@@ -70,13 +70,13 @@ dependencies:
 
 Top-level container for all combat-related subsystems.
 
-## Sub-module Relationships
+## Class Diagram
 
 ```mermaid
-graph TD
-    combat --> skill[combat/skill]
-    combat --> buff[combat/buff]
-    skill --> buff
+classDiagram
+    class skill { <<module>> }
+    class buff { <<module>> }
+    skill ..> buff : applies
 ```
 
 - **skill** — Active ability execution (cast, cooldown, targeting)

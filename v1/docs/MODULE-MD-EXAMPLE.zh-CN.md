@@ -70,13 +70,13 @@ dependencies:
 
 所有战斗相关子系统的顶层容器。
 
-## 子模块关系
+## 类图
 
 ```mermaid
-graph TD
-    combat --> skill[combat/skill]
-    combat --> buff[combat/buff]
-    skill --> buff
+classDiagram
+    class skill { <<module>> }
+    class buff { <<module>> }
+    skill ..> buff : applies
 ```
 
 - **skill** — 主动技能执行（施放、冷却、目标选取）

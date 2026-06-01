@@ -17,168 +17,6 @@ status: spec
 3. **Session 写侧** —— `AppendSessionEvent` 唯一写入点；调用方仅 Brain.MotorCortex
 4. **多脑区编织** —— 一 Agent 持 N 个 BrainBase；共享一份 Memory / MCP / Tool 资源池
 
-## 架构图（v2 三层模型中的位置）
-
-```mermaid
-flowchart TD
-    classDef facade fill:#fce4ec,stroke:#880e4f,stroke-width:2px,color:#000;
-    classDef brain  fill:#e1f5fe,stroke:#01579b,color:#000;
-    classDef kernel fill:#e8f5e9,stroke:#1b5e20,color:#000;
-    classDef infra  fill:#fff9c4,stroke:#f57f17,color:#000;
-    classDef msai   fill:#bbdefb,stroke:#0d47a1,color:#000;
-    classDef peer   fill:#f3e5f5,stroke:#4a148c,color:#000;
-
-    USR["User"]
-    CH["Channel\n(薄封装 AgentSession)"]
-
-    AS["AgentSystem (本模块)\nOpenInstanceAsync / AgentDescription / Session 写侧"]
-
-    subgraph BRAIN["Agent/Brain (脑区策略层)"]
-        PFC["PrefrontalCortex"]
-        PL["ParietalLobe"]
-        HC["Hippocampus"]
-        MC["MotorCortex 家族\nNative / External(ClaudeCode)"]
-    end
-
-    subgraph KERNEL["Agent/Kernel (神经系统机制层)"]
-        NEU["Neuron/\nINeuron · MsaiNeuron · ExternalEngineNeuron · NeuronFactory"]
-        SYN["Synapse/\nSynapseToolFactory · IPrefrontalCallback · IBrainRegistry"]
-    end
-
-    subgraph INFRA["基建层"]
-        TOOLS["CBIM.Tools"]
-        SKILLS["CBIM.Skills"]
-        MCP["CBIM.Mcp"]
-        MEM["CBIM.Memory\nIMemoryService"]
-        STO["CBIM.Storage"]
-    end
-
-    subgraph MS["Microsoft 包"]
-        MSAI["Microsoft.Agents.AI\nAIAgent / Builder / Session"]
-        MSEXT["Microsoft.Extensions.AI\nIChatClient / AIFunction"]
-        MSMCP["Microsoft.Agents.AI.Mcp"]
-    end
-
-    WS["Workspace (平级层)\nModuleDescription.McpList"]
-
-    USR --> CH --> AS
-    AS -- OpenInstanceAsync 装配 --> BRAIN
-    BRAIN -- 依赖 --> KERNEL
-    AS -- 注入资源 --> KERNEL
-    AS --> TOOLS
-    AS --> SKILLS
-    AS --> MCP
-    AS --> MEM
-    AS --> STO
-    KERNEL --> MSAI
-    KERNEL --> MSEXT
-    MCP --> MSMCP
-    WS -. 跨维度共享 McpDescriptor .-> MCP
-
-    class AS facade;
-    class PFC,PL,HC,MC brain;
-    class NEU,SYN kernel;
-    class TOOLS,SKILLS,MCP,MEM,STO infra;
-    class MSAI,MSEXT,MSMCP msai;
-    class WS peer;
-```
-
-**依赖方向**：Agent 层 → Kernel → 基建 → Microsoft，单向无反向。Agent ⊥ Workspace（平级互不依赖；唯一接触点是 `McpDescriptor` 类型共享）。
-
-## 类图（核心类型关系）
-
-```mermaid
-classDiagram
-    class AgentSystem {
-        <<service facade>>
-        +ListDescriptions() IReadOnlyList~AgentDescription~
-        +GetDescription(name) AgentDescription
-        +OpenInstanceAsync(id, options) Task~Agent~
-        +CloseInstanceAsync(instanceId) Task
-        +GetInstance(id) Agent
-        +AppendSessionEvent(id, ev) void
-    }
-
-    class AgentDescription {
-        <<immutable>>
-        +string Id
-        +string Name
-        +string Soul
-        +string Identity
-        +IReadOnlyList~SkillDescriptor~ Skills
-        +IReadOnlyList~ToolDescriptor~ SystemTools
-        +IReadOnlyList~McpDescriptor~ McpList
-        +Func~string,IMemoryService~ MemoryFactory
-        +BrainConfig BrainConfig
-    }
-
-    class Agent {
-        <<runtime instance>>
-        +string InstanceId
-        +string DescriptionId
-        +IReadOnlyList~BrainBase~ Brains
-        +PrefrontalCortex Prefrontal
-        +IBrainRegistry BrainRegistry
-        +IMemoryService Memory
-        +IReadOnlyList~IAsyncDisposable~ McpHandles
-        +AgentSession Session
-        +DisposeAsync() ValueTask
-    }
-
-    class OpenInstanceOptions {
-        <<record>>
-        +string ActivatedByTaskId
-        +string TaskWhere
-        +Func~string,IMemoryService~ MemoryFactoryOverride
-    }
-
-    class BrainConfig {
-        +IReadOnlyList~BrainDescriptor~ Brains
-        +Default(agentName)$ BrainConfig
-        +Custom(brains)$ BrainConfig
-    }
-
-    class BrainBase {
-        <<abstract · in Agent/Brain>>
-        +string BrainId
-        +IMemoryService Memory
-        +INeuron Neuron
-        +InvokeAsync(invocation) Task~BrainOutcome~
-    }
-
-    class PrefrontalCortex {
-        <<in Agent/Brain>>
-        +IReadOnlyList~BrainBase~ CallableBrains
-        +IBrainRegistry BrainRegistry
-    }
-
-    class INeuron {
-        <<interface · in Agent/Kernel/Neuron>>
-        +InvokeAsync(invocation) Task~BrainOutcome~
-        +UnderlyingAgent AIAgent
-    }
-
-    class IBrainRegistry {
-        <<interface · in Agent/Kernel/Synapse>>
-        +RegisterBrain(brain) void
-        +Find(brainId) BrainBase
-    }
-
-    AgentSystem --> AgentDescription : reads
-    AgentSystem --> Agent : creates
-    AgentSystem ..> OpenInstanceAsync
-    AgentSystem ..> OpenInstanceOptions
-    AgentDescription --> BrainConfig : holds
-    Agent --> BrainBase : holds N
-    Agent --> PrefrontalCortex : holds 1
-    Agent --> IBrainRegistry : holds
-    BrainBase <|-- PrefrontalCortex
-    BrainBase --> INeuron : holds
-    PrefrontalCortex --> IBrainRegistry : holds
-```
-
-**关键关系**：`AgentDescription` 是声明（不可变蓝图）；`Agent` 是运行态实例；`BrainBase` / `INeuron` / `IBrainRegistry` 来自子模块 `Brain/` 与 `Kernel/`，本模块仅持有引用、不实现它们。
-
 ## 装配序流（OpenInstanceAsync 五步）
 
 ```mermaid
@@ -329,3 +167,16 @@ public sealed record OpenInstanceOptions
 1. **服务门面 = 编织者，不是策略制定者** —— 本模块只负责把 Brain 子模块的脑区集 + Kernel 子模块的神经元/突触 + 基建层的资源池编织起来，不参与脑区策略与神经元机制的定义。这是「单一职责」在装配层的体现。
 2. **跨维度共享抽象不是耦合** —— `McpDescriptor` 被 Agent 与 Workspace 同时引用，是同一抽象被两个维度独立调用；不构成依赖边。
 3. **Memory + MCP 是装配必释放资源** —— 二者持外部连接 / 进程，是 `CloseInstanceAsync` 接口存在的最强动机；其余资源随 GC 释放即可。
+
+## Class Diagram
+
+```mermaid
+classDiagram
+    class Brain { <<module>> }
+    class Kernel { <<module>> }
+
+    Brain ..> Kernel : consumes INeuron and SynapseToolFactory
+```
+
+**Brain 与 Kernel 关系**：Brain 依赖 Kernel（消费 `INeuron` / `SynapseToolFactory`）；Kernel 不感知具体脑区类型。本模块同时持有两者引用，在 `OpenInstanceAsync` 内编织。详细的架构依赖布局与类型体系（PrefrontalCortex / ParietalLobe / Hippocampus / MotorCortex / INeuron / IBrainRegistry 等）各自下沉到 `Brain/.dna/module.md` 与 `Kernel/.dna/module.md`，以及 `Kernel/Neuron/` 与 `Kernel/Synapse/` 两个 leaf 模块。
+

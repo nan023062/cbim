@@ -12,41 +12,6 @@ This module IS the CBIM kernel Python package — the single code drop that powe
 
 The whole package is installed verbatim under `<project>/.cbim/kernel/` by the `/cbim_install` slash command. There is exactly one install path (download tree + run `python -m engine init`) and exactly one runtime entry — the shim `.cbim/run` (POSIX) or `.cbim/run.cmd` (Windows), which sets `PYTHONPATH=<project>/.cbim/kernel` and execs `python -m engine "$@"`. No `cbim` binary on `PATH`. No global venv. No multi-version staging. No version pin.
 
-## Sub-module Relationships
-
-```mermaid
-graph TD
-    engine["engine/<br/>unified CLI dispatcher"]
-    project["project/<br/>install-side: init, sync, templates, source-of-truth agents+commands+hook-scripts"]
-    cbi["cbi/<br/>capability+business primitives (agents, skills, dna, snapshot)"]
-    memory["memory/<br/>memory engine (file backend, chroma backend, loader, writer)"]
-    services["services/<br/>cross-cutting facades (agent_service, memory_service, knowledge_service, log_service)"]
-    dashboard["dashboard/<br/>local web UI server"]
-    mcp["mcp_server/<br/>FastMCP stdio server (LLM governance tools) + scheduler + tasks"]
-    ctx["context.py (leaf file)<br/>project_root / cbim_dir / kernel_root resolution"]
-
-    engine --> project
-    engine --> cbi
-    engine --> memory
-    engine --> dashboard
-    engine --> mcp
-    services --> cbi
-    services --> memory
-    services --> engine
-    mcp --> services
-    mcp --> cbi
-    mcp --> memory
-    mcp --> engine
-    dashboard --> services
-    project -.->|reads templates at install time only| cbi
-```
-
-Dependency direction is strict and unidirectional. The stable bottom: `context.py` (a single leaf file, no sub-package), `cbi`, `memory`. Mid-tier: `services`, `project`. Top-tier (orchestrators): `engine`, `dashboard`, `mcp_server`. Nothing below imports anything above. `cbi` and `memory` import only from `context` and their own internals.
-
-Hook subprocesses are not a sub-package of the kernel: they live as install-time snapshots under `project/hooks_src/cbim_*.py`, get copied into `.claude/hooks/` at init, and bootstrap `<project>/.cbim/kernel/` onto `sys.path` to import `memory.*` / `cbi.*` / `engine.*` directly. No subprocess-to-server transport.
-
-Loose kernel-root artefacts: `__init__.py` (exposes `__version__` read from `VERSION`), `VERSION` (single-line semver string), `requirements.txt` (runtime dependencies), `context.py` (shared root-resolution primitives).
-
 ## Origin Context
 
 A CBIM "install" is just a directory tree. The user runs `/cbim_install` inside a project; that downloads this whole kernel package into `<project>/.cbim/kernel/` and runs `python -m engine init` once. Init writes the shim `.cbim/run`, installs the 4 agents under `.claude/agents/`, installs the 6 slash commands under `.claude/commands/`, installs the 7 in-process hook bridges under `.claude/hooks/cbim_*.py` (snapshot copied from `project/hooks_src/`), merges hook + MCP config into `.claude/settings.json`, drops a `CLAUDE.md`, and appends `.cbim/` to `.gitignore` plus the `permissions.deny` entries that keep LLM tools out of `.cbim/`. From then on the user (and Claude Code) invoke the kernel only via the shim — and LLM-driven writes to `.dna/`, `.claude/agents/`, and `.cbim/memory/` go through the `cbim` MCP server, never through raw `Write`/`Edit`.
@@ -79,4 +44,38 @@ Hook subprocesses are install-time snapshots, not a kernel sub-module: they live
 - No installer, updater, upgrade flow, migrate command, version pin, `versions.json`, `.cbim/.pin`, or `cbim_kernel.context` legacy import path.
 - No `bin/` directory, no `cbim` launcher script on PATH, no global venv at `~/.cbim/`.
 - No multi-version kernel staging. Each project carries its own kernel copy at `<project>/.cbim/kernel/`. To "upgrade", re-run `/cbim_install`.
+
+## Class Diagram
+
+```mermaid
+classDiagram
+    class engine { <<module>> }
+    class project { <<module>> }
+    class cbi { <<module>> }
+    class memory { <<module>> }
+    class services { <<module>> }
+    class dashboard { <<module>> }
+    class mcp_server { <<module>> }
+
+    engine ..> project : delegates init / sync
+    engine ..> cbi : delegates dna / agent / skill / snapshot
+    engine ..> memory : delegates memory ops
+    engine ..> dashboard : delegates dashboard start
+    engine ..> mcp_server : delegates mcp stdio
+    services ..> cbi : reads via primitives
+    services ..> memory : reads via memory facade
+    services ..> engine : reads engine config
+    mcp_server ..> services : tools call service facades
+    mcp_server ..> cbi : tools read primitives
+    mcp_server ..> memory : tools read memory
+    mcp_server ..> engine : tools read engine state
+    dashboard ..> services : panels read service facades
+    project ..> cbi : reads templates at install time only
+```
+
+Dependency direction is strict and unidirectional. The stable bottom: `context.py` (a single leaf file at the kernel root, not a sub-module), `cbi`, `memory`. Mid-tier: `services`, `project`. Top-tier (orchestrators): `engine`, `dashboard`, `mcp_server`. Nothing below imports anything above. `cbi` and `memory` import only from `context` and their own internals.
+
+Hook subprocesses are not a sub-package of the kernel: they live as install-time snapshots under `project/hooks_src/cbim_*.py`, get copied into `.claude/hooks/` at init, and bootstrap `<project>/.cbim/kernel/` onto `sys.path` to import `memory.*` / `cbi.*` / `engine.*` directly. No subprocess-to-server transport.
+
+Loose kernel-root artefacts: `__init__.py` (exposes `__version__` read from `VERSION`), `VERSION` (single-line semver string), `requirements.txt` (runtime dependencies), `context.py` (shared root-resolution primitives).
 

@@ -17,22 +17,6 @@ This directory **also** carries a flat collection of top-level pytest files (`te
 
 **What this module is not.** Not an implementation. Not a test runner itself. Not responsible for the top-level kernel pytest files.
 
-## Sub-module Relationships
-
-```mermaid
-graph TD
-    framework["framework/<br/>shared primitives:<br/>TestTarget · runner · log_assert · stats · reporter"]
-    workflow["workflow/<br/>4-loop CBIM validator<br/>(pytest, opt-in -m workflow)"]
-    benchmark["benchmark/<br/>plain-vs-CBIM A/B<br/>(standalone runner_cli)"]
-
-    workflow -->|imports run, Verdict,<br/>assert_*_loop, aggregate,<br/>render_markdown| framework
-    benchmark -->|imports run, CaseStats,<br/>aggregate, render_markdown| framework
-```
-
-**Dependency direction.** `framework` is the stable side; `workflow` and `benchmark` are the volatile sides. Both children import from `framework`; `framework` knows nothing about either consumer. No back-edges. No sibling-to-sibling links — `workflow` and `benchmark` never reference each other.
-
-**Composition vs aggregation.** The parent **composes** `framework` (without it the other two cannot function) and **aggregates** `workflow` + `benchmark` (each is independently runnable; either can be deleted without breaking the other).
-
 ## Key Decisions
 
 - **Stdlib + pytest only.** No third-party test deps. `subprocess`, `time`, `json`, `re`, `dataclass`, plus pytest. Rationale: the harness must run in any CI without environment drift; richer libraries don't pay for themselves at this scale.
@@ -60,3 +44,20 @@ These two questions have **incompatible drivers**: (1) wants pytest's discovery 
 - Not a CI orchestrator. Each child exposes a `run-bench.sh` (or pytest invocation); wiring them into CI is the consumer's problem.
 - Not in charge of the toy fixture project under `benchmark/fixture/` — that fixture's design and lifecycle belong to the `benchmark` child.
 - Not a place to add a 4th sibling that re-uses framework. New questions about CC kernel behavior should first be checked against `workflow` and `benchmark`; only a genuinely incompatible driver shape justifies a new leaf.
+
+## Class Diagram
+
+```mermaid
+classDiagram
+    class framework { <<module>> }
+    class workflow { <<module>> }
+    class benchmark { <<module>> }
+
+    workflow ..> framework : imports run / Verdict / assert_*_loop / aggregate / render_markdown
+    benchmark ..> framework : imports run / CaseStats / aggregate / render_markdown
+```
+
+**Dependency direction.** `framework` is the stable side; `workflow` and `benchmark` are the volatile sides. Both children import from `framework`; `framework` knows nothing about either consumer. No back-edges. No sibling-to-sibling links — `workflow` and `benchmark` never reference each other.
+
+**Composition vs aggregation.** The parent **composes** `framework` (without it the other two cannot function) and **aggregates** `workflow` + `benchmark` (each is independently runnable; either can be deleted without breaking the other).
+

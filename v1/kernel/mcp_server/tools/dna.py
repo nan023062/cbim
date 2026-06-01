@@ -122,6 +122,8 @@ def register(mcp) -> None:
     def dna_show(module_path: str, cwd: str = "") -> str:
         """Show metadata + architecture body for the .dna/ module at `module_path`.
 
+        Returns frontmatter + Positioning + Class Diagram + Key Decisions per v1/docs/MODULE-MD-DESIGN.zh-CN.md.
+
         Args:
             module_path: Path to the module directory (containing .dna/), e.g. 'src/combat'.
             cwd: Project directory (default: current working dir).
@@ -195,6 +197,8 @@ def register(mcp) -> None:
 
         Returns:
             Path of the created `.dna/` directory, or `ERROR: ...` on failure.
+
+        All three module kinds use classDiagram-based templates; parent/root use <<module>> stereotype per sub-module node, leaf shows code-level classes.
         """
         from services import init_module
         try:

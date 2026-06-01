@@ -14,109 +14,6 @@ status: spec
 - 让 Brain 层只关注脑区策略（调度 / 推理 / 记忆 / 动作），不再混入「如何挂 LLM」「脑区如何互调」。
 - **机制层 vs 策略层**：Kernel 是机制层，保持稳定；Brain 是策略层，可演化。
 
-## 架构图（三层模型中的位置）
-
-```mermaid
-flowchart TD
-    classDef facade fill:#fce4ec,stroke:#880e4f,color:#000;
-    classDef brain  fill:#f3e5f5,stroke:#4a148c,color:#000;
-    classDef kernel fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px,color:#000;
-    classDef msai   fill:#bbdefb,stroke:#0d47a1,color:#000;
-
-    AS["AgentSystem\n(装配方)"]
-
-    subgraph BRAIN["Agent/Brain (脑区策略层)"]
-        PFC["PrefrontalCortex"]
-        PL["ParietalLobe"]
-        HC["Hippocampus"]
-        MC["MotorCortex 家族"]
-    end
-
-    subgraph KERNEL["Agent/Kernel (本模块 · 神经系统机制层)"]
-        NEU["Neuron/\nINeuron · MsaiNeuron · ExternalEngineNeuron · NeuronFactory"]
-        SYN["Synapse/\nFlowGraph 引擎\n(Compiler + Orchestrator + SynapseToolFactory)"]
-    end
-
-    subgraph MS["Microsoft 包"]
-        MSAI["Microsoft.Agents.AI"]
-        MSEXT["Microsoft.Extensions.AI"]
-        MSWF["Microsoft.Agents.AI.Workflows"]
-    end
-
-    AS -- OpenInstance 装配 --> BRAIN
-    AS -- NeuronFactory.Create --> NEU
-    AS -- SynapseToolFactory.Build --> SYN
-    BRAIN -- 持 INeuron --> NEU
-    PFC -- 持 FlowGraph 工具 --> SYN
-    NEU --> MSAI
-    NEU --> MSEXT
-    SYN --> MSWF
-
-    class AS facade;
-    class PFC,PL,HC,MC brain;
-    class NEU,SYN kernel;
-    class MSAI,MSEXT,MSWF msai;
-```
-
-**依赖方向**：Brain → Kernel 单向不反向。Kernel 不感知任何具体脑区类型。
-
-## 类图（Kernel 内核心类型 + 与 Brain 的边界）
-
-```mermaid
-classDiagram
-    class BrainBase {
-        <<abstract · in Agent/Brain>>
-        +string BrainId
-        +INeuron Neuron
-        +InvokeAsync(invocation) Task~BrainOutcome~
-    }
-
-    class INeuron {
-        <<interface · Neuron/>>
-        +string NeuronId
-        +NeuronKind Kind
-        +AIAgent? UnderlyingAgent
-        +InvokeAsync(invocation, ct) Task~BrainOutcome~
-    }
-
-    class NeuronFactory {
-        <<static · Neuron/>>
-        +Create(descriptor, ctx)$ INeuron
-    }
-
-    class SynapseToolFactory {
-        <<static · Synapse/>>
-        +Build(callableBrains)$ IReadOnlyList~AITool~
-    }
-
-    class IPrefrontalCallback {
-        <<interface · Synapse/>>
-        +ReportProgress(brainId, message)
-        +ReportOutcome(brainId, outcome)
-    }
-
-    class IBrainRegistry {
-        <<interface · Synapse/>>
-        +RegisterBrain(brain)
-        +Find(brainId) BrainBase
-    }
-
-    class CompilerToolFactory {
-        <<static · Synapse/Compiler/>>
-        +Build(builder, callable)$ IReadOnlyList~AITool~
-    }
-
-    class CBIMOrchestrator {
-        <<class · Synapse/Orchestrator/>>
-        +RunAsync(circuit, palette, callback, ct) Task~BrainOutcome~
-    }
-
-    BrainBase --> INeuron : holds
-    NeuronFactory ..> INeuron : creates
-    SynapseToolFactory ..> BrainBase : reads BrainId
-    CBIMOrchestrator ..> BrainBase : invokes
-```
-
 ## Children
 
 | 子模块 | 一句话职责 |
@@ -149,4 +46,14 @@ classDiagram
 - 不接管 BrainConfig 校验——主脑唯一 / 至少一 MotorCortex 仍在 BrainConfig
 - 不实现具体外部引擎——`ExternalEngineNeuron` 仅持 `IExternalEngineAdapter`
 - 不引入新并发模型——Registry 用粗锁 InMemory
+
+## Class Diagram
+
+```mermaid
+classDiagram
+    class Neuron { <<module>> }
+    class Synapse { <<module>> }
+```
+
+**Neuron ⊥ Synapse**：两子模块互不引用；各自被 Brain 层装配点独立调用。Brain 依赖 Kernel 是单向跨模块边 (Brain → {Neuron, Synapse})，本 parent 不反向依赖。详细类型体系（INeuron / MsaiNeuron / ExternalEngineNeuron / NeuronFactory / SynapseToolFactory / IPrefrontalCallback / IBrainRegistry 等）下沉到 `Neuron/.dna/module.md` 与 `Synapse/.dna/module.md`；Synapse 进一步有 `Compiler/` 与 `Orchestrator/` 两个 leaf 子模块。
 

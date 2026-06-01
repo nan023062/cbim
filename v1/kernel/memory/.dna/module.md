@@ -25,56 +25,6 @@ status: implemented
 | Session 恢复者 / 事件源 / 调度参与方 | 不是。不感知会话生命周期、不 emit 事件、不参与调度决策。 |
 | 检索引擎 | 不是。向量检索 / BM25 / 索引存储 / 漂移校验都在平级模块 `kernel/retrieval`；memory 仅在 `crud.write` 后作为同步副作用调 `retrieval.index_upsert("memory_medium", ...)`。 |
 
-## Sub-module Relationships
-
-```mermaid
-flowchart LR
-    subgraph Memory["kernel/memory（本模块）"]
-        direction LR
-        CRUD["crud/<br/>write · update · delete<br/>· 调 retrieval.index_upsert (同步副作用)"]
-        Compact["compaction/<br/>identify · compact<br/>+ 候选区 + 健康巡检"]
-    end
-
-    HookIn[("写入入口（仅中期）<br/>memory_write MCP · CLI")]
-    Reader[("读取调用者<br/>任意循环")]
-    Contract[["对外契约<br/>query · scan · get · stats"]]
-    Retrieval[("kernel/retrieval<br/>index_upsert / index_delete")]
-    Transcripts[("~/.claude/projects/&lt;slug&gt;/*.jsonl<br/>CC 原生 transcript = 短期记忆<br/>**不属于本模块**")]
-    Dream[("engine/dream<br/>扫超 1 天 transcript →<br/>主 agent 蒙骏 → memory_write → 删原")]
-
-    HookIn --> CRUD
-    CRUD -->|write 同步触发 identify| Compact
-    CRUD -.->|同步副作用| Retrieval
-    Compact -->|压缩产物通过 update/delete 回写| CRUD
-    Compact -.->|候选条目落 .cbim/memory/candidates/<br/>不通知任何外部方| Compact
-
-    Dream -.->|读 transcripts 主 agent 蒙骏| Transcripts
-    Dream -->|memory_write 写中期| HookIn
-    Dream -.->|蒙骏后删原件| Transcripts
-
-    Memory --> Contract
-    Reader --> Contract
-```
-
-**子模块关系**：
-
-| 关系 | 方向 | 说明 |
-|------|------|------|
-| `crud` → `compaction` | `write` 同步调用 `identify` | "Create 一体两步"的第 2 步；不通知外部 |
-| `crud` → `kernel/retrieval` | `write` / `update` / `delete` 同步调 `index_upsert` / `index_delete` | 索引与数据一致性由本模块承诺；该依赖进入 module dependencies |
-| `compaction` → `crud` | `compact` 通过 `update` / `delete` 回写 | 改盘的唯一入口在 `crud`；`compaction` 不持有文件写权限 |
-| `compaction` ↔ `candidates/` | 独占工作区 | 路径独立，不复用 `medium/` |
-
-**与外部模块的协作**：
-
-| 对方 | 方向 | 说明 |
-|------|------|------|
-| `kernel/retrieval` | crud 调用 | 写入 / 更新 / 删除 medium 条目后同步调索引 |
-| `engine/dream` | dream 调用 memory_write | dream 从 transcripts 蒙骏后以普通写入路径调 `memory_write` 落 medium；本模块对 dream 无感知 |
-| `~/.claude/projects/<slug>/` transcripts | 本模块不读不写 | transcripts 是 Claude Code 产物，不是本模块的数据；蒙骏者（主 agent in dream）才读，hook 才删 |
-
-**无循环依赖**——`crud` ↔ `compaction` 是**双向调用**，不是双向静态依赖；静态依赖只有一条：`compaction → crud`。`crud → retrieval` 是本模块唯一的跨模块依赖，单向。
-
 ## Origin Context
 
 原始设计试图由本模块同时拥有 short / medium 两层存储。实践中出现三个问题：
@@ -111,3 +61,34 @@ v2 重设计决议：
 - **不是短期记忆仓。** v2 后本模块不拥有 short 存储、不读 transcripts、不删 transcripts。任何 short 路径、Stop hook 写 short、`tier=short` 写入参数都是破窗。
 - **不是检索引擎。** 向量 / BM25 / 索引存储在平级模块 `kernel/retrieval`；本模块只调它的 `index_upsert` / `index_delete`。
 - **不是知识系统。** 不评判一条条目是否"值得晋升"；只识别"形态上像候选"并打包，决断权在知识循环。
+
+## Class Diagram
+
+```mermaid
+classDiagram
+    class crud { <<module>> }
+    class compaction { <<module>> }
+
+    compaction ..> crud : compaction writes back via update/delete (crud owns disk writes)
+    crud ..> compaction : write synchronously triggers identify
+```
+
+**子模块关系**：
+
+| 关系 | 方向 | 说明 |
+|------|------|------|
+| `crud` → `compaction` | `write` 同步调用 `identify` | "Create 一体两步"的第 2 步；不通知外部 |
+| `crud` → `kernel/retrieval` | `write` / `update` / `delete` 同步调 `index_upsert` / `index_delete` | 索引与数据一致性由本模块承诺；该依赖进入 module dependencies |
+| `compaction` → `crud` | `compact` 通过 `update` / `delete` 回写 | 改盘的唯一入口在 `crud`；`compaction` 不持有文件写权限 |
+| `compaction` ↔ `candidates/` | 独占工作区 | 路径独立，不复用 `medium/` |
+
+**与外部模块的协作**：
+
+| 对方 | 方向 | 说明 |
+|------|------|------|
+| `kernel/retrieval` | crud 调用 | 写入 / 更新 / 删除 medium 条目后同步调索引 |
+| `engine/dream` | dream 调用 memory_write | dream 从 transcripts 蓒骨后以普通写入路径调 `memory_write` 落 medium；本模块对 dream 无感知 |
+| `~/.claude/projects/<slug>/` transcripts | 本模块不读不写 | transcripts 是 Claude Code 产物，不是本模块的数据；蓒骨者（主 agent in dream）才读，hook 才删 |
+
+**无循环依赖**——`crud` ↔ `compaction` 是**双向调用**，不是双向静态依赖；静态依赖只有一条：`compaction → crud`。`crud → retrieval` 是本模块唯一的跨模块依赖，单向。
+

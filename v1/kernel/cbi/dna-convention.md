@@ -1,6 +1,8 @@
 # `.dna/` Business Layer Convention
 
 > The business layer is governed by the architect, strictly separated from the capability layer (`.claude/agents/`).
+>
+> **Canonical specification**: v1/docs/MODULE-MD-DESIGN.zh-CN.md. This file is the kernel-side convention reference.
 
 ## Core Concepts
 
@@ -142,7 +144,19 @@ classDiagram
 A parent module's `module.md` body contains three sections:
 
 1. **Positioning** — One sentence: what this module is and why it exists.
-2. **Sub-module Relationship Diagram** — Mermaid `graph` showing child modules as nodes, inter-child dependencies as edges, and one-sentence positioning per node. **Never write any child module's internal details.**
+2. **Class Diagram** — Mermaid `classDiagram` with `<<module>>` stereotype per sub-module node. Each class node represents one sub-module; use `..>` association arrows for inter-sub-module dependencies. **Never write any child module's internal details.**
+
+Example:
+
+```
+classDiagram
+    class cache { <<module>> }
+    class memory { <<module>> }
+    class io { <<module>> }
+    cache ..> memory : uses
+    io ..> cache : configures
+```
+
 3. **Key Decisions** — Emergent insights visible only from the cross-child-module perspective: why these sub-modules exist together, how they interact at their boundaries.
    - **Decision smell**: if a bullet point is about a single sub-module's internal design ("Why X/ uses Y approach"), it belongs in *that sub-module's own* `.dna/module.md` — move it there.
    - **Component diagram implies sub-modules**: if you find yourself drawing boxes for internal components, those components must become separate CBIM modules with their own `.dna/` before this `module.md` is written.
@@ -205,6 +219,8 @@ Any change that alters the class diagram — new classes, changed interfaces, re
 2. **Parent module writes only relationships and positioning** — A parent module's `module.md` body describes only: the relationships between child modules (dependency / composition / aggregation) and each child module's positioning. Never write any child module's internal details. Each child module's internal design is the responsibility of its own `module.md`. Any key decision that applies to a single child module belongs in that child's own `.dna/`, not in the parent.
 
 3. **Capability and business separated** — The knowledge pack contains only project/module knowledge; it must not reference agent capability specs.
+
+4. **Diagram syntax unified** — All three module types (leaf/parent/root) use `classDiagram`. No `graph TD` or `flowchart` for module diagrams. Leaf modules show code-level classes/interfaces; parent/root modules show sub-modules with `<<module>>` stereotype.
 
 ---
 

@@ -208,7 +208,7 @@ Run `/cbim_dashboard` (or `.cbim/run dashboard`) — opens http://127.0.0.1:8765
 
 ## Architecture Details
 
-See [v1/docs/ARCHITECTURE.md](v1/docs/ARCHITECTURE.md) | [架构文档（中文）](v1/docs/ARCHITECTURE.zh-CN.md)
+See [架构文档（中文）](v1/docs/ARCHITECTURE.zh-CN.md)
 
 ---
 

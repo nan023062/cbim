@@ -1,5 +1,3 @@
-[English](INSTALL.md) | [中文](INSTALL.zh-CN.md)
-
 # CBIM 安装参考
 
 安装 / 刷新 / 卸载 / 迁移命令见仓库根 README 的 [**安装**章节](../../README.zh-CN.md#安装)。本文档补充完整的部署后目录布局。

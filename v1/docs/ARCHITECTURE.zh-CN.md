@@ -1,5 +1,3 @@
-[English](ARCHITECTURE.md) | [中文](ARCHITECTURE.zh-CN.md)
-
 # CBIM 架构文档
 
 ## 为什么需要 CBIM
@@ -183,7 +181,7 @@ CBIM 将知识作为架构的一等公民，而不是代码的附属注释。`.d
 ## 延伸阅读
 
 - [INSTALL](./INSTALL.zh-CN.md) — 部署后目录布局
-- [MODULE-MD-EXAMPLE](./MODULE-MD-EXAMPLE.zh-CN.md) — 叶子与父模块 `module.md` 示例
+- [MODULE-MD-DESIGN](./MODULE-MD-DESIGN.zh-CN.md) — DNA 设计指南（哲学 · `module.md` 规范 · 示例），唯一权威文档
 - [README](../../README.zh-CN.md) — 安装、首次使用、Slash 命令、MCP 工具、仪表盘
 - `src/kernel/cbi/.dna/` — 能力 + 业务原语
 - `src/kernel/cbi/agents/.dna/` — 架构师 / HR / 评审官 / 程序员 定义

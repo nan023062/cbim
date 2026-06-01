@@ -13,6 +13,7 @@ Execute:
 
 1. **Load review context**
    - Module knowledge pack `<module-dir>/.dna/module.md` (+ `contract.md` if present)
+   - Module.md spec: v1/docs/MODULE-MD-DESIGN.zh-CN.md (canonical structural rules for the artifact under review)
    - Architecture principles: the "Beliefs" and "Architecture Principles (C1-C6)" sections from `.claude/agents/architect.md`
    - Target agent's professional standards: the responsibilities/principles section from `.claude/agents/<agent-id>.md`
 2. Knowledge layer review
@@ -83,6 +84,7 @@ Knowledge layer review comes first — if the blueprint is flawed, perfect code 
 - Extraneous artifacts (types not designed in the knowledge)
 - Signature drift (actual vs contract.md / module.md class diagram)
 - Dead code (unreferenced public types)
+- Diagram-spec drift: parent module.md uses `graph TD` instead of `classDiagram` with `<<module>>`, OR uses paragraphs instead of list/table for Key Decisions
 
 ### LLM-Specific Hallucinations
 - Fabricated APIs: referencing methods or parameters that don't exist in the framework/library

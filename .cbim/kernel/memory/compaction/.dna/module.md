@@ -61,12 +61,9 @@ classDiagram
 - **`MemRebuildIndex` 是两个动作的集合。** (1) 重建本模块内部 `index/`（服务于 `scan` / `get` 的快快表）；(2) 调 `engine/retrieval.verify_consistency("memory_medium", mode="full")` 全量校验与外部检索索引的一致性。到这一步是服务于"快检发现漂移后的兜底修复"；主的增量同步在 `crud/` 的写入路径上。
 - **闭环自然收敛，无需外部判停。** `compact` 处理候选后回写的 `medium/` 又会触发 `identify` 再次产生候选——形成内部闭环。但因为每次 `compact` 严格减少候选总数（合并、删除原始条目），闭环会自然收敛；本模块不需要外部回调或显式 stop 条件。
 
-## Sub-module Relationships
-
-无下级子模块。本模块是 leaf；横向上反向调用 `crud/` 的 `update` / `delete` 回写压缩产物，构成记忆服务内部的双向闭环；`MemRebuildIndex` 另外依赖外部 `engine/retrieval.verify_consistency`。
-
 ## Non-Goals
 
 - **不读 transcript JSONL。** 废弃了原来“扫 short 压 medium”的职责后，本模块不再访问 `~/.claude/projects/<slug>/`。Transcript 蒙骏在 `engine/dream` + `memory_distill` skill，蒙骏产物通过普通 `memory_write` 路径走到 `crud/`。
 - **不调 LLM。** 压缩 / 识别候选 / 健康巡检 / 索引重建全部是确定性 Python 逻辑；任何“用 LLM 判断要不要压缩”的写法都是破窗。
 - **不发事件、不调外部。** 压缩 / 识别候选 / 归档 / 重建索引都不通知任何方。
+

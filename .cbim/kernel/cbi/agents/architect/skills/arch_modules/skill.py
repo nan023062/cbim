@@ -8,6 +8,29 @@ This skill has **two invocation modes**:
 1. **Execution Gate** — Coordinator dispatches the Architect as the mandatory gate for any execution task (code / feature / bugfix). The Architect performs DNA state triage and returns a **ContextPack** to the Coordinator before any Work Agent runs. See `## Execution Gate: DNA State Triage` and `## ContextPack Schema` below.
 2. **Direct CRUD** — User or Architect itself initiates module create / update / deprecate / split. See `## Project Initialization` and below.
 
+## DNA Principle (governs every CRUD decision below)
+
+A `.dna/` document is a module's **self-description** — it exists to make the module a self-contained knowledge unit, so knowledge stays layered and modules do not couple through documentation.
+
+Each DNA carries **exactly two things**:
+
+1. **Positioning** — this module's role on its parent's axis (one sentence).
+2. **Own design body** — this module's own internal organisation: which sub-modules it cut, and how those sub-modules relate at the boundary (roles, dependency direction, composition / aggregation).
+
+**Strictly forbidden in any DNA:**
+- Any sub-module's internal design — classes, fields, functions, dependency graphs inside a child belong in *that child's own* `.dna/`. Parent never drills down.
+- Implementation details, call timing, wiring order, completion status, future work, narrative preamble, repeated restatements.
+
+**Style:** terse. Pure positioning + pure own-module design body. If a CRUD operation would write content that drills into a sub-module's internals, stop and push that content into the sub-module's own `.dna/` instead.
+
+This principle is the source of the leaf-vs-parent rules, the "no Key Decision about a single child" rule, the `#19/#20/#21` script checks, and the "decision smell" warning that appear throughout this skill — they are concrete enforcements of the principle above.
+
+## Canonical Reference
+
+**Authoritative module.md specification**: v1/docs/MODULE-MD-DESIGN.zh-CN.md
+
+This document is the kernel-side reference. All module.md design rules, examples, anti-patterns, and enforcement mechanisms derive from that spec. When in doubt about structure, citation, or forbidden patterns, consult the canonical spec first.
+
 ## Commands
 
 ```bash
@@ -18,11 +41,11 @@ cbim dna init <dir> --type {root,parent,leaf} --name <name> --owner <owner> [--d
 
 **`--type` is required and determines the body template:**
 
-| Type | When to use | Template body |
-|------|-------------|---------------|
-| `root` | Project root only — single-app projects that have a top-level module. `target` must equal project root. Monorepos / mixed-system projects normally skip this. | Parent template |
-| `parent` | Module that contains sub-modules (each with their own `.dna/`) | `## Positioning / ## Sub-module Relationships (graph) / ## Key Decisions` |
-| `leaf` | Module with no sub-modules; self-contained | `## Positioning / ## Class Diagram (classDiagram) / ## Key Decisions` |
+| Type | When to use | Mermaid Diagram | Template body |
+|------|-------------|-----------------|---------------|
+| `root` | Project root only — single-app projects that have a top-level module. `target` must equal project root. Monorepos / mixed-system projects normally skip this. | classDiagram (sub-modules with <<module>>) | Parent template |
+| `parent` | Module that contains sub-modules (each with their own `.dna/`) | classDiagram with <<module>> stereotype, ..> arrows for dependencies | `## Positioning / ## Class Diagram / ## Key Decisions` |
+| `leaf` | Module with no sub-modules; self-contained | classDiagram (real code-level classes/interfaces) | `## Positioning / ## Class Diagram / ## Key Decisions` |
 
 The CLI **refuses** to init any module before `.cbim/index.md` exists (proves `install.py` ran), and refuses to init `--type root` anywhere except the project root. Every successful `init_module` auto-appends the new module to the registry.
 
@@ -220,7 +243,7 @@ This rescans the filesystem and rebuilds `.cbim/index.md`.
    ```bash
    cbim dna init <dir> --type {parent|leaf} --name <name> --owner architect
    ```
-   The CLI installs a body template matching the type — leaf gets `classDiagram`, parent gets a `graph` placeholder with a "do not write sub-module internals" comment.
+   The CLI installs a body template matching the type — both leaf and parent get `classDiagram` placeholders (leaf shows code-level classes, parent shows sub-modules with <<module>> stereotype).
 
 4. Fill in `.dna/module.md`:
    - **Frontmatter**: fill in `description`, `keywords`, `dependencies` as needed
@@ -261,7 +284,7 @@ This rescans the filesystem and rebuilds `.cbim/index.md`.
 
    **Parent module** body (template provided):
    - `## Positioning` — one sentence: what this module is and why it exists
-   - `## Sub-module Relationships` — Mermaid `graph`: sub-modules as nodes, inter-sub-module dependencies as edges, one-sentence positioning per node
+   - `## Class Diagram` — Mermaid `classDiagram`: each sub-module as a class node with `<<module>>` stereotype, using `..>` arrows for inter-sub-module dependencies
    - `## Key Decisions` — **only** cross-sub-module emergent insights: why these sub-modules exist together, how they relate at boundaries
      - **Decision smell** (also enforced by `check.py #19/#20`): if a bullet is about a single sub-module's internal design ("Why X/ uses Y approach internally"), it belongs in *that sub-module's own* `.dna/`, not here. Move it.
 
@@ -273,6 +296,27 @@ This rescans the filesystem and rebuilds `.cbim/index.md`.
 7. Run compliance check: execute `arch-governance.md`
 
 **Naming convention**: `name` uses kebab-case; `owner` is the responsible agent id.
+
+---
+
+## High-Density Discipline
+
+Module.md is **signal, not noise**. Three forbidden patterns:
+
+1. **No code**: Never copy-paste source code into module.md. Instead, point: "See `src/event-bus/bus.ts` lines 120-140."
+2. **No pseudocode**: No flowcharts of algorithms, no logic trees, no "simplified" code. Either link to real code or don't include it.
+3. **No implementation detail**: Never describe *how* a sub-system works internally. Describe *why* the design chose this structure (the decision, not the execution).
+
+**Key Decisions format** — list or table **only**, never paragraphs:
+- One bold title, then 1-2 sentences (max).
+- Sentence structure: "[What] [Why] [Where: point to code]"
+- If "why" needs more than 1-2 sentences, the decision is too coarse — split it into smaller decisions, or the detail belongs in the code, not module.md.
+
+Example (right):
+- **Interface-first design**: Public surface is `IEventBus` (interface), never `EventBus` (impl). Enables test doubles without framework-dependent mocks. See `src/event-bus/bus.ts`.
+
+Example (wrong):
+- **Interface-first design**: In our system, we have an IEventBus interface that defines the contract. The EventBus class implements this interface. When a consumer needs to subscribe to events, they depend on the IEventBus interface. This allows us to create test doubles easily without needing to mock the entire EventBus class. You can see the implementation in src/event-bus/bus.ts where we define both the interface and the class. The reason we did this is to follow the Dependency Inversion Principle from SOLID design patterns. This approach has several benefits: it decouples the consumer from the concrete implementation, it makes testing easier, and it follows best practices in object-oriented design.
 
 ---
 

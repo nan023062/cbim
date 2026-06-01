@@ -163,6 +163,23 @@ classDiagram
 
 ---
 
+## Key Decisions: Bounded, Current-State Only
+
+Key Decisions are the **"why" of the current architecture** — each entry explains one structural choice that is visible in the class diagram but whose rationale the code cannot show (interface boundaries, sync vs async, dependency direction, a key data structure). Two properties follow from this:
+
+- **Bounded by construction.** Decisions map one-to-one onto the module's *current* structural choices. A module has only so many such choices, so the decision count is small and does **not** grow with project age. `module.md` does not bloat.
+- **Current state only — replace, never append.** When a decision is superseded, *remove* the old entry from `module.md` and let the new decision take its place. The old decision plus its time-bound rationale ("we chose X in 2024 because the team was small") drops into session memory — it must never accumulate in `module.md`. This is Business Hard Rule 1 ("No history") applied to decisions.
+
+A Key Decision belongs in `module.md`, **not** in memory, because it is the *other half of the same knowledge unit*: the class diagram states WHAT the current shape is, the decision states WHY it is that shape. Split them and a reader sees the structure without the constraints behind it, and "improves" it into breakage. The **evolution** of a decision (how X became Y) is memory; the **current conclusion** is knowledge.
+
+**Smell test for a Key Decision entry:**
+- Explains why the *current* design is the way it is — timeless, no dates → keep it in `module.md`.
+- Describes a change — "used to be X, now Y, because back then…" → that is history; it belongs in session memory, not here.
+
+> Memory is short-term + medium-term only, and project-local. What is durable and network-shareable is **capability knowledge** (agents) and **business knowledge** (`module.md` / conventions) — not decisions. A decision is always a local, transient artifact; it never "graduates" into a cross-project asset.
+
+---
+
 ## Optional: `contract.md` (Protocol Boundary)
 
 | File | When to create | Constraint |
@@ -214,7 +231,7 @@ Any change that alters the class diagram — new classes, changed interfaces, re
 
 ## Business Hard Rules
 
-1. **No history** — `module.md` and `contract.md` describe only the current final state. Never write what changed or why it changed. Changes go into session memory (`.cbim/memory/`); the architect periodically distills and promotes them.
+1. **No history** — `module.md` and `contract.md` describe only the current final state. Never write what changed or why it changed. Changes go into session memory (`.cbim/memory/`); the architect periodically distills and promotes them. This applies to **Key Decisions** too: keep only the current rationale, replace (never append) when a decision is superseded, and let the old decision with its time-bound context fall into session memory. See *Key Decisions: Bounded, Current-State Only* above.
 
 2. **Parent module writes only relationships and positioning** — A parent module's `module.md` body describes only: the relationships between child modules (dependency / composition / aggregation) and each child module's positioning. Never write any child module's internal details. Each child module's internal design is the responsibility of its own `module.md`. Any key decision that applies to a single child module belongs in that child's own `.dna/`, not in the parent.
 

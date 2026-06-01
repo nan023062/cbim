@@ -66,6 +66,3 @@ classDiagram
 - **`candidates/` 不归本模块管。** 候选区数据结构、识别逻辑、压缩流程在 `compaction/` 子模块；本模块只在 `write` 的第 2 步里调用 `compaction.identify(entry)`，把控制权交回去。
 - **本模块增加一条跨模块依赖：`engine/retrieval`。** 进入 `module.md` Dependencies。方向仅为 `memory.crud → engine/retrieval`，`retrieval` 不依赖本模块；无环。
 
-## Sub-module Relationships
-
-无下级子模块。本模块是 leaf；横向上被 `compaction/` 反向调用（回写压缩产物），构成记忆服务内部的双向闭环；同时单向依赖外部 `engine/retrieval`（写入同步调用其 `index_upsert` / `index_delete`）。

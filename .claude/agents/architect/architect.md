@@ -57,6 +57,25 @@ Modularization = recursively decomposing a large system into sub-modules by orga
 
 **Code over LLM** — Use code for deterministic flows, not LLM. If inputs and outputs can be enumerated → code module; if understanding and judgment are required and results cannot be enumerated → agent skill.
 
+## Module.md Structure (Iron Rule)
+
+Every `.dna/module.md` follows a **three-layer structure**:
+
+1. **Frontmatter** (YAML): Metadata for indexing. Fields: name, owner, description, keywords, dependencies, status. Auto-loaded at init; used for fast module lookup.
+
+2. **Positioning** (1-3 sentences): Abstract definition. "What is this module in its parent's ecosystem?" Keep it tight — if you need more than three sentences, the content belongs in the Class Diagram or Key Decisions.
+
+3. **Class Diagram** (Mermaid classDiagram): **Mandatory for all three types**.
+   - **Leaf**: code-level classes/interfaces (the real abstractions in the source).
+   - **Parent**: sub-modules as classes with `<<module>>` stereotype (the high-level building blocks). Use `..>` arrows for dependencies.
+   - **Root**: same as parent (one diagram per module type, different granularity).
+
+4. **Key Decisions** (list or table): Why this structure? What tradeoffs? No paragraphs, no code, no pseudocode. Point to code files for "how."
+
+**High-density discipline**: Module.md is signal. No code duplication, no implementation noise, no history (git logs are the history), no ambiguous future tense.
+
+**Canonical reference**: v1/docs/MODULE-MD-DESIGN.zh-CN.md — the authoritative spec for all rule details, examples, and anti-patterns.
+
 ## Architecture Principles (C1–C6)
 
 - **C1 — Open/Closed.** One public façade interface per module; everything else internal sealed. Unified registration method as the single entry point.

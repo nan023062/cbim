@@ -180,11 +180,11 @@ def _is_leaf(path: str, all_paths: set[str]) -> bool:
 
 def _detect_phantom_subnodes(arch: str, parent_path: str, parent_dir: Path,
                              all_paths: set[str]) -> list[str]:
-    """For a parent module's body, scan mermaid `graph` blocks. For each node
-    whose ID or label matches an actual sub-directory of this module, check
+    """For a parent module's body, scan mermaid blocks (graph, flowchart, or classDiagram).
+    For each node whose ID or label matches an actual sub-directory of this module, check
     whether that sub-directory has a .dna/. Return labels lacking .dna/."""
 
-    # Extract graph blocks
+    # Extract all mermaid blocks
     blocks = []
     in_block = False
     cur: list[str] = []
@@ -202,10 +202,13 @@ def _detect_phantom_subnodes(arch: str, parent_path: str, parent_dir: Path,
         if in_block:
             cur.append(line)
 
-    # Only inspect blocks that declare a 'graph' (not classDiagram/sequenceDiagram/etc.)
-    graph_blocks = [b for b in blocks if re.search(r"^\s*graph\s+", b, re.MULTILINE)
-                    or re.search(r"^\s*flowchart\s+", b, re.MULTILINE)]
-    if not graph_blocks:
+    # Inspect blocks that declare 'graph', 'flowchart', or 'classDiagram'
+    relevant_blocks = [b for b in blocks if (
+        re.search(r"^\s*graph\s+", b, re.MULTILINE) or
+        re.search(r"^\s*flowchart\s+", b, re.MULTILINE) or
+        re.search(r"^\s*classDiagram", b, re.MULTILINE)
+    )]
+    if not relevant_blocks:
         return []
 
     # Collect immediate sub-directories of the parent module, applying the
@@ -230,7 +233,7 @@ def _detect_phantom_subnodes(arch: str, parent_path: str, parent_dir: Path,
 
     phantom = []
     seen: set[str] = set()
-    for block in graph_blocks:
+    for block in relevant_blocks:
         for node_id, label in _GRAPH_NODE_RE.findall(block):
             for token in (node_id, label):
                 # Match against sub_dirs (case-sensitive; tolerate `name/` and `name<br/>`)
@@ -313,22 +316,25 @@ def run_checks(root: Path) -> dict[str, list[str]]:
 
         # Parent-specific structural smells (#19 #20)
         if not _is_leaf(path, all_paths):
-            # #19 — parent module body uses leaf-shaped diagram
-            if arch and "classDiagram" in arch:
-                issues["MUST"].append(
-                    f"[#19] {path}: parent module body contains 'classDiagram' — "
-                    f"should use 'graph' showing sub-modules. Sub-module internals "
-                    f"belong in their own .dna/module.md."
-                )
+            # #19 — parent module body must use classDiagram with <<module>> stereotype
+            if arch:
+                has_classDiagram = "classDiagram" in arch
+                has_graph_td = re.search(r"^\s*graph\s+TD", arch, re.MULTILINE)
+                if not has_classDiagram or has_graph_td:
+                    issues["MUST"].append(
+                        f"[#19] {path}: parent module body must use 'classDiagram' with "
+                        f"<<module>> stereotype. Using 'graph TD' or other diagram types is not allowed. "
+                        f"See v1/docs/MODULE-MD-DESIGN.zh-CN.md for details."
+                    )
 
-            # #20 — graph nodes reference sub-paths that have no .dna/
+            # #20 — classDiagram nodes reference sub-modules that must exist
             if arch:
                 phantom = _detect_phantom_subnodes(arch, path, mod_dir, all_paths)
                 for label in phantom:
-                    issues["SUGGEST"].append(
-                        f"[#20] {path}: component diagram references '{label}' "
-                        f"but no .dna/ exists there — promote to sub-module or "
-                        f"remove from diagram."
+                    issues["MUST"].append(
+                        f"[#20] {path}: class diagram references sub-module '{label}' "
+                        f"but no .dna/ exists there — either create the sub-module or "
+                        f"remove '{label}' from the diagram. See v1/docs/MODULE-MD-DESIGN.zh-CN.md."
                     )
 
         # Leaf-specific structural smells (#21)

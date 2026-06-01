@@ -28,7 +28,65 @@ Lives **inside** the engine package because every check threads through `engine.
 
 ```mermaid
 classDiagram
-    %% classes, interfaces, key method signatures, relationships
+    class AuditFinding {
+        <<dataclass>>
+        +str check
+        +str severity
+        +str target
+        +str message
+        +dict metadata
+        +str suggestion
+        +str code
+    }
+    class AuditResult {
+        <<dataclass>>
+        +list~AuditFinding~ findings
+        +dict summary
+        +str ran_at
+        +str project_root
+        +dict config_snapshot
+        +to_dict() dict
+    }
+    class run_audit {
+        <<function>>
+        +run_audit(project_root, checks, config, min_severity) AuditResult
+    }
+    class list_checks {
+        <<function>>
+        +list_checks() list~str~
+    }
+    class CHECKS {
+        <<registry dict>>
+        +index_consistency : callable
+        +memory_threshold : callable
+        +agent_fission : callable
+        +dna_fission : callable
+        +dna_tree : callable
+    }
+    class load_audit_config {
+        <<function>>
+        +load_audit_config(project_root) dict
+    }
+    class resolve_bands {
+        <<function>>
+        +resolve_bands(threshold) tuple
+    }
+    class register_audit_subparser {
+        <<function · cli>>
+        +register_audit_subparser(subparsers) None
+    }
+    class dispatch {
+        <<function · cli>>
+        +dispatch(args, project_root) int
+    }
+
+    run_audit ..> CHECKS : iterates selected checks
+    run_audit ..> AuditResult : returns
+    run_audit ..> AuditFinding : aggregates
+    run_audit ..> load_audit_config : merges thresholds
+    CHECKS ..> resolve_bands : per-check uses bands
+    dispatch ..> run_audit : delegates
+    register_audit_subparser ..> dispatch : wires argparse
 ```
 
 ## Key Decisions
@@ -43,35 +101,6 @@ classDiagram
 
 - **`dependencies` frontmatter 语义**：仅声明跨边界、非祖先的依赖。同层兄弟、向下抽象层、外部模块都要列；任何祖先链上的模块一律不列。这一约定由 `dna_tree` 检查的 `TREE_DEP_ANCESTOR_DECLARED` 强制。
 
-## Sub-module Relationships
-
-```
-audit/
-  __init__.py        # run_audit, list_checks, AuditResult, AuditFinding
-  cli.py             # register_audit_subparser + dispatch
-  result.py          # AuditFinding / AuditResult dataclasses + JSON
-  report.py          # to_stdout / to_markdown / to_json renderers
-  config.py          # DEFAULTS + load_audit_config + resolve_bands
-  registry.py        # CHECKS = {name: fn}
-  checks/
-    index_consistency.py
-    memory_threshold.py
-    agent_fission.py
-    dna_fission.py
-    dna_tree.py
-    _agent_skill_parser.py   # fragile heuristic, isolated for easy swap
-```
-
-Inbound: `engine.cli.main` calls `register_audit_subparser` and routes `domain == "audit"` to `audit.cli.dispatch`.
-
-Outbound:
-- `services.list_modules` / `services.list_agents` — preferred read API for the project state.
-- `cbi._primitives.modules` — `read_index`, `list_modules`, `index_path` for the registry-vs-disk diff.
-- `engine.config.load_config` — pulls the optional `audit` section from `.cbim/config.json`.
-- `kernel/memory` `stats()` — the **only** way `memory_threshold` reaches into memory. No raw file reads under `.cbim/memory/`; no calls into `crud/` or `compaction/` internals.
-
-Each `check_xxx(project_root: Path, config: dict) -> list[AuditFinding]` is registered in `registry.CHECKS`. The runner (`run_audit`) iterates the selected checks, aggregates findings, and packages them in an `AuditResult` together with a summary and the effective config snapshot.
-
 ## Non-Goals
 
 - **No auto-fix.** Audit reports drift; it never rewrites `.dna/`, `.claude/agents/`, or `.cbim/memory/`. Fix commands stay in their owning modules.
@@ -79,3 +108,4 @@ Each `check_xxx(project_root: Path, config: dict) -> list[AuditFinding]` is regi
 - **No semantic judgment.** Audit does not decide whether a memory entry "should be promoted" to agent skills or `.dna/`. Promotion-candidate identification belongs to `kernel/memory/compaction/`; the architect's knowledge loop consumes those candidates via `scan(filter="promote_candidate")`. Same for fission: audit reports oversize, it does not propose how to split.
 - **No raw reads under `.cbim/memory/`.** `memory_threshold` reaches memory **only** through `kernel/memory`'s `stats()` interface. Direct file walks under `.cbim/memory/short/` / `medium/` / `candidates/` are forbidden — that would couple audit to memory's internal layout and re-introduce the threshold-judgment leak this collapse was meant to fix.
 - **No deep semantic import scan.** Dependency direction comes from `frontmatter.dependencies`. We do not parse Python imports, grep code references, or trace call graphs — that is a separate concern with very different cost/precision trade-offs.
+

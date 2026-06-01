@@ -43,7 +43,20 @@ Modularization = recursively decomposing a large system into sub-modules by orga
 - **Single responsibility** — At the current decomposition level, each sub-module carries exactly one responsibility
 - **Open/closed principle** — Encapsulate everything that can be encapsulated; expose only the necessary contract
 
-**Parent module knowledge must contain exactly 4 things:**
+## DNA Principle (Iron Rule)
+
+**A `.dna/` document is a single module's self-description — nothing more.** It carries exactly two things and nothing else:
+
+1. **Positioning** — this module's role on its parent's axis (one sentence)
+2. **Own design body** — this module's own internal organisation: which sub-modules it cut, and how those sub-modules relate at the boundary (roles, dependency direction, composition / aggregation)
+
+**Strictly forbidden in any DNA:**
+- Any sub-module's internal design — classes, fields, functions, dependency graphs inside a child belong in *that child's own* `.dna/`. Parent never drills down.
+- Implementation details, call timing, wiring order, completion status, future work, narrative preamble, repeated restatements.
+
+**Style:** terse. Pure positioning + pure own-module design body. Strip anything that drills into a sub-module's internals.
+
+**Parent module knowledge must contain exactly 4 things (concrete form of the principle above):**
 1. Its own positioning
 2. Child module list + inter-child relationships (dependency / composition / aggregation)
 3. Origin context: the meta-concept that justifies the child modules' existence
@@ -54,9 +67,30 @@ Modularization = recursively decomposing a large system into sub-modules by orga
 - Include a Key Decision that applies to only one child module — that decision belongs in the child's own `.dna/module.md`
 - Draw a component diagram whose boxes represent internal components without first creating `.dna/` for each of those components
 
+**When reviewing a DNA:** if any content drills into a sub-module's internals, lift it out and push it into that sub-module's own `.dna/` — do not leave it in the parent.
+
 **Knowledge first** — Knowledge is the blueprint; code is the implementation. Always update the blueprint before building.
 
 **Code over LLM** — Use code for deterministic flows, not LLM. If inputs and outputs can be enumerated → code module; if understanding and judgment are required and results cannot be enumerated → agent skill.
+
+## Module.md Structure (Iron Rule)
+
+Every `.dna/module.md` follows a **three-layer structure**:
+
+1. **Frontmatter** (YAML): Metadata for indexing. Fields: name, owner, description, keywords, dependencies, status. Auto-loaded at init; used for fast module lookup.
+
+2. **Positioning** (1-3 sentences): Abstract definition. "What is this module in its parent's ecosystem?" Keep it tight — if you need more than three sentences, the content belongs in the Class Diagram or Key Decisions.
+
+3. **Class Diagram** (Mermaid classDiagram): **Mandatory for all three types**.
+   - **Leaf**: code-level classes/interfaces (the real abstractions in the source).
+   - **Parent**: sub-modules as classes with `<<module>>` stereotype (the high-level building blocks). Use `..>` arrows for dependencies.
+   - **Root**: same as parent (one diagram per module type, different granularity).
+
+4. **Key Decisions** (list or table): Why this structure? What tradeoffs? No paragraphs, no code, no pseudocode. Point to code files for "how."
+
+**High-density discipline**: Module.md is signal. No code duplication, no implementation noise, no history (git logs are the history), no ambiguous future tense.
+
+**Canonical reference**: v1/docs/MODULE-MD-DESIGN.zh-CN.md — the authoritative spec for all rule details, examples, and anti-patterns.
 
 ## Architecture Principles (C1–C6)
 

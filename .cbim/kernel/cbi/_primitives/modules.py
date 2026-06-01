@@ -315,12 +315,23 @@ _PARENT_BODY = """
 
 <!-- One sentence: what this module is and why it exists. -->
 
-## Sub-module Relationships
+## Class Diagram
 
 ```mermaid
-graph TD
-    %% Nodes = sub-modules (each with one-line positioning).
-    %% Edges = inter-sub-module dependencies.
+classDiagram
+    %% Each class node = one sub-module (use <<module>> stereotype).
+    %% Edges = inter-sub-module dependencies (..> associations).
+```
+
+**Mermaid syntax requirement**: Must use `classDiagram`. Each class node represents one sub-module (use `<<module>>` stereotype). Use `..>` association arrows for dependencies. Example:
+
+```mermaid
+classDiagram
+    class cache { <<module>> }
+    class memory { <<module>> }
+    class io { <<module>> }
+    cache ..> memory : uses
+    io ..> cache : configures
 ```
 
 ## Key Decisions

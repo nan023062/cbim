@@ -1,0 +1,444 @@
+================================================================================
+CBIM v2 · FlowGraph (Synapse/Compiler + Synapse/Orchestrator) 实装 arch_plan payload (v3)
+生成时间: 2026-05-29
+本轮范围: T8-T15 (FlowGraph: NL → NeuralCircuit IR → MAF Workflow 硬执行)
+源 .dna 文件:
+  - v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/.dna/module.md (parent, 本轮已稳定)
+  - v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/.dna/module.md (leaf, 本轮已稳定; 落盘路径已修订)
+  - v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/.dna/module.md (leaf, 本轮已稳定)
+
+用户拍板的 4 项决策 (T8-T15 必遵循):
+  D1 工具前缀: __circuit_* (Compiler) 与 __brain_call_* (SynapseToolFactory, v1 保留) 并列, 命名空间不冲突
+  D2 SynapseToolFactory 在 v1 保留为 1-node 退化原语 (主脑判断「闲聊/单脑区无后续」时直调)
+  D3 NeuralCircuit JSON 落盘路径: .cbim/agentsystem/sessions/{instanceId}/circuits/{circuitId}.json
+     (嵌入 session 子目录; 语义上 Session 拥有 Circuit)
+  D4 WaitUserNode + Brain/.dna Dependencies 节本轮均推后; T8-T15 不超量
+
+铁律 (全局, 8 task 一致):
+  K1 Kernel 子模块不感知具体脑区类型 (只读 BrainBase.BrainId / 调 BrainBase.InvokeAsync)
+  K3 Synapse 是唯一跨脑区机制出口 (__brain_call_* 与 __circuit_* 都在 Synapse 子模块, Brain 不准复制)
+  K4 Neuron ⊥ Synapse (本轮 Compiler/Orchestrator 均不 using Kernel.Neuron)
+  K6 三 leaf 互不引用 (SynapseToolFactory / Compiler / Orchestrator 同层平铺; 跨三者装配由 PrefrontalCortex 在主脑装配期完成)
+  K7 NeuralCircuit 是不可变 IR (commit 后冻结, Orchestrator 只读不改)
+  C1-C5 Compiler 子铁律 (见 Compiler/.dna 铁律段, 重点 C2 IR 构建工具只发给主脑 / C3 校验失败必回退用户 / C4 Compiler 与 Orchestrator 互不引用)
+  O1-O5 Orchestrator 子铁律 (见 Orchestrator/.dna 铁律段, 重点 O1 不重造 MAF / O3 Fail-fast / O4 上报绕 IPrefrontalCallback)
+
+不在本轮范围 (T8-T15 严禁触碰):
+  - 不实装 CallToolNode / ParallelNode / WaitUserNode (Compiler/.dna Non-Goals 已注)
+  - 不实装复杂表达式语言 (ConditionExpression v1 仅 contains / equals)
+  - 不修改 T1-T7 已交付物 (Neuron/ 全部, Synapse/ 顶层 5 文件, Brain/ 全部; API 稳定)
+  - 不动 Brain/.dna 的 Dependencies 段 (D4 推后)
+  - 不动 PrefrontalCortex 以外的脑区文件 (ParietalLobe/Hippocampus/MotorCortex/NativeMotorCortex/ExternalMotorCortex/ClaudeCodeMotorCortex 全部不动)
+
+================================================================================
+ARCH_PLAN (JSON, 完整, 8 task, T8-T15)
+================================================================================
+
+[
+  {
+    "id": "T8-circuit-ir-types",
+    "description": "在 v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/ 落地 NeuralCircuit IR 全部数据类型: NeuralCircuit (immutable, sealed) + CircuitNode (abstract base) + CallBrainNode / BranchNode / ReturnNode 三个 v1 首发子类 + CallToolNode 占位 (留 internal sealed 但本轮不被 Builder 使用) + CircuitEdge。namespace 全部用 CBIM.AgentSystem.Kernel.Synapse.Compiler。本切片只产出 IR 数据类型, 不写 Builder, 不写 ToolFactory, 不写 Executor。",
+    "required_capability": "unity-csharp-programmer",
+    "depends_on": [],
+    "arch_context": {
+      "必读_dna": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/.dna/module.md (Positioning + 类型契约 + 铁律 K6/K7)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/.dna/module.md (类型契约段 全文, 重点: NeuralCircuit / CircuitNode / 5 子类签名 / v1 节点矩阵表 / 铁律 C1/C4/C5)"
+      ],
+      "必读_cs": [
+        "v2/cbim/Assets/CBIM/Agent/Brain/BrainBase.cs (CallBrainNode.TargetBrainId 字符串验证将引用 BrainBase.BrainId 字段; 本切片本身不依赖, 但需理解 BrainId 形如 'motor-cortex.native')",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/SynapseToolFactory.cs (作为类似规模 + 风格的样板: 类头 XML doc 引铁律 / 字段验证习惯 / 异常消息中文)"
+      ],
+      "新增文件清单": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/NeuralCircuit.cs (sealed class)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/CircuitNode.cs (public abstract class)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/CallBrainNode.cs (sealed)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/CallToolNode.cs (sealed; v1 留位类型, 本轮 Builder 不产, 但类型签名要齐, 供 C5 开闭原则验证)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/BranchNode.cs (sealed)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/ReturnNode.cs (sealed)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/CircuitEdge.cs (sealed)"
+      ],
+      "类型签名": {
+        "NeuralCircuit": "public sealed class NeuralCircuit { public string CircuitId { get; } public string SourceRequest { get; } public string StartNodeId { get; } public IReadOnlyList<CircuitNode> Nodes { get; } public IReadOnlyList<CircuitEdge> Edges { get; } public DateTimeOffset CompiledAt { get; } public NeuralCircuit(string circuitId, string sourceRequest, string startNodeId, IReadOnlyList<CircuitNode> nodes, IReadOnlyList<CircuitEdge> edges, DateTimeOffset compiledAt) { /* null/empty 校验 + 字段冻结 + Nodes/Edges 转为 new ReadOnlyCollection */ } }",
+        "CircuitNode": "public abstract class CircuitNode { public string NodeId { get; } public string Label { get; } protected CircuitNode(string nodeId, string label) { /* null/empty 校验 */ } }",
+        "CallBrainNode": "public sealed class CallBrainNode : CircuitNode { public string TargetBrainId { get; } public string Intent { get; } public string? StructuredInputJson { get; } public CallBrainNode(string nodeId, string label, string targetBrainId, string intent, string? structuredInputJson) : base(nodeId, label) { /* targetBrainId/intent 非空校验; structuredInputJson 可空 */ } }",
+        "CallToolNode": "public sealed class CallToolNode : CircuitNode { public string ToolName { get; } public string ArgsJson { get; } public CallToolNode(string nodeId, string label, string toolName, string argsJson) : base(nodeId, label) { /* ... */ } }  // v1 留位; Builder 本轮不产, 但类型签名齐全可供未来 C5 扩展",
+        "BranchNode": "public sealed class BranchNode : CircuitNode { public string ConditionExpression { get; } public BranchNode(string nodeId, string label, string conditionExpression) : base(nodeId, label) { /* ConditionExpression 非空校验; v1 仅在 Orchestrator 评估时校验 contains/equals 语法 */ } }",
+        "ReturnNode": "public sealed class ReturnNode : CircuitNode { public string SummaryTemplate { get; } public ReturnNode(string nodeId, string label, string summaryTemplate) : base(nodeId, label) { /* SummaryTemplate 允许 '{previous.summary}' 占位符 */ } }",
+        "CircuitEdge": "public sealed class CircuitEdge { public string FromNodeId { get; } public string ToNodeId { get; } public string? BranchLabel { get; } public CircuitEdge(string fromNodeId, string toNodeId, string? branchLabel) { /* From/To 非空; BranchLabel null 表示无条件边 */ } }"
+      },
+      "关键算法步骤": {
+        "不变量保护": "NeuralCircuit 构造器接收 nodes/edges 后立即包 new ReadOnlyCollection<>(list) (System.Collections.ObjectModel) 确保 K7 immutable; CompiledAt 用 DateTimeOffset 而非 DateTime, 一律 ToUniversalTime",
+        "校验范围": "本切片只做单值非空 / 集合非 null 校验; 不做图连通性 / 无环 / 节点引用合法性校验 (那是 NeuralCircuitBuilder.Commit 的责任, T9 做)",
+        "NodeId 格式": "字段值由调用方传入 (Builder 会用 'n01' / 'n02' 自增); 本切片仅做 string.IsNullOrWhiteSpace 校验"
+      },
+      "下游 task 消费": "T9 (Builder 产出 NeuralCircuit) / T10 (CompilerToolFactory 通过 Builder 调本类) / T11 (Executor 读 CircuitNode 子类) / T12 (CircuitToWorkflowCompiler 用 switch on CircuitNode 派生类型) / T14 (PrefrontalCortex 持 NeuralCircuit 后落盘 + 调 Orchestrator) / T15 (测试覆盖)",
+      "协调点": "本切片无任何依赖, 是 8 task 的起点; T9 / T11 都需本切片产出后才能开工; T9 (Builder) 与 T11 (Executor 包) 可并行, 都依赖 T8",
+      "铁律": [
+        "K7 IR 不可变 (本切片是物理护栏: 字段全 get-only + Nodes/Edges 包 ReadOnlyCollection)",
+        "C1 编译产物不可变 (同 K7)",
+        "C5 节点类型扩展走开闭 (本切片把 CircuitNode 设为 abstract; 新增节点类型走继承, 不改基类)",
+        "K6 Compiler 不引用 Orchestrator 命名空间 (本切片仅引 BCL, 不引 MAF, 不引 Brain)"
+      ],
+      "Out_Of_Scope": [
+        "不实装 NeuralCircuitBuilder (T9 做)",
+        "不实装 ParallelNode / WaitUserNode (Compiler/.dna Non-Goals 注: v1 不发)",
+        "不做 JSON 序列化 attribute / SourceGenerator (T14 落盘走 System.Text.Json 默认反射, 本切片字段全 public get 即可)",
+        "不写 Tests (T15 集中写)"
+      ]
+    }
+  },
+  {
+    "id": "T9-neural-circuit-builder",
+    "description": "在 v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/ 落地 NeuralCircuitBuilder (per-invocation mutable state, sealed, 编译完即丢) + CircuitCompilationException (sealed Exception, 用于 Commit 时整体校验失败回退主脑). Builder 提供 AddCallBrain/AddBranch/AddReturn/AddEdge/Commit 5 个公开方法 (供 T10 的 AITool handler 调用); 每步即时校验; Commit 做整体连通性 + 无环 + Branch 出边 ≥2 + ReturnNode 存在 4 项校验。本切片只产 Builder 与 Exception, 不产 AITool。",
+    "required_capability": "unity-csharp-programmer",
+    "depends_on": ["T8-circuit-ir-types"],
+    "arch_context": {
+      "必读_dna": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/.dna/module.md (重点: 类型契约 NeuralCircuitBuilder 段 / CompilerToolFactory 段中 __circuit_add_* 工具名清单 / 编译失败回退段 全文 / 铁律 C1/C3/C5)"
+      ],
+      "必读_cs": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/NeuralCircuit.cs (T8 产出, Builder 在 Commit 时构造)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/CircuitNode.cs (+ 4 子类, T8 产出, Builder Add 方法返回 NodeId 字符串)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/CircuitEdge.cs (T8 产出)"
+      ],
+      "新增文件清单": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/NeuralCircuitBuilder.cs (sealed)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/CircuitCompilationException.cs (sealed Exception)"
+      ],
+      "类型签名": {
+        "NeuralCircuitBuilder": "public sealed class NeuralCircuitBuilder { public string CircuitId { get; } public NeuralCircuit? Compiled { get; private set; } public NeuralCircuitBuilder(string circuitId, string sourceRequest) { /* circuitId 非空 (调用方传 Guid 字符串); sourceRequest 缓存供 Commit 用 */ } public string AddCallBrain(string label, string targetBrainId, string intent, string? structuredInputJson) { /* 即时校验: targetBrainId 不为空 (但合法性 (palette 中是否存在) 不在本类校验, 推给 T11 BrainCallExecutor 装配期校验) → 分配 nodeId 'n01' / 'n02' (自增) → new CallBrainNode → 添加 → 返回 nodeId */ } public string AddBranch(string label, string conditionExpression) { /* 同上, 即时校验 conditionExpression 非空; v1 不解析语法, 留 Orchestrator 评估 */ } public string AddReturn(string label, string summaryTemplate) { /* 同上 */ } public void AddEdge(string fromNodeId, string toNodeId, string? branchLabel) { /* 即时校验: fromNodeId/toNodeId 必须已在节点表中 (否则抛 InvalidOperationException → AITool handler 包成 ToolException 反馈 LLM); BranchLabel 仅当 fromNodeId 对应 BranchNode 时非空, 当 fromNodeId 对应 CallBrainNode 时必为 null (即时校验) */ } public NeuralCircuit Commit() { /* 整体校验四项: 1) 至少 1 ReturnNode (否则抛 CircuitCompilationException('图未声明终止节点 ReturnNode')); 2) StartNode→任意 ReturnNode 有路径 (BFS); 3) 无环 (DFS visited+recStack); 4) 每个 BranchNode 出边 ≥2 且每条出边 BranchLabel 非空; 通过则: 设 StartNodeId = 第一个 Add 进来的节点 (按 Add 顺序确定; 文档化在 XML doc), CompiledAt = DateTimeOffset.UtcNow, 构造 NeuralCircuit, 写 this.Compiled, 返回。Commit 后再次调用任何 Add 抛 InvalidOperationException('builder 已 commit, 不可再修改')。*/ } }",
+        "CircuitCompilationException": "public sealed class CircuitCompilationException : Exception { public string Reason { get; } public CircuitCompilationException(string reason) : base($'NeuralCircuit 编译失败: {reason}') { Reason = reason; } } // 主脑 PrefrontalCortex.InvokeAsync 捕获后回退用户澄清 (C3 铁律)"
+      },
+      "关键算法步骤": {
+        "NodeId 自增": "internal int _nextId 从 1 开始; 每次 Add* 都用 $'n{_nextId++:D2}' 生成 (n01 → n99 够本轮; n01-n999 也可改 D3, 装配期没限制)",
+        "StartNodeId 决定规则": "第一个 Add 进来的节点是 StartNode (Compiler/.dna 隐含; 文档化在 Commit XML doc 与 NeuralCircuitBuilder 类头)。LLM 在编译期需先 add_call_brain (或 add_branch) 作为入口, 这与 prompt 引导一致",
+        "连通性 BFS": "队列起始放 StartNodeId; 用 HashSet<string> visited 记录已访问; 邻接表从 Edges 反向构造 (Dictionary<fromNodeId, List<toNodeId>>); 每个 ReturnNode 是否在 visited 内? 若任一 ReturnNode 不可达则抛",
+        "无环 DFS": "经典三色 (white/gray/black); 检出 backedge 抛 CircuitCompilationException('图含环, 节点 nXX 形成回路')",
+        "Branch 出边校验": "foreach BranchNode bn: edges.Where(e => e.FromNodeId == bn.NodeId).ToList(); 若 count < 2 抛 ('BranchNode nXX 至少需要 2 条出边'); 若 any BranchLabel null 抛 ('BranchNode nXX 出边必须带 BranchLabel')"
+      },
+      "下游 task 消费": "T10 (CompilerToolFactory 在每个 __circuit_add_* AITool handler 内调本 Builder); T14 (PrefrontalCortex.InvokeAsync 装配期 new NeuralCircuitBuilder, 调用后读 builder.Compiled 是否非 null 决定走 FlowGraph 路径还是退化路径)",
+      "协调点": "本切片严格在 T8 完成后; T10 等本切片完成; T11 / T12 仅依赖 T8 (不依赖 Builder), 可与本切片并行",
+      "铁律": [
+        "C1 编译产物不可变 (Commit 后 builder.Compiled.Nodes/Edges 都是 T8 包过的 ReadOnlyCollection)",
+        "C3 校验失败必回退 (Commit 抛 CircuitCompilationException, 不允许半图执行)",
+        "C5 开闭 (新增节点类型 → 加 AddCallTool/AddParallel 方法, 不改既有 Add 签名)",
+        "K6 Builder 不引用 Orchestrator (仅引 BCL)"
+      ],
+      "Out_Of_Scope": [
+        "不做 ConditionExpression 语法校验 (留 Orchestrator T11 评估器做)",
+        "不实装 AddCallTool / AddParallel / AddWaitUser (v1 不发)",
+        "不接管 LLM ToolException 包装 (本类抛通用 InvalidOperationException + CircuitCompilationException; AITool handler 在 T10 把它转 ToolException)",
+        "不写 Tests"
+      ]
+    }
+  },
+  {
+    "id": "T10-compiler-tool-factory",
+    "description": "在 v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/ 落地 CompilerToolFactory (静态类, 产 __circuit_* AITool 集) + 内部 AITool handler 委托。命名规则: __circuit_start / __circuit_add_call_brain / __circuit_add_branch / __circuit_add_return / __circuit_add_edge / __circuit_commit (共 6 个). 每个 AITool handler 内调 builder 的对应方法, 把 IR 状态变更 + 校验错误反射为 ToolException 返 LLM (FunctionInvokingChatClient 自动重试 LLM)。本切片只产工厂 + handler, 不动 Builder, 不动 Brain。",
+    "required_capability": "unity-csharp-programmer",
+    "depends_on": ["T9-neural-circuit-builder"],
+    "arch_context": {
+      "必读_dna": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/.dna/module.md (重点: CompilerToolFactory 段 全文 / 编译失败回退段 1) 即时校验 / 铁律 C2/C3)"
+      ],
+      "必读_cs": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/NeuralCircuitBuilder.cs (T9 产出, 6 个 handler 全部调用本类)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/SynapseToolFactory.cs (样板: AIFunctionFactory.Create 用法 / Description 中文撰写惯例 / handler 异常包装 / BrainId 不感知具体类型)",
+        "v2/cbim/Assets/CBIM/Agent/Brain/BrainBase.cs (handler 中 __circuit_add_call_brain 接收 targetBrainId 字符串; 即时校验 'targetBrainId 必须在 callableBrains 的 BrainId 集合中' 时引)"
+      ],
+      "新增文件清单": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/CompilerToolFactory.cs (public static class)"
+      ],
+      "类型签名": {
+        "CompilerToolFactory": "public static class CompilerToolFactory { public static IReadOnlyList<AITool> Build(NeuralCircuitBuilder builder, IReadOnlyList<BrainBase> callableBrains) { /* builder/callableBrains 非空; 调用 6 个内部静态 Build* 方法返回工具列表 */ } }",
+        "6 个 AITool 工具名 + schema": [
+          "__circuit_start(sourceRequest: string) → string nodeIdNone='' (实际 sourceRequest 在 builder ctor 已传入, 这个工具只是「请 LLM 显示宣告开始编译」, 让 builder 把 sourceRequest 写入 Builder.SourceRequest 字段; 如果 T9 已在 ctor 接收则本工具可仅返回 'started' 字面量 + 校验未已 Commit 过)",
+          "__circuit_add_call_brain(label: string, targetBrainId: string, intent: string, structuredInputJson: string?): string newNodeId  // handler: 1) 验证 targetBrainId ∈ callableBrains.Select(b=>b.BrainId) 否则抛 ToolException('targetBrainId xxx 不在可调脑区集合; 可选: brainId1, brainId2, ...') 2) builder.AddCallBrain(...) 3) 返回 newNodeId",
+          "__circuit_add_branch(label: string, conditionExpression: string): string newNodeId  // handler: 1) 验证 conditionExpression 形如 '<token> contains \"<value>\"' 或 '<token> equals \"<value>\"' (极简正则, 失败抛 ToolException) 2) builder.AddBranch(...) 3) 返回 newNodeId",
+          "__circuit_add_return(label: string, summaryTemplate: string): string newNodeId  // handler: builder.AddReturn(...) 返回 newNodeId",
+          "__circuit_add_edge(fromNodeId: string, toNodeId: string, branchLabel: string?): string 'ok'  // handler: builder.AddEdge(...) (InvalidOperationException → ToolException)",
+          "__circuit_commit(): string  // handler: try { var circuit = builder.Commit(); return $'committed circuit {circuit.CircuitId} with {circuit.Nodes.Count} nodes, {circuit.Edges.Count} edges'; } catch (CircuitCompilationException ex) { throw new InvalidOperationException($'commit 失败: {ex.Reason}'); } // FunctionInvokingChatClient 会把 InvalidOperationException 反 LLM"
+        ],
+        "异常映射": "InvalidOperationException (Builder 拒收 / commit 整体失败) → 委托 AIFunctionFactory 默认包成 tool error response, LLM 下一轮看到错信自修正; CircuitCompilationException → 在 __circuit_commit handler 内重包成 InvalidOperationException, msg 保留 Reason"
+      },
+      "关键算法步骤": {
+        "AIFunctionFactory.Create 风格": "参考 SynapseToolFactory.cs: 用 [Description('...中文说明...')] 标注参数; XML doc 写在 BuildXxx 静态方法上 (LLM 读 description 决定何时调)",
+        "callableBrains 来自哪": "Build 入参 (由 PrefrontalCortex 在装配期传入, 与 SynapseToolFactory.Build 同一份 callableBrains 列表)",
+        "structuredInputJson 类型": "string? (不是 object); 与 SynapseToolFactory 一致 (Synapse cs 注释说明了 msai 对 object? 生成空 schema 的问题)",
+        "Description 引导用法": "__circuit_add_call_brain.description = 'Declare a step that will dispatch user intent to a specific brain. Use after __circuit_start; can be chained.' (中英都行, 但与现存工厂一致用中文)",
+        "Build 返回顺序": "[start, add_call_brain, add_branch, add_return, add_edge, commit] — LLM 看到这个顺序自然按编译流程使用"
+      },
+      "下游 task 消费": "T14 (PrefrontalCortex.InvokeAsync 在 prefrontal Neuron 装配期把本 Factory 与 SynapseToolFactory 产出的工具拼到 standardAITools 一起注入 NeuronAssemblyContext)",
+      "协调点": "本切片严格在 T9 完成后 (调 builder 方法); 与 T11/T12/T13 互不阻塞 (Executor 包不引 CompilerToolFactory)",
+      "铁律": [
+        "C2 IR 构建工具只发给主脑 (本工厂仅产工具; 是否仅注主脑由调用方 PrefrontalCortex T14 控制)",
+        "C3 校验失败必回退 (__circuit_commit handler 不允许 swallow 异常硬走)",
+        "K3 Synapse 是跨脑区机制唯一出口 (Brain 不准定义另一组 __circuit_* AITool)",
+        "C4 Compiler ⊥ Orchestrator (本工厂不 using Orchestrator)",
+        "K6 Compiler 不引用 Orchestrator 命名空间"
+      ],
+      "Out_Of_Scope": [
+        "不产 __circuit_add_call_tool / __circuit_add_parallel / __circuit_add_wait_user (v1 不发)",
+        "不接管 prompt 引导 (Soul prompt 在 PrefrontalCortex 描述符里; 不在本工厂)",
+        "不管 builder 生命周期 (per-invocation new 由 PrefrontalCortex 在 T14 控制)",
+        "不写 Tests"
+      ]
+    }
+  },
+  {
+    "id": "T11-orchestrator-executors-and-message",
+    "description": "在 v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/ 落地 MAF Executor 包 + 节点间 envelope: CircuitMessage (sealed class, History 字典) + BrainCallExecutor (调 BrainBase.InvokeAsync + 上报 IPrefrontalCallback.ReportProgress) + BranchExecutor (评估 ConditionExpression + 选择出边 BranchLabel) + ReturnExecutor (渲染 SummaryTemplate + YieldOutputAsync + RequestHaltAsync) + ConditionEvaluator (极简, 仅 contains / equals)。本切片只产 Executor + Message + Evaluator, 不产 CircuitToWorkflowCompiler (T12), 不产 CBIMOrchestrator (T13)。",
+    "required_capability": "unity-csharp-programmer",
+    "depends_on": ["T8-circuit-ir-types"],
+    "arch_context": {
+      "必读_dna": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/.dna/module.md (重点: 类型契约 / CircuitToWorkflowCompiler 段 中 BrainCallExecutor/BranchExecutor/ReturnExecutor 责任表 / CircuitMessage 段 全文 / 节点失败段 / 铁律 O1/O3/O4/O5)"
+      ],
+      "必读_cs": [
+        "v2/cbim/Assets/CBIM/Agent/Brain/BrainBase.cs (BrainCallExecutor 持 BrainBase 引用调 InvokeAsync)",
+        "v2/cbim/Assets/CBIM/Agent/Brain/BrainInvocation.cs (BrainCallExecutor 构造 BrainInvocation 调 InvokeAsync 的入参)",
+        "v2/cbim/Assets/CBIM/Agent/Brain/BrainOutcome.cs (Executor 把 outcome.Summary 写入 CircuitMessage.LastSummary 与 History)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/IPrefrontalCallback.cs (BrainCallExecutor 与 ReturnExecutor 用 callback.ReportProgress 上报)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/CallBrainNode.cs / BranchNode.cs / ReturnNode.cs (T8 产出, Executor 持节点引用读字段)"
+      ],
+      "新增文件清单": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/CircuitMessage.cs (sealed class)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/CircuitExecutionException.cs (sealed Exception, Executor 抛出 → Orchestrator 收 WorkflowErrorEvent)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/ConditionEvaluator.cs (internal static, 仅 contains/equals)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/BrainCallExecutor.cs (sealed, 继承 MAF Executor<CircuitMessage>)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/BranchExecutor.cs (sealed, 继承 MAF Executor<CircuitMessage>)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/ReturnExecutor.cs (sealed, 继承 MAF Executor<CircuitMessage, string>)"
+      ],
+      "类型签名": {
+        "CircuitMessage": "public sealed class CircuitMessage { public string CircuitId { get; } public string FromNodeId { get; } public string? BranchLabel { get; } public string LastSummary { get; } public IReadOnlyDictionary<string, BrainOutcome> History { get; } public CircuitMessage(string circuitId, string fromNodeId, string? branchLabel, string lastSummary, IReadOnlyDictionary<string, BrainOutcome> history) { /* null 校验; History 包 new ReadOnlyDictionary */ } public CircuitMessage WithNext(string newFromNodeId, string newLastSummary, BrainOutcome? appendOutcome, string? newBranchLabel) { /* 不可变更新; History.ToDictionary 后 Add appendOutcome (若非 null); 返新 CircuitMessage */ } }",
+        "BrainCallExecutor": "public sealed class BrainCallExecutor : Executor<CircuitMessage> { private readonly string _nodeId; private readonly CallBrainNode _node; private readonly BrainBase _brain; private readonly IPrefrontalCallback _callback; public BrainCallExecutor(string nodeId, CallBrainNode node, BrainBase brain, IPrefrontalCallback callback) : base(nodeId) { /* null 校验 + BrainBase.BrainId == node.TargetBrainId 校验 (否则抛 CircuitExecutionException) */ } [HandlerAttribute] public async ValueTask HandleAsync(CircuitMessage message, IWorkflowContext context, CancellationToken ct) { _callback.ReportProgress('@orchestrator', $'running node {_nodeId} (brain={_brain.BrainId})'); var invocation = new BrainInvocation(correlationId: Guid.NewGuid().ToString(), intent: _node.Intent, structuredInput: _node.StructuredInputJson, context: new Dictionary<string, object> { ['previous'] = message.LastSummary }); var outcome = await _brain.InvokeAsync(invocation, ct).ConfigureAwait(false); if (outcome.IsError) { await context.AddEventAsync(new ExecutorFailedEvent(_nodeId, outcome.ErrorMessage ?? 'unknown error')).ConfigureAwait(false); await context.RequestHaltAsync().ConfigureAwait(false); return; } var next = message.WithNext(_nodeId, outcome.Summary, outcome, branchLabel: null); await context.SendMessageAsync(next, ct).ConfigureAwait(false); } }",
+        "BranchExecutor": "public sealed class BranchExecutor : Executor<CircuitMessage> { private readonly string _nodeId; private readonly BranchNode _node; public BranchExecutor(string nodeId, BranchNode node) : base(nodeId) { } [HandlerAttribute] public async ValueTask HandleAsync(CircuitMessage message, IWorkflowContext context, CancellationToken ct) { var matchedLabel = ConditionEvaluator.Evaluate(_node.ConditionExpression, message); // matchedLabel 是 'true' 或 'false' 或 一段 string 标签 var next = message.WithNext(_nodeId, message.LastSummary, appendOutcome: null, newBranchLabel: matchedLabel); await context.SendMessageAsync(next, ct).ConfigureAwait(false); } }",
+        "ReturnExecutor": "public sealed class ReturnExecutor : Executor<CircuitMessage, string> { private readonly string _nodeId; private readonly ReturnNode _node; public ReturnExecutor(string nodeId, ReturnNode node) : base(nodeId) { } [HandlerAttribute] public async ValueTask<string> HandleAsync(CircuitMessage message, IWorkflowContext context, CancellationToken ct) { var rendered = RenderTemplate(_node.SummaryTemplate, message); // 占位符 {previous.summary} → message.LastSummary; {node_n03.summary} → message.History['n03'].Summary await context.YieldOutputAsync(rendered).ConfigureAwait(false); await context.RequestHaltAsync().ConfigureAwait(false); return rendered; } private static string RenderTemplate(string template, CircuitMessage message) { /* 极简: Regex 替换 {previous.summary} / {node_XXX.summary} */ } }",
+        "ConditionEvaluator": "internal static class ConditionEvaluator { public static string Evaluate(string conditionExpression, CircuitMessage message) { /* 解析 '<lhs> <op> \"<rhs>\"', op ∈ {contains, equals}; lhs 形如 'previous.summary' 或 'node_n03.summary'; 求值后返回 'true' 或 'false' (字符串, 作为 BranchLabel 给下游 AddEdge.condition lambda 匹配) */ } }",
+        "CircuitExecutionException": "public sealed class CircuitExecutionException : Exception { public string NodeId { get; } public CircuitExecutionException(string nodeId, string reason) : base($'节点 {nodeId} 执行失败: {reason}') { NodeId = nodeId; } }"
+      },
+      "关键算法步骤": {
+        "MAF Executor 基类用法": "Microsoft.Agents.AI.Workflows 提供 Executor<TIn> 与 Executor<TIn, TOut> 基类; 子类用 [HandlerAttribute] 标记处理方法; ctor 第 1 参 nodeId 为本 Executor 在图中的唯一标识 (与 CircuitNode.NodeId 一致)",
+        "ConditionEvaluator 语法范围": "v1 只识 ' contains ' 与 ' equals ' (前后空格); lhs 'previous.summary' 取 message.LastSummary, 'node_<id>.summary' 取 message.History[<id>].Summary; rhs 必为双引号字符串字面量; 不识 AND/OR/NOT/比较运算符 (留 ExpressionEngine 子模块未来)",
+        "BranchLabel 协议": "ConditionEvaluator 返回字面量 'true' 或 'false' (作字符串); CircuitEdge.BranchLabel 由 LLM 在编译期写入 'true' / 'false' (与 ConditionExpression 求值结果一致); T12 CircuitToWorkflowCompiler 用 condition lambda msg => msg.BranchLabel == edge.BranchLabel 路由",
+        "异常映射": "BrainBase.InvokeAsync 抛异常 → BrainCallExecutor catch + context.AddEventAsync(new ExecutorFailedEvent) + context.RequestHaltAsync; outcome.IsError 同样路径; T13 Orchestrator 收 WorkflowErrorEvent / ExecutorFailedEvent 后包成 BrainOutcome(IsError=true)",
+        "RenderTemplate 实现": "private static readonly Regex _placeholderRegex = new(@'\\{previous\\.summary\\}|\\{node_(?<id>n\\d+)\\.summary\\}', RegexOptions.Compiled); 用 Match.Replace 替换"
+      },
+      "下游 task 消费": "T12 (CircuitToWorkflowCompiler 装配 Executor 到 MAF WorkflowBuilder); T13 (Orchestrator.RunAsync 包 MAF.RunStreamingAsync); T15 (测试覆盖)",
+      "协调点": "本切片严格在 T8 完成后 (引 CircuitNode 子类); 与 T9 / T10 并行 (Executor 包不引 Builder, 不引 CompilerToolFactory); T12 依赖本切片",
+      "铁律": [
+        "O1 不重造 MAF (Executor 全部继承 MAF Executor<>, 不另起执行框架)",
+        "O3 Fail-fast (节点失败直接 RequestHaltAsync, 不做 fallback 路由)",
+        "O4 上报绕 IPrefrontalCallback (Executor 不直接调 Channel)",
+        "O5 Compiler ⊥ Orchestrator (本切片仅引 Compiler 的 IR 数据类型, 不引 NeuralCircuitBuilder / CompilerToolFactory)",
+        "K6 三 leaf 互不引用 (本切片不引 SynapseToolFactory)",
+        "K4 Synapse ⊥ Neuron (本切片不引 Kernel.Neuron)"
+      ],
+      "Out_Of_Scope": [
+        "不实装 CallToolExecutor / ParallelExecutor / WaitUserExecutor (v1 不发)",
+        "不接管 MAF Checkpoint (默认不启)",
+        "不接管 BrainPalette 来源 (T13 RunAsync 入参传入)",
+        "不写 Tests"
+      ]
+    }
+  },
+  {
+    "id": "T12-circuit-to-workflow-compiler",
+    "description": "在 v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/ 落地 CircuitToWorkflowCompiler (internal static 类) — 输入 NeuralCircuit + IReadOnlyList<BrainBase> palette + IPrefrontalCallback callback, 输出 MAF Workflow 实例。switch on CircuitNode 派生类型装配 BrainCallExecutor/BranchExecutor/ReturnExecutor; 遍 CircuitEdge 添 AddEdge<CircuitMessage>; 验证 brainPalette 含所有 CallBrainNode.TargetBrainId 否则抛 CircuitCompilationException。本切片只产 Compiler, 不产 Orchestrator 门面 (T13)。",
+    "required_capability": "unity-csharp-programmer",
+    "depends_on": ["T11-orchestrator-executors-and-message"],
+    "arch_context": {
+      "必读_dna": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/.dna/module.md (重点: CircuitToWorkflowCompiler 段 全文 / BrainPalette 段 / CircuitMessage 段 / Mermaid)"
+      ],
+      "必读_cs": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/NeuralCircuit.cs / CircuitNode.cs + 5 子类 (T8, switch on type)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/CircuitEdge.cs (T8)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/CircuitMessage.cs / *Executor.cs (T11, 本切片装配)",
+        "v2/cbim/Assets/CBIM/Agent/Brain/BrainBase.cs (palette 元素类型)"
+      ],
+      "新增文件清单": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/CircuitToWorkflowCompiler.cs (internal static class)"
+      ],
+      "类型签名": {
+        "CircuitToWorkflowCompiler": "internal static class CircuitToWorkflowCompiler { public static Workflow Compile(NeuralCircuit circuit, IReadOnlyList<BrainBase> brainPalette, IPrefrontalCallback callback) { /* 见关键算法步骤 */ } }"
+      },
+      "关键算法步骤": {
+        "装配主体": "var startExecutor = <按 circuit.StartNodeId 派生类型构造 Executor>; var builder = new WorkflowBuilder(startExecutor); var executorMap = new Dictionary<string, Executor> { [circuit.StartNodeId] = startExecutor }; foreach (var node in circuit.Nodes where node.NodeId != circuit.StartNodeId) { var executor = BuildExecutor(node, brainPalette, callback); builder.BindExecutor(executor); executorMap[node.NodeId] = executor; }",
+        "BuildExecutor switch": "switch (node) { case CallBrainNode cb: var brain = brainPalette.FirstOrDefault(b => b.BrainId == cb.TargetBrainId) ?? throw new CircuitCompilationException($'brain {cb.TargetBrainId} 不在 palette 中 (palette: {string.Join(\",\", brainPalette.Select(b => b.BrainId))})'); return new BrainCallExecutor(cb.NodeId, cb, brain, callback); case BranchNode br: return new BranchExecutor(br.NodeId, br); case ReturnNode rn: return new ReturnExecutor(rn.NodeId, rn); case CallToolNode: throw new NotSupportedException('CallToolNode v1 不支持执行'); default: throw new NotSupportedException($'未知节点类型 {node.GetType().Name}'); }",
+        "AddEdge 路由": "foreach (var edge in circuit.Edges) { var from = executorMap[edge.FromNodeId]; var to = executorMap[edge.ToNodeId]; if (edge.BranchLabel == null) { builder.AddEdge<CircuitMessage>(from, to); } else { var label = edge.BranchLabel; builder.AddEdge<CircuitMessage>(from, to, condition: msg => msg.BranchLabel == label); } }",
+        "Output 标记": "foreach (var node in circuit.Nodes.OfType<ReturnNode>()) { builder.WithOutputFrom(executorMap[node.NodeId]); }",
+        "校验 + Build": "return builder.Build(validateOrphans: true);"
+      },
+      "下游 task 消费": "T13 (CBIMOrchestrator.RunAsync 内部调本类产 Workflow 后传 InProcessExecution.RunStreamingAsync); T15 (测试: 用 fake palette 调本类拿 Workflow 实例做断言)",
+      "协调点": "本切片严格在 T11 完成后; T13 依赖本切片",
+      "铁律": [
+        "O1 不重造 MAF (用 WorkflowBuilder + AddEdge<>, 不另起图框架)",
+        "O5 Compiler ⊥ Orchestrator (本类引 Compiler 的 IR 类型 OK; 但 Compiler 不能反向引本类; 本类是 Orchestrator 内部 internal, 不暴露给 Compiler)",
+        "K6 三 leaf 互不引用 (本类不引 SynapseToolFactory)",
+        "K4 Synapse ⊥ Neuron (不引 Kernel.Neuron)"
+      ],
+      "Out_Of_Scope": [
+        "不接管 Workflow 执行 (本类只 Compile, T13 RunAsync 负责执行)",
+        "不接管 BrainPalette 来源 (T13 RunAsync 入参传入)",
+        "不实装 CallToolNode 装配路径 (v1 抛 NotSupportedException; T11 Executor 包未实装)",
+        "不写 Tests"
+      ]
+    }
+  },
+  {
+    "id": "T13-cbim-orchestrator-facade",
+    "description": "在 v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/ 落地 CBIMOrchestrator (sealed public class) — 公开 2 方法: RunAsync (生产路径, 调 InProcessExecution.RunStreamingAsync + 迮代 WorkflowEvent + 收 finalSummary + 返 BrainOutcome) + CompileToMafWorkflow (debug 路径, 直接调 T12 的 CircuitToWorkflowCompiler.Compile)。WorkflowEvent 路由: ExecutorInvokedEvent/ExecutorCompletedEvent → callback.ReportProgress; WorkflowOutputEvent → 收 finalSummary; WorkflowErrorEvent/ExecutorFailedEvent → 包 BrainOutcome(IsError=true)。本切片只产门面, 不动 PrefrontalCortex (T14)。",
+    "required_capability": "unity-csharp-programmer",
+    "depends_on": ["T12-circuit-to-workflow-compiler"],
+    "arch_context": {
+      "必读_dna": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/.dna/module.md (重点: 类型契约 CBIMOrchestrator 段 / 节点失败 / 重试 / 图回滚 段 / 进度回报 与 Channel.OnOutput 段 / 铁律 O1/O3/O4)"
+      ],
+      "必读_cs": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/NeuralCircuit.cs (T8, RunAsync 入参)",
+        "v2/cbim/Assets/CBIM/Agent/Brain/BrainBase.cs / BrainOutcome.cs (RunAsync 入参 + 返回类型)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/IPrefrontalCallback.cs (RunAsync 入参)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/CircuitToWorkflowCompiler.cs (T12, 本类内部调)"
+      ],
+      "新增文件清单": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/CBIMOrchestrator.cs (sealed public class)"
+      ],
+      "类型签名": {
+        "CBIMOrchestrator": "public sealed class CBIMOrchestrator { public async Task<BrainOutcome> RunAsync(NeuralCircuit circuit, IReadOnlyList<BrainBase> brainPalette, IPrefrontalCallback callback, CancellationToken ct) { /* 见关键算法步骤 */ } public Workflow CompileToMafWorkflow(NeuralCircuit circuit, IReadOnlyList<BrainBase> brainPalette) { /* 调 CircuitToWorkflowCompiler.Compile, callback 用 NullPrefrontalCallback.Instance (本切片内 internal static) */ } }"
+      },
+      "关键算法步骤": {
+        "RunAsync 主流程": "1) 校验 circuit/palette/callback 非空 + circuit.Nodes 非空; 2) var workflow = CircuitToWorkflowCompiler.Compile(circuit, brainPalette, callback); 3) 构造 startMessage = new CircuitMessage(circuit.CircuitId, fromNodeId: '@orchestrator-start', branchLabel: null, lastSummary: circuit.SourceRequest, history: new Dictionary<string, BrainOutcome>()); 4) await using var run = await InProcessExecution.StreamAsync(workflow, startMessage, ct); 5) string? finalSummary = null; List<string> errors = new(); 6) await foreach (var ev in run.WatchStreamAsync(ct)) { switch (ev) { case ExecutorInvokedEvent inv: callback.ReportProgress('@orchestrator', $'running node {inv.ExecutorId}'); break; case ExecutorCompletedEvent cmp: callback.ReportProgress('@orchestrator', $'node {cmp.ExecutorId} done'); break; case WorkflowOutputEvent out: if (out.Data is string s) finalSummary = s; break; case WorkflowErrorEvent err: errors.Add(err.Exception?.Message ?? 'unknown workflow error'); break; case ExecutorFailedEvent failed: errors.Add($'node {failed.ExecutorId}: {failed.Reason}'); break; } } 7) if (errors.Count > 0) return new BrainOutcome(summary: string.Empty, isError: true, errorMessage: string.Join('; ', errors), structuredOutput: null, sideEffects: Array.Empty<SideEffect>()); 8) if (finalSummary == null) return new BrainOutcome(summary: string.Empty, isError: true, errorMessage: 'circuit 执行完成但未产出 ReturnNode 输出', ...); 9) return new BrainOutcome(summary: finalSummary, isError: false, errorMessage: null, structuredOutput: null, sideEffects: Array.Empty<SideEffect>());",
+        "MAF API 名": "Microsoft.Agents.AI.Workflows 实际 API 名以本仓 Brain/Tests/ 中已用形态为准 (若 InProcessExecution.RunStreamingAsync / StreamAsync 等名有出入, 以 MAF 包文档为准, 不为名字硬绑死)",
+        "NullPrefrontalCallback": "internal sealed class NullPrefrontalCallback : IPrefrontalCallback { public static readonly NullPrefrontalCallback Instance = new(); public void ReportProgress(string brainId, string message) { } public void ReportOutcome(string brainId, BrainOutcome outcome) { } } // 供 CompileToMafWorkflow (debug 路径) 内部用",
+        "BrainOutcome 构造器签名": "以 v2/cbim/Assets/CBIM/Agent/Brain/BrainOutcome.cs 当前签名为准 (T1-T7 已稳定); 不在本切片重塑 BrainOutcome"
+      },
+      "下游 task 消费": "T14 (PrefrontalCortex.InvokeAsync 在 builder.Compiled != null 时 new CBIMOrchestrator() 调 RunAsync)",
+      "协调点": "本切片严格在 T12 完成后; T14 依赖本切片 + T10",
+      "铁律": [
+        "O1 不重造 MAF (RunAsync 内全部委托 InProcessExecution.StreamAsync; CBIM 不写 SuperStep 调度)",
+        "O3 Fail-fast (任何 WorkflowErrorEvent 直接返 IsError=true; 不重试)",
+        "O4 上报绕 IPrefrontalCallback (Orchestrator 不引 Channel; ReportProgress 是唯一对外口子)",
+        "K6 Orchestrator 不引 SynapseToolFactory / Compiler 的 CompilerToolFactory (仅引 Compiler 的 IR 数据类型, 经 T12)",
+        "K4 Synapse ⊥ Neuron (不引 Kernel.Neuron)"
+      ],
+      "Out_Of_Scope": [
+        "不实装 MAF Checkpoint (留 OrchestratorOptions, v2 加)",
+        "不实装节点级重试 (O3)",
+        "不接管 PrefrontalCortex 装配 (T14)",
+        "不写 Tests"
+      ]
+    }
+  },
+  {
+    "id": "T14-prefrontal-cortex-flowgraph-integration",
+    "description": "改 v2/cbim/Assets/CBIM/Agent/Brain/PrefrontalCortex.cs: 装配期同时挂 SynapseToolFactory (已有, 不动) + CompilerToolFactory (新增, T10) 到 NeuronAssemblyContext.StandardAITools; PrefrontalCortex 持 NeuralCircuitBuilder (per-invocation, 每次 InvokeAsync 新建); 重写 InvokeAsync — 调完 Neuron.InvokeAsync 后查 builder.Compiled, 非 null 走 FlowGraph 路径 (new CBIMOrchestrator + RunAsync), null 走退化路径 (直接返 Neuron 结果); FlowGraph 路径在 RunAsync 前把 NeuralCircuit JSON 落盘 .cbim/agentsystem/sessions/{instanceId}/circuits/{circuitId}.json (用 System.Text.Json, 路径由调用方注入 IAgentInstanceContext 提供 instanceId)。本切片改 PrefrontalCortex.cs 一份文件 + 可能补 1 个小辅助接口 IAgentInstanceContext (若 v2 已有则复用)。",
+    "required_capability": "unity-csharp-programmer",
+    "depends_on": ["T10-compiler-tool-factory", "T13-cbim-orchestrator-facade"],
+    "arch_context": {
+      "必读_dna": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/.dna/module.md (重点: FlowGraph 全链路径 段 / 装配期 Phase 2 装主脑 全部三段 / 运行期 主脑接到 user request 流程)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/.dna/module.md (重点: NL 到 NeuralCircuit 编译方案选择 / CompilerToolFactory 段 / 落盘审计 段 全文 — 路径 .cbim/agentsystem/sessions/{instanceId}/circuits/{circuitId}.json + 用户决策注释)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/.dna/module.md (重点: CBIMOrchestrator 段 / BrainPalette 段 — 'AgentInstance.Brains 填')",
+        "v2/cbim/Assets/CBIM/Agent/Brain/.dna/module.md (重点: PrefrontalCortex 段)"
+      ],
+      "必读_cs": [
+        "v2/cbim/Assets/CBIM/Agent/Brain/PrefrontalCortex.cs (主改文件; T7 已重写过, 本切片在其上再加 InvokeAsync override + 装配期工具拼接)",
+        "v2/cbim/Assets/CBIM/Agent/Brain/BrainBase.cs (基类 InvokeAsync 实现, 本类需 override)",
+        "v2/cbim/Assets/CBIM/Agent/Brain/BrainInvocation.cs / BrainOutcome.cs (override 签名)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Neuron/NeuronAssemblyContext.cs (装配期 StandardAITools 字段, 把 SynapseToolFactory + CompilerToolFactory 产物拼到一起)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/SynapseToolFactory.cs (已有, 调用方式样板)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/CompilerToolFactory.cs (T10 新增, 本切片调)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/NeuralCircuitBuilder.cs (T9, 本切片每次 InvokeAsync 新建)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/CBIMOrchestrator.cs (T13, 本切片调 RunAsync)",
+        "v2/cbim/Assets/CBIM/Agent/Workspace/ (查找 AgentSystem.OpenInstance 实现 + 现有 IAgentInstanceContext 抽象, 若已存在则注入 instanceId; 若不存在则建议轻量接口 + Out_Of_Scope 提示由后续 task 落 hook)"
+      ],
+      "改动文件清单": [
+        "v2/cbim/Assets/CBIM/Agent/Brain/PrefrontalCortex.cs (主改: ctor 加 IAgentInstanceContext 参数 + override InvokeAsync + 调 CompilerToolFactory 的逻辑下沉到 AgentSystem.OpenInstance 还是留 PrefrontalCortex.ctor — 见关键算法步骤)"
+      ],
+      "新增文件清单 (条件)": [
+        "v2/cbim/Assets/CBIM/Agent/Brain/IAgentInstanceContext.cs (仅当 Workspace/ 下未找到; 接口仅含 string InstanceId { get; } 一字段)"
+      ],
+      "类型签名": {
+        "PrefrontalCortex ctor 改动": "在现有签名末尾加 IAgentInstanceContext instanceContext 参数 (供 InvokeAsync 落盘期取 instanceId)",
+        "PrefrontalCortex.InvokeAsync override": "public override async Task<BrainOutcome> InvokeAsync(BrainInvocation invocation, CancellationToken ct) { var builder = new NeuralCircuitBuilder(circuitId: Guid.NewGuid().ToString(), sourceRequest: invocation.Intent); var compilerTools = CompilerToolFactory.Build(builder, CallableBrains); /* compilerTools 本应在 Neuron 装配期挂到 ctx.StandardAITools, 而非每次 InvokeAsync 重挂 — 见关键算法步骤 决策表 */ var llmResult = await base.Neuron.InvokeAsync(invocation, ct).ConfigureAwait(false); if (builder.Compiled != null) { var circuit = builder.Compiled; await PersistCircuitJsonAsync(circuit, ct).ConfigureAwait(false); var orchestrator = new CBIMOrchestrator(); return await orchestrator.RunAsync(circuit, brainPalette: BuildOrchestratorPalette(), callback: Callback ?? new PrefrontalCallbackAdapter(noop), ct).ConfigureAwait(false); } return llmResult; } private async Task PersistCircuitJsonAsync(NeuralCircuit circuit, CancellationToken ct) { var dir = Path.Combine('.cbim', 'agentsystem', 'sessions', _instanceContext.InstanceId, 'circuits'); Directory.CreateDirectory(dir); var path = Path.Combine(dir, $'{circuit.CircuitId}.json'); var json = JsonSerializer.Serialize(circuit, new JsonSerializerOptions { WriteIndented = true }); await File.WriteAllTextAsync(path, json, ct).ConfigureAwait(false); } private IReadOnlyList<BrainBase> BuildOrchestratorPalette() => CallableBrains.Concat(new[] { (BrainBase)this }).ToList();  // palette 含主脑 (供 ReturnNode 引用) + 全部子脑区"
+      },
+      "关键算法步骤": {
+        "compilerTools 装配位置决策": "推荐方案 A: 在 AgentSystem.OpenInstance Phase 2 装主脑时, 一次性 SynapseToolFactory.Build(callable) + CompilerToolFactory.Build(builder, callable) 拼到 prefrontalCtx.StandardAITools (与 dna 装配期伪代码一致); 但此 builder 必须在每次 InvokeAsync 新建 — 这与 'Neuron 装配期工具集是静态的' 冲突. 解法: AgentSystem 创建 PrefrontalCortex 时传一个 NeuralCircuitBuilder 工厂委托 Func<NeuralCircuitBuilder> 给 PrefrontalCortex.ctor, PrefrontalCortex 在每次 InvokeAsync 调委托产新 builder + 调 CompilerToolFactory.Build + 把这一轮产物经 INeuron 的某种『per-invocation 工具补充』机制注入 — 但 INeuron 当前 API 不支持. 退化方案 B (本切片采用): compilerTools 在 PrefrontalCortex.ctor 时一次性产 + 挂到 Neuron, 但 builder 是 'singleton per Cortex 实例'; 每次 InvokeAsync 调 builder.Reset() 清掉旧 state. 需在 T9 NeuralCircuitBuilder 补 Reset() 公开方法. 若 T9 已固化为 immutable 状态 (无 Reset), 则方案 C: builder 是字段, 每次 InvokeAsync 替换为新实例 + 重新调 CompilerToolFactory.Build + 把工具集传给 INeuron — 仍需 INeuron 支持 per-invocation 工具补充; 若不支持则把 compilerTools 改为 'AIFunction 引用 builder 字段 (闭包捕获)', builder 字段每次 InvokeAsync 重赋, AIFunction handler 永远读最新 builder 字段值 (这是本切片推荐). 决策: 采用方案 C — PrefrontalCortex._activeBuilder 字段每次 InvokeAsync 替换; CompilerToolFactory 在 ctor 时调一次拿到 AITool 集, 内部 handler 永远经 PrefrontalCortex._activeBuilder 取当前 builder (通过 PrefrontalCortex 暴露 internal 取值器). 若实施期发现 CompilerToolFactory.Build 接受 NeuralCircuitBuilder 强引用 (T10 设计), 则改 CompilerToolFactory.Build 接受 Func<NeuralCircuitBuilder> 委托 — 注意此处可能需要回手调 T10 的 CompilerToolFactory 签名; 若代价过高则用方案 D: PrefrontalCortex 不通过 Neuron 内 AITool 编图, 而是 InvokeAsync 内手动驱动 'LLM → tool call → parse → call builder' 循环 (绕过 FunctionInvokingChatClient 自动调用 — 失去 msai 自动化优势). 方案 C 仍是首选; 实施期遇到不可解再回头评估方案 D",
+        "落盘路径硬编码": "Path.Combine('.cbim', 'agentsystem', 'sessions', instanceId, 'circuits') — 与 D3 决策一致; 项目根从 cwd 取 (与现有 jsonl 落盘惯例一致, AgentSystem.OpenInstance 时已确定 cwd)",
+        "palette 含主脑": "RunNode 渲染 SummaryTemplate 时可能需引主脑 history; palette 设计含全部脑区便于 BranchExecutor/ReturnExecutor 在未来扩展引主脑 outcome. v1 主脑通常不被 CallBrainNode 调 (Soul prompt 不引导), 但 palette 含主脑无副作用",
+        "callback fallback": "Callback 属性可能为 null (T7 注 PrefrontalCortex 的 callback 恒为 null); 此处 RunAsync 必传 IPrefrontalCallback, 故构造一个 noop adapter: new PrefrontalCallbackAdapter(onProgress: (_,_) => { }, onOutcome: (_,_) => Task.CompletedTask) — 实际 PrefrontalCallbackAdapter 现存签名以 T1-T7 为准, 调整入参以适配"
+      },
+      "下游 task 消费": "T15 (Tests 走完 PrefrontalCortex 端到端)",
+      "协调点": "本切片严格在 T10/T13 之后; 关于 NeuralCircuitBuilder 工厂签名: 若实施期发现 T10 的 CompilerToolFactory 强引 NeuralCircuitBuilder, 本切片可能需要回手与 T10 协商把签名改为 Func<NeuralCircuitBuilder> — 这是 8 task 中唯一可能回手的点 (T9/T10/T14 三方协调); 建议 T9 ctor 不锁死, 允许 builder 字段在 PrefrontalCortex 中作 internal mutable 引用",
+      "铁律": [
+        "K3 主脑唯一调度 (本切片 PrefrontalCortex 同时调度编译 + 执行, 没引入新调度方)",
+        "K2 Neuron 是唯一 LLM 出口 (本切片不绕开 Neuron 调 LLM)",
+        "C2 IR 构建工具只发给主脑 (本切片只把 compilerTools 挂到 PrefrontalCortex 的 Neuron, 子脑区不挂)",
+        "C3 校验失败必回退 (PrefrontalCortex.InvokeAsync 不 catch CircuitCompilationException 硬走; 让异常上抛由 BrainBase 包成 BrainOutcome(IsError=true), 主脑下一轮 Soul prompt 引导用户澄清)",
+        "落盘路径必为 .cbim/agentsystem/sessions/{instanceId}/circuits/{circuitId}.json (D3 决策)"
+      ],
+      "Out_Of_Scope": [
+        "不改 SynapseToolFactory (已有, T2 稳定)",
+        "不实装 PrefrontalAggregationStrategy 行为 (T7 已注: 本轮仅留枚举与字段)",
+        "不实装 Soul prompt 内容 (PrefrontalCortex.Descriptor.Soul 由调用方传入; 本切片仅消费 Descriptor, 不写 Soul)",
+        "不动 NeuronAssemblyContext (T1 稳定)",
+        "不动 AgentSystem.OpenInstance (Workspace 层文件; 实施期若发现 Phase 2 装主脑需补 compilerTools 拼接, 由本切片在 PrefrontalCortex.ctor 中接管, 不动 OpenInstance)",
+        "不写 Tests"
+      ]
+    }
+  },
+  {
+    "id": "T15-tests-and-compile-check",
+    "description": "(1) 在 v2/cbim/Assets/CBIM/Agent/Brain/Tests/ 与 v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/Tests/ + Orchestrator/Tests/ (如目录不存在则新增) 下新增 NUnit 测试: 覆盖 NeuralCircuit IR 不变量 / NeuralCircuitBuilder 5 项 Commit 校验 / CompilerToolFactory 6 个工具的 ToolException 路径 / ConditionEvaluator contains+equals / BrainCallExecutor outcome.IsError 路径 / ReturnExecutor RenderTemplate 占位符 / CircuitToWorkflowCompiler palette 缺失 throw / CBIMOrchestrator RunAsync 端到端 (3-node 直线 + Branch 双出口) / PrefrontalCortex FlowGraph 路径 + 退化路径 + JSON 落盘. (2) 跑全仓库 dotnet build (或 Unity Editor 报错复盘) 确保 0 编译错. (3) 跑测试套确保 0 失败.",
+    "required_capability": "unity-csharp-programmer",
+    "depends_on": ["T14-prefrontal-cortex-flowgraph-integration"],
+    "arch_context": {
+      "必读_dna": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/.dna/module.md (铁律 K3/K4/K6/K7 / FlowGraph 全链路径)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/.dna/module.md (铁律 C1-C5 / 编译失败回退 / 落盘审计)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/.dna/module.md (铁律 O1-O5 / 节点失败处理)"
+      ],
+      "必读_cs": [
+        "v2/cbim/Assets/CBIM/Agent/Brain/Tests/ 全部已有测试 (NeuronFactoryTests / SynapseToolFactoryTests / OpenInstanceIntegrationTests 等 — T1-T7 已建立的样板风格)",
+        "v2/cbim/Assets/CBIM/Agent/Brain/Tests/FakeChatClient.cs / FakeExternalEngineAdapter.cs / InMemoryFakeMemoryService.cs / FakePrefrontalCallback.cs (现有 fake, 复用)",
+        "本轮 T8-T14 全部新增/修改文件 (作为待测对象)"
+      ],
+      "新增/更新测试文件清单": [
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/Tests/NeuralCircuitInvariantTests.cs (覆盖 T8 IR 不变量: null/empty 校验 / Nodes/Edges 是 ReadOnlyCollection)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/Tests/NeuralCircuitBuilderTests.cs (覆盖 T9: AddCallBrain/AddBranch/AddReturn/AddEdge 即时校验 / Commit 5 项校验 / Commit 后再 Add throw / StartNodeId = 首个 Add 节点)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Compiler/Tests/CompilerToolFactoryTests.cs (覆盖 T10: 6 个工具名存在 / __circuit_add_call_brain targetBrainId 不在 palette 抛 ToolException / __circuit_commit 失败包 InvalidOperationException)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/Tests/ConditionEvaluatorTests.cs (覆盖 T11 evaluator: 'previous.summary contains \"x\"' 真 + 假 / 'node_n03.summary equals \"y\"' / 语法错抛)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/Tests/ExecutorTests.cs (覆盖 T11: BrainCallExecutor outcome.IsError → RequestHaltAsync / ReturnExecutor RenderTemplate {previous.summary} 渲染 / BranchExecutor 多分支 BranchLabel 设置)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/Tests/CircuitToWorkflowCompilerTests.cs (覆盖 T12: palette 缺 brain throw / CallToolNode throw / 正常 build 通过)",
+        "v2/cbim/Assets/CBIM/Agent/Kernel/Synapse/Orchestrator/Tests/CBIMOrchestratorEndToEndTests.cs (覆盖 T13: 3-node 直线 [CallBrain→Return] 路径正常返 / Branch 双出口 contains 'approved' 走分支 A / outcome.IsError 端到端返 IsError=true)",
+        "v2/cbim/Assets/CBIM/Agent/Brain/Tests/PrefrontalCortexFlowGraphTests.cs (覆盖 T14: FakeChatClient 模拟 LLM 调 __circuit_* 序列 → builder.Compiled 非 null → 走 FlowGraph 路径 → 验证 JSON 文件落盘到正确路径 .cbim/agentsystem/sessions/{instanceId}/circuits/{circuitId}.json; 另一测试 LLM 不调 __circuit_* → builder.Compiled 为 null → 走退化路径返 llmResult)"
+      ],
+      "关键算法步骤": {
+        "测试目录结构选择": "若 Compiler/ 与 Orchestrator/ 下不允许放 Tests/ 子目录 (Unity asmdef 规则), 则全部测试统一放 v2/cbim/Assets/CBIM/Agent/Brain/Tests/ 下并保持 namespace 反映被测子模块; 否则各子模块 Tests/ 单独 asmdef. 实施期先查 Brain/Tests/CBIM.AgentSystem.Brain.Tests.asmdef 是否引 Kernel.Neuron/Synapse, 若已引则可统一放 Brain/Tests/",
+        "mock 策略": "用现存 FakeChatClient (FakeChatClient.cs) 模拟 LLM tool call 序列; 模拟 6 个 __circuit_* 工具被有序调到; FakeChatClient 返 ChatMessage with FunctionCallContent ; FunctionInvokingChatClient 真实调 handler",
+        "JSON 落盘验证": "测试中传 IAgentInstanceContext mock with InstanceId='test-instance-001'; 跑 InvokeAsync 后 assert File.Exists('.cbim/agentsystem/sessions/test-instance-001/circuits/<circuitId>.json'); 用 Path.Combine; 测试 setup 在 临时目录 (Environment.CurrentDirectory 切到 TestContext.CurrentContext.TestDirectory 子目录) 避免污染仓库",
+        "MAF 端到端": "CBIMOrchestratorEndToEndTests 构造 fake BrainBase (重写 InvokeAsync 返预设 BrainOutcome) palette → 手工 new NeuralCircuit (绕 Builder, 直接 Test fixture 注 IR) → 调 orchestrator.RunAsync → assert 返 outcome.Summary 匹配 / IsError",
+        "编译验证": "Unity 项目跑 csc 或 dotnet build (具体调用以 v2/cbim/ 现有 build 脚本 / asmdef 编译惯例为准); 0 错 0 警告 (除已存在的 obsolete)"
+      },
+      "下游 task 消费": "无 (本切片是终点)",
+      "协调点": "本切片严格在 T14 完成后; 若 T8-T14 任一前置失败需回退",
+      "铁律": [
+        "测试只引 public 类型 (CircuitToWorkflowCompiler 是 internal, 通过 InternalsVisibleTo 暴露给 Orchestrator.Tests asmdef)",
+        "测试不绕过 K1-K7 / C1-C5 / O1-O5 (如不在测试中 new ChatClientAgent 直绕 K2)",
+        "测试 JSON 落盘必验证完整路径 .cbim/agentsystem/sessions/{instanceId}/circuits/{circuitId}.json (D3 决策)"
+      ],
+      "Out_Of_Scope": [
+        "不写性能测试 (本轮无性能目标)",
+        "不写 MAF Checkpoint 测试 (Orchestrator v1 未启 Checkpoint)",
+        "不写 WaitUserNode/ParallelNode/CallToolNode 测试 (v1 不实装)",
+        "不写 ClaudeCodeMotorCortex 端到端 (与本轮无关)"
+      ]
+    }
+  }
+]
+
+================================================================================
+END OF PAYLOAD (v3)
+================================================================================

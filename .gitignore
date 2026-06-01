@@ -8,6 +8,7 @@ Library/
 obj/
 Temp/
 *.csproj
+v2/cbim/Logs/
 
 #.claude/
 #CLAUDE.md

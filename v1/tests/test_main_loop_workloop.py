@@ -264,7 +264,7 @@ def test_malformed_arch_reply_routes_to_user_input_not_done():
     arch, tree = _mini_tree_with_arch_yield()
     bb = _mini_bb(arch_plan=None, work_results={})
     bb.user_request = "implement login form"
-    bb.knowledge_snapshot = None
+    bb.retrieved_context = None
 
     # First tick drives ArchExecYield → RUNNING with pending_dispatch set.
     assert tree.tick(bb) is Status.RUNNING
@@ -320,7 +320,7 @@ def test_multiline_arch_plan_parses_through_sub_tree():
     arch, tree = _mini_tree_with_arch_yield()
     bb = _mini_bb(arch_plan=None, work_results={})
     bb.user_request = "implement login form"
-    bb.knowledge_snapshot = None
+    bb.retrieved_context = None
 
     # First tick → architect dispatch yields RUNNING.
     assert tree.tick(bb) is Status.RUNNING

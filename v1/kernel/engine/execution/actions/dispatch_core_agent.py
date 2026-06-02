@@ -71,7 +71,12 @@ class DispatchCoreAgent(Node):
         result = (bb.work_results or {}).get(key)
         if result is not None:
             status = result.get("status") if isinstance(result, dict) else None
-            if status == "ok":
+            # 'needs_user_input' is not a failure — the core agent finished its
+            # turn and is asking the user a question. Sequence must continue so
+            # the downstream SwitchBranch can route to Respond(mode='need_user')
+            # and render the question. Only 'failed' (and unrecognized status)
+            # short-circuits the branch.
+            if status in ("ok", "needs_user_input"):
                 return Status.SUCCESS
             return Status.FAILURE
 
@@ -85,14 +90,25 @@ class DispatchCoreAgent(Node):
         return Status.RUNNING
 
     def on_resume(self, bb, payload) -> None:
+        from .receipt import parse_trailer
+
         text = payload if isinstance(payload, str) else (
             payload.get("output", "") if isinstance(payload, dict) else str(payload)
         )
         key = _result_key(self.agent_type)
+        trailer = parse_trailer(text, dispatch_task_id=key)
+
         new_results = dict(bb.work_results or {})
         new_results[key] = {
-            "status": "ok",
+            "status": trailer.status,
+            "summary": trailer.summary,
+            "question": trailer.question,
+            "blocking_module": trailer.blocking_module,
+            "failure_kind": trailer.failure_kind,
+            "artifacts": list(trailer.artifacts),
+            "agent": trailer.agent,
             "output": text,
+            "extras": dict(trailer.extras),
             "raw": payload if not isinstance(payload, str) else None,
         }
         bb.work_results = new_results

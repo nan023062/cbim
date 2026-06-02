@@ -1,12 +1,13 @@
 """actions/mode_classify.py — classify user_request → bb.mode.
 
-Five-mode policy (v3.7 — tighten core-agent patterns, prioritize execution verbs):
+Five-mode policy (v3.8 — add core-agent explicit-naming tier, narrow audit/architect bare keywords):
   1. Rule path — keyword/pattern tables. Deterministic; no LLM call.
      - architect-preempt (split/merge/deprecate a module, update .dna) → architect
-     - execution verbs (implement/add/fix/refactor/build/…)            → execution
-     - explicit architect request (design a module / ask architect …) → architect
-     - explicit hr request (recruit X agent / ask HR …)                → hr
-     - explicit auditor request (audit X / ask auditor / code review)  → audit
+     - core-agent explicit naming (ask/let/找/让/请/叫/派给/交给 + architect/HR/auditor) → matching role
+     - execution verbs (implement/add/fix/refactor/修一下/改一下/…)    → execution
+     - architect meta-task patterns (design a module / draw architecture …) → architect
+     - hr lifecycle patterns (recruit X agent / 招 X agent …)          → hr
+     - audit verb-form patterns (do a code review / 独立审查 …)        → audit
      - questions / lookups / greetings                                 → conversation
      - everything else (default)                                       → execution
   2. PR-D: the LLM fallback branch is gone. The kernel performs no LLM
@@ -18,24 +19,37 @@ Empty / whitespace-only request → "conversation" so DirectReply ships a
 friendly "please describe what you want" message instead of blowing up
 the execution pipeline.
 
-Precedence on rule conflict (v3.7):
-  architect-preempt > execution-verb > architect-request > hr-request >
-  audit-request > conversation > default ("execution").
+Precedence on rule conflict (v3.8):
+  architect-preempt > core-agent explicit naming > execution-verb >
+  architect-request (remaining) > hr-request (remaining) >
+  audit-request (remaining) > conversation > default ("execution").
 
-The v3.5/v3.6 ordering (`architect > hr > audit > execution-verb`) used
-bare topic keywords ("architecture" / "audit" / "module.md" / "recruit")
-that hijacked execution requests like "implement audit logging" or
-"refactor the architecture module". v3.7 flips precedence so the
-execution verb wins by default, and restricts the three core-agent
-tables to explicit dispatch phrasing — either naming the role
-(ask/let/dispatch/找/让 + architect/HR/auditor) or pairing a meta-task
-verb with that role's exclusive deliverable (design a module, draw the
-architecture, recruit an agent, audit X, do a code review …).
+The v3.7 ordering placed execution-verb before all three core-agent
+tables, which broke two cross-table cases:
+  - "修一下审计日志的 bug" → audit (bare "审计" hit audit-b4; "修一下"
+    was missing from the execution Chinese verb row)
+  - "请审计员做架构评审"  → architect ("做+架构" in architect-b5 ran
+    before the audit table, so the explicit "请审计员" naming lost)
 
-The single exception is the architect-preempt layer, which fires
-BEFORE execution verbs for "split/merge/deprecate a module" and
-"update .dna" — these have no execution landing (their real output is
-.dna edits, not source-code edits) and are unambiguously architect work.
+v3.8 fixes both by (a) hoisting the explicit "ask/请 + role" patterns
+into a dedicated tier ABOVE execution-verb so explicit dispatch always
+wins, (b) extending the execution Chinese verb row with 修一下/改一下/
+调一下/顺手修/顺便改/改个/修个, (c) narrowing audit-b4 to drop bare
+"审计" (it is now only an audit signal when paired with a review verb
+or appears in audit-b5/b6 verb-form patterns), and (d) narrowing the
+architect-b5 deliverable list so bare "架构" no longer matches (only
+"架构图" / "架构设计"; "架构评审/审查" is audit territory).
+
+The architect-preempt layer still fires FIRST for "split/merge/deprecate
+a module" and "update .dna" — these have no execution landing and are
+unambiguously architect work.
+
+Example precedence walk-through:
+  - "修一下审计日志的 bug"  → execution-verb tier (修一下) wins
+  - "请审计员做架构评审"    → core-agent naming tier (请+审计员) wins
+  - "请架构师设计登录模块"  → core-agent naming tier (请+架构师) wins
+  - "design a new login module" → architect-request tier (no explicit
+    naming, no execution verb)
 
 NEVER fails (returns SUCCESS always). The mode is a routing decision, not
 an error condition.
@@ -79,6 +93,63 @@ _ARCHITECT_PREEMPT_PATTERNS = [
 
 
 # ---------------------------------------------------------------------------
+# Core-agent explicit naming — "ask/let/.../dispatch + role" (English) and
+# "让/请/找/问/叫/派给/交给 + 角色" (Chinese). Hoisted out of the per-role
+# _ARCHITECT_PATTERNS / _HR_PATTERNS / _AUDIT_PATTERNS so explicit naming
+# beats execution verbs and beats every other core-agent meta-task table.
+#
+# Order within this list is the tie-break for the (rare) case where a single
+# request names two roles. The first match wins, so list order is
+# significant — keep this stable.
+# ---------------------------------------------------------------------------
+
+_CORE_AGENT_NAMING_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
+    # architect — English dispatch verb + architect
+    (
+        "architect",
+        re.compile(
+            r"\b(ask|let|have|tell|dispatch|send|consult|get|find|invoke)\s+"
+            r"(the\s+)?architect\b",
+            re.IGNORECASE,
+        ),
+    ),
+    # architect — Chinese 让 / 请 / 找 / 问 / 叫 / 派给 / 交给 架构师
+    (
+        "architect",
+        re.compile(r"(让|请|找|问|叫|派给|交给)\s*架构师"),
+    ),
+    # hr — English dispatch verb + HR
+    (
+        "hr",
+        re.compile(
+            r"\b(ask|let|have|tell|dispatch|send|consult|get|find|invoke)\s+"
+            r"(the\s+)?hr\b",
+            re.IGNORECASE,
+        ),
+    ),
+    # hr — Chinese 让 / 请 / 找 / 问 / 叫 / 派给 / 交给 HR
+    (
+        "hr",
+        re.compile(r"(让|请|找|问|叫|派给|交给)\s*HR", re.IGNORECASE),
+    ),
+    # audit — English dispatch verb + auditor
+    (
+        "audit",
+        re.compile(
+            r"\b(ask|let|have|tell|dispatch|send|consult|get|find|invoke)\s+"
+            r"(the\s+)?auditor\b",
+            re.IGNORECASE,
+        ),
+    ),
+    # audit — Chinese 让 / 请 / 找 / 问 / 叫 / 派给 / 交给 审计员
+    (
+        "audit",
+        re.compile(r"(让|请|找|问|叫|派给|交给)\s*审计员"),
+    ),
+]
+
+
+# ---------------------------------------------------------------------------
 # Execution verbs — broad action verbs that signal "code is going to move".
 # ---------------------------------------------------------------------------
 
@@ -89,7 +160,8 @@ _EXECUTION_PATTERNS = [
         re.IGNORECASE,
     ),
     re.compile(
-        r"(实现|新增|修复|重构|加(一?个|入)|创建|拆分|合并|废弃|更新|删除|改写|重写)"
+        r"(实现|新增|修复|重构|加(一?个|入)|创建|拆分|合并|废弃|更新|删除|改写|重写"
+        r"|修一下|改一下|调一下|顺手修|顺便改|改个|修个)"
     ),
 ]
 
@@ -102,14 +174,10 @@ _EXECUTION_PATTERNS = [
 # ---------------------------------------------------------------------------
 
 _ARCHITECT_PATTERNS = [
-    # (a1) English: dispatch verb + architect
-    re.compile(
-        r"\b(ask|let|have|tell|dispatch|send|consult|get|find|invoke)\s+"
-        r"(the\s+)?architect\b",
-        re.IGNORECASE,
-    ),
-    # (a2) Chinese: 让 / 请 / 找 / 问 / 叫 / 派给 / 交给 架构师
-    re.compile(r"(让|请|找|问|叫|派给|交给)\s*架构师"),
+    # NOTE: a1/a2 (English/Chinese explicit "ask/请 + architect") moved
+    # to _CORE_AGENT_NAMING_PATTERNS so explicit naming wins over
+    # execution verbs. This table now holds only the meta-task (b*)
+    # patterns that fire AFTER the execution-verb table.
     # (b1) English: design + architect-exclusive deliverable
     # Allows up to 4 modifier words between "design [a/the/new]" and the
     # deliverable noun, so "design a new login module" still matches.
@@ -138,10 +206,12 @@ _ARCHITECT_PATTERNS = [
         r"(knowledge\s+pack|context\s*pack)\b",
         re.IGNORECASE,
     ),
-    # (b5) Chinese: architect meta-task verbs + deliverable nouns
+    # (b5) Chinese: architect meta-task verbs + deliverable nouns.
+    # v3.8: bare "架构" removed — "架构评审/架构审查" is audit territory.
+    # Only "架构图" / "架构设计" remain as architect-exclusive deliverables.
     re.compile(
         r"(画|出|做|提供|写|准备|生成)\s*(一?份|一?张|一?套)?\s*"
-        r"(设计|蓝图|架构|知识包|context\s*pack|模块划分|模块边界|契约设计)"
+        r"(设计|蓝图|架构图|架构设计|知识包|context\s*pack|模块划分|模块边界|契约设计)"
     ),
     # (b6) Chinese: 模块化 / 重构架构 / 拆分模块 / 合并模块 / 定义契约 / 架构设计
     re.compile(r"(模块化|重构架构|拆分模块|合并模块|定义契约|架构设计)"),
@@ -155,14 +225,9 @@ _ARCHITECT_PATTERNS = [
 # ---------------------------------------------------------------------------
 
 _HR_PATTERNS = [
-    # (a1) English: dispatch verb + HR
-    re.compile(
-        r"\b(ask|let|have|tell|dispatch|send|consult|get|find|invoke)\s+"
-        r"(the\s+)?hr\b",
-        re.IGNORECASE,
-    ),
-    # (a2) Chinese: 让 / 请 / 找 / 问 / 叫 / 派给 / 交给 HR
-    re.compile(r"(让|请|找|问|叫|派给|交给)\s*HR", re.IGNORECASE),
+    # NOTE: a1/a2 (English/Chinese explicit "ask/请 + HR") moved to
+    # _CORE_AGENT_NAMING_PATTERNS. This table holds only the lifecycle
+    # (b*) patterns that fire AFTER the execution-verb table.
     # (b1) English: recruit / hire / onboard / … + agent
     # Allows up to 4 modifier words between the verb and "agent" so
     # "recruit a python backend engineer agent" still matches.
@@ -194,14 +259,9 @@ _HR_PATTERNS = [
 # ---------------------------------------------------------------------------
 
 _AUDIT_PATTERNS = [
-    # (a1) English: dispatch verb + auditor
-    re.compile(
-        r"\b(ask|let|have|tell|dispatch|send|consult|get|find|invoke)\s+"
-        r"(the\s+)?auditor\b",
-        re.IGNORECASE,
-    ),
-    # (a2) Chinese: 让 / 请 / 找 / 问 / 叫 / 派给 / 交给 审计员
-    re.compile(r"(让|请|找|问|叫|派给|交给)\s*审计员"),
+    # NOTE: a1/a2 (English/Chinese explicit "ask/请 + auditor") moved
+    # to _CORE_AGENT_NAMING_PATTERNS. This table holds only the
+    # verb-form audit (b*) patterns that fire AFTER the execution-verb table.
     # (b1) English: independent review / second opinion / sanity / governance check
     re.compile(
         r"\b(independent\s+(review|audit|critique)|second\s+opinion|"
@@ -220,11 +280,24 @@ _AUDIT_PATTERNS = [
         r"(code\s*review|design\s*review|architecture\s*review|audit)\b",
         re.IGNORECASE,
     ),
-    # (b4) Chinese: 独立审查 / 复盘 / 挑刺 / 质疑 / code review
+    # (b4) Chinese: 独立审查 / 复盘 / 挑刺 / 质疑 / 提出反对意见
+    # 独立(...)审查/审核/复核/评审 — allow up to 6 Chinese chars between
+    # the "独立" prefix and the verb-noun, so phrases like
+    # "独立对抗式审查" / "独立对项目的审查" still match.
+    # v3.8: bare "审计" dropped — "审计日志" is a noun phrase about the
+    # subject, not an audit request. Audit signal now requires either an
+    # explicit review verb (审查/审核/复核/评审/复盘/挑刺/质疑) or one of
+    # the verb-form patterns in b5/b6, or explicit "请+审计员" naming.
     re.compile(
-        r"(审计|独立审查|独立审核|独立复核|独立评审|"
-        r"复盘|挑刺|找问题|质疑|提出反对意见|做\s*code\s*review)"
+        r"(独立.{0,6}?(审查|审核|复核|评审)|"
+        r"复盘|挑刺|找问题|质疑|提出反对意见)"
     ),
+    # (b5) Chinese: prefix-noun + verb-noun audit phrasing
+    # e.g. 全盘审查 / 全面评审 / 整体复盘 / 架构评审 / 代码审查 / 设计审核
+    re.compile(r"(全盘|全面|整体|架构|代码|设计)\s*(审查|审核|评审|复盘)"),
+    # (b6) Chinese: 做 + (一次|一轮|一遍|个)? + 审查/审核/评审/code review
+    # e.g. 做一次审查 / 做一轮评审 / 做个 code review / 做 code review
+    re.compile(r"做\s*(一次|一轮|一遍|个)?\s*(审查|审核|评审|code\s*review)", re.IGNORECASE),
 ]
 
 
@@ -254,9 +327,10 @@ class ModeClassify(Node):
             bb.mode = "conversation"
             return Status.SUCCESS
 
-        # v3.7 precedence:
-        #   architect-preempt > execution-verb > architect-request >
-        #   hr-request > audit-request > conversation > default.
+        # v3.8 precedence:
+        #   architect-preempt > core-agent explicit naming > execution-verb >
+        #   architect-request (remaining b*) > hr-request (remaining b*) >
+        #   audit-request (remaining b*) > conversation > default.
 
         # 1. Architect preempt — split/merge/deprecate a module, update .dna.
         for pat in _ARCHITECT_PREEMPT_PATTERNS:
@@ -264,37 +338,45 @@ class ModeClassify(Node):
                 bb.mode = "architect"
                 return Status.SUCCESS
 
-        # 2. Execution verbs — the broad default for "code is going to move".
+        # 2. Core-agent explicit naming — "ask/let/请/找/让 + role".
+        # Wins over execution verbs so "请审计员审一下" lands on audit
+        # even when an execution verb appears in the same sentence.
+        for mode, pat in _CORE_AGENT_NAMING_PATTERNS:
+            if pat.search(text):
+                bb.mode = mode
+                return Status.SUCCESS
+
+        # 3. Execution verbs — the broad default for "code is going to move".
         for pat in _EXECUTION_PATTERNS:
             if pat.search(text):
                 bb.mode = "execution"
                 return Status.SUCCESS
 
-        # 3. Explicit architect request.
+        # 4. Remaining architect meta-task patterns (b*).
         for pat in _ARCHITECT_PATTERNS:
             if pat.search(text):
                 bb.mode = "architect"
                 return Status.SUCCESS
 
-        # 4. Explicit HR request.
+        # 5. Remaining HR lifecycle patterns (b*).
         for pat in _HR_PATTERNS:
             if pat.search(text):
                 bb.mode = "hr"
                 return Status.SUCCESS
 
-        # 5. Explicit auditor request.
+        # 6. Remaining audit verb-form patterns (b*).
         for pat in _AUDIT_PATTERNS:
             if pat.search(text):
                 bb.mode = "audit"
                 return Status.SUCCESS
 
-        # 6. Conversation-shaped phrasing.
+        # 7. Conversation-shaped phrasing.
         for pat in _CONVERSATION_PATTERNS:
             if pat.search(text):
                 bb.mode = "conversation"
                 return Status.SUCCESS
 
-        # 7. Rule miss — default to execution (the safe "send through
+        # 8. Rule miss — default to execution (the safe "send through
         # the Architect → Work pipeline" path). The kernel performs no
         # LLM classification; the architect itself reroutes (via
         # status="needs_user_input") if the request turns out to be

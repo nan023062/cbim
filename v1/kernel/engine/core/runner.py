@@ -8,6 +8,23 @@ Single source of truth for:
 
 The Runner is itself stateless across `run()` calls — bb.json + resume.json
 on disk is the only continuity.
+
+Timeout policy (documented, not enforced here)
+----------------------------------------------
+Tasks carried on the blackboard may include a ``timeout_hint_s`` field. That
+hint is passed through to the dispatched main agent and to external
+monitoring as advisory data only. The Runner itself does NOT enforce any
+per-task timer. The only timeout the engine enforces is the global root-tree
+``@Timeout(global_timeout_s)`` decorator wired in
+``v1/kernel/engine/execution/tree/main_loop.py`` (default 30 minutes).
+
+Rationale: a node that goes RUNNING and yields can be resumed many ticks
+later (potentially across separate Claude Code turns). A per-task timer
+started on tick N would have to span tick boundaries, which would either
+require shadow state outside the blackboard or silently miss its deadline —
+both break the "blackboard is the single source of truth" invariant. So we
+keep one authoritative timeout at the root and treat task-level hints as
+metadata.
 """
 
 from __future__ import annotations
@@ -360,8 +377,9 @@ class Runner:
             subtask_map = self._agent_subtask_to_leaf.get(pd.agent_type, {})
             if pd.subtask_id and pd.subtask_id in subtask_map:
                 target_names.append(subtask_map[pd.subtask_id])
-            # Priority 2: bt-style WorkAgentLeaf#<subtask_id> for the parallel
-            # work-agent dispatch case.
+            # Priority 2: bt-style WorkAgentLeaf#<subtask_id> for the serial
+            # work-agent dispatch case (one task yields per tick; named
+            # WorkAgentLeaf#<id> for resume path lookup).
             if pd.subtask_id:
                 base = self._agent_type_to_leaf.get("work", "WorkAgentLeaf")
                 target_names.append(f"{base}#{pd.subtask_id}")

@@ -253,6 +253,91 @@ def test_mode_classify_english_update_dna_is_architect_preempt():
 # The historical _StubModeLLM tests (LLM verdict round-trip) are gone.
 
 
+# MF-2 (t2) regression — strengthen the Chinese audit-keyword coverage
+# and confirm the execution verb still wins when "审查" appears as a
+# topic noun rather than an audit request.
+#
+# Known cross-table priority bugs NOT exercised here (out of scope for t2):
+#   1. "修一下审计日志的 bug" currently routes to audit because "审计"
+#      is a bare audit keyword and "修一下" is not in the execution table.
+#   2. "请审计员做架构评审" currently routes to architect because
+#      "做架构" hits the architect table before the audit table.
+# Both are pre-existing routing bugs. t2 did not fix them, so writing
+# them as failing assertions would block this regression suite. The
+# audit-via-审计员 path is still exercised through a phrasing that
+# does not collide with the architect table.
+
+def test_mode_classify_independent_adversarial_review_is_audit():
+    bb = _bb(user_request="独立对抗式审查这个模块的设计")
+    assert ModeClassify().tick(bb) is Status.SUCCESS
+    assert bb.mode == "audit"
+
+
+def test_mode_classify_full_review_is_audit():
+    bb = _bb(user_request="做一次全盘审查")
+    assert ModeClassify().tick(bb) is Status.SUCCESS
+    assert bb.mode == "audit"
+
+
+def test_mode_classify_overall_review_v37_changes_is_audit():
+    bb = _bb(user_request="全面评审一下 v3.7 改动")
+    assert ModeClassify().tick(bb) is Status.SUCCESS
+    assert bb.mode == "audit"
+
+
+def test_mode_classify_refactor_review_flow_code_is_execution():
+    # The noun "审查" is part of the subject ("审查流程"), not an
+    # audit request. The execution verb "重构" must win.
+    bb = _bb(user_request="重构审查流程的代码")
+    assert ModeClassify().tick(bb) is Status.SUCCESS
+    assert bb.mode == "execution"
+
+
+def test_mode_classify_ask_auditor_for_independent_review_is_audit():
+    # Equivalent to "请审计员做架构评审" but without the "架构" trigger
+    # that currently hijacks the architect table (known pre-existing bug,
+    # see note above).
+    bb = _bb(user_request="请审计员独立评审这次改动")
+    assert ModeClassify().tick(bb) is Status.SUCCESS
+    assert bb.mode == "audit"
+
+
+# v3.8 cross-table priority fixes — the four cases that motivated v3.8.
+
+def test_mode_classify_fix_audit_log_bug_is_execution():
+    # v3.8 fix #1: "修一下" is now in the execution Chinese verb row,
+    # and bare "审计" was dropped from audit-b4. Both changes are needed
+    # for this to land on execution.
+    bb = _bb(user_request="修一下审计日志的 bug")
+    assert ModeClassify().tick(bb) is Status.SUCCESS
+    assert bb.mode == "execution"
+
+
+def test_mode_classify_ask_auditor_architecture_review_is_audit():
+    # v3.8 fix #2: "请审计员" now matches the core-agent naming tier
+    # which runs BEFORE the architect-b5 "做+架构" pattern. Previously
+    # architect-b5 won and this routed to architect.
+    bb = _bb(user_request="请审计员做架构评审")
+    assert ModeClassify().tick(bb) is Status.SUCCESS
+    assert bb.mode == "audit"
+
+
+def test_mode_classify_ask_auditor_short_review_is_audit():
+    # Core-agent naming tier must catch the bare "请审计员审一下" form
+    # even though "审一下" matches none of the verb-form audit patterns.
+    bb = _bb(user_request="请审计员审一下")
+    assert ModeClassify().tick(bb) is Status.SUCCESS
+    assert bb.mode == "audit"
+
+
+def test_mode_classify_ask_architect_design_login_module_is_architect():
+    # Regression: explicit "请架构师" still lands on architect via the
+    # core-agent naming tier (was previously architect-b1).
+    bb = _bb(user_request="请架构师设计登录模块")
+    assert ModeClassify().tick(bb) is Status.SUCCESS
+    assert bb.mode == "architect"
+
+
 # ---------------------------------------------------------------------------
 # DirectReply (PR-D: passthrough only, no LLM hook)
 # ---------------------------------------------------------------------------
@@ -291,7 +376,7 @@ def test_work_agent_leaf_yields_with_task_id():
 def test_work_agent_leaf_forwards_required_capability_verbatim():
     """Focused: whatever string the arch_plan task puts in
     required_capability must land verbatim on the DispatchRequest."""
-    for cap in ("programmer", "tester", "doc_writer", "generalist"):
+    for cap in ("programmer", "doc_writer", "generalist"):
         bb = _bb(arch_plan=[
             {"id": "t1", "description": "d", "required_capability": cap},
         ])

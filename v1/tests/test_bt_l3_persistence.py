@@ -74,11 +74,11 @@ def test_bb_snapshot_roundtrip(tmp_path):
     assert bb2.bb_status == "running"
 
 
-def test_bb_snapshot_schema_version_is_3():
+def test_bb_snapshot_schema_version_is_4():
     bb = Blackboard()
     bb.tick_id = "x"
     raw = bb.to_dict()
-    assert raw["schema_version"] == SCHEMA_VERSION == 3
+    assert raw["schema_version"] == SCHEMA_VERSION == 4
 
 
 def test_bb_snapshot_has_no_agent_assignments_field():

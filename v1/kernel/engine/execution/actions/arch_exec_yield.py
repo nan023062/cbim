@@ -39,7 +39,7 @@ _MAX_TASKS = 8
 # Capabilities the architect may name on a task. Anything else is
 # silently collapsed to "generalist" so HR's CoreAgentSelector can route.
 _KNOWN_CAPABILITIES: frozenset[str] = frozenset(
-    {"programmer", "tester", "doc_writer", "generalist"}
+    {"programmer", "doc_writer", "generalist"}
 )
 
 
@@ -174,9 +174,7 @@ class ArchExecYield(Node):
     @staticmethod
     def _compose_prompt(bb, subtask_id: str) -> str:
         user_request = (getattr(bb, "user_request", "") or "").strip()
-        snapshot = getattr(bb, "knowledge_snapshot", None) or ""
-        if not snapshot:
-            snapshot = "(无快照 — 自行调用 dna_list / dna_show 查询)"
+        snapshot = _render_module_knowledge(bb)
         redo_context = getattr(bb, "arch_redo_context", None)
         if redo_context:
             redo_block = json.dumps(redo_context, ensure_ascii=False, indent=2)
@@ -196,7 +194,7 @@ class ArchExecYield(Node):
             "每条 task 字段：\n"
             "  id (str, 唯一)\n"
             "  description (str)\n"
-            "  required_capability (str, ∈ {programmer, tester, doc_writer, generalist})\n"
+            "  required_capability (str, ∈ {programmer, doc_writer, generalist})\n"
             "  params (dict)\n"
             "  arch_context (str, 非空)\n\n"
             "约束：\n"
@@ -220,6 +218,45 @@ class ArchExecYield(Node):
 # ---------------------------------------------------------------------------
 # Module-private helpers
 # ---------------------------------------------------------------------------
+
+_SNAPSHOT_FALLBACK = "(无快照 — 自行调用 dna_list / dna_show 查询)"
+_SNAPSHOT_SUMMARY_CHARS = 160
+
+
+def _render_module_knowledge(bb) -> str:
+    """Render ContextRetrieval's module_knowledge bucket as a snapshot.
+
+    Reads ``bb.retrieved_context["module_knowledge"]`` (written by the
+    ContextRetrieval leaf earlier in the tick) and formats each hit as
+    a single human-readable line: ``- <doc_id> (score=<s>): <summary>``.
+    Falls back to the static placeholder when the bucket is missing or
+    empty so the prompt always carries a snapshot section.
+    """
+    rc = getattr(bb, "retrieved_context", None) or {}
+    hits = rc.get("module_knowledge") or []
+    if not hits:
+        return _SNAPSHOT_FALLBACK
+    lines: list[str] = []
+    for h in hits:
+        if not isinstance(h, dict):
+            continue
+        doc_id = h.get("doc_id") or "<unknown>"
+        score = h.get("score")
+        try:
+            score_str = f"{float(score):.3f}" if score is not None else "?"
+        except (TypeError, ValueError):
+            score_str = "?"
+        body = h.get("content") or h.get("snippet") or h.get("text") or ""
+        if not isinstance(body, str):
+            body = str(body)
+        body = body.strip().replace("\n", " ")
+        if len(body) > _SNAPSHOT_SUMMARY_CHARS:
+            body = body[:_SNAPSHOT_SUMMARY_CHARS].rstrip() + "..."
+        lines.append(f"- {doc_id} (score={score_str}): {body}")
+    if not lines:
+        return _SNAPSHOT_FALLBACK
+    return "\n".join(lines)
+
 
 def _payload_to_text(payload: Any) -> str:
     if isinstance(payload, str):

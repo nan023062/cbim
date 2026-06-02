@@ -207,13 +207,48 @@ def test_e2e_audit_mode_yields_auditor_dispatch(isolated_scheduler_root):
     assert "no critical findings" in r2.user_message
 
 
+def test_e2e_architect_needs_user_input_surfaces_question(isolated_scheduler_root):
+    """Regression for the needs_user_input gate.
+
+    When a core agent's receipt carries status=needs_user_input, the
+    Sequence must NOT short-circuit on the dispatch leaf. The
+    CoreReplyGate#<type> SwitchBranch routes to Respond(mode='need_user')
+    which renders the clarifying question, so the user actually sees it.
+
+    Before the gate landed, DispatchCoreAgent returned FAILURE on
+    needs_user_input → Sequence short-circuited → Respond never ran →
+    user_message was empty / generic.
+    """
+    receipt_with_question = (
+        "Need a bit more info before I can design this.\n"
+        "<!-- BEGIN CBIM-RECEIPT v1\n"
+        "status: needs_user_input\n"
+        "task_id: core:architect\n"
+        "agent: architect\n"
+        "summary: blocked on auth provider choice\n"
+        "question: which auth provider should I design for — OIDC or SAML?\n"
+        "END CBIM-RECEIPT -->\n"
+    )
+    r, log = _drive("design a new login module", receipt_with_question)
+    assert r.kind == "done"
+    assert len(log) == 1
+    assert log[0] == ("architect", "core:architect")
+    # The need_user renderer wraps the question in a fixed preamble; check
+    # both the preamble and the verbatim question text are present.
+    msg = r.user_message or ""
+    assert "我需要你的确认才能继续" in msg, \
+        f"need_user preamble missing from user_message: {msg!r}"
+    assert "which auth provider should I design for" in msg, \
+        f"clarifying question missing from user_message: {msg!r}"
+
+
 def test_e2e_each_core_agent_mode_yields_exactly_once(isolated_scheduler_root):
     """Drive each of the three core-agent modes through the helper and
     assert exactly one yield (one DispatchRequest) per tick."""
     cases = [
         ("design the auth module",            "architect",
          ".claude/agents/architect/architect.md"),
-        ("hire a tester agent",               "hr",
+        ("hire a doc_writer agent",           "hr",
          ".claude/agents/hr/hr.md"),
         ("do an independent review of the bt engine", "auditor",
          ".claude/agents/auditor/auditor.md"),

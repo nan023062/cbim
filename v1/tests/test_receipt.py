@@ -315,7 +315,7 @@ _PLAN = [
     {
         "id": "t2",
         "description": "do the other thing",
-        "required_capability": "tester",
+        "required_capability": "generalist",
         "params": {"depends_on": ["t1"]},
         "arch_context": "ctx for t2",
     },

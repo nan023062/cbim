@@ -37,7 +37,7 @@ def _bb(**overrides) -> SimpleNamespace:
         convergence=None,
         arch_redo_context=None,
         work_loop_iter=None,
-        knowledge_snapshot=None,
+        retrieved_context=None,
     )
     for k, v in overrides.items():
         setattr(bb, k, v)
@@ -255,3 +255,61 @@ def test_no_cross_tick_state_on_self():
         if not k.startswith("_") and k != "name"
     }
     assert public_attrs == set()
+
+
+# ---------------------------------------------------------------------------
+# RI-1 + RI-2 regression — _compose_prompt must render the
+# module_knowledge bucket from bb.retrieved_context when present, and
+# fall back to a placeholder line when absent. The architect prompt is
+# the only place the retrieval pipeline surfaces in execution mode.
+# ---------------------------------------------------------------------------
+
+def test_compose_prompt_renders_module_knowledge_hits():
+    bb = _bb(retrieved_context={
+        "module_knowledge": [
+            {"doc_id": "dna/foo", "score": 0.9, "snippet": "hello"},
+        ],
+    })
+    prompt = ArchExecYield._compose_prompt(bb, "arch:1")
+    # Either the doc id or the snippet body must reach the prompt.
+    assert "dna/foo" in prompt
+    assert "hello" in prompt
+    # Section header is still present.
+    assert "### 知识快照" in prompt
+
+
+def test_compose_prompt_renders_multiple_module_knowledge_hits():
+    bb = _bb(retrieved_context={
+        "module_knowledge": [
+            {"doc_id": "dna/foo", "score": 0.9, "snippet": "hello"},
+            {"doc_id": "dna/bar", "score": 0.7, "content": "world"},
+        ],
+    })
+    prompt = ArchExecYield._compose_prompt(bb, "arch:1")
+    assert "dna/foo" in prompt
+    assert "hello" in prompt
+    assert "dna/bar" in prompt
+    assert "world" in prompt
+
+
+def test_compose_prompt_falls_back_to_placeholder_without_retrieved_context():
+    bb = _bb(retrieved_context=None)
+    prompt = ArchExecYield._compose_prompt(bb, "arch:1")
+    assert "### 知识快照" in prompt
+    # Fallback placeholder is shipped verbatim — exact phrasing is part
+    # of the architect prompt contract.
+    assert "无快照" in prompt
+    assert "dna_list" in prompt
+
+
+def test_compose_prompt_falls_back_when_bucket_empty():
+    bb = _bb(retrieved_context={"module_knowledge": []})
+    prompt = ArchExecYield._compose_prompt(bb, "arch:1")
+    assert "无快照" in prompt
+
+
+def test_compose_prompt_falls_back_when_bucket_missing():
+    # retrieved_context exists but has no module_knowledge key.
+    bb = _bb(retrieved_context={"other_bucket": [{"x": 1}]})
+    prompt = ArchExecYield._compose_prompt(bb, "arch:1")
+    assert "无快照" in prompt

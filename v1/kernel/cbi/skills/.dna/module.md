@@ -1,27 +1,34 @@
 ---
 name: cbi-skills
 owner: architect
-description: CBI cross-agent skills: dispatch, memory_write, memory_query, memory_distill
+description: CBI cross-agent skills: memory_write, memory_query, memory_distill (dispatch skill removed in t3 — routing 现由 engine/execution 的 ModeClassify 节点全权承担)
 keywords: []
 dependencies: []
 ---
 
 ## Positioning
 
-Cross-agent skills: `dispatch` (assistant's routing skill), `memory_write` / `memory_query` / `memory_distill` (memory ops invoked by the assistant on user request).
+Cross-agent skills: `memory_write` / `memory_query` / `memory_distill` (memory ops invoked by the assistant on user request, by the governance loop's `DispatchMemDistill` node, or by any agent that needs to write/read CBIM memory).
+
+The former `dispatch` skill has been removed: request routing is now performed in-engine by the `ModeClassify` leaf node of `engine/execution`, not by an LLM skill. Routing is no longer a cross-agent capability.
 
 ## Class Diagram
 
 ```mermaid
 classDiagram
-    class dispatch {
+    class memory_write {
         +skill.py
-        +classifies user request → which agent
+        +write entry to .cbim/memory/<tier>/
     }
-    class memory_write
-    class memory_query
-    class memory_distill
-    note "All four are agent-agnostic: any agent or the assistant can invoke them via `engine skill show <id>`."
+    class memory_query {
+        +skill.py
+        +search across memory tiers
+    }
+    class memory_distill {
+        +skill.py
+        +promote transcript JSONL → medium memory
+    }
+    note "All three are agent-agnostic: any agent or the assistant can invoke them via the cbim MCP memory_* tools."
 ```
 
 ## Key Decisions

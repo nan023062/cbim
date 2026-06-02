@@ -62,6 +62,12 @@ flowchart TD
 | 汇总渲染回复 | 把各路产出整理成给用户的回复 | → 落记忆 |
 | 落记忆 | 把本轮值得留存的内容写入记忆，失败不阻塞 | → 回复用户 |
 
+### 3.1 超时约束（仅全局，无 per-task）
+
+执行根上只有**一个**强制超时：根序列外层的 `@Timeout(global_timeout_s)` 装饰器（默认 30 分钟，见 `v1/kernel/engine/execution/tree/main_loop.py` 的 `build_root()`）。
+
+任务对象上可能携带 `timeout_hint_s` 字段，但它**仅作为提示**透传给主 agent 与外部监控，Runner 自身不会基于该值启动任何 per-task 计时器。原因：节点可以在某一 tick 进入 RUNNING 并 yield、若干 tick（甚至若干会话）之后才被 resume；per-task 计时器跨 tick 边界要么需要在黑板之外维护影子状态，要么会静默错过截止时间——两者都违反"黑板是单一状态源"铁律。因此全局只在根上设一个时限，任务级提示视作元数据。
+
 ---
 
 ## 4. 与子循环的衔接

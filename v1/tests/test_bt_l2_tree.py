@@ -42,10 +42,19 @@ def test_root_structure_matches_design():
         "ModeSwitch",
         # Conversation branch
         "DirectReply",
-        # Three core-agent branches (peer to Work Agent)
-        "ArchitectBranch", "DispatchCoreAgent#architect", "Respond#architect",
-        "HrBranch",        "DispatchCoreAgent#hr",        "Respond#hr",
-        "AuditBranch",     "DispatchCoreAgent#auditor",   "Respond#audit",
+        # Three core-agent branches (peer to Work Agent). Each branch
+        # now ends in a CoreReplyGate (SwitchBranch on receipt status)
+        # so the 'needs_user_input' path routes to a dedicated Respond
+        # leaf instead of being swallowed by a Sequence short-circuit.
+        "ArchitectBranch", "DispatchCoreAgent#architect",
+        "CoreReplyGate#architect", "Respond#architect",
+        "Respond#architect_need_user",
+        "HrBranch",        "DispatchCoreAgent#hr",
+        "CoreReplyGate#hr", "Respond#hr",
+        "Respond#hr_need_user",
+        "AuditBranch",     "DispatchCoreAgent#auditor",
+        "CoreReplyGate#auditor", "Respond#audit",
+        "Respond#audit_need_user",
         # Execution branch (PR-C: WorkLoop wraps the architect-work
         # convergence cycle; EscalationGate switches on bb.convergence)
         # (PR-D: ArchExecYield is the single-yield architect dispatch
@@ -170,18 +179,23 @@ def test_mode_switch_present_with_five_cases():
     assert switch._default.name == "ExecutionSeq"
 
 
-def test_core_agent_branches_are_dispatch_then_respond():
-    """Each of the three core-agent branches must be a 2-node Sequence:
-    DispatchCoreAgent#<type> followed by Respond#<label>. The
-    DispatchCoreAgent leaf carries the correct agent_type AND the
+def test_core_agent_branches_are_dispatch_then_reply_gate():
+    """Each core-agent branch is now a 2-node Sequence:
+    DispatchCoreAgent#<type> followed by CoreReplyGate#<type>
+    (SwitchBranch on receipt status). The gate routes:
+      - 'ok'               → Respond#<label>
+      - 'needs_user_input' → Respond#<label>_need_user
+      - default            → Respond#<label>
+
+    The DispatchCoreAgent leaf carries the correct agent_type and the
     matching `.claude/agents/<x>/<x>.md` agent_file."""
     expected = {
         "ArchitectBranch": ("architect", ".claude/agents/architect/architect.md",
-                            "Respond#architect"),
+                            "architect"),
         "HrBranch":        ("hr",        ".claude/agents/hr/hr.md",
-                            "Respond#hr"),
+                            "hr"),
         "AuditBranch":     ("auditor",   ".claude/agents/auditor/auditor.md",
-                            "Respond#audit"),
+                            "audit"),
     }
     found: dict[str, Sequence] = {}
     for n in _walk(ROOT):
@@ -190,17 +204,29 @@ def test_core_agent_branches_are_dispatch_then_respond():
     assert set(found) == set(expected), \
         f"missing core-agent branches: {set(expected) - set(found)}"
 
-    for branch_name, (agent_type, agent_file, respond_name) in expected.items():
+    for branch_name, (agent_type, agent_file, respond_suffix) in expected.items():
         kids = found[branch_name].children()
         assert len(kids) == 2, \
-            f"{branch_name} must have exactly [DispatchCoreAgent, Respond]"
-        dispatch, respond = kids
+            f"{branch_name} must have exactly [DispatchCoreAgent, CoreReplyGate]"
+        dispatch, gate = kids
         assert isinstance(dispatch, DispatchCoreAgent), \
             f"{branch_name}[0] must be DispatchCoreAgent, got {type(dispatch).__name__}"
         assert dispatch.agent_type == agent_type
         assert dispatch.agent_file == agent_file
         assert dispatch.name == f"DispatchCoreAgent#{agent_type}"
-        assert respond.name == respond_name
+
+        assert isinstance(gate, SwitchBranch), \
+            f"{branch_name}[1] must be SwitchBranch, got {type(gate).__name__}"
+        assert gate.name == f"CoreReplyGate#{agent_type}"
+        cases = gate._cases  # noqa: SLF001 — structural assertion
+        assert set(cases.keys()) == {"ok", "needs_user_input"}, \
+            f"{gate.name} cases must be ok+needs_user_input; got {sorted(cases)}"
+        assert cases["ok"].name == f"Respond#{respond_suffix}"
+        assert cases["needs_user_input"].name == \
+            f"Respond#{respond_suffix}_need_user"
+        # Default must mirror the 'ok' branch instance so an unknown status
+        # still renders the standard response rather than FAILURE-ing.
+        assert gate._default is cases["ok"]
 
 
 def test_build_root_is_pure_factory():

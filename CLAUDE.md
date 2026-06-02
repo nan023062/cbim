@@ -52,7 +52,7 @@ Assistant (coordination entry, sole external interface, sole dispatcher)
 
 - **Architect** — receives design and blueprint tasks; reports back to assistant when done, assistant decides next steps
 - **HR** — full lifecycle management of work agents; assistant requests execution agents through HR, who matches or recruits and returns the agent file path
-- **Auditor** — dispatched by assistant at the right time; independent review, not invoked directly by other agents
+- **Auditor** — triggered only when the user explicitly requests review (ModeClassify routes to `audit` mode); independent review, not invoked directly by other agents. After business execution converges there is no automatic audit gate — the assistant does not proactively dispatch the auditor.
 - **Work agents** — assigned by HR, assistant dispatches with agent file; for available work agents see `.claude/agents/` directory
 
 ## Project Root
@@ -70,7 +70,7 @@ The coordinator no longer drives the dispatch loop in prose. Control flow has mo
 3. The engine returns a `BtResult`:
    - `kind="done"` → relay `user_message` to the user verbatim. Done.
    - `kind="yield"` → the engine wants you to dispatch an agent. Read `dispatch_request`:
-     - `agent_type` ∈ {`"architect"`, `"auditor"`, `"work"`} tells you which path.
+     - `agent_type` ∈ {`"architect"`, `"hr"`, `"auditor"`, `"work"`} tells you which path.
      - `agent_file` (if present) is the exact `.claude/agents/*.md` path to use.
      - `prompt` is the full prompt — feed it to the Task tool **verbatim**, do not edit, summarize, or augment.
      - After the Task tool returns, call `bt_tick_resume(tick_id=<from yield>, dispatch_result=<Task tool output>)`.
@@ -111,12 +111,11 @@ Governance has no user-facing chatter — it's background self-maintenance, not 
 
 | What you need to do | Run |
 |---------------------|-----|
-| Request classification and routing | `cbim skill show dispatch` |
 | Business governance: module design, arch compliance, knowledge system | `cbim skill show architect.arch_modules` |
 | Capability governance: agent recruitment, training, assessment, matching | `cbim skill show hr.hr_agents` |
 | Memory (write / query / distill) | `cbim skill show memory_write` / `query` / `distill` |
 
-Auditor is dispatched directly by assistant at the right time — no skill read needed: `.claude/agents/auditor/auditor.md`
+Auditor is dispatched only when the user explicitly requests review (ModeClassify routes to `audit` mode) — the assistant does not proactively call the auditor after convergence; no skill read needed: `.claude/agents/auditor/auditor.md`
 
 ---
 

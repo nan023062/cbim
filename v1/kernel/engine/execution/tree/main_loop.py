@@ -13,13 +13,22 @@ Tree shape (see module.md §"5 分支模式拓扑"):
       conversation → DirectReply
       architect    → ArchitectBranch (Sequence)
           DispatchCoreAgent#architect
-          Respond#architect
+          CoreReplyGate#architect (SwitchBranch on receipt status)
+            ok               → Respond#architect
+            needs_user_input → Respond#architect_need_user
+            default          → Respond#architect
       hr           → HrBranch (Sequence)
           DispatchCoreAgent#hr
-          Respond#hr
+          CoreReplyGate#hr (SwitchBranch on receipt status)
+            ok               → Respond#hr
+            needs_user_input → Respond#hr_need_user
+            default          → Respond#hr
       audit        → AuditBranch (Sequence)
           DispatchCoreAgent#auditor
-          Respond#audit
+          CoreReplyGate#auditor (SwitchBranch on receipt status)
+            ok               → Respond#audit
+            needs_user_input → Respond#audit_need_user
+            default          → Respond#audit
       execution    → ExecutionSeq (Sequence)
           WorkLoop (LoopSeq, max_iters=3)
             ArchExecYield        (PR-D: single yield to the architect
@@ -77,6 +86,26 @@ def _converge_key(bb) -> str:
     return "done"
 
 
+def _core_agent_key(agent_type: str):
+    """Build a SwitchBranch key_fn that reads
+    bb.work_results['core:<agent_type>'].status.
+
+    Defaults to 'ok' when the entry or status is missing so the gate
+    falls through to the default Respond branch instead of FAILURE-ing
+    (defensive — DispatchCoreAgent always populates the entry, but the
+    gate must not crash on an empty blackboard during dry-run or test).
+    """
+    key = f"core:{agent_type}"
+
+    def _fn(bb) -> str:
+        entry = (bb.work_results or {}).get(key)
+        if not isinstance(entry, dict):
+            return "ok"
+        return entry.get("status") or "ok"
+
+    return _fn
+
+
 def build_root(*, global_timeout_s: int = 1800):
     init = InitTick(name="InitTick")
     # v3.8 — ContextRetrieval pulls four retrieval sources and writes the
@@ -96,35 +125,44 @@ def build_root(*, global_timeout_s: int = 1800):
     direct = DirectReply(name="DirectReply")
 
     # Three core-agent branches — peer to Work Agent (see module.md
-    # §"三大核心 agent 平级直派"). Each branch yields once via
-    # DispatchCoreAgent and then runs Respond so the core agent's reply
-    # surfaces as bb.final_response (mirrors what ExecutionSeq does for
-    # the work pipeline). Respond reads bb.work_results, which
-    # DispatchCoreAgent populated under key f"core:{agent_type}".
-    architect_branch = Sequence(
-        [
-            DispatchCoreAgent(agent_type="architect",
-                              name="DispatchCoreAgent#architect"),
-            Respond(name="Respond#architect"),
-        ],
-        name="ArchitectBranch",
-    )
-    hr_branch = Sequence(
-        [
-            DispatchCoreAgent(agent_type="hr",
-                              name="DispatchCoreAgent#hr"),
-            Respond(name="Respond#hr"),
-        ],
-        name="HrBranch",
-    )
-    audit_branch = Sequence(
-        [
-            DispatchCoreAgent(agent_type="auditor",
-                              name="DispatchCoreAgent#auditor"),
-            Respond(name="Respond#audit"),
-        ],
-        name="AuditBranch",
-    )
+    # §"三大核心 agent 平级直派"). Each branch is
+    # Sequence(DispatchCoreAgent → SwitchBranch(status)) so the core
+    # agent's reply surfaces as bb.final_response (mirrors what
+    # ExecutionSeq does for the work pipeline). The SwitchBranch routes
+    # on the receipt status field captured by DispatchCoreAgent under
+    # bb.work_results['core:<agent_type>']:
+    #   - 'ok'                → Respond (default rendering)
+    #   - 'needs_user_input'  → Respond(mode='need_user') — clarifying
+    #                           question reaches the user instead of being
+    #                           swallowed by a Sequence short-circuit
+    #   - default             → Respond (defensive)
+    # 'failed' never reaches the switch — DispatchCoreAgent returns
+    # FAILURE on 'failed', short-circuiting the outer Sequence.
+    def _core_branch(agent_type: str, branch_name: str, respond_suffix: str):
+        respond_ok       = Respond(name=f"Respond#{respond_suffix}")
+        respond_need_usr = Respond(name=f"Respond#{respond_suffix}_need_user",
+                                   mode="need_user")
+        gate = SwitchBranch(
+            key_fn=_core_agent_key(agent_type),
+            cases={
+                "ok":               respond_ok,
+                "needs_user_input": respond_need_usr,
+            },
+            default=respond_ok,
+            name=f"CoreReplyGate#{agent_type}",
+        )
+        return Sequence(
+            [
+                DispatchCoreAgent(agent_type=agent_type,
+                                  name=f"DispatchCoreAgent#{agent_type}"),
+                gate,
+            ],
+            name=branch_name,
+        )
+
+    architect_branch = _core_branch("architect", "ArchitectBranch", "architect")
+    hr_branch        = _core_branch("hr",        "HrBranch",        "hr")
+    audit_branch     = _core_branch("auditor",   "AuditBranch",     "audit")
 
     # Execution branch — the Architect → Work pipeline with bounded
     # loop-back (PR-C). ArchExecYield sits as the first child of

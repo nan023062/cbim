@@ -188,17 +188,16 @@ class ModeClassify(Node):
 
 ---
 
-## 5. 与 audit / memory / mcp_server 的边界
+## 5. 与 memory / mcp_server 的边界
 
 | 邻接模块 | 关系 | 实现细节 |
 |----------|------|----------|
-| **audit** | 可选叶节点。主循环默认不挂 Audit；某些"高风险变更"路由会把 Audit 节点插在 Aggregate 之后、Converge 之前 | Audit 节点本身就是一个 Action，按 §2 规约实现；产出写 `bb.audit_report`。是否挂 Audit 由 `tree/main_loop.py` 中根据 `bb.intent.kind` 决定（变体树由组合工厂返回，根仍唯一） |
 | **memory** | 通过 `FlushMemoryAction` 批量调 `memory_write`。其他节点严禁直接调记忆服务——它们只能往 `bb.memory_flush_queue` push 条目 | 记忆故障被 `@Catch` 吞掉，不阻塞用户回复（详见 [`WORKFLOW-EXECUTION §4`](./WORKFLOW-EXECUTION.zh-CN.md#4-五阶段--五个-action-的契约)） |
 | **mcp_server** | 暴露 `bt_tick` 与 `bt_tick_resume` 两个工具给主 agent | `api/bt_tick.py` 的两个函数直接注册为 MCP 工具，函数签名即工具签名（详见 §6） |
 
-audit 与 memory 是**消费者/被消费者**关系，行为树引擎不依赖它们的内部实现，只依赖它们的契约（audit 返回报告、memory 接受写入）。mcp_server 是**容器**——它装载引擎、暴露入口，但不参与树的执行逻辑。
+memory 是**被消费者**——行为树引擎不依赖其内部实现，只依赖其契约（接受写入）。mcp_server 是**容器**——它装载引擎、暴露入口，但不参与树的执行逻辑。v3.7 之后 `engine/audit` 已从引擎依赖中下架，`AuditAction` 与 `bb.audit_report` 字段同步移除。
 
-依赖方向：`bt` → `memory.contract`（调用方）、`bt` ← `mcp_server`（容器）、`bt` → `audit.contract`（可选调用方）。无环。
+依赖方向：`bt` → `memory.contract`（调用方）、`bt` ← `mcp_server`（容器）。无环。
 
 ---
 
@@ -249,7 +248,7 @@ class BtResult:
 ```python
 @dataclass
 class DispatchRequest:
-    agent_type: str          # "work" | "auditor"（architect / hr 已下沉为引擎内子树，不再 yield）
+    agent_type: str          # 'work' | 'architect' | 'hr' | 'auditor' —— 详见 actions/core_agents.CORE_AGENT_FILES（核心三 agent 的 .claude/agents/*.md 路径表）与 api/result.DispatchRequest 字段注释。
     agent_file: str | None   # work agent 需要；auditor 可为 None
     prompt: str              # 喂给 Task tool 的完整 prompt
     subtask_id: str | None   # WorkAgentLeaf 派工时携带，用于 resume 时定位 subtask_results[id]
@@ -283,7 +282,7 @@ sequenceDiagram
     E-->>M: Done(user_message)
 ```
 
-执行根的 yield 只剩 Work Agent 一种——Architect / HR 的执行子循环已下沉为引擎内 Python BT 子树，全程在 `bt_tick` 调用栈内完成，不经主 agent 中转。对话通路更短——`ModeClassify` 把 `bb.mode` 写成 `"conversation"`，`ModeBranch` 直走 `DirectReply` 写 `final_response`，单次 tick 就 `Done`，从不 yield。
+执行根的 yield 有两类——Work Agent 与三个核心 agent（Architect / HR / Auditor）；后者经 `DispatchCoreAgent` 直派，路径与 Work Agent 同形，区别仅在 `agent_type` 与 `agent_file`。对话通路更短——`ModeClassify` 把 `bb.mode` 写成 `"conversation"`，`ModeBranch` 直走 `DirectReply` 写 `final_response`，单次 tick 就 `Done`，从不 yield。
 
 ### 6.5 错误恢复与孤儿 tick
 

@@ -67,4 +67,4 @@ Display the following overview to the user verbatim (in Chinese):
 - **Stop** — 蒸馏本轮会话写入 `memory/short/`
 - **PreToolUse** — 工具调用日志（受 `.cbim/.debug` 控制）
 
-详见 `cbim skill show dispatch`（派发流程）和各 agent 的 `.md`（性格/职责/skill 表）。
+详见各 agent 的 `.md`（性格/职责/skill 表）。

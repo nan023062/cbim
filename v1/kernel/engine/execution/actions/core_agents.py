@@ -12,7 +12,7 @@ Importers:
     via the alias-broadened CORE_AGENT_CAPABILITY_TABLE.
 
 The two tables share the three core-agent rows; capability aliases
-(programmer / coder / tester / ...) are HR-side concerns and stay in the
+(programmer / coder / ...) are HR-side concerns and stay in the
 capability table only.
 """
 
@@ -32,7 +32,7 @@ CORE_AGENT_FILES: dict[str, str] = {
 
 
 # Capability-keyed lookup used by HR's CoreAgentSelector. The three core
-# rows mirror CORE_AGENT_FILES; programmer/coder/tester aliases are HR's
+# rows mirror CORE_AGENT_FILES; programmer/coder aliases are HR's
 # routing concern and live here only.
 CORE_AGENT_CAPABILITY_TABLE: dict[str, str] = {
     # Core agents — same paths as CORE_AGENT_FILES.
@@ -42,7 +42,6 @@ CORE_AGENT_CAPABILITY_TABLE: dict[str, str] = {
     # Work-agent capability aliases.
     "programmer":              ".claude/agents/programmer/programmer.md",
     "coder":                   ".claude/agents/programmer/programmer.md",
-    "tester":                  ".claude/agents/programmer/programmer.md",
     "python-backend-engineer": ".claude/agents/programmer/programmer.md",
     "prompt-engineer":         ".claude/agents/programmer/programmer.md",
 }

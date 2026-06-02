@@ -9,7 +9,10 @@ No write barriers are enforced here (the "single writer per field" rule
 is a design-time invariant; runtime enforcement would be ceremonious and
 duplicate static review). Reads are unrestricted.
 
-Schema version: 3 (v3.6 — `agent_assignments` removed alongside hr_exec subtree).
+Schema version: 4 (drops `audit_report` from FIELDS and prunes 8 dead
+`arch_*` / `hr_*` extras left over from the pre-v3.6 arch_exec / hr_exec
+subtrees). Older snapshots at schema_version=3 still load — `from_dict`
+silently ignores unknown FIELDS / extras.
 """
 
 from __future__ import annotations
@@ -36,42 +39,30 @@ class IdentifiableBB(Protocol):
     def clear_dirty(self) -> None: ...
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 # Scratch fields stashed on bb.__dict__ that must survive a yield/resume
-# (snapshot.write_bb → read_bb). The canonical FIELDS tuple stays at the
-# v3.6 13-field set; these ride alongside in fields["_extras"]. Additive,
-# backward-readable — old snapshots without `_extras` restore as no-op.
+# (snapshot.write_bb → read_bb). The canonical FIELDS tuple stays compact;
+# these ride alongside in fields["_extras"]. Additive, backward-readable
+# — old snapshots without `_extras` restore as no-op, and unknown keys
+# in `_extras` are silently dropped on load.
 #
 # Members:
-#   arch_*               — architect-execution subtree intermediate state
-#   hr_*                 — hr-execution remnants (kept for snapshot
-#                          backward compatibility; not written in v3.6+)
-#   convergence,         — PR-C ConvergeJudge → EscalationGate signalling
+#   convergence          — PR-C ConvergeJudge → EscalationGate signalling
 #   arch_redo_context    — PR-C arch ↔ work loop-back payload
 #   work_loop_iter       — PR-C LoopSeq iteration counter (public alias)
+#   retrieved_context    — v3.8 ContextRetrieval three-bucket dict
 _PERSISTED_EXTRAS: tuple[str, ...] = (
-    "arch_plan_draft",
-    "arch_scan_summary",
-    "arch_state",
-    "arch_worth",
-    "hr_agent_inventory",
-    "hr_current_task",
-    "hr_current_match",
-    "hr_assignments_draft",
     "convergence",
     "arch_redo_context",
     "work_loop_iter",
-    # v3.8 — ContextRetrieval leaf writes the three-bucket dict here so
-    # downstream subtrees (ModeClassify, the five mode branches) can read
-    # it without re-querying retrieval. Not a canonical FIELDS entry —
-    # carried as an extra so the schema_version doesn't churn.
     "retrieved_context",
 )
 
 
-# Canonical field set per WORKFLOW-EXECUTION §2.1 v3.6 (13 fields).
+# Canonical field set (schema v4 — 12 fields; v3 `audit_report` dropped
+# because no producer / consumer in the live tree).
 FIELDS: tuple[str, ...] = (
     "tick_id",
     "user_request",
@@ -85,7 +76,6 @@ FIELDS: tuple[str, ...] = (
     "pending_dispatch",
     "trace",
     "memory_flush_queue",
-    "audit_report",
 )
 
 
@@ -96,11 +86,10 @@ class Blackboard:
     bb dirty for the next Runner snapshot.
     """
 
-    # NOTE: "__dict__" is included so the bt subtrees (arch_exec / hr_exec)
-    # can stash intermediate scratch fields (arch_scan_summary, arch_state,
-    # arch_plan_draft, hr_agent_inventory, hr_current_task, hr_current_match,
-    # hr_assignments_draft, …) without bloating the canonical 14-field set.
-    # Dirty-tracking still only applies to FIELDS via __setattr__.
+    # NOTE: "__dict__" is included so the bt subtrees can stash intermediate
+    # scratch fields (see _PERSISTED_EXTRAS — convergence, arch_redo_context,
+    # work_loop_iter, retrieved_context) without bloating the canonical
+    # FIELDS set. Dirty-tracking still only applies to FIELDS via __setattr__.
     #
     # `_trace_flushed_idx`: count of bb.trace entries already drained to
     # trace.jsonl on disk. Owned and bumped by Runner._flush_trace; not a

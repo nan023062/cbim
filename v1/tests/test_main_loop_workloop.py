@@ -37,16 +37,17 @@ def _find(name: str) -> Node:
 
 
 # ---------------------------------------------------------------------------
-# Case 18: WorkLoop has [ArchExecYield, DispatchWork, ConvergeJudge]
-# (PR-D: the ArchExecOrFallback Selector wrapping the nine-leaf
-# in-process subtree was replaced by the single ArchExecYield leaf.)
+# Case 18: WorkLoop has [ArchExecYield, DispatchWork, ArchCheckGate,
+# ConvergeJudge] (v3.9: ArchCheckGate inserted between DispatchWork and
+# ConvergeJudge so the architectural compliance check happens before
+# convergence judgement).
 # ---------------------------------------------------------------------------
 
 def test_workloop_children_in_order():
     wl = _find("WorkLoop")
     assert isinstance(wl, LoopSeq)
     assert [c.name for c in wl.children()] == [
-        "ArchExecYield", "DispatchWork", "ConvergeJudge",
+        "ArchExecYield", "DispatchWork", "ArchCheckGate", "ConvergeJudge",
     ]
     # max_iters lines up with the module constant.
     assert wl._max_iters == DEFAULT_MAX_ITERS  # noqa: SLF001 — structural

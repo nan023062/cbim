@@ -86,7 +86,7 @@ def test_schema_version_unchanged_by_extras():
     bb.convergence = "done"
     bb.work_loop_iter = 1
     raw = bb.to_dict()
-    assert raw["schema_version"] == SCHEMA_VERSION == 4
+    assert raw["schema_version"] == SCHEMA_VERSION == 5
 
 
 def test_extras_not_emitted_when_no_scratch_set():
@@ -178,7 +178,7 @@ def test_to_dict_after_v3_load_writes_v4_and_drops_deprecated_extras():
     raw = bb.to_dict()
 
     # (c1) — schema bumped to current version on rewrite.
-    assert raw["schema_version"] == SCHEMA_VERSION == 4
+    assert raw["schema_version"] == SCHEMA_VERSION == 5
 
     # (c2) — deprecated extras must not appear in the rewritten snapshot.
     extras = raw["fields"].get("_extras", {})
@@ -213,6 +213,6 @@ def test_from_dict_loads_v3_snapshot_without_extras_key():
     assert bb.mode == "conversation"
     assert getattr(bb, "convergence", None) is None
     raw = bb.to_dict()
-    assert raw["schema_version"] == 4
+    assert raw["schema_version"] == 5
     # No scratch fields were set, so _extras must not appear.
     assert "_extras" not in raw["fields"]

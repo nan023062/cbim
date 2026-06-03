@@ -81,9 +81,12 @@ def test_root_structure_matches_design():
 def test_execution_seq_three_node_pr_c_shape():
     """PR-C: ExecutionSeq children = [WorkLoop, EscalationGate, CatchFlush].
 
-    WorkLoop wraps [ArchExecYield, DispatchWork, ConvergeJudge] with
-    max_iters=3; the architect re-runs on each retry so iter-2+ behaviour
-    is local to the loop. EscalationGate routes on bb.convergence to
+    WorkLoop wraps [ArchExecYield, DispatchWork, ArchCheckGate,
+    ConvergeJudge] with max_iters=3 (v3.9 inserted ArchCheckGate between
+    DispatchWork and ConvergeJudge — the programmatic compliance check
+    runs every iteration; its verdict trumps work-side signals at
+    ConvergeJudge time).
+    EscalationGate routes on bb.convergence to
     Respond / Respond#need_user / Respond#exhausted. CatchFlush always
     runs last so memory flushes regardless of which branch fired.
 
@@ -101,11 +104,12 @@ def test_execution_seq_three_node_pr_c_shape():
         "WorkLoop", "EscalationGate", "CatchFlush",
     ], f"unexpected ExecutionSeq children: {child_names}"
 
-    # WorkLoop children = [ArchExecYield, DispatchWork, ConvergeJudge]
+    # WorkLoop children = [ArchExecYield, DispatchWork, ArchCheckGate,
+    # ConvergeJudge] — v3.9 four-node shape.
     work_loop = exec_seq.children()[0]
     work_loop_children = [c.name for c in work_loop.children()]
     assert work_loop_children == [
-        "ArchExecYield", "DispatchWork", "ConvergeJudge",
+        "ArchExecYield", "DispatchWork", "ArchCheckGate", "ConvergeJudge",
     ], f"unexpected WorkLoop children: {work_loop_children}"
 
     # ArchExecYield is a leaf — no children.

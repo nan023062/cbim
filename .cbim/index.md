@@ -12,6 +12,7 @@
 - v1/kernel/engine/core
 - v1/kernel/engine/dream
 - v1/kernel/engine/execution
+- v1/kernel/engine/execution/actions/arch_check_gate
 - v1/kernel/engine/persistence
 - v1/kernel/engine/retrieval
 - v1/kernel/mcp_server

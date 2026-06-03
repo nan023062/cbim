@@ -27,16 +27,26 @@ def to_stdout(result: AuditResult) -> str:
         glyph = _SEVERITY_GLYPH.get(f.severity, f.severity)
         target = f.target if f.target is not None else "-"
         code = f.code or "?"
-        lines.append(f"{glyph} {f.check}/{code} :: {target} :: {f.message}")
+        # Only annotate origin when it's baseline; "new" is the default and
+        # adding `[new]` everywhere would just be visual noise.
+        origin_tag = " [baseline]" if getattr(f, "origin", "new") == "baseline" else ""
+        lines.append(f"{glyph} {f.check}/{code} :: {target} :: {f.message}{origin_tag}")
         if f.suggestion:
             lines.append(f"        -> {f.suggestion}")
     summary = result.summary
+    by_origin = summary.get("by_origin") or {}
     lines.append("")
     lines.append(
         f"audit: {summary.get('total', 0)} findings "
         f"(error={summary.get('error', 0)}, warn={summary.get('warn', 0)}, "
         f"info={summary.get('info', 0)}) across {len(summary.get('checks_ran', []))} checks"
     )
+    if by_origin:
+        lines.append(
+            f"       origin: new={by_origin.get('new', 0)} "
+            f"baseline={by_origin.get('baseline', 0)} "
+            f"(mode={summary.get('baseline_mode', 'lenient')})"
+        )
     return "\n".join(lines) + "\n"
 
 

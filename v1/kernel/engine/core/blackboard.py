@@ -9,10 +9,14 @@ No write barriers are enforced here (the "single writer per field" rule
 is a design-time invariant; runtime enforcement would be ceremonious and
 duplicate static review). Reads are unrestricted.
 
-Schema version: 4 (drops `audit_report` from FIELDS and prunes 8 dead
-`arch_*` / `hr_*` extras left over from the pre-v3.6 arch_exec / hr_exec
-subtrees). Older snapshots at schema_version=3 still load — `from_dict`
-silently ignores unknown FIELDS / extras.
+Schema version: 5 (v3.9 — adds `arch_check_report` to `_PERSISTED_EXTRAS`
+so the ArchCheckGate verdict survives yield/resume between DispatchWork
+and ConvergeJudge). v4 dropped `audit_report` from FIELDS and pruned the
+8 dead `arch_*` / `hr_*` extras left over from the pre-v3.6 arch_exec /
+hr_exec subtrees. `from_dict` silently ignores unknown FIELDS / extras;
+older snapshots at schema_version=3/4 still load (persistence.snapshot
+hard-rejects on mismatch when reading via read_bb, but the dataclass
+itself is forward/backward tolerant).
 """
 
 from __future__ import annotations
@@ -39,7 +43,7 @@ class IdentifiableBB(Protocol):
     def clear_dirty(self) -> None: ...
 
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 # Scratch fields stashed on bb.__dict__ that must survive a yield/resume
@@ -53,11 +57,16 @@ SCHEMA_VERSION = 4
 #   arch_redo_context    — PR-C arch ↔ work loop-back payload
 #   work_loop_iter       — PR-C LoopSeq iteration counter (public alias)
 #   retrieved_context    — v3.8 ContextRetrieval three-bucket dict
+#   arch_check_report    — v3.9 ArchCheckGate verdict/findings/scoped_to;
+#                          single writer = ArchCheckGate, readers =
+#                          ConvergeJudge (read-only) + Respond (exhausted
+#                          render) + dashboards
 _PERSISTED_EXTRAS: tuple[str, ...] = (
     "convergence",
     "arch_redo_context",
     "work_loop_iter",
     "retrieved_context",
+    "arch_check_report",
 )
 
 

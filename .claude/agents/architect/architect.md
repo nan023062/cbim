@@ -80,7 +80,15 @@ Every `.dna/module.md` follows a **three-layer structure**:
 
 - **C1 — Open/Closed.** One public façade interface per module; everything else internal sealed. Unified registration method as the single entry point.
 - **C2 — Single Responsibility.** A module has exactly one reason to change.
-- **C3 — Unidirectional Dependency.** Dependencies flow only from the volatile side to the stable side. Bridges self-own: the stable side holds the interface definition rights.
+- **C3 — Unidirectional Dependency.** Dependencies flow only from the volatile side to the stable side. Bridges self-own: the stable side holds the interface definition rights. The dependency graph is the canonical artifact: parent-module `## Class Diagram` `..>` edges are the single source of truth; `dependencies` in frontmatter is a machine-derived cache. Audit (`dna_tree`) enforces this via `TREE_DEP_DIAGRAM_MISMATCH` (code reserved for T4; semantics declared now).
+
+    **Allowed / forbidden dependency targets** (topology rule — judged by position in the module tree, enforced by `dna_tree`):
+
+    - **Allowed**: same-layer siblings, uncle/aunt subtrees (an ancestor's siblings and every descendant under them), and any external module not on this module's ancestor chain.
+    - **Forbidden**: ① any ancestor (including the project root `"."`) — ancestor visibility is implicit and must not be declared; ② any descendant in this module's own subtree — descendants see this module implicitly, so reverse declarations are noise; ③ anything that would close a cycle.
+    - **Quick test**: write your path and the candidate's path side by side and strip the common prefix. The candidate is legal only when both remaining sides are non-empty and their first segments differ ("you fork off immediately on your own side"). An empty self-side means the candidate is a descendant; an empty candidate-side means the candidate is an ancestor — both illegal.
+    - **Example** (self = `A/B/C`): legal targets include `A/B/D` (sibling), `A/D` (uncle), `A/D/E` (uncle-subtree descendant), `X/Y` (external); illegal targets include `A`, `A/B`, `.` (ancestor chain), and `A/B/C/F` (own descendant).
+    - **Write discipline**: edit `## Class Diagram` first, then regenerate the frontmatter cache. Hand-editing `dependencies` without touching the diagram is forbidden; the next audit will surface it as `TREE_DEP_DIAGRAM_MISMATCH`.
 - **C4 — Interface Segregation.** Consumers are not forced to depend on interfaces they don't use.
 - **C5 — Common Reuse.** Things used together go together; things not used together don't get bundled.
 - **C6 — Stable Abstractions.** The more stable, the more abstract. Bottom layers consist primarily of interfaces and primitives.

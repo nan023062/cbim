@@ -19,24 +19,16 @@ Engine contains zero business logic in either role. The CLI dispatcher parses ar
 
 ```mermaid
 classDiagram
-    class cli {
-        +main()
-    }
-    class logger
-    class session_log
-    class import_log
-    class log_view
-    class debug
-    class config
-    class audit
-    class core {
+    class `engine-core` {
+        <<module>>
         +Node
         +Composite
         +Decorator
         +Runner
         +Blackboard
     }
-    class persistence {
+    class `engine-persistence` {
+        <<module>>
         +write_bb()
         +read_bb()
         +write_resume()
@@ -44,41 +36,45 @@ classDiagram
         +append_event()
     }
     class retrieval {
+        <<module>>
         +index_upsert()
         +index_delete()
         +search()
         +verify_consistency()
         +stats()
     }
-    class execution {
+    class `execution-engine` {
+        <<module>>
         +bt_tick()
         +bt_tick_resume()
         +bt_list_running_ticks()
     }
-    class dream {
+    class `dream-engine` {
+        <<module>>
         +dream_tick()
         +dream_tick_resume()
         +dream_list_runs()
         +dream_abort()
     }
+    class audit {
+        <<module>>
+        +run_audit()
+        +BaselineStore
+    }
 
-    cli --> logger
-    cli --> session_log
-    cli --> import_log
-    cli --> log_view
-    cli --> debug
-    cli --> config
-    cli --> audit
-    cli --> execution : audit-only inspect
-    cli --> dream : audit-only inspect
-    persistence --> core : SCHEMA_VERSION
-    execution --> core : Node / Composite / Decorator / Runner / Blackboard
-    execution --> persistence : bb / resume / trace I/O
-    execution --> retrieval : 4-source search (ContextRetrieval)
-    dream --> core : Node / Composite / Decorator / Runner / Blackboard
-    dream --> persistence : bb / resume / trace I/O
-    dream --> retrieval : verify_consistency / index_delete
+    `engine-persistence` ..> `engine-core` : SCHEMA_VERSION
+    `execution-engine` ..> `engine-core` : Node / Composite / Decorator / Runner / Blackboard
+    `execution-engine` ..> `engine-persistence` : bb / resume / trace I/O
+    `execution-engine` ..> retrieval : 4-source search (ContextRetrieval)
+    `execution-engine` ..> memory : FlushMemory contract.write
+    `dream-engine` ..> `engine-core` : Node / Composite / Decorator / Runner / Blackboard
+    `dream-engine` ..> `engine-persistence` : bb / resume / trace I/O
+    `dream-engine` ..> retrieval : verify_consistency / index_delete
+    `dream-engine` ..> memory : compact / sweep_expired / HealthChecker
+    `dream-engine` ..> audit : BaselineStore.load (read-only burndown)
 ```
+
+**Class diagram reading rules.** Nodes are the six registered sub-modules of `engine/` (frontmatter `name` values). Edges (`..>`) declare cross-module dependencies — the authoritative source per the `dna_tree` `TREE_DEP_DIAGRAM_MISMATCH` rule. Outgoing edges from `memory` and `audit` are not shown here because both have other parents (`v1/kernel/memory` is a top-level sibling of `engine`; `audit` is itself an engine child whose own dependencies are declared at its own level). Internal engine code (`cli.py`, `logger.py`, `session_log.py`, `import_log.py`, `log_view.py`, `debug.py`, `config.py`) does NOT appear here — those are package-internal files, not sub-modules; the narrative below covers their role.
 
 Note: `execution/`, `dream/`, and `retrieval/` are NOT routed through `cli`. `execution/` and `dream/` are exposed to the main agent via the `mcp_server` container as MCP tools; `retrieval/` is an in-process facade called directly by `execution/`, `dream/`, `memory/`, and the `dna_*` / `agent_*` MCP tool layer. The CLI dispatcher only inspects `execution/` and `dream/` for audit / debug purposes (e.g. listing `.cbim/scheduler/bt/<tick_id>/` and `.cbim/scheduler/dream/<run_id>/` directories).
 
@@ -108,7 +104,7 @@ Dispatched domains (current surface, mirrors `engine/cli.py:main`):
 
 Hook events are NOT dispatched through this CLI — Claude Code invokes the in-process bridge scripts at `.claude/hooks/cbim_*.py` directly.
 
-Internal cross-cutting modules: `logger` + `session_log` (per-session text logs), `call_log` + `import_log` (PreToolUse/PostToolUse + import telemetry), `log_view` (read-back surface for `log show` / `log tail`), `debug` (.debug flag toggle), `config` (config get/set/show), `audit` (drift checks), `core` (shared BT primitives), `persistence` (atomic bb / resume / trace file I/O shared by both root loops), `retrieval` (shared multi-source index facade used by both root loops and every write path of the four indexed sources).
+Internal cross-cutting code files (not sub-modules, do NOT appear in the class diagram above): `logger.py` + `session_log.py` (per-session text logs), `call_log.py` + `import_log.py` (PreToolUse/PostToolUse + import telemetry), `log_view.py` (read-back surface for `log show` / `log tail`), `debug.py` (.debug flag toggle), `config.py` (config get/set/show), `cli.py` (CLI dispatcher entry). These are engine-internal Python modules; only the six registered sub-modules (`core/`, `persistence/`, `retrieval/`, `execution/`, `dream/`, `audit/`) appear as classDiagram nodes.
 
 Non-CLI sub-modules (driven through other surfaces):
 
@@ -116,7 +112,8 @@ Non-CLI sub-modules (driven through other surfaces):
 - `persistence/` — atomic file persistence for behavior-tree state (bb.json + resume.json via `snapshot.py`; trace.jsonl via `trace.py`). Shared by `execution/` and `dream/` runners; loop-agnostic (the caller injects the absolute directory). On-disk paths under `.cbim/scheduler/{bt,dream}/<id>/` are an external contract — read by the dashboard and CLI audit tools. Depends on `engine/core/blackboard.SCHEMA_VERSION` only. See `engine/persistence/.dna/module.md`.
 - `retrieval/` — vector + keyword retrieval primitives (embedding-provider abstraction, BM25 fallback, per-source index storage at `.cbim/index/<source>/`, similarity search, two-tier drift verification). Treats the four data sources (transcript / memory_medium / dna / agents) uniformly via a string-enum `source` parameter; does NOT know what those sources mean semantically. Loop-agnostic and source-agnostic. Used by `execution/` (`ContextRetrieval` runs 4-source `search` before `ModeClassify`), by `dream/` (`MemRebuildIndex` runs `verify_consistency(mode="full")`; `TranscriptDelete` runs `index_delete("transcript", ...)`), and by every write path of the four indexed sources (`memory.crud` / `mcp_server.tools.dna` / `mcp_server.tools.agents` / `hooks.session_stop`) as a synchronous side-effect of writing. Sibling to `execution/` and `dream/` under `engine/`; not owned by either root. Dependency direction: `{execution, dream, memory.crud, memory.compaction, mcp_server.tools.dna, mcp_server.tools.agents, hooks.session_*} → engine/retrieval`; the reverse is forbidden. See `engine/retrieval/.dna/module.md` and `engine/retrieval/.dna/contract.md`.
 - `execution/` — behavior-tree driver for the **execution loop** (user-driven root). Exposes `bt_tick(user_request, context=None)` / `bt_tick_resume(tick_id, dispatch_result)` / `bt_list_running_ticks()` as MCP tools (registered by `mcp_server`). The main agent calls `bt_tick` on each user prompt; the BT runner drives the global root node through yield/resume until `Done`. Builds its tree out of `engine/core/` primitives. See `engine/execution/.dna/module.md` and `engine/execution/.dna/contract.md`. Persistence at `.cbim/scheduler/bt/<tick_id>/{bb.json, trace.jsonl, resume.json}` (writes via `engine/persistence/`); 4-source context retrieval via `engine/retrieval/`.
-- `dream/` — behavior-tree driver for the **governance loop** (SessionStart-catchup-driven root, CBIM's second root, peer to `execution/`). Exposes `dream_tick(reason, run_id=None)` / `dream_tick_resume(run_id, dispatch_result)` / `dream_list_runs(limit=10)` / `dream_abort(run_id, reason)` as MCP tools. Triggered by SessionStart hook when ≥20 hours since last successful run. Drives three governance steps (memory / knowledge / capability) via `SequenceTolerant`; memory step calls `memory/` internal maintenance interfaces in-process (no LLM) plus `engine/retrieval/` for full-mode drift verification and transcript index cleanup; knowledge / capability steps yield to dispatch Architect / HR in governance mode. Reuses `engine/core/` primitives (Node ABC, Composite, Decorator, Runner), `engine/persistence/` for bb / resume / trace I/O, and `engine/retrieval/` for index drift checks but holds an independent root tree, independent blackboard schema (8 fields), independent trace, independent entry tools. Dependency direction is `dream → engine/core`, `dream → engine/persistence`, `dream → engine/retrieval`; `execution` does NOT depend on `dream`, and `dream` does NOT depend on `execution` — they are siblings sharing `core/` / `persistence/` / `retrieval/`. See `engine/dream/.dna/module.md` and `engine/dream/.dna/contract.md`. Persistence at `.cbim/scheduler/dream/<run_id>/{bb.json, trace.jsonl, resume.json, report.md, current.json, last_success.json, abandoned.json}` — physically isolated from `execution/`.
+- `dream/` — behavior-tree driver for the **governance loop** (SessionStart-catchup-driven root, CBIM's second root, peer to `execution/`). Exposes `dream_tick(reason, run_id=None)` / `dream_tick_resume(run_id, dispatch_result)` / `dream_list_runs(limit=10)` / `dream_abort(run_id, reason)` as MCP tools. Triggered by SessionStart hook when ≥20 hours since last successful run. Drives three governance steps (memory / knowledge / capability) via `SequenceTolerant`; memory step calls `memory/` internal maintenance interfaces in-process (no LLM) plus `engine/retrieval/` for full-mode drift verification and transcript index cleanup; knowledge / capability steps yield to dispatch Architect / HR in governance mode. Reuses `engine/core/` primitives (Node ABC, Composite, Decorator, Runner), `engine/persistence/` for bb / resume / trace I/O, and `engine/retrieval/` for index drift checks but holds an independent root tree, independent blackboard schema (8 fields), independent trace, independent entry tools. Dependency direction is `dream → engine/core`, `dream → engine/persistence`, `dream → engine/retrieval`, `dream → engine/audit` (BaselineStore.load read-only); `execution` does NOT depend on `dream`, and `dream` does NOT depend on `execution` — they are siblings sharing `core/` / `persistence/` / `retrieval/`. See `engine/dream/.dna/module.md` and `engine/dream/.dna/contract.md`. Persistence at `.cbim/scheduler/dream/<run_id>/{bb.json, trace.jsonl, resume.json, report.md, current.json, last_success.json, abandoned.json}` — physically isolated from `execution/`.
+- `audit/` — read-only architecture drift guard exposing five checks (`index_consistency` / `memory_threshold` / `agent_fission` / `dna_fission` / `dna_tree`) plus a `BaselineStore` for the audit ratchet. Sibling to `execution` / `dream` / `core` / `persistence` / `retrieval` under `engine/`. Consumed by (a) `execution`'s `ArchCheckGate` leaf (runs `run_audit(checks=[dna_tree, dna_fission])` after `DispatchWork`) and (b) `dream`'s `BaselineBurndown` action (calls `BaselineStore.load()` to surface burndown advice). `audit` does NOT depend on `execution` or `dream` — it is the stable downstream side of both consumer relationships. See `engine/audit/.dna/module.md`.
 
 ## Origin Context
 
@@ -148,3 +145,4 @@ Every CBIM operation that an LLM or human types is one CLI invocation. The kerne
 - No `cbim_kernel.*` import paths. The kernel root is now the package root (after flatten); imports are `from engine ...`, `from memory ...`, `from cbi.resources ...`, never `from cbim_kernel.engine ...`.
 - No `migrate` or `upgrade` subcommands. Project lifecycle = `init` + `project sync` only.
 - No `pin` subcommand, no `versions.json` reader, no installer-side subprocess.
+

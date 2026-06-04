@@ -30,6 +30,12 @@ CBIM 执行任务循环的**驱动引擎**。每一次用户 prompt 触发一次
 ## Sub-module Relationships
 
 ```mermaid
+classDiagram
+    class arch-check-gate { <<module>> }
+    arch-check-gate ..> audit : ArchCheckGate calls run_audit (read-only)
+```
+
+```mermaid
 flowchart TB
     Root["Root (Trace ▸ Timeout ▸ RootSeq)"]
     Init["InitTick"]
@@ -52,7 +58,8 @@ flowchart TB
     ExecSeq --> WorkLoop["WorkLoop = LoopSeq(max_iters=3)"]
     WorkLoop --> ArchY["ArchExecYield<br/>(yield: agent_type='architect',<br/>subtask_id='arch:<iter>';<br/>从 receipt trailer 取 arch_plan)"]
     ArchY --> Work["DispatchWork<br/>(yields per Work task; agent_type='work';<br/>主 agent 用 MCP agent_list 解析 agent_file)"]
-    Work --> Judge["ConvergeJudge<br/>(bb.work_results → bb.convergence)"]
+    Work --> ArchGate["ArchCheckGate<br/>(纯代码审计门 · 不 yield<br/>run_audit(touched_modules) → bb.arch_check_report)"]
+    ArchGate --> Judge["ConvergeJudge<br/>(bb.work_results + bb.arch_check_report → bb.convergence)"]
     Judge -.->|arch_redo| ArchY
     ExecSeq --> Gate["EscalationGate<br/>(SwitchBranch 按 bb.convergence)"]
     Gate --> RespExec["Respond (done / need_user / exhausted)"]
@@ -60,12 +67,13 @@ flowchart TB
 
     subgraph EXEC["kernel/engine/execution（本模块）"]
         direction TB
-        Actions["actions/<br/>init_tick · context_retrieval · mode_classify · direct_reply · dispatch_core_agent · core_agents (表) · arch_exec_yield · dispatch_work · converge_judge · respond · flush_memory · receipt (trailer 解析)"]
-        Tree["tree/<br/>main_loop ROOT 构造器（SwitchBranch 五分支 + WorkLoop LoopSeq）"]
+        Actions["actions/<br/>init_tick · context_retrieval · mode_classify · direct_reply · dispatch_core_agent · core_agents (表) · arch_exec_yield · dispatch_work · <b>arch_check_gate</b> (携 .dna) · converge_judge · respond · flush_memory · receipt (trailer 解析)"]
+        Tree["tree/<br/>main_loop ROOT 构造器（SwitchBranch 五分支 + WorkLoop LoopSeq 4 节点）"]
         Api["api/<br/>bt_tick · bt_tick_resume · BtResult · DispatchRequest"]
     end
 
     Core[("engine/core<br/>Node ABC · Composite · Decorator · Blackboard · Runner")]
+    Audit[("engine/audit<br/>run_audit · BaselineStore")]
     MainAgent[("主 Agent（Task tool）")]
     Persist[("engine/persistence<br/>bb.json · resume.json · trace.jsonl")]
     Memory[("kernel/memory<br/>contract.write")]
@@ -79,12 +87,15 @@ flowchart TB
     Tree --> Core
     Tree --> Actions
     Actions --> Core
+    Actions -.->|ArchCheckGate 调 run_audit| Audit
     Core --> Persist
     Actions -.->|ContextRetrieval 调 4 源 search| Retrieval
     Actions -.->|FlushMemory 批量| Memory
 ```
 
-**主干拓扑 v3.8**：根节点结构为 `Trace ▸ Timeout ▸ RootSeq`，`RootSeq = Sequence(InitTick → ContextRetrieval → ModeClassify → ModeSwitch)`。`ContextRetrieval` 是 v2 记忆重设计后新增的前置叶：
+**主干拓扑 v3.9**：根节点结构仍为 `Trace ▸ Timeout ▸ RootSeq`，`RootSeq = Sequence(InitTick → ContextRetrieval → ModeClassify → ModeSwitch)`；**变更点在 `execution` 分支的 `WorkLoop`：从 3 节点扩为 4 节点**——`LoopSeq(ArchExecYield → DispatchWork → ArchCheckGate → ConvergeJudge, max_iters=3)`。`ArchCheckGate` 为纯代码检测门，在 `DispatchWork` 产出后紧扣一环只读审计，写 `bb.arch_check_report`；**不 yield**、**不走 FAILURE 短路**（`tick` 永返 SUCCESS），收敛判定权仍归 `ConvergeJudge` 独有。
+
+`ContextRetrieval` 详情（v2 记忆重设计后新增的前置叶）：
 
 - **输入**：`bb.user_request`。
 - **动作**：同步调 4 次 `engine/retrieval.search(source, query=user_request, top_k=N_per_source)`，源分别为 `"transcript"` / `"memory_medium"` / `"dna"` / `"agents"`。
@@ -102,11 +113,13 @@ flowchart TB
 | `architect` | `ArchitectBranch = Sequence(DispatchCoreAgent#architect → Respond#architect)` | 是（一次） | `"architect"` |
 | `hr` | `HrBranch = Sequence(DispatchCoreAgent#hr → Respond#hr)` | 是（一次） | `"hr"` |
 | `audit` | `AuditBranch = Sequence(DispatchCoreAgent#auditor → Respond#audit)` | 是（一次） | `"auditor"` |
-| `execution`（含 default 回退） | `ExecutionSeq = Sequence(WorkLoop=LoopSeq[ArchExecYield, DispatchWork, ConvergeJudge] → EscalationGate → CatchFlush(FlushMemory))` | 是（架构师 1–3 次 + 每个 Work 任务 1 次） | `"architect"` / `"work"` |
+| `execution`（含 default 回退） | `ExecutionSeq = Sequence(WorkLoop=LoopSeq[ArchExecYield, DispatchWork, ArchCheckGate, ConvergeJudge] → EscalationGate → CatchFlush(FlushMemory))` | 是（架构师 1–3 次 + 每个 Work 任务 1 次；ArchCheckGate 不 yield） | `"architect"` / `"work"` |
 
 **v3.6 重要变更：`HrExecution` 子树从 `ExecutionSeq` 中移除。** 执行链路从 `arch_exec → hr_exec → DispatchWork` 简化为 `WorkLoop(ArchExecYield + DispatchWork + ConvergeJudge)`。理由：(a) 现有 Work Agent 集合短小（programmer / coder / tester …），LLM 能在 yield 时直接匹配，无需引擎内子树流转；(b) 真正的能力缺口治理是治理根 `hr_gov` 子循环的职责，不放在执行热路径上。**`hr` 分支与 `hr_gov` 治理子树保持不变**。
 
-**v3.7 重要变更：`arch_exec` 子树从 in-process 多叶坍缩为 `ArchExecYield` 单节点 yield。** 架构师执行的 LLM 调用完全走外部 agent persona（`.claude/agents/architect/architect.md`）；原 `intent_analyze / decompose / arch_gate / scan / extract / worth / state_check / diff / create / validate / map_tasks / assemble` 多叶全部下架，`engine/core` 中的 `LlmActionLeaf` 原语也同步下架。
+**v3.7 重要变更：`arch_exec` 子树从 in-process 多叶坤缩为 `ArchExecYield` 单节点 yield。** 架构师执行的 LLM 调用完全走外部 agent persona（`.claude/agents/architect/architect.md`）；原 `intent_analyze / decompose / arch_gate / scan / extract / worth / state_check / diff / create / validate / map_tasks / assemble` 多叶全部下架，`engine/core` 中的 `LlmActionLeaf` 原语也同步下架。
+
+**v3.9 重要变更：`WorkLoop` 从 3 节点扩为 4 节点，新增 `ArchCheckGate`。** 该节点位于 `DispatchWork` 之后、`ConvergeJudge` 之前的固定一环，对本轮 arch_plan 声明的 `touched_modules` 调 `engine/audit.run_audit(checks=[dna_tree, dna_fission])`，按 `BaselineStore` 棘轮折算后写 `bb.arch_check_report`。详见子模块 [`actions/arch_check_gate/.dna/module.md`](../actions/arch_check_gate/.dna/module.md)。**架构师必须在 `arch_plan` 的 task.params 中填 `touched_modules`**——该字段是 arch_plan 契约的必填字段，缺失即视为协议违规。
 
 **`DispatchWork` 的 agent_file 解析职责改由主 agent 承担**：架构师在 `arch_plan` 每个 task 上写 `required_capability`（枚举值见 `arch_exec_yield.py::_KNOWN_CAPABILITIES`：programmer / doc_writer / generalist），**不**写 `agent_file`。`WorkAgentLeaf.tick` yield 出的 `DispatchRequest` 携带 `agent_file=None` 与新增的 `required_capability` 字段；主 agent 据此调 MCP `agent_list` 匹配 `.claude/agents/*.md`，匹配不到则回退到默认 work agent `.claude/agents/programmer/programmer.md`。匹配逻辑由 CLAUDE.md 主 agent 提示词承载，不在引擎进程内。
 
@@ -120,13 +133,23 @@ flowchart TB
 | `actions/context_retrieval` → `engine/retrieval` | 同步 4 源 search | 不 yield；retrieval 是同步嵌入式接口。失败被 `@Catch` 吞掉 |
 | `actions/arch_exec_yield` → `engine/core` + `actions/core_agents` + `actions/receipt` | yield 单叶 | 单次 yield 到架构师 agent；`on_resume` 调 `parse_trailer` 取 `arch_plan` |
 | `actions/dispatch_work` → `engine/core` + `actions/receipt` | yield 多叶顺序 | 为 `bb.arch_plan` 每个 task 生成一个 `WorkAgentLeaf`，严格顺序执行；`on_resume` 调 `parse_trailer` 写 `bb.work_results` |
-| `actions/converge_judge` → `engine/core` | 纯代码 | 聚合 `bb.work_results` 写 `bb.convergence`；arch_redo 上限由 LoopSeq max_iters 控制 |
+| `actions/arch_check_gate` → `engine/audit` | 同步只读审计 | 不 yield、不持回调；调 `run_audit(checks=[dna_tree, dna_fission])` + `BaselineStore` 折算后写 `bb.arch_check_report`。携自有 `.dna/` 是 execution 名下首个 `actions/` 叶独立成模块的例外——参见下面「不对称」决策 |
+| `actions/converge_judge` → `engine/core` | 纯代码 | 聚合 `bb.work_results` + `bb.arch_check_report` 写 `bb.convergence`；arch_redo 上限由 LoopSeq max_iters 控制 |
 | `actions/*` 普通叶 → `engine/core` | 实现 `Node` ABC | 每个 Action 是 `engine.core.Node` 的一个子类，签名 `tick(bb) -> Status` |
 | `api` → `tree` + `engine/core` + `engine/persistence` | 入口启动 / 恢复 | `bt_tick` 读 `ROOT` 启 `engine.core.Runner`；`bt_tick_resume` 调 `persistence.snapshot.read_bb / read_resume` 后由 Runner 按 `runner_resume_path` 重建栈；路径前缀注入为 `.cbim/scheduler/bt/<tick_id>/` |
 
-**无循环依赖**——单向自顶向下：`api → tree → {engine/core, actions} → {engine/persistence, memory.contract, engine/retrieval.contract}`。
+**黑板关键字段 (v3.9 升级)**：
 
-**注：`engine/core` / `engine/persistence` / `engine/retrieval` 是 execution 和 dream 共享的平级原语库**——都不属于任一根内部。两根（`engine/execution` 与 `engine/dream`）都依赖 `engine/core` 的 Node ABC / Composite / Decorator / Runner / Blackboard，同时两根都依赖 `engine/persistence/` 的持久化与 trace 文件格式、两根都依赖 `engine/retrieval/` 的检索原语；但两根各持独立根树、独立黑板、独立入口工具。依赖方向 `execution → engine/core`、`dream → engine/core`，**execution 与 dream 互不依赖**（单向铁律）。
+| 字段 | 写者 | 读者 | 说明 |
+|------|------|------|------|
+| `arch_plan` | `ArchExecYield`（从 receipt trailer 解析写入） | `DispatchWork` / `ArchCheckGate` / `ConvergeJudge` | task.params 中 **`touched_modules` 是必填字段**；架构师漏写即视为协议违规，`ArchCheckGate` 写 fail verdict 让 `ConvergeJudge` 触发 arch_redo |
+| `work_results` | `DispatchWork` | `ConvergeJudge` | 不变 |
+| `arch_check_report` | `ArchCheckGate`（v3.9 新增唯一写者） | `ConvergeJudge`（只读，不写） / `Respond`（耗尽时渲染 summary） / 调试观测 | 进入 `engine/core/blackboard.py` 的 `_PERSISTED_EXTRAS`；SCHEMA_VERSION 由 4 推进至 5；verdict.pass_=False 优先级 > needs_user_input > needs_arch_decision > done |
+| `convergence` | `ConvergeJudge` | `EscalationGate` / `Respond` | 不变；棘轮判定走 `convergence ∈ {arch_redo, done, exhausted, needs_user_input}` |
+
+**无循环依赖**——单向自顶向下：`api → tree → {engine/core, actions} → {engine/persistence, engine/audit, memory.contract, engine/retrieval.contract}`。
+
+**注：`engine/core` / `engine/persistence` / `engine/retrieval` 是 execution 和 dream 共享的平级原语库**——都不属于任一根内部。两根（`engine/execution` 与 `engine/dream`）都依赖 `engine/core` 的 Node ABC / Composite / Decorator / Runner / Blackboard，同时两根都依赖 `engine/persistence/` 的持久化与 trace 文件格式、两根都依赖 `engine/retrieval/` 的检索原语；但两根各持独立根树、独立黑板、独立入口工具。依赖方向 `execution → engine/core`、`dream → engine/core`，**execution 与 dream 互不依赖**（单向铁律）。`engine/audit` 与 execution 是同为 engine 子模块的兄弟；execution 通过 `ArchCheckGate` 单向依赖 audit，audit 不反向依赖 execution。
 
 ## Origin Context
 
@@ -187,6 +210,12 @@ v2 把控制流抽到引擎，主 agent 退化为执行手。树拓扑可读、�
 - **现状**：programmer agent 已升级为通用代码 agent，可同时承担产线代码与测试代码编写；引擎能力枚举（`_KNOWN_CAPABILITIES` / 架构师 prompt / `CORE_AGENT_CAPABILITY_TABLE`）中的 `tester` 仅在兜底层指向 `.claude/agents/programmer/programmer.md`，**并无独立 tester agent persona** 存在。enum 中保留 tester 只会让架构师在派工时误以为存在专职 tester，引发空槽位匹配与不必要的能力分类噪音。
 - **决策**：从三处同步移除 `tester`——`actions/arch_exec_yield.py::_KNOWN_CAPABILITIES`、架构师 prompt 中列出的可用能力枚举、`CORE_AGENT_CAPABILITY_TABLE` 的兜底映射。删除后能力集合收敛为 `programmer / doc_writer / generalist` 三值。测试代码编写归 programmer 默认职责，不再视为独立能力维度。
 - **再招聘触发条件**：当且仅当以下三条**同时**满足时，HR 才启动新一代 tester agent 招聘：(a) 测试工程出现独立工具链（独立测试框架 / 独立 CI 阶段 / 独立测试数据治理）；(b) 测试评审周期独立于代码评审周期（测试 PR 与代码 PR 走两条评审流）；(c) 单一 programmer 因测试责任过载，出现测试代码质量下滑或迭代节奏被测试任务挤占的客观信号。三条任缺其一，tester 留在 programmer 名下。
+
+### v3.9 — ArchCheckGate 插入 WorkLoop：架构合规门与收敛判定解耦
+
+- **`ConvergeJudge` 对 `bb.arch_check_report` 只读不写。** 写者唯一 = `ArchCheckGate`（黑板 schema 强制）。`ConvergeJudge` 仅读 `verdict.pass_` 与 `unresolved` 决策跳 arch_redo，不允许修改 `arch_check_report` 中任何字段（含「重新分类严重性」「调整 unresolved 集合」等隱式重写）。该单写多读隔离是审计棘轮可追溯性的全部前提——任何「启发式抻决」提议都要走 contract 变更；黑板 schema 校验阶段拒绝 `ConvergeJudge` 对 `arch_check_report` 的写动作。
+- **`verdict.pass_=False` 优先级 > `needs_user_input` > `needs_arch_decision` > `done`。** `ConvergeJudge` 在计算 `bb.convergence` 时按该优先序检查信号源：首先看架构合规门（`arch_check_report.verdict.pass_=False` → `arch_redo` + `unresolved` 灌入 `arch_redo_context`，除非 LoopSeq max_iters 耗尽转 `exhausted`），再看 Work 层信号（`needs_user_input` / `needs_arch_decision` / `done`）。理由：架构师写出的 .dna 不合规是「为上游一切后续判定奉为地基」的问题——论上游让下游 Work Agent 在不合规的设计上提问或升级决策是糟践资源，架构修正必须先于业务决断。`done` 位于最低位业主要则表示「只有架构合规 + 无人补问 + 无需架构重决三者同时成立才谈完成」。
+- **`actions/arch_check_gate/` 是 execution 名下首个携自有 `.dna/` 的 `actions/` 子项，其他叶节点仍属 execution 内部代码——不对称是合理的。** 让某个叶独立成模块的唯一理由是「它承载跨模块边界的独立不变量」：`ArchCheckGate` 携着 INV-CHECK-GATE-1（100% 确定性代码、零 LLM 参与）与 `dependencies: [engine/audit]` 两项爵位，必须独立审计入口且加锁粒度为 `dna_tree` / `dna_fission`；而 init_tick / mode_classify / context_retrieval / dispatch_core_agent / arch_exec_yield / dispatch_work / converge_judge / respond / flush_memory / receipt 都是 execution 内部控制流叶，不过跨模块边界，不需要各自 .dna。未来若再有叶在同一意义上承载独立跨模块契约（例如一个接入外部 retrieval 子系统的 gate），同样可独立成模块——不对称准则是「跨模块契约与独立不变量」，不是「代码量」或「重要性」。
 
 ## Non-Goals
 

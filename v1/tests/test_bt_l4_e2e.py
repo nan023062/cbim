@@ -44,6 +44,52 @@ def isolated_scheduler_root(tmp_path, monkeypatch):
     return sched
 
 
+@pytest.fixture(autouse=True)
+def neutralize_arch_check_gate(monkeypatch):
+    """v3.9 — neutralise ArchCheckGate's real audit run during e2e dry-runs.
+
+    The gate calls ``run_audit(project_root(), ...)`` which, in this
+    test process, would scan the *actual* cbim-kernel project's .dna
+    tree and surface whatever drift it currently carries. That would
+    flip the gate verdict on / off based on unrelated repo state and
+    break the dry-run pipeline assertions. We stub the gate's
+    ``_tick_impl`` to write a clean pass verdict and return — so the
+    pipeline ticks through to ConvergeJudge with arch_check_report
+    present but never fail-triggering. Architecture-side coverage of
+    the real gate lives in the gate's own unit tests and the
+    ConvergeJudge integration tests in test_main_loop_workloop.py.
+    """
+    from datetime import datetime, timezone
+    from engine.execution.actions.arch_check_gate import gate as _gate_mod
+
+    def _stub_tick_impl(self, bb) -> None:
+        ran_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        bb.arch_check_report = {
+            "touched_modules": [],
+            "verdict": {
+                "pass": True,
+                "error_count": 0,
+                "warn_count": 0,
+                "info_count": 0,
+                "new_error_count": 0,
+                "new_warn_count": 0,
+                "findings": [],
+                "unresolved": [],
+                "summary": "pass (stubbed in e2e)",
+                "ratchet_mode": "lenient",
+            },
+            "scoped_findings": [],
+            "baseline_meta": {"mode": "lenient", "by_origin": {}},
+            "ran_at": ran_at,
+            "checks_ran": ["dna_tree", "dna_fission"],
+            "stubbed": True,
+        }
+
+    monkeypatch.setattr(
+        _gate_mod.ArchCheckGate, "_tick_impl", _stub_tick_impl, raising=True,
+    )
+
+
 def _drive(user_request: str, *replies: str, max_steps: int = 20):
     """Run a tick, feeding the provided replies in order on each yield.
 

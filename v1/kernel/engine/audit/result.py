@@ -10,6 +10,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
 Severity = Literal["info", "warn", "error"]
+Origin = Literal["baseline", "new"]
 
 _SEVERITY_RANK = {"info": 0, "warn": 1, "error": 2}
 
@@ -23,9 +24,32 @@ class AuditFinding:
     metadata: dict[str, Any] = field(default_factory=dict)
     suggestion: str | None = None
     code: str | None = None
+    # T2 baseline ratchet: every finding carries an origin tag. Defaults to
+    # "new" so all pre-baseline callers stay zero-change; BaselineStore.classify
+    # flips it to "baseline" when the fingerprint is already accepted on disk.
+    # Old JSON reports that lack this field are read as "new" (see from_dict).
+    origin: Origin = "new"
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "AuditFinding":
+        """Construct from a dict (e.g. an older JSON report).
+
+        Missing `origin` is silently coerced to "new" so legacy report files
+        round-trip without surprise. Unknown extra keys are ignored.
+        """
+        return cls(
+            check=d["check"],
+            severity=d["severity"],
+            target=d.get("target"),
+            message=d["message"],
+            metadata=dict(d.get("metadata") or {}),
+            suggestion=d.get("suggestion"),
+            code=d.get("code"),
+            origin=d.get("origin") or "new",
+        )
 
 
 @dataclass

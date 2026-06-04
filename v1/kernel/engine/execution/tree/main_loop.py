@@ -35,9 +35,16 @@ Tree shape (see module.md §"5 分支模式拓扑"):
                                   agent; replaces the in-process
                                   nine-leaf arch_exec subtree)
             DispatchWork
-            ConvergeJudge        (PR-C: aggregates bb.work_results →
-                                  bb.convergence ∈ {done | arch_redo |
-                                  user_input | exhausted})
+            ArchCheckGate        (v3.9: programmatic, deterministic
+                                  read-only audit on touched_modules;
+                                  writes bb.arch_check_report; tick
+                                  always SUCCESS, pass/fail flows via
+                                  verdict on the blackboard)
+            ConvergeJudge        (PR-C: aggregates bb.work_results +
+                                  bb.arch_check_report → bb.convergence
+                                  ∈ {done | arch_redo | user_input |
+                                  exhausted}; verdict.pass=False has
+                                  priority over any work-side signal)
           EscalationGate (SwitchBranch on bb.convergence)
             "done"       → Respond
             "user_input" → Respond#need_user
@@ -59,6 +66,7 @@ its receipt trailer. All LLM-driven decisions live in
 
 from __future__ import annotations
 
+from ..actions.arch_check_gate import ArchCheckGate
 from ..actions.arch_exec_yield import ArchExecYield
 from ..actions.context_retrieval import ContextRetrieval
 from ..actions.converge_judge import DEFAULT_MAX_ITERS, ConvergeJudge
@@ -173,10 +181,11 @@ def build_root(*, global_timeout_s: int = 1800):
     # outside the kernel and returns arch_plan in its receipt trailer.
     arch_exec_yield = ArchExecYield(name="ArchExecYield")
     dispatch_work = DispatchWork(name="DispatchWork")
+    arch_check_gate = ArchCheckGate(name="ArchCheckGate")
     converge_judge = ConvergeJudge(max_iters=DEFAULT_MAX_ITERS,
                                    name="ConvergeJudge")
     work_loop = LoopSeq(
-        [arch_exec_yield, dispatch_work, converge_judge],
+        [arch_exec_yield, dispatch_work, arch_check_gate, converge_judge],
         max_iters=DEFAULT_MAX_ITERS,
         name="WorkLoop",
     )

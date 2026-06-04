@@ -249,3 +249,187 @@ def test_collect_hr_advice_extracts_dict_payload_output(bb):
     assert bb.hr_governance_report["safe_actions_applied"] == [
         "agent_edit translator 补 description"
     ]
+
+
+# ---------------------------------------------------------------------------
+# Baseline burn-down advice (T8) — collect_arch_advice piggybacks burn-down
+# reminders onto arch_governance_report.advice_pending.
+# ---------------------------------------------------------------------------
+
+from engine.dream.actions import baseline_burndown as _bd
+
+
+def _seed_baseline(project_root: Path, entries: list[dict]) -> None:
+    """Write a baseline.json under <project_root>/.cbim/audit/ for tests.
+
+    Tests bypass BaselineStore.save() to avoid pulling the audit module's
+    write path into a test that lives in dream's territory; instead we
+    drop the JSON file directly with the schema BaselineStore.load()
+    reads.
+    """
+    import json as _json
+    audit_dir = project_root / ".cbim" / "audit"
+    audit_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema_version": 1,
+        "saved_at": "2026-01-01T00:00:00+00:00",
+        "entries": entries,
+    }
+    (audit_dir / "baseline.json").write_text(
+        _json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+
+def test_burndown_returns_empty_when_baseline_missing(tmp_path):
+    """Project never initialised baseline → advice list is empty."""
+    advice = _bd.collect_burndown_advice(project_root_override=tmp_path)
+    assert advice == []
+
+
+def test_burndown_returns_empty_when_baseline_empty(tmp_path):
+    """Baseline file exists but holds no entries → empty advice."""
+    _seed_baseline(tmp_path, entries=[])
+    advice = _bd.collect_burndown_advice(project_root_override=tmp_path)
+    assert advice == []
+
+
+def test_burndown_groups_per_check_and_appends_rollup(tmp_path):
+    """Three entries across two checks → 2 per-check lines + 1 rollup."""
+    _seed_baseline(tmp_path, entries=[
+        {
+            "fingerprint": "a" * 64, "check": "dna_tree", "code": "TREE_X",
+            "target": "src/foo", "message": "m1",
+            "accepted_at": "2026-01-01T00:00:00+00:00",
+        },
+        {
+            "fingerprint": "b" * 64, "check": "dna_tree", "code": "TREE_Y",
+            "target": "src/bar", "message": "m2",
+            "accepted_at": "2026-01-01T00:00:00+00:00",
+        },
+        {
+            "fingerprint": "c" * 64, "check": "memory_threshold", "code": "MEM_Z",
+            "target": None, "message": "m3",
+            "accepted_at": "2026-01-01T00:00:00+00:00",
+        },
+    ])
+    advice = _bd.collect_burndown_advice(project_root_override=tmp_path)
+    # Per-check lines come first (alphabetical), rollup last.
+    assert len(advice) == 3
+    assert advice[0].startswith("baseline burn-down: dna_tree 下还有 2 条")
+    assert advice[1].startswith("baseline burn-down: memory_threshold 下还有 1 条")
+    assert advice[2].startswith("baseline burn-down 汇总：共 3 条")
+    # Every line names the manual CLI as the consumption path — burn-down
+    # is advisory only; dream never writes the baseline.
+    assert all("cbim audit baseline clear" in line or "CLI" in line for line in advice)
+
+
+def test_burndown_advice_merged_into_arch_report_on_resume(bb, tmp_path, monkeypatch):
+    """on_resume populates arch_governance_report and appends burn-down advice."""
+    _seed_baseline(tmp_path, entries=[
+        {
+            "fingerprint": "d" * 64, "check": "dna_tree", "code": "TREE_X",
+            "target": "src/foo", "message": "m1",
+            "accepted_at": "2026-01-01T00:00:00+00:00",
+        },
+    ])
+    # Pin the project_root that collect_burndown_advice resolves to.
+    monkeypatch.setattr(_bd, "_project_root", lambda: tmp_path)
+
+    node = CollectArchAdvice()
+    bb.arch_governance_dispatched = True
+    node.on_resume(bb, json.dumps({
+        "arch_governance_report": {
+            "safe_actions_applied": ["dna_edit src/foo 补 owner"],
+            "advice_pending": ["既有建议 A"],
+        }
+    }))
+
+    report = bb.arch_governance_report
+    assert report["safe_actions_applied"] == ["dna_edit src/foo 补 owner"]
+    # Existing advice survives; burn-down lines are appended after it.
+    assert report["advice_pending"][0] == "既有建议 A"
+    assert any("baseline burn-down: dna_tree" in s for s in report["advice_pending"])
+    assert any("baseline burn-down 汇总" in s for s in report["advice_pending"])
+
+
+def test_burndown_advice_merged_into_placeholder_on_no_payload(bb, tmp_path, monkeypatch):
+    """Even the no_payload_received FAILURE path picks up burn-down advice."""
+    _seed_baseline(tmp_path, entries=[
+        {
+            "fingerprint": "e" * 64, "check": "memory_threshold", "code": "MEM_Z",
+            "target": None, "message": "m3",
+            "accepted_at": "2026-01-01T00:00:00+00:00",
+        },
+    ])
+    monkeypatch.setattr(_bd, "_project_root", lambda: tmp_path)
+
+    node = CollectArchAdvice()
+    bb.arch_governance_dispatched = True
+    # No on_resume call → tick produces placeholder error report.
+    assert node.tick(bb) is Status.FAILURE
+    report = bb.arch_governance_report
+    assert report["error"] == "no_payload_received"
+    assert any("baseline burn-down: memory_threshold" in s for s in report["advice_pending"])
+
+
+def test_burndown_advice_skipped_when_arch_step_short_circuits(bb, tmp_path, monkeypatch):
+    """Dispatch never fired → no architect report → no burn-down advice attached.
+
+    Burn-down advice piggybacks on the architect's report. If the arch step
+    didn't dispatch (e.g. pre-seeded or skipped), there's no report to attach
+    to and bb.arch_governance_report stays None. This is by design: burn-down
+    advice surfaces through the architect's existing advice_pending block, not
+    via a new blackboard field.
+    """
+    _seed_baseline(tmp_path, entries=[
+        {
+            "fingerprint": "f" * 64, "check": "dna_tree", "code": "TREE_X",
+            "target": "src/foo", "message": "m1",
+            "accepted_at": "2026-01-01T00:00:00+00:00",
+        },
+    ])
+    monkeypatch.setattr(_bd, "_project_root", lambda: tmp_path)
+
+    node = CollectArchAdvice()
+    # arch_governance_dispatched left as None / falsy.
+    assert node.tick(bb) is Status.SUCCESS
+    assert bb.arch_governance_report is None
+
+
+def test_burndown_advice_handles_corrupt_baseline_gracefully(tmp_path):
+    """Corrupt baseline.json → helper returns empty list, no exception."""
+    audit_dir = tmp_path / ".cbim" / "audit"
+    audit_dir.mkdir(parents=True, exist_ok=True)
+    (audit_dir / "baseline.json").write_text("{not json", encoding="utf-8")
+    # Helper must swallow JSON errors — it's advisory only.
+    advice = _bd.collect_burndown_advice(project_root_override=tmp_path)
+    assert advice == []
+
+
+def test_burndown_never_calls_save_or_accept(tmp_path, monkeypatch):
+    """Hard invariant (T8): dream-side baseline access is load()-only.
+
+    We patch BaselineStore.accept / save / clear to raise; if collect_burndown_advice
+    touches any of them we get a noisy failure. Production wiring (CollectArchAdvice
+    → collect_burndown_advice → BaselineStore.load) is asserted by the other tests
+    in this group; this one nails down the read-only contract by detection.
+    """
+    _seed_baseline(tmp_path, entries=[
+        {
+            "fingerprint": "g" * 64, "check": "dna_tree", "code": "TREE_X",
+            "target": "src/foo", "message": "m1",
+            "accepted_at": "2026-01-01T00:00:00+00:00",
+        },
+    ])
+    from engine.audit import BaselineStore
+
+    def _explode(*a, **kw):
+        raise AssertionError("dream burn-down helper must never mutate baseline")
+
+    monkeypatch.setattr(BaselineStore, "accept", _explode)
+    monkeypatch.setattr(BaselineStore, "save", _explode)
+    monkeypatch.setattr(BaselineStore, "clear", _explode)
+
+    advice = _bd.collect_burndown_advice(project_root_override=tmp_path)
+    assert advice  # non-empty → load() was reached and produced output
+    assert any("dna_tree" in line for line in advice)

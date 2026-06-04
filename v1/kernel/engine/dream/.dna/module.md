@@ -8,6 +8,7 @@ dependencies:
   - v1/kernel/engine/persistence
   - v1/kernel/engine/retrieval
   - v1/kernel/memory
+  - v1/kernel/engine/audit
 status: implemented
 ---
 
@@ -36,7 +37,7 @@ flowchart TB
     subgraph DREAM["kernel/engine/dream（本模块）"]
         direction TB
         Tree["tree/<br/>DreamRoot 构造器（Sequence + SequenceTolerant）"]
-        Actions["actions/<br/>Init / Mem*Step / TranscriptScan / DistillGate / DispatchMemDistill / CollectMemDistill / TranscriptDelete / DispatchArchGovern / DispatchHRGovern / CollectArchAdvice / CollectHRAdvice / EmitReport / Finalize"]
+        Actions["actions/<br/>Init / Mem*Step / TranscriptScan / DistillGate / DispatchMemDistill / CollectMemDistill / TranscriptDelete / DispatchArchGovern / DispatchHRGovern / CollectArchAdvice / CollectHRAdvice / BaselineBurndown / EmitReport / Finalize"]
         Api["api/<br/>dream_tick · dream_tick_resume · dream_list_runs · dream_abort · DreamResult"]
     end
 
@@ -45,6 +46,7 @@ flowchart TB
     MainAgent[("主 Agent（Task tool + memory_distill skill）")]
     Memory[("kernel/memory<br/>compact · sweep_expired · HealthChecker")]
     Retrieval[("engine/retrieval<br/>verify_consistency(mode=full)<br/>index_delete(\"transcript\", …)")]
+    Audit[("engine/audit<br/>BaselineStore.load() 只读")]
     Transcripts[("~/.claude/projects/&lt;slug&gt;/*.jsonl")]
     MCP[("mcp_server<br/>容器")]
 
@@ -61,6 +63,7 @@ flowchart TB
     Actions -.->|DispatchMemDistill yield main| MainAgent
     Actions -.->|TranscriptDelete| Transcripts
     Actions -.->|TranscriptDelete 同步 index_delete| Retrieval
+    Actions -.->|BaselineBurndown lazy import| Audit
 ```
 
 **子模块关系**：
@@ -73,10 +76,11 @@ flowchart TB
 | 持久化 | **复用 engine/persistence** | 不自建持久化子模块。`engine/core/runner.py` 调 `persistence.snapshot` / `persistence.trace`，写入 `.cbim/scheduler/dream/<run_id>/`（路径前缀由 `api/dream_tick.py` 注入）；文件格式与执行循环一致，方便 dashboard / 调试工具复用 |
 | `actions` → `memory`（内部维护接口） | in-process 调用 | `MemHealthScan` / `MemCompact` / `MemSweepExpired` Action 直接 Python 调用 `memory.HealthChecker.check()` / `memory.compact()` / `memory.sweep_expired()`；不走 MCP |
 | `actions` → `engine/retrieval` | in-process 调用 | `MemRebuildIndex` 调 `retrieval.verify_consistency("memory_medium", mode="full")`；`TranscriptDelete` 删原 JSONL 后同步调 `retrieval.index_delete("transcript", doc_id)` 去索引 |
-| `actions` → `~/.claude/projects/<slug>/*.jsonl`（外部文件系统） | 只读 mtime + 删除文件 | `TranscriptScan` 扫描该目录拉出 mtime 超 1 天的 JSONL 列表；`TranscriptDelete` 在蛒骨成功后删原件。文件内容本身由主 agent（被 DispatchMemDistill yield上来）亲自读 |
-| `actions` → MainAgent（yield） | 协程式 yield/resume | Architect / HR / 主 agent（记忆蛒骨）派工一律走 `DreamResult.Yield(DispatchRequest)` → 主 agent Task tool / 主 agent 自执行 → `dream_tick_resume` 路径；引擎进程内**不**持有 Architect / HR / 主 agent 客户端 |
+| `actions` → `engine/audit`（lazy import） | in-process 调用 | `BaselineBurndown` Action 采用延迟导入调 `audit.BaselineStore.load()` 读取已接受的棘轮项，生成只读 burn-down 建议并合入 `arch_governance_report.advice_pending`。调用全部只读：不调 `accept()` / `save()` / `clear()`；项目尚未初始化 baseline / 文件损坏 / 任何 I/O 异常 → 返回空列表优雅降级，不中断 dream tick。lazy import 仅推迟导入时机，不消除耦合；依赖在静态拓扑中以兄弟身份合法声明 |
+| `actions` → `~/.claude/projects/<slug>/*.jsonl`（外部文件系统） | 只读 mtime + 删除文件 | `TranscriptScan` 扫描该目录拉出 mtime 超 1 天的 JSONL 列表；`TranscriptDelete` 在蔣骨成功后删原件。文件内容本身由主 agent（被 DispatchMemDistill yield上来）亲自读 |
+| `actions` → MainAgent（yield） | 协程式 yield/resume | Architect / HR / 主 agent（记忆蔣骨）派工一律走 `DreamResult.Yield(DispatchRequest)` → 主 agent Task tool / 主 agent 自执行 → `dream_tick_resume` 路径；引擎进程内**不**持有 Architect / HR / 主 agent 客户端 |
 
-**无循环依赖**——单向自顶向下：`api → tree → {engine/core, actions} → {engine/persistence, memory[内部维护接口], engine/retrieval[内部维护接口]}`。`dream` 依赖 `engine/core` 、`engine/persistence` 与 `engine/retrieval`，不依赖 `execution`；`execution` 也不依赖 `dream`，两根平级、共享 `engine/core` 与 `engine/retrieval`。
+**无循环依赖**——单向自顶向下：`api → tree → {engine/core, actions} → {engine/persistence, memory[内部维护接口], engine/retrieval[内部维护接口], engine/audit[BaselineStore 只读]}`。`dream` 依赖 `engine/core`、`engine/persistence`、`engine/retrieval` 与 `engine/audit`，不依赖 `execution`；`execution` 也不依赖 `dream`，两根平级、共享 `engine/core` 与 `engine/retrieval`。`dream → audit` 是同层兄弟依赖（都在 `v1/kernel/engine/` 下），audit 不反向依赖 dream——无环。
 
 ## Origin Context
 
@@ -134,7 +138,9 @@ v2 把所有自维护抽到第二根循环，复用同一个 BT 引擎但独立�
 - **v1/kernel/memory/compaction（内部维护接口）** —— `MemCompact` 节点直接 in-process 调用 `memory.compact()`；`MemSweepExpired` 调 `memory.sweep_expired()`。这些是记忆服务的**内部维护接口**，专供治理循环使用，不对外暴露 MCP。**v2 变更**：MemRebuildIndex 不再调 `memory.rebuild_index()`——索引重建上下架到下一项。
 - **v1/kernel/memory/_facade（内部维护接口）** —— `MemHealthScan` 直接 in-process 调用 `memory.HealthChecker.check()`，返回候选堆积量、过期条目数等指标供后续子节点判断是否需执行 compact / sweep。
 - **v1/kernel/engine/retrieval（内部维护接口）** —— `MemRebuildIndex` 调 `retrieval.verify_consistency("memory_medium", mode="full")` 全量校验与修复；`TranscriptDelete` 在删原件后同步调 `retrieval.index_delete("transcript", doc_id)` 清掉该 transcript 的索引条目。为该依赖进入 dependencies。
-- **主 agent（yield）** —— `DispatchMemDistill` 以 `agent_type="main", subtask_id="governance_memory_distill"` yield；主 agent 收到后不调 Task tool，而是读 prompt 中列出的 transcript 路径、调 `memory_distill` skill 自行蛒骨，然后调 `dream_tick_resume` 回交蛒骨结果。本模块不持有主 agent 客户端。
+- **v1/kernel/engine/audit（同层兄弟·BaselineStore 只读）** —— `BaselineBurndown` Action 采用 lazy import（`from engine.audit import BaselineStore`，仅在 `tick()` 体内导入以保持本模块导入时拓扑干净）调 `BaselineStore.load()` 读已接受的 audit findings，按 check 聚合后产出可读 burn-down 提示拼入 `arch_governance_report.advice_pending`。调用全部只读——`accept()` / `save()` / `clear()` 绝不调用；接受棘轮的动作仅能由人类显式走 `cbim audit baseline clear --yes ...` CLI。项目尚未初始化 baseline / 文件不存在 / 文件损坏 / ImportError / 任何 I/O 异常 → 返回空列表优雅降级，不中断 dream tick。lazy import 只推迟导入时机，不消除耦合；依赖实质仁是 `dream → audit` 同层兄弟，故进入 frontmatter dependencies。该依赖是治理循环「棘轮 burn-down 建议」能力的唯一起点，audit 不反向依赖 dream。
+- **主 agent（yield）** —— `DispatchMemDistill` 以 `agent_type="main", subtask_id="governance_memory_distill"` yield；主 agent 收到后不调 Task tool，而是读 prompt 中列出的 transcript 路径、调 `memory_distill` skill 自行蔣骨，然后调 `dream_tick_resume` 回交蔣骨结果。本模块不持有主 agent 客户端。
 - **mcp_server（反向，容器）** —— 不在本模块 dependencies 中；`mcp_server` 把 `api/dream_tick.py` 的 4 个函数注册为 MCP 工具，函数签名即工具签名。引擎不感知 MCP 容器存在。
 
-依赖方向：`dream → engine/core`、`dream → engine/persistence`、`dream → memory.{compaction,_facade}`（内部维护接口）、`dream → engine/retrieval`（内部维护接口）、`mcp_server → dream`。无环。
+依赖方向：`dream → engine/core`、`dream → engine/persistence`、`dream → memory.{compaction,_facade}`（内部维护接口）、`dream → engine/retrieval`（内部维护接口）、`dream → engine/audit`（同层兄弟·BaselineStore 只读）、`mcp_server → dream`。无环。
+

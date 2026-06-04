@@ -231,7 +231,7 @@ classDiagram
 |------|------|------|------|
 | `description` | string | 一句话目的 | `解耦的、类型安全的事件分发` |
 | `keywords` | list | 搜索标签 | `[event, pub-sub]` |
-| `dependencies` | list | 本模块依赖的模块路径 | `[".", "src/types"]` |
+| `dependencies` | list | 本模块依赖的模块路径（拓扑语义见下方约束规则；从父模块 `## 类图` 的 `..>` 边机器派生） | `["src/types", "packages/core/event-bus"]` |
 | `includeDirs` | list | 要包含在模块边界内的子目录 | `["src", "tests"]` |
 
 ### Status 字段：三种生命周期状态
@@ -251,7 +251,17 @@ classDiagram
 - `name`：仅中划线分隔（小写字母、数字、中划线）。示例：`event-bus`、`combat-skill`、`memory-distill`。
 - `owner`：通常是负责代理的 id。标准值是 `architect`，但可以是任何代理 id。
 - `description`：如果存在，必须是单个句子。
-- `dependencies`：模块路径列表（相对路径如 `"."`、`"src/types"`、`"packages/core/event-bus"`）。依赖图必须是无环的（DAG）；循环由审计检查 `dna_tree` 检测和报告为错误。
+- `dependencies`：模块路径列表（相对路径如 `"src/types"`、`"packages/core/event-bus"`）。依赖图必须是无环的（DAG）；循环由审计检查 `dna_tree` 检测和报告为错误。
+
+  **拓扑语义**：依赖的合法目标按模块树的位置关系判定 ——
+
+  - **允许列入**：① 同层兄弟模块（与本模块共享父目录的模块）；② 叔伯及其整棵子树（祖先节点的兄弟，以及那些兄弟下的全部后代）；③ 不在本模块祖先链上的任意外部模块。
+  - **禁止列入**：① 本模块的任一祖先（含项目根 `"."`）—— 子模块对父模块、孙模块对祖父模块的可见性都是隐式的，无需也不得声明；② 本模块自身子树下的任一后代 —— 后代对自己也是隐式可见，不应反向声明；③ 任何会与既有依赖形成环的目标。
+  - **直观判别法**：把本模块的路径与候选依赖的路径并排写出，去掉两者的公共前缀；只有当两侧剩余部分都非空、且各自的第一段不同（即"自己这一侧立刻分叉"）时，候选才合法。若本侧剩余为空，候选是后代；若候选侧剩余为空，候选是祖先；任一种都不合法。
+  - **举例**（设本模块路径为 `A/B/C`）：合法依赖包括 `A/B/D`（同层兄弟）、`A/D`（叔伯）、`A/D/E`（叔伯子树后代）、`X/Y`（外部模块）；不得列入 `A`、`A/B`、`.`（祖先链）以及 `A/B/C/F`（自身后代）。
+  - **强制方**：祖先违规由 `dna_tree` 报 `TREE_DEP_ANCESTOR_DECLARED`；指向树上层但非祖先的不稳定侧由 `TREE_DEP_UP_TREE` 报告；引用不存在的路径由 `TREE_DEP_DANGLING` 报告；循环由 `TREE_CYCLE` 报告为 error。
+
+  **声明源 vs. 派生缓存**：依赖关系的**唯一声明源**是父模块 `## 类图` 中的 `..>` 边；frontmatter 的 `dependencies` 字段是从类图边机器派生的缓存，便于审计与索引快速读取。两边不一致时，由 `dna_tree` 的 `TREE_DEP_DIAGRAM_MISMATCH` 报错（审计码 T4 实装；本规范先行声明）。写入纪律：架构师必须先改 `## 类图` 的 `..>` 边，再让工具重生成 frontmatter 的 `dependencies`；不得手工编辑 frontmatter 字段而不同步类图。
 - `includeDirs`：很少需要；仅当模块的代码跨越多个不是直接子目录的目录时使用。示例：`src/combat` 中的模块，也在 `src/types/combat-types` 中拥有代码。如果模块自包含在一个目录中，则省略。
 
 ---

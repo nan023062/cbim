@@ -177,7 +177,7 @@ class ArchExecYield(Node):
         snapshot = _render_module_knowledge(bb)
         redo_context = getattr(bb, "arch_redo_context", None)
         if redo_context:
-            redo_block = json.dumps(redo_context, ensure_ascii=False, indent=2)
+            redo_block = _render_redo_context(redo_context)
         else:
             redo_block = "(首次进入)"
         return (
@@ -197,9 +197,17 @@ class ArchExecYield(Node):
             "  required_capability (str, ∈ {programmer, doc_writer, generalist})\n"
             "  params (dict)\n"
             "  arch_context (str, 非空)\n\n"
+            "params 必填字段：\n"
+            "  touched_modules (list[str], 必填，非空)\n"
+            "    本 task 将触及（创建/修改/审查）的模块路径集合，路径形如\n"
+            "    `v1/kernel/engine/audit`，与 `.dna/module.md` 路径一致。\n"
+            "    用于 ArchCheckGate 按需对触及模块跑 dna_tree/dna_fission；\n"
+            "    漏写 = 协议违规，下游网关会标 warning 并退化为全树扫描，\n"
+            "    但不会因此 fail —— 是给架构师的提醒，不是给用户的阻塞。\n"
+            "  depends_on (list[str], 可选)\n"
+            "    本 task 依赖的其他 task id；不能成环。\n\n"
             "约束：\n"
             f"  - task 总数 ≤ {_MAX_TASKS}\n"
-            "  - 依赖关系写入 params.depends_on (list[str])，不能成环\n"
             "  - 不可执行 → arch_plan 留空 list，receipt status=needs_user_input + question\n\n"
             "### 回执格式\n"
             "按 PR-A 回执 trailer 规范输出，并在 trailer 中追加 arch_plan 行。\n"
@@ -221,6 +229,89 @@ class ArchExecYield(Node):
 
 _SNAPSHOT_FALLBACK = "(无快照 — 自行调用 dna_list / dna_show 查询)"
 _SNAPSHOT_SUMMARY_CHARS = 160
+
+
+# Banner injected verbatim before any audit_finding entries in the redo
+# context block. Wording is contract-grade — programmer / coder / doc
+# agents downstream parse the architect's redo plan against the
+# expectation that the architect MUST address every finding here. Do
+# not rephrase casually; updates go through .dna review.
+_AUDIT_FINDINGS_HEADER = (
+    "以下是程序化检测门（ArchCheckGate）发现的硬性架构问题，"
+    "必须按 suggestion 修复，不得绕过。"
+)
+_AUDIT_FINDINGS_PROHIBITION = (
+    "不得提议关闭/降级该检查或将 finding 标记为 baseline 接受 —— "
+    "这两类操作是人类显式动作，不属于本次 redo 的合法选项；"
+    "必须真正修改 .dna 让下一轮 audit 通过。"
+)
+
+
+def _render_redo_context(redo_context: dict) -> str:
+    """Render arch_redo_context with audit findings as a hard read-only block.
+
+    Two-section layout:
+      1. Audit findings (if any): the header + each finding's full text +
+         the prohibition footer. This block is the only place where the
+         architect is told "you MUST do exactly this".
+      2. Everything else (work-side needs_arch_decision unresolved
+         entries, previous_plan, iter, reason): serialised as pretty
+         JSON so the architect sees the full payload.
+    """
+    unresolved = redo_context.get("unresolved") or []
+    audit_entries: list[dict] = []
+    other_entries: list[dict] = []
+    for entry in unresolved:
+        if isinstance(entry, dict) and entry.get("kind") == "audit_finding":
+            audit_entries.append(entry)
+        else:
+            other_entries.append(entry)
+
+    sections: list[str] = []
+
+    if audit_entries:
+        lines: list[str] = [_AUDIT_FINDINGS_HEADER, ""]
+        for i, f in enumerate(audit_entries, 1):
+            check = f.get("check") or "unknown"
+            severity = f.get("severity") or "warn"
+            target = f.get("target") or "(no target)"
+            message = (f.get("message") or "").strip()
+            suggestion = (f.get("suggestion") or "").strip()
+            code = f.get("code")
+            origin = f.get("origin") or "new"
+            head = f"[{i}] check={check} severity={severity} origin={origin} target={target}"
+            if code:
+                head += f" code={code}"
+            lines.append(head)
+            if message:
+                lines.append(f"    message: {message}")
+            if suggestion:
+                lines.append(f"    suggestion: {suggestion}")
+            else:
+                lines.append("    suggestion: (none — fix per message)")
+        lines.append("")
+        lines.append(_AUDIT_FINDINGS_PROHIBITION)
+        sections.append("\n".join(lines))
+
+    # Carry the remainder (non-audit unresolved + previous_plan + iter +
+    # reason) as pretty JSON. We rebuild the dict to keep the audit
+    # entries OUT of the JSON dump (they already appear above verbatim).
+    remainder = {
+        k: v for k, v in redo_context.items()
+        if k != "unresolved"
+    }
+    if other_entries:
+        remainder["unresolved"] = other_entries
+    if remainder:
+        sections.append(json.dumps(remainder, ensure_ascii=False, indent=2))
+
+    if not sections:
+        # Defensive: redo_context was empty-but-present. Render the
+        # original (possibly empty) JSON so the architect at least sees
+        # the shape.
+        return json.dumps(redo_context, ensure_ascii=False, indent=2)
+
+    return "\n\n".join(sections)
 
 
 def _render_module_knowledge(bb) -> str:
@@ -319,6 +410,16 @@ def _parse_plan(raw: Any) -> list[dict] | None:
         params = item.get("params") or {}
         if not isinstance(params, dict):
             return None
+        # Normalise params.touched_modules — required field per ArchCheckGate
+        # contract, but architects sometimes forget. Missing / malformed
+        # collapses to [] (empty list), which ArchCheckGate then treats as
+        # "scan everything as a fallback and emit a warning". We do NOT
+        # fail the plan over this — the gate's warning is the right
+        # surface for the protocol nudge.
+        params = dict(params)  # shallow copy so we don't mutate the input
+        params["touched_modules"] = _coerce_touched_modules(
+            params.get("touched_modules")
+        )
         out.append({
             "id": task_id,
             "description": description,
@@ -326,6 +427,32 @@ def _parse_plan(raw: Any) -> list[dict] | None:
             "params": params,
             "arch_context": arch_context,
         })
+    return out
+
+
+def _coerce_touched_modules(raw: Any) -> list[str]:
+    """Coerce a raw `touched_modules` field into a clean list[str].
+
+    Returns an empty list on any malformed input — missing, wrong type,
+    or list-of-non-strings. The ArchCheckGate fallback covers the empty
+    case (full-tree scan + warning); we do not fail the plan over a
+    missing field, because (a) the gate already surfaces the issue and
+    (b) re-dispatching the architect for one missing list rarely helps.
+    """
+    if not isinstance(raw, list):
+        return []
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in raw:
+        if not isinstance(item, str):
+            continue
+        s = item.strip()
+        if not s:
+            continue
+        if s in seen:
+            continue
+        seen.add(s)
+        out.append(s)
     return out
 
 

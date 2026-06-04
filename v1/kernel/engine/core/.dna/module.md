@@ -91,6 +91,19 @@ v3.6 之前还携带 `LlmActionLeaf` 叶原语（「一 tick 一 LLM 调用」�
 - **trace 落盘是观测，不是权威。** 与 persistence 模块的 "trace.jsonl 仅供观测" 决策一致：刷盘失败不抛出、不阻塞 tick，游标不前进以待下次出口点重试；恢复仍只走 `bb.json + resume.json`，绝不回放 `trace.jsonl`。
 - **决策类原语自追踪 `*_decision` 事件。** `SwitchBranch` 在 `key_fn(bb)` 求值后写一条 `switch_decision`（含 `key` / `matched_case` / `chosen_child`）；`Selector` 在每个出口（首子 SUCCESS / 中间 RUNNING / 全 FAILURE）写一条 `selector_decision`（含 `child_results` + `chosen_child` + `outcome`）。两者都追加到同一份 `bb.trace`，由 Runner 出口点统一刷盘——与节点三事件共享缓冲区与刷盘契约，节点对象仍无跨 tick 状态。提取 `core/_trace_utils.py` 私有辅助模块承载 `_append_trace_event` / `_now_iso_ms`，让 `composite.py` 与 `runner.py` 共用同一份实现，避免反向 import。
 
+### v3.9 — 黑板 SCHEMA_VERSION 5：`_PERSISTED_EXTRAS` 增 `arch_check_report`
+
+- **SCHEMA_VERSION 4 → 5。** `engine/core/blackboard.py::SCHEMA_VERSION` 从 4 推进至 5。该常量是黑板 schema 唯一权威源，`engine/persistence/snapshot.py` 划起换数据时反向引用（依赖方向：persistence → core）。本次变更原因：execution 在 v3.9 新增黑板字段 `arch_check_report`（唯一写者 = `actions/arch_check_gate/ArchCheckGate`）。升级走向后兼容读取策略——老 SCHEMA_VERSION 4 的 `bb.json` 由 persistence 读盘时填 `arch_check_report=None`，不报错。
+- **`_PERSISTED_EXTRAS` 增 `arch_check_report` 一项。** `blackboard.py::Blackboard._PERSISTED_EXTRAS` 是 「不在 dataclass 字段表但需要被持久化」 的额外字段集合；本次 v3.9 加入 `"arch_check_report"`。`to_dict` / `from_dict` 需同步识别该字段以保证跨 tick 恢复时 verdict / findings / scope 信息不丢。其他 `_PERSISTED_EXTRAS` 成员酶位不变。
+
+**黑板字段表（execution 根重点新增部分，v3.9）**：
+
+| 字段 | 唯一写者 | 读者 | 说明 |
+|------|------|------|------|
+| `arch_check_report` | `actions/arch_check_gate/ArchCheckGate`（execution 子模块） | `actions/converge_judge/ConvergeJudge`（只读，不允许重写） / `actions/respond/Respond`（耗尽时渲染 summary） / dashboard 与 trace.jsonl 重放器调试观测 | 结构 `{verdict: {pass_, error_count, warn_count, info_count, unresolved, summary}, findings: [...], ran_at, scoped_to: [touched_modules]}`；属于 `_PERSISTED_EXTRAS`；core 只负责 schema 校验（唯一写者 · 字段存在 · 序列化可行），不负责业务语义 |
+
+**业务语义归属**：该字段的所有业务语义（何时写、什么是 pass / fail、何时触发 arch_redo、与 `convergence` 的优先级关系等）归 execution 根。参见 [`../execution/.dna/module.md`](../execution/.dna/module.md) 「黑板关键字段 (v3.9 升级)」与 [`../execution/actions/arch_check_gate/.dna/module.md`](../execution/actions/arch_check_gate/.dna/module.md)。core 仅是黑板 schema 的唯一权威仓库，不持有该字段的业务含义——这与 core 「不承载业务 Action」的 Non-Goal 保持一致。
+
 ## Non-Goals
 
 - **不承载业务 Action。** 业务侧 Action（ModeClassify、ContextRetrieval、ArchExecYield、DispatchWork、ConvergeJudge、Respond、FlushMemory、MemHealthScan 等）归对应根模块的 `actions/` 子目录，不归 core。

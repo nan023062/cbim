@@ -30,6 +30,12 @@ CBIM 执行任务循环的**驱动引擎**。每一次用户 prompt 触发一次
 ## Sub-module Relationships
 
 ```mermaid
+classDiagram
+    class arch-check-gate { <<module>> }
+    arch-check-gate ..> audit : ArchCheckGate calls run_audit (read-only)
+```
+
+```mermaid
 flowchart TB
     Root["Root (Trace ▸ Timeout ▸ RootSeq)"]
     Init["InitTick"]

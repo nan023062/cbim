@@ -237,6 +237,10 @@ _LEGACY_CBIM_HOOK_CMD_PREFIXES: tuple[str, ...] = (
     ".cbim/run hook",  # pre-Phase-3a shim
     "cbim hook ",      # pre-V1 CLI-based hooks (e.g. "cbim hook session-start")
 )
+# Simple bare-path commands written before Python-detection was added.
+# They start with _CBIM_HOOK_CMD_PREFIX so the legacy list is not needed for
+# detection, but naming the pattern explicitly documents the upgrade path.
+_LEGACY_BARE_HOOK_CMD_PREFIX = ".claude/hooks/cbim_"
 _CBIM_DENY_PATTERNS: tuple[str, ...] = (
     "Write(.cbim/**)",
     "Edit(.cbim/**)",
@@ -258,7 +262,7 @@ def _is_cbim_hook_entry(entry: object) -> bool:
     cmd = entry.get("command")
     if not isinstance(cmd, str):
         return False
-    return cmd.startswith(_CBIM_HOOK_CMD_PREFIX) or any(
+    return _CBIM_HOOK_CMD_PREFIX in cmd or any(
         cmd.startswith(p) for p in _LEGACY_CBIM_HOOK_CMD_PREFIXES
     )
 

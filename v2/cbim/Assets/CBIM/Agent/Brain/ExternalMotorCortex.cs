@@ -1,45 +1,57 @@
 using System;
-using CBIM.AgentSystem.Kernel.Neuron;
-using CBIM.AgentSystem.Kernel.Synapse;
-using CBIM.Memory;
+using System.Collections.Generic;
 
-namespace CBIM.AgentSystem.Brain
+namespace CBIM.AgentSystem
 {
     /// <summary>
     /// ExternalMotorCortex —— 桥接外部 agent 引擎（Claude Code / Cursor / Cline 等）的运动皮层抽象。
-    ///
-    /// <para>「外部 AI 工具 = 会干活的肌肉」哲学的物理落地——本抽象类是 OO 层面整个
-    /// CBIM 唯一允许的 External 分支点（其他脑区无 External 变体）。</para>
-    ///
-    /// <para>结构差异（T4 后）：</para>
-    /// <list type="bullet">
-    ///   <item>本类不再持 <see cref="IExternalEngineAdapter"/>——已下沉到 <see cref="ExternalEngineNeuron"/>
-    ///         内部。NeuronFactory 在装配期为 <see cref="ExternalMotorCortexDescriptor"/> 路径创建
-    ///         ExternalEngineNeuron 并注入 Adapter。</item>
-    ///   <item><see cref="Brain.Agent"/> 透传 <c>Neuron.UnderlyingAgent</c>，ExternalEngineNeuron 返回 <c>null</c>。</item>
-    ///   <item><see cref="Brain.InvokeAsync"/> 默认实现透传给 <see cref="Brain.Neuron"/>——
-    ///         Neuron 走 Adapter 二阶段路径，本类无须 override。</item>
-    /// </list>
-    ///
-    /// <para>本类仍持 <see cref="ShareMode"/>——MemoryShareMode 是 Brain 层语义（描述符语义保留在 Brain，K5），
-    /// 非 Neuron 实现细节。</para>
     /// </summary>
     public abstract class ExternalMotorCortex : MotorCortex
     {
         /// <summary>Memory 与外部引擎的共享桥模式——从描述符透传。</summary>
-        public MemoryShareMode ShareMode { get; }
+        public MemoryShareMode ShareMode => _descriptor.MemoryShareMode;
 
-        protected ExternalMotorCortex(
-            ExternalMotorCortexDescriptor descriptor,
-            IMemoryService memory,
-            INeuron neuron,
-            IPrefrontalCallback callback)
-            : base(descriptor?.BrainId ?? throw new ArgumentNullException(nameof(descriptor)),
-                   neuron,
-                   memory,
-                   callback)
+        private ExternalMotorCortexDescriptor _descriptor;
+
+        protected ExternalMotorCortex(IBrainAgent agent, ExternalMotorCortexDescriptor descriptor): 
+            base( agent, descriptor)
         {
-            ShareMode = descriptor.MemoryShareMode;
+            _descriptor = descriptor;
+        }
+    }
+    
+    /// <summary>
+    /// External 运动皮层描述符
+    /// </summary>
+    public sealed class ExternalMotorCortexDescriptor : MotorCortexDescriptor
+    {
+        /// <summary>外部引擎种类（v1 仅 ClaudeCode）。</summary>
+        public ExternalEngineKind EngineKind { get; }
+
+        /// <summary>引擎接入点——CLI 路径 / HTTP URL 等。</summary>
+        public string EngineEndpoint { get; }
+
+        /// <summary>引擎自有配置（key-value · 由具体 Adapter 解析）。</summary>
+        public IReadOnlyDictionary<string, object> AdapterConfig { get; }
+
+        /// <summary>Memory 共享桥模式（默认 <see cref="MemoryShareMode.McpServer"/>）。</summary>
+        public MemoryShareMode MemoryShareMode { get; set; } = MemoryShareMode.McpServer;
+
+        public ExternalMotorCortexDescriptor(string brainId, string systemPrompt,
+            ExternalEngineKind engineKind, string engineEndpoint,
+            IReadOnlyDictionary<string, object>? adapterConfig = null)
+            : base(brainId, systemPrompt)
+        {
+            if (!brainId.StartsWith("motor-cortex.", StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    $"ExternalMotorCortexDescriptor.BrainId 必须以 'motor-cortex.' 开头（实际: '{brainId}'）");
+            if (string.IsNullOrWhiteSpace(engineEndpoint))
+                throw new ArgumentException(
+                    "ExternalMotorCortexDescriptor.EngineEndpoint 不能为空", nameof(engineEndpoint));
+
+            EngineKind = engineKind;
+            EngineEndpoint = engineEndpoint;
+            AdapterConfig = adapterConfig ?? new Dictionary<string, object>();
         }
     }
 }

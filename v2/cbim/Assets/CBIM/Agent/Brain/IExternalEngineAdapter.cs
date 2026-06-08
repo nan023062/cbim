@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CBIM.AgentSystem.Brain
+namespace CBIM.AgentSystem
 {
     /// <summary>
     /// 把对外部 agent 引擎（Claude Code / Cursor / Cline 等）的调用收敛到一处。
@@ -16,7 +16,7 @@ namespace CBIM.AgentSystem.Brain
     /// <para>实现期约定：</para>
     /// <list type="bullet">
     ///   <item>SubmitAsync 必须返回一个对实现内部唯一的 jobId（用于 AwaitResultAsync 配对）。</item>
-    ///   <item>AwaitResultAsync 失败时返回 <c>IsError=true</c> 的 <see cref="BrainOutcome"/>，<b>不</b>抛出。</item>
+    ///   <item>AwaitResultAsync 失败时返回 <c>IsError=true</c> 的 <see cref="NeuronOutput"/>，<b>不</b>抛出。</item>
     ///   <item>DisposeAsync 必须强制收尾——杀掉所有未退出的外部进程、关闭桥接 server。</item>
     /// </list>
     /// </summary>
@@ -25,12 +25,12 @@ namespace CBIM.AgentSystem.Brain
         /// <summary>
         /// 提交一次外部引擎调用。返回引擎内部唯一的 jobId。
         /// </summary>
-        Task<string> SubmitAsync(BrainInvocation invocation, CancellationToken ct);
+        Task<string> SubmitAsync(NeuronInput invocation, CancellationToken ct);
 
         /// <summary>
         /// 等待指定 jobId 的最终结果。
-        /// 失败时返回 <c>IsError=true</c> 的 <see cref="BrainOutcome"/>，不抛。
+        /// 失败时返回 <c>IsError=true</c> 的 <see cref="NeuronOutput"/>，不抛。
         /// </summary>
-        Task<BrainOutcome> AwaitResultAsync(string jobId, CancellationToken ct);
+        Task<NeuronOutput> AwaitResultAsync(string jobId, CancellationToken ct);
     }
 }

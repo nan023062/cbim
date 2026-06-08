@@ -1,4 +1,4 @@
-namespace CBIM.AgentSystem.Brain
+namespace CBIM.AgentSystem
 {
     /// <summary>
     /// 外部 AI 引擎种类——<see cref="ExternalMotorCortexDescriptor"/> 通过本枚举声明

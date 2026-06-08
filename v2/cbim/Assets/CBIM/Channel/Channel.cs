@@ -74,7 +74,7 @@ namespace CBIM.Channel
                 throw new ArgumentException(
                     "Agent.Prefrontal 不能为 null——Channel 必须能拿到主脑 AIAgent 句柄。",
                     nameof(instance));
-            if (instance.Prefrontal.Agent == null)
+            if (instance.Prefrontal.AIAgent == null)
                 throw new ArgumentException(
                     "Agent.Prefrontal.Agent 不能为 null——PrefrontalCortex 装配未生成 msai AIAgent。",
                     nameof(instance));
@@ -85,7 +85,7 @@ namespace CBIM.Channel
 
             ChannelId = channelId;
             Instance = instance;
-            Agent = instance.Prefrontal.Agent;
+            Agent = instance.Prefrontal.AIAgent;
             Session = instance.Session;
         }
 

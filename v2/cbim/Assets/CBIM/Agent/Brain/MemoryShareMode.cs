@@ -1,4 +1,4 @@
-namespace CBIM.AgentSystem.Brain
+namespace CBIM.AgentSystem
 {
     /// <summary>
     /// ExternalMotorCortex 与 CBIM Memory 之间的共享桥模式。

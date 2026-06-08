@@ -5,7 +5,6 @@ using CBIM.AgentSystem;
 
 // Alias 消歧——CBIM.AgentSystem 既是 namespace 又是 class。本文件用 `AgentSystemService`
 // 引用类型，避免 `AgentSystem.AgentSystem` 这种重复名段写法。
-using AgentSystemService = CBIM.AgentSystem.AgentSystem;
 using AgentInstance = CBIM.AgentSystem.Agent;
 
 namespace CBIM.Channel
@@ -15,14 +14,14 @@ namespace CBIM.Channel
     ///
     /// <para>职责（仅四件事）：</para>
     /// <list type="number">
-    ///   <item><see cref="OpenChannelAsync"/>——按 AgentDescription 装配 Agent 实例（委托 <see cref="AgentSystem"/>），包成 Channel 并注册。</item>
+    ///   <item><see cref="OpenChannelAsync"/>——按 AgentDescription 装配 Agent 实例（委托 <see cref="AgentManager"/>），包成 Channel 并注册。</item>
     ///   <item><see cref="GetChannel"/>——按 ID 查活动 Channel。</item>
     ///   <item><see cref="ListChannels"/>——列出全部活动 Channel。</item>
     ///   <item><see cref="CloseChannelAsync"/>——注销 Channel + 释放底层 Agent。</item>
     /// </list>
     ///
     /// <para><b>薄封装铁律</b>：本服务不直接 new ChatClientAgent / 不感知脑区 /
-    /// 不写 Session 日志——所有装配 / 脑区编织 / Memory 桥接均由 <see cref="AgentSystem"/>
+    /// 不写 Session 日志——所有装配 / 脑区编织 / Memory 桥接均由 <see cref="AgentManager"/>
     /// 在 OpenInstanceAsync 内完成。Channel 层只做「ID ↔ Channel 实例」的轻量映射。</para>
     ///
     /// <para>线程安全：内部 <c>_channels</c> 字典所有读写均在 <c>_lock</c> 锁内——
@@ -30,11 +29,11 @@ namespace CBIM.Channel
     /// </summary>
     public sealed class ChannelService
     {
-        private readonly AgentSystemService _agentSystem;
+        private readonly AgentManager _agentSystem;
         private readonly Dictionary<string, Channel> _channels = new Dictionary<string, Channel>(StringComparer.Ordinal);
         private readonly object _lock = new object();
 
-        public ChannelService(AgentSystemService agentSystem)
+        public ChannelService(AgentManager agentSystem)
         {
             if (agentSystem == null)
                 throw new ArgumentNullException(nameof(agentSystem));

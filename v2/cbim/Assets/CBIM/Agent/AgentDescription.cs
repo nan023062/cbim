@@ -4,7 +4,6 @@ using CBIM.Skills;
 using CBIM.Mcp;
 using CBIM.Tools;
 using CBIM.Memory;
-using CBIM.AgentSystem.Brain;
 
 namespace CBIM.AgentSystem
 {
@@ -76,11 +75,9 @@ namespace CBIM.AgentSystem
         public Func<string, IMemoryService> MemoryFactory { get; }
 
         /// <summary>
-        /// 脑区编织蓝图（可空）。null 表示走默认 4 脑装载——
-        /// <c>AgentSystem.OpenInstanceAsync</c> 内部 fallback 到 <see cref="BrainConfig.Default"/>。
-        /// 显式给值时按蓝图装配（典型用法：<see cref="BrainConfig.Custom"/> 追加 ClaudeCodeMotorCortex）。
+        /// 除了内置脑区以外的工作脑区
         /// </summary>
-        public BrainConfig BrainConfig { get; }
+        public IReadOnlyList<BrainDescriptor> BrainDescription { get; }
 
         public AgentDescription(
             string id,
@@ -91,7 +88,7 @@ namespace CBIM.AgentSystem
             IReadOnlyList<ToolDescriptor> systemTools = null,
             IReadOnlyList<McpDescriptor> mcpList = null,
             Func<string, IMemoryService> memoryFactory = null,
-            BrainConfig brainConfig = null)
+            IReadOnlyList<BrainDescriptor> brainDescription = null)
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("AgentDescription.Id 不能为空", nameof(id));
@@ -110,7 +107,7 @@ namespace CBIM.AgentSystem
             SystemTools = systemTools ?? Array.Empty<ToolDescriptor>();
             McpList = mcpList ?? Array.Empty<McpDescriptor>();
             MemoryFactory = memoryFactory;
-            BrainConfig = brainConfig;
+            BrainDescription = brainDescription;
         }
 
         public override string ToString() =>

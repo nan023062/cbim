@@ -1,4 +1,4 @@
-namespace CBIM.AgentSystem.Brain
+namespace CBIM.AgentSystem
 {
     /// <summary>
     /// PrefrontalCortex 把子脑区结果回传给用户时的合并策略。

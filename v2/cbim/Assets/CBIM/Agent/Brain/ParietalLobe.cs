@@ -1,37 +1,38 @@
-using System;
-using CBIM.AgentSystem.Kernel.Neuron;
-using CBIM.AgentSystem.Kernel.Synapse;
-using CBIM.Memory;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace CBIM.AgentSystem.Brain
+namespace CBIM.AgentSystem
 {
     /// <summary>
     /// ParietalLobe（顶叶）——架构脑。
-    ///
-    /// <para>职责：模块设计 / 知识蓝图 / 架构合规校验 / 协助 Hippocampus 落地裂变设计。</para>
-    ///
-    /// <para>本类完全继承 <see cref="Brain"/> 默认 InvokeAsync——架构脑的特化由
-    /// <see cref="StandardBrainDescriptor.Soul"/> + <see cref="StandardBrainDescriptor.Capability"/>
-    /// 上声明的 SystemTools / Skills 表达，<b>无</b>类层新增字段。</para>
     /// </summary>
     public sealed class ParietalLobe : Brain
     {
-        public const string DefaultBrainId = "parietal-lobe";
-
-        public ParietalLobe(
-            StandardBrainDescriptor descriptor,
-            IMemoryService memory,
-            INeuron neuron,
-            IPrefrontalCallback callback)
-            : base(descriptor?.BrainId ?? throw new ArgumentNullException(nameof(descriptor)),
-                   neuron,
-                   memory,
-                   callback ?? throw new ArgumentNullException(nameof(callback),
-                       "ParietalLobe 不允许 null callback——子脑区必须能向主脑回报。"))
+        public override BrainKind Kind => BrainKind.ParietalLobe;
+        
+        public ParietalLobe(IBrainAgent agent, ParietalLobeDescriptor descriptor)
+            : base(agent, descriptor) 
         {
-            if (descriptor.Kind != StandardBrainKind.ParietalLobe)
-                throw new InvalidOperationException(
-                    $"ParietalLobe 要求 descriptor.Kind=ParietalLobe（实际: {descriptor.Kind}）。");
+        }
+        
+        public override async Task<NeuronOutput> InvokeAsync(NeuronInput invocation, CancellationToken ct)
+        {
+            return default;
+        }
+    }
+    
+    /// <summary>
+    /// 逻辑 + 架构（全局观），负责规划和设计决策
+    /// </summary>
+    public sealed class ParietalLobeDescriptor : BrainDescriptor
+    {
+        public static readonly ParietalLobeDescriptor Default = new ParietalLobeDescriptor();
+        
+        static readonly string Id = "__parietalLobe_cortex";
+        static readonly string Prompt = "专注于规划、设计、架构的顶叶, 你是智能体的大脑，负责从全局视角规划和设计解决方案，制定模块接口规范，校验整体架构合规性，并协助记忆脑落地裂变设计。";
+        
+        ParietalLobeDescriptor() : base(Id, Prompt)
+        {
         }
     }
 }

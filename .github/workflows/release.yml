@@ -24,10 +24,8 @@ jobs:
           ARCHIVE="cbim-kernel-${VER}.tar.gz"
           STAGE="$(mktemp -d)/cbim-kernel-${TAG}"
           mkdir -p "$STAGE"
-          # Copy kernel package contents (cbim_kernel/, requirements.txt, tests/, VERSION)
-          cp -R v1/src/kernel/. "$STAGE/"
-          # Copy updater/ from sibling directory
-          cp -R v1/src/updater "$STAGE/updater"
+          # Copy kernel package contents (engine/, cbi/, memory/, project/, requirements.txt, ...)
+          cp -R v1/kernel/. "$STAGE/"
           # Strip caches
           find "$STAGE" -type d -name '__pycache__' -prune -exec rm -rf {} +
           find "$STAGE" -type d -name '.pytest_cache' -prune -exec rm -rf {} +

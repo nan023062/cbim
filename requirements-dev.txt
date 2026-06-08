@@ -1,0 +1,16 @@
+# Dev / test dependencies for contributors running the v1 kernel test suite.
+#
+# Install:
+#   pip install -r requirements-dev.txt
+#   pip install -r v1/kernel/requirements.txt
+#
+# Run:
+#   pytest v1/tests/ -m "not workflow"
+#
+# Note: `mcp` (the runtime dependency for the kernel itself) is declared in
+# v1/kernel/requirements.txt and is required to run the tests. The
+# `workflow` marker covers end-to-end loop tests that need ANTHROPIC_API_KEY
+# and the `claude` CLI — auto-skipped without them; exclude explicitly to
+# avoid the "collected but skipped" noise.
+
+pytest>=7.0

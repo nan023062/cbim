@@ -1,0 +1,15 @@
+name: Governance Leak Guard
+on: [pull_request, push]
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Forbid governance artifacts
+        run: |
+          set -e
+          if git ls-files | grep -E '^(\.cbim/|\.claude/|CLAUDE\.md$|\.mcp\.json$|\.claudeignore$)'; then
+            echo "::error::governance artifact leaked into public repo"
+            exit 1
+          fi
+          echo "clean: no governance artifacts tracked"

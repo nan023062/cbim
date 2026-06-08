@@ -27,3 +27,9 @@ v2/cbim/Logs/
 
 # CBIM
 .cbim/
+
+# CBIM governance shell — never commit to this public repo
+.claude/
+CLAUDE.md
+.mcp.json
+.claudeignore

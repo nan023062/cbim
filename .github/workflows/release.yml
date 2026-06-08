@@ -29,6 +29,8 @@ jobs:
           # Strip caches
           find "$STAGE" -type d -name '__pycache__' -prune -exec rm -rf {} +
           find "$STAGE" -type d -name '.pytest_cache' -prune -exec rm -rf {} +
+          # Stamp the release version into the kernel directory
+          echo "$VER" > "$STAGE/VERSION"
           tar -czf "$ARCHIVE" -C "$STAGE" .
           echo "archive=$ARCHIVE" >> $GITHUB_OUTPUT
 

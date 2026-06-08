@@ -1,6 +1,0 @@
-# CBIM framework files — access via skill Python scripts only
-.cbim/
-**/.dna/
-.venv/
-__pycache__/
-*.pyc

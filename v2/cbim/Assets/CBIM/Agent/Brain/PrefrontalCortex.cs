@@ -15,36 +15,14 @@ namespace CBIM.AgentSystem.Brain
 {
     /// <summary>
     /// PrefrontalCortex（前额叶皮层）—— 主脑 / 调度中枢。
-    /// 每个 AgentInstance 有且仅有 1 个；Channel.SendAsync 的实际投递目标。
-    ///
-    /// <para>「主脑唯一通路」铁律的物理护栏：</para>
-    /// <list type="bullet">
-    ///   <item><b>sealed</b>——不存在「External 主脑」的语法可能。</item>
-    ///   <item><see cref="BrainBase.PrefrontalCallback"/> 永远为 <c>null</c>——自己不回报自己。</item>
-    ///   <item>调度仅通过 <c>__brain_call_*</c> AITool 下发——其他脑区互不直调。</item>
-    /// </list>
-    ///
-    /// <para>本轮（T14）FlowGraph 整合：双身份（编译器 + 监督者）。</para>
-    /// <list type="bullet">
-    ///   <item>装配期挂两类 AITool：
-    ///     <c>__brain_call_*</c>（来自 <see cref="SynapseToolFactory"/>，退化路径用） +
-    ///     <c>__circuit_*</c>（来自 <see cref="CompilerToolFactory"/>，FlowGraph 路径用），
-    ///     拼到 <see cref="NeuronAssemblyContext.StandardAITools"/>。</item>
-    ///   <item><see cref="InvokeAsync"/> 重写：每轮新建 <see cref="NeuralCircuitBuilder"/>
-    ///     存入 <see cref="ActiveBuilder"/> 字段（CompilerToolFactory 装配期捕获的闭包
-    ///     委托永远读最新值）；Neuron 跑完后查 <c>builder.Compiled</c>——
-    ///     非 null 走 FlowGraph 路径（落盘 JSON + <see cref="CBIMOrchestrator"/> 执行），
-    ///     null 走退化路径（直接返 Neuron 结果）。</item>
-    ///   <item>JSON 落盘路径：<c>.cbim/agentsystem/sessions/{instanceId}/circuits/{circuitId}.json</c>
-    ///     （D3 决策）。<see cref="_instanceId"/> 由 AgentSystem.OpenInstance 构造期注入。</item>
-    /// </list>
+    /// 每个 Agent 有且仅有 1 个；Channel.SendAsync 的实际投递目标。
     /// </summary>
-    public sealed class PrefrontalCortex : BrainBase
+    public sealed class PrefrontalCortex : Brain
     {
         public const string DefaultBrainId = "prefrontal-cortex";
-
+        
         /// <summary>装配期注入的可调度子脑区清单——不含 PrefrontalCortex 自身。</summary>
-        public IReadOnlyList<BrainBase> CallableBrains { get; }
+        public IReadOnlyList<Brain> CallableBrains { get; }
 
         /// <summary>结果合并策略。本轮仅留枚举与字段；行为由后续 task 视需要实现。</summary>
         public PrefrontalAggregationStrategy Aggregation { get; set; } = PrefrontalAggregationStrategy.SummarizeBeforeReturn;
@@ -96,7 +74,7 @@ namespace CBIM.AgentSystem.Brain
             IMemoryService memory,
             INeuron neuron,
             IPrefrontalCallback? callback,
-            IReadOnlyList<BrainBase> callableBrains,
+            IReadOnlyList<Brain> callableBrains,
             IBrainRegistry brainRegistry,
             string instanceId,
             string? projectRoot = null)
@@ -122,7 +100,7 @@ namespace CBIM.AgentSystem.Brain
             descriptor.EnsureInvariants();
 
             // ── 2. CallableBrains 浅复制 + 自指 / 重复 BrainId / 嵌套主脑 校验
-            var copy = new List<BrainBase>(callableBrains.Count);
+            var copy = new List<Brain>(callableBrains.Count);
             var seen = new HashSet<string>(StringComparer.Ordinal);
             foreach (var b in callableBrains)
             {
@@ -152,7 +130,7 @@ namespace CBIM.AgentSystem.Brain
         /// <list type="number">
         ///   <item>新建 per-invocation <see cref="NeuralCircuitBuilder"/>，写入 <see cref="ActiveBuilder"/> 字段；
         ///         CompilerToolFactory 装配期捕获的闭包委托从此处读到最新 builder。</item>
-        ///   <item>调 <see cref="BrainBase.Neuron"/>.<see cref="INeuron.InvokeAsync"/>——
+        ///   <item>调 <see cref="Brain.Neuron"/>.<see cref="INeuron.InvokeAsync"/>——
         ///         LLM 自决调 <c>__circuit_*</c> 编图 或 <c>__brain_call_*</c> 退化派发。</item>
         ///   <item>查 <c>builder.Compiled</c>——
         ///     <list type="bullet">
@@ -232,7 +210,7 @@ namespace CBIM.AgentSystem.Brain
             //     用 noop 让 callback 调用静默（与 PrefrontalCortex.PrefrontalCallback==null 同语义）。
             var orchestrator = new CBIMOrchestrator();
             var outcome = await orchestrator
-                .RunAsync(circuit, CallableBrains, NoopPrefrontalCallback.Instance, ct)
+                .RunAsync(circuit, CallableBrains, NoopPrefrontalCallback.Default, ct)
                 .ConfigureAwait(false);
 
             // 4c) 若落盘有错且 outcome 是成功的，把落盘错误附到 ErrorMessage——不改 IsError
@@ -338,7 +316,7 @@ namespace CBIM.AgentSystem.Brain
         /// </summary>
         private sealed class NoopPrefrontalCallback : IPrefrontalCallback
         {
-            public static readonly NoopPrefrontalCallback Instance = new NoopPrefrontalCallback();
+            public static readonly NoopPrefrontalCallback Default = new NoopPrefrontalCallback();
 
             private NoopPrefrontalCallback() { }
 

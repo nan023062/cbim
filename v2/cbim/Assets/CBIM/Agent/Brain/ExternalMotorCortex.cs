@@ -16,8 +16,8 @@ namespace CBIM.AgentSystem.Brain
     ///   <item>本类不再持 <see cref="IExternalEngineAdapter"/>——已下沉到 <see cref="ExternalEngineNeuron"/>
     ///         内部。NeuronFactory 在装配期为 <see cref="ExternalMotorCortexDescriptor"/> 路径创建
     ///         ExternalEngineNeuron 并注入 Adapter。</item>
-    ///   <item><see cref="BrainBase.Agent"/> 透传 <c>Neuron.UnderlyingAgent</c>，ExternalEngineNeuron 返回 <c>null</c>。</item>
-    ///   <item><see cref="BrainBase.InvokeAsync"/> 默认实现透传给 <see cref="BrainBase.Neuron"/>——
+    ///   <item><see cref="Brain.Agent"/> 透传 <c>Neuron.UnderlyingAgent</c>，ExternalEngineNeuron 返回 <c>null</c>。</item>
+    ///   <item><see cref="Brain.InvokeAsync"/> 默认实现透传给 <see cref="Brain.Neuron"/>——
     ///         Neuron 走 Adapter 二阶段路径，本类无须 override。</item>
     /// </list>
     ///

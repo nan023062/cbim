@@ -158,34 +158,6 @@ namespace CBIM.AgentSystem
 
         /// <summary>
         /// 双轨装配——按 BrainConfig 编织 N 个脑区。
-        ///
-        /// <para>装配总序（T5 双轨重写）：</para>
-        /// <list type="number">
-        ///   <item>Source 0 · BrainConfig 选定（<c>desc.BrainConfig ?? BrainConfig.Default(desc.Name)</c>）</item>
-        ///   <item>Source 1 · Memory 选定（<c>options.Override ?? desc.MemoryFactory ?? Default</c>）</item>
-        ///   <item>Source 2 · StandardTools 装配（v1 stub 空集合——预留位）</item>
-        ///   <item>Source 3 · McpList 装配（v1 stub 空集合——预留位）</item>
-        ///   <item>Source 4 · Brain 编织——两阶段：
-        ///     <list type="bullet">
-        ///       <item>Phase 1: 为每个非主脑 descriptor 构造 <see cref="NeuronAssemblyContext"/>，
-        ///             调 <see cref="NeuronFactory.Create"/> 拿 <see cref="INeuron"/>，
-        ///             按 BrainKind 选择子类构造 <see cref="BrainBase"/>。</item>
-        ///       <item>Phase 2: 拿 callableBrains（=已装好的非主脑），调 <see cref="SynapseToolFactory.Build"/>
-        ///             拿 brainCallTools 装入主脑 <see cref="NeuronAssemblyContext.SynapseAITools"/>，
-        ///             调 <see cref="NeuronFactory.Create"/> 拿主脑 Neuron，构造
-        ///             <see cref="PrefrontalCortex"/> 实例。</item>
-        ///     </list>
-        ///   </item>
-        /// </list>
-        ///
-        /// <para>TaskWhere 必填校验：</para>
-        /// <list type="bullet">
-        ///   <item>desc.McpList 非空 → 必填</item>
-        ///   <item>BrainConfig 含 ExternalMotorCortex 且 ShareMode==McpServer → 必填</item>
-        /// </list>
-        ///
-        /// <para>BrainConfig 三铁律（主脑唯一 / 至少一个 MotorCortex / BrainId 唯一）由
-        /// <see cref="BrainConfig"/> 构造期校验，本方法不重复。</para>
         /// </summary>
         public async Task<Agent> OpenInstanceAsync(
             string descriptionId,
@@ -233,7 +205,7 @@ namespace CBIM.AgentSystem
                 onProgress: (brainId, message) => Task.CompletedTask);
 
             var brainRegistry = new InMemoryBrainRegistry();
-            var brains = new List<BrainBase>(brainConfig.Brains.Count);
+            var brains = new List<Brain.Brain>(brainConfig.Brains.Count);
 
             // ─── Phase 1：非主脑先装 ────────────────────────────────────────────────
             // BrainConfig 三铁律已保证恰有一个主脑，此处按 IsPrefrontal 过滤即可。
@@ -246,7 +218,7 @@ namespace CBIM.AgentSystem
                     continue;
                 }
 
-                BrainBase brain = BuildNonPrefrontalBrain(bd, memory, callbackAdapter, options, mcpHandles);
+                Brain.Brain brain = BuildNonPrefrontalBrain(bd, memory, callbackAdapter, options, mcpHandles);
                 brainRegistry.RegisterBrain(brain);
                 brains.Add(brain);
             }
@@ -339,10 +311,10 @@ namespace CBIM.AgentSystem
         ///   <item>按描述符子类构造 <see cref="NeuronAssemblyContext"/>——
         ///         为 ExternalMotor 装配 adapter，为 NativeMotor 准备 stdTools 通道（v1 留空）。</item>
         ///   <item>调 <see cref="NeuronFactory.Create"/> 拿 <see cref="INeuron"/>。</item>
-        ///   <item>按 BrainKind / EngineKind 走 <see cref="ConstructBrainByKind"/> 构造具体 <see cref="BrainBase"/>。</item>
+        ///   <item>按 BrainKind / EngineKind 走 <see cref="ConstructBrainByKind"/> 构造具体 <see cref="Brain"/>。</item>
         /// </list>
         /// </summary>
-        private BrainBase BuildNonPrefrontalBrain(
+        private Brain.Brain BuildNonPrefrontalBrain(
             BrainDescriptor d,
             IMemoryService memory,
             IPrefrontalCallback callback,
@@ -375,11 +347,11 @@ namespace CBIM.AgentSystem
         }
 
         /// <summary>
-        /// 按描述符子类型 + 语义 Kind/EngineKind 选择具体 <see cref="BrainBase"/> 子类构造。
+        /// 按描述符子类型 + 语义 Kind/EngineKind 选择具体 <see cref="Brain"/> 子类构造。
         /// 本方法不消费 LLM / Adapter 等运行资源——只是「描述符 → 子类」的纯派发。
         /// PrefrontalCortex 不在本方法内构造（由 Phase 2 单独装配）。
         /// </summary>
-        private static BrainBase ConstructBrainByKind(
+        private static Brain.Brain ConstructBrainByKind(
             BrainDescriptor d,
             IMemoryService memory,
             INeuron neuron,
@@ -530,7 +502,7 @@ namespace CBIM.AgentSystem
 
         /// <summary>
         /// 关闭一个 Agent：释放其持有的脑区 / Memory / MCP / Session。
-        /// 释放顺序由 <see cref="Agent.DisposeAsync"/> 负责（MotorCortex → 其他脑区 →
+        /// 释放顺序由 <see cref="Agent.Dispose"/> 负责（MotorCortex → 其他脑区 →
         /// Prefrontal → Memory → McpHandles → Session）。多次调用幂等。
         /// </summary>
         public async ValueTask CloseInstanceAsync(Agent instance)
@@ -542,7 +514,7 @@ namespace CBIM.AgentSystem
                 _activeInstances.Remove(instance.InstanceId);
             }
 
-            await instance.DisposeAsync().ConfigureAwait(false);
+            instance.Dispose();
         }
 
         /// <summary>列出当前活动中的 Agent（已 OpenInstance 但未 Close）。</summary>

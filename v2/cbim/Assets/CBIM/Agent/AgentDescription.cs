@@ -31,6 +31,7 @@ namespace CBIM.AgentSystem
     /// CBIM 设计原则：agent 保持专精。若一份 AgentDescription 的
     /// Skills / SystemTools / McpList 广度过大，触发"裂变规则"——拆为多个专精 agent。
     /// </summary>
+    [Serializable]
     public sealed class AgentDescription
     {
         /// <summary>Agent 唯一 ID。kebab-case。例："unity-programmer" / "backend-programmer" / "blender-artist"。</summary>

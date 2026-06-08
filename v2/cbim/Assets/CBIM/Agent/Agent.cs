@@ -27,7 +27,7 @@ namespace CBIM.AgentSystem
     ///   <item>Description.McpList           = 协作能力（接外部系统的本事）</item>
     ///   <item><see cref="Session"/>         = 当下思考记录（这次对话的脑中状态）</item>
     ///   <item><see cref="McpHandles"/>      = 启动中的工具进程（运行中的 MCP server / Memory bridge）</item>
-    ///   <item><see cref="DisposeAsync"/>    = 下班关电脑（释放资源）</item>
+    ///   <item><see cref="Dispose"/>    = 下班关电脑（释放资源）</item>
     /// </list>
     ///
     /// <para>与 Workspace.Module（办公位）对偶——人 + 办公位 = 一次任务的完整场景。</para>
@@ -42,7 +42,7 @@ namespace CBIM.AgentSystem
     /// <para>释放顺序（task-5 重定义）：
     /// MotorCortex 类 → 其他脑区 → Prefrontal → Memory → McpHandles → Session。</para>
     /// </summary>
-    public sealed class Agent : IAsyncDisposable
+    public sealed partial class Agent : IDisposable
     {
         /// <summary>实例唯一 ID（Guid 字符串）。Session 写日志时作为 actor 标识。</summary>
         public string InstanceId { get; }
@@ -54,7 +54,7 @@ namespace CBIM.AgentSystem
         /// 脑区集合——本轮重定义为 Agent 的多脑区编织体。
         /// 顺序：Phase A 非 Prefrontal 脑区先注入，Phase B Prefrontal 最后注入（位于列表尾）。
         /// </summary>
-        public IReadOnlyList<BrainBase> Brains { get; }
+        public IReadOnlyList<Brain.Brain> Brains { get; }
 
         /// <summary>
         /// 主脑句柄——类型固定为 <see cref="PrefrontalCortex"/>。
@@ -62,7 +62,9 @@ namespace CBIM.AgentSystem
         /// </summary>
         public PrefrontalCortex Prefrontal { get; }
 
+        /// <summary>
         /// <summary>Dream 裂变产出新脑区的动态注册点。</summary>
+        /// </summary>
         public IBrainRegistry BrainRegistry { get; }
 
         /// <summary>
@@ -102,7 +104,7 @@ namespace CBIM.AgentSystem
         public Agent(
             string instanceId,
             AgentDescription description,
-            IReadOnlyList<BrainBase> brains,
+            IReadOnlyList<Brain.Brain> brains,
             PrefrontalCortex prefrontal,
             AgentSession session,
             IBrainRegistry brainRegistry,
@@ -141,18 +143,9 @@ namespace CBIM.AgentSystem
         }
 
         /// <summary>
-        /// 释放本实例占用的所有资源——task-5 重定义顺序：
-        /// <list type="number">
-        ///   <item>MotorCortex 类脑区（外部副作用）</item>
-        ///   <item>其他非 Prefrontal 脑区（ParietalLobe / Hippocampus / Dream 裂变新脑区等）</item>
-        ///   <item>Prefrontal（主脑最后释放——子脑区可能在 Dispose 路径上回调主脑收尾）</item>
-        ///   <item>Memory（第三方后端如 Pinecone client 需异步断开）</item>
-        ///   <item>McpHandles（memory-bridge / 外部 MCP server）</item>
-        ///   <item>Session（Microsoft 框架处理）</item>
-        /// </list>
-        /// 各步以 try/catch 隔离——单点失败不阻断后续清理。多次调用幂等。
+        /// 释放本实例占用的所有资源
         /// </summary>
-        public async ValueTask DisposeAsync()
+        public async void Dispose()
         {
             // 1) MotorCortex 类脑区先释放——外部副作用 / 外部进程需第一时间收尾
             foreach (var motor in Brains.OfType<MotorCortex>())

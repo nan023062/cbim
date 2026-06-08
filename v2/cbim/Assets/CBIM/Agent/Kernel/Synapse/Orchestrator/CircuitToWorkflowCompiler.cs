@@ -60,7 +60,7 @@ namespace CBIM.AgentSystem.Kernel.Synapse.Orchestrator
         ///   <c>InProcessExecution</c> 执行。</returns>
         public static Workflow Compile(
             NeuralCircuit circuit,
-            IReadOnlyList<BrainBase> brainPalette,
+            IReadOnlyList<Brain.Brain> brainPalette,
             IPrefrontalCallback callback)
         {
             if (circuit == null)
@@ -158,14 +158,14 @@ namespace CBIM.AgentSystem.Kernel.Synapse.Orchestrator
         /// </summary>
         private static Executor BuildExecutor(
             CircuitNode node,
-            IReadOnlyList<BrainBase> brainPalette,
+            IReadOnlyList<Brain.Brain> brainPalette,
             IPrefrontalCallback callback)
         {
             switch (node)
             {
                 case CallBrainNode callBrain:
                 {
-                    BrainBase? brain = null;
+                    Brain.Brain? brain = null;
                     for (int i = 0; i < brainPalette.Count; i++)
                     {
                         var candidate = brainPalette[i];

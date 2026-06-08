@@ -81,7 +81,7 @@ namespace CBIM.AgentSystem.Kernel.Synapse.Orchestrator
         /// <param name="ct">取消令牌——传给 MAF 与 stream 迭代。</param>
         public async Task<BrainOutcome> RunAsync(
             NeuralCircuit circuit,
-            IReadOnlyList<BrainBase> brainPalette,
+            IReadOnlyList<Brain.Brain> brainPalette,
             IPrefrontalCallback callback,
             CancellationToken ct)
         {
@@ -207,7 +207,7 @@ namespace CBIM.AgentSystem.Kernel.Synapse.Orchestrator
         /// </summary>
         public Workflow CompileToMafWorkflow(
             NeuralCircuit circuit,
-            IReadOnlyList<BrainBase> brainPalette,
+            IReadOnlyList<Brain.Brain> brainPalette,
             IPrefrontalCallback callback)
         {
             if (circuit == null)
@@ -219,20 +219,5 @@ namespace CBIM.AgentSystem.Kernel.Synapse.Orchestrator
 
             return CircuitToWorkflowCompiler.Compile(circuit, brainPalette, callback);
         }
-    }
-
-    /// <summary>
-    /// 空回调——供 <see cref="CBIMOrchestrator.CompileToMafWorkflow"/> 等 debug 路径占位。
-    /// 不向外暴露，避免被生产路径误用。
-    /// </summary>
-    internal sealed class NullPrefrontalCallback : IPrefrontalCallback
-    {
-        public static readonly NullPrefrontalCallback Instance = new NullPrefrontalCallback();
-
-        private NullPrefrontalCallback() { }
-
-        public void ReportProgress(string brainId, string message) { }
-
-        public void ReportOutcome(string brainId, BrainOutcome outcome) { }
     }
 }

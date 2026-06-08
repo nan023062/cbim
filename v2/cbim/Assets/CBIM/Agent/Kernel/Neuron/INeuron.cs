@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,7 +11,7 @@ namespace CBIM.AgentSystem.Kernel.Neuron
     /// 神经元——LLM 思维链单元抽象。
     ///
     /// <para>持有「与一个 LLM 引擎对话的能力」。BrainBase 不感知背后是 msai 还是 external，
-    /// 只通过该抽象消费 LLM 能力。两实现：<see cref="MsaiNeuron"/>（msai 装配） /
+    /// 只通过该抽象消费 LLM 能力。两实现：<see cref="MsAINeuron"/>（msai 装配） /
     /// <see cref="ExternalEngineNeuron"/>（外部引擎桥接）。</para>
     ///
     /// <para>K2 铁律：本接口是 Brain 层调用 LLM 的<b>唯一出口</b>——任何脑区想调 LLM
@@ -33,7 +34,7 @@ namespace CBIM.AgentSystem.Kernel.Neuron
 
         /// <summary>
         /// 暴露底层 <see cref="AIAgent"/> 引用（仅供 Channel 持引用打 SendAsync 用）。
-        /// <see cref="MsaiNeuron"/> 返回真实 ChatClientAgent；<see cref="ExternalEngineNeuron"/>
+        /// <see cref="MsAINeuron"/> 返回真实 ChatClientAgent；<see cref="ExternalEngineNeuron"/>
         /// 返回 <c>null</c>（外部引擎自带 LLM，无 AIAgent 句柄）。
         /// </summary>
         AIAgent? UnderlyingAgent { get; }

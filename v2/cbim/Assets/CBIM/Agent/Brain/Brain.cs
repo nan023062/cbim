@@ -9,22 +9,9 @@ using Microsoft.Agents.AI;
 namespace CBIM.AgentSystem.Brain
 {
     /// <summary>
-    /// 脑区契约公共基类。
-    ///
-    /// <para>本轮重要变动（T4）：基类不再持有 <c>IChatClient</c> 也不再做 msai 装配——
-    /// 所有 LLM 思维链能力已下沉到 <see cref="CBIM.AgentSystem.Kernel.Neuron.INeuron"/>（K2 铁律：
-    /// Neuron 是 Brain 层调用 LLM 的唯一出口）。基类只持 <see cref="Neuron"/> 抽象引用，
-    /// 默认 <see cref="InvokeAsync"/> 透传给 <c>Neuron.InvokeAsync</c>；msai 还是 ExternalEngine
-    /// 由 NeuronFactory 在装配期决定，基类与子类无感。</para>
-    ///
-    /// <para>「同一具身一份记忆」铁律的物理落地：<see cref="Memory"/> 由 AgentInstance 在
-    /// 装配期注入，所有脑区共享同一 <see cref="IMemoryService"/> 实例。</para>
-    ///
-    /// <para>「主脑唯一通路」铁律（K3）的物理护栏：<see cref="PrefrontalCallback"/> 是子脑区
-    /// 向 PrefrontalCortex 回报的唯一通路；接口极小化（仅 ReportProgress / ReportOutcome），
-    /// 反向调度兄弟脑区在类型层面被杜绝。主脑自身的本字段恒为 null。</para>
+    /// 脑区契约公共基类。 其实就是封装的AI Agent
     /// </summary>
-    public abstract class BrainBase : IAsyncDisposable
+    public abstract class Brain : IAsyncDisposable
     {
         /// <summary>脑区在 AgentInstance 内的唯一标识。</summary>
         public string BrainId { get; }
@@ -35,7 +22,7 @@ namespace CBIM.AgentSystem.Brain
         /// <summary>
         /// 神经元——LLM 思维链单元。本字段是 Brain 层调用 LLM 的唯一出口（K2 铁律）。
         /// 由 AgentSystem 装配期通过 NeuronFactory 创建并注入；BrainBase 与子类不感知其具体实现
-        /// （<see cref="MsaiNeuron"/> 还是 <see cref="ExternalEngineNeuron"/>）。
+        /// （<see cref="MsAINeuron"/> 还是 <see cref="ExternalEngineNeuron"/>）。
         /// </summary>
         public INeuron Neuron { get; }
 
@@ -61,7 +48,7 @@ namespace CBIM.AgentSystem.Brain
         /// <param name="neuron">神经元（LLM 出口）。由 NeuronFactory 创建。不为 null。</param>
         /// <param name="memory">共享 Memory 实例。不为 null。</param>
         /// <param name="callback">主脑回调；主脑自身传 <c>null</c>，其他脑区由装配期注入。</param>
-        protected BrainBase(
+        protected Brain(
             string brainId,
             INeuron neuron,
             IMemoryService memory,

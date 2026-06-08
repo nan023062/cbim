@@ -6,7 +6,7 @@ using CBIM.Memory;
 namespace CBIM.AgentSystem.Brain
 {
     /// <summary>
-    /// NativeMotorCortex —— 由 <see cref="MsaiNeuron"/> 驱动的本地运动皮层。BrainConfig.Default 默认装 1 个。
+    /// NativeMotorCortex —— 由 <see cref="MsAINeuron"/> 驱动的本地运动皮层。BrainConfig.Default 默认装 1 个。
     ///
     /// <para>BrainId 约定：默认 <c>"motor-cortex.native"</c>；允许 Dream 裂变期产出
     /// <c>"motor-cortex.&lt;specialty&gt;"</c> 子型号（如 <c>"motor-cortex.refactor"</c>）——

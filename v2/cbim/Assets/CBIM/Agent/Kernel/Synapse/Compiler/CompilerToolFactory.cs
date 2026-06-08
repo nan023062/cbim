@@ -55,7 +55,7 @@ namespace CBIM.AgentSystem.Kernel.Synapse.Compiler
         /// <returns>AITool 集合（6 个）。</returns>
         public static IReadOnlyList<AITool> Build(
             Func<NeuralCircuitBuilder> builderProvider,
-            IReadOnlyList<BrainBase> callableBrains)
+            IReadOnlyList<Brain.Brain> callableBrains)
         {
             if (builderProvider == null)
                 throw new ArgumentNullException(nameof(builderProvider));

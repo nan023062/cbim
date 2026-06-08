@@ -10,11 +10,11 @@ namespace CBIM.AgentSystem.Brain
     ///
     /// <para>职责：模块设计 / 知识蓝图 / 架构合规校验 / 协助 Hippocampus 落地裂变设计。</para>
     ///
-    /// <para>本类完全继承 <see cref="BrainBase"/> 默认 InvokeAsync——架构脑的特化由
+    /// <para>本类完全继承 <see cref="Brain"/> 默认 InvokeAsync——架构脑的特化由
     /// <see cref="StandardBrainDescriptor.Soul"/> + <see cref="StandardBrainDescriptor.Capability"/>
     /// 上声明的 SystemTools / Skills 表达，<b>无</b>类层新增字段。</para>
     /// </summary>
-    public sealed class ParietalLobe : BrainBase
+    public sealed class ParietalLobe : Brain
     {
         public const string DefaultBrainId = "parietal-lobe";
 

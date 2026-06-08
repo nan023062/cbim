@@ -10,22 +10,29 @@ using Microsoft.Extensions.AI;
 namespace CBIM.AgentSystem.Kernel.Neuron
 {
     /// <summary>
-    /// 标准 Msai 神经元——装配 <see cref="ChatClientAgent"/> + <see cref="FunctionInvokingChatClient"/>
+    /// 标准 MsAI 神经元——装配 <see cref="ChatClientAgent"/> + <see cref="FunctionInvokingChatClient"/>
     /// + AITool 集（StandardAITools + SynapseAITools）。
     ///
     /// <para>InvokeAsync 路径：把 <see cref="BrainInvocation.Intent"/> 包成 user
     /// <see cref="ChatMessage"/> 投给内部 ChatClientAgent.RunAsync，取 response.Text
     /// 作为 <see cref="BrainOutcome.Summary"/>。</para>
     /// </summary>
-    public sealed class MsaiNeuron : INeuron
+    public sealed class MsAINeuron : INeuron
     {
         public string NeuronId { get; }
+        
         public NeuronKind Kind => NeuronKind.Msai;
+        
         public AIAgent? UnderlyingAgent => _agent;
 
         private readonly ChatClientAgent _agent;
+        
         private readonly IChatClient _invokingChatClient;
+        
+        private readonly ChatMessage _message;
+        
         private readonly IMemoryService _memory;
+        
         private int _disposed;
 
         /// <summary>
@@ -42,7 +49,7 @@ namespace CBIM.AgentSystem.Kernel.Neuron
         /// <param name="chatClient">底层 LLM 客户端。不为 null。</param>
         /// <param name="memory">共享 Memory 实例。不为 null。</param>
         /// <param name="aiTools">已合并的 AITool 集（StandardAITools + SynapseAITools）。不为 null（可空集）。</param>
-        public MsaiNeuron(
+        public MsAINeuron(
             string neuronId,
             StandardBrainDescriptor descriptor,
             IChatClient chatClient,
@@ -92,6 +99,7 @@ namespace CBIM.AgentSystem.Kernel.Neuron
             options.ChatOptions = chatOptions;
 
             _agent = new ChatClientAgent(_invokingChatClient, options);
+            _message = new ChatMessage(ChatRole.User, string.Empty);
         }
 
         /// <inheritdoc/>
@@ -100,11 +108,14 @@ namespace CBIM.AgentSystem.Kernel.Neuron
             if (invocation == null)
                 throw new ArgumentNullException(nameof(invocation));
 
-            var message = new ChatMessage(ChatRole.User, invocation.Intent ?? string.Empty);
-            var result = await _agent.RunAsync(message, cancellationToken: ct).ConfigureAwait(false);
+            TextContent textContent = new TextContent(invocation.Intent ?? string.Empty);
+            _message.Contents.Clear();
+            _message.Contents.Add(textContent);
+            
+            var response = await _agent.RunAsync(_message, cancellationToken: ct).ConfigureAwait(false);
 
             return new BrainOutcome(
-                Summary: result.Text ?? string.Empty,
+                Summary: response.Text,
                 StructuredOutput: null,
                 SideEffects: Array.Empty<SideEffect>(),
                 IsError: false,

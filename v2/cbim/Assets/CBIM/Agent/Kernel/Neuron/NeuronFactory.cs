@@ -20,7 +20,7 @@ namespace CBIM.AgentSystem.Kernel.Neuron
         /// <summary>
         /// 分派规则：
         /// <list type="bullet">
-        ///   <item><see cref="StandardBrainDescriptor"/> → <see cref="MsaiNeuron"/></item>
+        ///   <item><see cref="StandardBrainDescriptor"/> → <see cref="MsAINeuron"/></item>
         ///   <item><see cref="ExternalMotorCortexDescriptor"/> → <see cref="ExternalEngineNeuron"/>
         ///         （需 <see cref="NeuronAssemblyContext.ExternalAdapter"/> 非 null）</item>
         /// </list>
@@ -42,7 +42,7 @@ namespace CBIM.AgentSystem.Kernel.Neuron
                             "StandardBrainDescriptor 装配需要 NeuronAssemblyContext.ChatClient 非 null。");
 
                     var merged = MergeTools(ctx.StandardAITools, ctx.SynapseAITools);
-                    return new MsaiNeuron(std.BrainId, std, ctx.ChatClient, ctx.Memory, merged);
+                    return new MsAINeuron(std.BrainId, std, ctx.ChatClient, ctx.Memory, merged);
                 }
 
                 case ExternalMotorCortexDescriptor ext:

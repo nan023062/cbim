@@ -11,12 +11,12 @@ namespace CBIM.AgentSystem.Kernel.Synapse.Orchestrator
 {
     /// <summary>
     /// <c>CallBrainNode</c> 的 MAF Executor 包装——节点执行体里调
-    /// <see cref="BrainBase.InvokeAsync"/> 投递 Intent 到目标脑区，再把 outcome 沿
+    /// <see cref="Brain.InvokeAsync"/> 投递 Intent 到目标脑区，再把 outcome 沿
     /// <see cref="CircuitMessage"/> 传给下游。
     ///
     /// <para>O1 铁律：不重造执行引擎——继承 MAF <see cref="Executor{TInput}"/>，让 MAF
     /// 负责消息路由 / SuperStep 调度 / Checkpoint。</para>
-    /// <para>O3 铁律：fail-fast——<see cref="BrainBase.InvokeAsync"/> 抛异常或返回
+    /// <para>O3 铁律：fail-fast——<see cref="Brain.InvokeAsync"/> 抛异常或返回
     /// <see cref="BrainOutcome.IsError"/>=true 时，不重试、不 fallback；直接 AddEvent
     /// <see cref="ExecutorFailedEvent"/> + <see cref="IWorkflowContext.RequestHaltAsync"/>，
     /// 主脑下一轮拿 IsError 结果自行决定是否重编。</para>
@@ -26,13 +26,13 @@ namespace CBIM.AgentSystem.Kernel.Synapse.Orchestrator
     {
         private readonly string _nodeId;
         private readonly CallBrainNode _node;
-        private readonly BrainBase _brain;
+        private readonly Brain.Brain _brain;
         private readonly IPrefrontalCallback _callback;
 
         public BrainCallExecutor(
             string nodeId,
             CallBrainNode node,
-            BrainBase brain,
+            Brain.Brain brain,
             IPrefrontalCallback callback)
             : base(nodeId)
         {

@@ -15,11 +15,11 @@ namespace CBIM.AgentSystem.Brain
     /// 信号评估器 + AIFunction <c>analyze_fission</c> 由后续 Dream 实施切片落地，
     /// 本类先占类名 + 命名空间。</para>
     ///
-    /// <para>本类完全继承 <see cref="BrainBase"/> 默认 InvokeAsync——具体能力由
+    /// <para>本类完全继承 <see cref="Brain"/> 默认 InvokeAsync——具体能力由
     /// <see cref="StandardBrainDescriptor.Soul"/> + <see cref="StandardBrainDescriptor.Capability"/>
     /// 上声明的 SystemTools / Skills 表达。</para>
     /// </summary>
-    public sealed class Hippocampus : BrainBase
+    public sealed class Hippocampus : Brain
     {
         public const string DefaultBrainId = "hippocampus";
 

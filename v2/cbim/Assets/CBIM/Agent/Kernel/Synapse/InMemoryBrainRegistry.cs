@@ -15,11 +15,11 @@ namespace CBIM.AgentSystem.Kernel.Synapse
     /// </summary>
     public sealed class InMemoryBrainRegistry : IBrainRegistry
     {
-        private readonly Dictionary<string, BrainBase> _store = new Dictionary<string, BrainBase>(StringComparer.Ordinal);
+        private readonly Dictionary<string, Brain.Brain> _store = new Dictionary<string, Brain.Brain>(StringComparer.Ordinal);
         private readonly object _lock = new object();
 
         /// <inheritdoc/>
-        public void RegisterBrain(BrainBase brain)
+        public void RegisterBrain(Brain.Brain brain)
         {
             if (brain == null)
                 throw new ArgumentNullException(nameof(brain));
@@ -47,7 +47,7 @@ namespace CBIM.AgentSystem.Kernel.Synapse
         }
 
         /// <inheritdoc/>
-        public BrainBase? Find(string brainId)
+        public Brain.Brain? Find(string brainId)
         {
             if (string.IsNullOrWhiteSpace(brainId))
                 return null;
@@ -59,13 +59,13 @@ namespace CBIM.AgentSystem.Kernel.Synapse
         }
 
         /// <inheritdoc/>
-        public IReadOnlyList<BrainBase> All()
+        public IReadOnlyList<Brain.Brain> All()
         {
             lock (_lock)
             {
                 // 返回快照副本——调用方拿到的列表不会随后续 Register / Unregister 改变，
                 // 避免外部迭代时被并发修改抛 InvalidOperationException。
-                var snapshot = new BrainBase[_store.Count];
+                var snapshot = new Brain.Brain[_store.Count];
                 _store.Values.CopyTo(snapshot, 0);
                 return snapshot;
             }

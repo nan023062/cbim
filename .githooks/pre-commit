@@ -1,0 +1,10 @@
+#!/bin/sh
+# Reject commits that introduce CBIM governance artifacts into this public repo.
+blocked=$(git diff --cached --name-only | grep -E '^(\.cbim/|\.claude/|CLAUDE\.md$|\.mcp\.json$|\.claudeignore$)')
+if [ -n "$blocked" ]; then
+    echo "ERROR: attempt to commit governance artifacts:" >&2
+    echo "$blocked" >&2
+    echo "These belong only in the private parent repo. Unstage them and retry." >&2
+    exit 1
+fi
+exit 0

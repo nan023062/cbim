@@ -58,6 +58,8 @@ in `mcp` (the runtime dependency the kernel and tests import).
 No editable install is needed: `v1/tests/conftest.py` adds `v1/kernel/` to
 `sys.path` automatically so `import engine`, `import cbi`, etc. resolve.
 
+To enable the client-side leak guard locally, run: `git config core.hooksPath .githooks`
+
 ---
 
 ## Running tests

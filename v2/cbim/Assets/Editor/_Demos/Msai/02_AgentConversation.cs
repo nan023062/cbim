@@ -1,4 +1,4 @@
-// Demo 2：通过 AIAgent + AgentSession 实现多轮对话。
+﻿// Demo 2：通过 AIAgent + AgentSession 实现多轮对话。
 // 验证 AgentSession 能在多轮之间携带上下文，第二次回复可以引用第一次说过的内容。
 using System;
 using System.Collections.Generic;

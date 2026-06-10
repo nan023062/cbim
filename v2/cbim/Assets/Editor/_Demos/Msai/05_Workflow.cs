@@ -1,4 +1,4 @@
-// Demo 5：多 agent workflow。
+﻿// Demo 5：多 agent workflow。
 // 验证 Microsoft.Agents.AI.Workflows 能把两个 AIAgent 串成 executor，
 // 把前一个 agent 的输出消息传给后一个 agent。
 using System;

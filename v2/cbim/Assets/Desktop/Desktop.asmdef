@@ -2,7 +2,7 @@
     "name": "Desktop",
     "rootNamespace": "",
     "references": [
-        "CBIM"
+        "AgenticOS"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

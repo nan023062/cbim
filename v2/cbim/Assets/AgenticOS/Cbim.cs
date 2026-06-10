@@ -1,0 +1,301 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using CBIM.Agent;
+using CBIM.LlmClient;
+using CBIM.Mcp;
+using CBIM.Memory;
+using CBIM.Skills;
+using CBIM.Storage;
+using CBIM.Workflow;
+using CBIM.Workspace;
+
+#nullable enable
+
+namespace CBIM
+{
+    /// <summary>
+    /// Cbim — CBIM 系统根容器。
+    ///
+    /// <para>职责：按固定顺序完成所有层的初始化（配置层 → 实例层 → 服务层），
+    /// 对外暴露只读属性，统一管理 <see cref="McpInstanceManager"/> 等有生命周期资源的释放。
+    /// 每个 Session 对应一个独立 Agent 实例，Session 生命周期由 Cbim 直接管理。</para>
+    ///
+    /// <para>使用方式：
+    /// <code>
+    /// var os = Cbim.Create(new CbimOptions
+    /// {
+    ///     RootPath = "/data/cbim",
+    ///     Agent = new AgentDescription(...)
+    /// });
+    /// var session = await os.OpenSessionAsync();
+    /// os.Dispose();
+    /// </code>
+    /// </para>
+    /// </summary>
+    public sealed class Cbim : IDisposable
+    {
+
+#region 配置层（FileStore）
+
+        /// <summary>模型配置注册表（<c>models/</c> 子目录）。</summary>
+        public FileModelStore ModelStore { get; }
+
+        /// <summary>技能配置注册表（<c>skills/</c> 子目录）。</summary>
+        public FileSkillStore SkillStore { get; }
+
+        /// <summary>工作流配置注册表（<c>workflows/</c> 子目录）。</summary>
+        public FileWorkflowStore WorkflowStore { get; }
+
+        /// <summary>MCP 描述符注册表（<c>mcps/</c> 子目录）。</summary>
+        public FileMcpStore McpStore { get; }
+
+#endregion
+
+#region 文件后端（各 FileStore 共享）
+
+        /// <summary>文件系统存取原语——各 FileStore 的共享后端。</summary>
+        public FileBackend FileBackend { get; }
+
+#endregion
+
+#region 实例层
+
+        /// <summary>IChatClient 工厂——按 <see cref="ModelDescriptor"/> 路由到对应 Provider 构建器。</summary>
+        public ChatClientFactory LlmClient { get; }
+
+        /// <summary>MCP 实例管理器——Shared / 隔离双模式生命周期管理。</summary>
+        public McpInstanceManager Mcp { get; }
+
+#endregion
+
+#region 服务层
+
+        /// <summary>
+        /// Memory 服务——Cbim 统一持有的记忆后端。
+        /// Hippocampus 通过 <c>agent.Os.Memory</c> 访问；外部可通过 <see cref="SwitchMemory"/> 热切换。
+        /// </summary>
+        public IMemoryService Memory { get; private set; }
+
+        /// <summary>Workspace 子系统——封装工作区根路径 + 按权限分层的 DNA AITool 列表。</summary>
+        public WorkspaceSystem Workspace { get; }
+
+#endregion
+
+#region 配置项（供 Session 创建 Agent 时使用）
+
+        /// <summary>
+        /// 创建时传入的配置项——Session 构造 Agent 时从此读取 <see cref="CbimOptions.Agent"/>。
+        /// </summary>
+        public CbimOptions Options { get; }
+
+#endregion
+
+#region Session 管理（直接在 Cbim 上）
+
+        private readonly Dictionary<string, Agent.Agent> _sessions = new Dictionary<string, Agent.Agent>();
+        private readonly object _sessionLock = new object();
+
+#endregion
+
+#region 构造（私有）
+
+        private Cbim(
+            CbimOptions options,
+            FileBackend fileBackend,
+            FileModelStore modelStore,
+            FileSkillStore skillStore,
+            FileWorkflowStore workflowStore,
+            FileMcpStore mcpStore,
+            ChatClientFactory llmClient,
+            McpInstanceManager mcp,
+            IMemoryService memory,
+            WorkspaceSystem workspace)
+        {
+            Options       = options;
+            FileBackend   = fileBackend;
+            ModelStore    = modelStore;
+            SkillStore    = skillStore;
+            WorkflowStore = workflowStore;
+            McpStore      = mcpStore;
+            LlmClient     = llmClient;
+            Mcp           = mcp;
+            Memory        = memory;
+            Workspace     = workspace;
+        }
+
+#endregion
+
+        /// <summary>
+        /// 热切换记忆后端——将 <see cref="Memory"/> 替换为新的 <see cref="IMemoryService"/> 实例。
+        /// 切换后 Hippocampus 下次通过 <c>agent.Os.Memory</c> 取到的即为新实例。
+        /// </summary>
+        /// <param name="newMemoryService">新的记忆服务实例，不能为 null。</param>
+        public void SwitchMemory(IMemoryService newMemoryService)
+        {
+            if (newMemoryService == null) throw new ArgumentNullException(nameof(newMemoryService));
+            Memory = newMemoryService;
+        }
+
+#region 工厂方法
+
+        /// <summary>
+        /// 按 <paramref name="options"/> 初始化并返回一个完整的 Cbim 实例。
+        ///
+        /// <para>初始化顺序：
+        /// <list type="number">
+        ///   <item><see cref="FileBackend"/> — 文件系统存取原语</item>
+        ///   <item>各 FileStore — 全量扫描对应子目录进内存索引</item>
+        ///   <item><see cref="ChatClientFactory"/> — 基于默认 ProviderRegistry</item>
+        ///   <item><see cref="McpInstanceManager"/> — 注入 MCP 启动器 SPI</item>
+        ///   <item><see cref="IMemoryService"/> — 外部注入或 LocalMemoryService 默认实现</item>
+        ///   <item><see cref="WorkspaceSystem"/> — 根路径为 options.RootPath</item>
+        /// </list>
+        /// Session 及其内部 Agent 在 <see cref="OpenSessionAsync"/> 时按需创建，不在 Create 时预建。
+        /// </para>
+        /// </summary>
+        /// <param name="options">配置项，<see cref="CbimOptions.RootPath"/> 与 <see cref="CbimOptions.Agent"/> 均不能为空。</param>
+        public static Cbim Create(CbimOptions options)
+        {
+            if (options == null) throw new ArgumentNullException(nameof(options));
+            if (string.IsNullOrWhiteSpace(options.RootPath))
+                throw new ArgumentException(
+                    "CbimOptions.RootPath 不能为空——请提供数据根目录路径。",
+                    nameof(options));
+            if (options.Agent == null)
+                throw new ArgumentException(
+                    "CbimOptions.Agent 不能为空——请提供 AgentDescription。",
+                    nameof(options));
+
+            // 1. 文件后端
+            var backend = new FileBackend(options.RootPath);
+
+            // 2. 配置层 FileStore
+            var modelStore    = new FileModelStore(backend);
+            var skillStore    = new FileSkillStore(backend);
+            var workflowStore = new FileWorkflowStore(backend);
+            var mcpStore      = new FileMcpStore(backend);
+
+            // 3. IChatClient 工厂（默认 ProviderRegistry，含所有内置 Provider）
+            var llmClient = new ChatClientFactory();
+
+            // 4. MCP 实例管理器
+            IMcpClientStarter starter = options.McpStarter ?? new NullMcpClientStarter();
+            var mcp = new McpInstanceManager(starter);
+
+            // 5. Memory 服务——外部注入优先；否则用 LocalMemoryService + MemoryRootPath
+            var memory = options.Memory
+                ?? new LocalMemoryService(
+                    options.MemoryRootPath ?? Path.Combine(options.RootPath, "memory"));
+
+            // 6. Workspace 子系统（根路径为 options.RootPath）
+            var workspace = new WorkspaceSystem(options.RootPath);
+
+            // 7. 构造并返回 Cbim 根容器
+            return new Cbim(options, backend, modelStore, skillStore, workflowStore, mcpStore, llmClient, mcp, memory, workspace);
+        }
+
+#endregion
+
+#region Session 管理接口
+
+        /// <summary>
+        /// 开通一个新 Session——每个 Session 独立持有自己的 Agent 实例。
+        /// 返回的 <see cref="Agent.Agent"/> 携带唯一 <see cref="Agent.Agent.SessionId"/>，
+        /// 调用方可订阅 <see cref="Agent.Agent.OnOutput"/> 并调用 <see cref="Agent.Agent.SendAsync"/>。
+        /// </summary>
+        public Task<Agent.Agent> OpenSessionAsync(CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+            var agent = new Agent.Agent(this, Options.Agent);
+            lock (_sessionLock)
+            {
+                _sessions[agent.SessionId] = agent;
+            }
+            return Task.FromResult(agent);
+        }
+
+        /// <summary>
+        /// 关闭指定 Session——从注册表移除并释放 Agent。
+        /// 幂等：未知 sessionId 静默返回。
+        /// </summary>
+        public Task CloseSessionAsync(string sessionId, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(sessionId)) return Task.CompletedTask;
+
+            Agent.Agent? agent;
+            lock (_sessionLock)
+            {
+                _sessions.TryGetValue(sessionId, out agent);
+                _sessions.Remove(sessionId);
+            }
+
+            agent?.Dispose();
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 按 ID 查活动 Session（Agent 实例）。找不到返回 null。
+        /// </summary>
+        public Agent.Agent? GetSession(string sessionId)
+        {
+            lock (_sessionLock)
+            {
+                _sessions.TryGetValue(sessionId, out var agent);
+                return agent;
+            }
+        }
+
+#endregion
+
+#region 生命周期
+
+        /// <summary>
+        /// 释放所有持有生命周期的资源（全部 Session Agent + MCP）。
+        /// 多次调用安全（幂等）。
+        /// </summary>
+        public void Dispose()
+        {
+            List<Agent.Agent> snapshot;
+            lock (_sessionLock)
+            {
+                snapshot = new List<Agent.Agent>(_sessions.Values);
+                _sessions.Clear();
+            }
+
+            foreach (var agent in snapshot)
+            {
+                agent.Dispose();
+            }
+
+            Mcp.Dispose();
+        }
+    }
+
+#endregion
+
+#region NullMcpClientStarter — 未配置 MCP 时的占位实现
+
+    /// <summary>
+    /// <see cref="IMcpClientStarter"/> 的空实现——当 <see cref="CbimOptions.McpStarter"/>
+    /// 未配置时注入，任何 MCP 实例化尝试都将抛出明确错误。
+    /// </summary>
+    internal sealed class NullMcpClientStarter : IMcpClientStarter
+    {
+        /// <inheritdoc/>
+        /// <exception cref="InvalidOperationException">
+        /// 始终抛出——提示调用方在 <see cref="CbimOptions"/> 中配置真实的 MCP 启动器。
+        /// </exception>
+        public IStartedMcpClient Start(McpDescriptor descriptor)
+        {
+            throw new InvalidOperationException(
+                "McpStarter not configured in CbimOptions. " +
+                "Set CbimOptions.McpStarter to a real IMcpClientStarter implementation " +
+                "(e.g., one backed by Microsoft.Agents.AI.Mcp) before using MCP features.");
+        }
+    }
+
+#endregion
+}

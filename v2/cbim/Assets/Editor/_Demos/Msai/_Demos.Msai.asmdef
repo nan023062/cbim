@@ -2,7 +2,7 @@
     "name": "_Demos.Msai",
     "rootNamespace": "",
     "references": [
-        "CBIM"
+        "AgenticOS"
     ],
     "includePlatforms": [
         "Editor"

@@ -2,7 +2,7 @@
     "name": "_VerifyMsai.Editor",
     "rootNamespace": "",
     "references": [
-        "CBIM"
+        "AgenticOS"
     ],
     "includePlatforms": [
         "Editor"

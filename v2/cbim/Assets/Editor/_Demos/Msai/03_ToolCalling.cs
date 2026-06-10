@@ -1,4 +1,4 @@
-// Demo 3：自动 tool calling。
+﻿// Demo 3：自动 tool calling。
 // 验证 ChatClientAgent 自动注入的 FunctionInvokingChatClient 循环
 // 能调用 C# 方法、把结果回喂给模型，并产出最终自然语言回答。
 using System;
@@ -28,7 +28,9 @@ namespace CBIM.Demos.Msai
             w.minSize = new Vector2(600, 460);
         }
 
-        // ---- 暴露给模型的工具 ----
+
+#region 暴露给模型的工具
+
         // 两个工具都通过下面的 AIFunctionFactory.Create 包装。描述来自
         // [Description] 特性 —— 这就是 LLM 在 tool schema 里看到的内容。
 
@@ -50,7 +52,12 @@ namespace CBIM.Demos.Msai
             return v;
         }
 
-        // ---- UI ----
+
+
+#endregion
+
+#region UI
+
 
         private void OnGUI()
         {
@@ -159,5 +166,7 @@ namespace CBIM.Demos.Msai
             }
             return string.Join(", ", parts);
         }
+
+#endregion
     }
 }

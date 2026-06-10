@@ -1,4 +1,4 @@
-// MSAI 学习用 demo 的共享辅助工具。
+﻿// MSAI 学习用 demo 的共享辅助工具。
 // 所有 demo 都只从环境变量读取 API key —— 永远不要硬编码密钥。
 using System;
 using System.ClientModel;

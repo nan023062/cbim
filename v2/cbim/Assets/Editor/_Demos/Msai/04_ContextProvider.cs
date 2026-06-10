@@ -1,4 +1,4 @@
-// Demo 4：AIContextProvider，在每次 agent 运行前注入额外指令。
+﻿// Demo 4：AIContextProvider，在每次 agent 运行前注入额外指令。
 // 验证通过 ChatClientAgentOptions.AIContextProviders 挂上的自定义 AIContextProvider
 // 能传到模型并改变其行为。
 using System;

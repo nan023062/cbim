@@ -1,4 +1,4 @@
-// Demo 1：最基础的 IChatClient 调用。
+﻿// Demo 1：最基础的 IChatClient 调用。
 // 验证 Microsoft.Extensions.AI 最底层能否打通真实的 OpenAI 接口。
 using System;
 using System.Collections.Generic;

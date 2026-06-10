@@ -1,6 +1,6 @@
 # Microsoft Agent Framework + BCL Polyfills - Portable .NET DLLs
 
-**用途**：CBIM 的 LLM 调用底座 + Agent 抽象层 + Unity 2020.3 BCL 缺口补丁。所有以纯 .NET DLL 形式投放，**不依赖 NuGetForUnity / Unity Package Manager**。CBIM 设计为纯 .NET 库，Unity 是当前宿主，未来可剥离为独立库 / 后端进程。
+**用途**：CBIM 的 LLM 调用底座 + Agent 抽象层 + MCP 协议接入 + Unity 2020.3 BCL 缺口补丁。所有以纯 .NET DLL 形式投放，**不依赖 NuGetForUnity / Unity Package Manager**。CBIM 设计为纯 .NET 库，Unity 是当前宿主，未来可剥离为独立库 / 后端进程。
 
 **下载来源**：[nuget.org](https://www.nuget.org/) 官方仓库，通过 `https://api.nuget.org/v3-flatcontainer/{packageid-lower}/{version}/{packageid-lower}.{version}.nupkg` 直拉 `.nupkg`，解包抽 `lib/<target>/*.dll`。
 
@@ -8,9 +8,9 @@
 
 ---
 
-## DLL 总览（44 个，~16 MB）
+## DLL 总览（46 个，~17.3 MB）
 
-按职能分四组：核心 Agent 框架 / LLM Provider / Microsoft 框架抽象 / 系统库与 BCL polyfill。
+按职能分五组：核心 Agent 框架 / LLM Provider / MCP 协议 SDK / Microsoft 框架抽象 / 系统库与 BCL polyfill。
 
 ---
 
@@ -40,7 +40,20 @@
 
 ---
 
-## 三、Microsoft 框架基础抽象（被上层间接依赖）
+## 三、MCP 协议 SDK（CBIM.Mcp 通过 AgenticOS.Mcp 装配层使用）
+
+| DLL | 用途 |
+|-----|------|
+| **ModelContextProtocol.dll** | MCP 官方 .NET SDK 1.3.0 hosting/DI 集成层（`McpServiceCollectionExtensions` / `IMcpServer` 注册）。当前装配层未直接使用，留作后续 server 角色扩展。 |
+| **ModelContextProtocol.Core.dll** | MCP 官方 .NET SDK 1.3.0 核心协议层——`McpClient` / `McpClientTool`（`: AIFunction`）/ `StdioClientTransport` / `HttpClientTransport` / JSON-RPC framing。`AgenticOS.Mcp/McpClientStarter.cs` 直接 using。 |
+
+**接合点**：`McpClientTool` 继承自 `Microsoft.Extensions.AI.AIFunction`——可直接喂给 `ChatOptions.Tools`，与本目录已装的 `Microsoft.Extensions.AI` 中间件链（`FunctionInvokingChatClient`）无缝对接。
+
+**装配位置**：`Assets/AgenticOS.Mcp/`（独立 asmdef，仅装配层引用本 SDK；基建层 `AgenticOS` 不引用 — 通过 `IMcpClientStarter` SPI 隔离）。
+
+---
+
+## 四、Microsoft 框架基础抽象（被上层间接依赖）
 
 | DLL | 用途 |
 |-----|------|
@@ -61,7 +74,7 @@
 
 ---
 
-## 四、系统库与 BCL polyfill
+## 五、系统库与 BCL polyfill
 
 ### 系统库（Microsoft 官方包，Agent 框架内部用）
 

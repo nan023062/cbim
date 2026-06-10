@@ -2,7 +2,8 @@
     "name": "Desktop",
     "rootNamespace": "",
     "references": [
-        "AgenticOS"
+        "AgenticOS",
+        "AgenticOS.Mcp"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

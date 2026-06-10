@@ -156,3 +156,24 @@ T2-T7 可以按"真做"的范围立项。
 - 总规模约 500 行；不上 server 角色，只做 client；不上 SSE，只支持 stdio 子进程通讯
 
 当前评估结论是不需要走这条路。
+
+---
+
+## 8. 落实记录（2026-06-10）
+
+按 §6 方案 T2-T7 已落实——本评估转为"已实施"状态。
+
+实施摘要：
+- DLL 投放：`ModelContextProtocol.dll` (NS2.0, 113 KB) + `ModelContextProtocol.Core.dll` (NS2.0, 1.18 MB) 已抽至本目录，附 PluginImporter `.dll.meta`。
+- 装配层：新增独立 `Assets/AgenticOS.Mcp/`（asmdef 名 `AgenticOS.Mcp`，仅引用 `AgenticOS` + 上述两个 MCP DLL + `Microsoft.Bcl.AsyncInterfaces` + `System.Threading.Tasks.Extensions`），实现 `CBIM.Mcp.McpClientStarter` + 内部 `StartedMcpClient`。基建层 `AgenticOS` 不引用 MCP SDK——`IStartedMcpClient.AiFunctions` 仍为 `IReadOnlyList<object>` 装箱，SPI 防火墙保留。
+- 接合 SDK 实测的 4 个名字（与本评估当时未到属性级的 4 项疑问对应）：
+  1. **HTTP 传输类**：`HttpClientTransport`（支持 SSE + Streamable HTTP 双模式 via `HttpTransportMode`）；`SseClientSessionTransport` 是会话级 internal 类型，不公开。
+  2. **`StdioClientTransportOptions` 字段**：`Arguments` (`IList<string>?`)、`EnvironmentVariables` (`IDictionary<string, string?>?`)。
+  3. **工厂入口**：`McpClient.CreateAsync(IClientTransport, McpClientOptions?, ILoggerFactory?, CancellationToken)`。**没有** `McpClientFactory` 类型。
+  4. **`ListToolsAsync()` 返回**：`ValueTask<IList<McpClientTool>>`（分页便利重载——已自动游标遍历）。
+- 装配 wiring：`Assets/Desktop/Desktop.asmdef` 追加 `AgenticOS.Mcp` 引用；`Assets/Desktop/CbimDemo.cs` 在 `CbimOptions` 初始化时注入 `McpStarter = new CBIM.Mcp.McpClientStarter()`。
+
+未做（不在本次范围内）：
+- AgenticTeam 取 starter 作为注入数据，无需修改。
+- Vena 层暂未接 CBIM。
+- _VerifyMsai 未追加 MCP smoke test（§6 第 5 步）——按需后续补。

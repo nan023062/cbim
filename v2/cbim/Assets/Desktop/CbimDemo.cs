@@ -77,6 +77,7 @@ namespace CBIM.Desktop
                 {
                     RootPath = rootPath,
                     Agent = agentDesc,
+                    McpStarter = new CBIM.Mcp.McpClientStarter(),
                 });
                 Debug.Log("[CbimDemo] ✓ Cbim 初始化完成");
 

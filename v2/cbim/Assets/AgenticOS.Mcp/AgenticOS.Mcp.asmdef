@@ -1,0 +1,22 @@
+{
+    "name": "AgenticOS.Mcp",
+    "rootNamespace": "",
+    "references": [
+        "AgenticOS"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "ModelContextProtocol.Core.dll",
+        "ModelContextProtocol.dll",
+        "Microsoft.Bcl.AsyncInterfaces.dll",
+        "Microsoft.Extensions.Logging.Abstractions.dll",
+        "System.Threading.Tasks.Extensions.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

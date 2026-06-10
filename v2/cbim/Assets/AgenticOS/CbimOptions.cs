@@ -29,16 +29,8 @@ namespace CBIM
 
         /// <summary>
         /// 外部注入的记忆服务实现（可选）。
-        /// 提供时直接使用，忽略 <see cref="MemoryRootPath"/>；
-        /// 为 null 时用 <see cref="LocalMemoryService"/> + <see cref="MemoryRootPath"/> 创建默认实现。
+        /// 提供时直接使用；为 null 时用 <see cref="LocalMemoryService"/> + <c>RootPath/memory</c> 创建默认实现。
         /// </summary>
         public IMemoryService Memory { get; set; }
-
-        /// <summary>
-        /// <see cref="LocalMemoryService"/> 的文件存储根路径（可选）。
-        /// 仅在 <see cref="Memory"/> 为 null 时生效；
-        /// 为 null 时回退到 <c>RootPath/memory</c>。
-        /// </summary>
-        public string MemoryRootPath { get; set; }
     }
 }

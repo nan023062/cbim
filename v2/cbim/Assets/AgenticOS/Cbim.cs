@@ -18,22 +18,6 @@ namespace CBIM
 {
     /// <summary>
     /// Cbim — CBIM 系统根容器。
-    ///
-    /// <para>职责：按固定顺序完成所有层的初始化（配置层 → 实例层 → 服务层），
-    /// 对外暴露只读属性，统一管理 <see cref="McpManager"/> 等有生命周期资源的释放。
-    /// 每个 Session 对应一个独立 Agent 实例，Session 生命周期由 Cbim 直接管理。</para>
-    ///
-    /// <para>使用方式：
-    /// <code>
-    /// var os = Cbim.Create(new CbimOptions
-    /// {
-    ///     RootPath = "/data/cbim",
-    ///     Agent = new AgentDescription(...)
-    /// });
-    /// var session = await os.OpenSessionAsync();
-    /// os.Dispose();
-    /// </code>
-    /// </para>
     /// </summary>
     public sealed class Cbim : IDisposable
     {
@@ -199,10 +183,9 @@ namespace CBIM
             IMcpClientStarter starter = options.McpStarter ?? new NullMcpClientStarter();
             var mcp = new McpManager(starter);
 
-            // 5. Memory 服务——外部注入优先；否则用 LocalMemoryService + MemoryRootPath
+            // 5. Memory 服务——外部注入优先；否则按 RootPath/memory 默认落盘。
             var memory = options.Memory
-                ?? new LocalMemoryService(
-                    options.MemoryRootPath ?? Path.Combine(options.RootPath, "memory"));
+                ?? new LocalMemoryService(Path.Combine(options.RootPath, "memory"));
 
             // 6. Workspace 子系统（根路径为 options.RootPath）
             var workspace = new WorkspaceSystem(options.RootPath);

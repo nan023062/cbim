@@ -12,7 +12,7 @@ namespace CBIM.Agent
     /// （<see cref="PrefrontalModelId"/> / <see cref="ParietalLobeModelId"/> / <see cref="HippocampusModelId"/>）
     /// 以及可选的用户工作脑列表（<see cref="WorkBrains"/>）。</para>
     ///
-    /// <para>内置脑（PrefrontalCortex / ParietalLobe / Hippocampus）由 <see cref="Agent"/> 构造器
+    /// <para>内置脑（PrefrontalCortex / ParietalLobe / Hippocampus）由 <see cref="Session"/> 构造器
     /// 自动装配，调用方无须手动创建其描述符。</para>
     ///
     /// <para>能力声明（Skills / Workflows / Tools / Mcp / ModelId）已下移至

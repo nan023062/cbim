@@ -12,7 +12,7 @@
     ///   - 同步签名——与本模块其他类对齐（CBIM.Storage / FileMcpStore 均同步）。
     ///     具体实现可在内部 block 等待异步握手 / tools/list；调用方（McpManager）
     ///     已在锁内串行化同 Id 启动，不存在重入风险。
-    ///   - 抛异常代表启动失败——上游 McpManager.Request 不吞、原样上抛。
+    ///   - 抛异常代表启动失败——上游 McpManager.GetOrCreate 不吞、原样上抛。
     ///     装配侧接住后做优雅降级。
     ///
     /// 这是「依赖隔离 SPI」而非「多实现插件点」——现阶段只有一个 Microsoft client 实现，

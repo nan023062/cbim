@@ -20,7 +20,7 @@ namespace CBIM
     /// Cbim — CBIM 系统根容器。
     ///
     /// <para>职责：按固定顺序完成所有层的初始化（配置层 → 实例层 → 服务层），
-    /// 对外暴露只读属性，统一管理 <see cref="McpInstanceManager"/> 等有生命周期资源的释放。
+    /// 对外暴露只读属性，统一管理 <see cref="McpManager"/> 等有生命周期资源的释放。
     /// 每个 Session 对应一个独立 Agent 实例，Session 生命周期由 Cbim 直接管理。</para>
     ///
     /// <para>使用方式：
@@ -67,7 +67,7 @@ namespace CBIM
         public ChatClientFactory LlmClient { get; }
 
         /// <summary>MCP 实例管理器——Shared / 隔离双模式生命周期管理。</summary>
-        public McpInstanceManager Mcp { get; }
+        public McpManager Mcp { get; }
 
 #endregion
 
@@ -84,23 +84,33 @@ namespace CBIM
 
 #endregion
 
-#region 配置项（供 Session 创建 Agent 时使用）
-
-        /// <summary>
-        /// 创建时传入的配置项——Session 构造 Agent 时从此读取 <see cref="CbimOptions.Agent"/>。
-        /// </summary>
-        public CbimOptions Options { get; }
-
-#endregion
-
 #region Session 管理（直接在 Cbim 上）
 
-        private readonly Dictionary<string, Agent.Agent> _sessions = new Dictionary<string, Agent.Agent>();
+        /// <summary>
+        /// 创建时传入的配置项——Session。
+        /// </summary>
+        private CbimOptions _options;
+
+        private readonly Dictionary<string, Session> _sessions = new Dictionary<string, Session>();
+        
         private readonly object _sessionLock = new object();
 
 #endregion
 
 #region 构造（私有）
+
+        /// <summary>
+        /// 进程退出回退处理器——已订阅 <see cref="AppDomain.ProcessExit"/>。
+        /// 显式 Dispose 时解除订阅，避免静态事件 GC-rooting 本实例。
+        /// 已被 <see cref="Dispose"/> 调用置 null，作为「未订阅」标识。
+        /// </summary>
+        private EventHandler? _processExitHandler;
+
+        /// <summary>
+        /// Dispose 幂等闸——0 = 未释放，1 = 已释放。
+        /// 同时被显式 <see cref="Dispose"/> 与 ProcessExit 回退路径竞争，需用 Interlocked 序列化。
+        /// </summary>
+        private int _disposed;
 
         private Cbim(
             CbimOptions options,
@@ -110,11 +120,11 @@ namespace CBIM
             FileWorkflowStore workflowStore,
             FileMcpStore mcpStore,
             ChatClientFactory llmClient,
-            McpInstanceManager mcp,
+            McpManager mcp,
             IMemoryService memory,
             WorkspaceSystem workspace)
         {
-            Options       = options;
+            _options       = options;
             FileBackend   = fileBackend;
             ModelStore    = modelStore;
             SkillStore    = skillStore;
@@ -124,6 +134,19 @@ namespace CBIM
             Mcp           = mcp;
             Memory        = memory;
             Workspace     = workspace;
+
+            // 订阅 ProcessExit 作为防御性兜底——硬 kill 绕过此事件，~2s 预算，
+            // 正常关闭仍应走显式 Dispose（见 Dispose 幂等保护）。
+            _processExitHandler = OnProcessExit;
+            AppDomain.CurrentDomain.ProcessExit += _processExitHandler;
+        }
+
+        private void OnProcessExit(object? sender, EventArgs e)
+        {
+            // ProcessExit 回退：本回调若被触发，说明显式 Dispose 未被调用。
+            // Dispose 幂等且会解除自身订阅，重复触发安全。
+            try { Dispose(); }
+            catch { /* best-effort：进程退出期错误不上抛 */ }
         }
 
 #endregion
@@ -135,7 +158,9 @@ namespace CBIM
         /// <param name="newMemoryService">新的记忆服务实例，不能为 null。</param>
         public void SwitchMemory(IMemoryService newMemoryService)
         {
-            if (newMemoryService == null) throw new ArgumentNullException(nameof(newMemoryService));
+            if (newMemoryService == null) 
+                throw new ArgumentNullException(nameof(newMemoryService));
+            
             Memory = newMemoryService;
         }
 
@@ -143,27 +168,16 @@ namespace CBIM
 
         /// <summary>
         /// 按 <paramref name="options"/> 初始化并返回一个完整的 Cbim 实例。
-        ///
-        /// <para>初始化顺序：
-        /// <list type="number">
-        ///   <item><see cref="FileBackend"/> — 文件系统存取原语</item>
-        ///   <item>各 FileStore — 全量扫描对应子目录进内存索引</item>
-        ///   <item><see cref="ChatClientFactory"/> — 基于默认 ProviderRegistry</item>
-        ///   <item><see cref="McpInstanceManager"/> — 注入 MCP 启动器 SPI</item>
-        ///   <item><see cref="IMemoryService"/> — 外部注入或 LocalMemoryService 默认实现</item>
-        ///   <item><see cref="WorkspaceSystem"/> — 根路径为 options.RootPath</item>
-        /// </list>
-        /// Session 及其内部 Agent 在 <see cref="OpenSessionAsync"/> 时按需创建，不在 Create 时预建。
-        /// </para>
         /// </summary>
-        /// <param name="options">配置项，<see cref="CbimOptions.RootPath"/> 与 <see cref="CbimOptions.Agent"/> 均不能为空。</param>
         public static Cbim Create(CbimOptions options)
         {
             if (options == null) throw new ArgumentNullException(nameof(options));
+            
             if (string.IsNullOrWhiteSpace(options.RootPath))
                 throw new ArgumentException(
                     "CbimOptions.RootPath 不能为空——请提供数据根目录路径。",
                     nameof(options));
+            
             if (options.Agent == null)
                 throw new ArgumentException(
                     "CbimOptions.Agent 不能为空——请提供 AgentDescription。",
@@ -183,7 +197,7 @@ namespace CBIM
 
             // 4. MCP 实例管理器
             IMcpClientStarter starter = options.McpStarter ?? new NullMcpClientStarter();
-            var mcp = new McpInstanceManager(starter);
+            var mcp = new McpManager(starter);
 
             // 5. Memory 服务——外部注入优先；否则用 LocalMemoryService + MemoryRootPath
             var memory = options.Memory
@@ -203,13 +217,11 @@ namespace CBIM
 
         /// <summary>
         /// 开通一个新 Session——每个 Session 独立持有自己的 Agent 实例。
-        /// 返回的 <see cref="Agent.Agent"/> 携带唯一 <see cref="Agent.Agent.SessionId"/>，
-        /// 调用方可订阅 <see cref="Agent.Agent.OnOutput"/> 并调用 <see cref="Agent.Agent.SendAsync"/>。
         /// </summary>
-        public Task<Agent.Agent> OpenSessionAsync(CancellationToken ct = default)
+        public Task<Session> OpenSessionAsync(CancellationToken ct = default)
         {
             ct.ThrowIfCancellationRequested();
-            var agent = new Agent.Agent(this, Options.Agent);
+            var agent = new Session(this, _options.Agent);
             lock (_sessionLock)
             {
                 _sessions[agent.SessionId] = agent;
@@ -219,32 +231,31 @@ namespace CBIM
 
         /// <summary>
         /// 关闭指定 Session——从注册表移除并释放 Agent。
-        /// 幂等：未知 sessionId 静默返回。
         /// </summary>
         public Task CloseSessionAsync(string sessionId, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(sessionId)) return Task.CompletedTask;
 
-            Agent.Agent? agent;
+            Session session;
             lock (_sessionLock)
             {
-                _sessions.TryGetValue(sessionId, out agent);
+                _sessions.TryGetValue(sessionId, out session);
                 _sessions.Remove(sessionId);
             }
 
-            agent?.Dispose();
+            session?.Dispose();
             return Task.CompletedTask;
         }
 
         /// <summary>
         /// 按 ID 查活动 Session（Agent 实例）。找不到返回 null。
         /// </summary>
-        public Agent.Agent? GetSession(string sessionId)
+        public Session? GetSession(string sessionId)
         {
             lock (_sessionLock)
             {
-                _sessions.TryGetValue(sessionId, out var agent);
-                return agent;
+                _sessions.TryGetValue(sessionId, out var session);
+                return session;
             }
         }
 
@@ -254,23 +265,37 @@ namespace CBIM
 
         /// <summary>
         /// 释放所有持有生命周期的资源（全部 Session Agent + MCP）。
-        /// 多次调用安全（幂等）。
+        /// 幂等——可被显式调用与 <see cref="AppDomain.ProcessExit"/> 兜底路径同时竞争。
         /// </summary>
         public void Dispose()
         {
-            List<Agent.Agent> snapshot;
+            // Interlocked 闸：只有第一个调用者真正执行释放，后续直接返回。
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+            // 解除 ProcessExit 订阅，避免静态事件 GC-rooting 本实例。
+            var handler = _processExitHandler;
+            if (handler != null)
+            {
+                _processExitHandler = null;
+                try { AppDomain.CurrentDomain.ProcessExit -= handler; }
+                catch { /* best-effort：进程退出期 AppDomain 可能已不可用 */ }
+            }
+
+            List<Session> snapshot;
             lock (_sessionLock)
             {
-                snapshot = new List<Agent.Agent>(_sessions.Values);
+                snapshot = new List<Session>(_sessions.Values);
                 _sessions.Clear();
             }
 
-            foreach (var agent in snapshot)
+            foreach (var session in snapshot)
             {
-                agent.Dispose();
+                try { session.Dispose(); }
+                catch { /* best-effort：单个 Session 释放失败不阻断其余 */ }
             }
 
-            Mcp.Dispose();
+            try { Mcp.Dispose(); }
+            catch { /* best-effort：MCP 释放失败不上抛 */ }
         }
     }
 

@@ -13,7 +13,7 @@ namespace CBIM.Agent
     #region SessionOutcome
 
     /// <summary>
-    /// <see cref="Agent.SendAsync"/> 的返回值——一次 user → agent 投递的最终结果。
+    /// <see cref="Session.SendAsync"/> 的返回值——一次 user → agent 投递的最终结果。
     /// </summary>
     public sealed class SessionOutcome
     {
@@ -34,7 +34,7 @@ namespace CBIM.Agent
     #region SessionEvent
 
     /// <summary>
-    /// <see cref="Agent.OnOutput"/> 事件载荷——每次 <see cref="Agent.SendAsync"/>
+    /// <see cref="Session.OnOutput"/> 事件载荷——每次 <see cref="Session.SendAsync"/>
     /// 完成时（不论成功 / 失败）会发射一条。
     ///
     /// <para>失败时 <see cref="Text"/> 形如 <c>"[ERROR] &lt;message&gt;"</c>。</para>
@@ -58,9 +58,9 @@ namespace CBIM.Agent
     #region Agent
 
     /// <summary>
-    /// Agent 实例——一份 AgentDescription 装配后的运行态对象。
+    /// Session 实例——一份 AgentDescription 装配后的运行态对象。
     /// </summary>
-    public sealed class Agent : IDisposable, IBrainAgent, IBrainLookup
+    public sealed class Session : IDisposable, IBrainAgent
     {
         private Cbim _os;
 
@@ -86,7 +86,6 @@ namespace CBIM.Agent
 
         /// <summary>
         /// 本 Agent 实例的会话唯一 ID（Guid）。
-        /// 由 <see cref="Cbim.OpenSessionAsync"/> 的调用方用于 <see cref="Cbim.CloseSessionAsync"/>。
         /// </summary>
         public string SessionId { get; } = Guid.NewGuid().ToString("N");
 
@@ -255,7 +254,7 @@ namespace CBIM.Agent
         /// <inheritdoc/>
         IReadOnlyList<Brain> IBrainAgent.CallableBrains => _callableBrainsSnapshot;
 
-        public Agent(Cbim os, AgentDescription description)
+        public Session(Cbim os, AgentDescription description)
         {
             if (os == null)
                 throw new ArgumentNullException(nameof(os));

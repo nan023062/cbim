@@ -37,14 +37,14 @@ namespace CBIM.Agent
 #region AgentEvent
 
     /// <summary>
-    /// Agent 层统一事件——所有 Brain 事件经 <see cref="Agent.OnEvent"/> 聚合后以本类型对外分发。
+    /// Agent 层统一事件——所有 Brain 事件经 <see cref="Session.OnEvent"/> 聚合后以本类型对外分发。
     /// </summary>
     public sealed class AgentEvent
     {
         /// <summary>事件产生时间（UTC）。</summary>
         public DateTimeOffset Timestamp { get; }
 
-        /// <summary>所属会话 ID（来自 <see cref="Agent.SessionId"/>）。</summary>
+        /// <summary>所属会话 ID（来自 <see cref="Session.SessionId"/>）。</summary>
         public string SessionId { get; }
 
         /// <summary>产生事件的脑区 ID。</summary>
@@ -109,7 +109,7 @@ namespace CBIM.Agent
 
         /// <summary>
         /// 将一次 <see cref="BrainUsageEvent"/> 累加到汇总中。
-        /// 由 <see cref="Agent"/> 的事件订阅回调调用；线程安全。
+        /// 由 <see cref="Session"/> 的事件订阅回调调用；线程安全。
         /// </summary>
         internal void Accumulate(string brainId, BrainUsageEvent e)
         {

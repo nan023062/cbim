@@ -49,8 +49,6 @@ namespace CBIM.Mind
     /// </summary>
     public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
     {
-        private bool __disposed;
-
 #region 流式输出 & Token 统计
 
         /// <summary>
@@ -116,26 +114,16 @@ namespace CBIM.Mind
         /// </summary>
         private void RefreshContextMessageCount()
         {
-            if (_neuron is Neuron msai && msai.HistoryProvider != null)
+            if (_neuron is Neuron neuron && neuron.HistoryProvider != null)
             {
                 // GetMessages(null) 取默认 session（无 AgentSession 绑定时使用 null）
-                var messages = msai.HistoryProvider.GetMessages(session: null);
-                ContextMessageCount = messages?.Count ?? 0;
+                var messageList = neuron.HistoryProvider.GetMessages(session: null);
+                ContextMessageCount = messageList?.Count ?? 0;
             }
         }
 
         public abstract BrainKind Kind { get; }
-
-        /// <summary>
-        /// 子类工厂方法——在 Brain 基类构造器内被调用，解析并返回本脑区使用的 <see cref="IMemoryService"/>。
-        /// 默认返回 null；仅 <see cref="Hippocampus"/> 覆写以从 <c>agent.Os.Memory</c> 取值。
-        /// 此方法在基类构造器中调用时，子类字段尚未初始化，因此实现只能依赖方法参数，不能访问 <c>this</c> 字段。
-        /// </summary>
-        protected IMemoryService ResolveMemory(IBrainAgent agent, BrainDescriptor descriptor)
-        {
-            return agent.Os.Memory;
-        }
-
+        
         public string BrainId => Descriptor.BrainId;
 
         public BrainDescriptor Descriptor { get; }
@@ -147,6 +135,7 @@ namespace CBIM.Mind
 #endregion
 
 #region Executor + per-invocation Builder
+
         private readonly ICircuitExecutor _executor;
 
         /// <summary>per-invocation 编译器状态；null 表示当前无编译中的回路。</summary>
@@ -171,10 +160,6 @@ namespace CBIM.Mind
         /// </summary>
         protected Brain(IBrainAgent agent, ChatClientFactory chatClientFactory, BrainDescriptor descriptor)
         {
-            ValidateArgs(agent, chatClientFactory, descriptor);
-
-            __disposed  = false;
-            
             Agent       = agent;
             
             Descriptor  = descriptor;
@@ -190,33 +175,16 @@ namespace CBIM.Mind
 
 #endregion
 
-#region 参数校验
-        private static void ValidateArgs(IBrainAgent agent, ChatClientFactory chatClientFactory, BrainDescriptor descriptor)
-        {
-            if (agent == null)
-                throw new ArgumentNullException(nameof(agent), "BrainBase.Agent 不允许 null。");
-
-            if (chatClientFactory == null)
-                throw new ArgumentNullException(nameof(chatClientFactory), "BrainBase.ChatClientFactory 不允许 null。");
-
-            if (descriptor == null)
-                throw new ArgumentException("BrainBase.BrainDescriptor 不能为空", nameof(descriptor));
-        }
-
-#endregion
-
 #region 完整工具集组装
         private IReadOnlyList<AITool> BuildToolSet(IBrainAgent agent, BrainDescriptor descriptor)
         {
-            var memory = agent.Os.Memory;
-            
             IReadOnlyList<AITool> allTools = MergeTools(BuildCompilerTools(agent), BuildExtraTools(agent, descriptor));
             
             allTools = MergeTools(allTools, BuildStandardTools(descriptor));
             
             allTools = MergeTools(allTools, BuildMcpTools(agent, descriptor));
             
-            allTools = MergeTools(allTools, BuildPermissionTools(agent, memory));
+            allTools = MergeTools(allTools, BuildMemoryAndDnaTools(agent));
 
             return allTools;
         }
@@ -260,7 +228,13 @@ namespace CBIM.Mind
 #endregion
 
 #region MCP AITools
-        private static IReadOnlyList<AITool> BuildMcpTools(IBrainAgent agent, BrainDescriptor descriptor)
+        /// <summary>
+        /// 本脑区通过 MCP 管理器 GetOrCreate 获取的 MCP 引用（mcpId 列表）。
+        /// 在 <see cref="Dispose"/> 时逐一 Release，避免 Shared 实例引用泄漏 / 子进程不退出。
+        /// </summary>
+        private readonly List<string> _mcpRefs = new List<string>();
+
+        private IReadOnlyList<AITool> BuildMcpTools(IBrainAgent agent, BrainDescriptor descriptor)
         {
             if (agent.Os.Mcp == null || descriptor.McpIds.Count == 0)
                 return Array.Empty<AITool>();
@@ -275,6 +249,8 @@ namespace CBIM.Mind
                 try
                 {
                     var mcpClient = agent.Os.Mcp.GetOrCreate(mcpDescriptor, descriptor.BrainId);
+                    // 记录引用——Dispose 时按 (mcpId, BrainId) 解引用
+                    _mcpRefs.Add(mcpId);
                     foreach (var fn in mcpClient.AiFunctions)
                     {
                         if (fn is AITool tool)
@@ -292,27 +268,27 @@ namespace CBIM.Mind
 #endregion
 
 #region DNA / Memory 权限工具
-        private IReadOnlyList<AITool> BuildPermissionTools(IBrainAgent agent, IMemoryService? memory)
+        private IReadOnlyList<AITool> BuildMemoryAndDnaTools(IBrainAgent agent)
         {
             var permTools = new List<AITool>();
 
             // DNA 工具：所有脑区只读；仅架构脑 ParietalLobe 升级为读写（写权限按 BrainKind 写死）
             if (agent.Os.Workspace != null)
             {
-                var dnaTools = Kind == BrainKind.ParietalLobe
+                var dnaToolList = Kind == BrainKind.ParietalLobe
                     ? agent.Os.Workspace.ReadWriteDnaTools
                     : agent.Os.Workspace.ReadOnlyDnaTools;
-                foreach (var t in dnaTools)
+                foreach (AITool t in dnaToolList)
                     permTools.Add(t);
             }
 
             // Memory 工具：所有脑区只读；仅记忆脑 Hippocampus 升级为读写（写权限按 BrainKind 写死）
-            if (memory != null)
+            if (agent.Os.Memory != null)
             {
-                var memTools = Kind == BrainKind.Hippocampus
-                    ? MemoryToolProvider.GetReadWriteTools(memory)
-                    : MemoryToolProvider.GetReadOnlyTools(memory);
-                foreach (var t in memTools)
+                var memToolList = Kind == BrainKind.Hippocampus
+                    ? MemoryToolProvider.GetReadWriteTools(agent.Os.Memory)
+                    : MemoryToolProvider.GetReadOnlyTools(agent.Os.Memory);
+                foreach (AITool t in memToolList)
                     permTools.Add(t);
             }
 
@@ -432,15 +408,14 @@ namespace CBIM.Mind
         /// </summary>
         public void Dispose()
         {
-            if(__disposed) return;
-
-            __disposed = true;
-
             try
             {
                 BeforeDestroy();
 
                 NeuronFactory.Destroy(_neuron);
+
+                // 在 Agent 置 null 之前解引用本脑区持有的 MCP
+                ReleaseMcpReferences();
             }
             finally
             {
@@ -448,6 +423,28 @@ namespace CBIM.Mind
 
                 _neuron = null;
             }
+        }
+
+        /// <summary>
+        /// 释放本脑区在 <see cref="BuildMcpTools"/> 期间通过 GetOrCreate 获取的全部 MCP 引用。
+        /// Shared 实例在所有引用脑区释放后由 MCP 管理器关闭；隔离实例直接关闭。
+        /// 须在 <see cref="Agent"/> 置 null 之前调用。Release 幂等，best-effort：单个失败不阻断其余。
+        /// </summary>
+        private void ReleaseMcpReferences()
+        {
+            if (_mcpRefs.Count == 0) return;
+
+            var mcp = Agent?.Os?.Mcp;
+            if (mcp != null)
+            {
+                foreach (var mcpId in _mcpRefs)
+                {
+                    try { mcp.Release(mcpId, BrainId); }
+                    catch { /* best-effort：关闭期错误不上抛，避免阻断其余释放 */ }
+                }
+            }
+
+            _mcpRefs.Clear();
         }
 
 #endregion

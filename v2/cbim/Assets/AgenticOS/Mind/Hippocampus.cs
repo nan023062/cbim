@@ -13,20 +13,9 @@ namespace CBIM.Mind
     {
         public override BrainKind Kind => BrainKind.Hippocampus;
 
-        protected override bool CanWriteMemory => true;
-
         internal Hippocampus(IBrainAgent agent, ChatClientFactory chatClientFactory, HippocampusDescriptor descriptor)
             : base(agent, chatClientFactory, descriptor)
         {
-        }
-
-        /// <summary>
-        /// 覆写基类工厂方法——从 <c>agent.Os.Memory</c> 取 AgenticOS 统一持有的 IMemoryService。
-        /// 实现仅依赖方法参数，不访问任何 <c>this</c> 字段（C# 基类构造期虚调用约束）。
-        /// </summary>
-        protected override IMemoryService? ResolveMemory(IBrainAgent agent, BrainDescriptor descriptor)
-        {
-            return agent.Os.Memory;
         }
     }
 

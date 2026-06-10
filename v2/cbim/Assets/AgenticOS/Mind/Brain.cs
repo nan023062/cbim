@@ -88,14 +88,14 @@ namespace CBIM.Mind
         public long ContextTokenEstimate { get; internal set; }
 
         /// <summary>
-        /// 触发 <see cref="OnToken"/> 事件（由 <see cref="MsAINeuron"/> 回调，勿在业务层直接调用）。
+        /// 触发 <see cref="OnToken"/> 事件（由 <see cref="Kernel.Neuron"/> 回调，勿在业务层直接调用）。
         /// </summary>
         internal void RaiseToken(string token, bool isEnd)
             => OnToken?.Invoke(new BrainTokenEvent(BrainId, token, isEnd));
 
         /// <summary>
         /// 触发 <see cref="OnUsage"/> 事件，同时累加 <see cref="CumulativeUsage"/>
-        /// （由 <see cref="MsAINeuron"/> 回调，勿在业务层直接调用）。
+        /// （由 <see cref="Kernel.Neuron"/> 回调，勿在业务层直接调用）。
         /// </summary>
         internal void RaiseUsage(int input, int output)
         {
@@ -116,7 +116,7 @@ namespace CBIM.Mind
         /// </summary>
         private void RefreshContextMessageCount()
         {
-            if (_neuron is MsAINeuron msai && msai.HistoryProvider != null)
+            if (_neuron is Neuron msai && msai.HistoryProvider != null)
             {
                 // GetMessages(null) 取默认 session（无 AgentSession 绑定时使用 null）
                 var messages = msai.HistoryProvider.GetMessages(session: null);
@@ -127,21 +127,14 @@ namespace CBIM.Mind
         public abstract BrainKind Kind { get; }
 
         /// <summary>
-        /// 是否具备 DNA 写权限。仅 ParietalLobe 覆写为 true；其余脑区保持 false（只读或不注入）。
-        /// </summary>
-        protected virtual bool CanWriteDna => false;
-
-        /// <summary>
-        /// 是否具备 Memory 写权限。仅 Hippocampus 覆写为 true；其余脑区保持 false（只读或不注入）。
-        /// </summary>
-        protected virtual bool CanWriteMemory => false;
-
-        /// <summary>
         /// 子类工厂方法——在 Brain 基类构造器内被调用，解析并返回本脑区使用的 <see cref="IMemoryService"/>。
         /// 默认返回 null；仅 <see cref="Hippocampus"/> 覆写以从 <c>agent.Os.Memory</c> 取值。
         /// 此方法在基类构造器中调用时，子类字段尚未初始化，因此实现只能依赖方法参数，不能访问 <c>this</c> 字段。
         /// </summary>
-        protected virtual IMemoryService ResolveMemory(IBrainAgent agent, BrainDescriptor descriptor) => null;
+        protected IMemoryService ResolveMemory(IBrainAgent agent, BrainDescriptor descriptor)
+        {
+            return agent.Os.Memory;
+        }
 
         public string BrainId => Descriptor.BrainId;
 
@@ -162,14 +155,14 @@ namespace CBIM.Mind
         /// <summary>
         /// 神经元——LLM 思维链单元。本字段是 Brain 层调用 LLM 的唯一出口（K2 铁律）。
         /// 由构造器内部通过 NeuronFactory 创建；BrainBase 与子类不感知其具体实现
-        /// （<see cref="MsAINeuron"/> 还是 <see cref="ExternalEngineNeuron"/>）。
+        /// （<see cref="Kernel.Neuron"/> 还是 <see cref="ExternalNeuron"/>）。
         /// </summary>
         public INeuron Neuron => _neuron;
 
         /// <summary>
         /// 透传 <see cref="Neuron"/> 的底层 <see cref="Microsoft.Agents.AI.AIAgent"/> 引用——保留旧字段名以兼容
         /// 已持引用打 <c>SendAsync</c> 的 Channel 等调用方。
-        /// <see cref="ExternalEngineNeuron"/> 路径下恒为 <c>null</c>（外部引擎自带 LLM，无 AIAgent 句柄）。
+        /// <see cref="ExternalNeuron"/> 路径下恒为 <c>null</c>（外部引擎自带 LLM，无 AIAgent 句柄）。
         /// </summary>
         public AIAgent? AIAgent => Neuron.UnderlyingAgent;
 
@@ -181,15 +174,18 @@ namespace CBIM.Mind
             ValidateArgs(agent, chatClientFactory, descriptor);
 
             __disposed  = false;
+            
             Agent       = agent;
+            
             Descriptor  = descriptor;
+            
             _executor   = new Orchestrator();
+            
+            IReadOnlyList<AITool> tools = BuildToolSet(agent, descriptor);
+            
+            IReadOnlyList<AIContextProvider> contextProviders= BuildContextProviders(agent, descriptor);
 
-            var memory           = ResolveMemory(agent, descriptor);
-            var tools            = BuildToolSet(agent, chatClientFactory, descriptor, memory);
-            var contextProviders = BuildContextProviders(agent, descriptor, memory);
-
-            _neuron = CreateNeuron(agent, chatClientFactory, descriptor, tools, contextProviders, memory);
+            _neuron = CreateNeuron(agent, chatClientFactory, tools, contextProviders);
         }
 
 #endregion
@@ -210,18 +206,16 @@ namespace CBIM.Mind
 #endregion
 
 #region 完整工具集组装
-        private IReadOnlyList<AITool> BuildToolSet(
-            IBrainAgent agent,
-            ChatClientFactory chatClientFactory,
-            BrainDescriptor descriptor,
-            IMemoryService? memory)
+        private IReadOnlyList<AITool> BuildToolSet(IBrainAgent agent, BrainDescriptor descriptor)
         {
-            IReadOnlyList<AITool> allTools = MergeTools(
-                BuildCompilerTools(agent),
-                BuildExtraTools(agent, descriptor));
-
+            var memory = agent.Os.Memory;
+            
+            IReadOnlyList<AITool> allTools = MergeTools(BuildCompilerTools(agent), BuildExtraTools(agent, descriptor));
+            
             allTools = MergeTools(allTools, BuildStandardTools(descriptor));
+            
             allTools = MergeTools(allTools, BuildMcpTools(agent, descriptor));
+            
             allTools = MergeTools(allTools, BuildPermissionTools(agent, memory));
 
             return allTools;
@@ -302,18 +296,22 @@ namespace CBIM.Mind
         {
             var permTools = new List<AITool>();
 
-            // DNA 工具（唯一接口原则：只注入 ParietalLobe，即 CanWriteDna = true）
-            if (CanWriteDna && agent.Os.Workspace != null)
+            // DNA 工具：所有脑区只读；仅架构脑 ParietalLobe 升级为读写（写权限按 BrainKind 写死）
+            if (agent.Os.Workspace != null)
             {
-                var dnaTools = agent.Os.Workspace.ReadWriteDnaTools;
+                var dnaTools = Kind == BrainKind.ParietalLobe
+                    ? agent.Os.Workspace.ReadWriteDnaTools
+                    : agent.Os.Workspace.ReadOnlyDnaTools;
                 foreach (var t in dnaTools)
                     permTools.Add(t);
             }
 
-            // Memory 工具（唯一接口原则：只注入 Hippocampus，即 CanWriteMemory = true）
-            if (CanWriteMemory && memory != null)
+            // Memory 工具：所有脑区只读；仅记忆脑 Hippocampus 升级为读写（写权限按 BrainKind 写死）
+            if (memory != null)
             {
-                var memTools = MemoryToolProvider.GetReadWriteTools(memory);
+                var memTools = Kind == BrainKind.Hippocampus
+                    ? MemoryToolProvider.GetReadWriteTools(memory)
+                    : MemoryToolProvider.GetReadOnlyTools(memory);
                 foreach (var t in memTools)
                     permTools.Add(t);
             }
@@ -324,15 +322,14 @@ namespace CBIM.Mind
 #endregion
 
 #region ContextProviders（Skill / Workflow / Memory）
-        private IReadOnlyList<AIContextProvider> BuildContextProviders(
-            IBrainAgent agent,
-            BrainDescriptor descriptor,
-            IMemoryService? memory)
+        private IReadOnlyList<AIContextProvider> BuildContextProviders(IBrainAgent agent, BrainDescriptor descriptor)
         {
             var contextProviders = new List<AIContextProvider>();
 
-            // MemoryContextProvider：只注入具备 Memory 写权限的脑区（Hippocampus）
-            if (CanWriteMemory && memory != null)
+            var memory = agent.Os.Memory;
+            
+            // MemoryContextProvider：自动召回记忆，仅注入记忆脑 Hippocampus
+            if (Kind == BrainKind.Hippocampus && memory != null)
                 contextProviders.Add(new MemoryContextProvider(memory));
 
             if (descriptor.SkillIds.Count > 0)
@@ -347,31 +344,14 @@ namespace CBIM.Mind
 #endregion
 
 #region Neuron 创建
-        private INeuron CreateNeuron(
-            IBrainAgent agent,
-            ChatClientFactory chatClientFactory,
-            BrainDescriptor descriptor,
-            IReadOnlyList<AITool> tools,
-            IReadOnlyList<AIContextProvider> contextProviders,
-            IMemoryService? memory)
+        private INeuron CreateNeuron(IBrainAgent agent, ChatClientFactory chatClientFactory, IReadOnlyList<AITool> tools, IReadOnlyList<AIContextProvider> contextProviders)
         {
-            var modelDescriptor = string.IsNullOrEmpty(descriptor.ModelId)
-                ? null
-                : agent.Os.ModelStore.Get(descriptor.ModelId);
+            var modelDescriptor = string.IsNullOrEmpty(Descriptor.ModelId) ? null : agent.Os.ModelStore.Get(Descriptor.ModelId);
             IChatClient chatClient = chatClientFactory.Create(modelDescriptor);
             if (chatClient == null)
-                throw new InvalidOperationException(
-                    $"ChatClientFactory.Create 为脑区 '{descriptor.BrainId}' 返回了 null。");
-
-            return NeuronFactory.Create(
-                descriptor,
-                chatClient,
-                tools,
-                memory,
-                contextProviders: contextProviders.Count > 0 ? contextProviders : null,
-                soul: agent.Soul,
-                identity: agent.Identity,
-                brain: this);
+                throw new InvalidOperationException($"ChatClientFactory.Create 为脑区 '{BrainId}' 返回了 null。");
+        
+            return NeuronFactory.Create(this, agent.Soul, agent.Identity, Descriptor, chatClient, tools, contextProviders);
         }
 
         /// <summary>合并两份工具集为不可变快照。</summary>
@@ -383,26 +363,11 @@ namespace CBIM.Mind
             foreach (var t in b) merged.Add(t);
             return merged;
         }
-
-        /// <summary>
-        /// <see cref="ICircuitBuilderContext"/> 显式实现——
-        /// 返回当前活跃的 <see cref="NeuralCircuitBuilder"/>。
-        /// <para>仅在 <see cref="InvokeAsync"/> 路径 1 执行窗口内非 null；其余时刻返回 <c>null</c>。</para>
-        /// </summary>
+        
         NeuralCircuitBuilder? ICircuitBuilderContext.GetActiveBuilder() => _builder;
 
         /// <summary>
         /// 投递子任务到本脑区。
-        ///
-        /// <para>双路径逻辑：
-        /// <list type="bullet">
-        /// <item>路径 1（编译期）：初始化 <c>_activeBuilder</c>，透传给 <see cref="Neuron"/>.InvokeAsync，
-        /// LLM 工具循环由 CompilerTools + SynapseTools 驱动；</item>
-        /// <item>路径 2（执行期）：<c>_activeBuilder.Compiled != null</c>——从 Builder 取出已冻结的
-        /// <see cref="NeuralCircuit"/> 交 <see cref="Orchestrator"/> 执行，执行后重置 Builder。</item>
-        /// </list>
-        /// </para>
-        /// 子类如需完全替代本策略可重写；如需在路径前后插入钩子，建议 override 并 await base。
         /// </summary>
         public virtual async Task<NeuronOutcome> InvokeAsync(NeuronInput invocation, CancellationToken ct)
         {
@@ -424,7 +389,7 @@ namespace CBIM.Mind
         /// InvokeAsync 的实际执行逻辑，由基类在设置 <see cref="IsProcessing"/> 后调用。
         /// 子类如需完全替代调度策略，override 此方法；如需在调度前后插入钩子，override <see cref="InvokeAsync"/> 并 await base。
         /// </summary>
-        protected virtual async Task<NeuronOutcome> ExecuteInvokeAsync(NeuronInput invocation, CancellationToken ct)
+        private async Task<NeuronOutcome> ExecuteInvokeAsync(NeuronInput invocation, CancellationToken ct)
         {
             if (_builder?.Compiled != null)
             {

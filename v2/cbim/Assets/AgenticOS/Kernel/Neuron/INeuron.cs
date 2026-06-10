@@ -35,7 +35,7 @@ namespace CBIM.Kernel
 
         /// <summary>
         /// 暴露底层 <see cref="AIAgent"/> 引用（仅供 Channel 持引用打 SendAsync 用）。
-        /// <see cref="MsAINeuron"/> 返回真实 ChatClientAgent；<see cref="ExternalEngineNeuron"/>
+        /// <see cref="Neuron"/> 返回真实 ChatClientAgent；<see cref="ExternalNeuron"/>
         /// 返回 <c>null</c>（外部引擎自带 LLM，无 AIAgent 句柄）。
         /// </summary>
         AIAgent? UnderlyingAgent { get; }

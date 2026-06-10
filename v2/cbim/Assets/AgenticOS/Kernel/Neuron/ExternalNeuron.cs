@@ -1,48 +1,33 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using CBIM.Mind;
-using CBIM.Memory;
 using Microsoft.Agents.AI;
+using Microsoft.Extensions.AI;
 
 namespace CBIM.Kernel
 {
     /// <summary>
-    /// 外部引擎神经元——桥接 <see cref="IExternalEngineAdapter"/>（如 ClaudeCodeEngineAdapter）。
+    /// 外部引擎神经元
     /// </summary>
-    public sealed class ExternalEngineNeuron : INeuron
+    public sealed class ExternalNeuron : INeuron
     {
-        public string NeuronId { get; }
         public NeuronKind Kind => NeuronKind.External;
+        
         public AIAgent? UnderlyingAgent => null;
 
         private readonly IExternalEngineAdapter _adapter;
-        private readonly IMemoryService _memory;
         private int _disposed;
-
-        /// <param name="neuronId">神经元 Id（=BrainId · 必为 "motor-cortex." 开头）。</param>
-        /// <param name="descriptor">外部运动皮层描述符——本构造期不读语义字段，仅持引用供子类回查。</param>
-        /// <param name="adapter">外部引擎适配器。不为 null。</param>
-        /// <param name="memory">共享 Memory 实例。不为 null。</param>
-        public ExternalEngineNeuron(
-            string neuronId,
-            ExternalMotorCortexDescriptor descriptor,
-            IExternalEngineAdapter adapter,
-            IMemoryService memory)
+        
+        public ExternalNeuron(Brain brain,  string soul, string identity,
+            IReadOnlyList<AITool> aiTools, IReadOnlyList<AIContextProvider>? contextProviders = null)
         {
-            if (string.IsNullOrWhiteSpace(neuronId))
-                throw new ArgumentException("ExternalEngineNeuron.NeuronId 不能为空", nameof(neuronId));
-            if (descriptor == null)
-                throw new ArgumentNullException(nameof(descriptor));
-            if (adapter == null)
-                throw new ArgumentNullException(nameof(adapter));
-            if (memory == null)
-                throw new ArgumentNullException(nameof(memory));
-
-            NeuronId = neuronId;
-            _adapter = adapter;
-            _memory = memory;
+            ExternalMotorCortexDescriptor descriptor = (ExternalMotorCortexDescriptor)brain.Descriptor;
+            
+            // init by ExternalMotorCortexDescriptor info
+            _adapter = null;
         }
 
         /// <inheritdoc/>

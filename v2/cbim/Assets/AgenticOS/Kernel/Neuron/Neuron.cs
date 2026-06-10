@@ -20,7 +20,7 @@ namespace CBIM.Kernel
     /// <see cref="ChatMessage"/> 投给内部 ChatClientAgent.RunAsync，取 response.Text
     /// 作为 <see cref="NeuronOutcome.Summary"/>。</para>
     /// </summary>
-    public sealed class MsAINeuron : INeuron
+    public sealed class Neuron : INeuron
     {
         public NeuronKind Kind => NeuronKind.Msai;
 
@@ -52,16 +52,15 @@ namespace CBIM.Kernel
         /// <summary>
         /// 装配单元：
         /// </summary>
-        public MsAINeuron(Brain brain,  string soul, string identity, BrainDescriptor descriptor, IChatClient chatClient, 
+        public Neuron(Brain brain,  string soul, string identity, IChatClient chatClient, 
             IReadOnlyList<AITool> aiTools, IReadOnlyList<AIContextProvider>? contextProviders = null)
         {
-            if (descriptor == null)
-                throw new ArgumentNullException(nameof(descriptor));
             if (chatClient == null)
                 throw new ArgumentNullException(nameof(chatClient));
             if (aiTools == null)
                 throw new ArgumentNullException(nameof(aiTools));
-            
+
+            var descriptor = brain.Descriptor;
             // 包 FunctionInvokingChatClient——让 LLM 返回 tool_call 时框架自动派发到 AIFunction 并回填结果。
             _invokingChatClient = new FunctionInvokingChatClient(chatClient);
 

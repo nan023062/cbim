@@ -12,25 +12,19 @@ namespace CBIM.Kernel
     /// </summary>
     public static class NeuronFactory
     {
-        public static INeuron Create(BrainDescriptor descriptor, IChatClient chatClient, IReadOnlyList<AITool> tools, IMemoryService? memory = null, IExternalEngineAdapter? externalAdapter = null, IReadOnlyList<AIContextProvider>? contextProviders = null, string soul = null, string identity = null, Brain? brain = null)
+        public static INeuron Create(Brain brain, string soul, string identity, BrainDescriptor descriptor, IChatClient chatClient, IReadOnlyList<AITool> tools, IReadOnlyList<AIContextProvider>? contextProviders = null)
         {
             if (descriptor == null)
                 throw new ArgumentNullException(nameof(descriptor));
             if (tools == null)
                 throw new ArgumentNullException(nameof(tools));
 
-            var effectiveMemory = memory ?? NullMemoryService.Instance;
-
             switch (descriptor)
             {
                 // ExternalMotorCortexDescriptor 必须先匹配更派生的类型。
                 case ExternalMotorCortexDescriptor ext:
                 {
-                    if (externalAdapter == null)
-                        throw new InvalidOperationException(
-                            "ExternalEngineNeuron 装配需要 externalAdapter 非 null。");
-
-                    return new ExternalEngineNeuron(ext.BrainId, ext, externalAdapter, effectiveMemory);
+                    return new ExternalNeuron(brain, soul, identity, tools,  contextProviders);
                 }
 
                 default:
@@ -39,7 +33,7 @@ namespace CBIM.Kernel
                         throw new InvalidOperationException(
                             $"BrainDescriptor 装配需要 chatClient 非 null（脑区 '{descriptor.BrainId}'）。");
 
-                    return new MsAINeuron(brain, soul, identity, descriptor, chatClient, tools, contextProviders);
+                    return new Neuron(brain, soul, identity, chatClient, tools, contextProviders);
                 }
             }
         }

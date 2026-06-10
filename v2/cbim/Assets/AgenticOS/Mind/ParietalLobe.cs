@@ -10,8 +10,6 @@ namespace CBIM.Mind
     {
         public override BrainKind Kind => BrainKind.ParietalLobe;
 
-        protected override bool CanWriteDna => true;
-
         internal ParietalLobe(IBrainAgent agent, ChatClientFactory chatClientFactory, ParietalLobeDescriptor descriptor)
             : base(agent, chatClientFactory, descriptor)
         {

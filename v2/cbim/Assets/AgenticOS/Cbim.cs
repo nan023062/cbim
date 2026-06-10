@@ -87,9 +87,9 @@ namespace CBIM
 #region Session 管理（直接在 Cbim 上）
 
         /// <summary>
-        /// 创建时传入的配置项——Session。
+        /// 创建时传入的 Agent 描述——OpenSessionAsync 据此构造每个 Session 的独立 Agent。
         /// </summary>
-        private CbimOptions _options;
+        private readonly AgentDescription _agentDescription;
 
         private readonly Dictionary<string, Session> _sessions = new Dictionary<string, Session>();
         
@@ -113,7 +113,7 @@ namespace CBIM
         private int _disposed;
 
         private Cbim(
-            CbimOptions options,
+            AgentDescription agentDescription,
             FileBackend fileBackend,
             FileModelStore modelStore,
             FileSkillStore skillStore,
@@ -124,7 +124,7 @@ namespace CBIM
             IMemoryService memory,
             WorkspaceSystem workspace)
         {
-            _options       = options;
+            _agentDescription = agentDescription;
             FileBackend   = fileBackend;
             ModelStore    = modelStore;
             SkillStore    = skillStore;
@@ -208,7 +208,7 @@ namespace CBIM
             var workspace = new WorkspaceSystem(options.RootPath);
 
             // 7. 构造并返回 Cbim 根容器
-            return new Cbim(options, backend, modelStore, skillStore, workflowStore, mcpStore, llmClient, mcp, memory, workspace);
+            return new Cbim(options.Agent, backend, modelStore, skillStore, workflowStore, mcpStore, llmClient, mcp, memory, workspace);
         }
 
 #endregion
@@ -221,7 +221,7 @@ namespace CBIM
         public Task<Session> OpenSessionAsync(CancellationToken ct = default)
         {
             ct.ThrowIfCancellationRequested();
-            var agent = new Session(this, _options.Agent);
+            var agent = new Session(this, _agentDescription);
             lock (_sessionLock)
             {
                 _sessions[agent.SessionId] = agent;

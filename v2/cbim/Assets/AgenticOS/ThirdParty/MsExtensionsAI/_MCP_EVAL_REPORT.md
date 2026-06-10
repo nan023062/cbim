@@ -115,14 +115,21 @@ lib/
 
 ## 5. 结论
 
-### **可用性等级：✅ 完全可用**
+### **可用性等级：⚠ IL 层"可用"，编译层 ❌ 不可用（魔改 Unity）→ 装配层休眠**
 
-理由汇总：
+> **更正（2026-06-11）**：本节最初判定的 "✅ 完全可用" **错误**——评估只覆盖了 IL / 传递依赖层面，未到源码编译层。落地实测见 §9。
+
+IL 层依旧成立：
 1. ✅ 两个包都有**实体 NS2.0 lib**（非 forwarder）
 2. ✅ NS2.0 传递依赖**全在已装清单内**，零新增传递依赖
 3. ✅ IL 扫描确认**零 .NET 5+ 独有 API 引用**
 4. ✅ 与 Agent Framework 1.7.0 的接合面是 `Microsoft.Extensions.AI.AITool`——和 ChatClientAgent / FunctionInvokingChatClient 直接通
 5. ✅ 体积可控（仅 ~1.3 MB）
+
+源码编译层不成立：
+- ❌ `StdioClientTransportOptions.Command` / `HttpClientTransportOptions.Endpoint` 用 C# 11 `required` 修饰；魔改 Unity 的 Roslyn 不识别 `required` 语义但触发 CS0619（"Constructors of types with required members are not supported in this version of your compiler."）。任何直接 `new` 都编译失败。
+- ❌ 该限制对 **所有已发布 SDK 版本** 成立——`required` 自 `v0.1.0-preview.1` 起即引入，没有不带 `required` 的可降级版本。
+- ❌ SDK 也未提供带 `[SetsRequiredMembers]` 的替代构造器 / 字段直传形式构造器，常规迂回均不通。
 
 风险点（次要）：
 - ModelContextProtocol.Core 对 `Microsoft.Extensions.AI.Abstractions` 要求 **10.5.2**，本目录已装 `Microsoft.Extensions.AI.Abstractions.dll` 来自 1.7.0 主线包（其打的版本是 MEAI 9.x 时代的，**实际安装版本需要核实**）。如果实测版本不满足 10.5.2，需要同步升级 Microsoft.Extensions.AI{,.Abstractions} 一并升到 10.x（已装 README §"已评估但未装"列 `Mem0` 钉死 9.x 的注释暗示当前主线确为 10.x，但应在 T2 前再核一次实际 DLL 的 AssemblyVersion）。
@@ -177,3 +184,29 @@ T2-T7 可以按"真做"的范围立项。
 - AgenticTeam 取 starter 作为注入数据，无需修改。
 - Vena 层暂未接 CBIM。
 - _VerifyMsai 未追加 MCP smoke test（§6 第 5 步）——按需后续补。
+
+---
+
+## 9. 状态变更（2026-06-11）：装配层休眠
+
+§5 的"完全可用"结论在落地后被推翻——参见上方更正。装配层 `Assets/AgenticOS.Mcp/` 改为 **休眠（quarantined）** 状态。
+
+**实施变更**：
+
+- `Assets/AgenticOS.Mcp/AgenticOS.Mcp.asmdef`：追加 `defineConstraints: ["CBIM_MCP_CLIENT"]`。该 define 默认未设置 → Unity 整体跳过本 asmdef 的编译，CS0619 不再触发。`precompiledReferences` 保持原样（asmdef 被 define 排除时无害）。
+- `Assets/AgenticOS.Mcp/McpClientStarter.cs`：恢复为 **直接 `new` 对象初始化器** 形式（之前一度引入的反射构造 helper 已删除——反射只是绕 CS0619 的下策；既然装配层不在 Unity 内编译，直接 `new` 才是 Option B 工具链下的正轨）。
+- `Assets/Desktop/CbimDemo.cs`：移除 `McpStarter = new CBIM.Mcp.McpClientStarter()`，留下注释指向本节。`Cbim` 退化到 `NullMcpClientStarter` → `Brain.BuildMcpTools` 早返回空集，StandardTools/Compiler/Memory/DNA 工具链不受影响。
+- `Assets/Desktop/Desktop.asmdef`：从 `references` 中移除 `"AgenticOS.Mcp"`，避免悬挂引用。
+- SPI（`Assets/AgenticOS/Mcp/{IMcpClientStarter, IStartedMcpClient, McpDescriptor, McpManager, NullMcpClientStarter}`）**全活**——SDK-free 抽象，零删除，复活时即插即用。
+- `ThirdParty/MsExtensionsAI/ModelContextProtocol{.Core,}.dll`：`.gitignore` 已排除二进制本体，`.meta` 保留——复活时无需重新写 PluginImporter。
+
+**复活方案（Option B：Unity 之外预编译）**：
+
+1. 在父项目 / 目标 asmdef 设置 scripting define `CBIM_MCP_CLIENT`；
+2. 用真正的 C# 11 编译器（dotnet SDK 7+ / Visual Studio 2022+）在 Unity 之外编 `Assets/AgenticOS.Mcp/` + `Assets/AgenticOS` 引用 → 产出 `AgenticOS.Mcp.dll`；
+3. 把 DLL 投放到 `ThirdParty/MsExtensionsAI/` 或独立 `ThirdParty/AgenticOS.Mcp/`；
+4. 在 `Assets/Desktop/Desktop.asmdef.references` 重新加 `"AgenticOS.Mcp"`，在 `CbimDemo.cs` 复原 `McpStarter = new CBIM.Mcp.McpClientStarter()`。
+
+**不要尝试在 Unity 内编译**——除非升级 Unity Mono / Roslyn 至支持 `required`。
+
+> 历史教训：评估到 IL 层就 "✅ 完全可用" 是不够的——**必须把样例代码喂给目标编译器跑一遍**。本次教训已记入更正历史。

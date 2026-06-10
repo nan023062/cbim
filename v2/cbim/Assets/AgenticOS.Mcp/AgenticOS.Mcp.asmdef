@@ -16,7 +16,9 @@
         "System.Threading.Tasks.Extensions.dll"
     ],
     "autoReferenced": true,
-    "defineConstraints": [],
+    "defineConstraints": [
+        "CBIM_MCP_CLIENT"
+    ],
     "versionDefines": [],
     "noEngineReferences": true
 }

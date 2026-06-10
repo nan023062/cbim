@@ -40,16 +40,29 @@
 
 ---
 
-## 三、MCP 协议 SDK（CBIM.Mcp 通过 AgenticOS.Mcp 装配层使用）
+## 三、MCP 协议 SDK（CBIM.Mcp 装配层 — **当前休眠**）
+
+> ⚠ **状态更正（2026-06-11）**：`_MCP_EVAL_REPORT.md` §5 的"完全可用"结论**仅在 IL/传递依赖层面成立**，并未覆盖魔改 Unity 编译器对 C# 11 `required` 成员的处理。落地实测（Unity 2020.3 魔改 Roslyn）证明 ModelContextProtocol 的 `StdioClientTransportOptions` / `HttpClientTransportOptions` 直接 `new` **无法编译**（CS0619：'Constructors of types with required members are not supported in this version of your compiler.'），且 `required` 自 v0.1.0-preview.1 引入起所有版本均如此——不可避。
+>
+> 为此装配层 `Assets/AgenticOS.Mcp/` 已**休眠**：asmdef 通过 `defineConstraints: ["CBIM_MCP_CLIENT"]` 排除编译；`Assets/Desktop/CbimDemo.cs` 不再注入 `McpStarter`，`Cbim.Create` 退化到 `NullMcpClientStarter`（Brain 仍可获得 StandardTools + Compiler + Memory/DNA，行为完整）。下方两个 DLL + meta **保留在仓中**，便于复活时直接喂给 Option B 工具链。
 
 | DLL | 用途 |
 |-----|------|
-| **ModelContextProtocol.dll** | MCP 官方 .NET SDK 1.3.0 hosting/DI 集成层（`McpServiceCollectionExtensions` / `IMcpServer` 注册）。当前装配层未直接使用，留作后续 server 角色扩展。 |
-| **ModelContextProtocol.Core.dll** | MCP 官方 .NET SDK 1.3.0 核心协议层——`McpClient` / `McpClientTool`（`: AIFunction`）/ `StdioClientTransport` / `HttpClientTransport` / JSON-RPC framing。`AgenticOS.Mcp/McpClientStarter.cs` 直接 using。 |
+| **ModelContextProtocol.dll** | MCP 官方 .NET SDK 1.3.0 hosting/DI 集成层（`McpServiceCollectionExtensions` / `IMcpServer` 注册）。本仓 `.gitignore` 排除二进制本体，仅留 `.meta`；按需重新下载抽包。 |
+| **ModelContextProtocol.Core.dll** | MCP 官方 .NET SDK 1.3.0 核心协议层——`McpClient` / `McpClientTool`（`: AIFunction`）/ `StdioClientTransport` / `HttpClientTransport` / JSON-RPC framing。本仓同上。 |
 
-**接合点**：`McpClientTool` 继承自 `Microsoft.Extensions.AI.AIFunction`——可直接喂给 `ChatOptions.Tools`，与本目录已装的 `Microsoft.Extensions.AI` 中间件链（`FunctionInvokingChatClient`）无缝对接。
+**接合点（设计依旧成立）**：`McpClientTool` 继承自 `Microsoft.Extensions.AI.AIFunction`——可直接喂给 `ChatOptions.Tools`，与本目录已装的 `Microsoft.Extensions.AI` 中间件链（`FunctionInvokingChatClient`）无缝对接。
 
-**装配位置**：`Assets/AgenticOS.Mcp/`（独立 asmdef，仅装配层引用本 SDK；基建层 `AgenticOS` 不引用 — 通过 `IMcpClientStarter` SPI 隔离）。
+**装配位置**：`Assets/AgenticOS.Mcp/`（独立 asmdef，定义约束 `CBIM_MCP_CLIENT`；SPI 抽象 `Assets/AgenticOS/Mcp/{IMcpClientStarter, IStartedMcpClient, McpDescriptor, McpManager}` 仍**全活**——SDK-free，零删除）。
+
+**复活路径（Option B：Unity 之外预编译 DLL）**：
+
+1. 在父项目 / asmdef 中保留 / 设置 scripting define `CBIM_MCP_CLIENT`；
+2. 用真正的 C# 11 编译器（dotnet SDK 7+ 或 VS 2022+）在 Unity 之外把 `Assets/AgenticOS.Mcp/` 与 `Assets/AgenticOS` 引用一起编出 `AgenticOS.Mcp.dll`；
+3. 把产出的 DLL 投放至 `ThirdParty/`（与 ModelContextProtocol*.dll 同目录）；
+4. 在 `Assets/Desktop/CbimDemo.cs` 复原 `McpStarter = new CBIM.Mcp.McpClientStarter()` 注入，并在 `Desktop.asmdef.references` 重新加 `"AgenticOS.Mcp"`。
+
+> ❌ 不要尝试在 Unity 内编译此装配——除非 Unity 的 Mono / Roslyn 升级到识别 `required` 关键字。当前 2020.3 + 魔改编译器**做不到**。
 
 ---
 

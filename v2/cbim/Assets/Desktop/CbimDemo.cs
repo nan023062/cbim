@@ -77,7 +77,12 @@ namespace CBIM.Desktop
                 {
                     RootPath = rootPath,
                     Agent = agentDesc,
-                    McpStarter = new CBIM.Mcp.McpClientStarter(),
+                    // MCP client 休眠：AgenticOS.Mcp 装配层被 CBIM_MCP_CLIENT define 约束排除（魔改
+                    // Unity 编译 ModelContextProtocol 的 C# 11 `required` 成员触发 CS0619，跨所有 SDK
+                    // 版本均不可避）。McpStarter 留空 → Cbim 走 NullMcpClientStarter，Brain 退化为
+                    // StandardTools + Compiler + Memory/DNA。
+                    // 接外部 MCP server 时：定义 CBIM_MCP_CLIENT 并按 Option B 在 Unity 之外预编译
+                    // AgenticOS.Mcp 为 DLL 投放，再回填 McpStarter = new CBIM.Mcp.McpClientStarter()。
                 });
                 Debug.Log("[CbimDemo] ✓ Cbim 初始化完成");
 

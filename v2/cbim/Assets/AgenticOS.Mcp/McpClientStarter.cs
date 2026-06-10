@@ -9,6 +9,23 @@ namespace CBIM.Mcp
     /// <see cref="IMcpClientStarter"/> 的真实实现——基于官方
     /// <c>ModelContextProtocol</c> SDK（github.com/modelcontextprotocol/csharp-sdk）的薄封装。
     ///
+    /// ⚠ 本装配层（AgenticOS.Mcp）当前 **休眠**——asmdef 通过 <c>defineConstraints</c>
+    /// 约束在 <c>CBIM_MCP_CLIENT</c> 之下，默认不参与 Unity 编译。原因：ModelContextProtocol
+    /// 的 <c>StdioClientTransportOptions</c> / <c>HttpClientTransportOptions</c> 用 C# 11
+    /// <c>required</c> 修饰必填成员，魔改 Unity 的 Roslyn 不认识 <c>required</c> 语义但会
+    /// 触发 CS0619（"Constructors of types with required members are not supported in
+    /// this version of your compiler."），任何直接 <c>new</c> 都会编译失败。该限制对所有
+    /// 已发布 SDK 版本成立（<c>required</c> 自 v0.1.0-preview.1 起即被引入），不可避。
+    ///
+    /// 复活方案（Option B 预编译 DLL）：
+    ///   1) 在父项目设置 scripting define <c>CBIM_MCP_CLIENT</c>，或在 asmdef 的
+    ///      <c>defineConstraints</c> 中保留该 define——本 asmdef 仍会被排除；
+    ///   2) 在 Unity 之外用真正的 C# 11 编译器（dotnet SDK 7+ / Visual Studio 2022+）
+    ///      把本目录连同 <c>AgenticOS</c> 引用一起编出 <c>AgenticOS.Mcp.dll</c>；
+    ///   3) 把产出的 DLL 投放至 <c>ThirdParty/</c> 之类的预编译 DLL 目录；
+    ///   4) 删除（或留作源码归档）此处的 <c>.cs</c> + asmdef 二选一即可。
+    /// 不要尝试在 Unity 内编译——除非升级 Unity Mono / Roslyn 至支持 <c>required</c>。
+    ///
     /// 职责（仅此而已）：
     ///   1. 按 <see cref="McpDescriptor"/> 子类型构造对应 IClientTransport
     ///      （StdioMcpDescriptor → StdioClientTransport；HttpMcpDescriptor → HttpClientTransport）

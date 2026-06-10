@@ -21,8 +21,7 @@ namespace CBIM
     /// </summary>
     public sealed class Cbim : IDisposable
     {
-
-#region 配置层（FileStore）
+        #region 配置层（FileStore）
 
         /// <summary>模型配置注册表（<c>models/</c> 子目录）。</summary>
         public FileModelStore ModelStore { get; }
@@ -36,16 +35,16 @@ namespace CBIM
         /// <summary>MCP 描述符注册表（<c>mcps/</c> 子目录）。</summary>
         public FileMcpStore McpStore { get; }
 
-#endregion
+        #endregion
 
-#region 文件后端（各 FileStore 共享）
+        #region 文件后端（各 FileStore 共享）
 
         /// <summary>文件系统存取原语——各 FileStore 的共享后端。</summary>
         public FileBackend FileBackend { get; }
 
-#endregion
+        #endregion
 
-#region 实例层
+        #region 实例层
 
         /// <summary>IChatClient 工厂——按 <see cref="ModelDescriptor"/> 路由到对应 Provider 构建器。</summary>
         public ChatClientFactory LlmClient { get; }
@@ -53,9 +52,9 @@ namespace CBIM
         /// <summary>MCP 实例管理器——Shared / 隔离双模式生命周期管理。</summary>
         public McpManager Mcp { get; }
 
-#endregion
+        #endregion
 
-#region 服务层
+        #region 服务层
 
         /// <summary>
         /// Memory 服务——Cbim 统一持有的记忆后端。
@@ -66,9 +65,9 @@ namespace CBIM
         /// <summary>Workspace 子系统——封装工作区根路径 + 按权限分层的 DNA AITool 列表。</summary>
         public WorkspaceSystem Workspace { get; }
 
-#endregion
+        #endregion
 
-#region Session 管理（直接在 Cbim 上）
+        #region Session 管理（直接在 Cbim 上）
 
         /// <summary>
         /// 创建时传入的 Agent 描述——OpenSessionAsync 据此构造每个 Session 的独立 Agent。
@@ -76,12 +75,56 @@ namespace CBIM
         private readonly AgentDescription _agentDescription;
 
         private readonly Dictionary<string, Session> _sessions = new Dictionary<string, Session>();
-        
+
         private readonly object _sessionLock = new object();
 
-#endregion
+        #endregion
 
-#region 构造（私有）
+        #region 构造（私有）
+
+        /// <summary>
+        /// 按 <paramref name="options"/> 初始化并返回一个完整的 Cbim 实例。
+        /// </summary>
+        public static Cbim Create(CbimOptions options)
+        {
+            if (options == null) throw new ArgumentNullException(nameof(options));
+
+            if (string.IsNullOrWhiteSpace(options.RootPath))
+                throw new ArgumentException(
+                    "CbimOptions.RootPath 不能为空——请提供数据根目录路径。",
+                    nameof(options));
+
+            if (options.Agent == null)
+                throw new ArgumentException(
+                    "CbimOptions.Agent 不能为空——请提供 AgentDescription。",
+                    nameof(options));
+
+            // 1. 文件后端
+            var backend = new FileBackend(options.RootPath);
+
+            // 2. 配置层 FileStore
+            var modelStore = new FileModelStore(backend);
+            var skillStore = new FileSkillStore(backend);
+            var workflowStore = new FileWorkflowStore(backend);
+            var mcpStore = new FileMcpStore(backend);
+
+            // 3. IChatClient 工厂（默认 ProviderRegistry，含所有内置 Provider）
+            var llmClient = new ChatClientFactory();
+
+            // 4. MCP 实例管理器
+            IMcpClientStarter starter = options.McpStarter ?? new NullMcpClientStarter();
+            var mcp = new McpManager(starter);
+
+            // 5. Memory 服务——外部注入优先；否则按 RootPath/memory 默认落盘。
+            var memory = options.Memory ?? new LocalMemoryService(Path.Combine(options.RootPath, "memory"));
+
+            // 6. Workspace 子系统（根路径为 options.RootPath）
+            var workspace = new WorkspaceSystem(options.RootPath);
+
+            // 7. 构造并返回 Cbim 根容器
+            return new Cbim(options.Agent, backend, modelStore, skillStore, workflowStore, mcpStore, llmClient, mcp,
+                memory, workspace);
+        }
 
         /// <summary>
         /// 进程退出回退处理器——已订阅 <see cref="AppDomain.ProcessExit"/>。
@@ -109,15 +152,15 @@ namespace CBIM
             WorkspaceSystem workspace)
         {
             _agentDescription = agentDescription;
-            FileBackend   = fileBackend;
-            ModelStore    = modelStore;
-            SkillStore    = skillStore;
+            FileBackend = fileBackend;
+            ModelStore = modelStore;
+            SkillStore = skillStore;
             WorkflowStore = workflowStore;
-            McpStore      = mcpStore;
-            LlmClient     = llmClient;
-            Mcp           = mcp;
-            Memory        = memory;
-            Workspace     = workspace;
+            McpStore = mcpStore;
+            LlmClient = llmClient;
+            Mcp = mcp;
+            Memory = memory;
+            Workspace = workspace;
 
             // 订阅 ProcessExit 作为防御性兜底——硬 kill 绕过此事件，~2s 预算，
             // 正常关闭仍应走显式 Dispose（见 Dispose 幂等保护）。
@@ -129,11 +172,17 @@ namespace CBIM
         {
             // ProcessExit 回退：本回调若被触发，说明显式 Dispose 未被调用。
             // Dispose 幂等且会解除自身订阅，重复触发安全。
-            try { Dispose(); }
-            catch { /* best-effort：进程退出期错误不上抛 */ }
+            try
+            {
+                Dispose();
+            }
+            catch
+            {
+                /* best-effort：进程退出期错误不上抛 */
+            }
         }
 
-#endregion
+        #endregion
 
         /// <summary>
         /// 热切换记忆后端——将 <see cref="Memory"/> 替换为新的 <see cref="IMemoryService"/> 实例。
@@ -142,61 +191,14 @@ namespace CBIM
         /// <param name="newMemoryService">新的记忆服务实例，不能为 null。</param>
         public void SwitchMemory(IMemoryService newMemoryService)
         {
-            if (newMemoryService == null) 
+            if (newMemoryService == null)
                 throw new ArgumentNullException(nameof(newMemoryService));
-            
+
             Memory = newMemoryService;
         }
 
-#region 工厂方法
 
-        /// <summary>
-        /// 按 <paramref name="options"/> 初始化并返回一个完整的 Cbim 实例。
-        /// </summary>
-        public static Cbim Create(CbimOptions options)
-        {
-            if (options == null) throw new ArgumentNullException(nameof(options));
-            
-            if (string.IsNullOrWhiteSpace(options.RootPath))
-                throw new ArgumentException(
-                    "CbimOptions.RootPath 不能为空——请提供数据根目录路径。",
-                    nameof(options));
-            
-            if (options.Agent == null)
-                throw new ArgumentException(
-                    "CbimOptions.Agent 不能为空——请提供 AgentDescription。",
-                    nameof(options));
-
-            // 1. 文件后端
-            var backend = new FileBackend(options.RootPath);
-
-            // 2. 配置层 FileStore
-            var modelStore    = new FileModelStore(backend);
-            var skillStore    = new FileSkillStore(backend);
-            var workflowStore = new FileWorkflowStore(backend);
-            var mcpStore      = new FileMcpStore(backend);
-
-            // 3. IChatClient 工厂（默认 ProviderRegistry，含所有内置 Provider）
-            var llmClient = new ChatClientFactory();
-
-            // 4. MCP 实例管理器
-            IMcpClientStarter starter = options.McpStarter ?? new NullMcpClientStarter();
-            var mcp = new McpManager(starter);
-
-            // 5. Memory 服务——外部注入优先；否则按 RootPath/memory 默认落盘。
-            var memory = options.Memory
-                ?? new LocalMemoryService(Path.Combine(options.RootPath, "memory"));
-
-            // 6. Workspace 子系统（根路径为 options.RootPath）
-            var workspace = new WorkspaceSystem(options.RootPath);
-
-            // 7. 构造并返回 Cbim 根容器
-            return new Cbim(options.Agent, backend, modelStore, skillStore, workflowStore, mcpStore, llmClient, mcp, memory, workspace);
-        }
-
-#endregion
-
-#region Session 管理接口
+        #region Session 管理接口
 
         /// <summary>
         /// 开通一个新 Session——每个 Session 独立持有自己的 Agent 实例。
@@ -209,6 +211,7 @@ namespace CBIM
             {
                 _sessions[agent.SessionId] = agent;
             }
+
             return Task.FromResult(agent);
         }
 
@@ -242,9 +245,9 @@ namespace CBIM
             }
         }
 
-#endregion
+        #endregion
 
-#region 生命周期
+        #region 生命周期
 
         /// <summary>
         /// 释放所有持有生命周期的资源（全部 Session Agent + MCP）。
@@ -260,8 +263,14 @@ namespace CBIM
             if (handler != null)
             {
                 _processExitHandler = null;
-                try { AppDomain.CurrentDomain.ProcessExit -= handler; }
-                catch { /* best-effort：进程退出期 AppDomain 可能已不可用 */ }
+                try
+                {
+                    AppDomain.CurrentDomain.ProcessExit -= handler;
+                }
+                catch
+                {
+                    /* best-effort：进程退出期 AppDomain 可能已不可用 */
+                }
             }
 
             List<Session> snapshot;
@@ -273,18 +282,30 @@ namespace CBIM
 
             foreach (var session in snapshot)
             {
-                try { session.Dispose(); }
-                catch { /* best-effort：单个 Session 释放失败不阻断其余 */ }
+                try
+                {
+                    session.Dispose();
+                }
+                catch
+                {
+                    /* best-effort：单个 Session 释放失败不阻断其余 */
+                }
             }
 
-            try { Mcp.Dispose(); }
-            catch { /* best-effort：MCP 释放失败不上抛 */ }
+            try
+            {
+                Mcp.Dispose();
+            }
+            catch
+            {
+                /* best-effort：MCP 释放失败不上抛 */
+            }
         }
+
+        #endregion
     }
 
-#endregion
-
-#region NullMcpClientStarter — 未配置 MCP 时的占位实现
+    #region NullMcpClientStarter — 未配置 MCP 时的占位实现
 
     /// <summary>
     /// <see cref="IMcpClientStarter"/> 的空实现——当 <see cref="CbimOptions.McpStarter"/>
@@ -305,5 +326,5 @@ namespace CBIM
         }
     }
 
-#endregion
+    #endregion
 }

@@ -10,18 +10,6 @@ namespace CBIM.Mcp
 {
     /// <summary>
     /// MCP 描述符本地文件后端。
-    ///
-    /// 落盘形态：<c>&lt;root&gt;/&lt;subdir&gt;/&lt;id&gt;.json</c>（默认 subdir = "mcps"）。
-    /// 一条 McpDescriptor 一个文件，无 index——构造时全量扫描进内存索引，
-    /// <see cref="Put"/> / <see cref="Delete"/> 同步更新索引 + 原子落盘。
-    ///
-    /// 多态 JSON：McpDescriptor 是抽象基类（StdioMcpDescriptor / HttpMcpDescriptor 两子类），
-    /// 使用 <c>"transport"</c> 鉴别字段（值为 <see cref="McpTransportKind"/> 字符串）做
-    /// 序列化分派。设计时为后补子类预留——增子类时只需在 <see cref="McpDescriptorConverter"/>
-    /// 内加一条 switch 分支即可。
-    ///
-    /// 线程安全：所有公共方法在内部锁下访问索引；落盘走 <see cref="FileBackend.WriteAtomic"/>。
-    /// 调用方可在任意线程并发调用。
     /// </summary>
     public sealed class FileMcpStore
     {
@@ -30,10 +18,12 @@ namespace CBIM.Mcp
         private static readonly JsonSerializerOptions JsonOptions = BuildJsonOptions();
 
         private readonly FileBackend _storage;
+        
         private readonly string _subdir;
+        
         private readonly object _gate = new object();
-        private readonly Dictionary<string, McpDescriptor> _entries =
-            new Dictionary<string, McpDescriptor>(StringComparer.Ordinal);
+        
+        private readonly Dictionary<string, McpDescriptor> _entries = new Dictionary<string, McpDescriptor>(StringComparer.Ordinal);
 
         /// <summary>
         /// 构造并从 <c>&lt;root&gt;/&lt;subdir&gt;/</c> 扫描全量条目进内存。

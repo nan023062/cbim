@@ -58,6 +58,21 @@ namespace CBIM.Kernel
             this.IsError = IsError;
             this.ErrorMessage = ErrorMessage;
         }
+
+        /// <summary>
+        /// 复制本结果但用 <paramref name="sideEffects"/> 覆盖 <see cref="SideEffects"/>——
+        /// MotorCortex（工作脑）在 Brain 层调用结束时调用，将 ToolSandbox 队列里收集的副作用记录归入。
+        /// 其余字段透传，避免重复罗列全参 ctor。
+        /// </summary>
+        public NeuronOutcome WithSideEffects(IReadOnlyList<SideEffect> sideEffects)
+        {
+            return new NeuronOutcome(
+                Summary: Summary,
+                StructuredOutput: StructuredOutput,
+                SideEffects: sideEffects ?? Array.Empty<SideEffect>(),
+                IsError: IsError,
+                ErrorMessage: ErrorMessage);
+        }
     }
     
     /// <summary>

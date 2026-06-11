@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
+using CBIM.Kernel;
 
 namespace CBIM.Tools.Standard
 {
@@ -7,6 +9,10 @@ namespace CBIM.Tools.Standard
     //
     // 仅在构造期使用：工具实例绑定到唯一一个 ToolSandbox，
     // 运行时不允许替换（见 module.md "Iron Rule 2"）。
+    //
+    // 例外：SideEffects 是 append-only 遥测队列（不是配置态），由 StandardTools
+    // 在每次副作用调用（bash / file.write / file.edit / file.delete）后入队，
+    // Brain 层在脑区调用结束时整体出队归入 NeuronOutcome.SideEffects。
     public sealed class ToolSandbox
     {
         public IReadOnlyList<string> AllowedPathPrefixes { get; }
@@ -15,6 +21,12 @@ namespace CBIM.Tools.Standard
         public long MaxResultBytes { get; }
         public IReadOnlyList<string> BlockedExtensions { get; }
         public IReadOnlyList<string> WebAllowedHosts { get; }
+
+        /// <summary>
+        /// 本次脑区调用期间产生的副作用记录队列——线程安全（并行工具轮次会并发入队）。
+        /// 仅 append；Brain 层调用结束后 drain 一次性归入 <see cref="NeuronOutcome.SideEffects"/>。
+        /// </summary>
+        internal ConcurrentQueue<SideEffect> SideEffects { get; } = new ConcurrentQueue<SideEffect>();
 
         public ToolSandbox(
             IReadOnlyList<string> allowedPathPrefixes,

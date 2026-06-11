@@ -184,6 +184,14 @@ namespace CBIM.Mind
         /// </summary>
         private IReadOnlyList<AITool>? _motorStaticPrefix;
 
+        /// <summary>
+        /// 当前 MotorCortex 调用窗口内活动的 ToolSandbox——
+        /// 由 <see cref="RebuildMotorStandardToolsForInvocation"/> 设置，
+        /// <see cref="ExecuteInvokeAsync"/> 在 Neuron 调用结束后 drain 其 SideEffects 队列归入 NeuronOutcome。
+        /// 仅在 MotorCortex 流程中非 null；其余脑区 / 非调用窗口为 null。
+        /// </summary>
+        private ToolSandbox? _activeMotorSandbox;
+
         private IReadOnlyList<AITool> BuildToolSet(IBrainAgent agent, BrainDescriptor descriptor)
         {
             // 「非 StandardTools 前缀」对所有脑区都一样：CompilerTools + ExtraTools + MCP + Memory/DNA
@@ -450,6 +458,15 @@ namespace CBIM.Mind
 
                     var outcome = await Neuron.InvokeAsync(invocation, ct).ConfigureAwait(false);
                     RefreshContextMessageCount();
+
+                    // MotorCortex：drain ToolSandbox 上累积的 SideEffects，
+                    // 替换 Neuron 默认返回的空列表（合同：工作脑必须填 NeuronOutcome.SideEffects）。
+                    if (Kind == BrainKind.MotorCortex)
+                    {
+                        var sideEffects = DrainMotorSideEffects();
+                        if (sideEffects.Count > 0)
+                            outcome = outcome.WithSideEffects(sideEffects);
+                    }
                     return outcome;
                 }
                 finally
@@ -468,6 +485,8 @@ namespace CBIM.Mind
         /// <list type="bullet">
         /// <item>沙箱：每次新建（满足 ToolSandbox「按构造期一次成型，运行期不可变」铁律——不复用旧实例，
         ///       而是每次新建 → 旧实例随旧 AIFunction 一起被 GC）；</item>
+        /// <item>新建后将引用存入 <see cref="_activeMotorSandbox"/>，
+        ///       <see cref="ExecuteInvokeAsync"/> 在 Neuron 调用结束后 drain 其 SideEffects 队列；</item>
         /// <item>白名单：<c>invocation.Modules.Select(m =&gt; m.WorkspaceRoot)</c>；</item>
         /// <item>Modules 为空 → 跳过 StandardTools 装配（结果：工作脑无文件操作能力，Q8 fail-hard）；</item>
         /// <item>WorkingDirectory：取首个 Module.WorkspaceRoot（bash 默认 cwd）。</item>
@@ -478,33 +497,76 @@ namespace CBIM.Mind
             var prefix = _motorStaticPrefix ?? Array.Empty<AITool>();
 
             var modules = invocation.Modules;
-            IReadOnlyList<string> allowed;
+            List<string> roots;
             string? workingDir;
             if (modules == null || modules.Count == 0)
             {
-                allowed = Array.Empty<string>();
+                roots = new List<string>();
                 workingDir = null;
             }
             else
             {
-                var roots = new List<string>(modules.Count);
+                roots = new List<string>(modules.Count);
                 foreach (var m in modules)
                 {
                     if (m == null) continue;
                     if (string.IsNullOrWhiteSpace(m.WorkspaceRoot)) continue;
                     roots.Add(m.WorkspaceRoot);
                 }
-                allowed = roots;
                 workingDir = roots.Count > 0 ? roots[0] : null;
             }
 
-            var standardTools = BuildStandardTools(Descriptor, allowed, workingDir);
+            // 沙箱直接在此构造（而非由 BuildStandardTools 内部构造），以便后续 ExecuteInvokeAsync
+            // drain 其 SideEffects 队列归入 NeuronOutcome。空 roots 时不建沙箱也不装工具——
+            // 与原 BuildStandardTools 的「空白名单 → 空工具集」语义保持一致。
+            IReadOnlyList<AITool> standardTools;
+            if (Descriptor.ToolIds.Count == 0 || roots.Count == 0)
+            {
+                _activeMotorSandbox = null;
+                standardTools = Array.Empty<AITool>();
+            }
+            else
+            {
+                var sandbox = new ToolSandbox(
+                    allowedPathPrefixes: roots,
+                    workingDirectory: workingDir ?? string.Empty);
+                _activeMotorSandbox = sandbox;
+                var standardFunctions = StandardTools.Build(Descriptor.ToolIds, sandbox);
+                if (standardFunctions.Count == 0)
+                {
+                    standardTools = Array.Empty<AITool>();
+                }
+                else
+                {
+                    var list = new List<AITool>(standardFunctions.Count);
+                    foreach (var fn in standardFunctions)
+                        list.Add(fn);
+                    standardTools = list;
+                }
+            }
+
             var merged = MergeTools(prefix, standardTools);
 
             if (_neuron is Neuron msai)
                 msai.ReplaceTools(merged);
             // ExternalNeuron 走外部引擎自己的工具集，不参与 StandardTools 注入——
             // 静默跳过（外部引擎沙箱由其适配层负责）。
+        }
+
+        /// <summary>
+        /// 将 <see cref="_activeMotorSandbox"/> 的 SideEffects 队列一次性出队并清空引用——
+        /// 仅在 MotorCortex 调用结束后调用。返回不可变列表（即便沙箱 null 也返回空，便于调用方直接传入 NeuronOutcome.WithSideEffects）。
+        /// </summary>
+        private IReadOnlyList<SideEffect> DrainMotorSideEffects()
+        {
+            var sandbox = _activeMotorSandbox;
+            _activeMotorSandbox = null;
+            if (sandbox == null) return Array.Empty<SideEffect>();
+
+            var drained = new List<SideEffect>();
+            while (sandbox.SideEffects.TryDequeue(out var se))
+                drained.Add(se);
+            return drained.Count == 0 ? Array.Empty<SideEffect>() : drained;
         }
 
         protected virtual void BeforeDestroy() { }

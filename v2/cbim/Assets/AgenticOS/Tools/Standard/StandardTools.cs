@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using CBIM.Kernel;
 using CBIM.Storage;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.FileSystemGlobbing;
@@ -211,6 +212,7 @@ namespace CBIM.Tools.Standard
                         string payload = content ?? string.Empty;
                         storage.WriteAtomic(full, payload);
                         int bytes = Utf8NoBom.GetByteCount(payload);
+                        RecordSideEffect(sandbox, "file.write", full, "bytes=" + bytes);
                         return "OK: wrote " + bytes + " bytes to " + full;
                     }
                     catch (UnauthorizedAccessException) { throw; }
@@ -248,6 +250,7 @@ namespace CBIM.Tools.Standard
                         string updated = existing.Substring(0, idx) + (newStr ?? string.Empty) +
                                          existing.Substring(idx + oldStr.Length);
                         storage.WriteAtomic(full, updated);
+                        RecordSideEffect(sandbox, "file.edit", full, "oldStrLen=" + oldStr.Length);
                         return "OK: replaced 1 occurrence in " + full;
                     }
                     catch (UnauthorizedAccessException) { throw; }
@@ -268,6 +271,7 @@ namespace CBIM.Tools.Standard
                         if (!File.Exists(full))
                             return "OK: file already absent: " + full;
                         File.Delete(full);
+                        RecordSideEffect(sandbox, "file.delete", full, null);
                         return "OK: deleted " + full;
                     }
                     catch (UnauthorizedAccessException) { throw; }
@@ -476,6 +480,8 @@ namespace CBIM.Tools.Standard
                             ? null : sandbox.WorkingDirectory;
                     }
 
+                    RecordSideEffect(sandbox, "bash", resolvedWorkDir ?? string.Empty, command);
+
                     ProcessStartInfo psi;
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
@@ -578,8 +584,23 @@ namespace CBIM.Tools.Standard
         private const int HeadProbeBytes    = 8 * 1024;
         private const int BashDefaultTimeoutMs = 30_000;
         private const int BashMaxTimeoutMs     = 120_000;
+        private const int SideEffectDetailMaxChars = 256;
 
         private static readonly UTF8Encoding Utf8NoBom = new UTF8Encoding(false);
+
+        /// <summary>记录一次副作用到沙箱 SideEffects 队列。Detail 超长截断到 256 字符。</summary>
+        private static void RecordSideEffect(ToolSandbox sandbox, string kind, string target, string detail)
+        {
+            if (sandbox == null) return;
+            string truncated = detail == null
+                ? null
+                : (detail.Length <= SideEffectDetailMaxChars ? detail : detail.Substring(0, SideEffectDetailMaxChars));
+            sandbox.SideEffects.Enqueue(new SideEffect(
+                Kind: kind,
+                Target: target ?? string.Empty,
+                Detail: truncated,
+                At: DateTimeOffset.UtcNow));
+        }
 
 
 #endregion

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CBIMTeam</RootNamespace>
+    <AssemblyName>AgenticTeam</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AgenticOS\AgenticOS.csproj" />
+  </ItemGroup>
+
+</Project>

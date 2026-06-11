@@ -276,6 +276,7 @@ namespace CBIM.Workflow
             public string TargetBrainId { get; set; }
             public string Intent { get; set; }
             public string StructuredInputJson { get; set; }
+            public string ModuleIdsJson { get; set; }
 
             // Branch 专属
             public string ConditionExpression { get; set; }
@@ -300,6 +301,7 @@ namespace CBIM.Workflow
                             TargetBrainId = cb.TargetBrainId,
                             Intent = cb.Intent,
                             StructuredInputJson = cb.StructuredInputJson,
+                            ModuleIdsJson = cb.ModuleIdsJson,
                         };
                     case BranchNode bn:
                         return new NodeDto
@@ -339,7 +341,9 @@ namespace CBIM.Workflow
                 switch (Kind)
                 {
                     case "CallBrain":
-                        allocated = builder.AddCallBrain(Label, TargetBrainId, Intent, StructuredInputJson);
+                        // ModuleIdsJson 为 null 时（旧档案缺字段）走 Builder 默认值 = null，
+                        // 与 CallBrainNode 构造期 fail-hard 默认（无文件操作权限）一致。
+                        allocated = builder.AddCallBrain(Label, TargetBrainId, Intent, StructuredInputJson, ModuleIdsJson);
                         break;
                     case "Branch":
                         allocated = builder.AddBranch(Label, ConditionExpression);

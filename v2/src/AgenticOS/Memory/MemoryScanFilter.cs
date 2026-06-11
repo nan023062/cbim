@@ -12,13 +12,13 @@ namespace CBIM.Memory;
 /// <param name="Since">仅返回 CreatedAt &gt;= 此时间的条目。</param>
 public sealed class MemoryScanFilter
 {
-    public string SourceEquals { get; }
-    public IReadOnlyList<string> TagsAny { get; }
+    public string? SourceEquals { get; }
+    public IReadOnlyList<string>? TagsAny { get; }
     public DateTime? Since { get; }
 
     public MemoryScanFilter(
-        string SourceEquals = null,
-        IReadOnlyList<string> TagsAny = null,
+        string? SourceEquals = null,
+        IReadOnlyList<string>? TagsAny = null,
         DateTime? Since = null)
     {
         this.SourceEquals = SourceEquals;

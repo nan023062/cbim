@@ -28,7 +28,7 @@ public sealed class SkillDescriptor
     /// <summary>技能正文（SKILL.md 风格内容，含使用指引 / 示例 / 注意事项）。可为空。</summary>
     public string Content { get; }
 
-    public SkillDescriptor(string id, string name, string description, string content = null)
+    public SkillDescriptor(string id, string name, string description, string? content = null)
     {
         if (string.IsNullOrWhiteSpace(id))
             throw new ArgumentException("Skill.Id 不能为空", nameof(id));

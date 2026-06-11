@@ -29,8 +29,8 @@ public sealed class HttpMcpDescriptor : McpDescriptor
         string name,
         string description,
         string endpoint,
-        string authToken = null,
-        IReadOnlyDictionary<string, string> headers = null)
+        string? authToken = null,
+        IReadOnlyDictionary<string, string>? headers = null)
         : base(id, name, description)
     {
         if (string.IsNullOrWhiteSpace(endpoint))

@@ -47,7 +47,7 @@ public class MotorCortexDescriptor : BrainDescriptor
         string systemPrompt,
         string name,
         string identity,
-        IReadOnlyList<string> toolIds)
+        IReadOnlyList<string>? toolIds)
         : base(brainId, systemPrompt, name, identity, toolIds: toolIds ?? DefaultWorkerToolIds)
     {
     }

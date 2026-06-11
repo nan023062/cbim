@@ -28,8 +28,8 @@ public sealed class StdioMcpDescriptor : McpDescriptor
         string name,
         string description,
         string command,
-        IReadOnlyList<string> args = null,
-        IReadOnlyDictionary<string, string> env = null)
+        IReadOnlyList<string>? args = null,
+        IReadOnlyDictionary<string, string>? env = null)
         : base(id, name, description)
     {
         if (string.IsNullOrWhiteSpace(command))

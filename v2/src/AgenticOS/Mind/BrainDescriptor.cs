@@ -92,10 +92,10 @@ public abstract class BrainDescriptor
         string name = "",
         string identity = "",
         string modelId = "",
-        IReadOnlyList<string> skillIds = null,
-        IReadOnlyList<string> workflowIds = null,
-        IReadOnlyList<string> toolIds = null,
-        IReadOnlyList<string> mcpIds = null,
+        IReadOnlyList<string>? skillIds = null,
+        IReadOnlyList<string>? workflowIds = null,
+        IReadOnlyList<string>? toolIds = null,
+        IReadOnlyList<string>? mcpIds = null,
         int? contextWindowTokens = null,
         ContextCompactionStrategy compactionStrategy = ContextCompactionStrategy.None)
     {

@@ -36,7 +36,7 @@ public sealed class ToolDescriptor
     /// <summary>该家族在本 agent 上下文中的用途简述。可为空（用家族默认描述）。</summary>
     public string Description { get; }
 
-    public ToolDescriptor(string familyName, string description = null)
+    public ToolDescriptor(string familyName, string? description = null)
     {
         if (string.IsNullOrWhiteSpace(familyName))
             throw new ArgumentException("ToolDescriptor.FamilyName 不能为空", nameof(familyName));

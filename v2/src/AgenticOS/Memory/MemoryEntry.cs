@@ -29,12 +29,12 @@ public sealed class MemoryEntry
         string Source,
         DateTime CreatedAt,
         string Text,
-        IReadOnlyList<string> Tags)
+        IReadOnlyList<string>? Tags)
     {
         this.Id = Id;
-        this.Source = Source;
+        this.Source = Source ?? string.Empty;
         this.CreatedAt = CreatedAt;
-        this.Text = Text;
-        this.Tags = Tags;
+        this.Text = Text ?? string.Empty;
+        this.Tags = Tags ?? Array.Empty<string>();
     }
 }

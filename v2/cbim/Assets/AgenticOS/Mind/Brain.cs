@@ -179,15 +179,30 @@ namespace CBIM.Mind
         private IReadOnlyList<AITool> BuildToolSet(IBrainAgent agent, BrainDescriptor descriptor)
         {
             IReadOnlyList<AITool> allTools = MergeTools(BuildCompilerTools(agent), BuildExtraTools(agent, descriptor));
-            
-            allTools = MergeTools(allTools, BuildStandardTools(descriptor));
-            
+
+            allTools = MergeTools(allTools, BuildStandardTools(descriptor, ResolveStaticAllowedPathPrefixes(agent)));
+
             allTools = MergeTools(allTools, BuildMcpTools(agent, descriptor));
-            
+
             allTools = MergeTools(allTools, BuildMemoryAndDnaTools(agent));
 
             return allTools;
         }
+
+        /// <summary>
+        /// 装配期沙箱的允许路径前缀列表——按 BrainKind 决定。
+        /// <list type="bullet">
+        /// <item>当前 Phase 1 默认：返回空——所有脑区构造期均不获得任何文件操作能力，
+        ///       PathGuard 一致以「沙箱无白名单 → 拒绝」拒掉所有调用，行为等价于改造前
+        ///       「allowedPathPrefixes=null」的全拒绝路径，但语义清晰且可被 override。</item>
+        /// <item>Phase 2.4 计划：ParietalLobe 升级为返回 <c>WorkspaceSystem.RootPath</c>，
+        ///       配合只读文件家族实现「架构脑 read-all」。</item>
+        /// <item>Phase 3 计划：MotorCortex 不走本路径——
+        ///       <see cref="ExecuteInvokeAsync"/> 按 <c>NeuronInput.Modules</c> 动态重建沙箱。</item>
+        /// </list>
+        /// </summary>
+        protected virtual IReadOnlyList<string> ResolveStaticAllowedPathPrefixes(IBrainAgent agent)
+            => Array.Empty<string>();
 
 #endregion
 
@@ -208,13 +223,35 @@ namespace CBIM.Mind
 #endregion
 
 #region StandardTools AIFunctions
-        private static IReadOnlyList<AITool> BuildStandardTools(BrainDescriptor descriptor)
+
+        /// <summary>
+        /// 装配 StandardTools（files / search / bash 家族）。
+        ///
+        /// <para>沙箱构造采用「按构造期一次成型，运行期不可变」铁律——
+        /// 当 <paramref name="allowedPathPrefixes"/> 为空，PathGuard 在每次调用都因「沙箱无白名单」拒绝，
+        /// 等价于「不给文件工具」。本方法在此情形直接返回空列表，避免向 LLM 暴露注定失败的工具入口。</para>
+        ///
+        /// <para>Phase 1：所有脑区均走构造期一次性装配；Phase 3 起 MotorCortex 改由
+        /// <see cref="ExecuteInvokeAsync"/> 按 NeuronInput.Modules 逐次重建。</para>
+        /// </summary>
+        /// <param name="descriptor">脑区描述符——决定 ToolIds 选择。</param>
+        /// <param name="allowedPathPrefixes">沙箱允许的路径前缀；空 = 拒绝全部文件操作（且立即返回空工具集）。</param>
+        /// <param name="workingDirectory">沙箱默认 workDir（bash 家族用），可为 null。</param>
+        private static IReadOnlyList<AITool> BuildStandardTools(
+            BrainDescriptor descriptor,
+            IReadOnlyList<string> allowedPathPrefixes,
+            string workingDirectory = null)
         {
             if (descriptor.ToolIds.Count == 0)
                 return Array.Empty<AITool>();
 
-            // 沙箱：默认无路径限制（宽松实例；调用方可通过子类 BuildExtraTools 替换为受限沙箱）
-            var toolSandbox = new ToolSandbox(allowedPathPrefixes: null);
+            // 空白名单 → 直接返回空工具集（语义对齐 Phase 1 修复）
+            if (allowedPathPrefixes == null || allowedPathPrefixes.Count == 0)
+                return Array.Empty<AITool>();
+
+            var toolSandbox = new ToolSandbox(
+                allowedPathPrefixes: allowedPathPrefixes,
+                workingDirectory: workingDirectory ?? string.Empty);
             var standardFunctions = StandardTools.Build(descriptor.ToolIds, toolSandbox);
             if (standardFunctions.Count == 0)
                 return Array.Empty<AITool>();
@@ -272,8 +309,11 @@ namespace CBIM.Mind
         {
             var permTools = new List<AITool>();
 
-            // DNA 工具：所有脑区只读；仅架构脑 ParietalLobe 升级为读写（写权限按 BrainKind 写死）
-            if (agent.Os.Workspace != null)
+            // DNA 工具：按 BrainKind 三档分发——
+            //   ParietalLobe（架构脑）→ 读+写
+            //   Hippocampus（记忆脑）→ 完全无 DNA 权限（不分配任何 dna_* 工具）
+            //   其它（PrefrontalCortex / MotorCortex）→ 只读
+            if (agent.Os.Workspace != null && Kind != BrainKind.Hippocampus)
             {
                 var dnaToolList = Kind == BrainKind.ParietalLobe
                     ? agent.Os.Workspace.ReadWriteDnaTools

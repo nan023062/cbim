@@ -20,12 +20,23 @@ namespace CBIM.Kernel
         /// <summary>可选 JSON 载荷——透传给 <c>BrainInvocation.StructuredInput</c>；不需要时为 null。</summary>
         public string? StructuredInputJson { get; }
 
+        /// <summary>
+        /// 本次派发的 Module Id JSON 字符串数组（例 <c>"[\"src/combat\",\"src/ui\"]"</c>）。
+        ///
+        /// <para>语义对齐 synapse 工具的 <c>moduleIdsJson</c> 参数：工作脑用其重建文件沙箱白名单；
+        /// 非工作脑忽略；null / 空数组 → 工作脑无文件操作权限（Q8 fail-hard）。
+        /// 编译期由 LLM 通过 <c>__circuit_add_call_brain</c> 透传，执行期由
+        /// <c>BrainCallExecutor</c> + <see cref="CBIM.Workspace.ModuleResolver"/> 解析为活动 Module。</para>
+        /// </summary>
+        public string? ModuleIdsJson { get; }
+
         public CallBrainNode(
             string nodeId,
             string label,
             string targetBrainId,
             string intent,
-            string? structuredInputJson)
+            string? structuredInputJson,
+            string? moduleIdsJson = null)
             : base(nodeId, label)
         {
             if (string.IsNullOrWhiteSpace(targetBrainId))
@@ -36,6 +47,7 @@ namespace CBIM.Kernel
             TargetBrainId = targetBrainId;
             Intent = intent;
             StructuredInputJson = structuredInputJson;
+            ModuleIdsJson = moduleIdsJson;
         }
     }
 }

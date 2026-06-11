@@ -37,11 +37,11 @@ namespace CBIM.Kernel
         }
 
         /// <summary>添加 CallBrain 节点——返回新节点 Id（首次调用即 StartNodeId）。</summary>
-        public string AddCallBrain(string label, string targetBrainId, string intent, string? structuredInputJson)
+        public string AddCallBrain(string label, string targetBrainId, string intent, string? structuredInputJson, string? moduleIdsJson = null)
         {
             EnsureMutable();
             var nodeId = AllocateNodeId();
-            var node = new CallBrainNode(nodeId, label, targetBrainId, intent, structuredInputJson);
+            var node = new CallBrainNode(nodeId, label, targetBrainId, intent, structuredInputJson, moduleIdsJson);
             _nodes.Add(node);
             _nodeIndex.Add(nodeId, node);
             return nodeId;

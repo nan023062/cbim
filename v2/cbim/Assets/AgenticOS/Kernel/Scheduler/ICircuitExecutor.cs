@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿#nullable enable
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using CBIM.Workspace;
 using Microsoft.Extensions.AI;
 
 namespace CBIM.Kernel
@@ -15,6 +17,7 @@ namespace CBIM.Kernel
             IBrainLookup brainLookup,
             IPrefrontalCallback callback,
             CancellationToken ct = default,
-            IReadOnlyDictionary<string, AIFunction> toolRegistry = null);
+            IReadOnlyDictionary<string, AIFunction>? toolRegistry = null,
+            WorkspaceSystem? workspace = null);
     }
 }

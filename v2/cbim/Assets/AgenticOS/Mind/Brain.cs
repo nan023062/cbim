@@ -429,7 +429,10 @@ namespace CBIM.Mind
                 _builder = null;
                 // 若本脑区实现了 IPrefrontalCallback，以 this 作为 callback；否则用空实现
                 var callback = (this as IPrefrontalCallback) ?? NullPrefrontalCallback.Instance;
-                return await _executor.RunAsync(circuit, (IBrainLookup)Agent, callback, ct).ConfigureAwait(false);
+                // 传 Workspace —— 让 BrainCallExecutor 在 NodeIR 里的 ModuleIdsJson 解析为活动 Module，
+                // 与 SynapseToolFactory 路径完全对称（避免 compiled-circuit 派发的工作脑无文件权限）。
+                var workspace = Agent?.Os?.Workspace;
+                return await _executor.RunAsync(circuit, (IBrainLookup)Agent, callback, ct, toolRegistry: null, workspace: workspace).ConfigureAwait(false);
             }
             else
             {

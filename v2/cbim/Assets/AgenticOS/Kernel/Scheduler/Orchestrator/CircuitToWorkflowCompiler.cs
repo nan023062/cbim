@@ -1,6 +1,8 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using CBIM.Workspace;
 using Microsoft.Agents.AI.Workflows;
 using Microsoft.Extensions.AI;
 
@@ -16,7 +18,8 @@ namespace CBIM.Kernel
             NeuralCircuit circuit,
             IBrainLookup brainLookup,
             IPrefrontalCallback callback,
-            IReadOnlyDictionary<string, AIFunction> toolRegistry)
+            IReadOnlyDictionary<string, AIFunction> toolRegistry,
+            WorkspaceSystem? workspace = null)
         {
             if (circuit == null)
                 throw new ArgumentNullException(nameof(circuit));
@@ -35,7 +38,7 @@ namespace CBIM.Kernel
                     $"StartNodeId='{circuit.StartNodeId}' 不在 NeuralCircuit.Nodes 中。");
             }
 
-            var startExecutor = BuildExecutor(startNode, brainLookup, callback, toolRegistry);
+            var startExecutor = BuildExecutor(startNode, brainLookup, callback, toolRegistry, workspace);
             var builder = new WorkflowBuilder(startExecutor);
 
             var executorMap = new Dictionary<string, Executor>(StringComparer.Ordinal)
@@ -48,7 +51,7 @@ namespace CBIM.Kernel
                 if (node.NodeId == circuit.StartNodeId)
                     continue;
 
-                var executor = BuildExecutor(node, brainLookup, callback, toolRegistry);
+                var executor = BuildExecutor(node, brainLookup, callback, toolRegistry, workspace);
                 builder.BindExecutor(executor);
                 executorMap[node.NodeId] = executor;
             }
@@ -104,7 +107,8 @@ namespace CBIM.Kernel
             CircuitNode node,
             IBrainLookup brainLookup,
             IPrefrontalCallback callback,
-            IReadOnlyDictionary<string, AIFunction> toolRegistry)
+            IReadOnlyDictionary<string, AIFunction> toolRegistry,
+            WorkspaceSystem? workspace)
         {
             switch (node)
             {
@@ -114,7 +118,7 @@ namespace CBIM.Kernel
                         ?? throw new CircuitExecutionException(
                             callBrain.NodeId,
                             $"CallBrainNode.TargetBrainId='{callBrain.TargetBrainId}' 在 Agent 中找不到对应脑区。");
-                    return new BrainCallExecutor(callBrain.NodeId, callBrain, invocable, callback);
+                    return new BrainCallExecutor(callBrain.NodeId, callBrain, invocable, callback, workspace);
                 }
 
                 case BranchNode branch:

@@ -202,7 +202,11 @@ namespace CBIM.Kernel
                 [Description("Natural-language task description for the target brain.")]
                 string intent,
                 [Description("Optional JSON-serialized structured payload; pass null when not needed.")]
-                string? structuredInputJson)
+                string? structuredInputJson,
+                [Description("Module ids for this dispatch as a JSON string array (e.g. '[\"src/combat\",\"src/ui\"]'). " +
+                             "Worker brains use these to scope their filesystem sandbox; non-worker brains ignore. " +
+                             "Pass null or '[]' when no module scope is required (workers will get NO file access).")]
+                string? moduleIdsJson)
             {
                 var builder = ResolveBuilder(_context);
                 if (!_callableBrainIds.Contains(targetBrainId ?? string.Empty))
@@ -215,7 +219,7 @@ namespace CBIM.Kernel
                 }
                 try
                 {
-                    return builder.AddCallBrain(label, targetBrainId, intent, structuredInputJson);
+                    return builder.AddCallBrain(label, targetBrainId, intent, structuredInputJson, moduleIdsJson);
                 }
                 catch (ArgumentException ex)
                 {

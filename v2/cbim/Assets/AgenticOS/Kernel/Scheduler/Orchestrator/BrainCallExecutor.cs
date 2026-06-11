@@ -1,7 +1,9 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using CBIM.Workspace;
 using Microsoft.Agents.AI.Workflows;
 
 namespace CBIM.Kernel
@@ -15,12 +17,14 @@ namespace CBIM.Kernel
         private readonly CallBrainNode _node;
         private readonly IInvocable _brain;
         private readonly IPrefrontalCallback _callback;
+        private readonly WorkspaceSystem? _workspace;
 
         public BrainCallExecutor(
             string nodeId,
             CallBrainNode node,
             IInvocable brain,
-            IPrefrontalCallback callback)
+            IPrefrontalCallback callback,
+            WorkspaceSystem? workspace = null)
             : base(nodeId)
         {
             if (string.IsNullOrWhiteSpace(nodeId))
@@ -36,6 +40,7 @@ namespace CBIM.Kernel
             _node = node;
             _brain = brain;
             _callback = callback;
+            _workspace = workspace;
         }
 
         public override async ValueTask HandleAsync(
@@ -53,11 +58,16 @@ namespace CBIM.Kernel
                 ["previous"] = message.LastSummary,
             };
 
+            // 通过共享的 ModuleResolver 解析 ModuleIdsJson → 活动 Module 列表，
+            // 与 SynapseToolFactory 走同一份语义；workspace == null 时（降级 / 测试）退化为空列表。
+            var modules = ModuleResolver.Resolve(_node.ModuleIdsJson, _workspace);
+
             var invocation = new NeuronInput(
                 CorrelationId: Guid.NewGuid().ToString(),
                 Intent: _node.Intent,
                 StructuredInput: _node.StructuredInputJson,
-                Context: invocationContext);
+                Context: invocationContext,
+                Modules: modules);
 
             NeuronOutcome outcome;
             try

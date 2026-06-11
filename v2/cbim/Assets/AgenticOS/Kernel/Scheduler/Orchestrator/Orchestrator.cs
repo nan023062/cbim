@@ -1,7 +1,9 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using CBIM.Workspace;
 using Microsoft.Agents.AI.Workflows;
 using Microsoft.Extensions.AI;
 
@@ -21,7 +23,8 @@ namespace CBIM.Kernel
             IBrainLookup brainLookup,
             IPrefrontalCallback callback,
             CancellationToken ct = default,
-            IReadOnlyDictionary<string, AIFunction> toolRegistry = null)
+            IReadOnlyDictionary<string, AIFunction>? toolRegistry = null,
+            WorkspaceSystem? workspace = null)
         {
             if (circuit == null)
                 throw new ArgumentNullException(nameof(circuit));
@@ -39,7 +42,7 @@ namespace CBIM.Kernel
             var resolvedToolRegistry = toolRegistry
                 ?? new Dictionary<string, AIFunction>(StringComparer.Ordinal);
 
-            var workflow = CircuitToWorkflowCompiler.Compile(circuit, brainLookup, callback, resolvedToolRegistry);
+            var workflow = CircuitToWorkflowCompiler.Compile(circuit, brainLookup, callback, resolvedToolRegistry, workspace);
 
             var startMessage = new CircuitMessage(
                 circuitId: circuit.CircuitId,

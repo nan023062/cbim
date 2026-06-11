@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using CBIM.Mind;
+using CBIM.Workspace;
 using Microsoft.Extensions.AI;
 
 namespace CBIM.Kernel
@@ -103,7 +103,7 @@ namespace CBIM.Kernel
                 if (!string.IsNullOrEmpty(context))
                     ctxDict["ctx"] = context!;
 
-                var modules = ResolveModuleIds(moduleIdsJson, _agent);
+                var modules = ModuleResolver.Resolve(moduleIdsJson, _agent?.Os?.Workspace);
 
                 var invocation = new NeuronInput(
                     CorrelationId: Guid.NewGuid().ToString("N"),
@@ -121,51 +121,5 @@ namespace CBIM.Kernel
             }
         }
 
-        /// <summary>
-        /// 把 LLM 给的 JSON 字符串数组解析为已激活的 Module 实例清单。
-        ///
-        /// <para>规则：
-        /// <list type="bullet">
-        /// <item>null / 空白 / 解析失败 → 返回空列表（工作脑因此无文件权限，符合 Q8 fail-hard）；</item>
-        /// <item>每个 id 必须命中 <c>Workspace.GetDescription</c>，否则跳过该项（不静默接收陌生 id）；</item>
-        /// <item>每个命中 description 用 <c>OpenInstance</c> 激活一个新 Module 实例，工作区根 = <c>RootPath/id</c>；</item>
-        /// <item>activatedByTaskId 暂传 null——记账需求上层未定。</item>
-        /// </list></para>
-        /// </summary>
-        private static IReadOnlyList<CBIM.Workspace.Module> ResolveModuleIds(string? moduleIdsJson, IBrainAgent agent)
-        {
-            if (string.IsNullOrWhiteSpace(moduleIdsJson))
-                return Array.Empty<CBIM.Workspace.Module>();
-
-            string[]? ids;
-            try
-            {
-                ids = JsonSerializer.Deserialize<string[]>(moduleIdsJson);
-            }
-            catch (JsonException)
-            {
-                return Array.Empty<CBIM.Workspace.Module>();
-            }
-            if (ids == null || ids.Length == 0)
-                return Array.Empty<CBIM.Workspace.Module>();
-
-            var ws = agent?.Os?.Workspace;
-            if (ws == null) return Array.Empty<CBIM.Workspace.Module>();
-
-            var rootPath = ws.RootPath;
-            var resolved = new List<CBIM.Workspace.Module>(ids.Length);
-            foreach (var raw in ids)
-            {
-                if (string.IsNullOrWhiteSpace(raw)) continue;
-                string id = raw.Trim();
-                if (!ws.ContainsDescription(id)) continue;
-                string moduleRoot = string.Equals(id, ".", StringComparison.Ordinal)
-                    ? rootPath
-                    : System.IO.Path.GetFullPath(System.IO.Path.Combine(rootPath, id));
-                var instance = ws.OpenInstance(id, moduleRoot, activatedByTaskId: null);
-                resolved.Add(instance);
-            }
-            return resolved;
-        }
     }
 }

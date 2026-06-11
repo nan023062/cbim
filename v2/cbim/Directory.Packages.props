@@ -1,0 +1,63 @@
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <!--
+    NuGet pin set for the CBIM native-.NET migration.
+
+    Anchor: Microsoft.Agents.AI 1.10.0 (latest stable at time of migration).
+    1.10.0's nuspec for net8.0 declares Microsoft.Extensions.AI = 10.6.0 — we pin
+    that exact version to avoid NU1605 transitive downgrade noise. The OpenAI /
+    Anthropic SDK majors are tracked at their latest stable tags; the Anthropic
+    Microsoft.Agents.AI bridge ships preview-only (no stable tag yet) so we
+    pin its latest preview to stay on the same 1.x agent-framework train.
+  -->
+  <ItemGroup>
+    <!-- Agent framework core -->
+    <PackageVersion Include="Microsoft.Agents.AI" Version="1.10.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.Abstractions" Version="1.10.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.10.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.Anthropic" Version="1.10.0-preview.260610.1" />
+    <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.10.0" />
+
+    <!-- IChatClient layer -->
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.6.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.6.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.6.0" />
+
+    <!-- LLM provider SDKs -->
+    <PackageVersion Include="OpenAI" Version="2.11.0" />
+    <PackageVersion Include="Anthropic" Version="12.29.0" />
+
+    <!-- MCP -->
+    <PackageVersion Include="ModelContextProtocol" Version="1.4.0" />
+    <PackageVersion Include="ModelContextProtocol.Core" Version="1.4.0" />
+
+    <!-- Microsoft.Extensions.* (transitive but pin explicitly to silence NU1605) -->
+    <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.Extensions.Primitives" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
+    <PackageVersion Include="System.ClientModel" Version="1.14.0" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.8" />
+
+    <!-- CLI -->
+    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+
+    <!-- Test stack -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.1" />
+    <PackageVersion Include="FluentAssertions" Version="7.2.0" />
+  </ItemGroup>
+
+</Project>

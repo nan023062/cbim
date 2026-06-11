@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CBIM</RootNamespace>
+    <AssemblyName>AgenticOS</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!--
+    Microsoft Agent Framework — core abstractions + concrete bridges.
+    The OpenAI / Anthropic provider packages drag the OpenAI / Anthropic
+    SDKs in transitively; we keep them as explicit references here for
+    clarity (this is the file someone reads to know what CBIM rests on).
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Agents.AI.Abstractions" />
+    <PackageReference Include="Microsoft.Agents.AI.OpenAI" />
+    <PackageReference Include="Microsoft.Agents.AI.Anthropic" />
+    <PackageReference Include="Microsoft.Agents.AI.Workflows" />
+
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
+
+    <PackageReference Include="OpenAI" />
+    <PackageReference Include="Anthropic" />
+
+    <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
+
+    <!-- MCP — folded into AgenticOS (was Assets/AgenticOS.Mcp) -->
+    <PackageReference Include="ModelContextProtocol" />
+    <PackageReference Include="ModelContextProtocol.Core" />
+  </ItemGroup>
+
+</Project>

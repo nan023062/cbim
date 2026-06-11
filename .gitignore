@@ -30,3 +30,20 @@ obj/
 CLAUDE.md
 .mcp.json
 .claudeignore
+
+# v2 native-.NET tree: track sources/configs but ignore build artefacts
+!v2/src/**/*.csproj
+!v2/src/cbim.sln
+!v2/src/Directory.Build.props
+!v2/src/Directory.Packages.props
+!v2/src/nuget.config
+!v2/src/global.json
+!v2/src/.editorconfig
+v2/src/**/bin/
+v2/src/**/obj/
+
+# Engine behavior-tree resume scratch
+.bt-resume-payload*.txt
+
+# JetBrains Rider IDE config — never tracked
+.idea/

@@ -174,9 +174,9 @@ namespace CBIM.Workspace
         /// <item>Metadata = <see cref="LocalModuleMetadata"/> 指向 <c>module.md</c>（即便缺失也注册描述符）。</item>
         /// </list></para>
         ///
-        /// <para>NEEDS_ARCH_DECISION（次要）：当前未读取 module.md frontmatter——
-        /// 模块 Id 完全由路径推导，与 v1 Python 端「模块 Id 来自 frontmatter」可能错位。
-        /// 待 IDnaService 决定后改为读 frontmatter。</para>
+        /// <para>模块 Id 由路径推导，不读 module.md frontmatter——与 v1 Python 内核保持一致
+        /// （v1 同样以路径为键）。frontmatter 中的 <c>name</c> 字段是面向人类阅读的标签，
+        /// 而非寻址主键；路径作为唯一键更稳定（文件系统不允许重复路径，frontmatter 可能漂移 / 撞名）。</para>
         /// </summary>
         public static IEnumerable<ModuleDescription> DiscoverModules(string rootPath)
         {

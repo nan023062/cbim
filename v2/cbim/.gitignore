@@ -9,3 +9,6 @@
 # Build artefacts under src/
 src/**/bin/
 src/**/obj/
+
+# Engine behavior-tree resume scratch
+.bt-resume-payload*.txt

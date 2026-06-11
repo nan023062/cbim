@@ -566,7 +566,7 @@ namespace CBIM.Mind
             var drained = new List<SideEffect>();
             while (sandbox.SideEffects.TryDequeue(out var se))
                 drained.Add(se);
-            return drained.Count == 0 ? Array.Empty<SideEffect>() : drained;
+            return drained.Count == 0 ? Array.Empty<SideEffect>() : (IReadOnlyList<SideEffect>)drained;
         }
 
         protected virtual void BeforeDestroy() { }

@@ -33,8 +33,8 @@ public sealed class ToolSandbox
         string workingDirectory = "",
         long maxFileBytes = 10L * 1024 * 1024,
         long maxResultBytes = 10L * 1024 * 1024,
-        IReadOnlyList<string> blockedExtensions = null,
-        IReadOnlyList<string> webAllowedHosts = null)
+        IReadOnlyList<string>? blockedExtensions = null,
+        IReadOnlyList<string>? webAllowedHosts = null)
     {
         AllowedPathPrefixes = allowedPathPrefixes ?? new string[0];
         WorkingDirectory = workingDirectory ?? string.Empty;

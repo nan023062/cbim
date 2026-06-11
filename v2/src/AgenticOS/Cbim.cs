@@ -224,7 +224,7 @@ public sealed class Cbim : IDisposable
         if (string.IsNullOrWhiteSpace(sessionId))
             return Task.CompletedTask;
 
-        Session session;
+        Session? session;
         lock (_sessionLock)
         {
             _sessions.TryGetValue(sessionId, out session);

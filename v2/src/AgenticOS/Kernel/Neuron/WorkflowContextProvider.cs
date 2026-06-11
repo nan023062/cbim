@@ -54,7 +54,7 @@ public sealed class WorkflowContextProvider : AIContextProvider
             if (string.IsNullOrWhiteSpace(id))
                 continue;
 
-            WorkflowDescriptor workflow =
+            WorkflowDescriptor? workflow =
                 await _workflowStore.GetAsync(id, cancellationToken).ConfigureAwait(false);
             if (workflow == null)
                 continue;

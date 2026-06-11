@@ -318,7 +318,7 @@ public sealed class FileMcpStore
             string name = GetRequiredString(root, "name");
             string description = GetRequiredString(root, "description");
             string endpoint = GetRequiredString(root, "endpoint");
-            string authToken = GetOptionalString(root, "authToken");
+            string? authToken = GetOptionalString(root, "authToken");
             var headers = ReadStringMap(root, "headers");
 
             return new HttpMcpDescriptor(id, name, description, endpoint, authToken, headers);

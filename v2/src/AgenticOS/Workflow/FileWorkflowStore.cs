@@ -145,7 +145,7 @@ public sealed class FileWorkflowStore
 
     private WorkflowDescriptor? TryLoadEntry(string path)
     {
-        string json = _storage.ReadOrNull(path);
+        string? json = _storage.ReadOrNull(path);
         if (string.IsNullOrEmpty(json))
             return null;
 

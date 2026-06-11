@@ -95,7 +95,7 @@ public sealed class RemoteModuleMetadata : ModuleMetadata
 
     public override string Location => Endpoint;
 
-    public RemoteModuleMetadata(string endpoint, string authToken = null)
+    public RemoteModuleMetadata(string endpoint, string? authToken = null)
     {
         if (string.IsNullOrWhiteSpace(endpoint))
             throw new ArgumentException("RemoteModuleMetadata.Endpoint 不能为空", nameof(endpoint));

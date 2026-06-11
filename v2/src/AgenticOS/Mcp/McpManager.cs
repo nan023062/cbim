@@ -123,7 +123,7 @@ public sealed class McpManager : IDisposable
         if (string.IsNullOrEmpty(brainId))
             return;
 
-        IStartedMcpClient toDispose = null;
+        IStartedMcpClient? toDispose = null;
 
         lock (_gate)
         {

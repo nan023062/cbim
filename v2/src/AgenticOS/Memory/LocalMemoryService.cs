@@ -103,7 +103,7 @@ public sealed class LocalMemoryService : IMemoryService
     }
 
     /// <inheritdoc />
-    public MemoryEntry Get(string id)
+    public MemoryEntry? Get(string id)
     {
         if (string.IsNullOrWhiteSpace(id))
             return null;

@@ -12,8 +12,8 @@ public class MotorCortex : Brain
 {
     public sealed override BrainKind Kind => BrainKind.MotorCortex;
 
-    public MotorCortex(IBrainAgent agent, ChatClientFactory chatClientFactory, MotorCortexDescriptor descriptor)
-        : base(agent, chatClientFactory, descriptor)
+    public MotorCortex(IBrainAgent agent, MotorCortexDescriptor descriptor)
+        : base(agent, descriptor)
     {
     }
 }

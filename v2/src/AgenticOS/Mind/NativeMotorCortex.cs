@@ -13,8 +13,8 @@ public sealed class NativeMotorCortex : MotorCortex
     /// <summary>本脑区的固定 BrainId 前缀常量。</summary>
     public const string DefaultBrainId = "motor-cortex.native";
 
-    public NativeMotorCortex(IBrainAgent agent, ChatClientFactory chatClientFactory, NativeMotorCortexDescriptor descriptor)
-        : base(agent, chatClientFactory, descriptor)
+    public NativeMotorCortex(IBrainAgent agent, NativeMotorCortexDescriptor descriptor)
+        : base(agent, descriptor)
     {
     }
 }

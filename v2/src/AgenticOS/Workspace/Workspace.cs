@@ -327,14 +327,14 @@ public sealed class WorkspaceSystem
             throw new ArgumentException("name 不能为空", nameof(name));
         if (string.IsNullOrWhiteSpace(owner))
             throw new ArgumentException("owner 不能为空", nameof(owner));
-        if (Array.IndexOf(DnaFrontmatter.KindValues, kind) < 0)
+        if (Array.IndexOf(DnaFormatter.KindValues, kind) < 0)
             throw new ArgumentException(
                 $"kind 必须为 {{root, parent, leaf}} 之一；得到：{kind}", nameof(kind));
 
         string finalStatus = string.IsNullOrWhiteSpace(status)
             ? (kind == "root" ? "implemented" : "spec")
             : status;
-        if (Array.IndexOf(DnaFrontmatter.StatusValues, finalStatus) < 0)
+        if (Array.IndexOf(DnaFormatter.StatusValues, finalStatus) < 0)
             throw new ArgumentException(
                 $"status 必须为 {{spec, planned, implemented}} 之一；得到：{finalStatus}", nameof(status));
 
@@ -354,14 +354,14 @@ public sealed class WorkspaceSystem
             meta["description"] = description;
         meta["keywords"] = new List<object>();
         meta["dependencies"] = new List<object>();
-        DnaFrontmatter.ValidateMandatory(meta);
+        DnaFormatter.ValidateMandatory(meta);
 
         Directory.CreateDirectory(moduleDir);
         Directory.CreateDirectory(dnaDir);
 
         string body = string.Join("\n",
             kind == "leaf" ? LeafBodyTemplate : ParentBodyTemplate);
-        string moduleMd = DnaFrontmatter.Render(meta) + body;
+        string moduleMd = DnaFormatter.Render(meta) + body;
         WriteAtomic(Path.Combine(dnaDir, "module.md"), moduleMd);
 
         if (withContract)
@@ -450,8 +450,8 @@ public sealed class WorkspaceSystem
             throw new FileNotFoundException($"源模块缺少 .dna/module.md：{sourceMd}");
 
         string sourceRaw = File.ReadAllText(sourceMd, Utf8NoBom);
-        var sourceMeta = DnaFrontmatter.Parse(sourceRaw);
-        string sourceBody = DnaFrontmatter.StripFrontmatter(sourceRaw);
+        var sourceMeta = DnaFormatter.Parse(sourceRaw);
+        string sourceBody = DnaFormatter.StripFrontmatter(sourceRaw);
         string sourceOwner = sourceMeta.TryGetValue("owner", out var ov) ? ov?.ToString() ?? "" : "";
         string sourceRel = MakeRelative(RootPath, sourceDir);
 
@@ -491,8 +491,8 @@ public sealed class WorkspaceSystem
         }
 
         // -- 2. 校验 H2 标题在源 body 中存在 --
-        var sections = DnaFrontmatter.SplitSections(sourceBody);
-        var h2Index = new Dictionary<string, DnaFrontmatter.Section>(StringComparer.Ordinal);
+        var sections = DnaFormatter.SplitSections(sourceBody);
+        var h2Index = new Dictionary<string, DnaFormatter.Section>(StringComparer.Ordinal);
         foreach (var s in sections)
             if (s.Level == 2)
                 h2Index[s.Heading] = s;
@@ -502,7 +502,7 @@ public sealed class WorkspaceSystem
                 $"源模块缺少必备 H2 标题：[{string.Join(", ", missing)}]");
 
         // -- 3. 抽取每个标题对应的行块 --
-        var bodyLines = DnaFrontmatter.ToLineList(sourceBody);
+        var bodyLines = DnaFormatter.ToLineList(sourceBody);
         var extracted = new Dictionary<string, List<string>>(StringComparer.Ordinal);
         foreach (var h in requestedHeadings)
         {
@@ -545,7 +545,7 @@ public sealed class WorkspaceSystem
             newSourceLines.RemoveAt(newSourceLines.Count - 1);
         string newSourceBody = newSourceLines.Count == 0 ? "" : string.Join("\n", newSourceLines) + "\n";
 
-        var (sourceFmBlock, _) = DnaFrontmatter.Split(sourceRaw);
+        var (sourceFmBlock, _) = DnaFormatter.Split(sourceRaw);
         string newSourceText = sourceFmBlock.Length > 0
             ? sourceFmBlock + "\n" + newSourceBody
             : newSourceBody;
@@ -758,14 +758,14 @@ public sealed class WorkspaceSystem
             {
                 throw new ArgumentException("payload.value_list 必须是数组类型");
             }
-            if (DnaFrontmatter.ListFields.Contains(field) == false && copied.Count == 0)
+            if (DnaFormatter.ListFields.Contains(field) == false && copied.Count == 0)
                 throw new ArgumentException(
                     $"字段 '{field}' 非 list 类型，无法用空数组清空");
             newValue = copied;
         }
         else
         {
-            if (DnaFrontmatter.ListFields.Contains(field))
+            if (DnaFormatter.ListFields.Contains(field))
                 throw new ArgumentException(
                     $"字段 '{field}' 是 list 类型，必须用 payload.value_list");
             // hasScalar above guarantees scalar != null at this point.
@@ -777,7 +777,7 @@ public sealed class WorkspaceSystem
             if (hasList)
                 throw new ArgumentException("'status' 是标量枚举，请用 payload.value");
             string sv = scalar?.ToString() ?? string.Empty;
-            if (Array.IndexOf(DnaFrontmatter.StatusValues, sv) < 0)
+            if (Array.IndexOf(DnaFormatter.StatusValues, sv) < 0)
                 throw new ArgumentException(
                     $"status 必须为 {{spec, planned, implemented}} 之一；得到：{sv}");
         }
@@ -786,18 +786,18 @@ public sealed class WorkspaceSystem
             if (hasList)
                 throw new ArgumentException("'kind' 是标量枚举，请用 payload.value");
             string kv = scalar?.ToString() ?? string.Empty;
-            if (Array.IndexOf(DnaFrontmatter.KindValues, kv) < 0)
+            if (Array.IndexOf(DnaFormatter.KindValues, kv) < 0)
                 throw new ArgumentException(
                     $"kind 必须为 {{root, parent, leaf}} 之一；得到：{kv}");
         }
 
         string raw = File.ReadAllText(moduleMd, Utf8NoBom);
-        var meta = DnaFrontmatter.Parse(raw);
-        string body = DnaFrontmatter.StripFrontmatter(raw);
+        var meta = DnaFormatter.Parse(raw);
+        string body = DnaFormatter.StripFrontmatter(raw);
         meta[field] = newValue;
-        DnaFrontmatter.ValidateMandatory(meta);
+        DnaFormatter.ValidateMandatory(meta);
 
-        string newText = DnaFrontmatter.Render(meta) + "\n" + body + "\n";
+        string newText = DnaFormatter.Render(meta) + "\n" + body + "\n";
         WriteAtomic(moduleMd, newText);
         return Path.GetFullPath(moduleMd);
     }
@@ -809,7 +809,7 @@ public sealed class WorkspaceSystem
         string content = c.ToString() ?? string.Empty;
 
         string raw = File.Exists(moduleMd) ? File.ReadAllText(moduleMd, Utf8NoBom) : "";
-        var (fmBlock, _) = DnaFrontmatter.Split(raw);
+        var (fmBlock, _) = DnaFormatter.Split(raw);
         string bodyText = content.EndsWith("\n", StringComparison.Ordinal) ? content : content + "\n";
         string newText = fmBlock.Length > 0 ? fmBlock + "\n" + bodyText : bodyText;
         WriteAtomic(moduleMd, newText);
@@ -868,9 +868,9 @@ public sealed class WorkspaceSystem
             && cmObj is bool cm && cm;
 
         string raw = File.ReadAllText(filePath, Utf8NoBom);
-        var (fmBlock, body) = DnaFrontmatter.Split(raw);
-        var lines = DnaFrontmatter.ToLineList(body);
-        var sections = DnaFrontmatter.SplitSections(body);
+        var (fmBlock, body) = DnaFormatter.Split(raw);
+        var lines = DnaFormatter.ToLineList(body);
+        var sections = DnaFormatter.SplitSections(body);
         var matches = sections.Where(s => s.Level == level && s.Heading == heading).ToList();
 
         if (matches.Count > 1)
@@ -879,7 +879,7 @@ public sealed class WorkspaceSystem
 
         // needsContent 上方已校验 content != null，可安全断言。
         List<string> contentLines = needsContent
-            ? DnaFrontmatter.NormalizeContentLines(content!)
+            ? DnaFormatter.NormalizeContentLines(content!)
             : new List<string>();
 
         if (matches.Count == 0)
@@ -989,7 +989,7 @@ public sealed class WorkspaceSystem
             try
             { raw = File.ReadAllText(mm, Utf8NoBom); }
             catch { continue; }
-            var meta = DnaFrontmatter.Parse(raw);
+            var meta = DnaFormatter.Parse(raw);
             if (!meta.TryGetValue("dependencies", out var deps))
                 continue;
             if (!(deps is List<object> list))

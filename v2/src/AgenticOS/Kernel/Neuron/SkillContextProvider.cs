@@ -54,7 +54,7 @@ public sealed class SkillContextProvider : AIContextProvider
             if (string.IsNullOrWhiteSpace(id))
                 continue;
 
-            SkillDescriptor skill = _skillStore.Get(id);
+            SkillDescriptor? skill = _skillStore.Get(id);
             if (skill == null)
                 continue;
 

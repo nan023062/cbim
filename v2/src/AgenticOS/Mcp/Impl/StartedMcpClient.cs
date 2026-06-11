@@ -16,7 +16,7 @@ namespace CBIM.Mcp;
 /// </summary>
 internal sealed class StartedMcpClient : IStartedMcpClient
 {
-    private McpClient _client;
+    private McpClient? _client;
 
     public StartedMcpClient(McpClient client, IReadOnlyList<object> aiFunctions)
     {

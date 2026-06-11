@@ -37,7 +37,7 @@ public class FileBackend
             }
         }
 
-        string parent = Path.GetDirectoryName(full);
+        string? parent = Path.GetDirectoryName(full);
         if (!string.IsNullOrEmpty(parent) && !Directory.Exists(parent))
         {
             Directory.CreateDirectory(parent);
@@ -60,7 +60,7 @@ public class FileBackend
         }
     }
 
-    public string ReadOrNull(string path)
+    public string? ReadOrNull(string path)
     {
         if (!File.Exists(path))
         {
@@ -97,7 +97,7 @@ public class FileBackend
 
     private static void EnsureParent(string path)
     {
-        string parent = Path.GetDirectoryName(path);
+        string? parent = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(parent) && !Directory.Exists(parent))
         {
             Directory.CreateDirectory(parent);

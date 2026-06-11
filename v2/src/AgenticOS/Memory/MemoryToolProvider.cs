@@ -150,7 +150,7 @@ public static class MemoryToolProvider
         public string Invoke()
         {
             var s = _memory.Stats();
-            return JsonSerializer.Serialize(new Dictionary<string, object>
+            return JsonSerializer.Serialize(new Dictionary<string, object?>
             {
                 { "totalEntries", s.TotalEntries },
                 { "oldestCreatedAt", s.OldestCreatedAt?.ToString("o") },
@@ -180,7 +180,7 @@ public static class MemoryToolProvider
             [Description("Comma-separated tag list; OR within; pass null to skip.")] string tagsAny,
             [Description("ISO-8601 timestamp; pass null to skip.")] string sinceIso8601)
         {
-            IReadOnlyList<string> tags = null;
+            IReadOnlyList<string>? tags = null;
             if (!string.IsNullOrWhiteSpace(tagsAny))
             {
                 var raw = tagsAny.Split(',');

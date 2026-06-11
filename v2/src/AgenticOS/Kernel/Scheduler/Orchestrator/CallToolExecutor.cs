@@ -66,7 +66,7 @@ internal sealed class CallToolExecutor : Executor<CircuitMessage>
                 var parsed = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(_node.ArgsJson);
                 if (parsed != null && parsed.Count > 0)
                 {
-                    var dict = new Dictionary<string, object>(parsed.Count, StringComparer.OrdinalIgnoreCase);
+                    var dict = new Dictionary<string, object?>(parsed.Count, StringComparer.OrdinalIgnoreCase);
                     foreach (var kv in parsed)
                         dict[kv.Key] = kv.Value;
                     args = new AIFunctionArguments(dict);

@@ -29,13 +29,9 @@ public sealed class PrefrontalCortex : Brain, IPrefrontalCallback
     /// Orchestrator、CompilerTools、SynapseTools、Neuron 均由基类自管理。
     /// </summary>
     /// <param name="agent">所属 Agent 实例。同时充当脑区查找表，供 Orchestrator 定位子脑区。</param>
-    /// <param name="chatClientFactory">LLM 客户端工厂。</param>
     /// <param name="descriptor">脑区描述符。</param>
-    internal PrefrontalCortex(
-        IBrainAgent agent,
-        ChatClientFactory chatClientFactory,
-        PrefrontalDescriptor descriptor)
-        : base(agent, chatClientFactory, descriptor)
+    internal PrefrontalCortex(IBrainAgent agent, PrefrontalDescriptor descriptor)
+        : base(agent, descriptor)
     {
     }
 
@@ -46,7 +42,7 @@ public sealed class PrefrontalCortex : Brain, IPrefrontalCallback
     /// (3) 派发前枚举工作区已注册的 ModuleDescription（WorkspaceTools.module_list），
     ///     从而在 __brain_call_* 的 moduleIdsJson 入参里报上正确的 module id。
     /// </summary>
-    protected override IReadOnlyList<AITool> BuildExtraTools(IBrainAgent agent, BrainDescriptor descriptor)
+    protected override IReadOnlyList<AITool> BuildExtraTools()
     {
         var synapse = SynapseToolFactory.Build(agent.CallableBrains, agent);
         var inspect = BrainInspectToolProvider.GetReadOnlyTools(agent);

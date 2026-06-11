@@ -15,8 +15,8 @@ public abstract class ExternalMotorCortex : MotorCortex
 
     private ExternalMotorCortexDescriptor _descriptor;
 
-    protected ExternalMotorCortex(IBrainAgent agent, ChatClientFactory chatClientFactory, ExternalMotorCortexDescriptor descriptor)
-        : base(agent, chatClientFactory, descriptor)
+    protected ExternalMotorCortex(IBrainAgent agent, ExternalMotorCortexDescriptor descriptor)
+        : base(agent, descriptor)
     {
         _descriptor = descriptor;
     }

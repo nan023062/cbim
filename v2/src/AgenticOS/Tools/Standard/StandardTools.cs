@@ -475,7 +475,7 @@ public static class StandardTools
                                    : timeoutMs > BashMaxTimeoutMs ? BashMaxTimeoutMs
                                    : timeoutMs;
 
-                string resolvedWorkDir;
+                string? resolvedWorkDir;
                 if (workDir != null)
                 {
                     try
@@ -528,7 +528,7 @@ public static class StandardTools
 
                 Task stdoutTask = Task.Run(() =>
                 {
-                    string line;
+                    string? line;
                     while ((line = process.StandardOutput.ReadLine()) != null)
                     {
                         lock (stdoutSb)
@@ -542,7 +542,7 @@ public static class StandardTools
 
                 Task stderrTask = Task.Run(() =>
                 {
-                    string line;
+                    string? line;
                     while ((line = process.StandardError.ReadLine()) != null)
                     {
                         lock (stderrSb)

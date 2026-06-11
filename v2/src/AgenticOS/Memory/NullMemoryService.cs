@@ -23,7 +23,7 @@ public sealed class NullMemoryService : IMemoryService
     public Task<IReadOnlyList<MemoryEntry>> QueryAsync(string text, int topK = 5, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<MemoryEntry>>(Array.Empty<MemoryEntry>());
 
-    public MemoryEntry Get(string id) => null;
+    public MemoryEntry? Get(string id) => null;
     public IReadOnlyList<MemoryEntry> List() => Array.Empty<MemoryEntry>();
 
     public void Delete(string id) { }

@@ -13,8 +13,8 @@ public sealed class Hippocampus : Brain
 {
     public override BrainKind Kind => BrainKind.Hippocampus;
 
-    internal Hippocampus(IBrainAgent agent, ChatClientFactory chatClientFactory, HippocampusDescriptor descriptor)
-        : base(agent, chatClientFactory, descriptor)
+    internal Hippocampus(IBrainAgent agent, HippocampusDescriptor descriptor)
+        : base(agent, descriptor)
     {
     }
 }

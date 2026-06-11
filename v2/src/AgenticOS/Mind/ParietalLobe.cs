@@ -15,8 +15,8 @@ public sealed class ParietalLobe : Brain
 {
     public override BrainKind Kind => BrainKind.ParietalLobe;
 
-    internal ParietalLobe(IBrainAgent agent, ChatClientFactory chatClientFactory, ParietalLobeDescriptor descriptor)
-        : base(agent, chatClientFactory, descriptor)
+    internal ParietalLobe(IBrainAgent agent, ParietalLobeDescriptor descriptor)
+        : base(agent, descriptor)
     {
     }
 
@@ -24,7 +24,7 @@ public sealed class ParietalLobe : Brain
     /// 架构脑沙箱白名单 = 工作区根路径——允许 read-all。
     /// 没拿到 RootPath 时退化为空（保持与默认行为一致）。
     /// </summary>
-    protected override IReadOnlyList<string> ResolveStaticAllowedPathPrefixes(IBrainAgent agent)
+    protected override IReadOnlyList<string> ResolveStaticAllowedPathPrefixes()
     {
         var root = agent?.Os?.Workspace?.RootPath;
         if (string.IsNullOrWhiteSpace(root))

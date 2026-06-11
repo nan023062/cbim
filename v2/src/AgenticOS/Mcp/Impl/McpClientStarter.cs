@@ -114,10 +114,9 @@ public sealed class McpClientStarter : IMcpClientStarter
         // 仅当我们的 Env 非空才注入；空字典就保持 null（避免无意义复制 + 让 SDK 用默认环境）。
         if (d.Env.Count > 0)
         {
-            var env = new Dictionary<string, string>(d.Env.Count, StringComparer.Ordinal);
+            var env = new Dictionary<string, string?>(d.Env.Count, StringComparer.Ordinal);
             foreach (var kv in d.Env)
                 env[kv.Key] = kv.Value;
-            // 上转 string? 字典是隐式的（C# 引用类型 nullable 仅是注解）。
             options.EnvironmentVariables = env;
         }
 
@@ -132,7 +131,7 @@ public sealed class McpClientStarter : IMcpClientStarter
 
         // AdditionalHeaders 是 IDictionary<string,string>——拷贝 descriptor 的只读字典
         // 并按需补一条 Authorization。空 token / 空 headers 都跳过分配。
-        IDictionary<string, string> headers = null;
+        IDictionary<string, string>? headers = null;
         if (d.Headers.Count > 0)
         {
             headers = new Dictionary<string, string>(d.Headers.Count, StringComparer.Ordinal);

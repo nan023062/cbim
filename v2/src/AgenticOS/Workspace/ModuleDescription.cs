@@ -89,9 +89,9 @@ public sealed class ModuleDescription
         string id,
         string name,
         ModuleMetadata metadata,
-        IReadOnlyList<SkillDescriptor> workflows = null,
-        IReadOnlyList<ToolDescriptor> tools = null,
-        IReadOnlyList<McpDescriptor> mcpList = null)
+        IReadOnlyList<SkillDescriptor>? workflows = null,
+        IReadOnlyList<ToolDescriptor>? tools = null,
+        IReadOnlyList<McpDescriptor>? mcpList = null)
     {
         if (string.IsNullOrWhiteSpace(id))
             throw new ArgumentException("ModuleDescription.Id 不能为空", nameof(id));

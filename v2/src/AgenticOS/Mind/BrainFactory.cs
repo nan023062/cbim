@@ -35,19 +35,19 @@ public static class BrainFactory
             throw new NotImplementedException("ExternalMotorCortex Brain not implemented");
 
         if (descriptor is PrefrontalDescriptor prefrontalDescriptor)
-            return new PrefrontalCortex(agent, chatClientFactory, prefrontalDescriptor);
+            return new PrefrontalCortex(agent, prefrontalDescriptor);
 
         if (descriptor is ParietalLobeDescriptor parietalLobeDescriptor)
-            return new ParietalLobe(agent, chatClientFactory, parietalLobeDescriptor);
+            return new ParietalLobe(agent, parietalLobeDescriptor);
 
         if (descriptor is HippocampusDescriptor hippocampusDescriptor)
-            return new Hippocampus(agent, chatClientFactory, hippocampusDescriptor);
+            return new Hippocampus(agent, hippocampusDescriptor);
 
         if (descriptor is NativeMotorCortexDescriptor nativeMotorCortexDescriptor)
-            return new NativeMotorCortex(agent, chatClientFactory, nativeMotorCortexDescriptor);
+            return new NativeMotorCortex(agent, nativeMotorCortexDescriptor);
 
         if (descriptor is MotorCortexDescriptor motorCortexDescriptor)
-            return new MotorCortex(agent, chatClientFactory, motorCortexDescriptor);
+            return new MotorCortex(agent, motorCortexDescriptor);
 
         throw new NotImplementedException($"{descriptor.GetType()} not implemented");
     }

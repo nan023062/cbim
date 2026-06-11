@@ -310,11 +310,6 @@ public sealed class Session : IDisposable, IBrainAgent
     /// </summary>
     public void Dispose()
     {
-        if (_os == null)
-            return;
-
-        _os = null;
-
         foreach (var brain in _brains.Values)
         {
             BrainFactory.Destroy(brain);

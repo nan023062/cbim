@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -19,7 +17,7 @@ public sealed class SplitSpec
     public string Path { get; }
 
     /// <summary>
-    /// 新模块 frontmatter <c>name</c>。
+    /// 新模块 formatter <c>name</c>。
     /// </summary>
     public string Name { get; }
 
@@ -34,7 +32,7 @@ public sealed class SplitSpec
     public string Owner { get; }
 
     /// <summary>
-    /// 可选 description（写入新模块 frontmatter）。
+    /// 可选 description（写入新模块 formatter）。
     /// </summary>
     public string Description { get; }
 
@@ -43,8 +41,10 @@ public sealed class SplitSpec
     {
         if (string.IsNullOrWhiteSpace(path))
             throw new ArgumentException("SplitSpec.Path 不能为空", nameof(path));
+
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("SplitSpec.Name 不能为空", nameof(name));
+
         if (headings == null || headings.Count == 0)
             throw new ArgumentException("SplitSpec.Headings 至少要有一个", nameof(headings));
 
@@ -97,7 +97,7 @@ public sealed class DependencyRef
 }
 
 /// <summary>
-/// frontmatter / 区段解析与渲染工具。
+/// DnaFormatter / 区段解析与渲染工具。
 ///
 /// <para>对偶 v1 Python <c>services/_fm.py</c> + <c>cbi/_primitives/modules.py</c>。
 /// 手写实现，刻意保持与 read 侧（<see cref="DnaToolProvider"/>）的解析风格对称——
@@ -105,10 +105,10 @@ public sealed class DependencyRef
 ///
 /// <para>不引入第三方 YAML 库——v1 Python 同样手写以避免 PyYAML 依赖；此处沿袭。</para>
 /// </summary>
-internal static class DnaFrontmatter
+internal static class DnaFormatter
 {
     // 与 v1 Python `_MODULE_FM_SCHEMA` 对齐。
-    public static readonly string[] Schema =
+    static readonly string[] Schema =
     {
         "name", "owner", "description",
         "keywords", "dependencies", "includeDirs",
@@ -317,10 +317,10 @@ internal static class DnaFrontmatter
     /// </summary>
     public sealed class Section
     {
-        public int Level;       // 1..6
-        public string Heading;  // 去首尾空白
-        public int Start;       // 标题行索引
-        public int End;         // 区段下界行索引（exclusive）
+        public int Level;                     // 1..6
+        public string Heading = string.Empty; // 去首尾空白
+        public int Start;                     // 标题行索引
+        public int End;                       // 区段下界行索引（exclusive）
     }
 
     /// <summary>

@@ -17,7 +17,7 @@ public static class WorkspaceToolProvider
     /// <summary>
     /// 返回主脑用的 Workspace 工具集。当前只有 <c>module_list</c>。
     /// </summary>
-    public static IReadOnlyList<AITool> GetReadOnlyTools(WorkspaceSystem workspace)
+    public static IReadOnlyList<AITool> GetReadOnlyTools(WorkspaceSystem? workspace)
     {
         if (workspace == null)
             return Array.Empty<AITool>();

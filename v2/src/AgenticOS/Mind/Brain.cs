@@ -128,9 +128,9 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
 
     public BrainDescriptor Descriptor { get; }
 
-    private INeuron _neuron;
+    private readonly INeuron _neuron;
 
-    internal IBrainAgent Agent { get; private set; }
+    protected readonly IBrainAgent agent;
 
     #endregion
 
@@ -138,39 +138,34 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
 
     private readonly ICircuitExecutor _executor;
 
-    /// <summary>per-invocation 编译器状态；null 表示当前无编译中的回路。</summary>
+    /// <summary>
+    /// per-invocation 编译器状态；null 表示当前无编译中的回路。
+    /// </summary>
     private NeuralCircuitBuilder? _builder;
 
     /// <summary>
-    /// 神经元——LLM 思维链单元。本字段是 Brain 层调用 LLM 的唯一出口（K2 铁律）。
-    /// 由构造器内部通过 NeuronFactory 创建；BrainBase 与子类不感知其具体实现
-    /// （<see cref="Kernel.Neuron"/> 还是 <see cref="ExternalNeuron"/>）。
-    /// </summary>
-    public INeuron Neuron => _neuron;
-
-    /// <summary>
-    /// 透传 <see cref="Neuron"/> 的底层 <see cref="Microsoft.Agents.AI.AIAgent"/> 引用——保留旧字段名以兼容
+    /// 透传 <see cref="_neuron"/> 的底层 <see cref="Microsoft.Agents.AI.AIAgent"/> 引用——保留旧字段名以兼容
     /// 已持引用打 <c>SendAsync</c> 的 Channel 等调用方。
     /// <see cref="ExternalNeuron"/> 路径下恒为 <c>null</c>（外部引擎自带 LLM，无 AIAgent 句柄）。
     /// </summary>
-    public AIAgent? AIAgent => Neuron.UnderlyingAgent;
+    public AIAgent? AIAgent => _neuron.UnderlyingAgent;
 
     /// <summary>
     /// 构造器内部完成 Orchestrator、CompilerTools、Neuron 的完整装配。
     /// </summary>
-    protected Brain(IBrainAgent agent, ChatClientFactory chatClientFactory, BrainDescriptor descriptor)
+    protected Brain(IBrainAgent agent, BrainDescriptor descriptor)
     {
-        Agent = agent;
+        this.agent = agent ?? throw new ArgumentNullException(nameof(agent));
 
-        Descriptor = descriptor;
+        Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
 
         _executor = new Orchestrator();
 
-        IReadOnlyList<AITool> tools = BuildToolSet(agent, descriptor);
+        IReadOnlyList<AITool> tools = BuildToolSet();
 
-        IReadOnlyList<AIContextProvider> contextProviders = BuildContextProviders(agent, descriptor);
+        IReadOnlyList<AIContextProvider> contextProviders = BuildContextProviders();
 
-        _neuron = CreateNeuron(agent, chatClientFactory, tools, contextProviders);
+        _neuron = CreateNeuron(tools, contextProviders);
     }
 
     #endregion
@@ -192,12 +187,12 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
     /// </summary>
     private ToolSandbox? _activeMotorSandbox;
 
-    private IReadOnlyList<AITool> BuildToolSet(IBrainAgent agent, BrainDescriptor descriptor)
+    private IReadOnlyList<AITool> BuildToolSet()
     {
         // 「非 StandardTools 前缀」对所有脑区都一样：CompilerTools + ExtraTools + MCP + Memory/DNA
-        IReadOnlyList<AITool> staticPrefix = MergeTools(BuildCompilerTools(agent), BuildExtraTools(agent, descriptor));
-        staticPrefix = MergeTools(staticPrefix, BuildMcpTools(agent, descriptor));
-        staticPrefix = MergeTools(staticPrefix, BuildMemoryAndDnaTools(agent));
+        IReadOnlyList<AITool> staticPrefix = MergeTools(BuildCompilerTools(), BuildExtraTools());
+        staticPrefix = MergeTools(staticPrefix, BuildMcpTools());
+        staticPrefix = MergeTools(staticPrefix, BuildMemoryAndDnaTools());
 
         // MotorCortex（工作脑）：构造期不装 StandardTools——StandardTools 在每次
         // ExecuteInvokeAsync 内按 NeuronInput.Modules 重建后通过 Neuron.ReplaceTools 注入。
@@ -209,7 +204,7 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
         }
 
         // 其它 BrainKind：构造期一次性合并 StandardTools（沙箱白名单由 ResolveStaticAllowedPathPrefixes 决定）
-        return MergeTools(staticPrefix, BuildStandardTools(descriptor, ResolveStaticAllowedPathPrefixes(agent)));
+        return MergeTools(staticPrefix, BuildStandardTools(Descriptor,ResolveStaticAllowedPathPrefixes()));
     }
 
     /// <summary>
@@ -224,13 +219,13 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
     ///       <see cref="ExecuteInvokeAsync"/> 按 <c>NeuronInput.Modules</c> 动态重建沙箱。</item>
     /// </list>
     /// </summary>
-    protected virtual IReadOnlyList<string> ResolveStaticAllowedPathPrefixes(IBrainAgent agent)
+    protected virtual IReadOnlyList<string> ResolveStaticAllowedPathPrefixes()
         => Array.Empty<string>();
 
     #endregion
 
     #region CompilerTools（显式接口依赖 ICircuitBuilderContext）
-    private IReadOnlyList<AITool> BuildCompilerTools(IBrainAgent agent)
+    private IReadOnlyList<AITool> BuildCompilerTools()
     {
         // 显式传 this（实现了 ICircuitBuilderContext），取代原先的隐式闭包绑定
         return CompilerToolFactory.Build(this, agent.CallableBrains);
@@ -240,7 +235,7 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
     /// 子类可覆写，返回额外工具集（例如 PrefrontalCortex 追加 SynapseTools）。
     /// 默认实现返回空列表。
     /// </summary>
-    protected virtual IReadOnlyList<AITool> BuildExtraTools(IBrainAgent agent, BrainDescriptor descriptor)
+    protected virtual IReadOnlyList<AITool> BuildExtraTools()
         => Array.Empty<AITool>();
 
     #endregion
@@ -249,19 +244,10 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
 
     /// <summary>
     /// 装配 StandardTools（files / search / bash 家族）。
-    ///
-    /// <para>沙箱构造采用「按构造期一次成型，运行期不可变」铁律——
-    /// 当 <paramref name="allowedPathPrefixes"/> 为空，PathGuard 在每次调用都因「沙箱无白名单」拒绝，
-    /// 等价于「不给文件工具」。本方法在此情形直接返回空列表，避免向 LLM 暴露注定失败的工具入口。</para>
-    ///
-    /// <para>Phase 1：所有脑区均走构造期一次性装配；Phase 3 起 MotorCortex 改由
-    /// <see cref="ExecuteInvokeAsync"/> 按 NeuronInput.Modules 逐次重建。</para>
     /// </summary>
-    /// <param name="descriptor">脑区描述符——决定 ToolIds 选择。</param>
-    /// <param name="allowedPathPrefixes">沙箱允许的路径前缀；空 = 拒绝全部文件操作（且立即返回空工具集）。</param>
     private static IReadOnlyList<AITool> BuildStandardTools(
         BrainDescriptor descriptor,
-        IReadOnlyList<string> allowedPathPrefixes)
+        IReadOnlyList<string>? allowedPathPrefixes)
     {
         if (descriptor.ToolIds.Count == 0)
             return Array.Empty<AITool>();
@@ -292,13 +278,13 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
     /// </summary>
     private readonly List<string> _mcpRefs = new List<string>();
 
-    private IReadOnlyList<AITool> BuildMcpTools(IBrainAgent agent, BrainDescriptor descriptor)
+    private IReadOnlyList<AITool> BuildMcpTools()
     {
-        if (agent.Os.Mcp == null || descriptor.McpIds.Count == 0)
+        if (Descriptor.McpIds.Count == 0)
             return Array.Empty<AITool>();
 
         var mcpTools = new List<AITool>();
-        foreach (var mcpId in descriptor.McpIds)
+        foreach (var mcpId in Descriptor.McpIds)
         {
             if (string.IsNullOrWhiteSpace(mcpId))
                 continue;
@@ -308,7 +294,7 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
 
             try
             {
-                var mcpClient = agent.Os.Mcp.GetOrCreate(mcpDescriptor, descriptor.BrainId);
+                var mcpClient = agent.Os.Mcp.GetOrCreate(mcpDescriptor, Descriptor.BrainId);
                 // 记录引用——Dispose 时按 (mcpId, BrainId) 解引用
                 _mcpRefs.Add(mcpId);
                 foreach (var fn in mcpClient.AiFunctions)
@@ -328,7 +314,7 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
     #endregion
 
     #region DNA / Memory 权限工具
-    private IReadOnlyList<AITool> BuildMemoryAndDnaTools(IBrainAgent agent)
+    private IReadOnlyList<AITool> BuildMemoryAndDnaTools()
     {
         var permTools = new List<AITool>();
 
@@ -336,7 +322,7 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
         //   ParietalLobe（架构脑）→ 读+写
         //   Hippocampus（记忆脑）→ 完全无 DNA 权限（不分配任何 dna_* 工具）
         //   其它（PrefrontalCortex / MotorCortex）→ 只读
-        if (agent.Os.Workspace != null && Kind != BrainKind.Hippocampus)
+        if (Kind != BrainKind.Hippocampus)
         {
             var dnaToolList = Kind == BrainKind.ParietalLobe
                 ? agent.Os.Workspace.ReadWriteDnaTools
@@ -346,7 +332,6 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
         }
 
         // Memory 工具：所有脑区只读；仅记忆脑 Hippocampus 升级为读写（写权限按 BrainKind 写死）
-        if (agent.Os.Memory != null)
         {
             var memToolList = Kind == BrainKind.Hippocampus
                 ? MemoryToolProvider.GetReadWriteTools(agent.Os.Memory)
@@ -361,21 +346,21 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
     #endregion
 
     #region ContextProviders（Skill / Workflow / Memory）
-    private IReadOnlyList<AIContextProvider> BuildContextProviders(IBrainAgent agent, BrainDescriptor descriptor)
+    private IReadOnlyList<AIContextProvider> BuildContextProviders()
     {
         var contextProviders = new List<AIContextProvider>();
 
         var memory = agent.Os.Memory;
 
         // MemoryContextProvider：自动召回记忆，仅注入记忆脑 Hippocampus
-        if (Kind == BrainKind.Hippocampus && memory != null)
+        if (Kind == BrainKind.Hippocampus)
             contextProviders.Add(new MemoryContextProvider(memory));
 
-        if (descriptor.SkillIds.Count > 0)
-            contextProviders.Add(new SkillContextProvider(agent.Os.SkillStore, descriptor.SkillIds));
+        if (Descriptor.SkillIds.Count > 0)
+            contextProviders.Add(new SkillContextProvider(agent.Os!.SkillStore, Descriptor.SkillIds));
 
-        if (descriptor.WorkflowIds.Count > 0)
-            contextProviders.Add(new WorkflowContextProvider(agent.Os.WorkflowStore, descriptor.WorkflowIds));
+        if (Descriptor.WorkflowIds.Count > 0)
+            contextProviders.Add(new WorkflowContextProvider(agent.Os!.WorkflowStore, Descriptor.WorkflowIds));
 
         return contextProviders;
     }
@@ -383,10 +368,10 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
     #endregion
 
     #region Neuron 创建
-    private INeuron CreateNeuron(IBrainAgent agent, ChatClientFactory chatClientFactory, IReadOnlyList<AITool> tools, IReadOnlyList<AIContextProvider> contextProviders)
+    private INeuron CreateNeuron(IReadOnlyList<AITool> tools, IReadOnlyList<AIContextProvider> contextProviders)
     {
         var modelDescriptor = string.IsNullOrEmpty(Descriptor.ModelId) ? null : agent.Os.ModelStore.Get(Descriptor.ModelId);
-        IChatClient chatClient = chatClientFactory.Create(modelDescriptor);
+        IChatClient chatClient = agent.Os.LlmClient.Create(modelDescriptor);
         if (chatClient == null)
             throw new InvalidOperationException($"ChatClientFactory.Create 为脑区 '{BrainId}' 返回了 null。");
 
@@ -442,8 +427,9 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
             var callback = (this as IPrefrontalCallback) ?? NullPrefrontalCallback.Instance;
             // 传 Workspace —— 让 BrainCallExecutor 在 NodeIR 里的 ModuleIdsJson 解析为活动 Module，
             // 与 SynapseToolFactory 路径完全对称（避免 compiled-circuit 派发的工作脑无文件权限）。
-            var workspace = Agent?.Os?.Workspace;
-            return await _executor.RunAsync(circuit, (IBrainLookup)Agent, callback, ct, toolRegistry: null, workspace: workspace).ConfigureAwait(false);
+            var agent = this.agent ?? throw new InvalidOperationException($"脑区 '{BrainId}' 已 Dispose，Agent 引用为 null。");
+            var workspace = agent.Os?.Workspace;
+            return await _executor.RunAsync(circuit, (IBrainLookup)agent, callback, ct, toolRegistry: null, workspace: workspace).ConfigureAwait(false);
         }
         else
         {
@@ -459,7 +445,7 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
                 if (Kind == BrainKind.MotorCortex)
                     RebuildMotorStandardToolsForInvocation(invocation);
 
-                var outcome = await Neuron.InvokeAsync(invocation, ct).ConfigureAwait(false);
+                var outcome = await _neuron.InvokeAsync(invocation, ct).ConfigureAwait(false);
                 RefreshContextMessageCount();
 
                 // MotorCortex：drain ToolSandbox 上累积的 SideEffects，
@@ -579,7 +565,7 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
 
     /// <summary>
     /// 释放本脑区占用的资源。
-    /// 默认实现释放 <see cref="Neuron"/>；子类如持有额外资源需重写并最后调用 base。
+    /// 默认实现释放 <see cref="_neuron"/>；子类如持有额外资源需重写并最后调用 base。
     /// AgentInstance 的释放顺序保证调用：MotorCortex → 其他脑区 → Prefrontal。
     /// 实现需做到多次调用幂等。
     /// </summary>
@@ -589,30 +575,26 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
         {
             BeforeDestroy();
 
-            NeuronFactory.Destroy(_neuron);
-
             // 在 Agent 置 null 之前解引用本脑区持有的 MCP
             ReleaseMcpReferences();
         }
         finally
         {
-            Agent = null;
-
-            _neuron = null;
+            NeuronFactory.Destroy(_neuron);
         }
     }
 
     /// <summary>
     /// 释放本脑区在 <see cref="BuildMcpTools"/> 期间通过 GetOrCreate 获取的全部 MCP 引用。
     /// Shared 实例在所有引用脑区释放后由 MCP 管理器关闭；隔离实例直接关闭。
-    /// 须在 <see cref="Agent"/> 置 null 之前调用。Release 幂等，best-effort：单个失败不阻断其余。
+    /// 须在 <see cref="agent"/> 置 null 之前调用。Release 幂等，best-effort：单个失败不阻断其余。
     /// </summary>
     private void ReleaseMcpReferences()
     {
         if (_mcpRefs.Count == 0)
             return;
 
-        var mcp = Agent?.Os?.Mcp;
+        var mcp = agent?.Os?.Mcp;
         if (mcp != null)
         {
             foreach (var mcpId in _mcpRefs)

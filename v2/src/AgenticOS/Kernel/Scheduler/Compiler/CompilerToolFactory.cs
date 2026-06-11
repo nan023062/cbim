@@ -1,4 +1,3 @@
-#nullable enable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -16,9 +15,7 @@ public static class CompilerToolFactory
     /// <summary>
     /// 产出 6 个 <c>__circuit_*</c> AITool。
     /// </summary>
-    public static IReadOnlyList<AITool> Build(
-        ICircuitBuilderContext context,
-        IReadOnlyList<Mind.Brain> callableBrains)
+    public static IReadOnlyList<AITool> Build(ICircuitBuilderContext context, IReadOnlyList<Mind.Brain> callableBrains)
     {
         if (context == null)
             throw new ArgumentNullException(nameof(context));
@@ -219,7 +216,8 @@ public static class CompilerToolFactory
             }
             try
             {
-                return builder.AddCallBrain(label, targetBrainId, intent, structuredInputJson, moduleIdsJson);
+                // 上方 Contains 检查已隐式断言 targetBrainId 命中合法集合；走到此处必非 null。
+                return builder.AddCallBrain(label, targetBrainId!, intent, structuredInputJson, moduleIdsJson);
             }
             catch (ArgumentException ex)
             {

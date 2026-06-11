@@ -18,7 +18,7 @@ public sealed class ExternalNeuron : INeuron
 
     public AIAgent? UnderlyingAgent => null;
 
-    private readonly IExternalEngineAdapter _adapter;
+    private readonly IExternalEngineAdapter? _adapter;
     private int _disposed;
 
     public ExternalNeuron(Brain brain, string soul, string identity,
@@ -36,8 +36,9 @@ public sealed class ExternalNeuron : INeuron
         if (invocation == null)
             throw new ArgumentNullException(nameof(invocation));
 
-        var jobId = await _adapter.SubmitAsync(invocation, ct).ConfigureAwait(false);
-        var outcome = await _adapter.AwaitResultAsync(jobId, ct).ConfigureAwait(false);
+        var adapter = _adapter ?? throw new InvalidOperationException("ExternalNeuron 的 _adapter 尚未实装。");
+        var jobId = await adapter.SubmitAsync(invocation, ct).ConfigureAwait(false);
+        var outcome = await adapter.AwaitResultAsync(jobId, ct).ConfigureAwait(false);
         return outcome;
     }
 
@@ -46,7 +47,8 @@ public sealed class ExternalNeuron : INeuron
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
 
-        await _adapter.DisposeAsync().ConfigureAwait(false);
+        if (_adapter != null)
+            await _adapter.DisposeAsync().ConfigureAwait(false);
     }
 }
 

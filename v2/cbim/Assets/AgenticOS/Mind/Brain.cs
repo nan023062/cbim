@@ -176,17 +176,32 @@ namespace CBIM.Mind
 #endregion
 
 #region 完整工具集组装
+
+        /// <summary>
+        /// MotorCortex 的「非 StandardTools 前缀」缓存——构造期一次性建好，每次
+        /// <see cref="ExecuteInvokeAsync"/> 调用前与本次重建的 StandardTools 合并后整体下发到 Neuron。
+        /// 仅 MotorCortex 持有；其它 BrainKind 始终为 null。
+        /// </summary>
+        private IReadOnlyList<AITool>? _motorStaticPrefix;
+
         private IReadOnlyList<AITool> BuildToolSet(IBrainAgent agent, BrainDescriptor descriptor)
         {
-            IReadOnlyList<AITool> allTools = MergeTools(BuildCompilerTools(agent), BuildExtraTools(agent, descriptor));
+            // 「非 StandardTools 前缀」对所有脑区都一样：CompilerTools + ExtraTools + MCP + Memory/DNA
+            IReadOnlyList<AITool> staticPrefix = MergeTools(BuildCompilerTools(agent), BuildExtraTools(agent, descriptor));
+            staticPrefix = MergeTools(staticPrefix, BuildMcpTools(agent, descriptor));
+            staticPrefix = MergeTools(staticPrefix, BuildMemoryAndDnaTools(agent));
 
-            allTools = MergeTools(allTools, BuildStandardTools(descriptor, ResolveStaticAllowedPathPrefixes(agent)));
+            // MotorCortex（工作脑）：构造期不装 StandardTools——StandardTools 在每次
+            // ExecuteInvokeAsync 内按 NeuronInput.Modules 重建后通过 Neuron.ReplaceTools 注入。
+            // 缓存前缀以便每次重建只重做 StandardTools。
+            if (Kind == BrainKind.MotorCortex)
+            {
+                _motorStaticPrefix = staticPrefix;
+                return staticPrefix;
+            }
 
-            allTools = MergeTools(allTools, BuildMcpTools(agent, descriptor));
-
-            allTools = MergeTools(allTools, BuildMemoryAndDnaTools(agent));
-
-            return allTools;
+            // 其它 BrainKind：构造期一次性合并 StandardTools（沙箱白名单由 ResolveStaticAllowedPathPrefixes 决定）
+            return MergeTools(staticPrefix, BuildStandardTools(descriptor, ResolveStaticAllowedPathPrefixes(agent)));
         }
 
         /// <summary>
@@ -425,6 +440,11 @@ namespace CBIM.Mind
 
                 try
                 {
+                    // MotorCortex（工作脑）：本次调用按 invocation.Modules 重建沙箱 + StandardTools，
+                    // 通过 Neuron.ReplaceTools 注入。空 Modules → 无文件工具（Q8 fail-hard）。
+                    if (Kind == BrainKind.MotorCortex)
+                        RebuildMotorStandardToolsForInvocation(invocation);
+
                     var outcome = await Neuron.InvokeAsync(invocation, ct).ConfigureAwait(false);
                     RefreshContextMessageCount();
                     return outcome;
@@ -436,6 +456,52 @@ namespace CBIM.Mind
                         _builder = null;
                 }
             }
+        }
+
+        /// <summary>
+        /// 工作脑专用：按 <paramref name="invocation"/>.Modules 重建一份新的 ToolSandbox 与 StandardTools，
+        /// 与构造期缓存的非-StandardTools 前缀 (<see cref="_motorStaticPrefix"/>) 合并后整体下发给 Neuron。
+        ///
+        /// <list type="bullet">
+        /// <item>沙箱：每次新建（满足 ToolSandbox「按构造期一次成型，运行期不可变」铁律——不复用旧实例，
+        ///       而是每次新建 → 旧实例随旧 AIFunction 一起被 GC）；</item>
+        /// <item>白名单：<c>invocation.Modules.Select(m =&gt; m.WorkspaceRoot)</c>；</item>
+        /// <item>Modules 为空 → 跳过 StandardTools 装配（结果：工作脑无文件操作能力，Q8 fail-hard）；</item>
+        /// <item>WorkingDirectory：取首个 Module.WorkspaceRoot（bash 默认 cwd）。</item>
+        /// </list>
+        /// </summary>
+        private void RebuildMotorStandardToolsForInvocation(NeuronInput invocation)
+        {
+            var prefix = _motorStaticPrefix ?? Array.Empty<AITool>();
+
+            var modules = invocation.Modules;
+            IReadOnlyList<string> allowed;
+            string? workingDir;
+            if (modules == null || modules.Count == 0)
+            {
+                allowed = Array.Empty<string>();
+                workingDir = null;
+            }
+            else
+            {
+                var roots = new List<string>(modules.Count);
+                foreach (var m in modules)
+                {
+                    if (m == null) continue;
+                    if (string.IsNullOrWhiteSpace(m.WorkspaceRoot)) continue;
+                    roots.Add(m.WorkspaceRoot);
+                }
+                allowed = roots;
+                workingDir = roots.Count > 0 ? roots[0] : null;
+            }
+
+            var standardTools = BuildStandardTools(Descriptor, allowed, workingDir);
+            var merged = MergeTools(prefix, standardTools);
+
+            if (_neuron is Neuron msai)
+                msai.ReplaceTools(merged);
+            // ExternalNeuron 走外部引擎自己的工具集，不参与 StandardTools 注入——
+            // 静默跳过（外部引擎沙箱由其适配层负责）。
         }
 
         protected virtual void BeforeDestroy() { }

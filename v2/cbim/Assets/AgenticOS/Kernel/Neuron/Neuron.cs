@@ -31,8 +31,15 @@ namespace CBIM.Kernel
         private readonly IChatClient _invokingChatClient;
 
         private readonly ChatMessage _message;
-        
+
         private readonly Brain _brain;
+
+        /// <summary>
+        /// ChatOptions 引用——构造期赋给 <c>options.ChatOptions</c>，运行期由
+        /// <see cref="ReplaceTools"/> 复写其 <c>Tools</c> 列表，让 MotorCortex 等需要
+        /// 按调用动态调整工具集的脑区无需重建 Neuron。
+        /// </summary>
+        private readonly ChatOptions _chatOptions;
 
         /// <summary>
         /// 上下文历史提供器——当 <see cref="BrainDescriptor.ContextWindowTokens"/> 非 null 时由构造器创建；
@@ -159,9 +166,37 @@ namespace CBIM.Kernel
             }
             options.ChatOptions = chatOptions;
 
+            _chatOptions = chatOptions;
             _agent   = new ChatClientAgent(_invokingChatClient, options);
             _message = new ChatMessage(ChatRole.User, string.Empty);
             _brain   = brain;
+        }
+
+        /// <summary>
+        /// 用 <paramref name="newTools"/> 整体替换当前 ChatOptions 上的 Tools 列表。
+        ///
+        /// <para>仅用于 MotorCortex 等需要按 NeuronInput.Modules 逐次重建沙箱 / 工具集的脑区——
+        /// 在每次 <see cref="InvokeAsync"/> 前由 <see cref="Brain"/> 调用。
+        /// 调用方负责把所有需要的工具（CompilerTools / SynapseTools / MCP / Memory / DNA / 重建后的
+        /// StandardTools 等）合并好后整体传入。</para>
+        ///
+        /// <para>实现：直接复写 <c>_chatOptions.Tools</c>。<see cref="ChatClientAgent"/> 在每次
+        /// <c>RunStreamingAsync</c> 时按 <c>ChatOptions.Tools</c> 取工具集，故无需重建 Agent。</para>
+        /// </summary>
+        public void ReplaceTools(IReadOnlyList<AITool> newTools)
+        {
+            if (newTools == null || newTools.Count == 0)
+            {
+                _chatOptions.Tools = null;
+                return;
+            }
+            var copy = new List<AITool>(newTools.Count);
+            foreach (var t in newTools)
+            {
+                if (t == null) continue;
+                copy.Add(t);
+            }
+            _chatOptions.Tools = copy.Count == 0 ? null : copy;
         }
 
         /// <inheritdoc/>

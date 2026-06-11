@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using CBIM.Mind;
@@ -18,11 +19,14 @@ namespace CBIM.Kernel
         /// 产出 <c>__brain_call_*</c> AITool 集。
         /// </summary>
         /// <param name="callableBrains">可调脑区清单。允许空列表（主脑无可调子脑区时合法）。</param>
+        /// <param name="agent">主脑所属 Agent——在 trampoline 解析 module_ids → 活动 Module 时使用。</param>
         /// <returns>AITool 集合——按入参顺序生成，供主脑 Neuron 装配为 <c>ChatOptions.Tools</c>。</returns>
-        public static IReadOnlyList<AITool> Build(IReadOnlyList<Mind.Brain> callableBrains)
+        public static IReadOnlyList<AITool> Build(IReadOnlyList<Mind.Brain> callableBrains, IBrainAgent agent)
         {
             if (callableBrains == null)
                 throw new ArgumentNullException(nameof(callableBrains));
+            if (agent == null)
+                throw new ArgumentNullException(nameof(agent));
 
             var tools = new List<AITool>(callableBrains.Count);
             var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -35,7 +39,7 @@ namespace CBIM.Kernel
                     throw new InvalidOperationException(
                         $"callableBrains 中 BrainId 重复: '{callable.BrainId}'——「BrainId 唯一」铁律违反。");
 
-                tools.Add(BuildBrainCallFunction(callable));
+                tools.Add(BuildBrainCallFunction(callable, agent));
             }
 
             return tools;
@@ -49,16 +53,20 @@ namespace CBIM.Kernel
         /// 拿到带名字 + <see cref="DescriptionAttribute"/> 的参数（lambda 的参数名在反射后会被擦成
         /// arg0/arg1/…，无法产出可用的 JSON schema 描述）。</para>
         /// </summary>
-        private static AIFunction BuildBrainCallFunction(Mind.Brain callable)
+        private static AIFunction BuildBrainCallFunction(Mind.Brain callable, IBrainAgent agent)
         {
             string sanitized = callable.BrainId.Replace('.', '_').Replace('-', '_');
             string fnName = "__brain_call_" + sanitized;
             string description =
                 $"Dispatch sub-task to brain '{callable.BrainId}'. " +
-                $"Use when the user request is best handled by this sub-region.";
+                $"Use when the user request is best handled by this sub-region. " +
+                $"For MotorCortex (worker brains), pass moduleIdsJson to scope the worker's filesystem sandbox " +
+                $"to those module roots — empty / null = no file access (fail-hard).";
 
-            var trampoline = new BrainCallTrampoline(callable);
-            var methodInfo = typeof(BrainCallTrampoline).GetMethod(nameof(BrainCallTrampoline.InvokeAsync), BindingFlags.Instance | BindingFlags.Public);
+            var trampoline = new BrainCallTrampoline(callable, agent);
+            var methodInfo = typeof(BrainCallTrampoline).GetMethod(
+                nameof(BrainCallTrampoline.InvokeAsync),
+                BindingFlags.Instance | BindingFlags.Public);
             if (methodInfo == null)
                 throw new InvalidOperationException("未找到 BrainCallTrampoline.InvokeAsync——内部不变量违反。");
 
@@ -68,32 +76,41 @@ namespace CBIM.Kernel
         /// <summary>
         /// 把对一个具体子脑区的调用包成「带参数名 + Description」的实例方法，
         /// 供 <see cref="AIFunctionFactory"/> 产出含正确 JSON schema 的 AIFunction。
-        /// 每个子脑区一份实例——构造期捕获 callable 引用。
+        /// 每个子脑区一份实例——构造期捕获 callable + agent 引用。
         /// </summary>
         private sealed class BrainCallTrampoline
         {
             private readonly Mind.Brain _callable;
+            private readonly IBrainAgent _agent;
 
-            public BrainCallTrampoline(Mind.Brain callable)
+            public BrainCallTrampoline(Mind.Brain callable, IBrainAgent agent)
             {
                 _callable = callable;
+                _agent = agent;
             }
 
             public async Task<string> InvokeAsync(
                 [Description("Natural-language task description for the sub-region brain.")] string intent,
                 [Description("Optional JSON-serialized structured payload; pass null when not needed.")] string? structured,
                 [Description("Optional situational hint passed as Context['ctx']; pass null when not needed.")] string? context,
+                [Description("Module ids for this dispatch as a JSON string array (e.g. '[\"src/combat\",\"src/ui\"]'). " +
+                             "Worker brains use these to scope their filesystem sandbox; non-worker brains ignore. " +
+                             "Pass null or '[]' when no module scope is required (workers will get NO file access).")]
+                string? moduleIdsJson,
                 CancellationToken cancellationToken)
             {
                 var ctxDict = new Dictionary<string, object>(StringComparer.Ordinal);
                 if (!string.IsNullOrEmpty(context))
                     ctxDict["ctx"] = context!;
 
+                var modules = ResolveModuleIds(moduleIdsJson, _agent);
+
                 var invocation = new NeuronInput(
                     CorrelationId: Guid.NewGuid().ToString("N"),
                     Intent: intent ?? string.Empty,
                     StructuredInput: structured,
-                    Context: ctxDict);
+                    Context: ctxDict,
+                    Modules: modules);
 
                 var outcome = await _callable.InvokeAsync(invocation, cancellationToken).ConfigureAwait(false);
 
@@ -102,6 +119,53 @@ namespace CBIM.Kernel
 
                 return outcome.Summary ?? string.Empty;
             }
+        }
+
+        /// <summary>
+        /// 把 LLM 给的 JSON 字符串数组解析为已激活的 Module 实例清单。
+        ///
+        /// <para>规则：
+        /// <list type="bullet">
+        /// <item>null / 空白 / 解析失败 → 返回空列表（工作脑因此无文件权限，符合 Q8 fail-hard）；</item>
+        /// <item>每个 id 必须命中 <c>Workspace.GetDescription</c>，否则跳过该项（不静默接收陌生 id）；</item>
+        /// <item>每个命中 description 用 <c>OpenInstance</c> 激活一个新 Module 实例，工作区根 = <c>RootPath/id</c>；</item>
+        /// <item>activatedByTaskId 暂传 null——记账需求上层未定。</item>
+        /// </list></para>
+        /// </summary>
+        private static IReadOnlyList<CBIM.Workspace.Module> ResolveModuleIds(string? moduleIdsJson, IBrainAgent agent)
+        {
+            if (string.IsNullOrWhiteSpace(moduleIdsJson))
+                return Array.Empty<CBIM.Workspace.Module>();
+
+            string[]? ids;
+            try
+            {
+                ids = JsonSerializer.Deserialize<string[]>(moduleIdsJson);
+            }
+            catch (JsonException)
+            {
+                return Array.Empty<CBIM.Workspace.Module>();
+            }
+            if (ids == null || ids.Length == 0)
+                return Array.Empty<CBIM.Workspace.Module>();
+
+            var ws = agent?.Os?.Workspace;
+            if (ws == null) return Array.Empty<CBIM.Workspace.Module>();
+
+            var rootPath = ws.RootPath;
+            var resolved = new List<CBIM.Workspace.Module>(ids.Length);
+            foreach (var raw in ids)
+            {
+                if (string.IsNullOrWhiteSpace(raw)) continue;
+                string id = raw.Trim();
+                if (!ws.ContainsDescription(id)) continue;
+                string moduleRoot = string.Equals(id, ".", StringComparison.Ordinal)
+                    ? rootPath
+                    : System.IO.Path.GetFullPath(System.IO.Path.Combine(rootPath, id));
+                var instance = ws.OpenInstance(id, moduleRoot, activatedByTaskId: null);
+                resolved.Add(instance);
+            }
+            return resolved;
         }
     }
 }

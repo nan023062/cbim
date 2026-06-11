@@ -118,7 +118,7 @@ namespace CBIM
             // 5. Memory 服务——外部注入优先；否则按 RootPath/memory 默认落盘。
             var memory = options.Memory ?? new LocalMemoryService(Path.Combine(options.RootPath, "memory"));
 
-            // 6. Workspace 子系统（根路径为 options.RootPath）
+            // 6. Workspace 子系统——根路径 + DNA 工具列表 + ModuleDescription 注册表（按 .dna/ 自动发现）
             var workspace = new WorkspaceSystem(options.RootPath);
 
             // 7. 构造并返回 Cbim 根容器

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using CBIM.Kernel;
 using CBIM.LlmClient;
+using CBIM.Workspace;
 using Microsoft.Extensions.AI;
 
 namespace CBIM.Mind
@@ -39,17 +40,24 @@ namespace CBIM.Mind
         }
 
         /// <summary>
-        /// 追加 SynapseTools 与 BrainInspectTools——让主脑 Neuron 能直接调用各子脑区，
-        /// 并能在派发前只读地枚举 / 检查可调子脑区的描述符与运行态。
+        /// 追加 SynapseTools + BrainInspectTools + WorkspaceTools——让主脑 Neuron 能：
+        /// (1) 直接调用各子脑区（SynapseTools）；
+        /// (2) 派发前只读地枚举 / 检查可调子脑区的描述符与运行态（BrainInspectTools）；
+        /// (3) 派发前枚举工作区已注册的 ModuleDescription（WorkspaceTools.module_list），
+        ///     从而在 __brain_call_* 的 moduleIdsJson 入参里报上正确的 module id。
         /// </summary>
         protected override IReadOnlyList<AITool> BuildExtraTools(IBrainAgent agent, BrainDescriptor descriptor)
         {
-            var synapse = SynapseToolFactory.Build(agent.CallableBrains);
+            var synapse = SynapseToolFactory.Build(agent.CallableBrains, agent);
             var inspect = BrainInspectToolProvider.GetReadOnlyTools(agent);
-            if (inspect.Count == 0) return synapse;
-            var merged = new List<AITool>(synapse.Count + inspect.Count);
+            var workspaceTools = WorkspaceToolProvider.GetReadOnlyTools(agent.Os?.Workspace);
+
+            int total = synapse.Count + inspect.Count + workspaceTools.Count;
+            if (total == synapse.Count) return synapse;
+            var merged = new List<AITool>(total);
             foreach (var t in synapse) merged.Add(t);
             foreach (var t in inspect) merged.Add(t);
+            foreach (var t in workspaceTools) merged.Add(t);
             return merged;
         }
 

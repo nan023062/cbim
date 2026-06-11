@@ -1,63 +1,81 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using Microsoft.Extensions.AI;
 
 namespace CBIM.Workspace
 {
     /// <summary>
-    /// Workspace 服务（业务维度门面）——CBIM 业务侧的总入口。
+    /// WorkspaceSystem——CBIM 工作区子系统。
     ///
-    /// 类比：办公室管理员 + 工位调度。
-    ///   - 静态侧：管理"公司有哪些办公位"（ModuleDescription 注册表）
-    ///   - 动态侧：派工时"激活某个工位给本任务用"（OpenInstance）和"用完释放"（CloseInstance）
+    /// <para>统一持有「静态侧」与「动态侧」（Q6 合并旧 <c>Workspace</c> 与 <c>WorkspaceSystem</c>）：
+    /// <list type="bullet">
+    /// <item><b>RootPath</b> + 按权限分层的 DNA AITool 列表（供各脑区取用）；</item>
+    /// <item><b>ModuleDescription 注册表</b>（Q7：构造期由 <see cref="DiscoverModules"/> 扫描
+    /// <see cref="RootPath"/> 之下所有 <c>.dna/</c> 目录自动发现）；</item>
+    /// <item><b>活动 Module 实例表</b>（任务派发期 OpenInstance / CloseInstance）。</item>
+    /// </list></para>
     ///
-    /// 与 AgenticOS 完全对偶：
-    ///   AgenticOS    = 管"人"   ：AgentDescription 注册 + Agent 装配/释放
-    ///   Workspace    = 管"工位"：ModuleDescription 注册 + Module 激活/释放
+    /// <para>类比：办公室管理员 + 工位调度。
+    ///   - 静态：维护「公司有哪些办公位」（ModuleDescription 注册表）
+    ///   - 动态：派工时「激活某个工位给本任务用」（OpenInstance）和「用完释放」（CloseInstance）</para>
     ///
-    /// 区别在重量：
-    ///   Agent  重（要装配 AIAgent + 启 MCP + 维护 Session）
-    ///   Module 轻（纯激活记录 + 沙盒根路径绑定）
-    /// 所以 Workspace.OpenInstance 是同步方法（无需 IO），不像 CBIM.NewAgent。
-    ///
-    /// 职责（清晰边界）：
-    ///   1. 维护 ModuleDescription 注册表（构造时注入，查找按 Id）
-    ///   2. 激活 Module：绑定 workspaceRoot + 记 activatedByTaskId
-    ///   3. 跟踪活动实例（ListActiveInstances）
-    ///   4. 释放实例时清理本地状态（无外部资源需关）
-    ///
-    /// 不做的事（其他模块的责任）：
-    ///   - Metadata 内容读取 → 由 Kernel/ContextProviders.WorkspaceContextProvider 按需读
-    ///   - Module 的 Tools/Mcp 实例化 → 由 CBIM.NewAgent 在装配 Agent 时合并
+    /// <para>与 AgenticOS 完全对偶——AgenticOS 管「人」（AgentDescription），
+    /// WorkspaceSystem 管「工位」（ModuleDescription）；区别在重量：
+    /// Module 远轻量，纯激活记录。</para>
     /// </summary>
-    public sealed class Workspace
+    public sealed class WorkspaceSystem
     {
+        /// <summary>工作区根路径（绝对路径）。</summary>
+        public string RootPath { get; }
+
+        /// <summary>只读 DNA 工具集——供 PrefrontalCortex / MotorCortex 等使用（Hippocampus 由 Brain 层屏蔽）。</summary>
+        public IReadOnlyList<AITool> ReadOnlyDnaTools { get; }
+
+        /// <summary>读写 DNA 工具集——仅供 ParietalLobe 使用。</summary>
+        public IReadOnlyList<AITool> ReadWriteDnaTools { get; }
+
         private readonly Dictionary<string, ModuleDescription> _descriptions;
         private readonly Dictionary<string, Module> _activeInstances;
         private readonly object _instancesLock = new object();
 
         /// <summary>
-        /// 构造 Workspace。
+        /// 默认构造——根据 <paramref name="rootPath"/> 扫描 <c>.dna/</c> 自动发现 ModuleDescription。
+        /// 适用于绝大多数生产场景：知识库即模块清单。
         /// </summary>
-        /// <param name="descriptions">已知的 ModuleDescription 集合（按 Id 索引）。</param>
-        public Workspace(IEnumerable<ModuleDescription> descriptions)
+        /// <param name="rootPath">工作区根路径，由 AgenticOS 在初始化时传入。</param>
+        public WorkspaceSystem(string rootPath)
+            : this(rootPath, descriptions: null)
         {
-            if (descriptions == null) throw new ArgumentNullException(nameof(descriptions));
-
-            _descriptions = new Dictionary<string, ModuleDescription>();
-            foreach (var d in descriptions)
-            {
-                if (_descriptions.ContainsKey(d.Id))
-                    throw new ArgumentException($"ModuleDescription.Id 重复：{d.Id}", nameof(descriptions));
-                _descriptions[d.Id] = d;
-            }
-
-            _activeInstances = new Dictionary<string, Module>();
         }
 
+        /// <summary>
+        /// 完整构造——允许覆盖 ModuleDescription 注册表（测试 / 嵌入式场景使用）。
+        /// 当 <paramref name="descriptions"/> 为 null 时退化为自动发现。
+        /// </summary>
+        public WorkspaceSystem(string rootPath, IEnumerable<ModuleDescription> descriptions)
+        {
+            if (string.IsNullOrWhiteSpace(rootPath))
+                throw new ArgumentException("rootPath 不能为空", nameof(rootPath));
+
+            RootPath          = rootPath;
+            ReadOnlyDnaTools  = DnaToolProvider.GetReadOnlyTools(rootPath);
+            ReadWriteDnaTools = DnaToolProvider.GetReadWriteTools(rootPath);
+
+            _descriptions    = new Dictionary<string, ModuleDescription>(StringComparer.Ordinal);
+            _activeInstances = new Dictionary<string, Module>(StringComparer.Ordinal);
+
+            var seed = descriptions ?? DiscoverModules(rootPath);
+            foreach (var d in seed)
+            {
+                if (d == null) continue;
+                if (_descriptions.ContainsKey(d.Id))
+                    throw new ArgumentException($"ModuleDescription.Id 重复：{d.Id}");
+                _descriptions[d.Id] = d;
+            }
+        }
 
 #region 静态侧：ModuleDescription 注册表
-
 
         /// <summary>列出全部已注册的 ModuleDescription。</summary>
         public IReadOnlyList<ModuleDescription> ListDescriptions()
@@ -76,22 +94,14 @@ namespace CBIM.Workspace
         public bool ContainsDescription(string id) =>
             !string.IsNullOrWhiteSpace(id) && _descriptions.ContainsKey(id);
 
-
-
 #endregion
 
-#region 动态侧：Module 生命周期
-
+#region 动态侧：Module 实例生命周期
 
         /// <summary>
         /// 激活一个 Module：把 ModuleDescription 绑定到具体工作区根路径。
-        ///
         /// 不做任何 IO 操作——纯数据组装。
-        /// 如需读 Metadata 内容、扫描文件，由 ContextProvider 按需进行（不在激活时做）。
         /// </summary>
-        /// <param name="descriptionId">要激活的 ModuleDescription Id。</param>
-        /// <param name="workspaceRoot">本次激活的绝对工作区根路径（沙盒根）。</param>
-        /// <param name="activatedByTaskId">触发本次激活的 Task Id（可空）。</param>
         public Module OpenInstance(
             string descriptionId,
             string workspaceRoot,
@@ -119,10 +129,7 @@ namespace CBIM.Workspace
             return instance;
         }
 
-        /// <summary>
-        /// 关闭一个 Module：从活动表移除。
-        /// 不持外部资源，仅本地状态清理。
-        /// </summary>
+        /// <summary>关闭一个 Module 实例：从活动表移除。无外部资源需关。</summary>
         public void CloseInstance(Module instance)
         {
             if (instance == null) return;
@@ -132,7 +139,7 @@ namespace CBIM.Workspace
             }
         }
 
-        /// <summary>列出当前活动中的 Module。</summary>
+        /// <summary>列出当前活动中的 Module 实例。</summary>
         public IReadOnlyList<Module> ListActiveInstances()
         {
             lock (_instancesLock)
@@ -150,37 +157,64 @@ namespace CBIM.Workspace
                 return _activeInstances.TryGetValue(instanceId, out var i) ? i : null;
             }
         }
-    }
 
-    /// <summary>
-    /// Workspace 子系统——将工作区根路径与按权限分层的 DNA AITool 列表封装在一起，
-    /// 作为 AgenticOS 的顶层属性暴露，供各脑区直接取用，避免重复调用 Provider。
-    ///
-    /// <list type="bullet">
-    /// <item><see cref="ReadOnlyDnaTools"/> — 只读 DNA 工具集（PrefrontalCortex / Hippocampus 等其他内置脑使用）</item>
-    /// <item><see cref="ReadWriteDnaTools"/> — 读写 DNA 工具集（ParietalLobe 专用）</item>
-    /// </list>
-    /// </summary>
-    public sealed class WorkspaceSystem
-    {
-        /// <summary>工作区根路径（绝对路径）。</summary>
-        public string RootPath { get; }
+#endregion
 
-        /// <summary>只读 DNA 工具集——供其他内置脑区使用。</summary>
-        public IReadOnlyList<AITool> ReadOnlyDnaTools { get; }
-
-        /// <summary>读写 DNA 工具集——仅供 ParietalLobe 使用。</summary>
-        public IReadOnlyList<AITool> ReadWriteDnaTools { get; }
+#region .dna/ 自动发现
 
         /// <summary>
-        /// 构造 WorkspaceSystem：记录根路径并预先生成两份 DNA 工具列表。
+        /// 扫描 <paramref name="rootPath"/> 之下所有 <c>.dna/</c> 目录，逐一构建 ModuleDescription。
+        ///
+        /// <para>规则：
+        /// <list type="bullet">
+        /// <item>每个 <c>.dna</c> 目录的父目录视为一个模块根；</item>
+        /// <item>模块 Id = 父目录相对 root 的路径，规范化为正斜杠（例 <c>"src/combat"</c>），
+        ///       根目录直接持 <c>.dna</c> 时 Id = <c>"."</c>；</item>
+        /// <item>模块 Name = 模块根目录最末一级名（例 <c>"combat"</c>），根 = <c>"&lt;root&gt;"</c>；</item>
+        /// <item>Metadata = <see cref="LocalModuleMetadata"/> 指向 <c>module.md</c>（即便缺失也注册描述符）。</item>
+        /// </list></para>
+        ///
+        /// <para>NEEDS_ARCH_DECISION（次要）：当前未读取 module.md frontmatter——
+        /// 模块 Id 完全由路径推导，与 v1 Python 端「模块 Id 来自 frontmatter」可能错位。
+        /// 待 IDnaService 决定后改为读 frontmatter。</para>
         /// </summary>
-        /// <param name="rootPath">工作区根路径，由 AgenticOS 在初始化时传入。</param>
-        public WorkspaceSystem(string rootPath)
+        public static IEnumerable<ModuleDescription> DiscoverModules(string rootPath)
         {
-            RootPath          = rootPath;
-            ReadOnlyDnaTools  = DnaToolProvider.GetReadOnlyTools(rootPath);
-            ReadWriteDnaTools = DnaToolProvider.GetReadWriteTools(rootPath);
+            if (string.IsNullOrWhiteSpace(rootPath)) yield break;
+            string rootFull = Path.GetFullPath(rootPath);
+            if (!Directory.Exists(rootFull)) yield break;
+
+            foreach (var dnaDir in DnaToolProvider.EnumerateDnaDirs(rootFull))
+            {
+                string moduleDir = Path.GetDirectoryName(dnaDir);
+                if (string.IsNullOrEmpty(moduleDir)) continue;
+
+                string id = MakeRelative(rootFull, moduleDir);
+                string name = string.Equals(id, ".", StringComparison.Ordinal)
+                    ? "<root>"
+                    : Path.GetFileName(moduleDir);
+
+                string moduleMdPath = Path.Combine(dnaDir, "module.md");
+                ModuleMetadata metadata = new LocalModuleMetadata(moduleMdPath);
+
+                yield return new ModuleDescription(
+                    id: id,
+                    name: string.IsNullOrWhiteSpace(name) ? id : name,
+                    metadata: metadata);
+            }
+        }
+
+        private static string MakeRelative(string root, string full)
+        {
+            string rootFull = Path.GetFullPath(root);
+            string targetFull = Path.GetFullPath(full);
+            if (targetFull.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase))
+            {
+                string rel = targetFull.Substring(rootFull.Length)
+                    .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                return rel.Length == 0 ? "." : rel.Replace(Path.DirectorySeparatorChar, '/');
+            }
+            return targetFull;
         }
 
 #endregion

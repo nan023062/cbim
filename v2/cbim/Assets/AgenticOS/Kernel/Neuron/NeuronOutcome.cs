@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using CBIM.Workspace;
 
 namespace CBIM.Kernel
 {
@@ -13,16 +14,28 @@ namespace CBIM.Kernel
         public object? StructuredInput { get; }
         public IReadOnlyDictionary<string, object> Context { get; }
 
+        /// <summary>
+        /// 本次调用动态指派给目标脑区的 Module 实例列表（per-invocation）。
+        ///
+        /// <para>语义：MotorCortex（工作脑）按这份清单逐次重建文件沙箱白名单——
+        /// <c>AllowedPathPrefixes = Modules.Select(m =&gt; m.WorkspaceRoot)</c>。
+        /// 空列表 → 工作脑无任何文件读写权限（Q8 fail-hard，不退化到全工作区）。
+        /// 非工作脑忽略本字段（其沙箱在装配期一次成型）。</para>
+        /// </summary>
+        public IReadOnlyList<Module> Modules { get; }
+
         public NeuronInput(
             string CorrelationId,
             string Intent,
             object? StructuredInput,
-            IReadOnlyDictionary<string, object> Context)
+            IReadOnlyDictionary<string, object> Context,
+            IReadOnlyList<Module>? Modules = null)
         {
             this.CorrelationId = CorrelationId;
             this.Intent = Intent;
             this.StructuredInput = StructuredInput;
             this.Context = Context;
+            this.Modules = Modules ?? Array.Empty<Module>();
         }
     }
     

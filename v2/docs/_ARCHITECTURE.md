@@ -5,6 +5,17 @@
 
 实现细节见各模块 `.dna/module.md`。
 
+本文档服从 CBIM 的总纲：
+
+**CBIM = Capability-Business Independence + Memory。**
+
+- **Capability（能力）** 由 agent 承载；单个 agent 内部按脑区拆分能力，多 agent 通过 team 组织协作。
+- **Business（业务）** 由 workspace 承载；单个 workspace 描述一个领域工作区，多 workspace 汇成 project。
+- **Independence（独立性）** 要求能力侧与业务侧正交建模、独立演化、运行时动态配对。
+- **Memory（记忆）** 是能力与业务之间的对齐层，记录身份、经验、知识、档案和演化结果。
+
+上下文最小化是上述结构成立后的结果，不是本文档的第一性目标。
+
 ---
 
 ## 一、概念关系图
@@ -20,7 +31,7 @@ flowchart LR
     team["team<br/>(协作组织)"]
     workspace["workspace<br/>(单工种工作区 · 非认知体)"]
     subgraph workspaceMem["workspace 记忆 (1:1, 按内容分类, 不分层)"]
-        wsDNA["DNA 稳定区<br/>(架构 / 契约 / 依赖 / owner 等稳定身份)"]
+        wsDNA["DNA 稳定区<br/>(架构 / 契约 / 依赖 / 边界等稳定身份)"]
         wsEvents["事件档案<br/>(修改 / 决策 / 问题等业务事实流)"]
     end
     project["project<br/>(多工种集合)"]
@@ -32,12 +43,14 @@ flowchart LR
     team <-- "协作于其上" --> project
 ```
 
-- **agent** 是个体；多个 agent 按角色分工组成 **team**。
-- **workspace** 是单一工种的工作空间；多个 workspace 汇成 **project**。
+- **agent** 是能力侧的个体；多个 agent 按角色分工组成 **team**。
+- **workspace** 是业务侧的单一领域工作空间；多个 workspace 汇成 **project**。
 - **team** 与 **project** 在运行时配对——team 中的 agent 进入 project 中对应工种的 workspace 干活。
 - **记忆（知识）** 分两条独立的线：agent 端按大脑认知模型分短/中/长三层；workspace 端按内容分 DNA 稳定区 / 事件档案两类，**不引入层级**。两条线互不吞并。
 
-CBIM = team × project（一个 team 在一个 project 上协作）。
+CBIM 的运行态组合 = team × project（一个 team 在一个 project 上协作）。
+
+CBIM 的设计公式 = Capability-Business Independence + Memory。
 
 ---
 
@@ -45,7 +58,7 @@ CBIM = team × project（一个 team 在一个 project 上协作）。
 
 ### agent · 虚拟人代理
 
-**它是什么。** CBIM 里的"工种"个体——一个具备特定专业能力的虚拟人，承担某一类工作（例如程序员、美术、策划）。
+**它是什么。** CBIM 能力侧的个体——一个具备特定专业能力的虚拟人，承担某一类工作（例如程序员、美术、策划）。
 
 **它不是什么。** 不是"全能选手"，不是"一个进程"，不是"一个工具集合"。一个 agent 只代表一种工种身份。
 
@@ -65,7 +78,7 @@ CBIM = team × project（一个 team 在一个 project 上协作）。
 
 ### workspace · 工作区
 
-**它是什么。** 单一工种的工作空间——某一工种开展工作所需的资料、流程、外部系统接入点都汇聚于此。对应原架构里"模块 / 工作区"的概念。
+**它是什么。** 业务侧的单一领域工作空间——某一类工作开展时需要面对的资料、流程、外部系统接入点和业务契约都汇聚于此。对应原架构里"模块 / 工作区"的概念。
 
 **它不是什么。** 不是 agent 的容器（workspace 本身不持有 agent）；不是多工种共享的大杂烩——一个 workspace 只服务一种工种。
 
@@ -91,14 +104,14 @@ CBIM = team × project（一个 team 在一个 project 上协作）。
 |---|---|---|
 | **agent** | soul + skill + MCP 配置 | 长期 |
 | **agent** | 经验沉淀（自我学习、模式、启发式） | 短期 / 中期 |
-| **workspace** | DNA 稳定区（架构、契约、依赖、owner 等稳定身份） | —（不适用层级） |
+| **workspace** | DNA 稳定区（架构、契约、依赖、边界等稳定身份） | —（不适用层级） |
 | **workspace** | 事件档案（修改 / 决策 / 问题等业务事实流） | —（不适用层级） |
 
 > workspace 行的"层级"列**有意留空**：workspace 非认知体，不适用大脑分层模型——这是设计选择，不是疏漏。
 
 - **agent 的长期记忆**——这个 agent 的稳定身份：soul（人格/职责）、skill（技能）、MCP 配置（可用工具的接入声明）。
 - **agent 的短/中期记忆**——这个 agent 在思考与工作过程中沉淀的经验、模式、启发式，只属于这一个 agent。本文档不展开"短期与中期具体存什么、如何区分"，那是实现层的事。
-- **workspace 的 DNA 稳定区**——这块工作区"是什么"的本体描述：架构、契约、依赖、owner 等稳定身份信息。
+- **workspace 的 DNA 稳定区**——这块工作区"是什么"的本体描述：架构、契约、依赖、边界等稳定身份信息。
 - **workspace 的事件档案**——这块工作区上发生的业务事实流：修改记录、决策记录、问题记录。
 
 **它不是什么。** 不是 team 级或 project 级的共享知识库——记忆没有"团队层"或"项目层"的形态。不是跨 agent 可读写的公共存储——一个 agent 看不到也不依赖另一个 agent 的记忆。不是任务流水或调度日志。**不涉及任何检索机制**——精准查找、模糊召回等都是工程实现，与"是哪种记忆"正交，本架构文档不予描述。
@@ -114,11 +127,12 @@ CBIM = team × project（一个 team 在一个 project 上协作）。
 
 ## 三、复合关系
 
-**CBIM = team × project。**
+**运行态 CBIM = team × project。**
 
 - **team**（一组 agent）提供"人手"——谁来干、各自什么工种。
 - **project**（一组 workspace）提供"场地"——在哪里干、每个工种有哪个工位。
 - 两者在运行时配对：team 中的某个工种 agent 进入 project 中对应工种的 workspace 完成具体工作。
+- 这只是运行态组合关系；设计总纲仍是 **Capability-Business Independence + Memory**。
 - **记忆（知识）按归属切分成两条独立的线，且两条线的组织模型不同**：
   - **agent 端**——按大脑认知分层（短 / 中 / 长），随 agent 走，不进入 team 或 project 的共享层；长期层承载稳定身份（soul + skill + MCP 配置），短/中期层承载经验沉淀。
   - **workspace 端**——按内容分两类（DNA 稳定区 + 事件档案），**不引入层级**；随 workspace 走，对该 workspace 上的 agent 可见。

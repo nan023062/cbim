@@ -1,13 +1,9 @@
-# 覆盖全局 gitignore 的 *.dll 规则:
-# MsExtensionsAI 第三方运行库需要随仓库分发,否则拉取后 Unity 引用全部断开。
-!Assets/CBIM/ThirdParty/MsExtensionsAI/*.dll
-
-# Native-.NET migration: src/ tree must be tracked despite parent *.csproj rule
+# Native-.NET layout: src/ tree must be tracked despite parent *.csproj rule
 !src/**/*.csproj
 !Directory.Build.props
 !Directory.Packages.props
 !nuget.config
-!cbim-native.sln
+!cbim.sln
 !global.json
 
 # Build artefacts under src/

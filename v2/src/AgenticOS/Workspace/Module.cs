@@ -53,13 +53,13 @@ public sealed class Module
     public DateTimeOffset ActivatedAt { get; }
 
     /// <summary>触发本次激活的 Task ID。</summary>
-    public string ActivatedByTaskId { get; }
+    public string? ActivatedByTaskId { get; }
 
     public Module(
         string instanceId,
         ModuleDescription description,
         string workspaceRoot,
-        string activatedByTaskId = null)
+        string? activatedByTaskId = null)
     {
         if (string.IsNullOrWhiteSpace(instanceId))
             throw new ArgumentException("Module.InstanceId 不能为空", nameof(instanceId));

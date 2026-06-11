@@ -63,7 +63,7 @@ public sealed class WorkspaceSystem
     /// 完整构造——允许覆盖 ModuleDescription 注册表（测试 / 嵌入式场景使用）。
     /// 当 <paramref name="descriptions"/> 为 null 时退化为自动发现。
     /// </summary>
-    public WorkspaceSystem(string rootPath, IEnumerable<ModuleDescription> descriptions)
+    public WorkspaceSystem(string rootPath, IEnumerable<ModuleDescription>? descriptions)
     {
         if (string.IsNullOrWhiteSpace(rootPath))
             throw new ArgumentException("rootPath 不能为空", nameof(rootPath));
@@ -102,7 +102,7 @@ public sealed class WorkspaceSystem
     /// <summary>
     /// 按 Id 找 ModuleDescription。找不到返 null。
     /// </summary>
-    public ModuleDescription GetDescription(string id)
+    public ModuleDescription? GetDescription(string id)
     {
         if (string.IsNullOrWhiteSpace(id))
             return null;
@@ -126,7 +126,7 @@ public sealed class WorkspaceSystem
     public Module OpenInstance(
         string descriptionId,
         string workspaceRoot,
-        string activatedByTaskId = null)
+        string? activatedByTaskId = null)
     {
         var desc = GetDescription(descriptionId);
         if (desc == null)
@@ -177,7 +177,7 @@ public sealed class WorkspaceSystem
     /// <summary>
     /// 按 InstanceId 查活动实例。找不到返 null。
     /// </summary>
-    public Module GetActiveInstance(string instanceId)
+    public Module? GetActiveInstance(string instanceId)
     {
         if (string.IsNullOrWhiteSpace(instanceId))
             return null;
@@ -217,7 +217,7 @@ public sealed class WorkspaceSystem
 
         foreach (var dnaDir in DnaToolProvider.EnumerateDnaDirs(rootFull))
         {
-            string moduleDir = Path.GetDirectoryName(dnaDir);
+            string? moduleDir = Path.GetDirectoryName(dnaDir);
             if (string.IsNullOrEmpty(moduleDir))
                 continue;
 
@@ -701,7 +701,7 @@ public sealed class WorkspaceSystem
 
     internal static void WriteAtomic(string path, string content)
     {
-        string parent = Path.GetDirectoryName(path);
+        string? parent = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(parent) && !Directory.Exists(parent))
             Directory.CreateDirectory(parent);
         string tmp = path + ".tmp";
@@ -736,7 +736,7 @@ public sealed class WorkspaceSystem
             throw new FileNotFoundException($"module.md 不存在：{moduleMd}");
         if (!payload.TryGetValue("field", out var fieldObj) || fieldObj == null)
             throw new ArgumentException("frontmatter 编辑需要 payload.field");
-        string field = fieldObj.ToString();
+        string field = fieldObj.ToString() ?? string.Empty;
 
         bool hasScalar = payload.TryGetValue("value", out var scalar) && scalar != null;
         bool hasList = payload.TryGetValue("value_list", out var listObj) && listObj != null;
@@ -768,7 +768,8 @@ public sealed class WorkspaceSystem
             if (DnaFrontmatter.ListFields.Contains(field))
                 throw new ArgumentException(
                     $"字段 '{field}' 是 list 类型，必须用 payload.value_list");
-            newValue = scalar;
+            // hasScalar above guarantees scalar != null at this point.
+            newValue = scalar!;
         }
 
         if (field == "status")
@@ -805,7 +806,7 @@ public sealed class WorkspaceSystem
     {
         if (!payload.TryGetValue("content", out var c) || c == null)
             throw new ArgumentException("body 编辑需要 payload.content");
-        string content = c.ToString();
+        string content = c.ToString() ?? string.Empty;
 
         string raw = File.Exists(moduleMd) ? File.ReadAllText(moduleMd, Utf8NoBom) : "";
         var (fmBlock, _) = DnaFrontmatter.Split(raw);
@@ -819,7 +820,7 @@ public sealed class WorkspaceSystem
     {
         if (!payload.TryGetValue("content", out var c) || c == null)
             throw new ArgumentException("contract 编辑需要 payload.content");
-        string content = c.ToString();
+        string content = c.ToString() ?? string.Empty;
         string text = content.EndsWith("\n", StringComparison.Ordinal) ? content : content + "\n";
         WriteAtomic(contractMd, text);
         return Path.GetFullPath(contractMd);
@@ -838,7 +839,7 @@ public sealed class WorkspaceSystem
             throw new FileNotFoundException($"目标文件不存在：{filePath}");
         if (!payload.TryGetValue("heading", out var hObj) || hObj == null)
             throw new ArgumentException("section 编辑需要 payload.heading");
-        string heading = hObj.ToString();
+        string heading = hObj.ToString() ?? string.Empty;
 
         string secMode = (payload.TryGetValue("mode", out var mObj) && mObj is string ms && !string.IsNullOrWhiteSpace(ms))
             ? ms
@@ -848,7 +849,7 @@ public sealed class WorkspaceSystem
 
         bool needsContent = secMode != "delete";
         payload.TryGetValue("content", out var contentObj);
-        string content = contentObj?.ToString();
+        string? content = contentObj?.ToString();
         if (needsContent && content == null)
             throw new ArgumentException("payload.content 在非 delete 模式下必填");
         if (!needsContent && content != null)
@@ -876,8 +877,9 @@ public sealed class WorkspaceSystem
             throw new InvalidOperationException(
                 $"区段歧义：'{heading}' (level {level}) 匹配 {matches.Count} 个；标题在文件内必须唯一");
 
+        // needsContent 上方已校验 content != null，可安全断言。
         List<string> contentLines = needsContent
-            ? DnaFrontmatter.NormalizeContentLines(content)
+            ? DnaFrontmatter.NormalizeContentLines(content!)
             : new List<string>();
 
         if (matches.Count == 0)
@@ -955,12 +957,12 @@ public sealed class WorkspaceSystem
     {
         if (!payload.TryGetValue("name", out var nObj) || nObj == null)
             throw new ArgumentException("workflow 编辑需要 payload.name");
-        string wfName = nObj.ToString();
+        string wfName = nObj.ToString() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(wfName))
             throw new ArgumentException("payload.name 不能为空");
         if (!payload.TryGetValue("content", out var cObj) || cObj == null)
             throw new ArgumentException("workflow 编辑需要 payload.content");
-        string content = cObj.ToString();
+        string content = cObj.ToString() ?? string.Empty;
 
         if (wfName.Contains("/") || wfName.Contains("\\") || wfName.Contains(".."))
             throw new ArgumentException($"非法 workflow 名：{wfName}");
@@ -995,12 +997,14 @@ public sealed class WorkspaceSystem
 
             foreach (var dep in list)
             {
-                string ds = dep?.ToString();
+                string? ds = dep?.ToString();
                 if (string.IsNullOrWhiteSpace(ds))
                     continue;
                 if (string.Equals(ds.Trim(), sourceRel, StringComparison.Ordinal))
                 {
-                    string moduleDir = Path.GetDirectoryName(dnaDir);
+                    string? moduleDir = Path.GetDirectoryName(dnaDir);
+                    if (moduleDir == null)
+                        continue;
                     string modRel = MakeRelative(RootPath, moduleDir);
                     refs.Add(new DependencyRef(
                         modRel, ds,

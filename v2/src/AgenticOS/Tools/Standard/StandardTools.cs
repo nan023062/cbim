@@ -34,7 +34,7 @@ public static class StandardTools
     public static IReadOnlyList<AIFunction> Build(
         IEnumerable<string> toolIds,
         ToolSandbox sandbox,
-        FileBackend storage = null)
+        FileBackend? storage = null)
     {
         if (sandbox == null)
             throw new ArgumentNullException(nameof(sandbox));
@@ -100,7 +100,7 @@ public static class StandardTools
             for (int i = 0; i < batch.Count; i++)
             {
                 AIFunction fn = batch[i];
-                string name = fn != null ? fn.Name : null;
+                string name = fn.Name;
                 if (string.IsNullOrEmpty(name))
                 {
                     tools.Add(fn);
@@ -130,7 +130,7 @@ public static class StandardTools
     public static IReadOnlyList<AIFunction> CreateFamilies(
         IEnumerable<string> familyNames,
         ToolSandbox sandbox,
-        FileBackend storage = null)
+        FileBackend? storage = null)
         => Build(familyNames, sandbox, storage);
 
 
@@ -138,7 +138,7 @@ public static class StandardTools
     #region 预设族
 
 
-    public static IReadOnlyList<AIFunction> BuildFilesGroup(ToolSandbox sandbox, FileBackend storage)
+    public static IReadOnlyList<AIFunction> BuildFilesGroup(ToolSandbox sandbox, FileBackend? storage)
         => new AIFunction[]
         {
             BuildReadFile(sandbox, storage),
@@ -163,7 +163,7 @@ public static class StandardTools
     #region Files 工具
 
 
-    private static AIFunction BuildReadFile(ToolSandbox sandbox, FileBackend storage)
+    private static AIFunction BuildReadFile(ToolSandbox sandbox, FileBackend? storage)
     {
         return AIFunctionFactory.Create(
             (Func<string, int, int, string>)((path, maxLines, offset) =>
@@ -201,7 +201,7 @@ public static class StandardTools
             "Read a UTF-8 text file. Binary files return a JSON metadata object instead of their contents. Large text files are truncated by line count and total bytes.");
     }
 
-    private static AIFunction BuildWriteFile(ToolSandbox sandbox, FileBackend storage)
+    private static AIFunction BuildWriteFile(ToolSandbox sandbox, FileBackend? storage)
     {
         if (storage == null)
             throw new ArgumentNullException(nameof(storage), "Files family requires a FileBackend storage instance");
@@ -226,7 +226,7 @@ public static class StandardTools
             "Write a UTF-8 text file atomically. Parent directories are created on demand. Overwrites any existing file at the path.");
     }
 
-    private static AIFunction BuildEditFile(ToolSandbox sandbox, FileBackend storage)
+    private static AIFunction BuildEditFile(ToolSandbox sandbox, FileBackend? storage)
     {
         if (storage == null)
             throw new ArgumentNullException(nameof(storage), "Files family requires a FileBackend storage instance");
@@ -265,7 +265,7 @@ public static class StandardTools
             "Replace a single exact occurrence of oldStr with newStr in a UTF-8 text file. Fails if oldStr does not appear exactly once.");
     }
 
-    private static AIFunction BuildDeleteFile(ToolSandbox sandbox, FileBackend storage)
+    private static AIFunction BuildDeleteFile(ToolSandbox sandbox, FileBackend? storage)
     {
         return AIFunctionFactory.Create(
             (Func<string, string>)(path =>
@@ -286,7 +286,7 @@ public static class StandardTools
             "Delete a file. A missing file is treated as success (idempotent).");
     }
 
-    private static AIFunction BuildListDirectory(ToolSandbox sandbox, FileBackend storage)
+    private static AIFunction BuildListDirectory(ToolSandbox sandbox, FileBackend? storage)
     {
         return AIFunctionFactory.Create(
             (Func<string, string>)(path =>
@@ -606,11 +606,11 @@ public static class StandardTools
     private static readonly UTF8Encoding Utf8NoBom = new UTF8Encoding(false);
 
     /// <summary>记录一次副作用到沙箱 SideEffects 队列。Detail 超长截断到 256 字符。</summary>
-    private static void RecordSideEffect(ToolSandbox sandbox, string kind, string target, string detail)
+    private static void RecordSideEffect(ToolSandbox sandbox, string kind, string target, string? detail)
     {
         if (sandbox == null)
             return;
-        string truncated = detail == null
+        string? truncated = detail == null
             ? null
             : (detail.Length <= SideEffectDetailMaxChars ? detail : detail.Substring(0, SideEffectDetailMaxChars));
         sandbox.SideEffects.Enqueue(new SideEffect(

@@ -29,5 +29,5 @@ internal interface IMemoryBridgeTool
     /// <param name="arguments">客户端 <c>arguments</c> 对象；null 视为空对象。</param>
     /// <param name="jsonOptions">序列化选项（与 server 共用）。</param>
     /// <returns>执行结果——序列化后作为 text content 回传。不为 null。</returns>
-    JsonNode Handle(JsonNode arguments, JsonSerializerOptions jsonOptions);
+    JsonNode Handle(JsonNode? arguments, JsonSerializerOptions jsonOptions);
 }

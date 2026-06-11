@@ -39,10 +39,11 @@ internal sealed class MemoryGetTool : IMemoryBridgeTool
         };
     }
 
-    public JsonNode Handle(JsonNode arguments, JsonSerializerOptions jsonOptions)
+    public JsonNode Handle(JsonNode? arguments, JsonSerializerOptions jsonOptions)
     {
-        string id = MemoryBridgeToolSerializer.GetStringOrNull(arguments, "id");
-        var entry = _memory.Get(id);
+        string? id = MemoryBridgeToolSerializer.GetStringOrNull(arguments, "id");
+        var entry = id == null ? null : _memory.Get(id);
+        // entry 可为 null（id 空白或未命中），下方序列化分支已处理。
 
         return new JsonObject
         {

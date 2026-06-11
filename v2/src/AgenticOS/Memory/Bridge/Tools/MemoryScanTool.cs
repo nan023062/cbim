@@ -52,9 +52,9 @@ internal sealed class MemoryScanTool : IMemoryBridgeTool
         };
     }
 
-    public JsonNode Handle(JsonNode arguments, JsonSerializerOptions jsonOptions)
+    public JsonNode Handle(JsonNode? arguments, JsonSerializerOptions jsonOptions)
     {
-        string source = MemoryBridgeToolSerializer.GetStringOrNull(arguments, "source");
+        string? source = MemoryBridgeToolSerializer.GetStringOrNull(arguments, "source");
         var tags = MemoryBridgeToolSerializer.GetStringArrayOrEmpty(arguments, "tags");
         var since = MemoryBridgeToolSerializer.ParseIso8601UtcOrNull(
             MemoryBridgeToolSerializer.GetStringOrNull(arguments, "since"));

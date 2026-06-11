@@ -74,7 +74,8 @@ public static class DnaToolProvider
         var trampoline = new DnaListTrampoline(workspaceRoot);
         var method = typeof(DnaListTrampoline).GetMethod(
             nameof(DnaListTrampoline.Invoke),
-            BindingFlags.Instance | BindingFlags.Public);
+            BindingFlags.Instance | BindingFlags.Public)
+            ?? throw new InvalidOperationException("DnaListTrampoline.Invoke not found");
         return AIFunctionFactory.Create(
             method,
             target: trampoline,
@@ -113,7 +114,7 @@ public static class DnaToolProvider
             var entries = new List<Dictionary<string, object>>();
             foreach (var dnaDir in EnumerateDnaDirs(baseDir))
             {
-                string moduleDir = Path.GetDirectoryName(dnaDir);
+                string? moduleDir = Path.GetDirectoryName(dnaDir);
                 if (string.IsNullOrEmpty(moduleDir))
                     continue;
                 string moduleRel = MakeRelative(_root, moduleDir);
@@ -142,7 +143,8 @@ public static class DnaToolProvider
         var trampoline = new DnaShowTrampoline(workspaceRoot);
         var method = typeof(DnaShowTrampoline).GetMethod(
             nameof(DnaShowTrampoline.Invoke),
-            BindingFlags.Instance | BindingFlags.Public);
+            BindingFlags.Instance | BindingFlags.Public)
+            ?? throw new InvalidOperationException("DnaShowTrampoline.Invoke not found");
         return AIFunctionFactory.Create(
             method,
             target: trampoline,
@@ -198,7 +200,8 @@ public static class DnaToolProvider
         var trampoline = new DnaInitTrampoline(workspace);
         var method = typeof(DnaInitTrampoline).GetMethod(
             nameof(DnaInitTrampoline.Invoke),
-            BindingFlags.Instance | BindingFlags.Public);
+            BindingFlags.Instance | BindingFlags.Public)
+            ?? throw new InvalidOperationException("DnaInitTrampoline.Invoke not found");
         return AIFunctionFactory.Create(
             method,
             target: trampoline,
@@ -253,7 +256,8 @@ public static class DnaToolProvider
         var trampoline = new DnaEditTrampoline(workspace);
         var method = typeof(DnaEditTrampoline).GetMethod(
             nameof(DnaEditTrampoline.Invoke),
-            BindingFlags.Instance | BindingFlags.Public);
+            BindingFlags.Instance | BindingFlags.Public)
+            ?? throw new InvalidOperationException("DnaEditTrampoline.Invoke not found");
         return AIFunctionFactory.Create(
             method,
             target: trampoline,
@@ -307,7 +311,8 @@ public static class DnaToolProvider
         var trampoline = new DnaSplitTrampoline(workspace);
         var method = typeof(DnaSplitTrampoline).GetMethod(
             nameof(DnaSplitTrampoline.Invoke),
-            BindingFlags.Instance | BindingFlags.Public);
+            BindingFlags.Instance | BindingFlags.Public)
+            ?? throw new InvalidOperationException("DnaSplitTrampoline.Invoke not found");
         return AIFunctionFactory.Create(
             method,
             target: trampoline,
@@ -371,7 +376,8 @@ public static class DnaToolProvider
         var trampoline = new DnaDeprecateTrampoline(workspace);
         var method = typeof(DnaDeprecateTrampoline).GetMethod(
             nameof(DnaDeprecateTrampoline.Invoke),
-            BindingFlags.Instance | BindingFlags.Public);
+            BindingFlags.Instance | BindingFlags.Public)
+            ?? throw new InvalidOperationException("DnaDeprecateTrampoline.Invoke not found");
         return AIFunctionFactory.Create(
             method,
             target: trampoline,
@@ -412,7 +418,8 @@ public static class DnaToolProvider
         var trampoline = new DnaReindexTrampoline(workspace);
         var method = typeof(DnaReindexTrampoline).GetMethod(
             nameof(DnaReindexTrampoline.Invoke),
-            BindingFlags.Instance | BindingFlags.Public);
+            BindingFlags.Instance | BindingFlags.Public)
+            ?? throw new InvalidOperationException("DnaReindexTrampoline.Invoke not found");
         return AIFunctionFactory.Create(
             method,
             target: trampoline,
@@ -555,8 +562,8 @@ public static class DnaToolProvider
         {
             if (el.ValueKind != JsonValueKind.Object)
                 throw new ArgumentException("splits 元素必须是 JSON 对象");
-            string path = el.TryGetProperty("path", out var p) ? p.GetString() : null;
-            string name = el.TryGetProperty("name", out var n) ? n.GetString() : null;
+            string? path = el.TryGetProperty("path", out var p) ? p.GetString() : null;
+            string? name = el.TryGetProperty("name", out var n) ? n.GetString() : null;
             var headings = new List<string>();
             if (el.TryGetProperty("headings", out var hs) && hs.ValueKind == JsonValueKind.Array)
             {
@@ -566,7 +573,8 @@ public static class DnaToolProvider
             string owner = el.TryGetProperty("owner", out var o) ? (o.GetString() ?? string.Empty) : string.Empty;
             string desc = el.TryGetProperty("description", out var d)
                 ? (d.GetString() ?? string.Empty) : string.Empty;
-            specs.Add(new SplitSpec(path, name, headings, owner, desc));
+            // SplitSpec 构造器内部 fail-hard 校验非空 path/name；此处 ! 把空值移交给它。
+            specs.Add(new SplitSpec(path!, name!, headings, owner, desc));
         }
         return specs;
     }
@@ -590,7 +598,8 @@ public static class DnaToolProvider
                     return l;
                 }
             case JsonValueKind.String:
-                return el.GetString();
+                // JSON String 由 doc 自身保证非 null（否则 ValueKind=Null）。
+                return el.GetString()!;
             case JsonValueKind.True:
                 return true;
             case JsonValueKind.False:
@@ -600,9 +609,10 @@ public static class DnaToolProvider
                     return i;
                 return el.GetDouble();
             case JsonValueKind.Null:
-                return null;
+                // 上层 dict/list 把 null 折成空串以维持 IReadOnlyDictionary<string,object> 契约。
+                return string.Empty;
             default:
-                return el.ToString();
+                return el.ToString() ?? string.Empty;
         }
     }
 

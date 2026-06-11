@@ -34,7 +34,7 @@ internal sealed class MemoryStatsTool : IMemoryBridgeTool
         };
     }
 
-    public JsonNode Handle(JsonNode arguments, JsonSerializerOptions jsonOptions)
+    public JsonNode Handle(JsonNode? arguments, JsonSerializerOptions jsonOptions)
     {
         var stats = _memory.Stats();
         return new JsonObject

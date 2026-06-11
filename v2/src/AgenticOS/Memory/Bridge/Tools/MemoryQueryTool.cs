@@ -49,9 +49,9 @@ internal sealed class MemoryQueryTool : IMemoryBridgeTool
         };
     }
 
-    public JsonNode Handle(JsonNode arguments, JsonSerializerOptions jsonOptions)
+    public JsonNode Handle(JsonNode? arguments, JsonSerializerOptions jsonOptions)
     {
-        string text = MemoryBridgeToolSerializer.GetStringOrNull(arguments, "text");
+        string? text = MemoryBridgeToolSerializer.GetStringOrNull(arguments, "text");
         int topK = MemoryBridgeToolSerializer.GetIntOrDefault(arguments, "topK", DefaultTopK);
 
         // text 为 null 时下游会返回空集合，但 MCP 输入语义里 text 是必填——给出明确错误。

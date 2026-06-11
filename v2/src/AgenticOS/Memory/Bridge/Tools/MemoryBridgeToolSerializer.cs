@@ -19,7 +19,7 @@ internal static class MemoryBridgeToolSerializer
     private const string Iso8601UtcFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
 
     /// <summary>把 <see cref="DateTime"/> 转 ISO 8601 UTC 字符串。null 输入返回 null（用于可空字段）。</summary>
-    public static string FormatIso8601Utc(DateTime? value)
+    public static string? FormatIso8601Utc(DateTime? value)
     {
         if (!value.HasValue)
             return null;
@@ -36,7 +36,7 @@ internal static class MemoryBridgeToolSerializer
     /// 解析 ISO 8601（含 <c>Z</c> 或时区偏移）为 UTC <see cref="DateTime"/>。
     /// 空白返回 null；非法格式抛 <see cref="FormatException"/>——MCP 层会把它包成 RPC 错误。
     /// </summary>
-    public static DateTime? ParseIso8601UtcOrNull(string text)
+    public static DateTime? ParseIso8601UtcOrNull(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
             return null;
@@ -69,7 +69,7 @@ internal static class MemoryBridgeToolSerializer
     /// 把 <see cref="MemoryEntry"/> 序列化为 MCP 客户端易读的 JSON 对象——
     /// <c>tags</c> 字段保证非 null（null 折成空数组）；<c>createdAt</c> 走 ISO 8601 UTC。
     /// </summary>
-    public static JsonObject EntryToJson(MemoryEntry entry)
+    public static JsonObject? EntryToJson(MemoryEntry entry)
     {
         if (entry == null)
             return null;
@@ -90,7 +90,7 @@ internal static class MemoryBridgeToolSerializer
     }
 
     /// <summary>把 <see cref="IReadOnlyList{MemoryEntry}"/> 序列化为 JSON 数组。null/empty 返回空数组。</summary>
-    public static JsonArray EntriesToJson(IReadOnlyList<MemoryEntry> entries)
+    public static JsonArray EntriesToJson(IReadOnlyList<MemoryEntry>? entries)
     {
         var arr = new JsonArray();
         if (entries == null)
@@ -106,7 +106,7 @@ internal static class MemoryBridgeToolSerializer
     /// 取 JSON 字符串字段——缺失 / null 返回 null；类型不对抛 <see cref="ArgumentException"/>
     /// （而非静默返回 null——防 schema 漂移被无声吞掉）。
     /// </summary>
-    public static string GetStringOrNull(JsonNode args, string field)
+    public static string? GetStringOrNull(JsonNode? args, string field)
     {
         if (args == null)
             return null;
@@ -121,7 +121,7 @@ internal static class MemoryBridgeToolSerializer
     /// <summary>
     /// 取 JSON int 字段——缺失 / null 返回 defaultValue；类型不对抛 <see cref="ArgumentException"/>。
     /// </summary>
-    public static int GetIntOrDefault(JsonNode args, string field, int defaultValue)
+    public static int GetIntOrDefault(JsonNode? args, string field, int defaultValue)
     {
         if (args == null)
             return defaultValue;
@@ -143,7 +143,7 @@ internal static class MemoryBridgeToolSerializer
     /// 取 JSON string[] 字段——缺失 / null 返回空列表；非数组或元素非字符串抛
     /// <see cref="ArgumentException"/>。
     /// </summary>
-    public static IReadOnlyList<string> GetStringArrayOrEmpty(JsonNode args, string field)
+    public static IReadOnlyList<string> GetStringArrayOrEmpty(JsonNode? args, string field)
     {
         if (args == null)
             return Array.Empty<string>();

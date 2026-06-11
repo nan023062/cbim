@@ -259,11 +259,9 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
     /// </summary>
     /// <param name="descriptor">脑区描述符——决定 ToolIds 选择。</param>
     /// <param name="allowedPathPrefixes">沙箱允许的路径前缀；空 = 拒绝全部文件操作（且立即返回空工具集）。</param>
-    /// <param name="workingDirectory">沙箱默认 workDir（bash 家族用），可为 null。</param>
     private static IReadOnlyList<AITool> BuildStandardTools(
         BrainDescriptor descriptor,
-        IReadOnlyList<string> allowedPathPrefixes,
-        string workingDirectory = null)
+        IReadOnlyList<string> allowedPathPrefixes)
     {
         if (descriptor.ToolIds.Count == 0)
             return Array.Empty<AITool>();
@@ -274,7 +272,7 @@ public abstract class Brain : IInvocable, ICircuitBuilderContext, IDisposable
 
         var toolSandbox = new ToolSandbox(
             allowedPathPrefixes: allowedPathPrefixes,
-            workingDirectory: workingDirectory ?? string.Empty);
+            workingDirectory: string.Empty);
         var standardFunctions = StandardTools.Build(descriptor.ToolIds, toolSandbox);
         if (standardFunctions.Count == 0)
             return Array.Empty<AITool>();

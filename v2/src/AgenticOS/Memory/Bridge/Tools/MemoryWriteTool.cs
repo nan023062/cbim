@@ -57,11 +57,11 @@ internal sealed class MemoryWriteTool : IMemoryBridgeTool
         };
     }
 
-    public JsonNode Handle(JsonNode arguments, JsonSerializerOptions jsonOptions)
+    public JsonNode Handle(JsonNode? arguments, JsonSerializerOptions jsonOptions)
     {
-        string id = MemoryBridgeToolSerializer.GetStringOrNull(arguments, "id");
-        string source = MemoryBridgeToolSerializer.GetStringOrNull(arguments, "source");
-        string text = MemoryBridgeToolSerializer.GetStringOrNull(arguments, "text");
+        string? id = MemoryBridgeToolSerializer.GetStringOrNull(arguments, "id");
+        string? source = MemoryBridgeToolSerializer.GetStringOrNull(arguments, "source");
+        string? text = MemoryBridgeToolSerializer.GetStringOrNull(arguments, "text");
         var tags = MemoryBridgeToolSerializer.GetStringArrayOrEmpty(arguments, "tags");
 
         // 入口校验（fail-fast）——把「空白 id」从默认实现的 ArgumentException

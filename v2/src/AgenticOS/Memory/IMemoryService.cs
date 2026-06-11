@@ -53,7 +53,7 @@ public interface IMemoryService
     /// </summary>
     /// <param name="id">条目 Id。</param>
     /// <returns>命中返回条目；<b>不存在或 Id 空白时返回 <c>null</c></b>。</returns>
-    MemoryEntry Get(string id);
+    MemoryEntry? Get(string id);
 
     /// <summary>
     /// 枚举所有条目——按 <see cref="MemoryEntry.CreatedAt"/> 倒序。

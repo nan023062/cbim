@@ -48,7 +48,7 @@ public sealed class MemoryBridgeMcpServer : IAsyncDisposable
     private readonly IMemoryService _memory;
     private readonly MemoryBridgeMcpServerConfig _config;
     private readonly Dictionary<string, IMemoryBridgeTool> _tools;
-    private CancellationTokenSource _cts;
+    private CancellationTokenSource? _cts;
     private bool _disposed;
 
     /// <summary>
@@ -56,7 +56,7 @@ public sealed class MemoryBridgeMcpServer : IAsyncDisposable
     /// </summary>
     /// <param name="memory">中期记忆服务实例（per-Agent）；不为 null。</param>
     /// <param name="config">协议握手字段；null 走默认（serverName=cbim-memory-bridge-mcp / version=1.0.0）。</param>
-    public MemoryBridgeMcpServer(IMemoryService memory, MemoryBridgeMcpServerConfig config = null)
+    public MemoryBridgeMcpServer(IMemoryService memory, MemoryBridgeMcpServerConfig? config = null)
     {
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
         _config = (config ?? new MemoryBridgeMcpServerConfig()).Validate();
@@ -95,7 +95,7 @@ public sealed class MemoryBridgeMcpServer : IAsyncDisposable
         {
             while (!linked.IsCancellationRequested)
             {
-                string line;
+                string? line;
                 try
                 {
                     line = await input.ReadLineAsync().ConfigureAwait(false);
@@ -117,7 +117,7 @@ public sealed class MemoryBridgeMcpServer : IAsyncDisposable
                     continue;
                 }
 
-                string response = ProcessLine(line);
+                string? response = ProcessLine(line);
                 if (response != null)
                 {
                     await output.WriteLineAsync(response).ConfigureAwait(false);
@@ -135,9 +135,9 @@ public sealed class MemoryBridgeMcpServer : IAsyncDisposable
     /// 处理单条 JSON-RPC 帧——返回应写回的响应字符串；notification（无 id）返回 null（不回复）。
     /// 解析失败时返回 JSON-RPC parse error 帧。
     /// </summary>
-    internal string ProcessLine(string line)
+    internal string? ProcessLine(string line)
     {
-        JsonNode root;
+        JsonNode? root;
         try
         {
             root = JsonNode.Parse(line);
@@ -154,20 +154,20 @@ public sealed class MemoryBridgeMcpServer : IAsyncDisposable
         }
 
         // id 可为 null（notification）、字符串或数字——按原节点透传。
-        JsonNode id = req["id"];
+        JsonNode? id = req["id"];
         bool isNotification = id == null;
 
-        string method = (req["method"] is JsonValue mv && mv.TryGetValue<string>(out var ms)) ? ms : null;
+        string? method = (req["method"] is JsonValue mv && mv.TryGetValue<string>(out var ms)) ? ms : null;
         if (string.IsNullOrEmpty(method))
         {
             return isNotification ? null : BuildError(id, ErrInvalidRequest, "缺少 'method' 字段");
         }
 
-        JsonNode @params = req["params"];
+        JsonNode? @params = req["params"];
 
         try
         {
-            JsonNode result = DispatchMethod(method, @params, isNotification);
+            JsonNode? result = DispatchMethod(method, @params, isNotification);
             if (isNotification)
                 return null;
             // result 允许为 null（理论上不会，但兜底）→ 序列化成 JSON null
@@ -193,7 +193,7 @@ public sealed class MemoryBridgeMcpServer : IAsyncDisposable
 
     #region JSON-RPC 方法分发
 
-    private JsonNode DispatchMethod(string method, JsonNode @params, bool isNotification)
+    private JsonNode DispatchMethod(string method, JsonNode? @params, bool isNotification)
     {
         switch (method)
         {
@@ -219,7 +219,7 @@ public sealed class MemoryBridgeMcpServer : IAsyncDisposable
         }
     }
 
-    private JsonNode HandleInitialize(JsonNode @params)
+    private JsonNode HandleInitialize(JsonNode? @params)
     {
         // 不验证 client 端协议版本——MCP 标准让 server 在 result 里回报自己支持的版本，
         // 由 client 决定是否继续。我们也把客户端版本当 best-effort 信息丢弃。
@@ -258,25 +258,26 @@ public sealed class MemoryBridgeMcpServer : IAsyncDisposable
     }
 
 
-    private JsonNode HandleToolsCall(JsonNode @params)
+    private JsonNode HandleToolsCall(JsonNode? @params)
     {
         var po = @params as JsonObject;
         if (po == null)
             throw new McpProtocolException(ErrInvalidParams, "tools/call 需要 params 对象");
 
-        string name = (po["name"] is JsonValue nv && nv.TryGetValue<string>(out var ns)) ? ns : null;
+        string? name = (po["name"] is JsonValue nv && nv.TryGetValue<string>(out var ns)) ? ns : null;
         if (string.IsNullOrEmpty(name))
             throw new McpProtocolException(ErrInvalidParams, "tools/call 缺少 'name' 字段");
 
         if (!_tools.TryGetValue(name, out var tool))
             throw new McpProtocolException(ErrMethodNotFound, "未注册的工具：" + name);
 
-        JsonNode args = po["arguments"];
+        JsonNode? args = po["arguments"];
 
         // 执行工具——输入级异常按 MCP 规约转为 result.isError=true（而非 JSON-RPC error 层），
         // 让 LLM 能看见错误内容并自我修正。
         try
         {
+            // tool.Handle 接受可空 arguments；MCP 规范允许 arguments 缺省。
             JsonNode handled = tool.Handle(args, JsonOptions);
             string serialized = handled == null ? "null" : handled.ToJsonString(JsonOptions);
             return new JsonObject
@@ -326,7 +327,7 @@ public sealed class MemoryBridgeMcpServer : IAsyncDisposable
     #region JSON-RPC 帧构造
 
 
-    private static string BuildResult(JsonNode id, JsonNode result)
+    private static string BuildResult(JsonNode? id, JsonNode? result)
     {
         var frame = new JsonObject
         {
@@ -337,7 +338,7 @@ public sealed class MemoryBridgeMcpServer : IAsyncDisposable
         return frame.ToJsonString(JsonOptions);
     }
 
-    private static string BuildError(JsonNode id, int code, string message)
+    private static string BuildError(JsonNode? id, int code, string message)
     {
         var frame = new JsonObject
         {

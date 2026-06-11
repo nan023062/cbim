@@ -178,9 +178,9 @@ namespace CBIM.Workspace
         /// <param name="rootPath">工作区根路径，由 AgenticOS 在初始化时传入。</param>
         public WorkspaceSystem(string rootPath)
         {
-            RootPath         = rootPath;
-            ReadOnlyDnaTools  = DnaToolProvider.GetReadOnlyTools();
-            ReadWriteDnaTools = DnaToolProvider.GetReadWriteTools();
+            RootPath          = rootPath;
+            ReadOnlyDnaTools  = DnaToolProvider.GetReadOnlyTools(rootPath);
+            ReadWriteDnaTools = DnaToolProvider.GetReadWriteTools(rootPath);
         }
 
 #endregion

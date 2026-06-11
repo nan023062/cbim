@@ -1,10 +1,15 @@
 #nullable enable
+using System;
+using System.Collections.Generic;
 using CBIM.LlmClient;
 
 namespace CBIM.Mind
 {
     /// <summary>
     /// ParietalLobe（顶叶）——架构脑。
+    /// 装配期获得「整工作区只读」沙箱：白名单 = WorkspaceSystem.RootPath，
+    /// ToolIds 由 <see cref="ParietalLobeDescriptor"/> 写死为只读文件家族（readfile/listdir/grep/glob）。
+    /// 不下放 writefile/editfile/deletefile/bash——这是按 BrainKind 写死的硬上限。
     /// </summary>
     public sealed class ParietalLobe : Brain
     {
@@ -13,6 +18,18 @@ namespace CBIM.Mind
         internal ParietalLobe(IBrainAgent agent, ChatClientFactory chatClientFactory, ParietalLobeDescriptor descriptor)
             : base(agent, chatClientFactory, descriptor)
         {
+        }
+
+        /// <summary>
+        /// 架构脑沙箱白名单 = 工作区根路径——允许 read-all。
+        /// 没拿到 RootPath 时退化为空（保持与默认行为一致）。
+        /// </summary>
+        protected override IReadOnlyList<string> ResolveStaticAllowedPathPrefixes(IBrainAgent agent)
+        {
+            var root = agent?.Os?.Workspace?.RootPath;
+            if (string.IsNullOrWhiteSpace(root))
+                return Array.Empty<string>();
+            return new[] { root };
         }
     }
 
@@ -28,11 +45,22 @@ namespace CBIM.Mind
         static readonly string DefaultIdentity = "架构脑 · 模块设计 / 架构合规";
 
         /// <summary>
+        /// 架构脑只读文件家族——按 BrainKind 写死，不暴露给 AgentDescription 配置。
+        /// readfile / listdir / grep / glob：四件套已能完整覆盖架构脑需要的工作区只读浏览能力。
+        /// 不含 writefile / editfile / deletefile / bash——这些在权限模型里属于工作脑独占。
+        /// </summary>
+        private static readonly string[] ReadOnlyFileToolIds =
+        {
+            "readfile", "listdir", "grep", "glob",
+        };
+
+        /// <summary>
         /// 创建架构脑描述符。
         /// </summary>
         /// <param name="modelId">绑定的 ModelDescriptor.Id（null 或空字符串表示使用默认模型）。</param>
         internal ParietalLobeDescriptor(string? modelId = null)
-            : base(Id, Prompt, DefaultName, DefaultIdentity, modelId ?? string.Empty)
+            : base(Id, Prompt, DefaultName, DefaultIdentity, modelId ?? string.Empty,
+                   toolIds: ReadOnlyFileToolIds)
         {
         }
     }

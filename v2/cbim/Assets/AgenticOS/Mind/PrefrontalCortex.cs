@@ -39,10 +39,19 @@ namespace CBIM.Mind
         }
 
         /// <summary>
-        /// 追加 SynapseTools——让主脑 Neuron 能直接调用各子脑区。
+        /// 追加 SynapseTools 与 BrainInspectTools——让主脑 Neuron 能直接调用各子脑区，
+        /// 并能在派发前只读地枚举 / 检查可调子脑区的描述符与运行态。
         /// </summary>
         protected override IReadOnlyList<AITool> BuildExtraTools(IBrainAgent agent, BrainDescriptor descriptor)
-            => SynapseToolFactory.Build(agent.CallableBrains);
+        {
+            var synapse = SynapseToolFactory.Build(agent.CallableBrains);
+            var inspect = BrainInspectToolProvider.GetReadOnlyTools(agent);
+            if (inspect.Count == 0) return synapse;
+            var merged = new List<AITool>(synapse.Count + inspect.Count);
+            foreach (var t in synapse) merged.Add(t);
+            foreach (var t in inspect) merged.Add(t);
+            return merged;
+        }
 
 #region IPrefrontalCallback
 

@@ -37,15 +37,19 @@ namespace CBIM.Workspace
                 target: trampoline,
                 name: "module_list",
                 description:
-                    "List every registered Module Description in the current workspace. " +
-                    "Returns a JSON array of {id, name, metadataKind, metadataLocation}. " +
-                    "Use the returned ids in __brain_call_* moduleIdsJson to scope a worker brain's filesystem sandbox.");
+                "List every registered Module Description in the current workspace. " +
+                "Returns a JSON array of {id, name, metadataKind, metadataLocation}. " +
+                "Use the returned ids in __brain_call_* moduleIdsJson to scope a worker brain's filesystem sandbox.");
         }
 
         private sealed class ModuleListTrampoline
         {
             private readonly WorkspaceSystem _ws;
-            public ModuleListTrampoline(WorkspaceSystem ws) { _ws = ws; }
+
+            public ModuleListTrampoline(WorkspaceSystem ws)
+            {
+                _ws = ws;
+            }
 
             public string Invoke()
             {
@@ -62,6 +66,7 @@ namespace CBIM.Workspace
                         { "metadataLocation", d.Metadata.Location },
                     });
                 }
+
                 list.Sort((a, b) => string.CompareOrdinal((string)a["id"], (string)b["id"]));
                 return JsonSerializer.Serialize(list);
             }

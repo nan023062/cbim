@@ -39,6 +39,7 @@ namespace CBIM.Workflow
         private readonly FileBackend _storage;
         private readonly string _subdir;
         private readonly object _gate = new object();
+
         private readonly Dictionary<string, WorkflowDescriptor> _entries =
             new Dictionary<string, WorkflowDescriptor>(StringComparer.Ordinal);
 
@@ -59,8 +60,7 @@ namespace CBIM.Workflow
         }
 
 
-#region FileWorkflowStore 公共方法
-
+        #region FileWorkflowStore 公共方法
 
         public Task<WorkflowDescriptor?> GetAsync(string id, CancellationToken ct = default)
         {
@@ -93,6 +93,7 @@ namespace CBIM.Workflow
                 _entries[descriptor.Id] = descriptor;
                 PersistEntry(descriptor);
             }
+
             return Task.CompletedTask;
         }
 
@@ -106,15 +107,13 @@ namespace CBIM.Workflow
                 if (_entries.Remove(id))
                     _storage.Delete(EntryPath(id));
             }
+
             return Task.CompletedTask;
         }
 
+        #endregion
 
-
-#endregion
-
-#region 内部：路径 / 序列化 / 加载
-
+        #region 内部：路径 / 序列化 / 加载
 
         private string EntryPath(string id) =>
             _storage.ResolveCbimPath(_subdir, id + FileSuffix);
@@ -166,21 +165,18 @@ namespace CBIM.Workflow
             }
         }
 
+        #endregion
 
-
-#endregion
-
-#region 落盘 DTO
-
-        //
-        // 序列化方案：NeuralCircuit 是多态运行时对象，CircuitNode 抽象基类派生三类型。
-        // 不做直接 JSON 多态序列化（避免引入 JsonDerivedType / TypeDiscriminator 到 .NET 6+ 限定特性）。
-        // 改为存储构建参数：
-        //   - NodeDto 含 kind 鉴别字段（"CallBrain" / "Branch" / "Return" / "CallTool"）
-        //   - EdgeDto 对应 CircuitEdge 三字段
-        //   - 反序列化时逐一调用 NeuralCircuitBuilder.Add*，最终 Commit 重建 NeuralCircuit
-        // 优势：完整保留 Commit 校验（连通性 / 无环 / BranchNode 出度），存档 + 恢复语义一致。
-
+        #region 落盘 DTO
+        /// <summary>
+        ///序列化方案：NeuralCircuit 是多态运行时对象，CircuitNode 抽象基类派生三类型。
+        ///不做直接 JSON 多态序列化（避免引入 JsonDerivedType / TypeDiscriminator 到 .NET 6+ 限定特性）。
+        ///改为存储构建参数：
+        ///  - NodeDto 含 kind 鉴别字段（"CallBrain" / "Branch" / "Return" / "CallTool"）
+        ///  - EdgeDto 对应 CircuitEdge 三字段
+        ///  - 反序列化时逐一调用 NeuralCircuitBuilder.Add*，最终 Commit 重建 NeuralCircuit
+        ///优势：完整保留 Commit 校验（连通性 / 无环 / BranchNode 出度），存档 + 恢复语义一致。
+        /// </summary>
         private sealed class WorkflowDto
         {
             public string Id { get; set; }
@@ -199,23 +195,31 @@ namespace CBIM.Workflow
             public WorkflowDescriptor ToDescriptor()
             {
                 var circuit = Circuit?.ToCircuit()
-                    ?? throw new ArgumentException("WorkflowDto.Circuit 不能为 null。");
+                              ?? throw new ArgumentException("WorkflowDto.Circuit 不能为 null。");
                 return new WorkflowDescriptor(Id, Name, Description, circuit);
             }
         }
 
         private sealed class CircuitDto
         {
-            /// <summary>Circuit Id（Guid 字符串）——重建时直接透传给 NeuralCircuitBuilder。</summary>
+            /// <summary>
+            /// Circuit Id（Guid 字符串）——重建时直接透传给 NeuralCircuitBuilder。
+            /// </summary>
             public string CircuitId { get; set; }
 
-            /// <summary>原始 user NL。</summary>
+            /// <summary>
+            /// 原始 user NL。
+            /// </summary>
             public string SourceRequest { get; set; }
 
-            /// <summary>节点有序列表——顺序即 Builder 的 Add 调用顺序，第一个节点为 StartNode。</summary>
+            /// <summary>
+            /// 节点有序列表——顺序即 Builder 的 Add 调用顺序，第一个节点为 StartNode。
+            /// </summary>
             public List<NodeDto> Nodes { get; set; }
 
-            /// <summary>边列表。</summary>
+            /// <summary>
+            /// 边列表。
+            /// </summary>
             public List<EdgeDto> Edges { get; set; }
 
             public static CircuitDto From(NeuralCircuit c)
@@ -343,7 +347,8 @@ namespace CBIM.Workflow
                     case "CallBrain":
                         // ModuleIdsJson 为 null 时（旧档案缺字段）走 Builder 默认值 = null，
                         // 与 CallBrainNode 构造期 fail-hard 默认（无文件操作权限）一致。
-                        allocated = builder.AddCallBrain(Label, TargetBrainId, Intent, StructuredInputJson, ModuleIdsJson);
+                        allocated = builder.AddCallBrain(Label, TargetBrainId, Intent, StructuredInputJson,
+                            ModuleIdsJson);
                         break;
                     case "Branch":
                         allocated = builder.AddBranch(Label, ConditionExpression);
@@ -384,6 +389,6 @@ namespace CBIM.Workflow
             };
         }
 
-#endregion
+        #endregion
     }
 }

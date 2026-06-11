@@ -13,7 +13,7 @@ namespace CBIM.Workspace
         /// <summary>远端文档 / spec endpoint（云工作区的知识载体）。</summary>
         Remote,
     }
-
+    
     /// <summary>
     /// 模块 DNA（ModuleMetadata）——业务维度的**纯知识载体**抽象。
     /// 一个 Module 通过 Metadata 暴露它的业务知识、约定、约束文档（"是什么"）。

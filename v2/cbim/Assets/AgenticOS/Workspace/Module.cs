@@ -78,7 +78,8 @@ namespace CBIM.Workspace
         public override string ToString()
         {
             var idShort = InstanceId.Length > 8 ? InstanceId.Substring(0, 8) : InstanceId;
-            return $"Module({idShort}.., desc={Description.Id}, root={WorkspaceRoot}, task={ActivatedByTaskId ?? "<none>"})";
+            return
+                $"Module({idShort}.., desc={Description.Id}, root={WorkspaceRoot}, task={ActivatedByTaskId ?? "<none>"})";
         }
     }
 }

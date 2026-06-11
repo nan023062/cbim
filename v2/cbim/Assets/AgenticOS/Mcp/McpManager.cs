@@ -14,6 +14,7 @@ namespace CBIM.Mcp
         // Shared MCP：单实例 + 引用集合
         private readonly Dictionary<string, IStartedMcpClient> _sharedInstances =
             new Dictionary<string, IStartedMcpClient>(StringComparer.Ordinal);
+
         private readonly Dictionary<string, HashSet<string>> _sharedRefs =
             new Dictionary<string, HashSet<string>>(StringComparer.Ordinal); // mcpId → brainIds
 
@@ -35,7 +36,7 @@ namespace CBIM.Mcp
             _starter = starter ?? throw new ArgumentNullException(nameof(starter));
         }
 
-#region 公共 API
+        #region 公共 API
 
         /// <summary>
         /// 获取或创建一个 MCP 实例。
@@ -149,7 +150,7 @@ namespace CBIM.Mcp
             toDispose?.Dispose();
         }
 
-#endregion
+        #endregion
 
         /// <summary>
         /// 关闭所有仍活跃的 MCP 连接 / 子进程。
@@ -181,12 +182,18 @@ namespace CBIM.Mcp
             // 逐一锁外 Dispose——某个 client.Dispose 抛异常不影响其他
             foreach (var client in toDisposeAll)
             {
-                try { client.Dispose(); }
-                catch { /* best-effort：关闭期错误不上抛，避免阻断其余 Dispose */ }
+                try
+                {
+                    client.Dispose();
+                }
+                catch
+                {
+                    /* best-effort：关闭期错误不上抛，避免阻断其余 Dispose */
+                }
             }
         }
 
-#region 内部辅助
+        #region 内部辅助
 
         private void ThrowIfDisposed()
         {
@@ -194,6 +201,6 @@ namespace CBIM.Mcp
                 throw new ObjectDisposedException(nameof(McpManager));
         }
 
-#endregion
+        #endregion
     }
 }

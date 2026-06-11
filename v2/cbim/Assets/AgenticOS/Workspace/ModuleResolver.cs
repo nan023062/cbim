@@ -38,6 +38,7 @@ namespace CBIM.Workspace
             {
                 return Array.Empty<Module>();
             }
+
             if (ids == null || ids.Length == 0) return Array.Empty<Module>();
 
             var rootPath = workspace.RootPath;
@@ -53,6 +54,7 @@ namespace CBIM.Workspace
                 var instance = workspace.OpenInstance(id, moduleRoot, activatedByTaskId: null);
                 resolved.Add(instance);
             }
+
             return resolved;
         }
     }

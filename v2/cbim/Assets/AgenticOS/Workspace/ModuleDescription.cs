@@ -98,7 +98,8 @@ namespace CBIM.Workspace
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("ModuleDescription.Name 不能为空", nameof(name));
             if (metadata == null)
-                throw new ArgumentNullException(nameof(metadata), "ModuleDescription.Metadata 不能为空——business module 必须有业务知识载体");
+                throw new ArgumentNullException(nameof(metadata),
+                    "ModuleDescription.Metadata 不能为空——business module 必须有业务知识载体");
 
             Id = id;
             Name = name;

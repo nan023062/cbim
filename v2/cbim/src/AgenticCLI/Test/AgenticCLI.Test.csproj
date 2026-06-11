@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CBIM.Test</RootNamespace>
+    <AssemblyName>AgenticCLI.Test</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!--
+    Physically nested under AgenticCLI/Test/ per migration brief, logically
+    a sibling test project. References AgenticOS for the kernel-level
+    Circuit / SideEffect tests; AgenticTeam + AgenticCLI references reserved
+    for future smoke tests on team / CLI-level concerns.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\AgenticOS\AgenticOS.csproj" />
+    <ProjectReference Include="..\..\AgenticTeam\AgenticTeam.csproj" />
+    <ProjectReference Include="..\AgenticCLI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" />
+  </ItemGroup>
+
+</Project>

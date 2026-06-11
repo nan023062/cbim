@@ -10,6 +10,7 @@ namespace CBIM.Kernel
     /// <see cref="ConditionEvaluator.Evaluate"/> 求值，把分支标签写入
     /// <see cref="CircuitMessage.BranchLabel"/>，再 SendMessage 给下游。
     /// </summary>
+    [SendsMessage(typeof(CircuitMessage))]
     internal sealed class BranchExecutor : Executor<CircuitMessage>
     {
         private readonly string _nodeId;

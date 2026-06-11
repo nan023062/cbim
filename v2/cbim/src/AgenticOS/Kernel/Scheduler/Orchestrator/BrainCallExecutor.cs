@@ -11,6 +11,7 @@ namespace CBIM.Kernel
     /// <summary>
     /// <c>CallBrainNode</c> 的 MAF Executor 包装——节点执行体里调
     /// </summary>
+    [SendsMessage(typeof(CircuitMessage))]
     internal sealed class BrainCallExecutor : Executor<CircuitMessage>
     {
         private readonly string _nodeId;

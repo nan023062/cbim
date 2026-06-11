@@ -5,6 +5,8 @@
     <RootNamespace>CBIM.Cli</RootNamespace>
     <AssemblyName>cbim</AssemblyName>
     <RollForward>LatestMajor</RollForward>
+    <!-- Test/ is a sibling project nested for convenience; exclude its sources from CLI glob. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);Test\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

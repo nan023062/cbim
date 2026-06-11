@@ -9,6 +9,7 @@ namespace CBIM.Kernel
     /// <summary>
     /// <c>ReturnNode</c> 的 MAF Executor 包装——终止节点。
     /// </summary>
+    [YieldsOutput(typeof(string))]
     internal sealed class ReturnExecutor : Executor<CircuitMessage, string>
     {
         private static readonly Regex PlaceholderRegex = new Regex(

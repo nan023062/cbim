@@ -13,6 +13,7 @@ namespace CBIM.Kernel
     /// 在工具注册表中查找目标 <see cref="AIFunction"/>，调用它，并将结果写入
     /// <see cref="CircuitMessage"/>，沿回路传给下游。
     /// </summary>
+    [SendsMessage(typeof(CircuitMessage))]
     internal sealed class CallToolExecutor : Executor<CircuitMessage>
     {
         private readonly string _nodeId;

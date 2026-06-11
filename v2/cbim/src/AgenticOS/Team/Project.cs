@@ -1,7 +1,6 @@
-﻿namespace CBIMTeam
+namespace CBIMTeam;
+
+public class Project
 {
-    public class Project
-    {
-        
-    }
+
 }

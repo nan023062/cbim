@@ -897,8 +897,8 @@ public static class StandardTools
     private sealed class BashResultPayload
     {
         public int exitCode { get; set; }
-        public string stdout { get; set; }
-        public string stderr { get; set; }
+        public string? stdout { get; set; }
+        public string? stderr { get; set; }
         public bool timedOut { get; set; }
     }
 

@@ -323,7 +323,7 @@ public sealed class LocalMemoryService : IMemoryService
     {
         // 优先按 index.json 加载；index 缺失或损坏时退回扫描条目目录重建。
         string indexPath = IndexPath();
-        string indexJson = _storage.ReadOrNull(indexPath);
+        string? indexJson = _storage.ReadOrNull(indexPath);
         bool indexUsable = false;
 
         if (!string.IsNullOrEmpty(indexJson))
@@ -358,7 +358,7 @@ public sealed class LocalMemoryService : IMemoryService
 
     private void RebuildFromDirectory()
     {
-        string entryDir = Path.GetDirectoryName(EntryPath("__probe"));
+        string? entryDir = Path.GetDirectoryName(EntryPath("__probe"));
         if (string.IsNullOrEmpty(entryDir) || !Directory.Exists(entryDir))
             return;
 
@@ -371,10 +371,10 @@ public sealed class LocalMemoryService : IMemoryService
         }
     }
 
-    private MemoryEntry TryLoadEntry(string id)
+    private MemoryEntry? TryLoadEntry(string id)
     {
         string path = EntryPath(id);
-        string json = _storage.ReadOrNull(path);
+        string? json = _storage.ReadOrNull(path);
         if (string.IsNullOrEmpty(json))
             return null;
         try
@@ -475,10 +475,10 @@ public sealed class LocalMemoryService : IMemoryService
 
     private sealed class IndexRecord
     {
-        public string FileName { get; set; }
-        public string Source { get; set; }
+        public string? FileName { get; set; }
+        public string? Source { get; set; }
         public DateTime CreatedAt { get; set; }
-        public IReadOnlyList<string> Tags { get; set; }
+        public IReadOnlyList<string>? Tags { get; set; }
     }
 
     #endregion

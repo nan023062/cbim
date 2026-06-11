@@ -52,7 +52,7 @@ public sealed class FileSkillStore
     #region FileSkillStore 公共方法
 
 
-    public SkillDescriptor Get(string id)
+    public SkillDescriptor? Get(string id)
     {
         if (string.IsNullOrWhiteSpace(id))
             return null;
@@ -144,7 +144,7 @@ public sealed class FileSkillStore
         // 用 ResolveCbimPath 产出一个 dummy 条目路径，从中提取目录。
         // ResolveCbimPath 内部确保父目录存在，但只到 parent；这里我们要的就是 parent。
         string probe = EntryPath("__probe");
-        string dir = Path.GetDirectoryName(probe);
+        string? dir = Path.GetDirectoryName(probe);
         if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
             return;
 
@@ -156,9 +156,9 @@ public sealed class FileSkillStore
         }
     }
 
-    private SkillDescriptor TryLoadEntry(string path)
+    private SkillDescriptor? TryLoadEntry(string path)
     {
-        string json = _storage.ReadOrNull(path);
+        string? json = _storage.ReadOrNull(path);
         if (string.IsNullOrEmpty(json))
             return null;
 
@@ -187,7 +187,7 @@ public sealed class FileSkillStore
             || ContainsIgnoreCase(d.Content, text);
     }
 
-    private static bool ContainsIgnoreCase(string haystack, string needle)
+    private static bool ContainsIgnoreCase(string? haystack, string needle)
     {
         if (string.IsNullOrEmpty(haystack))
             return false;
@@ -197,10 +197,10 @@ public sealed class FileSkillStore
     // 落盘 DTO——隔离 SkillDescriptor（构造器有校验，不能直接被反序列化 set）。
     private sealed class SkillDto
     {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public string Content { get; set; }
+        public string? Id { get; set; }
+        public string? Name { get; set; }
+        public string? Description { get; set; }
+        public string? Content { get; set; }
 
         public static SkillDto From(SkillDescriptor d) => new SkillDto
         {
@@ -211,7 +211,7 @@ public sealed class FileSkillStore
         };
 
         public SkillDescriptor ToDescriptor() =>
-            new SkillDescriptor(Id, Name, Description, Content);
+            new SkillDescriptor(Id!, Name!, Description!, Content);
     }
 
     #endregion

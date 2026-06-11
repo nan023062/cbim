@@ -30,7 +30,7 @@ public class ChatClientFactory
     /// <summary>
     /// 按模型描述符返回对应的 LLM 客户端。
     /// </summary>
-    public IChatClient Create(ModelDescriptor model)
+    public IChatClient Create(ModelDescriptor? model)
     {
         if (model == null)
             throw new InvalidOperationException(

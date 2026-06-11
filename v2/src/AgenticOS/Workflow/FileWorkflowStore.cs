@@ -131,7 +131,7 @@ public sealed class FileWorkflowStore
     private void LoadFromDisk()
     {
         string probe = EntryPath("__probe");
-        string dir = Path.GetDirectoryName(probe);
+        string? dir = Path.GetDirectoryName(probe);
         if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
             return;
 
@@ -185,10 +185,10 @@ public sealed class FileWorkflowStore
     /// </summary>
     private sealed class WorkflowDto
     {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public CircuitDto Circuit { get; set; }
+        public string? Id { get; set; }
+        public string? Name { get; set; }
+        public string? Description { get; set; }
+        public CircuitDto? Circuit { get; set; }
 
         public static WorkflowDto From(WorkflowDescriptor d) => new WorkflowDto
         {
@@ -202,7 +202,7 @@ public sealed class FileWorkflowStore
         {
             var circuit = Circuit?.ToCircuit()
                           ?? throw new ArgumentException("WorkflowDto.Circuit 不能为 null。");
-            return new WorkflowDescriptor(Id, Name, Description, circuit);
+            return new WorkflowDescriptor(Id!, Name!, Description!, circuit);
         }
     }
 
@@ -211,22 +211,22 @@ public sealed class FileWorkflowStore
         /// <summary>
         /// Circuit Id（Guid 字符串）——重建时直接透传给 NeuralCircuitBuilder。
         /// </summary>
-        public string CircuitId { get; set; }
+        public string? CircuitId { get; set; }
 
         /// <summary>
         /// 原始 user NL。
         /// </summary>
-        public string SourceRequest { get; set; }
+        public string? SourceRequest { get; set; }
 
         /// <summary>
         /// 节点有序列表——顺序即 Builder 的 Add 调用顺序，第一个节点为 StartNode。
         /// </summary>
-        public List<NodeDto> Nodes { get; set; }
+        public List<NodeDto>? Nodes { get; set; }
 
         /// <summary>
         /// 边列表。
         /// </summary>
-        public List<EdgeDto> Edges { get; set; }
+        public List<EdgeDto>? Edges { get; set; }
 
         public static CircuitDto From(NeuralCircuit c)
         {
@@ -266,7 +266,7 @@ public sealed class FileWorkflowStore
             if (Edges != null)
             {
                 foreach (var edgeDto in Edges)
-                    builder.AddEdge(edgeDto.FromNodeId, edgeDto.ToNodeId, edgeDto.BranchLabel);
+                    builder.AddEdge(edgeDto.FromNodeId!, edgeDto.ToNodeId!, edgeDto.BranchLabel);
             }
 
             return builder.Commit();
@@ -276,27 +276,27 @@ public sealed class FileWorkflowStore
     private sealed class NodeDto
     {
         /// <summary>节点类型鉴别符：CallBrain | Branch | Return | CallTool。</summary>
-        public string Kind { get; set; }
+        public string? Kind { get; set; }
 
         // 通用字段（所有节点共有）
-        public string NodeId { get; set; }
-        public string Label { get; set; }
+        public string? NodeId { get; set; }
+        public string? Label { get; set; }
 
         // CallBrain 专属
-        public string TargetBrainId { get; set; }
-        public string Intent { get; set; }
-        public string StructuredInputJson { get; set; }
-        public string ModuleIdsJson { get; set; }
+        public string? TargetBrainId { get; set; }
+        public string? Intent { get; set; }
+        public string? StructuredInputJson { get; set; }
+        public string? ModuleIdsJson { get; set; }
 
         // Branch 专属
-        public string ConditionExpression { get; set; }
+        public string? ConditionExpression { get; set; }
 
         // Return 专属
-        public string SummaryTemplate { get; set; }
+        public string? SummaryTemplate { get; set; }
 
         // CallTool 专属
-        public string ToolName { get; set; }
-        public string ArgsJson { get; set; }
+        public string? ToolName { get; set; }
+        public string? ArgsJson { get; set; }
 
         public static NodeDto From(CircuitNode node)
         {
@@ -353,14 +353,15 @@ public sealed class FileWorkflowStore
                 case "CallBrain":
                     // ModuleIdsJson 为 null 时（旧档案缺字段）走 Builder 默认值 = null，
                     // 与 CallBrainNode 构造期 fail-hard 默认（无文件操作权限）一致。
-                    allocated = builder.AddCallBrain(Label, TargetBrainId, Intent, StructuredInputJson,
+                    // Label / TargetBrainId / Intent 由 Builder.AddCallBrain 内部 fail-hard。
+                    allocated = builder.AddCallBrain(Label!, TargetBrainId!, Intent!, StructuredInputJson,
                         ModuleIdsJson);
                     break;
                 case "Branch":
-                    allocated = builder.AddBranch(Label, ConditionExpression);
+                    allocated = builder.AddBranch(Label!, ConditionExpression!);
                     break;
                 case "Return":
-                    allocated = builder.AddReturn(Label, SummaryTemplate);
+                    allocated = builder.AddReturn(Label!, SummaryTemplate!);
                     break;
                 case "CallTool":
                     // CallToolNode 在 v1 是占位类型，Builder 尚未开放 AddCallTool 入口。
@@ -383,9 +384,9 @@ public sealed class FileWorkflowStore
 
     private sealed class EdgeDto
     {
-        public string FromNodeId { get; set; }
-        public string ToNodeId { get; set; }
-        public string BranchLabel { get; set; }
+        public string? FromNodeId { get; set; }
+        public string? ToNodeId { get; set; }
+        public string? BranchLabel { get; set; }
 
         public static EdgeDto From(CircuitEdge edge) => new EdgeDto
         {

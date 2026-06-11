@@ -57,7 +57,7 @@ public sealed class FileToolStore
 
 
     /// <summary>按 FamilyName 查找 ToolDescriptor。找不到返回 null。</summary>
-    public ToolDescriptor Get(string familyName)
+    public ToolDescriptor? Get(string familyName)
     {
         if (string.IsNullOrWhiteSpace(familyName))
             return null;
@@ -125,7 +125,7 @@ public sealed class FileToolStore
     {
         // 用 ResolveCbimPath 产出一个 dummy 条目路径，从中提取目录。
         string probe = EntryPath("__probe");
-        string dir = Path.GetDirectoryName(probe);
+        string? dir = Path.GetDirectoryName(probe);
         if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
             return;
 
@@ -137,9 +137,9 @@ public sealed class FileToolStore
         }
     }
 
-    private ToolDescriptor TryLoadEntry(string path)
+    private ToolDescriptor? TryLoadEntry(string path)
     {
-        string json = _storage.ReadOrNull(path);
+        string? json = _storage.ReadOrNull(path);
         if (string.IsNullOrEmpty(json))
             return null;
 
@@ -163,8 +163,8 @@ public sealed class FileToolStore
     // 落盘 DTO——隔离 ToolDescriptor（构造器有校验，不能直接被反序列化 set）。
     private sealed class ToolDto
     {
-        public string FamilyName { get; set; }
-        public string Description { get; set; }
+        public string? FamilyName { get; set; }
+        public string? Description { get; set; }
 
         public static ToolDto From(ToolDescriptor d) => new ToolDto
         {
@@ -173,7 +173,7 @@ public sealed class FileToolStore
         };
 
         public ToolDescriptor ToDescriptor() =>
-            new ToolDescriptor(FamilyName, Description);
+            new ToolDescriptor(FamilyName!, Description);
     }
 
     #endregion

@@ -41,7 +41,7 @@ public sealed class FileMcpStore
         LoadFromDisk();
     }
 
-    public McpDescriptor Get(string id)
+    public McpDescriptor? Get(string id)
     {
         if (string.IsNullOrWhiteSpace(id))
             return null;
@@ -127,7 +127,7 @@ public sealed class FileMcpStore
         // 用 ResolveCbimPath 产出一个 dummy 条目路径，从中提取目录。
         // ResolveCbimPath 内部确保父目录存在，但只到 parent；这里我们要的就是 parent。
         string probe = EntryPath("__probe");
-        string dir = Path.GetDirectoryName(probe);
+        string? dir = Path.GetDirectoryName(probe);
         if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
             return;
 
@@ -139,9 +139,9 @@ public sealed class FileMcpStore
         }
     }
 
-    private McpDescriptor TryLoadEntry(string path)
+    private McpDescriptor? TryLoadEntry(string path)
     {
-        string json = _storage.ReadOrNull(path);
+        string? json = _storage.ReadOrNull(path);
         if (string.IsNullOrEmpty(json))
             return null;
 
@@ -168,7 +168,7 @@ public sealed class FileMcpStore
             || ContainsIgnoreCase(d.Description, text);
     }
 
-    private static bool ContainsIgnoreCase(string haystack, string needle)
+    private static bool ContainsIgnoreCase(string? haystack, string needle)
     {
         if (string.IsNullOrEmpty(haystack))
             return false;
@@ -343,10 +343,10 @@ public sealed class FileMcpStore
         {
             if (!root.TryGetProperty(name, out var prop) || prop.ValueKind != JsonValueKind.String)
                 throw new JsonException($"McpDescriptor JSON 缺少必填字段 \"{name}\"");
-            return prop.GetString();
+            return prop.GetString()!;
         }
 
-        private static string GetOptionalString(JsonElement root, string name)
+        private static string? GetOptionalString(JsonElement root, string name)
         {
             if (!root.TryGetProperty(name, out var prop))
                 return null;
@@ -371,7 +371,7 @@ public sealed class FileMcpStore
             {
                 if (item.ValueKind != JsonValueKind.String)
                     throw new JsonException($"McpDescriptor JSON \"{name}\" 元素必须为字符串");
-                list.Add(item.GetString());
+                list.Add(item.GetString()!);
             }
             return list;
         }
@@ -390,7 +390,7 @@ public sealed class FileMcpStore
             {
                 if (kv.Value.ValueKind != JsonValueKind.String)
                     throw new JsonException($"McpDescriptor JSON \"{name}\".{kv.Name} 必须为字符串");
-                map[kv.Name] = kv.Value.GetString();
+                map[kv.Name] = kv.Value.GetString()!;
             }
             return map;
         }

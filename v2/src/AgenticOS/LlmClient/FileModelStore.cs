@@ -53,7 +53,7 @@ public sealed class FileModelStore
 
     #region 公共方法
 
-    public ModelDescriptor Get(string id)
+    public ModelDescriptor? Get(string id)
     {
         if (string.IsNullOrWhiteSpace(id))
             return null;
@@ -115,7 +115,7 @@ public sealed class FileModelStore
     {
         // 用 ResolveCbimPath 产出一个 dummy 条目路径，从中提取目录。
         string probe = EntryPath("__probe");
-        string dir = Path.GetDirectoryName(probe);
+        string? dir = Path.GetDirectoryName(probe);
         if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
             return;
 
@@ -127,9 +127,9 @@ public sealed class FileModelStore
         }
     }
 
-    private ModelDescriptor TryLoadEntry(string path)
+    private ModelDescriptor? TryLoadEntry(string path)
     {
-        string json = _storage.ReadOrNull(path);
+        string? json = _storage.ReadOrNull(path);
         if (string.IsNullOrEmpty(json))
             return null;
 
@@ -156,7 +156,7 @@ public sealed class FileModelStore
     {
         public override KnownProvider Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            string value = reader.GetString();
+            string? value = reader.GetString();
             if (string.IsNullOrEmpty(value))
                 throw new JsonException("KnownProvider 值不能为空");
             return (KnownProvider)Enum.Parse(typeof(KnownProvider), value, ignoreCase: true);
@@ -171,10 +171,10 @@ public sealed class FileModelStore
     // 落盘 DTO——隔离 ModelDescriptor（构造器有校验，不能直接被反序列化 set）。
     private sealed class ModelDto
     {
-        public string Id { get; set; }
-        public string Name { get; set; }
+        public string? Id { get; set; }
+        public string? Name { get; set; }
         public KnownProvider Provider { get; set; }
-        public string ModelName { get; set; }
+        public string? ModelName { get; set; }
         public string? ApiKey { get; set; }
         public string? Endpoint { get; set; }
         public float? Temperature { get; set; }
@@ -193,7 +193,7 @@ public sealed class FileModelStore
         };
 
         public ModelDescriptor ToDescriptor() =>
-            new ModelDescriptor(Id, Name, Provider, ModelName, ApiKey, Endpoint, Temperature, MaxTokens);
+            new ModelDescriptor(Id!, Name!, Provider, ModelName!, ApiKey, Endpoint, Temperature, MaxTokens);
     }
 
     #endregion

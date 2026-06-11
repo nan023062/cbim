@@ -13,19 +13,29 @@ namespace CBIM.Workspace
     /// </summary>
     public sealed class SplitSpec
     {
-        /// <summary>新模块目录路径（相对工作区根或绝对路径）。</summary>
+        /// <summary>
+        /// 新模块目录路径（相对工作区根或绝对路径）。
+        /// </summary>
         public string Path { get; }
 
-        /// <summary>新模块 frontmatter <c>name</c>。</summary>
+        /// <summary>
+        /// 新模块 frontmatter <c>name</c>。
+        /// </summary>
         public string Name { get; }
 
-        /// <summary>从源模块 body 抽取的 H2 标题列表（带或不带 "## " 前缀皆可）。</summary>
+        /// <summary>
+        /// 从源模块 body 抽取的 H2 标题列表（带或不带 "## " 前缀皆可）。
+        /// </summary>
         public IReadOnlyList<string> Headings { get; }
 
-        /// <summary>新模块 owner——为空则继承源模块 owner。</summary>
+        /// <summary>
+        /// 新模块 owner——为空则继承源模块 owner。
+        /// </summary>
         public string Owner { get; }
 
-        /// <summary>可选 description（写入新模块 frontmatter）。</summary>
+        /// <summary>
+        /// 可选 description（写入新模块 frontmatter）。
+        /// </summary>
         public string Description { get; }
 
         public SplitSpec(string path, string name, IReadOnlyList<string> headings,
@@ -51,7 +61,9 @@ namespace CBIM.Workspace
     /// </summary>
     public sealed class SplitResult
     {
-        /// <summary>新建的每一份 module.md 的绝对路径。</summary>
+        /// <summary>
+        /// 新建的每一份 module.md 的绝对路径。
+        /// </summary>
         public IReadOnlyList<string> Created { get; }
 
         /// <summary>
@@ -67,7 +79,9 @@ namespace CBIM.Workspace
         }
     }
 
-    /// <summary>反向依赖引用记录——<see cref="SplitResult.DependencyRefs"/> 元素。</summary>
+    /// <summary>
+    /// 反向依赖引用记录——<see cref="SplitResult.DependencyRefs"/> 元素。
+    /// </summary>
     public sealed class DependencyRef
     {
         public string Module { get; }
@@ -185,7 +199,9 @@ namespace CBIM.Workspace
             return meta;
         }
 
-        /// <summary>剥掉 <c>---\n...\n---</c> 块，返回 body（去首尾空白）。无 frontmatter 时返回原文（去首尾空白）。</summary>
+        /// <summary>
+        /// 剥掉 <c>---\n...\n---</c> 块，返回 body（去首尾空白）。无 frontmatter 时返回原文（去首尾空白）。
+        /// </summary>
         public static string StripFrontmatter(string text)
         {
             if (string.IsNullOrEmpty(text)) return string.Empty;
@@ -287,7 +303,9 @@ namespace CBIM.Workspace
 
         // -------- 区段编辑 --------
 
-        /// <summary>区段——记录标题层级、文本、起止行索引。</summary>
+        /// <summary>
+        /// 区段——记录标题层级、文本、起止行索引。
+        /// </summary>
         public sealed class Section
         {
             public int Level;       // 1..6
@@ -296,7 +314,9 @@ namespace CBIM.Workspace
             public int End;         // 区段下界行索引（exclusive）
         }
 
-        /// <summary>切分 body 为区段集合。跳过代码围栏内的标题。</summary>
+        /// <summary>
+        /// 切分 body 为区段集合。跳过代码围栏内的标题。
+        /// </summary>
         public static List<Section> SplitSections(string bodyText)
         {
             var lines = (bodyText ?? string.Empty).Split('\n');
@@ -349,7 +369,9 @@ namespace CBIM.Workspace
             return sections;
         }
 
-        /// <summary>把 body 文本按行装载为可变 List（去掉末尾空行——对齐 Python splitlines 行为）。</summary>
+        /// <summary>
+        /// 把 body 文本按行装载为可变 List（去掉末尾空行——对齐 Python splitlines 行为）。
+        /// </summary>
         public static List<string> ToLineList(string bodyText)
         {
             if (string.IsNullOrEmpty(bodyText)) return new List<string>();

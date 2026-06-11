@@ -28,13 +28,19 @@ namespace CBIM.Workspace
     /// </summary>
     public sealed class WorkspaceSystem
     {
-        /// <summary>工作区根路径（绝对路径）。</summary>
+        /// <summary>
+        /// 工作区根路径（绝对路径）。
+        /// </summary>
         public string RootPath { get; }
 
-        /// <summary>只读 DNA 工具集——供 PrefrontalCortex / MotorCortex 等使用（Hippocampus 由 Brain 层屏蔽）。</summary>
+        /// <summary>
+        /// 只读 DNA 工具集——供 PrefrontalCortex / MotorCortex 等使用（Hippocampus 由 Brain 层屏蔽）。
+        /// </summary>
         public IReadOnlyList<AITool> ReadOnlyDnaTools { get; }
 
-        /// <summary>读写 DNA 工具集——仅供 ParietalLobe 使用。</summary>
+        /// <summary>
+        /// 读写 DNA 工具集——仅供 ParietalLobe 使用。
+        /// </summary>
         public IReadOnlyList<AITool> ReadWriteDnaTools { get; }
 
         private readonly Dictionary<string, ModuleDescription> _descriptions;
@@ -45,7 +51,9 @@ namespace CBIM.Workspace
         /// 默认构造——根据 <paramref name="rootPath"/> 扫描 <c>.dna/</c> 自动发现 ModuleDescription。
         /// 适用于绝大多数生产场景：知识库即模块清单。
         /// </summary>
-        /// <param name="rootPath">工作区根路径，由 AgenticOS 在初始化时传入。</param>
+        /// <param name="rootPath">
+        /// 工作区根路径，由 AgenticOS 在初始化时传入。
+        /// </param>
         public WorkspaceSystem(string rootPath)
             : this(rootPath, descriptions: null)
         {
@@ -82,20 +90,26 @@ namespace CBIM.Workspace
 
         #region 静态侧：ModuleDescription 注册表
 
-        /// <summary>列出全部已注册的 ModuleDescription。</summary>
+        /// <summary>
+        /// 列出全部已注册的 ModuleDescription。
+        /// </summary>
         public IReadOnlyList<ModuleDescription> ListDescriptions()
         {
             return new List<ModuleDescription>(_descriptions.Values);
         }
 
-        /// <summary>按 Id 找 ModuleDescription。找不到返 null。</summary>
+        /// <summary>
+        /// 按 Id 找 ModuleDescription。找不到返 null。
+        /// </summary>
         public ModuleDescription GetDescription(string id)
         {
             if (string.IsNullOrWhiteSpace(id)) return null;
             return _descriptions.TryGetValue(id, out var d) ? d : null;
         }
 
-        /// <summary>判断指定 Id 的 ModuleDescription 是否已注册。</summary>
+        /// <summary>
+        /// 判断指定 Id 的 ModuleDescription 是否已注册。
+        /// </summary>
         public bool ContainsDescription(string id) =>
             !string.IsNullOrWhiteSpace(id) && _descriptions.ContainsKey(id);
 
@@ -134,7 +148,9 @@ namespace CBIM.Workspace
             return instance;
         }
 
-        /// <summary>关闭一个 Module 实例：从活动表移除。无外部资源需关。</summary>
+        /// <summary>
+        /// 关闭一个 Module 实例：从活动表移除。无外部资源需关。
+        /// </summary>
         public void CloseInstance(Module instance)
         {
             if (instance == null) return;
@@ -144,7 +160,9 @@ namespace CBIM.Workspace
             }
         }
 
-        /// <summary>列出当前活动中的 Module 实例。</summary>
+        /// <summary>
+        /// 列出当前活动中的 Module 实例。
+        /// </summary>
         public IReadOnlyList<Module> ListActiveInstances()
         {
             lock (_instancesLock)
@@ -153,7 +171,9 @@ namespace CBIM.Workspace
             }
         }
 
-        /// <summary>按 InstanceId 查活动实例。找不到返 null。</summary>
+        /// <summary>
+        /// 按 InstanceId 查活动实例。找不到返 null。
+        /// </summary>
         public Module GetActiveInstance(string instanceId)
         {
             if (string.IsNullOrWhiteSpace(instanceId)) return null;
@@ -288,7 +308,9 @@ namespace CBIM.Workspace
         ///
         /// <para>kind 必须为 <c>root|parent|leaf</c>；status 留空时按 kind 推默认（root → implemented，其余 spec）。</para>
         /// </summary>
-        /// <returns>新建的 .dna/ 目录绝对路径。</returns>
+        /// <returns>
+        /// 新建的 .dna/ 目录绝对路径。
+        /// </returns>
         public string DnaInit(string modulePath, string kind, string name, string owner,
                               string description = "", bool withContract = false, string status = "")
         {
@@ -348,7 +370,9 @@ namespace CBIM.Workspace
         /// 编辑现有 DNA 模块。target ∈ frontmatter|body|section|contract|contract-section|workflow。
         /// payload 字段语义对偶 v1 Python <c>edit_module</c>。
         /// </summary>
-        /// <returns>被写入的目标文件绝对路径。</returns>
+        /// <returns>
+        /// 被写入的目标文件绝对路径。
+        /// </returns>
         public string DnaEdit(string modulePath, string target,
                               IReadOnlyDictionary<string, object> payload, string mode = "replace")
         {
@@ -621,7 +645,9 @@ namespace CBIM.Workspace
 
         // -------- 私有辅助 --------
 
-        /// <summary>把 <paramref name="modulePath"/> 解析为绝对路径，并校验在 RootPath 之下。</summary>
+        /// <summary>
+        /// 把 <paramref name="modulePath"/> 解析为绝对路径，并校验在 RootPath 之下。
+        /// </summary>
         private string ResolveAndGuard(string modulePath)
         {
             string full = Path.IsPathRooted(modulePath)

@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgenticOS", "src\AgenticOS\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgenticTeam", "src\AgenticTeam\AgenticTeam.csproj", "{8FEE8CA1-D7BA-4D1F-A39A-454F158D6BE9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgenticCLI", "src\AgenticCLI\AgenticCLI.csproj", "{80D14252-6AC6-4101-847B-691D11F4EC40}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,6 +45,18 @@ Global
 		{8FEE8CA1-D7BA-4D1F-A39A-454F158D6BE9}.Release|x64.Build.0 = Release|Any CPU
 		{8FEE8CA1-D7BA-4D1F-A39A-454F158D6BE9}.Release|x86.ActiveCfg = Release|Any CPU
 		{8FEE8CA1-D7BA-4D1F-A39A-454F158D6BE9}.Release|x86.Build.0 = Release|Any CPU
+		{80D14252-6AC6-4101-847B-691D11F4EC40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{80D14252-6AC6-4101-847B-691D11F4EC40}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80D14252-6AC6-4101-847B-691D11F4EC40}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{80D14252-6AC6-4101-847B-691D11F4EC40}.Debug|x64.Build.0 = Debug|Any CPU
+		{80D14252-6AC6-4101-847B-691D11F4EC40}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{80D14252-6AC6-4101-847B-691D11F4EC40}.Debug|x86.Build.0 = Debug|Any CPU
+		{80D14252-6AC6-4101-847B-691D11F4EC40}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{80D14252-6AC6-4101-847B-691D11F4EC40}.Release|Any CPU.Build.0 = Release|Any CPU
+		{80D14252-6AC6-4101-847B-691D11F4EC40}.Release|x64.ActiveCfg = Release|Any CPU
+		{80D14252-6AC6-4101-847B-691D11F4EC40}.Release|x64.Build.0 = Release|Any CPU
+		{80D14252-6AC6-4101-847B-691D11F4EC40}.Release|x86.ActiveCfg = Release|Any CPU
+		{80D14252-6AC6-4101-847B-691D11F4EC40}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -50,5 +64,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{FB44ECCD-308A-4B35-9F32-C40213587253} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{8FEE8CA1-D7BA-4D1F-A39A-454F158D6BE9} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{80D14252-6AC6-4101-847B-691D11F4EC40} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

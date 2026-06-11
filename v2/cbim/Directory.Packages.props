@@ -37,7 +37,7 @@
     <PackageVersion Include="ModelContextProtocol.Core" Version="1.4.0" />
 
     <!-- Microsoft.Extensions.* (transitive but pin explicitly to silence NU1605) -->
-    <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.8" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.8" />
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.8" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.8" />

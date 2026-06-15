@@ -161,7 +161,7 @@ def write(path: Path, tier: str, backend: MemoryBackend) -> None:
     try:
         from memory.compaction.identifier import identify
         identify({"path": str(path), "tier": tier, "metadata": meta})
-    except Exception:
+    except Exception:  # noqa: BLE001 - identify is a best-effort side-channel; any failure must not block the write primary path
         pass
 
     # Step 3: synchronous external retrieval index. Errors propagate so the

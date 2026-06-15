@@ -64,7 +64,7 @@ def _agent_label(transcript_path: str) -> str:
         data = json.loads(meta.read_text(encoding="utf-8"))
         name = (data.get("agentType") or "").strip()
         return f"[agent:{name}] " if name else ""
-    except Exception:
+    except (OSError, json.JSONDecodeError, ValueError):
         return ""
 
 
@@ -150,7 +150,7 @@ def append(
         line = f"[{ts}] [{tag}] {agent}{_escape(message)}\n"
         with path.open("a", encoding="utf-8") as f:
             f.write(line)
-    except Exception:
+    except Exception:  # noqa: BLE001 - logging boundary: any failure must be silent so the host process is never crashed by its own log shim
         pass
 
 
@@ -360,7 +360,7 @@ def _last_assistant_text(transcript_path: str) -> str:
             full = "\n".join(texts).strip()
             if full:
                 return full
-    except Exception:
+    except (OSError, json.JSONDecodeError, ValueError, TypeError):
         pass
     return ""
 

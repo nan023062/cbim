@@ -18,7 +18,7 @@ def _rel_for_log(p: Path, root: Path) -> str:
     """Return path relative to project root for log entries (posix style)."""
     try:
         return p.resolve().relative_to(root.resolve()).as_posix()
-    except Exception:
+    except (ValueError, OSError):
         return p.as_posix()
 
 

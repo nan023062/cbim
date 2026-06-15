@@ -59,7 +59,7 @@ def check(project_root: Path, config: dict) -> list[AuditFinding]:
 
     try:
         report = HealthChecker(store_dir).check()
-    except Exception as e:  # pragma: no cover — defensive
+    except Exception as e:  # noqa: BLE001 - audit boundary: any HealthChecker failure must surface as an AuditFinding so the operator never gets a silent miss
         return [
             AuditFinding(
                 check="memory_threshold",

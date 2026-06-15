@@ -252,7 +252,7 @@ def split_module(
     source_tmp = source_md.with_suffix(source_md.suffix + ".tmp")
     try:
         source_tmp.write_text(new_source_text, encoding="utf-8")
-    except Exception:
+    except OSError:
         if source_tmp.exists():
             try:
                 source_tmp.unlink()
@@ -300,6 +300,10 @@ def split_module(
         os.replace(source_tmp, source_md)
 
     except Exception:
+        # Rollback boundary: any sub-step exception
+        # (OSError/ValueError/RuntimeError from _init_module / _write_module_doc)
+        # must trigger full rollback; narrowing risks leaving half-baked splits
+        # behind. ruff treats trace-then-raise as valid — no BLE001 reported.
         if source_tmp.exists():
             try:
                 source_tmp.unlink()
@@ -377,7 +381,7 @@ def _rollback_index_entries(root: Path, mod_dirs: list[Path]) -> None:
         return
     try:
         existing = read_index(root)
-    except Exception:
+    except Exception:  # noqa: BLE001 - rollback sub-step is best-effort; any failure here must not crash and bury the original split-time exception
         return
     to_remove: set[str] = set()
     for d in mod_dirs:
@@ -389,7 +393,7 @@ def _rollback_index_entries(root: Path, mod_dirs: list[Path]) -> None:
     remaining = [p for p in existing if p not in to_remove]
     try:
         _write_index(root, remaining)
-    except Exception:
+    except Exception:  # noqa: BLE001 - rollback sub-step is best-effort; same rationale as the read above
         pass
 
 

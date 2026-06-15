@@ -53,6 +53,8 @@ v2 重设计决议：
 - **与 `.dna/` 知识系统是同级独立系统。** 记忆条目可能被人工或 Architect **复制**到 `.dna/`，但这是知识侧的**导入**动作，不是本模块的"出口"。`compaction/` 只生成候选条目并标记 `promote_candidate`，等知识循环来 `scan(filter="promote_candidate")` 自取。
 - **子模块分工的稳定性等同对外契约。** `crud/` 持有所有改盘动作的入口，`compaction/` 持有所有压缩升级与候选区管理；两者职责零重叠。父模块只暴露 4 个只读接口的转发，**不**在父模块层放任何业务逻辑。
 
+- **Batch 5 异常治理 —— config 覆盖失败 stderr 警告而非静默。** `.cbim/config.json` 加载是 best-effort 路径（缺失 / 损坏不应让 memory 服务起不来），原本 broad-catch + silent-swallow。Batch 5 已收紧到 `(OSError, json.JSONDecodeError)` 并列 tuple，且加 `print(f"[cbim memory] config override unreadable: {e}", file=sys.stderr)`——"启动 best-effort" 不等于"无声吞"：用户改坏配置时必须有可见反馈，否则会出现"我明明改了阈值怎么没生效"的诊断地狱。完整规约（含本类 best-effort 边界的处理范式）见 `v1/docs/EXCEPTION-GOVERNANCE.zh-CN.md`。
+
 ## Non-Goals
 
 - **不是事件源。** 任何写入、压缩、候选识别都不 emit 事件、不调外部回调、不写跨模块日志（模块内部观测日志除外）。

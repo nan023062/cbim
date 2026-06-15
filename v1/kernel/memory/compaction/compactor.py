@@ -81,7 +81,7 @@ def compact(store_dir: Path, backend: MemoryBackend | None = None) -> Compaction
                 # candidates from a pre-v2 store get noticed.
                 report.errors.append(f"unknown candidate kind '{kind}' on {cand_id}")
                 report.skipped += 1
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - per-candidate collector: a single candidate failure must not kill the whole batch; record error in report.errors and move on
             report.errors.append(f"{cand_id}: {type(e).__name__}: {e}")
             report.skipped += 1
 

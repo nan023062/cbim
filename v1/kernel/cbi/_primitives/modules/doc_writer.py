@@ -64,7 +64,7 @@ def write_module_doc(mod_dir: Path, file_name: str, body: str) -> Path:
     try:
         tmp.write_text(new_content, encoding="utf-8")
         os.replace(tmp, target)
-    except Exception:
+    except OSError:
         # Best-effort cleanup of half-written tmp; suppress secondary errors.
         try:
             if tmp.exists():

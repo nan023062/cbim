@@ -32,7 +32,7 @@ def _resolve_store_dir(explicit: str | None) -> Path:
     try:
         from context import cbim_dir
         return cbim_dir() / "memory"
-    except Exception:
+    except ImportError:
         return Path.cwd() / ".cbim" / "memory"
 
 

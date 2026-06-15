@@ -77,6 +77,15 @@ def load_config(cwd=None) -> dict:
                 cfg[section].update(values)
             else:
                 cfg[section] = values
-    except Exception:
-        pass
+    except (OSError, ValueError, KeyError, ImportError) as exc:
+        # Surface the failure on stderr — silently swallowing config errors
+        # used to be a real footgun (operator changes config.json, expects
+        # it to take effect, sees no diff and no message). Return value
+        # unchanged: defaults still flow back so the caller never crashes.
+        import sys
+        print(
+            f"[memory._config] config override skipped: "
+            f"{type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
     return cfg

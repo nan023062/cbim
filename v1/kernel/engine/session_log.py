@@ -6,7 +6,7 @@ This module re-exports the public API so existing callers
 (mcp_server, scheduler, etc.) keep working without changes.
 """
 
-from .logger import (  # noqa: F401
+from .logger import (
     logs_dir,
     current_log_path,
     start_session,

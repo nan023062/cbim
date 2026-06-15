@@ -59,7 +59,7 @@ def _load_thresholds() -> dict:
             for k in out:
                 if k in cfg and cfg[k] is not None:
                     out[k] = cfg[k]
-    except Exception:
+    except (ImportError, OSError, ValueError):
         pass
     return out
 

@@ -168,6 +168,8 @@ classDiagram
 - **Audit 进程仍 read-only；baseline 写入仅能走显式 CLI 子命令**。`cbim audit baseline accept` 必须携 `--yes`；`run_audit` 与治理循环（`dream_tick`）绝不自动写 baseline。"接受棘轮退一格" 是人类动作，不是可推导事件。
 - **`BaselineStore` 是 audit 的第 9 个节点**，进入 Class Diagram；`run_audit ..> BaselineStore`（读取时加载、为 finding 打 `origin` 标）。CLI `baseline accept/clear/list` 同样仅通过 `BaselineStore` 写入。
 
+- **Batch 5 异常治理 —— `BaselineStore.save` 原子写收紧到 `OSError`。** `tempfile` + `os.replace` 写 `.cbim/audit/baseline.json` 的 cleanup 分支已从 broad-catch 收紧到 `except OSError`：原子写失败的可能性集合是 IO/权限/磁盘满，全在 `OSError` 下；其他异常（编程错误、序列化 bug）应当裸抛而非被 cleanup 吞掉。配合 "audit 进程仍 read-only；baseline 写入仅能走显式 CLI 子命令" 的既有铁律——baseline.json 是 CI 质量门锁的状态来源，写盘失败必须可见、不可静默。完整规约见 `v1/docs/EXCEPTION-GOVERNANCE.zh-CN.md`。
+
 ## Non-Goals
 
 - **No auto-fix.** Audit reports drift; it never rewrites `.dna/`, `.claude/agents/`, or `.cbim/memory/`. Fix commands stay in their owning modules.

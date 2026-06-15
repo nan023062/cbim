@@ -185,3 +185,29 @@ def test_audit_does_not_read_memory_files_directly():
     ]
     hits = [tok for tok in forbidden if tok in text]
     assert not hits, f"forbidden raw-memory access tokens: {hits}"
+
+
+# --- Batch 5.6: HealthChecker failure must not be silently dropped -------
+
+
+def test_health_checker_runtime_error_surfaces_as_finding(tmp_path, monkeypatch):
+    """HealthChecker.check raising any non-import exception MUST be
+    surfaced as a MEMORY_HEALTH_ERROR audit finding (not swallowed).
+    This is the rationale for keeping the broad-except in the audit
+    boundary: any failure must reach the operator as a finding."""
+    _seed_store(tmp_path)
+
+    from memory.compaction import health as health_mod
+
+    def boom(self):
+        raise RuntimeError("simulated health checker bug")
+
+    monkeypatch.setattr(health_mod.HealthChecker, "check", boom)
+
+    findings = check(tmp_path, {})
+    assert len(findings) == 1
+    f = findings[0]
+    assert f.code == "MEMORY_HEALTH_ERROR"
+    assert f.severity == "warn"
+    assert "RuntimeError" in f.message
+    assert "simulated health checker bug" in f.message

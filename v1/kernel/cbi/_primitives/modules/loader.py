@@ -35,7 +35,7 @@ def _load_new_format(mod_dir: Path, root: Path, aimod: Path, module_md: Path) ->
     try:
         raw = module_md.read_text(encoding="utf-8")
         _log_import(f"dna:{_rel_for_log(module_md, root)}", "ok", "dna.load")
-    except Exception:
+    except (OSError, UnicodeDecodeError):
         _log_import(f"dna:{_rel_for_log(module_md, root)}", "miss", "dna.load")
         return None
 
@@ -77,7 +77,7 @@ def _load_legacy_format(mod_dir: Path, root: Path, aimod: Path,
     try:
         data = json.loads(legacy_json.read_text(encoding="utf-8"))
         _log_import(f"dna:{_rel_for_log(legacy_json, root)}", "ok", "dna.load")
-    except Exception:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         _log_import(f"dna:{_rel_for_log(legacy_json, root)}", "miss", "dna.load")
         return None
 

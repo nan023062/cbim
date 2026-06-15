@@ -161,7 +161,7 @@ def _make_handler(dashboard_dir: Path, cbim_dir: Path, root_dir: Path, last_beat
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=str(dashboard_dir), **kwargs)
 
-        def do_GET(self):  # noqa: N802 - required by stdlib
+        def do_GET(self):  # required by stdlib (CamelCase)
             parsed = urlparse(self.path)
             path = parsed.path
             if path == "/api/entries":
@@ -204,7 +204,7 @@ def _make_handler(dashboard_dir: Path, cbim_dir: Path, root_dir: Path, last_beat
             self.end_headers()
             self.wfile.write(body)
 
-        def log_message(self, fmt, *args):  # noqa: A003 - stdlib override
+        def log_message(self, fmt, *args):  # stdlib override
             pass  # suppress per-request access logs
 
     return _Handler

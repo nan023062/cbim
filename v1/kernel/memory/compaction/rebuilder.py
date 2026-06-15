@@ -56,7 +56,7 @@ def rebuild(store_dir: Path, backend: MemoryBackend,
         try:
             _crud_write(md_file, MEDIUM, backend)
             count += 1
-        except Exception:
+        except Exception:  # noqa: BLE001 - per-entry rebuild: a single failure must not kill the whole rebuild batch; drift verify pass catches gaps
             # Single-entry failure must not kill the rebuild — drift will
             # catch the gap on the verify pass.
             pass

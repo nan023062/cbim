@@ -7,6 +7,8 @@ approach, so the optimisation is provably zero-behavior-change.
 
 from pathlib import Path
 
+import pytest
+
 from cbi._primitives.modules.loader import (
     _SCAN_SKIP_DIRS,
     _is_skipped,
@@ -145,3 +147,99 @@ def test_scan_skip_dirs_membership_only_grows() -> None:
         ".next", ".cache",
     }
     assert legacy <= _SCAN_SKIP_DIRS
+
+
+# --- Batch 5.6: load_module narrowed-except fixtures ---------------------
+
+
+def test_load_module_returns_none_on_unreadable_md(tmp_path, monkeypatch):
+    """`module.md` raises OSError on read → load_module returns None.
+    Covers the narrowed `except (OSError, UnicodeDecodeError)` branch."""
+    from cbi._primitives.modules.loader import load_module
+
+    _mk_module_md(tmp_path, "pkg")
+    real_read = Path.read_text
+
+    def boom(self, *args, **kwargs):
+        if self.name == "module.md" and self.parent.name == ".dna":
+            raise OSError("simulated read failure")
+        return real_read(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", boom)
+
+    assert load_module(tmp_path / "pkg", tmp_path) is None
+
+
+def test_load_module_returns_none_on_non_utf8(tmp_path):
+    """Binary garbage in module.md → UnicodeDecodeError → caught → None."""
+    from cbi._primitives.modules.loader import load_module
+
+    mod = tmp_path / "pkg"
+    (mod / ".dna").mkdir(parents=True)
+    (mod / ".dna" / "module.md").write_bytes(b"\xff\xfe\x00garbage")
+
+    assert load_module(mod, tmp_path) is None
+
+
+def test_load_module_legacy_json_returns_none_on_corrupt(tmp_path):
+    """Legacy module.json with broken JSON → JSONDecodeError → caught → None."""
+    from cbi._primitives.modules.loader import load_module
+
+    mod = tmp_path / "pkg"
+    (mod / ".dna").mkdir(parents=True)
+    (mod / ".dna" / "module.json").write_text(
+        "{not valid json", encoding="utf-8"
+    )
+
+    assert load_module(mod, tmp_path) is None
+
+
+def test_load_module_unrelated_exception_propagates(tmp_path, monkeypatch):
+    """A RuntimeError inside the try block (e.g. _log_import blowing up
+    for some reason) MUST propagate — narrowing's whole point is that
+    we no longer swallow bug-class exceptions."""
+    from cbi._primitives.modules import loader as loader_mod
+
+    _mk_module_md(tmp_path, "pkg")
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("simulated logger bug")
+
+    monkeypatch.setattr(loader_mod, "_log_import", boom)
+
+    with pytest.raises(RuntimeError, match="simulated logger bug"):
+        loader_mod.load_module(tmp_path / "pkg", tmp_path)
+
+
+# --- Batch 5.6: _telemetry._rel_for_log narrowed-except ------------------
+
+
+def test_rel_for_log_returns_posix_on_value_error(tmp_path):
+    """Cross-drive (or otherwise non-relative) path → ValueError caught,
+    posix string returned."""
+    from cbi._primitives.modules._telemetry import _rel_for_log
+
+    # Construct a path that cannot be made relative to tmp_path.
+    other = Path("/totally/unrelated/path") if not str(tmp_path).startswith("/") else Path("C:/elsewhere")
+    out = _rel_for_log(other, tmp_path)
+    # Whatever path we passed in, its as_posix() form is what we expect back.
+    assert out == other.as_posix()
+
+
+def test_rel_for_log_returns_posix_on_oserror(tmp_path, monkeypatch):
+    """Path.resolve() raising OSError → caught → posix fallback."""
+    from cbi._primitives.modules import _telemetry
+
+    real_resolve = Path.resolve
+
+    def boom(self, *args, **kwargs):
+        # Only blow up the input path; let root resolve normally.
+        if self == tmp_path / "x":
+            raise OSError("simulated resolve failure")
+        return real_resolve(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", boom)
+
+    out = _telemetry._rel_for_log(tmp_path / "x", tmp_path)
+    assert out == (tmp_path / "x").as_posix()
+

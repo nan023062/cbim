@@ -185,7 +185,7 @@ def write_module_section(
     try:
         tmp.write_text(new_content, encoding="utf-8")
         os.replace(tmp, target)
-    except Exception:
+    except OSError:
         try:
             if tmp.exists():
                 tmp.unlink()

@@ -37,7 +37,7 @@ class Node(ABC):
     name: str = ""
 
     @abstractmethod
-    def tick(self, bb) -> Status:  # noqa: D401
+    def tick(self, bb) -> Status:
         ...
 
     def on_resume(self, bb, payload: Any) -> None:  # default: no-op

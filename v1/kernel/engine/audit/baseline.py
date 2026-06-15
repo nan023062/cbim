@@ -168,7 +168,7 @@ class BaselineStore:
             with os.fdopen(fd, "w", encoding="utf-8") as fp:
                 fp.write(body)
             os.replace(tmp_path, self._path)
-        except Exception:
+        except OSError:
             # Best-effort cleanup of the tempfile if replace failed.
             try:
                 os.unlink(tmp_path)

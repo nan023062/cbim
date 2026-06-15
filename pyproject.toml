@@ -80,14 +80,11 @@ ban-relative-imports = "parents"
 # scripts, not engine.* / mcp_server.*). Existing primitive usage there
 # is out of scope for the Batch 2 boundary rule.
 "v1/kernel/project/hooks_src/**" = ["TID251"]
-# Batch 5 — 子批 5.6 尚未处理;完成后删。
-# 这些路径含可能掩盖底层 bug 的 broad-except 兜底,需要架构师定规约后
-# 单点收紧;5.1~5.5 已把"合理边界"的 BLE001 全数 noqa 或具体收紧。
-"v1/kernel/cbi/_primitives/modules/**" = ["BLE001", "TID251"]
-"v1/kernel/engine/audit/baseline.py" = ["BLE001"]
-"v1/kernel/engine/audit/checks/memory_threshold.py" = ["BLE001"]
-"v1/kernel/engine/logger.py" = ["BLE001"]
-"v1/kernel/memory/**" = ["BLE001"]
+# cbi.resources transitively uses services._fm primitives via cbi/**;
+# the cbi/_primitives/modules/** subtree is the primitives implementation
+# itself, so it imports its own peer modules — TID251's banned-api rule
+# would otherwise complain about that intra-package traffic.
+"v1/kernel/cbi/_primitives/modules/**" = ["TID251"]
 # engine/audit/checks/index_consistency.py is an intentional white-box
 # inspector of cbi._primitives invariants. Routing it through services.*
 # would defeat the audit (it would query the very façade whose backing

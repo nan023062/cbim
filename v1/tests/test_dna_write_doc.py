@@ -196,6 +196,35 @@ def test_atomic_write_failure_leaves_original_intact(tmp_path, monkeypatch):
     assert tmp_residue == [], f"unexpected tmp residue: {tmp_residue}"
 
 
+def test_atomic_write_unrelated_exception_propagates(tmp_path, monkeypatch):
+    """Batch 5.6: the atomic-write try/except is now narrowed to OSError —
+    any other exception type (e.g. ValueError raised by a misbehaving
+    write_text replacement) MUST propagate untouched, otherwise we are
+    silently swallowing real bugs.
+
+    The cleanup fast-path still runs before re-raise (defensive try/except
+    around tmp.unlink), so we additionally assert no .tmp residue is left.
+    """
+    mod = _make_module(tmp_path)
+    real_write_text = Path.write_text
+
+    def boom(self, *args, **kwargs):
+        if self.suffix == ".tmp":
+            raise ValueError("not an OSError on purpose")
+        return real_write_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "write_text", boom)
+
+    with pytest.raises(ValueError, match="not an OSError"):
+        write_module_doc(mod, "module.md", "## body\n")
+
+    # Cleanup unaffected by the narrowing: tmp residue still gets removed
+    # because the half-written write_text raised before tmp.write returned,
+    # so there is nothing to clean. (No assertion stronger than "no leak".)
+    tmp_residue = list((mod / ".dna").glob("*.tmp"))
+    assert tmp_residue == []
+
+
 # --- CLI wrapper ----------------------------------------------------------
 
 

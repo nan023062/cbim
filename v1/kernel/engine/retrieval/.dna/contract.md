@@ -129,7 +129,37 @@
 - `schema_version` 递增 + 向后兼容读取。
 - 不保证跨主机可携——`vectors.bin` 是 endian / dim 敏感的。跨主机迁移需重建。
 
----
+### 写入工件（实现细节，非契约消费面）
+
+`persist_atomic` 把 `meta.json` / `bm25.json` / `vectors.bin` 三个文件作为一笔事务写入；过程中会在 `<source>/` 内创建以下工件：
+
+```
+.cbim/index/<source>/
+  .lock                      # 跨进程互斥文件（POSIX flock / Windows msvcrt.locking）
+  .staging/                  # 阶段写目录；事务成功后删除
+    meta.json
+    bm25.json
+    vectors.bin
+  meta.json.bak              # 仅在轮转重命名期间存在；事务成功后删除
+  bm25.json.bak
+  vectors.bin.bak
+```
+
+- 这些工件**不是公共契约消费面**——dashboard / debug / 用户脚本不应读取或依赖它们。
+- `IndexStore` 初始化时 best-effort 清理任何遗留的 `.staging/` 与 `*.bak`，保证下一次 `persist_atomic` 从干净状态起跑。
+- `.lock` 文件**创建后从不删除**（轻量、无用户可见副作用），其他三类工件在事务正常结束时由 `persist_atomic` 自身清除。
+- `.gitignore` / `.cbim/.gitignore` 应包含整个 `.cbim/index/` 路径；以上工件天然不进版本库。
+
+### 写入语义开关（emergency-fallback）
+
+`RetrievalConfig.atomic_persist: bool = True`（写入 `.cbim/retrieval/config.json` 的 `atomic_persist` 字段），含义：
+
+| 取值 | 行为 | 用途 |
+|------|------|------|
+| `True`（默认） | 三文件经由 `persist_atomic` 一笔事务写入；要么三个一起到位，要么全部回滚 | 正常生产路径 |
+| `False` | 退回到逐文件 `os.replace`，无跨进程锁、无三文件一致性保证 | **emergency-fallback only**：仅在 staging 路径出现现场故障（如平台重命名异常）需要临时绕过时使用；不是性能旋钮，不允许长期开启 |
+
+约束：`atomic_persist=False` 是降级开关，不是调优旋钮。文档、默认值、测试用例都锚定 `True`；emergency-fallback 状态结束后必须复位。任何对此值的批量改动需走 contract 变更流程。
 
 ## 不在契约内的部分
 

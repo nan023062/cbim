@@ -24,7 +24,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from services._fm import find_project_root
+from context import resolve_root_or_cwd as find_project_root
 
 from . import list_checks, run_audit
 from .baseline import BaselineStore, fingerprint

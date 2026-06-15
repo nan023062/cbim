@@ -18,7 +18,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ._fm import find_project_root, parse_frontmatter, strip_frontmatter
+from context import resolve_root_or_cwd as _resolve_root
+
+from . import _reindex
+from ._fm import parse_frontmatter, strip_frontmatter
 
 _BUILTIN_AGENTS = frozenset({"architect", "hr", "auditor", "programmer"})
 
@@ -46,7 +49,7 @@ def list_agents(cwd=None, include_builtin: bool = False) -> list[dict]:
               "body":        <agent .md body with frontmatter stripped>,
             }
     """
-    root = Path(find_project_root(cwd))
+    root = _resolve_root(cwd)
     agents_dir = root / ".claude" / "agents"
     if not agents_dir.exists():
         return []
@@ -92,11 +95,57 @@ def _load_skills(agent_dir: Path) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Read façade — single-agent lookup.
+# ---------------------------------------------------------------------------
+
+
+def get_agent(name: str, cwd: str = "") -> dict | None:
+    """Return one agent's flattened representation, or None when absent.
+
+    Same dict shape as a single element of `list_agents` plus an
+    additional ``agent_md_path`` key carrying the absolute Path of the
+    backing `.md` file. Filters out path-traversal in the same way as
+    the write facade.
+    """
+    if not name or "/" in name or "\\" in name or name in (".", ".."):
+        return None
+    root = _resolve_root(cwd)
+    agent_dir = root / ".claude" / "agents" / name
+    md = agent_dir / f"{name}.md"
+    if not md.is_file():
+        return None
+    try:
+        raw = md.read_text(encoding="utf-8")
+    except (FileNotFoundError, PermissionError):
+        return None
+    meta = parse_frontmatter(raw)
+    return {
+        "id": name,
+        "name": meta.get("name", name),
+        "description": meta.get("description", ""),
+        "model": meta.get("model", ""),
+        "tools": meta.get("tools", ""),
+        "skills": _load_skills(agent_dir),
+        "body": strip_frontmatter(raw),
+        "agent_md_path": md.resolve(),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Write facade — shared by engine/cli.py and mcp_server/tools/agent.py
 # ---------------------------------------------------------------------------
 
-def _resolve_root(cwd: str = "") -> Path:
-    return Path(find_project_root(cwd or None))
+
+def _validate_identifier(value: str, *, kind: str) -> None:
+    """Reject path-traversal attempts in agent / skill names.
+
+    Names flow from external callers (CLI / MCP / dashboard) and are
+    joined into ``.claude/agents/<name>/...`` paths. We disallow path
+    separators and dot-segments so the identifier can never escape its
+    parent directory.
+    """
+    if not value or "/" in value or "\\" in value or value in (".", ".."):
+        raise ValueError(f"invalid {kind} name: {value!r}")
 
 
 def scaffold_agent(
@@ -111,8 +160,10 @@ def scaffold_agent(
     Returns the absolute path to the created agent.md as a string.
     """
     from cbi.resources import Agent
+    _validate_identifier(name, kind="agent")
     root = _resolve_root(cwd)
     agent = Agent.create(name, description=description, model=model, root=root)
+    _reindex.reindex_agent(root, name)
     return str(agent.path)
 
 
@@ -146,6 +197,7 @@ def update_agent(
     is missing.
     """
     from cbi.resources import Agent
+    _validate_identifier(name, kind="agent")
     root = _resolve_root(cwd)
     agent = Agent.load(name, root=root)
 
@@ -204,6 +256,7 @@ def update_agent(
         raise ValueError(f"unknown target: {target!r}")
 
     agent.save()
+    _reindex.reindex_agent(root, name)
     return str(agent.path.resolve())
 
 
@@ -214,6 +267,8 @@ def add_skill_to_agent(agent_name: str, skill_name: str, content: str = "", cwd:
     if the skill already exists. Returns the absolute path to the new skill file.
     """
     from cbi.resources import Agent
+    _validate_identifier(agent_name, kind="agent")
+    _validate_identifier(skill_name, kind="skill")
     root = _resolve_root(cwd)
     agent = Agent.load(agent_name, root=root)
     if skill_name in agent.skills:
@@ -225,7 +280,9 @@ def add_skill_to_agent(agent_name: str, skill_name: str, content: str = "", cwd:
 def archive_agent(name: str, cwd: str = "") -> str:
     """Move `.claude/agents/<name>/` to its archived twin and return the new path."""
     from cbi.resources import Agent
+    _validate_identifier(name, kind="agent")
     root = _resolve_root(cwd)
     agent = Agent.load(name, root=root)
     archived = agent.archive()
+    _reindex.drop_agent(name)
     return str(archived)

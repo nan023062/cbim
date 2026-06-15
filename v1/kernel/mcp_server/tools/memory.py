@@ -14,24 +14,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-
-def _project_root(cwd: Path) -> Path:
-    """Walk up from cwd to find the directory containing .cbim/."""
-    p = cwd.resolve()
-    for _ in range(6):
-        if (p / ".cbim").is_dir():
-            return p
-        if p.parent == p:
-            break
-        p = p.parent
-    raise RuntimeError(
-        f"No .cbim/ directory found walking up from {cwd}; cannot locate memory store."
-    )
+from context import project_root
 
 
 def _store_dir(cwd: str) -> Path:
     """Resolve <project>/.cbim/memory/ for the given cwd (creating if absent)."""
-    root = _project_root(Path(cwd) if cwd else Path.cwd())
+    root = project_root(cwd or None)
     store = root / ".cbim" / "memory"
     store.mkdir(parents=True, exist_ok=True)
     return store
@@ -63,7 +51,7 @@ def register(mcp) -> None:
             )
         if tier and tier != "medium":
             return f"ERROR: tier must be 'medium' or empty, got {tier!r}"
-        root = _project_root(Path(cwd) if cwd else Path.cwd())
+        root = project_root(cwd or None)
         tier_arg = "medium" if tier == "medium" else None
         results = Memory.query(text, tier=tier_arg, top_k=top_k, root=root)
         if not results:
@@ -130,7 +118,7 @@ def register(mcp) -> None:
         if tier != "medium":
             return f"ERROR: tier must be 'medium', got {tier!r}"
 
-        root = _project_root(Path(cwd) if cwd else Path.cwd())
+        root = project_root(cwd or None)
         store = root / ".cbim" / "memory"
         store.mkdir(parents=True, exist_ok=True)
         entry = Memory.create(
@@ -198,13 +186,13 @@ def register(mcp) -> None:
             cwd: Project directory (default: current working dir).
         """
         from cbi.resources import Memory
+        from services import PathOutsideRootError, resolve_within_root
 
         store = _store_dir(cwd)
-        target = (store / path).resolve()
         try:
-            target.relative_to(store.resolve())
-        except ValueError:
-            return f"ERROR: path {path!r} escapes the memory store"
+            target = resolve_within_root(store, path, allow_root_itself=False)
+        except PathOutsideRootError as e:
+            return f"ERROR: {e}"
         if not target.exists():
             return f"ERROR: not found: {path}"
         Memory.load(target).delete()

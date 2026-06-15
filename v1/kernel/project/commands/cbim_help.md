@@ -19,9 +19,9 @@ Display the following overview to the user verbatim (in Chinese):
          │              │
          │              └─ 调用 skill (cbim skill show <name>) 执行
          │
-         ├─ 写记忆 → .cbim/memory/short/  (Stop hook 自动)
-         ├─ 蒸馏  → .cbim/memory/medium/ (architect 周期)
-         └─ 知识  → .dna/ + .cbim/kernel/cbi/skills/   (architect 提升)
+         ├─ 短期记忆 → CC 原生 transcript JSONL（不在 .cbim 下，会话级）
+         ├─ 蒸馏      → .cbim/memory/medium/  (dream 治理循环触发)
+         └─ 知识      → .dna/ + .cbim/kernel/cbi/skills/   (architect 提升)
 ```
 
 ## Slash Commands（本地）
@@ -53,8 +53,8 @@ Display the following overview to the user verbatim (in Chinese):
 ## 关键路径
 
 - `.cbim/` — 框架代码（read-only，由 `.claudeignore` + deny 保护）
-- `.cbim/memory/short/` — 原始会话记录（3 天后清理）
-- `.cbim/memory/medium/` — 蒸馏后的模式
+- 短期记忆 — CC 原生 transcript JSONL（不在 .cbim 下，会话级，CC 自治理）
+- `.cbim/memory/medium/` — 蒸馏后的模式（dream 治理循环产物）
 - `.dna/index.md` — 模块注册表（architect 维护）
 - `.claude/agents/` — agent 定义（架构师/审计/HR/程序员 + 自定义）
 - `.claude/commands/` — slash command 定义
@@ -64,7 +64,7 @@ Display the following overview to the user verbatim (in Chinese):
 ## 钩子
 
 - **SessionStart** — 加载记忆上下文 + 生成知识快照
-- **Stop** — 蒸馏本轮会话写入 `memory/short/`
+- **Stop** — 不再自动落盘；蒸馏由 dream 治理循环触发
 - **PreToolUse** — 工具调用日志（受 `.cbim/.debug` 控制）
 
 详见各 agent 的 `.md`（性格/职责/skill 表）。

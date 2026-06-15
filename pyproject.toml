@@ -1,2 +1,125 @@
 [tool.pytest.ini_options]
 norecursedirs = ["v1/tests/benchmark/fixture", ".cbim", ".venv", ".git"]
+
+
+# ---------------------------------------------------------------------------
+# Ruff — lint + format
+#
+# Phase: Batch 0 baseline-anchor (装尺). The rule set is final; what is
+# transitional is the *pinned baseline* of pre-existing violations that
+# CI tolerates. New code must conform to the full rule set; pre-existing
+# violations are tracked separately and burned down in later batches.
+#
+# Per-file-ignores below are the "transitional baseline" — every entry
+# carries a TODO with the batch that owns the cleanup.
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [
+    "v1/tests/benchmark/fixture",
+    ".cbim",
+    ".venv",
+    "__pycache__",
+]
+
+[tool.ruff.lint]
+# Rule families:
+#   F     — pyflakes (undefined names, unused imports, ...)
+#   E     — pycodestyle errors
+#   I     — isort (import ordering)
+#   UP    — pyupgrade (modern Python idioms)
+#   SIM   — flake8-simplify
+#   ARG   — flake8-unused-arguments
+#   B     — flake8-bugbear
+#   RUF   — ruff-native opinionated checks
+#   TID   — flake8-tidy-imports (banned-api scaffold + relative-import policy)
+select = ["F", "E", "I", "UP", "SIM", "ARG", "B", "RUF", "TID"]
+
+# Rules deliberately deferred — turning them on now would force code
+# changes that belong to later batches.
+ignore = [
+    # Batch 5 — exception governance: enable BLE001 (blind-except) once
+    # the exception taxonomy is in place. Today we still have a few
+    # bare `except Exception` swallows that are intentional (e.g.
+    # retrieval re-index side-effects) and need the canonical pattern.
+    "BLE001",
+    # Batch 0 only — module-level mutable defaults / etc. that are
+    # rampant in argparse setup; defer until cli.py decomposition (TBD).
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+# Hard rule: relative imports may go *up* one level only ("from . import X"
+# / "from .submodule import Y"). Anything deeper indicates package-boundary
+# bleed and is banned. This rule is one of the two "anti-regression rails"
+# for Batch 2 (re-establish import boundaries between engine.* / mcp_server.*
+# / cbi._primitives).
+ban-relative-imports = "parents"
+
+# Banned-API live (Batch 2). The scaffold is gone; `cbi._primitives` is now
+# off-limits to engine.* / mcp_server.*. Reads go through services.* (which
+# wraps the primitive) and writes go through services.* (the transactional
+# façade) or cbi.resources (the OOP façade). cbi.resources itself is NOT
+# banned — it is a stable, intentional dependency surface.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"cbi._primitives".msg = "engine.* and mcp_server.* must not reach into cbi._primitives directly; go through services or cbi.resources."
+
+[tool.ruff.lint.per-file-ignores]
+# Tests routinely use unused-args (pytest fixtures), broad scoping, etc.
+"v1/tests/**" = ["ARG001", "ARG002", "B011", "SIM117", "E501"]
+# argparse setup in cli.py uses long single-line `add_argument` chains
+# that are deliberately compact. Decomposition belongs to a later batch;
+# until then we tolerate E501 here.
+"v1/kernel/engine/cli.py" = ["E501"]
+# late-lookup contract for monkeypatch tests (E402 from in-dispatch imports);
+# uniform dispatch(args, parser) signature (ARG001 from sometimes-unused parser)
+"v1/kernel/engine/cli/*.py" = ["E402", "ARG001"]
+# services.* IS the legitimate primitives consumer; the banned-api rule
+# targets engine.* / mcp_server.* / hooks reach-ins, not the wrapper layer.
+"v1/kernel/services/**" = ["TID251"]
+# cbi.resources transitively uses services._fm primitives; allow it to
+# also touch cbi._primitives directly (it's the OOP shell over them).
+"v1/kernel/cbi/**" = ["TID251"]
+# project/hooks_src/* is an independent sys.path domain (project hook
+# scripts, not engine.* / mcp_server.*). Existing primitive usage there
+# is out of scope for the Batch 2 boundary rule.
+"v1/kernel/project/hooks_src/**" = ["TID251"]
+# engine/audit/checks/index_consistency.py is an intentional white-box
+# inspector of cbi._primitives invariants. Routing it through services.*
+# would defeat the audit (it would query the very façade whose backing
+# registry it is trying to verify against the on-disk truth). This is a
+# permanent, by-design exception — not a transitional baseline entry.
+# Other audit checks (dna_fission, agent_fission, dna_tree) correctly
+# go through services.* because they consume metadata snapshots; only
+# index_consistency needs the raw primitive surface to compare the
+# registry's claim against an independent disk scan.
+"v1/kernel/engine/audit/checks/index_consistency.py" = ["TID251"]
+
+[tool.ruff.format]
+# Don't fight the existing single-quote / double-quote mix; let ruff
+# pick the dominant style and leave it.
+quote-style = "preserve"
+indent-style = "space"
+
+
+# ---------------------------------------------------------------------------
+# mypy — start lenient, tighten in later batches.
+#
+# strict-optional is the only real teeth right now; the rest of the
+# ratchets (disallow-untyped-defs, no-implicit-optional across
+# downstream packages, etc.) come on once the typing baseline is real.
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.10"
+strict_optional = true
+ignore_missing_imports = true
+follow_imports = "silent"
+warn_unused_ignores = false
+warn_redundant_casts = true
+no_implicit_optional = true
+# Tests exercise SimpleNamespace + duck-typing heavily; not worth the
+# noise at this phase.
+exclude = [
+    "v1/tests/",
+    "v1/tests/benchmark/fixture/",
+]

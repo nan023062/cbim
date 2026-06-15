@@ -42,3 +42,47 @@ jobs:
       - name: Run pytest (excluding workflow opt-in tests)
         run: |
           python -m pytest v1/tests/ -m "not workflow" -q
+
+  # ---------------------------------------------------------------------------
+  # Lint job — Batch 0 baseline-anchor.
+  #
+  # Runs ruff + mypy against the kernel. Pre-existing violations are
+  # tolerated (--exit-zero / continue-on-error) so this job never blocks
+  # the matrix while we're still measuring the baseline; later batches
+  # ratchet the failure threshold down.
+  #
+  # The intent is informational right now — every PR gets a violation
+  # count delta in its log, even if the count itself is non-zero.
+  # ---------------------------------------------------------------------------
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install lint dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip install -r v1/kernel/requirements.txt
+
+      - name: ruff check (baseline — count violations, never fail)
+        # --exit-zero keeps the job green while we're anchoring the baseline.
+        # Output stays in the log so violation deltas are visible per PR.
+        run: |
+          ruff check v1/kernel --output-format=github --statistics --exit-zero
+
+      - name: ruff format --check (baseline — informational)
+        continue-on-error: true
+        run: |
+          ruff format --check v1/kernel
+
+      - name: mypy (baseline — informational)
+        continue-on-error: true
+        run: |
+          mypy v1/kernel

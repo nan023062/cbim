@@ -6,6 +6,17 @@ Findings:
   INDEX_STALE_ENTRY   warn   registry path no longer has .dna/module.md on disk
   INDEX_PATH_FORMAT   warn   entry not normalised (trailing slash, leading ./, etc.)
   INDEX_DUPLICATE     warn   same path listed twice
+
+White-box exception. Unlike sibling checks (dna_fission, agent_fission,
+dna_tree) which read metadata snapshots through services.*, this check
+deliberately imports cbi._primitives.modules directly. The whole point
+is to compare two independent sources of truth — the raw registry file
+and a fresh on-disk scan — and surface drift between them. Going through
+services.list_modules() would short-circuit that comparison: services
+reads the registry first and then notarises it with frontmatter, so any
+INDEX_PATH_FORMAT / INDEX_DUPLICATE / INDEX_STALE_ENTRY drift would be
+silently normalised away before this check ever sees it. The TID251
+suppression in pyproject.toml for this file is permanent and by design.
 """
 
 from __future__ import annotations

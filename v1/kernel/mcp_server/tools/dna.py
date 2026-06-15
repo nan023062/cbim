@@ -16,86 +16,7 @@ Write tools (route through services.knowledge_service):
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from context import project_root
-
-
-def _project_root(cwd: str) -> Path:
-    """Locate the project root. Honour explicit cwd if provided, else
-    use the kernel context."""
-    if cwd:
-        p = Path(cwd).resolve()
-        for _ in range(6):
-            if (p / ".cbim").is_dir():
-                return p
-            if p.parent == p:
-                break
-            p = p.parent
-        return Path(cwd).resolve()
-    return project_root()
-
-
-# ---------------------------------------------------------------------------
-# Retrieval side-effects
-#
-# Per engine/retrieval/.dna Key Decision: index_upsert is the responsibility
-# of every write tool. doc_id for the "dna" source is the module path
-# relative to the project root (as printed by `cbim dna list`); content is
-# the module.md text; metadata.source_path is the absolute module.md path
-# so retrieval's fast-check can stat it.
-#
-# Failures are swallowed: the data write already succeeded, the dream
-# loop's MemRebuildIndex will reconcile on the next governance pass.
-# ---------------------------------------------------------------------------
-
-
-def _module_doc_id(root: Path, module_dir: Path) -> str:
-    """Return the canonical doc_id for a .dna/ module.
-
-    Mirrors what `cbim dna list` prints: module dir relative to project
-    root, POSIX separators. Falls back to the absolute path string when
-    the module dir is outside the project root (shouldn't happen but
-    safer than crashing the side-effect).
-    """
-    try:
-        rel = module_dir.resolve().relative_to(root.resolve())
-    except ValueError:
-        return str(module_dir.resolve())
-    s = rel.as_posix()
-    return s or "."
-
-
-def _reindex_dna_module(root: Path, module_dir: Path) -> None:
-    """Read <module_dir>/.dna/module.md and push it into the retrieval index."""
-    md = module_dir / ".dna" / "module.md"
-    if not md.is_file():
-        return
-    try:
-        content = md.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        return
-    if not content:
-        return
-    try:
-        from engine.retrieval import index_upsert
-        index_upsert(
-            "dna",
-            _module_doc_id(root, module_dir),
-            content,
-            {"source_path": str(md.resolve())},
-        )
-    except Exception:
-        # Data write already succeeded; the dream loop's
-        # MemRebuildIndex will reconcile on the next governance pass.
-        return
-
-
-def _safe_reindex_dna(root: Path, module_dir: Path) -> None:
-    try:
-        _reindex_dna_module(root, module_dir)
-    except Exception:
-        return
 
 
 def register(mcp) -> None:
@@ -128,34 +49,35 @@ def register(mcp) -> None:
             module_path: Path to the module directory (containing .dna/), e.g. 'src/combat'.
             cwd: Project directory (default: current working dir).
         """
-        from cbi.resources import DNAModule
-        root = _project_root(cwd)
-        mod_dir = (root / module_path).resolve()
+        from services import (
+            PathOutsideRootError,
+            get_module,
+            resolve_within_root,
+        )
+        root = project_root(cwd or None)
         try:
-            m = DNAModule.load(mod_dir, root=root)
-        except FileNotFoundError:
+            mod_dir = resolve_within_root(root, module_path, allow_root_itself=False)
+        except PathOutsideRootError as e:
+            return f"ERROR: {e}"
+        info = get_module(module_path, cwd=cwd)
+        if info is None:
             return f"ERROR: no .dna/ found in {mod_dir}"
-        fm = m.frontmatter
         lines = [
-            f"Name        : {fm.get('name', m.id)}",
-            f"Owner       : {fm.get('owner', '')}",
-            f"Description : {fm.get('description', '')}",
+            f"Name        : {info['name']}",
+            f"Owner       : {info['owner']}",
+            f"Description : {info['description']}",
         ]
-        keywords = fm.get("keywords") or []
-        if keywords:
-            lines.append(f"Keywords    : {', '.join(keywords)}")
-        dependencies = fm.get("dependencies") or []
-        if dependencies:
-            lines.append(f"Dependencies: {', '.join(dependencies)}")
-        workflows = m.workflows.list()
-        if workflows:
-            lines.append(f"Workflows   : {', '.join(workflows)}")
-        body_text = m.body.read()
-        if body_text:
-            lines.append("\n--- module.md (body) ---\n" + body_text)
-        contract_text = m.contract.body.read() if m.contract.exists() else ""
-        if contract_text:
-            lines.append("\n--- contract.md ---\n" + contract_text)
+        if info["keywords"]:
+            lines.append(f"Keywords    : {', '.join(info['keywords'])}")
+        if info["dependencies"]:
+            lines.append(f"Dependencies: {', '.join(info['dependencies'])}")
+        wf_ids = [w["id"] for w in info["workflows"]]
+        if wf_ids:
+            lines.append(f"Workflows   : {', '.join(wf_ids)}")
+        if info["body"]:
+            lines.append("\n--- module.md (body) ---\n" + info["body"])
+        if info["contract"]:
+            lines.append("\n--- contract.md ---\n" + info["contract"])
         return "\n".join(lines)
 
     @mcp.tool()
@@ -165,10 +87,8 @@ def register(mcp) -> None:
         Args:
             cwd: Project directory (default: current working dir).
         """
-        from cbi.resources import DNAModule
-        root = _project_root(cwd)
-        DNAModule.reindex(root=root)
-        count = len(DNAModule.list_all(root=root))
+        from services import reindex_modules
+        count = reindex_modules(cwd=cwd)
         return f"Rebuilt registry  ({count} modules)"
 
     @mcp.tool()
@@ -200,7 +120,12 @@ def register(mcp) -> None:
 
         All three module kinds use classDiagram-based templates; parent/root use <<module>> stereotype per sub-module node, leaf shows code-level classes.
         """
-        from services import init_module
+        from services import PathOutsideRootError, init_module, resolve_within_root
+        root = project_root(cwd or None)
+        try:
+            resolve_within_root(root, dir, allow_root_itself=False)
+        except PathOutsideRootError as e:
+            return f"ERROR: {e}"
         try:
             dna_dir = init_module(
                 dir,
@@ -216,9 +141,6 @@ def register(mcp) -> None:
             return f"ERROR: {e}"
         except (ValueError, FileNotFoundError) as e:
             return f"ERROR: {e}"
-        # init_module returns the .dna/ dir path; module dir is its parent.
-        root = _project_root(cwd)
-        _safe_reindex_dna(root, Path(dna_dir).parent)
         return dna_dir
 
     @mcp.tool()
@@ -242,20 +164,20 @@ def register(mcp) -> None:
         Returns:
             Path of the saved file, or `ERROR: ...` on failure.
         """
-        from services import edit_module
+        from services import PathOutsideRootError, edit_module, resolve_within_root
+        root = project_root(cwd or None)
         try:
-            saved = edit_module(module_path, target, payload, mode=mode, cwd=cwd)
+            resolve_within_root(root, module_path, allow_root_itself=False)
+        except PathOutsideRootError as e:
+            return f"ERROR: {e}"
+        # Path-confine the input string here; the service write also
+        # handles the post-edit retrieval reindex inline now (Batch 1).
+        try:
+            return edit_module(module_path, target, payload, mode=mode, cwd=cwd)
         except FileNotFoundError as e:
             return f"ERROR: {e}"
         except (ValueError, LookupError, RuntimeError) as e:
             return f"ERROR: {e}"
-        # Re-index module.md regardless of which file edit_module touched
-        # (contract / workflow edits don't change module.md but the module
-        # itself is the indexable unit).
-        root = _project_root(cwd)
-        module_dir = (root / module_path).resolve()
-        _safe_reindex_dna(root, module_dir)
-        return saved
 
     @mcp.tool()
     def dna_split(
@@ -279,9 +201,30 @@ def register(mcp) -> None:
             {"created": [paths], "dependency_refs": [refs]} on success, or
             {"error": str} on failure.
         """
-        from services import split_module
+        from services import PathOutsideRootError, resolve_within_root, split_module
+        root = project_root(cwd or None)
         try:
-            result = split_module(
+            resolve_within_root(
+                root, source_module_path, allow_root_itself=False
+            )
+        except PathOutsideRootError as e:
+            return {"error": str(e)}
+        # Each split spec carries a ``path`` from LLM input — reject
+        # any that escape the project root before handing off.
+        for spec in splits or []:
+            if not isinstance(spec, dict):
+                continue
+            spec_path = spec.get("path")
+            if not spec_path:
+                continue
+            try:
+                resolve_within_root(root, spec_path, allow_root_itself=False)
+            except PathOutsideRootError as e:
+                return {"error": str(e)}
+        # Source + every newly-created module are reindexed inside
+        # services.knowledge_service.split_module; nothing to do here.
+        try:
+            return split_module(
                 source_module_path,
                 splits,
                 strategy=strategy,
@@ -289,15 +232,6 @@ def register(mcp) -> None:
             )
         except (ValueError, LookupError, FileNotFoundError, FileExistsError, RuntimeError) as e:
             return {"error": str(e)}
-        # Re-index both the source module (its body changed in either
-        # strategy) and every newly created module. result["created"] is
-        # a list of absolute module.md paths.
-        root = _project_root(cwd)
-        _safe_reindex_dna(root, (root / source_module_path).resolve())
-        for created_md in result.get("created", []):
-            created_module_dir = Path(created_md).resolve().parent.parent
-            _safe_reindex_dna(root, created_module_dir)
-        return result
 
     @mcp.tool()
     def dna_write_doc(
@@ -316,7 +250,12 @@ def register(mcp) -> None:
             body:        Body markdown (frontmatter is preserved separately).
             cwd:         Project directory (default: current working dir).
         """
-        from services import write_doc
+        from services import PathOutsideRootError, resolve_within_root, write_doc
+        root = project_root(cwd or None)
+        try:
+            resolve_within_root(root, module_path, allow_root_itself=False)
+        except PathOutsideRootError as e:
+            return f"ERROR: {e}"
         try:
             return write_doc(module_path, file, body, cwd=cwd)
         except (ValueError, FileNotFoundError) as e:
@@ -343,7 +282,12 @@ def register(mcp) -> None:
             mode:        "replace" | "append" | "insert-after" | "delete".
             cwd:         Project directory (default: current working dir).
         """
-        from services import write_section
+        from services import PathOutsideRootError, resolve_within_root, write_section
+        root = project_root(cwd or None)
+        try:
+            resolve_within_root(root, module_path, allow_root_itself=False)
+        except PathOutsideRootError as e:
+            return f"ERROR: {e}"
         try:
             return write_section(
                 module_path, file, heading,

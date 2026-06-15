@@ -15,14 +15,38 @@ CBI internal primitives: dna (module CRUD, index, write-doc, reindex), agents (a
 
 ```mermaid
 classDiagram
-    class modules {
-        +list_modules(root) list
+    class loader {
         +load_module(mod_dir, root) dict
+        +list_modules(root) list
+    }
+    class scaffold {
         +init_module(mod_dir, ...) Path
-        +write_module_doc(mod_dir, file, body) Path
-        +update_index(root)
         +ensure_registry(root) Path
+    }
+    class registry {
+        +update_index(root)
         +index_path(root) Path  // .cbim/index.md
+    }
+    class doc_writer {
+        +write_module_doc(mod_dir, file, body) Path
+    }
+    class section_parser {
+        +parse_sections(body) list
+        +find_section(body, heading) Section
+    }
+    class section_writer {
+        +write_section(body, heading, content, mode) str
+    }
+    class frontmatter_schema {
+        +editable_fields() list
+        +validate(payload) None
+    }
+    class splitter {
+        +split_module(source, splits, strategy) dict
+    }
+    class _telemetry {
+        +_log_import(...)
+        +_rel_for_log(...)
     }
     class agents {
         +list_agents(...)
@@ -32,22 +56,37 @@ classDiagram
     class snapshot {
         +build_snapshot(project_root) str
     }
-    class cli {
-        <<empty stub, P3 Wave 1>>
-        +historical: cmd_modules_* / cmd_agents_*
-        +superseded by engine.cli._handle_*
-    }
-    cbi_resources --> modules : DNAModule wraps
+
+    loader ..> _telemetry : import telemetry
+    scaffold ..> registry : updates index after init
+    scaffold ..> doc_writer : writes module.md
+    splitter ..> loader : reads source body
+    splitter ..> section_parser : finds split points
+    splitter ..> section_writer : rewrites each split target
+    splitter ..> doc_writer : final write-back
+    splitter ..> registry : reindex post-split
+    section_writer ..> section_parser : locate before mutate
+
+    cbi_resources --> loader : DNAModule.load wraps
+    cbi_resources --> doc_writer : DNAModule.save wraps
     cbi_resources --> agents : Agent wraps
-    snapshot --> modules : reads via list_modules
+    snapshot --> loader : reads via list_modules
 ```
 
-All `cmd_*` handlers previously hosted here were deleted in P3 Wave 1. The top-level `engine/cli.py` now dispatches directly to `cbi.resources.{DNAModule, Agent}` through private `_handle_dna_*` / `_handle_agent_*` functions. Frontmatter parsing duplicates inside `modules.py` / `agents.py` (`_parse_frontmatter` / `_strip_frontmatter` / `_parse_yaml_block`) were removed in the same wave; both files now import the single source of truth from `services._fm`.
+`modules/` is the single 10-file sub-package owning all `.dna/` CRUD primitives. Each file has one responsibility (loader / scaffold / registry / doc_writer / section_parser / section_writer / frontmatter_schema / splitter / _telemetry / __init__). The 10-way split came from collapsing the legacy `modules.py` (1185 LOC) into single-responsibility files; `_telemetry.py` centralises the `_log_import` / `_rel_for_log` plumbing every other file used to re-import.
+
+`agents.py` and `snapshot.py` remain single-file primitives — neither has hit the splitting threshold, and `cbi.resources.{Agent,Snapshot}` already gives the public object shell.
+
+All `cmd_*` handlers previously hosted here were deleted in P3 Wave 1. The top-level `engine/cli/` (now a package — see `engine/.dna/module.md`) dispatches directly to `cbi.resources.{DNAModule, Agent}`. Frontmatter parsing duplicates inside the legacy `modules.py` / `agents.py` (`_parse_frontmatter` / `_strip_frontmatter` / `_parse_yaml_block`) were removed in the same wave; both now import the single source of truth from `services._fm`.
 
 ## Key Decisions
 
+- **`modules.py` (1185 LOC) was split into a 10-file `modules/` sub-package in Batch 3.** One file per concern: `loader.py` (parse + list), `scaffold.py` (init), `registry.py` (`.cbim/index.md` writer), `doc_writer.py` (whole-file write), `section_parser.py` + `section_writer.py` (heading-level edits), `frontmatter_schema.py` (editable-field whitelist + validation), `splitter.py` (atomic multi-file split), `_telemetry.py` (`_log_import` / `_rel_for_log`), `__init__.py` (re-exports). Public import path stays `from cbi._primitives.modules import ...` so neither `services` nor `cbi.resources` needed touching.
+- **<300 LOC is the soft per-file target inside `modules/`.** Most files land 25–203 lines. `splitter.py` is the deliberate exception at ~400 LOC: it owns one indivisible transactional flow (parse → plan splits → rewrite N targets → reindex) and any internal cut would either force a public sub-API for a single caller or leak partial-state between sub-helpers. Splitting is the wrong refactor for it; the soft target yields to single-responsibility integrity.
+- **`_log_import` is centralised in `_telemetry.py`.** Before the split, every file in the legacy `modules.py` re-imported `engine.import_log.log_import` with its own try/except fallback stub. `_telemetry.py` owns one canonical try/except, exposes `_log_import` and `_rel_for_log`, and every other file in `modules/` imports from it. Removes nine copies of the same boilerplate; gives the audit a single line to ban / mock.
 - **Module registry is `.cbim/index.md`, not the project-root `.dna/`.** Decouples the framework-managed fast-path registry from the optional project-root module document. `.cbim/` is the framework (not a business module), so it has no `.dna/` and no `module.md`; the registry sits directly at `.cbim/index.md` with no redundant wrapper layer.
 - **`dna init` requires the registry to exist.** It does not auto-bootstrap. Registry creation is the responsibility of `dna reindex` (which creates an empty registry on a clean repo via `_write_index → ensure_registry`) or `cbim init`. *Architect note: this means architects working on a fresh kernel checkout must run `dna reindex` once before any `dna init`.*
 - **`dna edit` is the unified write surface; `write-doc` / `write-section` are deprecated aliases.** Since P3, all edits route through `cbim dna edit --target {frontmatter | body | section | contract | contract-section | workflow}`, implemented by `_handle_dna_edit` over `DNAModule` and its sub-objects (`.frontmatter` / `.body` / `.contract` / `.workflows`). Frontmatter is always preserved verbatim; `.save()` is atomic. Direct file edits remain banned by the Kernel-Only Writes rule.
 - **Dependency direction is strictly unidirectional.** `engine/cli → cbi/resources → cbi/_primitives → services/_fm`. `cbi/_primitives` must not import `cbi/resources`; the resource layer wraps the primitives, never the other way round.
 - **Package name `_primitives` uses the underscore-prefix convention for internal-use packages.** External callers (work agents, hooks, MCP, dashboard) must go through `cbi.resources` for the rich object model, or `services.*` for the read-mostly facade. P3 Wave 2 renamed `cbi/engine` → `cbi/_primitives` to make this boundary explicit.
+

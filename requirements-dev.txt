@@ -14,3 +14,10 @@
 # avoid the "collected but skipped" noise.
 
 pytest>=7.0
+
+# Lint / type / hook chain — installed by CI's "lint" job and by
+# contributors via `pre-commit install`. Versions pinned loosely so the
+# baseline is reproducible without forcing churn on every minor bump.
+ruff>=0.6.9,<0.7
+mypy>=1.11,<2
+pre-commit>=3.7,<4

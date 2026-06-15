@@ -20,7 +20,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import RLock
-from typing import Dict, List, Optional, Union
 
 # Minimum spread between top vector scores below which we treat the
 # embedding as semantically collapsed (e.g. provider stuck returning a
@@ -39,12 +38,10 @@ from engine.retrieval.store import (
     VALID_SOURCES,
     DocRecord,
     IndexStore,
-    StoreError,
     VectorBlob,
     content_sha256,
     now_iso,
 )
-
 
 # --------------------------------------------------------------------------
 # Public dataclasses
@@ -77,13 +74,13 @@ class Hit:
 class IndexStats:
     source: str
     total_docs: int
-    vector_dim: Optional[int]
+    vector_dim: int | None
     embedding_provider: str
     fallback_active: bool
     index_size_bytes: int
     last_upsert_at: str
-    last_verify_at: Optional[str]
-    last_drift_count: Optional[int]
+    last_verify_at: str | None
+    last_drift_count: int | None
 
     def to_dict(self) -> dict:
         return {
@@ -109,11 +106,11 @@ class _SourceState:
     source: str
     store: IndexStore
     bm25: BM25Index
-    records: Dict[str, DocRecord]
-    vectors: Optional[VectorBlob]   # None when provider unavailable / dim=0
+    records: dict[str, DocRecord]
+    vectors: VectorBlob | None   # None when provider unavailable / dim=0
     last_upsert_at: str = ""
-    last_verify_at: Optional[str] = None
-    last_drift_count: Optional[int] = None
+    last_verify_at: str | None = None
+    last_drift_count: int | None = None
 
 
 # --------------------------------------------------------------------------
@@ -122,11 +119,11 @@ class _SourceState:
 
 
 class RetrievalFacade:
-    def __init__(self, index_root: Path, config: Optional[RetrievalConfig] = None) -> None:
+    def __init__(self, index_root: Path, config: RetrievalConfig | None = None) -> None:
         self.index_root = Path(index_root)
         self.config = config or load_config(self.index_root)
         self.provider: EmbeddingProvider = build_provider(self.config)
-        self._sources: Dict[str, _SourceState] = {}
+        self._sources: dict[str, _SourceState] = {}
         self._lock = RLock()
 
     # ---------------- internal helpers ----------------
@@ -163,7 +160,7 @@ class RetrievalFacade:
             vectors=vectors,
         )
 
-    def _ensure_vector_blob(self, state: _SourceState) -> Optional[VectorBlob]:
+    def _ensure_vector_blob(self, state: _SourceState) -> VectorBlob | None:
         if not self.provider.is_available():
             return None
         if state.vectors is None:
@@ -171,6 +168,17 @@ class RetrievalFacade:
         return state.vectors
 
     def _persist(self, state: _SourceState) -> None:
+        if self.config.atomic_persist:
+            # Single-shot transactional write of meta + bm25 + vectors.
+            state.store.persist_atomic(
+                state.records,
+                state.bm25.to_dict(),
+                state.vectors,
+            )
+            return
+        # Legacy path — kept behind the atomic_persist=False feature
+        # flag so an emergency rollback can switch back without code
+        # changes.
         state.store.save_meta(state.records)
         state.store.save_bm25_state(state.bm25.to_dict())
         if state.vectors is not None:
@@ -183,7 +191,7 @@ class RetrievalFacade:
         source: str,
         doc_id: str,
         content: str,
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
     ) -> None:
         if not isinstance(source, str) or not source:
             raise RetrievalError("source must be a non-empty string")
@@ -199,61 +207,99 @@ class RetrievalFacade:
 
         with self._lock:
             state = self._get(source)
-            # Persist content snapshot first so a crash can be detected.
-            state.store.write_doc(doc_id, content)
+            with state.store._cross_process_lock():
+                self._do_upsert(state, source, doc_id, content, metadata, source_path)
 
-            # mtime/size for fast-check: prefer original source file when
-            # known; otherwise stat the snapshot we just wrote.
-            if source_path:
-                try:
-                    st = Path(source_path).stat()
-                    mtime = st.st_mtime
-                    size = st.st_size
-                except OSError:
-                    mtime = 0.0
-                    size = len(content.encode("utf-8"))
-            else:
-                snap = state.store.doc_path(doc_id)
-                try:
-                    st = snap.stat()
-                    mtime = st.st_mtime
-                    size = st.st_size
-                except OSError:
-                    mtime = 0.0
-                    size = len(content.encode("utf-8"))
+    def _reload_under_lock(self, state: _SourceState) -> None:
+        """Refresh the in-memory state from disk while the cross-process
+        lock is held.
 
-            rec = DocRecord(
-                doc_id=doc_id,
-                mtime=mtime,
-                size=size,
-                sha256=content_sha256(content),
-                indexed_at=now_iso(),
-                metadata=metadata,
-                source_path=str(source_path) if source_path else None,
-            )
-            state.records[doc_id] = rec
+        Multiple cooperating processes can each hold their own facade
+        cache; before mutating, we MUST load the current on-disk values
+        so we don't overwrite a peer process's commit. Read-modify-write
+        becomes correct because (a) we are inside ``_cross_process_lock``
+        and (b) atomic_persist guarantees the on-disk triple is
+        self-consistent.
+        """
+        state.records = state.store.load_meta()
+        bm25_state = state.store.load_bm25_state()
+        if bm25_state is not None:
+            state.bm25 = BM25Index.from_dict(bm25_state)
+        else:
+            state.bm25 = BM25Index()
+        if self.provider.is_available():
+            state.vectors = state.store.load_vectors()
+        else:
+            state.vectors = None
 
-            # BM25 always.
-            state.bm25.upsert(doc_id, content)
+    def _do_upsert(
+        self,
+        state: _SourceState,
+        source: str,
+        doc_id: str,
+        content: str,
+        metadata: dict,
+        source_path,
+    ) -> None:
+        # Reload-from-disk while we hold the cross-process lock so we
+        # see any peer-process commits that landed since our cache was
+        # populated.
+        self._reload_under_lock(state)
+        # Persist content snapshot first so a crash can be detected.
+        state.store.write_doc(doc_id, content)
 
-            # Vector when provider available.
-            if self.provider.is_available():
-                try:
-                    vec = self.provider.embed(content)
-                    blob = self._ensure_vector_blob(state)
-                    assert blob is not None
-                    blob.upsert(doc_id, vec)
-                except Exception as e:
-                    # Embedding failed mid-flight — don't kill the upsert;
-                    # BM25 still works and drift will re-attempt later.
-                    # Logged via stats() / fallback_active for observability.
-                    pass
-
-            state.last_upsert_at = rec.indexed_at
+        # mtime/size for fast-check: prefer original source file when
+        # known; otherwise stat the snapshot we just wrote.
+        if source_path:
             try:
-                self._persist(state)
-            except OSError as e:
-                raise RetrievalError(f"persist failed for source={source}: {e}") from e
+                st = Path(source_path).stat()
+                mtime = st.st_mtime
+                size = st.st_size
+            except OSError:
+                mtime = 0.0
+                size = len(content.encode("utf-8"))
+        else:
+            snap = state.store.doc_path(doc_id)
+            try:
+                st = snap.stat()
+                mtime = st.st_mtime
+                size = st.st_size
+            except OSError:
+                mtime = 0.0
+                size = len(content.encode("utf-8"))
+
+        rec = DocRecord(
+            doc_id=doc_id,
+            mtime=mtime,
+            size=size,
+            sha256=content_sha256(content),
+            indexed_at=now_iso(),
+            metadata=metadata,
+            source_path=str(source_path) if source_path else None,
+        )
+        state.records[doc_id] = rec
+
+        # BM25 always.
+        state.bm25.upsert(doc_id, content)
+
+        # Vector when provider available.
+        if self.provider.is_available():
+            try:
+                vec = self.provider.embed(content)
+                blob = self._ensure_vector_blob(state)
+                assert blob is not None
+                blob.upsert(doc_id, vec)
+            except Exception:
+                # Embedding failed mid-flight — don't kill the upsert;
+                # BM25 still works and drift will re-attempt later.
+                # Logged via stats() / fallback_active for observability.
+                pass
+
+        state.last_upsert_at = rec.indexed_at
+        try:
+            self._persist(state)
+        except OSError as e:
+            raise RetrievalError(f"persist failed for source={source}: {e}") from e
 
     # ---------------- public: index_delete ----------------
 
@@ -264,18 +310,24 @@ class RetrievalFacade:
             raise RetrievalError("doc_id must be a non-empty string")
         with self._lock:
             state = self._get(source)
-            if doc_id not in state.records:
-                # Idempotent: not present == success.
-                return
-            state.records.pop(doc_id, None)
-            state.bm25.delete(doc_id)
-            if state.vectors is not None:
-                state.vectors.delete(doc_id)
-            state.store.delete_doc(doc_id)
-            try:
-                self._persist(state)
-            except OSError as e:
-                raise RetrievalError(f"persist failed for source={source}: {e}") from e
+            with state.store._cross_process_lock():
+                # Reload under lock — see _reload_under_lock for rationale.
+                self._reload_under_lock(state)
+                if doc_id not in state.records:
+                    # Idempotent: not present == success (consistent with
+                    # the pre-lock check that was here before).
+                    return
+                state.records.pop(doc_id, None)
+                state.bm25.delete(doc_id)
+                if state.vectors is not None:
+                    state.vectors.delete(doc_id)
+                state.store.delete_doc(doc_id)
+                try:
+                    self._persist(state)
+                except OSError as e:
+                    raise RetrievalError(
+                        f"persist failed for source={source}: {e}"
+                    ) from e
 
     # ---------------- public: search ----------------
 
@@ -284,8 +336,8 @@ class RetrievalFacade:
         source: str,
         query: str,
         top_k: int = 10,
-        filters: Optional[dict] = None,
-    ) -> List[Hit]:
+        filters: dict | None = None,
+    ) -> list[Hit]:
         if not isinstance(source, str) or not source:
             raise RetrievalError("source must be a non-empty string")
         if query is None:
@@ -302,7 +354,7 @@ class RetrievalFacade:
             if allowed_ids is not None and not allowed_ids:
                 return []
 
-            ranked: List[tuple] = []
+            ranked: list[tuple] = []
 
             use_vector = (
                 self.provider.is_available()
@@ -333,7 +385,7 @@ class RetrievalFacade:
             else:
                 ranked = state.bm25.search(query, top_k, allowed_ids=allowed_ids)
 
-            hits: List[Hit] = []
+            hits: list[Hit] = []
             for doc_id, score in ranked:
                 rec = state.records.get(doc_id)
                 if rec is None:
@@ -385,7 +437,7 @@ class RetrievalFacade:
 
     # ---------------- public: stats ----------------
 
-    def stats(self, source: Optional[str] = None) -> Union[IndexStats, List[IndexStats]]:
+    def stats(self, source: str | None = None) -> IndexStats | list[IndexStats]:
         if source is None:
             return [self._one_stats(s) for s in VALID_SOURCES]
         return self._one_stats(source)
@@ -414,7 +466,7 @@ class RetrievalFacade:
 # --------------------------------------------------------------------------
 
 
-def _is_vector_collapsed(vec_ranked: List[tuple]) -> bool:
+def _is_vector_collapsed(vec_ranked: list[tuple]) -> bool:
     """True when the vector ranking carries no usable signal.
 
     Two failure modes the embedding layer can hand us silently:
@@ -435,7 +487,7 @@ def _is_vector_collapsed(vec_ranked: List[tuple]) -> bool:
     return (top - bot) < _VECTOR_COLLAPSE_EPSILON
 
 
-def _filter_doc_ids(records: Dict[str, DocRecord], filters: Optional[dict]) -> Optional[set]:
+def _filter_doc_ids(records: dict[str, DocRecord], filters: dict | None) -> set | None:
     """Return the set of doc_ids whose metadata matches all filter keys,
     or None if no filter was supplied (means: all docs allowed)."""
     if not filters:
@@ -453,7 +505,7 @@ def _filter_doc_ids(records: Dict[str, DocRecord], filters: Optional[dict]) -> O
     return allowed
 
 
-_default_facade: Optional[RetrievalFacade] = None
+_default_facade: RetrievalFacade | None = None
 _default_lock = RLock()
 
 
@@ -480,7 +532,7 @@ def reset_default_facade() -> None:
         _default_facade = None
 
 
-def index_upsert(source: str, doc_id: str, content: str, metadata: Optional[dict] = None) -> None:
+def index_upsert(source: str, doc_id: str, content: str, metadata: dict | None = None) -> None:
     _facade().index_upsert(source, doc_id, content, metadata)
 
 
@@ -492,8 +544,8 @@ def search(
     source: str,
     query: str,
     top_k: int = 10,
-    filters: Optional[dict] = None,
-) -> List[Hit]:
+    filters: dict | None = None,
+) -> list[Hit]:
     return _facade().search(source, query, top_k, filters)
 
 
@@ -501,5 +553,5 @@ def verify_consistency(source: str, mode: str) -> DriftReport:
     return _facade().verify_consistency(source, mode)
 
 
-def stats(source: Optional[str] = None) -> Union[IndexStats, List[IndexStats]]:
+def stats(source: str | None = None) -> IndexStats | list[IndexStats]:
     return _facade().stats(source)

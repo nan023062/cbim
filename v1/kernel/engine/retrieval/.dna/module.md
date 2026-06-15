@@ -107,15 +107,19 @@ CBIM v2 的记忆架构重设计带来一个共同需求：**多源向量检索*
 
 ## Key Decisions
 
-- **本模块是 leaf，无下级子模块。** 内部四组职责（EmbeddingProvider / VectorIndex+BM25Index / IndexStore / DriftChecker）通过 `RetrievalFacade` 粘合对外。任何"把 EmbeddingProvider 拔出来做独立子模块"的提议都要先回答"它有没有独立的写入入口和生命周期"——目前没有，它只是 facade 注入的策略对象。
-- **本模块在 `engine/` 之下，与 `execution` / `dream` / `core` / `persistence` 平级。** 不是 `execution` 子模块、不是 `dream` 子模块、不是 `memory` 子模块。理由：服务于两根循环（execution 前置召回 + dream 全量校验）的基础设施天然属于核心循环 infra 子层。依赖方向单向：`{execution, dream, memory.crud, memory.compaction, mcp_server.tools.dna, mcp_server.tools.agents, hooks.session_*} → engine/retrieval`，本模块对它们零依赖。
-- **EmbeddingProvider 是可插拔接口；BM25 是永远在线的兜底。** `EmbeddingProvider.is_available()` 在每次 `search` / `index_upsert` 调用前查询；返回 `False` 时（外部 API 未配置 / 网络不可达 / 模型未加载）自动降级为 BM25 关键词检索。**"零外部依赖也能工作"是铁律**——CBIM 默认安装不假定用户有 OpenAI key / GPU / 本地模型，开箱即用必须有兜底路径。
-- **4 个源共享同一套接口，源名是字符串枚举。** `source ∈ {"transcript", "memory_medium", "dna", "agents"}`，本模块内部按源分目录存索引文件（`.cbim/index/<source>/`），但接口对源**一视同仁**——调用方传 `source` 字符串选索引，不通过"每个源一个接口方法"暴露语义差异。新增源只需在源名枚举追加 + 调用方接入，本模块不改。
-- **索引更新是写入工具的同步副作用，本模块不主动触发。** `memory_write` / `dna_edit` / `agent_update` / transcript 写入 hook 每次写入数据后**同步**调用 `retrieval.index_upsert(source, doc_id, content, metadata)`；删除同理 `index_delete`。本模块不订阅事件、不起 watcher、不扫文件系统——索引与数据的一致性由"写入工具同时写两边"承诺，本模块只保证"调到了就索引到"。
-- **两级漂移校验：mtime+size 快检 + hash 兜底。** SessionStart hook 调 `verify_consistency(source, mode="fast")` 用 mtime+size 比对元数据，秒级完成，发现可疑文件标记 suspect 待修；治理循环（`engine/dream` 的 MemRebuildIndex 节点）调 `verify_consistency(source, mode="full")` 跑全量 hash 校验作为兜底。**两级合用**——快检覆盖 99% 漂移、低开销；hash 兜底解决快检漏判（同 mtime 同 size 但内容变了的边角情况）与索引文件本身的损坏。
-- **索引存储路径是公共契约。** `.cbim/index/<source>/{index.json, vectors.bin, bm25.json, meta.json}` 进入 contract。dashboard 与 debug 工具可只读消费；本模块对结构演进走 schema_version 字段。
-- **检索结果带 `source` 标签返回，由调用方做语义分类。** `Hit{doc_id, source, score, content, metadata}`——调用方拿到列表后按 `source` 分桶拼装（如 execution 的 3 类上下文：transcript+memory_medium → "近期记忆"、agents → "agent 信息"、dna → "模块知识图谱"）。本模块**不**做语义分桶；分桶规则属于调用方的上下文组装策略。
-- **`embed_batch` 是性能契约，不是新接口语义。** 批量 embedding 与单条 embedding 语义完全等价，仅用于减少外部 API 往返；调用方何时用单条 / 何时用 batch 是性能决策，不影响正确性。
+- **本模块是 leaf，无下级子模块。** 内部四组职责（EmbeddingProvider / VectorIndex+BM25Index / IndexStore / DriftChecker）通过 `RetrievalFacade` 粘合对外。任何“把 EmbeddingProvider 拔出来做独立子模块”的提议都要先回答“它有没有独立的写入入口和生命周期”——目前没有，它只是 facade 注入的策略对象。
+- **本模块在 `engine/` 之下，与 `execution` / `dream` / `core` / `persistence` 平级。** 依赖方向单向：`{execution, dream, memory.crud, memory.compaction, services._reindex, mcp_server.tools.dna, mcp_server.tools.agents, hooks.session_*} → engine/retrieval`，本模块对它们零依赖。
+- **EmbeddingProvider 是可插拔接口；BM25 是永远在线的兜底。** `EmbeddingProvider.is_available()` 在每次 `search` / `index_upsert` 调用前查询；返回 `False` 时自动降级为 BM25 关键词检索。“零外部依赖也能工作”是铁律。
+- **4 个源共享同一套接口，源名是字符串枚举。** `source ∈ {"transcript", "memory_medium", "dna", "agents"}`，本模块内部按源分目录存索引文件（`.cbim/index/<source>/`），但接口对源一视同仁。
+- **索引更新是写入工具的同步副作用，本模块不主动触发。** `services._reindex` 在每个 write 函数末尾内联调 `index_upsert` / `index_delete`；hooks.session_stop 写 transcript 后同步调。本模块不订阅事件、不起 watcher、不扫文件系统。
+- **两级漂移校验：mtime+size 快检 + hash 兜底。** SessionStart hook 调 `verify_consistency(source, mode="fast")`；治理循环（`engine/dream` 的 MemRebuildIndex 节点）调 `verify_consistency(source, mode="full")` 跑全量 hash 校验。
+- **`persist_atomic` 三文件事务 + 跨进程锁 + emergency-fallback 开关。** `IndexStore.persist_atomic(meta, bm25, vectors)` 是这三个并生文件一起划进 / 一起划出的唯一口。策略：(1) 在 `<source_dir>/.staging/` 下并发写三个阶段文件；(2) 預扫并清除升余 `*.bak`；(3) 同跨进程锁保护下轮转重命名：每个 live `<name>` 先重命名为 `<name>.bak`，再把阶段文件重命名为 `<name>`；(4) 成功后删除所有 `*.bak` 与阶段目录。任何中间步失败，回滚路径将 `*.bak` 还原为 `<name>`，并报 `RetrievalError`；上层三个文件要么都是老三元（`*.bak` 尚未吊走）要么都是新三元，决不出现跨文件不一致。
+- **跨进程锁索引为 `<source_dir>/.lock`，跨平台实现。** POSIX 走 `fcntl.flock(LOCK_EX)`；Windows 走 `msvcrt.locking(LK_LOCK, 1)` 锁首字节。`.lock` 文件创建后从不删除，但同一进程同时只能有一者持锁。锁范围是整个 `persist_atomic`（包含阶段写 + 轮转重命名），以保证多进程同时写同一个 `source` 不产生主插与 `*.bak` 交叉。
+- **上取交互产物在 IndexStore 初始化时被清理。** `<source_dir>/.staging/`、`meta.json.bak`、`bm25.json.bak`、`vectors.bin.bak` 任一遗留都会被 `IndexStore.__init__` 里的清理路径 best-effort 删除，以保证下一次 `persist_atomic` 从干净状态起走。这些上取文件必须也被 `.gitignore` / `.cbim` 指定为不跟踪。
+- **`RetrievalConfig.atomic_persist` 是 emergency-fallback，不是性能旋钮。** 默认 `True`，走 `persist_atomic` 三文件事务；设 `False` 后退回逆老的同步 `os.replace` 逐文件写（可能产生跨文件不一致）。该开关仅用于现场故障处理（如同事出现 staging 作业性问题需临时绕过），不是供调优使用。文档、默认、测试都金“默认 atomic”这个语义；emergency-fallback 状态走完后必须调回 `True`。
+- **索引存储路径是公共契约。** `.cbim/index/<source>/{index.json, vectors.bin, bm25.json, meta.json}` 进契约。`<source>/.lock` 与 `.staging/` / `*.bak` 是实现依赖的工件，不进契约、不供下游消费。
+- **检索结果带 `source` 标签返回，由调用方做语义分类。** `Hit{doc_id, source, score, content, metadata}`——调用方拿到列表后按 `source` 分桶拼装。本模块不做语义分桶。
+- **`embed_batch` 是性能契约，不是新接口语义。** 批量 embedding 与单条 embedding 语义完全等价，仅用于减少外部 API 往返。
 
 ## Sub-module Relationships
 

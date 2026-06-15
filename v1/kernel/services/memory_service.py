@@ -19,7 +19,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from ._fm import find_project_root, parse_frontmatter, strip_frontmatter
+from context import resolve_root_or_cwd as _resolve_root
+
+from ._fm import parse_frontmatter, strip_frontmatter
 
 # v2: short tier removed. Only medium remains as a file tier.
 TIERS = ("medium",)
@@ -53,8 +55,8 @@ def list_entries(tier: str | None = None, cwd=None) -> list[dict]:
         Sort: tier order short→medium, within each tier filename DESC
         (newest first by date-prefixed name).
     """
-    root = find_project_root(cwd)
-    store_dir = Path(root) / ".cbim" / "memory"
+    root = _resolve_root(cwd)
+    store_dir = root / ".cbim" / "memory"
 
     if tier is not None and tier not in TIERS:
         raise ValueError(f"tier must be one of {TIERS} or None, got {tier!r}")
@@ -122,7 +124,7 @@ def _build_backend(cwd: str = ""):
     from memory.crud.backend import MemoryBackend  # noqa: F401  (typing)
     from memory.crud.file_backend import FileBackend
 
-    root = Path(find_project_root(cwd or None))
+    root = _resolve_root(cwd or None)
     store_dir = root / ".cbim" / "memory"
     store_dir.mkdir(parents=True, exist_ok=True)
     return FileBackend(store_dir), store_dir
@@ -154,7 +156,7 @@ def reindex(tier: str = "", cwd: str = "") -> str:
 
 def get_entry(entry_id: str, cwd: str = "") -> dict | None:
     from memory._facade import get as _facade_get
-    root = Path(find_project_root(cwd or None))
+    root = _resolve_root(cwd or None)
     store_dir = root / ".cbim" / "memory"
     return _facade_get(entry_id, store_dir=store_dir)
 

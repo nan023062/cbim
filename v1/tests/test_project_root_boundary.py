@@ -120,22 +120,22 @@ def test_project_root_raises_at_home_boundary(tmp_path, monkeypatch, isolated_ho
         project_root()
 
 
-def test_project_root_outside_home_no_marker_returns_cwd(tmp_path, monkeypatch, isolated_home, tmp_path_factory):
-    """cwd is outside home, no .cbim anywhere -> degrade to cwd (no raise,
-    no home leak). Decoy must remain untouched.
+def test_project_root_strict_raises_at_fs_root(tmp_path, monkeypatch, isolated_home, tmp_path_factory):
+    """STRICT: cwd is outside home, no .cbim anywhere -> raise RuntimeError.
 
-    Note: must use an *isolated* tmp dir that does NOT live under the real
-    user home; pytest's default tmp_path on Windows is under
+    The pre-Batch-1 behaviour was to silently degrade to cwd; that was a
+    foot-gun for runtime callers (MCP / dashboard / hooks) which then
+    operated on a non-project as if it were one. STRICT semantics mean
+    runtime entry points fail loudly here. The decoy must remain
+    untouched (we never even look at it).
+
+    Test isolation: tmp_path on Windows lives under
     C:\\Users\\<user>\\AppData\\... which would let a polluted real
-    `~/.cbim/` interfere with the walk. We use the test machine's drive
-    root via a sibling tmp tree under the repo build dir instead.
+    `~/.cbim/` interfere with the walk. We use the repo drive root via
+    a sibling tmp tree to stay deterministic.
     """
     import tempfile
     from context import project_root
-    # Place the cwd somewhere guaranteed outside Path.home() — even the *real*
-    # home (the fake one is already excluded by monkeypatch). Using the repo
-    # root's drive directly keeps the test deterministic regardless of any
-    # polluted user-home state.
     repo_drive = Path(__file__).resolve().drive + os.sep
     raw = Path(tempfile.mkdtemp(dir=repo_drive + "tmp" if Path(repo_drive + "tmp").exists() else repo_drive))
     try:
@@ -143,14 +143,63 @@ def test_project_root_outside_home_no_marker_returns_cwd(tmp_path, monkeypatch, 
         sub.mkdir(parents=True)
         monkeypatch.chdir(sub)
         snap = _decoy_snapshot(isolated_home)
-        result = project_root()
-        assert result.resolve() == sub.resolve()
+        with pytest.raises(RuntimeError, match="no .cbim/ marker"):
+            project_root()
         _assert_decoy_intact(snap)
     finally:
-        # Step out of the dir before cleanup so Windows can release the handle.
         monkeypatch.chdir(Path(__file__).resolve().parent)
         import shutil
         shutil.rmtree(raw, ignore_errors=True)
+
+
+def test_resolve_root_or_cwd_falls_back(tmp_path, monkeypatch, isolated_home):
+    """LENIENT: cwd is outside home, no .cbim anywhere -> degrade to cwd.
+
+    `resolve_root_or_cwd` is the soft sibling of `project_root` and
+    preserves the legacy `_fm.find_project_root` semantics that CLI /
+    tests / service-internals still rely on.
+    """
+    import tempfile
+    from context import resolve_root_or_cwd
+    repo_drive = Path(__file__).resolve().drive + os.sep
+    raw = Path(tempfile.mkdtemp(dir=repo_drive + "tmp" if Path(repo_drive + "tmp").exists() else repo_drive))
+    try:
+        sub = raw / "elsewhere" / "deep"
+        sub.mkdir(parents=True)
+        monkeypatch.chdir(sub)
+        snap = _decoy_snapshot(isolated_home)
+        result = resolve_root_or_cwd()
+        assert result.resolve() == sub.resolve()
+        _assert_decoy_intact(snap)
+    finally:
+        monkeypatch.chdir(Path(__file__).resolve().parent)
+        import shutil
+        shutil.rmtree(raw, ignore_errors=True)
+
+
+def test_resolve_root_or_cwd_still_blocks_home(tmp_path, monkeypatch, isolated_home):
+    """LENIENT: home boundary is never relaxed, even in lenient mode.
+
+    The only difference between project_root and resolve_root_or_cwd is
+    fs-root behaviour; the home guard fires identically in both.
+    """
+    from context import resolve_root_or_cwd
+    sub = isolated_home / "some" / "sub" / "dir"
+    sub.mkdir(parents=True)
+    monkeypatch.chdir(sub)
+    with pytest.raises(RuntimeError, match="user home"):
+        resolve_root_or_cwd()
+
+
+def test_resolve_root_or_cwd_finds_ancestor_marker(tmp_path, monkeypatch, isolated_home):
+    """LENIENT: when a project marker IS present, returns it (parity with strict)."""
+    from context import resolve_root_or_cwd
+    proj = tmp_path / "proj"
+    (proj / ".cbim").mkdir(parents=True)
+    deep = proj / "a" / "b"
+    deep.mkdir(parents=True)
+    monkeypatch.chdir(deep)
+    assert resolve_root_or_cwd().resolve() == proj.resolve()
 
 
 # --- cbim init: end-to-end clobber regression ----------------------------

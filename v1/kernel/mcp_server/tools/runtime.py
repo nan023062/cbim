@@ -19,23 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-
-# ---------------------------------------------------------------------------
-# Project root resolution (same convention as memory/dna tools)
-# ---------------------------------------------------------------------------
-
-def _project_root(cwd: str) -> Path:
-    p = (Path(cwd) if cwd else Path.cwd()).resolve()
-    for _ in range(6):
-        if (p / ".cbim").is_dir():
-            return p
-        if p.parent == p:
-            break
-        p = p.parent
-    raise RuntimeError(
-        f"No .cbim/ directory found walking up from {cwd or Path.cwd()}; "
-        f"cannot locate project root."
-    )
+from context import project_root
 
 
 # ---------------------------------------------------------------------------
@@ -162,7 +146,7 @@ def register(mcp) -> None:
             port).
         """
         try:
-            root = _project_root(cwd)
+            root = project_root(cwd or None)
         except RuntimeError as e:
             return json.dumps({"error": str(e)})
 
@@ -212,7 +196,7 @@ def register(mcp) -> None:
             JSON dict {enabled: bool}.
         """
         try:
-            root = _project_root(cwd)
+            root = project_root(cwd or None)
         except RuntimeError as e:
             return json.dumps({"error": str(e)})
         flag = root / ".cbim" / ".debug"
@@ -233,7 +217,7 @@ def register(mcp) -> None:
         if state not in ("on", "off"):
             return json.dumps({"error": f"state must be 'on' or 'off', got {state!r}"})
         try:
-            root = _project_root(cwd)
+            root = project_root(cwd or None)
         except RuntimeError as e:
             return json.dumps({"error": str(e)})
         flag = root / ".cbim" / ".debug"
@@ -257,7 +241,7 @@ def register(mcp) -> None:
             when no session log exists yet (SessionStart hook hasn't run).
         """
         try:
-            root = _project_root(cwd)
+            root = project_root(cwd or None)
         except RuntimeError as e:
             return json.dumps({"error": str(e)})
 

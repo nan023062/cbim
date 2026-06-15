@@ -1,0 +1,31 @@
+# CBIM v1 kernel — pre-commit hooks.
+#
+# Install once per clone:
+#   pip install pre-commit
+#   pre-commit install
+#
+# Runs on `git commit` against staged files only. CI runs the same
+# tools but over the entire tree (see .github/workflows/test.yml).
+#
+# Rule philosophy: see [tool.ruff] in pyproject.toml. Batch 0 baseline
+# tolerates pre-existing violations; new code must conform.
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      # ruff format — auto-formatter, equivalent to `ruff format`.
+      - id: ruff-format
+      # ruff check — linter; `--fix` only applies safe auto-fixes.
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        # Type-check staged files only; full-tree run happens in CI.
+        # additional_dependencies stays empty — mypy already ignores
+        # missing imports per pyproject.toml [tool.mypy].
+        files: '^v1/kernel/.*\.py$'
+        args: [--config-file=pyproject.toml]

@@ -15,17 +15,47 @@ doc_id is the lookup key in meta.json.
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
 import re
+import shutil
+import sys
 import time
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Any
 
+from atomic_io import (  # kernel root leaf, see context.py convention
+    atomic_write_bytes,
+    atomic_write_text,
+)
 
 VALID_SOURCES = ("transcript", "memory_medium", "dna", "agents")
+
+
+def _rename_with_retry(src: Path, dst: Path, attempts: int = 10, delay: float = 0.05) -> None:
+    """``os.replace`` with bounded retry to absorb Windows handle-lag.
+
+    On Windows ``os.replace`` can fail with ``PermissionError`` when
+    another process / antivirus / search-indexer briefly holds a stray
+    handle to the destination, even after the read-side has nominally
+    closed. Retry a few times with a short sleep before propagating.
+    """
+    last_err: OSError | None = None
+    for _ in range(attempts):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError as e:
+            last_err = e
+            time.sleep(delay)
+    if last_err is not None:
+        raise last_err
+    # Should be unreachable, but appease the type checker.
+    os.replace(src, dst)
 
 
 class StoreError(Exception):
@@ -63,7 +93,7 @@ class DocRecord:
     sha256: str
     indexed_at: str
     metadata: dict = field(default_factory=dict)
-    source_path: Optional[str] = None  # absolute path of original file (when known)
+    source_path: str | None = None  # absolute path of original file (when known)
 
     def to_dict(self) -> dict:
         return {
@@ -76,7 +106,7 @@ class DocRecord:
         }
 
     @classmethod
-    def from_dict(cls, doc_id: str, data: dict) -> "DocRecord":
+    def from_dict(cls, doc_id: str, data: dict) -> DocRecord:
         return cls(
             doc_id=doc_id,
             mtime=float(data.get("mtime", 0.0)),
@@ -109,22 +139,30 @@ class IndexStore:
         self.meta_path = self.source_dir / "meta.json"
         self.bm25_path = self.source_dir / "bm25.json"
         self.vectors_path = self.source_dir / "vectors.bin"
+        self.lock_path = self.source_dir / ".lock"
+        self.staging_dir = self.source_dir / ".staging"
+        # Best-effort cleanup of any abandoned staging from a previous
+        # crash. We don't recover staged files automatically — the
+        # next persist_atomic will recreate them — but we MUST clear
+        # any *.bak left mid-rollback so the next persist starts from
+        # a clean slate. Idempotent and safe to run on every init.
+        self._cleanup_orphans()
 
     # ---------------- meta.json ----------------
 
-    def load_meta(self) -> Dict[str, DocRecord]:
+    def load_meta(self) -> dict[str, DocRecord]:
         if not self.meta_path.exists():
             return {}
         try:
             raw = json.loads(self.meta_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return {}
-        out: Dict[str, DocRecord] = {}
+        out: dict[str, DocRecord] = {}
         for doc_id, rec in (raw.get("docs") or {}).items():
             out[doc_id] = DocRecord.from_dict(doc_id, rec)
         return out
 
-    def save_meta(self, records: Dict[str, DocRecord]) -> None:
+    def save_meta(self, records: dict[str, DocRecord]) -> None:
         self.source_dir.mkdir(parents=True, exist_ok=True)
         payload = {
             "schema_version": 1,
@@ -141,11 +179,9 @@ class IndexStore:
     def write_doc(self, doc_id: str, content: str) -> None:
         self.docs_dir.mkdir(parents=True, exist_ok=True)
         path = self.doc_path(doc_id)
-        tmp = path.with_suffix(".txt.tmp")
-        tmp.write_text(content, encoding="utf-8")
-        os.replace(tmp, path)
+        atomic_write_text(path, content, fsync=True)
 
-    def read_doc(self, doc_id: str) -> Optional[str]:
+    def read_doc(self, doc_id: str) -> str | None:
         path = self.doc_path(doc_id)
         if not path.exists():
             return None
@@ -164,7 +200,7 @@ class IndexStore:
 
     # ---------------- bm25.json ----------------
 
-    def load_bm25_state(self) -> Optional[dict]:
+    def load_bm25_state(self) -> dict | None:
         if not self.bm25_path.exists():
             return None
         try:
@@ -178,7 +214,7 @@ class IndexStore:
 
     # ---------------- vectors.bin ----------------
 
-    def load_vectors(self) -> Optional["VectorBlob"]:
+    def load_vectors(self) -> VectorBlob | None:
         if not self.vectors_path.exists():
             return None
         try:
@@ -186,9 +222,209 @@ class IndexStore:
         except (OSError, ValueError):
             return None
 
-    def save_vectors(self, blob: "VectorBlob") -> None:
+    def save_vectors(self, blob: VectorBlob) -> None:
         self.source_dir.mkdir(parents=True, exist_ok=True)
         blob.save(self.vectors_path)
+
+    # ---------------- atomic three-file persist ----------------
+
+    @contextlib.contextmanager
+    def _cross_process_lock(self) -> Iterator[None]:
+        """Acquire an exclusive cross-process lock on ``<source_dir>/.lock``.
+
+        Implementation differs per platform:
+          * POSIX: ``fcntl.flock`` with ``LOCK_EX`` — advisory but honoured
+            by every cooperating cbim process.
+          * Windows: ``msvcrt.locking`` with ``LK_LOCK`` on the first byte
+            of the file — mandatory, blocks indefinitely.
+
+        The .lock file is created on demand and never deleted. A 1-byte
+        sentinel is written so Windows has a byte to lock; the file's
+        existence is irrelevant to correctness.
+        """
+        self.source_dir.mkdir(parents=True, exist_ok=True)
+        # Touch + ensure 1 byte for msvcrt.locking on Windows.
+        if not self.lock_path.exists():
+            with open(self.lock_path, "wb") as f:
+                f.write(b"\x00")
+        elif self.lock_path.stat().st_size < 1:
+            with open(self.lock_path, "ab") as f:
+                f.write(b"\x00")
+
+        if sys.platform == "win32":
+            import msvcrt
+            f = open(self.lock_path, "r+b")
+            try:
+                # Park at byte 0 and lock 1 byte. LK_LOCK retries
+                # internally until granted (no caller-visible spin).
+                f.seek(0)
+                while True:
+                    try:
+                        msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
+                        break
+                    except OSError:
+                        # LK_LOCK retries up to ~10 times then raises;
+                        # loop forever per contract (no timeout).
+                        time.sleep(0.05)
+                try:
+                    yield
+                finally:
+                    f.seek(0)
+                    try:
+                        msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+                    except OSError:
+                        pass
+            finally:
+                f.close()
+        else:
+            import fcntl
+            f = open(self.lock_path, "r+b")
+            try:
+                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                try:
+                    yield
+                finally:
+                    try:
+                        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                    except OSError:
+                        pass
+            finally:
+                f.close()
+
+    def _cleanup_orphans(self) -> None:
+        """Best-effort: remove any leftover staging dir or .bak files.
+
+        Runs on IndexStore init so we never enter persist_atomic with
+        stale rollback artefacts. Failures are swallowed — this is
+        opportunistic housekeeping, not a precondition.
+        """
+        try:
+            if self.staging_dir.exists():
+                shutil.rmtree(self.staging_dir, ignore_errors=True)
+        except OSError:
+            pass
+        for bak_name in ("meta.json.bak", "bm25.json.bak", "vectors.bin.bak"):
+            p = self.source_dir / bak_name
+            if p.exists():
+                try:
+                    p.unlink()
+                except OSError:
+                    pass
+
+    def persist_atomic(
+        self,
+        records: dict[str, DocRecord],
+        bm25_state: dict,
+        vectors: VectorBlob | None,
+    ) -> None:
+        """Write meta.json + bm25.json (+ vectors.bin) as one transaction.
+
+        Strategy: stage all three files inside ``<source_dir>/.staging/``,
+        then for each existing live file rename it to ``<name>.bak`` and
+        rename the staged copy into place. On any failure inside the
+        rename phase, roll back by restoring ``*.bak``. On success, drop
+        the ``*.bak`` files.
+
+        After a crash anywhere mid-transaction, ``_cleanup_orphans`` on
+        the next ``IndexStore.__init__`` clears the half-state. A reader
+        opening the directory between crash and recovery sees either the
+        old triple (``*.bak`` not yet renamed away) or the new triple,
+        never a mix.
+        """
+        self.source_dir.mkdir(parents=True, exist_ok=True)
+        # Always start from a clean staging dir.
+        if self.staging_dir.exists():
+            shutil.rmtree(self.staging_dir, ignore_errors=True)
+        self.staging_dir.mkdir(parents=True, exist_ok=True)
+
+        meta_payload = {
+            "schema_version": 1,
+            "source": self.source,
+            "docs": {doc_id: rec.to_dict() for doc_id, rec in records.items()},
+        }
+        meta_staged = self.staging_dir / "meta.json"
+        bm25_staged = self.staging_dir / "bm25.json"
+        vectors_staged = self.staging_dir / "vectors.bin"
+
+        # Phase 1: stage. Any failure here is clean — nothing is renamed.
+        try:
+            atomic_write_text(
+                meta_staged,
+                json.dumps(meta_payload, indent=2, ensure_ascii=False),
+                fsync=True,
+            )
+            atomic_write_text(
+                bm25_staged,
+                json.dumps(bm25_state, indent=2, ensure_ascii=False),
+                fsync=True,
+            )
+            if vectors is not None:
+                vectors.save(vectors_staged)
+        except BaseException:
+            shutil.rmtree(self.staging_dir, ignore_errors=True)
+            raise
+
+        # Phase 2: rename live -> *.bak, then staged -> live. Track
+        # progress so we can roll back on partial failure.
+        ops: list[tuple[Path, Path]] = []
+        # (live, staged) pairs, in commit order.
+        ops.append((self.meta_path, meta_staged))
+        ops.append((self.bm25_path, bm25_staged))
+        if vectors is not None:
+            ops.append((self.vectors_path, vectors_staged))
+
+        renamed_to_bak: list[Path] = []
+        committed_live: list[Path] = []
+        try:
+            # Pre-flight: clear any existing *.bak so the rename target
+            # is free.
+            for live, _ in ops:
+                bak = live.with_suffix(live.suffix + ".bak")
+                if bak.exists():
+                    try:
+                        bak.unlink()
+                    except OSError:
+                        pass
+
+            # Move live -> *.bak (skip when live doesn't exist yet).
+            for live, _ in ops:
+                if live.exists():
+                    bak = live.with_suffix(live.suffix + ".bak")
+                    _rename_with_retry(live, bak)
+                    renamed_to_bak.append(live)
+
+            # Promote staged -> live.
+            for live, staged in ops:
+                _rename_with_retry(staged, live)
+                committed_live.append(live)
+        except BaseException:
+            # Roll back: undo any staged->live promotions, then restore
+            # *.bak -> live for the ones we moved aside.
+            for live in committed_live:
+                try:
+                    if live.exists():
+                        live.unlink()
+                except OSError:
+                    pass
+            for live in renamed_to_bak:
+                bak = live.with_suffix(live.suffix + ".bak")
+                if bak.exists():
+                    try:
+                        os.replace(bak, live)
+                    except OSError:
+                        pass
+            shutil.rmtree(self.staging_dir, ignore_errors=True)
+            raise
+
+        # Phase 3: success — remove *.bak and the staging dir.
+        for live in renamed_to_bak:
+            bak = live.with_suffix(live.suffix + ".bak")
+            if bak.exists():
+                try:
+                    bak.unlink()
+                except OSError:
+                    pass
+        shutil.rmtree(self.staging_dir, ignore_errors=True)
 
     # ---------------- diagnostics ----------------
 
@@ -206,10 +442,12 @@ class IndexStore:
 
 
 def _atomic_write_json(path: Path, payload: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-    os.replace(tmp, path)
+    """Thin wrapper over kernel._io.atomic_write_text for JSON payloads."""
+    atomic_write_text(
+        path,
+        json.dumps(payload, indent=2, ensure_ascii=False),
+        fsync=True,
+    )
 
 
 # --------------------------------------------------------------------------
@@ -229,7 +467,6 @@ def _atomic_write_json(path: Path, payload: Any) -> None:
 # --------------------------------------------------------------------------
 
 import struct
-from typing import List
 
 
 class VectorBlob:
@@ -238,8 +475,8 @@ class VectorBlob:
 
     def __init__(self, dim: int) -> None:
         self.dim = int(dim)
-        self.doc_ids: List[str] = []
-        self.vectors: List[List[float]] = []
+        self.doc_ids: list[str] = []
+        self.vectors: list[list[float]] = []
 
     def upsert(self, doc_id: str, vec: list) -> None:
         if len(vec) != self.dim:
@@ -258,15 +495,14 @@ class VectorBlob:
             del self.doc_ids[idx]
             del self.vectors[idx]
 
-    def get(self, doc_id: str) -> Optional[List[float]]:
+    def get(self, doc_id: str) -> list[float] | None:
         if doc_id in self.doc_ids:
             return self.vectors[self.doc_ids.index(doc_id)]
         return None
 
     def save(self, path: Path) -> None:
         import array
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(path.suffix + ".tmp")
+        import io
         id_blob = json.dumps(self.doc_ids, ensure_ascii=False).encode("utf-8")
         header = struct.pack(
             "<4sIIII",
@@ -279,14 +515,14 @@ class VectorBlob:
         flat = array.array("f")
         for v in self.vectors:
             flat.extend(v)
-        with open(tmp, "wb") as f:
-            f.write(header)
-            f.write(id_blob)
-            flat.tofile(f)
-        os.replace(tmp, path)
+        buf = io.BytesIO()
+        buf.write(header)
+        buf.write(id_blob)
+        flat.tofile(buf)
+        atomic_write_bytes(path, buf.getvalue(), fsync=True)
 
     @classmethod
-    def load(cls, path: Path) -> "VectorBlob":
+    def load(cls, path: Path) -> VectorBlob:
         import array
         with open(path, "rb") as f:
             header = f.read(struct.calcsize("<4sIIII"))

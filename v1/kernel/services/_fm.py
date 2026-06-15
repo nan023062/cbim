@@ -86,15 +86,3 @@ def _render_field(key: str, val) -> list[str]:
     return [f"{key}: {val}"]
 
 
-def find_project_root(cwd) -> "object":
-    """Walk up from cwd looking for .cbim/. Returns Path or cwd."""
-    from pathlib import Path
-    p = Path(cwd).resolve() if cwd else Path.cwd().resolve()
-    cur = p
-    for _ in range(6):
-        if (cur / ".cbim").is_dir():
-            return cur
-        if cur.parent == cur:
-            break
-        cur = cur.parent
-    return p

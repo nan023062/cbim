@@ -13,9 +13,9 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from pathlib import Path
 
+from atomic_io import atomic_write_text  # kernel root leaf, see context.py convention
 from engine.core.blackboard import SCHEMA_VERSION
 
 _log = logging.getLogger(__name__)
@@ -24,11 +24,12 @@ _log = logging.getLogger(__name__)
 def write_bb(tick_dir: Path, bb) -> None:
     tick_dir.mkdir(parents=True, exist_ok=True)
     target = tick_dir / "bb.json"
-    tmp = tick_dir / "bb.json.tmp"
     payload = bb.to_dict()
-    tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False, default=_json_default),
-                   encoding="utf-8")
-    os.replace(tmp, target)
+    atomic_write_text(
+        target,
+        json.dumps(payload, indent=2, ensure_ascii=False, default=_json_default),
+        fsync=True,
+    )
 
 
 def read_bb(tick_dir: Path):
@@ -50,10 +51,11 @@ def read_bb(tick_dir: Path):
 def write_resume(tick_dir: Path, payload: dict) -> None:
     tick_dir.mkdir(parents=True, exist_ok=True)
     target = tick_dir / "resume.json"
-    tmp = tick_dir / "resume.json.tmp"
-    tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False, default=_json_default),
-                   encoding="utf-8")
-    os.replace(tmp, target)
+    atomic_write_text(
+        target,
+        json.dumps(payload, indent=2, ensure_ascii=False, default=_json_default),
+        fsync=True,
+    )
 
 
 def read_resume(tick_dir: Path) -> dict | None:

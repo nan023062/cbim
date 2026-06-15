@@ -7,8 +7,7 @@ Read tools:
 
 from __future__ import annotations
 
-from pathlib import Path
-
+from context import project_root
 from engine.audit import list_checks, run_audit
 
 _SEVERITY_RANK = {"info": 0, "warn": 1, "error": 2}
@@ -38,9 +37,11 @@ def register(mcp) -> None:
             project_root, config_snapshot. On unknown check names returns
             {"error": "..."}.
         """
-        project_root = Path(cwd).resolve() if cwd else Path.cwd().resolve()
+        # Bug fix (Batch 1): walk up to find the .cbim/ marker instead
+        # of trusting the raw cwd — same fix as snapshot.py.
+        root = project_root(cwd or None)
         try:
-            result = run_audit(project_root, checks=checks)
+            result = run_audit(root, checks=checks)
         except ValueError as e:
             return {"error": str(e)}
 

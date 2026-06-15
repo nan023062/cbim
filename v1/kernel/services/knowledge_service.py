@@ -18,7 +18,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ._fm import find_project_root, parse_frontmatter, strip_frontmatter
+from context import resolve_root_or_cwd as _resolve_root
+
+from . import _reindex
+from ._fm import parse_frontmatter, strip_frontmatter
 
 
 def list_modules(cwd=None) -> list[dict]:
@@ -43,7 +46,7 @@ def list_modules(cwd=None) -> list[dict]:
               "workflows":    [ {"id": <slug>, "name": <fm name>, "body": <md>}, ... ],
             }
     """
-    root = Path(find_project_root(cwd))
+    root = _resolve_root(cwd)
 
     from cbi._primitives.modules import list_modules as _list_modules
 
@@ -89,11 +92,151 @@ def _collect_workflows(workflows_dir: Path) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Write facade — shared by engine/cli.py and mcp_server/tools/dna.py
+# Read façade — single-point lookups, schema accessor, snapshot wrapper.
+#
+# These exist so callers (engine/cli.py, mcp_server/tools/*) never need
+# to reach into cbi._primitives directly. Both layers go through here,
+# which is what the Batch 2 banned-api rule enforces.
 # ---------------------------------------------------------------------------
 
-def _resolve_root(cwd: str = "") -> Path:
-    return Path(find_project_root(cwd or None))
+
+def get_module(module_path: str | Path, cwd: str = "") -> dict | None:
+    """Return one module's flattened representation, or None when absent.
+
+    Single-point load — does NOT iterate `list_modules`. The module dict
+    mirrors what `list_modules` returns for a single entry (frontmatter
+    fields + body + contract + workflows + keywords/dependencies
+    normalisation) and additionally exposes ``module_dir`` as an
+    absolute Path so callers don't have to recompute it.
+
+    Returns None when the module.md file is missing. Missing contract.md
+    is NOT an error — the contract field is just an empty string.
+    """
+    from cbi.resources import DNAModule
+
+    root = _resolve_root(cwd)
+    mod_dir = Path(module_path) if Path(module_path).is_absolute() else (root / module_path)
+    try:
+        m = DNAModule.load(mod_dir, root=root)
+    except FileNotFoundError:
+        return None
+
+    fm = m.frontmatter
+    keywords = fm.get("keywords") or []
+    if isinstance(keywords, str):
+        keywords = [k.strip() for k in keywords.split(",") if k.strip()] if keywords else []
+    deps = fm.get("dependencies") or []
+    if isinstance(deps, str):
+        deps = [d.strip() for d in deps.split(",") if d.strip()] if deps else []
+
+    contract_text = m.contract.body.read() if m.contract.exists() else ""
+    workflows = _collect_workflows(m.path.parent / "workflows")
+    try:
+        rel = m.path.parent.parent.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        rel = str(m.path.parent.parent.resolve())
+
+    return {
+        "id": rel or ".",
+        "path": rel or ".",
+        "name": fm.get("name", m.id),
+        "owner": fm.get("owner", ""),
+        "description": fm.get("description", ""),
+        "status": fm.get("status", ""),
+        "keywords": keywords if isinstance(keywords, list) else [],
+        "dependencies": deps if isinstance(deps, list) else [],
+        "architecture": m.body.read(),
+        "body": m.body.read(),
+        "contract": contract_text,
+        "workflows": workflows,
+        "module_dir": m.path.parent.parent.resolve(),
+    }
+
+
+def build_snapshot(cwd: str = "") -> str:
+    """Render the project knowledge snapshot (module tree + agents + recent activity).
+
+    Thin wrapper around the snapshot primitive that keeps callers out of
+    `cbi._primitives.snapshot`. Resolves the project root leniently so
+    CLI invocations from a scratch dir still produce a deterministic
+    output (an empty tree) rather than raising.
+    """
+    from cbi._primitives.snapshot import build_snapshot as _build
+    return _build(_resolve_root(cwd))
+
+
+def get_module_fm_schema() -> dict:
+    """Expose the module frontmatter schema constants as a stable dict.
+
+    Returns a dict with two keys:
+      - ``list_fields``: ``frozenset[str]`` — frontmatter fields whose
+        YAML type must be a list (e.g. ``keywords``, ``dependencies``).
+      - ``status_values``: ``tuple[str, ...]`` — allowed values for the
+        ``status`` field.
+
+    The CLI uses these to enforce shape constraints without having to
+    import from `cbi._primitives.modules` directly.
+    """
+    from cbi._primitives.modules import (
+        _MODULE_FM_LIST_FIELDS,
+        _MODULE_FM_STATUS_VALUES,
+    )
+    return {
+        "list_fields": _MODULE_FM_LIST_FIELDS,
+        "status_values": _MODULE_FM_STATUS_VALUES,
+    }
+
+
+def reindex_modules(cwd: str = "") -> int:
+    """Rescan the filesystem and rebuild `.cbim/index.md`. Returns the new module count.
+
+    Wraps `DNAModule.reindex` + `len(list_all)` so the CLI handler
+    `cbim dna reindex` can route through services without poking at
+    cbi.resources from engine.* code paths (Batch 2 banned-api).
+    """
+    from cbi.resources import DNAModule
+
+    root = _resolve_root(cwd)
+    DNAModule.reindex(root=root)
+    return len(DNAModule.list_all(root=root))
+
+
+def dry_run_section(
+    module_path: str | Path,
+    file: str,
+    heading: str,
+    level: int,
+    mode: str,
+    content: str | None,
+    create_if_missing: bool = False,
+) -> str:
+    """Render the would-be result of a section edit without touching disk.
+
+    The other write functions in this module are commit-only (they
+    write to disk and return the saved path); the CLI's `--dry-run`
+    flag for `dna write-section` needs the *rendered text* instead. This
+    wrapper isolates that one read-only side of the primitive so the
+    CLI doesn't have to reach into `cbi._primitives` itself.
+    """
+    from cbi._primitives.modules import write_module_section
+    if file not in ("module.md", "contract.md"):
+        raise ValueError(f"file must be 'module.md' or 'contract.md', got: {file!r}")
+    result = write_module_section(
+        Path(module_path),
+        file,
+        heading,
+        level,
+        mode,
+        content,
+        create_if_missing=create_if_missing,
+        dry_run=True,
+    )
+    return result if isinstance(result, str) else str(result)
+
+
+# ---------------------------------------------------------------------------
+# Write facade — shared by engine/cli.py and mcp_server/tools/dna.py
+# ---------------------------------------------------------------------------
 
 
 def init_module(
@@ -136,6 +279,8 @@ def init_module(
         status=status,
         root=root,
     )
+    # m.path == <module_dir>/.dna/module.md; module_dir = m.path.parent.parent.
+    _reindex.reindex_dna(root, m.path.parent.parent)
     return str(m.path.parent.resolve())
 
 
@@ -161,14 +306,15 @@ def edit_module(
 
     Returns the absolute path to the saved file as a string.
     """
-    from cbi.resources import DNAModule
     from cbi._primitives.modules import (
         _MODULE_FM_LIST_FIELDS,
         _MODULE_FM_STATUS_VALUES,
     )
+    from cbi.resources import DNAModule
 
     root = _resolve_root(cwd)
-    m = DNAModule.load(Path(module_path), root=root)
+    module_dir = Path(module_path)
+    m = DNAModule.load(module_dir, root=root)
 
     if target == "frontmatter":
         field = payload.get("field")
@@ -200,6 +346,7 @@ def edit_module(
                 )
         m.frontmatter.set(field, new_value)
         m.save()
+        _reindex.reindex_dna(root, module_dir)
         return str(m.path.resolve())
 
     if target == "body":
@@ -208,6 +355,7 @@ def edit_module(
             raise ValueError("payload.content is required for target=body")
         m.body.write(content)
         m.save()
+        _reindex.reindex_dna(root, module_dir)
         return str(m.path.resolve())
 
     if target == "section":
@@ -237,6 +385,7 @@ def edit_module(
             insert_at_top=insert_at_top,
         )
         m.save()
+        _reindex.reindex_dna(root, module_dir)
         return str(m.path.resolve())
 
     if target == "contract":
@@ -246,6 +395,7 @@ def edit_module(
         m.contract.ensure()
         m.contract.body.write(content)
         m.save()
+        _reindex.reindex_dna(root, module_dir)
         return str(m.contract.path.resolve())
 
     if target == "contract-section":
@@ -276,6 +426,7 @@ def edit_module(
             insert_at_top=insert_at_top,
         )
         m.save()
+        _reindex.reindex_dna(root, module_dir)
         return str(m.contract.path.resolve())
 
     if target == "workflow":
@@ -286,6 +437,10 @@ def edit_module(
         if content is None:
             raise ValueError("payload.content is required for target=workflow")
         m.workflows.add(wf_name, content)
+        # Module.md is unchanged here, but the historical MCP wrapper
+        # reindexed every dna_edit call regardless of target — keep that
+        # behaviour so the retrieval index stays warm on workflow churn too.
+        _reindex.reindex_dna(root, module_dir)
         return str((m.path.parent / "workflows" / wf_name / "workflow.md").resolve())
 
     raise ValueError(f"unknown target: {target!r}")
@@ -322,13 +477,20 @@ def split_module(
         raise ValueError(f"strategy must be 'comment' or 'move', got: {strategy!r}")
 
     root = _resolve_root(cwd)
+    source_dir = Path(source_module_path)
     result = DNAModule.split(
-        Path(source_module_path),
+        source_dir,
         splits,
         root=root,
         dry_run=False,
         keep_source=(strategy == "comment"),
     )
+    # Source body changed in either strategy; every newly created module
+    # also needs its own retrieval entry. result.created_modules carries
+    # primitive module objects whose .path is `<created>/.dna/module.md`.
+    _reindex.reindex_dna(root, source_dir)
+    for created_m in result.created_modules:
+        _reindex.reindex_dna(root, created_m.path.parent.parent)
     return {
         "created": [str(m.path.resolve()) for m in result.created_modules],
         "dependency_refs": list(result.dependency_refs_report or []),
@@ -348,10 +510,10 @@ def write_doc(
     from cbi._primitives.modules import write_module_doc
     if file not in ("module.md", "contract.md"):
         raise ValueError(f"file must be 'module.md' or 'contract.md', got: {file!r}")
-    # cwd resolution is a no-op for write_module_doc — it works on absolute or
-    # cwd-relative module_path directly; the cwd kwarg is kept for API symmetry.
-    _ = _resolve_root(cwd)
-    written = write_module_doc(Path(module_path), file, body)
+    root = _resolve_root(cwd)
+    module_dir = Path(module_path)
+    written = write_module_doc(module_dir, file, body)
+    _reindex.reindex_dna(root, module_dir)
     return str(written.resolve())
 
 
@@ -373,9 +535,10 @@ def write_section(
     from cbi._primitives.modules import write_module_section
     if file not in ("module.md", "contract.md"):
         raise ValueError(f"file must be 'module.md' or 'contract.md', got: {file!r}")
-    _ = _resolve_root(cwd)
+    root = _resolve_root(cwd)
+    module_dir = Path(module_path)
     result = write_module_section(
-        Path(module_path),
+        module_dir,
         file,
         heading,
         level,
@@ -384,4 +547,5 @@ def write_section(
         create_if_missing=create_if_missing,
         dry_run=False,
     )
+    _reindex.reindex_dna(root, module_dir)
     return str(Path(result).resolve())

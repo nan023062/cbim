@@ -4,8 +4,6 @@ mcp_server/tools/snapshot.py — Project knowledge snapshot tool.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 
 def register(mcp) -> None:
     @mcp.tool()
@@ -16,6 +14,9 @@ def register(mcp) -> None:
         Args:
             cwd: Project directory (default: current working dir of the MCP server).
         """
-        from cbi._primitives.snapshot import build_snapshot
-        root = Path(cwd).resolve() if cwd else Path.cwd().resolve()
-        return build_snapshot(root)
+        # Batch 2: route through services.build_snapshot so the tool stays
+        # within the engine.* / mcp_server.* → services boundary that the
+        # banned-api rule enforces. The service walks up from `cwd` to
+        # locate the .cbim/ marker (Batch 1 bug fix).
+        from services import build_snapshot
+        return build_snapshot(cwd=cwd)

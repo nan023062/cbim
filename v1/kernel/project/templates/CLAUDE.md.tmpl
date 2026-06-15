@@ -127,7 +127,7 @@ CBIM has its **own** memory system at `.cbim/memory/` governed by the `memory.*`
 
 | Trigger | What to do |
 |---------|-----------|
-| User explicitly says: "记下"/"记住"/"remember this"/"save this"/"记一下"/"备忘" | Run `cbim skill show memory_write` and write to `.cbim/memory/short/YYYY-MM-DD-manual-<slug>.md` |
+| User explicitly says: "记下"/"记住"/"remember this"/"save this"/"记一下"/"备忘" | Run `cbim skill show memory_write` and call `mcp__cbim__memory_create(tier="medium", slug="manual-<slug>")`; entry lands at `.cbim/memory/medium/YYYY-MM-DD-manual-<slug>.md` |
 | User asks to recall past context: "上次"/"之前我们"/"recall"/"what did we decide" | Run `cbim skill show memory_query` and query `.cbim/memory/` |
 | User asks to distill / promote memory: "整理记忆"/"distill"/"promote to knowledge" | Run `cbim skill show memory_distill` |
 | Session start / end | Hooks (`load_memory.py` / `write_memory.py`) handle automatically — assistant does nothing |

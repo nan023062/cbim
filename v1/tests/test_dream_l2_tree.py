@@ -75,11 +75,12 @@ def test_each_step_is_catch_over_timeout(root):
         assert isinstance(inner, Timeout), f"{child.name} inner is not Timeout"
 
 
-def test_memory_step_has_nine_action_children(root):
-    """v2 memory step: 9 nodes. Transcript scan + DistillGate drive the
-    dispatch path; TranscriptDelete consumes the report's distilled_paths
-    before MemCompact / MemSweepExpired / MemRebuildIndex run on the
-    medium tier (which the distilled transcripts just landed in)."""
+def test_memory_step_has_ten_action_children(root):
+    """v2 + Batch 7 memory step: 10 nodes. Transcript scan + DistillGate
+    drive the dispatch path; TranscriptDelete consumes the report's
+    distilled_paths; MemPromoteScan stages rule/flow tagged medium entries
+    into candidates/ (feature flag default off → no-op); then MemCompact /
+    MemSweepExpired / MemRebuildIndex finalise the medium tier."""
     body = root.children()[0].children()[0]
     steps = body.children()[1]
     mem_catch = steps.children()[0]
@@ -93,6 +94,7 @@ def test_memory_step_has_nine_action_children(root):
         "DispatchMemDistill",
         "CollectMemDistill",
         "TranscriptDelete",
+        "MemPromoteScan",
         "MemCompact",
         "MemSweepExpired",
         "MemRebuildIndex",

@@ -54,6 +54,10 @@ _DEFAULTS: dict = {
         # latency or cost.
         "skip_if_no_work": True,
     },
+    "promote": {
+        "enabled": False,
+        "scan_tags": ["rule", "flow"],
+    },
 }
 
 

@@ -17,6 +17,9 @@ Topology (per WORKFLOW-DREAM §三 + v2 transcript-driven memory step):
       │     │     ├── CollectMemDistill      (owns on_resume → bb.mem_distill_result)
       │     │     ├── TranscriptDelete       (unlinks distilled_paths +
       │     │     │                           retrieval.index_delete)
+      │     │     ├── MemPromoteScan         (stage rule/flow tagged medium
+      │     │     │                           entries into candidates/;
+      │     │     │                           feature-flag default off → no-op)
       │     │     ├── MemCompact             (medium-tier file compaction)
       │     │     ├── MemSweepExpired
       │     │     └── MemRebuildIndex        (rebuild_and_verify)
@@ -33,13 +36,18 @@ Topology (per WORKFLOW-DREAM §三 + v2 transcript-driven memory step):
 EmitReport + FinalizeDreamTick live OUTSIDE the SequenceTolerant container
 so they ALWAYS run, even if every governance step failed.
 
-The memory governance step is now 9 nodes. The v1 ``MemDistillGate`` —
+The memory governance step is now 10 nodes. The v1 ``MemDistillGate`` —
 which read a HealthChecker short_count threshold — was retired alongside
 the short-tier in memory v2. The v2 gate (``DistillGate``) is a pure
 data-volume check on ``bb.transcript_paths``; the distill input is now
 the user's mature CC transcript JSONLs, and the post-distill
 ``TranscriptDelete`` leaf removes the consumed transcripts (both on
-disk and from the retrieval index).
+disk and from the retrieval index). Batch 7 inserted ``MemPromoteScan``
+between TranscriptDelete and MemCompact: it identifies medium entries
+worth promoting to the knowledge system (rule/flow tagged) and stages
+them into the candidates/ work area. The feature flag
+``promote.enabled`` defaults to off — when off, the scan returns 0 and
+touches nothing on disk.
 
 Architect / HR governance steps remain sub-agent dispatches via the Task
 tool; the MemDistill yield is a self-dispatch — on receiving a yield with
@@ -71,6 +79,7 @@ from ..actions.init_tick import InitDreamTick
 from ..actions.mem_steps import (
     MemCompact,
     MemHealthScan,
+    MemPromoteScan,
     MemRebuildIndex,
     MemSweepExpired,
 )
@@ -116,7 +125,7 @@ def build_dream_root(
     init = InitDreamTick(name="InitDreamTick")
 
     # ---- Memory governance step ----
-    # v2 9-node sequence (per .dna/contract.md "v2 重设计"):
+    # v2 10-node sequence (per .dna/contract.md "v2 重设计" + Batch 7):
     #
     #   MemHealthScan       — read memory.HealthChecker indicators
     #   TranscriptScan      — list ~/.claude/projects/<slug>/*.jsonl
@@ -127,14 +136,18 @@ def build_dream_root(
     #                         subtask_id="governance_memory_distill")
     #   CollectMemDistill   — on_resume → bb.mem_distill_result
     #   TranscriptDelete    — unlink distilled paths + retrieval.index_delete
+    #   MemPromoteScan      — stage rule/flow tagged medium entries into
+    #                         candidates/ (feature-flag default off → no-op)
     #   MemCompact          — medium-tier file compaction
     #   MemSweepExpired     — archive-and-delete expired entries
     #   MemRebuildIndex     — rebuild_and_verify(store, backend)
     #
     # Order rationale: distill consumes transcripts → delete transcripts
-    # → compact medium (which the new entries just landed in) → sweep
-    # expired → rebuild/verify index. Each leaf is independent under the
-    # @Catch wrapper; a single failure annotates bb but does not abort.
+    # → promote scan (sees the latest distilled entries before compact
+    # rewrites them and before sweep removes any stale tagged entries) →
+    # compact medium → sweep expired → rebuild/verify index. Each leaf
+    # is independent under the @Catch wrapper; a single failure annotates
+    # bb but does not abort.
     mem_seq = Sequence(
         [
             MemHealthScan(store_dir=memory_store_dir, name="MemHealthScan"),
@@ -143,6 +156,7 @@ def build_dream_root(
             DispatchMemDistill(store_dir=memory_store_dir, name="DispatchMemDistill"),
             CollectMemDistill(store_dir=memory_store_dir, name="CollectMemDistill"),
             TranscriptDelete(name="TranscriptDelete"),
+            MemPromoteScan(store_dir=memory_store_dir, name="MemPromoteScan"),
             MemCompact(store_dir=memory_store_dir, name="MemCompact"),
             MemSweepExpired(store_dir=memory_store_dir, backend=backend, name="MemSweepExpired"),
             MemRebuildIndex(store_dir=memory_store_dir, backend=backend, name="MemRebuildIndex"),

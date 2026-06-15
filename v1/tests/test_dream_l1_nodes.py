@@ -22,6 +22,7 @@ from engine.dream.actions.init_tick import InitDreamTick
 from engine.dream.actions.mem_steps import (
     MemCompact,
     MemHealthScan,
+    MemPromoteScan,
     MemRebuildIndex,
     MemSweepExpired,
 )
@@ -97,6 +98,29 @@ def test_mem_sweep_expired_returns_success_with_empty_store(bb, store_dir, backe
     node = MemSweepExpired(store_dir=store_dir, backend=backend)
     assert node.tick(bb) is Status.SUCCESS
     assert bb.mem_sweep_result == {"deleted": 0, "keep_days": 3}
+
+
+def test_mem_promote_scan_returns_success_with_flag_off(bb, store_dir):
+    """Default config has promote.enabled=False → tick is SUCCESS and
+    bb.mem_promote_result records 0 staged. Critical zero-regression
+    invariant."""
+    node = MemPromoteScan(store_dir=store_dir)
+    assert node.tick(bb) is Status.SUCCESS
+    assert bb.mem_promote_result == {"staged": 0}
+
+
+def test_mem_promote_scan_failure_when_inner_raises(bb, store_dir, monkeypatch):
+    """If scan_for_promote_candidates raises, tick is FAILURE and the
+    error class name is recorded on bb.mem_promote_result['error']."""
+    from engine.dream.actions import mem_steps as _ms
+
+    def _boom(_store_dir):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(_ms, "scan_for_promote_candidates", _boom)
+    node = MemPromoteScan(store_dir=store_dir)
+    assert node.tick(bb) is Status.FAILURE
+    assert "RuntimeError" in bb.mem_promote_result["error"]
 
 
 def test_mem_rebuild_index_always_runs(bb, store_dir, backend):

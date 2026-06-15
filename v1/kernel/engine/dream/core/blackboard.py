@@ -13,6 +13,7 @@ Field write-ownership (single-writer rule, validated by code review):
   - mem_distill_result                          ← DistillGate (skip) / CollectMemDistill
   - transcript_delete_errors                    ← TranscriptDelete
   - mem_compact_result                          ← MemCompact (or skip path)
+  - mem_promote_result                          ← MemPromoteScan
   - mem_sweep_result                            ← MemSweepExpired
   - mem_index_result                            ← MemRebuildIndex
   - arch_governance_dispatched                  ← DispatchArchGovern
@@ -31,7 +32,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-# Canonical 21-field schema for the governance loop blackboard.
+# Canonical 24-field schema for the governance loop blackboard.
 FIELDS: tuple[str, ...] = (
     # Identity & trigger
     "run_id",
@@ -43,6 +44,7 @@ FIELDS: tuple[str, ...] = (
     "mem_compact_result",
     "mem_distill_dispatched",
     "mem_distill_result",
+    "mem_promote_result",
     "mem_sweep_result",
     "mem_index_result",
     # v2 transcript-driven distill — written by the new TranscriptScan /

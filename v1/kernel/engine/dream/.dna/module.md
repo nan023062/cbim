@@ -123,6 +123,12 @@ v2 把所有自维护抽到第二根循环，复用同一个 BT 引擎但独立�
 - **`SequenceTolerant` 归属 dream/core、不上提 engine/core（Batch 4 上游决策 + 架构师裁定）。** 查重复代码时曾考虑“抽到 engine/core/composite.py”，裁定上游：不抽。依据是 `bb.step_results` 是 dream blackboard 专属字段（execution 黑板 schema 不仓该字段），`SequenceTolerant.tick` 必须读写它来实现「跨子节点聖状态记录 + resume 幂等跳过」语义。抽到 engine/core 会造成两验以中之一：(a) `engine/core` 反向依赖上层 dream 黑板 schema，直接违反 C3；(b) 在 `engine/core/blackboard.py` 中考虑 `step_results` 字段让 execution 也背它。两验都现报废。本次 Batch 4 只去重 `_resume_index` 这个与黑板 schema 无关的底层 helper（提升为 `engine.core.composite.resume_index`）。`SequenceTolerant` 本体仍留 dream/core；它是“能抵受单步失败的顶层治理三步容器”，该语义不是 BT 通用原语。
 - **`engine/dream/core/composite_tolerant.py` 中本地 `_Composite` 最小重声明刻意保留。** `engine/core/composite.py::_Composite` 是模块私有名（以 `_` 开头），跨模块 import 会踩进「什么名叫什么」的反向耦合。`SequenceTolerant` 仅需 `__init__` + `children()` 两个方法，实现足够简单，重声明三行在 dream/core 是陶合的代价。判出。未来如 `engine/core` 决定给 `_Composite` 提升为公开基类（去下划线），dream 侧可平滑切换为 `from engine.core.composite import Composite`；在那之前 dream 必须使用本地重声明，不可 `from engine.core.composite import _Composite`。`from engine.core.composite import resume_index` 均为已公开名字的正常 import。
 
+- **Batch 7：`MemPromoteScan` 加入 `MemoryGovernanceStep`，位置在 `TranscriptDelete` 之后、`MemCompact` 之前。** 节点为纯 in-process Python 叶（继承 `engine.core.Node`），调 `memory.compaction.scan_for_promote_candidates(store_dir)` 把 medium 中带 `tags:rule` / `tags:flow` 的条目暂存进 `candidates/`，供下一轮知识循环 `scan(filter="promote_candidate")` 自取。
+  - **特性旗关时 SUCCESS 不抛**：`promote.enabled=False` 时被调函数返回 0；节点写 `bb.mem_promote_result={"staged": 0}` 后 SUCCESS。默认配置下零回归——治理循环每 20 小时跑一次但不动盘。
+  - **黑板字段 `bb.mem_promote_result` 单写者契约**：`engine/dream/core/blackboard.py::FIELDS` 注册第 24 个字段，唯一写者锁定 `MemPromoteScan`（异常路径写 `{"error": ...}` 同样在该节点内）。`@Catch` 装饰器在父 `MemoryGovernanceStep` 上仍生效——单点失败标 FAILURE 但不阻 `MemCompact` / `MemSweepExpired` / `MemRebuildIndex` 后续。
+  - **顺序理由**：`TranscriptDelete` 后 medium 已含本轮蒸馏出的最新条目；先 `MemPromoteScan` 让其有机会被识别为提升候选，再让 `MemCompact` 改写、`MemSweepExpired` 可能扫掉过期 tagged 条目。倒过来会导致刚蒸馏出的 rule/flow 条目被 sweep 掉之前没机会 stage。
+  - **拓扑同步两处**：`engine/dream/tree/dream_loop.py::build_dream_root` 与 `engine/dream/loops/memory_governance.py::build_memory_governance_subtree` 同步插入。`MemoryGovernanceStep` 由 9 节点扩为 10 节点。
+
 ## Non-Goals
 
 - **不与用户对话。** 治理循环全程在后台运行，Done 不返回 `user_message`；摘要通过 `report.md` 落盘 + 下次 SessionStart 注入主 agent 上下文，被动呈现。

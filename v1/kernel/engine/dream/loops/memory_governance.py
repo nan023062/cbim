@@ -30,6 +30,7 @@ from engine.dream.actions.dispatch_mem_distill import DispatchMemDistill
 from engine.dream.actions.mem_steps import (
     MemCompact,
     MemHealthScan,
+    MemPromoteScan,
     MemRebuildIndex,
     MemSweepExpired,
 )
@@ -48,7 +49,7 @@ def build_memory_governance_subtree(
     backend: MemoryBackend | None = None,
     transcripts_dir: Path | None = None,
 ) -> Node:
-    """Construct the nine-step memory governance Sequence (no decorators).
+    """Construct the ten-step memory governance Sequence (no decorators).
 
     Matches the inner sequence of MemoryGovernanceStep in
     dream/tree/dream_loop.py. Use this when you want the bare sub-loop
@@ -67,6 +68,7 @@ def build_memory_governance_subtree(
             DispatchMemDistill(store_dir=store_dir, name="DispatchMemDistill"),
             CollectMemDistill(store_dir=store_dir, name="CollectMemDistill"),
             TranscriptDelete(name="TranscriptDelete"),
+            MemPromoteScan(store_dir=store_dir, name="MemPromoteScan"),
             MemCompact(store_dir=store_dir, name="MemCompact"),
             MemSweepExpired(store_dir=store_dir, backend=backend, name="MemSweepExpired"),
             MemRebuildIndex(store_dir=store_dir, backend=backend, name="MemRebuildIndex"),
@@ -82,6 +84,7 @@ __all__ = [
     "DispatchMemDistill",
     "CollectMemDistill",
     "TranscriptDelete",
+    "MemPromoteScan",
     "MemCompact",
     "MemSweepExpired",
     "MemRebuildIndex",

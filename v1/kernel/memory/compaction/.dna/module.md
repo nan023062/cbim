@@ -61,6 +61,14 @@ classDiagram
 - **`MemRebuildIndex` 是两个动作的集合。** (1) 重建本模块内部 `index/`（服务于 `scan` / `get` 的快快表）；(2) 调 `engine/retrieval.verify_consistency("memory_medium", mode="full")` 全量校验与外部检索索引的一致性。到这一步是服务于"快检发现漂移后的兜底修复"；主的增量同步在 `crud/` 的写入路径上。
 - **闭环自然收敛，无需外部判停。** `compact` 处理候选后回写的 `medium/` 又会触发 `identify` 再次产生候选——形成内部闭环。但因为每次 `compact` 严格减少候选总数（合并、删除原始条目），闭环会自然收敛；本模块不需要外部回调或显式 stop 条件。
 
+- **Batch 7 规则 C 落地：`scan_for_promote_candidates()` 上线，默认关闭。** v2 父模块 Key Decision 第 6 条「`compaction/` 只生成候选条目并标记 `promote_candidate`，等知识循环来 `scan(filter='promote_candidate')` 自取」从「设计承诺」走到「代码实装」。`promote_builder.scan_for_promote_candidates(store_dir)` 现以下硬约束执行：
+  - **特性旗标 `promote.enabled` 默认 False**（在 `memory/_config.py::_DEFAULTS['promote']`）。旗关时函数严格 no-op：`return 0`，**不创建** `candidates/` 目录、**不调** `_facade.scan`、**不触盘**。默认配置零回归。
+  - **旗开时按 `promote.scan_tags`（默认 `["rule", "flow"]`）逐 tag 扫 medium**：经父模块 `_facade.scan({"tier":"medium","tag":tag}, ...)` 拉命中后，每条调 `CandidatesArea.stage(entry)` 暂存。tags 取值由配置控制，模块本体不写死语义判断。
+  - **幂等通过候选区落盘文件名比对**：`_is_already_staged()` 复刻 `CandidatesArea.stage()` 的 `path/id → safe_key.candidate.json` 派生规则，文件已存在则跳过——**不刷 mtime、不回写 medium**。一条 medium 条目被多次扫描的代价是常数 `Path.exists()` 调用。
+  - **不持有 medium 写权限的铁律不动**：候选只往 `candidates/` 暂存；medium 条目本身只读取 path/id/tier/tags 用于过滤，**绝不**调 `crud.update` / `crud.delete`。一旦知识循环取走候选（移出 `candidates/`），下一轮扫描视为新命中再次 stage——这是「取走允许重扫」的正向语义。
+  - **30 天 sweep 兜底由 `ArchiveCleaner.sweep_expired()` 保留**：候选区遗留过期件由既有归档清理路径处理，promote_builder 不参与时效管理。
+- **由 `MemPromoteScan` 节点周期触发，不进 `compact()` 主链路。** 触发权交给 `engine/dream/actions/mem_steps.MemPromoteScan`（顺序在 `MemoryGovernanceStep` 内的 `TranscriptDelete` 之后、`MemCompact` 之前），跑频取决于 dream tick 节奏（默认 20 小时窗口），与 `Compactor.compact()` 的 medium 内合并完全解耦——压缩与提升是两条互不阻塞的路径。本模块继续不感知 dream 循环；`MemPromoteScan` 是其唯一的本模块函数调用点。
+
 ## Non-Goals
 
 - **不读 transcript JSONL。** 废弃了原来“扫 short 压 medium”的职责后，本模块不再访问 `~/.claude/projects/<slug>/`。Transcript 蒙骏在 `engine/dream` + `memory_distill` skill，蒙骏产物通过普通 `memory_write` 路径走到 `crud/`。

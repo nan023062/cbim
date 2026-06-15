@@ -35,7 +35,12 @@ from typing import Any
 
 from engine.core.node import Node, Status
 
-from memory.compaction import HealthChecker, compact, sweep_expired
+from memory.compaction import (
+    HealthChecker,
+    compact,
+    scan_for_promote_candidates,
+    sweep_expired,
+)
 from memory.compaction.rebuilder import rebuild_and_verify
 from memory.crud.backend import MemoryBackend
 
@@ -90,6 +95,27 @@ class MemCompact(Node):
 # now data-volume on bb.transcript_paths via DistillGate (see
 # actions/transcript_steps.py). MemHealthScan no longer needs to feed a
 # threshold check.
+
+
+# ---------------------------------------------------------------------------
+# MemPromoteScan
+# ---------------------------------------------------------------------------
+
+class MemPromoteScan(Node):
+    """Run scan_for_promote_candidates(); SUCCESS even when flag off (0 staged is legal)."""
+
+    def __init__(self, *, store_dir: Path, name: str = "MemPromoteScan") -> None:
+        self.name = name
+        self._store_dir = Path(store_dir)
+
+    def tick(self, bb) -> Status:
+        try:
+            staged = scan_for_promote_candidates(self._store_dir)
+        except Exception as e:  # noqa: BLE001 — Dream step writes error state to bb and continues; never crash dream tick
+            bb.mem_promote_result = {"error": f"{type(e).__name__}: {e}"}
+            return Status.FAILURE
+        bb.mem_promote_result = {"staged": int(staged)}
+        return Status.SUCCESS
 
 
 # ---------------------------------------------------------------------------

@@ -49,10 +49,11 @@ def _bb() -> DreamBlackboard:
 # DreamBlackboard tests
 # ---------------------------------------------------------------------------
 
-def test_dream_bb_field_count_is_23():
+def test_dream_bb_field_count_is_24():
     # 21 fields per the prior count + 2 added by the v2 transcript-driven
-    # distill path (transcript_paths, transcript_delete_errors).
-    assert len(FIELDS) == 23
+    # distill path (transcript_paths, transcript_delete_errors) + 1 added
+    # by Batch 7 promote scan (mem_promote_result).
+    assert len(FIELDS) == 24
 
 
 def test_dream_bb_setattr_marks_dirty():

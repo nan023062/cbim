@@ -183,6 +183,24 @@ def test_dna_write_doc_forwards_to_write_doc(monkeypatch):
     assert out == "/abs/module.md"
 
 
+def test_dna_write_doc_emits_deprecation_warning(monkeypatch, capsys):
+    """dna_write_doc must emit a [DEPRECATED] notice naming 1.1.0 to stderr."""
+    import services
+    import mcp_server.tools.dna as dna_tool
+
+    rec = _Recorder(return_value="/abs/module.md")
+    monkeypatch.setattr(services, "write_doc", rec)
+
+    tools = _register(dna_tool)
+    tools["dna_write_doc"](
+        module_path="src/foo", file="module.md", body="body text", cwd="",
+    )
+    err = capsys.readouterr().err
+    assert "[DEPRECATED]" in err
+    assert "1.1.0" in err
+    assert "dna_write_doc" in err
+
+
 def test_dna_write_section_forwards_to_write_section(monkeypatch):
     import services
     import mcp_server.tools.dna as dna_tool
@@ -197,6 +215,25 @@ def test_dna_write_section_forwards_to_write_section(monkeypatch):
     )
     assert rec.called_once
     assert out == "/abs/module.md"
+
+
+def test_dna_write_section_emits_deprecation_warning(monkeypatch, capsys):
+    """dna_write_section must emit a [DEPRECATED] notice naming 1.1.0 to stderr."""
+    import services
+    import mcp_server.tools.dna as dna_tool
+
+    rec = _Recorder(return_value="/abs/module.md")
+    monkeypatch.setattr(services, "write_section", rec)
+
+    tools = _register(dna_tool)
+    tools["dna_write_section"](
+        module_path="src/foo", file="module.md",
+        heading="Positioning", content="text", mode="replace", cwd="",
+    )
+    err = capsys.readouterr().err
+    assert "[DEPRECATED]" in err
+    assert "1.1.0" in err
+    assert "dna_write_section" in err
 
 
 # ---------------------------------------------------------------------------

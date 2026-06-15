@@ -229,8 +229,8 @@ def _handle_dna_write_doc(args: argparse.Namespace) -> int:
     """[DEPRECATED] Write body into <module-path>/.dna/<file>, preserving frontmatter."""
     from services import write_doc
     print(
-        "DeprecationWarning: 'dna write-doc' is deprecated, "
-        "use 'dna edit --target body' instead.",
+        "[DEPRECATED] 'dna write-doc' is deprecated and will be removed in "
+        "the next minor release (1.1.0); use 'dna edit --target body' instead.",
         file=sys.stderr,
     )
     if args.content is None and args.content_file is None:
@@ -262,8 +262,8 @@ def _handle_dna_write_doc(args: argparse.Namespace) -> int:
 def _handle_dna_write_section(args: argparse.Namespace) -> int:
     """[DEPRECATED] Section-level surgical edit of .dna/{module.md,contract.md}."""
     print(
-        "DeprecationWarning: 'dna write-section' is deprecated, "
-        "use 'dna edit --target section' instead.",
+        "[DEPRECATED] 'dna write-section' is deprecated and will be removed in "
+        "the next minor release (1.1.0); use 'dna edit --target section' instead.",
         file=sys.stderr,
     )
     if getattr(args, "insert_after", None) or getattr(args, "insert_at_top", False):

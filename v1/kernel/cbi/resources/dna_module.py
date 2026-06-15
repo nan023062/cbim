@@ -210,8 +210,9 @@ class DNAModule(Resource):
             # Legacy format: synthesize a frontmatter dict from JSON and load
             # architecture.md as the body. Saving will convert to new format.
             print(
-                f"[DEPRECATED] {mod_path}: using legacy module.json + architecture.md; "
-                f"migrate to module.md",
+                f"[DEPRECATED] {mod_path}: legacy module.json + architecture.md "
+                f"format is deprecated and will be removed in the next minor "
+                f"release (1.1.0); migrate to module.md.",
                 file=sys.stderr,
             )
             data = json.loads(legacy_json.read_text(encoding="utf-8"))

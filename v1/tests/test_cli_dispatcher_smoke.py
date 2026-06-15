@@ -297,13 +297,15 @@ def test_dashboard_routes_to_cmd_dashboard(monkeypatch):
 
 def test_preview_alias_routes_to_cmd_dashboard(monkeypatch, capsys):
     """`preview` is a deprecated alias; it must still reach cmd_dashboard
-    and emit a deprecation warning to stderr."""
+    and emit the [DEPRECATED] notice naming 1.1.0 to stderr."""
     rec = _Recorder()
     monkeypatch.setattr(cli_mod, "cmd_dashboard", rec)
     assert _run_cli(monkeypatch, ["preview", "--no-browser"]) == 0
     assert rec.called_once
     err = capsys.readouterr().err
-    assert "deprecated" in err.lower()
+    assert "[DEPRECATED]" in err
+    assert "1.1.0" in err
+    assert "preview" in err
 
 
 # ---------------------------------------------------------------------------

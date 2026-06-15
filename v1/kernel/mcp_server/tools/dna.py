@@ -16,6 +16,8 @@ Write tools (route through services.knowledge_service):
 
 from __future__ import annotations
 
+import sys
+
 from context import project_root
 
 
@@ -250,6 +252,12 @@ def register(mcp) -> None:
             body:        Body markdown (frontmatter is preserved separately).
             cwd:         Project directory (default: current working dir).
         """
+        print(
+            "[DEPRECATED] dna_write_doc is deprecated and will be removed in "
+            "the next minor release (1.1.0); use dna_edit(target='body' or "
+            "'contract') instead.",
+            file=sys.stderr,
+        )
         from services import PathOutsideRootError, resolve_within_root, write_doc
         root = project_root(cwd or None)
         try:
@@ -282,6 +290,12 @@ def register(mcp) -> None:
             mode:        "replace" | "append" | "insert-after" | "delete".
             cwd:         Project directory (default: current working dir).
         """
+        print(
+            "[DEPRECATED] dna_write_section is deprecated and will be removed "
+            "in the next minor release (1.1.0); use dna_edit(target='section' "
+            "or 'contract-section') instead.",
+            file=sys.stderr,
+        )
         from services import PathOutsideRootError, resolve_within_root, write_section
         root = project_root(cwd or None)
         try:

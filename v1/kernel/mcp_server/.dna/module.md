@@ -58,6 +58,8 @@ classDiagram
 - **MCP server is the LLM write path only.** Hook subprocesses (Claude Code lifecycle callbacks) bypass MCP entirely and import kernel modules in-process; `mcp` SDK is therefore a soft dependency, required only when the LLM wants to call governance tools.
 - **Slash commands talk to MCP tools, never to a Bash CLI.** Project-side `.claude/commands/cbim_*.md` invoke `mcp__cbim__*` tools (e.g. `dashboard_ensure_running`, `debug_set`, `log_show`). Shelling out to `cbim ...` from a slash command is a regression — it bypasses MCP logging, ignores `.cbim/` read-permission denials, and routes through whatever `cbim` binary the user's PATH happens to find (often a stale global pin-launcher, not the project kernel).
 
+- **MCP deprecated 工具（`dna_write_doc` / `dna_write_section`）计划下一个 minor release（1.1.0）移除；Batch 4 仅加 stderr 警告，未删。** `mcp_server/tools/dna.py` 中两个工具函数体首行 `print("[DEPRECATED] ... will be removed in the next minor release (1.1.0); use dna_edit(target='body' or 'contract') / dna_edit(target='section' or 'contract-section') instead.", file=sys.stderr)`，工具本身还读、返回值还走原服务层路径（`KnowledgeService`）以保证调用者不崩。`dna_edit(target="body"|"section"|"contract"|"contract-section")` 是完整的后继趋面。下一个 minor release 一起删两个工具函数 + `register_dna_tools()` 中的注册调用 + 对应单测。迁移路径与 CLI 一致：`dna edit --target {body|section|contract|contract-section}`。
+
 ## Non-Goals
 
 - **No hook transport.** Hook subprocesses do not connect to this server (no UDS listener, no hook-facing MCP tools). Hook reliability is decoupled from server liveness.

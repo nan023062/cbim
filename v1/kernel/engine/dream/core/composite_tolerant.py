@@ -21,11 +21,15 @@ schema does not carry `step_results` (a dream-only field).
 
 from __future__ import annotations
 
+from engine.core.composite import resume_index
 from engine.core.node import Node, Status
 
 # bt.core.composite's base class is module-private (`_Composite`). Re-derive
 # the same minimal shape locally rather than reach into a private name —
 # this also keeps dream/core self-contained.
+# Deliberate split: the local `_Composite` stays a minimal redeclaration so
+# we never import bt/core private names; only already-public helpers
+# (`resume_index`) are shared from engine.core.composite.
 
 class _Composite(Node):
     def __init__(self, children: list[Node], *, name: str) -> None:
@@ -54,7 +58,7 @@ class SequenceTolerant(_Composite):
         super().__init__(children, name=name)
 
     def tick(self, bb) -> Status:
-        start_idx = _resume_index(self, bb)
+        start_idx = resume_index(self, bb)
         if bb.step_results is None:
             bb.step_results = {}
         results = dict(bb.step_results)
@@ -76,25 +80,3 @@ class SequenceTolerant(_Composite):
         # All children resolved — aggregate.
         any_success = any(v == "success" for v in results.values())
         return Status.SUCCESS if any_success else Status.FAILURE
-
-
-def _resume_index(composite: _Composite, bb) -> int:
-    """Mirrors bt.core.composite._resume_index — find the child slot to
-    resume into based on bb.runner_resume_path.
-    """
-    path = bb.runner_resume_path
-    if not path:
-        return 0
-    try:
-        idx = path.index(composite.name)
-    except ValueError:
-        return 0
-    if idx + 1 >= len(path):
-        return 0
-    next_name = path[idx + 1]
-    for i, child in enumerate(composite._children):
-        if child.name == next_name:
-            return i
-        if "#" in next_name and next_name.split("#", 1)[0] == child.name:
-            return i
-    return 0

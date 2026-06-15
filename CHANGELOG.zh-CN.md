@@ -17,6 +17,41 @@ CBIM 早期阶段修复频率高。为降低用户的迁移摩擦：
 
 ---
 
+## [Unreleased — patch on 1.0.5] - 2026-06-15 —— 内核清理：去重 + 弃用提示统一格式
+
+两处小幅内核质量改进；无 schema 变更、对未弃用路径行为无影响。
+
+### 去重：共享 `resume_index`
+
+- `engine.core.composite._resume_index` 公开化为 `engine.core.composite.resume_index`,被 `engine.dream.core.composite_tolerant.SequenceTolerant` 复用（之前是字节级 copy）。
+- dream 侧的 `_Composite` 基类**刻意保持本地最小重声明**,不从 `engine.core.composite` 导入 —— 维护 `bt` / `dream` 边界（不引用 bt 的私有名）。仅共享已经公开的 helper。
+- 净效果：两棵树共享一份 resume-path 遍历定义；行为不变（已用 execution + dream 全量测试验证）。
+
+### Deprecations（本版本仅告警；1.1.0 移除）
+
+六处既有的已标注 deprecated 接口,现在被调用时会统一向 stderr 输出告警：
+
+```
+[DEPRECATED] <name> is deprecated and will be removed in the next minor release (1.1.0); use <replacement> instead.
+```
+
+| # | 接口 | 替代 |
+|---|------|------|
+| 1 | CLI `cbim dna write-doc` | `cbim dna edit --target body` |
+| 2 | CLI `cbim dna write-section` | `cbim dna edit --target section` |
+| 3 | CLI `cbim preview` | `cbim dashboard` |
+| 4 | MCP 工具 `dna_write_doc` | `dna_edit(target='body' 或 'contract')` |
+| 5 | MCP 工具 `dna_write_section` | `dna_edit(target='section' 或 'contract-section')` |
+| 6 | 旧版 `.dna/module.json` + `architecture.md` 模块格式 | `module.md`（执行一次 `cbim dna edit --target frontmatter` 即可迁移）|
+
+- 本版本**仅警告,不移除任何接口**。返回值、退出码、stdout、磁盘副作用均不变。既有脚本继续可用。
+- 告警使用 `print(..., file=sys.stderr)`,**故意不使用** `warnings.warn(DeprecationWarning)` —— `-W error` / pytest 的默认 filter 会把告警转换成异常,破坏调用方 CI 信号。
+- **下一个 minor 版本（1.1.0）将正式移除**。迁移建议：
+  - 扫一遍 CI / 脚本中上述六处接口,替换为规范等价。
+  - 旧版 module.json：迁移完任何剩余模块后,跑一次 `cbim dna reindex`；`load_module()` 在 `module.md` 与 `module.json` 同时存在时会自动优先 `module.md`,可以原地安全迁移。
+
+---
+
 ## [1.0.5] - 2026-05-22 —— DNA：spec 状态字段 + 原子化 split 命令
 
 `.dna/module.md` 新增 `status` frontmatter 字段（与 `dna_state` 正交）：

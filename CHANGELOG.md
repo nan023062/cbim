@@ -17,6 +17,41 @@ This keeps the version line meaningful (each tag is a real surface change) and a
 
 ---
 
+## [Unreleased — patch on 1.0.5] - 2026-06-15 — kernel cleanup: dedup + uniform deprecation notices
+
+Two small kernel-quality changes; no schema changes, no behaviour changes for non-deprecated paths.
+
+### Dedup: shared `resume_index`
+
+- `engine.core.composite._resume_index` was promoted to public `engine.core.composite.resume_index` and re-used by `engine.dream.core.composite_tolerant.SequenceTolerant` (which previously carried a byte-for-byte copy).
+- The dream-side `_Composite` base class is intentionally kept as a local minimal redeclaration — it is NOT imported from `engine.core.composite` — preserving the `bt` / `dream` boundary (no reach-in to bt's private names). Only the already-public helper is shared.
+- Net effect: one definition of resume-path traversal across the two trees; behaviour is unchanged (verified by full execution + dream test runs).
+
+### Deprecations (warning-only this release; removal in 1.1.0)
+
+Six existing surfaces that were already documented as deprecated now emit a uniform stderr notice when invoked:
+
+```
+[DEPRECATED] <name> is deprecated and will be removed in the next minor release (1.1.0); use <replacement> instead.
+```
+
+| # | Surface | Replacement |
+|---|---------|-------------|
+| 1 | CLI `cbim dna write-doc` | `cbim dna edit --target body` |
+| 2 | CLI `cbim dna write-section` | `cbim dna edit --target section` |
+| 3 | CLI `cbim preview` | `cbim dashboard` |
+| 4 | MCP tool `dna_write_doc` | `dna_edit(target='body' or 'contract')` |
+| 5 | MCP tool `dna_write_section` | `dna_edit(target='section' or 'contract-section')` |
+| 6 | Legacy `.dna/module.json` + `architecture.md` module format | `module.md` (write `cbim dna edit --target frontmatter` once to migrate) |
+
+- Notices are **warning-only this release**; **no surfaces are removed in this patch**. Return values, exit codes, stdout, and on-disk effects are unchanged. Existing scripts continue to work.
+- Notices use `print(..., file=sys.stderr)`; we deliberately do **not** use `warnings.warn(DeprecationWarning)`, because `-W error` / `pytest`'s default filter would convert the notice into an exception and break callers' CI.
+- **Removal is scheduled for the next minor release (1.1.0).** Migration guidance:
+  - Sweep CI / scripts for the six surfaces above; replace with the canonical equivalents.
+  - For legacy module.json: run a one-time `cbim dna reindex` after migrating any remaining modules — the `load_module()` code path will auto-prefer `module.md` once both files are present, so migrations are safe in-place.
+
+---
+
 ## [1.0.5] - 2026-05-22 — DNA: spec status field + atomic split command
 
 New `status` frontmatter field on `.dna/module.md` (orthogonal to `dna_state`):

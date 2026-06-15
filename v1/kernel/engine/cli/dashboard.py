@@ -32,8 +32,9 @@ def dispatch(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
 
 
 def dispatch_preview(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
-    print("[deprecated] `preview` is now `dashboard`; please use "
-          "`python .cbim/engine dashboard`", file=sys.stderr)
+    print("[DEPRECATED] 'preview' subcommand is deprecated and will be removed "
+          "in the next minor release (1.1.0); use 'dashboard' instead.",
+          file=sys.stderr)
     from engine import cli as _pkg
     return _pkg.cmd_dashboard(args)
 

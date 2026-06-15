@@ -22,8 +22,9 @@ def load_module(mod_dir: Path, root: Path) -> dict | None:
     if module_md.exists():
         return _load_new_format(mod_dir, root, aimod, module_md)
     elif legacy_json.exists():
-        print(f"[DEPRECATED] {mod_dir}: using legacy module.json + architecture.md; "
-              f"migrate to module.md", file=sys.stderr)
+        print(f"[DEPRECATED] {mod_dir}: legacy module.json + architecture.md "
+              f"format is deprecated and will be removed in the next minor "
+              f"release (1.1.0); migrate to module.md.", file=sys.stderr)
         return _load_legacy_format(mod_dir, root, aimod, legacy_json)
     else:
         _log_import(f"dna:{_rel_for_log(module_md, root)}", "miss", "dna.load")
@@ -125,6 +126,11 @@ _SCAN_SKIP_DIRS = {
     "node_modules", ".git", "dist", "build", "__pycache__",
     ".venv", ".cbim", ".pnpm-store", "coverage",
     ".next", ".cache",
+    # Walk-time pruning additions (Batch 6): these were already filtered
+    # post-hoc by _is_skipped via path-segment scan in some call sites, but
+    # adding them here lets the DFS skip whole subtrees up front.
+    "venv", ".tox", ".idea", ".vscode",
+    ".mypy_cache", ".pytest_cache", ".ruff_cache", "htmlcov",
 }
 
 
@@ -136,25 +142,91 @@ def _is_skipped(mod_dir: Path, root: Path) -> bool:
     return any(p in _SCAN_SKIP_DIRS for p in parts)
 
 
-def _scan_modules(root: Path) -> list[dict]:
-    """Slow path: rglob the filesystem for all .dna/module.md (and legacy
-    module.json) files, skipping vendor/build/framework dirs. Used by reindex
-    and as a fallback when the registry is missing."""
-    modules = []
-    seen_dirs: set[Path] = set()
+def _walk_dna_dirs(root: Path) -> tuple[list[Path], list[Path]]:
+    """Single-pass DFS that returns (md_dirs, json_dirs).
 
-    for mm in sorted(root.rglob(".dna/module.md")):
-        mod_dir = mm.parent.parent
+    Each list contains module directories (parent of .dna/) where a
+    module.md (resp. module.json) was found. md takes precedence: if a
+    module dir has both, it appears only in md_dirs.
+
+    Pruning rules (must stay equivalent to ``rglob(".dna/module.*")``
+    followed by ``_is_skipped`` filtering):
+      * directory name in ``_SCAN_SKIP_DIRS`` -> do not descend
+      * symlink -> skip (rglob default does not follow symlinks)
+      * ``.dna`` directory -> collect its module.md / module.json from
+        the parent, then do NOT descend into .dna/ itself
+      * OSError on iterdir / is_dir / is_symlink -> skip silently
+        (matches hooks _iter_dna_modules behavior on permission denied
+        / broken symlink / path too long)
+    """
+    md_dirs: list[Path] = []
+    json_dirs: list[Path] = []
+    seen: set[Path] = set()
+
+    def _walk(d: Path) -> None:
+        try:
+            children = list(d.iterdir())
+        except OSError:
+            return
+        for child in children:
+            name = child.name
+            if name in _SCAN_SKIP_DIRS:
+                continue
+            try:
+                if child.is_symlink() or not child.is_dir():
+                    continue
+            except OSError:
+                continue
+            if name == ".dna":
+                mod_dir = child.parent
+                if mod_dir in seen:
+                    continue
+                if (child / "module.md").is_file():
+                    md_dirs.append(mod_dir)
+                    seen.add(mod_dir)
+                elif (child / "module.json").is_file():
+                    json_dirs.append(mod_dir)
+                    seen.add(mod_dir)
+                # Never descend into .dna/ itself.
+                continue
+            _walk(child)
+
+    _walk(root)
+    return md_dirs, json_dirs
+
+
+def _scan_modules(root: Path) -> list[dict]:
+    """Slow path: walk the filesystem for all .dna/module.md (and legacy
+    module.json) files, skipping vendor/build/framework dirs at walk time.
+    Used by reindex and as a fallback when the registry is missing.
+
+    Equivalent in output (modulo identical ordering) to the prior
+    rglob-based implementation; the rewrite is a pure traversal speedup
+    that prunes skip dirs up front instead of post-filtering.
+    """
+    md_dirs, json_dirs = _walk_dna_dirs(root)
+
+    # Re-establish the legacy ordering: previously the implementation
+    # used ``sorted(root.rglob(".dna/module.md"))``, which sorts Path
+    # objects lexicographically including the trailing ``.dna/module.md``
+    # segment. DFS visit order is not guaranteed to match that, so we
+    # sort with the equivalent key.
+    md_dirs.sort(key=lambda p: p / ".dna" / "module.md")
+    json_dirs.sort(key=lambda p: p / ".dna" / "module.json")
+
+    modules: list[dict] = []
+    for mod_dir in md_dirs:
+        # Belt-and-suspenders: walk-time pruning already excludes these,
+        # but keep _is_skipped as a second gate in case a skip name
+        # appears mid-path via an exotic mount.
         if _is_skipped(mod_dir, root):
             continue
-        seen_dirs.add(mod_dir)
         m = load_module(mod_dir, root)
         if m:
             modules.append(m)
 
-    for mj in sorted(root.rglob(".dna/module.json")):
-        mod_dir = mj.parent.parent
-        if mod_dir in seen_dirs or _is_skipped(mod_dir, root):
+    for mod_dir in json_dirs:
+        if _is_skipped(mod_dir, root):
             continue
         m = load_module(mod_dir, root)
         if m:

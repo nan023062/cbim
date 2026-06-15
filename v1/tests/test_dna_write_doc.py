@@ -207,9 +207,14 @@ def test_cli_inline_content(tmp_path, capsys):
         content="## CLI Body\n",
     ))
     assert rc == 0
-    captured = capsys.readouterr().out.strip()
-    assert captured == str((mod / ".dna" / "module.md").resolve())
+    captured = capsys.readouterr()
+    out = captured.out.strip()
+    assert out == str((mod / ".dna" / "module.md").resolve())
     assert "## CLI Body" in (mod / ".dna" / "module.md").read_text(encoding="utf-8")
+    # Deprecation notice goes to stderr; happy-path stdout (the path) is unaffected.
+    assert "[DEPRECATED]" in captured.err
+    assert "1.1.0" in captured.err
+    assert "write-doc" in captured.err
 
 
 def test_cli_content_file(tmp_path):
@@ -278,3 +283,75 @@ def test_cli_rejects_uninitialized_module(tmp_path, capsys):
     ))
     assert rc == 1
     assert "not initialized" in capsys.readouterr().err
+
+
+# --- deprecation notices: cli write-section ------------------------------
+
+
+def test_cli_write_section_emits_deprecation(tmp_path, capsys):
+    """`dna write-section` happy path: emits [DEPRECATED] + 1.1.0 to stderr,
+    exits 0, prints the resolved file path on stdout."""
+    from engine.cli import _handle_dna_write_section as cmd_write_section
+
+    mod = _make_module(tmp_path)
+    ns = argparse.Namespace(
+        module_path=str(mod),
+        file="module.md",
+        heading="Old Body",
+        level=2,
+        mode="replace",
+        content="fresh body text\n",
+        content_file=None,
+        stdin=False,
+        create_if_missing=False,
+        dry_run=False,
+        insert_after=None,
+        insert_at_top=False,
+    )
+    rc = cmd_write_section(ns)
+    captured = capsys.readouterr()
+    assert rc == 0
+    # stdout should carry the resolved module.md path.
+    assert captured.out.strip() == str((mod / ".dna" / "module.md").resolve())
+    # stderr should carry the [DEPRECATED] notice naming 1.1.0.
+    assert "[DEPRECATED]" in captured.err
+    assert "1.1.0" in captured.err
+    assert "write-section" in captured.err
+
+
+# --- deprecation notice: legacy module.json loaders ----------------------
+
+
+def test_legacy_module_json_loader_emits_deprecation(tmp_path, capsys):
+    """Loading a module via the legacy module.json path emits [DEPRECATED]
+    + 1.1.0 to stderr and still loads successfully.
+
+    Uses the public `cbi.resources.DNAModule.load` facade (the kernel-internal
+    `cbi._primitives.modules.loader.load_module` is banned-api for tests by
+    design; the facade exercises the same legacy branch via dna_module.py).
+    """
+    import json as _json
+
+    from cbi.resources import DNAModule
+
+    mod = tmp_path / "legacy_mod"
+    aimod = mod / ".dna"
+    aimod.mkdir(parents=True)
+    (aimod / "module.json").write_text(
+        _json.dumps({
+            "name": "legacy_mod",
+            "owner": "platform",
+            "description": "legacy",
+            "keywords": [],
+            "dependencies": [],
+        }),
+        encoding="utf-8",
+    )
+    (aimod / "architecture.md").write_text("## Body\n\nlegacy body text\n", encoding="utf-8")
+
+    loaded = DNAModule.load(mod, root=tmp_path)
+    err = capsys.readouterr().err
+    assert loaded is not None  # legacy load still works
+    assert "[DEPRECATED]" in err
+    assert "1.1.0" in err
+    assert "module.json" in err

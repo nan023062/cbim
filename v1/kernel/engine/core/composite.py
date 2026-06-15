@@ -41,7 +41,7 @@ class Sequence(_Composite):
     def tick(self, bb) -> Status:
         # Resume support: if runner_resume_path points into this composite,
         # skip already-completed children. Path segments are node names.
-        start_idx = _resume_index(self, bb)
+        start_idx = resume_index(self, bb)
         for i in range(start_idx, len(self._children)):
             child = self._children[i]
             status = _tick_child(self, child, i, bb)
@@ -65,7 +65,7 @@ class Selector(_Composite):
         super().__init__(children, name=name)
 
     def tick(self, bb) -> Status:
-        start_idx = _resume_index(self, bb)
+        start_idx = resume_index(self, bb)
         # Per-tick decision log; do NOT hang this on self (composites are
         # stateless across ticks per README §2 iron rule).
         child_results: list[dict] = []
@@ -150,7 +150,7 @@ class LoopSeq(_Composite):
         while True:
             # Resume support: if runner_resume_path runs through this
             # composite, skip children that already completed in a prior tick.
-            start_idx = _resume_index(self, bb)
+            start_idx = resume_index(self, bb)
             inner_status = Status.SUCCESS
             for i in range(start_idx, len(self._children)):
                 child = self._children[i]
@@ -458,7 +458,7 @@ class ModeBranch(Node):
 # Resume-path helpers
 # ---------------------------------------------------------------------------
 
-def _resume_index(composite: _Composite, bb) -> int:
+def resume_index(composite: _Composite, bb) -> int:
     """If runner_resume_path goes through `composite`, return the child
     index to resume at; otherwise 0.
 

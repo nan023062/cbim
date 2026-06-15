@@ -120,6 +120,9 @@ v2 把所有自维护抽到第二根循环，复用同一个 BT 引擎但独立�
 - **治理模式自主权边界：安全动作可执行，危险动作只产建议。** 安全幂等动作（更新时间戳、补字段、记日志、记忆压缩、transcript 蒙骏删原件、索引重建）治理模式可自主执行；不可逆 / 高影响动作（归档模块、招募 agent、改契约、删 `.dna/`）只能写进 `advice_pending` 落到 report.md，由用户下次会话决定是否采纳。
 - **治理只做回头式重构，前向式造新归执行子循环。** Architect / HR 治理模式扫已有资产（`.dna/` 注册表、`.claude/agents/` 注册表）做裂变 / 归档 / 合并 / 依赖重组 / 漂移识别；“为满足当前任务而懒式创建新模块 / 招募新 agent”由执行根的 ArchGate / CallHR 节点触发，**不在治理循环范围**。这一刀切清楚后，治理模式才能稳定收敛，不会与执行模式抢工作。
 
+- **`SequenceTolerant` 归属 dream/core、不上提 engine/core（Batch 4 上游决策 + 架构师裁定）。** 查重复代码时曾考虑“抽到 engine/core/composite.py”，裁定上游：不抽。依据是 `bb.step_results` 是 dream blackboard 专属字段（execution 黑板 schema 不仓该字段），`SequenceTolerant.tick` 必须读写它来实现「跨子节点聖状态记录 + resume 幂等跳过」语义。抽到 engine/core 会造成两验以中之一：(a) `engine/core` 反向依赖上层 dream 黑板 schema，直接违反 C3；(b) 在 `engine/core/blackboard.py` 中考虑 `step_results` 字段让 execution 也背它。两验都现报废。本次 Batch 4 只去重 `_resume_index` 这个与黑板 schema 无关的底层 helper（提升为 `engine.core.composite.resume_index`）。`SequenceTolerant` 本体仍留 dream/core；它是“能抵受单步失败的顶层治理三步容器”，该语义不是 BT 通用原语。
+- **`engine/dream/core/composite_tolerant.py` 中本地 `_Composite` 最小重声明刻意保留。** `engine/core/composite.py::_Composite` 是模块私有名（以 `_` 开头），跨模块 import 会踩进「什么名叫什么」的反向耦合。`SequenceTolerant` 仅需 `__init__` + `children()` 两个方法，实现足够简单，重声明三行在 dream/core 是陶合的代价。判出。未来如 `engine/core` 决定给 `_Composite` 提升为公开基类（去下划线），dream 侧可平滑切换为 `from engine.core.composite import Composite`；在那之前 dream 必须使用本地重声明，不可 `from engine.core.composite import _Composite`。`from engine.core.composite import resume_index` 均为已公开名字的正常 import。
+
 ## Non-Goals
 
 - **不与用户对话。** 治理循环全程在后台运行，Done 不返回 `user_message`；摘要通过 `report.md` 落盘 + 下次 SessionStart 注入主 agent 上下文，被动呈现。

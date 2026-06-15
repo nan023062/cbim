@@ -31,7 +31,7 @@ def _resolve_store_dir() -> Path:
     try:
         from context import cbim_dir
         return cbim_dir() / "memory"
-    except Exception:
+    except ImportError:
         return Path.cwd() / ".cbim" / "memory"
 
 
@@ -89,7 +89,7 @@ class FlushMemory(Node):
             )
             try:
                 status = crud_root.tick(crud_bb)
-            except Exception:
+            except Exception:  # noqa: BLE001 — second safety net; outer Catch(swallow) already wraps
                 # Individual entry failure — keep going. The outer
                 # Catch(swallow) is a second safety net.
                 continue

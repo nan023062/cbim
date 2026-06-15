@@ -44,11 +44,14 @@ class Trace(_Decorator):
                 "node": self._child.name,
                 "event": "enter",
             }]
-        except Exception:
+        except (AttributeError, TypeError):
             pass
         try:
             status = self._child.tick(bb)
         except Exception as e:
+            # Trace decorator: record then re-raise; original exception preserved.
+            # ruff treats raise-after-record as a valid pattern and does not flag
+            # this as BLE001 — no noqa needed.
             try:
                 bb.trace = (bb.trace or []) + [{
                     "ts": _now_iso(),
@@ -56,7 +59,7 @@ class Trace(_Decorator):
                     "event": "trace_self_error",
                     "error": str(e)[:200],
                 }]
-            except Exception:
+            except (AttributeError, TypeError):
                 pass
             raise
         duration_ms = int((time.monotonic() - start) * 1000)
@@ -68,7 +71,7 @@ class Trace(_Decorator):
                 "status": status.value,
                 "duration_ms": duration_ms,
             }]
-        except Exception:
+        except (AttributeError, TypeError):
             pass
         return status
 
@@ -97,7 +100,7 @@ class Timeout(_Decorator):
                     "event": "timeout",
                     "elapsed_s": int(elapsed),
                 }]
-            except Exception:
+            except (AttributeError, TypeError):
                 pass
             return Status.FAILURE
         return status
@@ -135,7 +138,7 @@ class Retry(_Decorator):
                         "event": "retry",
                         "attempt": attempt,
                     }]
-                except Exception:
+                except (AttributeError, TypeError):
                     pass
         return last
 
@@ -157,7 +160,7 @@ class Catch(_Decorator):
         try:
             status = self._child.tick(bb)
             return status
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Catch decorator: convert leaf exception to status by design
             try:
                 bb.trace = (bb.trace or []) + [{
                     "ts": _now_iso(),
@@ -165,7 +168,7 @@ class Catch(_Decorator):
                     "event": "catch",
                     "error": str(e)[:200],
                 }]
-            except Exception:
+            except (AttributeError, TypeError):
                 pass
             if self._fallback == "swallow":
                 return Status.FAILURE

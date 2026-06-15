@@ -52,7 +52,7 @@ class FinalizeDreamTick(Node):
                     current.unlink()
                 except OSError:
                     pass
-        except Exception:
+        except Exception:  # noqa: BLE001 — finalize is best-effort by design
             # Don't propagate — finalize is best-effort by design.
             return Status.FAILURE
         return Status.SUCCESS

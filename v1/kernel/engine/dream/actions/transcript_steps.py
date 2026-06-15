@@ -172,7 +172,7 @@ class TranscriptDelete(Node):
         errors: list[dict] = []
         try:
             from engine.retrieval import index_delete
-        except Exception:
+        except ImportError:
             index_delete = None  # type: ignore[assignment]
 
         for raw in distilled:
@@ -183,7 +183,7 @@ class TranscriptDelete(Node):
             if index_delete is not None:
                 try:
                     index_delete("transcript", str(p))
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — collector pattern; record per-entry failure, keep sweeping
                     errors.append({
                         "path": str(p),
                         "stage": "index_delete",

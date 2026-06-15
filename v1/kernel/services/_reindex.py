@@ -63,7 +63,7 @@ def reindex_dna(root: Path, module_dir: Path) -> None:
             content,
             {"source_path": str(md.resolve())},
         )
-    except Exception:
+    except Exception:  # noqa: BLE001 — main write succeeded; reindex is side-effect, dream loop verify_consistency reconciles
         return
 
 
@@ -94,7 +94,7 @@ def reindex_agent(root: Path, name: str) -> None:
             content,
             {"source_path": str(md.resolve())},
         )
-    except Exception:
+    except Exception:  # noqa: BLE001 — main write succeeded; reindex is side-effect, dream loop verify_consistency reconciles
         return
 
 
@@ -103,5 +103,5 @@ def drop_agent(name: str) -> None:
     try:
         from engine.retrieval import index_delete
         index_delete("agents", name)
-    except Exception:
+    except Exception:  # noqa: BLE001 — main write succeeded; reindex is side-effect, dream loop verify_consistency reconciles
         return

@@ -29,7 +29,7 @@ def register(mcp) -> None:
         """
         try:
             return _bt_tick(user_request, context).to_dict()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — MCP boundary; must return dict not raise
             return {
                 "kind": "error",
                 "error_code": "engine_internal",
@@ -46,7 +46,7 @@ def register(mcp) -> None:
         """
         try:
             return _bt_tick_resume(tick_id, dispatch_result).to_dict()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — MCP boundary; must return dict not raise
             return {
                 "kind": "error",
                 "error_code": "engine_internal",
@@ -61,7 +61,7 @@ def register(mcp) -> None:
         """
         try:
             return [t.to_dict() for t in _bt_list_running_ticks()]
-        except Exception:
+        except (OSError, ValueError, RuntimeError):
             return []
 
     @mcp.tool()

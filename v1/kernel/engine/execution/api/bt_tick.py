@@ -29,7 +29,7 @@ def _scheduler_root() -> Path:
     try:
         from context import cbim_dir
         return cbim_dir() / "scheduler"
-    except Exception:
+    except ImportError:
         return Path.cwd() / ".cbim" / "scheduler"
 
 
@@ -86,7 +86,7 @@ def bt_tick(user_request: str, context: dict | None = None) -> BtResult:
         runner = _build_runner()
         rr = runner.run(bb)
         return _to_bt_result(rr, tick_id)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — top-level API guard; convert any crash to BtResult(error)
         return BtResult(
             kind="error",
             error_code="engine_internal",
@@ -108,7 +108,7 @@ def bt_tick_resume(tick_id: str, dispatch_result: Any) -> BtResult:
         runner = _build_runner()
         rr = runner.resume(bb, dispatch_result)
         return _to_bt_result(rr, tick_id)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — top-level API guard; convert any crash to BtResult(error)
         return BtResult(
             kind="error",
             error_code="engine_internal",

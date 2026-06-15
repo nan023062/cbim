@@ -142,13 +142,13 @@ def _sync_source_with_disk(source: str,
     try:
         from engine.retrieval import index_upsert, verify_consistency
         from engine.retrieval.facade import _facade  # internal but stable
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return
 
     # Step 1+2: drift fix for known ids.
     try:
         verify_consistency(source, "fast")
-    except Exception:
+    except Exception:  # noqa: BLE001 — per-session reconcile; self-heals next session
         # Failure here just means we re-check on the next session.
         pass
 
@@ -158,7 +158,7 @@ def _sync_source_with_disk(source: str,
     try:
         state = _facade()._get(source)
         known = set(state.records.keys())
-    except Exception:
+    except (KeyError, AttributeError):
         known = set()
 
     for doc_id, src_path in on_disk:
@@ -177,7 +177,7 @@ def _sync_source_with_disk(source: str,
                 content,
                 {"source_path": str(src_path)},
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 — per-file failure must not stop scan loop
             # Single-file failure must not stop the rest of the scan.
             continue
 
@@ -194,7 +194,7 @@ def _sync_transcripts(root: Path) -> None:
     """
     try:
         from memory._lib.paths import cc_transcripts_dir
-    except Exception:
+    except ImportError:
         return
     try:
         tdir = cc_transcripts_dir(root)
@@ -206,13 +206,13 @@ def _sync_transcripts(root: Path) -> None:
     try:
         from engine.retrieval import index_upsert
         from engine.retrieval.facade import _facade
-    except Exception:
+    except ImportError:
         return
 
     try:
         state = _facade()._get("transcript")
         known = set(state.records.keys())
-    except Exception:
+    except (KeyError, AttributeError):
         known = set()
 
     for p in tdir.glob("*.jsonl"):
@@ -237,7 +237,7 @@ def _sync_transcripts(root: Path) -> None:
                 content,
                 {"source_path": abs_path},
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 — per-file failure must not stop scan loop
             continue
 
 
@@ -268,7 +268,7 @@ def _build_context(root: Path, session_id: str) -> str:
     try:
         from engine.session_log import start_session
         start_session(session_id=session_id, cwd=str(root), cbim=cbim)
-    except Exception:
+    except Exception:  # noqa: BLE001 — session-log write is best-effort
         pass
 
     # Run the retrieval index sync passes before composing context — this
@@ -280,7 +280,7 @@ def _build_context(root: Path, session_id: str) -> str:
     try:
         from cbi._primitives.snapshot import build_snapshot
         snapshot_out = build_snapshot(root.resolve()) or ""
-    except Exception:
+    except (OSError, ValueError, RuntimeError):
         snapshot_out = ""
 
     dream_banner, dream_summary = _dream_signals(cbim)

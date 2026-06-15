@@ -49,7 +49,7 @@ def _scheduler_root() -> Path:
     try:
         from context import cbim_dir  # type: ignore[import-not-found]
         return cbim_dir() / "scheduler"
-    except Exception:
+    except ImportError:
         return Path.cwd() / ".cbim" / "scheduler"
 
 
@@ -57,7 +57,7 @@ def _memory_store_dir() -> Path:
     try:
         from context import cbim_dir  # type: ignore[import-not-found]
         return cbim_dir() / "memory"
-    except Exception:
+    except ImportError:
         return Path.cwd() / ".cbim" / "memory"
 
 
@@ -205,7 +205,7 @@ def dream_tick(reason: str, run_id: str | None = None) -> DreamResult:
         )
         rr = runner.run(bb)
         return _to_dream_result(rr, run_id, bb)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — top-level dream API guard; convert any crash to DreamResult(error)
         return DreamResult(
             kind="error",
             error_code="engine_internal",
@@ -272,7 +272,7 @@ def dream_tick_resume(run_id: str, dispatch_result: Any) -> DreamResult:
         )
         rr = runner.resume(bb, dispatch_result)
         return _to_dream_result(rr, run_id, bb)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — top-level dream API guard; convert any crash to DreamResult(error)
         return DreamResult(
             kind="error",
             error_code="engine_internal",

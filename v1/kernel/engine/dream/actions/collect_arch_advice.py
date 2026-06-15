@@ -28,6 +28,7 @@ Pairs with ``actions/dispatch_arch.DispatchArchGovern`` inside
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from engine.core.node import Node, Status
@@ -57,7 +58,7 @@ def _append_burndown(report: dict) -> None:
     """
     try:
         extra = collect_burndown_advice()
-    except Exception:
+    except (OSError, json.JSONDecodeError):
         return
     if not extra:
         return

@@ -25,6 +25,7 @@ baseline entries, sorted by check name for stable ordering.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Iterable
 
@@ -41,10 +42,10 @@ def _project_root() -> Path | None:
     try:
         from context import project_root  # type: ignore[import-not-found]
         return project_root()
-    except Exception:
+    except ImportError:
         try:
             return Path.cwd()
-        except Exception:
+        except OSError:
             return None
 
 
@@ -90,9 +91,10 @@ def collect_burndown_advice(project_root_override: Path | None = None) -> list[s
             # degradation per task spec.
             return []
         entries = store.load()
-    except Exception:
-        # Corrupt baseline.json, permission error, anything else — we are
-        # an advisory helper, never a blocker. Eat the error and skip.
+    except (OSError, json.JSONDecodeError, ValueError, RuntimeError):
+        # Corrupt baseline.json (BaselineStore wraps JSONDecodeError in
+        # RuntimeError), permission error, or any structural defect — we
+        # are an advisory helper, never a blocker. Eat the error and skip.
         return []
 
     if not entries:

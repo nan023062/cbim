@@ -68,7 +68,7 @@ def _mirror_to_session_log(event: dict) -> None:
             return
         from engine.logger import append as _log_append
         _log_append("BT", _format_bt_line(event))
-    except Exception:
+    except Exception:  # noqa: BLE001 — append session log; observational, must not break a tick
         pass
 
 

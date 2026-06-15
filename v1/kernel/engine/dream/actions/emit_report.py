@@ -31,7 +31,7 @@ class EmitReport(Node):
             tmp.replace(report_path)
             bb.report_path = str(report_path)
             bb.summary_for_session = _render_summary(bb)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — never kill Finalize on report-emit failure
             # Failing to write the report should not kill Finalize — record
             # the error on bb and let the downstream Finalize still rotate
             # the 20h window.

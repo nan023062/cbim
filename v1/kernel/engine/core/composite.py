@@ -282,7 +282,7 @@ class SwitchBranch(Node):
         # chronological: decision → child_enter → child_exit.
         try:
             key = self._key_fn(bb)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Switch key_fn failure routes to __error__ branch by design
             _append_trace_event(bb, {
                 "event": "switch_decision",
                 "node": self.name,

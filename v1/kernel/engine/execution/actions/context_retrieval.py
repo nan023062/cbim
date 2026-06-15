@@ -41,11 +41,11 @@ def _safe_search(source: str, query: str, top_k: int) -> list:
     """
     try:
         from engine.retrieval import search
-    except Exception:
+    except ImportError:
         return []
     try:
         hits = search(source, query, top_k=top_k)
-    except Exception:
+    except Exception:  # noqa: BLE001 — context retrieval best-effort; no hits is legal
         return []
     out = []
     for h in hits or []:

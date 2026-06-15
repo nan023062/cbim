@@ -104,7 +104,7 @@ class _StubLeaf(Node):
             return Status.SUCCESS
         try:
             result = self._call(bb)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — CRUD callable may raise anything; record on bb and let outer Catch decide
             bb.crud_result = {
                 "node": self.name,
                 "error": f"{type(e).__name__}: {e}",

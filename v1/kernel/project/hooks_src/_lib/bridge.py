@@ -30,7 +30,7 @@ def safe_run(callable, *, on_error_label: str):
     """Run `callable`; on any exception print `[CBIM:hook] <label>: <err>` to stderr and swallow."""
     try:
         return callable()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — hook safe_run boundary; never block CC startup
         print(
             f"[CBIM:hook] {on_error_label}: {type(e).__name__}: {e}",
             file=sys.stderr,

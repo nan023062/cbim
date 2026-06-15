@@ -95,7 +95,7 @@ def _check(records, mode, read_doc, upsert, delete) -> DriftReport:
                     delete(doc_id)
                     report.drifted.append(doc_id)
                     report.repaired.append(doc_id)
-                except Exception as e:  # pragma: no cover — defensive
+                except Exception as e:  # noqa: BLE001 — drift reconcile collector; must not interrupt sweep  # pragma: no cover — defensive
                     report.failed.append({"doc_id": doc_id, "error": str(e)})
                 continue
             try:
@@ -148,7 +148,7 @@ def _attempt_reindex(doc_id, src_path: Path, rec, upsert, report) -> None:
     try:
         upsert(doc_id, content, dict(rec.metadata or {}))
         report.repaired.append(doc_id)
-    except Exception as e:  # pragma: no cover — defensive
+    except Exception as e:  # noqa: BLE001 — drift reconcile collector; must not interrupt sweep  # pragma: no cover — defensive
         report.failed.append({"doc_id": doc_id, "error": f"reindex: {e}"})
 
 

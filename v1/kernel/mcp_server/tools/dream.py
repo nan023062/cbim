@@ -31,7 +31,7 @@ def register(mcp) -> None:
         """
         try:
             return _dream_tick(reason, run_id).to_dict()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — MCP boundary; must return dict not raise
             return {
                 "kind": "error",
                 "error_code": "engine_internal",
@@ -48,7 +48,7 @@ def register(mcp) -> None:
         """
         try:
             return _dream_tick_resume(run_id, dispatch_result).to_dict()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — MCP boundary; must return dict not raise
             return {
                 "kind": "error",
                 "error_code": "engine_internal",
@@ -63,7 +63,7 @@ def register(mcp) -> None:
         """
         try:
             return [s.to_dict() for s in _dream_list_runs(limit)]
-        except Exception:
+        except (OSError, ValueError, RuntimeError):
             return []
 
     @mcp.tool()
@@ -75,7 +75,7 @@ def register(mcp) -> None:
         """
         try:
             return _dream_abort(run_id, reason).to_dict()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — MCP boundary; must return dict not raise
             return {
                 "aborted": False,
                 "run_id": run_id,

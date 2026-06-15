@@ -37,7 +37,7 @@ def _log(msg: str) -> None:
     try:
         from engine.session_log import append
         append("MCP", msg)
-    except Exception:
+    except Exception:  # noqa: BLE001 — MCP server-side log observational; never disturb tool dispatch
         pass
 
 

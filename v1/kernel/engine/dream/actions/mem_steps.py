@@ -58,7 +58,7 @@ class MemHealthScan(Node):
     def tick(self, bb) -> Status:
         try:
             report = HealthChecker(self._store_dir).check()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Dream step writes error state to bb and continues; never crash dream tick
             bb.mem_health = {"error": f"{type(e).__name__}: {e}"}
             return Status.FAILURE
         bb.mem_health = _report_to_dict(report)
@@ -79,7 +79,7 @@ class MemCompact(Node):
     def tick(self, bb) -> Status:
         try:
             report = compact(self._store_dir)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Dream step writes error state to bb and continues; never crash dream tick
             bb.mem_compact_result = {"error": f"{type(e).__name__}: {e}"}
             return Status.FAILURE
         bb.mem_compact_result = _report_to_dict(report)
@@ -115,7 +115,7 @@ class MemSweepExpired(Node):
     def tick(self, bb) -> Status:
         try:
             deleted = sweep_expired(self._store_dir, self._backend, keep_days=self._keep_days)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Dream step writes error state to bb and continues; never crash dream tick
             bb.mem_sweep_result = {"error": f"{type(e).__name__}: {e}"}
             return Status.FAILURE
         bb.mem_sweep_result = {"deleted": int(deleted), "keep_days": self._keep_days}
@@ -158,7 +158,7 @@ class MemRebuildIndex(Node):
     def tick(self, bb) -> Status:
         try:
             report = rebuild_and_verify(self._store_dir, self._backend)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — Dream step writes error state to bb and continues; never crash dream tick
             bb.mem_index_result = {"error": f"{type(e).__name__}: {e}"}
             return Status.FAILURE
         bb.mem_index_result = _report_to_dict(report)
@@ -184,7 +184,7 @@ def _report_to_dict(obj: Any) -> dict:
         for f in obj.__dataclass_fields__:
             try:
                 out[f] = getattr(obj, f)
-            except Exception:
+            except AttributeError:
                 continue
         return out
     if hasattr(obj, "__dict__"):

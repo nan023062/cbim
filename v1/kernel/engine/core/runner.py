@@ -219,7 +219,7 @@ class Runner:
 
         try:
             status = self._root.tick(bb)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — top-level BT guard; convert any crash to RunResult(error)
             bb.bb_status = "error"
             self._persist(bb, tick_dir)
             self._flush_trace(bb, tick_dir)
@@ -285,7 +285,7 @@ class Runner:
             )
         try:
             target.on_resume(bb, dispatch_result)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — top-level BT guard; convert any crash to RunResult(error)
             return RunResult(
                 "error",
                 error_code="dispatch_result_schema_mismatch",
@@ -344,7 +344,7 @@ class Runner:
         pending = events[idx:]
         try:
             written = trace_mod.append_many(tick_dir, pending)
-        except Exception:
+        except Exception:  # noqa: BLE001 — trace flush observational; never break a tick
             # Trace is observational; never let a flush failure break the
             # tick. Counter is intentionally NOT advanced on failure so
             # the next exit point retries.
@@ -416,7 +416,7 @@ def _prime_bb_dependent_composites(root: Node, bb) -> None:
         if hasattr(n, "_bb_ref"):
             try:
                 n._bb_ref = bb
-            except Exception:
+            except (AttributeError, TypeError):
                 pass
         for ch in n.children():
             stack.append(ch)

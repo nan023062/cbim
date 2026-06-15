@@ -289,7 +289,7 @@ class RetrievalFacade:
                 blob = self._ensure_vector_blob(state)
                 assert blob is not None
                 blob.upsert(doc_id, vec)
-            except Exception:
+            except Exception:  # noqa: BLE001 — third-party embed provider may raise anything; must degrade to BM25
                 # Embedding failed mid-flight — don't kill the upsert;
                 # BM25 still works and drift will re-attempt later.
                 # Logged via stats() / fallback_active for observability.
@@ -367,7 +367,7 @@ class RetrievalFacade:
                     q_vec = self.provider.embed(query)
                     vec_idx = VectorIndex(state.vectors)
                     vec_ranked = vec_idx.search(q_vec, top_k, allowed_ids=allowed_ids)
-                except Exception:
+                except Exception:  # noqa: BLE001 — third-party embed provider may raise anything; must degrade to BM25
                     vec_ranked = []
                 bm_ranked = state.bm25.search(query, top_k, allowed_ids=allowed_ids)
                 # Detect semantic collapse: if the top vector scores are all

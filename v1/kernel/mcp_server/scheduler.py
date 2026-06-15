@@ -99,7 +99,7 @@ class Scheduler:
             mod_name = f"{tasks_pkg.__name__}.{info.name}"
             try:
                 mod = importlib.import_module(mod_name)
-            except Exception as exc:
+            except (ImportError, ModuleNotFoundError) as exc:
                 self._log("SCHED", f"failed to import {info.name}: {exc}")
                 continue
             for name, obj in inspect.getmembers(mod):
@@ -144,7 +144,7 @@ class Scheduler:
             result = await task.run(ctx)
             ok = True
             msg = str(result) if result is not None else "ok"
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001 — task.run is third-party-style; convert any failure to ok=False/msg
             ok = False
             msg = f"ERROR: {exc}"
         finished = datetime.now().isoformat(timespec="seconds")
@@ -173,7 +173,7 @@ class Scheduler:
         while not self._stop.is_set():
             try:
                 await self.tick()
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001 — scheduler loop must keep ticking; log and continue
                 self._log("SCHED", f"tick error: {exc}")
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=TICK_SECONDS)

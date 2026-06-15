@@ -46,7 +46,7 @@ def _resolve_transcript(root: Path, event_path: str, session_id: str) -> Path | 
     if session_id:
         try:
             from memory._lib.paths import cc_transcripts_dir
-        except Exception:
+        except ImportError:
             return None
         try:
             cand = cc_transcripts_dir(root) / f"{session_id}.jsonl"

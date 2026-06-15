@@ -73,7 +73,7 @@ class ConvergeJudge(Node):
             # renders whatever we have, and log for post-mortem.
             try:
                 bb.convergence = "done"
-            except Exception:
+            except AttributeError:
                 pass
             _append_trace_event(bb, {
                 "event": "converge_internal_error",

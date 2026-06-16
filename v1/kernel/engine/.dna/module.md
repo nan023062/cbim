@@ -91,7 +91,7 @@ Dispatched domains (current surface, mirrors `engine/cli/__init__.py:main`):
 - `agent` → in-process handlers driving `cbi.resources.Agent` (list / show / scaffold / archive / update / add-skill)
 - `snapshot` → `cbi._primitives.snapshot.build_snapshot`
 - `skill` → `cbi.resources.Skill` (list / show)
-- `soul` → walks `cbi.agents.*.agent` modules
+- `soul` → reads `project/agents/<name>.md` (the 4 kernel agents) + `project/templates/CLAUDE.md.tmpl` (assistant). After the soul-py removal, agent definitions live exclusively under `project/agents/` as plain Markdown; there is no Python rendering step.
 - `config` → `engine.config` (get / set / show on `.cbim/config.json`)
 - `dashboard` → `dashboard.server.start_server`
 - `preview` → `dashboard` (deprecated alias)

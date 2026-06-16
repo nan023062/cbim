@@ -1,8 +1,6 @@
 """`cbim soul` domain — list / show built-in agent soul content."""
 
 import argparse
-import importlib
-import pkgutil
 import sys
 
 from engine.import_log import log_import
@@ -22,33 +20,26 @@ def dispatch(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
 
 
 def _load_souls(trigger: str | None = None) -> dict[str, str]:
-    from cbi import agents as souls_pkg
+    from project.sync import KERNEL_AGENT_NAMES, read_agent_md, read_template
     souls: dict[str, str] = {}
-    for info in pkgutil.iter_modules(souls_pkg.__path__):
-        module_path = f"{souls_pkg.__name__}.{info.name}.agent"
+    for name in KERNEL_AGENT_NAMES:
+        label = f"project.agents.{name}.md"
         try:
-            mod = importlib.import_module(module_path)
+            souls[name] = read_agent_md(name)
             if trigger is not None:
-                log_import(module_path, "ok", trigger)
-        except ModuleNotFoundError:
+                log_import(label, "ok", trigger)
+        except FileNotFoundError:
             if trigger is not None:
-                log_import(module_path, "miss", trigger)
+                log_import(label, "miss", trigger)
             continue
-        for attr in dir(mod):
-            if attr.endswith("_MD"):
-                souls[info.name] = getattr(mod, attr)
-                break
-
     coord_template = "CLAUDE.md.tmpl"
     try:
-        from project.sync import read_template
         souls["assistant"] = read_template(coord_template)
         if trigger is not None:
             log_import(f"project.templates.{coord_template}", "ok", trigger)
     except FileNotFoundError:
         if trigger is not None:
             log_import(f"project.templates.{coord_template}", "miss", trigger)
-
     return souls
 
 
@@ -63,7 +54,7 @@ def _cmd_soul(args, parser):
         souls = _load_souls(trigger="soul.show")
         if args.name not in souls:
             print(f"Soul not found: {args.name}", file=sys.stderr); return 1
-        print(souls[args.name]); return 0
+        sys.stdout.write(souls[args.name]); return 0
     parser.print_help(); return 1
 
 

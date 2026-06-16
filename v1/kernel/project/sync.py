@@ -73,6 +73,11 @@ def read_template(name: str) -> str:
     return _read_template(name)
 
 
+def read_agent_md(name: str) -> str:
+    """Public accessor for kernel-managed agent definition markdown files."""
+    return (_AGENTS / f"{name}.md").read_text(encoding="utf-8")
+
+
 def _rel(path: Path, root: Path) -> str:
     try:
         rel = path.relative_to(root)

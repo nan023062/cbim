@@ -39,6 +39,9 @@ NODE_SPECS: list[NodeSpec] = [
 ]
 
 
+_PROMOTE_CANDIDATE_RENDER_LIMIT = 30
+
+
 def compose_prompt(bb) -> str:
     """Render the governance NodeSpec list into the architect prompt.
 
@@ -50,10 +53,17 @@ def compose_prompt(bb) -> str:
     Output schema is aligned with ``parse_response`` and consumed by
     ``CollectArchAdvice.on_resume``: ``safe_actions_applied`` /
     ``advice_pending`` are the two recognized keys.
+
+    Promote candidates rendered from ``bb.mem_promote_candidates`` are
+    surfaced as a dedicated section so the architect can per-candidate
+    PROMOTE / HOLD / REJECT — but **promote is human-confirm-only**:
+    PROMOTE always lands in ``advice_pending`` (never ``safe_actions_applied``);
+    REJECT may optionally route through a safe ``CandidatesArea.clear``.
     """
     # The dream blackboard has no user-facing input field; both attrs are
     # read defensively in case future plumbing wants to pre-seed context.
     snapshot = getattr(bb, "dna_snapshot", None) or ""
+    candidates = list(getattr(bb, "mem_promote_candidates", None) or [])
 
     # Per-spec hint, keyed by NodeSpec.id. Each line explains *what to do*
     # inside that node and which bucket (safe / risky) findings fall into.
@@ -121,6 +131,36 @@ def compose_prompt(bb) -> str:
     ]
     if snapshot:
         lines += ["### 输入上下文", str(snapshot)[:2000], ""]
+
+    if candidates:
+        head = candidates[:_PROMOTE_CANDIDATE_RENDER_LIMIT]
+        rest = max(0, len(candidates) - _PROMOTE_CANDIDATE_RENDER_LIMIT)
+        lines += [
+            "### 待裁决：记忆提升候选（promote candidates）",
+            "下面 medium 条目被规则 C 标记为可固化为知识。**人工确认门**：",
+            "PROMOTE 永远只产 `advice_pending` 建议（指明落 `.dna/<module>` 的 Key Decisions",
+            " 或 skill），**绝不进 `safe_actions_applied` 写 .dna**；HOLD 不动；",
+            "REJECT 可写 `advice_pending`，并允许通过 safe `CandidatesArea.clear` 清单兜底",
+            "（在你的 `safe_actions_applied` 里写 `candidates_clear: <path>`，",
+            "由后续治理消费掉，不直接动 .dna）。",
+            "",
+        ]
+        for i, entry in enumerate(head, start=1):
+            path = (entry.get("path") if isinstance(entry, dict) else None) or ""
+            tier = (entry.get("tier") if isinstance(entry, dict) else None) or ""
+            tags_raw = entry.get("tags") if isinstance(entry, dict) else None
+            tags = ",".join(str(t) for t in tags_raw) if isinstance(tags_raw, list) else str(tags_raw or "")
+            slug = (entry.get("slug") if isinstance(entry, dict) else None) or ""
+            summary_raw = (entry.get("summary") if isinstance(entry, dict) else None) or ""
+            summary = str(summary_raw)[:160].replace("\n", " ")
+            lines.append(
+                f"{i:>2}. `{path}` (tier={tier}, slug={slug}, tags=[{tags}])"
+            )
+            if summary:
+                lines.append(f"     摘要: {summary}")
+        if rest:
+            lines.append(f"  ……还有 {rest} 条候选未渲染（按 PROMOTE/HOLD/REJECT 三选一逐条裁决，本轮先处理前 {_PROMOTE_CANDIDATE_RENDER_LIMIT} 条）。")
+        lines.append("")
 
     lines += ["### 流程节点（按序，冒号后为每节点的执行说明）"]
     for i, spec in enumerate(NODE_SPECS, start=1):

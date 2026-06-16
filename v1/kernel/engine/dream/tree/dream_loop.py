@@ -69,12 +69,15 @@ from memory.crud.file_backend import FileBackend
 
 from ..actions.collect_arch_advice import CollectArchAdvice
 from ..actions.collect_hr_advice import CollectHRAdvice
+from ..actions.collect_incoming_triage import CollectIncomingTriage
 from ..actions.collect_mem_distill import CollectMemDistill
 from ..actions.dispatch_arch import DispatchArchGovern
 from ..actions.dispatch_hr import DispatchHRGovern
+from ..actions.dispatch_incoming_triage import DispatchIncomingTriage
 from ..actions.dispatch_mem_distill import DispatchMemDistill
 from ..actions.emit_report import EmitReport
 from ..actions.finalize import FinalizeDreamTick
+from ..actions.incoming_steps import IncomingScan
 from ..actions.init_tick import InitDreamTick
 from ..actions.mem_steps import (
     MemCompact,
@@ -125,29 +128,38 @@ def build_dream_root(
     init = InitDreamTick(name="InitDreamTick")
 
     # ---- Memory governance step ----
-    # v2 10-node sequence (per .dna/contract.md "v2 重设计" + Batch 7):
+    # Phase-5 13-node sequence (per .dna/contract.md "v2 重设计" + Batch 7
+    # + incoming-queue triage):
     #
-    #   MemHealthScan       — read memory.HealthChecker indicators
-    #   TranscriptScan      — list ~/.claude/projects/<slug>/*.jsonl
-    #                         with mtime > 1 day → bb.transcript_paths
-    #   DistillGate         — non-empty paths? if not, skip Dispatch / Collect /
-    #                         Delete via bb.mem_distill_dispatched=False
-    #   DispatchMemDistill  — yield to main agent (agent_type="main",
-    #                         subtask_id="governance_memory_distill")
-    #   CollectMemDistill   — on_resume → bb.mem_distill_result
-    #   TranscriptDelete    — unlink distilled paths + retrieval.index_delete
-    #   MemPromoteScan      — stage rule/flow tagged medium entries into
-    #                         candidates/ (feature-flag default off → no-op)
-    #   MemCompact          — medium-tier file compaction
-    #   MemSweepExpired     — archive-and-delete expired entries
-    #   MemRebuildIndex     — rebuild_and_verify(store, backend)
+    #   MemHealthScan            — read memory.HealthChecker indicators
+    #   TranscriptScan           — list ~/.claude/projects/<slug>/*.jsonl
+    #                              with mtime > 1 day → bb.transcript_paths
+    #   DistillGate              — non-empty paths? if not, skip Dispatch /
+    #                              Collect / Delete via bb.mem_distill_dispatched=False
+    #   DispatchMemDistill       — yield to main agent (agent_type="main",
+    #                              subtask_id="governance_memory_distill")
+    #   CollectMemDistill        — on_resume → bb.mem_distill_result
+    #   TranscriptDelete         — unlink distilled paths + retrieval.index_delete
+    #   MemPromoteScan           — stage rule/flow tagged medium entries into
+    #                              candidates/ + surface pending list on bb
+    #                              (architect_governance.compose_prompt renders it)
+    #   IncomingScan             — Phase 5: list <store>/medium/incoming/*.jsonl
+    #                              (excluding today's file) → bb.incoming_paths
+    #   DispatchIncomingTriage   — yield to main agent (agent_type="main",
+    #                              subtask_id="governance_incoming_triage")
+    #   CollectIncomingTriage    — on_resume → bb.incoming_triage_result;
+    #                              moves processed_paths to incoming/processed/
+    #   MemCompact               — medium-tier file compaction
+    #   MemSweepExpired          — archive-and-delete expired entries
+    #   MemRebuildIndex          — rebuild_and_verify(store, backend)
     #
-    # Order rationale: distill consumes transcripts → delete transcripts
-    # → promote scan (sees the latest distilled entries before compact
-    # rewrites them and before sweep removes any stale tagged entries) →
-    # compact medium → sweep expired → rebuild/verify index. Each leaf
-    # is independent under the @Catch wrapper; a single failure annotates
-    # bb but does not abort.
+    # Order rationale: distill consumes transcripts → delete transcripts →
+    # promote scan stages and exposes candidates → incoming triage runs
+    # AFTER promote scan so newly-arriving high-signal records can land in
+    # medium and *next-tick* promote scan picks them up → compact medium →
+    # sweep expired → rebuild/verify index. Each leaf is independent under
+    # the @Catch wrapper; a single failure (including the incoming-triage
+    # business-failure path) annotates bb but does not abort the sequence.
     mem_seq = Sequence(
         [
             MemHealthScan(store_dir=memory_store_dir, name="MemHealthScan"),
@@ -157,6 +169,9 @@ def build_dream_root(
             CollectMemDistill(store_dir=memory_store_dir, name="CollectMemDistill"),
             TranscriptDelete(name="TranscriptDelete"),
             MemPromoteScan(store_dir=memory_store_dir, name="MemPromoteScan"),
+            IncomingScan(store_dir=memory_store_dir, name="IncomingScan"),
+            DispatchIncomingTriage(store_dir=memory_store_dir, name="DispatchIncomingTriage"),
+            CollectIncomingTriage(store_dir=memory_store_dir, name="CollectIncomingTriage"),
             MemCompact(store_dir=memory_store_dir, name="MemCompact"),
             MemSweepExpired(store_dir=memory_store_dir, backend=backend, name="MemSweepExpired"),
             MemRebuildIndex(store_dir=memory_store_dir, backend=backend, name="MemRebuildIndex"),

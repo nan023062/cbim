@@ -41,6 +41,7 @@ _HOOKS_SRC = _PKG_DIR / "hooks_src"
 KERNEL_HOOK_SCRIPT_NAMES: tuple[str, ...] = (
     "cbim_session_start.py",
     "cbim_stop.py",
+    "cbim_subagent_stop.py",
     "cbim_session_end.py",
     "cbim_user_prompt_submit.py",
     "cbim_pre_tool_use.py",
@@ -204,7 +205,9 @@ def sync_hook_scripts(project_root: Path, dry_run: bool = False) -> list[str]:
     actions: list[str] = []
 
     if dry_run:
-        actions.append(f"would refresh {rel_dir}/ (7 scripts + _lib/)")
+        actions.append(
+            f"would refresh {rel_dir}/ ({len(KERNEL_HOOK_SCRIPT_NAMES)} scripts + _lib/)"
+        )
         return actions
 
     hooks_dir.mkdir(parents=True, exist_ok=True)
@@ -218,7 +221,7 @@ def sync_hook_scripts(project_root: Path, dry_run: bool = False) -> list[str]:
     if lib_dst.exists():
         shutil.rmtree(lib_dst)
 
-    # 2. Copy 7 cbim_*.py scripts; chmod 0755.
+    # 2. Copy each cbim_*.py kernel hook script; chmod 0755.
     for name in KERNEL_HOOK_SCRIPT_NAMES:
         src = _HOOKS_SRC / name
         dst = hooks_dir / name
@@ -498,7 +501,7 @@ def sync_templates(project_root: Path, dry_run: bool = False) -> list[str]:
       2. .claudeignore
       3. .claude/agents/<name>/<name>.md  (architect, auditor, hr, programmer)
       4. .claude/commands/<name>.md       (6 built-in slash commands)
-      5. .claude/hooks/cbim_*.py + _lib/  (7 hook scripts + shared library)
+      5. .claude/hooks/cbim_*.py + _lib/  (kernel hook scripts + shared library)
       6. .claude/settings.json
       7. .mcp.json
       8. .gitignore

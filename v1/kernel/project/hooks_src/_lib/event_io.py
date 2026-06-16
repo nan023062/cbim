@@ -26,11 +26,16 @@ def read_event() -> dict:
         return {}
 
 
-def write_additional_context(text: str) -> None:
-    """Emit a SessionStart additionalContext payload on stdout."""
+def write_additional_context(text: str, *, event_name: str = "SessionStart") -> None:
+    """Emit an additionalContext payload on stdout for a given hook event.
+
+    Default ``event_name="SessionStart"`` preserves the pre-existing caller
+    contract; UserPromptSubmit (and any future event_name-bearing hook)
+    passes the appropriate identifier explicitly.
+    """
     payload = {
         "hookSpecificOutput": {
-            "hookEventName": "SessionStart",
+            "hookEventName": event_name,
             "additionalContext": text or "",
         }
     }

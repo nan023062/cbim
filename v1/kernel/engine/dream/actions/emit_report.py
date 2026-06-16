@@ -66,9 +66,13 @@ def _render_report(bb) -> str:
         "mem_compact_result": bb.mem_compact_result,
         "mem_distill_dispatched": bb.mem_distill_dispatched,
         "mem_distill_result": bb.mem_distill_result,
+        "mem_promote_result": bb.mem_promote_result,
+        "incoming_triage_result": bb.incoming_triage_result,
         "mem_sweep_result": bb.mem_sweep_result,
         "mem_index_result": bb.mem_index_result,
     }))
+    lines.append("## Promote candidates (pending architect adjudication)")
+    lines.append(_yaml_block(bb.mem_promote_candidates or []))
     lines.append("## Knowledge governance (Architect)")
     lines.append(_yaml_block(bb.arch_governance_report or {}))
     lines.append("## Capability governance (HR)")

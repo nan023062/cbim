@@ -41,6 +41,7 @@ from memory.compaction import (
     scan_for_promote_candidates,
     sweep_expired,
 )
+from memory.compaction.candidates import CandidatesArea
 from memory.compaction.rebuilder import rebuild_and_verify
 from memory.crud.backend import MemoryBackend
 
@@ -102,7 +103,19 @@ class MemCompact(Node):
 # ---------------------------------------------------------------------------
 
 class MemPromoteScan(Node):
-    """Run scan_for_promote_candidates(); SUCCESS even when flag off (0 staged is legal)."""
+    """Run scan_for_promote_candidates() and surface pending candidates on bb.
+
+    Phase 5 (rule C consumer side): after the scan stages new entries into
+    ``CandidatesArea``, we ALSO read ``pull_pending()`` to expose every
+    currently-staged candidate on ``bb.mem_promote_candidates``. The
+    architect-governance prompt then renders one PROMOTE / HOLD / REJECT
+    advice line per candidate. The candidates work area is the contract
+    boundary — staging is idempotent, so re-emitting the same candidate
+    across ticks is harmless until the architect explicitly REJECTs (which
+    routes through ``CandidatesArea.clear``).
+
+    SUCCESS even when feature flag is off (0 staged + empty pending is legal).
+    """
 
     def __init__(self, *, store_dir: Path, name: str = "MemPromoteScan") -> None:
         self.name = name
@@ -113,8 +126,24 @@ class MemPromoteScan(Node):
             staged = scan_for_promote_candidates(self._store_dir)
         except Exception as e:  # noqa: BLE001 — Dream step writes error state to bb and continues; never crash dream tick
             bb.mem_promote_result = {"error": f"{type(e).__name__}: {e}"}
+            bb.mem_promote_candidates = []
             return Status.FAILURE
-        bb.mem_promote_result = {"staged": int(staged)}
+        try:
+            pending = CandidatesArea(self._store_dir).pull_pending()
+        except Exception as e:  # noqa: BLE001 — best-effort surface; flag-off path returns []
+            pending = []
+            bb.mem_promote_result = {
+                "staged": int(staged),
+                "pending_count": 0,
+                "pull_error": f"{type(e).__name__}: {e}",
+            }
+            bb.mem_promote_candidates = []
+            return Status.SUCCESS
+        bb.mem_promote_candidates = pending
+        bb.mem_promote_result = {
+            "staged": int(staged),
+            "pending_count": len(pending),
+        }
         return Status.SUCCESS
 
 

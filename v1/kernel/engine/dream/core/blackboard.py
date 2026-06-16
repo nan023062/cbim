@@ -14,8 +14,12 @@ Field write-ownership (single-writer rule, validated by code review):
   - transcript_delete_errors                    ← TranscriptDelete
   - mem_compact_result                          ← MemCompact (or skip path)
   - mem_promote_result                          ← MemPromoteScan
+  - mem_promote_candidates                      ← MemPromoteScan
   - mem_sweep_result                            ← MemSweepExpired
   - mem_index_result                            ← MemRebuildIndex
+  - incoming_paths                              ← IncomingScan
+  - incoming_triage_dispatched                  ← IncomingScan
+  - incoming_triage_result                      ← IncomingScan (skip) / CollectIncomingTriage
   - arch_governance_dispatched                  ← DispatchArchGovern
   - arch_governance_report                      ← CollectArchAdvice
   - hr_governance_dispatched                    ← DispatchHRGovern
@@ -32,7 +36,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-# Canonical 24-field schema for the governance loop blackboard.
+# Canonical 28-field schema for the governance loop blackboard.
 FIELDS: tuple[str, ...] = (
     # Identity & trigger
     "run_id",
@@ -45,6 +49,7 @@ FIELDS: tuple[str, ...] = (
     "mem_distill_dispatched",
     "mem_distill_result",
     "mem_promote_result",
+    "mem_promote_candidates",
     "mem_sweep_result",
     "mem_index_result",
     # v2 transcript-driven distill — written by the new TranscriptScan /
@@ -52,6 +57,11 @@ FIELDS: tuple[str, ...] = (
     # writer (single-writer rule); see Field write-ownership table above.
     "transcript_paths",
     "transcript_delete_errors",
+    # Phase-5 incoming-queue triage (mature .cbim/memory/medium/incoming/
+    # JSONL files distilled into medium/*.md by the main agent).
+    "incoming_paths",
+    "incoming_triage_dispatched",
+    "incoming_triage_result",
     # Knowledge governance step
     "arch_governance_dispatched",
     "arch_governance_report",

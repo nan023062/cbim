@@ -34,6 +34,16 @@
         ]
       }
     ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if python3 -c \"\" 2>/dev/null; then python3 .claude/hooks/cbim_subagent_stop.py; else python .claude/hooks/cbim_subagent_stop.py; fi"
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [

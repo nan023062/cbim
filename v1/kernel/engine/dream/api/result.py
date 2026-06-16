@@ -64,6 +64,7 @@ DREAM_AGENT_SUBTASK_TO_LEAF: dict[str, dict[str, str]] = {
     },
     "main": {
         "governance_memory_distill": "CollectMemDistill",
+        "governance_incoming_triage": "CollectIncomingTriage",
     },
 }
 

@@ -102,11 +102,13 @@ def test_mem_sweep_expired_returns_success_with_empty_store(bb, store_dir, backe
 
 def test_mem_promote_scan_returns_success_with_flag_off(bb, store_dir):
     """Default config has promote.enabled=False → tick is SUCCESS and
-    bb.mem_promote_result records 0 staged. Critical zero-regression
-    invariant."""
+    bb.mem_promote_result records 0 staged + 0 pending. Phase 5 also surfaces
+    the empty pending list on bb.mem_promote_candidates for the architect
+    consumer side. Critical zero-regression invariant."""
     node = MemPromoteScan(store_dir=store_dir)
     assert node.tick(bb) is Status.SUCCESS
-    assert bb.mem_promote_result == {"staged": 0}
+    assert bb.mem_promote_result == {"staged": 0, "pending_count": 0}
+    assert bb.mem_promote_candidates == []
 
 
 def test_mem_promote_scan_failure_when_inner_raises(bb, store_dir, monkeypatch):

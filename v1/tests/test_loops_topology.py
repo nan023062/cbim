@@ -206,13 +206,16 @@ MEM_GOV_EXPECTED_NAMES = {
     "CollectMemDistill",
     "TranscriptDelete",
     "MemPromoteScan",
+    "IncomingScan",
+    "DispatchIncomingTriage",
+    "CollectIncomingTriage",
     "MemCompact",
     "MemSweepExpired",
     "MemRebuildIndex",
 }
 
 
-def test_memory_governance_subtree_has_ten_steps(tmp_path: Path):
+def test_memory_governance_subtree_has_thirteen_steps(tmp_path: Path):
     subtree = memory_governance.build_memory_governance_subtree(store_dir=tmp_path)
     names = set(_walk_names(subtree))
     missing = MEM_GOV_EXPECTED_NAMES - names
@@ -226,8 +229,33 @@ def test_memory_governance_order_matches_dream_loop(tmp_path: Path):
     assert child_names == [
         "MemHealthScan", "TranscriptScan", "DistillGate",
         "DispatchMemDistill", "CollectMemDistill", "TranscriptDelete",
-        "MemPromoteScan", "MemCompact", "MemSweepExpired", "MemRebuildIndex",
+        "MemPromoteScan",
+        "IncomingScan", "DispatchIncomingTriage", "CollectIncomingTriage",
+        "MemCompact", "MemSweepExpired", "MemRebuildIndex",
     ], f"unexpected memory_governance order: {child_names}"
+
+
+def test_memory_governance_dream_loop_and_subtree_match(tmp_path: Path):
+    """Both build paths (dream_loop.build_dream_root + loops.memory_governance.
+    build_memory_governance_subtree) must produce the same inner sequence."""
+    from engine.dream.tree.dream_loop import build_dream_root
+
+    root = build_dream_root(
+        scheduler_root=tmp_path / "sched",
+        memory_store_dir=tmp_path / "mem",
+        transcripts_dir=tmp_path / "transcripts",
+    )
+    mem_seq = _find_node_by_name(root, "MemoryGovernanceStep")
+    assert mem_seq is not None, "dream_loop build dropped MemoryGovernanceStep"
+
+    subtree = memory_governance.build_memory_governance_subtree(
+        store_dir=tmp_path / "mem",
+        transcripts_dir=tmp_path / "transcripts",
+    )
+    assert [c.name for c in mem_seq.children()] == \
+        [c.name for c in subtree.children()], (
+            "memory_governance subtree drift: dream_loop and sub-builder disagree"
+        )
 
 
 # ---------------------------------------------------------------------------

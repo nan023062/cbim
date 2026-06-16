@@ -72,6 +72,8 @@ Two trigger events write this layout: first-use bootstrap (`init`) and explicit 
 - **Hook scripts under `hooks_src/` are install-time snapshots, not a runtime dependency.** They are pure text/code that init copies into `.claude/hooks/`; `project/` itself never imports them. They live here (not in a separate top-level package) precisely because their job is to be copied into the user's workspace.
 - **Source-of-truth agent and command Markdown lives here, under `agents/` and `commands/`.** These directories are not "documentation" — they are the canonical copies the kernel ships. Init copies them verbatim into the user's `.claude/` tree. Edits to user-side files (`.claude/agents/architect/architect.md` etc.) get overwritten on the next init or `cbim project sync`; a warning is printed when `cbim agent update` targets one of the kernel-managed names.
 
+- **`cbim_user_prompt_submit.py` 在 mark-busy/log 之外新承担「记忆召回注入」职责（记忆系统「无感知自动召回」重构阶段 1）。** 每次用户输入提交后，该 hook 经 `_lib/bridge.py` bootstrap kernel，跑 4 源 retrieval search（`transcript` / `memory_medium` / `dna` / `agents`），在 hook 内做相关性门控 + 字符预算裁剪，经 `event_io.write_additional_context(text, event_name="UserPromptSubmit")` 把「永久知识 + 相关记忆」注入 **coordinator 主上下文**；retrieval / kernel 异常一律 swallow（exit 0 不阻塞用户输入）。**受众边界**：仅 coordinator 主上下文受益，子 agent 不自动继承——子 agent 的 prompt 级召回仍由 `engine/execution` 的 `ContextRetrieval` 叶（BT 内同步 4 源 search）承担。两条召回路径受众不同，互不替代。
+
 ## Non-Goals
 
 - No `migrate.py`, no `upgrade/` sub-package, no `pin.py`, no `.cbim/.pin` accessor, no `versions.json` reader.

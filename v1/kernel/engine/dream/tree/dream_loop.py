@@ -22,7 +22,9 @@ Topology (per WORKFLOW-DREAM §三 + v2 transcript-driven memory step):
       │     │     │                           feature-flag default off → no-op)
       │     │     ├── MemCompact             (medium-tier file compaction)
       │     │     ├── MemSweepExpired
-      │     │     └── MemRebuildIndex        (rebuild_and_verify)
+      │     │     ├── MemRebuildIndex        (rebuild_and_verify)
+      │     │     └── DnaGraphRebuild        (.cbim/index/dna/graph.json
+      │     │                                 — Phase 3 business knowledge graph)
       │     ├── ArchitectGovernanceStep (Sequence) @Timeout(10min) @Catch
       │     │     ├── DispatchArchGovern     (yields agent_type="architect")
       │     │     └── CollectArchAdvice      (owns on_resume → bb.arch_governance_report)
@@ -36,7 +38,7 @@ Topology (per WORKFLOW-DREAM §三 + v2 transcript-driven memory step):
 EmitReport + FinalizeDreamTick live OUTSIDE the SequenceTolerant container
 so they ALWAYS run, even if every governance step failed.
 
-The memory governance step is now 10 nodes. The v1 ``MemDistillGate`` —
+The memory governance step is now 14 nodes. The v1 ``MemDistillGate`` —
 which read a HealthChecker short_count threshold — was retired alongside
 the short-tier in memory v2. The v2 gate (``DistillGate``) is a pure
 data-volume check on ``bb.transcript_paths``; the distill input is now
@@ -80,6 +82,7 @@ from ..actions.finalize import FinalizeDreamTick
 from ..actions.incoming_steps import IncomingScan
 from ..actions.init_tick import InitDreamTick
 from ..actions.mem_steps import (
+    DnaGraphRebuild,
     MemCompact,
     MemHealthScan,
     MemPromoteScan,
@@ -99,6 +102,7 @@ def build_dream_root(
     memory_store_dir: Path,
     memory_backend: MemoryBackend | None = None,
     transcripts_dir: Path | None = None,
+    project_root: Path | None = None,
     global_timeout_s: int = 1800,
     step_timeout_s: int = 600,
 ):
@@ -118,18 +122,27 @@ def build_dream_root(
         leaves this None and the scan resolves to
         ``~/.claude/projects/<slug>/`` against the process CWD; tests
         pass a tmp dir to keep the scan hermetic.
+    project_root : Path, optional
+        Project root passed to the DnaGraphRebuild leaf. Defaults to
+        ``memory_store_dir.parent.parent`` (i.e. the directory whose
+        ``.cbim/memory/`` we were handed). Tests that exercise the
+        sub-loop with a mock memory dir should pass an explicit value.
     global_timeout_s : int
         Hard ceiling for the whole tick (default 30min).
     step_timeout_s : int
         Per-step ceiling (default 10min).
     """
     backend = memory_backend or FileBackend(memory_store_dir)
+    if project_root is None:
+        # memory_store_dir is conventionally <root>/.cbim/memory/. Two
+        # parents up gives us the project root used by graph_builder.
+        project_root = Path(memory_store_dir).parent.parent
 
     init = InitDreamTick(name="InitDreamTick")
 
     # ---- Memory governance step ----
-    # Phase-5 13-node sequence (per .dna/contract.md "v2 重设计" + Batch 7
-    # + incoming-queue triage):
+    # Phase-5 14-node sequence (Batch 7 + incoming-queue triage + Phase 3
+    # DNA graph rebuild):
     #
     #   MemHealthScan            — read memory.HealthChecker indicators
     #   TranscriptScan           — list ~/.claude/projects/<slug>/*.jsonl
@@ -152,6 +165,11 @@ def build_dream_root(
     #   MemCompact               — medium-tier file compaction
     #   MemSweepExpired          — archive-and-delete expired entries
     #   MemRebuildIndex          — rebuild_and_verify(store, backend)
+    #   DnaGraphRebuild          — full rebuild of
+    #                              .cbim/index/dna/graph.json
+    #                              (Phase 3 — runs LAST so the graph
+    #                              reflects the just-reconciled
+    #                              retrieval index state)
     #
     # Order rationale: distill consumes transcripts → delete transcripts →
     # promote scan stages and exposes candidates → incoming triage runs
@@ -175,6 +193,7 @@ def build_dream_root(
             MemCompact(store_dir=memory_store_dir, name="MemCompact"),
             MemSweepExpired(store_dir=memory_store_dir, backend=backend, name="MemSweepExpired"),
             MemRebuildIndex(store_dir=memory_store_dir, backend=backend, name="MemRebuildIndex"),
+            DnaGraphRebuild(project_root=project_root, name="DnaGraphRebuild"),
         ],
         name="MemoryGovernanceStep",
     )

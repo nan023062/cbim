@@ -33,6 +33,20 @@ from _lib.bridge import bootstrap_kernel, safe_run
 # Per-source top-K passed to engine.retrieval.search.
 _TOP_K_PER_SOURCE = 5
 
+# Phase 3: dna source supports graph expansion. Seeds are still
+# top_k=5; one BFS hop on each seed can drag in dependents / parent /
+# children, which would blow past the per-bucket budget if we let it.
+# Cap the post-expansion hit list at _DNA_MAX_HITS so the bucket stays
+# bounded — seeds-first ordering means the cut, when it bites, drops
+# only graph neighbours, never primary BM25/vector hits.
+_DNA_MAX_HITS = 12
+
+# Hop budget for the dna source; matches architect decision D3.
+# Hop=1 picks up direct dependencies, dependents, the immediate parent,
+# and direct children — the relevant first-degree context — without
+# blowing the recall window. Hop=2 was discussed but deferred.
+_DNA_EXPAND_HOPS = 1
+
 # Whole-injection character budget. Claude Code's documented limit on
 # additionalContext is 10_000 chars; we leave a 20% margin.
 _CHAR_BUDGET = 8000
@@ -108,14 +122,26 @@ def _recall(root: Path, prompt: str) -> dict:
         return buckets
 
     for source in _PRIORITY:
+        # Phase 3: dna source uses graph expansion. expand_hops=1 walks
+        # depends_on + contains edges from each seed once, so we surface
+        # the seed's dependencies, dependents, parent, and direct
+        # children alongside the BM25/vector hits.
+        kwargs: dict = {"top_k": _TOP_K_PER_SOURCE}
+        if source == "dna":
+            kwargs["filters"] = {"expand_hops": _DNA_EXPAND_HOPS}
         try:
-            hits = _search(source, query, top_k=_TOP_K_PER_SOURCE)
+            hits = _search(source, query, **kwargs)
         except Exception:  # noqa: BLE001 — per-source failure must not stop the others
             continue
         try:
-            buckets[source] = [h.to_dict() for h in hits or []]
+            hit_dicts = [h.to_dict() for h in hits or []]
         except Exception:  # noqa: BLE001 — defensive: malformed Hit object
-            buckets[source] = []
+            hit_dicts = []
+        if source == "dna" and len(hit_dicts) > _DNA_MAX_HITS:
+            # Seeds-first ordering preserved by facade — slicing keeps
+            # primary hits and trims the longest-tail neighbours.
+            hit_dicts = hit_dicts[:_DNA_MAX_HITS]
+        buckets[source] = hit_dicts
     return buckets
 
 
@@ -184,7 +210,29 @@ def _render_bucket(source: str, hits: list[dict]) -> str:
         doc_id = h.get("doc_id") or "?"
         score = float(h.get("score", 0.0) or 0.0)
         body = _summarise_body(h.get("content") or "")
-        lines.append(f"- [{source}] `{doc_id}` (score={score:.2f}) — {body}")
+        md = h.get("metadata") or {}
+        # Phase 3: tag dna graph-expansion neighbours and archived modules
+        # so the coordinator can see at a glance whether a hit is a primary
+        # BM25/vector match or a graph neighbour pulled in alongside.
+        annotations: list[str] = []
+        expanded_from = md.get("expanded_from")
+        if expanded_from:
+            hop = md.get("hop")
+            hop_text = f"hop{hop}" if hop is not None else "hop"
+            annotations.append(f"←邻居·{hop_text}·via {expanded_from}")
+        # Archived / deprecated modules carry their lifecycle status in
+        # the dna source metadata via the upstream graph node — but the
+        # current dna upsert doesn't propagate ``status`` into the
+        # retrieval record's metadata. Surface the marker if it does
+        # exist (forward-compat) so renderers don't grow a separate
+        # path the day status is added.
+        status = md.get("status")
+        if status in ("archived", "deprecated"):
+            annotations.append(f"[{status}]")
+        suffix = (" " + " ".join(annotations)) if annotations else ""
+        lines.append(
+            f"- [{source}] `{doc_id}`{suffix} (score={score:.2f}) — {body}"
+        )
     return "\n".join(lines)
 
 

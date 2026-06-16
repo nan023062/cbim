@@ -75,13 +75,15 @@ def test_each_step_is_catch_over_timeout(root):
         assert isinstance(inner, Timeout), f"{child.name} inner is not Timeout"
 
 
-def test_memory_step_has_thirteen_action_children(root):
-    """Phase-5 memory step: 13 nodes. Transcript scan + DistillGate drive
+def test_memory_step_has_fourteen_action_children(root):
+    """Phase-5 memory step: 14 nodes. Transcript scan + DistillGate drive
     the distill yield; TranscriptDelete consumes its distilled_paths;
     MemPromoteScan stages + surfaces candidates for the architect prompt;
     then the new IncomingScan + DispatchIncomingTriage + CollectIncomingTriage
     triad triages the per-turn realtime capture queue; finally MemCompact /
-    MemSweepExpired / MemRebuildIndex finalise the medium tier."""
+    MemSweepExpired / MemRebuildIndex finalise the medium tier; Phase 3
+    appends DnaGraphRebuild as the authoritative full-rebuild of
+    .cbim/index/dna/graph.json."""
     body = root.children()[0].children()[0]
     steps = body.children()[1]
     mem_catch = steps.children()[0]
@@ -102,6 +104,7 @@ def test_memory_step_has_thirteen_action_children(root):
         "MemCompact",
         "MemSweepExpired",
         "MemRebuildIndex",
+        "DnaGraphRebuild",
     ]
 
 

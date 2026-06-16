@@ -1,11 +1,16 @@
 """actions/mem_steps.py — memory governance step actions (in-process leaves).
 
-Four pure-Python structural nodes:
+Five pure-Python structural nodes:
   MemHealthScan      — in-process call to memory.HealthChecker.check()
   MemCompact         — in-process call to memory.compact()
   MemSweepExpired    — in-process call to memory.sweep_expired()
   MemRebuildIndex    — in-process call to memory.compaction.rebuilder
                        .rebuild_and_verify() (always runs in v2)
+  DnaGraphRebuild    — in-process full rebuild of .cbim/index/dna/graph.json
+                       via cbi._primitives.modules.graph_builder.build_graph
+                       (Phase 3 — runs after MemRebuildIndex so the dna
+                       business knowledge graph stays in sync with the
+                       just-reconciled retrieval index)
 
 The v2 distill triggering (TranscriptScan + DistillGate + the
 DispatchMemDistill / CollectMemDistill / TranscriptDelete yield triad)
@@ -217,6 +222,42 @@ class MemRebuildIndex(Node):
             bb.mem_index_result = {"error": f"{type(e).__name__}: {e}"}
             return Status.FAILURE
         bb.mem_index_result = _report_to_dict(report)
+        return Status.SUCCESS
+
+
+# ---------------------------------------------------------------------------
+# DnaGraphRebuild
+# ---------------------------------------------------------------------------
+
+class DnaGraphRebuild(Node):
+    """Full-rebuild the DNA business knowledge graph (Phase 3).
+
+    Calls ``cbi._primitives.modules.graph_builder.build_graph(project_root)``
+    which scans every .dna/module.md, derives depends_on / contains
+    edges, and atomically writes ``.cbim/index/dna/graph.json``. This is
+    the authoritative path: incoming reindex_dna calls only patch the
+    edited module's outgoing edges, so a periodic full rebuild keeps
+    the graph from drifting under churn.
+
+    No blackboard fields written. The rebuild is a side-effect on the
+    filesystem (graph.json); SequenceTolerant captures the SUCCESS /
+    FAILURE status into ``bb.step_results[<wrapper_name>]`` and
+    EmitReport surfaces aggregate health from there. Adding a
+    ``dna_graph_result`` field would require extending the
+    DreamBlackboard schema (single-writer rule) for an output that
+    isn't consumed by any downstream leaf.
+    """
+
+    def __init__(self, *, project_root: Path, name: str = "DnaGraphRebuild") -> None:
+        self.name = name
+        self._project_root = Path(project_root)
+
+    def tick(self, bb) -> Status:
+        try:
+            from cbi._primitives.modules.graph_builder import build_graph
+            build_graph(self._project_root)
+        except Exception:  # noqa: BLE001 — Dream step never crashes dream tick; silent failure leaves the previous graph.json in place
+            return Status.FAILURE
         return Status.SUCCESS
 
 

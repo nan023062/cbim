@@ -45,6 +45,11 @@ def reindex_dna(root: Path, module_dir: Path) -> None:
     project may legitimately have no `.cbim/` set up yet — common in
     `tmp_path` test layouts that exercise services without booting the
     full retrieval store).
+
+    Phase 3 addendum: after the BM25/vector upsert succeeds, also
+    refresh the DNA graph for this module (single-module patch). Failure
+    here is silently swallowed — the dream loop's authoritative
+    DnaGraphRebuild leaf reconciles on the next governance pass.
     """
     try:
         md = module_dir / ".dna" / "module.md"
@@ -64,6 +69,15 @@ def reindex_dna(root: Path, module_dir: Path) -> None:
             {"source_path": str(md.resolve())},
         )
     except Exception:  # noqa: BLE001 — main write succeeded; reindex is side-effect, dream loop verify_consistency reconciles
+        return
+
+    # Phase 3 graph patch — out of the upsert try/except so a graph
+    # write hiccup doesn't swallow legitimate retrieval errors above
+    # (the upsert path uses its own broad except for the same reason).
+    try:
+        from cbi._primitives.modules.graph_builder import patch_graph
+        patch_graph(root, module_dir)
+    except Exception:  # noqa: BLE001 — same fault-tolerance contract as reindex itself; dream loop's full DnaGraphRebuild owns recovery
         return
 
 

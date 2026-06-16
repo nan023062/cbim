@@ -126,6 +126,10 @@ v2 把所有自维护抽到第二根循环，复用同一个 BT 引擎但独立�
 - **Stage 5：MemPromoteScan 不再是"只暂存"，同时负责暴露候选供架构师审议。** 节点原有调 `scan_for_promote_candidates` 暂存 medium 的 rule/flow tagged 条目进 `candidates/`；Stage 5 额外调 `CandidatesArea.pull_pending()` 拉出全部当前候选写 `bb.mem_promote_candidates` 项目黑板字段，由 `loops/architect_governance.compose_prompt(bb)`（单参函数、不接 store_dir）渲染到架构师治理模式 prompt。架构师按条产 PROMOTE / HOLD / REJECT advice，**强制人工门**：PROMOTE 只产 advice 不自动写 `.dna/`，架构师产物落 `arch_governance_report.advice_pending`，最终上届用户决定。该变动让 medium 条目变为知识是一条可见、可审议的路径——与 Stage 4 以后"实时捕获 → dream incoming triage → medium"上游路径拼接后，从原始信号到记忆再到知识的三段道第一次闭环。
 - **Batch 7 原决策仍生效**：`MemPromoteScan` 的 `staged` 技人 flag (`promote.enabled`) 默认关闭时 `staged=0` + SUCCESS；随 Stage 5 补上 `pull_pending` 之后，即使 flag 关闭 `pending_count` 也能为 0（无新候选 stage 不造成发出），架构师 prompt 渲染空列表跳过这一节。默认配置下零回归不变。
 
+- **Phase 3 — `MemoryGovernanceStep` 末尾插入 `DnaGraphRebuild` 叶子，mem_seq 由 13 节点扩为 14 节点。** 位置在 `MemRebuildIndex` 之后、sequence 末尾，以保证图谱重建反映的是刚刚被 `verify_consistency("memory_medium")` 调和后的 retrieval 状态。该节点是 **in-process** 叶子（不 yield），调 `cbi._primitives.modules.graph_builder.build_graph(project_root)` 扫全树 `.dna/module.md` 重建 `<root>/.cbim/index/dna/graph.json`；错误被吞下（`return Status.FAILURE`）不中断 sequence。`build_memory_governance_subtree` 复用同一拓扑。选择「放在记忆治理末尾」而非「独立为第四个治理步」的两条理由：(1) graph 是 `dna` 源的索引器副产物，与 BM25/vector 索引同属"同一源的物化产物」，与 MemRebuildIndex 有语义连续性；(2) Architect / HR 治理步是 yield 子 agent 的路径，graph 重建是十几毫秒级 in-process 调用，抽为第四步会多产生一个 Catch+Timeout 包装层但不产生任何语义价值。
+- **Phase 3 — “全构 + patch + session_start 兑底”三路径一致性模型。** dream `DnaGraphRebuild` 是全量权威重建（扫全树、重业亘 graph.json）；`services/_reindex.reindex_dna` 末尾调 `patch_graph(root, module_dir)` 只重算被编辑模块的外出边（D9：不级联邻居，被依赖者在自己下次写时会覆盖自己的外出边，最终一致）；`session_start._ensure_graph(root)` 在 graph.json 不存在时调 `build_graph(root)` 兑底。三者共同保证：dream 三个多小时一轮、热路径只 patch 不重建、冷启动能免误退化为空图谱。每条路径都是幂等且最后者获胜。全量重建在 1000 模块规模下“图构造阶段”纯耗时 ~35ms（不含 _scan_modules，后者是跨依赖者共享设施，不计入图谱性能账）。
+- **Phase 3 — 依赖方向：`engine/dream → cbi/_primitives/modules/graph_builder`。** `actions/mem_steps.DnaGraphRebuild.tick` 里报 `from cbi._primitives.modules.graph_builder import build_graph`，是跨包 import。`graph_builder` 是 `cbi._primitives.modules` 包中的纯 primitives leaf，不反向 import dream；依赖颓限是包括 retrieval 主的三层：`engine/dream → cbi/_primitives → services/_fm`，零环。Phase 3 不付出任何新 外部依赖」，module.md frontmatter dependencies 不动（主要调用路径仍然经 retrieval；`cbi/_primitives` 是重用 `_scan_modules` 与原子写入，属于「Actions 调轻量并入工具」一类，不进顶级依赖表）。
+
 ## Non-Goals
 
 - **不与用户对话。** 治理循环全程在后台运行，Done 不返回 `user_message`；摘要通过 `report.md` 落盘 + 下次 SessionStart 注入主 agent 上下文，被动呈现。
@@ -149,4 +153,3 @@ v2 把所有自维护抽到第二根循环，复用同一个 BT 引擎但独立�
 - **mcp_server（反向，容器）** —— 不在本模块 dependencies 中；`mcp_server` 把 `api/dream_tick.py` 的 4 个函数注册为 MCP 工具，函数签名即工具签名。引擎不感知 MCP 容器存在。
 
 依赖方向：`dream → engine/core`、`dream → engine/persistence`、`dream → memory.{compaction,_facade}`（内部维护接口）、`dream → engine/retrieval`（内部维护接口）、`dream → engine/audit`（同层兄弟·BaselineStore 只读）、`mcp_server → dream`。无环。
-

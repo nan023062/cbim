@@ -33,6 +33,7 @@ from engine.retrieval.drift import DriftReport, fast_check, full_check
 from engine.retrieval.embedding.base import EmbeddingProvider
 from engine.retrieval.embedding.factory import build_provider
 from engine.retrieval.index.bm25 import BM25Index
+from engine.retrieval.index.graph import GraphIndex
 from engine.retrieval.index.vector import VectorIndex, rrf_fuse
 from engine.retrieval.store import (
     VALID_SOURCES,
@@ -42,6 +43,13 @@ from engine.retrieval.store import (
     content_sha256,
     now_iso,
 )
+
+# Score decay applied per BFS hop when promoting a graph neighbour into
+# the hit list. The seed's score is multiplied by 0.6**hop so hop-1
+# neighbours rank below the weakest seed but above the next BM25 page;
+# hop-2 neighbours are clearly tertiary. Empirical sweet spot — keeps
+# the recall window from drowning in low-relevance graph fluff.
+_GRAPH_HOP_SCORE_DECAY = 0.6
 
 # --------------------------------------------------------------------------
 # Public dataclasses
@@ -108,6 +116,12 @@ class _SourceState:
     bm25: BM25Index
     records: dict[str, DocRecord]
     vectors: VectorBlob | None   # None when provider unavailable / dim=0
+    # Lazy-loaded only for source="dna"; remains None for the other three
+    # sources. Wraps the on-disk graph.json built by graph_builder.
+    # ``None`` here means "not yet loaded"; ``GraphIndex(None)`` would
+    # mean "loaded but empty". We keep the distinction so search() can
+    # late-bind the load and gracefully degrade if graph.json is absent.
+    graph: GraphIndex | None = None
     last_upsert_at: str = ""
     last_verify_at: str | None = None
     last_drift_count: int | None = None
@@ -345,6 +359,18 @@ class RetrievalFacade:
         if not isinstance(top_k, int) or top_k <= 0:
             raise RetrievalError("top_k must be a positive int")
 
+        # Phase 3: extract the optional ``expand_hops`` filter directive
+        # before metadata filtering, otherwise ``_filter_doc_ids`` would
+        # treat it as a metadata equality test on a key that no record
+        # carries — zeroing out the result set. ``expand_hops`` is the
+        # ONLY non-metadata key recognised here; everything else stays
+        # in ``filters`` and continues through the equality matcher.
+        expand_hops, filters = _split_graph_directives(filters)
+        if expand_hops is not None and source != "dna":
+            raise RetrievalError(
+                "expand_hops filter is only supported for source='dna'"
+            )
+
         with self._lock:
             state = self._get(source)
             if not state.records:
@@ -386,11 +412,15 @@ class RetrievalFacade:
                 ranked = state.bm25.search(query, top_k, allowed_ids=allowed_ids)
 
             hits: list[Hit] = []
+            seed_ids: list[str] = []
+            seed_score: dict[str, float] = {}
             for doc_id, score in ranked:
                 rec = state.records.get(doc_id)
                 if rec is None:
                     continue
                 content = state.store.read_doc(doc_id) or ""
+                seed_ids.append(doc_id)
+                seed_score[doc_id] = float(score)
                 hits.append(
                     Hit(
                         doc_id=doc_id,
@@ -400,6 +430,26 @@ class RetrievalFacade:
                         metadata=dict(rec.metadata or {}),
                     )
                 )
+
+            # Phase 3: graph expansion. Only when caller asked for it
+            # AND we're on source="dna" (validated above). Lazy-load the
+            # GraphIndex once per source state. Failure modes (graph.json
+            # missing or corrupt) leave ``state.graph`` as an empty
+            # GraphIndex — bfs() returns {} so the seeds-only path is
+            # the silent default.
+            if expand_hops and seed_ids:
+                if state.graph is None:
+                    state.graph = GraphIndex.load(self.index_root.parent.parent)
+                expansion = state.graph.bfs(seed_ids, hops=expand_hops)
+                hits = _merge_seeded_neighbours(
+                    hits=hits,
+                    seed_ids=set(seed_ids),
+                    seed_score=seed_score,
+                    expansion=expansion,
+                    state=state,
+                    source=source,
+                )
+
             return hits
 
     # ---------------- public: verify_consistency ----------------
@@ -503,6 +553,98 @@ def _filter_doc_ids(records: dict[str, DocRecord], filters: dict | None) -> set 
         if ok:
             allowed.add(doc_id)
     return allowed
+
+
+# Reserved filter keys consumed by the facade itself rather than passed
+# through to ``_filter_doc_ids``. ``expand_hops`` is the only member
+# today (Phase 3 graph expansion); future graph-mode toggles attach here.
+_GRAPH_DIRECTIVE_KEYS = {"expand_hops"}
+
+
+def _split_graph_directives(filters: dict | None) -> tuple[int | None, dict | None]:
+    """Pop the ``expand_hops`` directive from ``filters``.
+
+    Returns ``(hops, remaining_filters)``. ``hops`` is None when not
+    requested, an int >= 1 otherwise. ``remaining_filters`` is the
+    metadata-only subset suitable for the equality matcher; we return
+    None (== "no filters") when nothing remains so the existing
+    short-circuit in ``_filter_doc_ids`` keeps working.
+    """
+    if not filters:
+        return None, filters
+    hops_raw = filters.get("expand_hops")
+    if hops_raw is None:
+        return None, filters
+    try:
+        hops = int(hops_raw)
+    except (TypeError, ValueError):
+        raise RetrievalError(
+            f"expand_hops must be an int, got {type(hops_raw).__name__}"
+        )
+    if hops < 0:
+        raise RetrievalError("expand_hops must be >= 0")
+    remaining = {k: v for k, v in filters.items() if k not in _GRAPH_DIRECTIVE_KEYS}
+    return hops, (remaining or None)
+
+
+def _merge_seeded_neighbours(
+    *,
+    hits: list[Hit],
+    seed_ids: set[str],
+    seed_score: dict[str, float],
+    expansion: dict[str, tuple[int, str]],
+    state: "_SourceState",
+    source: str,
+) -> list[Hit]:
+    """Append graph-expanded hits to the seeded list, seeds first.
+
+    Each expanded hit:
+      * doc_id      = neighbour module path (must exist in state.records;
+                      stale entries — graph node without matching record —
+                      are silently dropped, never poisoning the result)
+      * score       = seed_score * 0.6**hop  (lower than its originator)
+      * metadata    = original record metadata + ``expanded_from`` (the
+                      seed that pulled it in) + ``hop`` distance
+      * content     = full doc snapshot from the store, identical to
+                      what a direct seed would carry
+
+    Duplicates are dropped: a neighbour that's already a seed is skipped,
+    and a neighbour that came in through multiple seeds keeps the
+    first-recorded BFS path (closest hop wins by construction of bfs()).
+    """
+    out: list[Hit] = list(hits)
+    already_emitted = set(seed_ids)
+    for nb_id, (hop, origin) in expansion.items():
+        if nb_id in already_emitted:
+            continue
+        rec = state.records.get(nb_id)
+        if rec is None:
+            # Graph references a module that retrieval doesn't know
+            # about (e.g. dna source not yet rebuilt for that module).
+            # Silently drop — graph expansion should never invent doc_ids.
+            continue
+        decay = _GRAPH_HOP_SCORE_DECAY ** hop
+        base_score = seed_score.get(origin, 0.0)
+        # Floor at a tiny positive value so downstream score-threshold
+        # filters can still drop expansion hits when a min-score gate
+        # is applied (e.g. the user_prompt_submit hook gates dna at 0.0
+        # so this doesn't matter, but other callers may set min>0).
+        score = max(base_score * decay, 1e-6)
+        md = dict(rec.metadata or {})
+        md["expanded_from"] = origin
+        md["hop"] = hop
+        content = state.store.read_doc(nb_id) or ""
+        out.append(
+            Hit(
+                doc_id=nb_id,
+                source=source,
+                score=float(score),
+                content=content,
+                metadata=md,
+            )
+        )
+        already_emitted.add(nb_id)
+    return out
 
 
 _default_facade: RetrievalFacade | None = None

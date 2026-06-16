@@ -121,6 +121,11 @@ CBIM v2 的记忆架构重设计带来一个共同需求：**多源向量检索*
 - **检索结果带 `source` 标签返回，由调用方做语义分类。** `Hit{doc_id, source, score, content, metadata}`——调用方拿到列表后按 `source` 分桶拼装。本模块不做语义分桶。
 - **`embed_batch` 是性能契约，不是新接口语义。** 批量 embedding 与单条 embedding 语义完全等价，仅用于减少外部 API 往返。
 
+- **Phase 3 — `dna` 源支持 `search(filters={"expand_hops": k})` k 跳邻域扩展。** 接口签名零变（仍是冻结的 5 函数），仅在 `filters` 中识别保留键 `expand_hops`：解析后从 filters 弹出，进入图扩展路径；`expand_hops` 缺省 / 0 / 不传时字节级等价于 Phase 2 行为。仅 `source="dna"` 接受该键，其他源传入抛 `RetrievalError("expand_hops filter is only supported for source='dna'")`。
+- **图谱物化为 `.cbim/index/dna/graph.json`，与 BM25/vector 同层但侧路独立。** 图谱与 BM25/vector 同属 `dna` 索引器副产物，路径布局 `<index_root>/dna/graph.json`，沿用 `<index_root>/dna/.lock` 跨进程锁；不进入 `IndexStore.persist_atomic` 的三文件事务（meta/bm25/vectors），是"第四件"独立物化产物。这样选取的两条理由：(1) graph 与 vector/bm25 的写入节奏不同——graph 是结构性（仅在模块拓扑变更时改），bm25/vector 是内容性（每次 upsert 都改）；强行四件原子会拖慢热路径；(2) graph 缺失 / 损坏时只让扩展路径退化为"种子-only"，不影响 BM25/vector 检索本身——把它绑进同一事务反而扩大了故障半径。
+- **`GraphIndex` 在 retrieval 内只持"加载 + BFS"两件事；图谱构造在 retrieval 之外。** `engine/retrieval/index/graph.py` 的 `GraphIndex` 是只读视图：`load(project_root)` 懒导入 `cbi._primitives.modules.graph_builder.load_graph` 读 `graph.json`，`bfs(seeds, hops)` 做迭代式跳数受限的双向邻接遍历（`adjacency_out` + `adjacency_in`，跳上限 ~5000 防爆膨胀）。**构造图谱（解析 frontmatter `dependencies` + Mermaid `..>` 边、物化 `graph.json`）的责任放在 `cbi/_primitives/modules/graph_builder.py`**，retrieval 不参与解析。这一刀守的是"对源一视同仁"铁律：retrieval 不知道 `.dna/` 的业务语义（frontmatter 字段、Mermaid 类图），它只知道 `(source, doc_id, content, metadata)` 四元组——graph 构造一旦进 retrieval，就要 retrieval 反向 import `cbi/_primitives` 解析模块文档，破坏 leaf 模块的边界。
+- **k 跳扩展打分按 `seed_score * 0.6**hop` 衰减，向后兼容旧 5 函数语义。** 命中合并由 `_merge_seeded_neighbours` 完成：种子保持原次序与原分数靠前；邻居以 `seed_score * 0.6**hop` 排在种子之后，并在 metadata 注入 `expanded_from`（拉它进来的种子）+ `hop` 距离两个观测字段，但**不**改变 `Hit` 字段集（`{doc_id, source, score, content, metadata}`），契约层零变。`expand_hops` 缺省路径不进入合并逻辑，按 `_split_graph_directives` 早返回保证字节级等价。
+
 ## Sub-module Relationships
 
 无下级子模块。本模块是 leaf。
@@ -137,9 +142,13 @@ CBIM v2 的记忆架构重设计带来一个共同需求：**多源向量检索*
 | `engine/execution` 的 retrieval 节点 | `search(source, query, top_k)` × 4 源 | `bt_tick` 启动后、`ModeClassify` 前 |
 | `engine/dream` 的 MemRebuildIndex 节点 | `verify_consistency(source, mode="full")` | 治理循环记忆步内 |
 | `engine/dream` 的 TranscriptDelete 节点 | `index_delete("transcript", doc_id)` | 治理循环删 transcript 后 |
-| `.claude/hooks/cbim_session_start.py` | `verify_consistency(source, mode="fast")` | 每次 session 启动 |
+| `engine/dream` 的 DnaGraphRebuild 节点 | 间接——调 `cbi/_primitives/modules/graph_builder.build_graph(root)` 写 `<index_root>/dna/graph.json`；retrieval 仅负责读（`GraphIndex.load`） | 治理循环记忆步末尾（mem_seq 第 14 节点） |
+| `.claude/hooks/cbim_session_start.py` | `verify_consistency(source, mode="fast")` + `_ensure_graph(root)` 兑底调 `build_graph` | 每次 session 启动 |
+| `services/_reindex.reindex_dna` | 在 `index_upsert("dna", ...)` 末尾调 `cbi/_primitives/modules/graph_builder.patch_graph(root, module_dir)` 增量 patch | `dna_edit` / `dna_init` 等写入后同步触发 |
 
-依赖方向：所有上述调用方 → `engine/retrieval`。**本模块没有对外依赖**（仅依赖 Python 标准库 + 可选 embedding SDK）。无循环依赖。
+**与 `cbi/_primitives/modules/graph_builder` 的兑子关系**：retrieval 不进行任何图谱构造。`GraphIndex` （`engine/retrieval/index/graph.py`）只是反转读取点——懒导入 `cbi._primitives.modules.graph_builder.load_graph` 读出 graph.json，本地为 (src, kind) 堆堆邻接表后提供 BFS。导入方向：`engine/retrieval/index/graph.py → cbi/_primitives/modules/graph_builder`，这与「`memory.crud → engine/retrieval`」是同样的「调用方 → retrieval」与「被调供应者 ← 被调者」两重关系：`graph_builder` 以「输出者」的身份向 retrieval 提供 graph.json，而 retrieval 以「被代理者」的身份被 graph_builder 调 (`load_graph`)。两侧仅以 graph.json 这个 JSON 文件为接口边界，retrieval 不反向 import `cbi/_primitives`，不造成环。
+
+依赖方向：上述调用方 → `engine/retrieval`；`engine/retrieval` 加载 graph.json 时 → `cbi/_primitives/modules/graph_builder.load_graph`（单向，后者不反向导入 retrieval）。**本模块仅依赖 cbi/_primitives/modules/graph_builder 这一个轻量外部输出者**（其他仍是 Python 标准库 + 可选 embedding SDK）。无循环依赖。
 
 ## Non-Goals
 
@@ -157,3 +166,4 @@ CBIM v2 的记忆架构重设计带来一个共同需求：**多源向量检索*
 本模块对外**无依赖**。仅依赖 Python 标准库（`json` / `pathlib` / `hashlib`）+ 可选 numpy（vector 索引存在时）+ 可选 embedding SDK（外部 provider 启用时）。
 
 依赖方向：`memory.crud → engine/retrieval`、`memory.compaction → engine/retrieval`、`mcp_server.tools.dna → engine/retrieval`、`mcp_server.tools.agents → engine/retrieval`、`hooks.session_* → engine/retrieval`、`engine/execution → engine/retrieval`、`engine/dream → engine/retrieval`。无环。
+

@@ -51,7 +51,7 @@
 
 ### MemoryGovernanceStep 子节点拓扑（13 节点）
 
-Stage 5 完工后 `MemoryGovernanceStep`（`tree/dream_loop.py::build_dream_root` 中的 `mem_seq`）真实子节点列表，按 Sequence 顺序：
+Stage 5 + Phase 3 完工后 `MemoryGovernanceStep`（`tree/dream_loop.py::build_dream_root` 中的 `mem_seq`）真实子节点列表，按 Sequence 顺序：
 
 | # | 节点 | 类型 | yield? | 用途 |
 |---|------|------|--------|------|
@@ -68,10 +68,23 @@ Stage 5 完工后 `MemoryGovernanceStep`（`tree/dream_loop.py::build_dream_root
 | 11 | `MemCompact` | in-process | 否 | 调 `memory.compact()` 压缩 medium |
 | 12 | `MemSweepExpired` | in-process | 否 | 调 `memory.sweep_expired()` 清归档过期 |
 | 13 | `MemRebuildIndex` | in-process | 否 | 调 `rebuild_and_verify` 重建并校验 retrieval 索引 |
+| 14 | `DnaGraphRebuild` | in-process | 否 | **Phase 3 新增**：调 `cbi._primitives.modules.graph_builder.build_graph(project_root)` 全量重建 `<root>/.cbim/index/dna/graph.json`；错误吞下返回 FAILURE 不中断序列 |
 
-**顺序理由**：distill 消费 transcripts → 删 transcripts → promote scan 暂存并暴露候选 → incoming triage 在 promote scan 之后跑（让本轮新到的高信号原始记录有机会进 medium，下一轮 promote scan 再识别）→ compact medium → sweep 过期 → rebuild/verify 索引。每个 leaf 在 `@Catch` 包裹下相互独立——单 leaf 失败（含 incoming-triage 业务失败路径）只 annotate bb，不打断 sequence。
+> **节点总数从 13 调为 14**：本表标题仍以"13 节点"命名是为保留历史镜像位置、免冲击下游引用；Phase 3 后的权威节点总数为 **14**。后续可随一次契约变更一起重命名为"14 节点"。
 
-**稳定承诺**：节点数（13）与节点名是契约级稳定承诺；新增节点 / 改名 / 改顺序需走 contract 变更流程。每节点的 `yield?` 列锁死——in-process 节点永不发出 `DispatchRequest`，yield 节点必发。
+**顺序理由**：distill 消费 transcripts → 删 transcripts → promote scan 暂存并暴露候选 → incoming triage 在 promote scan 之后跑（让本轮新到的高信号原始记录有机会进 medium，下一轮 promote scan 再识别）→ compact medium → sweep 过期 → rebuild/verify retrieval 索引 → **以刚刚被调和后的 retrieval 状态为起点重建 DNA 业务知识图谱（DnaGraphRebuild）**。每个 leaf 在 `@Catch` 包裹下相互独立——单 leaf 失败（含 incoming-triage 业务失败路径、含 graph 重建失败）只 annotate bb，不打断 sequence。
+
+**稳定承诺**：节点数（14）与节点名是契约级稳定承诺；新增节点 / 改名 / 改顺序需走 contract 变更流程。每节点的 `yield?` 列锁死——in-process 节点永不发出 `DispatchRequest`，yield 节点必发。
+
+#### Phase 3 补充：DnaGraphRebuild 叶子的独立总结
+
+| 项 | 值 |
+|----|-----|
+| 入口 | `cbi._primitives.modules.graph_builder.build_graph(project_root: Path) -> dict` |
+| 黑板字段 | 不写 bb（副作用是 `<root>/.cbim/index/dna/graph.json`；`@Trace` / `SequenceTolerant.bb.step_results["DnaGraphRebuild"]` 仍然记录 SUCCESS / FAILURE 供 EmitReport 聚合） |
+| 取消上调件 | 仅在 `cbi._primitives.modules.graph_builder` 未装载 / `build_graph` 报错时返回 FAILURE；不抹除现有 graph.json |
+| 性能阈值 | 1000 模块 / **图构造阶段 < 100ms**（不含 `_scan_modules` 冷态扫描 I/O——后者是跨三个调用方共享的基础设施，不计入图谱性能账）。全线报 ~484ms 几乎全部费在扫描上。该阈值裡定为"图谱模块自身的开销"不含共享设施账。 |
+| 幂等性 | 全量重建、事务性原子写入（走 IndexStore 跨进程锁 + atomic_write_text）；如何重启都会生成一致体现状 |
 
 ## `dream_tick` — 启动新治理 tick
 

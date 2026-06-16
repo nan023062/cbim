@@ -31,6 +31,7 @@ from engine.dream.actions.dispatch_incoming_triage import DispatchIncomingTriage
 from engine.dream.actions.dispatch_mem_distill import DispatchMemDistill
 from engine.dream.actions.incoming_steps import IncomingScan
 from engine.dream.actions.mem_steps import (
+    DnaGraphRebuild,
     MemCompact,
     MemHealthScan,
     MemPromoteScan,
@@ -51,8 +52,9 @@ def build_memory_governance_subtree(
     store_dir: Path,
     backend: MemoryBackend | None = None,
     transcripts_dir: Path | None = None,
+    project_root: Path | None = None,
 ) -> Node:
-    """Construct the 13-step memory governance Sequence (no decorators).
+    """Construct the 14-step memory governance Sequence (no decorators).
 
     Matches the inner sequence of MemoryGovernanceStep in
     dream/tree/dream_loop.py. Use this when you want the bare sub-loop
@@ -60,9 +62,15 @@ def build_memory_governance_subtree(
 
     ``transcripts_dir`` is forwarded to TranscriptScan; None falls back
     to ``~/.claude/projects/<slug>/`` against the process CWD.
+
+    ``project_root`` is forwarded to DnaGraphRebuild; None defaults to
+    ``store_dir.parent.parent`` (i.e. the project that owns
+    ``.cbim/memory/``). Tests with ad-hoc tmp layouts can override.
     """
     store_dir = Path(store_dir)
     backend = backend or FileBackend(store_dir)
+    if project_root is None:
+        project_root = Path(store_dir).parent.parent
     return Sequence(
         [
             MemHealthScan(store_dir=store_dir, name="MemHealthScan"),
@@ -78,6 +86,7 @@ def build_memory_governance_subtree(
             MemCompact(store_dir=store_dir, name="MemCompact"),
             MemSweepExpired(store_dir=store_dir, backend=backend, name="MemSweepExpired"),
             MemRebuildIndex(store_dir=store_dir, backend=backend, name="MemRebuildIndex"),
+            DnaGraphRebuild(project_root=project_root, name="DnaGraphRebuild"),
         ],
         name="MemoryGovernanceStep",
     )
@@ -97,5 +106,6 @@ __all__ = [
     "MemCompact",
     "MemSweepExpired",
     "MemRebuildIndex",
+    "DnaGraphRebuild",
     "build_memory_governance_subtree",
 ]

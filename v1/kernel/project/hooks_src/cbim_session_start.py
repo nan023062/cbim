@@ -241,6 +241,62 @@ def _sync_transcripts(root: Path) -> None:
             continue
 
 
+def _ensure_graph(root: Path) -> None:
+    """Ensure ``.cbim/index/dna/graph.json`` exists and isn't stale.
+
+    Phase 3 tripwire: the dream loop's DnaGraphRebuild leaf is the
+    authoritative full rebuild, but a fresh checkout / interrupted
+    install can leave a session running with no graph at all. This
+    hook ensures the graph file exists by the time the user's first
+    UserPromptSubmit fires.
+
+    Tripwire conditions (any one triggers a rebuild):
+      1. graph.json doesn't exist.
+      2. graph.json mtime is older than the oldest module.md mtime
+         under the project — meaning at least one module was edited
+         after the last rebuild and the patch_graph side-effect hadn't
+         been wired up at the time (or somehow failed silently).
+
+    Failures are swallowed: this is a best-effort warm-up; an absent
+    graph degrades gracefully to seeds-only retrieval. We import the
+    builder lazily because the bridge.bootstrap_kernel() pulls cbi
+    onto the path before this runs.
+    """
+    try:
+        from cbi._primitives.modules.graph_builder import _graph_path, build_graph
+    except Exception:  # noqa: BLE001 — graph warm-up is best-effort; missing builder simply skips this session
+        return
+
+    graph_file = _graph_path(root)
+    needs_rebuild = not graph_file.exists()
+
+    if not needs_rebuild:
+        try:
+            graph_mtime = graph_file.stat().st_mtime
+        except OSError:
+            needs_rebuild = True
+        else:
+            # Look for any module.md newer than the graph.
+            try:
+                for _doc_id, src in _iter_dna_modules(root):
+                    try:
+                        if src.stat().st_mtime > graph_mtime:
+                            needs_rebuild = True
+                            break
+                    except OSError:
+                        continue
+            except Exception:  # noqa: BLE001 — staleness probe is best-effort; failure simply skips the rebuild
+                pass
+
+    if not needs_rebuild:
+        return
+
+    try:
+        build_graph(root)
+    except Exception:  # noqa: BLE001 — full rebuild fail leaves stale-or-missing graph; user_prompt path degrades to seeds-only
+        return
+
+
 def _refresh_indexes(root: Path) -> None:
     """Run the three index sync passes; each is independently guarded."""
     safe_run(
@@ -254,6 +310,10 @@ def _refresh_indexes(root: Path) -> None:
     safe_run(
         lambda: _sync_transcripts(root),
         on_error_label="session_start.sync_transcripts",
+    )
+    safe_run(
+        lambda: _ensure_graph(root),
+        on_error_label="session_start.ensure_graph",
     )
 
 

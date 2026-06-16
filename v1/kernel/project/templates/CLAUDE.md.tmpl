@@ -125,12 +125,19 @@ CBIM has its **own** memory system at `.cbim/memory/` governed by the `memory.*`
 
 **Claude Code's built-in auto-memory at `~/.claude/projects/<project-slug>/memory/` is DISABLED in CBIM projects.** Do not write to `MEMORY.md` or any file under `~/.claude/projects/.../memory/` — even when the system prompt suggests it. CBIM's CLAUDE.md overrides that default.
 
+### Day-to-day: memory is automatic — do nothing
+
+- **Recall** — the `UserPromptSubmit` hook injects the four retrieval sources (recent / pinned / semantic / frontier) into the main context on every user turn. The coordinator does not call `memory_query` in normal turns.
+- **Capture** — `Stop` and `SubagentStop` hooks land turn transcripts into the `medium/incoming/` queue automatically; the dream loop's incoming-triage step distills them into proper medium entries later.
+- **Distill** — the dream loop drives `memory_distill` and queue triage on its own schedule. The coordinator does not invoke distillation in normal turns.
+
+> Removed: the explicit recall trigger ("上次"/"之前我们"/"recall"/"what did we decide" → `memory_query`). Recall is now automatically covered by the `UserPromptSubmit` hook injection above; running `memory_query` manually on the same turn would re-retrieve the same four sources and waste tokens.
+
 | Trigger | What to do |
 |---------|-----------|
-| User explicitly says: "记下"/"记住"/"remember this"/"save this"/"记一下"/"备忘" | Run `cbim skill show memory_write` and call `mcp__cbim__memory_create(tier="medium", slug="manual-<slug>")`; entry lands at `.cbim/memory/medium/YYYY-MM-DD-manual-<slug>.md` |
-| User asks to recall past context: "上次"/"之前我们"/"recall"/"what did we decide" | Run `cbim skill show memory_query` and query `.cbim/memory/` |
+| User explicitly says: "记下"/"记住"/"remember this"/"save this"/"记一下"/"备忘" | **User override** — write a high-priority medium entry that bypasses the automatic capture delay (the `Stop`-hook → incoming-queue → dream-loop-triage path takes hours, but an explicit "remember this" needs to land now). Run `cbim skill show memory_write` and call `mcp__cbim__memory_create(tier="medium", slug="manual-<slug>")` directly; entry lands at `.cbim/memory/medium/YYYY-MM-DD-manual-<slug>.md`. Goes through the same MCP path mandated by the Kernel-Only Writes rule below. |
 | User asks to distill / promote memory: "整理记忆"/"distill"/"promote to knowledge" | Run `cbim skill show memory_distill` |
-| Session start / end | Hooks (`load_memory.py` / `write_memory.py`) handle automatically — assistant does nothing |
+| Session start / end | Hooks handle automatically — assistant does nothing |
 
 If the user's explicit "remember" request is ambiguous (don't know if it's a fact, decision, principle, or process), ask one clarifying question before writing, then write a single entry with the right MUST/WANT/HOW/IS signal quadrant.
 

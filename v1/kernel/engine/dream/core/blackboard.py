@@ -1,7 +1,7 @@
 """dream/core/blackboard.py — DreamBlackboard: governance-loop carrier.
 
 Independent from bt's Blackboard (which carries the 18 execution-loop fields).
-The dream loop owns its own 19-field schema per design WORKFLOW-DREAM §五 +
+The dream loop owns its own 28-field schema per design WORKFLOW-DREAM §五 +
 the runner-required scaffolding (bb_status / runner_resume_path / pending_dispatch
 / trace) shared with bt at the Runner protocol level (IdentifiableBB).
 

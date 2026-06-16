@@ -83,7 +83,7 @@ class DispatchRequest:
         of spawning a sub-agent via the Task tool — used only for
         memory-source governance jobs (currently ``governance_memory_distill``).
       - ``subtask_id`` ∈ {"governance_knowledge", "governance_capability",
-        "governance_memory_distill"}
+        "governance_memory_distill", "governance_incoming_triage"}
       - ``prompt`` must start with ``## 治理模式`` (or equivalent governance
         marker). For sub-agent dispatches the coordinator feeds it verbatim
         into the Task tool; for ``agent_type="main"`` the coordinator

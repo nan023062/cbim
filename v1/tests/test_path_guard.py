@@ -184,6 +184,144 @@ def test_dna_split_rejects_bad_split_path(tmp_path, monkeypatch):
     assert isinstance(out, dict) and "error" in out, out
 
 
+def _make_root_module(root: Path) -> None:
+    """Stand up a minimum project root with a root module so dna_show / dna_edit
+    can address it as ``"."`` / ``""`` / absolute root path.
+    """
+    (root / ".cbim").mkdir(exist_ok=True)
+    (root / ".cbim" / "config.json").write_text("{}", encoding="utf-8")
+    (root / ".cbim" / "index.md").write_text(
+        "# Module Index\n\n- .\n", encoding="utf-8"
+    )
+    (root / ".dna").mkdir(exist_ok=True)
+    (root / ".dna" / "module.md").write_text(
+        "---\nname: root\nowner: arch\ndescription: rt\n"
+        "keywords: []\ndependencies: []\nstatus: implemented\n---\n\n"
+        "## Positioning\n\nroot positioning\n",
+        encoding="utf-8",
+    )
+
+
+def test_dna_show_accepts_root_dot(tmp_path, monkeypatch):
+    _make_root_module(tmp_path)
+    tools = _register_dna(monkeypatch, tmp_path)
+    out = tools["dna_show"](module_path=".", cwd=str(tmp_path))
+    assert not out.startswith("ERROR:"), out
+    assert "Name        : root" in out
+
+
+def test_dna_show_accepts_root_empty_string(tmp_path, monkeypatch):
+    _make_root_module(tmp_path)
+    tools = _register_dna(monkeypatch, tmp_path)
+    out = tools["dna_show"](module_path="", cwd=str(tmp_path))
+    assert not out.startswith("ERROR:"), out
+    assert "Name        : root" in out
+
+
+def test_dna_edit_accepts_root_body(tmp_path, monkeypatch):
+    _make_root_module(tmp_path)
+    tools = _register_dna(monkeypatch, tmp_path)
+    out = tools["dna_edit"](
+        module_path=".",
+        target="body",
+        payload={"content": "## Positioning\n\nupdated by test\n"},
+        mode="replace",
+        cwd=str(tmp_path),
+    )
+    assert not out.startswith("ERROR:"), out
+    written = (tmp_path / ".dna" / "module.md").read_text(encoding="utf-8")
+    assert "updated by test" in written
+
+
+def test_dna_edit_accepts_root_frontmatter(tmp_path, monkeypatch):
+    _make_root_module(tmp_path)
+    tools = _register_dna(monkeypatch, tmp_path)
+    out = tools["dna_edit"](
+        module_path=".",
+        target="frontmatter",
+        payload={"field": "description", "value": "rt-edited"},
+        mode="replace",
+        cwd=str(tmp_path),
+    )
+    assert not out.startswith("ERROR:"), out
+    written = (tmp_path / ".dna" / "module.md").read_text(encoding="utf-8")
+    assert "description: rt-edited" in written
+
+
+def test_dna_edit_accepts_root_section(tmp_path, monkeypatch):
+    _make_root_module(tmp_path)
+    tools = _register_dna(monkeypatch, tmp_path)
+    out = tools["dna_edit"](
+        module_path=".",
+        target="section",
+        payload={
+            "heading": "Positioning",
+            "content": "fresh positioning\n",
+            "level": 2,
+        },
+        mode="replace",
+        cwd=str(tmp_path),
+    )
+    assert not out.startswith("ERROR:"), out
+    written = (tmp_path / ".dna" / "module.md").read_text(encoding="utf-8")
+    assert "fresh positioning" in written
+
+
+def test_dna_split_still_rejects_root_source(tmp_path, monkeypatch):
+    """Splitting *the root* is not unblocked by this change — the splitter
+    primitive does not exercise the source-equals-root edge and the
+    operation is semantically wrong (root is the aggregate, not a leaf)."""
+    _make_root_module(tmp_path)
+    tools = _register_dna(monkeypatch, tmp_path)
+    out = tools["dna_split"](
+        source_module_path=".",
+        splits=[{"path": "child", "name": "Child", "headings": []}],
+        strategy="comment",
+        cwd=str(tmp_path),
+    )
+    assert isinstance(out, dict) and "error" in out, out
+
+
+def test_dna_init_root_kind_accepts_root_dir(tmp_path, monkeypatch):
+    """`kind="root"` REQUIRES `dir == "."` — entry guard must let it through.
+    Other kinds at root still get rejected (covered separately below)."""
+    # Bare project: registry exists but no root .dna/ yet (init's job).
+    (tmp_path / ".cbim").mkdir()
+    (tmp_path / ".cbim" / "config.json").write_text("{}", encoding="utf-8")
+    (tmp_path / ".cbim" / "index.md").write_text("# Module Index\n", encoding="utf-8")
+    tools = _register_dna(monkeypatch, tmp_path)
+    out = tools["dna_init"](
+        dir=".",
+        kind="root",
+        name="root",
+        owner="arch",
+        description="rt",
+        with_contract=False,
+        status="",
+        cwd=str(tmp_path),
+    )
+    assert not out.startswith("ERROR:"), out
+    assert (tmp_path / ".dna" / "module.md").is_file()
+
+
+def test_dna_init_leaf_kind_still_rejects_root_dir(tmp_path, monkeypatch):
+    """`kind="leaf"` (or "parent") at the project root is a caller error;
+    keep the early reject so it surfaces with a clear message."""
+    _make_root_module(tmp_path)
+    tools = _register_dna(monkeypatch, tmp_path)
+    out = tools["dna_init"](
+        dir=".",
+        kind="leaf",
+        name="bogus",
+        owner="arch",
+        description="",
+        with_contract=False,
+        status="",
+        cwd=str(tmp_path),
+    )
+    assert out.startswith("ERROR:"), out
+
+
 def test_memory_delete_rejects_traversal(tmp_path, monkeypatch):
     (tmp_path / ".cbim" / "memory").mkdir(parents=True)
     import mcp_server.tools.memory as memory_tool

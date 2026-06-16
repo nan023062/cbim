@@ -58,7 +58,12 @@ def register(mcp) -> None:
         )
         root = project_root(cwd or None)
         try:
-            mod_dir = resolve_within_root(root, module_path, allow_root_itself=False)
+            # Root module ('' / '.') is a normal readable module — service
+            # layer (knowledge_service.get_module, list_modules, registry)
+            # already treats path "." as "root itself", so the entry guard
+            # only needs to keep traversal-out attempts out, not the root
+            # in.
+            mod_dir = resolve_within_root(root, module_path, allow_root_itself=True)
         except PathOutsideRootError as e:
             return f"ERROR: {e}"
         info = get_module(module_path, cwd=cwd)
@@ -124,8 +129,14 @@ def register(mcp) -> None:
         """
         from services import PathOutsideRootError, init_module, resolve_within_root
         root = project_root(cwd or None)
+        # `kind == "root"` REQUIRES the target to be the project root itself
+        # (cbi._primitives.modules.scaffold.init_module enforces this), so
+        # the entry guard must allow `dir == "."` precisely for that kind.
+        # Other kinds (parent / leaf) are still rejected — initialising a
+        # parent/leaf at the project root is a caller mistake.
+        allow_root = kind == "root"
         try:
-            resolve_within_root(root, dir, allow_root_itself=False)
+            resolve_within_root(root, dir, allow_root_itself=allow_root)
         except PathOutsideRootError as e:
             return f"ERROR: {e}"
         try:
@@ -169,7 +180,11 @@ def register(mcp) -> None:
         from services import PathOutsideRootError, edit_module, resolve_within_root
         root = project_root(cwd or None)
         try:
-            resolve_within_root(root, module_path, allow_root_itself=False)
+            # Root module is a normal editable module — frontmatter,
+            # body, sections, contract, and workflows all apply just as
+            # they do for child modules; services.edit_module routes
+            # `module_path == "."` to `<root>/.dna/module.md` correctly.
+            resolve_within_root(root, module_path, allow_root_itself=True)
         except PathOutsideRootError as e:
             return f"ERROR: {e}"
         # Path-confine the input string here; the service write also
@@ -206,13 +221,21 @@ def register(mcp) -> None:
         from services import PathOutsideRootError, resolve_within_root, split_module
         root = project_root(cwd or None)
         try:
+            # Splitting the root module itself is intentionally rejected:
+            # the splitter's `source_rel = source_mod_dir.relative_to(root)`
+            # path produces an empty string when source == root, which is
+            # not exercised by any primitive code path. Splitting downward
+            # from root is also semantically wrong — the root module is
+            # the aggregate, not a leaf to be decomposed. Use child modules
+            # as split sources.
             resolve_within_root(
                 root, source_module_path, allow_root_itself=False
             )
         except PathOutsideRootError as e:
             return {"error": str(e)}
         # Each split spec carries a ``path`` from LLM input — reject
-        # any that escape the project root before handing off.
+        # any that escape the project root, and also reject the root
+        # itself (you cannot create a "new root" via split).
         for spec in splits or []:
             if not isinstance(spec, dict):
                 continue
@@ -261,7 +284,9 @@ def register(mcp) -> None:
         from services import PathOutsideRootError, resolve_within_root, write_doc
         root = project_root(cwd or None)
         try:
-            resolve_within_root(root, module_path, allow_root_itself=False)
+            # Mirror dna_edit(target='body'/'contract') — root module's
+            # module.md / contract.md are legitimate write targets.
+            resolve_within_root(root, module_path, allow_root_itself=True)
         except PathOutsideRootError as e:
             return f"ERROR: {e}"
         try:
@@ -299,7 +324,9 @@ def register(mcp) -> None:
         from services import PathOutsideRootError, resolve_within_root, write_section
         root = project_root(cwd or None)
         try:
-            resolve_within_root(root, module_path, allow_root_itself=False)
+            # Mirror dna_edit(target='section'/'contract-section') — root
+            # module's sections are legitimate write targets.
+            resolve_within_root(root, module_path, allow_root_itself=True)
         except PathOutsideRootError as e:
             return f"ERROR: {e}"
         try:

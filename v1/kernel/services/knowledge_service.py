@@ -24,6 +24,20 @@ from . import _reindex
 from ._fm import parse_frontmatter, strip_frontmatter
 
 
+def _module_dir(module_path: str | Path, root: Path) -> Path:
+    """Resolve a caller-supplied module path against the project root.
+
+    Mirrors the read-side convention in `get_module`: absolute paths are
+    honoured as-is; relative paths (including the root sentinel "." and
+    "") are anchored to ``root``. This keeps every write function
+    (`edit_module`, `split_module`, `write_doc`, `write_section`)
+    independent of the calling process's cwd, and makes "." address the
+    root module deterministically.
+    """
+    p = Path(module_path)
+    return p if p.is_absolute() else (root / p)
+
+
 def list_modules(cwd=None) -> list[dict]:
     """Return all registered .dna modules.
 
@@ -270,7 +284,7 @@ def init_module(
     from cbi.resources import DNAModule
     root = _resolve_root(cwd)
     m = DNAModule.create(
-        Path(dir),
+        _module_dir(dir, root),
         name=name,
         owner=owner,
         description=description,
@@ -313,7 +327,7 @@ def edit_module(
     from cbi.resources import DNAModule
 
     root = _resolve_root(cwd)
-    module_dir = Path(module_path)
+    module_dir = _module_dir(module_path, root)
     m = DNAModule.load(module_dir, root=root)
 
     if target == "frontmatter":
@@ -477,7 +491,7 @@ def split_module(
         raise ValueError(f"strategy must be 'comment' or 'move', got: {strategy!r}")
 
     root = _resolve_root(cwd)
-    source_dir = Path(source_module_path)
+    source_dir = _module_dir(source_module_path, root)
     result = DNAModule.split(
         source_dir,
         splits,
@@ -511,7 +525,7 @@ def write_doc(
     if file not in ("module.md", "contract.md"):
         raise ValueError(f"file must be 'module.md' or 'contract.md', got: {file!r}")
     root = _resolve_root(cwd)
-    module_dir = Path(module_path)
+    module_dir = _module_dir(module_path, root)
     written = write_module_doc(module_dir, file, body)
     _reindex.reindex_dna(root, module_dir)
     return str(written.resolve())
@@ -536,7 +550,7 @@ def write_section(
     if file not in ("module.md", "contract.md"):
         raise ValueError(f"file must be 'module.md' or 'contract.md', got: {file!r}")
     root = _resolve_root(cwd)
-    module_dir = Path(module_path)
+    module_dir = _module_dir(module_path, root)
     result = write_module_section(
         module_dir,
         file,

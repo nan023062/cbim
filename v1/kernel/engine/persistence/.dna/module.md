@@ -1,10 +1,16 @@
 ---
 name: engine-persistence
 owner: architect
-description: Atomic file persistence for behavior-tree state: snapshot.py writes bb.json + resume.json, trace.py appends trace.jsonl. Shared by execution loop and dream (governance) loop; on-disk layout under .cbim/scheduler/{bt,dream}/<id>/ is an external contract.
-keywords: []
+description: BT 状态原子持久化：bb/resume 整文件替换 + trace 追加，loop-agnostic，磁盘布局为外契约
+keywords:
+  - persistence
+  - atomic-write
+  - bb-json
+  - trace
+  - snapshot
+  - loop-agnostic
 dependencies:
-  - v1/kernel/engine/core
+  - kernel/engine/core
 status: implemented
 ---
 
@@ -70,4 +76,3 @@ No internal classes beyond two file modules; this is a leaf. Consumers (`engine/
 - **No concurrent-writer support.** Two runners writing to the same directory is undefined. One tick / one run owns its directory; there is no lock, no last-writer-wins arbitration.
 - **No migration of old snapshots on schema bump.** Schema bumps invalidate in-flight resumes; this is by design (in-flight ticks are short-lived and expendable).
 - **No format other than JSON.** No msgpack, no pickle, no protobuf. JSON is line-debuggable in production; that is more valuable than wire compactness for state files of this size.
-

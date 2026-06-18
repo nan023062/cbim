@@ -28,17 +28,22 @@ def _make_index(root: Path, entries: list[str]) -> None:
 
 
 def _make_module(root: Path, rel: str, deps: list[str] | None = None) -> None:
+    """v2-conformant fixture. The legacy ``deps`` parameter is preserved
+    for signature stability but ignored — v2 sources deps from parent
+    class diagrams, not frontmatter.
+    """
     mod = root if rel == "." else (root / rel)
     dna = mod / ".dna"
     dna.mkdir(parents=True)
-    fm = ["---", f"name: {rel}", "owner: x", "description: m"]
-    if deps:
-        fm.append("dependencies:")
-        for d in deps:
-            fm.append(f"  - {d}")
-    else:
-        fm.append("dependencies: []")
-    fm.append("---")
+    fm = [
+        "---",
+        f"name: {rel}",
+        "owner: x",
+        "description: m",
+        "keywords: []",
+        "status: implemented",
+        "---",
+    ]
     (dna / "module.md").write_text("\n".join(fm) + "\n\nbody\n", encoding="utf-8")
 
 

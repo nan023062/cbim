@@ -1,8 +1,14 @@
 ---
 name: retrieval
 owner: architect
-description: Vector + keyword retrieval primitives: embedding-provider abstraction, BM25 fallback, per-source index storage, similarity search, drift verification. Shared by memory / dna / agents / transcripts. Core-loop infrastructure under engine/ — siblings of execution / dream / core / persistence.
-keywords: []
+description: 项目级 4 源检索原语库：向量+BM25 混合，可插拔 embedding，调用方同步触发索引
+keywords:
+  - retrieval
+  - embedding
+  - bm25
+  - vector-search
+  - drift-check
+  - four-source
 dependencies: []
 status: implemented
 ---
@@ -166,4 +172,3 @@ CBIM v2 的记忆架构重设计带来一个共同需求：**多源向量检索*
 本模块对外**无依赖**。仅依赖 Python 标准库（`json` / `pathlib` / `hashlib`）+ 可选 numpy（vector 索引存在时）+ 可选 embedding SDK（外部 provider 启用时）。
 
 依赖方向：`memory.crud → engine/retrieval`、`memory.compaction → engine/retrieval`、`mcp_server.tools.dna → engine/retrieval`、`mcp_server.tools.agents → engine/retrieval`、`hooks.session_* → engine/retrieval`、`engine/execution → engine/retrieval`、`engine/dream → engine/retrieval`。无环。
-

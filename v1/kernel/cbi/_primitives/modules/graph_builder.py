@@ -8,13 +8,15 @@ database. Output is a single JSON file at
 
 Edge semantics — only TWO kinds, locked by architect decision D1:
 
-  * ``depends_on``  — directed edge A→B means A.module.md frontmatter
-                      ``dependencies`` lists B's module path, OR A's
-                      module.md body contains a Mermaid classDiagram
-                      ``A ..> B`` arrow (parent modules only). Both
-                      endpoints must already be members of the module set
-                      (i.e. in ``read_index`` or scanned by
-                      ``_scan_modules``).
+  * ``depends_on``  — directed edge A→B means A's parent module body
+                      contains a Mermaid classDiagram ``A ..> B`` arrow.
+                      Class diagrams live on parent modules only (D7);
+                      leaf modules cannot contribute dependency edges.
+                      Both endpoints must already be members of the
+                      module set (i.e. in ``read_index`` or scanned by
+                      ``_scan_modules``). Note: v2 deleted the
+                      frontmatter ``dependencies`` field; there is no
+                      legacy fallback.
   * ``contains``    — directed edge P→C means C's module path is a
                       direct child path of P (parent prefix +
                       no intermediate ``/``). Pure structural.
@@ -104,6 +106,21 @@ _DEP_ARROW_RE = re.compile(
     r"`?([A-Za-z_][A-Za-z0-9_-]*)`?\s*\.\.>\s*`?([A-Za-z_][A-Za-z0-9_-]*)`?",
 )
 
+# Cross-tree placeholder origin annotation. Per MODULE-MD-DESIGN.zh-CN.md
+# section "占位节点命名约定": when a parent module's class diagram needs to
+# reference a remote module from another sub-tree, it declares a placeholder
+# class whose id is the remote path with ``/`` replaced by ``_``, then
+# follows up with a comment line of the form
+#
+#     class <id> : .from(<original/path>)
+#
+# We parse those annotations into a local id -> path override map so the
+# usual name->path dependency resolution finds the cross-tree endpoint
+# even though the placeholder id isn't a registered module name.
+_PLACEHOLDER_ORIGIN_RE = re.compile(
+    r"^\s*class\s+([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*\.from\(\s*([^)]+?)\s*\)\s*$",
+)
+
 
 def _extract_mermaid_blocks(body: str) -> list[str]:
     """Return the inner text of every ```mermaid ... ``` fenced block.
@@ -132,6 +149,34 @@ def _extract_mermaid_blocks(body: str) -> list[str]:
     return blocks
 
 
+def _parse_placeholder_origins(body: str) -> dict[str, str]:
+    """Return ``{placeholder_id: original_path}`` for every cross-tree
+    placeholder annotation found in the body's classDiagram blocks.
+
+    Pure function — does not mutate inputs and does not touch the
+    filesystem. Each annotation is scoped to its own diagram block: a
+    placeholder declared in one parent's diagram never bleeds into
+    another parent's resolution. Callers fold the returned map into a
+    *local* override of ``name_to_path`` and discard it after parsing —
+    these placeholders are not real modules and must never appear in the
+    global graph node set.
+    """
+    origins: dict[str, str] = {}
+    for block in _extract_mermaid_blocks(body):
+        first_nonempty = next(
+            (ln.strip() for ln in block.splitlines() if ln.strip()),
+            "",
+        )
+        if not first_nonempty.startswith("classDiagram"):
+            continue
+        for line in block.splitlines():
+            m = _PLACEHOLDER_ORIGIN_RE.match(line)
+            if m:
+                placeholder_id, original_path = m.group(1), m.group(2).strip()
+                origins[placeholder_id] = original_path
+    return origins
+
+
 def _parse_class_diagram_deps(
     body: str,
     name_to_path: dict[str, str],
@@ -139,12 +184,28 @@ def _parse_class_diagram_deps(
     """Return (src_path, dst_path) pairs from classDiagram ``..>`` arrows.
 
     ``name_to_path`` maps frontmatter module name → module path. An
-    arrow whose either side doesn't match a known name is dropped; we
-    don't attempt fuzzy matching (D7: only parent modules carry class
+    arrow whose either side doesn't resolve (neither a known module name
+    nor a placeholder declared in this same body) is dropped; we don't
+    attempt fuzzy matching (D7: only parent modules carry class
     diagrams, and parent diagrams reference siblings/children by their
-    declared module name).
+    declared module name or by an explicit placeholder annotation for
+    cross-tree endpoints).
+
+    Cross-tree resolution: placeholder origins parsed from this body
+    extend ``name_to_path`` *locally only* — the override is built as
+    ``dict(name_to_path) | origins`` and discarded when the function
+    returns, so a placeholder id never leaks into other modules' edge
+    parsing or into the graph's node set.
+
+    Comment lines starting with ``%%`` (e.g. the four-section R3 layout
+    markers) carry no ``..>`` arrows and are ignored naturally by
+    ``_DEP_ARROW_RE`` without any explicit filter.
     """
     pairs: list[tuple[str, str]] = []
+    placeholder_origins = _parse_placeholder_origins(body)
+    # Local-only override; never written back to ``name_to_path``.
+    local_resolver = dict(name_to_path)
+    local_resolver.update(placeholder_origins)
     for block in _extract_mermaid_blocks(body):
         # Only walk classDiagram blocks. Plain ``graph TD`` / ``flowchart``
         # blocks are out of scope per D1 — they describe runtime flow,
@@ -156,8 +217,8 @@ def _parse_class_diagram_deps(
         if not first_nonempty.startswith("classDiagram"):
             continue
         for left, right in _DEP_ARROW_RE.findall(block):
-            l_path = name_to_path.get(left)
-            r_path = name_to_path.get(right)
+            l_path = local_resolver.get(left)
+            r_path = local_resolver.get(right)
             if l_path is None or r_path is None:
                 continue
             if l_path == r_path:
@@ -287,16 +348,10 @@ def _emit_edges_for_module(
     is_leaf = (is_leaf_cache.get(src) if is_leaf_cache is not None
                else _is_leaf(src, all_paths))
 
-    # depends_on from frontmatter
-    for dep in m.get("dependencies") or []:
-        if not isinstance(dep, str):
-            continue
-        if dep == src:
-            continue
-        if dep in all_paths:
-            _add_edge(graph, src, dep, "depends_on", seen)
-
-    # depends_on from classDiagram body — parents only (D7)
+    # depends_on edges are sourced exclusively from the parent module's
+    # classDiagram (..> arrows). Frontmatter `dependencies` was deleted
+    # from the v2 schema; loader no longer emits the field, so there is
+    # no fallback path here.
     if not is_leaf:
         body = m.get("architecture") or ""
         if body:
@@ -569,4 +624,5 @@ __all__ = [
     "patch_graph",
     "load_graph",
     "_graph_path",
+    "_parse_placeholder_origins",
 ]

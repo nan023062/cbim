@@ -1,9 +1,16 @@
 ---
 name: project-lifecycle
 owner: architect
-description: Install side of the kernel: init, sync, source-of-truth templates+agents+commands
-keywords: []
+description: 内核安装侧：init / sync 操作 + agents / commands / hooks / templates 四源单源
+keywords:
+  - install
+  - init
+  - sync
+  - templates
+  - source-of-truth
+  - claude-config
 dependencies: []
+status: implemented
 ---
 
 ## Positioning
@@ -79,4 +86,3 @@ Two trigger events write this layout: first-use bootstrap (`init`) and explicit 
 - No `migrate.py`, no `upgrade/` sub-package, no `pin.py`, no `.cbim/.pin` accessor, no `versions.json` reader.
 - No installer subprocess. No multi-version kernel staging under `<install_root>/kernel/<ver>/`.
 - No diagnostic 7-scenario matrix. There are no scenarios — install is binary (the kernel is either present at `.cbim/kernel/` or it isn't).
-

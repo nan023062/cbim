@@ -2,16 +2,24 @@
 
 Two relations:
   - Parent/child (decided by path nesting; tree only).
-  - Dependencies (frontmatter `dependencies`; must be single-directional DAG).
+  - Dependencies (parent module class diagram is the v2 authoritative
+    source; v2 deleted the frontmatter ``dependencies`` field, so there
+    is no fallback path).
 
 Findings:
-  TREE_ORPHAN                warn   module has no enclosing parent (and isn't root)
-  TREE_DEP_DANGLING          warn   declared dep path is unknown
-  TREE_DEP_ANCESTOR_DECLARED warn   dep targets an ancestor (implicit; must not be declared)
-  TREE_DEP_UP_TREE           warn   dep points up the tree to a non-ancestor unstable side
-  TREE_CYCLE                 error  dep graph has a strongly-connected component
-  TREE_DEP_DIAGRAM_MISMATCH  warn   frontmatter `dependencies` disagrees with parent
-                                    module's classDiagram `..>` edges from this module
+  TREE_ORPHAN                 warn   module has no enclosing parent (and isn't root)
+  TREE_DEP_DANGLING           warn   declared dep path is unknown
+  TREE_DEP_ANCESTOR_DECLARED  warn   dep targets an ancestor (implicit; must not be declared)
+  TREE_DEP_UP_TREE            warn   dep points up the tree to a non-ancestor unstable side
+  TREE_CYCLE                  error  dep graph has a strongly-connected component
+  TREE_DIAGRAM_R1_PLACEHOLDER_EXPANDED  warn  placeholder annotation points at a path
+                                              that belongs to the diagram-host's own
+                                              subtree (should be a regular sub-node)
+  TREE_DIAGRAM_R2_DEEP_SOURCE           warn  arrow source resolves to a descendant
+                                              deeper than one level under the parent
+  TREE_DIAGRAM_R3_UNGROUPED              info  parent class diagram with cross-tree
+                                              placeholders is missing the four-section
+                                              `%% --- N. ... ---` group markers
 """
 
 from __future__ import annotations
@@ -19,6 +27,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from cbi._primitives.modules.graph_builder import _parse_placeholder_origins
 from services import list_modules as _service_list_modules
 
 from ..result import AuditFinding
@@ -181,6 +190,150 @@ def _node_name_for(m: dict, path: str) -> str:
     return path.rsplit("/", 1)[-1] if "/" in path else path
 
 
+# ---------------------------------------------------------------------------
+# R3: four-section group marker detection
+# ---------------------------------------------------------------------------
+
+# A R3-compliant parent diagram with cross-tree placeholders carries comment
+# lines that look like ``%% --- 1. ... ---`` for each of the four sections.
+# We only require the leading marker pattern (digit 1..4) inside the diagram
+# block; the prose content after the digit is human-facing decoration.
+_R3_MARKER_RE = re.compile(
+    r"^\s*%%\s*-{2,}\s*([1-4])\b",
+    re.MULTILINE,
+)
+
+
+def _has_four_section_grouping(block: str) -> bool:
+    """True when the diagram block names all four R3 group markers (1..4)."""
+    seen = {m.group(1) for m in _R3_MARKER_RE.finditer(block)}
+    return seen == {"1", "2", "3", "4"}
+
+
+def _classdiagram_blocks(body: str) -> list[str]:
+    """Yield the inner text of every ```mermaid classDiagram``` block."""
+    if not body:
+        return []
+    out: list[str] = []
+    for block in _MERMAID_BLOCK_RE.findall(body):
+        first = next(
+            (ln.strip() for ln in block.splitlines() if ln.strip()),
+            "",
+        )
+        if first.startswith("classDiagram"):
+            out.append(block)
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Per-module authoritative dep set (class diagram first, frontmatter fallback)
+# ---------------------------------------------------------------------------
+
+
+def _resolve_node_factory(by_path: dict[str, dict], name_to_path: dict[str, str]):
+    """Build a closure that turns a class-diagram node id into a module path."""
+    def _resolve(node: str) -> str | None:
+        if not node:
+            return None
+        if node in name_to_path:
+            return name_to_path[node]
+        for p in by_path:
+            base = p.rsplit("/", 1)[-1] if "/" in p else p
+            if base == node:
+                return p
+        return None
+    return _resolve
+
+
+def _diagram_deps_for_module(
+    module_path: str,
+    parent_module: dict,
+    parent_path: str,
+    by_path: dict[str, dict],
+    name_to_path: dict[str, str],
+) -> set[str] | None:
+    """Resolve the authoritative dep set for ``module_path`` from its parent's
+    class diagram.
+
+    Returns:
+      - ``set[str]`` of module paths (possibly empty) when the parent body
+        contains at least one classDiagram block. An empty set means "the
+        diagram is authoritative and lists no edges from this module".
+      - ``None`` when the parent has no classDiagram block at all → caller
+        should fall back to frontmatter ``dependencies``.
+    """
+    body = parent_module.get("architecture") or ""
+    if not body:
+        return None
+    blocks = _classdiagram_blocks(body)
+    if not blocks:
+        return None
+
+    # Resolver enriched with placeholder origins so `submodule_cbim_v2` (a
+    # placeholder id) maps onto the real `submodule/cbim/v2` path.
+    placeholder_origins: dict[str, str] = {}
+    for block in blocks:
+        # Re-run the parser on each block for full fidelity; concatenating
+        # blocks would let placeholders bleed across siblings.
+        placeholder_origins.update(
+            _parse_placeholder_origins("```mermaid\n" + block + "\n```\n")
+        )
+    local_name_to_path = dict(name_to_path)
+    # Placeholder origins override; they're authoritative within the diagram.
+    local_name_to_path.update(placeholder_origins)
+    resolve = _resolve_node_factory(by_path, local_name_to_path)
+
+    edges = _parse_class_diagram_deps(body)
+    self_node = _node_name_for(by_path[module_path], module_path)
+
+    # Per R2, deeper sources are rendered as their top-level-under-parent
+    # ancestor. Honour that: an arrow whose source resolves to `module_path`
+    # OR to `module_path`'s top-level ancestor under `parent_path` counts
+    # towards this module's authoritative dep set.
+    deep_alias = _top_level_under_parent(module_path, parent_path)
+    candidates = {self_node}
+    if deep_alias is not None:
+        candidates.add(deep_alias)
+
+    out: set[str] = set()
+    for src_token, dst_tokens in edges.items():
+        src_path = resolve(src_token)
+        # Either the resolved path is the module itself, or the raw token
+        # equals one of its diagram aliases (covers cases where the source
+        # is unregistered but matches by name).
+        is_match = (src_path == module_path) or (src_token in candidates)
+        if not is_match:
+            continue
+        for dst in dst_tokens:
+            dst_path = resolve(dst)
+            if dst_path is None:
+                # External / placeholder unresolved — drop. The TREE_DEP_*
+                # checks operate on registered paths only.
+                continue
+            out.add(dst_path)
+    return out
+
+
+def _top_level_under_parent(path: str, parent: str) -> str | None:
+    """Return the top-level component of ``path`` immediately beneath ``parent``.
+
+    e.g. ``_top_level_under_parent("a/b/c", ".")`` → ``"a"``;
+         ``_top_level_under_parent("a/b/c", "a")`` → ``"a/b"``;
+         ``_top_level_under_parent("x", "y")`` → ``None`` (not a descendant).
+    """
+    if path == parent:
+        return None
+    if parent == ".":
+        head = path.split("/", 1)[0]
+        return head if head else None
+    prefix = parent + "/"
+    if not path.startswith(prefix):
+        return None
+    rest = path[len(prefix):]
+    head = rest.split("/", 1)[0]
+    return f"{parent}/{head}" if head else None
+
+
 def check(project_root: Path, config: dict) -> list[AuditFinding]:
     findings: list[AuditFinding] = []
 
@@ -195,6 +348,12 @@ def check(project_root: Path, config: dict) -> list[AuditFinding]:
 
     all_paths = set(by_path.keys())
     has_root = "." in all_paths
+
+    name_to_path: dict[str, str] = {}
+    for p, mm in by_path.items():
+        nm = (mm.get("name") or "").strip()
+        if nm and nm not in name_to_path:
+            name_to_path[nm] = p
 
     for path, m in sorted(by_path.items()):
         if path == ".":
@@ -213,10 +372,29 @@ def check(project_root: Path, config: dict) -> list[AuditFinding]:
                 code="TREE_ORPHAN",
             ))
 
+    # --- Build the authoritative dep graph from parent class diagrams.
+    # v2 deleted the frontmatter `dependencies` field; there is no
+    # fallback. A module without a parent (or whose parent has no
+    # classDiagram block) contributes no edges — that's not drift,
+    # just "nothing declared".
     dep_graph: dict[str, list[str]] = {}
     for path, m in by_path.items():
-        deps = [_normalise(d) for d in (m.get("dependencies") or []) if d]
+        parent_path = (
+            "." if path == "." else
+            (path.rsplit("/", 1)[0] if "/" in path else ".")
+        )
+        parent_module = by_path.get(parent_path) if path != "." else None
+
+        diagram_deps: set[str] = set()
+        if parent_module is not None:
+            resolved = _diagram_deps_for_module(
+                path, parent_module, parent_path, by_path, name_to_path,
+            )
+            if resolved is not None:
+                diagram_deps = resolved
+        deps = sorted(diagram_deps)
         dep_graph[path] = deps
+
         ancestors = set(_ancestors(path))
         for dep in deps:
             if dep not in all_paths:
@@ -226,12 +404,11 @@ def check(project_root: Path, config: dict) -> list[AuditFinding]:
                     target=path,
                     message=f"module {path!r} declares dependency on unknown path {dep!r}",
                     suggestion=(
-                        "Remove the stale dependency via `cbim dna edit "
-                        "--target frontmatter --field dependencies` or create the "
-                        "missing module."
+                        "Remove the stale dependency from the parent class "
+                        "diagram or create the missing module."
                     ),
                     code="TREE_DEP_DANGLING",
-                    metadata={"dep": dep},
+                    metadata={"dep": dep, "origin": "diagram"},
                 ))
                 continue
             if dep in ancestors:
@@ -244,12 +421,12 @@ def check(project_root: Path, config: dict) -> list[AuditFinding]:
                         "sub-module-to-parent imports are implicit and must not be declared"
                     ),
                     suggestion=(
-                        f"Remove ancestor {dep!r} from `dependencies` frontmatter; "
-                        "sub-module-to-parent imports are implicit and should not be "
-                        "declared as cross-boundary deps."
+                        f"Remove ancestor {dep!r} from the parent class diagram "
+                        "edges; sub-module-to-parent imports are implicit and "
+                        "should not be declared as cross-boundary deps."
                     ),
                     code="TREE_DEP_ANCESTOR_DECLARED",
-                    metadata={"dep": dep},
+                    metadata={"dep": dep, "origin": "diagram"},
                 ))
                 continue
 
@@ -268,97 +445,177 @@ def check(project_root: Path, config: dict) -> list[AuditFinding]:
             metadata={"cycle": sorted(comp)},
         ))
 
-    # --- TREE_DEP_DIAGRAM_MISMATCH ----------------------------------------
-    # Parent module's `classDiagram` `..>` edges are the SOURCE OF TRUTH for
-    # dependency declarations; frontmatter `dependencies` is the derived
-    # cache. Disagreement = drift. See .dna/module.md Key Decision
-    # "TREE_DEP_DIAGRAM_MISMATCH 解析规则 (T4 实装契约)".
-    name_to_path: dict[str, str] = {}
-    for p, mm in by_path.items():
-        nm = (mm.get("name") or "").strip()
-        if nm and nm not in name_to_path:
-            name_to_path[nm] = p
-
-    def _resolve_node(node: str) -> str | None:
-        if not node:
-            return None
-        if node in name_to_path:
-            return name_to_path[node]
-        for p in by_path:
-            base = p.rsplit("/", 1)[-1] if "/" in p else p
-            if base == node:
-                return p
-        return None
-
-    for path, m in sorted(by_path.items()):
-        if path == ".":
-            continue
-        parent_path = path.rsplit("/", 1)[0] if "/" in path else "."
-        parent = by_path.get(parent_path)
-        if parent is None:
-            continue
-        parent_body = parent.get("architecture") or ""
-        if not parent_body:
-            continue
-        edges = _parse_class_diagram_deps(parent_body)
-        if not edges:
-            # Parent has no classDiagram block (or only empty / flowchart
-            # blocks) — defer; this isn't drift, it's a not-yet-migrated
-            # parent. T4 deliberately stays silent here.
-            continue
-
-        self_node = _node_name_for(m, path)
-        diag_targets_raw = edges.get(self_node, set())
-        d_diag: set[str] = set()
-        for tgt_node in diag_targets_raw:
-            resolved = _resolve_node(tgt_node)
-            if resolved is None:
-                # External / placeholder node; not in registry, not our
-                # concern here (and not a TREE_DEP_DANGLING either — that
-                # check operates on frontmatter, not class diagrams).
-                continue
-            d_diag.add(resolved)
-
-        raw_decl = m.get("dependencies") or []
-        if not isinstance(raw_decl, list):
-            raw_decl = []
-        d_decl: set[str] = {_normalise(d) for d in raw_decl if d}
-
-        for missing_in_diag in sorted(d_decl - d_diag):
-            findings.append(AuditFinding(
-                check="dna_tree",
-                severity="warn",
-                target=path,
-                message=(
-                    f"module {path!r} frontmatter declares dependency on "
-                    f"{missing_in_diag!r} but parent module {parent_path!r}'s "
-                    "class diagram has no `..>` edge from this module to it"
-                ),
-                suggestion=(
-                    f"Add `{self_node} ..> <{missing_in_diag} node>` to parent "
-                    f"module {parent_path!r}'s classDiagram, then regenerate "
-                    "this module's frontmatter dependencies."
-                ),
-                code="TREE_DEP_DIAGRAM_MISMATCH",
-                metadata={"dep": missing_in_diag, "parent": parent_path},
-            ))
-        for missing_in_decl in sorted(d_diag - d_decl):
-            findings.append(AuditFinding(
-                check="dna_tree",
-                severity="warn",
-                target=path,
-                message=(
-                    f"parent module {parent_path!r}'s class diagram has a `..>` "
-                    f"edge from this module to {missing_in_decl!r} but module "
-                    f"{path!r}'s frontmatter `dependencies` does not include it"
-                ),
-                suggestion=(
-                    f"Update parent module {parent_path!r}'s classDiagram or "
-                    "regenerate this module's frontmatter dependencies so the "
-                    "two agree."
-                ),
-                code="TREE_DEP_DIAGRAM_MISMATCH",
-                metadata={"dep": missing_in_decl, "parent": parent_path},
-            ))
+    # --- R1 / R2 / R3 topology consistency on parent class diagrams --------
+    # Triggered only on parent modules whose body contains at least one
+    # classDiagram block; leaf modules and prose-only parents are skipped.
+    # All three findings are warn / info (no error), per PR-1 lenient
+    # semantics — the ratchet's fingerprint mechanism then auto-baselines
+    # them on first audit run after PR-1 lands.
+    findings.extend(
+        _diagram_rule_findings(by_path, all_paths, name_to_path)
+    )
 
     return findings
+
+
+def _diagram_rule_findings(
+    by_path: dict[str, dict],
+    all_paths: set[str],
+    name_to_path: dict[str, str],
+) -> list[AuditFinding]:
+    """Detect R1/R2/R3 violations across every parent module's class diagrams."""
+    out: list[AuditFinding] = []
+    for parent_path, parent_module in sorted(by_path.items()):
+        body = parent_module.get("architecture") or ""
+        if not body:
+            continue
+        blocks = _classdiagram_blocks(body)
+        if not blocks:
+            continue
+
+        for block in blocks:
+            block_text = "```mermaid\n" + block + "\n```\n"
+            placeholder_origins = _parse_placeholder_origins(block_text)
+
+            # ----- R1: placeholder origin lives inside this parent's subtree
+            # (so it shouldn't be a placeholder — it's a regular sub-node).
+            # Only fire when the origin path resolves to a registered
+            # module — unregistered paths could be future mounts or external
+            # references and aren't ours to flag.
+            for pid, origin_path in placeholder_origins.items():
+                norm_origin = _normalise(origin_path)
+                if norm_origin not in all_paths:
+                    continue
+                if not _is_descendant(norm_origin, parent_path):
+                    continue
+                out.append(AuditFinding(
+                    check="dna_tree",
+                    severity="warn",
+                    target=parent_path,
+                    message=(
+                        f"parent module {parent_path!r}'s class diagram lists "
+                        f"placeholder {pid!r} pointing at {origin_path!r}, "
+                        "which is a descendant of this parent — placeholders "
+                        "are reserved for cross-tree references, not local "
+                        "sub-modules"
+                    ),
+                    suggestion=(
+                        "Replace the placeholder with a regular `class "
+                        "<sub-module> { <<module>> }` node in this same diagram."
+                    ),
+                    code="TREE_DIAGRAM_R1_PLACEHOLDER_EXPANDED",
+                    metadata={
+                        "placeholder": pid,
+                        "origin": origin_path,
+                    },
+                ))
+
+            # ----- R2: arrow sources whose resolved path is more than one
+            # level below `parent_path`. Common-ancestor diagrams may only
+            # name their direct-child layer as the source side.
+            edges = _parse_class_diagram_deps(block_text)
+            local_name_to_path = dict(name_to_path)
+            local_name_to_path.update(placeholder_origins)
+
+            def _resolve_local(token: str) -> str | None:
+                if not token:
+                    return None
+                if token in local_name_to_path:
+                    return local_name_to_path[token]
+                for p in by_path:
+                    base = p.rsplit("/", 1)[-1] if "/" in p else p
+                    if base == token:
+                        return p
+                return None
+
+            for src_token in edges:
+                src_path = _resolve_local(src_token)
+                if src_path is None:
+                    continue
+                # Only flag when the source is a descendant of this parent.
+                # External placeholders aren't R2 violations — they're cross-
+                # tree references and obey their own rules.
+                if not _is_descendant(src_path, parent_path):
+                    continue
+                depth = _depth_under_parent(src_path, parent_path)
+                if depth is None or depth <= 1:
+                    continue
+                top_level = _top_level_under_parent(src_path, parent_path)
+                out.append(AuditFinding(
+                    check="dna_tree",
+                    severity="warn",
+                    target=parent_path,
+                    message=(
+                        f"parent module {parent_path!r}'s class diagram has an "
+                        f"arrow originating at {src_token!r} (resolves to "
+                        f"{src_path!r}), which is {depth} levels below the "
+                        "parent — only direct-child level nodes may be "
+                        "sources here"
+                    ),
+                    suggestion=(
+                        f"Render the source as {top_level!r} (its top-level "
+                        f"ancestor under {parent_path!r}); recurse into "
+                        f"{top_level!r}'s own diagram for the inner detail."
+                    ),
+                    code="TREE_DIAGRAM_R2_DEEP_SOURCE",
+                    metadata={
+                        "source": src_token,
+                        "resolved": src_path,
+                        "depth": depth,
+                    },
+                ))
+
+            # ----- R3: a diagram block carrying any cross-tree placeholder
+            # must use the four-section group markers. No placeholder = no
+            # need for the layout; some parents legitimately have only
+            # local nodes and skip the markers.
+            if placeholder_origins and not _has_four_section_grouping(block):
+                out.append(AuditFinding(
+                    check="dna_tree",
+                    severity="info",
+                    target=parent_path,
+                    message=(
+                        f"parent module {parent_path!r}'s class diagram has "
+                        f"{len(placeholder_origins)} cross-tree placeholder(s) "
+                        "but is missing the four-section `%% --- N. ... ---` "
+                        "group markers"
+                    ),
+                    suggestion=(
+                        "Annotate the diagram with the four group markers "
+                        "(direct nodes / cross-tree placeholders / internal "
+                        "edges / cross-tree edges) so reviewers can see the "
+                        "subtree-vs-cross-tree split at a glance."
+                    ),
+                    code="TREE_DIAGRAM_R3_UNGROUPED",
+                    metadata={
+                        "placeholder_count": len(placeholder_origins),
+                    },
+                ))
+    return out
+
+
+def _is_descendant(path: str, ancestor: str) -> bool:
+    """True when ``path`` is strictly below ``ancestor`` in the module tree."""
+    if path == ancestor:
+        return False
+    if ancestor == ".":
+        return path != "."
+    return path.startswith(ancestor + "/")
+
+
+def _depth_under_parent(path: str, parent: str) -> int | None:
+    """Levels between ``parent`` and ``path``.
+
+    e.g. parent=".",  path="a"     → 1
+         parent=".",  path="a/b"   → 2
+         parent="a",  path="a/b"   → 1
+         parent="a",  path="a/b/c" → 2
+
+    Returns None when path is not a descendant.
+    """
+    if not _is_descendant(path, parent):
+        return None
+    if parent == ".":
+        return path.count("/") + 1
+    rest = path[len(parent) + 1:]
+    return rest.count("/") + 1

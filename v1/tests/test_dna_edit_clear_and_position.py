@@ -237,21 +237,32 @@ def test_body_insert_at_top_into_empty_body():
 # Service round-trip — knowledge_service.edit_module
 # ---------------------------------------------------------------------------
 
-def test_service_clear_dependencies_round_trip(tmp_path):
+def test_service_clear_keywords_round_trip(tmp_path):
+    """Round-trip clearing of a list-typed frontmatter field via the
+    service layer.
+
+    PR-1 schema migration retargeted this test from `dependencies`
+    (removed in v2) to `keywords` (still list-typed in v2). The service
+    contract under test — clear a populated list field, observe an
+    empty-list rendering — is unchanged.
+    """
     root = _make_project(tmp_path)
-    mod = _make_module(root, "mymod",
-                       deps=["foo/bar", "baz"])
+    mod = _make_module(root, "mymod")
+    # Pre-populate keywords so we have something to clear.
+    edit_module(mod, "frontmatter",
+                {"field": "keywords", "value_list": ["foo-bar", "baz"]},
+                cwd=str(root))
 
     edit_module(mod, "frontmatter",
-                {"field": "dependencies", "value_list": []},
+                {"field": "keywords", "value_list": []},
                 cwd=str(root))
 
     out = (mod / ".dna" / "module.md").read_text(encoding="utf-8")
-    # YAML may render as either `dependencies: []` or `dependencies:` with no
+    # YAML may render as either `keywords: []` or `keywords:` with no
     # items; both are valid empty-list representations.
-    assert "foo/bar" not in out
+    assert "foo-bar" not in out
     assert "baz" not in out
-    assert "dependencies:" in out
+    assert "keywords:" in out
 
 
 def test_service_clear_rejects_non_list_field(tmp_path):

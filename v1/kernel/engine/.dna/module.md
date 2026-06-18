@@ -1,9 +1,16 @@
 ---
 name: kernel-engine
 owner: architect
-description: Kernel engine — home of the CLI dispatcher and CBIM's twin behavior-tree roots plus their shared core-loop infrastructure; (1) unified CLI dispatcher routing python -m engine <domain> to memory/dna/agent/skill/hook/mcp/dashboard/init/project/log/config/debug/audit, (2) home of the behavior-tree execution root execution/ (MCP-exposed bt_tick / bt_tick_resume) and the governance root dream/ (MCP-exposed dream_tick / dream_tick_resume), both driven by shared engine/core primitives, persisted via shared engine/persistence, and consuming shared engine/retrieval for 4-source vector + keyword search and drift verification
-keywords: []
+description: 内核引擎：CLI 分发器 + 执行/治理双 BT 根 + 共享原语层（core/persistence/retrieval）
+keywords:
+  - engine
+  - cli
+  - behavior-tree
+  - dispatcher
+  - twin-root
+  - shared-primitives
 dependencies: []
+status: implemented
 ---
 
 ## Positioning
@@ -151,4 +158,3 @@ Every CBIM operation that an LLM or human types is one CLI invocation. The kerne
 - No `cbim_kernel.*` import paths. The kernel root is now the package root (after flatten); imports are `from engine ...`, `from memory ...`, `from cbi.resources ...`, never `from cbim_kernel.engine ...`.
 - No `migrate` or `upgrade` subcommands. Project lifecycle = `init` + `project sync` only.
 - No `pin` subcommand, no `versions.json` reader, no installer-side subprocess.
-

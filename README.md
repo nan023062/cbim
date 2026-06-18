@@ -27,7 +27,7 @@ Everything below describes **V1**.
 3. The script clones the repo into a temp directory, copies `v1/kernel/` into `<project>/.cbim/kernel/` (flat — `engine/`, `cbi/`, `memory/`, `project/` are direct children), then runs `python3 -m engine init` to populate the project (launcher shims, agents, slash commands, hooks, MCP server, `CLAUDE.md`, `.gitignore`). `init` also builds a managed venv at `<project>/.cbim/.venv/` and installs the `mcp` SDK into it — your system Python is untouched. Requires `git` and `python3` ≥ 3.10 on PATH; no global `pip install`.
 4. **Restart Claude Code** so the `SessionStart` hook fires.
 
-Native Windows is not supported by `install.sh` (POSIX bash); use WSL.
+Native Windows is supported — `install.sh` runs in any POSIX `bash` environment, including Windows Git Bash / MINGW64. Launch it from Git Bash; `cmd.exe` and PowerShell are not entry points (use Git Bash on those machines). WSL also works.
 
 After install, the project root contains:
 

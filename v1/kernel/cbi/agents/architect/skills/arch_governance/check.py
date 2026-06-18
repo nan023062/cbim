@@ -23,6 +23,7 @@ from pathlib import Path
 from ....._primitives.modules import (
     list_modules, read_index, _SCAN_SKIP_DIRS, _scan_modules,
 )
+from ....._primitives.modules.graph_builder import _parse_class_diagram_deps
 from .config import CONFIG as _cfg
 
 PLACEHOLDER_MIN_REAL_LINES   = _cfg["placeholder_min_real_lines"]
@@ -261,7 +262,26 @@ def run_checks(root: Path) -> dict[str, list[str]]:
 
     mod_map = {m["path"]: m for m in modules}
     all_paths = set(mod_map)
-    dep_graph = {m["path"]: [d for d in m.get("dependencies", [])] for m in modules}
+    # v2: dependency relationships are declared exclusively by parent
+    # module class diagrams (..> arrows). Frontmatter `dependencies` was
+    # deleted from the schema. Reuse the graph_builder parser so the
+    # cycle detection here stays lock-step with the audit / retrieval
+    # graph.
+    name_to_path = {m["name"]: m["path"] for m in modules if m.get("name")}
+    dep_graph: dict[str, list[str]] = {p: [] for p in all_paths}
+    for m in modules:
+        path = m["path"]
+        # Only parents carry classDiagram blocks (D7); leaves contribute
+        # nothing to the dep graph from this source.
+        if _is_leaf(path, all_paths):
+            continue
+        body = m.get("architecture") or ""
+        if not body:
+            continue
+        for src_path, dst_path in _parse_class_diagram_deps(body, name_to_path):
+            if src_path in all_paths and dst_path in all_paths and src_path != dst_path:
+                if dst_path not in dep_graph[src_path]:
+                    dep_graph[src_path].append(dst_path)
 
     # Module registry lives at .cbim/index.md (framework-managed). This
     # replaces the old <project-root>/.dna/index.md location.

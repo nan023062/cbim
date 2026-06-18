@@ -24,6 +24,52 @@ from . import _reindex
 from ._fm import parse_frontmatter, strip_frontmatter
 
 
+# ---------------------------------------------------------------------------
+# v2 `links` frontmatter validation. Single-source-of-truth — both CLI and
+# MCP route through edit_module(target="frontmatter", field="links"), so
+# validating here keeps the surfaces honest. CLI/MCP layers are pass-through.
+#
+# Schema (v2):
+#   list[dict]            — each element a dict
+#   dict["kind"]          — required; one of {"local", "git", "db"}
+#   kind == "local"       — must carry "target" (path string)
+#   kind == "git" / "db"  — extra fields are passed through verbatim (the
+#                            specific protocol fields are out of scope here;
+#                            once we materialise git/db loaders, those layers
+#                            will validate their own required fields).
+# ---------------------------------------------------------------------------
+_LINK_KINDS = ("local", "git", "db")
+
+
+def _validate_links(value) -> None:
+    """Validate a `links` frontmatter value. Raises ValueError on first issue.
+
+    Called from edit_module's frontmatter branch so CLI/MCP/programmatic
+    callers all get the same rules. Empty list is allowed (clears links).
+    """
+    if not isinstance(value, list):
+        raise ValueError(
+            f"field 'links' must be a list of dicts; got: {type(value).__name__}"
+        )
+    for idx, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ValueError(
+                f"links[{idx}] must be a dict; got: {type(item).__name__}"
+            )
+        kind = item.get("kind")
+        if not kind:
+            raise ValueError(f"links[{idx}] missing required key 'kind'")
+        if kind not in _LINK_KINDS:
+            raise ValueError(
+                f"links[{idx}].kind must be one of {_LINK_KINDS}, "
+                f"got: {kind!r}"
+            )
+        if kind == "local" and not item.get("target"):
+            raise ValueError(
+                f"links[{idx}] kind='local' requires non-empty 'target'"
+            )
+
+
 def _module_dir(module_path: str | Path, root: Path) -> Path:
     """Resolve a caller-supplied module path against the project root.
 
@@ -54,7 +100,6 @@ def list_modules(cwd=None) -> list[dict]:
               "owner":        <frontmatter owner>,
               "description":  <frontmatter description>,
               "keywords":     [str, ...],
-              "dependencies": [str, ...],
               "architecture": <module.md body, frontmatter stripped>,
               "contract":     <contract.md content or "">,
               "workflows":    [ {"id": <slug>, "name": <fm name>, "body": <md>}, ... ],
@@ -74,10 +119,6 @@ def list_modules(cwd=None) -> list[dict]:
         if isinstance(kw, str):
             kw = [k.strip() for k in kw.split(",") if k.strip()] if kw else []
         m["keywords"] = kw if isinstance(kw, list) else []
-        deps = m.get("dependencies", [])
-        if isinstance(deps, str):
-            deps = [d.strip() for d in deps.split(",") if d.strip()] if deps else []
-        m["dependencies"] = deps if isinstance(deps, list) else []
         inflated.append(m)
     return inflated
 
@@ -119,9 +160,9 @@ def get_module(module_path: str | Path, cwd: str = "") -> dict | None:
 
     Single-point load — does NOT iterate `list_modules`. The module dict
     mirrors what `list_modules` returns for a single entry (frontmatter
-    fields + body + contract + workflows + keywords/dependencies
-    normalisation) and additionally exposes ``module_dir`` as an
-    absolute Path so callers don't have to recompute it.
+    fields + body + contract + workflows + keywords normalisation) and
+    additionally exposes ``module_dir`` as an absolute Path so callers
+    don't have to recompute it.
 
     Returns None when the module.md file is missing. Missing contract.md
     is NOT an error — the contract field is just an empty string.
@@ -139,9 +180,6 @@ def get_module(module_path: str | Path, cwd: str = "") -> dict | None:
     keywords = fm.get("keywords") or []
     if isinstance(keywords, str):
         keywords = [k.strip() for k in keywords.split(",") if k.strip()] if keywords else []
-    deps = fm.get("dependencies") or []
-    if isinstance(deps, str):
-        deps = [d.strip() for d in deps.split(",") if d.strip()] if deps else []
 
     contract_text = m.contract.body.read() if m.contract.exists() else ""
     workflows = _collect_workflows(m.path.parent / "workflows")
@@ -158,7 +196,6 @@ def get_module(module_path: str | Path, cwd: str = "") -> dict | None:
         "description": fm.get("description", ""),
         "status": fm.get("status", ""),
         "keywords": keywords if isinstance(keywords, list) else [],
-        "dependencies": deps if isinstance(deps, list) else [],
         "architecture": m.body.read(),
         "body": m.body.read(),
         "contract": contract_text,
@@ -184,7 +221,7 @@ def get_module_fm_schema() -> dict:
 
     Returns a dict with two keys:
       - ``list_fields``: ``frozenset[str]`` — frontmatter fields whose
-        YAML type must be a list (e.g. ``keywords``, ``dependencies``).
+        YAML type must be a list (v2 schema: ``keywords``, ``links``).
       - ``status_values``: ``tuple[str, ...]`` — allowed values for the
         ``status`` field.
 
@@ -358,6 +395,8 @@ def edit_module(
                     f"status must be one of {_MODULE_FM_STATUS_VALUES}, "
                     f"got: {new_value!r}"
                 )
+        if field == "links" and has_list:
+            _validate_links(new_value)
         m.frontmatter.set(field, new_value)
         m.save()
         _reindex.reindex_dna(root, module_dir)

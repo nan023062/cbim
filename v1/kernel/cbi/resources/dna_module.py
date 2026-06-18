@@ -46,10 +46,11 @@ class SplitResult:
 # ---------------------------------------------------------------------------
 
 class ModuleFrontmatter(Frontmatter):
+    # v2 schema (PR-1): mirrors _MODULE_FM_SCHEMA in
+    # cbi/_primitives/modules/frontmatter_schema.py — keep in sync.
     _SCHEMA = (
         "name", "owner", "description",
-        "keywords", "dependencies", "includeDirs",
-        "status",
+        "keywords", "status", "links",
     )
 
 
@@ -216,12 +217,13 @@ class DNAModule(Resource):
                 file=sys.stderr,
             )
             data = json.loads(legacy_json.read_text(encoding="utf-8"))
+            # v2 schema: drop legacy `dependencies` / `includeDirs` keys —
+            # dependency edges live exclusively in parent class diagrams.
             fm = ModuleFrontmatter({
                 "name": data.get("name", ""),
                 "owner": data.get("owner", ""),
                 "description": data.get("description", ""),
                 "keywords": data.get("keywords", []),
-                "dependencies": data.get("dependencies", []),
             })
             arch_path = aimod / "architecture.md"
             body_text = (

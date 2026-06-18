@@ -1,8 +1,15 @@
 ---
 name: engine-core
 owner: architect
-description: BT 引擎共享原语库——Node ABC / Composite / Decorator / Runner / Blackboard / ForEach / SwitchBranch；execution 与 dream 两根共享的稳定底层，不依赖任何上层模块
-keywords: []
+description: BT 共享原语：Node/Composite/Decorator/Runner/Blackboard，execution 与 dream 同基
+keywords:
+  - behavior-tree
+  - primitives
+  - blackboard
+  - runner
+  - composite
+  - decorator
+  - shared-base
 dependencies: []
 status: implemented
 ---
@@ -121,4 +128,3 @@ v3.6 之前还携带 `LlmActionLeaf` 叶原语（「一 tick 一 LLM 调用」�
 **为什么不在 dependencies 声明**：`persistence/snapshot.py` 反向引用了 `engine.core.blackboard.SCHEMA_VERSION`，以使版本成为唯一权威源（persistence 不拥有 schema 权）。两边同时存在 import 关系会在模块拓扑层面构成环。架构上的解环原则：**core 不声明对 persistence 的静态依赖**，把 `persistence` 当作"运行时协作者"看待——与 LLM 客户端、memory 服务同列（均不进入 dependencies）。`Runner` 在实际代码中仍会 `from engine.persistence import snapshot, trace`，但在模块责任划分上表述为“persistence 是 core 的上层调用受体”。后续重构可进一步走“构造器注入 snapshot/trace 函数”路线彻底代码层解耦。
 
 依赖方向（frontmatter 可静态审计部分）：`engine/execution → engine/core`、`engine/dream → engine/core`、`engine/persistence → engine/core`。core 本身不声明对上层任何模块的静态依赖。无环。
-

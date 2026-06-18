@@ -37,6 +37,40 @@ def _module_doc_id(root: Path, module_dir: Path) -> str:
     return s or "."
 
 
+def _build_dna_header_band(content: str) -> str | None:
+    """Derive the dna header band (name + description + keywords).
+
+    PR-2 retrieval-Y: the header band is the structured slice the user
+    cares about most for retrieval relevance, distinct from the prose
+    body. Parses frontmatter through the same ``services._fm`` parser
+    the loader uses, so the band stays in lock-step with what's actually
+    indexable. Returns None for files without a frontmatter block, which
+    drops the upsert into the PR-1 body-only ranking path.
+    """
+    try:
+        from services._fm import parse_frontmatter
+    except Exception:  # noqa: BLE001 — defensive: services is on sys.path everywhere we run
+        return None
+    fm = parse_frontmatter(content)
+    if not fm:
+        return None
+    parts: list[str] = []
+    name = fm.get("name")
+    if isinstance(name, str) and name.strip():
+        parts.append(name.strip())
+    description = fm.get("description")
+    if isinstance(description, str) and description.strip():
+        parts.append(description.strip())
+    keywords = fm.get("keywords")
+    if isinstance(keywords, list):
+        parts.extend(str(k).strip() for k in keywords if str(k).strip())
+    elif isinstance(keywords, str) and keywords.strip():
+        parts.append(keywords.strip())
+    if not parts:
+        return None
+    return " ".join(parts)
+
+
 def reindex_dna(root: Path, module_dir: Path) -> None:
     """Read `<module_dir>/.dna/module.md` and push it into the retrieval index.
 
@@ -61,12 +95,21 @@ def reindex_dna(root: Path, module_dir: Path) -> None:
             return
         if not content:
             return
+        # PR-2 retrieval-Y: derive the header band (name + description +
+        # keywords) from the parsed frontmatter so BM25 / vector ranking
+        # weights this slice higher than body prose. Pulled from the
+        # already-parsed dict, NOT re-extracted from the YAML text — the
+        # rendered band is what callers see at search time. Falls back
+        # cleanly to None when the doc has no frontmatter (legacy / new
+        # format errors), keeping the upsert path PR-1 compatible.
+        header_content = _build_dna_header_band(content)
         from engine.retrieval import index_upsert
         index_upsert(
             "dna",
             _module_doc_id(root, module_dir),
             content,
             {"source_path": str(md.resolve())},
+            header_content=header_content,
         )
     except Exception:  # noqa: BLE001 — main write succeeded; reindex is side-effect, dream loop verify_consistency reconciles
         return

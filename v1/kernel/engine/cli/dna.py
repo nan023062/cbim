@@ -42,6 +42,12 @@ def register(sub: argparse._SubParsersAction) -> argparse.ArgumentParser:
                     metavar="ITEM",
                     help="Frontmatter list value (one or more items, space-separated); "
                          "mutually exclusive with --value")
+    _p.add_argument("--value-list-json", dest="value_list_json", default=None,
+                    metavar="JSON",
+                    help="Frontmatter list value as a JSON array string. Use this "
+                         "for list-of-dict fields like `links` "
+                         "(e.g. '[{\"kind\":\"local\",\"target\":\".\"}]'). "
+                         "Mutually exclusive with --value / --value-list / --clear.")
     _p.add_argument("--clear", dest="clear", action="store_true",
                     help="Clear a list-typed frontmatter field (set to []). "
                          "Only valid with --target frontmatter and a list-typed --field.")
@@ -172,7 +178,6 @@ def _handle_dna_show(args: argparse.Namespace) -> int:
     owner = m.frontmatter.get("owner", "") or ""
     description = m.frontmatter.get("description", "") or ""
     keywords = m.frontmatter.get("keywords") or []
-    dependencies = m.frontmatter.get("dependencies") or []
     status = m.frontmatter.get("status", "implemented") or "implemented"
     workflows = m.workflows.list()
     architecture = m.body.read()
@@ -183,7 +188,6 @@ def _handle_dna_show(args: argparse.Namespace) -> int:
     print(f"Status      : {status}")
     print(f"Description : {description}")
     if keywords:     print(f"Keywords    : {', '.join(keywords)}")
-    if dependencies: print(f"Dependencies: {', '.join(dependencies)}")
     if workflows:    print(f"Workflows   : {', '.join(workflows)}")
     if architecture: print(f"\n--- module.md (body) ---\n{architecture[:600]}")
     if contract:     print(f"\n--- contract.md ---\n{contract[:600]}")
@@ -421,12 +425,17 @@ def _build_dna_edit_payload(args: argparse.Namespace, target: str) -> dict:
             raise ValueError("--field is required for --target frontmatter")
         value_given = args.value is not None
         list_given = getattr(args, "value_list", None) is not None
+        json_given = getattr(args, "value_list_json", None) is not None
         clear_given = bool(getattr(args, "clear", False))
-        if sum([value_given, list_given, clear_given]) > 1:
-            raise ValueError("--value, --value-list, --clear are mutually exclusive")
-        if not (value_given or list_given or clear_given):
+        if sum([value_given, list_given, json_given, clear_given]) > 1:
             raise ValueError(
-                "one of --value / --value-list / --clear is required for --target frontmatter"
+                "--value, --value-list, --value-list-json, --clear are "
+                "mutually exclusive"
+            )
+        if not (value_given or list_given or json_given or clear_given):
+            raise ValueError(
+                "one of --value / --value-list / --value-list-json / --clear "
+                "is required for --target frontmatter"
             )
         from services import get_module_fm_schema
         _MODULE_FM_LIST_FIELDS = get_module_fm_schema()["list_fields"]
@@ -437,13 +446,26 @@ def _build_dna_edit_payload(args: argparse.Namespace, target: str) -> dict:
                 f"       example: cbim dna edit ... --field {args.field} "
                 f"--value-list item_a item_b"
             )
-        if args.field == "status" and (list_given or clear_given):
+        if args.field == "status" and (list_given or json_given or clear_given):
             raise ValueError(
-                "field 'status' is a scalar enum; use --value, not --value-list / --clear"
+                "field 'status' is a scalar enum; use --value, not "
+                "--value-list / --value-list-json / --clear"
             )
         payload = {"field": args.field}
         if clear_given:
             payload["value_list"] = []
+        elif json_given:
+            import json as _json
+            try:
+                parsed = _json.loads(args.value_list_json)
+            except _json.JSONDecodeError as e:
+                raise ValueError(f"--value-list-json is not valid JSON: {e}") from e
+            if not isinstance(parsed, list):
+                raise ValueError(
+                    f"--value-list-json must decode to a JSON array; got: "
+                    f"{type(parsed).__name__}"
+                )
+            payload["value_list"] = parsed
         elif list_given:
             payload["value_list"] = args.value_list
         else:
@@ -595,8 +617,8 @@ def _handle_dna_split(args: argparse.Namespace) -> int:
         refs = result.dependency_refs_report
         if refs:
             print(
-                f"\nWARNING: {len(refs)} module(s) have `dependencies:` entries "
-                f"pointing at the source. These are NOT rewritten automatically "
+                f"\nWARNING: {len(refs)} parent class diagram(s) reference the "
+                f"source via `..>` arrows. These are NOT rewritten automatically "
                 f"(out of scope for `dna split`):"
             )
             for r in refs:
@@ -619,8 +641,8 @@ def _handle_dna_split(args: argparse.Namespace) -> int:
     refs = result.get("dependency_refs") or []
     if refs:
         print(
-            f"\nWARNING: {len(refs)} module(s) have `dependencies:` entries "
-            f"pointing at the source. These are NOT rewritten automatically "
+            f"\nWARNING: {len(refs)} parent class diagram(s) reference the "
+            f"source via `..>` arrows. These are NOT rewritten automatically "
             f"(out of scope for `dna split`):"
         )
         for r in refs:

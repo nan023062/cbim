@@ -29,6 +29,7 @@ def _make_project_with_module(tmp_path: Path) -> tuple[Path, Path]:
         "keywords:\n"
         "  - alpha\n"
         "  - beta\n"
+        "status: implemented\n"
         "---\n"
         "## Positioning\nbody text\n",
         encoding="utf-8",
@@ -45,7 +46,9 @@ def test_get_module_returns_full_shape(tmp_path):
     assert info["owner"] == "platform"
     assert info["description"] == "a foo"
     assert info["keywords"] == ["alpha", "beta"]
-    assert info["dependencies"] == []
+    # v2 dropped `dependencies` from the schema; the facade must not
+    # surface it.
+    assert "dependencies" not in info
     assert "body text" in info["body"]
     assert info["contract"] == ""  # missing contract.md is not an error
     assert info["workflows"] == []
@@ -78,8 +81,12 @@ def test_get_module_fm_schema_shape():
     from services import get_module_fm_schema
     schema = get_module_fm_schema()
     assert "list_fields" in schema and "status_values" in schema
+    # v2 schema (PR-1): only `keywords` and `links` are list-typed at
+    # the schema level; `dependencies` / `includeDirs` were removed.
     assert "keywords" in schema["list_fields"]
-    assert "dependencies" in schema["list_fields"]
+    assert "links" in schema["list_fields"]
+    assert "dependencies" not in schema["list_fields"]
+    assert "includeDirs" not in schema["list_fields"]
     assert schema["status_values"] == ("spec", "planned", "implemented")
     # Must be hashable / immutable (stable contract for callers).
     assert isinstance(schema["list_fields"], frozenset)

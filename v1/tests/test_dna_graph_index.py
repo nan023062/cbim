@@ -124,20 +124,27 @@ def test_graph_index_load_round_trip_with_builder(tmp_path: Path):
     from cbi._primitives.modules.graph_builder import build_graph
     from cbi._primitives.modules.registry import update_index
 
-    def write(rel: str, name: str, deps: list[str] | None = None):
+    def write(rel: str, name: str, body: str = "") -> None:
         d = (tmp_path if rel == "." else tmp_path / rel) / ".dna"
         d.mkdir(parents=True, exist_ok=True)
-        deps_yaml = "[]" if not deps else "[" + ", ".join(f'"{x}"' for x in deps) + "]"
+        body_text = body or f"## Positioning\n\n{name}\n"
         (d / "module.md").write_text(
-            f"---\nname: {name}\ndependencies: {deps_yaml}\nstatus: implemented\n---\n"
-            f"## Positioning\n\n{name}\n",
+            f"---\nname: {name}\nowner: tester\ndescription: m\n"
+            f"keywords: []\nstatus: implemented\n---\n{body_text}",
             encoding="utf-8",
         )
 
+    # Root parent's class diagram declares the deps (v2 schema).
+    root_body = (
+        "## Class Diagram\n\n```mermaid\nclassDiagram\n"
+        "    class a\n    class b\n    class c\n"
+        "    b ..> a\n    c ..> a\n    c ..> b\n```\n"
+    )
+    write(".", "root", body=root_body)
     write("a", "a")
-    write("b", "b", ["a"])
-    write("c", "c", ["a", "b"])
-    update_index(tmp_path, ["a", "b", "c"])
+    write("b", "b")
+    write("c", "c")
+    update_index(tmp_path, [".", "a", "b", "c"])
     build_graph(tmp_path)
 
     g = GraphIndex.load(tmp_path)

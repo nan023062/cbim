@@ -1,9 +1,16 @@
 ---
 name: mcp-server
 owner: architect
-description: MCP tool/task server: exposes kernel ops to MCP clients (dna, agent, skill, snapshot, scheduler, runtime, audit)
-keywords: []
+description: MCP stdio 工具服务器：暴露 dna/agent/skill/memory/audit 等内核治理工具给 LLM
+keywords:
+  - mcp
+  - stdio
+  - tools
+  - llm-write
+  - governance
+  - services-shell
 dependencies: []
+status: implemented
 ---
 
 ## Positioning
@@ -63,4 +70,3 @@ classDiagram
 ## Non-Goals
 
 - **No hook transport.** Hook subprocesses do not connect to this server (no UDS listener, no hook-facing MCP tools). Hook reliability is decoupled from server liveness.
-

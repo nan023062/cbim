@@ -139,6 +139,13 @@ class IndexStore:
         self.meta_path = self.source_dir / "meta.json"
         self.bm25_path = self.source_dir / "bm25.json"
         self.vectors_path = self.source_dir / "vectors.bin"
+        # Optional sibling — only the dna source ever populates it. When
+        # present, it carries one float32 vector per doc_id (same dim as
+        # vectors.bin) embedding the header band (name + description +
+        # keywords). Missing file is fine; the search path falls back to
+        # body-only similarity. Not part of the legacy on-disk contract:
+        # readers tolerate its absence and writers produce it lazily.
+        self.header_vectors_path = self.source_dir / "header_vectors.bin"
         self.lock_path = self.source_dir / ".lock"
         self.staging_dir = self.source_dir / ".staging"
         # Best-effort cleanup of any abandoned staging from a previous
@@ -226,6 +233,27 @@ class IndexStore:
         self.source_dir.mkdir(parents=True, exist_ok=True)
         blob.save(self.vectors_path)
 
+    # ---------------- header_vectors.bin (optional) ----------------
+
+    def load_header_vectors(self) -> VectorBlob | None:
+        """Read the optional header-band vector blob.
+
+        Returns ``None`` when the sibling file is absent (the canonical
+        state for non-dna sources, and for dna sources written before
+        PR-2). The PR-1 / pre-PR-2 on-disk shape stays loadable: missing
+        header file → search degrades to body-only similarity, no error.
+        """
+        if not self.header_vectors_path.exists():
+            return None
+        try:
+            return VectorBlob.load(self.header_vectors_path)
+        except (OSError, ValueError):
+            return None
+
+    def save_header_vectors(self, blob: VectorBlob) -> None:
+        self.source_dir.mkdir(parents=True, exist_ok=True)
+        blob.save(self.header_vectors_path)
+
     # ---------------- atomic three-file persist ----------------
 
     @contextlib.contextmanager
@@ -303,7 +331,12 @@ class IndexStore:
                 shutil.rmtree(self.staging_dir, ignore_errors=True)
         except OSError:
             pass
-        for bak_name in ("meta.json.bak", "bm25.json.bak", "vectors.bin.bak"):
+        for bak_name in (
+            "meta.json.bak",
+            "bm25.json.bak",
+            "vectors.bin.bak",
+            "header_vectors.bin.bak",
+        ):
             p = self.source_dir / bak_name
             if p.exists():
                 try:
@@ -316,10 +349,12 @@ class IndexStore:
         records: dict[str, DocRecord],
         bm25_state: dict,
         vectors: VectorBlob | None,
+        header_vectors: VectorBlob | None = None,
     ) -> None:
-        """Write meta.json + bm25.json (+ vectors.bin) as one transaction.
+        """Write meta.json + bm25.json (+ vectors.bin + optional
+        header_vectors.bin) as one transaction.
 
-        Strategy: stage all three files inside ``<source_dir>/.staging/``,
+        Strategy: stage every involved file inside ``<source_dir>/.staging/``,
         then for each existing live file rename it to ``<name>.bak`` and
         rename the staged copy into place. On any failure inside the
         rename phase, roll back by restoring ``*.bak``. On success, drop
@@ -328,8 +363,12 @@ class IndexStore:
         After a crash anywhere mid-transaction, ``_cleanup_orphans`` on
         the next ``IndexStore.__init__`` clears the half-state. A reader
         opening the directory between crash and recovery sees either the
-        old triple (``*.bak`` not yet renamed away) or the new triple,
-        never a mix.
+        old set (``*.bak`` not yet renamed away) or the new set, never a
+        mix.
+
+        ``header_vectors`` is optional and only used for source="dna" in
+        the PR-2 retrieval-Y design. When omitted, the live
+        header_vectors.bin (if any) is left untouched.
         """
         self.source_dir.mkdir(parents=True, exist_ok=True)
         # Always start from a clean staging dir.
@@ -345,6 +384,7 @@ class IndexStore:
         meta_staged = self.staging_dir / "meta.json"
         bm25_staged = self.staging_dir / "bm25.json"
         vectors_staged = self.staging_dir / "vectors.bin"
+        header_vectors_staged = self.staging_dir / "header_vectors.bin"
 
         # Phase 1: stage. Any failure here is clean — nothing is renamed.
         try:
@@ -360,6 +400,8 @@ class IndexStore:
             )
             if vectors is not None:
                 vectors.save(vectors_staged)
+            if header_vectors is not None:
+                header_vectors.save(header_vectors_staged)
         except BaseException:
             shutil.rmtree(self.staging_dir, ignore_errors=True)
             raise
@@ -372,6 +414,8 @@ class IndexStore:
         ops.append((self.bm25_path, bm25_staged))
         if vectors is not None:
             ops.append((self.vectors_path, vectors_staged))
+        if header_vectors is not None:
+            ops.append((self.header_vectors_path, header_vectors_staged))
 
         renamed_to_bak: list[Path] = []
         committed_live: list[Path] = []

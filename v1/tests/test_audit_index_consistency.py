@@ -14,7 +14,8 @@ def _make_module(root: Path, rel: str) -> None:
     mod = root / rel
     (mod / ".dna").mkdir(parents=True)
     (mod / ".dna" / "module.md").write_text(
-        "---\nname: m\nowner: x\ndescription: m\n---\n\nbody\n",
+        "---\nname: m\nowner: x\ndescription: m\n"
+        "keywords: []\nstatus: implemented\n---\n\nbody\n",
         encoding="utf-8",
     )
 

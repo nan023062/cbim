@@ -1,9 +1,16 @@
 ---
 name: cbi-skills
 owner: architect
-description: CBI cross-agent skills: memory_write, memory_query, memory_distill (dispatch skill removed in t3 — routing 现由 engine/execution 的 ModeClassify 节点全权承担)
-keywords: []
+description: CBI 跨 agent 公共 skill 容器：memory_write / memory_query / memory_distill
+keywords:
+  - skills
+  - cross-agent
+  - memory-write
+  - memory-query
+  - memory-distill
+  - shared
 dependencies: []
+status: implemented
 ---
 
 ## Positioning
@@ -69,4 +76,3 @@ classDiagram
 - skill 调 `memory_write` 只能传 `tier="medium"`（记忆服务 v2 不再接受 short）。
 - skill **不**直接删 transcript——删除动作在治理循环的 `TranscriptDelete` 节点，决策权在治理循环手里、与索引同步。
 - skill 调用者主 agent **不需**主动调 `retrieval.index_upsert`——medium 写入后 `memory.crud.write` 会同步触发索引更新。
-

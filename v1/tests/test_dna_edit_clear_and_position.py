@@ -60,7 +60,7 @@ def _make_project(tmp_path: Path) -> Path:
     (tmp_path / ".dna").mkdir()
     (tmp_path / ".dna" / "module.md").write_text(
         "---\nname: root\nowner: arch\ndescription: rt\n"
-        "keywords: []\ndependencies: []\n---\n\n## Positioning\n\nroot\n",
+        "keywords: []\nstatus: implemented\ndependencies: []\n---\n\n## Positioning\n\nroot\n",
         encoding="utf-8",
     )
     (tmp_path / "index.md").write_text("# Index\n", encoding="utf-8")
@@ -76,7 +76,7 @@ def _make_module(root: Path, rel: str, body: str = "## Old\n\nbody\n",
         deps_block = "dependencies:\n" + "".join(f"  - {d}\n" for d in deps)
     (mod / ".dna" / "module.md").write_text(
         f"---\nname: {rel}\nowner: arch\ndescription: x\n"
-        f"keywords: []\n{deps_block}---\n\n{body}",
+        f"keywords: []\nstatus: implemented\n{deps_block}---\n\n{body}",
         encoding="utf-8",
     )
     return mod

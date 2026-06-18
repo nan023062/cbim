@@ -61,6 +61,23 @@ def _memory_store_dir() -> Path:
         return Path.cwd() / ".cbim" / "memory"
 
 
+def _project_root() -> Path:
+    """Resolve the project root for the dream loop.
+
+    Equivalent to ``_memory_store_dir().parent.parent`` under the standard
+    ``<root>/.cbim/memory/`` layout, but routed through the canonical
+    ``context.project_root()`` resolver so tests that monkeypatch
+    ``_memory_store_dir`` don't accidentally compute a project root that
+    escapes the test's tmp boundary. Falls back to cwd parent-walk when the
+    context module is unavailable (mirrors the legacy behavior).
+    """
+    try:
+        from context import project_root  # type: ignore[import-not-found]
+        return project_root()
+    except ImportError:
+        return Path.cwd()
+
+
 def _transcripts_dir() -> Path | None:
     """Resolve the Claude Code transcripts directory for this project.
 
@@ -195,6 +212,7 @@ def dream_tick(reason: str, run_id: str | None = None) -> DreamResult:
             scheduler_root=_scheduler_root(),
             memory_store_dir=_memory_store_dir(),
             transcripts_dir=_transcripts_dir(),
+            project_root=_project_root(),
         )
         runner = Runner(
             root,
@@ -262,6 +280,7 @@ def dream_tick_resume(run_id: str, dispatch_result: Any) -> DreamResult:
             scheduler_root=_scheduler_root(),
             memory_store_dir=_memory_store_dir(),
             transcripts_dir=_transcripts_dir(),
+            project_root=_project_root(),
         )
         runner = Runner(
             root,

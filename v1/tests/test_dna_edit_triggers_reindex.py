@@ -35,7 +35,8 @@ def _make_project(tmp_path: Path) -> Path:
     mod = root / "src" / "foo"
     (mod / ".dna").mkdir(parents=True)
     (mod / ".dna" / "module.md").write_text(
-        "---\nname: Foo\nowner: platform\ndescription: x\n---\n## Positioning\nold body\n",
+        "---\nname: Foo\nowner: platform\ndescription: x\n"
+        "keywords: []\nstatus: implemented\n---\n## Positioning\nold body\n",
         encoding="utf-8",
     )
     return root

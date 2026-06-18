@@ -1,10 +1,16 @@
 ---
 name: memory_crud
 owner: architect
-description: Memory CRUD primitives: write/update/delete to medium/ + internal index + sync side-effect to engine/retrieval. v2 drops short/ tier; write is one primitive in three steps (persist + identify + retrieval upsert).
-keywords: []
+description: Medium CRUD 原语层：write/update/delete 三步原语，落盘+identify+retrieval 同步
+keywords:
+  - crud
+  - write
+  - atomic
+  - identify
+  - retrieval-upsert
+  - primitive
 dependencies:
-  - v1/kernel/engine/retrieval
+  - kernel/engine/retrieval
 status: implemented
 ---
 
@@ -65,4 +71,3 @@ classDiagram
 - **不持有对外接口。** 4 个对外只读接口（`query` / `scan` / `get` / `stats`）全部在父模块 `kernel/memory` 的 `contract.md` 内。`crud/` 是内部实现细节，**不**在父模块对外契约中出现；外部任何循环都不能直接调 `crud/`。写入侧的合法入口只有两条：`memory_write` MCP 工具、CLI——它们都先到父模块入口，再走入本模块。
 - **`candidates/` 不归本模块管。** 候选区数据结构、识别逻辑、压缩流程在 `compaction/` 子模块；本模块只在 `write` 的第 2 步里调用 `compaction.identify(entry)`，把控制权交回去。
 - **本模块增加一条跨模块依赖：`engine/retrieval`。** 进入 `module.md` Dependencies。方向仅为 `memory.crud → engine/retrieval`，`retrieval` 不依赖本模块；无环。
-

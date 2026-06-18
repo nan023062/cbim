@@ -186,7 +186,8 @@ def test_ensure_graph_creates_graph_when_missing(tmp_path):
     mod = tmp_path / "modA" / ".dna"
     mod.mkdir(parents=True)
     (mod / "module.md").write_text(
-        "---\nname: modA\ndependencies: []\nstatus: implemented\n---\n## Positioning\n\nA.\n",
+        "---\nname: modA\nowner: tester\ndescription: m\n"
+        "keywords: []\nstatus: implemented\n---\n## Positioning\n\nA.\n",
         encoding="utf-8",
     )
     # Register it so build_graph filters to the registered set.

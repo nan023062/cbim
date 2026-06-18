@@ -37,15 +37,40 @@ class BM25Index:
 
     # ---------------- mutation ----------------
 
-    def upsert(self, doc_id: str, content: str) -> None:
+    # Header band token frequencies are multiplied by this factor before
+    # being added to per-doc Counter postings. Per design Y: header band
+    # = name + description + keywords; bumping its tf weight without
+    # touching idf is a localised relevance boost that survives BM25's
+    # length normalization (the injected duplicates also count toward
+    # doc_length, so already-long docs don't get a bigger relative
+    # boost). Lives only on source="dna"; non-dna upserts keep
+    # header_content=None and behave byte-identically to PR-1.
+    _HEADER_TF_FACTOR = 2
+
+    def upsert(
+        self,
+        doc_id: str,
+        content: str,
+        header_content: str | None = None,
+    ) -> None:
         # If doc already exists, remove its postings first.
         if doc_id in self.doc_lengths:
             self._remove_postings(doc_id)
         tokens = tokenize(content)
-        self.doc_lengths[doc_id] = len(tokens)
-        if not tokens:
+        counts: Counter = Counter(tokens)
+        if header_content:
+            header_tokens = tokenize(header_content)
+            for tok in header_tokens:
+                # Add (factor) extra hits per header token. Doc length
+                # tracks the same total so the BM25 length-normalisation
+                # term stays self-consistent.
+                counts[tok] += self._HEADER_TF_FACTOR
+            extra = len(header_tokens) * self._HEADER_TF_FACTOR
+        else:
+            extra = 0
+        self.doc_lengths[doc_id] = len(tokens) + extra
+        if not counts:
             return
-        counts = Counter(tokens)
         for term, tf in counts.items():
             postings = self.inverted.setdefault(term, {})
             postings[doc_id] = tf

@@ -2,9 +2,16 @@
 name: arch-check-gate
 owner: architect
 description: 程序化检测门：在 DispatchWork 后、ConvergeJudge 前对触及模块跑只读审计、按基线棘轮判 verdict 写黑板
-keywords: []
+keywords:
+  - arch-check
+  - gate
+  - deterministic
+  - audit
+  - ratchet
+  - no-llm
+  - scoped
 dependencies:
-  - v1/kernel/engine/audit
+  - kernel/engine/audit
 status: spec
 ---
 

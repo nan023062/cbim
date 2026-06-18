@@ -215,24 +215,62 @@ classDiagram
 
 ## 第二部分：前言架构
 
-### 字段清单
+### 字段清单（v2 — 检索友好 schema）
 
-每个 `module.md` 以 YAML 前言开始。这些字段是**必需的**：
+每个 `module.md` 以 YAML 前言开始。**v2 schema 仅五项必填 + 一项可选**，全部围绕「召回友好」设计 —— 字段不再描述模块在树上的拓扑（拓扑由父模块类图 `..>` 边唯一承载），只描述模块**身份与可被检索到的语义**。
 
-| 字段 | 类型 | 描述 | 示例 |
-|------|------|------|------|
-| `name` | string | 中划线分隔的模块标识符 | `event-bus` |
-| `owner` | string | 负责的代理 id（通常是 `architect`） | `architect` |
-| `status` | enum | 声明的实现状态：`spec`、`planned` 或 `implemented` | `implemented` |
-
-这些字段是**可选的**：
+**必填字段（5）：**
 
 | 字段 | 类型 | 描述 | 示例 |
 |------|------|------|------|
-| `description` | string | 一句话目的 | `解耦的、类型安全的事件分发` |
-| `keywords` | list | 搜索标签 | `[event, pub-sub]` |
-| `dependencies` | list | 本模块依赖的模块路径（拓扑语义见下方约束规则；从父模块 `## 类图` 的 `..>` 边机器派生） | `["src/types", "packages/core/event-bus"]` |
-| `includeDirs` | list | 要包含在模块边界内的子目录 | `["src", "tests"]` |
+| `name` | string | 中划线分隔的模块标识符；同一项目内全局唯一 | `event-bus` |
+| `owner` | string | 负责代理的 id（默认 `architect`） | `architect` |
+| `description` | string | 单句、≤80 字、结构「定位语+职责边界」 | `进程内类型安全的事件分发，解耦上下游模块通信` |
+| `keywords` | list | 5–8 条领域术语；用于 BM25/向量召回（详见「元数据检索规范」节） | `[event, pub-sub, dispatcher, decoupling]` |
+| `status` | enum | 声明的实现状态：`spec` / `planned` / `implemented` | `implemented` |
+
+**可选字段（1）：**
+
+| 字段 | 类型 | 描述 | 示例 |
+|------|------|------|------|
+| `links` | list | 模块边界内的代码 / 资源挂载点；缺省 = `[{kind: local, target: "."}]`（向后兼容） | 见下表 |
+
+**v2 删除的旧字段：**
+
+| 已删除 | 删除理由 |
+|---|---|
+| `dependencies` | 依赖关系唯一声明源是**父模块** `## 类图` 的 `..>` 边；frontmatter 不再保留派生缓存（T4 实装后已无消费者）。 |
+| `includeDirs` | 旧字段在现网零消费者；语义并入新 `links` 的 `kind: local`，glob 控制更显式。 |
+
+### `links` 字段：按 `kind` 分别定 schema
+
+`links` 列表的每一项**必须**带 `kind`，由 `kind` 决定其他字段的合法集合。本轮仅实装 `kind: local`，`git` / `db` 占位预留以便未来跨仓 / 跨库挂载，**不实装**（loader 接受字段定义但不消费 ref / driver / conn_ref）。
+
+**`kind: local`（当前唯一实装）：**
+
+| 字段 | 必填 | 描述 |
+|---|---|---|
+| `target` | ✓ | 挂载目录，相对于 `module.md` 所在 `.dna/` 的父目录；`"."` 表示模块根 |
+| `include` | | glob 模式列表，**默认全部包含** |
+| `exclude` | | glob 模式列表，**默认空** |
+
+**`kind: git`（预留，不实装）：**
+
+| 字段 | 必填 | 描述 |
+|---|---|---|
+| `ref` | ✓ | git ref（branch / tag / commit） |
+| `path` | ✓ | 仓库内路径 |
+| `url` | | 仓库 URL；缺省 = 当前仓库 |
+
+**`kind: db`（预留，不实装）：**
+
+| 字段 | 必填 | 描述 |
+|---|---|---|
+| `driver` | ✓ | 数据库驱动（`postgres` / `sqlite` / ...） |
+| `schema` | ✓ | schema / namespace 名 |
+| `conn_ref` | ✓ | 连接配置引用（不内嵌凭据） |
+
+**缺省语义**：模块 frontmatter 完全未写 `links` 时，loader 视同 `links: [{kind: local, target: "."}]`。这意味着 v1 旧文件**无需迁移即合规**，迁移脚本只在确实需要排除子目录时才填写显式 `links`。
 
 ### Status 字段：三种生命周期状态
 
@@ -248,21 +286,249 @@ classDiagram
 
 ### 约束规则
 
-- `name`：仅中划线分隔（小写字母、数字、中划线）。示例：`event-bus`、`combat-skill`、`memory-distill`。
+- `name`：仅中划线分隔（小写字母、数字、中划线）。示例：`event-bus`、`combat-skill`、`memory-distill`。同项目内全局唯一 —— 父模块类图的 `..>` 边按 `name` 解析依赖目标。
 - `owner`：通常是负责代理的 id。标准值是 `architect`，但可以是任何代理 id。
-- `description`：如果存在，必须是单个句子。
-- `dependencies`：模块路径列表（相对路径如 `"src/types"`、`"packages/core/event-bus"`）。依赖图必须是无环的（DAG）；循环由审计检查 `dna_tree` 检测和报告为错误。
+- `description`：单个句子，长度 ≤80 字。详细规则见下方「元数据检索规范」节。
+- `keywords`：5–8 条 kebab-case 短语。详细规则见下方「元数据检索规范」节。
+- `status`：枚举 `spec` / `planned` / `implemented`。架构师设置以表达意图，与代码实际状态正交（详见上方 Status 节）。
+- `links`：可选。每项必带 `kind`，按 `kind` 决定字段集（详见上方「`links` 字段」节）。
 
-  **拓扑语义**：依赖的合法目标按模块树的位置关系判定 ——
+### 依赖关系：唯一声明源 = 父模块类图
 
-  - **允许列入**：① 同层兄弟模块（与本模块共享父目录的模块）；② 叔伯及其整棵子树（祖先节点的兄弟，以及那些兄弟下的全部后代）；③ 不在本模块祖先链上的任意外部模块。
-  - **禁止列入**：① 本模块的任一祖先（含项目根 `"."`）—— 子模块对父模块、孙模块对祖父模块的可见性都是隐式的，无需也不得声明；② 本模块自身子树下的任一后代 —— 后代对自己也是隐式可见，不应反向声明；③ 任何会与既有依赖形成环的目标。
-  - **直观判别法**：把本模块的路径与候选依赖的路径并排写出，去掉两者的公共前缀；只有当两侧剩余部分都非空、且各自的第一段不同（即"自己这一侧立刻分叉"）时，候选才合法。若本侧剩余为空，候选是后代；若候选侧剩余为空，候选是祖先；任一种都不合法。
-  - **举例**（设本模块路径为 `A/B/C`）：合法依赖包括 `A/B/D`（同层兄弟）、`A/D`（叔伯）、`A/D/E`（叔伯子树后代）、`X/Y`（外部模块）；不得列入 `A`、`A/B`、`.`（祖先链）以及 `A/B/C/F`（自身后代）。
-  - **强制方**：祖先违规由 `dna_tree` 报 `TREE_DEP_ANCESTOR_DECLARED`；指向树上层但非祖先的不稳定侧由 `TREE_DEP_UP_TREE` 报告；引用不存在的路径由 `TREE_DEP_DANGLING` 报告；循环由 `TREE_CYCLE` 报告为 error。
+依赖图必须是单向无环 DAG；循环由审计检查 `dna_tree` 报 `TREE_CYCLE`（error）。**v2 起依赖关系的唯一声明源是父模块 `## 类图` 中的 `..>` 边**，frontmatter 不再持有 `dependencies` 字段（v1 中它曾作为派生缓存，T4 mismatch 检查实装后已无消费者，本轮一并删除）。
 
-  **声明源 vs. 派生缓存**：依赖关系的**唯一声明源**是父模块 `## 类图` 中的 `..>` 边；frontmatter 的 `dependencies` 字段是从类图边机器派生的缓存，便于审计与索引快速读取。两边不一致时，由 `dna_tree` 的 `TREE_DEP_DIAGRAM_MISMATCH` 报错（审计码 T4 实装；本规范先行声明）。写入纪律：架构师必须先改 `## 类图` 的 `..>` 边，再让工具重生成 frontmatter 的 `dependencies`；不得手工编辑 frontmatter 字段而不同步类图。
-- `includeDirs`：很少需要；仅当模块的代码跨越多个不是直接子目录的目录时使用。示例：`src/combat` 中的模块，也在 `src/types/combat-types` 中拥有代码。如果模块自包含在一个目录中，则省略。
+**拓扑语义**（仍由 `dna_tree` 强制，针对父模块类图边解析后判定）—— 依赖的合法目标按模块树的位置关系判定：
+
+- **允许**：① 同层兄弟模块；② 叔伯及其整棵子树；③ 不在本模块祖先链上的任意外部模块。
+- **禁止**：① 本模块的任一祖先（含项目根 `"."`，祖先链上的可见性是隐式的）；② 本模块自身子树下的任一后代（隐式可见，反向声明无意义）；③ 任何会形成环的目标。
+- **直观判别法**：把本模块的路径与候选目标并排写出，去掉公共前缀；只有当两侧剩余都非空且各自首段不同（"自己这一侧立刻分叉"）时，候选才合法。
+- **举例**（设本模块=`A/B/C`）：合法 `A/B/D`、`A/D`、`A/D/E`、`X/Y`；非法 `A`、`A/B`、`.`、`A/B/C/F`。
+- **强制方**：祖先违规 → `TREE_DEP_ANCESTOR_DECLARED`；树上层但非祖先 → `TREE_DEP_UP_TREE`；不存在路径 → `TREE_DEP_DANGLING`；循环 → `TREE_CYCLE`。
+- **跨子树依赖**：当目标既不在本模块祖先链、也不在本模块同层兄弟集合时（即"跨子树"），依赖**不画在直接父模块的类图里**，而是上提到本模块与目标模块的**最近共同祖先**类图中。共祖类图的画法、占位节点、容量限制详见下一节「类图承载规则」。
+
+---
+
+## 第二部分（续）：类图承载规则
+
+类图是模块文档的**架构主轴**。叶子模块画代码级类、父/根模块画子模块（带 `<<module>>` 刻板印象）—— 这两条已在第一部分定下。本节补充父/根模块**承载三类关系**的具体画法、跨子树边的上提规则、以及单图容量上限。
+
+### 三类关系的画法
+
+| 关系 | 出现位置 | 画法 |
+|---|---|---|
+| **父子组成（contains）** | 父模块图 | 在父模块图内并列摆放各子模块节点（每个 `class <name> { <<module>> }`）；**不画显式箭头** —— 由 `graph_builder` 从模块路径前缀关系自动派生 `contains` 边。 |
+| **同父兄弟依赖** | 共同父模块图 | 该父模块图内画 `A ..> B : <verb>`，verb 用领域动词（`applies` / `reads` / `dispatches` 等），不写实现动词。 |
+| **跨子树依赖** | **最近共同祖先**模块图 | 共祖图内对每个跨树端用占位节点表示远端、用本地节点表示本侧顶层一级模块；详见下方三规则。 |
+
+### 跨子树依赖：最近共同祖先承载（R1 / R2 / R3）
+
+跨子树依赖（源端与目标端的最近共同祖先既不是源端的直接父也不是目标端的直接父）**唯一**画在共祖类图中。为防止共祖图被远端子树的内部细节淹没，强制三条画法规则：
+
+- **R1 — 只画占位节点，不展开远端子树。** 跨树边的远端在共祖图中只以一个**占位节点**出现；占位节点不再展开它自己内部的子模块。任何想了解远端内部的人，跳到远端自己的 `.dna/module.md` 看。
+- **R2 — 只画该共祖直接管辖层级（一级深度）的边。** 共祖类图只画"共祖的一级子模块之间 / 共祖的一级子模块与跨树占位节点之间"的边。深于一级的源端必须**沿用其顶层一级模块**作为图内源端 —— 把"`A/B/C ..> X/Y`"在共祖 `.` 的图里渲染为"`A ..> X_Y`"，C 的存在隐藏在 A 的子树内（`A` 自己的图里继续递推）。
+- **R3 — 图内分组分节，固定四段顺序渲染。** 一张共祖图按以下顺序分组（用 mermaid 注释 `%%` 分节）：
+
+  ```
+  %% --- 1. 直接管辖节点（共祖的一级子模块） ---
+  class core { <<module>> }
+  class engine { <<module>> }
+  ...
+  %% --- 2. 跨树占位节点（来自其它子树的远端） ---
+  class submodule_cbim_v2 { <<module>> }
+  class submodule_cbim_v2 : .from(submodule/cbim/v2)
+  ...
+  %% --- 3. 内部边（直接管辖节点之间） ---
+  core ..> engine : provides
+  ...
+  %% --- 4. 跨树边（涉及占位节点的边） ---
+  engine ..> submodule_cbim_v2 : reads_compat
+  ```
+
+  四段顺序固定，便于 reviewer 一眼区分本子树内部架构与跨子树挂钩。
+
+### 占位节点命名约定
+
+跨树占位节点的 mermaid `class` id 由远端**模块路径**机器派生 —— 路径中的 `/` 替换为 `_`、保留中划线、不带其他字符替换：
+
+| 远端真实路径 | 占位 class id |
+|---|---|
+| `submodule/cbim/v2` | `submodule_cbim_v2` |
+| `packages/core/event-bus` | `packages_core_event-bus` |
+| `src/combat/skill` | `src_combat_skill` |
+
+每个占位节点紧跟一行注释 `class <id> : .from(<原始路径>)` 还原真实路径，便于人工阅读：
+
+```mermaid
+class submodule_cbim_v2 { <<module>> }
+class submodule_cbim_v2 : .from(submodule/cbim/v2)
+```
+
+`graph_builder` 解析跨树边时，按 `class id` 直接反查 `name_to_path`（不写映射表，从注释行还原即可）。
+
+### 单图容量上限（防过载）
+
+跨树占位节点过多会让共祖图变成"接线板"，丧失架构信息密度。容量线分两档：
+
+| 跨树占位节点数 | 严重度 | 检查 | 动作 |
+|---|---|---|---|
+| ≤5 | 健康 | — | — |
+| 6–10 | SUGGEST | `audit dna_fission` 新增 `DNA_PARENT_DIAGRAM_OVERLOAD` 检查，warn 级 | 架构师评估是否抽提中间模块或合并子树边 |
+| ≥11 | MUST | 同上检查，error 级 | 必须重构 —— 通常意味着该共祖位置应该新增一个聚合层模块、或下沉部分跨树边到更窄的共祖 |
+
+`DNA_PARENT_DIAGRAM_OVERLOAD` 仅对**父模块**的类图生效（叶子模块图里没有跨树占位节点的概念），由 `dna_fission` 在解析共祖图时一并统计。
+
+---
+
+## 第二部分（续）：元数据检索规范（原则 A）
+
+`description` 与 `keywords` 同时承担两个职责：① 给人类读者的快速定位；② 给检索器（BM25 / 向量）的召回信号。两个职责对应同一份字符串 —— 写不好这两条字段，召回率就垮了。**现网 25 个模块 keywords 全为 `[]` 是当前最大召回缺口**，补全是杠杆最高的一项治理工作。
+
+### `description` 写作规范
+
+- **长度**：单句，≤80 字（中文按字符计；英文按字符计）。一句话写不下 = 模块边界没切干净，先回去切模块。
+- **结构**：`<定位语> + <职责边界>`。
+  - 定位语：模块在父模块轴上的角色定位（"事件分发器" / "依赖图构造器" / "记忆蒸馏管线"）。
+  - 职责边界：明确"做什么 + 不做什么"的边界限定词（"仅进程内" / "不跨进程" / "只读不写" / "依赖 X 但不依赖 Y"）。
+- **必含**：① 领域名词（事件 / 模块 / 记忆 / 索引...）≥1；② 职责动词（分发 / 构造 / 蒸馏 / 召回...）≥1；③ 边界限定词（仅 / 不 / 跨 / 同步...）≥1。
+- **禁止**：实现细节（"用 HashMap 存"）、历史叙述（"原本是 X、后来改 Y"）、功能枚举（"提供 A、B、C、D、E、F 个 API"）、非领域缩写（PR / DAG 这种通用词除外）、模棱两可（"可能" / "未来" / "考虑"）。
+
+**好示例：**
+
+| 模块 | description |
+|---|---|
+| `event-bus` | 进程内类型安全的事件分发，解耦上下游模块通信，不跨进程不持久化。 |
+| `engine/retrieval` | 项目级检索引擎，融合 BM25 与向量打分，支撑 `.dna` / agent / memory 三轴召回。 |
+| `cbi/_primitives/modules` | DNA 模块底层 CRUD 与图构造原子库，loader / scaffold / graph_builder 同包内零外报。 |
+
+**坏示例：**
+
+| 模块 | description（坏） | 病灶 |
+|---|---|---|
+| `event-bus` | EventBus 模块。 | 没定位、没边界 |
+| `event-bus` | 我们用 HashMap 实现了一个事件总线，支持 on/off/emit 三个 API。 | 实现细节 + 功能枚举 |
+| `event-bus` | 未来可能扩展为跨进程的发布订阅系统。 | 模棱两可 + 未实现 |
+
+### `keywords` 写作规范
+
+- **数量**：5–8 条。<5 条召回信号不足；>8 条噪声反客为主。
+- **形态**：单个 token 或 kebab-case 短语（小写，单词间用 `-`，不含空格、不含其他标点）。例：`event` / `pub-sub` / `cross-process` / `class-diagram-edge`。
+- **覆盖**（5–8 条按以下三类配额）：
+  - 领域名词 2–3 条（`event` / `module` / `memory`）
+  - 职责动词 1–2 条（`dispatch` / `recall` / `distill`）
+  - 关键概念 / 配套术语 2–3 条（`pub-sub` / `bm25` / `frontmatter`）
+- **禁止**：① 与 `name` 重复（`event-bus` 模块的 keywords 里再写 `event-bus` 是浪费）；② 与 `description` 字面完全重叠（同一短语 description 已含、keywords 不再加）；③ 含空格或非 `-` 标点；④ 全大写或驼峰（统一小写）。
+
+**好示例：**
+
+```yaml
+name: event-bus
+description: 进程内类型安全的事件分发，解耦上下游模块通信，不跨进程不持久化。
+keywords: [event, pub-sub, dispatcher, decoupling, in-process, sync-emit]
+```
+
+**坏示例：**
+
+```yaml
+name: event-bus
+keywords: []                                     # 空 — 召回 0 信号（现网典型）
+keywords: [event-bus]                            # 与 name 重复 — 0 增量
+keywords: [Event Bus, PubSub System]             # 含空格、大写、非 kebab — schema 拒收
+keywords: [event, event, event, ..., event]      # 重复堆砌 — 检索惩罚
+```
+
+### 检索加权（方案 Y）
+
+文本规范本身已显著抬升召回上限；为锁住成果，`engine/retrieval` 在索引时对 frontmatter 字段额外加权 ——
+
+- **BM25 端**：`name + description + keywords` 拼成 `header band`，term frequency × **2.0** 注入索引（正文 1.0×）。`header band` 的 token 权重比正文相同 token 高一倍，确保模块名/简介里出现的领域词条天然排在召回头部。
+- **向量端**：分别为 `header band` 与 `body` 计算两条向量，融合分 = 0.7 × header_sim + 0.3 × body_sim。语义近邻召回偏向「按身份找模块」而非「按片段找位置」。
+
+加权由 retrieval 层实现、对 module.md 编写者透明 —— 写好 description / keywords 即获得双倍召回收益，无需手改任何检索代码。
+
+---
+
+## 第二部分（续）：能力图谱双轴前瞻（原则 B）
+
+CBIM 长期愿景是把**业务知识**（module.md 体系）与**能力知识**（agent.md 体系）放进同一张能力图谱。今天的实装只覆盖业务轴；本节锁定未来 agent 数 >15 时复用同一套元数据规范的承诺，写在这里以避免日后 agent 元数据另起炉灶。
+
+| 轴 | 当前载体 | 元数据规范 | 检索后端 |
+|---|---|---|---|
+| **业务轴** | `<module>/.dna/module.md` | 本文件第二部分（v2） | `engine/retrieval` source=`dna` |
+| **能力轴** | `.claude/agents/<name>/<name>.md` | 未来：套用本文件 description / keywords 规范（80 字单句 + 5–8 kebab keywords） | `engine/retrieval` source=`agents`（已存在） |
+
+**承诺（不本轮实装，仅记录）：**
+
+1. 当 agent 数 >15 时，agent.md 的 frontmatter **必须**补齐 description（≤80 字单句）和 keywords（5–8 条 kebab）；规范内容直接复用本文件的「元数据检索规范」节，不另写。
+2. agent 与 module 共享同一套 `engine/retrieval` 向量召回底座（已实装，两源同 IndexStore），加权策略（header band 2.0× / 0.7+0.3 融合）对两源同步生效 —— 不为 agent 单独搞一套。
+3. 当能力图谱需要把「agent 持有什么资产」结构化时，新增字段与 `links` 对称设计（同一组 kind 枚举、同一份 schema 拆分原则）；本轮 agent 文件不动。
+
+把这条承诺写在 `module.md` 设计文档而非独立 agent 设计文档，是因为「双轴共享一套元数据规范」是规范本身的属性 —— 在哪边声明它，决定了后续讨论它在哪边。**业务轴是先驱、能力轴是同盟**，规范源在业务轴。
+
+---
+
+## 第二部分（续）：粒度准则（拆分阈值）
+
+模块边界切粗或切细都是成本。以下三档（舒适 / 告警 / 必拆）是默认阈值，可被项目级 `audit_config.yaml` 覆盖；现网模块超过告警线即触发 `dna_fission` 检查。
+
+| 维度 | 舒适 | 告警 (SUGGEST) | 必拆 (MUST) |
+|---|---|---|---|
+| 正文行数 | ≤200 | 201–350 | >350 |
+| workflow 数 | ≤4 | 5–7 | ≥8 |
+| 子模块数 | ≤7 | 8–12 | >12 |
+| 类图节点数（叶子代码节点 / 父子模块节点） | ≤8 | 9–12 | >12 |
+| 跨树占位节点数（共祖图） | ≤5 | 6–10 | ≥11 |
+
+`dna_fission` 现已实装 `DNA_BODY_OVERSIZE` / `DNA_WORKFLOW_OVERLOAD`；本轮新增 `DNA_PARENT_DIAGRAM_OVERLOAD`（跨树占位节点数）。子模块数与类图节点数仍由架构师人工巡检 + arch_governance 跑提示，未走 audit。
+
+**现网过细模块的合并方向**（仅记录方向，个案评估留给本轮之外的治理工单）：
+
+- `memory/crud` + `memory/compaction` —— 都是记忆原子操作、合并消除小粒度噪声。
+- `tests` 三个子模块 —— 评估上提为单 `tests` 模块。
+- `arch_check_gate` 内的 `baseline` / `gate` / `scope` / `verdict` —— 评估上提到 `arch_check_gate` 一级。
+
+---
+
+## 第二部分（续）：迁移注意事项（v1 → v2）
+
+v2 schema **强迁移**：现网所有 `module.md` 必须在同一次迁移中切换到 v2 字段集；不保留双 schema 兼容期，避免 loader 内部维护两套字段解析路径。
+
+### 一次性迁移脚本：`tools/migrate_2_x.py`
+
+脚本对仓库内所有 `**/.dna/module.md` 执行以下原子操作（单文件级事务，全文件成功或回滚）：
+
+| # | 动作 | 说明 |
+|---|---|---|
+| 1 | **删 `dependencies` 行** | 整段 frontmatter 字段 + 其下列表项一并移除；依赖关系唯一声明源切换为父模块类图的 `..>` 边。 |
+| 2 | **删 `includeDirs` 行** | 整段 frontmatter 字段 + 其下列表项一并移除；如需排除子目录，迁移脚本在交互模式下提示用户填 `links: [{kind: local, target: ".", exclude: [...]}]`，否则按缺省 `[{kind: local, target: "."}]` 处理。 |
+| 3 | **类图边等价性校验** | 对每个父模块，旧 `dependencies` 字段声明的依赖目标必须与新 `..>` 边集合**完全一致**（按 `name` 解析）；不一致时**不静默修复**，停在该文件、报告差异、由架构师人工裁决。 |
+| 4 | **补 `description` placeholder** | 缺 `description` 字段时写入 `description: TODO  # ≤80 字单句，结构「定位语+职责边界」`，并将该模块加入「待人工补全」清单（脚本结束时打印汇总）。 |
+| 5 | **补 `keywords` placeholder** | 缺 `keywords` 字段或为空 `[]` 时写入 `keywords: [TODO]  # 5–8 条 kebab，详见元数据检索规范节`，同样加入待补全清单。现网 25 个模块 keywords 全空 —— 这是迁移后召回率提升的最大杠杆，必须批量补齐再合并 PR。 |
+| 6 | **补 `status` 字段** | 缺 `status` 时按现网通用约定写入 `status: implemented`（绝大多数现网模块已落地）；少量例外由架构师事后人工调整为 `spec` / `planned`。 |
+| 7 | **不写 `links`（保持缺省）** | 除非动作 2 检测到旧 `includeDirs` 有非全包语义，否则迁移脚本**不**主动写 `links` 字段；loader 视同 `[{kind: local, target: "."}]`。这保证 v1 旧文件零迁移 frontmatter 即合规。 |
+
+### audit baseline 棘轮清理
+
+旧 `dependencies` 字段曾为 `dna_tree` 检查提供独立的拓扑信息源；v2 起单一信息源切换为父模块类图，旧基线（baseline ratchet）里的 `TREE_DEP_*` 系列 fingerprint 失去比对依据。迁移脚本同批执行：
+
+- 扫 `audit baseline` 中所有 fingerprint 类别为 `TREE_DEP_ANCESTOR_DECLARED` / `TREE_DEP_UP_TREE` / `TREE_DEP_DANGLING` 的条目；
+- 删除这些失效条目（仅 `TREE_DEP_*`；其它检查类别如 `TREE_CYCLE` / `DNA_BODY_OVERSIZE` 不动）；
+- 提交 baseline 变更与 frontmatter 迁移作**同一个 commit**，标题约定 `chore(dna): migrate frontmatter v1 → v2 + clear stale TREE_DEP_* baseline`，便于审计追踪。
+
+### 迁移后的回归验证
+
+迁移脚本结束后必须本地跑一次 `cbim audit` 全量检查，确认：
+
+- 无 `TREE_*` 错误（旧字段删除未引入新依赖违规）；
+- `DNA_FRONTMATTER_*` 全绿（5 必填字段无遗漏）；
+- 「待人工补全」清单为空（所有 description / keywords placeholder 已被人手补齐才合并主干）。
+
+若审计仍报错或清单非空 —— 不得合并 PR。把待补全字段补齐、违规依赖人工裁决、再跑审计直至全绿。
+
+### 不在本轮迁移范围内
+
+- **agent.md frontmatter 升级** —— 见「能力图谱双轴前瞻」节，等 agent 数 >15 时再做，本轮不动 `.claude/agents/**`。
+- **`links` 字段实装 git / db kind** —— schema 已锁定预留，loader 接受字段定义但本轮不消费 `ref` / `driver` / `conn_ref`；何时启用由后续跨仓 / 跨库挂载需求驱动。
+- **现网过细模块合并** —— 见「粒度准则」节方向清单；个案评估走治理工单，不在迁移脚本里强行合并。
 
 ---
 
@@ -533,7 +799,7 @@ owner: architect
 
 ### 结构检查清单
 
-- [ ] **前言**：name（中划线）、owner（代理 id）、status（spec/planned/implemented）、description（一句话，如果存在）
+- [ ] **前言（v2，5 必填 + 1 可选）**：`name`（中划线、项目内全局唯一）、`owner`（代理 id）、`description`（单句 ≤80 字、必填）、`keywords`（5–8 条 kebab、必填）、`status`（`spec` / `planned` / `implemented`、必填）；可选 `links`（按 `kind` 分 schema，缺省 = `[{kind: local, target: "."}]`）。**已删除字段**：`dependencies`（依赖唯一声明源是父模块类图）、`includeDirs`（语义并入 `links.local`）。
 - [ ] **定位部分**：一到两句话（最多三句）；抽象且简洁，而非内部描述
 - [ ] **图表部分**（叶子）：使用 `classDiagram`；显示类、接口、关键签名、关系
 - [ ] **图表部分**（父模块）：使用 `classDiagram`；每个节点是子模块、带 `<<module>>` 刻板印象；边使用 `..>` 显示依赖
@@ -607,19 +873,22 @@ owner: architect
 
 **示例（错误）— 在叶子模块或被误识别的父模块中：**
 
-```markdown
+````markdown
 ## 类图
+
 ```mermaid
 graph TD
     KNOWLEDGE["knowledge/<br/>module CRUD"]
     MEMORY["memory/<br/>distillation"]
     DISPATCH["dispatch/<br/>coordinator"]
 ```
+````
 
 **修正（如果这是父模块）**：使用带 `<<module>>` 刻板印象的 `classDiagram`：
 
-```markdown
+````markdown
 ## 类图
+
 ```mermaid
 classDiagram
     class knowledge { <<module>> }
@@ -628,6 +897,7 @@ classDiagram
     knowledge ..> memory : updates state
     dispatch ..> knowledge : reads
 ```
+````
 
 **修正（如果这是叶子模块）**：先拆分组件成真正的子模块。然后叶子的图表将显示代码级类，而非目录名。
 
@@ -729,6 +999,8 @@ classDiagram
 2. **父模块只写关系与定位** —— 父模块正文只描述子模块间关系（依赖/组合/聚合）与各子模块定位，绝不写任何子模块的内部细节；那是各子模块自己 `module.md` 的职责。
 3. **能力与业务分离** —— 知识包只含项目/模块知识，不得引用 agent 能力规格。
 4. **图语法统一** —— 三种模块类型（叶子/父/根）一律用 `classDiagram`，不用 `graph TD` / `flowchart`。叶子展示代码级类/接口，父/根用 `<<module>>` 刻板印象展示子模块。
+5. **frontmatter v2 字段集** —— 5 必填（`name` / `owner` / `description` / `keywords` / `status`）+ 1 可选（`links`）。`dependencies` 与 `includeDirs` 已删除：依赖关系唯一声明源是父模块类图的 `..>` 边，模块挂载范围由 `links` 的 `kind: local` 控制（缺省 = 全包）。任何形如「在 frontmatter 写依赖列表」「在 frontmatter 列子目录」的 PR 必须打回，由作者跑 `tools/migrate_2_x.py` 重写。
+6. **依赖唯一声明源 = 父模块类图** —— 跨子树边按 R1/R2/R3 三规则上提到最近共同祖先类图；任何在子模块自己的 frontmatter 或正文里"声明依赖"的写法都是错误来源，必须改为父模块类图边。
 
 ### 向后兼容：旧格式
 
@@ -782,15 +1054,15 @@ cbim dna reindex
 
 `module.md` 是 `.dna/` 中唯一的必需文件。它将元数据（YAML frontmatter）与架构（markdown 正文）合并在一个文件中 —— 与 `.claude/agents/<name>.md` 和 `.cbim/cbi/skills/<name>/skill.py` 形成统一的 `frontmatter + 正文` 模式。
 
-## 叶子模块示例
+## 叶子模块示例（v2 frontmatter）
 
 ````markdown
 ---
 name: event-bus
 owner: architect
-description: 解耦的、类型安全的进程内事件分发
-keywords: [event, pub-sub, decoupling]
-dependencies: []
+description: 进程内类型安全的事件分发，解耦上下游模块通信，不跨进程不持久化。
+keywords: [event, pub-sub, dispatcher, decoupling, in-process, sync-emit]
+status: implemented
 ---
 
 ## 定位
@@ -830,18 +1102,19 @@ classDiagram
 - **同步 emit**：Handler 设计为同步执行；异步副作用由 handler 自行管理，保持 bus 简单可预测。
 ````
 
-## 父模块示例
+注：`links` 字段省略 —— loader 视同 `links: [{kind: local, target: "."}]`，模块根目录全部纳入。
 
-父模块的正文只描述定位、子模块关系和跨子模块的涌现洞察 —— 不写任何子模块的内部细节。
+## 父模块示例（同父子兄弟依赖）
+
+父模块的正文只描述定位、子模块关系和跨子模块的涌现洞察 —— 不写任何子模块的内部细节。依赖关系唯一声明源是 `## 类图` 的 `..>` 边，frontmatter 不再写 `dependencies`。
 
 ````markdown
 ---
 name: combat
 owner: architect
-description: 战斗系统根模块
-keywords: [combat, battle]
-dependencies:
-  - src/types
+description: 战斗系统父模块，承载主动技能与被动状态两类子系统的协作边界。
+keywords: [combat, skill, buff, battle, action-loop]
+status: implemented
 ---
 
 ## 定位
@@ -853,7 +1126,7 @@ dependencies:
 ```mermaid
 classDiagram
     class skill { <<module>> }
-    class buff { <<module>> }
+    class buff  { <<module>> }
     skill ..> buff : applies
 ```
 
@@ -864,6 +1137,53 @@ classDiagram
 
 - **skill 依赖 buff，反向禁止**：技能可以施加 buff，但 buff 不得触发技能 —— 防止递归战斗循环。
 ````
+
+## 含跨树依赖的父模块示例（最近共同祖先承载，R1/R2/R3）
+
+跨子树边（源端在本父模块子树内、目标端在另一棵子树内）**不**画在源端的直接父模块图里，而是上提到源/目标两端的最近共同祖先模块图。下例假设项目根 `.` 是源端 `src/combat/skill` 与目标端 `submodule/cbim/v2` 的最近共同祖先；该跨树边只在根模块图中以**占位节点**形式出现，根模块图按四段顺序渲染。
+
+````markdown
+---
+name: project-root
+owner: architect
+description: 项目根模块，聚合业务子树（src）与外部内核子树（submodule/cbim），承载跨子树协作边界。
+keywords: [root, monorepo, cross-tree, integration]
+status: implemented
+links:
+  - {kind: local, target: ".", exclude: ["dist/**", "node_modules/**"]}
+---
+
+## 定位
+
+项目根模块；业务子树（`src`）与外部内核子树（`submodule/cbim`）共同的最近祖先。
+
+## 类图
+
+```mermaid
+classDiagram
+    %% --- 1. 直接管辖节点（共祖的一级子模块） ---
+    class src { <<module>> }
+    class submodule { <<module>> }
+
+    %% --- 2. 跨树占位节点（来自其它子树的远端） ---
+    class submodule_cbim_v2 { <<module>> }
+    class submodule_cbim_v2 : .from(submodule/cbim/v2)
+
+    %% --- 3. 内部边（直接管辖节点之间） ---
+    %% （本例 src 与 submodule 间无直接依赖；如有则写在此段）
+
+    %% --- 4. 跨树边（涉及占位节点的边） ---
+    src ..> submodule_cbim_v2 : reads_compat
+```
+
+## 关键决策
+
+- **跨树依赖只在共祖图露面**：`src/combat/skill` 对 `submodule/cbim/v2` 的依赖按 R2 沿用顶层一级模块 `src` 作图内源端；`skill` 自己的存在隐藏在 `src` 子树内，进 `src/.dna/module.md` 继续递推查看。
+- **占位节点不展开**：`submodule_cbim_v2` 在本图只露名字，不绘其内部子模块；任何想了解远端内部的人，跳到 `submodule/cbim/v2/.dna/module.md`。
+- **四段顺序固定**：reviewer 一眼能区分本子树内部架构（第 1、3 段）与跨子树挂钩（第 2、4 段）。
+````
+
+注：占位 class id `submodule_cbim_v2` 由远端真实路径 `submodule/cbim/v2` 机器派生（`/`→`_`），紧跟一行 `class <id> : .from(<原始路径>)` 注释还原真实路径，`graph_builder` 解析时反查 `name_to_path`。
 
 ---
 

@@ -24,21 +24,22 @@ from engine.retrieval.facade import RetrievalError, RetrievalFacade
 
 
 def _write_module(root: Path, rel: str, name: str,
-                  deps: list[str] | None = None,
-                  body_extra: str = "") -> None:
+                  body_extra: str = "",
+                  body: str | None = None) -> None:
     mod_dir = root if rel == "." else root / rel
     dna = mod_dir / ".dna"
     dna.mkdir(parents=True, exist_ok=True)
-    deps_yaml = "[]" if not deps else "[" + ", ".join(f'"{d}"' for d in deps) + "]"
     fm = (
         "---\n"
         f"name: {name}\n"
-        f"dependencies: {deps_yaml}\n"
+        "owner: tester\n"
+        "description: m\n"
+        "keywords: []\n"
         "status: implemented\n"
         "---\n"
     )
-    body = f"## Positioning\n\n{name} module.\n{body_extra}"
-    (dna / "module.md").write_text(fm + body, encoding="utf-8")
+    body_text = body if body is not None else f"## Positioning\n\n{name} module.\n{body_extra}"
+    (dna / "module.md").write_text(fm + body_text, encoding="utf-8")
 
 
 def _build_test_project(tmp_path: Path) -> tuple[Path, RetrievalFacade]:
@@ -46,23 +47,26 @@ def _build_test_project(tmp_path: Path) -> tuple[Path, RetrievalFacade]:
 
     Beta and gamma's bodies use the unique tokens 'betatoken' / 'gammatoken'
     so a search for 'zorblexicon' matches alpha alone — letting us
-    actually exercise graph expansion to bring in the dependents.
-    Frontmatter ``dependencies`` is kept distinct from the body text so
-    BM25 doesn't accidentally co-rank dependents on the seed query.
+    actually exercise graph expansion to bring in the dependents. The
+    root parent's class diagram declares beta/gamma's deps on alpha (v2:
+    deps come from parent diagrams, not frontmatter).
     """
     root = tmp_path / "proj"
     root.mkdir()
-    _write_module(root, "alpha", name="alpha",
-                  body_extra="zorblexicon here.")
-    _write_module(root, "beta", name="beta", deps=["alpha"],
-                  body_extra="betatoken only.")
-    _write_module(root, "gamma", name="gamma", deps=["alpha"],
-                  body_extra="gammatoken only.")
-    update_index(root, ["alpha", "beta", "gamma"])
+    root_diagram = (
+        "## Class Diagram\n\n```mermaid\nclassDiagram\n"
+        "    class alpha\n    class beta\n    class gamma\n"
+        "    beta ..> alpha\n    gamma ..> alpha\n```\n"
+    )
+    _write_module(root, ".", name="root", body=root_diagram)
+    _write_module(root, "alpha", name="alpha", body_extra="zorblexicon here.")
+    _write_module(root, "beta", name="beta", body_extra="betatoken only.")
+    _write_module(root, "gamma", name="gamma", body_extra="gammatoken only.")
+    update_index(root, [".", "alpha", "beta", "gamma"])
     build_graph(root)
 
     facade = RetrievalFacade(root / ".cbim" / "index", RetrievalConfig())
-    # Push module bodies into the dna source so search() finds them.
+    # Push leaf module bodies into the dna source so search() finds them.
     for path in ("alpha", "beta", "gamma"):
         md = (root / path / ".dna" / "module.md").read_text(encoding="utf-8")
         facade.index_upsert(

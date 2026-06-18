@@ -331,28 +331,62 @@ def split_module(
 
 
 def _scan_dependency_refs(root: Path, source_rel: str) -> list[dict]:
-    """Report every module whose frontmatter `dependencies:` mentions
-    `source_rel`. SCAN ONLY — no mutation.
+    """Report every module that depends on ``source_rel``.
 
-    The split command surfaces these so the architect can manually rewrite
-    each affected module's dependencies afterward via `cbim dna edit`.
+    SCAN ONLY — no mutation. The split command surfaces these so the
+    architect can manually rewrite each affected module's reference
+    afterward via `cbim dna edit` and/or by editing the relevant parent
+    class diagram.
+
+    v2: dependency relationships live exclusively in parent module class
+    diagrams (``..>`` arrows). Each entry is tagged ``kind: "class-diagram"``
+    and names the diagram-host module so the architect can locate the
+    arrow that needs redirecting.
     """
     refs: list[dict] = []
-    for mod_dict in _scan_modules(root):
-        deps = mod_dict.get("dependencies") or []
-        if not isinstance(deps, list):
+    modules = list(_scan_modules(root))
+
+    # Parent class-diagram ``..>`` arrows targeting source_rel.
+    # Build a name→path map so resolver can match arrow tokens to module
+    # paths the same way graph_builder does. Placeholder origins are parsed
+    # per-body (local-only) inside _parse_class_diagram_deps.
+    name_to_path = {
+        m["name"]: m["path"]
+        for m in modules
+        if m.get("name")
+    }
+    all_paths = {m["path"] for m in modules}
+
+    # _parse_class_diagram_deps lives in graph_builder; importing here keeps
+    # splitter's import surface narrow (top-of-file imports stay light).
+    from .graph_builder import _parse_class_diagram_deps as _gb_parse_deps
+
+    for mod_dict in modules:
+        body = mod_dict.get("architecture") or ""
+        if not body:
             continue
-        for dep in deps:
-            if isinstance(dep, str) and dep.strip() == source_rel:
-                refs.append({
-                    "module": mod_dict["path"],
-                    "dep_line": dep,
-                    "action_required": (
-                        f"`dependencies:` lists '{source_rel}'; consider "
-                        f"updating to point at the new split target(s)."
-                    ),
-                })
-                break
+        for src_path, dst_path in _gb_parse_deps(body, name_to_path):
+            if dst_path != source_rel:
+                continue
+            if src_path not in all_paths:
+                continue
+            if src_path == source_rel:
+                # Self-edge from a typo or in-source diagram example;
+                # resolving the source as the source module being split is
+                # not a "dependent" — drop.
+                continue
+            refs.append({
+                "module": src_path,
+                "dep_line": f"{src_path} ..> {source_rel}",
+                "kind": "class-diagram",
+                "diagram_host": mod_dict["path"],
+                "action_required": (
+                    f"parent module '{mod_dict['path']}'s class diagram "
+                    f"contains `{src_path} ..> {source_rel}`; consider "
+                    "redirecting the edge to the new split target(s)."
+                ),
+            })
+
     return refs
 
 

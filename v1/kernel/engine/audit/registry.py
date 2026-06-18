@@ -12,6 +12,7 @@ from pathlib import Path
 from .checks import (
     agent_fission,
     dna_fission,
+    dna_frontmatter,
     dna_tree,
     index_consistency,
     memory_threshold,
@@ -26,6 +27,7 @@ CHECKS: dict[str, CheckFn] = {
     "agent_fission": agent_fission.check,
     "dna_fission": dna_fission.check,
     "dna_tree": dna_tree.check,
+    "dna_frontmatter": dna_frontmatter.check,
 }
 
 

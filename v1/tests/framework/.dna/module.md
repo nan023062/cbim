@@ -1,8 +1,14 @@
 ---
 name: tests-framework
 owner: architect
-description: Shared test primitives — TestTarget, headless claude runner, log parsing/assertions, stats, report rendering
-keywords: []
+description: 共享测试原语：TestTarget + claude 子进程 runner + 日志断言 + 报告渲染，无驱动逻辑
+keywords:
+  - framework
+  - primitives
+  - test-target
+  - claude-runner
+  - log-assert
+  - report
 dependencies: []
 status: implemented
 ---

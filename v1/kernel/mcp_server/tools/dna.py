@@ -76,8 +76,6 @@ def register(mcp) -> None:
         ]
         if info["keywords"]:
             lines.append(f"Keywords    : {', '.join(info['keywords'])}")
-        if info["dependencies"]:
-            lines.append(f"Dependencies: {', '.join(info['dependencies'])}")
         wf_ids = [w["id"] for w in info["workflows"]]
         if wf_ids:
             lines.append(f"Workflows   : {', '.join(wf_ids)}")

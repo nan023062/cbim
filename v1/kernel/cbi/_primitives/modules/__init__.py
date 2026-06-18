@@ -15,6 +15,7 @@ from ._telemetry import _rel_for_log as _rel_for_log
 from .doc_writer import _WRITE_DOC_ALLOWED as _WRITE_DOC_ALLOWED
 from .doc_writer import write_module_doc as write_module_doc
 from .frontmatter_schema import _MODULE_FM_LIST_FIELDS as _MODULE_FM_LIST_FIELDS
+from .frontmatter_schema import _MODULE_FM_REQUIRED as _MODULE_FM_REQUIRED
 from .frontmatter_schema import _MODULE_FM_SCHEMA as _MODULE_FM_SCHEMA
 from .frontmatter_schema import _MODULE_FM_STATUS_VALUES as _MODULE_FM_STATUS_VALUES
 from .frontmatter_schema import _build_module_md as _build_module_md
@@ -66,6 +67,7 @@ __all__ = [
     "ensure_registry",
     # White-box contract names consumed by audit, governance, body resource, tests
     "_MODULE_FM_LIST_FIELDS",
+    "_MODULE_FM_REQUIRED",
     "_MODULE_FM_STATUS_VALUES",
     "_SCAN_SKIP_DIRS",
     "_scan_modules",

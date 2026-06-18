@@ -1,9 +1,16 @@
 ---
 name: cbim-kernel-pkg
 owner: architect
-description: CBIM kernel package: engine, project, cbi, memory, hooks, services, dashboard, mcp_server
-keywords: []
+description: CBIM 内核 Python 包，承载引擎/记忆/CBI/服务/仪表盘/MCP，单 install 路径
+keywords:
+  - kernel
+  - install
+  - package
+  - runtime
+  - single-entry
+  - project-local
 dependencies: []
+status: implemented
 ---
 
 ## Positioning
@@ -96,4 +103,3 @@ Loose kernel-root artefacts: `__init__.py` (exposes `__version__` read from `VER
 - File-level fsync failures **propagate** (caller's data is genuinely not durable yet); directory-level fsync failures are silently swallowed.
 - Any failure path attempts to remove the leftover `.tmp` so the workspace never accumulates partial files; cleanup exceptions are suppressed.
 - Note: the file is named `atomic_io.py`, NOT `_io.py` — it is a public leaf consumed by every kernel layer (persistence, cbi, memory, services), not a private helper.
-

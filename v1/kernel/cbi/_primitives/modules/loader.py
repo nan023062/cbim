@@ -9,6 +9,23 @@ from pathlib import Path
 from services._fm import parse_frontmatter, strip_frontmatter
 
 from ._telemetry import _log_import, _rel_for_log
+from .frontmatter_schema import _MODULE_FM_REQUIRED
+
+
+class ModuleSchemaError(ValueError):
+    """Raised when a v2 module.md is missing one of the required frontmatter
+    fields (``name`` / ``owner`` / ``description`` / ``keywords`` / ``status``).
+
+    Distinct from ``ValueError`` so callers can catch the schema-violation
+    case separately from generic value errors. The first arg is the
+    human-readable message (``str(err)``); ``module_path`` and
+    ``missing_field`` carry the structured detail.
+    """
+
+    def __init__(self, message: str, module_path: Path, missing_field: str) -> None:
+        super().__init__(message)
+        self.module_path = module_path
+        self.missing_field = missing_field
 
 # ---------------------------------------------------------------------------
 # Read
@@ -43,6 +60,22 @@ def _load_new_format(mod_dir: Path, root: Path, aimod: Path, module_md: Path) ->
     body = strip_frontmatter(raw)
     rel = mod_dir.relative_to(root).as_posix()
 
+    # v2 strict required-field check. Migration has rewritten every
+    # module.md (Step 5 of the v2 sprint), so a missing required field at
+    # this point is a real schema violation — surface it loudly rather
+    # than silently defaulting. Stale `dependencies` / `includeDirs` keys
+    # in the YAML are merely *unknown* to the v2 schema and are dropped
+    # by the field whitelist below; only tools/migrate_2_x.py --apply
+    # physically removes them from disk.
+    for required in _MODULE_FM_REQUIRED:
+        if required not in data:
+            raise ModuleSchemaError(
+                f"module.md missing required frontmatter field "
+                f"{required!r}: {module_md}",
+                module_path=module_md,
+                missing_field=required,
+            )
+
     contract_path = aimod / "contract.md"
     if contract_path.exists():
         contract = contract_path.read_text(encoding="utf-8")
@@ -56,16 +89,21 @@ def _load_new_format(mod_dir: Path, root: Path, aimod: Path, module_md: Path) ->
     return {
         "id": rel or ".",
         "path": rel or ".",
-        "name": data.get("name", rel),
-        "owner": data.get("owner", ""),
-        "description": data.get("description", ""),
-        "keywords": data.get("keywords", []),
-        "dependencies": data.get("dependencies", []),
-        # Backward compat: older module.md files have no `status` — default to
-        # "implemented" because by definition the existing code in the repo
-        # already realises whatever the DNA describes (otherwise the file
-        # wouldn't be there yet).
-        "status": data.get("status", "implemented"),
+        "name": data["name"],
+        "owner": data["owner"],
+        "description": data["description"],
+        "keywords": data["keywords"],
+        # v2 `links` field (default-injected only into the in-memory dict —
+        # NOT written back to disk). When the on-disk module.md omits `links`,
+        # callers see `[{"kind": "local", "target": "."}]`; when it sets
+        # `links: []` or any explicit value, that value is passed through.
+        # The `data.get` fallback distinguishes "missing key" (default) from
+        # "explicit empty list" (preserved verbatim) because parse_frontmatter
+        # only inserts the key when it appears in the file.
+        "links": data.get(
+            "links", [{"kind": "local", "target": "."}]
+        ),
+        "status": data["status"],
         "architecture": body,
         "contract": contract,
         "workflows": workflows,
@@ -105,9 +143,17 @@ def _load_legacy_format(mod_dir: Path, root: Path, aimod: Path,
         "owner": data.get("owner", ""),
         "description": data.get("description", ""),
         "keywords": data.get("keywords", []),
-        "dependencies": data.get("dependencies", []),
+        # v2 `links` default — same in-memory-only injection as
+        # _load_new_format. Legacy JSON authors never wrote it; new readers
+        # uniformly see the canonical "module root" mount.
+        "links": data.get(
+            "links", [{"kind": "local", "target": "."}]
+        ),
         # Legacy module.json was authored before the status field existed —
-        # treat as implemented for backward compat (see _load_new_format).
+        # treat as implemented for backward compat. v2's `dependencies` /
+        # `includeDirs` deletion applies here too: even if a hand-edited
+        # legacy file carries those keys, we drop them on load — the v2
+        # consumers all source dependencies from parent class diagrams.
         "status": data.get("status", "implemented"),
         "architecture": arch,
         "contract": contract,
@@ -242,4 +288,6 @@ __all__ = [
     "_SCAN_SKIP_DIRS",
     "_is_skipped",
     "_scan_modules",
+    "_walk_dna_dirs",
+    "ModuleSchemaError",
 ]

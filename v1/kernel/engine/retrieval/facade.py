@@ -116,6 +116,13 @@ class _SourceState:
     bm25: BM25Index
     records: dict[str, DocRecord]
     vectors: VectorBlob | None   # None when provider unavailable / dim=0
+    # PR-2 retrieval-Y: optional per-doc header-band vector store. Only
+    # populated for source="dna" (other sources leave it None and behave
+    # exactly as in PR-1). When non-None, search() blends header & body
+    # cosine scores (0.7*header + 0.3*body); when None, body vector is
+    # the sole signal. None on a dna source means "not yet written" —
+    # PR-1 indices upgrade lazily on the next reindex.
+    header_vectors: VectorBlob | None = None
     # Lazy-loaded only for source="dna"; remains None for the other three
     # sources. Wraps the on-disk graph.json built by graph_builder.
     # ``None`` here means "not yet loaded"; ``GraphIndex(None)`` would
@@ -166,12 +173,21 @@ class RetrievalFacade:
                 if content is not None:
                     bm25.upsert(doc_id, content)
         vectors = store.load_vectors() if self.provider.is_available() else None
+        # Header-band vector blob is only meaningful when both (a) we have
+        # an embedding provider and (b) the on-disk file exists. Loaders
+        # for other sources never see this file.
+        header_vectors = (
+            store.load_header_vectors()
+            if self.provider.is_available()
+            else None
+        )
         return _SourceState(
             source=source,
             store=store,
             bm25=bm25,
             records=records,
             vectors=vectors,
+            header_vectors=header_vectors,
         )
 
     def _ensure_vector_blob(self, state: _SourceState) -> VectorBlob | None:
@@ -181,13 +197,29 @@ class RetrievalFacade:
             state.vectors = VectorBlob(self.provider.dimension())
         return state.vectors
 
+    def _ensure_header_vector_blob(
+        self, state: _SourceState,
+    ) -> VectorBlob | None:
+        """Allocate the per-doc header-band vector blob on first write.
+
+        Mirrors ``_ensure_vector_blob``. Only ever called from the dna
+        source upsert path; non-dna sources never hit this method.
+        """
+        if not self.provider.is_available():
+            return None
+        if state.header_vectors is None:
+            state.header_vectors = VectorBlob(self.provider.dimension())
+        return state.header_vectors
+
     def _persist(self, state: _SourceState) -> None:
         if self.config.atomic_persist:
-            # Single-shot transactional write of meta + bm25 + vectors.
+            # Single-shot transactional write of meta + bm25 + vectors
+            # (+ optional header_vectors for the dna source).
             state.store.persist_atomic(
                 state.records,
                 state.bm25.to_dict(),
                 state.vectors,
+                state.header_vectors,
             )
             return
         # Legacy path — kept behind the atomic_persist=False feature
@@ -197,6 +229,8 @@ class RetrievalFacade:
         state.store.save_bm25_state(state.bm25.to_dict())
         if state.vectors is not None:
             state.store.save_vectors(state.vectors)
+        if state.header_vectors is not None:
+            state.store.save_header_vectors(state.header_vectors)
 
     # ---------------- public: index_upsert ----------------
 
@@ -206,13 +240,31 @@ class RetrievalFacade:
         doc_id: str,
         content: str,
         metadata: dict | None = None,
+        header_content: str | None = None,
     ) -> None:
+        """Upsert ``doc_id`` with full document ``content``.
+
+        ``header_content`` is the optional header band (PR-2 retrieval-Y
+        — name + description + keywords for source="dna"). When supplied,
+        BM25 weights its tokens 2x and a separate header-band vector is
+        embedded for fused-cosine search; when None, behaviour is
+        byte-identical to PR-1. Non-dna sources MUST NOT pass this
+        argument — see store.VALID_SOURCES.
+        """
         if not isinstance(source, str) or not source:
             raise RetrievalError("source must be a non-empty string")
         if not isinstance(doc_id, str) or not doc_id:
             raise RetrievalError("doc_id must be a non-empty string")
         if content is None:
             raise RetrievalError("content must not be None")
+        if header_content is not None and source != "dna":
+            # Belt-and-suspenders: header-band weighting only makes sense
+            # for the dna source where the band is a structured
+            # frontmatter slice. Refuse rather than silently weight a
+            # header on transcripts / agents / memory.
+            raise RetrievalError(
+                "header_content is only supported for source='dna'"
+            )
         metadata = dict(metadata or {})
         # source_path is an optional metadata field. We promote it to a
         # first-class DocRecord field so drift checking doesn't have to
@@ -222,7 +274,10 @@ class RetrievalFacade:
         with self._lock:
             state = self._get(source)
             with state.store._cross_process_lock():
-                self._do_upsert(state, source, doc_id, content, metadata, source_path)
+                self._do_upsert(
+                    state, source, doc_id, content, metadata,
+                    source_path, header_content,
+                )
 
     def _reload_under_lock(self, state: _SourceState) -> None:
         """Refresh the in-memory state from disk while the cross-process
@@ -243,8 +298,10 @@ class RetrievalFacade:
             state.bm25 = BM25Index()
         if self.provider.is_available():
             state.vectors = state.store.load_vectors()
+            state.header_vectors = state.store.load_header_vectors()
         else:
             state.vectors = None
+            state.header_vectors = None
 
     def _do_upsert(
         self,
@@ -254,6 +311,7 @@ class RetrievalFacade:
         content: str,
         metadata: dict,
         source_path,
+        header_content: str | None = None,
     ) -> None:
         # Reload-from-disk while we hold the cross-process lock so we
         # see any peer-process commits that landed since our cache was
@@ -293,8 +351,9 @@ class RetrievalFacade:
         )
         state.records[doc_id] = rec
 
-        # BM25 always.
-        state.bm25.upsert(doc_id, content)
+        # BM25 always. Header band (when supplied) gets a 2x tf weight
+        # injected here so retrieval ranks header-matching docs higher.
+        state.bm25.upsert(doc_id, content, header_content=header_content)
 
         # Vector when provider available.
         if self.provider.is_available():
@@ -303,6 +362,18 @@ class RetrievalFacade:
                 blob = self._ensure_vector_blob(state)
                 assert blob is not None
                 blob.upsert(doc_id, vec)
+                if header_content:
+                    # Embed the header band separately so search() can
+                    # blend ``0.7*cos(q,header) + 0.3*cos(q,body)``.
+                    header_vec = self.provider.embed(header_content)
+                    header_blob = self._ensure_header_vector_blob(state)
+                    assert header_blob is not None
+                    header_blob.upsert(doc_id, header_vec)
+                elif state.header_vectors is not None:
+                    # Caller switched off the header band for an existing
+                    # doc (e.g. emptied keywords + description). Drop the
+                    # stale header vector so it can't outrank the body.
+                    state.header_vectors.delete(doc_id)
             except Exception:  # noqa: BLE001 — third-party embed provider may raise anything; must degrade to BM25
                 # Embedding failed mid-flight — don't kill the upsert;
                 # BM25 still works and drift will re-attempt later.
@@ -335,6 +406,8 @@ class RetrievalFacade:
                 state.bm25.delete(doc_id)
                 if state.vectors is not None:
                     state.vectors.delete(doc_id)
+                if state.header_vectors is not None:
+                    state.header_vectors.delete(doc_id)
                 state.store.delete_doc(doc_id)
                 try:
                     self._persist(state)
@@ -391,7 +464,14 @@ class RetrievalFacade:
             if use_vector:
                 try:
                     q_vec = self.provider.embed(query)
-                    vec_idx = VectorIndex(state.vectors)
+                    # Pass the optional header-band blob so VectorIndex
+                    # fuses ``0.7*cos(q, header) + 0.3*cos(q, body)`` per
+                    # doc when available; falls back to body-only when
+                    # the doc has no header vector.
+                    vec_idx = VectorIndex(
+                        state.vectors,
+                        header_blob=state.header_vectors,
+                    )
                     vec_ranked = vec_idx.search(q_vec, top_k, allowed_ids=allowed_ids)
                 except Exception:  # noqa: BLE001 — third-party embed provider may raise anything; must degrade to BM25
                     vec_ranked = []
@@ -471,7 +551,17 @@ class RetrievalFacade:
                 rec = state.records.get(doc_id)
                 if rec is not None and rec.source_path and "source_path" not in metadata:
                     metadata = {**metadata, "source_path": rec.source_path}
-                self.index_upsert(source, doc_id, content, metadata)
+                # Re-derive the header band on dna drift refresh so the
+                # header-band weighting stays in sync with the on-disk
+                # frontmatter. Other sources have no header band.
+                header_content = None
+                if source == "dna":
+                    from services._reindex import _build_dna_header_band
+                    header_content = _build_dna_header_band(content)
+                self.index_upsert(
+                    source, doc_id, content, metadata,
+                    header_content=header_content,
+                )
 
             def _delete(doc_id: str):
                 self.index_delete(source, doc_id)
@@ -674,8 +764,14 @@ def reset_default_facade() -> None:
         _default_facade = None
 
 
-def index_upsert(source: str, doc_id: str, content: str, metadata: dict | None = None) -> None:
-    _facade().index_upsert(source, doc_id, content, metadata)
+def index_upsert(
+    source: str,
+    doc_id: str,
+    content: str,
+    metadata: dict | None = None,
+    header_content: str | None = None,
+) -> None:
+    _facade().index_upsert(source, doc_id, content, metadata, header_content)
 
 
 def index_delete(source: str, doc_id: str) -> None:

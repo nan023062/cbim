@@ -27,7 +27,7 @@
 3. 脚本会把仓库 clone 到临时目录，把 `v1/kernel/` 拷贝到 `<project>/.cbim/kernel/`（扁平布局 —— `engine/`、`cbi/`、`memory/`、`project/` 是直接子目录），然后跑 `python3 -m engine init` 完成项目落地（启动 shim、agents、slash 命令、钩子、MCP server、`CLAUDE.md`、`.gitignore`）。`init` 还会在 `<project>/.cbim/.venv/` 建一个项目本地 venv 并把 `mcp` SDK 装进去 —— 你的系统 Python 不会被动到。要求 PATH 上有 `git` 与 `python3` ≥ 3.10；不做全局 `pip install`。
 4. **重启 Claude Code**，让 `SessionStart` 钩子触发。
 
-Windows 原生不支持 `install.sh`（POSIX bash），请用 WSL。
+Windows 也支持 —— `install.sh` 在任何 POSIX `bash` 环境都能跑,包括 Windows 的 Git Bash / MINGW64。从 Git Bash 启动即可;原生 `cmd.exe` 与 PowerShell 不是入口(在那种机器上用 Git Bash)。WSL 也可以。
 
 安装完成后，项目根目录会出现：
 

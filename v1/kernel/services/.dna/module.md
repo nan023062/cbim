@@ -1,9 +1,16 @@
 ---
 name: services
 owner: architect
-description: Service layer: agent/log/memory/knowledge facades used by mcp_server and dashboard
-keywords: []
+description: 读写双面 facade 层：agent/dna/memory/log 服务为 MCP/dashboard/CLI 单源依赖
+keywords:
+  - services
+  - facade
+  - read-write
+  - knowledge
+  - agent-service
+  - single-source
 dependencies: []
+status: implemented
 ---
 
 ## Positioning
@@ -76,4 +83,3 @@ classDiagram
 - **Path-traversal guard `services/_paths.py` is the single defence.** `resolve_within_root(root, rel, *, must_exist, allow_root_itself)` and `PathOutsideRootError` are owned here; **enforced at the MCP entry**, not in services or `cbi/_primitives`. Services trust the entry layer (MCP / CLI handlers / dashboard) to have already validated paths — enforcing twice would force every internal helper to take a `root` parameter for a check the entry already performed. The guard rejects Windows drive-relative forms (`C:foo` — OS interprets vs per-drive cwd, never against root) and absolute paths that escape root via `..` or symlinks/reparse points; absolute paths that *do* land inside root are allowed (CLI surface routinely passes them).
 - **`_fm` is the single frontmatter parser.** `cbi/_primitives/modules/loader.py` and `cbi/_primitives/agents.py` both delegate to `services._fm` after the P3 Wave 1 deduplication; no module owns its own frontmatter parser.
 - **`find_project_root` no longer lives in services or `_fm`.** Project-root resolution is owned by `kernel/context.py` exclusively (the `project_root()` STRICT and `resolve_root_or_cwd()` LENIENT facades). Services consume those two helpers; they do not implement walk-up logic of their own.
-

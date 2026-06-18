@@ -203,24 +203,40 @@ def test_split_rejects_when_heading_missing(tmp_path):
 
 
 def test_split_reports_dependency_refs_without_mutating_them(tmp_path):
+    """v2: dependency refs come exclusively from parent class diagrams.
+
+    Set up a sibling parent (``sib_parent``) whose class diagram has a
+    ``..>`` arrow targeting ``src_mod``. The split command surfaces that
+    edge in ``dependency_refs`` and must not mutate the parent's body.
+    """
     src_mod = _make_source(tmp_path)
 
-    # Sibling module whose frontmatter `dependencies:` references src_mod
-    sib = tmp_path / "sib_mod"
+    # Build a sibling parent with a registered child that points at src_mod.
+    sib_parent = tmp_path / "sib_parent"
+    (sib_parent / ".dna").mkdir(parents=True)
+    parent_diagram = (
+        "## Class Diagram\n\n```mermaid\nclassDiagram\n"
+        "    class child { <<module>> }\n"
+        "    class src_mod { <<module>> }\n"
+        "    child ..> src_mod\n"
+        "```\n"
+    )
+    (sib_parent / ".dna" / "module.md").write_text(
+        "---\nname: sib_parent\nowner: bob\ndescription: parent\n"
+        "keywords: [TODO]\nstatus: implemented\n---\n\n"
+        + parent_diagram,
+        encoding="utf-8",
+    )
+    child = sib_parent / "child"
     init_module(
-        sib,
-        name="sib_mod",
+        child,
+        name="child",
         owner="bob",
-        description="depends on src_mod",
+        description="declared dependent in parent diagram",
         type_="leaf",
         project_root=tmp_path,
     )
-    sib_md = sib / ".dna" / "module.md"
-    raw = sib_md.read_text(encoding="utf-8")
-    raw = raw.replace("dependencies: []", "dependencies: [src_mod]")
-    sib_before = raw  # snapshot for post-split comparison
-    sib_md.write_text(raw, encoding="utf-8")
-    sib_before = sib_md.read_text(encoding="utf-8")
+    parent_before = (sib_parent / ".dna" / "module.md").read_text(encoding="utf-8")
 
     splits = [{
         "path": "diag_mod",
@@ -230,18 +246,103 @@ def test_split_reports_dependency_refs_without_mutating_them(tmp_path):
 
     report = split_module(src_mod, splits, root=tmp_path)
 
-    # Report names the sibling
+    # Report names the dependent child via its parent's class diagram.
     assert len(report["dependency_refs"]) == 1
     ref = report["dependency_refs"][0]
-    assert ref["module"] == "sib_mod"
-    assert ref["dep_line"] == "src_mod"
+    assert ref["module"] == "sib_parent/child"
+    assert ref["kind"] == "class-diagram"
+    assert ref["diagram_host"] == "sib_parent"
     assert "action_required" in ref
 
-    # Sibling's frontmatter is BYTE-FOR-BYTE unchanged
-    sib_after = sib_md.read_text(encoding="utf-8")
-    assert sib_after == sib_before, (
-        "dependency_refs must be REPORT ONLY; sibling frontmatter must not be mutated"
+    # Parent body BYTE-FOR-BYTE unchanged.
+    parent_after = (sib_parent / ".dna" / "module.md").read_text(encoding="utf-8")
+    assert parent_after == parent_before, (
+        "dependency_refs must be REPORT ONLY; parent class diagram must not be mutated"
     )
+
+
+def test_split_reports_class_diagram_refs(tmp_path):
+    """v2: _scan_dependency_refs surfaces class-diagram edges only.
+
+    Setup:
+      * `parent_a` parent module's class diagram declares
+            `child_a ..> src_mod`
+        → kind="class-diagram", module="parent_a/child_a"
+      * `parent_b` parent module's class diagram declares
+            `child_b ..> src_mod`
+        → kind="class-diagram", module="parent_b/child_b"
+
+    Two reference entries are expected; the v2 schema removes
+    frontmatter ``dependencies`` so legacy-style references no longer
+    surface here.
+    """
+    src_mod = _make_source(tmp_path)
+
+    def _write_module(rel: str, fm_extra: str = "", body: str = "body\n",
+                      name: str | None = None) -> None:
+        mod = tmp_path / rel
+        (mod / ".dna").mkdir(parents=True)
+        if name is None:
+            name = rel.rsplit("/", 1)[-1]
+        fm = (
+            "---\n"
+            f"name: {name}\n"
+            "owner: x\n"
+            "description: m\n"
+            "keywords: [TODO]\n"
+            "status: implemented\n"
+            f"{fm_extra}"
+            "---\n\n"
+        )
+        (mod / ".dna" / "module.md").write_text(fm + body, encoding="utf-8")
+
+    parent_a_diagram = (
+        "## Class Diagram\n\n```mermaid\nclassDiagram\n"
+        "    class child_a { <<module>> }\n"
+        "    class src_mod { <<module>> }\n"
+        "    child_a ..> src_mod\n"
+        "```\n"
+    )
+    parent_b_diagram = (
+        "## Class Diagram\n\n```mermaid\nclassDiagram\n"
+        "    class child_b { <<module>> }\n"
+        "    class src_mod { <<module>> }\n"
+        "    child_b ..> src_mod\n"
+        "```\n"
+    )
+
+    _write_module("parent_a", body=parent_a_diagram)
+    _write_module("parent_b", body=parent_b_diagram)
+    _write_module("parent_a/child_a")
+    _write_module("parent_b/child_b")
+
+    # Update the project index so list_modules sees the new modules.
+    idx_path = tmp_path / ".cbim" / "index.md"
+    existing = idx_path.read_text(encoding="utf-8").rstrip() + "\n"
+    extra = (
+        "- parent_a\n- parent_b\n"
+        "- parent_a/child_a\n- parent_b/child_b\n"
+    )
+    idx_path.write_text(existing + extra, encoding="utf-8")
+
+    splits = [{
+        "path": "diag_mod",
+        "name": "diag_mod",
+        "headings": ["Class Diagram"],
+    }]
+
+    report = split_module(src_mod, splits, root=tmp_path)
+    refs = report["dependency_refs"]
+
+    by_kind = {(r["kind"], r["module"]) for r in refs}
+    assert ("class-diagram", "parent_a/child_a") in by_kind, refs
+    assert ("class-diagram", "parent_b/child_b") in by_kind, refs
+    assert len(refs) == 2, refs
+
+    # Class-diagram entries record which parent's diagram hosted the edge.
+    cd_refs = [r for r in refs if r["kind"] == "class-diagram"]
+    hosts = {r["diagram_host"] for r in cd_refs}
+    assert hosts == {"parent_a", "parent_b"}
 
 
 # --- 5. Dry-run ---------------------------------------------------------

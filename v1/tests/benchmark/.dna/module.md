@@ -1,10 +1,16 @@
 ---
 name: tests-benchmark
 owner: architect
-description: Plain-vs-CBIM A/B comparison — standalone runner_cli, 5 tasks x 2 modes, fixture-based toy project
-keywords: []
+description: Plain/CBIM A/B 对照测试器：5 任务 × 2 模式，fixture 玩具工程，独立 runner
+keywords:
+  - benchmark
+  - ab-test
+  - plain-baseline
+  - fixture
+  - standalone-runner
+  - paired
 dependencies:
-  - v1/tests/framework
+  - tests/framework
 status: implemented
 ---
 

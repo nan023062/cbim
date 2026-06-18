@@ -1,11 +1,17 @@
 ---
 name: memory_compaction
 owner: architect
-description: Memory compaction & upgrade for medium tier: identify/compact candidates, promote-candidate marker, archive cleanup, internal index + engine/retrieval drift verification, health checks. v2 drops short->medium distillation responsibility (now in engine/dream + memory_distill skill).
-keywords: []
+description: Medium 压缩升级层：候选识别 + 压缩 + 归档清理 + 健康巡检，回写经 crud
+keywords:
+  - compaction
+  - candidates
+  - promote
+  - sweep
+  - health-check
+  - write-back
 dependencies:
-  - v1/kernel/memory/crud
-  - v1/kernel/engine/retrieval
+  - kernel/memory/crud
+  - kernel/engine/retrieval
 status: implemented
 ---
 
@@ -74,4 +80,3 @@ classDiagram
 - **不读 transcript JSONL。** 废弃了原来“扫 short 压 medium”的职责后，本模块不再访问 `~/.claude/projects/<slug>/`。Transcript 蒙骏在 `engine/dream` + `memory_distill` skill，蒙骏产物通过普通 `memory_write` 路径走到 `crud/`。
 - **不调 LLM。** 压缩 / 识别候选 / 健康巡检 / 索引重建全部是确定性 Python 逻辑；任何“用 LLM 判断要不要压缩”的写法都是破窗。
 - **不发事件、不调外部。** 压缩 / 识别候选 / 归档 / 重建索引都不通知任何方。
-

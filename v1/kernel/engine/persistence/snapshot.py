@@ -3,10 +3,10 @@
 Atomic write via temp file + rename. bb.json is rewritten in full on dirty
 (no diff patches — by design, simpler recovery, per README §3).
 
-Schema version is owned by core.blackboard.SCHEMA_VERSION (current: 2 after
-the v3 simplification). Snapshots written by a different schema version are
-treated as orphaned: read_bb() logs a warning and returns None so the engine
-can drop them without crashing.
+Schema version is owned by core.blackboard.SCHEMA_VERSION (imported below;
+do NOT hard-code it here). Snapshots written by a different schema version
+are treated as orphaned: read_bb() logs a warning and returns None so the
+engine can drop them without crashing.
 """
 
 from __future__ import annotations

@@ -1,14 +1,20 @@
 ---
 name: dream-engine
 owner: architect
-description: CBIM 治理循环驱动引擎；复用 engine/core 行为树原语，承载独立的治理根树、独立黑板、独立 trace、独立入口（dream_tick / dream_tick_resume），由 SessionStart 补跑触发
-keywords: []
+description: CBIM 治理循环驱动：独立治理根树 + 黑板 + trace，SessionStart 补跑驱动，不抢热路径
+keywords:
+  - governance
+  - dream-tick
+  - second-root
+  - sessionstart
+  - idempotent
+  - catchup
 dependencies:
-  - v1/kernel/engine/core
-  - v1/kernel/engine/persistence
-  - v1/kernel/engine/retrieval
-  - v1/kernel/memory
-  - v1/kernel/engine/audit
+  - kernel/engine/core
+  - kernel/engine/persistence
+  - kernel/engine/retrieval
+  - kernel/memory
+  - kernel/engine/audit
 status: implemented
 ---
 

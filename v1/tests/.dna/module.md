@@ -1,8 +1,15 @@
 ---
 name: v1-tests
 owner: architect
-description: Automated test harness layer — shared framework + workflow loop validation + plain-vs-CBIM A/B benchmark
-keywords: []
+description: 自动化测试外壳层：框架原语 + workflow 四循环验证 + plain/CBIM A/B 对照三子
+keywords:
+  - tests
+  - harness
+  - e2e
+  - framework
+  - workflow
+  - benchmark
+  - ab-compare
 dependencies: []
 status: implemented
 ---
@@ -49,15 +56,14 @@ These two questions have **incompatible drivers**: (1) wants pytest's discovery 
 
 ```mermaid
 classDiagram
-    class framework { <<module>> }
-    class workflow { <<module>> }
-    class benchmark { <<module>> }
+    class tests-framework { <<module>> }
+    class tests-workflow { <<module>> }
+    class tests-benchmark { <<module>> }
 
-    workflow ..> framework : imports run / Verdict / assert_*_loop / aggregate / render_markdown
-    benchmark ..> framework : imports run / CaseStats / aggregate / render_markdown
+    tests-workflow ..> tests-framework : imports run / Verdict / assert_*_loop / aggregate / render_markdown
+    tests-benchmark ..> tests-framework : imports run / CaseStats / aggregate / render_markdown
 ```
 
-**Dependency direction.** `framework` is the stable side; `workflow` and `benchmark` are the volatile sides. Both children import from `framework`; `framework` knows nothing about either consumer. No back-edges. No sibling-to-sibling links — `workflow` and `benchmark` never reference each other.
+**Dependency direction.** `tests-framework` is the stable side; `tests-workflow` and `tests-benchmark` are the volatile sides. Both children import from `tests-framework`; `tests-framework` knows nothing about either consumer. No back-edges. No sibling-to-sibling links — `tests-workflow` and `tests-benchmark` never reference each other.
 
-**Composition vs aggregation.** The parent **composes** `framework` (without it the other two cannot function) and **aggregates** `workflow` + `benchmark` (each is independently runnable; either can be deleted without breaking the other).
-
+**Composition vs aggregation.** The parent **composes** `tests-framework` (without it the other two cannot function) and **aggregates** `tests-workflow` + `tests-benchmark` (each is independently runnable; either can be deleted without breaking the other).

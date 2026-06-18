@@ -32,6 +32,12 @@ DEFAULTS: dict = {
     "dna_fission": {
         "max_body_lines": 350,
         "max_workflow_count": 8,
+        # Cross-tree placeholder count (parent module class diagrams). Spec
+        # bands are explicit, not ratio-based: 1–5 healthy, 6–10 warn (SUGGEST),
+        # ≥11 error (MUST). The threshold names the upper edge of warn — see
+        # MODULE-MD-DESIGN.zh-CN.md "单图容量上限". Reach for `resolve_explicit_bands`
+        # rather than `resolve_bands` for this kind of explicit ladder.
+        "max_cross_tree_placeholders": 10,
     },
     "dna_tree": {
         "allow_undeclared_deps": False,
@@ -71,4 +77,40 @@ def resolve_bands(value: float, threshold: float) -> Severity | None:
         return "warn"
     if value >= _INFO_FACTOR * threshold:
         return "info"
+    return None
+
+
+def resolve_explicit_bands(
+    value: float,
+    warn_max: float,
+    error_min: float | None = None,
+) -> Severity | None:
+    """Resolve a value against an explicit two-edge severity ladder.
+
+    Used by checks whose spec defines bands as concrete counts rather than
+    ratios off a single threshold (e.g. cross-tree placeholder limit:
+    1–5 healthy / 6–10 warn / ≥11 error).
+
+    ``warn_max`` is the inclusive upper edge of the warn band (also the
+    `error_min - 1` if ``error_min`` is omitted). ``value > warn_max``
+    promotes to error. Below the warn band (``value < warn_min``, where
+    ``warn_min = max(1, warn_max // 2 + 1)`` by default) returns None
+    (healthy).
+
+    Returns None for healthy / unset thresholds.
+    """
+    if warn_max <= 0:
+        return None
+    if error_min is None:
+        error_min = warn_max + 1
+    if value >= error_min:
+        return "error"
+    # Anything strictly below `error_min` and at or above 1 unit above the
+    # designed-healthy ceiling is a warn. The "healthy ceiling" defaults to
+    # half-of-warn-max rounded up — same heuristic the design doc uses for
+    # the placeholder ladder (≤5 healthy, 6–10 warn, ≥11 error with
+    # warn_max=10 → ceiling=5).
+    healthy_ceiling = max(1, int(warn_max) // 2)
+    if value > healthy_ceiling:
+        return "warn"
     return None

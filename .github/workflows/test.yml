@@ -40,6 +40,8 @@ jobs:
           pip install -r v1/kernel/requirements.txt
 
       - name: Run pytest (excluding workflow opt-in tests)
+        env:
+          CBIM_PROJECT_ROOT: ${{ github.workspace }}
         run: |
           mkdir -p .cbim
           python -m pytest v1/tests/ -m "not workflow" -q

@@ -36,6 +36,12 @@ def isolated_dirs(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(api, "_scheduler_root", lambda: scheduler_root)
     monkeypatch.setattr(api, "_memory_store_dir", lambda: memory_root)
     monkeypatch.setattr(api, "_transcripts_dir", lambda: transcripts_root)
+    # Pin project_root to the tmp root too — the dream loop's
+    # DnaGraphRebuild leaf scans this directory for .dna/module.md files.
+    # Without this the resolver walks up to the actual repo root and trips
+    # on residue (or, post v2 schema strictness, on malformed test
+    # fixtures lying around in pytest's session tmp tree).
+    monkeypatch.setattr(api, "_project_root", lambda: tmp_path)
     return scheduler_root, memory_root
 
 

@@ -18,26 +18,38 @@ def _make_module(
     deps: list[str] | None = None,
     body: str = "body\n",
 ) -> None:
+    """Build a v2-conformant .dna/module.md.
+
+    The legacy `deps` parameter is preserved for test signature stability
+    but no longer writes a frontmatter `dependencies` field — v2 sources
+    deps from the parent's class diagram. Tests that need topology checks
+    must pass the corresponding ``..>`` arrows in ``body`` instead.
+    """
     mod = root if rel == "." else (root / rel)
     dna = mod / ".dna"
     dna.mkdir(parents=True)
-    fm = ["---", f"name: {rel}", "owner: x", "description: m"]
-    if deps:
-        fm.append("dependencies:")
-        for d in deps:
-            fm.append(f"  - {d}")
-    else:
-        fm.append("dependencies: []")
-    fm.append("---")
+    fm = [
+        "---",
+        f"name: {rel}",
+        "owner: x",
+        "description: m",
+        "keywords: []",
+        "status: implemented",
+        "---",
+    ]
     (dna / "module.md").write_text(
         "\n".join(fm) + "\n\n" + body, encoding="utf-8"
     )
 
 
+def _classdiagram(body: str) -> str:
+    return "## Class Diagram\n\n```mermaid\nclassDiagram\n" + body + "\n```\n"
+
+
 def test_clean_tree_no_findings(tmp_path):
     _seed(tmp_path, [".", "alpha", "beta"])
-    _make_module(tmp_path, ".")
-    _make_module(tmp_path, "alpha", deps=["beta"])
+    _make_module(tmp_path, ".", body=_classdiagram("    alpha ..> beta"))
+    _make_module(tmp_path, "alpha")
     _make_module(tmp_path, "beta")
     assert check(tmp_path, {}) == []
 
@@ -53,19 +65,37 @@ def test_orphan_warn(tmp_path):
 
 
 def test_dep_dangling(tmp_path):
-    _seed(tmp_path, [".", "alpha"])
-    _make_module(tmp_path, ".")
-    _make_module(tmp_path, "alpha", deps=["ghost"])
+    """Parent class diagram declares an edge to an unregistered path."""
+    _seed(tmp_path, [".", "alpha", "ghost"])
+    # Root parent diagram references alpha and ghost, then ghost gets
+    # deregistered from the index so the dep is dangling. We achieve this
+    # by writing the diagram with an explicit cross-tree placeholder
+    # whose .from() points at a registered-but-then-removed path.
+    parent_body = (
+        "## Class Diagram\n\n```mermaid\nclassDiagram\n"
+        "    class alpha { <<module>> }\n"
+        "    class ghost_ph { <<module>> }\n"
+        "    class ghost_ph : .from(ghost_path)\n"
+        "    alpha ..> ghost_ph : reads\n"
+        "```\n"
+    )
+    _make_module(tmp_path, ".", body=parent_body)
+    _make_module(tmp_path, "alpha")
     findings = check(tmp_path, {})
     dangling = [f for f in findings if f.code == "TREE_DEP_DANGLING"]
     assert len(dangling) == 1
+    assert dangling[0].metadata["dep"] == "ghost_path"
+    assert dangling[0].metadata["origin"] == "diagram"
 
 
 def test_dep_ancestor_declared(tmp_path):
+    """`alpha`'s class diagram has `child ..> alpha` — child declares its
+    ancestor alpha as dep."""
     _seed(tmp_path, [".", "alpha", "alpha/child"])
     _make_module(tmp_path, ".")
-    _make_module(tmp_path, "alpha")
-    _make_module(tmp_path, "alpha/child", deps=["alpha"])
+    alpha_body = _classdiagram("    child ..> alpha")
+    _make_module(tmp_path, "alpha", body=alpha_body)
+    _make_module(tmp_path, "alpha/child")
     findings = check(tmp_path, {})
     anc = [f for f in findings if f.code == "TREE_DEP_ANCESTOR_DECLARED"]
     assert len(anc) == 1
@@ -74,37 +104,41 @@ def test_dep_ancestor_declared(tmp_path):
     assert [f for f in findings if f.code == "TREE_DEP_UP_TREE"] == []
 
 
-def test_dep_ancestor_declared_root(tmp_path):
-    _seed(tmp_path, [".", "alpha"])
-    _make_module(tmp_path, ".")
-    _make_module(tmp_path, "alpha", deps=["."])
-    findings = check(tmp_path, {})
-    anc = [f for f in findings if f.code == "TREE_DEP_ANCESTOR_DECLARED"]
-    assert len(anc) == 1
-    assert anc[0].metadata["dep"] == "."
-
-
 def test_dep_uncle_subtree_not_flagged(tmp_path):
     """Uncle-subtree deps are legal cross-boundary references.
 
     Tree shape:
         .
         +-- alpha
-        |   +-- beta        (declares dep on gamma/delta)
+        |   +-- beta        (root diagram declares ``beta ..> gamma_delta``
+        |                    via cross-tree placeholder)
         +-- gamma
             +-- delta
 
     ``gamma/delta`` is NOT an ancestor of ``alpha/beta`` — it lives in a
     sibling subtree of ``alpha/beta``'s ancestor ``alpha``. Such uncle-
-    subtree references are the *intended* shape of cross-boundary deps;
-    the audit must not raise TREE_DEP_ANCESTOR_DECLARED (ancestors only)
-    nor TREE_DEP_UP_TREE (currently documented-but-unimplemented; if
-    later wired up, must still skip uncle subtrees).
+    subtree references are the *intended* shape of cross-boundary deps.
     """
     _seed(tmp_path, [".", "alpha", "alpha/beta", "gamma", "gamma/delta"])
-    _make_module(tmp_path, ".")
+    # Root diagram is the common ancestor that hosts the cross-tree edge.
+    parent_body = (
+        "## Class Diagram\n\n```mermaid\nclassDiagram\n"
+        "    %% --- 1. ---\n"
+        "    class alpha { <<module>> }\n"
+        "    class gamma { <<module>> }\n"
+        "    class alpha_beta { <<module>> }\n"
+        "    class alpha_beta : .from(alpha/beta)\n"
+        "    class gamma_delta { <<module>> }\n"
+        "    class gamma_delta : .from(gamma/delta)\n"
+        "    %% --- 2. ---\n"
+        "    %% --- 3. ---\n"
+        "    %% --- 4. ---\n"
+        "    alpha_beta ..> gamma_delta : reads\n"
+        "```\n"
+    )
+    _make_module(tmp_path, ".", body=parent_body)
     _make_module(tmp_path, "alpha")
-    _make_module(tmp_path, "alpha/beta", deps=["gamma/delta"])
+    _make_module(tmp_path, "alpha/beta")
     _make_module(tmp_path, "gamma")
     _make_module(tmp_path, "gamma/delta")
 
@@ -120,10 +154,6 @@ def test_dep_uncle_subtree_not_flagged(tmp_path):
         "uncle-subtree dep falsely flagged as up-tree: "
         f"{[(f.target, f.metadata) for f in up_tree_flags]}"
     )
-
-    # Sanity: the dep itself must not be reported as dangling either —
-    # gamma/delta is a registered module, so the cross-boundary edge is
-    # fully resolved.
     dangling = [
         f for f in findings
         if f.code == "TREE_DEP_DANGLING" and f.target == "alpha/beta"
@@ -132,10 +162,14 @@ def test_dep_uncle_subtree_not_flagged(tmp_path):
 
 
 def test_dep_cycle_error(tmp_path):
+    """Root diagram declares ``alpha ..> beta`` and ``beta ..> alpha``."""
     _seed(tmp_path, [".", "alpha", "beta"])
-    _make_module(tmp_path, ".")
-    _make_module(tmp_path, "alpha", deps=["beta"])
-    _make_module(tmp_path, "beta", deps=["alpha"])
+    parent_body = _classdiagram(
+        "    alpha ..> beta\n    beta ..> alpha"
+    )
+    _make_module(tmp_path, ".", body=parent_body)
+    _make_module(tmp_path, "alpha")
+    _make_module(tmp_path, "beta")
     findings = check(tmp_path, {})
     cycles = [f for f in findings if f.code == "TREE_CYCLE"]
     assert len(cycles) == 1
@@ -144,105 +178,196 @@ def test_dep_cycle_error(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# TREE_DEP_DIAGRAM_MISMATCH (T4): frontmatter `dependencies` must match the
-# parent module's classDiagram `..>` edges originating at this module.
+# Topology checks fed by parent class diagrams (v2: diagram-only; no fallback).
 # ---------------------------------------------------------------------------
 
 
-def _classdiagram(body: str) -> str:
-    return "## Class Diagram\n\n```mermaid\nclassDiagram\n" + body + "\n```\n"
-
-
-def test_diagram_mismatch_consistent_no_finding(tmp_path):
-    """Parent diagram declares `alpha ..> beta`; child frontmatter agrees."""
-    _seed(tmp_path, [".", "alpha", "beta"])
-    parent_body = _classdiagram("    alpha ..> beta")
+def test_topology_uses_class_diagram_when_present(tmp_path):
+    """Parent class diagram is authoritative; unresolved diagram tokens
+    are dropped (treated as external) — no TREE_DEP_DANGLING."""
+    _seed(tmp_path, [".", "alpha"])
+    parent_body = _classdiagram("    alpha ..> ghost")
     _make_module(tmp_path, ".", body=parent_body)
-    _make_module(tmp_path, "alpha", deps=["beta"])
-    _make_module(tmp_path, "beta")
+    _make_module(tmp_path, "alpha")
     findings = check(tmp_path, {})
-    mm = [f for f in findings if f.code == "TREE_DEP_DIAGRAM_MISMATCH"]
-    assert mm == [], [(f.target, f.metadata) for f in mm]
+    dangling = [f for f in findings if f.code == "TREE_DEP_DANGLING"]
+    # `ghost` is unregistered; the resolver drops the unresolved arrow,
+    # so no dep is recorded. (Unregistered tokens are treated as external
+    # placeholders, not dangling registered paths.)
+    assert dangling == []
 
 
-def test_diagram_mismatch_frontmatter_extra(tmp_path):
-    """frontmatter lists [beta, gamma] but parent only draws `..> beta`.
-
-    Expect one mismatch finding for gamma (declared but not drawn).
-    """
-    _seed(tmp_path, [".", "alpha", "beta", "gamma"])
-    parent_body = _classdiagram("    alpha ..> beta")
-    _make_module(tmp_path, ".", body=parent_body)
-    _make_module(tmp_path, "alpha", deps=["beta", "gamma"])
-    _make_module(tmp_path, "beta")
-    _make_module(tmp_path, "gamma")
+def test_topology_diagram_dep_origin_metadata(tmp_path):
+    """All v2 dep findings carry origin='diagram'."""
+    _seed(tmp_path, [".", "alpha", "alpha/child"])
+    alpha_body = _classdiagram("    child ..> alpha")
+    _make_module(tmp_path, ".")
+    _make_module(tmp_path, "alpha", body=alpha_body)
+    _make_module(tmp_path, "alpha/child")
     findings = check(tmp_path, {})
-    mm = [f for f in findings if f.code == "TREE_DEP_DIAGRAM_MISMATCH"]
-    assert len(mm) == 1, [(f.target, f.metadata) for f in mm]
-    assert mm[0].target == "alpha"
-    assert mm[0].severity == "warn"
-    assert mm[0].metadata["dep"] == "gamma"
-    assert mm[0].metadata["parent"] == "."
+    anc = [f for f in findings if f.code == "TREE_DEP_ANCESTOR_DECLARED"]
+    assert len(anc) == 1
+    assert anc[0].metadata["origin"] == "diagram"
 
 
-def test_diagram_mismatch_diagram_extra(tmp_path):
-    """Parent draws `..> beta, ..> gamma` but frontmatter only lists [beta].
-
-    Expect one mismatch finding for gamma (drawn but not declared).
-    """
-    _seed(tmp_path, [".", "alpha", "beta", "gamma"])
-    parent_body = _classdiagram(
-        "    alpha ..> beta\n    alpha ..> gamma"
-    )
-    _make_module(tmp_path, ".", body=parent_body)
-    _make_module(tmp_path, "alpha", deps=["beta"])
-    _make_module(tmp_path, "beta")
-    _make_module(tmp_path, "gamma")
+def test_no_diagram_no_deps(tmp_path):
+    """v2 has no frontmatter fallback: a parent without a classDiagram
+    contributes zero edges."""
+    _seed(tmp_path, [".", "alpha"])
+    _make_module(tmp_path, ".", body="just prose, no diagram")
+    _make_module(tmp_path, "alpha")
     findings = check(tmp_path, {})
-    mm = [f for f in findings if f.code == "TREE_DEP_DIAGRAM_MISMATCH"]
-    assert len(mm) == 1, [(f.target, f.metadata) for f in mm]
-    assert mm[0].target == "alpha"
-    assert mm[0].severity == "warn"
-    assert mm[0].metadata["dep"] == "gamma"
+    dangling = [f for f in findings if f.code == "TREE_DEP_DANGLING"]
+    assert dangling == []
 
 
-def test_diagram_mismatch_no_parent_skipped(tmp_path):
-    """Orphan module with no registered parent: no mismatch finding, no crash."""
-    _seed(tmp_path, ["alpha/beta"])
-    _make_module(tmp_path, "alpha/beta", deps=["whatever"])
-    findings = check(tmp_path, {})
-    mm = [f for f in findings if f.code == "TREE_DEP_DIAGRAM_MISMATCH"]
-    assert mm == []
+# ---------------------------------------------------------------------------
+# R1 / R2 / R3 sub-checks
+# ---------------------------------------------------------------------------
 
 
-def test_diagram_mismatch_parent_no_classdiagram_skipped(tmp_path):
-    """Parent body has only a flowchart (no classDiagram): silently skip."""
-    _seed(tmp_path, [".", "alpha", "beta"])
-    parent_body = (
-        "## Topology\n\n```mermaid\nflowchart TD\n    alpha --> beta\n```\n"
-    )
-    _make_module(tmp_path, ".", body=parent_body)
-    # frontmatter declares a dep that the flowchart "draws" — must NOT
-    # be reported as mismatch, because flowchart is not the source of truth.
-    _make_module(tmp_path, "alpha", deps=["beta"])
-    _make_module(tmp_path, "beta")
-    findings = check(tmp_path, {})
-    mm = [f for f in findings if f.code == "TREE_DEP_DIAGRAM_MISMATCH"]
-    assert mm == []
-
-
-def test_diagram_mismatch_unclosed_fence_skipped(tmp_path):
-    """Parent has an unclosed ```mermaid fence: no crash, no finding."""
-    _seed(tmp_path, [".", "alpha", "beta"])
-    # Note: opening fence + classDiagram, but no terminating ```.
+def test_r1_placeholder_expanded_warn(tmp_path):
+    """A placeholder annotation pointing at a path inside the parent's own
+    subtree is an R1 violation: should be a regular sub-node, not a
+    placeholder."""
+    _seed(tmp_path, [".", "alpha"])
+    # `.` parent declares a placeholder pointing at `alpha`, which IS its
+    # direct child. R1 violation — placeholders are reserved for cross-tree
+    # references.
     parent_body = (
         "## Class Diagram\n\n```mermaid\nclassDiagram\n"
-        "    alpha ..> beta\n"
-        "trailing prose without closing fence\n"
+        "    class alpha { <<module>> }\n"
+        "    class alpha : .from(alpha)\n"
+        "```\n"
     )
+    _make_module(tmp_path, ".", body=parent_body)
+    _make_module(tmp_path, "alpha")
+    findings = check(tmp_path, {})
+    r1 = [f for f in findings if f.code == "TREE_DIAGRAM_R1_PLACEHOLDER_EXPANDED"]
+    assert len(r1) == 1
+    assert r1[0].severity == "warn"
+    assert r1[0].metadata["placeholder"] == "alpha"
+    assert r1[0].metadata["origin"] == "alpha"
+
+
+def test_r1_cross_tree_placeholder_no_finding(tmp_path):
+    """A placeholder pointing OUT of the parent's subtree is exactly the
+    R1-compliant case — no finding."""
+    _seed(tmp_path, [".", "alpha"])
+    # Placeholder `farside_thing` points at `farside/thing`, which is NOT
+    # registered nor a descendant of `.`. (This is unusual — typically `.`
+    # is everyone's ancestor — but in this test setup `.` only registers
+    # `alpha`, and `farside/thing` is neither registered nor a descendant
+    # path of any registered module, simulating an external mount.)
+    parent_body = (
+        "## Class Diagram\n\n```mermaid\nclassDiagram\n"
+        "    %% --- 1. ---\n"
+        "    class alpha { <<module>> }\n"
+        "    %% --- 2. ---\n"
+        "    class farside_thing { <<module>> }\n"
+        "    class farside_thing : .from(/external/farside/thing)\n"
+        "    %% --- 3. ---\n"
+        "    %% --- 4. ---\n"
+        "```\n"
+    )
+    _make_module(tmp_path, ".", body=parent_body)
+    _make_module(tmp_path, "alpha")
+    findings = check(tmp_path, {})
+    r1 = [f for f in findings if f.code == "TREE_DIAGRAM_R1_PLACEHOLDER_EXPANDED"]
+    assert r1 == []
+
+
+def test_r2_deep_source_warn(tmp_path):
+    """An arrow originating at a path > 1 level below the parent is R2:
+    should be rendered using its top-level ancestor under that parent."""
+    _seed(tmp_path, [".", "a", "a/b", "x"])
+    # `.` parent diagram has `a/b ..> x`. R2 violation: source `a/b` is
+    # 2 levels below the host parent `.`; should be rendered as `a`.
+    parent_body = _classdiagram("    a_b ..> x")
+    _make_module(tmp_path, ".", body=parent_body)
+    _make_module(tmp_path, "a")
+    # Give a/b a name that the resolver will pick up — the canonical
+    # convention is `a_b` for path `a/b`.
+    (tmp_path / "a/b/.dna").mkdir(parents=True)
+    (tmp_path / "a/b/.dna/module.md").write_text(
+        "---\nname: a_b\nowner: x\ndescription: m\n"
+        "keywords: []\nstatus: implemented\n---\n\nbody\n",
+        encoding="utf-8",
+    )
+    _make_module(tmp_path, "x")
+    findings = check(tmp_path, {})
+    r2 = [f for f in findings if f.code == "TREE_DIAGRAM_R2_DEEP_SOURCE"]
+    assert len(r2) == 1, [
+        (f.code, f.target, f.metadata) for f in findings
+    ]
+    assert r2[0].severity == "warn"
+    assert r2[0].metadata["resolved"] == "a/b"
+    assert r2[0].metadata["depth"] == 2
+
+
+def test_r2_direct_child_source_no_finding(tmp_path):
+    """An arrow whose source is a direct child of the parent is R2-compliant."""
+    _seed(tmp_path, [".", "a", "x"])
+    parent_body = _classdiagram("    a ..> x")
+    _make_module(tmp_path, ".", body=parent_body)
+    _make_module(tmp_path, "a")
+    _make_module(tmp_path, "x")
+    findings = check(tmp_path, {})
+    r2 = [f for f in findings if f.code == "TREE_DIAGRAM_R2_DEEP_SOURCE"]
+    assert r2 == []
+
+
+def test_r3_missing_group_markers_info(tmp_path):
+    """A diagram with cross-tree placeholders but no four-section group
+    markers raises R3 (info)."""
+    _seed(tmp_path, [".", "alpha"])
+    parent_body = (
+        "## Class Diagram\n\n```mermaid\nclassDiagram\n"
+        "    class alpha { <<module>> }\n"
+        "    class farside_thing { <<module>> }\n"
+        "    class farside_thing : .from(/external/farside/thing)\n"
+        "    alpha ..> farside_thing : reads\n"
+        "```\n"
+    )
+    _make_module(tmp_path, ".", body=parent_body)
+    _make_module(tmp_path, "alpha")
+    findings = check(tmp_path, {})
+    r3 = [f for f in findings if f.code == "TREE_DIAGRAM_R3_UNGROUPED"]
+    assert len(r3) == 1
+    assert r3[0].severity == "info"
+    assert r3[0].metadata["placeholder_count"] == 1
+
+
+def test_r3_grouped_diagram_no_finding(tmp_path):
+    """A diagram with all four group markers passes R3."""
+    _seed(tmp_path, [".", "alpha"])
+    parent_body = (
+        "## Class Diagram\n\n```mermaid\nclassDiagram\n"
+        "    %% --- 1. direct ---\n"
+        "    class alpha { <<module>> }\n"
+        "    %% --- 2. cross-tree placeholders ---\n"
+        "    class farside_thing { <<module>> }\n"
+        "    class farside_thing : .from(/external/farside/thing)\n"
+        "    %% --- 3. internal edges ---\n"
+        "    %% --- 4. cross-tree edges ---\n"
+        "    alpha ..> farside_thing : reads\n"
+        "```\n"
+    )
+    _make_module(tmp_path, ".", body=parent_body)
+    _make_module(tmp_path, "alpha")
+    findings = check(tmp_path, {})
+    r3 = [f for f in findings if f.code == "TREE_DIAGRAM_R3_UNGROUPED"]
+    assert r3 == []
+
+
+def test_r3_no_placeholders_no_finding(tmp_path):
+    """A diagram with NO cross-tree placeholders need not carry the four
+    group markers — R3 doesn't fire."""
+    _seed(tmp_path, [".", "alpha", "beta"])
+    parent_body = _classdiagram("    alpha ..> beta")
     _make_module(tmp_path, ".", body=parent_body)
     _make_module(tmp_path, "alpha", deps=["beta"])
     _make_module(tmp_path, "beta")
     findings = check(tmp_path, {})
-    mm = [f for f in findings if f.code == "TREE_DEP_DIAGRAM_MISMATCH"]
-    assert mm == []
+    r3 = [f for f in findings if f.code == "TREE_DIAGRAM_R3_UNGROUPED"]
+    assert r3 == []

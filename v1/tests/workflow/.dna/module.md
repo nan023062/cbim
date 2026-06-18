@@ -1,10 +1,16 @@
 ---
 name: tests-workflow
 owner: architect
-description: Four-loop CBIM architecture validation — pytest-driven, 4 loops x 2 flavors (positive/negative)
-keywords: []
+description: CBIM 四循环架构断言：pytest 驱动，4 循环 × 正反两味共8 例，opt-in 跑
+keywords:
+  - workflow
+  - four-loop
+  - pytest
+  - positive-negative
+  - log-assert
+  - opt-in
 dependencies:
-  - v1/tests/framework
+  - tests/framework
 status: implemented
 ---
 
@@ -79,4 +85,3 @@ graph TD
 - Not driven by `runner_cli` — that script belongs to `benchmark`. Mixing drivers across siblings would dissolve the parent's "two questions, two drivers" decomposition.
 - Does not own `framework/` primitives. Bug fixes to runner / log parsing / aggregation live in `framework`, not here.
 - Does not run in the default `pytest` collection — `-m workflow` is required. Removing the marker is a regression.
-

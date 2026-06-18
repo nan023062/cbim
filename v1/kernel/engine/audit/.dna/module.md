@@ -1,12 +1,18 @@
 ---
 name: audit
 owner: architect
-description: Architecture drift guard - five read-only checks (index/memory/agents/dna/tree) over .dna, .claude/agents, .cbim/memory
-keywords: []
+description: 架构漂移只读审计器：五项检查 + 棘轮基线，扫 .dna / agent / memory，不写盘
+keywords:
+  - audit
+  - drift
+  - baseline
+  - checks
+  - ratchet
+  - read-only
 dependencies:
-  - v1/kernel/services
-  - v1/kernel/cbi/_primitives
-  - v1/kernel/memory
+  - kernel/services
+  - kernel/cbi/_primitives
+  - kernel/memory
 status: implemented
 ---
 
@@ -179,4 +185,3 @@ classDiagram
 - **No deep semantic import scan.** Dependency direction comes from `frontmatter.dependencies`. We do not parse Python imports, grep code references, or trace call graphs — that is a separate concern with very different cost/precision trade-offs.
 
 - **审计本身永不写 `.cbim/audit/baseline.json`**。`run_audit` 只读 baseline、为 finding 打 `origin` 标；写入仅通过显式人类命令（`cbim audit baseline accept --yes` 等）走 `BaselineStore`。治理循环 / CI / 引擎任何路径都不得隐式写入—— 防“深夜静默接受”破窗。
-

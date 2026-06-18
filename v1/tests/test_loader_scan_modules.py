@@ -23,9 +23,10 @@ def _mk_module_md(root: Path, rel: str, name: str | None = None) -> None:
     fm_name = name if name is not None else rel.replace("/", "-")
     (aimod / "module.md").write_text(
         f"---\nname: {fm_name}\n"
+        f"owner: tester\n"
         f"description: test\n"
         f"keywords: []\n"
-        f"dependencies: []\n"
+        f"status: implemented\n"
         f"---\nbody\n",
         encoding="utf-8",
     )

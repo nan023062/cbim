@@ -2,12 +2,18 @@
 name: execution-engine
 owner: architect
 description: CBIM 核心驱动引擎；以行为树范式驱动主循环——单次 prompt = 单次 tick，由树拓扑+黑板+协程式 yield/resume 完成全部调度
-keywords: []
+keywords:
+  - execution
+  - behavior-tree
+  - bt-tick
+  - yield-resume
+  - dispatch
+  - root-loop
 dependencies:
-  - v1/kernel/engine/core
-  - v1/kernel/engine/persistence
-  - v1/kernel/engine/retrieval
-  - v1/kernel/memory
+  - kernel/engine/core
+  - kernel/engine/persistence
+  - kernel/engine/retrieval
+  - kernel/memory
 status: implemented
 ---
 
@@ -248,4 +254,3 @@ v2 把控制流抽到引擎，主 agent 退化为执行手。树拓扑可读、�
 - **mcp_server（反向，容器）** —— 不在本模块 dependencies 中；`mcp_server` 把 `api/bt_tick.py` 的两个函数注册为 MCP 工具，函数签名即工具签名。引擎不感知 MCP 容器存在。
 
 依赖方向：`execution → engine/core`、`execution → engine/persistence`、`execution → engine/retrieval.contract`、`execution → memory.contract`、`mcp_server → execution`。无环。
-

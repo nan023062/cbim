@@ -256,7 +256,22 @@ class DnaGraphRebuild(Node):
         try:
             from cbi._primitives.modules.graph_builder import build_graph
             build_graph(self._project_root)
-        except Exception:  # noqa: BLE001 — Dream step never crashes dream tick; silent failure leaves the previous graph.json in place
+        except Exception as e:  # noqa: BLE001 — Dream step never crashes dream tick; silent failure leaves the previous graph.json in place
+            # Observability: record the exception type/message on bb.trace
+            # so test failures and incident reports surface the cause
+            # instead of leaving a bare FAILURE step. Control flow is
+            # unchanged — we still return FAILURE so SequenceTolerant
+            # captures it and EmitReport reports the step status.
+            try:
+                trace = list(bb.trace) if isinstance(bb.trace, list) else []
+                trace.append({
+                    "node": self.name,
+                    "event": "graph_rebuild_failed",
+                    "error": f"{type(e).__name__}: {e}"[:200],
+                })
+                bb.trace = trace
+            except Exception:  # noqa: BLE001 — trace is best-effort observability
+                pass
             return Status.FAILURE
         return Status.SUCCESS
 

@@ -1,11 +1,18 @@
 ---
 name: cbi
 owner: architect
-description: Cbim Cognitive Infrastructure: agents (architect/auditor/hr/programmer) + skills + dna/agents engine ops
-keywords: []
+description: CBIM 认知基建层：agents 与 skills 资源 + DNA/agent 治理原语，承载内置 4 agent
+keywords:
+  - agents
+  - skills
+  - dna
+  - governance
+  - resources
+  - cognition
 dependencies:
   - v1/kernel/services
   - v1/kernel/memory
+status: implemented
 ---
 
 ## Positioning
@@ -25,11 +32,10 @@ CBIM agents need three things to function: (1) their identity/system-prompt defi
 
 ```mermaid
 classDiagram
-    class _primitives { <<module>> }
-    class agents { <<module>> }
-    class skills { <<module>> }
+    class cbi-primitives { <<module>> }
+    class cbi-agents { <<module>> }
+    class cbi-skills { <<module>> }
 
-    agents ..> skills : per-agent skills layered over cross-agent ones
-    _primitives ..> agents : reads agent definitions, never owns them
+    cbi-agents ..> cbi-skills : per-agent skills layered over cross-agent ones
+    cbi-primitives ..> cbi-agents : reads agent definitions, never owns them
 ```
-

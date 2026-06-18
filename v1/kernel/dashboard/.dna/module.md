@@ -2,8 +2,15 @@
 name: dashboard
 owner: architect
 description: Local web dashboard: HTTP server + static UI for inspecting project state
-keywords: []
+keywords:
+  - dashboard
+  - http-server
+  - stdlib
+  - web-ui
+  - inspection
+  - json-api
 dependencies: []
+status: implemented
 ---
 
 ## Positioning
@@ -33,4 +40,3 @@ classDiagram
 
 - **Stdlib HTTP only — no Flask/FastAPI.** The dashboard ships inside every kernel version; adding a web framework would balloon the install footprint for a tool most users rarely open.
 - **Vendored frontend deps** (`marked`, `purify`). Avoids per-project npm install for offline use.
-

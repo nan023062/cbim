@@ -121,6 +121,11 @@ def init_module(mod_dir: Path, name: str, owner: str,
 
     aimod.mkdir(parents=True)
 
+    # v2 frontmatter (PR-1): 5 required fields (`name`, `owner`, `description`,
+    # `keywords`, `status`) + optional `links`. `dependencies` / `includeDirs`
+    # are gone — dependency edges live exclusively in parent module class
+    # diagrams; mount scope is described by `links` (kind: local default,
+    # injected in-memory by loader when omitted on disk).
     fm_lines = [
         "---",
         f"name: {name}",
@@ -128,8 +133,15 @@ def init_module(mod_dir: Path, name: str, owner: str,
     ]
     if description:
         fm_lines.append(f"description: {description}")
-    fm_lines.append("keywords: []")
-    fm_lines.append("dependencies: []")
+    else:
+        # Loader (services/_fm.parse_frontmatter) skips `#`-leading lines but
+        # does NOT strip inline comments — a trailing `# ...` would be
+        # captured into the value verbatim and pollute retrieval. So we emit
+        # the human-facing hint as a separate comment line above the value.
+        fm_lines.append("# description ≤80 字单句，结构「定位语+职责边界」")
+        fm_lines.append("description: TODO")
+    fm_lines.append("# keywords 5–8 条 kebab，详见元数据检索规范节")
+    fm_lines.append("keywords: [TODO]")
     fm_lines.append(f"status: {status}")
     fm_lines.append("---")
 

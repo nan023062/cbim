@@ -41,6 +41,7 @@ jobs:
 
       - name: Run pytest (excluding workflow opt-in tests)
         run: |
+          mkdir -p .cbim
           python -m pytest v1/tests/ -m "not workflow" -q
 
   # ---------------------------------------------------------------------------
@@ -71,11 +72,17 @@ jobs:
           pip install -r requirements-dev.txt
           pip install -r v1/kernel/requirements.txt
 
-      - name: ruff check (baseline — count violations, never fail)
-        # --exit-zero keeps the job green while we're anchoring the baseline.
-        # Output stays in the log so violation deltas are visible per PR.
+      # --exit-zero keeps both steps green while we're anchoring the baseline.
+      # Annotations + statistics are split because ruff rejects
+      # `--statistics` combined with `--output-format=github` (format
+      # validation crashes before --exit-zero can swallow it).
+      - name: ruff check (annotations on PR diff)
         run: |
-          ruff check v1/kernel --output-format=github --statistics --exit-zero
+          ruff check v1/kernel --output-format=github --exit-zero
+
+      - name: ruff check (statistics for baseline tracking)
+        run: |
+          ruff check v1/kernel --statistics --exit-zero
 
       - name: ruff format --check (baseline — informational)
         continue-on-error: true

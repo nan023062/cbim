@@ -254,3 +254,22 @@ def test_init_from_subdir_of_real_project_still_targets_cwd(tmp_path, monkeypatc
     # Outer project's config.json must not have been overwritten
     assert (outer / ".cbim" / "config.json").read_text(encoding="utf-8") == snap_outer_cfg
     _assert_decoy_intact(snap_decoy)
+
+
+def test_project_root_explicit_cwd_overrides_env(tmp_path, monkeypatch, isolated_home):
+    """STRICT: explicit cwd is honored even when CBIM_PROJECT_ROOT is set."""
+    from context import project_root
+    proj = tmp_path / "proj"
+    (proj / ".cbim").mkdir(parents=True)
+    (proj / ".cbim" / "config.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setenv("CBIM_PROJECT_ROOT", str(tmp_path / "elsewhere"))
+    assert project_root(cwd=proj).resolve() == proj.resolve()
+
+
+def test_resolve_root_or_cwd_explicit_cwd_overrides_env(tmp_path, monkeypatch, isolated_home):
+    """LENIENT: explicit cwd is honored even when CBIM_PROJECT_ROOT is set."""
+    from context import resolve_root_or_cwd
+    proj = tmp_path / "proj"
+    (proj / ".cbim").mkdir(parents=True)
+    monkeypatch.setenv("CBIM_PROJECT_ROOT", str(tmp_path / "elsewhere"))
+    assert resolve_root_or_cwd(cwd=proj).resolve() == proj.resolve()

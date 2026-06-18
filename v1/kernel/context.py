@@ -60,14 +60,15 @@ def project_root(cwd: Path | str | None = None) -> Path:
     and should fail loudly.
 
     Resolution order:
-      1. CBIM_PROJECT_ROOT env var wins outright (no walk, no validation).
+      1. CBIM_PROJECT_ROOT env var wins **when no explicit cwd was passed**
+         (env is a fallback, not an override; no walk, no validation).
       2. Walk up from `cwd` (default: Path.cwd()) preferring
          `.cbim/config.json` over a bare `.cbim/` directory; no step limit.
       3. If the walk reaches `Path.home()`, raise RuntimeError (home boundary).
       4. If the walk reaches the filesystem root with no marker, raise
          RuntimeError (the strict differentiator from `resolve_root_or_cwd`).
     """
-    if "CBIM_PROJECT_ROOT" in os.environ:
+    if cwd is None and "CBIM_PROJECT_ROOT" in os.environ:
         return Path(os.environ["CBIM_PROJECT_ROOT"])
     start = _coerce_cwd(cwd)
     home = _resolved_home()
@@ -92,13 +93,14 @@ def resolve_root_or_cwd(cwd: Path | str | None = None) -> Path:
     semantics but also enforces the home-directory boundary.
 
     Resolution order:
-      1. CBIM_PROJECT_ROOT env var wins.
+      1. CBIM_PROJECT_ROOT env var wins **when no explicit cwd was passed**
+         (env is a fallback, not an override).
       2. Walk up from `cwd` looking for `.cbim/`, capped at 10 ancestors
          (preserves the historical `_fm.find_project_root` budget).
       3. Home boundary still raises (the home guard is never relaxed).
       4. No marker found → return `cwd.resolve()` unchanged.
     """
-    if "CBIM_PROJECT_ROOT" in os.environ:
+    if cwd is None and "CBIM_PROJECT_ROOT" in os.environ:
         return Path(os.environ["CBIM_PROJECT_ROOT"])
     start = _coerce_cwd(cwd)
     home = _resolved_home()

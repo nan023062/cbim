@@ -43,6 +43,7 @@ jobs:
         env:
           CBIM_PROJECT_ROOT: ${{ github.workspace }}
         run: |
+          mkdir -p .cbim
           python -m pytest v1/tests/ -m "not workflow" -q
 
   # ---------------------------------------------------------------------------

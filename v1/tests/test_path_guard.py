@@ -55,6 +55,10 @@ def test_dotdot_escape_rejected(tmp_path):
         resolve_within_root(tmp_path, "../../etc/passwd")
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="backslash is path separator on Windows only; on POSIX the string is a literal filename",
+)
 def test_windows_backslash_dotdot_rejected(tmp_path):
     with pytest.raises(PathOutsideRootError):
         resolve_within_root(tmp_path, "..\\..\\foo")

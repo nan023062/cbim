@@ -524,19 +524,41 @@ def test_parse_block_list_strips_quotes_symmetric_with_top_level():
     }
 
 
-def test_parse_still_rejects_unquoted_alias_in_list():
+@pytest.mark.parametrize("value", ["*anchor", "&team-a"])
+def test_parse_still_rejects_unquoted_alias_in_list(value):
     """Guard rail: quoting is a *writer-side* fix. The parser must continue
     to reject legitimate unquoted alias / anchor / tag syntax — that shape
     is a real YAML construct we can't faithfully round-trip, so it stays
-    a hard error, not a silently-parsed string."""
-    text = (
-        "---\n"
-        "keywords:\n"
-        "  - *anchor\n"
-        "---\n"
-    )
+    a hard error, not a silently-parsed string. Both values here are a
+    prefix followed by a clean identifier (letters/digits/dash/underscore,
+    no second special char) — indistinguishable from a real anchor/alias
+    name, unlike `*Updated*Event` or `*.md` above."""
+    text = f"---\nkeywords:\n  - {value}\n---\n"
     with pytest.raises(ValueError, match="anchors|unsupported"):
         parse_frontmatter(text)
+
+
+@pytest.mark.parametrize("value", [
+    "*Updated*Event",
+    "*Created*Event",
+    "*",
+    "*.md",
+])
+def test_parse_accepts_raw_unquoted_wildcard_leading_star(value):
+    """Production bug: a hand-written/legacy `.dna/module.md` had unquoted
+    `- *Updated*Event` in its `keywords` list (predating the writer-side
+    quoting fix above). The parser rejected it outright as an unsupported
+    YAML anchor/alias, which then blocked every read of that file (dna_show,
+    dna_list, project_snapshot, and any dna_edit needed to fix it) — a
+    dead end, since the fix-the-file path itself required a successful
+    parse first.
+
+    None of these values are shaped like a real anchor/alias reference
+    (`*anchor_name`): they either have a second special char after the
+    prefix or are the bare prefix alone. They must parse as plain scalars
+    without the caller pre-quoting the source file."""
+    text = f"---\nkeywords:\n  - {value}\n---\n"
+    assert parse_frontmatter(text) == {"keywords": [value]}
 
 
 def test_render_map_list_value_with_yaml_special_leading_char_round_trips():

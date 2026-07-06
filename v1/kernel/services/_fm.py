@@ -29,9 +29,6 @@ from __future__ import annotations
 import re
 
 
-_UNSUPPORTED_PREFIXES = ("&", "*", "!")
-
-
 def _unescape_scalar(s: str) -> str:
     """Reverse the escapes produced by `_quote_scalar` (double-quoted values).
 
@@ -173,11 +170,36 @@ def _quote_scalar(val) -> str:
     return f'"{escaped}"'
 
 
+_ANCHOR_ALIAS_RE = re.compile(r"^[&*][A-Za-z0-9_-]+$")
+
+
 def _check_unsupported(token: str, what: str) -> None:
-    """Reject anchors/aliases/tags so callers don't silently lose data."""
+    """Reject anchors/aliases/tags so callers don't silently lose data.
+
+    A leading `&`/`*`/`!` alone doesn't make a token an anchor, alias, or
+    tag — only the whole token does. `*Updated*Event` is a plain wildcard
+    string that happens to start with `*`; `*anchor_name` is a real alias
+    reference. We only reject the latter shape (prefix + a clean
+    identifier, nothing else) so ordinary content isn't punished for
+    sharing a leading character with real YAML constructs. Our own writer
+    (`_quote_scalar` / `_needs_quoting`) already quotes any value with a
+    leading `&`/`*`/`!` on the way out, so a bare one on the way in is
+    never something we emitted ourselves — it's hand-written or
+    round-tripped content that just needs to be read back faithfully.
+    """
     if not token:
         return
-    if token[0] in _UNSUPPORTED_PREFIXES or token.startswith("!!"):
+    if token.startswith("!!"):
+        raise ValueError(
+            f"frontmatter: unsupported YAML construct in {what}: {token!r} "
+            "(anchors / tags / !!str are not supported)"
+        )
+    if token[0] in ("&", "*") and _ANCHOR_ALIAS_RE.match(token):
+        raise ValueError(
+            f"frontmatter: unsupported YAML construct in {what}: {token!r} "
+            "(anchors / tags / !!str are not supported)"
+        )
+    if token[0] == "!":
         raise ValueError(
             f"frontmatter: unsupported YAML construct in {what}: {token!r} "
             "(anchors / tags / !!str are not supported)"

@@ -168,7 +168,20 @@ def register(mcp) -> None:
             module_path: Path to the module directory (the one containing `.dna/`).
             target:      "frontmatter" | "body" | "section" | "contract" |
                          "contract-section" | "workflow".
-            payload:     Per-target dict; see services.knowledge_service.edit_module.
+            payload:     Per-target dict.
+
+                         For target="frontmatter", exactly one of these three
+                         mutex-payload variants:
+                           {"field": str, "value": scalar}      — set a scalar
+                           {"field": str, "value_list": list}   — set a list
+                           {"field": str, "delete": true}       — remove the key
+
+                         The delete variant refuses required fields (name,
+                         owner, description, keywords, status) with
+                         ValueError, and raises LookupError when the field
+                         is not currently present in the frontmatter.
+
+                         Other targets: see services.knowledge_service.edit_module.
             mode:        Default section mode when payload omits its own "mode".
             cwd:         Project directory (default: current working dir).
 

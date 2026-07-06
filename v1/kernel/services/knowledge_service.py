@@ -219,22 +219,27 @@ def build_snapshot(cwd: str = "") -> str:
 def get_module_fm_schema() -> dict:
     """Expose the module frontmatter schema constants as a stable dict.
 
-    Returns a dict with two keys:
+    Returns a dict with three keys:
       - ``list_fields``: ``frozenset[str]`` — frontmatter fields whose
         YAML type must be a list (v2 schema: ``keywords``, ``links``).
       - ``status_values``: ``tuple[str, ...]`` — allowed values for the
         ``status`` field.
+      - ``required``: ``tuple[str, ...]`` — fields that must remain
+        present in module.md and therefore cannot be deleted via
+        ``edit_module(target='frontmatter', payload={'delete': True})``.
 
     The CLI uses these to enforce shape constraints without having to
     import from `cbi._primitives.modules` directly.
     """
     from cbi._primitives.modules import (
         _MODULE_FM_LIST_FIELDS,
+        _MODULE_FM_REQUIRED,
         _MODULE_FM_STATUS_VALUES,
     )
     return {
         "list_fields": _MODULE_FM_LIST_FIELDS,
         "status_values": _MODULE_FM_STATUS_VALUES,
+        "required": _MODULE_FM_REQUIRED,
     }
 
 
@@ -359,6 +364,7 @@ def edit_module(
     """
     from cbi._primitives.modules import (
         _MODULE_FM_LIST_FIELDS,
+        _MODULE_FM_REQUIRED,
         _MODULE_FM_STATUS_VALUES,
     )
     from cbi.resources import DNAModule
@@ -373,10 +379,31 @@ def edit_module(
             raise ValueError("payload.field is required for target=frontmatter")
         has_scalar = "value" in payload and payload["value"] is not None
         has_list = "value_list" in payload and payload["value_list"] is not None
-        if has_scalar and has_list:
-            raise ValueError("payload.value and payload.value_list are mutually exclusive")
-        if not has_scalar and not has_list:
-            raise ValueError("one of payload.value or payload.value_list is required")
+        has_delete = bool(payload.get("delete"))
+        given = sum([has_scalar, has_list, has_delete])
+        if given > 1:
+            raise ValueError(
+                "payload.value, payload.value_list, and payload.delete are "
+                "mutually exclusive"
+            )
+        if given == 0:
+            raise ValueError(
+                "one of payload.value, payload.value_list, or payload.delete is required"
+            )
+        if has_delete:
+            if field in _MODULE_FM_REQUIRED:
+                raise ValueError(
+                    f"field {field!r} is required and cannot be deleted "
+                    f"(required set: {list(_MODULE_FM_REQUIRED)})"
+                )
+            if not m.frontmatter.has(field):
+                raise LookupError(
+                    f"field {field!r} is not present in module frontmatter"
+                )
+            m.frontmatter.delete(field)
+            m.save()
+            _reindex.reindex_dna(root, module_dir)
+            return str(m.path.resolve())
         if field in _MODULE_FM_LIST_FIELDS and has_scalar:
             raise ValueError(
                 f"field {field!r} is a list-typed field; use payload.value_list"

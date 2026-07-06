@@ -51,6 +51,10 @@ def register(sub: argparse._SubParsersAction) -> argparse.ArgumentParser:
     _p.add_argument("--clear", dest="clear", action="store_true",
                     help="Clear a list-typed frontmatter field (set to []). "
                          "Only valid with --target frontmatter and a list-typed --field.")
+    _p.add_argument("--delete-key", dest="delete_key", action="store_true",
+                    help="Remove the frontmatter key entirely (as opposed to "
+                         "setting it to an empty value). Refuses required fields. "
+                         "Only valid with --target frontmatter.")
     _p.add_argument("--content", default=None, help="Inline markdown content")
     _p.add_argument("--content-file", dest="content_file", default=None, help="Read content from this path")
     _p.add_argument("--stdin", action="store_true", help="Read content from stdin")
@@ -427,15 +431,16 @@ def _build_dna_edit_payload(args: argparse.Namespace, target: str) -> dict:
         list_given = getattr(args, "value_list", None) is not None
         json_given = getattr(args, "value_list_json", None) is not None
         clear_given = bool(getattr(args, "clear", False))
-        if sum([value_given, list_given, json_given, clear_given]) > 1:
+        delete_given = bool(getattr(args, "delete_key", False))
+        if sum([value_given, list_given, json_given, clear_given, delete_given]) > 1:
             raise ValueError(
-                "--value, --value-list, --value-list-json, --clear are "
-                "mutually exclusive"
+                "--value, --value-list, --value-list-json, --clear, --delete-key "
+                "are mutually exclusive"
             )
-        if not (value_given or list_given or json_given or clear_given):
+        if not (value_given or list_given or json_given or clear_given or delete_given):
             raise ValueError(
-                "one of --value / --value-list / --value-list-json / --clear "
-                "is required for --target frontmatter"
+                "one of --value / --value-list / --value-list-json / --clear / "
+                "--delete-key is required for --target frontmatter"
             )
         from services import get_module_fm_schema
         _MODULE_FM_LIST_FIELDS = get_module_fm_schema()["list_fields"]
@@ -452,7 +457,9 @@ def _build_dna_edit_payload(args: argparse.Namespace, target: str) -> dict:
                 "--value-list / --value-list-json / --clear"
             )
         payload = {"field": args.field}
-        if clear_given:
+        if delete_given:
+            payload["delete"] = True
+        elif clear_given:
             payload["value_list"] = []
         elif json_given:
             import json as _json
@@ -513,7 +520,22 @@ def _apply_dna_edit_in_memory(m, target: str, payload: dict) -> None:
     """Dry-run helper: apply the same mutations the service would, without saving."""
     if target == "frontmatter":
         from services import get_module_fm_schema
-        _MODULE_FM_STATUS_VALUES = get_module_fm_schema()["status_values"]
+        schema = get_module_fm_schema()
+        _MODULE_FM_STATUS_VALUES = schema["status_values"]
+        if payload.get("delete"):
+            required = schema["required"]
+            field = payload["field"]
+            if field in required:
+                raise ValueError(
+                    f"field {field!r} is required and cannot be deleted "
+                    f"(required set: {list(required)})"
+                )
+            if not m.frontmatter.has(field):
+                raise LookupError(
+                    f"field {field!r} is not present in module frontmatter"
+                )
+            m.frontmatter.delete(field)
+            return
         new_value = payload.get("value_list", payload.get("value"))
         if payload["field"] == "status" and new_value not in _MODULE_FM_STATUS_VALUES:
             raise ValueError(

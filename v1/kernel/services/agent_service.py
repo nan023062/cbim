@@ -26,6 +26,11 @@ from ._fm import parse_frontmatter, strip_frontmatter
 _BUILTIN_AGENTS = frozenset({"architect", "hr", "auditor", "programmer"})
 
 _AGENT_FM_EDITABLE: tuple[str, ...] = ("description", "model", "tools")
+# Frontmatter fields that may be *removed* entirely (as opposed to set to a
+# new value). Only `tools` is deletable — omitting it means "inherit the
+# default toolset from Claude Code"; `description` and `model` must remain
+# present to keep the agent addressable.
+_AGENT_FM_DELETABLE: tuple[str, ...] = ("tools",)
 
 
 def list_agents(cwd=None, include_builtin: bool = False) -> list[dict]:
@@ -205,20 +210,40 @@ def update_agent(
         field = payload.get("field")
         if field is None:
             raise ValueError("payload.field is required for target=frontmatter")
-        if field not in _AGENT_FM_EDITABLE:
-            raise ValueError(
-                f"field {field!r} is not editable; "
-                f"allowed: {', '.join(_AGENT_FM_EDITABLE)} "
-                f"(rename is a separate operation, not handled here)"
-            )
         has_scalar = "value" in payload and payload["value"] is not None
         has_list = "value_list" in payload and payload["value_list"] is not None
-        if has_scalar and has_list:
-            raise ValueError("payload.value and payload.value_list are mutually exclusive")
-        if not has_scalar and not has_list:
-            raise ValueError("one of payload.value or payload.value_list is required")
-        new_value = payload["value_list"] if has_list else payload["value"]
-        agent.frontmatter.set(field, new_value)
+        has_delete = bool(payload.get("delete"))
+        given = sum([has_scalar, has_list, has_delete])
+        if given > 1:
+            raise ValueError(
+                "payload.value, payload.value_list, and payload.delete are "
+                "mutually exclusive"
+            )
+        if given == 0:
+            raise ValueError(
+                "one of payload.value, payload.value_list, or payload.delete is required"
+            )
+        if has_delete:
+            if field not in _AGENT_FM_DELETABLE:
+                raise ValueError(
+                    f"field {field!r} cannot be deleted; "
+                    f"deletable fields: {', '.join(_AGENT_FM_DELETABLE)} "
+                    f"(description/model are required for the agent to be addressable)"
+                )
+            if not agent.frontmatter.has(field):
+                raise LookupError(
+                    f"field {field!r} is not present in agent frontmatter"
+                )
+            agent.frontmatter.delete(field)
+        else:
+            if field not in _AGENT_FM_EDITABLE:
+                raise ValueError(
+                    f"field {field!r} is not editable; "
+                    f"allowed: {', '.join(_AGENT_FM_EDITABLE)} "
+                    f"(rename is a separate operation, not handled here)"
+                )
+            new_value = payload["value_list"] if has_list else payload["value"]
+            agent.frontmatter.set(field, new_value)
 
     elif target == "body":
         content = payload.get("content")

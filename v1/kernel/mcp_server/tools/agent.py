@@ -99,8 +99,17 @@ def register(mcp) -> None:
             name:    Agent id (directory name under `.claude/agents/`).
             target:  "frontmatter" | "body" | "section".
             payload: Per-target dict.
-                     frontmatter -> {"field": str, "value": scalar} OR
-                                    {"field": str, "value_list": list[str]}
+                     frontmatter -> exactly one of these three mutex variants:
+                                    {"field": str, "value": scalar}      — set scalar
+                                    {"field": str, "value_list": list}   — set list
+                                    {"field": str, "delete": true}       — remove key
+
+                                    Only the `tools` field is deletable
+                                    (removing it means "inherit the default
+                                    toolset"); attempting to delete
+                                    `description` or `model` raises
+                                    ValueError. Deleting an absent key
+                                    raises LookupError.
                      body        -> {"content": str}
                      section     -> {"heading": str, "content": str | null,
                                      "level": 2|3, "mode": str,

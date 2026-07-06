@@ -17,6 +17,10 @@ from ._shared import _read_content_arg
 # touch. `name` (and the on-disk basename) is intentionally NOT editable —
 # renaming an agent is a separate operation, not a frontmatter edit.
 _AGENT_FM_EDITABLE: tuple[str, ...] = ("description", "model", "tools")
+# Mirror of services.agent_service._AGENT_FM_DELETABLE — kept in this
+# module for the dry-run helper only, so we don't cross the services
+# boundary from the CLI dry-run path.
+_AGENT_FM_DELETABLE: tuple[str, ...] = ("tools",)
 
 
 def register(sub: argparse._SubParsersAction) -> argparse.ArgumentParser:
@@ -49,6 +53,11 @@ def register(sub: argparse._SubParsersAction) -> argparse.ArgumentParser:
     _p.add_argument("--clear", dest="clear", action="store_true",
                     help="Clear a list-typed frontmatter field (set to []). "
                          "Only valid with --target frontmatter and a list-typed --field.")
+    _p.add_argument("--delete-key", dest="delete_key", action="store_true",
+                    help="Remove the frontmatter key entirely (as opposed to "
+                         "setting it to an empty value). Only `tools` is deletable "
+                         "(inherits the default toolset). Only valid with "
+                         "--target frontmatter.")
     _p.add_argument("--content", default=None, help="Inline markdown content (body/section)")
     _p.add_argument("--content-file", dest="content_file", default=None,
                     help="Read content from this path (body/section)")
@@ -250,14 +259,20 @@ def _build_agent_update_payload(args: argparse.Namespace, target: str) -> dict:
         value_given = args.value is not None
         list_given = getattr(args, "value_list", None) is not None
         clear_given = bool(getattr(args, "clear", False))
-        if sum([value_given, list_given, clear_given]) > 1:
-            raise ValueError("--value, --value-list, --clear are mutually exclusive")
-        if not (value_given or list_given or clear_given):
+        delete_given = bool(getattr(args, "delete_key", False))
+        if sum([value_given, list_given, clear_given, delete_given]) > 1:
             raise ValueError(
-                "one of --value / --value-list / --clear is required for --target frontmatter"
+                "--value, --value-list, --clear, --delete-key are mutually exclusive"
+            )
+        if not (value_given or list_given or clear_given or delete_given):
+            raise ValueError(
+                "one of --value / --value-list / --clear / --delete-key is required "
+                "for --target frontmatter"
             )
         payload = {"field": args.field}
-        if clear_given:
+        if delete_given:
+            payload["delete"] = True
+        elif clear_given:
             payload["value_list"] = []
         elif list_given:
             payload["value_list"] = args.value_list
@@ -297,14 +312,28 @@ def _build_agent_update_payload(args: argparse.Namespace, target: str) -> dict:
 def _apply_agent_update_in_memory(agent, target: str, payload: dict) -> None:
     """Dry-run helper: apply the same mutations the service would, without saving."""
     if target == "frontmatter":
-        if payload["field"] not in _AGENT_FM_EDITABLE:
+        field = payload["field"]
+        if payload.get("delete"):
+            if field not in _AGENT_FM_DELETABLE:
+                raise ValueError(
+                    f"field {field!r} cannot be deleted; "
+                    f"deletable fields: {', '.join(_AGENT_FM_DELETABLE)} "
+                    f"(description/model are required for the agent to be addressable)"
+                )
+            if not agent.frontmatter.has(field):
+                raise LookupError(
+                    f"field {field!r} is not present in agent frontmatter"
+                )
+            agent.frontmatter.delete(field)
+            return
+        if field not in _AGENT_FM_EDITABLE:
             raise ValueError(
-                f"field {payload['field']!r} is not editable; "
+                f"field {field!r} is not editable; "
                 f"allowed: {', '.join(_AGENT_FM_EDITABLE)} "
                 f"(rename is a separate operation, not handled here)"
             )
         new_value = payload.get("value_list", payload.get("value"))
-        agent.frontmatter.set(payload["field"], new_value)
+        agent.frontmatter.set(field, new_value)
     elif target == "body":
         agent.body.write(payload["content"])
     elif target == "section":

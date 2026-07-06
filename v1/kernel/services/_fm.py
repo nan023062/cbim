@@ -26,15 +26,151 @@ for every meta this parser is willing to accept.
 
 from __future__ import annotations
 
+import re
+
 
 _UNSUPPORTED_PREFIXES = ("&", "*", "!")
 
 
+def _unescape_scalar(s: str) -> str:
+    """Reverse the escapes produced by `_quote_scalar` (double-quoted values).
+
+    Single-pass character walker: on encountering a backslash, translate
+    the next character per the mirror of `_quote_scalar`'s replacement
+    table. Unknown escapes are preserved verbatim (backslash + the
+    following char), matching this module's forgiving-parser stance —
+    strict rejection here would surprise callers who hand-write quoted
+    values.
+
+    A single-pass walker is required (not sequential `str.replace`s):
+    the escape order in `_quote_scalar` is backslash-first-then-quote,
+    so a value containing both a literal backslash AND a literal quote
+    round-trips through a `\\\\` + `\\"` sequence which a naive replace
+    chain would mis-decode.
+    """
+    out: list[str] = []
+    i = 0
+    n = len(s)
+    while i < n:
+        ch = s[i]
+        if ch == "\\" and i + 1 < n:
+            nxt = s[i + 1]
+            if nxt == "\\":
+                out.append("\\")
+            elif nxt == '"':
+                out.append('"')
+            elif nxt == "n":
+                out.append("\n")
+            elif nxt == "t":
+                out.append("\t")
+            elif nxt == "r":
+                out.append("\r")
+            elif nxt == "0":
+                out.append("\x00")
+            else:
+                out.append("\\")
+                out.append(nxt)
+            i += 2
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _is_quoted(s: str) -> bool:
+    """True when `s` is wrapped in a matched pair of `'`/`"` quotes."""
+    return len(s) >= 2 and s[0] == s[-1] and s[0] in "'\""
+
+
 def _strip_quotes(s: str) -> str:
-    """Strip a single layer of surrounding quotes if balanced."""
-    if len(s) >= 2 and s[0] == s[-1] and s[0] in "'\"":
-        return s[1:-1]
+    """Strip a single layer of surrounding quotes if balanced.
+
+    For double-quoted values, also reverses the backslash / control-char
+    escapes applied by `_quote_scalar` — the round-trip contract in the
+    module docstring depends on it. Single-quoted values are stripped
+    but not unescaped (our writer never emits single quotes; parsers
+    reading hand-written single-quoted content get raw inner content,
+    which is what YAML plain-scalar semantics call for).
+    """
+    if _is_quoted(s):
+        inner = s[1:-1]
+        if s[0] == '"':
+            return _unescape_scalar(inner)
+        return inner
     return s
+
+
+# Leading characters that make a plain YAML scalar ambiguous or invalid.
+# Anchors/aliases/tags (`&`, `*`, `!`), directives (`%`), unquoted flow
+# indicators (`,`, `[`, `]`, `{`, `}`), block scalar heads (`|`, `>`),
+# comments (`#`), quotes (`'`, `"`), mapping / sequence indicators
+# (`:`, `-`, `?`), reserved (`@`, `` ` ``).
+_INDICATOR_LEADS = frozenset("*&!%@`#|>'\",[]{}?:-")
+
+_BOOL_NULL_LITERALS = frozenset({
+    "true", "false", "yes", "no", "on", "off", "null", "~",
+})
+
+_NUMERIC_RES = (
+    re.compile(r"^-?\d+$"),
+    re.compile(r"^-?\d+\.\d*([eE][+-]?\d+)?$"),
+    re.compile(r"^-?\.\d+([eE][+-]?\d+)?$"),
+    re.compile(r"^0[xX][0-9a-fA-F]+$"),
+    re.compile(r"^0[oO][0-7]+$"),
+)
+
+
+def _needs_quoting(s: str) -> bool:
+    """True when `s` cannot survive a plain-scalar round-trip through our parser."""
+    if s == "":
+        return True
+    if s.strip() != s:
+        return True
+    if s[0] in _INDICATOR_LEADS:
+        return True
+    if s.endswith(":"):
+        return True
+    if ": " in s:
+        return True
+    if " #" in s:
+        return True
+    for ch in s:
+        code = ord(ch)
+        if ch == "\n" or (code < 0x20 and ch != "\t") or code == 0x7f:
+            return True
+    if s.lower() in _BOOL_NULL_LITERALS:
+        return True
+    for pat in _NUMERIC_RES:
+        if pat.match(s):
+            return True
+    if s in ("...", "---"):
+        return True
+    return False
+
+
+def _quote_scalar(val) -> str:
+    """Render `val` as a YAML-safe scalar.
+
+    Returns the string unchanged (plain scalar) when it can survive our
+    permissive parser unquoted; otherwise wraps in double quotes with the
+    standard backslash + control-char escapes. Non-string inputs are cast
+    via `str()` first so boolean/number rules still trigger.
+    """
+    s = val if isinstance(val, str) else str(val)
+    if not _needs_quoting(s):
+        return s
+    # Order matters: escape backslashes first, then the char classes that
+    # produce a backslash + letter output. Control chars use the standard
+    # YAML double-quoted escapes.
+    escaped = (
+        s.replace("\\", "\\\\")
+         .replace('"', '\\"')
+         .replace("\n", "\\n")
+         .replace("\t", "\\t")
+         .replace("\r", "\\r")
+         .replace("\x00", "\\0")
+    )
+    return f'"{escaped}"'
 
 
 def _check_unsupported(token: str, what: str) -> None:
@@ -192,6 +328,19 @@ def parse_frontmatter(text: str) -> dict:
                 meta[current_key] = []
             element = raw[4:].strip()
             _check_unsupported(element, f"list element under {current_key!r}")
+            # A quoted element is always a plain scalar — the `:` inside it
+            # is content, not a mapping indicator. Skip the dict-entry
+            # heuristic before it corrupts values like `"foo: bar"` into
+            # `{'"foo': 'bar"'}`.
+            if _is_quoted(element):
+                if meta[current_key] and isinstance(meta[current_key][-1], dict):
+                    raise ValueError(
+                        f"frontmatter: list under {current_key!r} mixes scalar "
+                        "and map elements"
+                    )
+                current_dict = None
+                meta[current_key].append(_strip_quotes(element))
+                continue
             if ":" in element and not (element.startswith("{") and element.endswith("}")):
                 # `- k: v` opens a new dict element; subsequent 4-space
                 # `    k2: v2` lines append into it until the next `  - ` or
@@ -228,7 +377,7 @@ def parse_frontmatter(text: str) -> dict:
                         "and map elements"
                     )
                 current_dict = None
-                meta[current_key].append(element)
+                meta[current_key].append(_strip_quotes(element))
             continue
 
         # ---- continuation of the current dict element ----
@@ -326,7 +475,7 @@ def _render_field(key: str, val) -> list[str]:
         out = [f"{key}:"]
         if all_scalars:
             for item in val:
-                out.append(f"  - {item}")
+                out.append(f"  - {_quote_scalar(item)}")
             return out
         # all_dicts: block-style nested map list
         for item in val:
@@ -338,13 +487,13 @@ def _render_field(key: str, val) -> list[str]:
                 )
             keys_iter = iter(item.items())
             first_k, first_v = next(keys_iter)
-            out.append(f"  - {first_k}: {first_v}")
+            out.append(f"  - {first_k}: {_quote_scalar(first_v)}")
             for sub_k, sub_v in keys_iter:
-                out.append(f"    {sub_k}: {sub_v}")
+                out.append(f"    {sub_k}: {_quote_scalar(sub_v)}")
         return out
     if isinstance(val, dict):
         raise ValueError(
             f"frontmatter: top-level dict value under {key!r} is not "
             "supported (use a list of dicts or a scalar)"
         )
-    return [f"{key}: {val}"]
+    return [f"{key}: {_quote_scalar(val)}"]

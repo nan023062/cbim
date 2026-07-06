@@ -404,3 +404,253 @@ def test_render_rejects_top_level_dict_value():
 def test_render_rejects_empty_dict_in_list():
     with pytest.raises(ValueError, match="empty dict"):
         render_frontmatter({"links": [{}]})
+
+
+# ---------------------------------------------------------------------------
+# YAML-safe scalar quoting regression — bug fix for `render_frontmatter`
+# emitting values with YAML-special leading chars (e.g. `*ResultEvent`,
+# `&anchor`, `!tag`) as bare unquoted scalars, which then blew up on the
+# next parse. All values below must survive `parse(render(...))` intact.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("value", [
+    # Anchor / alias / tag lookalikes — the original bug report.
+    "*ResultEvent",
+    "&anchor-lookalike",
+    "!tag-lookalike",
+    "*",
+    "*Updated*Event",
+    # Star-in-the-middle used to work already (leading `G`); regression guard.
+    "G2U*Event",
+    # Directives, reserved, block-scalar heads, comments, flow openers,
+    # mapping / sequence indicators — every character in _INDICATOR_LEADS
+    # that trips a plain-scalar's leading position.
+    "%directive",
+    "@ref",
+    "|literal-lookalike",
+    ">folded-lookalike",
+    "#leading-hash",
+    "?maybe-key",
+    "-dash-first",
+    "[bracket",
+    "{brace",
+    ", comma",
+])
+def test_list_scalar_with_yaml_special_leading_char_round_trips(value):
+    meta = {"keywords": [value]}
+    rendered = render_frontmatter(meta, schema=("keywords",))
+    assert parse_frontmatter(rendered) == meta
+
+
+@pytest.mark.parametrize("value", [
+    # Same leading-char classes but as a top-level scalar (not a list element).
+    "*ResultEvent",
+    "&x",
+    "!x",
+    # Boolean / null literals — YAML would coerce these to bool/None if
+    # unquoted, but our parser returns them as strings; still, they need
+    # quoting so a real YAML consumer (or a future upgrade of this parser)
+    # does not lose the type distinction.
+    "true",
+    "false",
+    "null",
+    "yes",
+    "no",
+    # Numeric-looking strings.
+    "42",
+    "3.14",
+    # ": " inside — would otherwise get partition-split into k/v.
+    "foo: bar",
+    # Trailing colon — same partition risk.
+    "trailing:",
+    # " #" inside — YAML treats as trailing comment start when unquoted.
+    "foo #bar",
+    # Empty string.
+    "",
+    # Leading/trailing whitespace preservation.
+    "  spaced  ",
+])
+def test_top_level_scalar_with_yaml_special_content_round_trips(value):
+    meta = {"description": value}
+    rendered = render_frontmatter(meta, schema=("description",))
+    assert parse_frontmatter(rendered) == meta
+
+
+def test_bug_report_exact_repro_keywords_with_star_leads():
+    """Verbatim reproduction of the module-frontmatter case that triggered
+    this bug: a `keywords` list documenting wildcard event names, several
+    of which start with `*`. Before the fix, this rendered as unquoted
+    `- *ResultEvent` and the next parse crashed."""
+    meta = {"keywords": ["G2U*Event", "*Updated*Event", "*ResultEvent"]}
+    rendered = render_frontmatter(meta, schema=("keywords",))
+    assert parse_frontmatter(rendered) == meta
+
+
+@pytest.mark.parametrize("value", [
+    "combat",
+    "alice",
+    "hello world",
+    "foo-bar",
+    "snake_case",
+    "PascalCase",
+    "with.dot",
+    "path/segment",
+])
+def test_safe_scalars_render_without_quotes(value):
+    """No-clutter guard: values that don't need quoting must render as plain
+    scalars (zero double-quote characters in the frontmatter), and still
+    round-trip. Prevents the fix from over-quoting benign values."""
+    meta = {"description": value, "keywords": [value]}
+    rendered = render_frontmatter(meta, schema=("description", "keywords"))
+    assert '"' not in rendered
+    assert parse_frontmatter(rendered) == meta
+
+
+def test_parse_block_list_strips_quotes_symmetric_with_top_level():
+    """Parser symmetry: the block-list scalar branch must strip surrounding
+    quotes, matching the flow-list branch and the top-level scalar branch.
+    Before the fix, quoted list elements survived with their quotes intact,
+    so writer-emitted quoted data could not round-trip."""
+    text = (
+        "---\n"
+        "keywords:\n"
+        '  - "with quotes"\n'
+        "  - unquoted\n"
+        "---\n"
+    )
+    assert parse_frontmatter(text) == {
+        "keywords": ["with quotes", "unquoted"],
+    }
+
+
+def test_parse_still_rejects_unquoted_alias_in_list():
+    """Guard rail: quoting is a *writer-side* fix. The parser must continue
+    to reject legitimate unquoted alias / anchor / tag syntax — that shape
+    is a real YAML construct we can't faithfully round-trip, so it stays
+    a hard error, not a silently-parsed string."""
+    text = (
+        "---\n"
+        "keywords:\n"
+        "  - *anchor\n"
+        "---\n"
+    )
+    with pytest.raises(ValueError, match="anchors|unsupported"):
+        parse_frontmatter(text)
+
+
+def test_render_map_list_value_with_yaml_special_leading_char_round_trips():
+    """The map-list value quoting site (first_v / sub_v) is a separate code
+    path from the plain-scalar and block-list branches — verify it too."""
+    meta = {
+        "links": [
+            {"kind": "local", "target": "*Star.md"},
+            {"kind": "local", "target": "&anchor-target"},
+        ],
+    }
+    rendered = render_frontmatter(meta, schema=("links",))
+    assert parse_frontmatter(rendered) == meta
+
+
+# ---------------------------------------------------------------------------
+# Gap 1 — quoted block-list element must not hit the dict-entry heuristic.
+# A value like `"foo: bar"` used to get partition-split into `{'"foo': 'bar"'}`
+# because the parser ran the `:` test on the raw (still-quoted) element text.
+# ---------------------------------------------------------------------------
+
+
+def test_round_trip_block_list_element_with_colon_space():
+    meta = {"keywords": ["foo: bar"]}
+    rendered = render_frontmatter(meta, schema=("keywords",))
+    assert parse_frontmatter(rendered) == meta
+
+
+def test_round_trip_block_list_element_with_trailing_colon():
+    meta = {"keywords": ["trailing:"]}
+    rendered = render_frontmatter(meta, schema=("keywords",))
+    assert parse_frontmatter(rendered) == meta
+
+
+def test_round_trip_block_list_element_with_leading_colon():
+    # Edge case in the colon-in-list-element family: leading colon.
+    # `_needs_quoting` fires (`:` is in _INDICATOR_LEADS) so writer quotes it;
+    # reader must recognise the quoted element as a plain scalar.
+    meta = {"keywords": [":leading-colon"]}
+    rendered = render_frontmatter(meta, schema=("keywords",))
+    assert parse_frontmatter(rendered) == meta
+
+
+# ---------------------------------------------------------------------------
+# Gap 2 — reader must un-escape backslash / quote / control-char sequences
+# emitted by `_quote_scalar`. Without this, quoted values with embedded
+# specials round-trip with literal backslashes preserved (`\"quoted\"`
+# instead of `"quoted"`).
+# ---------------------------------------------------------------------------
+
+
+def test_round_trip_top_level_scalar_with_embedded_double_quotes():
+    meta = {"description": '"quoted"'}
+    rendered = render_frontmatter(meta, schema=("description",))
+    assert parse_frontmatter(rendered) == meta
+
+
+def test_round_trip_top_level_scalar_star_leading_with_embedded_quote():
+    meta = {"description": '*a"b'}
+    rendered = render_frontmatter(meta, schema=("description",))
+    assert parse_frontmatter(rendered) == meta
+
+
+def test_round_trip_scalar_with_embedded_backslash_and_quote():
+    # Ordering-bug catcher: escape does `\\`→`\\\\` first, then `"`→`\\"`,
+    # so unescape must do the inverse in the right order. A naive
+    # sequential-replace unescape (`\\\\`→`\\` then `\\"`→`"`) will mis-decode
+    # this input; the single-pass walker in `_unescape_scalar` gets it right.
+    meta = {"description": 'back\\slash and "quote"'}
+    rendered = render_frontmatter(meta, schema=("description",))
+    assert parse_frontmatter(rendered) == meta
+
+
+def test_round_trip_scalar_with_embedded_newline():
+    # `_quote_scalar` escapes real newlines as literal `\n` when the value
+    # is quoted (rule 7: quote if `\n` or control char present). Reader must
+    # translate the literal `\n` back to a real newline for the round trip.
+    meta = {"description": "line1\nline2"}
+    rendered = render_frontmatter(meta, schema=("description",))
+    # Sanity: the rendered form contains no real newline in the value line
+    # (the newline was escaped to `\n`), so parsing is still line-safe.
+    assert "line1\\nline2" in rendered
+    assert parse_frontmatter(rendered) == meta
+
+
+def test_round_trip_scalar_with_embedded_tab_and_cr():
+    # Mirror-escape verification for the remaining control chars that
+    # `_quote_scalar` explicitly handles.
+    meta = {"description": "col1\tcol2\rend"}
+    rendered = render_frontmatter(meta, schema=("description",))
+    assert parse_frontmatter(rendered) == meta
+
+
+def test_round_trip_block_list_element_with_embedded_quote():
+    # Gap 1 + Gap 2 together: block-list branch must both skip the
+    # dict-entry heuristic on quoted elements AND unescape the payload.
+    meta = {"keywords": ['embedded "quote" here']}
+    rendered = render_frontmatter(meta, schema=("keywords",))
+    assert parse_frontmatter(rendered) == meta
+
+
+def test_round_trip_map_list_value_with_embedded_quote():
+    # Third quote-strip site (nested-map value) must also unescape.
+    meta = {"links": [{"kind": "local", "target": 'has "quote" in name'}]}
+    rendered = render_frontmatter(meta, schema=("links",))
+    assert parse_frontmatter(rendered) == meta
+
+
+def test_round_trip_flow_list_scalar_with_embedded_quote():
+    # Fourth quote-strip site (flow-list scalar element) must also unescape.
+    # Route through a hand-written frontmatter using flow syntax rather than
+    # the writer (the writer always emits block-style scalar lists), so we
+    # exercise the flow-list unescape branch directly.
+    text = '---\nkeywords: ["has \\"quote\\" here", plain]\n---\n'
+    assert parse_frontmatter(text) == {
+        "keywords": ['has "quote" here', "plain"],
+    }

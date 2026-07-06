@@ -9,9 +9,9 @@ block style — matching the format produced by modules._build_module_md.
 
 from __future__ import annotations
 
-from typing import Any, Iterable
+from typing import Any
 
-from services._fm import parse_frontmatter
+from services._fm import parse_frontmatter, render_frontmatter
 
 
 class Frontmatter:
@@ -86,33 +86,15 @@ class Frontmatter:
 
         Field order: schema fields first (in declared order, only if present),
         then any remaining fields in insertion order. Lists render block-style
-        when populated, `[]` when empty.
-        """
-        if not self._data:
-            return "---\n---\n"
-        lines: list[str] = ["---"]
-        emitted: set[str] = set()
-        for key in self._SCHEMA:
-            if key in self._data:
-                lines.extend(self._render_field(key, self._data[key]))
-                emitted.add(key)
-        for key, val in self._data.items():
-            if key in emitted:
-                continue
-            lines.extend(self._render_field(key, val))
-        lines.append("---")
-        return "\n".join(lines) + "\n"
+        when populated, `[]` when empty. Scalars needing YAML quoting (leading
+        `*` / `&` / `!`, embedded `": "`, boolean/numeric literals, etc.) are
+        emitted double-quoted so the parser can round-trip them.
 
-    @staticmethod
-    def _render_field(key: str, val: Any) -> Iterable[str]:
-        if isinstance(val, list):
-            if val:
-                out = [f"{key}:"]
-                for item in val:
-                    out.append(f"  - {item}")
-                return out
-            return [f"{key}: []"]
-        return [f"{key}: {val}"]
+        Delegates to `services._fm.render_frontmatter` — the canonical writer
+        with the quoting rules — to eliminate the historical duplicate-copy
+        drift where this file used to hold its own unquoted-f-string renderer.
+        """
+        return render_frontmatter(self._data, self._SCHEMA)
 
     # ------------------------------------------------------------------
     # Internal

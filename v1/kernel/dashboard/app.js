@@ -371,8 +371,7 @@ function renderKnowledgeDetail(el, mod) {
     ['path', mod.path],
     ...(mod.owner              ? [['owner',    mod.owner]]                          : []),
     ...(mod.keywords.length    ? [['keywords', mod.keywords.join(', ')]]            : []),
-    ...(mod.dependencies.length ? [['deps',    mod.dependencies.join(', ')]]        : []),
-    ...(mod.workflows.length    ? [['workflows', mod.workflows.map(w => w.id).join(', ')]] : []),
+    ...(mod.workflows.length   ? [['workflows', mod.workflows.map(w => w.id).join(', ')]] : []),
   ];
   const meta = pairs.map(([k, v]) =>
     `<div class="meta-item"><strong>${k}</strong>: ${esc(v)}</div>`).join('');

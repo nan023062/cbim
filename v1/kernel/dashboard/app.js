@@ -26,6 +26,7 @@ const I18N = {
     badge_medium:    '中期',
     section_user:    '用户能力',
     section_framework:'框架能力',
+    section_unassigned:'未分配',
     log_clear:       '清空',
     log_path:        '当前日志',
     log_no_session:  '尚无活动会话',
@@ -57,6 +58,7 @@ const I18N = {
     badge_medium:    'Medium',
     section_user:    'User agents',
     section_framework:'Framework',
+    section_unassigned:'Unassigned',
     log_clear:       'Clear',
     log_path:        'Active log',
     log_no_session:  'No active session',
@@ -270,7 +272,17 @@ function renderKnowledgeSidebar() {
   );
   const sb = document.getElementById('sidebar');
   if (!items.length) { sb.innerHTML = `<div class="empty">${esc(t('empty_knowledge'))}</div>`; return; }
-  sb.innerHTML = items.map(m => {
+  const UNASSIGNED = ' unassigned';  // sentinel key that cannot collide with any real owner
+  const buckets = new Map();
+  for (const mod of items) {
+    const owner = (mod.owner || '').trim();
+    const key = owner === '' ? UNASSIGNED : owner;
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(mod);
+  }
+  const ownerKeys = [...buckets.keys()].filter(k => k !== UNASSIGNED).sort();
+  if (buckets.has(UNASSIGNED)) ownerKeys.push(UNASSIGNED);
+  const renderRow = m => {
     const kws = m.keywords.map(k => `<span class="entry-keyword">#${esc(k)}</span>`).join('');
     const wfBadge = m.workflows.length
       ? `<span class="badge badge-workflow">${m.workflows.length} workflows</span>` : '';
@@ -280,7 +292,14 @@ function renderKnowledgeSidebar() {
       <div class="entry-title">${esc(m.name)}</div>
       <div class="entry-desc">${esc(m.description.slice(0, 60))}</div>
     </div>`;
-  }).join('');
+  };
+  const sections = [];
+  for (const key of ownerKeys) {
+    const label = key === UNASSIGNED ? t('section_unassigned') : key;
+    sections.push(`<div class="sidebar-section">${esc(label)}</div>`);
+    sections.push(buckets.get(key).map(renderRow).join(''));
+  }
+  sb.innerHTML = sections.join('');
 }
 
 function renderLogSidebar() {

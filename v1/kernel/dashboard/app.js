@@ -78,6 +78,41 @@ function md(text) {
   return DOMPurify.sanitize(marked.parse(String(text || '')));
 }
 
+// ---------------------------------------------------------------------------
+// Mermaid post-processor
+// ---------------------------------------------------------------------------
+// After `innerHTML = md(...)` injects marked+DOMPurify-sanitised HTML, marked
+// leaves ` ```mermaid ` fences as `<pre><code class="language-mermaid">`.
+// Scan for those, hand each source string to Mermaid, and swap the <pre> for
+// the generated SVG. Mermaid's SVG output is emitted by our vendored library
+// and must NOT be run back through DOMPurify's default profile — that would
+// strip <foreignObject> and drop text labels inside class diagrams.
+// On any rendering failure the original <pre> is retained so a single bad
+// diagram cannot blank the whole panel.
+let MERMAID_UID = 0;
+async function renderMermaidIn(rootEl) {
+  if (!rootEl || typeof mermaid === 'undefined') return;
+  const codeNodes = rootEl.querySelectorAll('pre > code.language-mermaid');
+  for (const code of codeNodes) {
+    const pre = code.parentElement;
+    if (!pre) continue;
+    const source = code.textContent || '';
+    const id = 'mermaid-svg-' + (++MERMAID_UID);
+    try {
+      const { svg } = await mermaid.render(id, source);
+      const wrap = document.createElement('div');
+      wrap.className = 'mermaid-block';
+      wrap.innerHTML = svg;
+      pre.replaceWith(wrap);
+    } catch (_err) {
+      // Keep the original <pre> so the user still sees the source; leave any
+      // stray helper node Mermaid may have appended to <body> alone.
+      const stray = document.getElementById('d' + id);
+      if (stray && stray.parentElement) stray.parentElement.removeChild(stray);
+    }
+  }
+}
+
 function t(key, ...args) {
   const v = I18N[LANG.current][key];
   return typeof v === 'function' ? v(...args) : v;
@@ -358,6 +393,7 @@ function renderMemoryDetail(el, entry) {
       <div class="meta-grid">${meta}</div>
     </div>
     <div class="content-body markdown-body">${md(entry.body)}</div>`;
+  renderMermaidIn(el);
 }
 
 function renderAgentDetail(el, agent) {
@@ -383,6 +419,7 @@ function renderAgentDetail(el, agent) {
       <div class="meta-grid">${meta}</div>
     </div>
     ${soulSection}${skillSections}`;
+  renderMermaidIn(el);
 }
 
 function renderKnowledgeDetail(el, mod) {
@@ -413,6 +450,7 @@ function renderKnowledgeDetail(el, mod) {
       <div class="meta-grid">${meta}</div>
     </div>
     ${sections.join('')}`;
+  renderMermaidIn(el);
 }
 
 // ---------------------------------------------------------------------------
@@ -555,6 +593,13 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) beat
 
 renderLogFilters();
 applyI18n();
+
+// Mermaid v10.9.3 UMD bundle is vendored under vendor/mermaid.min.js.
+// startOnLoad must stay false — our markdown is injected dynamically; we
+// drive rendering ourselves via mermaid.render() inside renderMermaidIn().
+if (typeof mermaid !== 'undefined') {
+  mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'default' });
+}
 
 fetch('/api/info').then(r => r.json()).then(d => {
   INFO.host = d.host; INFO.port = d.port; INFO.root = d.root_dir; INFO.cbim = d.cbim_dir;

@@ -403,3 +403,13 @@ header h1 { font-size: 15px; font-weight: 600; white-space: nowrap; }
 .markdown-body a { color: var(--accent); text-decoration: none; }
 .markdown-body a:hover { text-decoration: underline; }
 .markdown-body input[type="checkbox"] { margin-right: 4px; }
+
+/* Mermaid diagram container — replaces <pre><code class="language-mermaid">
+   after renderMermaidIn() swaps in the SVG. Scope the overflow / centring to
+   this wrapper so we do NOT force `svg { max-width: 100% }` globally. */
+.mermaid-block {
+  overflow-x: auto;
+  text-align: center;
+  margin: 12px 0;
+}
+.mermaid-block svg { max-width: 100%; height: auto; }

@@ -7,6 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from atomic_io import atomic_write_text  # kernel root leaf
+
 from . import sync as _sync
 
 _TEMPLATES = _sync._TEMPLATES
@@ -44,7 +46,7 @@ def _install_config(project_root: Path, force: bool) -> None:
         return
     content = _read_template("config.json.tmpl")
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
-    cfg_path.write_text(content, encoding="utf-8")
+    atomic_write_text(cfg_path, content)
     _print("created", cfg_path, project_root)
 
 
@@ -143,7 +145,9 @@ def _install_run_shim(project_root: Path, force: bool) -> None:
         'export PYTHONPATH="$DIR/kernel${PYTHONPATH:+:$PYTHONPATH}"\n'
         'exec "$DIR/.venv/bin/python" -m engine "$@"\n'
     )
-    posix_path.write_text(posix_content, encoding="utf-8")
+    atomic_write_text(posix_path, posix_content)
+    # atomic_io's temp file is 0o644; restore the executable bit that the
+    # POSIX shim needs to be invocable as `.cbim/run`.
     os.chmod(posix_path, 0o755)
     _print("created", posix_path, project_root)
 
@@ -155,7 +159,7 @@ def _install_run_shim(project_root: Path, force: bool) -> None:
         'set "PYTHONPATH=%DIR%kernel;%PYTHONPATH%"\r\n'
         '"%DIR%.venv\\Scripts\\python.exe" -m engine %*\r\n'
     )
-    win_path.write_text(win_content, encoding="utf-8")
+    atomic_write_text(win_path, win_content)
     _print("created", win_path, project_root)
 
 
@@ -281,9 +285,9 @@ def _clean_global_settings() -> None:
     if before == after:
         return
 
-    global_settings.write_text(
+    atomic_write_text(
+        global_settings,
         json.dumps(data, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
     )
     print("[cbim] cleaned legacy cbim entries from global ~/.claude/settings.json")
 

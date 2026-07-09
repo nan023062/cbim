@@ -12,6 +12,9 @@ Findings:
   TREE_DEP_ANCESTOR_DECLARED  warn   dep targets an ancestor (implicit; must not be declared)
   TREE_DEP_UP_TREE            warn   dep points up the tree to a non-ancestor unstable side
   TREE_CYCLE                  error  dep graph has a strongly-connected component
+  TREE_NAME_COLLISION         warn   two modules share the same frontmatter `name`;
+                                     parent class-diagram edges naming it resolve
+                                     only to the first-registered module
   TREE_DIAGRAM_R1_PLACEHOLDER_EXPANDED  warn  placeholder annotation points at a path
                                               that belongs to the diagram-host's own
                                               subtree (should be a regular sub-node)
@@ -350,10 +353,32 @@ def check(project_root: Path, config: dict) -> list[AuditFinding]:
     has_root = "." in all_paths
 
     name_to_path: dict[str, str] = {}
-    for p, mm in by_path.items():
+    # Iterate in sorted order so name-collision findings surface a stable
+    # "first-registered wins" pick — required for baseline fingerprint stability.
+    for p, mm in sorted(by_path.items()):
         nm = (mm.get("name") or "").strip()
-        if nm and nm not in name_to_path:
-            name_to_path[nm] = p
+        if not nm:
+            continue
+        if nm in name_to_path:
+            findings.append(AuditFinding(
+                check="dna_tree",
+                severity="warn",
+                target=p,
+                message=(
+                    f"module {p!r} frontmatter name={nm!r} collides with "
+                    f"already-registered module {name_to_path[nm]!r}; "
+                    f"parent class-diagram edges naming {nm!r} will resolve "
+                    f"only to the first-registered module"
+                ),
+                suggestion=(
+                    "Rename this module's frontmatter `name` field to be "
+                    "unique, or delete the duplicate module."
+                ),
+                code="TREE_NAME_COLLISION",
+                metadata={"conflicting_with": name_to_path[nm], "name": nm},
+            ))
+            continue
+        name_to_path[nm] = p
 
     for path, m in sorted(by_path.items()):
         if path == ".":
@@ -379,11 +404,12 @@ def check(project_root: Path, config: dict) -> list[AuditFinding]:
     # just "nothing declared".
     dep_graph: dict[str, list[str]] = {}
     for path, m in by_path.items():
-        parent_path = (
-            "." if path == "." else
-            (path.rsplit("/", 1)[0] if "/" in path else ".")
-        )
-        parent_module = by_path.get(parent_path) if path != "." else None
+        # Use the same "nearest registered ancestor" ladder as orphan
+        # detection; falling back to the raw filesystem parent would silently
+        # drop dep edges whenever an intermediate directory has no
+        # `.dna/module.md` of its own.
+        parent_path = _find_parent(path, all_paths) if path != "." else None
+        parent_module = by_path.get(parent_path) if parent_path else None
 
         diagram_deps: set[str] = set()
         if parent_module is not None:

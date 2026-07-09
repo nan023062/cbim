@@ -43,11 +43,13 @@ from _lib.event_io import read_event, write_additional_context
 from _lib.paths import project_root_from_cwd
 from _lib.bridge import bootstrap_kernel, safe_run
 
-# Dream readiness detection constants — kept in sync with
-# engine.dream.api.dream_tick (cannot import here because the hook runs
-# before kernel bootstrap completes on every event).
+# Dream readiness detection constants. `_DREAM_WINDOW_HOURS` (20h) is a
+# SessionStart-side gate independent of the dream engine, so it stays
+# local. The heartbeat-stale threshold, in contrast, is now single-sourced
+# from `engine.dream.api.dream_tick._HEARTBEAT_STALE_MINUTES` (see
+# `_dream_signals` for the lazy import) — the engine performs the actual
+# self-heal now, the hook just phrases the same threshold in its banner.
 _DREAM_WINDOW_HOURS = 20
-_DREAM_HEARTBEAT_STALE_MINUTES = 30
 
 
 # ---------------------------------------------------------------------------
@@ -362,6 +364,19 @@ def _dream_signals(cbim: Path) -> tuple[str | None, str | None]:
     the loop will dispatch the main agent to distill un-distilled
     transcripts before running the architect / HR governance passes.
     """
+    # Lazy import: `bootstrap_kernel(root)` has already inserted the
+    # kernel dir on sys.path by the time _dream_signals is called (main()
+    # runs bootstrap before _build_context), but the hook module itself
+    # loads before that — so this must not sit at module top. Fallback to
+    # the historical literal keeps the banner working if the engine module
+    # is somehow missing (partial checkout, custom test harness).
+    try:
+        from engine.dream.api.dream_tick import (
+            _HEARTBEAT_STALE_MINUTES as _DREAM_HEARTBEAT_STALE_MINUTES,
+        )
+    except ImportError:
+        _DREAM_HEARTBEAT_STALE_MINUTES = 30
+
     dream_dir = cbim / "scheduler" / "dream"
     if not dream_dir.exists():
         return None, None

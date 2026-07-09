@@ -148,12 +148,15 @@ class IndexStore:
         self.header_vectors_path = self.source_dir / "header_vectors.bin"
         self.lock_path = self.source_dir / ".lock"
         self.staging_dir = self.source_dir / ".staging"
-        # Best-effort cleanup of any abandoned staging from a previous
-        # crash. We don't recover staged files automatically — the
-        # next persist_atomic will recreate them — but we MUST clear
-        # any *.bak left mid-rollback so the next persist starts from
-        # a clean slate. Idempotent and safe to run on every init.
-        self._cleanup_orphans()
+        # NB: no orphan cleanup on init. Removing stale ``.staging/``
+        # or ``*.bak`` without holding the cross-process lock races
+        # ``persist_atomic`` in a peer process: the peer's live file
+        # sitting at ``*.bak`` waiting to be renamed back on rollback
+        # would be deleted from under it, permanently losing that
+        # index file. Cleanup is instead performed inside
+        # ``persist_atomic`` under the lock — Phase 1 always wipes
+        # ``.staging/``, and Phase 2 pre-flight unlinks any ``*.bak``
+        # for the files it is about to promote.
 
     # ---------------- meta.json ----------------
 
@@ -360,11 +363,12 @@ class IndexStore:
         rename phase, roll back by restoring ``*.bak``. On success, drop
         the ``*.bak`` files.
 
-        After a crash anywhere mid-transaction, ``_cleanup_orphans`` on
-        the next ``IndexStore.__init__`` clears the half-state. A reader
-        opening the directory between crash and recovery sees either the
-        old set (``*.bak`` not yet renamed away) or the new set, never a
-        mix.
+        After a crash anywhere mid-transaction, the next call into
+        ``persist_atomic`` cleans up under the lock: Phase 1 wipes
+        ``.staging/``, Phase 2 pre-flight unlinks any ``*.bak`` for
+        the files being promoted this round. A reader opening the
+        directory between crash and recovery sees either the old set
+        (``*.bak`` not yet renamed away) or the new set, never a mix.
 
         ``header_vectors`` is optional and only used for source="dna" in
         the PR-2 retrieval-Y design. When omitted, the live

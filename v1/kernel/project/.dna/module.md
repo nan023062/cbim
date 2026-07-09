@@ -81,8 +81,11 @@ Two trigger events write this layout: first-use bootstrap (`init`) and explicit 
 
 - **`cbim_user_prompt_submit.py` 在 mark-busy/log 之外新承担「记忆召回注入」职责（记忆系统「无感知自动召回」重构阶段 1）。** 每次用户输入提交后，该 hook 经 `_lib/bridge.py` bootstrap kernel，跑 4 源 retrieval search（`transcript` / `memory_medium` / `dna` / `agents`），在 hook 内做相关性门控 + 字符预算裁剪，经 `event_io.write_additional_context(text, event_name="UserPromptSubmit")` 把「永久知识 + 相关记忆」注入 **coordinator 主上下文**；retrieval / kernel 异常一律 swallow（exit 0 不阻塞用户输入）。**受众边界**：仅 coordinator 主上下文受益，子 agent 不自动继承——子 agent 的 prompt 级召回仍由 `engine/execution` 的 `ContextRetrieval` 叶（BT 内同步 4 源 search）承担。两条召回路径受众不同，互不替代。
 
+- **All kernel-managed file writes go through `atomic_io.atomic_write_text/bytes` — no bare `Path.write_text`, no `shutil.copy2` for single-file replaces.** Hook scripts (`.claude/hooks/cbim_*.py`) and shim scripts (`.cbim/run`) explicitly `os.chmod(0o755)` after the atomic write to restore the exec bit that `atomic_io`'s 0o644 tmp mode would otherwise drop. Mass tree copies (`_lib/`) still use `shutil.copytree` because they run inside a `rmtree`→copy sequence where torn-write risk is negligible. **This rule extends to `~/.claude/settings.json` via `_clean_global_settings` — the highest-risk write in the module, since a torn write there breaks every CBIM project on the machine.**
+
 ## Non-Goals
 
 - No `migrate.py`, no `upgrade/` sub-package, no `pin.py`, no `.cbim/.pin` accessor, no `versions.json` reader.
 - No installer subprocess. No multi-version kernel staging under `<install_root>/kernel/<ver>/`.
 - No diagnostic 7-scenario matrix. There are no scenarios — install is binary (the kernel is either present at `.cbim/kernel/` or it isn't).
+

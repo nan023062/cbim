@@ -78,9 +78,26 @@ def test_catchup_outside_20h_window_runs(isolated_dirs):
 # don't depend on a real mid-tick suspension survival.
 
 
-def _seed_running_tick(scheduler_root, run_id: str = "stuck-run") -> None:
+def _seed_running_tick(
+    scheduler_root,
+    run_id: str = "stuck-run",
+    *,
+    heartbeat: str | None = None,
+    include_heartbeat: bool = True,
+) -> None:
     """Write a minimal bb.json + current.json that look like a tick in
-    flight, without ever invoking the engine."""
+    flight, without ever invoking the engine.
+
+    ``heartbeat`` — ISO-8601 UTC string for `last_heartbeat`. Defaults to
+    "now" so the seeded tick looks alive by default and the engine's
+    heartbeat-stale self-heal in `_current_running_run_id()` won't fire
+    (single-flight tests need this). Pass an explicit old timestamp to
+    trigger self-heal in stale-heartbeat tests.
+
+    ``include_heartbeat`` — set False to omit the `last_heartbeat` field
+    entirely (simulates legacy `current.json` format or a partial write);
+    the engine must treat that as expired and self-heal.
+    """
     dream_dir = scheduler_root / "dream"
     tick_dir = dream_dir / run_id
     tick_dir.mkdir(parents=True, exist_ok=True)
@@ -97,12 +114,18 @@ def _seed_running_tick(scheduler_root, run_id: str = "stuck-run") -> None:
             "step_results": {},
         },
     }), encoding="utf-8")
-    (dream_dir / "current.json").write_text(json.dumps({
+    current_payload = {
         "run_id": run_id,
         "status": "running",
         "started_at": "2026-05-25T00:00:00+00:00",
-        "last_heartbeat": "2026-05-25T00:00:00+00:00",
-    }), encoding="utf-8")
+    }
+    if include_heartbeat:
+        current_payload["last_heartbeat"] = heartbeat or datetime.now(
+            timezone.utc
+        ).isoformat(timespec="seconds")
+    (dream_dir / "current.json").write_text(
+        json.dumps(current_payload), encoding="utf-8"
+    )
 
 
 def test_second_dream_tick_while_running_is_skipped(isolated_dirs):
@@ -174,3 +197,72 @@ def test_dream_abort_marks_abandoned_and_clears_current(isolated_dirs):
 def test_dream_abort_on_unknown_run_is_noop(isolated_dirs):
     abort = api.dream_abort("does-not-exist", "manual_abort")
     assert abort.aborted is False
+
+
+# ---------------------------------------------------------------------------
+# Heartbeat self-heal — engine reclaims a dead RUNNING slot on next call
+# ---------------------------------------------------------------------------
+
+def test_stale_heartbeat_running_tick_self_heals(isolated_dirs):
+    """Killed tick with a heartbeat > 30 min old must not wedge the single-
+    flight gate. `_current_running_run_id()` self-heals by calling
+    dream_abort under the hood and returns None so a fresh tick can start."""
+    scheduler_root, _ = isolated_dirs
+    stale_hb = (
+        datetime.now(timezone.utc) - timedelta(hours=2)
+    ).isoformat(timespec="seconds")
+    _seed_running_tick(scheduler_root, run_id="killed-run", heartbeat=stale_hb)
+
+    # Self-heal: gate returns None even though current.json still says running.
+    assert api._current_running_run_id() is None
+
+    # Abandoned artifact recorded on disk.
+    assert (scheduler_root / "dream" / "killed-run" / "abandoned.json").exists()
+
+    # Slot is free — a fresh dream_tick proceeds past the single-flight gate.
+    res = api.dream_tick("manual")
+    assert res.kind in ("yield", "done"), res.to_dict()
+
+
+def test_missing_heartbeat_running_tick_self_heals(isolated_dirs):
+    """Legacy `current.json` without a `last_heartbeat` field (or a partial
+    write caught mid-flight) must also be treated as expired — otherwise
+    old-format files could wedge single-flight indefinitely."""
+    scheduler_root, _ = isolated_dirs
+    _seed_running_tick(
+        scheduler_root, run_id="no-hb-run", include_heartbeat=False
+    )
+
+    assert api._current_running_run_id() is None
+    assert (scheduler_root / "dream" / "no-hb-run" / "abandoned.json").exists()
+
+
+def test_fresh_heartbeat_running_tick_still_blocks(isolated_dirs):
+    """Negative control: a tick with a fresh heartbeat is NOT self-healed;
+    single-flight must still block a second dream_tick."""
+    scheduler_root, _ = isolated_dirs
+    _seed_running_tick(scheduler_root, run_id="alive-run")  # default = now
+
+    assert api._current_running_run_id() == "alive-run"
+    res = api.dream_tick("manual")
+    assert res.kind == "skipped"
+    assert res.reason == "another_run_in_progress"
+    # Should NOT have written abandoned.json for the alive tick.
+    assert not (scheduler_root / "dream" / "alive-run" / "abandoned.json").exists()
+
+
+def test_dream_abort_is_idempotent_under_concurrent_self_heal(isolated_dirs):
+    """Two concurrent processes observing the same stale heartbeat both call
+    dream_abort; the second must be a benign no-op (aborted=False) rather
+    than an exception. Guards against races between MCP callers."""
+    scheduler_root, _ = isolated_dirs
+    stale_hb = (
+        datetime.now(timezone.utc) - timedelta(hours=2)
+    ).isoformat(timespec="seconds")
+    _seed_running_tick(scheduler_root, run_id="race-run", heartbeat=stale_hb)
+
+    first = api.dream_abort("race-run", reason="stale_heartbeat")
+    second = api.dream_abort("race-run", reason="stale_heartbeat")
+
+    assert first.aborted is True
+    assert second.aborted is False  # already abandoned; benign no-op

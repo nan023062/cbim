@@ -151,8 +151,11 @@ def test_concurrent_upsert_no_loss(tmp_path):
         assert not (store.source_dir / bak_name).exists()
 
 
-def test_orphan_cleanup_on_init(tmp_path):
-    """Stale .staging/ + *.bak from a crashed run get swept on next init."""
+def test_orphan_cleanup_on_persist_atomic(tmp_path):
+    """Stale .staging/ + *.bak from a crashed run get swept by the next
+    persist_atomic call (cleanup used to run in IndexStore.__init__ but
+    that race-with-live-persists could delete a peer process's *.bak
+    mid-rollback — see the store.py __init__ comment)."""
     store_dir = tmp_path / "dna"
     store_dir.mkdir()
     (store_dir / ".staging").mkdir()
@@ -160,7 +163,22 @@ def test_orphan_cleanup_on_init(tmp_path):
     (store_dir / "meta.json.bak").write_text("{}", encoding="utf-8")
     (store_dir / "bm25.json.bak").write_text("{}", encoding="utf-8")
 
-    IndexStore(tmp_path, "dna")
+    store = IndexStore(tmp_path, "dna")
+
+    # Init deliberately leaves stale artefacts alone — no unlocked
+    # cleanup — so they survive the constructor.
+    assert (store_dir / ".staging").exists()
+    assert (store_dir / "meta.json.bak").exists()
+    assert (store_dir / "bm25.json.bak").exists()
+
+    # Next persist_atomic call reclaims them: Phase 1 wipes .staging/,
+    # Phase 2 pre-flight unlinks *.bak for every file it's about to
+    # promote (meta + bm25 always).
+    rec = DocRecord(
+        doc_id="m1", mtime=1.0, size=2, sha256="abc",
+        indexed_at="2026-06-15T00:00:00Z", metadata={},
+    )
+    store.persist_atomic({"m1": rec}, {"docs": {"m1": {"len": 2}}}, None)
 
     assert not (store_dir / ".staging").exists()
     assert not (store_dir / "meta.json.bak").exists()

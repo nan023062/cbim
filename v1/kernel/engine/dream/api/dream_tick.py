@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -140,7 +140,38 @@ def _within_catchup_window() -> bool:
     return delta_hours < _CATCHUP_WINDOW_HOURS
 
 
+def _parse_iso(ts: str) -> datetime | None:
+    """Parse ISO-8601 timestamp (accepting trailing `Z`); return None on any failure.
+
+    Kept in the same style as the SessionStart hook's `_parse_iso` and the
+    inline `datetime.fromisoformat(...replace("Z", "+00:00"))` pattern used
+    by `_within_catchup_window`. Lifted out here because the heartbeat
+    self-heal path needs both a null-in and a null-out signal (missing
+    field → treat as expired) and threading that through inline parses
+    would duplicate the fallback logic.
+    """
+    if not ts:
+        return None
+    try:
+        return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+
+
 def _current_running_run_id() -> str | None:
+    """Return the run_id of the currently-running dream tick, or None.
+
+    Doubles as the heartbeat-stale self-heal gate: when `current.json`
+    still says RUNNING but the `last_heartbeat` field is missing or
+    older than `_HEARTBEAT_STALE_MINUTES`, the tick is presumed dead
+    (killed process, machine reboot, OS crash). Self-heal by calling
+    `dream_abort(run_id, reason="stale_heartbeat")` and return None so
+    the caller treats the slot as free.
+
+    Missing-field case (`last_heartbeat` absent — legacy `current.json`
+    or a partial write) is treated as expired so stale-format files
+    can't wedge single-flight indefinitely.
+    """
     p = _dream_root() / "current.json"
     if not p.exists():
         return None
@@ -150,7 +181,14 @@ def _current_running_run_id() -> str | None:
         return None
     if raw.get("status") != "running":
         return None
-    return raw.get("run_id")
+    run_id = raw.get("run_id")
+    hb = _parse_iso(raw.get("last_heartbeat") or "")
+    now = datetime.now(timezone.utc)
+    if hb is None or (now - hb) >= timedelta(minutes=_HEARTBEAT_STALE_MINUTES):
+        if run_id:
+            dream_abort(run_id, reason="stale_heartbeat")
+        return None
+    return run_id
 
 
 def _write_current(run_id: str, status: str = "running") -> None:

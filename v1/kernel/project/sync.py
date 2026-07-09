@@ -28,7 +28,10 @@ Never touched by sync:
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+
+from atomic_io import atomic_write_bytes, atomic_write_text  # kernel root leaf
 
 _PKG_DIR = Path(__file__).resolve().parent
 _TEMPLATES = _PKG_DIR / "templates"
@@ -87,6 +90,19 @@ def _rel(path: Path, root: Path) -> str:
     return str(rel).replace("\\", "/")
 
 
+def _atomic_write_executable(dst: Path, data: bytes) -> None:
+    """Atomic write + chmod 0755. Kept local because the +x bit is
+    a project-install concern, not a general kernel primitive.
+
+    ``atomic_write_bytes`` creates its temp file with fixed 0o644 permissions;
+    on POSIX we must explicitly restore the executable bit after ``os.replace``.
+    (On Windows the chmod is effectively a no-op — the shim / hook scripts
+    are invoked through the Python interpreter, not their +x bit.)
+    """
+    atomic_write_bytes(dst, data)
+    os.chmod(dst, 0o755)
+
+
 # ---------------------------------------------------------------------------
 # Per-file sync primitives. Each returns an action string describing what was
 # done (or would be done, when dry_run=True). Returning a falsy string means
@@ -105,7 +121,7 @@ def sync_claude_md(project_root: Path, dry_run: bool = False) -> str:
     if not dst.exists():
         verb = "would create" if dry_run else "created"
     if not dry_run:
-        dst.write_text(content, encoding="utf-8")
+        atomic_write_text(dst, content)
     return f"{verb} {rel}"
 
 
@@ -124,7 +140,7 @@ def sync_claudeignore(project_root: Path, dry_run: bool = False) -> str:
     if not dst.exists():
         verb = "would create" if dry_run else "created"
         if not dry_run:
-            dst.write_text(template_text, encoding="utf-8")
+            atomic_write_text(dst, template_text)
         return f"{verb} {rel}"
 
     existing_text = dst.read_text(encoding="utf-8")
@@ -137,7 +153,7 @@ def sync_claudeignore(project_root: Path, dry_run: bool = False) -> str:
     if not dry_run:
         suffix = "" if existing_text.endswith("\n") or not existing_text else "\n"
         addition = suffix + "\n".join(missing) + "\n"
-        dst.write_text(existing_text + addition, encoding="utf-8")
+        atomic_write_text(dst, existing_text + addition)
     return f"{verb} {rel}"
 
 
@@ -154,7 +170,7 @@ def sync_agent(project_root: Path, name: str, dry_run: bool = False) -> str:
         verb = "would create" if dry_run else "created"
     if not dry_run:
         dst.parent.mkdir(parents=True, exist_ok=True)
-        dst.write_text(content, encoding="utf-8")
+        atomic_write_text(dst, content)
     return f"{verb} {rel}"
 
 
@@ -176,7 +192,7 @@ def sync_command(project_root: Path, name: str, dry_run: bool = False) -> str:
         verb = "would create" if dry_run else "created"
     if not dry_run:
         dst.parent.mkdir(parents=True, exist_ok=True)
-        dst.write_text(content, encoding="utf-8")
+        atomic_write_text(dst, content)
     return f"{verb} {rel}"
 
 
@@ -192,12 +208,12 @@ def sync_hook_scripts(project_root: Path, dry_run: bool = False) -> list[str]:
       - the entire .claude/hooks/_lib/ subdirectory
 
     Anything else under .claude/hooks/ is treated as user-owned and left alone.
-    Existing kernel-owned artifacts are removed before re-copy (clean slate),
-    so the result is byte-identical to the bundled hooks_src/ tree.
+    Kernel-owned artifacts are installed atomically (per-file atomic replace
+    for cbim_*.py scripts; rmtree + copytree for the _lib/ subdirectory), so
+    the result is byte-identical to the bundled hooks_src/ tree.
 
     Returns one action string per artifact touched, plus one summary line.
     """
-    import os
     import shutil
 
     hooks_dir = project_root / ".claude" / "hooks"
@@ -212,21 +228,20 @@ def sync_hook_scripts(project_root: Path, dry_run: bool = False) -> list[str]:
 
     hooks_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Remove only kernel-owned artifacts (preserve user-added .py files).
-    for name in KERNEL_HOOK_SCRIPT_NAMES:
-        p = hooks_dir / name
-        if p.exists():
-            p.unlink()
+    # 1. Remove the _lib/ subtree only (whole-tree rebuild is fine — see step 3).
+    #    Kernel hook scripts themselves are NOT unlinked first: atomic replace
+    #    swaps them in place, so there is no torn-write window.
     lib_dst = hooks_dir / "_lib"
     if lib_dst.exists():
         shutil.rmtree(lib_dst)
 
-    # 2. Copy each cbim_*.py kernel hook script; chmod 0755.
+    # 2. Atomically install each cbim_*.py kernel hook script with 0755.
+    #    `_atomic_write_executable` writes to a tmp file then os.replace's it,
+    #    so an interrupted install leaves the previous script intact.
     for name in KERNEL_HOOK_SCRIPT_NAMES:
         src = _HOOKS_SRC / name
         dst = hooks_dir / name
-        shutil.copy2(src, dst)
-        os.chmod(dst, 0o755)
+        _atomic_write_executable(dst, src.read_bytes())
         actions.append(f"installed {_rel(dst, project_root)}")
 
     # 3. Copy _lib/ subdir (filter __pycache__ at any depth).
@@ -373,9 +388,9 @@ def sync_settings(project_root: Path, dry_run: bool = False) -> str:
         verb = "would create" if dry_run else "created"
         if not dry_run:
             settings_path.parent.mkdir(parents=True, exist_ok=True)
-            settings_path.write_text(
+            atomic_write_text(
+                settings_path,
                 json.dumps(template, indent=2, ensure_ascii=False) + "\n",
-                encoding="utf-8",
             )
         return f"{verb} {rel}"
 
@@ -403,9 +418,9 @@ def sync_settings(project_root: Path, dry_run: bool = False) -> str:
 
     verb = "would merge" if dry_run else "merged"
     if not dry_run:
-        settings_path.write_text(
+        atomic_write_text(
+            settings_path,
             json.dumps(existing, indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8",
         )
     return f"{verb} {rel}"
 
@@ -430,9 +445,9 @@ def sync_mcp_json(project_root: Path, dry_run: bool = False) -> str:
         verb = "would create" if dry_run else "created"
         if not dry_run:
             mcp_path.parent.mkdir(parents=True, exist_ok=True)
-            mcp_path.write_text(
+            atomic_write_text(
+                mcp_path,
                 json.dumps(template, indent=2, ensure_ascii=False) + "\n",
-                encoding="utf-8",
             )
         return f"{verb} {rel}"
 
@@ -451,9 +466,9 @@ def sync_mcp_json(project_root: Path, dry_run: bool = False) -> str:
 
     verb = "would merge" if dry_run else "merged"
     if not dry_run:
-        mcp_path.write_text(
+        atomic_write_text(
+            mcp_path,
             json.dumps(existing, indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8",
         )
     return f"{verb} {rel}"
 
@@ -471,7 +486,7 @@ def sync_gitignore(project_root: Path, dry_run: bool = False) -> str:
     if not gi_path.exists():
         verb = "would create" if dry_run else "created"
         if not dry_run:
-            gi_path.write_text("# CBIM\n" + "\n".join(entries) + "\n", encoding="utf-8")
+            atomic_write_text(gi_path, "# CBIM\n" + "\n".join(entries) + "\n")
         return f"{verb} {rel}"
 
     existing_text = gi_path.read_text(encoding="utf-8")
@@ -484,7 +499,7 @@ def sync_gitignore(project_root: Path, dry_run: bool = False) -> str:
     if not dry_run:
         suffix = "" if existing_text.endswith("\n") or not existing_text else "\n"
         addition = suffix + "\n# CBIM\n" + "\n".join(missing) + "\n"
-        gi_path.write_text(existing_text + addition, encoding="utf-8")
+        atomic_write_text(gi_path, existing_text + addition)
     return f"{verb} {rel}"
 
 

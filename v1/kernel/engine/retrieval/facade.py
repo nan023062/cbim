@@ -17,6 +17,7 @@ All other names in this module are internal.
 """
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import RLock
@@ -317,11 +318,13 @@ class RetrievalFacade:
         # see any peer-process commits that landed since our cache was
         # populated.
         self._reload_under_lock(state)
-        # Persist content snapshot first so a crash can be detected.
-        state.store.write_doc(doc_id, content)
 
-        # mtime/size for fast-check: prefer original source file when
-        # known; otherwise stat the snapshot we just wrote.
+        # mtime/size for fast-check: prefer the original source file
+        # when known; otherwise derive from the in-memory content
+        # directly. We deliberately do NOT stat the snapshot here — it
+        # is written AFTER the transaction commits (see the tail of
+        # this method), so at this point it either doesn't exist yet
+        # or still holds a stale prior version.
         if source_path:
             try:
                 st = Path(source_path).stat()
@@ -331,14 +334,8 @@ class RetrievalFacade:
                 mtime = 0.0
                 size = len(content.encode("utf-8"))
         else:
-            snap = state.store.doc_path(doc_id)
-            try:
-                st = snap.stat()
-                mtime = st.st_mtime
-                size = st.st_size
-            except OSError:
-                mtime = 0.0
-                size = len(content.encode("utf-8"))
+            mtime = time.time()
+            size = len(content.encode("utf-8"))
 
         rec = DocRecord(
             doc_id=doc_id,
@@ -386,6 +383,23 @@ class RetrievalFacade:
         except OSError as e:
             raise RetrievalError(f"persist failed for source={source}: {e}") from e
 
+        # Persist the content snapshot AFTER the meta/bm25/vectors
+        # transaction commits. docs/<doc_id>.txt is deliberately
+        # outside the persist_atomic boundary (see .dna/module.md Key
+        # Decisions). Write-order tradeoff:
+        #   * write BEFORE commit → on rollback the disk carries a
+        #     fresh snapshot whose content no other index knows about
+        #     (orphan snapshot leak, silently stale).
+        #   * write AFTER commit  → a crash between commit and this
+        #     write leaves meta referencing a missing snapshot;
+        #     read_doc() returns None and Hit.content falls back to
+        #     "" via the ``or ""`` guard in search(), and the next
+        #     upsert / drift-repair rewrites it.
+        # The second failure surface is strictly smaller — no fresh
+        # content is written into an aborted transaction — so we
+        # write last.
+        state.store.write_doc(doc_id, content)
+
     # ---------------- public: index_delete ----------------
 
     def index_delete(self, source: str, doc_id: str) -> None:
@@ -408,13 +422,28 @@ class RetrievalFacade:
                     state.vectors.delete(doc_id)
                 if state.header_vectors is not None:
                     state.header_vectors.delete(doc_id)
-                state.store.delete_doc(doc_id)
                 try:
                     self._persist(state)
                 except OSError as e:
                     raise RetrievalError(
                         f"persist failed for source={source}: {e}"
                     ) from e
+                # Unlink the content snapshot AFTER the transaction
+                # commits. docs/<doc_id>.txt sits outside persist_atomic
+                # (see .dna/module.md Key Decisions). Delete-order
+                # tradeoff:
+                #   * delete BEFORE commit → on rollback meta still
+                #     references the doc but the snapshot is gone;
+                #     read_doc() returns None and Hit.content becomes
+                #     "" — the actual data-inconsistency case this
+                #     fix targets.
+                #   * delete AFTER commit  → a crash between commit
+                #     and this unlink leaves an orphan snapshot with
+                #     no meta reference (harmless disk leak; nothing
+                #     reads it since it's not in meta).
+                # The second failure surface is strictly smaller, so
+                # we delete last.
+                state.store.delete_doc(doc_id)
 
     # ---------------- public: search ----------------
 

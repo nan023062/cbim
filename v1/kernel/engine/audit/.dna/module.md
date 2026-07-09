@@ -9,11 +9,11 @@ keywords:
   - checks
   - ratchet
   - read-only
+status: implemented
 dependencies:
   - kernel/services
   - kernel/cbi/_primitives
   - kernel/memory
-status: implemented
 ---
 
 ## Positioning
@@ -176,6 +176,8 @@ classDiagram
 
 - **Batch 5 异常治理 —— `BaselineStore.save` 原子写收紧到 `OSError`。** `tempfile` + `os.replace` 写 `.cbim/audit/baseline.json` 的 cleanup 分支已从 broad-catch 收紧到 `except OSError`：原子写失败的可能性集合是 IO/权限/磁盘满，全在 `OSError` 下；其他异常（编程错误、序列化 bug）应当裸抛而非被 cleanup 吞掉。配合 "audit 进程仍 read-only；baseline 写入仅能走显式 CLI 子命令" 的既有铁律——baseline.json 是 CI 质量门锁的状态来源，写盘失败必须可见、不可静默。完整规约见 `v1/docs/EXCEPTION-GOVERNANCE.zh-CN.md`。
 
+- **`dna_tree` 统一父模块判定 + `TREE_NAME_COLLISION` 显式化**。`dna_tree` 内所有"本模块的父模块是谁"计算统一走 `_find_parent(path, all_paths)` —— 最近已注册祖先。既往孤儿检测走 `_find_parent`、依赖边解析走文件系统直接父目录（`path.rsplit("/", 1)[0]`）的两个不一致定义，会在"中间目录未注册"的场景下让依赖边被吞掉、`TREE_CYCLE` / `TREE_DEP_DANGLING` 漏报。统一后两处判定同源。配套修 `name_to_path` 构建：遇到 frontmatter `name` 重名不再静默丢弃，产出 `TREE_NAME_COLLISION`（severity=warn，lenient 降级策略，origin=new）—— 保留"第一个注册的胜出"策略避免破坏历史 findings 的 target 稳定性，但让重名从"隐形错解析"变成"显式可见 finding"；遍历改用 `sorted(by_path.items())` 保证冲突时"哪个模块赢"是确定的、跨机器可复现的。
+
 ## Non-Goals
 
 - **No auto-fix.** Audit reports drift; it never rewrites `.dna/`, `.claude/agents/`, or `.cbim/memory/`. Fix commands stay in their owning modules.
@@ -185,3 +187,4 @@ classDiagram
 - **No deep semantic import scan.** Dependency direction comes from `frontmatter.dependencies`. We do not parse Python imports, grep code references, or trace call graphs — that is a separate concern with very different cost/precision trade-offs.
 
 - **审计本身永不写 `.cbim/audit/baseline.json`**。`run_audit` 只读 baseline、为 finding 打 `origin` 标；写入仅通过显式人类命令（`cbim audit baseline accept --yes` 等）走 `BaselineStore`。治理循环 / CI / 引擎任何路径都不得隐式写入—— 防“深夜静默接受”破窗。
+

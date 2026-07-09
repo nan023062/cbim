@@ -16,6 +16,8 @@ _SCAN_SKIP_DIRS.
 
 from pathlib import Path
 
+from atomic_io import atomic_write_text  # kernel root leaf — see context.py
+
 from ._telemetry import _log_import, _rel_for_log
 from .loader import _scan_modules, load_module
 
@@ -56,7 +58,9 @@ def read_index(root: Path) -> list[str]:
     _log_import(f"dna:{_rel_for_log(p, root)}", "ok", "dna.load")
     out = []
     for line in p.read_text(encoding="utf-8").splitlines():
-        s = line.strip().lstrip("- ").strip()
+        s = line.strip()
+        if s.startswith("- "):
+            s = s[2:].strip()
         if not s or s.startswith("#"):
             continue
         first = s.split()[0] if s.split() else ""
@@ -71,7 +75,7 @@ def _write_index(root: Path, paths: list[str]) -> None:
     lines = ["# Module Index", ""]
     for p_str in sorted(set(paths)):
         lines.append(f"- {p_str}")
-    _index_path(root).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    atomic_write_text(_index_path(root), "\n".join(lines) + "\n")
 
 
 def _append_to_index(root: Path, rel_path: str) -> None:

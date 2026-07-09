@@ -73,18 +73,33 @@ class ArchExecYield(Node):
     # ------------------------------------------------------------------
 
     def tick(self, bb) -> Status:
-        # Short-circuit when a previous tick (same iter) already produced
-        # a plan. WorkLoop re-enters this leaf on arch_redo, in which
-        # case the redo path clears bb.arch_plan upstream so we yield
-        # afresh.
+        # Post-arch_redo entry: ConvergeJudge stashed bb.arch_redo_context
+        # (with iter = the iter that failed) then returned FAILURE, and
+        # LoopSeq has since bumped bb.work_loop_iter. The bb.arch_plan
+        # from the failed iter is still hanging around — a naive
+        # short-circuit on "plan is not None" below would swallow the
+        # redo silently and WorkLoop would spin to exhaustion never
+        # re-yielding to the architect. Detect that state here (by iter
+        # comparison against the stashed context) and clear the stale
+        # plan so the yield block below fires. on_resume clears
+        # arch_redo_context after writing the fresh plan, so this branch
+        # does NOT re-fire on the post-resume re-tick (which would wipe
+        # the plan we just received).
         plan = getattr(bb, "arch_plan", None)
+        if plan is not None and self._is_stale_redo_plan(bb):
+            bb.arch_plan = None
+            plan = None
+
+        # Short-circuit when a previous step in this same iter (either
+        # bt_tick's fresh-plan init or on_resume just now) already
+        # produced a plan.
         if plan is not None:
             # Defensive: invalid shape → FAILURE so the loop bubbles.
             if not isinstance(plan, list):
                 return Status.FAILURE
             return Status.SUCCESS
 
-        # First call (or post-redo with cleared plan) — yield.
+        # First call (or redo re-entry with plan just cleared above) — yield.
         subtask_id = self._subtask_id(bb)
         bb.pending_dispatch = DispatchRequest(
             agent_type="architect",
@@ -101,6 +116,17 @@ class ArchExecYield(Node):
         trailer = parse_trailer(text, dispatch_task_id=subtask_id)
 
         bb.pending_dispatch = None
+        # Mark the arch_redo signal as consumed. The context was needed
+        # during yield (rendered into the architect prompt by
+        # _compose_prompt) and by tick() to detect the redo re-entry;
+        # once we have a fresh receipt in hand the redo round is over.
+        # Leaving arch_redo_context set would cause tick()'s stale-plan
+        # check to fire on the next tick and wipe the plan we're about
+        # to write below. Exhausted-path readers (Respond#exhausted) are
+        # unaffected: ConvergeJudge re-stashes arch_redo_context at the
+        # exhausted iter itself, after any on_resume call.
+        if getattr(bb, "arch_redo_context", None) is not None:
+            bb.arch_redo_context = None
 
         status = trailer.status
         if status == "failed":
@@ -170,6 +196,33 @@ class ArchExecYield(Node):
     def _subtask_id(bb) -> str:
         iter_no = int(getattr(bb, "work_loop_iter", 1) or 1)
         return f"arch:{iter_no}"
+
+    @staticmethod
+    def _is_stale_redo_plan(bb) -> bool:
+        """Return True iff arch_redo_context was stashed at a prior iter.
+
+        ConvergeJudge writes ``arch_redo_context["iter"] = work_loop_iter``
+        BEFORE returning FAILURE; LoopSeq then bumps ``work_loop_iter``
+        by one and re-ticks us. So a strictly-less-than comparison
+        catches exactly the "just re-entered a redo iteration" state.
+        The condition also gates on the context being a well-formed
+        dict with an int iter — corrupt / partial contexts fall through
+        as "not stale" (defensive: the loop still functions; a
+        legitimate redo will fix the shape on the next round).
+
+        Returns False when arch_redo_context is None (first entry, or
+        after on_resume consumed it), when the context isn't a dict,
+        when ``iter`` is missing / non-int, or when the stashed iter is
+        NOT older than the current work_loop_iter.
+        """
+        ctx = getattr(bb, "arch_redo_context", None)
+        if not isinstance(ctx, dict):
+            return False
+        stashed_iter = ctx.get("iter")
+        if not isinstance(stashed_iter, int):
+            return False
+        current_iter = int(getattr(bb, "work_loop_iter", 1) or 1)
+        return stashed_iter < current_iter
 
     @staticmethod
     def _compose_prompt(bb, subtask_id: str) -> str:

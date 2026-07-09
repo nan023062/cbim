@@ -259,6 +259,20 @@ class Runner:
                 interrupt_reason=bb.interrupt_reason,
             )
 
+        # Root returned FAILURE without a more-specific interrupt_reason:
+        # translate to error(tick_failed) so callers surface a real diagnostic
+        # instead of relaying an empty final_response as "done". Legacy
+        # behaviour treated FAILURE as done and lost the failure signal.
+        if status is Status.FAILURE:
+            bb.bb_status = "error"
+            self._persist(bb, tick_dir)
+            self._clear_resume(tick_dir)
+            self._flush_trace(bb, tick_dir)
+            return RunResult(
+                "error", error_code="tick_failed",
+                error_message="root behavior tree returned FAILURE",
+            )
+
         bb.bb_status = "done"
         self._persist(bb, tick_dir)
         self._clear_resume(tick_dir)

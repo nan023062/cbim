@@ -317,6 +317,130 @@ _MULTILINE_REPLY = (
 )
 
 
+# ---------------------------------------------------------------------------
+# arch_redo dead-loop regression — end-to-end through the mini sub-tree.
+#
+# Prior to the ArchExecYield stale-plan fix, this exact scenario would
+# silently spin WorkLoop to max_iters: iter 1 arch dispatch OK, work
+# agent returns needs_arch_decision → ConvergeJudge decides arch_redo →
+# LoopSeq bumps to iter 2 → ArchExecYield sees bb.arch_plan (stale from
+# iter 1) is not None → short-circuits SUCCESS without ever re-yielding
+# to the architect. Post-fix: iter 2 re-enters ArchExecYield, detects
+# the stale plan via arch_redo_context.iter < work_loop_iter, clears it,
+# and yields a fresh architect dispatch (subtask_id="arch:2").
+# ---------------------------------------------------------------------------
+
+def _arch_receipt(plan_json: str, task_id: str = "arch:1") -> str:
+    return (
+        "<!-- BEGIN CBIM-RECEIPT v1\n"
+        "status: ok\n"
+        f"task_id: {task_id}\n"
+        "agent: architect\n"
+        "summary: stub\n"
+        f"arch_plan: {plan_json}\n"
+        "END CBIM-RECEIPT -->\n"
+    )
+
+
+def _work_receipt_needs_arch(task_id: str) -> str:
+    return (
+        "<!-- BEGIN CBIM-RECEIPT v1\n"
+        f"task_id: {task_id}\n"
+        "agent: programmer\n"
+        "status: needs_arch_decision\n"
+        "summary: schema missing\n"
+        "question: which schema for field Z?\n"
+        "blocking_module: v1/foo\n"
+        "END CBIM-RECEIPT -->\n"
+    )
+
+
+def test_arch_redo_reyields_to_architect_not_dead_loops():
+    """WorkLoop must re-yield the architect on arch_redo — the whole
+    point of the redo mechanism. Regression pin for the stale-plan
+    short-circuit dead loop."""
+    from engine.execution.actions.dispatch_work import WorkAgentLeaf
+
+    arch, tree = _mini_tree_with_arch_yield()
+    bb = _mini_bb(arch_plan=None, work_results={})
+    bb.user_request = "implement x"
+    bb.retrieved_context = None
+
+    # Tick 1 — ArchExecYield yields architect (subtask arch:1).
+    assert tree.tick(bb) is Status.RUNNING
+    assert bb.pending_dispatch is not None
+    assert bb.pending_dispatch.agent_type == "architect"
+    assert bb.pending_dispatch.subtask_id == "arch:1"
+
+    # Feed architect's iter-1 plan.
+    iter1_plan_json = (
+        '[{"id":"t1","description":"impl x",'
+        '"required_capability":"programmer","params":{},'
+        '"arch_context":"iter1-ctx"}]'
+    )
+    arch.on_resume(bb, _arch_receipt(iter1_plan_json, task_id="arch:1"))
+    assert bb.arch_plan == [{
+        "id": "t1", "description": "impl x",
+        "required_capability": "programmer",
+        "params": {"touched_modules": []},
+        "arch_context": "iter1-ctx",
+    }]
+
+    # Tick 2 — DispatchWork yields work agent for t1.
+    assert tree.tick(bb) is Status.RUNNING
+    assert bb.pending_dispatch is not None
+    assert bb.pending_dispatch.agent_type == "work"
+    assert bb.pending_dispatch.subtask_id == "t1"
+
+    # Work agent replies with needs_arch_decision — will trigger arch_redo
+    # in ConvergeJudge (iter 1 < max_iters).
+    WorkAgentLeaf(task_id="t1").on_resume(bb, _work_receipt_needs_arch("t1"))
+    assert bb.work_results["t1"]["status"] == "needs_arch_decision"
+
+    # Tick 3 — the critical one. Sequence:
+    #   ArchExecYield.tick  → plan present (iter-1), ctx=None → SUCCESS.
+    #   DispatchWork.tick   → work_results[t1] present → SUCCESS.
+    #   ConvergeJudge.tick  → needs_arch_decision @ iter 1, stashes
+    #                          arch_redo_context.iter=1, purges, returns
+    #                          FAILURE.
+    #   LoopSeq             → bumps work_loop_iter to 2, re-enters.
+    #   ArchExecYield.tick  → plan still set BUT stale (ctx.iter=1 <
+    #                          work_loop_iter=2). Post-fix: clears plan
+    #                          and yields architect subtask arch:2.
+    status = tree.tick(bb)
+    assert status is Status.RUNNING, (
+        "arch_redo did NOT re-yield to architect — WorkLoop is dead-looping. "
+        f"convergence={bb.convergence!r} work_loop_iter={bb.work_loop_iter} "
+        f"arch_plan={bb.arch_plan!r}"
+    )
+    assert bb.pending_dispatch is not None
+    assert bb.pending_dispatch.agent_type == "architect"
+    assert bb.pending_dispatch.subtask_id == "arch:2", (
+        "expected iter-2 architect subtask; got "
+        f"{bb.pending_dispatch.subtask_id!r}"
+    )
+    assert bb.arch_plan is None, (
+        "stale iter-1 plan should have been cleared before the yield"
+    )
+    # And the redo context must still be present at this point — it's
+    # about to be rendered into the architect's redo prompt.
+    assert bb.arch_redo_context is not None
+    assert bb.arch_redo_context["iter"] == 1
+
+    # Feed architect's iter-2 plan.
+    iter2_plan_json = (
+        '[{"id":"t1b","description":"revised task",'
+        '"required_capability":"programmer","params":{},'
+        '"arch_context":"iter2-ctx"}]'
+    )
+    arch.on_resume(bb, _arch_receipt(iter2_plan_json, task_id="arch:2"))
+
+    # on_resume must have consumed arch_redo_context — otherwise the next
+    # tick would wipe the fresh plan we just wrote.
+    assert bb.arch_redo_context is None
+    assert bb.arch_plan and bb.arch_plan[0]["id"] == "t1b"
+
+
 def test_multiline_arch_plan_parses_through_sub_tree():
     arch, tree = _mini_tree_with_arch_yield()
     bb = _mini_bb(arch_plan=None, work_results={})

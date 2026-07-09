@@ -238,6 +238,137 @@ def test_on_resume_with_needs_user_input_sets_convergence():
 
 
 # ---------------------------------------------------------------------------
+# arch_redo re-entry — regression for the WorkLoop dead-loop bug
+#
+# Prior to the fix, ConvergeJudge would decide arch_redo (returning
+# FAILURE) and LoopSeq would bump work_loop_iter, but ArchExecYield's
+# "plan is not None → SUCCESS" short-circuit swallowed the re-entry
+# because nothing cleared the stale bb.arch_plan. WorkLoop then spun to
+# max_iters never re-yielding to the architect, and the whole
+# "architecture non-compliant → let the architect redo" mechanism was
+# a no-op. These tests pin the fix: (a) ArchExecYield.tick detects the
+# stale plan via arch_redo_context.iter < work_loop_iter and clears it
+# before falling through to the yield block; (b) on_resume consumes
+# arch_redo_context so the detection does NOT re-fire on the
+# post-resume re-tick and wipe the fresh plan.
+# ---------------------------------------------------------------------------
+
+def test_tick_clears_stale_plan_on_redo_reentry_and_yields():
+    """LoopSeq re-entry after arch_redo: stale plan must be cleared and
+    the architect re-dispatched, not swallowed by the short-circuit."""
+    bb = _bb(arch_plan=[{"id": "prev-t1"}])
+    bb.arch_redo_context = {
+        "iter": 1,
+        "unresolved": [],
+        "previous_plan": [{"id": "prev-t1"}],
+    }
+    bb.work_loop_iter = 2
+    leaf = ArchExecYield()
+    assert leaf.tick(bb) is Status.RUNNING
+    assert bb.arch_plan is None  # stale plan wiped
+    assert bb.pending_dispatch is not None
+    assert bb.pending_dispatch.agent_type == "architect"
+    assert bb.pending_dispatch.subtask_id == "arch:2"
+
+
+def test_tick_does_not_clear_when_ctx_iter_equals_current():
+    """Defensive: only iter STRICTLY less than current counts as stale.
+    An equal iter (which shouldn't occur in production but is worth
+    guarding against — race hypothesis, replay tests, etc.) leaves the
+    plan alone."""
+    bb = _bb(arch_plan=[{"id": "t1"}])
+    bb.arch_redo_context = {"iter": 2, "unresolved": [], "previous_plan": []}
+    bb.work_loop_iter = 2
+    leaf = ArchExecYield()
+    assert leaf.tick(bb) is Status.SUCCESS
+    assert bb.arch_plan == [{"id": "t1"}]
+
+
+def test_tick_ignores_malformed_arch_redo_context():
+    """A non-dict / missing-iter context does NOT trip stale-plan
+    clearing — the short-circuit fires normally."""
+    bb = _bb(arch_plan=[{"id": "t1"}])
+    bb.arch_redo_context = "not a dict"
+    bb.work_loop_iter = 2
+    leaf = ArchExecYield()
+    assert leaf.tick(bb) is Status.SUCCESS
+    assert bb.arch_plan == [{"id": "t1"}]
+
+    bb2 = _bb(arch_plan=[{"id": "t1"}])
+    bb2.arch_redo_context = {"unresolved": []}  # no iter key
+    bb2.work_loop_iter = 2
+    assert ArchExecYield().tick(bb2) is Status.SUCCESS
+    assert bb2.arch_plan == [{"id": "t1"}]
+
+
+def test_on_resume_clears_arch_redo_context_so_retick_short_circuits():
+    """After on_resume writes a fresh plan, the very next tick must NOT
+    re-clear it — the redo signal is consumed here."""
+    bb = _bb(arch_plan=[{"id": "prev-t1"}])
+    bb.arch_redo_context = {"iter": 1, "unresolved": [], "previous_plan": []}
+    bb.work_loop_iter = 2
+    leaf = ArchExecYield()
+
+    # Tick 1: clears the stale plan and yields.
+    assert leaf.tick(bb) is Status.RUNNING
+    assert bb.arch_plan is None
+
+    # Architect (simulated) replies with a valid iter-2 plan.
+    plan_json = (
+        '[{"id":"t1","description":"redo work",'
+        '"required_capability":"programmer","params":{},'
+        '"arch_context":"redo-ctx"}]'
+    )
+    leaf.on_resume(bb, _receipt(plan_json, task_id="arch:2"))
+
+    # arch_redo_context consumed; fresh plan populated.
+    assert bb.arch_redo_context is None
+    assert isinstance(bb.arch_plan, list) and len(bb.arch_plan) == 1
+    assert bb.arch_plan[0]["id"] == "t1"
+
+    # Tick 2: plan is fresh, context cleared → short-circuit SUCCESS,
+    # NO second wipe.
+    assert leaf.tick(bb) is Status.SUCCESS
+    assert bb.arch_plan and bb.arch_plan[0]["id"] == "t1"
+
+
+def test_on_resume_clears_redo_context_on_all_reply_paths():
+    """The context-consume applies regardless of reply status, so a
+    'failed' / 'needs_user_input' / malformed reply on the redo round
+    also releases the marker (otherwise the next tick would loop back
+    into the redo detection with an empty plan)."""
+    # failed status
+    bb = _bb()
+    bb.arch_redo_context = {"iter": 1, "unresolved": [], "previous_plan": []}
+    ArchExecYield().on_resume(
+        bb,
+        "<!-- BEGIN CBIM-RECEIPT v1\n"
+        "status: failed\n"
+        "task_id: arch:1\n"
+        "agent: architect\n"
+        "summary: gave up\n"
+        "failure_kind: other\n"
+        "END CBIM-RECEIPT -->\n",
+    )
+    assert bb.arch_redo_context is None
+
+    # needs_user_input status
+    bb = _bb()
+    bb.arch_redo_context = {"iter": 1, "unresolved": [], "previous_plan": []}
+    ArchExecYield().on_resume(
+        bb,
+        _receipt(None, status="needs_user_input", question="which framework?"),
+    )
+    assert bb.arch_redo_context is None
+
+    # malformed-plan status=ok path
+    bb = _bb()
+    bb.arch_redo_context = {"iter": 1, "unresolved": [], "previous_plan": []}
+    ArchExecYield().on_resume(bb, _receipt("[not valid json"))
+    assert bb.arch_redo_context is None
+
+
+# ---------------------------------------------------------------------------
 # Cross-tick state hygiene
 # ---------------------------------------------------------------------------
 

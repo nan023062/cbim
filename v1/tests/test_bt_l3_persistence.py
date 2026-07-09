@@ -48,6 +48,47 @@ def isolated_scheduler_root(tmp_path, monkeypatch):
     return sched
 
 
+@pytest.fixture
+def neutralize_arch_check_gate(monkeypatch):
+    """Stub ArchCheckGate._tick_impl to write a clean pass verdict.
+
+    Opt-in (NOT autouse) — most L3 persistence tests exit before the
+    WorkLoop reaches ArchCheckGate. Only the tests that drive a full
+    Architect → Work → Done pipeline need the stub, because the live
+    gate would scan the actual repo's .dna and flip fail/pass on
+    unrelated drift. Mirrors the neutraliser in test_bt_l4_e2e.py.
+    """
+    from datetime import datetime, timezone
+    from engine.execution.actions.arch_check_gate import gate as _gate_mod
+
+    def _stub_tick_impl(self, bb) -> None:
+        ran_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        bb.arch_check_report = {
+            "touched_modules": [],
+            "verdict": {
+                "pass": True,
+                "error_count": 0,
+                "warn_count": 0,
+                "info_count": 0,
+                "new_error_count": 0,
+                "new_warn_count": 0,
+                "findings": [],
+                "unresolved": [],
+                "summary": "pass (stubbed for L3)",
+                "ratchet_mode": "lenient",
+            },
+            "scoped_findings": [],
+            "baseline_meta": {"mode": "lenient", "by_origin": {}},
+            "ran_at": ran_at,
+            "checks_ran": ["dna_tree", "dna_fission"],
+            "stubbed": True,
+        }
+
+    monkeypatch.setattr(
+        _gate_mod.ArchCheckGate, "_tick_impl", _stub_tick_impl, raising=True,
+    )
+
+
 # ---------------------------------------------------------------------------
 # bb.json round-trip
 # ---------------------------------------------------------------------------
@@ -154,9 +195,24 @@ def test_second_yield_targets_work_agent(isolated_scheduler_root):
         f"resume path missing WorkAgentLeaf#<id>: {rj['runner_resume_path']}"
 
 
-def test_resume_clears_resume_json_on_done(isolated_scheduler_root):
+def test_resume_clears_resume_json_on_done(
+    isolated_scheduler_root, neutralize_arch_check_gate,
+):
+    """Full pipeline: architect yield → work yield → Done → resume.json
+    is removed.
+
+    Uses ``neutralize_arch_check_gate`` for the same reason the L4 e2e
+    tests do: ArchCheckGate would otherwise scan the live cbim .dna
+    tree and its verdict would swing on unrelated repo state. Before
+    the arch_redo fix landed this test happened to pass by accident
+    (the stale-plan short-circuit turned every redo into a silent
+    dead-loop, exhausting into "done"); post-fix, a fail verdict now
+    correctly re-yields to the architect, so the test would flake on
+    any repo state that trips the audit. The persistence contract
+    being tested here (resume.json cleanup on terminal) is orthogonal
+    to the gate — the neutralised stub is the right isolation.
+    """
     sched = isolated_scheduler_root
-    # Full pipeline: architect yield → work yield → Done.
     r1 = api.bt_tick("实现 login API 模块")
     assert r1.kind == "yield"
     r2 = api.bt_tick_resume(r1.tick_id, FAKE_ARCH_RECEIPT)

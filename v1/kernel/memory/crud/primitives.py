@@ -48,6 +48,29 @@ def _check_tier(tier: str) -> None:
         )
 
 
+def _check_write_path(path: Path, tier: str) -> None:
+    """Defence-in-depth: reject a write target that isn't a direct child of a
+    ``<tier>/`` directory or that carries any ``..`` traversal segment.
+
+    The primary entry point (``cbi.resources.Memory.create``) already
+    sanitises the slug before constructing the path. This guard catches any
+    caller that bypasses that facade and hands us an unsafe ``path`` (e.g. a
+    future test or migration script). Not a full path-in-root check — the
+    primitive has no ``store_dir`` parameter — but enough to trip the two
+    concrete traversal shapes: ``..`` collapsed / uncollapsed, and a parent
+    directory that doesn't match the declared tier.
+    """
+    if ".." in path.parts:
+        raise ValueError(
+            f"write path contains '..' traversal segment: {path!s}"
+        )
+    if path.parent.name != tier:
+        raise ValueError(
+            f"write path parent {path.parent.name!r} does not match tier "
+            f"{tier!r}: {path!s}"
+        )
+
+
 def _read_frontmatter(text: str) -> dict:
     meta: dict = {}
     if not text.startswith("---"):
@@ -148,6 +171,7 @@ def write(path: Path, tier: str, backend: MemoryBackend) -> None:
     for success; step 2 (identify) is best-effort.
     """
     _check_tier(tier)
+    _check_write_path(path, tier)
     text = _entry_text(path)
     if not text:
         return

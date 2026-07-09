@@ -19,6 +19,46 @@ from ._io import atomic_write_text
 from services._fm import parse_frontmatter, strip_frontmatter
 
 
+def _sanitize_slug(slug: str) -> str:
+    """Normalise and validate a user-supplied slug fragment for filename use.
+
+    The slug becomes part of ``<ts>-<kind>-<slug>.md`` under
+    ``.cbim/memory/<tier>/`` and is subsequently rendered by downstream
+    consumers (notably the dashboard, where the filename lands inside HTML
+    attribute + JS-string contexts). Anything that could redirect the final
+    path outside that directory, embed non-printable bytes in the filename,
+    or break the HTML/JS string contexts a downstream consumer wraps it in
+    is rejected up front. Spaces are collapsed to hyphens to preserve the
+    historical behaviour that callers rely on.
+    """
+    cleaned = slug.strip().replace(" ", "-")
+    if not cleaned:
+        raise ValueError("slug must not be empty after stripping whitespace")
+    if "/" in cleaned or "\\" in cleaned:
+        raise ValueError(
+            f"slug must not contain path separators: {slug!r}"
+        )
+    if ".." in cleaned:
+        raise ValueError(
+            f"slug must not contain '..' traversal segments: {slug!r}"
+        )
+    # HTML / JS string-context metacharacters. Blocking these at the source
+    # keeps a downstream renderer (dashboard onclick handlers, etc.) from
+    # having to defend the JS-in-HTML-attribute context in isolation.
+    for ch in ("'", '"', "`", "<", ">", "&"):
+        if ch in cleaned:
+            raise ValueError(
+                f"slug must not contain HTML/JS metacharacter {ch!r}: {slug!r}"
+            )
+    for ch in cleaned:
+        code = ord(ch)
+        if code < 0x20 or code == 0x7f:
+            raise ValueError(
+                f"slug must not contain control characters: {slug!r}"
+            )
+    return cleaned
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -85,8 +125,12 @@ class Memory(Resource):
         """Write a new memory entry file and index it through crud.primitives."""
         from memory.crud.primitives import write as _crud_write
 
+        # Validate BEFORE any disk write. Slug flows into the filename, so
+        # an unchecked '/' or '..' would let a caller redirect the write
+        # outside `.cbim/memory/<tier>/` — see security note in the module
+        # docstring for `_sanitize_slug`.
+        slug_clean = _sanitize_slug(slug)
         store = _default_store(root)
-        slug_clean = slug.strip().replace(" ", "-")
         ts = datetime.now().strftime("%Y-%m-%d-%H%M%S")
         filename = f"{ts}-{kind}-{slug_clean}.md"
         path = store / tier / filename

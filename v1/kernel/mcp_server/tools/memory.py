@@ -121,9 +121,17 @@ def register(mcp) -> None:
         root = project_root(cwd or None)
         store = root / ".cbim" / "memory"
         store.mkdir(parents=True, exist_ok=True)
-        entry = Memory.create(
-            slug=slug, content=content, tier=tier, kind="manual", root=root,
-        )
+        try:
+            entry = Memory.create(
+                slug=slug, content=content, tier=tier, kind="manual", root=root,
+            )
+        except ValueError as e:
+            # Memory.create raises ValueError on unsafe slug input; surface
+            # it in the same "ERROR: ..." shape as this tool's other rejects
+            # (tier guard above). Business validation lives in the resource
+            # facade — this catch is a presentation-format adapter, not a
+            # second validation layer.
+            return f"ERROR: {e}"
         return str(entry.path.relative_to(store))
 
     @mcp.tool()

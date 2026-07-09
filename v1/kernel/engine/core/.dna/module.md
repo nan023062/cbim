@@ -98,6 +98,13 @@ v3.6 之前还携带 `LlmActionLeaf` 叶原语（「一 tick 一 LLM 调用」�
 - **trace 落盘是观测，不是权威。** 与 persistence 模块的 "trace.jsonl 仅供观测" 决策一致：刷盘失败不抛出、不阻塞 tick，游标不前进以待下次出口点重试；恢复仍只走 `bb.json + resume.json`，绝不回放 `trace.jsonl`。
 - **决策类原语自追踪 `*_decision` 事件。** `SwitchBranch` 在 `key_fn(bb)` 求值后写一条 `switch_decision`（含 `key` / `matched_case` / `chosen_child`）；`Selector` 在每个出口（首子 SUCCESS / 中间 RUNNING / 全 FAILURE）写一条 `selector_decision`（含 `child_results` + `chosen_child` + `outcome`）。两者都追加到同一份 `bb.trace`，由 Runner 出口点统一刷盘——与节点三事件共享缓冲区与刷盘契约，节点对象仍无跨 tick 状态。提取 `core/_trace_utils.py` 私有辅助模块承载 `_append_trace_event` / `_now_iso_ms`，让 `composite.py` 与 `runner.py` 共用同一份实现，避免反向 import。
 - **`resume_index` 是 composite 子系统的公开 helper（v3.10 / Batch 4 由 `_resume_index` 提升）。** `engine/core/composite.py::resume_index(composite, bb) -> int` 是「runner_resume_path 是否经过本 composite、若经过则下一步从哪个子节点开始」的唯一判定函数，由 Sequence / Selector / LoopSeq 三处自用，并由 `engine/dream/core/composite_tolerant.py::SequenceTolerant` 通过 `from engine.core.composite import resume_index` 共用。**全仓单一定义、单一 reader**；dream 侧禁止再复制本函数实现（Batch 4 之前 dream/core 的 `_resume_index` 是逐字 copy，现已删除）。任何「resume 行为再次发散」的诉求都应通过扩展 `resume_index` 参数（而非重新实现）来满足。
+- **Runner 顶层按 Status 分派终态。** `runner.py::Runner.run` 在根 tick 返回后按以下优先级决定 `RunResult`：
+  1. `Status.RUNNING` + `pending_dispatch` → `RunResult("yield", ...)`，正常协程让出。
+  2. `bb.interrupt_reason` 且 `bb.final_response` 为空 → `RunResult("error", error_code="interrupt", ...)`。承载具体的 escalation / 中断上下文，优先于泛化的 FAILURE 分支。
+  3. `Status.FAILURE`（且未命中 2）→ `RunResult("error", error_code="tick_failed", error_message="root behavior tree returned FAILURE")`。根节点返回 FAILURE 说明整棵树某条决定性路径失败但未通过 `interrupt_reason` 声明具体原因；不再把它当成 done 静默吞掉。
+  4. 其余（`Status.SUCCESS` 或 `Status.FAILURE` 已在 2 中被 interrupt 覆盖）→ `RunResult("done", user_message=bb.final_response or "")`。
+
+  此前版本的 Runner 顶层收尾只判 `interrupt_reason`，不区分根 Status 是 SUCCESS 还是 FAILURE——两者都被写成 `bb_status = "done"` 并返回空 `user_message`。这是遗留实现漏洞：execution 侧当 `DispatchCoreAgent` 在 core agent 报 `failed` 时返回 `Status.FAILURE`（走 Sequence 短路），根收到 FAILURE 后被 Runner 静默当成 done，用户拿到空回复毫无提示。现修复。新增 `tick_failed` 是共享的 error_code——`engine/execution` 与 `engine/dream` 两根共用同一份 Runner，因此这条错误码也归 core 契约（其他已有 error_code：`engine_internal` / `interrupt` / `dispatch_result_schema_mismatch`）。
 
 ### v3.9 — 黑板 SCHEMA_VERSION 5：`_PERSISTED_EXTRAS` 增 `arch_check_report`
 

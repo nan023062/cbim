@@ -1,5 +1,7 @@
 """Frontmatter schema constants for module.md and the rendering helper."""
 
+import re
+
 from services._fm import render_frontmatter
 
 # v2 schema (PR-1): 5 required fields + 1 optional (`links`).
@@ -14,6 +16,7 @@ from services._fm import render_frontmatter
 _MODULE_FM_SCHEMA = (
     "name", "owner", "description",
     "keywords", "status", "links",
+    "body_edited_at",
 )
 
 # Frontmatter fields whose YAML type is a list. The CLI uses this to reject
@@ -47,10 +50,40 @@ def _build_module_md(meta: dict, body: str) -> str:
     return render_frontmatter(meta, _MODULE_FM_SCHEMA) + "\n" + body + "\n"
 
 
+# `body_edited_at` accepts the compact RFC-3339-with-Z shape the kernel emits
+# (``YYYY-MM-DDTHH:MM:SSZ``) as well as the equivalent explicit-offset shape
+# ``YYYY-MM-DDTHH:MM:SS+00:00``. Fractional seconds are tolerated but not
+# required; anything else (naive timestamps, non-UTC offsets) is rejected —
+# freshness math depends on comparing UTC to UTC.
+_BODY_EDITED_AT_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|\+00:00)$"
+)
+
+
+def _validate_body_edited_at(value) -> None:
+    """Validate a ``body_edited_at`` frontmatter value. Raises ValueError.
+
+    Missing is fine (existence is optional); ``None`` is not — an explicit
+    null makes no semantic sense here. The value must be a string in one of
+    the accepted UTC shapes above.
+    """
+    if not isinstance(value, str):
+        raise ValueError(
+            f"field 'body_edited_at' must be an ISO-8601 UTC string; "
+            f"got: {type(value).__name__}"
+        )
+    if not _BODY_EDITED_AT_RE.match(value):
+        raise ValueError(
+            f"field 'body_edited_at' must be an ISO-8601 UTC timestamp "
+            f"(e.g. '2026-07-09T12:34:56Z'); got: {value!r}"
+        )
+
+
 __all__ = [
     "_MODULE_FM_SCHEMA",
     "_MODULE_FM_LIST_FIELDS",
     "_MODULE_FM_REQUIRED",
     "_MODULE_FM_STATUS_VALUES",
     "_build_module_md",
+    "_validate_body_edited_at",
 ]

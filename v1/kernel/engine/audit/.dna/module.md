@@ -1,7 +1,7 @@
 ---
 name: audit
 owner: architect
-description: 架构漂移只读审计器：五项检查 + 棘轮基线，扫 .dna / agent / memory，不写盘
+description: 架构漂移只读审计器：六项检查 + 棘轮基线，扫 .dna / agent / memory / 代码时间戳，不写盘
 keywords:
   - audit
   - drift
@@ -9,24 +9,26 @@ keywords:
   - checks
   - ratchet
   - read-only
-status: implemented
 dependencies:
   - kernel/services
   - kernel/cbi/_primitives
   - kernel/memory
+status: implemented
+body_edited_at: 2026-07-09T07:59:03Z
 ---
 
 ## Positioning
 
 Read-only governance drift guard. Inspects the project's `.cbim/index.md`, every registered `.dna/module.md`, every project-level agent under `.claude/agents/`, and the memory service's published `stats()` output. Returns structured findings; never mutates anything.
 
-Five checks, single dispatch surface:
+Six checks, single dispatch surface:
 
 - `index_consistency` — registry vs. on-disk module list
 - `memory_threshold` — pulls metrics from `kernel/memory`'s `stats()` only; flags when short-tier count / staleness / candidate backlog cross the configured bands. **Does not own the thresholds' meaning, does not judge promotion-worthiness, does not read raw memory files.**
 - `agent_fission` — project agent body & skill count oversize
 - `dna_fission` — module body & workflow count oversize
 - `dna_tree` — parent/child orphans, dep DAG (cycles, dangling, up-tree direction)
+- `dna_freshness` — module.md `body_edited_at` (kernel auto-stamped on every module.md write) vs the latest git commit under the module directory (excluding `.dna/` and registered child modules); flags docs that haven't been re-touched since newer code landed. 7-day baseline; git-only (silently skips non-git projects).
 
 Lives **inside** the engine package because every check threads through `engine.config` (audit thresholds live in `.cbim/config.json`'s `audit` section) and because the CLI surface (`cbim audit ...`) is one more sub-domain of `python -m engine`.
 
@@ -69,6 +71,7 @@ classDiagram
         +agent_fission : callable
         +dna_fission : callable
         +dna_tree : callable
+        +dna_freshness : callable
     }
     class load_audit_config {
         <<function>>
@@ -177,6 +180,13 @@ classDiagram
 - **Batch 5 异常治理 —— `BaselineStore.save` 原子写收紧到 `OSError`。** `tempfile` + `os.replace` 写 `.cbim/audit/baseline.json` 的 cleanup 分支已从 broad-catch 收紧到 `except OSError`：原子写失败的可能性集合是 IO/权限/磁盘满，全在 `OSError` 下；其他异常（编程错误、序列化 bug）应当裸抛而非被 cleanup 吞掉。配合 "audit 进程仍 read-only；baseline 写入仅能走显式 CLI 子命令" 的既有铁律——baseline.json 是 CI 质量门锁的状态来源，写盘失败必须可见、不可静默。完整规约见 `v1/docs/EXCEPTION-GOVERNANCE.zh-CN.md`。
 
 - **`dna_tree` 统一父模块判定 + `TREE_NAME_COLLISION` 显式化**。`dna_tree` 内所有"本模块的父模块是谁"计算统一走 `_find_parent(path, all_paths)` —— 最近已注册祖先。既往孤儿检测走 `_find_parent`、依赖边解析走文件系统直接父目录（`path.rsplit("/", 1)[0]`）的两个不一致定义，会在"中间目录未注册"的场景下让依赖边被吞掉、`TREE_CYCLE` / `TREE_DEP_DANGLING` 漏报。统一后两处判定同源。配套修 `name_to_path` 构建：遇到 frontmatter `name` 重名不再静默丢弃，产出 `TREE_NAME_COLLISION`（severity=warn，lenient 降级策略，origin=new）—— 保留"第一个注册的胜出"策略避免破坏历史 findings 的 target 稳定性，但让重名从"隐形错解析"变成"显式可见 finding"；遍历改用 `sorted(by_path.items())` 保证冲突时"哪个模块赢"是确定的、跨机器可复现的。
+
+- **`dna_freshness` —— 文档 vs 代码时间轴对齐嫀疑信号（7 天基线）。** 消费 `.dna/module.md` frontmatter 中由 kernel 自动维护的 `body_edited_at` 字段（每次 module.md 写入时由 `cbi/_primitives/modules/doc_writer.py` 打时间戳），与“模块目录下（排除 `.dna/` 与已注册子模块目录）最新 git commit 时间”对比，差值超阀值即报 `DNA_FRESHNESS_STALE`。约束：
+  - **阀值 7 天，`resolve_bands(7)` 分三段：info=6、warn=7、error=11 天**（标准 80% / 100% / 150% 比例的取整结果）。阀值走 `.cbim/config.json` 的 `audit.dna_freshness.stale_days` 字段，默认 7。
+  - **棘轮策略 lenient**，与 `dna_tree` / `dna_fission` / `agent_fission` 一致——`origin=baseline` 降一档（error→warn→info），`origin=new` 不降。`ratchet.py` 的策略表已同步新增这一行（上方 Key Decision 里的参考表没同步，源代码 `ratchet.py` 为单一真相源）。
+  - **降级路径**：非 git 项目 / git 二进制不在 PATH / 模块目录不在 git 追踪内 / 模块目录下无追踪文件 / module.md 缺 `body_edited_at` 字段（存量未迁移） → 该模块跳过不产 finding，不报 error。存量迁移已一次性跑过 `cbim dna stamp-freshness` 补齐内核自己 20 个模块的 `body_edited_at`。
+  - **`message` 必须保持固定文案，可变量（天数 / 时间戳）一律入 `metadata`——硬性约束。** `BaselineStore` 指纹 = `hash(check + code + target + sha256(message))`；若 message 含“距上次编辑 X 天”「上次编辑于 <日期>”这类会变字符串，每次 audit 都会为同一模块产新指纹→全部落 origin=new→baseline 机制彻底失效→CI 永远不绿。7 天基线下触发频率高，这条约束尤为关键。实现定义：`code=DNA_FRESHNESS_STALE`，`message` 冃 "module `<path>` body edited before newer code commits landed in this module directory" 一句，`metadata` 承载 `body_edited_at` / `latest_code_commit_at` / `days_stale` 三个观测量。指纹稳定性已由单测硬销（同一场景连续跑 3 次 fingerprint 字节相等）。
+  - **本检查是“嫀疑信号”不是“漂移证据”**——代码新提交但文档未变未必意味着文档陈旧（注释 / 内部实现微调等场景文档不受影响）。架构师看到 finding 后自行判定——真漂移就改 module.md（kernel 会自动重刷 `body_edited_at`），伪阳性就 `cbim audit baseline accept --check dna_freshness --yes` 吸收存量。与 `TREE_DEP_DIAGRAM_MISMATCH` 同模式：audit 只发信号，修复动作仍是人的责任。
 
 ## Non-Goals
 

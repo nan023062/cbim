@@ -12,6 +12,7 @@ from pathlib import Path
 from .checks import (
     agent_fission,
     dna_fission,
+    dna_freshness,
     dna_frontmatter,
     dna_tree,
     index_consistency,
@@ -28,6 +29,7 @@ CHECKS: dict[str, CheckFn] = {
     "dna_fission": dna_fission.check,
     "dna_tree": dna_tree.check,
     "dna_frontmatter": dna_frontmatter.check,
+    "dna_freshness": dna_freshness.check,
 }
 
 

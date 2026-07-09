@@ -12,6 +12,7 @@ keywords:
 dependencies:
   - v1/kernel/services
 status: implemented
+body_edited_at: 2026-07-09T07:59:03Z
 ---
 
 ## Positioning
@@ -115,3 +116,6 @@ All `cmd_*` handlers previously hosted here were deleted in P3 Wave 1. The top-l
 - **Phase 3 — `modules/graph_builder.py` 是业务知识图谱的唯一构造入口，位于 `_primitives` 而非 retrieval。** 选择理由：(a) 图构造需要读 `frontmatter.dependencies` 与 Mermaid `..>` 边，这些是 `.dna/` 的业务语义，retrieval 是「对源一视同仁」的原子库，不应该知道「模块」是什么；(b) 业务语义解析 依赖复用 `loader._scan_modules` + `registry.read_index`，这两件全在 `_primitives.modules` 下，同包调用零外报。导入方向锁死：`graph_builder → loader / registry`（包内）；**`engine/retrieval/index/graph.GraphIndex.load` → `cbi._primitives.modules.graph_builder.load_graph`**（包外上调用）。retrieval 不反向 import `_primitives`，零环。
 - **Phase 3 — `_primitives` 顶层 import表不付出任何新外部依赖。** `graph_builder` 仅报 `from atomic_io import atomic_write_text`（kernel root leaf，已在现有依赖表内）与同包 `loader` / `registry`；在 `_write_graph` 路径上额外随件 try-import `engine.retrieval.store.IndexStore` 仅为跨进程锁的 best-effort 获取，**失败时 silently fallback 到纯原子写**，不报错不微份跨包依赖。该跨包 import 是「锁依赖」不是「调用路径依赖」，在 audit 扫描上以 `lazy import inside function body` 不计入拓扑环检查；frontmatter `dependencies` 不动。
 - **Phase 3 — `graph_builder` 不动 `cbi.resources` 面，仅被 `engine/retrieval` / `engine/dream` / `services/_reindex` / `hooks.session_start` 跨包调用。** 这与P3 对「`_primitives` 是内部原子、外部调用走 `cbi.resources` 」的独严调是合调的一项调领例外：`graph_builder` 输出的是**跨源索引器副产物**（与 BM25/vector 索引同层），不在「DNA 模块 CRUD」语义范畴中，抹上 `cbi.resources` 包装崭会造成「为一个调用方开一套 facade」的反面。外部调用按函数名直接报 `from cbi._primitives.modules.graph_builder import build_graph / patch_graph / load_graph`。这三个函数名是公共契约；其他内部 helper（`_extract_mermaid_blocks` / `_parse_class_diagram_deps` / `_is_leaf` / `_direct_parent` / `_emit_edges_for_module` / `_drop_module_from_graph` / `_graph_path` / `_write_graph`）是实现细节，不对外报。
+
+- **`.dna/module.md` frontmatter `body_edited_at` 字段由 kernel 自动打时间戳，人不维护。** 每次 module.md 走 `doc_writer.write_module_doc(mod_dir, "module.md", body)` 收口写盘，不管触发方是 `DNAModule.body.save()` / `.frontmatter.save()` / `.save()` / `dna_edit` MCP 工具任意一条，kernel 都会在写入前把 frontmatter 中的 `body_edited_at` 更新为当前 UTC ISO 8601 时间戳。**仅针对 module.md：**contract.md 与 workflows/*.md 不受影响——该字段专属 module.md 的修订时钟。存量迁移：`cbim dna stamp-freshness` 子命令一次性扫全模块、调 `DNAModule.save()` 触发收口写以补齐存量 `body_edited_at`。**与“Kernel-Only Writes”铁律的连动**：任何绕过 `doc_writer` 的 raw `Write`/`Edit` 不会更新这个字段——stamp 停推本身就是 `engine/audit/checks/dna_freshness.py` 消费的漂移信号，反向推导出“module.md 绕过 kernel 直写”这种违规行为。
+

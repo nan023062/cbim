@@ -9,9 +9,10 @@ keywords:
   - trace
   - snapshot
   - loop-agnostic
+status: implemented
+body_edited_at: 2026-07-09T07:59:03Z
 dependencies:
   - kernel/engine/core
-status: implemented
 ---
 
 ## Positioning

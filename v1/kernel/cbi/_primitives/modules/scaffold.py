@@ -5,11 +5,23 @@ from pathlib import Path
 
 from services._fm import parse_frontmatter, strip_frontmatter
 
+from . import doc_writer as _doc_writer
 from .frontmatter_schema import (
     _MODULE_FM_STATUS_VALUES,
     _build_module_md,
 )
 from .registry import _append_to_index, _index_path
+
+
+def _now_body_edited_at() -> str:
+    """Late-lookup shim over :func:`doc_writer._now_body_edited_at`.
+
+    Import-time binding (``from .doc_writer import _now_body_edited_at``)
+    would freeze the reference here and defeat the tests' monkeypatch
+    against ``cbi._primitives.modules.doc_writer._now_body_edited_at``.
+    Going through the module attribute each call keeps the patch honoured.
+    """
+    return _doc_writer._now_body_edited_at()
 
 _VALID_TYPES = ("root", "parent", "leaf")
 
@@ -143,6 +155,10 @@ def init_module(mod_dir: Path, name: str, owner: str,
     fm_lines.append("# keywords 5–8 条 kebab，详见元数据检索规范节")
     fm_lines.append("keywords: [TODO]")
     fm_lines.append(f"status: {status}")
+    # Kernel-managed freshness stamp; see doc_writer.stamp_module_md_content
+    # for the writer-wide policy. Init is the first "write" for this module,
+    # so the initial value is now.
+    fm_lines.append(f"body_edited_at: {_now_body_edited_at()}")
     fm_lines.append("---")
 
     body = _LEAF_BODY if type_ == "leaf" else _PARENT_BODY
@@ -176,6 +192,9 @@ def update_module_meta(mod_dir: Path, **kwargs) -> None:
         meta = parse_frontmatter(raw)
         body = strip_frontmatter(raw)
         meta.update({k: v for k, v in kwargs.items() if v is not None})
+        # module.md write path: stamp freshness (see doc_writer for the
+        # writer-wide policy).
+        meta["body_edited_at"] = _now_body_edited_at()
         module_md.write_text(_build_module_md(meta, body), encoding="utf-8")
     elif legacy_json.exists():
         data = json.loads(legacy_json.read_text(encoding="utf-8"))

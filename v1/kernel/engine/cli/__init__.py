@@ -122,6 +122,7 @@ from .dna import _handle_dna_list as _handle_dna_list
 from .dna import _handle_dna_reindex as _handle_dna_reindex
 from .dna import _handle_dna_show as _handle_dna_show
 from .dna import _handle_dna_split as _handle_dna_split
+from .dna import _handle_dna_stamp_freshness as _handle_dna_stamp_freshness
 from .dna import _handle_dna_write_doc as _handle_dna_write_doc
 from .dna import _handle_dna_write_section as _handle_dna_write_section
 from .dna import _parse_into_spec as _parse_into_spec

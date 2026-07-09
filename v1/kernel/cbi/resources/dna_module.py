@@ -46,11 +46,12 @@ class SplitResult:
 # ---------------------------------------------------------------------------
 
 class ModuleFrontmatter(Frontmatter):
-    # v2 schema (PR-1): mirrors _MODULE_FM_SCHEMA in
+    # v2 schema: mirrors _MODULE_FM_SCHEMA in
     # cbi/_primitives/modules/frontmatter_schema.py — keep in sync.
     _SCHEMA = (
         "name", "owner", "description",
         "keywords", "status", "links",
+        "body_edited_at",
     )
 
 
@@ -368,16 +369,36 @@ class DNAModule(Resource):
 
     def _render(self) -> str:
         """Return the in-memory module.md text (frontmatter + body) that save()
-        would write. No filesystem touch — used by dry-run paths."""
+        would write. No filesystem touch — used by dry-run paths.
+
+        Freshness (``body_edited_at``) is NOT stamped here; the dry-run
+        callers want a stable render they can compare against, and stamping
+        would poison that. Stamping happens in :meth:`save` only.
+        """
         meta = self.frontmatter.to_dict()
         body_text = self.body.read()
         return _mod_eng._build_module_md(meta, body_text)
 
     def save(self) -> None:
-        """Atomically write module.md (and contract.md if dirty)."""
+        """Atomically write module.md (and contract.md if dirty).
+
+        module.md writes stamp ``body_edited_at`` on every save — see
+        :func:`cbi._primitives.modules.doc_writer.stamp_module_md_content`
+        for the policy. The stamp is written into the in-memory
+        ``self.frontmatter`` too, so a subsequent read of the object
+        reflects the new value.
+        """
         # If we loaded from legacy format, on save we write the new module.md
         # alongside; we do NOT delete legacy files automatically — migration is
         # an explicit action.
+        # Late lookup via the doc_writer submodule so tests can monkeypatch
+        # `cbi._primitives.modules.doc_writer._now_body_edited_at` at the
+        # canonical origin and see the patch here too. Re-export binding on
+        # the `_mod_eng` package would be frozen at import time.
+        self.frontmatter.set(
+            "body_edited_at",
+            _mod_eng.doc_writer._now_body_edited_at(),
+        )
         rendered = self._render()
         atomic_write_text(self._path, rendered)
 

@@ -75,6 +75,21 @@ def register(sub: argparse._SubParsersAction) -> argparse.ArgumentParser:
     _p.add_argument("--dry-run", dest="dry_run", action="store_true",
                     help="Print rendered result to stdout; do not write to disk")
 
+    _p = dsub.add_parser(
+        "stamp-freshness",
+        help=(
+            "Backfill / refresh the kernel-managed `body_edited_at` "
+            "frontmatter field on every `.dna/module.md`. Default: only "
+            "stamp modules that are missing the field. Use --force to "
+            "restamp every module regardless."
+        ),
+    )
+    _p.add_argument("--root", default=None, help="Project root override.")
+    _p.add_argument(
+        "--force",
+        action="store_true",
+        help="Restamp every module, not just those missing `body_edited_at`.",
+    )
     _p = dsub.add_parser("write-doc", help="[deprecated] use `dna edit --target body` instead")
     _p.add_argument("module_path", help="Path to the module directory (the one containing .dna/)")
     _p.add_argument("--file", required=True, choices=["module.md", "contract.md"], help="Which file in .dna/ to write")
@@ -145,6 +160,7 @@ def dispatch(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
         "split": _pkg._handle_dna_split,
         "write-doc": _pkg._handle_dna_write_doc,
         "write-section": _pkg._handle_dna_write_section,
+        "stamp-freshness": _pkg._handle_dna_stamp_freshness,
     }
     return dna_cmds[args.command](args)
 
@@ -230,6 +246,46 @@ def _handle_dna_reindex(args: argparse.Namespace) -> int:
     from services import reindex_modules
     count = reindex_modules(cwd=args.root or "")
     print(f"Rebuilt index.md  ({count} modules)")
+    return 0
+
+
+def _handle_dna_stamp_freshness(args: argparse.Namespace) -> int:
+    """Backfill / restamp `body_edited_at` across every registered module.
+
+    Default: only stamp modules whose frontmatter is missing the field —
+    the "one-shot backfill after upgrading kernel" flow.
+    ``--force``: stamp every module regardless, useful when the operator
+    intentionally wants to reset the freshness clock (e.g. after a
+    project-wide re-audit).
+    """
+    from cbi.resources import DNAModule
+
+    root = Path(args.root) if args.root else Path.cwd()
+    modules = DNAModule.list_all(root=root)
+    if not modules:
+        print("No .dna modules found.")
+        return 0
+
+    force = bool(getattr(args, "force", False))
+    stamped: list[str] = []
+    skipped: list[str] = []
+    for m in modules:
+        already_has = m.frontmatter.has("body_edited_at")
+        if already_has and not force:
+            skipped.append(m.id)
+            continue
+        # save() is the collar: it stamps `body_edited_at` and writes atomically.
+        # We don't touch body/frontmatter otherwise — this is a pure re-save.
+        m.save()
+        stamped.append(m.id)
+
+    print(f"Stamped {len(stamped)} module(s):")
+    for mid in stamped:
+        print(f"  + {mid}")
+    if skipped:
+        print(f"\nSkipped {len(skipped)} module(s) (already stamped; use --force to restamp):")
+        for mid in skipped:
+            print(f"  - {mid}")
     return 0
 
 

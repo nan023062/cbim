@@ -42,6 +42,15 @@ DEFAULTS: dict = {
     "dna_tree": {
         "allow_undeclared_deps": False,
     },
+    "dna_freshness": {
+        # Number of days between the newest code commit under a module's
+        # directory and the module.md `body_edited_at` stamp before we
+        # consider the doc stale. Bands mirror `resolve_bands`:
+        # 80% of threshold → info, threshold → warn, 150% of threshold → error.
+        # For the default threshold of 7 that yields ~5.6 / 7 / 10.5 days,
+        # in practice rounded to 6 / 7 / 11 (finding uses `int(days_stale)`).
+        "stale_days": 7,
+    },
 }
 
 _INFO_FACTOR = 0.80

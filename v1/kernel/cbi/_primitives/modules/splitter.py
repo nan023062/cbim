@@ -226,6 +226,13 @@ def split_module(
     else:
         new_source_text = new_source_body
 
+    # Split is a module.md write on the source module — stamp the freshness
+    # timestamp. Runs after frontmatter reassembly so the stamp goes through
+    # the shared re-render path (services/_fm.render_frontmatter), keeping
+    # every module.md writer in sync with doc_writer's policy.
+    from .doc_writer import stamp_module_md_content as _stamp
+    new_source_text = _stamp(new_source_text)
+
     # --- 5. Scan dependency references (SCAN ONLY, no mutation) -------------
     dependency_refs = _scan_dependency_refs(root, source_rel)
 

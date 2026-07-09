@@ -6,7 +6,12 @@ cmd_modules_write_doc in cbi._primitives.cli, inlined into the
 top-level dispatcher in P3 Wave 1).
 
 Scope:
-  - frontmatter on module.md is preserved byte-for-byte; only the body is replaced
+  - frontmatter on module.md is preserved semantically (values round-trip
+    through the canonical renderer). The kernel-managed ``body_edited_at``
+    field is written on every module.md save (see freshness stamping in
+    doc_writer.stamp_module_md_content) — byte-for-byte preservation was
+    dropped by design for module.md, but contract.md still preserves
+    byte-for-byte.
   - contract.md can be created (no prior file) or replaced
   - rejects file names other than module.md / contract.md
   - rejects a module dir without a .dna/ subdirectory
@@ -67,6 +72,15 @@ def _ns(**kw) -> argparse.Namespace:
 
 
 def test_write_module_md_preserves_frontmatter(tmp_path):
+    """module.md writes preserve every frontmatter value semantically and
+    additionally stamp `body_edited_at`. Values (name / owner / description /
+    keywords / dependencies) round-trip; the new stamp is written in;
+    the body is replaced.
+    """
+    import re
+
+    from services._fm import parse_frontmatter
+
     mod = _make_module(tmp_path)
     new_body = "## New Body\n\nfresh content from architect\n"
 
@@ -75,16 +89,20 @@ def test_write_module_md_preserves_frontmatter(tmp_path):
     assert written == (mod / ".dna" / "module.md").resolve()
     out = written.read_text(encoding="utf-8")
 
-    # Frontmatter is preserved byte-for-byte
-    assert out.startswith(
-        "---\n"
-        "name: mymod\n"
-        "owner: someone\n"
-        "description: placeholder\n"
-        "keywords: []\n"
-        "dependencies: []\n"
-        "---\n"
-    )
+    # Frontmatter values round-trip through the canonical renderer.
+    fm = parse_frontmatter(out)
+    assert fm["name"] == "mymod"
+    assert fm["owner"] == "someone"
+    assert fm["description"] == "placeholder"
+    assert fm["keywords"] == []
+    # Extra key (v1 legacy) is preserved by the renderer.
+    assert fm["dependencies"] == []
+
+    # Kernel-managed freshness stamp landed and matches the RFC-3339-with-Z shape.
+    stamp = fm["body_edited_at"]
+    assert isinstance(stamp, str)
+    assert re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", stamp), stamp
+
     # Old body gone, new body present
     assert "Old Body" not in out
     assert "## New Body" in out

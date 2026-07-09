@@ -9,9 +9,10 @@ keywords:
   - identify
   - retrieval-upsert
   - primitive
+status: implemented
+body_edited_at: 2026-07-09T07:59:03Z
 dependencies:
   - kernel/engine/retrieval
-status: implemented
 ---
 
 ## Positioning

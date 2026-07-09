@@ -10,6 +10,7 @@ from pathlib import Path
 
 from services._fm import parse_frontmatter
 
+from .doc_writer import stamp_module_md_content
 from .section_parser import (
     _normalize_content_lines,
     _split_frontmatter_block,
@@ -177,6 +178,12 @@ def write_module_section(
             raise RuntimeError(
                 "post-edit frontmatter failed to parse; aborting (file unchanged)"
             )
+
+    # module.md is stamped on every write (see doc_writer.stamp_module_md_content
+    # for the rationale). contract.md keeps its byte-for-byte frontmatter
+    # preservation guarantee.
+    if file_name == "module.md":
+        new_content = stamp_module_md_content(new_content)
 
     if dry_run:
         return new_content

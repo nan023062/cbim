@@ -12,7 +12,10 @@ governance skill, body resource, tests) import directly from this package.
 
 from ._telemetry import _log_import as _log_import
 from ._telemetry import _rel_for_log as _rel_for_log
+from .doc_writer import _BODY_EDITED_AT_KEY as _BODY_EDITED_AT_KEY
 from .doc_writer import _WRITE_DOC_ALLOWED as _WRITE_DOC_ALLOWED
+from .doc_writer import _now_body_edited_at as _now_body_edited_at
+from .doc_writer import stamp_module_md_content as stamp_module_md_content
 from .doc_writer import write_module_doc as write_module_doc
 from .frontmatter_schema import _MODULE_FM_LIST_FIELDS as _MODULE_FM_LIST_FIELDS
 from .frontmatter_schema import _MODULE_FM_REQUIRED as _MODULE_FM_REQUIRED

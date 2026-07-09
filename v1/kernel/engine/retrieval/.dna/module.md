@@ -9,8 +9,9 @@ keywords:
   - vector-search
   - drift-check
   - four-source
-dependencies: []
 status: implemented
+body_edited_at: 2026-07-09T07:59:03Z
+dependencies: []
 ---
 
 ## Positioning
@@ -176,4 +177,3 @@ CBIM v2 的记忆架构重设计带来一个共同需求：**多源向量检索*
 本模块对外**无依赖**。仅依赖 Python 标准库（`json` / `pathlib` / `hashlib`）+ 可选 numpy（vector 索引存在时）+ 可选 embedding SDK（外部 provider 启用时）。
 
 依赖方向：`memory.crud → engine/retrieval`、`memory.compaction → engine/retrieval`、`mcp_server.tools.dna → engine/retrieval`、`mcp_server.tools.agents → engine/retrieval`、`hooks.session_* → engine/retrieval`、`engine/execution → engine/retrieval`、`engine/dream → engine/retrieval`。无环。
-

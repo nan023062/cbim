@@ -9,12 +9,13 @@ keywords:
   - yield-resume
   - dispatch
   - root-loop
+status: implemented
+body_edited_at: 2026-07-09T07:59:03Z
 dependencies:
   - kernel/engine/core
   - kernel/engine/persistence
   - kernel/engine/retrieval
   - kernel/memory
-status: implemented
 ---
 
 ## Positioning

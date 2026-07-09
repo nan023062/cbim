@@ -44,6 +44,7 @@ _CHECK_MODE: dict[str, str] = {
     "dna_tree": "lenient",
     "dna_fission": "lenient",
     "agent_fission": "lenient",
+    "dna_freshness": "lenient",
     "index_consistency": "strict",
     "memory_threshold": "strict",
 }

@@ -2,9 +2,11 @@
 mcp_server/tools/dna.py — MCP tools for the CBIM module knowledge system (.dna/).
 
 Read tools:
-  dna_list(cwd)                  — all registered modules
-  dna_show(module_path, cwd)     — full module.md + contract.md content
-  dna_reindex(cwd)               — rescan filesystem, rebuild registry
+  dna_list(cwd)                                — all registered modules
+  dna_show(module_path, cwd)                   — full module.md + contract.md content
+  dna_workflows_scan(module_paths, keywords, cwd)
+                                                — workflow lookup by trigger keyword
+  dna_reindex(cwd)                             — rescan filesystem, rebuild registry
 
 Write tools (route through services.knowledge_service):
   dna_init(dir, kind, name, owner, description, with_contract, status, cwd)
@@ -84,6 +86,52 @@ def register(mcp) -> None:
         if info["contract"]:
             lines.append("\n--- contract.md ---\n" + info["contract"])
         return "\n".join(lines)
+
+    @mcp.tool()
+    def dna_workflows_scan(
+        module_paths: list,
+        keywords: list,
+        cwd: str = "",
+    ) -> list:
+        """Scan the given modules' `.dna/workflows/*/workflow.md` and return
+        those whose `triggers` overlap with `keywords` via case-insensitive
+        bidirectional substring match.
+
+        Read-only; does not touch the retrieval index. Unregistered
+        `module_paths` (not present in `.cbim/index.md`) are silently
+        skipped — callers who need "which paths are registered" should
+        use `dna_list` first. Path-traversal inputs (`../…`, drive-relative,
+        off-volume) are rejected by the shared path guard.
+
+        Args:
+            module_paths: List of module directories relative to the
+                          project root (or absolute paths inside root).
+                          `""` / `"."` addresses the root module.
+            keywords:     Free-form search terms. Empty list → empty
+                          result (no error, no "match everything").
+            cwd:          Project directory (default: current working dir).
+
+        Returns:
+            List of dicts sorted by `(module_path, workflow_id)`::
+
+                [
+                  {
+                    "module_path":      <project-relative POSIX path>,
+                    "workflow_id":      <directory slug>,
+                    "name":             <frontmatter.name>,
+                    "purpose":          <frontmatter.purpose>,
+                    "matched_triggers": [<trigger phrase>, ...],
+                    "body":             <workflow.md body, frontmatter stripped>,
+                  },
+                  ...
+                ]
+        """
+        from services import scan_workflows
+        return scan_workflows(
+            list(module_paths or []),
+            list(keywords or []),
+            cwd=cwd,
+        )
 
     @mcp.tool()
     def dna_reindex(cwd: str = "") -> str:
@@ -181,12 +229,31 @@ def register(mcp) -> None:
                          ValueError, and raises LookupError when the field
                          is not currently present in the frontmatter.
 
+                         For target="workflow", payload carries the workflow
+                         slug plus an optional mode selector:
+                           {"name": str, "content": str}
+                               — create (default; mode field omitted)
+                           {"name": str, "mode": "create", "content": str}
+                               — create (explicit); FileExistsError if the
+                                 workflow already exists
+                           {"name": str, "mode": "update", "content": str}
+                               — replace the body of an existing workflow;
+                                 FileNotFoundError if it does not exist
+                           {"name": str, "mode": "delete"}
+                               — remove workflow.md AND its now-empty <name>/
+                                 parent dir; idempotent when the workflow is
+                                 already gone; ValueError if "content" is
+                                 supplied
+
                          Other targets: see services.knowledge_service.edit_module.
             mode:        Default section mode when payload omits its own "mode".
+                         Ignored for target="workflow" (workflow uses its own
+                         payload-level "mode" — create | update | delete).
             cwd:         Project directory (default: current working dir).
 
         Returns:
-            Path of the saved file, or `ERROR: ...` on failure.
+            Path of the saved file (for workflow delete: the removed dir path),
+            or `ERROR: ...` on failure.
         """
         from services import PathOutsideRootError, edit_module, resolve_within_root
         root = project_root(cwd or None)

@@ -67,6 +67,16 @@ Locate the modules potentially related to the task:
 
 Outcome of Scan: a concrete list of `(module-dir, .dna/module.md absolute path or null)` candidate pairs.
 
+### Step 1.5 — Applicable Workflow Scan
+
+Once Step 1 has produced the candidate module list, extract keywords jointly from the `user_request` and those candidate module paths. There is no strict extraction rule — architect judgement — but the keyword set MUST at minimum cover the verbs and domain nouns that appear in the `user_request`.
+
+Invoke `dna_workflows_scan(module_paths=<candidate module paths>, keywords=<extracted keywords>)` (MCP tool). Matching is case-insensitive and bidirectional substring against each workflow's declared triggers; the tool silently skips modules that carry no `.dna/workflows/` directory.
+
+For every hit returned, quote its `body` (the `workflow.md` post-frontmatter content, verbatim) into the corresponding module's `arch_context` as an independent `<!-- workflow: <workflow_id> -->` block, placed immediately after `design_constraints` for that module.
+
+If no workflow is hit, this step produces nothing — proceed to Step 2 as usual. Not every gate run must attach a workflow; the scan is opportunistic, not mandatory output.
+
 ### Step 2 — Triage: the DNA four states
 
 For each candidate module, classify into exactly one state. Terminology copied verbatim from `design/WORKFLOW-ARCHITECT.zh-CN.md` §「DNA 四状态」:
@@ -140,6 +150,16 @@ The packet is a single Markdown block with the following structure. Fields marke
 | `action_taken` | yes | What the Architect did: `init` / `skip` / `none` / `update` / `mark_spec`. `mark_spec` means the architect ran `cbim dna edit ... --field status --value spec` on this module — the frontmatter `status` field is now the machine-readable record; the ContextPack carries the human-readable echo. |
 | `design_constraints` | yes | Plain-text summary of constraints extracted from `module.md` / `contract.md` (positioning, key decisions, public interface signatures). Quote verbatim where possible. |
 | `notes` | optional | Module-specific hint for the Work Agent (e.g. "S1 — implement freely within existing contract", "S3 — DNA is the spec (status=spec), do not deviate; flip to implemented when done", "S0 skipped — one-shot script, no DNA needed"). |
+
+### Optional `## Applicable Workflows` block (per module entry)
+
+A module entry MAY carry an optional `## Applicable Workflows` sub-section — zero to many lines — placed immediately after `design_constraints`. Each line encodes one hit from `dna_workflows_scan` (Step 1.5) in the shape:
+
+```
+workflow: <workflow_id> · triggers-matched: [<matched_triggers>] · <body verbatim>
+```
+
+**Work Agent consumption rule for this block**: workflows listed here are executable step specifications — the Work Agent MUST follow their step sequence when performing the task. If a workflow's steps conflict with the same module's `design_constraints`, `design_constraints` wins; the Work Agent MUST NOT silently pick a side but MUST escalate via the standard `NEEDS_ARCH_DECISION:` marker back through the Coordinator.
 
 ### Example (Markdown form)
 

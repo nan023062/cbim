@@ -22,6 +22,7 @@ from context import resolve_root_or_cwd as _resolve_root
 
 from . import _reindex
 from ._fm import parse_frontmatter, strip_frontmatter
+from ._paths import resolve_within_root
 
 
 # ---------------------------------------------------------------------------
@@ -144,6 +145,145 @@ def _collect_workflows(workflows_dir: Path) -> list[dict]:
             "body": strip_frontmatter(raw),
         })
     return out
+
+
+def scan_workflows(
+    module_paths: list[str],
+    keywords: list[str],
+    cwd: str = "",
+) -> list[dict]:
+    """Return workflow records whose triggers match any of ``keywords``.
+
+    Args:
+        module_paths: Candidate module directories (relative to the project
+            root or absolute; ``""`` / ``"."`` addresses the root module).
+            Each path is confined to the project root via
+            :func:`services._paths.resolve_within_root` — a traversal attempt
+            (``../…``, drive-relative, off-volume) raises
+            :class:`services.PathOutsideRootError`. Unregistered paths (not
+            present in ``.cbim/index.md``) are **silently skipped** so the
+            caller can pass a broad candidate list without pre-filtering; the
+            return list only contains matches, never markers.
+        keywords: Free-form search terms. Case-insensitive; leading/trailing
+            whitespace is stripped. Empty list → returns ``[]`` (no error,
+            no "match everything" semantics).
+        cwd: Project search base; walks up to find ``.cbim/``.
+
+    Returns:
+        List of pure-data dicts, sorted by ``(module_path, workflow_id)``::
+
+            [
+              {
+                "module_path":       <project-relative POSIX path>,
+                "workflow_id":       <directory slug under .dna/workflows/>,
+                "name":              <frontmatter.name, or slug on absence>,
+                "purpose":           <frontmatter.purpose, or "">,
+                "matched_triggers":  [<trigger phrase that matched>, ...],
+                "body":              <workflow.md with frontmatter stripped>,
+              },
+              ...
+            ]
+
+    Matching semantics:
+        A workflow is included when any of its declared ``triggers`` and any
+        of the supplied ``keywords`` overlap via a case-insensitive
+        substring relation in *either* direction (``keyword ⊆ trigger``
+        *or* ``trigger ⊆ keyword``). The bidirectional rule handles both
+        practical patterns — a short generic keyword hitting a longer
+        specific trigger phrase, and a long specific search query hitting
+        a short generic trigger — without silently missing either.
+
+    Purity:
+        Read-only. Does NOT touch the retrieval index; the dream loop
+        reconciles retrieval state independently.
+    """
+    if not keywords:
+        return []
+
+    from cbi._primitives.modules.registry import read_index
+
+    root = _resolve_root(cwd)
+    registered = set(read_index(root))
+
+    # Normalise every input path to its canonical registry form. Traversal
+    # attempts raise PathOutsideRootError (subclass of ValueError) — that
+    # propagates to the caller so it can't be silently dropped.
+    seen_paths: set[str] = set()
+    normalised: list[str] = []
+    for raw in module_paths or []:
+        abs_path = resolve_within_root(root, raw, allow_root_itself=True)
+        try:
+            rel = abs_path.resolve().relative_to(root.resolve()).as_posix()
+        except ValueError:
+            # resolve_within_root guarantees containment, so this branch
+            # is defensive — skip rather than raise on a normalisation
+            # edge case we haven't identified.
+            continue
+        canonical = rel if rel and rel != "." else "."
+        if canonical in seen_paths:
+            continue
+        seen_paths.add(canonical)
+        normalised.append(canonical)
+
+    # Prepare keyword needles once — strip + lowercase + dedupe.
+    needles: list[str] = []
+    seen_needles: set[str] = set()
+    for k in keywords:
+        if not isinstance(k, str):
+            continue
+        n = k.strip().lower()
+        if not n or n in seen_needles:
+            continue
+        seen_needles.add(n)
+        needles.append(n)
+    if not needles:
+        return []
+
+    results: list[dict] = []
+    for mp in normalised:
+        if mp not in registered:
+            continue  # silently skip unregistered — see docstring
+        mod_dir = root if mp == "." else (root / mp)
+        wf_root = mod_dir / ".dna" / "workflows"
+        if not wf_root.is_dir():
+            continue
+        for wf_dir in sorted(wf_root.iterdir()):
+            if not wf_dir.is_dir():
+                continue
+            wf_file = wf_dir / "workflow.md"
+            if not wf_file.is_file():
+                continue
+            try:
+                raw = wf_file.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            meta = parse_frontmatter(raw)
+            triggers = meta.get("triggers") or []
+            if not isinstance(triggers, list):
+                continue
+            matched: list[str] = []
+            for t in triggers:
+                if not isinstance(t, str):
+                    continue
+                t_norm = t.strip().lower()
+                if not t_norm:
+                    continue
+                if any(n in t_norm or t_norm in n for n in needles):
+                    matched.append(t)
+            if not matched:
+                continue
+            purpose = meta.get("purpose", "")
+            results.append({
+                "module_path": mp,
+                "workflow_id": wf_dir.name,
+                "name": meta.get("name", wf_dir.name),
+                "purpose": purpose if isinstance(purpose, str) else "",
+                "matched_triggers": matched,
+                "body": strip_frontmatter(raw),
+            })
+
+    results.sort(key=lambda x: (x["module_path"], x["workflow_id"]))
+    return results
 
 
 # ---------------------------------------------------------------------------
@@ -513,15 +653,66 @@ def edit_module(
         wf_name = payload.get("name")
         if not wf_name:
             raise ValueError("payload.name is required for target=workflow")
+        wf_mode = payload.get("mode", "create")
+        if wf_mode not in ("create", "update", "delete"):
+            raise ValueError(
+                f"payload.mode for target=workflow must be one of "
+                f"'create' | 'update' | 'delete' (default 'create'), "
+                f"got: {wf_mode!r}"
+            )
         content = payload.get("content")
-        if content is None:
-            raise ValueError("payload.content is required for target=workflow")
-        m.workflows.add(wf_name, content)
+        workflows_dir = m.path.parent / "workflows"
+        wf_dir = workflows_dir / wf_name
+
+        if wf_mode == "create":
+            if content is None:
+                raise ValueError(
+                    "payload.content is required for target=workflow, mode=create"
+                )
+            m.workflows.add(wf_name, content)
+            result_path = str((wf_dir / "workflow.md").resolve())
+        elif wf_mode == "update":
+            if content is None:
+                raise ValueError(
+                    "payload.content is required for target=workflow, mode=update"
+                )
+            if wf_name not in m.workflows:
+                raise FileNotFoundError(
+                    f"workflow {wf_name!r} does not exist under {module_path}, "
+                    f"cannot update"
+                )
+            wf = m.workflows.get(wf_name)
+            wf.body.write(content)
+            wf.save()
+            result_path = str((wf_dir / "workflow.md").resolve())
+        else:  # wf_mode == "delete"
+            if content:
+                raise ValueError(
+                    "payload.content is not accepted for target=workflow, mode=delete"
+                )
+            # WorkflowCollection.remove is idempotent — silently skips when
+            # workflow.md is absent. Preserve that: delete on a missing
+            # workflow is a no-op, not an error.
+            m.workflows.remove(wf_name)
+            # Services-layer responsibility: clean up the now-empty <name>/
+            # dir. Primitives layer (WorkflowCollection.remove) intentionally
+            # only unlinks the file. If the dir has unexpected residual
+            # files, surface an error rather than silently rmtree-ing
+            # non-empty state.
+            if wf_dir.is_dir():
+                residual = [p.name for p in wf_dir.iterdir()]
+                if residual:
+                    raise RuntimeError(
+                        f"workflow dir {wf_dir} is not empty after removing "
+                        f"workflow.md; unexpected residual files: {residual}"
+                    )
+                wf_dir.rmdir()
+            result_path = str(wf_dir.resolve())
         # Module.md is unchanged here, but the historical MCP wrapper
         # reindexed every dna_edit call regardless of target — keep that
         # behaviour so the retrieval index stays warm on workflow churn too.
         _reindex.reindex_dna(root, module_dir)
-        return str((m.path.parent / "workflows" / wf_name / "workflow.md").resolve())
+        return result_path
 
     raise ValueError(f"unknown target: {target!r}")
 

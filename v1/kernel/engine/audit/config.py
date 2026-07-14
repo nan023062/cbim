@@ -68,6 +68,14 @@ DEFAULTS: dict = {
         # fires — per-note.
         "max_draft_stuck_days": 30,
     },
+    "skill_scripts": {
+        # Per-asset byte-size threshold. `resolve_bands` bands this into
+        # info at 80% (~160 KB), warn at 100% (~200 KB), error at 150%
+        # (~300 KB). Large scripts under `<skill>/assets/` are a smell —
+        # non-trivial logic should live in first-class kernel code, not
+        # in HR-provisioned assets.
+        "size_bytes": 200000,
+    },
 }
 
 _INFO_FACTOR = 0.80

@@ -9,10 +9,10 @@ keywords:
   - snapshot
   - internal
   - loader
+status: implemented
+body_edited_at: 2026-07-14T09:52:40Z
 dependencies:
   - v1/kernel/services
-status: implemented
-body_edited_at: 2026-07-09T07:59:03Z
 ---
 
 ## Positioning
@@ -118,4 +118,13 @@ All `cmd_*` handlers previously hosted here were deleted in P3 Wave 1. The top-l
 - **Phase 3 — `graph_builder` 不动 `cbi.resources` 面，仅被 `engine/retrieval` / `engine/dream` / `services/_reindex` / `hooks.session_start` 跨包调用。** 这与P3 对「`_primitives` 是内部原子、外部调用走 `cbi.resources` 」的独严调是合调的一项调领例外：`graph_builder` 输出的是**跨源索引器副产物**（与 BM25/vector 索引同层），不在「DNA 模块 CRUD」语义范畴中，抹上 `cbi.resources` 包装崭会造成「为一个调用方开一套 facade」的反面。外部调用按函数名直接报 `from cbi._primitives.modules.graph_builder import build_graph / patch_graph / load_graph`。这三个函数名是公共契约；其他内部 helper（`_extract_mermaid_blocks` / `_parse_class_diagram_deps` / `_is_leaf` / `_direct_parent` / `_emit_edges_for_module` / `_drop_module_from_graph` / `_graph_path` / `_write_graph`）是实现细节，不对外报。
 
 - **`.dna/module.md` frontmatter `body_edited_at` 字段由 kernel 自动打时间戳，人不维护。** 每次 module.md 走 `doc_writer.write_module_doc(mod_dir, "module.md", body)` 收口写盘，不管触发方是 `DNAModule.body.save()` / `.frontmatter.save()` / `.save()` / `dna_edit` MCP 工具任意一条，kernel 都会在写入前把 frontmatter 中的 `body_edited_at` 更新为当前 UTC ISO 8601 时间戳。**仅针对 module.md：**contract.md 与 workflows/*.md 不受影响——该字段专属 module.md 的修订时钟。存量迁移：`cbim dna stamp-freshness` 子命令一次性扫全模块、调 `DNAModule.save()` 触发收口写以补齐存量 `body_edited_at`。**与“Kernel-Only Writes”铁律的连动**：任何绕过 `doc_writer` 的 raw `Write`/`Edit` 不会更新这个字段——stamp 停推本身就是 `engine/audit/checks/dna_freshness.py` 消费的漂移信号，反向推导出“module.md 绕过 kernel 直写”这种违规行为。
+
+- **新增 `_primitives/skills.py` —— project-侧 agent skill 目录 CRUD 原语（2026-07-14 决策锁定）**。与 `agents.py` 平行，单文件不拆包。属于 `_primitives` 内部层，外部调用方仍需走 `cbi.resources.Skill` / `services.SkillService`。
+
+  - **仅侜 `.claude/agents/<agent>/skills/` 子树**。内置四 agent 的内核版 skill（制 `SKILL` 常量形式位于 `cbi/agents/<name>/skills/<skill>/skill.py`）不在本原语范围内；`cbi/resources/Skill.load_builtin` 继续处理只读内核版。接口层面无交叉。
+  - **单一写入入口**。`.dna/` / `.claude/agents/` 下需要新增“不属于既有 modules/agents 目录”的写入（即 agent skill 目录形态 + assets/）均过本包；任何另起一个与内核写盘入口平行的新包（如先前临时方案中“直接写 assets”）都是回归。
+  - **与内核-只-写铁律对齐**。skills.py 预期提供：`create_agent_skill(agents_dir, agent, skill, body, *, as_dir: bool) -> Path`、`load_agent_skill(agents_dir, agent, skill) -> dict`、`list_agent_skills(agents_dir, agent) -> list[dict]`、`update_agent_skill_body(...)`、`delete_agent_skill(...)`、`add_skill_asset(agents_dir, agent, skill, asset_rel_path, content, *, is_executable: bool) -> Path`、`remove_skill_asset(...)`。方法粒度与 `agents.scaffold_agent` / `archive_agent` 一致——“一个方法一个原子写盘事务”，不携带业务护栏（is_executable 白名单、caller 报名、audit log、内置 agent 拒写）——**护栏均上提至服务层**，本原语内只负责“能不能完成物理写入”（路径组装、atomic_write、目录创建、重名、删除）。
+  - **路径拼接商止“同名共存”。**创建时误拒：已存在 `<skill>.md` 要创目录形 / 已存在 `<skill>/` 要创单文件形 → `FileExistsError`。`load_agent_skill` 同时发现两种形态 → `AmbiguousSkillError`（与 resources.Skill 同名异常；定义在 primitives 层，resources 层 re-export）。
+  - **依赖方向**。`skills.py` 仅 import `services._fm` 与本包内 `_telemetry`；不 import `cbi.resources`，不 import `engine.retrieval`（索引副作用由服务层内联调 `_reindex`），不 import `engine.logger`（audit log 同样由服务层担任）。与已有铁律“依赖方向：engine/cli → cbi/resources → cbi/_primitives → services/_fm”一致。
+  - **与 `<300 LOC 软目标`对齐**，预期单文件在此阈值以内；如因开接入 assets 变体发胀至接近阈值，拆包方式参照 `modules/` 拆为 `skills/`子包（loader / crud / assets / …）。当前不预建子包。
 

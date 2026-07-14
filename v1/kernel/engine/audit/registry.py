@@ -18,6 +18,7 @@ from .checks import (
     dna_tree,
     index_consistency,
     memory_threshold,
+    skill_scripts,
 )
 from .result import AuditFinding
 
@@ -32,6 +33,7 @@ CHECKS: dict[str, CheckFn] = {
     "dna_frontmatter": dna_frontmatter.check,
     "dna_freshness": dna_freshness.check,
     "dna_notes": dna_notes.check,
+    "skill_scripts": skill_scripts.check,
 }
 
 

@@ -18,6 +18,7 @@ from ._frontmatter import Frontmatter
 from ._io import atomic_write_text
 from .skill import Skill
 from .._primitives import agents as _agents_eng
+from .._primitives import skills as _skills_eng
 from services._fm import parse_frontmatter, strip_frontmatter
 
 
@@ -25,10 +26,32 @@ class AgentFrontmatter(Frontmatter):
     _SCHEMA = ("name", "description", "model", "tools")
 
 
+def _skill_name_from_rec(rec: dict) -> str:
+    """Recover the skill name from a `_primitives.skills.load_agent_skill` record.
+
+    Primitive records carry `form` + `path`; the name is not stored explicitly
+    because it is unambiguously derivable from the path shape:
+      * form == "file" -> path is `<skill>.md`,        name == path.stem
+      * form == "dir"  -> path is `<skill>/skill.md`,  name == path.parent.name
+    """
+    return rec["path"].parent.name if rec["form"] == "dir" else rec["path"].stem
+
+
 class SkillCollection:
-    """Lazy view over <agent_dir>/skills/*.md."""
+    """View over `<agent_dir>/skills/`, supporting both file-form (`<name>.md`)
+    and dir-form (`<name>/skill.md` + `<name>/assets/`) skills.
+
+    Disk-shape detection (which form a given skill uses) is delegated to
+    `cbi._primitives.skills`; this class never inspects `<name>.md` vs
+    `<name>/skill.md` directly.
+    """
 
     def __init__(self, agent_dir: Path):
+        self._agent_dir = agent_dir
+        self._agents_dir = agent_dir.parent
+        self._agent_name = agent_dir.name
+        # Retained for backward-compat introspection; not used for form
+        # detection (primitives handle that).
         self._dir = agent_dir / "skills"
 
     # ------------------------------------------------------------------
@@ -36,33 +59,60 @@ class SkillCollection:
     # ------------------------------------------------------------------
 
     def list(self) -> list[str]:
-        if not self._dir.exists():
-            return []
-        return sorted(f.stem for f in self._dir.glob("*.md"))
+        recs = _skills_eng.list_agent_skills(self._agents_dir, self._agent_name)
+        return [_skill_name_from_rec(r) for r in recs]
 
     def get(self, name: str) -> Skill:
-        path = self._dir / f"{name}.md"
-        return Skill.load(path)
+        rec = _skills_eng.load_agent_skill(self._agents_dir, self._agent_name, name)
+        if rec is None:
+            raise FileNotFoundError(
+                f"skill not found: {self._agent_name}/{name}"
+            )
+        return Skill.load(rec["path"])
 
     def __contains__(self, name: str) -> bool:
-        return (self._dir / f"{name}.md").is_file()
+        # `load_agent_skill` returns None when neither form exists and raises
+        # `AmbiguousSkillError` when both exist; letting the error propagate
+        # is intentional (ambiguity is a real state the caller must resolve,
+        # not something to silently paper over).
+        return _skills_eng.load_agent_skill(
+            self._agents_dir, self._agent_name, name
+        ) is not None
 
     def __iter__(self) -> Iterator[Skill]:
-        for stem in self.list():
-            yield Skill.load(self._dir / f"{stem}.md")
+        for rec in _skills_eng.list_agent_skills(self._agents_dir, self._agent_name):
+            yield Skill.load(rec["path"])
 
     # ------------------------------------------------------------------
     # Write
     # ------------------------------------------------------------------
 
-    def add(self, name: str, content: str) -> Skill:
-        self._dir.mkdir(parents=True, exist_ok=True)
-        return Skill.create(self._dir / f"{name}.md", content=content)
+    def add(self, name: str, content: str, *, as_dir: bool = False) -> Skill:
+        """Create a new skill.
+
+        `as_dir=False` (default) creates the legacy single-file shape
+        (`<name>.md`). `as_dir=True` creates the directory shape
+        (`<name>/skill.md`), which is required if the skill will later gain
+        `assets/`. The primitives layer refuses to create over an existing
+        skill in either form (`FileExistsError`).
+        """
+        path = _skills_eng.create_agent_skill(
+            self._agents_dir,
+            self._agent_name,
+            name,
+            content,
+            as_dir=as_dir,
+        )
+        return Skill.load(path)
 
     def remove(self, name: str) -> None:
-        path = self._dir / f"{name}.md"
-        if path.is_file():
-            path.unlink()
+        try:
+            _skills_eng.delete_agent_skill(
+                self._agents_dir, self._agent_name, name
+            )
+        except FileNotFoundError:
+            # Match the pre-primitive behaviour: silent no-op when absent.
+            pass
 
 
 class Agent(Resource):

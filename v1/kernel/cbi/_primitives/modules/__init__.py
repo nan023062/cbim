@@ -22,6 +22,21 @@ from .frontmatter_schema import _MODULE_FM_REQUIRED as _MODULE_FM_REQUIRED
 from .frontmatter_schema import _MODULE_FM_SCHEMA as _MODULE_FM_SCHEMA
 from .frontmatter_schema import _MODULE_FM_STATUS_VALUES as _MODULE_FM_STATUS_VALUES
 from .frontmatter_schema import _build_module_md as _build_module_md
+from .note_crud import _NOTE_SLUG_RE as _NOTE_SLUG_RE
+from .note_crud import _validate_note_slug as _validate_note_slug
+from .note_crud import create_note as create_note
+from .note_crud import delete_note as delete_note
+from .note_crud import list_notes as list_notes
+from .note_crud import note_exists as note_exists
+from .note_crud import read_note as read_note
+from .note_crud import update_note as update_note
+from .notes_frontmatter_schema import _NOTE_FM_INTENT_VALUES as _NOTE_FM_INTENT_VALUES
+from .notes_frontmatter_schema import _NOTE_FM_LIST_FIELDS as _NOTE_FM_LIST_FIELDS
+from .notes_frontmatter_schema import _NOTE_FM_REQUIRED as _NOTE_FM_REQUIRED
+from .notes_frontmatter_schema import _NOTE_FM_SCHEMA as _NOTE_FM_SCHEMA
+from .notes_frontmatter_schema import _NOTE_FM_STATUS_VALUES as _NOTE_FM_STATUS_VALUES
+from .notes_frontmatter_schema import _build_note_md as _build_note_md
+from .notes_frontmatter_schema import _validate_note_frontmatter as _validate_note_frontmatter
 from .loader import _SCAN_SKIP_DIRS as _SCAN_SKIP_DIRS
 from .loader import _is_skipped as _is_skipped
 from .loader import _load_legacy_format as _load_legacy_format
@@ -68,6 +83,22 @@ __all__ = [
     "index_path",
     "read_index",
     "ensure_registry",
+    # Notes primitives (Task 0 — .dna/notes/ single-file supplement layer)
+    "create_note",
+    "update_note",
+    "delete_note",
+    "list_notes",
+    "read_note",
+    "note_exists",
+    "_validate_note_slug",
+    "_validate_note_frontmatter",
+    "_build_note_md",
+    "_NOTE_FM_SCHEMA",
+    "_NOTE_FM_LIST_FIELDS",
+    "_NOTE_FM_REQUIRED",
+    "_NOTE_FM_STATUS_VALUES",
+    "_NOTE_FM_INTENT_VALUES",
+    "_NOTE_SLUG_RE",
     # White-box contract names consumed by audit, governance, body resource, tests
     "_MODULE_FM_LIST_FIELDS",
     "_MODULE_FM_REQUIRED",

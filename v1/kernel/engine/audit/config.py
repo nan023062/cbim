@@ -51,6 +51,23 @@ DEFAULTS: dict = {
         # in practice rounded to 6 / 7 / 11 (finding uses `int(days_stale)`).
         "stale_days": 7,
     },
+    "dna_notes": {
+        # Cap on the number of `<module>/.dna/notes/<slug>.md` supplement
+        # files a single module can carry before the "note sprawl" alert
+        # fires (mirrors dna_fission's `max_workflow_count` semantics —
+        # `resolve_bands` bands off this threshold).
+        "max_note_count": 20,
+        # Per-module ratio (0..100) of "stale" notes above which the
+        # stale-ratio finding fires. Stale = a note's `last_reviewed` is
+        # older than the module.md `body_edited_at` stamp (missing
+        # `last_reviewed` counts as stale by design).
+        "max_stale_ratio_pct": 30,
+        # Days a `status="draft"` note is allowed to sit un-reviewed
+        # (measured against `last_reviewed`, or the file's mtime when the
+        # note has never been reviewed) before the draft-stuck finding
+        # fires — per-note.
+        "max_draft_stuck_days": 30,
+    },
 }
 
 _INFO_FACTOR = 0.80

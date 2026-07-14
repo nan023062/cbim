@@ -10,7 +10,7 @@ keywords:
   - drift-check
   - four-source
 status: implemented
-body_edited_at: 2026-07-09T07:59:03Z
+body_edited_at: 2026-07-10T10:04:17Z
 dependencies: []
 ---
 
@@ -137,6 +137,17 @@ CBIM v2 的记忆架构重设计带来一个共同需求：**多源向量检索*
 - **`GraphIndex` 在 retrieval 内只持"加载 + BFS"两件事；图谱构造在 retrieval 之外。** `engine/retrieval/index/graph.py` 的 `GraphIndex` 是只读视图：`load(project_root)` 懒导入 `cbi._primitives.modules.graph_builder.load_graph` 读 `graph.json`，`bfs(seeds, hops)` 做迭代式跳数受限的双向邻接遍历（`adjacency_out` + `adjacency_in`，跳上限 ~5000 防爆膨胀）。**构造图谱（解析 frontmatter `dependencies` + Mermaid `..>` 边、物化 `graph.json`）的责任放在 `cbi/_primitives/modules/graph_builder.py`**，retrieval 不参与解析。这一刀守的是"对源一视同仁"铁律：retrieval 不知道 `.dna/` 的业务语义（frontmatter 字段、Mermaid 类图），它只知道 `(source, doc_id, content, metadata)` 四元组——graph 构造一旦进 retrieval，就要 retrieval 反向 import `cbi/_primitives` 解析模块文档，破坏 leaf 模块的边界。
 - **k 跳扩展打分按 `seed_score * 0.6**hop` 衰减，向后兼容旧 5 函数语义。** 命中合并由 `_merge_seeded_neighbours` 完成：种子保持原次序与原分数靠前；邻居以 `seed_score * 0.6**hop` 排在种子之后，并在 metadata 注入 `expanded_from`（拉它进来的种子）+ `hop` 距离两个观测字段，但**不**改变 `Hit` 字段集（`{doc_id, source, score, content, metadata}`），契约层零变。`expand_hops` 缺省路径不进入合并逻辑，按 `_split_graph_directives` 早返回保证字节级等价。
 
+- **`.dna/notes/*.md` 待纳入 `dna` 源 ingest glob（设计已定，代码待动）。** 根模块 D8 决定新增 `.dna/notes/<slug>.md` 作为模块补充说明层（面向所有想看详细设计的读者，是 module.md 的详细展开）。当前 `dna` 源 ingest 范围仍是 `**/.dna/{module.md, contract.md, workflows/*}` —— **尚未覆盖 notes**；首批 notes 落盘时，`services/_reindex.reindex_dna` 与 `mcp_server.tools.dna` 写入路径需一起扩展。**5 函数契约不变、source 枚举不变**，只是 ingest 覆盖面扩展（仍在 `source="dna"` 下）。检索端可用三处元数据加权：`intent`（`rationale` / `implementation-detail` / `current-state` / `usage-example` / `historical-context`）、`status`（stable 优先）、`related_modules`（可复用现有 `expand_hops` 图扩展）。本条目状态：**知识已定，代码未动**；后续落地时删除本条目并入正式实现说明。
+
+- **D8 落地细化（补录）**：上一条 bullet 说的“ingest glob 扩展”改动点**不在本模块**，在写路径侧。具体三处：
+  - `services/_reindex.py::reindex_dna` 硬编码只读 `<module_dir>/.dna/module.md`，需扩展扫 `<module_dir>/.dna/notes/*.md` 循环 upsert（`source="dna"`，`doc_id="<module>/notes/<slug>"`，metadata 带 `intent` / `status` / `related_modules`）。
+  - `.claude/hooks/cbim_session_start.py::_iter_dna_modules` 冷启动补录扫描也只覆盖 `module.md`，需一并扩展扫 `notes/*.md`（处理人肉加进来的 note、从别的机器 clone 过来的项目）。
+  - **本模块 `contract.md` 中 dna 源边界表格行**（当前 `**/.dna/{module.md, contract.md, workflows/*}`）属于契约的一部分，落地时需同步更新为覆盖 `notes/*.md`——虽然 5 函数签名与 source 枚举不变，但 source 边界的内容范围是对外承诺，不能只改写路径不改契约描述。
+
+  本模块作为 leaf 保持“无脑接受调用”语义，不主动扫文件、不新增源、不改 5 函数契约。**知识已定，代码未动**。
+
+- **D8 收官（2026-07-10）**：Task 6 完成——本模块 `contract.md` 中 `dna` 源边界表格行已由 `**/.dna/{module.md, contract.md, workflows/*}` 更新为 `**/.dna/{module.md, contract.md, workflows/*, notes/*}`。Task 1（`services/_reindex.py::reindex_notes`）+ Task 4（hook 冷启动）已一并落地。**索引 metadata 单一出口**规则（分歧 1 裁决）固化到实现：`source="dna"` 的 metadata 字典组装仅在 `services/_reindex.py` 内发生，本模块作为 leaf 仍保持“对源一视同仁”语义。详见根模块 D8 落地记录。
+
 ## Sub-module Relationships
 
 无下级子模块。本模块是 leaf。
@@ -177,3 +188,4 @@ CBIM v2 的记忆架构重设计带来一个共同需求：**多源向量检索*
 本模块对外**无依赖**。仅依赖 Python 标准库（`json` / `pathlib` / `hashlib`）+ 可选 numpy（vector 索引存在时）+ 可选 embedding SDK（外部 provider 启用时）。
 
 依赖方向：`memory.crud → engine/retrieval`、`memory.compaction → engine/retrieval`、`mcp_server.tools.dna → engine/retrieval`、`mcp_server.tools.agents → engine/retrieval`、`hooks.session_* → engine/retrieval`、`engine/execution → engine/retrieval`、`engine/dream → engine/retrieval`。无环。
+

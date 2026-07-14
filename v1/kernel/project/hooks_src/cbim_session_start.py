@@ -57,6 +57,58 @@ _DREAM_WINDOW_HOURS = 20
 # ---------------------------------------------------------------------------
 
 
+_DNA_SKIP_DIRS = frozenset({
+    ".git", "node_modules", "__pycache__", ".venv", "venv", ".tox",
+    "dist", "build", ".idea", ".vscode", ".cbim",
+})
+
+
+def _iter_dna_module_dirs(root: Path) -> list[tuple[str, Path]]:
+    """Shared walk skeleton behind `_iter_dna_modules` and `_iter_dna_notes`.
+
+    Yields ``(module_rel_posix, module_dir)`` for every directory
+    containing a ``.dna/module.md``. ``module_rel_posix`` is the module
+    dir's POSIX-style path relative to ``root`` — ``"."`` for the root
+    module (Path.relative_to's canonical single-dot form).
+
+    Off-tree module dirs (root symlinked outside itself, etc.) are
+    skipped rather than raised — matches the historical behavior of the
+    old inline walk.
+
+    Kept as a plain list return (not a generator) so both consumers can
+    walk it multiple times without re-scanning, and so `_iter_dna_notes`
+    can call it lazily without paying a second traversal cost.
+    """
+    out: list[tuple[str, Path]] = []
+
+    def _walk(d: Path) -> None:
+        try:
+            children = list(d.iterdir())
+        except OSError:
+            return
+        for child in children:
+            name = child.name
+            if name in _DNA_SKIP_DIRS:
+                continue
+            if not child.is_dir():
+                continue
+            if name == ".dna":
+                module_md = child / "module.md"
+                if module_md.is_file():
+                    module_dir = child.parent
+                    try:
+                        rel = module_dir.resolve().relative_to(root.resolve())
+                    except ValueError:
+                        continue
+                    out.append((rel.as_posix(), module_dir))
+                # Do NOT descend into .dna/ itself.
+                continue
+            _walk(child)
+
+    _walk(root)
+    return out
+
+
 def _iter_dna_modules(root: Path) -> list[tuple[str, Path]]:
     """Walk the project tree for .dna/module.md files.
 
@@ -70,39 +122,50 @@ def _iter_dna_modules(root: Path) -> list[tuple[str, Path]]:
     repos with thousands of files.
     """
     out: list[tuple[str, Path]] = []
-    skip_dirs = {
-        ".git", "node_modules", "__pycache__", ".venv", "venv", ".tox",
-        "dist", "build", ".idea", ".vscode", ".cbim",
-    }
+    for rel_posix, module_dir in _iter_dna_module_dirs(root):
+        doc_id = rel_posix or "."
+        module_md = module_dir / ".dna" / "module.md"
+        out.append((doc_id, module_md.resolve()))
+    return out
 
-    # The .dna/ marker is one level below the module dir, so we look for
-    # any directory named ".dna" containing a module.md.
-    def _walk(d: Path) -> None:
+
+def _iter_dna_notes(root: Path) -> list[tuple[str, Path]]:
+    """Walk every registered module for `.dna/notes/*.md` files.
+
+    Returns (doc_id, source_path) tuples matching the note doc_id
+    contract in `services/knowledge_service._note_doc_id`:
+
+        root module  →  ``notes/<slug>``
+        sub module   →  ``<mod_rel>/notes/<slug>`` (POSIX separators)
+
+    The formula is duplicated (not imported) because hooks_src has no
+    other dependency on ``services.*`` and adding one for a 3-line
+    contract would broaden the hook's kernel surface. Test
+    `test_iter_dna_notes_doc_id_matches_note_doc_id` cross-checks both
+    implementations to catch drift.
+
+    Modules without a `.dna/notes/` directory contribute nothing;
+    per-note read errors are the caller's problem (this fn is pure
+    filesystem discovery with no side-effects).
+    """
+    out: list[tuple[str, Path]] = []
+    for rel_posix, module_dir in _iter_dna_module_dirs(root):
+        notes_dir = module_dir / ".dna" / "notes"
+        if not notes_dir.is_dir():
+            continue
         try:
-            children = list(d.iterdir())
+            candidates = sorted(notes_dir.glob("*.md"))
         except OSError:
-            return
-        for child in children:
-            name = child.name
-            if name in skip_dirs:
+            continue
+        for note_path in candidates:
+            if not note_path.is_file():
                 continue
-            if not child.is_dir():
-                continue
-            if name == ".dna":
-                module_md = child / "module.md"
-                if module_md.is_file():
-                    module_dir = child.parent
-                    try:
-                        rel = module_dir.resolve().relative_to(root.resolve())
-                    except ValueError:
-                        continue
-                    doc_id = rel.as_posix() or "."
-                    out.append((doc_id, module_md.resolve()))
-                # Do NOT descend into .dna/ itself.
-                continue
-            _walk(child)
-
-    _walk(root)
+            slug = note_path.stem
+            if rel_posix in ("", "."):
+                doc_id = f"notes/{slug}"
+            else:
+                doc_id = f"{rel_posix}/notes/{slug}"
+            out.append((doc_id, note_path.resolve()))
     return out
 
 
@@ -300,10 +363,17 @@ def _ensure_graph(root: Path) -> None:
 
 
 def _refresh_indexes(root: Path) -> None:
-    """Run the three index sync passes; each is independently guarded."""
+    """Run the index sync passes; each is independently guarded."""
     safe_run(
         lambda: _sync_source_with_disk("dna", _iter_dna_modules(root)),
         on_error_label="session_start.sync_dna",
+    )
+    # Notes share the "dna" retrieval source; a separate pass keeps the
+    # walk of .dna/notes/*.md fully independent from the module.md walk
+    # so a bug in one path can't stall the other.
+    safe_run(
+        lambda: _sync_source_with_disk("dna", _iter_dna_notes(root)),
+        on_error_label="session_start.sync_dna_notes",
     )
     safe_run(
         lambda: _sync_source_with_disk("agents", _iter_agents(root)),

@@ -80,7 +80,21 @@ def reindex_dna(root: Path, module_dir: Path) -> None:
     `tmp_path` test layouts that exercise services without booting the
     full retrieval store).
 
-    Phase 3 addendum: after the BM25/vector upsert succeeds, also
+    Notes addendum: after the module.md upsert succeeds, also scan
+    ``<module_dir>/.dna/notes/*.md`` and upsert each note as its own
+    dna doc (doc_id = ``<mod_rel>/notes/<slug>`` or ``notes/<slug>`` for
+    the root module — same contract as
+    :func:`services.knowledge_service._note_doc_id`). Notes are indexed
+    per-file (never merged into the module.md doc) because they carry
+    different doc_ids and merging would silently overwrite one with the
+    other. Per-note failures do not sink the batch — the surrounding
+    module.md upsert already succeeded, and the dream loop reconciles.
+    Both this batch path and the single-CRUD path in
+    :mod:`services.knowledge_service` route through
+    :func:`reindex_notes`, which delegates metadata assembly to a single
+    helper — the two paths cannot drift.
+
+    Phase 3 addendum: after the BM25/vector upserts succeed, also
     refresh the DNA graph for this module (single-module patch). Failure
     here is silently swallowed — the dream loop's authoritative
     DnaGraphRebuild leaf reconciles on the next governance pass.
@@ -114,6 +128,15 @@ def reindex_dna(root: Path, module_dir: Path) -> None:
     except Exception:  # noqa: BLE001 — main write succeeded; reindex is side-effect, dream loop verify_consistency reconciles
         return
 
+    # Notes pass — best-effort, one doc per note. Outer try/except is a
+    # belt-and-suspenders wrapper on top of the per-note guards inside
+    # ``reindex_notes`` so any escaped exception can't sink the graph
+    # patch that follows.
+    try:
+        reindex_notes(root, module_dir)
+    except Exception:  # noqa: BLE001 — index side-effect only; dream loop reconciles
+        pass
+
     # Phase 3 graph patch — out of the upsert try/except so a graph
     # write hiccup doesn't swallow legitimate retrieval errors above
     # (the upsert path uses its own broad except for the same reason).
@@ -122,6 +145,173 @@ def reindex_dna(root: Path, module_dir: Path) -> None:
         patch_graph(root, module_dir)
     except Exception:  # noqa: BLE001 — same fault-tolerance contract as reindex itself; dream loop's full DnaGraphRebuild owns recovery
         return
+
+
+def _note_index_payload(
+    root: Path,
+    module_dir: Path,
+    note_path: Path,
+) -> tuple[str, str, dict] | None:
+    """Read one note file and assemble its retrieval-index payload.
+
+    Returns ``(doc_id, content, metadata)`` on success, or ``None`` when
+    the note should be skipped (unreadable / empty / bad slug / retrieval
+    subsystem absent). This is the single source of truth for note
+    metadata — both the batch-rebuild path (``reindex_notes`` with
+    ``only_slug=None``) and the single-CRUD path (``only_slug=<slug>``,
+    invoked from :mod:`services.knowledge_service`) MUST route through
+    this helper so the two paths cannot drift on metadata shape.
+
+    Metadata shape (Task 0 contract, tightened by architect ruling):
+      * ``kind``             — literal ``"note"``.
+      * ``intent``           — enum value from
+                               :data:`_NOTE_FM_INTENT_VALUES` when the
+                               frontmatter carries a legal value;
+                               otherwise ``None``. Missing, corrupted,
+                               and out-of-enum all collapse to ``None``
+                               — retrieval's weighting consumer does not
+                               distinguish these cases, so no
+                               ``"unknown"`` sentinel is emitted.
+      * ``status``           — same rule as ``intent``, keyed against
+                               :data:`_NOTE_FM_STATUS_VALUES`.
+      * ``related_modules``  — the frontmatter list filtered to string
+                               elements; missing / non-list defaults to
+                               ``[]`` (a list-typed field's natural
+                               empty state, not a sentinel).
+      * ``source_path``      — resolved on-disk path of the note file.
+
+    Import notes:
+      * ``_note_doc_id`` is fetched via lazy import — a top-level
+        ``from services.knowledge_service import _note_doc_id`` would
+        deadlock the module-load order (``knowledge_service`` does
+        ``from . import _reindex`` before ``_note_doc_id`` is defined).
+    """
+    try:
+        from services._fm import parse_frontmatter
+        from services.knowledge_service import _note_doc_id
+        from cbi._primitives.modules import _NOTE_SLUG_RE
+        from cbi._primitives.modules.notes_frontmatter_schema import (
+            _NOTE_FM_INTENT_VALUES,
+            _NOTE_FM_STATUS_VALUES,
+        )
+    except Exception:  # noqa: BLE001 — retrieval subsystem may be absent (bare tmp_path layouts)
+        return None
+
+    if not note_path.is_file():
+        return None
+    slug = note_path.stem
+    # Skip files with slugs that don't satisfy the note-slug convention
+    # — same filter list_notes() applies. Their doc_id would be
+    # non-round-trippable via the CRUD API, so indexing them would just
+    # create orphans.
+    if not _NOTE_SLUG_RE.match(slug):
+        return None
+    try:
+        content = note_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    if not content:
+        return None
+
+    # parse_frontmatter raises on unrecognised shapes; treat as
+    # broken-frontmatter so we still index the body. Missing, corrupt,
+    # and out-of-enum enum values all collapse to None — retrieval
+    # weighting has no behavioural fork for the three cases, so no
+    # "unknown" sentinel is invented.
+    try:
+        fm = parse_frontmatter(content)
+    except Exception:  # noqa: BLE001 — corrupt frontmatter, keep body indexable
+        fm = {}
+    if not isinstance(fm, dict):
+        fm = {}
+
+    raw_intent = fm.get("intent")
+    intent_meta = (
+        raw_intent
+        if isinstance(raw_intent, str) and raw_intent in _NOTE_FM_INTENT_VALUES
+        else None
+    )
+
+    raw_status = fm.get("status")
+    status_meta = (
+        raw_status
+        if isinstance(raw_status, str) and raw_status in _NOTE_FM_STATUS_VALUES
+        else None
+    )
+
+    raw_related = fm.get("related_modules")
+    related_meta = (
+        [x for x in raw_related if isinstance(x, str)]
+        if isinstance(raw_related, list)
+        else []
+    )
+
+    doc_id = _note_doc_id(root, module_dir, slug)
+    metadata = {
+        "kind": "note",
+        "intent": intent_meta,
+        "status": status_meta,
+        "related_modules": related_meta,
+        "source_path": str(note_path.resolve()),
+    }
+    return doc_id, content, metadata
+
+
+def reindex_notes(
+    root: Path,
+    module_dir: Path,
+    only_slug: str | None = None,
+) -> None:
+    """Upsert ``<module_dir>/.dna/notes/*.md`` into the retrieval index.
+
+    Two modes, one metadata pipeline (via :func:`_note_index_payload`):
+
+      * ``only_slug=None`` — batch mode. Scan every ``notes/*.md`` under
+        the module. Used by :func:`reindex_dna` (cold-start / bulk
+        rebuild).
+      * ``only_slug=<slug>`` — single-note mode. Upsert just that one
+        note. Used by the CRUD path in
+        :mod:`services.knowledge_service` after ``create``/``update``
+        successfully lands the file.
+
+    Both modes produce identical metadata for the same on-disk file —
+    that is the whole point of factoring the metadata assembly into
+    :func:`_note_index_payload`.
+
+    Header band weighting is NOT applied here — notes lack the
+    structured name/description/keywords slice that module.md uses for
+    header-band ranking, so ``index_upsert`` is called without the
+    ``header_content`` argument.
+
+    Fault tolerance: per-note read/parse/upsert failures are swallowed
+    so a single corrupted note can't sink a batch. In single-note mode
+    the same swallowing applies — the primary file write already
+    succeeded on the caller's side, and the dream loop's
+    ``verify_consistency`` reconciles on the next governance pass.
+    """
+    notes_dir = module_dir / ".dna" / "notes"
+    if not notes_dir.is_dir():
+        return
+
+    try:
+        from engine.retrieval import index_upsert
+    except Exception:  # noqa: BLE001 — retrieval subsystem may be absent (bare tmp_path layouts)
+        return
+
+    if only_slug is not None:
+        candidates = [notes_dir / f"{only_slug}.md"]
+    else:
+        candidates = sorted(notes_dir.glob("*.md"))
+
+    for note_path in candidates:
+        try:
+            payload = _note_index_payload(root, module_dir, note_path)
+            if payload is None:
+                continue
+            doc_id, content, metadata = payload
+            index_upsert("dna", doc_id, content, metadata)
+        except Exception:  # noqa: BLE001 — one note failure must not sink the batch
+            continue
 
 
 def reindex_agent(root: Path, name: str) -> None:

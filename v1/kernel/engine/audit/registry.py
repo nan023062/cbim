@@ -14,6 +14,7 @@ from .checks import (
     dna_fission,
     dna_freshness,
     dna_frontmatter,
+    dna_notes,
     dna_tree,
     index_consistency,
     memory_threshold,
@@ -30,6 +31,7 @@ CHECKS: dict[str, CheckFn] = {
     "dna_tree": dna_tree.check,
     "dna_frontmatter": dna_frontmatter.check,
     "dna_freshness": dna_freshness.check,
+    "dna_notes": dna_notes.check,
 }
 
 

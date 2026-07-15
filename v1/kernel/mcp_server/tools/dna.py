@@ -44,14 +44,26 @@ def register(mcp) -> None:
         )
 
     @mcp.tool()
-    def dna_show(module_path: str, cwd: str = "") -> str:
+    def dna_show(
+        module_path: str,
+        cwd: str = "",
+        include_notes: bool = False,
+    ) -> str:
         """Show metadata + architecture body for the .dna/ module at `module_path`.
 
         Returns frontmatter + Positioning + Class Diagram + Key Decisions per v1/docs/MODULE-MD-DESIGN.zh-CN.md.
 
         Args:
-            module_path: Path to the module directory (containing .dna/), e.g. 'src/combat'.
-            cwd: Project directory (default: current working dir).
+            module_path:   Path to the module directory (containing .dna/), e.g. 'src/combat'.
+            cwd:           Project directory (default: current working dir).
+            include_notes: When True, expand every ``notes/<slug>.md`` body
+                           inline after the module.md / contract.md sections.
+                           Default False — the ``Notes       : ...`` summary
+                           line still appears whenever the module has notes,
+                           but the note bodies are omitted so retrieval /
+                           auto-recall callers keep the compact payload.
+                           The retrieval-hit summary path (240-char snippet)
+                           is unaffected either way.
         """
         from services import (
             PathOutsideRootError,
@@ -81,10 +93,35 @@ def register(mcp) -> None:
         wf_ids = [w["id"] for w in info["workflows"]]
         if wf_ids:
             lines.append(f"Workflows   : {', '.join(wf_ids)}")
+        # `notes` was appended to the get_module payload in Task 0 without
+        # touching existing keys — treat missing key as "no notes" so this
+        # tool stays robust to an older services layer during rollout.
+        notes = info.get("notes") or []
+        if notes:
+            note_summary = ", ".join(
+                f"{n['slug']} ({n['status']})" if n.get("status") else n["slug"]
+                for n in notes
+            )
+            lines.append(f"Notes       : {note_summary}")
         if info["body"]:
             lines.append("\n--- module.md (body) ---\n" + info["body"])
         if info["contract"]:
             lines.append("\n--- contract.md ---\n" + info["contract"])
+        if include_notes and notes:
+            # Reuse the module_dir already confined by resolve_within_root
+            # above so we never re-derive a path from LLM-supplied strings
+            # for the second read.
+            from cbi._primitives.modules import read_note as _read_note
+            for n in notes:
+                try:
+                    _fm, body = _read_note(mod_dir, n["slug"])
+                except (FileNotFoundError, ValueError):
+                    # Broken slug or a note that vanished between list and
+                    # read — skip silently so the rest of the payload still
+                    # renders. list_notes already suppresses malformed
+                    # entries; this is the belt-and-braces cousin.
+                    continue
+                lines.append(f"\n--- notes/{n['slug']}.md ---\n{body}")
         return "\n".join(lines)
 
     @mcp.tool()
@@ -210,12 +247,12 @@ def register(mcp) -> None:
         mode: str = "replace",
         cwd: str = "",
     ) -> str:
-        """Edit `module.md` / `contract.md` / a workflow under `<module_path>/.dna/`.
+        """Edit `module.md` / `contract.md` / a workflow / a note under `<module_path>/.dna/`.
 
         Args:
             module_path: Path to the module directory (the one containing `.dna/`).
             target:      "frontmatter" | "body" | "section" | "contract" |
-                         "contract-section" | "workflow".
+                         "contract-section" | "workflow" | "note".
             payload:     Per-target dict.
 
                          For target="frontmatter", exactly one of these three
@@ -245,23 +282,68 @@ def register(mcp) -> None:
                                  already gone; ValueError if "content" is
                                  supplied
 
+                         For target="note", payload carries the note slug
+                         plus a mode selector. Unlike workflow, a note is a
+                         single file (``notes/<slug>.md``) — no per-note
+                         directory:
+                           {"name": <slug>, "mode": "create",
+                            "content": <body>, "frontmatter": <meta_dict>}
+                               — create (also the default when "mode" is
+                                 omitted). FileExistsError if the note
+                                 already exists. Both ``content`` and
+                                 ``frontmatter`` are required.
+                           {"name": <slug>, "mode": "update",
+                            "content": <body>, "frontmatter": <meta_dict>}
+                               — full-file rewrite of an existing note;
+                                 FileNotFoundError if it does not exist.
+                                 Both ``content`` and ``frontmatter`` are
+                                 required.
+                           {"name": <slug>, "mode": "delete"}
+                               — unlink notes/<slug>.md; idempotent when the
+                                 note is already gone; ValueError if
+                                 ``content`` or ``frontmatter`` is supplied.
+                                 The parent ``notes/`` directory is NEVER
+                                 removed here — its lifecycle follows the
+                                 module itself, not any single note.
+
+                         Frontmatter dict schema for target="note"
+                         (validated in the primitive layer; ValueError
+                         identifies the offending field):
+                           - title           (required, non-empty str)
+                           - status          (required; one of "draft" |
+                                              "reviewed" | "stable")
+                           - intent          (optional; one of "rationale" |
+                                              "implementation-detail" |
+                                              "current-state" |
+                                              "usage-example" |
+                                              "historical-context"; None or
+                                              omitted is legal)
+                           - keywords        (optional, list[str])
+                           - related_modules (optional, list[str])
+                           - last_reviewed   (optional, str — ISO-8601
+                                              recommended, permissive on shape)
+                           - authors         (optional, list[str])
+
                          Other targets: see services.knowledge_service.edit_module.
             mode:        Default section mode when payload omits its own "mode".
-                         Ignored for target="workflow" (workflow uses its own
-                         payload-level "mode" — create | update | delete).
+                         Ignored for target="workflow" and target="note"
+                         (both use their own payload-level "mode" —
+                         create | update | delete).
             cwd:         Project directory (default: current working dir).
 
         Returns:
-            Path of the saved file (for workflow delete: the removed dir path),
+            Path of the saved file (for workflow delete: the removed dir
+            path; for note delete: the now-absent notes/<slug>.md path),
             or `ERROR: ...` on failure.
         """
         from services import PathOutsideRootError, edit_module, resolve_within_root
         root = project_root(cwd or None)
         try:
             # Root module is a normal editable module — frontmatter,
-            # body, sections, contract, and workflows all apply just as
-            # they do for child modules; services.edit_module routes
-            # `module_path == "."` to `<root>/.dna/module.md` correctly.
+            # body, sections, contract, workflows, and notes all apply just
+            # as they do for child modules; services.edit_module routes
+            # `module_path == "."` to `<root>/.dna/module.md` (and its
+            # `<root>/.dna/notes/…` peers) correctly.
             resolve_within_root(root, module_path, allow_root_itself=True)
         except PathOutsideRootError as e:
             return f"ERROR: {e}"
@@ -269,6 +351,10 @@ def register(mcp) -> None:
         # handles the post-edit retrieval reindex inline now (Batch 1).
         try:
             return edit_module(module_path, target, payload, mode=mode, cwd=cwd)
+        except FileExistsError as e:
+            # Same translation as dna_init — create-on-existing (workflow
+            # or note) is a caller error, not an unexpected exception.
+            return f"ERROR: {e}"
         except FileNotFoundError as e:
             return f"ERROR: {e}"
         except (ValueError, LookupError, RuntimeError) as e:

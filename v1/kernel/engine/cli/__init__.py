@@ -8,7 +8,7 @@ Domains:
   dna         list | show | init | reindex | edit | write-doc (deprecated) | write-section (deprecated) | split
   agent       list | show | scaffold | archive | update | add-skill
   snapshot    [--root PATH]
-  skill       list | show <name>
+  skill       list | show <name> | create | update | delete | add-asset | remove-asset
   soul        list | show <name>
   config      get <key> | set <key> <value> | show
   dashboard   [--port N] [--no-browser]   (preview = deprecated alias)
@@ -129,6 +129,11 @@ from .dna import _parse_into_spec as _parse_into_spec
 from .init import _cmd_init as _cmd_init
 from .project import _cmd_project as _cmd_project
 from .skill import _cmd_skill as _cmd_skill
+from .skill import _handle_skill_add_asset as _handle_skill_add_asset
+from .skill import _handle_skill_create as _handle_skill_create
+from .skill import _handle_skill_delete as _handle_skill_delete
+from .skill import _handle_skill_remove_asset as _handle_skill_remove_asset
+from .skill import _handle_skill_update as _handle_skill_update
 from .soul import _cmd_soul as _cmd_soul
 from .soul import _load_souls as _load_souls
 

@@ -1,12 +1,21 @@
 """
 skill.py — Skill resource.
 
-A skill is a single markdown file (optionally with frontmatter) living under
-an agent's `skills/` directory, or anywhere else a skill catalog references.
+A skill is a markdown definition living under an agent's `skills/` directory
+in one of two on-disk shapes:
 
-Built-in skills are a second flavour: they ship as Python string constants
-(`SKILL`) inside `cbi.agents.<agent>.skills.<name>.skill`. `list_builtin` /
-`load_builtin` discover and wrap them as read-only Skill objects.
+  * file form : `<skill>.md`                           (no assets)
+  * dir  form : `<skill>/skill.md` + `<skill>/assets/` (supports assets)
+
+Detection between the two forms is delegated to `cbi._primitives.skills`;
+this module never re-implements the probe. `Skill.load(path)` handles both
+shapes as long as the caller passes the correct primary markdown path
+(`<skill>.md` or `<skill>/skill.md`).
+
+Built-in skills are a second flavour entirely: they ship as Python string
+constants (`SKILL`) inside `cbi.agents.<agent>.skills.<name>.skill`.
+`list_builtin` / `load_builtin` discover and wrap them as read-only Skill
+objects.
 """
 
 from __future__ import annotations
@@ -19,7 +28,10 @@ from ._base import Resource
 from ._body import Body
 from ._frontmatter import Frontmatter
 from ._io import atomic_write_text
+from .._primitives.skills import AmbiguousSkillError
 from services._fm import strip_frontmatter
+
+__all__ = ["AmbiguousSkillError", "ReadOnlyError", "Skill"]
 
 
 class ReadOnlyError(RuntimeError):
@@ -37,7 +49,10 @@ class Skill(Resource):
         read_only: bool = False,
     ):
         self._path = path.resolve() if path.exists() else path
-        self._id = path.stem
+        # Dir-form skills live at `<skill>/skill.md`; the identity is the
+        # containing directory name, not the literal file stem "skill".
+        # File-form skills live at `<skill>.md` and take the stem as-is.
+        self._id = path.parent.name if path.name == "skill.md" else path.stem
         self._dirty = False
         self._read_only = read_only
         self.frontmatter = frontmatter

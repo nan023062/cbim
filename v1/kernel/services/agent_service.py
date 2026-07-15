@@ -22,6 +22,7 @@ from context import resolve_root_or_cwd as _resolve_root
 
 from . import _reindex
 from ._fm import parse_frontmatter, strip_frontmatter
+from ._identifiers import validate_identifier as _validate_identifier
 
 _BUILTIN_AGENTS = frozenset({"architect", "hr", "auditor", "programmer"})
 
@@ -139,18 +140,6 @@ def get_agent(name: str, cwd: str = "") -> dict | None:
 # ---------------------------------------------------------------------------
 # Write facade — shared by engine/cli.py and mcp_server/tools/agent.py
 # ---------------------------------------------------------------------------
-
-
-def _validate_identifier(value: str, *, kind: str) -> None:
-    """Reject path-traversal attempts in agent / skill names.
-
-    Names flow from external callers (CLI / MCP / dashboard) and are
-    joined into ``.claude/agents/<name>/...`` paths. We disallow path
-    separators and dot-segments so the identifier can never escape its
-    parent directory.
-    """
-    if not value or "/" in value or "\\" in value or value in (".", ".."):
-        raise ValueError(f"invalid {kind} name: {value!r}")
 
 
 def scaffold_agent(

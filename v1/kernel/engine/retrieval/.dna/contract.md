@@ -26,12 +26,12 @@
 |--------|----------|-----------|
 | `"transcript"` | `~/.claude/projects/<project-slug>/*.jsonl`（CC 对话转录） | `.claude/hooks/cbim_session_stop.py` |
 | `"memory_medium"` | `.cbim/memory/medium/*.md` | `memory.crud.write` / `update` / `delete` |
-| `"dna"` | `**/.dna/{module.md, contract.md, workflows/*}` | `mcp_server.tools.dna.*`（`dna_edit` / `dna_init` / `dna_split` / `dna_deprecate` 等） |
+| `"dna"` | `**/.dna/{module.md, contract.md, workflows/*, notes/*}` | `mcp_server.tools.dna.*`（`dna_edit` / `dna_init` / `dna_split` / `dna_deprecate` 等） |
 | `"agents"` | `.claude/agents/**/*.md` | `mcp_server.tools.agents.*`（`agent_update` / `agent_init` / `agent_archive` 等） |
 
 新增 `source` 枚举值需走 contract 变更流程（与新增接口同级）。
 
----
+**dna 源 ingest 覆盖面变更历史**：2026-07-10 新增 `notes/*.md`（根模块 D8 决定）。`.dna/notes/<slug>.md` 为模块补充说明层，详细读者面向。写入责任人仍为 `mcp_server.tools.dna.*`——具体经 `dna_edit(target="note")` 分支。
 
 ## `index_upsert` — 写入或更新一条索引
 

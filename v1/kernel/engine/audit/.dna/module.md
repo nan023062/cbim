@@ -9,12 +9,12 @@ keywords:
   - checks
   - ratchet
   - read-only
+status: implemented
+body_edited_at: 2026-07-14T09:54:56Z
 dependencies:
   - kernel/services
   - kernel/cbi/_primitives
   - kernel/memory
-status: implemented
-body_edited_at: 2026-07-09T07:59:03Z
 ---
 
 ## Positioning
@@ -187,6 +187,27 @@ classDiagram
   - **降级路径**：非 git 项目 / git 二进制不在 PATH / 模块目录不在 git 追踪内 / 模块目录下无追踪文件 / module.md 缺 `body_edited_at` 字段（存量未迁移） → 该模块跳过不产 finding，不报 error。存量迁移已一次性跑过 `cbim dna stamp-freshness` 补齐内核自己 20 个模块的 `body_edited_at`。
   - **`message` 必须保持固定文案，可变量（天数 / 时间戳）一律入 `metadata`——硬性约束。** `BaselineStore` 指纹 = `hash(check + code + target + sha256(message))`；若 message 含“距上次编辑 X 天”「上次编辑于 <日期>”这类会变字符串，每次 audit 都会为同一模块产新指纹→全部落 origin=new→baseline 机制彻底失效→CI 永远不绿。7 天基线下触发频率高，这条约束尤为关键。实现定义：`code=DNA_FRESHNESS_STALE`，`message` 冃 "module `<path>` body edited before newer code commits landed in this module directory" 一句，`metadata` 承载 `body_edited_at` / `latest_code_commit_at` / `days_stale` 三个观测量。指纹稳定性已由单测硬销（同一场景连续跑 3 次 fingerprint 字节相等）。
   - **本检查是“嫀疑信号”不是“漂移证据”**——代码新提交但文档未变未必意味着文档陈旧（注释 / 内部实现微调等场景文档不受影响）。架构师看到 finding 后自行判定——真漂移就改 module.md（kernel 会自动重刷 `body_edited_at`），伪阳性就 `cbim audit baseline accept --check dna_freshness --yes` 吸收存量。与 `TREE_DEP_DIAGRAM_MISMATCH` 同模式：audit 只发信号，修复动作仍是人的责任。
+
+- **`skill_scripts` —— HR Skill CRUD 扩展新增的定期安全 review 检查项（2026-07-14 决策锁定）**。依附于 cbi/agents 新增的 skill 目录形 + assets/ 护栏体系；属于需要人类读目录、不是自动修复的“疑似信号”——与 `dna_freshness` 同模式。
+
+  **扫描范围**：`.claude/agents/<name>/skills/<skill>/assets/**`，只看 `<name>` 不在 `{"architect","auditor","hr","programmer"}` 集合内的 work agent。内置四 agent 的内核版 skill 目录（`cbi/agents/<name>/skills/<skill>/skill.py` + 可能伴随的任何文件）不在扫描范围内（内核版本管理，CI 的安全评审已有单独机制）。
+
+  **数据源**：`services.list_agents(include_builtin=False)` + 直接扫磁盘（`.claude/agents/<name>/skills/*/assets/`）。无需额外跨包依赖；不读 `.cbim/`。
+
+  **Finding codes**（均入 `SKILL_SCRIPT_*` 命名空间）：
+
+  | code | severity | 触发条件 |
+  |---|---|---|
+  | `SKILL_SCRIPT_UNTRACKED_EXTENSION` | warn | assets/ 下发现后缀 ∈ executable 白名单但没有 sibling `.executable-declared` 标志文件（方案：服务层写 is_executable=True 时额外写 `<asset>.executable-declared` 零字节标志，供审计进行“可执行声明与磁盘后缀对齐”岚验）|
+  | `SKILL_SCRIPT_SIZE` | info ≥ 200KB · warn ≥ 500KB · error ≥ 1MB | 单个资产体积过大（bin/exe/dll 很大概率反者“恶意或遇具”）|
+  | `SKILL_SCRIPT_OUTSIDE_ASSETS` | error | 直接发现 `<skill>/*.<exec-ext>` 不在 assets/ 下（写入层报比壹盖）|
+  | `SKILL_SCRIPT_CORE_AGENT_VIOLATION` | error | 内置四 agent 目录下发现由 HR CRUD 途径写入的 assets（自保护岚验：服务层已拒内置四名，本项拓思比壹盖）|
+
+  **棐轮策略**：新 check 写进 `_CHECK_MODE`，lenient——递推 baseline 适应存量；oirin=new 保持原严重度。severity 写入使用 `resolve_bands(200_000)` 与预设阈值一致。
+
+  **错误消息不变铁律（与 dna_freshness 一致）**。messsage 中不得包含体积数、mtime；可变量均入 metadata ——保持基线指纹稳定。
+
+  **实物预名**：`engine/audit/checks/skill_scripts.py`。新增的尔后注入 `audit/registry.py::CHECKS`；`ratchet._CHECK_MODE` 多一行 `"skill_scripts": "lenient"`。`.cbim/config.json` 可选配置 `audit.skill_scripts.size_bytes` 默认 200000；无需其他参数。
 
 ## Non-Goals
 

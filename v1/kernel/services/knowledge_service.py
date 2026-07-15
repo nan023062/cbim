@@ -71,6 +71,53 @@ def _validate_links(value) -> None:
             )
 
 
+# ---------------------------------------------------------------------------
+# Note doc_id contract (Task 0). Kept next to the module doc_id contract in
+# services/_reindex.py so future readers can compare shapes side-by-side.
+#
+#   root module   ``notes/<slug>``          (NOT ``./notes/<slug>``)
+#   sub module    ``<mod_rel>/notes/<slug>`` (POSIX separators, no leading .)
+#
+# Downstream index scan / cold-start / audit tasks compose the same doc_id
+# from a filesystem walk; if this function's output diverges from those
+# walks, the retrieval index ends up with duplicate entries. Keep the two
+# in lock-step.
+# ---------------------------------------------------------------------------
+def _note_doc_id(root: Path, module_dir: Path, slug: str) -> str:
+    try:
+        rel = module_dir.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        # Off-tree module (defensive: services callers already anchor
+        # module_dir under root, but preserve the module-side fallback).
+        return f"{module_dir.resolve().as_posix()}/notes/{slug}"
+    if not rel or rel == ".":
+        return f"notes/{slug}"
+    return f"{rel}/notes/{slug}"
+
+
+def _delete_note_index(root: Path, module_dir: Path, slug: str) -> None:
+    """Drop a note doc from the retrieval index (source="dna").
+
+    Idempotent: ``index_delete`` silently no-ops when the doc_id is
+    unknown. Failure is swallowed with the same rationale as
+    :func:`services._reindex.reindex_notes`: the primary filesystem
+    write (unlink) already succeeded; the dream loop's
+    ``verify_consistency`` reconciles on the next governance pass.
+
+    Delete stays inline here rather than going through
+    ``reindex_notes`` because the note file no longer exists — there is
+    no payload to assemble from disk. The doc_id contract is still the
+    single :func:`_note_doc_id` helper, so batch and CRUD stay aligned
+    on the identifier side.
+    """
+    try:
+        doc_id = _note_doc_id(root, module_dir, slug)
+        from engine.retrieval import index_delete
+        index_delete("dna", doc_id)
+    except Exception:  # noqa: BLE001 — main write succeeded; drift loop reconciles
+        return
+
+
 def _module_dir(module_path: str | Path, root: Path) -> Path:
     """Resolve a caller-supplied module path against the project root.
 
@@ -323,6 +370,11 @@ def get_module(module_path: str | Path, cwd: str = "") -> dict | None:
 
     contract_text = m.contract.body.read() if m.contract.exists() else ""
     workflows = _collect_workflows(m.path.parent / "workflows")
+    # Task 0: notes are the module-supplement layer (.dna/notes/<slug>.md).
+    # Emit metadata-only records — callers who need body must read the
+    # file directly to keep the payload light.
+    from cbi._primitives.modules import list_notes as _list_notes
+    notes = _list_notes(m.path.parent.parent)
     try:
         rel = m.path.parent.parent.resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
@@ -340,6 +392,7 @@ def get_module(module_path: str | Path, cwd: str = "") -> dict | None:
         "body": m.body.read(),
         "contract": contract_text,
         "workflows": workflows,
+        "notes": notes,
         "module_dir": m.path.parent.parent.resolve(),
     }
 
@@ -712,6 +765,82 @@ def edit_module(
         # reindexed every dna_edit call regardless of target — keep that
         # behaviour so the retrieval index stays warm on workflow churn too.
         _reindex.reindex_dna(root, module_dir)
+        return result_path
+
+    if target == "note":
+        # Payload contract:
+        #   {"name": <slug>, "mode": "create",  "content": <body>, "frontmatter": <dict>}
+        #   {"name": <slug>, "mode": "update",  "content": <body>, "frontmatter": <dict>}
+        #   {"name": <slug>, "mode": "delete"}
+        #
+        # Frontmatter validation happens in `_validate_note_frontmatter`
+        # (single source of truth for the note schema). ValueError is
+        # allowed to propagate — surfaces must see the exact reason.
+        from cbi._primitives.modules import (
+            create_note as _create_note,
+            delete_note as _delete_note,
+            update_note as _update_note,
+        )
+
+        note_name = payload.get("name")
+        if not note_name:
+            raise ValueError("payload.name is required for target=note")
+        note_mode = payload.get("mode", "create")
+        if note_mode not in ("create", "update", "delete"):
+            raise ValueError(
+                f"payload.mode for target=note must be one of "
+                f"'create' | 'update' | 'delete' (default 'create'), "
+                f"got: {note_mode!r}"
+            )
+        content = payload.get("content")
+        frontmatter = payload.get("frontmatter")
+
+        if note_mode == "create":
+            if content is None:
+                raise ValueError(
+                    "payload.content is required for target=note, mode=create"
+                )
+            if not isinstance(frontmatter, dict):
+                raise ValueError(
+                    "payload.frontmatter (dict) is required for target=note, mode=create"
+                )
+            written = _create_note(module_dir, note_name, frontmatter, content)
+            # Route the single-note upsert through the same helper that
+            # the batch rebuild path uses — metadata assembly is
+            # centralised in ``_reindex._note_index_payload`` so the
+            # CRUD side and the batch side cannot drift.
+            _reindex.reindex_notes(root, module_dir, only_slug=note_name)
+            result_path = str(written.resolve())
+        elif note_mode == "update":
+            if content is None:
+                raise ValueError(
+                    "payload.content is required for target=note, mode=update"
+                )
+            if not isinstance(frontmatter, dict):
+                raise ValueError(
+                    "payload.frontmatter (dict) is required for target=note, mode=update"
+                )
+            written = _update_note(module_dir, note_name, frontmatter, content)
+            _reindex.reindex_notes(root, module_dir, only_slug=note_name)
+            result_path = str(written.resolve())
+        else:  # note_mode == "delete"
+            if content is not None:
+                raise ValueError(
+                    "payload.content is not accepted for target=note, mode=delete"
+                )
+            if "frontmatter" in payload and payload["frontmatter"] is not None:
+                raise ValueError(
+                    "payload.frontmatter is not accepted for target=note, mode=delete"
+                )
+            # Slug validation still fires here so a bad name never
+            # reaches the retrieval index_delete call.
+            path_after = _delete_note(module_dir, note_name)
+            _delete_note_index(root, module_dir, note_name)
+            result_path = str(path_after.resolve())
+
+        # Module.md unchanged → skip module.md reindex. Note-level
+        # upsert/delete already happened above (reindex_notes /
+        # _delete_note_index).
         return result_path
 
     raise ValueError(f"unknown target: {target!r}")

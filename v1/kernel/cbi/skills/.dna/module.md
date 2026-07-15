@@ -10,7 +10,7 @@ keywords:
   - memory-distill
   - shared
 status: implemented
-body_edited_at: 2026-07-09T07:59:03Z
+body_edited_at: 2026-07-14T09:50:58Z
 dependencies: []
 ---
 
@@ -77,3 +77,14 @@ classDiagram
 - skill 调 `memory_write` 只能传 `tier="medium"`（记忆服务 v2 不再接受 short）。
 - skill **不**直接删 transcript——删除动作在治理循环的 `TranscriptDelete` 节点，决策权在治理循环手里、与索引同步。
 - skill 调用者主 agent **不需**主动调 `retrieval.index_upsert`——medium 写入后 `memory.crud.write` 会同步触发索引更新。
+
+### HR Skill CRUD 扩展中的读写边界（2026-07-14 决策锁定）
+
+本模块承载的“跨 agent 公共 skill”（`memory_write` / `memory_query` / `memory_distill`）在 HR Skill CRUD 扩展中**明确保持只读边界不变**。理由：
+
+- 跨 agent 公共 skill 的调用方是多元的（主 agent + 治理循环 + 任意 agent），一旦允许某一方（哪怕是 HR）改写，其余调用方就承担了“他人改了我读的”风险；内核版本管理是这类跨界能力保持一致性的唯一合适治理面。
+- HR Skill CRUD 的用户价值场景（招/训 work agent 时给它私有能力包）本来就发生在 agent 自己的 `skills/` 子目录下，跨 agent 公共层没有需求驱动。
+- 该边界与 `## Positioning` 中“ a skill lives here only if more than one agent invokes it” 的既有铁律一致——写入权限的开放会带来“谁改都能改”的耦合，把跨 agent 共享变成跨 agent 冲突源。
+
+**实现约束**：MCP 层不新增针对 `cbi/skills/*` 的写入工具；services.SkillService 新增的写方法（`create_agent_skill` 等）签名中必须要求 `agent_name` 参数，隐式排除对本包路径的路由。
+

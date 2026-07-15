@@ -17,7 +17,7 @@ from .dna_module import (
     DNAModule, ModuleFrontmatter, Contract, WorkflowCollection, SplitResult,
 )
 from .memory import Memory
-from .skill import ReadOnlyError, Skill
+from .skill import AmbiguousSkillError, ReadOnlyError, Skill
 from .workflow import Workflow
 
 __all__ = [
@@ -30,6 +30,7 @@ __all__ = [
     "WorkflowCollection",
     "SplitResult",
     "Memory",
+    "AmbiguousSkillError",
     "ReadOnlyError",
     "Skill",
     "Workflow",

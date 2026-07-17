@@ -10,7 +10,7 @@ keywords:
   - source-of-truth
   - claude-config
 status: implemented
-body_edited_at: 2026-07-09T07:59:03Z
+body_edited_at: 2026-07-17T06:46:50Z
 dependencies: []
 ---
 
@@ -84,8 +84,11 @@ Two trigger events write this layout: first-use bootstrap (`init`) and explicit 
 
 - **All kernel-managed file writes go through `atomic_io.atomic_write_text/bytes` — no bare `Path.write_text`, no `shutil.copy2` for single-file replaces.** Hook scripts (`.claude/hooks/cbim_*.py`) and shim scripts (`.cbim/run`) explicitly `os.chmod(0o755)` after the atomic write to restore the exec bit that `atomic_io`'s 0o644 tmp mode would otherwise drop. Mass tree copies (`_lib/`) still use `shutil.copytree` because they run inside a `rmtree`→copy sequence where torn-write risk is negligible. **This rule extends to `~/.claude/settings.json` via `_clean_global_settings` — the highest-risk write in the module, since a torn write there breaks every CBIM project on the machine.**
 
+- **`_lib/event_io.py::write_additional_context` 走 bytes 层写出，不走 `sys.stdout.reconfigure`。** `json.dumps(payload, ensure_ascii=False)` 得到 str 后交给 `sys.stdout.write`，在 Windows 上文本模式 stdout 使用系统默认代码页（GBK），emoji / 生僻字必然触发 `UnicodeEncodeError`，hook 崩溃。方案定为 `json.dumps(payload, ensure_ascii=False).encode("utf-8")` 得 bytes，直接 `sys.stdout.buffer.write(...)` + `flush()`，绕开文本层编码。**否决 `sys.stdout.reconfigure(encoding="utf-8")`**：修改进程全局 stdout 状态，且必须 `try/except (AttributeError, ValueError)` 兜底 stdout 被测试 harness 替换、不支持 reconfigure 的极端场景；bytes 方案与本模块「文件/文本 I/O 显式声明 UTF-8，不依赖平台默认」的既有原则同轨。**边界**：`read_event()` 与 `write_additional_context(text, *, event_name=...)` 的公开签名不变；两个调用者 `cbim_session_start.py` / `cbim_user_prompt_submit.py` 不动；上游 `hooks_src/_lib/event_io.py` 与部署副本 `.claude/hooks/_lib/event_io.py` 同批同步、逐字节一致。
+
 ## Non-Goals
 
 - No `migrate.py`, no `upgrade/` sub-package, no `pin.py`, no `.cbim/.pin` accessor, no `versions.json` reader.
 - No installer subprocess. No multi-version kernel staging under `<install_root>/kernel/<ver>/`.
 - No diagnostic 7-scenario matrix. There are no scenarios — install is binary (the kernel is either present at `.cbim/kernel/` or it isn't).
+

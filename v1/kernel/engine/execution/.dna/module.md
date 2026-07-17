@@ -10,7 +10,7 @@ keywords:
   - dispatch
   - root-loop
 status: implemented
-body_edited_at: 2026-07-09T07:59:03Z
+body_edited_at: 2026-07-17T06:16:01Z
 dependencies:
   - kernel/engine/core
   - kernel/engine/persistence
@@ -36,11 +36,7 @@ CBIM 执行任务循环的**驱动引擎**。每一次用户 prompt 触发一次
 
 ## Sub-module Relationships
 
-```mermaid
-classDiagram
-    class arch-check-gate { <<module>> }
-    arch-check-gate ..> audit : ArchCheckGate calls run_audit (read-only)
-```
+本模块名下唯一携自有 `.dna/` 的 `actions/` 子项是 `actions/arch_check_gate`——它承载 `ArchCheckGate → engine/audit` 的跨模块静态依赖（`arch_check_gate` 自身 frontmatter `dependencies` 已声明该依赖，见 [`actions/arch_check_gate/.dna/module.md`](actions/arch_check_gate/.dna/module.md)）。该关系不在本父模块的 class diagram 中直接绘制，因为按 R2 direct-child 规则，父级 class diagram 的箭头源头须为父模块的直接子层节点；`arch_check_gate` 位于本模块下未收编中间目录 `actions/` 之内，路径深度为 2，不满足直接子层。父级视角的完整树拓扑与跨模块协作以下方的 flowchart 呈现。
 
 ```mermaid
 flowchart TB
@@ -255,3 +251,4 @@ v2 把控制流抽到引擎，主 agent 退化为执行手。树拓扑可读、�
 - **mcp_server（反向，容器）** —— 不在本模块 dependencies 中；`mcp_server` 把 `api/bt_tick.py` 的两个函数注册为 MCP 工具，函数签名即工具签名。引擎不感知 MCP 容器存在。
 
 依赖方向：`execution → engine/core`、`execution → engine/persistence`、`execution → engine/retrieval.contract`、`execution → memory.contract`、`mcp_server → execution`。无环。
+

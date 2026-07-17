@@ -10,9 +10,9 @@ keywords:
   - retrieval-upsert
   - primitive
 status: implemented
-body_edited_at: 2026-07-09T07:59:03Z
+body_edited_at: 2026-07-17T06:11:46Z
 dependencies:
-  - kernel/engine/retrieval
+  - submodule/cbim/v1/kernel/engine/retrieval
 ---
 
 ## Positioning

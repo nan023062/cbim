@@ -10,7 +10,7 @@ keywords:
   - crud-compaction
   - retrieval-sync
 status: implemented
-body_edited_at: 2026-07-17T06:11:39Z
+body_edited_at: 2026-07-17T09:13:21Z
 dependencies: []
 ---
 
@@ -61,6 +61,8 @@ v2 重设计决议：
 - **子模块分工的稳定性等同对外契约。** `crud/` 持有所有改盘动作的入口，`compaction/` 持有所有压缩升级与候选区管理；两者职责零重叠。父模块只暴露 4 个只读接口的转发，**不**在父模块层放任何业务逻辑。
 
 - **Batch 5 异常治理 —— config 覆盖失败 stderr 警告而非静默。** `.cbim/config.json` 加载是 best-effort 路径（缺失 / 损坏不应让 memory 服务起不来），原本 broad-catch + silent-swallow。Batch 5 已收紧到 `(OSError, json.JSONDecodeError)` 并列 tuple，且加 `print(f"[cbim memory] config override unreadable: {e}", file=sys.stderr)`——"启动 best-effort" 不等于"无声吞"：用户改坏配置时必须有可见反馈，否则会出现"我明明改了阈值怎么没生效"的诊断地狱。完整规约（含本类 best-effort 边界的处理范式）见 `v1/docs/EXCEPTION-GOVERNANCE.zh-CN.md`。
+
+- **`list_recent` 是按时间的只读列出原语，归 memory 不归 retrieval。** SessionStart hook 需要注入“最近 N 条记忆决策摘要”到 coordinator 上下文，该场景**没有 query**、纯按时间倒序列出 —— 与 retrieval 的“语义/关键词检索”语义不同（retrieval 的每一次调用都要有 `query` 字符串）。因此新增 `list_recent(limit: int, tier: str = "medium") -> list[MemoryEntry]` 只读接口归本模块，与 `query` / `scan` / `get` / `stats` 同级（4→5），稳定承诺同级。实现细节：直接按 `created_at` metadata 倒序取前 N 条，不走 retrieval facade、不触发 embedding、不走 BM25，是纯目录扫描 + 排序；性能 O(N log N)，N 为 medium 条目总数（实践中 < 10⁴）。签名细节与失败语义见 `contract.md`。
 
 ## Non-Goals
 
@@ -115,4 +117,3 @@ classDiagram
 ## Non-Goals 补充：`medium/incoming/` 子树
 
 - **不读、不写、不扫 `medium/incoming/`。** Stage 4 hook 在 `<store>/medium/incoming/YYYY-MM-DD.jsonl` 追写实时捕获；Stage 5 dream 消费 prior-day JSONL 并归档到 `incoming/processed/`。本模块的所有扫描 / 查询 / 压缩 / 过期清扫逻辑仅限 medium **主体区**（`<store>/medium/*.md`）与 candidates **独立区**，绝不递归进 `incoming/`。路径同住是部署便利，不是逻辑拥有。
-

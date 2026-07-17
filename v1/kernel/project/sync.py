@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 
 from atomic_io import atomic_write_bytes, atomic_write_text  # kernel root leaf
@@ -38,6 +39,11 @@ _TEMPLATES = _PKG_DIR / "templates"
 _AGENTS = _PKG_DIR / "agents"
 _COMMANDS = _PKG_DIR / "commands"
 _HOOKS_SRC = _PKG_DIR / "hooks_src"
+_SCHEDULER_TEMPLATES = _TEMPLATES / "scheduler"
+
+# Default nightly trigger time (local wall clock) baked into
+# win_dream_task.xml when no override is present in .cbim/config.json.
+_DEFAULT_TRIGGER_TIME = "03:30"
 
 # Kernel-managed hook script filenames installed into .claude/hooks/. Any other
 # *.py file under .claude/hooks/ is treated as user-owned and never touched.
@@ -252,6 +258,119 @@ def sync_hook_scripts(project_root: Path, dry_run: bool = False) -> list[str]:
 
     shutil.copytree(lib_src, lib_dst, ignore=_ignore)
     actions.append(f"installed {_rel(lib_dst, project_root)}/")
+    return actions
+
+
+def _read_trigger_time(project_root: Path) -> str:
+    """Read `scheduler.dream_trigger_time` from .cbim/config.json.
+
+    Fall back to ``_DEFAULT_TRIGGER_TIME`` when the config file is
+    missing, unreadable, malformed, or lacks the key. Kernel-managed
+    templates render deterministically even on a partial install.
+    """
+    cfg_path = project_root / ".cbim" / "config.json"
+    if not cfg_path.exists():
+        return _DEFAULT_TRIGGER_TIME
+    try:
+        data = json.loads(cfg_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return _DEFAULT_TRIGGER_TIME
+    sched = data.get("scheduler") if isinstance(data, dict) else None
+    if isinstance(sched, dict):
+        val = sched.get("dream_trigger_time")
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+    return _DEFAULT_TRIGGER_TIME
+
+
+def sync_scheduler_templates(project_root: Path, dry_run: bool = False) -> list[str]:
+    """Render the dream-trigger scheduler artefacts under
+    `.cbim/scheduler/tools/`.
+
+    Always overwrites — the rendered files are kernel-managed derivatives
+    of the templates + project-root path, mirroring the sync policy for
+    the .claude/hooks/ scripts. Human edits to the rendered files are
+    lost on the next sync; use `.cbim/config.json.scheduler.*` for
+    per-project knobs instead.
+
+    Platform gate: `dream_trigger.ps1` and `win_dream_task.xml` are
+    Windows-only artefacts (PowerShell script + Task Scheduler task
+    definition). On non-Windows platforms only `README.md` is rendered
+    so operators still see the placeholder pointing at forthcoming
+    macOS/Linux bindings.
+
+    All writes go through `atomic_write_text` (project-standard atomic
+    write primitive; no bespoke replace-in-place paths).
+    """
+    tools_dir = project_root / ".cbim" / "scheduler" / "tools"
+    actions: list[str] = []
+
+    if not _SCHEDULER_TEMPLATES.is_dir():
+        # Kernel install is missing the templates/scheduler/ directory —
+        # nothing to render. Skip silently so a partial install doesn't
+        # blow up the whole sync.
+        return actions
+
+    is_windows = sys.platform == "win32"
+    trigger_script = tools_dir / "dream_trigger.ps1"
+    task_xml = tools_dir / "win_dream_task.xml"
+    readme = tools_dir / "README.md"
+
+    # README always renders — it documents the macOS/Linux gap.
+    readme_src = _SCHEDULER_TEMPLATES / "README.md"
+    if readme_src.is_file():
+        content = readme_src.read_text(encoding="utf-8")
+        if dry_run:
+            if not readme.exists() or readme.read_text(encoding="utf-8") != content:
+                actions.append(f"would refresh {_rel(readme, project_root)}")
+        else:
+            tools_dir.mkdir(parents=True, exist_ok=True)
+            atomic_write_text(readme, content)
+            actions.append(f"rendered {_rel(readme, project_root)}")
+
+    if not is_windows:
+        return actions
+
+    # Windows-only artefacts.
+    ps_src = _SCHEDULER_TEMPLATES / "dream_trigger.ps1.tmpl"
+    xml_src = _SCHEDULER_TEMPLATES / "win_dream_task.xml.tmpl"
+
+    project_root_abs = str(project_root.resolve())
+    trigger_time = _read_trigger_time(project_root)
+    trigger_script_abs = str(trigger_script.resolve())
+
+    if ps_src.is_file():
+        ps_content = ps_src.read_text(encoding="utf-8").replace(
+            "{{project_root}}", project_root_abs
+        )
+        if dry_run:
+            if (
+                not trigger_script.exists()
+                or trigger_script.read_text(encoding="utf-8") != ps_content
+            ):
+                actions.append(f"would refresh {_rel(trigger_script, project_root)}")
+        else:
+            tools_dir.mkdir(parents=True, exist_ok=True)
+            atomic_write_text(trigger_script, ps_content)
+            actions.append(f"rendered {_rel(trigger_script, project_root)}")
+
+    if xml_src.is_file():
+        xml_content = (
+            xml_src.read_text(encoding="utf-8")
+            .replace("{{trigger_script_abs}}", trigger_script_abs)
+            .replace("{{trigger_time}}", trigger_time)
+        )
+        if dry_run:
+            if (
+                not task_xml.exists()
+                or task_xml.read_text(encoding="utf-8") != xml_content
+            ):
+                actions.append(f"would refresh {_rel(task_xml, project_root)}")
+        else:
+            tools_dir.mkdir(parents=True, exist_ok=True)
+            atomic_write_text(task_xml, xml_content)
+            actions.append(f"rendered {_rel(task_xml, project_root)}")
+
     return actions
 
 
@@ -517,9 +636,10 @@ def sync_templates(project_root: Path, dry_run: bool = False) -> list[str]:
       3. .claude/agents/<name>/<name>.md  (architect, auditor, hr, programmer)
       4. .claude/commands/<name>.md       (6 built-in slash commands)
       5. .claude/hooks/cbim_*.py + _lib/  (kernel hook scripts + shared library)
-      6. .claude/settings.json
-      7. .mcp.json
-      8. .gitignore
+      6. .cbim/scheduler/tools/*          (rendered scheduler artefacts)
+      7. .claude/settings.json
+      8. .mcp.json
+      9. .gitignore
     """
     project_root = Path(project_root).resolve()
     actions: list[str] = []
@@ -528,6 +648,7 @@ def sync_templates(project_root: Path, dry_run: bool = False) -> list[str]:
     actions.extend(sync_agents(project_root, dry_run=dry_run))
     actions.extend(sync_commands(project_root, dry_run=dry_run))
     actions.extend(sync_hook_scripts(project_root, dry_run=dry_run))
+    actions.extend(sync_scheduler_templates(project_root, dry_run=dry_run))
     actions.append(sync_settings(project_root, dry_run=dry_run))
     actions.append(sync_mcp_json(project_root, dry_run=dry_run))
     actions.append(sync_gitignore(project_root, dry_run=dry_run))

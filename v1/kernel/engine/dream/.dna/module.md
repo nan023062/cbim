@@ -10,7 +10,7 @@ keywords:
   - idempotent
   - catchup
 status: implemented
-body_edited_at: 2026-07-09T07:59:03Z
+body_edited_at: 2026-07-17T09:10:27Z
 dependencies:
   - kernel/engine/core
   - kernel/engine/persistence
@@ -32,8 +32,8 @@ CBIM **第二个根循环**的驱动引擎，与执行循环（`engine/execution
 | 误解 | 澄清 |
 |------|------|
 | `engine/execution` 的子模块 | 不是。是平级第二根，与 execution 共享 `engine/core` 但各持独立根树；两根互不依赖，都依赖 `engine/core`。 |
-| cron / 定时器 | 不是。无内置时钟，仅在 SessionStart 检测“距上次成功 ≥ 20 小时”才补跑。 |
-| 夜间常驻守护进程 | 不是。零后台进程；每次 tick 跑完即退，状态全在 `.cbim/scheduler/dream/`。 |
+| cron / 定时器 | 不是。CBIM 侧无内置时钟。可选的 OS 一次性任务（cron / launchd / Task Scheduler）是 OS 拥有的时钟，由用户手动注册；命中后主动跑一次 `dream_tick(reason="catchup")`，与 SessionStart 兜底并存。 |
+| 夜间常驻守护进程 | 不是。每次 tick 跑完即退，状态全在 `.cbim/scheduler/dream/`。OS 一次性任务每次触发都独立启动 headless claude 后退出，不常驻。 |
 | 主动改代码 / 删模块的自动化机器人 | 不是。治理模式只做安全幂等动作（时间戳更新、记忆压缩、索引重建、归类建议）；危险动作（归档模块、招募 agent、改契约）只产建议落到 report.md。 |
 | 阻塞用户的后台任务 | 不是。用户 prompt 立即让位——RUNNING 节点归档为“abandoned”，明天再跑。 |
 
@@ -111,42 +111,43 @@ v2 把所有自维护抽到第二根循环，复用同一个 BT 引擎但独立�
 ## Key Decisions
 
 - **治理循环是 CBIM 第二个根循环，与执行循环平级共存。** 不是子循环、不是装饰器、不是插件。两根共享同一个行为树引擎本体（`engine/core`），但各持独立根树、独立黑板、独立 trace、独立入口工具。`engine/execution` 与 `engine/dream` 互不 import——两根平级、各自依赖 `engine/core`，单向依赖铁律。
-- **SessionStart hook 触发，无定时器。** 唯一触发入口是 SessionStart hook 检测"距上次成功治理 ≥ 20 小时"（读 `.cbim/scheduler/dream/last_success.json`），满足则注入系统消息提示主 agent 启动 `dream_tick`。零后台常驻进程，无 cron / systemd 依赖。
-- **三步严格串行（记忆 → 知识 → 能力），用 SequenceTolerant 容错。** 三步对共享资源（记忆写锁、`.dna/` 扫描 I/O）有竞争，串行天然规避竞态；夜间任务对延迟不敏感无需并发提速。SequenceTolerant 语义"顺序遍历 + 单步失败不打断后续"——任一步 FAILURE 不阻塞下一步，全 FAILURE 才整体 FAILURE，至少一步 SUCCESS 即整体 SUCCESS。
-- **记忆治理步 v2 重设计：输入源从 `.cbim/memory/short/` 改为 `~/.claude/projects/<slug>/` 下的 transcript JSONL。** v1 的记忆治理步是"扫 short 压为 medium"；v2 short 层废弃后，记忆步责任重定为"扫超过 1 天的 CC transcript → 交主 agent 蒸馏为 medium → 蒸馏成功后删原 transcript 文件"。Stage 5 又接上 Phase 4 hook 层的 `<store>/medium/incoming/*.jsonl` 实时捕获队列，多一条 `IncomingScan + DispatchIncomingTriage + CollectIncomingTriage` 三联节点 + `MemPromoteScan` 接通候选消费端。**Sequence 现为 13 节点**；子节点顺序与各节点职责见 `.dna/contract.md` 《MemoryGovernanceStep 子节点拓扑（13 节点）》表。该步全部在主 agent 上下文内完成（`"main"` 例外）不派子 agent——蒸馏 / incoming triage 的输入是记忆源、输出是记忆条目，是记忆源责任人的本能作业，并且 HR 不拥有 `memory_create`。
+- **触发源二元制：SessionStart 兜底 + OS 一次性任务主动拉起。** 治理循环有两条对等的触发入口：(1) SessionStart hook 每次会话启动时检测“距上次成功治理 ≥ 20 小时”（读 `.cbim/scheduler/dream/last_success.json`），满足则注入系统消息提示主 agent 启动 `dream_tick`（兜底路径，依赖用户开会话）；(2) OS 一次性定时任务（cron / launchd / Task Scheduler，由 `project` 模板注入 example，用户自选是否启用）在预设时间（默认 03:30）通过 headless claude 显式白名单模式 `--allowedTools mcp__cbim__dream_tick,mcp__cbim__dream_tick_resume,mcp__cbim__dream_abort,mcp__cbim__dream_list_runs,Task` 主动拉起主 agent 跑一次 `dream_tick(reason="catchup")`（主动路径，不依赖用户在场）。两条触发源共享同一 20 小时窗口 + 单飞门（`current.json` 与 `_HEARTBEAT_STALE_MINUTES` 自愈机制），彼此幂等；任一条命中都能推进治理进度。零内嵌定时器、零后台常驻进程——OS 一次性任务由 OS 拥有，不是 CBIM 侧的守护进程。
+- **三步严格串行（记忆 → 知识 → 能力），用 SequenceTolerant 容错。** 三步对共享资源（记忆写锁、`.dna/` 扫描 I/O）有竞争，串行天然规避竞态；夜间任务对延迟不敏感无需并发提速。SequenceTolerant 语义“顺序遍历 + 单步失败不打断后续”——任一步 FAILURE 不阻塞下一步，全 FAILURE 才整体 FAILURE，至少一步 SUCCESS 即整体 SUCCESS。
+- **记忆治理步 v2 重设计：输入源从 `.cbim/memory/short/` 改为 `~/.claude/projects/<slug>/` 下的 transcript JSONL。** v1 的记忆治理步是“扫 short 压为 medium”；v2 short 层废弃后，记忆步责任重定为“扫超过 1 天的 CC transcript → 交主 agent 蒸馏为 medium → 蒸馏成功后删原 transcript 文件”。Stage 5 又接上 Phase 4 hook 层的 `<store>/medium/incoming/*.jsonl` 实时捕获队列，多一条 `IncomingScan + DispatchIncomingTriage + CollectIncomingTriage` 三联节点 + `MemPromoteScan` 接通候选消费端。**Sequence 现为 13 节点**；子节点顺序与各节点职责见 `.dna/contract.md` 《MemoryGovernanceStep 子节点拓扑（13 节点）》表。该步全部在主 agent 上下文内完成（`"main"` 例外）不派子 agent——蒸馏 / incoming triage 的输入是记忆源、输出是记忆条目，是记忆源责任人的本能作业，并且 HR 不拥有 `memory_create`。
 - **知识 / 能力治理 yield 派 Architect / HR 治理模式（与执行根 ArchGate/CallHR 复用 agent 文件，靠 prompt 模式区分）。** `DispatchArchGovern` / `DispatchHRGovern` 通过 `DreamResult.Yield(dispatch_request)` 让主 agent 用 Task tool 派出 Architect / HR，prompt 头部带 `## 治理模式` token；agent 文件本身与执行循环共用，治理 / 执行模式由 prompt 头部 token 决定。
 - **配对出现的 Dispatch + Collect 两个节点，Collect 独家拥有 on_resume。** Architect / HR / 记忆蒸馏 / incoming triage 四对三联节点都是 `Dispatch* + Collect*` 序列；Dispatch 只负责填 `bb.pending_dispatch` 与记 dispatched 标记，Collect 独家拥有 `on_resume(bb, payload)`，按 `loops.<x>_governance.parse_response` 解析后写入 `bb.<x>_result`。两节点职责不重叠，免却 Dispatch 节点同时担 yield 与 parse 两份心智负担。
 - **用户 prompt 立即让位，治理 RUNNING 节点归档，明天再跑。** 治理跑到一半用户发来新 prompt，主 agent 立即响应用户，不调 `dream_tick_resume`。引擎在 `_current_running_run_id()` 每次调用时自检心跳：若 `current.json` 是 running 且 `last_heartbeat` 缺失或超过 30 分钟未更新，就地调 `dream_abort(reason="stale_heartbeat")` 归档 → 返回 None，让当前 tick 起为新 run（MCP / CLI 直接调 `dream_tick` 也走这条自愈路径，不再依赖 SessionStart hook 手动清理）。心跳阈值常量 `_HEARTBEAT_STALE_MINUTES = 30` 单点位于 `api/dream_tick.py`，SessionStart hook 从此处 lazy import 复用（不再本地维护第二份阈值，避免两处漂移）；hook 侧 banner 保留仅作提示，实际清理已下沉到引擎自身。`last_success.json` 未更新 → 20 小时窗口仍成立 → 明天补跑。用户优先是单向硬规则。
-- **失败容忍：单步失败不阻塞下一步；产物不回滚。** 治理动作设计为幂等且单调——要么成功推进，要么原样不动，不存在"半成功需要回滚"。`@Catch` 吞掉单步异常写入 `bb.step_results[step]=failure`，`@Timeout(10min)` 触发标记 timeout，全局 `@Timeout(30min)` 熔断后 EmitReport 仍执行（写部分报告） + FinalizeDreamTick 仍执行（20 小时窗口正常滚动）。**TranscriptDelete / CollectIncomingTriage 都是幂等的**：已删 / 已归档的文件下一轮不会被重复扫。
+- **失败容忍：单步失败不阻塞下一步；产物不回滚。** 治理动作设计为幂等且单调——要么成功推进，要么原样不动，不存在“半成功需要回滚”。`@Catch` 吞掉单步异常写入 `bb.step_results[step]=failure`，`@Timeout(10min)` 触发标记 timeout，全局 `@Timeout(30min)` 熔断后 EmitReport 仍执行（写部分报告） + FinalizeDreamTick 仍执行（20 小时窗口正常滚动）。**TranscriptDelete / CollectIncomingTriage 都是幂等的**：已删 / 已归档的文件下一轮不会被重复扫。
 - **治理模式自主权边界：安全动作可执行，危险动作只产建议。** 安全幂等动作（更新时间戳、补字段、记日志、记忆压缩、transcript / incoming 蒸馏、索引重建、incoming 归档）治理模式可自主执行；不可逆 / 高影响动作（归档模块、招募 agent、改契约、删 `.dna/`、**记忆升知识 PROMOTE**）只能写进 `advice_pending` 落到 report.md，由用户下次会话决定是否采纳。
-- **治理只做回头式重构，前向式造新归执行子循环。** Architect / HR 治理模式扫已有资产（`.dna/` 注册表、`.claude/agents/` 注册表）做裂变 / 归档 / 合并 / 依赖重组 / 漂移识别；"为满足当前任务而懒式创建新模块 / 招募新 agent"由执行根的 ArchGate / CallHR 节点触发，**不在治理循环范围**。这一刀切清楚后，治理模式才能稳定收敛，不会与执行模式抢工作。
+- **治理只做回头式重构，前向式造新归执行子循环。** Architect / HR 治理模式扫已有资产（`.dna/` 注册表、`.claude/agents/` 注册表）做裂变 / 归档 / 合并 / 依赖重组 / 漂移识别；“为满足当前任务而懒式创建新模块 / 招募新 agent”由执行根的 ArchGate / CallHR 节点触发，**不在治理循环范围**。这一刀切清楚后，治理模式才能稳定收敛，不会与执行模式抢工作。
 
-- **`SequenceTolerant` 归属 dream/core、不上提 engine/core（Batch 4 上游决策 + 架构师裁定）。** 查重复代码时曾考虑"抽到 engine/core/composite.py"，裁定上游：不抽。依据是 `bb.step_results` 是 dream blackboard 专属字段（execution 黑板 schema 不拥有该字段），`SequenceTolerant.tick` 必须读写它来实现「跨子节点详状态记录 + resume 幂等跳过」语义。抽到 engine/core 会造成两验中之一：(a) `engine/core` 反向依赖上层 dream 黑板 schema，直接违反 C3；(b) 在 `engine/core/blackboard.py` 中考虑 `step_results` 字段让 execution 也背它。两验都现报废。本次 Batch 4 只去重 `_resume_index` 这个与黑板 schema 无关的底层 helper（提升为 `engine.core.composite.resume_index`）。`SequenceTolerant` 本体仍留 dream/core；它是"能抵受单步失败的顶层治理三步容器"，该语义不是 BT 通用原语。
+- **`SequenceTolerant` 归属 dream/core、不上提 engine/core（Batch 4 上游决策 + 架构师裁定）。** 查重复代码时曾考虑“抽到 engine/core/composite.py”，裁定上游：不抽。依据是 `bb.step_results` 是 dream blackboard 专属字段（execution 黑板 schema 不拥有该字段），`SequenceTolerant.tick` 必须读写它来实现「跨子节点详状态记录 + resume 幂等跳过」语义。抽到 engine/core 会造成两验中之一：(a) `engine/core` 反向依赖上层 dream 黑板 schema，直接违反 C3；(b) 在 `engine/core/blackboard.py` 中考虑 `step_results` 字段让 execution 也背它。两验都现报废。本次 Batch 4 只去重 `_resume_index` 这个与黑板 schema 无关的底层 helper（提升为 `engine.core.composite.resume_index`）。`SequenceTolerant` 本体仍留 dream/core；它是“能抵受单步失败的顶层治理三步容器”，该语义不是 BT 通用原语。
 - **`engine/dream/core/composite_tolerant.py` 中本地 `_Composite` 最小重声明刻意保留。** `engine/core/composite.py::_Composite` 是模块私有名（以 `_` 开头），跨模块 import 会踩进「什么名叫什么」的反向耦合。`SequenceTolerant` 仅需 `__init__` + `children()` 两个方法，实现足够简单，重声明三行在 dream/core 是陶合的代价。判出。未来如 `engine/core` 决定给 `_Composite` 提升为公开基类（去下划线），dream 侧可平滑切换为 `from engine.core.composite import Composite`；在那之前 dream 必须使用本地重声明，不可 `from engine.core.composite import _Composite`。`from engine.core.composite import resume_index` 均为已公开名字的正常 import。
 
 - **Stage 5：IncomingScan + DispatchIncomingTriage + CollectIncomingTriage 三联节点加入 `MemoryGovernanceStep`，位置在 `MemPromoteScan` 之后、`MemCompact` 之前。** Phase 4 hook 层将每轮实时捕获追写到 `<store>/medium/incoming/YYYY-MM-DD.jsonl`（详见 `kernel/project/hooks_src/_lib/incoming_writer.py`）；Stage 5 dream 消费该队列的 prior-day 文件：IncomingScan 拉列表并按 mtime 排序、DispatchIncomingTriage yield 给主 agent 走 LLM 语义二筛与 MUST/WANT/HOW/IS 四象限压缩、CollectIncomingTriage `on_resume` 后用 `os.replace` 将处理成功文件原子移动到 `incoming/processed/`。今日文件刻意不走——hook 仍在追加，只有完全静止的旧日 JSONL 才参与治理。失败安全：业务失败（解析错、report 非 dict、LLM 报 errors）一律写 `bb.incoming_triage_result` 含 `error` 后 SUCCESS 返回，不向上游传 FAILURE——下游 MemCompact / MemSweepExpired / MemRebuildIndex 必须继续。
   - **黑板字段 4 新增**：`bb.incoming_paths`（IncomingScan 单写）、`bb.incoming_triage_dispatched`（IncomingScan 单写）、`bb.incoming_triage_result`（IncomingScan 跳过路径 / CollectIncomingTriage 全部路径写），并 `bb.mem_promote_candidates`（MemPromoteScan 单写）一起让 `core/blackboard.FIELDS` 扩为 28 字段。
-  - **主 agent 回执 schema**锁定 `{processed_paths, medium_entries_written, errors}`，产物同时是"medium 记忆条目"与"归档后的 incoming 文件"。incoming 处理完不直接写 `.dna/`——是否进一步 PROMOTE 为知识交给下一步 `MemPromoteScan` + Architect 治理子循环。
+  - **主 agent 回执 schema**锁定 `{processed_paths, medium_entries_written, errors}`，产物同时是“medium 记忆条目”与“归档后的 incoming 文件”。incoming 处理完不直接写 `.dna/`——是否进一步 PROMOTE 为知识交给下一步 `MemPromoteScan` + Architect 治理子循环。
   - **拓扑同步两处**：`tree/dream_loop.py::build_dream_root` 与 `loops/memory_governance.py::build_memory_governance_subtree` 同步插入。`MemoryGovernanceStep` 由 10 节点扩为 13 节点。
   - **顺序理由**：放在 promote scan 后是为了让 promote scan 先把上一轮 medium 深处的 rule/flow 候选拉出锁住，本轮 incoming triage 成果落下之后由下一轮 dream tick 的 promote scan 重新处理——两子任务不在同一 tick 内交互。放在 MemCompact 前是为了让本轮新落 medium 的条目同样享受压缩 / sweep / rebuild 的治理后续。
 
-- **Stage 5：MemPromoteScan 不再是"只暂存"，同时负责暴露候选供架构师审议。** 节点原有调 `scan_for_promote_candidates` 暂存 medium 的 rule/flow tagged 条目进 `candidates/`；Stage 5 额外调 `CandidatesArea.pull_pending()` 拉出全部当前候选写 `bb.mem_promote_candidates` 项目黑板字段，由 `loops/architect_governance.compose_prompt(bb)`（单参函数、不接 store_dir）渲染到架构师治理模式 prompt。架构师按条产 PROMOTE / HOLD / REJECT advice，**强制人工门**：PROMOTE 只产 advice 不自动写 `.dna/`，架构师产物落 `arch_governance_report.advice_pending`，最终上届用户决定。该变动让 medium 条目变为知识是一条可见、可审议的路径——与 Stage 4 以后"实时捕获 → dream incoming triage → medium"上游路径拼接后，从原始信号到记忆再到知识的三段道第一次闭环。
+- **Stage 5：MemPromoteScan 不再是“只暂存”，同时负责暴露候选供架构师审议。** 节点原有调 `scan_for_promote_candidates` 暂存 medium 的 rule/flow tagged 条目进 `candidates/`；Stage 5 额外调 `CandidatesArea.pull_pending()` 拉出全部当前候选写 `bb.mem_promote_candidates` 项目黑板字段，由 `loops/architect_governance.compose_prompt(bb)`（单参函数、不接 store_dir）渲染到架构师治理模式 prompt。架构师按条产 PROMOTE / HOLD / REJECT advice，**强制人工门**：PROMOTE 只产 advice 不自动写 `.dna/`，架构师产物落 `arch_governance_report.advice_pending`，最终上届用户决定。该变动让 medium 条目变为知识是一条可见、可审议的路径——与 Stage 4 以后“实时捕获 → dream incoming triage → medium”上游路径拼接后，从原始信号到记忆再到知识的三段道第一次闭环。
 - **Batch 7 原决策仍生效**：`MemPromoteScan` 的 `staged` 技人 flag (`promote.enabled`) 默认关闭时 `staged=0` + SUCCESS；随 Stage 5 补上 `pull_pending` 之后，即使 flag 关闭 `pending_count` 也能为 0（无新候选 stage 不造成发出），架构师 prompt 渲染空列表跳过这一节。默认配置下零回归不变。
 
-- **Phase 3 — `MemoryGovernanceStep` 末尾插入 `DnaGraphRebuild` 叶子，mem_seq 由 13 节点扩为 14 节点。** 位置在 `MemRebuildIndex` 之后、sequence 末尾，以保证图谱重建反映的是刚刚被 `verify_consistency("memory_medium")` 调和后的 retrieval 状态。该节点是 **in-process** 叶子（不 yield），调 `cbi._primitives.modules.graph_builder.build_graph(project_root)` 扫全树 `.dna/module.md` 重建 `<root>/.cbim/index/dna/graph.json`；错误被吞下（`return Status.FAILURE`）不中断 sequence。`build_memory_governance_subtree` 复用同一拓扑。选择「放在记忆治理末尾」而非「独立为第四个治理步」的两条理由：(1) graph 是 `dna` 源的索引器副产物，与 BM25/vector 索引同属"同一源的物化产物」，与 MemRebuildIndex 有语义连续性；(2) Architect / HR 治理步是 yield 子 agent 的路径，graph 重建是十几毫秒级 in-process 调用，抽为第四步会多产生一个 Catch+Timeout 包装层但不产生任何语义价值。
+- **Phase 3 — `MemoryGovernanceStep` 末尾插入 `DnaGraphRebuild` 叶子，mem_seq 由 13 节点扩为 14 节点。** 位置在 `MemRebuildIndex` 之后、sequence 末尾，以保证图谱重建反映的是刚刚被 `verify_consistency("memory_medium")` 调和后的 retrieval 状态。该节点是 **in-process** 叶子（不 yield），调 `cbi._primitives.modules.graph_builder.build_graph(project_root)` 扫全树 `.dna/module.md` 重建 `<root>/.cbim/index/dna/graph.json`；错误被吞下（`return Status.FAILURE`）不中断 sequence。`build_memory_governance_subtree` 复用同一拓扑。选择「放在记忆治理末尾」而非「独立为第四个治理步」的两条理由：(1) graph 是 `dna` 源的索引器副产品，与 BM25/vector 索引同属“同一源的物化产品」，与 MemRebuildIndex 有语义连续性；(2) Architect / HR 治理步是 yield 子 agent 的路径，graph 重建是十几毫秒级 in-process 调用，抽为第四步会多产生一个 Catch+Timeout 包装层但不产生任何语义价值。
 - **Phase 3 — “全构 + patch + session_start 兑底”三路径一致性模型。** dream `DnaGraphRebuild` 是全量权威重建（扫全树、重业亘 graph.json）；`services/_reindex.reindex_dna` 末尾调 `patch_graph(root, module_dir)` 只重算被编辑模块的外出边（D9：不级联邻居，被依赖者在自己下次写时会覆盖自己的外出边，最终一致）；`session_start._ensure_graph(root)` 在 graph.json 不存在时调 `build_graph(root)` 兑底。三者共同保证：dream 三个多小时一轮、热路径只 patch 不重建、冷启动能免误退化为空图谱。每条路径都是幂等且最后者获胜。全量重建在 1000 模块规模下“图构造阶段”纯耗时 ~35ms（不含 _scan_modules，后者是跨依赖者共享设施，不计入图谱性能账）。
-- **Phase 3 — 依赖方向：`engine/dream → cbi/_primitives/modules/graph_builder`。** `actions/mem_steps.DnaGraphRebuild.tick` 里报 `from cbi._primitives.modules.graph_builder import build_graph`，是跨包 import。`graph_builder` 是 `cbi._primitives.modules` 包中的纯 primitives leaf，不反向 import dream；依赖颓限是包括 retrieval 主的三层：`engine/dream → cbi/_primitives → services/_fm`，零环。Phase 3 不付出任何新 外部依赖」，module.md frontmatter dependencies 不动（主要调用路径仍然经 retrieval；`cbi/_primitives` 是重用 `_scan_modules` 与原子写入，属于「Actions 调轻量并入工具」一类，不进顶级依赖表）。
+- **Phase 3 — 依赖方向：`engine/dream → cbi/_primitives/modules/graph_builder`。** `actions/mem_steps.DnaGraphRebuild.tick` 里报 `from cbi._primitives.modules.graph_builder import build_graph`，是跨包 import。`graph_builder` 是 `cbi._primitives.modules` 包中的纯 primitives leaf，不反向 import dream；依赖颇限是包括 retrieval 主的三层：`engine/dream → cbi/_primitives → services/_fm`，零环。Phase 3 不付出任何新 外部依赖」，module.md frontmatter dependencies 不动（主要调用路径仍然经 retrieval；`cbi/_primitives` 是重用 `_scan_modules` 与原子写入，属于「Actions 调轻量并入工具」一类，不进顶级依赖表）。
 
 ## Non-Goals
 
 - **不与用户对话。** 治理循环全程在后台运行，Done 不返回 `user_message`；摘要通过 `report.md` 落盘 + 下次 SessionStart 注入主 agent 上下文，被动呈现。
-- **不抢占执行循环优先级。** 用户优先是单向硬规则——治理让位用户，用户不让位治理。无任何"治理跑完再响应用户"的语义。
+- **不抢占执行循环优先级。** 用户优先是单向硬规则——治理让位用户，用户不让位治理。无任何“治理跑完再响应用户”的语义。
 - **不调 Work Agent / 不调 Auditor。** 治理管的是元结构（记忆 / 模块 / agent 注册表），不是业务执行。Work Agent / Auditor 是 Claude Code 提示词配置 agent，CBIM 不为它们设计任何循环（含治理）。
-- **不引入夜间常驻守护进程。** 零后台进程、无 cron、无 systemd timer。每次 tick 跑完即退，状态全在 `.cbim/scheduler/dream/`。
+- **不引入夜间常驻守护进程。** 每次 `dream_tick` 跑完即退，状态全在 `.cbim/scheduler/dream/`。CBIM 侧永不持有 daemon / systemd service / 后台线程。OS 一次性任务（cron / launchd / Task Scheduler）是“OS 拥有的一次性时钟触发”，不是“CBIM 拥有的常驻进程”——每次触发都独立启动 headless claude 走完 `dream_tick` 后退出，不构成本模块的守护进程。
 - **不复用执行循环黑板。** 黑板 schema 完全独立（8 字段，与执行循环 18 字段无交集），持久化路径物理隔离（`.cbim/scheduler/dream/` vs `.cbim/scheduler/bt/`）。互相不读对方 bb。
-- **治理记忆步骤不调 LLM。** `MemoryGovernanceStep` 全程确定性 Python 流程；任何"用 LLM 判断要不要压缩"的写法都是破窗。判断逻辑全在 `memory.HealthChecker` 的硬阈值里。
-- **治理子循环不做"为当前任务造新模块 / 招新 agent"。** 这归执行子循环。治理只做回头式重构（裂变 / 归档 / 合并 / 重组）。
-- **不升级治理为可交互会话。** Architect / HR 治理模式在子会话内默默跳完全过程后一次性返回全量报告；任何"让治理期间主 agent 补充输入"的设计被明确拒绝——治理是后台自维护，不是多轮对话。
+- **治理记忆步骤不调 LLM。** `MemoryGovernanceStep` 全程确定性 Python 流程；任何“用 LLM 判断要不要压缩”的写法都是破窗。判断逻辑全在 `memory.HealthChecker` 的硬阈值里。
+- **治理子循环不做“为当前任务造新模块 / 招新 agent”。** 这归执行子循环。治理只做回头式重构（裂变 / 归档 / 合并 / 重组）。
+- **不升级治理为可交互会话。** Architect / HR 治理模式在子会话内默默跳完全过程后一次性返回全量报告；任何“让治理期间主 agent 补充输入”的设计被明确拒绝——治理是后台自维护，不是多轮对话。
+- **不由 CBIM 侧代替用户注册 OS 任务。** OS 一次性任务的注册 / 卸载 / 修改始终是用户操作——`project` 模板只提供 example 脚本片段（cron 表达式、launchd plist、Task Scheduler XML）与说明文档，由用户手动 `crontab -e` / `launchctl load` / `schtasks /create`。CBIM 不代替用户 sudo、不代替用户写 OS 系统目录、不代替用户开机自启；卸载 CBIM 也不清理 OS 任务（用户资产由用户拥有）。
 
 ## Outbound
 

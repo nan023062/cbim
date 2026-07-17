@@ -113,6 +113,31 @@
 
 ---
 
+
+## Recency weighting
+
+`RetrievalConfig` 新增分源半衰期配置（可选），用于对**内容本身承载时间语义的源**在排序阶段应用时效性衰减乘子。
+
+- 配置字段（写入 `.cbim/retrieval/config.json`）：
+  - `recency_half_life_days: dict[str, float]`，示例默认值 `{"memory_medium": 60.0, "transcript": 30.0}`
+  - `dna` / `agents` **不启用**衰减 —— 未列入该字典或值为 0/缺失即视为关闭
+- 衰减公式（facade 内部混排排序时应用，与 programmer 实现一致）：
+  ```python
+  age_days = (now - created_at).total_seconds() / 86400.0
+  multiplier = 0.5 ** (age_days / half_life_days)
+  final_score = base_score * multiplier
+  ```
+  等价数学形式：`multiplier = exp(-ln(2) * age_days / half_life_days)`（注意必须带 `ln(2)` 因子；`exp(-age/half_life)` 不满足半衰期语义）。自检：
+  - `age_days = 0` → `multiplier = 1.0`（新鲜条目不打折）
+  - `age_days = half_life_days` → `multiplier = 0.5`（半衰期定义）
+  - `age_days = 2 * half_life_days` → `multiplier = 0.25`
+  - `age_days = 3 * half_life_days` → `multiplier = 0.125`
+  
+  `base_score` 是 embedding / BM25 / RRF 融合的原始得分；`created_at` 从命中条目的 metadata 取（`memory_medium` 用 `created_at`，`transcript` 用 mtime），缺失即视为“无时间语义”跳过乘子（`multiplier = 1.0`）。
+- 关闭方法：把该源的半衰期设为 `0` 或从字典中移除即可。
+- **契约边界**：5 函数签名与 `Hit` 字段（`{doc_id, source, score, content, metadata}`）不变；`Hit.score` 语义仍为“用于排序的相对得分”，调用方不能用它作阀值判断（与 embedding/BM25 后端切换时的既有约束一致）。半衰期配置对调用方透明，是本模块内部的排序策略，新增 / 修改半衰期不走 contract 变更流程。
+- **默认值可调**：`medium=60 天 / transcript=30 天` 是本次落地的示例默认，后续可在实践中调整而不产生契约变更。
+
 ## 索引存储路径（公共契约）
 
 ```

@@ -1,10 +1,11 @@
 ---
 name: cbim-kernel
 owner: architect
-description: Cbim-CC kernel monorepo: single kernel module installed per-project via install.sh
+description: "Cbim-CC kernel monorepo: single kernel module installed per-project via install.sh"
 keywords: []
-dependencies: []
 status: implemented
+body_edited_at: 2026-07-17T06:13:54Z
+dependencies: []
 ---
 
 ## Positioning
@@ -31,8 +32,7 @@ The kernel must run inside each project's `.cbim/` and serve only that project. 
 classDiagram
     class kernel { <<module>> }
     class tests { <<module>> }
-
-    tests ..> kernel : exercises via claude -p subprocess
 ```
 
-`kernel` is the production artifact: `install.sh` copies `v1/kernel/` into each project's `.cbim/kernel/`. `tests` is a sibling harness that exercises the kernel end-to-end through a real `claude -p` subprocess; it is **not** packaged or shipped — it stays in the monorepo for CI and local validation. The earlier three-module design (`bin` launcher + `installer`/`updater` + `kernel`) targeted a globally-installed multi-version layout; that design was abandoned in favour of the current per-project flat-copy install (`install.sh` → `<project>/.cbim/kernel/`). No launcher binary, no version registry, no cross-version migrator exists on disk.
+`kernel` is the production artifact: `install.sh` copies `v1/kernel/` into each project's `.cbim/kernel/`. `tests` is a sibling harness that exercises the kernel end-to-end through a real `claude -p` subprocess; it is **not** packaged or shipped — it stays in the monorepo for CI and local validation. The `tests → kernel` relationship is a **runtime subprocess invocation** (not a static import), so it is documented in prose here rather than as a `..>` dependency arrow in the class diagram — the R2 direct-child rule reserves diagram arrows for static-dependency edges at the direct-child level, and both `kernel` and `tests` live two path segments below this parent (under the unadopted `v1/` intermediate directory). The earlier three-module design (`bin` launcher + `installer`/`updater` + `kernel`) targeted a globally-installed multi-version layout; that design was abandoned in favour of the current per-project flat-copy install (`install.sh` → `<project>/.cbim/kernel/`). No launcher binary, no version registry, no cross-version migrator exists on disk.
+

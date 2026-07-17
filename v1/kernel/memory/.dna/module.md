@@ -10,7 +10,7 @@ keywords:
   - crud-compaction
   - retrieval-sync
 status: implemented
-body_edited_at: 2026-07-09T07:59:03Z
+body_edited_at: 2026-07-17T06:11:39Z
 dependencies: []
 ---
 
@@ -81,11 +81,10 @@ classDiagram
 
     %% --- 2. 跨树占位节点（远端依赖口） ---
     class kernel_engine_retrieval { <<module>> }
-    class kernel_engine_retrieval : .from(kernel/engine/retrieval)
+    class kernel_engine_retrieval : .from(submodule/cbim/v1/kernel/engine/retrieval)
 
     %% --- 3. 内部边（本模块一级子模块之间） ---
     memory_compaction ..> memory_crud : compaction writes back via update/delete (crud owns disk writes)
-    memory_crud ..> memory_compaction : write synchronously triggers identify
 
     %% --- 4. 跨树边（依赖跨树占位节点） ---
     memory_crud ..> kernel_engine_retrieval : write/update/delete sync index_upsert/index_delete
@@ -96,9 +95,9 @@ classDiagram
 
 | 关系 | 方向 | 说明 |
 |------|------|------|
-| `memory_crud` → `memory_compaction` | `write` 同步调用 `identify` | "Create 一体两步"的第 2 步；不通知外部 |
+| `memory_crud` → `memory_compaction` | `write` 运行时通过回调调用 `identify`（非静态导入） | "Create 一体两步"的第 2 步；不通知外部 |
 | `memory_crud` → `kernel/engine/retrieval` | `write` / `update` / `delete` 同步调 `index_upsert` / `index_delete` | 索引与数据一致性由本模块承诺；该依赖进入 module dependencies |
-| `memory_compaction` → `memory_crud` | `compact` 通过 `update` / `delete` 回写 | 改盘的唯一入口在 `crud`；`compaction` 不持有文件写权限 |
+| `memory_compaction` → `memory_crud` | `compact` 通过 `update` / `delete` 回写 | 改盘的唯一入口在 `crud`；`compaction` 不持有文件写权限；该依赖进入 module dependencies |
 | `memory_compaction` ↔ `candidates/` | 独占工作区 | 路径独立，不复用 `medium/`；是 `compaction.scan_for_promote_candidates` 暂存、`pull_pending` 取出的 staging 区 |
 
 **与外部模块的协作**：
@@ -111,8 +110,9 @@ classDiagram
 | `<store>/medium/incoming/` JSONL（Stage 4 捕获队列） | **位于本模块路径下但本模块不读不写** | `<store>/medium/incoming/YYYY-MM-DD.jsonl` 是 Phase 4 hook 实时捕获队列（写者为 `kernel/project/hooks_src/_lib/incoming_writer.py`），存放在 `medium/` 下但**不在 crud/compaction 的添加删改范围内**——`scan` / `query` / `get` / `compact` / `sweep_expired` 绝不记该子目录。路径仅是物理共住，逻辑上它是上游 hook 与下游 dream 的交接点。 |
 | `<store>/medium/incoming/processed/`（Stage 5 dream 归档区） | **同上：位物理不位逻辑** | `engine/dream` 的 `CollectIncomingTriage` 在蒸骨成功后用 `os.replace` 将原 JSONL 原子移动到该目录作为归档。本模块同样**不读不写**该区，不将其视作可入库 medium 条目。 |
 
-**无循环依赖**——`memory_crud` ↔ `memory_compaction` 是**双向调用**，不是双向静态依赖；静态依赖只有一条：`memory_compaction → memory_crud`。`memory_crud → retrieval` 是本模块唯一的跨模块依赖，单向。
+**无循环依赖**——`memory_crud` ↔ `memory_compaction` 是**双向调用**，不是双向静态依赖；静态依赖只有一条：`memory_compaction → memory_crud`（`crud` 提供的 `identify` 回调被 `compaction` 注入进来，不构成 `crud → compaction` 的静态 import）。`memory_crud → retrieval` 是本模块唯一的跨模块依赖，单向。
 
 ## Non-Goals 补充：`medium/incoming/` 子树
 
 - **不读、不写、不扫 `medium/incoming/`。** Stage 4 hook 在 `<store>/medium/incoming/YYYY-MM-DD.jsonl` 追写实时捕获；Stage 5 dream 消费 prior-day JSONL 并归档到 `incoming/processed/`。本模块的所有扫描 / 查询 / 压缩 / 过期清扫逻辑仅限 medium **主体区**（`<store>/medium/*.md`）与 candidates **独立区**，绝不递归进 `incoming/`。路径同住是部署便利，不是逻辑拥有。
+

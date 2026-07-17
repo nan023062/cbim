@@ -39,5 +39,11 @@ def write_additional_context(text: str, *, event_name: str = "SessionStart") -> 
             "additionalContext": text or "",
         }
     }
-    sys.stdout.write(json.dumps(payload, ensure_ascii=False))
-    sys.stdout.flush()
+    # Force UTF-8 at the bytes layer so non-ASCII content (Chinese, emoji,
+    # rare CJK glyphs) never trips over the platform default encoding
+    # (e.g. GBK on Windows), which would otherwise raise UnicodeEncodeError
+    # from sys.stdout.write and crash the hook. Matches the project-wide
+    # convention of explicit UTF-8 for all stdout/file I/O.
+    encoded = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    sys.stdout.buffer.write(encoded)
+    sys.stdout.buffer.flush()

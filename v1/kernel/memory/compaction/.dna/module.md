@@ -10,10 +10,10 @@ keywords:
   - health-check
   - write-back
 status: implemented
-body_edited_at: 2026-07-09T07:59:03Z
+body_edited_at: 2026-07-17T06:11:47Z
 dependencies:
-  - kernel/memory/crud
-  - kernel/engine/retrieval
+  - submodule/cbim/v1/kernel/memory/crud
+  - submodule/cbim/v1/kernel/engine/retrieval
 ---
 
 ## Positioning

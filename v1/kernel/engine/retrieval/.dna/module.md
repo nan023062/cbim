@@ -10,7 +10,7 @@ keywords:
   - drift-check
   - four-source
 status: implemented
-body_edited_at: 2026-07-10T10:04:17Z
+body_edited_at: 2026-07-17T09:21:30Z
 dependencies: []
 ---
 
@@ -148,6 +148,8 @@ CBIM v2 的记忆架构重设计带来一个共同需求：**多源向量检索*
 
 - **D8 收官（2026-07-10）**：Task 6 完成——本模块 `contract.md` 中 `dna` 源边界表格行已由 `**/.dna/{module.md, contract.md, workflows/*}` 更新为 `**/.dna/{module.md, contract.md, workflows/*, notes/*}`。Task 1（`services/_reindex.py::reindex_notes`）+ Task 4（hook 冷启动）已一并落地。**索引 metadata 单一出口**规则（分歧 1 裁决）固化到实现：`source="dna"` 的 metadata 字典组装仅在 `services/_reindex.py` 内发生，本模块作为 leaf 仍保持“对源一视同仁”语义。详见根模块 D8 落地记录。
 
+- **Recency 衰减为“内容有时间语义”源的可选乘子。** 时效性衰减不是“所有检索结果按时间打折”，而是**仅对内容本身承载时间语义的源开启**的可选乘子：`memory_medium`（条目文件名带 YYYY-MM-DD 且 metadata 有 `created_at`）与 `transcript`（hook 落盘时天然带 mtime）两源默认启用；`dna` / `agents` 是“长期知识与能力册”，永不启用衰减 —— 它们对新旧没有偏好，`intent="rationale"` 与 `intent="usage-example"` 的相对权重由 metadata 分层，不由时间决定。衰减公式为 `score * 0.5^((now - created_at) / half_life)`，默认半衰期由 `RetrievalConfig.recency_half_life_days` 分源配置（示例默认值 `medium=60` 天 / `transcript=30` 天，可调）；半衰期为 0 或缺失即关闭该源的衰减。契约层 5 函数签名与 `Hit` 字段不变，乘子应用发生在 facade 内部混排排序阶段，调用方不感知也不能干预。
+
 ## Sub-module Relationships
 
 无下级子模块。本模块是 leaf。
@@ -188,4 +190,3 @@ CBIM v2 的记忆架构重设计带来一个共同需求：**多源向量检索*
 本模块对外**无依赖**。仅依赖 Python 标准库（`json` / `pathlib` / `hashlib`）+ 可选 numpy（vector 索引存在时）+ 可选 embedding SDK（外部 provider 启用时）。
 
 依赖方向：`memory.crud → engine/retrieval`、`memory.compaction → engine/retrieval`、`mcp_server.tools.dna → engine/retrieval`、`mcp_server.tools.agents → engine/retrieval`、`hooks.session_* → engine/retrieval`、`engine/execution → engine/retrieval`、`engine/dream → engine/retrieval`。无环。
-

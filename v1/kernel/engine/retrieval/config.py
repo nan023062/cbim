@@ -7,12 +7,22 @@ install must work.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from atomic_io import atomic_write_text
 
 SCHEMA_VERSION = 1
+
+
+# Default recency half-life per retrieval source, in days. Sources
+# absent from this map get multiplier=1.0 (no recency decay) — e.g.
+# ``dna`` and ``agents`` are versioned artefacts whose age does not
+# imply staleness, so they deliberately opt out.
+_DEFAULT_RECENCY_HALF_LIFE_DAYS: dict[str, float] = {
+    "memory_medium": 60.0,
+    "transcript": 30.0,
+}
 
 
 @dataclass(frozen=True)
@@ -28,9 +38,36 @@ class RetrievalConfig:
     # consistent across crashes. Set to False to fall back to the legacy
     # serial-write path if the atomic path causes regression.
     atomic_persist: bool = True
+    # Per-source exponential recency decay. Keys are retrieval source
+    # names (see store.VALID_SOURCES); values are half-life in days. A
+    # source that is absent from the dict — or the whole dict set to
+    # None — disables the recency multiplier for that source and
+    # preserves the raw score. Defaults live in
+    # ``_DEFAULT_RECENCY_HALF_LIFE_DAYS`` (memory_medium=60d,
+    # transcript=30d; dna / agents deliberately opt out).
+    recency_half_life_days: dict[str, float] | None = field(
+        default_factory=lambda: dict(_DEFAULT_RECENCY_HALF_LIFE_DAYS)
+    )
 
     @classmethod
     def from_dict(cls, data: dict) -> RetrievalConfig:
+        raw_recency = data.get("recency_half_life_days", "__missing__")
+        if raw_recency == "__missing__":
+            recency: dict[str, float] | None = dict(_DEFAULT_RECENCY_HALF_LIFE_DAYS)
+        elif raw_recency is None:
+            recency = None
+        elif isinstance(raw_recency, dict):
+            recency = {}
+            for k, v in raw_recency.items():
+                try:
+                    recency[str(k)] = float(v)
+                except (TypeError, ValueError):
+                    # Ignore malformed entries rather than reject the
+                    # whole config; a bad value just disables decay for
+                    # that source.
+                    continue
+        else:
+            recency = dict(_DEFAULT_RECENCY_HALF_LIFE_DAYS)
         return cls(
             provider=data.get("provider", "null"),
             openai_api_key_env=data.get("openai_api_key_env", "OPENAI_API_KEY"),
@@ -39,6 +76,7 @@ class RetrievalConfig:
             hybrid_search=bool(data.get("hybrid_search", False)),
             schema_version=int(data.get("schema_version", SCHEMA_VERSION)),
             atomic_persist=bool(data.get("atomic_persist", True)),
+            recency_half_life_days=recency,
         )
 
     def to_dict(self) -> dict:
@@ -50,6 +88,11 @@ class RetrievalConfig:
             "hybrid_search": self.hybrid_search,
             "schema_version": self.schema_version,
             "atomic_persist": self.atomic_persist,
+            "recency_half_life_days": (
+                dict(self.recency_half_life_days)
+                if self.recency_half_life_days is not None
+                else None
+            ),
         }
 
 

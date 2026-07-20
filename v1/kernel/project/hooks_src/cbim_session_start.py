@@ -416,9 +416,55 @@ def _build_context(root: Path, session_id: str) -> str:
         snapshot_out = ""
 
     dream_banner, dream_summary = _dream_signals(cbim)
+    decisions_banner = _recent_decisions_banner(root)
 
-    parts = [p for p in [dream_banner, dream_summary, snapshot_out] if p]
+    parts = [
+        p
+        for p in [dream_banner, dream_summary, decisions_banner, snapshot_out]
+        if p
+    ]
     return "\n\n---\n\n".join(parts) if parts else ""
+
+
+def _recent_decisions_banner(root: Path) -> str | None:
+    """Compact "MUST / WANT decisions from the last 7 days" summary.
+
+    Returns None on empty results OR any exception path — SessionStart
+    must never crash on a memory-facade regression. Mirrors the safe_run
+    pattern used elsewhere in this file: guard the whole probe and skip
+    silently on failure.
+    """
+    try:
+        from memory import list_recent
+    except ImportError:
+        return None
+
+    try:
+        entries = list_recent(
+            store_dir=root / ".cbim" / "memory",
+            tier="medium",
+            quadrants=("MUST", "WANT"),
+            since_days=7,
+            limit=5,
+        )
+    except Exception:  # noqa: BLE001 — best-effort banner; never propagate
+        return None
+
+    if not entries:
+        return None
+
+    lines: list[str] = ["[CBIM decisions · 最近 7 天]"]
+    for e in entries:
+        # mtime is ISO-8601 UTC ("YYYY-MM-DDT...+00:00"); banner only
+        # wants the date component.
+        date = ""
+        mtime = e.get("mtime") or ""
+        if isinstance(mtime, str) and len(mtime) >= 10:
+            date = mtime[:10]
+        first_line = (e.get("first_line") or "").strip()
+        quadrant = e.get("quadrant") or "?"
+        lines.append(f"- [{quadrant} {date}] {first_line}")
+    return "\n".join(lines)
 
 
 def _dream_signals(cbim: Path) -> tuple[str | None, str | None]:

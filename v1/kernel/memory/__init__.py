@@ -13,6 +13,6 @@ Code and surfaced via `engine.retrieval` (source="transcript"), not by
 this module.
 """
 
-from ._facade import query, scan, get, stats
+from ._facade import query, scan, get, stats, list_recent
 
-__all__ = ["query", "scan", "get", "stats"]
+__all__ = ["query", "scan", "get", "stats", "list_recent"]

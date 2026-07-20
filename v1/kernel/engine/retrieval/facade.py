@@ -17,8 +17,10 @@ All other names in this module are internal.
 """
 from __future__ import annotations
 
+import math
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from threading import RLock
 
@@ -520,21 +522,39 @@ class RetrievalFacade:
             else:
                 ranked = state.bm25.search(query, top_k, allowed_ids=allowed_ids)
 
+            # Recency multiplier for this source. Computed once per
+            # search() call so every hit sees a stable ``now`` — a hit
+            # scanned last in the loop otherwise gets a fractionally
+            # smaller multiplier than the first, which is silently
+            # unfair.
+            half_life = _recency_half_life_for_source(self.config, source)
+            now_ts = time.time() if half_life is not None else None
+
             hits: list[Hit] = []
             seed_ids: list[str] = []
+            # seed_score stores RAW ranker output (pre-multiplier) because
+            # graph expansion decays off the ranker score, then applies
+            # the neighbour's own recency multiplier on top. Applying the
+            # seed multiplier here would double-count when a hop-1 hit
+            # inherits it and multiplies by its own age again.
             seed_score: dict[str, float] = {}
             for doc_id, score in ranked:
                 rec = state.records.get(doc_id)
                 if rec is None:
                     continue
                 content = state.store.read_doc(doc_id) or ""
+                raw_score = float(score)
+                if half_life is not None and now_ts is not None:
+                    final_score = raw_score * _recency_multiplier(rec, half_life, now_ts)
+                else:
+                    final_score = raw_score
                 seed_ids.append(doc_id)
-                seed_score[doc_id] = float(score)
+                seed_score[doc_id] = raw_score
                 hits.append(
                     Hit(
                         doc_id=doc_id,
                         source=source,
-                        score=float(score),
+                        score=final_score,
                         content=content,
                         metadata=dict(rec.metadata or {}),
                     )
@@ -557,6 +577,8 @@ class RetrievalFacade:
                     expansion=expansion,
                     state=state,
                     source=source,
+                    half_life_days=half_life,
+                    now_ts=now_ts,
                 )
 
             return hits
@@ -633,6 +655,90 @@ class RetrievalFacade:
 # --------------------------------------------------------------------------
 # Module-level singleton + 5 public functions.
 # --------------------------------------------------------------------------
+
+
+def _recency_half_life_for_source(
+    config: RetrievalConfig, source: str,
+) -> float | None:
+    """Return the half-life in days for ``source`` or None to disable decay.
+
+    Config-level None (``recency_half_life_days = None``) or a source
+    not present in the map both disable decay — callers get the raw
+    score. A non-positive half-life is likewise ignored to keep the
+    downstream math well-behaved (``exp(-x / 0)`` would blow up).
+    """
+    mapping = config.recency_half_life_days
+    if not mapping:
+        return None
+    try:
+        hl = float(mapping.get(source, 0.0))
+    except (TypeError, ValueError):
+        return None
+    if hl <= 0:
+        return None
+    return hl
+
+
+_SECONDS_PER_DAY = 86400.0
+
+
+def _record_timestamp(rec: "DocRecord") -> float | None:
+    """Extract a comparable UTC epoch timestamp from ``rec``.
+
+    Preference order: ``indexed_at`` (ISO string) then ``mtime`` (already
+    epoch seconds). Returns None when both are missing / unparseable so
+    the caller can fall back to multiplier=1.0.
+
+    ``indexed_at`` is written by ``store.now_iso()`` as
+    ``"YYYY-MM-DDTHH:MM:SSZ"``. datetime.fromisoformat handles that once
+    we swap the trailing ``Z`` for ``+00:00``.
+    """
+    ts_iso = getattr(rec, "indexed_at", "") or ""
+    if isinstance(ts_iso, str) and ts_iso:
+        s = ts_iso.strip()
+        # Common variants: RFC-3339 with trailing Z, or explicit offset.
+        try:
+            if s.endswith("Z"):
+                dt = datetime.fromisoformat(s[:-1] + "+00:00")
+            else:
+                dt = datetime.fromisoformat(s)
+        except ValueError:
+            dt = None
+        if dt is not None:
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.timestamp()
+
+    mtime = getattr(rec, "mtime", 0.0) or 0.0
+    try:
+        m = float(mtime)
+    except (TypeError, ValueError):
+        return None
+    if m > 0:
+        return m
+    return None
+
+
+def _recency_multiplier(rec: "DocRecord", half_life_days: float, now_ts: float) -> float:
+    """True half-life exponential decay: ``0.5 ** (age_days / half_life_days)``.
+
+    Equivalent to ``exp(-ln(2) * age_days / half_life_days)`` — the
+    parameter is *named* half-life so the on-the-tin promise is
+    "multiplier = 0.5 at age = half_life". Using ``exp(-age/half_life)``
+    would give 1/e ≈ 0.368 at that point, contradicting the name.
+
+    Missing / unparseable timestamps → 1.0 (no penalty).
+    A record indexed in the future (clock skew) → 1.0 as well; negative
+    ages would boost the score, which we don't want.
+    """
+    ts = _record_timestamp(rec)
+    if ts is None:
+        return 1.0
+    age_seconds = now_ts - ts
+    if age_seconds <= 0:
+        return 1.0
+    age_days = age_seconds / _SECONDS_PER_DAY
+    return math.exp(-math.log(2.0) * age_days / half_life_days)
 
 
 def _is_vector_collapsed(vec_ranked: list[tuple]) -> bool:
@@ -714,6 +820,8 @@ def _merge_seeded_neighbours(
     expansion: dict[str, tuple[int, str]],
     state: "_SourceState",
     source: str,
+    half_life_days: float | None = None,
+    now_ts: float | None = None,
 ) -> list[Hit]:
     """Append graph-expanded hits to the seeded list, seeds first.
 
@@ -721,7 +829,11 @@ def _merge_seeded_neighbours(
       * doc_id      = neighbour module path (must exist in state.records;
                       stale entries — graph node without matching record —
                       are silently dropped, never poisoning the result)
-      * score       = seed_score * 0.6**hop  (lower than its originator)
+      * score       = seed_raw_score * 0.6**hop * recency(neighbour)
+                      — seed_score here is the RAW ranker score (see
+                      search()'s seed_score docstring). Applying the
+                      neighbour's own recency multiplier keeps the
+                      per-hit semantics consistent with direct seeds.
       * metadata    = original record metadata + ``expanded_from`` (the
                       seed that pulled it in) + ``hop`` distance
       * content     = full doc snapshot from the store, identical to
@@ -744,11 +856,14 @@ def _merge_seeded_neighbours(
             continue
         decay = _GRAPH_HOP_SCORE_DECAY ** hop
         base_score = seed_score.get(origin, 0.0)
+        raw_score = base_score * decay
+        if half_life_days is not None and now_ts is not None:
+            raw_score *= _recency_multiplier(rec, half_life_days, now_ts)
         # Floor at a tiny positive value so downstream score-threshold
         # filters can still drop expansion hits when a min-score gate
         # is applied (e.g. the user_prompt_submit hook gates dna at 0.0
         # so this doesn't matter, but other callers may set min>0).
-        score = max(base_score * decay, 1e-6)
+        score = max(raw_score, 1e-6)
         md = dict(rec.metadata or {})
         md["expanded_from"] = origin
         md["hop"] = hop

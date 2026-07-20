@@ -196,6 +196,19 @@ def _install_hook_scripts(project_root: Path, force: bool) -> None:
         print(f"[cbim] {action}")
 
 
+def _render_scheduler_templates(project_root: Path, force: bool) -> None:
+    """Render the dream-trigger scheduler artefacts into .cbim/scheduler/tools/.
+
+    Always overwrites — kernel-managed derivatives (see
+    ``_sync.sync_scheduler_templates`` for the platform gate and template
+    contract). ``force`` is retained for signature parity with sibling
+    installers but has no effect.
+    """
+    actions = _sync.sync_scheduler_templates(project_root, dry_run=False)
+    for action in actions:
+        print(f"[cbim] {action}")
+
+
 def _check_mcp_sdk(project_root: Path) -> None:
     """Verify `mcp` is importable from the managed venv. Diagnostic only.
 
@@ -370,6 +383,7 @@ def init_project(project_root: Path, force: bool = False) -> None:
     _install_agents(project_root, force)
     _install_commands(project_root, force)
     _install_hook_scripts(project_root, force)
+    _render_scheduler_templates(project_root, force)
     _install_settings(project_root, force)
     _install_mcp_json(project_root, force)
     _install_claude_md(project_root, force)

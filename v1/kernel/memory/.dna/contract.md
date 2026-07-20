@@ -70,6 +70,23 @@
 
 ---
 
+
+## `list_recent` — 按时间列出最近条目
+
+| 字段 | 内容 |
+|------|------|
+| 用途 | SessionStart hook 场景：纯按时间倒序拉最近 N 条记忆条目，注入 coordinator 主上下文的“最近决策摘要”。**不接受 query** —— 与 `query` 的“语义/关键词检索”语义不同 |
+| 输入 | `limit: int`（必填，建议 5-20）；`tier: str = "medium"`（取值集合与其他接口一致：`{medium, candidates}`） |
+| 输出 | `list[MemoryEntry]`，按 `created_at` 降序；`MemoryEntry` 字段与 `get` 返回一致（至少含 `doc_id / content / metadata / created_at`） |
+| 排序语义 | 严格按 `created_at` metadata 降序；时间戳缺失的条目排在末尾（不参与前 N） |
+| 失败语义 | `limit <= 0` 抛参数验证失败；传入 `tier="short"` 抛参数验证失败（与其他接口一致）；目录不存在返回空列表 |
+| 性能 | 纯目录扫描 + 排序，不走 retrieval 索引；O(N log N)，N 为对应 tier 总条数 |
+| 稳定承诺 | 函数签名锁定；`MemoryEntry` 字段名可向后兼容追加 |
+
+**使用场景锁定**：该接口仅供“按时间列最近”这一类**没有 query 语义**的场景使用（SessionStart 决策摘要注入是当前唯一案例）。任何需要相关性排序的读取仍走 `query`；任何需要枚举全量条目的场景走 `scan`。
+
+---
+
 ## 写入入口（不在对外契约内，仅作说明）
 
 写入路径两条：`memory_write` MCP / CLI。两条都走入 `crud/` 子模块，**仅可写 `medium/`**（`candidates/` 由 `compaction/` 独占，对外不可直接写）。

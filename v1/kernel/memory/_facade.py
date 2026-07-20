@@ -19,7 +19,7 @@ from __future__ import annotations
 import os
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from memory.crud.backend import MemoryBackend
@@ -429,3 +429,143 @@ def stats(filter: dict | None = None,
         "newest_entry_at": _iso(newest_ts),
         "backend": _BACKEND_NAME,
     }
+
+
+# ------------------------------------------------------------------
+# 5. list_recent — SessionStart banner support (v2)
+# ------------------------------------------------------------------
+
+# Signal-line grammar for memory bodies. See project templates/CLAUDE.md.tmpl
+# and cbi/skills/memory_write/skill.py — every entry carries at least one
+# ``- [x] <QUADRANT>: <subject>: <content>`` bullet.
+_SIGNAL_LINE = re.compile(
+    r"""
+    ^\s*[-*]\s*                   # bullet
+    \[[xX ]?\]\s*                 # optional checkbox
+    (?P<quadrant>MUST|WANT|HOW|IS)
+    \s*:\s*
+    (?P<rest>.+?)\s*$
+    """,
+    re.VERBOSE,
+)
+
+
+def _detect_quadrant(body: str) -> str | None:
+    """Return the first quadrant tag found in a memory body, or None.
+
+    Scans line-by-line — the first match wins. Bodies without a signal
+    line (rare, but not disallowed) return None and are filtered out by
+    ``list_recent`` because they can't be routed to a quadrant bucket.
+    """
+    for line in body.splitlines():
+        m = _SIGNAL_LINE.match(line)
+        if m:
+            return m.group("quadrant")
+    return None
+
+
+def _first_line(body: str) -> str:
+    """First non-blank, non-heading line of the body (post-frontmatter).
+
+    Skips markdown H1/H2 headings so the caller gets the substantive
+    first line rather than a "## 标题" template stub. Falls back to the
+    heading if that's all there is.
+    """
+    heading_fallback: str | None = None
+    for raw in body.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith("#"):
+            if heading_fallback is None:
+                heading_fallback = line.lstrip("# ").strip()
+            continue
+        return line
+    return heading_fallback or ""
+
+
+def list_recent(
+    store_dir: Path | None = None,
+    *,
+    tier: str = "medium",
+    quadrants: tuple[str, ...] = ("MUST", "WANT"),
+    since_days: int = 7,
+    limit: int = 5,
+) -> list[dict]:
+    """Return recently-touched memory entries filtered by quadrant.
+
+    Read-only. Bypasses the retrieval backend entirely and walks the
+    on-disk tier directory in mtime-descending order — this is a
+    SessionStart-critical path and must not depend on the retrieval
+    index being warm.
+
+    Return shape (one dict per entry):
+        {
+          "slug":        stem of the filename (no extension),
+          "quadrant":    one of MUST / WANT / HOW / IS,
+          "first_line":  first substantive line of the body,
+          "mtime":       ISO-8601 UTC timestamp,
+          "path":        absolute path as str,
+        }
+
+    Params:
+      store_dir   — override memory store root (defaults to context resolver).
+      tier        — restricted to "medium" in v2 (short was removed).
+      quadrants   — accepted quadrant tags. Case-sensitive; use the
+                    canonical uppercase spellings.
+      since_days  — only entries with mtime within this many days from
+                    now are considered.
+      limit       — max number of entries returned.
+    """
+    _validate_tier(tier)
+    store_dir = _resolve_store_dir(store_dir)
+    tier_dir = store_dir / tier
+    if not tier_dir.is_dir():
+        return []
+
+    q_set = set(quadrants)
+    cutoff = time.time() - max(0, int(since_days)) * 86400
+
+    candidates: list[tuple[float, Path]] = []
+    try:
+        for p in tier_dir.glob("*.md"):
+            if not p.is_file():
+                continue
+            try:
+                mtime = p.stat().st_mtime
+            except OSError:
+                continue
+            if mtime < cutoff:
+                continue
+            candidates.append((mtime, p))
+    except OSError:
+        return []
+
+    # Sort mtime DESC before quadrant filtering so the limit slice is
+    # deterministic — first N recent entries matching a quadrant.
+    candidates.sort(key=lambda x: x[0], reverse=True)
+
+    out: list[dict] = []
+    for mtime, p in candidates:
+        if len(out) >= max(0, int(limit)):
+            break
+        try:
+            raw = p.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        body = raw
+        if raw.startswith("---"):
+            end = raw.find("\n---", 3)
+            if end != -1:
+                body = raw[end + 4:]
+        quadrant = _detect_quadrant(body)
+        if quadrant is None or quadrant not in q_set:
+            continue
+        out.append({
+            "slug": p.stem,
+            "quadrant": quadrant,
+            "first_line": _first_line(body),
+            "mtime": _iso(mtime),
+            "path": str(p),
+        })
+    return out

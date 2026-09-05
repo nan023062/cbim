@@ -2,7 +2,7 @@
 services/_fm.py — frontmatter helpers shared across service modules.
 
 Intentionally minimal: a permissive scalar/list YAML-frontmatter parser
-that matches what dashboard/server.py used to do inline. No PyYAML dep.
+that centralizes frontmatter parsing for service and resource callers. No PyYAML dep.
 
 Supported list element shapes (per v2 `links` schema, PR-1):
   - scalars (block- or flow-style)        ->  list[str]

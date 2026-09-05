@@ -2,7 +2,7 @@
 services/skill_service.py — read facade + per-agent skill CRUD.
 
 Read side (`list_skills` / `get_skill`) wraps `cbi.resources.Skill` and
-surfaces the built-in framework skills (agent-scoped + coordinator).
+surfaces the built-in framework skills (agent-scoped and main-session skills).
 
 Write side (`create_agent_skill`, `update_agent_skill`,
 `delete_agent_skill`, `add_skill_asset`, `remove_skill_asset`) targets
@@ -18,7 +18,7 @@ Boundaries:
     exposed via the Agent resource / `agent_show` MCP tool, not this
     module.
   * This service never converts exceptions to "ERROR:" strings — raw
-    exceptions propagate. Wire-format conversion is the mcp_server tool
+    exceptions propagate. CLI argument conversion belongs to the command layer
     layer's job.
 """
 
@@ -64,7 +64,7 @@ class ExecutableAssetRequiresFlagError(ValueError):
 # ---------------------------------------------------------------------------
 
 def list_skills() -> list[str]:
-    """Return all built-in skill keys (agent-scoped + coordinator)."""
+    """Return all built-in skill keys (agent-scoped + main-session)."""
     from cbi.resources import Skill
     return Skill.list_builtin()
 
@@ -160,23 +160,6 @@ def _resolve_asset_target(
             f"asset path must resolve under {skill_name}/assets/: {asset_rel_path!r}"
         ) from exc
     return target
-
-
-def _audit_log(action: str, agent: str, skill: str, asset: str, is_executable: bool) -> None:
-    """Best-effort audit line for asset writes that touch executable context.
-
-    Logger failure is swallowed — the primary filesystem write already
-    succeeded, and losing an audit line must not sink the operation.
-    """
-    try:
-        from engine import logger
-        logger.append(
-            "CBIM:skill_asset",
-            f"{action}|agent={agent}|skill={skill}|asset={asset}"
-            f"|is_executable={is_executable}",
-        )
-    except Exception:  # noqa: BLE001 — logging is side-effect; primary write already landed
-        pass
 
 
 def create_agent_skill(
@@ -354,7 +337,6 @@ def add_skill_asset(
             # audit logs; that is a much smaller failure than sinking the
             # whole operation.
             pass
-        _audit_log("add", agent_name, skill_name, asset_rel_path, is_executable)
 
     _reindex.reindex_agent(root, agent_name)
     return str(written.resolve())
@@ -399,9 +381,6 @@ def remove_skill_asset(
     removed = _skill_primitives.remove_skill_asset(
         agents_dir, agent_name, skill_name, asset_rel_path
     )
-
-    if was_executable_declared:
-        _audit_log("remove", agent_name, skill_name, asset_rel_path, True)
 
     _reindex.reindex_agent(root, agent_name)
     return str(removed.resolve())

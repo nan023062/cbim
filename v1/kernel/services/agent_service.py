@@ -2,11 +2,11 @@
 services/agent_service.py — agent roster + transactional write facade.
 
 Read side (`list_agents`) wraps `cbi._primitives.agents` with a stable,
-dashboard/MCP-facing surface and filters out built-in framework agents.
+CLI-facing surface and filters out built-in framework agents.
 
 Write side exposes transactional facades (`scaffold_agent`, `update_agent`,
 `add_skill_to_agent`, `archive_agent`) that both the engine CLI handlers
-(`engine/cli.py`) and the MCP tools (`mcp_server/tools/agent.py`) call.
+(`engine/cli/agent.py`) calls.
 
 Phase 1 design note: previously this layer was read-only. The "No service
 writes" rule was reversed so CLI and MCP can share one transactional
@@ -40,7 +40,7 @@ def list_agents(cwd=None, include_builtin: bool = False) -> list[dict]:
     Args:
         cwd:             Project search base; walks up to find `.cbim/`.
         include_builtin: When True, framework agents are included
-                         (default False — dashboard caller decides).
+                         (default False — the CLI caller decides).
 
     Returns:
         List of dicts shaped like::
@@ -138,7 +138,7 @@ def get_agent(name: str, cwd: str = "") -> dict | None:
 
 
 # ---------------------------------------------------------------------------
-# Write facade — shared by engine/cli.py and mcp_server/tools/agent.py
+# Write facade — shared by engine CLI and resource callers
 # ---------------------------------------------------------------------------
 
 

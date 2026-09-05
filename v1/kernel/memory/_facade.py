@@ -166,10 +166,14 @@ def query(text: str,
           **_extra_filter) -> list[dict]:
     """Semantic/keyword retrieval. Returns ranked entries (most relevant first).
 
-    Defers to the backend (default FileBackend = recency order). Pass
+    Defers to the backend (default FileBackend = case-insensitive text lookup). Pass
     `tier="medium"` to restrict scope; `tier="short"` raises ValueError.
     """
     _validate_tier(tier)
+    if limit < 1:
+        raise ValueError("limit must be >= 1")
+    if not text.strip():
+        raise ValueError("query text must not be empty; use scan/list to enumerate")
     store_dir = _resolve_store_dir(store_dir)
     backend = backend or _build_backend(store_dir)
     where = {"tier": tier} if tier else None
@@ -249,54 +253,26 @@ def get(entry_id: str | Path,
       - a full path (str or Path)
       - a basename (resolved against medium/, then candidates/)
     """
+    from memory.crud.primitives import resolve_entry_path
+
     store_dir = _resolve_store_dir(store_dir)
-    p = Path(entry_id)
-    if p.is_file():
-        tier = p.parent.name
-        content = ""
-        try:
-            content = p.read_text(encoding="utf-8")
-        except OSError:
-            pass
-        entry = _entry_dict(p, tier)
-        entry["content"] = content
-        return entry
-
-    # Treat as basename; search the v2 tier set.
     name = str(entry_id)
-    cand = store_dir / "medium" / name
-    if cand.is_file():
-        try:
-            content = cand.read_text(encoding="utf-8")
-        except OSError:
-            content = ""
-        entry = _entry_dict(cand, "medium")
-        entry["content"] = content
-        return entry
-
-    # candidates dir uses *.candidate.json — try both bare name and suffixed.
-    from memory.compaction.candidates import CANDIDATES_SUBDIR
-    cand_dir = store_dir / CANDIDATES_SUBDIR
-    for fname in (name, f"{name}.candidate.json"):
-        cand = cand_dir / fname
-        if cand.is_file():
-            try:
-                content = cand.read_text(encoding="utf-8")
-            except OSError:
-                content = ""
-            try:
-                mtime = cand.stat().st_mtime
-            except OSError:
-                mtime = 0.0
-            return {
-                "id": cand.stem,
-                "path": str(cand),
-                "tier": "candidates",
-                "mtime": _iso(mtime),
-                "metadata": {},
-                "content": content,
-            }
-
+    p = Path(name)
+    if len(p.parts) == 1 and not p.is_absolute() and "\\" not in name and ":" not in name:
+        choices = []
+        if p.suffix == ".md":
+            choices.append(Path("medium") / name)
+        choices.append(Path("candidates") / (name if name.endswith(".candidate.json") else f"{name}.candidate.json"))
+    else:
+        choices = [p]
+    for choice in choices:
+        # ``Path`` renders separators with backslashes on Windows; normalize
+        # internally before applying the portable entry-path guard.
+        candidate = resolve_entry_path(choice.as_posix(), store_dir)
+        if candidate.is_file():
+            entry = _entry_dict(candidate, candidate.parent.name)
+            entry["content"] = candidate.read_text(encoding="utf-8")
+            return entry
     return None
 
 
@@ -432,7 +408,7 @@ def stats(filter: dict | None = None,
 
 
 # ------------------------------------------------------------------
-# 5. list_recent — SessionStart banner support (v2)
+# 5. list_recent — explicit recent-entry listing
 # ------------------------------------------------------------------
 
 # Signal-line grammar for memory bodies. See project templates/CLAUDE.md.tmpl
@@ -496,7 +472,7 @@ def list_recent(
 
     Read-only. Bypasses the retrieval backend entirely and walks the
     on-disk tier directory in mtime-descending order — this is a
-    SessionStart-critical path and must not depend on the retrieval
+    explicit recent-entry path and must not depend on the retrieval
     index being warm.
 
     Return shape (one dict per entry):

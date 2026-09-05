@@ -3,8 +3,6 @@
 import argparse
 import sys
 
-from engine.import_log import log_import
-
 
 def register(sub: argparse._SubParsersAction) -> argparse.ArgumentParser:
     psl = sub.add_parser("soul", help="List or show built-in agent soul content")
@@ -19,27 +17,18 @@ def dispatch(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
     return _pkg._cmd_soul(args, parser)
 
 
-def _load_souls(trigger: str | None = None) -> dict[str, str]:
+def _load_souls() -> dict[str, str]:
     from project.sync import KERNEL_AGENT_NAMES, read_agent_md, read_template
     souls: dict[str, str] = {}
     for name in KERNEL_AGENT_NAMES:
-        label = f"project.agents.{name}.md"
         try:
             souls[name] = read_agent_md(name)
-            if trigger is not None:
-                log_import(label, "ok", trigger)
         except FileNotFoundError:
-            if trigger is not None:
-                log_import(label, "miss", trigger)
             continue
-    coord_template = "CLAUDE.md.tmpl"
     try:
-        souls["assistant"] = read_template(coord_template)
-        if trigger is not None:
-            log_import(f"project.templates.{coord_template}", "ok", trigger)
+        souls["assistant"] = read_template("CLAUDE.md.tmpl")
     except FileNotFoundError:
-        if trigger is not None:
-            log_import(f"project.templates.{coord_template}", "miss", trigger)
+        pass
     return souls
 
 
@@ -51,7 +40,7 @@ def _cmd_soul(args, parser):
         for name in sorted(souls): print(name)
         return 0
     if args.command == "show":
-        souls = _load_souls(trigger="soul.show")
+        souls = _load_souls()
         if args.name not in souls:
             print(f"Soul not found: {args.name}", file=sys.stderr); return 1
         sys.stdout.write(souls[args.name]); return 0

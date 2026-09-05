@@ -2,7 +2,7 @@
 Single source of truth for runtime path resolution.
 
 Two public root resolvers — one strict, one lenient. The split exists
-because runtime callers (MCP / dashboard / hooks) want a hard error when
+because runtime callers want a hard error when
 they're invoked from somewhere that isn't a CBIM project, while CLI /
 tests / service-internals want a graceful degradation to cwd when no
 project marker is found (so unit tests and ad-hoc commands keep working
@@ -56,7 +56,7 @@ def project_root(cwd: Path | str | None = None) -> Path:
 
     STRICT — raises RuntimeError when the walk reaches the filesystem root
     without finding a `.cbim/` marker. Used by runtime entry points
-    (MCP server, dashboard, hooks) where a missing project is a misconfig
+    (CLI and service callers) where a missing project is a misconfiguration
     and should fail loudly.
 
     Resolution order:

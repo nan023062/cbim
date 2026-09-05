@@ -1,7 +1,7 @@
 """
 crud/file_backend.py — File-based MemoryBackend (default, zero external dependencies).
 
-Retrieval is recency-based (modification time), not semantic. For semantic
+Retrieval uses case-insensitive text lookup, with recency as a tie-breaker. For semantic
 search the parent module delegates to `engine.retrieval` rather than swapping
 this backend.
 
@@ -11,6 +11,7 @@ v2: only medium/ is walked; short/ has been removed.
 from pathlib import Path
 
 from .backend import MemoryBackend
+from .primitives import resolve_entry_path
 
 # Single tier walked by this backend. Kept as a constant so future tier
 # additions don't need a code grep.
@@ -29,13 +30,15 @@ class FileBackend(MemoryBackend):
 
     def query(self, text: str, n_results: int,
               where: dict | None = None) -> list[dict]:
-        """Return the most recently modified .md files.
+        """Return files containing the case-insensitive query text, newest first.
 
-        `text` is accepted for interface compatibility but ignored —
-        retrieval order is modification time, newest first.
+        This is literal text lookup, not BM25 or semantic retrieval.
         `where` may carry {"tier": "medium"} to restrict scope; any other
         tier value yields an empty result (short/ is gone in v2).
         """
+        if n_results < 1 or not text.strip():
+            raise ValueError("query text must be nonempty and n_results >= 1")
+        needle = text.strip().casefold()
         tier = (where or {}).get("tier")
         if tier is not None and tier not in _TIERS:
             return []
@@ -47,8 +50,11 @@ class FileBackend(MemoryBackend):
             if tier_dir.exists():
                 for p in tier_dir.glob("*.md"):
                     try:
-                        candidates.append((p.stat().st_mtime, p))
-                    except OSError:
+                        p = resolve_entry_path(p.resolve(), self._store, writable=True)
+                        content = p.read_text(encoding="utf-8").casefold()
+                        if needle in content:
+                            candidates.append((p.stat().st_mtime, p))
+                    except (OSError, UnicodeDecodeError, ValueError):
                         pass
 
         candidates.sort(reverse=True)
@@ -62,7 +68,7 @@ class FileBackend(MemoryBackend):
         ]
 
     def delete(self, doc_id: str) -> None:
-        p = Path(doc_id)
+        p = resolve_entry_path(doc_id, self._store, writable=True)
         if p.exists():
             p.unlink()
 

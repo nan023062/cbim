@@ -1,1 +1,1 @@
-mcp>=1.0.0
+# The V1 kernel uses only Python standard-library dependencies.

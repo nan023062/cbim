@@ -105,14 +105,8 @@ class Skill(Resource):
         cbi.skills.*. Returns {key: SKILL_string}.
 
         Keys are '<agent>.<skill_name>' for agent-scoped skills and
-        '<skill_name>' for top-level coordinator skills.
+        '<skill_name>' for top-level main-session skills.
         """
-        # Local import to defer log_import dependency until actually needed.
-        try:
-            from engine.import_log import log_import
-        except ImportError:
-            def log_import(*a, **kw): pass
-
         skills: dict[str, str] = {}
 
         try:
@@ -137,15 +131,15 @@ class Skill(Resource):
                     try:
                         mod = importlib.import_module(module_path)
                         if trigger is not None:
-                            log_import(module_path, "ok", trigger)
+                            pass
                         if hasattr(mod, "SKILL"):
                             key = f"{agent_info.name}.{skill_info.name}"
                             skills[key] = mod.SKILL
                     except ModuleNotFoundError:
                         if trigger is not None:
-                            log_import(module_path, "miss", trigger)
+                            pass
 
-        # Top-level coordinator skills only when no agent filter is set.
+        # Top-level main-session skills only when no agent filter is set.
         if agent is None:
             try:
                 from .. import skills as coord_skills_pkg
@@ -156,12 +150,12 @@ class Skill(Resource):
                     try:
                         mod = importlib.import_module(module_path)
                         if trigger is not None:
-                            log_import(module_path, "ok", trigger)
+                            pass
                         if hasattr(mod, "SKILL"):
                             skills[skill_info.name] = mod.SKILL
                     except ModuleNotFoundError:
                         if trigger is not None:
-                            log_import(module_path, "miss", trigger)
+                            pass
             except ModuleNotFoundError:
                 pass
 
@@ -177,7 +171,7 @@ class Skill(Resource):
         """List all built-in skill keys.
 
         When `agent` is None, returns every key (agent-scoped like
-        'architect.arch_modules' plus top-level coordinator skills like
+        'architect.arch_modules' plus top-level main-session skills like
         'memory_write'). When `agent` is set, only that agent's keys are
         returned. `trigger`, when given, is forwarded to import_log so
         the discovery walk shows up in the structured import log.
@@ -190,7 +184,7 @@ class Skill(Resource):
 
         Accepted key formats:
             '<agent>.<skill_name>'  — agent-scoped skill
-            '<skill_name>'          — top-level coordinator skill
+            '<skill_name>'          — top-level main-session skill
 
         The returned object's body holds the SKILL markdown; calling save()
         raises ReadOnlyError because built-ins are shipped in code, not on

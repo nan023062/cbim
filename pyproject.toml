@@ -47,18 +47,12 @@ ignore = [
 [tool.ruff.lint.flake8-tidy-imports]
 # Hard rule: relative imports may go *up* one level only ("from . import X"
 # / "from .submodule import Y"). Anything deeper indicates package-boundary
-# bleed and is banned. This rule is one of the two "anti-regression rails"
-# for Batch 2 (re-establish import boundaries between engine.* / mcp_server.*
-# / cbi._primitives).
+# bleed and is banned.
 ban-relative-imports = "parents"
 
-# Banned-API live (Batch 2). The scaffold is gone; `cbi._primitives` is now
-# off-limits to engine.* / mcp_server.*. Reads go through services.* (which
-# wraps the primitive) and writes go through services.* (the transactional
-# façade) or cbi.resources (the OOP façade). cbi.resources itself is NOT
-# banned — it is a stable, intentional dependency surface.
+# Keep low-level primitives behind the service/resource boundary.
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
-"cbi._primitives".msg = "engine.* and mcp_server.* must not reach into cbi._primitives directly; go through services or cbi.resources."
+"cbi._primitives".msg = "Use services or cbi.resources instead of reaching into cbi._primitives directly."
 
 [tool.ruff.lint.per-file-ignores]
 # Tests routinely use unused-args (pytest fixtures), broad scoping, etc.
@@ -70,16 +64,11 @@ ban-relative-imports = "parents"
 # late-lookup contract for monkeypatch tests (E402 from in-dispatch imports);
 # uniform dispatch(args, parser) signature (ARG001 from sometimes-unused parser)
 "v1/kernel/engine/cli/*.py" = ["E402", "ARG001"]
-# services.* IS the legitimate primitives consumer; the banned-api rule
-# targets engine.* / mcp_server.* / hooks reach-ins, not the wrapper layer.
+# services.* is the legitimate primitives consumer.
 "v1/kernel/services/**" = ["TID251"]
 # cbi.resources transitively uses services._fm primitives; allow it to
 # also touch cbi._primitives directly (it's the OOP shell over them).
 "v1/kernel/cbi/**" = ["TID251"]
-# project/hooks_src/* is an independent sys.path domain (project hook
-# scripts, not engine.* / mcp_server.*). Existing primitive usage there
-# is out of scope for the Batch 2 boundary rule.
-"v1/kernel/project/hooks_src/**" = ["TID251"]
 # cbi.resources transitively uses services._fm primitives via cbi/**;
 # the cbi/_primitives/modules/** subtree is the primitives implementation
 # itself, so it imports its own peer modules — TID251's banned-api rule

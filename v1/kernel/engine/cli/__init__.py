@@ -11,13 +11,10 @@ Domains:
   skill       list | show <name> | create | update | delete | add-asset | remove-asset
   soul        list | show <name>
   config      get <key> | set <key> <value> | show
-  dashboard   [--port N] [--no-browser]   (preview = deprecated alias)
   debug       on | off | status
-  log         show | tail
   init        Bootstrap a new CBIM project in cwd
   project     sync (refresh kernel-managed templates)
   audit       run | index | memory | agents | dna | tree | list-checks
-  mcp         Start the CBIM MCP server (stdio)
 
 Each domain is a standalone module with a `register(sub)` (returns its own
 argparse parser) and a `dispatch(args, parser)` (returns exit code). The
@@ -30,12 +27,9 @@ import argparse
 from . import agent as _agent
 from . import audit as _audit
 from . import config as _config
-from . import dashboard as _dashboard
 from . import debug as _debug
 from . import dna as _dna
 from . import init as _init
-from . import log as _log
-from . import mcp as _mcp
 from . import memory as _memory
 from . import project as _project
 from . import skill as _skill
@@ -54,12 +48,8 @@ def main() -> int:
         "snapshot": _snapshot.register(sub),
         "skill": _skill.register(sub),
         "soul": _soul.register(sub),
-        "log": _log.register(sub),
         "config": _config.register(sub),
-        "dashboard": _dashboard.register(sub),
-        "preview": _dashboard.register_preview(sub),
         "debug": _debug.register(sub),
-        "mcp": _mcp.register(sub),
         "init": _init.register(sub),
         "audit": _audit.register(sub),
         "project": _project.register(sub),
@@ -72,12 +62,8 @@ def main() -> int:
         "snapshot": _snapshot.dispatch,
         "skill": _skill.dispatch,
         "soul": _soul.dispatch,
-        "log": _log.dispatch,
         "config": _config.dispatch,
-        "dashboard": _dashboard.dispatch,
-        "preview": _dashboard.dispatch_preview,
         "debug": _debug.dispatch,
-        "mcp": _mcp.dispatch,
         "init": _init.dispatch,
         "audit": _audit.dispatch,
         "project": _project.dispatch,
@@ -98,8 +84,6 @@ def main() -> int:
 # the test suite a-zero-touch and lets monkey-patching engine.cli.<name>
 # rebind the function the dispatcher actually invokes (the dispatchers do a
 # late lookup via this package).
-from engine.log_view import cmd_log_show as cmd_log_show
-from engine.log_view import cmd_log_tail as cmd_log_tail
 from .agent import _AGENT_FM_EDITABLE as _AGENT_FM_EDITABLE
 from .agent import _apply_agent_update_in_memory as _apply_agent_update_in_memory
 from .agent import _build_agent_update_payload as _build_agent_update_payload
@@ -111,7 +95,6 @@ from .agent import _handle_agent_show as _handle_agent_show
 from .agent import _handle_agent_update as _handle_agent_update
 from .agent import _render_agent as _render_agent
 from .agent import _warn_if_kernel_managed as _warn_if_kernel_managed
-from .dashboard import cmd_dashboard as cmd_dashboard
 from .debug import _cmd_debug as _cmd_debug
 from .debug import _debug_flag_path as _debug_flag_path
 from .dna import _apply_dna_edit_in_memory as _apply_dna_edit_in_memory

@@ -137,7 +137,7 @@ def _cmd_skill(args, parser):
 
 # ---------------------------------------------------------------------------
 # Write handlers — thin wrappers around services.skill_service.
-# The same service functions back the MCP tools in mcp_server/tools/skill.py;
+# The same service functions back the native CLI surface;
 # both entry points share one enforcement layer (identifier validation,
 # forbidden-agent list, path-traversal guard, executable-asset gating).
 # ---------------------------------------------------------------------------

@@ -31,8 +31,8 @@ from ..result import AuditFinding
 
 
 _SUGGEST_GOVERNANCE = (
-    "Run `dream_tick(reason=\"catchup\")` so the governance loop compacts "
-    "the medium tier and promotes / drops backlogged candidates."
+    "Run the explicit memory maintenance command to review thresholds and "
+    "manage candidates."
 )
 
 

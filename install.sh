@@ -9,7 +9,7 @@
 #   - clones cbim master into a tempdir
 #   - replaces <project>/.cbim/kernel/ with v1/kernel/ (flat layout) atomically
 #   - runs `python -m engine init` to (re)populate .cbim/, .claude/, CLAUDE.md, .gitignore
-# Preserved across re-runs: .cbim/memory/, .cbim/scheduler/, .cbim/config.json, .dna/.
+# Preserved across re-runs: .cbim/memory/, .cbim/config.json, .dna/.
 # Runs in any POSIX bash (Linux, macOS, WSL, Windows Git Bash / MINGW64).
 # On Windows, launch from Git Bash; cmd.exe and PowerShell are not entry points.
 
@@ -127,8 +127,7 @@ SWAPPED=1
 
 # --- 5. run engine init ---
 log "running engine init ..."
-log "(first install builds a managed venv at .cbim/.venv/ and downloads"
-log " the ~10 MB \`mcp\` SDK into it — may take a few seconds)"
+log "(first install builds a managed venv at .cbim/.venv/)"
 cd "$PROJECT_ROOT"
 PYTHONPATH="$DST_KERNEL" "${PYTHON_ARGV[@]}" -m engine init
 
@@ -137,4 +136,4 @@ INSTALL_OK=1
 rm -rf "$DST_KERNEL_OLD" 2>/dev/null || true
 
 # --- 6. done ---
-log "installed. Restart Claude Code so the SessionStart hook fires."
+log "installed. Restart Claude Code to load the updated project Skills."

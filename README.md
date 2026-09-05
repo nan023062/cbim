@@ -2,220 +2,92 @@
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-> CBIM (Capability–Business Independence + Memory) is a cc-prompt-pack for Claude Code. It splits a project along two axes — **capability** (specialized agents and skills) and **business** (a per-module `.dna/` knowledge tree) — and adds a session-spanning **memory** pipeline so each task loads only `target-agent-soul × task-subtree.dna`, never the whole project. The result: bounded context, fewer hallucinations, durable cross-session knowledge.
+CBIM (Capability–Business Independence + Memory) separates **portable capability** (Agents and Skills), **project business knowledge** (module-local `.dna/`), and **explicitly saved memory**.
 
-This repo hosts two implementations:
+[V1](v1/) runs on Claude Code using user-invoked main-session Skills and a local Python data layer. [V2](v2/) is a separate implementation; the V1 simplification does not change it.
 
-| | [V1 — CC Kernel](v1/) | [V2 — Native Agent](v2/) |
-|---|---|---|
-| **What it is** | CBIM riding on Claude Code — prompts, agent definitions, Python hooks, an MCP server | Standalone C# / .NET 8 runtime with a deterministic scheduler |
-| **Status** | Available — see install below | Design phase — see [`v2/`](v2/) |
+## V1 working model
 
-Everything below describes **V1**.
+- **No Skill invoked: normal Claude Code behavior.** CBIM does not classify, route, dispatch or gate ordinary requests.
+- **Matching Skill: work in the main conversation.** Claude Code may select a Skill when its description clearly matches the request; the user may also invoke it explicitly. If no Skill matches, use normal Claude Code behavior. Specialist Agents remain reusable capabilities, not mandatory stages.
+- **Memory is explicit.** Save, query or organize it only at the user's request. No conversation capture, automatic recall, distillation or source deletion.
+- No behavior tree, background governance, lifecycle hooks, MCP server or scheduled Claude process.
+- Keep the useful foundations: resource management, schemas, path checks, atomic writes, module registry, retrieval, knowledge graph and manual audits.
 
----
+This is an experiment in reducing workflow overhead while preserving useful knowledge boundaries, not a guarantee of bounded context or improved accuracy.
 
-## Install
+## User-invoked Skills
 
-1. Open your project root (cd into it; this is the directory where CBIM will live).
-2. From the project root, run:
-
-   ```bash
-   curl -sSL https://raw.githubusercontent.com/nan023062/cbim/master/install.sh | bash
-   ```
-
-3. The script clones the repo into a temp directory, copies `v1/kernel/` into `<project>/.cbim/kernel/` (flat — `engine/`, `cbi/`, `memory/`, `project/` are direct children), then runs `python3 -m engine init` to populate the project (launcher shims, agents, slash commands, hooks, MCP server, `CLAUDE.md`, `.gitignore`). `init` also builds a managed venv at `<project>/.cbim/.venv/` and installs the `mcp` SDK into it — your system Python is untouched. Requires `git` and `python3` ≥ 3.10 on PATH; no global `pip install`.
-4. **Restart Claude Code** so the `SessionStart` hook fires.
-
-Native Windows is supported — `install.sh` runs in any POSIX `bash` environment, including Windows Git Bash / MINGW64. Launch it from Git Bash; `cmd.exe` and PowerShell are not entry points (use Git Bash on those machines). WSL also works.
-
-After install, the project root contains:
-
-- `.cbim/run` (POSIX, 0755) + `.cbim/run.cmd` (Windows) — launcher shims; each resolves its own directory and execs `.cbim/.venv/bin/python -m engine "$@"` with `PYTHONPATH=<project>/.cbim/kernel`. No absolute interpreter path is baked in — `.cbim/` is self-contained.
-- `.cbim/.venv/` — managed venv (gitignored); built by `engine init` with the bootstrap `python3`, then holds `mcp` and any future CBIM Python deps. Your system Python is never modified.
-- `.cbim/kernel/` — vendored kernel (gitignored)
-- `.cbim/config.json`, `.cbim/logs/`, `.cbim/memory/{short,medium}/` — engine state (gitignored)
-- `.claude/agents/{architect,auditor,hr,programmer}/` — 4 core agents
-- `.claude/commands/cbim_{install,help,dashboard,debug,log,sched}.md` — 6 slash commands
-- `.claude/settings.json` — hooks (registered as `.cbim/run hook <event>`) + `mcpServers.cbim` entry (runs `.cbim/run mcp`) + `permissions.deny` for `Write(.cbim/**)` / `Edit(.cbim/**)`
-- `CLAUDE.md` — assistant identity (coordination hub); regenerated on every `/cbim_install`
-- `.claudeignore` — paths Claude Code excludes from its read scope
-- `.gitignore` — appends `.cbim/`
-
-**Refresh / upgrade.** Once the first install has completed, the `/cbim_install` slash command is registered in `.claude/commands/`. From then on, re-run it from the Claude prompt — it's idempotent. The shim and kernel are regenerated; your `.dna/` and `.cbim/memory/` are preserved. There is no `cbim update` CLI; the slash command is the canonical refresh path. (Re-running the `install.sh` curl command from step 2 is also a valid refresh — it overwrites `.cbim/kernel/` and re-runs `engine init`, preserving `.cbim/memory/`, `.cbim/scheduler/`, `.cbim/config.json`, and `.dna/`.)
-
-**Uninstall.** `rm -rf .cbim/`, then remove `.claude/agents/{architect,auditor,hr,programmer}/`, the 6 `.claude/commands/cbim_*.md` files, the `mcpServers.cbim` + hook entries in `.claude/settings.json`, the CBIM block from `CLAUDE.md`, and the `.cbim/` line in `.gitignore`. There is no uninstall CLI.
-
-**Migration from an earlier layout.** If `<project>/cbim-cc/` exists from a pre-rename install, `rm -rf cbim-cc/` and re-run `/cbim_install`. The shim regenerates with the new `.cbim/kernel/` path. No automated migrator script exists — this is the entire migration procedure.
-
-There is **no `cbim` CLI on your PATH**, **no global `pip install`**, **no project-version pinning**. The sole runtime entry is `.cbim/run <subcommand>`, which dispatches through the project-local venv at `.cbim/.venv/`.
-
-For the canonical install spec see [`v1/kernel/project/commands/cbim_install.md`](v1/kernel/project/commands/cbim_install.md).
-
----
-
-## First Use
-
-Restart Claude Code, then send:
-
-> **"Please initialize the module knowledge system for this project"**
-
-The assistant dispatches the architect to build the `.dna/` knowledge system. After that, you're ready.
-
----
-
-## How to Use
-
-Just tell the assistant what you want — no need to specify an agent:
-
-| What you want | Just say |
-|---------------|----------|
-| Initialize knowledge system | Please initialize the module knowledge system for this project |
-| Create a feature module | Create a combat module |
-| Implement a feature | Implement the login API per the current blueprint |
-| Review a design | Review this change |
-| Query a past decision | What was the decision history for the combat module |
-| Recruit a work agent | Help me recruit an AI engineer agent |
-
----
-
-## Slash Commands
-
-| Command | Purpose |
+| Skill | Purpose |
 |---|---|
-| `/cbim_install` | Install or refresh CBIM in the current project (downloads kernel into `.cbim/kernel/`, writes the `.cbim/run` shim, registers hooks + MCP server) |
-| `/cbim_help` | Framework overview (workflow + command list + key paths) |
-| `/cbim_dashboard` | Open the local dashboard (memory / capability / knowledge / log) |
-| `/cbim_debug on\|off\|status` | Toggle/inspect extra engine-internal logging |
-| `/cbim_log [N]` | Show the current session log (agent loop signals) |
-| `/cbim_sched status\|trigger <name>` | Inspect / fire scheduler tasks |
+| `/cbim-knowledge` | Read relevant modules, contracts, notes and business workflows |
+| `/cbim-code` | Locate and explain source code for a requested scope |
+| `/cbim-architecture` | Design or update business architecture for the requested change |
+| `/cbim-development` | Implement and verify a scoped change without mandatory delegation |
+| `/cbim-memory` | Explicitly save, query or organize selected memory |
 
-## MCP Tools
+Native Skills are installed at `.claude/skills/<name>/SKILL.md`, with `user-invocable: true` and no `disable-model-invocation` or `context: fork`. Claude Code may automatically match a clearly relevant Skill; an unmatched request uses default behavior. Agent-private Skills and Python built-in method texts remain separate mechanisms.
 
-CBIM also ships as an MCP server registered in `.claude/settings.json` under `mcpServers.cbim`. The assistant can invoke the following tools directly, no `cbim ...` Bash needed:
+Example: `/cbim-knowledge explain the payment module's contract`. This does not implicitly read memory or start an architect Agent.
 
-| Tool | Purpose |
-|---|---|
-| `memory_query` / `memory_list` / `memory_create` / `memory_delete` | CBIM memory store access |
-| `dna_list` / `dna_show` / `dna_reindex` | Module knowledge (.dna/) |
-| `agent_list` / `agent_show` | Claude Code agent registry |
-| `skill_list` / `skill_show` | CBIM skill catalog |
-| `project_snapshot` | Full project knowledge snapshot |
-| `scheduler_status` / `scheduler_trigger` | Inspect and fire scheduled tasks |
+## Install and upgrade
 
-The server is implemented with the official `mcp` Python SDK (FastMCP) and runs via the project-local `.cbim/run mcp` shim — no global install, no `pip install` step. The shim sets `PYTHONPATH=<project>/.cbim/kernel` and invokes `python -m engine mcp`.
+Requires Python 3.10+, Git, Claude Code, and Bash for the shell installer (including Windows Git Bash). The project-local launchers support POSIX and Windows.
 
-## Scheduler
+**Source checkout:** review and run this checkout's `install.sh` as described in [installation reference](v1/docs/INSTALL.zh-CN.md). The remote `master` installer installs the published branch, not uncommitted changes in your checkout. Do not use a remote download to verify this refactor before it is released.
 
-An async task scheduler is embedded in the MCP server (started in its lifespan). It ticks every 30 seconds and dispatches built-in tasks that ship with the kernel package (`mcp_server.tasks`).
+The installer vendors `v1/kernel/` into the selected project's `.cbim/kernel/`, creates a project-local Python environment and launchers, and installs capability assets and explicit Skills. It does not install MCP, register lifecycle hooks, start a service, or alter global Claude settings. Existing user permissions remain in force.
 
-Each task subclasses `mcp_server.scheduler.Task` and declares `name`, `description`, `interval_seconds` (0 = manual-only), and `respect_cc_idle` (True = only fire when CC is idle, per `.cbim/.cc-status`). Tasks currently ship inside the kernel; there is no project-local task drop-in path yet.
+Use `.cbim/run --help` from a human terminal (Windows: `.cbim/run.cmd --help`) for the current CLI. There is no global `cbim` command. A Skill does not grant shell access: if the host denies this entry point, stop and report the restriction rather than removing deny rules or using another path to the same data.
 
-`UserPromptSubmit` and `Stop` hooks maintain `.cbim/.cc-status` (`busy` / `idle`) so opt-in tasks only fire between turns. State persists in `.cbim/scheduler/state.json`; results are logged as `[SCHED]` in the session log.
+**Existing installations:** explicit synchronization can remove narrowly recognized legacy CBIM project registrations while preserving other tools and user settings. It does not unregister operating-system tasks or delete runtime data. Review existing system tasks and customized coordinator instructions separately. Source changes do not upgrade the containing project automatically.
 
-**Lifetime**: the scheduler runs inside the MCP server process. CC starts the server (via the `.cbim/run mcp` shim registered in `.claude/settings.json` under `mcpServers.cbim`) → scheduler starts; CC exits → scheduler stops.
+**Uninstall:** first back up memory, business knowledge, capability assets and any historical records you need. Remove only verified CBIM executable assets and registrations. Do not recursively delete `.cbim/` as a routine uninstall: it contains user data as well as code. No automatic data purge is provided.
 
----
+## Data layout
 
-## Directory Structure
-
-`.dna/` directories are **modules** scattered through the codebase at any depth where a module exists; they form a tree by filesystem hierarchy. The project root **does not** require a `.dna/`. The only hard requirement is the framework-managed registry at `.cbim/.dna/index.md` (created by install, updated by `init_module`).
-
-```
-your-project/
-├── CLAUDE.md                      ← Assistant identity (main session)
-│
+```text
+project/
 ├── .claude/
-│   ├── settings.json              ← Permission config + hook registration + MCP server registration
-│   ├── agents/                    ← Architect / HR / Auditor / Programmer (installed by /cbim_install)
-│   └── commands/                  ← Slash commands /cbim_install, /cbim_help, /cbim_dashboard, /cbim_debug, /cbim_log, /cbim_sched
-│
-├── src/                           ← Your code (any layout you like)
-│   ├── combat/
-│   │   ├── .dna/                  ← Module (parent): describes children + boundaries
-│   │   │   ├── module.md          ← required: frontmatter + architecture body
-│   │   │   ├── contract.md        ← optional: protocol boundary
-│   │   │   ├── workflows/         ← optional: deterministic process definitions
-│   │   │   └── ...                ← optional: any user-defined files
-│   │   ├── skill/.dna/            ← Module (leaf): specific implementation
-│   │   └── buff/.dna/             ← Module (leaf)
-│   └── economy/.dna/              ← Module
-│
-├── .dna/                          ← OPTIONAL project-root module
-│   └── module.md                  ←   (only if your project root is itself a module —
-│                                  ←    single-app shape; monorepos often skip this)
-│
-└── .cbim/                         ← Framework (this directory)
-    ├── run                        ← POSIX launcher shim (sets PYTHONPATH, execs `python -m engine`)
-    ├── run.cmd                    ← Windows launcher shim
-    ├── config.json                ← Local framework config
-    ├── .dna/index.md              ← Module registry (framework-managed)
-    ├── logs/                      ← Engine logs (gitignored)
-    ├── memory/                    ← Memory store (gitignored)
-    │   ├── short/                 ← Short-term session memory
-    │   └── medium/                ← Medium-term distilled memory
-    └── kernel/                    ← Kernel install (downloaded by /cbim_install)
-        ├── engine/                ← Unified CLI dispatcher (memory / dna / agent / skill / hook / mcp / dashboard ...)
-        ├── cbi/                   ← Capability + business primitives + resources
-        ├── memory/                ← Memory engine
-        ├── hooks/                 ← SessionStart / Stop / UserPromptSubmit / PreToolUse hook scripts
-        ├── mcp_server/            ← FastMCP server + scheduler + built-in tasks
-        ├── dashboard/             ← Local dashboard server
-        ├── services/              ← Cross-cutting services (frontmatter, ids, ...)
-        ├── project/               ← Init / sync / templates
-        └── context.py             ← Shared root-resolution module
+│   ├── agents/                 # portable specialist definitions and private Skills
+│   ├── skills/                 # explicit main-session entry points
+│   └── commands/               # manual installation/help/diagnostic commands
+├── src/<module>/.dna/
+│   ├── module.md               # required module metadata and architecture
+│   ├── contract.md             # optional contract
+│   ├── notes/                  # optional business notes
+│   └── workflows/              # optional business process descriptions
+└── .cbim/
+    ├── run / run.cmd           # local launchers
+    ├── .venv/                  # managed Python environment
+    ├── kernel/                 # installed V1 source
+    ├── config.json
+    ├── index.md                # module registry
+    ├── index/                  # derived retrieval/graph data
+    └── memory/medium/          # explicitly saved entries
 ```
 
-Note on long-term memory: `.cbim/memory/short/` and `.cbim/memory/medium/` are created at install time. A long-term tier (if/when distilled from medium) is created on demand by the distill flow, not by `init`.
+A root `.dna/` is optional. Business workflows are knowledge files, not executable dispatch trees. Existing `short`, candidates, logs and old execution state are not automatically migrated or deleted.
 
----
+## Retained manual capabilities
 
-## Two-Layer Governance
+- Agent/Skill management, including assets and executable-asset declarations.
+- Module/contract/note/workflow management, split, snapshot and reindex.
+- Memory storage, lookup, health checks and explicit maintenance.
+- BM25 text retrieval and knowledge graph queries. Optional backend structures remain; the Local/OpenAI retrieval embedding providers are currently unwired placeholders, separate from the optional Chroma memory backend.
+- Read-only audits and optional baseline management.
 
-| Layer | Governed by | Scope | Rule |
-|-------|-------------|-------|------|
-| **Capability layer** | HR | `.claude/agents/` + `.cbim/kernel/cbi/skills/` | No project-specific content |
-| **Business layer** | Architect | `.dna/` (`module.md` = sole hard constraint; extensions optional) | No agent spec references |
+A user-requested write may synchronize its indexes. This is operation consistency, not an autonomous workflow. Index failures must be visible; no background process will silently repair them later.
 
-The `.dna/` convention follows **minimal constraint + open extension**: the directory's existence marks a module; `module.md` is the only required file (YAML frontmatter + architecture body in one file); `contract.md`, `workflows/`, and any user-defined files are optional.
+## Development
 
-| Skill type | Storage | Characteristics |
-|------------|---------|----------------|
-| **Capability skill** | `.cbim/kernel/cbi/skills/` | Agent private capability; portable; governed by HR |
-| **Business skill** | `.dna/workflows/` | Module deterministic process; project-bound; governed by architect |
+Tests live in `v1/tests/`; kernel imports are configured by the test fixtures. Run tests with temporary project/home directories and no access to an existing installation. Real Claude integration tests are opt-in and distinct from ordinary unit tests. Git hooks and CI remain development tooling, not CBIM runtime triggers.
 
----
-
-## Memory System
-
-| Stage | Path | Purpose |
-|-------|------|---------|
-| Short-term | `.cbim/memory/short/` | Raw session records (cleaned after 3 days) |
-| Medium-term | `.cbim/memory/medium/` | Compressed pattern summaries |
-| Knowledge | `.cbim/kernel/cbi/skills/` + `.dna/` | Crystallized into governance structures |
-
-`SessionStart` hook automatically injects at session start: project knowledge snapshot + last session recovery point + recent memory.
-`Stop` hook distills the just-finished session into `memory/short/`.
-`PreToolUse` hook (inert by default) writes tool-call logs to `.cbim/logs/tools.txt` when `/cbim_debug on` is set.
-
----
-
-## Dashboard
-
-Run `/cbim_dashboard` (or `.cbim/run dashboard`) — opens http://127.0.0.1:8765 with Memory / Capability / Knowledge / Log tabs. The dashboard is also auto-spawned in the background by the `auto_preview` hook when CC is idle.
-
----
-
-## Architecture Details
-
-See [架构文档（中文）](v1/docs/ARCHITECTURE.zh-CN.md)
-
----
-
-## Requirements
-
-- Python 3.10+ (`python3` on PATH at install time; baked into the shim as an absolute path)
-- Claude Code CLI
+- [V1 architecture](v1/docs/ARCHITECTURE.zh-CN.md)
+- [Installation reference](v1/docs/INSTALL.zh-CN.md)
+- [Module format](v1/docs/MODULE-MD-DESIGN.zh-CN.md)
+- [Explicit memory](v1/docs/MEMORY-REDESIGN.zh-CN.md)
+- [Exception handling](v1/docs/EXCEPTION-GOVERNANCE.zh-CN.md)
 
 ## License
 

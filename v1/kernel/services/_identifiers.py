@@ -1,6 +1,6 @@
 """services/_identifiers.py — shared identifier validation.
 
-Agent and skill names flow from external callers (CLI / MCP / dashboard)
+Agent and skill names flow from external callers (CLI and resource)
 and get joined into ``.claude/agents/<name>/skills/<skill>/...`` paths.
 Both ``agent_service`` and ``skill_service`` need the same rejection
 rules for path separators and dot-segments, so the check lives here as

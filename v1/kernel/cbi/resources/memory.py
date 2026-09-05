@@ -17,6 +17,7 @@ from ._body import Body
 from ._frontmatter import Frontmatter
 from ._io import atomic_write_text
 from services._fm import parse_frontmatter, strip_frontmatter
+from memory.crud.primitives import _check_tier, resolve_entry_path
 
 
 def _sanitize_slug(slug: str) -> str:
@@ -24,7 +25,7 @@ def _sanitize_slug(slug: str) -> str:
 
     The slug becomes part of ``<ts>-<kind>-<slug>.md`` under
     ``.cbim/memory/<tier>/`` and is subsequently rendered by downstream
-    consumers (notably the dashboard, where the filename lands inside HTML
+    consumers (including CLI output, where the filename is rendered as text
     attribute + JS-string contexts). Anything that could redirect the final
     path outside that directory, embed non-printable bytes in the filename,
     or break the HTML/JS string contexts a downstream consumer wraps it in
@@ -43,7 +44,7 @@ def _sanitize_slug(slug: str) -> str:
             f"slug must not contain '..' traversal segments: {slug!r}"
         )
     # HTML / JS string-context metacharacters. Blocking these at the source
-    # keeps a downstream renderer (dashboard onclick handlers, etc.) from
+    # keeps downstream renderers and CLI output from
     # having to defend the JS-in-HTML-attribute context in isolation.
     for ch in ("'", '"', "`", "<", ">", "&"):
         if ch in cleaned:
@@ -87,10 +88,10 @@ class Memory(Resource):
 
     def __init__(self, path: Path, *, frontmatter: Frontmatter, body: Body,
                  store_dir: Path | None = None):
-        self._path = path.resolve()
+        self._path = resolve_entry_path(path, store_dir or _default_store(), writable=True)
         self._id = path.stem
         self._dirty = False
-        self._store_dir = (store_dir or path.parent.parent).resolve()
+        self._store_dir = Path(store_dir or _default_store()).resolve()
         self.frontmatter = frontmatter
         self.body = body
         frontmatter._on_change = self._mark_dirty
@@ -101,8 +102,9 @@ class Memory(Resource):
     # ------------------------------------------------------------------
 
     @classmethod
-    def load(cls, path: Path | str, **_kw) -> "Memory":
-        p = Path(path)
+    def load(cls, path: Path | str, *, store_dir: Path | None = None, root: Path | None = None, **_kw) -> "Memory":
+        store = Path(store_dir) if store_dir is not None else _default_store(root)
+        p = resolve_entry_path(path, store, writable=True)
         if not p.is_file():
             raise FileNotFoundError(f"memory entry not found: {p}")
         raw = p.read_text(encoding="utf-8")
@@ -110,6 +112,7 @@ class Memory(Resource):
             p,
             frontmatter=Frontmatter(parse_frontmatter(raw)),
             body=Body(strip_frontmatter(raw)),
+            store_dir=store,
         )
 
     @classmethod
@@ -118,9 +121,10 @@ class Memory(Resource):
         *,
         slug: str,
         content: str,
-        tier: str = "short",
+        tier: str = "medium",
         kind: str = "manual",
         root: Path | None = None,
+        store_dir: Path | None = None,
     ) -> "Memory":
         """Write a new memory entry file and index it through crud.primitives."""
         from memory.crud.primitives import write as _crud_write
@@ -129,21 +133,25 @@ class Memory(Resource):
         # an unchecked '/' or '..' would let a caller redirect the write
         # outside `.cbim/memory/<tier>/` — see security note in the module
         # docstring for `_sanitize_slug`.
+        _check_tier(tier)
         slug_clean = _sanitize_slug(slug)
-        store = _default_store(root)
-        ts = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+        kind = _sanitize_slug(kind)
+        if not isinstance(content, str):
+            raise ValueError("content must be a string")
+        store = Path(store_dir) if store_dir is not None else _default_store(root)
+        ts = datetime.now().strftime("%Y-%m-%d-%H%M%S-%f")
         filename = f"{ts}-{kind}-{slug_clean}.md"
-        path = store / tier / filename
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding="utf-8")
+        path = resolve_entry_path(store.resolve() / tier / filename, store, writable=True)
+        atomic_write_text(path, content)
 
         backend = _build_backend(store)
         _crud_write(path, tier, backend)
-        return cls.load(path)
+        return cls.load(path, store_dir=store)
 
     @classmethod
     def exists(cls, path: Path | str, **_kw) -> bool:
-        return Path(path).is_file()
+        store = _kw.get("store_dir") or _default_store(_kw.get("root"))
+        return resolve_entry_path(path, store, writable=True).is_file()
 
     @classmethod
     def query(
@@ -174,7 +182,9 @@ class Memory(Resource):
         root: Path | None = None,
     ) -> list["Memory"]:
         store = _default_store(root)
-        tiers = [tier] if tier else ["short", "medium"]
+        if tier is not None:
+            _check_tier(tier)
+        tiers = [tier] if tier else ["medium"]
         out: list[Memory] = []
         for t in tiers:
             tier_dir = store / t
@@ -182,7 +192,7 @@ class Memory(Resource):
                 continue
             for md in sorted(tier_dir.glob("*.md")):
                 try:
-                    out.append(cls.load(md))
+                    out.append(cls.load(md, store_dir=store))
                 except FileNotFoundError:
                     continue
         return out
@@ -215,9 +225,11 @@ class Memory(Resource):
             text = body
         if not text.endswith("\n"):
             text += "\n"
+        tier = self.frontmatter.get("tier") or self._path.parent.name
+        _check_tier(tier)
+        resolve_entry_path(self._path, self._store_dir, writable=True)
         atomic_write_text(self._path, text)
         # Re-index so the backend picks up the new content.
-        tier = self.frontmatter.get("tier") or self._path.parent.name
         backend = _build_backend(self._store_dir)
         _crud_write(self._path, tier, backend)
         self._mark_clean()
@@ -231,6 +243,7 @@ class Memory(Resource):
         """
         from memory.crud.primitives import delete as _crud_delete
 
+        resolve_entry_path(self._path, self._store_dir, writable=True)
         backend = _build_backend(self._store_dir)
         _crud_delete(self._path, backend)
         if self._path.is_file():
@@ -242,17 +255,8 @@ class Memory(Resource):
         Updates the backend index (delete old doc_id, re-add at new path via
         save()) and rewrites the in-memory `tier` field in frontmatter.
         """
-        from memory.crud.primitives import delete as _crud_delete
-
-        if to_tier not in ("short", "medium"):
-            raise ValueError(f"tier must be 'short' or 'medium', got {to_tier!r}")
-        new_path = self._store_dir / to_tier / self._path.name
-        new_path.parent.mkdir(parents=True, exist_ok=True)
-
-        backend = _build_backend(self._store_dir)
-        _crud_delete(self._path, backend)
-        self._path.rename(new_path)
-        self._path = new_path
+        _check_tier(to_tier)
+        # Medium is the sole writable tier; do not delete or move the entry.
+        resolve_entry_path(self._path, self._store_dir, writable=True)
         self.frontmatter.set("tier", to_tier)
-        # Persist the tier update + re-index.
         self.save()

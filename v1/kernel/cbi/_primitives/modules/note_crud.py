@@ -155,7 +155,7 @@ def list_notes(mod_dir: Path) -> list[dict]:
         }
 
     Body content is NOT loaded here — this is the metadata listing
-    consumed by ``services.get_module`` and dashboard callers who only
+    consumed by ``services.get_module`` and read-only callers who only
     want the "what notes exist" answer. Callers who need the body can
     read the file directly.
     """

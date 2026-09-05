@@ -1,28 +1,8 @@
-"""
-crud/primitives.py — Memory CRUD primitives (write / update / delete) + IndexMaintainer.
+"""Memory mutations synchronously maintain local and retrieval indices.
 
-v2: short/ tier removed. Only medium/ is writable here. Each primitive performs
-a synchronous side-effect on engine.retrieval to keep the external search index
-in lockstep with on-disk entries.
-
-Design (see crud/.dna/module.md, status=spec):
-- `write` is a single primitive in three ordered steps; success requires all three:
-    1. Persist new entry to medium/ and sync the local backend index.
-    2. Call `compaction.identify(entry)` (deferred import — keeps the static
-       dependency arrow `compaction -> crud` from reversing).
-    3. Call `engine.retrieval.index_upsert("memory_medium", doc_id, content,
-       metadata={"source_path": <abs path>, ...})`.
-  Failure of step 1 or 3 propagates as the original exception. Step 2 failures
-  are swallowed (identify is a non-essential side effect; never blocks write).
-- `update` is the patch-style mutation used by compaction when rewriting medium
-  entries; same three steps as `write` minus identify (identify on update would
-  recurse via compaction's own writes).
-- `delete` removes the entry from the backend, the filesystem, and the external
-  retrieval index. Failure of any step propagates.
-
-Iron rule: passing `tier="short"` raises `ValueError`. There is no migration
-path — short tier was removed in v2 because CC transcripts already serve as
-the short-term memory layer.
+Only medium is writable. These primitives index already-persisted files;
+resource/CLI callers validate containment before reading or writing them.
+Index failures propagate; no automatic identification or compaction runs.
 """
 
 from __future__ import annotations
@@ -31,6 +11,37 @@ import re
 from pathlib import Path
 
 from .backend import MemoryBackend
+
+
+def resolve_entry_path(path: str | Path, store_dir: Path, *, writable: bool = False) -> Path:
+    """Resolve an entry id inside the store, rejecting traversal and symlink escapes."""
+    from pathlib import PureWindowsPath
+
+    raw = str(path)
+    p = Path(raw)
+    win = PureWindowsPath(raw)
+    if not raw or ".." in win.parts or ".." in p.parts:
+        raise ValueError(f"invalid memory entry path: {raw!r}")
+    if win.drive and not p.is_absolute():
+        raise ValueError(f"drive-relative or foreign memory path: {raw!r}")
+    if "\\" in raw and not p.is_absolute():
+        raise ValueError(f"memory paths must use '/' separators: {raw!r}")
+    store = Path(store_dir).resolve()
+    if not p.is_absolute():
+        p = store / (Path("medium") / p if len(p.parts) == 1 else p)
+    resolved = p.resolve()
+    try:
+        rel = resolved.relative_to(store)
+    except ValueError as exc:
+        raise ValueError(f"memory entry must stay inside {store}: {raw!r}") from exc
+    tiers = ("medium",) if writable else ("medium", "candidates")
+    if len(rel.parts) != 2 or rel.parts[0] not in tiers:
+        raise ValueError(f"memory entry must be directly under {tiers}: {raw!r}")
+    if rel.parts[0] == "medium" and resolved.suffix != ".md":
+        raise ValueError("medium entries must be Markdown files")
+    if rel.parts[0] == "candidates" and not resolved.name.endswith(".candidate.json"):
+        raise ValueError("candidate entries must end in .candidate.json")
+    return resolved
 
 MEDIUM = "medium"
 TIERS = (MEDIUM,)
@@ -167,8 +178,7 @@ def _retrieval_delete(doc_id: str) -> None:
 def write(path: Path, tier: str, backend: MemoryBackend) -> None:
     """Index a markdown entry file at `path` into `tier`.
 
-    Three ordered steps (see module docstring). Steps 1 and 3 are required
-    for success; step 2 (identify) is best-effort.
+    Local and retrieval indexing are both required for success.
     """
     _check_tier(tier)
     _check_write_path(path, tier)
@@ -181,25 +191,15 @@ def write(path: Path, tier: str, backend: MemoryBackend) -> None:
     index = IndexMaintainer(backend)
     index.on_write(doc_id=str(path), text=text, metadata=meta)
 
-    # Step 2: best-effort identify (deferred import; never blocks write).
-    try:
-        from memory.compaction.identifier import identify
-        identify({"path": str(path), "tier": tier, "metadata": meta})
-    except Exception:  # noqa: BLE001 - identify is a best-effort side-channel; any failure must not block the write primary path
-        pass
-
-    # Step 3: synchronous external retrieval index. Errors propagate so the
-    # caller can decide whether to roll back step 1 or surface the failure.
+    # Synchronous write-triggered retrieval consistency; failures propagate.
     _retrieval_upsert(path, text, meta)
 
 
 def update(path: Path, tier: str, backend: MemoryBackend) -> None:
-    """Re-index a modified entry. Same shape as write() minus identify.
-
-    `compaction.compact()` calls this after rewriting a medium entry;
-    identify on update would double-count.
+    """Re-index a modified medium entry.
     """
     _check_tier(tier)
+    _check_write_path(path, tier)
     text = _entry_text(path)
     if not text:
         return
@@ -215,7 +215,6 @@ def delete(path: Path, backend: MemoryBackend) -> None:
     """Remove an entry from the local backend index, the filesystem snapshot,
     and the external retrieval index.
 
-    Does NOT trigger compaction.identify (identify fires only on write).
     """
     index = IndexMaintainer(backend)
     index.on_delete(str(path))

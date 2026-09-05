@@ -2,7 +2,7 @@
 
 fast (mtime+size): for entries whose meta.source_path exists, stat the
 file and compare. Mismatches go into the drift list. Required to finish
-sub-second per arch decision (SessionStart hook).
+sub-second for an architecture decision.
 
 full (sha256): re-hash content for every meta entry. Slow path used by
 the dream loop's MemRebuildIndex. Catches the same-mtime/same-size edge

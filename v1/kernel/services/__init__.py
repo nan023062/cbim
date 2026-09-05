@@ -3,13 +3,12 @@ services - shared CBIM service layer.
 
 Stable, dependency-light functions that return structured Python data
 (no HTTP, no MCP SDK, no formatting for LLM consumption). Both the
-dashboard HTTP server and the MCP tool layer consume this package as
+CLI and resource layers consume this package as
 their single source of truth.
 
 Dependency direction (single, hard rule):
-    mcp_server.tools --> services <-- dashboard.server
-The dashboard layer MUST NOT import from mcp_server; MCP tools MUST NOT
-import from dashboard. If either direction shows up, the boundary is broken.
+    engine.cli --> services <-- cbi.resources
+Service callers must not bypass the resource and primitive boundaries.
 """
 
 from ._paths import PathOutsideRootError, resolve_within_root
@@ -35,7 +34,6 @@ from .knowledge_service import (
     write_doc,
     write_section,
 )
-from .log_service import read_log
 from .memory_service import (
     cleanup as memory_cleanup,
 )
@@ -64,7 +62,6 @@ __all__ = [
     "dry_run_section",
     "list_skills",
     "get_skill",
-    "read_log",
     # writes
     "scaffold_agent",
     "update_agent",

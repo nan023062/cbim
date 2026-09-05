@@ -85,7 +85,7 @@ def test_stats_rejects_tier_short(store):
 # ---------------------------------------------------------------------------
 
 def test_query_returns_only_medium_entries(store):
-    res = query("anything", limit=10, store_dir=store)
+    res = query("body", limit=10, store_dir=store)
     assert isinstance(res, list)
     # 2 medium entries; candidates aren't returned by query.
     assert len(res) == 2
@@ -93,7 +93,7 @@ def test_query_returns_only_medium_entries(store):
 
 
 def test_query_with_tier_medium(store):
-    res = query("anything", tier="medium", limit=10, store_dir=store)
+    res = query("body", tier="medium", limit=10, store_dir=store)
     assert len(res) == 2
 
 

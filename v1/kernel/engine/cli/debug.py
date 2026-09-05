@@ -21,16 +21,13 @@ def dispatch(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
 
 
 def _debug_flag_path() -> Path | None:
-    """The flag lives at <project>/.cbim/.debug, controlling extra [ENG]/[IMP]
-    log entries from call_log/import_log. Session-level signals
-    ([SESSION]/[USER]/[TOOL]/[RESULT]/[TURN]) always log, no flag needed."""
+    """Return the project-local opt-in diagnostic logging flag."""
     from context import cbim_dir
     return cbim_dir() / ".debug"
 
 
 def _cmd_debug(args) -> int:
-    """Toggle the .cbim/.debug flag. Controls extra engine internals only;
-    base session signals are always logged."""
+    """Explicitly toggle the project-local diagnostic logging flag."""
     flag = _debug_flag_path()
     if flag is None:
         print("debug: cannot locate project root")

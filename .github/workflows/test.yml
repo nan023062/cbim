@@ -12,7 +12,6 @@ on:
 #
 #   Dependencies pulled in by tests:
 #     - pytest                         (test runner; declared in requirements-dev.txt)
-#     - mcp >= 1.0.0                   (kernel runtime; declared in v1/kernel/requirements.txt)
 #
 #   v1/tests/conftest.py prepends v1/kernel/ to sys.path, so no editable
 #   install is required. Smoke phase scripts (smoke_phase*.py) are kept in
@@ -43,7 +42,6 @@ jobs:
         env:
           CBIM_PROJECT_ROOT: ${{ github.workspace }}
         run: |
-          mkdir -p .cbim
           python -m pytest v1/tests/ -m "not workflow" -q
 
   # ---------------------------------------------------------------------------

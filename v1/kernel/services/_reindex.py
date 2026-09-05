@@ -26,6 +26,16 @@ after a single write.
 from __future__ import annotations
 
 from pathlib import Path
+import warnings
+
+
+def _reindex_warning(kind: str, exc: Exception) -> None:
+    warnings.warn(
+        f"{kind} data was saved, but retrieval index refresh failed: {exc}. "
+        "Run the explicit reindex command to repair it.",
+        RuntimeWarning,
+        stacklevel=3,
+    )
 
 
 def _module_doc_id(root: Path, module_dir: Path) -> str:
@@ -125,7 +135,8 @@ def reindex_dna(root: Path, module_dir: Path) -> None:
             {"source_path": str(md.resolve())},
             header_content=header_content,
         )
-    except Exception:  # noqa: BLE001 — main write succeeded; reindex is side-effect, dream loop verify_consistency reconciles
+    except Exception as exc:  # noqa: BLE001 — data write already succeeded
+        _reindex_warning("DNA", exc)
         return
 
     # Notes pass — best-effort, one doc per note. Outer try/except is a

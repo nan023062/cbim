@@ -21,7 +21,6 @@ same way: the dispatch dict captures attribute references after import.
 """
 from __future__ import annotations
 
-from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -224,34 +223,6 @@ def test_soul_subparser_routes(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# log: show / tail
-# ---------------------------------------------------------------------------
-
-@pytest.mark.parametrize(
-    "argv, expected_command, attr",
-    [
-        (["log", "show"], "show", "cmd_log_show"),
-        (["log", "tail"], "tail", "cmd_log_tail"),
-    ],
-)
-def test_log_subparser_routes(monkeypatch, argv, expected_command, attr):
-    """log show / tail route to engine.log_view.cmd_log_*."""
-    # The dict is built inside main() so patching the module attribute
-    # before calling main() is what gets captured.
-    import engine.log_view as lv
-    rec = _Recorder()
-    monkeypatch.setattr(lv, attr, rec)
-    # Also patch the names re-exported into engine.cli, since main()
-    # builds the dispatch dict from those local imports.
-    monkeypatch.setattr(cli_mod, attr, rec)
-    assert _run_cli(monkeypatch, argv) == 0
-    assert rec.called_once
-    ns = rec.last_args_namespace
-    assert ns.domain == "log"
-    assert ns.command == expected_command
-
-
-# ---------------------------------------------------------------------------
 # config: get / set / show
 # ---------------------------------------------------------------------------
 
@@ -285,28 +256,6 @@ def test_config_subparser_routes(monkeypatch, argv, expected_command, attr, extr
 # dashboard
 # ---------------------------------------------------------------------------
 
-def test_dashboard_routes_to_cmd_dashboard(monkeypatch):
-    rec = _Recorder()
-    monkeypatch.setattr(cli_mod, "cmd_dashboard", rec)
-    assert _run_cli(monkeypatch, ["dashboard", "--no-browser"]) == 0
-    assert rec.called_once
-    ns = rec.last_args_namespace
-    assert ns.domain == "dashboard"
-    assert ns.no_browser is True
-
-
-def test_preview_alias_routes_to_cmd_dashboard(monkeypatch, capsys):
-    """`preview` is a deprecated alias; it must still reach cmd_dashboard
-    and emit the [DEPRECATED] notice naming 1.1.0 to stderr."""
-    rec = _Recorder()
-    monkeypatch.setattr(cli_mod, "cmd_dashboard", rec)
-    assert _run_cli(monkeypatch, ["preview", "--no-browser"]) == 0
-    assert rec.called_once
-    err = capsys.readouterr().err
-    assert "[DEPRECATED]" in err
-    assert "1.1.0" in err
-    assert "preview" in err
-
 
 # ---------------------------------------------------------------------------
 # debug: on / off / status
@@ -328,24 +277,6 @@ def test_debug_subparser_routes(monkeypatch, argv, expected_command):
     ns = rec.last_args_namespace
     assert ns.domain == "debug"
     assert ns.command == expected_command
-
-
-# ---------------------------------------------------------------------------
-# mcp: starts the MCP server. Patch `mcp_server.server.mcp.run`.
-# ---------------------------------------------------------------------------
-
-def test_mcp_routes_to_server_run(monkeypatch):
-    """`cbim mcp` imports mcp_server.server lazily and invokes mcp.run()."""
-    # Build a fake mcp_server.server module before the lazy import in main().
-    import sys
-    fake_run = _Recorder(return_value=None)
-    fake_mcp = SimpleNamespace(run=fake_run)
-    fake_mod = SimpleNamespace(mcp=fake_mcp)
-    # Replace the import resolution; lazy `from mcp_server import server`
-    # in main() will pick this up via sys.modules.
-    monkeypatch.setitem(sys.modules, "mcp_server.server", fake_mod)
-    assert _run_cli(monkeypatch, ["mcp"]) == 0
-    assert fake_run.called_once
 
 
 # ---------------------------------------------------------------------------

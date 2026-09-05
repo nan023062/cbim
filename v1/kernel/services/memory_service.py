@@ -5,7 +5,7 @@ Read side (`list_entries`) is unchanged from the historical service shape.
 
 Write side (`reindex`, `cleanup`) is the single implementation shared by:
   - engine/cli.py `cmd_reindex` / `cmd_cleanup` (CLI surface)
-  - mcp_server/tools/memory.py (MCP surface)
+  - engine/cli/memory.py (CLI surface)
 
 Phase 1 design note: previously this layer was read-only. The "No service
 writes" rule was reversed so we don't duplicate the MemoryEngine wiring on
@@ -112,7 +112,7 @@ def _date_from_name(name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Write facade — shared by engine/cli.py and mcp_server/tools/memory.py
+# Write facade — shared by engine/cli/memory.py and resources
 # ---------------------------------------------------------------------------
 
 def _build_backend(cwd: str = ""):

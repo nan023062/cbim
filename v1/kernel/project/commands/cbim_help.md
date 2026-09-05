@@ -1,70 +1,54 @@
 ---
-description: Show CBIM commands overview + workflow summary
+description: Show the CBIM V1 commands and architecture overview
 ---
 
-Display the following overview to the user verbatim (in Chinese):
+Display the following overview to the user in Chinese:
 
----
+# CBIM V1 总览
 
-# CBIM 总览
+CBIM 将可复用能力（Agent、Skill、能力资源）与项目业务知识（`.dna/` 模块）分离，
+并提供仅在用户明确要求时使用的本地 memory。
 
-**框架定位：** Capability-Business Independence + Memory。能力层（agent + skill）与业务层（.dna 模块）解耦，所有沉淀经记忆系统持续提炼。
+## 工作方式
 
-## 工作流
+- Claude Code 默认处理普通请求。
+- 任务描述清晰匹配时，Claude Code 可以自动命中 CBIM 原生 Skill；用户也可以显式调用。
+- Skill 在主会话中执行，不启动固定 Agent 链、子代理调度器或后台服务。
+- 没有匹配的 Skill 时，不经过 CBIM 路由，直接使用默认行为。
+- memory 不会因 Skill 命中而自动读取或写入；必须由用户明确要求。
 
-```
-用户 → 协调者（CLAUDE.md）
-         │
-         ├─ 派发任务 → architect / hr / auditor / programmer (agent，.claude/agents/)
-         │              │
-         │              └─ 调用 skill (cbim skill show <name>) 执行
-         │
-         ├─ 短期记忆 → CC 原生 transcript JSONL（不在 .cbim 下，会话级）
-         ├─ 蒸馏      → .cbim/memory/medium/  (dream 治理循环触发)
-         └─ 知识      → .dna/ + .cbim/kernel/cbi/skills/   (architect 提升)
-```
-
-## Slash Commands（本地）
+## Slash Commands
 
 | 命令 | 作用 |
 |---|---|
-| `/cbim_help` | 本帮助 |
-| `/cbim_install` | 安装/刷新 CBIM cc-prompt-pack |
-| `/cbim_dashboard` | 启动（或重新打开）本地仪表盘 |
-| `/cbim_debug on\|off\|status` | 控制 `.cbim/.debug` 标志——开启/关闭额外的 `[ENG]`/`[IMP]` 引擎内部日志（基础信号永远开启） |
-| `/cbim_log [N]` | 查看当前会话日志最近 N 条（默认 50，所有信号类型在同一文件） |
-| `/cbim_sched status\|trigger <name>` | 查看/触发 MCP scheduler 任务 |
+| `/cbim_help` | 显示本帮助 |
+| `/cbim_install` | 在当前项目安装或刷新 V1 kernel 与原生 Skills |
+| `/cbim_debug on\|off\|status` | 切换显式调试标志 |
 
-## CBIM Engine 命令 (`cbim <domain> <cmd>`)
+## CLI domains
 
-| 域 | 命令 | 说明 |
-|---|---|---|
-| `memory` | `create` / `add` / `query` / `delete` / `reindex` / `cleanup` | 记忆 CRUD + 查询（会话写入/加载由 hook 自动处理） |
-| `dashboard` | `--port` / `--no-browser` | 启动本地仪表盘 |
-| `dna` | `list` / `show` / `init` / `reindex` / `edit --target {frontmatter\|body\|section\|contract\|contract-section\|workflow}` | 业务模块（`.dna/`）管理（`write-doc` / `write-section` 已 deprecated，改用 `edit --target body\|section`） |
-| `agent` | `list` / `show` / `scaffold` / `archive` | Agent 注册表 |
-| `skill` | `list` / `show <name>` | 列出/查看 skill 内容 |
-| `soul` | `list` / `show <name>` | 列出/查看 agent 灵魂模板 |
-| `snapshot` | `[--root PATH]` | 生成项目知识快照 |
-| `config` | `get <key>` / `set <key> <value>` / `show` | 读写 `.cbim/config.json` |
-| `debug` | `on` / `off` / `status` | 切换 PreToolUse 工具调用日志 |
-| `log` | `show` / `tail` | 查看合并的 debug 日志 |
+| 域 | 用途 |
+|---|---|
+| `memory` | 用户主动执行记忆创建、查询、删除、清理和重建索引 |
+| `dna` | 管理业务模块、notes、workflows、contract 和索引 |
+| `agent` | 管理可复用 Agent 定义 |
+| `skill` | 管理可复用 Skill 与能力资源 |
+| `soul` | 查看 Agent 模板 |
+| `audit` | 用户主动执行只读检查 |
+| `config` | 管理项目本地配置 |
+| `debug` | 查看或切换显式调试状态 |
 
-## 关键路径
+CLI 是 service/resource 层的显式入口，不是任务调度器。所有受控写入都保留路径、
+frontmatter、schema、原子写和索引校验。
 
-- `.cbim/` — 框架代码（read-only，由 `.claudeignore` + deny 保护）
-- 短期记忆 — CC 原生 transcript JSONL（不在 .cbim 下，会话级，CC 自治理）
-- `.cbim/memory/medium/` — 蒸馏后的模式（dream 治理循环产物）
-- `.dna/index.md` — 模块注册表（architect 维护）
-- `.claude/agents/` — agent 定义（架构师/审计/HR/程序员 + 自定义）
-- `.claude/commands/` — slash command 定义
-- `.claude/settings.json` — hooks + permissions
-- `CLAUDE.md` — 协调者指令（每次会话自动加载）
+## 重要路径
 
-## 钩子
+- `v1/kernel/`：CBIM V1 源码
+- `.dna/`：项目业务知识
+- `.claude/agents/`：Agent 定义
+- `.claude/skills/`：主会话 Skills
+- `.claude/commands/`：slash command 定义
+- `.cbim/memory/`：项目本地 memory 数据
 
-- **SessionStart** — 加载记忆上下文 + 生成知识快照
-- **Stop** — 不再自动落盘；蒸馏由 dream 治理循环触发
-- **PreToolUse** — 工具调用日志（受 `.cbim/.debug` 控制）
-
-详见各 agent 的 `.md`（性格/职责/skill 表）。
+V1 不提供行为树、Dream 自动治理、生命周期 hooks、MCP server、Dashboard、后台调度
+或自动记忆捕获。已有历史数据和用户配置不会因为安装或同步而被删除。

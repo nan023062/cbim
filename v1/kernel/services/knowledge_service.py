@@ -7,7 +7,7 @@ normalises list-typed frontmatter fields.
 Write side (`init_module`, `edit_module`, `split_module`, `write_doc`,
 `write_section`) is the single implementation shared by:
   - engine/cli.py `_handle_dna_*` (CLI surface)
-  - mcp_server/tools/dna.py (MCP surface)
+  - engine/cli/dna.py (CLI surface)
 
 Phase 1 design note: previously this layer was read-only. The "No service
 writes" rule was reversed so we don't duplicate the multi-file orchestration
@@ -336,7 +336,7 @@ def scan_workflows(
 # ---------------------------------------------------------------------------
 # Read façade — single-point lookups, schema accessor, snapshot wrapper.
 #
-# These exist so callers (engine/cli.py, mcp_server/tools/*) never need
+# These exist so CLI callers never need
 # to reach into cbi._primitives directly. Both layers go through here,
 # which is what the Batch 2 banned-api rule enforces.
 # ---------------------------------------------------------------------------
@@ -484,7 +484,7 @@ def dry_run_section(
 
 
 # ---------------------------------------------------------------------------
-# Write facade — shared by engine/cli.py and mcp_server/tools/dna.py
+# Write facade used by the engine CLI and resource callers
 # ---------------------------------------------------------------------------
 
 

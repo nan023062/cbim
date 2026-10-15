@@ -9,10 +9,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgenticTeam", "AgenticTeam\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgenticCLI", "AgenticCLI\AgenticCLI.csproj", "{80D14252-6AC6-4101-847B-691D11F4EC40}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{A7B40FAC-904C-4F33-A795-A6EE12A150FF}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgenticCLI.Test", "AgenticCLI\Test\AgenticCLI.Test.csproj", "{E8178083-4274-4F78-ADD5-EDF16C3BA435}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,23 +55,10 @@ Global
 		{80D14252-6AC6-4101-847B-691D11F4EC40}.Release|x64.Build.0 = Release|Any CPU
 		{80D14252-6AC6-4101-847B-691D11F4EC40}.Release|x86.ActiveCfg = Release|Any CPU
 		{80D14252-6AC6-4101-847B-691D11F4EC40}.Release|x86.Build.0 = Release|Any CPU
-		{E8178083-4274-4F78-ADD5-EDF16C3BA435}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E8178083-4274-4F78-ADD5-EDF16C3BA435}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E8178083-4274-4F78-ADD5-EDF16C3BA435}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{E8178083-4274-4F78-ADD5-EDF16C3BA435}.Debug|x64.Build.0 = Debug|Any CPU
-		{E8178083-4274-4F78-ADD5-EDF16C3BA435}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{E8178083-4274-4F78-ADD5-EDF16C3BA435}.Debug|x86.Build.0 = Debug|Any CPU
-		{E8178083-4274-4F78-ADD5-EDF16C3BA435}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E8178083-4274-4F78-ADD5-EDF16C3BA435}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E8178083-4274-4F78-ADD5-EDF16C3BA435}.Release|x64.ActiveCfg = Release|Any CPU
-		{E8178083-4274-4F78-ADD5-EDF16C3BA435}.Release|x64.Build.0 = Release|Any CPU
-		{E8178083-4274-4F78-ADD5-EDF16C3BA435}.Release|x86.ActiveCfg = Release|Any CPU
-		{E8178083-4274-4F78-ADD5-EDF16C3BA435}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{E8178083-4274-4F78-ADD5-EDF16C3BA435} = {A7B40FAC-904C-4F33-A795-A6EE12A150FF}
 	EndGlobalSection
 EndGlobal

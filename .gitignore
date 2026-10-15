@@ -31,7 +31,7 @@ CLAUDE.md
 .mcp.json
 .claudeignore
 
-# v2 native-.NET tree: track sources/configs but ignore build artefacts
+# .NET source tree: track sources/configs but ignore build artefacts
 !src/**/*.csproj
 !src/cbim.sln
 !src/Directory.Build.props

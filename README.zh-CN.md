@@ -16,8 +16,8 @@
 架构与设计原则位于 [`design/`](design/)：
 
 - [`_ARCHITECTURE.md`](design/_ARCHITECTURE.md) —— 概念模型与边界
-- [`v2-architecture-summary.md`](design/v2-architecture-summary.md) —— 运行时约束与依赖方向
-- [`cbim-v2-观点.md`](design/cbim-v2-观点.md) —— 能力/业务独立性、记忆、工作流与工作区
+- [`architecture-summary.md`](design/architecture-summary.md) —— 运行时约束与依赖方向
+- [`cbim-观点.md`](design/cbim-观点.md) —— 能力/业务独立性、记忆、工作流与工作区
 
 ## 环境要求
 

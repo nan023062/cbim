@@ -16,8 +16,8 @@ The repository contains one supported implementation: the .NET 8 solution under 
 Architecture and design principles are documented in [`design/`](design/):
 
 - [`_ARCHITECTURE.md`](design/_ARCHITECTURE.md) — conceptual model and boundaries
-- [`v2-architecture-summary.md`](design/v2-architecture-summary.md) — runtime constraints and dependency direction
-- [`cbim-v2-观点.md`](design/cbim-v2-观点.md) — capability/business independence, memory, workflows, and workspaces
+- [`architecture-summary.md`](design/architecture-summary.md) — runtime constraints and dependency direction
+- [`cbim-观点.md`](design/cbim-观点.md) — capability/business independence, memory, workflows, and workspaces
 
 ## Requirements
 

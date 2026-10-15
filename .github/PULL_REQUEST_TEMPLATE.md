@@ -26,9 +26,11 @@ Keep the description focused on what changed and why.
 ## How was this tested?
 
 <!--
-Describe the test approach. At minimum, the default suite must pass:
+Describe the test approach. At minimum, the solution should build and the
+automated tests should pass:
 
-    pytest v1/tests/ -m "not workflow"
+    dotnet build src/cbim.sln --no-restore
+    dotnet test src/cbim.sln --no-build
 
 If you added new tests, mention them here. If a change is intentionally
 untested (e.g. doc-only), say so.
@@ -38,9 +40,9 @@ untested (e.g. doc-only), say so.
 
 <!-- All boxes must be checked before requesting review. -->
 
-- [ ] `pytest v1/tests/ -m "not workflow"` passes locally
+- [ ] `dotnet build src/cbim.sln --no-restore` passes locally
+- [ ] `dotnet test src/cbim.sln --no-build` passes locally
 - [ ] No new third-party dependency introduced (or justified in Summary)
-- [ ] No `print`-style debugging left in committed code
-- [ ] **No governance files committed** — `.cbim/`, `.claude/`, `CLAUDE.md`, `.mcp.json`, `.claudeignore` are NOT in this PR (see [CONTRIBUTING.md](../CONTRIBUTING.md) "Red line")
+- [ ] No debug output or generated files left in committed code
 - [ ] Commit messages follow the convention in `CONTRIBUTING.md`
 - [ ] Branch is up to date with `master`

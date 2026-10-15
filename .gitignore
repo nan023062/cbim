@@ -32,15 +32,15 @@ CLAUDE.md
 .claudeignore
 
 # v2 native-.NET tree: track sources/configs but ignore build artefacts
-!v2/src/**/*.csproj
-!v2/src/cbim.sln
-!v2/src/Directory.Build.props
-!v2/src/Directory.Packages.props
-!v2/src/nuget.config
-!v2/src/global.json
-!v2/src/.editorconfig
-v2/src/**/bin/
-v2/src/**/obj/
+!src/**/*.csproj
+!src/cbim.sln
+!src/Directory.Build.props
+!src/Directory.Packages.props
+!src/nuget.config
+!src/global.json
+!src/.editorconfig
+src/**/bin/
+src/**/obj/
 
 # Engine behavior-tree resume scratch
 .bt-resume-payload*.txt

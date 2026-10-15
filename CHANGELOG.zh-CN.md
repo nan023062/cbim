@@ -2,245 +2,29 @@
 
 [English](CHANGELOG.md) | [中文](CHANGELOG.zh-CN.md)
 
-记录 CBIM 所有值得关注的版本变更。格式大致遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，内核遵循语义化版本。
+这里记录受支持的 CBIM C#/.NET 实现的重要变更。下方历史条目作为已退役实现代际的不可变审计记录保留，不代表当前支持范围。
+
+## [Unreleased] - 2026-10-15 —— .NET 8 仓库收敛
+
+- 将受支持的 C#/.NET 8 实现提升到根目录 `src/`。
+- 将当前架构文档合并到根目录 `design/`。
+- 删除已退役实现树、旧工具，以及过时的流程设计文档。
+- 将开发指南与 CI/发布自动化切换为 .NET solution。
+
+## 历史归档
+
+以下条目仅记录已退役版本，作为审计历史保留，不是当前运行时使用说明。当前实现是 `src/cbim.sln`。
 
 ---
 
-## 版本治理原则
+## [1.0.5] - 2026-05-22
 
-CBIM 早期阶段修复频率高。为降低用户的迁移摩擦：
+已退役的历史版本。具体实现细节请查阅仓库历史。
 
-- **大版本 / 小版本 bump**：发布新特性或 schema 变更时使用，用户用 `cbim migrate --version <v>` 切换。
-- **补丁**（bug 修复、文档微调、内部重构）**不 bump 版本**。用户用 `cbim update --reinstall --local <kernel-src>`（或远端等价命令）拉取最新源码，pin 保持不动。CHANGELOG 在事后记录"已 rolled into 当前 pin 版本"。
+## [1.0.4] - 2026-05-22
 
-这让版本号保持有意义（每个 tag 都是真正的接口变化），避免每次小修复都强制用户重装。
+已退役的历史版本。具体实现细节请查阅仓库历史。
 
----
+## [1.0.3] - 2026-05-22
 
-## [Unreleased — patch on 1.0.5] - 2026-06-15 —— 内核清理：去重 + 弃用提示统一格式
-
-两处小幅内核质量改进；无 schema 变更、对未弃用路径行为无影响。
-
-### 去重：共享 `resume_index`
-
-- `engine.core.composite._resume_index` 公开化为 `engine.core.composite.resume_index`,被 `engine.dream.core.composite_tolerant.SequenceTolerant` 复用（之前是字节级 copy）。
-- dream 侧的 `_Composite` 基类**刻意保持本地最小重声明**,不从 `engine.core.composite` 导入 —— 维护 `bt` / `dream` 边界（不引用 bt 的私有名）。仅共享已经公开的 helper。
-- 净效果：两棵树共享一份 resume-path 遍历定义；行为不变（已用 execution + dream 全量测试验证）。
-
-### Deprecations（本版本仅告警；1.1.0 移除）
-
-六处既有的已标注 deprecated 接口,现在被调用时会统一向 stderr 输出告警：
-
-```
-[DEPRECATED] <name> is deprecated and will be removed in the next minor release (1.1.0); use <replacement> instead.
-```
-
-| # | 接口 | 替代 |
-|---|------|------|
-| 1 | CLI `cbim dna write-doc` | `cbim dna edit --target body` |
-| 2 | CLI `cbim dna write-section` | `cbim dna edit --target section` |
-| 3 | CLI `cbim preview` | `cbim dashboard` |
-| 4 | MCP 工具 `dna_write_doc` | `dna_edit(target='body' 或 'contract')` |
-| 5 | MCP 工具 `dna_write_section` | `dna_edit(target='section' 或 'contract-section')` |
-| 6 | 旧版 `.dna/module.json` + `architecture.md` 模块格式 | `module.md`（执行一次 `cbim dna edit --target frontmatter` 即可迁移）|
-
-- 本版本**仅警告,不移除任何接口**。返回值、退出码、stdout、磁盘副作用均不变。既有脚本继续可用。
-- 告警使用 `print(..., file=sys.stderr)`,**故意不使用** `warnings.warn(DeprecationWarning)` —— `-W error` / pytest 的默认 filter 会把告警转换成异常,破坏调用方 CI 信号。
-- **下一个 minor 版本（1.1.0）将正式移除**。迁移建议：
-  - 扫一遍 CI / 脚本中上述六处接口,替换为规范等价。
-  - 旧版 module.json：迁移完任何剩余模块后,跑一次 `cbim dna reindex`；`load_module()` 在 `module.md` 与 `module.json` 同时存在时会自动优先 `module.md`,可以原地安全迁移。
-
----
-
-## [1.0.5] - 2026-05-22 —— DNA：spec 状态字段 + 原子化 split 命令
-
-`.dna/module.md` 新增 `status` frontmatter 字段（与 `dna_state` 正交）：
-
-- 三个取值：`spec`（已设计、未实现 —— S3 状态）、`planned`（仅命名、设计待补）、`implemented`（代码与 DNA 一致）。
-- `status` 是声明的意图（架构师设定、程序员翻转）；`dna_state`（0/1/2/3）是观测到的漂移。两者都会在 `cbim dna show` / `dna list` / `cbim snapshot` 中露出，让架构师能发现陈旧的 spec 标记（例如 `status:spec + dna_state:1` = 程序员实现完忘记翻转）。
-- `cbim dna init` 支持 `--status`（叶子/父模块默认 `spec`，根模块默认 `implemented`）；`cbim dna edit --target frontmatter --field status --value <v>` 强校验枚举。
-- 向后兼容：本仓库已有 17 个 module.md 文件（以及任何其他仓库的 module.md）保持字节稳定；`load_module()` 返回 dict 时缺失的 status 默认为 `implemented`。
-- `arch_modules` skill 已同步：Worth0 决策 / S3 动作 / 正交矩阵都教学了新词汇。Deprecate Module 段按架构师裁定重写 —— 弃用是生命周期轴，**不是** status 枚举的扩展；生命周期 frontmatter schema 留给未来版本（已挂账跟踪）。
-
-新增 `cbim dna split <source> --into <path>:<name>:<H1|H2|...>` 原子命令：
-
-- 一条命令把源模块拆成 N 个新模块，全成功或全回滚。新模块默认 `status: spec`（消费上面的新字段）。
-- 原子性：先把所有写入暂存到 `.tmp` 文件，校验完整 plan，再按依赖顺序 `os.replace` 一把 sweep；任何环节失败则 unlink 所有 `.tmp` 文件、磁盘保持原状（mid-sweep 测试用故意注入失败验证过）。
-- 源侧默认：保留原 sections 并加 `<!-- split: moved <heading> → <new-path> -->` 弃用注释（可追溯）；`--no-keep-source` 用于干净切走。
-- 跨模块引用重写**不在范围内** —— 命令只输出一份 SCAN-ONLY 的 `dependency_refs` 报告，列出 frontmatter `dependencies:` 提到源路径的同级模块，架构师再用 `cbim dna edit --field dependencies --value-list ...` 手动跟进。把原子性约束在单源分解（C2：单一职责）。
-- 测试覆盖：7 个用例，含 happy path、target 已存在、heading 缺失、仅出报告、dry-run、`status='spec'` 继承、mid-sweep 回滚。
-- CLI 限制：`--into PATH:NAME:HEADINGS` 冒号分隔形式对 Windows 绝对路径不友好；推荐仅使用 POSIX 相对路径（已在 `dna split --help` 标注）。
-
----
-
-## [1.0.4] - 2026-05-22 —— 治理打磨：writer 注入信号模板 + skill 与 CLI 对齐
-
-- Memory 写入闭环：`memory/engine/writer.py` 现在会在每个 `## 信号` 标题下输出 4 行 `_SIGNAL_TEMPLATE`（MUST / WANT / HOW / IS 未勾选条目，附 placeholder 提示），让"空信号"条目落盘时自带可填写模板，而不是留一个空槽。`_fill_signals` 语义不变 —— 模板只在未自动抽出信号时作为回退；LLM / 启发式信号仍然会替换 `\n## 信号\n` byte-exact marker 之后的全部内容。
-- `cbi/skills/memory_write/skill.py` 的 "Entry Format" 示例块与模板字节对齐（原文写的是英文 `## Signals`；修正为 `## 信号` 中文，与 200+ 存量条目以及 hook 的真实输出一致）。
-- Skill 文本 ↔ CLI 对齐（共扫描 14 处漂移；6 处 MUST/SUGGEST 文本修正落地，8 处复核无问题）：
-  - `arch_modules/skill.py`：`cbim dna update` → `cbim dna edit --target body`（Execution Gate 的 S2 动作；这是 architect 热路径里唯一残留的旧命令引用）。
-  - `memory_distill/skill.py`：`(see write.md spec)` → `(see memory_write skill)`（残留文件引用）；`## Signals` → `## 信号`（与 hook 输出对齐）。
-  - `memory_query/skill.py`：移除自相矛盾的重复代码块（"If CBIM is installed as a subdirectory..." 段说法是错的；`cbim` 是 launcher，无需路径前缀）。
-  - `architect/agent.py` + `hr/agent.py`：Kernel-Only Writes 升级规则中的 "engine dna / engine agent / engine memory" → "cbim dna / cbim agent / cbim memory"（launcher 成为规范入口之前的旧调用面）。
-- 覆盖度：HR skills 已在 1.0.3 (P3-1) 同步；本轮关闭了 architect / memory skills 中剩余的全部漂移。`arch_governance/check.py` 脚本存在性已核实（存在）。
-
----
-
-## [1.0.3] - 2026-05-22 —— 治理闭环接线：HR 写入路径打通 + memory 阈值触发
-
-补齐两处长期挂账的治理空洞。(1) HR 写入路径：架构师此前指出的"死结"—— `.claude/agents/` 是 governed-dir，但 skill 文本只暗示用 `Edit`；工具列表中没有 `Edit` 的 agent 根本无路可走。(2) memory 阈值触发：short 层写入管道功能完备，但治理侧从未接线 —— 条目无止境堆积，从不提醒整理。
-
-### HR 写入路径打通
-
-- **新增 CLI 子命令** `cbim agent update` 与 `cbim agent add-skill`，对齐 `cbim dna edit` 的接口：`--target {frontmatter|body|section}`、`--content` / `--content-file` / `--stdin`、`--dry-run`。
-- `agent update --target frontmatter` 覆盖 `description` / `model` / `tools`。拒绝 `--field name` —— 改名是另一个独立操作，按设计分离。
-- `agent update --target section` 通过 `Body.write_section` 支持对 `## Heading` 块的 `replace` / `append` / `insert-after` / `delete`。
-- `agent add-skill` 原子地创建 `.claude/agents/<id>/skills/<skill-id>/skill.md`；skill 已存在时退出码 2。
-- 针对 **kernel-managed** agent（architect / auditor / hr / programmer）的更新会向 stderr 打印警告 —— `"kernel-managed; will be overwritten on next 'cbim project sync'"` —— 但仍执行。故意保留本地覆盖的可能。
-- **Engine 重构：** `engine/cli.py` 内 helper `_read_dna_content` 重命名为 `_read_content_arg` —— 跨所有资源统一的 content 输入助手。5 处调用点已同步；行为无变化。
-- **HR skills 同步：** `hr_agents`（Tools / Update / Archive / Fission 段）与 `hr_training`（Step 3）已改为引用 `cbim agent ...`，不再写 "directly edit"。skill 文本与 CLI 表面终于对齐。
-
-### Memory 阈值触发
-
-- **SessionStart 钩子**（`load_memory.py`）当 `count(.cbim/memory/short/*.md) >= memory.distill.suggest_threshold` 时输出单行 banner，提示用户 `cbim skill show memory_distill`。
-- **Banner 顺序**保持 `additionalContext` 优先级：upgrade banner → threshold banner → snapshot → memory_out。整理提示永远不会盖掉 upgrade-required 信号。
-- **配置驱动阈值：**经由 `memory.engine.config.load_config()` 读取 —— 与配置文件物理位置完全解耦。键缺失时回退到代码内 `_DEFAULTS`（= 5），老项目零迁移即可工作。
-- **失败行为：**hook 遵循 `hooks/.dna` 铁律吞掉所有异常 —— 阈值检查 bug 不会阻塞 session。
-
-### `memory.distill.*` 配置项（现在可见）
-
-- `v1/src/kernel/cbim_kernel/project/templates/config.json.tmpl` 增加 `memory.distill.{suggest_threshold, how_to_skill_threshold, how_to_workflow_threshold, must_review_threshold}` 块，数值与 `_DEFAULTS` 严格对齐。
-- 新建项目的 `config.json` 直接可见这些旋钮（无需翻代码即可调）。已存在项目从 `_DEFAULTS` 回退取到完全相同的数值 —— **零迁移风险，无自动升级**。
-
-### Notes
-
-- 无 schema bump。纯加法：新增子命令、新增 hook banner、新增配置块（默认值完全向后兼容）。
-- 精神上是 bug fix 而非字面上 —— `cbim agent` 此前并不会崩，只是没有 `update` / `add-skill` 动词。HR 文档化的工作流才是真正的缺口。
-
----
-
-## [1.0.2] - 2026-05-22 —— 修复 `cbim migrate` PYTHONPATH bug + 收紧 updater 同级切分铁律
-
-纯补丁版本。无对外接口变化，无 schema 变化。修复 `cbim migrate` 的一处回归，并消除长期存在的、违反 updater↔kernel 同级铁律的反向 import。
-
-### Bug
-
-- `cbim migrate --version <v>` 在调用方未手动设置 `PYTHONPATH` 指向内核快照路径时，会以 `ModuleNotFoundError: No module named 'cbim_kernel'` 直接崩溃。端到端 migrate 在无该未文档化 workaround 时实际上不可用。
-
-### Root cause
-
-- `v1/src/updater/migrate.py` 写了 `from cbim_kernel.project import sync as project_sync` —— 一处 updater → kernel 的反向 import。这违反 `.dna` 中**不容谈判**的铁律：updater 与 kernel 是 launcher 之下的同级模块，唯一耦合面是磁盘契约（`versions.json` / `kernel/<ver>/` / `.cbim/.pin`），跨边界的 Python import **任一方向**都被禁止。
-
-### Fix
-
-- 新增私有模块 `v1/src/updater/sync.py`，承载 `KERNEL_AGENT_NAMES` / `KERNEL_COMMAND_NAMES` 两个常量与 `sync_settings` / `sync_agents` / `sync_commands` 三个函数。三者均以显式 `kernel_root: Path` 参数注入，通过 `updater.registry` 解析路径，不再 import kernel 包。
-- `v1/src/updater/migrate.py` 重构为只依赖 `updater.sync`。默认版本回退（原先 `from cbim_kernel import __version__`）改为 `updater.registry.get_default()`。
-- 验收：`grep -r "cbim_kernel" v1/src/updater/` 返回 **0 行 import**；剩余命中均为磁盘路径字符串或 `python -m cbim_kernel` 子进程调用（合法的磁盘契约方向）。
-
-### Notes
-
-- `v1/src/kernel/cbim_kernel/project/sync.py` 暂留 —— kernel 内部仍有 2 处消费者（`project/init.py`、`engine/cli.py` 经 `sync_templates` / `read_template`），**不是**死代码。两个 sync 表面的去重留作后续 PR。
-- 本补丁不覆盖：launcher 注入 PYTHONPATH（属于错误方向的修复）；`a49b62b` 引入的 kernel 门面 `_fwd`（无关，方向本就正确）。
-
----
-
-## [1.0.1] - 2026-05-22 —— 执行循环机制层
-
-本次发布把执行循环从"协调者临场发挥"提升为"显式的、由 soul prompt 驱动的机制"。不新增 CLI、不新增 hook —— 纪律完全落在 skill 文本与 `cbim init` 铺设的项目级 `CLAUDE.md` 模板里。已存在的项目通过 `cbim update --reinstall` + 重新 `init` 模板拉取。
-
-### `arch_modules` skill
-
-- **Execution Gate** —— DNA 状态分诊（0 / 1 / 2 / 3），配套显式的 state→action 矩阵与 Worth0 决策步骤，让架构师按知识状态路由，而不是按直觉。
-- **ContextPack Schema** —— 4 个顶层字段 + `modules[]` 子 schema + Markdown 示例 + Work Agent 消费规则（缺失即拒绝，不做改写）。
-
-### `dispatch` skill
-
-- **Decomposition Heuristics** —— 并行 vs 串行分诊，保守默认（拿不准就串行）。
-- **Phase 2 Input Contract** —— ContextPack 原文转发，用统一的 `<!-- BEGIN ContextPack -->` / `<!-- END ContextPack -->` 包裹；Work Agent 收到不含此块的 prompt 直接 reject。
-- **Interruption Thresholds** —— 三条显式停机条件：意图歧义、结果冲突、破坏性越权。
-
-### `CLAUDE.md` 模板（kernel 生成，永不由用户编辑）
-
-- **Workflow 重写。** Step 6 分出 Branch A 回环路径：Work Agent → Architect，通过 `NEEDS_ARCH_DECISION:` 升级标记触发。Step 7 改为三分支汇总：done / follow-up / conflict。
-- **循环终止。** 5 次软上限 + 显式 convergence 信号 —— 循环必须终止，不允许静默自旋。
-- **Requirement-type 任务定义。** 代码 / 模块 / 契约 / `.dna` 写入被列为一等需求类型。
-- **升级标记格式。** Work Agent 升级走固定的 `NEEDS_ARCH_DECISION:` 前缀。
-- **Hard Rules +3。** 每次循环都先走 knowledge-first；尊重升级标记；循环必须终止。
-
-### 架构决策强化
-
-- 所有配置由 kernel 生成，永不复制 —— `cbim init` / `cbim update` 从模板覆盖 `CLAUDE.md`；用户对该文件的编辑不被保留。
-- CBIM 执行循环作为 soul-prompt-driven 的 LLM 自律运行。不新增 CLI 命令、不新增 hook，纪律完全在文本里。
-
-### 升级路径
-
-```bash
-cbim update --reinstall --local <kernel-src>   # 把 1.0.1 拉进 install root
-cbim migrate --version 1.0.1                   # 项目重新 pin
-```
-
-然后在每个项目里重跑 `cbim init`（或等模板刷新路径）以拿到新的 `CLAUDE.md`。
-
----
-
-## [1.0.0] - 2026-05-22
-
-首个公开发布版本。版本号从内部迭代中重置。
-
-### 架构
-
-CBIM（Capability–Business Independence + Memory）沿两轴切分 LLM agent 项目：
-- **业务轴** —— 按模块切分的 `.dna/` 知识树，由 Architect 角色治理。
-- **能力轴** —— 专精 agent 与其 skill，由 HR 角色治理。
-
-跨会话记忆管道让每个任务的上下文 = 目标 agent 灵魂 × 任务子树 `.dna/` —— 上下文有界、幻觉减少、跨会话知识沉淀。
-
-仓库中并存两套实现：
-- **V1 — CC Kernel**（本次发布）：跑在 Claude Code 之上的 Python 扩展。
-- **V2 — Native Agent**：独立的 C# / .NET 8 运行时；设计阶段。
-
-### 内核 CLI
-
-- `cbim init` —— 在当前项目铺设 `.cbim/`、`.claude/`、`CLAUDE.md`、`.claudeignore`。
-- `cbim migrate --version <v>` —— 把当前项目的布局与 pin 迁移到目标内核版本。
-- `cbim update [--reinstall] [--local <path>]` —— 更新已装内核；`--reinstall`（别名 `--force`）跳过版本号比对，强制重装快照。
-- `cbim upgrade {check, apply}` —— 比对并应用 schema 升级。
-- `cbim dna {list, show, init, edit, reindex, write-doc, write-section}` —— 模块知识 CRUD。`edit --target {frontmatter|body|section|contract|contract-section|workflow}` 为统一入口；`--value-list` 写入块式 YAML 列表，用于 list 类型字段。`write-doc` / `write-section` 保留为 deprecated 别名。
-- `cbim agent {list, show, scaffold, archive}` —— agent 定义 CRUD。
-- `cbim memory {add, query, cleanup, reindex}` —— 记忆条目；会话开始/结束的记忆刷新由 hook 进程内处理。
-- `cbim skill {list, show}` —— 内置 skill 发现。
-- `cbim snapshot`、`cbim config`、`cbim log`、`cbim dashboard`、`cbim debug`、`cbim hook`、`cbim mcp`、`cbim project`、`cbim release-notes`。
-
-### 内部架构
-
-- `cbi/resources/` —— 统一资源对象模型：`Agent`、`DNAModule`、`Skill`、`Workflow`、`Memory`。每个 façade 暴露 `.frontmatter` / `.body` / 子集合访问器，以及原子 `.save()`。
-- `cbi/_primitives/` —— 内部引擎原语（load / parse / write）。不应被直接 import；请使用 `cbi.resources`。
-- `services/_fm.py` —— 唯一的 frontmatter 解析/渲染实现。
-- 依赖方向严格单向：`cli → resources → _primitives → services/_fm`。
-- hooks（`write_memory`、`load_memory`）进程内运行，降低会话边界延迟。
-
-### 滚动补丁（rolled into pinned 1.0.0）
-
-依据上面的版本治理原则，以下修复已被 roll into 1.0.0 源码线，未 bump 版本。用 `cbim update --reinstall --local <kernel-src>` 即可拉取。
-
-- `cbim upgrade` / `cbim update` 通过 kernel facade 调用时，会把 `<install_root>` 加到子进程 `python -m updater` 的 `PYTHONPATH`，修复装了 1.0.0 的项目里报 `ModuleNotFoundError: No module named 'updater'` 的问题。
-- `cbim install`（`--local` 与 GitHub release 路径）现在会刷新位于 PATH 上的 launcher（`cbim_launcher.py`、`cbim`、`cbim.cmd`）到 `<install_root>/bin/`。此前 launcher 只在首次安装时写入、之后永不更新，导致源码中 launcher 的路由变更（例如新增 `upgrade` / `check` / `apply` 到 `UPDATER_COMMANDS`）永远到不了用户机器。刷新通过 `os.replace` 原子完成，Windows 下安全。
-
-### 安装
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/nan023062/cbim/master/bootstrap.sh | bash
-```
-
-Windows / 无 bash 环境：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/nan023062/cbim/master/bootstrap.py | python3
-```
-
-固定版本：`CBIM_VERSION=1.0.0 curl ... | bash`
-
-### 环境要求
-
-- Python 3.10+
-- Claude Code CLI
+已退役的历史版本。具体实现细节请查阅仓库历史。

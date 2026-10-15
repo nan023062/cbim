@@ -16,60 +16,49 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Build kernel tarball
-        id: tarball
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.x
+
+      - name: Publish CLI
+        run: dotnet publish src/AgenticCLI/AgenticCLI.csproj --configuration Release --output publish
+
+      - name: Create release archive
+        id: archive
         run: |
           TAG="${GITHUB_REF_NAME}"
-          VER="${TAG#v}"
-          ARCHIVE="cbim-kernel-${VER}.tar.gz"
-          STAGE="$(mktemp -d)/cbim-kernel-${TAG}"
-          mkdir -p "$STAGE"
-          # Copy kernel package contents (engine/, cbi/, memory/, project/, requirements.txt, ...)
-          cp -R v1/kernel/. "$STAGE/"
-          # Strip caches
-          find "$STAGE" -type d -name '__pycache__' -prune -exec rm -rf {} +
-          find "$STAGE" -type d -name '.pytest_cache' -prune -exec rm -rf {} +
-          # Stamp the release version into the kernel directory
-          echo "$VER" > "$STAGE/VERSION"
-          tar -czf "$ARCHIVE" -C "$STAGE" .
-          echo "archive=$ARCHIVE" >> $GITHUB_OUTPUT
+          ARCHIVE="cbim-${TAG}.tar.gz"
+          tar -czf "$ARCHIVE" -C publish .
+          echo "archive=$ARCHIVE" >> "$GITHUB_OUTPUT"
 
       - name: Extract release notes from CHANGELOG
         id: notes
         run: |
           TAG="${GITHUB_REF_NAME#v}"
-          # Extract block between ## [TAG] and the next ## [
           NOTES=$(awk "/^## \[$TAG\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
           ZH_NOTES=$(awk "/^## \[$TAG\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.zh-CN.md)
-
-          # Combine bilingual notes
-          COMBINED="## English
-
-          $NOTES
-
-          ---
-
-          ## 中文
-
-          $ZH_NOTES"
-
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$COMBINED" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo 'notes<<EOF'
+            echo '## English'
+            echo
+            echo "$NOTES"
+            echo
+            echo '---'
+            echo
+            echo '## 中文'
+            echo
+            echo "$ZH_NOTES"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${GITHUB_REF_NAME}"
-          TITLE=$(git log -1 --pretty=%s "$TAG" | sed 's/^release: //')
+          TITLE=$(git log -1 --pretty=%s "$TAG")
           gh release create "$TAG" \
             --title "$TITLE" \
-            --notes "${{ steps.notes.outputs.notes }}"
-
-      - name: Upload kernel tarball to release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          gh release upload "$TAG" "${{ steps.tarball.outputs.archive }}" --clobber
+            --notes "${{ steps.notes.outputs.notes }}" \
+            "${{ steps.archive.outputs.archive }}"

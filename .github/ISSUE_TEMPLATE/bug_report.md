@@ -34,8 +34,8 @@ assignees: ''
 
 - CBIM version / commit: <!-- `git -C <cbim-checkout> describe --tags --always --dirty` -->
 - OS: <!-- e.g. Ubuntu 22.04 / macOS 14.4 / Windows 11 + WSL2 -->
-- Python: <!-- `python --version` -->
-- Install path: <!-- e.g. `install.sh` bootstrap, git clone, pip install of kernel tarball -->
+- .NET SDK: <!-- `dotnet --info` -->
+- Runtime/project path: <!-- e.g. `src/AgenticCLI` -->
 
 ## Additional context
 

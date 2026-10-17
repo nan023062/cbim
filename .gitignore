@@ -1,35 +1,7 @@
-.venv/
-__pycache__/
-*.pyc
-cbim-kernel-*.tar.gz
-
 # C# generated files (root scratch csproj; src ones un-ignored via per-dir rule)
 obj/
 *.csproj
 
-#.claude/
-#CLAUDE.md
-.cbim/.venv/
-.cbim/run
-.cbim/run.cmd
-.cbim/logs/
-.cbim/.debug
-.cbim/.cc-status
-.cbim/index/
-.cbim/scheduler/state.json
-.cbim/scheduler/bt/
-.cbim/scheduler/dream/
-.cbim/dashboard/
-.cbim/memory/
-
-# CBIM
-.cbim/
-
-# CBIM governance shell — never commit to this public repo
-.claude/
-CLAUDE.md
-.mcp.json
-.claudeignore
 
 # .NET source tree: track sources/configs but ignore build artefacts
 !src/**/*.csproj

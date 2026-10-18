@@ -52,6 +52,6 @@
 
 - 发现与 CRUD 看 [Workspace.cs](Workspace.cs)，激活参数看 [Module.cs](Module.cs) 和 [ModuleResolver.cs](ModuleResolver.cs)。
 - 工具协议看 [DnaToolProvider.cs](DnaToolProvider.cs)、[DnaWriteTypes.cs](DnaWriteTypes.cs)、[WorkspaceToolProvider.cs](WorkspaceToolProvider.cs)。
-- [CircuitModulesTest](../../AgenticCLI/Test/CircuitModulesTest.cs) 验证注册描述符经编译派发成为活动 Module。
-- 该测试不是自动发现、DNA CRUD 或路径边界的完整覆盖；改动这些部分需独立核对相应分支。
+- 当前没有产品测试项目验证注册描述符经编译派发成为活动 Module。
+- 需补验证自动发现、DNA CRUD、路径边界及派发解析分支。
 - 公共验证入口见 [源码 DNA](../../CLAUDE.md)，修改 Id/路径规则时同时检查两条派发调用者。

@@ -47,4 +47,4 @@ Agent 与 Mind 首轮由本文覆盖；Skills/Workflow 的描述符 stores 提�
 
 ## 定位与验证
 
-改动会话装配从 Session 构造函数追踪到 BrainFactory 和 Brain；改动服务生命周期从 Cbim.Create/Dispose 追踪。回路模块传递与动作副作用测试由 [CLI 测试导航](../AgenticCLI/CLAUDE.md) 指向，现有测试不覆盖完整会话生命周期或端到端模型调用。
+改动会话装配从 Session 构造函数追踪到 BrainFactory 和 Brain；改动服务生命周期从 Cbim.Create/Dispose 追踪。当前没有产品测试覆盖；回路模块传递、动作副作用、完整会话生命周期和端到端模型调用仍需验证。公共验证入口及限制见 [源码 DNA](../CLAUDE.md)。

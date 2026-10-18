@@ -12,9 +12,9 @@ CBIM（Capability–Business Independence + Memory）是独立的 C#/.NET 8 智�
 |---|---|---|
 | AgenticOS | 单 Agent 的运行时、会话、脑区及基础设施 | [运行时](AgenticOS/CLAUDE.md) |
 | AgenticTeam | 多个运行时实例的成员关系与项目组合 | [团队](AgenticTeam/CLAUDE.md) |
-| AgenticCLI | 一次性命令行宿主及测试导航 | [命令行](AgenticCLI/CLAUDE.md) |
+| AgenticCLI | 一次性命令行宿主 | [命令行](AgenticCLI/CLAUDE.md) |
 
-[cbim.sln](cbim.sln) 包含三个产品项目和 AgenticCLI.Test。测试物理上嵌套在 AgenticCLI/Test，逻辑上是独立项目，不是 CLI 运行时的一部分。
+[cbim.sln](cbim.sln) 当前仅包含三个产品项目：AgenticOS、AgenticTeam 和 AgenticCLI；已删除的 AgenticCLI/Test 测试项目不在 solution 中，也不属于 CLI 运行时。
 
 项目引用方向是 AgenticCLI → AgenticTeam → AgenticOS，CLI 也直接引用 AgenticOS。这描述程序集引用，不代表 AgenticOS 内部类型关系或运行时调用都单向无环。
 
@@ -35,9 +35,9 @@ dotnet build cbim.sln --no-restore
 dotnet test cbim.sln --no-build
 ```
 
-CI 使用 Release：build/test 均添加 `--configuration Release`。使用 `--no-build` 前须已按同配置构建；修改后需重建或省略该参数。
+当前 solution 仅含三个产品项目，不含产品测试项目；因此 solution/CI 中保留 `dotnet test` 命令或配置，不代表当前有产品测试被执行。协作层 Node 测试（如存在）也不计入产品测试覆盖。CI 使用 Release：build/test 均添加 `--configuration Release`。使用 `--no-build` 前须已按同配置构建；修改后需重建或省略该参数。
 
-格式规则由 [.editorconfig](.editorconfig) 定义，可运行 `dotnet format cbim.sln --verify-no-changes --no-restore`；该命令不是现有 CI 步骤。具体聊天和单测命令见命令行模块 DNA。这些是验证入口，不代表已经运行或通过。
+格式规则由 [.editorconfig](.editorconfig) 定义，可运行 `dotnet format cbim.sln --verify-no-changes --no-restore`；该命令不是现有 CI 步骤。具体聊天验证入口见命令行模块 DNA。这些是验证入口，不代表已经运行或通过。
 
 ## 修改约束与现状边界
 

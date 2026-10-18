@@ -27,22 +27,16 @@ AgenticCLI 是 AgenticOS 的薄命令行宿主，负责解析参数、合并配�
 - 默认 root 是系统 LocalApplicationData 下的 CBIM，`--root` 可覆盖；该路径兼作数据目录和 Workspace 根，不默认使用当前仓库。
 - 运行会写入模型配置并发出真实模型请求，不是只读检查。默认 AgentDescription 未提供额外 WorkBrains，不能将此演示视为完整编程工作脑团队。
 
-## 运行与测试入口
+## 运行与验证入口
 
 以下命令从 `src/` 执行；共享构建步骤见 [源码 DNA](../CLAUDE.md)。聊天前需在环境中提供 OPENAI_API_KEY。
 
 ```sh
 dotnet run --project AgenticCLI/AgenticCLI.csproj -- chat --message "你好"
-dotnet test AgenticCLI/Test/AgenticCLI.Test.csproj --filter "FullyQualifiedName=CBIM.Test.CircuitModulesTest.Compiled_call_brain_with_moduleIdsJson_yields_NeuronInput_Modules_non_empty"
-dotnet test AgenticCLI/Test/AgenticCLI.Test.csproj --filter "FullyQualifiedName~CBIM.Test.BashSideEffectTest"
 ```
 
-[Test/AgenticCLI.Test.csproj](Test/AgenticCLI.Test.csproj) 是独立 xUnit + FluentAssertions 测试项目，虽嵌套在 CLI 目录中，其源码通过 CLI 的 DefaultItemExcludes 排除，不编入可执行程序。
-
-- [CircuitModulesTest](Test/CircuitModulesTest.cs)：构造回路并验证 moduleIds 被解析为目标脑区的 Modules，无需真实模型。
-- [BashSideEffectTest](Test/BashSideEffectTest.cs)：在临时目录启动平台对应 noop 命令，验证 bash 副作用记录，不强求命令输出成功。
-- 这些测试不是 CLI/Team 端到端 smoke test，不能以其通过推断真实聊天、Provider 或团队协作已验证。
+当前没有 CLI 产品测试覆盖；参数解析、配置优先级、退出行为和真实聊天仍需分别验证。产品测试现状与共享命令的限制见 [源码 DNA](../CLAUDE.md)。
 
 ## 修改约束
 
-配置解析和输出留在宿主；可复用运行时行为放在所属核心模块。改变参数、默认路径、退出行为或测试布局时，核对 Program、appsettings、项目文件之间的对应关系，不让测试源码进入 CLI 编译范围。
+配置解析和输出留在宿主；可复用运行时行为放在所属核心模块。改变参数、默认路径或退出行为时，核对 Program、appsettings、项目文件之间的对应关系。

@@ -53,6 +53,6 @@
 
 - 核心数据语义看 [LocalMemoryService.cs](LocalMemoryService.cs)、[MemoryEntry.cs](MemoryEntry.cs)、[MemoryScanFilter.cs](MemoryScanFilter.cs)。
 - 工具序列化和桥接看 [MemoryToolProvider.cs](MemoryToolProvider.cs)、[MemoryBridgeMcpServer.cs](Bridge/MemoryBridgeMcpServer.cs)。
-- 当前 CLI 测试目录没有 Memory 专项测试；现有回路和 shell 用例不能证明记忆持久化或 MCP 桥接正确。
+- 当前没有产品测试项目提供 Memory 专项覆盖；不能据回路或 shell 场景推断记忆持久化或 MCP 桥接正确。
 - 后续验证重点是重启加载、损坏索引回退、同分排序、过滤组合、工具权限和 JSON-RPC 错误响应。
 - 公共验证入口见 [源码 DNA](../../CLAUDE.md)；更换后端须保持 IMemoryService 的空值与排序语义。

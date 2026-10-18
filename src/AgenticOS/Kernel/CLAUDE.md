@@ -51,6 +51,6 @@
 
 - 调用装配从 [Neuron.cs](Neuron/Neuron.cs)、[SynapseToolFactory.cs](Scheduler/SynapseToolFactory.cs) 进入。
 - 回路从 [NeuralCircuitBuilder.cs](Scheduler/Compiler/NeuralCircuitBuilder.cs)、[Orchestrator.cs](Scheduler/Orchestrator/Orchestrator.cs) 进入。
-- [CircuitModulesTest](../../AgenticCLI/Test/CircuitModulesTest.cs) 验证编译回路把非空 Modules 传到目标脑区。
-- 该测试不覆盖完整 Session 的“提交后下次执行”时序，也不证明两种路径的全部错误分支。
+- 当前没有产品测试项目验证编译回路把非空 Modules 传到目标脑区。
+- 需补验证完整 Session 的“提交后下次执行”时序、两种派发路径及其错误分支。
 - 公共验证命令见 [源码 DNA](../../CLAUDE.md)；定位本层回归时优先检查模块参数、提交时序和结果语义。

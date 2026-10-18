@@ -51,6 +51,6 @@
 
 - 生命周期入口看 [McpManager.cs](McpManager.cs)，协议适配看 [McpClientStarter.cs](Impl/McpClientStarter.cs)。
 - 资源释放看 [StartedMcpClient.cs](Impl/StartedMcpClient.cs)，配置读写看 [FileMcpStore.cs](FileMcpStore.cs)。
-- 当前 CLI 测试目录没有 MCP 专项测试；可用 fake IMcpClientStarter 隔离网络验证共享、失败和释放语义。
+- 当前没有产品测试项目提供 MCP 专项覆盖；可用 fake `IMcpClientStarter` 隔离网络验证共享、失败和释放语义。
 - 真实传输还需分别验证握手、工具发现、异常清理和宿主配置，不能仅凭模拟启动器判定端到端可用。
 - 公共验证入口见 [源码 DNA](../../CLAUDE.md)；同步 Start 可能阻塞，宿主应避免假定它是非阻塞 API。

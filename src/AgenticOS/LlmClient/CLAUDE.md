@@ -53,6 +53,6 @@
 - 配置入口看 [ModelDescriptor.cs](ModelDescriptor.cs)、[FileModelStore.cs](FileModelStore.cs)、[KnownProviders.cs](KnownProviders.cs)。
 - 路由与密钥看 [ProviderRegistry.cs](ProviderRegistry.cs)、[ApiKeyResolver.cs](ApiKeyResolver.cs)。
 - 实际适配看 [OpenAICompatibleBuilder.cs](Providers/OpenAICompatibleBuilder.cs)、[AnthropicBuilder.cs](Providers/AnthropicBuilder.cs)。
-- 当前 CLI 测试目录没有 Provider 专项测试；MockChatClient 是执行层替身，不证明网络鉴权或模型兼容性。
+- 当前没有 Provider 产品测试覆盖；`MockChatClient` 只能作为执行层替身，不证明网络鉴权或模型兼容性。
 - 后续验证应区分纯路由/缺失密钥/占位异常检查与需凭据的服务调用，避免把前者当端到端结果。
 - 公共验证入口见 [源码 DNA](../../CLAUDE.md)；添加 Provider 时同时补齐实现、注册和配置语义。

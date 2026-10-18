@@ -52,6 +52,6 @@
 
 - 工具路由和动作实现看 [StandardTools.cs](Standard/StandardTools.cs)，路径检查看 [PathGuard.cs](Standard/Sandbox/PathGuard.cs)。
 - 配置和队列看 [ToolSandbox.cs](Standard/Sandbox/ToolSandbox.cs)，描述持久化看 [FileToolStore.cs](FileToolStore.cs)。
-- [BashSideEffectTest](../../AgenticCLI/Test/BashSideEffectTest.cs) 验证 RunCommand 入队 bash 记录，不强求命令输出成功。
-- 该测试不证明 OS 隔离、路径越界防护或所有文件动作正确；相关变更需分别核对错误和成功分支。
+- 当前没有产品测试项目验证 RunCommand 入队 bash 记录或命令结果语义。
+- 需补验证路径越界防护及各文件动作的错误和成功分支；这些检查不等于 OS 隔离验证。
 - 公共验证入口见 [源码 DNA](../../CLAUDE.md)；修改工具标识或参数时同步检查 Brain 装配及 AIFunction schema。

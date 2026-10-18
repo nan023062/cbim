@@ -30,6 +30,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - “定时 <时间／周期> <任务>”“提醒 <时间> <事项>”“定时列表”“取消定时 <完整 ID>”或 `/schedule` → `.claude/skills/schedule/SKILL.md`：仅会话内调度，不继承提交授权。
 - “AI工作流检查”或 `/ai-workflow-check [目录]` → `.claude/skills/ai-workflow-check/SKILL.md`：只读、不修复；不写报告、档案或 handoff，该限制优先于常规记忆收尾，即使有新发现也不例外。
 - “定期AI工作流检查 <周期>” → schedule Skill 的“定期 AI 工作流检查”流程。
+- “记录这条反馈”或 `/learn` → `.claude/skills/learn/SKILL.md`：保存明确反馈为待审材料，不自动晋升。
+- “Dream 整理学习记录”或 `/dream` → `.claude/skills/dream/SKILL.md`：按能力／业务归属提出具体修改，当前明确确认后才合并。
 
 ## 团队协作
 
@@ -43,6 +45,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 记忆与交接
 
 - 恢复时读取 `.claude/memory/handoff.md`，核对分支、工作区与文件；恢复包可能截断，最近档案不等于全部待办，历史建议不是授权。
+- 用户直接明确纠偏、禁止事项或应做规则时，主 Agent 按 learn Skill 及时提炼并记录，无需另说“记住”；只采集启用后的直接反馈，不回溯聊天。当前指令即时遵循，候选不等于长期规则；一次性限制不泛化，计划／只读／权限限制优先且不后台补写。
 - 每轮结束由主 Agent 核对交接。有实质修改、决定、验证或阻塞时，先用 `.claude/hooks/task-archive.cjs` 归档，再更新 handoff；格式和重试见归档器及 handoff 维护说明。
 - 不覆盖历史、不虚报完成、不重复充分内容；普通问答／提醒不逐次归档。进度只写记忆，不保存完整聊天、密钥或私有推理。
 - 只读、计划模式及权限限制优先，无法保存须说明；子 Agent 不代写共享记忆，Hook 提醒不证明保存成功。部分失败如实报告，不保证中断时完成收尾。

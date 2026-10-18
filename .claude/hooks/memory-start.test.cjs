@@ -91,6 +91,22 @@ test('bad, oversized and mismatched records are isolated and do not use the thre
   assert.ok(!errors.join('').includes('SECRET'));
 });
 
+test('learning records remain compatible with bounded restoration without promoting their evidence', t => {
+  const root = fixture(t);
+  const item = record(10, { summary: '含学习材料', learning: { version: 1, entries: [{
+    id: 'f1', kind: 'feedback', action: 'add', category: 'requirement',
+    source: { origin: 'direct_user', evidence: 'LEARNING-EVIDENCE-NOT-INJECTED', form: 'paraphrase' },
+    core: '待审材料', scope: { duration: 'unknown', paths: [] }, route: 'suggestion',
+  }] } });
+  archive(root, item);
+  const before = tree(root);
+  const output = buildContext(root);
+  assert.ok(output.includes(item.task_id));
+  assert.ok(output.includes('含学习材料'));
+  assert.ok(!output.includes('LEARNING-EVIDENCE-NOT-INJECTED'));
+  assert.deepEqual(tree(root), before);
+});
+
 test('missing snapshots and directories are reported without creating anything', t => {
   const root = fixture(t);
   const output = buildContext(root);

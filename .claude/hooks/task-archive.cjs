@@ -48,9 +48,129 @@ function canonical(value) {
   return value;
 }
 
+const ENTRY_ID = /^[a-z][a-z0-9_-]{0,31}$/;
+const SHA256 = /^[a-f0-9]{64}$/;
+
+function learningRef(value) {
+  text(value, 100);
+  const parts = value.split('#');
+  check(parts.length === 2);
+  validId(parts[0]);
+  check(ENTRY_ID.test(parts[1]));
+  return parts;
+}
+
+function knowledgeTarget(value) {
+  relative(value);
+  const parts = value.split('/');
+  return /^\.claude\/agents\/[a-zA-Z0-9_-]+\.md$/.test(value) ||
+    (parts.length > 1 && parts.at(-1) === 'CLAUDE.md' &&
+      parts.slice(0, -1).every(part => !part.startsWith('.')));
+}
+
+function validateLearning(learning) {
+  object(learning, ['version', 'entries']);
+  check(learning.version === 1 && Array.isArray(learning.entries) &&
+    learning.entries.length > 0 && learning.entries.length <= 16);
+  const ids = new Set();
+  for (const entry of learning.entries) {
+    check(entry && ENTRY_ID.test(entry.id) && !ids.has(entry.id));
+    ids.add(entry.id);
+    if (entry.kind === 'feedback') {
+      object(entry, ['id', 'kind', 'action', 'category', 'source', 'core', 'scope', 'route'], ['previous']);
+      check(['add', 'revise', 'withdraw'].includes(entry.action));
+      check(['problem', 'prohibition', 'requirement'].includes(entry.category));
+      object(entry.source, ['origin', 'evidence', 'form']);
+      check(entry.source.origin === 'direct_user');
+      check(['redacted_quote', 'paraphrase'].includes(entry.source.form));
+      text(entry.source.evidence, 400);
+      text(entry.core, 800);
+      object(entry.scope, ['duration', 'paths']);
+      check(['task', 'module', 'global', 'unknown'].includes(entry.scope.duration));
+      strings(entry.scope.paths, 240);
+      entry.scope.paths.forEach(relative);
+      check(entry.scope.duration !== 'module' || entry.scope.paths.length > 0);
+      check(['capability', 'business', 'suggestion'].includes(entry.route));
+      check((entry.action !== 'add') === Object.hasOwn(entry, 'previous'));
+      if (entry.previous) learningRef(entry.previous);
+    } else if (entry.kind === 'proposal') {
+      object(entry, ['id', 'kind', 'sources', 'target', 'before_sha256', 'after_sha256', 'context', 'edits', 'reason']);
+      check(Array.isArray(entry.sources) && entry.sources.length > 0 && entry.sources.length <= 16);
+      check(new Set(entry.sources).size === entry.sources.length);
+      entry.sources.forEach(learningRef);
+      check(knowledgeTarget(entry.target));
+      check(SHA256.test(entry.before_sha256) && SHA256.test(entry.after_sha256));
+      check(entry.before_sha256 !== entry.after_sha256);
+      text(entry.reason, 1000);
+      check(Array.isArray(entry.context) && entry.context.length > 0 && entry.context.length <= 16);
+      const contexts = new Set();
+      for (const item of entry.context) {
+        object(item, ['path', 'sha256']);
+        relative(item.path);
+        check(item.path === 'CLAUDE.md' || item.path.endsWith('/CLAUDE.md'));
+        check(!contexts.has(item.path) && item.path !== entry.target && SHA256.test(item.sha256));
+        contexts.add(item.path);
+      }
+      check(contexts.has('CLAUDE.md'));
+      check(Array.isArray(entry.edits) && entry.edits.length > 0 && entry.edits.length <= 16);
+      for (const edit of entry.edits) {
+        object(edit, ['old', 'new']);
+        text(edit.old, 8000);
+        check(typeof edit.new === 'string' && edit.new.length <= 8000 && edit.new !== edit.old);
+        check(!/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(edit.new));
+      }
+    } else if (entry.kind === 'result') {
+      if (entry.phase === 'started') {
+        object(entry, ['id', 'kind', 'phase', 'proposal', 'confirmation']);
+        text(entry.confirmation, 400);
+      } else {
+        object(entry, ['id', 'kind', 'phase', 'proposal', 'attempt', 'outcome', 'detail'], ['observed_sha256']);
+        check(entry.phase === 'finished');
+        learningRef(entry.attempt);
+        check(['applied', 'already_present', 'failed', 'blocked', 'uncertain', 'declined'].includes(entry.outcome));
+        text(entry.detail, 1000);
+        if (entry.observed_sha256) check(SHA256.test(entry.observed_sha256));
+        if (['applied', 'already_present'].includes(entry.outcome)) check(SHA256.test(entry.observed_sha256));
+      }
+      learningRef(entry.proposal);
+    } else {
+      check(false);
+    }
+  }
+}
+
+// References point to previously archived entries, never to siblings in this record.
+function validateLearningLinks(record, resolve) {
+  const get = (ref, kind) => {
+    const [task] = learningRef(ref);
+    check(task !== record.task_id);
+    const entry = resolve(ref);
+    check(entry && entry.kind === kind);
+    return entry;
+  };
+  for (const entry of record.learning?.entries || []) {
+    if (entry.kind === 'feedback' && entry.previous) {
+      const previous = get(entry.previous, 'feedback');
+      check(previous.action !== 'withdraw');
+      check(JSON.stringify(canonical(previous.scope)) === JSON.stringify(canonical(entry.scope)));
+    } else if (entry.kind === 'proposal') {
+      for (const ref of entry.sources) check(get(ref, 'feedback').action !== 'withdraw');
+    } else if (entry.kind === 'result') {
+      const proposal = get(entry.proposal, 'proposal');
+      if (entry.phase === 'finished') {
+        const attempt = get(entry.attempt, 'result');
+        check(attempt.phase === 'started' && attempt.proposal === entry.proposal);
+        if (['applied', 'already_present'].includes(entry.outcome)) {
+          check(entry.observed_sha256 === proposal.after_sha256);
+        }
+      }
+    }
+  }
+}
+
 function validate(record) {
   object(record, ['schema_version', 'task_id', 'recorded_at', 'title', 'summary', 'status',
-    'modules', 'roles', 'changes', 'decisions', 'verification', 'open_items'], ['session_id', 'supersedes']);
+    'modules', 'roles', 'changes', 'decisions', 'verification', 'open_items'], ['session_id', 'supersedes', 'learning']);
   check(record.schema_version === 1);
   validId(record.task_id);
   text(record.recorded_at, 40);
@@ -84,6 +204,7 @@ function validate(record) {
     validId(record.supersedes);
     check(record.supersedes !== record.task_id);
   }
+  if (Object.hasOwn(record, 'learning')) validateLearning(record.learning);
   const result = canonical(record);
   check(Buffer.byteLength(JSON.stringify(result) + '\n') <= MAX_BYTES);
   return result;
@@ -167,6 +288,10 @@ function archive(root, input) {
   const record = validate(input);
   const relativePath = recordPath(record.task_id);
   if (record.supersedes) loadRecord(root, record.supersedes);
+  validateLearningLinks(record, ref => {
+    const [task, id] = learningRef(ref);
+    return loadRecord(root, task).learning?.entries.find(entry => entry.id === id);
+  });
   const file = safePath(root, relativePath, true);
   const serialized = JSON.stringify(record);
   let fd;
@@ -194,4 +319,5 @@ if (require.main === module) {
   }
 }
 
-module.exports = { ROOT, MAX_BYTES, ID, validate, parse, safePath, readBounded, readStdin, recordPath, loadRecord, archive };
+module.exports = { ROOT, MAX_BYTES, ID, validate, parse, safePath, readBounded, readStdin, recordPath, loadRecord, archive,
+  learningRef, knowledgeTarget, validateLearningLinks };

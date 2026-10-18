@@ -173,7 +173,8 @@ test('registered exec-form hooks preserve Stop and restore all four sources', ()
   const stop = settings.hooks.Stop[0].hooks[0];
   const result = run(stop, { hook_event_name: 'Stop', permission_mode: 'default', stop_hook_active: false });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(JSON.parse(result.stdout).decision, 'block');
+  assert.equal(result.stdout, '');
+  assert.equal(result.stderr, '');
   const active = run(stop, { hook_event_name: 'Stop', permission_mode: 'default', stop_hook_active: true });
   assert.equal(active.status, 0);
   assert.equal(active.stdout, '');

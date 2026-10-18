@@ -17,30 +17,30 @@ function run(input, target = script, cwd = os.tmpdir()) {
   });
 }
 
-test('normal main Stop requests a memory check with fixed protocol output', () => {
+test('normal main Stop passes without emitting a block decision', () => {
+  assert.equal(evaluate(stop), null);
   const result = run(JSON.stringify(stop));
   assert.equal(result.status, 0);
   assert.equal(result.stderr, '');
-  const output = JSON.parse(result.stdout);
-  assert.deepEqual(Object.keys(output).sort(), ['decision', 'reason']);
-  assert.equal(output.decision, 'block');
-  for (const text of ['handoff.md', '主 Agent', '只读', '不得绕过',
-    'task-archive.cjs', 'task_id', 'recorded_at', '幂等', 'supersedes', '不因 Stop 次数', '不自动保存']) {
-    assert.ok(output.reason.includes(text));
-  }
-});
-
-test('repeated active stops pass and a new ordinary stop is blocked again', () => {
-  const decisions = [false, true, true, false].map(active =>
-    evaluate({ ...stop, stop_hook_active: active })?.decision ?? null);
-  assert.deepEqual(decisions, ['block', null, null, 'block']);
-  const result = run(JSON.stringify({ ...stop, stop_hook_active: true }));
-  assert.equal(result.status, 0);
   assert.equal(result.stdout, '');
 });
 
+test('normal and active stops pass without recursive blocking', () => {
+  for (const active of [false, true]) {
+    assert.equal(evaluate({ ...stop, stop_hook_active: active }), null);
+    const result = run(JSON.stringify({ ...stop, stop_hook_active: active }));
+    assert.equal(result.status, 0);
+    assert.equal(result.stdout, '');
+    assert.equal(result.stderr, '');
+  }
+});
+
 test('plan mode passes without requesting memory writes', () => {
-  assert.equal(evaluate({ ...stop, permission_mode: 'plan' }), null);
+  assert.equal(evaluate({ hook_event_name: 'Stop', permission_mode: 'plan' }), null);
+  const result = run(JSON.stringify({ ...stop, permission_mode: 'plan' }));
+  assert.equal(result.status, 0);
+  assert.equal(result.stdout, '');
+  assert.equal(result.stderr, '');
 });
 
 test('SubagentStop and other events pass without requiring Stop fields', () => {
@@ -49,8 +49,9 @@ test('SubagentStop and other events pass without requiring Stop fields', () => {
   }
 });
 
-test('main agent_type does not incorrectly suppress the check', () => {
-  assert.equal(evaluate({ ...stop, agent_type: 'custom-main' }).decision, 'block');
+test('agent_type does not change pass-through or bypass input validation', () => {
+  assert.equal(evaluate({ ...stop, agent_type: 'custom-main' }), null);
+  assert.throws(() => evaluate({ ...stop, agent_type: 'custom-main', stop_hook_active: 'false' }));
 });
 
 test('invalid input fails non-blockingly without exposing payload', () => {
@@ -80,7 +81,8 @@ test('exec form supports a script path containing spaces from another cwd', () =
     fs.copyFileSync(script, target);
     const result = run(JSON.stringify(stop), target);
     assert.equal(result.status, 0);
-    assert.equal(JSON.parse(result.stdout).decision, 'block');
+    assert.equal(result.stdout, '');
+    assert.equal(result.stderr, '');
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Module definition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "summary",
+    "authors",
+    "sources",
+    "connectors",
+    "id",
+    "children",
+    "overview",
+    "workflows"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 100,
+      "pattern": "^[^\\r\\n]+$",
+      "description": "100–250 non-whitespace characters; checked by the maintenance script."
+    },
+    "authors": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^\\S+$"
+      },
+      "description": "Human author IDs from one team; empty when unknown. References and team membership checked by maintenance script."
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "connectors": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^\\.cbim/connectors/[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*$"
+      }
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))[^\\\\\\s:/]+(?:/[^\\\\\\s:/]+)*$"
+    },
+    "children": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))[^\\\\\\s:/]+(?:/[^\\\\\\s:/]+)*$"
+      }
+    },
+    "overview": {
+      "const": "module.md"
+    },
+    "workflows": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "reference"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reference": {
+            "type": "string",
+            "pattern": "^workflows/[a-z][a-z0-9]*(?:_[a-z0-9]+)*/workflow\\.md$"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "location",
+        "scope"
+      ],
+      "properties": {
+        "location": {
+          "type": "string",
+          "minLength": 1,
+          "description": "仅引用项目相对文件夹路径，不直接引用文件；文件按所在文件夹登记，具体维护范围由 scope 与 overview 说明。路径类型需依据文件系统或工程证据核实。"
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1,
+          "description": "一句话说明物理源的主要维护对象及必要排除条件；混装细节、具体边界与核验限制归 overview，不在索引中展开。"
+        }
+      }
+    }
+  }
+}

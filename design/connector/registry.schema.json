@@ -1,0 +1,58 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "connectors"
+  ],
+  "properties": {
+    "connectors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "summary",
+          "plugin"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^\\.cbim/connectors/[A-Za-z0-9_-]+$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "plugin": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ghost_id",
+              "namespace"
+            ],
+            "properties": {
+              "ghost_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "namespace": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

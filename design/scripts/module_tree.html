@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CBIM · 项目模块树</title>
+<style>
+:root{color-scheme:light dark;font:14px system-ui,sans-serif}*{box-sizing:border-box}body{margin:0;background:Canvas;color:CanvasText}header{padding:16px 20px;border-bottom:1px solid GrayText}h1{font-size:21px;margin:0 0 8px}p{margin:6px 0;color:GrayText}nav{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}button,input{font:inherit;padding:7px 10px;border:1px solid GrayText;border-radius:6px;background:Canvas;color:CanvasText}input[type=search]{width:210px;max-width:100%}main{display:grid;grid-template-columns:minmax(0,1fr) 300px}#viewport{height:75vh;min-height:420px;overflow:hidden;touch-action:none;cursor:grab}svg{display:block;width:100%;height:100%;user-select:none}aside{padding:18px;border-left:1px solid GrayText;overflow:auto;max-height:75vh;overflow-wrap:anywhere}h2{font-size:17px}dt{font-weight:bold;margin-top:16px}dd{margin:5px 0;white-space:pre-wrap}.edge{stroke:GrayText;fill:none;stroke-width:1.2}.node rect{fill:Canvas;stroke:GrayText}.node text{fill:CanvasText;font-size:14px}.node{cursor:pointer}.node:focus rect,.selected rect{stroke:Highlight;stroke-width:3}.match rect{stroke:Highlight;stroke-width:3}.virtual rect{stroke-dasharray:5 3}.muted{opacity:.35}#status{font-size:12px} @media(max-width:650px){header{padding:12px}main{display:block}#viewport{height:60vh;min-height:340px}aside{border-left:0;border-top:1px solid GrayText;max-height:none}}
+</style>
+<header><h1>项目模块树</h1><p id="meta"></p><p>连线表示模块包含关系；业务依赖约束以各模块类图为准。拖动画布，滚轮缩放，点击节点查看详情。</p>
+<nav><input id="search" type="search" aria-label="搜索模块" placeholder="搜索名称、路径、职责"><button id="next">定位下一个</button><button id="all">展开全部</button><button id="fold">仅顶层</button><button id="fit">全图</button><button id="read">可读大小</button><button id="plus" aria-label="放大">＋</button><button id="minus" aria-label="缩小">－</button><label><input id="virtual" type="checkbox">显示直属内容</label><span id="status" aria-live="polite"></span></nav></header>
+<main><div id="viewport"><svg id="canvas" role="img" aria-label="全项目模块树"><g id="scene"></g></svg></div><aside id="detail"><h2>选择一个模块</h2><p>默认显示全部正式模块。选中节点后可折叠它的子树；隐藏内容不会从定义中删除。</p><p>这是生成时的快照；修改模块后重新运行工具刷新。</p></aside></main>
+<script id="data" type="application/json">__MODULE_TREE_DATA__</script>
+<script>
+'use strict';
+const data=JSON.parse(document.getElementById('data').textContent),nodes=data.nodes;
+const $=id=>document.getElementById(id),svg=$('canvas'),scene=$('scene'),collapsed=new Set();
+let scale=1,tx=24,ty=24,positions={},width=1000,height=600,selected=null,matches=[],index=-1;
+const parent={};for(const n of Object.values(nodes))for(const c of n.children)parent[c]=n.id;
+$('meta').textContent=`${data.project} · ${Object.keys(nodes).length} 个正式模块 · ${data.roots.length} 个顶层节点 · ${data.generated}`;
+function el(tag,attrs={},text){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,v);if(text!==undefined)e.textContent=text;return e}
+function transform(){scene.setAttribute('transform',`translate(${tx},${ty}) scale(${scale})`)}
+function kids(n){return n.virtual?[]:[...n.children,...($('virtual').checked&&n.sources.length?[n.id+'::direct']:[])]}
+function get(id){return nodes[id]||{id,name:'直属内容（虚拟子模块）',summary:'所属模块维护范围中扣除其他模块归属后的直属内容；sources 和 scope 共同界定边界。',sources:nodes[id.slice(0,-8)].sources,authors:[],children:[],virtual:true}}
+function draw(){scene.replaceChildren();positions={};let row=0,maxDepth=0;
+function layout(id,depth){positions[id]={x:depth*320,y:row++*48};maxDepth=Math.max(maxDepth,depth);if(!collapsed.has(id))for(const c of kids(get(id)))layout(c,depth+1)}
+for(const r of data.roots)layout(r,0);width=maxDepth*320+300;height=row*48+20;
+for(const [id,p] of Object.entries(positions)){const n=get(id);if(!collapsed.has(id))for(const c of kids(n)){const q=positions[c];scene.append(el('path',{class:'edge',d:`M${p.x+12},${p.y+34} V${q.y+17} H${q.x}`}))}}
+for(const [id,p] of Object.entries(positions)){const n=get(id),g=el('g',{class:'node'+(n.virtual?' virtual':'')+(selected===id?' selected':'')+(matches.includes(id)?' match':''),transform:`translate(${p.x},${p.y})`,tabindex:0,role:'button','aria-label':n.name});g.append(el('rect',{width:290,height:34,rx:6}));let label=(collapsed.has(id)?'▸ ':'')+n.name;g.append(el('text',{x:10,y:22},label.length>33?label.slice(0,31)+'…':label));g.append(el('title',{},n.name+'\n'+n.summary));g.onclick=()=>choose(id);g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose(id)}};scene.append(g)}transform();$('status').textContent=`可见 ${row} 节点${matches.length?' · 命中 '+matches.length:''}`}
+function choose(id){selected=id;const n=get(id),panel=$('detail');panel.replaceChildren();function add(tag,text){const e=document.createElement(tag);e.textContent=text;panel.append(e);return e}add('h2',n.name);add('p',n.id);add('p',n.summary);if(!n.virtual){add('p','作者：'+(n.authors.join('、')||'无'));add('p','正文：'+n.id+'/module.md');if(kids(n).length){const b=add('button',collapsed.has(id)?'展开子树':'折叠子树');b.onclick=()=>{collapsed.has(id)?collapsed.delete(id):collapsed.add(id);choose(id)}}}add('h2','Source 与维护范围');if(!n.sources.length)add('p','无');for(const s of n.sources){add('dt',s.location);add('dd',s.scope||'无')}draw()}
+function fit(){scale=Math.min(svg.clientWidth/(width+40),svg.clientHeight/(height+40),1);tx=20;ty=20;transform()}
+function zoom(f){const s=Math.min(3,Math.max(.04,scale*f)),x=svg.clientWidth/2,y=svg.clientHeight/2;tx=x-(x-tx)*s/scale;ty=y-(y-ty)*s/scale;scale=s;transform()}
+function locate(){if(!matches.length)return;const id=matches[++index%matches.length];let p=parent[id];while(p){collapsed.delete(p);p=parent[p]}choose(id);scale=1;tx=20-positions[id].x;ty=svg.clientHeight/3-positions[id].y;transform()}
+$('search').oninput=()=>{const q=$('search').value.trim().toLowerCase();matches=q?Object.values(nodes).filter(n=>(n.name+' '+n.id+' '+n.summary).toLowerCase().includes(q)).map(n=>n.id):[];index=-1;draw();if(q&&!matches.length)$('status').textContent='无匹配模块'};
+$('search').onkeydown=e=>{if(e.key==='Enter')locate()};$('next').onclick=locate;
+$('fit').onclick=fit;$('read').onclick=()=>{scale=1;tx=20;ty=20;transform()};$('plus').onclick=()=>zoom(1.25);$('minus').onclick=()=>zoom(.8);
+$('all').onclick=()=>{collapsed.clear();draw()};$('fold').onclick=()=>{for(const id of Object.keys(nodes))collapsed.add(id);draw();fit()};$('virtual').onchange=()=>{draw()};
+svg.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY<0?1.1:1/1.1)},{passive:false});
+let drag=null;svg.onpointerdown=e=>{if(e.target.closest('.node'))return;drag={x:e.clientX,y:e.clientY,tx,ty};svg.setPointerCapture(e.pointerId)};svg.onpointermove=e=>{if(drag){tx=drag.tx+e.clientX-drag.x;ty=drag.ty+e.clientY-drag.y;transform()}};svg.onpointerup=svg.onpointercancel=()=>{drag=null};
+draw(); // Keep labels readable by default; the full tree remains on one canvas.
+</script></html>

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "groups"
+  ],
+  "properties": {
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "agents"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^\\.cbim/team(?:/[^/]+)*$"
+          },
+          "agents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "summary"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^\\.cbim/team/(?:[^/]+/)*[^/]+$"
+                },
+                "summary": {
+                  "type": "string",
+                  "minLength": 100
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

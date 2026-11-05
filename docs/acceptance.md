@@ -1,0 +1,57 @@
+# 首版验收与交付边界
+
+验证日期：2026-11-05。目标平台：Windows x64。CBIM 定位为面向 AI 原生团队的生产与治理体系，CBIM Assistant 是其桌面产品入口（见 [产品说明](product-positioning.md)）；本次交付工作区、知识治理与 MCP 的最小运行闭环，自主 AI 工作流执行尚未实现。
+
+## 程序与启动
+
+- 便携目录：`build/<北京时间 YYYYMMDD-HHmmss>/CBIM Assistant-win32-x64/`。
+- 启动：双击目录中的 `CBIM Assistant.exe`，人工添加业务工程。
+- 分发：`build/<构建时间>/make/zip/win32/x64/CBIM-Assistant-<构建时间>-win32-x64-0.1.0.zip`，解压后保留完整目录，不能只复制 EXE。
+- 最近成功构建的目录、EXE 和 ZIP 路径记录在 `build/latest-build.json`。每次构建自身的元数据在时间目录内的 `build-info.json`；`stage` 区分完成 package 与完成 make。
+- 首次打开业务工程时初始化缺失的 `.cbim/`；已有知识不覆盖。运行记录默认放在用户主目录 `.cbim/`，不放入业务工程。
+
+## 验证命令与证据
+
+```powershell
+pnpm typecheck
+pnpm test --reporter=default --reporter=json --outputFile=test-results/unit.json
+pnpm make
+pnpm test:desktop
+pnpm test:portable
+```
+
+运行结果保存在 `test-results/`，该目录为本地生成证据，不纳入版本控制。执行命令会重新生成相应证据。
+
+| 验证 | 证据与范围 |
+|---|---|
+| TypeScript 类型检查 | `pnpm typecheck` 退出码 |
+| 规则与服务集成 | `unit.json`；31 项测试，覆盖真实文件、正式 MCP SDK、并发与失败恢复、页签恢复排序，以及本地/远端仓库、鉴权、身份与版本冲突、端口占用和关闭 |
+| 打包桌面界面 | `desktop.json`、`desktop.png`；双工作区隔离、四类页签、鼠标拖动与键盘排序、重启后布局和草稿恢复、真实架构图与任务状态、深浅色及渲染错误检查 |
+| 工程外便携启动 | `portable.json`；复制产物到临时目录，隔离用户数据，PATH 不含 Node/Python，实际初始化知识、加载 Schema 并启动 MCP |
+
+自动化测试包含空工程与已有工程、兼容性诊断、同名工程隔离、路径别名与跨进程锁、登记并发合并、缓存损坏、不可用用户数据路径、移除及重新定位、鉴权与实例身份、双工作区 MCP 连接、过期写入、幂等重试、移动引用、删除悬空引用、链接及路径越界、端口冲突、关闭等待提交、任务取消和外部变化检测。
+
+崩溃测试使用真实子进程：第一份文件写入后终止进程，再次打开时恢复事务、接管内核锁并更换运行实例身份。安装目录测试拒绝安装根、资源子目录及其链接别名。
+
+桌面脚本通过 preload 调用添加/打开工作区，再通过真实页面操作切换、校验和关闭；没有自动操作系统文件夹选择对话框。便携测试不是全新 Windows 虚拟机测试，`cleanMachine` 明确为 `false`。
+
+界面验证入口为 `scripts/workspace-ui-smoke.mjs`。图中使用隔离测试工程的正式知识文件，不向真实业务工程写入演示内容。`knowledge-dark.png` 和 `knowledge-light.png` 保存项目架构图的两种主题截图。界面交互和能力边界详见 [工作区界面](workspace-ui.md)。
+
+## 已实现与限制
+
+已实现：Electron/React 桌面入口、多工作区独立服务、模块树与知识查看编辑、变更预览、TypeScript 确定性规则、正式 MCP 查询和受控写入、版本冲突检查、多文件事务日志及实际恢复。
+
+尚未实现或未验证：
+
+- 自主 AI 成员调度、模型接入与业务 Workflow 自动执行，不属于本次已交付运行能力。
+- 架构语义、自然语言 scope、业务运行正确性仍需团队 review；结构校验通过不能替代这些判断。
+- 旧 Python 专用工具并非全部迁移；详见 [规则迁移](rule-migration.md)。新应用运行时不调用 Python；当前资源包仍包含 `design/` 中的历史参考脚本。
+- 跨物理磁盘写入、不同 Windows 账户竞争同一工程、全新系统安装尚未实测。没有据此声称通过完整的全部验收场景。
+- 未签名的 Windows 便携包；未验证 macOS/Linux 构建、安装器、自动更新。
+- 各工作区共享 Electron 主进程；主进程崩溃会停止所有工作区，不能声称具有进程级故障隔离。
+- 多文件写入不是操作系统级原子事务；外部程序可能看到中间状态。外部编辑器不遵守锁时仍存在最终比较与替换之间的竞争窗口。
+- 凭据按当前用户的数据目录权限保护；同用户进程不是安全隔离边界。
+- `.cbim.local/` 仅检测和提示迁移方案，不自动迁移或删除真实历史。
+- 模块树测试覆盖结构与虚拟节点规则，未进行大规模性能基准；无障碍与完整交互回归也未完成。
+
+架构、生命周期及存储详见 [实现架构](assistant-architecture.md)，协议和授权详见 [MCP 接口](assistant-mcp.md)。

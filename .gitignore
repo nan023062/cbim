@@ -1,49 +1,11 @@
-.venv/
+node_modules/
+.vite/
+out/
+build/
+publish/rules/
+publish/[0-9]*/
+publish/latest-build.json
+publish/latest-build.json.*.tmp
 __pycache__/
 *.pyc
-cbim-kernel-*.tar.gz
-
-# C# generated files (root scratch csproj; src ones un-ignored via per-dir rule)
-obj/
-*.csproj
-
-#.claude/
-#CLAUDE.md
-.cbim/.venv/
-.cbim/run
-.cbim/run.cmd
-.cbim/logs/
-.cbim/.debug
-.cbim/.cc-status
-.cbim/index/
-.cbim/scheduler/state.json
-.cbim/scheduler/bt/
-.cbim/scheduler/dream/
-.cbim/dashboard/
-.cbim/memory/
-
-# CBIM
-.cbim/
-
-# CBIM governance shell — never commit to this public repo
-.claude/
-CLAUDE.md
-.mcp.json
-.claudeignore
-
-# v2 native-.NET tree: track sources/configs but ignore build artefacts
-!v2/src/**/*.csproj
-!v2/src/cbim.sln
-!v2/src/Directory.Build.props
-!v2/src/Directory.Packages.props
-!v2/src/nuget.config
-!v2/src/global.json
-!v2/src/.editorconfig
-v2/src/**/bin/
-v2/src/**/obj/
-
-# Engine behavior-tree resume scratch
-.bt-resume-payload*.txt
-
-# JetBrains Rider IDE config — never tracked
-.idea/
+test-results/

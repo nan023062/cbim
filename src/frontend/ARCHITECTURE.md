@@ -89,7 +89,7 @@ N_src_frontend_tasks ..> N_src_frontend_shell : 导入依赖
 
 - [automation/](automation/ARCHITECTURE.md)：工作区内部自动化展示；定时触发尚未实现。
 - [components/](components/ARCHITECTURE.md)：通用展示组件，不持有领域服务与运行状态。
-- [conversation/](conversation/ARCHITECTURE.md)：中央对话、输入、附件、队列与工具状态。队列以版本增量同步，不因空轮询替换列表引用。
+- [conversation/](conversation/ARCHITECTURE.md)：中央对话、输入、附件、队列与工具状态。权限说明覆盖业务文件与知识提交；队列以版本增量同步，不因空轮询替换列表引用。
 - [diagnostics/](diagnostics/ARCHITECTURE.md)：MCP 健康、流量与调用日志的诊断展示，不把服务在线视为知识校验通过。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识问题、预览提交和维护工具界面；业务架构展示位于 workspace。
 - [resources/](resources/ARCHITECTURE.md)：三类共享资源的查看与编辑界面。仓库设置通过统一设置入口打开。

@@ -81,7 +81,7 @@ export default async function(pi) {
   pi.on('before_agent_start',async(event)=>{
     const active=pi.getActiveTools();
     event.systemPromptOptions.promptGuidelines.push('本轮实际活动工具：'+active.join(', ')+'。权限事实以本轮工具和调用结果为准，不沿用历史助手消息中的只读、不可写或缺少工具结论。');
-    if(active.includes('write'))event.systemPromptOptions.promptGuidelines.push('本轮可调用 write 创建工作区业务文件（包括根目录下的 tetris.html），edit 修改文件；实际写入仍需通过 CBIM 授权。知识库 writeEnabled 不控制业务文件写入。用户要求实现时应调用工具落盘并验证，不用长篇源码回复代替执行；仅在真实拒绝或错误后报告对应阻塞。');
+    if(active.includes('write'))event.systemPromptOptions.promptGuidelines.push('本轮可调用 write 创建工作区业务文件（包括根目录下的 tetris.html），edit 修改文件；实际写入仍需通过 CBIM 授权。业务写入与知识提交共用本轮权限；知识必须通过 cbim_ 工具操作，不能用原生工具直接修改 .cbim/。用户要求实现时应调用工具落盘并验证，不用长篇源码回复代替执行；仅在真实拒绝或错误后报告对应阻塞。');
     else event.systemPromptOptions.promptGuidelines.push('本轮未启用 write，请遵守只读权限；需要落盘时提示用户选择逐次询问或允许执行。');
   });
   pi.on('tool_call',async(event)=>{

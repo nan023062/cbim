@@ -1,11 +1,12 @@
 /**
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
- * 设计原因：插入请求和回执落盘到当前运行，不自动重放未确认插入；保存每轮用户消息、先持久化工具决策再放行；未知结果与验收区分，恢复必须显式核对。
+ * 设计原因：先持久化工具决策再放行，按真实运行身份生成拒绝、完成及未知结果回执；审批后复核停止状态，不自动重放未确认操作。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {safeId} from '../foundation/identity';
 import type {RunStorage} from './storage';
+import {toolReceipt} from '../tools/receipts';
 import type {AgentEngine,EngineEvent,RunSummary,StoredEvent,TaskSpec,ToolCall,ToolDecision} from './types';
 
 export interface RuntimeOptions {
@@ -53,10 +54,22 @@ export class LoopRuntime {
       const runId=randomUUID(),directory=path.join(this.options.directory,safeId(task.taskId),runId);
       const journal=this.options.storage.createJournal(directory,task,runId);await journal.init();
       const pendingTools=new Set<string>();
+      const calls=new Map<string,{call:ToolCall;decision:ToolDecision}>();
+      const identity={workspaceId:task.workspaceId,taskId:task.taskId,runId};
       const emit=async(event:EngineEvent)=>{
+        if(event.type==='tool.finished'){
+          const known=calls.get(String(event.data.id));
+          const {receipt:_untrustedReceipt,...data}=event.data;
+          // 被拒绝调用也可能收到 Pi 的失败结束事件；不能覆盖为成功，也不接受无 gate 的伪造回执。
+          if(known){
+            if(data.name!==undefined&&data.name!==known.call.name)throw Error('工具结果名称与已授权调用不一致');
+            event={...event,data:{...data,receipt:toolReceipt(identity,known.call,known.decision,!known.decision.allow?'denied':data.isError?'failed':'succeeded',data.result)}};
+          }else event={...event,data};
+        }
         const saved=await journal.append(event);
         if(event.type==='tool.allowed')pendingTools.add(String(event.data.id));
         if(event.type==='tool.finished')pendingTools.delete(String(event.data.id));
+        if(event.type==='tool.denied')pendingTools.delete(String(event.data.id));
         try{void Promise.resolve(this.options.onEvent?.(saved)).catch(()=>{})}catch{/* observers cannot change durable execution */}
       };
       const engine=this.options.createEngine();let stopping=false;
@@ -74,9 +87,18 @@ export class LoopRuntime {
         let failure:unknown;
         try{
           await engine.start({task,runId,directory,sessionFile:previous?.sessionFile,emit,beforeTool:async call=>{
+            call=structuredClone(call);
+            if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
+            calls.set(call.id,{call,decision:{allow:false}});
             await emit({type:'tool.proposed',data:{...call}});
-            const decision=stopping?{allow:false,reason:'任务正在停止'}:await this.options.toolPolicy(call);
-            await emit({type:decision.allow?'tool.allowed':'tool.denied',data:{...call,...decision}});
+            let decision=stopping?{allow:false,reason:'任务正在停止'}:await this.options.toolPolicy(structuredClone(call));
+            if(stopping)decision={...decision,allow:false,reason:'任务正在停止'};
+            calls.set(call.id,{call,decision});
+            await emit({type:decision.allow?'tool.allowed':'tool.denied',data:{...call,...decision,...(!decision.allow?{receipt:toolReceipt(identity,call,decision,'denied')}: {})}});
+            if(stopping&&decision.allow){
+              decision={...decision,allow:false,reason:'任务正在停止'};calls.set(call.id,{call,decision});
+              await emit({type:'tool.denied',data:{...call,...decision,receipt:toolReceipt(identity,call,decision,'denied')}});
+            }
             return decision;
           }});
           result=stopping?{status:'cancelled' as const}:await engine.run(message);
@@ -85,7 +107,7 @@ export class LoopRuntime {
         }finally{
           try{await engine.close()}catch(error){failure??=error}
           try{
-            if(failure||pendingTools.size)await emit({type:'run.interrupted',data:{error:failure instanceof Error?failure.message:String(failure||'工具结果未确认'),unresolvedTools:[...pendingTools]}});
+            if(failure||pendingTools.size)await emit({type:'run.interrupted',data:{error:failure instanceof Error?failure.message:String(failure||'工具结果未确认'),unresolvedTools:[...pendingTools],receipts:[...pendingTools].map(id=>{const item=calls.get(id)!;return toolReceipt(identity,item.call,item.decision,'unknown')})}});
             else await emit({type:'run.settled',data:{...result,acceptance:'not_evaluated'}});
             await journal.flush();
           }finally{this.active.delete(task.taskId);this.injections.delete(task.taskId);release()}

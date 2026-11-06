@@ -1,6 +1,6 @@
 /**
  * 作用定位：调度引擎：将工作区内部知识服务、内核锁与前置策略注入独立 LoopRuntime。
- * 设计原因：传递主进程解析的图片字节给 Pi；仅依赖 Core 与注入的运行保障接口，平台锁和模型由应用装配，依据持久化身份选主 Agent 或团队任务指引，并在原生写入前执行权限审批；结构化问题经注入通道等待用户答复。
+ * 设计原因：原生与知识工具共用 Core 运行授权，知识参数及实例在 gate 前核验；只读禁止两类写入，ask 共用本轮审批，领域事务与平台边界不可豁免。
  */
 import {questionTool} from '../conversation/questions';
 import path from 'node:path';
@@ -16,8 +16,10 @@ import type {ChatPermission} from '../../core/brain/types';
 import {LoopRuntime,PiEngine,type TaskSpec,type StoredEvent,type ToolCall,type ToolDecision} from '../../core/brain';
 import type {PiCommand} from '../../core/brain/pi/rpc';
 import type {ResolvedLlm} from '../../core/brain/llm/ports';
+import {authorizeRunTool} from '../../core/policy/tool-policy';
+import {questionInput} from '../../core/tools/questions';
 
-/** 工作区执行装配参数；默认只开放本地只读工具和受工作区写入开关保护的知识工具。 */
+/** 工作区执行装配参数；未指定权限时默认只读，知识与业务写入由同一运行策略控制。 */
 export interface WorkspaceLoopOptions {
   /** 由持久化任务身份确定指引，不接收界面任意提示词。 */
   mode?:'chat';
@@ -42,7 +44,7 @@ export interface ExecutionServices {
   storage:import('../../core/brain/storage').RunStorage;
   /** 跨进程任务互斥；返回释放函数，由运行时在结束后调用。 */
   acquireLease(task:TaskSpec):Promise<()=>void>;
-  /** 原生工具白名单检查后仍须通过此策略；知识写入另由 Core 校验授权。 */
+  /** 原生工具仍须通过平台边界；两类写入共用运行授权，知识另核验 Schema、实例与版本。 */
   authorizeNative(call:ToolCall):Promise<ToolDecision>;
 }
 async function bundledPiEntry(){
@@ -67,7 +69,8 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
   const directory=path.join(paths.project(workspace.id),'loop-engine');await fs.mkdir(directory,{recursive:true});
   const agentHome=path.join(directory,'pi');
   const command=options.process??{command:process.execPath,args:[await bundledPiEntry()],env:{ELECTRON_RUN_AS_NODE:'1'}};
-  let allowedKnowledge=new Set<string>();
+  const permission=options.permission??(options.allowNativeExecution?'execute':'read');
+  const policyContext={workspaceId:workspace.id,permission,guard:services.authorizeNative,approve:options.requestApproval};
   const runtime=new LoopRuntime({
     storage:services.storage,
     directory:path.join(directory,'tasks'),
@@ -75,19 +78,20 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
       if(task.workspaceId!==workspace.id||task.root!==workspace.path)throw Error('任务与工作区身份不匹配');
       return services.acquireLease(task);
     },
-    createEngine:()=>new PiEngine({process:command,provider:options.provider,model:options.model,llm:options.llm,images:options.images,agentHome,prompt:(options.mode==='chat'?mainAgentInstructions:loopInstructions)+(options.requestQuestion?'\n需要用户在多个方向、方案或偏好间选择时，调用 cbim_ask_user_question 展示选项卡，等待答复后继续，不要仅在正文列编号让用户回复。界面自动提供其它补充输入，不要把其它添加到 options。常规实现细节自行判断，不为不必要的选择打断任务。问题回答不等于工具授权。':''),allowNativeExecution:options.allowNativeExecution,turnTimeoutMs:options.turnTimeoutMs,
+    createEngine:()=>new PiEngine({process:command,provider:options.provider,model:options.model,llm:options.llm,images:options.images,agentHome,prompt:(options.mode==='chat'?mainAgentInstructions:loopInstructions)+(options.requestQuestion?'\n需要用户在多个方向、方案或偏好间选择时，调用 cbim_ask_user_question 展示选项卡，等待答复后继续，不要仅在正文列编号让用户回复。界面自动提供其它补充输入，不要把其它添加到 options。常规实现细节自行判断，不为不必要的选择打断任务。问题回答不等于工具授权。':''),allowNativeExecution:permission!=='read',turnTimeoutMs:options.turnTimeoutMs,
       knowledge:{
-        list:async()=>{const tools=[...service.list(),...(options.requestQuestion?[questionTool]:[])];allowedKnowledge=new Set(tools.map(t=>t.name));return tools},
-        call:async(name,args,signal)=>name===questionTool.name&&options.requestQuestion?{content:[{type:'text',text:JSON.stringify(await options.requestQuestion(args,signal))}]}:service.call(name,args,true,signal),
+        list:async()=>[...service.list(),...(options.requestQuestion?[questionTool]:[])],
+        call:async(name,args,signal)=>name===questionTool.name&&options.requestQuestion?{content:[{type:'text',text:JSON.stringify(await options.requestQuestion(args,signal))}]}:service.callFromRun(name,args,permission!=='read',signal),
       },
     }),
     toolPolicy:async call=>{
-      if(allowedKnowledge.has(call.name))return {allow:true}; // 内部工具仍受工作区写入授权控制。
-      const native=options.allowNativeExecution?['read','grep','find','ls','bash','write','edit']:['read','grep','find','ls'];
-      if(!native.includes(call.name))return {allow:false,reason:'当前运行未授权此工具'};
-      const decision=await services.authorizeNative(call);if(!decision.allow)return decision;
-      if(options.permission==='ask'&&['bash','write','edit'].includes(call.name))return options.requestApproval?options.requestApproval(call):{allow:false,reason:'审批通道不可用'};
-      return decision;
+      owner.assert();
+      try{
+        if(call.name===questionTool.name&&options.requestQuestion){questionInput.parse(call.input);return await authorizeRunTool(call,{effects:['read'],native:false},policyContext)}
+        if(call.name.startsWith('cbim_'))return await authorizeRunTool(call,service.describe(call.name,call.input),policyContext);
+        if(!['read','grep','find','ls','bash','write','edit'].includes(call.name))return {allow:false,reason:'当前运行未授权此工具'};
+        return await authorizeRunTool(call,{effects:[call.name==='bash'?'command':['write','edit'].includes(call.name)?'business-write':'read'],native:true},policyContext);
+      }catch(error){return {allow:false,reason:error instanceof Error?error.message:String(error)}}
     },onEvent:options.onEvent,
   });
   return {runtime,workspace,agentHome,newTask:(goal:string,acceptance:string[]=[]):TaskSpec=>({taskId:randomUUID(),workspaceId:workspace.id,root:workspace.path,goal,moduleIds:[],acceptance})};

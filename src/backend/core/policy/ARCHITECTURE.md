@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-现有对话权限与确认的数据契约。尚未统一知识写开关和原生权限，不将目录存在视为权限重构完成。
+内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；外部 MCP 保留独立凭据与写开关，不声称操作系统隔离。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,9 +10,35 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [tool-policy.ts](tool-policy.ts) | 内部 Loop 的统一工具授权策略，同时处理业务文件与正式知识写入。 |
 | [types.ts](types.ts) | 对话权限模式和单次人工确认契约。 |
 
 ## 架构类图
+
+### tool-policy.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_policy_tool_policy_ts["tool-policy.ts"] {
+  <<module>>
+}
+class N_src_backend_core_policy_tool_policy_ts_RunToolDescriptor["RunToolDescriptor"] {
+  <<interface>>
+  +effects
+  +native
+}
+N_src_backend_core_policy_tool_policy_ts ..> N_src_backend_core_policy_tool_policy_ts_RunToolDescriptor : 声明
+class N_src_backend_core_policy_tool_policy_ts_RunPolicyContext["RunPolicyContext"] {
+  <<interface>>
+  +workspaceId
+  +permission
+  +guard()
+  +approve()
+}
+N_src_backend_core_policy_tool_policy_ts ..> N_src_backend_core_policy_tool_policy_ts_RunPolicyContext : 声明
+```
+
+直接依赖：[types.ts](types.ts)、[../tools/types.ts](../tools/types.ts)。
 
 ### types.ts
 
@@ -37,6 +63,19 @@ class N_src_backend_core_policy_types_ts_ChatApproval["ChatApproval"] {
 N_src_backend_core_policy_types_ts ..> N_src_backend_core_policy_types_ts_ChatApproval : 声明
 ```
 
+
+### 本目录调用边界
+
+```mermaid
+classDiagram
+class N_src_backend_core_policy_tool_policy_ts["tool-policy.ts"] {
+  <<module>>
+}
+class N_src_backend_core_policy_types_ts["types.ts"] {
+  <<module>>
+}
+N_src_backend_core_policy_tool_policy_ts ..> N_src_backend_core_policy_types_ts : 导入依赖
+```
 
 
 ## 子目录导航

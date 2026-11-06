@@ -54,7 +54,11 @@ KnowledgeService 统一维护工具定义、参数 Schema、实例核验、查�
 
 ## 权限与持久化
 
-默认开放 read/grep/find/ls 和内部知识工具；显式启用原生执行才开放 bash/write/edit。知识正文提交仍另需工作区 Agent 写入授权，两者互不替代。
+内部 Loop 的业务与知识工具共用本轮权限：read 拒绝业务写入、知识提交、索引刷新及命令；ask 对这些操作逐次确认；execute 自动执行，但保留平台边界与知识实例、版本及事务检查。只读查询、结构校验和预览可用，预览可能保存本地计划缓存，不修改正式知识。未提供 permission 的 CLI 保持 allowNativeExecution 的兼容映射：false 为 read，true 为 execute。
+
+内部知识调用采用桥接 gate 的一次性授权，不修改工作区 writable 开关，也不为外部 MCP 扩权；外部 MCP 仍按原凭据和开关检查。“本次全部通过”只在当前运行有效，停止与结束清理；审批期间停止后，迟到批准不能重新放行。
+
+运行摘要新增 toolReceipts，记录 workspaceId、taskId、runId、toolCallId、输入/结果哈希、副作用、范围与 succeeded/failed/denied/unknown。结果随事件落盘后返回，模型自带 receipt 不作为权威记录。旧日志不补造回执；Pi 在 Schema 阶段直接拒绝且未到达 gate 的调用仍保留原工具错误事件。命令范围为 unknown，不声称已完成系统级隔离；回执不是业务验收结果。
 
 工具放行前记录提议、授权决定并 fsync，写失败拒绝执行。未收到结果的获准操作需要核实，不自动重放。`agent_settled` 才结束运行；`completed` 只表示引擎结束，验收仍为 `not_evaluated`。
 
@@ -90,7 +94,7 @@ loop.start/resume 未传供应商时使用全局默认；options.profileId 可�
 
 ## 对话页面
 
-对话页默认内置主 Agent，直接输入文字即可发送，不需要模块、团队 Agent、Workflow、责任人或验收表单。空工作区也能聊天，知识按需通过内部工具查询。可选模型或沿用默认模型；原生文件修改与命令执行默认关闭，知识写入权限另行控制。
+对话页默认内置主 Agent，直接输入文字即可发送，不需要模块、团队 Agent、Workflow、责任人或验收表单。空工作区也能聊天，知识按需通过内部工具查询。可选模型或沿用默认模型；桌面默认采用逐次询问，业务文件、知识提交和命令共用运行权限。模式变更在下次发送时生效。
 
 loop.chat 创建 mode=chat、agentId=cbim:main 的普通对话；loop.choices 仅保留给显式团队任务调用方，聊天页面不调用。loop.thread 按 taskId 返回全部运行轮次。页签只保存 taskId 和草稿，消息、工具、错误及执行状态从主进程日志恢复。页面每秒串行刷新，不持久化私有思维；公开文本增量随后由最终消息替换。每轮 run.started 保存本轮用户消息，历史版本无此字段时回退显示原始目标。
 

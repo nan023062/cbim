@@ -55,5 +55,7 @@ export interface RunSummary {
   acceptance: 'not_evaluated';
   sessionFile?: string;
   unresolvedTools: string[];
+  /** 新运行的工具事实回执；旧日志可能没有，不能补造为已验收证据。 */
+  toolReceipts?:import('../tools/types').ToolReceipt[];
   events: StoredEvent[];
 }

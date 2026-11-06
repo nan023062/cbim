@@ -174,8 +174,8 @@ try{
   await page.getByRole('combobox',{name:'对话模型',exact:true}).click();await page.getByRole('option').filter({hasText:'second-model'}).click();
   await page.getByRole('combobox',{name:'执行权限',exact:true}).click();await page.getByRole('option').filter({hasText:'只读访问'}).click();
   await page.getByRole('textbox',{name:'对话草稿',exact:true}).fill('优先执行队列B');await page.getByRole('button',{name:'加入队列',exact:true}).click();
-  const queueB=page.locator('.queued-message').filter({hasText:'优先执行队列B'});await queueB.waitFor();await queueB.getByRole('button',{name:'设为下一条',exact:true}).click();
-  await page.waitForFunction(()=>document.querySelector('.queued-message p')?.textContent==='优先执行队列B');
+  const queueB=page.locator('.queued-message').filter({hasText:'优先执行队列B'});await queueB.waitFor();await queueB.locator('.queue-grip').press('Alt+ArrowUp');
+  await page.waitForFunction(()=>document.querySelector('.queued-message .queue-text')?.textContent==='优先执行队列B');
   await page.screenshot({path:'test-results/message-queue.png'});
   await page.getByRole('button',{name:'停止执行',exact:true}).click();await page.getByRole('button',{name:'继续队列',exact:true}).waitFor();
   await page.waitForFunction(()=>[...document.querySelectorAll('.chat-run-status')].at(-1)?.textContent.includes('已停止'));

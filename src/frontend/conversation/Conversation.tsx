@@ -32,7 +32,7 @@ interface HistoryItem {task?:{taskId:string;goal:string};runId:string;status:str
 export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings,onAttachments}:{tab:ViewTab;workspace:WorkspaceView;onDraft:(draft:string)=>void;openView:(kind:TabKind)=>void;onBind:(taskId?:string)=>void;openSettings:()=>void;onAttachments:(items:ChatAttachment[])=>void}){
   const [section,setSection]=useState<'chat'|'tasks'>('chat');
   const [models,setModels]=useState<LlmSettings>(),[runs,setRuns]=useState<RunSummary[]>([]),[history,setHistory]=useState<HistoryItem[]>([]);
-  // 默认权限以手掌标识，提供执行工具，副作用逐次确认；用户仍可显式选择只读。
+  // 默认权限以手掌标识，业务文件与知识提交共用本轮审批；模式变化仅作用于下次发送。
   const preferenceKey='cbim.composer.'+workspace.id+'.'+tab.id;
   const readPreference=()=>{try{const value=JSON.parse(localStorage.getItem(preferenceKey)||'{}');return value&&typeof value==='object'?value:{}}catch{return {}}};
   const [selection,setSelection]=useState<string>(()=>typeof readPreference().selection==='string'?readPreference().selection:''),[permission,setPermission]=useState<ChatPermission>(()=>['read','ask','execute'].includes(readPreference().permission)?readPreference().permission:'ask');
@@ -131,9 +131,9 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
         <ComposerAttachments items={attachments} workspaceId={workspace.id} disabled={busy||attachmentBusy} onRemove={id=>onAttachments(attachments.filter(a=>a.id!==id))}/>
         <textarea ref={input} aria-label="对话草稿" disabled={busy} value={tab.draft||''} onChange={e=>onDraft(e.target.value)} placeholder="继续聊一聊…" title="Enter 发送或排队，Shift+Enter 换行；Ctrl+Enter 插入当前任务，沿用当前模型与权限" onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){if(canSend){e.preventDefault();void send(running&&(e.ctrlKey||e.metaKey))}else if(running&&!busy&&(e.ctrlKey||e.metaKey)&&queued[0]){e.preventDefault();void queueOperation('loop.queueInsert',{queueId:queued[0].id})}}}}/>
         <div className="chat-controls"><div className="chat-controls-left"><AttachmentMenu workspaceId={workspace.id} disabled={busy||attachmentBusy||attachments.length>=12} onBusy={setAttachmentBusy} onAdd={addAttachments}/><ComposerPicker label="执行权限" value={permission} onChange={v=>{setPermission(v as ChatPermission);if(running)setNextTip(Date.now())}} disabled={busy} warning={permission==='execute'} options={[
-          {value:'read',label:'只读访问',icon:'knowledge',description:'只查看和分析，不修改文件或执行命令'},
-          {value:'ask',label:'默认权限',icon:'hand',description:'可执行任务；写文件和运行命令前逐次确认'},
-          {value:'execute',label:'完全访问',icon:'warning',description:'自动执行原生工具；知识库写入仍需独立授权'},
+          {value:'read',label:'只读访问',icon:'knowledge',description:'只查看、分析和预览，不修改业务文件或正式知识，不执行命令'},
+          {value:'ask',label:'默认权限',icon:'hand',description:'修改业务文件、提交知识和运行命令前逐次确认'},
+          {value:'execute',label:'完全访问',icon:'warning',description:'自动执行业务文件、知识提交和命令操作；仍检查工作区边界及知识版本'},
         ]}/></div>
         <div className="chat-controls-right"><ComposerPicker label="对话模型" value={selection} onChange={value=>{setSelection(value);if(running)setNextTip(Date.now())}} disabled={busy||!models} fallbackLabel={models?'所选模型不可用':'正在加载模型…'} searchable align="right" options={[
           {value:'',label:models?.profiles.find(p=>p.id===models.selectedId)?.defaultModel||'选择模型',description:'使用设置中的默认供应商和模型',group:'默认'},

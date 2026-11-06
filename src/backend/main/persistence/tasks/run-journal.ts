@@ -1,10 +1,11 @@
 /**
  * 作用定位：本机执行事件日志，顺序追加并 fsync，从记录恢复摘要和未确认工具。
- * 设计原因：由 FileRunStorage 注入大脑；追加记录可靠保存后才通知观察者，一次写失败阻止后续无证据执行。
+ * 设计原因：由 FileRunStorage 注入大脑；先持久化后发布，读取时汇总运行时生成的调用回执，旧日志不补造回执，一次写失败阻止后续无证据执行。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {EngineEvent, RunSummary, StoredEvent, TaskSpec} from '../../../core/brain/types';
+import type {ToolReceipt} from '../../../core/tools/types';
 
 
 /** Append-only authority; fsync before callbacks receive the event. */
@@ -41,10 +42,19 @@ export class RunJournal {
       if(event.type==='session.bound')sessionFile=String(event.data.sessionFile);
       if(event.type==='tool.allowed')pending.add(String(event.data.id));
       if(event.type==='tool.finished')pending.delete(String(event.data.id));
+      if(event.type==='tool.denied')pending.delete(String(event.data.id));
       if(event.type==='run.settled')status=event.data.status as RunSummary['status'];
       if(event.type==='run.interrupted')status='interrupted';
     }
     if(pending.size)status='interrupted';
-    return {task,runId:first.runId,status,acceptance:'not_evaluated',sessionFile,unresolvedTools:[...pending],events};
+    const receipts=new Map<string,ToolReceipt>();
+    for(const event of events){
+      const records=event.type==='run.interrupted'?(event.data.receipts??[]):['tool.denied','tool.finished'].includes(event.type)&&event.data.receipt?[event.data.receipt]:[];
+      for(const receipt of records as ToolReceipt[]){
+        if(receipt.workspaceId!==task.workspaceId||receipt.taskId!==task.taskId||receipt.runId!==first.runId)throw Error('工具回执身份与运行不匹配');
+        receipts.set(receipt.toolCallId,receipt);
+      }
+    }
+    return {task,runId:first.runId,status,acceptance:'not_evaluated',sessionFile,unresolvedTools:[...pending],toolReceipts:[...receipts.values()],events};
   }
 }

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-执行事件日志、存储端口实现及不可变附件快照。日志 fsync 后发布，图片独立保存并恢复为视觉输入。
+执行事件日志、存储端口实现及不可变附件快照。日志 fsync 后发布，读取时核对并汇总工具回执身份；图片独立保存并恢复为视觉输入。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -60,7 +60,7 @@ class N_src_backend_main_persistence_tasks_run_journal_ts_RunJournal["RunJournal
 N_src_backend_main_persistence_tasks_run_journal_ts ..> N_src_backend_main_persistence_tasks_run_journal_ts_RunJournal : 声明
 ```
 
-直接依赖：[../../../core/brain/types.ts](../../../core/brain/types.ts)。
+直接依赖：[../../../core/brain/types.ts](../../../core/brain/types.ts)、[../../../core/tools/types.ts](../../../core/tools/types.ts)。
 
 ### run-storage.ts
 

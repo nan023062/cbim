@@ -1,16 +1,20 @@
 /**
- * 作用定位：内部工具定义、名称查找及参数 Schema 转换。
+ * 作用定位：内部工具定义、版本和副作用声明、名称查找及参数 Schema 转换。
  * 设计原因：调度与 MCP 共用协议定义；注册表不签发权限，执行上下文必须由调用边界提供。
  */
 import {z} from 'zod';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {fail} from '../foundation/errors';
+import type {ToolEffect} from './types';
 
 /** Context 只能由可信调用方传入，不能从模型的 inputSchema 中推导授权。 */
 export interface ToolDefinition<Context> {
   name:string;
   description?:string;
   inputSchema:z.ZodRawShape;
+  /** 协议与副作用元数据；旧调用方可省略，注册表本身不据此签发权限。 */
+  version?:1;
+  effects?:readonly ToolEffect[];
   execute:(args:any,context:Context)=>Promise<any>;
 }
 
@@ -23,7 +27,7 @@ export class ToolRegistry<Context> {
     if(this.entries.some(t=>t.name===tool.name))fail('TOOL_DUPLICATE','工具名称重复');
     this.entries.push(tool);
   }
-  list(){return this.entries.map(t=>({name:t.name,description:t.description,inputSchema:zodToJsonSchema(z.object(t.inputSchema)) as Record<string,unknown>}))}
+  list(){return this.entries.map(t=>({name:t.name,description:t.description,version:t.version??1,effects:t.effects,inputSchema:zodToJsonSchema(z.object(t.inputSchema)) as Record<string,unknown>}))}
   /** 只解析，不执行；调用方在返回后校验身份与授权再调用 execute。 */
   resolve(name:string,input:unknown){
     const tool=this.entries.find(t=>t.name===name);if(!tool)fail('TOOL','未知知识工具');

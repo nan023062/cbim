@@ -60,7 +60,7 @@ export class PiEngine implements AgentEngine {
     // 业务上下文随任务持久化；执行恢复使用原快照，当前知识修改仍由服务校验版本。
     // 普通对话的用户文字与附件只经用户消息发送，不抬升为系统指引。
     const systemContext=context.task.mode==='chat'?{taskId:context.task.taskId,workspaceId:context.task.workspaceId,root:context.task.root,agentId:context.task.agentId}:context.task;
-    const executionHint=this.options.allowNativeExecution?'\n本轮已提供 write/edit/bash 执行工具，可创建业务文件和运行验证。工具调用受 CBIM 策略及用户批准控制；知识 writeEnabled 与业务文件权限独立。':'\n本轮为只读模式，未提供 write/edit/bash。如需实现文件，请提示用户将输入框权限改为逐次询问或允许执行，再发送消息继续；不需要配置 MCP 或开启知识库写入。';
+    const executionHint=this.options.allowNativeExecution?'\n本轮已提供 write/edit/bash 执行工具，可创建业务文件和运行验证。工具调用受 CBIM 策略及用户批准控制；业务写入与知识提交共用本轮权限，知识变更仍须通过 cbim_ 工具、版本检查和事务校验。':'\n本轮为只读模式，未提供 write/edit/bash。如需实现文件，请提示用户将输入框权限改为逐次询问或允许执行，再发送消息继续；不需要配置 MCP 或开启知识库写入。';
     const instructions=this.options.prompt+executionHint+(context.task.mode==='chat'?'\n\n当前工作区对话身份：\n':'\n\n任务定义与冻结的团队工作流上下文：\n')+JSON.stringify(systemContext,null,2);
     await fs.writeFile(extension,bridgeExtension,{mode:0o600});await fs.writeFile(prompt,instructions,{mode:0o600});
     // 所有运行拥有独立设置，CLI 的模型目录也只复制快照，避免并发互相覆盖。

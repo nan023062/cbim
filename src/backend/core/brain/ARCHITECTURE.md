@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-与具体模型引擎无关的执行循环及事件契约。通过 RunStorage 注入可靠日志，执行结束不代表业务验收。
+引擎无关的执行循环与事件契约。工具决策先落盘，完成或未知结果生成运行回执；审批后复核停止，恢复不自动重放未知操作。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -69,7 +69,7 @@ class N_src_backend_core_brain_types_ts["types.ts"] {
 ## 子目录导航
 
 - [llm/](llm/ARCHITECTURE.md)：公开模型参数、能力元数据及运行快照端口。实际配置文件和加密凭据由 main/persistence/settings 持有。
-- [pi/](pi/ARCHITECTURE.md)：Pi 进程协议适配、工具桥与运行参数。保持真实工具调用门禁、图片输入、恢复及长度错误报告。
+- [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数。一次性 gate 连接统一授权，指引明确业务与知识共用运行权限；保留图片、恢复及长度错误报告。
 
 [返回上层](../ARCHITECTURE.md)。
 

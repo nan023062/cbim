@@ -19,7 +19,7 @@ export interface KnowledgeWorkspace {
   readonly rules:{designRoot:string};
   readonly tasks:Map<string,TaskView>;
   state:string;
-  /** 当前实例的知识写入授权；不能由工具参数自行授予。 */
+  /** 外部 MCP 的实例知识写开关；内部 Loop 采用独立的单次运行授权，不改动此开关。 */
   writable:boolean;
   assert(identity?:{workspaceId:string;instanceId:string}):void;
   read():Promise<Snapshot>;

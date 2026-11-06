@@ -1,7 +1,7 @@
 /**
  * 作用定位：管理一次用户任务的调度周期，串接主 Agent 调度、执行成员和结果回传，周期结束后释放执行实例。
  * 设计原因：周期冻结本轮真实用户输入，不复用会话首次目标；成员回注不改写输入。一次任务可能跨多个主模型轮次，用户队列等周期可靠关闭后才启动下一周期，执行者与主实例始终分离。
- * 职责边界：主 Agent 只调度和治理知识；安全等待经显式文本补充消费一次性意图，沿原周期与预算重规划，普通队列不能恢复。退出/重启不重放，停止等待提交收束后再释放成员，任何补充都不是人工验收。
+ * 职责边界：主 Agent 只调度和治理知识；补充沿原周期，新只读核实经可靠意图开启新周期但保留主实例。权限不能随回注或补充提升，停止等待提交收束，退出/重启不重放；用户观察和补充都不是人工验收。
  */
 import {hash,json} from '../../core/foundation/serialization';
 import {randomUUID} from 'node:crypto';
@@ -9,6 +9,7 @@ import {fail} from '../../core/foundation/errors';
 import type {TaskSpec,RunSummary,RunInputSource} from '../../core/brain/types';
 import type {DispatchScope,DispatchScopeOutcome} from '../../core/tasks/dispatch-scope';
 import type {GoalContinuationRequest} from '../../core/tasks/scope-continuation';
+import type {RecoveryRequest} from '../../core/tasks/scope-recovery';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {DispatchTaskInput} from '../../core/tasks/dispatch-commands';
 import type {GraphSnapshot,TaskNode} from '../../core/tasks/graph-types';
@@ -23,7 +24,7 @@ import type {WorkspaceExecutionLease} from './workspace-lease';
 /** 只保存主轮选择的公开运行选项；不保存密钥、附件字节或本轮 allowAll。 */
 type Options={provider:string;model:string;profileId:string;permission:'read'|'ask'|'execute';allowNativeExecution:boolean;turnTimeoutMs?:number};
 /** 一个用户任务跨主轮和成员回注共享 scope；tasks 保留已回注的成员，供最终收束与释放。 */
-type Cycle={task:TaskSpec;scopeId:string;tasks:Set<string>;operations:Set<Promise<unknown>>;mainRuns:Set<string>;workRequested:boolean;stopped:boolean;cancelRequested?:boolean;ending?:DispatchScopeOutcome;closing?:Promise<void>;completionSummary?:RunSummary};
+type Cycle={task:TaskSpec;scopeId:string;tasks:Set<string>;operations:Set<Promise<unknown>>;mainRuns:Set<string>;workRequested:boolean;stopped:boolean;readOnly?:boolean;cancelRequested?:boolean;ending?:DispatchScopeOutcome;closing?:Promise<void>;completionSummary?:RunSummary};
 type Batch={cycle:Cycle;task:TaskSpec;runId:string;options:Options;tasks:string[];calls:Set<string>;settled?:RunSummary;stopped:boolean;failures:Map<string,string>;watched:Set<string>};
 
 /** 应用按工作区装配一个；关闭必须早于主/成员执行管理器与派发存储。 */
@@ -40,7 +41,34 @@ export class AutoCollaboration {
   private releaseListener:()=>void;
   constructor(private owner:KnowledgeWorkspace,private dispatch:WorkspaceDispatchService,private members:MemberExecutionManager,private execution:WorkspaceExecutionManager,lease:WorkspaceExecutionLease,private reportIssue:(rootSessionId:string,error:unknown)=>void=()=>{}){
     this.releaseListener=lease.observeRelease(()=>this.schedule());
-    execution.attachCollaboration({busy:id=>this.busy(id),waiting:id=>this.waitingSlots.has(id),continuationReceipt:query=>dispatch.continuations.inspect(query),continuationCheckpoint:request=>this.continuationCheckpoint(request),acceptContinuation:(request,task,runId)=>this.acceptContinuation(request,task,runId),starting:(task,options,source,message)=>this.starting(task,source,!!options.profileId,message,options.attachmentIds),startFailed:(task,source,error)=>this.startFailed(task,source,error),settled:(task,_options,summary)=>this.settled(task,summary),stop:id=>this.stop(id)});
+    execution.attachCollaboration({busy:id=>this.busy(id),waiting:id=>this.waitingSlots.has(id),recoveryReceipt:query=>dispatch.recoveries.inspect(query),recoveryPreflight:request=>this.recoveryPreflight(request),acceptRecovery:(request,task,context)=>this.acceptRecovery(request,task,context),recoveryContext:rootSessionId=>dispatch.recoveries.latestContext({workspaceId:owner.entry.id,rootSessionId}),recoveryRunIds:rootSessionId=>dispatch.recoveries.priorRunIds({workspaceId:owner.entry.id,rootSessionId}),continuationReceipt:query=>dispatch.continuations.inspect(query),continuationCheckpoint:request=>this.continuationCheckpoint(request),acceptContinuation:(request,task,runId)=>this.acceptContinuation(request,task,runId),starting:(task,options,source,message)=>this.starting(task,source,!!options.profileId,message,options.attachmentIds),startFailed:(task,source,error)=>this.startFailed(task,source,error),settled:(task,_options,summary)=>this.settled(task,summary),stop:id=>this.stop(id)});
+  }
+
+  /** 读取来源报告仅预检；新运行意图在 runtime 的租约内再次核实，不能用预检结果直接启动。 */
+  private async recoveryPreflight(request:RecoveryRequest){
+    if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭');
+    if(this.busy(request.rootSessionId)||this.resuming.has(request.rootSessionId))fail('RECOVERY_BUSY','当前主会话还有未结束目标');
+    await this.dispatch.recoveries.preflight(request);
+  }
+  /** 新周期不复活旧成员；可靠意图先落盘，之后绑定同一主实例的全新原生上下文，等待停止屏障收束。 */
+  private acceptRecovery(request:RecoveryRequest,task:TaskSpec,context:{runId:string;nativeSessionId:string;excludedRunIds:string[]}):Promise<void>{
+    if(this.closed||this.resuming.has(task.taskId))return Promise.reject(Object.assign(Error('新核实周期正在关闭或已有提交'),{code:'COLLABORATION_STOPPED'}));
+    const pending=(async()=>{
+      if(task.mode!=='chat'||task.agentId!=='cbim:main'||task.taskId!==request.rootSessionId||task.workspaceId!==request.workspaceId)fail('COLLABORATION_IDENTITY','核实目标与主会话身份不一致');
+      if(this.busy(task.taskId))fail('RECOVERY_BUSY','当前主会话还有未结束目标');
+      const accepted=await this.dispatch.recoveries.accept(request,context);
+      if(!accepted.fresh)fail('RECOVERY_REPLAY','核实意图已受理，请查询原记录，不重复启动');
+      this.cycles.set(task.taskId,{task:structuredClone(task),scopeId:accepted.scope.scopeId,tasks:new Set(),operations:new Set(),mainRuns:new Set([context.runId]),workRequested:true,stopped:false,readOnly:true});
+    })().catch(async error=>{
+      // 已提交后读取失败也不能撤销或复用启动意图，只收束本次运行，不能误关闭同 ID 的旧回执。
+      try{
+        const receipt=await this.dispatch.recoveries.inspect({workspaceId:request.workspaceId,rootSessionId:request.rootSessionId,commandId:request.commandId});
+        if(receipt?.recovery.runId===context.runId)await this.dispatch.closeScope({workspaceId:request.workspaceId,rootSessionId:request.rootSessionId},receipt.scopeId,'interrupted');
+      }catch(problem){this.reportIssue(task.taskId,problem)}
+      throw error;
+    });
+    this.resuming.set(task.taskId,pending);
+    return pending.finally(()=>{if(this.resuming.get(task.taskId)===pending)this.resuming.delete(task.taskId)});
   }
 
   /** 只允许当前等待目标准备新运行；模型前的事务仍会复核，读取不授予重复启动权。 */
@@ -63,7 +91,7 @@ export class AutoCollaboration {
       if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭');
       const accepted=await this.dispatch.continuations.accept(request,runId);
       if(!accepted.fresh)fail('GOAL_CONTINUATION_REPLAY','补充意图已受理，请查询原运行，不重复启动');
-      const cycle:Cycle={task:structuredClone(task),scopeId:accepted.scope.scopeId,tasks:new Set(graph.tasks.filter(node=>node.scopeId===request.scopeId).map(node=>node.taskId)),operations:new Set(),mainRuns:new Set([...accepted.continuation.wait.mainRunIds,runId]),workRequested:true,stopped:false};
+      const cycle:Cycle={task:structuredClone(task),scopeId:accepted.scope.scopeId,tasks:new Set(graph.tasks.filter(node=>node.scopeId===request.scopeId).map(node=>node.taskId)),operations:new Set(),mainRuns:new Set([...accepted.continuation.wait.mainRunIds,runId]),workRequested:true,stopped:false,readOnly:!!accepted.scope.recovery};
       this.cycles.set(task.taskId,cycle);this.waitingSlots.delete(task.taskId);
       // 此处不等待 stop：调用方的 AbortSignal 在事务返回后阻止模型，stop/close 等 resuming 后收束此 Cycle。
     })().catch(async error=>{
@@ -124,6 +152,7 @@ export class AutoCollaboration {
     if(task.workspaceId!==this.owner.entry.id||task.root!==this.owner.entry.path)fail('COLLABORATION_IDENTITY','协作运行不属于当前工作区');
     const permission=options.permission??(options.allowNativeExecution?'execute':'read');
     const cycle=this.cycles.get(task.taskId);if(!cycle||cycle.stopped)fail('COLLABORATION_STOPPED','主轮没有活动的用户任务调度周期');
+    if(cycle.readOnly&&permission!=='read')fail('RECOVERY_READ_ONLY','只读核实周期不能提升主运行权限');
     // 按实际创建的主 run 计数，暂时占用导致的启动重试不扣额度；模型不能调大限制。
     if(!cycle.mainRuns.has(runId)&&cycle.mainRuns.size>=32)fail('GOAL_CYCLE_LIMIT','本次目标已达到 32 次主调度运行，已停止自动续跑');
     cycle.mainRuns.add(runId);

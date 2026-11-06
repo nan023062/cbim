@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主会话任务图及独立目标增量；显式补充使用持久冻结请求。成员节点按需核实执行事实，图变化标记旧报告，分页基线不拼接；核实不启动模型，未知结果不当作未执行，候选不替代验收。
+主会话任务图及独立目标增量；成员节点按需核实执行事实，再明确新建只读核实周期。表单冻结来源、观察及目标，未知提交只查询或同ID重试；旧报告及候选不替代验收，切换节点不改执行对象。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -14,6 +14,7 @@
 | [DispatchGraph.tsx](DispatchGraph.tsx) | 把当前主会话的已提交派发图绘制为可选择的任务节点流程图。 |
 | [execution-report-state.ts](execution-report-state.ts) | 验证成员执行核实报告的身份和分页基线，并保存一次显式读取的前端状态。 |
 | [execution-report.css](execution-report.css) | 选中成员任务的只读执行核实报告排版。 |
+| [ExecutionRecoveryForm.tsx](ExecutionRecoveryForm.tsx) | 异常执行报告后的显式新周期入口，将用户观察与新的只读核实目标分开呈现。 |
 | [FlowView.tsx](FlowView.tsx) | 显示知识校验和索引任务的实际状态与结果。 |
 | [graph-layout.ts](graph-layout.ts) | 为主会话任务图计算可测试的 DAG 分层坐标与有向连线路径，供任务视图绘制。 |
 | [graph-state.ts](graph-state.ts) | 主会话派发图的前端增量投影，核对身份和游标后原子合并完整提交。 |
@@ -22,13 +23,15 @@
 | [MemberActivity.tsx](MemberActivity.tsx) | 在主对话中展示最近的成员任务与公开执行动态，并链接到对应任务节点详情。 |
 | [MemberExecutionReport.tsx](MemberExecutionReport.tsx) | 在任务节点详情中展示一次显式核实的派发、日志与工具回执报告，独立于成员流式正文。 |
 | [MemberRunTranscript.tsx](MemberRunTranscript.tsx) | 以成员身份显示公开消息和工具过程，供主会话成员卡片及任务详情共用。 |
-| [MemberTaskDetail.tsx](MemberTaskDetail.tsx) | 展示任务图选中成员的公开运行正文、工具过程、计划与候选，以及独立的只读执行核实报告。 |
+| [MemberTaskDetail.tsx](MemberTaskDetail.tsx) | 展示任务图选中成员的公开正文、工具、计划与候选；独立报告核实执行事实，独立表单显式创建新的只读核实周期。 |
+| [recovery-state.ts](recovery-state.ts) | 保存用户从异常报告新建只读核实周期的草稿、冻结命令和受理回执。 |
 | [scope-goal.css](scope-goal.css) | 对话摘要与任务根详情共用的目标计划卡片、历史选择和证据排版。 |
 | [scope-state.ts](scope-state.ts) | 主会话目标周期的增量投影和展示状态，供对话摘要与任务根详情共用。 |
 | [ScopeContinuationForm.tsx](ScopeContinuationForm.tsx) | 目标卡片中的显式纯文本补充入口，展示已冻结请求、查询与同命令重试。 |
 | [ScopeGoalPanel.tsx](ScopeGoalPanel.tsx) | 复用展示本轮真实目标、静态角色分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。 |
 | [SessionTaskView.tsx](SessionTaskView.tsx) | 以节点流程图展示当前主会话的派发任务，并在选择根或任务后显示对应执行详情。 |
 | [task-graph.css](task-graph.css) | 主会话派发图、可读任务节点与按需详情的自适应布局。 |
+| [useExecutionRecovery.ts](useExecutionRecovery.ts) | 把所选任务的核实报告、当前会话状态与独立的新周期草稿连接起来。 |
 | [useExecutionReport.ts](useExecutionReport.ts) | 为选中成员任务装配只读核实控制器，将图/周期变化投影为报告过期提示。 |
 | [useMemberRun.ts](useMemberRun.ts) | 按成员运行身份轮询公开流式事件，支持卡片预览与任务详情的增量读取。 |
 | [useScopeContinuation.ts](useScopeContinuation.ts) | 在主会话层装配唯一补充控制器，向对话卡和任务根提供同一份草稿、提交锁及回执状态。 |
@@ -174,6 +177,7 @@ class N_src_frontend_tasks_DispatchGraph_tsx_DispatchRootView["DispatchRootView"
   +running
   +runCount
   +pendingCount
+  +unreadableRunCount
 }
 N_src_frontend_tasks_DispatchGraph_tsx ..> N_src_frontend_tasks_DispatchGraph_tsx_DispatchRootView : 声明
 class N_src_frontend_tasks_DispatchGraph_tsx_DispatchGraphProps["DispatchGraphProps"] {
@@ -246,6 +250,18 @@ class N_src_frontend_tasks_execution_report_css["execution-report.css"] {
   <<stylesheet>>
 }
 ```
+
+### ExecutionRecoveryForm.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_ExecutionRecoveryForm_tsx["ExecutionRecoveryForm.tsx"] {
+  <<component>>
+  +ExecutionRecoveryForm()
+}
+```
+
+直接依赖：[useExecutionRecovery.ts](useExecutionRecovery.ts)。
 
 ### FlowView.tsx
 
@@ -417,7 +433,7 @@ class N_src_frontend_tasks_MemberExecutionReport_tsx_external_ExecutionReportSta
 N_src_frontend_tasks_MemberExecutionReport_tsx_external_ExecutionReportState <|-- N_src_frontend_tasks_MemberExecutionReport_tsx_ExecutionReportView
 ```
 
-直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[useExecutionReport.ts](useExecutionReport.ts)、[execution-report-state.ts](execution-report-state.ts)、[execution-report.css](execution-report.css)。
+直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[useExecutionReport.ts](useExecutionReport.ts)、[execution-report-state.ts](execution-report-state.ts)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[ExecutionRecoveryForm.tsx](ExecutionRecoveryForm.tsx)、[execution-report.css](execution-report.css)。
 
 ### MemberRunTranscript.tsx
 
@@ -441,7 +457,121 @@ class N_src_frontend_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../conversation/QuestionCard.tsx](../conversation/QuestionCard.tsx)、[useMemberRun.ts](useMemberRun.ts)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[MemberExecutionReport.tsx](MemberExecutionReport.tsx)、[MemberActivity.tsx](MemberActivity.tsx)、[member-activity.css](member-activity.css)。
+直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../conversation/QuestionCard.tsx](../conversation/QuestionCard.tsx)、[useMemberRun.ts](useMemberRun.ts)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[MemberExecutionReport.tsx](MemberExecutionReport.tsx)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[MemberActivity.tsx](MemberActivity.tsx)、[member-activity.css](member-activity.css)。
+
+### recovery-state.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_recovery_state_ts["recovery-state.ts"] {
+  <<module>>
+  +recoverySourceKey()
+  +recoveryRejected()
+  +checkedRecoveryReceipt()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_recovery_state_ts["recovery-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_recovery_state_ts_RecoverySource["RecoverySource"] {
+  <<type>>
+
+}
+N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_RecoverySource : 声明
+class N_src_frontend_tasks_recovery_state_ts_RecoveryTarget["RecoveryTarget"] {
+  <<type>>
+
+}
+N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_RecoveryTarget : 声明
+class N_src_frontend_tasks_recovery_state_ts_RecoveryAttempt["RecoveryAttempt"] {
+  <<interface>>
+  +request
+  +phase
+  +uncertain
+  +receipt
+  +error
+}
+N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_RecoveryAttempt : 声明
+class N_src_frontend_tasks_recovery_state_ts_RecoveryDraft["RecoveryDraft"] {
+  <<interface>>
+  +source
+  +observation
+  +message
+  +attempt
+}
+N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_RecoveryDraft : 声明
+```
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_recovery_state_ts["recovery-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_recovery_state_ts_RecoveryState["RecoveryState"] {
+  <<interface>>
+  +records
+  +error
+}
+N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_RecoveryState : 声明
+class N_src_frontend_tasks_recovery_state_ts_RecoveryPorts["RecoveryPorts"] {
+  <<interface>>
+  +storage
+  +submit
+  +lookup
+  +uuid
+}
+N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_RecoveryPorts : 声明
+class N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryController["ExecutionRecoveryController"] {
+  +workspaceId
+  +rootSessionId
+  +storageKey
+  +snapshot
+  +available
+  +canRelease
+  +subscribe()
+  +record()
+  +isPending()
+  +edit()
+  +submit()
+  +retry()
+  +query()
+  +restore()
+  -ports
+  -value
+}
+N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryController : 声明
+class N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryPool["ExecutionRecoveryPool"] {
+  +get()
+  -idleLimit
+  -controllers
+}
+N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryPool : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_recovery_state_ts["recovery-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryController["ExecutionRecoveryController"] {
+  -unavailable
+  -listeners
+  -pending
+  -emit()
+  -update()
+  -send()
+}
+N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryController : 声明
+```
+
+直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
 
 ### scope-goal.css
 
@@ -586,6 +716,7 @@ class N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTask
   +taskId
   +runs
   +queued
+  +historyIssueCount
   +now
   +busy
   +onQueueChange
@@ -597,7 +728,6 @@ class N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTask
   +graphError
   +onRefreshGraph
   +scopeState
-  +continuation
 }
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps : 声明
 ```
@@ -611,6 +741,8 @@ class N_src_frontend_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
 }
 class N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTaskViewProps"] {
   <<interface>>
+  +continuation
+  +recovery
   +active
   +selectedTaskId
   +onSelectTask
@@ -618,7 +750,7 @@ class N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTask
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps : 声明
 ```
 
-直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../conversation/WorkStatus.tsx](../conversation/WorkStatus.tsx)、[../conversation/MessageQueue.tsx](../conversation/MessageQueue.tsx)、[DispatchGraph.tsx](DispatchGraph.tsx)、[MemberTaskDetail.tsx](MemberTaskDetail.tsx)、[ScopeGoalPanel.tsx](ScopeGoalPanel.tsx)、[scope-state.ts](scope-state.ts)、[useScopeContinuation.ts](useScopeContinuation.ts)、[task-graph.css](task-graph.css)。
+直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../conversation/WorkStatus.tsx](../conversation/WorkStatus.tsx)、[../conversation/MessageQueue.tsx](../conversation/MessageQueue.tsx)、[DispatchGraph.tsx](DispatchGraph.tsx)、[MemberTaskDetail.tsx](MemberTaskDetail.tsx)、[ScopeGoalPanel.tsx](ScopeGoalPanel.tsx)、[scope-state.ts](scope-state.ts)、[useScopeContinuation.ts](useScopeContinuation.ts)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[task-graph.css](task-graph.css)。
 
 ### task-graph.css
 
@@ -628,6 +760,59 @@ class N_src_frontend_tasks_task_graph_css["task-graph.css"] {
   <<stylesheet>>
 }
 ```
+
+### useExecutionRecovery.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
+  <<module>>
+  +recoveryTarget()
+  +useExecutionRecovery()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_useExecutionRecovery_ts_RecoveryModel["RecoveryModel"] {
+  <<interface>>
+  +options
+  +label
+}
+N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_useExecutionRecovery_ts_RecoveryModel : 声明
+class N_src_frontend_tasks_useExecutionRecovery_ts_ExecutionRecoveryContext["ExecutionRecoveryContext"] {
+  <<interface>>
+  +state
+  +model
+  +refresh
+  +showScope
+}
+N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_useExecutionRecovery_ts_ExecutionRecoveryContext : 声明
+class N_src_frontend_tasks_useExecutionRecovery_ts_ExecutionRecoveryView["ExecutionRecoveryView"] {
+  <<interface>>
+  +visible
+  +record
+  +observation
+  +message
+  +editable
+  +canSubmit
+  +pending
+  +error
+  +reason
+  +modelLabel
+  +edit
+  +submit
+  +query
+  +retry
+  +showCreated
+}
+N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_useExecutionRecovery_ts_ExecutionRecoveryView : 声明
+```
+
+直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[scope-state.ts](scope-state.ts)、[recovery-state.ts](recovery-state.ts)、[execution-report-state.ts](execution-report-state.ts)。
 
 ### useExecutionReport.ts
 
@@ -659,6 +844,7 @@ class N_src_frontend_tasks_useMemberRun_ts["useMemberRun.ts"] {
 classDiagram
 class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
   <<module>>
+  +continuationModel()
   +continuationTarget()
   +useScopeContinuation()
 }
@@ -722,24 +908,30 @@ class N_src_frontend_tasks_graph_layout_ts["graph-layout.ts"] {
 class N_src_frontend_tasks_task_graph_css["task-graph.css"] {
   <<stylesheet>>
 }
+class N_src_frontend_tasks_ExecutionRecoveryForm_tsx["ExecutionRecoveryForm.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
+  <<module>>
+}
 class N_src_frontend_tasks_MemberActivity_tsx["MemberActivity.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_useMemberRun_ts["useMemberRun.ts"] {
   <<module>>
 }
-class N_src_frontend_tasks_MemberRunTranscript_tsx["MemberRunTranscript.tsx"] {
-  <<component>>
-}
 N_src_frontend_tasks_DispatchGraph_tsx ..> N_src_frontend_tasks_graph_layout_ts : 导入依赖
 N_src_frontend_tasks_DispatchGraph_tsx ..> N_src_frontend_tasks_task_graph_css : 导入依赖
+N_src_frontend_tasks_ExecutionRecoveryForm_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
 N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_useMemberRun_ts : 导入依赖
-N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_MemberRunTranscript_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_MemberActivity_tsx["MemberActivity.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_MemberRunTranscript_tsx["MemberRunTranscript.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_member_activity_css["member-activity.css"] {
@@ -754,13 +946,36 @@ class N_src_frontend_tasks_useExecutionReport_ts["useExecutionReport.ts"] {
 class N_src_frontend_tasks_execution_report_state_ts["execution-report-state.ts"] {
   <<module>>
 }
-class N_src_frontend_tasks_execution_report_css["execution-report.css"] {
-  <<stylesheet>>
-}
+N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_MemberRunTranscript_tsx : 导入依赖
 N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_member_activity_css : 导入依赖
 N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_useExecutionReport_ts : 导入依赖
 N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_execution_report_state_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_MemberExecutionReport_tsx["MemberExecutionReport.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_ExecutionRecoveryForm_tsx["ExecutionRecoveryForm.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_execution_report_css["execution-report.css"] {
+  <<stylesheet>>
+}
+class N_src_frontend_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_useMemberRun_ts["useMemberRun.ts"] {
+  <<module>>
+}
+N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
+N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_ExecutionRecoveryForm_tsx : 导入依赖
 N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_execution_report_css : 导入依赖
+N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_useMemberRun_ts : 导入依赖
 ```
 
 ```mermaid
@@ -768,21 +983,21 @@ classDiagram
 class N_src_frontend_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
   <<component>>
 }
-class N_src_frontend_tasks_useMemberRun_ts["useMemberRun.ts"] {
-  <<module>>
-}
 class N_src_frontend_tasks_MemberRunTranscript_tsx["MemberRunTranscript.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_MemberExecutionReport_tsx["MemberExecutionReport.tsx"] {
   <<component>>
 }
+class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
+  <<module>>
+}
 class N_src_frontend_tasks_MemberActivity_tsx["MemberActivity.tsx"] {
   <<component>>
 }
-N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_useMemberRun_ts : 导入依赖
 N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberRunTranscript_tsx : 导入依赖
 N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberExecutionReport_tsx : 导入依赖
+N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
 N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberActivity_tsx : 导入依赖
 ```
 
@@ -869,13 +1084,33 @@ classDiagram
 class N_src_frontend_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
   <<component>>
 }
+class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
+  <<module>>
+}
 class N_src_frontend_tasks_task_graph_css["task-graph.css"] {
   <<stylesheet>>
 }
-class N_src_frontend_tasks_useExecutionReport_ts["useExecutionReport.ts"] {
+class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_recovery_state_ts["recovery-state.ts"] {
+  <<module>>
+}
+N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
+N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_task_graph_css : 导入依赖
+N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
+N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_recovery_state_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_execution_report_state_ts["execution-report-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_useExecutionReport_ts["useExecutionReport.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_useMemberRun_ts["useMemberRun.ts"] {
@@ -890,7 +1125,7 @@ class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
 class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_task_graph_css : 导入依赖
+N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_execution_report_state_ts : 导入依赖
 N_src_frontend_tasks_useExecutionReport_ts ..> N_src_frontend_tasks_execution_report_state_ts : 导入依赖
 N_src_frontend_tasks_useMemberRun_ts ..> N_src_frontend_tasks_member_event_state_ts : 导入依赖
 N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
@@ -973,6 +1208,8 @@ N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts 
 
 #### 异常执行记录核实
 
+主会话标题、图根与根详情中的数量统一表示“已读 X 轮记录”，单独附加后端报告的“Y 轮待核实”。缺失或坏日志不会生成假的运行摘要，也不能把零条可读摘要解释为零次实际执行；逐条序号仅标为已读记录顺序，不冒充完整历史运行序号。
+
 `MemberExecutionReport` 位于 `MemberTaskDetail` 的执行轮次选择器之后、实时正文之前；它与 `MemberRunDetail` 独立，缺失或损坏日志不会遮住报告入口。两个兄弟视图的 React key 分别带 `report:` 和 `transcript:` 前缀，在同一执行身份下仍保持独立实例，任务由运行转终态时新增提示不能导致报告订阅与正文相互替换。任务视图仍是节点 DAG，不把核实报告改成全会话文字流。任务原有候选也必须属于当前选中 `runId`，旧轮次不能显示后来的交付结果。
 
 `useExecutionReport` 为 workspace/root/scope/task/run 选择创建独立 `ExecutionReportController`；构造、挂载、订阅、显示页签和图更新均不请求。只有“核实执行记录”“重新核实”“加载更多工具记录”显式调用只读 `dispatch.executionReport`，不调用模型、审批、问题回答、收件确认、启动、停止或恢复。没有运行轮次时只核实该任务的领取登记，不猜测最新日志。切换节点或轮次取消前端观察并忽略迟到结果，不撤销后端读取，也不改变任务。
@@ -981,7 +1218,19 @@ N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts 
 
 前端将 task revision、plan revision/status、实际所属 scope 的状态/goal revision 与图游标和报告基线比较。变化只标记报告版本不同，暂停继续加载旧页并等待用户重新核实；不自动回读全部日志。浏览历史周期不会为成员传入别的 scope：`SessionTaskView` 始终按选中任务的 `scopeId` 取真实摘要。
 
-展示上分开“尚未领取执行”“有在途执行记录”“执行轮次已结算”“执行结果未知”。failed/cancelled/missing 日志不能显示成未执行；没有完整回执不代表没有副作用。工具 succeeded 只表示收到成功回执，候选始终“尚未验收”，输入/结果哈希明确不是业务产物指纹。原始工具参数/输出、冻结知识、凭据和原生会话路径不属于公开报告，前端不提供重试、改派或人工验收操作。
+展示上分开“尚未领取执行”“有在途执行记录”“执行轮次已结算”“执行结果未知”。failed/cancelled/missing 日志不能显示成未执行；没有完整回执不代表没有副作用。工具 succeeded 只表示收到成功回执，候选始终“尚未验收”，输入/结果哈希明确不是业务产物指纹。原始工具参数/输出、冻结知识、凭据和原生会话路径不属于公开报告；报告本身不提供旧任务重试、改派或人工验收操作。
+
+#### 显式新建只读核实周期
+
+`ExecutionRecoveryForm` 位于报告之后，用户观察 `observation.text` 与新目标 `input.message` 分开，不修改旧任务。`useExecutionRecovery` 使用所选节点的真实 scope/task/run 与已验证报告 basis，只在来源周期 closed、会话没有 active/waiting、图已追齐且报告未过期时允许首次提交。已有运行必须明确选轮次；只有真正没有运行登记且报告为 not_started/not_expected 时才能省略 runId。历史筛选不改变真实开放周期。未知/损坏日志可作为核实对象，不能当作未执行。
+
+模型来自主输入区的实际 profile/provider/model，权限始终固定 `read`，不取输入区可写权限，也不包含附件。显式点击 `loop.recoveryStart` 才创建新周期；报告刷新、表单展示与编辑都不启动模型。受理后只刷新同一 root 的图与历史，“查看新目标”改变查看选择，不切换主会话或清空草稿、附件、队列。
+
+`ExecutionRecoveryController` 按 workspace/root 保存独立本机索引，来源键包含 scope/task/run，不包含会变动的报告 basis。发送前冻结 commandId、basis、观察、目标与模型选项；同 renderer 的池复用在途控制器。刷新报告、切换节点和重开不能隐藏未知命令并生成第二次请求。未知结果只查询 `loop.recoveryReceipt` 或原命令原正文重试；查询 undefined 仍为未知，一旦通信不确定，后续拒绝也不能解冻改发。仅首次明确预受理拒绝可保留草稿修正；持久化失败不发送，损坏本地记录不自动覆盖。
+
+回执通过 Bridge Schema 后仍核对 workspace/root/command、source+basis、operation、观察、目标和 options；新 scopeId 必须等于稳定 commandId，且新 scope/run 不能借用来源。受理后 recovery 事实保持不可变，只允许周期状态演进，closed 不能回退为开放。矛盾查询保留原回执并提示错误。`accepted` 仅表示创建意图受理，不能当作正在运行或核实通过。未知请求的同 ID 查询/重试不套用首次提交的“当前空闲/报告新鲜”条件，后端先去重再决定是否需要执行。已受理来源保持只读，不提供换 ID 再建操作。
+
+核实周期在 `ScopeSummary.readOnly` 明示只读约束；`useScopeContinuation` 对真实 openScope 的后续补充继续固定 read，不能借选择历史或修改 composer 权限提权。该标志不暴露原生上下文或旧运行排除清单。
 
 实线派发从父 → 子，依赖线从前置 → 后续；父任务等待子结果以节点状态和关联详情展示，不画结果反向边。任务结果“可交接”与“已验收”分开，v1 只有候选、不绘制虚假的验收通过标记。Agent 状态来自后端事实，前端不凭聊天内容、文本长度或计时推算进度百分比。
 

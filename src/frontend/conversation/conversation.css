@@ -33,3 +33,4 @@
 .chat-input-card textarea{height:32px;min-height:32px}.chat-controls{margin-top:7px}
 
 .composer-chip,.composer-picker-panel{color:var(--text)}
+.thread-history-issues{margin:12px 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}.thread-history-issues details{margin-top:8px}.thread-history-issues summary{cursor:pointer}.thread-history-issues code{word-break:break-all;font-size:10px}

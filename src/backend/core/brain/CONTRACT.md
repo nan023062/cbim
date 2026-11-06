@@ -1,3 +1,11 @@
+### 显式新主上下文
+
+`LoopRuntime.startFreshMain(task, message, control)` 只供可信调度入口使用，要求已经登记的 `chat / cbim:main` 绑定。保留逻辑任务与主实例，在取得租约后枚举既有运行目录，并合并 `knownRunIds()` 返回的可靠旧意图（包括尚无日志的意图）；上限 4096 个去重身份。新 runId 与 nativeSessionId 由运行时生成，`beforeRun` 在任何日志或引擎创建前原子保存新周期及上下文边界。
+
+这个入口不读旧运行日志，不传旧 sessionFile、source 或任务进度，不调用 reserveTask 覆盖原目录。旧文件、未知回执与原周期保持原状。`run.started.freshMain` 保存新原生身份与排除集合，便于核对可靠意图；模型和公开 IPC 不能提交这些字段。停止覆盖意图、日志和引擎准备；成功接收意图也不意味着执行成功，重启不自动重放。
+
+`ConversationThreadView` 将可读历史与 `{runId,code,message}` 问题分开。`resumeRunId` 只能来自当前上下文的完整运行链，不能从坏记录过滤后的数组末项推测。展示历史与恢复执行的职责分开，问题占位不伪造 RunSummary。
+
 ### 当前主对话实例绑定
 
 `ConversationAgentBinding` 为 `{ workspaceId, teamId, agentId, agentInstanceId, agentSessionId, rootSessionId }`，由后端已登记的主实例和会话通道装配到 `RuntimeOptions.conversationBinding`。每个主会话拥有自己的 `cbim:main` 实例；聊天与该会话派发图根引用同一个实例，不以相同角色名代替实例身份。大脑只接收可信身份快照，不创建或寻找实例。`checkedConversationAgentBinding` 拒绝额外字段、无效标识、非 `chat / cbim:main` 输入、不同工作区或 `rootSessionId !== TaskSpec.taskId`，并复制输入。

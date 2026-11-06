@@ -15,7 +15,7 @@ const active=(run?:DispatchRun)=>run?.status==='starting'||run?.status==='runnin
 const emptyTools=():ExecutionReport['tools']=>({available:false,total:0,counts:{succeeded:0,failed:0,denied:0,unknown:0,not_authorized:0},items:[],paginationReset:false});
 /** inspect 必须读取指定 run 的权威日志，不能从 UI 缓存或最近一次运行替代。 */
 export class ExecutionReportService {
-  constructor(private owner:KnowledgeWorkspace,private store:DispatchStore,private inspect:(run:DispatchRun)=>Promise<RunSummary>){}
+  constructor(private owner:Pick<KnowledgeWorkspace,'entry'|'assert'>,private store:Pick<DispatchStore,'read'>,private inspect:(run:DispatchRun)=>Promise<RunSummary>){}
   /** 只读核实；缺失、损坏、截断及身份不符返回保守报告，非法请求或跨主会话访问仍拒绝。 */
   async read(raw:unknown):Promise<ExecutionReport>{
     const parsed=executionReportInputSchema.safeParse(raw);

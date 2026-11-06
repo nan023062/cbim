@@ -14,7 +14,12 @@ test('root details distinguish delivery candidate from acceptance and show recor
 test('session task view isolates both workspace and conversation, including queued messages',()=>{
  const runs=[run('current'),run('other'),run('current','other-workspace')];expect(sessionRuns(runs,'w','current')).toEqual([runs[0]]);expect(sessionRuns(runs,'w')).toEqual([]);
  const html=renderToStaticMarkup(createElement(SessionTaskView,{workspaceId:'w',taskId:'current',runs,queued:[{id:'q',taskId:'other',message:'OTHER_QUEUE_SENTINEL',status:'pending',options:{model:'m',provider:'p'}}],now:0,busy:false,onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));
- expect(html).toContain('1 次执行');expect(html).not.toContain('OTHER_QUEUE_SENTINEL');expect(html).not.toContain('other-workspace');
+ expect(html).toContain('已读 1 轮记录');expect(html).not.toContain('OTHER_QUEUE_SENTINEL');expect(html).not.toContain('other-workspace');
+});
+
+test('坏主日志计数只表示可读记录，不把零条摘要显示成零次执行',()=>{
+ const html=renderToStaticMarkup(createElement(SessionTaskView,{workspaceId:'w',taskId:'current',runs:[],historyIssueCount:2,queued:[],now:0,busy:false,selectedTaskId:'session:current',onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));
+ expect(html).toContain('已读 0 轮记录');expect(html).toContain('2 轮待核实');expect(html).toContain('不能据此判定未执行');expect(html).not.toContain('0 次执行');expect(html).not.toContain('主会话暂无执行记录');
 });
 
 test('主根详情展示已记录的实例与对话通道，旧日志不按主角色推断身份',()=>{

@@ -1,10 +1,12 @@
 /**
  * 作用定位：在任务节点详情中展示一次显式核实的派发、日志与工具回执报告，独立于成员流式正文。
- * 设计原因：坏日志也必须能查看核实诊断；报告保持只读和按需分页，不把失败、取消或日志缺失解释为从未执行，更不提供重放或业务验收操作。
+ * 设计原因：坏日志也必须能查看核实诊断；报告保持只读和按需分页，独立表单才可显式新建只读核实周期。不把未知结果当作未执行，不恢复旧任务或提供业务验收。
  */
 import type {ExecutionReport,GraphCursor,ScopeSummary,TaskNode} from '../../bridge/contracts/dispatch';
 import {useExecutionReport} from './useExecutionReport';
 import type {ExecutionReportState} from './execution-report-state';
+import {useExecutionRecovery,type ExecutionRecoveryContext} from './useExecutionRecovery';
+import {ExecutionRecoveryForm} from './ExecutionRecoveryForm';
 import './execution-report.css';
 
 export interface ExecutionReportView extends ExecutionReportState {stale:boolean;inspect:()=>Promise<void>;more:()=>Promise<void>}
@@ -51,7 +53,8 @@ export function ExecutionReportPanel({state,taskId,runId}:{state:ExecutionReport
 }
 
 /** 独立挂载在轮次选择器之后，即使流式日志损坏也能通过该只读入口检查登记事实。 */
-export function MemberExecutionReport({workspaceId,rootSessionId,task,runId,graphCursor,scope}:{workspaceId:string;rootSessionId:string;task:TaskNode;runId?:string;graphCursor?:GraphCursor;scope?:ScopeSummary}){
+export function MemberExecutionReport({workspaceId,rootSessionId,task,runId,graphCursor,scope,recovery}:{workspaceId:string;rootSessionId:string;task:TaskNode;runId?:string;graphCursor?:GraphCursor;scope?:ScopeSummary;recovery?:ExecutionRecoveryContext}){
   const state=useExecutionReport({workspaceId,rootSessionId,taskId:task.taskId,scopeId:task.scopeId,runId},task,graphCursor,scope);
-  return <ExecutionReportPanel state={state} taskId={task.taskId} runId={runId}/>;
+  const creation=useExecutionRecovery(workspaceId,rootSessionId,task,runId,state.report,state.stale||state.loading||!!state.error,recovery);
+  return <><ExecutionReportPanel state={state} taskId={task.taskId} runId={runId}/><ExecutionRecoveryForm state={creation}/></>;
 }

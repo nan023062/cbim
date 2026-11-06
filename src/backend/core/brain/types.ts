@@ -1,6 +1,6 @@
 /**
  * 作用定位：大脑 执行层：与具体引擎无关的任务、事件、工具策略和执行摘要契约。
- * 设计原因：任务身份与引擎会话分开，主对话绑定登记实例，成员绑定区分业务任务、运行与通道；可信来源不签署人工验收。磁盘摘要额外报告未完整写入的尾行，使核实入口不把可读前缀误认成完整证据。
+ * 设计原因：任务身份与原生上下文分开；历史读取单独报告坏记录，不伪造运行摘要。可续接头只来自完整的当前上下文，旧历史可展示但不能成为异常回退入口。
  */
 import type {TaskSpec} from '../tasks/types';
 import type {ToolCall,ToolDecision} from '../tools/types';
@@ -88,4 +88,11 @@ export interface RunSummary {
   events: StoredEvent[];
   /** 仅持久日志读取提供；缺省表示该摘要未报告磁盘完整性，不能猜测为完好。未完成尾行不解析或改写。 */
   logIntegrity?:{partialTail:boolean};
+}
+/** 只读展示全部可核实历史；issues 不代表任务未执行，resumeRunId 缺省时不得猜测较早的可读轮次续聊。 */
+export interface ConversationThreadView {
+  runs:RunSummary[];
+  issues:{runId:string;code:string;message:string}[];
+  /** 当前上下文全部日志可核实时的最后一轮；新上下文意图尚未形成日志时也为空。 */
+  resumeRunId?:string;
 }

@@ -1,5 +1,5 @@
 /**
- * 作用定位：展示任务图选中成员的公开运行正文、工具过程、计划与候选，以及独立的只读执行核实报告。
+ * 作用定位：展示任务图选中成员的公开正文、工具、计划与候选；独立报告核实执行事实，独立表单显式创建新的只读核实周期。
  * 设计原因：按工作区/主会话/任务/轮次隔离观察；日志损坏不遮住核实入口，审批、问题和停止仍独立，不把查询或审批解释成业务验收与恢复。
  */
 import {useEffect,useRef,useState} from 'react';
@@ -10,11 +10,12 @@ import {QuestionCard} from '../conversation/QuestionCard';
 import {useMemberRun} from './useMemberRun';
 import {MemberRunTranscript} from './MemberRunTranscript';
 import {MemberExecutionReport} from './MemberExecutionReport';
+import type {ExecutionRecoveryContext} from './useExecutionRecovery';
 import {memberTaskLabel} from './MemberActivity';
 import './member-activity.css';
 
 /** 轮次切换在内部重建操作状态，保证晚到审批结果不能修改后来选中的成员界面。 */
-export function MemberTaskDetail({workspaceId,rootSessionId,task,onBack,active=true,graphCursor,scope}:{workspaceId:string;rootSessionId:string;task:TaskNode;onBack?:()=>void;active?:boolean;graphCursor?:GraphCursor;scope?:ScopeSummary}){
+export function MemberTaskDetail({workspaceId,rootSessionId,task,onBack,active=true,graphCursor,scope,recovery}:{workspaceId:string;rootSessionId:string;task:TaskNode;onBack?:()=>void;active?:boolean;graphCursor?:GraphCursor;scope?:ScopeSummary;recovery?:ExecutionRecoveryContext}){
   const [selected,setSelected]=useState('');
   const runId=task.runIds.includes(selected)?selected:task.runIds.at(-1);
   // 任务最新候选可能来自另一轮执行，旧轮次不能借用该候选证明自己的结果。
@@ -30,7 +31,7 @@ export function MemberTaskDetail({workspaceId,rootSessionId,task,onBack,active=t
       <details className="member-scope"><summary>验收要求</summary><ul>{task.acceptance.map(item=><li key={item.id}>{item.text}</li>)}</ul></details>
       {!!task.runIds.length&&<label className="member-run-selector">执行轮次<select aria-label="成员执行轮次" value={runId} onChange={event=>setSelected(event.target.value)}>{task.runIds.map((id,index)=><option key={id} value={id}>第 {index+1} 次 · {id.slice(0,8)}{id===task.activeRunId?' · 当前执行':''}</option>)}</select></label>}
       {/* 两个兄弟组件共享执行身份，但视图 key 必须区分，避免终态插入提示时 React 混用报告与正文实例。 */}
-      <MemberExecutionReport key={'report:'+JSON.stringify([workspaceId,rootSessionId,task.taskId,runId])} workspaceId={workspaceId} rootSessionId={rootSessionId} task={task} runId={runId} graphCursor={graphCursor} scope={scope}/>
+      <MemberExecutionReport key={'report:'+JSON.stringify([workspaceId,rootSessionId,task.taskId,runId])} workspaceId={workspaceId} rootSessionId={rootSessionId} task={task} runId={runId} graphCursor={graphCursor} scope={scope} recovery={recovery}/>
       {runId?<MemberRunDetail key={'transcript:'+JSON.stringify([workspaceId,rootSessionId,task.taskId,runId])} workspaceId={workspaceId} rootSessionId={rootSessionId} task={task} runId={runId} active={active}/>:<p className="member-muted">该任务尚未产生执行轮次。</p>}
       {candidate&&<section className="member-result"><h4>交付候选 · 尚未验收</h4><p>{candidate.summary}</p>{!!candidate.limitations.length&&<><h5>未验证限制</h5><ul>{candidate.limitations.map((item,index)=><li key={index}>{item}</li>)}</ul></>}<details><summary>{candidate.evidenceRefs.length} 条证据引用</summary>{candidate.evidenceRefs.map(id=><code key={id}>{id}</code>)}</details></section>}
     </>}

@@ -50,7 +50,7 @@ N_src_backend_scheduler_engine_tools ..> N_src_backend_scheduler_engine_context 
 
 - [context/](context/ARCHITECTURE.md)：内置主角色可在结构异常时诊断和治理知识。默认执行角色继承 Team 根 Skill，不创建项目角色定义文件；正式任务冻结执行角色、真实模块、维护关系、Workflow 与规范，拒绝主角色执行业务。
 - [conversation/](conversation/ARCHITECTURE.md)：主 Agent 目标规划、证据审阅与团队技术管理指引，以及用户问题、运行内审批和队列。缺必要信息时申请安全等待，不让模型轮询；主角色不执行业务，普通队列消息不替代人工决定或恢复。
-- [execution/](execution/ARCHITECTURE.md)：主实例与图根共享身份，沿计划派工并核验目标；安全等待和显式补充保留周期。执行核实读取指定运行日志、回执与派发事实，报告变动或未知；不启动模型、不确认信封、不自动重放。
+- [execution/](execution/ARCHITECTURE.md)：主实例与图根共享身份，沿计划派工并核验目标。报告只读核实事实；显式新周期重新核对来源后隔离旧上下文，以新只读成员核实影响。稳定意图阻止重复执行，当前上下文异常仍阻断续聊。
 - [runtime/](runtime/ARCHITECTURE.md)：动态运行监管与静态角色履历各自消费已提交事实。监管按真实实例聚合活动与用量；履历按角色/Session分页索引、按需读取公开事件，不授予执行权、不合并模型上下文。恢复不假活跃，实例释放不删历史。
 - [tools/](tools/ARCHITECTURE.md)：把知识 CRUD、目标计划/审阅、执行者派发和图查询注册为 cbim_ 工具。目标与派发工具仅在可信主运行绑定下提供，完成申请仍须结算复核；执行者不获得目标调度或递归派发权。
 

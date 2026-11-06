@@ -1,6 +1,6 @@
 /**
  * 作用定位：调度引擎：工作区执行管理，负责主 Agent 普通对话、团队任务执行与多轮历史读取，拒绝旧轮次分叉，挂起并处理逐次工具审批与结构化用户问题，持久化消息队列并在成功结束后串行续接；本次全部通过仅在当前执行期间有效。
- * 设计原因：本轮用户输入开启周期，成员回注及显式目标补充沿原周期；普通“同意”和继续队列不能解除持久等待。补充先查稳定回执，再由运行时提交一次性意图；停止信号覆盖工厂与日志准备窗口。
+ * 设计原因：补充沿原周期；新只读核实使用稳定意图创建独立上下文。执行预检只排除显式冻结的旧运行，当前记录损坏仍阻断；界面可展示坏历史诊断，不能据此猜测续跑头。
  */
 import {MessageQueue,type QueueCounts} from '../conversation/message-queue';
 import {ApprovalQueue} from '../conversation/approvals';
@@ -14,7 +14,7 @@ import {fail} from '../../core/foundation/errors';
 import {safeId} from '../../core/foundation/identity';
 import type {RunStorage} from '../../core/brain/storage';
 import type {StoredEvent,TaskSpec} from '../../core/brain';
-import type {RunInputSource,RunSummary} from '../../core/brain/types';
+import type {RunInputSource,RunSummary,ConversationThreadView} from '../../core/brain/types';
 import {checkedRunInputSource} from '../../core/brain/input-source';
 import type {createWorkspaceLoop,WorkspaceLoopOptions} from './loop-engine';
 import {prepareTeamTask,type TeamTaskInput} from '../context/team-workflow';
@@ -23,12 +23,23 @@ import {BusinessWorkspace} from '../../core/workspace/model';
 import {goalContinuationRequestSchema,type GoalContinuationRequest,type GoalContinuationReceipt} from '../../core/tasks/scope-continuation';
 import type {DispatchScopeWait} from '../../core/tasks/dispatch-scope';
 import {sameGoalValue} from '../../core/tasks/scope-goal';
+import {recoveryRequestSchema,type RecoveryRequest,type RecoveryLookup,type RecoveryReceipt,type ScopeRecovery} from '../../core/tasks/scope-recovery';
 
 /** IPC 允许的模型运行配置；不接受任意子进程命令或环境变量。 */
 export const executionOptions=z.object({provider:z.string().trim().min(1),model:z.string().trim().min(1),profileId:z.string().uuid().optional(),attachmentIds:z.array(z.string().uuid()).max(12).optional(),allowNativeExecution:z.boolean().default(false),permission:z.enum(['read','ask','execute']).optional(),turnTimeoutMs:z.number().int().min(1000).max(3600000).optional()}).strict();
 type Options=z.infer<typeof executionOptions>;
 /** 由可信工作区装配一次；回调只登记或唤醒协调器，不在 settled 内等待成员执行。 */
 export interface ExecutionCollaboration {
+  /** 只查询已接收的新周期；不得因为回执已存在而再次创建模型。 */
+  recoveryReceipt?(query:RecoveryLookup):Promise<RecoveryReceipt|undefined>;
+  /** 在工厂准备前核实来源、只读配置和关闭状态；可靠意图提交时仍须再次核验。 */
+  recoveryPreflight?(request:RecoveryRequest):Promise<void>;
+  /** 只接受运行时生成的上下文边界；必须先持久提交新周期，再绑定活动调度。 */
+  acceptRecovery?(request:RecoveryRequest,task:TaskSpec,context:{runId:string;nativeSessionId:string;excludedRunIds:string[]}):Promise<void>;
+  /** 最新可靠新上下文边界按持久提交顺序返回；不是“最新可读日志”。 */
+  recoveryContext?(rootSessionId:string):Promise<ScopeRecovery['context']|undefined>;
+  /** 可能没有运行目录的可靠旧意图也要冻结在新上下文边界中。 */
+  recoveryRunIds?(rootSessionId:string):Promise<string[]>;
   /** 只读持久意图；重试必须先核对回执，不依据 active Map 缺项推断从未执行。 */
   continuationReceipt?(query:{workspaceId:string;rootSessionId:string;scopeId:string;commandId:string}):Promise<GoalContinuationReceipt|undefined>;
   /** 读取当前安全检查点，旧等待、已关闭目标以及跨身份请求不能进入启动准备。 */
@@ -123,11 +134,57 @@ export class WorkspaceExecutionManager {
     const modules=await Promise.all(registry.modules.map(async(m:any)=>{const detail=await business.module(m.id);return {id:m.id,name:detail.definition.name,workflows:detail.workflows.map((w:any)=>({id:w.id,name:w.name}))}}));
     return {modules,agents:agents.groups.flatMap((g:any)=>g.agents.map((a:any)=>({id:a.id,name:a.name}))),people:people.people.map((p:any)=>({id:p.id,name:p.name||p.id})),structural:snapshot.validation?.structural};
   }
-  /** 获取一个任务的完整对话轮次；不改变执行状态，跨工作区身份仍由 inspect 校验。 */
+  /** 执行预检只读取当前上下文；旧运行仅可由可靠新周期明确排除，当前坏日志与缺失初始运行仍阻断。 */
   async thread(taskId:string){
     const root=path.join(this.directory(),safeId(taskId));const runs=await this.storage.list(root);
-    const summaries=await Promise.all(runs.map(runId=>this.inspect(taskId,safeId(runId))));
+    const context=await this.collaboration?.recoveryContext?.(taskId),excluded=new Set(context?.excludedRunIds??[]);
+    const current=runs.filter(id=>!excluded.has(id));
+    if(context&&!current.includes(context.initialRunId))fail('MAIN_CONTEXT_INCOMPLETE','新上下文启动记录缺失，请核实该周期，不能退回旧运行');
+    const summaries=await Promise.all(current.map(runId=>this.inspect(taskId,safeId(runId))));
+    return this.checkedCurrentHistory(current,summaries,context);
+  }
+  /** 新上下文按实际 resumeFrom 链组织，不用系统时钟或“最新可读”猜测；这里只核实已读取事实。 */
+  private checkedCurrentHistory(ids:string[],summaries:RunSummary[],context?:ScopeRecovery['context']){
+    if(ids.length!==summaries.length||new Set(ids).size!==ids.length)fail('MAIN_CONTEXT_INCOMPLETE','当前上下文存在无法读取的运行，不能回退');
+    if(context&&!ids.includes(context.initialRunId))fail('MAIN_CONTEXT_INCOMPLETE','新上下文启动记录缺失，不能退回旧运行');
+    for(const summary of summaries){
+      if(summary.logIntegrity?.partialTail)fail('MAIN_CONTEXT_INCOMPLETE','当前上下文存在不完整日志，不能续接或回退');
+      if(context){
+        const native=summary.events.find(event=>event.type==='session.bound')?.data.sessionId;
+        if(native!==undefined&&native!==context.nativeSessionId)fail('MAIN_CONTEXT_IDENTITY','当前运行不属于已登记的新上下文');
+        if(summary.runId===context.initialRunId){
+          const initial=summary.events[0]?.data.freshMain as {nativeSessionId?:unknown;excludedRunIds?:unknown}|undefined;
+          if(!initial||initial.nativeSessionId!==context.nativeSessionId||!sameGoalValue(initial.excludedRunIds,context.excludedRunIds))fail('MAIN_CONTEXT_IDENTITY','新上下文初始运行与可靠意图不一致');
+        }
+      }
+    }
+    if(context){
+      const first=summaries.find(run=>run.runId===context.initialRunId)!;
+      const ordered=[first],remaining=new Set(summaries.filter(run=>run!==first));
+      while(remaining.size){
+        const successors=[...remaining].filter(run=>run.events[0]?.data.resumeFrom===ordered.at(-1)!.runId);
+        if(successors.length!==1)fail('MAIN_CONTEXT_IDENTITY','新上下文运行链存在缺口或分叉，不能猜测续接头');
+        const next=successors[0];
+        if(!sameGoalValue(next.task,first.task)||!sameGoalValue(next.conversationBinding,first.conversationBinding))fail('MAIN_CONTEXT_IDENTITY','新上下文运行链改变了主任务或实例绑定');
+        remaining.delete(next);ordered.push(next);
+      }
+      return ordered;
+    }
     return summaries.sort((a,b)=>a.events[0].time.localeCompare(b.events[0].time));
+  }
+  /** 全部历史的只读投影；坏记录独立显示，不补造终态、不修复源文件，且不会把较早可读记录当作最新执行。 */
+  async threadView(taskId:string):Promise<ConversationThreadView>{
+    const ids=await this.storage.list(path.join(this.directory(),safeId(taskId))),view:ConversationThreadView={runs:[],issues:[]};
+    for(const runId of ids){try{
+      const run=await this.inspect(taskId,safeId(runId));view.runs.push(run);
+      if(run.logIntegrity?.partialTail)view.issues.push({runId,code:'RUN_LOG_INCOMPLETE',message:'这条运行记录尾行不完整，不能作为续跑或验收依据；原文件保持不变。'});
+    }catch(error){view.issues.push({runId,code:typeof (error as {code?:unknown})?.code==='string'?(error as {code:string}).code:'RUN_LOG_UNAVAILABLE',message:'这条历史运行暂时无法核实，原记录保留；不能据此判定没有发生操作。'});}}
+    view.runs.sort((a,b)=>a.events[0].time.localeCompare(b.events[0].time));
+    try{
+      const context=await this.collaboration?.recoveryContext?.(taskId),excluded=new Set(context?.excludedRunIds??[]),current=ids.filter(id=>!excluded.has(id));
+      view.resumeRunId=this.checkedCurrentHistory(current,view.runs.filter(run=>current.includes(run.runId)),context).at(-1)?.runId;
+    }catch{/* 显示历史与执行预检分别处理；任何当前缺口都不提供回退头，不重复读取全部日志。 */}
+    return view;
   }
   /** 新任务重新准备上下文，不接收调用方伪造的知识正文或任务身份。 */
   start(input:TeamTaskInput,options:Options){return this.serial(async()=>this.launch(await prepareTeamTask(this.workspace,input),executionOptions.parse(options)))}
@@ -137,7 +194,7 @@ export class WorkspaceExecutionManager {
     return this.launch({mode:'chat',taskId:randomUUID(),workspaceId:this.workspace.entry.id,root:this.workspace.entry.path,goal,agentId:mainAgentId,moduleIds:[],acceptance:[]},executionOptions.parse(options),message);
   })}
   /** 自动队列与结果回注在工厂等待前后都复核停止屏障，防止停止协作期间重新唤起旧消息。 */
-  private async launch(task:TaskSpec,options:Options,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,automaticQueue=false,continuation?:GoalContinuationRequest){
+  private async launch(task:TaskSpec,options:Options,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,automaticQueue=false,continuation?:GoalContinuationRequest,recovery?:RecoveryRequest){
     if(this.active.has(task.taskId))fail('TASK_RUNNING','任务正在执行');
     if((source?.kind==='member-results'||automaticQueue)&&this.resultContinuationStopped.has(task.taskId))fail('COLLABORATION_STOPPED','本会话已停止自动协作，请显式继续对话');
     const stopVersion=this.stopVersions.get(task.taskId)??0;
@@ -149,10 +206,17 @@ export class WorkspaceExecutionManager {
       controller.signal.throwIfAborted();
       if((this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
       if((source?.kind==='member-results'||automaticQueue)&&this.resultContinuationStopped.has(task.taskId))fail('COLLABORATION_STOPPED','本会话已停止自动协作，请显式继续对话');
-      if(!source&&!automaticQueue)this.resultContinuationStopped.delete(task.taskId);
-      await this.collaboration?.starting?.(task,options,source,message);
+      if(!source&&!automaticQueue&&!recovery)this.resultContinuationStopped.delete(task.taskId);
+      if(!recovery)await this.collaboration?.starting?.(task,options,source,message);
       if(this.closing||(this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
-      const run=await loop.runtime.start(task,message,resume,source,{signal:controller.signal,...(continuation?{beforeRun:async({runId}:{runId:string})=>{
+      const run=recovery?await loop.runtime.startFreshMain(task,message,{signal:controller.signal,knownRunIds:()=>this.collaboration?.recoveryRunIds?.(task.taskId)??Promise.resolve([]),beforeRun:async context=>{
+        controller.signal.throwIfAborted();
+        if(!this.collaboration?.acceptRecovery)fail('RECOVERY_UNAVAILABLE','当前工作区未装配新核实周期');
+        await this.collaboration.acceptRecovery(recovery,task,context);accepted=true;
+        controller.signal.throwIfAborted();
+        await (await this.queue()).pause(task.taskId,'已创建只读核实周期；原排队消息保留暂停，核实结束后可明确继续');
+        controller.signal.throwIfAborted();this.resultContinuationStopped.delete(task.taskId);
+      }}):await loop.runtime.start(task,message,resume,source,{signal:controller.signal,...(continuation?{beforeRun:async({runId}:{runId:string})=>{
         controller.signal.throwIfAborted();
         if(!this.collaboration?.acceptContinuation)fail('GOAL_CONTINUATION_UNAVAILABLE','当前工作区未装配目标恢复');
         await this.collaboration.acceptContinuation(continuation,task,runId);accepted=true;
@@ -173,12 +237,43 @@ export class WorkspaceExecutionManager {
         });
       }).catch(()=>{});
       return {workspaceId:task.workspaceId,taskId:task.taskId,runId:run.runId};
-    }catch(error){await loop?.runtime.close();if(!continuation||accepted)await this.collaboration?.startFailed?.(task,source,error);throw error}
+    }catch(error){await loop?.runtime.close();if((!continuation&&!recovery)||accepted)await this.collaboration?.startFailed?.(task,source,error);throw error}
     finally{if(this.pendingLaunches.get(task.taskId)===controller)this.pendingLaunches.delete(task.taskId)}
   }
+  /** 用户明确提交一个新只读核实目标；旧源记录不恢复，观察只是用户陈述，稳定请求先查已提交事实。 */
+  async recoverExecution(raw:unknown){
+    const request=recoveryRequestSchema.parse(raw);
+    // 在排队之前捕获，不让“请求已进入队列但尚未开始预检”的停止被当成下一次用户授权。
+    const requestedAtStopVersion=this.stopVersions.get(request.rootSessionId)??0;
+    const assertRequested=()=>{if(this.closing||(this.stopVersions.get(request.rootSessionId)??0)!==requestedAtStopVersion)fail('COLLABORATION_STOPPED','核实请求准备期间已收到停止或关闭请求')};
+    return this.serial(async()=>{
+    if(request.workspaceId!==this.workspace.entry.id)fail('IDENTITY','新核实任务不属于当前工作区');
+    const hooks=this.collaboration;
+    if(!hooks?.recoveryReceipt||!hooks.recoveryPreflight||!hooks.acceptRecovery)fail('RECOVERY_UNAVAILABLE','当前工作区未装配新核实周期');
+    const lookup=()=>hooks.recoveryReceipt!({workspaceId:request.workspaceId,rootSessionId:request.rootSessionId,commandId:request.commandId});
+    const receipt=await lookup();
+    if(receipt){
+      const saved=receipt.recovery;
+      const originalSource={scopeId:saved.source.scopeId,taskId:saved.source.taskId,...(saved.source.runId?{runId:saved.source.runId}:{}),reportBasis:saved.source.reportBasis};
+      if(!sameGoalValue(originalSource,request.source)||saved.operation!==request.operation||!sameGoalValue(saved.observation,request.observation)||!sameGoalValue(saved.input,request.input)||!sameGoalValue(saved.options,request.options))fail('RECOVERY_COMMAND_CONFLICT','同一核实请求已经绑定其他内容或配置');
+      return receipt;
+    }
+    assertRequested();
+    if(this.active.has(request.rootSessionId)||hooks.busy(request.rootSessionId))fail('RECOVERY_BUSY','当前会话仍有活动或等待中的目标，请先处理当前目标');
+    await hooks.recoveryPreflight(request);
+    assertRequested();
+    const task:TaskSpec={mode:'chat',taskId:request.rootSessionId,workspaceId:this.workspace.entry.id,root:this.workspace.entry.path,goal:request.input.message,agentId:mainAgentId,moduleIds:[],acceptance:[]};
+    const message=request.input.message+'\n\n本次明确创建独立的只读核实周期，保留原任务历史，不重复旧操作。请匹配业务模块和团队能力，派发新的只读执行任务核实影响，并按真实证据审阅；不要将用户观察当成已核实事实。\n用户观察（尚未核实）：\n'+request.observation.text+'\n来源记录：'+JSON.stringify(request.source);
+    try{await this.launch(task,executionOptions.parse({...request.options,allowNativeExecution:false}),message,undefined,undefined,false,undefined,request)}
+    catch(error){const saved=await lookup();if(saved)return saved;throw error}
+    const saved=await lookup();if(!saved)fail('RECOVERY_UNKNOWN','新核实周期提交结果尚未确认，请查询同一请求');return saved;
+  })}
   /** 用户显式补充原等待目标；稳定请求只消费一次。回执只证明受理，不保证已启动、执行成功或人工验收。 */
-  continueGoal(raw:unknown){return this.serial(async()=>{
+  async continueGoal(raw:unknown){
     const request=goalContinuationRequestSchema.parse(raw);
+    const requestedAtStopVersion=this.stopVersions.get(request.rootSessionId)??0;
+    const assertRequested=()=>{if(this.closing||(this.stopVersions.get(request.rootSessionId)??0)!==requestedAtStopVersion)fail('COLLABORATION_STOPPED','补充目标准备期间已收到停止或关闭请求')};
+    return this.serial(async()=>{
     if(request.workspaceId!==this.workspace.entry.id)fail('IDENTITY','目标补充不属于当前工作区');
     const hooks=this.collaboration;if(!hooks?.continuationReceipt||!hooks.continuationCheckpoint||!hooks.acceptContinuation)fail('GOAL_CONTINUATION_UNAVAILABLE','当前工作区未装配目标恢复');
     const lookup=()=>hooks.continuationReceipt!({workspaceId:request.workspaceId,rootSessionId:request.rootSessionId,scopeId:request.scopeId,commandId:request.commandId});
@@ -188,8 +283,10 @@ export class WorkspaceExecutionManager {
       if(saved.wait.waitId!==request.waitId||saved.wait.goalRevision!==request.expectedGoalRevision||saved.inputRevision!==request.expectedInputRevision+1||!sameGoalValue(saved.input,request.input)||!sameGoalValue(saved.options,request.options))fail('CONTINUATION_CONFLICT','同一补充标识已经绑定其他内容、版本或配置');
       return previousReceipt;
     }
+    assertRequested();
     const wait=await hooks.continuationCheckpoint(request);
     const history=await this.thread(request.rootSessionId),prior=history.at(-1);
+    assertRequested();
     if(!prior||prior.runId!==wait.runId||prior.task.mode!=='chat'||prior.status!=='completed'||prior.unresolvedTools.length||!prior.sessionFile)fail('CONTINUATION_NOT_READY','等待目标对应的主运行尚未安全结算或已有更新，请核实后继续');
     const source:RunInputSource={kind:'user-continuation',continuationId:request.commandId,scopeId:request.scopeId,waitId:request.waitId,inputRevision:request.expectedInputRevision+1};
     try{await this.launch(prior.task,executionOptions.parse({...request.options,allowNativeExecution:request.options.permission!=='read'}),request.input.message,{runId:prior.runId},source,false,request)}
@@ -248,7 +345,7 @@ export class WorkspaceExecutionManager {
   async inspect(taskId:string,runId:string){
     const active=this.active.get(taskId);
     const result=active?.runId===runId?await active.loop.runtime.inspect(taskId,runId):await this.storage.read(path.join(this.directory(),safeId(taskId),safeId(runId)));
-    if(result.task.workspaceId!==this.workspace.entry.id||result.task.root!==this.workspace.entry.path)fail('IDENTITY','执行记录属于其他工作区');
+    if(result.task.workspaceId!==this.workspace.entry.id||result.task.root!==this.workspace.entry.path||result.task.taskId!==taskId||result.runId!==runId)fail('IDENTITY','执行记录属于其他工作区、会话或运行');
     return result;
   }
   /** 历史从日志读取，重启后仍可查看；损坏日志返回错误，不伪装成完成。 */

@@ -1,6 +1,6 @@
 /**
  * 作用定位：在既有派发日志中可靠消费安全等待，并保存用户显式补充与一次性主运行启动意图。
- * 设计原因：运行时在租约和历史预检后注入真实 runId；只有本次新提交产生 fresh，重复请求只读原事实，崩溃不会自动重放模型。
+ * 设计原因：运行时在租约和历史预检后注入真实 runId；只有本次新提交产生 fresh，重复请求只读原事实，崩溃不会自动重放模型。核实周期补充仍须 read，不能借新输入提升权限或签发人工通过。
  * 职责边界：不启动模型、不清除停止屏障、不批准 human 项；调用方必须在提交前后核验停止信号，提交后失败不得还原等待或重用意图。
  */
 import {z} from 'zod';
@@ -43,6 +43,7 @@ export class ScopeContinuationService {
       const scope=this.scope(state,input),goal=scope.goal,wait=scope.wait;
       check(scope.status==='waiting'&&wait,'GOAL_NOT_WAITING','目标不处于安全等待，不能继续或重复消费等待');
       check(goal&&!goal.blocked&&goal.plan&&goal.review?.decision==='awaiting_user','GOAL_CONTINUATION_UNAVAILABLE','目标没有可继续的安全等待记录');
+      check(!scope.recovery||input.options.permission==='read','RECOVERY_READONLY','只读核实周期不能通过补充输入提升执行权限');
       check(wait.waitId===input.waitId,'GOAL_WAIT_CONFLICT','等待检查点已变化，请刷新目标');
       check(goal.revision===input.expectedGoalRevision&&goalInputRevision(goal)===input.expectedInputRevision,'GOAL_REVISION_CONFLICT','目标或补充版本已变化，请刷新后重试');
       check(wait.mainRunIds.length<32,'GOAL_CYCLE_LIMIT','本次目标已达到 32 次主调度运行，不能通过补充重置预算');

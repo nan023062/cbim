@@ -1,6 +1,6 @@
 /**
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
- * 设计原因：先持久化工具决策再放行；补充目标在取得租约并核实旧日志后提交一次性启动意图，已知尾行不完整时禁止续接。停止覆盖意图、日志和引擎准备窗口，成员回注与真实用户补充分开记录。
+ * 设计原因：先持久化工具决策再放行；补充目标只续接安全日志。显式新核实周期在同一主实例下创建全新原生上下文，冻结排除的旧运行并提交一次性意图，既不读取坏历史也不把它伪装成恢复。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -39,6 +39,14 @@ export interface RunStartControl {
   /** 租约和旧运行绑定检查之后、任何新日志/引擎之前调用，runId 由本运行时生成。 */
   beforeRun?(input:{task:TaskSpec;runId:string}):Promise<void>;
 }
+/** 可信调度器专用的新主上下文入口；运行/原生身份及旧运行集合由大脑在租约内生成，公开请求不能提供。 */
+export interface FreshMainStartControl {
+  signal:AbortSignal;
+  /** 可信调度日志中可能尚未创建文件的旧运行意图；租约内读取，与磁盘身份合并，不能由公开请求注入。 */
+  knownRunIds?():Promise<string[]>;
+  /** 在任何新日志、工具装配或模型之前可靠保存意图；失败不允许启动，成功后失败也不能重放同一意图。 */
+  beforeRun(input:{task:TaskSpec;runId:string;nativeSessionId:string;excludedRunIds:string[]}):Promise<void>;
+}
 /** 管理任务级运行和日志；成员跨任务的互斥、通道复用及结果交接由外层调度负责。 */
 export class LoopRuntime {
   /** taskId 为键；同任务在本运行时中只允许一个活动运行。 */
@@ -65,9 +73,17 @@ export class LoopRuntime {
     const pending=this.startInternal(task,message,undefined,prepared);this.starting.add(pending);
     try{return await pending}finally{this.starting.delete(pending)}
   }
-  private async startInternal(task:TaskSpec,message:string,resume?:{runId:string;reconciledToolIds?:string[]},member?:MemberRunLaunch,source?:RunInputSource,control?:RunStartControl):Promise<{runId:string;done:Promise<RunSummary>}>{
+  /** 为已经登记的主会话建立新上下文；不读旧日志、不承接旧工具或任务进度，目录存在及身份/租约仍须核实。 */
+  async startFreshMain(task:TaskSpec,message:string,control:FreshMainStartControl):Promise<{runId:string;done:Promise<RunSummary>}>{
+    if(this.closing)throw Error('Loop Engine 正在关闭');
+    if(!control?.signal||typeof control.beforeRun!=='function')throw Error('新主上下文必须提供可信意图提交与停止信号');
+    const pending=this.startInternal(task,message,undefined,undefined,undefined,{signal:control.signal},control);this.starting.add(pending);
+    try{return await pending}finally{this.starting.delete(pending)}
+  }
+  private async startInternal(task:TaskSpec,message:string,resume?:{runId:string;reconciledToolIds?:string[]},member?:MemberRunLaunch,source?:RunInputSource,control?:RunStartControl,fresh?:FreshMainStartControl):Promise<{runId:string;done:Promise<RunSummary>}>{
     task=structuredClone(task);
     const conversationBinding=this.options.conversationBinding===undefined?undefined:checkedConversationAgentBinding(this.options.conversationBinding,task);
+    if(fresh&&(task.mode!=='chat'||task.agentId!=='cbim:main'||!conversationBinding||resume||member||source))throw Error('新上下文仅限已经登记的主对话实例');
     if(source){source=checkedRunInputSource(source);if(task.mode!=='chat'||!resume||member)throw Error('可信接续只能用于已有主对话');}
     control?.signal.throwIfAborted();
     safeId(task.taskId);safeId(task.workspaceId);
@@ -76,9 +92,16 @@ export class LoopRuntime {
     const release=await this.options.acquireLease(task);
     let previous:RunSummary|undefined;
     let nativeSessionId=member?.session.nativeSessionId;
+    let excludedRunIds:string[]|undefined;
     let preparedEngine:AgentEngine|undefined;
     try{
-      if(resume){
+      if(fresh){
+        // 只枚举旧运行身份。坏历史仍保留；不能扫描“最新可读”记录来悄悄恢复旧上下文。
+        const listed=await this.options.storage.list(path.join(this.options.directory,task.taskId)),known=await fresh.knownRunIds?.()??[];
+        const all=[...new Set([...listed.map(safeId),...known.map(safeId)])];
+        if(all.length>4096||new Set(listed).size!==listed.length)throw Error('主会话历史数量或身份异常，不能建立新上下文');
+        excludedRunIds=all.sort();nativeSessionId=randomUUID();
+      }else if(resume){
         previous=await this.inspect(task.taskId,resume.runId);
         if(previous.logIntegrity?.partialTail)throw Error('原运行日志尾行不完整，先核实执行记录；不能直接续接或重放');
         if(source&&(previous.status!=='completed'||previous.unresolvedTools.length))throw Error('主对话上轮未安全完成，不能接续目标或成员结果');
@@ -100,6 +123,7 @@ export class LoopRuntime {
       }
       const runId=member?.binding.runId??randomUUID(),directory=path.join(this.options.directory,safeId(task.taskId),runId);
       control?.signal.throwIfAborted();
+      if(fresh)await fresh.beforeRun({task:structuredClone(task),runId,nativeSessionId:nativeSessionId!,excludedRunIds:[...excludedRunIds!]});
       await control?.beforeRun?.({task:structuredClone(task),runId});
       control?.signal.throwIfAborted();
       // 先创建尚未启动的适配器，工具装配失败不留下空运行日志。init 成功后必须写入头和真实取消终态，不能直接抛取消而破坏整条会话读取。
@@ -136,7 +160,7 @@ export class LoopRuntime {
         catch(error){await emit({type:'engine.status',data:{metric:'insertion',state:'failed',message,label:'插入未确认，请核实后继续'}});throw error}
       });
       // 保存输入及可信来源；显式补充仍是用户消息，成员结果不能在界面或原生上下文中冒充用户授权。
-      await emit({type:'run.started',data:{task,message,engine:engine.kind,resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[],...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),...(member?{memberBinding:member.binding,nativeSessionId:member.session.nativeSessionId}:{})}});
+      await emit({type:'run.started',data:{task,message,engine:engine.kind,resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[],...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),...(member?{memberBinding:member.binding,nativeSessionId:member.session.nativeSessionId}:{}),...(fresh?{freshMain:{nativeSessionId,excludedRunIds}}:{})}});
       await taskTools.invalidate('新一轮执行需要重新核实产物与证据');
       const stop=async()=>{if(stopping)return;stopping=true;await emit({type:'run.stop_requested',data:{}});await engine.stop()};
       const abort=()=>{void stop().catch(()=>{})};

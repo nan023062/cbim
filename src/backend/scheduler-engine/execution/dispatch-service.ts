@@ -1,6 +1,6 @@
 /**
  * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
- * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；周期冻结真实输入，全部终态复核后安全等待，仅显式补充可消费等待。初始化不自动续跑，幂等旧回执不能重开已关闭周期。
+ * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；周期冻结真实输入并支持安全等待。异常历史只经独立 recovery 意图开新只读周期，初始化不自动续跑，幂等旧回执不能重开已关闭周期。
  * 职责边界：本模块负责可靠入队，由独立 MemberExecutionManager 消费执行；新增派发不能覆盖已有活动占用，排队不等于任务完成。
  */
 import {randomUUID} from 'node:crypto';
@@ -17,6 +17,7 @@ import type {TaskSpec} from '../../core/tasks/types';
 import type {RunSummary} from '../../core/brain/types';
 import {ScopeGoalService,type ScopeGoalPorts} from './scope-goal-service';
 import {ScopeContinuationService} from './scope-continuation-service';
+import {ScopeRecoveryService} from './scope-recovery-service';
 import {openGraphInput,createMemberInput,dispatchTaskInput,graphIdentityInput} from '../../core/tasks/dispatch-commands';
 import type {OpenGraphReceipt,CreateMemberReceipt,DispatchReceipt} from '../../core/tasks/dispatch-commands';
 import type {GraphIdentity,GraphCursor,GraphSnapshot,GraphChange,GraphEventBatch,AgentGraphView,GraphEdge,TaskNode} from '../../core/tasks/graph-types';
@@ -34,9 +35,12 @@ export class WorkspaceDispatchService {
   readonly goals:ScopeGoalService;
   /** 可信用户补充的消费与只读回执；启动和停止屏障仍由运行管理器掌管。 */
   readonly continuations:ScopeContinuationService;
+  /** 已关闭周期的显式只读核实；创建新周期与原生上下文意图，不复活或重放来源。 */
+  readonly recoveries:ScopeRecoveryService;
   constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts){
     this.goals=new ScopeGoalService(owner,store,goalPorts);
     this.continuations=new ScopeContinuationService(owner,store);
+    this.recoveries=new ScopeRecoveryService(owner,store,goalPorts);
   }
 
   /** 工作区启动时恢复事务存储，触发存储观察者的基线；不创建成员、不消费任务。 */

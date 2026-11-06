@@ -2,7 +2,7 @@ import {expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {ScopeContinuationController,ScopeContinuationPool,checkedContinuationReceipt,continuationRejected,type ContinuationTarget,type ContinuationPorts} from '../src/frontend/tasks/continuation-state';
-import {continuationTarget,type ScopeContinuationView} from '../src/frontend/tasks/useScopeContinuation';
+import {continuationTarget,continuationModel,type ScopeContinuationView} from '../src/frontend/tasks/useScopeContinuation';
 import {ScopeContinuationForm} from '../src/frontend/tasks/ScopeContinuationForm';
 import type {GoalContinuationRequest,GoalContinuationReceipt,DispatchScope,ScopeSummary} from '../src/bridge/contracts/dispatch';
 import type {ScopeGoalState} from '../src/frontend/tasks/scope-state';
@@ -85,4 +85,11 @@ it('历史表单不提供提交或重试按钮，未知与受理不冒充执行�
   const base:ScopeContinuationView={scopeId:'scope',waitId:'wait',text:'补充',editable:false,canSubmit:false,canRetry:false,pending:false,error:'',modelLabel:'model',edit:()=>{},submit:async()=>{},query:async()=>{},retry:async()=>{}};
   const unknown=renderToStaticMarkup(createElement(ScopeContinuationForm,{state:{...base,record:{scopeId:'scope',waitId:'wait',text:'补充',attempt:{request,phase:'unknown',uncertain:true}}}}));expect(unknown).toMatch(/readonly=""/i);expect(unknown).toContain('查询提交状态');expect(unknown).not.toContain('scope-continuation-submit');expect(unknown).not.toContain('scope-continuation-retry');expect(unknown).toContain('不代表人工验收');
   const accepted=renderToStaticMarkup(createElement(ScopeContinuationForm,{state:{...base,record:{scopeId:'scope',waitId:'wait',text:'补充',attempt:{request,phase:'accepted',uncertain:false,receipt:receipt(request)}}}}));expect(accepted).toContain('补充已受理');expect(accepted).not.toContain('正在运行');
+});
+
+it('只读核实周期的补充权限取真实开放周期，不随composer或历史选择提权',()=>{
+  const state=scopeState(),model={options:{...options,permission:'execute' as const},label:'model · 完全访问'};
+  const effective=continuationModel(model,{openScope:{...state.openScope!,readOnly:true}})!;
+  expect(effective.options.permission).toBe('read');expect(effective.label).toContain('只读核实');expect(model.options.permission).toBe('execute');
+  expect(continuationModel(model,{openScope:state.openScope})).toBe(model);
 });

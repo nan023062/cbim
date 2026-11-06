@@ -43,6 +43,7 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'loop.prepare':return app.execution(args.id).prepare(args.task);
     case 'loop.choices':return app.execution(args.id).choices();
     case 'loop.thread':return app.execution(args.id).thread(args.taskId);
+    case 'loop.threadView':return app.execution(args.id).threadView(args.taskId);
     case 'loop.start':return app.execution(args.id).start(args.task,await app.modelOptions(args.options));
     case 'loop.queue':return app.execution(args.id).queued(args.taskId);
     case 'loop.queueDelta':return app.execution(args.id).queueDelta(args.taskId,args.cursor);
@@ -56,6 +57,8 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'loop.resume':return app.execution(args.id).resume(args.taskId,args.runId,await new ChatInputs(app.workspace(args.id)).message(args.message,args.attachments),await app.chatOptions(args.id,args.options,args.attachments),args.reconciledToolIds);
     case 'loop.goalContinue':return app.execution(args.workspaceId).continueGoal(args);
     case 'loop.goalContinuation':return app.memberDispatch(args.workspaceId).continuations.inspect(args);
+    case 'loop.recoveryStart':return app.execution(args.workspaceId).recoverExecution(args);
+    case 'loop.recoveryReceipt':return app.memberDispatch(args.workspaceId).recoveries.inspect(args);
     case 'chat.attach':return new ChatInputs(app.workspace(args.id)).add(args.attachment);
     case 'chat.connectors':return new ChatInputs(app.workspace(args.id)).connectors();
     case 'chat.preview':return new ChatInputs(app.workspace(args.id)).preview(args.attachmentId);

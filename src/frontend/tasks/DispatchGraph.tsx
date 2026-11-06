@@ -9,8 +9,8 @@ import {Icon} from '../components/Icon';
 import {layoutDispatchGraph,type DispatchGraphLayout} from './graph-layout';
 import './task-graph.css';
 
-/** 主会话摘要取自真实运行；它是图根的显示信息，不是派发 TaskNode。 */
-export interface DispatchRootView {nodeId:string;name:string;goal:string;status:string;running:boolean;runCount:number;pendingCount:number}
+/** 主会话摘要是图根显示信息；runCount 仅是已读取记录数，不能当作历史实际执行总次数。 */
+export interface DispatchRootView {nodeId:string;name:string;goal:string;status:string;running:boolean;runCount:number;pendingCount:number;unreadableRunCount?:number}
 /** 调用方先按工作区/主会话过滤图；本组件不读取后端，也不建立派发关系。 */
 export interface DispatchGraphProps {
   /** 缺省时仅绘制真实主会话根，不能解释为创建空派发图。 */
@@ -47,7 +47,7 @@ export function DispatchGraph({graph,root,selectedTaskId,onSelectTask,highlighte
           return <button key={node.nodeId} className={'dispatch-node '+(task?'task-node':'root-node')+(selectedTaskId===id?' selected':'')+(outsideScope?' other-scope':'')} style={{left:node.x,top:node.y,width:node.width,height:node.height}} onClick={()=>onSelectTask(id)} aria-pressed={selectedTaskId===id} aria-label={`${task?.assignee.name??root.name} · ${task?.goal??root.goal}${task?' · '+task.modules.map(module=>module.name).join('、'):''} · ${status}${outsideScope?' · 其他任务周期':''}`} data-testid={task?'dispatch-task-node':'dispatch-root-node'} data-task-id={task?.taskId} data-node-id={node.nodeId} data-status={task?.status} data-scope-id={task?.scopeId} data-highlighted={task&&highlightedScopeId?!outsideScope:undefined}>
             <span className="dispatch-node-top"><span className="dispatch-node-avatar"><Icon name={task?'team':'sparkles'} size={17}/></span><span className="dispatch-node-agent">{task?.assignee.name??root.name}<small>{task?'执行 Agent':'主会话 · 调度根'}</small></span><Icon name="chevron" size={13}/></span>
             <span className="dispatch-node-goal" title={task?.goal??root.goal}>{task?.goal??root.goal}</span>
-            {task?<span className="dispatch-node-modules" title={task.modules.map(module=>module.name).join('、')}><Icon name="folder" size={12}/><span>{task.modules.map(module=>module.name).join(' · ')}</span></span>:<span className="dispatch-node-modules">{root.runCount} 次执行 · {root.pendingCount} 条待执行</span>}
+            {task?<span className="dispatch-node-modules" title={task.modules.map(module=>module.name).join('、')}><Icon name="folder" size={12}/><span>{task.modules.map(module=>module.name).join(' · ')}</span></span>:<span className="dispatch-node-modules">已读 {root.runCount} 轮记录{root.unreadableRunCount?` · ${root.unreadableRunCount} 轮待核实`:''} · {root.pendingCount} 条待执行</span>}
             <span className={'dispatch-node-status '+(task?.status??(root.running?'running':''))}><i className={task?.status==='running'||!task&&root.running?'task-state-dot animated':'task-state-dot'}/>{status}</span>
             {task?.waitReason&&<span className="dispatch-node-reason" title={task.waitReason}>{task.waitReason}</span>}
           </button>;

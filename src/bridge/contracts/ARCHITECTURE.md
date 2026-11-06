@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-可序列化的 IPC 数据与公开展示契约。重导出 Core 公开类型及无 IO 校验/归并函数；图/目标增量各自有游标，执行核实分页绑定证据基线，不暴露密钥或平台存储。
+可序列化的 IPC 数据与公开展示契约。图/目标增量使用独立游标；新核实请求和回执冻结来源及只读配置。历史问题单独呈现，可续聊头由后端核实，不从剩余可读记录猜测。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -113,7 +113,7 @@ class N_src_bridge_contracts_dispatch_ts["dispatch.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/tasks/graph-types.ts](../../backend/core/tasks/graph-types.ts)、[../../backend/core/tasks/dispatch-commands.ts](../../backend/core/tasks/dispatch-commands.ts)、[../../backend/core/tasks/member-commands.ts](../../backend/core/tasks/member-commands.ts)、[../../backend/core/tasks/member-events.ts](../../backend/core/tasks/member-events.ts)、[../../backend/core/tasks/graph-reducer.ts](../../backend/core/tasks/graph-reducer.ts)、[../../backend/core/tasks/graph-rules.ts](../../backend/core/tasks/graph-rules.ts)、[../../backend/core/tasks/dispatch-scope.ts](../../backend/core/tasks/dispatch-scope.ts)、[../../backend/core/tasks/scope-view.ts](../../backend/core/tasks/scope-view.ts)、[../../backend/core/tasks/scope-continuation.ts](../../backend/core/tasks/scope-continuation.ts)、[../../backend/core/tasks/execution-report.ts](../../backend/core/tasks/execution-report.ts)。
+直接依赖：[../../backend/core/tasks/graph-types.ts](../../backend/core/tasks/graph-types.ts)、[../../backend/core/tasks/dispatch-commands.ts](../../backend/core/tasks/dispatch-commands.ts)、[../../backend/core/tasks/member-commands.ts](../../backend/core/tasks/member-commands.ts)、[../../backend/core/tasks/member-events.ts](../../backend/core/tasks/member-events.ts)、[../../backend/core/tasks/graph-reducer.ts](../../backend/core/tasks/graph-reducer.ts)、[../../backend/core/tasks/graph-rules.ts](../../backend/core/tasks/graph-rules.ts)、[../../backend/core/tasks/dispatch-scope.ts](../../backend/core/tasks/dispatch-scope.ts)、[../../backend/core/tasks/scope-view.ts](../../backend/core/tasks/scope-view.ts)、[../../backend/core/tasks/scope-continuation.ts](../../backend/core/tasks/scope-continuation.ts)、[../../backend/core/tasks/execution-report.ts](../../backend/core/tasks/execution-report.ts)、[../../backend/core/tasks/scope-recovery.ts](../../backend/core/tasks/scope-recovery.ts)。
 
 ### execution.ts
 
@@ -349,6 +349,10 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 主会话历史展示契约
+
+`execution.ts` 导出 `ConversationThreadView {runs,issues,resumeRunId?}`。坏日志问题独立于运行摘要，仍可显示正常历史；没有可续聊头时不得从 `runs.at(-1)` 推导执行目标。后端明确隔离旧上下文后，新链可以使用同一主实例继续调度，当前链损坏仍阻止续接。
+
 ### 显式补充请求与回执
 
 `dispatch.ts` 重导出 `GoalContinuationRequest / GoalContinuationReceipt` 及两者 Schema。请求冻结完整目标身份、waitId、目标与输入版本、稳定 commandId、原文和明确模型/权限；本步无附件。回执携带同一身份、scopeStatus、continuationId、旧检查点、输入版本、真实 runId 与已保存配置。前端校验响应和冻结请求匹配，未知响应只查询或原请求重试，不能换 ID 自动再次执行。
@@ -512,3 +516,9 @@ interface DispatchGraphApi {
 ### 只读执行核实
 
 `dispatch.ts` 重导出 Core 的 `ExecutionReportInput / ExecutionReport` 和相应 Schema。报告区分在途、结算与未知，不把失败/取消当作回滚；不包含原始工具参数、结果或原生路径。分页基线变化时重置第一页，前端不能合并不同核实版本。该契约不提供批准、复活或重派命令。
+
+### 显式新只读核实周期
+
+`dispatch.ts` 导出 `RecoveryRequest / RecoveryLookup / RecoveryReceipt` 及对应 Schema。`loop.recoveryStart` 接收 workspace/root/commandId、来源 scope/task/可选 run/reportBasis、固定 inspect_effects、分开的用户观察和目标、明确模型及 read 权限；没有附件或任意路径。`loop.recoveryReceipt` 只按 workspace/root/command 查询，不要求调用方先知道新周期 ID。
+
+回执外层包含新 scopeId/status，recovery 返回原命令/source+basis/operation/观察/目标/options、可信来源状态与新 runId。原生 ID 和旧运行排除集合不在公开回执中。回执表示持久受理，不保证模型仍在运行；身份或冻结内容不匹配不能视作成功。`ScopeSummary.readOnly` 只公开核实周期的只读约束，供后续显式补充继续固定 read。

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-中央对话、输入、附件、队列与工具状态。权限说明覆盖业务文件与知识提交；队列以版本增量同步，不因空轮询替换列表引用。
+中央主对话、输入、附件、队列及工具状态。执行成员卡片与主对话分离，结果回注显示系统来源，不伪造用户气泡；增量同步且切换保留草稿。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -46,6 +46,7 @@ class N_src_frontend_conversation_AttachmentMenu_tsx["AttachmentMenu.tsx"] {
   +AttachmentMenu()
 }
 ```
+
 直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)。
 
 ### brain-status.ts
@@ -57,6 +58,7 @@ class N_src_frontend_conversation_brain_status_ts["brain-status.ts"] {
   +brainStatus()
 }
 ```
+
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)。
 
 ### ComposerAttachments.tsx
@@ -68,6 +70,7 @@ class N_src_frontend_conversation_ComposerAttachments_tsx["ComposerAttachments.t
   +ComposerAttachments()
 }
 ```
+
 直接依赖：[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../components/Icon.tsx](../components/Icon.tsx)。
 
 ### ComposerCard.tsx
@@ -80,7 +83,16 @@ class N_src_frontend_conversation_ComposerCard_tsx["ComposerCard.tsx"] {
 }
 ```
 
+
 ### ComposerPicker.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_conversation_ComposerPicker_tsx["ComposerPicker.tsx"] {
+  <<component>>
+  +ComposerPicker()
+}
+```
 
 ```mermaid
 classDiagram
@@ -115,6 +127,14 @@ class N_src_frontend_conversation_conversation_css["conversation.css"] {
 classDiagram
 class N_src_frontend_conversation_Conversation_tsx["Conversation.tsx"] {
   <<component>>
+  +Conversation()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_conversation_Conversation_tsx["Conversation.tsx"] {
+  <<component>>
 }
 class N_src_frontend_conversation_Conversation_tsx_HistoryItem["HistoryItem"] {
   <<interface>>
@@ -126,7 +146,7 @@ class N_src_frontend_conversation_Conversation_tsx_HistoryItem["HistoryItem"] {
 N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_Conversation_tsx_HistoryItem : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../shell/tabs.ts](../shell/tabs.ts)、[transcript.ts](transcript.ts)、[MarkdownMessage.tsx](MarkdownMessage.tsx)、[WorkStatus.tsx](WorkStatus.tsx)、[../tasks/SessionTaskView.tsx](../tasks/SessionTaskView.tsx)、[session-tabs.css](session-tabs.css)、[MessageQueue.tsx](MessageQueue.tsx)、[useMessageQueue.ts](useMessageQueue.ts)、[QuestionCard.tsx](QuestionCard.tsx)、[UsageStatus.tsx](UsageStatus.tsx)、[MessageCard.tsx](MessageCard.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[conversation.css](conversation.css)、[ComposerCard.tsx](ComposerCard.tsx)、[SendButton.tsx](SendButton.tsx)、[AttachmentMenu.tsx](AttachmentMenu.tsx)、[ComposerPicker.tsx](ComposerPicker.tsx)、[ComposerAttachments.tsx](ComposerAttachments.tsx)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../shell/tabs.ts](../shell/tabs.ts)、[transcript.ts](transcript.ts)、[MarkdownMessage.tsx](MarkdownMessage.tsx)、[WorkStatus.tsx](WorkStatus.tsx)、[../tasks/SessionTaskView.tsx](../tasks/SessionTaskView.tsx)、[../tasks/useSessionGraph.ts](../tasks/useSessionGraph.ts)、[../tasks/MemberActivity.tsx](../tasks/MemberActivity.tsx)、[session-tabs.css](session-tabs.css)、[MessageQueue.tsx](MessageQueue.tsx)、[useMessageQueue.ts](useMessageQueue.ts)、[QuestionCard.tsx](QuestionCard.tsx)、[UsageStatus.tsx](UsageStatus.tsx)、[MessageCard.tsx](MessageCard.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[conversation.css](conversation.css)、[ComposerCard.tsx](ComposerCard.tsx)、[SendButton.tsx](SendButton.tsx)、[AttachmentMenu.tsx](AttachmentMenu.tsx)、[ComposerPicker.tsx](ComposerPicker.tsx)、[ComposerAttachments.tsx](ComposerAttachments.tsx)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)。
 
 ### MarkdownMessage.tsx
 
@@ -134,11 +154,10 @@ N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_Con
 classDiagram
 class N_src_frontend_conversation_MarkdownMessage_tsx["MarkdownMessage.tsx"] {
   <<component>>
-  +plainText()
-  +CodeBlock()
   +MarkdownMessage()
 }
 ```
+
 直接依赖：[repairStreamingMarkdown.ts](repairStreamingMarkdown.ts)。
 
 ### message-queue.css
@@ -160,6 +179,7 @@ class N_src_frontend_conversation_MessageCard_tsx["MessageCard.tsx"] {
 }
 ```
 
+
 ### MessageQueue.tsx
 
 ```mermaid
@@ -169,6 +189,7 @@ class N_src_frontend_conversation_MessageQueue_tsx["MessageQueue.tsx"] {
   +MessageQueue()
 }
 ```
+
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[message-queue.css](message-queue.css)。
 
 ### QuestionCard.tsx
@@ -180,6 +201,7 @@ class N_src_frontend_conversation_QuestionCard_tsx["QuestionCard.tsx"] {
   +QuestionCard()
 }
 ```
+
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[questions.css](questions.css)。
 
 ### questions.css
@@ -214,16 +236,10 @@ N_src_frontend_conversation_queue_sync_ts ..> N_src_frontend_conversation_queue_
 classDiagram
 class N_src_frontend_conversation_repairStreamingMarkdown_ts["repairStreamingMarkdown.ts"] {
   <<module>>
-  +scanFences()
-  +isEscaped()
-  +isBulletMarker()
-  +scanDelim()
-  +balanceEmphasis()
-  +repairTrailingImage()
-  +repairTrailingLink()
   +repairStreamingMarkdown()
 }
 ```
+
 
 ### SendButton.tsx
 
@@ -258,13 +274,21 @@ class N_src_frontend_conversation_session_tabs_css["session-tabs.css"] {
 classDiagram
 class N_src_frontend_conversation_ToolActivity_tsx["ToolActivity.tsx"] {
   <<component>>
-  +outputText()
   +ToolActivity()
 }
 ```
+
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)。
 
 ### transcript.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_conversation_transcript_ts["transcript.ts"] {
+  <<module>>
+  +transcript()
+}
+```
 
 ```mermaid
 classDiagram
@@ -309,10 +333,10 @@ class N_src_frontend_conversation_usage_ts["usage.ts"] {
 classDiagram
 class N_src_frontend_conversation_UsageStatus_tsx["UsageStatus.tsx"] {
   <<component>>
-  +Metric()
   +UsageStatus()
 }
 ```
+
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[brain-status.ts](brain-status.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[usage.ts](usage.ts)、[usage.css](usage.css)。
 
 ### useMessageQueue.ts
@@ -324,6 +348,7 @@ class N_src_frontend_conversation_useMessageQueue_ts["useMessageQueue.ts"] {
   +useMessageQueue()
 }
 ```
+
 直接依赖：[queue-sync.ts](queue-sync.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)。
 
 ### WorkStatus.tsx
@@ -335,6 +360,7 @@ class N_src_frontend_conversation_WorkStatus_tsx["WorkStatus.tsx"] {
   +WorkStatus()
 }
 ```
+
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[ToolActivity.tsx](ToolActivity.tsx)。
 
 ### 本目录调用边界

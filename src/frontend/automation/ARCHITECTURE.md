@@ -23,6 +23,7 @@ class N_src_frontend_automation_AutomationView_tsx["AutomationView.tsx"] {
   +AutomationView()
 }
 ```
+
 直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)。
 
 

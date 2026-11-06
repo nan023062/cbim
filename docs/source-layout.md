@@ -1,6 +1,6 @@
 # 源码目录与迁移说明
 
-日期：2026-11-06。本文记录本次目录与职责重构的实际结果。工具功能的后续建设见 [工具架构计划](tool-architecture-roadmap.md)，不能将目录存在视为相应能力已完成。
+日期：2026-11-06。本文记录本次目录与职责重构的实际结果。工具功能的后续建设见 [开发路线图](../design/tool-architecture-roadmap.md)，不能将目录存在视为相应能力已完成。
 
 ## 顶层边界
 
@@ -48,7 +48,7 @@ src/
     components/         公共展示组件
 ```
 
-源码以外维持 `design/`（内置运行规则资产）、`docs/`（人类设计说明）、`tests/`、`scripts/`、`build/` 和 `test-results/`。不把目标项目 `.cbim/` 或用户运行数据搬入源码。
+源码以外由 `docs/` 保存概念设计与配套说明，`design/` 组织开发路线图和逐步实施记录；已有内置运行规则与 Schema 仍保留在 `design/` 原路径，由程序显式加载。另有 `tests/`、`scripts/`、`build/` 和 `test-results/`。不把目标项目 `.cbim/` 或用户运行数据搬入源码。
 
 前端与后端是两个职责层，后端默认运行在本机，并非远端服务器。`bridge/` 只承载公开契约和安全通信：前端通过 preload 调用后端，后端通过契约返回数据。后端内部保持 main → scheduler-engine → core 的依赖方向，main 也可以直接装配 Core。
 
@@ -96,7 +96,7 @@ src/
 
 从 [src 总览](../src/ARCHITECTURE.md) 逐层进入，每个维护目录包含代码清单、Mermaid 类图和子目录链接。大图按文件或边界拆分，跨组依赖明确列出。
 
-分析真实职责后更新 `scripts/source-architecture.mjs` 的目录定位，再运行 `node scripts/source-architecture.mjs` 同步清单和实际声明。`node scripts/source-architecture.mjs --check` 检查文档漂移；脚本不能替代对职责、关键接口和设计理由的人工 review。
+分析真实职责后更新 `scripts/source-architecture.mjs` 的目录定位，再运行 `node scripts/source-architecture.mjs` 同步清单和实际声明。模块导出函数与类型声明同时展示，对象类型保留字段，大型节点按成员分段展示，避免私有字段挤掉公开生命周期入口。`node scripts/source-architecture.mjs --check` 检查文档漂移；脚本不能替代对职责、关键接口和设计理由的人工 review。生成规则的回归样例位于 `tests/source-architecture.test.ts`，使用系统临时目录验证，不把样例代码加入正式源码。
 
 `tests/layer-boundaries.test.ts` 检查嵌套目录、类型依赖及重导出的单向边界，并检查文件头和目录文档。`tests/core-domains.test.ts` 保留领域查询与调度边界回归，防止迁移后检查只扫描空的调度根目录而失效。
 

@@ -1,22 +1,84 @@
 /**
- * 作用定位：当前会话的任务视图，展示持久化目标、步骤责任、证据引用、交付候选和执行轮次。
- * 设计原因：复用对话已经读取的记录，不查询项目全量任务；双重身份过滤防止切换会话时展示旧响应。
- * 边界：完成声明与待审阅不代表业务验收通过；普通问答没有计划时不虚构步骤。
+ * 作用定位：以节点流程图展示当前主会话的派发任务，并在选择根或任务后显示对应执行详情。
+ * 设计原因：全局项目架构与会话派工分开；根详情展示主调度/知识管理实例与会话通道，业务执行由独立成员节点展开，身份过滤防止旧会话响应串入。
+ * 职责边界：运行轮次不是派发节点；没有真实图时只展示已有主会话根，不补造成员任务或业务验收结论。
  */
-import type {RunSummary} from '../../bridge/contracts/execution';
-import type {QueuedMessage} from '../../bridge/contracts/execution';
+import {useEffect,useState} from 'react';
+import type {RunSummary,QueuedMessage} from '../../bridge/contracts/execution';
+import type {GraphSnapshot} from '../../bridge/contracts/dispatch';
 import {WorkStatus} from '../conversation/WorkStatus';
 import {MessageQueue} from '../conversation/MessageQueue';
+import {DispatchGraph,type DispatchRootView} from './DispatchGraph';
+import {MemberTaskDetail} from './MemberTaskDetail';
+import './task-graph.css';
+
 /** 只接收当前工作区、当前会话的记录；草稿会话没有 taskId，因此没有运行历史。 */
-export function sessionRuns(runs:RunSummary[],workspaceId:string,taskId?:string){return taskId?runs.filter(r=>r.task.workspaceId===workspaceId&&r.task.taskId===taskId):[]}
-export function SessionTaskView({workspaceId,taskId,runs,queued,now,busy,onQueueChange,onQueueContinue,onChat,onStop}:{workspaceId:string;taskId?:string;runs:RunSummary[];queued:QueuedMessage[];now:number;busy:boolean;onQueueChange:(id:string,action:string)=>void;onQueueContinue:()=>void;onChat:()=>void;onStop:()=>void}){
- const history=sessionRuns(runs,workspaceId,taskId),pending=taskId?queued.filter(q=>q.taskId===taskId):[];
- const progress=history.at(-1)?.taskProgress;
- return <div className="session-task-view"><header><div><h2>任务视图</h2><p>仅显示当前会话 · {history.length} 次执行 · {pending.length} 条待执行</p></div><button onClick={onChat}>返回对话</button></header>
- {!taskId&&<p>发送第一条消息后，在这里查看本会话的执行进度。</p>}
- {progress&&<article className="session-run" aria-label="执行计划"><h3>{progress.goal}</h3><p>计划版本 {progress.version} · {progress.state==='awaiting_review'?'交付待审阅':'执行与验证中'} · 尚未业务验收</p><p>{progress.reason}</p><ol>{progress.steps.map(step=><li key={step.id}><strong>{step.title}</strong> · {step.owner} · {{pending:'待处理',working:'进行中',reported_done:'已报告完成，待核验'}[step.state]}{step.evidence.length>0&&<details><summary>{step.evidence.length} 条工具回执</summary>{step.evidence.map(id=><p key={id}><code>{id}</code></p>)}</details>}</li>)}</ol><h4>验收要求</h4><ul>{progress.acceptance.map((item,i)=><li key={i}>{item}</li>)}</ul>{progress.delivery&&<><h4>交付候选</h4><p>{progress.delivery.summary}</p><ul>{progress.delivery.limitations.map((item,i)=><li key={i}>{item}</li>)}</ul></>}<details><summary>计划修订记录</summary>{history.flatMap(run=>run.events.filter(e=>e.type==='task.updated').map(e=><p key={run.runId+':'+e.seq}>{e.time} · {String((e.data.progress as {reason?:string})?.reason??'计划更新')}</p>))}</details></article>}
- <MessageQueue items={pending} busy={busy} onChange={onQueueChange} onContinue={onQueueContinue}/>
- {[...history].reverse().map((run,i)=><article className="session-run" key={run.runId}><h3>{String(run.events.find(e=>e.type==='run.started')?.data.message||run.task.goal).split('\n')[0]}</h3><small>第 {history.length-i} 次执行 · {run.events[0]?.time?new Date(run.events[0].time).toLocaleString():''}</small><WorkStatus run={run} now={now}/>{run.status==='running'&&<button disabled={busy} onClick={onStop}>停止本次执行</button>}{run.unresolvedTools.length>0&&<p role="alert">有 {run.unresolvedTools.length} 项操作尚需在对话中核实。</p>}<details><summary>执行标识</summary><code>{run.runId}</code></details></article>)}
- {taskId&&!history.length&&<p>当前会话暂无可显示的执行记录。</p>}
- </div>;
+export function sessionRuns(runs:RunSummary[],workspaceId:string,taskId?:string){return taskId?runs.filter(run=>run.task.workspaceId===workspaceId&&run.task.taskId===taskId):[]}
+/** 根只是主会话显示锚点；主会话执行事实不能当作已派发给其他成员的业务任务。 */
+export function sessionRoot(history:RunSummary[],taskId:string,pending:number,graph?:GraphSnapshot):DispatchRootView{
+  const latest=history.at(-1),status=latest?{running:'正在工作',completed:'本轮结束',cancelled:'已停止',failed:'执行失败',interrupted:'执行中断'}[latest.status]:'暂无执行记录';
+  return {nodeId:graph?.root.nodeId??'session:'+taskId,name:graph?.root.agent.name??'主 Agent',goal:latest?.taskProgress?.goal??latest?.task.goal??'当前会话',status,running:latest?.status==='running',runCount:history.length,pendingCount:pending};
+}
+/** 主会话视图输入；图与日志由外层读取，本组件只过滤展示并转交显式操作。 */
+export interface SessionTaskViewProps {
+  workspaceId:string;
+  /** 主对话沿用的 taskId，在派发图中对应 rootSessionId；草稿尚无此值。 */
+  taskId?:string;
+  runs:RunSummary[];queued:QueuedMessage[];
+  /** 当前时间戳（毫秒），供根详情显示运行时长，不据此推断任务进度。 */
+  now:number;busy:boolean;
+  onQueueChange:(id:string,action:string)=>void;onQueueContinue:()=>void;onChat:()=>void;onStop:()=>void;
+  graph?:GraphSnapshot;graphLoading?:boolean;graphError?:string;onRefreshGraph?:()=>void;
+  /** 隐藏的会话仍保留节点选择，但其成员详情降低同步频率。 */
+  active?:boolean;
+  /** 根节点用 session:<rootSessionId>；业务节点用 taskId；undefined 关闭详情。 */
+  selectedTaskId?:string;
+  /** 提供时由外层控制选择以跨对话/任务页签保留；缺省时使用本组件局部选择。 */
+  onSelectTask?:(id?:string)=>void;
+}
+
+/** 主根详情保留调度与知识治理的对话轮次、计划和停止入口；业务执行详情仅由任务节点展开。 */
+function RootTaskDetail({history,pending,now,busy,onQueueChange,onQueueContinue,onStop,graph}:Pick<SessionTaskViewProps,'now'|'busy'|'onQueueChange'|'onQueueContinue'|'onStop'|'graph'>&{history:RunSummary[];pending:QueuedMessage[]}){
+  const progress=history.at(-1)?.taskProgress;
+  // 身份来自后端保存的绑定；旧日志无该字段时明确未知，不用角色名补造通道。
+  const bound=[...history].reverse().find(run=>run.conversationBinding),binding=bound?.conversationBinding;
+  const conflicting=Boolean(binding&&(binding.workspaceId!==bound!.task.workspaceId||binding.rootSessionId!==bound!.task.taskId||graph&&binding.agentInstanceId!==graph.root.agent.agentInstanceId));
+  const instance=graph?.root.agent.agentInstanceId??(!conflicting?binding?.agentInstanceId:undefined);
+  return <div className="root-task-detail" aria-label="主 Agent 调度详情" data-testid="root-task-detail">
+    <h3>主 Agent</h3><p>{history.length} 次执行 · {pending.length} 条待执行</p>
+    <details className="member-scope" open><summary>主会话实例与通道</summary>
+      {instance?<p>主 Agent 实例 <code>{instance}</code></p>:<p>历史记录未保存主 Agent 实例绑定。</p>}
+      {conflicting?<p role="alert">主会话运行与任务图的实例身份不一致，请重新同步。</p>:binding?<p>对话通道 <code>{binding.agentSessionId}</code></p>:<p>历史记录未保存对话通道绑定，不按角色名称推断。</p>}
+      {graph&&<p>调度通道 <code>{graph.root.agent.agentSessionId}</code></p>}
+      <p>主 Agent 负责调度与知识治理；业务任务由独立执行 Agent 实例完成。</p>
+    </details>
+    {progress&&<article className="session-run" aria-label="执行计划"><h3>{progress.goal}</h3><p>计划版本 {progress.version} · {progress.state==='awaiting_review'?'交付待审阅':'执行与验证中'} · 尚未业务验收</p><p>{progress.reason}</p><ol>{progress.steps.map(step=><li key={step.id}><strong>{step.title}</strong> · {step.owner} · {{pending:'待处理',working:'进行中',reported_done:'已报告完成，待核验'}[step.state]}{step.evidence.length>0&&<details><summary>{step.evidence.length} 条工具回执</summary>{step.evidence.map(id=><p key={id}><code>{id}</code></p>)}</details>}</li>)}</ol><h4>验收要求</h4><ul>{progress.acceptance.map((item,index)=><li key={index}>{item}</li>)}</ul>{progress.delivery&&<><h4>交付候选</h4><p>{progress.delivery.summary}</p><ul>{progress.delivery.limitations.map((item,index)=><li key={index}>{item}</li>)}</ul></>}<details><summary>计划修订记录</summary>{history.flatMap(run=>run.events.filter(event=>event.type==='task.updated').map(event=><p key={run.runId+':'+event.seq}>{event.time} · {String((event.data.progress as {reason?:string})?.reason??'计划更新')}</p>))}</details></article>}
+    <MessageQueue items={pending} busy={busy} onChange={onQueueChange} onContinue={onQueueContinue}/>
+    {[...history].reverse().map((run,index)=><article className="session-run" key={run.runId}><h3>{String(run.events.find(event=>event.type==='run.started')?.data.message||run.task.goal).split('\n')[0]}</h3><small>第 {history.length-index} 次执行 · {run.events[0]?.time?new Date(run.events[0].time).toLocaleString():''}</small><WorkStatus run={run} now={now}/>{run.status==='running'&&<button disabled={busy} onClick={onStop}>停止本次执行</button>}{run.unresolvedTools.length>0&&<p role="alert">有 {run.unresolvedTools.length} 项操作尚需在对话中核实。</p>}<details><summary>执行标识</summary><code>{run.runId}</code></details></article>)}
+    {!history.length&&<p>当前主会话暂无执行记录。返回对话发送消息后可查看运行状态。</p>}
+  </div>;
+}
+
+/** 主区域始终保留图；选择节点才挂载实时详情，关闭详情不停止后台任务。 */
+export function SessionTaskView(props:SessionTaskViewProps){
+  const {workspaceId,taskId,runs,queued,now,busy,onQueueChange,onQueueContinue,onChat,onStop,graph,graphLoading,graphError,onRefreshGraph,selectedTaskId,onSelectTask}=props;
+  const [localSelection,setLocalSelection]=useState<string>();
+  useEffect(()=>setLocalSelection(undefined),[workspaceId,taskId]);
+  const selected=onSelectTask?selectedTaskId:localSelection;
+  const select=(id?:string)=>{setLocalSelection(id);onSelectTask?.(id)};
+  const history=sessionRuns(runs,workspaceId,taskId),pending=taskId?queued.filter(message=>message.taskId===taskId):[];
+  const matching=graph&&graph.identity.workspaceId===workspaceId&&graph.identity.rootSessionId===taskId?graph:undefined;
+  const error=graph&&!matching?'任务图身份不匹配，请重新同步':graphError;
+  const root=taskId?sessionRoot(history,taskId,pending.length,matching):undefined;
+  const selectedTask=matching?.tasks.find(task=>task.taskId===selected),rootSelected=Boolean(root&&selected===root.nodeId),hasDetail=rootSelected||Boolean(selectedTask);
+  return <div className="session-task-view graph-mode" data-testid="session-task-view"><header><div><h2>任务流程</h2><p>当前会话 · {matching?.tasks.length??0} 个派发任务 · {history.length} 次执行</p></div><div className="task-view-actions">{onRefreshGraph&&<button onClick={onRefreshGraph} disabled={graphLoading} aria-label="刷新任务图">刷新</button>}<button onClick={onChat}>返回对话</button></div></header>
+    {error&&<p role="alert" className="task-graph-error">任务图同步中断：{error}{matching?'。保留上次已确认的图。':''}</p>}
+    {graphLoading&&<p role="status" className="task-graph-loading">正在同步任务图…</p>}
+    {!root?<div className="task-graph-draft"><h3>尚未开始会话</h3><p>发送第一条消息后，这里显示主 Agent；派发成员任务后显示团队任务流程。</p><button onClick={onChat}>开始对话</button></div>:<div className={'session-graph-layout'+(hasDetail?' with-detail':'')}>
+      <DispatchGraph key={workspaceId+':'+taskId} graph={matching} root={root} selectedTaskId={selected} onSelectTask={select}/>
+      {hasDetail&&<aside className="session-graph-detail" aria-label={rootSelected?'主 Agent 详情':'成员任务详情'} data-testid="session-graph-detail"><header><strong>{rootSelected?'主会话调度':'成员任务'}</strong><button onClick={()=>select(undefined)} aria-label="关闭详情，返回流程图">返回流程图</button></header>
+        {rootSelected?<RootTaskDetail history={history} pending={pending} now={now} busy={busy} onQueueChange={onQueueChange} onQueueContinue={onQueueContinue} onStop={onStop} graph={matching}/>:selectedTask&&taskId&&<MemberTaskDetail active={props.active} key={workspaceId+':'+taskId+':'+selectedTask.taskId} workspaceId={workspaceId} rootSessionId={taskId} task={selectedTask}/>}
+      </aside>}
+    </div>}
+  </div>;
 }

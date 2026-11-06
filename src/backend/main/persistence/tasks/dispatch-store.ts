@@ -1,6 +1,6 @@
 /**
- * 作用定位：将成员、独立会话、任务图批次和待投递信封作为一个工作区事务可靠保存。
- * 设计原因：追加日志是唯一权威记录；fsync 后才推进内存投影并通知全局监控，恢复只发完整基线，避免半次提交或重复计数。
+ * 作用定位：将成员、独立会话、任务图批次、领取意图和结果信封作为一个工作区事务可靠保存。
+ * 设计原因：追加日志是唯一权威记录；fsync 后才发布投影。主实例和周期执行实例分别去重，周期关闭与任务取消、实例释放原子保存；旧无范围记录不迁移。
  * 职责边界：应用须先持有工作区唯一写入锁；本类串行化该实例内的事务，不启动大脑、不消费 outbox。
  */
 import fs from 'node:fs/promises';
@@ -8,6 +8,8 @@ import path from 'node:path';
 import {fail} from '../../../core/foundation/errors';
 import {hash} from '../../../core/foundation/serialization';
 import {applyGraphBatch, readGraphDelta} from '../../../core/tasks/graph-reducer';
+import {validateDispatchExecution} from '../../../core/tasks/dispatch-invariants';
+import {validateDispatchScopes} from '../../../core/tasks/dispatch-scope-invariants';
 import type {DispatchCommand, DispatchMutation, DispatchObserver, DispatchState, DispatchStore} from '../../../core/tasks/dispatch-storage';
 import type {AgentRef, GraphCursor, GraphDelta, GraphEventBatch, GraphIdentity, GraphSnapshot} from '../../../core/tasks/graph-types';
 
@@ -24,7 +26,6 @@ interface TransactionRecord {body:TransactionBody;checksum:string}
 
 const clone = <T>(value:T):T => structuredClone(value);
 const sameGraph = (a:GraphIdentity,b:GraphIdentity) => a.workspaceId===b.workspaceId && a.rootSessionId===b.rootSessionId;
-const sameAgent = (a:AgentRef,b:AgentRef) => a.agentId===b.agentId && a.agentInstanceId===b.agentInstanceId && a.agentSessionId===b.agentSessionId;
 function text(value:unknown):value is string {return typeof value==='string' && value.trim().length>0}
 function valid(condition:unknown,message:string):asserts condition {if(!condition)fail('GRAPH_INPUT_INVALID',message)}
 function unique<T>(items:T[],key:(item:T)=>string,label:string){const ids=new Set<string>();for(const item of items){const id=key(item);valid(text(id)&&!ids.has(id),`${label}标识无效或重复`);ids.add(id)}}
@@ -37,7 +38,9 @@ function upsert<T>(old:T[],updates:T[],key:(item:T)=>string){const map=new Map(o
 export class FileDispatchStore implements DispatchStore {
   private readonly file:string;
   private state:DispatchState;
+  /** commandId 在整个工作区内去重；指纹同时包含操作与主会话等输入，跨图复用同键也会冲突。 */
   private readonly commands=new Map<string,{fingerprint:string;receipt:unknown}>();
+  /** 按 rootSessionId 保存已提交图批次；图序号独立于包含无图变更事务的 transactionSeq。 */
   private readonly events=new Map<string,GraphEventBatch[]>();
   private transactionSeq=0;
   private lastHash='';
@@ -51,7 +54,7 @@ export class FileDispatchStore implements DispatchStore {
   constructor(readonly directory:string,readonly workspaceId:string,private readonly observer?:DispatchObserver){
     valid(text(workspaceId),'存储必须绑定明确工作区');
     this.file=path.join(directory,'dispatch.jsonl');
-    this.state={workspaceId,members:[],sessions:[],graphs:[],outbox:[]};
+    this.state={workspaceId,members:[],sessions:[],graphs:[],outbox:[],runs:[],scopes:[]};
   }
 
   private available(){
@@ -85,7 +88,7 @@ export class FileDispatchStore implements DispatchStore {
   }
 
   /**
-   * 幂等查找先于 prepare；同键重发不会重新查知识或生成成员/任务 ID。
+   * 工作区级幂等查找先于 prepare；同键重发不会重新查知识或生成成员/任务 ID。
    * prepare 或领域校验失败不污染后续事务；实际写入失败会封闭本实例，须重新打开核实日志。
    */
   transact<T>(command:DispatchCommand,prepare:(state:DispatchState)=>Promise<DispatchMutation<T>>):Promise<T>{
@@ -142,25 +145,31 @@ export class FileDispatchStore implements DispatchStore {
   /** 验证整次 mutation 后才返回候选投影；图、成员会话与信封引用在同一个候选状态内核对。 */
   private project(mutation:DispatchMutation,command:DispatchCommand):DispatchState{
     valid(mutation&&typeof mutation==='object','无效调度事务');
-    const members=mutation.members??[],sessions=mutation.sessions??[],messages=mutation.messages??[];
-    valid(Array.isArray(members)&&Array.isArray(sessions)&&Array.isArray(messages),'事务集合必须是数组');
-    unique(members,m=>m.agentInstanceId,'成员');unique(sessions,s=>s.agentSessionId,'会话');unique(messages,m=>m.messageId,'消息');
-    const next:DispatchState={workspaceId:this.workspaceId,members:upsert(this.state.members,members,m=>m.agentInstanceId),sessions:upsert(this.state.sessions,sessions,s=>s.agentSessionId),graphs:[...this.state.graphs],outbox:[...this.state.outbox,...messages]};
-    unique(next.members,m=>m.agentId,'工作区角色');unique(next.sessions,s=>s.agentSessionId,'会话');unique(next.outbox,m=>m.messageId,'消息');
+    const members=mutation.members??[],sessions=mutation.sessions??[],messages=mutation.messages??[],runs=mutation.runs??[],scopes=mutation.scopes??[];
+    valid(Array.isArray(members)&&Array.isArray(sessions)&&Array.isArray(messages)&&Array.isArray(runs)&&Array.isArray(scopes),'事务集合必须是数组');
+    unique(members,m=>m.agentInstanceId,'成员');unique(sessions,s=>s.agentSessionId,'会话');unique(messages,m=>m.messageId,'消息');unique(runs,r=>r.binding?.runId,'运行');unique(scopes,s=>s.scopeId,'周期');
+    // 旧 v1 日志没有 runs；按空集合投影且保留原校验和，不通过迁移重写历史。
+    const next:DispatchState={workspaceId:this.workspaceId,members:upsert(this.state.members,members,m=>m.agentInstanceId),sessions:upsert(this.state.sessions,sessions,s=>s.agentSessionId),graphs:[...this.state.graphs],outbox:upsert(this.state.outbox,messages,m=>m.messageId),runs:upsert(this.state.runs??[],runs,r=>r.binding.runId),scopes:upsert(this.state.scopes??[],scopes,s=>s.scopeId)};
+    unique(next.members,m=>JSON.stringify(m.agentId==='cbim:main'?['main',m.mainRootSessionId??null]:m.executionScopeId?['execution',m.executionScopeId,m.executionTaskId]:['legacy',m.agentId]),'主会话、周期任务或旧角色实例');unique(next.sessions,s=>s.agentSessionId,'会话');unique(next.outbox,m=>m.messageId,'消息');
     for(const member of members){
       valid(member.workspaceId===this.workspaceId&&text(member.teamId)&&text(member.agentId),'成员必须属于当前工作区的明确团队角色');
+      valid(member.mainRootSessionId===undefined||(member.agentId==='cbim:main'&&text(member.mainRootSessionId)),'仅主实例可以固定所属主会话');
       valid(Number.isSafeInteger(member.leaseEpoch)&&member.leaseEpoch>=0&&text(member.configurationRevision),'成员代际或配置版本无效');
       valid(Array.isArray(member.agentSessionIds)&&new Set(member.agentSessionIds).size===member.agentSessionIds.length,'成员会话列表无效');
       valid(['idle','working','waiting','communicating'].includes(member.activity)&&Array.isArray(member.waitingTaskIds)&&Array.isArray(member.communicatingMessageIds),'成员活动状态无效');
       const previous=this.state.members.find(m=>m.agentInstanceId===member.agentInstanceId);
-      if(previous)valid(previous.workspaceId===member.workspaceId&&previous.teamId===member.teamId&&previous.agentId===member.agentId&&member.leaseEpoch>=previous.leaseEpoch,'不能重绑定已有成员或倒退租约代际');
+      if(previous)valid(previous.workspaceId===member.workspaceId&&previous.teamId===member.teamId&&previous.agentId===member.agentId&&previous.mainRootSessionId===member.mainRootSessionId&&previous.executionScopeId===member.executionScopeId&&previous.executionTaskId===member.executionTaskId&&member.leaseEpoch>=previous.leaseEpoch,'不能重绑定已有成员、主会话/执行周期范围或倒退租约代际');
     }
     for(const session of next.sessions){
+      valid(Object.keys(session).every(key=>['workspaceId','teamId','agentId','agentInstanceId','agentSessionId','rootSessionId','purpose','nativeSessionId','lastTaskId','lastRunId'].includes(key)),'公开成员通道不能携带私有路径或未知字段');
+      valid(session.purpose===undefined||session.purpose==='task'||(session.purpose==='conversation'&&session.agentId==='cbim:main'),'会话用途无效或不属于主角色');
       const member=next.members.find(m=>m.agentInstanceId===session.agentInstanceId);
       valid(session.workspaceId===this.workspaceId&&text(session.rootSessionId)&&member&&member.agentId===session.agentId&&member.teamId===session.teamId,'会话必须属于已有成员');
       valid(member.agentSessionIds.includes(session.agentSessionId),'成员未声明该会话');
+      valid(!member.mainRootSessionId||member.mainRootSessionId===session.rootSessionId,'主实例通道必须属于其固定主会话');
       const previous=this.state.sessions.find(s=>s.agentSessionId===session.agentSessionId);
-      if(previous)valid(previous.agentInstanceId===session.agentInstanceId&&previous.rootSessionId===session.rootSessionId,'不能将已有会话改绑至其它成员或主会话');
+      if(previous)valid(previous.agentInstanceId===session.agentInstanceId&&previous.rootSessionId===session.rootSessionId&&(previous.purpose??'task')===(session.purpose??'task'),'不能将已有会话改绑至其它成员、主会话或用途');
+      if(previous?.nativeSessionId)valid(previous.nativeSessionId===session.nativeSessionId,'不能改绑已知原生会话身份');
     }
     for(const member of next.members)for(const id of member.agentSessionIds)valid(next.sessions.some(s=>s.agentSessionId===id&&s.agentInstanceId===member.agentInstanceId),'成员引用的独立会话不存在');
     const batch=mutation.batch;
@@ -172,24 +181,18 @@ export class FileDispatchStore implements DispatchStore {
     }
     const checkAgent=(agent:AgentRef,identity:GraphIdentity)=>{
       const session=next.sessions.find(s=>s.agentSessionId===agent.agentSessionId);
-      valid(session&&session.agentId===agent.agentId&&session.agentInstanceId===agent.agentInstanceId&&session.rootSessionId===identity.rootSessionId,'图引用的成员会话与主会话不一致');
+      valid(session&&session.agentId===agent.agentId&&session.agentInstanceId===agent.agentInstanceId&&session.rootSessionId===identity.rootSessionId&&(session.purpose??'task')==='task','图引用的成员任务通道与主会话不一致');
     };
     for(const graph of next.graphs){
       checkAgent(graph.root.agent,graph.identity);
       for(const task of graph.tasks){checkAgent(task.requester,graph.identity);checkAgent(task.assignee,graph.identity)}
       for(const view of graph.agents)valid(next.members.some(m=>m.agentInstanceId===view.agentInstanceId&&m.agentId===view.agentId),'图状态引用了未知成员');
     }
-    for(const message of messages){
-      valid(message.kind==='assignment'&&message.delivery==='pending'&&message.commandId===command.commandId,'消息只能作为当前命令的待投递任务信封');
-      this.checkIdentity(message.identity);
-      const graph=next.graphs.find(g=>sameGraph(g.identity,message.identity));
-      const task=graph?.tasks.find(t=>t.taskId===message.taskId);
-      valid(batch&&sameGraph(batch.identity,message.identity)&&batch.changes.some(c=>c.type==='task.upserted'&&c.task.taskId===message.taskId),'信封须关联同批任务节点');
-      valid(task&&task.planRevision===message.planRevision&&sameAgent(task.requester,message.from)&&sameAgent(task.assignee,message.to),'信封来源、接收方或计划版本与任务不一致');
-    }
+    validateDispatchScopes(this.state,next,mutation);
+    validateDispatchExecution(this.state,next,mutation,command);
     if(batch)for(const change of batch.changes){
       if(change.type==='task.upserted'&&!this.state.graphs.find(g=>sameGraph(g.identity,batch.identity))?.tasks.some(t=>t.taskId===change.task.taskId)){
-        valid(messages.some(m=>m.taskId===change.task.taskId),'新任务必须与待投递信封一起提交');
+        valid(messages.some(m=>m.kind==='assignment'&&m.taskId===change.task.taskId),'新任务必须与待投递信封一起提交');
       }
     }
     return next;

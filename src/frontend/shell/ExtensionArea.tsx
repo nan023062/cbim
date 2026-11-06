@@ -1,6 +1,6 @@
 /**
  * 作用定位：工作区右侧扩展页签，独立于中央对话管理浏览器、命令终端、架构与内部运行诊断视图。
- * 设计原因：空页签只呈现功能选择；收起保留组件和草稿，关闭才释放终端。网页用无宿主权限的沙箱 iframe。
+ * 设计原因：空页签只呈现功能选择；收起保留组件和草稿，关闭才释放终端；静态团队/业务定义提交后刷新工作区共享快照，动态实例仍归会话任务图。网页用无宿主权限的沙箱 iframe。
  */
 import {useEffect,useState,type MutableRefObject} from 'react';
 import type {Snapshot,WorkspaceView} from '../../bridge/contracts/workspace';
@@ -26,7 +26,7 @@ export function ExtensionArea({workspace,snapshot,dirty,open,request,onClose,onO
  async function close(t:Panel){if(dirty.current.has(t.id)&&!confirm('此页有未提交的知识编辑，关闭并丢弃？'))return;dirty.current.delete(t.id);if(t.kind==='terminal')await api.call('terminal.close',{id:workspace.id,tabId:t.id});setTabs(old=>old.filter(x=>x.id!==t.id))}
  return <aside className="extension-area" hidden={!open} aria-label="右侧扩展区"><header className="extension-tabs"><div role="tablist" aria-label="扩展页签">{tabs.map(t=><div key={t.id} className={t.id===chosen?'active':''}><button role="tab" aria-selected={t.id===chosen} onClick={()=>setActive(t.id)}>{names[t.kind]}</button><button aria-label={'关闭扩展 '+names[t.kind]} onClick={()=>void close(t)}>×</button></div>)}</div><button aria-label="新增扩展页签" onClick={()=>add()}><Icon name="plus" size={16}/></button><button aria-label="收起扩展区" onClick={onClose}>›</button></header>
  {!tabs.length&&<div className="extension-empty"><p>扩展区暂无页签</p><button onClick={()=>add()}>新增空页签</button></div>}
- {tabs.map(t=><section key={t.id} className="extension-content" hidden={t.id!==chosen} aria-label={names[t.kind]}>{t.kind==='empty'?<div className="extension-empty">{choices.map(kind=><button key={kind} onClick={()=>setTabs(old=>old.map(x=>x.id===t.id?{...x,kind}:x))}>打开{names[kind]}</button>)}</div>:t.kind==='browser'?<BrowserPane workspaceId={workspace.id}/>:t.kind==='terminal'?<TerminalPane workspaceId={workspace.id} tabId={t.id}/>:t.kind==='team'?<TeamView workspace={workspace} snapshot={snapshot}/>:t.kind==='knowledge'?<BusinessArchitecture id={workspace.id} tabId={t.id} dirty={dirty} snapshot={snapshot}/>:t.kind==='automation'?<AutomationView workspace={workspace} snapshot={snapshot}/>:<WorkspaceDiagnostics workspace={workspace} snapshot={snapshot} refreshKnowledge={refresh}/>}</section>)}
+ {tabs.map(t=><section key={t.id} className="extension-content" hidden={t.id!==chosen} aria-label={names[t.kind]}>{t.kind==='empty'?<div className="extension-empty">{choices.map(kind=><button key={kind} onClick={()=>setTabs(old=>old.map(x=>x.id===t.id?{...x,kind}:x))}>打开{names[kind]}</button>)}</div>:t.kind==='browser'?<BrowserPane workspaceId={workspace.id}/>:t.kind==='terminal'?<TerminalPane workspaceId={workspace.id} tabId={t.id}/>:t.kind==='team'?<TeamView workspace={workspace} snapshot={snapshot} refresh={refresh}/>:t.kind==='knowledge'?<BusinessArchitecture id={workspace.id} tabId={t.id} dirty={dirty} snapshot={snapshot} refresh={refresh}/>:t.kind==='automation'?<AutomationView workspace={workspace} snapshot={snapshot}/>:<WorkspaceDiagnostics workspace={workspace} snapshot={snapshot} refreshKnowledge={refresh}/>}</section>)}
  </aside>;
 }
 /** 沙箱网页无 preload/Node/顶层导航权限；仅接受 HTTP(S)，被站点拒绝嵌入时提供外部打开。 */

@@ -49,9 +49,9 @@ class N_src_backend_core_workspace_model_ts["model.ts"] {
   <<module>>
 }
 class N_src_backend_core_workspace_model_ts_BusinessWorkspace["BusinessWorkspace"] {
-  -snapshot
   +modules()
   +module()
+  -snapshot
 }
 N_src_backend_core_workspace_model_ts ..> N_src_backend_core_workspace_model_ts_BusinessWorkspace : 声明
 ```

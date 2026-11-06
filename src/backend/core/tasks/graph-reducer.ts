@@ -22,7 +22,7 @@ function nextRevision(previous:{revision:number}|undefined,next:{revision:number
   if(next.revision!==(previous?previous.revision+1:1))fail('GRAPH_REVISION_CONFLICT','图对象版本必须从 1 开始并连续递增');
 }
 function taskRevision(previous:TaskNode,next:TaskNode){
-  if(previous.parentTaskId!==next.parentTaskId||stable(previous.requester)!==stable(next.requester)||previous.createdAt!==next.createdAt)fail('GRAPH_INPUT_INVALID','任务派发父关系、请求人和创建时间不能改写');
+  if(previous.scopeId!==next.scopeId||previous.parentTaskId!==next.parentTaskId||stable(previous.requester)!==stable(next.requester)||previous.createdAt!==next.createdAt)fail('GRAPH_INPUT_INVALID','任务调度周期、派发父关系、请求人和创建时间不能改写');
   const plan=(t:TaskNode)=>({goal:t.goal,acceptance:t.acceptance,modules:t.modules,assignee:t.assignee});
   const changed=stable(plan(previous))!==stable(plan(next));
   if(next.planRevision!==previous.planRevision+(changed?1:0))fail('GRAPH_REVISION_CONFLICT','任务计划版本与范围修订不一致');

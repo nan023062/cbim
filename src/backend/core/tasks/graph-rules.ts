@@ -20,7 +20,7 @@ const moduleBinding=z.object({moduleId:id,name:text,knowledgeRevision:id,mainten
     z.object({kind:z.literal('general'),id,version:id,reason:text}).strict(),
   ])}).strict();
 const root=z.object({kind:z.literal('session-root'),nodeId:id,identity,agent,revision,createdAt:time}).strict();
-const task=z.object({kind:z.literal('task'),nodeId:id,taskId:id,identity,parentTaskId:id.optional(),requester:agent,assignee:agent,
+const task=z.object({kind:z.literal('task'),nodeId:id,taskId:id,identity,scopeId:id.optional(),parentTaskId:id.optional(),requester:agent,assignee:agent,
   modules:z.array(moduleBinding).min(1),goal:text,acceptance:z.array(z.object({id,text}).strict()).min(1),
   revision,planRevision:revision,status:z.enum(['planned','queued','running','waiting','result_ready','blocked','failed','cancelled','interrupted']),
   awaitedChildren:z.array(z.object({taskId:id,planRevision:revision}).strict()),waitReason:text.optional(),runIds:z.array(id),activeRunId:id.optional(),

@@ -1,5 +1,5 @@
 /**
- * 作用定位：定义 IPC 路由需要的应用服务、成员派发查询、全局运行只读投影及工作区生命周期入口。
+ * 作用定位：定义 IPC 路由需要的应用服务、成员派发及执行审批、静态角色履历、全局运行只读投影与工作区生命周期入口。
  * 设计原因：路由依赖此契约，Application 负责实现和装配，避免路由反向引用应用类形成类型循环。
  * 职责边界：这里只声明内部调用能力，不代表渲染进程可以直接访问这些服务。
  */
@@ -10,6 +10,8 @@ import type {LlmProfiles} from '../persistence/settings/llm-profiles';
 import type {ResourceRepositories} from '../resources/resource-repository';
 import type {WorkspaceExecutionManager} from '../../scheduler-engine/execution/execution-manager';
 import type {WorkspaceDispatchService} from '../../scheduler-engine/execution/dispatch-service';
+import type {MemberExecutionManager} from '../../scheduler-engine/execution/member-execution';
+import type {AgentHistoryService} from '../../scheduler-engine/runtime/agent-history';
 import type {RuntimeCursor,RuntimeRead,RuntimeSnapshot} from '../../core/runtime/types';
 import type {Catalog as CatalogData, WorkspaceView} from '../../../bridge/contracts/workspace';
 
@@ -27,8 +29,12 @@ export interface ApplicationServices {
   list(): Promise<Omit<CatalogData, 'entries'> & {warning: string; entries: WorkspaceView[]}>;
   workspace(id: string): Workspace;
   execution(id: string): WorkspaceExecutionManager;
-  /** 仅装配当前工作区成员图服务；不会启动大脑或切换知识写权限。 */
+  /** 取得已装配的工作区成员图服务；未就绪则拒绝，不隐式启动大脑或改变知识写权限。 */
   memberDispatch(id:string):WorkspaceDispatchService;
+  /** 只接收已派发任务的可信执行命令，成员会话与模型快照由后端绑定。 */
+  memberExecution(id:string):MemberExecutionManager;
+  /** 按静态角色读取持久 Session 履历；已释放实例和已删除定义仍可追溯，不启动或恢复执行。 */
+  agentHistory(id:string):AgentHistoryService;
   /** 合并并发打开；restart 要先停止旧执行实例再重建工作区。 */
   open(id: string, restart?: boolean): Promise<Workspace>;
   stop(id: string): Promise<void>;

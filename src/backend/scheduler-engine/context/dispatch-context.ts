@@ -1,9 +1,8 @@
 /**
- * 作用定位：从同一知识快照解析派发角色与多模块绑定，供成员注册和任务入队使用。
- * 设计原因：模型只提供候选 ID；角色、继承 Skill、维护人和 Workflow 均从已校验知识取得，不接受伪造的完整绑定。
+ * 作用定位：解析主会话内置身份，以及正式派发所需的角色知识与多模块绑定。
+ * 设计原因：诊断对话的主实例登记不依赖业务知识完好；正式任务只接受自定义或内置默认执行角色，主调度角色永远不能成为执行者。
  * 职责边界：只读并冻结输入，不创建实例、不派发消息、不把本机维护声明当作权限批准。
  */
-import path from 'node:path';
 import {fail} from '../../core/foundation/errors';
 import {hash} from '../../core/foundation/serialization';
 import {content,data} from '../../core/knowledge/snapshot';
@@ -14,6 +13,7 @@ import type {ModuleBinding} from '../../core/tasks/graph-types';
 import type {ModuleMaintenanceDefinition} from '../../core/workspace/maintenance';
 import {BusinessWorkspace} from '../../core/workspace/model';
 import {mainAgentId,mainAgentInstructions} from '../conversation/main-agent';
+import {defaultExecutorId,defaultExecutorConfiguration} from './default-executor';
 
 /** 派发只使用结构完整的固定版本；普通问答仍可通过原查询入口查看缺口。 */
 function assertSnapshot(snapshot:Snapshot){
@@ -26,19 +26,19 @@ function textOf(body:ReturnType<typeof content>):string{
   return body.text;
 }
 
-/** 统一解析内置主角色与真实团队叶子角色；返回配置正文，不创建运行身份或授予工具权限。 */
+/** 仅用于建图和普通对话身份登记；知识异常也允许诊断，但不声称已加载可执行 Skill。正式任务必须走 resolveDispatchAgent。 */
+export function resolveConversationAgent(snapshot:Snapshot):AgentConfigurationSnapshot{
+  if(!snapshot.workspaceId||!snapshot.revision)fail('KNOWLEDGE_INVALID','主会话身份登记需要有效工作区和知识版本');
+  return {workspaceId:snapshot.workspaceId,teamId:'.cbim/team',agentId:mainAgentId,knowledgeRevision:snapshot.revision,name:'CBIM 主 Agent',source:'builtin',principles:mainAgentInstructions,effectiveSkills:[]};
+}
+
+/** 仅解析正式执行角色；内置主角色不可执行，默认执行者不要求创建项目静态文件。 */
 export async function resolveDispatchAgent(snapshot:Snapshot,agentId:string):Promise<AgentConfigurationSnapshot>{
   assertSnapshot(snapshot);
   if(typeof agentId!=='string'||!agentId.trim())fail('AGENT_MISSING','请指定已登记的成员角色');
   const identity={workspaceId:snapshot.workspaceId,teamId:'.cbim/team',agentId,knowledgeRevision:snapshot.revision};
-  if(agentId===mainAgentId){
-    const ownerId='.cbim/team',definition=data(snapshot,ownerId+'/skills.json');
-    return {...identity,name:'CBIM 主 Agent',source:'builtin',principles:mainAgentInstructions,
-      effectiveSkills:definition.skills.map((skill:{reference:string})=>({
-        skillId:path.posix.dirname(path.posix.join(ownerId,skill.reference)),ownerId,inherited:true,
-        content:textOf(content(snapshot,ownerId,skill.reference)),
-      }))};
-  }
+  if(agentId===mainAgentId)fail('AGENT_ROLE_INVALID','主 Agent 只负责调度；请选择执行角色，无合适角色时使用 cbim:executor');
+  if(agentId===defaultExecutorId)return defaultExecutorConfiguration(snapshot);
   if(!Object.hasOwn(snapshot.validation!.skills??{},agentId))fail('AGENT_MISSING','成员角色不存在或不是有效团队叶子');
   const agent=await new Team(snapshot).agent(agentId);
   if(!agent.skillSelectionValid)fail('KNOWLEDGE_INVALID','成员 Skill 继承存在冲突');

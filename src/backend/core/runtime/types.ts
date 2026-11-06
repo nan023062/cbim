@@ -7,6 +7,8 @@ import type {RunStatus} from '../brain/types';
 import type {RunUsage} from '../brain/usage';
 import type {TaskStatus} from '../tasks/graph-types';
 import type {AgentActivity} from '../team/agent-types';
+import type {MemberRunBinding} from '../brain/member-run';
+import type {ConversationAgentBinding} from '../brain/conversation-binding';
 
 /** epoch 由应用级管理器生成；关闭并重新接入工作区后，旧回调不能写入新投影。 */
 export type RuntimeAvailability='loading'|'ready'|'closed'|'unavailable';
@@ -25,8 +27,16 @@ export interface RuntimeWorkspace {
 /** 持久化实例加当前进程观察状态；恢复的历史 activity 不代表已经持有活动执行租约。 */
 export interface RuntimeMember {
   workspaceId:string;teamId:string;agentId:string;agentInstanceId:string;leaseEpoch:number;
+  /** 新主实例归属的主会话；普通成员及未迁移历史实例缺省，不用角色名补造。 */
+  mainRootSessionId?:string;
+  /** 执行实例的任务/调度周期归属；主调度实例不带执行周期。 */
+  executionScopeId?:string;executionTaskId?:string;
+  /** released 只保留历史，不再占当前实例与活跃压力；主实例随会话保留。 */
+  lifecycle?:'active'|'released';releasedAt?:string;
   activity:AgentActivity;activityCurrent:boolean;availability:RuntimeAvailability;
   sessionCount:number;activeTaskId?:string;activeRunId?:string;
+  /** 真实运行中的主会话通道；不是派发 TaskNode，不占用 activeTaskId 或重复计任务。 */
+  activeConversation?:{rootSessionId:string;agentSessionId:string;runId:string};
   waitingTaskIds:string[];communicatingMessageIds:string[];
 }
 /** 已派发业务任务；runIds 为空表示尚未创建执行轮次。 */
@@ -35,14 +45,18 @@ export interface RuntimeDispatchTask {
   agentId:string;agentInstanceId:string;moduleIds:string[];status:TaskStatus;
   revision:number;planRevision:number;runIds:string[];updatedAt:string;
 }
-/** 既有 Loop 的任务没有成员实例绑定；禁止按角色名称猜测 agentInstanceId。 */
-export interface RuntimeLoopTask {
-  source:'loop';binding:'role-only';workspaceId:string;taskId:string;agentId?:string;
+/** 对话按真实绑定归属实例；旧记录仍只有角色，禁止按角色名称猜测实例。 */
+export type RuntimeLoopTask={
+  source:'loop';workspaceId:string;taskId:string;agentId?:string;
   moduleIds:string[];status:RunStatus;runIds:string[];activeRunIds:string[];lastRunId:string;updatedAt:string;
-}
+}&({binding:'role-only'}|{binding:'instance';agentInstanceId:string;agentSessionId:string;rootSessionId:string});
 export type RuntimeTask=RuntimeDispatchTask|RuntimeLoopTask;
 export interface RuntimeRun {
   workspaceId:string;taskId:string;runId:string;agentId?:string;status:RunStatus;
+  /** 来自 run.started 的已核验成员身份；存在时归属派发任务，不再生成重复的 role-only 任务。 */
+  memberBinding?:MemberRunBinding;
+  /** 主会话自身的实例身份；与 memberBinding 互斥，不代表已派发业务任务。 */
+  conversationBinding?:ConversationAgentBinding;
   phase:'working'|'tool'|'waiting'|'stopping'|'settled';
   /** 最近一次改变公开状态的事件序号；流式片段仅推进内部去重序号，不触发界面版本。 */
   lastSeq:number;
@@ -54,6 +68,7 @@ export interface RuntimeUsage extends RunUsage {
 }
 /** 当前活跃运行与各类排队分别计数，避免把任务、轮次、消息叠加成虚假的总负载。 */
 export interface RuntimePressure {
+  /** taskInstances 保留可观察历史任务数；memberInstances 仅计未释放实例。 */
   taskInstances:number;memberInstances:number;openWorkspaces:number;unavailableWorkspaces:number;
   activeMembers:number;workingMembers:number;waitingMembers:number;communicatingMembers:number;
   activeRuns:number;queuedDispatchTasks:number;waitingDispatchTasks:number;blockedDispatchTasks:number;

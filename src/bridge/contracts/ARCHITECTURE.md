@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-可序列化的 IPC 数据与公开展示契约。可以重导出 Core 类型及纯格式化函数，不暴露密钥或平台存储实现。
+可序列化的 IPC 数据与公开展示契约。可重导出 Core 公开类型与无 IO 的校验、归并、格式化函数，不暴露密钥或平台存储实现。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,8 +10,10 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [agent-history.ts](agent-history.ts) | 向团队静态节点公开只读的角色 Session 历史协议。 |
+| [architecture.ts](architecture.ts) | 团队/业务架构编辑的桌面 IPC 契约，只公开对象操作、预览差异和提交回执。 |
 | [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
-| [dispatch.ts](dispatch.ts) | 向桌面消费者公开成员派发命令回执及主会话图 Snapshot/Delta。 |
+| [dispatch.ts](dispatch.ts) | 向桌面消费者公开成员派发、按白名单筛选的执行增量、回执和主会话图 Snapshot/Delta，并导出无 IO 的图校验及归并函数。 |
 | [execution.ts](execution.ts) | 对话、运行和排队在 IPC 中传递的可序列化类型。 |
 | [models.ts](models.ts) | 模型配置界面消费的公开模型信息与停止原因格式化。 |
 | [resources.ts](resources.ts) | 资源种类、仓库快照、登录占位及仓库状态的共享类型。 |
@@ -20,6 +22,68 @@
 | [workspace.ts](workspace.ts) | 跨进程工作区、知识事务与 IPC 数据契约。 |
 
 ## 架构类图
+
+### agent-history.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_agent_history_ts["agent-history.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../backend/core/team/session-history.ts](../../backend/core/team/session-history.ts)。
+
+### architecture.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_architecture_ts["architecture.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_architecture_ts_ArchitectureMaintenanceRequest["ArchitectureMaintenanceRequest"] {
+  <<interface>>
+  +moduleId
+  +maintainerPersonIds
+  +confirmed
+}
+N_src_bridge_contracts_architecture_ts ..> N_src_bridge_contracts_architecture_ts_ArchitectureMaintenanceRequest : 声明
+class N_src_bridge_contracts_architecture_ts_ArchitecturePreviewRequest["ArchitecturePreviewRequest"] {
+  <<interface>>
+  +workspaceId
+  +instanceId
+  +revision
+  +operations
+  +peopleUpserts
+  +maintenance
+}
+N_src_bridge_contracts_architecture_ts ..> N_src_bridge_contracts_architecture_ts_ArchitecturePreviewRequest : 声明
+class N_src_bridge_contracts_architecture_ts_ArchitectureCommitRequest["ArchitectureCommitRequest"] {
+  <<interface>>
+  +workspaceId
+  +instanceId
+  +planId
+}
+N_src_bridge_contracts_architecture_ts ..> N_src_bridge_contracts_architecture_ts_ArchitectureCommitRequest : 声明
+class N_src_bridge_contracts_architecture_ts_ArchitecturePreview["ArchitecturePreview"] {
+  <<type>>
+
+}
+N_src_bridge_contracts_architecture_ts ..> N_src_bridge_contracts_architecture_ts_ArchitecturePreview : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_architecture_ts["architecture.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_architecture_ts_ArchitectureCommit["ArchitectureCommit"] {
+  <<type>>
+
+}
+N_src_bridge_contracts_architecture_ts ..> N_src_bridge_contracts_architecture_ts_ArchitectureCommit : 声明
+```
+
+直接依赖：[../../backend/core/knowledge/object-crud.ts](../../backend/core/knowledge/object-crud.ts)。
 
 ### chat.ts
 
@@ -49,7 +113,7 @@ class N_src_bridge_contracts_dispatch_ts["dispatch.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/tasks/graph-types.ts](../../backend/core/tasks/graph-types.ts)、[../../backend/core/tasks/dispatch-commands.ts](../../backend/core/tasks/dispatch-commands.ts)。
+直接依赖：[../../backend/core/tasks/graph-types.ts](../../backend/core/tasks/graph-types.ts)、[../../backend/core/tasks/dispatch-commands.ts](../../backend/core/tasks/dispatch-commands.ts)、[../../backend/core/tasks/member-commands.ts](../../backend/core/tasks/member-commands.ts)、[../../backend/core/tasks/member-events.ts](../../backend/core/tasks/member-events.ts)、[../../backend/core/tasks/graph-reducer.ts](../../backend/core/tasks/graph-reducer.ts)、[../../backend/core/tasks/graph-rules.ts](../../backend/core/tasks/graph-rules.ts)。
 
 ### execution.ts
 
@@ -131,8 +195,68 @@ class N_src_bridge_contracts_resources_ts_RepositoryStatus["RepositoryStatus"] {
   +sharing
 }
 N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_RepositoryStatus : 声明
+class N_src_bridge_contracts_resources_ts_PublishWorkspaceInput["PublishWorkspaceInput"] {
+  <<interface>>
+  +workspaceId
+  +instanceId
+  +revision
+  +repositoryId
+  +repositoryRevision
+  +kind
+  +objectId
+  +name
+  +summary
+}
+N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_PublishWorkspaceInput : 声明
 ```
 
+```mermaid
+classDiagram
+class N_src_bridge_contracts_resources_ts["resources.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_resources_ts_ImportWorkspacePreviewInput["ImportWorkspacePreviewInput"] {
+  <<interface>>
+  +workspaceId
+  +instanceId
+  +revision
+  +repositoryId
+  +repositoryRevision
+  +resourceId
+  +mode
+  +targetParentId
+  +slug
+}
+N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_ImportWorkspacePreviewInput : 声明
+class N_src_bridge_contracts_resources_ts_ImportWorkspaceCommitInput["ImportWorkspaceCommitInput"] {
+  <<interface>>
+  +workspaceId
+  +instanceId
+  +planId
+}
+N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_ImportWorkspaceCommitInput : 声明
+class N_src_bridge_contracts_resources_ts_PublishWorkspaceResult["PublishWorkspaceResult"] {
+  <<interface>>
+  +repository
+  +resourceId
+  +warnings
+  +removedBindings
+}
+N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_PublishWorkspaceResult : 声明
+class N_src_bridge_contracts_resources_ts_ImportWorkspacePreview["ImportWorkspacePreview"] {
+  <<type>>
+  +planId
+  +kind
+  +mode
+  +targetRoot
+  +files
+  +warnings
+  +removedBindings
+}
+N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_ImportWorkspacePreview : 声明
+```
+
+直接依赖：[../../backend/core/knowledge/portable-package.ts](../../backend/core/knowledge/portable-package.ts)、[../../backend/core/knowledge/types.ts](../../backend/core/knowledge/types.ts)。
 
 ### runtime.ts
 
@@ -227,9 +351,32 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 
 ### 任务派发图公开契约
 
-已通过 `dispatch.ts` 导出真实节点/增量及命令回执类型；Application IPC 已接 `dispatch.open / dispatch.memberCreate / dispatch.task / dispatch.graphSnapshot / dispatch.graphDelta`。当前可以创建成员、可靠派发并读取图，尚未做界面图渲染、模型派发工具或图订阅推送。以下订阅与结果处理仍为后续契约。
+已通过 `dispatch.ts` 导出真实节点/增量及命令回执类型，以及无 IO 的 `applyGraphBatch / validateGraph` 供前端校验并归并图增量。Application IPC 已接 `dispatch.open / dispatch.memberCreate / dispatch.task / dispatch.graphSnapshot / dispatch.graphDelta`；主会话模型派发工具和当前批次自动执行/回注已接通，图订阅推送与通用历史协作恢复仍为后续能力。
 
-Bridge 只公开可序列化的图快照与增量数据。节点约束、角色实例和任务状态由 Core 定义，调度产生真实事实；前端不得根据助手回复文字推断“已派发”或直接写图状态。
+成员执行已接 `dispatch.executionStart / dispatch.executionStop / dispatch.executionInspect`，可信桌面请求须携带 `workspaceId + rootSessionId + taskId`，启动另带幂等 `commandId`、`expectedRevision` 及公开模型/权限选项。`MemberExecutionView` 只公开任务和运行状态，不返回原生会话路径、完整提示词或密钥。`dispatch.approvals / dispatch.approve / dispatch.questions / dispatch.answerQuestion` 使用相同任务身份；批准仅对当前执行有效。
+
+`dispatch.messages / dispatch.acknowledge` 使用 `workspaceId + rootSessionId + agentSessionId` 限定收件人。确认只消费结果信封，不把任务候选变为已验收；读取或收件本身不会发起模型调用。派发和成员执行共用同一事务存储，终态提交完成后才能释放成员占用。手工派发仍需明确启动；主会话本轮工具派发由协调器推进并可靠回注。执行者无递归派发权，历史唤醒和失败任务重试尚未接通。
+
+跨进程的图快照与增量只包含可序列化数据；Bridge 另重导出无 IO 的图校验/归并函数供前端本地消费，不把这些函数作为 IPC 数据传输。节点约束、角色实例和任务状态由 Core 定义，调度产生真实事实；前端不得根据助手回复文字推断“已派发”或直接写图状态。
+
+### 成员执行增量入口
+
+`dispatch.executionEvents` 接收 `workspaceId/rootSessionId/taskId/runId` 和可选 `{runId,seq}` cursor、limit（默认 200，最大 500）。返回 `MemberEventsRead`：reset/delta 携带当前 `MemberRunView`、cursor、连续 `StoredEvent[]` 和 hasMore；noop 仍携带 run/cursor，用于同步最终事务状态而不替换事件数组。游标属于其他 run 时拒绝，游标超前时 reset，分页必须消费到 hasMore=false 后再等待下一次更新。
+
+公开投影在后端按事件类型和字段白名单完成：保留公开对话文本、有限用量/状态、结构化计划、工具名、授权/成功/失败/未知状态、本轮回执和工作区业务路径。工具原始 input/result、write.content、知识工具正文、命令参数、冻结知识及原生 Session 路径字段不透传；工具结果只返回受限摘要，内部错误替换为通用文案。`session.bound` 替换为 `engine.status` 并保留原 seq，未识别事件也只保留通用状态。公开对话、任务目标/验收要求和计划正文仍作为业务文本保留，不保证自动识别其中的密钥或个人信息，前端不再执行二次脱敏。首次读取恢复日志后仅合并已落盘观察事件，后续轮询不重复扫描日志。
+
+### 静态 Agent 的 Session 履历
+
+`agent-history.ts` 公开 `AgentHistoryRole / AgentHistorySession / AgentHistoryRun` 与只读分页协议。四个 IPC 入口分别为：
+
+- `agentHistory.roles({workspaceId})`：已有履历的静态角色及记录数，包含当前定义已不存在的角色。
+- `agentHistory.sessions({workspaceId,agentId,cursor?,limit?})`：角色的独立 Session 分组。
+- `agentHistory.runs({workspaceId,agentId,sessionId,cursor?,limit?})`：本 Session 的任务运行摘要。
+- `agentHistory.events({workspaceId,agentId,sessionId,taskId,runId,cursor?,limit?})`：指定轮次的公开事件增量，复用 `MemberEventsRead` 的 reset/delta/noop。
+
+列表默认每页 30 条、最多 100 条；事件默认 200 条、最多 500 条。游标与身份绑定，跨角色、Session 或运行复用不能静默切换目标。详情仍核验全部归属，不接收客户端文件路径。诊断字段报告未能归档或恢复的记录，不以空列表伪装完整。
+
+主/成员详情共用 `public-run-events.ts` 白名单。主会话保留本轮用户输入；回注显示系统来源；成员启动只显示正式任务目标，不公开内部启动提示词。所有入口都不启动/恢复执行、不审批、不确认信封；实例释放和知识定义删除不改变读取历史的身份。
 
 ### 稳定身份与节点范围
 
@@ -255,7 +402,7 @@ interface GraphSnapshot {
 }
 ```
 
-根节点 `SessionRootNode` 表示主 Agent 的当前 Session，图内普通任务节点表达执行 Agent、涉及模块列表、任务目标、状态和结果引用。节点、边与成员投影的完整领域结构以 Core 契约为准，本层只重导出公开类型，不引用具体执行器或存储实现。
+根节点 `SessionRootNode` 表示主 Agent 的当前 Session，图内普通任务节点表达执行 Agent、涉及模块列表、任务目标、状态和结果引用。节点、边与成员投影的完整领域结构以 Core 契约为准，本层重导出公开类型和纯校验/归并函数，不引用具体执行器或存储实现。
 
 `rootSessionId` 是最初主 Agent 的会话范围；被派发成员拥有自己的 `agentSessionId`。`taskId` 是图节点身份，`runId` 是执行尝试身份，不能用现有 `loop.taskId` 同时代替这三类标识。
 
@@ -324,7 +471,7 @@ interface DispatchGraphApi {
 
 ### 消费与错误处理
 
-前端只有完整验证并原子应用一个批次后才推进游标。重复收到已经应用的批次时按 `streamId + seq` 去重；相同序号却具有不同 `eventId` 应视为协议不一致并重新获取快照。序号断档不直接跳过，应补读；补读不可用时再接收后端 reset。
+前端只有整份响应校验通过后才替换投影并推进游标；`delta.from` 必须等于当前游标，重复的旧 delta 也会因起点不匹配而被拒绝，随后由 Hook 不带游标请求权威 reset。相同游标的 noop，以及相同游标且内容一致的 reset，保留已有对象引用；同版本内容冲突或序号断档均保留旧图并重载，不直接跳过批次。Core 归并函数的批次幂等只在保留对应重放证明时成立，不能据此承诺前端任意历史 delta 都可自动去重。
 
 | 情况 | 返回与处理 |
 | --- | --- |
@@ -341,6 +488,10 @@ interface DispatchGraphApi {
 
 ### 当前会话与团队全局状态
 
-此图只显示当前主 Agent Session 发起的任务及其递归派发。`agents` 的状态及任务引用均为本图局部事实投影；一个成员可能在本图 waiting、在另一张图 working。本图 idle 不意味着全局空闲。工作区组织图的全局成员状态以后走独立授权接口，不在此协议中隐式夹带其他会话内容。
+此图只显示当前主 Agent Session 调度的任务；执行者没有递归派发权。`agents` 的状态及任务引用均为本图局部事实投影；兼容历史成员可能跨图共享引用，本图 idle 不意味着全局空闲。工作区组织图保持静态定义，其角色履历使用独立的只读历史接口，不在任务图协议中隐式夹带其他会话内容。
 
 图中的 `result_ready` 表示待交接候选，与执行完成、消息确认及业务验收分别表达。公开图不允许前端或模型把“收到返回消息”“进程结束”“有成功工具回执”自动转换成业务验收通过。
+
+### 桌面架构 CRUD 契约
+
+`architecture.ts` 导出 `ObjectOperation`、`ArchitecturePreviewRequest/CommitRequest` 和对应回执。预览绑定工作区/实例/知识版本，响应保留完整校验、差异、受影响路径、对象 ID 和 planId；确认提交只携带身份及 planId。创建/编辑模块时，界面显式选择真实维护人并确认，可附 `peopleUpserts` 在同一事务增加真人。后端生成维护记录，前端不能伪造 `confirmation`；声明不授予模型写权限。字段类型不暴露桌面服务实例或存储实现。

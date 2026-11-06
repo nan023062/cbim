@@ -22,7 +22,9 @@ test('real Pi stops on length once and explicitly resumes the same conversation'
  const wait=async(taskId:string,runId:string)=>{let result=await manager.inspect(taskId,runId);while(result.status==='running'||(manager as any).active.has(taskId)){await new Promise(r=>setTimeout(r,20));result=await manager.inspect(taskId,runId)}return result};
  const first=await f.app.dispatch('loop.chat',{id:entry.id,message:'Create file',options});const result=await wait(first.taskId,first.runId);expect(result.status).toBe('failed');expect(result.events.at(-1)?.data.error).toContain('模型返回长度限制');expect(requests).toBe(1);
  const next=await f.app.dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:first.runId,message:'Continue after checking existing results',options:{...options,permission:'execute'}});const resumed=await wait(next.taskId,next.runId);expect(resumed.status).toBe('completed');expect(resumed.sessionFile).toBe(result.sessionFile);expect(requests).toBe(2);
- expect(prompts[1]).toContain('本轮可调用 write');expect(toolSets[0]).not.toContain('write');expect(toolSets[1]).toEqual(expect.arrayContaining(['write','edit','bash']));
- const third=await f.app.dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:next.runId,message:'Read only now',options:{...options,permission:'read'}});expect((await wait(third.taskId,third.runId)).status).toBe('completed');expect(toolSets[2]).not.toContain('write');expect(toolSets[2]).not.toContain('bash');expect(prompts[2]).toContain('本轮未启用 write');
+ // 主会话仅负责调度；即使续聊选 execute 也不能把恢复变成主 Agent 的业务执行入口。
+ expect(prompts[1]).toContain('主 Agent');expect(prompts[1]).toContain('不提供业务写入或命令执行');
+ for(const tools of toolSets)for(const name of ['write','edit','bash'])expect(tools).not.toContain(name);
+ const third=await f.app.dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:next.runId,message:'Read only now',options:{...options,permission:'read'}});expect((await wait(third.taskId,third.runId)).status).toBe('completed');expect(toolSets[2]).not.toContain('write');expect(toolSets[2]).not.toContain('bash');expect(prompts[2]).toContain('主 Agent');
  }finally{server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));await f.cleanup()}
 },30000);

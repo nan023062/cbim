@@ -1,15 +1,21 @@
 /**
  * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
- * 设计原因：通过 ApplicationServices 契约隔离应用实现；全局监管只暴露快照和游标读取，派发事实仍由明确工作区服务提交；IPC 操作清单与生命周期分离。
+ * 设计原因：通过 ApplicationServices 契约隔离应用实现；成员执行和静态角色历史显式绑定完整身份，历史入口只读，审批与运行命令分开；全局监管只暴露快照和游标读取。
  */
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
+import {ArchitectureService} from '../workspace/architecture-service';
+import {WorkspacePackages} from '../resources/workspace-packages';
 import {fail} from '../../core/foundation/errors';
   /** 桌面 IPC 的操作路由；请求必须显式携带目标身份，不读取界面选中项。 */
 export async function dispatchApplication(app:ApplicationServices,action:string,args:any={}){switch(action){
     case 'list':return app.list();
     case 'runtime.snapshot':return app.runtime.snapshot();
     case 'runtime.read':return app.runtime.read(args.cursor);
+    case 'agentHistory.roles':return app.agentHistory(args.workspaceId).roles(args);
+    case 'agentHistory.sessions':return app.agentHistory(args.workspaceId).sessions(args);
+    case 'agentHistory.runs':return app.agentHistory(args.workspaceId).runs(args);
+    case 'agentHistory.events':return app.agentHistory(args.workspaceId).events(args);
     case 'models.list':return app.models.list();
     case 'models.save':return app.models.save(args);
     case 'models.select':return app.models.select(args.id);
@@ -22,6 +28,16 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'dispatch.task':return app.memberDispatch(args.workspaceId).dispatchTask(args);
     case 'dispatch.graphSnapshot':return app.memberDispatch(args.identity?.workspaceId).snapshot(args.identity);
     case 'dispatch.graphDelta':return app.memberDispatch(args.identity?.workspaceId).delta(args.identity,args.cursor,args.limit);
+    case 'dispatch.executionStart':return app.memberExecution(args.workspaceId).start(args);
+    case 'dispatch.executionStop':return app.memberExecution(args.workspaceId).stop(args);
+    case 'dispatch.executionInspect':return app.memberExecution(args.workspaceId).inspect(args);
+    case 'dispatch.executionEvents':return app.memberExecution(args.workspaceId).events(args);
+    case 'dispatch.messages':return app.memberExecution(args.workspaceId).messages(args);
+    case 'dispatch.acknowledge':return app.memberExecution(args.workspaceId).acknowledge(args);
+    case 'dispatch.approvals':return app.memberExecution(args.workspaceId).pendingApprovals(args);
+    case 'dispatch.approve':{const {approvalId,allow,allowAll,...identity}=args;return app.memberExecution(identity.workspaceId).answerApproval(identity,approvalId,allow,allowAll===true)}
+    case 'dispatch.questions':return app.memberExecution(args.workspaceId).pendingQuestions(args);
+    case 'dispatch.answerQuestion':{const {questionId,answers,...identity}=args;return app.memberExecution(identity.workspaceId).answerQuestion(identity,questionId,answers)}
     case 'loop.prepare':return app.execution(args.id).prepare(args.task);
     case 'loop.choices':return app.execution(args.id).choices();
     case 'loop.thread':return app.execution(args.id).thread(args.taskId);
@@ -54,6 +70,12 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'resources.share':return app.resources.startSharing(args);
     case 'resources.stopSharing':return app.resources.stopSharing();
     case 'resources.connection':return app.resources.connection();
+    // 静态定义编辑/复用只绑定工作区身份；不创建成员实例，也不触碰主会话任务图。
+    case 'architecture.preview':return new ArchitectureService(app.workspace(args.workspaceId)).preview(args);
+    case 'architecture.commit':return new ArchitectureService(app.workspace(args.workspaceId)).commit(args);
+    case 'resources.publishWorkspace':return new WorkspacePackages(app.workspace(args.workspaceId),app.resources).publish(args);
+    case 'resources.importPreview':return new WorkspacePackages(app.workspace(args.workspaceId),app.resources).preview(args);
+    case 'resources.importCommit':return new WorkspacePackages(app.workspace(args.workspaceId),app.resources).commit(args);
     case 'add':{if(app.isStopping)fail('SHUTTING_DOWN','CBIM 正在退出');const entry=await app.catalog.add(args.path);try{await app.open(entry.id)}catch{/* report the registered workspace's failed state in list */}return entry}
     case 'open':return (await app.open(args.id)).view();
     case 'rename':{const entry=await app.catalog.rename(args.id,args.name);const ws=app.running.get(args.id);if(ws)ws.entry.name=entry.name;app.runtime.rename(args.id,entry.name);return entry}

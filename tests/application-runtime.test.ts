@@ -8,6 +8,8 @@ import {LoopRuntime} from '../src/backend/core/brain/runtime';
 import type {AgentEngine,EngineContext} from '../src/backend/core/brain/types';
 import type {RuntimeSnapshot} from '../src/backend/core/runtime/types';
 import * as loops from '../src/backend/scheduler-engine/execution/loop-engine';
+import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
+import type {TaskSpec} from '../src/backend/core/brain/types';
 
 it('真实应用汇总两个工作区的成员及任务，幂等重试和重启不重复，关闭后不残留活动',async()=>{
   const f=await fixture();
@@ -99,7 +101,8 @@ it('损坏历史与无法打开的工作区标明不完整，不伪造为零消�
     await fs.mkdir(directory,{recursive:true});await fs.writeFile(path.join(directory,'events.jsonl'),'not-json\n');
     await f.app.open(entry.id);
     const snapshot=f.app.runtime.snapshot();
-    expect(snapshot.complete).toBe(false);expect(snapshot.workspaces[0].issues[0].source).toBe('run:bad-task/bad-run');
+    expect(snapshot.complete).toBe(false);expect(snapshot.workspaces[0].availability).toBe('ready');
+    expect(snapshot.workspaces[0].issues.map(issue=>issue.source)).toEqual(expect.arrayContaining(['agent-history','run:bad-task/bad-run']));
     expect(snapshot.usage.runCount).toBe(0); // 数字只代表可读取的记录；complete=false 显示缺口。
     await f.app.stop(entry.id);
     const opened=vi.spyOn(f.app.rules,'validate').mockRejectedValueOnce(Error('private path must not leak'));
@@ -107,5 +110,25 @@ it('损坏历史与无法打开的工作区标明不完整，不伪造为零消�
     expect(f.app.runtime.snapshot().workspaces[0].availability).toBe('unavailable');
     expect(f.app.runtime.snapshot().complete).toBe(false);
     expect(JSON.stringify(f.app.runtime.snapshot())).not.toContain('private path must not leak');
+  }finally{await f.cleanup()}
+});
+
+it('重开一次恢复成员和对话的两套运行历史，成员轮次不重复生成 Loop 任务',async()=>{
+  const f=await fixture();
+  try{
+    const entry=await f.app.dispatch('add',{path:f.a}),root=f.app.workspace(entry.id).entry.path;await f.app.stop(entry.id);
+    const task:TaskSpec={taskId:'member-task',workspaceId:entry.id,root,goal:'private goal',moduleIds:['game'],agentId:'cbim:main',acceptance:[]};
+    const memberBinding={workspaceId:entry.id,teamId:'team',agentId:'cbim:main',agentInstanceId:'member',agentSessionId:'member-session',rootSessionId:'main-session',taskId:task.taskId,runId:'member-run',leaseEpoch:1,planRevision:1};
+    const memberLog=new RunJournal(path.join(f.user,entry.id,'dispatch','runs','tasks',task.taskId,'member-run'),task,'member-run');
+    await memberLog.init();await memberLog.append({type:'run.started',data:{task,memberBinding}});await memberLog.append({type:'message',data:{usage:{input:40,output:10},text:'private member answer'}});await memberLog.append({type:'run.settled',data:{status:'completed'}});
+    const chatTask={...task,taskId:'chat-task',mode:'chat' as const},chatLog=new RunJournal(path.join(f.user,entry.id,'loop-engine','tasks',chatTask.taskId,'chat-run'),chatTask,'chat-run');
+    await chatLog.init();await chatLog.append({type:'run.started',data:{task:chatTask}});await chatLog.append({type:'message',data:{usage:{input:20,output:5}}});await chatLog.append({type:'run.settled',data:{status:'cancelled'}});
+    await f.app.open(entry.id);
+    const state=f.app.runtime.snapshot();expect(state.complete).toBe(true);
+    expect(state.usage).toMatchObject({runCount:2,total:75});expect(state.pressure.activeRuns).toBe(0);
+    expect(state.tasks.map(task=>task.taskId)).toEqual(['chat-task']);
+    expect(state.runs.find(run=>run.runId==='member-run')?.memberBinding).toEqual(memberBinding);
+    expect(JSON.stringify(state)).not.toMatch(/private goal|private member answer/);
+    await f.app.open(entry.id,true);expect(f.app.runtime.snapshot().usage).toMatchObject({runCount:2,total:75});
   }finally{await f.cleanup()}
 });

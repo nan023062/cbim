@@ -4,6 +4,8 @@ import type {RunSummary,StoredEvent,TaskSpec} from '../src/backend/core/brain/ty
 import type {AgentInstance} from '../src/backend/core/team/agent-types';
 import type {DispatchState,DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
 import type {GraphSnapshot,TaskNode} from '../src/backend/core/tasks/graph-types';
+import type {MemberRunBinding} from '../src/backend/core/brain/member-run';
+import type {ConversationAgentBinding} from '../src/backend/core/brain/conversation-binding';
 
 const stamp='2026-11-06T12:00:00.000Z';
 function task(workspaceId='a'):TaskSpec{return {workspaceId,taskId:'conversation',root:'C:/private/project',goal:'PRIVATE PROMPT',moduleIds:['game'],agentId:'cbim:main',acceptance:[],mode:'chat'}}
@@ -111,4 +113,105 @@ test('corrupt restored status or runtime task shape cannot publish a partial run
   const invalid=start();(invalid.data.task as unknown as {moduleIds:unknown}).moduleIds=null;
   expect(()=>manager.runEvent('a',epoch,invalid)).toThrow('任务概要');
   expect(manager.snapshot().runs).toEqual([]);expect(manager.read(cursor).mode).toBe('noop');
+});
+
+test('成员运行归属派发节点，消费仍累计一次；claimed 与 processed 信封退出待消费压力',()=>{
+  const manager=new GlobalRuntimeManager(),epoch=manager.begin('a','项目');manager.restoreDispatch('a',epoch,baseline());manager.ready('a',epoch);
+  const mutation=dispatch(),message=mutation.messages![0];manager.dispatchCommitted('a',epoch,mutation);
+  const memberTask={...task(),agentId:'cbim:executor',mode:undefined};
+  const memberBinding:MemberRunBinding={workspaceId:'a',teamId:'team',agentId:'cbim:executor',agentInstanceId:'executor',agentSessionId:'session',rootSessionId:'root',taskId:'conversation',runId:'run',leaseEpoch:1,planRevision:1};
+  const began=event(1,'run.started',{task:memberTask,memberBinding});manager.runEvent('a',epoch,began);
+  const tokens=event(2,'message',{usage:{input:100,output:20},pricingKnown:false});manager.runEvent('a',epoch,tokens);manager.runEvent('a',epoch,tokens);
+  expect(manager.snapshot().pressure).toMatchObject({taskInstances:1,activeRuns:1,pendingOutbox:1});
+  expect(manager.snapshot().tasks.map(task=>task.source)).toEqual(['dispatch']);
+  expect(manager.snapshot().runs[0].memberBinding).toEqual(memberBinding);
+  expect(manager.snapshot().usage).toMatchObject({runCount:1,total:120});
+  manager.dispatchCommitted('a',epoch,{receipt:{},messages:[{...message,delivery:'claimed',claim:{runId:'run',leaseEpoch:1}}]});
+  expect(manager.snapshot().pressure.pendingOutbox).toBe(0);
+  manager.dispatchCommitted('a',epoch,{receipt:{},messages:[{...message,messageId:'result',delivery:'pending'}]});
+  expect(manager.snapshot().pressure.pendingOutbox).toBe(1);
+  manager.dispatchCommitted('a',epoch,{receipt:{},messages:[{...message,messageId:'result',delivery:'processed'}]});
+  expect(manager.snapshot().pressure.pendingOutbox).toBe(0);
+});
+
+test('成员日志恢复可从起始事件确定绑定，摘要与起始身份冲突时不得发布统计',()=>{
+  const manager=new GlobalRuntimeManager(),epoch=manager.begin('a','项目'),state=baseline();
+  const queued=dispatch();state.graphs[0].tasks.push((queued.batch!.changes[0] as {task:TaskNode}).task);
+  const message=queued.messages![0];state.outbox=[{...message,delivery:'claimed'},{...message,messageId:'processed',delivery:'processed'},{...message,messageId:'pending',delivery:'pending'}];
+  manager.restoreDispatch('a',epoch,state);manager.ready('a',epoch);
+  const memberTask={...task(),agentId:'cbim:executor',mode:undefined};
+  const memberBinding:MemberRunBinding={workspaceId:'a',teamId:'team',agentId:'cbim:executor',agentInstanceId:'executor',agentSessionId:'session',rootSessionId:'root',taskId:'conversation',runId:'run',leaseEpoch:1,planRevision:1};
+  const events=[event(1,'run.started',{task:memberTask,memberBinding}),event(2,'message',{usage:{input:10,output:2}}),event(3,'run.settled',{status:'completed'})];
+  const recovered={...summary(events),task:memberTask};
+  manager.restoreRun('a',epoch,recovered);manager.restoreRun('a',epoch,recovered);
+  expect(manager.snapshot().runs[0].memberBinding).toEqual(memberBinding);
+  expect(manager.snapshot().pressure).toMatchObject({taskInstances:1,pendingOutbox:1,activeRuns:0});
+  expect(manager.snapshot().usage).toMatchObject({runCount:1,total:12});
+  const other=new GlobalRuntimeManager(),otherEpoch=other.begin('a','项目');
+  expect(()=>other.restoreRun('a',otherEpoch,{...recovered,memberBinding:{...memberBinding,agentSessionId:'wrong'}})).toThrow('成员身份不一致');
+  expect(other.snapshot().runs).toEqual([]);
+});
+
+function conversationBinding(rootSessionId='conversation',agentInstanceId='main-'+rootSessionId):ConversationAgentBinding{return {workspaceId:'a',teamId:'team',agentId:'cbim:main',agentInstanceId,agentSessionId:'chat-'+rootSessionId,rootSessionId}}
+function conversationStart(binding=conversationBinding(),runId='run'):StoredEvent{return {...start('a',runId),taskId:binding.rootSessionId,data:{task:{...task(),taskId:binding.rootSessionId},conversationBinding:binding}}}
+function registerConversation(manager:GlobalRuntimeManager,epoch:number,binding:ConversationAgentBinding){manager.dispatchCommitted('a',epoch,{receipt:{},members:[{...member(),agentInstanceId:binding.agentInstanceId,agentSessionIds:[binding.agentSessionId],mainRootSessionId:binding.rootSessionId}]})}
+
+test('主会话按可信实例绑定报告真实活动，等待与终态不创建派发业务任务',()=>{
+  const manager=new GlobalRuntimeManager(),epoch=manager.begin('a','项目'),binding=conversationBinding();manager.ready('a',epoch);registerConversation(manager,epoch,binding);
+  manager.runEvent('a',epoch,conversationStart(binding));
+  let state=manager.snapshot();expect(state.pressure).toMatchObject({memberInstances:1,activeMembers:1,workingMembers:1,taskInstances:1,queuedDispatchTasks:0});
+  expect(state.tasks[0]).toMatchObject({source:'loop',binding:'instance',agentInstanceId:binding.agentInstanceId,agentSessionId:binding.agentSessionId,rootSessionId:'conversation'});
+  expect(state.members[0]).toMatchObject({activity:'working',activityCurrent:true,activeConversation:{rootSessionId:'conversation',agentSessionId:binding.agentSessionId,runId:'run'}});expect(state.members[0].activeTaskId).toBeUndefined();
+  manager.runEvent('a',epoch,event(2,'tool.proposed'));expect(manager.snapshot().pressure).toMatchObject({workingMembers:0,waitingMembers:1,activeMembers:1});
+  manager.runEvent('a',epoch,event(3,'tool.started'));expect(manager.snapshot().members[0].activity).toBe('working');
+  manager.runEvent('a',epoch,event(4,'message',{usage:{input:10,output:2}}));manager.runEvent('a',epoch,event(4,'message',{usage:{input:10,output:2}}));
+  manager.runEvent('a',epoch,event(5,'run.settled',{status:'completed'}));state=manager.snapshot();
+  expect(state.pressure).toMatchObject({activeMembers:0,activeRuns:0,taskInstances:1});expect(state.members[0].activeConversation).toBeUndefined();expect(state.usage).toMatchObject({runCount:1,total:12});
+});
+
+test('同名主角色的两个主会话保持两个实例、独立通道与独立活动，旧对话仍无实例绑定',()=>{
+  const manager=new GlobalRuntimeManager(),epoch=manager.begin('a','项目'),one=conversationBinding(),two=conversationBinding('second');manager.ready('a',epoch);
+  for(const binding of [one,two]){registerConversation(manager,epoch,binding);manager.runEvent('a',epoch,conversationStart(binding,binding.rootSessionId))}
+  const legacy={...start('a','legacy'),taskId:'legacy',data:{task:{...task(),taskId:'legacy'}}};manager.runEvent('a',epoch,legacy);
+  const state=manager.snapshot();expect(state.pressure).toMatchObject({memberInstances:2,activeMembers:2,activeRuns:3,taskInstances:3});
+  expect(state.members.map(item=>item.activeConversation?.rootSessionId)).toEqual(['conversation','second']);
+  expect(state.members.map(item=>item.mainRootSessionId)).toEqual(['conversation','second']);
+  expect(state.tasks.find(item=>item.taskId==='legacy')).toMatchObject({source:'loop',binding:'role-only'});
+  expect(state.runs.find(item=>item.runId==='legacy')?.conversationBinding).toBeUndefined();
+  manager.detach('a',epoch);expect(manager.snapshot().pressure).toMatchObject({activeMembers:0,activeRuns:0});expect(manager.snapshot().members.every(item=>item.activeConversation===undefined)).toBe(true);
+});
+
+test('主会话日志恢复保留绑定与消费，不复活活动；摘要与起始身份冲突不可发布',()=>{
+  const manager=new GlobalRuntimeManager(),epoch=manager.begin('a','项目'),binding=conversationBinding();registerConversation(manager,epoch,binding);
+  const began=conversationStart(binding),events=[began,event(2,'message',{usage:{input:20,output:3}})],history=summary(events,'running');
+  manager.restoreRun('a',epoch,history);manager.ready('a',epoch);
+  expect(manager.snapshot().runs[0]).toMatchObject({conversationBinding:binding,status:'interrupted'});expect(manager.snapshot().pressure).toMatchObject({activeMembers:0,activeRuns:0});expect(manager.snapshot().usage.total).toBe(23);
+  const other=new GlobalRuntimeManager(),otherEpoch=other.begin('a','项目');
+  expect(()=>other.restoreRun('a',otherEpoch,{...history,conversationBinding:{...binding,agentInstanceId:'another-instance'}})).toThrow('主会话身份不一致');expect(other.snapshot().runs).toEqual([]);
+  const invalid=conversationStart({...binding,rootSessionId:'other'});invalid.data.task=task();
+  expect(()=>other.runEvent('a',otherEpoch,{...invalid,taskId:'conversation'})).toThrow('根会话不一致');
+  expect(()=>other.runEvent('a',otherEpoch,{...began,data:{...began.data,memberBinding:{}}})).toThrow('同时绑定');expect(other.snapshot().runs).toEqual([]);
+});
+
+test('只有运行绑定而缺少登记实例时不补造人员，独立执行轮次不重复合成任务',()=>{
+  const manager=new GlobalRuntimeManager(),epoch=manager.begin('a','项目'),binding=conversationBinding('conversation','member');manager.restoreDispatch('a',epoch,baseline());manager.ready('a',epoch);
+  manager.runEvent('a',epoch,conversationStart(binding,'chat-run'));manager.runEvent('a',epoch,event(2,'message',{usage:{input:10,output:2}},'a','chat-run'));manager.runEvent('a',epoch,event(3,'run.settled',{status:'completed'},'a','chat-run'));
+  manager.dispatchCommitted('a',epoch,dispatch());
+  const memberBinding:MemberRunBinding={...binding,agentId:'cbim:executor',agentInstanceId:'executor',agentSessionId:'session',rootSessionId:'root',taskId:'conversation',runId:'business-run',leaseEpoch:1,planRevision:1};
+  manager.runEvent('a',epoch,event(1,'run.started',{task:{...task(),agentId:'cbim:executor',mode:undefined},memberBinding},'a','business-run'));manager.runEvent('a',epoch,event(2,'message',{usage:{input:20,output:3}},'a','business-run'));
+  const state=manager.snapshot();expect(state.pressure).toMatchObject({memberInstances:1,taskInstances:2,activeRuns:1});expect(state.tasks.map(item=>item.source)).toEqual(['dispatch','loop']);expect(state.usage).toMatchObject({runCount:2,total:35});
+  const unknown=new GlobalRuntimeManager(),unknownEpoch=unknown.begin('a','项目');unknown.ready('a',unknownEpoch);unknown.runEvent('a',unknownEpoch,conversationStart());expect(unknown.snapshot().members).toEqual([]);expect(unknown.snapshot().pressure.activeMembers).toBe(0);
+});
+
+test('执行周期释放后保留实例和消费历史但退出当前压力，主调度实例继续保留',()=>{
+  const manager=new GlobalRuntimeManager(),epoch=manager.begin('a','项目');manager.restoreDispatch('a',epoch,baseline());manager.ready('a',epoch);
+  const executor:AgentInstance={...member(),agentId:'cbim:executor',agentInstanceId:'executor',executionScopeId:'scope',executionTaskId:'conversation',lifecycle:'active',activity:'working',activeTaskId:'conversation',activeRunId:'business-run'};
+  manager.dispatchCommitted('a',epoch,{receipt:{},members:[executor]});
+  const binding:MemberRunBinding={workspaceId:'a',teamId:'team',agentId:executor.agentId,agentInstanceId:executor.agentInstanceId,agentSessionId:'executor-session',rootSessionId:'root',taskId:'conversation',runId:'business-run',leaseEpoch:1,planRevision:1};
+  manager.runEvent('a',epoch,event(1,'run.started',{task:{...task(),agentId:executor.agentId,mode:undefined},memberBinding:binding},'a','business-run'));manager.runEvent('a',epoch,event(2,'message',{usage:{input:30,output:4}},'a','business-run'));
+  expect(manager.snapshot().pressure).toMatchObject({memberInstances:2,activeMembers:1,activeRuns:1});
+  const released:AgentInstance={...executor,lifecycle:'released',releasedAt:stamp,activity:'idle',activeTaskId:undefined,activeRunId:undefined,leaseEpoch:2};manager.dispatchCommitted('a',epoch,{receipt:{},members:[released]});
+  const state=manager.snapshot();expect(state.members).toHaveLength(2);expect(state.members.find(item=>item.agentInstanceId==='executor')).toMatchObject({executionScopeId:'scope',executionTaskId:'conversation',lifecycle:'released',releasedAt:stamp,activityCurrent:false});
+  expect(state.pressure).toMatchObject({memberInstances:1,activeMembers:0,activeRuns:0});expect(state.usage).toMatchObject({runCount:1,total:34});expect(state.members.find(item=>item.agentId==='cbim:main')).toBeDefined();
+  const restored=new GlobalRuntimeManager(),next=restored.begin('a','项目'),base=baseline();base.members.push(released);restored.restoreDispatch('a',next,base);restored.ready('a',next);expect(restored.snapshot().pressure).toMatchObject({memberInstances:1,activeMembers:0});expect(restored.snapshot().members).toHaveLength(2);
 });

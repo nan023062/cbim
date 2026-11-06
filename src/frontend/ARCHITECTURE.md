@@ -35,6 +35,7 @@ class N_src_frontend_resources["resources/"] {
   <<directory>>
 }
 N_src_frontend_conversation ..> N_src_frontend_components : 导入依赖
+N_src_frontend_resources ..> N_src_frontend_knowledge : 导入依赖
 ```
 
 ```mermaid
@@ -62,6 +63,7 @@ N_src_frontend_shell ..> N_src_frontend_settings : 导入依赖
 N_src_frontend_shell ..> N_src_frontend_team : 导入依赖
 N_src_frontend_shell ..> N_src_frontend_workspace : 导入依赖
 N_src_frontend_tasks ..> N_src_frontend_shell : 导入依赖
+N_src_frontend_team ..> N_src_frontend_tasks : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
@@ -70,6 +72,7 @@ N_src_frontend_tasks ..> N_src_frontend_shell : 导入依赖
 - `conversation` → `shell`：导入。
 - `conversation` → `tasks`：导入。
 - `main.tsx` → `shell`：导入。
+- `resources` → `knowledge`：导入。
 - `shell` → `resources`：导入。
 - `shell` → `settings`：导入。
 - `shell` → `components`：导入。
@@ -81,23 +84,28 @@ N_src_frontend_tasks ..> N_src_frontend_shell : 导入依赖
 - `tasks` → `components`：导入。
 - `tasks` → `shell`：导入。
 - `tasks` → `conversation`：导入。
+- `team` → `tasks`：导入。
+- `team` → `conversation`：导入。
+- `team` → `knowledge`：导入。
 - `team` → `components`：导入。
+- `team` → `resources`：导入。
 - `workspace` → `components`：导入。
 - `workspace` → `knowledge`：导入。
+- `workspace` → `resources`：导入。
 
 ## 子目录导航
 
 - [automation/](automation/ARCHITECTURE.md)：工作区内部自动化展示；定时触发尚未实现。
 - [components/](components/ARCHITECTURE.md)：通用展示组件，不持有领域服务与运行状态。
-- [conversation/](conversation/ARCHITECTURE.md)：中央对话、输入、附件、队列与工具状态。权限说明覆盖业务文件与知识提交；队列以版本增量同步，不因空轮询替换列表引用。
+- [conversation/](conversation/ARCHITECTURE.md)：中央主对话、输入、附件、队列及工具状态。执行成员卡片与主对话分离，结果回注显示系统来源，不伪造用户气泡；增量同步且切换保留草稿。
 - [diagnostics/](diagnostics/ARCHITECTURE.md)：只读展示工作区运行状态和知识校验问题，不把工作区就绪视为知识校验通过。
-- [knowledge/](knowledge/ARCHITECTURE.md)：知识问题、预览提交和维护工具界面；业务架构展示位于 workspace。
-- [resources/](resources/ARCHITECTURE.md)：三类共享资源的查看与编辑界面。仓库设置通过统一设置入口打开。
+- [knowledge/](knowledge/ARCHITECTURE.md)：知识问题、预览提交和静态对象表单；固定编辑基线，模块维护人同事务确认，删除先检查影响。业务架构展示位于 workspace。
+- [resources/](resources/ARCHITECTURE.md)：统一资源仓库的查看、编辑、静态包发布与下载应用。人才按团队/Agent/Skill复用，业务按整套架构应用；工作区身份及预览版本固定。设置通过统一入口打开。
 - [settings/](settings/ARCHITECTURE.md)：模型及仓库配置界面，凭据仅提交主进程保存，账户仍按当前占位语义处理。
-- [shell/](shell/ARCHITECTURE.md)：工作区侧栏、会话选择、用户栏与右侧扩展页签；会话区与项目级视图区分开。
-- [tasks/](tasks/ARCHITECTURE.md)：当前会话执行视图与维护任务展示，按工作区和任务身份过滤；显示计划步骤、责任、回执引用、修订历史与待审阅交付，不把运行结束当成验收。
-- [team/](team/ARCHITECTURE.md)：当前工作区团队架构及能力详情展示。
-- [workspace/](workspace/ARCHITECTURE.md)：当前工作区业务模块架构展示；知识编辑仍委托 knowledge 的维护组件。
+- [shell/](shell/ARCHITECTURE.md)：工作区侧栏、会话选择、用户栏与右侧扩展页签；会话区与项目级视图区分开。向会话传递活动页签状态，隐藏页签保留草稿/节点选择并降低成员与任务图同步频率。
+- [tasks/](tasks/ARCHITECTURE.md)：主会话任务流程图、稳定有向布局和运行增量投影。根详情展示主调度实例与通道；任务节点展示独立执行者的公开状态和证据，释放后历史仍可回看，候选不表示验收。
+- [team/](team/ARCHITECTURE.md)：工作区唯一的静态 Team/组/Agent 图及角色维护、继承与人才复用。Agent 节点可按 Session 查看只读执行履历；历史角色独立导航，删定义不回填团队树。详情按需分页，不轮询全量历史或启动执行。
+- [workspace/](workspace/ARCHITECTURE.md)：工作区唯一的静态领域工程/模块图及自身 Workflow。语义编辑委托 knowledge，完整业务模板复用委托 resources；多个主会话共享定义、动态任务各自独立。
 
 [返回上层](../ARCHITECTURE.md)。
 

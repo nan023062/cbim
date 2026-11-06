@@ -25,6 +25,7 @@ class N_src_backend_main_persistence_knowledge_files_ts["files.ts"] {
   +readKnowledge()
 }
 ```
+
 直接依赖：[../../../core/foundation/paths.ts](../../../core/foundation/paths.ts)、[../../../core/knowledge/types.ts](../../../core/knowledge/types.ts)、[../../../core/knowledge/knowledge.ts](../../../core/knowledge/knowledge.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/files.ts](../../../core/foundation/files.ts)。
 
 ### knowledge-store.ts
@@ -72,22 +73,22 @@ class N_src_backend_main_persistence_knowledge_knowledge_store_ts_Journal["Journ
 }
 N_src_backend_main_persistence_knowledge_knowledge_store_ts ..> N_src_backend_main_persistence_knowledge_knowledge_store_ts_Journal : 声明
 class N_src_backend_main_persistence_knowledge_knowledge_store_ts_KnowledgeStore["KnowledgeStore"] {
-  -owner
-  -log
-  -queue
   +activeOperations
   +drain()
   +initialize()
   +read()
   +snapshot()
-  -serial()
-  -draft()
   +preview()
   +commit()
-  -write()
-  -rollback()
   +recover()
   +planMove()
+  -owner
+  -log
+  -queue
+  -serial()
+  -draft()
+  -write()
+  -rollback()
 }
 N_src_backend_main_persistence_knowledge_knowledge_store_ts ..> N_src_backend_main_persistence_knowledge_knowledge_store_ts_KnowledgeStore : 声明
 ```
@@ -102,13 +103,13 @@ class N_src_backend_main_persistence_knowledge_object_storage_ts["object-storage
   <<module>>
 }
 class N_src_backend_main_persistence_knowledge_object_storage_ts_FileObjectStorage["FileObjectStorage"] {
-  -owner
   +assertAbsent()
   +assertKnowledgeOnly()
-  -planPath()
   +savePlan()
   +readPlan()
   +pruneEmpty()
+  -owner
+  -planPath()
 }
 N_src_backend_main_persistence_knowledge_object_storage_ts ..> N_src_backend_main_persistence_knowledge_object_storage_ts_FileObjectStorage : 声明
 class N_src_backend_main_persistence_knowledge_object_storage_ts_external_ObjectStorage["ObjectStorage (外部契约)"] {

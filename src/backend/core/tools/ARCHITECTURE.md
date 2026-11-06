@@ -49,6 +49,7 @@ class N_src_backend_core_tools_receipts_ts["receipts.ts"] {
   +toolReceipt()
 }
 ```
+
 直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[types.ts](types.ts)。
 
 ### registry.ts
@@ -69,11 +70,11 @@ class N_src_backend_core_tools_registry_ts_ToolDefinition["ToolDefinition"] {
 }
 N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_registry_ts_ToolDefinition : 声明
 class N_src_backend_core_tools_registry_ts_ToolRegistry["ToolRegistry"] {
-  -entries
   +tools
   +register()
   +list()
   +resolve()
+  -entries
 }
 N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_registry_ts_ToolRegistry : 声明
 ```
@@ -81,6 +82,15 @@ N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_registry_ts_To
 直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[types.ts](types.ts)。
 
 ### results.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tools_results_ts["results.ts"] {
+  <<module>>
+  +jsonToolResult()
+  +validateToolResult()
+}
+```
 
 ```mermaid
 classDiagram

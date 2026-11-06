@@ -1,6 +1,6 @@
 /**
  * 作用定位：向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。
- * 设计原因：先声明工具副作用并解析参数，再消费本次运行的调用授权；返回值通过统一协议校验，避免未定义结果进入会话。知识事务与模型执行隔离，权限不依赖可变的全局开关。
+ * 设计原因：先声明副作用再消费运行授权；内置默认执行角色由静态配置补充到查询，不写项目知识。返回值统一校验，知识事务与模型执行隔离。
  */
 import {z} from 'zod';
 import {ToolRegistry,type ToolDefinition} from '../../core/tools/registry';
@@ -11,6 +11,8 @@ import {KnowledgeQueries} from '../../core/knowledge/knowledge-queries';
 import {ObjectCrud,objectOperation} from '../../core/knowledge/object-crud';
 import type {ToolEffect} from '../../core/tools/types';
 import {jsonToolResult,validateToolResult} from '../../core/tools/results';
+import {context as snapshotContext} from '../../core/knowledge/snapshot';
+import {defaultExecutorId,defaultExecutorDefinition,defaultExecutorConfiguration} from '../context/default-executor';
 const identity={workspaceId:z.string(),instanceId:z.string()};
 export class KnowledgeTools {
   private readonly registry=new ToolRegistry<boolean>();
@@ -31,9 +33,13 @@ export class KnowledgeTools {
     for(const skill of builtinSkills){const name='cbim_skill_'+skill.id.replaceAll('-','_');register(name,{description:`读取内置「${skill.title}」流程：${skill.description}。返回正文、版本及引用，由调用方执行；调用本工具不会启动业务或修改文件。`,inputSchema:identity},wrap(name,()=>builtins.read(skill.id)))}
     register('cbim_module_registry',{description:'按关键词查询当前模块注册表，返回 Module ID、摘要与根节点；不改写磁盘。',inputSchema:{...identity,query:z.string().max(200).optional()}},wrap('cbim_module_registry',args=>queries.modules(args.query)));
     register('cbim_module_get',{description:'按注册表 ID 返回 Module 定义、知识正文及本模块 Workflow 列表和正文；不继承父模块流程。',inputSchema:{...identity,id:z.string()}},wrap('cbim_module_get',args=>queries.module(args.id)));
-    register('cbim_agent_registry',{description:'查询当前团队分组与 Agent 注册表，含名称、摘要、作者及真人对应信息。',inputSchema:{...identity,query:z.string().max(200).optional()}},wrap('cbim_agent_registry',args=>queries.agents(args.query)));
+    register('cbim_agent_registry',{description:'查询团队分组与 Agent 注册表；builtinAgents 包含只读内置默认执行角色 cbim:executor，无合适自定义执行角色时可派发给它。主 Agent 仅调度。',inputSchema:{...identity,query:z.string().max(200).optional()}},wrap('cbim_agent_registry',async args=>{const result=await queries.agents(args.query),query=String(args.query??'').toLowerCase();return {...result,builtinAgents:!query||`${defaultExecutorId} ${defaultExecutorDefinition.name} ${defaultExecutorDefinition.summary}`.toLowerCase().includes(query)?[{...defaultExecutorDefinition}]:[]}}));
     register('cbim_people_list',{description:'查询真人花名册与团队归属，用于人员责任与候选 Agent 定位，不授予维护权限。',inputSchema:{...identity,query:z.string().max(200).optional()}},wrap('cbim_people_list',args=>queries.people(args.query)));
-    register('cbim_agent_get',{description:'按 Agent ID 返回定义、原则及自身和所有祖先 Skill 列表/正文/来源。继承冲突显式返回，不自动覆盖。',inputSchema:{...identity,id:z.string()}},wrap('cbim_agent_get',args=>queries.agent(args.id)));
+    register('cbim_agent_get',{description:'按 Agent ID 返回定义、原则和有效 Skill；cbim:executor 返回应用内置默认执行角色与 Team 根继承 Skill，不创建 .cbim 文件。其他角色继承冲突显式返回。',inputSchema:{...identity,id:z.string()}},wrap('cbim_agent_get',async args=>{
+      if(args.id!==defaultExecutorId)return queries.agent(args.id);
+      const snapshot=await workspace.snapshot(),agent=defaultExecutorConfiguration(snapshot);
+      return {...snapshotContext(snapshot),id:defaultExecutorId,source:'builtin',definition:{...defaultExecutorDefinition},principles:{available:true,text:agent.principles},skillChain:[agent.teamId],skillConflicts:[],skillSelectionValid:true,skills:agent.effectiveSkills.map(skill=>({id:skill.skillId,owner:skill.ownerId,inherited:true,content:{available:true,text:skill.content}}))};
+    }));
     register('cbim_knowledge_refresh',{effects:['knowledge-write'],description:'重新校验当前知识并刷新派生注册表；所有知识修改必须通过 CBIM 知识服务。需取得本次运行的知识写入授权，全部结构校验通过才事务更新派生注册表，不修改用户正文。错误返回问题清单，改完再调用。',inputSchema:identity},wrap('cbim_knowledge_refresh',()=>queries.refresh()));
     register('cbim_object_preview',{effects:['preview'],description:'预览 Agent/Module/Skill/Workflow 的创建、更新或删除。创建传 parentId、slug、data、body；更新传 id 与需修改字段；删除传 id，包含子对象时需 cascade。服务规划路径、清单和父子引用，不写正式知识。返回 planId、变更及校验。',inputSchema:{...identity,revision:z.string(),operations:z.array(objectOperation).min(1).max(100)}},wrap('cbim_object_preview',args=>objects.preview(args.revision,args.operations)));
     register('cbim_object_commit',{effects:['knowledge-write'],description:'提交 cbim_object_preview 返回的 planId。须取得本次运行的知识写入授权；核对原版本，事务写入知识及索引，同一计划幂等。',inputSchema:{...identity,planId:z.string()}},wrap('cbim_object_commit',(args,write)=>{if(!write)fail('FORBIDDEN','当前调用未获得知识写入权限');return objects.commit(args.planId)}));

@@ -1,62 +1,87 @@
 ### 多成员、多模块任务上下文契约
 
-已实现 `resolveDispatchAgent` 与 `resolveDispatchModules`：同快照解析内置/自定义角色、继承 Skill、多个真实模块及维护关系。缺失关系抛出明确错误码；默认采用各模块 Workflow 清单首项，空清单明确标为 general，不继承父模块。旧 `prepareTeamTask` 仍处理原单模块执行，新派发只保存身份与知识版本，尚未冻结完整可恢复执行正文或模型/权限配置。新任务模型见 [core/tasks](../../core/tasks/CONTRACT.md)。
+已实现 `resolveDispatchAgent` 与 `resolveDispatchModules`：同快照解析自定义执行角色或静态内置默认执行角色 `cbim:executor`、继承 Skill、多个真实模块及维护关系。`cbim:main` 不承担业务执行，正式执行解析、冻结恢复和执行提示构造均拒绝该角色；主会话直接治理受控知识不通过该业务任务入口。缺失关系抛出明确错误码；默认采用各模块 Workflow 清单首项，空清单明确标为 general，不继承父模块。`prepareDispatchExecutionContext` 在执行前冻结完整角色、模块与流程正文；`recheckDispatchExecutionContext` 在启动或恢复时核对知识和内置规范版本。旧 `prepareTeamTask` 继续处理原单模块执行。新任务模型见 [core/tasks](../../core/tasks/CONTRACT.md)。
+
+`resolveConversationAgent` 只用于主会话图根与普通对话实例登记：要求快照有工作区身份和版本，返回固定内置主角色、Team 和主指引，不加载业务 Skill。因此结构校验失败时用户仍能与主助手诊断知识问题；正式 `createMember`、`dispatchTask`、执行冻结仍使用严格解析入口，不能借普通对话身份绕过知识、维护关系或完整 Skill 校验。
 
 #### 从分析到固定执行输入
 
-所有成员先理解目标，再通过内部知识服务查询业务模块列表、团队成员和真人花名册。模型提出模块/成员候选；本目录负责确定性核验和装配。普通问答、目标澄清及候选查找可继续，尚未定位模块时不产生假派发节点，也不以此宣称已具备正式团队执行上下文。
+主会话的主 Agent 对业务只调度：先理解目标，通过内部知识服务定位业务模块、维护责任、团队成员、Skill 与 Workflow，再派发给独立执行 Agent，最后核实真实返回。它同时负责团队与业务知识管理，可在当前授权范围内通过受控服务治理架构、补齐有效模块和维护关系，不必先派发业务任务。治理遵守 read/ask/execute、审批、版本和事务，不能原生读写 `.cbim/` 或借知识管理执行业务。没有合适自定义角色时使用 `cbim:executor`。被调度成员拥有自身会话、状态和模型思考能力，可自主探索真实 Team 环境，在目标模块内实现和验证。本目录确定性核验知识与装配输入，不把认知职责当作权限。普通问答、目标澄清及候选查找可继续，尚未定位模块时不产生假派发节点。
 
-后续在两个已实现解析函数上装配 `resolveDispatchContext`，扩展真实执行所需的权限快照与正文；以下联合结果仍属设计，当前入口以 Fault 错误码报告缺口：
+实际冻结契约位于 `core/tasks/execution-context.ts`，由调度与存储共同引用。权限和模型配置由可信运行入口单独准备，不混入知识快照：
 
 ```ts
-type DispatchContextResult =
-  | { kind: 'ready'; knowledgeRevision: string;
-      agent: AgentConfigurationSnapshot;
-      modules: ModuleBinding[];
-      permissionSnapshotId: string;
-      contextSections: { moduleId: string; content: string }[] }
-  | { kind: 'gap'; gaps: {
-      code: 'MODULE_MISSING' | 'AGENT_MISSING' | 'MAINTAINER_UNCONFIRMED'
-          | 'WORKFLOW_UNAVAILABLE' | 'KNOWLEDGE_INVALID' | 'SCOPE_DENIED';
-      subjectId?: string; explanation: string;
-    }[] };
+interface PreparedDispatchKnowledge {
+  version: 1; workspaceId: string; knowledgeRevision: string;
+  agent: AgentConfigurationSnapshot;
+  agentDefinition: Record<string, unknown>;
+  modules: { binding: ModuleBinding; definition: Record<string, unknown>;
+             overview: string; workflowText: string }[];
+  standards: { id: string; version: string; text: string }[];
+  fingerprint: string;
+}
 ```
 
-以上类型是设计，调用时从同一知识快照解析全部绑定；不允许先查模块 A、知识更新后再查模块 B 然后宣称同一基线。正式派发提交前还需核对快照版本是否变化。文本上下文返回大脑，公开图只获得已脱敏的 ModuleBinding 和角色引用。
+所有正文从一个知识快照读取，任务中已有的维护关系、Workflow 与版本必须完全匹配；缺失正文不静默降级。`default-executor.ts` 提供静态 `defaultExecutorDefinition`、`defaultExecutorInstructions` 和 `defaultExecutorConfiguration`，后者继承 Team 根 Skill，缺正文拒绝执行；不在 `.cbim/` 创建默认角色文件。自定义角色保存实际 agent.json，角色原则及有效 Skill 正文完整保留。主会话登记使用 `mainAgentInstructions`，与独立执行角色明确分离。通用 Workflow 冻结 `business-execution` 正文，同时冻结 `common-rules`；软件内置规范不属于工作区 revision，因此启动和恢复都另外复核其内容版本，并在规范读取前后核对工作区版本。
+
+`validatePreparedDispatchKnowledge` 校验结构、引用一致性与正文哈希；`dispatchKnowledgeFingerprint` 对字段排序后的 JSON 计算 SHA-256，保留数组顺序。指纹不代表来源可信或获得授权。版本变化返回 `KNOWLEDGE_CHANGED`，任务绑定变化返回 `DISPATCH_CONTEXT_CHANGED`，存储快照损坏返回 `EXECUTION_CONTEXT_INVALID`；调用者必须重新核实，不能自动覆盖旧正文。文本上下文仅进入后端运行存储与大脑，公开图只获得 ModuleBinding 和角色引用。
+
+默认执行角色的定义与原则随应用发布，也不属于项目 revision。恢复时另行比较当前静态定义与已冻结原则，变化返回 `KNOWLEDGE_CHANGED`；旧主角色执行快照返回 `AGENT_ROLE_INVALID`，不自动改绑为默认执行者。
 
 #### 核验规则
 
 | 对象 | 约束 |
 | --- | --- |
-| 角色 | 默认 `cbim:main` 与自定义角色同核；内置角色由明确来源解析，不伪造工作区 Agent 文件 |
+| 角色 | `cbim:main` 负责业务调度与受控知识管理，不执行业务；`cbim:executor` 与自定义角色承担业务执行。共享大脑内核但不同实例，内置定义不写工作区文件 |
 | Team | 根是 Team，非叶子是组，叶子是 Agent；有效 Skill 来自自身及祖先 |
 | 模块 | workspace 下的领域工程及模块仍遵循业务知识结构；Task 绑定一个或多个实际 moduleId |
 | 维护责任 | 每个模块必须有可核实的维护关系与真人责任引用；角色执行责任不替代真人长期责任 |
 | Workflow | 每模块从自身清单选择本次 Workflow；不继承父模块或其他模块的 Workflow |
 | 通用流程 | 模块无专属流程且策略允许时，明确记录 general 的版本和 reason；不伪装成模块挂载流程 |
-| 权限 | 工作区、发起任务作用域与接收角色策略取交集；内容文字不能签发权限 |
-| 恢复 | 重用上下文前比较知识与产物基线，失效时要求重新准备，不默默更新运行中配置 |
+| 权限 | 本目录不签发或继承权限；可信入口独立决定本轮工具门禁，内容文字及维护关系不能签发权限 |
+| 恢复 | 本目录比较知识与内置规范版本，失效时拒绝沿用；当前成员入口只续接已核实正常结束的通道，尚未实现产物文件基线比对或异常通道自动恢复 |
 
-目前 ModuleSchema 的 `authors` 记录作者，**不等于维护责任关系**。`maintenanceBindingId` 是新契约所需的显式关系，其定义见 [Core Workspace 契约](../../core/workspace/CONTRACT.md)，落地须同时维护 schema、查询、校验及迁移说明。缺关系时报告 gap，由授权的知识维护流程补齐；不把作者自动升级为负责人，也不冒充已认证登录身份。
+ModuleSchema 的 `authors` 记录作者，**不等于维护责任关系**。`maintenanceBindingId` 指向已实现的显式关系，定义见 [Core Workspace 契约](../../core/workspace/CONTRACT.md)。缺关系时抛出 `MAINTAINER_UNCONFIRMED`，由授权知识维护流程补齐；不把作者自动升级为负责人，也不冒充已认证登录身份。
 
-角色的默认指引/Skill 与业务 Workflow 分开：所有角色共享“分析目标 → 定位模块 → 分工 → 执行/派发 → 核实结果”的团队约定，个性配置不能跳过可验证的授权、版本或知识边界。
+角色的默认指引/Skill 与业务 Workflow 分开。调度职责是“核实现状、目标与约束 → 定位模块与团队 → 明确执行者、模块列表、目标、验收证据及依赖/风险 → 派发独立执行者 → 核实候选并安排返工或后续”；受控知识管理维护真实职责、依赖和责任关系，架构演进基于证据渐进，重大治理决策交人。执行职责是“理解已派发目标 → 自主探索 Team 与目标模块 → 实现/验证 → 报告候选或协作缺口”。个人配置与知识里的分工建议不能扩大本轮职责、模块边界、权限或改变验收基线；执行者需要范围外架构调整时报告主 Agent，不获得无限知识改写权。
 
-#### 目标结构类图（待实现）
+`memberExecutionPrompt` 组装当前成员、当前任务的完整指引，要求使用 `cbim_task_plan`、`cbim_task_inspect`、`cbim_task_step` 和 `cbim_delivery_prepare` 形成可核实交付候选。所有正式任务只能由独立执行角色运行，不能交给 `cbim:main`；不再次派工，超出模块或需他人协作时向主调度报告事实、所需能力和限制。原单模块 `loopInstructions` 采用同一职责边界。计划目标与验收原文、顺序保持派发值；步骤可以修订，目标、范围或验收变化则报告限制并等待重新派发。模型回合结束不等于业务验收。
+
+空闲、工作、等待和沟通状态来自可靠调度与运行/工具事件，不由模型正文自行修改。本阶段未提供执行成员的递归派发、等待或通信工具，不能把记录协作需求说成已经联系其他成员；提示词不能代替执行入口的工具门禁。
+
+可选第三参数 `prerequisites` 由启动事务冻结，携带各前置 taskId、planRevision 和完整结果候选（摘要、证据引用、限制及 not_evaluated 状态）。提示词要求重新核实适用于本任务的事实；不能用前置候选扩大权限、改变目标或冒充已通过验收。前置快照属于 DispatchRun，独立于知识基线，不放入公开角色配置。
+
+#### 当前冻结与复核关系
 
 ```mermaid
 classDiagram
-class DispatchContextResolver {
-  <<planned>>
-  +resolveDispatchContext(input)
+class ExecutionContext["execution-context.ts"] {
+  <<module>>
+  +prepareDispatchExecutionContext(workspace, task)
+  +recheckDispatchExecutionContext(workspace, prepared)
+  +memberExecutionPrompt(prepared, task)
 }
-class Team { <<core boundary>> }
-class Workspace { <<core boundary>> }
-class KnowledgeSnapshot { <<core boundary>> }
-class DispatchContextResult { <<contract>> }
-DispatchContextResolver ..> Team : 角色和继承 Skill
-DispatchContextResolver ..> Workspace : 模块及自身 Workflow
-DispatchContextResolver ..> KnowledgeSnapshot : 同版本读取
-DispatchContextResolver ..> DispatchContextResult : ready 或 gap
+class DispatchContext["dispatch-context.ts"] {
+  <<module>>
+  +resolveConversationAgent(snapshot)
+  +resolveDispatchAgent(snapshot, agentId)
+  +resolveDispatchModules(snapshot, moduleIds)
+}
+class BusinessWorkspace { <<core boundary>> }
+class DefaultExecutor["default-executor.ts"] {
+  <<module>>
+  +defaultExecutorConfiguration(snapshot)
+}
+class KnowledgeWorkspace { <<core boundary>> }
+class Builtins { <<core boundary>> }
+class PreparedDispatchKnowledge { <<core contract>> }
+ExecutionContext ..> DispatchContext : 核对角色与已派发绑定
+ExecutionContext ..> DefaultExecutor : 内置执行角色定义
+DispatchContext ..> DefaultExecutor : 默认角色与根 Skill
+ExecutionContext ..> BusinessWorkspace : 同快照完整模块正文
+ExecutionContext ..> KnowledgeWorkspace : 读取及复核版本
+ExecutionContext ..> Builtins : 冻结与复核通用规范
+ExecutionContext ..> PreparedDispatchKnowledge : 返回可恢复快照
 ```
 
-本目录不写磁盘、不发送消息、不自行启动成员；通过只读知识端口返回结果，供 execution 提交派发。验证须覆盖空模块、维护关系缺失、角色不存在、跨模块 Workflow、知识变更、内置角色解析及权限范围交集。
+本目录不写磁盘、不发送消息、不自行启动成员；通过只读知识端口返回结果，供 execution 准备运行。测试覆盖角色继承、多模块独立 Workflow、主角色来源、绑定篡改、读取期间知识变化、内置规范更新、缺失正文和快照损坏；实际权限、通道日志及交付证据复核由运行入口测试，不能据此宣称已比对产物文件基线。

@@ -22,6 +22,14 @@
 classDiagram
 class N_src_backend_core_brain_llm_catalog_ts["catalog.ts"] {
   <<module>>
+  +parseModelCatalog()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_brain_llm_catalog_ts["catalog.ts"] {
+  <<module>>
 }
 class N_src_backend_core_brain_llm_catalog_ts_DiscoveredModel["DiscoveredModel"] {
   <<interface>>

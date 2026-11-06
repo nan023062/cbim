@@ -25,6 +25,14 @@
 classDiagram
 class N_src_backend_core_foundation_errors_ts["errors.ts"] {
   <<module>>
+  +fail()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_foundation_errors_ts["errors.ts"] {
+  <<module>>
 }
 class N_src_backend_core_foundation_errors_ts_Fault["Fault"] {
   +code
@@ -49,14 +57,17 @@ class N_src_backend_core_foundation_files_ts["files.ts"] {
 }
 ```
 
+
 ### identity.ts
 
 ```mermaid
 classDiagram
 class N_src_backend_core_foundation_identity_ts["identity.ts"] {
   <<module>>
+  +safeId()
 }
 ```
+
 
 ### json.ts
 
@@ -67,6 +78,7 @@ class N_src_backend_core_foundation_json_ts["json.ts"] {
   +parseJson()
 }
 ```
+
 直接依赖：[errors.ts](errors.ts)。
 
 ### paths.ts
@@ -95,8 +107,11 @@ N_src_backend_core_foundation_paths_ts ..> N_src_backend_core_foundation_paths_t
 classDiagram
 class N_src_backend_core_foundation_serialization_ts["serialization.ts"] {
   <<module>>
+  +hash()
+  +json()
 }
 ```
+
 
 ### 本目录调用边界
 

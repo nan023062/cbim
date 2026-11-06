@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-引擎无关的执行循环与事件契约。工具决策、任务修订和回执先落盘；副作用及恢复使旧计划证据失效，执行结束不自动验收或重放未知操作。
+引擎无关的执行循环与事件契约。主对话以 conversationBinding 固定实例，正式任务以 memberBinding 固定业务运行，两者互斥；可信结果来源与回执先落盘，旧历史不补造身份，续跑不改绑或混合原生上下文。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,7 +10,10 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [index.ts](index.ts) | 大脑 执行层：对外重导出 Loop 核心契约、存储端口、运行时与 Pi 适配器。 |
+| [conversation-binding.ts](conversation-binding.ts) | 定义主对话与已登记 Agent 实例、逻辑会话之间的可信绑定，供运行时和日志恢复共用。 |
+| [index.ts](index.ts) | 大脑执行层：对外重导出 Loop 契约、主对话实例绑定、成员执行绑定、可信回注来源、存储端口、运行时与 Pi 适配器。 |
+| [input-source.ts](input-source.ts) | 定义普通用户输入之外、由调度器提交的成员结果接续来源。 |
+| [member-run.ts](member-run.ts) | 定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。 |
 | [model-errors.ts](model-errors.ts) | 把模型结束原因转换为用户可理解的执行错误，供实时引擎和历史回放共用。 |
 | [runtime.ts](runtime.ts) | 大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。 |
 | [storage.ts](storage.ts) | 执行循环使用的日志和任务目录存储端口。 |
@@ -27,9 +30,28 @@ class N_src_backend_core_brain_llm["llm/"] {
 class N_src_backend_core_brain_pi["pi/"] {
   <<directory>>
 }
+class N_src_backend_core_brain_conversation_binding_ts["conversation-binding.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_index_ts["index.ts"] {
   <<module>>
 }
+class N_src_backend_core_brain_input_source_ts["input-source.ts"] {
+  <<module>>
+}
+class N_src_backend_core_brain_member_run_ts["member-run.ts"] {
+  <<module>>
+}
+N_src_backend_core_brain_index_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
+N_src_backend_core_brain_index_ts ..> N_src_backend_core_brain_input_source_ts : 导入依赖
+N_src_backend_core_brain_index_ts ..> N_src_backend_core_brain_conversation_binding_ts : 导入依赖
+N_src_backend_core_brain_index_ts ..> N_src_backend_core_brain_pi : 导入依赖
+N_src_backend_core_brain_pi ..> N_src_backend_core_brain_input_source_ts : 导入依赖
+N_src_backend_core_brain_pi ..> N_src_backend_core_brain_llm : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_backend_core_brain_model_errors_ts["model-errors.ts"] {
   <<module>>
 }
@@ -39,22 +61,15 @@ class N_src_backend_core_brain_runtime_ts["runtime.ts"] {
 class N_src_backend_core_brain_storage_ts["storage.ts"] {
   <<module>>
 }
-N_src_backend_core_brain_index_ts ..> N_src_backend_core_brain_storage_ts : 导入依赖
-N_src_backend_core_brain_index_ts ..> N_src_backend_core_brain_runtime_ts : 导入依赖
-N_src_backend_core_brain_index_ts ..> N_src_backend_core_brain_pi : 导入依赖
-N_src_backend_core_brain_pi ..> N_src_backend_core_brain_llm : 导入依赖
-N_src_backend_core_brain_pi ..> N_src_backend_core_brain_model_errors_ts : 导入依赖
-N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_storage_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_backend_core_brain_types_ts["types.ts"] {
   <<module>>
 }
 class N_src_backend_core_brain_usage_ts["usage.ts"] {
   <<module>>
 }
+N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_storage_ts : 导入依赖
+N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
+N_src_backend_core_brain_storage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 ```
 
@@ -63,19 +78,89 @@ N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入
 - `index.ts` → `types.ts`：导入。
 - `index.ts` → `storage.ts`：导入。
 - `index.ts` → `runtime.ts`：导入。
+- `index.ts` → `member-run.ts`：导入。
+- `index.ts` → `input-source.ts`：导入。
+- `index.ts` → `conversation-binding.ts`：导入。
 - `index.ts` → `pi`：导入。
 - `pi` → `types.ts`：导入。
+- `pi` → `input-source.ts`：导入。
 - `pi` → `llm`：导入。
 - `pi` → `model-errors.ts`：导入。
 - `runtime.ts` → `storage.ts`：导入。
+- `runtime.ts` → `member-run.ts`：导入。
+- `runtime.ts` → `input-source.ts`：导入。
+- `runtime.ts` → `conversation-binding.ts`：导入。
 - `runtime.ts` → `types.ts`：导入。
 - `storage.ts` → `types.ts`：导入。
+- `types.ts` → `member-run.ts`：导入。
+- `types.ts` → `input-source.ts`：导入。
+- `types.ts` → `conversation-binding.ts`：导入。
 - `usage.ts` → `types.ts`：导入。
+
+### conversation-binding.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_backend_core_brain_conversation_binding_ts["conversation-binding.ts"] {
+  <<module>>
+  +checkedConversationAgentBinding()
+}
+```
+
+
+### input-source.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_backend_core_brain_input_source_ts["input-source.ts"] {
+  <<module>>
+  +checkedRunInputSource()
+}
+```
+
+
+### member-run.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_backend_core_brain_member_run_ts["member-run.ts"] {
+  <<module>>
+  +checkedMemberRunBinding()
+  +checkedMemberRunLaunch()
+}
+```
+
+
+### model-errors.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_backend_core_brain_model_errors_ts["model-errors.ts"] {
+  <<module>>
+  +modelStopError()
+}
+```
+
+
+### usage.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_backend_core_brain_usage_ts["usage.ts"] {
+  <<module>>
+  +runUsage()
+  +runDuration()
+  +taskUsage()
+  +tokenCount()
+  +durationText()
+}
+```
+
 
 ## 子目录导航
 
 - [llm/](llm/ARCHITECTURE.md)：公开模型参数、能力元数据及运行快照端口。实际配置文件和加密凭据由 main/persistence/settings 持有。
-- [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数。合并知识与本轮任务记录工具，通过一次性 gate 授权；工具结果写入会话前校验，协议错误保留错误码且不重放操作；保留图片、恢复及长度错误报告。
+- [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数。工具经一次性 gate 授权后透传真实调用 ID 并校验结果；成员回传作为 custom 任务数据续接原生会话，不冒充用户或新增授权。支持图片、恢复、取消及长度报告。
 
 [返回上层](../ARCHITECTURE.md)。
 
@@ -85,15 +170,49 @@ N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
-### 独立成员的大脑执行端口
+### 当前主对话实例绑定
 
-本附录定义后续 Agent 封装接入大脑时的接口语义，**尚未实现多成员 Session 管理和任务派发**。现有 `LoopRuntime`、`AgentEngine`、工具门禁、事件日志和 Pi 适配器继续按当前代码运行；以下类型是待实现设计。
+`ConversationAgentBinding` 为 `{ workspaceId, teamId, agentId, agentInstanceId, agentSessionId, rootSessionId }`，由后端已登记的主实例和会话通道装配到 `RuntimeOptions.conversationBinding`。每个主会话拥有自己的 `cbim:main` 实例；聊天与该会话派发图根引用同一个实例，不以相同角色名代替实例身份。大脑只接收可信身份快照，不创建或寻找实例。`checkedConversationAgentBinding` 拒绝额外字段、无效标识、非 `chat / cbim:main` 输入、不同工作区或 `rootSessionId !== TaskSpec.taskId`，并复制输入。
+
+`run.started.conversationBinding` 持久化这份身份，`EngineContext` 接收独立快照，`RunSummary` 从日志校验恢复。续聊已有绑定时必须完整保持原团队、实例、通道和根身份，不能丢失字段或改换实例；旧日志没有绑定时保持缺省，允许后端在显式新一轮续聊时首次绑定，旧日志不改写。当前兼容映射仍使用聊天 `TaskSpec.taskId` 作为根会话 ID，不因此产生业务任务节点。
+
+主对话的 `conversation` 通道与图根结果邮箱分别登记。主实例负责调度与团队/业务知识管理，正式业务任务使用独立执行实例；不能同时提供 `conversationBinding` 与 `MemberRunBinding`。聊天的原生历史仍通过原任务日志中的 `sessionFile` 续接，保留完整任务定义和未决工具检查。运行时从原轮次最后一次 `session.bound.sessionId` 提取期望原生身份，与该事件的文件一起传给适配器；不能把逻辑 `agentSessionId` 或聊天 `taskId` 当作旧原生 ID。Pi 在模型调用前核对实际原生 ID，防止同工作区错误文件串入别的主会话。旧日志缺少原生 ID 时不补造，Pi 明确拒绝恢复并要求核实原始记录或新建对话；旧记录仍可阅读。可信成员结果来源可以与主对话绑定并存，仍需安全完成后才接续。实例租约、图投影和注册对象一致性由调度层负责，运行日志读取不启动执行。
+
+主 Agent 的 Pi 指引区分两种能力：内部 `cbim_` 知识服务保留查询、预览和 CRUD，知识写入遵循本轮 read/ask/execute 及实际审批、版本和事务检查；原生业务 `write/edit/bash` 始终不提供，业务实现交给独立执行 Agent。运行装配对 `business-write / command` 另设主角色拒绝边界，不能靠用户选择 execute 或批准恢复这些能力。工具发现不等于写入授权，知识提交仍经过 `beforeTool` 的持久化决策与工具回执。
+
+### 当前主会话成员回注入口
+
+`RunInputSource` 是后端可信来源，结构为 `{ kind:'member-results', continuationId, messageIds, taskIds }`。`continuationId` 标识同一主轮收到的一批回传；`messageIds` 为结果信封集合，可以为空以报告没有交付候选的失败或受阻任务；`taskIds` 为非空任务集合，两组 ID 不要求逐项对应。`checkedRunInputSource` 校验 ID、集合唯一性和额外字段，并复制输入，避免调用方在异步启动期间改写来源。
+
+`LoopRuntime.start(task, message, resume?, source?)` 只有在原 `chat` 运行安全完成且没有未决工具时才接收此来源。它仍核对完整原任务及会话文件、持有工作区租约、执行本轮权限检查；结果正文没有新增授权。`run.started` 保存来源，`RunSummary.source` 恢复来源，`EngineContext.source` 传入适配器。启动后停止或失败也保留尝试记录，不能把“曾回注”理解成“已业务验收”。普通用户续聊不带此字段。
+
+`RuntimeOptions.createEngine({task, runId})` 提供本轮可信身份，便于调度装配派发工具；模型不能指定该身份。自动链路如何在主轮释放租约后启动成员、如何按来源去重及确认信封，由调度协调器负责。大脑不会在读取日志或应用重启时自行重新执行。
+
+### 当前成员执行入口
+
+`member-run.ts` 已实现 `MemberRunBinding` 和 `MemberRunLaunch`：调度先保存任务、成员和运行绑定，再调用 `LoopRuntime.startMember(task, message, launch)`。绑定包括 `workspaceId / teamId / agentId / agentInstanceId / agentSessionId / rootSessionId / taskId / runId / leaseEpoch / planRevision`；原生 `nativeSessionId / sessionFile?` 作为单独的后端启动参数传入，不进入公开任务图。业务任务必须指定成员及非空模块列表，运行日志写入完整绑定，读取时核对任务和轮次身份。
+
+`startMember` 与普通 `start / resume` 共用租约、工具决策持久化、回执、计划工具和终态处理，使用调度预分配的 `runId`。成员新任务不能伪装为旧 `TaskSpec` 的恢复；现阶段拒绝重复业务任务及普通 `resume` 恢复成员日志，不自动重试。是否能复用同成员通道由调度核实：上轮必须安全完成且没有未决工具，并持有成员及通道执行槽；大脑不会根据角色名寻找最近的 Session。
+
+`EngineContext.nativeSessionId` 使首次启动可以使用成员通道的原生身份，后续任务通过该身份和已核实的 `sessionFile` 继续同一通道。Pi 同时验证文件属于该工作区受管理会话目录，并从真实子进程 `get_state` 核对 `sessionId`，不一致时在模型生成前中断。未提供该字段的普通对话保留原有以 `taskId` 新建会话的行为。
+
+`RuntimeOptions.onEngineReady` 是启动事务的可靠确认点：`engine.start` 完成后，在 `engine.run` 和本轮模型生成之前等待回调。Pi 会在 `start` 返回前等待 `session.bound` 落盘；其他引擎未报告文件时，回调中的 `sessionFile` 可以缺省。回调携带实际 `taskId / runId / sessionFile?`，调度可在此提交成员运行状态和原生会话绑定。回调失败会关闭引擎并记录 `interrupted`，不会发送本轮提示。`onEvent` 只观察已落盘事件，其异常被隔离，不能替代该可靠确认。
+
+`start / startMember` 返回的是 `{ runId, done }` 句柄，不保证引擎已经准备成功；最终结果通过 `done` 获取。`stop(taskId)` 只请求停止当前活动运行，不存在活动运行时为空操作；停止请求返回不等于终态已经落盘，也不代表工具副作用已回滚。`close()` 禁止新启动，等待启动注册、停止和结束；成员跨任务的互斥与结果交接仍由调度持有。
+
+执行 `completed` 只表示这段引擎循环正常结束。结构化交付候选仍由 `cbim_delivery_prepare` 在真实计划、有效工具回执和当前验证证据具备时产生；没有提交的普通回复不能成为派发图的 `result_ready`，候选也不等于业务验收。Pi 跨任务同成员通道复用、跨成员隔离及错误原生身份拒绝，由真实 Pi 子进程和本地确定性模型服务验证。
+
+停止在 Pi 发出原生 abort 后可能收到标准 `This operation was aborted` 错误文本；只有已经显式停止且匹配标准取消文本时才归一为取消，其他供应商错误仍保留失败。未知工具结果继续由 `LoopRuntime` 标为 `interrupted`，不会因为用户点击停止而伪装成没有发生副作用。
+
+### 独立成员的大脑执行端口设计
+
+以下保留后续通用执行端口的设计；`AgentRunPort / PreparedAgentTurn / AgentRunOutcome` 及安全等待让出等类型**尚未按下列形式完整实现**。当前实现使用上一节的 `MemberRunLaunch` 与 `startMember`，不把设计中的所有能力描述为已交付。
 
 #### 当前可复用能力与需要拆开的身份
 
 当前 `LoopRuntime` 已提供任务租约、先持久化再执行的工具决策、工具回执、运行终态和显式恢复。`EngineContext.emit` 与 `beforeTool` 是事实记录和权限入口，成员执行继续使用这些入口，不能另开一条绕过门禁的执行链。
 
-目前 `taskId` 同时用于聊天线程、运行目录和 Pi 的新建会话标识；恢复还要求 `TaskSpec` 与历史完全一致。这不足以表示“同一成员的独立会话内先后执行不同任务”。后续必须显式绑定 `agentSessionId`，不能把新任务伪装为旧任务的 `resume`。
+普通对话兼容路径仍以 `taskId` 关联聊天线程、运行目录和 Pi 的新建会话标识；恢复要求 `TaskSpec` 与历史完全一致。成员业务任务现通过 `MemberRunBinding.agentSessionId` 和独立原生身份支持同一通道先后处理不同任务；下列设计继续描述未来会话分支、任务分支和等待提交的统一端口，不能把新任务伪装为旧任务的 `resume`。
 
 ```ts
 /** 每次执行都有成员、通道与运行身份；尚未定位模块的会话也能启动。 */

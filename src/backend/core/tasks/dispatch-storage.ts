@@ -1,37 +1,52 @@
 /**
  * 作用定位：定义工作区成员注册、会话绑定及任务派发的原子持久化端口。
- * 设计原因：调度层只表达领域变化，main 负责落盘；任务节点与待投递消息一起提交，观察端口只接收恢复基线及已提交事实。
- * 职责边界：持久化入队不是模型执行，outbox 尚未被执行器消费时不得报告任务正在运行。
+ * 设计原因：调度层只表达领域变化，main 负责落盘；任务、领取意图、消息和成员占用一起提交，观察端口只接收恢复基线及已提交事实。
+ * 职责边界：持久化入队或 starting 意图都不是模型已经运行，completed 也不代表验收通过。
  */
 import type {AgentInstance, AgentSessionBinding} from '../team/agent-types';
 import type {AgentRef, GraphIdentity, GraphEventBatch, GraphSnapshot, GraphCursor, GraphDelta} from './graph-types';
+import type {DispatchRun} from './dispatch-execution';
+import type {DispatchScope} from './dispatch-scope';
 
-/** 接收成员的任务信封；只保存任务引用，正文从同事务任务节点读取。 */
-export interface AssignmentMessage {
-  kind: 'assignment'; messageId: string; commandId: string; identity: GraphIdentity;
+/** 信封身份固定；claim 记录领取时的 run 与租约代际，消费后保留用于审计。 */
+export interface DispatchMessageBase {
+  messageId: string; commandId: string; identity: GraphIdentity;
   from: AgentRef; to: AgentRef; taskId: string; planRevision: number; createdAt: string;
-  /** 首版只可靠排队；不把 outbox 保存当作对端确认或执行成功。 */
-  delivery: 'pending';
+  /** assignment 按 pending→claimed→processed 前进；result 只经可信确认从 pending 变为 processed。 */
+  delivery: 'pending'|'claimed'|'processed';
+  /** 仅 assignment 被领取时生成，消费后继续保留；result 不创建运行或领取租约。 */
+  claim?:{runId:string;leaseEpoch:number};
 }
+/** 接收成员的任务信封；只保存任务引用，正文从同事务任务节点读取。 */
+export interface AssignmentMessage extends DispatchMessageBase {kind:'assignment'}
+/** 返回原发送方的候选引用；不复制消息正文，也不形成任务图的反向边。 */
+export interface ResultMessage extends DispatchMessageBase {kind:'result';replyTo:string;resultId:string;runId:string}
+export type DispatchMessage=AssignmentMessage|ResultMessage;
 
-/** 工作区级状态；成员跨根会话复用，图与消息按各自根会话隔离。 */
+/** 工作区级状态；主实例随会话保留，周期执行实例与历史图分开计量。 */
 export interface DispatchState {
   workspaceId: string;
   members: AgentInstance[];
   sessions: AgentSessionBinding[];
   graphs: GraphSnapshot[];
-  outbox: AssignmentMessage[];
+  outbox: DispatchMessage[];
+  /** 旧版本内存 fixture 可缺省；真实存储读取始终返回数组，旧日志按空集合恢复。 */
+  runs?:DispatchRun[];
+  /** 旧日志没有周期；按空集合恢复，不把旧任务伪造为新周期。 */
+  scopes?:DispatchScope[];
 }
 
 /** 幂等键由可信入口产生；fingerprint 是包括调用者在内的规范化输入摘要。 */
 export interface DispatchCommand { commandId: string; fingerprint: string }
 
-/** 一个命令的完整提交单元；重复对象 ID 在同次 mutation 中应拒绝。 */
+/** 一个命令的完整提交单元；可选数组按对象 ID 写入完整新记录，省略不改变集合，重复 ID 须拒绝。 */
 export interface DispatchMutation<T = unknown> {
   members?: AgentInstance[];
   sessions?: AgentSessionBinding[];
   batch?: GraphEventBatch;
-  messages?: AssignmentMessage[];
+  messages?: DispatchMessage[];
+  runs?:DispatchRun[];
+  scopes?:DispatchScope[];
   receipt: T;
 }
 
@@ -51,7 +66,9 @@ export interface DispatchStore {
   read(): Promise<DispatchState>;
   /** 相同键和摘要直接返回原回执，不重复执行 prepare；冲突不能覆盖原记录。 */
   transact<T>(command: DispatchCommand, prepare: (state: DispatchState) => Promise<DispatchMutation<T>>): Promise<T>;
+  /** 读取指定主会话的已提交图；尚未建图应报 GRAPH_NOT_FOUND，不自动创建节点。 */
   snapshot(identity: GraphIdentity): Promise<GraphSnapshot>;
+  /** 按完整事务批次分页，limit 为批次数；身份不匹配拒绝，流变化或保留前缀不足返回 reset。 */
   delta(identity: GraphIdentity, cursor?: GraphCursor, limit?: number): Promise<GraphDelta>;
   /** 停止接收新操作，等待已排队提交结束后释放资源。 */
   close(): Promise<void>;

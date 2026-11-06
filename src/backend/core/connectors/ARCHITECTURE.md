@@ -30,11 +30,11 @@ class N_src_backend_core_connectors_registry_ts_ConnectorDefinition["ConnectorDe
 }
 N_src_backend_core_connectors_registry_ts ..> N_src_backend_core_connectors_registry_ts_ConnectorDefinition : 声明
 class N_src_backend_core_connectors_registry_ts_ConnectorRegistry["ConnectorRegistry"] {
-  -entries
   +list()
   +get()
   +ids()
   +duplicates()
+  -entries
 }
 N_src_backend_core_connectors_registry_ts ..> N_src_backend_core_connectors_registry_ts_ConnectorRegistry : 声明
 ```

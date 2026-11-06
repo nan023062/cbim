@@ -1,5 +1,9 @@
 # 项目协作与注释规范
 
+开发 CBIM 工程时使用 `cbim-development`：先回顾 [开发路线图](design/tool-architecture-roadmap.md) 和 [上一步开发记录](design/development-log.md)，结合实际代码梳理下一步及验收；每完成一步立即更新 roadmap 的阶段状态、剩余项与开发接续，并追加实际验证记录。`docs/` 保存概念设计，`design/` 是开发计划模块，已有运行规范资产保留原路径。此开发流程适用于本仓库开发，不替代产品内置业务 Skill。
+
+开发 Skill 入口：[通用项目](.agents/skills/cbim-development/SKILL.md)、[Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md)，三份内容同步维护。只读分析或计划讨论不自动触发代码实施。
+
 固定架构维护流程见 [.claude Skill](.claude/skills/architecture-maintenance/SKILL.md) 和 [.codex Skill](.codex/skills/architecture-maintenance/SKILL.md)，两份内容保持同步。文件模块之间禁止循环依赖，包含类型引用；运行 `pnpm check:dependencies` 检查，运行 `pnpm check:architecture` 同时检查目录类图是否与代码同步。
 
 本文件中的代码注释、架构类图及同步维护规则**仅适用于 `src/` 及其子目录**，不要求为仓库根目录、`tests/`、`scripts/`、`design/`、`docs/` 等目录生成类图或补齐脚本注释。注释的主要读者是需要 review 和理解代码的项目维护者，默认使用简体中文；类型、接口、协议和工具名称保留原始标识。

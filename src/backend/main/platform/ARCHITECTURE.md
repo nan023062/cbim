@@ -26,10 +26,10 @@ class N_src_backend_main_platform_locking_ts["locking.ts"] {
   <<module>>
 }
 class N_src_backend_main_platform_locking_ts_KernelLock["KernelLock"] {
+  +close()
   -handle
   -fd
   -key
-  +close()
 }
 N_src_backend_main_platform_locking_ts ..> N_src_backend_main_platform_locking_ts_KernelLock : 声明
 ```
@@ -78,11 +78,11 @@ class N_src_backend_main_platform_terminal_ts["terminal.ts"] {
   <<module>>
 }
 class N_src_backend_main_platform_terminal_ts_TerminalSessions["TerminalSessions"] {
-  -entries
   +start()
   +read()
   +close()
   +closeAll()
+  -entries
 }
 N_src_backend_main_platform_terminal_ts ..> N_src_backend_main_platform_terminal_ts_TerminalSessions : 声明
 ```
@@ -97,6 +97,7 @@ class N_src_backend_main_platform_tool_guard_ts["tool-guard.ts"] {
   +guard()
 }
 ```
+
 
 
 ## 子目录导航

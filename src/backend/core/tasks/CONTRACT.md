@@ -1,6 +1,34 @@
 ### 任务图节点与事件 v1
 
-状态：已实现图类型、纯结构校验、原子批次投影与游标增量读取；执行状态机、结果交付及运行调度仍按下文契约逐步实现。总说明见 [虚拟成员与任务派发图契约](../../../../docs/agent-dispatch-contract.md)。本模块不拥有进程、磁盘、在线模型或 UI。
+状态：已实现图类型、纯结构校验、原子批次投影与游标增量读取，以及成员领取、启动、结算和结果信封的持久化契约与联合校验。实际启动、停止、恢复与结果读取由调度层实现；主调度后续派发与执行者等待唤醒仍按契约逐步接入；执行成员没有派发权。总说明见 [虚拟成员与任务派发图契约](../../../../docs/agent-dispatch-contract.md)。本模块不拥有进程、磁盘、在线模型或 UI。
+
+`TaskProgressTools` 不将 `cbim_task_*`、`cbim_dispatch_*` 或 `cbim_delivery_prepare` 的回执纳入业务完成证据。派发成功、读到候选或确认状态只说明协作记录存在；步骤完成仍须关联当前运行真实且有效的业务工具回执，成员候选也不等于人工验收。
+
+### 用户任务调度周期
+
+`dispatch-scope.ts` 定义 `DispatchScope {scopeId, workspaceId, rootSessionId, status, createdAt, closedAt?, outcome?}`。status 为 active/closed，outcome 为 completed/failed/cancelled/interrupted；它表达整轮用户任务的生命周期，completed 不替代业务验收。一轮包含多次主模型回合、成员执行和结果回注，不能因一次 LLM 返回就关闭。
+
+`DispatchState.scopes` 与 `DispatchMutation.scopes` 是 v1 日志的可选扩展；缺省为旧历史，不伪造迁移。`TaskNode.scopeId` 来自可信主调度入口，模型请求不允许填写。每个新周期任务固定一个非主执行实例；同一个静态角色对应多个任务时实例也不同。无合适自定义角色使用 `cbim:executor`，`cbim:main` 只作为图根调度，不接受新正式执行。
+
+`dispatch-scope-invariants.ts` 在提交和恢复时验证：每主会话最多一个 active 周期；主根长期保留；执行实例固定周期和任务；关闭前没有 starting/running；未执行任务和派发信封原子取消，执行实例同批 released 并递增租约。已关闭周期及其任务不再修改，已释放实例和通道不能复活；候选、图节点、会话与证据历史仍保留，结果信封可在之后确认收件。每周期最多 500 个任务，以确保关闭所需的任务取消和实例状态变更不超过现有单批 1000 变更限制。
+
+首次创建、关闭和恢复均由调度服务负责；Core 不判断用户目标是否完成，也不停止运行。旧无周期显式入口仍兼容原记录，新自动流程必须提供可信 scope。
+
+### 成员运行的公开事件流
+
+`member-events.ts` 定义 `MemberEventsInput / MemberEventCursor / MemberRunView / MemberEventsRead`。输入同时指定工作区、主会话、业务任务和运行；cursor 绑定单个 run 的原始日志序号。首次读取或游标超前返回 reset；增量返回 delta；无新事件返回 noop。每页默认 200、最多 500 条，响应 cursor 只推进到本页最后一条，hasMore 时继续分页。
+
+事件保持连续 seq：原生 Session 绑定替换为“成员会话已连接”公开状态，其余受限字段在后端删除，不能过滤整条记录导致断档。run 快照只含最小业务 TaskSpec、运行终态、未决工具及结构化计划；TaskSpec 包括本机工作区根路径，但没有 workflowContext、sessionFile 或冻结知识。noop 仍带 run，因为最后一个事件之后调度终态可能才完成。图事件 seq 与这里的运行 seq 是两条独立序列，运行 cursor.seq=0 表示空日志前缀；游标属于其他 run 时拒绝读取。
+
+### 可信成员命令
+
+`member-commands.ts` 只声明桌面调用的输入与公开回执；解析通过不代替调度的身份、任务状态或执行授权核验。
+
+- `memberTaskInput` 用工作区、主会话和业务 taskId 定位，供观察、停止和任务内交互复用。
+- `memberStartInput` 的 `commandId` 是幂等身份，`expectedRevision` 对应当前 `TaskNode.revision`，不是 `planRevision` 或步骤计划版本。`options.permission` 缺省为 `read`，`turnTimeoutMs` 以毫秒计，允许 1 秒至 1 小时；缺省超时由引擎决定。
+- `memberMessageInput` 指定当前主会话内的 `agentSessionId`，不能用原生 sessionId 或其他主会话通道读取邮箱。
+- `memberAcknowledgeInput` 只显式确认 result 信封的消费，不领取 assignment、不启动模型、不改变候选的验收状态。
+- `MemberStartReceipt` 只证明启动意图已提交；实际运行和最终结果由 `MemberExecutionView`、任务图或成员事件流观察。公开回执不包含模型凭据、原生会话文件或冻结知识正文。
 
 ### 节点结构
 
@@ -28,6 +56,7 @@ type TaskStatus = 'planned' | 'queued' | 'running' | 'waiting'
   | 'result_ready' | 'blocked' | 'failed' | 'cancelled' | 'interrupted';
 type TaskNode = {
   kind: 'task'; nodeId: string; taskId: string; identity: GraphIdentity;
+  scopeId?: string; // 新自动流程绑定用户任务周期，创建后不可改；旧历史缺省
   parentTaskId?: string; // 缺省表示从主会话根派发
   requester: AgentRef;
   assignee: AgentRef; // 每个任务恰好一个责任成员
@@ -37,7 +66,7 @@ type TaskNode = {
   planRevision: number; // 目标/范围/责任/验收变化才递增
   status: TaskStatus;
   awaitedChildren: { taskId: string; planRevision: number }[];
-  // 持久化等待的子任务及计划版本，不产生反向边
+  // 保留旧协议字段；当前执行者不派发子任务，不生成递归执行子树
   waitReason?: string; // 等待、阻塞或中断的可展示原因
   runIds: string[]; activeRunId?: string;
   result?: {
@@ -123,7 +152,7 @@ streamId 正常重启不变；只有明确重建或不兼容迁移才换流。�
 
 GraphDelta 不包含私有推理、模型凭据、完整工具正文、绝对文件路径或其他会话消息；evidenceRefs 指向需单独授权读取的记录。无变化只返回 noop，不重读全图或替换前端对象引用。成员状态按本图事实依 working > communicating > waiting > idle 投影，不能用本图 idle 声称成员在全工作区空闲。
 
-### 目标结构类图（待实现，独立于上方当前代码图）
+### 已实现的节点与事件关系
 
 ```mermaid
 classDiagram
@@ -169,4 +198,83 @@ GraphDelta --> GraphEventBatch : 连续批次
 GraphDelta --> GraphSnapshot : reset
 ```
 
-已新增 `graph-types.ts`（公开契约）、`graph-reducer.ts`（原子投影与增量读取）、`graph-rules.ts`（结构、DAG 与等待约束）。这些纯函数不签发权限、不运行 Agent、不自行把候选变成验收通过。内存投影保留已验证批次的重放证明，重复批次返回原对象；单独反序列化 Snapshot 后没有历史证明时拒绝旧批次，持久化从日志重放可重建证明。执行与恢复的行为测试仍需随对应服务接入。
+`graph-types.ts` 定义公开契约，`graph-reducer.ts` 负责原子投影与增量读取，`graph-rules.ts` 检查结构、DAG 与等待约束。这些纯函数不签发权限、不运行 Agent、不自行把候选变成验收通过。内存投影保留已验证批次的重放证明，重复批次返回原对象；单独反序列化 Snapshot 后没有历史证明时拒绝旧批次，持久化从日志重放可重建证明。
+
+### 成员运行、执行知识与邮箱
+
+`dispatch-storage.ts` 声明内部原子事务端口；`dispatch-execution.ts` 声明后端私有 `DispatchRun`；`execution-context.ts` 声明并校验 `PreparedDispatchKnowledge`；`dispatch-invariants.ts` 共同检查任务、成员、运行与信封的关系。主进程持久化适配器在追加和恢复日志时调用同一组校验，不复制领域规则。
+
+```ts
+type DispatchRunStatus = 'starting' | 'running' | 'completed'
+  | 'failed' | 'cancelled' | 'interrupted';
+interface DispatchRun {
+  binding: MemberRunBinding; // workspace/team/agent/instance/channel/root/task/run/lease/plan
+  assignmentMessageId: string;
+  status: DispatchRunStatus;
+  prepared: PreparedDispatchKnowledge;
+  prerequisites?: Array<{taskId: string; planRevision: number;
+    result: NonNullable<TaskNode['result']>}>;
+  model: ResolvedLlm['profile']; // 无 apiKey，拒绝额外字段
+  permission: ChatPermission;
+  turnTimeoutMs?: number;
+  session: { nativeSessionId: string; sessionFile?: string }; // 后端私有
+  createdAt: string;
+  startedAt?: string;
+  settledAt?: string;
+  error?: string;
+}
+```
+
+运行绑定与输入在 starting 提交时冻结，运行期间不可改换角色、计划、知识、模型或权限。知识快照保存有效 Skill、Agent 定义、模块定义/概览/Workflow 和通用规范；结构、版本与稳定指纹共同验证，指纹不代替可信知识来源。prerequisites 在领取时完整对应当前入向 dependency，锁定来源 taskId、planRevision、resultId 和候选内容；旧记录或无依赖任务缺省为空。执行和结算继续使用冻结结果，不随上游的新结果漂移。原生会话路径只能从未知补为确定值，不能把已知路径换成另一个会话；它不出现在公开成员通道和任务图中。
+
+- 领取：assignment pending → claimed，并保存 `claim:{runId,leaseEpoch}`、starting 与成员/任务活动占用。任务仍 queued，成员 communicating，不把准备阶段当实际执行。
+- 启动：真实 ready 事实保存 startedAt，运行变 running，任务 running、成员 working。全工作区同一个 agentInstanceId 只有一个活动运行，包括不同根会话。
+- 结算：保存 settledAt，清理活动占用，assignment processed 并保留 claim。运行 completed 且有有效候选时原子保存 task.result_ready 和反向 result 消息；无候选则 task.blocked，不能宣称业务完成。failed/cancelled/interrupted 映射为同名任务事实。
+- 消息：相同 messageId 只可更新 delivery/claim。result 含 replyTo、resultId、runId、planRevision，仅引用候选，不复制正文；pending → processed 由可信接收入口确认，不创建假 run 或反向任务图边。
+- 恢复：读取只是重建事实。调度接管未确定终态的 starting/running，原子改为 interrupted、释放占用、消费 assignment、提升成员 leaseEpoch。终态和旧租约不能被迟到回调修改，未知副作用不得自动重放。
+- 兼容：DispatchState/Mutation 的 runs 可缺省，以兼容旧版本调用者和 v1 日志。真实存储 read() 始终返回数组；旧日志恢复为空运行集合，保留原哈希链。
+
+```mermaid
+classDiagram
+class DispatchStore {
+  <<interface>>
+  read()
+  transact(command, prepare)
+}
+class DispatchMutation {
+  members
+  sessions
+  batch
+  messages
+  runs
+}
+class DispatchRun {
+  binding
+  status
+  assignmentMessageId
+  prepared
+  session
+}
+class PreparedDispatchKnowledge {
+  agent
+  modules
+  standards
+  fingerprint
+}
+class DispatchMessage {
+  <<union>>
+  kind
+  delivery
+  claim
+}
+class DispatchInvariants {
+  <<module>>
+  validateDispatchExecution()
+}
+DispatchStore --> DispatchMutation : 原子提交
+DispatchMutation --> DispatchRun : 执行事实
+DispatchMutation --> DispatchMessage : 信封变化
+DispatchRun --> PreparedDispatchKnowledge : 冻结输入
+DispatchInvariants --> DispatchMutation : 校验联合投影
+DispatchInvariants --> DispatchRun : 校验状态与身份
+```

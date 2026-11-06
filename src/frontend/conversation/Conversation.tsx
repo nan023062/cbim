@@ -1,6 +1,6 @@
 /**
  * 作用定位：会话双页签入口（对话/本会话任务），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。
- * 设计原因：队列嵌入输入卡片，支持 Ctrl+Enter 插入，按事件顺序展示用户补充；页签只保存草稿和 taskId，主进程日志是对话事实；所有异步请求绑定工作区，卸载页面不停止任务。
+ * 设计原因：主调度对话与执行成员流共用按主会话隔离的任务图；根对应主实例，任务卡片对应独立执行者。回注以系统来源衔接回复，不伪造用户输入，切换视图不重置草稿或停止任务。
  */
 import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
@@ -11,6 +11,8 @@ import {transcript} from './transcript';
 import {MarkdownMessage} from './MarkdownMessage';
 import {WorkStatus} from './WorkStatus';
 import {SessionTaskView} from '../tasks/SessionTaskView';
+import {useSessionGraph} from '../tasks/useSessionGraph';
+import {MemberActivity} from '../tasks/MemberActivity';
 import './session-tabs.css';
 import {MessageQueue} from './MessageQueue';
 import {useMessageQueue} from './useMessageQueue';
@@ -29,8 +31,12 @@ import type {ChatAttachment,ChatApproval,ChatPermission} from '../../bridge/cont
 const api=window.cbim;
 interface HistoryItem {task?:{taskId:string;goal:string};runId:string;status:string;error?:string}
 /** 请求使用本组件工作区身份；请求锁阻止双击，轮询只在当前组件存活时写入状态。 */
-export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings,onAttachments}:{tab:ViewTab;workspace:WorkspaceView;onDraft:(draft:string)=>void;openView:(kind:TabKind)=>void;onBind:(taskId?:string)=>void;openSettings:()=>void;onAttachments:(items:ChatAttachment[])=>void}){
+export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings,onAttachments,active=true}:{tab:ViewTab;workspace:WorkspaceView;onDraft:(draft:string)=>void;openView:(kind:TabKind)=>void;onBind:(taskId?:string)=>void;openSettings:()=>void;onAttachments:(items:ChatAttachment[])=>void;active?:boolean}){
   const [section,setSection]=useState<'chat'|'tasks'>('chat');
+  const graph=useSessionGraph(workspace.id,tab.taskId,active);
+  const [selectedTaskId,setSelectedTaskId]=useState<string>();
+  useEffect(()=>{setSelectedTaskId(undefined)},[workspace.id,tab.taskId]);
+  function viewMember(taskId:string){setSelectedTaskId(taskId);setSection('tasks')}
   const [models,setModels]=useState<LlmSettings>(),[runs,setRuns]=useState<RunSummary[]>([]),[history,setHistory]=useState<HistoryItem[]>([]);
   // 默认权限以手掌标识，业务文件与知识提交共用本轮审批；模式变化仅作用于下次发送。
   const preferenceKey='cbim.composer.'+workspace.id+'.'+tab.id;
@@ -50,7 +56,7 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
   function addAttachments(items:ChatAttachment[]){const combined=[...attachmentRef.current];for(const item of items)if(!combined.some(a=>a.kind===item.kind&&a.source===item.source))combined.push(item);if(combined.length>12){setError('最多可添加 12 项附件，请移除部分附件后重试');return}onAttachments(combined);if(running)setNextTip(Date.now())}
   async function importFiles(files:File[]){if(importing.current||attachmentBusy||busy)return;if(files.length+attachmentRef.current.length>12){setError('最多可添加 12 项附件');return}importing.current=true;setAttachmentBusy(true);setError('');try{addAttachments(await api.importFiles(workspace.id,files))}catch(e:any){setError(e.message)}finally{importing.current=false;setAttachmentBusy(false)}}
   const input=useRef<HTMLTextAreaElement>(null);
-  const lock=useRef(false),alive=useRef(true),scroll=useRef<HTMLDivElement>(null),follow=useRef(true);
+  const lock=useRef(false),alive=useRef(true),scroll=useRef<HTMLDivElement>(null),follow=useRef(true),memberContent=useRef<HTMLDivElement>(null);
   const latest=runs.at(-1),running=latest?.status==='running';
   useEffect(()=>{if(!running)return;const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer)},[running]);
   useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
@@ -69,6 +75,8 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
   useEffect(()=>{setConfirmed([])},[latest?.runId]);
   // 正文排版后、浏览器绘制前跟随末尾，避免 Markdown 高度变化误判为用户向上滚动。
   useLayoutEffect(()=>{if(section==='chat'&&follow.current&&scroll.current)scroll.current.scrollTop=scroll.current.scrollHeight},[runs,questions,section]);
+  // 成员输出在自己的 Hook 中更新；只在用户仍跟随底部时跟随高度，避免抢走查看旧消息的位置。
+  useEffect(()=>{const node=memberContent.current;if(!node||typeof ResizeObserver==='undefined')return;const observer=new ResizeObserver(()=>{if(section==='chat'&&follow.current&&scroll.current)scroll.current.scrollTop=scroll.current.scrollHeight});observer.observe(node);return()=>observer.disconnect()},[section,tab.taskId]);
   // 跟随文字增高，输入区达到上限后内部滚动，消息列与输入框保持同宽。
   useEffect(()=>{const node=input.current;if(node){node.style.height='auto';node.style.height=Math.min(186,Math.max(32,node.scrollHeight))+'px'}},[tab.draft]);
   async function operate(work:()=>Promise<void>){if(lock.current)return;lock.current=true;invalidateQueue();setBusy(true);setError('');try{await work()}catch(e:any){if(alive.current)setError(e.message)}finally{await refreshQueue();lock.current=false;if(alive.current)setBusy(false)}}
@@ -92,7 +100,7 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
   const queueChange=(queueId:string,action:string)=>void queueOperation('loop.queueChange',{queueId,action});
   const queueContinue=()=>void operate(async()=>{await api.call('loop.queueContinue',{id:workspace.id,taskId:tab.taskId})});
   return <div className="chat-page"><nav className="session-tabs" role="tablist" aria-label="会话内容"><button id={'session-chat-'+tab.id} role="tab" aria-selected={section==='chat'} aria-controls={'session-dialog-'+tab.id} onClick={()=>setSection('chat')}>对话</button><button id={'session-tasks-'+tab.id} role="tab" aria-selected={section==='tasks'} aria-controls={'session-task-panel-'+tab.id} onClick={()=>setSection('tasks')}>任务视图</button></nav>
-    {section==='tasks'&&<section className="session-task-panel" role="tabpanel" id={'session-task-panel-'+tab.id} aria-labelledby={'session-tasks-'+tab.id}><SessionTaskView workspaceId={workspace.id} taskId={tab.taskId} runs={runs} queued={queued} now={now} busy={busy} onQueueChange={queueChange} onQueueContinue={queueContinue} onChat={()=>setSection('chat')} onStop={()=>void operate(async()=>{await api.call('loop.stop',{id:workspace.id,taskId:tab.taskId})})}/>{pollError&&<p role="alert">{pollError}</p>}</section>}
+    {section==='tasks'&&<section className="session-task-panel" role="tabpanel" id={'session-task-panel-'+tab.id} aria-labelledby={'session-tasks-'+tab.id}><SessionTaskView active={active} workspaceId={workspace.id} taskId={tab.taskId} runs={runs} queued={queued} now={now} busy={busy} graph={graph.graph} graphLoading={graph.loading} graphError={graph.error} onRefreshGraph={graph.refresh} selectedTaskId={selectedTaskId} onSelectTask={setSelectedTaskId} onQueueChange={queueChange} onQueueContinue={queueContinue} onChat={()=>setSection('chat')} onStop={()=>void operate(async()=>{await api.call('loop.stop',{id:workspace.id,taskId:tab.taskId})})}/>{pollError&&<p role="alert">{pollError}</p>}</section>}
     <div className="conversation-dialog" hidden={section!=='chat'} role="tabpanel" id={'session-dialog-'+tab.id} aria-labelledby={'session-chat-'+tab.id}>
     <div className="chat-toolbar"><Icon name="chat" size={15}/><span className="chat-title">{latest?.task.goal.split('\n')[0]||'新对话'}</span><details className="chat-menu chat-header-menu" onKeyDown={e=>{if(e.key==='Escape')e.currentTarget.removeAttribute('open')}}><summary aria-label="对话菜单" title="对话菜单">···</summary><div className="chat-menu-content"><button disabled={busy} onClick={()=>{onBind(undefined);setRuns([]);setError('')}}><Icon name="plus" size={15}/>新对话</button><label>历史对话<select aria-label="对话历史" disabled={busy} value={tab.taskId||''} onChange={e=>{onBind(e.target.value||undefined);setError('')}}><option value="">新对话</option>{taskHistory.map(h=><option key={h.task!.taskId} value={h.task!.taskId}>{h.task!.goal.split('\n')[0].slice(0,60)}</option>)}</select></label><button onClick={()=>openView('knowledge')}>项目架构</button><button onClick={()=>openView('team')}>团队能力</button><button onClick={openSettings}>模型设置</button></div></details></div>
     {(error||pollError||queueError)&&<div className="shell-alert" role="alert">{error||pollError||queueError}</div>}
@@ -102,10 +110,13 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
       {tab.taskId&&!loaded&&!runs.length&&<p role="status">正在读取对话记录…</p>}
       {latest?.task.workflowContext&&<details className="chat-context"><summary>任务上下文 · {latest.task.goal.slice(0,80)}</summary><p>模块：{latest.task.moduleIds.join('、')}<br/>Agent：{latest.task.agentId}<br/>Workflow：{latest.task.workflowContext?.workflowId}<br/>责任人：{latest.task.responsiblePerson||'未指定'}</p><ul>{latest.task.acceptance.map((a,i)=><li key={i}>{a}</li>)}</ul></details>}
       {runs.map(run=>{const items=transcript(run);return <section key={run.runId} className="chat-turn" aria-label="对话轮次">
+        {items[0]?.kind==='system'&&<p className="chat-model-notice" role="status">{items[0].text}</p>}
         {items.filter((i,index)=>index===0&&i.kind==='user').map(item=><MessageCard key={item.id} speaker="user" text={item.text} time={run.events[0]?.time}><div className="chat-text">{item.text}</div>{item.attachments&&<div className="chat-attachments">{item.attachments.map((a,i)=><span key={i} title={a.source}><Icon name="knowledge" size={13}/>{a.name}</span>)}</div>}</MessageCard>)}
         <WorkStatus run={run} now={now}/>
         {items.slice(1).filter(i=>i.kind==='assistant'||i.kind==='error'||i.kind==='user').map(item=><MessageCard key={item.id} speaker={item.kind==='user'?'user':item.kind==='assistant'?'assistant':'error'} text={item.text} time={run.events.at(-1)?.time}>{item.kind==='user'?<div className="chat-text">{item.text}</div>:<MarkdownMessage text={item.text} streaming={item.pending} workspaceId={workspace.id}/>}</MessageCard>)}
       </section>})}
+      <div ref={memberContent}>{tab.taskId&&graph.graph?.tasks.length?<MemberActivity workspaceId={workspace.id} rootSessionId={tab.taskId} tasks={graph.graph.tasks} active={active&&section==='chat'} onSelectTask={viewMember} onViewAll={()=>setSection('tasks')}/>:null}</div>
+      {graph.error&&<p role="alert">{graph.error} <button onClick={graph.refresh}>重新同步成员动态</button></p>}
       {questions.map(q=><QuestionCard key={q.id} request={q} onAnswer={async answers=>{await api.call('loop.answerQuestion',{id:workspace.id,taskId:q.taskId,questionId:q.id,answers})}}/>)}
       {latest&&!running&&latest.unresolvedTools.length>0&&<div className="chat-reconcile"><h3>继续前核实未确认操作</h3><p>展开上方工具证据，核实实际产物后逐项勾选。系统不会自动重放。</p>{latest.unresolvedTools.map(id=><label key={id}><input type="checkbox" checked={confirmed.includes(id)} onChange={e=>setConfirmed(x=>e.target.checked?[...x,id]:x.filter(v=>v!==id))}/>已核实操作 {id}</label>)}</div>}
       {latest&&!running&&!latest.sessionFile&&<p role="alert">本次运行没有建立可恢复会话，请新建对话；原记录已保留。</p>}

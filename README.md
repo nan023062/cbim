@@ -40,6 +40,10 @@ pnpm make
 
 新人先阅读 [项目协作规范（AGENTS.md）](AGENTS.md)；Claude Code 的项目入口见 [CLAUDE.md](CLAUDE.md)。
 
+`docs/` 是[概念设计](docs/README.md)，`design/` 是[开发计划模块](design/README.md)。继续开发从 [roadmap](design/tool-architecture-roadmap.md) 和 [上一步开发记录](design/development-log.md) 开始：回顾全局与已有成果，确定下一步及验收，每完成一步立即更新计划状态。
+
+开发流程 `cbim-development` 提供 [Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md) 和 [通用项目](.agents/skills/cbim-development/SKILL.md) 三个同步入口；仅服务本工程开发，不是产品内置业务 Skill。
+
 架构维护流程提供两个入口：
 
 - [Claude Code：architecture-maintenance](.claude/skills/architecture-maintenance/SKILL.md)
@@ -63,17 +67,37 @@ pnpm make
 | `src/backend/scheduler-engine/` | 调度引擎：团队工作流准备、内部知识接入与执行管理 |
 | `src/backend/main/` | 应用装配；分为工作区、持久化、平台、IPC、资源和内部执行命令 |
 | `src/bridge/preload/`、`src/frontend/`、`src/bridge/contracts/` | 隔离 IPC、React 界面、跨进程协议 |
-| `design/` | 现有规范与 Schema；Python 文件暂留作迁移对照 |
+| `docs/` | 概念设计、产品和架构说明及配套参考 |
+| `design/` | 开发路线图、逐步记录与计划入口；现有规范/Schema 和迁移对照资产保留原路径 |
 | `tests/` | 隔离工程、规则、内部工具、调度与故障恢复测试 |
 | `scripts/` | 构建与桌面验证脚本 |
 | `build/` | 按构建时间命名的产物与最新构建记录 |
 
 - [架构、存储与生命周期](docs/assistant-architecture.md)
 - [Agent 派发与增量事件](docs/agent-dispatch-contract.md)
+- [主会话协作、成员执行与结果回传](docs/member-execution.md)
+- [主 Agent 的目标调度循环设计](docs/main-agent-orchestration-loop.md)
 - [全局成员与任务监控](docs/global-runtime-management.md)
+- [静态 Agent 的 Session 执行历史](docs/agent-session-history.md)
+- [静态架构编辑与资源复用](docs/workspace-ui.md#静态架构编辑与复用)
+- [本地与账号服务器资源仓库](docs/resource-repositories.md)
 - [规则迁移和行为差异](docs/rule-migration.md)
 - [验收证据与限制](docs/acceptance.md)
 
 正式知识仅存于 `<项目根>/.cbim/`；登记和本机项目历史存于 `<用户主目录>/.cbim/`。新应用不创建项目内 `.cbim.local/`。测试全部使用隔离用户目录。
 
-已实现多工作区、模型配置、主 Agent 对话与工具执行、知识查询与受控事务、任务内进度、成员实例登记、任务派发持久化及增量事件。全局运行管理已提供后端与 IPC 接口，尚无监控界面；成员收件箱自动执行、递归派发和完整团队协作闭环尚未接通。结构校验与执行结束都不能替代业务验收和架构判断。
+团队架构和业务架构是每个工作区各一份的静态定义图，支持自定义 Agent、模块及各自方法的增删改查，变更先预览再提交。人才市场支持整个 Team、单 Agent、单 Skill 的跨项目复用；业务模板始终整套发布和应用，导入后重新确认目标项目的维护人与源码范围。静态定义不携带成员实例或任务记录；同时存在的多个主会话各自拥有调度器生成的动态任务节点图。
+
+已实现多工作区、模型配置、主 Agent 对话、知识查询与受控事务、任务内进度、成员实例登记、任务派发及增量事件。主 Agent 是具备工程、架构和结构化思维的团队与技术管理者：理解目标与约束、治理团队和业务知识、组织责任与模块边界、派发任务并审阅证据。它可按 read/ask/execute 权限通过内部服务增删改查 `.cbim/`，但永不直接修改业务文件或执行命令，业务实现与验证交给独立执行 Agent。
+
+每个主会话与任务图根共用一个持久主实例，主会话之间独立。主会话通过 `cbim_dispatch_task` 派发自定义角色，没有合适角色时使用内置静态 `cbim:executor`；默认角色不写入项目定义。每个用户任务开启一个调度周期，跨主模型调用、成员执行和结果回注持续；执行实例随派发任务创建，周期结束后释放，主实例、图和历史证据保留。成员冻结角色、模块、Workflow、前置结果及实际模型和权限，使用独立 Pi 会话；主角色与自定义角色共用大脑内核，只有主角色有派发工具。可信桌面显式启动接口继续保留。
+
+主对话显示独立署名的成员实时动态；任务视图默认展示节点流程图，点击成员节点可看公开回复、工具状态、步骤与证据，并处理独立审批、选项问题或停止执行。图属于当前主会话，派发线和前置依赖线分开；数据按游标增量更新，保留草稿与节点选择。`pnpm test:members` 验证打包程序中的真实 Pi 流式接入（模型供应商使用本机测试响应）。
+
+团队架构中的主 Agent、默认执行 Agent 和自定义 Agent 均提供“执行历史”：按静态角色 → 独立 Session → 运行轮次查看输入、回复、工具状态及计划证据。执行实例释放后保留记录，删除角色后可从“历史角色”继续查看。角色/Session 索引存于本机用户数据，正文沿用原始运行日志，不合并模型上下文、不进入人才资源包；旧记录缺少绑定时明确标注。历史页只读、按需分页，手动刷新只补事件增量。
+
+`pnpm test:agent-history` 验证打包程序的角色历史流程；添加 `--default-executor` 可验证内置默认执行者。构建 `20261107-015449` 两种场景均通过，详见[履历验证报告](design/verification/agent-session-history-20261107.md)。
+
+自动协作不继承主轮“本次任务全部通过”，不把成员结果冒充用户消息；用户队列在周期可靠关闭后按原内容继续。真实 Application/Pi 配合本机可控模型响应已验证主知识授权、自动派发、成员读写、回注、独立 ask 审批、队列与停止边界。`pnpm test:main-instance` 和 `pnpm test:collaboration` 已验证构建 `20261107-012333` 的默认执行者与自定义成员桌面链路，详见[本步验证](design/verification/main-coordinator-20261107.md)；这些测试不等同于真实供应商的自主协作质量。
+
+全局运行管理同时统计对话和成员轮次、任务压力与 token 消耗，不重复计算派发任务；释放实例退出当前活动统计，历史用量保留。尚未接入成员求助/等待恢复、成员启动表单、全局监控页面、组织节点主动成员聊天、公平调度及预算限额；只读历史查看不提供这些执行操作。执行成员不具备递归派发权。失败、取消或中断的成员通道暂不续接；重启结算未关闭周期，不自动重放历史任务或未知副作用。结构化候选、主会话回注与结果收件确认均不代表正式业务验收通过。

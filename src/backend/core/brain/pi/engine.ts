@@ -1,13 +1,13 @@
 /**
- * 作用定位：大脑 执行层：PiEngine：启动隔离配置的 Pi 子进程、转换事件并等待 agent_settled。
- * 任务边界：把本轮日志绑定的计划工具与知识工具合并注册；任务工具绑定当前运行，也不能签发验收。
- * 设计原因：原生 steer 在动作边界消费补充，核对当前运行及图片能力；模型 input 按视觉能力生成，用户图片经 RPC 独立传递并读回能力检查；适配 Pi 事件与会话；每轮隔离运行设置并核对思考、压缩及重试，记录生成耗时、价格可用性及原生上下文估计；每次运行隔离模型配置并由环境注入凭据，按模式注入主 Agent 对话身份或冻结团队上下文，记录去重的思考/生成状态，只记录公开文本增量，以 agent_settled 判定结束。
+ * 作用定位：Pi 引擎适配器，负责隔离配置、主对话与成员原生会话校验、工具桥与公开执行事件转换。
+ * 设计原因：每轮冻结模型、权限和上下文，明确主 Agent 可经内部服务管理知识但不持有原生业务执行工具；恢复核对路径及原生 ID。可信成员回传经 custom 消息接续，工具经过日志门禁，结束只认 agent_settled。
+ * 职责边界：不保存私有推理正文；记录实际用量与生成耗时，未知计价保持未知。明确停止后的标准取消文本才归为取消，其他错误及未知工具副作用交由运行时保留。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {AgentEngine,EngineContext,EngineEvent} from '../types';
 import {PiRpc,type PiCommand} from './rpc';
-import {openBridge,bridgeExtension,type KnowledgeBridge} from './bridge';
+import {openBridge,bridgeExtensionForSource,type KnowledgeBridge} from './bridge';
 import type {ResolvedLlm} from '../llm/ports';
 import {modelStopError} from '../model-errors';
 import {buildPiRuntimeSettings,requestedThinkingLevel} from './runtime-config';
@@ -17,7 +17,7 @@ export interface PiOptions {
   process:PiCommand;
   provider:string;
   model:string;
-  /** Dedicated CBIM engine settings; never reuse a user's external Pi home. */
+  /** CBIM 工作区专用的引擎目录，不能复用用户外部 Pi 配置目录。 */
   agentHome:string;
   prompt:string;
   knowledge:KnowledgeBridge;
@@ -28,6 +28,7 @@ export interface PiOptions {
   /** 本轮用户明确附加的图片快照；经主进程读取，不作为系统指令。 */
   images?:{type:'image';data:string;mimeType:string}[];
 }
+/** 一次运行使用一个实例；启动失败也必须 close，以释放已创建的桥和子进程。 */
 export class PiEngine implements AgentEngine {
   readonly kind='pi';
   private context?:EngineContext;
@@ -46,17 +47,19 @@ export class PiEngine implements AgentEngine {
   private usageBaseline?:{tokens:Record<string,number>;cost:number};
   private closing=false;private stopped=false;private fatal?:Error;
   constructor(private options:PiOptions){}
+  /** 准备配置并核对原生会话，等待 session.bound 落盘后返回；不在此发送本轮提示。 */
   async start(context:EngineContext){
     this.context=context;
     await fs.mkdir(this.options.agentHome,{recursive:true});
     const sessionDir=path.join(this.options.agentHome,'sessions');await fs.mkdir(sessionDir,{recursive:true});
     if(context.sessionFile){
+      if(!context.nativeSessionId)throw Error('Pi 恢复记录缺少原生会话身份，请核实原始记录或新建对话，不能猜测恢复');
       const file=await fs.realpath(context.sessionFile),root=await fs.realpath(sessionDir),rel=path.relative(root,file);
       if(rel.startsWith('..')||path.isAbsolute(rel)||!rel)throw Error('Pi 恢复文件不属于此 CBIM 工作区');
     }
     // 任务工具绑定真实运行日志；仅在内部 Loop 存在时注册，不借外部知识接口伪造任务身份。
     const taskNames=new Set((await context.taskTools?.list()??[]).map(t=>t.name));
-    const tools:KnowledgeBridge={list:async()=>[...await this.options.knowledge.list(),...await context.taskTools?.list()??[]],call:(name,args,signal)=>taskNames.has(name)?context.taskTools!.call(name,args):this.options.knowledge.call(name,args,signal)};
+    const tools:KnowledgeBridge={list:async()=>[...await this.options.knowledge.list(),...await context.taskTools?.list()??[]],call:(name,args,signal,toolCallId)=>taskNames.has(name)?context.taskTools!.call(name,args):this.options.knowledge.call(name,args,signal,toolCallId)};
     this.bridge=await openBridge(tools,context.beforeTool,async usage=>{
       this.events=this.events.then(()=>context.emit({type:'engine.status',data:{label:'上下文用量已更新',metric:'context',...usage}}));await this.events;
     },async limit=>{this.requestLimit=limit;this.events=this.events.then(()=>context.emit({type:'engine.status',data:{label:'模型请求额度',metric:'request-limit',maxTokens:limit}}));await this.events});
@@ -64,9 +67,9 @@ export class PiEngine implements AgentEngine {
     // 业务上下文随任务持久化；执行恢复使用原快照，当前知识修改仍由服务校验版本。
     // 普通对话的用户文字与附件只经用户消息发送，不抬升为系统指引。
     const systemContext=context.task.mode==='chat'?{taskId:context.task.taskId,workspaceId:context.task.workspaceId,root:context.task.root,agentId:context.task.agentId}:context.task;
-    const executionHint=this.options.allowNativeExecution?'\n本轮已提供 write/edit/bash 执行工具，可创建业务文件和运行验证。工具调用受 CBIM 策略及用户批准控制；业务写入与知识提交共用本轮权限，知识变更仍须通过 cbim_ 工具、版本检查和事务校验。':'\n本轮为只读模式，未提供 write/edit/bash。如需实现文件，请提示用户将输入框权限改为逐次询问或允许执行，再发送消息继续。';
+    const executionHint=context.task.mode==='chat'&&context.task.agentId==='cbim:main'?'\n本轮身份是主 Agent，负责调度和团队/业务知识管理。可通过 cbim_ 内部知识工具查询、预览和提交 .cbim 知识，知识写入遵循本轮 read/ask/execute 权限：只读时禁止写入，逐次询问时必须批准后提交，执行权限仍须通过版本与事务校验。主 Agent 不提供业务写入或命令执行（原生 write/edit/bash）；需要实现时通过 cbim_dispatch_task 交给执行 Agent，无专业成员时使用内置 cbim:executor。用户选择的权限也控制下游执行，不能解除主 Agent 的业务执行边界；不要把主 Agent 没有原生执行工具误报为工作区不可写或要求给主 Agent 提升业务权限。':this.options.allowNativeExecution?'\n本轮已提供 write/edit/bash 执行工具，可创建业务文件和运行验证。工具调用受 CBIM 策略及用户批准控制；业务写入与知识提交共用本轮权限，知识变更仍须通过 cbim_ 工具、版本检查和事务校验。':'\n本轮为只读模式，未提供 write/edit/bash。如需实现文件，请提示用户将输入框权限改为逐次询问或允许执行，再发送消息继续。';
     const instructions=this.options.prompt+executionHint+(context.task.mode==='chat'?'\n\n当前工作区对话身份：\n':'\n\n任务定义与冻结的团队工作流上下文：\n')+JSON.stringify(systemContext,null,2);
-    await fs.writeFile(extension,bridgeExtension,{mode:0o600});await fs.writeFile(prompt,instructions,{mode:0o600});
+    await fs.writeFile(extension,bridgeExtensionForSource(context.source),{mode:0o600});await fs.writeFile(prompt,instructions,{mode:0o600});
     // 所有运行拥有独立设置，CLI 的模型目录也只复制快照，避免并发互相覆盖。
     const configHome=path.join(context.directory,'provider');await fs.mkdir(configHome,{recursive:true});
     if(!this.options.llm){try{await fs.copyFile(path.join(this.options.agentHome,'models.json'),path.join(configHome,'models.json'))}catch(e:any){if(e.code!=='ENOENT')throw e}}
@@ -88,9 +91,10 @@ export class PiEngine implements AgentEngine {
       '--mode','rpc','--provider',this.options.provider,'--model',this.options.model,
       '--no-extensions','--no-skills','--no-prompt-templates','--no-themes','--no-mcp',
       '--extension',extension,'--append-system-prompt',prompt,'--tools',allowed,
-      '--session-dir',sessionDir,...(context.sessionFile?['--session',context.sessionFile]:['--session-id',context.task.taskId]),
+      '--session-dir',sessionDir,...(context.sessionFile?['--session',context.sessionFile]:['--session-id',context.nativeSessionId??context.task.taskId]),
     ],{...process.env,...modelEnv,PI_CODING_AGENT_DIR:configHome,CBIM_LOOP_BRIDGE_URL:this.bridge.url,CBIM_LOOP_BRIDGE_TOKEN:this.bridge.token});
     const initial=await this.rpc.request('get_state');
+    if(context.nativeSessionId&&initial.sessionId!==context.nativeSessionId)throw Error(context.memberBinding?'Pi 原生会话身份与当前成员通道不一致':'Pi 原生会话身份与原对话记录不一致');
     if(initial.isStreaming||initial.pendingMessageCount)throw Error('Pi 会话已有未完成执行，拒绝覆盖');
     const thinking=requestedThinkingLevel(this.options.llm?.profile??{reasoning:initial.model?.reasoning===true});
     await this.rpc.request('set_thinking_level',{level:thinking});
@@ -106,6 +110,7 @@ export class PiEngine implements AgentEngine {
     this.usageBaseline=await this.rpc.request('get_session_stats').catch(()=>undefined);
     await context.emit({type:'session.bound',data:{sessionId:state.sessionId,sessionFile:state.sessionFile,provider:this.options.provider,model:this.options.model}});
   }
+  /** 发送本轮提示并等待 settled；超时抛错表示结果待核实，不自行重发提示或工具。 */
   async run(message:string){
     if(!this.rpc||!this.context)throw Error('引擎未启动');if(this.fatal)throw this.fatal;
     let timer:ReturnType<typeof setTimeout>|undefined;
@@ -113,8 +118,10 @@ export class PiEngine implements AgentEngine {
       this.settlement={resolve,reject};timer=setTimeout(()=>reject(Error('执行超时，结果需核实，不自动重放')),this.options.turnTimeoutMs??30*60*1000);
     });void settled.catch(()=>{});
     try{
-      const accepted=await this.rpc.request('prompt',{message,...(this.options.images?.length?{images:this.options.images}:{})});
-      if(accepted?.disposition!=='started')throw Error('Pi 没有启动本次任务，不能记为执行完成');
+      // 内部回传通过本轮扩展写成 custom 消息，不作为原生 user 记录；加前缀避免正文被解析为斜杠命令。
+      const continuation=this.context.source?.kind==='member-results';
+      const accepted=await this.rpc.request('prompt',{message:continuation?'CBIM 成员执行回传\n'+message:message,...(!continuation&&this.options.images?.length?{images:this.options.images}:{})});
+      if(accepted?.disposition!==(continuation?'handled':'started'))throw Error('Pi 没有按本轮输入来源启动任务，不能记为执行完成');
       const result=await settled;
       const stats=await this.rpc.request('get_session_stats').catch(()=>undefined);
       if(stats&&this.usageBaseline){
@@ -141,10 +148,12 @@ export class PiEngine implements AgentEngine {
           const message=event.message;
           const generationDurationMs=typeof message.duration==='number'&&Number.isFinite(message.duration)&&message.duration>0?message.duration:this.generationStarted===undefined?undefined:Math.max(0,performance.now()-this.generationStarted);
           this.generationStarted=undefined;
-          const failure=modelStopError(message,this.options.llm?.profile.maxTokens,this.requestLimit);
+          // Pi/provider 在已发起 abort 后有时仍用 error 返回标准取消文本；只归一这类明确取消，不掩盖普通模型错误。
+          const cancelledMessage=this.stopped&&message.stopReason==='error'&&/^(?:AbortError:\s*)?(?:This operation was aborted|The operation was aborted|Request aborted|Aborted)\.?$/i.test(String(message.errorMessage??'').trim());
+          const failure=cancelledMessage?undefined:modelStopError(message,this.options.llm?.profile.maxTokens,this.requestLimit);
           this.assistantError=failure?this.redact(failure):undefined;
           // Do not persist private reasoning. Authoritative final text replaces streaming deltas.
-          await emit({type:'message',data:{role:'assistant',text:(message.content||[]).filter((x:any)=>x.type==='text').map((x:any)=>x.text).join(''),stopReason:message.stopReason,usage:message.usage,generationDurationMs,pricingKnown:this.options.llm?!!this.options.llm.profile.pricing:undefined}});
+          await emit({type:'message',data:{role:'assistant',text:(message.content||[]).filter((x:any)=>x.type==='text').map((x:any)=>x.text).join(''),stopReason:cancelledMessage?'aborted':message.stopReason,usage:message.usage,generationDurationMs,pricingKnown:this.options.llm?!!this.options.llm.profile.pricing:undefined}});
         }return;
       // 与 Cindy Pi 适配一致：工具进度、重试、压缩都不是终态，只有 settled 收口。
       case 'tool_execution_update':await emit({type:'tool.updated',data:{id:event.toolCallId,name:event.toolName,result:event.partialResult}});return;
@@ -164,6 +173,9 @@ export class PiEngine implements AgentEngine {
       case 'tool_execution_end':await emit({type:'tool.finished',data:{id:event.toolCallId,name:event.toolName,isError:event.isError,result:event.result}});return;
       case 'agent_settled':
         this.settlement?.resolve(this.assistantError?{status:'failed',error:this.assistantError}:{status:this.stopped||event.aborted?'cancelled':'completed'});return;
+      case 'extension_error':
+        // custom 启动由扩展异步触发，失败必须结束等待，不能把 handled 当成模型已完成。
+        if(this.context?.source){this.fatal=Error(this.redact(String(event.error||'成员结果接续扩展失败')));this.settlement?.reject(this.fatal)}return;
       case 'extension_ui_request':
         // No implicit trust/approval fallback. Only our headless extension is intended to load.
         if(event.method==='confirm')this.rpc?.send({type:'extension_ui_response',id:event.id,confirmed:false});
@@ -180,7 +192,9 @@ export class PiEngine implements AgentEngine {
     const result=await this.rpc.request('steer',{message,...(images.length?{images}:{})});
     if(result?.disposition!=='queued')throw Error('Pi 未确认接收插入消息，请核实执行记录后再继续');
   }
+  /** 先保留停止意图，再请求原生 abort；请求失败则关闭进程，最终结算由 LoopRuntime 完成。 */
   async stop(){this.stopped=true;if(this.rpc)try{await this.rpc.request('abort',{},10000)}catch{await this.rpc.close()}}
+  /** 关闭进程并排空已收到的事件；即使事件持久化失败也会关闭工具桥。 */
   async close(){
     this.closing=true;
     try{await this.rpc?.close();await this.events}

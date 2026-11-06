@@ -1,17 +1,22 @@
 /**
  * 作用定位：单次运行授权、版本化队列增量和结构化问题按工作区路由；排队时冻结附件内容与模型身份。Application：登记及重命名工作区、装配模型供应商与服务，并统一派发主 Agent 对话、附件快照、工具审批和历史操作。
- * 设计原因：全应用只有一个动态运行监管入口，聚合各工作区的成员、任务和用量；实例装配时恢复一次基线，之后接收提交事实。工作区退役先阻止新服务，再排空服务、监控与锁；页面切换不影响执行。
+ * 设计原因：每个主会话绑定自己的主实例及图根，静态角色历史跨实例释放保留；先停协调和运行，撤销观察并排空历史索引后再释放工作区锁。
  */
 import path from 'node:path';
 import {dispatchApplication} from './ipc/dispatch';
 import type {ApplicationServices} from './ipc/services';
 import {LlmProfiles,type SecretCipher} from './persistence/settings/llm-profiles';
 import {createExecutionManager} from './execution';
-import {createMemberDispatch} from './member-dispatch';
+import {createMemberServices} from './member-dispatch';
 import type {WorkspaceDispatchService} from '../scheduler-engine/execution/dispatch-service';
+import type {MemberExecutionManager} from '../scheduler-engine/execution/member-execution';
+import {WorkspaceExecutionLease} from '../scheduler-engine/execution/workspace-lease';
+import {AutoCollaboration} from '../scheduler-engine/execution/auto-collaboration';
 import {GlobalRuntimeManager} from '../scheduler-engine/runtime/global-runtime';
 import {WorkspaceRuntimeMonitor} from './runtime-monitor';
 import {ChatInputs} from './persistence/tasks/chat-inputs';
+import {createAgentHistory} from './persistence/tasks/agent-history';
+import type {AgentHistoryService} from '../scheduler-engine/runtime/agent-history';
 import type {WorkspaceExecutionManager} from '../scheduler-engine/execution/execution-manager';
 import {Catalog} from './workspace/catalog';
 import {Paths} from './platform/paths';
@@ -27,18 +32,28 @@ export class Application implements ApplicationServices {
   /** 全应用共享供应商目录；公开 IPC 不返回凭据，运行时才解密。 */
   readonly models:LlmProfiles;
   private executions=new Map<string,WorkspaceExecutionManager>();
+  /** 只协调本次应用生命周期内真实主轮委派；重开不自动消费历史任务或结果。 */
+  private collaborations=new Map<string,AutoCollaboration>();
   private dispatchers=new Map<string,WorkspaceDispatchService>();
+  /** 与派发服务共享存储；关闭存储前先等待成员停止和结算尝试，失败记录保留供重开核实。 */
+  private memberExecutions=new Map<string,MemberExecutionManager>();
   /** 应用级唯一监管投影；底层权威日志与执行权限仍归各工作区所有。 */
   readonly runtime=new GlobalRuntimeManager();
   private monitors=new Map<string,WorkspaceRuntimeMonitor>();
+  /** 角色历史不依赖当前知识定义；工作区退役只关闭服务，不删除用户目录归档。 */
+  private histories=new Map<string,AgentHistoryService>();
   /** 关闭/重启跨 await 期间阻止新服务进入；计数允许 stop 等待一个正在重启的 open。 */
   private retiring=new Map<string,number>();
   private retire(id:string){this.retiring.set(id,(this.retiring.get(id)??0)+1);return ()=>{const count=this.retiring.get(id)!-1;if(count)this.retiring.set(id,count);else this.retiring.delete(id)}}
   private assertServiceAvailable(id:string){if(this.stopping)fail('SHUTTING_DOWN','CBIM 正在退出');if(this.retiring.has(id))fail('WORKSPACE_STOPPING','工作区正在关闭或重启，请稍后重试')}
   /** 成员图与邮箱每工作区只有一个写入服务，沿用已持有的工作区锁。 */
   memberDispatch(id:string){this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();const service=this.dispatchers.get(id);if(!service)fail('SERVICE_NOT_READY','工作区成员服务尚未就绪');return service}
+  /** 明确绑定工作区的成员执行入口；不依赖界面选中状态或普通对话的活动任务。 */
+  memberExecution(id:string){this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();const service=this.memberExecutions.get(id);if(!service)fail('SERVICE_NOT_READY','工作区成员执行服务尚未就绪');return service}
   /** 每个工作区实例唯一的执行管理器；调用必须显式指定工作区。 */
   execution(id:string){this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();const manager=this.executions.get(id);if(!manager)fail('SERVICE_NOT_READY','工作区执行服务尚未就绪');return manager}
+  /** 明确工作区的只读角色历史；没有执行、审批或恢复模型的副作用。 */
+  agentHistory(id:string){this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();const history=this.histories.get(id);if(!history)fail('SERVICE_NOT_READY','工作区 Agent 历史尚未就绪');return history}
   private stopping=false;private shutdownPromise?:Promise<void>;
   /** IPC 新增工作区前检查关停状态；只暴露读取，不允许路由修改生命周期。 */
   get isStopping(){return this.stopping}
@@ -50,28 +65,31 @@ export class Application implements ApplicationServices {
   async open(id:string,restart=false){if(this.stopping)fail('SHUTTING_DOWN','CBIM 正在退出');if(this.opening.has(id))return this.opening.get(id)!;this.assertServiceAvailable(id);
     const pending=(async()=>{const entry=(await this.catalog.read()).entries.find(x=>x.id===id);if(!entry)fail('NOT_REGISTERED','工作区未登记');let ws=this.running.get(id);
       if(restart||ws?.state!=='running'){const release=this.retire(id);try{
+        await this.collaborations.get(id)?.close();this.collaborations.delete(id);
         await this.executions.get(id)?.close();this.executions.delete(id);
+        await this.memberExecutions.get(id)?.close();this.memberExecutions.delete(id);
         await this.dispatchers.get(id)?.close();this.dispatchers.delete(id);
-        this.monitors.get(id)?.close();await ws?.close();
-        const monitor=new WorkspaceRuntimeMonitor(this.runtime,id,entry.name);this.monitors.set(id,monitor);
+        this.monitors.get(id)?.close();await this.histories.get(id)?.close();this.histories.delete(id);await ws?.close();
         ws=new Workspace(entry,this.paths,this.rules);this.running.set(id,ws);
+        const history=createAgentHistory(ws,message=>this.monitors.get(id)?.historyIssue(message));this.histories.set(id,history);
+        const monitor=new WorkspaceRuntimeMonitor(this.runtime,id,entry.name,history);this.monitors.set(id,monitor);
         try{
           await ws.open();
-          const service=createMemberDispatch(ws,monitor.dispatchObserver),execution=createExecutionManager(ws,this.models);
-          this.dispatchers.set(id,service);this.executions.set(id,execution);
-          await monitor.initialize(ws,service,execution);
+          const lease=new WorkspaceExecutionLease(),{dispatch:service,members}=createMemberServices(ws,this.models,lease,monitor.dispatchObserver),execution=createExecutionManager(ws,this.models,lease,()=>this.collaborations.get(id),service);
+          this.dispatchers.set(id,service);this.executions.set(id,execution);this.memberExecutions.set(id,members);
+          await monitor.initialize(ws,service,execution,members);
+          this.collaborations.set(id,new AutoCollaboration(ws,service,members,execution,lease,(root,error)=>monitor.collaborationIssue(root,error)));
         }catch(error){monitor.unavailable(error);throw error}
       }finally{release()}}
       await this.catalog.update(d=>{const item=d.entries.find(e=>e.id===id);if(item)item.lastOpened=new Date().toISOString();d.recent=[id,...d.recent.filter(x=>x!==id)].slice(0,30)});return ws})();this.opening.set(id,pending);try{return await pending}finally{this.opening.delete(id)}
   }
-  // Internal maintenance only. Closing a page never stops a registered service.
-  async stop(id:string){const release=this.retire(id);try{await this.opening.get(id)?.catch(()=>{});await this.executions.get(id)?.close();this.executions.delete(id);await this.dispatchers.get(id)?.close();this.dispatchers.delete(id);this.monitors.get(id)?.close();this.monitors.delete(id);const ws=this.running.get(id);await ws?.close();this.running.delete(id)}finally{release()}}
+  /** 内部生命周期入口；先禁用自动协作，再依次关闭主执行、成员、派发、监控和工作区，页面关闭不会调用它。 */
+  async stop(id:string){const release=this.retire(id);try{await this.opening.get(id)?.catch(()=>{});await this.collaborations.get(id)?.close();this.collaborations.delete(id);await this.executions.get(id)?.close();this.executions.delete(id);await this.memberExecutions.get(id)?.close();this.memberExecutions.delete(id);await this.dispatchers.get(id)?.close();this.dispatchers.delete(id);this.monitors.get(id)?.close();await this.histories.get(id)?.close();this.histories.delete(id);this.monitors.delete(id);const ws=this.running.get(id);await ws?.close();this.running.delete(id)}finally{release()}}
   async remove(id:string){await this.stop(id);await this.catalog.remove(id);this.runtime.forget(id)}
   async restore(){const d=await this.catalog.read();for(const entry of d.entries){try{await this.open(entry.id)}catch{/* failed workspace remains visible; continue the other services */}}}
   /** 幂等关闭应用，等待正在打开的工作区及提交完成，再释放服务和共享仓库。 */
-  async shutdown(){if(this.shutdownPromise)return this.shutdownPromise;this.stopping=true;this.shutdownPromise=(async()=>{await Promise.allSettled([...this.opening.values()]);await Promise.all([...this.executions.values(),...this.dispatchers.values()].map(x=>x.close()));this.executions.clear();this.dispatchers.clear();for(const monitor of this.monitors.values())monitor.close();this.monitors.clear();const results=await Promise.allSettled([...this.running.values()].map(w=>w.close()));await this.resources.close();this.running.clear();const failed=results.find(r=>r.status==='rejected');if(failed?.status==='rejected')throw failed.reason})();return this.shutdownPromise}
-  /** 未显式指定引擎模型时使用保存的默认配置；只传公开标识给调度层。 */
-  /** 默认选择转为明确模型身份，工作区工厂随后取得运行快照；兼容 CLI 显式模型。 */
+  async shutdown(){if(this.shutdownPromise)return this.shutdownPromise;this.stopping=true;this.shutdownPromise=(async()=>{await Promise.allSettled([...this.opening.values()]);await Promise.all([...this.collaborations.values()].map(x=>x.close()));this.collaborations.clear();await Promise.all([...this.executions.values(),...this.memberExecutions.values()].map(x=>x.close()));this.executions.clear();this.memberExecutions.clear();await Promise.all([...this.dispatchers.values()].map(x=>x.close()));this.dispatchers.clear();for(const monitor of this.monitors.values())monitor.close();await Promise.all([...this.histories.values()].map(x=>x.close()));this.histories.clear();this.monitors.clear();const results=await Promise.allSettled([...this.running.values()].map(w=>w.close()));await this.resources.close();this.running.clear();const failed=results.find(r=>r.status==='rejected');if(failed?.status==='rejected')throw failed.reason})();return this.shutdownPromise}
+  /** 默认选择转为明确模型身份，仅向调度层返回公开标识；工作区工厂随后取得运行快照，兼容 CLI 显式模型。 */
   async modelOptions(input:any={}){
     if(input?.provider&&input?.model&&!input.profileId)return input;
     const {profile}=await this.models.resolve(input?.profileId,input?.model);

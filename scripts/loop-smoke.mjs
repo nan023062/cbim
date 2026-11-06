@@ -102,6 +102,7 @@ try{
   assert.ok(result.events.some(e=>e.type==='tool.finished'&&e.data.id==='packaged-identity'));
   assert.equal(result.taskProgress?.goal,'核实工作区并记录计划');
   await page.getByRole('tab',{name:'任务视图',exact:true}).click();
+  await page.getByTestId('dispatch-root-node').click();
   await page.getByRole('article',{name:'执行计划',exact:true}).getByText('读取并核实',{exact:true}).waitFor();
   assert.ok((await page.getByRole('article',{name:'执行计划',exact:true}).innerText()).includes('尚未业务验收'));
   await page.screenshot({path:'test-results/task-progress.png'});
@@ -192,7 +193,7 @@ try{
   const otherTask=await call('loop.chat',{id:entry.id,message:'OTHER_SESSION_SENTINEL',options:{permission:'read'}});
   const otherDeadline=Date.now()+45000;while(Date.now()<otherDeadline){const r=await call('loop.inspect',{id:entry.id,taskId:otherTask.taskId,runId:otherTask.runId});if(r.status!=='running')break;await page.waitForTimeout(100)}
   await page.getByRole('textbox',{name:'对话草稿',exact:true}).fill('任务页签草稿');await page.getByRole('tab',{name:'任务视图',exact:true}).click();
-  await page.getByRole('heading',{name:'任务视图',exact:true}).waitFor();assert.ok((await page.locator('.session-task-view').innerText()).includes('随后执行队列A'));assert.ok(!(await page.locator('.session-task-view').innerText()).includes('OTHER_SESSION_SENTINEL'));
+  await page.getByRole('heading',{name:'任务流程',exact:true}).waitFor();await page.getByTestId('dispatch-root-node').click();assert.ok((await page.locator('.session-task-view').innerText()).includes('随后执行队列A'));assert.ok(!(await page.locator('.session-task-view').innerText()).includes('OTHER_SESSION_SENTINEL'));
   await page.screenshot({path:'test-results/session-task-view.png'});await page.getByRole('tab',{name:'对话',exact:true}).click();assert.equal(await page.getByRole('textbox',{name:'对话草稿',exact:true}).inputValue(),'任务页签草稿');
   assert.equal(await page.getByRole('tab',{name:'对话',exact:true}).count(),1);
   await page.getByRole('button',{name:'新对话 project',exact:true}).click();await page.getByRole('heading',{name:'有什么可以帮你？',exact:true}).waitFor();

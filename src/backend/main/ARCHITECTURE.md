@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Electron 入口与应用装配。管理工作区生命周期、模型存储、平台能力和调度实例，具体 action 在 ipc 中路由。
+Electron 入口与应用装配。向主会话注入图根实例与任务级调度周期，装配默认执行者、模型、平台与监管；关闭先停调度并收口执行，再关闭知识存储。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -13,8 +13,8 @@ Electron 入口与应用装配。管理工作区生命周期、模型存储、�
 | [application.ts](application.ts) | 单次运行授权、版本化队列增量和结构化问题按工作区路由；排队时冻结附件内容与模型身份。Application：登记及重命名工作区、装配模型供应商与服务，并统一派发主 Agent 对话、附件快照、工具审批和历史操作。 |
 | [execution.ts](execution.ts) | 主进程执行装配，将工作区、已解析模型、原生锁与平台访问策略注入调度引擎。 |
 | [main.ts](main.ts) | 本机后端的 Electron 装配入口，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。 |
-| [member-dispatch.ts](member-dispatch.ts) | 为已运行的工作区装配成员派发服务与本机事务存储。 |
-| [runtime-monitor.ts](runtime-monitor.ts) | 把一个工作区的派发事务、运行日志和对话队列接入应用级运行监管。 |
+| [member-dispatch.ts](member-dispatch.ts) | 为已运行工作区装配共用事务存储的成员派发、真实大脑执行和结果读取服务。 |
+| [runtime-monitor.ts](runtime-monitor.ts) | 把工作区派发事务、两套运行日志和对话队列接入全局监管，同时维护静态 Agent 的持久化历史归档。 |
 
 ## 架构类图
 
@@ -41,8 +41,9 @@ class N_src_backend_main_workspace["workspace/"] {
 N_src_backend_main_commands ..> N_src_backend_main_platform : 导入依赖
 N_src_backend_main_ipc ..> N_src_backend_main_persistence : 导入依赖
 N_src_backend_main_ipc ..> N_src_backend_main_workspace : 导入依赖
-N_src_backend_main_ipc ..> N_src_backend_main_platform : 导入依赖
 N_src_backend_main_ipc ..> N_src_backend_main_resources : 导入依赖
+N_src_backend_main_ipc ..> N_src_backend_main_platform : 导入依赖
+N_src_backend_main_persistence ..> N_src_backend_main_workspace : 导入依赖
 N_src_backend_main_resources ..> N_src_backend_main_platform : 导入依赖
 N_src_backend_main_workspace ..> N_src_backend_main_platform : 导入依赖
 N_src_backend_main_workspace ..> N_src_backend_main_persistence : 导入依赖
@@ -88,27 +89,52 @@ N_src_backend_main_main_ts ..> N_src_backend_main_application_ts : 导入依赖
 - `execution.ts` → `platform`：导入。
 - `ipc` → `persistence`：导入。
 - `ipc` → `workspace`：导入。
-- `ipc` → `platform`：导入。
 - `ipc` → `resources`：导入。
+- `ipc` → `platform`：导入。
 - `main.ts` → `platform`：导入。
 - `main.ts` → `application.ts`：导入。
 - `main.ts` → `persistence`：导入。
 - `member-dispatch.ts` → `workspace`：导入。
 - `member-dispatch.ts` → `persistence`：导入。
+- `member-dispatch.ts` → `platform`：导入。
+- `persistence` → `workspace`：导入。
 - `resources` → `platform`：导入。
 - `runtime-monitor.ts` → `workspace`：导入。
 - `runtime-monitor.ts` → `persistence`：导入。
 - `workspace` → `platform`：导入。
 - `workspace` → `persistence`：导入。
 
+### execution.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_backend_main_execution_ts["execution.ts"] {
+  <<module>>
+  +createExecutionManager()
+}
+```
+
+
+### member-dispatch.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
+  <<module>>
+  +createMemberDispatch()
+  +createMemberServices()
+}
+```
+
+
 ## 子目录导航
 
 - [commands/](commands/ARCHITECTURE.md)：CLI 入口，复用应用和调度，不拥有第二套领域规则。
-- [ipc/](ipc/ARCHITECTURE.md)：应用 action 路由。调用显式携带工作区和任务身份，桌面发送方核验仍在 Electron 接入处执行。
+- [ipc/](ipc/ARCHITECTURE.md)：应用 action 路由。运行调用显式携带工作区和任务身份，静态角色历史以角色/Session/运行身份只读查询；桌面发送方核验仍在 Electron 接入处执行。
 - [persistence/](persistence/ARCHITECTURE.md)：本机持久化适配：知识事务、运行日志、对话附件、模型配置。保留原数据路径与格式，目录调整不迁移用户数据。
 - [platform/](platform/ARCHITECTURE.md)：本机路径、系统锁、凭据加密、命令终端及原生工具访问检查。路径策略不是操作系统沙箱。
-- [resources/](resources/ARCHITECTURE.md)：链接器、人才和业务模板共用的本地/远端资源仓库实现。资源定义不等于已连接的可执行工具。
-- [workspace/](workspace/ARCHITECTURE.md)：本机工作区登记与运行实例。持锁后打开、监听、协调关闭，知识事务委托 persistence/knowledge。
+- [resources/](resources/ARCHITECTURE.md)：链接器、人才和完整业务模板共用的本地/远端资源仓库。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。
+- [workspace/](workspace/ARCHITECTURE.md)：本机工作区登记、运行实例与可信桌面静态架构编辑。持锁打开、监听、关闭，知识事务委托 persistence/knowledge；模块维护确认和真人条目同事务，不变更动态任务图。
 
 [返回上层](../ARCHITECTURE.md)。
 

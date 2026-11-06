@@ -21,7 +21,12 @@
     "make": "electron-forge make",
     "test:desktop": "node scripts/workspace-ui-smoke.mjs",
     "test:portable": "node scripts/portable-smoke.mjs",
-    "test:loop": "node scripts/loop-smoke.mjs"
+    "test:loop": "node scripts/loop-smoke.mjs",
+    "test:members": "tsx scripts/member-ui-smoke.mts",
+    "test:collaboration": "tsx scripts/collaboration-ui-smoke.mts",
+    "test:main-instance": "tsx scripts/collaboration-ui-smoke.mts --default-executor",
+    "test:agent-history": "tsx scripts/collaboration-ui-smoke.mts --history",
+    "test:architecture-ui": "tsx scripts/architecture-ui-smoke.mts"
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "1.5.0",

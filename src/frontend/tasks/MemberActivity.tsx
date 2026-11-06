@@ -1,0 +1,33 @@
+/**
+ * 作用定位：在主对话中展示最近的成员任务与公开执行动态，并链接到对应任务节点详情。
+ * 设计原因：执行成员输出保持独立署名，默认只展开最近一段公开回复；按真实派发身份隔离增量读取，不能混为主调度 Agent 的直接执行。
+ */
+import {useState} from 'react';
+import type {TaskNode} from '../../bridge/contracts/dispatch';
+import {Icon} from '../components/Icon';
+import {useMemberRun} from './useMemberRun';
+import {MemberRunTranscript} from './MemberRunTranscript';
+import './member-activity.css';
+
+export const memberTaskLabels:Record<TaskNode['status'],string>={planned:'待安排',queued:'待执行',running:'正在执行',waiting:'等待前置任务',result_ready:'交付待审阅',blocked:'需要处理',failed:'执行失败',cancelled:'已停止',interrupted:'执行中断'};
+/** 已领取但未就绪的 queued 节点显示启动中，不能把持久化意图当作执行已经开始。 */
+export function memberTaskLabel(task:TaskNode){return task.status==='queued'&&task.activeRunId?'正在启动':memberTaskLabels[task.status]}
+
+function MemberActivityCard({workspaceId,rootSessionId,task,onSelectTask,active}:{workspaceId:string;rootSessionId:string;task:TaskNode;onSelectTask:(id:string)=>void;active:boolean}){
+  const [expanded,setExpanded]=useState(false),latest=task.runIds.at(-1);
+  const {run,loading,error,refresh}=useMemberRun(workspaceId,rootSessionId,task.taskId,latest,true,active);
+  return <article className="member-activity-card" aria-label={'成员任务 · '+task.assignee.name}>
+    <header><span className="member-avatar"><Icon name="team" size={17}/></span><div><strong>{task.assignee.name}</strong><span className="member-role-caption">执行 Agent</span></div><span className={'member-state '+task.status}>{task.status==='running'&&<span className="work-spinner"/>}{memberTaskLabel(task)}</span></header>
+    <p className="member-task-goal">{task.goal}</p>
+    {run?<div className={'member-card-stream'+(expanded?' expanded':'')}><MemberRunTranscript run={run} workspaceId={workspaceId} memberName={task.assignee.name} compact={!expanded} active={active}/></div>:<p className="member-muted">{loading?'正在读取成员动态…':task.waitReason||'任务已派发，尚未开始执行。'}</p>}
+    {error&&<p className="member-error" role="alert">{error}<button onClick={()=>void refresh()}>重试读取</button></p>}
+    <footer>{run&&<button aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}>{expanded?'收起过程':'展开过程'}</button>}<button onClick={()=>onSelectTask(task.taskId)}>查看任务详情 <Icon name="chevron" size={13}/></button></footer>
+  </article>;
+}
+/** 限制同时观察的卡片数量；其余任务由图视图按需打开，避免每个任务各起一个常驻轮询。 */
+export function MemberActivity({workspaceId,rootSessionId,tasks,onSelectTask,onViewAll,active=true}:{workspaceId:string;rootSessionId:string;tasks:TaskNode[];onSelectTask:(id:string)=>void;onViewAll?:()=>void;active?:boolean}){
+  const local=tasks.filter(task=>task.identity.workspaceId===workspaceId&&task.identity.rootSessionId===rootSessionId);
+  if(!local.length)return null;
+  const latest=[...local].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)||b.taskId.localeCompare(a.taskId)).slice(0,3);
+  return <section className="member-activity" aria-label="团队成员执行动态"><div className="member-activity-heading"><span><Icon name="team" size={16}/>成员动态 · {local.length} 项任务</span><button onClick={()=>onViewAll?onViewAll():onSelectTask(latest[0].taskId)}>查看全部任务</button></div>{latest.map(task=><MemberActivityCard key={[workspaceId,rootSessionId,task.taskId].join(':')} workspaceId={workspaceId} rootSessionId={rootSessionId} task={task} onSelectTask={onSelectTask} active={active}/>)}</section>;
+}

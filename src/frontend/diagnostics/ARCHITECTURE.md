@@ -30,6 +30,14 @@ class N_src_frontend_diagnostics_diagnostics_css["diagnostics.css"] {
 classDiagram
 class N_src_frontend_diagnostics_WorkspaceDiagnostics_tsx["WorkspaceDiagnostics.tsx"] {
   <<component>>
+  +WorkspaceDiagnostics()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_diagnostics_WorkspaceDiagnostics_tsx["WorkspaceDiagnostics.tsx"] {
+  <<component>>
 }
 class N_src_frontend_diagnostics_WorkspaceDiagnostics_tsx_WorkspaceDiagnosticsProps["WorkspaceDiagnosticsProps"] {
   <<interface>>

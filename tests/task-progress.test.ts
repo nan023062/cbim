@@ -36,3 +36,12 @@ test('failed persistence and concurrent stale edits cannot overwrite the committ
   const results=await Promise.allSettled([p.call('cbim_task_plan',{...plan,expectedVersion:1}),p.call('cbim_task_plan',{...plan,expectedVersion:1})]);
   expect(results.map(x=>x.status)).toEqual(['fulfilled','rejected']);
 });
+test('dispatch and inspection receipts cannot turn scheduling bookkeeping into delivery evidence',async()=>{
+  const p=new TaskProgressTools(undefined,async()=>{});
+  await p.call('cbim_task_plan',plan);
+  for(const name of ['cbim_dispatch_task','cbim_dispatch_inspect','cbim_dispatch_result'])p.record({...receipt(name),toolName:name},p.generation);
+  expect((await value(p)).evidence).toEqual([]);
+  await expect(p.call('cbim_task_step',{expectedVersion:1,id:'build',state:'reported_done',evidenceIds:['cbim_dispatch_task']})).rejects.toThrow('证据不存在');
+  p.record(receipt('real-verification'),p.generation);
+  expect((await value(p)).evidence.map((r:ToolReceipt)=>r.toolCallId)).toEqual(['real-verification']);
+});

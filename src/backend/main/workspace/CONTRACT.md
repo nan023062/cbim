@@ -41,3 +41,11 @@ Workspace *-- KernelLock : 打开时持有，关闭时释放
 - 工作区诊断只读展示状态与问题，不提供重启操作。打开流程不修改项目的其他开发工具配置。
 
 知识存储与平台边界分别见 [persistence/knowledge](../persistence/knowledge/ARCHITECTURE.md)、[platform](../platform/ARCHITECTURE.md)。
+
+### 桌面架构编辑
+
+`ArchitectureService` 接收 `KnowledgeWorkspace` 端口，经严格 schema 和 `assert(identity)` 核实桌面请求。`preview` 要求 `workspaceId + instanceId + revision + operations`，可附真人 `peopleUpserts`；新增/编辑模块必须显式提交 `{moduleId?, maintainerPersonIds, confirmed:true}`。单次桌面预览最多新增/编辑一个模块，省略 moduleId 时由该操作推导。前端不能提供维护绑定、版本、确认时间或签署记录；后端生成这些字段并将花名册与对象放入同一受控预览。
+
+`commit` 只接受 `workspaceId + instanceId + planId`，使用冻结计划复核并提交，不接受正文或维护关系覆盖。此服务是用户操作的桌面入口，不加入 Agent 工具注册表；运行中的知识工具仍执行逐次权限门禁。无模型调用、成员启动或业务文件修改副作用。
+
+团队图和业务图是工作区共享的静态知识；多个主会话可同时持有各自独立的成员/目标/模块任务图。架构 CRUD 不创建动态成员，也不追改已派发任务中的角色或模块快照。知识版本变化后，由既有执行上下文检查拒绝过期基线，必须核实并重新准备任务。

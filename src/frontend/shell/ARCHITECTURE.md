@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-工作区侧栏、会话选择、用户栏与右侧扩展页签；会话区与项目级视图区分开。
+工作区侧栏、会话选择、用户栏与右侧扩展页签；会话区与项目级视图区分开。向会话传递活动页签状态，隐藏页签保留草稿/节点选择并降低成员与任务图同步频率。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -32,9 +32,18 @@ class N_src_frontend_shell_App_tsx["App.tsx"] {
   +App()
 }
 ```
+
 直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[WorkspaceList.tsx](WorkspaceList.tsx)、[ExtensionArea.tsx](ExtensionArea.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[UserMenu.tsx](UserMenu.tsx)、[useSidebarWidth.ts](useSidebarWidth.ts)、[state-labels.ts](state-labels.ts)。
 
 ### ExtensionArea.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_shell_ExtensionArea_tsx["ExtensionArea.tsx"] {
+  <<component>>
+  +ExtensionArea()
+}
+```
 
 ```mermaid
 classDiagram
@@ -48,7 +57,8 @@ class N_src_frontend_shell_ExtensionArea_tsx_Kind["Kind"] {
 N_src_frontend_shell_ExtensionArea_tsx ..> N_src_frontend_shell_ExtensionArea_tsx_Kind : 声明
 class N_src_frontend_shell_ExtensionArea_tsx_Panel["Panel"] {
   <<type>>
-
+  +id
+  +kind
 }
 N_src_frontend_shell_ExtensionArea_tsx ..> N_src_frontend_shell_ExtensionArea_tsx_Panel : 声明
 ```
@@ -83,6 +93,18 @@ class N_src_frontend_shell_state_labels_ts["state-labels.ts"] {
 ```
 
 ### tabs.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_shell_tabs_ts["tabs.ts"] {
+  <<module>>
+  +newTab()
+  +initialLayout()
+  +moveTab()
+  +readLayouts()
+  +mergeConversations()
+}
+```
 
 ```mermaid
 classDiagram
@@ -128,6 +150,7 @@ class N_src_frontend_shell_UserMenu_tsx["UserMenu.tsx"] {
   +UserMenu()
 }
 ```
+
 直接依赖：[../components/Icon.tsx](../components/Icon.tsx)。
 
 ### useSidebarWidth.ts
@@ -139,6 +162,7 @@ class N_src_frontend_shell_useSidebarWidth_ts["useSidebarWidth.ts"] {
   +useSidebarWidth()
 }
 ```
+
 
 ### workspace-list.css
 
@@ -158,6 +182,7 @@ class N_src_frontend_shell_WorkspaceList_tsx["WorkspaceList.tsx"] {
   +WorkspaceList()
 }
 ```
+
 直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[state-labels.ts](state-labels.ts)、[workspace-list.css](workspace-list.css)。
 
 ### 本目录调用边界

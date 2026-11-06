@@ -1,0 +1,4 @@
+/* 静态业务图使用扩展面板的实际宽度切换布局；与窗口宽度无关，避免大窗口内窄侧栏挤压节点和详情。 */
+.business-management{container-type:inline-size;width:100%;min-width:0;box-sizing:border-box}
+.business-management .module-canvas{min-width:0}
+@container(max-width:650px){.business-management .org-layout{flex-direction:column}.business-management .inspector{width:100%;min-width:0;border-left:0;border-top:1px solid var(--line);padding:20px 0}.business-management .view-heading{flex-wrap:wrap}}

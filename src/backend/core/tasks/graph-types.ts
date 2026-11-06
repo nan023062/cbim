@@ -24,6 +24,8 @@ export type TaskStatus = 'planned'|'queued'|'running'|'waiting'|'result_ready'
   |'blocked'|'failed'|'cancelled'|'interrupted';
 export type TaskNode = {
   kind:'task';nodeId:string;taskId:string;identity:GraphIdentity;
+  /** 可信主调度周期；旧显式派发可缺省，创建后不可更换。 */
+  scopeId?:string;
   /** 缺省表示主会话根派发；创建后不能迁移父节点。 */
   parentTaskId?:string;
   requester:AgentRef;assignee:AgentRef;modules:ModuleBinding[];

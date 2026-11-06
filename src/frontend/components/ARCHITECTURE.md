@@ -24,9 +24,18 @@ class N_src_frontend_components_Empty_tsx["Empty.tsx"] {
   +Empty()
 }
 ```
+
 直接依赖：[Icon.tsx](Icon.tsx)。
 
 ### Icon.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_components_Icon_tsx["Icon.tsx"] {
+  <<component>>
+  +Icon()
+}
+```
 
 ```mermaid
 classDiagram

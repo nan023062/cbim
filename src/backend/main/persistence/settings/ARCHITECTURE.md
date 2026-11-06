@@ -16,6 +16,8 @@
 
 ### llm-profiles.ts
 
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
 ```mermaid
 classDiagram
 class N_src_backend_main_persistence_settings_llm_profiles_ts["llm-profiles.ts"] {
@@ -39,21 +41,34 @@ class N_src_backend_main_persistence_settings_llm_profiles_ts_ModelFile["ModelFi
 }
 N_src_backend_main_persistence_settings_llm_profiles_ts ..> N_src_backend_main_persistence_settings_llm_profiles_ts_ModelFile : 声明
 class N_src_backend_main_persistence_settings_llm_profiles_ts_LlmProfiles["LlmProfiles"] {
+  +list()
+  +save()
+  +select()
+  +remove()
+  +resolve()
+  +discover()
+  +discoverDetails()
+  +test()
   -filename
   -cipher
   -queue
   -read()
   -view()
-  +list()
   -change()
-  +save()
-  +select()
-  +remove()
   -decrypt()
-  +resolve()
-  +discover()
-  +discoverDetails()
   -headers()
+}
+N_src_backend_main_persistence_settings_llm_profiles_ts ..> N_src_backend_main_persistence_settings_llm_profiles_ts_LlmProfiles : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_persistence_settings_llm_profiles_ts["llm-profiles.ts"] {
+  <<module>>
+}
+class N_src_backend_main_persistence_settings_llm_profiles_ts_LlmProfiles["LlmProfiles"] {
   -request()
 }
 N_src_backend_main_persistence_settings_llm_profiles_ts ..> N_src_backend_main_persistence_settings_llm_profiles_ts_LlmProfiles : 声明

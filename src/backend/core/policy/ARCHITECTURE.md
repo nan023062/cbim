@@ -21,6 +21,14 @@
 classDiagram
 class N_src_backend_core_policy_tool_policy_ts["tool-policy.ts"] {
   <<module>>
+  +authorizeRunTool()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_policy_tool_policy_ts["tool-policy.ts"] {
+  <<module>>
 }
 class N_src_backend_core_policy_tool_policy_ts_RunToolDescriptor["RunToolDescriptor"] {
   <<interface>>

@@ -34,6 +34,7 @@ class N_src_frontend_settings_ModelSettings_tsx["ModelSettings.tsx"] {
   +ModelSettings()
 }
 ```
+
 直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[models.css](models.css)。
 
 ### SettingsView.tsx
@@ -45,6 +46,7 @@ class N_src_frontend_settings_SettingsView_tsx["SettingsView.tsx"] {
   +SettingsView()
 }
 ```
+
 直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[ModelSettings.tsx](ModelSettings.tsx)。
 
 ### 本目录调用边界

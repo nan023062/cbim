@@ -1,10 +1,12 @@
 /**
- * 作用定位：维护整个应用的成员实例、派发任务及实际 Loop 消耗索引，接收 main 在可靠提交后送来的事实。
- * 设计原因：工作区仍拥有各自日志和执行权；应用级观察以工作区代际隔离旧回调，用运行身份和事件序号避免重复计费。
- * 职责边界：不读取文件、不启动引擎、不调度跨工作区任务；只缓存必要统计事件，任何快照都不包含消息、知识或工具正文。
+ * 作用定位：维护整个应用的成员实例、派发任务及实际 Loop 消耗索引，接收 main 在可靠提交后送来的事实；成员轮次归属派发节点，不重复生成对话任务。
+ * 设计原因：主会话活动按可信实例绑定投影，执行实例释放后保留历史但退出当前压力；运行身份和事件序号避免重复计费，观察不代替生命周期管理。
+ * 职责边界：不读取文件、不启动引擎、不调度跨工作区任务；待消费负载只计 pending 信封，任何快照都不包含消息、知识或工具正文。
  */
 import {randomUUID} from 'node:crypto';
 import type {RunSummary,StoredEvent,TaskSpec} from '../../core/brain/types';
+import {checkedMemberRunBinding} from '../../core/brain/member-run';
+import {checkedConversationAgentBinding} from '../../core/brain/conversation-binding';
 import {runUsage} from '../../core/brain/usage';
 import type {DispatchMutation,DispatchState} from '../../core/tasks/dispatch-storage';
 import type {TaskNode} from '../../core/tasks/graph-types';
@@ -94,7 +96,7 @@ export class GlobalRuntimeManager {
       sequences.set(graph.identity.rootSessionId,{streamId:graph.cursor.streamId,seq:graph.cursor.seq});
       for(const task of graph.tasks)tasks.set(key(task.identity.rootSessionId,task.taskId),this.task(task));
     }
-    state.members=members;state.tasks=tasks;state.graphSequences=sequences;state.outbox=new Set(baseline.outbox.map(m=>m.messageId));this.changed();
+    state.members=members;state.tasks=tasks;state.graphSequences=sequences;state.outbox=new Set(baseline.outbox.filter(m=>m.delivery==='pending').map(m=>m.messageId));this.changed();
   }
   /** 只在事务可靠提交后调用；增量更新受影响对象，不重新读取或复制整个工作区日志。 */
   dispatchCommitted(id:string,epoch:number,mutation:DispatchMutation){
@@ -112,11 +114,15 @@ export class GlobalRuntimeManager {
       }
       state.graphSequences.set(batch.identity.rootSessionId,{streamId:batch.streamId,seq:batch.seq});
     }
-    for(const message of mutation.messages??[])if(!state.outbox.has(message.messageId)){state.outbox.add(message.messageId);changed=true}
+    // 邮箱保留已领取/处理信封作为审计，但这些记录不再占待消费负载。
+    for(const message of mutation.messages??[]){
+      if(message.delivery==='pending'){if(!state.outbox.has(message.messageId)){state.outbox.add(message.messageId);changed=true}}
+      else if(state.outbox.delete(message.messageId))changed=true;
+    }
     if(changed)this.changed();
   }
   private member(value:AgentInstance,current:boolean):RuntimeMember {
-    return {workspaceId:value.workspaceId,teamId:value.teamId,agentId:value.agentId,agentInstanceId:value.agentInstanceId,leaseEpoch:value.leaseEpoch,activity:value.activity,activityCurrent:current,availability:'loading',sessionCount:value.agentSessionIds.length,activeTaskId:value.activeTaskId,activeRunId:value.activeRunId,waitingTaskIds:[...value.waitingTaskIds],communicatingMessageIds:[...value.communicatingMessageIds]};
+    return {workspaceId:value.workspaceId,teamId:value.teamId,agentId:value.agentId,agentInstanceId:value.agentInstanceId,leaseEpoch:value.leaseEpoch,...(value.mainRootSessionId?{mainRootSessionId:value.mainRootSessionId}:{}),...(value.executionScopeId?{executionScopeId:value.executionScopeId,executionTaskId:value.executionTaskId}:{}),...(value.lifecycle?{lifecycle:value.lifecycle,releasedAt:value.releasedAt}:{}),activity:value.activity,activityCurrent:current&&value.lifecycle!=='released',availability:'loading',sessionCount:value.agentSessionIds.length,activeTaskId:value.activeTaskId,activeRunId:value.activeRunId,waitingTaskIds:[...value.waitingTaskIds],communicatingMessageIds:[...value.communicatingMessageIds]};
   }
   private task(value:TaskNode):RuntimeDispatchTask {
     return {source:'dispatch',binding:'instance',workspaceId:value.identity.workspaceId,rootSessionId:value.identity.rootSessionId,taskId:value.taskId,agentId:value.assignee.agentId,agentInstanceId:value.assignee.agentInstanceId,moduleIds:value.modules.map(m=>m.moduleId),status:value.status,revision:value.revision,planRevision:value.planRevision,runIds:[...value.runIds],updatedAt:value.updatedAt};
@@ -131,7 +137,16 @@ export class GlobalRuntimeManager {
     const last=summary.events.at(-1)?.seq??0;
     // 已接收的实时事实优先，延迟恢复不能把活跃 run 覆盖成历史状态。
     if(existing&&existing.receivedSeq>=last)return;
-    const value=this.newRun(summary.task,summary.runId,summary.events[0]?.time??'');
+    const started=summary.events.find(event=>event.type==='run.started')?.data,recorded=started?.memberBinding,conversation=started?.conversationBinding;
+    const value=this.newRun(summary.task,summary.runId,summary.events[0]?.time??'',summary.memberBinding??recorded,summary.conversationBinding??conversation);
+    if(recorded!==undefined){
+      const checked=checkedMemberRunBinding(recorded,summary.task,summary.runId);
+      if(!value.view.memberBinding||Object.entries(checked).some(([field,data])=>value.view.memberBinding![field as keyof typeof checked]!==data))throw Error('恢复摘要与运行起始成员身份不一致');
+    }
+    if(conversation!==undefined){
+      const checked=checkedConversationAgentBinding(conversation,summary.task);
+      if(!value.view.conversationBinding||Object.entries(checked).some(([field,data])=>value.view.conversationBinding![field as keyof typeof checked]!==data))throw Error('恢复摘要与运行起始主会话身份不一致');
+    }
     for(const event of summary.events){
       if(event.workspaceId!==id||event.taskId!==summary.task.taskId||event.runId!==summary.runId||event.seq!==value.receivedSeq+1)throw Error('恢复运行的身份或事件顺序无效');
       value.receivedSeq=event.seq;const item=measurement(event);if(item)value.measurements.push(item);
@@ -155,7 +170,7 @@ export class GlobalRuntimeManager {
     if(!run){
       const task=event.data?.task as TaskSpec|undefined;
       if(event.type!=='run.started'||event.seq!==1||task?.workspaceId!==id||task.taskId!==event.taskId){this.issue(id,epoch,'run','运行缺少起始身份事件，需要重新载入');return}
-      run=this.newRun(task,event.runId,event.time);state.runs.set(runKey,run);
+      run=this.newRun(task,event.runId,event.time,event.data?.memberBinding,event.data?.conversationBinding);state.runs.set(runKey,run);
       run.liveEstablished=true;
     }
     if(event.seq<=run.receivedSeq)return;
@@ -177,9 +192,12 @@ export class GlobalRuntimeManager {
       else if(event.type==='tool.finished'||event.type==='tool.denied'||event.type==='message')run.view.phase='working';
     }
   }
-  private newRun(task:TaskSpec,runId:string,time:string):ObservedRun {
+  /** 两种运行绑定互斥；主会话与正式成员任务共享实例但保留各自通道，旧对话不猜映射。 */
+  private newRun(task:TaskSpec,runId:string,time:string,memberBinding?:unknown,conversationBinding?:unknown):ObservedRun {
     if(!task||typeof task!=='object'||typeof task.workspaceId!=='string'||!task.workspaceId||typeof task.taskId!=='string'||!task.taskId||typeof runId!=='string'||!runId||!Array.isArray(task.moduleIds)||task.moduleIds.some(id=>typeof id!=='string')||task.agentId!==undefined&&typeof task.agentId!=='string')throw Error('运行任务概要无效');
-    return {view:{workspaceId:task.workspaceId,taskId:task.taskId,runId,agentId:task.agentId,status:'running',phase:'working',lastSeq:0,startedAt:time,updatedAt:time,usage:runUsage([])},moduleIds:[...task.moduleIds],measurements:[],receivedSeq:0,liveEstablished:false};
+    if(memberBinding!==undefined&&conversationBinding!==undefined)throw Error('运行不能同时绑定主会话和派发成员任务');
+    const binding=memberBinding===undefined?undefined:checkedMemberRunBinding(memberBinding,task,runId),conversation=conversationBinding===undefined?undefined:checkedConversationAgentBinding(conversationBinding,task);
+    return {view:{workspaceId:task.workspaceId,taskId:task.taskId,runId,agentId:task.agentId,...(binding?{memberBinding:binding}:{}),...(conversation?{conversationBinding:conversation}:{}),status:'running',phase:'working',lastSeq:0,startedAt:time,updatedAt:time,usage:runUsage([])},moduleIds:[...task.moduleIds],measurements:[],receivedSeq:0,liveEstablished:false};
   }
   /** 队列变化后由唯一队列实例报告，重复计数不推进全局版本。 */
   queue(id:string,epoch:number,counts:RuntimeQueueCounts){
@@ -199,26 +217,39 @@ export class GlobalRuntimeManager {
     for(const state of this.workspaces.values()){
       const availability=state.view.availability;workspaces.push(clone(state.view));
       if(availability==='ready')pressure.openWorkspaces++;if(availability==='unavailable')pressure.unavailableWorkspaces++;
+      // 仅真实起始事件能证明当前活动；历史恢复、同名角色和已关闭工作区不能制造活跃实例。
+      const conversations=new Map<string,RuntimeRun>();
+      if(availability==='ready')for(const run of state.runs.values())if(run.liveEstablished&&run.view.status==='running'&&run.view.conversationBinding){
+        const binding=run.view.conversationBinding,member=state.members.get(binding.agentInstanceId);
+        if(member?.lifecycle!=='released'&&member?.agentId===binding.agentId&&member.teamId===binding.teamId&&(!member.mainRootSessionId||member.mainRootSessionId===binding.rootSessionId))conversations.set(binding.agentInstanceId,run.view);
+      }
       for(const member of state.members.values()){
-        const view={...member,availability,activityCurrent:member.activityCurrent&&availability==='ready'};members.push(view);
+        const view:RuntimeMember={...member,availability,activityCurrent:member.activityCurrent&&availability==='ready'},conversation=conversations.get(member.agentInstanceId);
+        if(conversation){const binding=conversation.conversationBinding!;view.activity=conversation.phase==='waiting'?'waiting':'working';view.activityCurrent=true;view.activeConversation={rootSessionId:binding.rootSessionId,agentSessionId:binding.agentSessionId,runId:conversation.runId}}
+        members.push(view);
+        if(view.lifecycle!=='released')pressure.memberInstances++;
         if(view.activityCurrent&&view.activity!=='idle'){pressure.activeMembers++;if(view.activity==='working')pressure.workingMembers++;if(view.activity==='waiting')pressure.waitingMembers++;if(view.activity==='communicating')pressure.communicatingMembers++}
       }
       for(const task of state.tasks.values()){
-        tasks.push(task);if(task.status==='queued')pressure.queuedDispatchTasks++;if(task.status==='waiting')pressure.waitingDispatchTasks++;if(task.status==='blocked')pressure.blockedDispatchTasks++;
+        tasks.push(task);if(state.members.get(task.agentInstanceId)?.lifecycle!=='released'){if(task.status==='queued')pressure.queuedDispatchTasks++;if(task.status==='waiting')pressure.waitingDispatchTasks++;if(task.status==='blocked')pressure.blockedDispatchTasks++}
       }
       const groups=new Map<string,ObservedRun[]>();
       for(const run of state.runs.values()){
-        runs.push(run.view);const group=groups.get(run.view.taskId)??[];group.push(run);groups.set(run.view.taskId,group);
-        if(run.view.status==='running'&&availability==='ready')pressure.activeRuns++;
+        runs.push(run.view);
+        // 成员轮次已经归属上方派发业务节点，只累计实际运行/消耗，不合成第二份 Loop 任务。
+        if(!run.view.memberBinding){const group=groups.get(run.view.taskId)??[];group.push(run);groups.set(run.view.taskId,group)}
+        const instanceId=run.view.memberBinding?.agentInstanceId??run.view.conversationBinding?.agentInstanceId;
+        if(run.view.status==='running'&&availability==='ready'&&(!instanceId||state.members.get(instanceId)?.lifecycle!=='released'))pressure.activeRuns++;
       }
       for(const group of groups.values()){
         group.sort((a,b)=>(a.view.startedAt??'').localeCompare(b.view.startedAt??'')||a.view.runId.localeCompare(b.view.runId));
         const latest=group.at(-1)!,active=group.filter(r=>r.view.status==='running');
-        tasks.push({source:'loop',binding:'role-only',workspaceId:state.view.workspaceId,taskId:latest.view.taskId,agentId:latest.view.agentId,moduleIds:latest.moduleIds,status:active.length?'running':latest.view.status,runIds:group.map(r=>r.view.runId),activeRunIds:active.map(r=>r.view.runId),lastRunId:latest.view.runId,updatedAt:latest.view.updatedAt});
+        const binding=latest.view.conversationBinding;
+        tasks.push({source:'loop',...(binding?{binding:'instance' as const,agentInstanceId:binding.agentInstanceId,agentSessionId:binding.agentSessionId,rootSessionId:binding.rootSessionId}:{binding:'role-only' as const}),workspaceId:state.view.workspaceId,taskId:latest.view.taskId,agentId:latest.view.agentId,moduleIds:latest.moduleIds,status:active.length?'running':latest.view.status,runIds:group.map(r=>r.view.runId),activeRunIds:active.map(r=>r.view.runId),lastRunId:latest.view.runId,updatedAt:latest.view.updatedAt});
       }
       pressure.pendingOutbox+=state.outbox.size;pressure.queuedConversationMessages+=state.view.queue.pending;pressure.pausedConversationMessages+=state.view.queue.paused;pressure.insertingConversationMessages+=state.view.queue.inserting;
     }
-    pressure.taskInstances=tasks.length;pressure.memberInstances=members.length;
+    pressure.taskInstances=tasks.length;
     const usage:RuntimeUsage={input:0,output:0,cacheRead:0,cacheWrite:0,reasoning:0,total:0,costPartial:false,usageReported:false,runCount:runs.length,reportedRuns:0,unreportedRuns:0,unpricedRuns:0};
     for(const run of runs){
       const value=run.usage;for(const field of ['input','output','cacheRead','cacheWrite','reasoning','total'] as const)usage[field]+=value[field];

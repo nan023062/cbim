@@ -20,7 +20,6 @@ CLI 入口，复用应用和调度，不拥有第二套领域规则。
 classDiagram
 class N_src_backend_main_commands_loop_cli_ts["loop-cli.ts"] {
   <<module>>
-  +main()
 }
 ```
 直接依赖：[../platform/paths.ts](../platform/paths.ts)、[../application.ts](../application.ts)。

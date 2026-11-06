@@ -7,6 +7,7 @@ import {hash} from '../src/backend/core/foundation/serialization';
 import type {DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
 import type {AgentInstance, AgentSessionBinding} from '../src/backend/core/team/agent-types';
 import type {AgentRef, GraphEventBatch, GraphIdentity, TaskNode} from '../src/backend/core/tasks/graph-types';
+import {prepareMember} from '../src/backend/scheduler-engine/execution/agent-manager';
 
 const identity:GraphIdentity={workspaceId:'workspace-1',rootSessionId:'root-session-1'};
 const createdAt='2026-11-06T10:00:00.000Z';
@@ -137,5 +138,53 @@ test('close drains already accepted commits and rejects later commands',async()=
     const close=f.store.close();await expect(f.store.transact({commandId:'later',fingerprint:'later'},async()=>({receipt:'no'}))).rejects.toMatchObject({code:'GRAPH_STORE_CLOSED'});
     release();await Promise.all([first,second,close]);
     const reopened=new FileDispatchStore(f.dir,identity.workspaceId);expect((await reopened.read()).outbox).toHaveLength(1);await reopened.close();
+  }finally{await f.cleanup()}
+});
+
+test('旧共享主实例和无用途任务通道保留原生身份，新根实例隔离；通道用途与实例范围不能改绑',async()=>{
+  const f=await setup();try{
+    await commitRoot(f.store);
+    await f.store.transact({commandId:'legacy-native',fingerprint:'legacy-native'},async state=>({sessions:[{...state.sessions[0],nativeSessionId:'old-native'}],receipt:true}));
+    const otherIdentity={...identity,rootSessionId:'legacy-other-root'},otherAgent={...main,agentSessionId:'legacy-other-session'};
+    await f.store.transact({commandId:'legacy-other',fingerprint:'legacy-other'},async state=>({
+      members:[{...state.members[0],agentSessionIds:[...state.members[0].agentSessionIds,otherAgent.agentSessionId]}],
+      sessions:[{...session(otherAgent),rootSessionId:otherIdentity.rootSessionId}],
+      batch:{...batch('legacy-other',1,[{type:'root.upserted',root:{kind:'session-root',nodeId:'session:'+otherIdentity.rootSessionId,identity:otherIdentity,agent:otherAgent,revision:1,createdAt}},{type:'agent.upserted',agent:{agentInstanceId:main.agentInstanceId,agentId:main.agentId,name:main.name,revision:1,state:'idle',waitingTaskIds:[]}}]),identity:otherIdentity,streamId:'legacy-other-stream'},receipt:true,
+    }));
+    const state=await f.store.read(),configuration={workspaceId:identity.workspaceId,teamId:'.cbim/team',agentId:'cbim:main',knowledgeRevision:'knowledge-1',name:'主 Agent',source:'builtin' as const,principles:'',effectiveSkills:[]};
+    const old=prepareMember(state,configuration,identity.rootSessionId),conversation=prepareMember(state,configuration,identity.rootSessionId,'conversation');
+    expect(prepareMember(state,configuration,otherIdentity.rootSessionId).agent).toEqual(otherAgent);
+    expect(old.session).toEqual(state.sessions[0]);expect(old.member.mainRootSessionId).toBeUndefined();
+    expect(conversation.member.agentInstanceId).toBe(main.agentInstanceId);
+    expect(conversation.session.agentSessionId).not.toBe(main.agentSessionId);
+    expect(conversation.session.nativeSessionId).toBeUndefined();
+    await f.store.transact({commandId:'conversation',fingerprint:'conversation'},async()=>({members:[conversation.member],sessions:[conversation.session],receipt:true}));
+    const newRoot=prepareMember(await f.store.read(),configuration,'new-root');
+    expect(newRoot.member.agentInstanceId).not.toBe(main.agentInstanceId);
+    expect(newRoot.member.mainRootSessionId).toBe('new-root');
+    await f.store.transact({commandId:'new-main',fingerprint:'new-main'},async()=>({members:[newRoot.member],sessions:[newRoot.session],receipt:true}));
+    const before=await fs.readFile(path.join(f.dir,'dispatch.jsonl'),'utf8');
+    for(const purpose of ['conversation','unknown'])await expect(f.store.transact({commandId:'bad-'+purpose,fingerprint:purpose},async()=>({sessions:[{...old.session,purpose:purpose as any}],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
+    await expect(f.store.transact({commandId:'rebind-main',fingerprint:'rebind'},async()=>({members:[{...conversation.member,mainRootSessionId:identity.rootSessionId}],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
+    await expect(f.store.transact({commandId:'rebind-new-main',fingerprint:'rebind-new'},async()=>({members:[{...newRoot.member,mainRootSessionId:'other-root'}],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
+    const invalidSession={...newRoot.session,agentSessionId:'foreign-session',rootSessionId:identity.rootSessionId};
+    await expect(f.store.transact({commandId:'foreign-channel',fingerprint:'foreign'},async()=>({members:[{...newRoot.member,agentSessionIds:[newRoot.session.agentSessionId,invalidSession.agentSessionId]}],sessions:[invalidSession],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
+    expect(await fs.readFile(path.join(f.dir,'dispatch.jsonl'),'utf8')).toBe(before);
+    await f.store.close();const reopened=new FileDispatchStore(f.dir,identity.workspaceId);
+    const restored=await reopened.read();expect(restored.members).toHaveLength(2);
+    expect(restored.sessions.find(item=>item.agentSessionId===main.agentSessionId)).toEqual(old.session);
+    expect((await reopened.snapshot(identity)).root.agent).toEqual(main);await reopened.close();
+  }finally{await f.cleanup()}
+});
+
+test('同根主实例和自定义角色仍禁止重复，不能借主会话范围创建任意重复成员',async()=>{
+  const f=await setup();try{
+    await commitRoot(f.store);
+    await f.store.transact({commandId:'dev',fingerprint:'dev'},async()=>({members:[member(dev)],sessions:[session(dev)],receipt:true}));
+    const duplicate={...member(dev),agentInstanceId:'duplicate-dev',agentSessionIds:['duplicate-session']},channel={...session(dev),agentInstanceId:duplicate.agentInstanceId,agentSessionId:'duplicate-session'};
+    for(const candidate of [duplicate,{...duplicate,mainRootSessionId:'another-root'}])await expect(f.store.transact({commandId:'duplicate-dev',fingerprint:'duplicate'},async()=>({members:[candidate],sessions:[channel],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
+    const scoped={...member(main),agentInstanceId:'scoped-main',mainRootSessionId:'new-root',agentSessionIds:['scoped-session']},scopedSession={...session(main),agentInstanceId:scoped.agentInstanceId,agentSessionId:'scoped-session',rootSessionId:'new-root'};
+    await f.store.transact({commandId:'scoped',fingerprint:'scoped'},async()=>({members:[scoped],sessions:[scopedSession],receipt:true}));
+    await expect(f.store.transact({commandId:'duplicate-main',fingerprint:'duplicate-main'},async()=>({members:[{...scoped,agentInstanceId:'another-main',agentSessionIds:['another-session']}],sessions:[{...scopedSession,agentInstanceId:'another-main',agentSessionId:'another-session'}],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
   }finally{await f.cleanup()}
 });

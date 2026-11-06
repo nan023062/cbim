@@ -1,9 +1,10 @@
 /**
  * 作用定位：任务派发图的可序列化领域契约，供调度、持久化和 Bridge 共同引用。
- * 设计原因：把会话、成员、任务与执行轮次分开；交付候选与成员求助分别记录，避免把求助结束误当成完成或可恢复停泊。
+ * 设计原因：把会话、成员、任务与执行轮次分开；交付、求助和未启动撤销分别记录，不从 cancelled 推断从未执行。
  * 职责边界：这里只声明事实形状；权限、知识核实、磁盘提交和模型执行由各自服务负责。
  */
 import type {MemberHelpRecord} from './member-help';
+import type {QueuedTaskCancellation} from './queued-task-cancel';
 export type GraphIdentity = {workspaceId:string;rootSessionId:string};
 export type AgentRef = {
   agentId:string;agentInstanceId:string;agentSessionId:string;
@@ -41,6 +42,8 @@ export type TaskNode = {
   };
   /** 正常结束后可靠交接的求助；任务保持 blocked，主调度须创建新任务，不可恢复此运行。 */
   help?:MemberHelpRecord;
+  /** 仅主调度明确撤销且从未领取的任务存在；普通运行停止或周期关闭不补造此记录。 */
+  cancelledBeforeStart?:QueuedTaskCancellation;
   /** 时间均为可信后端生成的 UTC ISO 8601 字符串。 */
   createdAt:string;updatedAt:string;
 };

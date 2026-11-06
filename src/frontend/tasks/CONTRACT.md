@@ -48,6 +48,14 @@
 
 `MemberHelpNotice` 同时服务成员动态与 `MemberTaskDetail`，只读显示求助种类、原因、待主调度处理的问题、已尝试工具引用及记录时间。明确本轮成员执行已结束、求助已交接，后续由主调度重新安排；这是交接记录，不推断当前仍在等待、原成员已恢复、问题已解决或得到人工批准。工具引用不等于执行成功或验收证据。详情只展示所选 run 对应的求助，不能从另一轮借用；组件独立于成员正文读取，日志加载失败不会隐藏已提交交接。此组件没有执行、恢复旧成员、改变权限或批准按钮，也不新增轮询和后端请求。
 
+#### 未启动任务撤销记录
+
+`member-cancellation-state` 从已经核验身份的图节点读取 `TaskNode.cancelledBeforeStart`：仅 cancelled、没有 run/activeRun/result/help/待依赖，且 scope、撤销前版本及记录时间与当前冻结节点匹配时显示“已撤销（未启动）”。主对话成员卡、任务节点及详情共享这一投影；普通取消、周期关闭、空运行列表或模型文字不能补造未启动事实，无可信记录仍只显示“已停止”。
+
+`MemberCancellationNotice` 在成员卡与详情中独立于执行日志呈现实际原因和后端时间；撤销不产生假的执行轮次，仍保留原目标、模块和节点。图节点保持真实 cancelled 状态与已有连线，只压缩摘要间距容纳原因和时间，不改变节点尺寸或拓扑。完整原因可在任务详情读取。记录说明原安排被撤销而不是目标完成，也不说明整个周期已关闭、成员实例已释放或后续已补做。
+
+所有内容随既有图增量刷新，没有新增用户撤销、恢复、验收按钮、轮询或后端调用。无日志的详情仍可以按原入口只读核实登记事实，不能从没有登记轮次推出没有发生过操作。撤销 notice 的组件 key 与求助、报告、正文互相独立，避免状态提示插入时串用实时视图。
+
 #### 异常执行记录核实
 
 主会话标题、图根与根详情中的数量统一表示“已读 X 轮记录”，单独附加后端报告的“Y 轮待核实”。缺失或坏日志不会生成假的运行摘要，也不能把零条可读摘要解释为零次实际执行；逐条序号仅标为已读记录顺序，不冒充完整历史运行序号。
@@ -136,6 +144,8 @@ class MemberTaskDetail { <<component>> }
 class MemberActivity { <<component>> }
 class MemberHelpNotice { <<component>> }
 class MemberHelpState { <<module>> }
+class MemberCancellationNotice { <<component>> }
+class MemberCancellationState { <<module>> }
 class MemberExecutionReport { <<component>> }
 class ExecutionReportController { <<module>> }
 class ScopeGoalPanel { <<component>> }
@@ -153,6 +163,10 @@ MemberTaskDetail --> MemberHelpNotice : 所选轮次的已结算求助
 MemberActivity --> MemberHelpNotice : 主对话只读交接摘要
 MemberHelpNotice --> MemberHelpState : 节点与运行绑定核对
 DispatchGraph --> MemberHelpState : 已交接状态与原因
+MemberTaskDetail --> MemberCancellationNotice : 无运行的撤销记录
+MemberActivity --> MemberCancellationNotice : 主对话只读撤销摘要
+MemberCancellationNotice --> MemberCancellationState : 冻结节点与记录核对
+DispatchGraph --> MemberCancellationState : 已撤销状态原因与时间
 MemberTaskDetail --> MemberExecutionReport : 所选轮次只读核实
 MemberExecutionReport --> ExecutionReportController : 显式读取与同基线分页
 SessionTaskView --> ScopeGoalPanel : 复用选中目标详情

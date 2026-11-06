@@ -1,6 +1,6 @@
 /**
  * 作用定位：把已提交的图事件原子转换为内存投影，并按游标输出增量读取结果。
- * 设计原因：节点、边和成员状态必须一起可见；无变化保留引用，已经交接的求助原样保留，避免后续增量改写历史事实。
+ * 设计原因：节点、边和成员状态必须一起可见；无变化保留引用，已经交接的求助和未启动撤销原样保留，防止增量改写历史。
  * 职责边界：不落盘、不分配事件序号、不启动任务；调用方必须先可靠提交再发布结果。
  */
 import {fail} from '../foundation/errors';
@@ -22,6 +22,7 @@ function nextRevision(previous:{revision:number}|undefined,next:{revision:number
   if(next.revision!==(previous?previous.revision+1:1))fail('GRAPH_REVISION_CONFLICT','图对象版本必须从 1 开始并连续递增');
 }
 function taskRevision(previous:TaskNode,next:TaskNode){
+  if(previous.cancelledBeforeStart)fail('GRAPH_INPUT_INVALID','已撤销的未启动任务已封存，不能再次改写或执行');
   if(previous.scopeId!==next.scopeId||previous.parentTaskId!==next.parentTaskId||stable(previous.requester)!==stable(next.requester)||previous.createdAt!==next.createdAt)fail('GRAPH_INPUT_INVALID','任务调度周期、派发父关系、请求人和创建时间不能改写');
   const plan=(t:TaskNode)=>({goal:t.goal,acceptance:t.acceptance,modules:t.modules,assignee:t.assignee});
   const changed=stable(plan(previous))!==stable(plan(next));
@@ -63,7 +64,7 @@ export function applyGraphBatch(previous:GraphSnapshot|undefined,event:GraphEven
       case 'task.upserted':{
         const old=tasks.get(change.task.taskId);nextRevision(old,change.task);
         if(old)taskRevision(old,change.task);
-        else if(change.task.planRevision!==1||!['planned','queued','waiting'].includes(change.task.status)||change.task.runIds.length||change.task.result||change.task.help)fail('GRAPH_INPUT_INVALID','新任务必须从尚未执行的计划版本 1 创建');
+        else if(change.task.planRevision!==1||!['planned','queued','waiting'].includes(change.task.status)||change.task.runIds.length||change.task.result||change.task.help||change.task.cancelledBeforeStart)fail('GRAPH_INPUT_INVALID','新任务必须从尚未执行的计划版本 1 创建');
         tasks.set(change.task.taskId,structuredClone(change.task));break;
       }
       case 'edge.upserted':{

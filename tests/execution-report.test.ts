@@ -13,6 +13,11 @@ import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
 import type {DispatchStore,DispatchState} from '../src/backend/core/tasks/dispatch-storage';
 import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
 import type {TaskNode,GraphSnapshot} from '../src/backend/core/tasks/graph-types';
+import {fixture,request} from './helpers';
+import {seedTeam} from './team-fixture';
+import {json} from '../src/backend/core/foundation/serialization';
+import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
+import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
 
 async function setup(){
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-report-')),identity={workspaceId:'workspace-1',rootSessionId:'root-1'},taskId='task-1',runId='run-1';
@@ -79,6 +84,42 @@ it('未选轮次只核实持久领取；不存在日志不能说明未启动，�
     await expect(f.manager.report({...f.input,rootSessionId:'other'})).rejects.toMatchObject({code:'TASK_NOT_FOUND'});
     await expect(f.manager.report({...f.input,workspaceId:'other'})).rejects.toMatchObject({code:'GRAPH_IDENTITY_MISMATCH'});
     expect(executionReportInputSchema.safeParse({...f.input,run:'any'}).success).toBe(false);
+  }finally{await f.cleanup()}
+});
+
+it('真实撤销服务产生的never-run任务可报告not_started，读取不创建日志、模型或修改记录',async()=>{
+  const f=await fixture();let service:WorkspaceDispatchService|undefined;try{
+    const entry=await f.app.dispatch('add',{path:f.a}),owner=f.app.workspace(entry.id),team=await seedTeam(owner),snapshot=await owner.snapshot(),moduleId=team.input.moduleId;
+    const definition=JSON.parse(snapshot.files.find(item=>item.path===moduleId+'/module.json')!.text);definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
+    await owner.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:json(definition)}]));
+    const directory=path.join(f.temp,'cancelled-report'),store=new FileDispatchStore(directory,entry.id),identity={workspaceId:entry.id,rootSessionId:'report-root'};service=new WorkspaceDispatchService(owner,store);
+    await service.openScope(identity,'cycle',{message:'完成目标'});await service.goals.plan(identity,'cycle','main-run','plan',{expectedRevision:1,objective:'完成目标',constraints:[],criteria:[{id:'c1',text:'真实产物',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],criterionIds:['c1'],reason:'负责业务模块'}],reason:'按图派发'});
+    const assigned=await service.dispatchTask({...identity,commandId:'assign',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],goal:'实现模块',acceptance:[{id:'c1',text:'真实产物'}],prerequisites:[]}},'cycle'),graph=await service.snapshot(identity);
+    await service.cancelQueued(identity,'cycle','main-run','cancel',{expectedGraphCursor:{streamId:graph.cursor.streamId,seq:graph.cursor.seq},targets:[{taskId:assigned.taskId,expectedRevision:1}],reason:'缺少输入，撤销排队工作'});
+    const inspect=vi.fn(async()=>{throw Error('must not read missing logs')}),prepare=vi.fn(async()=>{throw Error('must not create model')}),acquire=vi.fn(()=>{throw Error('must not acquire lease')}),manager=new MemberExecutionManager(owner,store,{inspect,prepare,acquire});
+    const bytes=await fs.readFile(path.join(directory,'dispatch.jsonl')),state=await store.read();
+    const report=await manager.report({...identity,taskId:assigned.taskId});expect(report).toMatchObject({execution:'not_started',log:{state:'not_expected'},tools:{available:false,total:0},issues:[{code:'TASK_CANCELLED_BEFORE_START'}]});
+    expect(report.issues.some(item=>item.code==='RUN_NOT_SELECTED')).toBe(false);expect(inspect).not.toHaveBeenCalled();expect(prepare).not.toHaveBeenCalled();expect(acquire).not.toHaveBeenCalled();expect(await store.read()).toEqual(state);expect(await fs.readFile(path.join(directory,'dispatch.jsonl'))).toEqual(bytes);
+    await service.closeScope(identity,'cycle','cancelled');expect(await manager.report({...identity,taskId:assigned.taskId})).toMatchObject({execution:'not_started',log:{state:'not_expected'},next:{kind:'new_cycle_only'}});
+  }finally{await service?.close();await f.cleanup()}
+});
+
+it('缺失/损坏撤销记录、错误绑定或运行领取事实仍保持unknown，后屏障变化也不宣称未执行',async()=>{
+  const f=await setup();try{
+    f.task.scopeId='cycle';f.task.status='cancelled';f.task.runIds=[];delete f.task.activeRunId;f.state.runs=[];f.task.waitReason='明确撤销';
+    f.task.cancelledBeforeStart={commandId:'cancel',scopeId:'cycle',mainRunId:'main-run',reason:f.task.waitReason,cancelledAt:f.task.updatedAt,previousRevision:f.task.revision-1,graphCursor:{streamId:f.graph.cursor.streamId,seq:f.graph.cursor.seq-1}};
+    f.state.scopes=[{...f.identity,scopeId:'cycle',status:'active',createdAt:f.task.createdAt}];f.state.outbox=[{kind:'assignment',messageId:'assignment',commandId:'assign',identity:f.identity,from:f.task.requester,to:f.task.assignee,taskId:f.task.taskId,planRevision:f.task.planRevision,createdAt:f.task.createdAt,delivery:'processed'}];
+    const input={...f.identity,taskId:f.task.taskId},good=structuredClone(f.state),read=vi.mocked(f.store.read);
+    expect((await f.manager.report(input)).execution).toBe('not_started');
+    const mutations:((state:DispatchState)=>void)[]=[
+      state=>{delete state.graphs[0].tasks[0].cancelledBeforeStart},state=>{state.graphs[0].tasks[0].cancelledBeforeStart!.previousRevision++},state=>{state.graphs[0].tasks[0].cancelledBeforeStart!.scopeId='foreign'},
+      state=>{state.graphs[0].tasks[0].cancelledBeforeStart!.cancelledAt='invalid'},state=>{state.graphs[0].tasks[0].cancelledBeforeStart!.reason='different'},state=>{state.graphs[0].tasks[0].cancelledBeforeStart!.graphCursor.streamId='other'},
+      state=>{state.outbox[0].claim={runId:'run',leaseEpoch:1}},state=>{state.outbox[0].delivery='pending'},state=>{state.outbox[0].to={...state.outbox[0].to,agentSessionId:'foreign'}},state=>{state.outbox=[]},state=>{state.runs=[f.run]},state=>{state.scopes=[]},
+      state=>{state.graphs[0].tasks[0].runIds=['old-run']},state=>{state.graphs[0].tasks[0].activeRunId='old-run'},state=>{state.graphs[0].tasks[0].awaitedChildren=[{taskId:'child',planRevision:1}]},state=>{state.graphs[0].tasks[0].help={} as NonNullable<TaskNode['help']>},state=>{state.graphs[0].tasks[0].result={} as NonNullable<TaskNode['result']>},
+    ];
+    for(const mutate of mutations){const state=structuredClone(good);mutate(state);read.mockImplementation(async()=>structuredClone(state));expect(await f.manager.report(input)).toMatchObject({execution:'unknown',log:{state:'not_selected'}})}
+    const changed=structuredClone(good);changed.outbox[0].claim={runId:'new-claim',leaseEpoch:2};read.mockResolvedValueOnce(good).mockResolvedValueOnce(changed);
+    expect(await f.manager.report(input)).toMatchObject({execution:'unknown',consistency:'changed_during_read'});expect(f.inspect).not.toHaveBeenCalled();expect(f.prepare).not.toHaveBeenCalled();expect(f.acquire).not.toHaveBeenCalled();expect(f.store.transact).not.toHaveBeenCalled();
   }finally{await f.cleanup()}
 });
 

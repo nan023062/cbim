@@ -1,6 +1,6 @@
 /**
  * 作用定位：管理一次用户任务的调度周期，串接主 Agent 调度、执行成员和结果回传，周期结束后释放执行实例。
- * 设计原因：周期冻结真实用户输入；成员安全结算的交付/求助经同一可靠回传入口送达，但求助不算交付或授权。主调度可据此新建任务，原执行轮不恢复；用户队列等周期可靠关闭后再启动。
+ * 设计原因：周期冻结真实输入；成员交付/求助经可靠回传送达，主调度可新派工或明确撤销未启动依赖。撤销保留周期历史，不加入执行批次，也不替代完成证据；用户队列等周期可靠关闭后再启动。
  * 职责边界：主 Agent 只调度和治理知识；补充沿原周期，新核实与正式业务重规划经各自可靠意图开启新周期。只读核实不能提权；新业务权限来自明确请求。停止等待提交收束，退出/重启不重放，用户观察或权限都不是人工验收。
  */
 import {hash,json} from '../../core/foundation/serialization';
@@ -191,7 +191,14 @@ export class AutoCollaboration {
       plan:(input,call)=>{this.assertLive(batch,call.signal);cycle.workRequested=true;return this.track(cycle,this.dispatch.goals.plan(this.identity(batch),cycle.scopeId,runId,'auto-goal-plan-'+hash(runId+':'+call.toolCallId),input))},
       review:(input,call)=>{this.assertLive(batch,call.signal);cycle.workRequested=true;return this.track(cycle,this.dispatch.goals.review(this.identity(batch),cycle.scopeId,runId,'auto-goal-review-'+hash(runId+':'+call.toolCallId),input))},
     });
-    return new DispatchTools({dispatch:(input,call)=>this.track(cycle,this.assign(batch,input,call.toolCallId,call.signal)),inspect:async taskId=>{
+    return new DispatchTools({dispatch:(input,call)=>this.track(cycle,this.assign(batch,input,call.toolCallId,call.signal)),cancel:(input,call)=>{
+      this.assertLive(batch,call.signal);cycle.workRequested=true;
+      // 仅撤销列出的未启动待办。成功后从本轮待执行批次移除，避免派发后同轮撤销又制造无意义的模型回注；周期历史仍完整保留。
+      const commandId='auto-cancel-'+hash(json({identity:this.identity(batch),runId:batch.runId,toolCallId:call.toolCallId}));
+      return this.track(cycle,this.dispatch.cancelQueued(this.identity(batch),cycle.scopeId,batch.runId,commandId,input).then(receipt=>{
+        const cancelled=new Set(receipt.cancelledTaskIds);batch.tasks=batch.tasks.filter(id=>!cancelled.has(id));return receipt;
+      }));
+    },inspect:async taskId=>{
       const graph=await this.dispatch.snapshot(this.identity(batch));
       if(!taskId)return graph;
       const task=graph.tasks.find(t=>t.taskId===taskId);if(!task)fail('TASK_NOT_FOUND','任务不属于当前主会话');return task;
@@ -219,7 +226,7 @@ export class AutoCollaboration {
     if(!summary){const cycle=this.cycles.get(task.taskId);if(cycle)cycle.ending='interrupted';this.reportIssue(task.taskId,Error('主轮没有可核实的终态'));this.schedule();return}
     const batch=this.batches.get(summary.runId);if(!batch)return;
     // Schema/权限拒绝可能发生在端口调用前；以可信回执补记工作意图，直接知识写也不能绕过目标审阅。
-    if(summary.toolReceipts?.some(receipt=>receipt.effects.includes('knowledge-write')||['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task'].includes(receipt.toolName)))batch.cycle.workRequested=true;
+    if(summary.toolReceipts?.some(receipt=>receipt.effects.includes('knowledge-write')||['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task','cbim_dispatch_cancel'].includes(receipt.toolName)))batch.cycle.workRequested=true;
     batch.settled=summary;
     if(summary.status!=='completed'||summary.unresolvedTools.length||!batch.tasks.length){batch.stopped=true;this.batches.delete(batch.runId);batch.cycle.completionSummary=summary;batch.cycle.ending=summary.status==='completed'&&!summary.unresolvedTools.length?'completed':summary.status==='failed'?'failed':summary.status==='cancelled'?'cancelled':'interrupted'}
     this.schedule();

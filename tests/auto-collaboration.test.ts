@@ -24,6 +24,10 @@ async function setup(){
     closeScope:vi.fn(async(_identity:any,scopeId:string,outcome:string,_summary?:RunSummary)=>{if(graph.tasks.some(task=>task.activeRunId))throw Error('scope still active');return {...identity,scopeId,status:'closed',outcome}}),
     openGraph:vi.fn(async()=>({agent:graph.root.agent,cursor:graph.cursor})),
     snapshot:vi.fn(async()=>structuredClone(graph)),
+    cancelQueued:vi.fn(async(_identity:any,scopeId:string,runId:string,commandId:string,input:any)=>{
+      for(const target of input.targets)Object.assign(graph.tasks.find(node=>node.taskId===target.taskId)!,{status:'cancelled',waitReason:input.reason});
+      return {...identity,scopeId,mainRunId:runId,commandId,cancelledTaskIds:input.targets.map((target:any)=>target.taskId),graphCursor:{streamId:graph.cursor.streamId,seq:++graph.cursor.seq}};
+    }),
     dispatchTask:vi.fn(async(input:any,scopeId?:string)=>{
       const node:TaskNode={kind:'task',scopeId,taskId:'assigned-1',nodeId:'task:assigned-1',identity,requester:graph.root.agent,assignee:agent,modules:[],goal:input.task.goal,acceptance:input.task.acceptance,revision:1,planRevision:1,status:'queued',awaitedChildren:[],runIds:[],createdAt:'2026-11-06',updatedAt:'2026-11-06'};
       graph.tasks.push(node);return {commandId:input.commandId,taskId:node.taskId,messageId:'assignment',cursor:graph.cursor,disposition:'queued' as const};
@@ -158,7 +162,7 @@ it('成功关闭门禁失败时保存阻塞原因并关闭失败周期，不能�
   }finally{await f.coordinator.close()}
 });
 
-it.each(['cbim_object_commit','cbim_goal_plan','cbim_goal_review'])('未建计划的%s调用不能绕过为普通聊天成功',async toolName=>{
+it.each(['cbim_object_commit','cbim_goal_plan','cbim_goal_review','cbim_dispatch_cancel'])('未建计划的%s调用不能绕过为普通聊天成功',async toolName=>{
   const f=await setup();try{
     f.dispatch.goals.inspect.mockResolvedValue({goal:{}} as any);
     f.hooks().settled(f.task,f.options,{task:f.task,runId:'parent-run',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[],toolReceipts:[{toolName,effects:toolName==='cbim_object_commit'?['knowledge-write']:['maintenance']} as any]});
@@ -166,6 +170,32 @@ it.each(['cbim_object_commit','cbim_goal_plan','cbim_goal_review'])('未建计�
     expect(f.dispatch.goals.block).toHaveBeenCalled();
     expect(f.dispatch.closeScope).toHaveBeenLastCalledWith(f.graph.identity,expect.any(String),'failed');
     expect(f.execution.collaborationReady).not.toHaveBeenCalled();
+  }finally{await f.coordinator.close()}
+});
+
+it('同轮派发后撤销不启动成员或额外回注主模型，周期仍保留任务历史并按本轮审阅等待',async()=>{
+  const f=await setup();try{
+    await f.assign();f.dispatch.goals.inspect.mockResolvedValue({goal:{plan:{},review:{decision:'awaiting_user'}}} as any);
+    const input={expectedGraphCursor:{streamId:'stream',seq:1},targets:[{taskId:'assigned-1',expectedRevision:1}],reason:'缺少必要输入，撤销未启动任务'};
+    const result=await f.tools.call('cbim_dispatch_cancel',input,new AbortController().signal,'cancel-native-one');
+    expect(f.dispatch.cancelQueued).toHaveBeenCalledWith(f.graph.identity,f.dispatch.openScope.mock.calls[0][1],'parent-run',expect.stringMatching(/^auto-cancel-/),input);
+    expect(JSON.parse(result.content[0].text).cancelledTaskIds).toEqual(['assigned-1']);
+    f.settleParent();await vi.waitFor(()=>expect(f.dispatch.parkScope).toHaveBeenCalledTimes(1));
+    expect(f.graph.tasks).toHaveLength(1);expect(f.graph.tasks[0].status).toBe('cancelled');
+    expect(f.members.start).not.toHaveBeenCalled();expect(f.execution.continueFromResults).not.toHaveBeenCalled();
+    expect(f.dispatch.parkScope.mock.calls[0][2].runId).toBe('parent-run');expect(f.hooks().waiting?.(f.task.taskId)).toBe(true);
+  }finally{await f.coordinator.close()}
+});
+
+it('撤销失败不从待执行批次移除任务，停止后的主工具不能再进入撤销服务',async()=>{
+  const f=await setup();try{
+    await f.assign();f.dispatch.cancelQueued.mockRejectedValueOnce(Object.assign(Error('遗漏依赖后继'),{code:'CANCEL_DEPENDENTS_REQUIRED'}));
+    const input={expectedGraphCursor:{streamId:'stream',seq:1},targets:[{taskId:'assigned-1',expectedRevision:1}],reason:'等待补充'};
+    await expect(f.tools.call('cbim_dispatch_cancel',input,new AbortController().signal,'cancel-native-one')).rejects.toThrow('遗漏');
+    f.settleParent();await vi.waitFor(()=>expect(f.graph.tasks[0].status).toBe('running'));
+    await f.hooks().stop(f.task.taskId);
+    await expect(f.tools.call('cbim_dispatch_cancel',input,new AbortController().signal,'late-cancel')).rejects.toMatchObject({code:'COLLABORATION_STOPPED'});
+    expect(f.dispatch.cancelQueued).toHaveBeenCalledTimes(1);
   }finally{await f.coordinator.close()}
 });
 

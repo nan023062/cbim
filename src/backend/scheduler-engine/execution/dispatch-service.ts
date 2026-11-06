@@ -1,7 +1,7 @@
 /**
  * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
  * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；周期冻结真实输入并支持安全等待。异常历史只经独立 recovery 意图开新只读周期，初始化不自动续跑，幂等旧回执不能重开已关闭周期。
- * 职责边界：本模块负责可靠入队，由独立 MemberExecutionManager 消费执行；新增派发不能覆盖已有活动占用，排队不等于任务完成。
+ * 职责边界：本模块负责可靠入队与主调度显式撤销未启动集合，由独立 MemberExecutionManager 执行；撤销不停止活动运行，也不代表目标完成。
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
@@ -19,6 +19,8 @@ import {ScopeGoalService,type ScopeGoalPorts} from './scope-goal-service';
 import {ScopeContinuationService} from './scope-continuation-service';
 import {ScopeRecoveryService} from './scope-recovery-service';
 import {ScopeReplanService} from './scope-replan-service';
+import {QueuedTaskCancelService} from './queued-task-cancel-service';
+import type {CancelQueuedTasksInput,CancelQueuedTasksReceipt} from '../../core/tasks/queued-task-cancel';
 import {openGraphInput,createMemberInput,dispatchTaskInput,graphIdentityInput} from '../../core/tasks/dispatch-commands';
 import type {OpenGraphReceipt,CreateMemberReceipt,DispatchReceipt} from '../../core/tasks/dispatch-commands';
 import type {GraphIdentity,GraphCursor,GraphSnapshot,GraphChange,GraphEventBatch,AgentGraphView,GraphEdge,TaskNode} from '../../core/tasks/graph-types';
@@ -40,12 +42,17 @@ export class WorkspaceDispatchService {
   readonly recoveries:ScopeRecoveryService;
   /** 独立业务新周期；来源必须是完整完成的只读核实，不放宽 recoveries 的只读边界。 */
   readonly replans:ScopeReplanService;
+  private readonly queuedCancellation:QueuedTaskCancelService;
   constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts){
     this.goals=new ScopeGoalService(owner,store,goalPorts);
     this.continuations=new ScopeContinuationService(owner,store);
     this.recoveries=new ScopeRecoveryService(owner,store,goalPorts);
     this.replans=new ScopeReplanService(owner,store,this.goals,goalPorts);
+    this.queuedCancellation=new QueuedTaskCancelService(owner,store);
   }
+
+  /** 主调度显式撤销未领取的完整依赖集合；不停止活动运行、不把撤销当作完成。 */
+  cancelQueued(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,input:CancelQueuedTasksInput):Promise<CancelQueuedTasksReceipt>{this.check(identity.workspaceId);return this.queuedCancellation.cancel(identity,scopeId,runId,commandId,input)}
 
   /** 工作区启动时恢复事务存储，触发存储观察者的基线；不创建成员、不消费任务。 */
   async initialize(){this.check(this.owner.entry.id);await this.store.read()}

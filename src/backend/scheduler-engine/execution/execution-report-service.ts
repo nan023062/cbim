@@ -1,6 +1,6 @@
 /**
  * 作用定位：以持久派发状态和指定成员运行日志生成异常核实报告。
- * 设计原因：观察流程独立于执行恢复，不创建模型、不确认信封、不改写记录；前后读取屏障和分页基线避免把不同时间的证据拼成一次完成结论。
+ * 设计原因：观察流程独立于执行恢复；只有可信撤销记录及无领取事实共同成立才报告未启动，普通 cancelled 不表示没有副作用。前后屏障防止拼接不同时间的证据。
  */
 import {fail} from '../../core/foundation/errors';
 import {hash,json} from '../../core/foundation/serialization';
@@ -10,6 +10,7 @@ import type {DispatchRun} from '../../core/tasks/dispatch-execution';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {RunSummary} from '../../core/brain/types';
 import {executionToolFacts} from './execution-report-facts';
+import {queuedTaskCancellationSchema} from '../../core/tasks/queued-task-cancel';
 
 const active=(run?:DispatchRun)=>run?.status==='starting'||run?.status==='running';
 const emptyTools=():ExecutionReport['tools']=>({available:false,total:0,counts:{succeeded:0,failed:0,denied:0,unknown:0,not_authorized:0},items:[],paginationReset:false});
@@ -29,10 +30,10 @@ export class ExecutionReportService {
     let summary:RunSummary|undefined,logToken:unknown;
     if(!input.runId){
       // 没有 run 意图也必须没有领取/执行事实，才可说当前任务尚未启动。
-      const claimed=before.outbox.some(m=>m.taskId===task.taskId&&m.identity.rootSessionId===input.rootSessionId&&!!m.claim);
-      const registered=(before.runs??[]).some(r=>r.binding.taskId===task.taskId&&r.binding.rootSessionId===input.rootSessionId);
-      if(!task.runIds.length&&!task.activeRunId&&!registered&&!claimed&&!task.result&&['planned','queued','waiting'].includes(task.status)){
-        result.execution='not_started';result.log.state='not_expected';issue('TASK_NOT_STARTED','info','当前任务没有已提交的运行或领取记录；这不表示工作区从未被其它任务修改。');
+      const claimed=facts.assignments.some(message=>!!message.claim),registered=facts.registeredRuns.length>0;
+      const cancelled=this.cancelledWithoutRun(facts);
+      if(!task.runIds.length&&!task.activeRunId&&!registered&&!claimed&&!task.result&&!task.help&&(['planned','queued','waiting'].includes(task.status)||cancelled)){
+        result.execution='not_started';result.log.state='not_expected';issue(cancelled?'TASK_CANCELLED_BEFORE_START':'TASK_NOT_STARTED','info',cancelled?'该任务已在启动前明确撤销，没有登记运行或领取记录；这不表示其它任务没有修改工作区。':'当前任务没有已提交的运行或领取记录；这不表示工作区从未被其它任务修改。');
       }else issue('RUN_NOT_SELECTED','info','请选择需要核实的运行轮次；未选择时不自动读取最新日志。');
     }else if(!task.runIds.includes(input.runId)||!run||!this.bound(run,task,input.workspaceId,input.rootSessionId)){
       result.log.state=run?'identity_mismatch':'missing';issue('DISPATCH_RUN_UNVERIFIED','danger','所选运行没有与当前任务匹配的持久领取记录，启动结果未知。');
@@ -101,9 +102,17 @@ export class ExecutionReportService {
     if(state.workspaceId!==this.owner.entry.id||!graph||!task)fail('TASK_NOT_FOUND','当前主会话没有此派发任务');
     const run=runId?state.runs?.find(r=>r.binding.runId===runId&&r.binding.taskId===taskId&&r.binding.rootSessionId===rootSessionId&&r.binding.workspaceId===this.owner.entry.id):undefined;
     const scope=task.scopeId?state.scopes?.find(s=>s.scopeId===task.scopeId&&s.rootSessionId===rootSessionId&&s.workspaceId===this.owner.entry.id):undefined;
-    return {graph,task,run,scope};
+    // 未选 run 时同样把领取与持久意图纳入读取屏障，不能仅依据 task.runIds 的显示字段判断未启动。
+    const assignments=state.outbox.filter(message=>message.kind==='assignment'&&message.taskId===taskId),registeredRuns=(state.runs??[]).filter(item=>item.binding.taskId===taskId);
+    return {graph,task,run,scope,assignments,registeredRuns};
   }
-  private stamp(value:ReturnType<ExecutionReportService['facts']>){return hash(json({cursor:value.graph.cursor,task:value.task,run:value.run?{binding:value.run.binding,status:value.run.status,startedAt:value.run.startedAt,settledAt:value.run.settledAt,session:value.run.session}:undefined,scope:value.scope?{id:value.scope.scopeId,status:value.scope.status,goalRevision:value.scope.goal?.revision}:undefined}))}
+  /** 只承认明确、结构完整且绑定当前任务的未启动撤销；旧 cancelled 或坏记录保持 unknown。 */
+  private cancelledWithoutRun({task,scope,graph,assignments,registeredRuns}:ReturnType<ExecutionReportService['facts']>):boolean{
+    const parsed=queuedTaskCancellationSchema.safeParse(task.cancelledBeforeStart);if(!parsed.success)return false;const record=parsed.data;
+    const sameAgent=(left:typeof task.requester,right:typeof task.requester)=>left.agentId===right.agentId&&left.agentInstanceId===right.agentInstanceId&&left.agentSessionId===right.agentSessionId;
+    return task.status==='cancelled'&&!!scope&&record.scopeId===task.scopeId&&record.scopeId===scope.scopeId&&record.previousRevision+1===task.revision&&record.cancelledAt===task.updatedAt&&record.reason===task.waitReason&&Date.parse(record.cancelledAt)>=Date.parse(task.createdAt)&&record.graphCursor.streamId===graph.cursor.streamId&&record.graphCursor.seq<graph.cursor.seq&&!task.runIds.length&&!task.activeRunId&&!task.result&&!task.help&&!task.awaitedChildren.length&&!registeredRuns.length&&sameAgent(task.requester,graph.root.agent)&&assignments.length===1&&assignments[0].identity.workspaceId===task.identity.workspaceId&&assignments[0].identity.rootSessionId===task.identity.rootSessionId&&assignments[0].planRevision===task.planRevision&&sameAgent(assignments[0].from,task.requester)&&sameAgent(assignments[0].to,task.assignee)&&assignments[0].delivery==='processed'&&!assignments[0].claim;
+  }
+  private stamp(value:ReturnType<ExecutionReportService['facts']>){return hash(json({cursor:value.graph.cursor,task:value.task,assignments:value.assignments,registeredRuns:value.registeredRuns.map(run=>({binding:run.binding,status:run.status})),run:value.run?{binding:value.run.binding,status:value.run.status,startedAt:value.run.startedAt,settledAt:value.run.settledAt,session:value.run.session}:undefined,scope:value.scope?{id:value.scope.scopeId,status:value.scope.status,goalRevision:value.scope.goal?.revision}:undefined}))}
   private bound(run:DispatchRun,task:ReturnType<ExecutionReportService['facts']>['task'],workspaceId:string,rootSessionId:string){const b=run.binding;return b.workspaceId===workspaceId&&b.rootSessionId===rootSessionId&&b.taskId===task.taskId&&b.agentId===task.assignee.agentId&&b.agentInstanceId===task.assignee.agentInstanceId&&b.agentSessionId===task.assignee.agentSessionId}
   private matches(summary:RunSummary,run:DispatchRun){
     const b=run.binding;

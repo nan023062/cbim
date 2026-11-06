@@ -1,6 +1,6 @@
 /**
  * 作用定位：在主对话中展示最近的成员任务与公开执行动态，并链接到对应任务节点详情。
- * 设计原因：执行成员输出保持独立署名，默认只展开最近一段公开回复；已结算求助与任务节点共用事实投影，不从模型求助文字猜测交接或混为主调度 Agent 的直接执行。
+ * 设计原因：执行成员输出保持独立署名，默认只展开最近一段公开回复；已结算求助和未启动撤销与任务节点共用事实投影，不从模型文字或取消状态猜测是否执行。
  */
 import {useState} from 'react';
 import type {TaskNode} from '../../bridge/contracts/dispatch';
@@ -9,20 +9,23 @@ import {useMemberRun} from './useMemberRun';
 import {MemberRunTranscript} from './MemberRunTranscript';
 import {MemberHelpNotice} from './MemberHelpNotice';
 import {committedMemberHelp} from './member-help-state';
+import {MemberCancellationNotice} from './MemberCancellationNotice';
+import {committedMemberCancellation,memberCancellationLabel} from './member-cancellation-state';
 import './member-activity.css';
 
 export const memberTaskLabels:Record<TaskNode['status'],string>={planned:'待安排',queued:'待执行',running:'正在执行',waiting:'等待前置任务',result_ready:'交付待审阅',blocked:'需要处理',failed:'执行失败',cancelled:'已停止',interrupted:'执行中断'};
-/** 已提交求助独立于普通受阻；已领取 queued 只表示启动中，不把持久化意图当成执行开始。 */
-export function memberTaskLabel(task:TaskNode){return committedMemberHelp(task)?'需要主调度协助':task.status==='queued'&&task.activeRunId?'正在启动':memberTaskLabels[task.status]}
+/** 求助与未启动撤销必须有可信记录；普通 cancelled 仍只表示已停止，已领取 queued 只表示启动中。 */
+export function memberTaskLabel(task:TaskNode){return committedMemberCancellation(task)?memberCancellationLabel:committedMemberHelp(task)?'需要主调度协助':task.status==='queued'&&task.activeRunId?'正在启动':memberTaskLabels[task.status]}
 
 function MemberActivityCard({workspaceId,rootSessionId,task,onSelectTask,active}:{workspaceId:string;rootSessionId:string;task:TaskNode;onSelectTask:(id:string)=>void;active:boolean}){
-  const [expanded,setExpanded]=useState(false),latest=task.runIds.at(-1);
+  const [expanded,setExpanded]=useState(false),latest=task.runIds.at(-1),cancellation=committedMemberCancellation(task);
   const {run,loading,error,refresh}=useMemberRun(workspaceId,rootSessionId,task.taskId,latest,true,active);
   return <article className="member-activity-card" aria-label={'成员任务 · '+task.assignee.name}>
     <header><span className="member-avatar"><Icon name="team" size={17}/></span><div><strong>{task.assignee.name}</strong><span className="member-role-caption">执行 Agent</span></div><span className={'member-state '+task.status}>{task.status==='running'&&<span className="work-spinner"/>}{memberTaskLabel(task)}</span></header>
     <p className="member-task-goal">{task.goal}</p>
     <MemberHelpNotice task={task} runId={latest} compact/>
-    {run?<div className={'member-card-stream'+(expanded?' expanded':'')}><MemberRunTranscript run={run} workspaceId={workspaceId} memberName={task.assignee.name} compact={!expanded} active={active}/></div>:<p className="member-muted">{loading?'正在读取成员动态…':latest?'尚未读取该轮公开执行记录。':task.waitReason||'任务已派发，尚未开始执行。'}</p>}
+    <MemberCancellationNotice task={task} compact/>
+    {run?<div className={'member-card-stream'+(expanded?' expanded':'')}><MemberRunTranscript run={run} workspaceId={workspaceId} memberName={task.assignee.name} compact={!expanded} active={active}/></div>:!cancellation&&<p className="member-muted">{loading?'正在读取成员动态…':latest?'尚未读取该轮公开执行记录。':task.status==='cancelled'?'没有登记的执行轮次，取消状态本身不能证明未执行。':task.waitReason||'任务已派发，尚未开始执行。'}</p>}
     {error&&<p className="member-error" role="alert">{error}<button onClick={()=>void refresh()}>重试读取</button></p>}
     <footer>{run&&<button aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}>{expanded?'收起过程':'展开过程'}</button>}<button onClick={()=>onSelectTask(task.taskId)}>查看任务详情 <Icon name="chevron" size={13}/></button></footer>
   </article>;

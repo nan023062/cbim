@@ -1,0 +1,25 @@
+/**
+ * 作用定位：与输入框一体的紧凑队列，匹配参考图的单行消息、拖柄及悬停圆形操作。
+ * 设计原因：队列和草稿共用边框；长列表内部滚动，触屏和键盘焦点始终能访问操作。
+ */
+.message-queue{font-size:12px;min-width:0;margin-bottom:12px}
+.queue-embedded{margin:-6px -4px 9px;padding:0 0 7px;border-bottom:1px solid var(--line)}
+.queue-list{max-height:168px;overflow-y:auto;scrollbar-width:thin}
+.queue-row{display:flex;align-items:center;gap:6px;min-height:27px;padding:0 8px;border-radius:7px;outline:none}
+.queue-row:hover,.queue-row:focus-within{background:var(--hover)}
+.queue-row:focus-visible{box-shadow:inset 0 0 0 1px var(--muted)}
+.queue-text{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.queue-grip{background:transparent;border:0;padding:0;width:18px;height:24px;color:var(--muted);cursor:grab;font-size:17px;flex-shrink:0}
+.queue-grip:active{cursor:grabbing}.queue-attachment-count{color:var(--muted);font-size:10px}
+.queue-actions{display:flex;gap:4px;opacity:0;flex-shrink:0;transition:opacity .12s}
+.queue-row:hover .queue-actions,.queue-row:focus-within .queue-actions{opacity:1}
+.queue-actions button{display:grid;place-items:center;width:20px;height:20px;padding:3px;border:1px solid var(--line);border-radius:50%;color:var(--muted);background:var(--surface)}
+.queue-actions button:hover{color:var(--text);background:var(--raised)}
+.queue-actions svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+.queue-drop-before{box-shadow:0 -2px 0 var(--muted)}.queue-dragging{opacity:.45}
+/* 末尾落点始终占位，拖动开始不改变底部输入框高度，避免原生拖动被布局位移取消。 */
+.queue-drop-end{height:14px;display:grid;place-items:center;color:var(--muted);font-size:10px}
+.queue-paused{display:flex;align-items:center;gap:8px;color:var(--muted);padding:5px 8px}.queue-paused span{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.queue-paused button{flex-shrink:0;font-size:11px;padding:3px 7px}
+.queue-editor{padding:7px 12px}.chat-input-card .queue-editor textarea,.queue-editor textarea{width:100%;min-height:65px;height:65px;max-height:130px;resize:vertical;padding:6px;border:1px solid var(--line);border-radius:6px;font-size:12px;box-sizing:border-box}.queue-editor>div{display:flex;justify-content:flex-end;align-items:center;gap:7px;margin-top:6px}.queue-editor small{margin-right:auto;color:var(--muted)}.queue-editor button{font-size:11px;padding:3px 8px}
+.composer-next-tip{font-size:11px;color:var(--muted);margin:4px 0 8px}
+@media(hover:none){.queue-actions{opacity:1}}@media(max-width:600px){.queue-actions{opacity:1}.queue-list{max-height:135px}.queue-editor small{display:none}}

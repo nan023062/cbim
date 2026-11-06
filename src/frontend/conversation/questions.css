@@ -1,0 +1,6 @@
+/**
+ * 作用定位：结构化问题卡片的主题、选中态和输入排版。
+ * 设计原因：窄屏纵排，保留原生单选与文本输入的键盘操作，不用视觉样式代替真实提交。
+ */
+.question-card{border:1px solid var(--line);border-radius:14px;padding:16px;margin:16px 0;background:var(--surface);color:var(--text)}
+.question-card fieldset{border:0;padding:0;margin:0 0 14px;min-width:0}.question-card legend{font-weight:600;padding:0;margin-bottom:12px}.question-options{display:grid;gap:8px}.question-option{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer}.question-option.selected{border-color:var(--muted);background:var(--surface-hover,var(--surface))}.question-option input{margin-top:3px}.question-option b{font-weight:500}.question-option small{display:block;color:var(--muted);margin-top:4px}.question-card textarea{box-sizing:border-box;width:100%;min-height:68px;margin-top:8px;resize:vertical;border:1px solid var(--line);border-radius:8px;padding:10px;background:transparent;color:var(--text);font:inherit}.question-card>button{display:block;margin-left:auto}.question-card [role=alert]{color:var(--danger)}

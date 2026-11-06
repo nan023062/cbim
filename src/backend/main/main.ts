@@ -1,0 +1,65 @@
+/**
+ * 作用定位：本机后端的 Electron 装配入口，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。
+ * 设计原因：把 Electron 窗口与 IPC 留在唯一桌面入口，服务层可以脱离窗口验证；模型凭据加密通过系统 safeStorage 注入；手动终端固定工作区目录，退出时释放子进程。
+ */
+import {app,BrowserWindow,ipcMain,dialog,shell} from 'electron';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+import {TerminalSessions} from './platform/terminal';
+import {Application} from './application';
+import {ChatInputs} from './persistence/tasks/chat-inputs';
+import {systemSecretCipher} from './platform/secrets';
+import {Paths} from './platform/paths';
+import {json} from '../core/foundation/serialization';
+import {Client} from '@modelcontextprotocol/sdk/client/index.js';
+import {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js';
+declare const MAIN_WINDOW_VITE_DEV_SERVER_URL:string;
+declare const MAIN_WINDOW_VITE_NAME:string;
+const terminals=new TerminalSessions();
+let application:Application;let quitting=false;let window:BrowserWindow;
+const userRoot=process.env.CBIM_USER_DATA_ROOT;
+if(userRoot){app.setPath('userData',path.join(userRoot,'desktop'));app.setPath('sessionData',path.join(userRoot,'desktop'))}
+else {const root=path.join(app.getPath('home'),'.cbim');app.setPath('userData',path.join(root,'desktop'));app.setPath('sessionData',path.join(root,'desktop'))}
+app.whenReady().then(async()=>{
+  const install=app.isPackaged?process.resourcesPath:app.getAppPath();
+  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install),path.join(install,'design'),{command:process.execPath,args:[path.join(__dirname,'host-bridge.js')]},true,systemSecretCipher);await application.init();
+  window=new BrowserWindow({width:1320,height:860,minWidth:760,minHeight:520,title:'CBIM Assistant',webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  window.webContents.setWindowOpenHandler(()=>({action:'deny'}));window.webContents.on('will-navigate',(event)=>event.preventDefault());
+  // 拖放走独立 IPC；与原生选择器共用快照和 .cbim 边界检查。
+  ipcMain.handle('cbim:drop',async(event,request:{id:string;paths:string[]})=>{
+    if(event.sender!==window.webContents||event.senderFrame!==window.webContents.mainFrame)throw Error('UNAUTHORIZED');
+    try{if(!request||!Array.isArray(request.paths)||!request.paths.length||request.paths.length>12||request.paths.some(p=>typeof p!=='string'))throw Error('无效文件列表');
+      const inputs=new ChatInputs(application.workspace(request.id));const items=[];
+      for(const file of request.paths){const stat=await fs.stat(file);items.push(await inputs.path(stat.isDirectory()?'folder':'file',file))}return {ok:true,value:items};
+    }catch(e:any){return {ok:false,error:{message:e.message}}}
+  });
+  ipcMain.handle('cbim:call',async(event,action:string,args:unknown)=>{if(event.sender!==window.webContents||event.senderFrame!==window.webContents.mainFrame)throw Error('UNAUTHORIZED');
+    if(action.startsWith('terminal.'))try{
+      const request=args as {id:string;tabId:string;command:string};if(!/^[a-zA-Z0-9-]{1,100}$/.test(request.tabId))throw Error('无效终端页签');const key=request.id+':'+request.tabId;if(action==='terminal.close'){terminals.close(key);return {ok:true,value:undefined}}const ws=application.workspace(request.id);ws.assert();
+      const value=action==='terminal.start'?terminals.start(key,ws.entry.path,request.command):action==='terminal.read'?terminals.read(key):action==='terminal.close'?terminals.close(key):(()=>{throw Error('未知终端操作')})();return {ok:true,value};
+    }catch(e:any){return {ok:false,error:{message:e.message}}}
+    if(action==='chat.openLink')try{
+      // 只有用户点击才打开链接；业务产物必须属于当前工作区且不是可执行程序。
+      const request=args as {id:string;target:string};const owner=application.workspace(request.id);
+      if(typeof request.target!=='string')throw Error('无效链接');
+      if(/^https?:\/\//i.test(request.target)){const url=new URL(request.target);if(url.username||url.password)throw Error('不支持包含凭据的链接');await shell.openExternal(url.href)}
+      else{
+        const root=await fs.realpath(owner.entry.path),file=await fs.realpath(path.resolve(root,decodeURIComponent(request.target)));
+        const relative=path.relative(root,file);
+        if(!relative||relative.startsWith('..')||path.isAbsolute(relative)||relative.split(/[\\/]/).some(p=>p.toLowerCase()==='.cbim'))throw Error('只能打开当前工作区的业务产物');
+        if(!/\.(html?|txt|md|pdf|png|jpe?g|gif|webp|svg)$/i.test(file))throw Error('该文件类型暂不支持直接打开');
+        const error=await shell.openPath(file);if(error)throw Error(error);
+      }return {ok:true,value:true};
+    }catch(e:any){return {ok:false,error:{code:'OPEN_LINK',message:e.message}}}
+    if(action==='chat.pick')try{
+      const request=args as {id:string;kind:string};if(!['file','folder'].includes(request.kind))throw Error('未知附件类型');
+      const inputs=new ChatInputs(application.workspace(request.id));const result=await dialog.showOpenDialog(window,{properties:request.kind==='folder'?['openDirectory']:['openFile','multiSelections']});
+      const items=[];if(!result.canceled)for(const file of result.filePaths.slice(0,12))items.push(await inputs.path(request.kind as 'file'|'folder',file));return {ok:true,value:items};
+    }catch(e:any){return {ok:false,error:{code:e.code||'ATTACHMENT',message:e.message}}}
+    try{if(action==='chooseFolder'){const result=await dialog.showOpenDialog(window,{properties:['openDirectory']});return {ok:true,value:result.canceled?null:result.filePaths[0]}}return {ok:true,value:await application.dispatch(action,args)}}catch(e:any){return {ok:false,error:{code:e.code||'ERROR',message:e.message}}}});
+  if(MAIN_WINDOW_VITE_DEV_SERVER_URL)await window.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);else await window.loadFile(path.join(__dirname,`../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+  // Packaged smoke execution is opt-in and requires an isolated data root.
+  if(process.env.CBIM_SMOKE_ROOT&&userRoot){const entry=await application.catalog.add(process.env.CBIM_SMOKE_ROOT);const ws=await application.open(entry.id);const snap=await ws.snapshot();const config=JSON.parse(await fs.readFile(path.join(entry.path,'.mcp.json'),'utf8')).mcpServers['cbim-'+entry.id];const host=new Client({name:'portable-host',version:'1'});let bridge=false;try{await host.connect(new StdioClientTransport({...config,cwd:entry.path,env:{...process.env,...config.env}}));const tools=await host.listTools();const result=await host.callTool({name:'cbim_workspace_identity',arguments:{}});const identity=JSON.parse((result.content as any)[0].text);bridge=tools.tools.some(t=>t.name==='cbim_knowledge_snapshot')&&identity.workspaceId===entry.id&&identity.instanceId===ws.instanceId;if(!bridge)throw Error('Packaged MCP bridge verification failed');const invoke=async(name:string,args:any={})=>{const r=await host.callTool({name,arguments:{...identity,...args}});const v=JSON.parse((r.content as any)[0].text);if(r.isError)throw Error(v.message);return v};for(const tool of ['cbim_skill_knowledge_query','cbim_skill_business_execution','cbim_skill_knowledge_governance','cbim_skill_architecture_governance','cbim_skill_create_agent_skill','cbim_skill_create_workflow','cbim_skill_core_check'])await invoke(tool);ws.writable=true;const plan=await invoke('cbim_object_preview',{revision:snap.revision,operations:[{kind:'agent',action:'create',parentId:'.cbim/team',slug:'smoke_agent',data:{name:'Smoke',summary:'portabletest'.repeat(12),capabilities:['test']},body:'# Principles'}]});await invoke('cbim_object_commit',{planId:plan.planId});const agent=await invoke('cbim_agent_get',{id:plan.objects[0]});if(!agent.principles.available)throw Error('Packaged object CRUD failed');ws.writable=false;const catalogResult=await host.callTool({name:'cbim_builtin_catalog',arguments:identity});if(catalogResult.isError)throw Error('Packaged builtin catalog failed');const catalog=JSON.parse((catalogResult.content as any)[0].text);for(const item of catalog.items){const document=await host.callTool({name:'cbim_builtin_read',arguments:{...identity,id:item.id,expectedVersion:item.version}});if(document.isError||!JSON.parse((document.content as any)[0].text).text)throw Error('Packaged builtin read failed: '+item.id)}}finally{await host.close()}await fs.writeFile(path.join(userRoot,'smoke-result.json'),json({packaged:app.isPackaged,workspaceId:entry.id,files:snap.files.length,bridge,builtins:true,objectCrud:true,mcp:ws.state,structural:snap.validation?.structural}));await application.shutdown();app.quit()}
+}).catch(e=>{dialog.showErrorBox('CBIM Assistant 启动失败',e.message+'\n请检查用户数据目录权限及程序资源。');app.exit(1)});
+app.on('before-quit',event=>{if(!quitting&&application){event.preventDefault();quitting=true;terminals.closeAll();void application.shutdown().then(()=>app.quit()).catch(e=>{quitting=false;dialog.showErrorBox('工作区关闭失败',e.message+'\n请保留运行窗口并重试。')})}});
+app.on('window-all-closed',()=>app.quit());

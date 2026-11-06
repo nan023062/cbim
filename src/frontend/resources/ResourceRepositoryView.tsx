@@ -1,0 +1,30 @@
+/**
+ * 作用定位：三类资源共用的定义列表与编辑器。
+ * 设计原因：资源保存与安装应用分离，编辑使用仓库身份和版本检测并发修改。
+ */
+import {useEffect,useState} from 'react';
+import {resourceKinds,resourceCategories,type ResourceCategory,type ResourceKind,type ResourceDefinition,type ResourceLibrarySnapshot,type RepositoryStatus} from '../../bridge/contracts/resources';
+
+type Draft={id?:string;kind:ResourceKind;name:string;summary:string;content:string;repositoryId:string;revision:string};
+const api=window.cbim;
+export function ResourceRepositoryView({category,onSettings}:{category:ResourceCategory;onSettings:()=>void}){
+  const meta=resourceCategories[category],kinds=(Object.keys(resourceKinds) as ResourceKind[]).filter(k=>resourceKinds[k].category===category);
+  const [status,setStatus]=useState<RepositoryStatus>(),[data,setData]=useState<ResourceLibrarySnapshot>(),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+  const [filter,setFilter]=useState<ResourceKind|'all'>('all'),[query,setQuery]=useState(''),[draft,setDraft]=useState<Draft>(),[dirty,setDirty]=useState(false);
+  async function refresh(){setBusy(true);try{const s:RepositoryStatus=await api.call('resources.status');setStatus(s);if(s.config)setData(await api.call('resources.list'));else setData(undefined);setError(s.error||'')}catch(e:any){setData(undefined);setError(e.message)}finally{setBusy(false)}}
+  useEffect(()=>{void refresh()},[]);
+  function edit(item?:ResourceDefinition,copy=false){if(!data)return;setDirty(false);setDraft({id:copy?undefined:item?.id,kind:item?.kind||kinds[0],name:item?(copy?item.name+' 副本':item.name):'',summary:item?.summary||'',content:item?.content||'',repositoryId:data.repositoryId,revision:data.revision})}
+  async function save(){if(!draft)return;setBusy(true);setError('');try{const {repositoryId,revision,id,...item}=draft;setData(await api.call('resources.save',{repositoryId,revision,...(id?{id}:{}),item}));setDraft(undefined);setDirty(false)}catch(e:any){setError(e.message)}finally{setBusy(false)}}
+  async function remove(item:ResourceDefinition){if(!data||!confirm(`从当前仓库删除「${item.name}」？已存在的工作区知识不会被修改。`))return;setBusy(true);try{setData(await api.call('resources.remove',{repositoryId:data.repositoryId,revision:data.revision,id:item.id}));setError('')}catch(e:any){setError(e.message)}finally{setBusy(false)}}
+  const items=(data?.items||[]).filter(i=>kinds.includes(i.kind)&&(filter==='all'||i.kind===filter)&&`${i.name} ${i.summary}`.toLowerCase().includes(query.toLowerCase()));
+  return <div className="view-page resource-library"><div className="view-heading"><div><p className="overline">CBIM / 团队资源仓库</p><h1>{meta.label}</h1><p>{meta.description}</p></div><button className="solid-button" disabled={!data||busy} onClick={()=>edit()}>新建自定义资源</button></div>
+    <div className="repository-bar"><div><b>{status?.source==='server'?'服务器仓库':status?.config?'本地仓库（未登录）':'本地仓库未配置'}</b><small>{status?.config?.location||'未登录时请在设置中选择本地目录'}</small></div><button disabled={busy} onClick={onSettings}>前往设置</button>{status?.config&&<button disabled={busy} onClick={()=>void refresh()}>刷新资源</button>}</div>
+    {error&&<div className="shell-alert" role="alert">{error}</div>}
+    <p className="inline-note">链接器、人才市场、业务模板共用一个资源仓库。未登录时使用本地目录，登录后统一自动切换到账号服务器仓库。</p>
+    <div className="resource-kind-overview">{kinds.map(k=><button key={k} className={filter===k?'active':''} onClick={()=>setFilter(f=>f===k?'all':k)}><b>{resourceKinds[k].label}</b><small>{resourceKinds[k].description}</small></button>)}</div>
+    <div className="inline-note">仓库保存可复用资源定义。保存不代表安装插件或应用到工作区，执行与一键应用功能尚未接入。</div>
+    {status?.config&&<div className="graph-toolbar"><input aria-label="搜索自定义资源" placeholder="搜索名称或说明…" value={query} onChange={e=>setQuery(e.target.value)}/><span className="subtle-badge">{items.length} 项资源</span></div>}
+    {!status?.config?<div className="view-empty"><h2>{status?.source==='server'?'服务器仓库待接入':'先设置本地仓库'}</h2><p>账号登录尚未接入，当前可使用本地文件夹保存资源。</p></div>:!data?<div className="view-empty"><h2>{busy?'正在加载仓库':'仓库暂不可用'}</h2><p>请检查设置并重新连接。</p></div>:!items.length?<div className="view-empty"><h2>{query?'没有匹配的资源':'仓库中还没有此类资源'}</h2><p>从团队需要的能力开始定制。</p></div>:<div className="definition-grid">{items.map(i=><article className="definition-card" key={i.id}><span className="subtle-badge">{resourceKinds[i.kind].label}</span><h3>{i.name}</h3><p>{i.summary||'暂无说明'}</p><small>仓库定义 · 未应用</small><div className="resource-actions"><button disabled={busy} onClick={()=>edit(i)}>编辑</button><button disabled={busy} onClick={()=>edit(i,true)}>复制定制</button><button disabled={busy} onClick={()=>void remove(i)}>删除</button></div></article>)}</div>}
+    {draft&&<div className="modal-backdrop resource-modal-backdrop"><form role="dialog" aria-modal="true" aria-label="自定义资源编辑器" className="modal resource-editor" onSubmit={e=>{e.preventDefault();void save()}}><header><h2>{draft.id?'编辑自定义资源':'新建自定义资源'}</h2><button type="button" disabled={busy} onClick={()=>{if(!dirty||confirm('放弃尚未保存的资源修改？'))setDraft(undefined)}}>关闭</button></header><label>资源类型<select aria-label="资源类型" value={draft.kind} onChange={e=>{setDraft({...draft,kind:e.target.value as ResourceKind});setDirty(true)}}>{kinds.map(k=><option key={k} value={k}>{resourceKinds[k].label}</option>)}</select></label><label>名称<input autoFocus aria-label="资源名称" required maxLength={100} value={draft.name} onChange={e=>{setDraft({...draft,name:e.target.value});setDirty(true)}}/></label><label>说明<input aria-label="资源说明" maxLength={1000} value={draft.summary} onChange={e=>{setDraft({...draft,summary:e.target.value});setDirty(true)}}/></label><label>定义内容<textarea aria-label="资源定义" required maxLength={200000} spellCheck={false} placeholder="填写 Markdown / JSON 定义，不要保存账号密码或令牌。" value={draft.content} onChange={e=>{setDraft({...draft,content:e.target.value});setDirty(true)}}/></label><p>保存到当前{status?.config?.mode==='local'?'本地仓库':'远端仓库'}，不会改写工作区知识。</p>{error&&<p role="alert" className="error-text">{error}</p>}<button className="solid-button" type="submit" disabled={busy||!draft.name.trim()||!draft.content.trim()}>{busy?'正在保存…':'保存定义'}</button></form></div>}
+  </div>
+}

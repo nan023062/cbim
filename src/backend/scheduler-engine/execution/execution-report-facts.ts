@@ -1,6 +1,6 @@
 /**
  * 作用定位：从已核对身份的成员运行日志提取工具授权与回执事实。
- * 设计原因：工具结束事件、执行终态和业务验收不能互相替代；缺少授权链或回执时保留未知，不从模型正文推断执行成功。
+ * 设计原因：工具结束、运行终态和业务验收不能互相替代；以最小可信运行身份复用于成员报告及主核实证明，缺少授权链时保留未知，不从模型正文推断成功。
  */
 import {executionReportSchema,type ExecutionReport} from '../../core/tasks/execution-report';
 import type {RunSummary} from '../../core/brain/types';
@@ -13,7 +13,7 @@ const effectsSchema=executionReportSchema.shape.tools.shape.items.element.shape.
 const scopeSchema=executionReportSchema.shape.tools.shape.items.element.shape.scope;
 const inputHash=(value:unknown)=>hash(JSON.stringify(value)??'undefined');
 /** 回执必须来自本 run 且与工具授权匹配；不向界面返回任何未白名单校验的对象。 */
-export function executionToolFacts(summary:RunSummary,run:DispatchRun){
+export function executionToolFacts(summary:RunSummary,run:{binding:Pick<DispatchRun['binding'],'workspaceId'|'taskId'|'runId'>}){
   const items=new Map<string,Item>(),invalid=new Set<string>(),gate=new Map<string,'allowed'|'denied'>(),inputs=new Map<string,string>();
   let orphan=false;
   const binding=run.binding;

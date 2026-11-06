@@ -16,6 +16,7 @@ import {dispatchScopeWaitSchema,type DispatchScope} from '../../core/tasks/dispa
 import type {GraphIdentity,GraphSnapshot,TaskNode} from '../../core/tasks/graph-types';
 import {goalPlanInputSchema,goalReviewInputSchema,sameGoalValue,scopeGoalDecisionLimit,goalInputRevision,goalNeedsReplan,type DispatchScopeGoal,type GoalPlanInput,type GoalReviewInput,type ScopeGoalReview} from '../../core/tasks/scope-goal';
 import {resolveConversationAgent,resolveDispatchAgent,resolveDispatchModules} from '../context/dispatch-context';
+import {executionToolFacts} from './execution-report-facts';
 
 /** 端口只按可信已登记身份读取 canonical 日志；不能接受模型提供路径或摘要。 */
 export interface ScopeGoalPorts {
@@ -63,6 +64,11 @@ export class ScopeGoalService {
       check(snapshot.workspaceId===scope.workspaceId,'GOAL_IDENTITY','知识快照不属于目标工作区');
       const criterionIds=draft.criteria.map(item=>item.id);
       check((goal.plan?.criteria??[]).filter(item=>item.kind==='human').every(item=>draft.criteria.some(candidate=>sameGoalValue(item,candidate))),'GOAL_HUMAN_REQUIRED','重新规划不能删除或降低既有人工验收项');
+      if(scope.replan){
+        const proof=scope.replan.source.proof,modules=proof.requiredModules.map(item=>item.moduleId),planned=draft.assignments.flatMap(item=>item.moduleIds);
+        check(proof.inheritedHuman.every(({id,text,kind})=>draft.criteria.some(item=>sameGoalValue(item,{id,text,kind}))),'GOAL_HUMAN_REQUIRED','新业务计划必须保留来源业务的人工验收项');
+        check(planned.every(id=>modules.includes(id))&&modules.every(id=>planned.includes(id)),'GOAL_MODULE_SCOPE','新业务计划必须完整覆盖且不能超出已核实模块');
+      }
       check(new Set(criterionIds).size===criterionIds.length,'GOAL_PLAN_INVALID','验收项 ID 不能重复');
       check(draft.assignments.every(item=>item.criterionIds.every(id=>criterionIds.includes(id)))&&criterionIds.every(id=>draft.assignments.some(item=>item.criterionIds.includes(id))),'GOAL_PLAN_INVALID','每个验收项必须有负责角色，分配不能引用不存在的验收项');
       const assignments=[];
@@ -206,6 +212,56 @@ export class ScopeGoalService {
     const snapshot=await this.owner.read();check(snapshot.revision===review.knowledgeRevision,'GOAL_KNOWLEDGE_CHANGED','完成申请后知识版本已变化');
     await this.evidence(state,scope,graph,{...review,expectedRevision:goal.revision},summary,snapshot.revision);
     check((await this.owner.read()).revision===snapshot.revision,'GOAL_KNOWLEDGE_CHANGED','完成核验期间知识版本已变化');
+  }
+  /**
+   * 为显式业务新周期重新核实已封存的只读核实周期，不假装重开 scope，也不要求关闭释放后的图游标等于旧审阅游标。
+   * 全部主链与成员运行均读取 canonical 记录；旧业务的未知事实不在此更正。返回哈希只是这批记录的版本证明，不是业务产物指纹。
+   */
+  async validateCompletedInspection(state:DispatchState,scope:DispatchScope):Promise<{knowledgeRevision:string;evidenceDigest:string;coveredModuleIds:string[]}>{
+    const logs=this.logs(),graph=this.graph(state,scope),goal=scope.goal,review=goal?.review,recovery=scope.recovery;
+    check(scope.status==='closed'&&scope.outcome==='completed'&&recovery&&goal&&!goal.blocked&&goal.plan&&review?.decision==='complete'&&review.revision===goal.revision&&review.planRevision===goal.plan.revision,'REPLAN_SOURCE_INVALID','只能从已完成并通过目标审阅的只读核实周期创建业务新周期');
+    check(!goalNeedsReplan(goal)&&goalInputRevision(review)===goalInputRevision(goal)&&goal.plan.knowledgeRevision===review.knowledgeRevision,'REPLAN_PROOF_INVALID','核实计划、输入和审阅版本不一致');
+    const knowledge=await this.owner.read();check(knowledge.revision===review.knowledgeRevision,'REPLAN_KNOWLEDGE_CHANGED','核实完成后知识已经变化，需要重新核实');
+    const recorded:Array<{summary:RunSummary;run?:DispatchRun}>=[],mainIds=new Set<string>();
+    const audit=(summary:RunSummary)=>{
+      check(!summary.logIntegrity?.partialTail&&!summary.unresolvedTools.length&&['run.settled','run.interrupted'].includes(summary.events.at(-1)?.type??''),'REPLAN_PROOF_INVALID','核实日志不完整或仍有未决操作');
+      const facts=executionToolFacts(summary,{binding:{workspaceId:scope.workspaceId,taskId:summary.task.taskId,runId:summary.runId}});
+      check(!facts.invalid&&!facts.counts.unknown,'REPLAN_PROOF_INVALID','核实日志有未知或矛盾工具回执');
+      check(!facts.items.some(item=>item.allowedSeq!==undefined&&(item.effects.some(effect=>effects.has(effect))||['write','edit','bash'].includes(item.toolName))),'REPLAN_PROOF_INVALID','只读核实期间存在写入或命令授权，不能作为业务重规划依据');
+    };
+    let runId=review.runId,main:RunSummary|undefined,nativeFile:string|undefined;
+    for(;;){
+      check(!mainIds.has(runId)&&mainIds.size<32&&!recovery.context.excludedRunIds.includes(runId),'REPLAN_PROOF_INVALID','核实主运行链循环、超限或混入旧上下文');mainIds.add(runId);
+      const summary=await logs.inspectMain(scope.rootSessionId,runId);this.main(state,summary,scope,graph,runId);
+      check(summary.status==='completed','REPLAN_PROOF_INVALID','核实主链含未完整完成的运行');audit(summary);recorded.push({summary});if(!main)main=summary;
+      const header=summary.events.find(event=>event.type==='run.started')?.data;
+      check(header&&recovery.options.permission==='read'&&(scope.continuations??[]).every(item=>item.options.permission==='read'),'REPLAN_PROOF_INVALID','核实主运行缺少只读启动事实');
+      const bindings=summary.events.filter(event=>event.type==='session.bound');
+      check(bindings.length>0&&typeof summary.sessionFile==='string'&&!!summary.sessionFile&&bindings.every(event=>event.data.sessionId===recovery.context.nativeSessionId&&event.data.sessionFile===summary.sessionFile)&&(!nativeFile||nativeFile===summary.sessionFile),'REPLAN_PROOF_INVALID','核实主运行的原生会话绑定缺失、变化或属于其它上下文');
+      nativeFile=summary.sessionFile;
+      if(runId===recovery.context.initialRunId){
+        const fresh=header.freshMain as {nativeSessionId?:unknown;excludedRunIds?:unknown}|undefined;
+        check(!header.resumeFrom&&fresh?.nativeSessionId===recovery.context.nativeSessionId&&sameGoalValue(fresh.excludedRunIds,recovery.context.excludedRunIds),'REPLAN_PROOF_INVALID','核实主链没有对应持久化新上下文边界');break;
+      }
+      check(!header.freshMain&&typeof header.resumeFrom==='string'&&!!header.resumeFrom,'REPLAN_PROOF_INVALID','核实主链缺少可信上游运行或意外开启另一上下文');runId=header.resumeFrom;
+    }
+    check(mainIds.has(goal.plan.runId)&&(scope.continuations??[]).every(item=>mainIds.has(item.runId)&&item.wait.mainRunIds.every(id=>mainIds.has(id))),'REPLAN_PROOF_INVALID','核实主链遗漏计划或补充运行');
+    check(lastEffect(main!)===review.lastEffectSeq&&review.observedSeq<=(main!.events.at(-1)?.seq??0),'REPLAN_PROOF_INVALID','主审阅的副作用或日志版本不一致');
+    const tasks=graph.tasks.filter(task=>task.scopeId===scope.scopeId),taskIds=new Set(tasks.map(task=>task.taskId)),runs=(state.runs??[]).filter(run=>taskIds.has(run.binding.taskId));
+    check(!tasks.some(task=>task.activeRunId)&&!state.members.some(member=>member.executionScopeId===scope.scopeId&&(member.lifecycle!=='released'||member.activeRunId||member.activeTaskId||member.waitingTaskIds.length||member.communicatingMessageIds.length)),'REPLAN_BUSY','核实周期仍有活动成员');
+    for(const run of runs){
+      const task=tasks.find(task=>task.taskId===run.binding.taskId)!;
+      check(['completed','failed','cancelled'].includes(run.status)&&run.permission==='read'&&run.binding.workspaceId===scope.workspaceId&&run.binding.rootSessionId===scope.rootSessionId&&run.binding.agentInstanceId===task.assignee.agentInstanceId,'REPLAN_PROOF_INVALID','核实成员运行状态、权限或绑定无效');
+      const summary=await logs.inspectMember(run);
+      check(summary.runId===run.binding.runId&&summary.task.taskId===task.taskId&&summary.task.workspaceId===scope.workspaceId&&summary.task.agentId===task.assignee.agentId&&summary.status===run.status&&sameGoalValue(summary.memberBinding,run.binding),'REPLAN_PROOF_INVALID','核实成员日志身份不一致');audit(summary);recorded.push({summary,run});
+    }
+    check(tasks.every(task=>task.runIds.every(id=>runs.some(run=>run.binding.runId===id))),'REPLAN_PROOF_INVALID','核实任务存在未登记的运行记录');
+    await this.evidence(state,scope,graph,{...review,expectedRevision:goal.revision},main!,knowledge.revision);
+    const replaced=new Set(review.superseded.map(item=>item.taskId)),coveredModuleIds=[...new Set(tasks.filter(task=>task.status==='result_ready'&&!replaced.has(task.taskId)).flatMap(task=>task.modules.map(module=>module.moduleId)))].sort();
+    // 读取不持有日志文件锁；再读同一批 canonical 摘要，发现中途变更则拒绝，不把多时点拼成一份证明。
+    for(const item of recorded){const again=item.run?await logs.inspectMember(item.run):await logs.inspectMain(scope.rootSessionId,item.summary.runId);check(sameGoalValue(again,item.summary),'REPLAN_STALE','核实日志读取期间发生变化')}
+    check((await this.owner.read()).revision===knowledge.revision,'REPLAN_KNOWLEDGE_CHANGED','核实证据读取期间知识版本变化');
+    return {knowledgeRevision:knowledge.revision,coveredModuleIds,evidenceDigest:hash(json({goal,tasks,runs,logs:recorded.map(item=>item.summary)}))};
   }
   /**
    * 在 parkScope 的事务内核实无活动执行的等待边界，不重入存储、不启动模型。

@@ -1,22 +1,26 @@
 /**
  * 作用定位：复用展示本轮真实目标、静态角色分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。
- * 设计原因：同一后端周期共享状态文案，普通问答、旧记录、完成申请、持久等待和可靠关闭分别呈现；展开仅查看事实，当前等待的显式补充交给共享控制器，不构成人工验收。
+ * 设计原因：周期状态与模型声明分开呈现；尚未登记计划的正式任务依据 origin 显示规划中，避免误称普通问答。等待补充和核实后的业务新目标各用独立共享控制器，不改旧周期权限或构成人工验收。
  */
 import type {ScopeGoalState} from './scope-state';
 import {Icon} from '../components/Icon';
 import {ScopeContinuationForm} from './ScopeContinuationForm';
 import type {ScopeContinuationView} from './useScopeContinuation';
+import {ScopeReplanForm} from './ScopeReplanForm';
+import type {ScopeReplanView} from './useScopeReplan';
 import './scope-goal.css';
 
 /** compact 仅改变默认展开状态；testId 支持对话与任务详情稳定定位，不影响业务状态。 */
-export interface ScopeGoalPanelProps {state:ScopeGoalState;compact?:boolean;testId?:string;/** 两处卡片共享主会话控制器；缺省为纯只读展示。 */continuation?:ScopeContinuationView}
+export interface ScopeGoalPanelProps {state:ScopeGoalState;compact?:boolean;testId?:string;/** 两处卡片共享主会话控制器；缺省为纯只读展示。 */continuation?:ScopeContinuationView;/** 正式业务新目标独立于只读核实和等待补充。 */replan?:ScopeReplanView}
 const shortId=(value:string)=>value.length>20?value.slice(0,8)+'…'+value.slice(-6):value;
 const reviewLabels={complete:'完成申请',replan:'继续重规划',blocked:'报告阻塞',awaiting_user:'需要用户补充'};
 /** 所有“已满足”都明确是审阅声明；人工项没有真实批准接口时只能显示待确认。 */
-export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel',continuation}:ScopeGoalPanelProps){
+export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel',continuation,replan}:ScopeGoalPanelProps){
   const {scopes,selectedScopeId,historyScopeId,selectedScope:scope,selectedGoalView:view,detailLoading,loading,error}=state;
   const summary=scopes.find(value=>value.scopeId===selectedScopeId),goal=scope?.goal,plan=goal?.plan,review=goal?.review;
   const title=plan?.objective??summary?.objective??summary?.inputPreview??'本轮目标';
+  // origin 来自已受理周期；无计划只是执行进度，不撤销该周期的业务或只读核实身份。
+  const noPlanText=summary?.origin==='business_replan'?(summary.status==='active'?'主 Agent 正在制定业务执行计划。':'本轮业务任务尚未登记执行计划。'):summary?.origin==='inspection'?(summary.status==='active'?'主 Agent 正在制定只读核实计划；核实期间保持只读权限。':'本轮只读核实尚未登记核实计划。'):'本轮没有登记业务目标计划；普通问答无需派发任务。';
   const sorted=[...scopes].reverse();
   return <section className={'scope-goal-panel'+(compact?' compact':'')} data-testid={testId} data-scope-id={selectedScopeId} data-goal-state={view.phase} aria-label="本轮目标与审阅">
     <header><div className={'scope-goal-status '+view.tone} data-testid="scope-goal-status"><Icon name={view.tone==='success'?'check':view.tone==='warning'?'warning':'flow'} size={14}/><strong>{view.label}</strong></div>
@@ -27,6 +31,7 @@ export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel',co
       <p className="scope-goal-title" title={title}>{title}</p>
       {summary.status==='waiting'&&<div className="scope-goal-waiting" data-testid="scope-goal-waiting"><p>{summary.wait?.reason}</p><p className="scope-goal-muted">在本目标卡片补充说明后继续。普通排队消息不会恢复本目标或代替人工验收。</p></div>}
       {continuation&&continuation.scopeId===selectedScopeId&&<ScopeContinuationForm state={continuation}/>}
+      {replan&&replan.inspectionScopeId===selectedScopeId&&<ScopeReplanForm state={replan}/>}
       {summary.blockedReason&&<p role="status" className="scope-goal-blocked" data-testid="scope-goal-blocked">未完成原因：{summary.blockedReason}</p>}
       {summary.status==='closed'&&summary.outcome!=='completed'&&!summary.blockedReason&&<p className="scope-goal-muted">本周期已结束，不能将本轮输出视为目标完成。</p>}
       {!summary.hasGoal?<p className="scope-goal-muted">旧记录没有持久化原始输入或目标计划；这里不根据会话标题推断。</p>:<details className="scope-goal-details" key={selectedScopeId} open={!compact} data-testid="scope-goal-details"><summary>查看目标计划与审阅<span>{summary.goalRevision===undefined?'':` · 第 ${summary.goalRevision} 版`}</span></summary>
@@ -39,7 +44,7 @@ export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel',co
             {plan.constraints.length>0&&<><h5>约束</h5><ul>{plan.constraints.map((item,index)=><li key={index}>{item}</li>)}</ul></>}
             <h5>验收要求</h5><ol className="scope-goal-criteria">{plan.criteria.map(criterion=>{const check=review?.checks.find(item=>item.criterionId===criterion.id);return <li key={criterion.id}><div><strong>{criterion.text}</strong><span className="scope-goal-kind">{criterion.kind==='human'?'人工确认':'证据核验'}</span></div><p className="scope-goal-muted">{criterion.kind==='human'?'尚未取得人工验收决定':check?.outcome==='satisfied'?'主 Agent 报告已满足，有证据引用':check?.outcome==='unmet'?'尚未满足':check?.outcome==='needs_human'?'需要人工判断':'尚未审阅'}</p>{check?.reason&&<p>{check.reason}</p>}</li>})}</ol>
             <h5>责任分配</h5><ul className="scope-goal-assignments">{plan.assignments.map((item,index)=><li key={index}><strong>{item.agentName}</strong><p>{item.moduleNames.length?item.moduleNames.join('、'):'团队 / 业务知识治理'}</p><p className="scope-goal-muted">{item.reason}</p><small>对应验收：{item.criterionIds.map(id=>plan.criteria.find(criterion=>criterion.id===id)?.text??id).join('；')}</small></li>)}</ul>
-          </div>:<p className="scope-goal-muted">本轮没有登记业务目标计划；普通问答无需派发任务。</p>}
+          </div>:<p className="scope-goal-muted">{noPlanText}</p>}
           {review&&<div className="scope-goal-section" data-testid="scope-goal-review"><h4>目标审阅 <small>第 {review.revision} 版 · {reviewLabels[review.decision]}</small></h4><p>{review.reason}</p>{review.decision==='complete'&&<p className="scope-goal-muted">{scope.status==='closed'&&scope.outcome==='completed'?'程序已核验证据与任务终态；目标符合性由主 Agent 审阅，不表示人工验收。':'这是完成申请，仍需等待主运行结束和程序复核。'}</p>}
             {review.gaps.length>0&&<><h5>剩余缺口</h5><ul>{review.gaps.map((gap,index)=><li key={index}>{gap}</li>)}</ul></>}
             {review.checks.some(item=>item.evidence.length>0)&&<details className="scope-goal-evidence"><summary>查看证据引用</summary>{review.checks.map(item=>item.evidence.length>0&&<div key={item.criterionId}><p><strong>{plan?.criteria.find(criterion=>criterion.id===item.criterionId)?.text??item.criterionId}</strong></p>{item.evidence.map((evidence,index)=><p key={index}>{evidence.kind==='main-knowledge'?'主 Agent 知识提交':`成员任务 ${shortId(evidence.taskId)} · 运行 ${shortId(evidence.runId)}`}<br/><span className="scope-goal-muted">工具回执：{evidence.toolCallIds.join('、')}</span></p>)}</div>)}</details>}

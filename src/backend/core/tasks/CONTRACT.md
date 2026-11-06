@@ -312,3 +312,13 @@ DispatchRun --> PreparedDispatchKnowledge : 冻结输入
 DispatchInvariants --> DispatchMutation : 校验联合投影
 DispatchInvariants --> DispatchRun : 校验状态与身份
 ```
+
+### 完成核实后的独立业务新周期
+
+`scope-replan.ts` 定义与 `scope.recovery` 互斥的 `scope.replan`。原业务周期必须保存可信 goal/plan，已完成的只读核实须覆盖其完整模块集合；缺少旧计划的 legacy 来源不能被解释为“没有人工条件”。新意图冻结来源核实周期、联合 basis、证据摘要、原业务人工项、用户新目标及明确 ask/execute 权限，不复制旧工具参数、不更正旧未知回执。
+
+`fresh-context.ts` 提供两类新周期共享的结构边界。初始主 run、原生身份与排除集合来自可信运行时；命令/主运行/原生身份不能跨两类周期或补充历史重复。等待和补充保留 initialRunId 的累计预算，旧 closed 周期不重开。上下文隔离集合必须包含此前已登记意图，即使尚未产生日志。
+
+持久不变量原样保护 replan；首个及每个后续计划都须保留 inheritedHuman 的 id/text/kind，并完整覆盖且不超出 requiredModules。核实完成、用户新目标和明确业务权限均不签发人工验收。公开摘要 `origin:inspection|business_replan` 只标明真实意图来源；完整上下文仍不进入 sessionRead 白名单详情。
+
+来源 inspection 必须是同一 root 最后提交的周期，且已经完成。当前没有产物指纹，任何后续周期（包括普通对话、已取消或新业务周期）都不能被假设未改变业务；换新命令必须重新完成只读核实。同命令旧回执查询/幂等返回不受此准入限制。

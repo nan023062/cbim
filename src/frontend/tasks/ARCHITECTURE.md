@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主会话任务图及独立目标增量；成员节点按需核实执行事实，再明确新建只读核实周期。再次核实须重新确认旧周期关闭、先保存历史并重新读取来源报告；未知提交只查询或同ID重试，保存失败不解锁。旧报告及候选不替代验收。
+主会话任务图及独立目标增量；成员报告可显式开启或再次开启只读核实。已完成核实可预览新业务条件、输入独立目标与权限；来源、图或草稿变化使预览失效。冻结提交只查询或同 ID 重试，核实和业务请求分别持久化。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -25,16 +25,20 @@
 | [MemberRunTranscript.tsx](MemberRunTranscript.tsx) | 以成员身份显示公开消息和工具过程，供主会话成员卡片及任务详情共用。 |
 | [MemberTaskDetail.tsx](MemberTaskDetail.tsx) | 展示任务图选中成员的公开正文、工具、计划与候选；独立报告核实执行事实，独立表单显式创建新的只读核实周期。 |
 | [recovery-state.ts](recovery-state.ts) | 保存用户从异常报告新建只读核实周期的草稿、冻结命令和受理回执。 |
+| [replan-state.ts](replan-state.ts) | 保存从已完成核实周期创建正式业务周期的独立草稿、条件预览和稳定提交命令。 |
 | [scope-goal.css](scope-goal.css) | 对话摘要与任务根详情共用的目标计划卡片、历史选择和证据排版。 |
+| [scope-replan.css](scope-replan.css) | 正式业务重规划表单与条件核验摘要排版，嵌入既有目标卡。 |
 | [scope-state.ts](scope-state.ts) | 主会话目标周期的增量投影和展示状态，供对话摘要与任务根详情共用。 |
 | [ScopeContinuationForm.tsx](ScopeContinuationForm.tsx) | 目标卡片中的显式纯文本补充入口，展示已冻结请求、查询与同命令重试。 |
 | [ScopeGoalPanel.tsx](ScopeGoalPanel.tsx) | 复用展示本轮真实目标、静态角色分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。 |
+| [ScopeReplanForm.tsx](ScopeReplanForm.tsx) | 已完成只读核实周期之后的正式业务新目标表单，复用于对话目标卡和任务根。 |
 | [SessionTaskView.tsx](SessionTaskView.tsx) | 以节点流程图展示当前主会话的派发任务，并在选择根或任务后显示对应执行详情。 |
 | [task-graph.css](task-graph.css) | 主会话派发图、可读任务节点与按需详情的自适应布局。 |
 | [useExecutionRecovery.ts](useExecutionRecovery.ts) | 把所选任务的核实报告、当前会话状态与独立的新周期草稿连接起来。 |
 | [useExecutionReport.ts](useExecutionReport.ts) | 为选中成员任务装配只读核实控制器，将图/周期变化投影为报告过期提示。 |
 | [useMemberRun.ts](useMemberRun.ts) | 按成员运行身份轮询公开流式事件，支持卡片预览与任务详情的增量读取。 |
 | [useScopeContinuation.ts](useScopeContinuation.ts) | 在主会话层装配唯一补充控制器，向对话卡和任务根提供同一份草稿、提交锁及回执状态。 |
+| [useScopeReplan.ts](useScopeReplan.ts) | 在主会话装配独立业务重规划控制器，把同一草稿与核验结果交给对话目标卡和任务根。 |
 | [useSessionGraph.ts](useSessionGraph.ts) | 按主对话 taskId 同步派发图、目标摘要和选中详情，为主对话和任务图提供同一投影与历史选择。 |
 
 ## 架构类图
@@ -591,11 +595,152 @@ N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_t
 
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
 
+### replan-state.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_replan_state_ts["replan-state.ts"] {
+  <<module>>
+  +replanRejected()
+  +checkedReplanPreview()
+  +checkedReplanReceipt()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_replan_state_ts["replan-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_replan_state_ts_ReplanTarget["ReplanTarget"] {
+  <<interface>>
+  +anchor
+  +graphCursor
+  +inspectionGoalRevision
+}
+N_src_frontend_tasks_replan_state_ts ..> N_src_frontend_tasks_replan_state_ts_ReplanTarget : 声明
+class N_src_frontend_tasks_replan_state_ts_external_ReplanPreviewInput["ReplanPreviewInput (外部契约)"] {
+  <<external>>
+}
+N_src_frontend_tasks_replan_state_ts_external_ReplanPreviewInput <|-- N_src_frontend_tasks_replan_state_ts_ReplanTarget
+class N_src_frontend_tasks_replan_state_ts_ReplanAttempt["ReplanAttempt"] {
+  <<interface>>
+  +request
+  +proof
+  +phase
+  +uncertain
+  +receipt
+  +error
+}
+N_src_frontend_tasks_replan_state_ts ..> N_src_frontend_tasks_replan_state_ts_ReplanAttempt : 声明
+class N_src_frontend_tasks_replan_state_ts_ReplanDraft["ReplanDraft"] {
+  <<interface>>
+  +inspectionScopeId
+  +message
+  +permission
+  +attempt
+}
+N_src_frontend_tasks_replan_state_ts ..> N_src_frontend_tasks_replan_state_ts_ReplanDraft : 声明
+class N_src_frontend_tasks_replan_state_ts_ReplanPreviewState["ReplanPreviewState"] {
+  <<interface>>
+  +target
+  +draftKey
+  +loading
+  +result
+  +error
+}
+N_src_frontend_tasks_replan_state_ts ..> N_src_frontend_tasks_replan_state_ts_ReplanPreviewState : 声明
+```
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_replan_state_ts["replan-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_replan_state_ts_ReplanState["ReplanState"] {
+  <<interface>>
+  +records
+  +preview
+  +error
+}
+N_src_frontend_tasks_replan_state_ts ..> N_src_frontend_tasks_replan_state_ts_ReplanState : 声明
+class N_src_frontend_tasks_replan_state_ts_ReplanPorts["ReplanPorts"] {
+  <<interface>>
+  +storage
+  +preview
+  +submit
+  +lookup
+  +uuid
+}
+N_src_frontend_tasks_replan_state_ts ..> N_src_frontend_tasks_replan_state_ts_ReplanPorts : 声明
+class N_src_frontend_tasks_replan_state_ts_ScopeReplanController["ScopeReplanController"] {
+  +workspaceId
+  +rootSessionId
+  +storageKey
+  +snapshot
+  +available
+  +canRelease
+  +subscribe()
+  +record()
+  +isPending()
+  +observeTarget()
+  +edit()
+  +preview()
+  +ready()
+  +submit()
+  +query()
+  +retry()
+}
+N_src_frontend_tasks_replan_state_ts ..> N_src_frontend_tasks_replan_state_ts_ScopeReplanController : 声明
+class N_src_frontend_tasks_replan_state_ts_ScopeReplanPool["ScopeReplanPool"] {
+  +get()
+  -idleLimit
+  -controllers
+}
+N_src_frontend_tasks_replan_state_ts ..> N_src_frontend_tasks_replan_state_ts_ScopeReplanPool : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_replan_state_ts["replan-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_replan_state_ts_ScopeReplanController["ScopeReplanController"] {
+  +restore()
+  -ports
+  -value
+  -unavailable
+  -target
+  -previewGeneration
+  -pending
+  -listeners
+  -emit()
+  -save()
+  -send()
+}
+N_src_frontend_tasks_replan_state_ts ..> N_src_frontend_tasks_replan_state_ts_ScopeReplanController : 声明
+```
+
+直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
+
 ### scope-goal.css
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_scope_goal_css["scope-goal.css"] {
+  <<stylesheet>>
+}
+```
+
+### scope-replan.css
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_scope_replan_css["scope-replan.css"] {
   <<stylesheet>>
 }
 ```
@@ -703,11 +848,24 @@ class N_src_frontend_tasks_ScopeGoalPanel_tsx_ScopeGoalPanelProps["ScopeGoalPane
   +compact
   +testId
   +continuation
+  +replan
 }
 N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_ScopeGoalPanel_tsx_ScopeGoalPanelProps : 声明
 ```
 
-直接依赖：[scope-state.ts](scope-state.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[ScopeContinuationForm.tsx](ScopeContinuationForm.tsx)、[useScopeContinuation.ts](useScopeContinuation.ts)、[scope-goal.css](scope-goal.css)。
+直接依赖：[scope-state.ts](scope-state.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[ScopeContinuationForm.tsx](ScopeContinuationForm.tsx)、[useScopeContinuation.ts](useScopeContinuation.ts)、[ScopeReplanForm.tsx](ScopeReplanForm.tsx)、[useScopeReplan.ts](useScopeReplan.ts)、[scope-goal.css](scope-goal.css)。
+
+### ScopeReplanForm.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_ScopeReplanForm_tsx["ScopeReplanForm.tsx"] {
+  <<component>>
+  +ScopeReplanForm()
+}
+```
+
+直接依赖：[useScopeReplan.ts](useScopeReplan.ts)、[scope-replan.css](scope-replan.css)。
 
 ### SessionTaskView.tsx
 
@@ -760,6 +918,7 @@ class N_src_frontend_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
 class N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTaskViewProps"] {
   <<interface>>
   +continuation
+  +replan
   +recovery
   +active
   +selectedTaskId
@@ -768,7 +927,7 @@ class N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTask
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps : 声明
 ```
 
-直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../conversation/WorkStatus.tsx](../conversation/WorkStatus.tsx)、[../conversation/MessageQueue.tsx](../conversation/MessageQueue.tsx)、[DispatchGraph.tsx](DispatchGraph.tsx)、[MemberTaskDetail.tsx](MemberTaskDetail.tsx)、[ScopeGoalPanel.tsx](ScopeGoalPanel.tsx)、[scope-state.ts](scope-state.ts)、[useScopeContinuation.ts](useScopeContinuation.ts)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[task-graph.css](task-graph.css)。
+直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../conversation/WorkStatus.tsx](../conversation/WorkStatus.tsx)、[../conversation/MessageQueue.tsx](../conversation/MessageQueue.tsx)、[DispatchGraph.tsx](DispatchGraph.tsx)、[MemberTaskDetail.tsx](MemberTaskDetail.tsx)、[ScopeGoalPanel.tsx](ScopeGoalPanel.tsx)、[scope-state.ts](scope-state.ts)、[useScopeContinuation.ts](useScopeContinuation.ts)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[useScopeReplan.ts](useScopeReplan.ts)、[task-graph.css](task-graph.css)。
 
 ### task-graph.css
 
@@ -918,6 +1077,70 @@ N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_useScopeCo
 ```
 
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[scope-state.ts](scope-state.ts)、[continuation-state.ts](continuation-state.ts)。
+
+### useScopeReplan.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
+  <<module>>
+  +replanTarget()
+  +useScopeReplan()
+}
+```
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_useScopeReplan_ts_ReplanModel["ReplanModel"] {
+  <<interface>>
+  +options
+  +label
+}
+N_src_frontend_tasks_useScopeReplan_ts ..> N_src_frontend_tasks_useScopeReplan_ts_ReplanModel : 声明
+class N_src_frontend_tasks_useScopeReplan_ts_ScopeReplanView["ScopeReplanView"] {
+  <<interface>>
+  +visible
+  +inspectionScopeId
+  +record
+  +message
+  +permission
+  +previewState
+  +editable
+  +canPreview
+  +canSubmit
+  +pending
+  +error
+  +reason
+  +modelLabel
+  +edit
+  +preview
+  +submit
+}
+N_src_frontend_tasks_useScopeReplan_ts ..> N_src_frontend_tasks_useScopeReplan_ts_ScopeReplanView : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_useScopeReplan_ts_ScopeReplanView["ScopeReplanView"] {
+  <<interface>>
+  +query
+  +retry
+  +showCreated
+}
+N_src_frontend_tasks_useScopeReplan_ts ..> N_src_frontend_tasks_useScopeReplan_ts_ScopeReplanView : 声明
+```
+
+直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[scope-state.ts](scope-state.ts)、[replan-state.ts](replan-state.ts)。
 
 ### useSessionGraph.ts
 
@@ -1077,7 +1300,33 @@ class N_src_frontend_tasks_ScopeContinuationForm_tsx["ScopeContinuationForm.tsx"
 class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
   <<module>>
 }
+class N_src_frontend_tasks_ScopeReplanForm_tsx["ScopeReplanForm.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
+  <<module>>
+}
+N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_ScopeContinuationForm_tsx : 导入依赖
+N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_useScopeContinuation_ts : 导入依赖
+N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_ScopeReplanForm_tsx : 导入依赖
+N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_useScopeReplan_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_ScopeGoalPanel_tsx["ScopeGoalPanel.tsx"] {
+  <<component>>
+}
 class N_src_frontend_tasks_scope_goal_css["scope-goal.css"] {
+  <<stylesheet>>
+}
+class N_src_frontend_tasks_ScopeReplanForm_tsx["ScopeReplanForm.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_scope_replan_css["scope-replan.css"] {
   <<stylesheet>>
 }
 class N_src_frontend_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
@@ -1086,9 +1335,9 @@ class N_src_frontend_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
 class N_src_frontend_tasks_DispatchGraph_tsx["DispatchGraph.tsx"] {
   <<component>>
 }
-N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_ScopeContinuationForm_tsx : 导入依赖
-N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_useScopeContinuation_ts : 导入依赖
 N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_scope_goal_css : 导入依赖
+N_src_frontend_tasks_ScopeReplanForm_tsx ..> N_src_frontend_tasks_useScopeReplan_ts : 导入依赖
+N_src_frontend_tasks_ScopeReplanForm_tsx ..> N_src_frontend_tasks_scope_replan_css : 导入依赖
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_DispatchGraph_tsx : 导入依赖
 ```
 
@@ -1123,24 +1372,27 @@ class N_src_frontend_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
 class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
   <<module>>
 }
+class N_src_frontend_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
+  <<module>>
+}
 class N_src_frontend_tasks_task_graph_css["task-graph.css"] {
   <<stylesheet>>
 }
 class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
   <<module>>
 }
-class N_src_frontend_tasks_recovery_state_ts["recovery-state.ts"] {
-  <<module>>
-}
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
+N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useScopeReplan_ts : 导入依赖
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_task_graph_css : 导入依赖
 N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
-N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_recovery_state_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_recovery_state_ts["recovery-state.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_execution_report_state_ts["execution-report-state.ts"] {
@@ -1155,16 +1407,10 @@ class N_src_frontend_tasks_useMemberRun_ts["useMemberRun.ts"] {
 class N_src_frontend_tasks_member_event_state_ts["member-event-state.ts"] {
   <<module>>
 }
-class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
-  <<module>>
-}
-class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
-  <<module>>
-}
+N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_recovery_state_ts : 导入依赖
 N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_execution_report_state_ts : 导入依赖
 N_src_frontend_tasks_useExecutionReport_ts ..> N_src_frontend_tasks_execution_report_state_ts : 导入依赖
 N_src_frontend_tasks_useMemberRun_ts ..> N_src_frontend_tasks_member_event_state_ts : 导入依赖
-N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
 ```
 
 ```mermaid
@@ -1172,16 +1418,32 @@ classDiagram
 class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
   <<module>>
 }
+class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
+  <<module>>
+}
 class N_src_frontend_tasks_continuation_state_ts["continuation-state.ts"] {
   <<module>>
 }
+class N_src_frontend_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_replan_state_ts["replan-state.ts"] {
+  <<module>>
+}
+N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
+N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_continuation_state_ts : 导入依赖
+N_src_frontend_tasks_useScopeReplan_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
+N_src_frontend_tasks_useScopeReplan_ts ..> N_src_frontend_tasks_replan_state_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_frontend_tasks_useSessionGraph_ts["useSessionGraph.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_continuation_state_ts : 导入依赖
 N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
 ```
 
@@ -1274,6 +1536,22 @@ N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts 
 
 核实周期在 `ScopeSummary.readOnly` 明示只读约束；`useScopeContinuation` 对真实 openScope 的后续补充继续固定 read，不能借选择历史或修改 composer 权限提权。该标志不暴露原生上下文或旧运行排除清单。
 
+#### 核实后的正式业务重规划
+
+已受理但尚未登记计划的周期按后端 `origin` 显示身份：`business_replan` 显示“正在规划业务任务”，`inspection` 显示“正在规划只读核实”。目标卡和任务根使用同一状态投影及无计划说明；缺计划不代表退回普通问答，也不假造已派发任务。只有 origin 缺省的普通聊天保留轻量问答文案；取消、等待或失败仍以真实周期状态优先，不持续显示规划中。
+
+`ScopeReplanForm` 是目标卡与任务根共享的独立入口。`Conversation` 只装配一次 `useScopeReplan`，两处卡片共享草稿、条件预览和提交锁。新来源只允许本会话最后提交的周期，并且明确 `origin=inspection`、closed/completed、摘要/完整目标计划/审阅版本一致；使用后端摘要保留的首次提交顺序，不按时间或随机 ID 排序。后续周期可能已改变产物，不能回选旧核实证据创建另一业务任务。只读标记、模型文字或旧业务周期不能替代来源身份。当前 root 仍有 active/waiting 时不允许核验/首次提交。历史选择只改变查看对象，不隐藏整个会话的开放状态；已有 accepted/unknown 命令仍可查询或原 ID 重试，不以最新来源条件改造原命令。
+
+用户填写独立“新业务目标”，权限默认为 `ask`，只有明确选择才设为 `execute`，不会自动继承输入区完全访问。模型身份取输入区解析后的实际供应商 profile/provider/model。表单不消费聊天草稿、附件或队列，也不更改旧核实周期 readOnly。执行计划由新周期内的主 Agent 创建并分派成员，不在前端伪造。
+
+“核验新任务条件”显式调用只读 `dispatch.replans.preview`，展示后端确认的必覆盖模块、继承人工条目、依据版本和具体问题；继承人工条目保留来源/ID/正文且不能由表单批准或删除。该预览是日志、来源和知识约束检查，不是已生成的业务执行计划，也不证明业务产物无未知影响。`eligible=false`、缺少依据或错身份均不能提交。
+
+预览只驻留内存，绑定 selected inspectionScopeId、目标摘要 stamp、图游标、实际模型选择和草稿目标/权限。切换来源、编辑草稿或图/模型版本变化会使预览失效，已发读取即使迟到也不能启用另一目标的创建。重开只恢复草稿/冻结命令，不将缓存预览当作新鲜资格。知识变化未必推进图游标，最终受理必须由后端重新核验 expectedBasis；界面不是事务或权限边界。
+
+“创建新业务任务”才生成 UUID，将严格 `ReplanRequest` 和已核验条件先写入独立 `cbim.scope-replan.v1.*` 索引再调用 `loop.replanStart`。索引按 workspace/root 固定，inspectionScopeId 是来源键；不复用只读 recovery 请求、存储键或权限。每 root 最多 128 个来源，读取与写入均限制 2 MiB UTF-8；写入时另为无回执的 submitting/unknown 请求预留冻结请求、预览事实大小及 16 KiB 元信息，避免受理后无处保存回执。超限、损坏或保存失败不覆盖原记录、不发送新命令、不解除已有锁定。
+
+通信未知只允许 `loop.replanReceipt` 查询和原命令原正文重试，undefined 不等于未受理；曾未知后的领域拒绝仍不解冻。首次明确预受理拒绝可修正草稿，重新核验条件；新命令不得与当前索引已有命令重号。受理回执核对 workspace/root/command、来源 basis、目标、权限和已核验的知识/模块/人工约束；新 scope 等于 commandId，新 run 不借来源或审阅运行。后续查询仅更新周期状态，不能改写受理事实或使 closed 回退为开放。accepted 仅表示意图已受理，提供查看新目标和查询状态，不自动重派，也不在本步提供再次创建业务周期的历史操作。
+
 实线派发从父 → 子，依赖线从前置 → 后续；父任务等待子结果以节点状态和关联详情展示，不画结果反向边。任务结果“可交接”与“已验收”分开，v1 只有候选、不绘制虚假的验收通过标记。Agent 状态来自后端事实，前端不凭聊天内容、文本长度或计时推算进度百分比。
 
 #### 增量接口与本地状态
@@ -1317,6 +1595,9 @@ class ScopeGoalPanel { <<component>> }
 class ScopeContinuationForm { <<component>> }
 class ScopeContinuationController { <<module>> }
 class UseScopeContinuation { <<module>> }
+class ScopeReplanForm { <<component>> }
+class ScopeReplanController { <<module>> }
+class UseScopeReplan { <<module>> }
 class SessionReadProjection { <<module>> }
 class GraphContract { <<bridge boundary>> }
 SessionTaskView --> DispatchGraph : 当前会话流程图
@@ -1327,6 +1608,9 @@ SessionTaskView --> ScopeGoalPanel : 复用选中目标详情
 ScopeGoalPanel --> ScopeContinuationForm : 当前等待显式补充
 ScopeContinuationForm --> UseScopeContinuation : 共享视图与操作
 UseScopeContinuation --> ScopeContinuationController : 草稿冻结与回执恢复
+ScopeGoalPanel --> ScopeReplanForm : 核实后独立业务新目标
+ScopeReplanForm --> UseScopeReplan : 共享条件与明确提交
+UseScopeReplan --> ScopeReplanController : 来源隔离与稳定请求
 SessionReadProjection --> GraphContract : 同屏障图与目标增量
 DispatchGraph --> GraphLayout : 稳定拓扑坐标
 GraphLayout --> GraphContract : 真实节点与连线

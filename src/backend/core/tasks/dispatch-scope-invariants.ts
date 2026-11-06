@@ -1,6 +1,6 @@
 /**
  * 作用定位：校验用户任务周期与执行实例、图任务及运行的跨对象生命周期。
- * 设计原因：提交和重放共同保护真实输入、等待检查点及一次性启动意图；核实周期只能引用已关闭来源、冻结 fresh 上下文并保持只读。迟到回调不能改写历史或复活已关闭实例。
+ * 设计原因：提交和重放共同保护输入、等待及启动意图；核实保持只读，独立重规划冻结完成证明、模块范围与人工条件。两类新周期共享 fresh 身份隔离，迟到回调不能改写历史或复活实例。
  * 职责边界：不决定整轮任务是否完成、不停止模型；主调度在结算全部运行后提交关闭，旧无周期历史保持原身份。
  */
 import {z} from 'zod';
@@ -10,9 +10,11 @@ import {dispatchScopeGoalSchema,dispatchScopeWaitSchema} from './dispatch-scope'
 import {validateScopeGoalTransition,goalInputRevision} from './scope-goal';
 import {scopeContinuationSchema,scopeContinuationTotalTextLimit} from './scope-continuation';
 import {scopeRecoverySchema} from './scope-recovery';
+import {scopeReplanSchema} from './scope-replan';
+import {scopeFreshContext} from './fresh-context';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
-const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),wait:dispatchScopeWaitSchema.optional(),continuations:z.array(scopeContinuationSchema).max(31).optional(),recovery:scopeRecoverySchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
+const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),wait:dispatchScopeWaitSchema.optional(),continuations:z.array(scopeContinuationSchema).max(31).optional(),recovery:scopeRecoverySchema.optional(),replan:scopeReplanSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
 function valid(condition:unknown,message:string):asserts condition {if(!condition)fail('GRAPH_INPUT_INVALID',message)}
 function ordered(value:unknown):unknown {return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,ordered(item)])):value}
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
@@ -27,11 +29,45 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
     valid(graph.tasks.filter(task=>task.scopeId===scope.scopeId).length<=500,'调度周期超过原子关闭可容纳的 500 个任务');
     const old=previous.scopes?.find(item=>item.scopeId===scope.scopeId);
     const recovery=scope.recovery;
+    const replan=scope.replan,fresh=scopeFreshContext(scope),intent=recovery??replan;
+    valid(!(recovery&&replan),'只读核实与正式业务重规划意图互斥');
+    if(old)valid(equal(old.replan,replan),'业务重规划意图创建后不可补造、移除或改写');
+    if(intent&&fresh){
+      valid(scope.scopeId===(recovery?.recoveryId??replan?.replanId)&&scope.createdAt===intent.acceptedAt&&scope.goal?.input.message===intent.input.message&&!scope.goal.input.attachmentIds?.length,'新周期意图必须绑定原始目标、身份和时间');
+      valid(!recoveryIds.has(scope.scopeId)&&!recoveryRuns.has(fresh.initialRunId)&&!recoveryNatives.has(fresh.nativeSessionId),'新周期命令、初始运行和原生身份不能重复');
+      recoveryIds.add(scope.scopeId);recoveryRuns.add(fresh.initialRunId);recoveryNatives.add(fresh.nativeSessionId);
+      valid(!next.runs?.some(run=>run.binding.runId===fresh.initialRunId),'新主运行不能借用成员身份');
+      if(scope.wait)valid(scope.wait.mainRunIds.includes(fresh.initialRunId),'等待不能丢失新周期首轮预算');
+      for(const item of scope.continuations??[])valid(item.wait.mainRunIds.includes(fresh.initialRunId),'补充历史不能丢失新周期首轮预算');
+      if(!old){
+        valid(mutation.scopes?.length===1&&!mutation.batch&&!mutation.runs?.length&&!mutation.members?.length&&!mutation.sessions?.length&&!mutation.messages?.length,'新周期意图不能顺带改写其它记录');
+        valid(!previous.runs?.some(run=>run.binding.rootSessionId===scope.rootSessionId&&['starting','running'].includes(run.status)),'不能在成员活动时隔离主上下文');
+        const prior=(previous.scopes??[]).filter(item=>item.rootSessionId===scope.rootSessionId),excluded=prior.flatMap(item=>{const context=scopeFreshContext(item);return [...(item.continuations??[]).map(value=>value.runId),...(context?[context.initialRunId,...context.excludedRunIds]:[])]});
+        valid(excluded.every(runId=>fresh.excludedRunIds.includes(runId)),'新上下文不能重新包含此前隔离的运行或无日志意图');
+      }
+    }
+    if(replan){
+      const inspection=scopes.find(item=>item.scopeId===replan.source.inspectionScopeId),proof=replan.source.proof;
+      valid(inspection?.recovery&&inspection.status==='closed'&&inspection.outcome==='completed'&&inspection.rootSessionId===scope.rootSessionId&&inspection.workspaceId===scope.workspaceId&&scopes.indexOf(inspection)<scopes.indexOf(scope),'业务重规划必须引用此前完成的本会话只读核实');
+      valid(inspection.goal?.review?.decision==='complete'&&inspection.goal.revision===proof.inspectionGoalRevision&&inspection.goal.plan?.revision===proof.inspectionPlanRevision&&inspection.goal.review.runId===proof.reviewRunId&&inspection.goal.review.knowledgeRevision===proof.knowledgeRevision,'业务重规划的核实证明与封存周期不一致');
+      const original=scopes.find(item=>item.scopeId===proof.sourceScopeId),task=graph.tasks.find(item=>item.taskId===proof.sourceTaskId);
+      valid(original?.goal?.plan&&original.status==='closed'&&original.scopeId===inspection.recovery.source.scopeId&&task?.scopeId===original.scopeId&&task.taskId===inspection.recovery.source.taskId&&proof.sourceRunId===inspection.recovery.source.runId,'业务重规划必须继承真实原业务来源，不补造旧计划');
+      const required=[...new Set([...task.modules.map(item=>item.moduleId),...original.goal.plan.assignments.flatMap(item=>item.moduleIds)])].sort();
+      valid(equal(required,[...proof.requiredModules.map(item=>item.moduleId)].sort()),'重规划必须冻结原业务的完整目标模块集合');
+      const superseded=new Set(inspection.goal.review.superseded.map(item=>item.taskId)),covered=graph.tasks.filter(item=>item.scopeId===inspection.scopeId&&item.status==='result_ready'&&item.result&&!superseded.has(item.taskId)).flatMap(item=>item.modules.map(module=>module.moduleId));
+      valid(required.every(module=>covered.includes(module)),'核实周期的成功候选必须覆盖重规划目标模块');
+      const humans=original.goal.plan.criteria.filter(item=>item.kind==='human').map(item=>({...item,sourceScopeId:original.scopeId,sourceGoalRevision:original.goal!.revision}));
+      valid(equal(humans,proof.inheritedHuman),'重规划不能遗漏或改写原业务人工验收条件');
+      if(!old)valid(previous.scopes?.filter(item=>item.rootSessionId===scope.rootSessionId).at(-1)?.scopeId===inspection.scopeId&&previous.scopes.some(item=>item.scopeId===inspection.scopeId&&item.status==='closed'&&item.outcome==='completed'),'核实周期必须是创建新业务意图前最后一个已提交且完成的周期');
+      if(scope.goal?.plan){
+        valid(proof.inheritedHuman.every(({id,text,kind})=>scope.goal!.plan!.criteria.some(item=>equal(item,{id,text,kind}))),'新业务计划必须原样保留人工验收条件');
+        const planned=scope.goal.plan.assignments.flatMap(item=>item.moduleIds);
+        valid(planned.every(module=>required.includes(module))&&required.every(module=>planned.includes(module)),'新业务计划必须完整覆盖且不能超出已核实模块');
+      }
+    }
     if(old)valid(equal(old.recovery,recovery),'核实启动意图创建后不可补造、移除或改写');
     if(recovery){
       valid(scope.scopeId===recovery.recoveryId&&scope.createdAt===recovery.acceptedAt&&scope.goal&&scope.goal.input.message===recovery.input.message&&!scope.goal.input.attachmentIds?.length,'核实意图须与新周期身份、原目标及时间一致');
-      valid(!recoveryIds.has(recovery.recoveryId)&&!recoveryRuns.has(recovery.context.initialRunId)&&!recoveryNatives.has(recovery.context.nativeSessionId),'核实命令、初始运行和原生身份不能重复');
-      recoveryIds.add(recovery.recoveryId);recoveryRuns.add(recovery.context.initialRunId);recoveryNatives.add(recovery.context.nativeSessionId);
       valid(!next.runs?.some(run=>run.binding.runId===recovery.context.initialRunId),'核实主运行不能借用成员执行身份');
       if(scope.wait)valid(scope.wait.mainRunIds.includes(recovery.context.initialRunId),'核实周期等待不能丢失首次主运行预算');
       for(const item of scope.continuations??[])valid(item.wait.mainRunIds.includes(recovery.context.initialRunId),'核实周期补充历史不能丢失首次主运行预算');
@@ -44,7 +80,7 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
         valid(mutation.scopes?.length===1&&!mutation.batch&&!mutation.runs?.length&&!mutation.members?.length&&!mutation.sessions?.length&&!mutation.messages?.length,'核实意图不能顺带修改来源、任务图、成员或执行记录');
         valid(!previous.runs?.some(run=>run.binding.rootSessionId===scope.rootSessionId&&['starting','running'].includes(run.status)),'不能在成员活动时隔离主上下文');
         const prior=(previous.scopes??[]).filter(item=>item.rootSessionId===scope.rootSessionId);
-        const excluded=prior.flatMap(item=>[...(item.continuations??[]).map(value=>value.runId),...(item.recovery?[item.recovery.context.initialRunId,...item.recovery.context.excludedRunIds]:[])]);
+        const excluded=prior.flatMap(item=>{const context=scopeFreshContext(item);return [...(item.continuations??[]).map(value=>value.runId),...(context?[context.initialRunId,...context.excludedRunIds]:[])]});
         valid(excluded.every(runId=>recovery.context.excludedRunIds.includes(runId)),'新核实上下文不能重新包含此前隔离的旧运行或无日志意图');
       }
     }

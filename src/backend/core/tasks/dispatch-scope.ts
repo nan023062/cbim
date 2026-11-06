@@ -1,10 +1,11 @@
 /**
  * 作用定位：定义一次用户任务的调度周期，与长期主会话和单次模型运行区分。
- * 设计原因：一次目标可以经历多轮调度、执行和结果回注；冻结原始输入，以 waiting 安全等待，显式补充继续同一目标。异常核实通过 recovery 意图建立独立只读新周期，旧周期保持关闭，不能续接损坏执行链。
+ * 设计原因：一次目标可以经历多轮调度、执行和结果回注；冻结原始输入，以 waiting 安全等待。异常核实和正式重规划分别通过 recovery/replan 意图建立新周期，旧周期保持关闭，不能续接损坏执行链。
  */
 import type {DispatchScopeGoal} from './scope-goal';
 import type {DispatchScopeWait,ScopeContinuation} from './scope-continuation';
 import type {ScopeRecovery} from './scope-recovery';
+import type {ScopeReplan} from './scope-replan';
 export {dispatchScopeWaitSchema} from './scope-continuation';
 export type {DispatchScopeWait} from './scope-continuation';
 export {dispatchScopeGoalSchema,dispatchScopeInputSchema} from './scope-goal';
@@ -26,6 +27,8 @@ export interface DispatchScope {
   continuations?:ScopeContinuation[];
   /** 仅新只读核实周期有值；来源、用户观察和全新原生上下文边界创建后永不改写，旧周期不复活。 */
   recovery?:ScopeRecovery;
+  /** 独立的业务重规划意图，须有已完成只读核实证明；与 recovery 互斥且永不改写。 */
+  replan?:ScopeReplan;
   closedAt?:string;
   outcome?:DispatchScopeOutcome;
 }

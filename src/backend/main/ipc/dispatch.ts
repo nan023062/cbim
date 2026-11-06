@@ -1,6 +1,6 @@
 /**
  * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
- * 设计原因：通过 ApplicationServices 契约隔离应用实现；目标补充、审批与只读执行核实分开，核实不重放模型或工具；所有入口使用完整身份，不依赖当前界面选择。
+ * 设计原因：通过 ApplicationServices 契约隔离应用实现；目标补充、只读核实与正式业务重规划分开。重规划预览只读，启动必须明确提交新目标与权限；所有入口使用完整身份，不依赖当前界面选择。
  */
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
@@ -33,6 +33,7 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'dispatch.executionStop':return app.memberExecution(args.workspaceId).stop(args);
     case 'dispatch.executionInspect':return app.memberExecution(args.workspaceId).inspect(args);
     case 'dispatch.executionReport':return app.memberExecution(args.workspaceId).report(args);
+    case 'dispatch.replans.preview':return app.memberDispatch(args.workspaceId).replans.preview(args);
     case 'dispatch.executionEvents':return app.memberExecution(args.workspaceId).events(args);
     case 'dispatch.messages':return app.memberExecution(args.workspaceId).messages(args);
     case 'dispatch.acknowledge':return app.memberExecution(args.workspaceId).acknowledge(args);
@@ -59,6 +60,8 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'loop.goalContinuation':return app.memberDispatch(args.workspaceId).continuations.inspect(args);
     case 'loop.recoveryStart':return app.execution(args.workspaceId).recoverExecution(args);
     case 'loop.recoveryReceipt':return app.memberDispatch(args.workspaceId).recoveries.inspect(args);
+    case 'loop.replanStart':return app.execution(args.workspaceId).replanExecution(args);
+    case 'loop.replanReceipt':return app.memberDispatch(args.workspaceId).replans.inspect(args);
     case 'chat.attach':return new ChatInputs(app.workspace(args.id)).add(args.attachment);
     case 'chat.connectors':return new ChatInputs(app.workspace(args.id)).connectors();
     case 'chat.preview':return new ChatInputs(app.workspace(args.id)).preview(args.attachmentId);

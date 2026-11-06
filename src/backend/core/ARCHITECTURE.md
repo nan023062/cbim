@@ -93,7 +93,7 @@ N_src_backend_core_team ..> N_src_backend_core_tasks : 导入依赖
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识快照、校验、领域查询、对象变更和可移植静态包规划。团队能力可独立复用，业务模板必须完整；物理事务与预览缓存经端口注入，不携带动态成员或任务。Team/Workspace 只依赖快照辅助，不依赖查询门面。
 - [policy/](policy/ARCHITECTURE.md)：内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；不声称操作系统隔离。
 - [runtime/](runtime/ARCHITECTURE.md)：应用级运行监管契约：主会话和正式任务按可信绑定归属实例，旧 Loop 无绑定保留 role-only；实时对话占用、轮次用量和负载分开表达，只读投影不签发执行权。
-- [tasks/](tasks/ARCHITECTURE.md)：任务计划、派发图、目标及等待。只读核实报告固定证据基线；新核实周期冻结用户观察、来源和上下文边界，只读约束贯穿运行及补充。旧周期不改写，候选和观察不等于验收。
+- [tasks/](tasks/ARCHITECTURE.md)：任务计划、派发图、目标及等待。只读核实与正式业务重规划各有独立意图，共用新上下文边界；重规划冻结证据版本、模块集合和原人工约束，核实权限保持只读。旧周期不改写，候选和观察不等于验收。
 - [team/](team/ARCHITECTURE.md)：Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履历契约。主实例归主会话，业务实例归周期与任务；履历按角色聚合真实通道，释放或删定义后保留，旧记录不补造实例。
 - [tools/](tools/ARCHITECTURE.md)：工具 Schema、版本、副作用、调用决策、结构化提问及回执；统一校验结果的 JSON 传输快照，拒绝缺失文本等无效内容。回执绑定运行身份与输入结果哈希；注册和发现不授予执行权限。
 - [workspace/](workspace/ARCHITECTURE.md)：领域工程、Module、本模块 Workflow 的只读视图及显式维护关系类型；作者与维护人分开，与 main/workspace 生命周期分开。

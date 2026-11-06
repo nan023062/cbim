@@ -17,3 +17,5 @@ export type {ExecutionReportInput,ExecutionReport} from '../../backend/core/task
 export {executionReportInputSchema,executionReportSchema} from '../../backend/core/tasks/execution-report';
 export type {RecoveryRequest,RecoveryLookup,RecoveryReceipt} from '../../backend/core/tasks/scope-recovery';
 export {recoveryRequestSchema,recoveryLookupSchema,recoveryReceiptSchema} from '../../backend/core/tasks/scope-recovery';
+export type {ReplanPreviewInput,ReplanPreview,ReplanRequest,ReplanLookup,ReplanReceipt} from '../../backend/core/tasks/scope-replan';
+export {replanPreviewInputSchema,replanPreviewSchema,replanRequestSchema,replanLookupSchema,replanReceiptSchema} from '../../backend/core/tasks/scope-replan';

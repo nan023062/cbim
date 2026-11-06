@@ -90,6 +90,26 @@ it('完成申请不是目标完成，普通对话、legacy和完成依据不足�
   expect(scopeGoalView(summarizeScope({...scope(),goal:undefined},streamId,1))).toMatchObject({phase:'legacy',tone:'neutral'});
 });
 
+it.each([
+  {origin:'business_replan' as const,phase:'business_planning',label:'正在规划业务任务',description:'主 Agent 正在制定业务执行计划。'},
+  {origin:'inspection' as const,phase:'inspection_planning',label:'正在规划只读核实',description:'主 Agent 正在制定只读核实计划；核实期间保持只读权限。'},
+])('已受理 $origin 尚无plan时保持真实任务身份，对话卡和根详情不误称普通问答',({origin,phase,label,description})=>{
+  const state=view(scope()),summary={...state.scopes[0],origin},goalView=scopeGoalView(summary,graph);
+  Object.assign(state,{scopes:[summary],openScope:summary,activeScope:summary,selectedGoalView:goalView,currentGoalView:goalView});
+  expect(goalView).toEqual({phase,label,tone:'running'});
+  const card=renderToStaticMarkup(createElement(ScopeGoalPanel,{state,compact:true,testId:'conversation-goal-summary'}));
+  const root=renderToStaticMarkup(createElement(SessionTaskView,{workspaceId:identity.workspaceId,taskId:identity.rootSessionId,runs:[],queued:[],now:0,busy:false,graph,scopeState:state,selectedTaskId:graph.root.nodeId,onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));
+  for(const html of [card,root]){expect(html).toContain(label);expect(html).toContain(description);expect(html).not.toContain('普通对话处理中');expect(html).not.toContain('普通问答无需派发任务');}
+  const stopped={...summary,status:'closed' as const,outcome:'cancelled' as const,closedAt:time};expect(scopeGoalView(stopped).phase).toBe('cancelled');
+  const stoppedView={...state,scopes:[stopped],selectedScope:{...state.selectedScope!,status:'closed' as const,outcome:'cancelled' as const,closedAt:time},selectedGoalView:scopeGoalView(stopped)};
+  const stoppedCard=renderToStaticMarkup(createElement(ScopeGoalPanel,{state:stoppedView}));expect(stoppedCard).not.toContain(description);expect(stoppedCard).not.toContain('普通问答无需派发任务');
+});
+
+it('普通无origin问答仍使用轻量对话状态与无计划说明',()=>{
+  const state=view(scope());expect(state.currentGoalView).toMatchObject({phase:'chat',label:'普通对话处理中'});
+  expect(renderToStaticMarkup(createElement(ScopeGoalPanel,{state}))).toContain('本轮没有登记业务目标计划；普通问答无需派发任务。');
+});
+
 it('补充后旧计划保持可查但不能冒充新目标完成，输入版本不一致拒绝发布',()=>{
   const revised=reviewed();revised.goal!.inputRevision=2;
   const summary=summarizeScope(revised,streamId,2);expect(summary.needsReplan).toBe(true);expect(scopeGoalView(summary)).toMatchObject({phase:'replanning',tone:'running'});

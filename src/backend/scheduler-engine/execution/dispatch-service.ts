@@ -18,6 +18,7 @@ import type {RunSummary} from '../../core/brain/types';
 import {ScopeGoalService,type ScopeGoalPorts} from './scope-goal-service';
 import {ScopeContinuationService} from './scope-continuation-service';
 import {ScopeRecoveryService} from './scope-recovery-service';
+import {ScopeReplanService} from './scope-replan-service';
 import {openGraphInput,createMemberInput,dispatchTaskInput,graphIdentityInput} from '../../core/tasks/dispatch-commands';
 import type {OpenGraphReceipt,CreateMemberReceipt,DispatchReceipt} from '../../core/tasks/dispatch-commands';
 import type {GraphIdentity,GraphCursor,GraphSnapshot,GraphChange,GraphEventBatch,AgentGraphView,GraphEdge,TaskNode} from '../../core/tasks/graph-types';
@@ -37,10 +38,13 @@ export class WorkspaceDispatchService {
   readonly continuations:ScopeContinuationService;
   /** 已关闭周期的显式只读核实；创建新周期与原生上下文意图，不复活或重放来源。 */
   readonly recoveries:ScopeRecoveryService;
+  /** 独立业务新周期；来源必须是完整完成的只读核实，不放宽 recoveries 的只读边界。 */
+  readonly replans:ScopeReplanService;
   constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts){
     this.goals=new ScopeGoalService(owner,store,goalPorts);
     this.continuations=new ScopeContinuationService(owner,store);
     this.recoveries=new ScopeRecoveryService(owner,store,goalPorts);
+    this.replans=new ScopeReplanService(owner,store,this.goals,goalPorts);
   }
 
   /** 工作区启动时恢复事务存储，触发存储观察者的基线；不创建成员、不消费任务。 */

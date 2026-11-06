@@ -1,6 +1,6 @@
 /**
  * 作用定位：调度引擎：工作区执行管理，负责主 Agent 普通对话、团队任务执行与多轮历史读取，拒绝旧轮次分叉，挂起并处理逐次工具审批与结构化用户问题，持久化消息队列并在成功结束后串行续接；本次全部通过仅在当前执行期间有效。
- * 设计原因：补充沿原周期；新只读核实使用稳定意图创建独立上下文。执行预检只排除显式冻结的旧运行，当前记录损坏仍阻断；界面可展示坏历史诊断，不能据此猜测续跑头。
+ * 设计原因：补充沿原周期；只读核实与正式业务重规划分别提交稳定意图、创建独立上下文。后者重新核实前置证据与明确权限，不能将只读核实提权。当前记录损坏仍阻断，不能据较早可读历史猜测续跑头。
  */
 import {MessageQueue,type QueueCounts} from '../conversation/message-queue';
 import {ApprovalQueue} from '../conversation/approvals';
@@ -23,21 +23,29 @@ import {BusinessWorkspace} from '../../core/workspace/model';
 import {goalContinuationRequestSchema,type GoalContinuationRequest,type GoalContinuationReceipt} from '../../core/tasks/scope-continuation';
 import type {DispatchScopeWait} from '../../core/tasks/dispatch-scope';
 import {sameGoalValue} from '../../core/tasks/scope-goal';
-import {recoveryRequestSchema,type RecoveryRequest,type RecoveryLookup,type RecoveryReceipt,type ScopeRecovery} from '../../core/tasks/scope-recovery';
+import {recoveryRequestSchema,type RecoveryRequest,type RecoveryLookup,type RecoveryReceipt} from '../../core/tasks/scope-recovery';
+import type {FreshContext} from '../../core/tasks/fresh-context';
+import {replanRequestSchema,type ReplanRequest,type ReplanLookup,type ReplanReceipt} from '../../core/tasks/scope-replan';
 
 /** IPC 允许的模型运行配置；不接受任意子进程命令或环境变量。 */
 export const executionOptions=z.object({provider:z.string().trim().min(1),model:z.string().trim().min(1),profileId:z.string().uuid().optional(),attachmentIds:z.array(z.string().uuid()).max(12).optional(),allowNativeExecution:z.boolean().default(false),permission:z.enum(['read','ask','execute']).optional(),turnTimeoutMs:z.number().int().min(1000).max(3600000).optional()}).strict();
 type Options=z.infer<typeof executionOptions>;
 /** 由可信工作区装配一次；回调只登记或唤醒协调器，不在 settled 内等待成员执行。 */
 export interface ExecutionCollaboration {
+  /** 正式业务重规划只读取原命令回执；查询不授予第二次启动资格。 */
+  replanReceipt?(query:ReplanLookup):Promise<ReplanReceipt|undefined>;
+  /** 核实已完成只读周期的真实证据、模块和人工约束，启动意图提交前还要重新核验。 */
+  replanPreflight?(request:ReplanRequest):Promise<void>;
+  /** 只接受运行时生成的新上下文，原子保存业务目标、明确权限及证据基线后才登记活动周期。 */
+  acceptReplan?(request:ReplanRequest,task:TaskSpec,context:{runId:string;nativeSessionId:string;excludedRunIds:string[]}):Promise<void>;
   /** 只查询已接收的新周期；不得因为回执已存在而再次创建模型。 */
   recoveryReceipt?(query:RecoveryLookup):Promise<RecoveryReceipt|undefined>;
   /** 在工厂准备前核实来源、只读配置和关闭状态；可靠意图提交时仍须再次核验。 */
   recoveryPreflight?(request:RecoveryRequest):Promise<void>;
   /** 只接受运行时生成的上下文边界；必须先持久提交新周期，再绑定活动调度。 */
   acceptRecovery?(request:RecoveryRequest,task:TaskSpec,context:{runId:string;nativeSessionId:string;excludedRunIds:string[]}):Promise<void>;
-  /** 最新可靠新上下文边界按持久提交顺序返回；不是“最新可读日志”。 */
-  recoveryContext?(rootSessionId:string):Promise<ScopeRecovery['context']|undefined>;
+  /** 核实或业务重规划的最新可靠上下文按持久提交顺序返回；不是“最新可读日志”。 */
+  recoveryContext?(rootSessionId:string):Promise<FreshContext|undefined>;
   /** 可能没有运行目录的可靠旧意图也要冻结在新上下文边界中。 */
   recoveryRunIds?(rootSessionId:string):Promise<string[]>;
   /** 只读持久意图；重试必须先核对回执，不依据 active Map 缺项推断从未执行。 */
@@ -144,7 +152,7 @@ export class WorkspaceExecutionManager {
     return this.checkedCurrentHistory(current,summaries,context);
   }
   /** 新上下文按实际 resumeFrom 链组织，不用系统时钟或“最新可读”猜测；这里只核实已读取事实。 */
-  private checkedCurrentHistory(ids:string[],summaries:RunSummary[],context?:ScopeRecovery['context']){
+  private checkedCurrentHistory(ids:string[],summaries:RunSummary[],context?:FreshContext){
     if(ids.length!==summaries.length||new Set(ids).size!==ids.length)fail('MAIN_CONTEXT_INCOMPLETE','当前上下文存在无法读取的运行，不能回退');
     if(context&&!ids.includes(context.initialRunId))fail('MAIN_CONTEXT_INCOMPLETE','新上下文启动记录缺失，不能退回旧运行');
     for(const summary of summaries){
@@ -194,7 +202,9 @@ export class WorkspaceExecutionManager {
     return this.launch({mode:'chat',taskId:randomUUID(),workspaceId:this.workspace.entry.id,root:this.workspace.entry.path,goal,agentId:mainAgentId,moduleIds:[],acceptance:[]},executionOptions.parse(options),message);
   })}
   /** 自动队列与结果回注在工厂等待前后都复核停止屏障，防止停止协作期间重新唤起旧消息。 */
-  private async launch(task:TaskSpec,options:Options,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,automaticQueue=false,continuation?:GoalContinuationRequest,recovery?:RecoveryRequest){
+  private async launch(task:TaskSpec,options:Options,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,automaticQueue=false,continuation?:GoalContinuationRequest,recovery?:RecoveryRequest,replan?:ReplanRequest){
+    if(recovery&&replan)fail('FRESH_MAIN_CONFLICT','同一启动不能混合只读核实和业务重规划');
+    const fresh=Boolean(recovery||replan);
     if(this.active.has(task.taskId))fail('TASK_RUNNING','任务正在执行');
     if((source?.kind==='member-results'||automaticQueue)&&this.resultContinuationStopped.has(task.taskId))fail('COLLABORATION_STOPPED','本会话已停止自动协作，请显式继续对话');
     const stopVersion=this.stopVersions.get(task.taskId)??0;
@@ -206,15 +216,21 @@ export class WorkspaceExecutionManager {
       controller.signal.throwIfAborted();
       if((this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
       if((source?.kind==='member-results'||automaticQueue)&&this.resultContinuationStopped.has(task.taskId))fail('COLLABORATION_STOPPED','本会话已停止自动协作，请显式继续对话');
-      if(!source&&!automaticQueue&&!recovery)this.resultContinuationStopped.delete(task.taskId);
-      if(!recovery)await this.collaboration?.starting?.(task,options,source,message);
+      if(!source&&!automaticQueue&&!fresh)this.resultContinuationStopped.delete(task.taskId);
+      if(!fresh)await this.collaboration?.starting?.(task,options,source,message);
       if(this.closing||(this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
-      const run=recovery?await loop.runtime.startFreshMain(task,message,{signal:controller.signal,knownRunIds:()=>this.collaboration?.recoveryRunIds?.(task.taskId)??Promise.resolve([]),beforeRun:async context=>{
+      const run=fresh?await loop.runtime.startFreshMain(task,message,{signal:controller.signal,knownRunIds:()=>this.collaboration?.recoveryRunIds?.(task.taskId)??Promise.resolve([]),beforeRun:async context=>{
         controller.signal.throwIfAborted();
-        if(!this.collaboration?.acceptRecovery)fail('RECOVERY_UNAVAILABLE','当前工作区未装配新核实周期');
-        await this.collaboration.acceptRecovery(recovery,task,context);accepted=true;
+        if(recovery){
+          if(!this.collaboration?.acceptRecovery)fail('RECOVERY_UNAVAILABLE','当前工作区未装配新核实周期');
+          await this.collaboration.acceptRecovery(recovery,task,context);
+        }else{
+          if(!replan||!this.collaboration?.acceptReplan)fail('REPLAN_UNAVAILABLE','当前工作区未装配正式业务重规划');
+          await this.collaboration.acceptReplan(replan,task,context);
+        }
+        accepted=true;
         controller.signal.throwIfAborted();
-        await (await this.queue()).pause(task.taskId,'已创建只读核实周期；原排队消息保留暂停，核实结束后可明确继续');
+        await (await this.queue()).pause(task.taskId,recovery?'已创建只读核实周期；原排队消息保留暂停，核实结束后可明确继续':'已创建新的业务目标；原排队消息保留暂停，目标结束后可明确继续');
         controller.signal.throwIfAborted();this.resultContinuationStopped.delete(task.taskId);
       }}):await loop.runtime.start(task,message,resume,source,{signal:controller.signal,...(continuation?{beforeRun:async({runId}:{runId:string})=>{
         controller.signal.throwIfAborted();
@@ -237,7 +253,7 @@ export class WorkspaceExecutionManager {
         });
       }).catch(()=>{});
       return {workspaceId:task.workspaceId,taskId:task.taskId,runId:run.runId};
-    }catch(error){await loop?.runtime.close();if((!continuation&&!recovery)||accepted)await this.collaboration?.startFailed?.(task,source,error);throw error}
+    }catch(error){await loop?.runtime.close();if((!continuation&&!fresh)||accepted)await this.collaboration?.startFailed?.(task,source,error);throw error}
     finally{if(this.pendingLaunches.get(task.taskId)===controller)this.pendingLaunches.delete(task.taskId)}
   }
   /** 用户明确提交一个新只读核实目标；旧源记录不恢复，观察只是用户陈述，稳定请求先查已提交事实。 */
@@ -268,6 +284,34 @@ export class WorkspaceExecutionManager {
     catch(error){const saved=await lookup();if(saved)return saved;throw error}
     const saved=await lookup();if(!saved)fail('RECOVERY_UNKNOWN','新核实周期提交结果尚未确认，请查询同一请求');return saved;
   })}
+  /**
+   * 明确创建新的业务目标，不能复制旧任务或提升已存在核实周期的权限。
+   * 停止版本在排队前捕获；可靠意图一旦受理，即使启动/返回失败也只查询该命令，不自动重放。
+   */
+  async replanExecution(raw:unknown){
+    const request=replanRequestSchema.parse(raw),requestedAtStopVersion=this.stopVersions.get(request.rootSessionId)??0;
+    const assertRequested=()=>{if(this.closing||(this.stopVersions.get(request.rootSessionId)??0)!==requestedAtStopVersion)fail('COLLABORATION_STOPPED','业务重规划准备期间已收到停止或关闭请求')};
+    return this.serial(async()=>{
+      if(request.workspaceId!==this.workspace.entry.id)fail('IDENTITY','业务重规划不属于当前工作区');
+      const hooks=this.collaboration;
+      if(!hooks?.replanReceipt||!hooks.replanPreflight||!hooks.acceptReplan)fail('REPLAN_UNAVAILABLE','当前工作区未装配正式业务重规划');
+      const lookup=()=>hooks.replanReceipt!({workspaceId:request.workspaceId,rootSessionId:request.rootSessionId,commandId:request.commandId});
+      const previous=await lookup();
+      if(previous){
+        const saved=previous.replan;
+        if(saved.source.inspectionScopeId!==request.source.inspectionScopeId||saved.source.expectedBasis!==request.source.expectedBasis||!sameGoalValue(saved.input,request.input)||!sameGoalValue(saved.options,request.options))fail('REPLAN_COMMAND_CONFLICT','同一业务重规划命令已经绑定其他内容、证据或权限');
+        return previous;
+      }
+      assertRequested();
+      if(this.active.has(request.rootSessionId)||hooks.busy(request.rootSessionId))fail('REPLAN_BUSY','当前会话仍有未结束的目标，请先处理当前目标');
+      await hooks.replanPreflight(request);assertRequested();
+      const task:TaskSpec={mode:'chat',taskId:request.rootSessionId,workspaceId:this.workspace.entry.id,root:this.workspace.entry.path,goal:request.input.message,agentId:mainAgentId,moduleIds:[],acceptance:[]};
+      const message=request.input.message+'\n\n本次明确创建新的业务重规划周期。先调用 cbim_goal_inspect 读取已核实模块范围与继承的人工验收约束，再匹配团队能力、保存新计划并派发新的执行任务。主 Agent 仅调度及受控知识治理，不亲自执行业务。旧核实是规划依据，不是新业务完成证据；不得复制旧工具操作、抹去旧未知结果或把权限选择当作人工验收。\n来源核实周期：'+request.source.inspectionScopeId;
+      try{await this.launch(task,executionOptions.parse({...request.options,allowNativeExecution:true}),message,undefined,undefined,false,undefined,undefined,request)}
+      catch(error){const saved=await lookup();if(saved)return saved;throw error}
+      const saved=await lookup();if(!saved)fail('REPLAN_UNKNOWN','新业务周期提交结果尚未确认，请查询同一命令');return saved;
+    });
+  }
   /** 用户显式补充原等待目标；稳定请求只消费一次。回执只证明受理，不保证已启动、执行成功或人工验收。 */
   async continueGoal(raw:unknown){
     const request=goalContinuationRequestSchema.parse(raw);

@@ -1,7 +1,7 @@
 /**
  * 作用定位：管理一次用户任务的调度周期，串接主 Agent 调度、执行成员和结果回传，周期结束后释放执行实例。
  * 设计原因：周期冻结本轮真实用户输入，不复用会话首次目标；成员回注不改写输入。一次任务可能跨多个主模型轮次，用户队列等周期可靠关闭后才启动下一周期，执行者与主实例始终分离。
- * 职责边界：主 Agent 只调度和治理知识；补充沿原周期，新只读核实经可靠意图开启新周期但保留主实例。权限不能随回注或补充提升，停止等待提交收束，退出/重启不重放；用户观察和补充都不是人工验收。
+ * 职责边界：主 Agent 只调度和治理知识；补充沿原周期，新核实与正式业务重规划经各自可靠意图开启新周期。只读核实不能提权；新业务权限来自明确请求。停止等待提交收束，退出/重启不重放，用户观察或权限都不是人工验收。
  */
 import {hash,json} from '../../core/foundation/serialization';
 import {randomUUID} from 'node:crypto';
@@ -10,6 +10,7 @@ import type {TaskSpec,RunSummary,RunInputSource} from '../../core/brain/types';
 import type {DispatchScope,DispatchScopeOutcome} from '../../core/tasks/dispatch-scope';
 import type {GoalContinuationRequest} from '../../core/tasks/scope-continuation';
 import type {RecoveryRequest} from '../../core/tasks/scope-recovery';
+import type {ReplanRequest} from '../../core/tasks/scope-replan';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {DispatchTaskInput} from '../../core/tasks/dispatch-commands';
 import type {GraphSnapshot,TaskNode} from '../../core/tasks/graph-types';
@@ -41,7 +42,34 @@ export class AutoCollaboration {
   private releaseListener:()=>void;
   constructor(private owner:KnowledgeWorkspace,private dispatch:WorkspaceDispatchService,private members:MemberExecutionManager,private execution:WorkspaceExecutionManager,lease:WorkspaceExecutionLease,private reportIssue:(rootSessionId:string,error:unknown)=>void=()=>{}){
     this.releaseListener=lease.observeRelease(()=>this.schedule());
-    execution.attachCollaboration({busy:id=>this.busy(id),waiting:id=>this.waitingSlots.has(id),recoveryReceipt:query=>dispatch.recoveries.inspect(query),recoveryPreflight:request=>this.recoveryPreflight(request),acceptRecovery:(request,task,context)=>this.acceptRecovery(request,task,context),recoveryContext:rootSessionId=>dispatch.recoveries.latestContext({workspaceId:owner.entry.id,rootSessionId}),recoveryRunIds:rootSessionId=>dispatch.recoveries.priorRunIds({workspaceId:owner.entry.id,rootSessionId}),continuationReceipt:query=>dispatch.continuations.inspect(query),continuationCheckpoint:request=>this.continuationCheckpoint(request),acceptContinuation:(request,task,runId)=>this.acceptContinuation(request,task,runId),starting:(task,options,source,message)=>this.starting(task,source,!!options.profileId,message,options.attachmentIds),startFailed:(task,source,error)=>this.startFailed(task,source,error),settled:(task,_options,summary)=>this.settled(task,summary),stop:id=>this.stop(id)});
+    execution.attachCollaboration({busy:id=>this.busy(id),waiting:id=>this.waitingSlots.has(id),replanReceipt:query=>dispatch.replans.inspect(query),replanPreflight:request=>this.replanPreflight(request),acceptReplan:(request,task,context)=>this.acceptReplan(request,task,context),recoveryReceipt:query=>dispatch.recoveries.inspect(query),recoveryPreflight:request=>this.recoveryPreflight(request),acceptRecovery:(request,task,context)=>this.acceptRecovery(request,task,context),recoveryContext:rootSessionId=>dispatch.recoveries.latestContext({workspaceId:owner.entry.id,rootSessionId}),recoveryRunIds:rootSessionId=>dispatch.recoveries.priorRunIds({workspaceId:owner.entry.id,rootSessionId}),continuationReceipt:query=>dispatch.continuations.inspect(query),continuationCheckpoint:request=>this.continuationCheckpoint(request),acceptContinuation:(request,task,runId)=>this.acceptContinuation(request,task,runId),starting:(task,options,source,message)=>this.starting(task,source,!!options.profileId,message,options.attachmentIds),startFailed:(task,source,error)=>this.startFailed(task,source,error),settled:(task,_options,summary)=>this.settled(task,summary),stop:id=>this.stop(id)});
+  }
+
+  /** 只预检正式重规划的核实证据；真正接受仍在运行租约内复核并持久化。 */
+  private async replanPreflight(request:ReplanRequest){
+    if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭');
+    if(this.busy(request.rootSessionId)||this.resuming.has(request.rootSessionId))fail('REPLAN_BUSY','当前主会话还有未结束目标');
+    await this.dispatch.replans.preflight(request);
+  }
+  /** 新业务周期使用新的执行实例，既有只读周期和旧失败任务保持封存；停止共享受理屏障。 */
+  private acceptReplan(request:ReplanRequest,task:TaskSpec,context:{runId:string;nativeSessionId:string;excludedRunIds:string[]}):Promise<void>{
+    if(this.closed||this.resuming.has(task.taskId))return Promise.reject(Object.assign(Error('业务重规划正在关闭或已有提交'),{code:'COLLABORATION_STOPPED'}));
+    const pending=(async()=>{
+      if(task.mode!=='chat'||task.agentId!=='cbim:main'||task.taskId!==request.rootSessionId||task.workspaceId!==request.workspaceId||task.root!==this.owner.entry.path||task.goal!==request.input.message)fail('COLLABORATION_IDENTITY','业务目标与主会话身份或明确输入不一致');
+      if(this.busy(task.taskId))fail('REPLAN_BUSY','当前主会话还有未结束目标');
+      const accepted=await this.dispatch.replans.accept(request,context);
+      if(!accepted.fresh)fail('REPLAN_REPLAY','业务目标意图已受理，请查询原回执，不重复启动');
+      this.cycles.set(task.taskId,{task:structuredClone(task),scopeId:accepted.scope.scopeId,tasks:new Set(),operations:new Set(),mainRuns:new Set([context.runId]),workRequested:true,stopped:false});
+    })().catch(async error=>{
+      // 仅收束这次运行的已落盘意图。旧命令的幂等回执不能被一次迟到请求关闭或重新执行。
+      try{
+        const receipt=await this.dispatch.replans.inspect({workspaceId:request.workspaceId,rootSessionId:request.rootSessionId,commandId:request.commandId});
+        if(receipt?.replan.runId===context.runId)await this.dispatch.closeScope({workspaceId:request.workspaceId,rootSessionId:request.rootSessionId},receipt.scopeId,'interrupted');
+      }catch(problem){this.reportIssue(task.taskId,problem)}
+      throw error;
+    });
+    this.resuming.set(task.taskId,pending);
+    return pending.finally(()=>{if(this.resuming.get(task.taskId)===pending)this.resuming.delete(task.taskId)});
   }
 
   /** 读取来源报告仅预检；新运行意图在 runtime 的租约内再次核实，不能用预检结果直接启动。 */

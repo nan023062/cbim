@@ -1,7 +1,7 @@
 /**
  * 作用定位：以节点流程图展示当前主会话的派发任务，并在选择根或任务后显示对应执行详情。
  * 设计原因：全局项目架构与会话派工分开；根详情共享当前/历史周期目标、审阅与显式补充状态，整张会话图保留并突出所选周期。开放周期可停止或取消，持久等待不触发队列恢复。
- * 职责边界：运行轮次不是派发节点；核实报告按需读取并使用节点实际归属。新周期创建上下文取真实开放周期与当前模型，不借历史筛选替换任务身份或权限。
+ * 职责边界：运行轮次不是派发节点；核实报告按需读取并使用节点实际归属。正式业务重规划与只读核实各有独立控制器，新周期准入取真实开放状态，不借历史筛选替换任务身份或权限。
  */
 import {useEffect,useState} from 'react';
 import type {RunSummary,QueuedMessage} from '../../bridge/contracts/execution';
@@ -14,6 +14,7 @@ import {ScopeGoalPanel} from './ScopeGoalPanel';
 import type {ScopeGoalState} from './scope-state';
 import type {ScopeContinuationView} from './useScopeContinuation';
 import type {ExecutionRecoveryContext} from './useExecutionRecovery';
+import type {ScopeReplanView} from './useScopeReplan';
 import './task-graph.css';
 
 /** 只接收当前工作区、当前会话的记录；草稿会话没有 taskId，因此没有运行历史。 */
@@ -42,6 +43,8 @@ export interface SessionTaskViewProps {
   scopeState?:ScopeGoalState;
   /** 与对话卡共享已冻结补充请求；不会在任务页重新创建控制器。 */
   continuation?:ScopeContinuationView;
+  /** 与主对话共享正式业务新目标草稿和稳定请求；不会在任务根另外启动预览或模型。 */
+  replan?:ScopeReplanView;
   /** 从历史报告新建只读核实周期；模型与真实开放周期来自主会话，历史选择不改变两者。 */
   recovery?:ExecutionRecoveryContext;
   /** 隐藏的会话仍保留节点选择，但其成员详情降低同步频率。 */
@@ -53,7 +56,7 @@ export interface SessionTaskViewProps {
 }
 
 /** 主根详情保留调度与知识治理的对话轮次、计划和停止入口；业务执行详情仅由任务节点展开。 */
-function RootTaskDetail({history,pending,now,busy,onQueueChange,onQueueContinue,onStop,graph,scopeState,continuation,historyIssueCount=0}:Pick<SessionTaskViewProps,'now'|'busy'|'onQueueChange'|'onQueueContinue'|'onStop'|'graph'|'scopeState'|'continuation'|'historyIssueCount'>&{history:RunSummary[];pending:QueuedMessage[]}){
+function RootTaskDetail({history,pending,now,busy,onQueueChange,onQueueContinue,onStop,graph,scopeState,continuation,replan,historyIssueCount=0}:Pick<SessionTaskViewProps,'now'|'busy'|'onQueueChange'|'onQueueContinue'|'onStop'|'graph'|'scopeState'|'continuation'|'replan'|'historyIssueCount'>&{history:RunSummary[];pending:QueuedMessage[]}){
   // 旧局部运行计划没有 scope 归属，不能借历史目标选择把它冒充所选周期的目标计划。
   const progress=scopeState?.selectedScopeId?undefined:history.at(-1)?.taskProgress;
   // 身份来自后端保存的绑定；旧日志无该字段时明确未知，不用角色名补造通道。
@@ -63,7 +66,7 @@ function RootTaskDetail({history,pending,now,busy,onQueueChange,onQueueContinue,
   const openScope=scopeState?.openScope,waiting=openScope?.status==='waiting';
   return <div className="root-task-detail" aria-label="主 Agent 调度详情" data-testid="root-task-detail">
     <h3>主 Agent</h3><p>已读 {history.length} 轮记录{historyIssueCount?` · ${historyIssueCount} 轮待核实`:''} · {pending.length} 条待执行</p>
-    {scopeState&&<ScopeGoalPanel state={scopeState} testId="dispatch-root-goal" continuation={continuation}/>}
+    {scopeState&&<ScopeGoalPanel state={scopeState} testId="dispatch-root-goal" continuation={continuation} replan={replan}/>}
     {openScope&&<div>{scopeState!.selectedScopeId!==openScope.scopeId&&<p>{waiting?'当前另有待补充任务：':'当前另有任务运行：'}{openScope.objective??openScope.inputPreview??'当前周期'}</p>}<button data-testid="scope-stop" disabled={busy} onClick={onStop}>{waiting?'取消当前任务':scopeState!.selectedScopeId===openScope.scopeId?'停止当前任务':'停止正在运行的任务'}</button></div>}
     <details className="member-scope" open><summary>主会话实例与通道</summary>
       {instance?<p>主 Agent 实例 <code>{instance}</code></p>:<p>历史记录未保存主 Agent 实例绑定。</p>}
@@ -98,7 +101,7 @@ export function SessionTaskView(props:SessionTaskViewProps){
     {!root?<div className="task-graph-draft"><h3>尚未开始会话</h3><p>发送第一条消息后，这里显示主 Agent；派发成员任务后显示团队任务流程。</p><button onClick={onChat}>开始对话</button></div>:<div className={'session-graph-layout'+(hasDetail?' with-detail':'')}>
       <DispatchGraph key={workspaceId+':'+taskId} graph={matching} root={root} selectedTaskId={selected} onSelectTask={select} highlightedScopeId={scopeState?.selectedScopeId}/>
       {hasDetail&&<aside className="session-graph-detail" aria-label={rootSelected?'主 Agent 详情':'成员任务详情'} data-testid="session-graph-detail"><header><strong>{rootSelected?'主会话调度':'成员任务'}</strong><button onClick={()=>select(undefined)} aria-label="关闭详情，返回流程图">返回流程图</button></header>
-        {rootSelected?<RootTaskDetail history={history} pending={pending} now={now} busy={busy} onQueueChange={onQueueChange} onQueueContinue={onQueueContinue} onStop={onStop} graph={matching} scopeState={scopeState} continuation={props.continuation} historyIssueCount={props.historyIssueCount}/>:selectedTask&&taskId&&<MemberTaskDetail active={props.active} key={workspaceId+':'+taskId+':'+selectedTask.taskId} workspaceId={workspaceId} rootSessionId={taskId} task={selectedTask} graphCursor={matching?.cursor} scope={scopeState?.scopes.find(scope=>scope.scopeId===selectedTask.scopeId)} recovery={props.recovery}/>}
+        {rootSelected?<RootTaskDetail history={history} pending={pending} now={now} busy={busy} onQueueChange={onQueueChange} onQueueContinue={onQueueContinue} onStop={onStop} graph={matching} scopeState={scopeState} continuation={props.continuation} replan={props.replan} historyIssueCount={props.historyIssueCount}/>:selectedTask&&taskId&&<MemberTaskDetail active={props.active} key={workspaceId+':'+taskId+':'+selectedTask.taskId} workspaceId={workspaceId} rootSessionId={taskId} task={selectedTask} graphCursor={matching?.cursor} scope={scopeState?.scopes.find(scope=>scope.scopeId===selectedTask.scopeId)} recovery={props.recovery}/>}
       </aside>}
     </div>}
   </div>;

@@ -28,7 +28,7 @@ class N_src_bridge_preload["preload/"] {
 
 ## 子目录导航
 
-- [contracts/](contracts/ARCHITECTURE.md)：可序列化的 IPC 数据与公开展示契约。图/目标增量使用独立游标；新核实请求和回执冻结来源及只读配置。历史问题单独呈现，可续聊头由后端核实，不从剩余可读记录猜测。
+- [contracts/](contracts/ARCHITECTURE.md)：可序列化的 IPC 数据与公开展示契约。图/目标增量使用独立游标；只读核实和正式重规划分别声明来源、配置、预览与回执。历史问题单独呈现，可续聊头由后端核实，不从剩余可读记录猜测。
 - [preload/](preload/ARCHITECTURE.md)：固定 Electron IPC 桥；不向页面暴露 Node、凭据或任意磁盘 API。
 
 [返回上层](../ARCHITECTURE.md)。

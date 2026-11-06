@@ -6,6 +6,7 @@ import {z} from 'zod';
 import {graphIdentityInput} from './dispatch-commands';
 import {scopeContinuationOptionsSchema} from './scope-continuation';
 import {executionReportSchema} from './execution-report';
+import {freshContextSchema} from './fresh-context';
 
 const id=z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 const text=z.string().max(64_000).refine(value=>value.trim().length>0,'核实说明不能为空');
@@ -20,7 +21,7 @@ export type RecoveryRequest=z.infer<typeof recoveryRequestSchema>;
 export const recoveryLookupSchema=recoveryRequestSchema.pick({workspaceId:true,rootSessionId:true,commandId:true}).strict();
 export type RecoveryLookup=z.infer<typeof recoveryLookupSchema>;
 /** 旧运行集合在取得租约后由可信存储枚举，最多 4096 项；只隔离已登记旧链，不能忽略新链的未知日志。 */
-export const recoveryContextSchema=z.object({initialRunId:id,nativeSessionId:z.string().uuid(),excludedRunIds:z.array(id).max(4096).refine(ids=>new Set(ids).size===ids.length,'旧运行身份不能重复')}).strict().refine(value=>!value.excludedRunIds.includes(value.initialRunId),'新运行不能被排除');
+export const recoveryContextSchema=freshContextSchema;
 export type RecoveryContext=z.infer<typeof recoveryContextSchema>;
 /** 新 scope 中不可变的核实来源与启动边界；不向已关闭来源周期追加字段。 */
 export const scopeRecoverySchema=z.object({recoveryId:z.string().uuid(),acceptedAt:z.string().datetime(),source:source.extend({taskRevision:z.number().int().positive().safe(),planRevision:z.number().int().positive().safe(),scopeOutcome:z.enum(['completed','failed','cancelled','interrupted']),reportExecution:executionReportSchema.shape.execution,logState:executionReportSchema.shape.log.shape.state,unknownToolCount:z.number().int().nonnegative().safe()}).strict(),operation:z.literal('inspect_effects'),observation,input,options,context:recoveryContextSchema}).strict();

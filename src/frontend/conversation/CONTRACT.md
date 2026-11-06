@@ -21,6 +21,8 @@
 
 从成员报告发起的新只读核实周期经 `SessionTaskView` 装配专用表单。主会话只传实际模型与真实开放周期，权限由表单固定 read；核实周期进入 waiting 后，目标补充仍保持 read。普通输入区草稿、附件、模型和权限不被表单改写，历史选择也不改变当前工作对象。
 
+已完成的核实周期另有正式业务新目标入口，`Conversation` 装配唯一 `useScopeReplan`，对话 `ScopeGoalPanel` 与任务根透传同一个视图。它仅共享实际模型身份，表单权限独立默认 ask，execute 必须明确选择。显式条件核验不运行模型，最终创建新业务周期才发送稳定命令；未知命令查询/重试不引用当前聊天输入。旧核实周期仍为只读，新业务目标不清空原草稿、附件或队列，历史选择不会替换真实开放周期或主会话身份。
+
 `UsageStatus.currentRun` 为 null 时明确没有安全运行头，不猜脑状态与上下文；有可信头则只取该轮上下文，即使历史时间排序把它排在较前。`conversationUsage` 仍累计所有可读运行已报告的费用和 token，旧异常 running 时长截于最后已知事件，不把它持续当成后台工作。存在历史问题时费用标为“已知部分”，不声称完整总消耗，也不估算缺失日志。
 
 ```mermaid
@@ -29,10 +31,12 @@ class Conversation { <<component>> }
 class ConversationState { <<module>> }
 class SessionGraphState { <<tasks boundary>> }
 class ScopeContinuation { <<tasks boundary>> }
+class ScopeReplan { <<tasks boundary>> }
 class MessageQueue { <<component>> }
 class UsageStatus { <<component>> }
 Conversation --> SessionGraphState : 当前开放目标与历史选择分离
 Conversation --> ScopeContinuation : 两处卡片共享显式补充状态
+Conversation --> ScopeReplan : 两处卡片共享业务新目标与条件核验
 Conversation --> ConversationState : 计算发送与执行状态
 Conversation --> MessageQueue : 等待只禁启动不禁整理
 Conversation --> UsageStatus : 真实等待检查点与状态

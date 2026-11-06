@@ -1,0 +1,7 @@
+/**
+ * 作用定位：正式业务重规划表单与条件核验摘要排版，嵌入既有目标卡。
+ * 设计原因：新目标、明确权限及只读继承约束分组呈现，窄详情面板换行，不用横向大表格或遮挡对话的弹窗。
+ */
+.scope-replan{border-top:1px solid var(--line);padding-top:12px;margin-top:12px;min-width:0;font-size:12px;line-height:1.65;overflow-wrap:anywhere}
+.scope-replan label{display:block;margin:10px 0}.scope-replan textarea{display:block;box-sizing:border-box;width:100%;min-height:90px;max-height:260px;resize:vertical;margin-top:5px;padding:9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);font:inherit}.scope-replan select{margin-left:8px;max-width:100%;padding:5px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);font:inherit}.scope-replan-actions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.scope-replan [role=alert]{color:var(--danger)}
+.scope-replan-proof{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0;margin:10px 0}.scope-replan-proof small{display:block;color:var(--muted)}.scope-replan details{font-size:10px;color:var(--muted)}.scope-replan summary{cursor:pointer}.scope-replan code{white-space:normal;overflow-wrap:anywhere}

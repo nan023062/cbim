@@ -1,0 +1,90 @@
+/**
+ * 作用定位：本机供应商配置持久化、默认模型选择和连接检测。
+ * 设计原因：运行快照保留视觉能力；参考 Cindy 按供应商共享凭据、按模型维护参数及每轮运行预算、计价快照的配置方式；凭据加密由平台注入，公开模型协议由 Core 定义，存储实现不进入大脑。
+ */
+import fs from 'node:fs/promises';
+import {randomUUID} from 'node:crypto';
+import {z} from 'zod';
+import {parseModelCatalog} from '../../../core/brain/llm/catalog';
+import {atomic} from '../../../core/foundation/files';
+import {fail} from '../../../core/foundation/errors';
+import {connectionSchema,definition,type LlmDefinition,type LlmSettings} from '../../../core/brain/llm/config';
+export type {LlmDefinition,LlmProfile,LlmSettings} from '../../../core/brain/llm/config';
+import type {SecretCipher,ResolvedLlm} from '../../../core/brain/llm/ports';
+export type {SecretCipher,ResolvedLlm} from '../../../core/brain/llm/ports';
+interface DiskProfile extends LlmDefinition {id:string;encryptedKey?:string}
+interface ModelFile {version:1;selectedId?:string;profiles:DiskProfile[]}
+const fileSchema=z.object({version:z.literal(1),selectedId:z.string().uuid().optional(),profiles:z.array(z.object({id:z.string().uuid(),encryptedKey:z.string().optional()}).passthrough()).max(100)});
+export class LlmProfiles {
+  private queue:Promise<unknown>=Promise.resolve();
+  constructor(private filename:string,private cipher?:SecretCipher){}
+  private async read():Promise<ModelFile>{
+    let raw:any;try{raw=JSON.parse(await fs.readFile(this.filename,'utf8'))}catch(e:any){if(e.code==='ENOENT')return {version:1,profiles:[]};throw Error('模型配置读取失败，请检查配置文件')}
+    const data=fileSchema.parse(raw),profiles=data.profiles.map(p=>{const {id,encryptedKey,...rest}=p;return {...definition.parse(rest),id,encryptedKey}});
+    if(new Set(profiles.map(p=>p.id)).size!==profiles.length||data.selectedId&&!profiles.some(p=>p.id===data.selectedId))fail('LLM_CONFIG','模型配置身份不一致');
+    return {version:1,selectedId:data.selectedId,profiles};
+  }
+  private view(data:ModelFile):LlmSettings{return {selectedId:data.selectedId,secureStorage:this.cipher?.available()===true,profiles:data.profiles.map(({encryptedKey,...p})=>({...p,hasKey:!!encryptedKey}))}}
+  async list(){return this.view(await this.read())}
+  private change<T>(operation:()=>Promise<T>){const result=this.queue.then(operation);this.queue=result.catch(()=>{});return result}
+  /** 空密钥保留原值；修改接口地址或协议后必须重新输入凭据。 */
+  save(input:unknown){return this.change(async()=>{
+    const r=z.object({id:z.string().uuid().optional(),profile:definition,apiKey:z.string().max(16000).optional()}).strict().parse(input);
+    const data=await this.read(),previous=data.profiles.find(p=>p.id===r.id);if(r.id&&!previous)fail('LLM_NOT_FOUND','供应商不存在');
+    let encryptedKey:string|undefined;
+    if(r.profile.auth==='api-key'){
+      if(r.apiKey){if(!this.cipher?.available())fail('SECRET_STORAGE','系统加密不可用，无法保存 API Key');encryptedKey=this.cipher.encrypt(r.apiKey)}
+      else {if(previous&&(previous.baseUrl!==r.profile.baseUrl||previous.api!==r.profile.api))fail('KEY_REQUIRED','更换接口地址或协议后请重新输入 API Key');encryptedKey=previous?.encryptedKey}
+      if(!encryptedKey)fail('KEY_REQUIRED','请输入 API Key');
+    }
+    const profile={...r.profile,id:previous?.id??randomUUID(),encryptedKey};
+    if(previous)data.profiles=data.profiles.map(p=>p.id===profile.id?profile:p);else {if(data.profiles.length>=100)fail('LIMIT','最多保存 100 个供应商');data.profiles.push(profile)}
+    data.selectedId??=profile.id;await atomic(this.filename,JSON.stringify(data,null,2));return this.view(data);
+  })}
+  select(id:string){return this.change(async()=>{const data=await this.read();if(!data.profiles.some(p=>p.id===id))fail('LLM_NOT_FOUND','供应商不存在');data.selectedId=id;await atomic(this.filename,JSON.stringify(data,null,2));return this.view(data)})}
+  remove(id:string){return this.change(async()=>{const data=await this.read();if(!data.profiles.some(p=>p.id===id))fail('LLM_NOT_FOUND','供应商不存在');data.profiles=data.profiles.filter(p=>p.id!==id);if(data.selectedId===id)data.selectedId=data.profiles[0]?.id;await atomic(this.filename,JSON.stringify(data,null,2));return this.view(data)})}
+  private decrypt(p:DiskProfile){
+    if(p.auth==='none')return 'cbim-local-no-auth';
+    if(!p.encryptedKey||!this.cipher?.available())fail('SECRET_STORAGE','模型密钥不可用，请重新保存 API Key');
+    try{return this.cipher.decrypt(p.encryptedKey)}catch{fail('SECRET_STORAGE','模型密钥无法解密，请重新保存 API Key')}
+  }
+  /** 将公开供应商配置展开为选定模型；禁用模型不得用于新运行。 */
+  async resolve(id?:string,modelId?:string):Promise<ResolvedLlm>{
+    const data=await this.read(),p=data.profiles.find(p=>p.id===(id??data.selectedId));if(!p)fail('LLM_REQUIRED','请先在设置中配置默认大模型');
+    const model=p.models.find(m=>m.id===(modelId??p.defaultModel)&&m.enabled);if(!model)fail('LLM_MODEL','模型不存在或已禁用');
+    return {profile:{id:p.id,name:p.name,api:p.api,baseUrl:p.baseUrl,auth:p.auth,model:model.id,contextWindow:model.contextWindow,maxTokens:model.maxTokens,reasoning:model.reasoning,vision:model.vision,outputLimit:model.outputLimit,thinkingLevel:model.thinkingLevel,workingContextWindow:model.workingContextWindow,compactionPercent:model.compactionPercent,pricing:model.pricing},apiKey:this.decrypt(p)};
+  }
+  /** 获取草稿接口的模型 ID；失败不阻止手动添加。保存凭据只在同地址、同协议时复用。 */
+  async discover(input:unknown){return (await this.discoverDetails(input)).map(m=>m.id)}
+  /** 读取供应商能力元数据；缺失字段不以固定 32k/200k 替代，不自动写回配置。 */
+  async discoverDetails(input:unknown){
+    const r=z.object({id:z.string().uuid().optional(),connection:connectionSchema.strict(),apiKey:z.string().max(16000).optional()}).strict().parse(input);
+    let key=r.apiKey||'';
+    if(r.connection.auth==='api-key'&&!key){const p=(await this.read()).profiles.find(p=>p.id===r.id);if(!p||p.baseUrl!==r.connection.baseUrl||p.api!==r.connection.api)fail('KEY_REQUIRED','请先输入该接口的 API Key');key=this.decrypt(p)}
+    const base=r.connection.baseUrl.replace(/\/$/,''),anthropic=r.connection.api==='anthropic-messages';
+    const url=base+(anthropic&&!base.endsWith('/v1')?'/v1/models':'/models');
+    const body=await this.request(url,{headers:this.headers(r.connection.api,r.connection.auth,key)});
+    if(!Array.isArray(body.data))fail('LLM_RESPONSE','接口未返回模型列表，请手动添加模型');
+    return parseModelCatalog(body.data);
+  }
+  private headers(api:string,auth:string,key:string){const h:Record<string,string>={'Content-Type':'application/json'};if(api==='anthropic-messages'){h['anthropic-version']='2023-06-01';if(auth==='api-key')h['x-api-key']=key}else if(auth==='api-key')h.Authorization='Bearer '+key;return h}
+  /** 请求仅返回解析后的短响应；错误不带服务器正文、请求头或密钥。 */
+  private async request(url:string,init:RequestInit){
+    try{
+      const response=await fetch(url,{...init,redirect:'error',signal:AbortSignal.timeout(15000)});
+      if(!response.ok){await response.body?.cancel();fail('LLM_HTTP',`模型接口返回 HTTP ${response.status}，请检查地址、模型 ID、密钥和额度`)}
+      const reader=response.body?.getReader();let text='';if(reader){const decoder=new TextDecoder();while(true){const part=await reader.read();if(part.done)break;text+=decoder.decode(part.value,{stream:true});if(text.length>1024*1024){await reader.cancel();fail('LLM_RESPONSE','模型响应过大')}}text+=decoder.decode()}
+      return JSON.parse(text);
+    }catch(e:any){if(['LLM_HTTP','LLM_RESPONSE'].includes(e.code))throw e;fail('LLM_CONNECTION','连接失败或超时，请检查网络与接口配置')}
+  }
+  /** 显式测试已保存模型，发送最小文本请求；不发送项目知识，不代表工具调用能力已验证。 */
+  async test(id:string,modelId?:string){
+    const {profile:p,apiKey}=await this.resolve(id,modelId),started=Date.now(),anthropic=p.api==='anthropic-messages',responses=p.api==='openai-responses';
+    const base=p.baseUrl.replace(/\/$/,''),url=base+(anthropic?(base.endsWith('/v1')?'/messages':'/v1/messages'):responses?'/responses':'/chat/completions');
+    const payload=responses?{model:p.model,max_output_tokens:64,stream:false,input:'Reply with OK.'}:{model:p.model,max_tokens:64,stream:false,messages:[{role:'user',content:'Reply with OK.'}]};
+    const body=await this.request(url,{method:'POST',headers:this.headers(p.api,p.auth,apiKey),body:JSON.stringify(payload)});
+    const valid=anthropic?body.content?.some((x:any)=>x.type==='text'&&typeof x.text==='string'):responses?body.output?.some((x:any)=>x.type==='message'&&x.content?.some((c:any)=>c.type==='output_text'&&typeof c.text==='string')):typeof body.choices?.[0]?.message?.content==='string';
+    if(!valid)fail('LLM_RESPONSE','接口没有返回有效文本，请核对接口协议');
+    return {ok:true,model:p.model,latencyMs:Date.now()-started};
+  }
+}

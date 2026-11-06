@@ -8,7 +8,7 @@
 build/
   YYYYMMDD-HHmmss/
     CBIM Assistant-win32-x64/
-      CBIM Assistant.exe
+      CBIM.exe
       ...其余运行文件
     make/zip/win32/x64/
       CBIM-Assistant-YYYYMMDD-HHmmss-win32-x64-0.1.0.zip

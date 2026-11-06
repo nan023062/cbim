@@ -3,6 +3,7 @@ import { VitePlugin } from '@electron-forge/plugin-vite';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import {packagePiRuntime} from './scripts/package-pi-runtime.mjs';
 
 // Keep one timestamp across Forge's package/make phases and any child processes.
 const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
@@ -19,11 +20,12 @@ async function saveBuildInfo(info:unknown){
 }
 const config: ForgeConfig = {
   outDir: buildOut,
-  packagerConfig: { asar: true, executableName: 'CBIM Assistant', extraResource: ['design','node_modules/koffi'] },
+  packagerConfig: { asar: true, executableName: 'CBIM', extraResource: ['design','docs','node_modules/koffi',path.join(buildOut,'pi-runtime')] },
   makers: [new MakerZIP({}, ['win32'])],
   hooks:{
+    generateAssets:async()=>{await packagePiRuntime(path.join(buildOut,'pi-runtime'))},
     postPackage:async(_config,result)=>{
-      await saveBuildInfo({buildStamp,timeZone:'Asia/Shanghai',stage:'package',completedAt:new Date().toISOString(),outputDirectory:buildOut,platform:result.platform,arch:result.arch,executable:result.platform==='win32'?path.join(result.outputPaths[0],'CBIM Assistant.exe'):null,packageDirectories:result.outputPaths,artifacts:[]});
+      await saveBuildInfo({buildStamp,timeZone:'Asia/Shanghai',stage:'package',completedAt:new Date().toISOString(),outputDirectory:buildOut,platform:result.platform,arch:result.arch,executable:result.platform==='win32'?path.join(result.outputPaths[0],'CBIM.exe'):null,packageDirectories:result.outputPaths,artifacts:[]});
     },
     postMake:async(_config,results)=>{
       for(const result of results)for(let i=0;i<result.artifacts.length;i++){
@@ -38,8 +40,10 @@ const config: ForgeConfig = {
     },
   },
   plugins: [new VitePlugin({build: [
-    {entry:'src/main/main.ts', config:'vite.main.config.ts', target:'main'},
-    {entry:'src/preload/preload.ts', config:'vite.preload.config.ts', target:'preload'},
+    {entry:'src/backend/main/main.ts', config:'vite.main.config.ts', target:'main'},
+    {entry:'src/backend/main/integrations/hosts/host-bridge.ts', config:'vite.main.config.ts', target:'main'},
+    {entry:'src/backend/main/integrations/hosts/host-guard.ts', config:'vite.main.config.ts', target:'main'},
+    {entry:'src/bridge/preload/preload.ts', config:'vite.preload.config.ts', target:'preload'},
   ], renderer:[{name:'main_window',config:'vite.renderer.config.ts'}]})],
 };
 export default config;

@@ -1,5 +1,7 @@
 # Module 定义与维护规范
 
+> 结构设计：workspace 是根容器，一级 Module 是按领域划分的工程节点，以下是各工程的模块节点。每个 Module 可用的 Workflow 仅为自身 module.json.workflows，不继承父模块或工程节点流程，不设置根级或模块级共享 workflows.json。Agent 任务基于明确的 Module。详见 [Team 与 Workspace 结构设计](../../docs/shared-skills-workflows.md)；工程层级的新增校验尚未实现，不据此自动改写已有工程。
+
 新增、修改模块定义或核实模块契约时按需读取。项目实例、索引位置与实际工作范围由调用方提供；本规范不组织执行者路由。
 
 ## 模块层级与物理工作区源

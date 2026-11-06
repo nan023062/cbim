@@ -1,17 +1,17 @@
 /**
  * 作用定位：大脑 执行层：与具体引擎无关的任务、事件、工具策略和执行摘要契约。
- * 设计原因：引擎可选 steer 在当前工具批次之后注入用户补充，不改变模型或权限；任务身份与引擎会话分开，区分主 Agent 对话与团队工作流快照，保存公开文本增量；执行结束不代表业务验收通过。
+ * 设计原因：任务身份与引擎会话分开；公开事件持久化计划修订，摘要区分交付候选与业务验收。steer 不改变模型或权限，普通问答不强制创建计划。
  */
 import type {TaskSpec} from '../tasks/types';
 import type {ToolCall,ToolDecision} from '../tools/types';
 export type {TaskSpec} from '../tasks/types';
 export type {ChatPermission,ChatApproval} from '../policy/types';
 export type {ToolCall,ToolDecision} from '../tools/types';
-/** Engine-neutral contract. No Electron, MCP or application database dependency. */
+/** Engine-neutral contract. No Electron or application database dependency. */
 export type RunStatus = 'running' | 'completed' | 'cancelled' | 'failed' | 'interrupted';
 export interface EngineEvent {
   type: 'run.started' | 'session.bound' | 'message' | 'message.delta' | 'tool.started' | 'tool.finished' |
-    'tool.proposed' | 'tool.allowed' | 'tool.denied' | 'tool.updated' | 'engine.status' | 'run.stop_requested' | 'run.settled' | 'run.interrupted';
+    'tool.proposed' | 'tool.allowed' | 'tool.denied' | 'tool.updated' | 'task.updated' | 'engine.status' | 'run.stop_requested' | 'run.settled' | 'run.interrupted';
   data: Record<string, unknown>;
 }
 /** 事件落盘后的身份与顺序信息；观察者只能收到成功持久化的记录。 */
@@ -32,6 +32,8 @@ export interface EngineContext {
   runId: string;
   directory: string;
   sessionFile?: string;
+  /** 绑定本轮日志的任务记录工具；不能签发业务验收。 */
+  taskTools?:Pick<import('../tasks/progress-tools').TaskProgressTools,'list'|'call'>;
   /** 返回前完成持久化；失败必须停止依赖这份证据的操作。 */
   emit(event: EngineEvent): Promise<void>;
   /** 决策及证据先落盘，返回 allow 才可执行。 */
@@ -57,5 +59,7 @@ export interface RunSummary {
   unresolvedTools: string[];
   /** 新运行的工具事实回执；旧日志可能没有，不能补造为已验收证据。 */
   toolReceipts?:import('../tools/types').ToolReceipt[];
+  /** 最近一次持久化计划；未创建计划的普通问答为空。 */
+  taskProgress?:import('../tasks/progress').TaskProgress;
   events: StoredEvent[];
 }

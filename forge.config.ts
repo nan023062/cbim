@@ -41,8 +41,6 @@ const config: ForgeConfig = {
   },
   plugins: [new VitePlugin({build: [
     {entry:'src/backend/main/main.ts', config:'vite.main.config.ts', target:'main'},
-    {entry:'src/backend/main/integrations/hosts/host-bridge.ts', config:'vite.main.config.ts', target:'main'},
-    {entry:'src/backend/main/integrations/hosts/host-guard.ts', config:'vite.main.config.ts', target:'main'},
     {entry:'src/bridge/preload/preload.ts', config:'vite.preload.config.ts', target:'preload'},
   ], renderer:[{name:'main_window',config:'vite.renderer.config.ts'}]})],
 };

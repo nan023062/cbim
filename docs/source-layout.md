@@ -13,6 +13,7 @@ src/
       connectors/         链接器定义
       knowledge/          知识类型、只读快照、规则、查询、CRUD 规划与存储端口
       policy/             当前权限与人工确认契约
+      runtime/            全局动态成员、任务、负载与消费的公开监管契约
       tasks/              任务及待执行消息契约
       team/               组织、Agent 与 Skill 继承
       tools/              注册表、调用与结构化问题契约
@@ -21,11 +22,11 @@ src/
       context/            团队任务上下文准备
       conversation/       主 Agent 指引、队列、提问及运行内审批
       execution/          运行装配、工作区执行和恢复
-      tools/              内部 Loop 与 MCP 共用的知识工具适配
+      runtime/            应用级运行索引、代际隔离、负载与用量聚合
+      tools/              内部 Loop 的知识工具及任务工具适配
     main/               应用装配与实际平台环境
-      commands/           CLI
+      commands/           内部 Loop 开发命令
       ipc/                应用 action 路由
-      integrations/       hosts/ 外部宿主；mcp/ 可选传输
       persistence/        knowledge/ 知识事务；tasks/ 日志附件；settings/ 配置
       platform/           路径、锁、加密、终端及原生访问检查
       resources/          共享资源仓库
@@ -39,7 +40,7 @@ src/
     workspace/          项目业务架构
     team/               项目团队架构
     knowledge/          知识编辑与检查
-    diagnostics/        MCP 状态、流量和日志
+    diagnostics/        工作区知识问题诊断
     shell/              侧栏、用户栏及扩展区域
     settings/           应用设置
     resources/          三类共享资源
@@ -68,9 +69,7 @@ src/
 | 执行管理器的审批等待与任务内授权 | `scheduler-engine/conversation/approvals.ts` |
 | `main/application.ts` action switch | `main/ipc/dispatch.ts`；应用仍控制服务生命周期 |
 | `main/infrastructure/` | 执行装配在 `main/execution.ts`，其余按平台与持久化归属 |
-| `main/host/`、`main/mcp/` | `main/integrations/hosts/`、`main/integrations/mcp/` |
 | `shared/` | 领域类型归 Core，公开跨进程数据归 `contracts/` |
-| `renderer/mcp/` | `renderer/diagnostics/` |
 | 业务架构面板 | `renderer/workspace/WorkspaceView.tsx`；知识编辑器仍在 Knowledge |
 
 ## 依赖规则
@@ -81,17 +80,19 @@ src/
 - Contracts 可以重导出 Core 的公开可序列化类型和纯格式化函数，不能暴露持密钥的运行快照。
 - 调度上下文准备直接调用 Core 查询服务，不通过模型工具协议取得数据。
 - Team 与 Workspace 只读快照辅助依赖严格 JSON 解析器，不通过 Rules 反向依赖完整领域查询门面。目录级依赖聚合不等于存在文件级循环。
-- `KnowledgeTools` 使用通用 `ToolRegistry` 注册协议。注册与发现不授权，实例与版本、写开关仍由原有调用边界核验。
+- `KnowledgeTools` 使用通用 `ToolRegistry` 注册协议。注册与发现不授权，调用使用可信运行的实例身份、版本和权限；桌面知识操作由固定 IPC 路由调用领域服务。
 
 ## 本次保持的行为
 
-工具名、IPC action、工作区身份算法、用户数据路径、事务日志、Pi 会话和队列文件格式保持不变。构建入口与宿主开发入口更新为新源路径，打包后仍生成原有桥接文件名。
+目录整理保持内部工具名、工作区身份算法、用户数据路径、事务日志、Pi 会话和队列文件格式。桌面与 `pnpm loop` 是实际运行入口；构建清单只包含应用、preload 和内部 Pi 运行资源。
 
-此次不统一原生与知识写权限，不引入新审批要求，不自动迁移项目知识或重放任务。Foundation 的 Node 文件原语、规则校验的只读文件核验、Pi 的进程适配以及会话队列自身的持久化仍保留其现有职责；Core 不是浏览器可执行的纯函数包。
+内部 Loop 的原生与知识写入已经共用运行权限，目录整理本身不自动迁移项目知识或重放任务。Foundation 的 Node 文件原语、规则校验的只读文件核验、Pi 的进程适配以及会话队列自身的持久化仍保留其现有职责；Core 不是浏览器可执行的纯函数包。
 
 尚未建立 `evidence/`、`governance/`、`planning/`、`workflow/`、`delivery/` 等空目录。只有相应阶段开始实现实际能力时才创建，避免用目录替代交付。
 
 ## Review 与维护
+
+成员封装与任务调度见 [任务派发图契约](agent-dispatch-contract.md)：Core 持有成员、图、命令和存储端口；调度负责知识核实与可靠入队；main 持有事务日志及工作区生命周期；Bridge 导出图 DTO。各模块 `CONTRACT.md` 分开记录已实现范围与后续设计，生成器同步附加到对应 `ARCHITECTURE.md`；上方类图仍只描述当前实现。修改契约源后运行生成器，避免未来 API 混入现状图。
 
 从 [src 总览](../src/ARCHITECTURE.md) 逐层进入，每个维护目录包含代码清单、Mermaid 类图和子目录链接。大图按文件或边界拆分，跨组依赖明确列出。
 
@@ -112,7 +113,7 @@ src/
 - 47 份目录架构文档覆盖 135 个代码/样式文件，同步检查及文档链接检查通过。入口注释已明确 frontend、backend、bridge 的职责；两份架构维护 Skill 同步采用新边界。
 - `pnpm package` 生成 `build/20261106-141226/CBIM Assistant-win32-x64/CBIM.exe`。
 - 打包后的扩展区界面验证通过：浏览器、终端、中央对话隔离、页签展开收起与布局。
-- 便携包复制到工程外并移除 PATH 中的 Node/Python 后，内置 Skill、知识 CRUD、stdio 桥及宿主 Hook 验证通过；不是另一台干净电脑测试。
+- 便携包复制到工程外并移除 PATH 中的 Node/Python 后，内置 Skill、知识 CRUD 验证通过；不是另一台干净电脑测试。
 
 ## 此前职责拆分验证
 
@@ -122,7 +123,7 @@ src/
 - 39 个测试文件、130 项测试通过，覆盖知识事务恢复、真实 Pi 调用、图片、队列、权限和分层边界。
 - 45 个维护目录的架构文档覆盖 134 个代码/样式文件；文档同步检查与相对链接检查通过。
 - `pnpm package` 生成 `build/20261106-133705/CBIM Assistant-win32-x64/CBIM.exe`。
-- 便携包复制到工程外、从 PATH 移除 Node/Python 后启动成功，内置 Skill、知识 CRUD、stdio 桥和宿主 Hook 验证通过；这是本机隔离目录验证，不是另一台干净电脑验证。
+- 便携包复制到工程外、从 PATH 移除 Node/Python 后启动成功，内置 Skill、知识 CRUD 验证通过；这是本机隔离目录验证，不是另一台干净电脑验证。
 - 新版扩展区桌面测试通过：浏览器、命令终端、团队/业务架构入口、中央草稿隔离、页签收起展开及几何布局。
 
 本次未发布或推送代码，未修改用户工作区知识与运行数据。后续工具功能仍按工具架构计划分阶段实现。

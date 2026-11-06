@@ -12,7 +12,7 @@
 | --- | --- |
 | [builtins.ts](builtins.ts) | Builtins：白名单发布内置 Skill、规范和 Schema，返回正文、版本与解析引用。 |
 | [knowledge-queries.ts](knowledge-queries.ts) | 核心知识查询门面，装配团队与业务工作区领域视图并刷新索引。 |
-| [knowledge.ts](knowledge.ts) | Core 知识规则：解析 JSON、校验三个领域的结构与引用并派生索引。 |
+| [knowledge.ts](knowledge.ts) | Core 知识规则：校验领域结构、人员与显式模块维护关系，并派生注册索引。 |
 | [object-crud.ts](object-crud.ts) | Core 对象治理：规划 Agent/Module/Skill/Workflow 变更，按计划提交受控事务。 |
 | [object-storage.ts](object-storage.ts) | 对象 CRUD 所需的目录检查、预览计划存储和空目录清理端口。 |
 | [ports.ts](ports.ts) | 核心知识领域需要的工作区存取与事务接口。 |
@@ -155,7 +155,6 @@ class N_src_backend_core_knowledge_ports_ts_KnowledgeWorkspace["KnowledgeWorkspa
   +rules
   +tasks
   +state
-  +writable
   +assert()
   +read()
   +snapshot()

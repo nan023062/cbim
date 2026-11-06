@@ -18,7 +18,7 @@ it('image capability is explicit, discoverable, and backward compatible',()=>{
  expect(modelSchema.parse({id:'legacy',name:'legacy',enabled:true,contextWindow:8192,maxTokens:1024,reasoning:false}).vision).toBeUndefined();
 });
 it('image snapshots preserve bytes, isolate workspaces, limit size, and survive queue reload',async()=>{
- const f=await fixture(false);try{
+ const f=await fixture();try{
   const a=await f.app.dispatch('add',{path:f.a}),b=await f.app.dispatch('add',{path:f.b});const inputs=new ChatInputs(f.app.workspace(a.id));
   const file=path.join(f.a,'picture.bin');await fs.writeFile(file,Buffer.from(png,'base64'));const item=await inputs.path('file',file);await fs.writeFile(file,'changed');
   expect(await inputs.images([item.id])).toEqual([{type:'image',mimeType:'image/png',data:png}]);
@@ -30,7 +30,7 @@ it('image snapshots preserve bytes, isolate workspaces, limit size, and survive 
  }finally{await f.cleanup()}
 });
 it('real Pi sends attachment image bytes to the provider, preserves them on resume, and rejects text-only models',async()=>{
- const f=await fixture(false);const requests:any[]=[];
+ const f=await fixture();const requests:any[]=[];
  const server=http.createServer(async(req,res)=>{
   let raw='';for await(const part of req)raw+=part;const body=JSON.parse(raw);requests.push(body);
   res.writeHead(200,{'Content-Type':'text/event-stream'});

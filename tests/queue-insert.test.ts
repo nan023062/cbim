@@ -6,7 +6,7 @@ import {fixture} from './helpers';
 import {transcript} from '../src/frontend/conversation/transcript';
 
 it('real Pi accepts queued steering without aborting the active request or losing the current tool',async()=>{
- const f=await fixture(false);let received!:()=>void,release!:()=>void;const firstRequest=new Promise<void>(r=>received=r),gate=new Promise<void>(r=>release=r);const bodies:any[]=[];
+ const f=await fixture();let received!:()=>void,release!:()=>void;const firstRequest=new Promise<void>(r=>received=r),gate=new Promise<void>(r=>release=r);const bodies:any[]=[];
  const file=path.join(f.a,'src','note.txt');await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file,'TOOL_EVIDENCE');
  const server=http.createServer(async(req,res)=>{
   let raw='';for await(const c of req)raw+=c;const body=JSON.parse(raw);bodies.push(body);const n=bodies.length;

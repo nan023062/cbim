@@ -1,6 +1,6 @@
 /**
  * 作用定位：调度引擎：将工作区内部知识服务、内核锁与前置策略注入独立 LoopRuntime。
- * 设计原因：原生与知识工具共用 Core 运行授权，知识参数及实例在 gate 前核验；只读禁止两类写入，ask 共用本轮审批，领域事务与平台边界不可豁免。
+ * 设计原因：原生与知识工具共用运行授权；任务记录工具在 gate 前校验参数，仅维护本运行记录、不授予业务写权限。领域事务与平台边界不可豁免。
  */
 import {questionTool} from '../conversation/questions';
 import path from 'node:path';
@@ -18,6 +18,7 @@ import type {PiCommand} from '../../core/brain/pi/rpc';
 import type {ResolvedLlm} from '../../core/brain/llm/ports';
 import {authorizeRunTool} from '../../core/policy/tool-policy';
 import {questionInput} from '../../core/tools/questions';
+import {progressTool} from '../../core/tasks/progress-tools';
 
 /** 工作区执行装配参数；未指定权限时默认只读，知识与业务写入由同一运行策略控制。 */
 export interface WorkspaceLoopOptions {
@@ -60,7 +61,7 @@ async function bundledPiEntry(){
   }
   throw Error('缺少 Pi 运行时，请先安装项目依赖');
 }
-/** 必须由工作区所有者装配；不发现或连接外部 MCP，权限与版本检查保留。 */
+/** 必须由工作区所有者装配；直接接入内部知识服务，保留权限与版本检查。 */
 export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,options:WorkspaceLoopOptions,services:ExecutionServices){
   owner.assert();
   const workspace=await paths.identity(owner.entry.path);
@@ -87,6 +88,7 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
     toolPolicy:async call=>{
       owner.assert();
       try{
+        const progress=progressTool(call.name,call.input);if(progress)return await authorizeRunTool(call,progress,policyContext);
         if(call.name===questionTool.name&&options.requestQuestion){questionInput.parse(call.input);return await authorizeRunTool(call,{effects:['read'],native:false},policyContext)}
         if(call.name.startsWith('cbim_'))return await authorizeRunTool(call,service.describe(call.name,call.input),policyContext);
         if(!['read','grep','find','ls','bash','write','edit'].includes(call.name))return {allow:false,reason:'当前运行未授权此工具'};

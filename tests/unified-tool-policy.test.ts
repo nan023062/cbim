@@ -17,7 +17,7 @@ test('read mode denies both write channels, including forged approvals and shell
 });
 
 test('real Pi routes knowledge commit through read, ask and execute modes and persists receipts',async()=>{
-  const f=await fixture(false);let turn=0,args:Record<string,unknown>={};
+  const f=await fixture();let turn=0,args:Record<string,unknown>={};
   const server=http.createServer(async(req,res)=>{
     for await(const _chunk of req){};
     res.writeHead(200,{'Content-Type':'text/event-stream'});
@@ -32,7 +32,7 @@ test('real Pi routes knowledge commit through read, ask and execute modes and pe
     const home=path.join(f.app.paths.project(entry.id),'loop-engine','pi');await fs.mkdir(home,{recursive:true});
     await fs.writeFile(path.join(home,'models.json'),JSON.stringify({providers:{'policy-provider':{baseUrl:`http://127.0.0.1:${(server.address() as any).port}/v1`,api:'openai-completions',apiKey:'test-only',models:[{id:'policy-model',reasoning:false,input:['text'],contextWindow:32768,maxTokens:1024,cost:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}}}));
     for(const permission of ['read','ask','execute'] as const){
-      turn=0;ws.writable=permission==='read';
+      turn=0;
       const snap=await ws.snapshot();args={workspaceId:entry.id,instanceId:ws.instanceId,revision:snap.revision,requestId:randomUUID(),changes:[]};
       const run=await manager.chat('验证统一工具权限',{provider:'policy-provider',model:'policy-model',permission,allowNativeExecution:permission!=='read',turnTimeoutMs:20000});
       if(permission==='ask'){
@@ -43,7 +43,6 @@ test('real Pi routes knowledge commit through read, ask and execute modes and pe
       const result=await manager.inspect(run.taskId,run.runId);
       expect(result.status,JSON.stringify(result.events.at(-1))).toBe('completed');
       expect(result.toolReceipts,JSON.stringify(result.events.filter(e=>e.type.startsWith('tool.')))).toMatchObject([{toolCallId:'knowledge-write',outcome:permission==='read'?'denied':'succeeded',workspaceId:entry.id,runId:run.runId,effects:['knowledge-write']}]);
-      expect(ws.writable).toBe(permission==='read');
     }
   }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}
 },60000);
@@ -54,20 +53,17 @@ test('ask uses the same approval for knowledge and files; platform denials canno
   expect((await authorizeRunTool({id:'denied',name:'bash',input:{}},{effects:['command'],native:true},{...context,guard:async()=>({allow:false,reason:'outside'})})).allow).toBe(false);
   expect(approvals).toBe(2);
 });
-test('internal per-call knowledge permission does not enable external MCP or skip identity and revision',async()=>{
-  const f=await fixture(false);try{
+test('internal per-call knowledge permission cannot skip identity or revision and is not retained by the next call',async()=>{
+  const f=await fixture();try{
     const entry=await f.app.dispatch('add',{path:f.a}),ws=f.app.workspace(entry.id),tools=knowledgeTools(ws),snap=await ws.snapshot();
     const args={workspaceId:entry.id,instanceId:ws.instanceId,revision:snap.revision,requestId:'unified-test',changes:[],approved:true};
-    expect(ws.writable).toBe(false);
-    await expect(tools.call('cbim_knowledge_commit',args,true)).rejects.toThrow('知识写入权限');
     await expect(tools.callFromRun('cbim_knowledge_commit',args,false)).rejects.toThrow('知识写入权限');
     await expect(tools.callFromRun('cbim_knowledge_refresh',args,false)).rejects.toThrow('知识写入权限');
     await expect(tools.callFromRun('cbim_knowledge_commit',{...args,instanceId:'forged'},true)).rejects.toThrow();
     await expect(tools.callFromRun('cbim_knowledge_commit',{...args,revision:'outdated'},true)).rejects.toThrow();
     const value=await tools.callFromRun('cbim_knowledge_commit',args,true);
     expect(JSON.parse(value.content[0].text)).toMatchObject({state:'committed',workspaceId:entry.id});
-    expect(ws.writable).toBe(false);
-    await expect(tools.call('cbim_knowledge_commit',args,true)).rejects.toThrow('知识写入权限');
+    await expect(tools.callFromRun('cbim_knowledge_commit',args,false)).rejects.toThrow('知识写入权限');
     for(const tool of tools.list()){expect(tool.version).toBe(1);expect(tool.effects?.length).toBeGreaterThan(0)}
   }finally{await f.cleanup()}
 });

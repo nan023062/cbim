@@ -29,18 +29,21 @@ class N_src_backend_core_knowledge["knowledge/"] {
 class N_src_backend_core_policy["policy/"] {
   <<directory>>
 }
-class N_src_backend_core_tasks["tasks/"] {
+class N_src_backend_core_runtime["runtime/"] {
   <<directory>>
 }
 N_src_backend_core_brain ..> N_src_backend_core_foundation : 导入依赖
-N_src_backend_core_brain ..> N_src_backend_core_tasks : 导入依赖
 N_src_backend_core_brain ..> N_src_backend_core_policy : 导入依赖
 N_src_backend_core_knowledge ..> N_src_backend_core_foundation : 导入依赖
 N_src_backend_core_knowledge ..> N_src_backend_core_connectors : 导入依赖
+N_src_backend_core_runtime ..> N_src_backend_core_brain : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_tasks["tasks/"] {
+  <<directory>>
+}
 class N_src_backend_core_team["team/"] {
   <<directory>>
 }
@@ -50,6 +53,8 @@ class N_src_backend_core_tools["tools/"] {
 class N_src_backend_core_workspace["workspace/"] {
   <<directory>>
 }
+N_src_backend_core_tasks ..> N_src_backend_core_team : 导入依赖
+N_src_backend_core_tasks ..> N_src_backend_core_tools : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
@@ -63,6 +68,12 @@ class N_src_backend_core_workspace["workspace/"] {
 - `knowledge` → `workspace`：导入。
 - `knowledge` → `connectors`：导入。
 - `policy` → `tools`：导入。
+- `runtime` → `brain`：导入。
+- `runtime` → `tasks`：导入。
+- `runtime` → `team`：导入。
+- `tasks` → `team`：导入。
+- `tasks` → `foundation`：导入。
+- `tasks` → `tools`：导入。
 - `team` → `knowledge`：导入。
 - `team` → `foundation`：导入。
 - `tools` → `foundation`：导入。
@@ -71,15 +82,16 @@ class N_src_backend_core_workspace["workspace/"] {
 
 ## 子目录导航
 
-- [brain/](brain/ARCHITECTURE.md)：引擎无关的执行循环与事件契约。工具决策先落盘，完成或未知结果生成运行回执；审批后复核停止，恢复不自动重放未知操作。
+- [brain/](brain/ARCHITECTURE.md)：引擎无关的执行循环与事件契约。工具决策、任务修订和回执先落盘；副作用及恢复使旧计划证据失效，执行结束不自动验收或重放未知操作。
 - [connectors/](connectors/ARCHITECTURE.md)：链接器定义、查询与唯一身份检查；当前不执行外部插件。
 - [foundation/](foundation/ARCHITECTURE.md)：少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识快照、校验、领域查询和对象变更规划。物理事务通过 KnowledgeWorkspace 注入，预览缓存通过 ObjectStorage 注入。Team/Workspace 仅依赖本目录的只读快照辅助，不依赖查询门面或工具注册。
-- [policy/](policy/ARCHITECTURE.md)：内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；外部 MCP 保留独立凭据与写开关，不声称操作系统隔离。
-- [tasks/](tasks/ARCHITECTURE.md)：任务定义和待执行消息契约。区分 taskId 与 runId；当前不包含业务自动验收或 Workflow 状态机。
-- [team/](team/ARCHITECTURE.md)：Team、小组、Agent 和父链 Skill 的只读领域视图；通过版本固定的快照解析，不依赖工作区进程。
+- [policy/](policy/ARCHITECTURE.md)：内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；不声称操作系统隔离。
+- [runtime/](runtime/ARCHITECTURE.md)：应用级运行监管契约：动态成员、派发任务、旧 Loop 任务、轮次用量和负载分开表达；只读投影不签发调度、租约或权限。
+- [tasks/](tasks/ARCHITECTURE.md)：任务计划、成员派发图类型及原子存储端口。图校验派发/依赖/等待关系，按游标增量读取；执行计划只产生交付候选，不自动验收。
+- [team/](team/ARCHITECTURE.md)：Team、小组、Agent 和父链 Skill 的只读视图，以及独立成员实例/会话的共享类型；身份契约不引用调度与平台实现。
 - [tools/](tools/ARCHITECTURE.md)：工具 Schema、版本、副作用、调用决策、结构化提问及回执；统一校验结果的 JSON 传输快照，拒绝缺失文本等无效内容。回执绑定运行身份与输入结果哈希；注册和发现不授予执行权限。
-- [workspace/](workspace/ARCHITECTURE.md)：领域工程、Module 与本模块 Workflow 的只读视图；与 main/workspace 的本机生命周期分开。
+- [workspace/](workspace/ARCHITECTURE.md)：领域工程、Module、本模块 Workflow 的只读视图及显式维护关系类型；作者与维护人分开，与 main/workspace 生命周期分开。
 
 [返回上层](../ARCHITECTURE.md)。
 

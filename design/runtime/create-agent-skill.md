@@ -4,7 +4,7 @@ description: 为已有 Agent、Team 或小组创建专业 Skill，维护归属�
 ---
 # 创建专业 Skill
 
-遵循[通用规范](builtin:common-rules)、[Agent 规范](builtin:agent-spec)、[Team Skill Schema](builtin:team-skills-schema)、[共享方法结构](builtin:shared-skills-workflows)。不创建宿主全局 Skill，不自动执行新 Skill 描述的业务操作。
+遵循[通用规范](builtin:common-rules)、[Agent 规范](builtin:agent-spec)、[Team Skill Schema](builtin:team-skills-schema)、[共享方法结构](builtin:shared-skills-workflows)。本流程只维护工作区团队 Skill，不修改应用内置流程，不自动执行新 Skill 描述的业务操作。
 
 1. 通过 cbim_agent_registry、cbim_agent_get 明确实际使用者、已有方法与祖先继承，核实新增授权。已有同等能力优先复用，避免同名冲突。
 2. 专属方法归 Agent；共享方法归能覆盖使用者的最近共同组织节点。不放到兄弟节点，不将内置治理流程复制到每个 Agent。

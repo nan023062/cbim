@@ -4,7 +4,7 @@
  */
 /** 知识校验/重建索引任务视图，不是内部 Loop 的业务任务持久化定义。 */
 export interface TaskView {id:string; workspaceId:string; name:string; state:string; progress:string; result?:unknown; error?:string}
-/** 知识正文及内容哈希；path 是服务返回的知识标识，不授权宿主直接访问磁盘。 */
+/** 知识正文及内容哈希；path 是服务返回的知识标识，不授权 Agent 的原生工具直接访问磁盘。 */
 export interface KnowledgeFile {path:string; text:string; hash:string}
 /** 单文件预期变更；text 为 null 表示删除，否则为完整新正文。 */
 export interface Change {path:string; text:string|null}

@@ -11,8 +11,7 @@ import {ChatInputs} from './persistence/tasks/chat-inputs';
 import {systemSecretCipher} from './platform/secrets';
 import {Paths} from './platform/paths';
 import {json} from '../core/foundation/serialization';
-import {Client} from '@modelcontextprotocol/sdk/client/index.js';
-import {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js';
+import {knowledgeTools} from '../scheduler-engine/tools/knowledge-tools';
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL:string;
 declare const MAIN_WINDOW_VITE_NAME:string;
 const terminals=new TerminalSessions();
@@ -22,7 +21,7 @@ if(userRoot){app.setPath('userData',path.join(userRoot,'desktop'));app.setPath('
 else {const root=path.join(app.getPath('home'),'.cbim');app.setPath('userData',path.join(root,'desktop'));app.setPath('sessionData',path.join(root,'desktop'))}
 app.whenReady().then(async()=>{
   const install=app.isPackaged?process.resourcesPath:app.getAppPath();
-  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install),path.join(install,'design'),{command:process.execPath,args:[path.join(__dirname,'host-bridge.js')]},true,systemSecretCipher);await application.init();
+  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install),path.join(install,'design'),systemSecretCipher);await application.init();
   window=new BrowserWindow({width:1320,height:860,minWidth:760,minHeight:520,title:'CBIM Assistant',webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   window.webContents.setWindowOpenHandler(()=>({action:'deny'}));window.webContents.on('will-navigate',(event)=>event.preventDefault());
   // 拖放走独立 IPC；与原生选择器共用快照和 .cbim 边界检查。
@@ -58,8 +57,26 @@ app.whenReady().then(async()=>{
     }catch(e:any){return {ok:false,error:{code:e.code||'ATTACHMENT',message:e.message}}}
     try{if(action==='chooseFolder'){const result=await dialog.showOpenDialog(window,{properties:['openDirectory']});return {ok:true,value:result.canceled?null:result.filePaths[0]}}return {ok:true,value:await application.dispatch(action,args)}}catch(e:any){return {ok:false,error:{code:e.code||'ERROR',message:e.message}}}});
   if(MAIN_WINDOW_VITE_DEV_SERVER_URL)await window.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);else await window.loadFile(path.join(__dirname,`../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
-  // Packaged smoke execution is opt-in and requires an isolated data root.
-  if(process.env.CBIM_SMOKE_ROOT&&userRoot){const entry=await application.catalog.add(process.env.CBIM_SMOKE_ROOT);const ws=await application.open(entry.id);const snap=await ws.snapshot();const config=JSON.parse(await fs.readFile(path.join(entry.path,'.mcp.json'),'utf8')).mcpServers['cbim-'+entry.id];const host=new Client({name:'portable-host',version:'1'});let bridge=false;try{await host.connect(new StdioClientTransport({...config,cwd:entry.path,env:{...process.env,...config.env}}));const tools=await host.listTools();const result=await host.callTool({name:'cbim_workspace_identity',arguments:{}});const identity=JSON.parse((result.content as any)[0].text);bridge=tools.tools.some(t=>t.name==='cbim_knowledge_snapshot')&&identity.workspaceId===entry.id&&identity.instanceId===ws.instanceId;if(!bridge)throw Error('Packaged MCP bridge verification failed');const invoke=async(name:string,args:any={})=>{const r=await host.callTool({name,arguments:{...identity,...args}});const v=JSON.parse((r.content as any)[0].text);if(r.isError)throw Error(v.message);return v};for(const tool of ['cbim_skill_knowledge_query','cbim_skill_business_execution','cbim_skill_knowledge_governance','cbim_skill_architecture_governance','cbim_skill_create_agent_skill','cbim_skill_create_workflow','cbim_skill_core_check'])await invoke(tool);ws.writable=true;const plan=await invoke('cbim_object_preview',{revision:snap.revision,operations:[{kind:'agent',action:'create',parentId:'.cbim/team',slug:'smoke_agent',data:{name:'Smoke',summary:'portabletest'.repeat(12),capabilities:['test']},body:'# Principles'}]});await invoke('cbim_object_commit',{planId:plan.planId});const agent=await invoke('cbim_agent_get',{id:plan.objects[0]});if(!agent.principles.available)throw Error('Packaged object CRUD failed');ws.writable=false;const catalogResult=await host.callTool({name:'cbim_builtin_catalog',arguments:identity});if(catalogResult.isError)throw Error('Packaged builtin catalog failed');const catalog=JSON.parse((catalogResult.content as any)[0].text);for(const item of catalog.items){const document=await host.callTool({name:'cbim_builtin_read',arguments:{...identity,id:item.id,expectedVersion:item.version}});if(document.isError||!JSON.parse((document.content as any)[0].text).text)throw Error('Packaged builtin read failed: '+item.id)}}finally{await host.close()}await fs.writeFile(path.join(userRoot,'smoke-result.json'),json({packaged:app.isPackaged,workspaceId:entry.id,files:snap.files.length,bridge,builtins:true,objectCrud:true,mcp:ws.state,structural:snap.validation?.structural}));await application.shutdown();app.quit()}
+  // 仅隔离数据目录下的显式打包测试可写入样本；正常启动走运行授权策略。
+  if(process.env.CBIM_SMOKE_ROOT&&userRoot){
+    const entry=await application.catalog.add(process.env.CBIM_SMOKE_ROOT),ws=await application.open(entry.id),snap=await ws.snapshot();
+    const tools=knowledgeTools(ws),identity={workspaceId:entry.id,instanceId:ws.instanceId};
+    const invoke=async(name:string,args:Record<string,unknown>={},write=false)=>{
+      const result=await tools.callFromRun(name,name==='cbim_workspace_identity'?{}:{...identity,...args},write);
+      return JSON.parse(result.content[0].text);
+    };
+    const current=await invoke('cbim_workspace_identity');
+    if(current.workspaceId!==entry.id||current.instanceId!==ws.instanceId||!tools.list().some(t=>t.name==='cbim_knowledge_snapshot'))throw Error('Packaged internal knowledge verification failed');
+    for(const tool of ['cbim_skill_knowledge_query','cbim_skill_business_execution','cbim_skill_knowledge_governance','cbim_skill_architecture_governance','cbim_skill_create_agent_skill','cbim_skill_create_workflow','cbim_skill_core_check'])await invoke(tool);
+    const plan=await invoke('cbim_object_preview',{revision:snap.revision,operations:[{kind:'agent',action:'create',parentId:'.cbim/team',slug:'smoke_agent',data:{name:'Smoke',summary:'portabletest'.repeat(12),capabilities:['test']},body:'# Principles'}]});
+    await invoke('cbim_object_commit',{planId:plan.planId},true);
+    const agent=await invoke('cbim_agent_get',{id:plan.objects[0]});
+    if(!agent.principles.available)throw Error('Packaged object CRUD failed');
+    const catalog=await invoke('cbim_builtin_catalog');
+    for(const item of catalog.items){const document=await invoke('cbim_builtin_read',{id:item.id,expectedVersion:item.version});if(!document.text)throw Error('Packaged builtin read failed: '+item.id)}
+    await fs.writeFile(path.join(userRoot,'smoke-result.json'),json({packaged:app.isPackaged,workspaceId:entry.id,files:snap.files.length,internalKnowledge:true,builtins:true,objectCrud:true,workspaceState:ws.state,structural:snap.validation?.structural}));
+    await application.shutdown();app.quit();
+  }
 }).catch(e=>{dialog.showErrorBox('CBIM Assistant 启动失败',e.message+'\n请检查用户数据目录权限及程序资源。');app.exit(1)});
 app.on('before-quit',event=>{if(!quitting&&application){event.preventDefault();quitting=true;terminals.closeAll();void application.shutdown().then(()=>app.quit()).catch(e=>{quitting=false;dialog.showErrorBox('工作区关闭失败',e.message+'\n请保留运行窗口并重试。')})}});
 app.on('window-all-closed',()=>app.quit());

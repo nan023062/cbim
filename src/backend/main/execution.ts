@@ -1,5 +1,5 @@
 /**
- * 作用定位：主进程执行装配，将工作区、已解析模型、原生锁与宿主策略注入调度引擎。
+ * 作用定位：主进程执行装配，将工作区、已解析模型、原生锁与平台访问策略注入调度引擎。
  * 设计原因：为活动运行插入注入工作区图片快照读取端口；启动时从本工作区附件快照恢复图片并复核视觉能力；平台适配留在 main，调度引擎仅依赖 Core 契约，不反向导入本模块。
  */
 import path from 'node:path';
@@ -32,7 +32,7 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles){
     authorizeNative:async call=>{
       workspace.assert();
       const mapped=call.name==='find'?'Glob':call.name;
-      const reason=guard({hook_event_name:'PreToolUse',cwd:workspace.entry.path,tool_name:mapped,tool_input:call.input},workspace.entry.path,workspace.entry.id);
+      const reason=guard({name:mapped,input:call.input},workspace.entry.path);
       return {allow:!reason,reason};
     },
   });},ids=>new ChatInputs(workspace).images(ids));

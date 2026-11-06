@@ -7,7 +7,7 @@ import {seedTeam} from './team-fixture';
 
 /** Real pinned Pi subprocess + internal knowledge service, deterministic local model transport (not a real LLM). */
 it('real Pi gates tools, calls internal knowledge, settles, and resumes its persisted session',async()=>{
-  const f=await fixture(false);let requests=0;
+  const f=await fixture();let requests=0;
   let hold=false,requestStarted:()=>void=()=>{};
   const server=http.createServer(async(req,res)=>{
     let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw);requests++;
@@ -28,7 +28,7 @@ it('real Pi gates tools, calls internal knowledge, settles, and resumes its pers
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
   try{
     const entry=await f.app.dispatch('add',{path:f.a});
-    await expect(fs.access(f.app.paths.discovery(entry.id))).rejects.toThrow();
+    await expect(fs.access(path.join(f.app.paths.project(entry.id),'discovery.json'))).rejects.toThrow();
     await expect(fs.access(path.join(f.a,'.mcp.json'))).rejects.toThrow();
     const agentHome=path.join(f.app.paths.project(entry.id),'loop-engine','pi');
     await fs.mkdir(agentHome,{recursive:true});

@@ -11,7 +11,7 @@ async function main(){
   const {values}=parseArgs({options:{root:{type:'string'},'user-data':{type:'string'},provider:{type:'string'},model:{type:'string'},goal:{type:'string'},module:{type:'string'},agent:{type:'string'},workflow:{type:'string'},person:{type:'string'},acceptance:{type:'string',multiple:true},'allow-execution':{type:'boolean'},task:{type:'string'},resume:{type:'string'},message:{type:'string'},'reconciled-tool':{type:'string',multiple:true}}});
   if(!values.root||!values.provider||!values.model)throw Error('需要 --root、--provider 和 --model；CLI 独立打开工作区，请先关闭占用该工程的 CBIM');
   if(Boolean(values.task)!==Boolean(values.resume))throw Error('--task 与 --resume 必须同时提供');
-  const application=new Application(new Paths(values['user-data'],path.resolve('.')),path.resolve('design'),undefined,false);
+  const application=new Application(new Paths(values['user-data'],path.resolve('.')),path.resolve('design'));
   let stop:(()=>void)|undefined;
   try{
     await application.init();const entry=await application.catalog.add(values.root);await application.open(entry.id);

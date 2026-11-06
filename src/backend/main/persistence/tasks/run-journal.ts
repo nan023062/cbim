@@ -1,6 +1,6 @@
 /**
  * 作用定位：本机执行事件日志，顺序追加并 fsync，从记录恢复摘要和未确认工具。
- * 设计原因：由 FileRunStorage 注入大脑；先持久化后发布，读取时汇总运行时生成的调用回执，旧日志不补造回执，一次写失败阻止后续无证据执行。
+ * 设计原因：先持久化后发布；重建工具回执和任务计划修订，旧日志不补造计划，模型运行完成不自动验收。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -55,6 +55,7 @@ export class RunJournal {
         receipts.set(receipt.toolCallId,receipt);
       }
     }
-    return {task,runId:first.runId,status,acceptance:'not_evaluated',sessionFile,unresolvedTools:[...pending],toolReceipts:[...receipts.values()],events};
+    const taskProgress=events.filter(e=>e.type==='task.updated').at(-1)?.data.progress as RunSummary['taskProgress'];
+    return {task,runId:first.runId,status,acceptance:'not_evaluated',sessionFile,unresolvedTools:[...pending],toolReceipts:[...receipts.values()],taskProgress,events};
   }
 }

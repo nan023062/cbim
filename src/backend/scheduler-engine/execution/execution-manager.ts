@@ -1,8 +1,8 @@
 /**
  * 作用定位：调度引擎：工作区执行管理，负责主 Agent 普通对话、团队任务执行与多轮历史读取，拒绝旧轮次分叉，挂起并处理逐次工具审批与结构化用户问题，持久化消息队列并在成功结束后串行续接；本次全部通过仅在当前执行期间有效。
- * 设计原因：编辑、拖动和原生插入按会话串行，插入失败暂停队列等待核实；保留每轮附件身份，避免续聊或排队丢图；仅依赖 Core 契约和注入工厂；配置仅传递供应商身份和模型 ID，凭据由工厂注入；关闭工作区时先排空执行。
+ * 设计原因：编辑、拖动和原生插入按会话串行，插入失败暂停队列等待核实；向应用监控发布持久化执行事实和队列负载，读取不触发重复通知；配置只传模型身份，关闭时排空执行并解绑观察端。
  */
-import {MessageQueue} from '../conversation/message-queue';
+import {MessageQueue,type QueueCounts} from '../conversation/message-queue';
 import {ApprovalQueue} from '../conversation/approvals';
 import {QuestionQueue} from '../conversation/questions';
 import path from 'node:path';
@@ -24,7 +24,18 @@ export const executionOptions=z.object({provider:z.string().trim().min(1),model:
 type Options=z.infer<typeof executionOptions>;
 export class WorkspaceExecutionManager {
   private messageQueue?:MessageQueue;
-  private async queue(){const q=this.messageQueue??=new MessageQueue(path.join(this.workspace.paths.project(this.workspace.entry.id),'loop-engine','pending-messages.json'));await q.load();return q}
+  private queueSubscriptions=new Set<()=>void>();
+  private queueSource(){return this.messageQueue??=new MessageQueue(path.join(this.workspace.paths.project(this.workspace.entry.id),'loop-engine','pending-messages.json'))}
+  private async queue(){const q=this.queueSource();await q.load();return q}
+  /** 全工作区队列的只读负载订阅；应在初始化前注册，首次恢复与保存之后发布，不暴露消息正文。 */
+  observeQueue(listener:(counts:QueueCounts)=>void,failed?:(error:Error)=>void){
+    if(this.closing)throw Error('工作区执行管理正在关闭');
+    const release=this.queueSource().subscribe(listener,failed);
+    this.queueSubscriptions.add(release);
+    return ()=>{release();this.queueSubscriptions.delete(release)};
+  }
+  /** 不创建任务或启动模型；串行载入已有队列，恢复出的消息保持暂停状态。 */
+  initializeQueueMonitoring():Promise<void>{return this.serial(async()=>{await this.queue()})}
   queued(taskId:string){return this.serial(async()=>{safeId(taskId);return (await this.queue()).list(taskId)})}
   /** 队列游标与变更共享串行边界，只发布已提交快照；保留 queued 供兼容和诊断使用。 */
   queueDelta(taskId:string,cursor?:unknown){return this.serial(async()=>{safeId(taskId);return (await this.queue()).delta(taskId,cursor)})}
@@ -128,5 +139,5 @@ export class WorkspaceExecutionManager {
     return records;
   }
   /** 禁止新任务，等待启动登记完成，然后停止并排空所有运行。 */
-  async close(){this.closing=true;await this.pending;this.cancelApprovals();await Promise.all([...this.active.values()].map(x=>x.loop.runtime.close()));this.active.clear();this.listeners.clear()}
+  async close(){this.closing=true;await this.pending;this.cancelApprovals();await Promise.all([...this.active.values()].map(x=>x.loop.runtime.close()));this.active.clear();this.listeners.clear();for(const release of this.queueSubscriptions)release();this.queueSubscriptions.clear()}
 }

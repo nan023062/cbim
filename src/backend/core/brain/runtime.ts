@@ -1,12 +1,13 @@
 /**
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
- * 设计原因：先持久化工具决策再放行，按真实运行身份生成拒绝、完成及未知结果回执；审批后复核停止状态，不自动重放未确认操作。
+ * 设计原因：先持久化工具决策再放行；任务计划修订与调用事实保存在同一日志，副作用和跨轮次恢复使旧证据失效，执行结束仍不等于验收。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {safeId} from '../foundation/identity';
 import type {RunStorage} from './storage';
 import {toolReceipt} from '../tools/receipts';
+import {TaskProgressTools} from '../tasks/progress-tools';
 import type {AgentEngine,EngineEvent,RunSummary,StoredEvent,TaskSpec,ToolCall,ToolDecision} from './types';
 
 export interface RuntimeOptions {
@@ -54,8 +55,9 @@ export class LoopRuntime {
       const runId=randomUUID(),directory=path.join(this.options.directory,safeId(task.taskId),runId);
       const journal=this.options.storage.createJournal(directory,task,runId);await journal.init();
       const pendingTools=new Set<string>();
-      const calls=new Map<string,{call:ToolCall;decision:ToolDecision}>();
+      const calls=new Map<string,{call:ToolCall;decision:ToolDecision;generation:number}>();
       const identity={workspaceId:task.workspaceId,taskId:task.taskId,runId};
+      const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})});
       const emit=async(event:EngineEvent)=>{
         if(event.type==='tool.finished'){
           const known=calls.get(String(event.data.id));
@@ -67,6 +69,7 @@ export class LoopRuntime {
           }else event={...event,data};
         }
         const saved=await journal.append(event);
+        if(event.type==='tool.finished'&&event.data.receipt)taskTools.record(event.data.receipt as import('../tools/types').ToolReceipt,calls.get(String(event.data.id))!.generation);
         if(event.type==='tool.allowed')pendingTools.add(String(event.data.id));
         if(event.type==='tool.finished')pendingTools.delete(String(event.data.id));
         if(event.type==='tool.denied')pendingTools.delete(String(event.data.id));
@@ -81,22 +84,24 @@ export class LoopRuntime {
       });
       // 保存本轮用户消息，恢复后对话仍能区分最初目标和后续指令。
       await emit({type:'run.started',data:{task,message,engine:engine.kind,resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[]}});
+      await taskTools.invalidate('新一轮执行需要重新核实产物与证据');
       const stop=async()=>{if(stopping)return;stopping=true;await emit({type:'run.stop_requested',data:{}});await engine.stop()};
       const done=(async()=>{
         let result:{status:'completed'|'cancelled'|'failed';error?:string}|undefined;
         let failure:unknown;
         try{
-          await engine.start({task,runId,directory,sessionFile:previous?.sessionFile,emit,beforeTool:async call=>{
+          await engine.start({task,runId,directory,sessionFile:previous?.sessionFile,taskTools,emit,beforeTool:async call=>{
             call=structuredClone(call);
             if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
-            calls.set(call.id,{call,decision:{allow:false}});
+            calls.set(call.id,{call,decision:{allow:false},generation:taskTools.generation});
             await emit({type:'tool.proposed',data:{...call}});
             let decision=stopping?{allow:false,reason:'任务正在停止'}:await this.options.toolPolicy(structuredClone(call));
             if(stopping)decision={...decision,allow:false,reason:'任务正在停止'};
-            calls.set(call.id,{call,decision});
+            if(decision.allow&&(decision.effects?.some(effect=>['business-write','knowledge-write','command'].includes(effect))||['write','edit','bash'].includes(call.name)))await taskTools.invalidate('即将执行可能改变产物的操作，需要重新验证');
+            calls.set(call.id,{call,decision,generation:taskTools.generation});
             await emit({type:decision.allow?'tool.allowed':'tool.denied',data:{...call,...decision,...(!decision.allow?{receipt:toolReceipt(identity,call,decision,'denied')}: {})}});
             if(stopping&&decision.allow){
-              decision={...decision,allow:false,reason:'任务正在停止'};calls.set(call.id,{call,decision});
+              decision={...decision,allow:false,reason:'任务正在停止'};calls.set(call.id,{call,decision,generation:taskTools.generation});
               await emit({type:'tool.denied',data:{...call,...decision,receipt:toolReceipt(identity,call,decision,'denied')}});
             }
             return decision;

@@ -13,7 +13,7 @@ test('length is actionable, reports usage, and old logs are readable without rew
  expect(modelStopError({stopReason:'length',usage:{output:13320,reasoning:7425}},16384)).toContain('不要只提高最大输出');
 });
 test('real Pi stops on length once and explicitly resumes the same conversation',async()=>{
- const f=await fixture(false);let requests=0;const toolSets:string[][]=[];const prompts:string[]=[];
+ const f=await fixture();let requests=0;const toolSets:string[][]=[];const prompts:string[]=[];
  const server=http.createServer(async(req,res)=>{let raw='';for await(const c of req)raw+=c;const body=JSON.parse(raw);prompts.push(JSON.stringify(body.messages));toolSets.push((body.tools||[]).map((t:any)=>t.function.name));requests++;res.writeHead(200,{'Content-Type':'text/event-stream'});for(const [delta,finish] of [[{role:'assistant',content:requests===1?'partial':'resumed'},null],[{},requests===1?'length':'stop']])res.write('data: '+JSON.stringify({id:'length-'+requests,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason:finish}]})+'\n\n');res.end('data: [DONE]\n\n')});
  await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));
  try{const entry=await f.app.dispatch('add',{path:f.a});const home=path.join(f.app.paths.project(entry.id),'loop-engine','pi');await fs.mkdir(home,{recursive:true});await fs.writeFile(path.join(home,'models.json'),JSON.stringify({providers:{'length-test':{baseUrl:`http://127.0.0.1:${(server.address() as any).port}/v1`,api:'openai-completions',apiKey:'test',models:[{id:'test',reasoning:false,input:['text'],contextWindow:32768,maxTokens:4096,cost:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}}}));

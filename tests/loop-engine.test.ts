@@ -88,3 +88,27 @@ it('a truncated journal tail is never interpreted as completed',async()=>{
     expect((await f.runtime.inspect(f.task.taskId,run.runId)).status).toBe('interrupted');
   }finally{await f.cleanup()}
 });
+
+it('task revisions survive logs and resume with stale evidence cleared, never auto-accepted',async()=>{
+  let turn=0;
+  class Engine extends StubEngine{async run(){
+    const tools=this.context.taskTools!;
+    if(turn++===0){
+      await tools.call('cbim_task_plan',{expectedVersion:0,goal:'交付功能',reason:'用户目标',acceptance:['检查结果'],steps:[{id:'one',title:'验证功能',owner:'主 Agent'}]});
+      await this.context.beforeTool({id:'proof',name:'read',input:{path:'proof.txt'}});
+      await this.context.emit({type:'tool.finished',data:{id:'proof',name:'read',result:'actual result'}});
+      await tools.call('cbim_task_step',{expectedVersion:1,id:'one',state:'reported_done',evidenceIds:['proof']});
+      await tools.call('cbim_delivery_prepare',{expectedVersion:2,summary:'待核验结果',limitations:[]});
+    }else{
+      const state=JSON.parse((await tools.call('cbim_task_inspect',{})).content[0].text);
+      expect(state.plan).toMatchObject({version:4,state:'executing',steps:[{state:'pending',evidence:[]}]});expect(state.evidence).toEqual([]);
+    }
+    return {status:'completed' as const};
+  }}
+  const f=await setup(()=>new Engine());try{
+    const first=await f.runtime.start(f.task),result=await first.done;
+    expect(result.taskProgress?.state).toBe('awaiting_review');expect(result.acceptance).toBe('not_evaluated');
+    expect((await RunJournal.read(path.join(f.directory,f.task.taskId,first.runId))).taskProgress).toEqual(result.taskProgress);
+    const second=await f.runtime.start(f.task,'继续修改',{runId:first.runId});await second.done;
+  }finally{await f.cleanup()}
+});

@@ -38,6 +38,7 @@ const server=http.createServer(async(req,res)=>{
     const approvalCall=requests===5||requests===7;
     if(requests===1){const text=JSON.stringify(body.messages);for(const expected of ['FILE_ATTACHMENT_EVIDENCE','WEB_ATTACHMENT_EVIDENCE','示例链接器'])assert.ok(text.includes(expected),expected)}
     const delta=approvalCall?{role:'assistant',tool_calls:[{index:0,id:'approval-'+requests,type:'function',function:{name:'write',arguments:JSON.stringify({path:path.join(root,requests===5?'approved.txt':'denied.txt'),content:'APPROVED'})}}]}:requests===1?{role:'assistant',tool_calls:[{index:0,id:'packaged-identity',type:'function',function:{name:'cbim_workspace_identity',arguments:'{}'}}]}:{role:'assistant',content:'已通过内部工具核实工作区。'};
+    if(requests===1)delta.tool_calls.push({index:1,id:'packaged-plan',type:'function',function:{name:'cbim_task_plan',arguments:JSON.stringify({expectedVersion:0,goal:'核实工作区并记录计划',reason:'桌面计划验证',acceptance:['核对实际工作区'],steps:[{id:'verify',title:'读取并核实',owner:'主 Agent'}]})}});
     for(const [value,finish] of [[delta,null],[{},requests===1||approvalCall?'tool_calls':'stop']])res.write('data: '+JSON.stringify({id:'smoke-'+requests,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta:value,finish_reason:finish}]})+'\n\n');
     res.write('data: '+JSON.stringify({id:'usage-'+requests,object:'chat.completion.chunk',created:1,model:body.model,choices:[],usage:{prompt_tokens:1000,completion_tokens:100,total_tokens:1100}})+'\n\n');res.end('data: [DONE]\n\n');
   }catch(error){modelError=error;res.writeHead(500).end(String(error))}
@@ -99,6 +100,12 @@ try{
   do{result=await call('loop.inspect',{id:entry.id,taskId:run.taskId,runId:run.runId});if(result.status!=='running')break;await new Promise(resolve=>setTimeout(resolve,100))}while(Date.now()<deadline);
   assert.equal(modelError,undefined);assert.equal(result.status,'completed',JSON.stringify(result.events.at(-1)));
   assert.ok(result.events.some(e=>e.type==='tool.finished'&&e.data.id==='packaged-identity'));
+  assert.equal(result.taskProgress?.goal,'核实工作区并记录计划');
+  await page.getByRole('tab',{name:'任务视图',exact:true}).click();
+  await page.getByRole('article',{name:'执行计划',exact:true}).getByText('读取并核实',{exact:true}).waitFor();
+  assert.ok((await page.getByRole('article',{name:'执行计划',exact:true}).innerText()).includes('尚未业务验收'));
+  await page.screenshot({path:'test-results/task-progress.png'});
+  await page.getByRole('tab',{name:'对话',exact:true}).click();
   assert.equal(result.acceptance,'not_evaluated');assert.equal(result.task.mode,'chat');assert.equal(result.task.agentId,'cbim:main');assert.deepEqual(result.task.moduleIds,[]);assert.equal(result.task.workflowContext,undefined);
   assert.ok(!JSON.stringify(result).includes('packaged-test-secret'));
   const modelFile=await fs.readFile(path.join(user,entry.id,'loop-engine','tasks',run.taskId,run.runId,'provider','models.json'),'utf8');

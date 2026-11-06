@@ -1,18 +1,15 @@
 import {describe,it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {Client} from '@modelcontextprotocol/sdk/client/index.js';
-import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import {fixture,request,moduleFiles} from './helpers';
+import {fixture,request,moduleFiles,internalKnowledge} from './helpers';
 import {exists,readJson} from '../src/backend/core/foundation/files';
 import {json} from '../src/backend/core/foundation/serialization';
 import {Workspace} from '../src/backend/main/workspace/workspace';
-import {serve} from '../src/backend/main/integrations/mcp/mcp';
 import {KernelLock} from '../src/backend/main/platform/locking';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
 
-describe('真实工作区与 MCP',()=>{
+describe('真实工作区与内部知识服务',()=>{
   it('首次打开创建空 Team 与 workspace 骨架，不创建全局 Workflow 或示例节点',async()=>{const f=await fixture();try{
     const entry=await f.app.catalog.add(f.a);expect(await exists(path.join(f.a,'.cbim'))).toBe(false);
     const w=await f.app.open(entry.id),root=path.join(f.a,'.cbim');
@@ -36,16 +33,6 @@ describe('真实工作区与 MCP',()=>{
     const task=wb.startTask('validate');await f.app.stop(a.id);while(task.state==='running')await new Promise(r=>setTimeout(r,10));expect(task.state).toBe('completed');expect(wb.state).toBe('running');
     await f.app.remove(a.id);expect(await exists(path.join(f.a,'.cbim/README.md'))).toBe(true);expect(await exists(f.app.paths.local(a.id,'transactions'))).toBe(true);expect(await exists(path.join(f.a,'.cbim.local'))).toBe(false);expect(await exists(path.join(f.a,'.cbim/discovery.json'))).toBe(false);
   }finally{await f.cleanup()}});
-  it('正式 SDK 连接、鉴权、错误实例与读写边界',async()=>{const f=await fixture();const clients:Client[]=[];try{const e=await f.app.catalog.add(f.a);const w=await f.app.open(e.id);const d=await readJson(f.app.paths.discovery(e.id));
-    expect((await fetch(d.url)).status).toBe(401);expect((await fetch(d.url,{headers:{Authorization:'Bearer '+w.readToken,Origin:'http://evil.invalid'}})).status).toBe(403);
-    const client=new Client({name:'test-agent',version:'1'});clients.push(client);await client.connect(new StreamableHTTPClientTransport(new URL(d.url),{requestInit:{headers:{Authorization:'Bearer '+w.readToken}}}));
-    const identity=await client.callTool({name:'cbim_workspace_identity',arguments:{}});expect(JSON.parse((identity.content as any)[0].text).workspaceId).toBe(e.id);
-    const bad=await client.callTool({name:'cbim_knowledge_snapshot',arguments:{workspaceId:e.id,instanceId:'stale'}});expect(bad.isError).toBe(true);
-    const snap=await w.read();const denied=await client.callTool({name:'cbim_knowledge_commit',arguments:request(snap,[{path:'.cbim/README.md',text:'# deny'}])});expect(denied.isError).toBe(true);
-    const writer=new Client({name:'writer',version:'1'});clients.push(writer);await writer.connect(new StreamableHTTPClientTransport(new URL(d.url),{requestInit:{headers:{Authorization:'Bearer '+w.writeToken}}}));w.writable=true;
-    const change=request(snap,[{path:'.cbim/README.md',text:'# written'}]);const ok=await writer.callTool({name:'cbim_knowledge_commit',arguments:change});expect(ok.isError).not.toBe(true);expect(JSON.parse((ok.content as any)[0].text).state).toBe('committed');
-    await f.app.stop(e.id);await expect(fetch(d.url)).rejects.toThrow();expect(await exists(f.app.paths.discovery(e.id))).toBe(false);
-  }finally{for(const c of clients)await c.close();await f.cleanup()}});
   it('过期写入、幂等重试、路径越界与链接拒绝',async()=>{const f=await fixture();try{const e=await f.app.catalog.add(f.a);const w=await f.app.open(e.id);const snap=await w.read();const r=request(snap,[{path:'.cbim/README.md',text:'# new'}]);const first=await w.commit(r);expect(await w.commit(r)).toEqual(first);
     await expect(w.commit(request(snap,[{path:'.cbim/README.md',text:'# stale'}]))).rejects.toThrow(/外部修改/);
     await expect(w.preview(request(await w.read(),[{path:'.cbim/../outside.md',text:'bad'}]))).rejects.toThrow();
@@ -53,16 +40,26 @@ describe('真实工作区与 MCP',()=>{
     await fs.symlink(f.b,path.join(f.a,'.cbim/workspace/escape'),'junction');await expect(w.read()).rejects.toThrow(/链接/);await fs.unlink(path.join(f.a,'.cbim/workspace/escape'));
   }finally{await f.cleanup()}});
   it('事务中断实际回滚；崩溃残留下次打开恢复',async()=>{const f=await fixture();try{const e=await f.app.catalog.add(f.a);const initial=await f.app.open(e.id);const old=(await initial.read()).files.find(x=>x.path==='.cbim/README.md')!.text;await f.app.stop(e.id);
-    const broken=new Workspace(e,f.app.paths,f.app.rules,n=>{if(n===1)throw Error('simulated disk failure')});await broken.open(serve);
+    const broken=new Workspace(e,f.app.paths,f.app.rules,n=>{if(n===1)throw Error('simulated disk failure')});await broken.open();
     await expect(broken.commit(request(await broken.read(),[{path:'.cbim/README.md',text:'# partial'},{path:'.cbim/extra.md',text:'# extra'}]))).rejects.toThrow('simulated');expect(await fs.readFile(path.join(f.a,'.cbim/README.md'),'utf8')).toBe(old);await broken.close();
     const dir=f.app.paths.local(e.id,'transactions');await fs.writeFile(path.join(f.a,'.cbim/README.md'),'# crash');await fs.writeFile(path.join(dir,'crash-test.json'),json({version:1,workspaceId:e.id,requestId:'crash-test',fingerprint:'x',state:'committing',before:{'.cbim/README.md':old},after:{'.cbim/README.md':'# crash'}}));
     const restored=await f.app.open(e.id);expect((await restored.read()).files.find(x=>x.path==='.cbim/README.md')?.text).toBe(old);expect((await readJson(path.join(dir,'crash-test.json'))).state).toBe('rolled_back');
   }finally{await f.cleanup()}});
-  it('恢复冲突保留人工编辑并拒绝发布服务',async()=>{const f=await fixture();try{const e=await f.app.catalog.add(f.a);await f.app.open(e.id);await f.app.stop(e.id);const dir=f.app.paths.local(e.id,'transactions');await fs.writeFile(path.join(f.a,'.cbim/README.md'),'# human');await fs.writeFile(path.join(dir,'conflict.json'),json({version:1,workspaceId:e.id,state:'committing',before:{'.cbim/README.md':'# old'},after:{'.cbim/README.md':'# machine'}}));await expect(f.app.open(e.id)).rejects.toThrow(/冲突/);expect(await fs.readFile(path.join(f.a,'.cbim/README.md'),'utf8')).toBe('# human');expect(await exists(f.app.paths.discovery(e.id))).toBe(false)}finally{await f.cleanup()}});
-  it('已有知识不覆盖，不兼容版本不发布',async()=>{const f=await fixture();try{const e=await f.app.catalog.add(f.a);await f.app.open(e.id);await f.app.stop(e.id);await fs.writeFile(path.join(f.a,'.cbim/README.md'),'# owned');await f.app.open(e.id);expect(await fs.readFile(path.join(f.a,'.cbim/README.md'),'utf8')).toBe('# owned');await f.app.stop(e.id);await fs.writeFile(path.join(f.a,'.cbim/project.json'),json({formatVersion:99,rulesVersion:1}));await expect(f.app.open(e.id)).rejects.toThrow(/不兼容/);expect(await exists(f.app.paths.discovery(e.id))).toBe(false)}finally{await f.cleanup()}});
+  it('恢复冲突保留人工编辑并拒绝发布服务',async()=>{const f=await fixture();try{const e=await f.app.catalog.add(f.a);await f.app.open(e.id);await f.app.stop(e.id);const dir=f.app.paths.local(e.id,'transactions');await fs.writeFile(path.join(f.a,'.cbim/README.md'),'# human');await fs.writeFile(path.join(dir,'conflict.json'),json({version:1,workspaceId:e.id,state:'committing',before:{'.cbim/README.md':'# old'},after:{'.cbim/README.md':'# machine'}}));await expect(f.app.open(e.id)).rejects.toThrow(/冲突/);expect(await fs.readFile(path.join(f.a,'.cbim/README.md'),'utf8')).toBe('# human');expect(await exists(path.join(f.app.paths.project(e.id),'discovery.json'))).toBe(false)}finally{await f.cleanup()}});
+  it('已有知识不覆盖，不兼容版本不发布',async()=>{const f=await fixture();try{const e=await f.app.catalog.add(f.a);await f.app.open(e.id);await f.app.stop(e.id);await fs.writeFile(path.join(f.a,'.cbim/README.md'),'# owned');await f.app.open(e.id);expect(await fs.readFile(path.join(f.a,'.cbim/README.md'),'utf8')).toBe('# owned');await f.app.stop(e.id);await fs.writeFile(path.join(f.a,'.cbim/project.json'),json({formatVersion:99,rulesVersion:1}));await expect(f.app.open(e.id)).rejects.toThrow(/不兼容/);expect(await exists(path.join(f.app.paths.project(e.id),'discovery.json'))).toBe(false)}finally{await f.cleanup()}});
   it('目录别名与跨进程工程互斥',async()=>{const f=await fixture();try{const alias=path.join(f.temp,'alias');await fs.symlink(f.a,alias,'junction');const e=await f.app.catalog.add(f.a);expect((await f.app.catalog.add(alias)).id).toBe(e.id);const w=await f.app.open(e.id);expect(()=>new KernelLock(f.a,e.id)).toThrow();
     if(process.platform==='win32'){const script=`const k=require('koffi');const w=k.load('kernel32.dll');const c=w.func('void * __stdcall CreateMutexW(void *, int, str16)');const wait=w.func('uint32 __stdcall WaitForSingleObject(void *, uint32)');const h=c(null,0,${JSON.stringify('Global\\CBIM_project_'+e.id)});process.exit(h&&[0,128].includes(wait(h,0))?9:0);`;const child=spawn(process.execPath,['-e',script],{windowsHide:true});const [code]=await once(child,'exit');expect(code).toBe(0)}await w.close();
   }finally{await f.cleanup()}});
   it('缓存损坏可添加、并发合并、重新定位保留旧历史',async()=>{const f=await fixture();try{await fs.writeFile(path.join(f.user,'workspaces.json'),'broken');await Promise.all([f.app.catalog.add(f.a),f.app.catalog.add(f.b)]);expect((await f.app.catalog.read()).entries).toHaveLength(2);const e=await f.app.catalog.add(f.a);await f.app.open(e.id);await f.app.stop(e.id);const next=path.join(f.temp,'moved');await fs.rename(f.a,next);const relocated=await f.app.catalog.relocate(e.id,next,true);expect(relocated.id).not.toBe(e.id);expect((await f.app.catalog.read()).entries.find(x=>x.id===relocated.id)?.previousIds).toContain(e.id);expect(await exists(f.app.paths.project(e.id))).toBe(true)}finally{await f.cleanup()}});
   it('创建真实模块、派生索引与移动引用',async()=>{const f=await fixture();try{const e=await f.app.catalog.add(f.a),w=await f.app.open(e.id);const changes=moduleFiles().map(({path,text})=>({path,text}));const p=await w.preview(request(await w.read(),changes));expect(p.validation.issues).toEqual([]);await w.commit(p.request);expect((await w.snapshot()).validation?.tree.roots).toEqual(['.cbim/workspace/game']);const move=await w.planMove(await w.read(),'.cbim/workspace/game','.cbim/workspace/resources');expect((await w.preview(move)).validation.structural).toBe(true);await w.commit(move);expect((await w.snapshot()).validation?.tree.roots).toEqual(['.cbim/workspace/resources'])}finally{await f.cleanup()}});
+  it('内部知识工具校验实例、逐调用读写授权和关闭后的访问',async()=>{const f=await fixture();try{
+    const e=await f.app.catalog.add(f.a),w=await f.app.open(e.id),{call}=internalKnowledge(w);
+    expect((await call('cbim_workspace_identity')).workspaceId).toBe(e.id);
+    await expect(call('cbim_knowledge_snapshot',{instanceId:'stale'})).rejects.toMatchObject({code:'STALE_INSTANCE'});
+    const snap=await w.read(),change=request(snap,[{path:'.cbim/README.md',text:'# written'}]);
+    await expect(call('cbim_knowledge_commit',change)).rejects.toMatchObject({code:'FORBIDDEN'});
+    expect((await call('cbim_knowledge_commit',change,true)).state).toBe('committed');
+    await expect(call('cbim_knowledge_commit',change)).rejects.toMatchObject({code:'FORBIDDEN'});
+    await f.app.stop(e.id);await expect(call('cbim_knowledge_snapshot')).rejects.toThrow();
+  }finally{await f.cleanup()}});
 });

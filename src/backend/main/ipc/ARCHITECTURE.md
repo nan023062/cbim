@@ -11,7 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [dispatch.ts](dispatch.ts) | 将经过主进程接入的 action 路由到明确的工作区和应用服务。 |
-| [services.ts](services.ts) | 定义 IPC 路由需要的应用服务及工作区生命周期入口。 |
+| [services.ts](services.ts) | 定义 IPC 路由需要的应用服务、成员派发查询、全局运行只读投影及工作区生命周期入口。 |
 
 ## 架构类图
 
@@ -24,7 +24,7 @@ class N_src_backend_main_ipc_dispatch_ts["dispatch.ts"] {
   +dispatchApplication()
 }
 ```
-直接依赖：[services.ts](services.ts)、[../persistence/tasks/chat-inputs.ts](../persistence/tasks/chat-inputs.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/files.ts](../../core/foundation/files.ts)。
+直接依赖：[services.ts](services.ts)、[../persistence/tasks/chat-inputs.ts](../persistence/tasks/chat-inputs.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
 
 ### services.ts
 
@@ -39,11 +39,13 @@ class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationService
   +paths
   +models
   +resources
+  +runtime
   +running
   +isStopping
   +list()
   +workspace()
   +execution()
+  +memberDispatch()
   +open()
   +stop()
   +remove()
@@ -53,7 +55,7 @@ class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationService
 N_src_backend_main_ipc_services_ts ..> N_src_backend_main_ipc_services_ts_ApplicationServices : 声明
 ```
 
-直接依赖：[../workspace/catalog.ts](../workspace/catalog.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../platform/paths.ts](../platform/paths.ts)、[../persistence/settings/llm-profiles.ts](../persistence/settings/llm-profiles.ts)、[../resources/resource-repository.ts](../resources/resource-repository.ts)、[../../scheduler-engine/execution/execution-manager.ts](../../scheduler-engine/execution/execution-manager.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)。
+直接依赖：[../workspace/catalog.ts](../workspace/catalog.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../platform/paths.ts](../platform/paths.ts)、[../persistence/settings/llm-profiles.ts](../persistence/settings/llm-profiles.ts)、[../resources/resource-repository.ts](../resources/resource-repository.ts)、[../../scheduler-engine/execution/execution-manager.ts](../../scheduler-engine/execution/execution-manager.ts)、[../../scheduler-engine/execution/dispatch-service.ts](../../scheduler-engine/execution/dispatch-service.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)。
 
 ### 本目录调用边界
 

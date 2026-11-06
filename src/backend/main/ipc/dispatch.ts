@@ -1,15 +1,15 @@
 /**
  * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
- * 设计原因：通过独立 ApplicationServices 契约隔离应用实现，避免反向类型依赖；IPC 操作清单与应用生命周期分离；保留原参数校验、工作区身份及错误返回语义。
+ * 设计原因：通过 ApplicationServices 契约隔离应用实现；全局监管只暴露快照和游标读取，派发事实仍由明确工作区服务提交；IPC 操作清单与生命周期分离。
  */
-import path from 'node:path';
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
 import {fail} from '../../core/foundation/errors';
-import {readJson} from '../../core/foundation/files';
   /** 桌面 IPC 的操作路由；请求必须显式携带目标身份，不读取界面选中项。 */
 export async function dispatchApplication(app:ApplicationServices,action:string,args:any={}){switch(action){
     case 'list':return app.list();
+    case 'runtime.snapshot':return app.runtime.snapshot();
+    case 'runtime.read':return app.runtime.read(args.cursor);
     case 'models.list':return app.models.list();
     case 'models.save':return app.models.save(args);
     case 'models.select':return app.models.select(args.id);
@@ -17,6 +17,11 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'models.test':return app.models.test(args.id,args.modelId);
     case 'models.discover':return app.models.discover(args);
     case 'models.discoverDetails':return app.models.discoverDetails(args);
+    case 'dispatch.open':return app.memberDispatch(args.workspaceId).openGraph(args);
+    case 'dispatch.memberCreate':return app.memberDispatch(args.workspaceId).createMember(args);
+    case 'dispatch.task':return app.memberDispatch(args.workspaceId).dispatchTask(args);
+    case 'dispatch.graphSnapshot':return app.memberDispatch(args.identity?.workspaceId).snapshot(args.identity);
+    case 'dispatch.graphDelta':return app.memberDispatch(args.identity?.workspaceId).delta(args.identity,args.cursor,args.limit);
     case 'loop.prepare':return app.execution(args.id).prepare(args.task);
     case 'loop.choices':return app.execution(args.id).choices();
     case 'loop.thread':return app.execution(args.id).thread(args.taskId);
@@ -51,19 +56,15 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'resources.connection':return app.resources.connection();
     case 'add':{if(app.isStopping)fail('SHUTTING_DOWN','CBIM 正在退出');const entry=await app.catalog.add(args.path);try{await app.open(entry.id)}catch{/* report the registered workspace's failed state in list */}return entry}
     case 'open':return (await app.open(args.id)).view();
-    case 'restartMcp':return (await app.open(args.id,true)).view();
-    case 'rename':{const entry=await app.catalog.rename(args.id,args.name);const ws=app.running.get(args.id);if(ws)ws.entry.name=entry.name;return entry}
+    case 'rename':{const entry=await app.catalog.rename(args.id,args.name);const ws=app.running.get(args.id);if(ws)ws.entry.name=entry.name;app.runtime.rename(args.id,entry.name);return entry}
     case 'remove':return app.remove(args.id);
     case 'relocate':{const entry=await app.catalog.relocate(args.id,args.path,args.confirm===true);if(entry.id!==args.id)await app.stop(args.id);await app.open(entry.id);return entry}
-    case 'mcpLogs':return app.workspace(args.id).calls.view();
     case 'snapshot':return app.workspace(args.id).snapshot();
     case 'preview':return app.workspace(args.workspaceId).preview(args);
     case 'commit':return app.workspace(args.workspaceId).commit(args);
     case 'movePreview':{const ws=app.workspace(args.id);return ws.preview(await ws.planMove(await ws.read(),args.from,args.to))}
-    case 'writeAccess':{const ws=app.workspace(args.id);ws.assert();ws.writable=args.enabled===true;return ws.view()}
     case 'task':if(!['validate','reindex'].includes(args.name))fail('TOOL','不支持的工具');return app.workspace(args.id).startTask(args.name);
     case 'cancelTask':return app.workspace(args.id).cancelTask(args.taskId);
     case 'local':if(!['memory','task-records','logs'].includes(args.kind))fail('TYPE','未知本地数据类型');return app.workspace(args.id).localData(args.kind);
-    case 'discovery':{const ws=app.workspace(args.id);return {...await readJson(app.paths.discovery(ws.entry.id)),credentialsPath:path.join(app.paths.project(ws.entry.id),'credentials.json')}}
     default:fail('ACTION','未知操作');
   }}

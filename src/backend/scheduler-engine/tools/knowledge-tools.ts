@@ -1,6 +1,6 @@
 /**
- * 作用定位：调度层知识工具适配，向内部大脑和可选 MCP 暴露相同工具。
- * 设计原因：声明工具副作用并在授权前解析参数；内部运行采用一次调用授权，外部 MCP 保留凭据与写开关，二者复用领域事务而不修改全局权限。 返回值通过统一协议校验，避免未定义结果进入会话。
+ * 作用定位：向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。
+ * 设计原因：先声明工具副作用并解析参数，再消费本次运行的调用授权；返回值通过统一协议校验，避免未定义结果进入会话。知识事务与模型执行隔离，权限不依赖可变的全局开关。
  */
 import {z} from 'zod';
 import {ToolRegistry,type ToolDefinition} from '../../core/tools/registry';
@@ -14,7 +14,6 @@ import {jsonToolResult,validateToolResult} from '../../core/tools/results';
 const identity={workspaceId:z.string(),instanceId:z.string()};
 export class KnowledgeTools {
   private readonly registry=new ToolRegistry<boolean>();
-  get tools(){return this.registry.tools}
   readonly queries:KnowledgeQueries;
   constructor(readonly workspace:KnowledgeWorkspace){
     const builtins=new Builtins(workspace.rules.designRoot);
@@ -35,18 +34,18 @@ export class KnowledgeTools {
     register('cbim_agent_registry',{description:'查询当前团队分组与 Agent 注册表，含名称、摘要、作者及真人对应信息。',inputSchema:{...identity,query:z.string().max(200).optional()}},wrap('cbim_agent_registry',args=>queries.agents(args.query)));
     register('cbim_people_list',{description:'查询真人花名册与团队归属，用于人员责任与候选 Agent 定位，不授予维护权限。',inputSchema:{...identity,query:z.string().max(200).optional()}},wrap('cbim_people_list',args=>queries.people(args.query)));
     register('cbim_agent_get',{description:'按 Agent ID 返回定义、原则及自身和所有祖先 Skill 列表/正文/来源。继承冲突显式返回，不自动覆盖。',inputSchema:{...identity,id:z.string()}},wrap('cbim_agent_get',args=>queries.agent(args.id)));
-    register('cbim_knowledge_refresh',{effects:['knowledge-write'],description:'重新校验当前知识并刷新派生注册表；所有知识修改必须通过 CBIM 知识服务。检查当前磁盘知识，全部结构校验通过才事务更新派生注册表；不修改用户正文。错误返回问题清单，改完再调用。内部 Loop 需取得知识写入授权；外部 MCP 保留原索引维护权限。',inputSchema:identity},wrap('cbim_knowledge_refresh',()=>queries.refresh()));
+    register('cbim_knowledge_refresh',{effects:['knowledge-write'],description:'重新校验当前知识并刷新派生注册表；所有知识修改必须通过 CBIM 知识服务。需取得本次运行的知识写入授权，全部结构校验通过才事务更新派生注册表，不修改用户正文。错误返回问题清单，改完再调用。',inputSchema:identity},wrap('cbim_knowledge_refresh',()=>queries.refresh()));
     register('cbim_object_preview',{effects:['preview'],description:'预览 Agent/Module/Skill/Workflow 的创建、更新或删除。创建传 parentId、slug、data、body；更新传 id 与需修改字段；删除传 id，包含子对象时需 cascade。服务规划路径、清单和父子引用，不写正式知识。返回 planId、变更及校验。',inputSchema:{...identity,revision:z.string(),operations:z.array(objectOperation).min(1).max(100)}},wrap('cbim_object_preview',args=>objects.preview(args.revision,args.operations)));
-    register('cbim_object_commit',{effects:['knowledge-write'],description:'提交 cbim_object_preview 返回的 planId。内部 Loop 须取得本轮写授权；外部 MCP 须有写凭据和桌面 Agent 写入授权；核对原版本，事务写入知识及索引，同一计划幂等。',inputSchema:{...identity,planId:z.string()}},wrap('cbim_object_commit',(args,write)=>{if(!write)fail('FORBIDDEN','当前调用未获得知识写入权限');return objects.commit(args.planId)}));
+    register('cbim_object_commit',{effects:['knowledge-write'],description:'提交 cbim_object_preview 返回的 planId。须取得本次运行的知识写入授权；核对原版本，事务写入知识及索引，同一计划幂等。',inputSchema:{...identity,planId:z.string()}},wrap('cbim_object_commit',(args,write)=>{if(!write)fail('FORBIDDEN','当前调用未获得知识写入权限');return objects.commit(args.planId)}));
     const changeSchema={...identity,revision:z.string(),requestId:z.string(),changes:z.array(z.object({path:z.string(),text:z.string().nullable()})).max(1000)};
     register('cbim_knowledge_preview',{effects:['preview'],description:'校验修改并预览影响，不写入。',inputSchema:changeSchema},wrap('cbim_knowledge_preview',args=>workspace.preview(args)));
-    register('cbim_knowledge_commit',{effects:['knowledge-write'],description:'内部 Loop 须取得本轮写授权；外部 MCP 需写开关及写令牌。两者均核对读取版本与幂等请求标识。',inputSchema:changeSchema},wrap('cbim_knowledge_commit',(args,write)=>{if(!write)fail('FORBIDDEN','当前调用未获得知识写入权限');return workspace.commit(args)}));
+    register('cbim_knowledge_commit',{effects:['knowledge-write'],description:'取得本次运行的知识写入授权后提交文件事务，核对读取版本与幂等请求标识。',inputSchema:changeSchema},wrap('cbim_knowledge_commit',(args,write)=>{if(!write)fail('FORBIDDEN','当前调用未获得知识写入权限');return workspace.commit(args)}));
     register('cbim_knowledge_move_preview',{effects:['preview'],inputSchema:{...identity,from:z.string(),to:z.string().nullable()}},wrap('cbim_knowledge_move_preview',async args=>workspace.preview(await workspace.planMove(await workspace.read(),args.from,args.to))));
     register('cbim_rules_validate',{effects:['maintenance'],description:'启动本工作区知识规则检查，返回维护任务 ID。它不是对话任务或团队派发任务。',inputSchema:identity},wrap('cbim_rules_validate',()=>workspace.startTask('validate')));
     register('cbim_task_status',{description:'查询本工作区知识检查/索引维护任务，taskId 使用维护接口返回的 ID；不用于主对话、执行计划或成员派发任务。找不到返回 not_found。',inputSchema:{...identity,taskId:z.string()}},wrap('cbim_task_status',args=>workspace.tasks.get(args.taskId)||{state:'not_found'}));
     register('cbim_task_cancel',{effects:['maintenance'],description:'请求取消本工作区知识检查/索引维护任务；只接受维护接口返回的 taskId，不接受主对话、执行计划或成员派发任务 ID。不存在报 TASK_NOT_FOUND；已结束返回原状态，取消请求不代表事务已经回滚。',inputSchema:{...identity,taskId:z.string()}},wrap('cbim_task_cancel',args=>workspace.cancelTask(args.taskId)));
   }
-  /** 返回实际参数 Schema；内部引擎无需连接 MCP 来发现工具。 */
+  /** 返回实际工具 Schema，供内部引擎注册可调用能力。 */
   list(){return this.registry.list()}
   /** 授权前解析参数和实例身份；只检查，不执行或创建预览。 */
   describe(name:string,input:unknown){
@@ -54,11 +53,7 @@ export class KnowledgeTools {
     this.workspace.assert(name==='cbim_workspace_identity'?undefined:args as {workspaceId:string;instanceId:string});
     return {effects:tool.effects??['read'] as readonly ToolEffect[],native:false};
   }
-  /** 外部接入仍须同时具备写凭据和工作区写开关；模型参数不能授权。 */
-  async call(name:string,input:unknown,write=false,signal?:AbortSignal){
-    return this.invoke(name,input,write&&this.workspace.writable,signal);
-  }
-  /** 仅由内部桥在一次性 gate 授权后调用；不设置 workspace.writable，不给外部 MCP 扩权。 */
+  /** 由执行桥在一次性 gate 授权后调用；write 来自运行策略，不能由模型输入自行授予。 */
   async callFromRun(name:string,input:unknown,write:boolean,signal?:AbortSignal){
     if(!write&&this.describe(name,input).effects.includes('knowledge-write'))fail('FORBIDDEN','本轮未获得知识写入权限');
     return this.invoke(name,input,write,signal);

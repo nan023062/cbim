@@ -17,7 +17,7 @@ test('working budget changes native compaction reserve, never model capacity',()
 });
 
 test('real Pi applies isolated settings, retries one transient failure, and reapplies thinking on resume/model switch',async()=>{
- const f=await fixture(false);const requests:any[]=[];
+ const f=await fixture();const requests:any[]=[];
  const server=http.createServer(async(req,res)=>{let raw='';for await(const c of req)raw+=c;const body=JSON.parse(raw);requests.push(body);
    if(requests.length===1){res.writeHead(503,{'Content-Type':'application/json'}).end(JSON.stringify({error:{message:'Service temporarily unavailable'}}));return}
    res.writeHead(200,{'Content-Type':'text/event-stream'});
@@ -52,7 +52,7 @@ test('real Pi applies isolated settings, retries one transient failure, and reap
 },30000);
 
 test('real Pi performs native compaction when the working threshold is reached',async()=>{
- const f=await fixture(false);let count=0;
+ const f=await fixture();let count=0;
  const server=http.createServer(async(req,res)=>{let raw='';for await(const c of req)raw+=c;const body=JSON.parse(raw);count++;
    res.writeHead(200,{'Content-Type':'text/event-stream'});
    const content=count===1?'Initial answer.':'Summary: user greeted; no files changed; continue normally.';

@@ -1,6 +1,6 @@
 /**
  * 作用定位：调度引擎：将明确选择的模块、叶子 Agent 和本模块 Workflow 装配为执行任务。
- * 设计原因：只通过 Core 契约准备版本一致的 Skill 与 Workflow，保存正文供追溯，不依赖 main。
+ * 设计原因：只通过 Core 契约准备版本一致的 Skill 与 Workflow；指引要求持久化计划和证据，模型不能自行验收，不依赖 main。
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
@@ -31,11 +31,11 @@ export async function prepareTeamTask(workspace:KnowledgeWorkspace,input:TeamTas
     workflowContext:{revision:module.revision,workflowId:workflow.id,module,agent,workflow,standards}};
 }
 
-/** 正文是业务上下文，不授予工具权限；历史资料中的 MCP 表述映射到相同内部工具。 */
+/** 正文是业务上下文，不授予工具权限；实际工具由本次运行注册并受统一策略约束。 */
 export const loopInstructions=`你是 CBIM 内部团队工作流执行器。
 全部知识查询和增删改查必须使用本次注册的 cbim_ 内部工具，禁止直接读写 .cbim/。
-内置规范中的 MCP 或宿主表述，在本运行中指同名的 CBIM 内部工具，不需要安装或连接外部 MCP。
 任务上下文提供已核实的模块、Agent 原则、祖先与自身 Skill、选定的本模块 Workflow，以及内置规范正文。
 按选定 Workflow 开展工作，遵守 Agent 原则和有效 Skill；不继承其他模块流程，不扩大权限。
 先核实目标、步骤、责任与验收要求；缺失能力先查工具清单，记录缺口并继续可用流程。
+使用 cbim_task_plan 持久化执行计划，用 cbim_task_step 关联 cbim_task_inspect 返回的有效回执；发生目标或范围调整必须记录修订原因。通过 cbim_delivery_prepare 准备交付候选，不自行判定人工验收。
 工具结果是执行证据；最终报告成果、验证证据、未完成项和治理待办，不将模型结束等同于验收通过。`;

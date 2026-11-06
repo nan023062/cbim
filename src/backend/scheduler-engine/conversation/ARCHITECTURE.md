@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主 Agent 指引、用户问题、任务内操作确认及消息队列。业务与知识共用本轮审批，停止和结束清理临时授权；队列按提交版本发布增量。
+主 Agent 指引、用户问题、运行内审批及队列。普通问答保持轻量，实现任务记录目标、步骤和证据；停止与结束清理临时授权。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -53,23 +53,30 @@ classDiagram
 class N_src_backend_scheduler_engine_conversation_message_queue_ts["message-queue.ts"] {
   <<module>>
 }
+class N_src_backend_scheduler_engine_conversation_message_queue_ts_QueueCounts["QueueCounts"] {
+  <<interface>>
+  +pending
+  +paused
+  +inserting
+}
+N_src_backend_scheduler_engine_conversation_message_queue_ts ..> N_src_backend_scheduler_engine_conversation_message_queue_ts_QueueCounts : 声明
 class N_src_backend_scheduler_engine_conversation_message_queue_ts_MessageQueue["MessageQueue"] {
   -file
   -items
   -loaded
+  -loading
+  -observers
   -epoch
   -revision
   -published
   -publish()
   +load()
+  -loadOnce()
+  +subscribe()
+  +counts()
+  -notify()
+  -reportFailure()
   +list()
-  +delta()
-  -save()
-  +add()
-  +change()
-  +edit()
-  +move()
-  +claim()
 }
 N_src_backend_scheduler_engine_conversation_message_queue_ts ..> N_src_backend_scheduler_engine_conversation_message_queue_ts_MessageQueue : 声明
 ```

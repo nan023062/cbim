@@ -83,7 +83,6 @@ class N_src_backend_core_foundation_paths_ts_StoragePaths["StoragePaths"] {
   +identity()
   +project()
   +local()
-  +discovery()
   +knowledge()
 }
 N_src_backend_core_foundation_paths_ts ..> N_src_backend_core_foundation_paths_ts_StoragePaths : 声明

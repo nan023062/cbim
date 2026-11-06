@@ -49,7 +49,6 @@ class N_src_backend_main_platform_paths_ts_Paths["Paths"] {
   +identity()
   +project()
   +local()
-  +discovery()
   +knowledge()
 }
 N_src_backend_main_platform_paths_ts ..> N_src_backend_main_platform_paths_ts_Paths : 声明

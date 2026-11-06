@@ -11,7 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [App.tsx](App.tsx) | 桌面外壳：工作区下展示对话，中间固定主 Agent 会话（对话/任务视图），右侧独立扩展区承载架构/流程等视图；可调整宽度的侧边栏、工作区选择、页签、轮询、全局页面和未提交修改提示。 |
-| [ExtensionArea.tsx](ExtensionArea.tsx) | 工作区右侧扩展页签，独立于中央对话管理浏览器、命令终端与工作区架构视图。 |
+| [ExtensionArea.tsx](ExtensionArea.tsx) | 工作区右侧扩展页签，独立于中央对话管理浏览器、命令终端、架构与内部运行诊断视图。 |
 | [extensions.css](extensions.css) | 中央对话与右侧扩展区的分栏、空页签及各扩展面板布局。 |
 | [shell.css](shell.css) | 工作区外壳、侧栏、页签、菜单和主题布局样式。 |
 | [state-labels.ts](state-labels.ts) | 界面工作区与工具任务状态的中文标签。 |
@@ -53,7 +53,7 @@ class N_src_frontend_shell_ExtensionArea_tsx_Panel["Panel"] {
 N_src_frontend_shell_ExtensionArea_tsx ..> N_src_frontend_shell_ExtensionArea_tsx_Panel : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../team/TeamView.tsx](../team/TeamView.tsx)、[../workspace/WorkspaceView.tsx](../workspace/WorkspaceView.tsx)、[../automation/AutomationView.tsx](../automation/AutomationView.tsx)、[../diagnostics/McpStatus.tsx](../diagnostics/McpStatus.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[extensions.css](extensions.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../team/TeamView.tsx](../team/TeamView.tsx)、[../workspace/WorkspaceView.tsx](../workspace/WorkspaceView.tsx)、[../automation/AutomationView.tsx](../automation/AutomationView.tsx)、[../diagnostics/WorkspaceDiagnostics.tsx](../diagnostics/WorkspaceDiagnostics.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[extensions.css](extensions.css)。
 
 ### extensions.css
 
@@ -158,7 +158,7 @@ class N_src_frontend_shell_WorkspaceList_tsx["WorkspaceList.tsx"] {
   +WorkspaceList()
 }
 ```
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../diagnostics/McpStatus.tsx](../diagnostics/McpStatus.tsx)、[state-labels.ts](state-labels.ts)、[workspace-list.css](workspace-list.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[state-labels.ts](state-labels.ts)、[workspace-list.css](workspace-list.css)。
 
 ### 本目录调用边界
 

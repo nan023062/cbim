@@ -1,6 +1,6 @@
 /**
- * 作用定位：Core 知识规则：解析 JSON、校验三个领域的结构与引用并派生索引。
- * 设计原因：调度引擎、桌面和外部适配器共用领域规则；结构校验不替代架构语义判断。
+ * 作用定位：Core 知识规则：校验领域结构、人员与显式模块维护关系，并派生注册索引。
+ * 设计原因：调度、桌面和外部适配共用规则；作者不自动升级为维护人，结构校验也不签发执行或架构批准。
  */
 import fs from 'node:fs/promises';
 import {ConnectorRegistry} from '../connectors/registry';
@@ -45,13 +45,21 @@ export class Rules {
     }
     const people=new Map<string,any>();if(schema('.cbim/team/people.json','people'))for(const p of data('.cbim/team/people.json').people){if(people.has(p.id))add('.cbim/team/people.json','duplicate',`人员重复：${p.id}`);people.set(p.id,p)}
     let ignores=ignore({ignorecase:true});try{ignores=ignores.add(texts.get('.cbim/.cbimignore')||'')}catch(e:any){add('.cbim/.cbimignore','ignore',e.message)}
-    const idSeen=new Set<string>();
+    const idSeen=new Set<string>(),maintenanceIds=new Set<string>();
     for(const f of files){const kind=f.path.endsWith('/module.json')&&f.path.startsWith('.cbim/workspace/')?'module':f.path.endsWith('/agent.json')&&f.path.startsWith('.cbim/team/')?'agent':undefined;if(!kind)continue;
       if(!schema(f.path,kind))continue;const d=data(f.path),id=pp.dirname(f.path);const folded=id.toLowerCase();if(idSeen.has(folded))add(f.path,'duplicate','标识不区分大小写时重复');idSeen.add(folded);summary(f.path,d.summary);
       const authorTeams=new Set<string>();for(const author of d.authors){const p=people.get(author);if(!p?.team)add(f.path,'author',`作者未知或未归组：${author}`);else authorTeams.add(p.team)}if(authorTeams.size>1)add(f.path,'author','作者必须来自同一已知 Team');
       for(const c of d.connectors)if(!connectorIds.has(c.toLowerCase()))add(f.path,'connector',`未登记连接器：${c}`);
       if(kind==='agent'){agents.set(id,d);ref(id,d.work_principles);continue}
       modules.set(id,d);if(d.id!==id)add(f.path,'identity','id 必须与模块目录一致');if(!/^(?:[0-9]+_)?[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(d.name)||pp.basename(id)!==d.name)add(f.path,'name','模块目录和名称须一致并使用小写 snake_case');
+      // 旧模块可没有维护声明；一旦声明，其人员引用和确认时间必须真实可解析，不能借作者字段补齐。
+      if(d.maintenance){
+        const m=d.maintenance;
+        if(maintenanceIds.has(m.bindingId))add(f.path,'maintenance','维护关系标识已被其他模块使用');maintenanceIds.add(m.bindingId);
+        for(const personId of m.maintainerPersonIds)if(!people.has(personId))add(f.path,'maintenance',`维护人未登记在真人花名册：${personId}`);
+        const timestamp=Date.parse(m.confirmation.confirmedAt);
+        if(!Number.isFinite(timestamp)||new Date(timestamp).toISOString()!==m.confirmation.confirmedAt)add(f.path,'maintenance','维护关系确认时间必须是有效 UTC ISO 8601 时间');
+      }
       ref(id,d.overview);this.body(id,d,texts.get(id+'/module.md')||'',add);
       const actual=files.filter(x=>x.path.startsWith(id+'/workflows/')&&x.path.endsWith('/workflow.md')).map(x=>x.path);
       this.inventory(id,d.workflows,actual,ref,add,'workflow');

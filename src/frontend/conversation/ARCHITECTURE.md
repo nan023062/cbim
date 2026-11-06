@@ -30,7 +30,7 @@
 | [ToolActivity.tsx](ToolActivity.tsx) | 把工具申请、授权、运行、输出及完成记录合并成可展开的执行时间线。 |
 | [transcript.ts](transcript.ts) | 将持久化执行事件投影为对话消息、工具证据与运行错误。 |
 | [usage.css](usage.css) | 输入框旁计量条、上下文环与明细弹层的排版。 |
-| [usage.ts](usage.ts) | 从持久化执行事件计算任务时间、已报告 token、生成速度、费用及当前上下文。 |
+| [usage.ts](usage.ts) | 保留对话界面的用量统计入口，经桥接契约使用 Core 的纯计量函数。 |
 | [UsageStatus.tsx](UsageStatus.tsx) | Cindy 风格的输入框上方时间/速度与底部任务价值、上下文占用显示。 |
 | [useMessageQueue.ts](useMessageQueue.ts) | 会话队列的独立增量刷新入口，覆盖轮询和用户操作后的即时同步。 |
 | [WorkStatus.tsx](WorkStatus.tsx) | 移植 Cindy WorkGroupBlock 的折叠标题、运行旋转图标、实时活动预览和执行轨道。 |
@@ -299,13 +299,9 @@ class N_src_frontend_conversation_usage_css["usage.css"] {
 classDiagram
 class N_src_frontend_conversation_usage_ts["usage.ts"] {
   <<module>>
-  +runDuration()
-  +taskUsage()
-  +tokenCount()
-  +durationText()
 }
 ```
-直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)。
+直接依赖：[../../bridge/contracts/usage.ts](../../bridge/contracts/usage.ts)。
 
 ### UsageStatus.tsx
 

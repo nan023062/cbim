@@ -13,7 +13,7 @@ import type {StoragePaths} from '../../../core/foundation/paths';
 import {Rules,revision,INDEXES,isKnowledge,parseJson} from '../../../core/knowledge/knowledge';
 import type {Snapshot,ChangeRequest,Preview,Change} from '../../../core/knowledge/types';
 
-/** 存储通过此端口报告实例状态；不持有 MCP、Electron 或工作区执行管理器。 */
+/** 存储通过此端口报告实例状态；不持有 Electron 或工作区执行管理器。 */
 export interface KnowledgeStoreOwner {
  readonly entry:{id:string;path:string}; readonly instanceId:string; readonly paths:StoragePaths; readonly rules:Rules;
  state:string; error?:string; knowledgeErrors:number; lastRevision:string; changed:boolean;
@@ -44,7 +44,7 @@ export class KnowledgeStore {
 
 此目录保存当前项目经 review 的正式团队能力与业务知识。
 
-宿主启动流程直接嵌入项目根 AGENTS.md、CLAUDE.md；通过 cbim_ MCP 工具查询知识、获取 Skill 和执行治理，不读取本目录中的入口文件。
+主 Agent 和团队成员通过内部 Loop 的 cbim_ 工具查询知识、获取 Skill 和执行治理；知识写入须经过本次运行授权、版本检查和事务校验。
 
 ## 团队能力树
 
@@ -66,13 +66,13 @@ workspace 根不创建共享 Workflow 清单或流程目录。
 team/skills/ 预留根 Team 的 Skill 正文。领域工程、小组、Agent、模块及流程由团队后续定义，不自动创建示例或导入资源仓库内容。
 skills/、workflows/ 及其资料目录不属于组织或模块节点。
 
-运行日志、事务记录、MCP 发现信息和凭据保存在用户目录，不写入此项目知识目录。
+运行日志、事务记录、成员任务和会话数据保存在用户目录，不写入此项目知识目录。
 `);
       if(await exists(dir))fail('CONFLICT','初始化期间出现 .cbim，请检查后重新打开');await fs.rename(staging,dir);
     }finally{await fs.rm(staging,{recursive:true,force:true})}
   }
   async read():Promise<Snapshot>{const files=await readKnowledge(this.owner.paths,this.owner.entry.path);return {workspaceId:this.owner.entry.id,instanceId:this.owner.instanceId,revision:revision(files),files}}
-  /** 读取当前正文并校验；返回结构错误不等于 MCP 服务不可用。 */
+  /** 读取当前正文并校验；返回结构错误不等于工作区不可用。 */
   async snapshot(){this.owner.assert();const snapshot=await this.read();snapshot.validation=await this.owner.rules.validate(this.owner.entry.path,snapshot.files);this.owner.knowledgeErrors=snapshot.validation.issues.filter(i=>i.severity==='error').length;
     for(const [p,text]of Object.entries(snapshot.validation.indexes)){const old=snapshot.files.find(f=>f.path===p);if(old?.text!==text)snapshot.validation.issues.push({severity:'warning',code:'index_stale',path:p,message:'派生注册表与知识定义不一致，可通过校验并更新索引修复'})}
     if(await exists(path.join(this.owner.entry.path,'.cbim.local')))snapshot.validation.issues.push({severity:'warning',code:'legacy_local',path:'.cbim.local',message:'发现旧本地历史目录。请先备份并核对身份；未授权不会移动或删除。'});return snapshot}

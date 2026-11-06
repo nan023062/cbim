@@ -1,5 +1,6 @@
 /**
  * 作用定位：大脑 执行层：PiEngine：启动隔离配置的 Pi 子进程、转换事件并等待 agent_settled。
+ * 任务边界：把本轮日志绑定的计划工具与知识工具合并注册；任务工具绑定当前运行，也不能签发验收。
  * 设计原因：原生 steer 在动作边界消费补充，核对当前运行及图片能力；模型 input 按视觉能力生成，用户图片经 RPC 独立传递并读回能力检查；适配 Pi 事件与会话；每轮隔离运行设置并核对思考、压缩及重试，记录生成耗时、价格可用性及原生上下文估计；每次运行隔离模型配置并由环境注入凭据，按模式注入主 Agent 对话身份或冻结团队上下文，记录去重的思考/生成状态，只记录公开文本增量，以 agent_settled 判定结束。
  */
 import fs from 'node:fs/promises';
@@ -53,14 +54,17 @@ export class PiEngine implements AgentEngine {
       const file=await fs.realpath(context.sessionFile),root=await fs.realpath(sessionDir),rel=path.relative(root,file);
       if(rel.startsWith('..')||path.isAbsolute(rel)||!rel)throw Error('Pi 恢复文件不属于此 CBIM 工作区');
     }
-    this.bridge=await openBridge(this.options.knowledge,context.beforeTool,async usage=>{
+    // 任务工具绑定真实运行日志；仅在内部 Loop 存在时注册，不借外部知识接口伪造任务身份。
+    const taskNames=new Set((await context.taskTools?.list()??[]).map(t=>t.name));
+    const tools:KnowledgeBridge={list:async()=>[...await this.options.knowledge.list(),...await context.taskTools?.list()??[]],call:(name,args,signal)=>taskNames.has(name)?context.taskTools!.call(name,args):this.options.knowledge.call(name,args,signal)};
+    this.bridge=await openBridge(tools,context.beforeTool,async usage=>{
       this.events=this.events.then(()=>context.emit({type:'engine.status',data:{label:'上下文用量已更新',metric:'context',...usage}}));await this.events;
     },async limit=>{this.requestLimit=limit;this.events=this.events.then(()=>context.emit({type:'engine.status',data:{label:'模型请求额度',metric:'request-limit',maxTokens:limit}}));await this.events});
     const extension=path.join(context.directory,'cbim-extension.mjs'),prompt=path.join(context.directory,'instructions.md');
     // 业务上下文随任务持久化；执行恢复使用原快照，当前知识修改仍由服务校验版本。
     // 普通对话的用户文字与附件只经用户消息发送，不抬升为系统指引。
     const systemContext=context.task.mode==='chat'?{taskId:context.task.taskId,workspaceId:context.task.workspaceId,root:context.task.root,agentId:context.task.agentId}:context.task;
-    const executionHint=this.options.allowNativeExecution?'\n本轮已提供 write/edit/bash 执行工具，可创建业务文件和运行验证。工具调用受 CBIM 策略及用户批准控制；业务写入与知识提交共用本轮权限，知识变更仍须通过 cbim_ 工具、版本检查和事务校验。':'\n本轮为只读模式，未提供 write/edit/bash。如需实现文件，请提示用户将输入框权限改为逐次询问或允许执行，再发送消息继续；不需要配置 MCP 或开启知识库写入。';
+    const executionHint=this.options.allowNativeExecution?'\n本轮已提供 write/edit/bash 执行工具，可创建业务文件和运行验证。工具调用受 CBIM 策略及用户批准控制；业务写入与知识提交共用本轮权限，知识变更仍须通过 cbim_ 工具、版本检查和事务校验。':'\n本轮为只读模式，未提供 write/edit/bash。如需实现文件，请提示用户将输入框权限改为逐次询问或允许执行，再发送消息继续。';
     const instructions=this.options.prompt+executionHint+(context.task.mode==='chat'?'\n\n当前工作区对话身份：\n':'\n\n任务定义与冻结的团队工作流上下文：\n')+JSON.stringify(systemContext,null,2);
     await fs.writeFile(extension,bridgeExtension,{mode:0o600});await fs.writeFile(prompt,instructions,{mode:0o600});
     // 所有运行拥有独立设置，CLI 的模型目录也只复制快照，避免并发互相覆盖。
@@ -79,6 +83,7 @@ export class PiEngine implements AgentEngine {
       void this.events.catch(error=>{this.fatal=error;this.settlement?.reject(error);void this.rpc?.close()});
     },error=>{if(!this.closing){this.fatal=error;this.settlement?.reject(error)}},message=>this.redact(message));
     const allowed=this.options.allowNativeExecution?'read,grep,find,ls,bash,write,edit,cbim_*':'read,grep,find,ls,cbim_*';
+    // 禁止 Pi 自动加载用户机器上的外部连接；内部工具只由本次受控扩展注册。
     this.rpc.start(this.options.process,context.task.root,[
       '--mode','rpc','--provider',this.options.provider,'--model',this.options.model,
       '--no-extensions','--no-skills','--no-prompt-templates','--no-themes','--no-mcp',

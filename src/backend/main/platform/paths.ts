@@ -20,7 +20,6 @@ export class Paths implements StoragePaths {
   }
   project(id:string){if(!/^[a-f0-9]{64}$/.test(id))fail('IDENTITY','无效项目标识');return path.join(this.userRoot,id)}
   local(id:string,kind:'memory'|'task-records'|'logs'|'cache'|'transactions'){return path.join(this.project(id),kind)}
-  discovery(id:string){return path.join(this.project(id),'discovery.json')}
   async knowledge(root:string,relative:string){
     if(!relative.startsWith('.cbim/')||relative.includes('\\')||relative.split('/').some(x=>!x||x==='.'||x==='..')||/[:\x00]/.test(relative))fail('PATH','知识路径必须在 .cbim/ 内');
     let current=root;

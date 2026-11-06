@@ -90,12 +90,12 @@ N_src_frontend_tasks ..> N_src_frontend_shell : 导入依赖
 - [automation/](automation/ARCHITECTURE.md)：工作区内部自动化展示；定时触发尚未实现。
 - [components/](components/ARCHITECTURE.md)：通用展示组件，不持有领域服务与运行状态。
 - [conversation/](conversation/ARCHITECTURE.md)：中央对话、输入、附件、队列与工具状态。权限说明覆盖业务文件与知识提交；队列以版本增量同步，不因空轮询替换列表引用。
-- [diagnostics/](diagnostics/ARCHITECTURE.md)：MCP 健康、流量与调用日志的诊断展示，不把服务在线视为知识校验通过。
+- [diagnostics/](diagnostics/ARCHITECTURE.md)：只读展示工作区运行状态和知识校验问题，不把工作区就绪视为知识校验通过。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识问题、预览提交和维护工具界面；业务架构展示位于 workspace。
 - [resources/](resources/ARCHITECTURE.md)：三类共享资源的查看与编辑界面。仓库设置通过统一设置入口打开。
 - [settings/](settings/ARCHITECTURE.md)：模型及仓库配置界面，凭据仅提交主进程保存，账户仍按当前占位语义处理。
 - [shell/](shell/ARCHITECTURE.md)：工作区侧栏、会话选择、用户栏与右侧扩展页签；会话区与项目级视图区分开。
-- [tasks/](tasks/ARCHITECTURE.md)：当前会话执行视图与维护任务展示，按工作区和任务身份过滤。
+- [tasks/](tasks/ARCHITECTURE.md)：当前会话执行视图与维护任务展示，按工作区和任务身份过滤；显示计划步骤、责任、回执引用、修订历史与待审阅交付，不把运行结束当成验收。
 - [team/](team/ARCHITECTURE.md)：当前工作区团队架构及能力详情展示。
 - [workspace/](workspace/ARCHITECTURE.md)：当前工作区业务模块架构展示；知识编辑仍委托 knowledge 的维护组件。
 

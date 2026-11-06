@@ -8,7 +8,7 @@ import {fixture} from './helpers';
 import {seedTeam} from './team-fixture';
 
 it('核心领域在固定快照上解析团队 Skill 和本模块 Workflow，无需 main 实例',async()=>{
-  const f=await fixture(false);try{
+  const f=await fixture();try{
     const e=await f.app.dispatch('add',{path:f.a}),w=f.app.workspace(e.id),seed=await seedTeam(w),snapshot=await w.snapshot();
     const hr=new Team(snapshot),business=new BusinessWorkspace(snapshot);
     await f.app.stop(e.id);

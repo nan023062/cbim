@@ -10,7 +10,7 @@ import {hash} from '../foundation/serialization';
 export const builtinSkills=[
   {id:'knowledge-query',title:'知识查询',description:'定位权威知识、核实证据并回答，默认只读'},
   {id:'business-execution',title:'需求实现',description:'定位模块和 Agent，组织实现、验证与交付'},
-  {id:'knowledge-governance',title:'知识治理',description:'检查事实、结构和引用，在授权内通过 MCP 预览、提交和复核'},
+  {id:'knowledge-governance',title:'知识治理',description:'检查事实、结构和引用，在授权内通过内部知识工具预览、提交和复核'},
   {id:'architecture-governance',title:'架构治理',description:'模式观察、架构评估、人工决定与渐进演进'},
   {id:'create-agent-skill',title:'创建 Agent/Team Skill',description:'为已有组织节点创建专业 Skill，维护清单并检查继承'},
   {id:'create-workflow',title:'创建模块 Workflow',description:'为已有模块创建独立流程并维护本模块清单'},
@@ -19,7 +19,7 @@ export const builtinSkills=[
 const entries=[
   ...builtinSkills.filter(s=>s.id!=='knowledge-governance').map(s=>[s.id,'skill',s.title,`design/runtime/${s.id}.md`]),
   ['knowledge-governance','skill','知识治理','design/runtime/knowledge-governance.md'],
-  ['common-rules','standard','MCP 执行与治理通用规范','design/runtime/common-rules.md'],
+  ['common-rules','standard','CBIM 内部执行与治理通用规范','design/runtime/common-rules.md'],
   ['module-spec','standard','Module 定义与维护规范','design/business/module-spec.md'],
   ['agent-spec','standard','Agent 定义与维护规范','design/capability/agent-spec.md'],
   ['architecture-spec','standard','架构评估与认知交付规范','design/task/architecture-spec.md'],
@@ -34,12 +34,12 @@ const entries=[
   ['people-schema','schema','人员 Schema','design/capability/people.schema.json'],
   ['connector-schema','schema','连接器 Schema','design/connector/registry.schema.json'],
 ].map(([id,kind,title,source])=>({id,kind,title,source}));
-const contract='内置资料只读，版本由内容 SHA-256 标识。查询以 MCP 当前返回值为准；宿主禁止直接读写 .cbim；全部知识 CRUD 由 MCP 执行，使用 cbim_object_preview/cbim_object_commit 或受控知识事务接口。宿主启动指引与派生注册表由 CBIM 维护。旧 Python 规则工具不是入口。Skill 工具返回流程，不会替宿主执行任务；结构校验不能替代语义与人工判断。';
+const contract='内置资料只读，版本由内容 SHA-256 标识。查询以内部知识服务当前返回值为准；Agent 的原生工具禁止直接读写 .cbim；全部知识 CRUD 由受授权的内部工具执行，使用 cbim_object_preview/cbim_object_commit 或受控知识事务接口。派生注册表由 CBIM 维护。旧 Python 规则工具不是入口。Skill 工具返回流程，不会替 Agent 执行任务；结构校验不能替代语义与人工判断。';
 
 export class Builtins {
   constructor(private designRoot:string){}
   private async document(entry:typeof entries[number]){
-    // Only server-owned manifest entries can select a file, never caller paths.
+    // Only application-owned manifest entries can select a file, never caller paths.
     const root=path.resolve(this.designRoot,'..'),file=path.resolve(root,entry.source);
     const real=await fs.realpath(file),relative=path.relative(await fs.realpath(root),real);
     if(relative.startsWith('..')||path.isAbsolute(relative))fail('BUILTIN_PATH','内置资料越出安装目录');

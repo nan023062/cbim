@@ -1,6 +1,6 @@
 # CBIM 内部 Loop Engine
 
-唯一引擎为固定版本 `@earendil-works/pi-coding-agent@1.5.0`。CBIM 拥有工作区执行实例，内部执行不依赖外部宿主或 MCP。
+唯一引擎为固定版本 `@earendil-works/pi-coding-agent@1.5.0`。CBIM 在应用内部管理工作区执行实例、模型配置、运行权限和工具调用。
 
 源码分层：`src/backend/core/brain/` 是通用执行层（大脑），`src/backend/scheduler-engine/` 是管理工作区、知识和团队流程的调度引擎。目录改名不改变 `loop.*` 接口、`pnpm loop` 命令和既有 `loop-engine/` 数据目录。
 
@@ -15,15 +15,13 @@ Application / 开发 CLI
     → LoopRuntime：任务锁、持久化事件、执行与恢复
       → PiEngine：真实 Pi 子进程、工具策略、原生会话
         → 临时能力桥 → KnowledgeService → 工作区查询与事务
-
-外部 MCP（兼容保留）→ 同一个 KnowledgeService
 ```
 
-KnowledgeService 统一维护工具定义、参数 Schema、实例核验、查询、预览与提交。内部工具仍使用 `cbim_` 名称，保留工作区身份、读取版本、幂等请求和写授权检查。MCP 不再包含独立的业务工具实现。
+KnowledgeService 提供领域查询与事务能力，KnowledgeTools 维护内部工具定义和参数 Schema。工具使用 `cbim_` 名称，通过可信运行绑定核验工作区身份、读取版本、幂等请求和本轮授权。
 
 领域封装均属于 Core：`core/connectors` 管理链接器，`core/team` 管理 Team/Agent/Skill，`core/workspace` 管理业务 Workspace/Module/Workflow，`core/knowledge` 提供共用规则与对象治理。实际文件事务由 `main/workspace` 实现 `KnowledgeWorkspace` 接口后注入，Core 不反向依赖 main。
 
-`Application.externalHost=false` 时不安装宿主配置，不发布 MCP、凭据或发现文件。开发 CLI 使用此模式。既有桌面默认外部接入暂留兼容，此次未删除用户配置。
+桌面与开发 CLI 装配相同的内部服务；工作区打开只管理知识、锁与执行记录，不向项目安装外部 AI 工具配置。
 
 ## 团队工作流准备
 
@@ -56,7 +54,7 @@ KnowledgeService 统一维护工具定义、参数 Schema、实例核验、查�
 
 内部 Loop 的业务与知识工具共用本轮权限：read 拒绝业务写入、知识提交、索引刷新及命令；ask 对这些操作逐次确认；execute 自动执行，但保留平台边界与知识实例、版本及事务检查。只读查询、结构校验和预览可用，预览可能保存本地计划缓存，不修改正式知识。未提供 permission 的 CLI 保持 allowNativeExecution 的兼容映射：false 为 read，true 为 execute。
 
-内部知识调用采用桥接 gate 的一次性授权，不修改工作区 writable 开关，也不为外部 MCP 扩权；外部 MCP 仍按原凭据和开关检查。“本次全部通过”只在当前运行有效，停止与结束清理；审批期间停止后，迟到批准不能重新放行。
+内部知识调用采用桥接 gate 的一次性授权，与业务工具共用当前运行的权限快照；不存在工作区全局 Agent 写入开关。“本次全部通过”只在当前运行有效，停止与结束清理；审批期间停止后，迟到批准不能重新放行。
 
 运行摘要新增 toolReceipts，记录 workspaceId、taskId、runId、toolCallId、输入/结果哈希、副作用、范围与 succeeded/failed/denied/unknown。结果随事件落盘后返回，模型自带 receipt 不作为权威记录。旧日志不补造回执；Pi 在 Schema 阶段直接拒绝且未到达 gate 的调用仍保留原工具错误事件。命令范围为 unknown，不声称已完成系统级隔离；回执不是业务验收结果。
 
@@ -78,7 +76,7 @@ pnpm loop --root "C:/Projects/Game" --provider "<供应商>" --model "<模型>" 
 
 ## 验证边界
 
-测试覆盖无 MCP 知识调用、继承与流程归属、写授权、记录隔离、停止排空及恢复版本冲突。真实 Pi 子进程配合本地确定性模型响应验证上下文注入、内部工具调用、知识目录读取拒绝、会话恢复与中断。这不是实际供应商鉴权或真实模型业务判断质量测试。
+测试覆盖内部知识调用、继承与流程归属、写授权、记录隔离、停止排空及恢复版本冲突。真实 Pi 子进程配合本地确定性模型响应验证上下文注入、内部工具调用、知识目录读取拒绝、会话恢复与中断。这不是实际供应商鉴权或真实模型业务判断质量测试。
 
 `pnpm package` 将 Pi 及安装时解析的生产依赖复制到 `resources/pi-runtime/`，附带版本清单。`pnpm test:loop` 启动打包后的 CBIM.exe，通过桌面 IPC 准备团队任务、启动实际 Pi 并验证内部工具调用；模型服务为隔离的本机确定性测试服务。
 
@@ -103,6 +101,16 @@ loop.chat 创建 mode=chat、agentId=cbim:main 的普通对话；loop.choices �
 长度限制诊断：模型 stopReason=length 表示输出被截断，不能显示为执行成功。界面显示配置上限和实际用量；低于配置上限时，不能据此确定是输出、上下文还是供应商侧限制，不只建议调大预算。核对后可继续原会话，不自动重放副作用工具。开启推理的低预算模型在设置页显示提示。
 
 每轮 before_agent_start 根据 Pi 实际活动工具刷新能力指引；已提供写工具时，不能沿用历史助手的“只读”判断。业务根目录下具体文件的写入仍经权限检查，与 .cbim/ 知识保护分开；指引不代表已授予执行权限。
+
+## 内部任务计划与交付候选
+
+实现任务可通过 `cbim_task_plan` 保存目标、责任描述、步骤和验收要求；修改须提交 expectedVersion 和原因，历史保存在 `task.updated` 事件中。普通问答不强制创建计划。`cbim_task_inspect` 返回当前计划及本轮可引用的真实成功回执，`cbim_task_step` 用这些调用 ID 记录完成声明；伪造、失败和失效证据会被拒绝。
+
+`cbim_delivery_prepare` 要求每个步骤都有有效证据，仅生成待审阅候选。运行 completed、步骤 reported_done、交付 awaiting_review 与业务验收是不同概念，当前没有模型或人工直接签发业务验收的接口。界面任务视图显示记录的目标、责任、修订及交付限制；不会从普通助手文本推断完成。
+
+工具绑定当前真实运行，经相同 gate 调用，但只修改执行记录，不改项目与正式知识，故只读模式也可以规划和记录读取证据。业务写、知识写及命令放行前使旧证据失效；恢复和修改计划也要求重新核实，未知结果仍需显式确认且不自动重放。命令可能改变产物，因此即便是测试命令也保守失效旧证据；应完成修改与验证后再关联本轮有效回执。
+
+当前未检测 Loop 外的产物修改，未按验收条目验证证据语义，未自动绑定候选模块或专业 Agent；责任描述也不代表已经派发给其他 Agent。工具真实接入不保证任意模型都会按指引调用，应在任务视图核对记录。
 
 ## Cindy Pi 运行配置对齐
 

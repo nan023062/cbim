@@ -1,8 +1,8 @@
 /**
  * 作用定位：为选中成员任务装配只读核实控制器，将图/周期变化投影为报告过期提示。
- * 设计原因：挂载、页签显示和轮询都不触发核实；不同节点或轮次独立控制器，迟到结果不会覆盖新选择，报告读取不影响成员执行。
+ * 设计原因：挂载、页签显示和轮询都不触发核实；不同节点或轮次独立控制器。提供稳定的 invalidate 回调，在新草稿准备后清旧报告且忽略其迟到结果，不自动请求后端。
  */
-import {useEffect,useMemo,useSyncExternalStore} from 'react';
+import {useCallback,useEffect,useMemo,useSyncExternalStore} from 'react';
 import type {GraphCursor,ScopeSummary,TaskNode} from '../../bridge/contracts/dispatch';
 import {ExecutionReportController,executionReportKey,executionReportStale,type ExecutionReportSelection} from './execution-report-state';
 
@@ -13,5 +13,6 @@ export function useExecutionReport(identity:ExecutionReportSelection,task:TaskNo
   const state=useSyncExternalStore(controller.subscribe,()=>controller.snapshot,()=>controller.snapshot);
   useEffect(()=>()=>controller.cancel(),[controller]);
   const stale=executionReportStale(state.report,task,graphCursor,scope);
-  return {...state,stale,inspect:()=>controller.inspect(),more:()=>stale?Promise.resolve():controller.more()};
+  const invalidate=useCallback(()=>controller.invalidate(),[controller]);
+  return {...state,stale,invalidate,inspect:()=>controller.inspect(),more:()=>stale?Promise.resolve():controller.more()};
 }

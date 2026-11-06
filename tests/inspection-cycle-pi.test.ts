@@ -12,8 +12,9 @@ import type {RecoveryRequest,RecoveryReceipt} from '../src/backend/core/tasks/sc
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import type {ConversationThreadView} from '../src/backend/core/brain/types';
 
-it.each(['complete-restart','stop'] as const)('starts a new read-only Pi inspection without replaying damaged old history (%s)',async mode=>{
-  const f=await fixture(),provider=await inspectionCycleProvider({holdFresh:true,holdOld:true});let app=f.app;
+it.each(['complete-restart','stop','again'] as const)('starts a new read-only Pi inspection without replaying damaged old history (%s)',async mode=>{
+  const f=await fixture(),provider=await inspectionCycleProvider({holdFresh:true,holdOld:true,again:mode==='again'});let app=f.app;
+  let repeated:{request:RecoveryRequest;receipt:RecoveryReceipt}|undefined;
   try{
     const {entry}=await seedExecutionReport(app,f.a,provider),profileId=(await app.models.list()).selectedId!;
     const started=await app.dispatch('loop.chat',{id:entry.id,message:data.oldGoal,options:{permission:'execute',turnTimeoutMs:30000}}) as {taskId:string;runId:string};
@@ -40,10 +41,25 @@ it.each(['complete-restart','stop'] as const)('starts a new read-only Pi inspect
     expect((await app.dispatch('loop.recoveryStart',req)).recovery).toEqual(receipt.recovery);expect((await app.dispatch('loop.recoveryReceipt',lookup)).recovery).toEqual(receipt.recovery);
     await expect(app.dispatch('loop.recoveryStart',{...req,input:{message:'changed'}})).rejects.toMatchObject({code:'RECOVERY_COMMAND_CONFLICT'});
     await expect(app.dispatch('loop.recoveryStart',{...req,commandId:randomUUID()})).rejects.toMatchObject({code:'RECOVERY_BUSY'});
-    if(mode==='stop'){
+    if(mode==='stop'||mode==='again'){
       await app.dispatch('loop.stop',{id:entry.id,taskId:started.taskId});
       await vi.waitFor(async()=>{expect((await scopes())[1]).toMatchObject({status:'closed',outcome:'cancelled'});expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:20000,interval:30});
       expect(provider.memberRequests).toHaveLength(3);expect((await graph()).tasks).toEqual(originalGraph.tasks);
+      if(mode==='again'){
+        const firstClosed=(await scopes())[1],closedReceipt=await app.dispatch('loop.recoveryReceipt',lookup) as RecoveryReceipt;
+        expect(closedReceipt.scopeStatus).toBe('closed');expect(closedReceipt.recovery).toEqual(receipt.recovery);
+        const firstLog=path.join(f.user,entry.id,'loop-engine','tasks',started.taskId,receipt.recovery.runId,'events.jsonl'),firstBytes=await fs.readFile(firstLog,'utf8');
+        const freshReport=await app.dispatch('dispatch.executionReport',query),next:RecoveryRequest={...req,commandId:randomUUID(),source:{...req.source,reportBasis:freshReport.basis.key}};
+        provider.releaseFresh();const nextReceipt=await app.dispatch('loop.recoveryStart',next) as RecoveryReceipt;repeated={request:next,receipt:nextReceipt};
+        expect(nextReceipt.scopeId).not.toBe(receipt.scopeId);expect(nextReceipt.recovery.runId).not.toBe(receipt.recovery.runId);expect(nextReceipt.recovery.source.taskId).toBe(oldTask.taskId);
+        await vi.waitFor(async()=>{expect((await scopes())[2]).toMatchObject({status:'closed',outcome:'completed'});expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:30000,interval:30});
+        const second=(await scopes())[2],after=await graph(),newTask=after.tasks.find(task=>task.scopeId===second.scopeId)!;
+        expect((await scopes()).slice(0,2)).toEqual([oldScope,firstClosed]);expect(await fs.readFile(firstLog,'utf8')).toBe(firstBytes);expect(after.root.agent).toEqual(originalGraph.root.agent);
+        expect(second.recovery!.context.nativeSessionId).not.toBe(fresh.recovery!.context.nativeSessionId);expect(second.recovery!.context.excludedRunIds.sort()).toEqual([...corrupt.oldIds,receipt.recovery.runId].sort());expect(newTask.assignee.agentInstanceId).not.toBe(oldTask.assignee.agentInstanceId);
+        expect((await app.dispatch('loop.recoveryStart',req)).recovery).toEqual(receipt.recovery);expect((await app.dispatch('loop.recoveryStart',next)).recovery).toEqual(nextReceipt.recovery);expect((await app.dispatch('loop.recoveryReceipt',{...identity,commandId:next.commandId})).recovery).toEqual(nextReceipt.recovery);
+        expect(provider.mainRequests).toHaveLength(13);expect(provider.memberRequests).toHaveLength(8);
+        const view=await app.dispatch('loop.threadView',{id:entry.id,taskId:started.taskId}) as ConversationThreadView;expect(view.runs).toHaveLength(3);expect(view.issues).toHaveLength(corrupt.oldIds.length);expect(view.runs.filter(run=>run.events[0].data.freshMain)).toHaveLength(2);
+      }
     }else{
       provider.releaseFresh();
       await vi.waitFor(async()=>{expect((await scopes())[1]).toMatchObject({status:'closed',outcome:'completed'});expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:30000,interval:30});
@@ -62,5 +78,6 @@ it.each(['complete-restart','stop'] as const)('starts a new read-only Pi inspect
     const finalScopes=await scopes(),counts=[provider.mainRequests.length,provider.memberRequests.length];await corrupt.unchanged();expect(await fs.readFile(marker,'utf8')).toBe(data.markerLine);expect((await fs.stat(marker)).mtimeMs).toBe(markerStat.mtimeMs);expect(provider.errors).toEqual([]);expect((await queue())[0]).toMatchObject({id:queued[0].id,message:queued[0].message,status:'paused'});
     await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
     expect(await scopes()).toEqual(finalScopes);expect((await app.dispatch('loop.recoveryReceipt',lookup)).scopeStatus).toBe('closed');expect((await app.dispatch('loop.recoveryStart',req)).recovery).toEqual(receipt.recovery);expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts);expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);await corrupt.unchanged();
+    if(repeated){expect((await app.dispatch('loop.recoveryReceipt',{...identity,commandId:repeated.request.commandId})).recovery).toEqual(repeated.receipt.recovery);expect((await app.dispatch('loop.recoveryStart',repeated.request)).recovery).toEqual(repeated.receipt.recovery);expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts)}
   }finally{provider.releaseOld();provider.releaseFresh();await app.shutdown();await f.cleanup();await provider.close()}
 },120000);

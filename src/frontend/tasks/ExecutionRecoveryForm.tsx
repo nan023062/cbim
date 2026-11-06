@@ -1,6 +1,6 @@
 /**
  * 作用定位：异常执行报告后的显式新周期入口，将用户观察与新的只读核实目标分开呈现。
- * 设计原因：观察不是对旧结果的更正或人工批准；冻结请求与回执可查询，未知结果不能修改正文再发，也不接入旧运行的恢复按钮。
+ * 设计原因：观察不是对旧结果的更正或人工批准；只有确认旧核实周期关闭并完整归档后才能准备新草稿。报告清空时仍保留表单和历史，未知结果只能查询原请求。
  */
 import type {ExecutionRecoveryView} from './useExecutionRecovery';
 
@@ -25,7 +25,10 @@ export function ExecutionRecoveryForm({state}:{state:ExecutionRecoveryView}){
       {(phase==='unknown'||phase==='accepted'||phase==='submitting')&&<button data-testid="execution-recovery-query" disabled={state.pending} onClick={()=>void state.query()}>查询创建状态</button>}
       {phase==='unknown'&&<button data-testid="execution-recovery-retry" disabled={state.pending} onClick={()=>void state.retry()}>原请求重试</button>}
       {phase==='accepted'&&<button data-testid="execution-recovery-view" onClick={state.showCreated}>查看新目标</button>}
+      {phase==='accepted'&&attempt?.receipt?.scopeStatus==='closed'&&<button data-testid="execution-recovery-prepare" disabled={!state.canPrepare} onClick={()=>void state.prepare()}>准备再次核实</button>}
     </div>
+    {phase==='accepted'&&attempt?.receipt?.scopeStatus==='closed'&&<p className="member-muted">再次核实会先确认此周期已结束并保存原请求。准备后须重新核实来源报告，再明确提交新任务。{!state.canPrepare&&!state.pending&&state.reason&&' '+state.reason}</p>}
     {attempt&&<details><summary>请求与来源标识</summary><p>命令 <code>{attempt.request.commandId}</code></p><p>来源任务 <code>{attempt.request.source.taskId}</code></p><p>原报告依据 <code>{attempt.request.source.reportBasis}</code></p></details>}
+    {!!state.record?.history?.length&&<details className="execution-recovery-history" data-testid="execution-recovery-history"><summary>已保存的核实历史（{state.record.history.length}）</summary>{state.record.history.map(item=><article data-testid="execution-recovery-history-item" key={item.request.commandId}><p>已受理 · 周期已结束</p><p>命令 <code>{item.request.commandId}</code></p><p>核实目标：{item.request.input.message}</p><p>用户观察：{item.request.observation.text}</p><p>目标周期 <code>{item.receipt.scopeId}</code> · 运行 <code>{item.receipt.recovery.runId}</code></p><p>来源依据 <code>{item.request.source.reportBasis}</code></p></article>)}</details>}
   </section>;
 }

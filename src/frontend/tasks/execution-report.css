@@ -1,6 +1,6 @@
 /**
  * 作用定位：选中成员任务的只读执行核实报告排版。
- * 设计原因：保持图与实时正文为原有结构，核实摘要及工具回执按需展开；窄详情栏使用可换行分组，避免大表格横向滚动。
+ * 设计原因：保持图与实时正文为原有结构，核实摘要、工具回执与再次核实历史按需展开；窄详情栏使用可换行分组，避免大表格横向滚动。
  */
 .execution-report{border:1px solid var(--line);border-radius:9px;padding:12px;margin:14px 0;min-width:0;overflow-wrap:anywhere;font-size:12px;line-height:1.6}
 .execution-report>header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.member-task-detail .execution-report h4{margin:0}.execution-report h5{font-size:12px;margin:14px 0 7px}.execution-report p{margin:7px 0}.execution-report-state{font-weight:600}.execution-report .warning{color:var(--warning)}
@@ -8,3 +8,4 @@
 .execution-report-counts{display:flex;flex-wrap:wrap;gap:10px 16px;margin:8px 0}.execution-report-counts div{display:flex;align-items:center;gap:5px}.execution-report-counts dt{color:var(--muted)}.execution-report-counts dd{margin:0;font-weight:600}
 .execution-report-tool{border-top:1px solid var(--line);padding:8px 0}.execution-report-tool summary{display:flex;align-items:baseline;justify-content:space-between;gap:8px;cursor:pointer;flex-wrap:wrap}.execution-report-tool summary span{color:var(--muted);font-size:11px}.execution-report code{white-space:normal;word-break:break-all;font-size:10px}.execution-report-basis{color:var(--muted);font-size:10px;margin-top:10px}.execution-report-basis summary{cursor:pointer}.execution-report-candidate{border-top:1px solid var(--line)}
 .execution-recovery{border-top:1px solid var(--line);margin:16px 0;padding-top:12px;font-size:12px;line-height:1.6;min-width:0;overflow-wrap:anywhere}.execution-recovery label{display:block;margin:12px 0}.execution-recovery textarea{display:block;width:100%;box-sizing:border-box;min-height:76px;resize:vertical;margin-top:5px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--text);font:inherit}.execution-recovery-actions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.execution-recovery code{word-break:break-all;font-size:10px}
+.execution-recovery-history article{border-top:1px solid var(--line);margin-top:8px;padding-top:8px}.execution-recovery-history article p{white-space:pre-wrap;margin:5px 0}.execution-recovery-history summary{cursor:pointer}

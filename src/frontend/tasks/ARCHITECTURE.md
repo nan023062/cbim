@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主会话任务图及独立目标增量；成员节点按需核实执行事实，再明确新建只读核实周期。表单冻结来源、观察及目标，未知提交只查询或同ID重试；旧报告及候选不替代验收，切换节点不改执行对象。
+主会话任务图及独立目标增量；成员节点按需核实执行事实，再明确新建只读核实周期。再次核实须重新确认旧周期关闭、先保存历史并重新读取来源报告；未知提交只查询或同ID重试，保存失败不解锁。旧报告及候选不替代验收。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -227,6 +227,7 @@ class N_src_frontend_tasks_execution_report_state_ts_ExecutionReportController["
   +snapshot
   +subscribe
   +cancel()
+  +invalidate()
   +inspect()
   +more()
   -read
@@ -495,14 +496,12 @@ class N_src_frontend_tasks_recovery_state_ts_RecoveryAttempt["RecoveryAttempt"] 
   +error
 }
 N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_RecoveryAttempt : 声明
-class N_src_frontend_tasks_recovery_state_ts_RecoveryDraft["RecoveryDraft"] {
-  <<interface>>
-  +source
-  +observation
-  +message
-  +attempt
+class N_src_frontend_tasks_recovery_state_ts_RecoveryArchive["RecoveryArchive"] {
+  <<type>>
+  +phase
+  +receipt
 }
-N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_RecoveryDraft : 声明
+N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_RecoveryArchive : 声明
 ```
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
@@ -512,6 +511,15 @@ classDiagram
 class N_src_frontend_tasks_recovery_state_ts["recovery-state.ts"] {
   <<module>>
 }
+class N_src_frontend_tasks_recovery_state_ts_RecoveryDraft["RecoveryDraft"] {
+  <<interface>>
+  +source
+  +observation
+  +message
+  +attempt
+  +history
+}
+N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_RecoveryDraft : 声明
 class N_src_frontend_tasks_recovery_state_ts_RecoveryState["RecoveryState"] {
   <<interface>>
   +records
@@ -530,27 +538,21 @@ class N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryController["Execut
   +workspaceId
   +rootSessionId
   +storageKey
+  +legacyStorageKey
   +snapshot
   +available
   +canRelease
   +subscribe()
+  +subscribeSource()
   +record()
   +isPending()
   +edit()
   +submit()
+  +prepareAgain()
   +retry()
   +query()
-  +restore()
-  -ports
-  -value
 }
 N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryController : 声明
-class N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryPool["ExecutionRecoveryPool"] {
-  +get()
-  -idleLimit
-  -controllers
-}
-N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryPool : 声明
 ```
 
 成员 2/2（同名节点为同一声明，跨图合并阅读）。
@@ -561,6 +563,9 @@ class N_src_frontend_tasks_recovery_state_ts["recovery-state.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryController["ExecutionRecoveryController"] {
+  +restore()
+  -ports
+  -value
   -unavailable
   -listeners
   -pending
@@ -569,6 +574,19 @@ class N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryController["Execut
   -send()
 }
 N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryController : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_recovery_state_ts["recovery-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryPool["ExecutionRecoveryPool"] {
+  +get()
+  -idleLimit
+  -controllers
+}
+N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryPool : 声明
 ```
 
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
@@ -767,10 +785,13 @@ class N_src_frontend_tasks_task_graph_css["task-graph.css"] {
 classDiagram
 class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
   <<module>>
+  +recoverySourceReason()
   +recoveryTarget()
   +useExecutionRecovery()
 }
 ```
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -799,14 +820,29 @@ class N_src_frontend_tasks_useExecutionRecovery_ts_ExecutionRecoveryView["Execut
   +message
   +editable
   +canSubmit
+  +canPrepare
   +pending
   +error
   +reason
   +modelLabel
   +edit
   +submit
+  +prepare
   +query
   +retry
+}
+N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_useExecutionRecovery_ts_ExecutionRecoveryView : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_useExecutionRecovery_ts_ExecutionRecoveryView["ExecutionRecoveryView"] {
+  <<interface>>
   +showCreated
 }
 N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_useExecutionRecovery_ts_ExecutionRecoveryView : 声明
@@ -1212,7 +1248,7 @@ N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts 
 
 `MemberExecutionReport` 位于 `MemberTaskDetail` 的执行轮次选择器之后、实时正文之前；它与 `MemberRunDetail` 独立，缺失或损坏日志不会遮住报告入口。两个兄弟视图的 React key 分别带 `report:` 和 `transcript:` 前缀，在同一执行身份下仍保持独立实例，任务由运行转终态时新增提示不能导致报告订阅与正文相互替换。任务视图仍是节点 DAG，不把核实报告改成全会话文字流。任务原有候选也必须属于当前选中 `runId`，旧轮次不能显示后来的交付结果。
 
-`useExecutionReport` 为 workspace/root/scope/task/run 选择创建独立 `ExecutionReportController`；构造、挂载、订阅、显示页签和图更新均不请求。只有“核实执行记录”“重新核实”“加载更多工具记录”显式调用只读 `dispatch.executionReport`，不调用模型、审批、问题回答、收件确认、启动、停止或恢复。没有运行轮次时只核实该任务的领取登记，不猜测最新日志。切换节点或轮次取消前端观察并忽略迟到结果，不撤销后端读取，也不改变任务。
+`useExecutionReport` 为 workspace/root/scope/task/run 选择创建独立 `ExecutionReportController`；构造、挂载、订阅、显示页签和图更新均不请求。只有“核实执行记录”“重新核实”“加载更多工具记录”显式调用只读 `dispatch.executionReport`，不调用模型、审批、问题回答、收件确认、启动、停止或恢复。没有运行轮次时只核实该任务的领取登记，不猜测最新日志。切换节点或轮次取消前端观察并忽略迟到结果，不撤销后端读取，也不改变任务。明确准备再次核实成功后，`invalidate` 清除旧报告、递增读取代次并忽略此前在途响应；它不会自动请求新报告。
 
 报告须经过 bridge schema 和完整身份校验，检查候选/工具回执所属运行、工具分类数量、页大小和连续游标。工具列表按默认 50 条的有界页面显式追加；同一 basis 才合并，服务端 `paginationReset` 或 `changed_during_read` 替换旧页，不能拼接不同时间的证据。读失败保留已核实报告并明确提示；报告没有修改图、知识或日志的能力。
 
@@ -1222,13 +1258,19 @@ N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts 
 
 #### 显式新建只读核实周期
 
-`ExecutionRecoveryForm` 位于报告之后，用户观察 `observation.text` 与新目标 `input.message` 分开，不修改旧任务。`useExecutionRecovery` 使用所选节点的真实 scope/task/run 与已验证报告 basis，只在来源周期 closed、会话没有 active/waiting、图已追齐且报告未过期时允许首次提交。已有运行必须明确选轮次；只有真正没有运行登记且报告为 not_started/not_expected 时才能省略 runId。历史筛选不改变真实开放周期。未知/损坏日志可作为核实对象，不能当作未执行。
+`ExecutionRecoveryForm` 位于报告之后，用户观察 `observation.text` 与新目标 `input.message` 分开，不修改旧任务。`useExecutionRecovery` 使用所选节点的真实 scope/task/run 与已验证报告 basis，只在来源周期 closed、会话没有 active/waiting、图已追齐且报告未过期时允许首次提交。已有运行必须明确选轮次；只有 task.runIds 为空、没有 activeRunId 且报告身份对应未选运行时才能省略 runId。已取消且未领取的节点允许保留 unknown/not_selected 报告后进入只读核实，不要求将其改判未执行。历史筛选不改变真实开放周期。未知/损坏日志可作为核实对象，不能当作未执行。
 
 模型来自主输入区的实际 profile/provider/model，权限始终固定 `read`，不取输入区可写权限，也不包含附件。显式点击 `loop.recoveryStart` 才创建新周期；报告刷新、表单展示与编辑都不启动模型。受理后只刷新同一 root 的图与历史，“查看新目标”改变查看选择，不切换主会话或清空草稿、附件、队列。
 
-`ExecutionRecoveryController` 按 workspace/root 保存独立本机索引，来源键包含 scope/task/run，不包含会变动的报告 basis。发送前冻结 commandId、basis、观察、目标与模型选项；同 renderer 的池复用在途控制器。刷新报告、切换节点和重开不能隐藏未知命令并生成第二次请求。未知结果只查询 `loop.recoveryReceipt` 或原命令原正文重试；查询 undefined 仍为未知，一旦通信不确定，后续拒绝也不能解冻改发。仅首次明确预受理拒绝可保留草稿修正；持久化失败不发送，损坏本地记录不自动覆盖。
+`ExecutionRecoveryController` 按 workspace/root 保存独立本机 v2 索引，来源键包含 scope/task/run，不包含会变动的报告 basis。独立键 `cbim.execution-recovery.v2.*` 优先读取；不存在时可读 v1，后续保存写 v2 并保持 v1 原字节。损坏 v2 不回退旧 v1，以免隐藏新命令。发送前冻结 commandId、basis、观察、目标与模型选项；同 renderer 的池复用在途控制器。刷新报告、切换节点和重开不能隐藏未知命令并生成第二次请求。未知结果只查询 `loop.recoveryReceipt` 或原命令原正文重试；查询 undefined 仍为未知，一旦通信不确定，后续拒绝也不能解冻改发。仅首次明确预受理拒绝可保留草稿修正；持久化失败不发送，损坏本地记录不自动覆盖。
 
-回执通过 Bridge Schema 后仍核对 workspace/root/command、source+basis、operation、观察、目标和 options；新 scopeId 必须等于稳定 commandId，且新 scope/run 不能借用来源。受理后 recovery 事实保持不可变，只允许周期状态演进，closed 不能回退为开放。矛盾查询保留原回执并提示错误。`accepted` 仅表示创建意图受理，不能当作正在运行或核实通过。未知请求的同 ID 查询/重试不套用首次提交的“当前空闲/报告新鲜”条件，后端先去重再决定是否需要执行。已受理来源保持只读，不提供换 ID 再建操作。
+回执通过 Bridge Schema 后仍核对 workspace/root/command、source+basis、operation、观察、目标和 options；新 scopeId 必须等于稳定 commandId，且新 scope/run 不能借用来源。受理后 recovery 事实保持不可变，只允许周期状态演进，closed 不能回退为开放。矛盾查询保留原回执并提示错误。`accepted` 仅表示创建意图受理，不能当作正在运行或核实通过。未知请求的同 ID 查询/重试不套用首次提交的“当前空闲/报告新鲜”条件，后端先去重再决定是否需要执行。
+
+“准备再次核实”只对 accepted 且 closed 的当前命令开放，当前主会话还必须没有开放目标。点击先按旧 commandId 重新查询；undefined、矛盾、通信失败、未关闭或正在查询均保持原锁定状态。只有完整旧请求及受理回执成功写入 history 后才清除当前 attempt，保留观察和目标作为新草稿。准备不生成 commandId、不调用模型，也不修改聊天草稿/附件/队列；最终“新建只读核实任务”才生成与当前索引所有命令都不同的 UUID。历史记录始终只读，不能选旧历史来绕过当前未知命令。
+
+所有状态先保存后发布；容量超限或 localStorage 写入失败不能解锁原命令。单来源最多 32 条归档、单 root 最多 128 条归档，索引实际 UTF-8 字节与未决回执预留合计最多 2 MiB；不淘汰旧请求。每个尚无回执的 submitting/unknown 命令预留其冻结请求序列化大小加 8 KiB 元信息，避免先发送后无法保存复制正文的受理回执；其他草稿编辑同样遵守预留。重开时核对每条历史的 root/source、closed 回执与全索引命令唯一性，已有记录不会因容量上限被静默删减。
+
+归档成功通过 source 订阅使所有同来源视图的报告同步失效，挂载之间遗漏的归档变化也补查；旧读取迟到不能重新填回可提交依据。报告为空时仍显示已保存历史、观察与目标，并提示“请重新核实来源报告”；用户须再次点击报告核实，再以新鲜 basis 提交。该过程不自动读取报告，最终后端仍核验来源版本及当前 root 是否空闲。
 
 核实周期在 `ScopeSummary.readOnly` 明示只读约束；`useScopeContinuation` 对真实 openScope 的后续补充继续固定 read，不能借选择历史或修改 composer 权限提权。该标志不暴露原生上下文或旧运行排除清单。
 

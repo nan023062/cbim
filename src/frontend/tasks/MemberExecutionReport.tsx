@@ -55,6 +55,6 @@ export function ExecutionReportPanel({state,taskId,runId}:{state:ExecutionReport
 /** 独立挂载在轮次选择器之后，即使流式日志损坏也能通过该只读入口检查登记事实。 */
 export function MemberExecutionReport({workspaceId,rootSessionId,task,runId,graphCursor,scope,recovery}:{workspaceId:string;rootSessionId:string;task:TaskNode;runId?:string;graphCursor?:GraphCursor;scope?:ScopeSummary;recovery?:ExecutionRecoveryContext}){
   const state=useExecutionReport({workspaceId,rootSessionId,taskId:task.taskId,scopeId:task.scopeId,runId},task,graphCursor,scope);
-  const creation=useExecutionRecovery(workspaceId,rootSessionId,task,runId,state.report,state.stale||state.loading||!!state.error,recovery);
+  const creation=useExecutionRecovery(workspaceId,rootSessionId,task,runId,state.report,state.stale||state.loading||!!state.error,recovery,state.invalidate);
   return <><ExecutionReportPanel state={state} taskId={task.taskId} runId={runId}/><ExecutionRecoveryForm state={creation}/></>;
 }

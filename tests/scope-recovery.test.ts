@@ -96,11 +96,16 @@ it('新成员保持read，直接启动与持久运行篡改都不能提权；主
 
 it('无日志受理意图仍冻结在下一上下文；按持久插入顺序选择最后核实，不复活旧closed',async()=>{
   const f=await setup(false);try{
-    const first=await f.service.recoveries.accept(f.input,f.launch());await f.service.closeScope(f.identity,first.scope.scopeId,'interrupted');
+    const original=await f.service.snapshot(f.identity),first=await f.service.recoveries.accept(f.input,f.launch());
+    await f.plan(first.scope.scopeId,first.recovery.context.initialRunId);await f.assign(first.scope.scopeId);await f.service.closeScope(f.identity,first.scope.scopeId,'interrupted');
+    const frozen=await f.service.recoveries.accept(f.input,f.launch());expect(frozen.fresh).toBe(false);expect(frozen.scope.outcome).toBe('interrupted');expect(f.prepare).not.toHaveBeenCalled();
+    await expect(f.service.recoveries.accept({...f.input,commandId:randomUUID()},{...f.launch(),excludedRunIds:await f.service.recoveries.priorRunIds(f.identity)})).rejects.toMatchObject({code:'RECOVERY_REPORT_STALE'});
     const report=await f.members.report({...f.identity,taskId:f.input.source.taskId}),input={...f.input,commandId:randomUUID(),source:{...f.input.source,reportBasis:report.basis.key}};
     await expect(f.service.recoveries.accept(input,f.launch())).rejects.toMatchObject({code:'RECOVERY_CONTEXT_CONFLICT'});
     const launch={...f.launch(),excludedRunIds:await f.service.recoveries.priorRunIds(f.identity)},second=await f.service.recoveries.accept(input,launch);
     expect(await f.service.recoveries.latestContext(f.identity)).toEqual(second.recovery.context);expect((await f.store.read()).scopes![1].outcome).toBe('interrupted');
+    expect(second.scope.scopeId).not.toBe(first.scope.scopeId);expect(second.recovery.context.nativeSessionId).not.toBe(first.recovery.context.nativeSessionId);expect(second.recovery.context.excludedRunIds).toContain(first.recovery.context.initialRunId);
+    const graph=await f.service.snapshot(f.identity);expect(graph.root.agent).toEqual(original.root.agent);expect(graph.tasks.find(task=>task.taskId===f.input.source.taskId)).toEqual(original.tasks.find(task=>task.taskId===f.input.source.taskId));
     expect((await f.service.recoveries.accept(f.input,f.launch())).scope.outcome).toBe('interrupted');
     const reader=new FileDispatchStore(f.directory,f.entry.id);try{const recovered=new WorkspaceDispatchService(f.workspace,reader);await recovered.recoverScopes();expect((await recovered.recoveries.inspect({...f.identity,commandId:input.commandId}))?.scopeStatus).toBe('closed');expect(await recovered.recoveries.latestContext(f.identity)).toEqual(second.recovery.context)}finally{await reader.close()}
     expect(await f.service.recoveries.latestContext({...f.identity,rootSessionId:'legacy-without-graph'})).toBeUndefined();expect(await f.service.recoveries.priorRunIds({...f.identity,rootSessionId:'legacy-without-graph'})).toEqual([]);

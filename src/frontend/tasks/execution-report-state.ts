@@ -1,6 +1,6 @@
 /**
  * 作用定位：验证成员执行核实报告的身份和分页基线，并保存一次显式读取的前端状态。
- * 设计原因：核实不等于恢复；读失败保留已有报告，跨节点迟到响应与不同基线的工具页不能混用。模块只调用注入的只读端口，不依赖 React、计时器或运行服务。
+ * 设计原因：核实不等于恢复；读失败保留已有报告，跨节点迟到响应与不同基线的工具页不能混用。准备再次核实时主动清缓存并作废在途读取，必须重新显式核实。
  */
 import {executionReportSchema} from '../../bridge/contracts/dispatch';
 import type {ExecutionReport,ExecutionReportInput,GraphCursor,ScopeSummary,TaskNode} from '../../bridge/contracts/dispatch';
@@ -50,6 +50,8 @@ export class ExecutionReportController {
   private publish(value:ExecutionReportState){this.value=value;for(const listener of this.listeners)listener()}
   /** 切换/卸载只忽略迟到读取；不停止后端任务或改变日志。 */
   cancel(){this.generation++;this.value={...this.value,loading:false}}
+  /** 新草稿必须重新显式核实；清除旧缓存并作废已发出的读取，绝不自动回读或恢复运行。 */
+  invalidate(){this.generation++;this.publish({loading:false,error:''})}
   async inspect(){await this.pull()}
   async more(){const report=this.value.report;if(!report?.tools.nextCursor||report.consistency!=='stable')return;await this.pull(report.tools.nextCursor)}
   private async pull(cursor?:NonNullable<ExecutionReportInput['cursor']>){

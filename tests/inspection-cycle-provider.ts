@@ -20,7 +20,7 @@ export const inspectionFixture={
 type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]};
 
 /** The initial real command appends once then fails; the fresh cycle can only read that side effect. */
-export async function inspectionCycleProvider(options:{holdFresh?:boolean;holdOld?:boolean}={}){
+export async function inspectionCycleProvider(options:{holdFresh?:boolean;holdOld?:boolean;again?:boolean}={}){
   const mainRequests:Request[]=[],memberRequests:Request[]=[],errors:string[]=[];
   let agentId='',moduleId='',releaseFresh=()=>{},releaseOld=()=>{};
   const gate=new Promise<void>(resolve=>{releaseFresh=resolve});
@@ -35,23 +35,27 @@ export async function inspectionCycleProvider(options:{holdFresh?:boolean;holdOl
       const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
       const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
       if(isMain){
-        if(turn===0)tool('inspection-old-plan','cbim_goal_plan',goalPlanArguments({objective:inspectionFixture.oldGoal,agentId,moduleIds:[moduleId],acceptance:inspectionFixture.oldAcceptance}));
-        else if(turn===1)tool('inspection-old-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:inspectionFixture.oldMemberGoal,acceptance:inspectionFixture.oldAcceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
-        else if(turn===2)reply('已派发。'+inspectionFixture.oldSecret);
-        else if(turn===3)tool('inspection-old-inspect','cbim_goal_inspect',{});
-        else if(turn===4){const {scope}=goalInspection(body,'inspection-old-inspect');tool('inspection-old-review','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'blocked',checks:scope.goal.plan.criteria.map(criterion=>({criterionId:criterion.id,outcome:'unmet',reason:inspectionFixture.oldFailure,evidence:[]})),superseded:[],gaps:[inspectionFixture.oldFailure],reason:inspectionFixture.oldFailure})}
-        else if(turn===5)reply(inspectionFixture.oldFailure);
-        else if(turn===6){
+        // The first fresh stream is explicitly cancelled before dispatch. A second user command
+        // starts at plan again, never at the cancelled stream's next tool or previous native head.
+        const step=options.again&&turn>=7?turn-1:turn;
+        if(step===0)tool('inspection-old-plan','cbim_goal_plan',goalPlanArguments({objective:inspectionFixture.oldGoal,agentId,moduleIds:[moduleId],acceptance:inspectionFixture.oldAcceptance}));
+        else if(step===1)tool('inspection-old-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:inspectionFixture.oldMemberGoal,acceptance:inspectionFixture.oldAcceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+        else if(step===2)reply('已派发。'+inspectionFixture.oldSecret);
+        else if(step===3)tool('inspection-old-inspect','cbim_goal_inspect',{});
+        else if(step===4){const {scope}=goalInspection(body,'inspection-old-inspect');tool('inspection-old-review','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'blocked',checks:scope.goal.plan.criteria.map(criterion=>({criterionId:criterion.id,outcome:'unmet',reason:inspectionFixture.oldFailure,evidence:[]})),superseded:[],gaps:[inspectionFixture.oldFailure],reason:inspectionFixture.oldFailure})}
+        else if(step===5)reply(inspectionFixture.oldFailure);
+        else if(step===6){
           assert.ok(!JSON.stringify(body.messages).includes(inspectionFixture.oldSecret),'新原生上下文不得加载旧主会话正文');
+          if(options.again&&turn===7)assert.ok(!JSON.stringify(body.messages).includes(inspectionFixture.live),'再次核实不得续接已停止的原生上下文');
           assert.ok(JSON.stringify(body.messages).includes(inspectionFixture.newGoal),'新核实目标必须作为显式用户输入');
           assert.ok(body.tools?.every(item=>!['write','edit','bash'].includes(item.function.name)),'新主周期保持只读工具边界');
-          if(options.holdFresh){emit({role:'assistant',content:inspectionFixture.live});await gate}
+          if(options.holdFresh&&turn===6){emit({role:'assistant',content:inspectionFixture.live});await gate}
           tool('inspection-new-plan','cbim_goal_plan',goalPlanArguments({objective:inspectionFixture.newGoal,agentId,moduleIds:[moduleId],acceptance:inspectionFixture.newAcceptance}));
-        }else if(turn===7)tool('inspection-new-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:inspectionFixture.newMemberGoal,acceptance:inspectionFixture.newAcceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
-        else if(turn===8)reply('已派发新的只读执行者，旧操作不重放。');
-        else if(turn===9)tool('inspection-new-inspect','cbim_goal_inspect',{});
-        else if(turn===10)tool('inspection-new-review','cbim_goal_review',goalCompleteArguments(body,'inspection-new-inspect'));
-        else if(turn===11)reply(inspectionFixture.final);
+        }else if(step===7)tool('inspection-new-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:inspectionFixture.newMemberGoal,acceptance:inspectionFixture.newAcceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+        else if(step===8)reply('已派发新的只读执行者，旧操作不重放。');
+        else if(step===9)tool('inspection-new-inspect','cbim_goal_inspect',{});
+        else if(step===10)tool('inspection-new-review','cbim_goal_review',goalCompleteArguments(body,'inspection-new-inspect'));
+        else if(step===11)reply(inspectionFixture.final);
         else throw Error('查询回执或重启不能增加模型请求：'+turn);
       }else{
         if(turn>=3)assert.ok(body.tools?.every(item=>!['write','edit','bash'].includes(item.function.name)),'新执行者必须只有只读原生工具');

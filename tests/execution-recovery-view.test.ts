@@ -2,7 +2,8 @@ import {expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {ExecutionRecoveryController,ExecutionRecoveryPool,checkedRecoveryReceipt,recoveryRejected,type RecoveryPorts,type RecoveryTarget} from '../src/frontend/tasks/recovery-state';
-import {recoveryTarget,type ExecutionRecoveryView} from '../src/frontend/tasks/useExecutionRecovery';
+import {recoveryTarget,recoverySourceReason,type ExecutionRecoveryView} from '../src/frontend/tasks/useExecutionRecovery';
+import {ExecutionReportController} from '../src/frontend/tasks/execution-report-state';
 import {ExecutionRecoveryForm} from '../src/frontend/tasks/ExecutionRecoveryForm';
 import {ThreadHistoryNotice,threadResumeRun} from '../src/frontend/conversation/ThreadHistoryNotice';
 import {conversationUsage} from '../src/frontend/conversation/usage';
@@ -94,15 +95,42 @@ it('新请求必须来源closed且当前无开放周期，历史筛选不改变�
   expect(check({...f.state,graph:{...f.graph,cursor:{...f.graph.cursor,seq:9}}}).target).toBeUndefined();expect(check(f.state,{...f.report,consistency:'changed_during_read'}).target).toBeUndefined();expect(recoveryTarget('workspace','root',f.task,undefined,f.report,false,f.state).target).toBeUndefined();
   const task={...f.task,runIds:[]},noRun={...f.report,identity:{workspaceId:'workspace',rootSessionId:'root',taskId:'member'},execution:'not_started' as const,log:{state:'not_expected' as const}};
   expect(check(f.state,noRun,task).target?.source.runId).toBeUndefined();expect(check(f.state,noRun,task).target).toBeDefined();
+  const cancelled={...task,status:'cancelled' as const},unknown={...noRun,execution:'unknown' as const,log:{state:'not_selected' as const},basis:{...noRun.basis,taskStatus:'cancelled' as const}};
+  const cancelledState={...f.state,graph:{...f.graph,tasks:[cancelled]}};
+  expect(check(cancelledState,unknown,cancelled).target).toBeDefined();
+  expect(check(cancelledState,unknown,{...cancelled,runIds:['old-run']}).target).toBeUndefined();
+  expect(recoverySourceReason('workspace','root',f.task,'old-run',f.state)).toBe('');
+  expect(recoverySourceReason('workspace','root',f.task,'old-run',{...f.state,openScope:{...f.scope,status:'waiting'}})).toContain('未结束');
   expect(check({...f.state,loading:true}).target).toBeUndefined();expect(check(f.state,f.report,{...f.task,scopeId:undefined}).target).toBeUndefined();
 });
 
 it('表单观察与目标分开；未知请求只有查询和同命令重试，受理不宣称已执行或人工通过',()=>{
   const request:RecoveryRequest={...target,commandId:command,operation:'inspect_effects',observation:{text:fields.observation},input:{message:fields.message},options};
-  const base:ExecutionRecoveryView={visible:true,observation:fields.observation,message:fields.message,editable:false,canSubmit:false,pending:false,error:'',reason:'',modelLabel:'model · 只读访问',edit:()=>{},submit:async()=>{},query:async()=>{},retry:async()=>{},showCreated:()=>{}};
+  const base:ExecutionRecoveryView={visible:true,observation:fields.observation,message:fields.message,editable:false,canSubmit:false,canPrepare:false,pending:false,error:'',reason:'',modelLabel:'model · 只读访问',edit:()=>{},submit:async()=>{},prepare:async()=>{},query:async()=>{},retry:async()=>{},showCreated:()=>{}};
   const unknown=renderToStaticMarkup(createElement(ExecutionRecoveryForm,{state:{...base,record:{source:target.source,...fields,attempt:{request,phase:'unknown',uncertain:true}}}}));
   expect(unknown).toContain('你的观察');expect(unknown).toContain('新的核实目标');expect(unknown).toContain('不重放旧工具');expect(unknown).toContain('不代表人工验收');expect(unknown).toContain('execution-recovery-query');expect(unknown).toContain('execution-recovery-retry');expect(unknown).not.toContain('execution-recovery-submit');expect(unknown).toMatch(/readonly=""/i);
   const accepted=renderToStaticMarkup(createElement(ExecutionRecoveryForm,{state:{...base,record:{source:target.source,...fields,attempt:{request,phase:'accepted',uncertain:false,receipt:receipt(request)}}}}));expect(accepted).toContain('新核实周期已受理');expect(accepted).toContain('查看新目标');expect(accepted).not.toContain('execution-recovery-retry');
+  expect(accepted).not.toContain('execution-recovery-prepare');
+  const archive={request,phase:'accepted' as const,uncertain:false,receipt:{...receipt(request),scopeStatus:'closed' as const}};
+  const closed=renderToStaticMarkup(createElement(ExecutionRecoveryForm,{state:{...base,canPrepare:true,record:{source:target.source,...fields,attempt:archive}}}));expect(closed).toContain('execution-recovery-prepare');expect(closed).not.toContain('execution-recovery-submit');
+  const prepared=renderToStaticMarkup(createElement(ExecutionRecoveryForm,{state:{...base,reason:'请重新核实来源报告，再提交新的核实任务。',record:{source:target.source,...fields,history:[archive]}}}));
+  expect(prepared).toContain('execution-recovery-history');expect(prepared).toContain('execution-recovery-history-item');expect(prepared).toContain(command);expect(prepared).toContain('请重新核实来源报告');expect(prepared).toMatch(/data-testid="execution-recovery-submit" disabled/);expect(prepared).toContain(fields.message);
+});
+
+it('归档准备同步清除同来源各视图报告，迟到旧读取无效，必须显式重读；其他节点保持原报告',async()=>{
+  const graph=graphFixture(),f=fixture(async request=>({...receipt(request),scopeStatus:'closed'}));
+  f.controller.edit(target.source,fields);await f.controller.submit(target,options);
+  f.query.mockResolvedValue({...receipt(f.send.mock.calls[0][0]),scopeStatus:'closed'});
+  let finish!:(value:ExecutionReport)=>void;const read=vi.fn(async()=>graph.report),one=new ExecutionReportController({...target.source,workspaceId:'workspace',rootSessionId:'root'},read),two=new ExecutionReportController({...target.source,workspaceId:'workspace',rootSessionId:'root'},read);
+  await one.inspect();await two.inspect();read.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve}));const late=one.inspect();
+  const different=vi.fn(),stopOne=f.controller.subscribeSource(target.source,()=>{},()=>one.invalidate()),stopTwo=f.controller.subscribeSource(target.source,()=>{},()=>two.invalidate()),stopOther=f.controller.subscribeSource({...target.source,taskId:'another'},()=>{},different);
+  expect(await f.controller.prepareAgain(target.source,command)).toBe(true);
+  expect(one.snapshot).toEqual({loading:false,error:''});expect(two.snapshot).toEqual({loading:false,error:''});expect(different).not.toHaveBeenCalled();expect(read).toHaveBeenCalledTimes(3);expect(f.send).toHaveBeenCalledTimes(1);
+  finish(graph.report);await late;expect(one.snapshot.report).toBeUndefined();expect(recoveryTarget('workspace','root',graph.task,'old-run',one.snapshot.report,false,graph.state).target).toBeUndefined();
+  await one.inspect();expect(one.snapshot.report).toEqual(graph.report);expect(two.snapshot.report).toBeUndefined();expect(recoveryTarget('workspace','root',graph.task,'old-run',one.snapshot.report,false,graph.state).target).toEqual(target);
+  // 刚挂载的第二处视图在 render 与订阅之间错过归档，也必须清旧缓存。
+  const missed=vi.fn();const stopMissed=f.controller.subscribeSource(target.source,()=>{},missed,0);expect(missed).toHaveBeenCalledTimes(1);
+  stopOne();stopTwo();stopOther();stopMissed();
 });
 
 it('坏历史独立占位，不制造运行或从较早可读记录回退续接头',()=>{

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-应用 action 路由。只读报告、显式核实、正式业务重规划的条件预览/启动/回执分别接入；历史展示返回问题与可信续聊头。普通聊天、补充、审批保留独立语义，桌面发送方在 Electron 接入处核验。
+应用 action 路由。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -11,7 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [dispatch.ts](dispatch.ts) | 将经过主进程接入的 action 路由到明确的工作区和应用服务。 |
-| [services.ts](services.ts) | 定义 IPC 路由需要的应用服务、成员派发及执行审批、静态角色履历、全局运行只读投影与工作区生命周期入口。 |
+| [services.ts](services.ts) | 定义 IPC 路由需要的应用服务、执行审批、静态角色履历、全局监管与准入投影、可靠配额设置和工作区生命周期入口。 |
 
 ## 架构类图
 
@@ -42,6 +42,8 @@ class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationService
   +paths
   +models
   +resources
+  +admission
+  +admissionSettings
   +runtime
   +running
   +isStopping
@@ -52,8 +54,6 @@ class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationService
   +memberExecution()
   +agentHistory()
   +open()
-  +stop()
-  +remove()
 }
 N_src_backend_main_ipc_services_ts ..> N_src_backend_main_ipc_services_ts_ApplicationServices : 声明
 ```
@@ -67,13 +67,15 @@ class N_src_backend_main_ipc_services_ts["services.ts"] {
 }
 class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationServices"] {
   <<interface>>
+  +stop()
+  +remove()
   +modelOptions()
   +chatOptions()
 }
 N_src_backend_main_ipc_services_ts ..> N_src_backend_main_ipc_services_ts_ApplicationServices : 声明
 ```
 
-直接依赖：[../workspace/catalog.ts](../workspace/catalog.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../platform/paths.ts](../platform/paths.ts)、[../persistence/settings/llm-profiles.ts](../persistence/settings/llm-profiles.ts)、[../resources/resource-repository.ts](../resources/resource-repository.ts)、[../../scheduler-engine/execution/execution-manager.ts](../../scheduler-engine/execution/execution-manager.ts)、[../../scheduler-engine/execution/dispatch-service.ts](../../scheduler-engine/execution/dispatch-service.ts)、[../../scheduler-engine/execution/member-execution.ts](../../scheduler-engine/execution/member-execution.ts)、[../../scheduler-engine/runtime/agent-history.ts](../../scheduler-engine/runtime/agent-history.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)。
+直接依赖：[../workspace/catalog.ts](../workspace/catalog.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../platform/paths.ts](../platform/paths.ts)、[../persistence/settings/llm-profiles.ts](../persistence/settings/llm-profiles.ts)、[../resources/resource-repository.ts](../resources/resource-repository.ts)、[../../scheduler-engine/execution/execution-manager.ts](../../scheduler-engine/execution/execution-manager.ts)、[../../scheduler-engine/execution/dispatch-service.ts](../../scheduler-engine/execution/dispatch-service.ts)、[../../scheduler-engine/execution/member-execution.ts](../../scheduler-engine/execution/member-execution.ts)、[../../scheduler-engine/runtime/agent-history.ts](../../scheduler-engine/runtime/agent-history.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)、[../persistence/settings/admission-settings.ts](../persistence/settings/admission-settings.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)。
 
 ### 本目录调用边界
 
@@ -100,6 +102,10 @@ N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_services_ts : 导�
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 全局并发准入与设置
+
+`admission.read({cursor})` 仅读应用内准入器，独立于历史监管索引；返回 snapshot 或同版本 noop，不启动运行、不扫描日志。`admission.settings` 返回已经生效的策略；`admission.configure({revision,maxConcurrentRuns})` 经串行版本校验和可靠写盘后生效，关闭期间拒绝改配。IPC 不公开 attempt、withdraw 或 release，页面和模型不能自行签发或伪造归还名额。
 
 ### 正式业务重规划
 

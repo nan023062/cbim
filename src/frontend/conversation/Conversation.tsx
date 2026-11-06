@@ -1,6 +1,6 @@
 /**
  * 作用定位：会话双页签入口（对话/本会话任务），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。
- * 设计原因：主运行与开放周期分开，历史问题以独立占位保留，可续接头由后端核实。目标补充、只读核实与正式业务重规划分别冻结请求；业务新权限明确另选，历史选择不改变聊天草稿、发送对象或旧核实周期的只读约束。
+ * 设计原因：主运行、开放周期和准入等待分开。配额不足保留首轮草稿，已受理协作使用只读票据提示；无实际占用时停止工作动画和等待期间计时。目标补充、核实与业务重规划仍使用各自可靠意图，不因容量等待重放旧任务。
  */
 import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
@@ -33,12 +33,16 @@ import {conversationExecutionState} from './conversation-state';
 import {useScopeContinuation} from '../tasks/useScopeContinuation';
 import {useScopeReplan} from '../tasks/useScopeReplan';
 import {ThreadHistoryNotice,threadResumeRun} from './ThreadHistoryNotice';
+import {useAdmission} from '../tasks/useAdmission';
+import {sessionAdmission} from '../tasks/admission-state';
+import {AdmissionNotice} from '../tasks/AdmissionNotice';
 const api=window.cbim;
 interface HistoryItem {task?:{taskId:string;goal:string};runId:string;status:string;error?:string}
 /** 请求使用本组件工作区身份；请求锁阻止双击，轮询只在当前组件存活时写入状态。 */
 export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings,onAttachments,active=true}:{tab:ViewTab;workspace:WorkspaceView;onDraft:(draft:string)=>void;openView:(kind:TabKind)=>void;onBind:(taskId?:string)=>void;openSettings:()=>void;onAttachments:(items:ChatAttachment[])=>void;active?:boolean}){
   const [section,setSection]=useState<'chat'|'tasks'>('chat');
   const graph=useSessionGraph(workspace.id,tab.taskId,active);
+  const admission=useAdmission(active),admissionState=sessionAdmission(admission.error?undefined:admission.data,workspace.id,tab.taskId);
   const [selectedTaskId,setSelectedTaskId]=useState<string>();
   useEffect(()=>{setSelectedTaskId(undefined)},[workspace.id,tab.taskId]);
   function viewMember(taskId:string){setSelectedTaskId(taskId);setSection('tasks')}
@@ -66,7 +70,7 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
   const lock=useRef(false),alive=useRef(true),scroll=useRef<HTMLDivElement>(null),follow=useRef(true),memberContent=useRef<HTMLDivElement>(null);
   // 当前开放目标和正在执行分开；持久等待不能通过旧 running 日志或历史选择恢复插入/队列。
   const currentRun=threadResumeRun(runs,resumeRunId),latest=currentRun??runs.at(-1),{mainRunning,executing,taskOpen,waiting,canInsert,canContinueQueue,shouldQueue}=conversationExecutionState(currentRun,graph.openScope,queued.length);
-  useEffect(()=>{if(!executing)return;const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer)},[executing]);
+  useEffect(()=>{if(!executing||admissionState.waitingOnly)return;const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer)},[executing,admissionState.waitingOnly]);
   useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
   useEffect(()=>{let cancelled=false;void api.call('models.list').then(x=>{if(!cancelled)setModels(x)}).catch((e:Error)=>{if(!cancelled)setError(e.message)});return()=>{cancelled=true}},[workspace.id]);
   // 历史/审批串行轮询，队列由独立增量 Hook 同步，不再等待日志读取。
@@ -115,6 +119,7 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
   const queueChange=(queueId:string,action:string)=>void queueOperation('loop.queueChange',{queueId,action});
   const queueContinue=()=>{if(canContinueQueue&&!graph.loading)void operate(async()=>{await api.call('loop.queueContinue',{id:workspace.id,taskId:tab.taskId})})};
   return <div className="chat-page"><nav className="session-tabs" role="tablist" aria-label="会话内容"><button id={'session-chat-'+tab.id} role="tab" aria-selected={section==='chat'} aria-controls={'session-dialog-'+tab.id} onClick={()=>setSection('chat')}>对话</button><button id={'session-tasks-'+tab.id} role="tab" aria-selected={section==='tasks'} aria-controls={'session-task-panel-'+tab.id} onClick={()=>setSection('tasks')}>任务视图</button></nav>
+    <AdmissionNotice tickets={admissionState.waiting} error={tab.taskId?admission.error:undefined}/>
     {section==='tasks'&&<section className="session-task-panel" role="tabpanel" id={'session-task-panel-'+tab.id} aria-labelledby={'session-tasks-'+tab.id}><SessionTaskView active={active} workspaceId={workspace.id} taskId={tab.taskId} runs={runs} historyIssueCount={threadIssues.length} queued={queued} now={now} busy={busy} graph={graph.graph} scopeState={graph} continuation={continuation} replan={replan} recovery={{state:graph,refresh:graph.refresh,model:modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,showScope:id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}}} graphLoading={graph.loading} graphError={graph.error} onRefreshGraph={graph.refresh} selectedTaskId={selectedTaskId} onSelectTask={setSelectedTaskId} onQueueChange={queueChange} onQueueContinue={queueContinue} onChat={()=>setSection('chat')} onStop={()=>void operate(async()=>{await api.call('loop.stop',{id:workspace.id,taskId:tab.taskId})})}/><ThreadHistoryNotice issues={threadIssues}/>{pollError&&<p role="alert">{pollError}</p>}</section>}
     <div className="conversation-dialog" hidden={section!=='chat'} role="tabpanel" id={'session-dialog-'+tab.id} aria-labelledby={'session-chat-'+tab.id}>
     <div className="chat-toolbar"><Icon name="chat" size={15}/><span className="chat-title">{latest?.task.goal.split('\n')[0]||'新对话'}</span><details className="chat-menu chat-header-menu" onKeyDown={e=>{if(e.key==='Escape')e.currentTarget.removeAttribute('open')}}><summary aria-label="对话菜单" title="对话菜单">···</summary><div className="chat-menu-content"><button disabled={busy} onClick={()=>{onBind(undefined);setRuns([]);setError('')}}><Icon name="plus" size={15}/>新对话</button><label>历史对话<select aria-label="对话历史" disabled={busy} value={tab.taskId||''} onChange={e=>{onBind(e.target.value||undefined);setError('')}}><option value="">新对话</option>{taskHistory.map(h=><option key={h.task!.taskId} value={h.task!.taskId}>{h.task!.goal.split('\n')[0].slice(0,60)}</option>)}</select></label><button onClick={()=>openView('knowledge')}>项目架构</button><button onClick={()=>openView('team')}>团队能力</button><button onClick={openSettings}>模型设置</button></div></details></div>
@@ -143,7 +148,7 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
       {waiting&&<p className="composer-next-tip" role="status" data-testid="conversation-waiting">当前目标等待补充；新消息会排队为下个任务。</p>}
       {approvals.map(a=><div className="chat-approval" key={a.id}><b>允许本次 {a.name} 操作？</b><pre>{JSON.stringify(a.input,null,2)}</pre><button disabled={busy} onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:tab.taskId,approvalId:a.id,allow:true})})}>允许一次</button><button disabled={busy} title="仅允许当前这次执行中的后续操作；结束或停止后自动恢复确认，知识库保护不变" onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:tab.taskId,approvalId:a.id,allow:true,allowAll:true})})}>本次任务全部通过</button><button disabled={busy} onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:tab.taskId,approvalId:a.id,allow:false})})}>拒绝</button></div>)}
 
-      <UsageStatus runs={runs} currentRun={currentRun??null} historyIncomplete={threadIssues.length>0} now={now} placement="above" waitingApproval={approvals.length>0||questions.length>0} activity={graph.currentGoalView.phase!=='none'?{...graph.currentGoalView,active:executing,waitingSince:graph.waitingScope?.wait?.createdAt}:undefined}/>
+      <UsageStatus runs={runs} currentRun={currentRun??null} historyIncomplete={threadIssues.length>0} now={now} placement="above" waitingApproval={approvals.length>0||questions.length>0} activity={admissionState.waitingOnly?{label:'正在等待执行资格',active:false,tone:'neutral',waitingSince:admissionState.waitingSince}:graph.currentGoalView.phase!=='none'?{...graph.currentGoalView,active:executing,waitingSince:graph.waitingScope?.wait?.createdAt}:undefined}/>
       {!modelAvailable&&models&&<p className="chat-model-notice">{models.profiles.length?'所选模型已不可用，请重新选择。':'尚未配置模型。'}<button onClick={openSettings}>前往模型设置</button></p>}
       <ComposerCard className={COMPOSER_CONTENT_CLASS+(dragActive?' drag-active':'')} aria-busy={attachmentBusy}
         onDragEnter={e=>{if(e.dataTransfer.types.includes('Files')){e.preventDefault();dragDepth.current++;setDragActive(true)}}}

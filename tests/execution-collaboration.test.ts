@@ -8,17 +8,27 @@ import {LoopRuntime} from '../src/backend/core/brain/runtime';
 import type {AgentEngine,EngineContext,RunInputSource,TaskSpec} from '../src/backend/core/brain/types';
 import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
 import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
+import {GlobalRunAdmission} from '../src/backend/scheduler-engine/runtime/run-admission';
+import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/execution/workspace-lease';
+import type {ExecutionLaunchContext,ExecutionAdmissionWait} from '../src/backend/scheduler-engine/execution/admission-wait';
+import {admissionRequestId,acquireExecutionLease} from '../src/backend/main/execution-admission';
 
 const options={provider:'test',model:'model-one',permission:'ask' as const,allowNativeExecution:true};
 const source=(continuationId='continuation-one',messageIds=['result-one'],taskIds=['member-task-one']):RunInputSource=>({kind:'member-results',continuationId,messageIds,taskIds});
 
-async function fixture(){
+function occupied(admission:GlobalRunAdmission){
+  const attempt=admission.attempt({workspaceId:'other-workspace',ownerEpoch:1,rootSessionId:'other-root',requestId:'other-run',source:'direct',workspacePermission:'read'},{canAcquire:()=>undefined,isCurrent:()=>true,acquire:()=>()=>{}});
+  if(attempt.kind!=='granted')throw Error('fixture occupancy was denied');return attempt.release;
+}
+
+async function fixture(admission?:GlobalRunAdmission){
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-conversation-collaboration-'));
   const workspace={entry:{id:'workspace-one',path:directory},paths:{project:()=>directory},assert:()=>{}} as unknown as KnowledgeWorkspace;
   const storage=new FileRunStorage();
+  const lease=new WorkspaceExecutionLease();
   let leased=false,busy=false,waiting=false;
   const runs:Array<{task:TaskSpec;message?:string;context?:EngineContext;finish:(status:'completed'|'failed'|'cancelled')=>void;closed:boolean}>=[];
-  const factory=vi.fn(async(config:any,task:TaskSpec)=>{
+  const factory=vi.fn(async(config:any,task:TaskSpec,launch:ExecutionLaunchContext)=>{
     let resolve!:(value:{status:'completed'|'failed'|'cancelled'})=>void;
     const completion=new Promise<{status:'completed'|'failed'|'cancelled'}>(accept=>{resolve=accept});
     const record={task,finish:(status:'completed'|'failed'|'cancelled')=>resolve({status}),closed:false} as typeof runs[number];
@@ -31,7 +41,10 @@ async function fixture(){
       async close(){record.closed=true},
     };
     const runtime=new LoopRuntime({storage,directory:path.join(directory,'loop-engine','tasks'),
-      acquireLease:async()=>{if(leased)throw Error('lease overlaps');leased=true;return ()=>{leased=false}},
+      acquireLease:async()=>{
+        const release=acquireExecutionLease(lease,task.taskId,{workspaceId:task.workspaceId,rootSessionId:task.taskId,taskId:task.taskId,requestId:admissionRequestId('main',launch.requestId),scopeId:launch.scopeId,source:launch.wait?'main-result':'direct',workspacePermission:'read'},admission?{manager:admission,ownerEpoch:1,isCurrent:()=>true}:undefined,launch.wait);
+        if(leased)throw Error('lease overlaps');leased=true;return ()=>{leased=false;release()};
+      },
       createEngine:()=>engine,toolPolicy:async()=>({allow:false}),onEvent:config.onEvent,
     });
     return {runtime} as any;
@@ -175,7 +188,7 @@ test('stop during an automatic queue factory prevents the pending loop from star
     let releaseFactory!:()=>void,created!:()=>void;
     const waitFactory=new Promise<void>(resolve=>{releaseFactory=resolve});
     const factoryEntered=new Promise<void>(resolve=>{created=resolve});
-    f.factory.mockImplementationOnce(async(config,task)=>{const loop=await originalFactory(config,task);created();await waitFactory;return loop});
+    f.factory.mockImplementationOnce(async(config,task,launch)=>{const loop=await originalFactory(config,task,launch);created();await waitFactory;return loop});
     const enqueue=f.manager.enqueue(chat.taskId,'automatic queued message',options);
     await factoryEntered;
     const stopping=f.manager.stop(chat.taskId);
@@ -195,7 +208,7 @@ test('stop while a new dispatch cycle is opening rejects the pending model run a
     await began;const taskId=f.runs[0].task.taskId,stopped=f.manager.stop(taskId);
     release();await expect(chat).rejects.toMatchObject({code:'COLLABORATION_STOPPED'});await stopped;
     expect(f.startFailed).toHaveBeenCalledWith(expect.objectContaining({taskId}),undefined,expect.any(Error));
-    expect(f.runs[0].context).toBeUndefined();await expect(f.manager.thread(taskId)).rejects.toMatchObject({code:'ENOENT'});
+    expect(f.runs[0].context).toBeUndefined();expect(await f.manager.thread(taskId)).toEqual([]);
   }finally{release();await f.cleanup()}
 });
 
@@ -219,4 +232,59 @@ test('collaboration failure synchronously blocks an enqueue that is already read
     await expect(f.manager.continueFromResults(chat.taskId,'late member report',options,source())).rejects.toMatchObject({code:'COLLABORATION_STOPPED'});
     await f.manager.continueQueue(chat.taskId);expect(f.runs).toHaveLength(2);
   }finally{releaseHistory();await f.cleanup()}
+});
+
+test('并发已满时首轮尚未受理：不开目标、不创建运行或引擎，准备失败仍释放名额',async()=>{
+  const admission=new GlobalRunAdmission();admission.configure({revision:1,maxConcurrentRuns:1});
+  const release=occupied(admission),f=await fixture(admission);try{
+    await expect(f.manager.chat('保留原草稿',options)).rejects.toMatchObject({code:'CAPACITY_BUSY'});
+    expect(f.starting).not.toHaveBeenCalled();expect(f.startFailed).not.toHaveBeenCalled();
+    expect(f.runs.every(run=>!run.context)).toBe(true);expect(await f.manager.list()).toEqual([]);
+    expect(admission.snapshot().waiting).toEqual([]);expect(admission.snapshot().occupied).toHaveLength(1);
+    release();f.starting.mockRejectedValueOnce(Error('scope storage failed'));
+    await expect(f.manager.chat('磁盘失败不能漏名额',options)).rejects.toThrow('scope storage failed');
+    expect(admission.snapshot().occupied).toEqual([]);expect(await f.manager.list()).toEqual([]);
+    await f.manager.chat('再次明确启动',options);expect(admission.snapshot().occupied).toHaveLength(1);
+    await f.finish(f.runs.length-1);expect(admission.snapshot().occupied).toEqual([]);
+  }finally{release();await f.cleanup()}
+});
+
+test('已受理结果回注等待保留稳定票，不开失败周期；释放只通知原协调器重新核实',async()=>{
+  const admission=new GlobalRunAdmission();admission.configure({revision:1,maxConcurrentRuns:1});
+  const f=await fixture(admission);let release=()=>{};try{
+    const chat=await f.manager.chat('已有目标',options);await f.finish();f.setBusy(true);
+    release=occupied(admission);const callbacks=new Map<string,()=>void>(),onReady=vi.fn();
+    const wait:ExecutionAdmissionWait={scopeId:'scope-one',isCurrent:()=>true,onReady,registerWithdraw:(key,withdraw)=>{callbacks.set(key,withdraw)}};
+    const report=source('auto:return:'+('x'.repeat(200)));
+    // Admission uses a bounded hash; the source journal itself still enforces its own input schema.
+    const validSource=source('auto-return-one');
+    expect(admissionRequestId('main',(report as {continuationId:string}).continuationId)).toMatch(/^main-[a-f0-9]{64}$/);
+    await expect(f.manager.continueFromResults(chat.taskId,'真实结果',options,validSource,wait)).rejects.toMatchObject({code:'CAPACITY_WAITING'});
+    const first=admission.snapshot().waiting[0];expect(first).toMatchObject({source:'main-result',scopeId:'scope-one'});
+    expect(f.starting).toHaveBeenCalledTimes(1);expect(f.startFailed).not.toHaveBeenCalled();expect(await f.manager.thread(chat.taskId)).toHaveLength(1);
+    await expect(f.manager.continueFromResults(chat.taskId,'真实结果',options,validSource,wait)).rejects.toMatchObject({code:'CAPACITY_WAITING'});
+    expect(admission.snapshot().waiting[0].ticketId).toBe(first.ticketId);expect(callbacks.size).toBe(1);
+    // Withdrawal uses only identity, not Request's source/permission, and is safe to repeat.
+    callbacks.values().next().value!();expect(admission.snapshot().waiting).toEqual([]);
+    await expect(f.manager.continueFromResults(chat.taskId,'真实结果',options,validSource,wait)).rejects.toMatchObject({code:'CAPACITY_WAITING'});
+    release();await vi.waitFor(()=>expect(onReady).toHaveBeenCalled());
+    expect(await f.manager.thread(chat.taskId)).toHaveLength(1);
+    await f.manager.continueFromResults(chat.taskId,'真实结果',options,validSource,wait);
+    expect(admission.snapshot().waiting).toEqual([]);expect(admission.snapshot().occupied).toHaveLength(1);
+    await f.finish(f.runs.length-1);expect(admission.snapshot().occupied).toEqual([]);
+  }finally{release();await f.cleanup()}
+});
+
+test('用户队列容量不足保留并暂停原消息，释放额度不会把它变成自动恢复任务',async()=>{
+  const admission=new GlobalRunAdmission();admission.configure({revision:1,maxConcurrentRuns:1});
+  const f=await fixture(admission);let release=()=>{};try{
+    const chat=await f.manager.chat('首轮',options);await f.finish();release=occupied(admission);
+    await f.manager.enqueue(chat.taskId,'不能丢失的排队正文',options);
+    expect(await f.manager.queued(chat.taskId)).toMatchObject([{message:'不能丢失的排队正文',status:'paused'}]);
+    expect(await f.manager.thread(chat.taskId)).toHaveLength(1);expect(admission.snapshot().waiting).toEqual([]);
+    release();await f.manager.collaborationReady(chat.taskId);
+    expect(await f.manager.thread(chat.taskId)).toHaveLength(1);
+    await f.manager.continueQueue(chat.taskId);expect(await f.manager.queued(chat.taskId)).toEqual([]);
+    await f.finish(f.runs.length-1);
+  }finally{release();await f.cleanup()}
 });

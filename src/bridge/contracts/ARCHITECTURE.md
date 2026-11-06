@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-可序列化的 IPC 数据与公开展示契约。图/目标增量使用独立游标；只读核实和正式重规划分别声明来源、配置、预览与回执。历史问题单独呈现，可续聊头由后端核实，不从剩余可读记录猜测。
+可序列化的 IPC 数据与公开展示契约。图、目标与全局准入各用独立游标；配额接口不暴露释放句柄。核实和重规划分别声明来源、配置、预览与回执，可信续聊头不从剩余历史猜测。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,6 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [admission.ts](admission.ts) | 向界面公开全局并发策略、当前占用及准入等待的可序列化契约。 |
 | [agent-history.ts](agent-history.ts) | 向团队静态节点公开只读的角色 Session 历史协议。 |
 | [architecture.ts](architecture.ts) | 团队/业务架构编辑的桌面 IPC 契约，只公开对象操作、预览差异和提交回执。 |
 | [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
@@ -22,6 +23,16 @@
 | [workspace.ts](workspace.ts) | 跨进程工作区、知识事务与 IPC 数据契约。 |
 
 ## 架构类图
+
+### admission.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_admission_ts["admission.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../backend/core/runtime/admission.ts](../../backend/core/runtime/admission.ts)。
 
 ### agent-history.ts
 

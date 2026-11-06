@@ -92,7 +92,7 @@ N_src_backend_core_team ..> N_src_backend_core_tasks : 导入依赖
 - [foundation/](foundation/ARCHITECTURE.md)：少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识快照、校验、领域查询、对象变更和可移植静态包规划。团队能力可独立复用，业务模板必须完整；物理事务与预览缓存经端口注入，不携带动态成员或任务。Team/Workspace 只依赖快照辅助，不依赖查询门面。
 - [policy/](policy/ARCHITECTURE.md)：内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；不声称操作系统隔离。
-- [runtime/](runtime/ARCHITECTURE.md)：应用级运行监管契约：主会话和正式任务按可信绑定归属实例，旧 Loop 无绑定保留 role-only；实时对话占用、轮次用量和负载分开表达，只读投影不签发执行权。
+- [runtime/](runtime/ARCHITECTURE.md)：应用级运行监管及独立准入契约：真实实例用量与执行许可分离，策略、票据和占用按可信身份表达；独立游标只读投影不签发执行权。
 - [tasks/](tasks/ARCHITECTURE.md)：任务计划、派发图、目标与等待。求助和未启动撤销分别保留不可变事实；明确撤销集合及依赖后继在提交/重放共用校验，不能隐藏旧运行。核实与正式重规划各有意图，候选、求助和撤销都不签发验收。
 - [team/](team/ARCHITECTURE.md)：Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履历契约。主实例归主会话，业务实例归周期与任务；履历按角色聚合真实通道，释放或删定义后保留，旧记录不补造实例。
 - [tools/](tools/ARCHITECTURE.md)：工具 Schema、版本、副作用、调用决策、结构化提问及回执；统一校验结果的 JSON 传输快照，拒绝缺失文本等无效内容。回执绑定运行身份与输入结果哈希；注册和发现不授予执行权限。

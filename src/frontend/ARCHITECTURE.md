@@ -59,6 +59,7 @@ class N_src_frontend_main_tsx["main.tsx"] {
   <<component>>
 }
 N_src_frontend_main_tsx ..> N_src_frontend_shell : 导入依赖
+N_src_frontend_settings ..> N_src_frontend_tasks : 导入依赖
 N_src_frontend_shell ..> N_src_frontend_settings : 导入依赖
 N_src_frontend_shell ..> N_src_frontend_team : 导入依赖
 N_src_frontend_shell ..> N_src_frontend_workspace : 导入依赖
@@ -73,6 +74,7 @@ N_src_frontend_team ..> N_src_frontend_tasks : 导入依赖
 - `conversation` → `tasks`：导入。
 - `main.tsx` → `shell`：导入。
 - `resources` → `knowledge`：导入。
+- `settings` → `tasks`：导入。
 - `shell` → `resources`：导入。
 - `shell` → `settings`：导入。
 - `shell` → `components`：导入。
@@ -97,13 +99,13 @@ N_src_frontend_team ..> N_src_frontend_tasks : 导入依赖
 
 - [automation/](automation/ARCHITECTURE.md)：工作区内部自动化展示；定时触发尚未实现。
 - [components/](components/ARCHITECTURE.md)：通用展示组件，不持有领域服务与运行状态。
-- [conversation/](conversation/ARCHITECTURE.md)：中央主对话、目标摘要、输入、附件及队列。区分活动周期与持久等待；核实不能提权，正式重规划单独输入目标和权限并与任务根共享控制器。坏历史独立保留，可续聊头由后端确认，不能回退较早轮次。
+- [conversation/](conversation/ARCHITECTURE.md)：中央主对话、目标摘要、输入、附件及队列。进程准入等待与持久用户等待分别展示，纯等待不累计工作时长；未受理保留草稿。核实与重规划权限分离，可续聊头由后端核实。
 - [diagnostics/](diagnostics/ARCHITECTURE.md)：只读展示工作区运行状态和知识校验问题，不把工作区就绪视为知识校验通过。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识问题、预览提交和静态对象表单；固定编辑基线，模块维护人同事务确认，删除先检查影响。业务架构展示位于 workspace。
 - [resources/](resources/ARCHITECTURE.md)：统一资源仓库的查看、编辑、静态包发布与下载应用。人才按团队/Agent/Skill复用，业务按整套架构应用；工作区身份及预览版本固定。设置通过统一入口打开。
-- [settings/](settings/ARCHITECTURE.md)：模型及仓库配置界面，凭据仅提交主进程保存，账户仍按当前占位语义处理。
+- [settings/](settings/ARCHITECTURE.md)：模型、仓库及全局运行并发配置。并发设置显式版本化保存，显示实际占用与等待，实时刷新不覆盖草稿；凭据仅提交主进程，账户仍按当前占位语义处理。
 - [shell/](shell/ARCHITECTURE.md)：工作区侧栏、会话选择、用户栏与右侧扩展页签；会话区与项目级视图区分开。向会话传递活动页签状态，隐藏页签保留草稿/节点选择并降低成员与任务图同步频率。
-- [tasks/](tasks/ARCHITECTURE.md)：主会话任务图及独立目标增量。成员卡、节点和详情共用安全交接的求助及未启动撤销记录；普通取消和空日志不能推断未执行。核实与业务重规划保留独立预览、草稿、冻结请求与回执，阅读不启动执行。
+- [tasks/](tasks/ARCHITECTURE.md)：主会话任务图、目标与准入状态。全窗口共享单次在途配额轮询，无变化保持引用，按 root 过滤等待。求助/撤销事实不冒充成功；恢复类请求仅在明确未受理时解冻，未知结果保留原请求。
 - [team/](team/ARCHITECTURE.md)：工作区唯一的静态 Team/组/Agent 图及角色维护、继承与人才复用。Agent 节点可按 Session 查看只读执行履历；历史角色独立导航，删定义不回填团队树。详情按需分页，不轮询全量历史或启动执行。
 - [workspace/](workspace/ARCHITECTURE.md)：工作区唯一的静态领域工程/模块图及自身 Workflow。语义编辑委托 knowledge，完整业务模板复用委托 resources；多个主会话共享定义、动态任务各自独立。
 

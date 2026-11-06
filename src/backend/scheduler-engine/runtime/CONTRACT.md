@@ -11,7 +11,7 @@
 
 ### 应用级动态索引（已实现）
 
-GlobalRuntimeManager 由 Application 单例持有，管理所有接入工作区的成员/任务索引和实际 Loop 用量；工作区服务负责命令、事务和执行，本目录只接收提交事实。
+GlobalRuntimeManager 由 Application 单例持有，管理所有接入工作区的成员/任务索引和实际 Loop 用量；工作区服务负责命令、事务和执行，索引自身只接收提交事实。新增运行准入由下述独立 GlobalRunAdmission 处理，不从统计缓存推断执行资格。
 
 - begin/ready/unavailable/detach/forget/rename 管理接入代际和可用性；旧 epoch 不污染新实例，关闭保留历史并清除活动观察。
 - restoreDispatch/dispatchCommitted 接收初始基线与新事务；增量只更新受影响对象，不读取磁盘。邮箱只计 pending，claimed/processed 事务使信封退出待消费负载。
@@ -22,7 +22,7 @@ GlobalRuntimeManager 由 Application 单例持有，管理所有接入工作区�
 - 周期释放事务携带的成员 lifecycle= released 立即投影为非当前活动；公开成员、任务与运行历史保留，当前实例数和活跃/排队压力排除释放的执行实例。主调度实例没有执行周期，保持会话身份；累计 Token 消费不随释放清零。
 - snapshot/read 输出公开 DTO；issue 明示不完整来源。未知价格和未报告消费不当成免费。
 
-负载是观察量，不是并发配额。成员执行槽与邮箱领取由 execution 服务管理，本目录只接收事实；跨成员公平调度和预算策略未由此索引实现。main 的 WorkspaceRuntimeMonitor 在恢复前订阅对话与成员运行，启动恢复不调用模型；历史分别扫描 loop-engine/tasks 与 dispatch/runs/tasks，并核验来源、任务与成员绑定。
+负载是观察量，不是并发配额。成员执行槽与邮箱领取由 execution 服务管理，GlobalRuntimeManager 只接收事实；全局准入由本目录独立的 GlobalRunAdmission 实现，预算策略尚未接通。main 的 WorkspaceRuntimeMonitor 在恢复前订阅对话与成员运行，启动恢复不调用模型；历史分别扫描 loop-engine/tasks 与 dispatch/runs/tasks，并核验来源、任务与成员绑定。
 
 #### 当前关键协作关系
 
@@ -73,3 +73,13 @@ WorkspaceIndex --> RuntimeDispatchTask : tasks 投影
 GlobalRuntimeManager ..> BrainUsage : 用量归并
 GlobalRuntimeManager ..> RuntimeSnapshot : 返回隔离副本
 ```
+
+### 应用级运行准入
+
+`GlobalRunAdmission` 不依赖 Application、磁盘或引擎实现。`attempt(request, LocalAdmissionPort)` 在同一个同步段核对全局额度、本地 canAcquire、isCurrent 并取得本地租约，成功后才登记全局占用。返回 granted/release、waiting/ticket 或 denied/reason。等待不占全局名额或本地租约；本地领取异常不得伪装为获准。同请求键（workspace/epoch/requestId）重试保持原票序与时间，完整请求变参拒绝；已运行请求拒绝重复领取，不返回第二把释放句柄。
+
+等待采用 FIFO，但只选择当前本地可领取的请求。更早 writer（ask/execute）即使暂时被本地读占用阻塞，仍阻止同工作区后来 reader 插队；其它工作区可绕过本地阻塞推进。direct 不排票且不能抢占更早 eligible 票据所需的最后名额。内部短暂计算通知顺序，不把通知当作预占许可，真正启动仍须原协调器再次 attempt 并验证任务版本与停止状态。
+
+`wake` 合并到微任务，仅通知可轮到的原 onReady。释放、显式配置、本地租约变化、撤票或失效清理可触发；等待 attempt 本身不自唤醒重试，避免空转。`withdraw` 只移除明确身份等待票；`retireOwner` 使旧工作区装配代际永久失效并撤票，既有占用仍计入额度直到真实释放。release 幂等，先移全局占用，再释放本地并通知重试；读取和重启都不会创建任务。
+
+`restorePolicy` 只允许首次 attempt/configure 前的空态启动恢复一次。`configure` 按当前 policy.revision 做 CAS，返回递增后的策略；调用方先可靠保存再调用，下降不取消已运行任务。`snapshot/read` 仅复制内存中的公开事实，不调用本地端口、不清理票据、不扫描日志；observeChange 只是隔离异常的更新通知。进程内流标识和票据不会从历史重建。此准入器只控制已接入运行的数量及既有本地冲突，不提供费用预算、操作系统沙箱、抢占或成员恢复。

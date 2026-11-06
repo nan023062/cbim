@@ -1,6 +1,6 @@
 /**
  * 作用定位：让已派发任务在独立成员会话中执行，提交领取、启动、结果及中断事实。
- * 设计原因：启动意图先落盘，模型工具只能在 running 确认后执行；主 Agent、已释放实例、已关闭或安全等待的主会话不能执行业务。只读核实周期在领取前禁止提权，等待限制覆盖旧任务；执行占用持续到终态事务完成。
+ * 设计原因：全局准入及本地租约先同步领取，容量等待不创建 run 或 claim；启动意图落盘后模型工具才可执行。已释放实例、已关闭或安全等待的主会话不能执行业务，占用持续到终态事务完成。
  * 职责边界：可信桌面或主会话协调器启动成员，本成员 Loop 不递归派发或继承免询问批准；求助在正常关闭后重读日志核实并单向交接，不恢复旧运行，候选交付不等于业务验收。
  */
 import {randomUUID} from 'node:crypto';
@@ -24,11 +24,16 @@ import {memberEventsInput,type MemberEventsRead} from '../../core/tasks/member-e
 import {MemberEventStreams,memberPublicTask} from './member-events';
 import {ExecutionReportService} from './execution-report-service';
 import type {ExecutionReport} from '../../core/tasks/execution-report';
+import type {ExecutionAdmissionWait} from './admission-wait';
 
 /** 装配主进程提供模型与磁盘能力，调度层不解密密钥或导入平台实现。 */
 export interface MemberExecutionPorts {
+  /** 工作区装配代际仍有效；退役时先失效，即使管理器 close 尚在等待协调收尾也不得继续启动。 */
+  isCurrent?():boolean;
+  /** 装配退役立即中断原生启动窗口，不能只等待 manager.close 才停止尚未进入 active 的模型。 */
+  signal?:AbortSignal;
   /** 同时领取工作区及明确执行实例的占用，阻止同实例重复启动；释放须晚于终态事务提交。 */
-  acquire(key:string,permission:ChatPermission,agentInstanceId?:string):()=>void;
+  acquire(key:string,permission:ChatPermission,agentInstanceId?:string,context?:{task:TaskNode;commandId:string;wait?:ExecutionAdmissionWait}):()=>void;
   /** 仅新命令解析一次模型；公开参数落盘，凭据只由 create 闭包持有，不进入图或日志。 */
   prepare(options:MemberStartOptions):Promise<{
     model:ResolvedLlm['profile'];
@@ -39,7 +44,7 @@ export interface MemberExecutionPorts {
 }
 type PreparedEngine=Awaited<ReturnType<MemberExecutionPorts['prepare']>>;
 /** 一个业务任务当前的进程句柄；done 包含运行关闭和终态事务，失败时句柄保留以阻止再次领取。 */
-type Handle={binding:DispatchRun['binding'];runtime?:LoopRuntime;stopping:boolean;done:Promise<void>};
+type Handle={binding:DispatchRun['binding'];runtime?:LoopRuntime;stopping:boolean;isCurrent():boolean;controller:AbortController;done:Promise<void>};
 const activeRun=(run:DispatchRun)=>run.status==='starting'||run.status==='running';
 
 /** 每个活动工作区一个执行管理器，与派发服务共享 store；调用方须先关闭本管理器再关闭存储。 */
@@ -49,6 +54,8 @@ export class MemberExecutionManager {
   private initialized?:Promise<void>;
   /** 按本工作区业务 taskId 索引，跨主会话身份另由存储检查；不使用原生会话 ID 作为键。 */
   private handles=new Map<string,Handle>();
+  /** 仅保存已核实归属、尚在领取准备中的请求；停止先写内存屏障，不排在准备事务后面。 */
+  private pendingStarts=new Map<string,{workspaceId:string;rootSessionId:string;stopping:boolean}>();
   /** 已进入领取流程但尚未返回启动回执的调用；close 先等待它们，避免遗漏刚登记的进程。 */
   private launches=new Set<Promise<MemberStartReceipt>>();
   private listeners=new Set<(event:StoredEvent)=>void>();
@@ -78,13 +85,16 @@ export class MemberExecutionManager {
    * 返回已提交的领取回执，不等待模型开始或任务结束；后续状态由 inspect/events 查询。
    * 重复 commandId 返回原回执，不重新解析模型、不重复启动进程；同一任务已有 run 时不能换命令重跑。
    */
-  async start(raw:unknown):Promise<MemberStartReceipt>{
+  async start(raw:unknown,wait?:ExecutionAdmissionWait):Promise<MemberStartReceipt>{
     const input=this.parse(memberStartInput,raw);await this.initialize();this.check(input.workspaceId);
-    const pending=this.startInternal(input);this.launches.add(pending);
+    const pending=this.startInternal(input,wait);this.launches.add(pending);
     try{return await pending}finally{this.launches.delete(pending)}
   }
-  private async startInternal(input:z.infer<typeof memberStartInput>):Promise<MemberStartReceipt>{
+  private async startInternal(input:z.infer<typeof memberStartInput>,wait?:ExecutionAdmissionWait):Promise<MemberStartReceipt>{
     let release:(()=>void)|undefined,launch:{run:DispatchRun;task:TaskNode;engine:PreparedEngine}|undefined;
+    const pending={workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,stopping:false};
+    const isCurrent=()=>!this.closing&&!pending.stopping&&!this.ports.signal?.aborted&&this.ports.isCurrent?.()!==false&&(!wait||wait.isCurrent());
+    const assertCurrent=()=>{if(!isCurrent())fail('COLLABORATION_STOPPED','成员启动所属工作区或协作批次已停止')};
     try{
       const receipt=await this.store.transact(this.command('member.start',input),async state=>{
         this.check(input.workspaceId);
@@ -101,14 +111,20 @@ export class MemberExecutionManager {
         if(member.activeRunId)fail('MEMBER_BUSY','该成员正在处理另一项任务');
         const assignment=state.outbox.find(m=>m.kind==='assignment'&&m.taskId===task.taskId&&m.identity.rootSessionId===input.rootSessionId&&m.delivery==='pending');
         if(!assignment)fail('ASSIGNMENT_UNAVAILABLE','任务缺少可领取的派发信封');
+        this.pendingStarts.set(task.taskId,pending);
         const previous=(state.runs??[]).filter(r=>r.binding.agentSessionId===session.agentSessionId).at(-1);
         if(previous){
           if(previous.status!=='completed')fail('MEMBER_SESSION_REVIEW_REQUIRED','该成员通道上次运行未安全结束，请先核实；本阶段不自动续接异常通道');
           const summary=await this.ports.inspect(previous);
           if(summary.status!=='completed'||summary.unresolvedTools.length||!summary.sessionFile||json(summary.memberBinding)!==json(previous.binding)||summary.task.workspaceId!==input.workspaceId||summary.task.root!==this.owner.entry.path||summary.task.taskId!==previous.binding.taskId||summary.task.agentId!==previous.binding.agentId||summary.runId!==previous.binding.runId||summary.sessionFile!==previous.session.sessionFile)fail('MEMBER_SESSION_REVIEW_REQUIRED','成员通道历史未通过核实，不能自动续接');
         }
-        const runId=randomUUID();release=this.ports.acquire(runId,input.options.permission,member.agentInstanceId);
-        const prepared=await prepareDispatchExecutionContext(this.owner,task),engine=await this.ports.prepare(input.options);
+        // 等待只由仍活动的自动协作批次授权；公开手动启动缺少该回调，容量不足明确拒绝而不假排队。
+        assertCurrent();
+        if(wait&&wait.scopeId!==task.scopeId)fail('COLLABORATION_STOPPED','成员启动所属协作批次周期不匹配');
+        const runId=randomUUID();release=this.ports.acquire(runId,input.options.permission,member.agentInstanceId,{task,commandId:input.commandId,wait});
+        // 取得名额不代表后续 await 期间仍获准启动；停止不能等到 claim 后才生效。
+        const prepared=await prepareDispatchExecutionContext(this.owner,task);assertCurrent();
+        const engine=await this.ports.prepare(input.options);assertCurrent();
         if(member.configurationRevision!==prepared.knowledgeRevision)fail('DISPATCH_CONTEXT_CHANGED','成员配置版本已变化，请重新登记派发');
         const prerequisites=graph.edges.filter(edge=>edge.enabled&&edge.kind==='dependency'&&edge.toNodeId===task.nodeId).map(edge=>{
           const source=graph.tasks.find(t=>t.nodeId===edge.fromNodeId)!;
@@ -123,37 +139,42 @@ export class MemberExecutionManager {
           return {type:'edge.upserted' as const,edge:{...edge,revision:edge.revision+1,condition:{...edge.condition,resultId:source.result!.resultId}}};
         });
         const batch=memberBatch(graph,input.commandId,'message.accepted',[{type:'task.upserted',task:updated},{type:'agent.upserted',agent:memberView(graph,occupied,updated)},...dependencies]);
-        await recheckDispatchExecutionContext(this.owner,prepared);this.check(input.workspaceId);
+        await recheckDispatchExecutionContext(this.owner,prepared);this.check(input.workspaceId);assertCurrent();
         launch={run,task:updated,engine};
         return {runs:[run],members:[occupied],messages:[{...assignment,delivery:'claimed' as const,claim:{runId,leaseEpoch:member.leaseEpoch}}],batch,receipt:{taskId:task.taskId,runId,cursor:{...graph.identity,streamId:batch.streamId,seq:batch.seq}}};
       });
       if(launch){
         const {run,task,engine}=launch;
-        const handle:Handle={binding:run.binding,stopping:this.closing,done:Promise.resolve()};
+        // 磁盘提交本身不可撤回；若提交期间停止，保留真实意图但只结算取消，不创建大脑。
+        const handle:Handle={binding:run.binding,stopping:!isCurrent(),isCurrent,controller:new AbortController(),done:Promise.resolve()};
         this.handles.set(task.taskId,handle);
         handle.done=this.execute(run,task,engine,handle,release!);
         // 结算失败保留活动占用并阻止后续任务；不能吞掉失败后伪装空闲。
         void handle.done.catch(()=>{});release=undefined;
       }
       return receipt;
-    }finally{release?.()}
+    }finally{if(this.pendingStarts.get(input.taskId)===pending)this.pendingStarts.delete(input.taskId);release?.()}
   }
   private async execute(run:DispatchRun,task:TaskNode,engine:PreparedEngine,handle:Handle,release:()=>void){
     let summary:RunSummary|undefined,error:string|undefined;
+    const retired=()=>{handle.stopping=true;handle.controller.abort(Error('工作区执行代际已退役'))};
+    this.ports.signal?.addEventListener('abort',retired,{once:true});if(this.ports.signal?.aborted)retired();
     const spec=memberPublicTask(task,this.owner.entry.path);this.eventStreams.begin(run,spec);
     try{
-      if(handle.stopping){await this.settle(run,undefined,'cancelled');return}
+      if(handle.stopping||!handle.isCurrent()){handle.stopping=true;await this.settle(run,undefined,'cancelled');return}
       await recheckDispatchExecutionContext(this.owner,run.prepared);
+      if(handle.stopping||!handle.isCurrent()){handle.stopping=true;await this.settle(run,undefined,'cancelled');return}
       handle.runtime=await engine.create(run,task,{
         onEvent:event=>{this.eventStreams.append(run,spec,event);this.emit(event)},onEngineReady:input=>this.ready(run,input.sessionFile),
         requestApproval:call=>this.approvals.request(task.taskId,call),requestQuestion:(args,signal)=>this.questions.ask(task.taskId,args,signal),
       });
-      if(handle.stopping){await this.settle(run,undefined,'cancelled');return}
-      const started=await handle.runtime.startMember(spec,task.goal,{binding:run.binding,session:run.session});
+      if(handle.stopping||!handle.isCurrent()){handle.stopping=true;await this.settle(run,undefined,'cancelled');return}
+      const started=await handle.runtime.startMember(spec,task.goal,{binding:run.binding,session:run.session},{signal:handle.controller.signal});
       if(handle.stopping)await handle.runtime.stop(task.taskId);
       summary=await started.done;
     }catch{error='成员执行未能正常结束，请检查该运行日志并核实产物'}
     finally{
+      this.ports.signal?.removeEventListener('abort',retired);
       this.approvals.cancel(task.taskId);this.questions.cancel(task.taskId);
       try{await handle.runtime?.close()}catch{error='成员进程未能正常关闭，请核实运行日志';summary=undefined}
       try{
@@ -211,10 +232,17 @@ export class MemberExecutionManager {
   /** 停止请求不直接宣称 cancelled；真实引擎收尾后才提交终态。 */
   async stop(raw:unknown){
     const input=this.parse(memberTaskInput,raw),handle=this.handles.get(input.taskId);
-    if(!handle){memberTask(await this.store.read(),input.rootSessionId,input.taskId);return {requested:false}}
+    if(!handle){
+      const pending=this.pendingStarts.get(input.taskId);
+      if(pending){
+        if(pending.workspaceId!==input.workspaceId||pending.rootSessionId!==input.rootSessionId)fail('TASK_NOT_FOUND','当前主会话没有此派发任务');
+        pending.stopping=true;return {requested:true};
+      }
+      memberTask(await this.store.read(),input.rootSessionId,input.taskId);return {requested:false};
+    }
     // 活动绑定已由领取事务冻结；先验证本请求再标记停止，避免被正在重读 canonical 的结算事务挡住。
     if(handle.binding.workspaceId!==input.workspaceId||handle.binding.rootSessionId!==input.rootSessionId)fail('TASK_NOT_FOUND','当前主会话没有此派发任务');
-    handle.stopping=true;const stopping=handle.runtime?.stop(input.taskId);this.approvals.cancel(input.taskId);this.questions.cancel(input.taskId);await stopping;return {requested:true};
+    handle.stopping=true;handle.controller.abort(Error('用户停止了本次成员运行'));const stopping=handle.runtime?.stop(input.taskId);this.approvals.cancel(input.taskId);this.questions.cancel(input.taskId);await stopping;return {requested:true};
   }
   /** 内部协调端等待进程关闭、终态提交及占用释放；不触发启动或重放，结算异常向调用方保留。 */
   async waitForSettlement(raw:unknown){
@@ -257,5 +285,5 @@ export class MemberExecutionManager {
    * 拒绝新请求，等待已接收的启动、停止及结算尝试后清理观察缓存；调用方随后关闭共享 DispatchStore。
    * 收尾错误不从 close 重抛；未成功结算的持久化活动记录留给下次 initialize 标记中断。
    */
-  async close(){this.closing=true;await Promise.allSettled([...this.launches]);const handles=[...this.handles.entries()];await Promise.allSettled(handles.map(async([taskId,handle])=>{handle.stopping=true;const stopping=handle.runtime?.stop(taskId);this.approvals.cancel(taskId);this.questions.cancel(taskId);await stopping}));await Promise.allSettled(handles.map(([,h])=>h.done));this.listeners.clear();this.eventStreams.clear()}
+  async close(){this.closing=true;await Promise.allSettled([...this.launches]);const handles=[...this.handles.entries()];await Promise.allSettled(handles.map(async([taskId,handle])=>{handle.stopping=true;handle.controller.abort(Error('成员执行服务正在关闭'));const stopping=handle.runtime?.stop(taskId);this.approvals.cancel(taskId);this.questions.cancel(taskId);await stopping}));await Promise.allSettled(handles.map(([,h])=>h.done));this.listeners.clear();this.eventStreams.clear()}
 }

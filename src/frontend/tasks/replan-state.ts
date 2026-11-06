@@ -1,6 +1,6 @@
 /**
  * 作用定位：保存从已完成核实周期创建正式业务周期的独立草稿、条件预览和稳定提交命令。
- * 设计原因：只读核实不能原地提权；预览不运行模型，明确提交前先保存新目标和 ask/execute 权限，通信未知只能查询或重试原命令。
+ * 设计原因：只读核实不能原地提权；提交前保存新目标和 ask/execute 权限。首次容量拒绝不锁死草稿，曾通信未知仍只能查询或重试原命令，不能借准入等待重放业务。
  * 职责边界：本模块不复活旧任务、不批准人工验收；来源与知识是否仍有效由后端在受理时再次核验。
  */
 import {replanPreviewSchema,replanRequestSchema,replanReceiptSchema} from '../../bridge/contracts/dispatch';
@@ -30,7 +30,7 @@ const textError=(error:unknown)=>error instanceof Error?error.message:String(err
 const bytes=(value:unknown)=>new TextEncoder().encode(JSON.stringify(value)).length;
 export const REPLAN_RECORD_LIMIT=128,REPLAN_INDEX_BYTE_LIMIT=2*1024*1024;
 /** 仅第一次确定未受理的领域拒绝允许修正；曾未知、冲突或取消不能按失败自动换命令。 */
-export function replanRejected(error:unknown){return /^REPLAN_(?:INPUT_INVALID|IDENTITY|SOURCE_INVALID|BUSY|PROOF_INVALID|LEGACY|KNOWLEDGE_CHANGED|STALE|CONTEXT_CONFLICT):/.test(textError(error))}
+export function replanRejected(error:unknown){return /^(?:CAPACITY_BUSY|REPLAN_(?:INPUT_INVALID|IDENTITY|SOURCE_INVALID|BUSY|PROOF_INVALID|LEGACY|KNOWLEDGE_CHANGED|STALE|CONTEXT_CONFLICT)):/.test(textError(error))}
 
 /** 返回事实必须属于请求来源；eligible 才能携带创建资格，预览不是已生成的执行计划。 */
 export function checkedReplanPreview(raw:unknown,input:ReplanPreviewInput):ReplanPreview{

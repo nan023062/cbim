@@ -1,6 +1,6 @@
 /**
  * 作用定位：管理显式目标补充的本地草稿、冻结请求与回执，不直接依赖 React 或桌面全局对象。
- * 设计原因：请求先保存再发送；超时和重开只查询或重试同一个命令，防止通信未知被误认为未执行。两处目标卡共享此控制器，普通聊天草稿不参与补充。
+ * 设计原因：请求先保存再发送；首次容量拒绝可重新编辑，曾通信未知的命令仍冻结，只查或重试原 ID，不能借容量不足误判为未受理。两处目标卡共享控制器，普通草稿独立。
  */
 import {goalContinuationRequestSchema,goalContinuationReceiptSchema} from '../../bridge/contracts/dispatch';
 import type {GoalContinuationRequest,GoalContinuationReceipt} from '../../bridge/contracts/dispatch';
@@ -27,7 +27,7 @@ export interface ContinuationPorts {
 const equal=(a:unknown,b:unknown):boolean=>{const order=(value:unknown):unknown=>Array.isArray(value)?value.map(order):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,order(v)])):value;return JSON.stringify(order(a))===JSON.stringify(order(b))};
 const textError=(error:unknown)=>error instanceof Error?error.message:String(error);
 /** 仅列出协议保证尚未接受意图的错误。未知代码（含通用 IO/运行失败）必须保留冻结请求。 */
-export function continuationRejected(error:unknown){return /^(?:GOAL_CONTINUATION_INPUT|GOAL_IDENTITY|GOAL_NOT_WAITING|GOAL_CONTINUATION_UNAVAILABLE|GOAL_WAIT_CONFLICT|GOAL_REVISION_CONFLICT|GOAL_CYCLE_LIMIT|GOAL_DECISION_LIMIT|GOAL_RUN_CONFLICT|GOAL_INPUT_LIMIT|GOAL_WORK_PENDING|IDENTITY|CONTINUATION_NOT_READY):/.test(textError(error))}
+export function continuationRejected(error:unknown){return /^(?:CAPACITY_BUSY|GOAL_CONTINUATION_INPUT|GOAL_IDENTITY|GOAL_NOT_WAITING|GOAL_CONTINUATION_UNAVAILABLE|GOAL_WAIT_CONFLICT|GOAL_REVISION_CONFLICT|GOAL_CYCLE_LIMIT|GOAL_DECISION_LIMIT|GOAL_RUN_CONFLICT|GOAL_INPUT_LIMIT|GOAL_WORK_PENDING|IDENTITY|CONTINUATION_NOT_READY):/.test(textError(error))}
 
 /** 回执还需核对冻结内容，不能只凭“成功”或某个 runId 确认另一目标的请求。 */
 export function checkedContinuationReceipt(raw:unknown,request:GoalContinuationRequest):GoalContinuationReceipt{

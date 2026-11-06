@@ -14,7 +14,7 @@ function Metric({label,children,title}:{label:ReactNode;children:ReactNode;title
  useEffect(()=>{if(!open)return;const outside=(e:PointerEvent)=>{if(!ref.current?.contains(e.target as Node))setOpen(false)};const key=(e:KeyboardEvent)=>{if(e.key==='Escape')setOpen(false)};document.addEventListener('pointerdown',outside);document.addEventListener('keydown',key);return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',key)}},[open]);
  return <div className="usage-metric" ref={ref}><button type="button" className="usage-trigger" title={title} aria-label={title} aria-expanded={open} onClick={()=>setOpen(!open)}>{label}</button>{open&&<div className="usage-popover" role="region" aria-label={title}><strong>{title}</strong>{children}</div>}</div>;
 }
-/** 主大脑停止流式输出后由会话目标状态接管提示；waitingSince 仅来自持久等待，防止较慢的运行日志轮询延长动画与工作时间。 */
+/** 主大脑停止流式输出后由会话目标或准入状态接管；waitingSince 来自可信用户等待或无实际占用的准入票据，防止旧日志延长动画与工作时间。 */
 export interface ConversationActivity {label:string;active:boolean;tone:'running'|'warning'|'success'|'neutral';waitingSince?:string}
 /** currentRun=null 明确无安全运行头，不能按旧历史猜脑状态；historyIncomplete 使累计费用明确标为已知部分。 */
 export function UsageStatus({runs,now,placement,capacity,waitingApproval=false,activity,currentRun,historyIncomplete=false}:{runs:RunSummary[];now:number;placement:'above'|'footer';capacity?:number;waitingApproval?:boolean;activity?:ConversationActivity;currentRun?:RunSummary|null;historyIncomplete?:boolean}){

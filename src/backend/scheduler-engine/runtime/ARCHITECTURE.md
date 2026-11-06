@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-动态运行监管与静态角色履历各自消费已提交事实。监管按真实实例聚合活动与用量；履历按角色/Session分页索引、按需读取公开事件，不授予执行权、不合并模型上下文。恢复不假活跃，实例释放不删历史。
+监管、履历与全局并发准入职责分离。监管消费真实用量；准入同步协调名额和本地租约，稳定票据 FIFO 等待，降额不逐出活动运行；履历不签发执行权。进程票据不从历史恢复模型。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -12,6 +12,7 @@
 | --- | --- |
 | [agent-history.ts](agent-history.ts) | 按工作区静态角色归档 Session 与运行摘要，向团队节点提供分页历史和受限事件详情。 |
 | [global-runtime.ts](global-runtime.ts) | 维护整个应用的成员实例、派发任务及实际 Loop 消耗索引，接收 main 在可靠提交后送来的事实；成员轮次归属派发节点，不重复生成对话任务。 |
+| [run-admission.ts](run-admission.ts) | 为应用内主轮和成员轮统一提供同步执行准入、FIFO 等待及独立只读投影。 |
 
 ## 架构类图
 
@@ -184,6 +185,97 @@ N_src_backend_scheduler_engine_runtime_global_runtime_ts ..> N_src_backend_sched
 
 直接依赖：[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/brain/member-run.ts](../../core/brain/member-run.ts)、[../../core/brain/conversation-binding.ts](../../core/brain/conversation-binding.ts)、[../../core/brain/usage.ts](../../core/brain/usage.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)。
 
+### run-admission.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_runtime_run_admission_ts["run-admission.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_runtime_run_admission_ts_LocalAdmissionPort["LocalAdmissionPort"] {
+  <<interface>>
+  +canAcquire()
+  +acquire()
+  +isCurrent()
+  +onReady()
+}
+N_src_backend_scheduler_engine_runtime_run_admission_ts ..> N_src_backend_scheduler_engine_runtime_run_admission_ts_LocalAdmissionPort : 声明
+class N_src_backend_scheduler_engine_runtime_run_admission_ts_AdmissionAttempt["AdmissionAttempt"] {
+  <<type>>
+
+}
+N_src_backend_scheduler_engine_runtime_run_admission_ts ..> N_src_backend_scheduler_engine_runtime_run_admission_ts_AdmissionAttempt : 声明
+class N_src_backend_scheduler_engine_runtime_run_admission_ts_Waiting["Waiting"] {
+  <<type>>
+  +request
+  +ticket
+  +port
+}
+N_src_backend_scheduler_engine_runtime_run_admission_ts ..> N_src_backend_scheduler_engine_runtime_run_admission_ts_Waiting : 声明
+class N_src_backend_scheduler_engine_runtime_run_admission_ts_Occupied["Occupied"] {
+  <<type>>
+  +request
+  +view
+}
+N_src_backend_scheduler_engine_runtime_run_admission_ts ..> N_src_backend_scheduler_engine_runtime_run_admission_ts_Occupied : 声明
+```
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_runtime_run_admission_ts["run-admission.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_runtime_run_admission_ts_GlobalRunAdmission["GlobalRunAdmission"] {
+  +observeChange()
+  +attempt()
+  +withdraw()
+  +retireOwner()
+  +wake()
+  +restorePolicy()
+  +configure()
+  +snapshot()
+  +read()
+  -streamId
+  -revision
+  -policy
+  -attempted
+  -policyRestored
+  -configured
+  -inAttempt
+}
+N_src_backend_scheduler_engine_runtime_run_admission_ts ..> N_src_backend_scheduler_engine_runtime_run_admission_ts_GlobalRunAdmission : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_runtime_run_admission_ts["run-admission.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_runtime_run_admission_ts_GlobalRunAdmission["GlobalRunAdmission"] {
+  -order
+  -occupied
+  -waiting
+  -retired
+  -listeners
+  -changeScheduled
+  -wakeScheduled
+  -changed()
+  -current()
+  -local()
+  -prune()
+  -evaluate()
+  -updateReasons()
+  -waitOrDeny()
+}
+N_src_backend_scheduler_engine_runtime_run_admission_ts ..> N_src_backend_scheduler_engine_runtime_run_admission_ts_GlobalRunAdmission : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)。
+
 
 ## 子目录导航
 
@@ -210,7 +302,7 @@ N_src_backend_scheduler_engine_runtime_global_runtime_ts ..> N_src_backend_sched
 
 ### 应用级动态索引（已实现）
 
-GlobalRuntimeManager 由 Application 单例持有，管理所有接入工作区的成员/任务索引和实际 Loop 用量；工作区服务负责命令、事务和执行，本目录只接收提交事实。
+GlobalRuntimeManager 由 Application 单例持有，管理所有接入工作区的成员/任务索引和实际 Loop 用量；工作区服务负责命令、事务和执行，索引自身只接收提交事实。新增运行准入由下述独立 GlobalRunAdmission 处理，不从统计缓存推断执行资格。
 
 - begin/ready/unavailable/detach/forget/rename 管理接入代际和可用性；旧 epoch 不污染新实例，关闭保留历史并清除活动观察。
 - restoreDispatch/dispatchCommitted 接收初始基线与新事务；增量只更新受影响对象，不读取磁盘。邮箱只计 pending，claimed/processed 事务使信封退出待消费负载。
@@ -221,7 +313,7 @@ GlobalRuntimeManager 由 Application 单例持有，管理所有接入工作区�
 - 周期释放事务携带的成员 lifecycle= released 立即投影为非当前活动；公开成员、任务与运行历史保留，当前实例数和活跃/排队压力排除释放的执行实例。主调度实例没有执行周期，保持会话身份；累计 Token 消费不随释放清零。
 - snapshot/read 输出公开 DTO；issue 明示不完整来源。未知价格和未报告消费不当成免费。
 
-负载是观察量，不是并发配额。成员执行槽与邮箱领取由 execution 服务管理，本目录只接收事实；跨成员公平调度和预算策略未由此索引实现。main 的 WorkspaceRuntimeMonitor 在恢复前订阅对话与成员运行，启动恢复不调用模型；历史分别扫描 loop-engine/tasks 与 dispatch/runs/tasks，并核验来源、任务与成员绑定。
+负载是观察量，不是并发配额。成员执行槽与邮箱领取由 execution 服务管理，GlobalRuntimeManager 只接收事实；全局准入由本目录独立的 GlobalRunAdmission 实现，预算策略尚未接通。main 的 WorkspaceRuntimeMonitor 在恢复前订阅对话与成员运行，启动恢复不调用模型；历史分别扫描 loop-engine/tasks 与 dispatch/runs/tasks，并核验来源、任务与成员绑定。
 
 #### 当前关键协作关系
 
@@ -272,3 +364,13 @@ WorkspaceIndex --> RuntimeDispatchTask : tasks 投影
 GlobalRuntimeManager ..> BrainUsage : 用量归并
 GlobalRuntimeManager ..> RuntimeSnapshot : 返回隔离副本
 ```
+
+### 应用级运行准入
+
+`GlobalRunAdmission` 不依赖 Application、磁盘或引擎实现。`attempt(request, LocalAdmissionPort)` 在同一个同步段核对全局额度、本地 canAcquire、isCurrent 并取得本地租约，成功后才登记全局占用。返回 granted/release、waiting/ticket 或 denied/reason。等待不占全局名额或本地租约；本地领取异常不得伪装为获准。同请求键（workspace/epoch/requestId）重试保持原票序与时间，完整请求变参拒绝；已运行请求拒绝重复领取，不返回第二把释放句柄。
+
+等待采用 FIFO，但只选择当前本地可领取的请求。更早 writer（ask/execute）即使暂时被本地读占用阻塞，仍阻止同工作区后来 reader 插队；其它工作区可绕过本地阻塞推进。direct 不排票且不能抢占更早 eligible 票据所需的最后名额。内部短暂计算通知顺序，不把通知当作预占许可，真正启动仍须原协调器再次 attempt 并验证任务版本与停止状态。
+
+`wake` 合并到微任务，仅通知可轮到的原 onReady。释放、显式配置、本地租约变化、撤票或失效清理可触发；等待 attempt 本身不自唤醒重试，避免空转。`withdraw` 只移除明确身份等待票；`retireOwner` 使旧工作区装配代际永久失效并撤票，既有占用仍计入额度直到真实释放。release 幂等，先移全局占用，再释放本地并通知重试；读取和重启都不会创建任务。
+
+`restorePolicy` 只允许首次 attempt/configure 前的空态启动恢复一次。`configure` 按当前 policy.revision 做 CAS，返回递增后的策略；调用方先可靠保存再调用，下降不取消已运行任务。`snapshot/read` 仅复制内存中的公开事实，不调用本地端口、不清理票据、不扫描日志；observeChange 只是隔离异常的更新通知。进程内流标识和票据不会从历史重建。此准入器只控制已接入运行的数量及既有本地冲突，不提供费用预算、操作系统沙箱、抢占或成员恢复。

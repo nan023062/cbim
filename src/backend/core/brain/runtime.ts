@@ -66,12 +66,12 @@ export class LoopRuntime {
   }
   /**
    * 启动已可靠领取的成员任务。只接收新业务 taskId；调用方负责成员互斥及前一通道运行的安全核实。
-   * 本入口不绕过任务租约、工具门禁或日志，也不自动重试已存在任务。
+   * 本入口不绕过任务租约、工具门禁或日志，也不自动重试已存在任务。可信停止信号覆盖尚未登记 active 的原生准备阶段。
    */
-  async startMember(task:TaskSpec,message:string,launch:MemberRunLaunch):Promise<{runId:string;done:Promise<RunSummary>}>{
+  async startMember(task:TaskSpec,message:string,launch:MemberRunLaunch,control?:Pick<RunStartControl,'signal'>):Promise<{runId:string;done:Promise<RunSummary>}>{
     if(this.closing)throw Error('Loop Engine 正在关闭');
     const prepared=checkedMemberRunLaunch(launch,task);
-    const pending=this.startInternal(task,message,undefined,prepared);this.starting.add(pending);
+    const pending=this.startInternal(task,message,undefined,prepared,undefined,control);this.starting.add(pending);
     try{return await pending}finally{this.starting.delete(pending)}
   }
   /** 为已经登记的主会话建立新上下文；不读旧日志、不承接旧工具或任务进度，目录存在及身份/租约仍须核实。 */

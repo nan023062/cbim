@@ -1,5 +1,5 @@
 /**
- * 作用定位：定义 IPC 路由需要的应用服务、成员派发及执行审批、静态角色履历、全局运行只读投影与工作区生命周期入口。
+ * 作用定位：定义 IPC 路由需要的应用服务、执行审批、静态角色履历、全局监管与准入投影、可靠配额设置和工作区生命周期入口。
  * 设计原因：路由依赖此契约，Application 负责实现和装配，避免路由反向引用应用类形成类型循环。
  * 职责边界：这里只声明内部调用能力，不代表渲染进程可以直接访问这些服务。
  */
@@ -14,6 +14,8 @@ import type {MemberExecutionManager} from '../../scheduler-engine/execution/memb
 import type {AgentHistoryService} from '../../scheduler-engine/runtime/agent-history';
 import type {RuntimeCursor,RuntimeRead,RuntimeSnapshot} from '../../core/runtime/types';
 import type {Catalog as CatalogData, WorkspaceView} from '../../../bridge/contracts/workspace';
+import type {AdmissionSettings} from '../persistence/settings/admission-settings';
+import type {AdmissionCursor,AdmissionRead} from '../../core/runtime/admission';
 
 /** 应用向路由提供的内部服务；工作区调用始终携带身份，生命周期仍由应用实现管理。 */
 export interface ApplicationServices {
@@ -21,6 +23,9 @@ export interface ApplicationServices {
   readonly paths: Paths;
   readonly models: LlmProfiles;
   readonly resources: ResourceRepositories;
+  /** 真正执行准入独立于监管索引；只暴露游标读取和可靠设置，不把领取能力交给页面。 */
+  readonly admission:{read(cursor?:AdmissionCursor):AdmissionRead};
+  readonly admissionSettings:AdmissionSettings;
   /** 应用级活动和用量投影；只读路由不向渲染进程暴露写入事实或接管任务的能力。 */
   readonly runtime:{snapshot():RuntimeSnapshot;read(cursor?:RuntimeCursor):RuntimeRead;rename(workspaceId:string,name:string):void};
   /** 仅观察已运行实例；路由重命名时同步实例显示名，不负责增删实例。 */

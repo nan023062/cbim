@@ -1,6 +1,6 @@
 /**
  * 作用定位：保存用户从异常报告新建只读核实周期的草稿、冻结命令和受理回执。
- * 设计原因：新周期不是恢复旧运行；先持久化再发送，未知结果只查原命令。明确再次核实须重新确认旧周期已关闭并保存完整历史，保存失败不解锁，报告版本不参与来源键。
+ * 设计原因：新周期不是恢复旧运行；先持久化再发送，首次容量拒绝可编辑，曾未知结果仍只查原命令。再次核实须确认旧周期关闭并保留历史，保存失败不解锁，报告版本不参与来源键。
  */
 import {recoveryRequestSchema,recoveryReceiptSchema} from '../../bridge/contracts/dispatch';
 import type {RecoveryRequest,RecoveryLookup,RecoveryReceipt} from '../../bridge/contracts/dispatch';
@@ -31,7 +31,7 @@ export const RECOVERY_SOURCE_HISTORY_LIMIT=32,RECOVERY_ROOT_HISTORY_LIMIT=128,RE
 /** 回执会复制冻结正文/选项；另留 8 KiB 给身份、ISO 时间及可信版本字段，防止发送成功后无处保存受理事实。 */
 const receiptReserve=(record:RecoveryDraft)=>record.attempt&&!record.attempt.receipt&&['submitting','unknown'].includes(record.attempt.phase)?new TextEncoder().encode(JSON.stringify(record.attempt.request)).length+8192:0;
 /** 仅协议明确保证尚未受理的拒绝才可重新编辑；冲突、IO 与未知代码保持冻结。 */
-export function recoveryRejected(error:unknown){return /^(?:RECOVERY_INPUT_INVALID|RECOVERY_IDENTITY|RECOVERY_SOURCE_NOT_CLOSED|RECOVERY_BUSY|RECOVERY_SOURCE_INVALID|RECOVERY_RUN_REQUIRED|RECOVERY_UNAVAILABLE|RECOVERY_REPORT_STALE|RECOVERY_CONTEXT_CONFLICT):/.test(textError(error))}
+export function recoveryRejected(error:unknown){return /^(?:CAPACITY_BUSY|RECOVERY_INPUT_INVALID|RECOVERY_IDENTITY|RECOVERY_SOURCE_NOT_CLOSED|RECOVERY_BUSY|RECOVERY_SOURCE_INVALID|RECOVERY_RUN_REQUIRED|RECOVERY_UNAVAILABLE|RECOVERY_REPORT_STALE|RECOVERY_CONTEXT_CONFLICT):/.test(textError(error))}
 
 /** 回执需匹配原始命令及内容，新周期和新运行不能借用来源身份；受理不等于正在运行。 */
 export function checkedRecoveryReceipt(raw:unknown,request:RecoveryRequest,previous?:RecoveryReceipt):RecoveryReceipt{

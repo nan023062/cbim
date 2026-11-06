@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-应用级运行监管契约：主会话和正式任务按可信绑定归属实例，旧 Loop 无绑定保留 role-only；实时对话占用、轮次用量和负载分开表达，只读投影不签发执行权。
+应用级运行监管及独立准入契约：真实实例用量与执行许可分离，策略、票据和占用按可信身份表达；独立游标只读投影不签发执行权。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,9 +10,84 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [admission.ts](admission.ts) | 定义应用级执行准入的公开策略、身份、占用、等待票据与独立读取游标。 |
 | [types.ts](types.ts) | 定义应用级人员、任务与运行消耗的只读监管契约，供调度索引和桌面桥接共同使用。 |
 
 ## 架构类图
+
+### admission.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_runtime_admission_ts["admission.ts"] {
+  <<module>>
+}
+class N_src_backend_core_runtime_admission_ts_AdmissionIdentity["AdmissionIdentity"] {
+  <<type>>
+
+}
+N_src_backend_core_runtime_admission_ts ..> N_src_backend_core_runtime_admission_ts_AdmissionIdentity : 声明
+class N_src_backend_core_runtime_admission_ts_AdmissionRequest["AdmissionRequest"] {
+  <<type>>
+
+}
+N_src_backend_core_runtime_admission_ts ..> N_src_backend_core_runtime_admission_ts_AdmissionRequest : 声明
+class N_src_backend_core_runtime_admission_ts_AdmissionWaitReason["AdmissionWaitReason"] {
+  <<type>>
+
+}
+N_src_backend_core_runtime_admission_ts ..> N_src_backend_core_runtime_admission_ts_AdmissionWaitReason : 声明
+class N_src_backend_core_runtime_admission_ts_AdmissionDenialReason["AdmissionDenialReason"] {
+  <<type>>
+
+}
+N_src_backend_core_runtime_admission_ts ..> N_src_backend_core_runtime_admission_ts_AdmissionDenialReason : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_runtime_admission_ts["admission.ts"] {
+  <<module>>
+}
+class N_src_backend_core_runtime_admission_ts_AdmissionTicket["AdmissionTicket"] {
+  <<type>>
+
+}
+N_src_backend_core_runtime_admission_ts ..> N_src_backend_core_runtime_admission_ts_AdmissionTicket : 声明
+class N_src_backend_core_runtime_admission_ts_AdmissionOccupant["AdmissionOccupant"] {
+  <<type>>
+
+}
+N_src_backend_core_runtime_admission_ts ..> N_src_backend_core_runtime_admission_ts_AdmissionOccupant : 声明
+class N_src_backend_core_runtime_admission_ts_AdmissionPolicy["AdmissionPolicy"] {
+  <<type>>
+
+}
+N_src_backend_core_runtime_admission_ts ..> N_src_backend_core_runtime_admission_ts_AdmissionPolicy : 声明
+class N_src_backend_core_runtime_admission_ts_AdmissionCursor["AdmissionCursor"] {
+  <<type>>
+
+}
+N_src_backend_core_runtime_admission_ts ..> N_src_backend_core_runtime_admission_ts_AdmissionCursor : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_runtime_admission_ts["admission.ts"] {
+  <<module>>
+}
+class N_src_backend_core_runtime_admission_ts_AdmissionSnapshot["AdmissionSnapshot"] {
+  <<type>>
+
+}
+N_src_backend_core_runtime_admission_ts ..> N_src_backend_core_runtime_admission_ts_AdmissionSnapshot : 声明
+class N_src_backend_core_runtime_admission_ts_AdmissionRead["AdmissionRead"] {
+  <<type>>
+
+}
+N_src_backend_core_runtime_admission_ts ..> N_src_backend_core_runtime_admission_ts_AdmissionRead : 声明
+```
+
 
 ### types.ts
 
@@ -249,3 +324,68 @@ N_src_backend_core_runtime_types_ts ..> N_src_backend_core_runtime_types_ts_Runt
 - 成员日志与对话日志均纳入累计消费，按 workspace/task/run/seq 去重；公开成员绑定只有身份和版本，不包含原生会话文件、知识正文或授权。
 
 详见[全局管理设计与实际范围](../../../../docs/global-runtime-management.md)。
+
+### 全局运行准入契约
+
+`admission.ts` 与只读负载索引分开定义运行准入。`AdmissionIdentity` 固定 workspaceId、ownerEpoch、rootSessionId、requestId，可附本次 agentInstanceId/scopeId/taskId；ownerEpoch 是进程内工作区装配代际，不是成员 leaseEpoch。身份只含安全 ID，不接收路径、正文、模型密钥或用户授权。
+
+`AdmissionRequest` 冻结 source（direct/member/main-result）和 workspacePermission（read/ask/execute）；ask 与 execute 均按工作区独占处理。direct 没有已受理首轮意图，容量不足不留下票据。其余请求的 `AdmissionTicket` 保存固定 ticketId/order/requestedAt 和当前等待原因 global_capacity/workspace_conflict/agent_busy/fairness；等待不代表运行启动，不增加时间、Token 或费用。
+
+`AdmissionPolicy` 默认 revision=1、maxConcurrentRuns=4，上限范围 1～32。configure 请求使用当前 revision 做 CAS，成功保存的新版本递增；降低额度不驱逐已占用运行。完整持久策略仅能在启动恢复阶段安装，不能在准入已开始后回滚版本。
+
+`AdmissionSnapshot` 暴露独立 cursor/policy/occupied/waiting，Occupant 只增加 acquiredAt；不混入历史统计。`AdmissionRead` 同游标返回 noop，不同或未来游标返回 snapshot。所有传输 schema 严格校验未知字段和身份。票据仅属于当前进程；重启不能凭快照恢复模型或工具执行。
+
+以下展开由严格 Schema 推导、自动声明图未展开的关键字段；全部是 `admission.ts` 的传输类型，不是运行服务。
+
+```mermaid
+classDiagram
+class AdmissionIdentity {
+  <<type>>
+  workspaceId
+  ownerEpoch
+  rootSessionId
+  requestId
+}
+class AdmissionRequest {
+  <<type>>
+  source
+  workspacePermission
+}
+class AdmissionTicket {
+  <<type>>
+  ticketId
+  order
+  requestedAt
+  reason
+}
+class AdmissionOccupant {
+  <<type>>
+  acquiredAt
+}
+AdmissionRequest ..> AdmissionIdentity : 扩展字段
+AdmissionTicket ..> AdmissionRequest : 包含冻结请求
+AdmissionOccupant ..> AdmissionRequest : 包含冻结请求
+```
+
+```mermaid
+classDiagram
+class AdmissionPolicy {
+  <<type>>
+  revision
+  maxConcurrentRuns
+}
+class AdmissionCursor {
+  <<type>>
+  streamId
+  revision
+}
+class AdmissionSnapshot {
+  <<type>>
+  policy
+  cursor
+  occupied
+  waiting
+}
+AdmissionSnapshot --> AdmissionPolicy : 已生效设置
+AdmissionSnapshot --> AdmissionCursor : 进程投影版本
+```

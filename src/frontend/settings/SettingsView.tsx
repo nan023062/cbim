@@ -1,10 +1,11 @@
 /**
- * 作用定位：模型供应商、仓库目录、共享服务和账号服务器占位设置。
- * 设计原因：模型与仓库独立加载，资源服务不可用不阻止用户配置大脑。
+ * 作用定位：模型供应商、运行并发、仓库目录、共享服务和账号服务器占位设置。
+ * 设计原因：模型、执行配额与仓库独立加载，资源服务不可用不阻止配置大脑和运行上限。
  */
 import {useEffect,useState} from 'react';
 import type {RepositoryStatus} from '../../bridge/contracts/resources';
 import {ModelSettings} from './ModelSettings';
+import {AdmissionSettings} from './AdmissionSettings';
 const api=window.cbim;
 export function SettingsView(){
   const [status,setStatus]=useState<RepositoryStatus>(),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(true);
@@ -16,13 +17,14 @@ export function SettingsView(){
   async function sharing(start:boolean){setBusy(true);setError('');try{setStatus(await api.call(start?'resources.share':'resources.stopSharing',start?{lan,port}:{}));setConnection(undefined)}catch(e:any){setError(e.message)}finally{setBusy(false)}}
   async function showConnection(){setError('');try{setConnection(await api.call('resources.connection'))}catch(e:any){setError(e.message)}}
 
-  if(!status)return <div className="view-page"><h1>设置</h1><ModelSettings/>{error?<p role="alert">{error}</p>:<p role="status">正在读取仓库设置…</p>}</div>;
+  if(!status)return <div className="view-page"><h1>设置</h1><ModelSettings/><AdmissionSettings/>{error?<p role="alert">{error}</p>:<p role="status">正在读取仓库设置…</p>}</div>;
   return <div className="view-page resource-library"><div className="view-heading"><div><p className="overline">CBIM / 设置</p><h1>设置</h1><p>仓库来源跟随登录状态：未登录使用本地目录，登录后自动连接服务器仓库。</p></div></div>
     <div className="repository-bar"><div><b>当前资源来源 · {status.source==='server'?'服务器仓库':'本地仓库（未登录）'}</b><small>{status.config?.location||(status.source==='server'?'等待账号服务提供仓库':'请选择本地仓库目录')}</small></div></div>
     <p className="inline-note">链接器、人才市场、业务模板共用当前身份对应的仓库。登录后自动切换，不搬迁或合并本地资源。</p>
     {error&&<div className="shell-alert" role="alert">{error}</div>}
     {notice&&<p role="status">{notice}</p>}
     <ModelSettings/>
+    <AdmissionSettings/>
     <section className="repository-settings"><h2>本地仓库</h2>
       {status.session.state==='signedOut'?<><p>当前未登录。选择这台电脑上的目录保存三类资源。</p><label>本地仓库文件夹<div className="repository-path"><input aria-label="本地仓库文件夹" placeholder="选择已有文件夹，或输入完整路径" value={localPath} disabled={busy} onChange={e=>setLocalPath(e.target.value)}/><button disabled={busy} onClick={async()=>{try{const p=await api.call('chooseFolder');if(p)setLocalPath(p)}catch(e:any){setError(e.message)}}}>选择文件夹</button></div></label><p>首次使用会在所选目录创建 cbim-resources.json。</p><button className="solid-button" disabled={busy||!localPath.trim()} onClick={()=>void configure()}>{busy?'正在验证…':'保存本地目录'}</button><p>更换目录不会搬迁、合并或删除原仓库的数据。</p></>:<p>已登录，当前使用账号服务器仓库。本地目录已保留，退出登录后恢复使用。</p>}
       {status?.config?.mode==='local'&&<div className="repository-sharing"><h3>让这台电脑提供仓库服务</h3>{status.sharing?<><p>服务已启动 · 端口 {status.sharing.port} · {status.sharing.host==='0.0.0.0'?'允许局域网连接':'仅本机访问'}</p><button disabled={busy} onClick={()=>void sharing(false)}>停止共享</button><button disabled={busy} onClick={()=>void showConnection()}>显示连接信息</button></>:<><label><input type="checkbox" checked={lan} disabled={busy} onChange={e=>setLan(e.target.checked)}/>允许其他电脑通过局域网连接</label><label>监听端口（0 为自动分配）<input type="number" min={0} max={65535} aria-label="监听端口" value={port} disabled={busy} onChange={e=>setPort(Number(e.target.value))}/></label><button disabled={busy||!Number.isInteger(port)||port<0||port>65535} onClick={()=>void sharing(true)}>启动仓库共享</button></>}

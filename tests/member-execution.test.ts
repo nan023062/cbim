@@ -12,6 +12,9 @@ import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/execution
 import {LoopRuntime} from '../src/backend/core/brain/runtime';
 import type {AgentEngine,EngineContext} from '../src/backend/core/brain/types';
 import type {MemberExecutionPorts} from '../src/backend/scheduler-engine/execution/member-execution';
+import {GlobalRunAdmission} from '../src/backend/scheduler-engine/runtime/run-admission';
+import {admissionRequestId,acquireExecutionLease} from '../src/backend/main/execution-admission';
+import type {ExecutionAdmissionWait} from '../src/backend/scheduler-engine/execution/admission-wait';
 
 const model={id:'test-provider',model:'test-model',name:'测试',api:'openai-completions' as const,auth:'api-key' as const,baseUrl:'https://example.test/v1',contextWindow:200000,maxTokens:1000,reasoning:false};
 async function until<T>(get:()=>Promise<T>,ready:(value:T)=>boolean){for(let i=0;i<500;i++){const value=await get();if(ready(value))return value;await new Promise(r=>setTimeout(r,10))}throw Error('timed out')}
@@ -25,6 +28,7 @@ async function setup(){
   const dispatch=new WorkspaceDispatchService(workspace,store),identity={workspaceId:entry.id,rootSessionId:'session-1'};
   await dispatch.openGraph({...identity,commandId:'open'});
   let behavior:'candidate'|'text'|'hold'|'rewrite'='candidate',release=()=>{},count=0;
+  let beforeRuntimeLease:()=>Promise<void>=async()=>{};
   const contexts:EngineContext[]=[];
   const prepare=vi.fn<MemberExecutionPorts['prepare']>(async()=>({model,create:async(run,_task,hooks)=>{
     const engine:AgentEngine={kind:'controlled-test',start:async context=>{contexts.push(context);await context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:context.sessionFile??path.join(directory,'native-'+context.nativeSessionId+'.jsonl')}})},
@@ -45,7 +49,7 @@ async function setup(){
         await invoke('cbim_delivery_prepare',{expectedVersion:2,summary:'已核验产物',limitations:['仍需业务验收']});
         return {status:'completed'};
       },stop:async()=>release(),close:async()=>{}};
-    return new LoopRuntime({storage,directory:path.join(directory,'runs','tasks'),acquireLease:async()=>()=>{},createEngine:()=>engine,onEngineReady:hooks.onEngineReady,onEvent:hooks.onEvent,toolPolicy:async call=>({allow:true,effects:[call.name==='read'?'read':'maintenance']})});
+    return new LoopRuntime({storage,directory:path.join(directory,'runs','tasks'),acquireLease:async()=>{await beforeRuntimeLease();return ()=>{}},createEngine:()=>engine,onEngineReady:hooks.onEngineReady,onEvent:hooks.onEvent,toolPolicy:async call=>({allow:true,effects:[call.name==='read'?'read':'maintenance']})});
   }}));
   const ports:MemberExecutionPorts={acquire:(key,permission,agentInstanceId)=>lease.acquire(key,permission,agentInstanceId),prepare,inspect:run=>storage.read(path.join(directory,'runs','tasks',run.binding.taskId,run.binding.runId))};
   const members=new MemberExecutionManager(workspace,store,ports);await members.initialize();
@@ -54,7 +58,7 @@ async function setup(){
   const input=(taskId:string)=>({...identity,taskId});
   const start=(taskId:string,permission:'read'|'ask'|'execute'='read')=>members.start({...input(taskId),commandId:'start-'+taskId,expectedRevision:1,options:{permission}});
   const settled=(taskId:string)=>until(()=>members.inspect(input(taskId)),view=>!!view.runs.length&&!['starting','running'].includes(view.runs.at(-1)!.status));
-  return {...f,workspace,entry,team,directory,store,storage,dispatch,members,ports,prepare,identity,assign,input,start,settled,contexts,lease,setBehavior:(value:typeof behavior)=>{behavior=value},cleanup:async()=>{release();await members.close();await dispatch.close();await f.cleanup()}};
+  return {...f,workspace,entry,team,directory,store,storage,dispatch,members,ports,prepare,identity,assign,input,start,settled,contexts,lease,setRuntimeGate:(gate:()=>Promise<void>)=>{beforeRuntimeLease=gate},setBehavior:(value:typeof behavior)=>{behavior=value},cleanup:async()=>{release();await members.close();await dispatch.close();await f.cleanup()}};
 }
 
 it('成员领取后执行、返回带证据的候选、原请求人确认收件；重复启动不重复调用模型',async()=>{
@@ -98,6 +102,66 @@ it('工作区写占用与主会话冲突，释放后只读派发可重试；默�
     expect(f.prepare).not.toHaveBeenCalled();await f.start(first.taskId);await f.settled(first.taskId);
     expect((await f.store.read()).runs![0].permission).toBe('read');
   }finally{await f.cleanup()}
+});
+
+it.each([
+  ['knowledge','batch'],['model','batch'],['knowledge','owner'],['model','owner'],
+] as const)('准入后 %s 准备尚未完成时 %s 失效，不落领取或创建模型',async(stage,cause)=>{
+  const f=await setup(),admission=new GlobalRunAdmission();let currentOwner=true,currentBatch=true,unblock=()=>{};
+  try{
+    await f.dispatch.openScope(f.identity,'pending-scope');const assigned=await f.assign('cbim:executor',[],'pending-scope');
+    const wait:ExecutionAdmissionWait|undefined=cause==='batch'?{scopeId:'pending-scope',isCurrent:()=>currentBatch,onReady:()=>{},registerWithdraw:()=>{}}:undefined;
+    f.ports.isCurrent=()=>currentOwner;
+    f.ports.acquire=(key,permission,agentInstanceId,context)=>acquireExecutionLease(f.lease,key,{workspaceId:f.entry.id,rootSessionId:f.identity.rootSessionId,taskId:assigned.taskId,scopeId:'pending-scope',agentInstanceId,requestId:admissionRequestId('member',context!.commandId),source:wait?'member':'direct',workspacePermission:permission},{manager:admission,ownerEpoch:1,isCurrent:()=>currentOwner},wait);
+    let entered!:()=>void;const began=new Promise<void>(resolve=>{entered=resolve}),gate=new Promise<void>(resolve=>{unblock=resolve});
+    const create=vi.fn<Awaited<ReturnType<MemberExecutionPorts['prepare']>>['create']>();
+    if(stage==='knowledge'){
+      const snapshot=f.workspace.snapshot.bind(f.workspace);
+      vi.spyOn(f.workspace,'snapshot').mockImplementationOnce(async()=>{const value=await snapshot();entered();await gate;return value});
+    }else{
+      f.prepare.mockImplementationOnce(async()=>{entered();await gate;return {model,create}});
+    }
+    const pending=f.members.start({...f.input(assigned.taskId),commandId:'start-pending',expectedRevision:1,options:{permission:'read'}},wait);void pending.catch(()=>{});
+    await began;expect(admission.snapshot().occupied).toHaveLength(1);
+    if(cause==='batch')currentBatch=false;else{currentOwner=false;admission.retireOwner(f.entry.id,1)}
+    unblock();await expect(pending).rejects.toMatchObject({code:'COLLABORATION_STOPPED'});
+    const state=await f.store.read(),node=state.graphs[0].tasks.find(task=>task.taskId===assigned.taskId)!;
+    expect(node.runIds).toEqual([]);expect(node.activeRunId).toBeUndefined();expect(state.runs??[]).toEqual([]);
+    expect(state.outbox.find(item=>item.taskId===assigned.taskId)).toMatchObject({delivery:'pending'});
+    expect(create).not.toHaveBeenCalled();expect(f.contexts).toEqual([]);
+    if(stage==='knowledge')expect(f.prepare).not.toHaveBeenCalled();
+    expect(admission.snapshot().occupied).toEqual([]);expect(f.lease.canAcquire('new-task','execute')).toBeUndefined();
+  }finally{unblock();await f.cleanup()}
+});
+
+it('手动成员停止在模型解析期间建立屏障，不等待领取事务结束才停止',async()=>{
+  const f=await setup();let unblock=()=>{};try{
+    const assigned=await f.assign();let entered!:()=>void;
+    const began=new Promise<void>(resolve=>{entered=resolve}),gate=new Promise<void>(resolve=>{unblock=resolve});
+    const create=vi.fn<Awaited<ReturnType<MemberExecutionPorts['prepare']>>['create']>();
+    f.prepare.mockImplementationOnce(async()=>{entered();await gate;return {model,create}});
+    const pending=f.start(assigned.taskId);void pending.catch(()=>{});await began;
+    await expect(f.members.stop({...f.input(assigned.taskId),rootSessionId:'other-root'})).rejects.toMatchObject({code:'TASK_NOT_FOUND'});
+    expect(await f.members.stop(f.input(assigned.taskId))).toEqual({requested:true});
+    unblock();await expect(pending).rejects.toMatchObject({code:'COLLABORATION_STOPPED'});
+    const view=await f.members.inspect(f.input(assigned.taskId));expect(view.task.runIds).toEqual([]);expect(view.runs).toEqual([]);
+    expect(create).not.toHaveBeenCalled();expect(f.contexts).toEqual([]);expect(f.lease.canAcquire('next','execute')).toBeUndefined();
+  }finally{unblock();await f.cleanup()}
+});
+
+it.each(['stop','owner'] as const)('已领取但原生尚未登记active时%s中断仍阻止新模型请求',async(cause)=>{
+  const f=await setup(),ownerController=new AbortController();let unblock=()=>{};try{
+    f.ports.signal=ownerController.signal;
+    let entered!:()=>void;const began=new Promise<void>(resolve=>{entered=resolve}),gate=new Promise<void>(resolve=>{unblock=resolve});
+    f.setRuntimeGate(async()=>{entered();await gate});
+    const assigned=await f.assign(),receipt=await f.start(assigned.taskId);await began;
+    // 此时 startMember 仍在 await acquireLease，Runtime.active 中尚无句柄。
+    if(cause==='stop')await f.members.stop(f.input(assigned.taskId));else ownerController.abort(Error('workspace retired'));
+    unblock();await f.members.waitForSettlement(f.input(assigned.taskId));
+    const view=await f.members.inspect(f.input(assigned.taskId));expect(view.task.runIds).toEqual([receipt.runId]);
+    expect(['cancelled','interrupted']).toContain(view.runs[0].status);expect(view.task.activeRunId).toBeUndefined();
+    expect(f.contexts).toEqual([]);expect(f.lease.canAcquire('next','execute')).toBeUndefined();
+  }finally{unblock();await f.cleanup()}
 });
 
 it('主实例禁止执行业务，默认执行者按任务独立创建并在周期结束后释放',async()=>{

@@ -170,6 +170,10 @@ class N_src_backend_core_brain_usage_ts["usage.ts"] {
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 成员启动期间的可信停止
+
+`LoopRuntime.startMember` 的可选第四参数只接受可信 `AbortSignal`。它复用主轮的启动停止边界，覆盖租约等待、日志初始化、原生引擎准备及模型调用前检查；不会因尚未登记 `active` 而让 `stop()` 落空。调度层在用户停止、服务关闭和工作区代际退役时同步触发信号。已经保存的领取/日志仍由原终态流程收尾，不删除历史或假装未执行；异常和未知操作继续保留 interrupted。
+
 ### 执行成员的一次性求助门闩
 
 `EngineContext.memberHelpTools` 只在 `startMember` 的可信绑定下存在。Pi 透传一次性 gate 的真实 `toolCallId`；主 Agent 伪造工具名仍会被拒绝。运行时在任何异步策略前为求助预占门闩；正在审批或已放行未结束的其它调用都阻止求助。预占之后的新工具仅写入拒绝事实，不进入可能执行集合，也不能反过来干扰已批准的求助。

@@ -7,9 +7,12 @@ import type {MemberExecutionManager} from '../src/backend/scheduler-engine/execu
 import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
 import type {TaskSpec,RunSummary} from '../src/backend/core/brain/types';
 import type {GraphSnapshot,TaskNode} from '../src/backend/core/tasks/graph-types';
+import {GlobalRunAdmission} from '../src/backend/scheduler-engine/runtime/run-admission';
+import type {ExecutionAdmissionWait} from '../src/backend/scheduler-engine/execution/admission-wait';
+import {admissionRequestId,acquireExecutionLease} from '../src/backend/main/execution-admission';
 
 function deferred<T>(){let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>{resolve=r});return {promise,resolve}}
-async function setup(){
+async function setup(admission?:GlobalRunAdmission){
   const task:TaskSpec={taskId:'conversation-1',workspaceId:'workspace-1',root:'C:/project',mode:'chat',goal:'原任务',agentId:'cbim:main',moduleIds:[],acceptance:[]};
   const identity={workspaceId:task.workspaceId,rootSessionId:task.taskId};
   const agent={agentId:'member',agentInstanceId:'instance',agentSessionId:'session',name:'成员'};
@@ -34,7 +37,7 @@ async function setup(){
     }),
   };
   const members={
-    start:vi.fn(async(input:any)=>{release=lease.acquire('member',input.options.permission);graph.tasks[0].activeRunId='member-run';graph.tasks[0].runIds=['member-run'];graph.tasks[0].status='running';return {taskId:input.taskId,runId:'member-run',cursor:graph.cursor}}),
+    start:vi.fn(async(input:any,wait?:ExecutionAdmissionWait)=>{release=acquireExecutionLease(lease,'member',{workspaceId:task.workspaceId,rootSessionId:task.taskId,taskId:input.taskId,agentInstanceId:agent.agentInstanceId,scopeId:wait?.scopeId,requestId:admissionRequestId('member',input.commandId),workspacePermission:input.options.permission,source:wait?'member':'direct'},admission?{manager:admission,ownerEpoch:1,isCurrent:()=>true}:undefined,wait);graph.tasks[0].activeRunId='member-run';graph.tasks[0].runIds=['member-run'];graph.tasks[0].status='running';return {taskId:input.taskId,runId:'member-run',cursor:graph.cursor}}),
     waitForSettlement:vi.fn(async()=>{if(graph.tasks[0]?.activeRunId)await done.promise}),
     stop:vi.fn(async()=>{if(graph.tasks[0]?.activeRunId){Object.assign(graph.tasks[0],{activeRunId:undefined,status:'cancelled'});release();done.resolve()}return {requested:true}}),
     messages:vi.fn(async()=>graph.tasks[0].result?[{kind:'result',taskId:'assigned-1',messageId:'message-1',resultId:'result-1'}]:[]),
@@ -45,8 +48,10 @@ async function setup(){
   const coordinator=new AutoCollaboration({entry:{id:task.workspaceId,path:task.root},assert:()=>{}} as KnowledgeWorkspace,dispatch as unknown as WorkspaceDispatchService,members as unknown as MemberExecutionManager,execution as unknown as WorkspaceExecutionManager,lease,issues);
   await hooks.starting?.(task,options,undefined,'本轮实际输入');
   execution.continueFromResults.mockImplementation(async(...args:unknown[])=>{
+    const wait=args[4] as ExecutionAdmissionWait|undefined;
+    const releaseMain=admission?acquireExecutionLease(lease,'main-return',{workspaceId:task.workspaceId,rootSessionId:task.taskId,requestId:admissionRequestId('main',(args[3] as {continuationId:string}).continuationId),workspacePermission:'read',source:'main-result',scopeId:wait?.scopeId},{manager:admission,ownerEpoch:1,isCurrent:()=>true},wait):()=>{};
     await hooks.starting?.(task,options,args[3] as any,args[1] as string);coordinator.tools(task,'continued',options);
-    queueMicrotask(()=>hooks.settled(task,options,{task,runId:'continued',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[]}));
+    queueMicrotask(()=>{releaseMain();hooks.settled(task,options,{task,runId:'continued',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[]})});
     return {workspaceId:task.workspaceId,taskId:task.taskId,runId:'continued'};
   });
   const tools=coordinator.tools(task,'parent-run',options)!;
@@ -58,6 +63,39 @@ async function setup(){
   };
   return {task,graph,dispatch,members,execution,issues,lease,coordinator,tools,options,assign,settleParent,finishMember,hooks:()=>hooks};
 }
+
+function occupy(admission:GlobalRunAdmission){
+  const attempt=admission.attempt({workspaceId:'another-workspace',ownerEpoch:1,rootSessionId:'another-root',requestId:'another-run',source:'direct',workspacePermission:'read'},{canAcquire:()=>undefined,isCurrent:()=>true,acquire:()=>()=>{}});
+  if(attempt.kind!=='granted')throw Error('fixture failed to acquire');return attempt.release;
+}
+
+it('已受理成员等待不产生run或失败；停止先撤票，迟到释放不启动旧成员',async()=>{
+  const admission=new GlobalRunAdmission();admission.configure({revision:1,maxConcurrentRuns:1});
+  const release=occupy(admission),f=await setup(admission);try{
+    await f.assign();f.settleParent();await vi.waitFor(()=>expect(admission.snapshot().waiting).toHaveLength(1));
+    expect(f.graph.tasks[0]).toMatchObject({status:'queued',runIds:[]});expect(f.members.start).toHaveBeenCalledTimes(1);
+    expect(f.issues).not.toHaveBeenCalled();expect(f.execution.continueFromResults).not.toHaveBeenCalled();expect(f.coordinator.busy(f.task.taskId)).toBe(true);
+    await f.hooks().stop(f.task.taskId);expect(admission.snapshot().waiting).toEqual([]);expect(f.dispatch.closeScope).toHaveBeenCalledWith(f.graph.identity,expect.any(String),'cancelled');
+    release();await Promise.resolve();await Promise.resolve();expect(f.members.start).toHaveBeenCalledTimes(1);expect(f.graph.tasks[0].runIds).toEqual([]);
+  }finally{release();await f.coordinator.close()}
+});
+
+it('容量回收仅唤醒原批次：成员与结果回注共用额度，结果等待尚不确认邮箱',async()=>{
+  const admission=new GlobalRunAdmission();admission.configure({revision:1,maxConcurrentRuns:1});
+  let release=occupy(admission);const f=await setup(admission);try{
+    await f.assign();f.settleParent();await vi.waitFor(()=>expect(admission.snapshot().waiting).toHaveLength(1));
+    release();await vi.waitFor(()=>expect(f.graph.tasks[0].status).toBe('running'));
+    expect(admission.snapshot().occupied).toHaveLength(1);expect(admission.snapshot().waiting).toEqual([]);
+    f.finishMember();release=occupy(admission);
+    await vi.waitFor(()=>expect(admission.snapshot().waiting[0]?.source).toBe('main-result'));
+    expect(f.members.acknowledge).not.toHaveBeenCalled();expect(f.dispatch.closeScope).not.toHaveBeenCalled();expect(f.issues).not.toHaveBeenCalled();
+    const ticket=admission.snapshot().waiting[0].ticketId;
+    const temporary=f.lease.acquire('unrelated-read','read');temporary();
+    await vi.waitFor(()=>expect(f.execution.continueFromResults).toHaveBeenCalledTimes(2));expect(admission.snapshot().waiting[0].ticketId).toBe(ticket);
+    release();await vi.waitFor(()=>expect(f.members.acknowledge).toHaveBeenCalledTimes(1));
+    await vi.waitFor(()=>expect(f.dispatch.closeScope).toHaveBeenCalledTimes(1));expect(admission.snapshot().occupied).toEqual([]);expect(admission.snapshot().waiting).toEqual([]);
+  }finally{release();await f.coordinator.close()}
+});
 
 it('已结算的等待申请停泊并保留目标入口，关闭应用不取消检查点',async()=>{
   const f=await setup();try{

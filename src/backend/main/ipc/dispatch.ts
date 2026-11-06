@@ -1,6 +1,6 @@
 /**
  * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
- * 设计原因：通过 ApplicationServices 契约隔离应用实现；目标补充、只读核实与正式业务重规划分开。重规划预览只读，启动必须明确提交新目标与权限；所有入口使用完整身份，不依赖当前界面选择。
+ * 设计原因：通过 ApplicationServices 契约隔离应用实现；全局配额只公开观察与可靠设置，不能经 IPC 领取名额。目标补充、核实和业务重规划各自保持明确身份及受理边界。
  */
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
@@ -12,6 +12,9 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'list':return app.list();
     case 'runtime.snapshot':return app.runtime.snapshot();
     case 'runtime.read':return app.runtime.read(args.cursor);
+    case 'admission.read':return app.admission.read(args.cursor);
+    case 'admission.settings':return app.admissionSettings.read();
+    case 'admission.configure':if(app.isStopping)fail('SHUTTING_DOWN','CBIM 正在退出');return app.admissionSettings.configure(args);
     case 'agentHistory.roles':return app.agentHistory(args.workspaceId).roles(args);
     case 'agentHistory.sessions':return app.agentHistory(args.workspaceId).sessions(args);
     case 'agentHistory.runs':return app.agentHistory(args.workspaceId).runs(args);

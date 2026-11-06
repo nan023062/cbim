@@ -1,6 +1,6 @@
 /**
  * 作用定位：调度引擎：工作区执行管理，负责主 Agent 普通对话、团队任务执行与多轮历史读取，拒绝旧轮次分叉，挂起并处理逐次工具审批与结构化用户问题，持久化消息队列并在成功结束后串行续接；本次全部通过仅在当前执行期间有效。
- * 设计原因：补充沿原周期；只读核实与正式业务重规划分别提交稳定意图、创建独立上下文。后者重新核实前置证据与明确权限，不能将只读核实提权。当前记录损坏仍阻断，不能据较早可读历史猜测续跑头。
+ * 设计原因：容量准入发生在周期/运行意图创建前，已受理结果回注由原批次等待；直接启动不足明确未受理。补充、核实与正式重规划仍分别核实可靠意图，当前历史损坏不能回退旧头。
  */
 import {MessageQueue,type QueueCounts} from '../conversation/message-queue';
 import {ApprovalQueue} from '../conversation/approvals';
@@ -25,6 +25,7 @@ import type {DispatchScopeWait} from '../../core/tasks/dispatch-scope';
 import {sameGoalValue} from '../../core/tasks/scope-goal';
 import {recoveryRequestSchema,type RecoveryRequest,type RecoveryLookup,type RecoveryReceipt} from '../../core/tasks/scope-recovery';
 import type {FreshContext} from '../../core/tasks/fresh-context';
+import type {ExecutionAdmissionWait,ExecutionLaunchContext} from './admission-wait';
 import {replanRequestSchema,type ReplanRequest,type ReplanLookup,type ReplanReceipt} from '../../core/tasks/scope-replan';
 
 /** IPC 允许的模型运行配置；不接受任意子进程命令或环境变量。 */
@@ -127,7 +128,7 @@ export class WorkspaceExecutionManager {
   answerApproval(taskId:string,id:string,allow:boolean,allowAll=false){this.approvalQueue.answer(taskId,id,allow,allowAll)}
   private cancelApprovals(taskId?:string){this.approvalQueue.cancel(taskId);this.questions.cancel(taskId)}
   /** 运行工厂由装配方注入，调度层不创建 main 的进程锁或具体工作区实例。 */
-  constructor(readonly workspace:KnowledgeWorkspace,private storage:RunStorage,private factory:(options:WorkspaceLoopOptions,task:TaskSpec)=>ReturnType<typeof createWorkspaceLoop>,private inputImages:(ids?:string[])=>Promise<import('../../core/brain/types').InputImage[]>=async()=>[]){}
+  constructor(readonly workspace:KnowledgeWorkspace,private storage:RunStorage,private factory:(options:WorkspaceLoopOptions,task:TaskSpec,context:ExecutionLaunchContext)=>ReturnType<typeof createWorkspaceLoop>,private inputImages:(ids?:string[])=>Promise<import('../../core/brain/types').InputImage[]>=async()=>[]){}
   /** 观察者只收到已落盘事件；监听错误不能改变执行结果。 */
   subscribe(listener:(event:StoredEvent)=>void){this.listeners.add(listener);return ()=>{this.listeners.delete(listener)}}
   private serial<T>(work:()=>Promise<T>):Promise<T>{
@@ -202,7 +203,7 @@ export class WorkspaceExecutionManager {
     return this.launch({mode:'chat',taskId:randomUUID(),workspaceId:this.workspace.entry.id,root:this.workspace.entry.path,goal,agentId:mainAgentId,moduleIds:[],acceptance:[]},executionOptions.parse(options),message);
   })}
   /** 自动队列与结果回注在工厂等待前后都复核停止屏障，防止停止协作期间重新唤起旧消息。 */
-  private async launch(task:TaskSpec,options:Options,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,automaticQueue=false,continuation?:GoalContinuationRequest,recovery?:RecoveryRequest,replan?:ReplanRequest){
+  private async launch(task:TaskSpec,options:Options,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,automaticQueue=false,continuation?:GoalContinuationRequest,recovery?:RecoveryRequest,replan?:ReplanRequest,admissionWait?:ExecutionAdmissionWait){
     if(recovery&&replan)fail('FRESH_MAIN_CONFLICT','同一启动不能混合只读核实和业务重规划');
     const fresh=Boolean(recovery||replan);
     if(this.active.has(task.taskId))fail('TASK_RUNNING','任务正在执行');
@@ -210,14 +211,13 @@ export class WorkspaceExecutionManager {
     const stopVersion=this.stopVersions.get(task.taskId)??0;
     const controller=new AbortController();this.pendingLaunches.set(task.taskId,controller);
     let loop:Awaited<ReturnType<typeof createWorkspaceLoop>>|undefined;
-    let accepted=false;
+    let accepted=false,preparingScope=false;
     try{
-      loop=await this.factory({...options,allowNativeExecution:options.permission?options.permission!=='read':options.allowNativeExecution,mode:task.mode,requestQuestion:(args,signal)=>this.questions.ask(task.taskId,args,signal),requestApproval:call=>this.approvalQueue.request(task.taskId,call),onEvent:event=>{for(const listener of this.listeners)try{listener(event)}catch{/* observers are not transactions */}}},structuredClone(task));
+      loop=await this.factory({...options,allowNativeExecution:options.permission?options.permission!=='read':options.allowNativeExecution,mode:task.mode,requestQuestion:(args,signal)=>this.questions.ask(task.taskId,args,signal),requestApproval:call=>this.approvalQueue.request(task.taskId,call),onEvent:event=>{for(const listener of this.listeners)try{listener(event)}catch{/* observers are not transactions */}}},structuredClone(task),{requestId:source?.kind==='member-results'?source.continuationId:randomUUID(),scopeId:admissionWait?.scopeId??continuation?.scopeId??recovery?.commandId??replan?.commandId,wait:admissionWait,signal:controller.signal});
       controller.signal.throwIfAborted();
       if((this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
       if((source?.kind==='member-results'||automaticQueue)&&this.resultContinuationStopped.has(task.taskId))fail('COLLABORATION_STOPPED','本会话已停止自动协作，请显式继续对话');
       if(!source&&!automaticQueue&&!fresh)this.resultContinuationStopped.delete(task.taskId);
-      if(!fresh)await this.collaboration?.starting?.(task,options,source,message);
       if(this.closing||(this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
       const run=fresh?await loop.runtime.startFreshMain(task,message,{signal:controller.signal,knownRunIds:()=>this.collaboration?.recoveryRunIds?.(task.taskId)??Promise.resolve([]),beforeRun:async context=>{
         controller.signal.throwIfAborted();
@@ -232,7 +232,12 @@ export class WorkspaceExecutionManager {
         controller.signal.throwIfAborted();
         await (await this.queue()).pause(task.taskId,recovery?'已创建只读核实周期；原排队消息保留暂停，核实结束后可明确继续':'已创建新的业务目标；原排队消息保留暂停，目标结束后可明确继续');
         controller.signal.throwIfAborted();this.resultContinuationStopped.delete(task.taskId);
-      }}):await loop.runtime.start(task,message,resume,source,{signal:controller.signal,...(continuation?{beforeRun:async({runId}:{runId:string})=>{
+      }}):await loop.runtime.start(task,message,resume,source,{signal:controller.signal,beforeRun:async({runId}:{runId:string})=>{
+        // Runtime 已取得全局及工作区租约；此刻才打开普通目标，容量拒绝不会留下假的失败周期。
+        controller.signal.throwIfAborted();
+        preparingScope=true;
+        await this.collaboration?.starting?.(task,options,source,message);
+        if(continuation){
         controller.signal.throwIfAborted();
         if(!this.collaboration?.acceptContinuation)fail('GOAL_CONTINUATION_UNAVAILABLE','当前工作区未装配目标恢复');
         await this.collaboration.acceptContinuation(continuation,task,runId);accepted=true;
@@ -240,7 +245,8 @@ export class WorkspaceExecutionManager {
         await (await this.queue()).pause(task.taskId,'原目标已接收补充，后续消息仍暂停；目标结束后可继续队列');
         controller.signal.throwIfAborted();
         this.resultContinuationStopped.delete(task.taskId);
-      }}:{})});
+        }
+      }});
       this.active.set(task.taskId,{runId:run.runId,loop});
       const runningLoop=loop;
       void run.done.catch(()=>undefined).then(async summary=>{
@@ -253,7 +259,7 @@ export class WorkspaceExecutionManager {
         });
       }).catch(()=>{});
       return {workspaceId:task.workspaceId,taskId:task.taskId,runId:run.runId};
-    }catch(error){await loop?.runtime.close();if((!continuation&&!fresh)||accepted)await this.collaboration?.startFailed?.(task,source,error);throw error}
+    }catch(error){await loop?.runtime.close();const code=(error as {code?:string})?.code;if(((!continuation&&!fresh)||accepted)&&(accepted||preparingScope||code!=='CAPACITY_WAITING'&&code!=='CAPACITY_BUSY'))await this.collaboration?.startFailed?.(task,source,error);throw error}
     finally{if(this.pendingLaunches.get(task.taskId)===controller)this.pendingLaunches.delete(task.taskId)}
   }
   /** 用户明确提交一个新只读核实目标；旧源记录不恢复，观察只是用户陈述，稳定请求先查已提交事实。 */
@@ -356,7 +362,7 @@ export class WorkspaceExecutionManager {
     return this.launch(prior.task,parsed,message,{runId,reconciledToolIds});
   })}
   /** 可信协调器回注已核实的成员终态；来源只允许在同线程消费一次，不经过可编辑的用户队列。 */
-  continueFromResults(taskId:string,message:string,options:Options,rawSource:RunInputSource){return this.serial(async()=>{
+  continueFromResults(taskId:string,message:string,options:Options,rawSource:RunInputSource,wait?:ExecutionAdmissionWait){return this.serial(async()=>{
     safeId(taskId);const source=checkedRunInputSource(rawSource);
     if(source.kind!=='member-results')fail('CONTINUATION_SOURCE','成员回注不能提交用户补充来源');
     if(!message.trim())fail('MESSAGE','成员结果内容不能为空');
@@ -370,7 +376,7 @@ export class WorkspaceExecutionManager {
     if(history.some(run=>run.source?.kind==='member-results'&&run.source.messageIds.some(id=>source.messageIds.includes(id))))fail('RESULT_ALREADY_CONSUMED','部分成员结果已进入本会话，不能换回传标识重复续跑');
     const prior=history.at(-1);
     if(!prior||prior.task.mode!=='chat'||prior.status!=='completed'||prior.unresolvedTools.length||!prior.sessionFile)fail('CONTINUATION_NOT_READY','主会话上轮未安全完成，请先核实后继续对话');
-    return this.launch(prior.task,executionOptions.parse(options),message,{runId:prior.runId},source);
+    return this.launch(prior.task,executionOptions.parse(options),message,{runId:prior.runId},source,false,undefined,undefined,undefined,wait);
   })}
   /** 协作批次结束后尝试原用户队列；不会解除用户停止或重启留下的暂停状态。 */
   collaborationReady(taskId:string){return this.serial(async()=>{safeId(taskId);await this.pump(taskId)})}

@@ -50,8 +50,8 @@ N_src_backend_scheduler_engine_tools ..> N_src_backend_scheduler_engine_context 
 
 - [context/](context/ARCHITECTURE.md)：内置主角色可在结构异常时诊断和治理知识。默认执行角色继承 Team 根 Skill，不创建项目角色定义文件；正式任务冻结执行角色、真实模块、维护关系、Workflow 与规范，拒绝主角色执行业务。
 - [conversation/](conversation/ARCHITECTURE.md)：主 Agent 的目标规划、证据审阅与团队技术管理指引，以及用户问题、审批和队列。主调度处理求助，可明确撤销未启动依赖后再申请安全等待；撤销不算成功，普通队列消息不替代人工决定或恢复。
-- [execution/](execution/ARCHITECTURE.md)：主实例与图根共享身份。成员求助经正常终态核实回传；主调度可同事务撤销明确未启动集合、消费派发信封并保留历史。撤销与领取互斥，成功后仅移除本轮待执行批次，目标门禁继续要求真实证据。
-- [runtime/](runtime/ARCHITECTURE.md)：动态运行监管与静态角色履历各自消费已提交事实。监管按真实实例聚合活动与用量；履历按角色/Session分页索引、按需读取公开事件，不授予执行权、不合并模型上下文。恢复不假活跃，实例释放不删历史。
+- [execution/](execution/ARCHITECTURE.md)：主实例与图根共享身份。主/成员启动先取得全局与本地许可，已受理批次等待不创建 run 或持锁；取消撤票且迟到通知无效。求助、未启动撤销和目标门禁保留原真实证据，原用户队列独立。
+- [runtime/](runtime/ARCHITECTURE.md)：监管、履历与全局并发准入职责分离。监管消费真实用量；准入同步协调名额和本地租约，稳定票据 FIFO 等待，降额不逐出活动运行；履历不签发执行权。进程票据不从历史恢复模型。
 - [tools/](tools/ARCHITECTURE.md)：把知识 CRUD、目标计划/审阅、执行者派发、图查询与未启动任务撤销注册为 cbim_ 工具。主调度工具仅在可信绑定和真实端口下提供；撤销不停止活动运行，也不能作为完成证据，执行者不获得调度权。
 
 [返回上层](../ARCHITECTURE.md)。

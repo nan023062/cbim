@@ -1,6 +1,6 @@
 /**
- * 作用定位：为已运行工作区装配共用事务存储的成员派发、真实大脑执行和结果读取服务。
- * 设计原因：派发和消费使用同一存储；模型密钥留在本轮工厂闭包，原生边界留在 main。主会话和成员同时共享工作区写入与实例占用，任务审批互不继承。
+ * 作用定位：为已运行工作区装配成员派发、大脑执行及目标审阅的可信日志读取端口。
+ * 设计原因：派发、目标审阅和消费使用同一事务存储；证据按明确运行绑定读取原日志，模型密钥留在工厂闭包。主会话和成员共享工作区占用，任务审批互不继承。
  */
 import path from 'node:path';
 import type {Workspace} from './workspace/workspace';
@@ -31,7 +31,20 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
   const directory=path.join(workspace.paths.project(workspace.entry.id),'dispatch');
   const store=new FileDispatchStore(directory,workspace.entry.id,observer),storage=new FileRunStorage();
   const runsDirectory=path.join(directory,'runs');
-  const dispatch=new WorkspaceDispatchService(workspace,store);
+  /** 主/成员的权威运行日志只在后端读取；不能以公开摘要或模型传来的“成功”替代。 */
+  const inspectMember=async(run:import('../core/tasks/dispatch-execution').DispatchRun)=>{
+    workspace.assert();
+    const summary=await storage.read(path.join(runsDirectory,'tasks',safeId(run.binding.taskId),safeId(run.binding.runId)));
+    if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path)throw Error('成员运行记录属于其他工作区');
+    if(JSON.stringify(summary.memberBinding)!==JSON.stringify(run.binding))throw Error('成员运行日志与已保存的执行绑定不一致');
+    return summary;
+  };
+  const dispatch=new WorkspaceDispatchService(workspace,store,{inspectMember,inspectMain:async(rootSessionId,runId)=>{
+    workspace.assert();
+    const summary=await storage.read(path.join(workspace.paths.project(workspace.entry.id),'loop-engine','tasks',safeId(rootSessionId),safeId(runId)));
+    if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path||summary.task.taskId!==rootSessionId||summary.runId!==runId||summary.task.agentId!=='cbim:main')throw Error('主调度证据不属于当前会话或运行');
+    return summary;
+  }});
   const members=new MemberExecutionManager(workspace,store,{
     acquire:(key,permission,agentInstanceId)=>lease.acquire('member:'+key,permission,agentInstanceId),
     prepare:async options=>{
@@ -52,13 +65,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
         return loop.runtime;
       }};
     },
-    inspect:async run=>{
-      workspace.assert();
-      const summary=await storage.read(path.join(runsDirectory,'tasks',safeId(run.binding.taskId),safeId(run.binding.runId)));
-      if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path)throw Error('成员运行记录属于其他工作区');
-      if(JSON.stringify(summary.memberBinding)!==JSON.stringify(run.binding))throw Error('成员运行日志与已保存的执行绑定不一致');
-      return summary;
-    },
+    inspect:inspectMember,
   });
   return {dispatch,members};
 }

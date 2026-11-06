@@ -9,6 +9,7 @@ import {Application} from '../src/backend/main/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import {seedTeam} from '../tests/team-fixture';
+import {goalCompleteArguments,goalPlanArguments} from '../tests/goal-provider-fixture';
 import {request} from '../tests/helpers';
 import {latestExecutable} from './build-artifact.mjs';
 
@@ -60,14 +61,17 @@ const server=http.createServer(async(req,res)=>{
     if(isMain){
       assert.ok(!body.tools?.some(tool=>['write','edit','bash','cbim_dispatch_self'].includes(tool.function.name)),'主调度不应获得业务文件和命令执行工具');
       assert.ok(body.tools?.some(tool=>tool.function.name==='cbim_object_commit'),'主 Agent 必须保留受控知识治理工具');
-      if(turn===0)tool('main-dispatch','cbim_dispatch_task',{...(!defaultExecutor?{agentId}:{}),moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
-      else if(turn===1)reply('已派发成员任务，等待成员回传后继续处理。');
-      else if(turn===2){assert.ok(JSON.stringify(body.messages).includes(candidate),'主会话续跑没有收到成员候选');reply(mainFinal)}
-      else if(verifyScopeGoals&&turn===3){
+      if(turn===0)tool('main-goal-plan','cbim_goal_plan',goalPlanArguments({objective:mainGoal,agentId:defaultExecutor?'cbim:executor':agentId,moduleIds:[moduleId],acceptance}));
+      else if(turn===1)tool('main-dispatch','cbim_dispatch_task',{...(!defaultExecutor?{agentId}:{}),moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+      else if(turn===2)reply('已派发成员任务，等待成员回传后继续处理。');
+      else if(turn===3)tool('main-goal-inspect','cbim_goal_inspect',{});
+      else if(turn===4)tool('main-goal-review','cbim_goal_review',goalCompleteArguments(body,'main-goal-inspect'));
+      else if(turn===5){assert.ok(JSON.stringify(body.messages).includes(candidate),'主会话续跑没有收到成员候选');reply(mainFinal)}
+      else if(verifyScopeGoals&&turn===6){
         assert.ok(JSON.stringify(body.messages.filter(message=>message.role==='user').at(-1)?.content).includes(resumedGoal),'续聊未收到新用户目标');
         emit({role:'assistant',content:resumedLive+'\n\n'});await resumedGate;reply(resumedFinal);
       }
-      else if(verifyScopeGoals&&turn===4){assert.ok(JSON.stringify(body.messages.filter(message=>message.role==='user').at(-1)?.content).includes(queuedGoal),'队列没有发送原始目标');reply(queuedFinal)}
+      else if(verifyScopeGoals&&turn===7){assert.ok(JSON.stringify(body.messages.filter(message=>message.role==='user').at(-1)?.content).includes(queuedGoal),'队列没有发送原始目标');reply(queuedFinal)}
       else throw Error('出现意外主会话请求：'+turn);
     }else{
       assert.ok(!body.tools?.some(tool=>tool.function.name.startsWith('cbim_dispatch_')),'成员不应获得递归派发工具');
@@ -144,14 +148,16 @@ try{
   if(verifyScopeGoals){
     assert.equal(initialScopes[0].scopeId,runningGraph.tasks[0].scopeId);
     assert.equal(initialScopes[0].status,'active');
-    assert.deepEqual(initialScopes[0].goal,{revision:1,input:{message:mainGoal,attachmentIds:[]}});
+    assert.deepEqual(initialScopes[0].goal?.input,{message:mainGoal,attachmentIds:[]});
+    assert.equal(initialScopes[0].goal?.revision,2);
+    assert.ok(initialScopes[0].goal?.plan);
   }
   if(defaultExecutor)assert.equal(runningGraph.tasks[0].assignee.agentId,'cbim:executor');
   const runtimeBefore=await call('runtime.snapshot');
   assert.equal(runtimeBefore.members.find((member:any)=>member.agentInstanceId===runningGraph.tasks[0].assignee.agentInstanceId)?.lifecycle,'active');
   assert.equal(await active.locator('.chat-message.user').count(),1);
   assert.equal(await active.locator('.chat-message.user').innerText().then(text=>text.includes(mainGoal)),true);
-  assert.equal(mainRequests.length,2);assert.equal(memberRequests.length,2);
+  assert.equal(mainRequests.length,3);assert.equal(memberRequests.length,2);
   await active.getByRole('textbox',{name:'对话草稿',exact:true}).fill('自动回传后仍保留的用户草稿');
   await fs.mkdir('test-results',{recursive:true});
   await page.screenshot({path:`test-results/${artifact}-live-chat.png`});
@@ -204,6 +210,11 @@ try{
   assert.deepEqual(finalGraph.tasks[0].result.evidenceRefs,['member-read']);
   assert.deepEqual(await call('dispatch.messages',{...identity,agentSessionId:finalGraph.root.agent.agentSessionId}),[]);
   assert.equal(await fs.readFile(path.join(project,'input.txt'),'utf8'),fact);
+  const reviewedScopes=await waitScopes(1,true);
+  assert.equal(reviewedScopes[0].outcome,'completed');
+  assert.equal(reviewedScopes[0].goal?.review?.decision,'complete');
+  assert.equal(reviewedScopes[0].goal?.revision,3);
+  assert.deepEqual(reviewedScopes[0].goal?.input,{message:mainGoal,attachmentIds:[]});
   await page.screenshot({path:`test-results/${artifact}-returned-chat.png`});
 
   // Reopening UI history retains the system source and never asks the provider to replay completed work.
@@ -213,11 +224,14 @@ try{
   await active.locator('.chat-model-notice').filter({hasText:sourceNotice}).waitFor();
   assert.equal(await active.locator('.chat-message.user').count(),1);
   assert.equal((await call('loop.thread',{id:entry.id,taskId:rootSessionId})).length,2);
-  assert.equal(mainRequests.length,3);assert.equal(memberRequests.length,5);
+  assert.equal(mainRequests.length,6);assert.equal(memberRequests.length,5);
   if(verifyScopeGoals){
     const firstClosed=await waitScopes(1,true);
     assert.equal(firstClosed[0].scopeId,initialScopes[0].scopeId);
-    assert.deepEqual(firstClosed[0].goal,initialScopes[0].goal,'成员回注不能把系统候选替换为用户周期目标');
+    assert.deepEqual(firstClosed[0].goal?.input,initialScopes[0].goal?.input,'成员回注不能把系统候选替换为用户周期目标');
+    assert.equal(firstClosed[0].goal?.revision,3);
+    assert.equal(firstClosed[0].goal?.review?.decision,'complete');
+    assert.equal(firstClosed[0].outcome,'completed');
     await active.getByRole('textbox',{name:'对话草稿',exact:true}).fill(resumedGoal);
     await active.getByRole('button',{name:'发送消息',exact:true}).click();
     await active.getByText(resumedLive,{exact:false}).waitFor();
@@ -234,7 +248,7 @@ try{
     await active.locator('.message-queue').getByText(queuedGoal,{exact:true}).waitFor();
     const queued=await call('loop.queue',{id:entry.id,taskId:rootSessionId});
     assert.equal(queued.length,1);assert.equal(queued[0].message,queuedGoal);assert.equal(queued[0].status,'pending');
-    assert.deepEqual(await scopes(),twoScopes);assert.equal(mainRequests.length,4);
+    assert.deepEqual(await scopes(),twoScopes);assert.equal(mainRequests.length,7);
     await page.screenshot({path:`test-results/${artifact}-queued-goal.png`});
     releaseResumed();
     await active.getByText(queuedFinal,{exact:true}).waitFor();
@@ -251,7 +265,7 @@ try{
     assert.equal(new Set(allRuns.map((run:any)=>run.sessionFile)).size,1);
     assert.equal(await active.locator('.chat-message.user').count(),3);
     assert.deepEqual(await call('loop.queue',{id:entry.id,taskId:rootSessionId}),[]);
-    assert.equal(mainRequests.length,5);assert.equal(memberRequests.length,5);
+    assert.equal(mainRequests.length,8);assert.equal(memberRequests.length,5);
     await page.screenshot({path:`test-results/${artifact}-separate-goals.png`});
 
     await desktop.close();desktop=undefined;
@@ -263,7 +277,7 @@ try{
     await restored.getByText(queuedFinal,{exact:true}).waitFor();
     assert.deepEqual(await scopes(),persisted);
     assert.equal((await call('loop.thread',{id:entry.id,taskId:rootSessionId})).length,4);
-    assert.equal(mainRequests.length,5);assert.equal(memberRequests.length,5);
+    assert.equal(mainRequests.length,8);assert.equal(memberRequests.length,5);
     await page.screenshot({path:`test-results/${artifact}-restored-goals.png`});
   }
   if(verifyHistory){
@@ -329,7 +343,7 @@ try{
       assert.equal(await currentView().locator(`[data-testid="team-static-node"][data-agent-id="${memberRole}"]`).count(),0,'历史角色不能回填静态团队树');
       await page.screenshot({path:`test-results/${artifact}-deleted-role-history.png`});
     }
-    assert.equal(mainRequests.length,3);assert.equal(memberRequests.length,5);
+    assert.equal(mainRequests.length,6);assert.equal(memberRequests.length,5);
     // Full application restart verifies archive durability, not just a cached renderer view.
     await desktop.close();desktop=undefined;
     desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});
@@ -338,11 +352,11 @@ try{
     const restored=await showRun(memberRole,memberRun.runId,!defaultExecutor);
     await restored.getByText(memberFinal,{exact:true}).waitFor();
     await restored.getByText(candidate,{exact:true}).waitFor();
-    assert.equal(mainRequests.length,3);assert.equal(memberRequests.length,5);
+    assert.equal(mainRequests.length,6);assert.equal(memberRequests.length,5);
     await page.screenshot({path:`test-results/${artifact}-restored-history.png`});
   }
   assert.deepEqual(pageErrors,[]);assert.deepEqual(transportErrors,[]);
-  const evidence={packagedExe:exe,realPi:true,realProvider:false,isolatedWorkspace:true,mainInstanceMatchesGraph:true,defaultExecutor,executorIsSeparateInstance:true,executorReleasedAfterCycle:true,mainInstanceRetained:true,mainHasNoBusinessExecutionTools:true,mainHasKnowledgeGovernanceTools:true,modelDispatched:true,memberAutoStarted:true,memberLiveCard:true,graphNodeDetails:true,resultNotAccepted:true,originalConversationContinued:true,systemReturnNotUserBubble:true,userDraftPreserved:true,resultEnvelopeAcknowledged:true,reloadWithoutReplay:true,...(verifyHistory?{staticRoleHistory:true,mainInputAndReturnHistory:true,releasedExecutorHistory:true,deletedRoleHistory:!defaultExecutor,historyAfterAppRestart:true,historyReadWithoutExecution:true}:{}),...(verifyScopeGoals?{scopeGoals:true,initialInputPersisted:true,resultContinuationPreservesGoal:true,resumedGoalIndependent:true,queuedGoalIndependent:true,queueWaitDoesNotOpenScope:true,goalsRetainedAfterAppRestart:true}:{}),mainRequests:mainRequests.length,memberRequests:memberRequests.length,pageErrors,transportErrors};
+  const evidence={packagedExe:exe,realPi:true,realProvider:false,isolatedWorkspace:true,mainInstanceMatchesGraph:true,defaultExecutor,executorIsSeparateInstance:true,executorReleasedAfterCycle:true,mainInstanceRetained:true,mainHasNoBusinessExecutionTools:true,mainHasKnowledgeGovernanceTools:true,modelDispatched:true,explicitGoalPlan:true,verifiedCompletionReview:true,memberAutoStarted:true,memberLiveCard:true,graphNodeDetails:true,resultNotAccepted:true,originalConversationContinued:true,systemReturnNotUserBubble:true,userDraftPreserved:true,resultEnvelopeAcknowledged:true,reloadWithoutReplay:true,...(verifyHistory?{staticRoleHistory:true,mainInputAndReturnHistory:true,releasedExecutorHistory:true,deletedRoleHistory:!defaultExecutor,historyAfterAppRestart:true,historyReadWithoutExecution:true}:{}),...(verifyScopeGoals?{scopeGoals:true,initialInputPersisted:true,resultContinuationPreservesGoal:true,resumedGoalIndependent:true,queuedGoalIndependent:true,queueWaitDoesNotOpenScope:true,goalsRetainedAfterAppRestart:true}:{}),mainRequests:mainRequests.length,memberRequests:memberRequests.length,pageErrors,transportErrors};
   await fs.writeFile(`test-results/${artifact}-ui-smoke.json`,JSON.stringify(evidence,null,2));console.log(JSON.stringify(evidence));
 }catch(error){
   await fs.mkdir('test-results',{recursive:true});

@@ -14,6 +14,8 @@ import type {DispatchStore,DispatchState,DispatchMessage} from '../../core/tasks
 import {dispatchScopeInputSchema,type DispatchScope,type DispatchScopeOutcome,type DispatchScopeInput,type DispatchScopeGoal} from '../../core/tasks/dispatch-scope';
 import type {AgentInstance} from '../../core/team/agent-types';
 import type {TaskSpec} from '../../core/tasks/types';
+import type {RunSummary} from '../../core/brain/types';
+import {ScopeGoalService,type ScopeGoalPorts} from './scope-goal-service';
 import {openGraphInput,createMemberInput,dispatchTaskInput,graphIdentityInput} from '../../core/tasks/dispatch-commands';
 import type {OpenGraphReceipt,CreateMemberReceipt,DispatchReceipt} from '../../core/tasks/dispatch-commands';
 import type {GraphIdentity,GraphCursor,GraphSnapshot,GraphChange,GraphEventBatch,AgentGraphView,GraphEdge,TaskNode} from '../../core/tasks/graph-types';
@@ -26,7 +28,11 @@ const scopeIdentityInput=graphIdentityInput.extend({scopeId:z.string().regex(/^[
 
 export class WorkspaceDispatchService {
   private closed=false;
-  constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore){}
+  /** 目标计划与审阅复用派发事务；日志证据由应用只读端口注入，不从模型参数接受。 */
+  readonly goals:ScopeGoalService;
+  constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts){
+    this.goals=new ScopeGoalService(owner,store,goalPorts);
+  }
 
   /** 工作区启动时恢复事务存储，触发存储观察者的基线；不创建成员、不消费任务。 */
   async initialize(){this.check(this.owner.entry.id);await this.store.read()}
@@ -41,7 +47,7 @@ export class WorkspaceDispatchService {
     const parsed=rawInput===undefined?undefined:this.parse(dispatchScopeInputSchema,rawInput);
     const goal:DispatchScopeGoal|undefined=parsed?{revision:1,input:{message:parsed.message,attachmentIds:[...(parsed.attachmentIds??[])]}}:undefined;
     const verifyGoal=(scope:DispatchScope)=>{
-      if(scope.goal?.revision!==goal?.revision||scope.goal?.input.message!==goal?.input.message||JSON.stringify(scope.goal?.input.attachmentIds)!==JSON.stringify(goal?.input.attachmentIds))fail('DISPATCH_SCOPE_INPUT_CONFLICT','同一调度周期不能重新绑定用户正文或附件');
+      if((scope.goal===undefined)!==(goal===undefined)||scope.goal?.input.message!==goal?.input.message||JSON.stringify(scope.goal?.input.attachmentIds)!==JSON.stringify(goal?.input.attachmentIds))fail('DISPATCH_SCOPE_INPUT_CONFLICT','同一调度周期不能重新绑定用户正文或附件');
     };
     await this.openGraph({...identity,commandId:'scope-root-'+hash(json(input))});
     // 命令键保持身份稳定，输入进入指纹；无 goal 的旧调用保留原指纹以读取历史回执。
@@ -61,10 +67,11 @@ export class WorkspaceDispatchService {
   }
 
   /**
-   * 必须先等待本周期成员终态；原子取消尚未执行任务并释放执行实例，保留主实例、图与证据。
+   * 必须先等待本周期成员终态；业务成功要求主运行摘要与显式审阅通过同事务复核，不允许取消未完任务后伪装成功。
+   * 失败/取消可原子取消未执行任务并释放执行实例；mainSummary 只能由可信运行结算传入，不能由模型或公开 IPC 伪造。
    * 同周期重复关闭返回已保存结果；已关闭实例不可复活，未确认运行不能通过关闭隐藏。
    */
-  async closeScope(identity:GraphIdentity,scopeId:string,outcome:DispatchScopeOutcome):Promise<DispatchScope>{
+  async closeScope(identity:GraphIdentity,scopeId:string,outcome:DispatchScopeOutcome,mainSummary?:RunSummary):Promise<DispatchScope>{
     const input=this.parse(scopeIdentityInput.extend({outcome:z.enum(['completed','failed','cancelled','interrupted'])}),{...identity,scopeId,outcome});this.check(input.workspaceId);
     const command={...input,commandId:'scope-close-'+hash(json(input))};
     return this.store.transact(this.command('scope.close',command),async state=>{
@@ -72,6 +79,13 @@ export class WorkspaceDispatchService {
       if(!scope||scope.rootSessionId!==input.rootSessionId)fail('DISPATCH_SCOPE_IDENTITY','调度周期不属于当前主会话');
       if(scope.status==='closed')return {receipt:scope};
       const tasks=graph.tasks.filter(task=>task.scopeId===scopeId),taskIds=new Set(tasks.map(task=>task.taskId));
+      // 普通问答只关闭生命周期；一旦规划或派工，必须引用同周期主轮结束事实及显式审阅。
+      // 在同一派发事务内复核，避免工具中申请完成后又出现新任务，提前释放成员。
+      const recordedWork=mainSummary?.toolReceipts?.some(receipt=>receipt.effects.includes('knowledge-write')||['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task'].includes(receipt.toolName));
+      if(outcome==='completed'&&scope.goal&&(scope.goal.plan||tasks.length||recordedWork)){
+        if(!mainSummary)fail('GOAL_REVIEW_REQUIRED','业务任务需要主调度的结构化目标审阅，不能直接标为完成');
+        await this.goals.validateCompletion(state,scope,mainSummary);
+      }
       if(state.runs?.some(run=>taskIds.has(run.binding.taskId)&&['starting','running'].includes(run.status)))fail('DISPATCH_SCOPE_BUSY','调度周期仍有未结算运行，请先停止并等待成员结束');
       const now=new Date().toISOString(),changes:GraphChange[]=[],messages:DispatchMessage[]=[],members:AgentInstance[]=[];
       for(const task of tasks)if(!task.runIds.length&&['planned','queued','waiting','blocked'].includes(task.status)){
@@ -200,6 +214,10 @@ export class WorkspaceDispatchService {
       }
       if(graph.root.revision!==input.expectedParentRevision)fail('GRAPH_REVISION_CONFLICT','主会话根版本已变化');
       const snapshot=await this.owner.snapshot();
+      if(trustedScopeId!==undefined){
+        const scope=state.scopes!.find(value=>value.scopeId===trustedScopeId)!;
+        if(scope.goal)this.goals.validateDispatch(state,scope,input.task,snapshot.revision);
+      }
       const taskId=randomUUID();
       const prepared=prepareMember(state,await resolveDispatchAgent(snapshot,input.task.assigneeAgentId),input.rootSessionId,'task',trustedScopeId===undefined?undefined:{scopeId:trustedScopeId,taskId});
       const modules=await resolveDispatchModules(snapshot,input.task.moduleIds);

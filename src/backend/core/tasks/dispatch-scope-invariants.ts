@@ -7,6 +7,7 @@ import {z} from 'zod';
 import {fail} from '../foundation/errors';
 import type {DispatchMutation,DispatchState} from './dispatch-storage';
 import {dispatchScopeGoalSchema} from './dispatch-scope';
+import {validateScopeGoalTransition} from './scope-goal';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
 const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
@@ -25,9 +26,9 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
     const old=previous.scopes?.find(item=>item.scopeId===scope.scopeId);
     if(old){
       valid(old.workspaceId===scope.workspaceId&&old.rootSessionId===scope.rootSessionId&&old.createdAt===scope.createdAt,'不能改绑周期或创建时间');
-      valid(equal(old.goal,scope.goal),'周期输入创建后不能改写、移除或给旧记录补造');
+      validateScopeGoalTransition(old.goal,scope.goal,false);
       if(old.status==='closed')valid(equal(old,scope),'已关闭调度周期不能重开或改写结果');
-    }else valid(scope.status==='active','新周期必须从 active 开始');
+    }else {valid(scope.status==='active','新周期必须从 active 开始');validateScopeGoalTransition(undefined,scope.goal,true)}
     if(scope.status==='active'){
       valid(!scope.closedAt&&!scope.outcome&&!activeRoots.has(scope.rootSessionId),'同一主会话只能有一个活动周期，活动周期不能含关闭信息');activeRoots.add(scope.rootSessionId);
     }else valid(scope.closedAt&&scope.outcome&&Date.parse(scope.closedAt)>=Date.parse(scope.createdAt),'已关闭周期缺少有效结束信息');

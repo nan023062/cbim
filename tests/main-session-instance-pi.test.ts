@@ -4,6 +4,7 @@ import path from 'node:path';
 import http from 'node:http';
 import {fixture,request} from './helpers';
 import {seedTeam} from './team-fixture';
+import {goalCompleteArguments,goalPlanArguments} from './goal-provider-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
 import type {RunSummary} from '../src/backend/core/brain/types';
@@ -103,8 +104,11 @@ it('executes the default executor in a separate scoped instance, returns evidenc
     const isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true;
     const requests=isMain?mainRequests:taskRequests,turn=requests.length;requests.push(body);
     if(isMain){
-      if(turn===0)return {text:mainPrivate,tool:{id:'dispatch-executor',name:'cbim_dispatch_task',args:{moduleIds:[moduleId],goal:executorGoal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]}}};
-      if(turn===1)return {text:'已登记默认执行成员的正式业务任务，等待执行证据。'};
+      if(turn===0)return {text:mainPrivate,tool:{id:'executor-goal-plan',name:'cbim_goal_plan',args:goalPlanArguments({objective:mainGoal,agentId:'cbim:executor',moduleIds:[moduleId],acceptance})}};
+      if(turn===1)return {tool:{id:'dispatch-executor',name:'cbim_dispatch_task',args:{moduleIds:[moduleId],goal:executorGoal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]}}};
+      if(turn===2)return {text:'已登记默认执行成员的正式业务任务，等待执行证据。'};
+      if(turn===3)return {tool:{id:'executor-goal-inspect',name:'cbim_goal_inspect',args:{}}};
+      if(turn===4)return {tool:{id:'executor-goal-review',name:'cbim_goal_review',args:goalCompleteArguments(body,'executor-goal-inspect')}};
       return {text:JSON.stringify(body.messages).includes(candidate)?'主会话收到执行成员结果：'+fact+'；候选尚未验收。':'缺少正式任务结果。'};
     }
     if(turn===0)return {tool:{id:'executor-plan',name:'cbim_task_plan',args:{expectedVersion:0,goal:executorGoal,reason:'执行主会话已登记的业务任务',acceptance,steps:[{id:'verify',title:'读取文件并核实内容',owner:'默认执行 Agent'}]}}};
@@ -131,7 +135,7 @@ it('executes the default executor in a separate scoped instance, returns evidenc
     const graph=await f.app.dispatch('dispatch.graphSnapshot',{identity}) as GraphSnapshot;
     expect(graph.tasks).toHaveLength(1);const task=graph.tasks[0],binding=history[0].conversationBinding!;
     expect(task).toMatchObject({goal:executorGoal,status:'result_ready',assignee:{agentId:'cbim:executor'},modules:[{moduleId}],result:{summary:candidate,evidenceRefs:['executor-read'],acceptance:'not_evaluated'}});
-    expect(closed).toMatchObject({...identity,scopeId:task.scopeId,status:'closed',outcome:'completed'});
+    expect(closed).toMatchObject({...identity,scopeId:task.scopeId,status:'closed',outcome:'completed',goal:{revision:3,review:{decision:'complete'}}});
     await expect(f.app.dispatch('dispatch.executionStart',{...identity,taskId:task.taskId,commandId:'cannot-revive-released-executor',expectedRevision:task.revision,options:{permission:'read'}})).rejects.toMatchObject({code:'MEMBER_RELEASED'});
     expect(binding.agentInstanceId).toBe(graph.root.agent.agentInstanceId);expect(task.assignee.agentInstanceId).not.toBe(graph.root.agent.agentInstanceId);expect(task.assignee.agentSessionId).not.toBe(graph.root.agent.agentSessionId);
     expect(binding.agentSessionId).not.toBe(task.assignee.agentSessionId);
@@ -147,17 +151,17 @@ it('executes the default executor in a separate scoped instance, returns evidenc
     expect(memberRun.events.find(event=>event.type==='session.bound')?.data.sessionId).not.toBe(history[0].events.find(event=>event.type==='session.bound')?.data.sessionId);
     expect(memberRun.toolReceipts).toContainEqual(expect.objectContaining({toolCallId:'executor-read',outcome:'succeeded'}));
     expect(await fs.readFile(path.join(f.a,'executor-input.txt'),'utf8')).toBe(fact);
-    expect(taskRequests).toHaveLength(5);expect(mainRequests).toHaveLength(3);
+    expect(taskRequests).toHaveLength(5);expect(mainRequests).toHaveLength(6);
     expect(JSON.stringify(taskRequests[0].messages)).not.toContain(mainPrivate);
     expect(JSON.stringify(taskRequests[2].messages)).toContain(fact);
-    expect(JSON.stringify(mainRequests[2].messages)).toContain(mainPrivate);expect(JSON.stringify(mainRequests[2].messages)).toContain(candidate);
+    expect(JSON.stringify(mainRequests[3].messages)).toContain(mainPrivate);expect(JSON.stringify(mainRequests[3].messages)).toContain(candidate);
     expect(taskRequests.every(body=>body.tools?.every(tool=>!tool.function.name.startsWith('cbim_dispatch_')))).toBe(true);
     expect(await f.app.dispatch('dispatch.messages',{...identity,agentSessionId:graph.root.agent.agentSessionId})).toEqual([]);
 
     const runtime=f.app.runtime.snapshot();expect(runtime.complete).toBe(true);
     expect(runtime.members.filter(member=>member.agentId==='cbim:main')).toHaveLength(1);
     expect(runtime.runs).toHaveLength(3);expect(runtime.tasks.filter(task=>task.source==='loop')).toHaveLength(1);expect(runtime.tasks.filter(task=>task.source==='dispatch')).toHaveLength(1);
-    expect(runtime.usage).toMatchObject({runCount:3,total:880,reportedRuns:3,unreportedRuns:0,cost:0});
+    expect(runtime.usage).toMatchObject({runCount:3,total:1210,reportedRuns:3,unreportedRuns:0,cost:0});
     expect(runtime.runs.filter(run=>run.conversationBinding?.agentInstanceId===binding.agentInstanceId)).toHaveLength(2);
     expect(runtime.runs.filter(run=>run.memberBinding?.agentInstanceId===task.assignee.agentInstanceId)).toHaveLength(1);
     const before=local.requests.length;await f.app.open(entry.id,true);

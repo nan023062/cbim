@@ -1,7 +1,7 @@
 /**
  * 作用定位：管理一次用户任务的调度周期，串接主 Agent 调度、执行成员和结果回传，周期结束后释放执行实例。
  * 设计原因：周期冻结本轮真实用户输入，不复用会话首次目标；成员回注不改写输入。一次任务可能跨多个主模型轮次，用户队列等周期可靠关闭后才启动下一周期，执行者与主实例始终分离。
- * 职责边界：主 Agent 只调度；结束、失败和停止先排空成员，再关闭持久化 scope。不恢复自动执行、不签发业务验收，历史记录不会随实例释放删除。
+ * 职责边界：主 Agent 只调度和治理知识；成功关闭须核验结构化目标审阅，失败/停止排空成员。证据不足转为阻塞并暂停队列，不恢复自动执行、不替代人工验收，历史不随释放删除。
  */
 import {hash,json} from '../../core/foundation/serialization';
 import {randomUUID} from 'node:crypto';
@@ -12,6 +12,7 @@ import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {DispatchTaskInput} from '../../core/tasks/dispatch-commands';
 import type {GraphSnapshot,TaskNode} from '../../core/tasks/graph-types';
 import {DispatchTools} from '../tools/dispatch-tools';
+import {GoalTools} from '../tools/goal-tools';
 import type {WorkspaceDispatchService} from './dispatch-service';
 import type {MemberExecutionManager} from './member-execution';
 import type {WorkspaceExecutionManager} from './execution-manager';
@@ -21,7 +22,7 @@ import type {WorkspaceExecutionLease} from './workspace-lease';
 /** 只保存主轮选择的公开运行选项；不保存密钥、附件字节或本轮 allowAll。 */
 type Options={provider:string;model:string;profileId:string;permission:'read'|'ask'|'execute';allowNativeExecution:boolean;turnTimeoutMs?:number};
 /** 一个用户任务跨主轮和成员回注共享 scope；tasks 保留已回注的成员，供最终收束与释放。 */
-type Cycle={task:TaskSpec;scopeId:string;tasks:Set<string>;operations:Set<Promise<unknown>>;stopped:boolean;ending?:DispatchScopeOutcome;closing?:Promise<void>};
+type Cycle={task:TaskSpec;scopeId:string;tasks:Set<string>;operations:Set<Promise<unknown>>;mainRuns:Set<string>;workRequested:boolean;stopped:boolean;ending?:DispatchScopeOutcome;closing?:Promise<void>;completionSummary?:RunSummary};
 type Batch={cycle:Cycle;task:TaskSpec;runId:string;options:Options;tasks:string[];calls:Set<string>;settled?:RunSummary;stopped:boolean;failures:Map<string,string>;watched:Set<string>};
 
 /** 应用按工作区装配一个；关闭必须早于主/成员执行管理器与派发存储。 */
@@ -44,14 +45,17 @@ export class AutoCollaboration {
     const existing=this.cycles.get(task.taskId);
     if(source){if(!existing||existing.stopped)fail('COLLABORATION_STOPPED','原任务调度周期已结束，不能继续自动回注');return}
     if(existing)fail('COLLABORATION_BUSY','当前用户任务尚未可靠关闭，请将新消息加入队列');
-    const cycle:Cycle={task:structuredClone(task),scopeId:randomUUID(),tasks:new Set(),operations:new Set(),stopped:false};
+    const cycle:Cycle={task:structuredClone(task),scopeId:randomUUID(),tasks:new Set(),operations:new Set(),mainRuns:new Set(),workRequested:false,stopped:false};
     await this.dispatch.openScope(this.identity(cycle),cycle.scopeId,{message,attachmentIds});this.cycles.set(task.taskId,cycle);
     if(this.closed){await this.finishCycle(cycle,'cancelled');fail('COLLABORATION_STOPPED','协作调度已关闭')}
   }
   private async startFailed(task:TaskSpec,source:RunInputSource|undefined,error:unknown){
     const code=(error as {code?:string})?.code;
     if(source&&(code==='WORKSPACE_EXECUTION_BUSY'||code==='MEMBER_BUSY'))return;
-    const cycle=this.cycles.get(task.taskId);if(cycle)await this.finishCycle(cycle,code==='COLLABORATION_STOPPED'?'cancelled':'failed');
+    const cycle=this.cycles.get(task.taskId);if(cycle){
+      if(code==='GOAL_CYCLE_LIMIT')await this.dispatch.goals.block(this.identity(cycle),cycle.scopeId,'本次任务已达到 32 次主调度运行，请先核实目标和进展再继续');
+      await this.finishCycle(cycle,code==='COLLABORATION_STOPPED'?'cancelled':'failed');
+    }
   }
   private track<T>(cycle:Cycle,pending:Promise<T>):Promise<T>{cycle.operations.add(pending);void pending.finally(()=>cycle.operations.delete(pending)).catch(()=>{});return pending}
 
@@ -61,18 +65,27 @@ export class AutoCollaboration {
     if(task.workspaceId!==this.owner.entry.id||task.root!==this.owner.entry.path)fail('COLLABORATION_IDENTITY','协作运行不属于当前工作区');
     const permission=options.permission??(options.allowNativeExecution?'execute':'read');
     const cycle=this.cycles.get(task.taskId);if(!cycle||cycle.stopped)fail('COLLABORATION_STOPPED','主轮没有活动的用户任务调度周期');
+    // 按实际创建的主 run 计数，暂时占用导致的启动重试不扣额度；模型不能调大限制。
+    if(!cycle.mainRuns.has(runId)&&cycle.mainRuns.size>=32)fail('GOAL_CYCLE_LIMIT','本次目标已达到 32 次主调度运行，已停止自动续跑');
+    cycle.mainRuns.add(runId);
     const batch:Batch={cycle,task:structuredClone(task),runId,options:{provider:options.provider,model:options.model,profileId:options.profileId,permission,allowNativeExecution:permission!=='read',turnTimeoutMs:options.turnTimeoutMs},tasks:[],calls:new Set(),stopped:false,failures:new Map(),watched:new Set()};
     this.batches.set(runId,batch);
+    const goals=new GoalTools({
+      inspect:async()=>({scope:await this.dispatch.goals.inspect(this.identity(batch),cycle.scopeId),graph:await this.dispatch.snapshot(this.identity(batch))}),
+      plan:(input,call)=>{this.assertLive(batch,call.signal);cycle.workRequested=true;return this.track(cycle,this.dispatch.goals.plan(this.identity(batch),cycle.scopeId,runId,'auto-goal-plan-'+hash(runId+':'+call.toolCallId),input))},
+      review:(input,call)=>{this.assertLive(batch,call.signal);cycle.workRequested=true;return this.track(cycle,this.dispatch.goals.review(this.identity(batch),cycle.scopeId,runId,'auto-goal-review-'+hash(runId+':'+call.toolCallId),input))},
+    });
     return new DispatchTools({dispatch:(input,call)=>this.track(cycle,this.assign(batch,input,call.toolCallId,call.signal)),inspect:async taskId=>{
       const graph=await this.dispatch.snapshot(this.identity(batch));
       if(!taskId)return graph;
       const task=graph.tasks.find(t=>t.taskId===taskId);if(!task)fail('TASK_NOT_FOUND','任务不属于当前主会话');return task;
-    }});
+    }},goals);
   }
   private identity(batch:{task:TaskSpec}){return {workspaceId:this.owner.entry.id,rootSessionId:batch.task.taskId}}
   private assertLive(batch:Batch,signal:AbortSignal){this.owner.assert();if(this.closed||batch.cycle.stopped||batch.stopped||batch.settled||signal.aborted)fail('COLLABORATION_STOPPED','当前主轮已停止接收委派')}
   private async assign(batch:Batch,input:DispatchTaskInput['task'],toolCallId:string,signal:AbortSignal){
     this.assertLive(batch,signal);
+    batch.cycle.workRequested=true;
     if(!batch.calls.has(toolCallId)&&batch.calls.size>=100)fail('COLLABORATION_LIMIT','单轮最多登记 100 次委派，请先处理已有结果');
     batch.calls.add(toolCallId);
     const identity=this.identity(batch),key=hash(json({identity,runId:batch.runId,toolCallId}));
@@ -89,8 +102,10 @@ export class AutoCollaboration {
   private settled(task:TaskSpec,summary?:RunSummary){
     if(!summary){const cycle=this.cycles.get(task.taskId);if(cycle)cycle.ending='interrupted';this.reportIssue(task.taskId,Error('主轮没有可核实的终态'));this.schedule();return}
     const batch=this.batches.get(summary.runId);if(!batch)return;
+    // Schema/权限拒绝可能发生在端口调用前；以可信回执补记工作意图，直接知识写也不能绕过目标审阅。
+    if(summary.toolReceipts?.some(receipt=>receipt.effects.includes('knowledge-write')||['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task'].includes(receipt.toolName)))batch.cycle.workRequested=true;
     batch.settled=summary;
-    if(summary.status!=='completed'||summary.unresolvedTools.length||!batch.tasks.length){batch.stopped=true;this.batches.delete(batch.runId);batch.cycle.ending=summary.status==='completed'&&!summary.unresolvedTools.length?'completed':summary.status==='failed'?'failed':summary.status==='cancelled'?'cancelled':'interrupted'}
+    if(summary.status!=='completed'||summary.unresolvedTools.length||!batch.tasks.length){batch.stopped=true;this.batches.delete(batch.runId);batch.cycle.completionSummary=summary;batch.cycle.ending=summary.status==='completed'&&!summary.unresolvedTools.length?'completed':summary.status==='failed'?'failed':summary.status==='cancelled'?'cancelled':'interrupted'}
     this.schedule();
   }
   /** 占用释放或可靠终态触发串行推进；不轮询日志，不等待模型长期 Promise。 */
@@ -149,19 +164,37 @@ export class AutoCollaboration {
     batch.stopped=true;this.batches.delete(batch.runId);
     for(const result of results)await this.members.acknowledge({...identity,agentSessionId:root.agentSessionId,messageId:result.messageId,commandId:'auto-ack-'+hash(source.continuationId+':'+result.messageId)});
   }
-  /** 等在途派发和启动完成，再停止并核实成员终态；只有可靠关闭 scope 后才能放行下一用户周期。 */
+  /** 成功关闭先核实显式目标审阅；不靠停止未完任务凑出成功。门禁失败保留原因并暂停用户队列，异常关闭仍排空成员。 */
   private finishCycle(cycle:Cycle,outcome:DispatchScopeOutcome):Promise<void>{
     if(cycle.closing)return cycle.closing;
     cycle.stopped=true;for(const batch of this.batches.values())if(batch.cycle===cycle)batch.stopped=true;
     cycle.closing=(async()=>{
       await Promise.allSettled([...cycle.operations]);
       const tasks=[...cycle.tasks].map(taskId=>({...this.identity(cycle),taskId}));
-      await Promise.all(tasks.map(task=>this.members.stop(task)));
-      await Promise.all(tasks.map(task=>this.members.waitForSettlement(task)));
-      await this.dispatch.closeScope(this.identity(cycle),cycle.scopeId,outcome);
+      let finalOutcome=outcome;
+      if(outcome==='completed'){
+        try{
+          if(cycle.workRequested&&!(await this.dispatch.goals.inspect(this.identity(cycle),cycle.scopeId)).goal?.plan)fail('GOAL_REVIEW_REQUIRED','业务规划或派发未能建立有效目标计划，请核实缺口后继续');
+          await this.dispatch.closeScope(this.identity(cycle),cycle.scopeId,'completed',cycle.completionSummary);
+        }catch(error){
+          // 证据不足或审阅过期不能伪装成功，也不能无限唤醒模型；留下可追溯阻塞并让用户后续继续。
+          const code=(error as {code?:string})?.code;
+          if(!code?.startsWith('GOAL_'))throw error;
+          const reason=error instanceof Error?error.message:String(error);
+          await this.dispatch.goals.block(this.identity(cycle),cycle.scopeId,reason);
+          this.reportIssue(cycle.task.taskId,error);
+          await this.execution.pauseCollaboration(cycle.task.taskId,'目标尚未完成：'+reason);
+          finalOutcome='failed';
+        }
+      }
+      if(finalOutcome!=='completed'){
+        await Promise.all(tasks.map(task=>this.members.stop(task)));
+        await Promise.all(tasks.map(task=>this.members.waitForSettlement(task)));
+        await this.dispatch.closeScope(this.identity(cycle),cycle.scopeId,finalOutcome);
+      }
       for(const batch of this.batches.values())if(batch.cycle===cycle)this.batches.delete(batch.runId);
       if(this.cycles.get(cycle.task.taskId)===cycle)this.cycles.delete(cycle.task.taskId);
-      if(!this.closed&&outcome==='completed')await this.execution.collaborationReady(cycle.task.taskId);
+      if(!this.closed&&finalOutcome==='completed')await this.execution.collaborationReady(cycle.task.taskId);
     })().catch(error=>{cycle.closing=undefined;throw error});
     void cycle.closing.catch(()=>{});return cycle.closing;
   }

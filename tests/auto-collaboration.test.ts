@@ -17,8 +17,9 @@ async function setup(){
   const lease=new WorkspaceExecutionLease(),done=deferred<void>();let release=()=>{},hooks!:ExecutionCollaboration;
   const options={provider:'provider',model:'model',profileId:'00000000-0000-4000-8000-000000000001',permission:'ask' as const,allowNativeExecution:true};
   const dispatch={
+    goals:{inspect:vi.fn(async()=>({goal:{plan:{}}})),plan:vi.fn(async()=>({})),review:vi.fn(async()=>({})),block:vi.fn(async()=>({}))},
     openScope:vi.fn(async(_identity:any,scopeId:string)=>({...identity,scopeId,status:'active',createdAt:'2026-11-07'})),
-    closeScope:vi.fn(async(_identity:any,scopeId:string,outcome:string)=>{if(graph.tasks.some(task=>task.activeRunId))throw Error('scope still active');return {...identity,scopeId,status:'closed',outcome}}),
+    closeScope:vi.fn(async(_identity:any,scopeId:string,outcome:string,_summary?:RunSummary)=>{if(graph.tasks.some(task=>task.activeRunId))throw Error('scope still active');return {...identity,scopeId,status:'closed',outcome}}),
     openGraph:vi.fn(async()=>({agent:graph.root.agent,cursor:graph.cursor})),
     snapshot:vi.fn(async()=>structuredClone(graph)),
     dispatchTask:vi.fn(async(input:any,scopeId?:string)=>{
@@ -96,7 +97,34 @@ it('没有候选的成员终态仍返回主会话，不伪造结果信封或验�
     const args=f.execution.continueFromResults.mock.calls[0] as unknown as any[];
     expect(args[1]).toContain('blocked');expect(args[1]).toContain('没有有效候选');expect(args[3].messageIds).toEqual([]);expect(f.members.acknowledge).not.toHaveBeenCalled();
     await vi.waitFor(()=>expect(f.dispatch.closeScope).toHaveBeenCalledTimes(1));
-    expect(f.dispatch.closeScope).toHaveBeenCalledWith(f.graph.identity,f.dispatch.openScope.mock.calls[0][1],'completed');
+    expect(f.dispatch.closeScope).toHaveBeenCalledWith(f.graph.identity,f.dispatch.openScope.mock.calls[0][1],'completed',expect.objectContaining({runId:'continued'}));
+  }finally{await f.coordinator.close()}
+});
+
+it('成功关闭门禁失败时保存阻塞原因并关闭失败周期，不能放行队列或把成员失败当完成',async()=>{
+  const f=await setup();try{
+    f.dispatch.closeScope.mockImplementation(async(identity,scopeId,outcome)=>{
+      if(outcome==='completed')throw Object.assign(Error('缺少当前目标的有效证据审阅'),{code:'GOAL_REVIEW_REQUIRED'});
+      return {...identity,scopeId,status:'closed',outcome};
+    });
+    await f.assign();f.settleParent();await vi.waitFor(()=>expect(f.graph.tasks[0].status).toBe('running'));
+    f.finishMember(false);
+    await vi.waitFor(()=>expect(f.hooks().busy(f.task.taskId)).toBe(false));
+    expect(f.dispatch.goals.block).toHaveBeenCalledWith(f.graph.identity,expect.any(String),'缺少当前目标的有效证据审阅');
+    expect(f.dispatch.closeScope).toHaveBeenLastCalledWith(f.graph.identity,expect.any(String),'failed');
+    expect(f.execution.pauseCollaboration).toHaveBeenCalledWith(f.task.taskId,expect.stringContaining('目标尚未完成'));
+    expect(f.execution.collaborationReady).not.toHaveBeenCalled();
+  }finally{await f.coordinator.close()}
+});
+
+it.each(['cbim_object_commit','cbim_goal_plan','cbim_goal_review'])('未建计划的%s调用不能绕过为普通聊天成功',async toolName=>{
+  const f=await setup();try{
+    f.dispatch.goals.inspect.mockResolvedValue({goal:{}} as any);
+    f.hooks().settled(f.task,f.options,{task:f.task,runId:'parent-run',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[],toolReceipts:[{toolName,effects:toolName==='cbim_object_commit'?['knowledge-write']:['maintenance']} as any]});
+    await vi.waitFor(()=>expect(f.hooks().busy(f.task.taskId)).toBe(false));
+    expect(f.dispatch.goals.block).toHaveBeenCalled();
+    expect(f.dispatch.closeScope).toHaveBeenLastCalledWith(f.graph.identity,expect.any(String),'failed');
+    expect(f.execution.collaborationReady).not.toHaveBeenCalled();
   }finally{await f.coordinator.close()}
 });
 
@@ -108,6 +136,15 @@ it('周期未可靠关闭时用户队列继续等待，关闭后才通知队列�
     closing.resolve();await vi.waitFor(()=>expect(f.execution.collaborationReady).toHaveBeenCalledWith(f.task.taskId));
     expect(f.hooks().busy(f.task.taskId)).toBe(false);
   }finally{closing.resolve();await f.coordinator.close()}
+});
+
+it('同一周期最多创建32次主调度运行，同run重复装配不重复扣额度',async()=>{
+  const f=await setup();try{
+    for(let i=1;i<32;i++)f.coordinator.tools(f.task,'main-'+i,f.options);
+    expect(()=>f.coordinator.tools(f.task,'main-31',f.options)).not.toThrow();
+    expect(()=>f.coordinator.tools(f.task,'main-over-limit',f.options)).toThrow('32');
+    expect(f.dispatch.closeScope).not.toHaveBeenCalled();
+  }finally{await f.coordinator.close()}
 });
 
 it('读取图期间关闭，不允许读取返回后启动成员',async()=>{

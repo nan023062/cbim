@@ -10,12 +10,13 @@
 
 当前适配器已实现 `cbim_dispatch_task` 与 `cbim_dispatch_inspect`，只在主调度会话装配真实端口时注册。主 Agent 永远不能成为执行者；省略 agentId 使用静态默认执行角色 `cbim:executor`。执行成员没有派发权。其余 `cbim_dispatch_*` 为待实现契约，不进入活动工具清单。现有知识工具和任务内进度工具保留自己的语义，不改名冒充跨成员调度。
 
+`DispatchTools` 可以通过第二个构造参数组合真实 `GoalTools`。缺省不注册任何目标工具，已有派发端口保持不变；组合后 list、has、describe、call 都按实际名称转交目标适配器，不因 `cbim_goal_` 前缀接受未知操作。
+
 工具全部使用 `cbim_` 前缀，由内部 Loop 通过工具网关调用调度服务。`DispatchTools` 严格解析参数，拒绝额外身份、授权和状态字段；调用 ID 来自已通过一次性 gate 的桥元数据，缺少时拒绝，不能在模型参数或输入哈希中猜测。`dispatch` 仅可靠入队，主轮结束后启动与结果续跑由注入的调度服务负责；`inspect` 不启动、不重试、不确认收件。只有真实服务可用时才将 Schema 加入模型能力清单。
 
 | 工具与状态 | 模型提交内容 | 服务返回内容 |
 | --- | --- | --- |
 | `cbim_dispatch_task`（当前） | 自定义执行角色或默认 cbim:executor、moduleIds、goal、acceptance、前置版本；拒绝 cbim:main | taskId、messageId、图游标；本周期创建独立执行实例，不是执行结果 |
-
 | `cbim_dispatch_inspect`（当前） | 可选本图 taskId，缺省查本图 | 经授权的任务/依赖/有效结果，不含其他成员私有上下文；当前不接收模型图游标 |
 | `cbim_dispatch_wait`（待实现） | 当前任务的 children（taskId + planRevision）与 reason | staged 等待提交；大脑安全让出执行槽后才切换 waiting |
 | `cbim_dispatch_result`（待实现） | summary、evidenceRefs、limitations、预期计划版本 | staged 结果提交；安全结束并复核后才发布候选，不自动验收 |
@@ -24,6 +25,22 @@
 | `cbim_dispatch_cancel`（待实现） | taskId、expectedRevision、self/subtree 取消范围、reason | 取消请求/停止跟踪，不伪造已停止或回滚 |
 
 维护任务工具 `cbim_task_status/cancel` 与本组派发工具保持不同职责。派发是维护执行记录，查询是只读；它们均不直接签发成员业务写权限。主会话 read 模式可以登记只读委派，成员的每次业务工具仍独立接受其运行门禁；不能将入队回执作为业务完成证据。完整能力清单以实际运行注册表为准。
+
+### 主目标规划与审阅工具
+
+`goal-tools.ts` 复用 Core `scope-goal.ts` 的 `goalPlanInputSchema` 和 `goalReviewInputSchema`，在权限描述与实际调用时分别严格校验，不复制领域 Schema，也不默默丢弃未知字段。只有主会话装配了目标服务端口时，以下三个工具才进入运行工具表；执行成员不获得它们。
+
+| 工具 | 模型输入 | 实际语义 |
+| --- | --- | --- |
+| `cbim_goal_inspect` | 严格空对象 | 读取当前目标、版本和装配端返回的本图事实，不启动执行、不确认完成 |
+| `cbim_goal_plan` | `expectedRevision` 与 Core 声明的目标、约束、验收项、分工和原因 | 保存计划候选；不派发成员、不改原始用户输入、不扩大权限 |
+| `cbim_goal_review` | `expectedRevision` 与 Core 声明的检查、真实证据引用、缺口和下一步决定 | 保存审阅；`decision=complete` 仅申请当前主运行可靠结算后的门禁复核 |
+
+`GoalToolsPort` 为 `inspect()`、`plan(input, invocation)`、`review(input, invocation)`；`invocation` 只携带桥提供的 `toolCallId` 和 `AbortSignal`。workspace、rootSession、scope、run 和持久化 commandId 由装配闭包绑定，模型不能夹带这些身份，也不能通过 approved、人工通过等字段签发批准。读取只声明 `read`，计划/审阅只声明 `maintenance`；工具描述不是业务写授权。缺失可信调用 ID、已取消调用、未知名称或非法输入均不得进入服务。
+
+工具适配器只返回实际服务结果，统一经 `jsonToolResult` 序列化；不将空值、领域失败或缺失返回值包装为完成。是否具备证据、是否存在在途执行、目标和知识版本是否有效由可信目标服务及主运行结算负责。工具当前仍在执行时，不能要求该主 run 已是 completed；也不能把审阅调用成功当成关闭周期或人工验收。
+
+`cbim_goal_*` 和派发、执行计划及交付候选工具一样，不进入 `TaskProgressTools` 的业务证据集合。知识治理可以引用主运行中实际成功的知识工具回执，无需伪造执行成员；主 Agent 的业务文件写入和命令权限仍保持拒绝。完整闭环与持久化完成门禁以 [execution 契约](../execution/CONTRACT.md) 为准。
 
 #### 可信调用上下文
 

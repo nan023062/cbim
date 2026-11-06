@@ -4,6 +4,7 @@ import path from 'node:path';
 import http from 'node:http';
 import {fixture,request} from './helpers';
 import {seedTeam} from './team-fixture';
+import {goalCompleteArguments,goalPlanArguments} from './goal-provider-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {RunSummary} from '../src/backend/core/brain/types';
@@ -39,8 +40,11 @@ it('automatically executes a model dispatch and returns its candidate to the sam
       const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]},null);emit({},'tool_calls')};
       const reply=(content:string)=>{emit({role:'assistant',content},null);emit({},'stop')};
       if(isMain){
-        if(turn===0)tool('main-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,i)=>({id:'criterion-'+i,text})),prerequisites:[]});
-        else if(turn===1)reply('已登记成员任务，等待返回，尚未宣称完成。');
+        if(turn===0)tool('main-goal-plan','cbim_goal_plan',goalPlanArguments({objective:mainGoal,agentId,moduleIds:[moduleId],acceptance}));
+        else if(turn===1)tool('main-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,i)=>({id:'criterion-'+i,text})),prerequisites:[]});
+        else if(turn===2)reply('已登记成员任务，等待返回，尚未宣称完成。');
+        else if(turn===3)tool('main-goal-inspect','cbim_goal_inspect',{});
+        else if(turn===4)tool('main-goal-review','cbim_goal_review',goalCompleteArguments(body,'main-goal-inspect'));
         else reply(JSON.stringify(body.messages).includes(candidate)?'主 Agent 已收到成员结果：'+businessFact+'；候选尚未验收。':'主会话没有收到成员事实。');
       }else{
         // A model may hallucinate an unavailable native tool; readonly scope must still prevent the real write.
@@ -80,6 +84,7 @@ it('automatically executes a model dispatch and returns its candidate to the sam
     const snapshotGraph=await graph();
     expect(snapshotGraph.tasks).toHaveLength(1);
     const task=snapshotGraph.tasks[0];
+    await vi.waitFor(async()=>expect(await f.app.memberDispatch(entry.id).goals.inspect(identity,task.scopeId!)).toMatchObject({status:'closed',outcome:'completed',goal:{revision:3,review:{decision:'complete'}}}),{timeout:5000,interval:30});
     expect(task).toMatchObject({goal:memberGoal,status:'result_ready',requester:snapshotGraph.root.agent,assignee:{agentId},modules:[{moduleId}],result:{summary:candidate,evidenceRefs:['member-read'],acceptance:'not_evaluated'}});
     expect(snapshotGraph.edges.filter(edge=>edge.kind==='dispatch')).toEqual([expect.objectContaining({fromNodeId:snapshotGraph.root.nodeId,toNodeId:task.nodeId})]);
     expect(history.map(run=>run.task.taskId)).toEqual([started.taskId,started.taskId]);
@@ -95,10 +100,10 @@ it('automatically executes a model dispatch and returns its candidate to the sam
     expect(await f.app.dispatch('dispatch.messages',{...identity,agentSessionId:snapshotGraph.root.agent.agentSessionId})).toEqual([]);
     await expect(fs.readFile(path.join(f.a,'collaboration-forbidden.txt'),'utf8')).rejects.toMatchObject({code:'ENOENT'});
     expect(await fs.readFile(path.join(f.a,'collaboration-input.txt'),'utf8')).toBe(businessFact);
-    expect(mainRequests).toHaveLength(3);
+    expect(mainRequests).toHaveLength(6);
     expect(memberRequests).toHaveLength(6);
     expect(memberRequests.every(body=>body.tools?.every(tool=>!tool.function.name.startsWith('cbim_dispatch_')&&tool.function.name!=='write'))).toBe(true);
-    expect(JSON.stringify(mainRequests[2].messages)).toContain(candidate);
+    expect(JSON.stringify(mainRequests[3].messages)).toContain(candidate);
     expect(JSON.stringify(memberRequests[3].messages)).toContain(businessFact);
     expect(transportErrors).toEqual([]);
 
@@ -137,9 +142,12 @@ it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input 
       const reply=(content:string)=>{emit({role:'assistant',content},null);emit({},'stop')};
       if(isMain){
         if(turn===0)tool('main-ask-write','write',{path:'ask-main-note.txt',content:'main run approved only'});
-        else if(turn===1)tool('main-ask-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,i)=>({id:'criterion-'+i,text})),prerequisites:[]});
-        else if(turn===2)reply('已派发成员任务，本轮让出执行占用。');
-        else if(turn===3)reply(JSON.stringify(body.messages).includes(candidate)?'主 Agent 已处理成员写入结果：'+businessFact:'缺少成员候选。');
+        else if(turn===1)tool('main-ask-goal-plan','cbim_goal_plan',goalPlanArguments({objective:mainGoal,agentId,moduleIds:[moduleId],acceptance}));
+        else if(turn===2)tool('main-ask-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,i)=>({id:'criterion-'+i,text})),prerequisites:[]});
+        else if(turn===3)reply('已派发成员任务，本轮让出执行占用。');
+        else if(turn===4)tool('main-ask-goal-inspect','cbim_goal_inspect',{});
+        else if(turn===5)tool('main-ask-goal-review','cbim_goal_review',goalCompleteArguments(body,'main-ask-goal-inspect'));
+        else if(turn===6)reply(JSON.stringify(body.messages).includes(candidate)?'主 Agent 已处理成员写入结果：'+businessFact:'缺少成员候选。');
         else{
           const input=JSON.stringify(body.messages.filter(message=>message.role==='user').at(-1)?.content);
           reply(input.includes(followupMessage)?'已收到独立续聊要求：'+followupMessage:input.includes(queuedMessage)?'已收到原始排队要求：'+queuedMessage:'没有收到原始用户要求。');
@@ -196,12 +204,12 @@ it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input 
     await expect(fs.readFile(path.join(f.a,'ask-member-output.txt'),'utf8')).rejects.toMatchObject({code:'ENOENT'});
     expect(await f.app.dispatch('loop.approvals',{id:entry.id,taskId:started.taskId})).toEqual([]);
     const originalScopes=await scopes();expect(originalScopes).toHaveLength(1);
-    expect(originalScopes[0]).toMatchObject({...identity,status:'active',goal:{revision:1,input:{message:mainGoal,attachmentIds:[]}}});
+    expect(originalScopes[0]).toMatchObject({...identity,status:'active',goal:{revision:2,input:{message:mainGoal,attachmentIds:[]}}});
 
     const queued=await f.app.dispatch('loop.resume',{id:entry.id,taskId:started.taskId,runId:started.runId,message:queuedMessage,options:{permission:'execute',turnTimeoutMs:20000}});
     expect(queued).toMatchObject({taskId:started.taskId,runId:started.runId,queued:true,queueId:expect.any(String)});
     expect(await f.app.dispatch('loop.queue',{id:entry.id,taskId:started.taskId})).toEqual([expect.objectContaining({id:queued.queueId,message:queuedMessage,status:'pending',options:expect.objectContaining({permission:'execute'})})]);
-    expect(mainRequests).toHaveLength(3);
+    expect(mainRequests).toHaveLength(4);
     expect(await f.app.dispatch('dispatch.approvals',memberIdentity)).toEqual(memberApprovals);
     expect(scopesOpened).toHaveBeenCalledTimes(1);expect(scopesClosed).not.toHaveBeenCalled();
     expect(await scopes()).toEqual(originalScopes); // Waiting user input is not a new running goal yet.
@@ -234,10 +242,10 @@ it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input 
     expect(JSON.stringify(history[1].events.filter(event=>event.type==='message'))).toContain('主 Agent 已处理成员写入结果：'+businessFact);
     expect(JSON.stringify(history[2].events.filter(event=>event.type==='message'))).toContain('已收到原始排队要求：'+queuedMessage);
     expect(await f.app.dispatch('loop.queue',{id:entry.id,taskId:started.taskId})).toEqual([]);
-    expect(mainRequests).toHaveLength(5);expect(memberRequests).toHaveLength(7);
-    expect(JSON.stringify(mainRequests[3].messages)).toContain(candidate);
-    expect(JSON.stringify(mainRequests[3].messages)).not.toContain(queuedMessage);
-    expect(JSON.stringify(mainRequests[4].messages.filter(message=>message.role==='user').at(-1)?.content)).toContain(queuedMessage);
+    expect(mainRequests).toHaveLength(8);expect(memberRequests).toHaveLength(7);
+    expect(JSON.stringify(mainRequests[4].messages)).toContain(candidate);
+    expect(JSON.stringify(mainRequests[4].messages)).not.toContain(queuedMessage);
+    expect(JSON.stringify(mainRequests[7].messages.filter(message=>message.role==='user').at(-1)?.content)).toContain(queuedMessage);
     expect((await graph()).tasks[0]).toMatchObject({status:'result_ready',result:{summary:candidate,acceptance:'not_evaluated'}});
     await vi.waitFor(()=>expect(scopesClosed).toHaveBeenCalledTimes(2),{timeout:5000,interval:20});
     expect(scopesOpened).toHaveBeenCalledTimes(2);
@@ -246,7 +254,7 @@ it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input 
     const closed=await Promise.all(scopesClosed.mock.results.map(result=>result.value));
     expect(closed.map(scope=>scope.outcome)).toEqual(['completed','completed']);
     const beforeFollowup=await scopes();expect(beforeFollowup).toHaveLength(2);
-    expect(beforeFollowup[0]).toMatchObject({scopeId:originalScopes[0].scopeId,status:'closed',goal:originalScopes[0].goal});
+    expect(beforeFollowup[0]).toMatchObject({scopeId:originalScopes[0].scopeId,status:'closed',outcome:'completed',goal:{revision:3,input:originalScopes[0].goal!.input,review:{decision:'complete'}}});
     expect(beforeFollowup[1]).toMatchObject({...identity,status:'closed',goal:{revision:1,input:{message:queuedMessage,attachmentIds:[]}}});
     expect(history[1].source?.kind).toBe('member-results');
     expect(beforeFollowup.some(scope=>scope.goal?.input.message.includes(candidate))).toBe(false);
@@ -261,7 +269,7 @@ it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input 
     expect(persisted.every(scope=>scope.rootSessionId===started.taskId)).toBe(true);
     expect(persisted.map(scope=>scope.goal?.input)).toEqual([mainGoal,queuedMessage,followupMessage].map(message=>({message,attachmentIds:[]})));
     expect(persisted.slice(0,2)).toEqual(beforeFollowup);
-    expect(mainRequests).toHaveLength(6);expect(memberRequests).toHaveLength(7);
+    expect(mainRequests).toHaveLength(9);expect(memberRequests).toHaveLength(7);
     const requestCount=requests.length;
     await f.app.open(entry.id,true);
     expect(await scopes()).toEqual(persisted);expect(await thread()).toHaveLength(4);

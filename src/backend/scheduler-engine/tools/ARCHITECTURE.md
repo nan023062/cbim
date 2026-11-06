@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-把知识 CRUD、执行者派发和图查询注册为 cbim_ 工具。主角色治理知识但不能业务写或命令；默认执行角色补足空团队，核对可信身份、周期和授权。执行者不获得递归派发权。
+把知识 CRUD、目标计划/审阅、执行者派发和图查询注册为 cbim_ 工具。目标与派发工具仅在可信主运行绑定下提供，完成申请仍须结算复核；执行者不获得目标调度或递归派发权。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,7 +10,8 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [dispatch-tools.ts](dispatch-tools.ts) | 把主调度会话的执行成员派发与本图查询端口转换为内部 Loop 工具。 |
+| [dispatch-tools.ts](dispatch-tools.ts) | 把主调度会话的执行成员派发与本图查询端口转换为内部 Loop 工具，并组合可选的用户目标工具。 |
+| [goal-tools.ts](goal-tools.ts) | 将主 Agent 当前用户目标的读取、规划和审阅端口注册为内部 Loop 工具。 |
 | [knowledge-tools.ts](knowledge-tools.ts) | 向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。 |
 
 ## 架构类图
@@ -45,12 +46,51 @@ class N_src_backend_scheduler_engine_tools_dispatch_tools_ts_DispatchTools["Disp
   +describe()
   +call()
   -port
+  -goals
   -parse()
 }
 N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_dispatch_tools_ts_DispatchTools : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[goal-tools.ts](goal-tools.ts)。
+
+### goal-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_tools_goal_tools_ts["goal-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_tools_goal_tools_ts_GoalToolName["GoalToolName"] {
+  <<type>>
+
+}
+N_src_backend_scheduler_engine_tools_goal_tools_ts ..> N_src_backend_scheduler_engine_tools_goal_tools_ts_GoalToolName : 声明
+class N_src_backend_scheduler_engine_tools_goal_tools_ts_GoalToolInvocation["GoalToolInvocation"] {
+  <<interface>>
+  +toolCallId
+  +signal
+}
+N_src_backend_scheduler_engine_tools_goal_tools_ts ..> N_src_backend_scheduler_engine_tools_goal_tools_ts_GoalToolInvocation : 声明
+class N_src_backend_scheduler_engine_tools_goal_tools_ts_GoalToolsPort["GoalToolsPort"] {
+  <<interface>>
+  +inspect()
+  +plan()
+  +review()
+}
+N_src_backend_scheduler_engine_tools_goal_tools_ts ..> N_src_backend_scheduler_engine_tools_goal_tools_ts_GoalToolsPort : 声明
+class N_src_backend_scheduler_engine_tools_goal_tools_ts_GoalTools["GoalTools"] {
+  +list()
+  +has()
+  +describe()
+  +call()
+  -port
+  -parse()
+}
+N_src_backend_scheduler_engine_tools_goal_tools_ts ..> N_src_backend_scheduler_engine_tools_goal_tools_ts_GoalTools : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)。
 
 ### knowledge-tools.ts
 
@@ -81,6 +121,19 @@ N_src_backend_scheduler_engine_tools_knowledge_tools_ts ..> N_src_backend_schedu
 
 直接依赖：[../../core/tools/registry.ts](../../core/tools/registry.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/knowledge/knowledge-queries.ts](../../core/knowledge/knowledge-queries.ts)、[../../core/knowledge/object-crud.ts](../../core/knowledge/object-crud.ts)、[../../core/tools/types.ts](../../core/tools/types.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/knowledge/snapshot.ts](../../core/knowledge/snapshot.ts)、[../context/default-executor.ts](../context/default-executor.ts)。
 
+### 本目录调用边界
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_tools_dispatch_tools_ts["dispatch-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_tools_goal_tools_ts["goal-tools.ts"] {
+  <<module>>
+}
+N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_goal_tools_ts : 导入依赖
+```
+
 
 ## 子目录导航
 
@@ -106,12 +159,13 @@ N_src_backend_scheduler_engine_tools_knowledge_tools_ts ..> N_src_backend_schedu
 
 当前适配器已实现 `cbim_dispatch_task` 与 `cbim_dispatch_inspect`，只在主调度会话装配真实端口时注册。主 Agent 永远不能成为执行者；省略 agentId 使用静态默认执行角色 `cbim:executor`。执行成员没有派发权。其余 `cbim_dispatch_*` 为待实现契约，不进入活动工具清单。现有知识工具和任务内进度工具保留自己的语义，不改名冒充跨成员调度。
 
+`DispatchTools` 可以通过第二个构造参数组合真实 `GoalTools`。缺省不注册任何目标工具，已有派发端口保持不变；组合后 list、has、describe、call 都按实际名称转交目标适配器，不因 `cbim_goal_` 前缀接受未知操作。
+
 工具全部使用 `cbim_` 前缀，由内部 Loop 通过工具网关调用调度服务。`DispatchTools` 严格解析参数，拒绝额外身份、授权和状态字段；调用 ID 来自已通过一次性 gate 的桥元数据，缺少时拒绝，不能在模型参数或输入哈希中猜测。`dispatch` 仅可靠入队，主轮结束后启动与结果续跑由注入的调度服务负责；`inspect` 不启动、不重试、不确认收件。只有真实服务可用时才将 Schema 加入模型能力清单。
 
 | 工具与状态 | 模型提交内容 | 服务返回内容 |
 | --- | --- | --- |
 | `cbim_dispatch_task`（当前） | 自定义执行角色或默认 cbim:executor、moduleIds、goal、acceptance、前置版本；拒绝 cbim:main | taskId、messageId、图游标；本周期创建独立执行实例，不是执行结果 |
-
 | `cbim_dispatch_inspect`（当前） | 可选本图 taskId，缺省查本图 | 经授权的任务/依赖/有效结果，不含其他成员私有上下文；当前不接收模型图游标 |
 | `cbim_dispatch_wait`（待实现） | 当前任务的 children（taskId + planRevision）与 reason | staged 等待提交；大脑安全让出执行槽后才切换 waiting |
 | `cbim_dispatch_result`（待实现） | summary、evidenceRefs、limitations、预期计划版本 | staged 结果提交；安全结束并复核后才发布候选，不自动验收 |
@@ -120,6 +174,22 @@ N_src_backend_scheduler_engine_tools_knowledge_tools_ts ..> N_src_backend_schedu
 | `cbim_dispatch_cancel`（待实现） | taskId、expectedRevision、self/subtree 取消范围、reason | 取消请求/停止跟踪，不伪造已停止或回滚 |
 
 维护任务工具 `cbim_task_status/cancel` 与本组派发工具保持不同职责。派发是维护执行记录，查询是只读；它们均不直接签发成员业务写权限。主会话 read 模式可以登记只读委派，成员的每次业务工具仍独立接受其运行门禁；不能将入队回执作为业务完成证据。完整能力清单以实际运行注册表为准。
+
+### 主目标规划与审阅工具
+
+`goal-tools.ts` 复用 Core `scope-goal.ts` 的 `goalPlanInputSchema` 和 `goalReviewInputSchema`，在权限描述与实际调用时分别严格校验，不复制领域 Schema，也不默默丢弃未知字段。只有主会话装配了目标服务端口时，以下三个工具才进入运行工具表；执行成员不获得它们。
+
+| 工具 | 模型输入 | 实际语义 |
+| --- | --- | --- |
+| `cbim_goal_inspect` | 严格空对象 | 读取当前目标、版本和装配端返回的本图事实，不启动执行、不确认完成 |
+| `cbim_goal_plan` | `expectedRevision` 与 Core 声明的目标、约束、验收项、分工和原因 | 保存计划候选；不派发成员、不改原始用户输入、不扩大权限 |
+| `cbim_goal_review` | `expectedRevision` 与 Core 声明的检查、真实证据引用、缺口和下一步决定 | 保存审阅；`decision=complete` 仅申请当前主运行可靠结算后的门禁复核 |
+
+`GoalToolsPort` 为 `inspect()`、`plan(input, invocation)`、`review(input, invocation)`；`invocation` 只携带桥提供的 `toolCallId` 和 `AbortSignal`。workspace、rootSession、scope、run 和持久化 commandId 由装配闭包绑定，模型不能夹带这些身份，也不能通过 approved、人工通过等字段签发批准。读取只声明 `read`，计划/审阅只声明 `maintenance`；工具描述不是业务写授权。缺失可信调用 ID、已取消调用、未知名称或非法输入均不得进入服务。
+
+工具适配器只返回实际服务结果，统一经 `jsonToolResult` 序列化；不将空值、领域失败或缺失返回值包装为完成。是否具备证据、是否存在在途执行、目标和知识版本是否有效由可信目标服务及主运行结算负责。工具当前仍在执行时，不能要求该主 run 已是 completed；也不能把审阅调用成功当成关闭周期或人工验收。
+
+`cbim_goal_*` 和派发、执行计划及交付候选工具一样，不进入 `TaskProgressTools` 的业务证据集合。知识治理可以引用主运行中实际成功的知识工具回执，无需伪造执行成员；主 Agent 的业务文件写入和命令权限仍保持拒绝。完整闭环与持久化完成门禁以 [execution 契约](../execution/CONTRACT.md) 为准。
 
 #### 可信调用上下文
 

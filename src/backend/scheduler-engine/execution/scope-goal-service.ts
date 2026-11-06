@@ -1,0 +1,214 @@
+/**
+ * 作用定位：在派发事务中保存本轮目标计划与结构化审阅，并核验真实日志、角色和模块基线。
+ * 设计原因：模型只能申请完成，必须等主运行结算后重新核实证据、任务压力与副作用；日志通过只读端口注入，避免调度反向依赖磁盘。
+ * 职责边界：不关闭周期、不释放成员、不运行工具；知识和派发日志不是跨存储原子事务，证据也不是外部产物指纹。
+ */
+import {z} from 'zod';
+import {fail} from '../../core/foundation/errors';
+import {hash,json} from '../../core/foundation/serialization';
+import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
+import type {RunSummary,StoredEvent} from '../../core/brain/types';
+import type {ToolReceipt} from '../../core/tools/types';
+import type {DispatchState,DispatchStore} from '../../core/tasks/dispatch-storage';
+import type {DispatchRun} from '../../core/tasks/dispatch-execution';
+import type {DispatchTaskInput} from '../../core/tasks/dispatch-commands';
+import type {DispatchScope} from '../../core/tasks/dispatch-scope';
+import type {GraphIdentity,GraphSnapshot,TaskNode} from '../../core/tasks/graph-types';
+import {goalPlanInputSchema,goalReviewInputSchema,sameGoalValue,scopeGoalDecisionLimit,type DispatchScopeGoal,type GoalPlanInput,type GoalReviewInput,type ScopeGoalReview} from '../../core/tasks/scope-goal';
+import {resolveConversationAgent,resolveDispatchAgent,resolveDispatchModules} from '../context/dispatch-context';
+
+/** 端口只按可信已登记身份读取 canonical 日志；不能接受模型提供路径或摘要。 */
+export interface ScopeGoalPorts {
+  inspectMember(run:DispatchRun):Promise<RunSummary>;
+  inspectMain(rootSessionId:string,runId:string):Promise<RunSummary>;
+}
+type Owner=Pick<KnowledgeWorkspace,'entry'|'instanceId'|'assert'|'snapshot'|'read'>;
+const effects=new Set(['business-write','knowledge-write','command']);
+const sameSet=(a:string[],b:string[])=>a.length===b.length&&new Set(a).size===a.length&&a.every(item=>b.includes(item));
+const cursor=(graph:GraphSnapshot)=>({streamId:graph.cursor.streamId,seq:graph.cursor.seq});
+const identitySchema=z.object({workspaceId:z.string().min(1).max(512),rootSessionId:z.string().min(1).max(512),scopeId:z.string().min(1).max(512)}).strict();
+function check(condition:unknown,code:string,message:string):asserts condition{if(!condition)fail(code,message)}
+function lastEffect(summary:RunSummary){return summary.events.reduce((latest,event)=>event.type==='tool.allowed'&&(Array.isArray(event.data.effects)&&event.data.effects.some(effect=>effects.has(String(effect)))||['write','edit','bash'].includes(String(event.data.name)))?Math.max(latest,event.seq):latest,0)}
+
+export class ScopeGoalService {
+  constructor(private readonly owner:Owner,private readonly store:DispatchStore,private readonly ports?:ScopeGoalPorts){}
+  private parse<S extends z.ZodTypeAny>(schema:S,value:unknown):z.output<S>{const result=schema.safeParse(value);if(!result.success)fail('GOAL_INPUT_INVALID',result.error.issues.map(issue=>issue.message).join('；'));return result.data}
+  private scope(state:DispatchState,identity:GraphIdentity,scopeId:string){
+    this.parse(identitySchema,{...identity,scopeId});this.owner.assert();
+    check(identity.workspaceId===this.owner.entry.id&&state.workspaceId===identity.workspaceId,'GOAL_IDENTITY','目标不属于当前工作区');
+    const scope=state.scopes?.find(value=>value.scopeId===scopeId&&value.rootSessionId===identity.rootSessionId&&value.workspaceId===identity.workspaceId);
+    check(scope,'GOAL_IDENTITY','目标周期不属于当前主会话');return scope;
+  }
+  private graph(state:DispatchState,scope:DispatchScope){const graph=state.graphs.find(value=>value.identity.rootSessionId===scope.rootSessionId&&value.identity.workspaceId===scope.workspaceId);check(graph,'GOAL_IDENTITY','目标缺少主会话任务图');return graph}
+  private editable(scope:DispatchScope,expectedRevision:number){
+    check(scope.status==='active','GOAL_CLOSED','目标周期已经结束');
+    check(scope.goal,'GOAL_LEGACY','旧周期没有可信原始输入，不能补造目标');
+    check(!scope.goal.blocked,'GOAL_BLOCKED','目标已记录阻塞，不再接受决策');
+    check(scope.goal.revision===expectedRevision,'GOAL_REVISION_CONFLICT','目标版本已变化，请重新读取');
+    check(scope.goal.revision<=scopeGoalDecisionLimit,'GOAL_DECISION_LIMIT','本轮目标决策已达到上限');return scope.goal;
+  }
+  private command(operation:string,identity:GraphIdentity,scopeId:string,runId:string,commandId:string,draft:unknown){
+    check(typeof runId==='string'&&runId.trim().length>0&&typeof commandId==='string'&&commandId.trim().length>0,'GOAL_IDENTITY','目标决策缺少可信运行或命令身份');
+    return {commandId,fingerprint:hash(json({operation,identity,scopeId,runId,draft}))};
+  }
+  /** 只读固定身份的周期快照；不创建计划、不读取完整运行日志。 */
+  async inspect(identity:GraphIdentity,scopeId:string):Promise<DispatchScope>{return this.scope(await this.store.read(),identity,scopeId)}
+
+  /** 核实真实角色、维护模块及知识版本后追加计划版本；显式重规划清除旧审阅。 */
+  async plan(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,raw:GoalPlanInput):Promise<DispatchScope>{
+    const draft=this.parse(goalPlanInputSchema,raw),command=this.command('goal.plan',identity,scopeId,runId,commandId,draft);
+    return this.store.transact(command,async state=>{
+      const scope=this.scope(state,identity,scopeId),goal=this.editable(scope,draft.expectedRevision),graph=this.graph(state,scope),snapshot=await this.owner.snapshot();
+      check(snapshot.workspaceId===scope.workspaceId,'GOAL_IDENTITY','知识快照不属于目标工作区');
+      const criterionIds=draft.criteria.map(item=>item.id);
+      check((goal.plan?.criteria??[]).filter(item=>item.kind==='human').every(item=>draft.criteria.some(candidate=>sameGoalValue(item,candidate))),'GOAL_HUMAN_REQUIRED','重新规划不能删除或降低既有人工验收项');
+      check(new Set(criterionIds).size===criterionIds.length,'GOAL_PLAN_INVALID','验收项 ID 不能重复');
+      check(draft.assignments.every(item=>item.criterionIds.every(id=>criterionIds.includes(id)))&&criterionIds.every(id=>draft.assignments.some(item=>item.criterionIds.includes(id))),'GOAL_PLAN_INVALID','每个验收项必须有负责角色，分配不能引用不存在的验收项');
+      const assignments=[];
+      for(const assignment of draft.assignments){
+        const agent=assignment.agentId==='cbim:main'?resolveConversationAgent(snapshot):await resolveDispatchAgent(snapshot,assignment.agentId);
+        check(assignment.agentId==='cbim:main'||assignment.moduleIds.length,'GOAL_PLAN_INVALID','业务执行角色必须明确目标模块');
+        const modules=assignment.moduleIds.length?await resolveDispatchModules(snapshot,assignment.moduleIds):[];
+        assignments.push({...assignment,agentName:agent.name,teamId:agent.teamId,moduleNames:modules.map(module=>module.name)});
+      }
+      check((await this.owner.read()).revision===snapshot.revision,'GOAL_KNOWLEDGE_CHANGED','规划期间知识已变化，请重新读取');
+      const {expectedRevision:_,...body}=draft,newGoal:DispatchScopeGoal={revision:goal.revision+1,input:goal.input,plan:{...body,assignments,revision:goal.revision+1,runId,recordedAt:new Date().toISOString(),knowledgeRevision:snapshot.revision,graphCursor:cursor(graph)}};
+      const next={...scope,goal:newGoal};return {scopes:[next],receipt:next};
+    });
+  }
+
+  /** 正式派发必须属于当前计划中同一角色和模块集合；完成申请后须先显式重规划才能继续派工。 */
+  validateDispatch(state:DispatchState,scope:DispatchScope,input:DispatchTaskInput['task'],knowledgeRevision:string):void{
+    this.scope(state,{workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId},scope.scopeId);
+    // 旧无 goal 周期保持读取/运行兼容，不给历史记录补造计划。
+    if(!scope.goal)return;
+    check(scope.status==='active'&&!scope.goal.blocked,'GOAL_BLOCKED','周期已经关闭或阻塞');
+    const plan=scope.goal.plan;
+    check(plan,'GOAL_PLAN_REQUIRED','正式派发前请先保存本轮目标计划');
+    check(!scope.goal.review,'GOAL_REPLAN_REQUIRED','已有目标审阅，请显式重规划后再派发');
+    check(plan.knowledgeRevision===knowledgeRevision,'GOAL_KNOWLEDGE_CHANGED','计划知识基线已变化，请重新规划');
+    check(plan.assignments.some(item=>item.agentId===input.assigneeAgentId&&sameSet(item.moduleIds,input.moduleIds)),'GOAL_ASSIGNMENT_MISMATCH','派发角色和模块集合不在当前目标计划中');
+  }
+
+  private logs(){check(this.ports,'GOAL_EVIDENCE_UNAVAILABLE','尚未接入可信运行日志，不能审阅或完成目标');return this.ports}
+  private main(state:DispatchState,summary:RunSummary,scope:DispatchScope,graph:GraphSnapshot,runId:string){
+    const binding=summary.conversationBinding,root=graph.root.agent;
+    const channel=state.sessions.find(session=>session.agentSessionId===binding?.agentSessionId&&session.purpose==='conversation');
+    check(summary.runId===runId&&summary.task.workspaceId===scope.workspaceId&&summary.task.taskId===scope.rootSessionId&&summary.task.agentId==='cbim:main'&&summary.task.mode==='chat'&&binding?.workspaceId===scope.workspaceId&&binding.rootSessionId===scope.rootSessionId&&binding.agentId==='cbim:main'&&binding.agentInstanceId===root.agentInstanceId&&channel?.workspaceId===scope.workspaceId&&channel.rootSessionId===scope.rootSessionId&&channel.agentInstanceId===root.agentInstanceId&&channel.agentId==='cbim:main'&&channel.teamId===binding.teamId,'GOAL_EVIDENCE_IDENTITY','主运行日志与当前主会话实例或对话通道不一致');
+  }
+  private receipt(summary:RunSummary,toolCallId:string):{receipt:ToolReceipt;event:StoredEvent}{
+    const receipts=(summary.toolReceipts??[]).filter(item=>item.toolCallId===toolCallId),events=summary.events.filter(event=>event.type==='tool.finished'&&event.data.id===toolCallId);
+    check(receipts.length===1&&events.length===1,'GOAL_EVIDENCE_INVALID','工具证据缺失或身份重复');
+    const receipt=receipts[0],event=events[0],allowed=summary.events.find(item=>item.type==='tool.allowed'&&item.data.id===toolCallId);
+    check(receipt.outcome==='succeeded'&&receipt.workspaceId===summary.task.workspaceId&&receipt.taskId===summary.task.taskId&&receipt.runId===summary.runId&&event.workspaceId===receipt.workspaceId&&event.taskId===receipt.taskId&&event.runId===receipt.runId&&event.data.isError!==true&&sameGoalValue(event.data.receipt,receipt)&&receipt.resultHash===hash(JSON.stringify(event.data.result)),'GOAL_EVIDENCE_INVALID','工具回执或结果正文不匹配');
+    check(allowed&&allowed.seq<event.seq&&allowed.data.name===receipt.toolName&&receipt.inputHash===hash(JSON.stringify(allowed.data.input))&&allowed.seq>=lastEffect(summary),'GOAL_EVIDENCE_STALE','证据不属于最后一次副作用之后的有效执行');
+    check(!receipt.toolName.startsWith('cbim_task_')&&!receipt.toolName.startsWith('cbim_dispatch_')&&!receipt.toolName.startsWith('cbim_goal_')&&receipt.toolName!=='cbim_delivery_prepare','GOAL_EVIDENCE_INVALID','调度、计划或审阅回执不能作为业务完成证据');
+    return {receipt,event};
+  }
+  private async member(state:DispatchState,scope:DispatchScope,graph:GraphSnapshot,task:TaskNode,knowledgeRevision:string){
+    const result=task.result;
+    check(task.scopeId===scope.scopeId&&task.identity.workspaceId===scope.workspaceId&&task.identity.rootSessionId===scope.rootSessionId&&task.status==='result_ready'&&!task.activeRunId&&result&&result.planRevision===task.planRevision&&task.runIds.includes(result.runId),'GOAL_EVIDENCE_INVALID','成员任务没有当前周期的有效交付候选');
+    const run=state.runs?.find(item=>item.binding.runId===result.runId&&item.binding.taskId===task.taskId);
+    check(run&&run.status==='completed'&&run.binding.workspaceId===scope.workspaceId&&run.binding.rootSessionId===scope.rootSessionId&&run.binding.agentId===task.assignee.agentId&&run.binding.agentInstanceId===task.assignee.agentInstanceId&&run.binding.agentSessionId===task.assignee.agentSessionId&&run.binding.planRevision===task.planRevision,'GOAL_EVIDENCE_IDENTITY','成员运行与任务候选身份不一致');
+    check(run.prepared.knowledgeRevision===knowledgeRevision&&task.modules.every(module=>module.knowledgeRevision===knowledgeRevision),'GOAL_EVIDENCE_STALE','成员候选属于旧知识基线，需要重新执行验证');
+    const summary=await this.logs().inspectMember(run);
+    check(summary.runId===run.binding.runId&&summary.task.taskId===task.taskId&&summary.task.workspaceId===scope.workspaceId&&summary.task.agentId===task.assignee.agentId&&sameGoalValue(summary.memberBinding,run.binding)&&summary.status==='completed'&&!summary.unresolvedTools.length,'GOAL_EVIDENCE_INVALID','成员日志尚未完整结束或绑定不一致');
+    const progress=summary.taskProgress;
+    check(progress?.state==='awaiting_review'&&progress.delivery&&progress.goal===task.goal&&sameGoalValue(progress.acceptance,task.acceptance.map(item=>item.text))&&progress.delivery.summary===result.summary&&sameGoalValue(progress.delivery.limitations,result.limitations)&&progress.steps.length&&progress.steps.every(step=>step.state==='reported_done'&&step.evidence.length)&&sameSet([...new Set(progress.steps.flatMap(step=>step.evidence))],result.evidenceRefs),'GOAL_EVIDENCE_INVALID','候选内容与运行的真实交付记录不一致');
+    for(const id of result.evidenceRefs)this.receipt(summary,id);
+    return summary;
+  }
+  private async evidence(state:DispatchState,scope:DispatchScope,graph:GraphSnapshot,draft:GoalReviewInput,main:RunSummary,knowledgeRevision:string){
+    const plan=scope.goal!.plan!,criteria=plan.criteria,checks=draft.checks;
+    check(new Set(checks.map(item=>item.criterionId)).size===checks.length&&checks.every(item=>criteria.some(criterion=>criterion.id===item.criterionId)),'GOAL_REVIEW_INVALID','审阅项重复或不属于当前计划');
+    const members=new Map<string,Promise<RunSummary>>();
+    for(const item of checks){
+      const criterion=criteria.find(value=>value.id===item.criterionId)!;
+      check(criterion.kind!=='human'||item.outcome!=='satisfied','GOAL_HUMAN_REQUIRED','模型不能替代真人确认人工验收项');
+      if(item.outcome==='satisfied')check(item.evidence.length,'GOAL_EVIDENCE_REQUIRED','已满足的验收项必须有真实证据');
+      for(const reference of item.evidence){
+        if(reference.kind==='member-result'){
+          const task=graph.tasks.find(value=>value.taskId===reference.taskId),result=task?.result;
+          check(task&&result&&result.runId===reference.runId&&result.resultId===reference.resultId&&result.planRevision===reference.planRevision&&reference.toolCallIds.every(id=>result.evidenceRefs.includes(id)),'GOAL_EVIDENCE_INVALID','成员证据不是当前结果候选');
+          check(plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&sameSet(assignment.moduleIds,task.modules.map(module=>module.moduleId))&&assignment.criterionIds.includes(item.criterionId)),'GOAL_EVIDENCE_IDENTITY','成员结果不属于此验收项的分配');
+          if(!members.has(task.taskId))members.set(task.taskId,this.member(state,scope,graph,task,knowledgeRevision));
+          const summary=await members.get(task.taskId)!;for(const id of reference.toolCallIds)this.receipt(summary,id);
+        }else{
+          check(plan.assignments.some(assignment=>assignment.agentId==='cbim:main'&&assignment.criterionIds.includes(item.criterionId)),'GOAL_EVIDENCE_IDENTITY','此验收项未分配给主角色治理');
+          for(const id of reference.toolCallIds){
+            const {receipt,event}=this.receipt(main,id);
+            check(['cbim_knowledge_commit','cbim_object_commit'].includes(receipt.toolName)&&receipt.effects.includes('knowledge-write')&&receipt.scope.kind==='knowledge','GOAL_EVIDENCE_INVALID','主角色证据只接受知识服务的真实提交');
+            const result=event.data.result as {content?:Array<{type?:string;text?:string}>};let body:Record<string,unknown>|undefined;
+            try{const texts=result.content?.filter(value=>value.type==='text');if(texts?.length===1)body=JSON.parse(texts[0].text!)}catch{/* 下方统一拒绝无效正文，不回显私密内容。 */}
+            check(body?.state==='committed'&&body.workspaceId===scope.workspaceId&&body.instanceId===this.owner.instanceId&&body.revision===knowledgeRevision&&typeof body.requestId==='string'&&Array.isArray(body.changed)&&body.changed.length>0&&body.changed.every(value=>typeof value==='string'&&value.startsWith('.cbim/')),'GOAL_EVIDENCE_INVALID','知识提交正文没有证明当前版本的真实变更');
+          }
+        }
+      }
+    }
+    if(draft.decision==='complete')check(!draft.gaps.length&&checks.length===criteria.length&&checks.every(item=>item.outcome==='satisfied')&&!criteria.some(item=>item.kind==='human'),'GOAL_CRITERIA_UNMET','仍有未满足或需要人工确认的验收项');
+    await this.supersessions(state,scope,graph,draft,members,knowledgeRevision);
+  }
+  private async supersessions(state:DispatchState,scope:DispatchScope,graph:GraphSnapshot,draft:GoalReviewInput,cache:Map<string,Promise<RunSummary>>,knowledgeRevision:string){
+    const entries=draft.superseded,ids=entries.map(item=>item.taskId);
+    check(new Set(ids).size===ids.length,'GOAL_REVIEW_INVALID','同一失败任务不能重复指定替代关系');
+    const edges=new Map(entries.map(item=>[item.taskId,item.replacementTaskIds])),colors=new Map<string,'visiting'|'done'>();
+    // 共享子路径只遍历一次，防止模型构造稠密无环关系导致指数递归。
+    const visit=(id:string)=>{check(colors.get(id)!=='visiting','GOAL_SUPERSESSION_CYCLE','任务替代关系不能成环');if(colors.get(id)==='done')return;colors.set(id,'visiting');for(const next of edges.get(id)??[])visit(next);colors.set(id,'done')};
+    for(const id of ids)visit(id);
+    for(const item of entries){
+      const source=graph.tasks.find(task=>task.taskId===item.taskId);
+      const stale=source?.status==='result_ready'&&state.runs?.some(run=>run.binding.runId===source.result?.runId&&run.prepared.knowledgeRevision!==knowledgeRevision);
+      check(source&&source.scopeId===scope.scopeId&&(['failed','blocked','cancelled','interrupted'].includes(source.status)||stale),'GOAL_SUPERSESSION_INVALID','只能替代本周期已失败、阻塞或知识基线过期的任务');
+      const covered=new Set<string>();
+      for(const id of item.replacementTaskIds){
+        const replacement=graph.tasks.find(task=>task.taskId===id);
+        check(replacement&&replacement.scopeId===scope.scopeId&&graph.tasks.indexOf(replacement)>graph.tasks.indexOf(source),'GOAL_SUPERSESSION_INVALID','替代任务必须是本周期后续创建的任务');
+        for(const module of replacement.modules)covered.add(module.moduleId);
+        if(!cache.has(id))cache.set(id,this.member(state,scope,graph,replacement,knowledgeRevision));await cache.get(id);
+      }
+      check(source.modules.every(module=>covered.has(module.moduleId)),'GOAL_SUPERSESSION_INVALID','替代任务集合没有覆盖原目标模块');
+    }
+    if(draft.decision==='complete'){
+      const tasks=graph.tasks.filter(task=>task.scopeId===scope.scopeId);
+      check(!tasks.some(task=>task.activeRunId||['planned','queued','running','waiting'].includes(task.status))&&!state.runs?.some(run=>tasks.some(task=>task.taskId===run.binding.taskId)&&['starting','running'].includes(run.status)),'GOAL_WORK_PENDING','本周期还有未结束的任务或运行');
+      for(const task of tasks)if(task.status==='result_ready'&&!ids.includes(task.taskId)){
+        if(!cache.has(task.taskId))cache.set(task.taskId,this.member(state,scope,graph,task,knowledgeRevision));await cache.get(task.taskId);
+      }else check(ids.includes(task.taskId),'GOAL_WORK_FAILED','本周期失败任务尚未被真实成功任务替代');
+    }
+  }
+
+  /** 工具阶段仅登记审阅请求；当前 review 工具尚未结束，完整运行终态留到 validateCompletion 核验。 */
+  async review(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,raw:GoalReviewInput):Promise<DispatchScope>{
+    const draft=this.parse(goalReviewInputSchema,raw),command=this.command('goal.review',identity,scopeId,runId,commandId,draft);
+    return this.store.transact(command,async state=>{
+      const scope=this.scope(state,identity,scopeId),goal=this.editable(scope,draft.expectedRevision),graph=this.graph(state,scope);
+      check(goal.plan,'GOAL_PLAN_REQUIRED','审阅前必须建立本轮目标计划');
+      const main=await this.logs().inspectMain(scope.rootSessionId,runId);this.main(state,main,scope,graph,runId);
+      const snapshot=await this.owner.read();await this.evidence(state,scope,graph,draft,main,snapshot.revision);
+      check((await this.owner.read()).revision===snapshot.revision,'GOAL_KNOWLEDGE_CHANGED','审阅期间知识版本发生变化');
+      const {expectedRevision:_,...body}=draft,review:ScopeGoalReview={...body,revision:goal.revision+1,planRevision:goal.plan.revision,runId,recordedAt:new Date().toISOString(),knowledgeRevision:snapshot.revision,graphCursor:cursor(graph),observedSeq:main.events.at(-1)?.seq??0,lastEffectSeq:lastEffect(main)};
+      const next={...scope,goal:{...goal,revision:goal.revision+1,review}};return {scopes:[next],receipt:next};
+    });
+  }
+  /** 在父级关闭事务中调用，不重入 store；复核同一主运行真实终态及完成申请之后的图/知识/副作用变化。 */
+  async validateCompletion(state:DispatchState,scope:DispatchScope,summary:RunSummary):Promise<void>{
+    this.logs();const graph=this.graph(state,scope),goal=scope.goal,review=goal?.review;
+    check(scope.status==='active'&&goal&&!goal.blocked&&goal.plan&&review?.decision==='complete'&&review.revision===goal.revision&&review.planRevision===goal.plan.revision,'GOAL_REVIEW_REQUIRED','目标尚未有当前版本的完成审阅');
+    this.main(state,summary,scope,graph,review.runId);
+    check(summary.status==='completed'&&!summary.unresolvedTools.length,'GOAL_MAIN_UNSETTLED','主运行尚未完整结束');
+    check(sameGoalValue(review.graphCursor,cursor(graph)),'GOAL_GRAPH_CHANGED','完成申请后任务图已变化，请重新审阅');
+    check(lastEffect(summary)===review.lastEffectSeq&&!summary.events.some(event=>event.seq>review.observedSeq&&event.type==='tool.allowed'&&Array.isArray(event.data.effects)&&event.data.effects.some(effect=>effects.has(String(effect)))),'GOAL_EFFECT_CHANGED','完成申请后又发生可能改变产物的操作');
+    const snapshot=await this.owner.read();check(snapshot.revision===review.knowledgeRevision,'GOAL_KNOWLEDGE_CHANGED','完成申请后知识版本已变化');
+    await this.evidence(state,scope,graph,{...review,expectedRevision:goal.revision},summary,snapshot.revision);
+    check((await this.owner.read()).revision===snapshot.revision,'GOAL_KNOWLEDGE_CHANGED','完成核验期间知识版本已变化');
+  }
+  /** 只有可信协调器调用；失败原因持久化但不伪造目标输入、运行结果或图事件。 */
+  async block(identity:GraphIdentity,scopeId:string,reason:string):Promise<DispatchScope>{
+    const text=this.parse(z.string().trim().min(1).max(16000),reason),command={commandId:'goal-block-'+hash(json({...identity,scopeId})),fingerprint:hash(json({...identity,scopeId,reason:text}))};
+    return this.store.transact(command,async state=>{
+      const scope=this.scope(state,identity,scopeId);check(scope.status==='active','GOAL_CLOSED','目标周期已经结束');
+      if(!scope.goal||scope.goal.blocked)return {receipt:scope};
+      const next={...scope,goal:{...scope.goal,blocked:{reason:text,at:new Date().toISOString()}}};return {scopes:[next],receipt:next};
+    });
+  }
+}

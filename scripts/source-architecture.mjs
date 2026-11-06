@@ -1,4 +1,5 @@
-/** Source layout documentation. Run after reviewing actual boundaries; --check detects drift. */
+/** 作用定位：按实际源码生成目录清单与现状类图，并独立附加 CONTRACT.md 的设计契约与落地范围。
+ * 设计原因：让未来接口与现状结构分开维护，避免重新生成类图时丢失契约；--check 同时检查两部分漂移。 */
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
@@ -11,20 +12,20 @@ const scope={
  'src/backend/core/foundation':'少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。',
  'src/backend/core/brain':'引擎无关的执行循环与事件契约。工具决策先落盘，完成或未知结果生成运行回执；审批后复核停止，恢复不自动重放未知操作。',
  'src/backend/core/brain/llm':'公开模型参数、能力元数据及运行快照端口。实际配置文件和加密凭据由 main/persistence/settings 持有。',
- 'src/backend/core/brain/pi':'Pi 协议、临时桥与运行参数。一次性 gate 连接统一授权，指引明确业务与知识共用运行权限；保留图片、恢复及长度错误报告。',
+ 'src/backend/core/brain/pi':'Pi 协议、临时桥与运行参数。一次性 gate 连接统一授权，指引明确业务与知识共用运行权限；保留图片、恢复及长度错误报告。工具结果写入会话前校验，协议错误保留错误码且不重放操作。',
  'src/backend/core/connectors':'链接器定义、查询与唯一身份检查；当前不执行外部插件。',
  'src/backend/core/knowledge':'知识快照、校验、领域查询和对象变更规划。物理事务通过 KnowledgeWorkspace 注入，预览缓存通过 ObjectStorage 注入。Team/Workspace 仅依赖本目录的只读快照辅助，不依赖查询门面或工具注册。',
  'src/backend/core/policy':'内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；外部 MCP 保留独立凭据与写开关，不声称操作系统隔离。',
  'src/backend/core/tasks':'任务定义和待执行消息契约。区分 taskId 与 runId；当前不包含业务自动验收或 Workflow 状态机。',
  'src/backend/core/team':'Team、小组、Agent 和父链 Skill 的只读领域视图；通过版本固定的快照解析，不依赖工作区进程。',
- 'src/backend/core/tools':'工具 Schema、版本、副作用、调用决策、结构化提问及回执。回执绑定运行身份与输入结果哈希；注册和发现不授予执行权限。',
+ 'src/backend/core/tools':'工具 Schema、版本、副作用、调用决策、结构化提问及回执；统一校验结果的 JSON 传输快照，拒绝缺失文本等无效内容。回执绑定运行身份与输入结果哈希；注册和发现不授予执行权限。',
  'src/backend/core/workspace':'领域工程、Module 与本模块 Workflow 的只读视图；与 main/workspace 的本机生命周期分开。',
  'src/bridge/contracts':'可序列化的 IPC 数据与公开展示契约。可以重导出 Core 类型及纯格式化函数，不暴露密钥或平台存储实现。',
  'src/backend/scheduler-engine':'工作区调度。装配团队上下文与模型工具，协调会话、运行、用户问题和队列；只依赖自身及 Core。',
  'src/backend/scheduler-engine/context':'准备并冻结明确选择的 Agent、模块、Skill 和 Workflow。直接调用领域查询，不经模型工具协议。',
  'src/backend/scheduler-engine/conversation':'主 Agent 指引、用户问题、任务内操作确认及消息队列。业务与知识共用本轮审批，停止和结束清理临时授权；队列按提交版本发布增量。',
  'src/backend/scheduler-engine/execution':'执行工厂与工作区运行管理器。存储、租约和平台访问策略由应用注入；管理历史、队列续接、启动与恢复。',
- 'src/backend/scheduler-engine/tools':'把 Core 知识能力暴露为 cbim_ 工具。内置 Loop 与可选 MCP 复用参数、身份和领域检查；内部 Loop 使用单次 gate 授权，外部 MCP 仍核验写凭据与实例开关。',
+ 'src/backend/scheduler-engine/tools':'把 Core 知识能力暴露为 cbim_ 工具。内置 Loop 与可选 MCP 复用参数、身份和领域检查；内部 Loop 使用单次 gate 授权，外部 MCP 仍核验写凭据与实例开关。返回结果须通过统一协议校验；维护任务 ID 与对话、成员派发任务区分，取消未知 ID 明确报错。',
  'src/backend/main':'Electron 入口与应用装配。管理工作区生命周期、模型存储、平台能力和调度实例，具体 action 在 ipc 中路由。',
  'src/backend/main/commands':'CLI 入口，复用应用和调度，不拥有第二套领域规则。',
  'src/backend/main/ipc':'应用 action 路由。调用显式携带工作区和任务身份，桌面发送方核验仍在 Electron 接入处执行。',
@@ -110,6 +111,8 @@ for(const d of directories){
  out+='\n## 子目录导航\n\n'+(children.length?children.map(c=>`- [${path.posix.basename(c)}/](${path.posix.basename(c)}/ARCHITECTURE.md)：${scope[c]}`).join('\n'):'无子目录。')+'\n';
  if(d!=='src')out+='\n[返回上层](../ARCHITECTURE.md)。\n';
  out+='\n每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。\n';
+ const contract=d+'/CONTRACT.md';
+ if(fs.existsSync(contract))out+='\n## 设计契约 v1 与落地范围\n\n以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。\n\n'+fs.readFileSync(contract,'utf8').trim()+'\n';
  const target=d+'/ARCHITECTURE.md';if(!fs.existsSync(target)||fs.readFileSync(target,'utf8')!==out){changed.push(target);if(!process.argv.includes('--check'))fs.writeFileSync(target,out)}
 }
 console.log(`${directories.length} 个目录，${files.length} 个代码/样式文件；${changed.length} 份架构文档${process.argv.includes('--check')?'存在差异':'已更新'}。`);

@@ -1,6 +1,6 @@
 /**
  * 作用定位：本机工作区实例：身份、锁、监听、维护任务及可选传输生命周期。
- * 设计原因：知识操作委托 KnowledgeStore 保持事务边界；工作区负责打开关闭顺序，支持不发布 MCP 的内部服务模式。
+ * 设计原因：知识操作委托 KnowledgeStore 保持事务边界；工作区负责打开关闭顺序，支持不发布 MCP 的内部服务模式。 维护任务按实例隔离，取消不存在的任务明确报错，不能把对话任务误报为已取消。
  */
 import fs from 'node:fs/promises';
 import {FileObjectStorage} from '../persistence/knowledge/object-storage';
@@ -56,7 +56,16 @@ export class Workspace implements KnowledgeWorkspace {
     this.assert();const id=randomUUID(),controller=new AbortController();this.controllers.set(id,controller);const task:TaskView={id,workspaceId:this.entry.id,name,state:'running',progress:'读取知识并检查规则'};this.tasks.set(id,task);
     void (async()=>{try{await new Promise(r=>setTimeout(r,0));if(controller.signal.aborted)fail('CANCELLED','任务已取消');const snap=await this.snapshot();if(controller.signal.aborted)fail('CANCELLED','任务已取消');if(name==='reindex'){task.progress='提交索引；此阶段等待完成后关闭';task.result=await this.commit({workspaceId:this.entry.id,instanceId:this.instanceId,revision:snap.revision,requestId:id,changes:[]})}else task.result=snap.validation;task.state='completed';task.progress='检查结束：架构判断仍需团队 review'}catch(e:any){task.state=e.code==='CANCELLED'?'cancelled':'failed';task.error=e.message}finally{this.controllers.delete(id);await atomic(path.join(this.paths.local(this.entry.id,'task-records'),id+'.json'),json(task)).catch(()=>{})}})();return task;
   }
-  cancelTask(id:string){this.controllers.get(id)?.abort();return this.tasks.get(id)}
+  /**
+   * 仅取消本实例的知识检查或索引维护任务；对话和成员派发任务不在此任务表中。
+   * 未运行或不存在时抛出明确错误。返回当前真实状态：abort 只是取消请求，已进入提交的事务可继续完成；终态重复取消保持原结果。
+   */
+  cancelTask(id:string):TaskView{
+    this.assert();const task=this.tasks.get(id);
+    if(!task||task.workspaceId!==this.entry.id)fail('TASK_NOT_FOUND','当前工作区实例中不存在该维护任务；此接口仅支持知识检查或索引维护任务，不接受对话或成员派发任务 ID');
+    if(task.state==='running')this.controllers.get(id)?.abort();
+    return task;
+  }
   async localData(kind:'memory'|'task-records'|'logs'){const dir=this.paths.local(this.entry.id,kind);await fs.mkdir(dir,{recursive:true});return {source:'local',nature:kind,workspaceId:this.entry.id,files:await fs.readdir(dir)}}
   private async log(event:string,details:Record<string,unknown>={}){const directory=this.paths.local(this.entry.id,'logs');await fs.mkdir(directory,{recursive:true});await fs.appendFile(path.join(directory,'events.ndjson'),JSON.stringify({time:new Date().toISOString(),workspaceId:this.entry.id,instanceId:this.instanceId,event,...details})+'\n',{mode:0o600}).catch(()=>{})}
   private async clearDiscovery(){for(const p of [this.paths.discovery(this.entry.id),path.join(this.paths.project(this.entry.id),'credentials.json')])if(await exists(p)){try{const d=await readJson(p);if(d.instanceId===this.instanceId)await fs.rm(p,{force:true})}catch{}}}

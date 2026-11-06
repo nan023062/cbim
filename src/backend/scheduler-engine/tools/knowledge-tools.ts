@@ -1,6 +1,6 @@
 /**
  * 作用定位：调度层知识工具适配，向内部大脑和可选 MCP 暴露相同工具。
- * 设计原因：声明工具副作用并在授权前解析参数；内部运行采用一次调用授权，外部 MCP 保留凭据与写开关，二者复用领域事务而不修改全局权限。
+ * 设计原因：声明工具副作用并在授权前解析参数；内部运行采用一次调用授权，外部 MCP 保留凭据与写开关，二者复用领域事务而不修改全局权限。 返回值通过统一协议校验，避免未定义结果进入会话。
  */
 import {z} from 'zod';
 import {ToolRegistry,type ToolDefinition} from '../../core/tools/registry';
@@ -10,6 +10,7 @@ import {Builtins,builtinSkills} from '../../core/knowledge/builtins';
 import {KnowledgeQueries} from '../../core/knowledge/knowledge-queries';
 import {ObjectCrud,objectOperation} from '../../core/knowledge/object-crud';
 import type {ToolEffect} from '../../core/tools/types';
+import {jsonToolResult,validateToolResult} from '../../core/tools/results';
 const identity={workspaceId:z.string(),instanceId:z.string()};
 export class KnowledgeTools {
   private readonly registry=new ToolRegistry<boolean>();
@@ -20,10 +21,10 @@ export class KnowledgeTools {
     const queries=this.queries=new KnowledgeQueries(workspace);
     const objects=new ObjectCrud(workspace);
     const register=(name:string,config:{description?:string;inputSchema:z.ZodRawShape;effects?:readonly ToolEffect[]},execute:ToolDefinition<boolean>['execute'])=>{this.registry.register({name,version:1,effects:['read'],...config,execute})};
-    const wrap=(_name:string,fn:(args:any,write:boolean)=>Promise<unknown>|unknown)=>async(args:any,write:boolean)=>{
-      const value=await fn(args,write);return {content:[{type:'text' as const,text:JSON.stringify(value)}]};
+    const wrap=(name:string,fn:(args:any,write:boolean)=>Promise<unknown>|unknown)=>async(args:any,write:boolean)=>{
+      return jsonToolResult(name,await fn(args,write));
     };
-    register('cbim_workspace_identity',{description:'核验工程与运行实例。不能启动工作区。',inputSchema:{}},async(_args,write)=>({content:[{type:'text',text:JSON.stringify({workspaceId:workspace.entry.id,root:workspace.entry.path,instanceId:workspace.instanceId,state:workspace.state,writeEnabled:write})}]}));
+    register('cbim_workspace_identity',{description:'核验工程与运行实例。不能启动工作区。',inputSchema:{}},async(_args,write)=>jsonToolResult('cbim_workspace_identity',{workspaceId:workspace.entry.id,root:workspace.entry.path,instanceId:workspace.instanceId,state:workspace.state,writeEnabled:write}));
     register('cbim_knowledge_snapshot',{description:'读取正式知识、版本、模块树与校验结果；不包含本地记忆。',inputSchema:identity},wrap('cbim_knowledge_snapshot',()=>workspace.snapshot()));
     register('cbim_knowledge_search',{inputSchema:{...identity,query:z.string().max(200)}},wrap('cbim_knowledge_search',async args=>{const snapshot=await workspace.read();return {...snapshot,files:snapshot.files.filter(f=>f.path.includes(args.query)||f.text.toLowerCase().includes(args.query.toLowerCase()))}}));
     register('cbim_builtin_catalog',{description:'列出 CBIM 内置知识治理 Skill、通用规范与 Schema，返回可读取 ID、内容版本和来源；只读。',inputSchema:identity},wrap('cbim_builtin_catalog',()=>builtins.catalog()));
@@ -41,9 +42,9 @@ export class KnowledgeTools {
     register('cbim_knowledge_preview',{effects:['preview'],description:'校验修改并预览影响，不写入。',inputSchema:changeSchema},wrap('cbim_knowledge_preview',args=>workspace.preview(args)));
     register('cbim_knowledge_commit',{effects:['knowledge-write'],description:'内部 Loop 须取得本轮写授权；外部 MCP 需写开关及写令牌。两者均核对读取版本与幂等请求标识。',inputSchema:changeSchema},wrap('cbim_knowledge_commit',(args,write)=>{if(!write)fail('FORBIDDEN','当前调用未获得知识写入权限');return workspace.commit(args)}));
     register('cbim_knowledge_move_preview',{effects:['preview'],inputSchema:{...identity,from:z.string(),to:z.string().nullable()}},wrap('cbim_knowledge_move_preview',async args=>workspace.preview(await workspace.planMove(await workspace.read(),args.from,args.to))));
-    register('cbim_rules_validate',{effects:['maintenance'],inputSchema:identity},wrap('cbim_rules_validate',()=>workspace.startTask('validate')));
-    register('cbim_task_status',{inputSchema:{...identity,taskId:z.string()}},wrap('cbim_task_status',args=>workspace.tasks.get(args.taskId)||{state:'not_found'}));
-    register('cbim_task_cancel',{effects:['maintenance'],inputSchema:{...identity,taskId:z.string()}},wrap('cbim_task_cancel',args=>workspace.cancelTask(args.taskId)));
+    register('cbim_rules_validate',{effects:['maintenance'],description:'启动本工作区知识规则检查，返回维护任务 ID。它不是对话任务或团队派发任务。',inputSchema:identity},wrap('cbim_rules_validate',()=>workspace.startTask('validate')));
+    register('cbim_task_status',{description:'查询本工作区知识检查/索引维护任务，taskId 使用维护接口返回的 ID；不用于主对话、执行计划或成员派发任务。找不到返回 not_found。',inputSchema:{...identity,taskId:z.string()}},wrap('cbim_task_status',args=>workspace.tasks.get(args.taskId)||{state:'not_found'}));
+    register('cbim_task_cancel',{effects:['maintenance'],description:'请求取消本工作区知识检查/索引维护任务；只接受维护接口返回的 taskId，不接受主对话、执行计划或成员派发任务 ID。不存在报 TASK_NOT_FOUND；已结束返回原状态，取消请求不代表事务已经回滚。',inputSchema:{...identity,taskId:z.string()}},wrap('cbim_task_cancel',args=>workspace.cancelTask(args.taskId)));
   }
   /** 返回实际参数 Schema；内部引擎无需连接 MCP 来发现工具。 */
   list(){return this.registry.list()}
@@ -67,7 +68,7 @@ export class KnowledgeTools {
     const {tool,args}=this.registry.resolve(name,input);
     if(name==='cbim_workspace_identity')this.workspace.assert();
     else this.workspace.assert(args as {workspaceId:string;instanceId:string});
-    return tool.execute(args,write);
+    return validateToolResult(name,await tool.execute(args,write));
   }
 }
 const services=new WeakMap<KnowledgeWorkspace,KnowledgeTools>();

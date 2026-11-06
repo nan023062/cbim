@@ -69,7 +69,7 @@ class N_src_backend_core_brain_types_ts["types.ts"] {
 ## 子目录导航
 
 - [llm/](llm/ARCHITECTURE.md)：公开模型参数、能力元数据及运行快照端口。实际配置文件和加密凭据由 main/persistence/settings 持有。
-- [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数。一次性 gate 连接统一授权，指引明确业务与知识共用运行权限；保留图片、恢复及长度错误报告。
+- [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数。一次性 gate 连接统一授权，指引明确业务与知识共用运行权限；保留图片、恢复及长度错误报告。工具结果写入会话前校验，协议错误保留错误码且不重放操作。
 
 [返回上层](../ARCHITECTURE.md)。
 

@@ -28,5 +28,6 @@ export interface KnowledgeWorkspace {
   commit(request:ChangeRequest):Promise<KnowledgeCommit>;
   planMove(snapshot:Snapshot,from:string,to:string|null):Promise<ChangeRequest>;
   startTask(name:'validate'|'reindex'):TaskView;
-  cancelTask(id:string):TaskView|undefined;
+  /** 仅接受本实例的维护任务 ID；未运行或未知任务须抛错，返回当前真实状态而非承诺已停止。终态重复请求保持原结果。 */
+  cancelTask(id:string):TaskView;
 }

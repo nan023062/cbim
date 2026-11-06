@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Pi 协议、临时桥与运行参数。一次性 gate 连接统一授权，指引明确业务与知识共用运行权限；保留图片、恢复及长度错误报告。
+Pi 协议、临时桥与运行参数。一次性 gate 连接统一授权，指引明确业务与知识共用运行权限；保留图片、恢复及长度错误报告。工具结果写入会话前校验，协议错误保留错误码且不重放操作。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -39,7 +39,7 @@ class N_src_backend_core_brain_pi_bridge_ts_KnowledgeBridge["KnowledgeBridge"] {
 N_src_backend_core_brain_pi_bridge_ts ..> N_src_backend_core_brain_pi_bridge_ts_KnowledgeBridge : 声明
 ```
 
-直接依赖：[../types.ts](../types.ts)。
+直接依赖：[../types.ts](../types.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)。
 
 ### engine.ts
 

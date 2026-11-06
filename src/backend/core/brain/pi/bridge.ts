@@ -1,10 +1,12 @@
 /**
  * 作用定位：大脑 执行层：内部知识 Schema/调用的本机临时桥及 Pi 扩展，工具授权先落盘再放行。
- * 设计原因：把知识服务 Schema 与一次性授权交给受控扩展；每轮根据实际活动工具刷新能力指引，避免沿用历史权限判断。每个模型回合及会话加载后以独立只读通道上报上下文计量及发送前实际输出额度；跨进程桥不依赖 MCP 协议。
+ * 设计原因：把知识服务 Schema 与一次性授权交给受控扩展；工具结果在进入 Pi 历史前再次检查，错误保留错误码而不重放操作。每轮刷新实际活动工具指引，只接受当前运行的随机凭据，并以独立只读通道上报上下文与请求额度。
  */
 import http from 'node:http';
 import {randomBytes,timingSafeEqual} from 'node:crypto';
 import type {ToolCall,ToolDecision} from '../types';
+import {validateToolResult} from '../../tools/results';
+import {Fault} from '../../foundation/errors';
 
 /** 从注入知识服务清单返回的工具 Schema，禁止仅凭名称伪造参数。 */
 export interface KnowledgeToolSchema {name:string;description?:string;inputSchema:Record<string,unknown>}
@@ -46,10 +48,10 @@ export async function openBridge(knowledge:KnowledgeBridge,beforeTool:(call:Tool
       }else{
         const grant=grants.get(call.id);grants.delete(call.id);
         if(!names.has(call.name)||!grant||grant.name!==call.name||grant.input!==JSON.stringify(call.input))throw Error('工具调用未获本次执行授权');
-        result=await knowledge.call(call.name,call.input,controller.signal);
+        result=validateToolResult(call.name,await knowledge.call(call.name,call.input,controller.signal));
       }
       res.setHeader('Content-Type','application/json');res.end(JSON.stringify(result));
-    }catch(error){res.writeHead(400,{'Content-Type':'application/json'}).end(JSON.stringify({error:error instanceof Error?error.message:String(error)}))}
+    }catch(error){res.writeHead(400,{'Content-Type':'application/json'}).end(JSON.stringify({code:error instanceof Fault?error.code:'TOOL_ERROR',error:error instanceof Error?error.message:String(error)}))}
   });
   await new Promise<void>((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)});
   const port=(server.address() as import('node:net').AddressInfo).port;
@@ -63,7 +65,7 @@ export default async function(pi) {
   delete process.env.CBIM_LOOP_BRIDGE_URL; delete process.env.CBIM_LOOP_BRIDGE_TOKEN;
   async function request(route, body, signal) {
     const response=await fetch(url+route,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:signal||AbortSignal.timeout(30000)});
-    const value=await response.json();if(!response.ok)throw Error(value.error||'CBIM bridge unavailable');return value;
+    const value=await response.json();if(!response.ok)throw Error((value.code?value.code+': ':'')+(value.error||'CBIM bridge unavailable'));return value;
   }
   // 原生上下文是估计值，压缩后未知必须传 null；不发送提示词或推理正文。
   async function reportContext(_event,ctx){try{const usage=ctx.getContextUsage();if(usage)await request('/context',{tokens:usage.tokens,contextWindow:usage.contextWindow})}catch{}}

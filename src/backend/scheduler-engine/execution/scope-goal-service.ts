@@ -1,6 +1,6 @@
 /**
  * 作用定位：在派发事务中保存本轮目标计划与结构化审阅，并核验真实日志、角色和模块基线。
- * 设计原因：模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用；安全等待检查点还核验所有成员没有未知工具，日志通过只读端口注入。
+ * 设计原因：模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用；用户补充使旧计划过期而不丢 human 项。安全等待还核验成员没有未知工具，日志通过只读端口注入。
  * 职责边界：不关闭周期、不释放成员、不运行工具；知识和派发日志不是跨存储原子事务，证据也不是外部产物指纹。
  */
 import {z} from 'zod';
@@ -14,7 +14,7 @@ import type {DispatchRun} from '../../core/tasks/dispatch-execution';
 import type {DispatchTaskInput} from '../../core/tasks/dispatch-commands';
 import {dispatchScopeWaitSchema,type DispatchScope} from '../../core/tasks/dispatch-scope';
 import type {GraphIdentity,GraphSnapshot,TaskNode} from '../../core/tasks/graph-types';
-import {goalPlanInputSchema,goalReviewInputSchema,sameGoalValue,scopeGoalDecisionLimit,type DispatchScopeGoal,type GoalPlanInput,type GoalReviewInput,type ScopeGoalReview} from '../../core/tasks/scope-goal';
+import {goalPlanInputSchema,goalReviewInputSchema,sameGoalValue,scopeGoalDecisionLimit,goalInputRevision,goalNeedsReplan,type DispatchScopeGoal,type GoalPlanInput,type GoalReviewInput,type ScopeGoalReview} from '../../core/tasks/scope-goal';
 import {resolveConversationAgent,resolveDispatchAgent,resolveDispatchModules} from '../context/dispatch-context';
 
 /** 端口只按可信已登记身份读取 canonical 日志；不能接受模型提供路径或摘要。 */
@@ -41,7 +41,7 @@ export class ScopeGoalService {
   }
   private graph(state:DispatchState,scope:DispatchScope){const graph=state.graphs.find(value=>value.identity.rootSessionId===scope.rootSessionId&&value.identity.workspaceId===scope.workspaceId);check(graph,'GOAL_IDENTITY','目标缺少主会话任务图');return graph}
   private editable(scope:DispatchScope,expectedRevision:number){
-    check(scope.status!=='waiting','GOAL_WAITING','目标已安全等待，当前没有续跑入口；请保留或显式停止');
+    check(scope.status!=='waiting','GOAL_WAITING','目标已安全等待，请由用户显式补充并继续或停止');
     check(scope.status==='active','GOAL_CLOSED','目标周期已经结束');
     check(scope.goal,'GOAL_LEGACY','旧周期没有可信原始输入，不能补造目标');
     check(!scope.goal.blocked,'GOAL_BLOCKED','目标已记录阻塞，不再接受决策');
@@ -73,7 +73,7 @@ export class ScopeGoalService {
         assignments.push({...assignment,agentName:agent.name,teamId:agent.teamId,moduleNames:modules.map(module=>module.name)});
       }
       check((await this.owner.read()).revision===snapshot.revision,'GOAL_KNOWLEDGE_CHANGED','规划期间知识已变化，请重新读取');
-      const {expectedRevision:_,...body}=draft,newGoal:DispatchScopeGoal={revision:goal.revision+1,input:goal.input,plan:{...body,assignments,revision:goal.revision+1,runId,recordedAt:new Date().toISOString(),knowledgeRevision:snapshot.revision,graphCursor:cursor(graph)}};
+      const {expectedRevision:_,...body}=draft,newGoal:DispatchScopeGoal={revision:goal.revision+1,...(goal.inputRevision===undefined?{}:{inputRevision:goal.inputRevision}),input:goal.input,plan:{...body,assignments,revision:goal.revision+1,inputRevision:goalInputRevision(goal),runId,recordedAt:new Date().toISOString(),knowledgeRevision:snapshot.revision,graphCursor:cursor(graph)}};
       const next={...scope,goal:newGoal};return {scopes:[next],receipt:next};
     });
   }
@@ -86,6 +86,7 @@ export class ScopeGoalService {
     check(scope.status==='active'&&!scope.goal.blocked,'GOAL_BLOCKED','周期已经关闭或阻塞');
     const plan=scope.goal.plan;
     check(plan,'GOAL_PLAN_REQUIRED','正式派发前请先保存本轮目标计划');
+    check(!goalNeedsReplan(scope.goal),'GOAL_REPLAN_REQUIRED','用户已补充目标，必须按最新输入重新规划再派发');
     check(!scope.goal.review,'GOAL_REPLAN_REQUIRED','已有目标审阅，请显式重规划后再派发');
     check(plan.knowledgeRevision===knowledgeRevision,'GOAL_KNOWLEDGE_CHANGED','计划知识基线已变化，请重新规划');
     check(plan.assignments.some(item=>item.agentId===input.assigneeAgentId&&sameSet(item.moduleIds,input.moduleIds)),'GOAL_ASSIGNMENT_MISMATCH','派发角色和模块集合不在当前目标计划中');
@@ -184,10 +185,11 @@ export class ScopeGoalService {
     return this.store.transact(command,async state=>{
       const scope=this.scope(state,identity,scopeId),goal=this.editable(scope,draft.expectedRevision),graph=this.graph(state,scope);
       check(goal.plan,'GOAL_PLAN_REQUIRED','审阅前必须建立本轮目标计划');
+      check(!goalNeedsReplan(goal),'GOAL_REPLAN_REQUIRED','用户已补充目标，必须按最新输入重新规划再审阅');
       const main=await this.logs().inspectMain(scope.rootSessionId,runId);this.main(state,main,scope,graph,runId);
       const snapshot=await this.owner.read();await this.evidence(state,scope,graph,draft,main,snapshot.revision);
       check((await this.owner.read()).revision===snapshot.revision,'GOAL_KNOWLEDGE_CHANGED','审阅期间知识版本发生变化');
-      const {expectedRevision:_,...body}=draft,review:ScopeGoalReview={...body,revision:goal.revision+1,planRevision:goal.plan.revision,runId,recordedAt:new Date().toISOString(),knowledgeRevision:snapshot.revision,graphCursor:cursor(graph),observedSeq:main.events.at(-1)?.seq??0,lastEffectSeq:lastEffect(main)};
+      const {expectedRevision:_,...body}=draft,review:ScopeGoalReview={...body,revision:goal.revision+1,inputRevision:goalInputRevision(goal),planRevision:goal.plan.revision,runId,recordedAt:new Date().toISOString(),knowledgeRevision:snapshot.revision,graphCursor:cursor(graph),observedSeq:main.events.at(-1)?.seq??0,lastEffectSeq:lastEffect(main)};
       const next={...scope,goal:{...goal,revision:goal.revision+1,review}};return {scopes:[next],receipt:next};
     });
   }
@@ -195,6 +197,7 @@ export class ScopeGoalService {
   async validateCompletion(state:DispatchState,scope:DispatchScope,summary:RunSummary):Promise<void>{
     this.logs();const graph=this.graph(state,scope),goal=scope.goal,review=goal?.review;
     check(scope.status==='active'&&goal&&!goal.blocked&&goal.plan&&review?.decision==='complete'&&review.revision===goal.revision&&review.planRevision===goal.plan.revision,'GOAL_REVIEW_REQUIRED','目标尚未有当前版本的完成审阅');
+    check(!goalNeedsReplan(goal)&&goalInputRevision(review)===goalInputRevision(goal),'GOAL_REPLAN_REQUIRED','完成审阅没有覆盖最新用户补充');
     this.main(state,summary,scope,graph,review.runId);
     check(summary.status==='completed'&&!summary.unresolvedTools.length,'GOAL_MAIN_UNSETTLED','主运行尚未完整结束');
     check(sameGoalValue(review.graphCursor,cursor(graph)),'GOAL_GRAPH_CHANGED','完成申请后任务图已变化，请重新审阅');
@@ -210,6 +213,7 @@ export class ScopeGoalService {
   async validateWaiting(state:DispatchState,scope:DispatchScope,summary:RunSummary,mainRunIds:string[]):Promise<void>{
     const logs=this.logs(),graph=this.graph(state,scope),goal=scope.goal,review=goal?.review;
     check(scope.status==='active'&&goal&&!goal.blocked&&goal.plan&&review?.decision==='awaiting_user'&&review.revision===goal.revision&&review.planRevision===goal.plan.revision,'GOAL_WAIT_REQUIRED','只有当前版本的等待用户审阅可以建立安全检查点');
+    check(!goalNeedsReplan(goal)&&goalInputRevision(review)===goalInputRevision(goal),'GOAL_REPLAN_REQUIRED','等待审阅没有覆盖最新用户补充');
     const proof=dispatchScopeWaitSchema.safeParse({waitId:'validation',reason:review.reason,createdAt:new Date().toISOString(),runId:summary.runId,goalRevision:goal.revision,graphCursor:review.graphCursor,knowledgeRevision:review.knowledgeRevision,mainRunIds});
     check(proof.success,'GOAL_WAIT_RUNS','等待检查点必须包含当前主运行，以及不重复且最多 32 个真实主运行 ID');
     this.main(state,summary,scope,graph,review.runId);

@@ -12,6 +12,7 @@
 .scope-goal-muted,.scope-goal-metadata{color:var(--muted)}.scope-goal-panel p{margin:6px 0;overflow-wrap:anywhere}
 .scope-goal-panel .scope-goal-blocked{border-left:2px solid var(--warning);padding:6px 10px;color:var(--warning);white-space:pre-wrap}
 .scope-goal-waiting{border-left:2px solid var(--warning);padding:2px 10px;margin:8px 0}.scope-goal-wait-reason{white-space:pre-wrap}
+.scope-continuation{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}.scope-continuation textarea{width:100%;min-height:90px;max-height:260px;resize:vertical;border:1px solid var(--line);border-radius:7px;padding:9px 11px;background:var(--bg);color:var(--text);font:inherit;line-height:1.6}.scope-continuation textarea[readonly]{color:var(--muted)}.scope-continuation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:9px 0}.scope-continuation [role=alert]{color:var(--danger)}.scope-continuation details{font-size:10px;color:var(--muted)}
 .scope-goal-alert{color:var(--danger)}.scope-goal-details{margin-top:8px}.scope-goal-details>summary{cursor:pointer;color:var(--muted);font-size:11px}
 .scope-goal-section{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}.scope-goal-panel h4{margin:0 0 7px;font-size:12px}.scope-goal-panel h5{font-size:11px;margin:12px 0 5px}
 .scope-goal-panel small{font-size:10px;color:var(--muted);font-weight:400}.scope-goal-panel ul,.scope-goal-panel ol{padding-left:20px;margin:5px 0}.scope-goal-panel li{overflow-wrap:anywhere;margin:7px 0}

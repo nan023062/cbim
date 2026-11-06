@@ -1,6 +1,6 @@
 /**
  * 作用定位：大脑 执行层：内部知识 Schema/调用的本机临时桥及 Pi 扩展，工具授权先落盘再放行。
- * 设计原因：把工具 Schema、一次性授权和可信回传入口交给受控扩展；成员数据写成 custom 消息，工具调用 ID 由门禁透传，结果进入 Pi 历史前再次校验。每轮刷新活动工具指引，以当前随机凭据保护工具调用和只读计量通道。
+ * 设计原因：把工具 Schema、一次性授权和可信回传入口交给受控扩展；只有成员数据写成 custom 消息，显式目标补充仍用原生用户消息。工具调用 ID 由门禁透传，结果进入 Pi 历史前再次校验，随机凭据保护单轮调用。
  */
 import http from 'node:http';
 import {randomBytes,timingSafeEqual} from 'node:crypto';
@@ -69,7 +69,7 @@ export default async function(pi) {
     const response=await fetch(url+route,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:signal||AbortSignal.timeout(30000)});
     const value=await response.json();if(!response.ok)throw Error((value.code?value.code+': ':'')+(value.error||'CBIM bridge unavailable'));return value;
   }
-  if(trustedInputSource){
+  if(trustedInputSource?.kind==='member-results'){
     let consumed=false;
     pi.on('input',event=>{
       if(consumed)return {action:'continue'};

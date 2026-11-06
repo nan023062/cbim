@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Pi 协议、临时桥与运行参数。工具经一次性 gate 授权后透传真实调用 ID 并校验结果；成员回传作为 custom 任务数据续接原生会话，不冒充用户或新增授权。支持图片、恢复、取消及长度报告。
+Pi 协议、临时桥与运行参数。工具经一次性gate授权并校验结果；只有成员回传作为custom任务数据，显式目标补充保持真实用户prompt语义。支持图片、受管会话恢复、取消及长度报告。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -204,7 +204,7 @@ N_src_backend_core_brain_pi_engine_ts ..> N_src_backend_core_brain_pi_runtime_co
 
 ### 当前成员结果接续
 
-普通用户输入保持 RPC `prompt` 的 `started` 行为；只有 `EngineContext.source` 存在时，`bridgeExtensionForSource` 才为本轮生成一次性可信输入处理器。首条输入写为 `customType:'cbim-member-results'` 的原生 custom 消息，保存来源 details，通过 `triggerTurn:true` 发起生成，原 prompt 返回 `handled`。后续用户 steer 不被拦截，custom 正文明示“任务数据、非用户新指令或授权、候选尚未验收”。输入加普通文字前缀，避免结果正文被当成斜杠命令。
+普通用户输入及 `user-continuation` 显式目标补充保持 RPC `prompt` 的 `started` 行为；只有 `EngineContext.source.kind==='member-results'` 时，`bridgeExtensionForSource` 才为本轮生成一次性可信输入处理器。首条输入写为 `customType:'cbim-member-results'` 的原生 custom 消息，保存来源 details，通过 `triggerTurn:true` 发起生成，原 prompt 返回 `handled`。后续用户 steer 不被拦截，custom 正文明示“任务数据、非用户新指令或授权、候选尚未验收”。输入加普通文字前缀，避免结果正文被当成斜杠命令。
 
 `PiEngine.run` 按来源核验 started/handled，并继续等待真实 `agent_settled`，不会把 handled 当成完成。异步 custom 启动的 `extension_error` 会终止等待并由运行日志保留中断，不超时后盲目重放。没有 source 的普通对话完全保留用户消息语义。回注不重复发送上一轮附件。
 

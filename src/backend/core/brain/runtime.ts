@@ -1,6 +1,6 @@
 /**
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
- * 设计原因：先持久化工具决策再放行；主对话固定登记实例，续聊从原日志传递原生会话身份供引擎核实，避免同工作区误读其他历史。成员任务保持独立通道，回注来源单独保存，执行结束不等于验收。
+ * 设计原因：先持久化工具决策再放行；主对话固定登记实例，补充目标在取得租约并核实旧日志后才提交一次性启动意图。停止信号覆盖意图、日志和引擎准备窗口，成员回注与真实用户补充分开记录。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -32,6 +32,13 @@ export interface RuntimeOptions {
   /** 接收已落盘事件；异常被隔离，不能借此回调阻断运行或替代可靠提交。 */
   onEvent?(event:StoredEvent):void;
 }
+/** 仅可信调度入口可注入；beforeRun 成功不代表模型已经启动，后续失败不得自动重放该意图。 */
+export interface RunStartControl {
+  /** 启动尚未进入 active 时也必须能取消；调用者负责在停止/退出时触发。 */
+  signal:AbortSignal;
+  /** 租约和旧运行绑定检查之后、任何新日志/引擎之前调用，runId 由本运行时生成。 */
+  beforeRun?(input:{task:TaskSpec;runId:string}):Promise<void>;
+}
 /** 管理任务级运行和日志；成员跨任务的互斥、通道复用及结果交接由外层调度负责。 */
 export class LoopRuntime {
   /** taskId 为键；同任务在本运行时中只允许一个活动运行。 */
@@ -43,9 +50,9 @@ export class LoopRuntime {
   private closing=false;
   constructor(private options:RuntimeOptions){}
   /** 新建运行或显式恢复；可信 source 仅允许接续安全完成的主对话，返回句柄后仍需等待 done。 */
-  async start(task:TaskSpec,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource):Promise<{runId:string;done:Promise<RunSummary>}>{
+  async start(task:TaskSpec,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,control?:RunStartControl):Promise<{runId:string;done:Promise<RunSummary>}>{
     if(this.closing)throw Error('Loop Engine 正在关闭');
-    const pending=this.startInternal(task,message,resume,undefined,source);this.starting.add(pending);
+    const pending=this.startInternal(task,message,resume,undefined,source,control);this.starting.add(pending);
     try{return await pending}finally{this.starting.delete(pending)}
   }
   /**
@@ -58,20 +65,22 @@ export class LoopRuntime {
     const pending=this.startInternal(task,message,undefined,prepared);this.starting.add(pending);
     try{return await pending}finally{this.starting.delete(pending)}
   }
-  private async startInternal(task:TaskSpec,message:string,resume?:{runId:string;reconciledToolIds?:string[]},member?:MemberRunLaunch,source?:RunInputSource):Promise<{runId:string;done:Promise<RunSummary>}>{
+  private async startInternal(task:TaskSpec,message:string,resume?:{runId:string;reconciledToolIds?:string[]},member?:MemberRunLaunch,source?:RunInputSource,control?:RunStartControl):Promise<{runId:string;done:Promise<RunSummary>}>{
     task=structuredClone(task);
     const conversationBinding=this.options.conversationBinding===undefined?undefined:checkedConversationAgentBinding(this.options.conversationBinding,task);
-    if(source){source=checkedRunInputSource(source);if(task.mode!=='chat'||!resume||member)throw Error('成员结果只能接续已有主对话');}
+    if(source){source=checkedRunInputSource(source);if(task.mode!=='chat'||!resume||member)throw Error('可信接续只能用于已有主对话');}
+    control?.signal.throwIfAborted();
     safeId(task.taskId);safeId(task.workspaceId);
     if(!task.goal.trim()||!message.trim())throw Error('任务目标和执行消息不能为空');
     if(this.active.has(task.taskId))throw Error('任务正在执行');
     const release=await this.options.acquireLease(task);
     let previous:RunSummary|undefined;
     let nativeSessionId=member?.session.nativeSessionId;
+    let preparedEngine:AgentEngine|undefined;
     try{
       if(resume){
         previous=await this.inspect(task.taskId,resume.runId);
-        if(source&&(previous.status!=='completed'||previous.unresolvedTools.length))throw Error('主对话上轮未安全完成，不能自动回注成员结果');
+        if(source&&(previous.status!=='completed'||previous.unresolvedTools.length))throw Error('主对话上轮未安全完成，不能接续目标或成员结果');
         if(previous.memberBinding)throw Error('成员任务不能通过普通对话恢复；请先由调度核实上次执行');
         // 已绑定历史不得改换或丢失登记身份；旧未绑定历史可在明确续聊时首次绑定，不重写旧记录。
         if(previous.conversationBinding&&(!conversationBinding||Object.entries(previous.conversationBinding).some(([key,value])=>conversationBinding[key as keyof ConversationAgentBinding]!==value)))throw Error('恢复必须使用原主对话实例与通道身份');
@@ -89,6 +98,11 @@ export class LoopRuntime {
         await this.options.storage.reserveTask(this.options.directory,task.taskId); // 已存在任务只能经显式恢复入口继续。
       }
       const runId=member?.binding.runId??randomUUID(),directory=path.join(this.options.directory,safeId(task.taskId),runId);
+      control?.signal.throwIfAborted();
+      await control?.beforeRun?.({task:structuredClone(task),runId});
+      control?.signal.throwIfAborted();
+      // 先创建尚未启动的适配器，工具装配失败不留下空运行日志。init 成功后必须写入头和真实取消终态，不能直接抛取消而破坏整条会话读取。
+      const engine=preparedEngine=this.options.createEngine({task:structuredClone(task),runId});
       const journal=this.options.storage.createJournal(directory,task,runId);await journal.init();
       let boundSessionFile:string|undefined;
       const pendingTools=new Set<string>();
@@ -113,22 +127,25 @@ export class LoopRuntime {
         if(event.type==='tool.denied')pendingTools.delete(String(event.data.id));
         try{void Promise.resolve(this.options.onEvent?.(saved)).catch(()=>{})}catch{/* observers cannot change durable execution */}
       };
-      const engine=this.options.createEngine({task:structuredClone(task),runId});let stopping=false;
+      let stopping=false;
       this.injections.set(task.taskId,async(message,images)=>{
         if(stopping||!engine.steer)throw Error('当前执行不支持插入消息');
         await emit({type:'engine.status',data:{metric:'insertion',state:'requested',message,label:'正在插入用户补充'}});
         try{await engine.steer(message,images);await emit({type:'engine.status',data:{metric:'insertion',state:'accepted',message,label:'已插入，当前动作完成后处理'}})}
         catch(error){await emit({type:'engine.status',data:{metric:'insertion',state:'failed',message,label:'插入未确认，请核实后继续'}});throw error}
       });
-      // 保存输入及可信来源，成员结果不能在恢复或界面投影中伪装成用户新指令。
+      // 保存输入及可信来源；显式补充仍是用户消息，成员结果不能在界面或原生上下文中冒充用户授权。
       await emit({type:'run.started',data:{task,message,engine:engine.kind,resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[],...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),...(member?{memberBinding:member.binding,nativeSessionId:member.session.nativeSessionId}:{})}});
       await taskTools.invalidate('新一轮执行需要重新核实产物与证据');
       const stop=async()=>{if(stopping)return;stopping=true;await emit({type:'run.stop_requested',data:{}});await engine.stop()};
+      const abort=()=>{void stop().catch(()=>{})};
+      control?.signal.addEventListener('abort',abort,{once:true});
       const done=(async()=>{
         let result:{status:'completed'|'cancelled'|'failed';error?:string}|undefined;
         let failure:unknown;
         try{
-          await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,emit,beforeTool:async call=>{
+          if(control?.signal.aborted)await stop();
+          if(!stopping)await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,emit,beforeTool:async call=>{
             call=structuredClone(call);
             if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
             calls.set(call.id,{call,decision:{allow:false},generation:taskTools.generation});
@@ -144,11 +161,14 @@ export class LoopRuntime {
             }
             return decision;
           }});
+          if(control?.signal.aborted)await stop();
           if(!stopping)await this.options.onEngineReady?.({taskId:task.taskId,runId,sessionFile:boundSessionFile});
+          if(control?.signal.aborted)await stop();
           result=stopping?{status:'cancelled' as const}:await engine.run(message);
         }catch(error){
           failure=error;
         }finally{
+          control?.signal.removeEventListener('abort',abort);
           try{await engine.close()}catch(error){failure??=error}
           try{
             if(failure||pendingTools.size)await emit({type:'run.interrupted',data:{error:failure instanceof Error?failure.message:String(failure||'工具结果未确认'),unresolvedTools:[...pendingTools],receipts:[...pendingTools].map(id=>{const item=calls.get(id)!;return toolReceipt(identity,item.call,item.decision,'unknown')})}});
@@ -160,7 +180,7 @@ export class LoopRuntime {
       })();
       this.active.set(task.taskId,{runId,engine,stop,done});void done.catch(()=>{});
       return {runId,done};
-    }catch(error){this.injections.delete(task.taskId);release();throw error}
+    }catch(error){this.injections.delete(task.taskId);try{await preparedEngine?.close()}finally{release()}throw error}
   }
   /** 读取指定轮次日志；本进程仍持有该轮次时将尚无终态的摘要呈现为 running，不触发恢复。 */
   async inspect(taskId:string,runId:string){

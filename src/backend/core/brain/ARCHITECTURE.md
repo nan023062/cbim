@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-引擎无关的执行循环与事件契约。主对话以 conversationBinding 固定实例，正式任务以 memberBinding 固定业务运行，两者互斥；可信结果来源与回执先落盘，旧历史不补造身份，续跑不改绑或混合原生上下文。
+引擎无关的执行循环与事件契约。主对话与正式成员分别绑定身份；真实用户补充与成员资料来源分开。租约及旧日志核实后才提交启动意图，停止覆盖尚未登记active的准备窗口；旧历史不补造，重启不重放。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -12,7 +12,7 @@
 | --- | --- |
 | [conversation-binding.ts](conversation-binding.ts) | 定义主对话与已登记 Agent 实例、逻辑会话之间的可信绑定，供运行时和日志恢复共用。 |
 | [index.ts](index.ts) | 大脑执行层：对外重导出 Loop 契约、主对话实例绑定、成员执行绑定、可信回注来源、存储端口、运行时与 Pi 适配器。 |
-| [input-source.ts](input-source.ts) | 定义普通用户输入之外、由调度器提交的成员结果接续来源。 |
+| [input-source.ts](input-source.ts) | 定义可信入口提交的成员结果与用户目标补充来源，供运行日志和引擎识别。 |
 | [member-run.ts](member-run.ts) | 定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。 |
 | [model-errors.ts](model-errors.ts) | 把模型结束原因转换为用户可理解的执行错误，供实时引擎和历史回放共用。 |
 | [runtime.ts](runtime.ts) | 大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。 |
@@ -160,7 +160,7 @@ class N_src_backend_core_brain_usage_ts["usage.ts"] {
 ## 子目录导航
 
 - [llm/](llm/ARCHITECTURE.md)：公开模型参数、能力元数据及运行快照端口。实际配置文件和加密凭据由 main/persistence/settings 持有。
-- [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数。工具经一次性 gate 授权后透传真实调用 ID 并校验结果；成员回传作为 custom 任务数据续接原生会话，不冒充用户或新增授权。支持图片、恢复、取消及长度报告。
+- [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数。工具经一次性gate授权并校验结果；只有成员回传作为custom任务数据，显式目标补充保持真实用户prompt语义。支持图片、受管会话恢复、取消及长度报告。
 
 [返回上层](../ARCHITECTURE.md)。
 
@@ -180,9 +180,17 @@ class N_src_backend_core_brain_usage_ts["usage.ts"] {
 
 主 Agent 的 Pi 指引区分两种能力：内部 `cbim_` 知识服务保留查询、预览和 CRUD，知识写入遵循本轮 read/ask/execute 及实际审批、版本和事务检查；原生业务 `write/edit/bash` 始终不提供，业务实现交给独立执行 Agent。运行装配对 `business-write / command` 另设主角色拒绝边界，不能靠用户选择 execute 或批准恢复这些能力。工具发现不等于写入授权，知识提交仍经过 `beforeTool` 的持久化决策与工具回执。
 
+### 当前显式用户补充与启动屏障
+
+`RunInputSource` 是判别联合：`MemberResultSource` 表示成员资料；`UserContinuationSource` 为 `{kind:'user-continuation',continuationId,scopeId,waitId,inputRevision}`，表示用户通过专门入口补充原目标。后者仍作为真实用户消息进入 Pi；两者都不能签署人工验收，公开聊天参数不能构造可信来源。
+
+`LoopRuntime.start` 第五参 `RunStartControl` 由可信调度注入。取得租约并核实旧日志绑定后生成真实 runId，在新日志和引擎创建前等待 `beforeRun({task,runId})` 提交启动意图。真实 Pi 文件/身份仍在 `engine.start` 内复核，后置失败不能自动还原等待或重放意图。
+
+`AbortSignal` 覆盖 beforeRun、日志初始化、引擎准备和模型发送窗口；执行管理器在 active 登记前也能取消在途启动。提交前中止不消费检查点，用户取消仍可另行关闭目标；提交后停止保留意图并关闭对应周期。启动回执不等于模型已经运行，最终事实继续由日志报告。跨派发日志与运行日志没有原子提交，不把缺日志意图补造为成功执行。
+
 ### 当前主会话成员回注入口
 
-`RunInputSource` 是后端可信来源，结构为 `{ kind:'member-results', continuationId, messageIds, taskIds }`。`continuationId` 标识同一主轮收到的一批回传；`messageIds` 为结果信封集合，可以为空以报告没有交付候选的失败或受阻任务；`taskIds` 为非空任务集合，两组 ID 不要求逐项对应。`checkedRunInputSource` 校验 ID、集合唯一性和额外字段，并复制输入，避免调用方在异步启动期间改写来源。
+`RunInputSource` 的成员结果分支结构为 `{ kind:'member-results', continuationId, messageIds, taskIds }`。`continuationId` 标识同一主轮收到的一批回传；`messageIds` 为结果信封集合，可以为空以报告没有交付候选的失败或受阻任务；`taskIds` 为非空任务集合，两组 ID 不要求逐项对应。`checkedRunInputSource` 校验 ID、集合唯一性和额外字段，并复制输入，避免调用方在异步启动期间改写来源。
 
 `LoopRuntime.start(task, message, resume?, source?)` 只有在原 `chat` 运行安全完成且没有未决工具时才接收此来源。它仍核对完整原任务及会话文件、持有工作区租约、执行本轮权限检查；结果正文没有新增授权。`run.started` 保存来源，`RunSummary.source` 恢复来源，`EngineContext.source` 传入适配器。启动后停止或失败也保留尝试记录，不能把“曾回注”理解成“已业务验收”。普通用户续聊不带此字段。
 

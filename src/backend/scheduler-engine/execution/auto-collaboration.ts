@@ -1,13 +1,14 @@
 /**
  * 作用定位：管理一次用户任务的调度周期，串接主 Agent 调度、执行成员和结果回传，周期结束后释放执行实例。
  * 设计原因：周期冻结本轮真实用户输入，不复用会话首次目标；成员回注不改写输入。一次任务可能跨多个主模型轮次，用户队列等周期可靠关闭后才启动下一周期，执行者与主实例始终分离。
- * 职责边界：主 Agent 只调度和治理知识；成功关闭须核验结构化目标审阅。已结算的 awaiting_user 保存安全等待检查点并暂停队列，退出/重启不执行；其他失败和用户停止排空成员。等待不是人工验收。
+ * 职责边界：主 Agent 只调度和治理知识；安全等待经显式文本补充消费一次性意图，沿原周期与预算重规划，普通队列不能恢复。退出/重启不重放，停止等待提交收束后再释放成员，任何补充都不是人工验收。
  */
 import {hash,json} from '../../core/foundation/serialization';
 import {randomUUID} from 'node:crypto';
 import {fail} from '../../core/foundation/errors';
 import type {TaskSpec,RunSummary,RunInputSource} from '../../core/brain/types';
 import type {DispatchScope,DispatchScopeOutcome} from '../../core/tasks/dispatch-scope';
+import type {GoalContinuationRequest} from '../../core/tasks/scope-continuation';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {DispatchTaskInput} from '../../core/tasks/dispatch-commands';
 import type {GraphSnapshot,TaskNode} from '../../core/tasks/graph-types';
@@ -31,13 +32,53 @@ export class AutoCollaboration {
   private cycles=new Map<string,Cycle>();
   /** 无计算占用的持久等待；独立于 Cycle，恢复不需要伪造 TaskSpec 或重启历史模型。 */
   private waitingSlots=new Map<string,DispatchScope>();
+  /** 等待消费事务与取消/关闭共用屏障；停止必须在它结算后再次读取当前周期。 */
+  private resuming=new Map<string,Promise<void>>();
   private closed=false;
   private pending:Promise<void>=Promise.resolve();
   private scheduled=false;
   private releaseListener:()=>void;
   constructor(private owner:KnowledgeWorkspace,private dispatch:WorkspaceDispatchService,private members:MemberExecutionManager,private execution:WorkspaceExecutionManager,lease:WorkspaceExecutionLease,private reportIssue:(rootSessionId:string,error:unknown)=>void=()=>{}){
     this.releaseListener=lease.observeRelease(()=>this.schedule());
-    execution.attachCollaboration({busy:id=>this.busy(id),waiting:id=>this.waitingSlots.has(id),starting:(task,options,source,message)=>this.starting(task,source,!!options.profileId,message,options.attachmentIds),startFailed:(task,source,error)=>this.startFailed(task,source,error),settled:(task,_options,summary)=>this.settled(task,summary),stop:id=>this.stop(id)});
+    execution.attachCollaboration({busy:id=>this.busy(id),waiting:id=>this.waitingSlots.has(id),continuationReceipt:query=>dispatch.continuations.inspect(query),continuationCheckpoint:request=>this.continuationCheckpoint(request),acceptContinuation:(request,task,runId)=>this.acceptContinuation(request,task,runId),starting:(task,options,source,message)=>this.starting(task,source,!!options.profileId,message,options.attachmentIds),startFailed:(task,source,error)=>this.startFailed(task,source,error),settled:(task,_options,summary)=>this.settled(task,summary),stop:id=>this.stop(id)});
+  }
+
+  /** 只允许当前等待目标准备新运行；模型前的事务仍会复核，读取不授予重复启动权。 */
+  private async continuationCheckpoint(request:GoalContinuationRequest){
+    if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭');
+    const parked=this.waitingSlots.get(request.rootSessionId);
+    if(!parked||parked.scopeId!==request.scopeId)fail('GOAL_WAIT_CONFLICT','当前会话没有匹配的等待目标');
+    const scope=await this.dispatch.goals.inspect({workspaceId:request.workspaceId,rootSessionId:request.rootSessionId},request.scopeId);
+    if(scope.status!=='waiting'||!scope.wait||scope.wait.waitId!==request.waitId||scope.goal?.revision!==request.expectedGoalRevision||(scope.goal?.inputRevision??1)!==request.expectedInputRevision)fail('GOAL_WAIT_CONFLICT','等待目标或输入版本已变化，请刷新后核实');
+    return structuredClone(scope.wait);
+  }
+
+  /** 可信运行时取得租约并生成 runId 后消费等待；恢复历史任务集合但不重新派发，预算沿用检查点。 */
+  private acceptContinuation(request:GoalContinuationRequest,task:TaskSpec,runId:string):Promise<void>{
+    if(this.closed||this.resuming.has(task.taskId))return Promise.reject(Object.assign(Error('目标恢复正在关闭或已有提交'),{code:'COLLABORATION_STOPPED'}));
+    const pending=(async()=>{
+      await this.continuationCheckpoint(request);
+      if(task.mode!=='chat'||task.agentId!=='cbim:main'||task.taskId!==request.rootSessionId||task.workspaceId!==request.workspaceId)fail('COLLABORATION_IDENTITY','补充目标与主会话身份不一致');
+      const graph=await this.dispatch.snapshot({workspaceId:request.workspaceId,rootSessionId:request.rootSessionId});
+      if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭');
+      const accepted=await this.dispatch.continuations.accept(request,runId);
+      if(!accepted.fresh)fail('GOAL_CONTINUATION_REPLAY','补充意图已受理，请查询原运行，不重复启动');
+      const cycle:Cycle={task:structuredClone(task),scopeId:accepted.scope.scopeId,tasks:new Set(graph.tasks.filter(node=>node.scopeId===request.scopeId).map(node=>node.taskId)),operations:new Set(),mainRuns:new Set([...accepted.continuation.wait.mainRunIds,runId]),workRequested:true,stopped:false};
+      this.cycles.set(task.taskId,cycle);this.waitingSlots.delete(task.taskId);
+      // 此处不等待 stop：调用方的 AbortSignal 在事务返回后阻止模型，stop/close 等 resuming 后收束此 Cycle。
+    })().catch(async error=>{
+      // 事务可能已落盘而提交后的读取失败。只收束本次真实 runId 的意图；旧回执或无法核实的事实绝不重放。
+      try{
+        const receipt=await this.dispatch.continuations.inspect({workspaceId:request.workspaceId,rootSessionId:request.rootSessionId,scopeId:request.scopeId,commandId:request.commandId});
+        if(receipt?.continuation.runId===runId){
+          await this.dispatch.closeScope({workspaceId:request.workspaceId,rootSessionId:request.rootSessionId},request.scopeId,'interrupted');
+          this.waitingSlots.delete(task.taskId);
+        }
+      }catch(recoveryError){this.reportIssue(task.taskId,recoveryError)}
+      throw error;
+    });
+    this.resuming.set(task.taskId,pending);
+    return pending.finally(()=>{if(this.resuming.get(task.taskId)===pending)this.resuming.delete(task.taskId)});
   }
 
   /** 工作区恢复之后、接受公开请求之前调用；只恢复等待占位，不读取或启动模型会话，不消费邮箱。 */
@@ -54,6 +95,11 @@ export class AutoCollaboration {
   private async starting(task:TaskSpec,source:RunInputSource|undefined,hasProfile:boolean,message:string,attachmentIds?:string[]){
     if(task.mode!=='chat'||task.agentId!=='cbim:main'||!hasProfile)return;
     if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭');
+    if(source?.kind==='user-continuation'){
+      const waiting=this.waitingSlots.get(task.taskId);
+      if(!waiting||waiting.scopeId!==source.scopeId||waiting.wait?.waitId!==source.waitId)fail('GOAL_WAIT_CONFLICT','目标补充未匹配当前安全等待');
+      return; // 这里仅准备；运行时 beforeRun 的持久事务才有权消费等待。
+    }
     if(this.waitingSlots.has(task.taskId))fail('GOAL_WAITING','当前目标处于持久等待，请先处理或取消等待目标');
     const existing=this.cycles.get(task.taskId);
     if(source){if(!existing||existing.stopped)fail('COLLABORATION_STOPPED','原任务调度周期已结束，不能继续自动回注');return}
@@ -223,13 +269,14 @@ export class AutoCollaboration {
   }
   /** 用户停止也关闭已恢复的等待目标；检查 park Promise 之后的占位，防止取消与等待提交竞争时漏掉目标。 */
   async stop(taskId:string){
-    const cycle=this.cycles.get(taskId);
     try{
+      await this.resuming.get(taskId)?.catch(()=>{});
+      const cycle=this.cycles.get(taskId);
       if(cycle){cycle.cancelRequested=true;await this.finishCycle(cycle,'cancelled')}
       const waiting=this.waitingSlots.get(taskId);
       if(waiting){await this.dispatch.closeScope({workspaceId:waiting.workspaceId,rootSessionId:waiting.rootSessionId},waiting.scopeId,'cancelled');this.waitingSlots.delete(taskId)}
     }catch(error){this.reportIssue(taskId,error);throw error}
   }
   /** 应用退出排空活动执行；已提交安全等待留在日志中，重开只恢复占位，不等同用户取消。 */
-  async close(){this.closed=true;this.releaseListener();for(const b of this.batches.values())b.stopped=true;await this.pending;const cycles=[...this.cycles.values()],results=await Promise.allSettled(cycles.map(cycle=>this.finishCycle(cycle,'cancelled')));for(let i=0;i<results.length;i++){const result=results[i];if(result.status==='rejected')this.reportIssue(cycles[i].task.taskId,result.reason)}this.batches.clear()}
+  async close(){this.closed=true;this.execution.cancelPendingLaunches();this.releaseListener();for(const b of this.batches.values())b.stopped=true;await Promise.allSettled([...this.resuming.values()]);await this.pending;const cycles=[...this.cycles.values()],results=await Promise.allSettled(cycles.map(cycle=>this.finishCycle(cycle,'cancelled')));for(let i=0;i<results.length;i++){const result=results[i];if(result.status==='rejected')this.reportIssue(cycles[i].task.taskId,result.reason)}this.batches.clear()}
 }

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-应用 action 路由。运行、目标与角色历史请求显式绑定工作区和主会话身份；sessionRead 只读同屏障下的图/目标增量及选中详情，不新建或启动任务。桌面发送方在 Electron 接入处核验。
+应用action路由。目标补充携带稳定命令和明确身份，回执查询只读；普通聊天、审批与补充分开。sessionRead返回同屏障图/目标增量，桌面发送方在Electron接入处核验。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -100,6 +100,12 @@ N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_services_ts : 导�
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 显式目标补充
+
+`loop.goalContinue` 接收完整 `GoalContinuationRequest`，纯文本、明确模型配置与权限、scope/wait/input 版本和稳定 commandId 交执行管理器。不能提交原生会话路径、来源或人工批准字段。相同请求查询原回执，不再启动；原等待已消费时换 ID 拒绝。
+
+`loop.goalContinuation` 只读查询同一工作区/主会话/scope/commandId 的回执。返回 undefined 不保证旧请求从未在途，客户端仍须复用原 ID；回执含完整身份、当前 scopeStatus 和原补充记录，不代表模型正在运行或验收通过。普通 `loop.resume/enqueue` 不变成此入口。
 
 ### 主会话目标与任务图读取
 

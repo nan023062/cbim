@@ -1,36 +1,59 @@
 /**
  * 作用定位：校验用户任务周期与执行实例、图任务及运行的跨对象生命周期。
- * 设计原因：提交和重放共同保护真实输入、持久等待检查点及不可逆释放；waiting 占据未关闭槽但不允许执行，迟到回调不能改变检查点或重新激活已关闭实例。
+ * 设计原因：提交和重放共同保护真实输入、等待检查点及一次性补充意图；只有保留完整旧 wait 并提高输入版本才能继续，迟到回调不能改写历史或复活已关闭实例。
  * 职责边界：不决定整轮任务是否完成、不停止模型；主调度在结算全部运行后提交关闭，旧无周期历史保持原身份。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
 import type {DispatchMutation,DispatchState} from './dispatch-storage';
 import {dispatchScopeGoalSchema,dispatchScopeWaitSchema} from './dispatch-scope';
-import {validateScopeGoalTransition} from './scope-goal';
+import {validateScopeGoalTransition,goalInputRevision} from './scope-goal';
+import {scopeContinuationSchema,scopeContinuationTotalTextLimit} from './scope-continuation';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
-const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),wait:dispatchScopeWaitSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
+const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),wait:dispatchScopeWaitSchema.optional(),continuations:z.array(scopeContinuationSchema).max(31).optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
 function valid(condition:unknown,message:string):asserts condition {if(!condition)fail('GRAPH_INPUT_INVALID',message)}
 function ordered(value:unknown):unknown {return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,ordered(item)])):value}
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 
 /** 全量检查周期引用、冻结输入及不可逆关闭；旧无 goal/scope 的记录保持缺省，不伪造迁移。 */
 export function validateDispatchScopes(previous:DispatchState,next:DispatchState,mutation:DispatchMutation):void{
-  const scopes=next.scopes??[],activeRoots=new Set<string>();
+  const scopes=next.scopes??[],activeRoots=new Set<string>(),continuationCommands=new Set<string>(),continuationRuns=new Set<string>();
   for(const scope of scopes){
     valid(shape.safeParse(scope).success&&scope.workspaceId===next.workspaceId,'调度周期结构或工作区身份无效');
     const graph=next.graphs.find(item=>item.identity.rootSessionId===scope.rootSessionId);
     valid(graph,'调度周期缺少对应主会话根');
     valid(graph.tasks.filter(task=>task.scopeId===scope.scopeId).length<=500,'调度周期超过原子关闭可容纳的 500 个任务');
     const old=previous.scopes?.find(item=>item.scopeId===scope.scopeId);
+    const history=scope.continuations??[],priorHistory=old?.continuations??[],supplement=history.length===priorHistory.length+1;
+    valid(history.length>=priorHistory.length&&history.length<=priorHistory.length+1&&priorHistory.every((item,index)=>equal(item,history[index])),'补充启动意图只能原样保留并一次追加一项');
+    valid(!old?.continuations||!!scope.continuations,'补充历史字段不能删除');
+    valid(history.reduce((total,item)=>total+item.input.message.length,0)<=scopeContinuationTotalTextLimit,'补充正文累计超过允许大小');
+    valid(!history.length||scope.goal&&goalInputRevision(scope.goal)===history.length+1,'补充历史与目标输入版本不一致');
+    if(scope.goal)valid(goalInputRevision(scope.goal)===(history.length+1),'输入版本只能随显式补充逐次增加');
+    const seenCommands=new Set<string>(),seenWaits=new Set<string>(),seenRuns=new Set<string>();
+    for(const [index,item] of history.entries()){
+      valid(item.inputRevision===index+2&&!seenCommands.has(item.continuationId)&&!seenWaits.has(item.wait.waitId)&&!seenRuns.has(item.runId),'补充身份重复或输入版本不连续');
+      valid(!continuationCommands.has(item.continuationId)&&!continuationRuns.has(item.runId),'补充命令或主运行不能跨周期重用');continuationCommands.add(item.continuationId);continuationRuns.add(item.runId);
+      valid(item.wait.mainRunIds.length<32&&!item.wait.mainRunIds.includes(item.runId),'补充不能重用既有运行或重置主运行预算');
+      valid(Date.parse(item.acceptedAt)>=Date.parse(item.wait.createdAt)&&Date.parse(item.wait.createdAt)>=Date.parse(scope.createdAt),'补充时间早于等待检查点');
+      if(index){const prior=history[index-1];valid([...prior.wait.mainRunIds,prior.runId].every(run=>item.wait.mainRunIds.includes(run))&&item.wait.goalRevision>prior.wait.goalRevision+1,'后续等待必须累计此前主轮和决策版本');}
+      seenCommands.add(item.continuationId);seenWaits.add(item.wait.waitId);seenRuns.add(item.runId);
+    }
+    if(scope.wait&&history.length){const prior=history.at(-1)!;valid([...prior.wait.mainRunIds,prior.runId].every(run=>scope.wait!.mainRunIds.includes(run))&&scope.wait.goalRevision>prior.wait.goalRevision+1,'等待检查点不能丢失已消费预算和输入决策');}
+    if(supplement){
+      const item=history.at(-1)!;
+      valid(old?.status==='waiting'&&scope.status==='active'&&old.wait&&equal(item.wait,old.wait)&&!scope.wait,'只能原子消费当前安全等待并保留完整检查点');
+      valid(old.goal&&!old.goal.blocked&&old.goal.revision<=62&&scope.goal&&item.inputRevision===goalInputRevision(scope.goal),'补充缺少可继续目标或后续规划审阅额度');
+      valid(mutation.scopes?.length===1&&!mutation.batch&&!mutation.runs?.length&&!mutation.members?.length&&!mutation.sessions?.length&&!mutation.messages?.length,'消费等待不能顺带执行成员、修改其他周期或更改任务图');
+    }
     if(old){
       valid(old.workspaceId===scope.workspaceId&&old.rootSessionId===scope.rootSessionId&&old.createdAt===scope.createdAt,'不能改绑周期或创建时间');
-      validateScopeGoalTransition(old.goal,scope.goal,false);
-      if(old.wait)valid(equal(old.wait,scope.wait)&&equal(old.goal,scope.goal),'等待检查点及其目标不能改写或移除');
-      if(old.status==='waiting')valid(scope.status==='closed'||equal(old,scope),'等待周期本阶段只能保留或显式关闭，不能恢复执行');
+      validateScopeGoalTransition(old.goal,scope.goal,false,supplement);
+      if(old.wait&&!supplement)valid(equal(old.wait,scope.wait)&&equal(old.goal,scope.goal),'等待检查点及其目标不能改写或移除');
+      if(old.status==='waiting')valid(supplement||scope.status==='closed'||equal(old,scope),'等待周期只能明确补充、保留或显式关闭');
       if(old.status==='closed')valid(equal(old,scope),'已关闭调度周期不能重开或改写结果');
-    }else {valid(scope.status==='active','新周期必须从 active 开始');validateScopeGoalTransition(undefined,scope.goal,true)}
+    }else {valid(scope.status==='active'&&!history.length,'新周期必须从 active 开始且不含补充历史');validateScopeGoalTransition(undefined,scope.goal,true)}
     if(scope.wait&&!old?.wait)valid(old?.status==='active'&&scope.status==='waiting','只能从活动周期创建真实等待检查点');
     if(scope.status!=='closed'){
       valid(!scope.closedAt&&!scope.outcome&&!activeRoots.has(scope.rootSessionId),'同一主会话只能有一个未关闭周期，活动或等待周期不能含关闭信息');activeRoots.add(scope.rootSessionId);

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主会话任务图与独立目标增量投影，追齐后原子发布。根详情共享目标计划/审阅和等待检查点；active/waiting/closed按真实状态展示，历史选择不改变开放目标。候选和等待都不替代人工验收。
+主会话任务图与独立目标增量，追齐后原子发布。两处目标卡共享显式补充控制器，先保存冻结请求，未知结果只查询或原ID重试；新输入显示旧计划待重规划。历史只读，候选与补充不替代人工验收。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,6 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [continuation-state.ts](continuation-state.ts) | 管理显式目标补充的本地草稿、冻结请求与回执，不直接依赖 React 或桌面全局对象。 |
 | [DispatchGraph.tsx](DispatchGraph.tsx) | 把当前主会话的已提交派发图绘制为可选择的任务节点流程图。 |
 | [FlowView.tsx](FlowView.tsx) | 显示知识校验和索引任务的实际状态与结果。 |
 | [graph-layout.ts](graph-layout.ts) | 为主会话任务图计算可测试的 DAG 分层坐标与有向连线路径，供任务视图绘制。 |
@@ -21,13 +22,129 @@
 | [MemberTaskDetail.tsx](MemberTaskDetail.tsx) | 展示任务图选中成员的公开运行正文、工具过程、计划与候选，并处理该成员的独立审批、问题和停止请求。 |
 | [scope-goal.css](scope-goal.css) | 对话摘要与任务根详情共用的目标计划卡片、历史选择和证据排版。 |
 | [scope-state.ts](scope-state.ts) | 主会话目标周期的增量投影和展示状态，供对话摘要与任务根详情共用。 |
+| [ScopeContinuationForm.tsx](ScopeContinuationForm.tsx) | 目标卡片中的显式纯文本补充入口，展示已冻结请求、查询与同命令重试。 |
 | [ScopeGoalPanel.tsx](ScopeGoalPanel.tsx) | 复用展示本轮真实目标、静态角色分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。 |
 | [SessionTaskView.tsx](SessionTaskView.tsx) | 以节点流程图展示当前主会话的派发任务，并在选择根或任务后显示对应执行详情。 |
 | [task-graph.css](task-graph.css) | 主会话派发图、可读任务节点与按需详情的自适应布局。 |
 | [useMemberRun.ts](useMemberRun.ts) | 按成员运行身份轮询公开流式事件，支持卡片预览与任务详情的增量读取。 |
+| [useScopeContinuation.ts](useScopeContinuation.ts) | 在主会话层装配唯一补充控制器，向对话卡和任务根提供同一份草稿、提交锁及回执状态。 |
 | [useSessionGraph.ts](useSessionGraph.ts) | 按主对话 taskId 同步派发图、目标摘要和选中详情，为主对话和任务图提供同一投影与历史选择。 |
 
 ## 架构类图
+
+### continuation-state.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_continuation_state_ts["continuation-state.ts"] {
+  <<module>>
+  +continuationRejected()
+  +checkedContinuationReceipt()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_continuation_state_ts["continuation-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_continuation_state_ts_ContinuationTarget["ContinuationTarget"] {
+  <<type>>
+
+}
+N_src_frontend_tasks_continuation_state_ts ..> N_src_frontend_tasks_continuation_state_ts_ContinuationTarget : 声明
+class N_src_frontend_tasks_continuation_state_ts_ContinuationPhase["ContinuationPhase"] {
+  <<type>>
+
+}
+N_src_frontend_tasks_continuation_state_ts ..> N_src_frontend_tasks_continuation_state_ts_ContinuationPhase : 声明
+class N_src_frontend_tasks_continuation_state_ts_ContinuationAttempt["ContinuationAttempt"] {
+  <<interface>>
+  +request
+  +phase
+  +uncertain
+  +receipt
+  +error
+}
+N_src_frontend_tasks_continuation_state_ts ..> N_src_frontend_tasks_continuation_state_ts_ContinuationAttempt : 声明
+class N_src_frontend_tasks_continuation_state_ts_ContinuationDraft["ContinuationDraft"] {
+  <<interface>>
+  +scopeId
+  +waitId
+  +text
+  +attempt
+}
+N_src_frontend_tasks_continuation_state_ts ..> N_src_frontend_tasks_continuation_state_ts_ContinuationDraft : 声明
+```
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_continuation_state_ts["continuation-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_continuation_state_ts_ContinuationState["ContinuationState"] {
+  <<interface>>
+  +records
+  +error
+}
+N_src_frontend_tasks_continuation_state_ts ..> N_src_frontend_tasks_continuation_state_ts_ContinuationState : 声明
+class N_src_frontend_tasks_continuation_state_ts_ContinuationPorts["ContinuationPorts"] {
+  <<interface>>
+  +storage
+  +submit
+  +lookup
+  +uuid
+}
+N_src_frontend_tasks_continuation_state_ts ..> N_src_frontend_tasks_continuation_state_ts_ContinuationPorts : 声明
+class N_src_frontend_tasks_continuation_state_ts_ScopeContinuationController["ScopeContinuationController"] {
+  +workspaceId
+  +rootSessionId
+  +storageKey
+  +snapshot
+  +available
+  +canRelease
+  +subscribe()
+  +record()
+  +isPending()
+  +edit()
+  +submit()
+  +retry()
+  +query()
+  +restore()
+  -ports
+  -value
+}
+N_src_frontend_tasks_continuation_state_ts ..> N_src_frontend_tasks_continuation_state_ts_ScopeContinuationController : 声明
+class N_src_frontend_tasks_continuation_state_ts_ScopeContinuationPool["ScopeContinuationPool"] {
+  +get()
+  -idleLimit
+  -controllers
+}
+N_src_frontend_tasks_continuation_state_ts ..> N_src_frontend_tasks_continuation_state_ts_ScopeContinuationPool : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_continuation_state_ts["continuation-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_continuation_state_ts_ScopeContinuationController["ScopeContinuationController"] {
+  -unavailable
+  -listeners
+  -pending
+  -emit()
+  -store()
+  -update()
+  -send()
+}
+N_src_frontend_tasks_continuation_state_ts ..> N_src_frontend_tasks_continuation_state_ts_ScopeContinuationController : 声明
+```
+
+直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
 
 ### DispatchGraph.tsx
 
@@ -312,6 +429,18 @@ N_src_frontend_tasks_scope_state_ts ..> N_src_frontend_tasks_scope_state_ts_Scop
 
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[graph-state.ts](graph-state.ts)。
 
+### ScopeContinuationForm.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_ScopeContinuationForm_tsx["ScopeContinuationForm.tsx"] {
+  <<component>>
+  +ScopeContinuationForm()
+}
+```
+
+直接依赖：[useScopeContinuation.ts](useScopeContinuation.ts)。
+
 ### ScopeGoalPanel.tsx
 
 ```mermaid
@@ -332,11 +461,12 @@ class N_src_frontend_tasks_ScopeGoalPanel_tsx_ScopeGoalPanelProps["ScopeGoalPane
   +state
   +compact
   +testId
+  +continuation
 }
 N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_ScopeGoalPanel_tsx_ScopeGoalPanelProps : 声明
 ```
 
-直接依赖：[scope-state.ts](scope-state.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[scope-goal.css](scope-goal.css)。
+直接依赖：[scope-state.ts](scope-state.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[ScopeContinuationForm.tsx](ScopeContinuationForm.tsx)、[useScopeContinuation.ts](useScopeContinuation.ts)、[scope-goal.css](scope-goal.css)。
 
 ### SessionTaskView.tsx
 
@@ -374,7 +504,7 @@ class N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTask
   +graphError
   +onRefreshGraph
   +scopeState
-  +active
+  +continuation
 }
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps : 声明
 ```
@@ -388,13 +518,14 @@ class N_src_frontend_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
 }
 class N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTaskViewProps"] {
   <<interface>>
+  +active
   +selectedTaskId
   +onSelectTask
 }
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps : 声明
 ```
 
-直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../conversation/WorkStatus.tsx](../conversation/WorkStatus.tsx)、[../conversation/MessageQueue.tsx](../conversation/MessageQueue.tsx)、[DispatchGraph.tsx](DispatchGraph.tsx)、[MemberTaskDetail.tsx](MemberTaskDetail.tsx)、[ScopeGoalPanel.tsx](ScopeGoalPanel.tsx)、[scope-state.ts](scope-state.ts)、[task-graph.css](task-graph.css)。
+直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../conversation/WorkStatus.tsx](../conversation/WorkStatus.tsx)、[../conversation/MessageQueue.tsx](../conversation/MessageQueue.tsx)、[DispatchGraph.tsx](DispatchGraph.tsx)、[MemberTaskDetail.tsx](MemberTaskDetail.tsx)、[ScopeGoalPanel.tsx](ScopeGoalPanel.tsx)、[scope-state.ts](scope-state.ts)、[useScopeContinuation.ts](useScopeContinuation.ts)、[task-graph.css](task-graph.css)。
 
 ### task-graph.css
 
@@ -416,6 +547,50 @@ class N_src_frontend_tasks_useMemberRun_ts["useMemberRun.ts"] {
 ```
 
 直接依赖：[member-event-state.ts](member-event-state.ts)。
+
+### useScopeContinuation.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
+  <<module>>
+  +continuationTarget()
+  +useScopeContinuation()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_useScopeContinuation_ts_ContinuationModel["ContinuationModel"] {
+  <<interface>>
+  +options
+  +label
+}
+N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_useScopeContinuation_ts_ContinuationModel : 声明
+class N_src_frontend_tasks_useScopeContinuation_ts_ScopeContinuationView["ScopeContinuationView"] {
+  <<interface>>
+  +scopeId
+  +waitId
+  +text
+  +record
+  +editable
+  +canSubmit
+  +canRetry
+  +pending
+  +error
+  +modelLabel
+  +edit
+  +submit
+  +query
+  +retry
+}
+N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_useScopeContinuation_ts_ScopeContinuationView : 声明
+```
+
+直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[scope-state.ts](scope-state.ts)、[continuation-state.ts](continuation-state.ts)。
 
 ### useSessionGraph.ts
 
@@ -494,24 +669,50 @@ class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
 class N_src_frontend_tasks_graph_state_ts["graph-state.ts"] {
   <<module>>
 }
+class N_src_frontend_tasks_ScopeContinuationForm_tsx["ScopeContinuationForm.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
+  <<module>>
+}
 class N_src_frontend_tasks_ScopeGoalPanel_tsx["ScopeGoalPanel.tsx"] {
   <<component>>
+}
+N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_member_activity_css : 导入依赖
+N_src_frontend_tasks_scope_state_ts ..> N_src_frontend_tasks_graph_state_ts : 导入依赖
+N_src_frontend_tasks_ScopeContinuationForm_tsx ..> N_src_frontend_tasks_useScopeContinuation_ts : 导入依赖
+N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_ScopeGoalPanel_tsx["ScopeGoalPanel.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_ScopeContinuationForm_tsx["ScopeContinuationForm.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
+  <<module>>
 }
 class N_src_frontend_tasks_scope_goal_css["scope-goal.css"] {
   <<stylesheet>>
 }
-N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_member_activity_css : 导入依赖
-N_src_frontend_tasks_scope_state_ts ..> N_src_frontend_tasks_graph_state_ts : 导入依赖
-N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
+class N_src_frontend_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_DispatchGraph_tsx["DispatchGraph.tsx"] {
+  <<component>>
+}
+N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_ScopeContinuationForm_tsx : 导入依赖
+N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_useScopeContinuation_ts : 导入依赖
 N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_scope_goal_css : 导入依赖
+N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_DispatchGraph_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
-  <<component>>
-}
-class N_src_frontend_tasks_DispatchGraph_tsx["DispatchGraph.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
@@ -523,10 +724,13 @@ class N_src_frontend_tasks_ScopeGoalPanel_tsx["ScopeGoalPanel.tsx"] {
 class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_DispatchGraph_tsx : 导入依赖
+class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
+  <<module>>
+}
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_MemberTaskDetail_tsx : 导入依赖
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_ScopeGoalPanel_tsx : 导入依赖
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
+N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useScopeContinuation_ts : 导入依赖
 ```
 
 ```mermaid
@@ -543,14 +747,29 @@ class N_src_frontend_tasks_useMemberRun_ts["useMemberRun.ts"] {
 class N_src_frontend_tasks_member_event_state_ts["member-event-state.ts"] {
   <<module>>
 }
+class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_continuation_state_ts["continuation-state.ts"] {
+  <<module>>
+}
+N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_task_graph_css : 导入依赖
+N_src_frontend_tasks_useMemberRun_ts ..> N_src_frontend_tasks_member_event_state_ts : 导入依赖
+N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
+N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_continuation_state_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_frontend_tasks_useSessionGraph_ts["useSessionGraph.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_task_graph_css : 导入依赖
-N_src_frontend_tasks_useMemberRun_ts ..> N_src_frontend_tasks_member_event_state_ts : 导入依赖
 N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
 ```
 
@@ -591,7 +810,19 @@ N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts 
 
 持久等待必须来自 `scope.status=waiting`，显示“等待补充 · 执行已暂停”；模型 `review.awaiting_user` 仅显示“已请求补充 · 等待暂停确认”，不冒充检查点已提交。`openScope` 包含 active/waiting，`activeScope` 仅含 active，`waitingScope` 仅含 waiting；三者从完整摘要列表选取，独立于历史浏览。自动选择优先未关闭周期，后台等待不能被最近历史覆盖。
 
-等待卡展示摘要原因，展开后读取完整 `scope.wait.reason` 与记录时间；关闭后保留等待历史，但取消状态优先于旧等待状态。等待根保留“取消当前任务”，浏览历史时说明当前另有待补充目标，按钮不会复活所选历史。恢复入口与人工验收表单尚未接通；普通队列不能作为恢复入口，根队列也禁用“继续队列”。同版本详情必须匹配摘要中的等待身份、目标版本与创建时间，旧等待详情不能拼到新摘要上。
+等待卡展示摘要原因，展开后读取完整 `scope.wait.reason` 与记录时间；关闭后保留等待历史，但取消状态优先于旧等待状态。等待根保留“取消当前任务”，浏览历史时说明当前另有待补充目标，按钮不会复活所选历史。显式纯文本补充通过下述专用表单提交，人工验收尚未接通；普通队列不能作为恢复入口，根队列也禁用“继续队列”。同版本详情必须匹配摘要中的等待身份、目标版本、输入版本与创建时间，旧等待详情不能拼到新摘要上。
+
+#### 显式补充与通信未知
+
+`ScopeContinuationForm` 仅显示 `useScopeContinuation` 提供的状态与操作，不自行生成命令。主对话和任务根接收同一 Hook 返回值；仅当前 waiting、选中详情和摘要身份/版本一致且同步正常时允许写入。历史选择只读，不能通过旧卡片恢复当前目标。接受补充后旧计划保留，但 `needsReplan` 显示“补充已受理 · 等待更新计划”；详情按记录展示补充正文和输入版本，不将旧审阅自动视为新输入已完成。
+
+`ScopeContinuationController` 按 workspace/root 隔离本机索引，草稿按 scope/wait 保存。首次提交先持久化严格冻结的 `GoalContinuationRequest`，包括真实 waiting、两个预期版本、UUID 命令、未经裁剪的纯文本和实际模型/权限；保存失败不调用 IPC。仅在用户点击时调用 `loop.goalContinue`，不存在挂载、刷新或模型判断触发的自动提交。附件与人工批准不属于本步请求。
+
+`ScopeContinuationPool` 在同一 renderer 中复用同会话控制器，避免切换工作区后旧回执覆盖重新打开的草稿；超过缓存目标数时只回收无订阅、无在途请求的历史对象。真正重开应用从本机记录恢复，不共享另一个 renderer 的内存状态；服务端仍以 wait/command 的持久化幂等保护处理多窗口重复请求。
+
+回执须通过 bridge schema，并逐一核对 workspace/root/scope/command/wait、目标与输入版本、正文和 options。`scopeStatus` 仅是回执读取时的周期状态，`runId` 是持久化运行标识，二者不能用来宣称模型正在执行。明确的未受理错误保留草稿供修正；命令冲突、运行中止、通信超时或无法校验的响应一律保留冻结请求为未知。曾经结果未知的请求，即使同 ID 重试随后返回拒绝，也不能解除冻结换 ID 重发。
+
+`loop.goalContinuation` 只读查询本次命令；返回 undefined 仍是未知，不证明服务器未执行。未知时可查询或在相同当前 waiting 下重试完全相同的请求；双击由控制器的同步 attempt 状态与在途集合拦截。重开将未结束的提交归为未知，只自动查询，不发送；损坏的本机记录显示错误并停止新提交，不覆盖可能已受理的未知记录。历史可查询既有命令，但不提供提交/重试按钮。迟到回执仍写入原会话记录，不刷新已切换的新会话。
 
 成员详情以独立成员署名展示公开流式正文、最近工具状态、可选运行轮次，以及目标、模块、候选和证据。授权、问题回答与停止仍需显式操作；使用后端公开投影，不展示原生私有推理事件或原生会话路径字段。详情请求按 workspace/root/task/run 完整身份隔离；运行中按一秒增量补读，隐藏时降至五秒，终态须补齐 `hasMore` 后才停止轮询。主对话活动摘要最多显示三个任务，完整任务仍由流程图查看。
 
@@ -637,11 +868,17 @@ class DispatchGraph { <<component>> }
 class GraphLayout { <<module>> }
 class MemberTaskDetail { <<component>> }
 class ScopeGoalPanel { <<component>> }
+class ScopeContinuationForm { <<component>> }
+class ScopeContinuationController { <<module>> }
+class UseScopeContinuation { <<module>> }
 class SessionReadProjection { <<module>> }
 class GraphContract { <<bridge boundary>> }
 SessionTaskView --> DispatchGraph : 当前会话流程图
 SessionTaskView --> MemberTaskDetail : 按需成员详情
 SessionTaskView --> ScopeGoalPanel : 复用选中目标详情
+ScopeGoalPanel --> ScopeContinuationForm : 当前等待显式补充
+ScopeContinuationForm --> UseScopeContinuation : 共享视图与操作
+UseScopeContinuation --> ScopeContinuationController : 草稿冻结与回执恢复
 SessionReadProjection --> GraphContract : 同屏障图与目标增量
 DispatchGraph --> GraphLayout : 稳定拓扑坐标
 GraphLayout --> GraphContract : 真实节点与连线

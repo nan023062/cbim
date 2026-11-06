@@ -9,7 +9,7 @@ import {graphIdentityInput} from './dispatch-commands';
 import type {DispatchScope} from './dispatch-scope';
 import type {GraphIdentity,GraphDelta} from './graph-types';
 import {assertGraphIdentity} from './graph-rules';
-import {sameGoalValue} from './scope-goal';
+import {sameGoalValue,goalInputRevision,goalNeedsReplan} from './scope-goal';
 
 const id=z.string().min(1).max(512);
 const seq=z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
@@ -18,7 +18,7 @@ const scopeCursor=graphCursor.extend({kind:z.literal('scopes')}).strict();
 const detailStamp=z.object({scopeId:id,streamId:id,seq:seq.min(1)}).strict();
 const outcome=z.enum(['completed','failed','cancelled','interrupted']);
 const waitSummary=z.object({waitId:id,reason:z.string().max(240),goalRevision:seq.min(1),createdAt:z.string()}).strict();
-const summary=z.object({scopeId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string(),closedAt:z.string().optional(),outcome:outcome.optional(),hasGoal:z.boolean(),goalRevision:seq.min(1).optional(),inputPreview:z.string().max(240).optional(),objective:z.string().max(240).optional(),hasPlan:z.boolean(),reviewDecision:z.enum(['complete','replan','blocked','awaiting_user']).optional(),blockedReason:z.string().max(240).optional(),wait:waitSummary.optional(),stamp:detailStamp}).strict();
+const summary=z.object({scopeId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string(),closedAt:z.string().optional(),outcome:outcome.optional(),hasGoal:z.boolean(),goalRevision:seq.min(1).optional(),inputRevision:seq.min(1).optional(),needsReplan:z.boolean().optional(),inputPreview:z.string().max(240).optional(),objective:z.string().max(240).optional(),hasPlan:z.boolean(),reviewDecision:z.enum(['complete','replan','blocked','awaiting_user']).optional(),blockedReason:z.string().max(240).optional(),wait:waitSummary.optional(),stamp:detailStamp}).strict();
 
 /** 只读请求的身份及选择均显式传入；游标和 stamp 是缓存证明，不授予跨会话读取权。 */
 export const dispatchSessionReadInput=z.object({identity:graphIdentityInput,graphCursor:graphCursor.optional(),scopeCursor:scopeCursor.optional(),selectedScopeId:id.optional(),detailStamp:detailStamp.optional(),limit:seq.min(1).max(500).optional()}).strict();
@@ -54,7 +54,7 @@ export function emptyScopeSnapshot(identity:GraphIdentity,graphStreamId:string):
 export function summarizeScope(scope:DispatchScope,streamId:string,seq:number):ScopeSummary{
   const goal=scope.goal;
   return {scopeId:scope.scopeId,status:scope.status,createdAt:scope.createdAt,...(scope.closedAt?{closedAt:scope.closedAt}:{}),...(scope.outcome?{outcome:scope.outcome}:{}),hasGoal:!!goal,hasPlan:!!goal?.plan,
-    ...(goal?{goalRevision:goal.revision,inputPreview:preview(goal.input.message)}:{}),
+    ...(goal?{goalRevision:goal.revision,inputRevision:goalInputRevision(goal),needsReplan:goalNeedsReplan(goal),inputPreview:preview(goal.input.message)}:{}),
     ...(goal?.plan?{objective:preview(goal.plan.objective)}:{}),...(goal?.review?{reviewDecision:goal.review.decision}:{}),
     ...(goal?.blocked?{blockedReason:preview(goal.blocked.reason)}:{}),...(scope.wait?{wait:{waitId:scope.wait.waitId,reason:preview(scope.wait.reason),goalRevision:scope.wait.goalRevision,createdAt:scope.wait.createdAt}}:{}),stamp:{scopeId:scope.scopeId,streamId,seq}};
 }
@@ -118,5 +118,5 @@ export function readScopeDetail(snapshot:ScopeSnapshot,scopes:readonly DispatchS
   if(stamp&&sameGoalValue(stamp,selected.stamp))return {mode:'noop',stamp:selected.stamp};
   const scope=scopes.find(item=>item.scopeId===selected.scopeId&&item.workspaceId===snapshot.identity.workspaceId&&item.rootSessionId===snapshot.identity.rootSessionId);
   valid(scope,'周期详情与摘要不一致');
-  return {mode:'updated',stamp:selected.stamp,scope:{scopeId:scope.scopeId,workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,status:scope.status,createdAt:scope.createdAt,...(scope.goal?{goal:structuredClone(scope.goal)}:{}),...(scope.wait?{wait:structuredClone(scope.wait)}:{}),...(scope.closedAt?{closedAt:scope.closedAt}:{}),...(scope.outcome?{outcome:scope.outcome}:{})}};
+  return {mode:'updated',stamp:selected.stamp,scope:{scopeId:scope.scopeId,workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,status:scope.status,createdAt:scope.createdAt,...(scope.goal?{goal:structuredClone(scope.goal)}:{}),...(scope.wait?{wait:structuredClone(scope.wait)}:{}),...(scope.continuations?{continuations:structuredClone(scope.continuations)}:{}),...(scope.closedAt?{closedAt:scope.closedAt}:{}),...(scope.outcome?{outcome:scope.outcome}:{})}};
 }

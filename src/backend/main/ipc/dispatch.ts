@@ -1,6 +1,6 @@
 /**
  * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
- * 设计原因：通过 ApplicationServices 契约隔离应用实现；成员执行和静态角色历史显式绑定完整身份，历史入口只读，审批与运行命令分开；会话图与目标周期联合读取不依赖界面当前选择。
+ * 设计原因：通过 ApplicationServices 契约隔离应用实现；显式目标补充与普通聊天、审批分开，稳定请求由调度去重，回执查询只读；所有入口使用完整身份，不依赖当前界面选择。
  */
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
@@ -53,6 +53,8 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'loop.queueContinue':return app.execution(args.id).continueQueue(args.taskId);
     case 'loop.chat':return app.execution(args.id).chat(await new ChatInputs(app.workspace(args.id)).message(args.message,args.attachments),await app.chatOptions(args.id,args.options,args.attachments));
     case 'loop.resume':return app.execution(args.id).resume(args.taskId,args.runId,await new ChatInputs(app.workspace(args.id)).message(args.message,args.attachments),await app.chatOptions(args.id,args.options,args.attachments),args.reconciledToolIds);
+    case 'loop.goalContinue':return app.execution(args.workspaceId).continueGoal(args);
+    case 'loop.goalContinuation':return app.memberDispatch(args.workspaceId).continuations.inspect(args);
     case 'chat.attach':return new ChatInputs(app.workspace(args.id)).add(args.attachment);
     case 'chat.connectors':return new ChatInputs(app.workspace(args.id)).connectors();
     case 'chat.preview':return new ChatInputs(app.workspace(args.id)).preview(args.attachmentId);

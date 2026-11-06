@@ -90,6 +90,15 @@ it('完成申请不是目标完成，普通对话、legacy和完成依据不足�
   expect(scopeGoalView(summarizeScope({...scope(),goal:undefined},streamId,1))).toMatchObject({phase:'legacy',tone:'neutral'});
 });
 
+it('补充后旧计划保持可查但不能冒充新目标完成，输入版本不一致拒绝发布',()=>{
+  const revised=reviewed();revised.goal!.inputRevision=2;
+  const summary=summarizeScope(revised,streamId,2);expect(summary.needsReplan).toBe(true);expect(scopeGoalView(summary)).toMatchObject({phase:'replanning',tone:'running'});
+  expect(scopeGoalView({...summary,status:'closed',outcome:'completed',closedAt:time})).toMatchObject({phase:'completion_unverified',tone:'warning'});
+  const html=renderToStaticMarkup(createElement(ScopeGoalPanel,{state:view(revised)}));expect(html).toContain('补充已受理');expect(html).toContain('输入第 1 版');expect(html).not.toContain('目标已完成');
+  const response=reset(revised,2);if(response.scopes.mode==='reset')response.scopes.snapshot.scopes[0].inputRevision=1;
+  const state=new SessionReadProjection(identity);expect(()=>state.apply(response)).toThrow('目标补充版本');expect(state.graph).toBeUndefined();
+});
+
 it('同一目标卡展示原始输入、计划、审阅、完整阻塞原因，但不伪造人工验收',()=>{
   const request=reviewed(),pending=renderToStaticMarkup(createElement(ScopeGoalPanel,{state:view(request),compact:true,testId:'conversation-goal-summary'}));
   expect(pending).toContain('data-goal-state="review_pending"');expect(pending).toContain('本轮真实输入');expect(pending).toContain('仍需等待主运行结束和程序复核');expect(pending).toContain('commit-one');expect(pending).not.toContain('目标已完成');
@@ -115,7 +124,7 @@ it('只有持久waiting才显示执行暂停，历史选择不覆盖当前等待
   const waiting:DispatchScope={...requested,status:'waiting',wait:{waitId:'wait-one',reason:'需要用户补充 '.repeat(100)+'完整原因末尾',createdAt:time,runId:'main-run',goalRevision:3,graphCursor:{streamId:'graph',seq:1},knowledgeRevision:'knowledge',mainRunIds:['main-run']}};
   const state=view(waiting),projection=new SessionReadProjection(identity);projection.apply(reset(waiting));
   expect(state.activeScope).toBeUndefined();expect(state.openScope).toBe(state.waitingScope);expect(state.currentGoalView.phase).toBe('waiting');expect(projection.detail()?.wait?.reason).toContain('完整原因末尾');
-  const html=renderToStaticMarkup(createElement(ScopeGoalPanel,{state}));expect(html).toContain('data-goal-state="waiting"');expect(html).toContain('scope-goal-wait-detail');expect(html).toContain('完整原因末尾');expect(html).toContain('恢复入口尚未接通');expect(html).not.toContain('<button');
+  const html=renderToStaticMarkup(createElement(ScopeGoalPanel,{state}));expect(html).toContain('data-goal-state="waiting"');expect(html).toContain('scope-goal-wait-detail');expect(html).toContain('完整原因末尾');expect(html).toContain('普通排队消息不会恢复本目标');expect(html).not.toContain('<button');
   const historical=view({...scope('closed'),status:'closed',closedAt:time,outcome:'completed'}),browsing={...historical,scopes:[state.openScope!,...historical.scopes],openScope:state.openScope,waitingScope:state.waitingScope,currentGoalView:state.currentGoalView};
   expect(currentScope(browsing.scopes)).toBe(state.waitingScope);
   const root=renderToStaticMarkup(createElement(SessionTaskView,{workspaceId:identity.workspaceId,taskId:identity.rootSessionId,runs:[],queued:[],now:0,busy:false,graph,scopeState:browsing,selectedTaskId:graph.root.nodeId,onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));expect(root).toContain('当前另有待补充任务');expect(root).toContain('取消当前任务');expect(root).toContain('data-testid="scope-stop"');

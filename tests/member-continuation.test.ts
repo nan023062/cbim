@@ -7,7 +7,7 @@ import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage'
 import {transcript} from '../src/frontend/conversation/transcript';
 import {openBridge} from '../src/backend/core/brain/pi/bridge';
 
-const source=():RunInputSource=>({kind:'member-results',continuationId:'batch-one',messageIds:['result-one'],taskIds:['member-task']});
+const source=():Extract<RunInputSource,{kind:'member-results'}>=>({kind:'member-results',continuationId:'batch-one',messageIds:['result-one'],taskIds:['member-task']});
 class Engine implements AgentEngine {
   readonly kind='pi';context!:EngineContext;
   constructor(private result:'completed'|'failed'|'cancelled'='completed'){}

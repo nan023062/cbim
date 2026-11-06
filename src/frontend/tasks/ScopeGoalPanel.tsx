@@ -1,17 +1,19 @@
 /**
  * 作用定位：复用展示本轮真实目标、静态角色分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。
- * 设计原因：同一后端周期共享状态文案，普通问答、旧记录、完成申请、持久等待和可靠关闭分别呈现；展开只读取已同步详情，不触发调度或验收。
+ * 设计原因：同一后端周期共享状态文案，普通问答、旧记录、完成申请、持久等待和可靠关闭分别呈现；展开仅查看事实，当前等待的显式补充交给共享控制器，不构成人工验收。
  */
 import type {ScopeGoalState} from './scope-state';
 import {Icon} from '../components/Icon';
+import {ScopeContinuationForm} from './ScopeContinuationForm';
+import type {ScopeContinuationView} from './useScopeContinuation';
 import './scope-goal.css';
 
 /** compact 仅改变默认展开状态；testId 支持对话与任务详情稳定定位，不影响业务状态。 */
-export interface ScopeGoalPanelProps {state:ScopeGoalState;compact?:boolean;testId?:string}
+export interface ScopeGoalPanelProps {state:ScopeGoalState;compact?:boolean;testId?:string;/** 两处卡片共享主会话控制器；缺省为纯只读展示。 */continuation?:ScopeContinuationView}
 const shortId=(value:string)=>value.length>20?value.slice(0,8)+'…'+value.slice(-6):value;
 const reviewLabels={complete:'完成申请',replan:'继续重规划',blocked:'报告阻塞',awaiting_user:'需要用户补充'};
 /** 所有“已满足”都明确是审阅声明；人工项没有真实批准接口时只能显示待确认。 */
-export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel'}:ScopeGoalPanelProps){
+export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel',continuation}:ScopeGoalPanelProps){
   const {scopes,selectedScopeId,historyScopeId,selectedScope:scope,selectedGoalView:view,detailLoading,loading,error}=state;
   const summary=scopes.find(value=>value.scopeId===selectedScopeId),goal=scope?.goal,plan=goal?.plan,review=goal?.review;
   const title=plan?.objective??summary?.objective??summary?.inputPreview??'本轮目标';
@@ -23,7 +25,8 @@ export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel'}:S
     {error&&<p className="scope-goal-alert" role="alert">{error}；保留上次已确认的目标记录。</p>}
     {!summary?<p className="scope-goal-muted">{loading?'正在同步本轮目标…':'当前会话还没有保存目标周期。普通聊天不会被补造成业务任务。'}</p>:<>
       <p className="scope-goal-title" title={title}>{title}</p>
-      {summary.status==='waiting'&&<div className="scope-goal-waiting" data-testid="scope-goal-waiting"><p>{summary.wait?.reason}</p><p className="scope-goal-muted">恢复入口尚未接通，可取消当前任务后另发任务。普通排队消息不会恢复本目标或代替人工验收。</p></div>}
+      {summary.status==='waiting'&&<div className="scope-goal-waiting" data-testid="scope-goal-waiting"><p>{summary.wait?.reason}</p><p className="scope-goal-muted">在本目标卡片补充说明后继续。普通排队消息不会恢复本目标或代替人工验收。</p></div>}
+      {continuation&&continuation.scopeId===selectedScopeId&&<ScopeContinuationForm state={continuation}/>}
       {summary.blockedReason&&<p role="status" className="scope-goal-blocked" data-testid="scope-goal-blocked">未完成原因：{summary.blockedReason}</p>}
       {summary.status==='closed'&&summary.outcome!=='completed'&&!summary.blockedReason&&<p className="scope-goal-muted">本周期已结束，不能将本轮输出视为目标完成。</p>}
       {!summary.hasGoal?<p className="scope-goal-muted">旧记录没有持久化原始输入或目标计划；这里不根据会话标题推断。</p>:<details className="scope-goal-details" key={selectedScopeId} open={!compact} data-testid="scope-goal-details"><summary>查看目标计划与审阅<span>{summary.goalRevision===undefined?'':` · 第 ${summary.goalRevision} 版`}</span></summary>
@@ -31,7 +34,8 @@ export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel'}:S
           {scope.wait&&<div className="scope-goal-section" data-testid="scope-goal-wait-detail"><h4>{scope.status==='waiting'?'等待补充原因':'等待记录'}</h4><p className="scope-goal-wait-reason">{scope.wait.reason}</p><p className="scope-goal-muted">记录于 {new Date(scope.wait.createdAt).toLocaleString()} · 目标第 {scope.wait.goalRevision} 版</p></div>}
           {goal?.blocked&&<div className="scope-goal-section" data-testid="scope-goal-blocked-detail"><h4>完整受阻原因</h4><p className="scope-goal-blocked">{goal.blocked.reason}</p></div>}
           <div className="scope-goal-section"><h4>本轮原始输入</h4><div className="scope-goal-input" data-testid="scope-goal-input">{goal!.input.message}</div>{goal!.input.attachmentIds.length>0&&<p className="scope-goal-muted">{goal!.input.attachmentIds.length} 份附件快照</p>}</div>
-          {plan?<div className="scope-goal-section" data-testid="scope-goal-plan"><h4>目标计划 <small>第 {plan.revision} 版</small></h4><p>{plan.objective}</p><p className="scope-goal-muted">{plan.reason}</p>
+          {!!scope.continuations?.length&&<div className="scope-goal-section" data-testid="scope-goal-continuations"><h4>已受理的目标补充</h4>{scope.continuations.map(item=><div key={item.continuationId}><p className="scope-goal-metadata">输入第 {item.inputRevision} 版 · {new Date(item.acceptedAt).toLocaleString()}</p><div className="scope-goal-input">{item.input.message}</div></div>)}</div>}
+          {plan?<div className="scope-goal-section" data-testid="scope-goal-plan"><h4>目标计划 <small>第 {plan.revision} 版 · 输入第 {plan.inputRevision??1} 版</small></h4>{summary.needsReplan&&<p className="scope-goal-muted">此计划早于最新补充，等待主 Agent 更新。</p>}<p>{plan.objective}</p><p className="scope-goal-muted">{plan.reason}</p>
             {plan.constraints.length>0&&<><h5>约束</h5><ul>{plan.constraints.map((item,index)=><li key={index}>{item}</li>)}</ul></>}
             <h5>验收要求</h5><ol className="scope-goal-criteria">{plan.criteria.map(criterion=>{const check=review?.checks.find(item=>item.criterionId===criterion.id);return <li key={criterion.id}><div><strong>{criterion.text}</strong><span className="scope-goal-kind">{criterion.kind==='human'?'人工确认':'证据核验'}</span></div><p className="scope-goal-muted">{criterion.kind==='human'?'尚未取得人工验收决定':check?.outcome==='satisfied'?'主 Agent 报告已满足，有证据引用':check?.outcome==='unmet'?'尚未满足':check?.outcome==='needs_human'?'需要人工判断':'尚未审阅'}</p>{check?.reason&&<p>{check.reason}</p>}</li>})}</ol>
             <h5>责任分配</h5><ul className="scope-goal-assignments">{plan.assignments.map((item,index)=><li key={index}><strong>{item.agentName}</strong><p>{item.moduleNames.length?item.moduleNames.join('、'):'团队 / 业务知识治理'}</p><p className="scope-goal-muted">{item.reason}</p><small>对应验收：{item.criterionIds.map(id=>plan.criteria.find(criterion=>criterion.id===id)?.text??id).join('；')}</small></li>)}</ul>

@@ -87,13 +87,13 @@ N_src_backend_core_team ..> N_src_backend_core_tasks : 导入依赖
 
 ## 子目录导航
 
-- [brain/](brain/ARCHITECTURE.md)：引擎无关的执行循环与事件契约。主对话以 conversationBinding 固定实例，正式任务以 memberBinding 固定业务运行，两者互斥；可信结果来源与回执先落盘，旧历史不补造身份，续跑不改绑或混合原生上下文。
+- [brain/](brain/ARCHITECTURE.md)：引擎无关的执行循环与事件契约。主对话与正式成员分别绑定身份；真实用户补充与成员资料来源分开。租约及旧日志核实后才提交启动意图，停止覆盖尚未登记active的准备窗口；旧历史不补造，重启不重放。
 - [connectors/](connectors/ARCHITECTURE.md)：链接器定义、查询与唯一身份检查；当前不执行外部插件。
 - [foundation/](foundation/ARCHITECTURE.md)：少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识快照、校验、领域查询、对象变更和可移植静态包规划。团队能力可独立复用，业务模板必须完整；物理事务与预览缓存经端口注入，不携带动态成员或任务。Team/Workspace 只依赖快照辅助，不依赖查询门面。
 - [policy/](policy/ARCHITECTURE.md)：内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；不声称操作系统隔离。
 - [runtime/](runtime/ARCHITECTURE.md)：应用级运行监管契约：主会话和正式任务按可信绑定归属实例，旧 Loop 无绑定保留 role-only；实时对话占用、轮次用量和负载分开表达，只读投影不签发执行权。
-- [tasks/](tasks/ARCHITECTURE.md)：任务计划、派发图、周期目标与安全等待检查点。原子校验输入、计划/审阅和不可逆关闭；waiting占唯一未关闭槽但无活动执行。公开摘要及详情用独立游标，模型判断不冒充人工验收。
+- [tasks/](tasks/ARCHITECTURE.md)：任务计划、派发图、目标与安全等待。显式补充原子消费检查点、追加不可变输入历史；新输入使旧计划失效，运行/版本预算跨补充累计。公开摘要及详情用独立游标，已关闭不复活，文字不签署人工验收。
 - [team/](team/ARCHITECTURE.md)：Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履历契约。主实例归主会话，业务实例归周期与任务；履历按角色聚合真实通道，释放或删定义后保留，旧记录不补造实例。
 - [tools/](tools/ARCHITECTURE.md)：工具 Schema、版本、副作用、调用决策、结构化提问及回执；统一校验结果的 JSON 传输快照，拒绝缺失文本等无效内容。回执绑定运行身份与输入结果哈希；注册和发现不授予执行权限。
 - [workspace/](workspace/ARCHITECTURE.md)：领域工程、Module、本模块 Workflow 的只读视图及显式维护关系类型；作者与维护人分开，与 main/workspace 生命周期分开。

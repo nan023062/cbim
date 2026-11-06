@@ -1,6 +1,6 @@
 /**
  * 作用定位：大脑 执行层：与具体引擎无关的任务、事件、工具策略和执行摘要契约。
- * 设计原因：任务身份与引擎会话分开，主对话绑定登记实例，成员绑定区分业务任务、运行与通道；可信成员回传携带独立来源，不冒充用户授权。公开事件持久化计划修订，摘要区分候选与验收，steer 不改变模型或权限。
+ * 设计原因：任务身份与引擎会话分开，主对话绑定登记实例，成员绑定区分业务任务、运行与通道；成员回传与显式用户补充携带不同可信来源，均不签署人工验收。公开事件持久化计划修订，steer 不改变模型或权限。
  */
 import type {TaskSpec} from '../tasks/types';
 import type {ToolCall,ToolDecision} from '../tools/types';
@@ -45,7 +45,7 @@ export interface EngineContext {
   memberBinding?:MemberRunBinding;
   /** 可信主对话登记身份；聊天通道与正式任务通道不混用，原生历史仍由 sessionFile 校验。 */
   conversationBinding?:ConversationAgentBinding;
-  /** 仅可信调度接续存在；成员结果以有来源的资料进入原生上下文，不伪造用户消息。 */
+  /** 仅可信接续入口存在；成员结果是资料，显式用户补充保持用户消息，不混淆授权。 */
   source?:RunInputSource;
   /** 绑定本轮日志的任务记录工具；不能签发业务验收。 */
   taskTools?:Pick<import('../tasks/progress-tools').TaskProgressTools,'list'|'call'>;

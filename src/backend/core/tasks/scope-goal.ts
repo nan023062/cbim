@@ -1,6 +1,6 @@
 /**
  * 作用定位：定义调度周期目标的原始输入、版本化计划、审阅证据和持久化转换规则。
- * 设计原因：计划与模型回合分离，原始需求不可改写；所有审阅引用真实运行而非模型自报结果，重放同样限制版本演进。
+ * 设计原因：计划与模型回合分离，原始需求不可改写；显式补充提升输入版本并使旧计划过期，审阅引用真实运行，重放同样限制版本演进。
  * 职责边界：Schema 只校验形状，运行、知识和图证据由调度服务核实；complete 是请求，不是验收已通过。
  */
 import {z} from 'zod';
@@ -12,7 +12,7 @@ const message=z.string().max(1_000_000).refine(value=>value.trim().length>0,'周
 const attachments=z.array(z.string().uuid()).max(12);
 const revision=z.number().int().min(1).max(65);
 const unique=(values:string[])=>new Set(values).size===values.length;
-/** 本步最多接受 64 次计划/审阅决策；达到上限只能由可信协调器记录阻塞并结束。 */
+/** 同一目标最多 64 次计划、审阅或显式补充版本变更；跨等待不重置，耗尽只能记录阻塞或结束。 */
 export const scopeGoalDecisionLimit=64;
 export interface DispatchScopeInput {message:string;attachmentIds?:string[]}
 export const dispatchScopeInputSchema=z.object({message,attachmentIds:attachments.optional()}).strict();
@@ -30,20 +30,24 @@ export type GoalPlanInput=z.infer<typeof goalPlanInputSchema>;
 export type GoalReviewInput=z.infer<typeof goalReviewInputSchema>;
 export type GoalEvidence=z.infer<typeof evidence>;
 const cursor=z.object({streamId:id,seq:z.number().int().nonnegative()}).strict();
-const stamp={revision,runId:id,recordedAt:z.string().datetime(),knowledgeRevision:id,graphCursor:cursor};
+const inputRevision=z.number().int().min(1).max(32);
+const stamp={revision,inputRevision:inputRevision.optional(),runId:id,recordedAt:z.string().datetime(),knowledgeRevision:id,graphCursor:cursor};
 /** 已解析真实角色及模块的知识基线；不复制 Skill 正文或密钥。 */
 const resolvedAssignment=assignment.extend({agentName:text,teamId:id,moduleNames:z.array(text).max(50)}).strict();
 const plan=goalPlanInputSchema.omit({expectedRevision:true,assignments:true}).extend({...stamp,assignments:z.array(resolvedAssignment).min(1).max(100)}).strict();
 const review=goalReviewInputSchema.omit({expectedRevision:true}).extend({...stamp,planRevision:revision,observedSeq:z.number().int().nonnegative(),lastEffectSeq:z.number().int().nonnegative()}).strict();
 /** 缺省整个 goal 只兼容旧周期；不能给已有旧记录猜测或补造原始输入。 */
-export const dispatchScopeGoalSchema=z.object({revision,input:z.object({message,attachmentIds:attachments}).strict(),plan:plan.optional(),review:review.optional(),blocked:z.object({reason:text,at:z.string().datetime()}).strict().optional()}).strict().superRefine((goal,context)=>{
+export const dispatchScopeGoalSchema=z.object({revision,inputRevision:inputRevision.optional(),input:z.object({message,attachmentIds:attachments}).strict(),plan:plan.optional(),review:review.optional(),blocked:z.object({reason:text,at:z.string().datetime()}).strict().optional()}).strict().superRefine((goal,context)=>{
   const issue=(message:string)=>context.addIssue({code:z.ZodIssueCode.custom,message});
-  if(goal.revision===1){if(goal.plan||goal.review)issue('初始目标不能包含决策');return}
+  if(goal.revision===1){if(goal.plan||goal.review||(goal.inputRevision??1)!==1)issue('初始目标不能包含决策或补充');return}
   if(!goal.plan){issue('后续版本必须保留计划');return}
   const criteria=goal.plan.criteria.map(item=>item.id);
   if(!unique(criteria)||!goal.plan.assignments.every(item=>item.criterionIds.every(id=>criteria.includes(id)))||!criteria.every(id=>goal.plan!.assignments.some(item=>item.criterionIds.includes(id))))issue('计划验收项及责任映射无效');
   if(goal.plan.revision<2||goal.plan.revision>goal.revision)issue('计划版本超出目标版本');
-  if(!goal.review){if(goal.plan.revision!==goal.revision)issue('未审阅时最新版本必须是计划');return}
+  const currentInput=goal.inputRevision??1,plannedInput=goal.plan.inputRevision??1;
+  if(plannedInput>currentInput)issue('计划输入版本超前');
+  if(!goal.review){if(plannedInput===currentInput&&goal.plan.revision!==goal.revision)issue('未审阅时最新版本必须是计划');if(plannedInput<currentInput&&goal.plan.revision>=goal.revision)issue('过期计划不能占据补充后的最新版本');return}
+  if(plannedInput!==currentInput||(goal.review.inputRevision??1)!==currentInput)issue('审阅必须对应最新输入版本的计划');
   if(goal.review.revision!==goal.revision||goal.review.planRevision!==goal.plan.revision||goal.review.revision<=goal.plan.revision)issue('审阅与目标计划版本不一致');
   if(goal.review.lastEffectSeq>goal.review.observedSeq)issue('副作用序号不能超过已观察日志');
   if(!unique(goal.review.checks.map(item=>item.criterionId))||!goal.review.checks.every(item=>criteria.includes(item.criterionId)))issue('审阅项重复或不属于计划');
@@ -53,21 +57,29 @@ export const dispatchScopeGoalSchema=z.object({revision,input:z.object({message,
 export type DispatchScopeGoal=z.infer<typeof dispatchScopeGoalSchema>;
 export type ScopeGoalPlan=NonNullable<DispatchScopeGoal['plan']>;
 export type ScopeGoalReview=NonNullable<DispatchScopeGoal['review']>;
+/** 历史字段缺省解释为第 1 版，仅用于比较，不在读取时补写历史。 */
+export function goalInputRevision(value:{inputRevision?:number}):number{return value.inputRevision??1}
+/** 真实用户补充之后保留旧计划供回顾和 human 约束，但不可沿该计划派工或完成。 */
+export function goalNeedsReplan(goal:DispatchScopeGoal):boolean{return !!goal.plan&&goalInputRevision(goal.plan)!==goalInputRevision(goal)}
 
 function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([key,item])=>[key,ordered(item)])):value}
 export const sameGoalValue=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 function valid(condition:unknown,message:string):asserts condition{if(!condition)fail('GRAPH_INPUT_INVALID',message)}
-/** 提交与磁盘重放共用：只允许追加一次决策版本或冻结阻塞，不允许删除输入、回退版本或改写已关闭快照。 */
-export function validateScopeGoalTransition(previous:DispatchScopeGoal|undefined,next:DispatchScopeGoal|undefined,isNew:boolean):void{
+/** 提交与重放共用；supplement 只能在周期不变量已匹配一次等待消费时传入，普通决策不能擅自提升输入版本。 */
+export function validateScopeGoalTransition(previous:DispatchScopeGoal|undefined,next:DispatchScopeGoal|undefined,isNew:boolean,supplement=false):void{
   if(isNew){valid(!next||(next.revision===1&&!next.plan&&!next.review&&!next.blocked),'新目标必须从未规划的第 1 版开始');return}
   if(sameGoalValue(previous,next))return;
   valid(previous&&next,'周期输入创建后不能改写、移除或给旧记录补造');
   valid(sameGoalValue(previous.input,next.input),'原始用户输入不可改写');
   valid(!previous.blocked,'已冻结阻塞的目标不可继续改写');
+  if(supplement){
+    valid(previous.review?.decision==='awaiting_user'&&!next.blocked&&next.revision===previous.revision+1&&goalInputRevision(next)===goalInputRevision(previous)+1&&sameGoalValue(previous.plan,next.plan)&&!next.review,'补充必须提升输入及目标版本、保留旧计划并清除审阅');return;
+  }
+  valid(sameGoalValue(previous.inputRevision,next.inputRevision),'只有绑定等待检查点的显式补充可以提升输入版本');
   if(next.blocked){valid(next.revision===previous.revision&&sameGoalValue(previous.plan,next.plan)&&sameGoalValue(previous.review,next.review),'阻塞记录不能顺带修改计划或审阅');return}
   valid(next.revision===previous.revision+1&&next.revision<=scopeGoalDecisionLimit+1,'目标决策版本必须逐次增加且不超过上限');
   if(!sameGoalValue(previous.plan,next.plan)){
-    valid(next.plan&&next.plan.revision===next.revision&&!next.review,'新计划必须绑定当前版本并清除旧审阅');
+    valid(next.plan&&next.plan.revision===next.revision&&goalInputRevision(next.plan)===goalInputRevision(next)&&!next.review,'新计划必须绑定当前输入与目标版本并清除旧审阅');
     valid((previous.plan?.criteria??[]).filter(item=>item.kind==='human').every(item=>next.plan!.criteria.some(candidate=>sameGoalValue(item,candidate))),'重新规划不能删除或降低既有人工验收项');
   }else valid(next.plan&&next.review&&next.review.revision===next.revision&&next.review.planRevision===next.plan.revision&&!sameGoalValue(previous.review,next.review),'审阅必须绑定现有计划和新的目标版本');
 }

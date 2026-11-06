@@ -44,12 +44,13 @@ export function scopeGoalView(scope:ScopeSummary|undefined,graph?:GraphSnapshot)
   if(!scope)return {phase:'none',label:'尚无本轮目标记录',tone:'neutral'};
   if(!scope.hasGoal)return {phase:'legacy',label:'旧周期 · 未保存原始目标',tone:'neutral'};
   if(scope.status==='closed'){
-    if(scope.outcome==='completed')return scope.hasPlan?(scope.reviewDecision==='complete'?{phase:'completed',label:'目标已完成',tone:'success'}:{phase:'completion_unverified',label:'周期已结束 · 完成依据不完整',tone:'warning'}):{phase:'conversation_finished',label:'本轮对话结束',tone:'neutral'};
+    if(scope.outcome==='completed')return scope.hasPlan?(scope.reviewDecision==='complete'&&!scope.needsReplan?{phase:'completed',label:'目标已完成',tone:'success'}:{phase:'completion_unverified',label:'周期已结束 · 完成依据不完整',tone:'warning'}):{phase:'conversation_finished',label:'本轮对话结束',tone:'neutral'};
     if(scope.outcome==='cancelled')return {phase:'cancelled',label:'本轮已停止',tone:'neutral'};
     if(scope.outcome==='interrupted')return {phase:'interrupted',label:'目标执行中断',tone:'warning'};
     return {phase:scope.blockedReason?'blocked':'failed',label:'目标未完成',tone:'warning'};
   }
   if(scope.status==='waiting')return {phase:'waiting',label:'等待补充 · 执行已暂停',tone:'warning'};
+  if(scope.needsReplan)return {phase:'replanning',label:'补充已受理 · 等待更新计划',tone:'running'};
   if(scope.blockedReason||scope.reviewDecision==='blocked')return {phase:'blocked',label:'目标受阻',tone:'warning'};
   if(scope.reviewDecision==='complete')return {phase:'review_pending',label:'完成申请待复核',tone:'warning'};
   if(scope.reviewDecision==='awaiting_user')return {phase:'awaiting_user',label:'已请求补充 · 等待暂停确认',tone:'warning'};
@@ -101,6 +102,8 @@ export class SessionReadProjection {
       const cached=cache.get(summary.scopeId);if(!cached||!sameStamp(cached.stamp,summary.stamp))continue;
       const scope=cached.scope;
       if(scope.status!==summary.status||scope.outcome!==summary.outcome||scope.createdAt!==summary.createdAt||scope.closedAt!==summary.closedAt||Boolean(scope.goal)!==summary.hasGoal||scope.goal?.revision!==summary.goalRevision||Boolean(scope.goal?.plan)!==summary.hasPlan||scope.goal?.review?.decision!==summary.reviewDecision)throw Error('目标摘要与同版本详情不一致');
+      if(summary.inputRevision!==undefined&&(scope.goal?.inputRevision??1)!==summary.inputRevision)throw Error('目标补充版本与同版本摘要不一致');
+      if(summary.needsReplan!==undefined&&summary.needsReplan!==(!!scope.goal?.plan&&(scope.goal.plan.inputRevision??1)!==(scope.goal.inputRevision??1)))throw Error('目标计划输入版本与同版本摘要不一致');
       if(Boolean(scope.wait)!==Boolean(summary.wait)||scope.wait?.waitId!==summary.wait?.waitId||scope.wait?.goalRevision!==summary.wait?.goalRevision||scope.wait?.createdAt!==summary.wait?.createdAt)throw Error('目标等待记录与同版本摘要不一致');
       if(scope.goal&&(!scope.goal.input||typeof scope.goal.input.message!=='string'||!Array.isArray(scope.goal.input.attachmentIds)))throw Error('目标详情缺少原始输入');
     }

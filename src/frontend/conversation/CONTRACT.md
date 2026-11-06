@@ -11,16 +11,20 @@
 
 `UsageStatus.waitingSince` 只使用可信目标摘要的等待时间。它优先于尚未追齐的运行日志，停止生成动画，并限制尚显示 running 的旧记录计时不会越过等待检查点；不改写已有 token、费用或执行日志。
 
-本步没有显式补充、恢复或人工批准表单。界面如实说明恢复入口尚未接通，可取消目标后另发任务；不提供不起作用的按钮，也不把“继续队列”、问题回答或工具批准复用为恢复操作。
+当前等待目标卡片提供“补充并继续”纯文本表单。`Conversation` 装配唯一 `useScopeContinuation`，对话卡与任务根共享草稿、提交锁和回执；表单不会消费或清空聊天草稿、附件和队列。提交时从输入区选定的有效供应商配置解析实际 `provider + profileId + model + permission`，完整请求先保存在本机再发送，后续修改模型和权限不改写已冻结请求。
+
+普通排队消息、问题回答、工具批准及“继续队列”均不能恢复目标。显式补充不是人工验收；已受理只代表恢复意图持久化，实际运行/等待/结束继续由目标增量流显示。通信结果未知时保留原命令，重开只查询，不自动再次执行；表单仅在当前 waiting 身份和版本一致时可以首次提交或原请求重试，历史只读。
 
 ```mermaid
 classDiagram
 class Conversation { <<component>> }
 class ConversationState { <<module>> }
 class SessionGraphState { <<tasks boundary>> }
+class ScopeContinuation { <<tasks boundary>> }
 class MessageQueue { <<component>> }
 class UsageStatus { <<component>> }
 Conversation --> SessionGraphState : 当前开放目标与历史选择分离
+Conversation --> ScopeContinuation : 两处卡片共享显式补充状态
 Conversation --> ConversationState : 计算发送与执行状态
 Conversation --> MessageQueue : 等待只禁启动不禁整理
 Conversation --> UsageStatus : 真实等待检查点与状态

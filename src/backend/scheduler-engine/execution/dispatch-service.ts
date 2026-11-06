@@ -1,6 +1,6 @@
 /**
  * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
- * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；周期冻结真实输入，等待检查点复核全部终态再可靠停泊。初始化保留安全等待，幂等旧回执不能重开已关闭周期。
+ * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；周期冻结真实输入，全部终态复核后安全等待，仅显式补充可消费等待。初始化不自动续跑，幂等旧回执不能重开已关闭周期。
  * 职责边界：本模块负责可靠入队，由独立 MemberExecutionManager 消费执行；新增派发不能覆盖已有活动占用，排队不等于任务完成。
  */
 import {randomUUID} from 'node:crypto';
@@ -16,6 +16,7 @@ import type {AgentInstance} from '../../core/team/agent-types';
 import type {TaskSpec} from '../../core/tasks/types';
 import type {RunSummary} from '../../core/brain/types';
 import {ScopeGoalService,type ScopeGoalPorts} from './scope-goal-service';
+import {ScopeContinuationService} from './scope-continuation-service';
 import {openGraphInput,createMemberInput,dispatchTaskInput,graphIdentityInput} from '../../core/tasks/dispatch-commands';
 import type {OpenGraphReceipt,CreateMemberReceipt,DispatchReceipt} from '../../core/tasks/dispatch-commands';
 import type {GraphIdentity,GraphCursor,GraphSnapshot,GraphChange,GraphEventBatch,AgentGraphView,GraphEdge,TaskNode} from '../../core/tasks/graph-types';
@@ -31,8 +32,11 @@ export class WorkspaceDispatchService {
   private closed=false;
   /** 目标计划与审阅复用派发事务；日志证据由应用只读端口注入，不从模型参数接受。 */
   readonly goals:ScopeGoalService;
+  /** 可信用户补充的消费与只读回执；启动和停止屏障仍由运行管理器掌管。 */
+  readonly continuations:ScopeContinuationService;
   constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts){
     this.goals=new ScopeGoalService(owner,store,goalPorts);
+    this.continuations=new ScopeContinuationService(owner,store);
   }
 
   /** 工作区启动时恢复事务存储，触发存储观察者的基线；不创建成员、不消费任务。 */
@@ -56,14 +60,14 @@ export class WorkspaceDispatchService {
     await this.store.transact(this.command('scope.open',command),async state=>{
       this.check(input.workspaceId);this.graph(state,input.rootSessionId);
       const previous=state.scopes?.find(scope=>scope.scopeId===scopeId);
-      if(previous){if(previous.rootSessionId!==input.rootSessionId)fail('DISPATCH_SCOPE_IDENTITY','调度周期属于其他主会话');verifyGoal(previous);if(previous.status==='waiting')fail('DISPATCH_SCOPE_WAITING','调度周期正在安全等待，本阶段不能重新启动');if(previous.status!=='active')fail('DISPATCH_SCOPE_CLOSED','调度周期已结束');return {receipt:previous}}
+      if(previous){if(previous.rootSessionId!==input.rootSessionId)fail('DISPATCH_SCOPE_IDENTITY','调度周期属于其他主会话');verifyGoal(previous);if(previous.status==='waiting')fail('DISPATCH_SCOPE_WAITING','调度周期正在安全等待，必须通过显式补充入口继续');if(previous.status!=='active')fail('DISPATCH_SCOPE_CLOSED','调度周期已结束');return {receipt:previous}}
       if(state.scopes?.some(scope=>scope.rootSessionId===input.rootSessionId&&scope.status!=='closed'))fail('DISPATCH_SCOPE_BUSY','当前主会话还有未结束或等待中的用户任务周期');
       const scope:DispatchScope={...input,status:'active',createdAt:new Date().toISOString(),...(goal?{goal}:{})};return {scopes:[scope],receipt:scope};
     });
     const scope=(await this.store.read()).scopes?.find(value=>value.scopeId===scopeId);
     if(!scope||scope.workspaceId!==input.workspaceId||scope.rootSessionId!==input.rootSessionId)fail('DISPATCH_SCOPE_IDENTITY','调度周期不属于当前主会话');
     verifyGoal(scope);
-    if(scope.status==='waiting')fail('DISPATCH_SCOPE_WAITING','调度周期正在安全等待，本阶段不能重新启动');
+    if(scope.status==='waiting')fail('DISPATCH_SCOPE_WAITING','调度周期正在安全等待，必须通过显式补充入口继续');
     if(scope.status!=='active')fail('DISPATCH_SCOPE_CLOSED','调度周期已结束，不能重新打开');
     return scope;
   }
@@ -115,7 +119,8 @@ export class WorkspaceDispatchService {
   async parkScope(identity:GraphIdentity,scopeId:string,rawSummary:RunSummary,rawMainRunIds:string[]):Promise<DispatchScope>{
     const input=this.parse(scopeIdentityInput,{...identity,scopeId});this.check(input.workspaceId);
     const summary=structuredClone(rawSummary),mainRunIds=structuredClone(rawMainRunIds);
-    const command={...input,runId:summary.runId,mainRunIds,commandId:'scope-wait-'+hash(json(input))};
+    // 同周期可以多次显式补充后再等待；幂等键绑定真实主运行，避免第二个检查点撞上第一次的提交。
+    const command={...input,runId:summary.runId,mainRunIds,commandId:'scope-wait-'+hash(json({...input,runId:summary.runId}))};
     await this.store.transact(this.command('scope.wait',command),async state=>{
       this.check(input.workspaceId);const scope=state.scopes?.find(value=>value.scopeId===scopeId&&value.rootSessionId===input.rootSessionId);
       if(!scope)fail('DISPATCH_SCOPE_IDENTITY','调度周期不属于当前主会话');

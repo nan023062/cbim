@@ -1,12 +1,13 @@
 /**
  * 作用定位：定义工作区成员注册、会话绑定及任务派发的原子持久化端口。
- * 设计原因：调度层只表达领域变化，main 负责落盘；任务、领取意图、消息和成员占用一起提交，观察端口只接收恢复基线及已提交事实。
+ * 设计原因：调度层只表达领域变化，main 负责落盘；任务、领取意图、消息和成员占用一起提交，界面在同一屏障读取图与独立周期投影，观察端口只接收已提交事实。
  * 职责边界：持久化入队或 starting 意图都不是模型已经运行，completed 也不代表验收通过。
  */
 import type {AgentInstance, AgentSessionBinding} from '../team/agent-types';
 import type {AgentRef, GraphIdentity, GraphEventBatch, GraphSnapshot, GraphCursor, GraphDelta} from './graph-types';
 import type {DispatchRun} from './dispatch-execution';
 import type {DispatchScope} from './dispatch-scope';
+import type {DispatchSessionReadInput,DispatchSessionRead} from './scope-view';
 
 /** 信封身份固定；claim 记录领取时的 run 与租约代际，消费后保留用于审计。 */
 export interface DispatchMessageBase {
@@ -70,6 +71,8 @@ export interface DispatchStore {
   snapshot(identity: GraphIdentity): Promise<GraphSnapshot>;
   /** 按完整事务批次分页，limit 为批次数；身份不匹配拒绝，流变化或保留前缀不足返回 reset。 */
   delta(identity: GraphIdentity, cursor?: GraphCursor, limit?: number): Promise<GraphDelta>;
+  /** 在同一已提交屏障读取图、独立周期摘要增量及选中详情；只读不会创建周期或推进任何序号。 */
+  sessionRead(input:DispatchSessionReadInput):Promise<DispatchSessionRead>;
   /** 停止接收新操作，等待已排队提交结束后释放资源。 */
   close(): Promise<void>;
 }

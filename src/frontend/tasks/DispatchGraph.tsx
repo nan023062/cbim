@@ -18,12 +18,14 @@ export interface DispatchGraphProps {
   root:DispatchRootView;
   /** 根使用 nodeId，业务节点使用 taskId，与详情视图的选择约定一致。 */
   selectedTaskId?:string;
+  /** 仅降低其他周期节点的视觉强调；保持完整拓扑和全部可选择节点，不据此改写派发状态。 */
+  highlightedScopeId?:string;
   onSelectTask:(id:string)=>void;
 }
 export const taskStatusLabels:Record<TaskNode['status'],string>={planned:'待安排',queued:'排队中',running:'执行中',waiting:'等待前置',result_ready:'交付待审阅',blocked:'需要处理',failed:'执行失败',cancelled:'已停止',interrupted:'执行中断'};
 
 /** 节点选择只展开详情，不发起任务、改变调度顺序或签发验收。 */
-export function DispatchGraph({graph,root,selectedTaskId,onSelectTask}:DispatchGraphProps){
+export function DispatchGraph({graph,root,selectedTaskId,onSelectTask,highlightedScopeId}:DispatchGraphProps){
   const viewport=useRef<HTMLDivElement>(null),previous=useRef<{root:string;layout:DispatchGraphLayout}|undefined>(undefined),marker=useId().replace(/[^a-zA-Z0-9_-]/g,'');
   const computed=useMemo(()=>{
     try{const layout=layoutDispatchGraph(graph,root.nodeId,previous.current?.root===root.nodeId?previous.current.layout:undefined);previous.current={root:root.nodeId,layout};return {layout,error:undefined}}
@@ -41,7 +43,8 @@ export function DispatchGraph({graph,root,selectedTaskId,onSelectTask}:DispatchG
         </svg>
         {layout.nodes.map(node=>{
           const task=node.taskId?tasks.get(node.taskId):undefined,id=task?.taskId??root.nodeId,status=task?(task.status==='queued'&&task.activeRunId?'正在启动':taskStatusLabels[task.status]):root.status;
-          return <button key={node.nodeId} className={'dispatch-node '+(task?'task-node':'root-node')+(selectedTaskId===id?' selected':'')} style={{left:node.x,top:node.y,width:node.width,height:node.height}} onClick={()=>onSelectTask(id)} aria-pressed={selectedTaskId===id} aria-label={`${task?.assignee.name??root.name} · ${task?.goal??root.goal}${task?' · '+task.modules.map(module=>module.name).join('、'):''} · ${status}`} data-testid={task?'dispatch-task-node':'dispatch-root-node'} data-task-id={task?.taskId} data-node-id={node.nodeId} data-status={task?.status}>
+          const outsideScope=Boolean(task&&highlightedScopeId&&task.scopeId!==highlightedScopeId);
+          return <button key={node.nodeId} className={'dispatch-node '+(task?'task-node':'root-node')+(selectedTaskId===id?' selected':'')+(outsideScope?' other-scope':'')} style={{left:node.x,top:node.y,width:node.width,height:node.height}} onClick={()=>onSelectTask(id)} aria-pressed={selectedTaskId===id} aria-label={`${task?.assignee.name??root.name} · ${task?.goal??root.goal}${task?' · '+task.modules.map(module=>module.name).join('、'):''} · ${status}${outsideScope?' · 其他任务周期':''}`} data-testid={task?'dispatch-task-node':'dispatch-root-node'} data-task-id={task?.taskId} data-node-id={node.nodeId} data-status={task?.status} data-scope-id={task?.scopeId} data-highlighted={task&&highlightedScopeId?!outsideScope:undefined}>
             <span className="dispatch-node-top"><span className="dispatch-node-avatar"><Icon name={task?'team':'sparkles'} size={17}/></span><span className="dispatch-node-agent">{task?.assignee.name??root.name}<small>{task?'执行 Agent':'主会话 · 调度根'}</small></span><Icon name="chevron" size={13}/></span>
             <span className="dispatch-node-goal" title={task?.goal??root.goal}>{task?.goal??root.goal}</span>
             {task?<span className="dispatch-node-modules" title={task.modules.map(module=>module.name).join('、')}><Icon name="folder" size={12}/><span>{task.modules.map(module=>module.name).join(' · ')}</span></span>:<span className="dispatch-node-modules">{root.runCount} 次执行 · {root.pendingCount} 条待执行</span>}

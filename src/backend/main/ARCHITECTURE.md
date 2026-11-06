@@ -130,7 +130,7 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 ## 子目录导航
 
 - [commands/](commands/ARCHITECTURE.md)：CLI 入口，复用应用和调度，不拥有第二套领域规则。
-- [ipc/](ipc/ARCHITECTURE.md)：应用 action 路由。运行调用显式携带工作区和任务身份，静态角色历史以角色/Session/运行身份只读查询；桌面发送方核验仍在 Electron 接入处执行。
+- [ipc/](ipc/ARCHITECTURE.md)：应用 action 路由。运行、目标与角色历史请求显式绑定工作区和主会话身份；sessionRead 只读同屏障下的图/目标增量及选中详情，不新建或启动任务。桌面发送方在 Electron 接入处核验。
 - [persistence/](persistence/ARCHITECTURE.md)：本机持久化适配：知识事务、运行日志、对话附件、模型配置。保留原数据路径与格式，目录调整不迁移用户数据。
 - [platform/](platform/ARCHITECTURE.md)：本机路径、系统锁、凭据加密、命令终端及原生工具访问检查。路径策略不是操作系统沙箱。
 - [resources/](resources/ARCHITECTURE.md)：链接器、人才和完整业务模板共用的本地/远端资源仓库。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。

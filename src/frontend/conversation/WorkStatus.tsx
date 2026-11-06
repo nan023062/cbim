@@ -1,12 +1,12 @@
 /**
  * 作用定位：移植 Cindy WorkGroupBlock 的折叠标题、运行旋转图标、实时活动预览和执行轨道。
- * 设计原因：只投影真实执行事件；上下文计量不覆盖当前活动文案，折叠不停止任务，等待批准与执行中分开呈现。
+ * 设计原因：只投影真实执行事件；本轮结束不表示整体目标完成，目标审阅由会话单独呈现。折叠不停止任务，等待批准与执行中分开。
  * 来源：Cindy WorkGroupBlock.tsx，Apache-2.0；许可见 docs/legal。
  */
 import type {RunSummary} from '../../bridge/contracts/execution';
 import {Icon} from '../components/Icon';
 import {ToolActivity} from './ToolActivity';
-const labels={running:'正在工作',completed:'本轮完成',cancelled:'已停止',failed:'执行失败',interrupted:'执行中断'};
+const labels={running:'正在工作',completed:'本轮结束',cancelled:'已停止',failed:'执行失败',interrupted:'执行中断'};
 export function WorkStatus({run,now}:{run:RunSummary;now:number}){
   const live=run.status==='running',end=live?now:Date.parse(run.events.at(-1)?.time||'');
   const seconds=Math.max(0,Math.round((end-Date.parse(run.events[0]?.time||''))/1000))||0;

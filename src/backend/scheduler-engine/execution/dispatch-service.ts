@@ -21,6 +21,7 @@ import type {OpenGraphReceipt,CreateMemberReceipt,DispatchReceipt} from '../../c
 import type {GraphIdentity,GraphCursor,GraphSnapshot,GraphChange,GraphEventBatch,AgentGraphView,GraphEdge,TaskNode} from '../../core/tasks/graph-types';
 import {resolveConversationAgent,resolveDispatchAgent,resolveDispatchModules} from '../context/dispatch-context';
 import {prepareMember} from './agent-manager';
+import {dispatchSessionReadInput} from '../../core/tasks/scope-view';
 
 /** 只需工作区状态与知识快照，不依赖桌面或具体文件存储。 */
 type DispatchWorkspace=Pick<KnowledgeWorkspace,'entry'|'instanceId'|'assert'|'snapshot'|'read'>;
@@ -250,6 +251,8 @@ export class WorkspaceDispatchService {
   snapshot(raw:unknown){const identity=this.parse(graphIdentityInput,raw);this.check(identity.workspaceId);return this.store.snapshot(identity)}
   /** 无变化返回 noop，读取内存游标与已提交批次，不重复回读知识或整份日志。 */
   delta(raw:unknown,cursor?:GraphCursor,limit?:number){const identity=this.parse(graphIdentityInput,raw);this.check(identity.workspaceId);return this.store.delta(identity,cursor,limit)}
+  /** 同屏读取图、独立周期摘要与选中详情；读取不启动调度，周期变化不使审阅保存的图游标过期。 */
+  sessionRead(raw:unknown){const input=this.parse(dispatchSessionReadInput,raw);this.check(input.identity.workspaceId);return this.store.sessionRead(input)}
   /** 先阻止新请求，再等待已经入队的事务；由应用在释放工作区锁前调用。 */
   async close(){this.closed=true;await this.store.close()}
 }

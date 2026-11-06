@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-执行日志、附件快照、派发事务及角色 Session 履历索引。正文保留唯一运行日志，派生索引按角色/通道/轮次原子保存；删除静态角色不删履历，不写入可共享知识包。身份与哈希链异常拒绝，未知操作不自动重放。
+执行日志、附件快照、派发事务与角色履历。目标摘要增量从既有事务重放派生，保留有界增量窗及完整原日志；同屏障读取图/目标/详情，无变化不重传原文。身份与哈希链异常拒绝，未知操作不自动重放。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -105,6 +105,7 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore["
   +read()
   +snapshot()
   +delta()
+  +sessionRead()
   +transact()
   +close()
   -observer
@@ -112,10 +113,9 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore["
   -state
   -commands
   -events
+  -scopeViews
+  -scopeEvents
   -transactionSeq
-  -lastHash
-  -initialization
-  -tail
 }
 N_src_backend_main_persistence_tasks_dispatch_store_ts ..> N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore : 声明
 class N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchStore["DispatchStore (外部契约)"] {
@@ -132,6 +132,9 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts["dispatch-store.ts"
   <<module>>
 }
 class N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore["FileDispatchStore"] {
+  -lastHash
+  -initialization
+  -tail
   -closing
   -closePromise
   -storageFailure
@@ -152,7 +155,7 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchSt
 N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchStore <|.. N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore
 ```
 
-直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/tasks/graph-reducer.ts](../../../core/tasks/graph-reducer.ts)、[../../../core/tasks/dispatch-invariants.ts](../../../core/tasks/dispatch-invariants.ts)、[../../../core/tasks/dispatch-scope-invariants.ts](../../../core/tasks/dispatch-scope-invariants.ts)、[../../../core/tasks/dispatch-storage.ts](../../../core/tasks/dispatch-storage.ts)、[../../../core/tasks/graph-types.ts](../../../core/tasks/graph-types.ts)。
+直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/tasks/graph-reducer.ts](../../../core/tasks/graph-reducer.ts)、[../../../core/tasks/dispatch-invariants.ts](../../../core/tasks/dispatch-invariants.ts)、[../../../core/tasks/dispatch-scope-invariants.ts](../../../core/tasks/dispatch-scope-invariants.ts)、[../../../core/tasks/dispatch-storage.ts](../../../core/tasks/dispatch-storage.ts)、[../../../core/tasks/graph-types.ts](../../../core/tasks/graph-types.ts)、[../../../core/tasks/scope-view.ts](../../../core/tasks/scope-view.ts)、[../../../core/tasks/dispatch-scope.ts](../../../core/tasks/dispatch-scope.ts)。
 
 ### run-journal.ts
 
@@ -325,6 +328,14 @@ interface DispatchStore {
 增量返回采用 `mode: 'noop' | 'delta' | 'reset'`，完整公开形状见 [Bridge 契约](../../../../bridge/contracts/CONTRACT.md)。无变化时不重复读取和传输全图正文。订阅只发布已落盘批次；消费者掉线或丢包后，用最后成功应用的游标补读。
 
 正常重启从持久化头恢复同一 `streamId` 与最后 `seq`，不回到 0。目前恢复并保留全部已提交图批次，未实现日志压缩或历史裁剪。若后续引入压缩，须先可靠生成带游标快照并建立保留区间；过期游标再按协议返回 `reset`。身份不匹配始终拒绝，不能用 reset 悄悄切换工作区或会话。
+
+### 联合读取图与周期目标
+
+`FileDispatchStore.sessionRead` 先等待原事务队列，再同步读取 graph delta、scope summary delta 与选中 scope detail，不在三份响应之间执行异步读取。此接口不创建根/周期、不读知识、不启动成员、不确认信封；原 `snapshot / delta` 接口保持兼容。
+
+周期投影只由已落盘 `scopes` 变更派生，和正常重放共用 `publish`。每主会话独立编号，不受其他会话事务、图事件或幂等回执重发影响。scope 摘要保存在内存，事件和重放证明最多保留 256 批；超窗客户端 reset 到摘要快照。原 `dispatch.jsonl` 不变，不另建权威记录；正常重启重建相同 streamId、seq 和详情 stamp。单独 plan/review/block/close 不制造图批次，因此不会让已保存的审阅证据自行过期。
+
+公开请求可选择本会话历史周期；缺省优先 active，再选最后创建的周期。无目标旧记录不补造。列表仅传小摘要，完整原始输入/计划/审阅在所选 stamp 变化时才返回；每秒无变化轮询只返回三份游标/noop。原始业务文本本身不做自动敏感内容识别，详情不包含运行私有路径、冻结知识或邮箱。
 
 ### 执行、邮箱与恢复
 

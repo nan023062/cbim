@@ -57,7 +57,7 @@ try{
   await page.getByRole('textbox',{name:'对话草稿',exact:true}).fill('主对话实时成员流程测试');
   await page.getByRole('button',{name:'发送消息',exact:true}).click();
   await page.getByText('主 Agent 回复：可以开始成员协作。',{exact:true}).waitFor();
-  await page.waitForFunction(()=>document.querySelector('.chat-run-status')?.textContent?.includes('本轮完成'));
+  await page.waitForFunction(()=>document.querySelector('.chat-run-status')?.textContent?.includes('本轮结束'));
   const records=await call('loop.list',{id:entry.id}),rootSessionId=records.find((record:any)=>record.task?.goal==='主对话实时成员流程测试').task.taskId;
   const identity={workspaceId:entry.id,rootSessionId};
   await call('dispatch.open',{...identity,commandId:'open-ui'});

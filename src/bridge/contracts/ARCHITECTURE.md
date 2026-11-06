@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-可序列化的 IPC 数据与公开展示契约。可重导出 Core 公开类型与无 IO 的校验、归并、格式化函数，不暴露密钥或平台存储实现。
+可序列化的 IPC 数据与公开展示契约。重导出 Core 公开类型及无 IO 校验/归并函数；会话图与目标使用各自游标和同屏障读取，不暴露密钥或平台存储。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -13,7 +13,7 @@
 | [agent-history.ts](agent-history.ts) | 向团队静态节点公开只读的角色 Session 历史协议。 |
 | [architecture.ts](architecture.ts) | 团队/业务架构编辑的桌面 IPC 契约，只公开对象操作、预览差异和提交回执。 |
 | [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
-| [dispatch.ts](dispatch.ts) | 向桌面消费者公开成员派发、按白名单筛选的执行增量、回执和主会话图 Snapshot/Delta，并导出无 IO 的图校验及归并函数。 |
+| [dispatch.ts](dispatch.ts) | 向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。 |
 | [execution.ts](execution.ts) | 对话、运行和排队在 IPC 中传递的可序列化类型。 |
 | [models.ts](models.ts) | 模型配置界面消费的公开模型信息与停止原因格式化。 |
 | [resources.ts](resources.ts) | 资源种类、仓库快照、登录占位及仓库状态的共享类型。 |
@@ -113,7 +113,7 @@ class N_src_bridge_contracts_dispatch_ts["dispatch.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/tasks/graph-types.ts](../../backend/core/tasks/graph-types.ts)、[../../backend/core/tasks/dispatch-commands.ts](../../backend/core/tasks/dispatch-commands.ts)、[../../backend/core/tasks/member-commands.ts](../../backend/core/tasks/member-commands.ts)、[../../backend/core/tasks/member-events.ts](../../backend/core/tasks/member-events.ts)、[../../backend/core/tasks/graph-reducer.ts](../../backend/core/tasks/graph-reducer.ts)、[../../backend/core/tasks/graph-rules.ts](../../backend/core/tasks/graph-rules.ts)。
+直接依赖：[../../backend/core/tasks/graph-types.ts](../../backend/core/tasks/graph-types.ts)、[../../backend/core/tasks/dispatch-commands.ts](../../backend/core/tasks/dispatch-commands.ts)、[../../backend/core/tasks/member-commands.ts](../../backend/core/tasks/member-commands.ts)、[../../backend/core/tasks/member-events.ts](../../backend/core/tasks/member-events.ts)、[../../backend/core/tasks/graph-reducer.ts](../../backend/core/tasks/graph-reducer.ts)、[../../backend/core/tasks/graph-rules.ts](../../backend/core/tasks/graph-rules.ts)、[../../backend/core/tasks/dispatch-scope.ts](../../backend/core/tasks/dispatch-scope.ts)、[../../backend/core/tasks/scope-view.ts](../../backend/core/tasks/scope-view.ts)。
 
 ### execution.ts
 
@@ -351,7 +351,17 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 
 ### 任务派发图公开契约
 
-已通过 `dispatch.ts` 导出真实节点/增量及命令回执类型，以及无 IO 的 `applyGraphBatch / validateGraph` 供前端校验并归并图增量。Application IPC 已接 `dispatch.open / dispatch.memberCreate / dispatch.task / dispatch.graphSnapshot / dispatch.graphDelta`；主会话模型派发工具和当前批次自动执行/回注已接通，图订阅推送与通用历史协作恢复仍为后续能力。
+已通过 `dispatch.ts` 导出真实节点/增量及命令回执类型，以及无 IO 的 `applyGraphBatch / validateGraph` 供前端校验并归并图增量。Application IPC 已接 `dispatch.open / dispatch.memberCreate / dispatch.task / dispatch.graphSnapshot / dispatch.graphDelta / dispatch.sessionRead`；主会话模型派发工具和当前批次自动执行/回注已接通，图订阅推送与通用历史协作恢复仍为后续能力。
+
+### 主会话图与目标周期联合读取
+
+`dispatch.sessionRead({identity,graphCursor?,scopeCursor?,selectedScopeId?,detailStamp?,limit?})` 返回 `DispatchSessionRead {graph:GraphDelta,scopes:ScopeDelta,detail:ScopeDetailRead}`，三份数据来自同一已提交存储屏障。工作区/主会话身份显式绑定，跨会话游标或选择拒绝，不依赖当前 UI 选中项；读取不创建任务或启动模型。
+
+`ScopeCursor` 增加 `kind:'scopes'`，使用独立 streamId/seq；plan/review/block/close 只能推进本流，不推进任务图。`ScopeSnapshot {identity,cursor,scopes}` 与 `ScopeEventBatch {identity,streamId,seq,scopes}` 只携带变更摘要。`ScopeSummary` 含 scopeId、status、createdAt、可选 closedAt/outcome、hasGoal/hasPlan、可选 goalRevision/inputPreview/objective/reviewDecision/blockedReason，以及 `{scopeId,streamId,seq}` stamp；三个文本摘要最多 240 字符。`ScopeDelta` 保持 reset/delta/noop 结构，scope 历史超过 256 批后 reset，limit 每页 1–500 个完整批次。
+
+`ScopeDetailRead` 为 updated `{stamp,scope:DispatchScope}`、noop `{stamp}` 或 empty。缺省选择 active 周期，否则最后创建的周期；选择固定后可检查历史完整输入、计划、逐项审阅和阻塞原因。详情 stamp 包含最后周期变更序号，block/close 即使目标版本不增加仍刷新详情。完整 `goal.input` 可包含大正文，仅在选择或 stamp 改变时传输。分页增量尚未到头部时 detail 可能比本页 cursor 新，不能因此拒绝有效响应。前端须先验证全部响应再统一替换投影，并使用同一个轮询请求消费两条流。
+
+`DispatchScope` 的 closed/outcome 是周期终态；`goal.review.decision:'complete'` 仅为等待复核的完成申请。模型运行 completed 不等于目标成功，历史没有 goal 时保持无记录。`applyScopeBatch / validateScopeSnapshot` 经 Bridge 提供纯归并与结构校验，不导入后端存储实现。
 
 成员执行已接 `dispatch.executionStart / dispatch.executionStop / dispatch.executionInspect`，可信桌面请求须携带 `workspaceId + rootSessionId + taskId`，启动另带幂等 `commandId`、`expectedRevision` 及公开模型/权限选项。`MemberExecutionView` 只公开任务和运行状态，不返回原生会话路径、完整提示词或密钥。`dispatch.approvals / dispatch.approve / dispatch.questions / dispatch.answerQuestion` 使用相同任务身份；批准仅对当前执行有效。
 

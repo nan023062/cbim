@@ -1,6 +1,6 @@
 /**
  * 作用定位：将成员、独立会话、任务图批次、领取意图和结果信封作为一个工作区事务可靠保存。
- * 设计原因：追加日志是唯一权威记录；fsync 后才发布投影。主实例和周期执行实例分别去重，周期关闭与任务取消、实例释放原子保存；旧无范围记录不迁移。
+ * 设计原因：追加日志是唯一权威记录；fsync 后才发布投影。独立周期摘要游标从同一日志重建，不推进任务图证据游标；同屏读取共享提交屏障，旧无范围记录不迁移。
  * 职责边界：应用须先持有工作区唯一写入锁；本类串行化该实例内的事务，不启动大脑、不消费 outbox。
  */
 import fs from 'node:fs/promises';
@@ -12,6 +12,8 @@ import {validateDispatchExecution} from '../../../core/tasks/dispatch-invariants
 import {validateDispatchScopes} from '../../../core/tasks/dispatch-scope-invariants';
 import type {DispatchCommand, DispatchMutation, DispatchObserver, DispatchState, DispatchStore} from '../../../core/tasks/dispatch-storage';
 import type {AgentRef, GraphCursor, GraphDelta, GraphEventBatch, GraphIdentity, GraphSnapshot} from '../../../core/tasks/graph-types';
+import {applyScopeBatch,dispatchSessionReadInput,emptyScopeSnapshot,readScopeDelta,readScopeDetail,summarizeScope,scopeViewHistoryLimit,type DispatchSessionReadInput,type DispatchSessionRead,type ScopeSnapshot,type ScopeEventBatch} from '../../../core/tasks/scope-view';
+import type {DispatchScope} from '../../../core/tasks/dispatch-scope';
 
 /** transactionSeq 是工作区日志序号，与单张图的 batch.seq 分开。 */
 interface TransactionBody {
@@ -42,6 +44,9 @@ export class FileDispatchStore implements DispatchStore {
   private readonly commands=new Map<string,{fingerprint:string;receipt:unknown}>();
   /** 按 rootSessionId 保存已提交图批次；图序号独立于包含无图变更事务的 transactionSeq。 */
   private readonly events=new Map<string,GraphEventBatch[]>();
+  /** 从 scopes 提交派生，每个主会话独立连续编号；正常重放恢复相同游标，不保存第二份日志。 */
+  private readonly scopeViews=new Map<string,ScopeSnapshot>();
+  private readonly scopeEvents=new Map<string,ScopeEventBatch[]>();
   private transactionSeq=0;
   private lastHash='';
   private initialization?:Promise<void>;
@@ -85,6 +90,15 @@ export class FileDispatchStore implements DispatchStore {
     this.available();await this.init();await this.tail;if(this.storageFailure)throw this.storageFailure;
     const graph=this.graph(identity);
     return clone(readGraphDelta(graph,this.events.get(identity.rootSessionId)??[],cursor,limit));
+  }
+
+  /** 图和周期在一个屏障内同步取值；无变化不复制目标正文，不回读知识或运行日志。 */
+  async sessionRead(raw:DispatchSessionReadInput):Promise<DispatchSessionRead>{
+    const parsed=dispatchSessionReadInput.safeParse(raw);valid(parsed.success,'主会话读取参数无效');
+    const input=parsed.data;this.available();await this.init();await this.tail;if(this.storageFailure)throw this.storageFailure;
+    const graph=this.graph(input.identity),root=input.identity.rootSessionId;
+    const scopes=this.scopeViews.get(root)??emptyScopeSnapshot(graph.identity,graph.cursor.streamId);
+    return clone({graph:readGraphDelta(graph,this.events.get(root)??[],input.graphCursor,input.limit),scopes:readScopeDelta(scopes,this.scopeEvents.get(root)??[],input.scopeCursor,input.limit),detail:readScopeDetail(scopes,this.state.scopes??[],input.selectedScopeId,input.detailStamp)});
   }
 
   /**
@@ -140,6 +154,15 @@ export class FileDispatchStore implements DispatchStore {
     this.commands.set(body.command.commandId,{fingerprint:body.command.fingerprint,receipt:body.mutation.receipt});
     const batch=body.mutation.batch;
     if(batch){const events=this.events.get(batch.identity.rootSessionId)??[];events.push(batch);this.events.set(batch.identity.rootSessionId,events)}
+    const groups=new Map<string,DispatchScope[]>();
+    for(const scope of body.mutation.scopes??[]){const values=groups.get(scope.rootSessionId)??[];values.push(scope);groups.set(scope.rootSessionId,values)}
+    for(const [root,updates] of groups){
+      const graph=this.graph({workspaceId:this.workspaceId,rootSessionId:root});
+      const previous=this.scopeViews.get(root)??emptyScopeSnapshot(graph.identity,graph.cursor.streamId),seq=previous.cursor.seq+1;
+      const event:ScopeEventBatch={identity:graph.identity,streamId:previous.cursor.streamId,seq,scopes:updates.map(scope=>summarizeScope(scope,previous.cursor.streamId,seq))};
+      this.scopeViews.set(root,applyScopeBatch(previous,event));
+      const events=this.scopeEvents.get(root)??[];events.push(event);if(events.length>scopeViewHistoryLimit)events.shift();this.scopeEvents.set(root,events);
+    }
   }
 
   /** 验证整次 mutation 后才返回候选投影；图、成员会话与信封引用在同一个候选状态内核对。 */

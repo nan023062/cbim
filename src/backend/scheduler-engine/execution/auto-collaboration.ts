@@ -1,13 +1,13 @@
 /**
  * 作用定位：管理一次用户任务的调度周期，串接主 Agent 调度、执行成员和结果回传，周期结束后释放执行实例。
  * 设计原因：周期冻结本轮真实用户输入，不复用会话首次目标；成员回注不改写输入。一次任务可能跨多个主模型轮次，用户队列等周期可靠关闭后才启动下一周期，执行者与主实例始终分离。
- * 职责边界：主 Agent 只调度和治理知识；成功关闭须核验结构化目标审阅，失败/停止排空成员。证据不足转为阻塞并暂停队列，不恢复自动执行、不替代人工验收，历史不随释放删除。
+ * 职责边界：主 Agent 只调度和治理知识；成功关闭须核验结构化目标审阅。已结算的 awaiting_user 保存安全等待检查点并暂停队列，退出/重启不执行；其他失败和用户停止排空成员。等待不是人工验收。
  */
 import {hash,json} from '../../core/foundation/serialization';
 import {randomUUID} from 'node:crypto';
 import {fail} from '../../core/foundation/errors';
 import type {TaskSpec,RunSummary,RunInputSource} from '../../core/brain/types';
-import type {DispatchScopeOutcome} from '../../core/tasks/dispatch-scope';
+import type {DispatchScope,DispatchScopeOutcome} from '../../core/tasks/dispatch-scope';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {DispatchTaskInput} from '../../core/tasks/dispatch-commands';
 import type {GraphSnapshot,TaskNode} from '../../core/tasks/graph-types';
@@ -22,26 +22,39 @@ import type {WorkspaceExecutionLease} from './workspace-lease';
 /** 只保存主轮选择的公开运行选项；不保存密钥、附件字节或本轮 allowAll。 */
 type Options={provider:string;model:string;profileId:string;permission:'read'|'ask'|'execute';allowNativeExecution:boolean;turnTimeoutMs?:number};
 /** 一个用户任务跨主轮和成员回注共享 scope；tasks 保留已回注的成员，供最终收束与释放。 */
-type Cycle={task:TaskSpec;scopeId:string;tasks:Set<string>;operations:Set<Promise<unknown>>;mainRuns:Set<string>;workRequested:boolean;stopped:boolean;ending?:DispatchScopeOutcome;closing?:Promise<void>;completionSummary?:RunSummary};
+type Cycle={task:TaskSpec;scopeId:string;tasks:Set<string>;operations:Set<Promise<unknown>>;mainRuns:Set<string>;workRequested:boolean;stopped:boolean;cancelRequested?:boolean;ending?:DispatchScopeOutcome;closing?:Promise<void>;completionSummary?:RunSummary};
 type Batch={cycle:Cycle;task:TaskSpec;runId:string;options:Options;tasks:string[];calls:Set<string>;settled?:RunSummary;stopped:boolean;failures:Map<string,string>;watched:Set<string>};
 
 /** 应用按工作区装配一个；关闭必须早于主/成员执行管理器与派发存储。 */
 export class AutoCollaboration {
   private batches=new Map<string,Batch>();
   private cycles=new Map<string,Cycle>();
+  /** 无计算占用的持久等待；独立于 Cycle，恢复不需要伪造 TaskSpec 或重启历史模型。 */
+  private waitingSlots=new Map<string,DispatchScope>();
   private closed=false;
   private pending:Promise<void>=Promise.resolve();
   private scheduled=false;
   private releaseListener:()=>void;
   constructor(private owner:KnowledgeWorkspace,private dispatch:WorkspaceDispatchService,private members:MemberExecutionManager,private execution:WorkspaceExecutionManager,lease:WorkspaceExecutionLease,private reportIssue:(rootSessionId:string,error:unknown)=>void=()=>{}){
     this.releaseListener=lease.observeRelease(()=>this.schedule());
-    execution.attachCollaboration({busy:id=>this.busy(id),starting:(task,options,source,message)=>this.starting(task,source,!!options.profileId,message,options.attachmentIds),startFailed:(task,source,error)=>this.startFailed(task,source,error),settled:(task,_options,summary)=>this.settled(task,summary),stop:id=>this.stop(id)});
+    execution.attachCollaboration({busy:id=>this.busy(id),waiting:id=>this.waitingSlots.has(id),starting:(task,options,source,message)=>this.starting(task,source,!!options.profileId,message,options.attachmentIds),startFailed:(task,source,error)=>this.startFailed(task,source,error),settled:(task,_options,summary)=>this.settled(task,summary),stop:id=>this.stop(id)});
+  }
+
+  /** 工作区恢复之后、接受公开请求之前调用；只恢复等待占位，不读取或启动模型会话，不消费邮箱。 */
+  async initialize(){
+    if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭');
+    for(const scope of await this.dispatch.waitingScopes()){
+      if(this.cycles.has(scope.rootSessionId))fail('COLLABORATION_BUSY','不能在活动执行期间恢复等待记录');
+      this.waitingSlots.set(scope.rootSessionId,scope);
+      await this.execution.pauseCollaboration(scope.rootSessionId,'当前目标等待用户补充，后续消息保留在队列');
+    }
   }
 
   /** 普通用户轮次打开新周期；可信成员结果只能续接当前周期，不能偷偷创建另一个周期。 */
   private async starting(task:TaskSpec,source:RunInputSource|undefined,hasProfile:boolean,message:string,attachmentIds?:string[]){
     if(task.mode!=='chat'||task.agentId!=='cbim:main'||!hasProfile)return;
     if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭');
+    if(this.waitingSlots.has(task.taskId))fail('GOAL_WAITING','当前目标处于持久等待，请先处理或取消等待目标');
     const existing=this.cycles.get(task.taskId);
     if(source){if(!existing||existing.stopped)fail('COLLABORATION_STOPPED','原任务调度周期已结束，不能继续自动回注');return}
     if(existing)fail('COLLABORATION_BUSY','当前用户任务尚未可靠关闭，请将新消息加入队列');
@@ -97,8 +110,8 @@ export class AutoCollaboration {
     batch.cycle.tasks.add(receipt.taskId);
     return receipt;
   }
-  /** 用户队列只在本会话确有委派待处理时暂缓，不阻塞其他会话的读取。 */
-  busy(taskId:string){return this.cycles.has(taskId)}
+  /** 未关闭目标始终占本会话入口；持久等待不占模型槽，但普通用户队列不能借它续跑。 */
+  busy(taskId:string){return this.cycles.has(taskId)||this.waitingSlots.has(taskId)}
   private settled(task:TaskSpec,summary?:RunSummary){
     if(!summary){const cycle=this.cycles.get(task.taskId);if(cycle)cycle.ending='interrupted';this.reportIssue(task.taskId,Error('主轮没有可核实的终态'));this.schedule();return}
     const batch=this.batches.get(summary.runId);if(!batch)return;
@@ -171,11 +184,21 @@ export class AutoCollaboration {
     cycle.closing=(async()=>{
       await Promise.allSettled([...cycle.operations]);
       const tasks=[...cycle.tasks].map(taskId=>({...this.identity(cycle),taskId}));
-      let finalOutcome=outcome;
-      if(outcome==='completed'){
+      let finalOutcome=cycle.cancelRequested?'cancelled':outcome;
+      if(finalOutcome==='completed'){
         try{
-          if(cycle.workRequested&&!(await this.dispatch.goals.inspect(this.identity(cycle),cycle.scopeId)).goal?.plan)fail('GOAL_REVIEW_REQUIRED','业务规划或派发未能建立有效目标计划，请核实缺口后继续');
-          await this.dispatch.closeScope(this.identity(cycle),cycle.scopeId,'completed',cycle.completionSummary);
+          const scope=await this.dispatch.goals.inspect(this.identity(cycle),cycle.scopeId);
+          if(cycle.workRequested&&!scope.goal?.plan)fail('GOAL_REVIEW_REQUIRED','业务规划或派发未能建立有效目标计划，请核实缺口后继续');
+          if(cycle.cancelRequested||this.closed)finalOutcome='cancelled';
+          else if(scope.goal?.review?.decision==='awaiting_user'){
+            if(!cycle.completionSummary)fail('GOAL_MAIN_UNSETTLED','等待检查点缺少完整的主运行终态');
+            const waiting=await this.dispatch.parkScope(this.identity(cycle),cycle.scopeId,cycle.completionSummary,[...cycle.mainRuns]);
+            this.waitingSlots.set(cycle.task.taskId,waiting);
+            for(const batch of this.batches.values())if(batch.cycle===cycle)this.batches.delete(batch.runId);
+            if(this.cycles.get(cycle.task.taskId)===cycle)this.cycles.delete(cycle.task.taskId);
+            await this.execution.pauseCollaboration(cycle.task.taskId,'当前目标等待用户补充，后续消息保留在队列');
+            return;
+          }else await this.dispatch.closeScope(this.identity(cycle),cycle.scopeId,'completed',cycle.completionSummary);
         }catch(error){
           // 证据不足或审阅过期不能伪装成功，也不能无限唤醒模型；留下可追溯阻塞并让用户后续继续。
           const code=(error as {code?:string})?.code;
@@ -198,11 +221,15 @@ export class AutoCollaboration {
     })().catch(error=>{cycle.closing=undefined;throw error});
     void cycle.closing.catch(()=>{});return cycle.closing;
   }
-  /** 立即禁止本会话后续派发，等待成员实际结算后关闭整个用户任务周期；保留任务和日志历史。 */
+  /** 用户停止也关闭已恢复的等待目标；检查 park Promise 之后的占位，防止取消与等待提交竞争时漏掉目标。 */
   async stop(taskId:string){
-    const cycle=this.cycles.get(taskId);if(!cycle)return;
-    try{await this.finishCycle(cycle,'cancelled')}catch(error){this.reportIssue(taskId,error);throw error}
+    const cycle=this.cycles.get(taskId);
+    try{
+      if(cycle){cycle.cancelRequested=true;await this.finishCycle(cycle,'cancelled')}
+      const waiting=this.waitingSlots.get(taskId);
+      if(waiting){await this.dispatch.closeScope({workspaceId:waiting.workspaceId,rootSessionId:waiting.rootSessionId},waiting.scopeId,'cancelled');this.waitingSlots.delete(taskId)}
+    }catch(error){this.reportIssue(taskId,error);throw error}
   }
-  /** 应用先禁用调度，再排空成员并关闭周期；其后才可关闭执行管理器和共享存储。 */
+  /** 应用退出排空活动执行；已提交安全等待留在日志中，重开只恢复占位，不等同用户取消。 */
   async close(){this.closed=true;this.releaseListener();for(const b of this.batches.values())b.stopped=true;await this.pending;const cycles=[...this.cycles.values()],results=await Promise.allSettled(cycles.map(cycle=>this.finishCycle(cycle,'cancelled')));for(let i=0;i<results.length;i++){const result=results[i];if(result.status==='rejected')this.reportIssue(cycles[i].task.taskId,result.reason)}this.batches.clear()}
 }

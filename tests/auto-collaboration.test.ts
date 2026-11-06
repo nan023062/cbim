@@ -19,6 +19,8 @@ async function setup(){
   const dispatch={
     goals:{inspect:vi.fn(async()=>({goal:{plan:{}}})),plan:vi.fn(async()=>({})),review:vi.fn(async()=>({})),block:vi.fn(async()=>({}))},
     openScope:vi.fn(async(_identity:any,scopeId:string)=>({...identity,scopeId,status:'active',createdAt:'2026-11-07'})),
+    waitingScopes:vi.fn<()=>Promise<any[]>>(async()=>[]),
+    parkScope:vi.fn(async(_identity:any,scopeId:string,summary:RunSummary,mainRunIds:string[])=>({...identity,scopeId,status:'waiting',createdAt:'2026-11-07',wait:{waitId:'wait-one',runId:summary.runId,mainRunIds}})),
     closeScope:vi.fn(async(_identity:any,scopeId:string,outcome:string,_summary?:RunSummary)=>{if(graph.tasks.some(task=>task.activeRunId))throw Error('scope still active');return {...identity,scopeId,status:'closed',outcome}}),
     openGraph:vi.fn(async()=>({agent:graph.root.agent,cursor:graph.cursor})),
     snapshot:vi.fn(async()=>structuredClone(graph)),
@@ -52,6 +54,45 @@ async function setup(){
   };
   return {task,graph,dispatch,members,execution,issues,lease,coordinator,tools,options,assign,settleParent,finishMember,hooks:()=>hooks};
 }
+
+it('已结算的等待申请停泊并保留目标入口，关闭应用不取消检查点',async()=>{
+  const f=await setup();try{
+    f.dispatch.goals.inspect.mockResolvedValue({goal:{plan:{},review:{decision:'awaiting_user'}}} as any);
+    f.settleParent();await vi.waitFor(()=>expect(f.dispatch.parkScope).toHaveBeenCalledTimes(1));
+    expect(f.dispatch.parkScope.mock.calls[0][3]).toEqual(['parent-run']);
+    await vi.waitFor(()=>expect(f.hooks().waiting?.(f.task.taskId)).toBe(true));
+    expect(f.coordinator.busy(f.task.taskId)).toBe(true);expect(f.execution.continueFromResults).not.toHaveBeenCalled();
+    await expect(f.hooks().starting!(f.task,f.options,undefined,'普通用户输入')).rejects.toMatchObject({code:'GOAL_WAITING'});
+    await f.coordinator.close();expect(f.dispatch.closeScope).not.toHaveBeenCalled();
+  }finally{await f.coordinator.close()}
+});
+
+it('用户停止与等待检查点提交竞争，等待落盘后仍取消而不遗留开放周期',async()=>{
+  const f=await setup(),parking=deferred<any>();try{
+    f.dispatch.goals.inspect.mockResolvedValue({goal:{plan:{},review:{decision:'awaiting_user'}}} as any);
+    f.dispatch.parkScope.mockImplementation(()=>parking.promise);
+    f.settleParent();await vi.waitFor(()=>expect(f.dispatch.parkScope).toHaveBeenCalledTimes(1));
+    const stop=f.hooks().stop(f.task.taskId);
+    const scopeId=f.dispatch.parkScope.mock.calls[0][1];
+    parking.resolve({...f.graph.identity,scopeId,status:'waiting',createdAt:'2026-11-07'});
+    await stop;
+    expect(f.dispatch.closeScope).toHaveBeenCalledWith(f.graph.identity,scopeId,'cancelled');
+    expect(f.coordinator.busy(f.task.taskId)).toBe(false);expect(f.execution.collaborationReady).not.toHaveBeenCalled();
+  }finally{await f.coordinator.close()}
+});
+
+it('恢复等待只登记占位，用户停止无需启动历史模型或伪造TaskSpec',async()=>{
+  const f=await setup();try{
+    await f.hooks().stop(f.task.taskId);f.dispatch.closeScope.mockClear();
+    const identity={workspaceId:f.task.workspaceId,rootSessionId:'history-root'};
+    f.dispatch.waitingScopes.mockResolvedValue([{...identity,scopeId:'history-scope',status:'waiting',createdAt:'2026-11-07'}]);
+    await f.coordinator.initialize();expect(f.coordinator.busy(identity.rootSessionId)).toBe(true);
+    expect(f.members.start).not.toHaveBeenCalled();expect(f.execution.continueFromResults).not.toHaveBeenCalled();
+    await f.hooks().stop(identity.rootSessionId);
+    expect(f.dispatch.closeScope).toHaveBeenCalledWith(identity,'history-scope','cancelled');
+    expect(f.coordinator.busy(identity.rootSessionId)).toBe(false);
+  }finally{await f.coordinator.close()}
+});
 
 it('主轮委派只入队，释放占用后成员才能运行；结果确认失败不重复续跑',async()=>{
   const f=await setup();try{

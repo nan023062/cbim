@@ -1,6 +1,6 @@
 /**
  * 作用定位：调度引擎：工作区执行管理，负责主 Agent 普通对话、团队任务执行与多轮历史读取，拒绝旧轮次分叉，挂起并处理逐次工具审批与结构化用户问题，持久化消息队列并在成功结束后串行续接；本次全部通过仅在当前执行期间有效。
- * 设计原因：以本轮实际输入打开调度周期，成员回注续用原周期，避免续聊和排队沿用首次 TaskSpec.goal。运行前后有可靠生命周期钩子，启动失败不泄漏周期；先释放主轮占用再通知调度，用户队列等整个周期结束才继续。
+ * 设计原因：以本轮实际输入打开调度周期，成员回注续用原周期，避免续聊和排队沿用首次 TaskSpec.goal。先释放主轮占用再通知调度；持久等待仍阻止队列，普通“同意”消息和继续队列不能替代显式目标恢复。
  */
 import {MessageQueue,type QueueCounts} from '../conversation/message-queue';
 import {ApprovalQueue} from '../conversation/approvals';
@@ -32,6 +32,8 @@ export interface ExecutionCollaboration {
   startFailed?(task:TaskSpec,source:RunInputSource|undefined,error:unknown):Promise<void>;
   /** 当前主会话仍有协作批次时，用户消息留在原队列，不抢占成员执行资源。 */
   busy(taskId:string):boolean;
+  /** 可信等待检查点已经提交且没有活动模型；仅用于阻止普通队列解除等待，不授予验收或恢复权。 */
+  waiting?(taskId:string):boolean;
   /** 只在运行和工作区占用已清理后同步通知；undefined 表示收尾或日志未能核实。 */
   settled(task:TaskSpec,options:Options,summary?:RunSummary):void;
   /** 必须先标记该会话停止自动调度，再等待成员收尾；不在管理器串行事务内调用。 */
@@ -61,7 +63,7 @@ export class WorkspaceExecutionManager {
   queued(taskId:string){return this.serial(async()=>{safeId(taskId);return (await this.queue()).list(taskId)})}
   /** 队列游标与变更共享串行边界，只发布已提交快照；保留 queued 供兼容和诊断使用。 */
   queueDelta(taskId:string,cursor?:unknown){return this.serial(async()=>{safeId(taskId);return (await this.queue()).delta(taskId,cursor)})}
-  enqueue(taskId:string,message:string,options:Options){return this.serial(async()=>{safeId(taskId);if(!message.trim())throw Error('消息不能为空');await this.thread(taskId);const q=await this.queue();const entry=await q.add(taskId,message,executionOptions.parse(options));await this.pump(taskId);return entry})}
+  enqueue(taskId:string,message:string,options:Options){return this.serial(async()=>{safeId(taskId);if(!message.trim())throw Error('消息不能为空');await this.thread(taskId);const q=await this.queue();const entry=await q.add(taskId,message,executionOptions.parse(options));if(this.collaboration?.waiting?.(taskId))await q.pause(taskId,'当前目标等待用户补充，后续消息保留在队列');await this.pump(taskId);return entry})}
   changeQueued(taskId:string,id:string,action:unknown){return this.serial(async()=>{await (await this.queue()).change(taskId,id,z.enum(['first','up','down','remove']).parse(action))})}
   editQueued(taskId:string,id:string,message:string,expected:string){return this.serial(async()=>{await (await this.queue()).edit(taskId,id,message,expected)})}
   moveQueued(taskId:string,id:string,beforeId?:string){return this.serial(async()=>{await (await this.queue()).move(taskId,id,beforeId)})}
@@ -72,7 +74,7 @@ export class WorkspaceExecutionManager {
     try{const images=await this.inputImages(entry.options.attachmentIds);await active.loop.runtime.steer(taskId,entry.message,images);await q.complete(id)}
     catch(error:any){await q.pause(taskId,'插入未确认：'+error.message+'；请核实当前对话后再继续队列');throw error}
   })}
-  continueQueue(taskId:string){return this.serial(async()=>{safeId(taskId);this.resultContinuationStopped.delete(taskId);await (await this.queue()).resume(taskId);await this.pump(taskId)})}
+  continueQueue(taskId:string){return this.serial(async()=>{safeId(taskId);if(this.collaboration?.waiting?.(taskId))fail('GOAL_WAITING','当前目标正在等待补充，继续队列不能恢复或验收该目标');this.resultContinuationStopped.delete(taskId);await (await this.queue()).resume(taskId);await this.pump(taskId)})}
   /** 成功结束才自动续接；异常和未核实工具保留队列，等待用户显式处理。 */
   private async pump(taskId:string){
     if(this.closing||this.resultContinuationStopped.has(taskId)||this.active.has(taskId)||this.collaboration?.busy(taskId))return;const q=await this.queue();if(!q.list(taskId).length)return;
@@ -155,7 +157,8 @@ export class WorkspaceExecutionManager {
     const parsed=executionOptions.parse(options);
     if(prior.task.mode==='chat'&&this.collaboration?.busy(taskId)){
       if(reconciledToolIds.length)fail('COLLABORATION_BUSY','协作期间不能排队未决工具核实，请先停止并核实当前任务');
-      const entry=await (await this.queue()).add(taskId,message,parsed);
+      const queue=await this.queue(),entry=await queue.add(taskId,message,parsed);
+      if(this.collaboration?.waiting?.(taskId))await queue.pause(taskId,'当前目标等待用户补充，后续消息保留在队列');
       return {workspaceId:prior.task.workspaceId,taskId,runId,queued:true as const,queueId:entry.id};
     }
     if(prior.task.mode!=='chat'){

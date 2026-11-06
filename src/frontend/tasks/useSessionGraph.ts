@@ -8,7 +8,7 @@ import {SessionReadProjection,completeSessionRead,currentScope,scopeGoalView,typ
 
 /**
  * rootSessionId 缺省时不发请求；身份变化或卸载会丢弃旧响应，不停止后端任务。
- * active=false 降频且保留图，重新激活时立即补读；在途的手动刷新合并为下一次补读。
+ * active=false 降频且保留图，重新激活时立即补读；在途的手动刷新合并为下一次补读。开放/等待周期与历史选择分别返回，等待不等于模型运行。
  */
 export function useSessionGraph(workspaceId:string,rootSessionId?:string,active=true):ScopeGoalState&{refresh:()=>void}{
   const scope=JSON.stringify([workspaceId,rootSessionId]);
@@ -59,5 +59,5 @@ export function useSessionGraph(workspaceId:string,rootSessionId?:string,active=
   const graph=state.scope===scope?state.graph:undefined,scopes=state.scope===scope?state.scopes:[],historyScopeId=selection.scope===scope?selection.id:undefined;
   const current=currentScope(scopes),selected=historyScopeId?scopes.find(item=>item.scopeId===historyScopeId):current;
   const detail=state.scope===scope&&state.detail?.scopeId===selected?.scopeId?state.detail:undefined;
-  return {graph,scopes,selectedScopeId:selected?.scopeId,historyScopeId,selectedScope:detail,activeScope:scopes.find(item=>item.status==='active'),currentGoalView:scopeGoalView(current,graph),selectedGoalView:scopeGoalView(selected,graph),detailLoading:!!selected&&!detail,selectScope,loading:state.scope===scope?state.loading:!!rootSessionId,error:state.scope===scope?state.error:'',refresh};
+  return {graph,scopes,selectedScopeId:selected?.scopeId,historyScopeId,selectedScope:detail,openScope:scopes.find(item=>item.status!=='closed'),activeScope:scopes.find(item=>item.status==='active'),waitingScope:scopes.find(item=>item.status==='waiting'),currentGoalView:scopeGoalView(current,graph),selectedGoalView:scopeGoalView(selected,graph),detailLoading:!!selected&&!detail,selectScope,loading:state.scope===scope?state.loading:!!rootSessionId,error:state.scope===scope?state.error:'',refresh};
 }

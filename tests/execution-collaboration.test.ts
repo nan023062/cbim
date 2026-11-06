@@ -16,7 +16,7 @@ async function fixture(){
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-conversation-collaboration-'));
   const workspace={entry:{id:'workspace-one',path:directory},paths:{project:()=>directory},assert:()=>{}} as unknown as KnowledgeWorkspace;
   const storage=new FileRunStorage();
-  let leased=false,busy=false;
+  let leased=false,busy=false,waiting=false;
   const runs:Array<{task:TaskSpec;message?:string;context?:EngineContext;finish:(status:'completed'|'failed'|'cancelled')=>void;closed:boolean}>=[];
   const factory=vi.fn(async(config:any,task:TaskSpec)=>{
     let resolve!:(value:{status:'completed'|'failed'|'cancelled'})=>void;
@@ -40,10 +40,10 @@ async function fixture(){
   const settled=vi.fn<ExecutionCollaboration['settled']>(()=>{expect(leased).toBe(false);expect(runs.at(-1)?.closed).toBe(true)});
   const stop=vi.fn<ExecutionCollaboration['stop']>(async()=>{busy=false});
   const starting=vi.fn<NonNullable<ExecutionCollaboration['starting']>>(async()=>{}),startFailed=vi.fn<NonNullable<ExecutionCollaboration['startFailed']>>(async()=>{});
-  const attach=()=>manager.attachCollaboration({busy:()=>busy,starting,startFailed,settled,stop});attach();
+  const attach=()=>manager.attachCollaboration({busy:()=>busy||waiting,waiting:()=>waiting,starting,startFailed,settled,stop});attach();
   return {
     workspace,storage,factory,runs,settled,stop,starting,startFailed,
-    get manager(){return manager},setBusy:(value:boolean)=>{busy=value},
+    get manager(){return manager},setBusy:(value:boolean)=>{busy=value},setWaiting:(value:boolean)=>{waiting=value},
     async finish(index=0,status:'completed'|'failed'|'cancelled'='completed'){
       const count=settled.mock.calls.length;runs[index].finish(status);await vi.waitFor(()=>expect(settled.mock.calls.length).toBeGreaterThan(count));
     },
@@ -60,6 +60,20 @@ test('初始输入与显式续聊传入本轮原文，原会话 TaskSpec 保持�
     await f.finish();
     await f.manager.resume(chat.taskId,chat.runId,second,options);
     expect(f.starting).toHaveBeenLastCalledWith(expect.objectContaining({taskId:chat.taskId,goal:first.trim()}),expect.anything(),undefined,second);
+  }finally{await f.cleanup()}
+});
+
+test('持久等待期间普通同意消息只排队，继续队列不能解除等待或启动模型',async()=>{
+  const f=await fixture();try{
+    const chat=await f.manager.chat('需要用户补充的目标',options);f.setWaiting(true);await f.finish();
+    await f.manager.enqueue(chat.taskId,'同意',options);
+    const result=await f.manager.resume(chat.taskId,chat.runId,'补充但来自普通输入',options);
+    expect(result).toMatchObject({queued:true});
+    await expect(f.manager.continueQueue(chat.taskId)).rejects.toMatchObject({code:'GOAL_WAITING'});
+    expect(f.runs).toHaveLength(1);
+    const pending=await f.manager.queued(chat.taskId);expect(pending).toHaveLength(2);expect(pending.every(item=>item.status==='paused')).toBe(true);
+    await f.manager.collaborationReady(chat.taskId);expect(f.runs).toHaveLength(1);
+    await f.reopen();await expect(f.manager.continueQueue(chat.taskId)).rejects.toMatchObject({code:'GOAL_WAITING'});expect(f.runs).toHaveLength(1);
   }finally{await f.cleanup()}
 });
 

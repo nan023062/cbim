@@ -1,6 +1,6 @@
 /**
  * 作用定位：复用展示本轮真实目标、静态角色分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。
- * 设计原因：同一后端周期共享状态文案，普通问答、旧记录、完成申请和可靠关闭分别呈现；展开只读取已同步详情，不触发调度或验收。
+ * 设计原因：同一后端周期共享状态文案，普通问答、旧记录、完成申请、持久等待和可靠关闭分别呈现；展开只读取已同步详情，不触发调度或验收。
  */
 import type {ScopeGoalState} from './scope-state';
 import {Icon} from '../components/Icon';
@@ -23,10 +23,12 @@ export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel'}:S
     {error&&<p className="scope-goal-alert" role="alert">{error}；保留上次已确认的目标记录。</p>}
     {!summary?<p className="scope-goal-muted">{loading?'正在同步本轮目标…':'当前会话还没有保存目标周期。普通聊天不会被补造成业务任务。'}</p>:<>
       <p className="scope-goal-title" title={title}>{title}</p>
+      {summary.status==='waiting'&&<div className="scope-goal-waiting" data-testid="scope-goal-waiting"><p>{summary.wait?.reason}</p><p className="scope-goal-muted">恢复入口尚未接通，可取消当前任务后另发任务。普通排队消息不会恢复本目标或代替人工验收。</p></div>}
       {summary.blockedReason&&<p role="status" className="scope-goal-blocked" data-testid="scope-goal-blocked">未完成原因：{summary.blockedReason}</p>}
       {summary.status==='closed'&&summary.outcome!=='completed'&&!summary.blockedReason&&<p className="scope-goal-muted">本周期已结束，不能将本轮输出视为目标完成。</p>}
       {!summary.hasGoal?<p className="scope-goal-muted">旧记录没有持久化原始输入或目标计划；这里不根据会话标题推断。</p>:<details className="scope-goal-details" key={selectedScopeId} open={!compact} data-testid="scope-goal-details"><summary>查看目标计划与审阅<span>{summary.goalRevision===undefined?'':` · 第 ${summary.goalRevision} 版`}</span></summary>
         {detailLoading||!scope?<p role="status" className="scope-goal-muted">正在同步目标详情…</p>:<>
+          {scope.wait&&<div className="scope-goal-section" data-testid="scope-goal-wait-detail"><h4>{scope.status==='waiting'?'等待补充原因':'等待记录'}</h4><p className="scope-goal-wait-reason">{scope.wait.reason}</p><p className="scope-goal-muted">记录于 {new Date(scope.wait.createdAt).toLocaleString()} · 目标第 {scope.wait.goalRevision} 版</p></div>}
           {goal?.blocked&&<div className="scope-goal-section" data-testid="scope-goal-blocked-detail"><h4>完整受阻原因</h4><p className="scope-goal-blocked">{goal.blocked.reason}</p></div>}
           <div className="scope-goal-section"><h4>本轮原始输入</h4><div className="scope-goal-input" data-testid="scope-goal-input">{goal!.input.message}</div>{goal!.input.attachmentIds.length>0&&<p className="scope-goal-muted">{goal!.input.attachmentIds.length} 份附件快照</p>}</div>
           {plan?<div className="scope-goal-section" data-testid="scope-goal-plan"><h4>目标计划 <small>第 {plan.revision} 版</small></h4><p>{plan.objective}</p><p className="scope-goal-muted">{plan.reason}</p>

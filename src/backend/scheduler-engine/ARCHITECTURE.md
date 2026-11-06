@@ -49,8 +49,8 @@ N_src_backend_scheduler_engine_tools ..> N_src_backend_scheduler_engine_context 
 ## 子目录导航
 
 - [context/](context/ARCHITECTURE.md)：内置主角色可在结构异常时诊断和治理知识。默认执行角色继承 Team 根 Skill，不创建项目角色定义文件；正式任务冻结执行角色、真实模块、维护关系、Workflow 与规范，拒绝主角色执行业务。
-- [conversation/](conversation/ARCHITECTURE.md)：主 Agent 的目标规划、证据审阅与团队技术管理指引，以及用户问题、运行内审批和队列。主角色沿业务/团队图谱调度，不能亲自执行业务；必要人工决定不由模型自签。
-- [execution/](execution/ARCHITECTURE.md)：主实例与图根共享身份，只调度与治理知识。周期冻结真实输入，保存图谱匹配计划和证据审阅，主轮结算后复核完成请求；缺证据暂停队列，最多32次主调度运行。成员回注沿原周期，关闭释放执行实例并保留历史。公开事件隐藏冻结提示及工具正文。
+- [conversation/](conversation/ARCHITECTURE.md)：主 Agent 目标规划、证据审阅与团队技术管理指引，以及用户问题、运行内审批和队列。缺必要信息时申请安全等待，不让模型轮询；主角色不执行业务，普通队列消息不替代人工决定或恢复。
+- [execution/](execution/ARCHITECTURE.md)：主实例与图根共享身份，沿目标计划派工并核验完成证据。主/成员安全结算后可停泊waiting，无模型占用而保留目标入口；普通队列不可越过等待。退出/重启保留检查点，用户停止关闭并释放实例。等待冻结主轮计数，不冒充验收或自动恢复。
 - [runtime/](runtime/ARCHITECTURE.md)：动态运行监管与静态角色履历各自消费已提交事实。监管按真实实例聚合活动与用量；履历按角色/Session分页索引、按需读取公开事件，不授予执行权、不合并模型上下文。恢复不假活跃，实例释放不删历史。
 - [tools/](tools/ARCHITECTURE.md)：把知识 CRUD、目标计划/审阅、执行者派发和图查询注册为 cbim_ 工具。目标与派发工具仅在可信主运行绑定下提供，完成申请仍须结算复核；执行者不获得目标调度或递归派发权。
 

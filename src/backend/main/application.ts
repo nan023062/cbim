@@ -1,6 +1,6 @@
 /**
  * 作用定位：单次运行授权、版本化队列增量和结构化问题按工作区路由；排队时冻结附件内容与模型身份。Application：登记及重命名工作区、装配模型供应商与服务，并统一派发主 Agent 对话、附件快照、工具审批和历史操作。
- * 设计原因：每个主会话绑定自己的主实例及图根，静态角色历史跨实例释放保留；先停协调和运行，撤销观察并排空历史索引后再释放工作区锁。
+ * 设计原因：每个主会话绑定自己的主实例及图根，静态角色历史跨实例释放保留；恢复安全等待占位后才接收请求，退出不取消已停泊目标。先停协调和运行，撤销观察并排空历史索引后再释放工作区锁。
  */
 import path from 'node:path';
 import {dispatchApplication} from './ipc/dispatch';
@@ -32,7 +32,7 @@ export class Application implements ApplicationServices {
   /** 全应用共享供应商目录；公开 IPC 不返回凭据，运行时才解密。 */
   readonly models:LlmProfiles;
   private executions=new Map<string,WorkspaceExecutionManager>();
-  /** 只协调本次应用生命周期内真实主轮委派；重开不自动消费历史任务或结果。 */
+  /** 本次真实主轮与安全等待占位共用入口；重开只恢复等待，绝不自动消费历史任务或结果。 */
   private collaborations=new Map<string,AutoCollaboration>();
   private dispatchers=new Map<string,WorkspaceDispatchService>();
   /** 与派发服务共享存储；关闭存储前先等待成员停止和结算尝试，失败记录保留供重开核实。 */
@@ -78,8 +78,12 @@ export class Application implements ApplicationServices {
           const lease=new WorkspaceExecutionLease(),{dispatch:service,members}=createMemberServices(ws,this.models,lease,monitor.dispatchObserver),execution=createExecutionManager(ws,this.models,lease,()=>this.collaborations.get(id),service);
           this.dispatchers.set(id,service);this.executions.set(id,execution);this.memberExecutions.set(id,members);
           await monitor.initialize(ws,service,execution,members);
-          this.collaborations.set(id,new AutoCollaboration(ws,service,members,execution,lease,(root,error)=>monitor.collaborationIssue(root,error)));
-        }catch(error){monitor.unavailable(error);throw error}
+          const collaboration=new AutoCollaboration(ws,service,members,execution,lease,(root,error)=>monitor.collaborationIssue(root,error));
+          this.collaborations.set(id,collaboration);await collaboration.initialize();
+        }catch(error){
+          // 知识库打开成功不代表内部服务已就绪。等待恢复若中途失败，阻止半就绪服务接受请求；下次 open 走统一关闭/重建路径。
+          monitor.unavailable(error);ws.error='工作区服务初始化失败：'+(error instanceof Error?error.message:String(error));ws.state='failed';throw error;
+        }
       }finally{release()}}
       await this.catalog.update(d=>{const item=d.entries.find(e=>e.id===id);if(item)item.lastOpened=new Date().toISOString();d.recent=[id,...d.recent.filter(x=>x!==id)].slice(0,30)});return ws})();this.opening.set(id,pending);try{return await pending}finally{this.opening.delete(id)}
   }

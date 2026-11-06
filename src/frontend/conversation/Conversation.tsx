@@ -1,6 +1,6 @@
 /**
  * 作用定位：会话双页签入口（对话/本会话任务），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。
- * 设计原因：主运行与整个调度周期分开，等待成员时仍能排队和停止；目标与任务图共用隔离的增量读取。历史目标选择只影响查看，不改变当前发送对象或状态。
+ * 设计原因：主运行与开放调度周期分开，持久等待仍可排队和取消却不能通过普通消息恢复；目标与任务图共用隔离的增量读取。历史目标选择只影响查看，不改变当前发送对象或状态。
  */
 import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
@@ -29,6 +29,7 @@ import {AttachmentMenu} from './AttachmentMenu';
 import {ComposerPicker} from './ComposerPicker';
 import {ComposerAttachments} from './ComposerAttachments';
 import type {ChatAttachment,ChatApproval,ChatPermission} from '../../bridge/contracts/chat';
+import {conversationExecutionState} from './conversation-state';
 const api=window.cbim;
 interface HistoryItem {task?:{taskId:string;goal:string};runId:string;status:string;error?:string}
 /** 请求使用本组件工作区身份；请求锁阻止双击，轮询只在当前组件存活时写入状态。 */
@@ -54,13 +55,13 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
   const [now,setNow]=useState(Date.now()),[approvals,setApprovals]=useState<ChatApproval[]>([]);
   const attachments=tab.attachments||[];
   const attachmentRef=useRef(attachments);attachmentRef.current=attachments;
-  function addAttachments(items:ChatAttachment[]){const combined=[...attachmentRef.current];for(const item of items)if(!combined.some(a=>a.kind===item.kind&&a.source===item.source))combined.push(item);if(combined.length>12){setError('最多可添加 12 项附件，请移除部分附件后重试');return}onAttachments(combined);if(running)setNextTip(Date.now())}
+  function addAttachments(items:ChatAttachment[]){const combined=[...attachmentRef.current];for(const item of items)if(!combined.some(a=>a.kind===item.kind&&a.source===item.source))combined.push(item);if(combined.length>12){setError('最多可添加 12 项附件，请移除部分附件后重试');return}onAttachments(combined);if(taskOpen)setNextTip(Date.now())}
   async function importFiles(files:File[]){if(importing.current||attachmentBusy||busy)return;if(files.length+attachmentRef.current.length>12){setError('最多可添加 12 项附件');return}importing.current=true;setAttachmentBusy(true);setError('');try{addAttachments(await api.importFiles(workspace.id,files))}catch(e:any){setError(e.message)}finally{importing.current=false;setAttachmentBusy(false)}}
   const input=useRef<HTMLTextAreaElement>(null);
   const lock=useRef(false),alive=useRef(true),scroll=useRef<HTMLDivElement>(null),follow=useRef(true),memberContent=useRef<HTMLDivElement>(null);
-  // 主 LLM 回合结束后可能仍在等待独立成员；只有活动主运行接受“插入当前大脑”。
-  const latest=runs.at(-1),mainRunning=latest?.status==='running',running=mainRunning||!!graph.activeScope;
-  useEffect(()=>{if(!running)return;const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer)},[running]);
+  // 当前开放目标和正在执行分开；持久等待不能通过旧 running 日志或历史选择恢复插入/队列。
+  const latest=runs.at(-1),{mainRunning,executing,taskOpen,waiting,canInsert,canContinueQueue,shouldQueue}=conversationExecutionState(latest,graph.openScope,queued.length);
+  useEffect(()=>{if(!executing)return;const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer)},[executing]);
   useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
   useEffect(()=>{let cancelled=false;void api.call('models.list').then(x=>{if(!cancelled)setModels(x)}).catch((e:Error)=>{if(!cancelled)setError(e.message)});return()=>{cancelled=true}},[workspace.id]);
   // 历史/审批串行轮询，队列由独立增量 Hook 同步，不再等待日志读取。
@@ -84,10 +85,10 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
   async function operate(work:()=>Promise<void>){if(lock.current)return;lock.current=true;invalidateQueue();setBusy(true);setError('');try{await work()}catch(e:any){if(alive.current)setError(e.message)}finally{await refreshQueue();graph.refresh();lock.current=false;if(alive.current)setBusy(false)}}
   async function send(insert=false){const message=(tab.draft||'').trim()||(attachments.length?'请查看附加的资料。':'');if(!message)return;
     await operate(async()=>{const [profileId,model]=selection?JSON.parse(selection):[];const options={...(profileId?{profileId,model}:{}),permission};
-      const result=tab.taskId&&(running||queued.length)?await api.call('loop.enqueue',{id:workspace.id,taskId:tab.taskId,message,attachments:attachments.map(a=>a.id),options}):tab.taskId?await api.call('loop.resume',{id:workspace.id,taskId:tab.taskId,runId:latest?.runId,message,attachments:attachments.map(a=>a.id),options,reconciledToolIds:confirmed}):await api.call('loop.chat',{id:workspace.id,message,attachments:attachments.map(a=>a.id),options});
+      const result=tab.taskId&&shouldQueue?await api.call('loop.enqueue',{id:workspace.id,taskId:tab.taskId,message,attachments:attachments.map(a=>a.id),options}):tab.taskId?await api.call('loop.resume',{id:workspace.id,taskId:tab.taskId,runId:latest?.runId,message,attachments:attachments.map(a=>a.id),options,reconciledToolIds:confirmed}):await api.call('loop.chat',{id:workspace.id,message,attachments:attachments.map(a=>a.id),options});
       // 即使离开页面，旧回调也只更新原工作区页签；历史可找回已启动任务。
       onBind(result.taskId);onDraft('');onAttachments([]);
-      if(insert&&mainRunning&&result.id)await api.call('loop.queueInsert',{id:workspace.id,taskId:result.taskId,queueId:result.id});
+      if(insert&&canInsert&&result.id)await api.call('loop.queueInsert',{id:workspace.id,taskId:result.taskId,queueId:result.id});
       if(alive.current){const data=await api.call('loop.thread',{id:workspace.id,taskId:result.taskId});if(alive.current){setRuns(data);setLoaded(true);follow.current=true}}
     });
   }
@@ -95,12 +96,13 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
   const selectedProfile=models?.profiles.find(p=>p.id===(selectedPair[0]||models?.selectedId));
   const selectedModel=selectedProfile?.models.find(m=>m.id===(selectedPair[1]||selectedProfile.defaultModel));
   const modelAvailable=!!models?.profiles.length&&(!selection||models.profiles.some(p=>p.models.some(m=>m.enabled&&JSON.stringify([p.id,m.id])===selection)));
-  const canSend=loaded&&!pollError&&!busy&&!attachmentBusy&&modelAvailable&&(!!tab.draft?.trim()||attachments.length>0)&&(tab.taskId?running||!!latest?.sessionFile&&latest.unresolvedTools.every(id=>confirmed.includes(id)):true);
+  // 初次周期读取尚未完成时不能凭运行日志猜测 resume；等待信息就绪后再决定发送或排队。
+  const canSend=loaded&&!pollError&&!graph.loading&&!busy&&!attachmentBusy&&modelAvailable&&(!!tab.draft?.trim()||attachments.length>0)&&(tab.taskId?taskOpen||!!latest?.sessionFile&&latest.unresolvedTools.every(id=>confirmed.includes(id)):true);
   // 标题只展示用户首行目标，避免把附加参考资料和内部标记放进导航。
   const taskHistory=[...new Map(history.filter(h=>h.task).map(h=>[h.task!.taskId,h])).values()];
-  const queueOperation=async(action:string,args:Record<string,unknown>)=>{let saved=false;await operate(async()=>{await api.call(action,{id:workspace.id,taskId:tab.taskId,...args});saved=true});return saved};
+  const queueOperation=async(action:string,args:Record<string,unknown>)=>{if(action==='loop.queueInsert'&&!canInsert)return false;let saved=false;await operate(async()=>{await api.call(action,{id:workspace.id,taskId:tab.taskId,...args});saved=true});return saved};
   const queueChange=(queueId:string,action:string)=>void queueOperation('loop.queueChange',{queueId,action});
-  const queueContinue=()=>void operate(async()=>{await api.call('loop.queueContinue',{id:workspace.id,taskId:tab.taskId})});
+  const queueContinue=()=>{if(canContinueQueue&&!graph.loading)void operate(async()=>{await api.call('loop.queueContinue',{id:workspace.id,taskId:tab.taskId})})};
   return <div className="chat-page"><nav className="session-tabs" role="tablist" aria-label="会话内容"><button id={'session-chat-'+tab.id} role="tab" aria-selected={section==='chat'} aria-controls={'session-dialog-'+tab.id} onClick={()=>setSection('chat')}>对话</button><button id={'session-tasks-'+tab.id} role="tab" aria-selected={section==='tasks'} aria-controls={'session-task-panel-'+tab.id} onClick={()=>setSection('tasks')}>任务视图</button></nav>
     {section==='tasks'&&<section className="session-task-panel" role="tabpanel" id={'session-task-panel-'+tab.id} aria-labelledby={'session-tasks-'+tab.id}><SessionTaskView active={active} workspaceId={workspace.id} taskId={tab.taskId} runs={runs} queued={queued} now={now} busy={busy} graph={graph.graph} scopeState={graph} graphLoading={graph.loading} graphError={graph.error} onRefreshGraph={graph.refresh} selectedTaskId={selectedTaskId} onSelectTask={setSelectedTaskId} onQueueChange={queueChange} onQueueContinue={queueContinue} onChat={()=>setSection('chat')} onStop={()=>void operate(async()=>{await api.call('loop.stop',{id:workspace.id,taskId:tab.taskId})})}/>{pollError&&<p role="alert">{pollError}</p>}</section>}
     <div className="conversation-dialog" hidden={section!=='chat'} role="tabpanel" id={'session-dialog-'+tab.id} aria-labelledby={'session-chat-'+tab.id}>
@@ -122,13 +124,14 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
       {graph.error&&<p role="alert">{graph.error} <button onClick={graph.refresh}>重新同步成员动态</button></p>}
       {questions.map(q=><QuestionCard key={q.id} request={q} onAnswer={async answers=>{await api.call('loop.answerQuestion',{id:workspace.id,taskId:q.taskId,questionId:q.id,answers})}}/>)}
       {latest&&!mainRunning&&latest.unresolvedTools.length>0&&<div className="chat-reconcile"><h3>继续前核实未确认操作</h3><p>展开上方工具证据，核实实际产物后逐项勾选。系统不会自动重放。</p>{latest.unresolvedTools.map(id=><label key={id}><input type="checkbox" checked={confirmed.includes(id)} onChange={e=>setConfirmed(x=>e.target.checked?[...x,id]:x.filter(v=>v!==id))}/>已核实操作 {id}</label>)}</div>}
-      {latest&&!running&&!latest.sessionFile&&<p role="alert">本次运行没有建立可恢复会话，请新建对话；原记录已保留。</p>}
+      {latest&&!taskOpen&&!latest.sessionFile&&<p role="alert">本次运行没有建立可恢复会话，请新建对话；原记录已保留。</p>}
     </div>
     <div className="chat-composer">
-      {running&&!!nextTip&&<p className="composer-next-tip" role="status">附件随下次发送；模型和权限修改在下一轮执行生效。插入当前任务仍沿用当前运行设置。</p>}
+      {taskOpen&&!!nextTip&&<p className="composer-next-tip" role="status">附件随下次发送；模型和权限修改在下一轮执行生效。{canInsert?'插入当前任务仍沿用当前运行设置。':''}</p>}
+      {waiting&&<p className="composer-next-tip" role="status" data-testid="conversation-waiting">当前目标等待补充；新消息会排队为下个任务。</p>}
       {approvals.map(a=><div className="chat-approval" key={a.id}><b>允许本次 {a.name} 操作？</b><pre>{JSON.stringify(a.input,null,2)}</pre><button disabled={busy} onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:tab.taskId,approvalId:a.id,allow:true})})}>允许一次</button><button disabled={busy} title="仅允许当前这次执行中的后续操作；结束或停止后自动恢复确认，知识库保护不变" onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:tab.taskId,approvalId:a.id,allow:true,allowAll:true})})}>本次任务全部通过</button><button disabled={busy} onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:tab.taskId,approvalId:a.id,allow:false})})}>拒绝</button></div>)}
 
-      <UsageStatus runs={runs} now={now} placement="above" waitingApproval={approvals.length>0||questions.length>0} activity={graph.currentGoalView.phase!=='none'?{...graph.currentGoalView,active:!!graph.activeScope}:undefined}/>
+      <UsageStatus runs={runs} now={now} placement="above" waitingApproval={approvals.length>0||questions.length>0} activity={graph.currentGoalView.phase!=='none'?{...graph.currentGoalView,active:executing,waitingSince:graph.waitingScope?.wait?.createdAt}:undefined}/>
       {!modelAvailable&&models&&<p className="chat-model-notice">{models.profiles.length?'所选模型已不可用，请重新选择。':'尚未配置模型。'}<button onClick={openSettings}>前往模型设置</button></p>}
       <ComposerCard className={COMPOSER_CONTENT_CLASS+(dragActive?' drag-active':'')} aria-busy={attachmentBusy}
         onDragEnter={e=>{if(e.dataTransfer.types.includes('Files')){e.preventDefault();dragDepth.current++;setDragActive(true)}}}
@@ -136,23 +139,23 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
         onDragLeave={()=>{dragDepth.current=Math.max(0,dragDepth.current-1);if(!dragDepth.current)setDragActive(false)}}
         onDrop={e=>{e.preventDefault();dragDepth.current=0;setDragActive(false);if(e.dataTransfer.files.length)void importFiles(Array.from(e.dataTransfer.files))}}
         onPaste={e=>{if(e.clipboardData.files.length){e.preventDefault();void importFiles(Array.from(e.clipboardData.files))}}}>
-        <MessageQueue embedded items={queued} busy={busy} onChange={queueChange} onContinue={queueContinue}
+        <MessageQueue embedded items={queued} busy={busy} continueDisabled={waiting||graph.loading} onChange={queueChange} onContinue={queueContinue}
           onEdit={(queueId,message,expected)=>queueOperation('loop.queueEdit',{queueId,message,expected})}
           onMove={(queueId,beforeId)=>void queueOperation('loop.queueMove',{queueId,beforeId})}
-          onInsert={mainRunning?(queueId)=>void queueOperation('loop.queueInsert',{queueId}):undefined}/>
+          onInsert={canInsert?(queueId)=>void queueOperation('loop.queueInsert',{queueId}):undefined}/>
         {dragActive&&<div className="composer-drop-target"><Icon name="folder" size={24}/><b>松开以添加到对话</b><small>文件和文件夹会保存在本机附件快照中</small></div>}
         {attachmentBusy&&<div className="composer-upload-state" role="status"><span className="work-spinner"/>正在准备附件…</div>}
         <ComposerAttachments items={attachments} workspaceId={workspace.id} disabled={busy||attachmentBusy} onRemove={id=>onAttachments(attachments.filter(a=>a.id!==id))}/>
-        <textarea ref={input} aria-label="对话草稿" disabled={busy} value={tab.draft||''} onChange={e=>onDraft(e.target.value)} placeholder="继续聊一聊…" title="Enter 发送或排队，Shift+Enter 换行；Ctrl+Enter 插入正在运行的主 Agent，沿用当前模型与权限" onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){if(canSend){e.preventDefault();void send(mainRunning&&(e.ctrlKey||e.metaKey))}else if(mainRunning&&!busy&&(e.ctrlKey||e.metaKey)&&queued[0]){e.preventDefault();void queueOperation('loop.queueInsert',{queueId:queued[0].id})}}}}/>
-        <div className="chat-controls"><div className="chat-controls-left"><AttachmentMenu workspaceId={workspace.id} disabled={busy||attachmentBusy||attachments.length>=12} onBusy={setAttachmentBusy} onAdd={addAttachments}/><ComposerPicker label="执行权限" value={permission} onChange={v=>{setPermission(v as ChatPermission);if(running)setNextTip(Date.now())}} disabled={busy} warning={permission==='execute'} options={[
+        <textarea ref={input} aria-label="对话草稿" disabled={busy} value={tab.draft||''} onChange={e=>onDraft(e.target.value)} placeholder="继续聊一聊…" title="Enter 发送或排队，Shift+Enter 换行；Ctrl+Enter 插入正在运行的主 Agent，沿用当前模型与权限" onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){if(canSend){e.preventDefault();void send(canInsert&&(e.ctrlKey||e.metaKey))}else if(canInsert&&!busy&&(e.ctrlKey||e.metaKey)&&queued[0]){e.preventDefault();void queueOperation('loop.queueInsert',{queueId:queued[0].id})}}}}/>
+        <div className="chat-controls"><div className="chat-controls-left"><AttachmentMenu workspaceId={workspace.id} disabled={busy||attachmentBusy||attachments.length>=12} onBusy={setAttachmentBusy} onAdd={addAttachments}/><ComposerPicker label="执行权限" value={permission} onChange={v=>{setPermission(v as ChatPermission);if(taskOpen)setNextTip(Date.now())}} disabled={busy} warning={permission==='execute'} options={[
           {value:'read',label:'只读访问',icon:'knowledge',description:'只查看、分析和预览，不修改业务文件或正式知识，不执行命令'},
           {value:'ask',label:'默认权限',icon:'hand',description:'修改业务文件、提交知识和运行命令前逐次确认'},
           {value:'execute',label:'完全访问',icon:'warning',description:'自动执行业务文件、知识提交和命令操作；仍检查工作区边界及知识版本'},
         ]}/></div>
-        <div className="chat-controls-right"><ComposerPicker label="对话模型" value={selection} onChange={value=>{setSelection(value);if(running)setNextTip(Date.now())}} disabled={busy||!models} fallbackLabel={models?'所选模型不可用':'正在加载模型…'} searchable align="right" options={[
+        <div className="chat-controls-right"><ComposerPicker label="对话模型" value={selection} onChange={value=>{setSelection(value);if(taskOpen)setNextTip(Date.now())}} disabled={busy||!models} fallbackLabel={models?'所选模型不可用':'正在加载模型…'} searchable align="right" options={[
           {value:'',label:models?.profiles.find(p=>p.id===models.selectedId)?.defaultModel||'选择模型',description:'使用设置中的默认供应商和模型',group:'默认'},
           ...(models?.profiles.flatMap(p=>p.models.filter(m=>m.enabled).map(m=>({value:JSON.stringify([p.id,m.id]),label:m.name||m.id,description:p.name+' / '+m.id,group:p.name})))||[]),
-        ]}/>{running&&<SendButton disabled={busy} isStreaming onClick={()=>void operate(async()=>{await api.call('loop.stop',{id:workspace.id,taskId:tab.taskId})})}/>} {(!running||!!tab.draft?.trim()||attachments.length>0)&&<SendButton disabled={!canSend} queued={running||queued.length>0} onClick={()=>void send()}/>}</div></div>
+        ]}/>{taskOpen&&<SendButton disabled={busy} isStreaming stopLabel={waiting?'取消当前任务':undefined} onClick={()=>void operate(async()=>{await api.call('loop.stop',{id:workspace.id,taskId:tab.taskId})})}/>} {(!taskOpen||!!tab.draft?.trim()||attachments.length>0)&&<SendButton disabled={!canSend} queued={shouldQueue} onClick={()=>void send()}/>}</div></div>
       </ComposerCard>
       <div className="chat-footer"><span><Icon name="folder" size={13}/>{workspace.name}</span><UsageStatus runs={runs} now={now} placement="footer" capacity={selectedModel?.contextWindow}/></div>
     </div>

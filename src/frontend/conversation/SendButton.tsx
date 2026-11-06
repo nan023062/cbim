@@ -1,13 +1,13 @@
 /**
  * 作用定位：从 Cindy SendButton 移植发送/停止的固定 28px 按钮和按下动作身份保护。
- * 设计原因：复用上游实际 SVG 和按下/释放逻辑；发送与停止可同时呈现，运行中发送进入队列；删除尚未支持的语音与创建 Agent 分支，替换样式与国际化依赖。
+ * 设计原因：复用上游实际 SVG 和按下/释放逻辑；发送与停止可同时呈现，开放目标的发送进入队列，持久等待明确显示取消目标；删除尚未支持的语音与创建 Agent 分支，替换样式与国际化依赖。
  * 来源：makecindy/cindy，Apache-2.0；Copyright 2026 XD Inc.；已为 CBIM 修改，见 docs/legal/cindy-NOTICE。
  */
 import {forwardRef,useRef} from 'react';
-interface SendButtonProps {disabled:boolean;onClick:()=>void;isStreaming?:boolean;queued?:boolean}
-export const SendButton=forwardRef<HTMLButtonElement,SendButtonProps>(function SendButton({disabled,onClick,isStreaming=false,queued=false},ref){
+interface SendButtonProps {disabled:boolean;onClick:()=>void;isStreaming?:boolean;queued?:boolean;/** 持久等待没有运行可停止，明确显示取消开放目标。 */stopLabel?:string}
+export const SendButton=forwardRef<HTMLButtonElement,SendButtonProps>(function SendButton({disabled,onClick,isStreaming=false,queued=false,stopLabel},ref){
   const currentAction=isStreaming?'stop':'send',pressedAction=useRef<string|null>(null);
-  return <button ref={ref} type="button" disabled={disabled} className="chat-send" aria-label={isStreaming?'停止执行':queued?'加入队列':'发送消息'} title={isStreaming?'暂停对话（停止本轮，保留会话）':queued?'加入队列（当前执行不受影响）':'发送消息'}
+  return <button ref={ref} type="button" disabled={disabled} className="chat-send" aria-label={isStreaming?stopLabel??'停止执行':queued?'加入队列':'发送消息'} title={isStreaming?stopLabel??'暂停对话（停止本轮，保留会话）':queued?'加入队列（当前执行不受影响）':'发送消息'}
     onPointerDown={()=>{pressedAction.current=currentAction}} onPointerCancel={()=>{pressedAction.current=null}} onBlur={()=>{pressedAction.current=null}}
     onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){if(event.repeat){event.preventDefault();return}pressedAction.current=currentAction}}}
     onClick={()=>{const initialAction=pressedAction.current;pressedAction.current=null;if(initialAction!==null&&initialAction!==currentAction)return;onClick()}}>

@@ -49,9 +49,10 @@ export function scopeGoalView(scope:ScopeSummary|undefined,graph?:GraphSnapshot)
     if(scope.outcome==='interrupted')return {phase:'interrupted',label:'目标执行中断',tone:'warning'};
     return {phase:scope.blockedReason?'blocked':'failed',label:'目标未完成',tone:'warning'};
   }
+  if(scope.status==='waiting')return {phase:'waiting',label:'等待补充 · 执行已暂停',tone:'warning'};
   if(scope.blockedReason||scope.reviewDecision==='blocked')return {phase:'blocked',label:'目标受阻',tone:'warning'};
   if(scope.reviewDecision==='complete')return {phase:'review_pending',label:'完成申请待复核',tone:'warning'};
-  if(scope.reviewDecision==='awaiting_user')return {phase:'awaiting_user',label:'需要用户补充',tone:'warning'};
+  if(scope.reviewDecision==='awaiting_user')return {phase:'awaiting_user',label:'已请求补充 · 等待暂停确认',tone:'warning'};
   const tasks=graph?.tasks.filter(task=>task.scopeId===scope.scopeId)??[];
   if(tasks.some(task=>task.status==='running'||task.activeRunId))return {phase:'executing',label:'成员正在执行',tone:'running'};
   if(tasks.some(task=>['planned','queued'].includes(task.status)))return {phase:'queued',label:'等待成员执行',tone:'running'};
@@ -59,10 +60,10 @@ export function scopeGoalView(scope:ScopeSummary|undefined,graph?:GraphSnapshot)
   if(tasks.length)return {phase:'reviewing',label:'等待主 Agent 审阅',tone:'running'};
   return scope.hasPlan?{phase:'planning',label:'正在推进目标',tone:'running'}:{phase:'chat',label:'普通对话处理中',tone:'running'};
 }
-/** 自动跟随活动周期，否则按后端首次创建事务顺序取最新历史，不按本机时间或随机标识重排。 */
+/** 自动跟随开放周期（执行或持久等待），否则按后端首次创建事务顺序取最新历史，不按本机时间或随机标识重排。 */
 export function currentScope(scopes:readonly ScopeSummary[]):ScopeSummary|undefined{
   // 存储按首次创建事务保持插入顺序，更新旧周期不会移位；与后端自动详情选择保持一致。
-  return scopes.find(scope=>scope.status==='active')??scopes.at(-1);
+  return scopes.find(scope=>scope.status!=='closed')??scopes.at(-1);
 }
 const sameStamp=(a:ScopeDetailStamp,b:ScopeDetailStamp)=>a.scopeId===b.scopeId&&a.streamId===b.streamId&&a.seq===b.seq;
 /** 同一会话内同时提交图、周期摘要与详情；任意部分无效都保留上一组合，不显示半次响应。 */
@@ -100,6 +101,7 @@ export class SessionReadProjection {
       const cached=cache.get(summary.scopeId);if(!cached||!sameStamp(cached.stamp,summary.stamp))continue;
       const scope=cached.scope;
       if(scope.status!==summary.status||scope.outcome!==summary.outcome||scope.createdAt!==summary.createdAt||scope.closedAt!==summary.closedAt||Boolean(scope.goal)!==summary.hasGoal||scope.goal?.revision!==summary.goalRevision||Boolean(scope.goal?.plan)!==summary.hasPlan||scope.goal?.review?.decision!==summary.reviewDecision)throw Error('目标摘要与同版本详情不一致');
+      if(Boolean(scope.wait)!==Boolean(summary.wait)||scope.wait?.waitId!==summary.wait?.waitId||scope.wait?.goalRevision!==summary.wait?.goalRevision||scope.wait?.createdAt!==summary.wait?.createdAt)throw Error('目标等待记录与同版本摘要不一致');
       if(scope.goal&&(!scope.goal.input||typeof scope.goal.input.message!=='string'||!Array.isArray(scope.goal.input.attachmentIds)))throw Error('目标详情缺少原始输入');
     }
     this.graphs=graphs;this.goals=goals;this.details=cache;
@@ -118,7 +120,11 @@ export interface ScopeGoalState {
   /** undefined 表示自动跟随，区别于 selectedScopeId 已解析出的实际周期 ID。 */
   historyScopeId?:string;
   selectedScope?:DispatchScope;
+  /** 当前未关闭目标，包含持久等待；决定发送入队与取消入口，不受历史选择影响。 */
+  openScope?:ScopeSummary;
+  /** 只有 active 表示调度仍在推进，waiting 不计入生成动画或工作时间。 */
   activeScope?:ScopeSummary;
+  waitingScope?:ScopeSummary;
   selectedGoalView:GoalView;
   currentGoalView:GoalView;
   graph?:GraphSnapshot;

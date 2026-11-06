@@ -1,6 +1,6 @@
 /**
  * 作用定位：让已派发任务在独立成员会话中执行，提交领取、启动、结果及中断事实。
- * 设计原因：启动意图先落盘，模型工具只能在 running 确认后执行；主 Agent 不得执行，已释放实例或已关闭周期也不可启动。执行占用持续到终态事务完成，公开事件不暴露原生会话或冻结知识。
+ * 设计原因：启动意图先落盘，模型工具只能在 running 确认后执行；主 Agent、已释放实例、已关闭或安全等待的主会话不能执行业务。等待限制也覆盖旧无 scope 任务，避免历史入口绕过检查点。执行占用持续到终态事务完成。
  * 职责边界：可信桌面或主会话协调器启动成员，本成员 Loop 不递归派发或继承免询问批准；候选交付不等于业务验收。
  */
 import {randomUUID} from 'node:crypto';
@@ -84,6 +84,7 @@ export class MemberExecutionManager {
       const receipt=await this.store.transact(this.command('member.start',input),async state=>{
         this.check(input.workspaceId);
         const {graph,task,member,session}=memberTask(state,input.rootSessionId,input.taskId);
+        if(state.scopes?.some(scope=>scope.rootSessionId===input.rootSessionId&&scope.status==='waiting'))fail('GOAL_WAITING','当前主会话目标处于安全等待，不能从历史任务启动执行');
         // 主实例只承担调度；即便旧图保留曾经的 self 任务，也不能再启动为业务执行者。
         if(member.agentId==='cbim:main')fail('AGENT_NOT_EXECUTABLE','主 Agent 不直接执行业务，请使用执行 Agent');
         if(member.lifecycle==='released')fail('MEMBER_RELEASED','执行实例已随调度周期释放，不能再次启动');

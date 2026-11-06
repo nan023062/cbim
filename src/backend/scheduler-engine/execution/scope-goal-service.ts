@@ -1,6 +1,6 @@
 /**
  * 作用定位：在派发事务中保存本轮目标计划与结构化审阅，并核验真实日志、角色和模块基线。
- * 设计原因：模型只能申请完成，必须等主运行结算后重新核实证据、任务压力与副作用；日志通过只读端口注入，避免调度反向依赖磁盘。
+ * 设计原因：模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用；安全等待检查点还核验所有成员没有未知工具，日志通过只读端口注入。
  * 职责边界：不关闭周期、不释放成员、不运行工具；知识和派发日志不是跨存储原子事务，证据也不是外部产物指纹。
  */
 import {z} from 'zod';
@@ -12,7 +12,7 @@ import type {ToolReceipt} from '../../core/tools/types';
 import type {DispatchState,DispatchStore} from '../../core/tasks/dispatch-storage';
 import type {DispatchRun} from '../../core/tasks/dispatch-execution';
 import type {DispatchTaskInput} from '../../core/tasks/dispatch-commands';
-import type {DispatchScope} from '../../core/tasks/dispatch-scope';
+import {dispatchScopeWaitSchema,type DispatchScope} from '../../core/tasks/dispatch-scope';
 import type {GraphIdentity,GraphSnapshot,TaskNode} from '../../core/tasks/graph-types';
 import {goalPlanInputSchema,goalReviewInputSchema,sameGoalValue,scopeGoalDecisionLimit,type DispatchScopeGoal,type GoalPlanInput,type GoalReviewInput,type ScopeGoalReview} from '../../core/tasks/scope-goal';
 import {resolveConversationAgent,resolveDispatchAgent,resolveDispatchModules} from '../context/dispatch-context';
@@ -41,6 +41,7 @@ export class ScopeGoalService {
   }
   private graph(state:DispatchState,scope:DispatchScope){const graph=state.graphs.find(value=>value.identity.rootSessionId===scope.rootSessionId&&value.identity.workspaceId===scope.workspaceId);check(graph,'GOAL_IDENTITY','目标缺少主会话任务图');return graph}
   private editable(scope:DispatchScope,expectedRevision:number){
+    check(scope.status!=='waiting','GOAL_WAITING','目标已安全等待，当前没有续跑入口；请保留或显式停止');
     check(scope.status==='active','GOAL_CLOSED','目标周期已经结束');
     check(scope.goal,'GOAL_LEGACY','旧周期没有可信原始输入，不能补造目标');
     check(!scope.goal.blocked,'GOAL_BLOCKED','目标已记录阻塞，不再接受决策');
@@ -201,6 +202,34 @@ export class ScopeGoalService {
     const snapshot=await this.owner.read();check(snapshot.revision===review.knowledgeRevision,'GOAL_KNOWLEDGE_CHANGED','完成申请后知识版本已变化');
     await this.evidence(state,scope,graph,{...review,expectedRevision:goal.revision},summary,snapshot.revision);
     check((await this.owner.read()).revision===snapshot.revision,'GOAL_KNOWLEDGE_CHANGED','完成核验期间知识版本已变化');
+  }
+  /**
+   * 在 parkScope 的事务内核实无活动执行的等待边界，不重入存储、不启动模型。
+   * 等待只接受当前 awaiting_user 审阅；已失败但明确结束的成员可保留，未知工具、在途租约和未开始任务均拒绝。
+   */
+  async validateWaiting(state:DispatchState,scope:DispatchScope,summary:RunSummary,mainRunIds:string[]):Promise<void>{
+    const logs=this.logs(),graph=this.graph(state,scope),goal=scope.goal,review=goal?.review;
+    check(scope.status==='active'&&goal&&!goal.blocked&&goal.plan&&review?.decision==='awaiting_user'&&review.revision===goal.revision&&review.planRevision===goal.plan.revision,'GOAL_WAIT_REQUIRED','只有当前版本的等待用户审阅可以建立安全检查点');
+    const proof=dispatchScopeWaitSchema.safeParse({waitId:'validation',reason:review.reason,createdAt:new Date().toISOString(),runId:summary.runId,goalRevision:goal.revision,graphCursor:review.graphCursor,knowledgeRevision:review.knowledgeRevision,mainRunIds});
+    check(proof.success,'GOAL_WAIT_RUNS','等待检查点必须包含当前主运行，以及不重复且最多 32 个真实主运行 ID');
+    this.main(state,summary,scope,graph,review.runId);
+    check(summary.status==='completed'&&!summary.unresolvedTools.length&&!summary.toolReceipts?.some(receipt=>receipt.outcome==='unknown'),'GOAL_MAIN_UNSETTLED','主运行尚未安全结束，不能建立等待检查点');
+    const main=await logs.inspectMain(scope.rootSessionId,review.runId);this.main(state,main,scope,graph,review.runId);
+    check(main.status==='completed'&&!main.unresolvedTools.length&&!main.toolReceipts?.some(receipt=>receipt.outcome==='unknown'),'GOAL_MAIN_UNSETTLED','主运行的持久化记录仍有未决操作');
+    check(sameGoalValue(review.graphCursor,cursor(graph)),'GOAL_GRAPH_CHANGED','等待申请后任务图已变化，请重新审阅');
+    check(lastEffect(main)===review.lastEffectSeq&&!main.events.some(event=>event.seq>review.observedSeq&&event.type==='tool.allowed'&&Array.isArray(event.data.effects)&&event.data.effects.some(effect=>effects.has(String(effect)))),'GOAL_EFFECT_CHANGED','等待申请后又发生可能改变产物的操作');
+    const tasks=graph.tasks.filter(task=>task.scopeId===scope.scopeId),ids=new Set(tasks.map(task=>task.taskId));
+    check(!tasks.some(task=>task.activeRunId||['planned','queued','running','waiting'].includes(task.status))&&!state.runs?.some(run=>run.binding.rootSessionId===scope.rootSessionId&&['starting','running'].includes(run.status)),'GOAL_WORK_PENDING','本周期仍有待执行任务或本会话仍有活动运行，不能进入等待');
+    check(!state.members.some(member=>member.executionScopeId===scope.scopeId&&(member.activeRunId||member.activeTaskId||member.activity!=='idle'||member.waitingTaskIds.length||member.communicatingMessageIds.length)),'GOAL_WORK_PENDING','执行成员仍有活动占用或待通信操作');
+    for(const run of state.runs??[])if(ids.has(run.binding.taskId)){
+      const task=tasks.find(item=>item.taskId===run.binding.taskId)!;
+      check(['completed','failed','cancelled'].includes(run.status),'GOAL_WAIT_UNCERTAIN','成员执行尚未得到明确终态，不能安全等待');
+      const member=await logs.inspectMember(run);
+      check(member.runId===run.binding.runId&&member.task.workspaceId===scope.workspaceId&&member.task.taskId===task.taskId&&member.task.agentId===task.assignee.agentId&&sameGoalValue(member.memberBinding,run.binding)&&member.status===run.status&&!member.unresolvedTools.length&&!member.toolReceipts?.some(receipt=>receipt.outcome==='unknown'),'GOAL_WAIT_UNCERTAIN','成员日志存在未知工具结果或运行身份不一致');
+    }
+    const snapshot=await this.owner.read();check(snapshot.revision===review.knowledgeRevision,'GOAL_KNOWLEDGE_CHANGED','等待申请后知识版本已变化');
+    await this.evidence(state,scope,graph,{...review,expectedRevision:goal.revision},main,snapshot.revision);
+    check((await this.owner.read()).revision===snapshot.revision,'GOAL_KNOWLEDGE_CHANGED','等待核验期间知识版本已变化');
   }
   /** 只有可信协调器调用；失败原因持久化但不伪造目标输入、运行结果或图事件。 */
   async block(identity:GraphIdentity,scopeId:string,reason:string):Promise<DispatchScope>{

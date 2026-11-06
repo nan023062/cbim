@@ -1,6 +1,6 @@
 /**
  * 作用定位：以节点流程图展示当前主会话的派发任务，并在选择根或任务后显示对应执行详情。
- * 设计原因：全局项目架构与会话派工分开；根详情共享当前/历史周期目标与审阅，整张会话图保留并突出所选周期。主模型回合结束后仍可停止正在执行的成员周期。
+ * 设计原因：全局项目架构与会话派工分开；根详情共享当前/历史周期目标与审阅，整张会话图保留并突出所选周期。开放周期可停止或取消，持久等待不触发队列恢复。
  * 职责边界：运行轮次不是派发节点；没有真实图时只展示已有主会话根，不补造成员任务或业务验收结论。
  */
 import {useEffect,useState} from 'react';
@@ -52,10 +52,11 @@ function RootTaskDetail({history,pending,now,busy,onQueueChange,onQueueContinue,
   const bound=[...history].reverse().find(run=>run.conversationBinding),binding=bound?.conversationBinding;
   const conflicting=Boolean(binding&&(binding.workspaceId!==bound!.task.workspaceId||binding.rootSessionId!==bound!.task.taskId||graph&&binding.agentInstanceId!==graph.root.agent.agentInstanceId));
   const instance=graph?.root.agent.agentInstanceId??(!conflicting?binding?.agentInstanceId:undefined);
+  const openScope=scopeState?.openScope,waiting=openScope?.status==='waiting';
   return <div className="root-task-detail" aria-label="主 Agent 调度详情" data-testid="root-task-detail">
     <h3>主 Agent</h3><p>{history.length} 次执行 · {pending.length} 条待执行</p>
     {scopeState&&<ScopeGoalPanel state={scopeState} testId="dispatch-root-goal"/>}
-    {scopeState?.activeScope&&<div>{scopeState.selectedScopeId!==scopeState.activeScope.scopeId&&<p>当前另有任务运行：{scopeState.activeScope.objective??scopeState.activeScope.inputPreview??'当前周期'}</p>}<button data-testid="scope-stop" disabled={busy} onClick={onStop}>{scopeState.selectedScopeId===scopeState.activeScope.scopeId?'停止当前任务':'停止正在运行的任务'}</button></div>}
+    {openScope&&<div>{scopeState!.selectedScopeId!==openScope.scopeId&&<p>{waiting?'当前另有待补充任务：':'当前另有任务运行：'}{openScope.objective??openScope.inputPreview??'当前周期'}</p>}<button data-testid="scope-stop" disabled={busy} onClick={onStop}>{waiting?'取消当前任务':scopeState!.selectedScopeId===openScope.scopeId?'停止当前任务':'停止正在运行的任务'}</button></div>}
     <details className="member-scope" open><summary>主会话实例与通道</summary>
       {instance?<p>主 Agent 实例 <code>{instance}</code></p>:<p>历史记录未保存主 Agent 实例绑定。</p>}
       {conflicting?<p role="alert">主会话运行与任务图的实例身份不一致，请重新同步。</p>:binding?<p>对话通道 <code>{binding.agentSessionId}</code></p>:<p>历史记录未保存对话通道绑定，不按角色名称推断。</p>}
@@ -63,7 +64,7 @@ function RootTaskDetail({history,pending,now,busy,onQueueChange,onQueueContinue,
       <p>主 Agent 负责调度与知识治理；业务任务由独立执行 Agent 实例完成。</p>
     </details>
     {progress&&<article className="session-run" aria-label="执行计划"><h3>{progress.goal}</h3><p>计划版本 {progress.version} · {progress.state==='awaiting_review'?'交付待审阅':'执行与验证中'} · 尚未业务验收</p><p>{progress.reason}</p><ol>{progress.steps.map(step=><li key={step.id}><strong>{step.title}</strong> · {step.owner} · {{pending:'待处理',working:'进行中',reported_done:'已报告完成，待核验'}[step.state]}{step.evidence.length>0&&<details><summary>{step.evidence.length} 条工具回执</summary>{step.evidence.map(id=><p key={id}><code>{id}</code></p>)}</details>}</li>)}</ol><h4>验收要求</h4><ul>{progress.acceptance.map((item,index)=><li key={index}>{item}</li>)}</ul>{progress.delivery&&<><h4>交付候选</h4><p>{progress.delivery.summary}</p><ul>{progress.delivery.limitations.map((item,index)=><li key={index}>{item}</li>)}</ul></>}<details><summary>计划修订记录</summary>{history.flatMap(run=>run.events.filter(event=>event.type==='task.updated').map(event=><p key={run.runId+':'+event.seq}>{event.time} · {String((event.data.progress as {reason?:string})?.reason??'计划更新')}</p>))}</details></article>}
-    <MessageQueue items={pending} busy={busy} onChange={onQueueChange} onContinue={onQueueContinue}/>
+    <MessageQueue items={pending} busy={busy} continueDisabled={waiting||scopeState?.loading} onChange={onQueueChange} onContinue={onQueueContinue}/>
     {scopeState?.selectedScopeId&&history.length>0&&<h4>主会话全部执行轮次</h4>}
     {[...history].reverse().map((run,index)=><article className="session-run" key={run.runId}><h3>{String(run.events.find(event=>event.type==='run.started')?.data.message||run.task.goal).split('\n')[0]}</h3><small>第 {history.length-index} 次执行 · {run.events[0]?.time?new Date(run.events[0].time).toLocaleString():''}</small><WorkStatus run={run} now={now}/>{run.status==='running'&&<button disabled={busy} onClick={onStop}>停止本次执行</button>}{run.unresolvedTools.length>0&&<p role="alert">有 {run.unresolvedTools.length} 项操作尚需在对话中核实。</p>}<details><summary>执行标识</summary><code>{run.runId}</code></details></article>)}
     {!history.length&&<p>当前主会话暂无执行记录。返回对话发送消息后可查看运行状态。</p>}

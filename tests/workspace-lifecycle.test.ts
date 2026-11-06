@@ -1,8 +1,9 @@
-import {it,expect} from 'vitest';
+import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture,request,internalKnowledge} from './helpers';
 import {Application} from '../src/backend/main/application';
+import {AutoCollaboration} from '../src/backend/scheduler-engine/execution/auto-collaboration';
 import {readJson,exists} from '../src/backend/core/foundation/files';
 
 it('登记工作区随应用启动，移除与退出释放实例，旧启动设置被清理',async()=>{
@@ -22,6 +23,19 @@ it('登记工作区随应用启动，移除与退出释放实例，旧启动设�
     await next.shutdown();expect(wb.state).toBe('closed');
     await expect(next.open(b.id)).rejects.toMatchObject({code:'SHUTTING_DOWN'});
   }finally{await next?.shutdown();await f.cleanup()}
+});
+
+it('协作等待恢复失败不会暴露半就绪服务，显式打开会关闭旧服务并重新初始化',async()=>{
+  const f=await fixture(),original=AutoCollaboration.prototype.initialize;
+  const initialize=vi.spyOn(AutoCollaboration.prototype,'initialize').mockImplementationOnce(async function(this:AutoCollaboration){await original.call(this);throw Error('等待队列保存失败')});
+  try{
+    const entry=await f.app.catalog.add(f.a);
+    await expect(f.app.open(entry.id)).rejects.toThrow('等待队列保存失败');
+    const failed=f.app.workspace(entry.id);expect(failed.state).toBe('failed');expect(failed.error).toContain('工作区服务初始化失败');
+    for(const get of [()=>f.app.execution(entry.id),()=>f.app.memberExecution(entry.id),()=>f.app.memberDispatch(entry.id)])expect(get).toThrow('工作区当前状态');
+    const retried=await f.app.open(entry.id);expect(retried.state).toBe('running');expect(retried.instanceId).not.toBe(failed.instanceId);expect(failed.state).toBe('closed');expect(initialize).toHaveBeenCalledTimes(2);
+    expect(f.app.execution(entry.id)).toBeDefined();
+  }finally{initialize.mockRestore();await f.cleanup()}
 });
 
 it('一个工作区丢失不阻止其他登记实例启动，也不创建丢失路径',async()=>{

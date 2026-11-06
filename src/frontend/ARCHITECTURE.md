@@ -97,13 +97,13 @@ N_src_frontend_team ..> N_src_frontend_tasks : 导入依赖
 
 - [automation/](automation/ARCHITECTURE.md)：工作区内部自动化展示；定时触发尚未实现。
 - [components/](components/ARCHITECTURE.md)：通用展示组件，不持有领域服务与运行状态。
-- [conversation/](conversation/ARCHITECTURE.md)：中央主对话、目标摘要、输入、附件及队列。区分主大脑生成与总体周期，等待成员仍可排队和停止；只有主运行活动时可插入大脑。历史目标选择不改变发送对象，完成申请不表示目标已完成。
+- [conversation/](conversation/ARCHITECTURE.md)：中央主对话、目标摘要、输入、附件及队列。区分主运行、活动周期及无模型的持久等待；开放目标期间普通输入只排队，waiting保留停止并禁止继续/插入。历史选择不改变操作对象，等待不展示生成动画。
 - [diagnostics/](diagnostics/ARCHITECTURE.md)：只读展示工作区运行状态和知识校验问题，不把工作区就绪视为知识校验通过。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识问题、预览提交和静态对象表单；固定编辑基线，模块维护人同事务确认，删除先检查影响。业务架构展示位于 workspace。
 - [resources/](resources/ARCHITECTURE.md)：统一资源仓库的查看、编辑、静态包发布与下载应用。人才按团队/Agent/Skill复用，业务按整套架构应用；工作区身份及预览版本固定。设置通过统一入口打开。
 - [settings/](settings/ARCHITECTURE.md)：模型及仓库配置界面，凭据仅提交主进程保存，账户仍按当前占位语义处理。
 - [shell/](shell/ARCHITECTURE.md)：工作区侧栏、会话选择、用户栏与右侧扩展页签；会话区与项目级视图区分开。向会话传递活动页签状态，隐藏页签保留草稿/节点选择并降低成员与任务图同步频率。
-- [tasks/](tasks/ARCHITECTURE.md)：主会话任务图及独立目标增量投影，同一响应全部校验后提交。根详情共享目标计划/审阅组件，可选历史并突出周期节点；图保持全会话关系，无变化保持引用，候选与完成申请都不代替验收。
+- [tasks/](tasks/ARCHITECTURE.md)：主会话任务图与独立目标增量投影，追齐后原子发布。根详情共享目标计划/审阅和等待检查点；active/waiting/closed按真实状态展示，历史选择不改变开放目标。候选和等待都不替代人工验收。
 - [team/](team/ARCHITECTURE.md)：工作区唯一的静态 Team/组/Agent 图及角色维护、继承与人才复用。Agent 节点可按 Session 查看只读执行履历；历史角色独立导航，删定义不回填团队树。详情按需分页，不轮询全量历史或启动执行。
 - [workspace/](workspace/ARCHITECTURE.md)：工作区唯一的静态领域工程/模块图及自身 Workflow。语义编辑委托 knowledge，完整业务模板复用委托 resources；多个主会话共享定义、动态任务各自独立。
 

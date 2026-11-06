@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-中央主对话、目标摘要、输入、附件及队列。区分主大脑生成与总体周期，等待成员仍可排队和停止；只有主运行活动时可插入大脑。历史目标选择不改变发送对象，完成申请不表示目标已完成。
+中央主对话、目标摘要、输入、附件及队列。区分主运行、活动周期及无模型的持久等待；开放目标期间普通输入只排队，waiting保留停止并禁止继续/插入。历史选择不改变操作对象，等待不展示生成动画。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -15,6 +15,7 @@
 | [ComposerAttachments.tsx](ComposerAttachments.tsx) | 按 Cindy ThumbnailStrip 的 56px 卡片、类型标识和角落移除按钮展示草稿附件。 |
 | [ComposerCard.tsx](ComposerCard.tsx) | 从 Cindy ComposerCard 移植的统一输入卡片与内容间距。 |
 | [ComposerPicker.tsx](ComposerPicker.tsx) | Cindy 风格的权限和模型 chip，向上展开可搜索、键盘可操作的选择面板。 |
+| [conversation-state.ts](conversation-state.ts) | 把主模型运行、开放调度周期和普通消息队列转换为输入区操作状态。 |
 | [conversation.css](conversation.css) | 对齐 Cindy 的消息列、工作记录折叠行及一体式底部输入框。 |
 | [Conversation.tsx](Conversation.tsx) | 会话双页签入口（对话/本会话任务），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。 |
 | [MarkdownMessage.tsx](MarkdownMessage.tsx) | 将 Agent 消息渲染成排版后的正文、列表、表格与可复制代码块。 |
@@ -112,6 +113,18 @@ N_src_frontend_conversation_ComposerPicker_tsx ..> N_src_frontend_conversation_C
 
 直接依赖：[../components/Icon.tsx](../components/Icon.tsx)。
 
+### conversation-state.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_conversation_conversation_state_ts["conversation-state.ts"] {
+  <<module>>
+  +conversationExecutionState()
+}
+```
+
+直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
+
 ### conversation.css
 
 ```mermaid
@@ -146,7 +159,7 @@ class N_src_frontend_conversation_Conversation_tsx_HistoryItem["HistoryItem"] {
 N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_Conversation_tsx_HistoryItem : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../shell/tabs.ts](../shell/tabs.ts)、[transcript.ts](transcript.ts)、[MarkdownMessage.tsx](MarkdownMessage.tsx)、[WorkStatus.tsx](WorkStatus.tsx)、[../tasks/SessionTaskView.tsx](../tasks/SessionTaskView.tsx)、[../tasks/useSessionGraph.ts](../tasks/useSessionGraph.ts)、[../tasks/MemberActivity.tsx](../tasks/MemberActivity.tsx)、[../tasks/ScopeGoalPanel.tsx](../tasks/ScopeGoalPanel.tsx)、[session-tabs.css](session-tabs.css)、[MessageQueue.tsx](MessageQueue.tsx)、[useMessageQueue.ts](useMessageQueue.ts)、[QuestionCard.tsx](QuestionCard.tsx)、[UsageStatus.tsx](UsageStatus.tsx)、[MessageCard.tsx](MessageCard.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[conversation.css](conversation.css)、[ComposerCard.tsx](ComposerCard.tsx)、[SendButton.tsx](SendButton.tsx)、[AttachmentMenu.tsx](AttachmentMenu.tsx)、[ComposerPicker.tsx](ComposerPicker.tsx)、[ComposerAttachments.tsx](ComposerAttachments.tsx)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../shell/tabs.ts](../shell/tabs.ts)、[transcript.ts](transcript.ts)、[MarkdownMessage.tsx](MarkdownMessage.tsx)、[WorkStatus.tsx](WorkStatus.tsx)、[../tasks/SessionTaskView.tsx](../tasks/SessionTaskView.tsx)、[../tasks/useSessionGraph.ts](../tasks/useSessionGraph.ts)、[../tasks/MemberActivity.tsx](../tasks/MemberActivity.tsx)、[../tasks/ScopeGoalPanel.tsx](../tasks/ScopeGoalPanel.tsx)、[session-tabs.css](session-tabs.css)、[MessageQueue.tsx](MessageQueue.tsx)、[useMessageQueue.ts](useMessageQueue.ts)、[QuestionCard.tsx](QuestionCard.tsx)、[UsageStatus.tsx](UsageStatus.tsx)、[MessageCard.tsx](MessageCard.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[conversation.css](conversation.css)、[ComposerCard.tsx](ComposerCard.tsx)、[SendButton.tsx](SendButton.tsx)、[AttachmentMenu.tsx](AttachmentMenu.tsx)、[ComposerPicker.tsx](ComposerPicker.tsx)、[ComposerAttachments.tsx](ComposerAttachments.tsx)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[conversation-state.ts](conversation-state.ts)。
 
 ### MarkdownMessage.tsx
 
@@ -254,6 +267,7 @@ class N_src_frontend_conversation_SendButton_tsx_SendButtonProps["SendButtonProp
   +onClick
   +isStreaming
   +queued
+  +stopLabel
 }
 N_src_frontend_conversation_SendButton_tsx ..> N_src_frontend_conversation_SendButton_tsx_SendButtonProps : 声明
 ```
@@ -347,6 +361,7 @@ class N_src_frontend_conversation_UsageStatus_tsx_ConversationActivity["Conversa
   +label
   +active
   +tone
+  +waitingSince
 }
 N_src_frontend_conversation_UsageStatus_tsx ..> N_src_frontend_conversation_UsageStatus_tsx_ConversationActivity : 声明
 ```
@@ -462,20 +477,23 @@ class N_src_frontend_conversation_ComposerPicker_tsx["ComposerPicker.tsx"] {
 class N_src_frontend_conversation_ComposerAttachments_tsx["ComposerAttachments.tsx"] {
   <<component>>
 }
+class N_src_frontend_conversation_conversation_state_ts["conversation-state.ts"] {
+  <<module>>
+}
+N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_AttachmentMenu_tsx : 导入依赖
+N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_ComposerPicker_tsx : 导入依赖
+N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_ComposerAttachments_tsx : 导入依赖
+N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_conversation_state_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_frontend_conversation_MarkdownMessage_tsx["MarkdownMessage.tsx"] {
   <<component>>
 }
 class N_src_frontend_conversation_repairStreamingMarkdown_ts["repairStreamingMarkdown.ts"] {
   <<module>>
 }
-N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_AttachmentMenu_tsx : 导入依赖
-N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_ComposerPicker_tsx : 导入依赖
-N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_ComposerAttachments_tsx : 导入依赖
-N_src_frontend_conversation_MarkdownMessage_tsx ..> N_src_frontend_conversation_repairStreamingMarkdown_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_frontend_conversation_MessageQueue_tsx["MessageQueue.tsx"] {
   <<component>>
 }
@@ -494,19 +512,19 @@ class N_src_frontend_conversation_UsageStatus_tsx["UsageStatus.tsx"] {
 class N_src_frontend_conversation_brain_status_ts["brain-status.ts"] {
   <<module>>
 }
-class N_src_frontend_conversation_usage_ts["usage.ts"] {
-  <<module>>
-}
+N_src_frontend_conversation_MarkdownMessage_tsx ..> N_src_frontend_conversation_repairStreamingMarkdown_ts : 导入依赖
 N_src_frontend_conversation_MessageQueue_tsx ..> N_src_frontend_conversation_message_queue_css : 导入依赖
 N_src_frontend_conversation_QuestionCard_tsx ..> N_src_frontend_conversation_questions_css : 导入依赖
 N_src_frontend_conversation_UsageStatus_tsx ..> N_src_frontend_conversation_brain_status_ts : 导入依赖
-N_src_frontend_conversation_UsageStatus_tsx ..> N_src_frontend_conversation_usage_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_conversation_UsageStatus_tsx["UsageStatus.tsx"] {
   <<component>>
+}
+class N_src_frontend_conversation_usage_ts["usage.ts"] {
+  <<module>>
 }
 class N_src_frontend_conversation_usage_css["usage.css"] {
   <<stylesheet>>
@@ -523,6 +541,7 @@ class N_src_frontend_conversation_WorkStatus_tsx["WorkStatus.tsx"] {
 class N_src_frontend_conversation_ToolActivity_tsx["ToolActivity.tsx"] {
   <<component>>
 }
+N_src_frontend_conversation_UsageStatus_tsx ..> N_src_frontend_conversation_usage_ts : 导入依赖
 N_src_frontend_conversation_UsageStatus_tsx ..> N_src_frontend_conversation_usage_css : 导入依赖
 N_src_frontend_conversation_useMessageQueue_ts ..> N_src_frontend_conversation_queue_sync_ts : 导入依赖
 N_src_frontend_conversation_WorkStatus_tsx ..> N_src_frontend_conversation_ToolActivity_tsx : 导入依赖
@@ -536,3 +555,35 @@ N_src_frontend_conversation_WorkStatus_tsx ..> N_src_frontend_conversation_ToolA
 [返回上层](../ARCHITECTURE.md)。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+## 设计契约 v1 与落地范围
+
+以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+# 会话执行与持久等待交互
+
+`Conversation` 只接收当前工作区和主会话的运行、队列及目标投影。`conversationExecutionState` 把主模型执行、开放周期与持久等待分开；历史周期选择不参与发送、停止、排队或计时的判断。
+
+- `mainRunning` 只表示可插入消息的主运行。后端已提交 `waiting` 时，另一条轮询暂未追齐的 running 日志不能重新开启插入能力。
+- `executing` 驱动当前工作时间刷新与生成动画；持久等待没有后台模型工作，不计入等待时间。
+- `taskOpen` 包含执行和持久等待，保留停止/取消入口，普通发送统一走 `loop.enqueue`。普通排队消息不是目标补充，也不是人工验收。
+- `busy` 仍只表示用户操作正在提交，等待本身不会锁住附件、模型、权限选择或队列编辑。
+
+等待时输入区显示“当前目标等待补充；新消息会排队为下个任务”，取消按钮操作当前开放目标。模型与权限修改用于后续消息，不改变已冻结目标。`MessageQueue.continueDisabled` 只禁用“继续队列”，保留删除、编辑和排序；不传 `onInsert`，快捷键处理也拒绝插入。后端仍独立验证状态，界面不是权限边界。
+
+`UsageStatus.waitingSince` 只使用可信目标摘要的等待时间。它优先于尚未追齐的运行日志，停止生成动画，并限制尚显示 running 的旧记录计时不会越过等待检查点；不改写已有 token、费用或执行日志。
+
+本步没有显式补充、恢复或人工批准表单。界面如实说明恢复入口尚未接通，可取消目标后另发任务；不提供不起作用的按钮，也不把“继续队列”、问题回答或工具批准复用为恢复操作。
+
+```mermaid
+classDiagram
+class Conversation { <<component>> }
+class ConversationState { <<module>> }
+class SessionGraphState { <<tasks boundary>> }
+class MessageQueue { <<component>> }
+class UsageStatus { <<component>> }
+Conversation --> SessionGraphState : 当前开放目标与历史选择分离
+Conversation --> ConversationState : 计算发送与执行状态
+Conversation --> MessageQueue : 等待只禁启动不禁整理
+Conversation --> UsageStatus : 真实等待检查点与状态
+```

@@ -1,6 +1,6 @@
 /**
  * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
- * 设计原因：通过 ApplicationServices 契约隔离应用实现；显式目标补充与普通聊天、审批分开，稳定请求由调度去重，回执查询只读；所有入口使用完整身份，不依赖当前界面选择。
+ * 设计原因：通过 ApplicationServices 契约隔离应用实现；目标补充、审批与只读执行核实分开，核实不重放模型或工具；所有入口使用完整身份，不依赖当前界面选择。
  */
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
@@ -32,6 +32,7 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'dispatch.executionStart':return app.memberExecution(args.workspaceId).start(args);
     case 'dispatch.executionStop':return app.memberExecution(args.workspaceId).stop(args);
     case 'dispatch.executionInspect':return app.memberExecution(args.workspaceId).inspect(args);
+    case 'dispatch.executionReport':return app.memberExecution(args.workspaceId).report(args);
     case 'dispatch.executionEvents':return app.memberExecution(args.workspaceId).events(args);
     case 'dispatch.messages':return app.memberExecution(args.workspaceId).messages(args);
     case 'dispatch.acknowledge':return app.memberExecution(args.workspaceId).acknowledge(args);

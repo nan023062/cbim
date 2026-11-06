@@ -1,7 +1,7 @@
 /**
  * 作用定位：让已派发任务在独立成员会话中执行，提交领取、启动、结果及中断事实。
  * 设计原因：启动意图先落盘，模型工具只能在 running 确认后执行；主 Agent、已释放实例、已关闭或安全等待的主会话不能执行业务。等待限制也覆盖旧无 scope 任务，避免历史入口绕过检查点。执行占用持续到终态事务完成。
- * 职责边界：可信桌面或主会话协调器启动成员，本成员 Loop 不递归派发或继承免询问批准；候选交付不等于业务验收。
+ * 职责边界：可信桌面或主会话协调器启动成员，本成员 Loop 不递归派发或继承免询问批准；只读异常核实不调用恢复，候选交付不等于业务验收。
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
@@ -21,6 +21,8 @@ import {QuestionQueue} from '../conversation/questions';
 import {memberTask,memberBatch,memberView,dependenciesReady,memberCandidate} from './member-state';
 import {memberEventsInput,type MemberEventsRead} from '../../core/tasks/member-events';
 import {MemberEventStreams,memberPublicTask} from './member-events';
+import {ExecutionReportService} from './execution-report-service';
+import type {ExecutionReport} from '../../core/tasks/execution-report';
 
 /** 装配主进程提供模型与磁盘能力，调度层不解密密钥或导入平台实现。 */
 export interface MemberExecutionPorts {
@@ -53,6 +55,8 @@ export class MemberExecutionManager {
   private questions=new QuestionQueue();
   private eventStreams:MemberEventStreams;
   constructor(private owner:KnowledgeWorkspace,private store:DispatchStore,private ports:MemberExecutionPorts){this.eventStreams=new MemberEventStreams(run=>ports.inspect(run))}
+  /** 手动只读核实指定任务/轮次；不调用 initialize，不恢复、启动、确认消息或重写异常日志。 */
+  async report(raw:unknown):Promise<ExecutionReport>{this.owner.assert();return new ExecutionReportService(this.owner,this.store,run=>this.ports.inspect(run)).read(raw)}
   private check(workspaceId:string){
     if(this.closing)fail('MEMBER_EXECUTION_CLOSED','成员执行服务正在关闭');
     this.owner.assert();if(workspaceId!==this.owner.entry.id)fail('GRAPH_IDENTITY_MISMATCH','成员任务不属于当前工作区');

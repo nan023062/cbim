@@ -1,6 +1,6 @@
 /**
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
- * 设计原因：先持久化工具决策再放行；主对话固定登记实例，补充目标在取得租约并核实旧日志后才提交一次性启动意图。停止信号覆盖意图、日志和引擎准备窗口，成员回注与真实用户补充分开记录。
+ * 设计原因：先持久化工具决策再放行；补充目标在取得租约并核实旧日志后提交一次性启动意图，已知尾行不完整时禁止续接。停止覆盖意图、日志和引擎准备窗口，成员回注与真实用户补充分开记录。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -80,6 +80,7 @@ export class LoopRuntime {
     try{
       if(resume){
         previous=await this.inspect(task.taskId,resume.runId);
+        if(previous.logIntegrity?.partialTail)throw Error('原运行日志尾行不完整，先核实执行记录；不能直接续接或重放');
         if(source&&(previous.status!=='completed'||previous.unresolvedTools.length))throw Error('主对话上轮未安全完成，不能接续目标或成员结果');
         if(previous.memberBinding)throw Error('成员任务不能通过普通对话恢复；请先由调度核实上次执行');
         // 已绑定历史不得改换或丢失登记身份；旧未绑定历史可在明确续聊时首次绑定，不重写旧记录。

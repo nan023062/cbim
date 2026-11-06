@@ -225,3 +225,6 @@ LoopRuntime ..> AgentEngine : 通过既有契约驱动
 ```
 
 图中的适配关系是实施方向，不表示当前 `LoopRuntime` 已实现 `AgentRunPort`。与 [成员契约](../team/CONTRACT.md) 和 [任务图契约](../tasks/CONTRACT.md) 一起评审后再增加代码文件；当前代码类图仍以实际声明为准。
+### 磁盘执行证据完整性
+
+`RunSummary.logIntegrity` 为可选的磁盘读取诊断，当前 `RunJournal.read` 总会提供 `partialTail`。完整前缀仍可供展示；尾行未写完不解析、不截断，也不能据前缀的 settled 证明完整日志。`LoopRuntime` 在创建新引擎或调用启动意图前拒绝续接已知不完整的原日志，并释放预检租约；即使传入工具核实 ID 也不能跳过。内存摘要或旧端口未提供该字段时不补造磁盘诊断。读取本身不授权重放。

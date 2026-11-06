@@ -1,6 +1,6 @@
 /**
  * 作用定位：本机执行事件日志，顺序追加并 fsync，从记录恢复摘要和未确认工具。
- * 设计原因：先持久化后发布；重建工具回执和计划，核验主对话实例、成员任务绑定及回注来源。旧日志不补造身份或来源，主对话绑定不能伪装为正式任务，模型运行完成不自动验收。
+ * 设计原因：先持久化后发布；核验运行绑定、回执和来源，读取完整前缀时保留尾行未完整写入的事实。损坏仅返回稳定错误码，不把 JSON 片段带到界面；读取不截断、不修复历史。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -9,6 +9,7 @@ import type {ToolReceipt} from '../../../core/tools/types';
 import {checkedMemberRunBinding} from '../../../core/brain/member-run';
 import {checkedRunInputSource} from '../../../core/brain/input-source';
 import {checkedConversationAgentBinding} from '../../../core/brain/conversation-binding';
+import {Fault,fail} from '../../../core/foundation/errors';
 
 
 /** 只追加的运行事实来源；事件可靠落盘后才返回，观察者由上层运行时通知。 */
@@ -34,10 +35,12 @@ export class RunJournal {
   }
   /** 等待截至调用时已排队的写入；日志曾写失败时继续拒绝，不能作为已可靠结算的证明。 */
   async flush(){await this.tail}
-  /** 只解析完整行并验证身份及顺序；已放行但无结果的工具使状态为 interrupted。 */
+  /** 只解析完整行并验证身份及顺序；未完整尾行通过 logIntegrity 报告，已放行无结果为 interrupted。IO 错误保留系统码，坏记录使用 RUN_LOG_INVALID。 */
   static async read(directory:string):Promise<RunSummary>{
     const text=await fs.readFile(path.join(directory,'events.jsonl'),'utf8');
-    const lines=text.split('\n');lines.pop(); // A crash may leave one incomplete tail; never interpret it.
+    if(text.length===0)fail('RUN_LOG_EMPTY','运行记录尚无首条完整事件');
+    try{
+    const lines=text.split('\n'),partialTail=lines.pop()!==''; // 只读有效前缀，报告但不截断未完成的最后一行。
     const events=lines.filter(Boolean).map(line=>JSON.parse(line) as StoredEvent);
     if(!events.length||events[0].type!=='run.started')throw Error('运行记录不完整');
     const first=events[0],task=first.data.task as TaskSpec;
@@ -66,6 +69,7 @@ export class RunJournal {
       }
     }
     const taskProgress=events.filter(e=>e.type==='task.updated').at(-1)?.data.progress as RunSummary['taskProgress'];
-    return {task,runId:first.runId,status,acceptance:'not_evaluated',sessionFile,...(memberBinding?{memberBinding}:{}),...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),unresolvedTools:[...pending],toolReceipts:[...receipts.values()],taskProgress,events};
+    return {task,runId:first.runId,status,acceptance:'not_evaluated',sessionFile,...(memberBinding?{memberBinding}:{}),...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),unresolvedTools:[...pending],toolReceipts:[...receipts.values()],taskProgress,events,logIntegrity:{partialTail}};
+    }catch(cause){if(cause instanceof Fault)throw cause;fail('RUN_LOG_INVALID','运行记录损坏或身份不一致，无法核实完整执行事实')}
   }
 }

@@ -1,6 +1,6 @@
 /**
  * 作用定位：将成员运行日志投影为可公开的连续事件流，并按 run 缓存首次恢复及后续已落盘增量。
- * 设计原因：节点详情高频轮询不能反复扫描日志；首次恢复失败可重试，成功后与实时事件合并去重。通过共享公开事件投影排除原生绑定、冻结知识及工具正文，前端消费该投影，静态角色历史复用同一白名单。
+ * 设计原因：节点详情高频轮询不能反复扫描日志；首次恢复失败可重试，成功后与实时事件合并去重。仅可信新运行尚未启动的空日志窗口可等待实时首条事件，已开始或损坏日志不能冒充空记录；公开投影排除原生绑定、冻结知识及工具正文。
  * 职责边界：不签发图状态、不启动或恢复执行；工具只公开身份、状态、工作区内业务路径与可信回执。公开对话和计划文本仅限长，不保证识别其中的敏感内容。
  */
 import {fail} from '../../core/foundation/errors';
@@ -53,7 +53,7 @@ export class MemberEventStreams {
       if(next.type==='task.updated'&&next.data.progress)stream.progress=next.data.progress as TaskProgress;
     }
   }
-  private async restore(stream:Stream){
+  private async restore(stream:Stream,observed:DispatchRun){
     const initiallyEmpty=stream.ordered.length===0&&stream.pending.size===0;
     try{
       const summary=await this.inspect(stream.run),binding=stream.run.binding;
@@ -62,8 +62,9 @@ export class MemberEventStreams {
       if(stream.pending.size)fail('MEMBER_EVENT_STREAM_INVALID','成员事件序号不连续，不能跳过缺失记录');
     }catch(error:any){
       // 新进程正在创建第一条记录，或启动失败发生在日志创建前；只允许空前缀等待已登记的实时观察。
-      const unavailable=error?.code==='ENOENT'||stream.live&&error?.message==='运行记录不完整';
-      if(unavailable&&initiallyEmpty&&(stream.live||!stream.run.startedAt&&!stream.run.session.sessionFile))return;
+      const beforeStart=!observed.startedAt&&!observed.session.sessionFile&&observed.status!=='completed';
+      const unavailable=error?.code==='ENOENT'&&beforeStart||error?.code==='RUN_LOG_EMPTY'&&stream.live&&observed.status==='starting'&&beforeStart;
+      if(unavailable&&initiallyEmpty)return;
       throw error;
     }
   }
@@ -73,7 +74,7 @@ export class MemberEventStreams {
    */
   async read(run:DispatchRun,task:TaskSpec,cursor:MemberEventCursor|undefined,limit:number):Promise<MemberEventsRead>{
     const stream=this.stream(run,task);if(stream.failure)throw stream.failure;
-    const loading=stream.load??=this.restore(stream);
+    const loading=stream.load??=this.restore(stream,structuredClone(run));
     try{await loading}catch(error){if(stream.load===loading)stream.load=undefined;throw error}
     if(stream.failure)throw stream.failure;if(stream.pending.size)fail('MEMBER_EVENT_STREAM_INVALID','成员事件序号不连续，不能跳过缺失记录');
     const view:MemberRunView={task:stream.task,runId:run.binding.runId,status:run.status==='starting'?'running':run.status,acceptance:'not_evaluated',unresolvedTools:[...stream.unresolved],...(stream.progress?{taskProgress:stream.progress}:{})};

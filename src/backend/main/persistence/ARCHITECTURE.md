@@ -33,7 +33,7 @@ class N_src_backend_main_persistence_tasks["tasks/"] {
 
 - [knowledge/](knowledge/ARCHITECTURE.md)：正式知识文件读取、初始化、事务恢复和对象计划缓存。提交串行化，回滚不覆盖外部修改，清理仅删除空目录。
 - [settings/](settings/ARCHITECTURE.md)：应用级供应商和模型配置存储。密钥经注入的系统加密端口保存，不在公开 IPC 返回。
-- [tasks/](tasks/ARCHITECTURE.md)：执行日志、附件快照、派发事务与角色履历。目标摘要增量从既有事务重放派生，保留有界增量窗及完整原日志；同屏障读取图/目标/详情，无变化不重传原文。身份与哈希链异常拒绝，未知操作不自动重放。
+- [tasks/](tasks/ARCHITECTURE.md)：执行日志、附件快照、派发事务与角色履历。日志只读完整前缀并报告未完整尾行，损坏不透传原始片段、不截断修复。图/目标/详情同屏障读取，未知操作不自动重放。
 
 [返回上层](../ARCHITECTURE.md)。
 

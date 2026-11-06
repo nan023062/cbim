@@ -1,6 +1,6 @@
 /**
  * 作用定位：大脑 执行层：与具体引擎无关的任务、事件、工具策略和执行摘要契约。
- * 设计原因：任务身份与引擎会话分开，主对话绑定登记实例，成员绑定区分业务任务、运行与通道；成员回传与显式用户补充携带不同可信来源，均不签署人工验收。公开事件持久化计划修订，steer 不改变模型或权限。
+ * 设计原因：任务身份与引擎会话分开，主对话绑定登记实例，成员绑定区分业务任务、运行与通道；可信来源不签署人工验收。磁盘摘要额外报告未完整写入的尾行，使核实入口不把可读前缀误认成完整证据。
  */
 import type {TaskSpec} from '../tasks/types';
 import type {ToolCall,ToolDecision} from '../tools/types';
@@ -86,4 +86,6 @@ export interface RunSummary {
   /** 最近一次持久化计划；未创建计划的普通问答为空。 */
   taskProgress?:import('../tasks/progress').TaskProgress;
   events: StoredEvent[];
+  /** 仅持久日志读取提供；缺省表示该摘要未报告磁盘完整性，不能猜测为完好。未完成尾行不解析或改写。 */
+  logIntegrity?:{partialTail:boolean};
 }

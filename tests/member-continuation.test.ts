@@ -61,7 +61,7 @@ it('rejects corrupt trusted metadata in a durable journal instead of treating it
     const second=await f.runtime.start(f.task,'candidate',{runId:first.runId},source());await second.done;
     const file=path.join(f.directory,f.task.taskId,second.runId,'events.jsonl');
     const lines=(await fs.readFile(file,'utf8')).trimEnd().split('\n'),entry=JSON.parse(lines[0]);entry.data.source.taskIds=[];lines[0]=JSON.stringify(entry);await fs.writeFile(file,lines.join('\n')+'\n');
-    await expect(f.runtime.inspect(f.task.taskId,second.runId)).rejects.toThrow('无效成员接续');
+    await expect(f.runtime.inspect(f.task.taskId,second.runId)).rejects.toMatchObject({code:'RUN_LOG_INVALID'});
   }finally{await f.cleanup()}
 });
 

@@ -1,6 +1,6 @@
 # 主 Agent 的目标调度循环
 
-本文区分整体目标设计与已实现部分。当前已接入真实输入、版本化目标计划、结构化证据审阅、成功结束门禁、安全等待及显式文本补充续跑；人工验收入口、异常执行恢复、产物指纹和全局预算仍需后续实现。
+本文区分整体目标设计与已实现部分。当前已接入真实输入、版本化目标计划、结构化证据审阅、成功结束门禁、安全等待及显式文本补充续跑；成员异常记录提供只读核实入口。人工验收、异常执行的显式恢复、产物指纹和全局预算仍需后续实现，实际验证见开发记录。
 
 ## 两个层次的循环
 
@@ -99,7 +99,7 @@ flowchart TD
 | 核实位置 | 已实现 | 与目标循环的差距 |
 | --- | --- | --- |
 | [main-agent.ts](../src/backend/scheduler-engine/conversation/main-agent.ts) | 图谱查询、目标计划、证据审阅和返工指引 | 在线模型的自主拆解与语义判断质量仍须真实业务验证 |
-| [auto-collaboration.ts](../src/backend/scheduler-engine/execution/auto-collaboration.ts) | 多批次派发/回注、完成门禁、安全等待及显式补充；重开只恢复占位，消费意图后沿原周期重规划，停止覆盖提交竞争 | 异常执行核实与全局预算待实现 |
+| [auto-collaboration.ts](../src/backend/scheduler-engine/execution/auto-collaboration.ts) | 多批次派发/回注、完成门禁、安全等待及显式补充；重开只恢复占位，消费意图后沿原周期重规划，停止覆盖提交竞争 | 异常执行恢复与全局预算待实现 |
 | [scope-goal-service.ts](../src/backend/scheduler-engine/execution/scope-goal-service.ts) | 真实图谱计划、版本化审阅、日志证据、失败任务替代及完成复核 | 没有业务产物指纹、跨存储原子锁和人工验收入口 |
 | [dispatch-scope.ts](../src/backend/core/tasks/dispatch-scope.ts) | 周期及原始输入、计划/审阅和无活动执行的 waiting 检查点 | waiting 不是恢复授权，closed 不等于真人业务验收 |
 | [execution-manager.ts](../src/backend/scheduler-engine/execution/execution-manager.ts) | 主会话、队列、续聊和可信结果回注；`starting` 接收本轮真实 message | TaskSpec 保持会话身份，周期输入独立保存；原周期追加要求与目标修订仍待实现 |

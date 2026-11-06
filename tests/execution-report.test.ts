@@ -1,0 +1,165 @@
+import {it,expect,vi} from 'vitest';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
+import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
+import {MemberExecutionManager,type MemberExecutionPorts} from '../src/backend/scheduler-engine/execution/member-execution';
+import {ExecutionReportService} from '../src/backend/scheduler-engine/execution/execution-report-service';
+import {executionReportInputSchema,executionReportSchema} from '../src/backend/core/tasks/execution-report';
+import {toolReceipt} from '../src/backend/core/tools/receipts';
+import type {ToolCall,ToolDecision} from '../src/backend/core/tools/types';
+import type {TaskSpec,RunSummary} from '../src/backend/core/brain/types';
+import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
+import type {DispatchStore,DispatchState} from '../src/backend/core/tasks/dispatch-storage';
+import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
+import type {TaskNode,GraphSnapshot} from '../src/backend/core/tasks/graph-types';
+
+async function setup(){
+  const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-report-')),identity={workspaceId:'workspace-1',rootSessionId:'root-1'},taskId='task-1',runId='run-1';
+  const assignee={agentId:'cbim:executor',agentInstanceId:'member-1',agentSessionId:'channel-1',name:'执行者'},requester={agentId:'cbim:main',agentInstanceId:'main-1',agentSessionId:'main-channel',name:'调度员'};
+  const task:TaskNode={kind:'task',nodeId:'node-1',taskId,identity,requester,assignee,modules:[],goal:'核验产物',acceptance:[],revision:3,planRevision:1,status:'running',awaitedChildren:[],runIds:[runId],activeRunId:runId,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  const graph:GraphSnapshot={version:1,identity,cursor:{...identity,streamId:'stream-1',seq:3},root:{kind:'session-root',nodeId:'root-node',identity,agent:requester,revision:1,createdAt:task.createdAt},tasks:[task],edges:[],agents:[]};
+  const run={binding:{...identity,taskId,runId,teamId:'.cbim/team',agentId:assignee.agentId,agentInstanceId:assignee.agentInstanceId,agentSessionId:assignee.agentSessionId,leaseEpoch:1,planRevision:1},assignmentMessageId:'assignment-1',status:'running',session:{nativeSessionId:'native-1',sessionFile:path.join(root,'private-native.jsonl')},createdAt:task.createdAt,startedAt:task.createdAt,permission:'execute',prepared:{private:'not-public'},model:{private:'not-public'}} as unknown as DispatchRun;
+  const state:DispatchState={workspaceId:identity.workspaceId,members:[],sessions:[],graphs:[graph],runs:[run],outbox:[]};
+  const store={read:vi.fn(async()=>structuredClone(state)),transact:vi.fn(async()=>{throw Error('readonly report attempted mutation')})} as unknown as DispatchStore;
+  const owner={entry:{id:identity.workspaceId,path:root},assert:vi.fn()} as unknown as KnowledgeWorkspace;
+  const spec:TaskSpec={taskId,workspaceId:identity.workspaceId,root,goal:task.goal,agentId:assignee.agentId,moduleIds:['app'],acceptance:[]};
+  const journal=new RunJournal(path.join(root,'journal'),spec,runId);await journal.init();await journal.append({type:'run.started',data:{task:spec,memberBinding:run.binding,message:'private input'}});await journal.append({type:'session.bound',data:{sessionFile:run.session.sessionFile,sessionId:'native-1'}});
+  const inspect=vi.fn(async()=>RunJournal.read(journal.directory)),prepare=vi.fn(async()=>{throw Error('must not create engine')}),acquire=vi.fn(()=>{throw Error('must not acquire lease')});
+  const manager=new MemberExecutionManager(owner,store,{inspect,prepare,acquire} as MemberExecutionPorts);
+  const input={...identity,taskId,runId};
+  let callNumber=0;
+  const call=async(outcome:'succeeded'|'failed'|'denied'|'pending'='succeeded',id='call-'+(++callNumber),startedBeforeGate=false)=>{
+    const tool:ToolCall={id,name:'bash',input:{command:'private command'}},decision:ToolDecision={allow:outcome!=='denied',effects:['command'],scope:{kind:'workspace',workspaceId:identity.workspaceId}};
+    if(startedBeforeGate)await journal.append({type:'tool.started',data:{id,name:tool.name}});
+    await journal.append({type:'tool.proposed',data:{...tool}});
+    await journal.append({type:decision.allow?'tool.allowed':'tool.denied',data:{...tool,...decision,...(!decision.allow?{receipt:toolReceipt({workspaceId:identity.workspaceId,taskId,runId},tool,decision,'denied')}: {})}});
+    if(outcome!=='pending'){
+      const result={content:[{type:'text',text:'private result'}]},receipt=toolReceipt({workspaceId:identity.workspaceId,taskId,runId},tool,decision,outcome,result);
+      await journal.append({type:'tool.finished',data:{id,name:tool.name,isError:outcome!=='succeeded',result,receipt}});
+    }
+    return tool;
+  };
+  const settle=async(status:'completed'|'failed'|'cancelled'='completed')=>{await journal.append({type:'run.settled',data:{status,acceptance:'not_evaluated'}});run.status=status;run.settledAt=new Date().toISOString();delete task.activeRunId;task.status=status==='completed'?'result_ready':status;task.revision++;graph.cursor.seq++};
+  return {root,identity,input,task,graph,run,state,store,owner,journal,inspect,prepare,acquire,manager,call,settle,cleanup:()=>fs.rm(root,{recursive:true,force:true})};
+}
+
+it('手动报告读取真实日志、保持只读并区分成功/失败回执与业务验收',async()=>{
+  const f=await setup();try{
+    await f.call('succeeded');await f.call('failed');await f.settle('failed');
+    const state=structuredClone(f.state),bytes=await fs.readFile(path.join(f.journal.directory,'events.jsonl'));
+    const report=await f.manager.report(f.input);
+    expect(report).toMatchObject({execution:'settled',consistency:'stable',log:{state:'verified',hasTerminal:true,summaryStatus:'failed'},tools:{available:true,total:2,counts:{succeeded:1,failed:1}}});
+    expect(report.issues.some(i=>i.code==='TOOLS_FAILED_WITH_POSSIBLE_EFFECTS')).toBe(true);
+    expect(report.candidate).toBeUndefined();expect(f.state).toEqual(state);expect(await fs.readFile(path.join(f.journal.directory,'events.jsonl'))).toEqual(bytes);
+    expect(f.prepare).not.toHaveBeenCalled();expect(f.acquire).not.toHaveBeenCalled();expect(f.store.transact).not.toHaveBeenCalled();
+    expect(JSON.stringify(report)).not.toMatch(/private|sessionFile|"command":|"result":/);
+    expect(executionReportSchema.safeParse(report).success).toBe(true);
+  }finally{await f.cleanup()}
+});
+
+it('Pi started可早于授权；无终态活动运行和在途工具不误报执行失败',async()=>{
+  const f=await setup();try{
+    await f.call('succeeded','first',true);await f.call('pending','pending',true);
+    const report=await f.manager.report(f.input);
+    expect(report).toMatchObject({execution:'in_flight',log:{state:'verified',hasTerminal:false},tools:{counts:{succeeded:1,unknown:1}}});
+    expect(report.issues.map(i=>i.code)).toContain('TOOLS_IN_FLIGHT');
+    f.run.status='interrupted';delete f.task.activeRunId;f.task.status='interrupted';
+    expect((await f.manager.report(f.input)).execution).toBe('unknown');
+  }finally{await f.cleanup()}
+});
+
+it('未选轮次只核实持久领取；不存在日志不能说明未启动，拒绝跨会话且不读其它run',async()=>{
+  const f=await setup();try{
+    const noRun={...f.identity,taskId:f.task.taskId};
+    expect(await f.manager.report(noRun)).toMatchObject({execution:'unknown',log:{state:'not_selected'}});expect(f.inspect).not.toHaveBeenCalled();
+    f.task.runIds=[];f.task.status='queued';delete f.task.activeRunId;f.state.runs=[];
+    expect(await f.manager.report(noRun)).toMatchObject({execution:'not_started',log:{state:'not_expected'}});
+    expect(await f.manager.report(f.input)).toMatchObject({execution:'unknown',log:{state:'missing'}});expect(f.inspect).not.toHaveBeenCalled();
+    await expect(f.manager.report({...f.input,rootSessionId:'other'})).rejects.toMatchObject({code:'TASK_NOT_FOUND'});
+    await expect(f.manager.report({...f.input,workspaceId:'other'})).rejects.toMatchObject({code:'GRAPH_IDENTITY_MISMATCH'});
+    expect(executionReportInputSchema.safeParse({...f.input,run:'any'}).success).toBe(false);
+  }finally{await f.cleanup()}
+});
+
+it.each(['missing','invalid','identity_mismatch','unavailable'] as const)('日志%s只返回安全问题，不传播原始内容',async state=>{
+  const f=await setup();try{
+    const code={missing:'ENOENT',invalid:'RUN_LOG_INVALID',identity_mismatch:'MEMBER_LOG_IDENTITY',unavailable:'EACCES'}[state];
+    f.inspect.mockRejectedValue(Object.assign(Error('private secret path/token'),{code}));
+    const report=await f.manager.report(f.input);
+    expect(report).toMatchObject({execution:'unknown',log:{state},tools:{available:false,total:0}});expect(JSON.stringify(report)).not.toContain('private');
+  }finally{await f.cleanup()}
+});
+
+it('完整终态后的截断尾行仍为incomplete/unknown，可读前缀不被当作完整证据',async()=>{
+  const f=await setup();try{
+    await f.call();await f.settle();await fs.appendFile(path.join(f.journal.directory,'events.jsonl'),'{"private":"unfinished');
+    expect(await f.manager.report(f.input)).toMatchObject({execution:'unknown',log:{state:'incomplete'},tools:{available:true,total:1}});
+  }finally{await f.cleanup()}
+});
+
+it('运行身份错绑、旧轮次借用新候选和终态后悬空事件均不冒充成功',async()=>{
+  const f=await setup();try{
+    await f.call();await f.settle();
+    f.task.result={resultId:'new-result',runId:'new-run',planRevision:1,summary:'最新候选',evidenceRefs:['call-1'],limitations:[],acceptance:'not_evaluated'};
+    expect((await f.manager.report(f.input)).candidate).toBeUndefined();
+    f.task.result.runId=f.input.runId;expect((await f.manager.report(f.input)).candidate?.resultId).toBe('new-result');
+    const original=await RunJournal.read(f.journal.directory),wrong=structuredClone(original);wrong.memberBinding!.agentInstanceId='foreign';f.inspect.mockResolvedValue(wrong);
+    expect(await f.manager.report(f.input)).toMatchObject({execution:'unknown',log:{state:'identity_mismatch'}});
+    f.inspect.mockImplementation(async()=>RunJournal.read(f.journal.directory));await f.journal.append({type:'message',data:{text:'late'}});
+    expect((await f.manager.report(f.input)).execution).toBe('unknown');
+  }finally{await f.cleanup()}
+});
+
+it('重复结束/重复授权或伪造hash变成unknown；正常denied随后finished不误报',async()=>{
+  const f=await setup();try{
+    await f.call('denied','denied');await f.call('succeeded','twice');await f.call('succeeded','duplicate-gate');
+    const summary=await RunJournal.read(f.journal.directory),finished=summary.events.find(e=>e.type==='tool.finished'&&e.data.id==='twice')!;
+    const allowed=summary.events.find(e=>e.type==='tool.allowed'&&e.data.id==='duplicate-gate')!;
+    await f.journal.append({type:'tool.allowed',data:allowed.data});
+    await f.journal.append({type:'tool.finished',data:finished.data});await f.settle();
+    const report=await f.manager.report(f.input);
+    expect(report.tools.items.find(i=>i.toolCallId==='denied')?.status).toBe('denied');expect(report.tools.items.find(i=>i.toolCallId==='twice')?.status).toBe('unknown');expect(report.execution).toBe('unknown');
+    expect(report.tools.items.find(i=>i.toolCallId==='duplicate-gate')?.status).toBe('unknown');
+    const bad=await RunJournal.read(f.journal.directory),item=bad.events.find(e=>e.type==='tool.finished'&&e.data.id==='denied')!;(item.data.receipt as {inputHash:string}).inputHash='f'.repeat(64);f.inspect.mockResolvedValue(bad);
+    expect((await f.manager.report(f.input)).tools.items.find(i=>i.toolCallId==='denied')?.status).toBe('unknown');
+  }finally{await f.cleanup()}
+});
+
+it('回执和isError矛盾或先成功结束后追加denied都不能冒充已拒绝或成功',async()=>{
+  const f=await setup();try{
+    const tool=await f.call('succeeded','late-deny');await f.call('succeeded','wrong-outcome');await f.settle();
+    const decision:ToolDecision={allow:false,effects:['command'],scope:{kind:'workspace',workspaceId:f.identity.workspaceId}};
+    await f.journal.append({type:'tool.denied',data:{...tool,...decision,receipt:toolReceipt({workspaceId:f.identity.workspaceId,taskId:f.input.taskId,runId:f.input.runId},tool,decision,'denied')}});
+    const summary=await RunJournal.read(f.journal.directory);summary.events.find(e=>e.type==='tool.finished'&&e.data.id==='wrong-outcome')!.data.isError=true;f.inspect.mockResolvedValue(summary);
+    const report=await f.manager.report(f.input);expect(report.execution).toBe('unknown');expect(report.tools.counts.unknown).toBe(2);expect(report.tools.counts.denied).toBe(0);expect(report.tools.counts.succeeded).toBe(0);
+  }finally{await f.cleanup()}
+});
+
+it('分页同基线有界返回，日志变化重置第一页；读取期间状态变化整份报告标未知',async()=>{
+  const f=await setup();try{
+    await f.call();await f.call();await f.call();
+    const first=await f.manager.report({...f.input,limit:2}),second=await f.manager.report({...f.input,limit:2,cursor:first.tools.nextCursor});
+    expect(first.tools.items).toHaveLength(2);expect(second.tools.items).toHaveLength(1);expect(second.basis.key).toBe(first.basis.key);expect(second.tools.paginationReset).toBe(false);
+    await f.call();const changed=await f.manager.report({...f.input,limit:2,cursor:first.tools.nextCursor});
+    expect(changed.tools.paginationReset).toBe(true);expect(changed.tools.items[0].toolCallId).toBe(first.tools.items[0].toolCallId);
+    f.inspect.mockImplementation(async()=>{f.task.revision++;f.graph.cursor.seq++;return RunJournal.read(f.journal.directory)});
+    expect(await f.manager.report(f.input)).toMatchObject({consistency:'changed_during_read',execution:'unknown',tools:{available:false,items:[]}});
+  }finally{await f.cleanup()}
+});
+
+it('重新创建只读服务不恢复starting记录，关闭周期只提示新周期而不重试',async()=>{
+  const f=await setup();try{
+    f.run.status='starting';f.task.scopeId='closed-scope';f.state.scopes=[{workspaceId:f.identity.workspaceId,rootSessionId:f.identity.rootSessionId,scopeId:'closed-scope',status:'closed'} as NonNullable<DispatchState['scopes']>[number]];
+    const report=await new ExecutionReportService(f.owner,f.store,f.inspect).read(f.input);
+    expect(report.next.kind).toBe('new_cycle_only');expect(f.run.status).toBe('starting');expect(f.store.transact).not.toHaveBeenCalled();
+  }finally{await f.cleanup()}
+});
+
+it('JSON可解析但工具事件正文缺失时返回未知，不抛投影异常或泄漏正文',async()=>{
+  const f=await setup();try{
+    await f.journal.append({type:'tool.started',data:undefined as never});await f.settle();
+    const report=await f.manager.report(f.input);
+    expect(report.execution).toBe('unknown');expect(report.issues.some(i=>i.code==='TOOL_EVIDENCE_INVALID')).toBe(true);
+  }finally{await f.cleanup()}
+});

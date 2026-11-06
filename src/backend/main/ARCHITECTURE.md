@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Electron 入口与应用装配。注入主实例、周期和证据日志端口；恢复安全等待占位后接收公开请求，重开不执行模型。退出排空活动执行而保留已停泊目标，最后撤销监管并关闭知识存储。
+Electron 入口与应用装配。注入实例、周期和证据日志端口，身份不符使用稳定错误码；只读核实与启动分开。恢复等待占位不执行模型，退出排空执行、保留停泊目标后关闭存储。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -130,7 +130,7 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 ## 子目录导航
 
 - [commands/](commands/ARCHITECTURE.md)：CLI 入口，复用应用和调度，不拥有第二套领域规则。
-- [ipc/](ipc/ARCHITECTURE.md)：应用action路由。目标补充携带稳定命令和明确身份，回执查询只读；普通聊天、审批与补充分开。sessionRead返回同屏障图/目标增量，桌面发送方在Electron接入处核验。
+- [ipc/](ipc/ARCHITECTURE.md)：应用action路由。目标补充使用稳定命令，执行核实按明确任务/运行只读；普通聊天、审批与补充分开。sessionRead返回同屏障图/目标增量，桌面发送方在Electron接入处核验。
 - [persistence/](persistence/ARCHITECTURE.md)：本机持久化适配：知识事务、运行日志、对话附件、模型配置。保留原数据路径与格式，目录调整不迁移用户数据。
 - [platform/](platform/ARCHITECTURE.md)：本机路径、系统锁、凭据加密、命令终端及原生工具访问检查。路径策略不是操作系统沙箱。
 - [resources/](resources/ARCHITECTURE.md)：链接器、人才和完整业务模板共用的本地/远端资源仓库。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。

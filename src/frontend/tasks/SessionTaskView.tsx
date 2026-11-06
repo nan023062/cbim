@@ -1,7 +1,7 @@
 /**
  * 作用定位：以节点流程图展示当前主会话的派发任务，并在选择根或任务后显示对应执行详情。
  * 设计原因：全局项目架构与会话派工分开；根详情共享当前/历史周期目标、审阅与显式补充状态，整张会话图保留并突出所选周期。开放周期可停止或取消，持久等待不触发队列恢复。
- * 职责边界：运行轮次不是派发节点；没有真实图时只展示已有主会话根，不补造成员任务或业务验收结论。
+ * 职责边界：运行轮次不是派发节点；核实报告仅在所选成员详情按需读取，传递该节点实际所属周期和图版本，不借历史筛选替换任务身份。
  */
 import {useEffect,useState} from 'react';
 import type {RunSummary,QueuedMessage} from '../../bridge/contracts/execution';
@@ -93,7 +93,7 @@ export function SessionTaskView(props:SessionTaskViewProps){
     {!root?<div className="task-graph-draft"><h3>尚未开始会话</h3><p>发送第一条消息后，这里显示主 Agent；派发成员任务后显示团队任务流程。</p><button onClick={onChat}>开始对话</button></div>:<div className={'session-graph-layout'+(hasDetail?' with-detail':'')}>
       <DispatchGraph key={workspaceId+':'+taskId} graph={matching} root={root} selectedTaskId={selected} onSelectTask={select} highlightedScopeId={scopeState?.selectedScopeId}/>
       {hasDetail&&<aside className="session-graph-detail" aria-label={rootSelected?'主 Agent 详情':'成员任务详情'} data-testid="session-graph-detail"><header><strong>{rootSelected?'主会话调度':'成员任务'}</strong><button onClick={()=>select(undefined)} aria-label="关闭详情，返回流程图">返回流程图</button></header>
-        {rootSelected?<RootTaskDetail history={history} pending={pending} now={now} busy={busy} onQueueChange={onQueueChange} onQueueContinue={onQueueContinue} onStop={onStop} graph={matching} scopeState={scopeState} continuation={props.continuation}/>:selectedTask&&taskId&&<MemberTaskDetail active={props.active} key={workspaceId+':'+taskId+':'+selectedTask.taskId} workspaceId={workspaceId} rootSessionId={taskId} task={selectedTask}/>}
+        {rootSelected?<RootTaskDetail history={history} pending={pending} now={now} busy={busy} onQueueChange={onQueueChange} onQueueContinue={onQueueContinue} onStop={onStop} graph={matching} scopeState={scopeState} continuation={props.continuation}/>:selectedTask&&taskId&&<MemberTaskDetail active={props.active} key={workspaceId+':'+taskId+':'+selectedTask.taskId} workspaceId={workspaceId} rootSessionId={taskId} task={selectedTask} graphCursor={matching?.cursor} scope={scopeState?.scopes.find(scope=>scope.scopeId===selectedTask.scopeId)}/>}
       </aside>}
     </div>}
   </div>;

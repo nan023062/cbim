@@ -42,6 +42,18 @@
 
 `MemberTaskDetail` 为四层身份设置独立组件 key；历史轮次只读，只有当前活动轮次读取审批/问题并提供操作按钮。提交失败分别保留读取错误和操作错误，卸载不撤回已提交的后端操作。`MemberRunTranscript` 只排版后端公开投影，compact 模式仅展示最近一项消息，不缩小日志读取范围，也不负责敏感内容识别。
 
+#### 异常执行记录核实
+
+`MemberExecutionReport` 位于 `MemberTaskDetail` 的执行轮次选择器之后、实时正文之前；它与 `MemberRunDetail` 独立，缺失或损坏日志不会遮住报告入口。两个兄弟视图的 React key 分别带 `report:` 和 `transcript:` 前缀，在同一执行身份下仍保持独立实例，任务由运行转终态时新增提示不能导致报告订阅与正文相互替换。任务视图仍是节点 DAG，不把核实报告改成全会话文字流。任务原有候选也必须属于当前选中 `runId`，旧轮次不能显示后来的交付结果。
+
+`useExecutionReport` 为 workspace/root/scope/task/run 选择创建独立 `ExecutionReportController`；构造、挂载、订阅、显示页签和图更新均不请求。只有“核实执行记录”“重新核实”“加载更多工具记录”显式调用只读 `dispatch.executionReport`，不调用模型、审批、问题回答、收件确认、启动、停止或恢复。没有运行轮次时只核实该任务的领取登记，不猜测最新日志。切换节点或轮次取消前端观察并忽略迟到结果，不撤销后端读取，也不改变任务。
+
+报告须经过 bridge schema 和完整身份校验，检查候选/工具回执所属运行、工具分类数量、页大小和连续游标。工具列表按默认 50 条的有界页面显式追加；同一 basis 才合并，服务端 `paginationReset` 或 `changed_during_read` 替换旧页，不能拼接不同时间的证据。读失败保留已核实报告并明确提示；报告没有修改图、知识或日志的能力。
+
+前端将 task revision、plan revision/status、实际所属 scope 的状态/goal revision 与图游标和报告基线比较。变化只标记报告版本不同，暂停继续加载旧页并等待用户重新核实；不自动回读全部日志。浏览历史周期不会为成员传入别的 scope：`SessionTaskView` 始终按选中任务的 `scopeId` 取真实摘要。
+
+展示上分开“尚未领取执行”“有在途执行记录”“执行轮次已结算”“执行结果未知”。failed/cancelled/missing 日志不能显示成未执行；没有完整回执不代表没有副作用。工具 succeeded 只表示收到成功回执，候选始终“尚未验收”，输入/结果哈希明确不是业务产物指纹。原始工具参数/输出、冻结知识、凭据和原生会话路径不属于公开报告，前端不提供重试、改派或人工验收操作。
+
 实线派发从父 → 子，依赖线从前置 → 后续；父任务等待子结果以节点状态和关联详情展示，不画结果反向边。任务结果“可交接”与“已验收”分开，v1 只有候选、不绘制虚假的验收通过标记。Agent 状态来自后端事实，前端不凭聊天内容、文本长度或计时推算进度百分比。
 
 #### 增量接口与本地状态
@@ -79,6 +91,8 @@ class SessionTaskView { <<component>> }
 class DispatchGraph { <<component>> }
 class GraphLayout { <<module>> }
 class MemberTaskDetail { <<component>> }
+class MemberExecutionReport { <<component>> }
+class ExecutionReportController { <<module>> }
 class ScopeGoalPanel { <<component>> }
 class ScopeContinuationForm { <<component>> }
 class ScopeContinuationController { <<module>> }
@@ -87,6 +101,8 @@ class SessionReadProjection { <<module>> }
 class GraphContract { <<bridge boundary>> }
 SessionTaskView --> DispatchGraph : 当前会话流程图
 SessionTaskView --> MemberTaskDetail : 按需成员详情
+MemberTaskDetail --> MemberExecutionReport : 所选轮次只读核实
+MemberExecutionReport --> ExecutionReportController : 显式读取与同基线分页
 SessionTaskView --> ScopeGoalPanel : 复用选中目标详情
 ScopeGoalPanel --> ScopeContinuationForm : 当前等待显式补充
 ScopeContinuationForm --> UseScopeContinuation : 共享视图与操作

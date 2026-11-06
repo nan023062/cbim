@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-执行日志、附件快照、派发事务与角色履历。目标摘要增量从既有事务重放派生，保留有界增量窗及完整原日志；同屏障读取图/目标/详情，无变化不重传原文。身份与哈希链异常拒绝，未知操作不自动重放。
+执行日志、附件快照、派发事务与角色履历。日志只读完整前缀并报告未完整尾行，损坏不透传原始片段、不截断修复。图/目标/详情同屏障读取，未知操作不自动重放。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -178,7 +178,7 @@ class N_src_backend_main_persistence_tasks_run_journal_ts_RunJournal["RunJournal
 N_src_backend_main_persistence_tasks_run_journal_ts ..> N_src_backend_main_persistence_tasks_run_journal_ts_RunJournal : 声明
 ```
 
-直接依赖：[../../../core/brain/types.ts](../../../core/brain/types.ts)、[../../../core/tools/types.ts](../../../core/tools/types.ts)、[../../../core/brain/member-run.ts](../../../core/brain/member-run.ts)、[../../../core/brain/input-source.ts](../../../core/brain/input-source.ts)、[../../../core/brain/conversation-binding.ts](../../../core/brain/conversation-binding.ts)。
+直接依赖：[../../../core/brain/types.ts](../../../core/brain/types.ts)、[../../../core/tools/types.ts](../../../core/tools/types.ts)、[../../../core/brain/member-run.ts](../../../core/brain/member-run.ts)、[../../../core/brain/input-source.ts](../../../core/brain/input-source.ts)、[../../../core/brain/conversation-binding.ts](../../../core/brain/conversation-binding.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)。
 
 ### run-storage.ts
 
@@ -361,3 +361,6 @@ interface DispatchStore {
 | 未确认的执行结果 | 保留中断/待核实状态，不自动重试副作用 |
 
 现有 `loop` 对话 `taskId`、`RunJournal` 及 `TaskProgress` 保留原意。引入 `rootSessionId` 和图任务 ID 时需要显式适配关联，不能根据名称相同直接等同；旧历史没有派发证据时不补造任务、消息或团队协作过程。
+### 运行日志的只读完整性诊断
+
+`RunJournal.read` 仅解析完整行并报告 `logIntegrity.partialTail`，保留未完成尾行的原始字节、不截断或修复。零字节文件返回 `RUN_LOG_EMPTY`；结构、绑定或 JSON 损坏返回 `RUN_LOG_INVALID`，错误不包含原始片段。文件系统错误保留系统码，缺失日志不能解释为未执行。正常读取依旧重建可信回执、未知工具与终态，完成前缀不代表尾行也完整。

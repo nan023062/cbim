@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-任务计划、派发图、目标与安全等待。显式补充原子消费检查点、追加不可变输入历史；新输入使旧计划失效，运行/版本预算跨补充累计。公开摘要及详情用独立游标，已关闭不复活，文字不签署人工验收。
+任务计划、派发图、目标与安全等待。显式补充保留输入历史并强制重规划。执行核实契约区分领取、在途、结算与未知，工具分页固定证据基线；候选不等于验收，已关闭不复活。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -17,6 +17,7 @@
 | [dispatch-scope.ts](dispatch-scope.ts) | 定义一次用户任务的调度周期，与长期主会话和单次模型运行区分。 |
 | [dispatch-storage.ts](dispatch-storage.ts) | 定义工作区成员注册、会话绑定及任务派发的原子持久化端口。 |
 | [execution-context.ts](execution-context.ts) | 成员业务执行所需的可持久化知识快照，以及存储与调度共用的完整性校验。 |
+| [execution-report.ts](execution-report.ts) | 成员执行异常核实的只读报告协议，供调度服务与界面共享。 |
 | [graph-reducer.ts](graph-reducer.ts) | 把已提交的图事件原子转换为内存投影，并按游标输出增量读取结果。 |
 | [graph-rules.ts](graph-rules.ts) | 任务图的纯领域校验，检查序列化形状、身份、派发父关系及依赖/等待无环。 |
 | [graph-types.ts](graph-types.ts) | 任务派发图的可序列化领域契约，供调度、持久化和 Bridge 共同引用。 |
@@ -320,6 +321,27 @@ N_src_backend_core_tasks_execution_context_ts ..> N_src_backend_core_tasks_execu
 ```
 
 直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../team/agent-types.ts](../team/agent-types.ts)、[graph-types.ts](graph-types.ts)。
+
+### execution-report.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_execution_report_ts["execution-report.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_execution_report_ts_ExecutionReportInput["ExecutionReportInput"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_execution_report_ts ..> N_src_backend_core_tasks_execution_report_ts_ExecutionReportInput : 声明
+class N_src_backend_core_tasks_execution_report_ts_ExecutionReport["ExecutionReport"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_execution_report_ts ..> N_src_backend_core_tasks_execution_report_ts_ExecutionReport : 声明
+```
+
+直接依赖：[member-commands.ts](member-commands.ts)、[dispatch-commands.ts](dispatch-commands.ts)。
 
 ### graph-reducer.ts
 
@@ -1036,20 +1058,26 @@ class N_src_backend_core_tasks_execution_context_ts["execution-context.ts"] {
 class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_graph_reducer_ts["graph-reducer.ts"] {
+class N_src_backend_core_tasks_execution_report_ts["execution-report.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_graph_rules_ts["graph-rules.ts"] {
+class N_src_backend_core_tasks_member_commands_ts["member-commands.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_dispatch_commands_ts["dispatch-commands.ts"] {
   <<module>>
 }
 N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_scope_view_ts : 导入依赖
 N_src_backend_core_tasks_execution_context_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
-N_src_backend_core_tasks_graph_reducer_ts ..> N_src_backend_core_tasks_graph_rules_ts : 导入依赖
-N_src_backend_core_tasks_graph_reducer_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
+N_src_backend_core_tasks_execution_report_ts ..> N_src_backend_core_tasks_member_commands_ts : 导入依赖
+N_src_backend_core_tasks_execution_report_ts ..> N_src_backend_core_tasks_dispatch_commands_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_tasks_graph_reducer_ts["graph-reducer.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_graph_rules_ts["graph-rules.ts"] {
   <<module>>
 }
@@ -1062,17 +1090,23 @@ class N_src_backend_core_tasks_member_commands_ts["member-commands.ts"] {
 class N_src_backend_core_tasks_dispatch_commands_ts["dispatch-commands.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_dispatch_execution_ts["dispatch-execution.ts"] {
-  <<module>>
-}
+N_src_backend_core_tasks_graph_reducer_ts ..> N_src_backend_core_tasks_graph_rules_ts : 导入依赖
+N_src_backend_core_tasks_graph_reducer_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
 N_src_backend_core_tasks_graph_rules_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
 N_src_backend_core_tasks_member_commands_ts ..> N_src_backend_core_tasks_dispatch_commands_ts : 导入依赖
-N_src_backend_core_tasks_member_commands_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
-N_src_backend_core_tasks_member_commands_ts ..> N_src_backend_core_tasks_dispatch_execution_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_tasks_member_commands_ts["member-commands.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_dispatch_execution_ts["dispatch-execution.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_member_events_ts["member-events.ts"] {
   <<module>>
 }
@@ -1082,20 +1116,26 @@ class N_src_backend_core_tasks_types_ts["types.ts"] {
 class N_src_backend_core_tasks_progress_ts["progress.ts"] {
   <<module>>
 }
+N_src_backend_core_tasks_member_commands_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
+N_src_backend_core_tasks_member_commands_ts ..> N_src_backend_core_tasks_dispatch_execution_ts : 导入依赖
+N_src_backend_core_tasks_member_events_ts ..> N_src_backend_core_tasks_types_ts : 导入依赖
+N_src_backend_core_tasks_member_events_ts ..> N_src_backend_core_tasks_progress_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_member_events_ts["member-events.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_member_commands_ts["member-commands.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_progress_tools_ts["progress-tools.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_member_events_ts ..> N_src_backend_core_tasks_types_ts : 导入依赖
-N_src_backend_core_tasks_member_events_ts ..> N_src_backend_core_tasks_progress_ts : 导入依赖
-N_src_backend_core_tasks_member_events_ts ..> N_src_backend_core_tasks_member_commands_ts : 导入依赖
-N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_progress_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
+class N_src_backend_core_tasks_progress_ts["progress.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_scope_view_ts["scope-view.ts"] {
   <<module>>
 }
@@ -1105,16 +1145,10 @@ class N_src_backend_core_tasks_dispatch_commands_ts["dispatch-commands.ts"] {
 class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_graph_rules_ts["graph-rules.ts"] {
-  <<module>>
-}
+N_src_backend_core_tasks_member_events_ts ..> N_src_backend_core_tasks_member_commands_ts : 导入依赖
+N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_progress_ts : 导入依赖
 N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_dispatch_commands_ts : 导入依赖
 N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_dispatch_scope_ts : 导入依赖
-N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
-N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_graph_rules_ts : 导入依赖
 ```
 
 ```mermaid
@@ -1122,9 +1156,17 @@ classDiagram
 class N_src_backend_core_tasks_scope_view_ts["scope-view.ts"] {
   <<module>>
 }
+class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_graph_rules_ts["graph-rules.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
   <<module>>
 }
+N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
+N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_graph_rules_ts : 导入依赖
 N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
 ```
 
@@ -1368,6 +1410,10 @@ GraphDelta --> GraphSnapshot : reset
 `graph-types.ts` 定义公开契约，`graph-reducer.ts` 负责原子投影与增量读取，`graph-rules.ts` 检查结构、DAG 与等待约束。这些纯函数不签发权限、不运行 Agent、不自行把候选变成验收通过。内存投影保留已验证批次的重放证明，重复批次返回原对象；单独反序列化 Snapshot 后没有历史证明时拒绝旧批次，持久化从日志重放可重建证明。
 
 ### 成员运行、执行知识与邮箱
+
+`execution-report.ts` 定义手动核实请求与只读 `ExecutionReport`。请求固定工作区、主会话、任务和可选运行；缺少 runId 只核实领取事实，不猜选最新日志。报告分别展示派发/日志状态、已授权工具回执和未验收候选；失败、取消与中断均不能解释为没有副作用。候选必须匹配所选 run，历史轮次不能借用后来结果。
+
+报告使用任务版本、图游标、周期状态/目标版本及日志顺序号组成读取基线；读取期间状态变化返回 `changed_during_read` 与未知，不拼接不同时间的事实。工具摘要每页最多 100 条，下一页必须携带同基线 `{basis,offset}`；基线变化返回当前第一页并标记 `paginationReset`。`available:false` 时 `total:0` 只代表无法取得回执集合，不能显示成“没有执行工具”。已知截断尾行是 `incomplete`，完整可读前缀不能证明完成；无日志、损坏或绑定不符保持未知。报告不包含原始工具参数/结果、原生路径或私有知识，不修改任务、不授权重试、不代签业务验收。
 
 `dispatch-storage.ts` 声明内部原子事务端口；`dispatch-execution.ts` 声明后端私有 `DispatchRun`；`execution-context.ts` 声明并校验 `PreparedDispatchKnowledge`；`dispatch-invariants.ts` 共同检查任务、成员、运行与信封的关系。主进程持久化适配器在追加和恢复日志时调用同一组校验，不复制领域规则。
 

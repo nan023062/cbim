@@ -1,6 +1,6 @@
 /**
  * 作用定位：为已运行工作区装配成员派发、大脑执行及目标审阅的可信日志读取端口。
- * 设计原因：派发、目标审阅和消费使用同一事务存储；证据按明确运行绑定读取原日志，模型密钥留在工厂闭包。主会话和成员共享工作区占用，任务审批互不继承。
+ * 设计原因：派发、目标审阅和只读核实使用同一存储及绑定日志；核实身份错误具有稳定错误码，不传递原始日志内容。模型密钥留在工厂闭包，主会话和成员共享占用，审批互不继承。
  */
 import path from 'node:path';
 import type {Workspace} from './workspace/workspace';
@@ -15,6 +15,7 @@ import {memberExecutionPrompt} from '../scheduler-engine/context/execution-conte
 import {FileRunStorage} from './persistence/tasks/run-storage';
 import {guard} from './platform/tool-guard';
 import {safeId} from '../core/foundation/identity';
+import {fail} from '../core/foundation/errors';
 
 /** 应用对每个活动工作区只调用一次；关闭服务必须早于释放工作区锁。 */
 export function createMemberDispatch(workspace:Workspace,observer?:DispatchObserver){
@@ -35,8 +36,8 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
   const inspectMember=async(run:import('../core/tasks/dispatch-execution').DispatchRun)=>{
     workspace.assert();
     const summary=await storage.read(path.join(runsDirectory,'tasks',safeId(run.binding.taskId),safeId(run.binding.runId)));
-    if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path)throw Error('成员运行记录属于其他工作区');
-    if(JSON.stringify(summary.memberBinding)!==JSON.stringify(run.binding))throw Error('成员运行日志与已保存的执行绑定不一致');
+    if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path)fail('MEMBER_LOG_IDENTITY','成员运行记录属于其他工作区');
+    if(JSON.stringify(summary.memberBinding)!==JSON.stringify(run.binding))fail('MEMBER_LOG_IDENTITY','成员运行日志与已保存的执行绑定不一致');
     return summary;
   };
   const dispatch=new WorkspaceDispatchService(workspace,store,{inspectMember,inspectMain:async(rootSessionId,runId)=>{

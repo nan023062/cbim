@@ -73,7 +73,7 @@ test('成员活动只显示本主会话最近三项，详情明确候选并拒�
   const tasks=[task('one'),task('two'),task('three'),task('four'),task('FOREIGN','other')];
   const html=renderToStaticMarkup(createElement(MemberActivity,{workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,tasks,onSelectTask:()=>{}}));
   expect(html).toContain('成员动态 · 4 项任务');expect(html.match(/class="member-activity-card"/g)).toHaveLength(3);expect(html).not.toContain('FOREIGN');expect(html).toContain('查看全部任务');
-  const candidate={...task('candidate'),status:'result_ready' as const,result:{resultId:'result',runId:'run',planRevision:1,summary:'交付摘要',evidenceRefs:['receipt-1'],limitations:['尚未人工审阅'],acceptance:'not_evaluated' as const}};
+  const candidate={...task('candidate'),runIds:['run'],status:'result_ready' as const,result:{resultId:'result',runId:'run',planRevision:1,summary:'交付摘要',evidenceRefs:['receipt-1'],limitations:['尚未人工审阅'],acceptance:'not_evaluated' as const}};
   const detail=renderToStaticMarkup(createElement(MemberTaskDetail,{workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,task:candidate}));
   expect(detail).toContain('尚未验收');expect(detail).toContain('receipt-1');expect(detail).toContain('尚未人工审阅');expect(detail).not.toContain('停止成员执行');
   const foreign=renderToStaticMarkup(createElement(MemberTaskDetail,{workspaceId:'other',rootSessionId:scope.rootSessionId,task:candidate}));

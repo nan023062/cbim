@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-应用action路由。目标补充携带稳定命令和明确身份，回执查询只读；普通聊天、审批与补充分开。sessionRead返回同屏障图/目标增量，桌面发送方在Electron接入处核验。
+应用action路由。目标补充使用稳定命令，执行核实按明确任务/运行只读；普通聊天、审批与补充分开。sessionRead返回同屏障图/目标增量，桌面发送方在Electron接入处核验。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -112,3 +112,6 @@ N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_services_ts : 导�
 `dispatchApplication` 将 `dispatch.sessionRead` 路由到 `app.memberDispatch(args.identity.workspaceId).sessionRead(args)`。身份、两个独立游标、所选周期和缓存 stamp 由调度服务严格校验；不从界面选中状态推断目标工作区，不返回全工作区派发存储。
 
 该入口只读，在同一个已提交屏障读取任务图、周期摘要和选中详情。审批、任务开始/停止及信封确认保留各自命令入口；图读取不能触发它们。既有 `dispatch.graphSnapshot / dispatch.graphDelta` 保持兼容。
+### 成员执行的只读核实
+
+`dispatch.executionReport` 路由到当前工作区 `MemberExecutionManager.report`，按主会话、任务与可选明确运行查询。省略 runId 只核实领取记录，不猜最新轮次。报告包含核实基线、完整性、受限工具回执和未验收候选；不调用启动、确认、恢复或改派。分页必须绑定同一基线，服务严格校验身份。

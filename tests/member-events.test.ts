@@ -73,6 +73,16 @@ it('retries a transient initial read failure once requested, then caches the suc
   await expect(streams.read(f.run,f.task,recovered.cursor,200)).rejects.toMatchObject({code:'MEMBER_EVENT_STREAM_INVALID'});
   expect(inspect).toHaveBeenCalledTimes(2);
 });
+it('only permits a live initial empty-log window, never a damaged or already-started journal',async()=>{
+  const f=fixture(),run={...f.run,status:'starting' as const,startedAt:undefined,session:{nativeSessionId:'native-new'}};
+  const empty=Object.assign(Error('initial empty file'),{code:'RUN_LOG_EMPTY'}),inspect=vi.fn(async():Promise<RunSummary>=>{throw empty});
+  const live=new MemberEventStreams(inspect);live.begin(run,f.task);
+  expect(await live.read(run,f.task,undefined,200)).toMatchObject({mode:'reset',events:[],cursor:{seq:0}});
+  live.append(run,f.task,f.events[0]);expect((await live.read(run,f.task,{runId:'run-1',seq:0},200)).cursor.seq).toBe(1);
+  await expect(new MemberEventStreams(inspect).read(run,f.task,undefined,200)).rejects.toBe(empty);
+  const started=new MemberEventStreams(inspect);started.begin(run,f.task);await expect(started.read(f.run,f.task,undefined,200)).rejects.toBe(empty);
+  const invalid=Object.assign(Error('corrupt'),{code:'RUN_LOG_INVALID'}),broken=new MemberEventStreams(async()=>{throw invalid});broken.begin(run,f.task);await expect(broken.read(run,f.task,undefined,200)).rejects.toBe(invalid);
+});
 
 it('rejects a corrupted historical identity, duplicate sequence changes and missing event prefixes instead of hiding gaps',async()=>{
   const f=fixture();

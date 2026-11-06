@@ -158,3 +158,6 @@ interface DispatchGraphApi {
 ### 桌面架构 CRUD 契约
 
 `architecture.ts` 导出 `ObjectOperation`、`ArchitecturePreviewRequest/CommitRequest` 和对应回执。预览绑定工作区/实例/知识版本，响应保留完整校验、差异、受影响路径、对象 ID 和 planId；确认提交只携带身份及 planId。创建/编辑模块时，界面显式选择真实维护人并确认，可附 `peopleUpserts` 在同一事务增加真人。后端生成维护记录，前端不能伪造 `confirmation`；声明不授予模型写权限。字段类型不暴露桌面服务实例或存储实现。
+### 只读执行核实
+
+`dispatch.ts` 重导出 Core 的 `ExecutionReportInput / ExecutionReport` 和相应 Schema。报告区分在途、结算与未知，不把失败/取消当作回滚；不包含原始工具参数、结果或原生路径。分页基线变化时重置第一页，前端不能合并不同核实版本。该契约不提供批准、复活或重派命令。

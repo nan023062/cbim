@@ -37,7 +37,7 @@ N_src_backend_scheduler_engine ..> N_src_backend_core : 导入依赖
 ## 子目录导航
 
 - [core/](core/ARCHITECTURE.md)：核心领域与通用执行契约。大脑、团队、业务模块、知识和工具各自维护语义；不导入 main、调度、IPC 或界面。brain/tasks、knowledge/team/workspace 的目录双向箭头来自不同契约文件，不代表文件级循环。
-- [main/](main/ARCHITECTURE.md)：Electron 入口与应用装配。注入主实例、周期和证据日志端口；恢复安全等待占位后接收公开请求，重开不执行模型。退出排空活动执行而保留已停泊目标，最后撤销监管并关闭知识存储。
+- [main/](main/ARCHITECTURE.md)：Electron 入口与应用装配。注入实例、周期和证据日志端口，身份不符使用稳定错误码；只读核实与启动分开。恢复等待占位不执行模型，退出排空执行、保留停泊目标后关闭存储。
 - [scheduler-engine/](scheduler-engine/ARCHITECTURE.md)：工作区调度。装配团队上下文与模型工具，协调会话、运行、用户问题和队列；只依赖自身及 Core。
 
 [返回上层](../ARCHITECTURE.md)。

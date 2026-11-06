@@ -106,6 +106,15 @@ it('人工验收不能由模型代签或replan删除/降级，完整校验和的
   }finally{await f.cleanup()}
 });
 
+it('主治理日志可读前缀后的截断尾行不能据以申请完成审阅',async()=>{
+  const f=await setup();try{
+    await f.service.goals.plan(f.identity,f.scope.scopeId,f.runId,'plan-one',plan());await f.commit();
+    await fs.appendFile(path.join(f.journal.directory,'events.jsonl'),'{"unfinished":');
+    await expect(f.service.goals.review(f.identity,f.scope.scopeId,f.runId,'truncated-review',review())).rejects.toMatchObject({code:'GOAL_EVIDENCE_INVALID'});
+    expect((await f.service.goals.inspect(f.identity,f.scope.scopeId)).goal!.review).toBeUndefined();
+  }finally{await f.cleanup()}
+});
+
 it('不可伪造主知识receipt、跨运行/会话证据或仅凭工具名称宣称提交',async()=>{
   const f=await setup();try{
     await f.service.goals.plan(f.identity,f.scope.scopeId,f.runId,'plan-one',plan());await f.commit();
@@ -130,6 +139,7 @@ it('完成申请之后的新副作用、未决工具、知识变化和图变化�
     await f.journal.append({type:'run.settled',data:{status:'completed'}});const main=await RunJournal.read(f.journal.directory),state=await f.store.read();
     await f.service.goals.validateCompletion(state,reviewed,main);
     const pending=structuredClone(main);pending.unresolvedTools=['unknown'];await expect(f.service.goals.validateCompletion(state,reviewed,pending)).rejects.toMatchObject({code:'GOAL_MAIN_UNSETTLED'});
+    const truncated=structuredClone(main);truncated.logIntegrity={partialTail:true};await expect(f.service.goals.validateCompletion(state,reviewed,truncated)).rejects.toMatchObject({code:'GOAL_MAIN_UNSETTLED'});
     const changed=structuredClone(state);changed.graphs[0].cursor.seq++;await expect(f.service.goals.validateCompletion(changed,reviewed,main)).rejects.toMatchObject({code:'GOAL_GRAPH_CHANGED'});
     const effect=structuredClone(main);effect.events.push({...effect.events.at(-1)!,seq:effect.events.length+1,type:'tool.allowed',data:{id:'late',name:'bash',effects:['command']}});await expect(f.service.goals.validateCompletion(state,reviewed,effect)).rejects.toMatchObject({code:'GOAL_EFFECT_CHANGED'});
     const snapshot=await f.workspace.snapshot();await f.workspace.commit(request(snapshot,[{path:'.cbim/README.md',text:'# 外部改动'}]));

@@ -1,6 +1,6 @@
 /**
  * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
- * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；初始化只恢复登记事实，供全局监管装配；桌面与自动协调共用服务，不自行签发成员身份或覆盖图状态。
+ * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；周期冻结本轮用户输入，幂等回执也不能被用于改绑目标。初始化只恢复事实，桌面与自动协调共用服务，不自行覆盖图状态。
  * 职责边界：本模块负责可靠入队，由独立 MemberExecutionManager 消费执行；新增派发不能覆盖已有活动占用，排队不等于任务完成。
  */
 import {randomUUID} from 'node:crypto';
@@ -11,7 +11,7 @@ import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {Snapshot} from '../../core/knowledge/types';
 import type {ConversationAgentBinding} from '../../core/brain/conversation-binding';
 import type {DispatchStore,DispatchState,DispatchMessage} from '../../core/tasks/dispatch-storage';
-import type {DispatchScope,DispatchScopeOutcome} from '../../core/tasks/dispatch-scope';
+import {dispatchScopeInputSchema,type DispatchScope,type DispatchScopeOutcome,type DispatchScopeInput,type DispatchScopeGoal} from '../../core/tasks/dispatch-scope';
 import type {AgentInstance} from '../../core/team/agent-types';
 import type {TaskSpec} from '../../core/tasks/types';
 import {openGraphInput,createMemberInput,dispatchTaskInput,graphIdentityInput} from '../../core/tasks/dispatch-commands';
@@ -31,19 +31,31 @@ export class WorkspaceDispatchService {
   /** 工作区启动时恢复事务存储，触发存储观察者的基线；不创建成员、不消费任务。 */
   async initialize(){this.check(this.owner.entry.id);await this.store.read()}
 
-  /** 主用户任务开始时创建调度周期；跨多次主模型回合复用，模型参数不能自行传入此身份。 */
-  async openScope(identity:GraphIdentity,scopeId:string):Promise<DispatchScope>{
+  /**
+   * 主用户任务开始时冻结本轮正文与附件身份；跨模型回合复用同一周期，不从旧 TaskSpec 推断本轮输入。
+   * 第三参数缺省仅兼容旧调用；同 scope 重发必须保持输入，不能通过命中幂等回执绕过校验。
+   */
+  async openScope(identity:GraphIdentity,scopeId:string,rawInput?:DispatchScopeInput):Promise<DispatchScope>{
     const input=this.parse(scopeIdentityInput,{...identity,scopeId});this.check(input.workspaceId);
+    // 在第一次 await 前校验并复制，调用者之后修改原对象不能改变正在保存的输入。
+    const parsed=rawInput===undefined?undefined:this.parse(dispatchScopeInputSchema,rawInput);
+    const goal:DispatchScopeGoal|undefined=parsed?{revision:1,input:{message:parsed.message,attachmentIds:[...(parsed.attachmentIds??[])]}}:undefined;
+    const verifyGoal=(scope:DispatchScope)=>{
+      if(scope.goal?.revision!==goal?.revision||scope.goal?.input.message!==goal?.input.message||JSON.stringify(scope.goal?.input.attachmentIds)!==JSON.stringify(goal?.input.attachmentIds))fail('DISPATCH_SCOPE_INPUT_CONFLICT','同一调度周期不能重新绑定用户正文或附件');
+    };
     await this.openGraph({...identity,commandId:'scope-root-'+hash(json(input))});
-    const command={...input,commandId:'scope-open-'+hash(json(input))};
+    // 命令键保持身份稳定，输入进入指纹；无 goal 的旧调用保留原指纹以读取历史回执。
+    const command={...input,commandId:'scope-open-'+hash(json(input)),...(goal?{goal}:{})};
     await this.store.transact(this.command('scope.open',command),async state=>{
       this.check(input.workspaceId);this.graph(state,input.rootSessionId);
       const previous=state.scopes?.find(scope=>scope.scopeId===scopeId);
-      if(previous){if(previous.rootSessionId!==input.rootSessionId)fail('DISPATCH_SCOPE_IDENTITY','调度周期属于其他主会话');if(previous.status!=='active')fail('DISPATCH_SCOPE_CLOSED','调度周期已结束');return {receipt:previous}}
+      if(previous){if(previous.rootSessionId!==input.rootSessionId)fail('DISPATCH_SCOPE_IDENTITY','调度周期属于其他主会话');verifyGoal(previous);if(previous.status!=='active')fail('DISPATCH_SCOPE_CLOSED','调度周期已结束');return {receipt:previous}}
       if(state.scopes?.some(scope=>scope.rootSessionId===input.rootSessionId&&scope.status==='active'))fail('DISPATCH_SCOPE_BUSY','当前主会话还有未结束的用户任务周期');
-      const scope:DispatchScope={...input,status:'active',createdAt:new Date().toISOString()};return {scopes:[scope],receipt:scope};
+      const scope:DispatchScope={...input,status:'active',createdAt:new Date().toISOString(),...(goal?{goal}:{})};return {scopes:[scope],receipt:scope};
     });
-    const scope=(await this.store.read()).scopes!.find(value=>value.scopeId===scopeId)!;
+    const scope=(await this.store.read()).scopes?.find(value=>value.scopeId===scopeId);
+    if(!scope||scope.workspaceId!==input.workspaceId||scope.rootSessionId!==input.rootSessionId)fail('DISPATCH_SCOPE_IDENTITY','调度周期不属于当前主会话');
+    verifyGoal(scope);
     if(scope.status!=='active')fail('DISPATCH_SCOPE_CLOSED','调度周期已结束，不能重新打开');
     return scope;
   }

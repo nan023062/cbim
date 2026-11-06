@@ -1,6 +1,6 @@
 /**
  * 作用定位：管理一次用户任务的调度周期，串接主 Agent 调度、执行成员和结果回传，周期结束后释放执行实例。
- * 设计原因：一次任务可能跨多个主模型轮次；周期不能在首个主轮结束时关闭。用户队列等周期可靠关闭后才启动下一周期，执行者与主实例始终分离。
+ * 设计原因：周期冻结本轮真实用户输入，不复用会话首次目标；成员回注不改写输入。一次任务可能跨多个主模型轮次，用户队列等周期可靠关闭后才启动下一周期，执行者与主实例始终分离。
  * 职责边界：主 Agent 只调度；结束、失败和停止先排空成员，再关闭持久化 scope。不恢复自动执行、不签发业务验收，历史记录不会随实例释放删除。
  */
 import {hash,json} from '../../core/foundation/serialization';
@@ -34,18 +34,18 @@ export class AutoCollaboration {
   private releaseListener:()=>void;
   constructor(private owner:KnowledgeWorkspace,private dispatch:WorkspaceDispatchService,private members:MemberExecutionManager,private execution:WorkspaceExecutionManager,lease:WorkspaceExecutionLease,private reportIssue:(rootSessionId:string,error:unknown)=>void=()=>{}){
     this.releaseListener=lease.observeRelease(()=>this.schedule());
-    execution.attachCollaboration({busy:id=>this.busy(id),starting:(task,options,source)=>this.starting(task,source,!!options.profileId),startFailed:(task,source,error)=>this.startFailed(task,source,error),settled:(task,_options,summary)=>this.settled(task,summary),stop:id=>this.stop(id)});
+    execution.attachCollaboration({busy:id=>this.busy(id),starting:(task,options,source,message)=>this.starting(task,source,!!options.profileId,message,options.attachmentIds),startFailed:(task,source,error)=>this.startFailed(task,source,error),settled:(task,_options,summary)=>this.settled(task,summary),stop:id=>this.stop(id)});
   }
 
   /** 普通用户轮次打开新周期；可信成员结果只能续接当前周期，不能偷偷创建另一个周期。 */
-  private async starting(task:TaskSpec,source:RunInputSource|undefined,hasProfile:boolean){
+  private async starting(task:TaskSpec,source:RunInputSource|undefined,hasProfile:boolean,message:string,attachmentIds?:string[]){
     if(task.mode!=='chat'||task.agentId!=='cbim:main'||!hasProfile)return;
     if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭');
     const existing=this.cycles.get(task.taskId);
     if(source){if(!existing||existing.stopped)fail('COLLABORATION_STOPPED','原任务调度周期已结束，不能继续自动回注');return}
     if(existing)fail('COLLABORATION_BUSY','当前用户任务尚未可靠关闭，请将新消息加入队列');
     const cycle:Cycle={task:structuredClone(task),scopeId:randomUUID(),tasks:new Set(),operations:new Set(),stopped:false};
-    await this.dispatch.openScope(this.identity(cycle),cycle.scopeId);this.cycles.set(task.taskId,cycle);
+    await this.dispatch.openScope(this.identity(cycle),cycle.scopeId,{message,attachmentIds});this.cycles.set(task.taskId,cycle);
     if(this.closed){await this.finishCycle(cycle,'cancelled');fail('COLLABORATION_STOPPED','协作调度已关闭')}
   }
   private async startFailed(task:TaskSpec,source:RunInputSource|undefined,error:unknown){

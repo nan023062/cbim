@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {Application} from '../src/backend/main/application';
 import {Paths} from '../src/backend/main/platform/paths';
+import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import {seedTeam} from '../tests/team-fixture';
 import {request} from '../tests/helpers';
 import {latestExecutable} from './build-artifact.mjs';
@@ -15,9 +16,12 @@ import {latestExecutable} from './build-artifact.mjs';
 // The first user message must trigger the model's dispatch tool. No test IPC starts a member or continuation.
 // Run after packaging: CBIM_TEST_EXE=<packaged CBIM.exe> pnpm exec tsx scripts/collaboration-ui-smoke.mts
 // --default-executor removes custom roles and verifies the built-in fallback has its own scoped instance.
+// --scope-goals adds independent resumed/queued inputs; keep separate from the fixed-count history scenario.
 const defaultExecutor=process.argv.includes('--default-executor');
 const verifyHistory=process.argv.includes('--history');
-const artifact=(defaultExecutor?'main-instance':'collaboration')+(verifyHistory?'-history':'');
+const verifyScopeGoals=process.argv.includes('--scope-goals');
+assert.ok(!(verifyHistory&&verifyScopeGoals),'--history 与 --scope-goals 分别运行，避免两种验收互相改写记录数量');
+const artifact=(defaultExecutor?'main-instance':'collaboration')+(verifyHistory?'-history':verifyScopeGoals?'-scope-goals':'');
 const exe=await latestExecutable();
 const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-collaboration-ui-'));
 const project=path.join(temp,'project'),user=path.join(temp,'user');
@@ -31,11 +35,17 @@ const liveText='成员正在独立会话核对业务文件。';
 const memberFinal='成员已提交读取证据，候选等待业务验收。';
 const mainFinal='主 Agent 已收到成员结果：'+fact+'。候选尚未验收。';
 const sourceNotice='已收到成员任务回传，主 Agent 继续处理';
+const resumedGoal='SCOPE_RESUMED_GOAL：请说明独立的第二轮目标限制';
+const queuedGoal='SCOPE_QUEUED_GOAL：这是运行中加入的第三轮用户目标';
+const resumedLive='正在处理独立续聊目标。';
+const resumedFinal='第二轮独立目标已答复。';
+const queuedFinal='第三轮排队目标已答复。';
 await fs.writeFile(path.join(project,'input.txt'),fact);
 type ProviderRequest={model:string;messages:{role:string;content:unknown}[];tools?:{function:{name:string}}[]};
 const mainRequests:ProviderRequest[]=[],memberRequests:ProviderRequest[]=[],transportErrors:string[]=[];
-let agentId='',moduleId='',releaseMember=()=>{};
+let agentId='',moduleId='',releaseMember=()=>{},releaseResumed=()=>{};
 const memberGate=new Promise<void>(resolve=>{releaseMember=resolve});
+const resumedGate=new Promise<void>(resolve=>{releaseResumed=resolve});
 const server=http.createServer(async(req,res)=>{
   try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));
@@ -53,6 +63,11 @@ const server=http.createServer(async(req,res)=>{
       if(turn===0)tool('main-dispatch','cbim_dispatch_task',{...(!defaultExecutor?{agentId}:{}),moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
       else if(turn===1)reply('已派发成员任务，等待成员回传后继续处理。');
       else if(turn===2){assert.ok(JSON.stringify(body.messages).includes(candidate),'主会话续跑没有收到成员候选');reply(mainFinal)}
+      else if(verifyScopeGoals&&turn===3){
+        assert.ok(JSON.stringify(body.messages.filter(message=>message.role==='user').at(-1)?.content).includes(resumedGoal),'续聊未收到新用户目标');
+        emit({role:'assistant',content:resumedLive+'\n\n'});await resumedGate;reply(resumedFinal);
+      }
+      else if(verifyScopeGoals&&turn===4){assert.ok(JSON.stringify(body.messages.filter(message=>message.role==='user').at(-1)?.content).includes(queuedGoal),'队列没有发送原始目标');reply(queuedFinal)}
       else throw Error('出现意外主会话请求：'+turn);
     }else{
       assert.ok(!body.tools?.some(tool=>tool.function.name.startsWith('cbim_dispatch_')),'成员不应获得递归派发工具');
@@ -74,6 +89,20 @@ try{
   setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();
   await setup.models.save({profile:{name:'Local collaboration UI',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'collaboration-ui',models:[{id:'collaboration-ui',name:'Collaboration UI',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
   const entry=await setup.dispatch('add',{path:project}),workspace=setup.workspace(entry.id),team=await seedTeam(workspace);
+  const scopes=async()=>{
+    // A second FileDispatchStore could truncate a live writer's partial tail during recovery. This reader never writes.
+    const raw=await fs.readFile(path.join(user,entry.id,'dispatch','dispatch.jsonl'),'utf8'),found=new Map<string,DispatchScope>();
+    for(const line of raw.slice(0,raw.lastIndexOf('\n')).split('\n').filter(Boolean)){
+      const {body}=JSON.parse(line);assert.equal(body.workspaceId,entry.id);
+      for(const scope of body.mutation.scopes??[])found.set(scope.scopeId,scope);
+    }
+    return [...found.values()];
+  };
+  const waitScopes=async(count:number,closed=false)=>{
+    const deadline=Date.now()+15000;
+    while(Date.now()<deadline){const current=await scopes();if(current.length===count&&(!closed||current.every(scope=>scope.status==='closed')))return current;await new Promise(resolve=>setTimeout(resolve,50))}
+    throw Error('调度周期尚未可靠保存：'+JSON.stringify(await scopes()));
+  };
   agentId=team.input.agentId;moduleId=team.input.moduleId;
   if(defaultExecutor){
     const snap=await workspace.snapshot();
@@ -111,6 +140,12 @@ try{
   assert.equal(firstThread[0].conversationBinding.rootSessionId,rootSessionId);
   assert.notEqual(runningGraph.tasks[0].assignee.agentInstanceId,mainInstanceId);
   assert.ok(runningGraph.tasks[0].scopeId,'自动派发任务必须属于用户调度周期');
+  const initialScopes=verifyScopeGoals?await waitScopes(1):[];
+  if(verifyScopeGoals){
+    assert.equal(initialScopes[0].scopeId,runningGraph.tasks[0].scopeId);
+    assert.equal(initialScopes[0].status,'active');
+    assert.deepEqual(initialScopes[0].goal,{revision:1,input:{message:mainGoal,attachmentIds:[]}});
+  }
   if(defaultExecutor)assert.equal(runningGraph.tasks[0].assignee.agentId,'cbim:executor');
   const runtimeBefore=await call('runtime.snapshot');
   assert.equal(runtimeBefore.members.find((member:any)=>member.agentInstanceId===runningGraph.tasks[0].assignee.agentInstanceId)?.lifecycle,'active');
@@ -179,6 +214,58 @@ try{
   assert.equal(await active.locator('.chat-message.user').count(),1);
   assert.equal((await call('loop.thread',{id:entry.id,taskId:rootSessionId})).length,2);
   assert.equal(mainRequests.length,3);assert.equal(memberRequests.length,5);
+  if(verifyScopeGoals){
+    const firstClosed=await waitScopes(1,true);
+    assert.equal(firstClosed[0].scopeId,initialScopes[0].scopeId);
+    assert.deepEqual(firstClosed[0].goal,initialScopes[0].goal,'成员回注不能把系统候选替换为用户周期目标');
+    await active.getByRole('textbox',{name:'对话草稿',exact:true}).fill(resumedGoal);
+    await active.getByRole('button',{name:'发送消息',exact:true}).click();
+    await active.getByText(resumedLive,{exact:false}).waitFor();
+    const twoScopes=await waitScopes(2);
+    assert.deepEqual(twoScopes[0],firstClosed[0]);
+    assert.notEqual(twoScopes[1].scopeId,firstClosed[0].scopeId);
+    assert.equal(twoScopes[1].rootSessionId,rootSessionId);
+    assert.equal(twoScopes[1].status,'active');
+    assert.deepEqual(twoScopes[1].goal,{revision:1,input:{message:resumedGoal,attachmentIds:[]}});
+
+    // This submission uses the real running composer; the queued goal is not opened until it starts.
+    await active.getByRole('textbox',{name:'对话草稿',exact:true}).fill(queuedGoal);
+    await active.getByRole('button',{name:'加入队列',exact:true}).click();
+    await active.locator('.message-queue').getByText(queuedGoal,{exact:true}).waitFor();
+    const queued=await call('loop.queue',{id:entry.id,taskId:rootSessionId});
+    assert.equal(queued.length,1);assert.equal(queued[0].message,queuedGoal);assert.equal(queued[0].status,'pending');
+    assert.deepEqual(await scopes(),twoScopes);assert.equal(mainRequests.length,4);
+    await page.screenshot({path:`test-results/${artifact}-queued-goal.png`});
+    releaseResumed();
+    await active.getByText(queuedFinal,{exact:true}).waitFor();
+    await page.waitForFunction(async({id,taskId})=>{
+      const runs=await (window as any).cbim.call('loop.thread',{id,taskId});return runs.length===4&&runs.every((run:any)=>run.status==='completed');
+    },{id:entry.id,taskId:rootSessionId});
+    const persisted=await waitScopes(3,true),allRuns=await call('loop.thread',{id:entry.id,taskId:rootSessionId});
+    assert.equal(new Set(persisted.map(scope=>scope.scopeId)).size,3);
+    assert.ok(persisted.every(scope=>scope.rootSessionId===rootSessionId));
+    assert.deepEqual(persisted.map(scope=>scope.goal?.input),[mainGoal,resumedGoal,queuedGoal].map(message=>({message,attachmentIds:[]})));
+    assert.deepEqual(persisted[0],firstClosed[0]);
+    assert.deepEqual(allRuns.map((run:any)=>run.source?.kind),[undefined,'member-results',undefined,undefined]);
+    assert.ok(allRuns.every((run:any)=>run.task.goal===mainGoal&&run.conversationBinding.agentInstanceId===mainInstanceId));
+    assert.equal(new Set(allRuns.map((run:any)=>run.sessionFile)).size,1);
+    assert.equal(await active.locator('.chat-message.user').count(),3);
+    assert.deepEqual(await call('loop.queue',{id:entry.id,taskId:rootSessionId}),[]);
+    assert.equal(mainRequests.length,5);assert.equal(memberRequests.length,5);
+    await page.screenshot({path:`test-results/${artifact}-separate-goals.png`});
+
+    await desktop.close();desktop=undefined;
+    desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});
+    page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));
+    await page.getByRole('button',{name:'project · 运行中',exact:true}).click();
+    await page.locator('.workspace-conversations button').filter({hasText:mainGoal}).first().click();
+    const restored=page.locator('.workspace-panel:not([hidden])');
+    await restored.getByText(queuedFinal,{exact:true}).waitFor();
+    assert.deepEqual(await scopes(),persisted);
+    assert.equal((await call('loop.thread',{id:entry.id,taskId:rootSessionId})).length,4);
+    assert.equal(mainRequests.length,5);assert.equal(memberRequests.length,5);
+    await page.screenshot({path:`test-results/${artifact}-restored-goals.png`});
+  }
   if(verifyHistory){
     // Inspect persisted static-role history from the packaged team UI, after the executor was released.
     const memberRole=finalGraph.tasks[0].assignee.agentId;
@@ -255,7 +342,7 @@ try{
     await page.screenshot({path:`test-results/${artifact}-restored-history.png`});
   }
   assert.deepEqual(pageErrors,[]);assert.deepEqual(transportErrors,[]);
-  const evidence={packagedExe:exe,realPi:true,realProvider:false,isolatedWorkspace:true,mainInstanceMatchesGraph:true,defaultExecutor,executorIsSeparateInstance:true,executorReleasedAfterCycle:true,mainInstanceRetained:true,mainHasNoBusinessExecutionTools:true,mainHasKnowledgeGovernanceTools:true,modelDispatched:true,memberAutoStarted:true,memberLiveCard:true,graphNodeDetails:true,resultNotAccepted:true,originalConversationContinued:true,systemReturnNotUserBubble:true,userDraftPreserved:true,resultEnvelopeAcknowledged:true,reloadWithoutReplay:true,...(verifyHistory?{staticRoleHistory:true,mainInputAndReturnHistory:true,releasedExecutorHistory:true,deletedRoleHistory:!defaultExecutor,historyAfterAppRestart:true,historyReadWithoutExecution:true}:{}),mainRequests:mainRequests.length,memberRequests:memberRequests.length,pageErrors,transportErrors};
+  const evidence={packagedExe:exe,realPi:true,realProvider:false,isolatedWorkspace:true,mainInstanceMatchesGraph:true,defaultExecutor,executorIsSeparateInstance:true,executorReleasedAfterCycle:true,mainInstanceRetained:true,mainHasNoBusinessExecutionTools:true,mainHasKnowledgeGovernanceTools:true,modelDispatched:true,memberAutoStarted:true,memberLiveCard:true,graphNodeDetails:true,resultNotAccepted:true,originalConversationContinued:true,systemReturnNotUserBubble:true,userDraftPreserved:true,resultEnvelopeAcknowledged:true,reloadWithoutReplay:true,...(verifyHistory?{staticRoleHistory:true,mainInputAndReturnHistory:true,releasedExecutorHistory:true,deletedRoleHistory:!defaultExecutor,historyAfterAppRestart:true,historyReadWithoutExecution:true}:{}),...(verifyScopeGoals?{scopeGoals:true,initialInputPersisted:true,resultContinuationPreservesGoal:true,resumedGoalIndependent:true,queuedGoalIndependent:true,queueWaitDoesNotOpenScope:true,goalsRetainedAfterAppRestart:true}:{}),mainRequests:mainRequests.length,memberRequests:memberRequests.length,pageErrors,transportErrors};
   await fs.writeFile(`test-results/${artifact}-ui-smoke.json`,JSON.stringify(evidence,null,2));console.log(JSON.stringify(evidence));
 }catch(error){
   await fs.mkdir('test-results',{recursive:true});
@@ -263,7 +350,7 @@ try{
   await fs.writeFile(`test-results/${artifact}-ui-smoke-failure.json`,JSON.stringify({packagedExe:exe,error:String(error),pageErrors,transportErrors,mainRequests:mainRequests.length,memberRequests:memberRequests.length},null,2));
   throw error;
 }finally{
-  releaseMember();await setup?.shutdown();await desktop?.close();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));
+  releaseMember();releaseResumed();await setup?.shutdown();await desktop?.close();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));
   const root=path.resolve(temp),parent=path.resolve(os.tmpdir());
   assert.equal(path.dirname(root),parent);assert.ok(path.basename(root).startsWith('cbim-collaboration-ui-'));
   await fs.rm(root,{recursive:true,force:true,maxRetries:3,retryDelay:150});

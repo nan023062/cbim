@@ -1,8 +1,9 @@
 import {expect,it} from 'vitest';
 import path from 'node:path';
+import fs from 'node:fs/promises';
 import {fixture,request} from './helpers';
 import {seedTeam} from './team-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
+import {hash,json} from '../src/backend/core/foundation/serialization';
 import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
 import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
 
@@ -96,5 +97,82 @@ it('恢复将未关闭周期标记 interrupted 并释放执行实例，不启动
     expect(state.scopes).toEqual(expect.arrayContaining([expect.objectContaining({scopeId:'already-done',status:'closed',outcome:'completed'}),expect.objectContaining({scopeId:'unfinished',status:'closed',outcome:'interrupted'})]));
     expect(state.members.filter(member=>member.executionScopeId==='unfinished').every(member=>member.lifecycle==='released')).toBe(true);
     expect(state.runs).toEqual([]);expect(state.graphs[0].tasks[0].status).toBe('cancelled');
+  }finally{await f.cleanup()}
+});
+
+const attachmentA='11111111-1111-4111-8111-111111111111';
+const attachmentB='22222222-2222-4222-8222-222222222222';
+
+it('周期冻结真实输入而非旧任务目标，保留原文及附件；关闭、新周期和真实重放相互独立',async()=>{
+  const f=await setup();try{
+    const message='  本轮用户输入\n保留换行和尾部空白  ',input={message,attachmentIds:[attachmentA]};
+    const opening=f.service.openScope(f.identity,'input-one',input);
+    input.message='调用者随后改动';input.attachmentIds.push(attachmentB);
+    const first=await opening,goal={revision:1,input:{message,attachmentIds:[attachmentA]}};
+    expect(first.goal).toEqual(goal);
+    first.goal!.input.message='修改返回对象也不得覆盖';
+    expect((await f.store.read()).scopes!.find(scope=>scope.scopeId==='input-one')!.goal).toEqual(goal);
+    const closed=await f.service.closeScope(f.identity,'input-one','completed');expect(closed.goal).toEqual(goal);
+    const second=await f.service.openScope(f.identity,'input-two',{message:'续聊发起的新目标'});
+    expect(second.goal).toEqual({revision:1,input:{message:'续聊发起的新目标',attachmentIds:[]}});
+    expect((await f.store.read()).scopes!.find(scope=>scope.scopeId==='input-one')!.goal).toEqual(goal);
+    const reader=new FileDispatchStore(f.directory,f.entry.id);try{
+      expect(await reader.read()).toEqual(await f.store.read());
+      const service=new WorkspaceDispatchService(f.workspace,reader);
+      expect(await service.openScope(f.identity,'input-two',{message:'续聊发起的新目标',attachmentIds:[]})).toEqual(second);
+      await expect(service.openScope(f.identity,'input-one',{message,attachmentIds:[attachmentA]})).rejects.toMatchObject({code:'DISPATCH_SCOPE_CLOSED'});
+    }finally{await reader.close()}
+  }finally{await f.cleanup()}
+});
+
+it('相同scope的不同正文或附件不能绕过已保存幂等回执，规范化空附件可正常重发',async()=>{
+  const f=await setup();try{
+    const original={message:'本轮原始目标',attachmentIds:[attachmentA,attachmentB]};
+    const scope=await f.service.openScope(f.identity,'fixed-input',original),file=path.join(f.directory,'dispatch.jsonl'),before=await fs.readFile(file,'utf8');
+    expect(await f.service.openScope(f.identity,'fixed-input',structuredClone(original))).toEqual(scope);
+    for(const changed of [{...original,message:'不同目标'},{...original,attachmentIds:[attachmentB,attachmentA]},{...original,attachmentIds:[]},undefined]){
+      await expect(f.service.openScope(f.identity,'fixed-input',changed)).rejects.toMatchObject({code:'COMMAND_ID_CONFLICT'});
+      expect(await fs.readFile(file,'utf8')).toBe(before);
+    }
+    await f.service.closeScope(f.identity,'fixed-input','cancelled');
+    const empty=await f.service.openScope(f.identity,'empty-input',{message:'没有附件'});
+    expect(await f.service.openScope(f.identity,'empty-input',{message:'没有附件',attachmentIds:[]})).toEqual(empty);
+    // 没有 scope.open 幂等回执的既有记录也必须经过事务内输入检查。
+    const other={...f.identity,rootSessionId:'other-root'};await f.service.openGraph({...other,commandId:'create-other-root'});
+    await f.store.transact({commandId:'independent-scope-creator',fingerprint:'independent-scope-creator'},async()=>({scopes:[{...scope,scopeId:'other-scope',rootSessionId:other.rootSessionId}],receipt:true}));
+    await expect(f.service.openScope(other,'other-scope',{message:'不能重绑定',attachmentIds:[]})).rejects.toMatchObject({code:'DISPATCH_SCOPE_INPUT_CONFLICT'});
+  }finally{await f.cleanup()}
+});
+
+it('输入边界拒绝空白/过长正文、无效或过多附件与额外字段，最大长度原样保存',async()=>{
+  const f=await setup();try{
+    const invalid:unknown[]=[{message:''},{message:' \n\t '},{message:'x'.repeat(1_000_001)},{message:'目标',attachmentIds:['not-a-uuid']},{message:'目标',attachmentIds:Array(13).fill(attachmentA)},{message:'目标',phase:'running'},{message:'目标',revision:2}];
+    for(let i=0;i<invalid.length;i++)await expect(f.service.openScope(f.identity,'invalid-'+i,invalid[i] as any)).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
+    expect((await f.store.read()).scopes).toEqual([]);expect((await f.store.read()).graphs).toEqual([]);
+    const message=' '+ 'x'.repeat(999_998)+' ',scope=await f.service.openScope(f.identity,'largest',{message,attachmentIds:Array(12).fill(attachmentA)});
+    expect(scope.goal!.input.message).toBe(message);expect(scope.goal!.input.message.length).toBe(1_000_000);expect(scope.goal!.input.attachmentIds).toHaveLength(12);
+  }finally{await f.cleanup()}
+});
+
+it('提交和完整校验和的日志重放都拒绝改写/移除goal或input，legacy不补造',async()=>{
+  const f=await setup();try{
+    const scope=await f.service.openScope(f.identity,'protected',{message:'原始输入',attachmentIds:[attachmentA]}),file=path.join(f.directory,'dispatch.jsonl'),original=await fs.readFile(file,'utf8');
+    const withoutGoal=structuredClone(scope);delete withoutGoal.goal;
+    const changes:unknown[]=[withoutGoal,{...scope,goal:{revision:1}},{...scope,goal:{revision:2,input:scope.goal!.input}},{...scope,goal:{revision:1,input:{message:'篡改正文',attachmentIds:[attachmentA]}}},{...scope,goal:{revision:1,input:{message:'原始输入',attachmentIds:[attachmentB]}}},{...scope,goal:{revision:1,input:{message:'原始输入'}}}];
+    for(let i=0;i<changes.length;i++){
+      await expect(f.store.transact({commandId:'invalid-mutation-'+i,fingerprint:'invalid-mutation-'+i},async()=>({scopes:[changes[i] as any],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
+      expect(await fs.readFile(file,'utf8')).toBe(original);
+      // 伪造下一条完整且校验和正确的事务，证明拒绝来自领域重放校验而不只是 hash 检查。
+      const previous=JSON.parse(original.trim().split('\n').at(-1)!);
+      const body={version:1,workspaceId:f.entry.id,transactionSeq:previous.body.transactionSeq+1,previousHash:previous.checksum,command:{commandId:'replayed-mutation-'+i,fingerprint:'replayed-mutation-'+i},mutation:{scopes:[changes[i]],receipt:true}};
+      await fs.writeFile(file,original+JSON.stringify({body,checksum:hash(JSON.stringify(body))})+'\n');
+      const reader=new FileDispatchStore(f.directory,f.entry.id);try{await expect(reader.read()).rejects.toMatchObject({code:'GRAPH_LOG_CORRUPT'})}finally{await reader.close();await fs.writeFile(file,original)}
+    }
+    await f.service.closeScope(f.identity,'protected','completed');
+    const legacy=await f.service.openScope(f.identity,'legacy');expect(legacy).not.toHaveProperty('goal');
+    await expect(f.service.openScope(f.identity,'legacy',{message:'不能给旧记录补造'})).rejects.toMatchObject({code:'COMMAND_ID_CONFLICT'});
+    await expect(f.store.transact({commandId:'fill-legacy',fingerprint:'fill-legacy'},async()=>({scopes:[{...legacy,goal:{revision:1,input:{message:'不能猜测',attachmentIds:[]}}}],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
+    await f.service.closeScope(f.identity,'legacy','interrupted');
+    const reader=new FileDispatchStore(f.directory,f.entry.id);try{expect((await reader.read()).scopes!.find(value=>value.scopeId==='legacy')).not.toHaveProperty('goal')}finally{await reader.close()}
   }finally{await f.cleanup()}
 });

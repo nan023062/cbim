@@ -5,6 +5,7 @@ import http from 'node:http';
 import {fixture,request} from './helpers';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
+import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {RunSummary} from '../src/backend/core/brain/types';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import type {MemberExecutionView} from '../src/backend/core/tasks/member-commands';
@@ -120,6 +121,7 @@ it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input 
   const candidate='成员已写入并读取 '+businessFact;
   const acceptance=['ask-member-output.txt 实际内容与指定内容一致'];
   const queuedMessage='QUEUED_USER_AFTER_COLLAB: 请保留这条原始要求，在团队结果之后回复';
+  const followupMessage='RESUMED_USER_NEW_GOAL: 这是独立的下一轮目标，请说明当前交付限制';
   const requests:ProviderRequest[]=[],mainRequests:ProviderRequest[]=[],memberRequests:ProviderRequest[]=[];
   const transportErrors:unknown[]=[];
   let agentId='',moduleId='';
@@ -138,7 +140,10 @@ it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input 
         else if(turn===1)tool('main-ask-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,i)=>({id:'criterion-'+i,text})),prerequisites:[]});
         else if(turn===2)reply('已派发成员任务，本轮让出执行占用。');
         else if(turn===3)reply(JSON.stringify(body.messages).includes(candidate)?'主 Agent 已处理成员写入结果：'+businessFact:'缺少成员候选。');
-        else reply(JSON.stringify(body.messages.filter(message=>message.role==='user').at(-1)?.content).includes(queuedMessage)?'已收到原始排队要求：'+queuedMessage:'没有收到原始用户要求。');
+        else{
+          const input=JSON.stringify(body.messages.filter(message=>message.role==='user').at(-1)?.content);
+          reply(input.includes(followupMessage)?'已收到独立续聊要求：'+followupMessage:input.includes(queuedMessage)?'已收到原始排队要求：'+queuedMessage:'没有收到原始用户要求。');
+        }
       }else{
         if(turn===0)tool('ask-member-plan','cbim_task_plan',{expectedVersion:0,goal:memberGoal,reason:'执行主会话委派',acceptance,steps:[{id:'verify',title:'写入后核实真实文件',owner:'开发者'}]});
         else if(turn===1)tool('ask-member-write','write',{path:'ask-member-output.txt',content:businessFact});
@@ -167,6 +172,16 @@ it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input 
     const identity={workspaceId:entry.id,rootSessionId:started.taskId};
     const graph=()=>f.app.dispatch('dispatch.graphSnapshot',{identity}) as Promise<GraphSnapshot>;
     const thread=()=>f.app.execution(entry.id).thread(started.taskId);
+    // Verify the durable goals, not only calls to the coordinator's open/close methods.
+    const scopes=async()=>{
+      // Read complete committed lines without opening a second recovering writer over the live store.
+      const raw=await fs.readFile(path.join(f.user,entry.id,'dispatch','dispatch.jsonl'),'utf8'),found=new Map<string,DispatchScope>();
+      for(const line of raw.slice(0,raw.lastIndexOf('\n')).split('\n').filter(Boolean)){
+        const {body}=JSON.parse(line);expect(body.workspaceId).toBe(entry.id);
+        for(const scope of body.mutation.scopes??[])found.set(scope.scopeId,scope);
+      }
+      return [...found.values()];
+    };
     let taskId='';
     await vi.waitFor(async()=>{const value=await graph();expect(value.tasks).toHaveLength(1);taskId=value.tasks[0].taskId;expect(value.tasks[0].status).toBe('running')},{timeout:15000,interval:30});
     const memberIdentity={...identity,taskId};
@@ -180,6 +195,8 @@ it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input 
     expect((await f.app.dispatch('dispatch.executionInspect',memberIdentity) as MemberExecutionView).runs[0]).toMatchObject({permission:'ask',status:'running'});
     await expect(fs.readFile(path.join(f.a,'ask-member-output.txt'),'utf8')).rejects.toMatchObject({code:'ENOENT'});
     expect(await f.app.dispatch('loop.approvals',{id:entry.id,taskId:started.taskId})).toEqual([]);
+    const originalScopes=await scopes();expect(originalScopes).toHaveLength(1);
+    expect(originalScopes[0]).toMatchObject({...identity,status:'active',goal:{revision:1,input:{message:mainGoal,attachmentIds:[]}}});
 
     const queued=await f.app.dispatch('loop.resume',{id:entry.id,taskId:started.taskId,runId:started.runId,message:queuedMessage,options:{permission:'execute',turnTimeoutMs:20000}});
     expect(queued).toMatchObject({taskId:started.taskId,runId:started.runId,queued:true,queueId:expect.any(String)});
@@ -187,6 +204,7 @@ it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input 
     expect(mainRequests).toHaveLength(3);
     expect(await f.app.dispatch('dispatch.approvals',memberIdentity)).toEqual(memberApprovals);
     expect(scopesOpened).toHaveBeenCalledTimes(1);expect(scopesClosed).not.toHaveBeenCalled();
+    expect(await scopes()).toEqual(originalScopes); // Waiting user input is not a new running goal yet.
 
     if(outcome==='stop'){
       const requestCount=requests.length;
@@ -199,6 +217,8 @@ it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input 
       await expect(fs.readFile(path.join(f.a,'ask-member-output.txt'),'utf8')).rejects.toMatchObject({code:'ENOENT'});
       await f.app.open(entry.id,true);
       expect(await thread()).toHaveLength(1);
+      const stoppedScopes=await scopes();expect(stoppedScopes).toHaveLength(1);
+      expect(stoppedScopes[0]).toMatchObject({scopeId:originalScopes[0].scopeId,outcome:'cancelled',goal:originalScopes[0].goal});
       expect(requests).toHaveLength(requestCount);
       expect(transportErrors).toEqual([]);
       return;
@@ -225,6 +245,27 @@ it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input 
     expect((await graph()).tasks[0].scopeId).toBe(scopesOpened.mock.calls[0][1]);
     const closed=await Promise.all(scopesClosed.mock.results.map(result=>result.value));
     expect(closed.map(scope=>scope.outcome)).toEqual(['completed','completed']);
+    const beforeFollowup=await scopes();expect(beforeFollowup).toHaveLength(2);
+    expect(beforeFollowup[0]).toMatchObject({scopeId:originalScopes[0].scopeId,status:'closed',goal:originalScopes[0].goal});
+    expect(beforeFollowup[1]).toMatchObject({...identity,status:'closed',goal:{revision:1,input:{message:queuedMessage,attachmentIds:[]}}});
+    expect(history[1].source?.kind).toBe('member-results');
+    expect(beforeFollowup.some(scope=>scope.goal?.input.message.includes(candidate))).toBe(false);
+
+    const followup=await f.app.dispatch('loop.resume',{id:entry.id,taskId:started.taskId,runId:history[2].runId,message:followupMessage,options:{permission:'read',turnTimeoutMs:20000}});
+    await vi.waitFor(async()=>{history=await thread();expect(history).toHaveLength(4);expect(history.every(run=>run.status==='completed')).toBe(true);expect((await scopes()).every(scope=>scope.status==='closed')).toBe(true)},{timeout:15000,interval:30});
+    expect(history[3].runId).toBe(followup.runId);expect(history[3].events[0].data.message).toBe(followupMessage);
+    expect(new Set(history.map(run=>run.sessionFile)).size).toBe(1);
+    expect(history.every(run=>run.task.goal===mainGoal)).toBe(true); // Thread identity stays stable; scope goals carry the new inputs.
+    const persisted=await scopes();expect(persisted).toHaveLength(3);
+    expect(new Set(persisted.map(scope=>scope.scopeId)).size).toBe(3);
+    expect(persisted.every(scope=>scope.rootSessionId===started.taskId)).toBe(true);
+    expect(persisted.map(scope=>scope.goal?.input)).toEqual([mainGoal,queuedMessage,followupMessage].map(message=>({message,attachmentIds:[]})));
+    expect(persisted.slice(0,2)).toEqual(beforeFollowup);
+    expect(mainRequests).toHaveLength(6);expect(memberRequests).toHaveLength(7);
+    const requestCount=requests.length;
+    await f.app.open(entry.id,true);
+    expect(await scopes()).toEqual(persisted);expect(await thread()).toHaveLength(4);
+    expect(requests).toHaveLength(requestCount);
     expect(transportErrors).toEqual([]);
   }finally{await f.cleanup();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
 },90000);

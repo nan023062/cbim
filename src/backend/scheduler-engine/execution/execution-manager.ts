@@ -1,6 +1,6 @@
 /**
  * 作用定位：调度引擎：工作区执行管理，负责主 Agent 普通对话、团队任务执行与多轮历史读取，拒绝旧轮次分叉，挂起并处理逐次工具审批与结构化用户问题，持久化消息队列并在成功结束后串行续接；本次全部通过仅在当前执行期间有效。
- * 设计原因：用户消息打开调度周期，成员回注续用原周期；运行前后有可靠生命周期钩子，启动失败不泄漏周期。先释放主轮占用再通知调度，用户队列等整个周期结束才继续，关闭不自动续跑。
+ * 设计原因：以本轮实际输入打开调度周期，成员回注续用原周期，避免续聊和排队沿用首次 TaskSpec.goal。运行前后有可靠生命周期钩子，启动失败不泄漏周期；先释放主轮占用再通知调度，用户队列等整个周期结束才继续。
  */
 import {MessageQueue,type QueueCounts} from '../conversation/message-queue';
 import {ApprovalQueue} from '../conversation/approvals';
@@ -26,8 +26,8 @@ export const executionOptions=z.object({provider:z.string().trim().min(1),model:
 type Options=z.infer<typeof executionOptions>;
 /** 由可信工作区装配一次；回调只登记或唤醒协调器，不在 settled 内等待成员执行。 */
 export interface ExecutionCollaboration {
-  /** 工厂准备完成、启动模型之前打开或续接可信调度周期；失败时不启动引擎。 */
-  starting?(task:TaskSpec,options:Options,source?:RunInputSource):Promise<void>;
+  /** 工厂准备完成、启动模型之前打开或续接周期；message 是本轮原文而非首次 goal，source 表示可信结果回注，不创建新目标。 */
+  starting?(task:TaskSpec,options:Options,source:RunInputSource|undefined,message:string):Promise<void>;
   /** 启动未成功时清理已经打开的周期；成员结果遇到暂时占用可保留原周期等待。 */
   startFailed?(task:TaskSpec,source:RunInputSource|undefined,error:unknown):Promise<void>;
   /** 当前主会话仍有协作批次时，用户消息留在原队列，不抢占成员执行资源。 */
@@ -119,7 +119,7 @@ export class WorkspaceExecutionManager {
   /** 普通对话由内置主 Agent 接待，不依赖团队注册表或知识结构通过校验。 */
   chat(message:string,options:Options){return this.serial(async()=>{
     const goal=z.string().trim().min(1).parse(message);
-    return this.launch({mode:'chat',taskId:randomUUID(),workspaceId:this.workspace.entry.id,root:this.workspace.entry.path,goal,agentId:mainAgentId,moduleIds:[],acceptance:[]},executionOptions.parse(options));
+    return this.launch({mode:'chat',taskId:randomUUID(),workspaceId:this.workspace.entry.id,root:this.workspace.entry.path,goal,agentId:mainAgentId,moduleIds:[],acceptance:[]},executionOptions.parse(options),message);
   })}
   /** 自动队列与结果回注在工厂等待前后都复核停止屏障，防止停止协作期间重新唤起旧消息。 */
   private async launch(task:TaskSpec,options:Options,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,automaticQueue=false){
@@ -131,7 +131,7 @@ export class WorkspaceExecutionManager {
       if((this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
       if((source||automaticQueue)&&this.resultContinuationStopped.has(task.taskId))fail('COLLABORATION_STOPPED','本会话已停止自动协作，请显式继续对话');
       if(!source&&!automaticQueue)this.resultContinuationStopped.delete(task.taskId);
-      await this.collaboration?.starting?.(task,options,source);
+      await this.collaboration?.starting?.(task,options,source,message);
       if(this.closing||(this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
       const run=await loop.runtime.start(task,message,resume,source);
       this.active.set(task.taskId,{runId:run.runId,loop});

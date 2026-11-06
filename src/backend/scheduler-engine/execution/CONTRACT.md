@@ -21,6 +21,8 @@
 
 ### 主会话协作接续边界
 
+`openScope(identity, scopeId, input?)` 的可信第三参数保存本轮实际 `{message, attachmentIds?}`，创建前复制为 `goal:{revision:1,input:{message,attachmentIds}}`，缺省附件为 []，正文不 trim。相同 scope 重发必须保持正文和附件；稳定命令键的 fingerprint 包含 goal，事务内及回执后的当前状态再次核验，不能通过已保存回执改绑输入。无 goal 的旧调用/记录保持兼容且不补造；关闭只增加终态字段，保留原 goal。本步不引入计划或评估阶段，不改变当前完成判断。
+
 `AutoCollaboration` 按工作区装配，只向使用已保存模型配置的主聊天轮次提供 `cbim_dispatch_task / inspect`；正式任务不获得递归工具。主 Agent 不执行业务；`cbim_dispatch_task.agentId` 缺省使用 `cbim:executor`。普通问答不用登记业务节点。模型仅传角色、模块、目标、验收和前置，工作区/会话/runId、scopeId 与实际 toolCallId 由运行绑定提供；稳定调用键映射到持久化命令，同次重发返回原回执。单轮最多登记 100 个不同派发调用，不能在工具 Promise 中等待执行。
 
 一次用户任务对应一个持久化 `DispatchScope`，可以跨多个主模型轮次、多个成员执行和结果回传。`starting` 在模型工厂准备后、模型启动前调用 `openScope`；可信结果回注沿用原周期，不能新建周期。每个模型轮仍保留独立 batch，以准确记录本轮派发和回注来源。仅当最新主轮正常结束且没有新的派发时，才关闭整个周期；首个主轮派发完成不关闭。失败、停止、启动失败和应用退出都会尝试收束周期：等待在途派发/启动完成，停止成员并等待真实结算，再调用 `closeScope` 释放执行实例，历史任务和运行日志保留。关闭失败继续报告诊断并保留真实状态，不伪装为已释放。

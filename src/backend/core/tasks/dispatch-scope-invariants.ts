@@ -1,19 +1,20 @@
 /**
  * 作用定位：校验用户任务周期与执行实例、图任务及运行的跨对象生命周期。
- * 设计原因：仅由服务置为 released 不足以防止迟到回调或日志恢复重新激活；提交和重放共用约束，释放与周期关闭必须同一事务可见。
+ * 设计原因：提交和重放共同保护周期真实输入及不可逆释放；不能用迟到回调改绑目标、删除输入或重新激活已关闭实例，释放与关闭必须同一事务可见。
  * 职责边界：不决定整轮任务是否完成、不停止模型；主调度在结算全部运行后提交关闭，旧无周期历史保持原身份。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
 import type {DispatchMutation,DispatchState} from './dispatch-storage';
+import {dispatchScopeGoalSchema} from './dispatch-scope';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
-const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','closed']),createdAt:z.string().datetime(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
+const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
 function valid(condition:unknown,message:string):asserts condition {if(!condition)fail('GRAPH_INPUT_INVALID',message)}
 function ordered(value:unknown):unknown {return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,ordered(item)])):value}
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 
-/** 全量检查周期引用；对新增/变更对象核验不可逆关闭，旧无 scope 的角色与任务不伪造迁移。 */
+/** 全量检查周期引用、冻结输入及不可逆关闭；旧无 goal/scope 的记录保持缺省，不伪造迁移。 */
 export function validateDispatchScopes(previous:DispatchState,next:DispatchState,mutation:DispatchMutation):void{
   const scopes=next.scopes??[],activeRoots=new Set<string>();
   for(const scope of scopes){
@@ -24,6 +25,7 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
     const old=previous.scopes?.find(item=>item.scopeId===scope.scopeId);
     if(old){
       valid(old.workspaceId===scope.workspaceId&&old.rootSessionId===scope.rootSessionId&&old.createdAt===scope.createdAt,'不能改绑周期或创建时间');
+      valid(equal(old.goal,scope.goal),'周期输入创建后不能改写、移除或给旧记录补造');
       if(old.status==='closed')valid(equal(old,scope),'已关闭调度周期不能重开或改写结果');
     }else valid(scope.status==='active','新周期必须从 active 开始');
     if(scope.status==='active'){

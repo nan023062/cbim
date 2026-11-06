@@ -6,7 +6,9 @@
 
 ### 用户任务调度周期
 
-`dispatch-scope.ts` 定义 `DispatchScope {scopeId, workspaceId, rootSessionId, status, createdAt, closedAt?, outcome?}`。status 为 active/closed，outcome 为 completed/failed/cancelled/interrupted；它表达整轮用户任务的生命周期，completed 不替代业务验收。一轮包含多次主模型回合、成员执行和结果回注，不能因一次 LLM 返回就关闭。
+`dispatch-scope.ts` 定义 `DispatchScope {scopeId, workspaceId, rootSessionId, status, createdAt, goal?, closedAt?, outcome?}`。status 为 active/closed，outcome 为 completed/failed/cancelled/interrupted；它表达整轮用户任务的生命周期，completed 不替代业务验收。一轮包含多次主模型回合、成员执行和结果回注，不能因一次 LLM 返回就关闭。
+
+`goal` 当前固定为 `{revision:1,input:{message,attachmentIds}}`，只保存该用户任务的真实输入，不引入 plan/phase 或新的完成判断。message 以非空白和最多 1,000,000 字符校验，保留原始空白与换行；attachmentIds 为最多 12 个 UUID，缺省输入规范化为空数组。Goal 一经创建，提交和日志重放都拒绝修改、移除或变更版本/附件；旧记录整个 goal 缺省，不能从旧 TaskSpec.goal、首轮消息或后续请求补造。
 
 `DispatchState.scopes` 与 `DispatchMutation.scopes` 是 v1 日志的可选扩展；缺省为旧历史，不伪造迁移。`TaskNode.scopeId` 来自可信主调度入口，模型请求不允许填写。每个新周期任务固定一个非主执行实例；同一个静态角色对应多个任务时实例也不同。无合适自定义角色使用 `cbim:executor`，`cbim:main` 只作为图根调度，不接受新正式执行。
 

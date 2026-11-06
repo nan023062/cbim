@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-每主会话一个主实例，与图根共享身份且不能执行业务。用户任务周期跨主轮、执行者和回注；随任务创建执行实例，周期结束释放。公开事件投影同时服务实时成员详情和只读履历，隐藏冻结提示及工具正文。
+每主会话一个主实例，与图根共享身份且不能执行业务。周期冻结本轮实际用户输入及受管附件引用，续聊和队列各自建立目标，成员回注保持原周期。随任务创建执行实例，周期结束释放。公开事件投影服务实时成员详情和只读履历，隐藏冻结提示及工具正文。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -649,6 +649,8 @@ N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_s
 - 初始化将 starting/running 收口为 interrupted，保留领取记录、增加 leaseEpoch，不重放模型或未知副作用。初始化失败在当前实例保持失败，重建工作区后再核实。关闭先等待已接收的启动、停止与结算尝试，再关 DispatchStore；close 不重抛收尾错误，结算失败的持久化活动记录留待重开恢复核实，不能把正常返回视为所有任务均已成功结算。
 
 ### 主会话协作接续边界
+
+`openScope(identity, scopeId, input?)` 的可信第三参数保存本轮实际 `{message, attachmentIds?}`，创建前复制为 `goal:{revision:1,input:{message,attachmentIds}}`，缺省附件为 []，正文不 trim。相同 scope 重发必须保持正文和附件；稳定命令键的 fingerprint 包含 goal，事务内及回执后的当前状态再次核验，不能通过已保存回执改绑输入。无 goal 的旧调用/记录保持兼容且不补造；关闭只增加终态字段，保留原 goal。本步不引入计划或评估阶段，不改变当前完成判断。
 
 `AutoCollaboration` 按工作区装配，只向使用已保存模型配置的主聊天轮次提供 `cbim_dispatch_task / inspect`；正式任务不获得递归工具。主 Agent 不执行业务；`cbim_dispatch_task.agentId` 缺省使用 `cbim:executor`。普通问答不用登记业务节点。模型仅传角色、模块、目标、验收和前置，工作区/会话/runId、scopeId 与实际 toolCallId 由运行绑定提供；稳定调用键映射到持久化命令，同次重发返回原回执。单轮最多登记 100 个不同派发调用，不能在工具 Promise 中等待执行。
 

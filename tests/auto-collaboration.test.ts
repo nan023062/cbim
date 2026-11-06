@@ -36,9 +36,9 @@ async function setup(){
   const execution={attachCollaboration:(value:ExecutionCollaboration)=>{hooks=value},continueFromResults:vi.fn(async(..._args:unknown[])=>({workspaceId:task.workspaceId,taskId:task.taskId,runId:'continued'})),collaborationReady:vi.fn(async()=>{}),pauseCollaboration:vi.fn(async()=>{})};
   const issues=vi.fn();
   const coordinator=new AutoCollaboration({entry:{id:task.workspaceId,path:task.root},assert:()=>{}} as KnowledgeWorkspace,dispatch as unknown as WorkspaceDispatchService,members as unknown as MemberExecutionManager,execution as unknown as WorkspaceExecutionManager,lease,issues);
-  await hooks.starting?.(task,options);
+  await hooks.starting?.(task,options,undefined,'本轮实际输入');
   execution.continueFromResults.mockImplementation(async(...args:unknown[])=>{
-    await hooks.starting?.(task,options,args[3] as any);coordinator.tools(task,'continued',options);
+    await hooks.starting?.(task,options,args[3] as any,args[1] as string);coordinator.tools(task,'continued',options);
     queueMicrotask(()=>hooks.settled(task,options,{task,runId:'continued',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[]}));
     return {workspaceId:task.workspaceId,taskId:task.taskId,runId:'continued'};
   });
@@ -58,6 +58,7 @@ it('主轮委派只入队，释放占用后成员才能运行；结果确认失�
     f.settleParent();await vi.waitFor(()=>expect(f.members.start).toHaveBeenCalledTimes(1));expect(f.graph.tasks[0].status).toBe('queued');
     release();await vi.waitFor(()=>expect(f.graph.tasks[0].status).toBe('running'));
     expect(f.dispatch.openScope).toHaveBeenCalledTimes(1);expect(f.dispatch.closeScope).not.toHaveBeenCalled();
+    expect(f.dispatch.openScope).toHaveBeenCalledWith(f.graph.identity,expect.any(String),{message:'本轮实际输入',attachmentIds:undefined});
     expect(f.members.start.mock.calls.at(-1)![0].options).toMatchObject({permission:'ask',model:'model',profileId:f.options.profileId});
     expect(f.members.start.mock.calls.at(-1)![0].options).not.toHaveProperty('allowAll');
     f.members.acknowledge.mockRejectedValueOnce(Error('ack disk unavailable'));f.finishMember();

@@ -1,6 +1,6 @@
 # 主 Agent 的目标调度循环
 
-这是经产品方向确认的目标设计。现有派发、成员执行、回注和周期管理可复用，完整的目标评估与完成门禁尚未实现；本文不宣称新增了运行能力。
+这是经产品方向确认的目标设计。现有派发、成员执行、回注和周期管理可复用；正在首先接入周期真实输入持久化，完整的目标评估与完成门禁尚未实现。
 
 ## 两个层次的循环
 
@@ -56,7 +56,9 @@ flowchart TD
 - `scopeId`：本轮用户任务/总体目标的调度周期；跨多次主模型调用、执行者运行和结果回注。
 - `taskId/runId`：执行节点及具体运行尝试；原始记录保留在所属静态 Agent 的 Session 履历。
 
-每个目标周期需要可靠保存：本轮真实用户输入与约束、目标版本、完成条件、已解析的模块/能力及知识版本、计划版本、等待的任务及结果版本、已审阅证据、当前差距、下一步决策及原因、最终完成依据。以上是待实现字段语义，不是已提供的 API。
+每个目标周期需要可靠保存：本轮真实用户输入与约束、目标版本、完成条件、已解析的模块/能力及知识版本、计划版本、等待的任务及结果版本、已审阅证据、当前差距、下一步决策及原因、最终完成依据。上述整体协议分步实现，不能把初始输入保存视为目标已分析或已完成。
+
+第一步的 `DispatchScope.goal` 保存固定版本 `revision:1` 和 `input:{message,attachmentIds}`：保留本轮原文及受管附件标识，创建后不可覆盖，不存图片字节。时间沿用周期 `createdAt`。旧日志没有 `goal` 时保持缺省，不用会话首次目标猜填历史；成员结果回注不创建或修改用户目标。该数据仍不代表完成条件、审阅记录或人工认可。
 
 特别是同一主会话中的第二次及后续用户任务：不能沿用第一次对话的 `TaskSpec.goal` 作为新目标。普通队列消息开始新周期，当前任务中的补充应明确归入原周期并修订目标；成员回注属于结果数据，不生成新用户目标或新授权。
 
@@ -82,8 +84,8 @@ flowchart TD
 | --- | --- | --- |
 | [main-agent.ts](../src/backend/scheduler-engine/conversation/main-agent.ts) | 图谱查询、模块/角色匹配、证据审阅与后续派工指引 | 主要是提示词约定，未持久化完整目标决策与评估状态 |
 | [auto-collaboration.ts](../src/backend/scheduler-engine/execution/auto-collaboration.ts) | 主轮派发后启动成员、等待真实结算、回注同一主会话；可跨多批次 | `settled` 在主轮 completed、无未决工具且没有新派工时结束周期，没有整体目标完成门禁 |
-| [dispatch-scope.ts](../src/backend/core/tasks/dispatch-scope.ts) | 周期 active/closed 与结束原因；释放实例后保留历史 | 没有周期级目标、验收清单、重规划与等待评估状态；closed 不代表验收 |
-| [execution-manager.ts](../src/backend/scheduler-engine/execution/execution-manager.ts) | 主会话、队列、续聊和可信结果回注 | `starting` 未单独传入本轮用户 message；续聊复用旧 TaskSpec，不能直接作为新周期目标 |
+| [dispatch-scope.ts](../src/backend/core/tasks/dispatch-scope.ts) | 周期 active/closed 与结束原因；保存真实输入和附件身份，释放后保留 | 尚无结构化完成条件、重规划与等待评估状态；closed 不代表验收 |
+| [execution-manager.ts](../src/backend/scheduler-engine/execution/execution-manager.ts) | 主会话、队列、续聊和可信结果回注；`starting` 接收本轮真实 message | TaskSpec 保持会话身份，周期输入独立保存；原周期追加要求与目标修订仍待实现 |
 | [member-state.ts](../src/backend/scheduler-engine/execution/member-state.ts) | 核实成员计划、回执和结构化交付候选 | 候选标为未验收，不包含总体目标是否已满足的决定 |
 
 因此当前具备外层循环的派工/回注基础，但还不是完整的目标驱动调度循环。实施顺序与验证条件见[开发路线图](../design/tool-architecture-roadmap.md)，本文件只维护设计依据。

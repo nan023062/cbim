@@ -1,6 +1,6 @@
 /**
- * 作用定位：成员执行事务的图增量、占用和交付候选投影辅助函数。
- * 设计原因：纯状态计算与进程生命周期分开；只接受可信运行回执，模型正文不能签发完成或验收事实。
+ * 作用定位：成员执行事务的图增量、占用和交付候选投影，并提供独立求助验证入口。
+ * 设计原因：纯状态计算与进程生命周期分开；已请求求助的运行不能同时产出交付候选，模型正文不签发完成或验收事实。
  */
 import {randomUUID} from 'node:crypto';
 import {fail} from '../../core/foundation/errors';
@@ -8,6 +8,8 @@ import type {RunSummary} from '../../core/brain/types';
 import type {DispatchState} from '../../core/tasks/dispatch-storage';
 import type {GraphSnapshot,GraphEventBatch,GraphChange,TaskNode,AgentGraphView} from '../../core/tasks/graph-types';
 import type {AgentInstance} from '../../core/team/agent-types';
+import {hasMemberHelp} from './member-help-state';
+export {memberHelpCandidate,hasMemberHelp} from './member-help-state';
 
 /** 查找始终限定主会话，不允许凭 taskId 跨图定位。 */
 export function memberTask(state:DispatchState,rootSessionId:string,taskId:string){
@@ -42,7 +44,7 @@ export function dependenciesReady(graph:GraphSnapshot,task:TaskNode){
 /** 交付候选仍需人工或治理验收；只认同一 run 的结构化计划及成功工具证据。 */
 export function memberCandidate(task:TaskNode,summary:RunSummary):TaskNode['result'] {
   const progress=summary.taskProgress;
-  if(summary.status!=='completed'||summary.unresolvedTools.length||progress?.state!=='awaiting_review'||!progress.delivery||!progress.steps.length)return;
+  if(hasMemberHelp(summary)||summary.status!=='completed'||summary.unresolvedTools.length||progress?.state!=='awaiting_review'||!progress.delivery||!progress.steps.length)return;
   if(progress.goal!==task.goal||JSON.stringify(progress.acceptance)!==JSON.stringify(task.acceptance.map(a=>a.text)))return;
   const receipts=new Set((summary.toolReceipts??[]).filter(r=>r.workspaceId===task.identity.workspaceId&&r.taskId===task.taskId&&r.runId===summary.runId&&r.outcome==='succeeded').map(r=>r.toolCallId));
   if(progress.steps.some(step=>step.state!=='reported_done'||!step.evidence.length||step.evidence.some(id=>!receipts.has(id))))return;

@@ -1,11 +1,12 @@
 /**
  * 作用定位：任务图的纯领域校验，检查序列化形状、身份、派发父关系及依赖/等待无环。
- * 设计原因：存储重放与新提交必须使用同一套规则，避免图上无环却发生成员互等。
+ * 设计原因：存储重放与新提交共用规则；求助只属于固定运行的 blocked 终态，不能混入成功候选或活动占用。
  * 职责边界：结构通过不等于知识维护人已认证或任务已获授权，调度层仍需核实来源。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
 import type {AgentRef,GraphEventBatch,GraphIdentity,GraphSnapshot,TaskNode} from './graph-types';
+import {memberHelpRecordSchema} from './member-help';
 
 const text=z.string().trim().min(1).max(100000);
 const id=z.string().min(1).max(512).refine(s=>s.trim()===s&&!/[\x00-\x1f]/.test(s));
@@ -25,6 +26,7 @@ const task=z.object({kind:z.literal('task'),nodeId:id,taskId:id,identity,scopeId
   revision,planRevision:revision,status:z.enum(['planned','queued','running','waiting','result_ready','blocked','failed','cancelled','interrupted']),
   awaitedChildren:z.array(z.object({taskId:id,planRevision:revision}).strict()),waitReason:text.optional(),runIds:z.array(id),activeRunId:id.optional(),
   result:z.object({resultId:id,runId:id,planRevision:revision,summary:text,evidenceRefs:z.array(id),limitations:z.array(text),acceptance:z.literal('not_evaluated')}).strict().optional(),
+  help:memberHelpRecordSchema.optional(),
   createdAt:time,updatedAt:time}).strict();
 const edgeBase={edgeId:id,identity,fromNodeId:id,toNodeId:id,revision,enabled:z.boolean()};
 const edge=z.discriminatedUnion('kind',[
@@ -96,6 +98,7 @@ export function validateGraph(value:GraphSnapshot):void {
     if(t.activeRunId&&!t.runIds.includes(t.activeRunId))fail('GRAPH_INPUT_INVALID','活动轮次不属于该任务');
     if(t.result&&(t.result.planRevision!==t.planRevision||!t.runIds.includes(t.result.runId)||t.status!=='result_ready'))fail('GRAPH_INPUT_INVALID','任务候选结果已失效或不属于该执行');
     if(t.status==='result_ready'&&!t.result)fail('GRAPH_INPUT_INVALID','可交接任务缺少真实候选结果');
+    if(t.help){const binding=t.help.binding;if(t.result||t.status!=='blocked'||t.activeRunId||!t.scopeId||binding.workspaceId!==t.identity.workspaceId||binding.rootSessionId!==t.identity.rootSessionId||binding.taskId!==t.taskId||binding.planRevision!==t.planRevision||!t.runIds.includes(binding.runId)||binding.agentId!==t.assignee.agentId||binding.agentInstanceId!==t.assignee.agentInstanceId||binding.agentSessionId!==t.assignee.agentSessionId)fail('GRAPH_INPUT_INVALID','成员求助必须绑定本周期已结束的执行任务，且不能作为成功候选')}
     for(const awaited of t.awaitedChildren){const child=tasks.get(awaited.taskId);if(!child||child.parentTaskId!==t.taskId)fail('GRAPH_INPUT_INVALID','等待的不是当前任务直接派发的子任务');if(!usableResult(child,awaited.planRevision))waits.push([t.nodeId,child.nodeId])}
   }
   for(const e of value.edges){

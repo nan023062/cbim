@@ -1,7 +1,7 @@
 /**
  * 作用定位：让已派发任务在独立成员会话中执行，提交领取、启动、结果及中断事实。
  * 设计原因：启动意图先落盘，模型工具只能在 running 确认后执行；主 Agent、已释放实例、已关闭或安全等待的主会话不能执行业务。只读核实周期在领取前禁止提权，等待限制覆盖旧任务；执行占用持续到终态事务完成。
- * 职责边界：可信桌面或主会话协调器启动成员，本成员 Loop 不递归派发或继承免询问批准；只读异常核实不调用恢复，候选交付不等于业务验收。
+ * 职责边界：可信桌面或主会话协调器启动成员，本成员 Loop 不递归派发或继承免询问批准；求助在正常关闭后重读日志核实并单向交接，不恢复旧运行，候选交付不等于业务验收。
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
@@ -18,7 +18,8 @@ import {memberStartInput,memberTaskInput,memberMessageInput,memberAcknowledgeInp
 import {prepareDispatchExecutionContext,recheckDispatchExecutionContext} from '../context/execution-context';
 import {ApprovalQueue} from '../conversation/approvals';
 import {QuestionQueue} from '../conversation/questions';
-import {memberTask,memberBatch,memberView,dependenciesReady,memberCandidate} from './member-state';
+import {memberTask,memberBatch,memberView,dependenciesReady,memberCandidate,memberHelpCandidate,hasMemberHelp} from './member-state';
+import type {MemberHelpRecord} from '../../core/tasks/member-help';
 import {memberEventsInput,type MemberEventsRead} from '../../core/tasks/member-events';
 import {MemberEventStreams,memberPublicTask} from './member-events';
 import {ExecutionReportService} from './execution-report-service';
@@ -38,7 +39,7 @@ export interface MemberExecutionPorts {
 }
 type PreparedEngine=Awaited<ReturnType<MemberExecutionPorts['prepare']>>;
 /** 一个业务任务当前的进程句柄；done 包含运行关闭和终态事务，失败时句柄保留以阻止再次领取。 */
-type Handle={runtime?:LoopRuntime;stopping:boolean;done:Promise<void>};
+type Handle={binding:DispatchRun['binding'];runtime?:LoopRuntime;stopping:boolean;done:Promise<void>};
 const activeRun=(run:DispatchRun)=>run.status==='starting'||run.status==='running';
 
 /** 每个活动工作区一个执行管理器，与派发服务共享 store；调用方须先关闭本管理器再关闭存储。 */
@@ -128,7 +129,7 @@ export class MemberExecutionManager {
       });
       if(launch){
         const {run,task,engine}=launch;
-        const handle:Handle={stopping:this.closing,done:Promise.resolve()};
+        const handle:Handle={binding:run.binding,stopping:this.closing,done:Promise.resolve()};
         this.handles.set(task.taskId,handle);
         handle.done=this.execute(run,task,engine,handle,release!);
         // 结算失败保留活动占用并阻止后续任务；不能吞掉失败后伪装空闲。
@@ -156,7 +157,7 @@ export class MemberExecutionManager {
       this.approvals.cancel(task.taskId);this.questions.cancel(task.taskId);
       try{await handle.runtime?.close()}catch{error='成员进程未能正常关闭，请核实运行日志';summary=undefined}
       try{
-        if(summary||error)await this.settle(run,summary,summary?.status==='running'?'interrupted':summary?.status??'interrupted',error);
+        if(summary||error)await this.settle(run,summary,summary&&handle.stopping&&hasMemberHelp(summary)?'cancelled':summary?.status==='running'?'interrupted':summary?.status??'interrupted',error);
         this.handles.delete(task.taskId);release();
       }catch{
         // 保留占用直到应用关闭；下一次启动从持久化的 starting/running 恢复为 interrupted。
@@ -182,29 +183,38 @@ export class MemberExecutionManager {
     if(!run||!activeRun(run)||member?.activeRunId!==run.binding.runId||member.leaseEpoch!==run.binding.leaseEpoch)fail('STALE_MEMBER_RUN','成员执行租约已失效');
     return run;
   }
-  /** 同一事务结算运行、任务、成员占用和信封；恢复额外提升租约代际，不重放旧模型或工具。 */
+  /** 同一事务结算运行、任务、成员占用和信封；求助重读 canonical 日志，恢复只登记中断，不凭旧日志补发求助。 */
   private async settle(original:DispatchRun,summary:RunSummary|undefined,status:Exclude<DispatchRun['status'],'starting'|'running'>,error?:string,recovery=false){
     const command={commandId:(recovery?'recover-':'settle-')+original.binding.runId,fingerprint:hash(json({binding:original.binding,status,recovery}))};
     await this.store.transact(command,async state=>{
       const run=this.currentRun(state,original),{graph,task,member,session}=memberTask(state,run.binding.rootSessionId,run.binding.taskId);
       if(summary&&(json(summary.memberBinding)!==json(run.binding)||summary.task.taskId!==task.taskId||summary.runId!==run.binding.runId))fail('MEMBER_RUN_MISMATCH','执行摘要身份不一致');
-      let result=summary?memberCandidate(task,summary):undefined;
+      let result=status==='completed'&&summary?memberCandidate(task,summary):undefined,help:MemberHelpRecord|undefined;
+      if(!recovery&&status==='completed'&&summary&&hasMemberHelp(summary)){
+        try{help=memberHelpCandidate(task,run,await this.ports.inspect(run))}catch{error='求助记录未通过完整运行、授权回执和工具结束检查，请核实后重新安排任务'}
+        if(!help)error??='求助缺少可核实的完整记录，请核实后重新安排任务';
+      }
       if(result)try{await recheckDispatchExecutionContext(this.owner,run.prepared)}catch{result=undefined;error='执行期间知识基线变化，交付候选需要重新核实'}
+      // canonical 重读期间用户仍可能停止；在没有进一步 await 的提交准备末端再次核对，不能发布迟到安全交接。
+      if(help&&this.handles.get(task.taskId)?.stopping){help=undefined;status='cancelled';error='用户停止了本次运行'}
       const now=new Date().toISOString(),taskStatus=result?'result_ready' as const:status==='completed'?'blocked' as const:status;
-      const updated:TaskNode={...task,revision:task.revision+1,status:taskStatus,activeRunId:undefined,result,updatedAt:now,waitReason:result?undefined:error??(status==='completed'?'本轮未提交与派发目标一致的有效计划和交付证据':status==='cancelled'?'用户停止了本次运行':'执行未正常结束，请核实产物')};
+      const updated:TaskNode={...task,revision:task.revision+1,status:taskStatus,activeRunId:undefined,result,help,updatedAt:now,waitReason:result?undefined:help?'本轮执行结束，待主调度新安排：'+help.input.reason:error??(status==='completed'?'本轮未提交与派发目标一致的有效计划和交付证据':status==='cancelled'?'用户停止了本次运行':'执行未正常结束，请核实产物')};
       const waitingTaskIds=member.waitingTaskIds.filter(id=>id!==task.taskId);
       const released={...member,leaseEpoch:member.leaseEpoch+(recovery?1:0),activity:waitingTaskIds.length?'waiting' as const:'idle' as const,activeTaskId:undefined,activeRunId:undefined,waitingTaskIds,communicatingMessageIds:[]};
       const assignment=state.outbox.find(m=>m.messageId===run.assignmentMessageId)!;
       const messages:DispatchMessage[]=[{...assignment,delivery:'processed'}];
       if(result)messages.push({kind:'result',messageId:randomUUID(),commandId:command.commandId,identity:graph.identity,from:task.assignee,to:task.requester,taskId:task.taskId,planRevision:task.planRevision,createdAt:now,delivery:'pending',replyTo:assignment.messageId,resultId:result.resultId,runId:run.binding.runId});
+      if(help)messages.push({kind:'help',messageId:randomUUID(),commandId:command.commandId,identity:graph.identity,from:task.assignee,to:task.requester,taskId:task.taskId,planRevision:task.planRevision,createdAt:now,delivery:'pending',replyTo:assignment.messageId,helpId:help.helpId,runId:run.binding.runId});
       return {runs:[{...run,status,settledAt:now,error:updated.waitReason}],members:[released],sessions:[{...session,lastTaskId:task.taskId,lastRunId:run.binding.runId}],messages,batch:memberBatch(graph,command.commandId,('task.'+taskStatus) as 'task.blocked',[{type:'task.upserted',task:updated},{type:'agent.upserted',agent:memberView(graph,released,updated)}]),receipt:true};
     });
   }
   /** 停止请求不直接宣称 cancelled；真实引擎收尾后才提交终态。 */
   async stop(raw:unknown){
-    const input=this.parse(memberTaskInput,raw);const {task}=memberTask(await this.store.read(),input.rootSessionId,input.taskId);
-    const handle=this.handles.get(task.taskId);if(!handle)return {requested:false};
-    handle.stopping=true;const stopping=handle.runtime?.stop(task.taskId);this.approvals.cancel(task.taskId);this.questions.cancel(task.taskId);await stopping;return {requested:true};
+    const input=this.parse(memberTaskInput,raw),handle=this.handles.get(input.taskId);
+    if(!handle){memberTask(await this.store.read(),input.rootSessionId,input.taskId);return {requested:false}}
+    // 活动绑定已由领取事务冻结；先验证本请求再标记停止，避免被正在重读 canonical 的结算事务挡住。
+    if(handle.binding.workspaceId!==input.workspaceId||handle.binding.rootSessionId!==input.rootSessionId)fail('TASK_NOT_FOUND','当前主会话没有此派发任务');
+    handle.stopping=true;const stopping=handle.runtime?.stop(input.taskId);this.approvals.cancel(input.taskId);this.questions.cancel(input.taskId);await stopping;return {requested:true};
   }
   /** 内部协调端等待进程关闭、终态提交及占用释放；不触发启动或重放，结算异常向调用方保留。 */
   async waitForSettlement(raw:unknown){
@@ -224,14 +234,14 @@ export class MemberExecutionManager {
     if(input.cursor&&input.cursor.runId!==input.runId)fail('MEMBER_EVENT_IDENTITY_MISMATCH','事件游标属于其他成员运行');
     const result=await this.eventStreams.read(run,memberPublicTask(task,this.owner.entry.path),input.cursor,input.limit);this.check(input.workspaceId);return result;
   }
-  /** 返回当前收件人的待处理信封；结果正文通过同图 task.result 获取。 */
+  /** 返回当前收件人的待处理信封；结果或求助正文通过同图 task.result/task.help 获取。 */
   async messages(raw:unknown){const input=this.parse(memberMessageInput,raw),state=await this.store.read();this.assertRecipient(state,input.rootSessionId,input.agentSessionId);return state.outbox.filter(m=>m.identity.rootSessionId===input.rootSessionId&&m.to.agentSessionId===input.agentSessionId&&m.delivery==='pending')}
   private assertRecipient(state:DispatchState,rootSessionId:string,agentSessionId:string){if(!state.sessions.some(s=>s.agentSessionId===agentSessionId&&s.rootSessionId===rootSessionId))fail('MESSAGE_RECIPIENT_INVALID','收件人不属于当前主会话')}
-  /** 显式收件确认仅消费 result，不领取新的任务，也不签发业务验收。 */
+  /** 显式收件确认只消费 result/help，不领取任务、不恢复旧成员，也不签发业务验收或用户批准。 */
   async acknowledge(raw:unknown){const input=this.parse(memberAcknowledgeInput,raw);return this.store.transact(this.command('member.ack',input),async state=>{
     this.assertRecipient(state,input.rootSessionId,input.agentSessionId);
     const message=state.outbox.find(m=>m.messageId===input.messageId&&m.identity.rootSessionId===input.rootSessionId&&m.to.agentSessionId===input.agentSessionId);
-    if(!message||message.kind!=='result')fail('MESSAGE_NOT_FOUND','当前收件人没有此结果信封');
+    if(!message||message.kind==='assignment')fail('MESSAGE_NOT_FOUND','当前收件人没有此结果或求助信封');
     return {messages:message.delivery==='processed'?[]:[{...message,delivery:'processed' as const}],receipt:{messageId:message.messageId,delivery:'processed' as const}};
   })}
   private async interaction(raw:unknown){const input=this.parse(memberTaskInput,raw);memberTask(await this.store.read(),input.rootSessionId,input.taskId);return input.taskId}

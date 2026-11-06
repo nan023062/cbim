@@ -1,6 +1,6 @@
 /**
  * 作用定位：把已提交的图事件原子转换为内存投影，并按游标输出增量读取结果。
- * 设计原因：节点、边和成员状态必须一起可见；无变化保留引用，避免轮询触发整图重建。
+ * 设计原因：节点、边和成员状态必须一起可见；无变化保留引用，已经交接的求助原样保留，避免后续增量改写历史事实。
  * 职责边界：不落盘、不分配事件序号、不启动任务；调用方必须先可靠提交再发布结果。
  */
 import {fail} from '../foundation/errors';
@@ -27,6 +27,7 @@ function taskRevision(previous:TaskNode,next:TaskNode){
   const changed=stable(plan(previous))!==stable(plan(next));
   if(next.planRevision!==previous.planRevision+(changed?1:0))fail('GRAPH_REVISION_CONFLICT','任务计划版本与范围修订不一致');
   if(previous.runIds.some((id,index)=>next.runIds[index]!==id))fail('GRAPH_INPUT_INVALID','历史执行轮次不能删除或改写');
+  if(previous.help&&stable(previous.help)!==stable(next.help))fail('GRAPH_INPUT_INVALID','已经交接的成员求助不能删除或改写');
 }
 
 /**
@@ -62,7 +63,7 @@ export function applyGraphBatch(previous:GraphSnapshot|undefined,event:GraphEven
       case 'task.upserted':{
         const old=tasks.get(change.task.taskId);nextRevision(old,change.task);
         if(old)taskRevision(old,change.task);
-        else if(change.task.planRevision!==1||!['planned','queued','waiting'].includes(change.task.status)||change.task.runIds.length||change.task.result)fail('GRAPH_INPUT_INVALID','新任务必须从尚未执行的计划版本 1 创建');
+        else if(change.task.planRevision!==1||!['planned','queued','waiting'].includes(change.task.status)||change.task.runIds.length||change.task.result||change.task.help)fail('GRAPH_INPUT_INVALID','新任务必须从尚未执行的计划版本 1 创建');
         tasks.set(change.task.taskId,structuredClone(change.task));break;
       }
       case 'edge.upserted':{

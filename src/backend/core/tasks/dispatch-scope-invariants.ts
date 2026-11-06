@@ -1,7 +1,7 @@
 /**
  * 作用定位：校验用户任务周期与执行实例、图任务及运行的跨对象生命周期。
  * 设计原因：提交和重放共同保护输入、等待及启动意图；核实保持只读，独立重规划冻结完成证明、模块范围与人工条件。两类新周期共享 fresh 身份隔离，迟到回调不能改写历史或复活实例。
- * 职责边界：不决定整轮任务是否完成、不停止模型；主调度在结算全部运行后提交关闭，旧无周期历史保持原身份。
+ * 职责边界：不决定整轮任务是否完成、不停止模型；求助仅在活动周期正常结算，关闭后只允许收件确认，不能补发或复活实例。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
@@ -151,6 +151,7 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
     const scope=scopes.find(item=>item.scopeId===task.scopeId),member=next.members.find(item=>item.agentInstanceId===task.assignee.agentInstanceId);
     valid(scope&&scope.rootSessionId===graph.identity.rootSessionId&&member&&task.assignee.agentId!=='cbim:main'&&member.executionScopeId===scope.scopeId&&member.executionTaskId===task.taskId&&!task.parentTaskId,'周期任务必须由主根派发并属于自己的执行实例和主会话');
     const old=previous.graphs.find(item=>item.identity.rootSessionId===graph.identity.rootSessionId)?.tasks.find(item=>item.taskId===task.taskId);
+    if(task.help&&!old?.help)valid(scope.status==='active'&&previous.scopes?.some(item=>item.scopeId===scope.scopeId&&item.status==='active'),'求助只能在原活动周期结算，等待或封存后不能补发');
     if(!old)valid(scope.status==='active','已关闭周期不能新增任务');
     else if(previous.scopes?.find(item=>item.scopeId===scope.scopeId)?.status!=='active')valid(equal(old,task),'等待或已关闭周期任务不能重新执行或改写历史');
     if(scope.status==='closed'){
@@ -165,6 +166,6 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
     if(['starting','running'].includes(run.status)&&member?.executionScopeId)valid(scope?.status==='active'&&member.lifecycle==='active','已关闭周期或已释放成员不能承载活动运行');
   }
   for(const session of mutation.sessions??[]){const member=previous.members.find(item=>item.agentInstanceId===session.agentInstanceId);if(member?.lifecycle==='released'||previous.scopes?.some(scope=>scope.scopeId===member?.executionScopeId&&scope.status==='waiting'))valid(equal(previous.sessions.find(item=>item.agentSessionId===session.agentSessionId),session),'等待或已释放实例的原生通道不能被迟到回调改写')}
-  // 结果信封可以在关闭后被主会话确认；除此之外，已释放实例与冻结任务不再接受运行侧变更。
+  // 结果或求助信封可以在关闭后确认；除此之外，已释放实例与冻结任务不再接受运行侧变更。
   for(const run of mutation.runs??[]){const member=next.members.find(item=>item.agentInstanceId===run.binding.agentInstanceId);if(member?.lifecycle==='released'||previous.scopes?.some(scope=>scope.scopeId===member?.executionScopeId&&scope.status==='waiting'))valid(equal(previous.runs?.find(item=>item.binding.runId===run.binding.runId),run),'等待或已释放实例不能新增或改写运行')}
 }

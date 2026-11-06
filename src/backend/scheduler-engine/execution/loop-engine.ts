@@ -19,6 +19,7 @@ import type {ResolvedLlm} from '../../core/brain/llm/ports';
 import {authorizeRunTool,type RunToolDescriptor} from '../../core/policy/tool-policy';
 import {questionInput} from '../../core/tools/questions';
 import {progressTool} from '../../core/tasks/progress-tools';
+import {memberHelpTool} from '../../core/tasks/member-help-tools';
 import type {DispatchTools} from '../tools/dispatch-tools';
 
 /** 工作区执行装配参数；未指定权限时默认只读，知识与业务写入由同一运行策略控制。 */
@@ -114,6 +115,7 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
       owner.assert();
       try{
         const progress=progressTool(call.name,call.input);if(progress)return await authorizeTool(call,progress);
+        const help=memberHelpTool(call.name,call.input);if(help)return services.member?await authorizeTool(call,help):{allow:false,reason:'主 Agent 负责处理成员求助，不能以成员身份提交求助'};
         if(dispatch?.has(call.name))return await authorizeTool(call,dispatch.describe(call.name,call.input));
         if(call.name===questionTool.name&&options.requestQuestion){questionInput.parse(call.input);return await authorizeTool(call,{effects:['read'],native:false})}
         if(call.name.startsWith('cbim_'))return await authorizeTool(call,service.describe(call.name,call.input));

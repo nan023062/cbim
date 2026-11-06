@@ -1,8 +1,9 @@
 /**
  * 作用定位：任务派发图的可序列化领域契约，供调度、持久化和 Bridge 共同引用。
- * 设计原因：把会话、成员、任务与执行轮次分开，避免现有聊天 taskId 被误当成业务派工身份。
+ * 设计原因：把会话、成员、任务与执行轮次分开；交付候选与成员求助分别记录，避免把求助结束误当成完成或可恢复停泊。
  * 职责边界：这里只声明事实形状；权限、知识核实、磁盘提交和模型执行由各自服务负责。
  */
+import type {MemberHelpRecord} from './member-help';
 export type GraphIdentity = {workspaceId:string;rootSessionId:string};
 export type AgentRef = {
   agentId:string;agentInstanceId:string;agentSessionId:string;
@@ -38,6 +39,8 @@ export type TaskNode = {
     resultId:string;runId:string;planRevision:number;summary:string;
     evidenceRefs:string[];limitations:string[];acceptance:'not_evaluated';
   };
+  /** 正常结束后可靠交接的求助；任务保持 blocked，主调度须创建新任务，不可恢复此运行。 */
+  help?:MemberHelpRecord;
   /** 时间均为可信后端生成的 UTC ISO 8601 字符串。 */
   createdAt:string;updatedAt:string;
 };

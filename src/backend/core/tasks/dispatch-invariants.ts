@@ -1,7 +1,7 @@
 /**
  * 作用定位：在派发事务提交和日志恢复时校验成员执行、任务图和邮箱的联合约束。
  * 设计原因：仅验证每条记录形状不能防止半次领取、重复占用或旧 run 回调；把跨对象约束集中在 Core，磁盘适配器只负责可靠提交。
- * 职责边界：不启动模型、不访问文件、不签发权限；starting 只表示已保存意图，未知副作用必须由调度标记中断后核实。
+ * 职责边界：不启动模型、不访问文件、不签发权限；求助须与正常结算和单向信封原子保存，未知副作用不得提升为安全交接。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
@@ -20,6 +20,7 @@ const messageBase=z.object({messageId:id,commandId:id,identity,from:agent,to:age
 const messageShape=z.discriminatedUnion('kind',[
   messageBase.extend({kind:z.literal('assignment')}).strict(),
   messageBase.extend({kind:z.literal('result'),replyTo:id,resultId:id,runId:id}).strict(),
+  messageBase.extend({kind:z.literal('help'),replyTo:id,helpId:id,runId:id}).strict(),
 ]);
 const resultShape=z.object({resultId:id,runId:id,planRevision:z.number().int().positive().safe(),summary:z.string().trim().min(1).max(100000),evidenceRefs:z.array(id),limitations:z.array(z.string().trim().min(1).max(100000)),acceptance:z.literal('not_evaluated')}).strict();
 const runShape=z.object({binding:z.object({workspaceId:id,teamId:id,agentId:id,agentInstanceId:id,agentSessionId:id,rootSessionId:id,taskId:id,runId:id,leaseEpoch:z.number().int().nonnegative().safe(),planRevision:z.number().int().positive().safe()}).strict(),assignmentMessageId:id,
@@ -96,6 +97,7 @@ function validateRun(previous:DispatchRun|undefined,run:DispatchRun,state:Dispat
     const expected=run.status==='completed'?['result_ready','blocked']:[run.status];
     valid(expected.includes(task.status),'运行终态与任务事实不一致');
     if(task.result)valid(run.status==='completed'&&task.result.runId===binding.runId,'候选结果必须来自本次完成的运行');
+    if(task.help)valid(run.status==='completed'&&equal(task.help.binding,binding),'求助必须来自本次正常结束的固定执行身份');
   }
 }
 
@@ -124,12 +126,16 @@ function validateMessage(previous:DispatchMessage|undefined,message:DispatchMess
       if(previous?.delivery==='pending')valid(mutation.runs?.some(item=>item.binding.runId===run.binding.runId&&item.status==='starting'),'领取与 starting 意图必须原子提交');
     }else valid(message.delivery==='processed'&&task.status==='cancelled','没有领取的任务信封只能随取消消费');
   }else{
-    valid(!message.claim&&message.delivery!=='claimed','结果确认不创建业务运行或领取租约');
+    valid(!message.claim&&message.delivery!=='claimed','结果或求助确认不创建业务运行或领取租约');
     const assignment=state.outbox.find(item=>item.messageId===message.replyTo);
     const run=(state.runs??[]).find(item=>item.binding.runId===message.runId);
     valid(assignment?.kind==='assignment'&&sameGraph(assignment.identity,message.identity)&&assignment.taskId===message.taskId&&sameAgent(assignment.from,message.to)&&sameAgent(assignment.to,message.from),'结果必须返回同一图中原始发送方');
     valid(run&&run.assignmentMessageId===message.replyTo&&run.status==='completed'&&run.binding.planRevision===message.planRevision,'结果消息缺少对应的完成运行');
-    if(!previous)valid(changedTask(mutation,message.identity,message.taskId)&&mutation.runs?.some(item=>item.binding.runId===message.runId&&item.status==='completed')&&task.status==='result_ready'&&task.result?.resultId===message.resultId&&task.result.runId===message.runId&&task.result.planRevision===message.planRevision,'结果信封须与完成运行及候选结果原子提交');
+    if(message.kind==='help')valid(task.help?.helpId===message.helpId&&task.status==='blocked'&&task.help.binding.runId===message.runId&&task.planRevision===message.planRevision,'求助信封只能引用自己的冻结求助记录');
+    if(!previous){
+      valid(changedTask(mutation,message.identity,message.taskId)&&mutation.runs?.some(item=>item.binding.runId===message.runId&&item.status==='completed'),'交接信封须与正常完成运行原子提交');
+      if(message.kind==='result')valid(task.status==='result_ready'&&task.result?.resultId===message.resultId&&task.result.runId===message.runId&&task.result.planRevision===message.planRevision,'结果信封须与候选结果原子提交');
+    }
   }
 }
 
@@ -154,12 +160,25 @@ export function validateDispatchExecution(previous:DispatchState,next:DispatchSt
     if(member.activeRunId)valid(runs.some(run=>active(run)&&run.binding.runId===member.activeRunId&&run.binding.agentInstanceId===member.agentInstanceId),'成员占用没有对应的活动运行');
     if(member.activity==='working')valid(Boolean(member.activeRunId),'工作中成员必须有真实运行占用');
   }
+  const helpIds=new Set<string>(),helpRuns=new Set<string>();
   for(const graph of next.graphs)for(const task of graph.tasks){
     if(task.activeRunId)valid(runs.some(run=>active(run)&&run.binding.runId===task.activeRunId&&sameGraph(run.binding,graph.identity)&&run.binding.taskId===task.taskId),'任务占用没有对应的活动运行');
     if(task.status==='running')valid(Boolean(task.activeRunId),'执行中任务必须有真实运行占用');
     if(task.result&&!previous.graphs.find(item=>sameGraph(item.identity,graph.identity))?.tasks.some(old=>old.taskId===task.taskId&&equal(old.result,task.result))){
       valid((previous.runs??[]).some(run=>active(run)&&run.binding.runId===task.result!.runId),'候选结果只能由本次活动运行结算产生');
       valid(mutation.messages?.some(message=>message.kind==='result'&&!previous.outbox.some(old=>old.messageId===message.messageId)&&sameGraph(message.identity,graph.identity)&&message.taskId===task.taskId&&message.planRevision===task.planRevision&&message.resultId===task.result!.resultId&&message.runId===task.result!.runId),'候选结果必须原子新增对应的结果信封');
+    }
+    const old=lookupTask(previous,graph.identity,task.taskId);
+    if(old?.help)valid(equal(old.help,task.help),'已经交接的求助不能移除、替换或改写');
+    if(task.help){
+      const help=task.help,run=runs.find(item=>item.binding.runId===help.binding.runId);
+      valid(!helpIds.has(help.helpId)&&!helpRuns.has(help.binding.runId),'求助身份和运行不能重复交接');helpIds.add(help.helpId);helpRuns.add(help.binding.runId);
+      valid(run?.status==='completed'&&equal(run.binding,help.binding)&&task.status==='blocked'&&!task.result&&!task.activeRunId,'求助须引用已正常结束并释放的同一运行');
+      valid(next.outbox.filter(message=>message.kind==='help'&&message.helpId===help.helpId&&message.runId===help.binding.runId&&message.taskId===task.taskId&&sameGraph(message.identity,graph.identity)).length===1,'同一求助必须且只能保留一个交接信封');
+      if(!old?.help){
+        valid((previous.runs??[]).some(item=>item.status==='running'&&equal(item.binding,help.binding)),'求助只能由当前运行正常结算产生，不能从旧终态补造');
+        valid(mutation.messages?.filter(message=>message.kind==='help'&&!previous.outbox.some(prior=>prior.messageId===message.messageId)&&sameGraph(message.identity,graph.identity)&&message.taskId===task.taskId&&message.planRevision===task.planRevision&&message.helpId===help.helpId&&message.runId===help.binding.runId).length===1,'求助必须原子新增唯一的返回信封');
+      }
     }
   }
 }

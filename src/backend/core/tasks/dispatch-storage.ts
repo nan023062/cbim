@@ -1,7 +1,7 @@
 /**
  * 作用定位：定义工作区成员注册、会话绑定及任务派发的原子持久化端口。
  * 设计原因：调度层只表达领域变化，main 负责落盘；任务、领取意图、消息和成员占用一起提交，界面在同一屏障读取图与独立周期投影，观察端口只接收已提交事实。
- * 职责边界：持久化入队或 starting 意图都不是模型已经运行，completed 也不代表验收通过。
+ * 职责边界：持久化入队或 starting 意图都不是模型已经运行；result 与 help 分别引用候选和问题，确认收件均不代表验收或授权。
  */
 import type {AgentInstance, AgentSessionBinding} from '../team/agent-types';
 import type {AgentRef, GraphIdentity, GraphEventBatch, GraphSnapshot, GraphCursor, GraphDelta} from './graph-types';
@@ -22,7 +22,9 @@ export interface DispatchMessageBase {
 export interface AssignmentMessage extends DispatchMessageBase {kind:'assignment'}
 /** 返回原发送方的候选引用；不复制消息正文，也不形成任务图的反向边。 */
 export interface ResultMessage extends DispatchMessageBase {kind:'result';replyTo:string;resultId:string;runId:string}
-export type DispatchMessage=AssignmentMessage|ResultMessage;
+/** 成员正常结算后的问题引用，不是成功候选、用户消息或自动恢复许可。 */
+export interface HelpMessage extends DispatchMessageBase {kind:'help';replyTo:string;helpId:string;runId:string}
+export type DispatchMessage=AssignmentMessage|ResultMessage|HelpMessage;
 
 /** 工作区级状态；主实例随会话保留，周期执行实例与历史图分开计量。 */
 export interface DispatchState {

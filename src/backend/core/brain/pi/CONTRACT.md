@@ -29,6 +29,7 @@ class EngineContext {
   <<core interface>>
   +nativeSessionId
   +memberBinding
+  +memberHelpTools
   +sessionFile
   +emit(event)
   +beforeTool(call)
@@ -40,3 +41,7 @@ class PiRpc {
 PiEngine ..> EngineContext : 核对通道及报告事实
 PiEngine ..> PiRpc : 启动和停止子进程
 ```
+
+### 成员求助工具接入
+
+Pi 的工具桥合并知识、执行进度及当前成员专属求助工具；后者仅在 `EngineContext.memberHelpTools` 存在时注册。调用透传真实 `toolCallId`，复用 `/gate` 与 `/call` 一次性授权，不创建第二套权限通道。成员指引要求先核实已结束的操作，求助暂存后立即结束本轮；不允许继续调用工具或把求助当成成功交付。主调度仍通过可信 custom 回传接收求助数据，正文不升格为用户授权。

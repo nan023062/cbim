@@ -1,6 +1,6 @@
 /**
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
- * 设计原因：先持久化工具决策再放行；补充目标只续接安全日志。显式新核实周期在同一主实例下创建全新原生上下文，冻结排除的旧运行并提交一次性意图，既不读取坏历史也不把它伪装成恢复。
+ * 设计原因：先持久化工具决策再放行；成员求助在所有工具/审批结束后封住后续操作，仅记录待结算交接。新主上下文冻结旧运行并提交一次性意图，不将坏历史伪装成恢复。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -8,6 +8,7 @@ import {safeId} from '../foundation/identity';
 import type {RunStorage} from './storage';
 import {toolReceipt} from '../tools/receipts';
 import {TaskProgressTools} from '../tasks/progress-tools';
+import {MemberHelpTools} from '../tasks/member-help-tools';
 import {checkedMemberRunLaunch,type MemberRunLaunch} from './member-run';
 import {checkedRunInputSource,type RunInputSource} from './input-source';
 import {checkedConversationAgentBinding,type ConversationAgentBinding} from './conversation-binding';
@@ -131,6 +132,8 @@ export class LoopRuntime {
       const journal=this.options.storage.createJournal(directory,task,runId);await journal.init();
       let boundSessionFile:string|undefined;
       const pendingTools=new Set<string>();
+      // 包含尚在等待策略/人工审批的调用；只看 tool.allowed 会遗漏尚未获得授权的并发写入。
+      const activeCalls=new Set<string>();
       const calls=new Map<string,{call:ToolCall;decision:ToolDecision;generation:number}>();
       const identity={workspaceId:task.workspaceId,taskId:task.taskId,runId};
       const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})});
@@ -148,11 +151,19 @@ export class LoopRuntime {
         if(event.type==='session.bound'&&typeof event.data.sessionFile==='string')boundSessionFile=event.data.sessionFile;
         if(event.type==='tool.finished'&&event.data.receipt)taskTools.record(event.data.receipt as import('../tools/types').ToolReceipt,calls.get(String(event.data.id))!.generation);
         if(event.type==='tool.allowed')pendingTools.add(String(event.data.id));
-        if(event.type==='tool.finished')pendingTools.delete(String(event.data.id));
-        if(event.type==='tool.denied')pendingTools.delete(String(event.data.id));
+        if(event.type==='tool.finished'||event.type==='tool.denied'){pendingTools.delete(String(event.data.id));activeCalls.delete(String(event.data.id))}
         try{void Promise.resolve(this.options.onEvent?.(saved)).catch(()=>{})}catch{/* observers cannot change durable execution */}
       };
       let stopping=false;
+      let stopFailure:unknown;
+      const memberHelpTools=member?new MemberHelpTools(member.binding,{
+        save:async help=>{await emit({type:'task.help_requested',data:{help}})},
+        assertReady:(id,attempted)=>{
+          if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id))throw Error('求助调用已停止或未获得授权');
+          if([...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))throw Error('仍有未结束工具，不能交接求助');
+          if(attempted.some(other=>other===id||!calls.has(other)||activeCalls.has(other)))throw Error('求助引用了本轮不存在或未结束的工具调用');
+        },
+      }):undefined;
       this.injections.set(task.taskId,async(message,images)=>{
         if(stopping||!engine.steer)throw Error('当前执行不支持插入消息');
         await emit({type:'engine.status',data:{metric:'insertion',state:'requested',message,label:'正在插入用户补充'}});
@@ -162,7 +173,13 @@ export class LoopRuntime {
       // 保存输入及可信来源；显式补充仍是用户消息，成员结果不能在界面或原生上下文中冒充用户授权。
       await emit({type:'run.started',data:{task,message,engine:engine.kind,resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[],...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),...(member?{memberBinding:member.binding,nativeSessionId:member.session.nativeSessionId}:{}),...(fresh?{freshMain:{nativeSessionId,excludedRunIds}}:{})}});
       await taskTools.invalidate('新一轮执行需要重新核实产物与证据');
-      const stop=async()=>{if(stopping)return;stopping=true;await emit({type:'run.stop_requested',data:{}});await engine.stop()};
+      const stop=async()=>{
+        if(stopping)return;stopping=true;
+        try{await emit({type:'run.stop_requested',data:{}})}catch(error){stopFailure=error}
+        // 记录失败不能阻止实际 abort；失败事实在收尾按 interrupted 保留，不把无日志停止写成正常求助。
+        try{await engine.stop()}catch(error){stopFailure??=error}
+        if(stopFailure)throw stopFailure;
+      };
       const abort=()=>{void stop().catch(()=>{})};
       control?.signal.addEventListener('abort',abort,{once:true});
       const done=(async()=>{
@@ -170,12 +187,16 @@ export class LoopRuntime {
         let failure:unknown;
         try{
           if(control?.signal.aborted)await stop();
-          if(!stopping)await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,emit,beforeTool:async call=>{
+          if(!stopping)await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,emit,beforeTool:async call=>{
             call=structuredClone(call);
             if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
+            // 同步预占求助边界，先于任何 await；主 Agent 即便伪造工具名也不能取得成员求助能力。
+            const helpReason=memberHelpTools?.guard(call.name,call.id,call.input,[...activeCalls])??(!memberHelpTools&&call.name==='cbim_task_help'?'仅正式执行成员可提交求助':undefined);
+            // 门闩明确拒绝的调用只记录拒绝事实，绝无执行机会，不能反过来阻塞已经获准的求助。
+            if(!helpReason&&!stopping)activeCalls.add(call.id);
             calls.set(call.id,{call,decision:{allow:false},generation:taskTools.generation});
             await emit({type:'tool.proposed',data:{...call}});
-            let decision=stopping?{allow:false,reason:'任务正在停止'}:await this.options.toolPolicy(structuredClone(call));
+            let decision=stopping?{allow:false,reason:'任务正在停止'}:helpReason?{allow:false,reason:helpReason}:await this.options.toolPolicy(structuredClone(call));
             if(stopping)decision={...decision,allow:false,reason:'任务正在停止'};
             if(decision.allow&&(decision.effects?.some(effect=>['business-write','knowledge-write','command'].includes(effect))||['write','edit','bash'].includes(call.name)))await taskTools.invalidate('即将执行可能改变产物的操作，需要重新验证');
             calls.set(call.id,{call,decision,generation:taskTools.generation});
@@ -184,6 +205,7 @@ export class LoopRuntime {
               decision={...decision,allow:false,reason:'任务正在停止'};calls.set(call.id,{call,decision,generation:taskTools.generation});
               await emit({type:'tool.denied',data:{...call,...decision,receipt:toolReceipt(identity,call,decision,'denied')}});
             }
+            if(!decision.allow)memberHelpTools?.denied(call.id);
             return decision;
           }});
           if(control?.signal.aborted)await stop();
@@ -195,9 +217,11 @@ export class LoopRuntime {
         }finally{
           control?.signal.removeEventListener('abort',abort);
           try{await engine.close()}catch(error){failure??=error}
+          failure??=stopFailure;
           try{
             if(failure||pendingTools.size)await emit({type:'run.interrupted',data:{error:failure instanceof Error?failure.message:String(failure||'工具结果未确认'),unresolvedTools:[...pendingTools],receipts:[...pendingTools].map(id=>{const item=calls.get(id)!;return toolReceipt(identity,item.call,item.decision,'unknown')})}});
-            else await emit({type:'run.settled',data:{...result,acceptance:'not_evaluated'}});
+            // close 仍属于本轮生命周期：在排空引擎期间收到停止，不能把已暂存的 completed 写成正常交接。
+            else await emit({type:'run.settled',data:{...(stopping&&result?.status==='completed'?{status:'cancelled' as const}:result),acceptance:'not_evaluated'}});
             await journal.flush();
           }finally{this.active.delete(task.taskId);this.injections.delete(task.taskId);release()}
         }

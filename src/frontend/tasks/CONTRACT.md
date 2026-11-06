@@ -42,6 +42,12 @@
 
 `MemberTaskDetail` 为四层身份设置独立组件 key；历史轮次只读，只有当前活动轮次读取审批/问题并提供操作按钮。提交失败分别保留读取错误和操作错误，卸载不撤回已提交的后端操作。`MemberRunTranscript` 只排版后端公开投影，compact 模式仅展示最近一项消息，不缩小日志读取范围，也不负责敏感内容识别。
 
+#### 成员求助交接
+
+`member-help-state` 只投影后端安全结算后保存的 `TaskNode.help`：节点必须 blocked、没有活动运行和交付候选，求助的 workspace/root/task/agent/instance/session/plan 必须匹配节点，run 必须已登记。普通受阻、取消、失败、结果未知或工具返回的 staged 文字不会被补造成求助交接。主对话 `MemberActivity` 和任务节点 `DispatchGraph` 共用该投影，显示“需要主调度协助”；图仍是原任务节点与既有派发连线，不添加结果反向边或假候选。
+
+`MemberHelpNotice` 同时服务成员动态与 `MemberTaskDetail`，只读显示求助种类、原因、待主调度处理的问题、已尝试工具引用及记录时间。明确本轮成员执行已结束、求助已交接，后续由主调度重新安排；这是交接记录，不推断当前仍在等待、原成员已恢复、问题已解决或得到人工批准。工具引用不等于执行成功或验收证据。详情只展示所选 run 对应的求助，不能从另一轮借用；组件独立于成员正文读取，日志加载失败不会隐藏已提交交接。此组件没有执行、恢复旧成员、改变权限或批准按钮，也不新增轮询和后端请求。
+
 #### 异常执行记录核实
 
 主会话标题、图根与根详情中的数量统一表示“已读 X 轮记录”，单独附加后端报告的“Y 轮待核实”。缺失或坏日志不会生成假的运行摘要，也不能把零条可读摘要解释为零次实际执行；逐条序号仅标为已读记录顺序，不冒充完整历史运行序号。
@@ -127,6 +133,9 @@ class SessionTaskView { <<component>> }
 class DispatchGraph { <<component>> }
 class GraphLayout { <<module>> }
 class MemberTaskDetail { <<component>> }
+class MemberActivity { <<component>> }
+class MemberHelpNotice { <<component>> }
+class MemberHelpState { <<module>> }
 class MemberExecutionReport { <<component>> }
 class ExecutionReportController { <<module>> }
 class ScopeGoalPanel { <<component>> }
@@ -140,6 +149,10 @@ class SessionReadProjection { <<module>> }
 class GraphContract { <<bridge boundary>> }
 SessionTaskView --> DispatchGraph : 当前会话流程图
 SessionTaskView --> MemberTaskDetail : 按需成员详情
+MemberTaskDetail --> MemberHelpNotice : 所选轮次的已结算求助
+MemberActivity --> MemberHelpNotice : 主对话只读交接摘要
+MemberHelpNotice --> MemberHelpState : 节点与运行绑定核对
+DispatchGraph --> MemberHelpState : 已交接状态与原因
 MemberTaskDetail --> MemberExecutionReport : 所选轮次只读核实
 MemberExecutionReport --> ExecutionReportController : 显式读取与同基线分页
 SessionTaskView --> ScopeGoalPanel : 复用选中目标详情

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-引擎无关的执行循环与事件契约。补充只续接安全日志；显式新主上下文保留登记实例，在租约内冻结旧运行及缺日志意图并提交新身份。停止覆盖准备窗口，旧记录不读写、不重放。
+引擎无关的执行循环与事件契约。成员求助在所有工具及审批结束后封住后续调用，暂存不等于交接；停止覆盖准备和关闭窗口。显式新上下文冻结旧运行，不读写或重放坏历史。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -169,6 +169,26 @@ class N_src_backend_core_brain_usage_ts["usage.ts"] {
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 执行成员的一次性求助门闩
+
+`EngineContext.memberHelpTools` 只在 `startMember` 的可信绑定下存在。Pi 透传一次性 gate 的真实 `toolCallId`；主 Agent 伪造工具名仍会被拒绝。运行时在任何异步策略前为求助预占门闩；正在审批或已放行未结束的其它调用都阻止求助。预占之后的新工具仅写入拒绝事实，不进入可能执行集合，也不能反过来干扰已批准的求助。
+
+`cbim_task_help` 执行前再次检查停止、授权、所有在途操作和被引用工具确实属于本轮；先记录 `task.help_requested {help}`，再返回标准 `{state:'staged',help}` 正文，最后由统一 `tool.finished` 签发回执。请求使用固定 MemberRunBinding，没有模型提供的收件人或提权参数。落盘失败不在同轮重放；成功后任何工具仍被拒绝，成员应结束本轮。
+
+staged 不是派发图交接。外层在引擎关闭和 canonical 日志核实后决定是否提交 `TaskNode.help`；取消、异常、未知副作用不发布求助信封。引擎 `run` 返回 completed 后、`close` 排空期间收到停止，最终正常终态改为 cancelled；已有异常或未决操作仍是 interrupted，不将停止解释成回滚。停止意图落盘失败仍尝试中止引擎并保留 interrupted；请求落盘前的参数/引用错误可在旧调用结束后以新 ID 修正，开始落盘后则不得同轮重放。
+
+```mermaid
+classDiagram
+class LoopRuntime { +startMember() }
+class MemberHelpTools { +guard() +denied() +call() }
+class EngineContext { +memberHelpTools }
+class RunJournal { <<port>> +append() }
+LoopRuntime --> MemberHelpTools : 每轮可信绑定与门闩
+LoopRuntime --> RunJournal : 先持久化请求与回执
+LoopRuntime --> EngineContext : 注入可用端口
+EngineContext --> MemberHelpTools : 仅正式成员
+```
 
 ### 显式新主上下文
 

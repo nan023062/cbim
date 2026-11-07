@@ -1,6 +1,6 @@
 /**
  * 作用定位：本机知识存储，承担初始化、快照、预览、串行事务、索引写入和崩溃恢复。
- * 设计原因：从工作区生命周期抽离物理事务；继续使用原日志格式和版本检查，不改变并发或回滚语义。
+ * 设计原因：从工作区生命周期抽离物理事务；治理与普通写入共用串行门禁，批准不能从模型 ChangeRequest 注入。
  * 回执边界：可按完整原请求只读核实已提交 journal，或确认是否存在任何原事务；不凭当前知识相等猜成功，不恢复旧实例或重放写入。
  */
 import fs from 'node:fs/promises';
@@ -13,6 +13,7 @@ import {fail} from '../../../core/foundation/errors';
 import type {StoragePaths} from '../../../core/foundation/paths';
 import {Rules,revision,INDEXES,isKnowledge,parseJson} from '../../../core/knowledge/knowledge';
 import type {Snapshot,ChangeRequest,Preview,Change} from '../../../core/knowledge/types';
+import type {KnowledgeGovernanceAuthority,KnowledgeGovernanceBinding,KnowledgeGovernanceTransaction,KnowledgeJournalStatus} from './governance-port';
 
 /** 存储通过此端口报告实例状态；不持有 Electron 或工作区执行管理器。 */
 export interface KnowledgeStoreOwner {
@@ -22,22 +23,37 @@ export interface KnowledgeStoreOwner {
  assert(identity?:{workspaceId:string;instanceId:string}):void;
 }
 interface CommitResult {state:string;workspaceId:string;instanceId:string;requestId:string;revision:string;changed:string[]}
-interface Journal {version:1;workspaceId:string;requestId:string;fingerprint:string;state:'prepared'|'committing'|'committed'|'rolled_back'|'recovery_required';before:Record<string,string|null>;after:Record<string,string|null>;result?:CommitResult}
+interface Journal {version:1;workspaceId:string;requestId:string;fingerprint:string;state:'prepared'|'committing'|'committed'|'rolled_back'|'recovery_required';before:Record<string,string|null>;after:Record<string,string|null>;result?:CommitResult;governance?:KnowledgeGovernanceBinding}
 /** 工作区持有一个存储实例，关闭前等待 drain，观察器避开正在提交的事务。 */
 export class KnowledgeStore {
  private queue:Promise<unknown>=Promise.resolve();
  activeOperations=0;
- constructor(private owner:KnowledgeStoreOwner,private log:(event:string,details?:Record<string,unknown>)=>Promise<void>){}
+ constructor(private owner:KnowledgeStoreOwner,private log:(event:string,details?:Record<string,unknown>)=>Promise<void>,private governance?:KnowledgeGovernanceAuthority){}
  /** 等待已经进入队列的事务结束；不会取消半完成提交。 */
  async drain(){await this.queue}
   /** 只读核实原请求的已提交回执，允许查询旧实例请求；不执行提交、回滚或恢复。 */
   async committedReceipt(request:ChangeRequest):Promise<CommitResult|undefined>{
-    this.owner.assert();if(request.workspaceId!==this.owner.entry.id||!/^[A-Za-z0-9_-]{8,100}$/.test(request.requestId))fail('IDENTITY','知识回执查询身份不匹配');
-    return this.serial(async()=>{this.owner.assert();const file=path.join(this.owner.paths.local(this.owner.entry.id,'transactions'),request.requestId+'.json');let value:Journal;
+    this.owner.assert();return this.serial(async()=>{this.owner.assert();return (await this.journalStatus(request))?.result});
+  }
+  /** 同串行事务内部的只读查询；允许旧实例身份，但不执行恢复或写入。 */
+  private async journalStatus(request:ChangeRequest):Promise<KnowledgeJournalStatus|undefined>{
+    if(request.workspaceId!==this.owner.entry.id||!/^[A-Za-z0-9_-]{8,100}$/.test(request.requestId))fail('IDENTITY','知识回执查询身份不匹配');
+    const file=path.join(this.owner.paths.local(this.owner.entry.id,'transactions'),request.requestId+'.json');let value:Journal;
       try{const stat=await fs.lstat(file);if(!stat.isFile()||stat.isSymbolicLink()||stat.size>16*1024*1024)fail('RECOVERY','知识事务记录不安全或过大');value=await readJson<Journal>(file)}catch(error:any){if(error.code==='ENOENT')return undefined;throw error}
       if(value.version!==1||value.workspaceId!==request.workspaceId||value.requestId!==request.requestId||value.fingerprint!==hash(json(request)))fail('IDEMPOTENCY','原知识事务与请求不一致，请核实记录');
-      if(value.state!=='committed')return undefined;const result=value.result;if(!result||result.state!=='committed'||result.workspaceId!==request.workspaceId||result.instanceId!==request.instanceId||result.requestId!==request.requestId||typeof result.revision!=='string'||!Array.isArray(result.changed)||result.changed.some(item=>typeof item!=='string'))fail('RECOVERY','已提交知识事务缺少有效回执');return structuredClone(result);
-    });
+      if(!['prepared','committing','committed','rolled_back','recovery_required'].includes(value.state))fail('RECOVERY','知识事务状态无效');
+      if(value.governance&&(!['intentId','protectionId','proposalId','decisionId'].every(key=>typeof value.governance?.[key as keyof KnowledgeGovernanceBinding]==='string')||Object.keys(value.governance).length!==4))fail('RECOVERY','知识事务治理来源无效');
+      const map=(item:unknown):item is Record<string,string|null>=>!!item&&typeof item==='object'&&!Array.isArray(item)&&Object.entries(item).every(([key,text])=>isKnowledge(key)&&(text===null||typeof text==='string'));
+      if(!map(value.before)||!map(value.after)||json(Object.keys(value.before).sort())!==json(Object.keys(value.after).sort())||request.changes.some(change=>!Object.hasOwn(value.after,change.path)||value.after[change.path]!==change.text)||Object.keys(value.after).some(key=>!request.changes.some(change=>change.path===key)&&!INDEXES.includes(key)))fail('RECOVERY','原知识事务前后正文与请求不一致');
+      const status:KnowledgeJournalStatus={state:value.state,before:structuredClone(value.before),after:structuredClone(value.after),...(value.governance?{governance:structuredClone(value.governance)}:{})};
+      if(value.state==='committed'){const result=value.result;if(!result||result.state!=='committed'||result.workspaceId!==request.workspaceId||result.instanceId!==request.instanceId||result.requestId!==request.requestId||typeof result.revision!=='string'||!Array.isArray(result.changed)||result.changed.some(item=>typeof item!=='string')||json([...result.changed].sort())!==json(Object.keys(value.after).sort()))fail('RECOVERY','已提交知识事务缺少有效回执');status.result=structuredClone(result)}
+      this.governance?.verifyJournal(request,status);return status;
+  }
+  /** 私有治理操作与所有知识提交共用一个队列；回调中的 apply 只解析已保存的真实意图。 */
+  governed<T>(operation:(transaction:KnowledgeGovernanceTransaction)=>Promise<T>):Promise<T>{
+    return this.serial(async()=>{this.owner.assert();this.activeOperations++;try{return await operation({snapshot:()=>this.snapshot(),preview:request=>this.draft(request),journal:request=>this.journalStatus(request),apply:async intentId=>{
+      if(!this.governance)fail('GOVERNANCE_UNAVAILABLE','治理存储尚未装配');const request=await this.governance.request(intentId);return this.commitInternal(request,intentId);
+    }})}finally{this.activeOperations--}});
   }
   /** 仅证明原请求是否有任何事务记录；已回滚/未完成也算存在，不冒称从未受理。 */
   async hasRecordedRequest(request:ChangeRequest):Promise<boolean>{this.owner.assert();if(request.workspaceId!==this.owner.entry.id||!/^[A-Za-z0-9_-]{8,100}$/.test(request.requestId))fail('IDENTITY','知识回执查询身份不匹配');return this.serial(async()=>{this.owner.assert();try{await fs.lstat(path.join(this.owner.paths.local(this.owner.entry.id,'transactions'),request.requestId+'.json'));return true}catch(error:any){if(error.code==='ENOENT')return false;throw error}})}
@@ -105,13 +121,21 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
   /** 按串行队列执行版本检查和带日志的写入；同请求内容幂等，失败时只回滚仍匹配本次写入的文件。 */
   async commit(request:ChangeRequest){this.owner.assert(request);return this.serial(async()=>{
     this.owner.assert(request);this.activeOperations++;
-    try{
+    try{return await this.commitInternal(request)}finally{this.activeOperations--}
+  })}
+  /** 调用方已经持有 serial；开始后 close 必须 drain，不能把 closing 当成中途取消提交。 */
+  private async commitInternal(request:ChangeRequest,intentId?:string){
+    this.owner.assert(request);
       const journalPath=path.join(this.owner.paths.local(this.owner.entry.id,'transactions'),request.requestId+'.json');
-      if(await exists(journalPath)){const old=await readJson<Journal>(journalPath);if(old.fingerprint!==hash(json(request)))fail('IDEMPOTENCY','请求标识已用于不同变更');if(old.state==='committed'&&old.result)return old.result;fail('RECOVERY','此前请求未提交或已回滚，请重新读取后使用新请求标识')}
+      if(await exists(journalPath)){const old=await this.journalStatus(request);if(intentId&&old?.governance?.intentId!==intentId)fail('GOVERNANCE_DATA','原知识事务缺少匹配的治理来源');if(old?.state==='committed'&&old.result)return old.result;fail('RECOVERY','此前请求未提交或已回滚，请重新读取后使用新请求标识')}
       const preview=await this.draft(request);if(!preview.validation.structural)fail('VALIDATION',preview.validation.issues.filter(x=>x.severity==='error').map(x=>`${x.path}: ${x.message}`).join('\n'));
       const current=await this.read();if(current.revision!==request.revision)fail('CONFLICT','校验期间知识已变化');
+      const governance=await this.governance?.verify(current,preview,request,value=>this.journalStatus(value),intentId);
+      // 新调用仍在入口检查 running。此事务已持有 serial，关闭正在等待它；这里只复核身份，不能因进入 closing 丢弃已受理提交。
+      if(request.workspaceId!==this.owner.entry.id||request.instanceId!==this.owner.instanceId)fail('STALE_INSTANCE','知识提交的工程或运行实例身份已变化');
+      if(intentId&&!governance)fail('GOVERNANCE_UNAVAILABLE','治理提交缺少可信来源');
       const before:Record<string,string|null>={},after:Record<string,string|null>={};for(const c of preview.changes){before[c.path]=current.files.find(f=>f.path===c.path)?.text??null;after[c.path]=c.text}
-      const journal:Journal={version:1,workspaceId:this.owner.entry.id,requestId:request.requestId,fingerprint:preview.fingerprint,state:'prepared',before,after};await atomic(journalPath,json(journal));
+      const journal:Journal={version:1,workspaceId:this.owner.entry.id,requestId:request.requestId,fingerprint:preview.fingerprint,state:'prepared',before,after,...(governance?{governance}:{})};await atomic(journalPath,json(journal));
       const expected=new Map(current.files.map(f=>[f.path,f]));journal.state='committing';await atomic(journalPath,json(journal));
       try{let n=0;for(const [p,text]of Object.entries(after)){
           const live=await this.read();if(live.revision!==revision([...expected.values()]))fail('CONFLICT','提交期间检测到外部修改，正在安全回滚');
@@ -121,15 +145,14 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
         const result={state:'committed',workspaceId:this.owner.entry.id,instanceId:this.owner.instanceId,requestId:request.requestId,revision:final.revision,changed:Object.keys(after)};
         journal.state='committed';journal.result=result;await atomic(journalPath,json(journal));this.owner.lastRevision=final.revision;this.owner.changed=false;await this.log('committed',{requestId:request.requestId,files:Object.keys(after).length});return result;
       }catch(e){await this.rollback(journal,journalPath);throw e}
-    }finally{this.activeOperations--}
-  })}
+  }
   private async write(relative:string,text:string|null){const target=await this.owner.paths.knowledge(this.owner.entry.path,relative);if(text===null)await fs.rm(target,{force:true});else await atomic(target,text)}
   private async rollback(journal:Journal,p:string){let blocked=false;
     for(const name of Object.keys(journal.after).reverse()){const target=await this.owner.paths.knowledge(this.owner.entry.path,name);const live=await exists(target)?await fs.readFile(target,'utf8'):null;if(live===journal.before[name])continue;if(live!==journal.after[name]){blocked=true;continue}try{await this.write(name,journal.before[name])}catch{blocked=true}}
     journal.state=blocked?'recovery_required':'rolled_back';await atomic(p,json(journal));if(blocked){this.owner.state='recovery_required';this.owner.error='恢复遇到外部修改，保留现场与事务证据，请人工合并后重新打开'}
   }
   /** 重放未完成事务的恢复步骤；发现外部修改则保留现场并进入需要恢复状态。 */
-  async recover(){const dir=this.owner.paths.local(this.owner.entry.id,'transactions');await fs.mkdir(dir,{recursive:true});for(const file of await fs.readdir(dir)){if(!file.endsWith('.json'))continue;const p=path.join(dir,file);const journal=await readJson<Journal>(p);if(journal.workspaceId!==this.owner.entry.id)fail('IDENTITY','事务记录属于其他工程');if(['prepared','committing','recovery_required'].includes(journal.state)){await this.rollback(journal,p);if(journal.state==='recovery_required')fail('RECOVERY','未完成事务与外部修改冲突；请根据本地事务证据人工合并后重新打开')}}}
+  async recover(){const dir=this.owner.paths.local(this.owner.entry.id,'transactions');await fs.mkdir(dir,{recursive:true});for(const file of await fs.readdir(dir)){if(!file.endsWith('.json'))continue;const p=path.join(dir,file);const journal=await readJson<Journal>(p);if(journal.workspaceId!==this.owner.entry.id)fail('IDENTITY','事务记录属于其他工程');const fileId=file.slice(0,-5);if(journal.governance||this.governance?.hasIntent(fileId)){if(!this.governance)fail('GOVERNANCE_UNAVAILABLE','治理日志缺少私有来源');const request=await this.governance.request(fileId);if(request.requestId!==journal.requestId)fail('GOVERNANCE_DATA','治理事务文件名与原意图不一致');await this.journalStatus(request)}if(['prepared','committing','recovery_required'].includes(journal.state)){await this.rollback(journal,p);if(journal.state==='recovery_required')fail('RECOVERY','未完成事务与外部修改冲突；请根据本地事务证据人工合并后重新打开')}}}
   async planMove(snapshot:Snapshot,from:string,to:string|null):Promise<ChangeRequest>{
     this.owner.assert(snapshot);await this.owner.paths.knowledge(this.owner.entry.path,from);if(to)await this.owner.paths.knowledge(this.owner.entry.path,to);
     const prefix=(p:string)=>p===from||p.startsWith(from+'/');const moved=snapshot.files.filter(f=>prefix(f.path));if(!moved.length)fail('NOT_FOUND','移动或删除对象不存在');

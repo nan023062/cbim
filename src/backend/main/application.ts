@@ -2,6 +2,7 @@
  * 作用定位：单次运行授权、版本化队列增量和结构化问题按工作区路由；排队时冻结附件内容与模型身份。Application：登记及重命名工作区、装配模型供应商与服务，并统一派发主 Agent 对话、附件快照、工具审批和历史操作。
  * 设计原因：主会话绑定独立主实例；应用共享并发准入，软限额设置在新周期创建时冻结。工作区代际隔离等待票据；关闭先撤票再停运行和排空历史，不通过删除观察记录假释放名额。
  * 资源连接：独立本机授权先恢复但不启动共享；仅主工厂捕获只读工具，工作区退役取消在途读取，退出先排空连接请求再关闭真实 HTTP 服务。
+ * 模块治理：仅已就绪 Workspace 提供桌面保护与人工决定服务；实际知识实施仍排入原事务队列，重开不执行保存的意图。
  */
 import path from 'node:path';
 import {dispatchApplication} from './ipc/dispatch';
@@ -84,6 +85,8 @@ export class Application implements ApplicationServices {
   async init(){await this.catalog.init();await this.rules.init();await this.resources.init();await this.repositoryConnections.init();await this.admissionSettings.init();await this.budgetSettings.init();await this.restore()}
   async list(){const data=await this.catalog.read();return {...data,warning:this.catalog.warning,entries:await Promise.all(data.entries.map(async e=>this.running.get(e.id)?.view()||{...e,state:await exists(e.path)?'registered':'missing',tasks:[]}))}}
   workspace(id:string){const ws=this.running.get(id);if(!ws)fail('NOT_RUNNING','工作区未运行，请由用户在桌面打开');return ws}
+  /** 只取得已就绪工作区的私有治理服务；不把计划或决定接到模型执行入口。 */
+  governance(id:string){this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();return ws.governance}
   /** 合并同工作区的并发打开并装配内部执行服务；restart 只更换此工作区实例，不修改外部工具配置。 */
   async open(id:string,restart=false){if(this.stopping)fail('SHUTTING_DOWN','CBIM 正在退出');if(this.opening.has(id))return this.opening.get(id)!;this.assertServiceAvailable(id);
     const pending=(async()=>{const entry=(await this.catalog.read()).entries.find(x=>x.id===id);if(!entry)fail('NOT_REGISTERED','工作区未登记');let ws=this.running.get(id);

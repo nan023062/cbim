@@ -1,5 +1,5 @@
 /**
- * 作用定位：定义 IPC 路由需要的应用服务、执行审批、静态角色履历、全局监管与准入投影、配额设置、桌面资源连接和工作区生命周期入口。
+ * 作用定位：定义 IPC 路由需要的应用服务、执行审批、静态角色履历、全局监管与准入投影、配额设置、桌面资源连接、模块治理和工作区生命周期入口。
  * 设计原因：路由依赖此契约，Application 负责实现和装配，避免路由反向引用应用类形成类型循环。
  * 职责边界：这里只声明内部调用能力，不代表渲染进程可以直接访问这些服务。
  */
@@ -9,6 +9,7 @@ import type {Paths} from '../platform/paths';
 import type {LlmProfiles} from '../persistence/settings/llm-profiles';
 import type {ResourceRepositories} from '../resources/resource-repository';
 import type {RepositoryConnections} from '../resources/repository-connections';
+import type {ModuleGovernanceService} from '../governance/module-governance';
 import type {WorkspaceExecutionManager} from '../../scheduler-engine/execution/execution-manager';
 import type {WorkspaceDispatchService} from '../../scheduler-engine/execution/dispatch-service';
 import type {MemberExecutionManager} from '../../scheduler-engine/execution/member-execution';
@@ -39,6 +40,8 @@ export interface ApplicationServices {
   readonly isStopping: boolean;
   list(): Promise<Omit<CatalogData, 'entries'> & {warning: string; entries: WorkspaceView[]}>;
   workspace(id: string): Workspace;
+  /** 仅桌面明确治理请求；批准不由模型构造，应用与记录决定是两个独立动作。 */
+  governance(id:string):ModuleGovernanceService;
   execution(id: string): WorkspaceExecutionManager;
   /** 取得已装配的工作区成员图及人工决定服务；未就绪则拒绝，人工记录不隐式启动大脑或改变权限。 */
   memberDispatch(id:string):WorkspaceDispatchService;

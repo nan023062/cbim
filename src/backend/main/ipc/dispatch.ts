@@ -2,6 +2,7 @@
  * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
  * 设计原因：通过 ApplicationServices 隔离实现；人工保存仅注入本机提交标记且不启动模型，humanContinue 是另一个明确入口并只消费已保存决定。计量、文本补充与新周期保持各自身份和受理边界。
  * 资源连接：桌面显式登记、授权与核验分别路由；只读原回执和未受理证明不重放知识提交，不接受客户端地址或令牌。
+ * 模块治理：登记、观察、决定与独立实施按原命令路由；只有可信桌面闭包提供人工来源，普通 commit 没有批准参数。
  */
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
@@ -10,6 +11,15 @@ import {WorkspacePackages} from '../resources/workspace-packages';
 import {fail} from '../../core/foundation/errors';
   /** 桌面 IPC 的操作路由；请求必须显式携带目标身份，不读取界面选中项。 */
 export async function dispatchApplication(app:ApplicationServices,action:string,args:any={}){switch(action){
+    case 'governance.list':return app.governance(args.workspaceId).list(args);
+    case 'governance.receipt':return app.governance(args.workspaceId).lookup(args);
+    case 'governance.unaccepted':return app.governance(args.workspaceId).unaccepted(args);
+    // 主 Frame 已由 Electron 核实；本机明确操作不冒充认证负责人，模型工具没有这些入口。
+    case 'governance.register':if(app.isStopping)fail('SHUTTING_DOWN','CBIM 正在退出，未登记保护');return app.governance(args.workspaceId).register(args,{kind:'local_desktop',interaction:'explicit_submit'});
+    case 'governance.observe':if(app.isStopping)fail('SHUTTING_DOWN','CBIM 正在退出，未保存观察');return app.governance(args.workspaceId).observe(args);
+    case 'governance.propose':if(app.isStopping)fail('SHUTTING_DOWN','CBIM 正在退出，未保存提案');return app.governance(args.workspaceId).propose(args);
+    case 'governance.decide':if(app.isStopping)fail('SHUTTING_DOWN','CBIM 正在退出，未保存决定');return app.governance(args.workspaceId).decide(args,{kind:'local_desktop',interaction:'explicit_submit'});
+    case 'governance.apply':if(app.isStopping)fail('SHUTTING_DOWN','CBIM 正在退出，未保存实施意图');return app.governance(args.workspaceId).apply(args);
     case 'list':return app.list();
     case 'runtime.snapshot':return app.runtime.snapshot();
     case 'runtime.read':return app.runtime.read(args.cursor);

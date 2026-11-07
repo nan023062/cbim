@@ -11,7 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [dispatch.ts](dispatch.ts) | 将经过主进程接入的 action 路由到明确的工作区和应用服务。 |
-| [services.ts](services.ts) | 定义 IPC 路由需要的应用服务、执行审批、静态角色履历、全局监管与准入投影、配额设置、桌面资源连接和工作区生命周期入口。 |
+| [services.ts](services.ts) | 定义 IPC 路由需要的应用服务、执行审批、静态角色履历、全局监管与准入投影、配额设置、桌面资源连接、模块治理和工作区生命周期入口。 |
 
 ## 架构类图
 
@@ -51,9 +51,9 @@ class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationService
   +isStopping
   +list()
   +workspace()
+  +governance()
   +execution()
   +memberDispatch()
-  +memberExecution()
 }
 N_src_backend_main_ipc_services_ts ..> N_src_backend_main_ipc_services_ts_ApplicationServices : 声明
 ```
@@ -67,6 +67,7 @@ class N_src_backend_main_ipc_services_ts["services.ts"] {
 }
 class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationServices"] {
   <<interface>>
+  +memberExecution()
   +agentHistory()
   +open()
   +stop()
@@ -77,7 +78,7 @@ class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationService
 N_src_backend_main_ipc_services_ts ..> N_src_backend_main_ipc_services_ts_ApplicationServices : 声明
 ```
 
-直接依赖：[../workspace/catalog.ts](../workspace/catalog.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../platform/paths.ts](../platform/paths.ts)、[../persistence/settings/llm-profiles.ts](../persistence/settings/llm-profiles.ts)、[../resources/resource-repository.ts](../resources/resource-repository.ts)、[../resources/repository-connections.ts](../resources/repository-connections.ts)、[../../scheduler-engine/execution/execution-manager.ts](../../scheduler-engine/execution/execution-manager.ts)、[../../scheduler-engine/execution/dispatch-service.ts](../../scheduler-engine/execution/dispatch-service.ts)、[../../scheduler-engine/execution/member-execution.ts](../../scheduler-engine/execution/member-execution.ts)、[../../scheduler-engine/runtime/agent-history.ts](../../scheduler-engine/runtime/agent-history.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)、[../persistence/settings/admission-settings.ts](../persistence/settings/admission-settings.ts)、[../persistence/settings/budget-settings.ts](../persistence/settings/budget-settings.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)。
+直接依赖：[../workspace/catalog.ts](../workspace/catalog.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../platform/paths.ts](../platform/paths.ts)、[../persistence/settings/llm-profiles.ts](../persistence/settings/llm-profiles.ts)、[../resources/resource-repository.ts](../resources/resource-repository.ts)、[../resources/repository-connections.ts](../resources/repository-connections.ts)、[../governance/module-governance.ts](../governance/module-governance.ts)、[../../scheduler-engine/execution/execution-manager.ts](../../scheduler-engine/execution/execution-manager.ts)、[../../scheduler-engine/execution/dispatch-service.ts](../../scheduler-engine/execution/dispatch-service.ts)、[../../scheduler-engine/execution/member-execution.ts](../../scheduler-engine/execution/member-execution.ts)、[../../scheduler-engine/runtime/agent-history.ts](../../scheduler-engine/runtime/agent-history.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)、[../persistence/settings/admission-settings.ts](../persistence/settings/admission-settings.ts)、[../persistence/settings/budget-settings.ts](../persistence/settings/budget-settings.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)。
 
 ### 本目录调用边界
 
@@ -104,6 +105,12 @@ N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_services_ts : 导�
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 单模块知识治理
+
+`governance.list/register/observe/propose/decide/apply/receipt/unaccepted` 显式绑定工作区；写动作还绑定实例、稳定命令及对应版本。模型没有此工具族。主 Frame 守卫核实发送方，register/decide 在后端注入 `local_desktop / explicit_submit`；保存决定和实施知识是两个独立动作，无额外模型、业务执行或权限提升。
+
+统一回执包含原 identity、commandId、action 和对应 record。apply 的 committed 必须有原知识 result；pending、not_applied、rolled_back 和 recovery_required 保持各自事实。receipt 允许查询退役实例的原记录，不执行写入；unaccepted 只有旧实例且账本/原 journal 无命令才为 true。通信未知必须保留原命令，不将再次收到前置错误当作取消原受理的依据。
 
 ### 桌面资源仓库只读连接
 

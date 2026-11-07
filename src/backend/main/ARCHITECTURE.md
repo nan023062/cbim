@@ -24,6 +24,9 @@ classDiagram
 class N_src_backend_main_commands["commands/"] {
   <<directory>>
 }
+class N_src_backend_main_governance["governance/"] {
+  <<directory>>
+}
 class N_src_backend_main_ipc["ipc/"] {
   <<directory>>
 }
@@ -36,22 +39,20 @@ class N_src_backend_main_platform["platform/"] {
 class N_src_backend_main_resources["resources/"] {
   <<directory>>
 }
-class N_src_backend_main_workspace["workspace/"] {
-  <<directory>>
-}
 N_src_backend_main_commands ..> N_src_backend_main_platform : 导入依赖
+N_src_backend_main_governance ..> N_src_backend_main_persistence : 导入依赖
 N_src_backend_main_ipc ..> N_src_backend_main_persistence : 导入依赖
-N_src_backend_main_ipc ..> N_src_backend_main_workspace : 导入依赖
 N_src_backend_main_ipc ..> N_src_backend_main_resources : 导入依赖
 N_src_backend_main_ipc ..> N_src_backend_main_platform : 导入依赖
-N_src_backend_main_persistence ..> N_src_backend_main_workspace : 导入依赖
+N_src_backend_main_ipc ..> N_src_backend_main_governance : 导入依赖
 N_src_backend_main_resources ..> N_src_backend_main_platform : 导入依赖
-N_src_backend_main_workspace ..> N_src_backend_main_platform : 导入依赖
-N_src_backend_main_workspace ..> N_src_backend_main_persistence : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_main_workspace["workspace/"] {
+  <<directory>>
+}
 class N_src_backend_main_application_ts["application.ts"] {
   <<module>>
 }
@@ -67,16 +68,22 @@ class N_src_backend_main_main_ts["main.ts"] {
 class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
   <<module>>
 }
-class N_src_backend_main_runtime_monitor_ts["runtime-monitor.ts"] {
-  <<module>>
-}
 N_src_backend_main_application_ts ..> N_src_backend_main_execution_ts : 导入依赖
 N_src_backend_main_application_ts ..> N_src_backend_main_member_dispatch_ts : 导入依赖
 N_src_backend_main_application_ts ..> N_src_backend_main_execution_admission_ts : 导入依赖
-N_src_backend_main_application_ts ..> N_src_backend_main_runtime_monitor_ts : 导入依赖
+N_src_backend_main_application_ts ..> N_src_backend_main_workspace : 导入依赖
+N_src_backend_main_execution_ts ..> N_src_backend_main_workspace : 导入依赖
 N_src_backend_main_execution_ts ..> N_src_backend_main_execution_admission_ts : 导入依赖
 N_src_backend_main_main_ts ..> N_src_backend_main_application_ts : 导入依赖
+N_src_backend_main_member_dispatch_ts ..> N_src_backend_main_workspace : 导入依赖
 N_src_backend_main_member_dispatch_ts ..> N_src_backend_main_execution_admission_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_runtime_monitor_ts["runtime-monitor.ts"] {
+  <<module>>
+}
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
@@ -97,10 +104,12 @@ N_src_backend_main_member_dispatch_ts ..> N_src_backend_main_execution_admission
 - `execution.ts` → `platform`：导入。
 - `execution.ts` → `execution-admission.ts`：导入。
 - `execution.ts` → `resources`：导入。
+- `governance` → `persistence`：导入。
 - `ipc` → `persistence`：导入。
 - `ipc` → `workspace`：导入。
 - `ipc` → `resources`：导入。
 - `ipc` → `platform`：导入。
+- `ipc` → `governance`：导入。
 - `main.ts` → `platform`：导入。
 - `main.ts` → `application.ts`：导入。
 - `main.ts` → `persistence`：导入。
@@ -114,6 +123,7 @@ N_src_backend_main_member_dispatch_ts ..> N_src_backend_main_execution_admission
 - `runtime-monitor.ts` → `persistence`：导入。
 - `workspace` → `platform`：导入。
 - `workspace` → `persistence`：导入。
+- `workspace` → `governance`：导入。
 
 ### execution-admission.ts 公开入口
 
@@ -153,6 +163,7 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 ## 子目录导航
 
 - [commands/](commands/ARCHITECTURE.md)：CLI 入口，复用应用和调度，不拥有第二套领域规则。
+- [governance/](governance/ARCHITECTURE.md)：工作区模块知识治理服务及可信桌面操作。登记、提案、决定和显式实施经知识事务屏障核实，读取不启动执行或重放未知操作。
 - [ipc/](ipc/ARCHITECTURE.md)：应用 action 路由。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。
 - [persistence/](persistence/ARCHITECTURE.md)：本机持久化适配：知识事务、运行日志、对话附件、模型配置。保留原数据路径与格式，目录调整不迁移用户数据。
 - [platform/](platform/ARCHITECTURE.md)：本机路径、系统锁、凭据加密、终端与工具访问检查。业务文件及受管原生会话各用固定根、有界读取与前后身份核实，拒绝链接、越界和 Windows 备用数据流；原生历史不完整则拒绝恢复，不修补原文件或承诺外部原子隔离。
@@ -168,6 +179,10 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 主进程运行装配契约
+
+## 模块知识保护与桌面治理
+
+每个 `Workspace` 装配独立 `ModuleGovernanceService` 和用户数据账本；`Application.governance(id)` 只返回已就绪实例。桌面登记和人工决定由 IPC 注入本机明确操作标记，模型工具、普通知识参数和资源内容不能签发批准。正式实施另走显式 apply，仍由原 KnowledgeStore 串行事务写入；服务关闭随知识队列排空，不恢复未完成意图。
 
 ## 本机资源仓库连接生命周期
 

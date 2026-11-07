@@ -14,6 +14,9 @@
 
 ```mermaid
 classDiagram
+class N_src_backend_main_persistence_governance["governance/"] {
+  <<directory>>
+}
 class N_src_backend_main_persistence_knowledge["knowledge/"] {
   <<directory>>
 }
@@ -31,6 +34,7 @@ class N_src_backend_main_persistence_tasks["tasks/"] {
 
 ## 子目录导航
 
+- [governance/](governance/ARCHITECTURE.md)：私有治理记录的有界严格持久化，保留原命令与不可变提案；不反向调用知识事务或创建第二条提交队列。
 - [knowledge/](knowledge/ARCHITECTURE.md)：正式知识文件读取、初始化、事务恢复和对象计划缓存。提交串行化，回滚不覆盖外部修改，清理仅删除空目录。
 - [settings/](settings/ARCHITECTURE.md)：应用级模型、并发与新目标软限额存储。密钥系统加密；策略串行版本校验与原子保存，缺文件才使用默认值。软限额只冻结新周期，设置恢复不重放模型或改变既有目标。
 - [tasks/](tasks/ARCHITECTURE.md)：执行日志、附件快照、派发事务与角色履历。日志只读完整前缀并报告未完整尾行，损坏不透传原始片段、不截断修复。图/目标/详情同屏障读取，未知操作不自动重放。

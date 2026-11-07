@@ -1,3 +1,9 @@
+### 单模块知识治理
+
+`governance.list/register/observe/propose/decide/apply/receipt/unaccepted` 显式绑定工作区；写动作还绑定实例、稳定命令及对应版本。模型没有此工具族。主 Frame 守卫核实发送方，register/decide 在后端注入 `local_desktop / explicit_submit`；保存决定和实施知识是两个独立动作，无额外模型、业务执行或权限提升。
+
+统一回执包含原 identity、commandId、action 和对应 record。apply 的 committed 必须有原知识 result；pending、not_applied、rolled_back 和 recovery_required 保持各自事实。receipt 允许查询退役实例的原记录，不执行写入；unaccepted 只有旧实例且账本/原 journal 无命令才为 true。通信未知必须保留原命令，不将再次收到前置错误当作取消原受理的依据。
+
 ### 桌面资源仓库只读连接
 
 `resources.connection.list / preview / commit / grant / revoke / check` 显式绑定工作区实例。登记经知识事务，授权独立保存；只有当前应用已显式开启的共享仓库可连接，请求不接受 URL 或令牌。`check` 才显式核验网络并返回受限目录摘要，主 Frame 接入规则继续适用，入口不注册到模型工具清单。

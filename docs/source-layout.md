@@ -9,6 +9,7 @@ src/
   backend/              本机后端逻辑层
     core/               核心领域、大脑和共享机制
       foundation/         错误、标识、JSON、哈希、路径端口及最小文件原语
+      governance/         模块知识治理的纯协议、观察依据和保护规则
       brain/              执行循环；llm/ 模型契约；pi/ 引擎适配
       connectors/         链接器定义
       knowledge/          知识类型、只读快照、规则、查询、CRUD 规划与存储端口
@@ -26,8 +27,9 @@ src/
       tools/              内部 Loop 的知识工具及任务工具适配
     main/               应用装配与实际平台环境
       commands/           内部 Loop 开发命令
+      governance/         可信桌面治理服务，与知识写入共用串行边界
       ipc/                应用 action 路由
-      persistence/        knowledge/ 知识事务；tasks/ 日志附件；settings/ 配置
+      persistence/        knowledge/ 知识事务；governance/ 私有治理账本；tasks/ 日志附件；settings/ 配置
       platform/           路径、锁、加密、终端及原生访问检查
       resources/          共享资源仓库
       workspace/          本机登记和运行实例
@@ -40,6 +42,7 @@ src/
     workspace/          项目业务架构
     team/               项目团队架构
     knowledge/          知识编辑与检查
+    governance/         模块保护、提案、人工决定、独立实施及原回执
     diagnostics/        工作区知识问题诊断
     shell/              侧栏、用户栏及扩展区域
     settings/           应用设置
@@ -88,7 +91,7 @@ src/
 
 内部 Loop 的原生与知识写入已经共用运行权限，目录整理本身不自动迁移项目知识或重放任务。Foundation 的 Node 文件原语、规则校验的只读文件核验、Pi 的进程适配以及会话队列自身的持久化仍保留其现有职责；Core 不是浏览器可执行的纯函数包。
 
-尚未建立 `evidence/`、`governance/`、`planning/`、`workflow/`、`delivery/` 等空目录。只有相应阶段开始实现实际能力时才创建，避免用目录替代交付。
+2026-11-07 随模块知识治理实际实现新增 Core、Main、持久化和前端的 governance 目录。纯协议不依赖存储；私有账本不反向排队；正式修改仍通过唯一知识事务。只交付已登记模块正文的观察、提案、本机决定和显式实施，不据目录名称推断全部治理能力。`evidence/`、`planning/`、`workflow/`、`delivery/` 等仍不为规划而建立空目录。
 
 ## Review 与维护
 

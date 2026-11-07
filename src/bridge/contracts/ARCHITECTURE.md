@@ -16,6 +16,7 @@
 | [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
 | [dispatch.ts](dispatch.ts) | 向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。 |
 | [execution.ts](execution.ts) | 对话、运行和排队在 IPC 中传递的可序列化类型。 |
+| [governance.ts](governance.ts) | 向业务架构界面公开模块知识治理的纯数据与严格校验协议。 |
 | [human-continue.ts](human-continue.ts) | 公开按已保存人工决定继续原目标的严格请求与回执，连接桌面和调度入口。 |
 | [human-decisions.ts](human-decisions.ts) | 向桌面公开人工决定的序列化请求、依据预览与不可变记录。 |
 | [models.ts](models.ts) | 模型配置界面消费的公开模型信息与停止原因格式化。 |
@@ -140,6 +141,16 @@ class N_src_bridge_contracts_execution_ts["execution.ts"] {
 }
 ```
 直接依赖：[../../backend/core/brain/types.ts](../../backend/core/brain/types.ts)、[../../backend/core/tasks/types.ts](../../backend/core/tasks/types.ts)、[../../backend/core/tasks/queue.ts](../../backend/core/tasks/queue.ts)、[../../backend/core/tools/questions.ts](../../backend/core/tools/questions.ts)、[../../backend/core/tools/scope-schema.ts](../../backend/core/tools/scope-schema.ts)。
+
+### governance.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_governance_ts["governance.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../backend/core/governance/module-governance.ts](../../backend/core/governance/module-governance.ts)。
 
 ### human-continue.ts
 
@@ -631,3 +642,7 @@ interface DispatchGraphApi {
 ### 文件基线的只读边界
 
 `dispatch.ts` 公开 Core 的 ArtifactReportInput/ArtifactReport 及严格 Schema。请求必须明确 workspace/root/task/run；无 baselineId 只枚举可靠记录，显式选择才复核文件。响应包含有界相对路径和哈希，不含文件正文、平台根路径、凭据或可恢复执行授权。与既有执行报告分页、核实周期创建的基线分别处理。
+
+### 模块知识治理
+
+governance.ts 仅重导 Core 严格纯协议。界面按明确工作区/实例/模块核对列表、原命令及精确提案依据；决定与实施分别提交，actor由可信服务确定。公开实施状态区分未提交、待核实、已提交、回滚与恢复异常；完整知识回执不等于业务验收。

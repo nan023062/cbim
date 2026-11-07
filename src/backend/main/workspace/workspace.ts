@@ -1,7 +1,7 @@
 /**
  * 作用定位：管理本机工作区的身份、独占锁、知识监听和维护任务。
  * 设计原因：知识操作委托 KnowledgeStore 保持事务边界；工作区统一打开关闭顺序，供应用内部执行和调度使用。维护任务按实例隔离，取消不存在的任务明确报错，不能把对话任务误报为已取消。
- * 回执边界：当前实例可委托存储只读核实旧请求的原 journal；这不授予旧实例重新提交或自动恢复的能力。
+ * 回执边界：当前实例可委托存储只读核实旧请求的原 journal；治理账本先于服务发布加载，保护与决定共用知识串行屏障，不恢复旧实施意图。
  */
 import fs from 'node:fs/promises';
 import {FileObjectStorage} from '../persistence/knowledge/object-storage';
@@ -15,9 +15,12 @@ import {fail} from '../../core/foundation/errors';
 import {KernelLock} from '../platform/locking';
 import {Rules} from '../../core/knowledge/knowledge';
 import {KnowledgeStore} from '../persistence/knowledge/knowledge-store';
+import {ModuleGovernanceService} from '../governance/module-governance';
+import type {KnowledgeGovernanceTransaction} from '../persistence/knowledge/governance-port';
 import type {WorkspaceEntry,WorkspaceView,Snapshot,ChangeRequest,TaskView} from '../../../bridge/contracts/workspace';
 export class Workspace implements KnowledgeWorkspace {
   readonly objects:FileObjectStorage;
+  readonly governance:ModuleGovernanceService;
   /** 每次打开生成新身份，拒绝重启前的旧请求和预览。 */
   readonly instanceId=randomUUID();knowledgeErrors=0;
   state='registered';error?:string;changed=false;lastRevision='';
@@ -25,7 +28,7 @@ export class Workspace implements KnowledgeWorkspace {
   private lock?:KernelLock;private watcher?:NodeJS.Timeout;private polling=false;
   private readonly knowledge:KnowledgeStore;
   // Fault injection is an explicit dependency used only by isolated tests.
-  constructor(readonly entry:WorkspaceEntry,readonly paths:Paths,readonly rules:Rules,readonly fault?:(step:number)=>void){this.objects=new FileObjectStorage(this);this.knowledge=new KnowledgeStore(this,(event,details)=>this.log(event,details))}
+  constructor(readonly entry:WorkspaceEntry,readonly paths:Paths,readonly rules:Rules,readonly fault?:(step:number)=>void){this.objects=new FileObjectStorage(this);this.governance=new ModuleGovernanceService(this,path.join(paths.project(entry.id),'governance','module-ledger.json'));this.knowledge=new KnowledgeStore(this,(event,details)=>this.log(event,details),this.governance)}
   view():WorkspaceView{return {...this.entry,state:this.state,error:this.error,tasks:[...this.tasks.values()],revision:this.lastRevision,changed:this.changed,instanceId:this.instanceId,knowledgeErrors:this.knowledgeErrors}}
   assert(identity?:{workspaceId:string;instanceId:string}){if(this.state!=='running')fail('NOT_RUNNING',`工作区当前状态：${this.state}`);if(identity&&(identity.workspaceId!==this.entry.id||identity.instanceId!==this.instanceId))fail('STALE_INSTANCE','工程或运行实例身份不匹配，请刷新工作区状态')}
   /** 持有独占锁后恢复事务并初始化知识；失败释放锁，不发布网络端点或写入外部工具配置。 */
@@ -35,10 +38,11 @@ export class Workspace implements KnowledgeWorkspace {
       const identity=await this.paths.identity(this.entry.path);if(identity.id!==this.entry.id)fail('IDENTITY','工程真实路径已变化，需要重新定位');
       this.lock=new KernelLock(identity.path,identity.id);
       const mapping=path.join(this.paths.project(identity.id),'identity.json');if(await exists(mapping)&&(await readJson(mapping)).path!==identity.path)fail('IDENTITY','本地历史记录绑定的工程不匹配');await atomic(mapping,json(identity));
-      await this.knowledge.recover();await this.knowledge.initialize();
+      await this.governance.init();await this.knowledge.recover();await this.knowledge.initialize();
       const snapshot=await this.read();this.lastRevision=snapshot.revision;
       const validation=await this.rules.validate(this.entry.path,snapshot.files);this.knowledgeErrors=validation.issues.filter(i=>i.severity==='error').length;
       this.state='running';
+      await this.governance.validatePersisted();
       await this.log('opened');
       this.watcher=setInterval(()=>{if(this.polling||this.state!=='running'||this.knowledge.activeOperations)return;this.polling=true;void this.read().then(s=>{if(s.revision!==this.lastRevision){this.changed=true;this.lastRevision=s.revision}}).catch(e=>{this.error=e.message}).finally(()=>{this.polling=false})},1200);this.watcher.unref();
     }catch(e:any){this.error=e.message;this.state='failed';this.lock?.close();this.lock=undefined;throw e}
@@ -48,6 +52,8 @@ export class Workspace implements KnowledgeWorkspace {
   snapshot(){return this.knowledge.snapshot()}
   preview(request:ChangeRequest){return this.knowledge.preview(request)}
   commit(request:ChangeRequest){return this.knowledge.commit(request)}
+  /** Main 私有治理端口；回调已经持有知识队列，不可重入公开提交方法。 */
+  governed<T>(operation:(tx:KnowledgeGovernanceTransaction)=>Promise<T>){return this.knowledge.governed(operation)}
   /** 查询原知识事务回执；旧实例请求可核实，但不会被重新提交。 */
   committedReceipt(request:ChangeRequest){return this.knowledge.committedReceipt(request)}
   /** 未受理核实只看原事务记录是否存在，不把回滚或未完成记录当作不存在。 */

@@ -11,6 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [files.ts](files.ts) | 从本机项目读取受控的正式知识文件。 |
+| [governance-port.ts](governance-port.ts) | 知识物理事务与私有治理账本之间的窄端口；仅供 Main 的可信工作区装配。 |
 | [knowledge-store.ts](knowledge-store.ts) | 本机知识存储，承担初始化、快照、预览、串行事务、索引写入和崩溃恢复。 |
 | [object-storage.ts](object-storage.ts) | 对象预览缓存、目录存在性检查和提交后空目录清理的本机实现。 |
 
@@ -27,6 +28,50 @@ class N_src_backend_main_persistence_knowledge_files_ts["files.ts"] {
 ```
 
 直接依赖：[../../../core/foundation/paths.ts](../../../core/foundation/paths.ts)、[../../../core/knowledge/types.ts](../../../core/knowledge/types.ts)、[../../../core/knowledge/knowledge.ts](../../../core/knowledge/knowledge.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/files.ts](../../../core/foundation/files.ts)。
+
+### governance-port.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_persistence_knowledge_governance_port_ts["governance-port.ts"] {
+  <<module>>
+}
+class N_src_backend_main_persistence_knowledge_governance_port_ts_KnowledgeGovernanceBinding["KnowledgeGovernanceBinding"] {
+  <<interface>>
+  +intentId
+  +protectionId
+  +proposalId
+  +decisionId
+}
+N_src_backend_main_persistence_knowledge_governance_port_ts ..> N_src_backend_main_persistence_knowledge_governance_port_ts_KnowledgeGovernanceBinding : 声明
+class N_src_backend_main_persistence_knowledge_governance_port_ts_KnowledgeJournalStatus["KnowledgeJournalStatus"] {
+  <<interface>>
+  +state
+  +before
+  +after
+  +governance
+  +result
+}
+N_src_backend_main_persistence_knowledge_governance_port_ts ..> N_src_backend_main_persistence_knowledge_governance_port_ts_KnowledgeJournalStatus : 声明
+class N_src_backend_main_persistence_knowledge_governance_port_ts_KnowledgeGovernanceAuthority["KnowledgeGovernanceAuthority"] {
+  <<interface>>
+  +request()
+  +hasIntent()
+  +verifyJournal()
+  +verify()
+}
+N_src_backend_main_persistence_knowledge_governance_port_ts ..> N_src_backend_main_persistence_knowledge_governance_port_ts_KnowledgeGovernanceAuthority : 声明
+class N_src_backend_main_persistence_knowledge_governance_port_ts_KnowledgeGovernanceTransaction["KnowledgeGovernanceTransaction"] {
+  <<interface>>
+  +snapshot()
+  +preview()
+  +journal()
+  +apply()
+}
+N_src_backend_main_persistence_knowledge_governance_port_ts ..> N_src_backend_main_persistence_knowledge_governance_port_ts_KnowledgeGovernanceTransaction : 声明
+```
+
+直接依赖：[../../../core/knowledge/types.ts](../../../core/knowledge/types.ts)、[../../../core/knowledge/ports.ts](../../../core/knowledge/ports.ts)。
 
 ### knowledge-store.ts
 
@@ -72,12 +117,14 @@ class N_src_backend_main_persistence_knowledge_knowledge_store_ts_Journal["Journ
   +before
   +after
   +result
+  +governance
 }
 N_src_backend_main_persistence_knowledge_knowledge_store_ts ..> N_src_backend_main_persistence_knowledge_knowledge_store_ts_Journal : 声明
 class N_src_backend_main_persistence_knowledge_knowledge_store_ts_KnowledgeStore["KnowledgeStore"] {
   +activeOperations
   +drain()
   +committedReceipt()
+  +governed()
   +hasRecordedRequest()
   +initialize()
   +read()
@@ -88,9 +135,8 @@ class N_src_backend_main_persistence_knowledge_knowledge_store_ts_KnowledgeStore
   +planMove()
   -owner
   -log
+  -governance
   -queue
-  -serial()
-  -draft()
 }
 N_src_backend_main_persistence_knowledge_knowledge_store_ts ..> N_src_backend_main_persistence_knowledge_knowledge_store_ts_KnowledgeStore : 声明
 ```
@@ -103,13 +149,17 @@ class N_src_backend_main_persistence_knowledge_knowledge_store_ts["knowledge-sto
   <<module>>
 }
 class N_src_backend_main_persistence_knowledge_knowledge_store_ts_KnowledgeStore["KnowledgeStore"] {
+  -journalStatus()
+  -serial()
+  -draft()
+  -commitInternal()
   -write()
   -rollback()
 }
 N_src_backend_main_persistence_knowledge_knowledge_store_ts ..> N_src_backend_main_persistence_knowledge_knowledge_store_ts_KnowledgeStore : 声明
 ```
 
-直接依赖：[files.ts](files.ts)、[../../../core/foundation/files.ts](../../../core/foundation/files.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/paths.ts](../../../core/foundation/paths.ts)、[../../../core/knowledge/knowledge.ts](../../../core/knowledge/knowledge.ts)、[../../../core/knowledge/types.ts](../../../core/knowledge/types.ts)。
+直接依赖：[files.ts](files.ts)、[../../../core/foundation/files.ts](../../../core/foundation/files.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/paths.ts](../../../core/foundation/paths.ts)、[../../../core/knowledge/knowledge.ts](../../../core/knowledge/knowledge.ts)、[../../../core/knowledge/types.ts](../../../core/knowledge/types.ts)、[governance-port.ts](governance-port.ts)。
 
 ### object-storage.ts
 
@@ -146,7 +196,11 @@ class N_src_backend_main_persistence_knowledge_knowledge_store_ts["knowledge-sto
 class N_src_backend_main_persistence_knowledge_files_ts["files.ts"] {
   <<module>>
 }
+class N_src_backend_main_persistence_knowledge_governance_port_ts["governance-port.ts"] {
+  <<module>>
+}
 N_src_backend_main_persistence_knowledge_knowledge_store_ts ..> N_src_backend_main_persistence_knowledge_files_ts : 导入依赖
+N_src_backend_main_persistence_knowledge_knowledge_store_ts ..> N_src_backend_main_persistence_knowledge_governance_port_ts : 导入依赖
 ```
 
 
@@ -157,3 +211,19 @@ N_src_backend_main_persistence_knowledge_knowledge_store_ts ..> N_src_backend_ma
 [返回上层](../ARCHITECTURE.md)。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+## 设计契约 v1 与落地范围
+
+以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+# 正式知识物理事务
+
+`KnowledgeStore` 是正式知识写入的唯一串行队列。所有普通提交继续核实例、读取版本、完整结构、逐文件外部冲突及原请求幂等；治理登记和决定通过 `governed` 共享此队列，避免批准检查与提交之间出现其他决定或写入。
+
+`governance-port.ts` 只声明 Main 内部端口，不进入 ChangeRequest 或模型工具输入。普通 `commit(request)` 永远不接 permit。可信 `apply(intentId)` 由私有治理账本解析精确请求，最终投影门禁在 prepared journal 之前执行；任何准备失败都不取得额外权限。
+
+Journal 的可选 governance 绑定保留 intent/protection/proposal/decision ID；旧无治理日志保持兼容。只读原回执同时核完整请求指纹、before/after 键和值、请求差异、派生索引范围及 committed.changed。治理日志再核私有提案的精确前后正文；仅形状合法的 result 不代表真实知识已提交。
+
+新提交在进入队列和开始时仍要求 running。已经开始事务、正在验证投影或治理门禁时，close/restart 只进入 closing 并等待 drain；门禁返回后继续核原身份和知识版本，不把 closing 当成取消已受理提交。治理实施在进入实际知识事务之后遵循同一规则；尚未开始的旧意图不会因此自动执行。
+
+重开对原未完成事务执行既有安全回滚，不重放实施意图。治理记录按文件 ID 和私有 intent 双向识别，在回滚前验证来源；删除 journal 内的 governance 字段不能绕过核验。已提交之后的展示或响应失败不会撤销知识结果，后续查询只读取原日志。关闭等待队列排空再释放工作区锁。

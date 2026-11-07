@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主会话任务图、目标与准入状态；依赖追加/替换只读历史核对身份和节点修订，摘要按实际版本选择最新，图沿真实启用边排列，不补造结果。运行内补充按真实接收记录显示，未知优先旧审阅，同版摘要/详情核对后增量呈现。根停止使用独立在途标记，插入等待不锁住停止按钮。等待补充共享多来源草稿与导入锁，原等待选择代次阻止迟到导入；明确目录/链接/网页/授权仓库来源，普通聊天草稿独立。流程、验证、检查点、基线、人工决定与用量保留各自冻结身份和证据，不把历史当当前验收。 成员卡片、节点详情和目标分配展示原岗位及模型；手动核实当前配置独立显示差异，迟到响应按原任务/修订隔离。
+主会话任务图、目标与准入状态；依赖追加/替换只读历史核对身份和节点修订，摘要按实际版本选择最新，图沿真实启用边排列，不补造结果。运行内补充按真实接收记录显示，未知优先旧审阅，同版摘要/详情核对后增量呈现。根停止使用独立在途标记，插入等待不锁住停止按钮。等待补充共享多来源草稿与导入锁，原等待选择代次阻止迟到导入；明确目录/链接/网页/授权仓库来源，普通聊天草稿独立。流程、验证、检查点、基线、人工决定与用量保留各自冻结身份和证据，不把历史当当前验收。 成员卡片、节点详情和目标分配展示原岗位及模型；手动核实当前配置独立显示差异，迟到响应按原任务/修订隔离。 主对话、图和详情区分显式交接放弃与普通封存，保留原岗位和运行；审阅中的原/新任务仅按同周期真实节点导航。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -37,7 +37,7 @@
 | [member-activity.css](member-activity.css) | 主对话中的成员活动卡片与任务节点详情排版。 |
 | [member-cancellation-state.ts](member-cancellation-state.ts) | 为成员卡、任务节点和详情提供未启动撤销的统一只读投影。 |
 | [member-checkpoint-state.ts](member-checkpoint-state.ts) | 将同任务的检查点交接和后续运行投影为成员卡片、节点与详情共用的只读状态。 |
-| [member-checkpoint.css](member-checkpoint.css) | 成员检查点的只读交接、预约和轮次引用排版。 |
+| [member-checkpoint.css](member-checkpoint.css) | 成员检查点的只读交接、预约、放弃审计和轮次引用排版。 |
 | [member-dependency-state.ts](member-dependency-state.ts) | 将任务节点的前置追加和替换审计转换为主对话和任务详情共用的只读历史投影。 |
 | [member-dependency.css](member-dependency.css) | 排版成员前置追加和替换的只读历史，供主对话摘要与任务详情共用。 |
 | [member-event-state.ts](member-event-state.ts) | 把成员公开事件分页归并为稳定的运行视图，供卡片与任务详情共用。 |
@@ -47,7 +47,7 @@
 | [MemberActivity.tsx](MemberActivity.tsx) | 在主对话中展示最近的成员任务与公开执行动态，并链接到对应任务节点详情。 |
 | [MemberArtifactReport.tsx](MemberArtifactReport.tsx) | 成员节点详情中的独立文件基线面板，手动列出记录并复核明确选择的一份。 |
 | [MemberCancellationNotice.tsx](MemberCancellationNotice.tsx) | 在主对话成员卡和任务详情中显示主调度已经提交的未启动撤销事实。 |
-| [MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx) | 在主对话和任务详情展示检查点、续执行预约与新旧轮次关系。 |
+| [MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx) | 在主对话和任务详情展示检查点、续执行预约、显式放弃与新旧轮次关系。 |
 | [MemberDependencyNotice.tsx](MemberDependencyNotice.tsx) | 在成员动态和任务详情中展示主调度已提交的前置追加/替换原因，以及当时的前置或候选身份。 |
 | [MemberExecutionReport.tsx](MemberExecutionReport.tsx) | 在任务节点详情中展示一次显式核实的派发、日志与工具回执报告，独立于成员流式正文。 |
 | [MemberHelpNotice.tsx](MemberHelpNotice.tsx) | 在主对话成员卡和任务详情中只读呈现已经结算的求助交接记录。 |
@@ -60,7 +60,7 @@
 | [OwnerExecutionInspection.tsx](OwnerExecutionInspection.tsx) | 在选中任务详情中显式核实当前负责人、能力和模型与原派发是否一致。 |
 | [recovery-state.ts](recovery-state.ts) | 保存用户从异常报告新建只读核实周期的草稿、冻结命令和受理回执。 |
 | [replan-state.ts](replan-state.ts) | 保存从已完成核实周期创建正式业务周期的独立草稿、条件预览和稳定提交命令。 |
-| [scope-goal.css](scope-goal.css) | 对话摘要与任务根详情共用的目标计划卡片、历史选择和证据排版。 |
+| [scope-goal.css](scope-goal.css) | 对话摘要与任务根详情共用的目标计划卡片、历史选择、证据及任务替代引用排版。 |
 | [scope-replan.css](scope-replan.css) | 正式业务重规划表单与条件核验摘要排版，嵌入既有目标卡。 |
 | [scope-state.ts](scope-state.ts) | 主会话目标周期的增量投影和展示状态，供对话摘要与任务根详情共用。 |
 | [scope-usage-state.ts](scope-usage-state.ts) | 管理任务周期用量的一次显式读取，并验证返回身份、计量来源与汇总一致性。 |
@@ -965,6 +965,7 @@ class N_src_frontend_tasks_member_checkpoint_state_ts_MemberCheckpointView["Memb
   +record
   +invalid
   +phase
+  +abandonment
   +resumedRunId
 }
 N_src_frontend_tasks_member_checkpoint_state_ts ..> N_src_frontend_tasks_member_checkpoint_state_ts_MemberCheckpointView : 声明
@@ -1811,6 +1812,7 @@ class N_src_frontend_tasks_ScopeContinuationForm_tsx["ScopeContinuationForm.tsx"
 classDiagram
 class N_src_frontend_tasks_ScopeGoalPanel_tsx["ScopeGoalPanel.tsx"] {
   <<component>>
+  +goalTaskReference()
   +ScopeGoalPanel()
 }
 ```
@@ -1825,6 +1827,7 @@ class N_src_frontend_tasks_ScopeGoalPanel_tsx_ScopeGoalPanelProps["ScopeGoalPane
   +state
   +compact
   +testId
+  +onSelectTask
   +continuation
   +replan
   +humanDecisions
@@ -3008,6 +3011,14 @@ N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts 
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 负责人交接与历史定位
+
+`memberCheckpointView` 严格核对显式 `checkpointAbandonment` 的周期、原运行、检查点、预约、计划及任务版本；只有 cancelled 且未产生第二 run 的原任务才显示“已为交接放弃”。普通取消/失败/中断仍为封存，缺失或损坏审计不补造原因，也不冒充“从未执行”。主对话、图标签及详情共用这一投影，无额外轮询。
+
+检查点卡保留原原因与预约说明，另列处置原因、原主运行、命令、版本、租约变化及时间；租约只是当时事实，不要求今天仍等于该值。原岗位与模型继续由 `OwnerExecutionDetails` 展示，当前负责人另经显式核实。没有处置/恢复按钮，渲染进程不能冒用主调度身份。
+
+目标审阅中的 `superseded` 保留真实原任务与新成果关系；`goalTaskReference` 仅允许所选周期与图、唯一任务的 workspace/root/scope 全部一致时打开已有详情。缺失节点只显示原 ID，不选择其他会话同名任务；选择不执行工具、不改变边、负责人、草稿或验收意见。两处目标卡复用已有导航，不创建新执行连线。
 
 ### 运行内补充与目标输入版本
 

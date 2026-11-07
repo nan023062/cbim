@@ -1,7 +1,7 @@
 /**
- * 作用定位：主调度九个工具的公开业务输出契约与可信调用归属校验。
+ * 作用定位：主调度十个工具的公开业务输出契约与可信调用归属校验。
  * 设计原因：JSON 可解析不代表目标、图或回执属于本次调用；唯一 wire 核对身份、Workflow 与负责人原始选择，不将解析后补值当作原请求事实。
- * 职责边界：排队、追加/替换前置及续执行预约均不是执行完成；输出失败不撤销可能已提交的事务，也不授权自动重试。
+ * 职责边界：排队、追加/替换前置及续执行预约均不是执行完成；检查点放弃只取消原待办，输出失败不撤销已提交事务，也不授权自动重试。
  */
 import {z} from 'zod';
 import {graphCursorSchema,graphSnapshotSchema,taskNodeSchema,validateGraph} from './graph-rules';
@@ -12,6 +12,7 @@ import {dependencyReplacementSchema,type ReplaceQueuedDependencyInput} from './q
 import {dependencyAdditionSchema,type AddQueuedDependencyInput} from './queued-dependency-addition';
 import type {CancelQueuedTasksInput} from './queued-task-cancel';
 import type {ResumeMemberInput} from './queued-member-resume';
+import {abandonCheckpointReceiptSchema,type AbandonCheckpointInput} from './checkpoint-handoff';
 export {projectMainScope,mainToolScopeSchema} from './main-tool-scope';
 export type {MainToolScope} from './main-tool-scope';
 
@@ -39,6 +40,7 @@ export const mainToolOutputSchemas={
   cbim_dispatch_replace_dependency:replaceQueuedDependencyOutputSchema,
   cbim_dispatch_add_dependency:addQueuedDependencyOutputSchema,
   cbim_dispatch_resume:resumeMemberOutputSchema,
+  cbim_dispatch_abandon_checkpoint:abandonCheckpointReceiptSchema,
 } as const;
 export type MainToolName=keyof typeof mainToolOutputSchemas;
 export type MainToolOutput<N extends MainToolName>=z.infer<(typeof mainToolOutputSchemas)[N]>;
@@ -94,6 +96,13 @@ function validateMainToolOutput(name:MainToolName,value:unknown,expected:MainToo
     const result=value as MainToolOutput<'cbim_dispatch_resume'>,request=input as ResumeMemberInput;
     if(!sameIdentity(result.cursor)||result.taskId!==request.taskId||result.checkpointId!==request.checkpointId||result.trackedTaskIds[0]!==result.taskId)issue('预约回执与原任务或检查点不一致');
     cursorCheck(result.cursor,request.expectedGraphCursor);return;
+  }
+  if(name==='cbim_dispatch_abandon_checkpoint'){
+    const receipt=value as MainToolOutput<'cbim_dispatch_abandon_checkpoint'>,request=input as AbandonCheckpointInput,record=receipt.abandonment;
+    if(!sameIdentity(receipt)||receipt.scopeId!==binding.scopeId||receipt.mainRunId!==binding.runId)issue('检查点放弃回执不属于当前主运行');
+    commandCheck(receipt.commandId);cursorCheck(receipt.graphCursor,request.expectedGraphCursor);
+    if(receipt.taskId!==request.taskId||record.commandId!==receipt.commandId||record.scopeId!==binding.scopeId||record.mainRunId!==binding.runId||record.checkpointId!==request.checkpointId||record.resumeRequestId!==request.expectedResumeRequestId||record.previousTaskRevision!==request.expectedRevision||record.planRevision!==request.expectedPlanRevision||record.goalRevision!==request.expectedGoalRevision||record.reason!==request.reason||!sameGoalValue(record.graphCursor,request.expectedGraphCursor))issue('检查点放弃审计与原请求及任务基线不一致');
+    return;
   }
   const result=value as MainToolOutput<'cbim_dispatch_cancel'>|MainToolOutput<'cbim_dispatch_replace_dependency'>|MainToolOutput<'cbim_dispatch_add_dependency'>;
   if(!sameIdentity(result)||result.scopeId!==binding.scopeId||result.mainRunId!==binding.runId)issue('调度变更回执不属于当前主运行');commandCheck(result.commandId);

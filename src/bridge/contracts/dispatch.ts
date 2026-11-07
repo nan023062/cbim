@@ -1,6 +1,6 @@
 /**
  * 作用定位：向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。
- * 设计原因：前端经 Bridge 消费 Core 契约，不导入调度或文件存储；依赖追加/替换只公开已提交审计，运行中补充只公开持久尝试，检查点只公开交接与预约，不导出执行许可或凭据。
+ * 设计原因：前端经 Bridge 消费 Core 契约，不导入调度或文件存储；检查点公开交接、预约与显式放弃的审计，均不代表执行许可、业务成果或回滚。
  */
 export type {GraphIdentity,GraphCursor,GraphSnapshot,GraphDelta,GraphEventBatch,GraphChange,TaskNode,GraphEdge,AgentGraphView} from '../../backend/core/tasks/graph-types';
 export type {DependencyReplacement} from '../../backend/core/tasks/queued-dependency-replacement';
@@ -9,6 +9,8 @@ export type {DependencyAddition} from '../../backend/core/tasks/queued-dependenc
 export {dependencyAdditionSchema} from '../../backend/core/tasks/queued-dependency-addition';
 export type {MemberCheckpointRecord} from '../../backend/core/tasks/member-checkpoint';
 export {memberCheckpointRecordSchema} from '../../backend/core/tasks/member-checkpoint';
+export type {AbandonCheckpointInput,CheckpointAbandonment,AbandonCheckpointReceipt} from '../../backend/core/tasks/checkpoint-handoff';
+export {abandonCheckpointInputSchema,checkpointAbandonmentSchema,abandonCheckpointReceiptSchema} from '../../backend/core/tasks/checkpoint-handoff';
 export type {MemberResumeRequest} from '../../backend/core/tasks/queued-member-resume';
 export {memberResumeRequestSchema} from '../../backend/core/tasks/queued-member-resume';
 export type {OpenGraphInput,CreateMemberInput,DispatchTaskInput,OpenGraphReceipt,CreateMemberReceipt,DispatchReceipt} from '../../backend/core/tasks/dispatch-commands';

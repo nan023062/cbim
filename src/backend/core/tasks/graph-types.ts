@@ -1,6 +1,6 @@
 /**
  * 作用定位：任务派发图的可序列化领域契约，供调度、持久化和 Bridge 共同引用。
- * 设计原因：把登记岗位、执行实例、任务与轮次分开；负责人绑定永久保留原版本，前置修订和检查点不能改换岗位、执行方法或冒充结果。
+ * 设计原因：把登记岗位、执行实例、任务与轮次分开；负责人绑定永久保留原版本，检查点交接放弃只增加终止审计，不能改换岗位、执行方法或冒充结果。
  * 职责边界：这里只声明事实形状；权限、知识核实、磁盘提交和模型执行由各自服务负责。
  */
 import type {MemberHelpRecord} from './member-help';
@@ -9,6 +9,7 @@ import type {DependencyReplacement} from './queued-dependency-replacement';
 import type {DependencyAddition} from './queued-dependency-addition';
 import type {MemberCheckpointRecord} from './member-checkpoint';
 import type {MemberResumeRequest} from './queued-member-resume';
+import type {CheckpointAbandonment} from './checkpoint-handoff';
 import type {WorkflowSelection} from './workflow-selection';
 import type {OwnerExecutionBinding} from '../team/member-execution-binding';
 export type GraphIdentity = {workspaceId:string;rootSessionId:string};
@@ -56,6 +57,8 @@ export type TaskNode = {
   checkpoints?:MemberCheckpointRecord[];
   /** 主调度显式预约的不可变信封引用；存在不表示已经领取或运行。 */
   resumeRequest?:MemberResumeRequest;
+  /** 主调度明确终止未消费检查点的历史；只撤销原待办，不改变岗位或产生新结果。 */
+  checkpointAbandonment?:CheckpointAbandonment;
   /** 仅主调度明确撤销且从未领取的任务存在；普通运行停止或周期关闭不补造此记录。 */
   cancelledBeforeStart?:QueuedTaskCancellation;
   /** 主调度显式换入真实前置候选的历史；只追加，不改变本任务计划或把旧来源标为成功。 */

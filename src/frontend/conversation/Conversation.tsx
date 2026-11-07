@@ -1,7 +1,7 @@
 /**
  * 作用定位：会话双页签入口（对话/本会话任务），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。
  * 设计原因：主运行、开放周期和准入等待分开。配额不足保留首轮草稿，已受理协作使用只读票据提示；无实际占用时停止工作动画和等待期间计时。目标补充、核实与业务重规划仍使用各自可靠意图，不因容量等待重放旧任务。 人工决定草稿和未知请求在两处目标卡共享，记录与任务恢复分离。 人工决定接续与文本补充分开，共享意图但不共享自动启动权。
- * 导航边界：全局运行页只传一次性原会话定位请求；核对实例、图与周期后选节点，消费后不反复覆盖用户选择，不修改输入、附件或运行状态。
+ * 导航边界：全局运行页传一次性原会话定位请求，目标审阅也可定位本周期原任务/替代成果；均只选择真实节点，不修改输入、附件或运行状态。
  * 插入边界：两处操作在点击时冻结主 runId；先入队成功再清草稿，插入失败只刷新真实队列，不跨轮重发或误删消息。
  * 资料边界：切到其他会话时本组件可能只被隐藏；必须把 active 传给补充控制器，撤销未完成的资料导入并隔离迟到回包。
  */
@@ -173,7 +173,7 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
       {!tab.taskId&&<div className="chat-welcome"><span className="overline">CBIM · 主 Agent</span><h2>有什么可以帮你？</h2><p>聊聊想法，提出问题，或告诉我你想完成的工作。</p></div>}
       {tab.taskId&&!loaded&&!runs.length&&<p role="status">正在读取对话记录…</p>}
       <ThreadHistoryNotice issues={threadIssues}/>
-      {tab.taskId&&<ScopeGoalPanel state={graph} compact testId="conversation-goal-summary" continuation={continuation} replan={replan} humanDecisions={humanDecisions} humanContinuation={humanContinuation}/>}
+      {tab.taskId&&<ScopeGoalPanel state={graph} compact testId="conversation-goal-summary" onSelectTask={viewMember} continuation={continuation} replan={replan} humanDecisions={humanDecisions} humanContinuation={humanContinuation}/>}
       {latest?.task.workflowContext&&<details className="chat-context"><summary>任务上下文 · {latest.task.goal.slice(0,80)}</summary><p>模块：{latest.task.moduleIds.join('、')}<br/>Agent：{latest.task.agentId}<br/>Workflow：{latest.task.workflowContext?.workflowId}<br/>责任人：{latest.task.responsiblePerson||'未指定'}</p><ul>{latest.task.acceptance.map((a,i)=><li key={i}>{a}</li>)}</ul></details>}
       {runs.map(run=>{const items=transcript(run);return <section key={run.runId} className="chat-turn" aria-label="对话轮次">
         {items[0]?.kind==='system'&&<p className="chat-model-notice" role="status">{items[0].text}</p>}

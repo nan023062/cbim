@@ -563,3 +563,13 @@ Progress 保存前独立冻结验证记录，原 wire 证明必须能由这些�
 两个原登记门禁只接受该完整验证返回的精确许可，不能因出现 source 字段就忽略混合写。其他岗位、责任、图、实例、会话、信封、运行或周期集合即使空数组也不能夹带。已有来源采纳不产生 capture；builtin 不产生 workspace generation。任一 pending 阻止新捕获、能力采纳和负责人设置，但不阻止保留原来源的元信息/模型/状态变化或责任解除；退休仍须先解除真实责任引用。
 
 原日志在首次来源追踪前没有 selection/ref 的历史保持原样；来源开始追踪后，新来源消费者必须提供完整选择与当前引用。控制面来源屏障不宣称已经覆盖旧成员派发，实际负责人运行接线属于后续范围。
+
+## 检查点交接放弃（Step34）
+
+`checkpoint-handoff.ts` 定义 `cbim_dispatch_abandon_checkpoint` 的严格请求、`checkpointAbandonment` 和回执。请求只含原图/目标/任务/计划版本、检查点、显式 nullable 恢复预约及理由，不接新负责人或证明。新字段缺省保留旧历史；`abandoned_by_handoff` 只说明原待办已取消，不代表新岗位已执行、业务验收或副作用回滚。
+
+`checkpoint-handoff-rules.ts` 选择同一 active 周期、最新登记主运行下的唯一未消费检查点。原段必须 completed、有完整私有 proof、空闲未释放实例和原通道；已领取预约、第二个 run、结果/求助或未决运行内补充均拒绝。旧岗位、知识、模型或文件当前变化不阻止明确终止；可信服务仍须核原 canonical 与冻结 proof，不能以结构通过代替历史核验。
+
+`checkpoint-handoff-invariants.ts` 先完整核验，再向检查点状态机提供按主会话与任务编码的窄许可。唯一事务只能包含原任务 cancelled/revision+1/不可变审计、原空闲实例 leaseEpoch+1、对应图投影 revision+1、可选原 pending 恢复 assignment processed 及严格回执；未知集合或混合写入拒绝。原 checkpoint 信封不改动，可独立迟到 ACK。放弃后的整个 TaskNode 不再改写，后续周期关闭可以再次提高实例租约，历史审计仍保留原 before/after 值。
+
+Store 继续用同一串行提交、原命令回执和原协议裁决，不增第二份日志或后台恢复。第十项主输出在一次原 wire 上核对真实调用身份及精确请求；坏回包不回滚、不重复提交。`cbim_dispatch_` 的统一证据排除覆盖本工具，其成功回执不能成为业务步骤/交付或人工接受的证明。新任务、领取与 resume 仍受负责人当前资格门禁约束，交接终止不为它们开例外。

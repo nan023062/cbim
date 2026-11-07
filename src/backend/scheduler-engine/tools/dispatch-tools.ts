@@ -1,5 +1,5 @@
 /**
- * 作用定位：把主调度的派发、查询、未启动撤销、追加/替换依赖及一次检查点续执行预约转换为内部工具，并组合目标工具。
+ * 作用定位：把主调度的派发、查询、未启动撤销、依赖修订及检查点预约/明确放弃转换为内部工具，并组合目标工具。
  * 设计原因：模型明确提交发现所得 ownerSelection、角色、模块和 Workflow；不自动填默认角色。可信闭包固定身份，严格输入拒绝夹带授权，输出核同一份 wire，失败不回滚或重做已入队事实。
  * 职责边界：派发只是入队，续执行只是预约，撤销和依赖修订只记录调度事实，不算验收。本模块不装配成员递归派发、活动任务中止或手工结果工具。
  */
@@ -15,12 +15,17 @@ import type {MainToolOutputBinding} from '../../core/tasks/main-tool-output';
 import {checkedMainToolResult,mainToolContract} from './main-tool-contracts';
 import type {GoalTools} from './goal-tools';
 import {resumeMemberInputSchema,type ResumeMemberInput,type ResumeMemberReceipt} from '../../core/tasks/queued-member-resume';
+import {abandonCheckpointInputSchema,type AbandonCheckpointInput,type AbandonCheckpointReceipt} from '../../core/tasks/checkpoint-handoff';
 
 const {assigneeAgentId,...taskFields}=dispatchTaskFields.shape;
 // 角色只核对岗位能力，不再作为默认路由；实际岗位预期来自模块负责人发现。
 const taskInput=z.object({agentId:assigneeAgentId.refine(id=>id!=='cbim:main','主 Agent 只能调度，不能承担执行任务'),...taskFields}).strict().superRefine((value,context)=>{if(!value.ownerSelection)context.addIssue({code:'custom',message:'必须提供模块负责岗位的 ownerSelection'});try{validateWorkflowSelections(value.moduleIds,value.workflowSelections)}catch{context.addIssue({code:'custom',message:'Workflow 选择必须属于本次任务模块'})}});
 const inspectInput=z.object({taskId:z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/).optional()}).strict();
 const definitions={
+  cbim_dispatch_abandon_checkpoint:{
+    description:'明确放弃当前活动周期尚未消费的可靠检查点及可选恢复预约，供负责人变更后的交接。先读取原图与目标，提交 expectedGraphCursor、expectedGoalRevision、taskId、expectedRevision、expectedPlanRevision、checkpointId、expectedResumeRequestId（未预约明确 null）和 reason。只取消原待办并保存审计，不迁移原任务、不运行或回滚、不证明业务完成；当前知识/文件/模型变化不阻止历史处置，损坏或缺失原 canonical 则拒绝。旧后继仍阻塞，按需显式撤销完整未启动闭包，再按当前负责岗位重新规划/派发；complete 仍须真实新候选逐项 superseded。未知回包先查原任务 checkpointAbandonment，不换调用重做。',
+    schema:abandonCheckpointInputSchema,effects:['maintenance'] as const,
+  },
   cbim_dispatch_add_dependency:{
     description:'为当前目标内尚未领取的既有任务追加一条结果前置，可先创建 B/C 再创建 A，并把 A 设为 B 的前置。先读目标及任务图，传 expectedGraphCursor/expectedGoalRevision、source/target 的 taskId/expectedRevision/expectedPlanRevision 和 reason。两端及全部启用依赖后继必须均未领取、未运行且匹配当前计划、知识和 Workflow；自身、重复、成环或未确认输入都拒绝。仅增加这条边并令原目标等待，不改角色、任务目标、权限或信封，不删除旧前置。保存后结束本主轮，仍需真实来源结果和预算准入才会执行；回执不是业务证据，未知时先查原审计，不换调用重加。',
     schema:addQueuedDependencyInputSchema,effects:['maintenance'] as const,
@@ -67,6 +72,8 @@ export interface DispatchToolsPort {
   addDependency?(input:AddQueuedDependencyInput,invocation:DispatchToolInvocation):Promise<AddQueuedDependencyReceipt>;
   /** 仅当前主轮预约，成员实际续执行在本主轮安全结束后另经领取门禁。 */
   resume?(input:ResumeMemberInput,invocation:DispatchToolInvocation):Promise<ResumeMemberReceipt>;
+  /** 只终止未消费的旧待办；原运行与证明不变，历史读取和最终 CAS 由服务负责。 */
+  abandonCheckpoint?(input:AbandonCheckpointInput,invocation:DispatchToolInvocation):Promise<AbandonCheckpointReceipt>;
 }
 
 /** 工具解析在权限检查前和执行前各做一次，不默默剥离模型提供的额外字段。 */
@@ -74,7 +81,7 @@ export class DispatchTools {
   private readonly binding:MainToolOutputBinding;
   constructor(private readonly port:DispatchToolsPort,private readonly goals?:GoalTools){this.binding=Object.freeze(structuredClone(port.binding))}
   /** 只有装配了真实端口才构造本对象；返回值不包含未来工具占位。 */
-  private available(name:string){return (name!=='cbim_dispatch_cancel'||!!this.port.cancel)&&(name!=='cbim_dispatch_replace_dependency'||!!this.port.replaceDependency)&&(name!=='cbim_dispatch_add_dependency'||!!this.port.addDependency)&&(name!=='cbim_dispatch_resume'||!!this.port.resume)}
+  private available(name:string){return (name!=='cbim_dispatch_cancel'||!!this.port.cancel)&&(name!=='cbim_dispatch_replace_dependency'||!!this.port.replaceDependency)&&(name!=='cbim_dispatch_add_dependency'||!!this.port.addDependency)&&(name!=='cbim_dispatch_resume'||!!this.port.resume)&&(name!=='cbim_dispatch_abandon_checkpoint'||!!this.port.abandonCheckpoint)}
   list(){return [...Object.entries(definitions).filter(([name])=>this.available(name)).map(([name,d])=>({name,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>,...mainToolContract(name as DispatchToolName)})),...(this.goals?.list()??[])]}
   /** 名称检测不执行操作，供 Loop 在知识工具之前选择本适配器。 */
   has(name:string):boolean{return (Object.hasOwn(definitions,name)&&this.available(name))||!!this.goals?.has(name)}
@@ -100,6 +107,7 @@ export class DispatchTools {
     else if(parsed.name==='cbim_dispatch_replace_dependency')value=await this.port.replaceDependency!(parsed.args as ReplaceQueuedDependencyInput,{toolCallId,signal});
     else if(parsed.name==='cbim_dispatch_add_dependency')value=await this.port.addDependency!(parsed.args as AddQueuedDependencyInput,{toolCallId,signal});
     else if(parsed.name==='cbim_dispatch_resume')value=await this.port.resume!(parsed.args as ResumeMemberInput,{toolCallId,signal});
+    else if(parsed.name==='cbim_dispatch_abandon_checkpoint')value=await this.port.abandonCheckpoint!(parsed.args as AbandonCheckpointInput,{toolCallId,signal});
     else{const {agentId,...task}=parsed.args as z.infer<typeof taskInput>;value=await this.port.dispatch({...task,assigneeAgentId:agentId},{toolCallId,signal})}
     return checkedMainToolResult(parsed.name,value,this.binding,expectedInput,toolCallId);
   }

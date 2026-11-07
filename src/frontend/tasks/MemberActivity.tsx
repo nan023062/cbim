@@ -1,6 +1,6 @@
 /**
  * 作用定位：在主对话中展示最近的成员任务与公开执行动态，并链接到对应任务节点详情。
- * 设计原因：执行成员输出保持原岗位署名和冻结模型，默认只展开最近一段公开回复；旧绑定缺省不猜岗位，检查点、求助和调度审计只读真实记录，停泊不显示成完成。
+ * 设计原因：执行成员输出保持原岗位署名和冻结模型，默认只展开最近一段公开回复；检查点显式放弃与普通取消分开标记，旧绑定缺省不猜岗位，调度审计不冒充业务完成。
  */
 import {useState} from 'react';
 import type {TaskNode} from '../../bridge/contracts/dispatch';
@@ -19,7 +19,7 @@ import './member-activity.css';
 
 export const memberTaskLabels:Record<TaskNode['status'],string>={planned:'待安排',queued:'待执行',running:'正在执行',waiting:'等待前置任务',checkpointed:'已保存检查点',result_ready:'交付待审阅',blocked:'需要处理',failed:'执行失败',cancelled:'已停止',interrupted:'执行中断'};
 /** 求助与未启动撤销必须有可信记录；普通 cancelled 仍只表示已停止，已领取 queued 只表示启动中。 */
-export function memberTaskLabel(task:TaskNode){const checkpoint=memberCheckpointView(task);return committedMemberCancellation(task)?memberCancellationLabel:committedMemberHelp(task)?'需要主调度协助':checkpoint.phase==='queued'?checkpointPhaseLabels.queued:task.status==='queued'&&task.activeRunId?'正在启动':memberTaskLabels[task.status]}
+export function memberTaskLabel(task:TaskNode){const checkpoint=memberCheckpointView(task);return committedMemberCancellation(task)?memberCancellationLabel:committedMemberHelp(task)?'需要主调度协助':checkpoint.phase==='abandoned'?checkpointPhaseLabels.abandoned:checkpoint.phase==='queued'?checkpointPhaseLabels.queued:task.status==='queued'&&task.activeRunId?'正在启动':memberTaskLabels[task.status]}
 
 function MemberActivityCard({workspaceId,rootSessionId,task,onSelectTask,active}:{workspaceId:string;rootSessionId:string;task:TaskNode;onSelectTask:(id:string)=>void;active:boolean}){
   const [expanded,setExpanded]=useState(false),latest=task.runIds.at(-1),cancellation=committedMemberCancellation(task);

@@ -40,7 +40,7 @@
 
 `cbim_goal_plan` 的主角色分工仍可绑定治理 moduleIds，但不得带 `workflowSelections`；工具在实际端口前拒绝，避免将未执行的业务流程包装为知识治理完成。执行角色选择规则不变。
 
-当前适配器已实现 `cbim_dispatch_task`、`cbim_dispatch_inspect`、`cbim_dispatch_cancel`、`cbim_dispatch_replace_dependency`、`cbim_dispatch_add_dependency` 和 `cbim_dispatch_resume`。后四项分别只有真实 `cancel`、`replaceDependency`、`addDependency`、`resume` 端口存在时注册；兼容装配不广告或接受不存在的能力。主 Agent 永远不能成为执行者；省略 agentId 使用静态默认执行角色 `cbim:executor`。执行成员没有派发、撤销、追加/替换依赖或续执行预约权，其他未实现名称不进入活动清单。
+当前适配器已实现 `cbim_dispatch_task`、`cbim_dispatch_inspect`、`cbim_dispatch_cancel`、`cbim_dispatch_replace_dependency`、`cbim_dispatch_add_dependency`、`cbim_dispatch_resume` 和 `cbim_dispatch_abandon_checkpoint`。后五项分别只有真实 `cancel`、`replaceDependency`、`addDependency`、`resume`、`abandonCheckpoint` 端口存在时注册；兼容装配不广告或接受不存在的能力。主 Agent 永远不能成为执行者；业务派发必须显式提供当前岗位的 `ownerSelection` 与对应 `agentId`，不默认回退 `cbim:executor`。执行成员没有派发、撤销、依赖修订、续执行预约或检查点放弃权，其他未实现名称不进入活动清单。
 
 `DispatchTools` 可以通过第二个构造参数组合真实 `GoalTools`。缺省不注册任何目标工具，已有派发端口保持不变；组合后 list、has、describe、call 都按实际名称转交目标适配器，不因 `cbim_goal_` 前缀接受未知操作。
 
@@ -138,3 +138,7 @@ raw 输入在任何领域调用前严格校验；发送端口的对象与原期�
 责任工具的原严格 change 协议增加 `kind:adopt_source`，只带原绑定、模块和理由，不接 nextOwner/来源证明；由真实主工厂复用服务采纳当前来源。唯一输出 wire 核 action=adopt_source、原负责人和原 bindingId，不能把缺省 nextOwner 误判为解除。权限仍为原 knowledge-write，回执仍排除业务验收，未知后只查原 commandId。
 
 岗位进入执行后，明确模块 inspect 另返回按真实岗位分组的执行选择与缺口，选择不保证未来领取、凭据或供应商可用。业务 goal/dispatch 输入必须明确 ownerSelection；服务重建 ownerBinding，不能靠模型声明身份、主模型选型或默认执行者补齐。工具仍在唯一 wire 校验实际输入/绑定，保存后坏回包不得重新派工。
+
+### 检查点交接放弃
+
+`cbim_dispatch_abandon_checkpoint` 仅在主调度装配真实端口时注册，effects 为 maintenance，取消说明为受理前检查，未知结果先 inspect 原任务的 checkpointAbandonment。请求明确图/目标/任务/计划/检查点版本及可空的原恢复预约 ID；workspace/root/scope/run/command 从可信闭包取得。独立冻结输入后才调用服务，回执只编码一次并核原身份和审计，不因输出错误重新放弃。回执不能用作业务或人工验收证据，不证明已回滚、迁移或执行新任务。

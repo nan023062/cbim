@@ -70,3 +70,26 @@ it('成员检查点只改变当前周期摘要，不把历史停泊或主周期�
   expect(scopeGoalView(scope,graph()).phase).toBe('member_checkpoint');expect(scopeGoalView({...scope,scopeId:'other'},graph()).phase).toBe('planning');expect(scopeGoalView({...scope,status:'waiting'},graph()).phase).toBe('waiting');
   expect(scopeGoalView({...scope,status:'closed',outcome:'interrupted'},graph()).phase).toBe('interrupted');
 });
+
+function abandoned(source=task()):TaskNode{return {...source,status:'cancelled',revision:source.revision+1,waitReason:'负责人已更换，保留旧工作并重新派发',checkpointAbandonment:{kind:'abandoned_by_handoff',commandId:'handoff-command',scopeId:'scope',mainRunId:'main-run',graphCursor:{streamId:'stream',seq:5},goalRevision:2,previousTaskRevision:source.revision,planRevision:source.planRevision,checkpointId:'checkpoint',sourceRunId:'source-run',resumeRequestId:source.resumeRequest?.requestId??null,previousLeaseEpoch:1,nextLeaseEpoch:2,reason:'负责人已更换，保留旧工作并重新派发',abandonedAt:time}}}
+
+it('显式交接放弃展示原检查点及处置事实；预约说明保留但不显示仍可续执行',()=>{
+  for(const source of [task(),queued()]){
+    const value=abandoned(source),html=notice(value),snapshot=graph(value);
+    expect(memberCheckpointView(value).phase).toBe('abandoned');expect(memberTaskLabel(value)).toBe('已为交接放弃');
+    expect(html).toContain('data-phase="abandoned"');expect(html).toContain('handoff-command');expect(html).toContain('负责人已更换');expect(html).toContain('后续需要重新验证');expect(html).toContain('放弃不代表业务完成或回滚');expect(html).not.toMatch(/<(button|input|form)\b/);
+    if(source.resumeRequest)expect(html).toContain('原预约已随交接处置，未启动');
+    const nodes=renderToStaticMarkup(createElement(DispatchGraph,{graph:snapshot,root:sessionRoot([],identity.rootSessionId,0,snapshot),onSelectTask:()=>{}}));
+    expect(nodes.match(/data-testid="dispatch-task-node"/g)).toHaveLength(1);expect(nodes).toContain('已为交接放弃');expect(nodes).toContain('data-from="session:root" data-to="task:member"');
+    expect(notice(value,'foreign')).toBe('');expect(memberCheckpointView({...value,revision:value.revision+2}).invalid).toBe(true);
+  }
+});
+
+it('普通封存不补造放弃审计；损坏或跨身份处置不泄漏原因且不借用新run',()=>{
+  const value=abandoned(),audit=value.checkpointAbandonment!;
+  expect(notice({...value,checkpointAbandonment:undefined})).toContain('data-phase="sealed"');
+  const malformed:TaskNode[]=[{...value,checkpoints:undefined},{...value,status:'checkpointed'}, {...value,revision:audit.previousTaskRevision}, {...abandoned(queued()),checkpointAbandonment:{...abandoned(queued()).checkpointAbandonment!,resumeRequestId:null}}, {...value,runIds:['source-run','new-run']},{...value,activeRunId:'source-run'}];
+  for(const key of ['scopeId','sourceRunId','checkpointId','resumeRequestId'] as const)malformed.push({...value,checkpointAbandonment:{...audit,[key]:'foreign'}});
+  malformed.push({...value,checkpointAbandonment:{...audit,nextLeaseEpoch:9}},{...value,checkpointAbandonment:{...audit,planRevision:9}},{...value,waitReason:'不同处置'},{...value,checkpointAbandonment:{...audit,previousLeaseEpoch:8,nextLeaseEpoch:9}});
+  for(const broken of malformed){expect(memberCheckpointView(broken).invalid).toBe(true);const html=notice(broken);expect(html).toContain('member-checkpoint-invalid');expect(html).not.toContain('负责人已更换');expect(html).not.toContain('已为交接放弃')}
+});

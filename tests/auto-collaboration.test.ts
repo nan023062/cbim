@@ -14,6 +14,7 @@ import {mainToolOwnerSelection,mainToolReplacement} from './main-tool-output-fix
 import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
 import type {AddQueuedDependencyInput,AddQueuedDependencyReceipt} from '../src/backend/core/tasks/queued-dependency-addition';
 import type {MainToolOutputBinding} from '../src/backend/core/tasks/main-tool-output';
+import type {AbandonCheckpointInput,AbandonCheckpointReceipt} from '../src/backend/core/tasks/checkpoint-handoff';
 
 function deferred<T>(){let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>{resolve=r});return {promise,resolve}}
 async function setup(admission?:GlobalRunAdmission){
@@ -24,6 +25,8 @@ async function setup(admission?:GlobalRunAdmission){
   const lease=new WorkspaceExecutionLease(),done=deferred<void>();let release=()=>{},hooks!:ExecutionCollaboration;
   const options={provider:'provider',model:'model',profileId:'00000000-0000-4000-8000-000000000001',permission:'ask' as const,allowNativeExecution:true};
   const dispatch={
+    abandonCheckpoint:vi.fn<(...args:unknown[])=>Promise<AbandonCheckpointReceipt>>(),
+    checkpointAbandonmentReceipt:vi.fn<(...args:unknown[])=>Promise<AbandonCheckpointReceipt|undefined>>(async()=>undefined),
     goals:{inspect:vi.fn(async()=>({goal:{plan:{}}})),inspectWithGraph:vi.fn<()=>Promise<unknown>>(),plan:vi.fn(async()=>({})),review:vi.fn(async()=>({})),block:vi.fn(async()=>({}))},
     openScope:vi.fn(async(_identity:any,scopeId:string)=>({...identity,scopeId,status:'active',createdAt:'2026-11-07'})),
     registerMainRun:vi.fn(async()=>({})),
@@ -79,6 +82,11 @@ async function setup(admission?:GlobalRunAdmission){
 
 const dependencyInput={expectedGraphCursor:{streamId:'stream',seq:5},expectedGoalRevision:3,target:{taskId:'assigned-1',expectedRevision:1,expectedPlanRevision:1},replace:{edgeId:'A-B',expectedRevision:1},with:{taskId:'A2',expectedRevision:4,expectedPlanRevision:1,runId:'A2-run',resultId:'A2-result'},reason:'保留未启动的原下游任务'};
 const additionInput:AddQueuedDependencyInput={expectedGraphCursor:{streamId:'stream',seq:5},expectedGoalRevision:3,source:{taskId:'source-A',expectedRevision:1,expectedPlanRevision:1},target:{taskId:'assigned-1',expectedRevision:1,expectedPlanRevision:1},reason:'原待办等待后来创建的来源'};
+const abandonmentInput:AbandonCheckpointInput={expectedGraphCursor:{streamId:'stream',seq:1},expectedGoalRevision:2,taskId:'assigned-1',expectedRevision:4,expectedPlanRevision:1,checkpointId:'checkpoint-one',expectedResumeRequestId:null,reason:'按当前岗位重新规划，保留旧检查点'};
+function abandoned(binding:MainToolOutputBinding,commandId:string):AbandonCheckpointReceipt{
+  const {runId,...identity}=binding;
+  return {...identity,mainRunId:runId,commandId,taskId:abandonmentInput.taskId,status:'cancelled',graphCursor:{streamId:'stream',seq:2},abandonment:{kind:'abandoned_by_handoff',commandId,scopeId:binding.scopeId,mainRunId:runId,graphCursor:abandonmentInput.expectedGraphCursor,goalRevision:2,previousTaskRevision:4,planRevision:1,checkpointId:'checkpoint-one',sourceRunId:'first-run',resumeRequestId:null,previousLeaseEpoch:1,nextLeaseEpoch:2,reason:abandonmentInput.reason,abandonedAt:'2026-11-08T00:00:00.000Z'}};
+}
 function addedDependency(binding:MainToolOutputBinding,commandId:string,input:AddQueuedDependencyInput):AddQueuedDependencyReceipt{
   const {runId,...identity}=binding,trackedTaskIds=[input.target.taskId,input.source.taskId];
   return {...identity,mainRunId:runId,commandId,taskId:input.target.taskId,status:'waiting',trackedTaskIds,graphCursor:{streamId:input.expectedGraphCursor.streamId,seq:input.expectedGraphCursor.seq+1},addition:{commandId,scopeId:binding.scopeId,mainRunId:runId,addedAt:'2026-11-07T00:00:00.000Z',reason:input.reason,graphCursor:input.expectedGraphCursor,goalRevision:input.expectedGoalRevision,goalPlanRevision:input.expectedGoalRevision,knowledgeRevision:'knowledge-one',previousTaskRevision:input.target.expectedRevision,targetPlanRevision:input.target.expectedPlanRevision,dependency:{edgeId:'new-A-B',sourceTaskId:input.source.taskId,sourceTaskRevision:input.source.expectedRevision,sourcePlanRevision:input.source.expectedPlanRevision},trackedTaskIds}};
@@ -95,7 +103,7 @@ it('权威联合查询返回空值时由业务输出契约拒绝，不崩溃或�
   }finally{await f.coordinator.close()}
 });
 
-it.each(['assign','cancel','replace','add','resume'] as const)('%s 的空值或缺失数组原样交输出契约拒绝，不在批次关联中抛TypeError或重试',async operation=>{
+it.each(['assign','cancel','replace','add','resume','abandon'] as const)('%s 的空值或缺失数组原样交输出契约拒绝，不在批次关联中抛TypeError或重试',async operation=>{
   const f=await setup();try{
     const signal=new AbortController().signal;
     let invoke:()=>Promise<unknown>,calls:()=>number;
@@ -110,12 +118,58 @@ it.each(['assign','cancel','replace','add','resume'] as const)('%s 的空值或�
     }else if(operation==='add'){
       f.dispatch.addQueuedDependency.mockResolvedValueOnce({} as never);
       invoke=()=>f.tools.call('cbim_dispatch_add_dependency',additionInput,signal,'add-bad');calls=()=>f.dispatch.addQueuedDependency.mock.calls.length;
+    }else if(operation==='abandon'){
+      f.dispatch.abandonCheckpoint.mockResolvedValueOnce(null as never);
+      invoke=()=>f.tools.call('cbim_dispatch_abandon_checkpoint',abandonmentInput,signal,'abandon-bad');calls=()=>f.dispatch.abandonCheckpoint.mock.calls.length;
     }else{
       f.members.requestResume.mockResolvedValueOnce({});
       invoke=()=>f.tools.call('cbim_dispatch_resume',{expectedGraphCursor:{streamId:'stream',seq:1},expectedGoalRevision:2,taskId:'assigned-1',expectedRevision:1,checkpointId:'checkpoint-one',reason:'按原目标续执行'},signal,'resume-bad');calls=()=>f.members.requestResume.mock.calls.length;
     }
     await expect(invoke()).rejects.toMatchObject({code:'TOOL_OUTPUT_INVALID'});expect(calls()).toBe(1);
     expect(f.members.start).not.toHaveBeenCalled();expect(f.execution.continueFromResults).not.toHaveBeenCalled();
+  }finally{await f.coordinator.close()}
+});
+
+it('检查点放弃立即纳入操作屏障，提交后停止等待回包且不再领取旧任务',async()=>{
+  const f=await setup(),committed=deferred<AbandonCheckpointReceipt>();try{
+    await f.assign();
+    f.dispatch.abandonCheckpoint.mockImplementation(()=>committed.promise);
+    const call=f.tools.call('cbim_dispatch_abandon_checkpoint',abandonmentInput,new AbortController().signal,'abandon-call');
+    const stopped=f.hooks().stop(f.task.taskId);await Promise.resolve();expect(f.dispatch.closeScope).not.toHaveBeenCalled();
+    const binding={...f.graph.identity,scopeId:f.dispatch.openScope.mock.calls[0][1],runId:'parent-run'};
+    committed.resolve(abandoned(binding,mainToolCommandId('cbim_dispatch_abandon_checkpoint',binding,'abandon-call')!));
+    await call;await stopped;f.settleParent();await Promise.resolve();
+    expect(f.dispatch.abandonCheckpoint).toHaveBeenCalledTimes(1);expect(f.members.start).not.toHaveBeenCalled();expect(f.execution.continueFromResults).not.toHaveBeenCalled();expect(f.members.acknowledge).not.toHaveBeenCalled();
+    expect(f.dispatch.closeScope).toHaveBeenCalledWith(f.graph.identity,binding.scopeId,'cancelled');
+  }finally{await f.coordinator.close()}
+});
+
+it.each(['success','bad-wire','reply-lost'] as const)('放弃回包%s后按原账本只读查证撤票，周期历史及原检查点收件职责保留',async mode=>{
+  const f=await setup();try{
+    await f.assign();const binding={...f.graph.identity,scopeId:f.dispatch.openScope.mock.calls[0][1],runId:'parent-run'},withdraw=vi.fn(),other=vi.fn();
+    // 仅观察协调器进程内 bookkeeping；真实检查点和持久事务由 service/Pi 测试覆盖。
+    const batches=(f.coordinator as unknown as {batches:Map<string,{tasks:string[];admissions:Map<string,{taskId:string;withdraw:()=>void}>;cycle:{tasks:Set<string>}}>}).batches;
+    const batch=batches.get('parent-run')!;batch.admissions.set('resume-ticket',{taskId:'assigned-1',withdraw});batch.admissions.set('other-ticket',{taskId:'other-task',withdraw:other});
+    const receipt=abandoned(binding,mainToolCommandId('cbim_dispatch_abandon_checkpoint',binding,'abandon-call')!);
+    f.dispatch.checkpointAbandonmentReceipt.mockResolvedValueOnce(receipt);
+    if(mode==='reply-lost')f.dispatch.abandonCheckpoint.mockRejectedValueOnce(Error('saved response lost'));
+    else f.dispatch.abandonCheckpoint.mockResolvedValueOnce(mode==='bad-wire'?null as never:receipt);
+    const pending=f.tools.call('cbim_dispatch_abandon_checkpoint',abandonmentInput,new AbortController().signal,'abandon-call');
+    if(mode==='reply-lost')await expect(pending).rejects.toThrow('saved response lost');
+    else if(mode==='bad-wire')await expect(pending).rejects.toMatchObject({code:'TOOL_OUTPUT_INVALID'});
+    else await pending;
+    expect(batch.tasks).toEqual([]);expect(batch.cycle.tasks.has('assigned-1')).toBe(true);expect(withdraw).toHaveBeenCalledTimes(1);expect(other).not.toHaveBeenCalled();expect(batch.admissions.has('other-ticket')).toBe(true);
+    expect(f.members.acknowledge).not.toHaveBeenCalled();expect(f.members.start).not.toHaveBeenCalled();
+    expect(f.dispatch.abandonCheckpoint).toHaveBeenCalledTimes(1);expect(f.dispatch.checkpointAbandonmentReceipt).toHaveBeenCalledWith(f.graph.identity,binding.scopeId,binding.runId,receipt.commandId,abandonmentInput);
+  }finally{await f.coordinator.close()}
+});
+
+it('原回执查询失败保留原错误并报告未知，停止撤票且不循环查询或重试处置',async()=>{
+  const f=await setup();try{
+    f.dispatch.abandonCheckpoint.mockRejectedValueOnce(Error('save result unknown'));f.dispatch.checkpointAbandonmentReceipt.mockRejectedValueOnce(Error('read unavailable'));
+    await expect(f.tools.call('cbim_dispatch_abandon_checkpoint',abandonmentInput,new AbortController().signal,'abandon-unknown')).rejects.toThrow('save result unknown');
+    expect(f.issues).toHaveBeenCalledWith(f.task.taskId,expect.objectContaining({message:expect.stringContaining('原回执暂不可核实')}));
+    await f.hooks().stop(f.task.taskId);expect(f.dispatch.abandonCheckpoint).toHaveBeenCalledTimes(1);expect(f.dispatch.checkpointAbandonmentReceipt).toHaveBeenCalledTimes(1);expect(f.members.start).not.toHaveBeenCalled();
   }finally{await f.coordinator.close()}
 });
 
@@ -298,7 +352,7 @@ it('成功关闭门禁失败时保存阻塞原因并关闭失败周期，不能�
   }finally{await f.coordinator.close()}
 });
 
-it.each(['cbim_object_commit','cbim_goal_plan','cbim_goal_review','cbim_dispatch_cancel','cbim_dispatch_replace_dependency','cbim_dispatch_add_dependency'])('未建计划的%s调用不能绕过为普通聊天成功',async toolName=>{
+it.each(['cbim_object_commit','cbim_goal_plan','cbim_goal_review','cbim_dispatch_cancel','cbim_dispatch_replace_dependency','cbim_dispatch_add_dependency','cbim_dispatch_abandon_checkpoint'])('未建计划的%s调用不能绕过为普通聊天成功',async toolName=>{
   const f=await setup();try{
     f.dispatch.goals.inspect.mockResolvedValue({goal:{}} as any);
     f.hooks().settled(f.task,f.options,{task:f.task,runId:'parent-run',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[],toolReceipts:[{toolName,effects:toolName==='cbim_object_commit'?['knowledge-write']:['maintenance']} as any]});

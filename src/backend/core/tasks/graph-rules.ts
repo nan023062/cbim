@@ -1,6 +1,6 @@
 /**
  * 作用定位：任务图的纯领域校验，完整图与单项公开查询共用节点状态规则，并检查身份、派发父关系及依赖/等待无环。
- * 设计原因：存储重放与新提交共用局部结构规则；负责人绑定严格对应工作区、Agent 与模块，图防环覆盖全部启用边，不以创建顺序代替依赖顺序。
+ * 设计原因：存储重放与新提交共用局部结构规则；负责人及检查点放弃审计严格对应原任务，图防环覆盖全部启用边，不以创建顺序代替依赖顺序。
  * 职责边界：结构通过不等于知识维护人已认证或任务已获授权，调度层仍需核实来源。
  */
 import {z} from 'zod';
@@ -12,6 +12,7 @@ import {dependencyReplacementSchema} from './queued-dependency-replacement';
 import {dependencyAdditionSchema} from './queued-dependency-addition';
 import {memberCheckpointRecordSchema} from './member-checkpoint';
 import {memberResumeRequestSchema} from './queued-member-resume';
+import {checkpointAbandonmentSchema} from './checkpoint-handoff';
 import {workflowSelectionsSchema,validateTaskWorkflowSelections} from './workflow-selection';
 import {ownerExecutionBindingSchema,ownerExecutionBindingMatches} from '../team/member-execution-binding';
 
@@ -35,6 +36,7 @@ const task=z.object({kind:z.literal('task'),nodeId:id,taskId:id,identity,scopeId
   result:z.object({resultId:id,runId:id,planRevision:revision,summary:text,evidenceRefs:z.array(id),limitations:z.array(text),acceptance:z.literal('not_evaluated')}).strict().optional(),
   help:memberHelpRecordSchema.optional(),
   checkpoints:z.array(memberCheckpointRecordSchema).length(1).optional(),resumeRequest:memberResumeRequestSchema.optional(),
+  checkpointAbandonment:checkpointAbandonmentSchema.optional(),
   cancelledBeforeStart:queuedTaskCancellationSchema.optional(),
   dependencyReplacements:z.array(dependencyReplacementSchema).min(1).max(32).optional(),
   dependencyAdditions:z.array(dependencyAdditionSchema).min(1).max(32).optional(),
@@ -105,6 +107,7 @@ export function validateTaskNode(t:TaskNode):void {
   if(checkpoint){const binding=checkpoint.binding;if(!t.scopeId||t.help?.binding.runId===binding.runId||t.cancelledBeforeStart||binding.workspaceId!==t.identity.workspaceId||binding.rootSessionId!==t.identity.rootSessionId||binding.taskId!==t.taskId||binding.planRevision!==t.planRevision||binding.runId!==t.runIds[0]||!sameMember(t.assignee,{...binding,name:''})||t.runIds.length>2||t.runIds.length===2&&!request||t.result?.runId===binding.runId)fail('GRAPH_INPUT_INVALID','检查点必须保留同任务原实例且不能替代交付或重复续执行')}
   if(t.status==='checkpointed'&&(!checkpoint||t.runIds.length!==1||t.activeRunId||t.result||request))fail('GRAPH_INPUT_INVALID','检查点任务缺少已结束原运行或被重复预约');
   if(request&&(!checkpoint||request.checkpointId!==checkpoint.checkpointId||request.runId!==checkpoint.binding.runId||request.scopeId!==t.scopeId||request.previousTaskRevision>=t.revision||request.trackedTaskIds[0]!==t.taskId||Date.parse(request.requestedAt)>Date.parse(t.updatedAt)))fail('GRAPH_INPUT_INVALID','续执行预约缺少原检查点、固定任务或有效版本');
+  if(t.checkpointAbandonment){const record=t.checkpointAbandonment;if(t.status!=='cancelled'||!checkpoint||t.runIds.length!==1||t.activeRunId||t.result||t.help||t.cancelledBeforeStart||t.awaitedChildren.length||record.scopeId!==t.scopeId||record.checkpointId!==checkpoint.checkpointId||record.sourceRunId!==checkpoint.binding.runId||record.resumeRequestId!==(request?.requestId??null)||record.planRevision!==t.planRevision||record.previousTaskRevision+1!==t.revision||record.previousLeaseEpoch!==checkpoint.binding.leaseEpoch||record.abandonedAt!==t.updatedAt||t.waitReason!==record.reason)fail('GRAPH_INPUT_INVALID','交接放弃必须保留原检查点、任务版本和租约来源')}
   if(t.cancelledBeforeStart){const record=t.cancelledBeforeStart;if(t.status!=='cancelled'||t.runIds.length||t.activeRunId||t.result||t.help||t.awaitedChildren.length||!t.scopeId||record.scopeId!==t.scopeId||record.previousRevision+1!==t.revision||record.cancelledAt!==t.updatedAt||t.waitReason!==record.reason)fail('GRAPH_INPUT_INVALID','未启动撤销记录与任务终态、版本不一致')}
   const replacements=t.dependencyReplacements??[];unique(replacements.map(record=>record.commandId),'前置替换命令');unique(replacements.map(record=>record.retired.edgeId),'退役依赖');
   for(let index=0;index<replacements.length;index++){
@@ -142,6 +145,7 @@ export function validateGraph(value:GraphSnapshot):void {
     const request=t.resumeRequest;
     if(request&&(request.graphCursor.streamId!==value.cursor.streamId||request.graphCursor.seq>=value.cursor.seq||request.trackedTaskIds.some(id=>tasks.get(id)?.scopeId!==t.scopeId)))fail('GRAPH_INPUT_INVALID','续执行预约不属于当前图历史或后继集合');
     if(t.cancelledBeforeStart){const record=t.cancelledBeforeStart;if(record.graphCursor.streamId!==value.cursor.streamId||record.graphCursor.seq>=value.cursor.seq)fail('GRAPH_INPUT_INVALID','未启动撤销记录与图基线不一致')}
+    if(t.checkpointAbandonment){const record=t.checkpointAbandonment;if(record.graphCursor.streamId!==value.cursor.streamId||record.graphCursor.seq>=value.cursor.seq)fail('GRAPH_INPUT_INVALID','检查点放弃不属于当前图历史')}
     const replacements=t.dependencyReplacements??[];
     for(let index=0;index<replacements.length;index++){
       const record=replacements[index],retired=value.edges.find(edge=>edge.edgeId===record.retired.edgeId),fresh=value.edges.find(edge=>edge.edgeId===record.replacement.edgeId);

@@ -27,7 +27,7 @@ export async function checkpointServiceFixture(){
   const {model}=await registerServiceOwner(f.app,workspace,'cbim:executor',[moduleId]);
   const store=workspace.dispatchStore,directory=store.directory,logs=path.join(f.user,'member-logs'),storage=new FileRunStorage(),lease=new WorkspaceExecutionLease(),files=new ArtifactFiles(f.a,()=>workspace.assert());
   const read=(run:DispatchRun)=>storage.read(path.join(logs,run.binding.taskId,run.binding.runId)),inspect=vi.fn(read),native=vi.fn(async()=>({byteLength:128,sha256:'a'.repeat(64)})),checkFiles=vi.fn(files.checkFiles.bind(files));
-  const service=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.models),identity={workspaceId:entry.id,rootSessionId:'checkpoint-root'},scopeId='checkpoint-scope',mainRunId='main-one';
+  const service=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.models,{inspect,normalizePath:raw=>normalizeArtifactPath(f.a,raw)}),identity={workspaceId:entry.id,rootSessionId:'checkpoint-root'},scopeId='checkpoint-scope',mainRunId='main-one';
   await service.openScope(identity,scopeId,{message:'继续同一成员任务'},mainRunId);
   const ownerSelection=(await service.owners.discover([moduleId])).groups[0].selection!;
   await service.goals.plan(identity,scopeId,mainRunId,'plan',{expectedRevision:1,objective:'核实目标',constraints:[],criteria:[{id:'c1',text:'实际证据',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,criterionIds:['c1'],reason:'原执行者'}],reason:'派发'});

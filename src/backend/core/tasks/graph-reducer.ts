@@ -1,6 +1,6 @@
 /**
  * 作用定位：把已提交的图事件原子转换为内存投影，并按游标输出增量读取结果。
- * 设计原因：节点、边和成员状态必须一起可见；已派发负责人、流程选择和检查点原样保留，防止增量补造岗位或借依赖修订改任务身份。
+ * 设计原因：节点、边和成员状态必须一起可见；已派发负责人、流程选择和检查点原样保留，放弃交接后整个任务封存，防止增量补造岗位或复活旧段。
  * 职责边界：不落盘、不分配事件序号、不启动任务；调用方必须先可靠提交再发布结果。
  */
 import {fail} from '../foundation/errors';
@@ -22,6 +22,7 @@ function nextRevision(previous:{revision:number}|undefined,next:{revision:number
   if(next.revision!==(previous?previous.revision+1:1))fail('GRAPH_REVISION_CONFLICT','图对象版本必须从 1 开始并连续递增');
 }
 function taskRevision(previous:TaskNode,next:TaskNode){
+  if(previous.checkpointAbandonment)fail('GRAPH_INPUT_INVALID','为交接放弃的检查点任务已封存，不能改写或恢复');
   if(previous.cancelledBeforeStart)fail('GRAPH_INPUT_INVALID','已撤销的未启动任务已封存，不能再次改写或执行');
   if(previous.scopeId!==next.scopeId||previous.parentTaskId!==next.parentTaskId||stable(previous.requester)!==stable(next.requester)||previous.createdAt!==next.createdAt)fail('GRAPH_INPUT_INVALID','任务调度周期、派发父关系、请求人和创建时间不能改写');
   if(stable(previous.workflowSelections)!==stable(next.workflowSelections))fail('GRAPH_INPUT_INVALID','已有任务的 Workflow 选择不能增删或改写，请重新规划并派发新任务');
@@ -75,7 +76,7 @@ export function applyGraphBatch(previous:GraphSnapshot|undefined,event:GraphEven
       case 'task.upserted':{
         const old=tasks.get(change.task.taskId);nextRevision(old,change.task);
         if(old)taskRevision(old,change.task);
-        else if(change.task.planRevision!==1||!['planned','queued','waiting'].includes(change.task.status)||change.task.runIds.length||change.task.result||change.task.help||change.task.cancelledBeforeStart||change.task.dependencyReplacements||change.task.dependencyAdditions||change.task.checkpoints||change.task.resumeRequest)fail('GRAPH_INPUT_INVALID','新任务必须从尚未执行的计划版本 1 创建');
+        else if(change.task.planRevision!==1||!['planned','queued','waiting'].includes(change.task.status)||change.task.runIds.length||change.task.result||change.task.help||change.task.cancelledBeforeStart||change.task.dependencyReplacements||change.task.dependencyAdditions||change.task.checkpoints||change.task.resumeRequest||change.task.checkpointAbandonment)fail('GRAPH_INPUT_INVALID','新任务必须从尚未执行的计划版本 1 创建');
         tasks.set(change.task.taskId,structuredClone(change.task));break;
       }
       case 'edge.upserted':{

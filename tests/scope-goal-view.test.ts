@@ -2,7 +2,7 @@ import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {SessionReadProjection,SessionScopeProjection,completeSessionRead,scopeGoalView,currentScope,type ScopeGoalState} from '../src/frontend/tasks/scope-state';
-import {ScopeGoalPanel} from '../src/frontend/tasks/ScopeGoalPanel';
+import {ScopeGoalPanel,goalTaskReference} from '../src/frontend/tasks/ScopeGoalPanel';
 import {MemberTaskDetail} from '../src/frontend/tasks/MemberTaskDetail';
 import {SessionTaskView,sessionRoot} from '../src/frontend/tasks/SessionTaskView';
 import {applyGraphBatch} from '../src/backend/core/tasks/graph-reducer';
@@ -20,6 +20,21 @@ function reset(value=scope(),seq=1):DispatchSessionRead{const scopes=snapshot([v
 function planned(){const value=scope();value.goal!.revision=2;value.goal!.plan={revision:2,runId:'main-run',recordedAt:time,knowledgeRevision:'knowledge',graphCursor:{streamId:'graph',seq:1},objective:'当前周期的治理目标',constraints:['仅管理知识'],criteria:[{id:'c1',kind:'evidence',text:'提供真实提交证据'}],assignments:[{agentId:'cbim:main',agentName:'主 Agent',teamId:'.cbim/team',moduleIds:[],moduleNames:[],criterionIds:['c1'],reason:'治理知识'}],reason:'按真实目标安排'};return value}
 function reviewed(){const value=planned();value.goal!.revision=3;value.goal!.review={revision:3,planRevision:2,runId:'main-run',recordedAt:time,knowledgeRevision:'knowledge',graphCursor:{streamId:'graph',seq:1},observedSeq:10,lastEffectSeq:4,decision:'complete',checks:[{criterionId:'c1',outcome:'satisfied',reason:'有真实证据',evidence:[{kind:'main-knowledge',toolCallIds:['commit-one']}]}],superseded:[],gaps:[],reason:'程序尚需复核'};return value}
 function view(value:DispatchScope):ScopeGoalState{const summary=summarizeScope(value,streamId,1),goalView=scopeGoalView(summary,graph);return {scopes:[summary],selectedScopeId:value.scopeId,selectedScope:value,openScope:value.status!=='closed'?summary:undefined,activeScope:value.status==='active'?summary:undefined,waitingScope:value.status==='waiting'?summary:undefined,selectedGoalView:goalView,currentGoalView:goalView,graph,loading:false,detailLoading:false,error:'',selectScope:()=>{}}}
+
+it('替代审阅只导航已同步的本周期节点，旧节点与新成果各自保留原身份',()=>{
+  const value=reviewed();value.goal!.review!.superseded=[{taskId:'old-task',replacementTaskIds:['new-task'],reason:'新负责人提供独立候选'}];
+  const member=(taskId:string):TaskNode=>({kind:'task',nodeId:'task:'+taskId,taskId,identity,scopeId:value.scopeId,requester:agent,assignee:{agentId:'static-role',agentInstanceId:taskId+'-instance',agentSessionId:taskId+'-session',name:taskId==='old-task'?'原负责人':'新负责人'},modules:[],goal:taskId+'目标',acceptance:[],revision:1,planRevision:1,status:taskId==='old-task'?'cancelled':'result_ready',awaitedChildren:[],runIds:[],createdAt:time,updatedAt:time});
+  const old=member('old-task'),next=member('new-task'),state={...view(value),graph:{...graph,tasks:[old,next]}};
+  expect(goalTaskReference(state,'old-task')).toBe(old);expect(goalTaskReference(state,'new-task')).toBe(next);
+  const html=renderToStaticMarkup(createElement(ScopeGoalPanel,{state,onSelectTask:()=>{}}));
+  expect(html).toContain('原任务与替代成果');expect(html.match(/data-testid="scope-task-reference"/g)).toHaveLength(2);expect(html).toContain('原负责人');expect(html).toContain('新负责人');
+  expect(renderToStaticMarkup(createElement(ScopeGoalPanel,{state}))).not.toContain('data-testid="scope-task-reference"');
+  expect(goalTaskReference({...state,selectedScopeId:'foreign'},'old-task')).toBeUndefined();
+  for(const changed of [{...state.graph,identity:{...identity,workspaceId:'foreign'}},{...state.graph,tasks:[old,old,next]},{...state.graph,tasks:[{...old,scopeId:'foreign'},next]},{...state.graph,tasks:[{...old,identity:{...identity,rootSessionId:'foreign'}},next]}]){
+    const invalid={...state,graph:changed};expect(goalTaskReference(invalid,'old-task')).toBeUndefined();const rendered=renderToStaticMarkup(createElement(ScopeGoalPanel,{state:invalid,onSelectTask:()=>{}}));expect(rendered).not.toContain('data-task-id="old-task"');expect(rendered).toContain('old-task');
+  }
+  expect(state.graph.edges).toEqual(graph.edges);expect(old.assignee.agentInstanceId).toBe('old-task-instance');
+});
 
 it('目标与成员只展示各自持久的指定流程，切回无选择历史不补造选择',()=>{
   const moduleId='.cbim/workspace/game',workflowId=moduleId+'/workflows/validate_json',value=planned();

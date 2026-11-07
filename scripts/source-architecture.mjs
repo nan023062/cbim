@@ -79,6 +79,19 @@ const ownerExecutionScopes={
  'src/frontend/workspace':'关联任务包含新旧协议节点，负责人变更不移交旧任务；实际领取重核原版本。',
 };
 for(const [directory,description] of Object.entries(ownerExecutionScopes))scope[directory]+=' '+description;
+// 显式交接只终止旧待办；历史核验、严格联合事务与只读展示各自留在既有层次。
+const checkpointHandoffScopes={
+ 'src/backend/core/brain/pi':'主角色提示同样要求内置执行角色先登记岗位、模块责任及独立模型，不以缺省角色绕过真实派发门禁。',
+ 'src/backend/core/tasks':'检查点显式放弃有独立严格协议与精确联合变更校验；原任务和检查点证据不可重写，纯 ACK 与后续周期释放保持可用。',
+ 'src/backend/scheduler-engine/execution':'CheckpointAbandonmentService 先读原命令，再核历史 canonical 与冻结证明，最后短事务裁决；不重读当前 native 或恢复旧模型，Auto 同步撤销旧恢复准入并等待处置收口。',
+ 'src/backend/scheduler-engine/tools':'主工具显式放弃原检查点/预约，绑定原 run/call 命令，坏回包只核实原事实，不取得业务完成资格。',
+ 'src/backend/scheduler-engine/conversation':'主调度将原检查点放弃、旧后继撤销和新负责岗位重新派发分开决策，真实新成果才可替代审阅。',
+ 'src/backend/main':'原 canonical 历史端口独立装配给交接处置，不开新的模型或原生运行入口。',
+ 'src/bridge/contracts':'公开检查点放弃审计和请求/回执纯契约，不向渲染进程授予主调度处置身份。',
+ 'src/frontend/tasks':'主对话、图和详情区分显式交接放弃与普通封存，保留原岗位和运行；审阅中的原/新任务仅按同周期真实节点导航。',
+ 'src/frontend/conversation':'目标摘要可跳转本周期原任务或替代成果，沿已有任务详情导航，不改草稿、附件或执行状态。',
+};
+for(const [directory,description] of Object.entries(checkpointHandoffScopes))scope[directory]+=' '+description;
 const norm=p=>p.replaceAll('\\','/');
 const walk=p=>fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(p+'/'+e.name):[p+'/'+e.name]);
 const files=walk('src').filter(f=>/\.(tsx?|jsx?|mjs|cjs|css)$/.test(f));

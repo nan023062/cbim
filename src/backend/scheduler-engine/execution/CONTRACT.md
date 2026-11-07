@@ -112,7 +112,7 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 ### 当前成员执行边界
 
-主 session 默认通过 `conversationBinding(task)` 可靠登记图根和主实例，`mainRootSessionId` 将新主实例固定到所属根；主实例负责调度与团队/业务知识管理，不执行业务任务。`conversation` 承载普通聊天，图根原通道承载结果邮箱；正式业务任务使用独立执行实例。没有自定义执行角色时使用内置静态 `cbim:executor`，禁止把 `cbim:main` 派为执行者。旧共享根保留历史引用，新根不复用遗留共享实例。知识结构错误不阻断内置主对话身份登记，但不放宽正式任务的配置/模块/维护关系校验。
+主 session 默认通过 `conversationBinding(task)` 可靠登记图根和主实例，`mainRootSessionId` 将新主实例固定到所属根；主实例负责调度与团队/业务知识管理，不执行业务任务。`conversation` 承载普通聊天，图根原通道承载结果邮箱；正式业务任务使用独立执行实例。没有自定义角色时可显式登记采用内置静态 `cbim:executor` 的岗位，仍须负责模块并采纳独立模型后派发；禁止默认回退或把 `cbim:main` 派为执行者。旧共享根保留历史引用，新根不复用遗留共享实例。知识结构错误不阻断内置主对话身份登记，但不放宽正式任务的配置/模块/维护关系校验。
 
 `createWorkspaceLoop` 为主 Agent 保留内部知识查询、预览、对象 CRUD 与知识提交工具，以及派发工具。知识写入走同一日志门禁和用户 `read / ask / execute` 权限：read 拒绝；ask 等待本轮批准；execute 允许进入知识服务的实例、版本和事务校验。`knowledge-write` 不等于业务执行权，主 Agent 的任何 `business-write / command` 描述在审批前独立拒绝，包括未来内部工具；原生 `write / edit / bash` 不注册，即使收到幻觉调用或用户选择完全访问也不放行。知识服务只在 gate 通过后接收运行装配提供的写入能力，不接受模型自行授予权限；`.cbim` 内容仍禁止经原生文件工具直接修改。
 
@@ -163,7 +163,7 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 ### 主会话协作接续边界（续）
 
-`AutoCollaboration` 按工作区装配，只向使用已保存模型配置的主聊天轮次提供 `cbim_dispatch_task / inspect`；正式任务不获得递归工具。主 Agent 不执行业务；`cbim_dispatch_task.agentId` 缺省使用 `cbim:executor`。普通问答不用登记业务节点。模型仅传角色、模块、目标、验收和前置，工作区/会话/runId、scopeId 与实际 toolCallId 由运行绑定提供；稳定调用键映射到持久化命令，同次重发返回原回执。单轮最多登记 100 个不同派发调用，不能在工具 Promise 中等待执行。
+`AutoCollaboration` 按工作区装配，只向使用已保存模型配置的主聊天轮次提供实际主调度工具；正式任务不获得递归工具。主 Agent 不执行业务；业务派发必须显式给出当前发现的 `ownerSelection` 及对应 `agentId`，内置角色也必须有实际岗位、模块责任和已采纳模型。普通问答不用登记业务节点。模型提交岗位选择、角色、模块、目标、验收、前置及可选 Workflow；工作区/会话/runId、scopeId 与实际 toolCallId 由运行绑定提供，业务请求必须符合当前目标计划。稳定调用键映射到持久化命令，同次重发返回原回执。单轮最多登记 100 个不同派发调用，不能在工具 Promise 中等待执行。
 
 一次用户任务对应一个持久化 `DispatchScope`，可以跨多个主模型轮次、多个成员执行和结果回传。`starting` 在模型工厂准备后、模型启动前调用 `openScope`；可信结果回注沿用原周期，不能新建周期。每个模型轮仍保留独立 batch，以准确记录本轮派发和回注来源。普通聊天在最新主轮正常结束且没有规划、派工或知识写入后关闭生命周期；正式工作必须由主 Agent 提交 complete 审阅申请，并在主运行结算后通过真实证据、版本和全周期状态复核，才允许以 completed 关闭。awaiting_user 则须通过独立安全检查后持久等待；其他不满足要求的情况继续分析、重规划或明确记录阻塞，不能把空回复或底层 run.completed 当作成功；首个主轮派发完成不关闭。失败、停止、启动失败和应用退出都会尝试收束活动周期：等待在途派发/启动完成，停止成员并等待真实结算，再调用 `closeScope` 释放执行实例；已安全 waiting 在应用退出时保留。历史任务和运行日志保留，关闭失败继续报告诊断并保留真实状态，不伪装为已释放。
 
@@ -278,7 +278,7 @@ MemberExecutionManager ..> MemberEventStreams : 公开执行增量
 
 #### 职责和端口
 
-调度器接收主 Agent 分析后的任务请求，核验成员、多模块维护关系、依赖与权限，再持久化派发。主 Agent 模型提出分工，也可按本轮权限通过内部知识服务维护团队和业务定义，程序负责边界与事实；执行 Agent 自主探索真实团队与目标模块、选择实现和验证方法，再返回事实或缺口。组织的父子关系不授予派发权；主实例不直接执行业务，没有可选自定义角色时由独立默认执行者承担业务。
+调度器接收主 Agent 分析后的任务请求，核验岗位、来源、多模块维护关系、依赖与权限，再持久化派发。主 Agent 模型提出分工，也可按本轮权限通过内部知识服务维护团队和业务定义，程序负责边界与事实；执行 Agent 自主探索真实团队与目标模块、选择实现和验证方法，再返回事实或缺口。组织的父子关系不授予派发权；主实例不直接执行业务，没有可用岗位时明确登记和分配责任，不能默认创建执行者绕过岗位模型与来源门禁。
 
 `dispatch-service.ts` 负责建图、注册、派发及读取；`agent-manager.ts` 分配身份；`member-execution.ts` 管理领取、执行、结果和恢复，`member-state.ts` 核实交付并组装图事实，`workspace-lease.ts` 管理跨运行占用。存储端口在 Core `dispatch-storage.ts`。下面 `AgentDispatchService` 是后续模型命令契约，不是当前同名实现。
 
@@ -549,3 +549,11 @@ queued 与接受日志确认后才移除队列项，迟到停止不撤销接受�
 原 TaskSpec、Prepared.memberContext 和 canonical 运行头必须具有相同岗位绑定；Workflow、目标审阅、人工来源与执行核实报告按原绑定比较，旧两边均无绑定仍只读兼容。检查点实际恢复按原权限/超时准备能力清单，不采用调用方的新权限；历史结算不查询当前负责人。领取后的来源变化不回溯取消本段，但文件采集、交付候选与最终验收保留原知识基线核验。
 
 普通聊天与主知识治理沿原入口，旧非 chat 的直接启动及新续轮明确拒绝。旧日志、已提交回执和已领取运行的结算保持原事实；旧无绑定待办不能新领取，不能按 agentId 补造岗位或回退默认执行者。
+
+## 检查点交接处置
+
+`CheckpointAbandonmentService` 先按精确请求指纹只查原命令回执，随后在 Store 事务外读取原 canonical。`verifyMemberCheckpointHistory` 核完整 TaskSpec/成员绑定/原生身份、正常终态、原任务进度及检查点事件和冻结 logHash/proof，不重读今日 native、业务文件、知识或模型，不刷新任何证明；缺失或损坏 canonical 拒绝。该历史入口不授予恢复许可，既有 resume 核验仍检查当前知识、全部文件和 native 字节。
+
+最终短 Store 事务重新选择原检查点并比较图、scope、task、run/proof、session、lease 及可选 resume assignment；停止检查覆盖全部等待至提交末端。只取消原节点、固定不可变 abandoned_by_handoff 审计、递增一次成员租约与图版本，并将明确的 pending resume assignment 置 processed。原 checkpoint 结果信封不被代 ACK，也不纳入历史观察 stamp，允许主回注后的迟到纯 ACK。原运行/知识/岗位/模型/边/检查点及预约审计不变。
+
+Auto 在任何异步处置前立即登记 cycle.operations，停止先作用原引擎再等操作收口。处置后（包括坏回包或异常）只查询一次精确原 command receipt；匹配严格身份与审计时移除旧待领取任务并撤相应 admission 票据，保留 cycle.tasks 历史。查询错误报告未核实、不改原输出或错误、不循环重试；停止统一撤票。新任务仍走当前岗位门禁，旧后继仍须显式取消和重建，最终 complete 必须有真实替代候选。

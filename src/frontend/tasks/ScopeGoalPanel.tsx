@@ -1,6 +1,6 @@
 /**
  * 作用定位：复用展示本轮真实目标、冻结岗位分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。
- * 设计原因：周期状态、冻结软限额与模型声明分开呈现；岗位、模型和显式流程只读原计划，不根据当前知识推断旧选择。人工意见与继续是独立动作，补充和新业务不改写原始输入。
+ * 设计原因：周期状态、冻结软限额与模型声明分开呈现；替代关系只定位本周期真实节点，不生成派发边或迁移旧成果。岗位、模型和显式流程只读原计划，人工意见与继续各自独立。
  * 接续附件：历史只展示后端已受理清单；运行内补充另列接收状态与实际输入快照，不重读原文件或把原生接收当作验收。
  */
 import type {ScopeGoalState} from './scope-state';
@@ -21,11 +21,23 @@ import {OwnerExecutionDetails} from './OwnerExecutionDetails';
 import './scope-goal.css';
 
 /** compact 仅改变默认展开状态；testId 支持对话与任务详情稳定定位，不影响业务状态。 */
-export interface ScopeGoalPanelProps {state:ScopeGoalState;compact?:boolean;testId?:string;/** 两处卡片共享主会话控制器；缺省为纯只读展示。 */continuation?:ScopeContinuationView;/** 正式业务新目标独立于只读核实和等待补充。 */replan?:ScopeReplanView;/** 人工意见与执行分离；两处卡片共用持久草稿和原命令。 */humanDecisions?:HumanDecisionsView;/** 明确把已保存决定交回主调度，不构造新用户正文。 */humanContinuation?:HumanContinuationView}
+export interface ScopeGoalPanelProps {state:ScopeGoalState;compact?:boolean;testId?:string;/** 仅定位已同步的本周期节点，不触发工具、恢复或授权。 */onSelectTask?:(id:string)=>void;/** 两处卡片共享主会话控制器；缺省为纯只读展示。 */continuation?:ScopeContinuationView;/** 正式业务新目标独立于只读核实和等待补充。 */replan?:ScopeReplanView;/** 人工意见与执行分离；两处卡片共用持久草稿和原命令。 */humanDecisions?:HumanDecisionsView;/** 明确把已保存决定交回主调度，不构造新用户正文。 */humanContinuation?:HumanContinuationView}
 const shortId=(value:string)=>value.length>20?value.slice(0,8)+'…'+value.slice(-6):value;
 const reviewLabels={complete:'完成申请',replan:'继续重规划',blocked:'报告阻塞',awaiting_user:'需要用户补充'};
+/** 只有所选周期、任务图和唯一节点归属一致才可导航；缺失历史保留 ID，不猜相近名称。 */
+export function goalTaskReference(state:ScopeGoalState,taskId:string){
+  const scope=state.selectedScope,graph=state.graph;
+  if(!scope||scope.scopeId!==state.selectedScopeId||!graph||graph.identity.workspaceId!==scope.workspaceId||graph.identity.rootSessionId!==scope.rootSessionId)return;
+  const matches=graph.tasks.filter(task=>task.taskId===taskId);
+  const task=matches.length===1?matches[0]:undefined;
+  if(task?.scopeId===scope.scopeId&&task.identity.workspaceId===scope.workspaceId&&task.identity.rootSessionId===scope.rootSessionId)return task;
+}
+function GoalTaskReference({state,taskId,onSelectTask}:{state:ScopeGoalState;taskId:string;onSelectTask?:ScopeGoalPanelProps['onSelectTask']}){
+  const task=goalTaskReference(state,taskId);
+  return task&&onSelectTask?<button type="button" className="scope-task-reference" data-testid="scope-task-reference" data-task-id={taskId} title={task.goal} onClick={()=>onSelectTask(taskId)}>{task.assignee.name} · {shortId(taskId)}</button>:<code>{shortId(taskId)}</code>;
+}
 /** 所有“已满足”都明确是审阅声明；人工决定显示实际记录，不自动形成完成结论。 */
-export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel',continuation,replan,humanDecisions,humanContinuation}:ScopeGoalPanelProps){
+export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel',continuation,replan,humanDecisions,humanContinuation,onSelectTask}:ScopeGoalPanelProps){
   const {scopes,selectedScopeId,historyScopeId,selectedScope:scope,selectedGoalView:view,detailLoading,loading,error}=state;
   const summary=scopes.find(value=>value.scopeId===selectedScopeId),goal=scope?.goal,plan=goal?.plan,review=goal?.review;
   const title=plan?.objective??summary?.objective??summary?.inputPreview??'本轮目标';
@@ -63,7 +75,7 @@ export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel',co
           {review&&<div className="scope-goal-section" data-testid="scope-goal-review"><h4>目标审阅 <small>第 {review.revision} 版 · {reviewLabels[review.decision]}</small></h4><p>{review.reason}</p>{review.decision==='complete'&&<p className="scope-goal-muted">{scope.status==='closed'&&scope.outcome==='completed'?'程序已核验证据、任务终态及适用的人工决定；完成范围以逐项审阅为准。':'这是完成申请，仍需等待主运行结束和程序复核。'}</p>}
             {review.gaps.length>0&&<><h5>剩余缺口</h5><ul>{review.gaps.map((gap,index)=><li key={index}>{gap}</li>)}</ul></>}
             {review.checks.some(item=>item.evidence.length>0)&&<details className="scope-goal-evidence"><summary>查看证据引用</summary>{review.checks.map(item=>item.evidence.length>0&&<div key={item.criterionId}><p><strong>{plan?.criteria.find(criterion=>criterion.id===item.criterionId)?.text??item.criterionId}</strong></p>{item.evidence.map((evidence,index)=><p key={index}>{evidence.kind==='human-decision'?`人工决定 ${shortId(evidence.decisionId)} · 接续 ${shortId(evidence.continuationId)}`:evidence.kind==='main-knowledge'?'主 Agent 知识提交':`成员任务 ${shortId(evidence.taskId)} · 运行 ${shortId(evidence.runId)}`}<br/><span className="scope-goal-muted">{evidence.kind==='human-decision'?'本机明确决定经当前接续与成果复核':`工具回执：${evidence.toolCallIds.join('、')}`}</span></p>)}</div>)}</details>}
-            {review.superseded.length>0&&<><h5>失败 / 过期任务替代</h5><ul>{review.superseded.map(item=><li key={item.taskId}><code>{shortId(item.taskId)}</code> → {item.replacementTaskIds.map(shortId).join('、')}<p>{item.reason}</p></li>)}</ul></>}
+            {review.superseded.length>0&&<><h5>原任务与替代成果</h5><p className="scope-goal-muted">点击查看各自执行记录；替代审阅不更改原负责人或任务连线。</p><ul data-testid="scope-superseded-tasks">{review.superseded.map(item=><li key={item.taskId}><span>原任务 </span><GoalTaskReference state={state} taskId={item.taskId} onSelectTask={onSelectTask}/><span> → 新成果 </span>{item.replacementTaskIds.map(id=><GoalTaskReference key={id} state={state} taskId={id} onSelectTask={onSelectTask}/>)}<p>{item.reason}</p></li>)}</ul></>}
           </div>}
           <p className="scope-goal-metadata">创建于 {new Date(scope.createdAt).toLocaleString()}{scope.closedAt?` · 结束于 ${new Date(scope.closedAt).toLocaleString()}`:''}</p>
         </>}

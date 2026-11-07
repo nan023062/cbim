@@ -1,6 +1,6 @@
 /**
  * 作用定位：检查成员检查点、续执行预约和唯一消费在图/运行/邮箱联合事务中的一致性。
- * 设计原因：不能只在工具入口防重；存储重放和普通事务须保留原负责人及流程选择，不得补造检查点、复用信封或将预约当成运行。
+ * 设计原因：不能只在工具入口防重；存储重放和普通事务须保留原负责人及流程选择，活动周期取消检查点只接受完整交接放弃校验产生的窄许可。
  */
 import {fail} from '../foundation/errors';
 import type {DispatchState,DispatchMutation,DispatchCommand} from './dispatch-storage';
@@ -14,8 +14,8 @@ function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(or
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 function valid(value:unknown,message:string):asserts value{if(!value)fail('GRAPH_INPUT_INVALID',message)}
 const fixed=(task:TaskNode)=>({goal:task.goal,acceptance:task.acceptance,modules:task.modules,workflowSelections:task.workflowSelections,ownerBinding:task.ownerBinding,assignee:task.assignee,requester:task.requester,scopeId:task.scopeId,planRevision:task.planRevision});
-/** 验证真实联合状态，不访问磁盘；文件和原生内容证明须由结算/领取的可信服务产生并再次核实。 */
-export function validateMemberCheckpoints(previous:DispatchState,next:DispatchState,mutation:DispatchMutation,command:DispatchCommand):void{
+/** 验证真实联合状态，不访问磁盘；abandoned 只接完整放弃校验按 [rootSessionId,taskId] 编码的许可。恢复仍需当前文件/原生证明，终止不授予恢复资格。 */
+export function validateMemberCheckpoints(previous:DispatchState,next:DispatchState,mutation:DispatchMutation,command:DispatchCommand,abandoned:ReadonlySet<string>=new Set()):void{
   const checkpointIds=new Set<string>(),consumed=new Set<string>();
   for(const run of mutation.runs??[])if(!previous.runs?.some(prior=>prior.binding.runId===run.binding.runId)){
     const oldTask=previous.graphs.find(graph=>graph.identity.rootSessionId===run.binding.rootSessionId)?.tasks.find(task=>task.taskId===run.binding.taskId);
@@ -65,7 +65,8 @@ export function validateMemberCheckpoints(previous:DispatchState,next:DispatchSt
       }
     }else{
       valid(!task.activeRunId&&!task.result&&!task.help,'尚未续执行的检查点不能产生占用或交付');
-      valid(scope.status==='active'?task.status==='checkpointed'&&!request||task.status==='queued'&&!!request:scope.status==='closed'&&['cancelled','interrupted'].includes(task.status),'未消费检查点只能等待主调度或随关闭封存');
+      // 许可只由完整放弃事务/不可变历史核验产生，不能以字段存在或 cancelled 状态自报。
+      valid(abandoned.has(JSON.stringify([task.identity.rootSessionId,task.taskId]))?task.status==='cancelled':scope.status==='active'?task.status==='checkpointed'&&!request||task.status==='queued'&&!!request:scope.status==='closed'&&['cancelled','interrupted'].includes(task.status),'未消费检查点只能等待主调度、经明确交接放弃或随关闭封存');
       valid(member.activity==='idle'&&!member.activeRunId&&!member.activeTaskId&&!member.waitingTaskIds.length&&!member.communicatingMessageIds.length,'未消费检查点不能占用成员或保留通信工作');
     }
   }

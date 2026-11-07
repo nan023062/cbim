@@ -1,6 +1,6 @@
 /**
  * 作用定位：在派发事务提交和重放时核验周期主运行清单的完整归属及追加边界。
- * 设计原因：登记不能依赖当前进程的集合；新清单与旧启动意图交叉检查，防止重复归属、补造旧统计或丢失没有日志的运行。
+ * 设计原因：登记不能依赖当前进程集合；文本补充和人工接续共用旧等待前缀与主轮计数，防止重复归属、补造旧统计或丢失无日志意图。
  */
 import {fail} from '../foundation/errors';
 import type {DispatchState,DispatchMutation} from './dispatch-storage';

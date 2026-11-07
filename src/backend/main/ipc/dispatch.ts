@@ -1,6 +1,6 @@
 /**
  * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
- * 设计原因：通过 ApplicationServices 隔离实现；显式人工保存仅在受控桌面路由注入本机提交标记，不冒充登录身份或启动模型。计量/文件读取与补充、新周期运行各自保持明确身份和受理边界。
+ * 设计原因：通过 ApplicationServices 隔离实现；人工保存仅注入本机提交标记且不启动模型，humanContinue 是另一个明确入口并只消费已保存决定。计量、文本补充与新周期保持各自身份和受理边界。
  */
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
@@ -70,6 +70,8 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'loop.resume':return app.execution(args.id).resume(args.taskId,args.runId,await new ChatInputs(app.workspace(args.id)).message(args.message,args.attachments),await app.chatOptions(args.id,args.options,args.attachments),args.reconciledToolIds);
     case 'loop.goalContinue':return app.execution(args.workspaceId).continueGoal(args);
     case 'loop.goalContinuation':return app.memberDispatch(args.workspaceId).continuations.inspect(args);
+    case 'loop.humanContinue':return app.execution(args.workspaceId).continueFromHumanDecisions(args);
+    case 'loop.humanContinuation':return app.memberDispatch(args.workspaceId).humanContinuations.inspect(args);
     case 'loop.recoveryStart':return app.execution(args.workspaceId).recoverExecution(args);
     case 'loop.recoveryReceipt':return app.memberDispatch(args.workspaceId).recoveries.inspect(args);
     case 'loop.replanStart':return app.execution(args.workspaceId).replanExecution(args);

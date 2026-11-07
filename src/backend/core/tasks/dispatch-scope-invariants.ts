@@ -1,6 +1,6 @@
 /**
  * 作用定位：校验用户任务周期与执行实例、图任务及运行的跨对象生命周期。
- * 设计原因：提交和重放共同保护输入、等待、冻结额度及启动意图；人工决定及预算拒绝分别只追加独立事实，不消费等待。新周期完整登记主运行，旧周期不补造；迟到回调不能改写历史或复活实例。
+ * 设计原因：提交和重放共同保护输入、等待、额度及启动意图；文本补充和显式人工接续共用有序预算，单纯保存决定不消费等待。新周期完整登记主运行，旧周期不补造；迟到回调不能复活实例。
  * 职责边界：不决定整轮任务是否完成、不停止模型；求助与检查点仅在活动周期正常结算。未消费检查点不能进入用户等待，关闭须封存，不能复活实例。
  */
 import {z} from 'zod';
@@ -8,7 +8,8 @@ import {fail} from '../foundation/errors';
 import type {DispatchMutation,DispatchState} from './dispatch-storage';
 import {dispatchScopeGoalSchema,dispatchScopeWaitSchema} from './dispatch-scope';
 import {validateScopeGoalTransition,goalInputRevision} from './scope-goal';
-import {scopeContinuationSchema,scopeContinuationTotalTextLimit} from './scope-continuation';
+import {scopeContinuationTotalTextLimit} from './scope-continuation';
+import {scopeContinuationRecordSchema,isHumanContinuation} from './scope-continuation-record';
 import {scopeRecoverySchema} from './scope-recovery';
 import {scopeReplanSchema} from './scope-replan';
 import {scopeFreshContext} from './fresh-context';
@@ -19,9 +20,10 @@ import {validateScopeBudgets} from './scope-budget-invariants';
 import {isMemberCheckpointPending} from './member-checkpoint';
 import {scopeHumanDecisionsSchema} from './human-decisions';
 import {validateHumanDecisions} from './human-decision-invariants';
+import {validateHumanContinuations} from './human-continuation-invariants';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
-const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),runTracking:scopeRunTrackingSchema.optional(),budget:scopeBudgetSchema.optional(),humanDecisions:scopeHumanDecisionsSchema.optional(),wait:dispatchScopeWaitSchema.optional(),continuations:z.array(scopeContinuationSchema).max(31).optional(),recovery:scopeRecoverySchema.optional(),replan:scopeReplanSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
+const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),runTracking:scopeRunTrackingSchema.optional(),budget:scopeBudgetSchema.optional(),humanDecisions:scopeHumanDecisionsSchema.optional(),wait:dispatchScopeWaitSchema.optional(),continuations:z.array(scopeContinuationRecordSchema).max(31).optional(),recovery:scopeRecoverySchema.optional(),replan:scopeReplanSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
 function valid(condition:unknown,message:string):asserts condition {if(!condition)fail('GRAPH_INPUT_INVALID',message)}
 function ordered(value:unknown):unknown {return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,ordered(item)])):value}
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
@@ -29,6 +31,7 @@ const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(o
 /** 全量检查周期引用、冻结输入及不可逆关闭；旧无 goal/scope 的记录保持缺省，不伪造迁移。 */
 export function validateDispatchScopes(previous:DispatchState,next:DispatchState,mutation:DispatchMutation):void{
   validateHumanDecisions(previous,next,mutation);
+  validateHumanContinuations(previous,next,mutation);
   const scopes=next.scopes??[],activeRoots=new Set<string>(),continuationCommands=new Set<string>(),continuationRuns=new Set<string>(),recoveryIds=new Set<string>(),recoveryRuns=new Set<string>(),recoveryNatives=new Set<string>();
   for(const scope of scopes){
     valid(shape.safeParse(scope).success&&scope.workspaceId===next.workspaceId,'调度周期结构或工作区身份无效');
@@ -95,7 +98,7 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
     const history=scope.continuations??[],priorHistory=old?.continuations??[],supplement=history.length===priorHistory.length+1;
     valid(history.length>=priorHistory.length&&history.length<=priorHistory.length+1&&priorHistory.every((item,index)=>equal(item,history[index])),'补充启动意图只能原样保留并一次追加一项');
     valid(!old?.continuations||!!scope.continuations,'补充历史字段不能删除');
-    valid(history.reduce((total,item)=>total+item.input.message.length,0)<=scopeContinuationTotalTextLimit,'补充正文累计超过允许大小');
+    valid(history.reduce((total,item)=>total+(isHumanContinuation(item)?0:item.input.message.length),0)<=scopeContinuationTotalTextLimit,'补充正文累计超过允许大小');
     valid(!history.length||scope.goal&&goalInputRevision(scope.goal)===history.length+1,'补充历史与目标输入版本不一致');
     if(scope.goal)valid(goalInputRevision(scope.goal)===(history.length+1),'输入版本只能随显式补充逐次增加');
     const seenCommands=new Set<string>(),seenWaits=new Set<string>(),seenRuns=new Set<string>();

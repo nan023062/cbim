@@ -1,7 +1,7 @@
 /**
  * 作用定位：将主 Agent 当前用户目标的读取、规划和审阅端口注册为内部 Loop 工具。
  * 设计原因：输入复用 Core 的严格协议，周期、运行及命令身份由可信装配闭包决定；模型只提交计划和有引用的判断，不能自行指定目标所属会话或签发验收。
- * 职责边界：complete 只申请主轮次结算后的复核，不直接关闭调度，也不确认人工验收；工具层不执行成员或重造证据回执。
+ * 职责边界：complete 只申请主轮次结算后的复核；人工项只能引用用户已保存且经专用入口消费的接受，模型不能签署或继续等待。工具层不执行成员或重造证据。
  */
 import {z} from 'zod';
 import {zodToJsonSchema} from 'zod-to-json-schema';
@@ -20,7 +20,7 @@ const definitions={
     schema:goalPlanInputSchema,effects:['maintenance'] as const,
   },
   cbim_goal_review:{
-    description:'按 expectedRevision 审阅当前目标和真实执行证据，记录逐项检查、剩余缺口及下一步决定。引用实际成员交付或本轮知识工具回执，不能把文字声明、派发成功或审阅工具回执当作业务证据。decision=complete 仅申请主轮次可靠结算后再次复核，不立即结束任务，不签发人工验收；未达到目标应重新规划或说明阻塞。',
+    description:'按 expectedRevision 审阅当前目标和真实执行证据。引用实际成员交付或本轮知识工具回执，不能把文字、派发或审阅回执当作证据。human 项 satisfied 仅能引用本输入实际消费的 {kind:human-decision,decisionId,continuationId} 接受，原业务主体和候选必须未变；模型不能签署、选择历史接受或自动继续等待。拒绝/补证通过 superseded.humanDecision 引用，替代必须是接续后新任务的真实候选，旧结果保留；仍需人工意见时提供真实 member-result 并等待新的决定。complete 仅申请主轮可靠结算后的再次复核，不立即结束任务。',
     schema:goalReviewInputSchema,effects:['maintenance'] as const,
   },
 };

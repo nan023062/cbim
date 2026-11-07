@@ -15,11 +15,12 @@ export function HumanDecisionPanel({state}:{state:HumanDecisionsView}){
   if(!state.criteria.length&&!state.history.length)return null;
   return <section className="human-decisions" aria-label="人工决定" data-testid="human-decision-panel" data-scope-id={state.scopeId} data-criterion-id={state.criterionId} data-basis={state.previewCurrent?result?.basis:undefined} data-phase={attempt?.phase??'draft'}>
     <header><strong>人工决定</strong><span>本机明确提交 · 尚非整体目标完成</span></header>
-    <p className="human-muted">选择验收项并核实成果，再记录接受、拒绝或补证意见。保存后任务继续保持等待，不启动模型。</p>
+    <p className="human-muted">选择验收项并核实成果，再记录接受、拒绝或补证意见。保存本身不启动模型；后续工作由独立的继续操作发起。</p>
     <label className="human-field">验收项<select data-testid="human-criterion-select" value={state.criterionId} onChange={event=>state.select(event.target.value)}>{state.criteria.map(value=><option key={value.id} value={value.id}>{value.text}</option>)}</select></label>
     {!state.eligible&&<p className="human-muted">当前为历史或尚未同步的目标；仅安全等待中的当前目标可以提交新决定。</p>}
     {state.eligible&&<>
       <button data-testid="human-preview" disabled={!state.editable||!!preview?.loading} onClick={()=>void state.inspect()}>{preview?.loading?'正在核实…':result?'重新核实当前选择':'查看候选与可选基线'}</button>
+      {!!record?.baselines.length&&<button data-testid="human-clear-baselines" disabled={!state.editable} onClick={()=>void state.clearBaselines()}>清除旧选择，重新核实</button>}
       {preview?.error&&<p role="alert" data-testid="human-error">{preview.error}</p>}
       {result&&<div className="human-candidates">
         {!state.previewCurrent&&<p className="human-warning">选择或目标已变化；请重新核实，旧观察不能用于提交。</p>}
@@ -40,7 +41,7 @@ export function HumanDecisionPanel({state}:{state:HumanDecisionsView}){
     {attempt?.error&&<p role="alert" data-testid="human-error">{attempt.error}</p>}
     {state.error&&<p role="alert" data-testid="human-error">{state.error}</p>}
     {attempt?.phase==='unknown'&&<div className="human-request-state"><p>提交结果尚未确认，保留原命令和意见。请查询或重试原请求，不会自动发送。</p><button data-testid="human-query" disabled={state.pending} onClick={()=>void state.query()}>查询提交结果</button><button data-testid="human-retry" disabled={!state.canRetry} onClick={()=>void state.retry()}>重试原请求</button></div>}
-    {attempt?.phase==='accepted'&&attempt.receipt&&<p role="status" data-testid="human-receipt" data-decision-id={attempt.receipt.record.decisionId}>已记录“{humanDecisionLabels[attempt.receipt.record.decision]}”。目标尚未因本次提交而完成，也未启动后续工作。</p>}
+    {attempt?.phase==='accepted'&&attempt.receipt&&<p role="status" data-testid="human-receipt" data-decision-id={attempt.receipt.record.decisionId}>已记录“{humanDecisionLabels[attempt.receipt.record.decision]}”。本次保存未完成目标或启动工作；后续状态以当前目标为准。</p>}
     {!!history.length&&<details className="human-history" open data-testid="human-history"><summary>本项决定记录 · {history.length}</summary>{[...history].reverse().map(value=><article key={value.decisionId} data-decision-id={value.decisionId}><strong>{humanDecisionLabels[value.decision]} · 第 {value.revision} 次记录</strong><time>{new Date(value.recordedAt).toLocaleString()}</time><p>{value.comment||'未附加意见'}</p><small>本机明确提交；仅代表当时依据，不自动沿用于当前成果。</small>{value.supersedesDecisionId&&<p className="human-muted">替代同一依据上的前次决定 <code>{value.supersedesDecisionId}</code></p>}<details><summary>查看范围与依据</summary><p>{value.proof.source.criterion.text}</p><p>计划第 {value.proof.source.planRevision} 版 · 审阅第 {value.proof.source.reviewRevision} 版</p>{value.proof.candidates.map(candidate=><div key={candidate.taskId}>任务 <code>{candidate.taskId}</code>{candidate.selected?.files.map(file=><p key={file.relativePath}><code>{file.relativePath}</code> · {fileLabels[file.state]??'无法核实'}</p>)}</div>)}{value.proof.limitations.map((limitation,index)=><p key={index}>{limitation}</p>)}</details></article>)}</details>}
   </section>;
 }

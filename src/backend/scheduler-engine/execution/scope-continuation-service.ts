@@ -1,7 +1,7 @@
 /**
  * 作用定位：在既有派发日志中可靠消费安全等待，并保存用户显式补充与一次性主运行启动意图。
  * 设计原因：运行时在租约和历史预检后注入真实 runId，按冻结软限额核实后才与消费等待同事务追加清单；预算拒绝仅登记独立阻塞，不消费等待、输入版本或启动意图。旧周期不补造归属，核实补充仍须 read。
- * 职责边界：不启动模型、不清除停止屏障、不批准 human 项；调用方必须在提交前后核验停止信号，提交后失败不得还原等待或重用意图。
+ * 职责边界：只接受文本分支，不返回或伪造人工接续；不启动模型、不批准 human 项。调用方须核验停止信号，提交后失败不得还原等待或重用意图。
  */
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
@@ -14,6 +14,7 @@ import {appendScopeMainRun} from '../../core/tasks/scope-run-tracking';
 import {goalInputRevision,scopeGoalDecisionLimit} from '../../core/tasks/scope-goal';
 import {goalContinuationRequestSchema,scopeContinuationLookupSchema,scopeContinuationTotalTextLimit,type GoalContinuationRequest,type GoalContinuationReceipt,type ScopeContinuation,type ScopeContinuationLookup} from '../../core/tasks/scope-continuation';
 import {rejectBudget,type ScopeBudgetService,type ScopeBudgetRejected} from './scope-budget-service';
+import {isHumanContinuation} from '../../core/tasks/scope-continuation-record';
 
 type Owner=Pick<KnowledgeWorkspace,'entry'|'assert'>;
 function check(condition:unknown,code:string,message:string):asserts condition{if(!condition)fail(code,message)}
@@ -31,7 +32,7 @@ export class ScopeContinuationService {
   /** 只查现有日志事实，不核实模型或原生会话，不产生启动授权；active/closed 也保留原接收记录。 */
   async inspect(raw:ScopeContinuationLookup):Promise<GoalContinuationReceipt|undefined>{
     const input=this.parse(scopeContinuationLookupSchema,raw),scope=this.scope(await this.store.read(),input),continuation=scope.continuations?.find(item=>item.continuationId===input.commandId);
-    return continuation?{workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,scopeId:scope.scopeId,scopeStatus:scope.status,continuation}:undefined;
+    return continuation&&!isHumanContinuation(continuation)?{workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,scopeId:scope.scopeId,scopeStatus:scope.status,continuation}:undefined;
   }
   /**
    * 仅可信 beforeRun 调用，runId 已由运行时分配。指纹不含随机 runId，相同命令永远返回第一次接收记录；变更请求则冲突。
@@ -51,7 +52,7 @@ export class ScopeContinuationService {
       check(wait.mainRunIds.length<32,'GOAL_CYCLE_LIMIT','本次目标已达到 32 次主调度运行，不能通过补充重置预算');
       check(goal.revision+3<=scopeGoalDecisionLimit+1,'GOAL_DECISION_LIMIT','剩余目标版本不足以接收补充并重新规划审阅');
       check(!wait.mainRunIds.includes(runId)&&!state.runs?.some(run=>run.binding.runId===runId)&&!state.scopes?.some(value=>value.continuations?.some(item=>item.runId===runId)),'GOAL_RUN_CONFLICT','主运行身份已经被使用，不能重复启动');
-      check((scope.continuations??[]).reduce((total,item)=>total+item.input.message.length,0)+input.input.message.length<=scopeContinuationTotalTextLimit,'GOAL_INPUT_LIMIT','本目标补充正文累计超过允许大小，请结束后另建目标');
+      check((scope.continuations??[]).reduce((total,item)=>total+(isHumanContinuation(item)?0:item.input.message.length),0)+input.input.message.length<=scopeContinuationTotalTextLimit,'GOAL_INPUT_LIMIT','本目标补充正文累计超过允许大小，请结束后另建目标');
       check(!state.runs?.some(run=>run.binding.rootSessionId===scope.rootSessionId&&['starting','running'].includes(run.status)),'GOAL_WORK_PENDING','本主会话仍有在途成员运行');
       const admitted=await this.budgets?.admit(state,scope,{kind:'main',taskId:scope.rootSessionId,runId});
       if(admitted?.rejected)return {scopes:[admitted.scope],receipt:admitted.rejected};
@@ -63,7 +64,7 @@ export class ScopeContinuationService {
     });
     if('budgetRejected' in receipt)rejectBudget(receipt);
     const scope=this.scope(await this.store.read(),input),continuation=scope.continuations?.find(item=>item.continuationId===input.commandId);
-    check(continuation&&continuation.runId===receipt.continuation.runId,'GOAL_CONTINUATION_UNAVAILABLE','已提交补充记录与当前周期不一致，不能启动');
+    check(continuation&&!isHumanContinuation(continuation)&&continuation.runId===receipt.continuation.runId,'GOAL_CONTINUATION_UNAVAILABLE','已提交补充记录与当前周期不一致，不能启动');
     return {scope,continuation,fresh};
   }
 }

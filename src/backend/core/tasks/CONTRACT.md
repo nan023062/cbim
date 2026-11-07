@@ -10,7 +10,7 @@
 
 `scope-goal.ts` 定义 `goal:{revision,input:{message,attachmentIds},plan?,review?,blocked?}`。新周期从 revision 1 开始；每次计划或审阅原子增加一个版本，派发不增加目标版本；最多 64 次决策。message 以非空白和最多 1,000,000 字符校验，保留原始空白与换行；attachmentIds 为最多 12 个 UUID，缺省输入规范化为空数组。原始 input 永远不可改写或移除；旧记录整个 goal 缺省，不能从旧 TaskSpec.goal、首轮消息或后续请求补造。
 
-计划保存 objective、constraints、criteria、assignments、reason，以及可信运行、时间、知识基线与图游标。criteria 区分 evidence / human；assignments 将真实静态角色及模块集合映射到验收项，主角色治理可使用空模块集合。审阅保存 complete / replan / blocked / awaiting_user 决策、逐项 checks、superseded 关系、gaps、reason，以及当前计划版本、运行、知识、图游标和副作用日志界限。member-result 证据引用 taskId/runId/resultId/planRevision/toolCallIds；main-knowledge 仅引用当前可信审阅运行的 toolCallIds，不能传入其他运行路径。Schema 和提交/重放不变量要求版本逐次增加；重规划清除旧审阅，但不能删除、改名或降级既有 human 项。人工决定通过独立历史保存；当前尚未接入目标审阅消费这些决定，人工项仍不能由模型标记 satisfied。
+计划保存 objective、constraints、criteria、assignments、reason，以及可信运行、时间、知识基线与图游标。criteria 区分 evidence / human；assignments 将真实静态角色及模块集合映射到验收项，主角色治理可使用空模块集合。审阅保存 complete / replan / blocked / awaiting_user 决策、逐项 checks、superseded 关系、gaps、reason，以及当前计划版本、运行、知识、图游标和副作用日志界限。member-result 证据引用 taskId/runId/resultId/planRevision/toolCallIds；main-knowledge 仅引用当前可信审阅运行的 toolCallIds，不能传入其他运行路径。Schema 和提交/重放不变量要求版本逐次增加；重规划清除旧审阅，但不能删除、改名或降级既有 human 项。人工决定通过独立历史保存；只有本输入版本显式消费的真实接受，且原业务主体、候选、知识及所选文件仍有效时，才可通过 human-decision 引用申请 satisfied，模型不能自行签署。
 
 `complete` 只表示模型提交了结构化完成申请。调度服务在主运行实际结束后复核日志和全周期状态，再决定是否允许 completed 关闭；原有成员候选仍保持 `acceptance:not_evaluated`。可信协调器可以单独写入 blocked 理由，保留最后计划和版本，之后不允许继续决策。旧快照保存在同一派发事务日志中，不另复制历史数组。
 
@@ -412,4 +412,16 @@ accept 必须覆盖此人工项当前审阅的全部真实成员候选，为每�
 
 `DispatchScope.humanDecisions={revision,records}` 最多 64 条，版本从 1 连续追加；旧字段缺省不补造。`human-decision-invariants.ts` 同时保护提交与重放：仅同一安全 waiting 周期可一次追加一条，保留原 goal/review/wait/budget/图/任务/实例/信封/运行不变；使用专属 `human-decision-<decisionId>` 命令。proof 必须绑定保存它的主体身份、当前全部成员候选和对应责任模块；旧记录、意见和证明不可改删。decisionId 跨周期唯一且不能复用恢复、重规划或补充命令；只有同人工项、同 basis 的最近决定可被新记录显式 supersedes，旧记录仍保留。
 
-人工决定摘要仅包含 revision/count/lastDecisionAt，完整历史在选中周期详情中返回。追加推进独立 scope stamp，不推进业务审阅 graph cursor 或 goal.revision；纯读取与重启不会触发模型或消费等待。当前目标完成门禁保持原样，人工项仍不能被模型标为 satisfied；决定如何被后续显式接续审阅消费属于后续步骤。
+人工决定摘要仅包含 revision/count/lastDecisionAt，完整历史在选中周期详情中返回。追加推进独立 scope stamp，不推进业务审阅 graph cursor 或 goal.revision；纯读取与重启不会触发模型或消费等待。单纯保存接受不能令人工项 satisfied；只有下面的独立接续与当前证据复核可支持完成申请。
+
+### 按人工决定显式继续原目标
+
+`human-continue.ts` 定义 `HumanContinuationRequest/Lookup/Receipt/ScopeHumanContinuation`。请求只携带本会话/周期/等待、预期 goal/input/decision 版本、稳定 UUID 命令、1～50 个唯一决定 ID 与明确模型/权限；严格拒绝自由正文、actor、主体和证明。服务须重新核实所选全集，模型工具不能构造这类受理来源。
+
+`scope-continuation-record.ts` 单向组合旧无 kind 的真实文本补充与新 `kind:human_decisions`，不引入协议类型环。两者共用有序 inputRevision、32 次主运行及原决策额度；新人工分支没有 input.message。可信记录保存完整旧 wait、实际新 run、决定序列及 ID、受理时原业务 subject，以及最多 500 个 priorTaskIds。subject 只包含 objective、constraints、验收原文与角色/模块/验收责任，排除解释和运行时钟，并稳定排序；priorTaskIds 是本周期受理前真实任务全集，不能由客户端声明。
+
+`human-continuation-rules.ts` 先跨 basis 选每个 criterion 最新意见，再限制当前 wait。必须消费这个全集，不能遗漏拒绝/补证、选择更旧接受或借其他等待。没有记录的人工项仍未满足。`human-continuation-invariants.ts` 核对独立命令、原子等待消费和原主体；意图不修改原输入或决定历史，inputRevision +1、旧 review 清除，主调度必须重新规划。当前输入的最后一条接续不是人工来源时，旧接受不可引用；之后另一等待也不自动继承批准。
+
+`GoalEvidence` 新分支是 `{kind:'human-decision',decisionId,continuationId}`，模型只引用记录。human satisfied 的形状必须恰有一个此类引用；普通 evidence 项、未满足项不能借它替代工具证据。人工引用可独立使用；同项额外列出的 member-result 必须属于该接受的精确候选和证据集合，不能混入未被接受的新成果。纯提交不变量要求当前意图、最新接受、同 criterion、原业务主体、知识及候选身份；真正 canonical 和文件有效性由服务在审阅与最终完成分别重核。记录存在或 Schema 通过都不代表已完成。
+
+`superseded.humanDecision` 显式引用本次消费的拒绝/补证，允许对其原 result_ready 候选安排返工。原任务版本、运行、结果及证据引用仍须与决定精确一致；替代结果必须来自 priorTaskIds 之外的本周期新任务，真实成功且覆盖原模块；原结果与人工历史不改写。接受不能使用此例外，单纯文字 reason 也不能替代引用；原失败/阻塞/过期知识替代协议保持独立。

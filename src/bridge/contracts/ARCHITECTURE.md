@@ -16,6 +16,7 @@
 | [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
 | [dispatch.ts](dispatch.ts) | 向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。 |
 | [execution.ts](execution.ts) | 对话、运行和排队在 IPC 中传递的可序列化类型。 |
+| [human-continue.ts](human-continue.ts) | 公开按已保存人工决定继续原目标的严格请求与回执，连接桌面和调度入口。 |
 | [human-decisions.ts](human-decisions.ts) | 向桌面公开人工决定的序列化请求、依据预览与不可变记录。 |
 | [models.ts](models.ts) | 模型配置界面消费的公开模型信息与停止原因格式化。 |
 | [resources.ts](resources.ts) | 资源种类、仓库快照、登录占位及仓库状态的共享类型。 |
@@ -138,6 +139,16 @@ class N_src_bridge_contracts_execution_ts["execution.ts"] {
 }
 ```
 直接依赖：[../../backend/core/brain/types.ts](../../backend/core/brain/types.ts)、[../../backend/core/tasks/types.ts](../../backend/core/tasks/types.ts)、[../../backend/core/tasks/queue.ts](../../backend/core/tasks/queue.ts)、[../../backend/core/tools/questions.ts](../../backend/core/tools/questions.ts)。
+
+### human-continue.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_human_continue_ts["human-continue.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../backend/core/tasks/human-continue.ts](../../backend/core/tasks/human-continue.ts)、[../../backend/core/tasks/scope-continuation-record.ts](../../backend/core/tasks/scope-continuation-record.ts)。
 
 ### human-decisions.ts
 
@@ -392,6 +403,12 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 人工决定接续的桌面契约
+
+`human-continue.ts` 只公开 Core 的严格请求、查询、回执和联合类型判别。`loop.humanContinue` 接当前等待、目标/输入/决定版本、最新决定 ID 全集、稳定命令及明确模型权限；不接自由正文、actor 或证明。`loop.humanContinuation` 按完整 workspace/root/scope/command 读取原意图，读取不执行。
+
+`scope.continuations` 兼容旧纯文本记录，新增 `kind:human_decisions`，没有伪造的 input.message。公开人工接续保留旧等待、实际消费的决定、业务主体、受理前任务 ID 集合及真实新运行；前任务集合用于核验返工是新任务。受理回执不代表运行仍在执行或目标完成，身份和冻结内容必须逐项校验。审阅引用 human-decision 只声明所引用的真实决定，是否适用由调度引擎核验。
 
 ### 人工决定的桌面契约
 

@@ -1,6 +1,6 @@
 /**
  * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
- * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；周期冻结输入、运行归属及软限额。关闭原子封存检查点和待领续请求，历史保留；安全等待和fresh意图独立，幂等旧回执不能重开周期。
+ * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；周期冻结输入、归属及软限额。人工保存和人工继续分设服务，继续同事务消费等待和登记运行；关闭封存待办，旧回执不能重开周期。
  * 职责边界：本模块负责可靠入队、显式撤销未启动集合及受审计的单条依赖替换，由独立 MemberExecutionManager 执行；调度维护不停止活动运行，不复活旧实例，也不代表目标完成。
  */
 import {randomUUID} from 'node:crypto';
@@ -20,6 +20,7 @@ import {ScopeContinuationService} from './scope-continuation-service';
 import {ScopeRecoveryService} from './scope-recovery-service';
 import {ScopeReplanService} from './scope-replan-service';
 import {ScopeHumanDecisionService,type HumanDecisionPorts} from './scope-human-decision-service';
+import {ScopeHumanContinuationService} from './scope-human-continuation-service';
 import {QueuedTaskCancelService} from './queued-task-cancel-service';
 import {QueuedDependencyReplacementService} from './queued-dependency-replacement-service';
 import type {ReplaceQueuedDependencyInput,ReplaceQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-replacement';
@@ -52,6 +53,8 @@ export class WorkspaceDispatchService {
   readonly replans:ScopeReplanService;
   /** 本机显式人工决定只追加等待周期记录，不消费等待、修改候选或授予运行许可。 */
   readonly humanDecisions:ScopeHumanDecisionService;
+  /** 按已保存决定独立消费等待；普通文本补充不进入此来源。 */
+  readonly humanContinuations:ScopeHumanContinuationService;
   /** 指定周期的按需统计；复用 canonical 日志端口，不影响运行许可或修复历史。 */
   readonly usage:ScopeUsageService;
   /** 运行间软限额门禁；证明与归属同事务，公开统计不能代替本入口。 */
@@ -59,13 +62,14 @@ export class WorkspaceDispatchService {
   private readonly queuedCancellation:QueuedTaskCancelService;
   private readonly queuedDependencyReplacement:QueuedDependencyReplacementService;
   constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts,budgetPolicy?:()=>ScopeBudgetPolicy,humanPorts?:HumanDecisionPorts){
-    this.goals=new ScopeGoalService(owner,store,goalPorts);
+    this.goals=new ScopeGoalService(owner,store,goalPorts,humanPorts);
     this.usage=new ScopeUsageService(owner,store,goalPorts);
     this.budgets=new ScopeBudgetService(this.usage,budgetPolicy);
     this.continuations=new ScopeContinuationService(owner,store,this.budgets);
     this.recoveries=new ScopeRecoveryService(owner,store,goalPorts,this.budgets);
     this.replans=new ScopeReplanService(owner,store,this.goals,goalPorts,this.budgets);
     this.humanDecisions=new ScopeHumanDecisionService(owner,store,this.goals,goalPorts,humanPorts,()=>this.check(owner.entry.id));
+    this.humanContinuations=new ScopeHumanContinuationService(owner,store,this.goals,goalPorts,humanPorts,this.budgets);
     this.queuedCancellation=new QueuedTaskCancelService(owner,store);
     this.queuedDependencyReplacement=new QueuedDependencyReplacementService(owner,store,this.goals);
   }

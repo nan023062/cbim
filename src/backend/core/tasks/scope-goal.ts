@@ -1,7 +1,7 @@
 /**
  * 作用定位：定义调度周期目标的原始输入、版本化计划、审阅证据和持久化转换规则。
  * 设计原因：计划与模型回合分离，原始需求不可改写；显式补充提升输入版本并使旧计划过期，审阅引用真实运行，重放同样限制版本演进。
- * 职责边界：Schema 只校验形状，运行、知识和图证据由调度服务核实；complete 是请求，不是验收已通过。
+ * 职责边界：人工满足项须引用真实决定及显式接续，但 Schema 只准许形状；运行、知识、文件和批准归属由调度服务重核，complete 仍仅是申请。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
@@ -22,9 +22,12 @@ const assignment=z.object({agentId:id,moduleIds:z.array(id).max(50).refine(uniqu
 export const goalPlanInputSchema=z.object({expectedRevision:revision,objective:text,constraints:z.array(text).max(50),criteria:z.array(criterion).min(1).max(50),assignments:z.array(assignment).min(1).max(100),reason:text}).strict();
 const memberEvidence=z.object({kind:z.literal('member-result'),taskId:id,runId:id,resultId:id,planRevision:z.number().int().positive(),toolCallIds:z.array(id).min(1).max(100).refine(unique)}).strict();
 const knowledgeEvidence=z.object({kind:z.literal('main-knowledge'),toolCallIds:z.array(id).min(1).max(100).refine(unique)}).strict();
-const evidence=z.discriminatedUnion('kind',[memberEvidence,knowledgeEvidence]);
+const humanDecisionReference=z.object({decisionId:z.string().uuid(),continuationId:z.string().uuid()}).strict();
+/** 仅引用真实记录和已受理接续；Schema 不把 ID 当作批准，可信服务仍须重核当前主体及成果。 */
+const humanEvidence=humanDecisionReference.extend({kind:z.literal('human-decision')}).strict();
+const evidence=z.discriminatedUnion('kind',[memberEvidence,knowledgeEvidence,humanEvidence]);
 const check=z.object({criterionId:id,outcome:z.enum(['satisfied','unmet','needs_human']),reason:text,evidence:z.array(evidence).max(100)}).strict();
-const superseded=z.object({taskId:id,replacementTaskIds:z.array(id).min(1).max(100).refine(unique),reason:text}).strict();
+const superseded=z.object({taskId:id,replacementTaskIds:z.array(id).min(1).max(100).refine(unique),reason:text,humanDecision:humanDecisionReference.optional()}).strict();
 export const goalReviewInputSchema=z.object({expectedRevision:revision,decision:z.enum(['complete','replan','blocked','awaiting_user']),checks:z.array(check).max(50),superseded:z.array(superseded).max(100),gaps:z.array(text).max(100),reason:text}).strict();
 export type GoalPlanInput=z.infer<typeof goalPlanInputSchema>;
 export type GoalReviewInput=z.infer<typeof goalReviewInputSchema>;
@@ -51,7 +54,11 @@ export const dispatchScopeGoalSchema=z.object({revision,inputRevision:inputRevis
   if(goal.review.revision!==goal.revision||goal.review.planRevision!==goal.plan.revision||goal.review.revision<=goal.plan.revision)issue('审阅与目标计划版本不一致');
   if(goal.review.lastEffectSeq>goal.review.observedSeq)issue('副作用序号不能超过已观察日志');
   if(!unique(goal.review.checks.map(item=>item.criterionId))||!goal.review.checks.every(item=>criteria.includes(item.criterionId)))issue('审阅项重复或不属于计划');
-  if(goal.review.checks.some(item=>item.outcome==='satisfied'&&(!item.evidence.length||goal.plan!.criteria.find(value=>value.id===item.criterionId)?.kind==='human')))issue('满足项必须有证据，模型不能批准人工项');
+  for(const item of goal.review.checks){
+    const human=goal.plan.criteria.find(value=>value.id===item.criterionId)?.kind==='human',refs=item.evidence.filter(value=>value.kind==='human-decision');
+    if(item.outcome==='satisfied'&&(!item.evidence.length||human&&refs.length!==1))issue('满足项必须有证据，人工项须引用一次明确人工接续');
+    if(refs.length&&(!human||item.outcome!=='satisfied'||item.evidence.some(value=>value.kind==='main-knowledge')))issue('人工决定仅可用于对应人工项的满足申请，不能代替业务工具或未满足项证据');
+  }
   if(goal.review.decision==='complete'&&(goal.review.gaps.length||goal.review.checks.length!==criteria.length||goal.review.checks.some(item=>item.outcome!=='satisfied')))issue('完成申请仍有未满足验收项');
 });
 export type DispatchScopeGoal=z.infer<typeof dispatchScopeGoalSchema>;

@@ -1,7 +1,7 @@
 /**
  * 作用定位：核实安全等待中的人工验收项和明确选定文件，保存本机显式决定及不可变依据。
  * 设计原因：成员候选、模型审阅与人的选择分开；预览不授予提交权，提交在派发事务内重建依据并按独立序列追加。
- * 职责边界：不修改 goal、wait、任务图或运行许可，不启动模型；哈希只描述有界观察，不证明整个工作区或外部原子快照。
+ * 职责边界：这里只保存决定，不修改 goal、wait、图或运行许可；共享文件端口供另一专用接续服务重新核实，保存本身不启动模型。哈希只描述有界观察。
  */
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
@@ -15,15 +15,9 @@ import {verifyArtifactBaselines} from '../../core/tasks/artifact-evidence';
 import {humanDecisionPreviewInputSchema,humanDecisionRequestSchema,humanDecisionLookupSchema,humanDecisionHistoryInputSchema,humanDecisionActorSchema,humanDecisionPreviewSchema,humanDecisionRecordSchema,humanDecisionCoverageLimitation,humanDecisionLimit,type HumanDecisionPreviewInput,type HumanDecisionRequest,type HumanDecisionLookup,type HumanDecisionHistoryInput,type HumanDecisionPreview,type HumanDecisionReceipt,type HumanDecisionHistory,type HumanDecisionActor,type HumanDecisionCandidate,type HumanDecisionKind} from '../../core/tasks/human-decisions';
 import {humanDecisionBasis,humanDecisionProof} from '../../core/tasks/human-decision-proof';
 import {ScopeGoalService,type ScopeGoalPorts} from './scope-goal-service';
+import type {HumanDecisionPorts} from './human-decision-evidence';
+export type {HumanDecisionPorts} from './human-decision-evidence';
 
-/** 文件端口固定工作区根，调用方不能传正文或可信哈希；只读占用不占全局模型槽位。 */
-export interface HumanDecisionPorts {
-  normalizePath(raw:string):string;
-  checkFiles(files:readonly ArtifactFileFact[],signal:AbortSignal):Promise<ArtifactFileCheck[]>;
-  acquireRead():()=>void;
-  /** 工作区退役/关闭后，尚未返回的文件或日志读取不能继续提交。 */
-  assertCurrent?():void;
-}
 type Owner=Pick<KnowledgeWorkspace,'entry'|'assert'|'read'>;
 function check(condition:unknown,code:string,message:string):asserts condition{if(!condition)fail(code,message)}
 const compare=(a:string,b:string)=>a<b?-1:a>b?1:0;

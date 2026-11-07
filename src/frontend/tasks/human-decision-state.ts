@@ -1,6 +1,6 @@
 /**
  * 作用定位：维护当前主会话人工决定的草稿、手动预览、冻结命令及回执，供两处目标卡共享。
- * 设计原因：保存意见与执行分离；先持久化再发送，通信未知只能核实原命令，预览迟到或切换选择不能使过期依据变为可提交。
+ * 设计原因：保存意见与执行分离；先持久化再发送，通信未知只能核实原命令。返工后须显式清除旧候选再核实，预览迟到或切换选择不能使过期依据变为可提交。
  */
 import {humanDecisionPreviewInputSchema,humanDecisionPreviewSchema,humanDecisionRequestSchema,humanDecisionReceiptSchema} from '../../bridge/contracts/human-decisions';
 import type {HumanDecisionKind,HumanDecisionBaselineSelection,HumanDecisionPreviewInput,HumanDecisionPreview,HumanDecisionRequest,HumanDecisionLookup,HumanDecisionReceipt} from '../../bridge/contracts/human-decisions';
@@ -95,6 +95,13 @@ export class HumanDecisionController {
   edit(target:HumanDecisionTarget,change:Partial<Pick<HumanDecisionDraft,'baselines'|'decision'|'comment'>>){
     const record=this.record(target.scopeId,target.criterionId);if(!this.available||!this.belongs(target)||this.locked(record))return;
     this.update({scopeId:target.scopeId,criterionId:target.criterionId,baselines:record?.baselines??[],comment:record?.comment??'',decision:record?.decision,...change,attempt:undefined});
+  }
+  /** 明确清除旧候选选择才能核实返工成果；不改后端历史，也不能清除未知/在途请求。 */
+  resetBaselines(target:HumanDecisionTarget):boolean{
+    const record=this.record(target.scopeId,target.criterionId);if(!this.available||!this.belongs(target)||this.locked(record))return false;
+    // 使正在回来的旧预览失效，避免新候选菜单再次被旧文件观察覆盖。
+    this.previews.delete(identityKey(target.scopeId,target.criterionId));
+    return this.update({scopeId:target.scopeId,criterionId:target.criterionId,baselines:[],comment:record?.comment??'',decision:undefined});
   }
   currentPreview(target:HumanDecisionTarget):HumanDecisionPreview|undefined{
     const state=this.previewState(target),record=this.record(target.scopeId,target.criterionId);

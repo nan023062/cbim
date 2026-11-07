@@ -46,7 +46,7 @@ export async function scopeContinuationProvider(options:{holdContinuation?:boole
           tool('continue-before-plan','cbim_goal_inspect',{});
         }else if(turn===7){
           const {scope}=goalInspection(body,'continue-before-plan') as unknown as {scope:DispatchScope};
-          assert.deepEqual(scope.goal?.input,{message:continuationFixture.mainGoal,attachmentIds:[]});assert.equal(scope.goal?.inputRevision,2);assert.equal(scope.continuations?.length,1);assert.equal(scope.continuations?.[0].input.message,continuationFixture.supplement);
+          assert.deepEqual(scope.goal?.input,{message:continuationFixture.mainGoal,attachmentIds:[]});assert.equal(scope.goal?.inputRevision,2);assert.equal(scope.continuations?.length,1);const continuation=scope.continuations?.[0];assert.ok(continuation&&'input'in continuation);assert.equal(continuation.input.message,continuationFixture.supplement);
           tool('continue-stale-review','cbim_goal_review',goalCompleteArguments(body,'continue-before-plan'));
         }else if(turn===8){
           const result=body.messages.find(message=>message.role==='tool'&&message.tool_call_id==='continue-stale-review');assert.ok(result&&JSON.stringify(result.content).includes('GOAL_REPLAN_REQUIRED'),'补充后旧计划必须拒绝直接完成审阅');

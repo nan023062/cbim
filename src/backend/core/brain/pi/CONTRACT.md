@@ -8,7 +8,7 @@ Pi 仅在可信 `EngineContext.artifactTools` 存在时注册采集工具，并�
 
 ### 当前成员结果接续
 
-普通用户输入及 `user-continuation` 显式目标补充保持 RPC `prompt` 的 `started` 行为；只有 `EngineContext.source.kind==='member-results'` 时，`bridgeExtensionForSource` 才为本轮生成一次性可信输入处理器。首条输入写为 `customType:'cbim-member-results'` 的原生 custom 消息，保存来源 details，通过 `triggerTurn:true` 发起生成，原 prompt 返回 `handled`。后续用户 steer 不被拦截，custom 正文明示“任务数据、非用户新指令或授权、候选尚未验收”。输入加普通文字前缀，避免结果正文被当成斜杠命令。
+普通用户输入及 `user-continuation` 显式文本补充保持 RPC `prompt` 的 `started` 行为。成员回传与 `human_decisions` 分别使用 `customType:'cbim-member-results'` / `cbim-human-decisions` 的一次性首条输入处理器，保存可信来源 details，通过 `triggerTurn:true` 发起生成，原 prompt 返回 `handled`。后续用户 steer 不被拦截。成员正文说明候选尚未验收；人工正文说明这是系统转交的本机已保存意见，仅针对所述条件和所选成果，不是用户自由消息、新目标或工具提权，须重新规划和核实。输入加普通文字前缀，避免意见被解析为斜杠命令。
 
 `PiEngine.run` 按来源核验 started/handled，并继续等待真实 `agent_settled`，不会把 handled 当成完成。异步 custom 启动的 `extension_error` 会终止等待并由运行日志保留中断，不超时后盲目重放。没有 source 的普通对话完全保留用户消息语义。回注不重复发送上一轮附件。
 

@@ -1,6 +1,6 @@
 /**
  * 作用定位：调度引擎：工作区执行管理，负责主 Agent 普通对话、团队任务执行与多轮历史读取，拒绝旧轮次分叉，挂起并处理逐次工具审批与结构化用户问题，持久化消息队列并在成功结束后串行续接；本次全部通过仅在当前执行期间有效。
- * 设计原因：容量准入发生在周期/运行意图创建前，beforeRun把真实运行ID送往额度门禁及周期登记，并持可信启动占位直到引擎关闭；补充、核实与正式重规划分别核实意图，当前坏历史不能回退旧头。
+ * 设计原因：容量准入先于意图，beforeRun 原子核额度并登记真实运行，启动占位持有到引擎关闭；文本补充与人工决定分别消费等待，后者走可信系统来源。当前坏历史不能回退旧头。
  */
 import {MessageQueue,type QueueCounts} from '../conversation/message-queue';
 import {ApprovalQueue} from '../conversation/approvals';
@@ -27,12 +27,17 @@ import {recoveryRequestSchema,type RecoveryRequest,type RecoveryLookup,type Reco
 import type {FreshContext} from '../../core/tasks/fresh-context';
 import type {ExecutionAdmissionWait,ExecutionLaunchContext} from './admission-wait';
 import {replanRequestSchema,type ReplanRequest,type ReplanLookup,type ReplanReceipt} from '../../core/tasks/scope-replan';
+import {humanContinuationRequestSchema,type HumanContinuationRequest,type HumanContinuationLookup,type HumanContinuationReceipt} from '../../core/tasks/human-continue';
 
 /** IPC 允许的模型运行配置；不接受任意子进程命令或环境变量。 */
 export const executionOptions=z.object({provider:z.string().trim().min(1),model:z.string().trim().min(1),profileId:z.string().uuid().optional(),attachmentIds:z.array(z.string().uuid()).max(12).optional(),allowNativeExecution:z.boolean().default(false),permission:z.enum(['read','ask','execute']).optional(),turnTimeoutMs:z.number().int().min(1000).max(3600000).optional()}).strict();
 type Options=z.infer<typeof executionOptions>;
 /** 由可信工作区装配一次；回调只登记或唤醒协调器，不在 settled 内等待成员执行。 */
 export interface ExecutionCollaboration {
+  /** 人工接续有独立意图和系统来源；查询不核实或启动，只有 beforeRun 可消费当前等待。 */
+  humanContinuationReceipt?(query:HumanContinuationLookup):Promise<HumanContinuationReceipt|undefined>;
+  humanContinuationPreflight?(request:HumanContinuationRequest):Promise<{wait:DispatchScopeWait;message:string}>;
+  acceptHumanContinuation?(request:HumanContinuationRequest,task:TaskSpec,runId:string,signal:AbortSignal):Promise<void>;
   /** 正式业务重规划只读取原命令回执；查询不授予第二次启动资格。 */
   replanReceipt?(query:ReplanLookup):Promise<ReplanReceipt|undefined>;
   /** 核实已完成只读周期的真实证据、模块和人工约束，启动意图提交前还要重新核验。 */
@@ -206,7 +211,7 @@ export class WorkspaceExecutionManager {
     return this.launch({mode:'chat',taskId:randomUUID(),workspaceId:this.workspace.entry.id,root:this.workspace.entry.path,goal,agentId:mainAgentId,moduleIds:[],acceptance:[]},executionOptions.parse(options),message);
   })}
   /** 自动队列与结果回注在工厂等待前后都复核停止屏障，防止停止协作期间重新唤起旧消息。 */
-  private async launch(task:TaskSpec,options:Options,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,automaticQueue=false,continuation?:GoalContinuationRequest,recovery?:RecoveryRequest,replan?:ReplanRequest,admissionWait?:ExecutionAdmissionWait){
+  private async launch(task:TaskSpec,options:Options,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,automaticQueue=false,continuation?:GoalContinuationRequest,recovery?:RecoveryRequest,replan?:ReplanRequest,admissionWait?:ExecutionAdmissionWait,human?:HumanContinuationRequest){
     if(recovery&&replan)fail('FRESH_MAIN_CONFLICT','同一启动不能混合只读核实和业务重规划');
     const fresh=Boolean(recovery||replan);
     if(this.active.has(task.taskId))fail('TASK_RUNNING','任务正在执行');
@@ -216,7 +221,7 @@ export class WorkspaceExecutionManager {
     let loop:Awaited<ReturnType<typeof createWorkspaceLoop>>|undefined;
     let accepted=false,preparingScope=false,releaseBudget:(()=>void)|undefined;
     try{
-      loop=await this.factory({...options,allowNativeExecution:options.permission?options.permission!=='read':options.allowNativeExecution,mode:task.mode,requestQuestion:(args,signal)=>this.questions.ask(task.taskId,args,signal),requestApproval:call=>this.approvalQueue.request(task.taskId,call),onEvent:event=>{for(const listener of this.listeners)try{listener(event)}catch{/* observers are not transactions */}}},structuredClone(task),{requestId:source?.kind==='member-results'?source.continuationId:randomUUID(),scopeId:admissionWait?.scopeId??continuation?.scopeId??recovery?.commandId??replan?.commandId,wait:admissionWait,signal:controller.signal});
+      loop=await this.factory({...options,allowNativeExecution:options.permission?options.permission!=='read':options.allowNativeExecution,mode:task.mode,requestQuestion:(args,signal)=>this.questions.ask(task.taskId,args,signal),requestApproval:call=>this.approvalQueue.request(task.taskId,call),onEvent:event=>{for(const listener of this.listeners)try{listener(event)}catch{/* observers are not transactions */}}},structuredClone(task),{requestId:source?.kind==='member-results'?source.continuationId:randomUUID(),scopeId:admissionWait?.scopeId??human?.scopeId??continuation?.scopeId??recovery?.commandId??replan?.commandId,wait:admissionWait,signal:controller.signal});
       controller.signal.throwIfAborted();
       if((this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
       if((source?.kind==='member-results'||automaticQueue)&&this.resultContinuationStopped.has(task.taskId))fail('COLLABORATION_STOPPED','本会话已停止自动协作，请显式继续对话');
@@ -242,6 +247,11 @@ export class WorkspaceExecutionManager {
         releaseBudget=this.collaboration?.holdMain?.(runId);
         preparingScope=true;
         await this.collaboration?.starting?.(task,options,source,message,runId);
+        if(human){
+          controller.signal.throwIfAborted();if(!this.collaboration?.acceptHumanContinuation)fail('HUMAN_CONTINUATION_UNAVAILABLE','当前工作区未装配人工决定接续');
+          await this.collaboration.acceptHumanContinuation(human,task,runId,controller.signal);accepted=true;controller.signal.throwIfAborted();
+          await (await this.queue()).pause(task.taskId,'已按保存的人工决定继续原目标；原排队消息保持暂停');controller.signal.throwIfAborted();this.resultContinuationStopped.delete(task.taskId);
+        }
         if(continuation){
         controller.signal.throwIfAborted();
         if(!this.collaboration?.acceptContinuation)fail('GOAL_CONTINUATION_UNAVAILABLE','当前工作区未装配目标恢复');
@@ -265,7 +275,7 @@ export class WorkspaceExecutionManager {
         });
       }).catch(()=>{});
       return {workspaceId:task.workspaceId,taskId:task.taskId,runId:run.runId};
-    }catch(error){try{await loop?.runtime.close()}finally{releaseBudget?.();releaseBudget=undefined}const code=(error as {code?:string})?.code;if(((!continuation&&!fresh)||accepted)&&(accepted||preparingScope||code!=='CAPACITY_WAITING'&&code!=='CAPACITY_BUSY'))await this.collaboration?.startFailed?.(task,source,error);throw error}
+    }catch(error){try{await loop?.runtime.close()}finally{releaseBudget?.();releaseBudget=undefined}const code=(error as {code?:string})?.code;if(((!continuation&&!human&&!fresh)||accepted)&&(accepted||preparingScope||code!=='CAPACITY_WAITING'&&code!=='CAPACITY_BUSY'))await this.collaboration?.startFailed?.(task,source,error);throw error}
     finally{if(this.pendingLaunches.get(task.taskId)===controller)this.pendingLaunches.delete(task.taskId)}
   }
   /** 用户明确提交一个新只读核实目标；旧源记录不恢复，观察只是用户陈述，稳定请求先查已提交事实。 */
@@ -349,6 +359,23 @@ export class WorkspaceExecutionManager {
     catch(error){const receipt=await lookup();if(receipt)return receipt;throw error}
     const receipt=await lookup();if(!receipt)fail('CONTINUATION_UNKNOWN','目标补充已尝试提交，但尚无法确认持久回执；请查询同一请求');return receipt;
   })}
+  /** 专门处理已保存的人工决定；不接自由正文，系统转交与普通补充、排队消息严格分离。 */
+  async continueFromHumanDecisions(raw:unknown){
+    const parsed=humanContinuationRequestSchema.safeParse(raw);if(!parsed.success)fail('HUMAN_CONTINUATION_INPUT','人工决定接续参数无效');const request=parsed.data,version=this.stopVersions.get(request.rootSessionId)??0;
+    const assertRequested=()=>{if(this.closing||(this.stopVersions.get(request.rootSessionId)??0)!==version)fail('COLLABORATION_STOPPED','人工接续准备期间已收到停止或关闭请求')};
+    return this.serial(async()=>{
+      if(request.workspaceId!==this.workspace.entry.id)fail('HUMAN_CONTINUATION_IDENTITY','人工接续不属于当前工作区');const hooks=this.collaboration;
+      if(!hooks?.humanContinuationReceipt||!hooks.humanContinuationPreflight||!hooks.acceptHumanContinuation)fail('HUMAN_CONTINUATION_UNAVAILABLE','当前工作区未装配人工接续');
+      const lookup=()=>hooks.humanContinuationReceipt!({workspaceId:request.workspaceId,rootSessionId:request.rootSessionId,scopeId:request.scopeId,commandId:request.commandId}),existing=await lookup();
+      if(existing){const saved=existing.continuation;if(saved.wait.waitId!==request.waitId||saved.wait.goalRevision!==request.expectedGoalRevision||saved.inputRevision!==request.expectedInputRevision+1||saved.decisionRevision!==request.expectedDecisionRevision||!sameGoalValue([...saved.decisionIds].sort(),[...request.decisionIds].sort())||!sameGoalValue(saved.options,request.options))fail('HUMAN_CONTINUATION_CONFLICT','此命令已绑定其他等待、决定或配置');return existing}
+      assertRequested();const preflight=await hooks.humanContinuationPreflight(request),history=await this.thread(request.rootSessionId),prior=history.at(-1);assertRequested();
+      if(!prior||prior.runId!==preflight.wait.runId||prior.task.mode!=='chat'||prior.status!=='completed'||prior.unresolvedTools.length||!prior.sessionFile)fail('HUMAN_CONTINUATION_NOT_READY','人工决定对应的主运行尚未完整结算或已有更新');
+      const source:RunInputSource={kind:'human_decisions',continuationId:request.commandId,scopeId:request.scopeId,waitId:request.waitId,inputRevision:request.expectedInputRevision+1,decisionRevision:request.expectedDecisionRevision,decisionIds:[...request.decisionIds]};
+      try{await this.launch(prior.task,executionOptions.parse({...request.options,allowNativeExecution:request.options.permission!=='read'}),preflight.message,{runId:prior.runId},source,false,undefined,undefined,undefined,undefined,request)}
+      catch(error){const receipt=await lookup();if(receipt)return receipt;throw error}
+      const receipt=await lookup();if(!receipt)fail('HUMAN_CONTINUATION_UNKNOWN','人工接续受理结果尚未确认，请查询原命令');return receipt;
+    });
+  }
   /** 从持久化身份恢复；普通对话按需读取知识，团队任务仍要求冻结知识版本一致。 */
   resume(taskId:string,runId:string,message:string,options:Options,reconciledToolIds:string[]=[]){return this.serial(async()=>{
     if(!message?.trim())fail('MESSAGE','恢复说明不能为空');

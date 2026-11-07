@@ -50,7 +50,7 @@ EngineContext --> MemberHelpTools : 仅正式成员
 
 ### 当前显式用户补充与启动屏障
 
-`RunInputSource` 是判别联合：`MemberResultSource` 表示成员资料；`UserContinuationSource` 为 `{kind:'user-continuation',continuationId,scopeId,waitId,inputRevision}`，表示用户通过专门入口补充原目标。后者仍作为真实用户消息进入 Pi；两者都不能签署人工验收，公开聊天参数不能构造可信来源。
+`RunInputSource` 是判别联合：`MemberResultSource` 表示成员资料；`UserContinuationSource` 为 `{kind:'user-continuation',continuationId,scopeId,waitId,inputRevision}`，表示用户通过专门入口补充原目标，仍作为真实用户消息进入 Pi。`HumanDecisionsSource` 为 `{kind:'human_decisions',continuationId,scopeId,waitId,inputRevision,decisionRevision,decisionIds}`，只由独立显式继续入口产生；其正文是系统转交已保存意见的摘要，不伪装自由用户输入或新业务目标。公开聊天参数不能构造可信来源，日志恢复严格校验并复制标识集合。
 
 `LoopRuntime.start` 第五参 `RunStartControl` 由可信调度注入。取得租约并核实旧日志绑定后生成真实 runId，在新日志和引擎创建前等待 `beforeRun({task,runId})` 提交启动意图。真实 Pi 文件/身份仍在 `engine.start` 内复核，后置失败不能自动还原等待或重放意图。
 

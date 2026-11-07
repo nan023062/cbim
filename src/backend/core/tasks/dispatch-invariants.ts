@@ -1,7 +1,7 @@
 /**
  * 作用定位：在派发事务提交和日志恢复时校验成员执行、任务图和邮箱的联合约束。
  * 设计原因：仅验证每条记录形状不能防止半次领取、重复占用或旧 run 回调；把跨对象约束集中在 Core，磁盘适配器只负责可靠提交。
- * 职责边界：不启动模型、不访问文件、不签发权限；检查点只有新领取轮次消费，人工决定只允许专属命令追加，不视为模型完成或续执行授权。
+ * 职责边界：不启动模型、不访问文件、不签发权限；人工保存与显式接续用不同专属命令，记录本身不能冒充完成或自行消费等待。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
@@ -15,6 +15,7 @@ import {validateQueuedDependencyReplacement} from './queued-dependency-replaceme
 import {memberCheckpointProofSchema,memberResumeFromSchema} from './member-checkpoint';
 import {validateMemberCheckpoints} from './member-checkpoint-invariants';
 import {validateHumanDecisionCommand} from './human-decision-invariants';
+import {validateHumanContinuationCommand} from './human-continuation-invariants';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
 const time=z.string().datetime();
@@ -157,6 +158,7 @@ function validateMessage(previous:DispatchMessage|undefined,message:DispatchMess
  */
 export function validateDispatchExecution(previous:DispatchState,next:DispatchState,mutation:DispatchMutation,command:DispatchCommand):void{
   validateHumanDecisionCommand(previous,mutation,command);
+  validateHumanContinuationCommand(previous,mutation,command);
   validateQueuedTaskCancellation(previous,next,mutation,command);
   validateQueuedDependencyReplacement(previous,next,mutation,command);
   validateMemberCheckpoints(previous,next,mutation,command);

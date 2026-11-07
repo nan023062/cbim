@@ -13,7 +13,7 @@
 | [artifact-capture.ts](artifact-capture.ts) | 成员运行的短时文件采集门闩，绑定真实授权、进度、知识基线与 canonical 事件。 |
 | [conversation-binding.ts](conversation-binding.ts) | 定义主对话与已登记 Agent 实例、逻辑会话之间的可信绑定，供运行时和日志恢复共用。 |
 | [index.ts](index.ts) | 大脑执行层：对外重导出 Loop 契约、主对话实例绑定、成员执行绑定、可信回注来源、存储端口、运行时与 Pi 适配器。 |
-| [input-source.ts](input-source.ts) | 定义可信入口提交的成员结果与用户目标补充来源，供运行日志和引擎识别。 |
+| [input-source.ts](input-source.ts) | 定义可信入口提交的成员结果、真实用户补充与人工决定系统转交来源。 |
 | [member-checkpoint.ts](member-checkpoint.ts) | 成员单次合作式停泊的运行时门闩，沿真实工具授权保存非终结检查点请求。 |
 | [member-run.ts](member-run.ts) | 定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。 |
 | [model-errors.ts](model-errors.ts) | 把模型结束原因转换为用户可理解的执行错误，供实时引擎和历史回放共用。 |
@@ -259,7 +259,7 @@ EngineContext --> MemberHelpTools : 仅正式成员
 
 ### 当前显式用户补充与启动屏障
 
-`RunInputSource` 是判别联合：`MemberResultSource` 表示成员资料；`UserContinuationSource` 为 `{kind:'user-continuation',continuationId,scopeId,waitId,inputRevision}`，表示用户通过专门入口补充原目标。后者仍作为真实用户消息进入 Pi；两者都不能签署人工验收，公开聊天参数不能构造可信来源。
+`RunInputSource` 是判别联合：`MemberResultSource` 表示成员资料；`UserContinuationSource` 为 `{kind:'user-continuation',continuationId,scopeId,waitId,inputRevision}`，表示用户通过专门入口补充原目标，仍作为真实用户消息进入 Pi。`HumanDecisionsSource` 为 `{kind:'human_decisions',continuationId,scopeId,waitId,inputRevision,decisionRevision,decisionIds}`，只由独立显式继续入口产生；其正文是系统转交已保存意见的摘要，不伪装自由用户输入或新业务目标。公开聊天参数不能构造可信来源，日志恢复严格校验并复制标识集合。
 
 `LoopRuntime.start` 第五参 `RunStartControl` 由可信调度注入。取得租约并核实旧日志绑定后生成真实 runId，在新日志和引擎创建前等待 `beforeRun({task,runId})` 提交启动意图。真实 Pi 文件/身份仍在 `engine.start` 内复核，后置失败不能自动还原等待或重放意图。
 

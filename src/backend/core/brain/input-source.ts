@@ -1,6 +1,6 @@
 /**
- * 作用定位：定义可信入口提交的成员结果与用户目标补充来源，供运行日志和引擎识别。
- * 设计原因：两种接续都需持久化身份以防重复启动；成员结果是任务资料，显式用户补充仍是真实用户消息，两者均不能伪造人工验收。
+ * 作用定位：定义可信入口提交的成员结果、真实用户补充与人工决定系统转交来源。
+ * 设计原因：接续须持久化身份防止重复启动；仅真实补充作为用户消息，人工决定按固定记录转交，不伪造自由正文或扩大批准范围。
  */
 import {safeId} from '../foundation/identity';
 
@@ -23,12 +23,21 @@ export interface UserContinuationSource {
   /** 原始输入为 1；本条真实补充提交后的输入版本。 */
   inputRevision:number;
 }
-export type RunInputSource=MemberResultSource|UserContinuationSource;
+/** 仅独立显式继续入口生成，正文为系统转交的已保存决定摘要，不是用户新业务目标。 */
+export interface HumanDecisionsSource {
+  kind:'human_decisions';continuationId:string;scopeId:string;waitId:string;
+  inputRevision:number;decisionRevision:number;decisionIds:string[];
+}
+export type RunInputSource=MemberResultSource|UserContinuationSource|HumanDecisionsSource;
 
 /** 校验并复制可信输入或历史日志中的来源；拒绝空任务、重复标识和额外身份/权限字段。 */
 export function checkedRunInputSource(value:unknown):RunInputSource {
   if(!value||typeof value!=='object'||Array.isArray(value))throw Error('无效成员接续来源');
   const source=value as Record<string,unknown>;
+  if(source.kind==='human_decisions'){
+    if(Object.keys(source).some(key=>!['kind','continuationId','scopeId','waitId','inputRevision','decisionRevision','decisionIds'].includes(key))||!['continuationId','scopeId','waitId'].every(key=>typeof source[key]==='string')||!Number.isSafeInteger(source.inputRevision)||(source.inputRevision as number)<2||(source.inputRevision as number)>32||!Number.isSafeInteger(source.decisionRevision)||(source.decisionRevision as number)<1||(source.decisionRevision as number)>64||!Array.isArray(source.decisionIds)||!source.decisionIds.length||source.decisionIds.length>50||source.decisionIds.some(id=>typeof id!=='string')||new Set(source.decisionIds).size!==source.decisionIds.length)throw Error('无效人工决定接续来源');
+    return {kind:'human_decisions',continuationId:safeId(source.continuationId as string),scopeId:safeId(source.scopeId as string),waitId:safeId(source.waitId as string),inputRevision:source.inputRevision as number,decisionRevision:source.decisionRevision as number,decisionIds:(source.decisionIds as string[]).map(safeId)};
+  }
   if(source.kind==='user-continuation'){
     if(Object.keys(source).some(key=>!['kind','continuationId','scopeId','waitId','inputRevision'].includes(key))||!['continuationId','scopeId','waitId'].every(key=>typeof source[key]==='string')||!Number.isSafeInteger(source.inputRevision)||(source.inputRevision as number)<2||(source.inputRevision as number)>32)throw Error('无效目标补充来源');
     return {kind:'user-continuation',continuationId:safeId(source.continuationId as string),scopeId:safeId(source.scopeId as string),waitId:safeId(source.waitId as string),inputRevision:source.inputRevision as number};

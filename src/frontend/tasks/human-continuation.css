@@ -1,0 +1,7 @@
+/**
+ * 作用定位：独立人工决定接续入口的目标卡布局。
+ * 设计原因：用清晰分隔呈现决定与执行两个动作，长意见可换行，窄视图按钮自然换行。
+ */
+.human-continuation{border-top:1px solid var(--line);padding-top:12px;margin-top:14px;min-width:0;overflow-wrap:anywhere}
+.human-continuation h4{margin:0 0 8px}.human-continuation ul{padding-left:18px}.human-continuation li{margin:8px 0}.human-continuation li p{white-space:pre-wrap;color:var(--muted);margin:5px 0}
+.human-continuation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.human-continuation code{font-size:10px;overflow-wrap:anywhere}.human-continuation details{margin-top:8px}

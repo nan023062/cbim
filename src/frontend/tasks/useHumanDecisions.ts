@@ -1,6 +1,6 @@
 /**
  * 作用定位：为当前主会话装配唯一人工决定控制器，将同一草稿和冻结请求传给对话及任务根。
- * 设计原因：只依据已同步的 waiting 详情开放提交，历史可查看而不能冒充当前目标；文件核实仅由明确点击触发，不追加轮询。
+ * 设计原因：只依据已同步的 waiting 详情开放提交，历史可查看而不能冒充当前目标；文件核实及返工后的清除旧选择均由明确点击触发，不追加轮询或自动批准。
  */
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {HumanDecisionBaselineSelection,HumanDecisionKind,HumanDecisionRecord} from '../../bridge/contracts/human-decisions';
@@ -14,7 +14,7 @@ export interface HumanDecisionsView {
   eligible:boolean;editable:boolean;pending:boolean;previewCurrent:boolean;canSubmit:boolean;canRetry:boolean;error:string;
   select:(criterionId:string)=>void;chooseBaseline:(taskId:string,runId:string,baselineId:string)=>void;
   chooseDecision:(decision:HumanDecisionKind)=>void;comment:(text:string)=>void;
-  inspect:()=>Promise<void>;submit:()=>Promise<void>;query:()=>Promise<void>;retry:()=>Promise<void>;
+  inspect:()=>Promise<void>;clearBaselines:()=>Promise<void>;submit:()=>Promise<void>;query:()=>Promise<void>;retry:()=>Promise<void>;
 }
 /** 详情和摘要都必须属于当前 waiting，目标或独立决定增量变化会使旧预览失效。 */
 export function humanDecisionTarget(workspaceId:string,rootSessionId:string|undefined,state:ScopeGoalState,criterionId:string):HumanDecisionTarget|undefined{
@@ -41,7 +41,7 @@ export function useHumanDecisions(workspaceId:string,rootSessionId:string|undefi
     canRetry:!!controller?.available&&!pending&&record?.attempt?.phase==='unknown',error:controller?.snapshot.error??'',select,
     chooseBaseline:(taskId,runId,baselineId)=>{const baselines:HumanDecisionBaselineSelection[]=(record?.baselines??[]).filter(value=>value.taskId!==taskId);if(baselineId)baselines.push({taskId,runId,baselineId});edit({baselines})},
     chooseDecision:decision=>edit({decision}),comment:text=>edit({comment:text}),
-    inspect:async()=>{if(target)await controller?.preview(target)},submit:async()=>{if(target&&controller)await after(()=>controller.submit(target))},
+    inspect:async()=>{if(target)await controller?.preview(target)},clearBaselines:async()=>{if(target&&editable&&controller?.resetBaselines(target))await controller.preview(target)},submit:async()=>{if(target&&controller)await after(()=>controller.submit(target))},
     query:async()=>{if(scope&&controller)await after(()=>controller.query(scope.scopeId,criterionId))},retry:async()=>{if(scope&&controller)await after(()=>controller.retry(scope.scopeId,criterionId))},
   };
 }

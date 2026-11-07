@@ -1,7 +1,7 @@
 /**
  * 作用定位：把主会话和成员运行事件转换为可展示的公开消息、工具状态、计划与证据摘要。
  * 设计原因：任务详情与静态 Agent 历史使用同一字段白名单，排除原生会话路径、冻结知识、工具输入正文及私有推理；公开正文限长，但不声称识别正文中的全部敏感信息。
- * 职责边界：这里只做纯投影，读取方须先核验完整归属；不启动运行、不确认收件，不把运行结束当作业务验收。
+ * 职责边界：这里只做纯投影，读取方须先核验完整归属；人工决定的系统转交仅公开来源种类和固定摘要，不当用户原话或透传意见正文，不把运行结束当作验收。
  */
 import path from 'node:path';
 import type {StoredEvent,TaskSpec} from '../../core/brain/types';
@@ -40,9 +40,9 @@ export function projectRunEvent(event:StoredEvent,identity:PublicRunIdentity,tas
   switch(type){
     case 'run.started':{
       // 成员启动 message 可能包含冻结提示词，只展示正式任务目标；主对话保留本轮用户原话，回注正文不冒充用户输入。
-      const returned=task.mode==='chat'&&record(source.source).kind==='member-results';
-      const message=returned?'成员任务结果回注（系统数据）':task.mode==='chat'?text(source.message,16000)??task.goal:task.goal;
-      data={task:structuredClone(task),message,...(returned?{source:{kind:'member-results'}}:{}),...(source.engine==='pi'?{engine:'pi'}:{})};break;
+      const kind=task.mode==='chat'?record(source.source).kind:undefined,returned=kind==='member-results'||kind==='human_decisions';
+      const message=kind==='human_decisions'?'按已保存的人工决定继续（系统转交）':returned?'成员任务结果回注（系统数据）':task.mode==='chat'?text(source.message,16000)??task.goal:task.goal;
+      data={task:structuredClone(task),message,...(returned?{source:{kind}}:{}),...(source.engine==='pi'?{engine:'pi'}:{})};break;
     }
     case 'session.bound':type='engine.status';data={label:'成员会话已连接'};break;
     case 'message':

@@ -1,7 +1,7 @@
 /**
  * 作用定位：在派发事务中保存本轮目标计划与结构化审阅，并为目标门禁、依赖修订和本机人工决定核验真实候选、角色及模块基线。
  * 设计原因：模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用；检查点和待领续请求仍属于未完任务，用户补充使旧计划过期而不丢 human 项。截断日志前缀不可成为完成或等待证据。
- * 职责边界：不关闭周期、不释放成员、不运行工具；知识和派发日志不是跨存储原子事务，证据也不是外部产物指纹。
+ * 职责边界：人工项仅引用当前实际消费的接受；审阅和完成均复核原业务主体、精确候选与选定字节，负面意见只能明确安排新任务返工。不关闭周期或签署，外部文件核实不构成原子快照。
  */
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
@@ -19,6 +19,9 @@ import {resolveConversationAgent,resolveDispatchAgent,resolveDispatchModules} fr
 import {executionToolFacts} from './execution-report-facts';
 import {memberHelpCandidate} from './member-help-state';
 import {memberPublicTask} from './member-events';
+import {consumedHumanDecision,assertHumanSubject,validateHumanAcceptances,type HumanDecisionPorts} from './human-decision-evidence';
+import type {HumanDecisionRecord} from '../../core/tasks/human-decisions';
+import {currentHumanContinuation} from '../../core/tasks/human-continuation-rules';
 
 /** 端口只按可信已登记身份读取 canonical 日志；不能接受模型提供路径或摘要。 */
 export interface ScopeGoalPorts {
@@ -34,7 +37,7 @@ function check(condition:unknown,code:string,message:string):asserts condition{i
 function lastEffect(summary:RunSummary){return summary.events.reduce((latest,event)=>event.type==='tool.allowed'&&(Array.isArray(event.data.effects)&&event.data.effects.some(effect=>effects.has(String(effect)))||['write','edit','bash'].includes(String(event.data.name)))?Math.max(latest,event.seq):latest,0)}
 
 export class ScopeGoalService {
-  constructor(private readonly owner:Owner,private readonly store:DispatchStore,private readonly ports?:ScopeGoalPorts){}
+  constructor(private readonly owner:Owner,private readonly store:DispatchStore,private readonly ports?:ScopeGoalPorts,private readonly humanPorts?:HumanDecisionPorts){}
   private parse<S extends z.ZodTypeAny>(schema:S,value:unknown):z.output<S>{const result=schema.safeParse(value);if(!result.success)fail('GOAL_INPUT_INVALID',result.error.issues.map(issue=>issue.message).join('；'));return result.data}
   private scope(state:DispatchState,identity:GraphIdentity,scopeId:string){
     this.parse(identitySchema,{...identity,scopeId});this.owner.assert();
@@ -188,10 +191,22 @@ export class ScopeGoalService {
   private async evidence(state:DispatchState,scope:DispatchScope,graph:GraphSnapshot,draft:GoalReviewInput,main:RunSummary,knowledgeRevision:string){
     const plan=scope.goal!.plan!,criteria=plan.criteria,checks=draft.checks;
     check(new Set(checks.map(item=>item.criterionId)).size===checks.length&&checks.every(item=>criteria.some(criterion=>criterion.id===item.criterionId)),'GOAL_REVIEW_INVALID','审阅项重复或不属于当前计划');
-    const members=new Map<string,Promise<RunSummary>>();
+    if(checks.some(item=>item.evidence.some(ref=>ref.kind==='human-decision'))||draft.superseded.some(item=>item.humanDecision)){
+      const intent=currentHumanContinuation(scope);check(intent,'GOAL_HUMAN_SOURCE','人工引用没有当前输入实际消费的意图');
+      const origin=intent.runId===main.runId?main:await this.logs().inspectMain(scope.rootSessionId,intent.runId);this.main(state,origin,scope,graph,intent.runId);
+      const header=origin.events[0],source=header?.data.source as Record<string,unknown>|undefined;
+      check(origin.logIntegrity?.partialTail===false&&header?.type==='run.started'&&sameGoalValue(header.data.task,origin.task)&&sameGoalValue(header.data.conversationBinding,origin.conversationBinding)&&header.data.resumeFrom===intent.wait.runId&&source?.kind==='human_decisions'&&source.continuationId===intent.continuationId&&source.scopeId===scope.scopeId&&source.waitId===intent.wait.waitId&&source.inputRevision===intent.inputRevision&&source.decisionRevision===intent.decisionRevision&&Array.isArray(source.decisionIds)&&sameSet(source.decisionIds as string[],intent.decisionIds),'GOAL_HUMAN_SOURCE','人工接续原始日志没有对应可信来源或已被改写');
+      const bindings=origin.events.filter(event=>event.type==='session.bound');
+      check(origin.events.every((event,index)=>event.seq===index+1&&event.workspaceId===scope.workspaceId&&event.taskId===scope.rootSessionId&&event.runId===intent.runId)&&!!origin.sessionFile&&bindings.length>0&&bindings.every(event=>typeof event.data.sessionId==='string'&&!!event.data.sessionId&&event.data.sessionId===bindings[0].data.sessionId&&event.data.sessionFile===origin.sessionFile),'GOAL_HUMAN_SOURCE','人工接续来源的连续事件或原生绑定不完整');
+      if(origin.runId!==main.runId){
+        const terminal=origin.events.at(-1),facts=executionToolFacts(origin,{binding:{workspaceId:scope.workspaceId,taskId:scope.rootSessionId,runId:origin.runId}});
+        check(origin.status==='completed'&&terminal?.type==='run.settled'&&terminal.data.status==='completed'&&!origin.unresolvedTools.length&&!facts.invalid&&!facts.counts.unknown,'GOAL_HUMAN_SOURCE','前一人工接续运行未安全结束或存在未知工具，不能沿用其决定');
+      }
+    }
+    const members=new Map<string,Promise<RunSummary>>(),acceptedHumans=new Map<string,HumanDecisionRecord>();
     for(const item of checks){
       const criterion=criteria.find(value=>value.id===item.criterionId)!;
-      check(criterion.kind!=='human'||item.outcome!=='satisfied','GOAL_HUMAN_REQUIRED','模型不能替代真人确认人工验收项');
+      check(criterion.kind!=='human'||item.outcome!=='satisfied'||item.evidence.some(reference=>reference.kind==='human-decision'),'GOAL_HUMAN_REQUIRED','人工项满足必须引用本输入版本实际消费的接受决定');
       if(item.outcome==='satisfied')check(item.evidence.length,'GOAL_EVIDENCE_REQUIRED','已满足的验收项必须有真实证据');
       for(const reference of item.evidence){
         if(reference.kind==='member-result'){
@@ -200,6 +215,10 @@ export class ScopeGoalService {
           check(plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&sameSet(assignment.moduleIds,task.modules.map(module=>module.moduleId))&&assignment.criterionIds.includes(item.criterionId)),'GOAL_EVIDENCE_IDENTITY','成员结果不属于此验收项的分配');
           if(!members.has(task.taskId))members.set(task.taskId,this.member(state,scope,graph,task,knowledgeRevision));
           const summary=await members.get(task.taskId)!;for(const id of reference.toolCallIds)this.receipt(summary,id);
+        }else if(reference.kind==='human-decision'){
+          check(criterion.kind==='human','GOAL_HUMAN_SOURCE','人工决定不能替代普通证据项');
+          const {continuation,record}=consumedHumanDecision(scope,reference,item.criterionId);
+          check(item.outcome==='satisfied'&&record.decision==='accept','GOAL_HUMAN_REQUIRED','人工证据只用于引用已接受的满足项；拒绝或补证应通过替代关系引用');assertHumanSubject(scope,continuation);acceptedHumans.set(record.decisionId,record);
         }else{
           check(plan.assignments.some(assignment=>assignment.agentId==='cbim:main'&&assignment.criterionIds.includes(item.criterionId)),'GOAL_EVIDENCE_IDENTITY','此验收项未分配给主角色治理');
           for(const id of reference.toolCallIds){
@@ -211,8 +230,16 @@ export class ScopeGoalService {
           }
         }
       }
+      if(criterion.kind==='human'&&item.outcome==='satisfied'){
+        const ref=item.evidence.find(reference=>reference.kind==='human-decision');check(ref?.kind==='human-decision','GOAL_HUMAN_REQUIRED','人工满足缺少已消费接受');const {record}=consumedHumanDecision(scope,ref,item.criterionId);
+        check(item.evidence.every(reference=>reference.kind==='human-decision'||reference.kind==='member-result'&&record.proof.candidates.some(candidate=>candidate.taskId===reference.taskId&&candidate.runId===reference.runId&&candidate.resultId===reference.resultId&&candidate.planRevision===reference.planRevision&&reference.toolCallIds.every(id=>candidate.evidenceToolCallIds.includes(id)))),'GOAL_HUMAN_CANDIDATE','人工满足不能混入此次接受以外的新候选或证据');
+      }
     }
-    if(draft.decision==='complete')check(!draft.gaps.length&&checks.length===criteria.length&&checks.every(item=>item.outcome==='satisfied')&&!criteria.some(item=>item.kind==='human'),'GOAL_CRITERIA_UNMET','仍有未满足或需要人工确认的验收项');
+    try{await validateHumanAcceptances(this.owner,state,scope,[...acceptedHumans.values()],this.ports,this.humanPorts,this.validateMemberCandidate.bind(this))}catch(error){
+      // 完成门禁保留 GOAL 命名空间，让协调器记录阻塞并收束；接受依据失效不能留下悬挂的活动周期。
+      fail('GOAL_HUMAN_STALE',error instanceof Error?error.message:'人工接受的当前依据无法核实');
+    }
+    if(draft.decision==='complete')check(!draft.gaps.length&&checks.length===criteria.length&&checks.every(item=>item.outcome==='satisfied'),'GOAL_CRITERIA_UNMET','仍有未满足或需要人工确认的验收项');
     await this.supersessions(state,scope,graph,draft,members,knowledgeRevision);
   }
   private async supersessions(state:DispatchState,scope:DispatchScope,graph:GraphSnapshot,draft:GoalReviewInput,cache:Map<string,Promise<RunSummary>>,knowledgeRevision:string){
@@ -225,11 +252,20 @@ export class ScopeGoalService {
     for(const item of entries){
       const source=graph.tasks.find(task=>task.taskId===item.taskId);
       const stale=source?.status==='result_ready'&&state.runs?.some(run=>run.binding.runId===source.result?.runId&&run.prepared.knowledgeRevision!==knowledgeRevision);
-      check(source&&source.scopeId===scope.scopeId&&(['failed','blocked','cancelled','interrupted'].includes(source.status)||stale),'GOAL_SUPERSESSION_INVALID','只能替代本周期已失败、阻塞或知识基线过期的任务');
+      const human=item.humanDecision?consumedHumanDecision(scope,item.humanDecision):undefined;
+      if(human){
+        const candidate=human.record.proof.candidates.find(candidate=>candidate.taskId===source?.taskId);
+        check(human.record.decision!=='accept'&&source?.status==='result_ready'&&candidate&&candidate.taskRevision===source.revision&&candidate.planRevision===source.planRevision&&candidate.resultId===source.result?.resultId&&candidate.runId===source.result?.runId,'GOAL_SUPERSESSION_INVALID','返工引用必须是本次消费的拒绝或补证及其精确旧候选');
+        // 返工允许文件变化，但不能把旧运行损坏或未知结果藏在 superseded 后跳过完成核实。
+        const summary=await this.validateMemberCandidate(state,scope,graph,source,human.record.proof.source.knowledgeRevision);
+        check(hash(json(summary.events))===candidate.logHash&&candidate.evidenceToolCallIds.every(id=>source.result!.evidenceRefs.includes(id)),'GOAL_SUPERSESSION_INVALID','被拒候选的原始日志或证据已经变化，不能用旧决定替代');
+      }
+      check(source&&source.scopeId===scope.scopeId&&(['failed','blocked','cancelled','interrupted'].includes(source.status)||stale||human),'GOAL_SUPERSESSION_INVALID','只能替代失败、基线过期或本次人工决定明确要求返工的候选');
       const covered=new Set<string>();
       for(const id of item.replacementTaskIds){
         const replacement=graph.tasks.find(task=>task.taskId===id);
         check(replacement&&replacement.scopeId===scope.scopeId&&graph.tasks.indexOf(replacement)>graph.tasks.indexOf(source),'GOAL_SUPERSESSION_INVALID','替代任务必须是本周期后续创建的任务');
+        if(human)check(!human.continuation.priorTaskIds.includes(replacement.taskId),'GOAL_SUPERSESSION_INVALID','人工返工必须创建接续之后的新任务，不能借用先前已有候选');
         for(const module of replacement.modules)covered.add(module.moduleId);
         if(!cache.has(id))cache.set(id,this.member(state,scope,graph,replacement,knowledgeRevision));await cache.get(id);
       }

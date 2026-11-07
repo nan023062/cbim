@@ -1,9 +1,10 @@
 /**
  * 作用定位：定义一次用户任务的调度周期，与长期主会话和单次模型运行区分。
- * 设计原因：一次目标可以经历多轮调度、执行和结果回注；冻结原始输入与运行间软限额，以 waiting 安全等待。人工决定独立追加，不消费等待；异常核实和正式重规划各建新周期，旧周期不能续接损坏执行链。
+ * 设计原因：一次目标可以经历多轮调度、执行和结果回注；冻结原始输入与软限额。保存人工决定不消费 waiting，独立显式继续才追加新输入版；异常核实和重规划另建周期，旧损坏链不复活。
  */
 import type {DispatchScopeGoal} from './scope-goal';
-import type {DispatchScopeWait,ScopeContinuation} from './scope-continuation';
+import type {DispatchScopeWait} from './scope-continuation';
+import type {ScopeContinuationRecord} from './scope-continuation-record';
 import type {ScopeRecovery} from './scope-recovery';
 import type {ScopeReplan} from './scope-replan';
 import type {ScopeRunTracking} from './scope-run-tracking';
@@ -32,8 +33,8 @@ export interface DispatchScope {
   humanDecisions?:ScopeHumanDecisions;
   /** waiting 必有；显式补充原样移入 continuations，取消关闭仍原样保留；不等于模型可自动恢复。 */
   wait?:DispatchScopeWait;
-  /** 仅可信用户继续入口追加，含已消费旧 wait 和真实启动 ID；原始 input 永不覆盖，旧历史缺省。 */
-  continuations?:ScopeContinuation[];
+  /** 文本补充与人工决定接续共用有序输入版本；人工分支无自由正文，原始 input 与旧等待永久保留。 */
+  continuations?:ScopeContinuationRecord[];
   /** 仅新只读核实周期有值；来源、用户观察和全新原生上下文边界创建后永不改写，旧周期不复活。 */
   recovery?:ScopeRecovery;
   /** 独立的业务重规划意图，须有已完成只读核实证明；与 recovery 互斥且永不改写。 */

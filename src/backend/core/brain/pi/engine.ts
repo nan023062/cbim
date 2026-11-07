@@ -1,6 +1,6 @@
 /**
  * 作用定位：Pi 引擎适配器，负责隔离配置、主对话与成员原生会话校验、工具桥与公开执行事件转换。
- * 设计原因：每轮冻结模型、权限和上下文；成员求助/基线/检查点沿真实调用 ID 入日志，续执行在载入前后核原证明。主回传经 custom 接续，所有工具经过门禁，结束只认 agent_settled。
+ * 设计原因：每轮冻结模型、权限和上下文；成员求助/基线/检查点沿真实调用 ID 入日志。成员回传与人工决定各用系统 custom 接续，不伪造用户目标，结束只认 agent_settled。
  * 职责边界：不保存私有推理正文；记录实际用量与生成耗时，未知计价保持未知。明确停止后的标准取消文本才归为取消，其他错误及未知工具副作用交由运行时保留。
  */
 import fs from 'node:fs/promises';
@@ -127,8 +127,9 @@ export class PiEngine implements AgentEngine {
     });void settled.catch(()=>{});
     try{
       // 内部回传通过本轮扩展写成 custom 消息，不作为原生 user 记录；加前缀避免正文被解析为斜杠命令。
-      const continuation=this.context.source?.kind==='member-results';
-      const accepted=await this.rpc.request('prompt',{message:continuation?'CBIM 成员执行回传\n'+message:message,...(!continuation&&this.options.images?.length?{images:this.options.images}:{})});
+      const continuation=this.context.source?.kind==='member-results'||this.context.source?.kind==='human_decisions';
+      const label=this.context.source?.kind==='human_decisions'?'CBIM 人工决定系统转交\n':'CBIM 成员执行回传\n';
+      const accepted=await this.rpc.request('prompt',{message:continuation?label+message:message,...(!continuation&&this.options.images?.length?{images:this.options.images}:{})});
       if(accepted?.disposition!==(continuation?'handled':'started'))throw Error('Pi 没有按本轮输入来源启动任务，不能记为执行完成');
       const result=await settled;
       const stats=await this.rpc.request('get_session_stats').catch(()=>undefined);

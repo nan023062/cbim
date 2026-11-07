@@ -125,7 +125,7 @@ it('同一目标卡展示原始输入、计划、审阅、完整阻塞原因，�
   const blocked=planned();blocked.goal!.blocked={reason:'完整原因 '.repeat(100)+'末尾诊断',at:time};blocked.status='closed';blocked.outcome='failed';blocked.closedAt=time;
   const html=renderToStaticMarkup(createElement(ScopeGoalPanel,{state:view(blocked)}));expect(html).toContain('data-goal-state="blocked"');expect(html).toContain('scope-goal-blocked-detail');expect(html).toContain('末尾诊断');
   const legacy=renderToStaticMarkup(createElement(ScopeGoalPanel,{state:view({...scope(),goal:undefined})}));expect(legacy).toContain('不根据会话标题推断');expect(legacy).not.toContain('scope-goal-input');
-  const completed=renderToStaticMarkup(createElement(ScopeGoalPanel,{state:view({...request,status:'closed',outcome:'completed',closedAt:time})}));expect(completed).toContain('程序已核验证据与任务终态');expect(completed).toContain('目标符合性由主 Agent 审阅，不表示人工验收');
+  const completed=renderToStaticMarkup(createElement(ScopeGoalPanel,{state:view({...request,status:'closed',outcome:'completed',closedAt:time})}));expect(completed).toContain('程序已核验证据、任务终态及适用的人工决定');expect(completed).toContain('完成范围以逐项审阅为准');expect(completed).not.toContain('主 Agent 已引用人工决定并复核当前依据');expect(completed).not.toContain('已记录“接受”');
 });
 
 it('主回合结束后活动周期根仍有停止入口，历史目标选择不删除全会话任务',()=>{

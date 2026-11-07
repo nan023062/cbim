@@ -1,6 +1,6 @@
 /**
  * 作用定位：为已运行工作区装配成员派发、大脑执行及目标审阅的可信日志读取端口。
- * 设计原因：派发、审阅及周期额度共用可信日志；成员采集注入有界文件读取和实时知识复核，显式报告仅临时取得业务读占用。领取先核限额与并发，等待不产生意图，密钥留在工厂闭包。
+ * 设计原因：派发、审阅及周期额度共用可信日志；检查点结算和续执行准备共用完整日志/文件/知识/原生指纹复核。领取先核限额与并发，等待不消费检查点，密钥留在工厂闭包；显式报告不启动成员。
  */
 import path from 'node:path';
 import type {Workspace} from './workspace/workspace';
@@ -13,6 +13,8 @@ import {MemberExecutionManager} from '../scheduler-engine/execution/member-execu
 import {createWorkspaceLoop} from '../scheduler-engine/execution/loop-engine';
 import {memberExecutionPrompt,recheckDispatchExecutionContext} from '../scheduler-engine/context/execution-context';
 import {ArtifactFiles,normalizeArtifactPath} from './platform/artifact-files';
+import {NativeSessionFiles} from './platform/native-session-files';
+import {verifyMemberCheckpointProof,verifyMemberCheckpointInputs} from '../scheduler-engine/execution/member-checkpoint-verifier';
 import {randomUUID} from 'node:crypto';
 import {FileRunStorage} from './persistence/tasks/run-storage';
 import {guard} from './platform/tool-guard';
@@ -37,6 +39,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
   const store=new FileDispatchStore(directory,workspace.entry.id,observer),storage=new FileRunStorage();
   const runsDirectory=path.join(directory,'runs');
   const artifactFiles=new ArtifactFiles(workspace.entry.path,()=>workspace.assert());
+  const nativeFiles=new NativeSessionFiles(path.join(runsDirectory,'pi','sessions'),()=>workspace.assert());
   const normalizeArtifact=(raw:string)=>normalizeArtifactPath(workspace.entry.path,raw);
   /** 主/成员的权威运行日志只在后端读取；不能以公开摘要或模型传来的“成功”替代。 */
   const inspectMember=async(run:import('../core/tasks/dispatch-execution').DispatchRun)=>{
@@ -46,6 +49,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
     if(JSON.stringify(summary.memberBinding)!==JSON.stringify(run.binding))fail('MEMBER_LOG_IDENTITY','成员运行日志与已保存的执行绑定不一致');
     return summary;
   };
+  const checkpointPorts={inspect:inspectMember,normalizePath:normalizeArtifact,checkFiles:artifactFiles.checkFiles.bind(artifactFiles),nativeFingerprint:nativeFiles.read.bind(nativeFiles)};
   const dispatch=new WorkspaceDispatchService(workspace,store,{inspectMember,inspectMain:async(rootSessionId,runId)=>{
     workspace.assert();
     const summary=await storage.read(path.join(workspace.paths.project(workspace.entry.id),'loop-engine','tasks',safeId(rootSessionId),safeId(runId)));
@@ -54,6 +58,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
   }},budgetPolicy);
   const members=new MemberExecutionManager(workspace,store,{
     artifacts:{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),acquireRead:()=>{workspace.assert();return lease.acquire('artifact-report:'+randomUUID(),'read')}},
+    checkpoints:{nativeFingerprint:(session,signal)=>nativeFiles.read(session,signal)},
     budgets:dispatch.budgets,
     isCurrent:()=>admission?.isCurrent()??true,
     signal:admission?.signal,
@@ -68,11 +73,16 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
         workspace.assert();
         if(run.binding.workspaceId!==workspace.entry.id||task.identity.workspaceId!==workspace.entry.id)throw Error('成员运行与工作区身份不匹配');
         if(JSON.stringify(run.model)!==JSON.stringify(llm.profile))throw Error('成员运行模型快照与启动配置不一致');
+        const previous=run.resumeFrom?(await store.read()).runs?.find(old=>old.binding.runId===run.resumeFrom!.runId):undefined;
+        if(run.resumeFrom&&(!previous?.checkpointProof||previous.checkpointProof.checkpoint.checkpointId!==run.resumeFrom.checkpointId))fail('MEMBER_CHECKPOINT_INVALID','续执行缺少原检查点证明');
         const loop=await createWorkspaceLoop(workspace.paths,workspace,{provider:'cbim-'+llm.profile.id,model:llm.profile.model,profileId:llm.profile.id,llm,
           permission:run.permission,turnTimeoutMs:run.turnTimeoutMs,onEvent:hooks.onEvent,requestApproval:hooks.requestApproval,requestQuestion:hooks.requestQuestion,
         },{
           storage,member:{directory:runsDirectory,prompt:memberExecutionPrompt(run.prepared,task,run.prerequisites)},onEngineReady:hooks.onEngineReady,
           artifacts:{knowledgeRevision:run.prepared.knowledgeRevision,normalizePath:normalizeArtifact,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},captureFiles:(paths,signal)=>artifactFiles.captureFiles(paths,signal)},
+          // 领取后到 Pi 发出首条 prompt 前仍有异步准备；每个准备边界复核原证明，不只核原生文件而遗漏外部业务文件变化。
+          assertMemberResume:previous?async()=>{await verifyMemberCheckpointProof(workspace,task,previous,checkpointPorts,()=>workspace.assert(),previous.checkpointProof)}:undefined,
+          assertMemberResumeInputs:previous?()=>verifyMemberCheckpointInputs(workspace,task,previous,checkpointPorts,()=>workspace.assert(),previous.checkpointProof!):undefined,
           // 成员管理器已在领取事务前取得共享占用，并持有到结算完成；大脑不能提前释放或再次领取。
           acquireLease:async input=>{workspace.assert();if(input.workspaceId!==workspace.entry.id||input.root!==workspace.entry.path||input.taskId!==task.taskId)throw Error('成员任务与工作区身份不匹配');return ()=>{}},
           authorizeNative:async call=>{workspace.assert();const reason=guard({name:call.name==='find'?'Glob':call.name,input:call.input},workspace.entry.path);return {allow:!reason,reason}},

@@ -1,10 +1,14 @@
 /**
  * 作用定位：向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。
- * 设计原因：前端经 Bridge 消费 Core 契约，不导入调度或文件存储；文件基线复核与执行报告分开，只公开有界事实，不包含执行许可、正文、凭据或原生会话隔离清单。
+ * 设计原因：前端经 Bridge 消费 Core 契约，不导入调度或文件存储；检查点只公开交接和预约，文件基线复核与执行报告分开，不导出原生文件指纹、执行许可或凭据。
  */
 export type {GraphIdentity,GraphCursor,GraphSnapshot,GraphDelta,GraphEventBatch,GraphChange,TaskNode,GraphEdge,AgentGraphView} from '../../backend/core/tasks/graph-types';
 export type {DependencyReplacement} from '../../backend/core/tasks/queued-dependency-replacement';
 export {dependencyReplacementSchema} from '../../backend/core/tasks/queued-dependency-replacement';
+export type {MemberCheckpointRecord} from '../../backend/core/tasks/member-checkpoint';
+export {memberCheckpointRecordSchema} from '../../backend/core/tasks/member-checkpoint';
+export type {MemberResumeRequest} from '../../backend/core/tasks/queued-member-resume';
+export {memberResumeRequestSchema} from '../../backend/core/tasks/queued-member-resume';
 export type {OpenGraphInput,CreateMemberInput,DispatchTaskInput,OpenGraphReceipt,CreateMemberReceipt,DispatchReceipt} from '../../backend/core/tasks/dispatch-commands';
 export type {MemberStartOptions,MemberStartReceipt,MemberExecutionView} from '../../backend/core/tasks/member-commands';
 export type {MemberEventsInput,MemberEventCursor,MemberRunView,MemberEventsRead} from '../../backend/core/tasks/member-events';

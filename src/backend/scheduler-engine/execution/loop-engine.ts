@@ -1,6 +1,6 @@
 /**
  * 作用定位：调度引擎：将工作区内部知识服务、内核锁与前置策略注入独立 LoopRuntime。
- * 设计原因：主会话管理团队/业务知识并调度独立执行者；内部知识事务遵循用户权限，业务写入和命令始终不能由主调度执行。文件采集只向可信成员注入，沿维护工具策略及既有授权链执行。
+ * 设计原因：主会话管理团队/业务知识并调度独立执行者；业务写入和命令始终不能由主调度执行。文件采集和单次检查点只向可信成员注入，续执行沿原冻结配置并重新经过工具门禁。
  */
 import {questionTool} from '../conversation/questions';
 import path from 'node:path';
@@ -22,6 +22,7 @@ import {progressTool} from '../../core/tasks/progress-tools';
 import {memberHelpTool} from '../../core/tasks/member-help-tools';
 import {artifactTool} from '../../core/tasks/artifact-tools';
 import type {ArtifactCapturePort} from '../../core/brain/artifact-capture';
+import {memberCheckpointTool} from '../../core/tasks/member-checkpoint-tools';
 import type {DispatchTools} from '../tools/dispatch-tools';
 
 /** 工作区执行装配参数；未指定权限时默认只读，知识与业务写入由同一运行策略控制。 */
@@ -54,6 +55,10 @@ export interface ExecutionServices {
   member?:{prompt:string;directory:string};
   /** 仅成员装配提供文件读取与当前知识复核；不存在时模型无法发现或调用采集工具。 */
   artifacts?:ArtifactCapturePort;
+  /** 仅已领取的成员续执行装配原日志/业务文件/知识/原生历史复核；不向主会话或模型公开。 */
+  assertMemberResume?():Promise<void>;
+  /** 原生已配置后、模型 prompt 前核业务文件/知识/canonical；原 native 指纹在载入前后另行核实。 */
+  assertMemberResumeInputs?():Promise<void>;
   /** 真正开始生成前提交成员的 running 事实；失败不得继续调用模型。 */
   onEngineReady?(input:{taskId:string;runId:string;sessionFile?:string}):Promise<void>;
   /** 与执行管理器共用同一工作区存储适配。 */
@@ -104,6 +109,8 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
   const runtime=new LoopRuntime({
     conversationBinding:services.conversationBinding,
     artifacts:services.member?services.artifacts:undefined,
+    assertMemberResume:services.member?services.assertMemberResume:undefined,
+    assertMemberResumeInputs:services.member?services.assertMemberResumeInputs:undefined,
     storage:services.storage,
     directory:path.join(directory,'tasks'),
     acquireLease:async task=>{
@@ -121,6 +128,7 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
       try{
         const progress=progressTool(call.name,call.input);if(progress)return await authorizeTool(call,progress);
         const artifact=artifactTool(call.name,call.input);if(artifact)return services.member&&services.artifacts?await authorizeTool(call,artifact):{allow:false,reason:'本轮未提供成员文件基线采集能力'};
+        const checkpoint=memberCheckpointTool(call.name,call.input);if(checkpoint)return services.member&&services.artifacts?await authorizeTool(call,checkpoint):{allow:false,reason:'本轮未提供成员检查点能力'};
         const help=memberHelpTool(call.name,call.input);if(help)return services.member?await authorizeTool(call,help):{allow:false,reason:'主 Agent 负责处理成员求助，不能以成员身份提交求助'};
         if(dispatch?.has(call.name))return await authorizeTool(call,dispatch.describe(call.name,call.input));
         if(call.name===questionTool.name&&options.requestQuestion){questionInput.parse(call.input);return await authorizeTool(call,{effects:['read'],native:false})}

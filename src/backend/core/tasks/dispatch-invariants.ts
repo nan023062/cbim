@@ -1,7 +1,7 @@
 /**
  * 作用定位：在派发事务提交和日志恢复时校验成员执行、任务图和邮箱的联合约束。
  * 设计原因：仅验证每条记录形状不能防止半次领取、重复占用或旧 run 回调；把跨对象约束集中在 Core，磁盘适配器只负责可靠提交。
- * 职责边界：不启动模型、不访问文件、不签发权限；求助、撤销与未启动前置替换分别原子保存，均不签发业务完成。
+ * 职责边界：不启动模型、不访问文件、不签发权限；求助、检查点、预约及实际续执行分别保存，只有新的领取轮次消费检查点，均不签发业务完成。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
@@ -12,6 +12,8 @@ import type {DispatchRun} from './dispatch-execution';
 import type {AgentRef,GraphIdentity} from './graph-types';
 import {validateQueuedTaskCancellation} from './queued-task-cancel-rules';
 import {validateQueuedDependencyReplacement} from './queued-dependency-replacement-invariants';
+import {memberCheckpointProofSchema,memberResumeFromSchema} from './member-checkpoint';
+import {validateMemberCheckpoints} from './member-checkpoint-invariants';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
 const time=z.string().datetime();
@@ -20,12 +22,14 @@ const agent=z.object({agentId:id,agentInstanceId:id,agentSessionId:id,name:z.str
 const claim=z.object({runId:id,leaseEpoch:z.number().int().nonnegative().safe()}).strict();
 const messageBase=z.object({messageId:id,commandId:id,identity,from:agent,to:agent,taskId:id,planRevision:z.number().int().positive().safe(),createdAt:time,delivery:z.enum(['pending','claimed','processed']),claim:claim.optional()});
 const messageShape=z.discriminatedUnion('kind',[
-  messageBase.extend({kind:z.literal('assignment')}).strict(),
+  messageBase.extend({kind:z.literal('assignment'),resumeFrom:memberResumeFromSchema.optional()}).strict(),
   messageBase.extend({kind:z.literal('result'),replyTo:id,resultId:id,runId:id}).strict(),
   messageBase.extend({kind:z.literal('help'),replyTo:id,helpId:id,runId:id}).strict(),
+  messageBase.extend({kind:z.literal('checkpoint'),replyTo:id,checkpointId:id,runId:id}).strict(),
 ]);
 const resultShape=z.object({resultId:id,runId:id,planRevision:z.number().int().positive().safe(),summary:z.string().trim().min(1).max(100000),evidenceRefs:z.array(id),limitations:z.array(z.string().trim().min(1).max(100000)),acceptance:z.literal('not_evaluated')}).strict();
 const runShape=z.object({binding:z.object({workspaceId:id,teamId:id,agentId:id,agentInstanceId:id,agentSessionId:id,rootSessionId:id,taskId:id,runId:id,leaseEpoch:z.number().int().nonnegative().safe(),planRevision:z.number().int().positive().safe()}).strict(),assignmentMessageId:id,
+  resumeFrom:memberResumeFromSchema.optional(),checkpointProof:memberCheckpointProofSchema.optional(),
   status:z.enum(['starting','running','completed','failed','cancelled','interrupted']),prepared:z.unknown(),model:z.record(z.unknown()),permission:z.enum(['read','ask','execute']),
   prerequisites:z.array(z.object({taskId:id,planRevision:z.number().int().positive().safe(),result:resultShape}).strict()).optional(),
   turnTimeoutMs:z.number().int().positive().safe().optional(),session:z.object({nativeSessionId:id,sessionFile:z.string().min(1).max(32768).optional()}).strict(),
@@ -67,7 +71,7 @@ function validateRun(previous:DispatchRun|undefined,run:DispatchRun,state:Dispat
   valid(assignment.claim?.runId===binding.runId&&assignment.claim.leaseEpoch===binding.leaseEpoch,'信封领取与运行租约不一致');
   valid(session.nativeSessionId===undefined||session.nativeSessionId===run.session.nativeSessionId,'原生会话身份与成员通道不一致');
   if(previous){
-    const fixed=(item:DispatchRun)=>{const {status:_,startedAt:__,settledAt:___,error:____,session:sessionValue,...rest}=item;return {...rest,session:{nativeSessionId:sessionValue.nativeSessionId}}};
+    const fixed=(item:DispatchRun)=>{const {status:_,startedAt:__,settledAt:___,error:____,session:sessionValue,checkpointProof:_proof,...rest}=item;return {...rest,session:{nativeSessionId:sessionValue.nativeSessionId}}};
     valid(equal(fixed(previous),fixed(run)),'不能修改运行的固定输入或身份');
     valid(!previous.session.sessionFile||previous.session.sessionFile===run.session.sessionFile,'不能改绑已知的原生会话文件');
     valid(!previous.startedAt||previous.startedAt===run.startedAt,'不能改写实际启动时间');
@@ -96,10 +100,14 @@ function validateRun(previous:DispatchRun|undefined,run:DispatchRun,state:Dispat
   }else{
     valid(run.settledAt&&Date.parse(run.settledAt)>=Date.parse(run.startedAt??run.createdAt),'终态缺少有效结算时间');
     valid(member.leaseEpoch>=binding.leaseEpoch&&member.activeRunId!==binding.runId&&task.activeRunId!==binding.runId&&assignment.delivery==='processed','终态必须释放成员、任务和信封');
-    const expected=run.status==='completed'?['result_ready','blocked']:[run.status];
-    valid(expected.includes(task.status),'运行终态与任务事实不一致');
-    if(task.result)valid(run.status==='completed'&&task.result.runId===binding.runId,'候选结果必须来自本次完成的运行');
-    if(task.help)valid(run.status==='completed'&&equal(task.help.binding,binding),'求助必须来自本次正常结束的固定执行身份');
+    // 旧检查点轮次可靠结束后保留原状；当前节点可处于续执行或封存，不能反向改写该历史轮次。
+    if(run.checkpointProof)valid(run.status==='completed'&&task.checkpoints?.[0]?.binding.runId===binding.runId,'检查点证明只能属于原已完成轮次');
+    else{
+      const expected=run.status==='completed'?['result_ready','blocked']:[run.status];
+      valid(expected.includes(task.status),'运行终态与任务事实不一致');
+      if(task.result)valid(run.status==='completed'&&task.result.runId===binding.runId,'候选结果必须来自本次完成的运行');
+      if(task.help)valid(run.status==='completed'&&equal(task.help.binding,binding),'求助必须来自本次正常结束的固定执行身份');
+    }
   }
 }
 
@@ -134,6 +142,7 @@ function validateMessage(previous:DispatchMessage|undefined,message:DispatchMess
     valid(assignment?.kind==='assignment'&&sameGraph(assignment.identity,message.identity)&&assignment.taskId===message.taskId&&sameAgent(assignment.from,message.to)&&sameAgent(assignment.to,message.from),'结果必须返回同一图中原始发送方');
     valid(run&&run.assignmentMessageId===message.replyTo&&run.status==='completed'&&run.binding.planRevision===message.planRevision,'结果消息缺少对应的完成运行');
     if(message.kind==='help')valid(task.help?.helpId===message.helpId&&task.status==='blocked'&&task.help.binding.runId===message.runId&&task.planRevision===message.planRevision,'求助信封只能引用自己的冻结求助记录');
+    if(message.kind==='checkpoint')valid(task.checkpoints?.[0]?.checkpointId===message.checkpointId&&task.checkpoints[0].binding.runId===message.runId&&task.planRevision===message.planRevision,'检查点信封只能引用本任务冻结的可靠交接');
     if(!previous){
       valid(changedTask(mutation,message.identity,message.taskId)&&mutation.runs?.some(item=>item.binding.runId===message.runId&&item.status==='completed'),'交接信封须与正常完成运行原子提交');
       if(message.kind==='result')valid(task.status==='result_ready'&&task.result?.resultId===message.resultId&&task.result.runId===message.runId&&task.result.planRevision===message.planRevision,'结果信封须与候选结果原子提交');
@@ -148,6 +157,7 @@ function validateMessage(previous:DispatchMessage|undefined,message:DispatchMess
 export function validateDispatchExecution(previous:DispatchState,next:DispatchState,mutation:DispatchMutation,command:DispatchCommand):void{
   validateQueuedTaskCancellation(previous,next,mutation,command);
   validateQueuedDependencyReplacement(previous,next,mutation,command);
+  validateMemberCheckpoints(previous,next,mutation,command);
   const runs=next.runs??[];
   for(const run of mutation.runs??[])validateRun((previous.runs??[]).find(item=>item.binding.runId===run.binding.runId),run,next,mutation);
   for(const message of mutation.messages??[])validateMessage(previous.outbox.find(item=>item.messageId===message.messageId),message,next,mutation,command);

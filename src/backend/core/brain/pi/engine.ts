@@ -1,6 +1,6 @@
 /**
  * 作用定位：Pi 引擎适配器，负责隔离配置、主对话与成员原生会话校验、工具桥与公开执行事件转换。
- * 设计原因：每轮冻结模型、权限和上下文，主 Agent 只做调度与知识管理；成员求助和文件基线采集沿真实调用 ID 进入日志，主回传经 custom 消息接续。所有工具经过门禁，结束只认 agent_settled。
+ * 设计原因：每轮冻结模型、权限和上下文；成员求助/基线/检查点沿真实调用 ID 入日志，续执行在载入前后核原证明。主回传经 custom 接续，所有工具经过门禁，结束只认 agent_settled。
  * 职责边界：不保存私有推理正文；记录实际用量与生成耗时，未知计价保持未知。明确停止后的标准取消文本才归为取消，其他错误及未知工具副作用交由运行时保留。
  */
 import fs from 'node:fs/promises';
@@ -61,7 +61,8 @@ export class PiEngine implements AgentEngine {
     const taskNames=new Set((await context.taskTools?.list()??[]).map(t=>t.name));
     const helpNames=new Set((await context.memberHelpTools?.list()??[]).map(t=>t.name));
     const artifactNames=new Set((await context.artifactTools?.list()??[]).map(t=>t.name));
-    const tools:KnowledgeBridge={list:async()=>[...await this.options.knowledge.list(),...await context.taskTools?.list()??[],...await context.memberHelpTools?.list()??[],...await context.artifactTools?.list()??[]],call:(name,args,signal,toolCallId)=>artifactNames.has(name)?context.artifactTools!.call(name,args,toolCallId):helpNames.has(name)?context.memberHelpTools!.call(name,args,toolCallId):taskNames.has(name)?context.taskTools!.call(name,args):this.options.knowledge.call(name,args,signal,toolCallId)};
+    const checkpointNames=new Set((await context.memberCheckpointTools?.list()??[]).map(t=>t.name));
+    const tools:KnowledgeBridge={list:async()=>[...await this.options.knowledge.list(),...await context.taskTools?.list()??[],...await context.memberHelpTools?.list()??[],...await context.artifactTools?.list()??[],...await context.memberCheckpointTools?.list()??[]],call:(name,args,signal,toolCallId)=>checkpointNames.has(name)?context.memberCheckpointTools!.call(name,args,toolCallId):artifactNames.has(name)?context.artifactTools!.call(name,args,toolCallId):helpNames.has(name)?context.memberHelpTools!.call(name,args,toolCallId):taskNames.has(name)?context.taskTools!.call(name,args):this.options.knowledge.call(name,args,signal,toolCallId)};
     this.bridge=await openBridge(tools,context.beforeTool,async usage=>{
       this.events=this.events.then(()=>context.emit({type:'engine.status',data:{label:'上下文用量已更新',metric:'context',...usage}}));await this.events;
     },async limit=>{this.requestLimit=limit;this.events=this.events.then(()=>context.emit({type:'engine.status',data:{label:'模型请求额度',metric:'request-limit',maxTokens:limit}}));await this.events});
@@ -71,7 +72,8 @@ export class PiEngine implements AgentEngine {
     const systemContext=context.task.mode==='chat'?{taskId:context.task.taskId,workspaceId:context.task.workspaceId,root:context.task.root,agentId:context.task.agentId}:context.task;
     const executionHint=context.task.mode==='chat'&&context.task.agentId==='cbim:main'?'\n本轮身份是主 Agent，负责调度和团队/业务知识管理。可通过 cbim_ 内部知识工具查询、预览和提交 .cbim 知识，知识写入遵循本轮 read/ask/execute 权限：只读时禁止写入，逐次询问时必须批准后提交，执行权限仍须通过版本与事务校验。主 Agent 不提供业务写入或命令执行（原生 write/edit/bash）；需要实现时通过 cbim_dispatch_task 交给执行 Agent，无专业成员时使用内置 cbim:executor。用户选择的权限也控制下游执行，不能解除主 Agent 的业务执行边界；不要把主 Agent 没有原生执行工具误报为工作区不可写或要求给主 Agent 提升业务权限。':this.options.allowNativeExecution?'\n本轮已提供 write/edit/bash 执行工具，可创建业务文件和运行验证。工具调用受 CBIM 策略及用户批准控制；业务写入与知识提交共用本轮权限，知识变更仍须通过 cbim_ 工具、版本检查和事务校验。':'\n本轮为只读模式，未提供 write/edit/bash。如需实现文件，请提示用户将输入框权限改为逐次询问或允许执行，再发送消息继续。';
     const helpHint=context.memberHelpTools?'\n作为执行成员，你不能再派发其它成员。遇到缺少信息、依赖、权限、能力或模块范围问题，先核实已有工具结果，再调用 cbim_task_help 向主调度提交结构化问题；可引用本轮已结束调用 ID。不要自己升级权限或请求恢复旧任务。求助成功只表示暂存，立即结束本轮，不能再调用工具、生成交付候选或声称完成；主调度会在本轮安全结束后重新安排新任务。':'';
-    const instructions=this.options.prompt+executionHint+helpHint+(context.task.mode==='chat'?'\n\n当前工作区对话身份：\n':'\n\n任务定义与冻结的团队工作流上下文：\n')+JSON.stringify(systemContext,null,2);
+    const checkpointHint=context.memberCheckpointTools?'\n本任务首轮可以申请一次 cbim_task_checkpoint 安全停泊。仅支持全部已成功 read/write/edit 触达文件均有完整基线的任务；执行过命令、动态目录查询、额外知识查询或未知操作不能使用。检查点请求后立即正常结束本轮；主调度显式预约后才可能沿原任务与上下文续执行一次，不能自行恢复、提权或把停泊当交付。':'';
+    const instructions=this.options.prompt+executionHint+helpHint+checkpointHint+(context.task.mode==='chat'?'\n\n当前工作区对话身份：\n':'\n\n任务定义与冻结的团队工作流上下文：\n')+JSON.stringify(systemContext,null,2);
     await fs.writeFile(extension,bridgeExtensionForSource(context.source),{mode:0o600});await fs.writeFile(prompt,instructions,{mode:0o600});
     // 所有运行拥有独立设置，CLI 的模型目录也只复制快照，避免并发互相覆盖。
     const configHome=path.join(context.directory,'provider');await fs.mkdir(configHome,{recursive:true});
@@ -84,6 +86,7 @@ export class PiEngine implements AgentEngine {
       await fs.writeFile(path.join(configHome,'models.json'),JSON.stringify({providers:{[this.options.provider]:{baseUrl:profile.baseUrl,api:profile.api,apiKey:'$CBIM_LLM_API_KEY',authHeader:profile.auth==='api-key',models:[{id:profile.model,reasoning:profile.reasoning,input:profile.vision?['text','image']:['text'],contextWindow:profile.contextWindow,maxTokens:profile.maxTokens,cost:profile.pricing??{input:0,output:0,cacheRead:0,cacheWrite:0}}]}}}),{mode:0o600});
       modelEnv.CBIM_LLM_API_KEY=apiKey;
     }
+    await context.assertMemberResume?.();
     this.rpc=new PiRpc(event=>{
       this.events=this.events.then(()=>this.consume(event));
       void this.events.catch(error=>{this.fatal=error;this.settlement?.reject(error);void this.rpc?.close()});
@@ -99,6 +102,8 @@ export class PiEngine implements AgentEngine {
     const initial=await this.rpc.request('get_state');
     if(context.nativeSessionId&&initial.sessionId!==context.nativeSessionId)throw Error(context.memberBinding?'Pi 原生会话身份与当前成员通道不一致':'Pi 原生会话身份与原对话记录不一致');
     if(initial.isStreaming||initial.pendingMessageCount)throw Error('Pi 会话已有未完成执行，拒绝覆盖');
+    // 载入不得悄悄修复或改写检查点历史；在本轮配置和输入写入前再次核实受管字节。
+    await context.assertMemberResume?.();
     const thinking=requestedThinkingLevel(this.options.llm?.profile??{reasoning:initial.model?.reasoning===true});
     await this.rpc.request('set_thinking_level',{level:thinking});
     await this.rpc.request('set_auto_compaction',{enabled:true});

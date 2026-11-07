@@ -1,7 +1,7 @@
 /**
- * 作用定位：把主调度会话的成员派发、本图查询、未启动任务撤销及单条依赖替换端口转换为内部 Loop 工具，并组合用户目标工具。
+ * 作用定位：把主调度的派发、查询、未启动撤销、依赖替换及一次检查点续执行预约转换为内部工具，并组合目标工具。
  * 设计原因：模型只表达责任角色、模块与目标，运行身份和权限由装配方闭包注入；严格 Schema 拒绝夹带授权或跨会话身份。
- * 职责边界：派发只是入队，撤销和依赖替换只记录调度事实，不算验收。本模块不装配成员递归派发、活动任务中止或手工结果工具。
+ * 职责边界：派发只是入队，续执行只是预约，撤销和依赖替换只记录调度事实，不算验收。本模块不装配成员递归派发、活动任务中止或手工结果工具。
  */
 import {z} from 'zod';
 import {zodToJsonSchema} from 'zod-to-json-schema';
@@ -11,12 +11,17 @@ import {cancelQueuedTasksInputSchema,type CancelQueuedTasksInput,type CancelQueu
 import {replaceQueuedDependencyInputSchema,type ReplaceQueuedDependencyInput,type ReplaceQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-replacement';
 import {jsonToolResult} from '../../core/tools/results';
 import type {GoalTools} from './goal-tools';
+import {resumeMemberInputSchema,type ResumeMemberInput,type ResumeMemberReceipt} from '../../core/tasks/queued-member-resume';
 
 const {assigneeAgentId,...taskFields}=dispatchTaskInput.shape.task.shape;
 // 未选定专业执行角色时使用内置静态默认执行者；主角色永远不能被派为执行者。
 const taskInput=z.object({agentId:assigneeAgentId.default('cbim:executor').refine(id=>id!=='cbim:main','主 Agent 只能调度，不能承担执行任务'),...taskFields}).strict();
 const inspectInput=z.object({taskId:z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/).optional()}).strict();
 const definitions={
+  cbim_dispatch_resume:{
+    description:'为当前活动周期中已安全停泊的原成员任务预约一次续执行。先读取当前图与目标；传 expectedGraphCursor、expectedGoalRevision、taskId、expectedRevision、checkpointId、reason。每任务最多一个检查点和一次续执行，原目标/模块/角色/权限/模型/知识/前置候选不得改变；旧求助、失败、取消、中断或已关闭实例不可恢复。成功只登记新待领取信封，结束本主轮后再核实文件和原生上下文、预算及名额，等待不消费检查点；不是已经运行或验收。',
+    schema:resumeMemberInputSchema,effects:['maintenance'] as const,
+  },
   cbim_dispatch_task:{
     description:'将任务交给当前主会话的执行 Agent。先查询 Team 与模块，明确 goal、moduleIds 和 acceptance；没有可选的专业 Agent 时省略 agentId 或使用 cbim:executor，由内置默认执行者承担。主 Agent 只调度，不能选择 cbim:main。成功仅表示排队，本轮调度器启动执行并将结果返回；不要轮询等待，不宣称已完成。不能指定实例、权限或伪造维护人。',
     schema:taskInput,effects:['maintenance'] as const,
@@ -49,13 +54,15 @@ export interface DispatchToolsPort {
   cancel?(input:CancelQueuedTasksInput,invocation:DispatchToolInvocation):Promise<CancelQueuedTasksReceipt>;
   /** 仅主调度装配；候选核实、停机屏障及原子审计由可信后端负责。 */
   replaceDependency?(input:ReplaceQueuedDependencyInput,invocation:DispatchToolInvocation):Promise<ReplaceQueuedDependencyReceipt>;
+  /** 仅当前主轮预约，成员实际续执行在本主轮安全结束后另经领取门禁。 */
+  resume?(input:ResumeMemberInput,invocation:DispatchToolInvocation):Promise<ResumeMemberReceipt>;
 }
 
 /** 工具解析在权限检查前和执行前各做一次，不默默剥离模型提供的额外字段。 */
 export class DispatchTools {
   constructor(private readonly port:DispatchToolsPort,private readonly goals?:GoalTools){}
   /** 只有装配了真实端口才构造本对象；返回值不包含未来工具占位。 */
-  private available(name:string){return (name!=='cbim_dispatch_cancel'||!!this.port.cancel)&&(name!=='cbim_dispatch_replace_dependency'||!!this.port.replaceDependency)}
+  private available(name:string){return (name!=='cbim_dispatch_cancel'||!!this.port.cancel)&&(name!=='cbim_dispatch_replace_dependency'||!!this.port.replaceDependency)&&(name!=='cbim_dispatch_resume'||!!this.port.resume)}
   list(){return [...Object.entries(definitions).filter(([name])=>this.available(name)).map(([name,d])=>({name,version:1 as const,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>})),...(this.goals?.list()??[])]}
   /** 名称检测不执行操作，供 Loop 在知识工具之前选择本适配器。 */
   has(name:string):boolean{return (Object.hasOwn(definitions,name)&&this.available(name))||!!this.goals?.has(name)}
@@ -76,6 +83,7 @@ export class DispatchTools {
     if(parsed.name==='cbim_dispatch_inspect')return jsonToolResult(name,await this.port.inspect((parsed.args as z.infer<typeof inspectInput>).taskId));
     if(parsed.name==='cbim_dispatch_cancel')return jsonToolResult(name,await this.port.cancel!(parsed.args as CancelQueuedTasksInput,{toolCallId,signal}));
     if(parsed.name==='cbim_dispatch_replace_dependency')return jsonToolResult(name,await this.port.replaceDependency!(parsed.args as ReplaceQueuedDependencyInput,{toolCallId,signal}));
+    if(parsed.name==='cbim_dispatch_resume')return jsonToolResult(name,await this.port.resume!(parsed.args as ResumeMemberInput,{toolCallId,signal}));
     const {agentId,...task}=parsed.args as z.infer<typeof taskInput>;
     return jsonToolResult(name,await this.port.dispatch({...task,assigneeAgentId:agentId},{toolCallId,signal}));
   }

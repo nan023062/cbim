@@ -404,6 +404,18 @@ AutoCollaboration 只在成功撤销回执后，从当前派发批次的待启�
 
 ## 运行间软限额
 
+### 单次成员停泊与原任务续执行
+
+`MemberExecutionManager` 只在成员引擎实际关闭后核实暂存检查点。`verifyMemberCheckpointProof` 共用于结算、主预约、实际领取及引擎准备：完整 canonical 身份/原 TaskSpec/原目标和验收/成功白名单工具/终态、当前知识与 Workflow、全路径文件基线、受管 native 指纹均须匹配。私有 logHash/native 摘要留在 DispatchRun，任务图只公开检查点记录。匹配只证明当前受限文件与已冻结上下文，不能证明业务验收或未知命令影响。
+
+通过结算的首轮保留 completed，但 task 为 checkpointed、无 candidate/help；新 checkpoint 信封回主调度。实例仍保留原身份，真实运行、工作区租约及全局名额在终态事务后释放。异常终态、停止、软件退出、已关闭 scope 和 released 实例不能变成可续执行检查点。
+
+`MemberResumeService.request` 在同 active scope、同计划和图 CAS 下复核原证明，幂等提交 `TaskNode.resumeRequest` 以及独立 pending assignment。工具回执只表示预约，既不创建新 run，也不消费旧 processed 信封。`AutoCollaboration` 将返回的 task 与未启动后继加入当前批次；当前主轮 settled 后才调用专用 `members.resume`，不会由读取或重启唤醒。
+
+真正领取仍先核预算、准入和当前批次，等待不消费检查点。当前 goal 版本须仍等于预约版本，且无审阅、blocked 或待重规划；预约后主轮改计划也不能沿旧请求领取。取得占用后重查原知识、配置、权限、前置候选、文件和 native，再原子追加唯一新 run/resumeFrom、领取新信封并递增 leaseEpoch 一代。模型公开快照按实际 JSON 持久语义比较可选缺省项，不能借此改变任何已配置字段；运行使用原权限，原批准不继承。引擎准备前后继续核冻结证明，prompt 前最后复核业务文件、知识及 canonical，合法 native 配置追加不误判为旧指纹一致。续轮清空旧 TaskProgress 证据，候选仅认新 run。
+
+每 task 最多一个检查点、一次续执行；旧任务目标/模块/实例/逻辑与原生通道保持不变。checkpointed 与待领续请求均阻止目标完成或 waiting；关闭周期将其封存为 cancelled、处理 pending 信封并释放成员，保留原记录。完整性失败不自动当 failed 或 superseded 继续，须明确收束周期再走新周期核实。
+
 `ScopeBudgetService` 在新普通周期、只读核实周期、业务重规划周期创建时冻结应用策略。默认关闭，旧无 budget 的周期不补造。启用时，首轮证明与主清单同事务写入；结果回注、用户显式补充与成员领取都先在当前派发事务中重读精确 canonical 日志，再将 `budget.lastAdmission` 与本次新增主运行或 DispatchRun 一起提交。策略改变仅影响下个周期，不能抹去当前已报告用量、复活旧执行实例或提升权限。
 
 主执行入口在 beforeRun 前取得 `holdMain(runId)`，在启动失败或引擎关闭后释放。它只用于识别登记后尚未写日志的可信进程内窗口，重启不会恢复该占位。成员以已经持久登记的 starting/running 为在途依据。启用额度的同周期一次只启动一个真实运行；已有在途先返回 `SCOPE_BUDGET_WAITING`，调用方释放本次临时名额并保留批次，原运行结算事件再唤醒核实。没有在途时，缺失、损坏、未完整报告的所需计量拒绝启动；仅配置 Token 不要求价格可知，配置费用才要求可靠估算。

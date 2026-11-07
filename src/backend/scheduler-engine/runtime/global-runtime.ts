@@ -1,6 +1,6 @@
 /**
  * 作用定位：维护整个应用的成员实例、派发任务及实际 Loop 消耗索引，接收 main 在可靠提交后送来的事实；成员轮次归属派发节点，不重复生成对话任务。
- * 设计原因：主会话活动按可信实例绑定投影，执行实例释放后保留历史但退出当前压力；运行身份和事件序号避免重复计费，观察不代替生命周期管理。
+ * 设计原因：主会话活动按可信实例绑定投影；安全停泊计等待压力而非活动运行，周期释放后保留历史但退出当前压力。运行身份和事件序号避免重复计费，观察不代替生命周期管理。
  * 职责边界：不读取文件、不启动引擎、不调度跨工作区任务；待消费负载只计 pending 信封，任何快照都不包含消息、知识或工具正文。
  */
 import {randomUUID} from 'node:crypto';
@@ -231,7 +231,8 @@ export class GlobalRuntimeManager {
         if(view.activityCurrent&&view.activity!=='idle'){pressure.activeMembers++;if(view.activity==='working')pressure.workingMembers++;if(view.activity==='waiting')pressure.waitingMembers++;if(view.activity==='communicating')pressure.communicatingMembers++}
       }
       for(const task of state.tasks.values()){
-        tasks.push(task);if(state.members.get(task.agentInstanceId)?.lifecycle!=='released'){if(task.status==='queued')pressure.queuedDispatchTasks++;if(task.status==='waiting')pressure.waitingDispatchTasks++;if(task.status==='blocked')pressure.blockedDispatchTasks++}
+        // 安全停泊仍是未完任务，但没有活动运行或执行槽；将其计入等待压力，避免监管视图漏掉待主调度安排的工作。
+        tasks.push(task);if(state.members.get(task.agentInstanceId)?.lifecycle!=='released'){if(task.status==='queued')pressure.queuedDispatchTasks++;if(task.status==='waiting'||task.status==='checkpointed')pressure.waitingDispatchTasks++;if(task.status==='blocked')pressure.blockedDispatchTasks++}
       }
       const groups=new Map<string,ObservedRun[]>();
       for(const run of state.runs.values()){

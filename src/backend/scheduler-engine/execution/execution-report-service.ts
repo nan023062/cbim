@@ -1,6 +1,6 @@
 /**
  * 作用定位：以持久派发状态和指定成员运行日志生成异常核实报告。
- * 设计原因：观察流程独立于执行恢复；只有可信撤销记录及无领取事实共同成立才报告未启动，普通 cancelled 不表示没有副作用。前后屏障防止拼接不同时间的证据。
+ * 设计原因：观察流程独立于执行恢复；只有可信撤销记录及无领取事实共同成立才报告未启动，普通 cancelled 不表示没有副作用。安全检查点只说明本轮结束，不当成交付；前后屏障防止拼接证据。
  */
 import {fail} from '../../core/foundation/errors';
 import {hash,json} from '../../core/foundation/serialization';
@@ -67,6 +67,7 @@ export class ExecutionReportService {
           }
           if(toolFacts.counts.failed)issue('TOOLS_FAILED_WITH_POSSIBLE_EFFECTS','warning','收到工具失败回执；工具失败前仍可能已经写入文件或改变外部状态。');
           if(['failed','cancelled','interrupted'].includes(run.status))issue('RUN_ENDED_ABNORMALLY','warning','运行已异常结束或停止；这不表示已撤销执行产生的改动。');
+          if(run.status==='completed'&&run.checkpointProof)issue('RUN_CHECKPOINTED','info','本轮已正常结束并提交安全检查点；检查点不是交付候选，也不自动恢复执行。');
           if(result.execution==='settled'&&task.result?.runId===input.runId&&task.result.planRevision===run.binding.planRevision)result.candidate={resultId:task.result.resultId,runId:task.result.runId,planRevision:task.result.planRevision,acceptance:'not_evaluated'};
           // 先保留完整有界字段用于 hash/count；分页只在读后屏障通过后返回。
           result.tools.items=toolFacts.items;

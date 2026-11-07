@@ -1,6 +1,6 @@
 /**
  * 作用定位：在派发事务中保存本轮目标计划与结构化审阅，并为目标门禁及未启动依赖替换核验真实日志、角色和模块基线。
- * 设计原因：模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用；用户补充使旧计划过期而不丢 human 项。安全等待还核验成员没有未知工具，已知截断的日志前缀不可成为完成或等待证据。
+ * 设计原因：模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用；检查点和待领续请求仍属于未完任务，用户补充使旧计划过期而不丢 human 项。截断日志前缀不可成为完成或等待证据。
  * 职责边界：不关闭周期、不释放成员、不运行工具；知识和派发日志不是跨存储原子事务，证据也不是外部产物指纹。
  */
 import {z} from 'zod';
@@ -208,7 +208,7 @@ export class ScopeGoalService {
     }
     if(draft.decision==='complete'){
       const tasks=graph.tasks.filter(task=>task.scopeId===scope.scopeId);
-      check(!tasks.some(task=>task.activeRunId||['planned','queued','running','waiting'].includes(task.status))&&!state.runs?.some(run=>tasks.some(task=>task.taskId===run.binding.taskId)&&['starting','running'].includes(run.status)),'GOAL_WORK_PENDING','本周期还有未结束的任务或运行');
+      check(!tasks.some(task=>task.activeRunId||['planned','queued','running','waiting','checkpointed'].includes(task.status))&&!state.runs?.some(run=>tasks.some(task=>task.taskId===run.binding.taskId)&&['starting','running'].includes(run.status)),'GOAL_WORK_PENDING','本周期还有未结束的任务、检查点或运行');
       for(const task of tasks)if(task.status==='result_ready'&&!ids.includes(task.taskId)){
         if(!cache.has(task.taskId))cache.set(task.taskId,this.member(state,scope,graph,task,knowledgeRevision));await cache.get(task.taskId);
       }else check(ids.includes(task.taskId),'GOAL_WORK_FAILED','本周期失败任务尚未被真实成功任务替代');
@@ -310,7 +310,7 @@ export class ScopeGoalService {
     check(sameGoalValue(review.graphCursor,cursor(graph)),'GOAL_GRAPH_CHANGED','等待申请后任务图已变化，请重新审阅');
     check(lastEffect(main)===review.lastEffectSeq&&!main.events.some(event=>event.seq>review.observedSeq&&event.type==='tool.allowed'&&Array.isArray(event.data.effects)&&event.data.effects.some(effect=>effects.has(String(effect)))),'GOAL_EFFECT_CHANGED','等待申请后又发生可能改变产物的操作');
     const tasks=graph.tasks.filter(task=>task.scopeId===scope.scopeId),ids=new Set(tasks.map(task=>task.taskId));
-    check(!tasks.some(task=>task.activeRunId||['planned','queued','running','waiting'].includes(task.status))&&!state.runs?.some(run=>run.binding.rootSessionId===scope.rootSessionId&&['starting','running'].includes(run.status)),'GOAL_WORK_PENDING','本周期仍有待执行任务或本会话仍有活动运行，不能进入等待');
+    check(!tasks.some(task=>task.activeRunId||['planned','queued','running','waiting','checkpointed'].includes(task.status))&&!state.runs?.some(run=>run.binding.rootSessionId===scope.rootSessionId&&['starting','running'].includes(run.status)),'GOAL_WORK_PENDING','本周期仍有待执行任务、检查点或活动运行，不能进入等待');
     check(!state.members.some(member=>member.executionScopeId===scope.scopeId&&(member.activeRunId||member.activeTaskId||member.activity!=='idle'||member.waitingTaskIds.length||member.communicatingMessageIds.length)),'GOAL_WORK_PENDING','执行成员仍有活动占用或待通信操作');
     for(const run of state.runs??[])if(ids.has(run.binding.taskId)){
       const task=tasks.find(item=>item.taskId===run.binding.taskId)!;

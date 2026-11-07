@@ -1,7 +1,7 @@
 /**
  * 作用定位：把当前主会话的已提交派发图绘制为可选择的任务节点流程图。
  * 设计原因：HTML 节点保留可读文字和键盘操作，SVG 仅负责有向连线；布局缓存按图身份隔离，状态增量不让节点反复跳位。
- * 职责边界：主 Agent 根只负责调度，正式业务节点属于独立执行 Agent；求助和未启动撤销只展示已提交记录，不从受阻或取消状态猜测执行事实，没有派发图时不把普通对话伪装成业务任务。
+ * 职责边界：主 Agent 根只负责调度；检查点续执行保持同一业务节点，求助和撤销只展示已提交记录。不从模型正文猜测执行事实，没有派发图时不把普通对话伪装成任务。
  */
 import {useId,useMemo,useRef} from 'react';
 import type {GraphSnapshot,TaskNode} from '../../bridge/contracts/dispatch';
@@ -9,6 +9,7 @@ import {Icon} from '../components/Icon';
 import {layoutDispatchGraph,type DispatchGraphLayout} from './graph-layout';
 import {committedMemberHelp} from './member-help-state';
 import {committedMemberCancellation,memberCancellationLabel} from './member-cancellation-state';
+import {memberCheckpointView,checkpointPhaseLabels} from './member-checkpoint-state';
 import './task-graph.css';
 
 /** 主会话摘要是图根显示信息；runCount 仅是已读取记录数，不能当作历史实际执行总次数。 */
@@ -24,7 +25,7 @@ export interface DispatchGraphProps {
   highlightedScopeId?:string;
   onSelectTask:(id:string)=>void;
 }
-export const taskStatusLabels:Record<TaskNode['status'],string>={planned:'待安排',queued:'排队中',running:'执行中',waiting:'等待前置',result_ready:'交付待审阅',blocked:'需要处理',failed:'执行失败',cancelled:'已停止',interrupted:'执行中断'};
+export const taskStatusLabels:Record<TaskNode['status'],string>={planned:'待安排',queued:'排队中',running:'执行中',waiting:'等待前置',checkpointed:'已保存检查点',result_ready:'交付待审阅',blocked:'需要处理',failed:'执行失败',cancelled:'已停止',interrupted:'执行中断'};
 
 /** 节点选择只展开详情，不发起任务、改变调度顺序或签发验收。 */
 export function DispatchGraph({graph,root,selectedTaskId,onSelectTask,highlightedScopeId}:DispatchGraphProps){
@@ -44,14 +45,14 @@ export function DispatchGraph({graph,root,selectedTaskId,onSelectTask,highlighte
           {layout.edges.map(({edge,path})=><path key={edge.edgeId} d={path} className={'dispatch-graph-edge '+edge.kind} markerEnd={`url(#dispatch-arrow-${marker})`} data-testid="dispatch-graph-edge" data-kind={edge.kind} data-from={edge.fromNodeId} data-to={edge.toNodeId}/>)}
         </svg>
         {layout.nodes.map(node=>{
-          const task=node.taskId?tasks.get(node.taskId):undefined,help=task?committedMemberHelp(task):undefined,cancellation=task?committedMemberCancellation(task):undefined,id=task?.taskId??root.nodeId,status=task?(cancellation?memberCancellationLabel:help?'需要主调度协助':task.status==='queued'&&task.activeRunId?'正在启动':taskStatusLabels[task.status]):root.status;
-          const reason=cancellation?.reason??help?.input.reason??task?.waitReason;
+          const task=node.taskId?tasks.get(node.taskId):undefined,help=task?committedMemberHelp(task):undefined,cancellation=task?committedMemberCancellation(task):undefined,checkpoint=task?memberCheckpointView(task):undefined,id=task?.taskId??root.nodeId,status=task?(cancellation?memberCancellationLabel:help?'需要主调度协助':checkpoint?.phase==='queued'?checkpointPhaseLabels.queued:task.status==='queued'&&task.activeRunId?'正在启动':taskStatusLabels[task.status]):root.status;
+          const reason=cancellation?.reason??help?.input.reason??task?.waitReason??checkpoint?.record?.input.reason;
           const outsideScope=Boolean(task&&highlightedScopeId&&task.scopeId!==highlightedScopeId);
           return <button key={node.nodeId} className={'dispatch-node '+(task?'task-node':'root-node')+(selectedTaskId===id?' selected':'')+(outsideScope?' other-scope':'')+(cancellation?' has-cancellation':'')} style={{left:node.x,top:node.y,width:node.width,height:node.height}} onClick={()=>onSelectTask(id)} aria-pressed={selectedTaskId===id} aria-label={`${task?.assignee.name??root.name} · ${task?.goal??root.goal}${task?' · '+task.modules.map(module=>module.name).join('、'):''} · ${status}${outsideScope?' · 其他任务周期':''}`} data-testid={task?'dispatch-task-node':'dispatch-root-node'} data-task-id={task?.taskId} data-node-id={node.nodeId} data-status={task?.status} data-scope-id={task?.scopeId} data-help-id={help?.helpId} data-cancel-id={cancellation?.commandId} data-highlighted={task&&highlightedScopeId?!outsideScope:undefined}>
             <span className="dispatch-node-top"><span className="dispatch-node-avatar"><Icon name={task?'team':'sparkles'} size={17}/></span><span className="dispatch-node-agent">{task?.assignee.name??root.name}<small>{task?'执行 Agent':'主会话 · 调度根'}</small></span><Icon name="chevron" size={13}/></span>
             <span className="dispatch-node-goal" title={task?.goal??root.goal}>{task?.goal??root.goal}</span>
             {task?<span className="dispatch-node-modules" title={task.modules.map(module=>module.name).join('、')}><Icon name="folder" size={12}/><span>{task.modules.map(module=>module.name).join(' · ')}</span></span>:<span className="dispatch-node-modules">已读 {root.runCount} 轮记录{root.unreadableRunCount?` · ${root.unreadableRunCount} 轮待核实`:''} · {root.pendingCount} 条待执行</span>}
-            <span className={'dispatch-node-status '+(task?.status??(root.running?'running':''))}><i className={task?.status==='running'||!task&&root.running?'task-state-dot animated':'task-state-dot'}/>{status}</span>
+            <span className={'dispatch-node-status '+(task?.status??(root.running?'running':''))} data-checkpoint-id={checkpoint?.record?.checkpointId}><i className={task?.status==='running'||!task&&root.running?'task-state-dot animated':'task-state-dot'}/>{status}</span>
             {reason&&<span className="dispatch-node-reason" title={reason}>{reason}</span>}
             {cancellation&&<time className="dispatch-node-cancellation-time" dateTime={cancellation.cancelledAt} title={'撤销记录时间：'+new Date(cancellation.cancelledAt).toLocaleString()}>记录于 {new Date(cancellation.cancelledAt).toLocaleString()}</time>}
           </button>;

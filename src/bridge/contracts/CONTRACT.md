@@ -189,6 +189,10 @@ interface DispatchGraphApi {
 `dispatch.ts` 导出 `ReplanPreviewInput / ReplanPreview / ReplanRequest / ReplanLookup / ReplanReceipt` 及严格 Schema。`dispatch.replans.preview` 按 workspace/root/inspectionScopeId 只读返回 eligible、联合 basis、图/目标/知识版本、requiredModules、inheritedHuman 和问题列表；预览不是启动许可。
 
 `loop.replanStart` 只接新 UUID、明确 source.inspectionScopeId/expectedBasis、纯文本新目标与 ask/execute 模型配置。`loop.replanReceipt` 按 workspace/root/command 查询原意图。公开 replan 包含 acceptedAt、business_replan、冻结目标与配置、source.proof 和新 runId；proof 是可信版本摘要而非新的工具回执，不含私有原生 ID/排除集合。回执只证明已受理，不代表业务验收完成。`ScopeSummary.origin` 区分 inspection 与 business_replan，普通和旧周期保持缺省。
-# 文件基线的只读边界
+### 成员检查点的公开边界
+
+`dispatch.ts` 只导出 MemberCheckpointRecord、MemberResumeRequest 及严格 Schema；不导出后端 checkpointProof 或原生历史指纹。TaskNode.checkpoints 是已正常结束并核实的交接，resumeRequest 是主调度预约审计，后继 run 才表示真正领取。公开图复用原 task/实例/会话，不新增虚假任务节点。该 Bridge 不提供前端直达的续执行或审批入口，关闭后仅可读历史。
+
+### 文件基线的只读边界
 
 `dispatch.ts` 公开 Core 的 ArtifactReportInput/ArtifactReport 及严格 Schema。请求必须明确 workspace/root/task/run；无 baselineId 只枚举可靠记录，显式选择才复核文件。响应包含有界相对路径和哈希，不含文件正文、平台根路径、凭据或可恢复执行授权。与既有执行报告分页、核实周期创建的基线分别处理。

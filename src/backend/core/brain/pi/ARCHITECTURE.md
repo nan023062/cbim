@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Pi 协议、临时桥与运行参数。工具经一次性gate授权并校验结果；只有成员回传作为custom任务数据，显式目标补充保持真实用户prompt语义。支持图片、受管会话恢复、取消及长度报告。
+Pi 协议、临时桥与运行参数。工具经一次性 gate 授权并校验结果；成员检查点只在可信端口存在时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为 custom 数据，不冒充用户授权。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -205,6 +205,10 @@ N_src_backend_core_brain_pi_engine_ts ..> N_src_backend_core_brain_pi_runtime_co
 ### 成员文件基线工具接入
 
 Pi 仅在可信 `EngineContext.artifactTools` 存在时注册采集工具，并经既有 `/gate`、一次性 `/call` 许可透传原生 toolCallId。采集结果沿标准工具完成事件进入 canonical 日志，不能由工具名、模型正文或独立桥接事件自行签发基线。主调度没有此端口；没有新增路径、命令或恢复权限。
+
+`memberCheckpointTools` 同样只按实际端口注册，透传可信调用 ID；指引明确一次 checkpoint/一次 resume，以及命令、动态目录、额外知识查询或未知操作不属于当前可恢复白名单。暂存后正常结束而非发送 abort；引擎不自行发布 checkpointed 或释放调度占用。
+
+专用续执行在启动 Pi 之前及 `get_state` 载入核实后、配置与本轮输入之前调用 `assertMemberResume`，再次核实原 canonical、业务文件、知识和原生字节。Runtime 在 Pi 准备与 running 事务结束后再通过 `assertMemberResumeInputs` 核业务文件、知识与旧日志，随后才发送 prompt。沿原 sessionId/sessionFile 启动同通道的新 run，旧 native 不能悄悄修复或改写后当作原检查点；已核实载入后允许本轮配置合法追加。该复核不是操作系统原子隔离；后续工具仍受新一轮门禁与批准。
 
 ### 当前成员结果接续
 

@@ -24,7 +24,7 @@ function valid(value:unknown,message:string):asserts value{if(!value)fail('ARTIF
 function bound(events:readonly ArtifactEvidenceEvent[],binding:Binding){let previous=0;for(const event of events){valid(Number.isSafeInteger(event.seq)&&event.seq>previous&&event.workspaceId===binding.workspaceId&&event.taskId===binding.taskId&&event.runId===binding.runId&&event.data&&typeof event.data==='object'&&!Array.isArray(event.data),'采集事件顺序或运行身份不一致');previous=event.seq;if(event.type==='run.started'){const task=event.data.task as {workspaceId?:unknown;taskId?:unknown;agentId?:unknown;mode?:unknown}|undefined;valid(equal(event.data.memberBinding,binding)&&!event.data.conversationBinding&&task?.workspaceId===binding.workspaceId&&task.taskId===binding.taskId&&task.agentId===binding.agentId&&task.mode!=='chat','采集日志头不属于本次成员运行')}}}
 
 /** 仅核实实际成功且唯一的 proposed→allowed→finished；Pi 的 started 不作为授权前提。 */
-function succeeded(events:readonly ArtifactEvidenceEvent[],binding:Binding,id:string){
+export function artifactSucceededCall(events:readonly ArtifactEvidenceEvent[],binding:Binding,id:string){
   const calls=events.filter(event=>['tool.proposed','tool.allowed','tool.denied','tool.finished'].includes(event.type)&&event.data.id===id),proposed=calls.filter(event=>event.type==='tool.proposed'),allowed=calls.filter(event=>event.type==='tool.allowed'),finished=calls.filter(event=>event.type==='tool.finished');
   valid(proposed.length===1&&allowed.length===1&&finished.length===1&&!calls.some(event=>event.type==='tool.denied'),'来源工具没有唯一完整的成功授权链');
   const p=proposed[0],a=allowed[0],f=finished[0],parsed=receipt.safeParse(f.data.receipt);valid(parsed.success,'来源工具回执结构无效');const r=parsed.data;
@@ -38,7 +38,7 @@ function succeeded(events:readonly ArtifactEvidenceEvent[],binding:Binding,id:st
 export function artifactSources(events:readonly ArtifactEvidenceEvent[],binding:Binding,ids:readonly string[]):{sources:Array<ArtifactSourceCall&{path:string}>;lastEffectSeq:number}{
   bound(events,binding);valid(ids.length>0&&ids.length<=artifactLimits.sources&&new Set(ids).size===ids.length,'采集来源数量无效或重复');
   const sources=ids.map<ArtifactSourceCall&{path:string}>(id=>{
-    const item=succeeded(events,binding,id),name=item.receipt.toolName;valid(name==='read'||name==='write'||name==='edit','仅支持真实 read/write/edit 单文件来源，不解析命令或目录');
+    const item=artifactSucceededCall(events,binding,id),name=item.receipt.toolName;valid(name==='read'||name==='write'||name==='edit','仅支持真实 read/write/edit 单文件来源，不解析命令或目录');
     const input=nativeInput[name].safeParse(item.allowed.data.input);valid(input.success,'文件工具参数不符合已支持的单文件协议');
     valid(item.receipt.scope.kind==='workspace'&&item.receipt.effects.includes(name==='read'?'read':'business-write'),'来源授权不属于工作区文件操作');
     return {toolCallId:id,toolName:name,allowedSeq:item.allowed.seq,finishedSeq:item.finished.seq,inputHash:item.receipt.inputHash,resultHash:item.receipt.resultHash!,path:input.data.path};
@@ -57,7 +57,7 @@ export function verifyArtifactBaselines(events:readonly ArtifactEvidenceEvent[],
     try{
       const parsed=artifactBaselineStagedSchema.safeParse(event.data.baseline);valid(parsed.success,'采集事件字段无效');const baseline=parsed.data;
       valid(equal(baseline.binding,binding)&&baseline.knowledgeRevision===knowledgeRevision&&ids.get(baseline.baselineId)===1&&calls.get(baseline.captureToolCallId)===1,'基线身份、知识或唯一标识不一致');
-      const own=succeeded(events,binding,baseline.captureToolCallId),input=artifactCaptureInputSchema.safeParse(own.allowed.data.input);
+      const own=artifactSucceededCall(events,binding,baseline.captureToolCallId),input=artifactCaptureInputSchema.safeParse(own.allowed.data.input);
       valid(own.receipt.toolName===captureName&&own.receipt.effects.includes('maintenance')&&input.success&&input.data.expectedTaskProgressVersion===baseline.progressVersion,'采集调用与进度版本不一致');
       const content=(own.finished.data.result as {content?:unknown[]}|undefined)?.content;valid(Array.isArray(content)&&content.length===1,'采集工具正文不完整');
       const block=content[0] as {type?:unknown;text?:unknown};valid(block?.type==='text'&&typeof block.text==='string','采集工具没有结构化文本结果');
@@ -87,7 +87,7 @@ export function verifyArtifactBaselines(events:readonly ArtifactEvidenceEvent[],
     const values=authorized.data.effects,scope=authorized.data.scope;
     if(values.includes('command')||scope?.kind==='unknown'||event.data.name==='bash'){impact='unknown';add('ARTIFACT_COMMAND_SCOPE','命令或未知范围不能由文件指纹推断完整影响')}
     else if(values.includes('business-write')||['write','edit'].includes(String(event.data.name))){
-      try{const name=event.data.name;valid(name==='write'||name==='edit','未知写入工具');succeeded(events,binding,String(event.data.id));const parsed=nativeInput[name].parse(event.data.input);valid(covered.has(normalizePath(parsed.path)),'写入文件未被采集')}
+      try{const name=event.data.name;valid(name==='write'||name==='edit','未知写入工具');artifactSucceededCall(events,binding,String(event.data.id));const parsed=nativeInput[name].parse(event.data.input);valid(covered.has(normalizePath(parsed.path)),'写入文件未被采集')}
       catch{impact='unknown';add('ARTIFACT_UNCOVERED_WRITE','存在未覆盖或不可解析的写入，基线只代表明确列出的文件')}
     }
   }

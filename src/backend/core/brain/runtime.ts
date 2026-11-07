@@ -1,6 +1,6 @@
 /**
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
- * 设计原因：先持久化工具决策再放行；成员求助封住后续操作，文件采集则用短门闩绑定真实回执、进度和实时知识。新主上下文冻结旧运行并提交一次性意图，不将坏历史伪装成恢复。
+ * 设计原因：先持久化工具决策再放行；成员求助和检查点封住后续操作，文件采集则用短门闩绑定真实回执、进度和实时知识。一次原任务续执行重新核实冻结证明并清空旧证据，不将坏历史伪装成恢复。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -10,6 +10,11 @@ import {toolReceipt} from '../tools/receipts';
 import {TaskProgressTools} from '../tasks/progress-tools';
 import {MemberHelpTools} from '../tasks/member-help-tools';
 import {artifactCaptureToolName} from '../tasks/artifact-tools';
+import {memberCheckpointToolName} from '../tasks/member-checkpoint-tools';
+import {RunMemberCheckpoint} from './member-checkpoint';
+import {verifyMemberCheckpoint} from '../tasks/member-checkpoint-evidence';
+import {hash,json} from '../foundation/serialization';
+import {isDeepStrictEqual} from 'node:util';
 import {RunArtifactCapture,type ArtifactCapturePort} from './artifact-capture';
 import {checkedMemberRunLaunch,type MemberRunLaunch} from './member-run';
 import {checkedRunInputSource,type RunInputSource} from './input-source';
@@ -26,6 +31,10 @@ export interface RuntimeOptions {
   conversationBinding?:ConversationAgentBinding;
   /** 成员专用的有界文件和实时知识复核端口；缺省不注册采集工具，不能仅靠角色名取得能力。 */
   artifacts?:ArtifactCapturePort;
+  /** 仅已领取续执行注入；复核原日志、文件、知识和原生指纹，覆盖 Runtime 与 Pi 准备窗口，不接受公开路径。 */
+  assertMemberResume?():Promise<void>;
+  /** 原生加载后最后发送前核原日志/知识/业务文件；不重复要求已合法追加配置的 native 字节仍等于旧指纹。 */
+  assertMemberResumeInputs?():Promise<void>;
   /** 返回覆盖完整运行生命周期的跨进程任务租约释放函数；拒绝时不创建运行日志或引擎。 */
   acquireLease(task:TaskSpec):Promise<()=>void>;
   /** 每轮创建独立引擎，并以已确定的任务/运行身份装配工具；不接受模型指定身份。 */
@@ -78,6 +87,14 @@ export class LoopRuntime {
     const pending=this.startInternal(task,message,undefined,prepared,undefined,control);this.starting.add(pending);
     try{return await pending}finally{this.starting.delete(pending)}
   }
+  /** 已领取的单次成员续执行；不放宽普通 start/resume，不移植旧工具证据或改换原生会话。 */
+  async resumeMember(task:TaskSpec,message:string,launch:MemberRunLaunch,checkpoint:{checkpointId:string;runId:string;logHash:string},control?:Pick<RunStartControl,'signal'>):Promise<{runId:string;done:Promise<RunSummary>}>{
+    if(this.closing)throw Error('Loop Engine 正在关闭');
+    if(!this.options.artifacts||!this.options.assertMemberResume||!this.options.assertMemberResumeInputs)throw Error('成员续执行缺少可信基线核实端口');
+    const prepared=checkedMemberRunLaunch(launch,task);
+    const pending=this.startInternal(task,message,undefined,prepared,undefined,control,undefined,structuredClone(checkpoint));this.starting.add(pending);
+    try{return await pending}finally{this.starting.delete(pending)}
+  }
   /** 为已经登记的主会话建立新上下文；不读旧日志、不承接旧工具或任务进度，目录存在及身份/租约仍须核实。 */
   async startFreshMain(task:TaskSpec,message:string,control:FreshMainStartControl):Promise<{runId:string;done:Promise<RunSummary>}>{
     if(this.closing)throw Error('Loop Engine 正在关闭');
@@ -85,7 +102,7 @@ export class LoopRuntime {
     const pending=this.startInternal(task,message,undefined,undefined,undefined,{signal:control.signal},control);this.starting.add(pending);
     try{return await pending}finally{this.starting.delete(pending)}
   }
-  private async startInternal(task:TaskSpec,message:string,resume?:{runId:string;reconciledToolIds?:string[]},member?:MemberRunLaunch,source?:RunInputSource,control?:RunStartControl,fresh?:FreshMainStartControl):Promise<{runId:string;done:Promise<RunSummary>}>{
+  private async startInternal(task:TaskSpec,message:string,resume?:{runId:string;reconciledToolIds?:string[]},member?:MemberRunLaunch,source?:RunInputSource,control?:RunStartControl,fresh?:FreshMainStartControl,memberResume?:{checkpointId:string;runId:string;logHash:string}):Promise<{runId:string;done:Promise<RunSummary>}>{
     task=structuredClone(task);
     const conversationBinding=this.options.conversationBinding===undefined?undefined:checkedConversationAgentBinding(this.options.conversationBinding,task);
     if(fresh&&(task.mode!=='chat'||task.agentId!=='cbim:main'||!conversationBinding||resume||member||source))throw Error('新上下文仅限已经登记的主对话实例');
@@ -100,7 +117,15 @@ export class LoopRuntime {
     let excludedRunIds:string[]|undefined;
     let preparedEngine:AgentEngine|undefined;
     try{
-      if(fresh){
+      if(memberResume){
+        previous=await this.inspect(task.taskId,safeId(memberResume.runId));
+        if(!member||!this.options.artifacts||!this.options.assertMemberResume||previous.status!=='completed'||previous.logIntegrity?.partialTail!==false||previous.unresolvedTools.length||hash(json(previous.events))!==memberResume.logHash||!isDeepStrictEqual(previous.task,task)||!previous.memberBinding||!previous.sessionFile||previous.sessionFile!==member.session.sessionFile)throw Error('成员检查点日志、目标或上下文不再匹配');
+        const {runId:_oldRun,leaseEpoch:oldEpoch,...old}=previous.memberBinding,{runId:_newRun,leaseEpoch:newEpoch,...next}=member.binding;
+        if(member.binding.runId===previous.runId||newEpoch!==oldEpoch+1||!isDeepStrictEqual(old,next))throw Error('续执行必须保留原成员任务身份并创建下一代租约的新运行');
+        const proof=verifyMemberCheckpoint(previous.events,previous.memberBinding,this.options.artifacts.knowledgeRevision,this.options.artifacts.normalizePath);
+        if(proof?.checkpoint.checkpointId!==memberResume.checkpointId||proof.logHash!==memberResume.logHash)throw Error('成员检查点未通过完整证据核验');
+        await this.options.assertMemberResume();await this.options.artifacts.assertCurrentKnowledge();control?.signal.throwIfAborted();
+      }else if(fresh){
         // 只枚举旧运行身份。坏历史仍保留；不能扫描“最新可读”记录来悄悄恢复旧上下文。
         const listed=await this.options.storage.list(path.join(this.options.directory,task.taskId)),known=await fresh.knownRunIds?.()??[];
         const all=[...new Set([...listed.map(safeId),...known.map(safeId)])];
@@ -141,9 +166,10 @@ export class LoopRuntime {
       const calls=new Map<string,{call:ToolCall;decision:ToolDecision;generation:number}>();
       const identity={workspaceId:task.workspaceId,taskId:task.taskId,runId};
       let artifactCapture:RunArtifactCapture|undefined;
+      let checkpointTools:RunMemberCheckpoint|undefined;
       const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{artifacts:()=>artifactCapture?.refs()??[]});
       const emit=async(event:EngineEvent,trustedArtifact=false)=>{
-        if(event.type==='artifact.baseline_captured'&&!trustedArtifact)throw Error('产物基线只能由本轮可信采集端口保存');
+        if((event.type==='artifact.baseline_captured'||event.type==='task.checkpoint_requested')&&!trustedArtifact)throw Error('产物和检查点只能由本轮可信端口保存');
         if(event.type==='tool.finished'){
           const known=calls.get(String(event.data.id));
           const {receipt:_untrustedReceipt,...data}=event.data;
@@ -155,6 +181,7 @@ export class LoopRuntime {
         }
         const saved=await journal.append(event);
         artifactCapture?.observed(saved);
+        checkpointTools?.observed(saved);
         if(event.type==='session.bound'&&typeof event.data.sessionFile==='string')boundSessionFile=event.data.sessionFile;
         if(event.type==='tool.finished'&&event.data.receipt)taskTools.record(event.data.receipt as import('../tools/types').ToolReceipt,calls.get(String(event.data.id))!.generation);
         if(event.type==='tool.allowed')pendingTools.add(String(event.data.id));
@@ -179,6 +206,11 @@ export class LoopRuntime {
         },
         save:async baseline=>{await emit({type:'artifact.baseline_captured',data:{baseline}},true)},
       });
+      if(member&&this.options.artifacts&&!memberResume)checkpointTools=new RunMemberCheckpoint(member.binding,this.options.artifacts,{
+        current:()=>taskTools.current(),assertReady:id=>{
+          if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))throw Error('检查点调用已停止、未获准或仍有其他在途操作');
+        },save:async checkpoint=>{await emit({type:'task.checkpoint_requested',data:{checkpoint}},true)},
+      });
       this.injections.set(task.taskId,async(message,images)=>{
         if(stopping||!engine.steer)throw Error('当前执行不支持插入消息');
         await emit({type:'engine.status',data:{metric:'insertion',state:'requested',message,label:'正在插入用户补充'}});
@@ -186,10 +218,10 @@ export class LoopRuntime {
         catch(error){await emit({type:'engine.status',data:{metric:'insertion',state:'failed',message,label:'插入未确认，请核实后继续'}});throw error}
       });
       // 保存输入及可信来源；显式补充仍是用户消息，成员结果不能在界面或原生上下文中冒充用户授权。
-      await emit({type:'run.started',data:{task,message,engine:engine.kind,resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[],...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),...(member?{memberBinding:member.binding,nativeSessionId:member.session.nativeSessionId}:{}),...(fresh?{freshMain:{nativeSessionId,excludedRunIds}}:{})}});
+      await emit({type:'run.started',data:{task,message,engine:engine.kind,resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[],...(memberResume?{memberResume:{checkpointId:memberResume.checkpointId,runId:memberResume.runId}}:{}),...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),...(member?{memberBinding:member.binding,nativeSessionId:member.session.nativeSessionId}:{}),...(fresh?{freshMain:{nativeSessionId,excludedRunIds}}:{})}});
       await taskTools.invalidate('新一轮执行需要重新核实产物与证据');
       const stop=async()=>{
-        if(stopping)return;stopping=true;artifactCapture?.stop();
+        if(stopping)return;stopping=true;artifactCapture?.stop();checkpointTools?.stop();
         try{await emit({type:'run.stop_requested',data:{}})}catch(error){stopFailure=error}
         // 记录失败不能阻止实际 abort；失败事实在收尾按 interrupted 保留，不把无日志停止写成正常求助。
         try{await engine.stop()}catch(error){stopFailure??=error}
@@ -202,11 +234,12 @@ export class LoopRuntime {
         let failure:unknown;
         try{
           if(control?.signal.aborted)await stop();
-          if(!stopping)await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,emit:event=>emit(event),beforeTool:async call=>{
+          if(!stopping)await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,memberCheckpointTools:checkpointTools?.tools,assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:event=>emit(event),beforeTool:async call=>{
             call=structuredClone(call);
             if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
             // 同步预占求助边界，先于任何 await；主 Agent 即便伪造工具名也不能取得成员求助能力。
-            const artifactReason=artifactCapture?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactCapture&&call.name===artifactCaptureToolName?'本轮未提供成员文件基线采集能力':undefined);
+            const checkpointReason=checkpointTools?.guard(call.name,call.id,call.input,[...activeCalls])??(!checkpointTools&&call.name===memberCheckpointToolName?'本任务最多一次检查点和一次续执行，本轮不能再申请停泊':undefined);
+            const artifactReason=checkpointReason??artifactCapture?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactCapture&&call.name===artifactCaptureToolName?'本轮未提供成员文件基线采集能力':undefined);
             const helpReason=artifactReason??memberHelpTools?.guard(call.name,call.id,call.input,[...activeCalls])??(!memberHelpTools&&call.name==='cbim_task_help'?'仅正式执行成员可提交求助':undefined);
             // 门闩明确拒绝的调用只记录拒绝事实，绝无执行机会，不能反过来阻塞已经获准的求助。
             if(!helpReason&&!stopping)activeCalls.add(call.id);
@@ -226,6 +259,7 @@ export class LoopRuntime {
           }});
           if(control?.signal.aborted)await stop();
           if(!stopping)await this.options.onEngineReady?.({taskId:task.taskId,runId,sessionFile:boundSessionFile});
+          if(!stopping&&memberResume)await this.options.assertMemberResumeInputs!();
           if(control?.signal.aborted)await stop();
           result=stopping?{status:'cancelled' as const}:await engine.run(message);
         }catch(error){
@@ -233,6 +267,7 @@ export class LoopRuntime {
         }finally{
           control?.signal.removeEventListener('abort',abort);
           artifactCapture?.stop();
+          checkpointTools?.stop();
           try{await engine.close()}catch(error){failure??=error}
           failure??=stopFailure;
           try{

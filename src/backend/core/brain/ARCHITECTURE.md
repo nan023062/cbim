@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-引擎无关的执行循环、事件与计量。成员文件采集在可信门闩内核实工具来源、进度与知识，成功回执才确认基线。停止覆盖准备与采集；求助不等于交接，计量不混淆未知价格，新上下文不重放旧运行。
+引擎无关的执行循环、事件与计量。文件采集和检查点沿真实工具授权封闭并发；专用成员续执行保留身份并清空旧证据，普通启动不变成恢复入口。停止覆盖准备与复核，正常关闭后才确认停泊。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -14,6 +14,7 @@
 | [conversation-binding.ts](conversation-binding.ts) | 定义主对话与已登记 Agent 实例、逻辑会话之间的可信绑定，供运行时和日志恢复共用。 |
 | [index.ts](index.ts) | 大脑执行层：对外重导出 Loop 契约、主对话实例绑定、成员执行绑定、可信回注来源、存储端口、运行时与 Pi 适配器。 |
 | [input-source.ts](input-source.ts) | 定义可信入口提交的成员结果与用户目标补充来源，供运行日志和引擎识别。 |
+| [member-checkpoint.ts](member-checkpoint.ts) | 成员单次合作式停泊的运行时门闩，沿真实工具授权保存非终结检查点请求。 |
 | [member-run.ts](member-run.ts) | 定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。 |
 | [model-errors.ts](model-errors.ts) | 把模型结束原因转换为用户可理解的执行错误，供实时引擎和历史回放共用。 |
 | [runtime.ts](runtime.ts) | 大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。 |
@@ -53,6 +54,9 @@ N_src_backend_core_brain_pi ..> N_src_backend_core_brain_llm : 导入依赖
 
 ```mermaid
 classDiagram
+class N_src_backend_core_brain_member_checkpoint_ts["member-checkpoint.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_member_run_ts["member-run.ts"] {
   <<module>>
 }
@@ -68,22 +72,21 @@ class N_src_backend_core_brain_scope_usage_ts["scope-usage.ts"] {
 class N_src_backend_core_brain_storage_ts["storage.ts"] {
   <<module>>
 }
-class N_src_backend_core_brain_types_ts["types.ts"] {
-  <<module>>
-}
+N_src_backend_core_brain_member_checkpoint_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_storage_ts : 导入依赖
+N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_member_checkpoint_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
-N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
-N_src_backend_core_brain_scope_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
-N_src_backend_core_brain_storage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
-N_src_backend_core_brain_types_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_brain_types_ts["types.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_usage_ts["usage.ts"] {
   <<module>>
 }
+N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
@@ -97,11 +100,15 @@ class N_src_backend_core_brain_usage_ts["usage.ts"] {
 - `index.ts` → `input-source.ts`：导入。
 - `index.ts` → `conversation-binding.ts`：导入。
 - `index.ts` → `pi`：导入。
+- `member-checkpoint.ts` → `member-run.ts`：导入。
+- `member-checkpoint.ts` → `types.ts`：导入。
+- `member-checkpoint.ts` → `artifact-capture.ts`：导入。
 - `pi` → `types.ts`：导入。
 - `pi` → `input-source.ts`：导入。
 - `pi` → `llm`：导入。
 - `pi` → `model-errors.ts`：导入。
 - `runtime.ts` → `storage.ts`：导入。
+- `runtime.ts` → `member-checkpoint.ts`：导入。
 - `runtime.ts` → `artifact-capture.ts`：导入。
 - `runtime.ts` → `member-run.ts`：导入。
 - `runtime.ts` → `input-source.ts`：导入。
@@ -190,7 +197,7 @@ class N_src_backend_core_brain_usage_ts["usage.ts"] {
 ## 子目录导航
 
 - [llm/](llm/ARCHITECTURE.md)：公开模型参数、能力元数据及运行快照端口。实际配置文件和加密凭据由 main/persistence/settings 持有。
-- [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数。工具经一次性gate授权并校验结果；只有成员回传作为custom任务数据，显式目标补充保持真实用户prompt语义。支持图片、受管会话恢复、取消及长度报告。
+- [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数。工具经一次性 gate 授权并校验结果；成员检查点只在可信端口存在时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为 custom 数据，不冒充用户授权。
 
 [返回上层](../ARCHITECTURE.md)。
 
@@ -468,6 +475,14 @@ LoopRuntime ..> AgentEngine : 通过既有契约驱动
 
 图中的适配关系是实施方向，不表示当前 `LoopRuntime` 已实现 `AgentRunPort`。与 [成员契约](../team/CONTRACT.md) 和 [任务图契约](../tasks/CONTRACT.md) 一起评审后再增加代码文件；当前代码类图仍以实际声明为准。
 ### 磁盘执行证据完整性
+
+#### 一次成员检查点与原通道续执行
+
+`RunMemberCheckpoint` 仅为具备可信文件端口的成员首轮装配 `cbim_task_checkpoint`。策略 await 之前同步预占门闩，拒绝未结束工具或审批；完整白名单文件来源、当前进度和知识、全部文件字节核实后保存 `task.checkpoint_requested`。成功只表示暂存，随后所有工具被封住，模型须正常结束。停止、超时、关闭失败或未决工具不能成为安全检查点；Core verifier 与外层调度才负责结算。
+
+`resumeMember` 是可信调度专用入口，要求原 canonical 完整正常终态、冻结 logHash、原 TaskSpec/成员/通道相同及 `leaseEpoch = old + 1`，仅 runId 改变。它不放宽普通 start/resume，不能沿 help/失败/取消日志继续。原进度复制后立即失效旧证据和 delivery；续轮不再提供检查点工具，必须用新运行的实际证据交付。
+
+`assertMemberResume` 由后端注入，核实原日志、知识、全覆盖文件基线及私有原生指纹，覆盖 Runtime 与 Pi 准备窗口。原生配置完成、onEngineReady 返回后，`assertMemberResumeInputs` 在真正发 prompt 前再核原日志、知识和业务文件；原 native 指纹已在载入前后核实，此时允许本轮受控配置合法追加。端口没有公开路径参数，不签发任意恢复能力；每任务只支持一个检查点和一次续执行，且不承诺跨应用重启。
 
 `RunSummary.logIntegrity` 为可选的磁盘读取诊断，当前 `RunJournal.read` 总会提供 `partialTail`。完整前缀仍可供展示；尾行未写完不解析、不截断，也不能据前缀的 settled 证明完整日志。`LoopRuntime` 在创建新引擎或调用启动意图前拒绝续接已知不完整的原日志，并释放预检租约；即使传入工具核实 ID 也不能跳过。内存摘要或旧端口未提供该字段时不补造磁盘诊断。读取本身不授权重放。
 

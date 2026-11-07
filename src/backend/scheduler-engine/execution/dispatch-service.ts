@@ -1,6 +1,6 @@
 /**
  * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
- * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；周期冻结真实输入、运行归属及软限额。每次主轮登记与可信额度证明原子提交，安全等待和fresh意图保持独立，幂等旧回执不能重开周期。
+ * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；周期冻结输入、运行归属及软限额。关闭原子封存检查点和待领续请求，历史保留；安全等待和fresh意图独立，幂等旧回执不能重开周期。
  * 职责边界：本模块负责可靠入队、显式撤销未启动集合及受审计的单条依赖替换，由独立 MemberExecutionManager 执行；调度维护不停止活动运行，不复活旧实例，也不代表目标完成。
  */
 import {randomUUID} from 'node:crypto';
@@ -22,6 +22,7 @@ import {ScopeReplanService} from './scope-replan-service';
 import {QueuedTaskCancelService} from './queued-task-cancel-service';
 import {QueuedDependencyReplacementService} from './queued-dependency-replacement-service';
 import type {ReplaceQueuedDependencyInput,ReplaceQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-replacement';
+import {isMemberCheckpointPending} from '../../core/tasks/member-checkpoint';
 import {ScopeUsageService} from './scope-usage-service';
 import {ScopeBudgetService,rejectBudget,type ScopeBudgetRejected} from './scope-budget-service';
 import type {ScopeBudgetPolicy} from '../../core/tasks/scope-budget';
@@ -147,8 +148,8 @@ export class WorkspaceDispatchService {
       }
       if(state.runs?.some(run=>taskIds.has(run.binding.taskId)&&['starting','running'].includes(run.status)))fail('DISPATCH_SCOPE_BUSY','调度周期仍有未结算运行，请先停止并等待成员结束');
       const now=new Date().toISOString(),changes:GraphChange[]=[],messages:DispatchMessage[]=[],members:AgentInstance[]=[];
-      for(const task of tasks)if(!task.runIds.length&&['planned','queued','waiting','blocked'].includes(task.status)){
-        const cancelled:TaskNode={...task,status:'cancelled',revision:task.revision+1,updatedAt:now,waitReason:'所属用户任务周期已结束，未启动任务已取消'};
+      for(const task of tasks)if(isMemberCheckpointPending(task)||!task.runIds.length&&['planned','queued','waiting','blocked'].includes(task.status)){
+        const cancelled:TaskNode={...task,status:'cancelled',revision:task.revision+1,updatedAt:now,waitReason:isMemberCheckpointPending(task)?'所属周期已结束，检查点与未领取的续执行预约已封存':'所属用户任务周期已结束，未启动任务已取消'};
         changes.push({type:'task.upserted',task:cancelled});
         for(const message of state.outbox)if(message.kind==='assignment'&&message.taskId===task.taskId&&message.delivery==='pending')messages.push({...message,delivery:'processed'});
       }

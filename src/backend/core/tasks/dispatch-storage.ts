@@ -1,13 +1,14 @@
 /**
  * 作用定位：定义工作区成员注册、会话绑定及任务派发的原子持久化端口。
  * 设计原因：调度层只表达领域变化，main 负责落盘；任务、领取意图、消息和成员占用一起提交，界面在同一屏障读取图与独立周期投影，观察端口只接收已提交事实。
- * 职责边界：持久化入队或 starting 意图都不是模型已经运行；result 与 help 分别引用候选和问题，确认收件均不代表验收或授权。
+ * 职责边界：持久化入队或 starting 意图都不是模型已经运行；result/help/checkpoint 分别引用候选、问题和检查点，确认收件均不代表验收或续执行授权。
  */
 import type {AgentInstance, AgentSessionBinding} from '../team/agent-types';
 import type {AgentRef, GraphIdentity, GraphEventBatch, GraphSnapshot, GraphCursor, GraphDelta} from './graph-types';
 import type {DispatchRun} from './dispatch-execution';
 import type {DispatchScope} from './dispatch-scope';
 import type {DispatchSessionReadInput,DispatchSessionRead} from './scope-view';
+import type {MemberResumeFrom} from './member-checkpoint';
 
 /** 信封身份固定；claim 记录领取时的 run 与租约代际，消费后保留用于审计。 */
 export interface DispatchMessageBase {
@@ -19,12 +20,14 @@ export interface DispatchMessageBase {
   claim?:{runId:string;leaseEpoch:number};
 }
 /** 接收成员的任务信封；只保存任务引用，正文从同事务任务节点读取。 */
-export interface AssignmentMessage extends DispatchMessageBase {kind:'assignment'}
+export interface AssignmentMessage extends DispatchMessageBase {kind:'assignment';resumeFrom?:MemberResumeFrom}
 /** 返回原发送方的候选引用；不复制消息正文，也不形成任务图的反向边。 */
 export interface ResultMessage extends DispatchMessageBase {kind:'result';replyTo:string;resultId:string;runId:string}
 /** 成员正常结算后的问题引用，不是成功候选、用户消息或自动恢复许可。 */
 export interface HelpMessage extends DispatchMessageBase {kind:'help';replyTo:string;helpId:string;runId:string}
-export type DispatchMessage=AssignmentMessage|ResultMessage|HelpMessage;
+/** 检查点可供主调度审阅，不是成功结果或自动恢复许可；只在可靠正常结算时发出。 */
+export interface CheckpointMessage extends DispatchMessageBase {kind:'checkpoint';replyTo:string;checkpointId:string;runId:string}
+export type DispatchMessage=AssignmentMessage|ResultMessage|HelpMessage|CheckpointMessage;
 
 /** 工作区级状态；主实例随会话保留，周期执行实例与历史图分开计量。 */
 export interface DispatchState {

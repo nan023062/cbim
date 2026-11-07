@@ -1,6 +1,6 @@
 /**
  * 作用定位：任务图的纯领域校验，检查序列化形状、身份、派发父关系及依赖/等待无环。
- * 设计原因：存储重放与新提交共用规则；求助、撤销和依赖替换具有独立历史，不能混入成功候选或活动占用。
+ * 设计原因：存储重放与新提交共用规则；检查点及其一次续预约保留固定身份，求助、撤销和依赖替换不混入成功候选或活动占用。
  * 职责边界：结构通过不等于知识维护人已认证或任务已获授权，调度层仍需核实来源。
  */
 import {z} from 'zod';
@@ -9,6 +9,8 @@ import {fail} from '../foundation/errors';
 import type {AgentRef,GraphEventBatch,GraphIdentity,GraphSnapshot,TaskNode} from './graph-types';
 import {memberHelpRecordSchema} from './member-help';
 import {dependencyReplacementSchema} from './queued-dependency-replacement';
+import {memberCheckpointRecordSchema} from './member-checkpoint';
+import {memberResumeRequestSchema} from './queued-member-resume';
 
 const text=z.string().trim().min(1).max(100000);
 const id=z.string().min(1).max(512).refine(s=>s.trim()===s&&!/[\x00-\x1f]/.test(s));
@@ -25,10 +27,11 @@ const moduleBinding=z.object({moduleId:id,name:text,knowledgeRevision:id,mainten
 const root=z.object({kind:z.literal('session-root'),nodeId:id,identity,agent,revision,createdAt:time}).strict();
 const task=z.object({kind:z.literal('task'),nodeId:id,taskId:id,identity,scopeId:id.optional(),parentTaskId:id.optional(),requester:agent,assignee:agent,
   modules:z.array(moduleBinding).min(1),goal:text,acceptance:z.array(z.object({id,text}).strict()).min(1),
-  revision,planRevision:revision,status:z.enum(['planned','queued','running','waiting','result_ready','blocked','failed','cancelled','interrupted']),
+  revision,planRevision:revision,status:z.enum(['planned','queued','running','waiting','result_ready','blocked','failed','cancelled','interrupted','checkpointed']),
   awaitedChildren:z.array(z.object({taskId:id,planRevision:revision}).strict()),waitReason:text.optional(),runIds:z.array(id),activeRunId:id.optional(),
   result:z.object({resultId:id,runId:id,planRevision:revision,summary:text,evidenceRefs:z.array(id),limitations:z.array(text),acceptance:z.literal('not_evaluated')}).strict().optional(),
   help:memberHelpRecordSchema.optional(),
+  checkpoints:z.array(memberCheckpointRecordSchema).length(1).optional(),resumeRequest:memberResumeRequestSchema.optional(),
   cancelledBeforeStart:queuedTaskCancellationSchema.optional(),
   dependencyReplacements:z.array(dependencyReplacementSchema).min(1).max(32).optional(),
   createdAt:time,updatedAt:time}).strict();
@@ -46,7 +49,7 @@ const change=z.discriminatedUnion('type',[
   z.object({type:z.literal('agent.upserted'),agent:agentView}).strict(),
 ]);
 const batch=z.object({version:z.literal(1),identity,streamId:id,seq:revision,eventId:id,commandId:id,
-  cause:z.enum(['graph.created','task.created','task.dispatched','task.started','task.waiting','task.result_ready','task.blocked','task.failed','task.cancelled','task.interrupted','task.revised','task.reconciled','dependency.changed','message.accepted','message.processed','agent.state_changed']),
+  cause:z.enum(['graph.created','task.created','task.dispatched','task.started','task.waiting','task.result_ready','task.blocked','task.failed','task.cancelled','task.interrupted','task.revised','task.reconciled','dependency.changed','message.accepted','message.processed','agent.state_changed','task.checkpointed','task.resume_requested']),
   committedAt:time,changes:z.array(change).min(1).max(1000)}).strict();
 const snapshot=z.object({version:z.literal(1),identity,cursor,root,tasks:z.array(task),edges:z.array(edge),agents:z.array(agentView)}).strict();
 
@@ -103,6 +106,10 @@ export function validateGraph(value:GraphSnapshot):void {
     if(t.result&&(t.result.planRevision!==t.planRevision||!t.runIds.includes(t.result.runId)||t.status!=='result_ready'))fail('GRAPH_INPUT_INVALID','任务候选结果已失效或不属于该执行');
     if(t.status==='result_ready'&&!t.result)fail('GRAPH_INPUT_INVALID','可交接任务缺少真实候选结果');
     if(t.help){const binding=t.help.binding;if(t.result||t.status!=='blocked'||t.activeRunId||!t.scopeId||binding.workspaceId!==t.identity.workspaceId||binding.rootSessionId!==t.identity.rootSessionId||binding.taskId!==t.taskId||binding.planRevision!==t.planRevision||!t.runIds.includes(binding.runId)||binding.agentId!==t.assignee.agentId||binding.agentInstanceId!==t.assignee.agentInstanceId||binding.agentSessionId!==t.assignee.agentSessionId)fail('GRAPH_INPUT_INVALID','成员求助必须绑定本周期已结束的执行任务，且不能作为成功候选')}
+    const checkpoint=t.checkpoints?.[0],request=t.resumeRequest;
+    if(checkpoint){const binding=checkpoint.binding;if(!t.scopeId||t.help?.binding.runId===binding.runId||t.cancelledBeforeStart||binding.workspaceId!==t.identity.workspaceId||binding.rootSessionId!==t.identity.rootSessionId||binding.taskId!==t.taskId||binding.planRevision!==t.planRevision||binding.runId!==t.runIds[0]||!sameMember(t.assignee,{...binding,name:''})||t.runIds.length>2||t.runIds.length===2&&!request||t.result?.runId===binding.runId)fail('GRAPH_INPUT_INVALID','检查点必须保留同任务原实例且不能替代交付或重复续执行')}
+    if(t.status==='checkpointed'&&(!checkpoint||t.runIds.length!==1||t.activeRunId||t.result||request))fail('GRAPH_INPUT_INVALID','检查点任务缺少已结束原运行或被重复预约');
+    if(request&&(!checkpoint||request.checkpointId!==checkpoint.checkpointId||request.runId!==checkpoint.binding.runId||request.scopeId!==t.scopeId||request.previousTaskRevision>=t.revision||request.graphCursor.streamId!==value.cursor.streamId||request.graphCursor.seq>=value.cursor.seq||request.trackedTaskIds[0]!==t.taskId||request.trackedTaskIds.some(id=>tasks.get(id)?.scopeId!==t.scopeId)||Date.parse(request.requestedAt)>Date.parse(t.updatedAt)))fail('GRAPH_INPUT_INVALID','续执行预约缺少原检查点、固定任务或可信图历史');
     if(t.cancelledBeforeStart){const record=t.cancelledBeforeStart;if(t.status!=='cancelled'||t.runIds.length||t.activeRunId||t.result||t.help||t.awaitedChildren.length||!t.scopeId||record.scopeId!==t.scopeId||record.previousRevision+1!==t.revision||record.cancelledAt!==t.updatedAt||t.waitReason!==record.reason||record.graphCursor.streamId!==value.cursor.streamId||record.graphCursor.seq>=value.cursor.seq)fail('GRAPH_INPUT_INVALID','未启动撤销记录与任务终态、版本或图基线不一致')}
     const replacements=t.dependencyReplacements??[];unique(replacements.map(record=>record.commandId),'前置替换命令');unique(replacements.map(record=>record.retired.edgeId),'退役依赖');
     for(let index=0;index<replacements.length;index++){

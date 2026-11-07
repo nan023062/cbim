@@ -1,7 +1,7 @@
 /**
  * 作用定位：主会话目标周期的增量投影和展示状态，供对话摘要与任务根详情共用。
  * 设计原因：目标版本独立于任务图；先核对身份和连续游标再合并，完成申请与真正关闭分开显示，历史选择不能覆盖当前任务状态。
- * 职责边界：只投影后端事实；尚无计划时按持久 origin 区分业务规划、只读核实和普通问答，不从消息正文推断目标或人工验收，不调用执行接口。
+ * 职责边界：只投影后端事实；成员检查点仍是未完任务，等待主调度安排。尚无计划时按持久 origin 区分业务规划、只读核实和普通问答，不从正文推断验收或调用执行接口。
  */
 import {applyScopeBatch,validateScopeSnapshot} from '../../bridge/contracts/dispatch';
 import type {DispatchScope,DispatchSessionRead,GraphIdentity,GraphSnapshot,ScopeCursor,ScopeDelta,ScopeSnapshot,ScopeSummary,ScopeDetailStamp} from '../../bridge/contracts/dispatch';
@@ -57,6 +57,7 @@ export function scopeGoalView(scope:ScopeSummary|undefined,graph?:GraphSnapshot)
   const tasks=graph?.tasks.filter(task=>task.scopeId===scope.scopeId)??[];
   if(tasks.some(task=>task.status==='running'||task.activeRunId))return {phase:'executing',label:'成员正在执行',tone:'running'};
   if(tasks.some(task=>['planned','queued'].includes(task.status)))return {phase:'queued',label:'等待成员执行',tone:'running'};
+  if(tasks.some(task=>task.status==='checkpointed'))return {phase:'member_checkpoint',label:'成员已保存检查点 · 等待调度',tone:'warning'};
   if(tasks.some(task=>task.status==='waiting'))return {phase:'waiting_members',label:'等待任务前置',tone:'running'};
   if(tasks.length)return {phase:'reviewing',label:'等待主 Agent 审阅',tone:'running'};
   if(!scope.hasPlan&&scope.origin==='business_replan')return {phase:'business_planning',label:'正在规划业务任务',tone:'running'};

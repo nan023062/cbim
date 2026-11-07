@@ -8,18 +8,23 @@ import type {ResolvedLlm} from '../brain/llm/ports';
 import type {ChatPermission} from '../policy/types';
 import type {PreparedDispatchKnowledge} from './execution-context';
 import type {TaskNode} from './graph-types';
+import type {MemberCheckpointProof,MemberResumeFrom} from './member-checkpoint';
 
 /** starting 是已持久化领取意图，running 须有真实启动事实；completed 不保证存在交付候选。 */
 export type DispatchRunStatus='starting'|'running'|'completed'|'failed'|'cancelled'|'interrupted';
 
 /**
  * 单次成员运行的固定输入与事实，由内部调度事务写入。
- * 同一 taskId 可以有多次 run；session.nativeSessionId 归 agentSessionId，不能按最近运行猜测。
+ * 首次运行之后只允许可信检查点带来一次续执行；session.nativeSessionId 归 agentSessionId，不能按最近运行猜测。
  */
 export interface DispatchRun {
   binding:MemberRunBinding;
   /** 本轮领取的 assignment 信封；与 claim 中的 runId/leaseEpoch 一起校验，不用于结果确认。 */
   assignmentMessageId:string;
+  /** 仅新的续执行轮次存在，原子领取时一次消费同任务检查点；从不改写旧运行。 */
+  resumeFrom?:MemberResumeFrom;
+  /** 正常关闭后保存的私有检查点证明；不得经图或成员摘要暴露原生指纹。 */
+  checkpointProof?:MemberCheckpointProof;
   status:DispatchRunStatus;
   /** 领取时冻结的知识基线和正文；运行及恢复时只复核，不随工作区的新版本改写。 */
   prepared:PreparedDispatchKnowledge;

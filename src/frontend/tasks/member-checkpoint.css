@@ -1,0 +1,10 @@
+/**
+ * 作用定位：成员检查点的只读交接、预约和轮次引用排版。
+ * 设计原因：沿用应用主题，不把未完任务涂成成功；长身份可换行，窄侧栏仍可区分源运行和续执行。
+ */
+.member-checkpoint-notice{border:1px solid var(--line);border-radius:8px;padding:12px;margin:12px 0;min-width:0;font-size:12px;line-height:1.65;overflow-wrap:anywhere}
+.member-checkpoint-notice>strong{font-size:12px;color:var(--warning)}.member-checkpoint-notice[data-phase=sealed]>strong{color:var(--muted)}
+.member-checkpoint-notice p{margin:7px 0}.member-checkpoint-reason,.member-checkpoint-notice [data-testid=member-checkpoint-resume]>p{white-space:pre-wrap}
+.member-checkpoint-notice dl{margin:10px 0}.member-checkpoint-notice dl>div{margin:7px 0}.member-checkpoint-notice dt{color:var(--muted);font-size:11px}.member-checkpoint-notice dd{margin:2px 0;min-width:0}.member-checkpoint-notice code{font-size:11px;overflow-wrap:anywhere}
+.member-checkpoint-notice time,.member-checkpoint-notice small{font-size:11px;color:var(--muted)}.member-checkpoint-notice summary{cursor:pointer;color:var(--muted)}.member-checkpoint-notice details{margin-top:9px}
+.member-checkpoint-notice [data-testid=member-checkpoint-resume]{margin:10px 0;padding-top:8px;border-top:1px solid var(--line)}.member-checkpoint-notice.compact>.member-checkpoint-reason{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}

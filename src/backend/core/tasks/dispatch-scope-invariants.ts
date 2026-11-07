@@ -1,7 +1,7 @@
 /**
  * 作用定位：校验用户任务周期与执行实例、图任务及运行的跨对象生命周期。
  * 设计原因：提交和重放共同保护输入、等待、冻结额度及启动意图；新周期完整登记主运行，旧周期不补造。预算拒绝只追加独立事实，不消费等待；迟到回调不能改写历史或复活实例。
- * 职责边界：不决定整轮任务是否完成、不停止模型；求助仅在活动周期正常结算，关闭后只允许收件确认，不能补发或复活实例。
+ * 职责边界：不决定整轮任务是否完成、不停止模型；求助与检查点仅在活动周期正常结算。未消费检查点不能进入用户等待，关闭须封存，不能复活实例。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
@@ -16,6 +16,7 @@ import {scopeRunTrackingSchema} from './scope-run-tracking';
 import {validateScopeRunTracking} from './scope-run-invariants';
 import {scopeBudgetSchema} from './scope-budget';
 import {validateScopeBudgets} from './scope-budget-invariants';
+import {isMemberCheckpointPending} from './member-checkpoint';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
 const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),runTracking:scopeRunTrackingSchema.optional(),budget:scopeBudgetSchema.optional(),wait:dispatchScopeWaitSchema.optional(),continuations:z.array(scopeContinuationSchema).max(31).optional(),recovery:scopeRecoverySchema.optional(),replan:scopeReplanSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
@@ -129,7 +130,7 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
       valid(wait&&goal&&!goal.blocked&&review?.decision==='awaiting_user'&&wait.goalRevision===goal.revision&&wait.runId===review.runId&&equal(wait.graphCursor,review.graphCursor)&&wait.knowledgeRevision===review.knowledgeRevision,'等待周期缺少对应当前审阅的可信检查点');
       valid(Date.parse(wait.createdAt)>=Date.parse(scope.createdAt)&&Date.parse(wait.createdAt)>=Date.parse(review.recordedAt),'等待检查点时间早于周期或审阅');
       if(old?.status==='active')valid(equal(old.goal,goal)&&equal(wait.graphCursor,{streamId:graph.cursor.streamId,seq:graph.cursor.seq}),'停泊不能顺带修改目标或引用过期任务图');
-      valid(!graph.tasks.some(task=>task.scopeId===scope.scopeId&&(task.activeRunId||['planned','queued','running','waiting'].includes(task.status))),'等待周期不能保留待执行或活动任务');
+      valid(!graph.tasks.some(task=>task.scopeId===scope.scopeId&&(task.activeRunId||isMemberCheckpointPending(task)||['planned','queued','running','waiting'].includes(task.status))),'等待周期不能保留待执行、成员检查点或活动任务');
       valid(!next.runs?.some(run=>run.binding.rootSessionId===scope.rootSessionId&&['starting','running'].includes(run.status)),'等待主会话不能承载活动成员运行');
     }
     if(scope.wait&&scope.status==='closed')valid(scope.outcome!=='completed','等待周期不能跳过完成复核直接标为成功');
@@ -162,7 +163,7 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
     if(!old)valid(scope.status==='active','已关闭周期不能新增任务');
     else if(previous.scopes?.find(item=>item.scopeId===scope.scopeId)?.status!=='active')valid(equal(old,task),'等待或已关闭周期任务不能重新执行或改写历史');
     if(scope.status==='closed'){
-      valid(!task.activeRunId&&!['planned','queued','waiting','running'].includes(task.status),'关闭周期不能保留尚待执行或运行中的任务');
+      valid(!task.activeRunId&&!isMemberCheckpointPending(task)&&!['planned','queued','waiting','running'].includes(task.status),'关闭周期不能保留尚待执行、可续检查点或运行中的任务');
       valid(!next.outbox.some(message=>message.kind==='assignment'&&message.taskId===task.taskId&&message.delivery!=='processed'),'关闭周期不能保留待领取或活动派发信封');
     }
   }

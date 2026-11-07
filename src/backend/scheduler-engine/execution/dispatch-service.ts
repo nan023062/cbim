@@ -1,7 +1,7 @@
 /**
  * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
  * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；周期冻结真实输入、运行归属及软限额。每次主轮登记与可信额度证明原子提交，安全等待和fresh意图保持独立，幂等旧回执不能重开周期。
- * 职责边界：本模块负责可靠入队与主调度显式撤销未启动集合，由独立 MemberExecutionManager 执行；撤销不停止活动运行，也不代表目标完成。
+ * 职责边界：本模块负责可靠入队、显式撤销未启动集合及受审计的单条依赖替换，由独立 MemberExecutionManager 执行；调度维护不停止活动运行，不复活旧实例，也不代表目标完成。
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
@@ -20,6 +20,8 @@ import {ScopeContinuationService} from './scope-continuation-service';
 import {ScopeRecoveryService} from './scope-recovery-service';
 import {ScopeReplanService} from './scope-replan-service';
 import {QueuedTaskCancelService} from './queued-task-cancel-service';
+import {QueuedDependencyReplacementService} from './queued-dependency-replacement-service';
+import type {ReplaceQueuedDependencyInput,ReplaceQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-replacement';
 import {ScopeUsageService} from './scope-usage-service';
 import {ScopeBudgetService,rejectBudget,type ScopeBudgetRejected} from './scope-budget-service';
 import type {ScopeBudgetPolicy} from '../../core/tasks/scope-budget';
@@ -33,7 +35,7 @@ import {dispatchSessionReadInput} from '../../core/tasks/scope-view';
 import {createScopeRunTracking,appendScopeMainRun} from '../../core/tasks/scope-run-tracking';
 
 /** 只需工作区状态与知识快照，不依赖桌面或具体文件存储。 */
-type DispatchWorkspace=Pick<KnowledgeWorkspace,'entry'|'instanceId'|'assert'|'snapshot'|'read'>;
+type DispatchWorkspace=Pick<KnowledgeWorkspace,'entry'|'instanceId'|'assert'|'snapshot'|'read'|'rules'>;
 const scopeIdentityInput=graphIdentityInput.extend({scopeId:z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/)}).strict();
 
 export class WorkspaceDispatchService {
@@ -51,6 +53,7 @@ export class WorkspaceDispatchService {
   /** 运行间软限额门禁；证明与归属同事务，公开统计不能代替本入口。 */
   readonly budgets:ScopeBudgetService;
   private readonly queuedCancellation:QueuedTaskCancelService;
+  private readonly queuedDependencyReplacement:QueuedDependencyReplacementService;
   constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts,budgetPolicy?:()=>ScopeBudgetPolicy){
     this.goals=new ScopeGoalService(owner,store,goalPorts);
     this.usage=new ScopeUsageService(owner,store,goalPorts);
@@ -59,10 +62,13 @@ export class WorkspaceDispatchService {
     this.recoveries=new ScopeRecoveryService(owner,store,goalPorts,this.budgets);
     this.replans=new ScopeReplanService(owner,store,this.goals,goalPorts,this.budgets);
     this.queuedCancellation=new QueuedTaskCancelService(owner,store);
+    this.queuedDependencyReplacement=new QueuedDependencyReplacementService(owner,store,this.goals);
   }
 
   /** 主调度显式撤销未领取的完整依赖集合；不停止活动运行、不把撤销当作完成。 */
   cancelQueued(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,input:CancelQueuedTasksInput):Promise<CancelQueuedTasksReceipt>{this.check(identity.workspaceId);return this.queuedCancellation.cancel(identity,scopeId,runId,commandId,input)}
+  /** 主轮显式修订未启动前置；停止检查覆盖证据读取前后，成功只返回待跟踪集合，不启动执行。 */
+  replaceQueuedDependency(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,input:ReplaceQueuedDependencyInput,assertCurrent?:()=>void):Promise<ReplaceQueuedDependencyReceipt>{this.check(identity.workspaceId);return this.queuedDependencyReplacement.replace(identity,scopeId,runId,commandId,input,assertCurrent)}
 
   /** 工作区启动时恢复事务存储，触发存储观察者的基线；不创建成员、不消费任务。 */
   async initialize(){this.check(this.owner.entry.id);await this.store.read()}

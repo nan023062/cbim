@@ -105,7 +105,7 @@ N_src_frontend_team ..> N_src_frontend_tasks : 导入依赖
 - [resources/](resources/ARCHITECTURE.md)：统一资源仓库的查看、编辑、静态包发布与下载应用。人才按团队/Agent/Skill复用，业务按整套架构应用；工作区身份及预览版本固定。设置通过统一入口打开。
 - [settings/](settings/ARCHITECTURE.md)：模型、仓库、并发及新目标软限额配置。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。凭据只提交主进程，账户仍为占位。
 - [shell/](shell/ARCHITECTURE.md)：工作区侧栏、会话选择、用户栏与右侧扩展页签；会话区与项目级视图区分开。向会话传递活动页签状态，隐藏页签保留草稿/节点选择并降低成员与任务图同步频率。
-- [tasks/](tasks/ARCHITECTURE.md)：主会话任务图、目标与准入状态。冻结软限额和拒绝来自周期摘要，明确额度拒绝保留补充草稿，曾通信未知仍冻结。用量按需读取、标明截至时间与缺失，切换隔离迟到响应；求助/撤销不冒充成功。
+- [tasks/](tasks/ARCHITECTURE.md)：主会话任务图、目标与准入状态。前置替换审计独立于流式日志，保留旧失败节点，只绘启用边；求助/撤销不冒充成功。冻结额度来自周期摘要，用量按需读取；未知恢复请求保持冻结。
 - [team/](team/ARCHITECTURE.md)：工作区唯一的静态 Team/组/Agent 图及角色维护、继承与人才复用。Agent 节点可按 Session 查看只读执行履历；历史角色独立导航，删定义不回填团队树。详情按需分页，不轮询全量历史或启动执行。
 - [workspace/](workspace/ARCHITECTURE.md)：工作区唯一的静态领域工程/模块图及自身 Workflow。语义编辑委托 knowledge，完整业务模板复用委托 resources；多个主会话共享定义、动态任务各自独立。
 

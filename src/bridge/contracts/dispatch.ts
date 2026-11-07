@@ -1,8 +1,10 @@
 /**
  * 作用定位：向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。
- * 设计原因：前端经 Bridge 消费 Core 契约，不导入调度或文件存储；核实报告绑定证据基线，显式新只读周期回执绑定原命令，不包含凭据或原生会话隔离清单。
+ * 设计原因：前端经 Bridge 消费 Core 契约，不导入调度或文件存储；只公开前置替换审计、证据报告及恢复回执，不包含执行许可、凭据或原生会话隔离清单。
  */
 export type {GraphIdentity,GraphCursor,GraphSnapshot,GraphDelta,GraphEventBatch,GraphChange,TaskNode,GraphEdge,AgentGraphView} from '../../backend/core/tasks/graph-types';
+export type {DependencyReplacement} from '../../backend/core/tasks/queued-dependency-replacement';
+export {dependencyReplacementSchema} from '../../backend/core/tasks/queued-dependency-replacement';
 export type {OpenGraphInput,CreateMemberInput,DispatchTaskInput,OpenGraphReceipt,CreateMemberReceipt,DispatchReceipt} from '../../backend/core/tasks/dispatch-commands';
 export type {MemberStartOptions,MemberStartReceipt,MemberExecutionView} from '../../backend/core/tasks/member-commands';
 export type {MemberEventsInput,MemberEventCursor,MemberRunView,MemberEventsRead} from '../../backend/core/tasks/member-events';

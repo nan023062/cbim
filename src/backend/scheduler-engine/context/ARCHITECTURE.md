@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-内置主角色可在结构异常时诊断和治理知识。默认执行角色继承 Team 根 Skill，不创建项目角色定义文件；正式任务冻结执行角色、真实模块、维护关系、Workflow 与规范，拒绝主角色执行业务。
+内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/维护关系、Workflow 与规范。前置替换重验待办并保留原实例；配置过期不能借重新准备刷新旧任务，主角色仍不执行业务。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -12,7 +12,7 @@
 | --- | --- |
 | [default-executor.ts](default-executor.ts) | 提供 CBIM 内置默认执行角色的静态定义及当前 Team 根 Skill 的只读装配。 |
 | [dispatch-context.ts](dispatch-context.ts) | 解析主会话内置身份，以及正式派发所需的角色知识与多模块绑定。 |
-| [execution-context.ts](execution-context.ts) | 为已派发成员任务冻结完整执行知识，并在实际启动或恢复前复核基线。 |
+| [execution-context.ts](execution-context.ts) | 为已派发成员任务冻结完整执行知识，并在实际启动、恢复或未启动依赖替换前复核基线。 |
 | [team-workflow.ts](team-workflow.ts) | 调度引擎：将明确选择的模块、叶子 Agent 和本模块 Workflow 装配为执行任务。 |
 
 ## 架构类图
@@ -53,6 +53,18 @@ class N_src_backend_scheduler_engine_context_execution_context_ts["execution-con
   +recheckDispatchExecutionContext()
   +memberExecutionPrompt()
 }
+```
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_context_execution_context_ts["execution-context.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_context_execution_context_ts_DispatchKnowledgeWorkspace["DispatchKnowledgeWorkspace"] {
+  <<type>>
+
+}
+N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_scheduler_engine_context_execution_context_ts_DispatchKnowledgeWorkspace : 声明
 ```
 
 直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/snapshot.ts](../../core/knowledge/snapshot.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[dispatch-context.ts](dispatch-context.ts)、[default-executor.ts](default-executor.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)。
@@ -113,6 +125,8 @@ N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_sc
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 ### 多成员、多模块任务上下文契约
+
+`DispatchKnowledgeWorkspace` 明确只读的 `entry/assert/snapshot/read/rules` 能力。未启动依赖替换复用 `prepareDispatchExecutionContext` 逐个核对待办闭包的原角色、模块、维护关系与当前规范，并用 `recheckDispatchExecutionContext` 最后核对替代候选的冻结知识。版本变化整体拒绝，不刷新旧任务或扩大权限；仍不声称锁定外部业务产物。
 
 已实现 `resolveDispatchAgent` 与 `resolveDispatchModules`：同快照解析自定义执行角色或静态内置默认执行角色 `cbim:executor`、继承 Skill、多个真实模块及维护关系。`cbim:main` 不承担业务执行，正式执行解析、冻结恢复和执行提示构造均拒绝该角色；主会话直接治理受控知识不通过该业务任务入口。缺失关系抛出明确错误码；默认采用各模块 Workflow 清单首项，空清单明确标为 general，不继承父模块。`prepareDispatchExecutionContext` 在执行前冻结完整角色、模块与流程正文；`recheckDispatchExecutionContext` 在启动或恢复时核对知识和内置规范版本。旧 `prepareTeamTask` 继续处理原单模块执行。新任务模型见 [core/tasks](../../core/tasks/CONTRACT.md)。
 

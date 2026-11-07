@@ -1,3 +1,7 @@
+### 已提交的前置替换审计
+
+`dispatch.ts` 重导出 `DependencyReplacement` 和严格 `dependencyReplacementSchema`；`TaskNode.dependencyReplacements` 随既有图增量传递。界面可显示替换前后身份与原因，但没有通过该 DTO 直接修改边、启动成员或批准验收的入口；真实换边只由可信主调度运行调用服务。
+
 ### 目标软限额设置与投影
 
 `scope-budget` 仅导出严格软限额策略与周期摘要。桌面可明确保存新周期默认值，不能指定当前周期的新限额、编造准入证明或预算消费；当前策略与拒绝从真实目标摘要读取。

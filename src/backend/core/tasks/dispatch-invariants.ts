@@ -1,7 +1,7 @@
 /**
  * 作用定位：在派发事务提交和日志恢复时校验成员执行、任务图和邮箱的联合约束。
  * 设计原因：仅验证每条记录形状不能防止半次领取、重复占用或旧 run 回调；把跨对象约束集中在 Core，磁盘适配器只负责可靠提交。
- * 职责边界：不启动模型、不访问文件、不签发权限；求助与正常结算原子保存，撤销与完整未启动依赖集合原子保存，两者均不签发业务完成。
+ * 职责边界：不启动模型、不访问文件、不签发权限；求助、撤销与未启动前置替换分别原子保存，均不签发业务完成。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
@@ -11,6 +11,7 @@ import type {DispatchCommand,DispatchMutation,DispatchState,DispatchMessage} fro
 import type {DispatchRun} from './dispatch-execution';
 import type {AgentRef,GraphIdentity} from './graph-types';
 import {validateQueuedTaskCancellation} from './queued-task-cancel-rules';
+import {validateQueuedDependencyReplacement} from './queued-dependency-replacement-invariants';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
 const time=z.string().datetime();
@@ -146,6 +147,7 @@ function validateMessage(previous:DispatchMessage|undefined,message:DispatchMess
  */
 export function validateDispatchExecution(previous:DispatchState,next:DispatchState,mutation:DispatchMutation,command:DispatchCommand):void{
   validateQueuedTaskCancellation(previous,next,mutation,command);
+  validateQueuedDependencyReplacement(previous,next,mutation,command);
   const runs=next.runs??[];
   for(const run of mutation.runs??[])validateRun((previous.runs??[]).find(item=>item.binding.runId===run.binding.runId),run,next,mutation);
   for(const message of mutation.messages??[])validateMessage(previous.outbox.find(item=>item.messageId===message.messageId),message,next,mutation,command);

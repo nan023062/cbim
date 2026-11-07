@@ -362,3 +362,13 @@ Token 使用安全整数严格比较；估算金额比较只容忍同量级约�
 预算拒绝保存不可改写的 `budget.blocked`，独立于 `goal.blocked`。它只能给未关闭周期追加原因，不能消费 waiting、增加运行、改写任务或批准结果；拒绝后不再启动新运行。纯结算、原目标完成核验、安全停泊或停止仍使用原生命周期，不因最后一轮超额而伪造失败。已关闭周期永久冻结，调高全局设置不会修改旧额度或恢复旧周期。
 
 `scope-view.ts` 摘要公开 policy/blocked，完整准入证明留在选中详情。单独预算拒绝推进周期增量与详情 stamp，不推进用于业务审阅的任务图游标，也不改变 goal.revision。所有数字仅用于运行间软门禁；一次模型运行中的请求、摘要与重试仍可能超过额度。
+
+### 未启动任务的单条前置替换
+
+`queued-dependency-replacement.ts` 定义严格输入 `expectedGraphCursor/expectedGoalRevision/target/replace/with/reason`。模型明确选择 B 的原边及 A2 当前计划、运行和候选身份；scope、主运行及命令来自可信入口。新操作要求周期有完整 `runTracking` 且包含该主运行；旧周期仍可读取，但不能猜造主运行来源来追加替换审计。
+
+`queued-dependency-replacement-rules.ts` 在同一状态选取原失败/安全求助来源、后创建的同周期候选及 B 的全部启用依赖后继。B/C 必须从未领取或登记运行，原角色、模块和知识基线仍匹配当前有效目标计划。A2 覆盖 A 的模块，不能位于 B 的后继中或已是 B 的另一条前置。纯结构检查不代替 Scheduler 对 canonical 日志、完整证据、知识和最后副作用的核实。
+
+提交原子保存四项 `dependency.changed` 图变化：原边 revision +1 并禁用、新边固定 A2 的 planRevision/resultId、B revision +1 并追加 `dependencyReplacements`、B 成员等待投影。B 的 goal/modules/acceptance/assignee/planRevision、原 assignment 与成员通道不变。只有其余全部前置也满足时 B 才转 queued；回执 `trackedTaskIds` 是 B 及全部未启动后继，不是立即执行许可。A 保留原失败或求助，最终完成仍须显式 superseded 与真实候选审阅。
+
+每条不可变审计冻结主命令、周期/主运行、提交前游标、目标/计划/知识版本、B 原版本、退役边与来源、新边与候选、原因和后继集合。每任务最多 32 次、逐次追加。`queued-dependency-replacement-invariants.ts` 在新提交及日志重放核对完整原子形状；普通事务不得给已有任务新增依赖或禁用前置。新任务创建仍可设初始依赖，真实首次领取仍可原子固定所有前置候选；已退役边永远不可再修改或启用。图投影和 Schema 同时验证历史引用与顺序，不能改删审计或顺带修改计划。后续权限、工作区租约、软限额及全局准入保持独立检查。

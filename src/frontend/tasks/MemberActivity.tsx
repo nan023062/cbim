@@ -1,6 +1,6 @@
 /**
  * 作用定位：在主对话中展示最近的成员任务与公开执行动态，并链接到对应任务节点详情。
- * 设计原因：执行成员输出保持独立署名，默认只展开最近一段公开回复；已结算求助和未启动撤销与任务节点共用事实投影，不从模型文字或取消状态猜测是否执行。
+ * 设计原因：执行成员输出保持独立署名，默认只展开最近一段公开回复；求助、撤销及前置替换只读真实记录，不从模型文字猜测是否执行或验收。
  */
 import {useState} from 'react';
 import type {TaskNode} from '../../bridge/contracts/dispatch';
@@ -10,6 +10,7 @@ import {MemberRunTranscript} from './MemberRunTranscript';
 import {MemberHelpNotice} from './MemberHelpNotice';
 import {committedMemberHelp} from './member-help-state';
 import {MemberCancellationNotice} from './MemberCancellationNotice';
+import {MemberDependencyNotice} from './MemberDependencyNotice';
 import {committedMemberCancellation,memberCancellationLabel} from './member-cancellation-state';
 import './member-activity.css';
 
@@ -25,6 +26,7 @@ function MemberActivityCard({workspaceId,rootSessionId,task,onSelectTask,active}
     <p className="member-task-goal">{task.goal}</p>
     <MemberHelpNotice task={task} runId={latest} compact/>
     <MemberCancellationNotice task={task} compact/>
+    <MemberDependencyNotice task={task} compact/>
     {run?<div className={'member-card-stream'+(expanded?' expanded':'')}><MemberRunTranscript run={run} workspaceId={workspaceId} memberName={task.assignee.name} compact={!expanded} active={active}/></div>:!cancellation&&<p className="member-muted">{loading?'正在读取成员动态…':latest?'尚未读取该轮公开执行记录。':task.status==='cancelled'?'没有登记的执行轮次，取消状态本身不能证明未执行。':task.waitReason||'任务已派发，尚未开始执行。'}</p>}
     {error&&<p className="member-error" role="alert">{error}<button onClick={()=>void refresh()}>重试读取</button></p>}
     <footer>{run&&<button aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}>{expanded?'收起过程':'展开过程'}</button>}<button onClick={()=>onSelectTask(task.taskId)}>查看任务详情 <Icon name="chevron" size={13}/></button></footer>

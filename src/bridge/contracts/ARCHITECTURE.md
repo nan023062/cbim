@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-可序列化的 IPC 数据与公开展示契约。图、目标与准入用独立游标；软限额只公开新目标设置与冻结摘要，周期用量标明缺口，不暴露日志路径或许可。核实/重规划各自声明来源与回执。
+可序列化的 IPC 数据与公开展示契约。图增量携带前置替换审计，目标与准入用独立游标；软限额和用量公开冻结事实及缺口，不暴露启动许可。核实/重规划各自声明来源与回执。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -126,7 +126,7 @@ class N_src_bridge_contracts_dispatch_ts["dispatch.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/tasks/graph-types.ts](../../backend/core/tasks/graph-types.ts)、[../../backend/core/tasks/dispatch-commands.ts](../../backend/core/tasks/dispatch-commands.ts)、[../../backend/core/tasks/member-commands.ts](../../backend/core/tasks/member-commands.ts)、[../../backend/core/tasks/member-events.ts](../../backend/core/tasks/member-events.ts)、[../../backend/core/tasks/graph-reducer.ts](../../backend/core/tasks/graph-reducer.ts)、[../../backend/core/tasks/graph-rules.ts](../../backend/core/tasks/graph-rules.ts)、[../../backend/core/tasks/dispatch-scope.ts](../../backend/core/tasks/dispatch-scope.ts)、[../../backend/core/tasks/scope-view.ts](../../backend/core/tasks/scope-view.ts)、[../../backend/core/tasks/scope-continuation.ts](../../backend/core/tasks/scope-continuation.ts)、[../../backend/core/tasks/execution-report.ts](../../backend/core/tasks/execution-report.ts)、[../../backend/core/tasks/scope-recovery.ts](../../backend/core/tasks/scope-recovery.ts)、[../../backend/core/tasks/scope-replan.ts](../../backend/core/tasks/scope-replan.ts)。
+直接依赖：[../../backend/core/tasks/graph-types.ts](../../backend/core/tasks/graph-types.ts)、[../../backend/core/tasks/queued-dependency-replacement.ts](../../backend/core/tasks/queued-dependency-replacement.ts)、[../../backend/core/tasks/dispatch-commands.ts](../../backend/core/tasks/dispatch-commands.ts)、[../../backend/core/tasks/member-commands.ts](../../backend/core/tasks/member-commands.ts)、[../../backend/core/tasks/member-events.ts](../../backend/core/tasks/member-events.ts)、[../../backend/core/tasks/graph-reducer.ts](../../backend/core/tasks/graph-reducer.ts)、[../../backend/core/tasks/graph-rules.ts](../../backend/core/tasks/graph-rules.ts)、[../../backend/core/tasks/dispatch-scope.ts](../../backend/core/tasks/dispatch-scope.ts)、[../../backend/core/tasks/scope-view.ts](../../backend/core/tasks/scope-view.ts)、[../../backend/core/tasks/scope-continuation.ts](../../backend/core/tasks/scope-continuation.ts)、[../../backend/core/tasks/execution-report.ts](../../backend/core/tasks/execution-report.ts)、[../../backend/core/tasks/scope-recovery.ts](../../backend/core/tasks/scope-recovery.ts)、[../../backend/core/tasks/scope-replan.ts](../../backend/core/tasks/scope-replan.ts)。
 
 ### execution.ts
 
@@ -381,6 +381,10 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 已提交的前置替换审计
+
+`dispatch.ts` 重导出 `DependencyReplacement` 和严格 `dependencyReplacementSchema`；`TaskNode.dependencyReplacements` 随既有图增量传递。界面可显示替换前后身份与原因，但没有通过该 DTO 直接修改边、启动成员或批准验收的入口；真实换边只由可信主调度运行调用服务。
 
 ### 目标软限额设置与投影
 

@@ -1,6 +1,6 @@
 /**
  * 作用定位：任务图的纯领域校验，检查序列化形状、身份、派发父关系及依赖/等待无环。
- * 设计原因：存储重放与新提交共用规则；求助和未启动撤销具有独立事实约束，不能混入成功候选或活动占用。
+ * 设计原因：存储重放与新提交共用规则；求助、撤销和依赖替换具有独立历史，不能混入成功候选或活动占用。
  * 职责边界：结构通过不等于知识维护人已认证或任务已获授权，调度层仍需核实来源。
  */
 import {z} from 'zod';
@@ -8,6 +8,7 @@ import {queuedTaskCancellationSchema} from './queued-task-cancel';
 import {fail} from '../foundation/errors';
 import type {AgentRef,GraphEventBatch,GraphIdentity,GraphSnapshot,TaskNode} from './graph-types';
 import {memberHelpRecordSchema} from './member-help';
+import {dependencyReplacementSchema} from './queued-dependency-replacement';
 
 const text=z.string().trim().min(1).max(100000);
 const id=z.string().min(1).max(512).refine(s=>s.trim()===s&&!/[\x00-\x1f]/.test(s));
@@ -29,6 +30,7 @@ const task=z.object({kind:z.literal('task'),nodeId:id,taskId:id,identity,scopeId
   result:z.object({resultId:id,runId:id,planRevision:revision,summary:text,evidenceRefs:z.array(id),limitations:z.array(text),acceptance:z.literal('not_evaluated')}).strict().optional(),
   help:memberHelpRecordSchema.optional(),
   cancelledBeforeStart:queuedTaskCancellationSchema.optional(),
+  dependencyReplacements:z.array(dependencyReplacementSchema).min(1).max(32).optional(),
   createdAt:time,updatedAt:time}).strict();
 const edgeBase={edgeId:id,identity,fromNodeId:id,toNodeId:id,revision,enabled:z.boolean()};
 const edge=z.discriminatedUnion('kind',[
@@ -102,6 +104,13 @@ export function validateGraph(value:GraphSnapshot):void {
     if(t.status==='result_ready'&&!t.result)fail('GRAPH_INPUT_INVALID','可交接任务缺少真实候选结果');
     if(t.help){const binding=t.help.binding;if(t.result||t.status!=='blocked'||t.activeRunId||!t.scopeId||binding.workspaceId!==t.identity.workspaceId||binding.rootSessionId!==t.identity.rootSessionId||binding.taskId!==t.taskId||binding.planRevision!==t.planRevision||!t.runIds.includes(binding.runId)||binding.agentId!==t.assignee.agentId||binding.agentInstanceId!==t.assignee.agentInstanceId||binding.agentSessionId!==t.assignee.agentSessionId)fail('GRAPH_INPUT_INVALID','成员求助必须绑定本周期已结束的执行任务，且不能作为成功候选')}
     if(t.cancelledBeforeStart){const record=t.cancelledBeforeStart;if(t.status!=='cancelled'||t.runIds.length||t.activeRunId||t.result||t.help||t.awaitedChildren.length||!t.scopeId||record.scopeId!==t.scopeId||record.previousRevision+1!==t.revision||record.cancelledAt!==t.updatedAt||t.waitReason!==record.reason||record.graphCursor.streamId!==value.cursor.streamId||record.graphCursor.seq>=value.cursor.seq)fail('GRAPH_INPUT_INVALID','未启动撤销记录与任务终态、版本或图基线不一致')}
+    const replacements=t.dependencyReplacements??[];unique(replacements.map(record=>record.commandId),'前置替换命令');unique(replacements.map(record=>record.retired.edgeId),'退役依赖');
+    for(let index=0;index<replacements.length;index++){
+      const record=replacements[index],retired=value.edges.find(edge=>edge.edgeId===record.retired.edgeId),fresh=value.edges.find(edge=>edge.edgeId===record.replacement.edgeId),prior=replacements[index-1];
+      if(record.scopeId!==t.scopeId||record.targetPlanRevision>t.planRevision||record.previousTaskRevision>=t.revision||record.graphCursor.streamId!==value.cursor.streamId||record.graphCursor.seq>=value.cursor.seq||record.trackedTaskIds[0]!==t.taskId||record.trackedTaskIds.some(id=>tasks.get(id)?.scopeId!==t.scopeId)||Date.parse(record.replacedAt)>Date.parse(t.updatedAt)||prior&&(prior.previousTaskRevision>=record.previousTaskRevision||prior.graphCursor.seq>=record.graphCursor.seq))fail('GRAPH_INPUT_INVALID','前置替换历史与任务、后继或图基线不一致');
+      if(retired?.kind!=='dependency'||retired.enabled||retired.revision!==record.retired.revision+1||retired.fromNodeId!==`task:${record.retired.sourceTaskId}`||retired.toNodeId!==t.nodeId||retired.condition.planRevision!==record.retired.sourcePlanRevision||retired.condition.resultId!==record.retired.resultId)fail('GRAPH_INPUT_INVALID','退役边与不可变替换审计不一致');
+      if(fresh?.kind!=='dependency'||fresh.fromNodeId!==`task:${record.replacement.sourceTaskId}`||fresh.toNodeId!==t.nodeId||fresh.condition.planRevision!==record.replacement.sourcePlanRevision||fresh.condition.resultId!==record.replacement.resultId)fail('GRAPH_INPUT_INVALID','替代边与固定候选审计不一致');
+    }
     for(const awaited of t.awaitedChildren){const child=tasks.get(awaited.taskId);if(!child||child.parentTaskId!==t.taskId)fail('GRAPH_INPUT_INVALID','等待的不是当前任务直接派发的子任务');if(!usableResult(child,awaited.planRevision))waits.push([t.nodeId,child.nodeId])}
   }
   for(const e of value.edges){

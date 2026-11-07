@@ -1,7 +1,7 @@
 /**
  * 作用定位：管理一次用户任务的调度周期，串接主 Agent 调度、执行成员和结果回传，周期结束后释放执行实例。
  * 设计原因：周期冻结输入、主运行归属及软限额；回注 beforeRun 先核额度和登记再启模型。容量或同周期在途由原批次等待；预算拒绝直接保存未完成并暂停队列，不额外调用模型解释，不重放未知运行。
- * 职责边界：主 Agent 只调度和治理知识；补充沿原周期，新核实与正式业务重规划经各自可靠意图开启新周期。只读核实不能提权；新业务权限来自明确请求。停止等待提交收束，退出/重启不重放，用户观察或权限都不是人工验收。
+ * 职责边界：主 Agent 只调度和治理知识；依赖替换回执仅重纳当前批次，仍待本主轮结算才执行。补充沿原周期，新核实与正式业务重规划经各自可靠意图开启新周期。只读核实不能提权；停止等待提交收束，退出/重启不重放，用户观察或权限都不是人工验收。
  */
 import {hash,json} from '../../core/foundation/serialization';
 import {randomUUID} from 'node:crypto';
@@ -201,6 +201,14 @@ export class AutoCollaboration {
       return this.track(cycle,this.dispatch.cancelQueued(this.identity(batch),cycle.scopeId,batch.runId,commandId,input).then(receipt=>{
         const cancelled=new Set(receipt.cancelledTaskIds);batch.tasks=batch.tasks.filter(id=>!cancelled.has(id));this.withdrawAdmissions(batch,cancelled);return receipt;
       }));
+    },replaceDependency:(input,call)=>{
+      this.assertLive(batch,call.signal);cycle.workRequested=true;
+      const commandId='auto-dependency-'+hash(json({identity:this.identity(batch),runId:batch.runId,toolCallId:call.toolCallId}));
+      return this.track(cycle,this.dispatch.replaceQueuedDependency(this.identity(batch),cycle.scopeId,batch.runId,commandId,input,()=>this.assertLive(batch,call.signal)).then(receipt=>{
+        // 旧批次已经退役，换边后必须显式重纳入当前批次；这里仅关联，advance仍等待本主轮settled。
+        for(const taskId of receipt.trackedTaskIds){if(!batch.tasks.includes(taskId))batch.tasks.push(taskId);cycle.tasks.add(taskId)}
+        return receipt;
+      }));
     },inspect:async taskId=>{
       const graph=await this.dispatch.snapshot(this.identity(batch));
       if(!taskId)return graph;
@@ -236,7 +244,7 @@ export class AutoCollaboration {
     if(!summary){const cycle=this.cycles.get(task.taskId);if(cycle)cycle.ending='interrupted';this.reportIssue(task.taskId,Error('主轮没有可核实的终态'));this.schedule();return}
     const batch=this.batches.get(summary.runId);if(!batch)return;
     // Schema/权限拒绝可能发生在端口调用前；以可信回执补记工作意图，直接知识写也不能绕过目标审阅。
-    if(summary.toolReceipts?.some(receipt=>receipt.effects.includes('knowledge-write')||['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task','cbim_dispatch_cancel'].includes(receipt.toolName)))batch.cycle.workRequested=true;
+    if(summary.toolReceipts?.some(receipt=>receipt.effects.includes('knowledge-write')||['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task','cbim_dispatch_cancel','cbim_dispatch_replace_dependency'].includes(receipt.toolName)))batch.cycle.workRequested=true;
     batch.settled=summary;
     if(summary.status!=='completed'||summary.unresolvedTools.length||!batch.tasks.length){this.retireBatch(batch);batch.cycle.completionSummary=summary;batch.cycle.ending=summary.status==='completed'&&!summary.unresolvedTools.length?'completed':summary.status==='failed'?'failed':summary.status==='cancelled'?'cancelled':'interrupted'}
     this.schedule();

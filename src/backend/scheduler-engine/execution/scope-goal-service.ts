@@ -1,5 +1,5 @@
 /**
- * 作用定位：在派发事务中保存本轮目标计划与结构化审阅，并核验真实日志、角色和模块基线。
+ * 作用定位：在派发事务中保存本轮目标计划与结构化审阅，并为目标门禁及未启动依赖替换核验真实日志、角色和模块基线。
  * 设计原因：模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用；用户补充使旧计划过期而不丢 human 项。安全等待还核验成员没有未知工具，已知截断的日志前缀不可成为完成或等待证据。
  * 职责边界：不关闭周期、不释放成员、不运行工具；知识和派发日志不是跨存储原子事务，证据也不是外部产物指纹。
  */
@@ -17,6 +17,8 @@ import type {GraphIdentity,GraphSnapshot,TaskNode} from '../../core/tasks/graph-
 import {goalPlanInputSchema,goalReviewInputSchema,sameGoalValue,scopeGoalDecisionLimit,goalInputRevision,goalNeedsReplan,type DispatchScopeGoal,type GoalPlanInput,type GoalReviewInput,type ScopeGoalReview} from '../../core/tasks/scope-goal';
 import {resolveConversationAgent,resolveDispatchAgent,resolveDispatchModules} from '../context/dispatch-context';
 import {executionToolFacts} from './execution-report-facts';
+import {memberHelpCandidate} from './member-help-state';
+import {memberPublicTask} from './member-events';
 
 /** 端口只按可信已登记身份读取 canonical 日志；不能接受模型提供路径或摘要。 */
 export interface ScopeGoalPorts {
@@ -125,6 +127,34 @@ export class ScopeGoalService {
     check(progress?.state==='awaiting_review'&&progress.delivery&&progress.goal===task.goal&&sameGoalValue(progress.acceptance,task.acceptance.map(item=>item.text))&&progress.delivery.summary===result.summary&&sameGoalValue(progress.delivery.limitations,result.limitations)&&progress.steps.length&&progress.steps.every(step=>step.state==='reported_done'&&step.evidence.length)&&sameSet([...new Set(progress.steps.flatMap(step=>step.evidence))],result.evidenceRefs),'GOAL_EVIDENCE_INVALID','候选内容与运行的真实交付记录不一致');
     for(const id of result.evidenceRefs)this.receipt(summary,id);
     return summary;
+  }
+  /** 调度修订复用交付证据规则，并要求 canonical 头、连续事件及实际终态完整；不把候选视为验收。 */
+  async validateMemberCandidate(state:DispatchState,scope:DispatchScope,graph:GraphSnapshot,task:TaskNode,knowledgeRevision:string):Promise<RunSummary>{
+    const summary=await this.member(state,scope,graph,task,knowledgeRevision),run=state.runs!.find(item=>item.binding.runId===task.result!.runId&&item.binding.taskId===task.taskId)!;
+    this.memberTerminal(scope,task,run,summary);return summary;
+  }
+  /** 换边前核验完整执行来源；只有无通道且无工具事实的明确启动失败可省略原生绑定。 */
+  private memberTerminal(scope:DispatchScope,task:TaskNode,run:DispatchRun,summary:RunSummary){
+    const binding=run.binding;
+    check(binding.workspaceId===scope.workspaceId&&binding.rootSessionId===scope.rootSessionId&&binding.taskId===task.taskId&&binding.agentId===task.assignee.agentId&&binding.agentInstanceId===task.assignee.agentInstanceId&&binding.agentSessionId===task.assignee.agentSessionId&&binding.planRevision===task.planRevision&&summary.runId===binding.runId&&sameGoalValue(summary.task,memberPublicTask(task,this.owner.entry.path))&&!summary.conversationBinding&&sameGoalValue(summary.memberBinding,binding),'GOAL_EVIDENCE_IDENTITY','成员日志与原任务身份、模块、目标或验收不一致');
+    check(['completed','failed'].includes(run.status)&&summary.status===run.status&&summary.logIntegrity?.partialTail===false&&!summary.unresolvedTools.length&&!summary.toolReceipts?.some(receipt=>receipt.outcome==='unknown'),'GOAL_EVIDENCE_INVALID','成员执行记录尚未可靠结束或有未知结果');
+    const first=summary.events[0],last=summary.events.at(-1);
+    check(first?.type==='run.started'&&sameGoalValue(first.data.task,summary.task)&&sameGoalValue(first.data.memberBinding,binding)&&!first.data.conversationBinding&&last?.type==='run.settled'&&last.data.status===summary.status&&summary.events.every((event,index)=>event.seq===index+1&&event.workspaceId===scope.workspaceId&&event.taskId===task.taskId&&event.runId===binding.runId&&event.data&&typeof event.data==='object'&&!Array.isArray(event.data)),'GOAL_EVIDENCE_INVALID','成员日志头、连续顺序或终态不完整');
+    const bindings=summary.events.filter(event=>event.type==='session.bound');
+    // 启动前明确失败可没有原生通道，但不能携带任何工具事实；已有通道不能靠空绑定事件列表蒙混通过。
+    check(summary.sessionFile===run.session.sessionFile&&(bindings.length?!!run.session.sessionFile&&bindings.every(event=>event.data.sessionId===run.session.nativeSessionId&&event.data.sessionFile===run.session.sessionFile):summary.status==='failed'&&!summary.sessionFile&&!summary.toolReceipts?.length&&!summary.events.some(event=>event.type.startsWith('tool.'))),'GOAL_EVIDENCE_IDENTITY','成员原生会话绑定与已登记运行不一致');
+    const facts=executionToolFacts(summary,run);check(!facts.invalid&&!facts.counts.unknown&&!facts.counts.not_authorized,'GOAL_EVIDENCE_INVALID','成员工具仍有未知副作用或缺失授权链');
+  }
+  /** 只接受可靠求助或明确失败来源；重读全部已登记运行，不能以换边隐藏未决操作或把失败当未执行。 */
+  async validateDependencySource(state:DispatchState,scope:DispatchScope,task:TaskNode):Promise<void>{
+    check(task.scopeId===scope.scopeId&&!task.activeRunId&&!task.result&&(task.status==='failed'||task.status==='blocked'&&task.help),'GOAL_EVIDENCE_INVALID','原前置没有可安全替换的失败或求助记录');
+    const runs=(state.runs??[]).filter(run=>run.binding.taskId===task.taskId&&run.binding.rootSessionId===scope.rootSessionId);
+    check(runs.length>0&&sameSet(runs.map(run=>run.binding.runId),task.runIds),'GOAL_EVIDENCE_IDENTITY','原前置运行登记不完整');
+    for(const run of runs){
+      const summary=await this.logs().inspectMember(run);this.memberTerminal(scope,task,run,summary);
+      if(task.help&&run.binding.runId===task.help.binding.runId)check(sameGoalValue(memberHelpCandidate(task,run,summary),task.help),'GOAL_EVIDENCE_INVALID','原前置求助与真实安全交接记录不一致');
+      else check(run.status==='failed','GOAL_EVIDENCE_INVALID','原前置不是明确失败，不能绕过已有结果');
+    }
   }
   private async evidence(state:DispatchState,scope:DispatchScope,graph:GraphSnapshot,draft:GoalReviewInput,main:RunSummary,knowledgeRevision:string){
     const plan=scope.goal!.plan!,criteria=plan.criteria,checks=draft.checks;

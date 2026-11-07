@@ -48,11 +48,11 @@ N_src_backend_scheduler_engine_tools ..> N_src_backend_scheduler_engine_context 
 
 ## 子目录导航
 
-- [context/](context/ARCHITECTURE.md)：内置主角色可在结构异常时诊断和治理知识。默认执行角色继承 Team 根 Skill，不创建项目角色定义文件；正式任务冻结执行角色、真实模块、维护关系、Workflow 与规范，拒绝主角色执行业务。
-- [conversation/](conversation/ARCHITECTURE.md)：主 Agent 的目标规划、证据审阅与团队技术管理指引，以及用户问题、审批和队列。主调度处理求助，可明确撤销未启动依赖后再申请安全等待；撤销不算成功，普通队列消息不替代人工决定或恢复。
-- [execution/](execution/ARCHITECTURE.md)：主实例与图根共享身份。新周期冻结软限额，可信用量在主登记/成员领取事务核实，证明随真实运行提交；在途先结算，拒绝不额外启动模型。等待、求助、撤销和验收独立，公开统计不签发许可。
+- [context/](context/ARCHITECTURE.md)：内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/维护关系、Workflow 与规范。前置替换重验待办并保留原实例；配置过期不能借重新准备刷新旧任务，主角色仍不执行业务。
+- [conversation/](conversation/ARCHITECTURE.md)：主 Agent 的规划、审阅与团队管理指引，以及提问、审批和队列。主调度可安排求助补做，再显式替换未启动前置或撤销待办；旧失败不改写，普通消息不替代人工决定或恢复。
+- [execution/](execution/ARCHITECTURE.md)：主实例与图根共享身份。主调度核实真实候选和未启动闭包后换边，待办显式纳入当前批次；停止/重开不自动续接。周期软限额在登记/领取事务核实；等待、求助与验收各自独立。
 - [runtime/](runtime/ARCHITECTURE.md)：监管、履历与全局并发准入职责分离。监管消费真实用量；准入同步协调名额和本地租约，稳定票据 FIFO 等待，降额不逐出活动运行；履历不签发执行权。进程票据不从历史恢复模型。
-- [tools/](tools/ARCHITECTURE.md)：把知识 CRUD、目标计划/审阅、执行者派发、图查询与未启动任务撤销注册为 cbim_ 工具。主调度工具仅在可信绑定和真实端口下提供；撤销不停止活动运行，也不能作为完成证据，执行者不获得调度权。
+- [tools/](tools/ARCHITECTURE.md)：把知识 CRUD、目标计划/审阅和主调度命令注册为 cbim_ 工具。未启动撤销/前置替换仅真实端口可用时公开，严格拒绝模型夹带身份；维护回执不算业务证据，执行者不获得调度权。
 
 [返回上层](../ARCHITECTURE.md)。
 

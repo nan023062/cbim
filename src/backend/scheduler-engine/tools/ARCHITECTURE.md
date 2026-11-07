@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-把知识 CRUD、目标计划/审阅、执行者派发、图查询与未启动任务撤销注册为 cbim_ 工具。主调度工具仅在可信绑定和真实端口下提供；撤销不停止活动运行，也不能作为完成证据，执行者不获得调度权。
+把知识 CRUD、目标计划/审阅和主调度命令注册为 cbim_ 工具。未启动撤销/前置替换仅真实端口可用时公开，严格拒绝模型夹带身份；维护回执不算业务证据，执行者不获得调度权。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,7 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [dispatch-tools.ts](dispatch-tools.ts) | 把主调度会话的成员派发、本图查询和未启动任务撤销端口转换为内部 Loop 工具，并组合用户目标工具。 |
+| [dispatch-tools.ts](dispatch-tools.ts) | 把主调度会话的成员派发、本图查询、未启动任务撤销及单条依赖替换端口转换为内部 Loop 工具，并组合用户目标工具。 |
 | [goal-tools.ts](goal-tools.ts) | 将主 Agent 当前用户目标的读取、规划和审阅端口注册为内部 Loop 工具。 |
 | [knowledge-tools.ts](knowledge-tools.ts) | 向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。 |
 
@@ -39,6 +39,7 @@ class N_src_backend_scheduler_engine_tools_dispatch_tools_ts_DispatchToolsPort["
   +dispatch()
   +inspect()
   +cancel()
+  +replaceDependency()
 }
 N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_dispatch_tools_ts_DispatchToolsPort : 声明
 class N_src_backend_scheduler_engine_tools_dispatch_tools_ts_DispatchTools["DispatchTools"] {
@@ -48,12 +49,13 @@ class N_src_backend_scheduler_engine_tools_dispatch_tools_ts_DispatchTools["Disp
   +call()
   -port
   -goals
+  -available()
   -parse()
 }
 N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_dispatch_tools_ts_DispatchTools : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/queued-task-cancel.ts](../../core/tasks/queued-task-cancel.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[goal-tools.ts](goal-tools.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/queued-task-cancel.ts](../../core/tasks/queued-task-cancel.ts)、[../../core/tasks/queued-dependency-replacement.ts](../../core/tasks/queued-dependency-replacement.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[goal-tools.ts](goal-tools.ts)。
 
 ### goal-tools.ts
 
@@ -193,6 +195,12 @@ N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_schedul
 工具适配器只返回实际服务结果，统一经 `jsonToolResult` 序列化；不将空值、领域失败或缺失返回值包装为完成。是否具备证据、是否存在在途执行、目标和知识版本是否有效由可信目标服务及主运行结算负责。工具当前仍在执行时，不能要求该主 run 已是 completed；也不能把审阅调用成功当成关闭周期或人工验收。
 
 `cbim_goal_*` 和派发、执行计划及交付候选工具一样，不进入 `TaskProgressTools` 的业务证据集合。知识治理可以引用主运行中实际成功的知识工具回执，无需伪造执行成员；主 Agent 的业务文件写入和命令权限仍保持拒绝。完整闭环与持久化完成门禁以 [execution 契约](../execution/CONTRACT.md) 为准。
+
+#### 未启动依赖替换工具
+
+`cbim_dispatch_replace_dependency` 仅在装配可信主调度端口时可发现和调用，效果为 `maintenance`。输入严格限定图游标、目标版本、目标节点版本、旧依赖边版本、替代候选的节点/计划/run/result 引用及原因；workspace、root、scope、主 run 和幂等命令由运行闭包注入，不能由模型指定。缺调用 ID、已取消或 Schema 非法均不进入服务。
+
+它只申请一次单条依赖替换，不复活旧成员、不递归派工、不改变权限、不证明业务完成。服务回执包含真实 `trackedTaskIds`，由协调器重新跟踪未启动下游；工具成功不代表下游已执行。端口前拒绝的可信回执也被主周期识别为业务尝试，不能按无计划普通聊天成功关闭。`cbim_dispatch_*` 仍排除在业务证据集合外。
 
 #### 可信调用上下文
 

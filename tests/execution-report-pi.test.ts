@@ -8,6 +8,7 @@ import {seedExecutionReport,reportFiles} from './execution-report-fixture';
 
 it.each([false,true])('reads real Pi execution evidence without running or reconciling (successful=%s)',async(success)=>{
   const f=await fixture(),provider=await executionReportProvider({success,hold:true});
+  let releaseClosing=()=>{};
   try{
     const {entry}=await seedExecutionReport(f.app,f.a,provider);
     const started=await f.app.dispatch('loop.chat',{id:entry.id,message:data.mainGoal,options:{permission:success?'read':'execute',turnTimeoutMs:30000}}) as {taskId:string;runId:string};
@@ -24,11 +25,24 @@ it.each([false,true])('reads real Pi execution evidence without running or recon
     expect(inFlight.tools.items.find((tool:any)=>tool.toolCallId===(success?'report-business-read':'report-business-command'))?.status).toBe(success?'succeeded':'failed');
     if(!success)expect(await fs.readFile(path.join(f.a,data.marker),'utf8')).toBe(data.fact);
     expect(provider.memberRequests).toHaveLength(3);expect(provider.mainRequests).toHaveLength(3);
+    const dispatcher=f.app.memberDispatch(entry.id);
+    // A failed goal still has durable block/close work after the last main lease is released.
+    // Hold that real service boundary to prove activeRuns=0 is not a stable report baseline.
+    let closingEntered:Promise<void>|undefined;
+    if(!success){
+      let entered=()=>{};closingEntered=new Promise<void>(resolve=>{entered=resolve});
+      const closingGate=new Promise<void>(resolve=>{releaseClosing=resolve}),block=dispatcher.goals.block.bind(dispatcher.goals);
+      vi.spyOn(dispatcher.goals,'block').mockImplementationOnce(async(...args)=>{entered();await closingGate;return block(...args)});
+    }
     provider.release();
     await vi.waitFor(async()=>{expect((await graph()).tasks[0].status).toBe(success?'result_ready':'failed');expect(provider.mainRequests).toHaveLength(6);expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:30000,interval:30});
+    if(closingEntered){await closingEntered;expect((await dispatcher.goals.inspect(identity,running.scopeId!)).status).toBe('active');releaseClosing()}
+    // executionReport rejects a read crossing scope revision/status changes; wait for the
+    // actual cycle closure before asserting settled and byte-for-byte no-mutation reads.
+    await vi.waitFor(async()=>expect((await dispatcher.goals.inspect(identity,running.scopeId!)).status).toBe('closed'),{timeout:30000,interval:30});
     const files=await reportFiles(f.user,entry.id,query.taskId,query.runId),before=await files.read(),graphBefore=await graph();
     const report=await f.app.dispatch('dispatch.executionReport',query);
-    expect(report.execution).toBe('settled');expect(report.log.state).toBe('verified');expect(report.consistency).toBe('stable');
+    expect(report.execution,JSON.stringify(report)).toBe('settled');expect(report.log.state).toBe('verified');expect(report.consistency).toBe('stable');
     expect(report.tools.items.find((tool:any)=>tool.toolCallId===(success?'report-business-read':'report-business-command'))?.status).toBe(success?'succeeded':'failed');
     const serialized=JSON.stringify(report);for(const secret of [f.a,f.user,data.fact,'writeFileSync','sessionFile','preparedKnowledge'])expect(serialized).not.toContain(secret);
     expect(report.candidate!==undefined).toBe(success);
@@ -61,5 +75,5 @@ it.each([false,true])('reads real Pi execution evidence without running or recon
       expect(await files.read()).toEqual(before);expect(await graph()).toEqual(graphBefore);expect(provider.mainRequests).toHaveLength(6);expect(provider.memberRequests).toHaveLength(3);
     }
     expect(provider.errors).toEqual([]);
-  }finally{provider.release();await f.cleanup();await provider.close()}
+  }finally{releaseClosing();provider.release();await f.cleanup();await provider.close()}
 },120000);

@@ -32,6 +32,9 @@ async function setup(admission?:GlobalRunAdmission){
       for(const target of input.targets)Object.assign(graph.tasks.find(node=>node.taskId===target.taskId)!,{status:'cancelled',waitReason:input.reason});
       return {...identity,scopeId,mainRunId:runId,commandId,cancelledTaskIds:input.targets.map((target:any)=>target.taskId),graphCursor:{streamId:graph.cursor.streamId,seq:++graph.cursor.seq}};
     }),
+    replaceQueuedDependency:vi.fn(async(_identity:any,scopeId:string,runId:string,commandId:string,input:any,assertCurrent?:()=>void)=>{
+      assertCurrent?.();return {...identity,scopeId,mainRunId:runId,commandId,taskId:input.target.taskId,status:'queued',trackedTaskIds:[input.target.taskId],graphCursor:{streamId:graph.cursor.streamId,seq:++graph.cursor.seq}};
+    }),
     dispatchTask:vi.fn(async(input:any,scopeId?:string)=>{
       const node:TaskNode={kind:'task',scopeId,taskId:'assigned-1',nodeId:'task:assigned-1',identity,requester:graph.root.agent,assignee:agent,modules:[],goal:input.task.goal,acceptance:input.task.acceptance,revision:1,planRevision:1,status:'queued',awaitedChildren:[],runIds:[],createdAt:'2026-11-06',updatedAt:'2026-11-06'};
       graph.tasks.push(node);return {commandId:input.commandId,taskId:node.taskId,messageId:'assignment',cursor:graph.cursor,disposition:'queued' as const};
@@ -64,6 +67,34 @@ async function setup(admission?:GlobalRunAdmission){
   };
   return {task,graph,dispatch,members,execution,issues,lease,coordinator,tools,options,assign,settleParent,finishMember,hooks:()=>hooks};
 }
+
+const dependencyInput={expectedGraphCursor:{streamId:'stream',seq:5},expectedGoalRevision:3,target:{taskId:'assigned-1',expectedRevision:1,expectedPlanRevision:1},replace:{edgeId:'A-B',expectedRevision:1},with:{taskId:'A2',expectedRevision:4,expectedPlanRevision:1,runId:'A2-run',resultId:'A2-result'},reason:'保留未启动的原下游任务'};
+
+it('替换回执把旧待办重新纳入当前批次，仅当前主轮settled后运行且保留权限',async()=>{
+  const f=await setup();try{
+    // 此任务来自之前批次，不能依赖本轮 dispatch 的内存列表发现它。
+    await f.dispatch.dispatchTask({task:{goal:'原下游',acceptance:[]}},f.dispatch.openScope.mock.calls[0][1]);
+    await f.tools.call('cbim_dispatch_replace_dependency',dependencyInput,new AbortController().signal,'replace-call');
+    expect(f.members.start).not.toHaveBeenCalled();
+    expect(f.dispatch.replaceQueuedDependency.mock.calls[0].slice(0,3)).toEqual([f.graph.identity,f.dispatch.openScope.mock.calls[0][1],'parent-run']);
+    f.settleParent();await vi.waitFor(()=>expect(f.graph.tasks[0].status).toBe('running'));
+    expect(f.members.start.mock.calls[0][0]).toMatchObject({taskId:'assigned-1',options:{permission:'ask'}});
+    f.finishMember();await vi.waitFor(()=>expect(f.dispatch.closeScope).toHaveBeenCalledTimes(1));
+  }finally{await f.coordinator.close()}
+});
+
+it('已进入提交的替换与停止竞争：停止等待回执收口，不启动迟到的下游',async()=>{
+  const f=await setup(),committed=deferred<any>();try{
+    await f.dispatch.dispatchTask({task:{goal:'原下游',acceptance:[]}},f.dispatch.openScope.mock.calls[0][1]);
+    f.dispatch.replaceQueuedDependency.mockImplementation(()=>committed.promise);
+    const call=f.tools.call('cbim_dispatch_replace_dependency',dependencyInput,new AbortController().signal,'replace-call');
+    const stopped=f.hooks().stop(f.task.taskId);await Promise.resolve();expect(f.dispatch.closeScope).not.toHaveBeenCalled();
+    committed.resolve({...f.graph.identity,scopeId:f.dispatch.openScope.mock.calls[0][1],mainRunId:'parent-run',commandId:'committed',taskId:'assigned-1',status:'queued',trackedTaskIds:['assigned-1'],graphCursor:{streamId:'stream',seq:6}});
+    await call;await stopped;f.settleParent();await Promise.resolve();
+    expect(f.members.start).not.toHaveBeenCalled();expect(f.execution.continueFromResults).not.toHaveBeenCalled();
+    expect(f.dispatch.closeScope).toHaveBeenCalledWith(f.graph.identity,f.dispatch.openScope.mock.calls[0][1],'cancelled');
+  }finally{committed.resolve({});await f.coordinator.close()}
+});
 
 function occupy(admission:GlobalRunAdmission){
   const attempt=admission.attempt({workspaceId:'another-workspace',ownerEpoch:1,rootSessionId:'another-root',requestId:'another-run',source:'direct',workspacePermission:'read'},{canAcquire:()=>undefined,isCurrent:()=>true,acquire:()=>()=>{}});
@@ -201,7 +232,7 @@ it('成功关闭门禁失败时保存阻塞原因并关闭失败周期，不能�
   }finally{await f.coordinator.close()}
 });
 
-it.each(['cbim_object_commit','cbim_goal_plan','cbim_goal_review','cbim_dispatch_cancel'])('未建计划的%s调用不能绕过为普通聊天成功',async toolName=>{
+it.each(['cbim_object_commit','cbim_goal_plan','cbim_goal_review','cbim_dispatch_cancel','cbim_dispatch_replace_dependency'])('未建计划的%s调用不能绕过为普通聊天成功',async toolName=>{
   const f=await setup();try{
     f.dispatch.goals.inspect.mockResolvedValue({goal:{}} as any);
     f.hooks().settled(f.task,f.options,{task:f.task,runId:'parent-run',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[],toolReceipts:[{toolName,effects:toolName==='cbim_object_commit'?['knowledge-write']:['maintenance']} as any]});

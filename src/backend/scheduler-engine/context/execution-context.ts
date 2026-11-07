@@ -1,5 +1,5 @@
 /**
- * 作用定位：为已派发成员任务冻结完整执行知识，并在实际启动或恢复前复核基线。
+ * 作用定位：为已派发成员任务冻结完整执行知识，并在实际启动、恢复或未启动依赖替换前复核基线。
  * 设计原因：任务图里的引用不足以恢复知识和执行职责；从同一快照装配自主执行所需内容，正式业务任务均限制为执行者，主 Agent 的受控知识治理不改变这一边界，权限和模型配置仍由可信入口独立处理。
  * 职责边界：只读知识与应用内置规范，不运行成员、不写任务图；维护关系和指引正文都不能扩大工具权限。
  */
@@ -16,6 +16,8 @@ import {defaultExecutorId,defaultExecutorDefinition,defaultExecutorInstructions}
 import {mainAgentId} from '../conversation/main-agent';
 
 const standardIds=['business-execution','common-rules'];
+/** 只读执行知识准备所需能力；依赖修订复用它，不需要工作区写入或任务控制接口。 */
+export type DispatchKnowledgeWorkspace=Pick<KnowledgeWorkspace,'entry'|'assert'|'snapshot'|'read'|'rules'>;
 /** 比较规范化 JSON，知识定义的对象字段排列不改变业务绑定，数组顺序保持原义。 */
 function canonical(value:unknown):string{
   const order=(item:unknown):unknown=>Array.isArray(item)?item.map(order):item&&typeof item==='object'?Object.fromEntries(Object.entries(item).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([key,v])=>[key,order(v)])):item;
@@ -33,7 +35,7 @@ function body(value:{available:boolean;text?:unknown},subject:string):string{
  * 只为已派发任务准备知识；所有模块须匹配派发时的同一知识版本及维护/Workflow 绑定。
  * 读取结束前再次核对知识和内置规范，返回独立的可序列化快照；缺失正文不降级为其他流程。
  */
-export async function prepareDispatchExecutionContext(workspace:KnowledgeWorkspace,task:TaskNode):Promise<PreparedDispatchKnowledge>{
+export async function prepareDispatchExecutionContext(workspace:DispatchKnowledgeWorkspace,task:TaskNode):Promise<PreparedDispatchKnowledge>{
   workspace.assert();
   if(task.identity.workspaceId!==workspace.entry.id)fail('GRAPH_IDENTITY_MISMATCH','成员任务不属于当前工作区');
   const snapshot=await workspace.snapshot();
@@ -64,7 +66,7 @@ export async function prepareDispatchExecutionContext(workspace:KnowledgeWorkspa
 }
 
 /** 恢复只复核既有快照，绝不静默替换正文；软件内置规范更新也会阻止旧基线继续运行。 */
-export async function recheckDispatchExecutionContext(workspace:KnowledgeWorkspace,prepared:PreparedDispatchKnowledge):Promise<void>{
+export async function recheckDispatchExecutionContext(workspace:DispatchKnowledgeWorkspace,prepared:PreparedDispatchKnowledge):Promise<void>{
   workspace.assert();validatePreparedDispatchKnowledge(prepared);
   if(prepared.agent.agentId===mainAgentId)fail('AGENT_ROLE_INVALID','主 Agent 不能恢复为执行者，请重新派发给执行角色');
   // 静态内置角色随应用升级，不能仅依赖项目 revision 继续使用过时的执行职责。

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主会话任务图、目标与准入状态。冻结软限额和拒绝来自周期摘要，明确额度拒绝保留补充草稿，曾通信未知仍冻结。用量按需读取、标明截至时间与缺失，切换隔离迟到响应；求助/撤销不冒充成功。
+主会话任务图、目标与准入状态。前置替换审计独立于流式日志，保留旧失败节点，只绘启用边；求助/撤销不冒充成功。冻结额度来自周期摘要，用量按需读取；未知恢复请求保持冻结。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -23,10 +23,13 @@
 | [graph-state.ts](graph-state.ts) | 主会话派发图的前端增量投影，核对身份和游标后原子合并完整提交。 |
 | [member-activity.css](member-activity.css) | 主对话中的成员活动卡片与任务节点详情排版。 |
 | [member-cancellation-state.ts](member-cancellation-state.ts) | 为成员卡、任务节点和详情提供未启动撤销的统一只读投影。 |
+| [member-dependency-state.ts](member-dependency-state.ts) | 将任务节点的前置替换审计转换为主对话和任务详情共用的只读历史投影。 |
+| [member-dependency.css](member-dependency.css) | 排版成员前置替换的只读历史，供主对话摘要与任务详情共用。 |
 | [member-event-state.ts](member-event-state.ts) | 把成员公开事件分页归并为稳定的运行视图，供卡片与任务详情共用。 |
 | [member-help-state.ts](member-help-state.ts) | 为成员动态、任务节点和详情提供同一份求助交接投影与中文分类。 |
 | [MemberActivity.tsx](MemberActivity.tsx) | 在主对话中展示最近的成员任务与公开执行动态，并链接到对应任务节点详情。 |
 | [MemberCancellationNotice.tsx](MemberCancellationNotice.tsx) | 在主对话成员卡和任务详情中显示主调度已经提交的未启动撤销事实。 |
+| [MemberDependencyNotice.tsx](MemberDependencyNotice.tsx) | 在成员动态和任务详情中展示主调度已提交的前置替换原因、原来源与新候选身份。 |
 | [MemberExecutionReport.tsx](MemberExecutionReport.tsx) | 在任务节点详情中展示一次显式核实的派发、日志与工具回执报告，独立于成员流式正文。 |
 | [MemberHelpNotice.tsx](MemberHelpNotice.tsx) | 在主对话成员卡和任务详情中只读呈现已经结算的求助交接记录。 |
 | [MemberRunTranscript.tsx](MemberRunTranscript.tsx) | 以成员身份显示公开消息和工具过程，供主会话成员卡片及任务详情共用。 |
@@ -454,6 +457,40 @@ N_src_frontend_tasks_member_cancellation_state_ts ..> N_src_frontend_tasks_membe
 
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
 
+### member-dependency-state.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_member_dependency_state_ts["member-dependency-state.ts"] {
+  <<module>>
+  +memberDependencyHistory()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_member_dependency_state_ts["member-dependency-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_member_dependency_state_ts_MemberDependencyHistory["MemberDependencyHistory"] {
+  <<interface>>
+  +records
+  +invalid
+}
+N_src_frontend_tasks_member_dependency_state_ts ..> N_src_frontend_tasks_member_dependency_state_ts_MemberDependencyHistory : 声明
+```
+
+直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
+
+### member-dependency.css
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_member_dependency_css["member-dependency.css"] {
+  <<stylesheet>>
+}
+```
+
 ### member-event-state.ts
 
 ```mermaid
@@ -527,7 +564,7 @@ class N_src_frontend_tasks_MemberActivity_tsx["MemberActivity.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[useMemberRun.ts](useMemberRun.ts)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[MemberHelpNotice.tsx](MemberHelpNotice.tsx)、[member-help-state.ts](member-help-state.ts)、[MemberCancellationNotice.tsx](MemberCancellationNotice.tsx)、[member-cancellation-state.ts](member-cancellation-state.ts)、[member-activity.css](member-activity.css)。
+直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[useMemberRun.ts](useMemberRun.ts)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[MemberHelpNotice.tsx](MemberHelpNotice.tsx)、[member-help-state.ts](member-help-state.ts)、[MemberCancellationNotice.tsx](MemberCancellationNotice.tsx)、[MemberDependencyNotice.tsx](MemberDependencyNotice.tsx)、[member-cancellation-state.ts](member-cancellation-state.ts)、[member-activity.css](member-activity.css)。
 
 ### MemberCancellationNotice.tsx
 
@@ -540,6 +577,18 @@ class N_src_frontend_tasks_MemberCancellationNotice_tsx["MemberCancellationNotic
 ```
 
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[member-cancellation-state.ts](member-cancellation-state.ts)、[member-activity.css](member-activity.css)。
+
+### MemberDependencyNotice.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_MemberDependencyNotice_tsx["MemberDependencyNotice.tsx"] {
+  <<component>>
+  +MemberDependencyNotice()
+}
+```
+
+直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[member-dependency-state.ts](member-dependency-state.ts)、[member-dependency.css](member-dependency.css)。
 
 ### MemberExecutionReport.tsx
 
@@ -606,7 +655,7 @@ class N_src_frontend_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../conversation/QuestionCard.tsx](../conversation/QuestionCard.tsx)、[useMemberRun.ts](useMemberRun.ts)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[MemberExecutionReport.tsx](MemberExecutionReport.tsx)、[MemberHelpNotice.tsx](MemberHelpNotice.tsx)、[MemberCancellationNotice.tsx](MemberCancellationNotice.tsx)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[MemberActivity.tsx](MemberActivity.tsx)、[member-activity.css](member-activity.css)。
+直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../conversation/QuestionCard.tsx](../conversation/QuestionCard.tsx)、[useMemberRun.ts](useMemberRun.ts)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[MemberExecutionReport.tsx](MemberExecutionReport.tsx)、[MemberHelpNotice.tsx](MemberHelpNotice.tsx)、[MemberCancellationNotice.tsx](MemberCancellationNotice.tsx)、[MemberDependencyNotice.tsx](MemberDependencyNotice.tsx)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[MemberActivity.tsx](MemberActivity.tsx)、[member-activity.css](member-activity.css)。
 
 ### recovery-state.ts
 
@@ -1458,13 +1507,13 @@ class N_src_frontend_tasks_member_help_state_ts["member-help-state.ts"] {
 class N_src_frontend_tasks_MemberCancellationNotice_tsx["MemberCancellationNotice.tsx"] {
   <<component>>
 }
-class N_src_frontend_tasks_member_cancellation_state_ts["member-cancellation-state.ts"] {
-  <<module>>
+class N_src_frontend_tasks_MemberDependencyNotice_tsx["MemberDependencyNotice.tsx"] {
+  <<component>>
 }
 N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_MemberHelpNotice_tsx : 导入依赖
 N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_member_help_state_ts : 导入依赖
 N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_MemberCancellationNotice_tsx : 导入依赖
-N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_member_cancellation_state_ts : 导入依赖
+N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_MemberDependencyNotice_tsx : 导入依赖
 ```
 
 ```mermaid
@@ -1472,14 +1521,31 @@ classDiagram
 class N_src_frontend_tasks_MemberActivity_tsx["MemberActivity.tsx"] {
   <<component>>
 }
+class N_src_frontend_tasks_member_cancellation_state_ts["member-cancellation-state.ts"] {
+  <<module>>
+}
 class N_src_frontend_tasks_member_activity_css["member-activity.css"] {
   <<stylesheet>>
 }
 class N_src_frontend_tasks_MemberCancellationNotice_tsx["MemberCancellationNotice.tsx"] {
   <<component>>
 }
-class N_src_frontend_tasks_member_cancellation_state_ts["member-cancellation-state.ts"] {
+N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_member_cancellation_state_ts : 导入依赖
+N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_member_activity_css : 导入依赖
+N_src_frontend_tasks_MemberCancellationNotice_tsx ..> N_src_frontend_tasks_member_cancellation_state_ts : 导入依赖
+N_src_frontend_tasks_MemberCancellationNotice_tsx ..> N_src_frontend_tasks_member_activity_css : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_MemberDependencyNotice_tsx["MemberDependencyNotice.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_member_dependency_state_ts["member-dependency-state.ts"] {
   <<module>>
+}
+class N_src_frontend_tasks_member_dependency_css["member-dependency.css"] {
+  <<stylesheet>>
 }
 class N_src_frontend_tasks_MemberExecutionReport_tsx["MemberExecutionReport.tsx"] {
   <<component>>
@@ -1487,19 +1553,19 @@ class N_src_frontend_tasks_MemberExecutionReport_tsx["MemberExecutionReport.tsx"
 class N_src_frontend_tasks_useExecutionReport_ts["useExecutionReport.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_member_activity_css : 导入依赖
-N_src_frontend_tasks_MemberCancellationNotice_tsx ..> N_src_frontend_tasks_member_cancellation_state_ts : 导入依赖
-N_src_frontend_tasks_MemberCancellationNotice_tsx ..> N_src_frontend_tasks_member_activity_css : 导入依赖
+class N_src_frontend_tasks_execution_report_state_ts["execution-report-state.ts"] {
+  <<module>>
+}
+N_src_frontend_tasks_MemberDependencyNotice_tsx ..> N_src_frontend_tasks_member_dependency_state_ts : 导入依赖
+N_src_frontend_tasks_MemberDependencyNotice_tsx ..> N_src_frontend_tasks_member_dependency_css : 导入依赖
 N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_useExecutionReport_ts : 导入依赖
+N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_execution_report_state_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_MemberExecutionReport_tsx["MemberExecutionReport.tsx"] {
   <<component>>
-}
-class N_src_frontend_tasks_execution_report_state_ts["execution-report-state.ts"] {
-  <<module>>
 }
 class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
   <<module>>
@@ -1510,19 +1576,22 @@ class N_src_frontend_tasks_ExecutionRecoveryForm_tsx["ExecutionRecoveryForm.tsx"
 class N_src_frontend_tasks_execution_report_css["execution-report.css"] {
   <<stylesheet>>
 }
-N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_execution_report_state_ts : 导入依赖
+class N_src_frontend_tasks_MemberHelpNotice_tsx["MemberHelpNotice.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_member_help_state_ts["member-help-state.ts"] {
+  <<module>>
+}
 N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
 N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_ExecutionRecoveryForm_tsx : 导入依赖
 N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_execution_report_css : 导入依赖
+N_src_frontend_tasks_MemberHelpNotice_tsx ..> N_src_frontend_tasks_member_help_state_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_MemberHelpNotice_tsx["MemberHelpNotice.tsx"] {
   <<component>>
-}
-class N_src_frontend_tasks_member_help_state_ts["member-help-state.ts"] {
-  <<module>>
 }
 class N_src_frontend_tasks_member_activity_css["member-activity.css"] {
   <<stylesheet>>
@@ -1536,18 +1605,18 @@ class N_src_frontend_tasks_useMemberRun_ts["useMemberRun.ts"] {
 class N_src_frontend_tasks_MemberRunTranscript_tsx["MemberRunTranscript.tsx"] {
   <<component>>
 }
-N_src_frontend_tasks_MemberHelpNotice_tsx ..> N_src_frontend_tasks_member_help_state_ts : 导入依赖
+class N_src_frontend_tasks_MemberExecutionReport_tsx["MemberExecutionReport.tsx"] {
+  <<component>>
+}
 N_src_frontend_tasks_MemberHelpNotice_tsx ..> N_src_frontend_tasks_member_activity_css : 导入依赖
 N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_useMemberRun_ts : 导入依赖
 N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberRunTranscript_tsx : 导入依赖
+N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberExecutionReport_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
-  <<component>>
-}
-class N_src_frontend_tasks_MemberExecutionReport_tsx["MemberExecutionReport.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_MemberHelpNotice_tsx["MemberHelpNotice.tsx"] {
@@ -1556,12 +1625,15 @@ class N_src_frontend_tasks_MemberHelpNotice_tsx["MemberHelpNotice.tsx"] {
 class N_src_frontend_tasks_MemberCancellationNotice_tsx["MemberCancellationNotice.tsx"] {
   <<component>>
 }
+class N_src_frontend_tasks_MemberDependencyNotice_tsx["MemberDependencyNotice.tsx"] {
+  <<component>>
+}
 class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberExecutionReport_tsx : 导入依赖
 N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberHelpNotice_tsx : 导入依赖
 N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberCancellationNotice_tsx : 导入依赖
+N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberDependencyNotice_tsx : 导入依赖
 N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
 ```
 
@@ -1801,6 +1873,14 @@ N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts 
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 未启动任务前置替换的历史展示
+
+`MemberDependencyNotice` 在主对话成员卡显示最新替换摘要，在任务详情展示全部已提交记录；与成员运行日志分离，无额外请求或轮询。Bridge 提供严格审计 Schema，`memberDependencyHistory` 校验所属周期、版本顺序、命令唯一性和待办集合，异常明确提示，不把缺失审计、模型文字或普通等待解释为已替换。
+
+记录展示原前置、新前置、采用的 run/result、原因和后端时间，后续成员执行不隐藏历史。历史审计不证明现在仍可执行、原任务成功或业务验收通过，不提供恢复/批准按钮。主对话与详情先核对工作区和主会话身份；compact 仅省略旧记录展示，不丢弃节点数据。
+
+任务图沿用真实 enabled 边布局：退役边不绘制，原失败或求助节点仍在，新依赖按真实端点绘制。前端不迁移任务、实例或会话身份，不因审计存在改变运行状态或替代最终目标审阅。
 
 ### 周期冻结软限额
 

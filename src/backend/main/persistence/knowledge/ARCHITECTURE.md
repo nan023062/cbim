@@ -30,6 +30,8 @@ class N_src_backend_main_persistence_knowledge_files_ts["files.ts"] {
 
 ### knowledge-store.ts
 
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
 ```mermaid
 classDiagram
 class N_src_backend_main_persistence_knowledge_knowledge_store_ts["knowledge-store.ts"] {
@@ -75,6 +77,8 @@ N_src_backend_main_persistence_knowledge_knowledge_store_ts ..> N_src_backend_ma
 class N_src_backend_main_persistence_knowledge_knowledge_store_ts_KnowledgeStore["KnowledgeStore"] {
   +activeOperations
   +drain()
+  +committedReceipt()
+  +hasRecordedRequest()
   +initialize()
   +read()
   +snapshot()
@@ -87,6 +91,18 @@ class N_src_backend_main_persistence_knowledge_knowledge_store_ts_KnowledgeStore
   -queue
   -serial()
   -draft()
+}
+N_src_backend_main_persistence_knowledge_knowledge_store_ts ..> N_src_backend_main_persistence_knowledge_knowledge_store_ts_KnowledgeStore : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_persistence_knowledge_knowledge_store_ts["knowledge-store.ts"] {
+  <<module>>
+}
+class N_src_backend_main_persistence_knowledge_knowledge_store_ts_KnowledgeStore["KnowledgeStore"] {
   -write()
   -rollback()
 }

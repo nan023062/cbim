@@ -1,3 +1,9 @@
+### 桌面资源仓库只读连接
+
+`resources.connection.list / preview / commit / grant / revoke / check` 显式绑定工作区实例。登记经知识事务，授权独立保存；只有当前应用已显式开启的共享仓库可连接，请求不接受 URL 或令牌。`check` 才显式核验网络并返回受限目录摘要，主 Frame 接入规则继续适用，入口不注册到模型工具清单。
+
+`receipt` 按 workspaceId/commandId 查询原授权命令；`commitReceipt` 按 workspaceId/planId 只读查询真实原知识事务，可保留旧实例身份。查询不到仍为未知，不触发提交。`unaccepted` 使用原实例/action/ID，只在后端证明旧实例退役且原请求未持久受理时返回 true；前端不能把一般报错或 undefined 当成该证明。退出拒绝新授权，关闭排空已进入的工作。
+
 ### 本机人工决定的独立入口
 
 `dispatch.humanPreview / humanDecide / humanReceipt / humanHistory` 仅按明确 workspace/root/scope 访问人工决定服务。预览显式选择 criterion 与基线，提交还须携带稳定 commandId、expectedBasis、expectedDecisionRevision、决定和 comment；actor、proof、路径及文件哈希不属于请求。

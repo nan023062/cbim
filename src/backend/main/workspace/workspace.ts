@@ -1,6 +1,7 @@
 /**
  * 作用定位：管理本机工作区的身份、独占锁、知识监听和维护任务。
  * 设计原因：知识操作委托 KnowledgeStore 保持事务边界；工作区统一打开关闭顺序，供应用内部执行和调度使用。维护任务按实例隔离，取消不存在的任务明确报错，不能把对话任务误报为已取消。
+ * 回执边界：当前实例可委托存储只读核实旧请求的原 journal；这不授予旧实例重新提交或自动恢复的能力。
  */
 import fs from 'node:fs/promises';
 import {FileObjectStorage} from '../persistence/knowledge/object-storage';
@@ -47,6 +48,10 @@ export class Workspace implements KnowledgeWorkspace {
   snapshot(){return this.knowledge.snapshot()}
   preview(request:ChangeRequest){return this.knowledge.preview(request)}
   commit(request:ChangeRequest){return this.knowledge.commit(request)}
+  /** 查询原知识事务回执；旧实例请求可核实，但不会被重新提交。 */
+  committedReceipt(request:ChangeRequest){return this.knowledge.committedReceipt(request)}
+  /** 未受理核实只看原事务记录是否存在，不把回滚或未完成记录当作不存在。 */
+  hasRecordedRequest(request:ChangeRequest){return this.knowledge.hasRecordedRequest(request)}
   planMove(snapshot:Snapshot,from:string,to:string|null){return this.knowledge.planMove(snapshot,from,to)}
   startTask(name:'validate'|'reindex'){
     this.assert();const id=randomUUID(),controller=new AbortController();this.controllers.set(id,controller);const task:TaskView={id,workspaceId:this.entry.id,name,state:'running',progress:'读取知识并检查规则'};this.tasks.set(id,task);

@@ -1,6 +1,7 @@
 /**
  * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
  * 设计原因：通过 ApplicationServices 隔离实现；人工保存仅注入本机提交标记且不启动模型，humanContinue 是另一个明确入口并只消费已保存决定。计量、文本补充与新周期保持各自身份和受理边界。
+ * 资源连接：桌面显式登记、授权与核验分别路由；只读原回执和未受理证明不重放知识提交，不接受客户端地址或令牌。
  */
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
@@ -94,6 +95,16 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'resources.share':return app.resources.startSharing(args);
     case 'resources.stopSharing':return app.resources.stopSharing();
     case 'resources.connection':return app.resources.connection();
+    case 'resources.connection.list':return app.repositoryConnections.list(args);
+    case 'resources.connection.preview':return app.repositoryConnections.preview(args);
+    case 'resources.connection.commit':return app.repositoryConnections.commit(args);
+    case 'resources.connection.commitReceipt':return app.repositoryConnections.commitReceipt(args);
+    case 'resources.connection.unaccepted':return app.repositoryConnections.unaccepted(args);
+    // 仅已核实主 Frame 的明确桌面操作；知识工具、链接器定义或模型不能自行授予权限。
+    case 'resources.connection.grant':if(app.isStopping)fail('SHUTTING_DOWN','CBIM 正在退出，未保存新授权');return app.repositoryConnections.grant(args);
+    case 'resources.connection.revoke':if(app.isStopping)fail('SHUTTING_DOWN','CBIM 正在退出，请重开后核实授权');return app.repositoryConnections.revoke(args);
+    case 'resources.connection.check':return app.repositoryConnections.check(args);
+    case 'resources.connection.receipt':return app.repositoryConnections.receipt(args);
     // 静态定义编辑/复用只绑定工作区身份；不创建成员实例，也不触碰主会话任务图。
     case 'architecture.preview':return new ArchitectureService(app.workspace(args.workspaceId)).preview(args);
     case 'architecture.commit':return new ArchitectureService(app.workspace(args.workspaceId)).commit(args);

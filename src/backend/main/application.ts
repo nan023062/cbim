@@ -1,6 +1,7 @@
 /**
  * 作用定位：单次运行授权、版本化队列增量和结构化问题按工作区路由；排队时冻结附件内容与模型身份。Application：登记及重命名工作区、装配模型供应商与服务，并统一派发主 Agent 对话、附件快照、工具审批和历史操作。
  * 设计原因：主会话绑定独立主实例；应用共享并发准入，软限额设置在新周期创建时冻结。工作区代际隔离等待票据；关闭先撤票再停运行和排空历史，不通过删除观察记录假释放名额。
+ * 资源连接：独立本机授权先恢复但不启动共享；工作区退役取消在途核验，退出先排空连接请求再关闭真实 HTTP 服务。
  */
 import path from 'node:path';
 import {dispatchApplication} from './ipc/dispatch';
@@ -29,10 +30,13 @@ import {fail} from '../core/foundation/errors';
 import {Rules} from '../core/knowledge/knowledge';
 import {Workspace} from './workspace/workspace';
 import {ResourceRepositories} from './resources/resource-repository';
+import {RepositoryConnections} from './resources/repository-connections';
 /** 实现路由所需的服务契约；IPC 层不反向依赖本应用类。 */
 export class Application implements ApplicationServices {
   readonly catalog:Catalog;readonly rules:Rules;readonly running=new Map<string,Workspace>();private opening=new Map<string,Promise<Workspace>>();
   readonly resources:ResourceRepositories;
+  /** 用户目录中的独立工作区只读授权；登记知识不自动授权，应用退出先取消连接核验。 */
+  readonly repositoryConnections:RepositoryConnections;
   /** 全应用共享供应商目录；公开 IPC 不返回凭据，运行时才解密。 */
   readonly models:LlmProfiles;
   private executions=new Map<string,WorkspaceExecutionManager>();
@@ -76,14 +80,15 @@ export class Application implements ApplicationServices {
   private stopping=false;private shutdownPromise?:Promise<void>;
   /** IPC 新增工作区前检查关停状态；只暴露读取，不允许路由修改生命周期。 */
   get isStopping(){return this.stopping}
-  constructor(readonly paths:Paths,designRoot:string,secretCipher?:SecretCipher) {this.models=new LlmProfiles(path.join(paths.userRoot,'llm.json'),secretCipher);this.admissionSettings=new AdmissionSettings(path.join(paths.userRoot,'run-admission.json'),this.admission);this.budgetSettings=new BudgetSettings(path.join(paths.userRoot,'scope-budget.json'));this.catalog=new Catalog(paths);this.rules=new Rules(designRoot);this.resources=new ResourceRepositories(paths)}
-  async init(){await this.catalog.init();await this.rules.init();await this.resources.init();await this.admissionSettings.init();await this.budgetSettings.init();await this.restore()}
+  constructor(readonly paths:Paths,designRoot:string,secretCipher?:SecretCipher) {this.models=new LlmProfiles(path.join(paths.userRoot,'llm.json'),secretCipher);this.admissionSettings=new AdmissionSettings(path.join(paths.userRoot,'run-admission.json'),this.admission);this.budgetSettings=new BudgetSettings(path.join(paths.userRoot,'scope-budget.json'));this.catalog=new Catalog(paths);this.rules=new Rules(designRoot);this.resources=new ResourceRepositories(paths);this.repositoryConnections=new RepositoryConnections(path.join(paths.userRoot,'repository-connections.json'),this.resources,id=>{this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();return ws})}
+  async init(){await this.catalog.init();await this.rules.init();await this.resources.init();await this.repositoryConnections.init();await this.admissionSettings.init();await this.budgetSettings.init();await this.restore()}
   async list(){const data=await this.catalog.read();return {...data,warning:this.catalog.warning,entries:await Promise.all(data.entries.map(async e=>this.running.get(e.id)?.view()||{...e,state:await exists(e.path)?'registered':'missing',tasks:[]}))}}
   workspace(id:string){const ws=this.running.get(id);if(!ws)fail('NOT_RUNNING','工作区未运行，请由用户在桌面打开');return ws}
   /** 合并同工作区的并发打开并装配内部执行服务；restart 只更换此工作区实例，不修改外部工具配置。 */
   async open(id:string,restart=false){if(this.stopping)fail('SHUTTING_DOWN','CBIM 正在退出');if(this.opening.has(id))return this.opening.get(id)!;this.assertServiceAvailable(id);
     const pending=(async()=>{const entry=(await this.catalog.read()).entries.find(x=>x.id===id);if(!entry)fail('NOT_REGISTERED','工作区未登记');let ws=this.running.get(id);
       if(restart||ws?.state!=='running'){const release=this.retire(id);try{
+        this.repositoryConnections.retireWorkspace(id);
         this.retireAdmission(id);
         await this.collaborations.get(id)?.close();this.collaborations.delete(id);
         await this.executions.get(id)?.close();this.executions.delete(id);
@@ -108,11 +113,11 @@ export class Application implements ApplicationServices {
       await this.catalog.update(d=>{const item=d.entries.find(e=>e.id===id);if(item)item.lastOpened=new Date().toISOString();d.recent=[id,...d.recent.filter(x=>x!==id)].slice(0,30)});return ws})();this.opening.set(id,pending);try{return await pending}finally{this.opening.delete(id)}
   }
   /** 内部生命周期入口；先禁用自动协作，再依次关闭主执行、成员、派发、监控和工作区，页面关闭不会调用它。 */
-  async stop(id:string){const release=this.retire(id);this.retireAdmission(id);try{await this.opening.get(id)?.catch(()=>{});this.retireAdmission(id);await this.collaborations.get(id)?.close();this.collaborations.delete(id);await this.executions.get(id)?.close();this.executions.delete(id);await this.memberExecutions.get(id)?.close();this.memberExecutions.delete(id);await this.dispatchers.get(id)?.close();this.dispatchers.delete(id);this.monitors.get(id)?.close();await this.histories.get(id)?.close();this.histories.delete(id);this.monitors.delete(id);const ws=this.running.get(id);await ws?.close();this.running.delete(id)}finally{release()}}
+  async stop(id:string){const release=this.retire(id);this.repositoryConnections.retireWorkspace(id);this.retireAdmission(id);try{await this.opening.get(id)?.catch(()=>{});this.retireAdmission(id);await this.collaborations.get(id)?.close();this.collaborations.delete(id);await this.executions.get(id)?.close();this.executions.delete(id);await this.memberExecutions.get(id)?.close();this.memberExecutions.delete(id);await this.dispatchers.get(id)?.close();this.dispatchers.delete(id);this.monitors.get(id)?.close();await this.histories.get(id)?.close();this.histories.delete(id);this.monitors.delete(id);const ws=this.running.get(id);await ws?.close();this.running.delete(id)}finally{release()}}
   async remove(id:string){await this.stop(id);await this.catalog.remove(id);this.runtime.forget(id)}
   async restore(){const d=await this.catalog.read();for(const entry of d.entries){try{await this.open(entry.id)}catch{/* failed workspace remains visible; continue the other services */}}}
   /** 幂等关闭应用，等待正在打开的工作区及提交完成，再释放服务和共享仓库。 */
-  async shutdown(){if(this.shutdownPromise)return this.shutdownPromise;this.stopping=true;for(const id of this.admissionOwners.keys())this.retireAdmission(id);this.shutdownPromise=(async()=>{await Promise.allSettled([...this.opening.values()]);for(const id of this.admissionOwners.keys())this.retireAdmission(id);await Promise.all([...this.collaborations.values()].map(x=>x.close()));this.collaborations.clear();await Promise.all([...this.executions.values(),...this.memberExecutions.values()].map(x=>x.close()));this.executions.clear();this.memberExecutions.clear();await Promise.all([...this.dispatchers.values()].map(x=>x.close()));this.dispatchers.clear();for(const monitor of this.monitors.values())monitor.close();await Promise.all([...this.histories.values()].map(x=>x.close()));this.histories.clear();this.monitors.clear();const results=await Promise.allSettled([...this.running.values()].map(w=>w.close()));await this.resources.close();this.running.clear();const failed=results.find(r=>r.status==='rejected');if(failed?.status==='rejected')throw failed.reason})();return this.shutdownPromise}
+  async shutdown(){if(this.shutdownPromise)return this.shutdownPromise;this.stopping=true;for(const id of this.admissionOwners.keys())this.retireAdmission(id);this.shutdownPromise=(async()=>{await this.repositoryConnections.close();await Promise.allSettled([...this.opening.values()]);for(const id of this.admissionOwners.keys())this.retireAdmission(id);await Promise.all([...this.collaborations.values()].map(x=>x.close()));this.collaborations.clear();await Promise.all([...this.executions.values(),...this.memberExecutions.values()].map(x=>x.close()));this.executions.clear();this.memberExecutions.clear();await Promise.all([...this.dispatchers.values()].map(x=>x.close()));this.dispatchers.clear();for(const monitor of this.monitors.values())monitor.close();await Promise.all([...this.histories.values()].map(x=>x.close()));this.histories.clear();this.monitors.clear();const results=await Promise.allSettled([...this.running.values()].map(w=>w.close()));await this.resources.close();this.running.clear();const failed=results.find(r=>r.status==='rejected');if(failed?.status==='rejected')throw failed.reason})();return this.shutdownPromise}
   /** 默认选择转为明确模型身份，仅向调度层返回公开标识；工作区工厂随后取得运行快照，兼容 CLI 显式模型。 */
   async modelOptions(input:any={}){
     if(input?.provider&&input?.model&&!input.profileId)return input;

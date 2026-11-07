@@ -1,6 +1,7 @@
 /**
  * 作用定位：本机知识存储，承担初始化、快照、预览、串行事务、索引写入和崩溃恢复。
  * 设计原因：从工作区生命周期抽离物理事务；继续使用原日志格式和版本检查，不改变并发或回滚语义。
+ * 回执边界：可按完整原请求只读核实已提交 journal，或确认是否存在任何原事务；不凭当前知识相等猜成功，不恢复旧实例或重放写入。
  */
 import fs from 'node:fs/promises';
 import {readKnowledge} from './files';
@@ -29,6 +30,17 @@ export class KnowledgeStore {
  constructor(private owner:KnowledgeStoreOwner,private log:(event:string,details?:Record<string,unknown>)=>Promise<void>){}
  /** 等待已经进入队列的事务结束；不会取消半完成提交。 */
  async drain(){await this.queue}
+  /** 只读核实原请求的已提交回执，允许查询旧实例请求；不执行提交、回滚或恢复。 */
+  async committedReceipt(request:ChangeRequest):Promise<CommitResult|undefined>{
+    this.owner.assert();if(request.workspaceId!==this.owner.entry.id||!/^[A-Za-z0-9_-]{8,100}$/.test(request.requestId))fail('IDENTITY','知识回执查询身份不匹配');
+    return this.serial(async()=>{this.owner.assert();const file=path.join(this.owner.paths.local(this.owner.entry.id,'transactions'),request.requestId+'.json');let value:Journal;
+      try{const stat=await fs.lstat(file);if(!stat.isFile()||stat.isSymbolicLink()||stat.size>16*1024*1024)fail('RECOVERY','知识事务记录不安全或过大');value=await readJson<Journal>(file)}catch(error:any){if(error.code==='ENOENT')return undefined;throw error}
+      if(value.version!==1||value.workspaceId!==request.workspaceId||value.requestId!==request.requestId||value.fingerprint!==hash(json(request)))fail('IDEMPOTENCY','原知识事务与请求不一致，请核实记录');
+      if(value.state!=='committed')return undefined;const result=value.result;if(!result||result.state!=='committed'||result.workspaceId!==request.workspaceId||result.instanceId!==request.instanceId||result.requestId!==request.requestId||typeof result.revision!=='string'||!Array.isArray(result.changed)||result.changed.some(item=>typeof item!=='string'))fail('RECOVERY','已提交知识事务缺少有效回执');return structuredClone(result);
+    });
+  }
+  /** 仅证明原请求是否有任何事务记录；已回滚/未完成也算存在，不冒称从未受理。 */
+  async hasRecordedRequest(request:ChangeRequest):Promise<boolean>{this.owner.assert();if(request.workspaceId!==this.owner.entry.id||!/^[A-Za-z0-9_-]{8,100}$/.test(request.requestId))fail('IDENTITY','知识回执查询身份不匹配');return this.serial(async()=>{this.owner.assert();try{await fs.lstat(path.join(this.owner.paths.local(this.owner.entry.id,'transactions'),request.requestId+'.json'));return true}catch(error:any){if(error.code==='ENOENT')return false;throw error}})}
   async initialize(){
     const dir=path.join(this.owner.entry.path,'.cbim');
     if(await exists(dir)){await this.owner.paths.knowledge(this.owner.entry.path,'.cbim/project.json');const manifest=path.join(dir,'project.json');

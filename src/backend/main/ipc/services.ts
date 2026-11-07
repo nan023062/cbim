@@ -1,5 +1,5 @@
 /**
- * 作用定位：定义 IPC 路由需要的应用服务、执行审批、静态角色履历、全局监管与准入投影、可靠配额设置和工作区生命周期入口。
+ * 作用定位：定义 IPC 路由需要的应用服务、执行审批、静态角色履历、全局监管与准入投影、配额设置、桌面资源连接和工作区生命周期入口。
  * 设计原因：路由依赖此契约，Application 负责实现和装配，避免路由反向引用应用类形成类型循环。
  * 职责边界：这里只声明内部调用能力，不代表渲染进程可以直接访问这些服务。
  */
@@ -8,6 +8,7 @@ import type {Workspace} from '../workspace/workspace';
 import type {Paths} from '../platform/paths';
 import type {LlmProfiles} from '../persistence/settings/llm-profiles';
 import type {ResourceRepositories} from '../resources/resource-repository';
+import type {RepositoryConnections} from '../resources/repository-connections';
 import type {WorkspaceExecutionManager} from '../../scheduler-engine/execution/execution-manager';
 import type {WorkspaceDispatchService} from '../../scheduler-engine/execution/dispatch-service';
 import type {MemberExecutionManager} from '../../scheduler-engine/execution/member-execution';
@@ -24,6 +25,8 @@ export interface ApplicationServices {
   readonly paths: Paths;
   readonly models: LlmProfiles;
   readonly resources: ResourceRepositories;
+  /** 桌面显式登记、授权和真实只读核验；没有模型入口或任意 URL/凭据参数。 */
+  readonly repositoryConnections:RepositoryConnections;
   /** 真正执行准入独立于监管索引；只暴露游标读取和可靠设置，不把领取能力交给页面。 */
   readonly admission:{read(cursor?:AdmissionCursor):AdmissionRead};
   readonly admissionSettings:AdmissionSettings;

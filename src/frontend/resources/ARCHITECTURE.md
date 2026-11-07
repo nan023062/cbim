@@ -10,12 +10,105 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [repository-connection-state.ts](repository-connection-state.ts) | 资源仓库连接写请求的本地待确认记录与严格回执匹配，供链接器界面跨卸载、重开核对原请求。 |
+| [repository-connections.css](repository-connections.css) | 对应界面的布局与视觉样式。 |
+| [RepositoryConnections.tsx](RepositoryConnections.tsx) | 在链接器页按明确工作区登记仓库身份、独立授予只读连接并查看真实 HTTP 核验摘要。 |
 | [resource-application.ts](resource-application.ts) | 资源列表的静态包识别与可创建种类策略，供列表和测试复用。 |
-| [ResourceRepositoryView.tsx](ResourceRepositoryView.tsx) | 三类资源共用的定义列表与编辑器，并为静态人才包/完整业务架构提供选择目标工作区的应用入口。 |
+| [ResourceRepositoryView.tsx](ResourceRepositoryView.tsx) | 三类资源共用的定义列表与编辑器；链接器页附带独立工作区仓库连接，人才包/完整业务架构有明确应用入口。 |
 | [workspace-transfer.css](workspace-transfer.css) | 静态资源发布/导入的选择列表与回执。设计原因：共享库来源、应用目标和整包替换在窄屏上仍可明确辨认。 */ |
 | [WorkspaceResourceTransfer.tsx](WorkspaceResourceTransfer.tsx) | 静态团队能力与完整业务架构在当前工作区和共用仓库之间的发布、下载及应用界面。 |
 
 ## 架构类图
+
+### repository-connection-state.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_resources_repository_connection_state_ts["repository-connection-state.ts"] {
+  <<module>>
+  +createRepositoryConnectionPendingStore()
+  +checkedRepositoryConnectionCommit()
+  +checkedRepositoryConnectionReceipt()
+  +checkedRepositoryConnectionUnaccepted()
+  +isRepositoryConnectionPreflightRejection()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_resources_repository_connection_state_ts["repository-connection-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_resources_repository_connection_state_ts_RepositoryConnectionPending["RepositoryConnectionPending"] {
+  <<type>>
+
+}
+N_src_frontend_resources_repository_connection_state_ts ..> N_src_frontend_resources_repository_connection_state_ts_RepositoryConnectionPending : 声明
+class N_src_frontend_resources_repository_connection_state_ts_RepositoryConnectionCommitPending["RepositoryConnectionCommitPending"] {
+  <<type>>
+
+}
+N_src_frontend_resources_repository_connection_state_ts ..> N_src_frontend_resources_repository_connection_state_ts_RepositoryConnectionCommitPending : 声明
+class N_src_frontend_resources_repository_connection_state_ts_RepositoryConnectionGrantPending["RepositoryConnectionGrantPending"] {
+  <<type>>
+
+}
+N_src_frontend_resources_repository_connection_state_ts ..> N_src_frontend_resources_repository_connection_state_ts_RepositoryConnectionGrantPending : 声明
+class N_src_frontend_resources_repository_connection_state_ts_PendingStorage["PendingStorage"] {
+  <<type>>
+
+}
+N_src_frontend_resources_repository_connection_state_ts ..> N_src_frontend_resources_repository_connection_state_ts_PendingStorage : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_resources_repository_connection_state_ts["repository-connection-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_resources_repository_connection_state_ts_RepositoryConnectionPendingStore["RepositoryConnectionPendingStore"] {
+  <<interface>>
+  +read()
+  +save()
+  +remove()
+}
+N_src_frontend_resources_repository_connection_state_ts ..> N_src_frontend_resources_repository_connection_state_ts_RepositoryConnectionPendingStore : 声明
+```
+
+直接依赖：[../../bridge/contracts/repository-connections.ts](../../bridge/contracts/repository-connections.ts)。
+
+### repository-connections.css
+
+```mermaid
+classDiagram
+class N_src_frontend_resources_repository_connections_css["repository-connections.css"] {
+  <<stylesheet>>
+}
+```
+
+### RepositoryConnections.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_resources_RepositoryConnections_tsx["RepositoryConnections.tsx"] {
+  <<component>>
+  +RepositoryConnections()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_resources_RepositoryConnections_tsx["RepositoryConnections.tsx"] {
+  <<component>>
+}
+class N_src_frontend_resources_RepositoryConnections_tsx_Connection["Connection"] {
+  <<type>>
+
+}
+N_src_frontend_resources_RepositoryConnections_tsx ..> N_src_frontend_resources_RepositoryConnections_tsx_Connection : 声明
+```
+
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../../bridge/contracts/repository-connections.ts](../../bridge/contracts/repository-connections.ts)、[repository-connection-state.ts](repository-connection-state.ts)、[repository-connections.css](repository-connections.css)。
 
 ### resource-application.ts
 
@@ -70,7 +163,7 @@ class N_src_frontend_resources_ResourceRepositoryView_tsx_Draft["Draft"] {
 N_src_frontend_resources_ResourceRepositoryView_tsx ..> N_src_frontend_resources_ResourceRepositoryView_tsx_Draft : 声明
 ```
 
-直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[WorkspaceResourceTransfer.tsx](WorkspaceResourceTransfer.tsx)、[resource-application.ts](resource-application.ts)。
+直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[WorkspaceResourceTransfer.tsx](WorkspaceResourceTransfer.tsx)、[RepositoryConnections.tsx](RepositoryConnections.tsx)、[resource-application.ts](resource-application.ts)。
 
 ### workspace-transfer.css
 
@@ -134,19 +227,41 @@ N_src_frontend_resources_WorkspaceResourceTransfer_tsx ..> N_src_frontend_resour
 
 ```mermaid
 classDiagram
+class N_src_frontend_resources_RepositoryConnections_tsx["RepositoryConnections.tsx"] {
+  <<component>>
+}
+class N_src_frontend_resources_repository_connection_state_ts["repository-connection-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_resources_repository_connections_css["repository-connections.css"] {
+  <<stylesheet>>
+}
 class N_src_frontend_resources_ResourceRepositoryView_tsx["ResourceRepositoryView.tsx"] {
   <<component>>
 }
 class N_src_frontend_resources_WorkspaceResourceTransfer_tsx["WorkspaceResourceTransfer.tsx"] {
   <<component>>
 }
+N_src_frontend_resources_RepositoryConnections_tsx ..> N_src_frontend_resources_repository_connection_state_ts : 导入依赖
+N_src_frontend_resources_RepositoryConnections_tsx ..> N_src_frontend_resources_repository_connections_css : 导入依赖
+N_src_frontend_resources_ResourceRepositoryView_tsx ..> N_src_frontend_resources_WorkspaceResourceTransfer_tsx : 导入依赖
+N_src_frontend_resources_ResourceRepositoryView_tsx ..> N_src_frontend_resources_RepositoryConnections_tsx : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_resources_ResourceRepositoryView_tsx["ResourceRepositoryView.tsx"] {
+  <<component>>
+}
 class N_src_frontend_resources_resource_application_ts["resource-application.ts"] {
   <<module>>
+}
+class N_src_frontend_resources_WorkspaceResourceTransfer_tsx["WorkspaceResourceTransfer.tsx"] {
+  <<component>>
 }
 class N_src_frontend_resources_workspace_transfer_css["workspace-transfer.css"] {
   <<stylesheet>>
 }
-N_src_frontend_resources_ResourceRepositoryView_tsx ..> N_src_frontend_resources_WorkspaceResourceTransfer_tsx : 导入依赖
 N_src_frontend_resources_ResourceRepositoryView_tsx ..> N_src_frontend_resources_resource_application_ts : 导入依赖
 N_src_frontend_resources_WorkspaceResourceTransfer_tsx ..> N_src_frontend_resources_resource_application_ts : 导入依赖
 N_src_frontend_resources_WorkspaceResourceTransfer_tsx ..> N_src_frontend_resources_workspace_transfer_css : 导入依赖
@@ -166,6 +281,20 @@ N_src_frontend_resources_WorkspaceResourceTransfer_tsx ..> N_src_frontend_resour
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 资源仓库界面契约
+
+## 工作区资源仓库连接
+
+`RepositoryConnections` 仅出现在链接器页。用户明确选择已就绪工作区，先预览并登记当前已共享仓库的静态定义，再独立点击允许只读连接。两步回执分别显示，不把知识提交视为授权，也不自动开启服务或让静态文本资源执行。
+
+列表和核验由显式操作读取，不轮询全部资源。核验展示真实 HTTP 的有界摘要、版本和时间，不展示正文、URL 或令牌；已显示摘要只是当次观察，不承诺持续在线。关闭共享或撤销后重新核验必须由后端拒绝，界面不降级读本地文件。
+
+请求冻结目标身份、知识/授权版本；同步锁阻止双击，目标代际丢弃迟到响应。`repository-connection-state.ts` 先在本机同步保存小体积冻结请求，最多 64 个工作区、256 KiB，不含完整预览、正文或密钥；存储失败不发送，损坏数据不覆盖。严格匹配原计划/命令与完整身份、定义哈希和授权下一版本，迟到回执不能清除后来请求。
+
+授权或登记结果未知时保留原命令/计划，只查原回执或重试原请求，不新建写操作。首次明确预提交拒绝可以解除；曾未知或重开恢复后不能用后来错误推断未发生。页面重入只恢复本地记录并读取当前状态，不重放操作。实例已更换时只查原回执；另一个显式“核实未受理并解除”操作必须取得服务关于旧实例退役且无原事务/命令的肯定证明，查不到回执本身不足以清记录。
+
+此阶段仅桌面连接和核验，主 Agent 工具尚未装配。CSS 按现有主题变量排版，窄窗口换行；资源标识不撑宽页面。
+
+## 静态资源发布与应用
 
 - 链接器、人才市场和业务模板共用同一个当前仓库；资源保存不等于应用到项目或授予执行权限。
 - 全局列表只为 `format: cbim-workspace-package` 且包类型与资源条目一致的 team、agent、skill、architecture 显示“应用到工作区”。这只是界面识别，格式、指纹、正文引用和目标知识仍由后端预览校验。

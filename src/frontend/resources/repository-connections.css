@@ -1,0 +1,22 @@
+/* 工作区连接只展示有界状态与核验摘要；窄窗口保持操作可换行，不让标识撑宽页面。 */
+.repository-connections{border:1px solid var(--line);border-radius:10px;padding:18px;margin:20px 0;background:var(--surface);min-width:0}
+.repository-connections h2{font-size:15px;margin:0 0 8px}
+.repository-connections p,.repository-connections small{font-size:12px;line-height:1.65}
+.repository-connections>header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.repository-connections>header p{margin:0;color:var(--muted)}
+.repository-connections label{display:flex;flex-direction:column;gap:7px;margin:14px 0;font-size:12px}
+.repository-connections select,.repository-connections input{width:100%;min-width:0}
+.repository-connection-list{display:grid;gap:12px;margin-top:16px}
+.repository-connection-card{border:1px solid var(--line);border-radius:8px;padding:14px;min-width:0}
+.repository-connection-card header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.repository-connection-card h3{font-size:13px;margin:0}
+.repository-connection-card code,.repository-connection-card small{overflow-wrap:anywhere;word-break:break-word}
+.repository-connection-card small{display:block;color:var(--muted);margin-top:6px}
+.repository-connection-result{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}
+.repository-connection-result ul{padding-left:20px;margin:8px 0}
+.repository-connection-result li{margin:7px 0;overflow-wrap:anywhere}
+.repository-connection-preview{border:1px solid var(--line);border-radius:8px;padding:14px;margin-top:14px}
+.repository-connection-preview pre{max-height:220px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px}
+.repository-connection-preview dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;font-size:12px}
+.repository-connection-preview dd{margin:0;overflow-wrap:anywhere}
+@media(max-width:600px){.repository-connections{padding:12px}.repository-connections>header{flex-wrap:wrap}.repository-connection-preview dl{display:block}.repository-connection-preview dd{margin:4px 0 10px}}

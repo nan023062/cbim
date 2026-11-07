@@ -43,7 +43,7 @@ export class Rules {
     let connectorIds=new Set<string>();
     if(schema('.cbim/connectors/registry.json','connectors')){
       const registry=new ConnectorRegistry(data('.cbim/connectors/registry.json').connectors);
-      connectorIds=registry.ids();for(const _id of registry.duplicates())add('.cbim/connectors/registry.json','duplicate','连接器标识或插件身份重复');
+      connectorIds=registry.ids();for(const _id of registry.duplicates())add('.cbim/connectors/registry.json','duplicate','链接器标识或提供方身份重复');
     }
     const people=new Map<string,any>();if(schema('.cbim/team/people.json','people'))for(const p of data('.cbim/team/people.json').people){if(people.has(p.id))add('.cbim/team/people.json','duplicate',`人员重复：${p.id}`);people.set(p.id,p)}
     let ignores=ignore({ignorecase:true});try{ignores=ignores.add(texts.get('.cbim/.cbimignore')||'')}catch(e:any){add('.cbim/.cbimignore','ignore',e.message)}

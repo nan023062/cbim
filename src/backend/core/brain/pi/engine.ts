@@ -1,6 +1,6 @@
 /**
  * 作用定位：Pi 引擎适配器，负责隔离配置、主对话与成员原生会话校验、工具桥与公开执行事件转换。
- * 设计原因：每轮冻结模型、权限和上下文；成员求助/基线/检查点沿真实调用 ID 入日志。成员回传与人工决定各用系统 custom 接续，不伪造用户目标，结束只认 agent_settled。
+ * 设计原因：每轮冻结模型、权限和上下文；原生注册与能力预检共用 Core 工具表。成员求助/基线/检查点沿真实调用 ID 入日志，成员回传与人工决定各用系统 custom 接续，结束只认 agent_settled。
  * 职责边界：不保存私有推理正文；记录实际用量与生成耗时，未知计价保持未知。明确停止后的标准取消文本才归为取消，其他错误及未知工具副作用交由运行时保留。
  */
 import fs from 'node:fs/promises';
@@ -11,6 +11,7 @@ import {openBridge,bridgeExtensionForSource,type KnowledgeBridge} from './bridge
 import type {ResolvedLlm} from '../llm/ports';
 import {modelStopError} from '../model-errors';
 import {buildPiRuntimeSettings,requestedThinkingLevel} from './runtime-config';
+import {nativeToolNames} from '../../tools/native-tools';
 
 /** 单次 Pi 适配器配置；agentHome 只属于 CBIM 工作区，turnTimeoutMs 为回合等待上限毫秒。 */
 export interface PiOptions {
@@ -91,7 +92,7 @@ export class PiEngine implements AgentEngine {
       this.events=this.events.then(()=>this.consume(event));
       void this.events.catch(error=>{this.fatal=error;this.settlement?.reject(error);void this.rpc?.close()});
     },error=>{if(!this.closing){this.fatal=error;this.settlement?.reject(error)}},message=>this.redact(message));
-    const allowed=this.options.allowNativeExecution?'read,grep,find,ls,bash,write,edit,cbim_*':'read,grep,find,ls,cbim_*';
+    const allowed=[...nativeToolNames(!!this.options.allowNativeExecution),'cbim_*'].join(',');
     // 禁止 Pi 自动加载用户机器上的外部连接；内部工具只由本次受控扩展注册。
     this.rpc.start(this.options.process,context.task.root,[
       '--mode','rpc','--provider',this.options.provider,'--model',this.options.model,

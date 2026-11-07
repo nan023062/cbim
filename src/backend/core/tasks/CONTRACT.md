@@ -4,6 +4,20 @@
 
 `TaskProgressTools` 不将 `cbim_task_*`、`cbim_dispatch_*`、`cbim_goal_*` 或 `cbim_delivery_prepare` 的回执纳入业务完成证据。派发成功、读到候选或登记审阅只说明协作记录存在；步骤完成仍须关联当前运行真实且有效的业务工具回执，成员候选也不等于人工验收。
 
+### 可选 Workflow 稳定条件
+
+`PreparedDispatchModule.workflowContract` 保存与同份 `workflowText` 解析完全一致的程序约定；专属流程仍按正文 SHA-256 固定版本，整体快照仍复核稳定指纹。没有声明不补规则，不继承父模块；`preparedWorkflowContracts` 提取所有绑定，保留每个模块及其 Workflow 身份，不能合并成无来源的全局要求。声明结构由 workspace 层的 `workflow-contract.ts` 校验。
+
+`WorkflowProgressContext` 由可信运行时注入冻结绑定、原始 TaskSpec 目标/验收项和工作区/任务/运行身份。`TaskProgressTools.beforeEffects()` 对声明了 `beforeEffects.requirePlan` 的运行检查本轮已保存且与原要求一致的计划；它返回审批前版本，`invalidate(reason, expectedPlanVersion)` 在串行持久化队列中再核对，审批期间版本变化则拒绝，不能沿旧批准执行。知识写、业务写及命令仍使旧回执代次失效；计划门禁只覆盖业务写/命令，不新增任何操作权限。新运行不能把旧计划当成本轮计划。
+
+含约定的运行还注入同步 `assertDeliveryReady` 端口，工具门禁及实际交付的串行持久化入口均检查在途副作用。读取与副作用执行窗口重叠时，真实回执仍保存，但不进入可引用证据；必须在窗口结束后新读取。该端口不负责停止工具或回滚，也不改变旧无约定运行的计划版本与采集代次。
+
+交付时只检查各已完成步骤实际引用的当前成功回执。`evaluateWorkflowDelivery` 必须同时满足全部模块的工具证据要求，生成 `TaskProgress.delivery.workflow`；模型输入 Schema 没有该字段。证明包含绑定哈希和每个条件对应的调用 ID，只表示真实工具调用事实，不证明命令是专业测试，也不证明整个模块已覆盖。同一调用可以满足多个相同工具条件，保留分别对应的模块来源。
+
+`validateWorkflowEvidence` 在成员结算与主目标复核时从 canonical 重新计算：冻结来源、连续日志身份、本轮计划、成功交付与候选匹配、真实 proposed→allowed→finished 链、输入/返回哈希，以及最后副作用实际结束后的当前证据。原生工具副作用必须匹配 `core/tools/native-tools.ts` 的真实注册表；`bash` 保持 unknown 范围。所有副作用须在交付之前明确结束，读取验证必须在最后一次结束之后才发起；写入自身成功回执仍可证明该次操作。失败副作用的完整结束记录仅用于判断时间边界，随后可重新读取验证，失败本身不能作成功证据。失败的交付重试不能遮蔽先前有效候选，但后续副作用会使旧候选失效。缺声明的历史运行保留既有行为；声明存在而来源/证据不完整时明确拒绝，不降级为旧流程。
+
+`artifactSucceededCall` 是采集和 Workflow 共用的真实工具链校验，只依赖工作区、任务、运行三层身份；原生会话/成员/正式快照由调用该函数的外层各自核实。这里不创建文件、不启动模型、不签署人工验收，不提供任意 DSL、脚本求值或跨重启自动恢复。
+
 ### 用户任务调度周期
 
 `dispatch-scope.ts` 定义 `DispatchScope {scopeId, workspaceId, rootSessionId, status, createdAt, goal?, wait?, continuations?, closedAt?, outcome?}`。status 为 active/waiting/closed，outcome 为 completed/failed/cancelled/interrupted；它表达整轮用户任务的生命周期，completed 不替代业务验收。一轮包含多次主模型回合、成员执行和结果回注，不能因一次 LLM 返回就关闭。waiting 表示所有模型与成员工作已安全结算、目标尚未结束的持久检查点；用户可显式补充同一目标后继续，或取消/失败/中断关闭，不自动恢复模型。

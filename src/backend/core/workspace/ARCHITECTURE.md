@@ -12,6 +12,7 @@
 | --- | --- |
 | [maintenance.ts](maintenance.ts) | 模块长期维护责任的知识契约，区别于 Task 的执行 Agent 与历史作者。 |
 | [model.ts](model.ts) | 业务工作区：领域工程与模块注册表、模块知识和仅本模块 Workflow的核心封装。 |
+| [workflow-contract.ts](workflow-contract.ts) | 定义模块 Workflow 正文中可选执行条件的严格协议，供知识治理、资源包与执行准备共同解析。 |
 
 ## 架构类图
 
@@ -58,6 +59,35 @@ N_src_backend_core_workspace_model_ts ..> N_src_backend_core_workspace_model_ts_
 
 直接依赖：[../knowledge/snapshot.ts](../knowledge/snapshot.ts)、[../foundation/json.ts](../foundation/json.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../knowledge/types.ts](../knowledge/types.ts)。
 
+### workflow-contract.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_workflow_contract_ts["workflow-contract.ts"] {
+  <<module>>
+  +parseWorkflowContract()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_workflow_contract_ts["workflow-contract.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_workflow_contract_ts_WorkflowToolName["WorkflowToolName"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_workflow_contract_ts_WorkflowToolName : 声明
+class N_src_backend_core_workspace_workflow_contract_ts_WorkflowContract["WorkflowContract"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_workflow_contract_ts_WorkflowContract : 声明
+```
+
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/json.ts](../foundation/json.ts)。
+
 
 ## 子目录导航
 
@@ -70,6 +100,14 @@ N_src_backend_core_workspace_model_ts ..> N_src_backend_core_workspace_model_ts_
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### Workflow 的可选程序条件
+
+`workflow-contract.ts` 是不依赖知识实现的纯协议模块。`parseWorkflowContract(markdown)` 读取正文中最多一个顶层 `cbim-workflow` 围栏块；支持标准反引号或波浪线围栏、0–3 空格缩进、CRLF。普通代码块中的示例、引用块及缩进代码不激活条件。无声明返回 `undefined`，现有自然语言方法保持不变；已声明但重复、未闭合、附加标记、JSON 重复字段、未知版本或字段均抛出 `WORKFLOW_CONTRACT_INVALID`，不得降级成无约束。
+
+版本 1 至少声明一项：`beforeEffects:{requirePlan:true}` 或 `delivery:{requiredToolEvidence:[{id,toolName}]}`。证据要求为 1–16 项，ID 是 1–80 位字母、数字、下划线或连字符且不重复；条件块最多 64 KiB UTF-8。工具名限 `read/write/edit/grep/find/ls/bash`，不接知识写入、调度、任意表达式或模型提供的 path/hash/pass。
+
+约定与自然语言一起保存在所属模块原 `workflow.md`，没有独立运行存储；正文版本、知识指纹和业务模板均覆盖它。纯 Schema 只声明条件，不提供工具、不授予权限，也不证明工具结果符合专业目标或覆盖整个模块。执行侧负责准备时冻结、工具放行及交付时核验真实条件；`bash` 名称出现不改变其影响范围未知的事实。知识变化仍须核实，不能凭此条件替换旧运行的冻结基线。
 
 ### 派发所需的模块维护关系
 

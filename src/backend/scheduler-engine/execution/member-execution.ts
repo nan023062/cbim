@@ -1,6 +1,6 @@
 /**
  * 作用定位：让已派发任务在独立成员会话中执行，提交领取、启动、结果、中断及一次安全停泊/续执行事实。
- * 设计原因：全局准入及本地租约先同步领取，容量等待不创建 run 或 claim；启动意图落盘后模型工具才可执行。已释放实例、已关闭或安全等待的主会话不能执行业务，占用持续到终态事务完成。
+ * 设计原因：全局准入及本地租约先同步领取，容量等待不创建 run 或 claim；Workflow 必需工具按真实能力先核，候选结算重读 canonical 条件。已释放实例、已关闭或安全等待的周期不能执行，占用持续到终态事务完成。
  * 职责边界：本成员 Loop 不递归派发或继承批准；求助在关闭后单向交接。检查点须完整关闭及复核后释放占用；主调度预约一次原任务新轮，失败、停止和重启不复活旧实例。只读报告不触发续执行，候选及匹配哈希不等于验收。
  */
 import {randomUUID} from 'node:crypto';
@@ -34,6 +34,8 @@ import type {MemberCheckpointProof,MemberCheckpointRecord} from '../../core/task
 import {MemberResumeService} from './member-resume-service';
 import type {ResumeMemberInput,ResumeMemberReceipt} from '../../core/tasks/queued-member-resume';
 import {goalNeedsReplan} from '../../core/tasks/scope-goal';
+import {preparedWorkflowContracts} from '../../core/tasks/execution-context';
+import {validateMemberWorkflow} from './member-workflow';
 
 /** 装配主进程提供模型与磁盘能力，调度层不解密密钥或导入平台实现。 */
 export interface MemberExecutionPorts {
@@ -52,6 +54,8 @@ export interface MemberExecutionPorts {
   /** 仅新命令解析一次模型；公开参数落盘，凭据只由 create 闭包持有，不进入图或日志。 */
   prepare(options:MemberStartOptions):Promise<{
     model:ResolvedLlm['profile'];
+    /** 与本轮实际引擎注册参数一致的工具清单；仅能力预检，不能替代权限或批准。 */
+    availableTools?:readonly string[];
     create(run:DispatchRun,task:TaskNode,hooks:{onEvent(event:StoredEvent):void;onEngineReady(input:{taskId:string;runId:string;sessionFile?:string}):Promise<void>;requestApproval(call:ToolCall):Promise<ToolDecision>;requestQuestion(args:unknown,signal:AbortSignal):Promise<unknown>}):Promise<LoopRuntime>;
   }>;
   /** 读取指定 run 的真实日志，校验通道安全续接；不得用最新运行或内存猜测替代。 */
@@ -160,6 +164,12 @@ export class MemberExecutionManager {
         // 取得名额不代表后续 await 期间仍获准启动；停止不能等到 claim 后才生效。
         const prepared=await prepareDispatchExecutionContext(this.owner,task);assertCurrent();
         const engine=await this.ports.prepare(options);assertCurrent();
+        const workflows=preparedWorkflowContracts(prepared);
+        if(workflows.length){
+          if(!engine.availableTools)fail('WORKFLOW_CAPABILITIES_UNAVAILABLE','本次引擎未提供可信工具能力清单，不能执行带约定的 Workflow');
+          const missing=[...new Set(workflows.flatMap(binding=>binding.contract.delivery?.requiredToolEvidence.map(item=>item.toolName)??[]))].filter(name=>!engine.availableTools!.includes(name));
+          if(missing.length)fail('WORKFLOW_TOOL_UNAVAILABLE','当前权限或引擎未提供 Workflow 必需工具：'+missing.join('、'));
+        }
         if(member.configurationRevision!==prepared.knowledgeRevision)fail('DISPATCH_CONTEXT_CHANGED','成员配置版本已变化，请重新登记派发');
         const prerequisites=graph.edges.filter(edge=>edge.enabled&&edge.kind==='dependency'&&edge.toNodeId===task.nodeId).map(edge=>{
           const source=graph.tasks.find(t=>t.nodeId===edge.fromNodeId)!;
@@ -257,6 +267,7 @@ export class MemberExecutionManager {
       const run=this.currentRun(state,original),{graph,task,member,session}=memberTask(state,run.binding.rootSessionId,run.binding.taskId);
       if(summary&&(json(summary.memberBinding)!==json(run.binding)||summary.task.taskId!==task.taskId||summary.runId!==run.binding.runId))fail('MEMBER_RUN_MISMATCH','执行摘要身份不一致');
       let result=status==='completed'&&summary?memberCandidate(task,summary):undefined,help:MemberHelpRecord|undefined,checkpoint:MemberCheckpointRecord|undefined,checkpointProof:MemberCheckpointProof|undefined;
+      if(result&&preparedWorkflowContracts(run.prepared).length)try{const canonical=await this.ports.inspect(run);validateMemberWorkflow(task,run,canonical,this.owner.entry.path);result=memberCandidate(task,canonical)}catch(problem){result=undefined;error='Workflow 交付条件未通过可信运行核实：'+(problem instanceof Error?problem.message:String(problem))}
       if(!recovery&&status==='completed'&&summary?.events.some(event=>event.type==='task.checkpoint_requested')){
         result=undefined;
         try{

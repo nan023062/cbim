@@ -1,6 +1,6 @@
 /**
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
- * 设计原因：先持久化工具决策再放行；成员求助和检查点封住后续操作，文件采集则用短门闩绑定真实回执、进度和实时知识。一次原任务续执行重新核实冻结证明并清空旧证据，不将坏历史伪装成恢复。
+ * 设计原因：工具先纯分类，成员 Workflow 计划条件先于审批；批准后核计划版本，重叠副作用期间的读回执不作交付证据。求助和检查点封住后续操作，文件采集绑定真实回执和知识；续执行复核原证明，不将坏历史伪装成恢复。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -20,6 +20,10 @@ import {checkedMemberRunLaunch,type MemberRunLaunch} from './member-run';
 import {checkedRunInputSource,type RunInputSource} from './input-source';
 import {checkedConversationAgentBinding,type ConversationAgentBinding} from './conversation-binding';
 import type {AgentEngine,EngineEvent,RunSummary,StoredEvent,TaskSpec,ToolCall,ToolDecision} from './types';
+import type {RunToolDescriptor} from '../policy/tool-policy';
+import type {WorkflowContractBinding} from '../tasks/execution-context';
+import {workflowHasEffects} from '../tasks/workflow-evidence';
+import {fail} from '../foundation/errors';
 
 /** 运行装配端口；可靠启动确认与只读事件观察分开，业务状态不能靠观察回调提交。 */
 export interface RuntimeOptions {
@@ -31,6 +35,10 @@ export interface RuntimeOptions {
   conversationBinding?:ConversationAgentBinding;
   /** 成员专用的有界文件和实时知识复核端口；缺省不注册采集工具，不能仅靠角色名取得能力。 */
   artifacts?:ArtifactCapturePort;
+  /** 仅正式成员的冻结模块约定；没有约定的旧运行保持原策略，存在约定必须装配可信分类端口。 */
+  workflowContracts?:WorkflowContractBinding[];
+  /** 纯分类与参数解析，不询问批准或运行工具；同一个描述继续交给授权端，避免两套 effects 判断。 */
+  describeTool?(call:ToolCall):RunToolDescriptor;
   /** 仅已领取续执行注入；复核原日志、文件、知识和原生指纹，覆盖 Runtime 与 Pi 准备窗口，不接受公开路径。 */
   assertMemberResume?():Promise<void>;
   /** 原生加载后最后发送前核原日志/知识/业务文件；不重复要求已合法追加配置的 native 字节仍等于旧指纹。 */
@@ -39,8 +47,8 @@ export interface RuntimeOptions {
   acquireLease(task:TaskSpec):Promise<()=>void>;
   /** 每轮创建独立引擎，并以已确定的任务/运行身份装配工具；不接受模型指定身份。 */
   createEngine(context:{task:TaskSpec;runId:string}):AgentEngine;
-  /** 对当前调用返回可信授权；运行时先落盘决策再允许工具执行。 */
-  toolPolicy(call:ToolCall):Promise<ToolDecision>;
+  /** 复用此前纯分类结果授权或审批；没有约定的旧装配可缺 descriptor，不能在此重新解释已给分类。 */
+  toolPolicy(call:ToolCall,descriptor?:RunToolDescriptor):Promise<ToolDecision>;
   /** 引擎成功准备、模型生成前必须完成的可靠启动确认；失败中断本轮，不能由只读观察者代替。 */
   onEngineReady?(input:{taskId:string;runId:string;sessionFile?:string}):Promise<void>;
   /** 接收已落盘事件；异常被隔离，不能借此回调阻断运行或替代可靠提交。 */
@@ -104,6 +112,8 @@ export class LoopRuntime {
   }
   private async startInternal(task:TaskSpec,message:string,resume?:{runId:string;reconciledToolIds?:string[]},member?:MemberRunLaunch,source?:RunInputSource,control?:RunStartControl,fresh?:FreshMainStartControl,memberResume?:{checkpointId:string;runId:string;logHash:string}):Promise<{runId:string;done:Promise<RunSummary>}>{
     task=structuredClone(task);
+    const workflows=structuredClone(this.options.workflowContracts??[]);
+    if(workflows.length&&(!member||!this.options.describeTool))fail('WORKFLOW_GATE_UNAVAILABLE','带执行约定的 Workflow 必须通过正式成员及可信工具分类门禁');
     const conversationBinding=this.options.conversationBinding===undefined?undefined:checkedConversationAgentBinding(this.options.conversationBinding,task);
     if(fresh&&(task.mode!=='chat'||task.agentId!=='cbim:main'||!conversationBinding||resume||member||source))throw Error('新上下文仅限已经登记的主对话实例');
     if(source){source=checkedRunInputSource(source);if(task.mode!=='chat'||!resume||member)throw Error('可信接续只能用于已有主对话');}
@@ -163,11 +173,14 @@ export class LoopRuntime {
       const pendingTools=new Set<string>();
       // 包含尚在等待策略/人工审批的调用；只看 tool.allowed 会遗漏尚未获得授权的并发写入。
       const activeCalls=new Set<string>();
-      const calls=new Map<string,{call:ToolCall;decision:ToolDecision;generation:number}>();
+      const calls=new Map<string,{call:ToolCall;decision:ToolDecision;generation:number;overlappedEffect?:boolean;effect?:boolean}>();
+      // 仅声明 Workflow 的运行启用：重叠读取仍记录真实回执，但不能证明副作用结束后的产物。
+      const effectsInFlight=new Set<string>();
+      const assertDeliveryReady=()=>{if(effectsInFlight.size)fail('WORKFLOW_EFFECT_PENDING','仍有未结束的副作用，不能准备交付；结束后须重新读取并验证')};
       const identity={workspaceId:task.workspaceId,taskId:task.taskId,runId};
       let artifactCapture:RunArtifactCapture|undefined;
       let checkpointTools:RunMemberCheckpoint|undefined;
-      const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{artifacts:()=>artifactCapture?.refs()??[]});
+      const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{artifacts:()=>artifactCapture?.refs()??[],...(workflows.length?{workflow:{bindings:workflows,task:{goal:task.goal,acceptance:task.acceptance},identity},assertDeliveryReady}:{})});
       const emit=async(event:EngineEvent,trustedArtifact=false)=>{
         if((event.type==='artifact.baseline_captured'||event.type==='task.checkpoint_requested')&&!trustedArtifact)throw Error('产物和检查点只能由本轮可信端口保存');
         if(event.type==='tool.finished'){
@@ -183,9 +196,12 @@ export class LoopRuntime {
         artifactCapture?.observed(saved);
         checkpointTools?.observed(saved);
         if(event.type==='session.bound'&&typeof event.data.sessionFile==='string')boundSessionFile=event.data.sessionFile;
-        if(event.type==='tool.finished'&&event.data.receipt)taskTools.record(event.data.receipt as import('../tools/types').ToolReceipt,calls.get(String(event.data.id))!.generation);
+        if(event.type==='tool.finished'&&event.data.receipt){
+          const known=calls.get(String(event.data.id))!;
+          if(!workflows.length||known.effect||!known.overlappedEffect&&!effectsInFlight.size)taskTools.record(event.data.receipt as import('../tools/types').ToolReceipt,known.generation);
+        }
         if(event.type==='tool.allowed')pendingTools.add(String(event.data.id));
-        if(event.type==='tool.finished'||event.type==='tool.denied'){pendingTools.delete(String(event.data.id));activeCalls.delete(String(event.data.id))}
+        if(event.type==='tool.finished'||event.type==='tool.denied'){pendingTools.delete(String(event.data.id));activeCalls.delete(String(event.data.id));effectsInFlight.delete(String(event.data.id))}
         try{void Promise.resolve(this.options.onEvent?.(saved)).catch(()=>{})}catch{/* observers cannot change durable execution */}
       };
       let stopping=false;
@@ -218,7 +234,7 @@ export class LoopRuntime {
         catch(error){await emit({type:'engine.status',data:{metric:'insertion',state:'failed',message,label:'插入未确认，请核实后继续'}});throw error}
       });
       // 保存输入及可信来源；显式补充仍是用户消息，成员结果不能在界面或原生上下文中冒充用户授权。
-      await emit({type:'run.started',data:{task,message,engine:engine.kind,resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[],...(memberResume?{memberResume:{checkpointId:memberResume.checkpointId,runId:memberResume.runId}}:{}),...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),...(member?{memberBinding:member.binding,nativeSessionId:member.session.nativeSessionId}:{}),...(fresh?{freshMain:{nativeSessionId,excludedRunIds}}:{})}});
+      await emit({type:'run.started',data:{task,message,engine:engine.kind,resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[],...(workflows.length?{workflowContracts:workflows}:{}),...(memberResume?{memberResume:{checkpointId:memberResume.checkpointId,runId:memberResume.runId}}:{}),...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),...(member?{memberBinding:member.binding,nativeSessionId:member.session.nativeSessionId}:{}),...(fresh?{freshMain:{nativeSessionId,excludedRunIds}}:{})}});
       await taskTools.invalidate('新一轮执行需要重新核实产物与证据');
       const stop=async()=>{
         if(stopping)return;stopping=true;artifactCapture?.stop();checkpointTools?.stop();
@@ -243,15 +259,32 @@ export class LoopRuntime {
             const helpReason=artifactReason??memberHelpTools?.guard(call.name,call.id,call.input,[...activeCalls])??(!memberHelpTools&&call.name==='cbim_task_help'?'仅正式执行成员可提交求助':undefined);
             // 门闩明确拒绝的调用只记录拒绝事实，绝无执行机会，不能反过来阻塞已经获准的求助。
             if(!helpReason&&!stopping)activeCalls.add(call.id);
-            calls.set(call.id,{call,decision:{allow:false},generation:taskTools.generation});
+            calls.set(call.id,{call,decision:{allow:false},generation:taskTools.generation,overlappedEffect:workflows.length>0&&effectsInFlight.size>0});
             await emit({type:'tool.proposed',data:{...call}});
-            let decision=stopping?{allow:false,reason:'任务正在停止'}:helpReason?{allow:false,reason:helpReason}:await this.options.toolPolicy(structuredClone(call));
+            let decision:ToolDecision,descriptor:RunToolDescriptor|undefined,planVersion:number|undefined;
+            try{
+              if(stopping)decision={allow:false,reason:'任务正在停止'};
+              else if(helpReason)decision={allow:false,reason:helpReason};
+              else{
+                if(workflows.length&&call.name==='cbim_delivery_prepare')assertDeliveryReady();
+                descriptor=this.options.describeTool?.(structuredClone(call));
+                if(descriptor&&workflowHasEffects(descriptor.effects))planVersion=taskTools.beforeEffects();
+                decision=descriptor?await this.options.toolPolicy(structuredClone(call),structuredClone(descriptor)):await this.options.toolPolicy(structuredClone(call));
+              }
+            }catch(error){const code=(error as {code?:string})?.code;decision={allow:false,reason:(code?.startsWith('WORKFLOW_')?code+': ':'')+(error instanceof Error?error.message:String(error)),...(descriptor?{effects:descriptor.effects}:{})}}
             if(stopping)decision={...decision,allow:false,reason:'任务正在停止'};
-            if(decision.allow&&(decision.effects?.some(effect=>['business-write','knowledge-write','command'].includes(effect))||['write','edit','bash'].includes(call.name)))await taskTools.invalidate('即将执行可能改变产物的操作，需要重新验证');
-            calls.set(call.id,{call,decision,generation:taskTools.generation});
+            // Workflow 首片仅约束业务副作用；知识提交仍沿用原来的证据失效规则，不能因分类拆分保留旧证据。
+            if(decision.allow&&((descriptor?.effects??decision.effects)?.some(effect=>['business-write','knowledge-write','command'].includes(effect))||(!descriptor&&['write','edit','bash'].includes(call.name)))){
+              if(workflows.length){
+                effectsInFlight.add(call.id);calls.get(call.id)!.effect=true;
+                for(const [id,known] of calls)if(id!==call.id&&activeCalls.has(id)&&!known.effect)known.overlappedEffect=true;
+              }
+              try{await taskTools.invalidate('即将执行可能改变产物的操作，需要重新验证',planVersion)}catch(error){const code=(error as {code?:string})?.code;decision={...decision,allow:false,reason:(code?.startsWith('WORKFLOW_')?code+': ':'')+(error instanceof Error?error.message:String(error))}}
+            }
+            calls.set(call.id,{...calls.get(call.id)!,call,decision,generation:taskTools.generation});
             await emit({type:decision.allow?'tool.allowed':'tool.denied',data:{...call,...decision,...(!decision.allow?{receipt:toolReceipt(identity,call,decision,'denied')}: {})}});
             if(stopping&&decision.allow){
-              decision={...decision,allow:false,reason:'任务正在停止'};calls.set(call.id,{call,decision,generation:taskTools.generation});
+              decision={...decision,allow:false,reason:'任务正在停止'};calls.set(call.id,{...calls.get(call.id)!,call,decision,generation:taskTools.generation});
               await emit({type:'tool.denied',data:{...call,...decision,receipt:toolReceipt(identity,call,decision,'denied')}});
             }
             if(!decision.allow)memberHelpTools?.denied(call.id);

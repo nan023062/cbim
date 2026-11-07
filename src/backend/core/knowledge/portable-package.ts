@@ -1,13 +1,14 @@
 /**
  * 作用定位：把工作区静态团队能力或完整业务架构转为可复用资源包，并纯计算目标知识变更。
  * 设计原因：包只携带定义与闭合正文引用，人员、维护授权、源码定位和连接器绑定必须在目标项目重新建立；运行实例与主会话任务图不属于可复用架构。
- * 职责边界：不读取磁盘、不写知识、不授予权限。完整目标 Schema/目录与引用规则仍由 KnowledgeWorkspace.preview/commit 统一验证。
+ * 职责边界：不读取磁盘、不写知识、不授予权限。Workflow 条件随原正文保留并独立严格解析；完整目标 Schema/目录与引用规则仍由 KnowledgeWorkspace.preview/commit 统一验证。
  */
 import path from 'node:path';
 import {z} from 'zod';
 import {hash,json} from '../foundation/serialization';
 import {parseJson} from '../foundation/json';
 import {fail} from '../foundation/errors';
+import {parseWorkflowContract} from '../workspace/workflow-contract';
 import {INDEXES} from './knowledge';
 import type {Snapshot,Change} from './types';
 
@@ -66,6 +67,7 @@ export function parseWorkspacePackage(content:string,kind?:string):WorkspacePack
       for(const item of data.workflows){const target=localReference(owner,item.reference);check(target&&files.has(target),'模块 Workflow 引用不完整');entries.add(target)}
     }else check(file.path.endsWith('.md'),'包只允许静态正文和已知定义，不允许任意 JSON 配置或可执行文件');
     if(file.path.endsWith('.md')){
+      if(file.path.endsWith('/workflow.md'))try{parseWorkflowContract(file.text)}catch{fail('RESOURCE_PACKAGE','资源包的 Workflow 执行约定无效')}
       check(!/(?:sk-[a-zA-Z0-9_-]{16,}|gh[pousr]_[a-zA-Z0-9]{20,}|-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----)/.test(file.text),'正文疑似包含真实凭据，不能发布到资源仓库');
       check(!/\.cbim\/(?:team|workspace|connectors)\/[a-z0-9_-]/i.test(file.text),'正文仍绑定源工程对象，请改为可移植的相对引用再发布');
       links(file.text,link=>{const target=localReference(owner,link);check(!target||target.startsWith(prefix+'/')&&files.has(target),'正文引用未包含在此静态资源包中');return link});

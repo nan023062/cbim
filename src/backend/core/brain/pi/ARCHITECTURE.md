@@ -120,7 +120,7 @@ class N_src_backend_core_brain_pi_engine_ts_external_AgentEngine["AgentEngine (�
 N_src_backend_core_brain_pi_engine_ts_external_AgentEngine <|.. N_src_backend_core_brain_pi_engine_ts_PiEngine
 ```
 
-直接依赖：[../types.ts](../types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../llm/ports.ts](../llm/ports.ts)、[../model-errors.ts](../model-errors.ts)、[runtime-config.ts](runtime-config.ts)。
+直接依赖：[../types.ts](../types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../llm/ports.ts](../llm/ports.ts)、[../model-errors.ts](../model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../tools/native-tools.ts](../../tools/native-tools.ts)。
 
 ### rpc.ts
 
@@ -257,3 +257,8 @@ PiEngine ..> PiRpc : 启动和停止子进程
 ### 成员求助工具接入
 
 Pi 的工具桥合并知识、执行进度及当前成员专属求助工具；后者仅在 `EngineContext.memberHelpTools` 存在时注册。调用透传真实 `toolCallId`，复用 `/gate` 与 `/call` 一次性授权，不创建第二套权限通道。成员指引要求先核实已结束的操作，求助暂存后立即结束本轮；不允许继续调用工具或把求助当成成功交付。主调度仍通过可信 custom 回传接收求助数据，正文不升格为用户授权。
+### 原生工具能力与执行约定
+
+Pi 的 `--tools` 参数使用 `core/tools/native-tools.ts` 的同一注册表。只读模式仅提供 read/grep/find/ls，ask/execute 才提供 write/edit/bash；可提供不等于某次调用已批准。成员启动前的 Workflow 能力检查读取相同清单，不能从模型提示词或声明推断能力。
+
+Workflow 计划与交付门禁位于共享 Runtime 和任务工具，Pi 仍经既有 gate/call 协议执行，不额外绕过批准或扩大主调度原生工具范围。bash 的成功工具事实不等于命令语义已验证，其影响范围仍为 unknown。

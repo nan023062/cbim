@@ -8,6 +8,7 @@ import {hash} from '../foundation/serialization';
 import {fail} from '../foundation/errors';
 import type {AgentConfigurationSnapshot} from '../team/agent-types';
 import type {ModuleBinding} from './graph-types';
+import {parseWorkflowContract,workflowContractSchema,type WorkflowContract} from '../workspace/workflow-contract';
 
 /** 模块绑定与正文保持一一对应；通用流程也保存实际采用的正文，不借用其他模块流程。 */
 export interface PreparedDispatchModule {
@@ -15,7 +16,13 @@ export interface PreparedDispatchModule {
   definition:Record<string,unknown>;
   overview:string;
   workflowText:string;
+  /** 同一正文的可选程序约定；无声明不补默认规则，保存后必须与正文解析完全一致。 */
+  workflowContract?:WorkflowContract;
 }
+/** 每份约定保留自己的模块与 Workflow 身份；合并检查不意味着证据具有逐模块覆盖能力。 */
+export interface WorkflowContractBinding {moduleId:string;workflowId:string;workflowVersion:string;contract:WorkflowContract}
+/** 从已经冻结的执行知识提取全部有效约定，不读取最新知识或继承父模块。 */
+export function preparedWorkflowContracts(prepared:PreparedDispatchKnowledge):WorkflowContractBinding[]{return prepared.modules.flatMap(module=>module.workflowContract?[{moduleId:module.binding.moduleId,workflowId:module.binding.workflow.id,workflowVersion:module.binding.workflow.version,contract:structuredClone(module.workflowContract)}]:[])}
 /** 后端内部的完整执行知识；不得整体放进公开任务图、全局监控或模型配置返回值。 */
 export interface PreparedDispatchKnowledge {
   version:1;
@@ -42,7 +49,7 @@ const shape=z.object({version:z.literal(1),workspaceId:id,knowledgeRevision:id,
   agent:z.object({workspaceId:id,teamId:id,agentId:id,knowledgeRevision:id,name:text,source:z.enum(['builtin','workspace']),principles:text,
     effectiveSkills:z.array(z.object({skillId:id,ownerId:id,inherited:z.boolean(),content:text}).strict()),
   }).strict(),agentDefinition:definition,
-  modules:z.array(z.object({binding:moduleBinding,definition,overview:text,workflowText:text}).strict()).min(1).max(100),
+  modules:z.array(z.object({binding:moduleBinding,definition,overview:text,workflowText:text,workflowContract:workflowContractSchema.optional()}).strict()).min(1).max(100),
   standards:z.array(z.object({id,version:id,text}).strict()).min(1),fingerprint:z.string().regex(/^[a-f0-9]{64}$/),
 }).strict();
 
@@ -74,6 +81,7 @@ export function validatePreparedDispatchKnowledge(value:unknown):asserts value i
   const standardIds=['business-execution','common-rules'];
   invalid(prepared.standards.length!==standardIds.length||!standardIds.every(id=>prepared.standards.some(standard=>standard.id===id)),'内置执行规范清单不完整或不受支持');
   for(const module of prepared.modules){
+    invalid(JSON.stringify(ordered(parseWorkflowContract(module.workflowText)))!==JSON.stringify(ordered(module.workflowContract)),'冻结 Workflow 执行约定与正文不一致');
     invalid(module.binding.knowledgeRevision!==prepared.knowledgeRevision||module.definition.id!==module.binding.moduleId,'模块定义与执行知识基线不一致');
     invalid(new Set(module.binding.maintainerPersonIds).size!==module.binding.maintainerPersonIds.length,'模块维护人不能重复');
     if(module.binding.workflow.kind==='module')invalid(hash(module.workflowText)!==module.binding.workflow.version,'模块 Workflow 正文与冻结版本不一致');

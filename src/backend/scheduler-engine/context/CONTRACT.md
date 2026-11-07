@@ -18,7 +18,7 @@ interface PreparedDispatchKnowledge {
   agent: AgentConfigurationSnapshot;
   agentDefinition: Record<string, unknown>;
   modules: { binding: ModuleBinding; definition: Record<string, unknown>;
-             overview: string; workflowText: string }[];
+             overview: string; workflowText: string; workflowContract?: WorkflowContract }[];
   standards: { id: string; version: string; text: string }[];
   fingerprint: string;
 }
@@ -26,7 +26,11 @@ interface PreparedDispatchKnowledge {
 
 所有正文从一个知识快照读取，任务中已有的维护关系、Workflow 与版本必须完全匹配；缺失正文不静默降级。`default-executor.ts` 提供静态 `defaultExecutorDefinition`、`defaultExecutorInstructions` 和 `defaultExecutorConfiguration`，后者继承 Team 根 Skill，缺正文拒绝执行；不在 `.cbim/` 创建默认角色文件。自定义角色保存实际 agent.json，角色原则及有效 Skill 正文完整保留。主会话登记使用 `mainAgentInstructions`，与独立执行角色明确分离。通用 Workflow 冻结 `business-execution` 正文，同时冻结 `common-rules`；软件内置规范不属于工作区 revision，因此启动和恢复都另外复核其内容版本，并在规范读取前后核对工作区版本。
 
-`validatePreparedDispatchKnowledge` 校验结构、引用一致性与正文哈希；`dispatchKnowledgeFingerprint` 对字段排序后的 JSON 计算 SHA-256，保留数组顺序。指纹不代表来源可信或获得授权。版本变化返回 `KNOWLEDGE_CHANGED`，任务绑定变化返回 `DISPATCH_CONTEXT_CHANGED`，存储快照损坏返回 `EXECUTION_CONTEXT_INVALID`；调用者必须重新核实，不能自动覆盖旧正文。文本上下文仅进入后端运行存储与大脑，公开图只获得 ModuleBinding 和角色引用。
+`validatePreparedDispatchKnowledge` 校验结构、引用一致性与正文哈希；`dispatchKnowledgeFingerprint` 对字段排序后的 JSON 计算 SHA-256，保留数组顺序。每份模块 Workflow 的可选 `cbim-workflow` 约定从本模块实际正文解析并随正文冻结；保存字段必须与重新解析的内容相同，删除约定后重算指纹也不能通过。`preparedWorkflowContracts` 保留所有模块的独立出处和版本，不继承父模块、不用最新知识替代已冻结要求。无声明保持原自然语言流程。
+
+指纹不代表来源可信或获得授权。版本变化返回 `KNOWLEDGE_CHANGED`，任务绑定变化返回 `DISPATCH_CONTEXT_CHANGED`，存储快照损坏返回 `EXECUTION_CONTEXT_INVALID`；调用者必须重新核实，不能自动覆盖旧正文。文本上下文仅进入后端运行存储与大脑，公开图只获得 ModuleBinding 和角色引用。
+
+旧 `prepareTeamTask` 入口遇到程序约定以 `WORKFLOW_MEMBER_REQUIRED` 拒绝，必须通过主调度派发正式成员。`assertLegacyWorkflowCompatible` 在实际运行租约前同样检查旧任务的冻结正文，防止续聊跳过准备入口；不从新知识给历史无声明任务补造条件。
 
 默认执行角色的定义与原则随应用发布，也不属于项目 revision。恢复时另行比较当前静态定义与已冻结原则，变化返回 `KNOWLEDGE_CHANGED`；旧主角色执行快照返回 `AGENT_ROLE_INVALID`，不自动改绑为默认执行者。
 

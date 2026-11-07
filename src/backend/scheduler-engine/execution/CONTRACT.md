@@ -445,3 +445,10 @@ AutoCollaboration 只在成功撤销回执后，从当前派发批次的待启�
 达到阈值返回 `SCOPE_BUDGET_EXCEEDED`，所需用量无法核实返回 `SCOPE_BUDGET_UNVERIFIABLE`。拒绝必须先在独立 scope mutation 保存 `budget.blocked`，事务外再抛错；不新增运行、不领取信封、不签发启动回执。等待补充被拒绝时，原 wait、goal/input 版本、continuations 和运行清单保持原样；它不是 `goal.blocked`，不能破坏安全检查点。拒绝命令在内部日志中可幂等读取，但公开 continuation/recovery/replan receipt 仍只返回真实已受理意图。
 
 自动成员或主回注遇到预算拒绝时，原批次暂停用户队列并关闭为 failed，不再调用主模型解释拒绝。完成复核、正常终态、消息确认与已满足条件的安全 park 不受此门禁限制；本轮最终超过阈值仍可以真实完成或等待用户。此边界只限制下一次运行；单轮 Pi 内多个请求、重试、摘要仍可能超额，不宣称硬 Token 或账单上限。
+### 冻结 Workflow 的启动与交付条件
+
+正式成员在创建 run、领取信封或启动模型前，使用本轮引擎实际可提供的工具清单核对全部模块的 requiredToolEvidence。带约定但无可信能力清单返回 `WORKFLOW_CAPABILITIES_UNAVAILABLE`，缺工具返回 `WORKFLOW_TOOL_UNAVAILABLE`；释放预检占用，不创建假运行或领取记录。ask 能力不代表实际调用已经批准。
+
+`loop-engine` 将一次纯分类的工具描述交给 Runtime 计划条件和原授权策略；知识管理与主调度业务边界不变。正式成员的全部冻结约定进入运行头和任务工具，不接受模型传入条件通过标志。旧单任务及其续聊声明约定时明确拒绝，未声明的旧流程兼容。
+
+`member-workflow.ts` 在候选结算和 `ScopeGoalService` 审阅/完成复核共用：重读完整 canonical，核原 TaskSpec、绑定、实际原生通道、末尾进度和正常终态，按各模块约定重算当前计划、成功回执及交付 proof。日志头缺约定、伪造回执/分类、错误模块/目标、截断或原生绑定缺失均不能借内存候选通过。结算失败保留真实 run 终态而任务 blocked；不会将模型 completed 等同交付或人工验收。

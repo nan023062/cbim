@@ -1,6 +1,6 @@
 /**
  * 作用定位：Core 对象治理：规划 Agent/Module/Skill/Workflow 变更，按计划提交受控事务。
- * 设计原因：领域语义归 Core，事务通过 KnowledgeWorkspace 契约执行，维护路径、清单及父子引用。
+ * 设计原因：领域语义归 Core，事务通过 KnowledgeWorkspace 契约执行，维护路径、清单及父子引用；Workflow 显式条件在预览前严格解析，提交仍重新走完整知识校验。
  * 桌面显式确认可将真人花名册和模块维护关系合入同一预览；内部工具仍只接受原对象操作，不借此获得用户确认或写授权。
  */
 import path from 'node:path';
@@ -13,6 +13,7 @@ import {INDEXES} from './knowledge';
 import {parseJson} from '../foundation/json';
 import type {ChangeRequest,Preview} from './types';
 import type {ModuleMaintenanceDefinition} from '../workspace/maintenance';
+import {parseWorkflowContract} from '../workspace/workflow-contract';
 
 const fields={name:z.string().min(1).optional(),summary:z.string().optional(),authors:z.array(z.string()).optional(),capabilities:z.array(z.string()).optional(),limitations:z.array(z.string()).optional(),connectors:z.array(z.string()).optional(),sources:z.array(z.object({location:z.string(),scope:z.string()}).strict()).optional(),purpose:z.string().optional()};
 export const objectOperation=z.object({kind:z.enum(['agent','module','skill','workflow']),action:z.enum(['create','update','delete']),id:z.string().optional(),parentId:z.string().optional(),slug:z.string().optional(),data:z.object(fields).strict().optional(),body:z.string().max(2*1024*1024).optional(),cascade:z.boolean().optional()}).strict();
@@ -50,6 +51,7 @@ export class ObjectCrud {
     }
     const group=(id:string)=>id==='.cbim/team'||s.validation!.indexes['.cbim/team/registry.json']&&parseJson(s.validation!.indexes['.cbim/team/registry.json']).groups.some((g:any)=>g.id===id);
     for(const op of operations){
+      if(op.kind==='workflow'&&op.action!=='delete'&&op.body!==undefined)parseWorkflowContract(op.body);
       let id=op.id||'',owner='',definitionPath='';const data=op.data||{};
       const allowed=op.kind==='agent'?['name','summary','authors','capabilities','limitations','connectors']:op.kind==='module'?['summary','authors','sources','connectors']:op.kind==='skill'?['name','purpose']:['name'];
       for(const key of Object.keys(data))if(!allowed.includes(key))fail('FIELD',`${op.kind} 不支持修改字段 ${key}；目录与清单由 CBIM 维护`);

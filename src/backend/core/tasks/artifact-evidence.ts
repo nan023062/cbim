@@ -23,8 +23,8 @@ const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(o
 function valid(value:unknown,message:string):asserts value{if(!value)fail('ARTIFACT_EVIDENCE_INVALID',message)}
 function bound(events:readonly ArtifactEvidenceEvent[],binding:Binding){let previous=0;for(const event of events){valid(Number.isSafeInteger(event.seq)&&event.seq>previous&&event.workspaceId===binding.workspaceId&&event.taskId===binding.taskId&&event.runId===binding.runId&&event.data&&typeof event.data==='object'&&!Array.isArray(event.data),'采集事件顺序或运行身份不一致');previous=event.seq;if(event.type==='run.started'){const task=event.data.task as {workspaceId?:unknown;taskId?:unknown;agentId?:unknown;mode?:unknown}|undefined;valid(equal(event.data.memberBinding,binding)&&!event.data.conversationBinding&&task?.workspaceId===binding.workspaceId&&task.taskId===binding.taskId&&task.agentId===binding.agentId&&task.mode!=='chat','采集日志头不属于本次成员运行')}}}
 
-/** 仅核实实际成功且唯一的 proposed→allowed→finished；Pi 的 started 不作为授权前提。 */
-export function artifactSucceededCall(events:readonly ArtifactEvidenceEvent[],binding:Binding,id:string){
+/** 采集与 Workflow 共用唯一 proposed→allowed→finished 核验，只需工作区/任务/运行身份；Pi 的 started 不作为授权前提。 */
+export function artifactSucceededCall(events:readonly ArtifactEvidenceEvent[],binding:Pick<Binding,'workspaceId'|'taskId'|'runId'>,id:string){
   const calls=events.filter(event=>['tool.proposed','tool.allowed','tool.denied','tool.finished'].includes(event.type)&&event.data.id===id),proposed=calls.filter(event=>event.type==='tool.proposed'),allowed=calls.filter(event=>event.type==='tool.allowed'),finished=calls.filter(event=>event.type==='tool.finished');
   valid(proposed.length===1&&allowed.length===1&&finished.length===1&&!calls.some(event=>event.type==='tool.denied'),'来源工具没有唯一完整的成功授权链');
   const p=proposed[0],a=allowed[0],f=finished[0],parsed=receipt.safeParse(f.data.receipt);valid(parsed.success,'来源工具回执结构无效');const r=parsed.data;

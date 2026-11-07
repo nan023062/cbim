@@ -1,6 +1,6 @@
 /**
  * 作用定位：Core 知识规则：校验领域结构、人员与显式模块维护关系，并派生注册索引。
- * 设计原因：调度、桌面和外部适配共用规则；作者不自动升级为维护人，结构校验也不签发执行或架构批准。
+ * 设计原因：调度、桌面和外部适配共用规则；模块 Workflow 的显式程序条件不能绕过完整事务校验。作者不自动升级为维护人，结构校验也不签发执行或架构批准。
  */
 import fs from 'node:fs/promises';
 import {ConnectorRegistry} from '../connectors/registry';
@@ -9,6 +9,7 @@ import Ajv2020 from 'ajv/dist/2020';
 import ignore from 'ignore';
 import {hash,json} from '../foundation/serialization';
 import {exists} from '../foundation/files';
+import {parseWorkflowContract} from '../workspace/workflow-contract';
 import type {KnowledgeFile,Validation,Issue,ModuleNode} from './types';
 import {parseJson} from '../foundation/json';
 export {parseJson} from '../foundation/json';
@@ -34,6 +35,7 @@ export class Rules {
     const add=(p:string,code:string,message:string,severity:'error'|'warning'='error')=>issues.push({path:p,code,message,severity});
     const data=(p:string)=>parsed.get(p);
     for(const file of files)if(file.path.endsWith('.json'))try{parsed.set(file.path,parseJson(file.text))}catch(e:any){add(file.path,'json',e.message)}
+    for(const file of files)if(file.path.startsWith('.cbim/workspace/')&&file.path.endsWith('/workflow.md'))try{parseWorkflowContract(file.text)}catch{add(file.path,'workflow_contract','Workflow 执行约定无效：请核对唯一的 cbim-workflow 块及版本、条件、工具和证据 ID')}
     const schema=(p:string,key:string)=>{const value=data(p);if(value===undefined){add(p,'missing','缺少有效知识定义');return false}const validator=this.validators.get(key)!;if(!validator(value)){for(const error of validator.errors||[])add(p,'schema',`${error.instancePath} ${error.message}`);return false}return true};
     const ref=(owner:string,reference:string)=>{const target=pp.normalize(pp.join(owner,reference.split('#')[0]));if(!target.startsWith('.cbim/')||!texts.has(target))add(owner,'reference',`引用不存在或越界：${reference}`);return target};
     const summary=(p:string,s:string)=>{const length=Array.from(s.replace(/\s/g,'')).length;if(s!==s.trim()||/[\r\n]/.test(s)||length<100||length>250)add(p,'summary','摘要须为 100–250 个非空白字符的单行文本')};

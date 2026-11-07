@@ -10,6 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [native-tools.ts](native-tools.ts) | 定义当前引擎真实装配的原生工具及可信副作用分类。 |
 | [questions.ts](questions.ts) | 结构化用户问题的 Schema 和待答快照。 |
 | [receipts.ts](receipts.ts) | 把已核实的工具调用、授权和终态整理为可追溯回执。 |
 | [registry.ts](registry.ts) | 内部工具定义、版本和副作用声明、名称查找及参数 Schema 转换。 |
@@ -17,6 +18,19 @@
 | [types.ts](types.ts) | 引擎无关的工具调用、副作用、策略决策及运行回执契约。 |
 
 ## 架构类图
+
+### native-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tools_native_tools_ts["native-tools.ts"] {
+  <<module>>
+  +nativeToolDescriptor()
+  +nativeToolNames()
+}
+```
+
+直接依赖：[../policy/tool-policy.ts](../policy/tool-policy.ts)。
 
 ### questions.ts
 
@@ -228,3 +242,8 @@ PiBridge ..> ResultsModule : 进入会话前校验
 ```
 
 历史会话修复属于显式维护，不在模型调用或结果校验中静默修改旧记录。
+### 原生工具的单一可信分类
+
+`native-tools.ts` 保存当前引擎实际支持的原生工具描述，供 Pi 注册、正式成员能力预检、授权分类和 Workflow canonical 评价共用。`nativeToolDescriptor` 返回独立描述，未知名称及对象继承属性不属于注册工具；`nativeToolNames(false)` 只包含只读工具。
+
+表中 read/grep/find/ls 属于 read，write/edit 属于 business-write，bash 属于 command。该清单不发放权限、不执行工具、不决定路径是否可访问；路径守卫、ask 审批与工作区身份仍由策略执行。任务评价只能核对实际成功调用，不能凭名称声明业务验证或完整文件覆盖。

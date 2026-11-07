@@ -1,6 +1,6 @@
 /**
  * 作用定位：在派发事务中保存本轮目标计划与结构化审阅，并为目标门禁、依赖修订和本机人工决定核验真实候选、角色及模块基线。
- * 设计原因：模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用；检查点和待领续请求仍属于未完任务，用户补充使旧计划过期而不丢 human 项。截断日志前缀不可成为完成或等待证据。
+ * 设计原因：模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用；成员 Workflow 条件沿冻结知识从 canonical 重算。检查点仍是未完任务，截断前缀或模型生成的程序 proof 不能成为完成依据。
  * 职责边界：人工项仅引用当前实际消费的接受；审阅和完成均复核原业务主体、精确候选与选定字节，负面意见只能明确安排新任务返工。不关闭周期或签署，外部文件核实不构成原子快照。
  */
 import {z} from 'zod';
@@ -22,6 +22,7 @@ import {memberPublicTask} from './member-events';
 import {consumedHumanDecision,assertHumanSubject,validateHumanAcceptances,type HumanDecisionPorts} from './human-decision-evidence';
 import type {HumanDecisionRecord} from '../../core/tasks/human-decisions';
 import {currentHumanContinuation} from '../../core/tasks/human-continuation-rules';
+import {validateMemberWorkflow} from './member-workflow';
 
 /** 端口只按可信已登记身份读取 canonical 日志；不能接受模型提供路径或摘要。 */
 export interface ScopeGoalPorts {
@@ -129,6 +130,7 @@ export class ScopeGoalService {
     const progress=summary.taskProgress;
     check(progress?.state==='awaiting_review'&&progress.delivery&&progress.goal===task.goal&&sameGoalValue(progress.acceptance,task.acceptance.map(item=>item.text))&&progress.delivery.summary===result.summary&&sameGoalValue(progress.delivery.limitations,result.limitations)&&progress.steps.length&&progress.steps.every(step=>step.state==='reported_done'&&step.evidence.length)&&sameSet([...new Set(progress.steps.flatMap(step=>step.evidence))],result.evidenceRefs),'GOAL_EVIDENCE_INVALID','候选内容与运行的真实交付记录不一致');
     for(const id of result.evidenceRefs)this.receipt(summary,id);
+    try{validateMemberWorkflow(task,run,summary,this.owner.entry.path)}catch(error){fail('GOAL_WORKFLOW_UNMET',error instanceof Error?error.message:'成员 Workflow 程序条件无法核实')}
     return summary;
   }
   /** 调度修订复用交付证据规则，并要求 canonical 头、连续事件及实际终态完整；不把候选视为验收。 */

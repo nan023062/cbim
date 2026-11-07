@@ -1,5 +1,5 @@
 /**
- * 作用定位：为已派发成员任务冻结完整执行知识，并在实际启动、恢复或未启动依赖替换前复核基线。
+ * 作用定位：为已派发成员任务冻结完整执行知识和各模块可选 Workflow 程序约定，并在启动、恢复或未启动依赖替换前复核基线。
  * 设计原因：任务图里的引用不足以恢复知识和执行职责；从同一快照装配自主执行所需内容，正式业务任务均限制为执行者，主 Agent 的受控知识治理不改变这一边界，权限和模型配置仍由可信入口独立处理。
  * 职责边界：只读知识与应用内置规范，不运行成员、不写任务图；维护关系和指引正文都不能扩大工具权限。
  */
@@ -14,6 +14,7 @@ import {dispatchKnowledgeFingerprint,validatePreparedDispatchKnowledge,type Prep
 import {resolveDispatchAgent,resolveDispatchModules} from './dispatch-context';
 import {defaultExecutorId,defaultExecutorDefinition,defaultExecutorInstructions} from './default-executor';
 import {mainAgentId} from '../conversation/main-agent';
+import {parseWorkflowContract} from '../../core/workspace/workflow-contract';
 
 const standardIds=['business-execution','common-rules'];
 /** 只读执行知识准备所需能力；依赖修订复用它，不需要工作区写入或任务控制接口。 */
@@ -56,7 +57,8 @@ export async function prepareDispatchExecutionContext(workspace:DispatchKnowledg
       workflowText=body(workflow.content,'Workflow');
       if(hash(workflowText)!==binding.workflow.version)fail('DISPATCH_CONTEXT_CHANGED','Workflow 正文与派发版本不一致');
     }else workflowText=standards.find(standard=>standard.id==='business-execution')!.text;
-    return {binding,definition:module.definition,overview,workflowText};
+    const workflowContract=parseWorkflowContract(workflowText);
+    return {binding,definition:module.definition,overview,workflowText,...(workflowContract?{workflowContract}:{})};
   }));
   const agentDefinition=agent.source==='workspace'?data(snapshot,agent.agentId+'/agent.json'):{...defaultExecutorDefinition};
   const content={version:1 as const,workspaceId:workspace.entry.id,knowledgeRevision:snapshot.revision,agent,agentDefinition,modules,standards};

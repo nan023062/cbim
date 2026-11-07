@@ -1,6 +1,6 @@
 /**
  * 作用定位：为已运行工作区装配成员派发、大脑执行及目标审阅的可信日志读取端口。
- * 设计原因：派发、审阅及周期额度共用可信日志；人工决定复用有界文件读取和本机只读占用。检查点结算和续执行共用完整证明；密钥留在工厂闭包，人工保存和显式报告均不启动成员。
+ * 设计原因：派发、审阅及周期额度共用可信日志；Workflow 能力按实际 Pi 清单和权限预检，冻结约定只注入正式成员。检查点与人工决定复用有界文件证明，密钥留在工厂闭包，只读报告不启动成员。
  */
 import path from 'node:path';
 import type {Workspace} from './workspace/workspace';
@@ -22,6 +22,8 @@ import {safeId} from '../core/foundation/identity';
 import {fail} from '../core/foundation/errors';
 import {admissionRequestId,acquireExecutionLease,type WorkspaceAdmission} from './execution-admission';
 import type {ScopeBudgetPolicy} from '../core/tasks/scope-budget';
+import {preparedWorkflowContracts} from '../core/tasks/execution-context';
+import {nativeToolNames} from '../core/tools/native-tools';
 
 /** 应用对每个活动工作区只调用一次；关闭服务必须早于释放工作区锁。 */
 export function createMemberDispatch(workspace:Workspace,observer?:DispatchObserver){
@@ -69,7 +71,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
     prepare:async options=>{
       workspace.assert();
       const llm=await models.resolve(options.profileId,options.model);
-      return {model:structuredClone(llm.profile),create:async(run,task,hooks)=>{
+      return {model:structuredClone(llm.profile),availableTools:nativeToolNames(options.permission!=='read'),create:async(run,task,hooks)=>{
         workspace.assert();
         if(run.binding.workspaceId!==workspace.entry.id||task.identity.workspaceId!==workspace.entry.id)throw Error('成员运行与工作区身份不匹配');
         if(JSON.stringify(run.model)!==JSON.stringify(llm.profile))throw Error('成员运行模型快照与启动配置不一致');
@@ -78,7 +80,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
         const loop=await createWorkspaceLoop(workspace.paths,workspace,{provider:'cbim-'+llm.profile.id,model:llm.profile.model,profileId:llm.profile.id,llm,
           permission:run.permission,turnTimeoutMs:run.turnTimeoutMs,onEvent:hooks.onEvent,requestApproval:hooks.requestApproval,requestQuestion:hooks.requestQuestion,
         },{
-          storage,member:{directory:runsDirectory,prompt:memberExecutionPrompt(run.prepared,task,run.prerequisites)},onEngineReady:hooks.onEngineReady,
+          storage,member:{directory:runsDirectory,prompt:memberExecutionPrompt(run.prepared,task,run.prerequisites),workflowContracts:preparedWorkflowContracts(run.prepared)},onEngineReady:hooks.onEngineReady,
           artifacts:{knowledgeRevision:run.prepared.knowledgeRevision,normalizePath:normalizeArtifact,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},captureFiles:(paths,signal)=>artifactFiles.captureFiles(paths,signal)},
           // 领取后到 Pi 发出首条 prompt 前仍有异步准备；每个准备边界复核原证明，不只核原生文件而遗漏外部业务文件变化。
           assertMemberResume:previous?async()=>{await verifyMemberCheckpointProof(workspace,task,previous,checkpointPorts,()=>workspace.assert(),previous.checkpointProof)}:undefined,

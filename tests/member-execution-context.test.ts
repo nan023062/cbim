@@ -6,10 +6,11 @@ import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
 import type {TaskNode} from '../src/backend/core/tasks/graph-types';
-import {dispatchKnowledgeFingerprint,validatePreparedDispatchKnowledge} from '../src/backend/core/tasks/execution-context';
+import {dispatchKnowledgeFingerprint,validatePreparedDispatchKnowledge,preparedWorkflowContracts} from '../src/backend/core/tasks/execution-context';
 import {resolveDispatchModules} from '../src/backend/scheduler-engine/context/dispatch-context';
 import {prepareDispatchExecutionContext,recheckDispatchExecutionContext,memberExecutionPrompt} from '../src/backend/scheduler-engine/context/execution-context';
 import {defaultExecutorId,defaultExecutorInstructions} from '../src/backend/scheduler-engine/context/default-executor';
+import {assertLegacyWorkflowCompatible,prepareTeamTask} from '../src/backend/scheduler-engine/context/team-workflow';
 
 async function setup(){
   const f=await fixture();
@@ -111,5 +112,18 @@ it('应用内置规范更新、正文或指纹篡改均拒绝恢复，冻结快�
     expect(()=>validatePreparedDispatchKnowledge(authority)).toThrow(expect.objectContaining({code:'EXECUTION_CONTEXT_INVALID'}));
     const reordered={...prepared,agentDefinition:Object.fromEntries(Object.entries(prepared.agentDefinition).reverse())};
     expect(dispatchKnowledgeFingerprint(reordered)).toBe(prepared.fingerprint);
+  }finally{await f.cleanup()}
+});
+
+it('模块自己的可选执行约定同正文冻结，移除或篡改解析结果不能靠重算指纹绕过',async()=>{
+  const f=await setup();try{
+    const contract={version:1,beforeEffects:{requirePlan:true},delivery:{requiredToolEvidence:[{id:'read-proof',toolName:'read'}]}},text='# 专业流程\n```cbim-workflow\n'+JSON.stringify(contract)+'\n```',snapshot=await f.w.snapshot();await f.w.commit(request(snapshot,[{path:f.team.input.workflowId+'/workflow.md',text}]));
+    const task={...f.task,modules:await resolveDispatchModules(await f.w.snapshot(),f.task.modules.map(module=>module.moduleId))},prepared=await prepareDispatchExecutionContext(f.w,task);expect(prepared.modules[0].workflowContract).toEqual(contract);expect(prepared.modules[1].workflowContract).toBeUndefined();expect(preparedWorkflowContracts(prepared)).toEqual([{moduleId:f.team.input.moduleId,workflowId:f.team.input.workflowId,workflowVersion:task.modules[0].workflow.version,contract}]);
+    const absent=structuredClone(prepared);delete absent.modules[0].workflowContract;absent.fingerprint=dispatchKnowledgeFingerprint(absent);expect(()=>validatePreparedDispatchKnowledge(absent)).toThrow(expect.objectContaining({code:'EXECUTION_CONTEXT_INVALID'}));
+    const changed=structuredClone(prepared);changed.modules[0].workflowContract!.delivery!.requiredToolEvidence[0].toolName='bash';changed.fingerprint=dispatchKnowledgeFingerprint(changed);expect(()=>validatePreparedDispatchKnowledge(changed)).toThrow(expect.objectContaining({code:'EXECUTION_CONTEXT_INVALID'}));
+    await expect(prepareTeamTask(f.w,{goal:task.goal,moduleId:f.team.input.moduleId,agentId:f.team.input.agentId,workflowId:f.team.input.workflowId,acceptance:task.acceptance.map(item=>item.text)})).rejects.toMatchObject({code:'WORKFLOW_MEMBER_REQUIRED'});
+    const legacy={taskId:'legacy',workspaceId:f.entry.id,root:f.entry.path,goal:task.goal,moduleIds:[f.team.input.moduleId],acceptance:[],workflowContext:{revision:prepared.knowledgeRevision,workflowId:f.team.input.workflowId,module:{},agent:{},workflow:{content:{text}},standards:[]}};
+    expect(()=>assertLegacyWorkflowCompatible(legacy)).toThrow(expect.objectContaining({code:'WORKFLOW_MEMBER_REQUIRED'}));
+    expect(()=>assertLegacyWorkflowCompatible({...legacy,workflowContext:{...legacy.workflowContext,workflow:{content:{text:'# 原普通工作流'}}}})).not.toThrow();
   }finally{await f.cleanup()}
 });

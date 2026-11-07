@@ -1,0 +1,103 @@
+/**
+ * 作用定位：核实可选 Workflow 的计划前置和交付回执，供运行时与调度结算共用。
+ * 设计原因：工具调用事实必须与固定模块约定、当前运行及最后副作用的真实结束边界一致；并发早读不能替代写入后的验证，不能相信模型自报 pass 或只检查内存状态。
+ * 职责边界：仅作确定性记录校验，不执行脚本、不签发权限，也不宣称命令具有专业验证语义或覆盖整个模块。
+ */
+import {fail} from '../foundation/errors';
+import {hash} from '../foundation/serialization';
+import {workflowContractSchema} from '../workspace/workflow-contract';
+import type {WorkflowContractBinding} from './execution-context';
+import type {TaskProgress,WorkflowEvidenceProof} from './progress';
+import type {TaskSpec} from './types';
+import type {ToolReceipt,ToolEffect} from '../tools/types';
+import {nativeToolDescriptor} from '../tools/native-tools';
+import {artifactSucceededCall,type ArtifactEvidenceEvent} from './artifact-evidence';
+
+export interface WorkflowRunIdentity {workspaceId:string;taskId:string;runId:string}
+/** 只能由本轮装配提供；任务要求不可由模型在创建局部计划时扩大或删减。 */
+export interface WorkflowProgressContext {bindings:WorkflowContractBinding[];task:Pick<TaskSpec,'goal'|'acceptance'>;identity:WorkflowRunIdentity}
+function valid(value:unknown,code:string,message:string):asserts value{if(!value)fail(code,message)}
+function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([key,v])=>[key,ordered(v)])):value}
+const same=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
+const hex=(value:unknown)=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
+/** 单次操作的分类由真实注册端口提供；本函数不从模型参数猜测副作用。 */
+export function workflowHasEffects(effects:readonly ToolEffect[]){return effects.some(effect=>effect==='business-write'||effect==='command')}
+function checkedBindings(bindings:readonly WorkflowContractBinding[]){
+  valid(bindings.length<=100&&new Set(bindings.map(item=>item.moduleId)).size===bindings.length,'WORKFLOW_CONTEXT_INVALID','Workflow 模块约定数量或归属重复');
+  for(const item of bindings)valid(item.moduleId&&item.workflowId&&item.workflowVersion&&workflowContractSchema.safeParse(item.contract).success,'WORKFLOW_CONTEXT_INVALID','冻结的 Workflow 约定无效');
+  return [...bindings].sort((a,b)=>a.moduleId<b.moduleId?-1:a.moduleId>b.moduleId?1:0);
+}
+/** 执行业务副作用前核对当前计划；没有声明 requirePlan 时不新增该门禁。 */
+export function assertWorkflowPlan(bindings:readonly WorkflowContractBinding[],plan:TaskProgress|undefined,task:Pick<TaskSpec,'goal'|'acceptance'>):number|undefined{
+  if(!checkedBindings(bindings).some(item=>item.contract.beforeEffects?.requirePlan))return;
+  valid(plan&&Number.isSafeInteger(plan.version)&&plan.version>0&&plan.steps.length&&plan.goal===task.goal&&same(plan.acceptance,task.acceptance),'WORKFLOW_PLAN_REQUIRED','本模块 Workflow 要求先保存与本任务目标及验收要求一致的执行计划');
+  return plan.version;
+}
+/** 只评价调用方已核实且实际列入步骤的当前代次回执，不自动挑选未引用的其他工具。 */
+export function evaluateWorkflowDelivery(bindings:readonly WorkflowContractBinding[],receipts:readonly ToolReceipt[],identity:WorkflowRunIdentity):WorkflowEvidenceProof{
+  const values=checkedBindings(bindings),unique=new Map<string,ToolReceipt>();
+  for(const receipt of receipts){
+    valid(receipt.workspaceId===identity.workspaceId&&receipt.taskId===identity.taskId&&receipt.runId===identity.runId&&receipt.scope.workspaceId===identity.workspaceId&&receipt.outcome==='succeeded'&&hex(receipt.inputHash)&&hex(receipt.resultHash),'WORKFLOW_EVIDENCE_INVALID','Workflow 交付回执必须是本任务本轮的真实成功结果');
+    valid(!unique.has(receipt.toolCallId)||same(unique.get(receipt.toolCallId),receipt),'WORKFLOW_EVIDENCE_INVALID','同一工具 ID 的 Workflow 证据不一致');unique.set(receipt.toolCallId,receipt);
+  }
+  const checks:WorkflowEvidenceProof['checks']=[];
+  for(const binding of values)for(const requirement of binding.contract.delivery?.requiredToolEvidence??[]){
+    const ids=[...unique.values()].filter(receipt=>receipt.toolName===requirement.toolName&&receipt.scope.kind===(requirement.toolName==='bash'?'unknown':'workspace')&&receipt.effects.includes(requirement.toolName==='bash'?'command':['write','edit'].includes(requirement.toolName)?'business-write':'read')).map(receipt=>receipt.toolCallId).sort();
+    valid(ids.length,'WORKFLOW_EVIDENCE_REQUIRED',`模块 ${binding.moduleId} 的 Workflow 条件 ${requirement.id} 缺少当前步骤引用的 ${requirement.toolName} 成功回执`);
+    checks.push({moduleId:binding.moduleId,workflowId:binding.workflowId,workflowVersion:binding.workflowVersion,requirementId:requirement.id,toolName:requirement.toolName,toolCallIds:ids});
+  }
+  return {version:1,bindingsHash:hash(JSON.stringify(ordered(values))),checks};
+}
+function progressResult(event:ArtifactEvidenceEvent):TaskProgress{
+  const content=(event.data.result as {content?:unknown[]}|undefined)?.content;
+  valid(Array.isArray(content)&&content.length===1,'WORKFLOW_LOG_INVALID','任务工具缺少唯一结构化返回');const block=content[0] as {type?:unknown;text?:unknown};valid(block.type==='text'&&typeof block.text==='string','WORKFLOW_LOG_INVALID','任务工具缺少正文');
+  try{return JSON.parse(block.text) as TaskProgress}catch{fail('WORKFLOW_LOG_INVALID','任务工具结果无法解析')}
+}
+/** 失败的副作用也可能已经改过文件；核实结束边界但不将失败回执作为完成证据。 */
+function effectFinished(events:readonly ArtifactEvidenceEvent[],identity:WorkflowRunIdentity,allowed:ArtifactEvidenceEvent):ArtifactEvidenceEvent{
+  const id=String(allowed.data.id),calls=events.filter(event=>['tool.proposed','tool.allowed','tool.denied','tool.finished'].includes(event.type)&&event.data.id===id),finished=calls.filter(event=>event.type==='tool.finished');
+  valid(finished.length===1,'WORKFLOW_EVIDENCE_INVALID','Workflow 副作用缺少唯一的实际结束记录');const end=finished[0],receipt=end.data.receipt as ToolReceipt|undefined;
+  if(receipt?.outcome==='succeeded')return artifactSucceededCall(events,identity,id).finished;
+  const proposed=calls.filter(event=>event.type==='tool.proposed');
+  valid(proposed.length===1&&calls.filter(event=>event.type==='tool.allowed').length===1&&!calls.some(event=>event.type==='tool.denied')&&proposed[0].seq<allowed.seq&&allowed.seq<end.seq,'WORKFLOW_EVIDENCE_INVALID','Workflow 副作用结束链不完整');
+  valid(receipt?.version===1&&receipt.outcome==='failed'&&receipt.workspaceId===identity.workspaceId&&receipt.taskId===identity.taskId&&receipt.runId===identity.runId&&receipt.toolCallId===id&&receipt.toolName===allowed.data.name&&end.data.name===allowed.data.name&&proposed[0].data.name===allowed.data.name&&same(proposed[0].data.input,allowed.data.input)&&receipt.inputHash===hash(JSON.stringify(allowed.data.input))&&same(receipt.effects,allowed.data.effects)&&same(receipt.scope,allowed.data.scope)&&end.data.isError===true&&receipt.resultHash===(end.data.result===undefined?undefined:hash(JSON.stringify(end.data.result))),'WORKFLOW_EVIDENCE_INVALID','Workflow 副作用必须有完整的已确认终态，未知或损坏记录不能用于交付');
+  return end;
+}
+/**
+ * 在成员结算和主目标核验时重算完整 canonical，而非信任 taskProgress 的命中字段。
+ * 有约定的新运行必须保留自己的计划和成功交付调用；续执行也须建立本轮计划，旧轮次回执不会继承。
+ */
+export function validateWorkflowEvidence(events:readonly ArtifactEvidenceEvent[],task:Pick<TaskSpec,'workspaceId'|'taskId'|'goal'|'acceptance'>,bindings:readonly WorkflowContractBinding[]):WorkflowEvidenceProof|undefined{
+  if(!bindings.length)return;checkedBindings(bindings);
+  const first=events[0],last=events.at(-1),identity={workspaceId:task.workspaceId,taskId:task.taskId,runId:first?.runId};
+  valid(first?.type==='run.started'&&first.runId&&same(first.data.workflowContracts,bindings)&&last?.type==='run.settled'&&last.data.status==='completed','WORKFLOW_LOG_INVALID','Workflow 运行缺少完整来源、冻结约定或正常终态');
+  valid(events.every((event,index)=>event.seq===index+1&&event.workspaceId===identity.workspaceId&&event.taskId===identity.taskId&&event.runId===identity.runId),'WORKFLOW_LOG_INVALID','Workflow 日志身份或连续顺序不完整');
+  const taskData=first.data.task as Partial<TaskSpec>|undefined;valid(taskData?.workspaceId===task.workspaceId&&taskData.taskId===task.taskId&&taskData.goal===task.goal&&same(taskData.acceptance,task.acceptance),'WORKFLOW_LOG_INVALID','Workflow 运行来源与真实任务不一致');
+  const candidateEvent=events.filter(event=>event.type==='task.updated').at(-1),candidate=candidateEvent?.data.progress as TaskProgress|undefined;
+  valid(candidateEvent&&candidate?.state==='awaiting_review'&&candidate.delivery&&candidate.steps.length&&candidate.goal===task.goal&&same(candidate.acceptance,task.acceptance),'WORKFLOW_LOG_INVALID','Workflow 缺少当前任务的待审阅交付记录');
+  const deliveries=events.filter(event=>event.type==='tool.finished'&&event.data.name==='cbim_delivery_prepare'&&event.seq>candidateEvent.seq&&(event.data.receipt as ToolReceipt|undefined)?.outcome==='succeeded'&&same(progressResult(event),candidate));
+  valid(deliveries.length===1,'WORKFLOW_LOG_INVALID','Workflow 候选没有唯一的成功交付调用');
+  const delivery=artifactSucceededCall(events,identity,String(deliveries[0].data.id)),delivered=progressResult(delivery.finished);
+  valid(delivery.allowed.seq<candidateEvent.seq&&same(delivered,candidate)&&Number(delivery.allowed.data.input&&((delivery.allowed.data.input as Record<string,unknown>).expectedVersion))===candidate.version-1,'WORKFLOW_LOG_INVALID','Workflow 交付事件、版本与成功回执不一致');
+  const planCalls=events.filter(event=>event.type==='tool.finished'&&event.data.name==='cbim_task_plan'&&(event.data.receipt as ToolReceipt|undefined)?.outcome==='succeeded').map(event=>{
+    const call=artifactSucceededCall(events,identity,String(event.data.id)),progress=progressResult(call.finished);
+    const saved=events.filter(item=>item.type==='task.updated'&&item.seq>call.allowed.seq&&item.seq<call.finished.seq&&same(item.data.progress,progress));
+    valid(saved.length===1,'WORKFLOW_LOG_INVALID','Workflow 计划缺少匹配的持久化记录');return {...call,progress,savedSeq:saved[0].seq};
+  });
+  const plan=planCalls.filter(call=>call.savedSeq<candidateEvent.seq).at(-1);valid(plan&&plan.progress.goal===task.goal&&same(plan.progress.acceptance,task.acceptance),'WORKFLOW_PLAN_REQUIRED','Workflow 交付必须使用本轮已保存的原目标计划');
+  const allowed=events.filter(event=>event.type==='tool.allowed');
+  for(const event of allowed){
+    const effects=event.data.effects,scope=event.data.scope as {kind?:unknown;workspaceId?:unknown}|undefined,native=nativeToolDescriptor(String(event.data.name));
+    valid(Array.isArray(effects)&&effects.length&&effects.every(effect=>['read','preview','maintenance','business-write','knowledge-write','command'].includes(String(effect)))&&scope?.workspaceId===identity.workspaceId&&scope.kind===(effects.includes('command')?'unknown':effects.includes('knowledge-write')?'knowledge':'workspace'),'WORKFLOW_LOG_INVALID','Workflow 操作缺少可信副作用分类或范围身份');
+    valid(!native||same(effects,native.effects),'WORKFLOW_LOG_INVALID','原生工具与真实注册的副作用分类不一致');
+  }
+  const effects=allowed.filter(event=>(event.data.effects as ToolEffect[]).some(effect=>['business-write','knowledge-write','command'].includes(effect)));
+  if(bindings.some(binding=>binding.contract.beforeEffects?.requirePlan))for(const effect of effects.filter(event=>workflowHasEffects(event.data.effects as ToolEffect[]))){const before=planCalls.filter(call=>call.savedSeq<effect.seq).at(-1);valid(before&&before.progress.goal===task.goal&&same(before.progress.acceptance,task.acceptance),'WORKFLOW_PLAN_REQUIRED','Workflow 发现计划之前或错误目标下的业务操作')}
+  const effectEnds=effects.map(effect=>({allowed:effect,finished:effectFinished(events,identity,effect)})),lastEffect=effects.at(-1)?.seq??0,lastEffectEnd=Math.max(0,...effectEnds.map(effect=>effect.finished.seq));
+  valid(lastEffectEnd<delivery.allowed.seq,'WORKFLOW_EVIDENCE_INVALID','交付时仍有未结束或后续副作用，原 Workflow 证据已失效');
+  valid(candidate.steps.every(step=>step.state==='reported_done'&&step.evidence.length),'WORKFLOW_EVIDENCE_INVALID','Workflow 交付仍有未完成或无证据步骤');
+  const ids=[...new Set(candidate.steps.flatMap(step=>step.evidence))],receipts=ids.map(id=>{
+    const call=artifactSucceededCall(events,identity,id),ownEffect=effectEnds.some(effect=>effect.allowed.data.id===id);valid(call.allowed.seq>plan.savedSeq&&call.allowed.seq>=lastEffect&&call.finished.seq<delivery.allowed.seq&&(ownEffect||call.allowed.seq>lastEffectEnd),'WORKFLOW_EVIDENCE_INVALID','Workflow 证据必须在当前计划内，读取验证不得与尚未结束的副作用重叠');return call.receipt;
+  });
+  const proof=evaluateWorkflowDelivery(bindings,receipts,identity);valid(same(proof,candidate.delivery.workflow),'WORKFLOW_EVIDENCE_INVALID','Workflow 交付条件与真实日志重算结果不一致');return proof;
+}

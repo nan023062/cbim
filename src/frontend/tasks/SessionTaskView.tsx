@@ -2,6 +2,7 @@
  * 作用定位：以节点流程图展示当前主会话的派发任务，并在选择根或任务后显示对应执行详情。
  * 设计原因：全局项目架构与会话派工分开；所选周期提供按需用量核对，读取不触发模型或持续扫日志。根详情共享目标、审阅与显式补充，整图保留并突出所选周期，持久等待不触发队列恢复。 人工决定接续与文本补充分开，共享意图但不共享自动启动权。
  * 职责边界：运行轮次不是派发节点；核实报告按需读取并使用节点实际归属。正式业务重规划与只读核实各有独立控制器，新周期准入取真实开放状态，不借历史筛选替换任务身份或权限。
+ * 停止入口：使用会话独立的停止在途状态，消息插入或附件准备忙碌时仍可停止。
  */
 import {useEffect,useState} from 'react';
 import type {RunSummary,QueuedMessage} from '../../bridge/contracts/execution';
@@ -40,6 +41,8 @@ export interface SessionTaskViewProps {
   historyIssueCount?:number;
   /** 当前时间戳（毫秒），供根详情显示运行时长，不据此推断任务进度。 */
   now:number;busy:boolean;
+  /** 只禁用重复停止，不借普通操作 busy 阻断正在插入消息时的停止。 */
+  stopping?:boolean;
   onQueueChange:(id:string,action:string)=>void;onQueueContinue:()=>void;onChat:()=>void;onStop:()=>void;
   graph?:GraphSnapshot;graphLoading?:boolean;graphError?:string;onRefreshGraph?:()=>void;
   /** 与主对话共享目标摘要/选中详情，历史选择只突出节点，不移除其他周期或改变执行。 */
@@ -63,7 +66,7 @@ export interface SessionTaskViewProps {
 }
 
 /** 主根详情保留调度与知识治理的对话轮次、计划和停止入口；业务执行详情仅由任务节点展开。 */
-function RootTaskDetail({history,pending,now,busy,onQueueChange,onQueueContinue,onStop,graph,scopeState,continuation,replan,humanDecisions,humanContinuation,historyIssueCount=0}:Pick<SessionTaskViewProps,'now'|'busy'|'onQueueChange'|'onQueueContinue'|'onStop'|'graph'|'scopeState'|'continuation'|'replan'|'humanDecisions'|'humanContinuation'|'historyIssueCount'>&{history:RunSummary[];pending:QueuedMessage[]}){
+function RootTaskDetail({history,pending,now,busy,stopping,onQueueChange,onQueueContinue,onStop,graph,scopeState,continuation,replan,humanDecisions,humanContinuation,historyIssueCount=0}:Pick<SessionTaskViewProps,'now'|'busy'|'stopping'|'onQueueChange'|'onQueueContinue'|'onStop'|'graph'|'scopeState'|'continuation'|'replan'|'humanDecisions'|'humanContinuation'|'historyIssueCount'>&{history:RunSummary[];pending:QueuedMessage[]}){
   // 旧局部运行计划没有 scope 归属，不能借历史目标选择把它冒充所选周期的目标计划。
   const progress=scopeState?.selectedScopeId?undefined:history.at(-1)?.taskProgress;
   // 身份来自后端保存的绑定；旧日志无该字段时明确未知，不用角色名补造通道。
@@ -74,7 +77,7 @@ function RootTaskDetail({history,pending,now,busy,onQueueChange,onQueueContinue,
   return <div className="root-task-detail" aria-label="主 Agent 调度详情" data-testid="root-task-detail">
     <h3>主 Agent</h3><p>已读 {history.length} 轮记录{historyIssueCount?` · ${historyIssueCount} 轮待核实`:''} · {pending.length} 条待执行</p>
     {scopeState&&<ScopeGoalPanel state={scopeState} testId="dispatch-root-goal" continuation={continuation} replan={replan} humanDecisions={humanDecisions} humanContinuation={humanContinuation}/>}
-    {openScope&&<div>{scopeState!.selectedScopeId!==openScope.scopeId&&<p>{waiting?'当前另有待补充任务：':'当前另有任务运行：'}{openScope.objective??openScope.inputPreview??'当前周期'}</p>}<button data-testid="scope-stop" disabled={busy} onClick={onStop}>{waiting?'取消当前任务':scopeState!.selectedScopeId===openScope.scopeId?'停止当前任务':'停止正在运行的任务'}</button></div>}
+    {openScope&&<div>{scopeState!.selectedScopeId!==openScope.scopeId&&<p>{waiting?'当前另有待补充任务：':'当前另有任务运行：'}{openScope.objective??openScope.inputPreview??'当前周期'}</p>}<button data-testid="scope-stop" disabled={stopping} onClick={onStop}>{waiting?'取消当前任务':scopeState!.selectedScopeId===openScope.scopeId?'停止当前任务':'停止正在运行的任务'}</button></div>}
     <details className="member-scope" open><summary>主会话实例与通道</summary>
       {instance?<p>主 Agent 实例 <code>{instance}</code></p>:<p>历史记录未保存主 Agent 实例绑定。</p>}
       {conflicting?<p role="alert">主会话运行与任务图的实例身份不一致，请重新同步。</p>:binding?<p>对话通道 <code>{binding.agentSessionId}</code></p>:<p>历史记录未保存对话通道绑定，不按角色名称推断。</p>}
@@ -82,9 +85,9 @@ function RootTaskDetail({history,pending,now,busy,onQueueChange,onQueueContinue,
       <p>主 Agent 负责调度与知识治理；业务任务由独立执行 Agent 实例完成。</p>
     </details>
     {progress&&<article className="session-run" aria-label="执行计划"><h3>{progress.goal}</h3><p>计划版本 {progress.version} · {progress.state==='awaiting_review'?'交付待审阅':'执行与验证中'} · 尚未业务验收</p><p>{progress.reason}</p><ol>{progress.steps.map(step=><li key={step.id}><strong>{step.title}</strong> · {step.owner} · {{pending:'待处理',working:'进行中',reported_done:'已报告完成，待核验'}[step.state]}{step.evidence.length>0&&<details><summary>{step.evidence.length} 条工具回执</summary>{step.evidence.map(id=><p key={id}><code>{id}</code></p>)}</details>}</li>)}</ol><h4>验收要求</h4><ul>{progress.acceptance.map((item,index)=><li key={index}>{item}</li>)}</ul>{progress.delivery&&<><h4>交付候选</h4><p>{progress.delivery.summary}</p><ul>{progress.delivery.limitations.map((item,index)=><li key={index}>{item}</li>)}</ul></>}<details><summary>计划修订记录</summary>{history.flatMap(run=>run.events.filter(event=>event.type==='task.updated').map(event=><p key={run.runId+':'+event.seq}>{event.time} · {String((event.data.progress as {reason?:string})?.reason??'计划更新')}</p>))}</details></article>}
-    <MessageQueue items={pending} busy={busy} continueDisabled={waiting||scopeState?.loading} onChange={onQueueChange} onContinue={onQueueContinue}/>
+    <MessageQueue items={pending} busy={busy} continueDisabled={stopping||waiting||scopeState?.loading} onChange={onQueueChange} onContinue={onQueueContinue}/>
     {scopeState?.selectedScopeId&&history.length>0&&<h4>可读的主会话记录</h4>}
-    {[...history].reverse().map((run,index)=><article className="session-run" key={run.runId}><h3>{run.source?.kind==='human_decisions'?'按已保存人工决定继续':String(run.events.find(event=>event.type==='run.started')?.data.message||run.task.goal).split('\n')[0]}</h3><small>已读记录 {history.length-index} · {run.events[0]?.time?new Date(run.events[0].time).toLocaleString():''}</small><WorkStatus run={run} now={now}/>{run.status==='running'&&<button disabled={busy} onClick={onStop}>停止本次执行</button>}{run.unresolvedTools.length>0&&<p role="alert">有 {run.unresolvedTools.length} 项操作尚需在对话中核实。</p>}<details><summary>执行标识</summary><code>{run.runId}</code></details></article>)}
+    {[...history].reverse().map((run,index)=><article className="session-run" key={run.runId}><h3>{run.source?.kind==='human_decisions'?'按已保存人工决定继续':String(run.events.find(event=>event.type==='run.started')?.data.message||run.task.goal).split('\n')[0]}</h3><small>已读记录 {history.length-index} · {run.events[0]?.time?new Date(run.events[0].time).toLocaleString():''}</small><WorkStatus run={run} now={now}/>{run.status==='running'&&<button disabled={stopping} onClick={onStop}>停止本次执行</button>}{run.unresolvedTools.length>0&&<p role="alert">有 {run.unresolvedTools.length} 项操作尚需在对话中核实。</p>}<details><summary>执行标识</summary><code>{run.runId}</code></details></article>)}
     {!history.length&&<p>{historyIssueCount?'当前没有可读的主会话记录；待核实轮次与已有任务节点仍保留，不能据此判定未执行。':'当前尚无可读的主会话记录。'}</p>}
   </div>;
 }
@@ -109,7 +112,7 @@ export function SessionTaskView(props:SessionTaskViewProps){
     {!root?<div className="task-graph-draft"><h3>尚未开始会话</h3><p>发送第一条消息后，这里显示主 Agent；派发成员任务后显示团队任务流程。</p><button onClick={onChat}>开始对话</button></div>:<div className={'session-graph-layout'+(hasDetail?' with-detail':'')}>
       <DispatchGraph key={workspaceId+':'+taskId} graph={matching} root={root} selectedTaskId={selected} onSelectTask={select} highlightedScopeId={scopeState?.selectedScopeId}/>
       {hasDetail&&<aside className="session-graph-detail" aria-label={rootSelected?'主 Agent 详情':'成员任务详情'} data-testid="session-graph-detail"><header><strong>{rootSelected?'主会话调度':'成员任务'}</strong><button onClick={()=>select(undefined)} aria-label="关闭详情，返回流程图">返回流程图</button></header>
-        {rootSelected?<RootTaskDetail history={history} pending={pending} now={now} busy={busy} onQueueChange={onQueueChange} onQueueContinue={onQueueContinue} onStop={onStop} graph={matching} scopeState={scopeState} continuation={props.continuation} replan={props.replan} humanDecisions={props.humanDecisions} humanContinuation={props.humanContinuation} historyIssueCount={props.historyIssueCount}/>:selectedTask&&taskId&&<MemberTaskDetail active={props.active} key={workspaceId+':'+taskId+':'+selectedTask.taskId} workspaceId={workspaceId} rootSessionId={taskId} task={selectedTask} graphCursor={matching?.cursor} scope={scopeState?.scopes.find(scope=>scope.scopeId===selectedTask.scopeId)} recovery={props.recovery}/>}
+        {rootSelected?<RootTaskDetail history={history} pending={pending} now={now} busy={busy} stopping={props.stopping} onQueueChange={onQueueChange} onQueueContinue={onQueueContinue} onStop={onStop} graph={matching} scopeState={scopeState} continuation={props.continuation} replan={props.replan} humanDecisions={props.humanDecisions} humanContinuation={props.humanContinuation} historyIssueCount={props.historyIssueCount}/>:selectedTask&&taskId&&<MemberTaskDetail active={props.active} key={workspaceId+':'+taskId+':'+selectedTask.taskId} workspaceId={workspaceId} rootSessionId={taskId} task={selectedTask} graphCursor={matching?.cursor} scope={scopeState?.scopes.find(scope=>scope.scopeId===selectedTask.scopeId)} recovery={props.recovery}/>}
       </aside>}
     </div>}
   </div>;

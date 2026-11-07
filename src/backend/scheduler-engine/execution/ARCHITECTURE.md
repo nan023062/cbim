@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主实例与图根共享身份。只在真实用户交互端口存在时装配提问工具；成员候选和目标审阅排除问答回执，但保留历史事实与真实业务证据。目标分工、派发及人工来源核对原流程选择；交付/审阅从canonical复核要求、真实passed及当前文件。检查点与前置替换不改选；额度/准入等待不消费，停止和重启封存不重放。
+主实例与图根共享身份；插入独立停止屏障，在异步准备后复核原run，停止实际引擎不排在插入串行事务之后。只在真实用户交互端口存在时装配提问工具；成员候选和目标审阅排除问答回执，但保留历史事实与真实业务证据。目标分工、派发及人工来源核对原流程选择；交付/审阅从canonical复核要求、真实passed及当前文件。检查点与前置替换不改选；额度/准入等待不消费，停止和重启封存不重放。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -425,12 +425,12 @@ class N_src_backend_scheduler_engine_execution_execution_manager_ts_WorkspaceExe
   -prepareContinuationInput
   -collaboration
   -resultContinuationStopped
+  -queueAdvanceStopped
   -stopVersions
   -pendingLaunches
-  -messageQueue
-  -queueSubscriptions
-  -queueSource()
-  -queue()
+  -pendingInsertions
+  -insertionsClosed
+  -cancelInsertions()
 }
 N_src_backend_scheduler_engine_execution_execution_manager_ts ..> N_src_backend_scheduler_engine_execution_execution_manager_ts_WorkspaceExecutionManager : 声明
 ```
@@ -443,6 +443,10 @@ class N_src_backend_scheduler_engine_execution_execution_manager_ts["execution-m
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
+  -messageQueue
+  -queueSubscriptions
+  -queueSource()
+  -queue()
   -pump()
   -active
   -pending
@@ -2191,3 +2195,10 @@ JSON 结构要求另按实际工厂的 `availableValidators` 与文件端口预�
 `memberCandidate` 复用进度证据的真实身份、作用域、结果哈希与工具用途筛选，防止无 Workflow 的旧进度或合成记录仅凭 `succeeded` 形成候选。问答答案、取消及其他不可引用的维护记录不能被混入步骤证据；原始运行日志保持可读，不改写已有事实。
 
 `ScopeGoalService.receipt` 另行拒绝共享 `questionToolName`，同时覆盖当前候选、历史返工候选和人工决定预览的来源核验。普通问答不能变为业务完成证明或人工接受；真实人工决定仍走原本机提交及显式接续协议。一个运行曾经提问并不失效：只引用真实业务回执的候选和人工预览仍按原门禁核实。
+### 队列插入的原轮次与停止屏障
+
+`insertQueued(taskId,queueId,expectedRunId)` 强制绑定用户选定的活动主轮，缺失/过期身份在领取前拒绝。领取、附件读取和 Runtime 入口前后核查原运行、工作区及停止代次；原消息使用当前主运行权限，不能用队列设置提权或改投成员。停止、协作暂停、协调器关闭及管理器关闭同步撤销插入；实际引擎停止不排在阻塞的插入串行事务之后。
+
+queued 与接受日志确认后才移除队列项，迟到停止不撤销接受。通信、接受日志或移除/暂停保存失败保持未知并设置独立 `queueAdvanceStopped`，即使暂停写盘失败也不自动推进旧队列；它只阻止普通自动队列，不误停合法成员结果回注。显式继续队列在原 waiting 门禁和持久恢复成功后清除此屏障。旧队列重开仍全部暂停，不迁移或重放。
+
+停止只绑定开始时的活动运行及当时尚未登记的启动 controller，不在慢收尾之后补扫并停止后来明确启动的新轮。同会话旧队列仍按原停止语义暂停。关闭排空各运行后报告实际失败，不以 allSettled 吞掉错误或漏清其它资源。

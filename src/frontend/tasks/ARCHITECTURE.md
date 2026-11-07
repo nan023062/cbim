@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主会话任务图、目标与准入状态。安全等待补充共享正文、文件/图片草稿及导入锁，按原附件身份冻结请求，切换后丢弃迟到选择，普通聊天草稿独立。目标与节点只显示各自保存的流程选择与冻结绑定，不以当前知识推断旧历史。结构验证按同轮真实工具终态区分未确认、当时符合/不符合和后续操作造成的过期。检查点、基线、人工决定与用量独立核实；跨轮次隔离，不提供读即恢复或把历史当当前验收。
+主会话任务图、目标与准入状态；根停止共用会话独立在途标记，插入等待不锁住停止按钮。安全等待补充共享正文、文件/图片草稿及导入锁，按原附件身份冻结请求，切换后丢弃迟到选择，普通聊天草稿独立。目标与节点只显示各自保存的流程选择与冻结绑定，不以当前知识推断旧历史。结构验证按同轮真实工具终态区分未确认、当时符合/不符合和后续操作造成的过期。检查点、基线、人工决定与用量独立核实；跨轮次隔离，不提供读即恢复或把历史当当前验收。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -1668,6 +1668,7 @@ class N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTask
   +historyIssueCount
   +now
   +busy
+  +stopping
   +onQueueChange
   +onQueueContinue
   +onChat
@@ -1676,7 +1677,6 @@ class N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTask
   +graphLoading
   +graphError
   +onRefreshGraph
-  +scopeState
 }
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps : 声明
 ```
@@ -1690,6 +1690,7 @@ class N_src_frontend_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
 }
 class N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTaskViewProps"] {
   <<interface>>
+  +scopeState
   +continuation
   +replan
   +humanDecisions
@@ -2958,3 +2959,7 @@ GraphLayout --> GraphContract : 真实节点与连线
 ## 模块 Workflow 选择
 
 目标责任分配只展示已保存的 `workflowSelections`，未声明不补造选择。成员详情仍显示每个模块真实 `ModuleBinding.workflow`；仅当原显式选择与绑定相同才标注“指定流程”。切换历史周期或任务不查询当前知识来改写原流程，不提供修改已派发任务选择的界面。
+
+## 主任务停止的独立在途状态
+
+`SessionTaskView.stopping` 只禁用重复停止，区别于发送、队列插入和编辑共用的 `busy`。主根与运行记录中的停止按钮在插入等待期间仍可点击，并调用会话统一的独立停止入口；停止未结束时不继续队列。历史周期选择不改变实际停止目标，组件不自行取消成员或推断停止已经完成。

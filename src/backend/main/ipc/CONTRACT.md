@@ -54,3 +54,7 @@ Electron 接入仍核对本窗口与主 Frame；`humanDecide` 在可信闭包注
 ### 成员执行的只读核实
 
 `dispatch.executionReport` 路由到当前工作区 `MemberExecutionManager.report`，按主会话、任务与可选明确运行查询。省略 runId 只核实领取记录，不猜最新轮次。报告包含核实基线、完整性、受限工具回执和未验收候选；不调用启动、确认、恢复或改派。分页必须绑定同一基线，服务严格校验身份。
+
+### 队列插入绑定原主轮
+
+`loop.queueInsert` 将 `taskId/queueId/expectedRunId` 原样传入执行管理器。路由不查询并替换客户端原 run，不给旧请求补字段；缺失、非法或已变化的主运行统一由后台拒绝，原排队消息保留。停止请求仍走独立入口，后端判断发送前拒绝、原生已接受或结果未知，IPC 不将迟到停止解释为消息未被接受或自动重发依据。

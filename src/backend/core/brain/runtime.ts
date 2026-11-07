@@ -1,6 +1,7 @@
 /**
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
  * 设计原因：工具先分类与计划门禁再审批；每轮进度绑定真实 workspace/task/run，成员专属工具另绑定完整实例。JSON 验证及交付复核各持短锁，异步读取前后核知识、计划与停止；坏回包保留事实，求助/检查点不解锁，采集/验证只随真实结束释放。
+ * 插入边界：核对原 run 和发送前停止信号；原生接受后保存真实事实，终态等待在途插入记录排空，不自动重放未知输入。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -66,6 +67,8 @@ export interface RunStartControl {
   /** 租约和旧运行绑定检查之后、任何新日志/引擎之前调用，runId 由本运行时生成。 */
   beforeRun?(input:{task:TaskSpec;runId:string}):Promise<void>;
 }
+/** 插入绑定用户选定的原主运行；停止信号只阻止发送前准备，不撤销已确认接收。 */
+export interface RunSteerControl {expectedRunId:string;signal:AbortSignal}
 /** 可信调度器专用的新主上下文入口；运行/原生身份及旧运行集合由大脑在租约内生成，公开请求不能提供。 */
 export interface FreshMainStartControl {
   signal:AbortSignal;
@@ -78,8 +81,8 @@ export interface FreshMainStartControl {
 export class LoopRuntime {
   /** taskId 为键；同任务在本运行时中只允许一个活动运行。 */
   private active=new Map<string,{runId:string;engine:AgentEngine;stop:()=>Promise<void>;done:Promise<RunSummary>}>();
-  /** 绑定活动运行的持久化入口；插入回执保存在同一运行，关闭时一并清理。 */
-  private injections=new Map<string,(message:string,images:import('./types').InputImage[])=>Promise<void>>();
+  /** 原运行独占插入入口及在途记录；结算前排空，防止停止后的迟到确认写到终态之后。 */
+  private injections=new Map<string,{runId:string;pending:Set<Promise<void>>;send:(message:string,images:import('./types').InputImage[],signal:AbortSignal)=>Promise<void>}>();
   /** 关闭时先等待启动注册完成，防止启动/关闭竞争泄漏子进程。 */
   private starting=new Set<Promise<{runId:string;done:Promise<RunSummary>}>>();
   private closing=false;
@@ -243,12 +246,26 @@ export class LoopRuntime {
         assertDeliveryReady:()=>{if(stopping||[...activeCalls].some(id=>calls.get(id)?.call.name!=='cbim_delivery_prepare')||[...pendingTools].some(id=>calls.get(id)?.call.name!=='cbim_delivery_prepare')||activeCalls.size>1)fail('VALIDATION_BUSY','仍有其他工具或审批未结束，不能读取 JSON 交付证据');assertDeliveryReady()},
         save:async value=>{await emit({type:'validation.checked',data:{validation:value}},true)},
       });
-      this.injections.set(task.taskId,async(message,images)=>{
-        if(stopping||!engine.steer)throw Error('当前执行不支持插入消息');
+      let finishing=false;
+      const injection={runId,pending:new Set<Promise<void>>(),send:async(message:string,images:import('./types').InputImage[],signal:AbortSignal)=>{
+        const assertReady=()=>{
+          if(stopping||this.closing||signal.aborted)fail('QUEUE_INSERT_STOPPED','当前运行已停止插入，原消息仍保留在队列');
+          if(finishing||task.mode!=='chat'||task.agentId!=='cbim:main'||!engine.steer)fail('QUEUE_INSERT_STALE','原主运行已结束或不支持插入，原消息仍保留在队列');
+        };
+        assertReady();
         await emit({type:'engine.status',data:{metric:'insertion',state:'requested',message,label:'正在插入用户补充'}});
-        try{await engine.steer(message,images);await emit({type:'engine.status',data:{metric:'insertion',state:'accepted',message,label:'已插入，当前动作完成后处理'}})}
-        catch(error){await emit({type:'engine.status',data:{metric:'insertion',state:'failed',message,label:'插入未确认，请核实后继续'}});throw error}
-      });
+        try{
+          assertReady();await engine.steer!(message,images,signal);
+          // queued 已由原生确认；迟到停止不抹去接受事实，持久化失败仍交由上层保留未知。
+          await emit({type:'engine.status',data:{metric:'insertion',state:'accepted',message,label:'已插入，当前动作完成后处理'}});
+        }catch(error){
+          const rejected=['QUEUE_INSERT_STOPPED','QUEUE_INSERT_STALE'].includes((error as {code?:string})?.code??'');
+          try{await emit({type:'engine.status',data:{metric:'insertion',state:'failed',message,label:rejected?'插入未发送，原消息保留在队列':'插入未确认，请核实后继续'}})}catch{fail('QUEUE_INSERT_UNKNOWN','插入结果未确认，请先核实原运行记录，勿重复发送')}
+          if(rejected)throw error;
+          fail('QUEUE_INSERT_UNKNOWN','插入结果未确认，请先核实原运行记录，勿重复发送');
+        }
+      }};
+      this.injections.set(task.taskId,injection);
       // 保存输入及可信来源；显式补充仍是用户消息，成员结果不能在界面或原生上下文中冒充用户授权。
       await emit({type:'run.started',data:{task,message,engine:engine.kind,resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[],...(workflows.length?{workflowContracts:workflows}:{}),...(memberResume?{memberResume:{checkpointId:memberResume.checkpointId,runId:memberResume.runId}}:{}),...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),...(member?{memberBinding:member.binding,nativeSessionId:member.session.nativeSessionId}:{}),...(fresh?{freshMain:{nativeSessionId,excludedRunIds}}:{})}});
       await taskTools.invalidate('新一轮执行需要重新核实产物与证据');
@@ -315,11 +332,13 @@ export class LoopRuntime {
         }catch(error){
           failure=error;
         }finally{
+          finishing=true;
           control?.signal.removeEventListener('abort',abort);
           artifactCapture?.stop();
           checkpointTools?.stop();
           validation?.stop();
           try{await engine.close()}catch(error){failure??=error}
+          await Promise.allSettled([...injection.pending]);
           failure??=stopFailure;
           try{
             if(failure||pendingTools.size)await emit({type:'run.interrupted',data:{error:failure instanceof Error?failure.message:String(failure||'工具结果未确认'),unresolvedTools:[...pendingTools],receipts:[...pendingTools].map(id=>{const item=calls.get(id)!;return toolReceipt(identity,item.call,item.decision,'unknown')})}});
@@ -342,10 +361,13 @@ export class LoopRuntime {
   }
   /** 请求当前轮次停止；不存在活动运行时为空操作，最终状态仍须等待启动句柄的 done。 */
   async stop(taskId:string){await this.active.get(taskId)?.stop()}
-  /** 只向当前活动运行注入；调用者负责按会话串行化，失败不得自动重放。 */
-  async steer(taskId:string,message:string,images:import('./types').InputImage[]=[]){
-    const inject=this.injections.get(taskId);if(!this.active.has(taskId)||!inject)throw Error('任务已结束，请继续队列');
-    await inject(message,images);
+  /** 只向明确选定的原活动运行注入；当前新轮不能代收迟到请求，未知结果不自动重放。 */
+  async steer(taskId:string,message:string,images:import('./types').InputImage[],control:RunSteerControl){
+    if(this.closing||control?.signal?.aborted)fail('QUEUE_INSERT_STOPPED','当前运行已停止插入，原消息仍保留在队列');
+    const inject=this.injections.get(taskId);
+    if(!control?.signal||!control.expectedRunId||this.active.get(taskId)?.runId!==control.expectedRunId||inject?.runId!==control.expectedRunId)fail('QUEUE_INSERT_STALE','原主运行已变化，原消息仍保留在队列');
+    const pending=inject.send(message,images,control.signal);inject.pending.add(pending);
+    try{await pending}finally{inject.pending.delete(pending)}
   }
   /** 禁止新启动，等待在途注册后停止并收束活动运行；逐项失败不会阻止其余资源释放。 */
   async close(){this.closing=true;await Promise.allSettled([...this.starting]);const active=[...this.active.values()];await Promise.allSettled(active.map(x=>x.stop()));await Promise.allSettled(active.map(x=>x.done))}

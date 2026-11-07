@@ -226,3 +226,7 @@ governance.ts 仅重导 Core 严格纯协议。界面按明确工作区/实例/�
 ### 成员结构验证投影
 
 `execution.ts` 的 `PublicValidationResult` 只暴露选定要求、文件指纹、当时结论和无原值诊断。真实成员绑定由后端投影前核实，不向页面透传 Schema、业务文件正文或运行私有上下文。暂存检查事件必须配合后续工具回执展示，不授予当前有效性或业务验收。
+
+### 排队消息插入的原运行身份
+
+`execution.ts` 的 `QueueInsertRequest` 固定 `{id,taskId,queueId,expectedRunId}`。`id` 是目标工作区，`expectedRunId` 是用户明确插入时正在执行的主轮，必填且不能由路由补成最新运行。请求只是尝试插入已有排队消息，不修改它保存的权限或模型，也不授权成员等待或目标 waiting 恢复。拒绝与未知结果不自动换轮重试。

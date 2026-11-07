@@ -18,12 +18,12 @@ it('real Pi accepts queued steering without aborting the active request or losin
  const entry=await f.app.dispatch('add',{path:f.a});await f.app.models.save({profile:{name:'local',api:'openai-completions',baseUrl:`http://127.0.0.1:${(server.address() as any).port}/v1`,auth:'none',models:[{id:'test',name:'test',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false}],defaultModel:'test'}});
  const run=await f.app.dispatch('loop.chat',{id:entry.id,message:'read note',options:{permission:'read'}});await firstRequest;
  const queued=await f.app.dispatch('loop.enqueue',{id:entry.id,taskId:run.taskId,message:'INSERTED_USER_INSTRUCTION',options:{permission:'execute'}});
- await f.app.dispatch('loop.queueInsert',{id:entry.id,taskId:run.taskId,queueId:queued.id});expect(await f.app.dispatch('loop.queue',{id:entry.id,taskId:run.taskId})).toEqual([]);release();
+ await f.app.dispatch('loop.queueInsert',{id:entry.id,taskId:run.taskId,queueId:queued.id,expectedRunId:run.runId});expect(await f.app.dispatch('loop.queue',{id:entry.id,taskId:run.taskId})).toEqual([]);release();
  let result=await f.app.execution(entry.id).inspect(run.taskId,run.runId);while(result.status==='running'){await new Promise(r=>setTimeout(r,20));result=await f.app.execution(entry.id).inspect(run.taskId,run.runId)}
  expect(result.status,JSON.stringify(result.events.at(-1))).toBe('completed');
  expect(result.events.some(e=>e.type==='tool.finished'&&e.data.id==='original-read')).toBe(true);
  expect(JSON.stringify(bodies.at(-1))).toContain('INSERTED_USER_INSTRUCTION');expect(bodies.at(-1).tools.some((t:any)=>t.function.name==='write')).toBe(false);
  expect(transcript(result).some(x=>x.kind==='user'&&x.text==='INSERTED_USER_INSTRUCTION')).toBe(true);
- await expect(f.app.dispatch('loop.queueInsert',{id:entry.id,taskId:run.taskId,queueId:queued.id})).rejects.toThrow();
+ await expect(f.app.dispatch('loop.queueInsert',{id:entry.id,taskId:run.taskId,queueId:queued.id,expectedRunId:run.runId})).rejects.toThrow();
  }finally{release();server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));await f.cleanup()}
 },60000);

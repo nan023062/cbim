@@ -1,6 +1,7 @@
 /**
  * 作用定位：调度引擎：工作区执行管理，负责主 Agent 普通对话、团队任务执行与多轮历史读取，拒绝旧轮次分叉，挂起并处理逐次工具审批与结构化用户问题，持久化消息队列并在成功结束后串行续接；本次全部通过仅在当前执行期间有效。
  * 设计原因：原命令先查回执；等待补充的附件一次准备，图片仅留本轮。容量准入先于意图，beforeRun 核额度、停止与清单后登记运行；人工决定仍走独立系统来源，当前坏历史不能回退旧头。
+ * 插入边界：绑定明确的原主 run，停止信号先于串行清理；已确认接收才移除队列，未知结果同时阻止内存自动推进。
  */
 import {MessageQueue,type QueueCounts} from '../conversation/message-queue';
 import {ApprovalQueue} from '../conversation/approvals';
@@ -82,12 +83,18 @@ export class WorkspaceExecutionManager {
   private collaboration?:ExecutionCollaboration;
   /** 用户停止后的迟到结果与自动队列不能重启模型；显式新用户轮次或继续队列才清除此屏障。 */
   private resultContinuationStopped=new Set<string>();
+  /** 插入结果未知/队列落盘失败只暂停普通队列，不能误停仍正常工作的成员结果回注。 */
+  private queueAdvanceStopped=new Set<string>();
   /** 捕获工厂/周期准备期间的用户停止；不能在 await 返回后误清除新收到的停止请求。 */
   private stopVersions=new Map<string,number>();
   /** 工厂、意图提交及日志初始化尚未进入 active 时仍可立即收到停止信号。 */
   private pendingLaunches=new Map<string,AbortController>();
+  /** 包含等待串行入口的插入；停止必须在 claim/附件/RPC 等待返回之前可撤销。 */
+  private pendingInsertions=new Map<AbortController,string>();
+  private insertionsClosed=false;
+  private cancelInsertions(taskId?:string){for(const [controller,id] of this.pendingInsertions)if(taskId===undefined||taskId===id)controller.abort()}
   /** 可信应用/协调器关闭时使用；只终止在途启动，不清除持久等待或批准任何操作。 */
-  cancelPendingLaunches(){for(const controller of this.pendingLaunches.values())controller.abort(Object.assign(Error('启动期间已收到停止请求'),{code:'COLLABORATION_STOPPED'}))}
+  cancelPendingLaunches(){this.insertionsClosed=true;this.cancelInsertions();for(const controller of this.pendingLaunches.values())controller.abort(Object.assign(Error('启动期间已收到停止请求'),{code:'COLLABORATION_STOPPED'}))}
   /** 仅供可信装配层接入，不能通过公开 IPC 提供回调或替换正在使用的协调器。 */
   attachCollaboration(hooks:ExecutionCollaboration){if(this.closing||this.collaboration)throw Error('协作调度已装配或工作区正在关闭');this.collaboration=hooks}
   private messageQueue?:MessageQueue;
@@ -110,23 +117,53 @@ export class WorkspaceExecutionManager {
   changeQueued(taskId:string,id:string,action:unknown){return this.serial(async()=>{await (await this.queue()).change(taskId,id,z.enum(['first','up','down','remove']).parse(action))})}
   editQueued(taskId:string,id:string,message:string,expected:string){return this.serial(async()=>{await (await this.queue()).edit(taskId,id,message,expected)})}
   moveQueued(taskId:string,id:string,beforeId?:string){return this.serial(async()=>{await (await this.queue()).move(taskId,id,beforeId)})}
-  /** 插入使用活动运行的模型和权限；先保存占用，失败暂停保留，绝不自动重放。 */
-  insertQueued(taskId:string,id:string){return this.serial(async()=>{
-    const active=this.active.get(taskId);if(!active)throw Error('当前任务已结束，请继续队列');
-    const q=await this.queue(),entry=await q.claim(taskId,id);
-    try{const images=await this.inputImages(entry.options.attachmentIds);await active.loop.runtime.steer(taskId,entry.message,images);await q.complete(id)}
-    catch(error:any){await q.pause(taskId,'插入未确认：'+error.message+'；请核实当前对话后再继续队列');throw error}
-  })}
-  continueQueue(taskId:string){return this.serial(async()=>{safeId(taskId);if(this.collaboration?.waiting?.(taskId))fail('GOAL_WAITING','当前目标正在等待补充，继续队列不能恢复或验收该目标');this.resultContinuationStopped.delete(taskId);await (await this.queue()).resume(taskId);await this.pump(taskId)})}
+  /** 插入只使用选定原主轮的模型/权限；queued 后不反悔，失败留原项且禁止自动重放。 */
+  insertQueued(taskId:string,id:string,expectedRunId:string){
+    const stopVersion=this.stopVersions.get(taskId)??0,controller=new AbortController();
+    this.pendingInsertions.set(controller,taskId);
+    const pending=this.serial(async()=>{
+      safeId(taskId);
+      try{if(typeof expectedRunId!=='string')throw Error('missing');safeId(expectedRunId)}catch{fail('QUEUE_INSERT_STALE','缺少有效的原主运行标识，原消息仍保留在队列')}
+      const active=this.active.get(taskId);
+      const assertCurrent=()=>{
+        if(this.closing||this.insertionsClosed||controller.signal.aborted||(this.stopVersions.get(taskId)??0)!==stopVersion||this.resultContinuationStopped.has(taskId))fail('QUEUE_INSERT_STOPPED','当前运行已停止插入，原消息仍保留在队列');
+        this.workspace.assert();
+        if(!active?.isMain||active.runId!==expectedRunId||this.active.get(taskId)!==active||this.collaboration?.waiting?.(taskId))fail('QUEUE_INSERT_STALE','原主运行已结束或变化，原消息仍保留在队列');
+      };
+      assertCurrent();const q=await this.queue();assertCurrent();
+      let claimed=false,enteredRuntime=false;
+      try{
+        const entry=await q.claim(taskId,id);claimed=true;assertCurrent();
+        const images=await this.inputImages(entry.options.attachmentIds);assertCurrent();
+        enteredRuntime=true;
+        await active!.loop.runtime.steer(taskId,entry.message,images,{expectedRunId,signal:controller.signal});
+        // 原生 queued 和接受日志均已确认。这里不再按迟到 stop 撤销消费，保存失败只能保持未知。
+        await q.complete(id);
+      }catch(error){
+        const rejected=['QUEUE_INSERT_STOPPED','QUEUE_INSERT_STALE'].includes((error as {code?:string})?.code??'');
+        const unknown=enteredRuntime&&!rejected;
+        if(claimed){
+          // 即便暂停落盘失败，settled/pump 也不能把已发送或已确认的旧消息自动再执行。
+          this.queueAdvanceStopped.add(taskId);
+          try{await q.pause(taskId,unknown?'插入结果未确认，请先核实原运行记录，勿重复发送':rejected?'本次插入未发送，原消息仍保留在队列':'插入准备失败，原消息保留在队列，请核实后继续')}
+          catch{fail('QUEUE_INSERT_UNKNOWN','插入或队列保存结果未确认，自动推进已停止，请先核实原运行记录，勿重复发送')}
+        }
+        if(unknown)fail('QUEUE_INSERT_UNKNOWN','插入结果未确认，队列已暂停，请先核实原运行记录，勿重复发送');
+        throw error;
+      }
+    });
+    return pending.finally(()=>this.pendingInsertions.delete(controller));
+  }
+  continueQueue(taskId:string){return this.serial(async()=>{safeId(taskId);if(this.collaboration?.waiting?.(taskId))fail('GOAL_WAITING','当前目标正在等待补充，继续队列不能恢复或验收该目标');this.resultContinuationStopped.delete(taskId);await (await this.queue()).resume(taskId);this.queueAdvanceStopped.delete(taskId);await this.pump(taskId)})}
   /** 成功结束才自动续接；异常和未核实工具保留队列，等待用户显式处理。 */
   private async pump(taskId:string){
-    if(this.closing||this.resultContinuationStopped.has(taskId)||this.active.has(taskId)||this.collaboration?.busy(taskId))return;const q=await this.queue();if(!q.list(taskId).length)return;
+    if(this.closing||this.resultContinuationStopped.has(taskId)||this.queueAdvanceStopped.has(taskId)||this.active.has(taskId)||this.collaboration?.busy(taskId))return;const q=await this.queue();if(!q.list(taskId).length)return;
     const prior=(await this.thread(taskId)).at(-1);if(!prior?.sessionFile||prior.unresolvedTools.length||prior.status==='interrupted'||prior.status==='running'){await q.pause(taskId,'请先核实上一轮执行状态');return}
     if(prior.task.mode!=='chat'){await q.pause(taskId,'队列仅支持普通对话');return}
     const next=await q.take(taskId);if(!next)return;
     try{await this.launch(prior.task,executionOptions.parse(next.options),next.message,{runId:prior.runId},undefined,true);await q.complete(next.id)}catch(e:any){await q.pause(taskId,e.message)}
   }
-  private active=new Map<string,{runId:string;loop:Awaited<ReturnType<typeof createWorkspaceLoop>>}>();
+  private active=new Map<string,{runId:string;isMain:boolean;loop:Awaited<ReturnType<typeof createWorkspaceLoop>>}>();
   private pending:Promise<unknown>=Promise.resolve();
   private closing=false;
   private listeners=new Set<(event:StoredEvent)=>void>();
@@ -239,6 +276,7 @@ export class WorkspaceExecutionManager {
       controller.signal.throwIfAborted();
       if((this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
       if((source?.kind==='member-results'||automaticQueue)&&this.resultContinuationStopped.has(task.taskId))fail('COLLABORATION_STOPPED','本会话已停止自动协作，请显式继续对话');
+      if(automaticQueue&&this.queueAdvanceStopped.has(task.taskId))fail('QUEUE_INSERT_UNKNOWN','旧队列插入或保存结果未确认，请先核实原运行记录，勿自动重发');
       if(!source&&!automaticQueue&&!fresh)this.resultContinuationStopped.delete(task.taskId);
       if(this.closing||(this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
       const run=fresh?await loop.runtime.startFreshMain(task,message,{signal:controller.signal,knownRunIds:()=>this.collaboration?.recoveryRunIds?.(task.taskId)??Promise.resolve([]),beforeRun:async context=>{
@@ -276,7 +314,7 @@ export class WorkspaceExecutionManager {
         this.resultContinuationStopped.delete(task.taskId);
         }
       }});
-      this.active.set(task.taskId,{runId:run.runId,loop});
+      this.active.set(task.taskId,{runId:run.runId,isMain:task.mode==='chat'&&task.agentId===mainAgentId,loop});
       const runningLoop=loop;
       void run.done.catch(()=>undefined).then(async summary=>{
         this.cancelApprovals(task.taskId);
@@ -428,14 +466,20 @@ export class WorkspaceExecutionManager {
   /** 协作批次结束后尝试原用户队列；不会解除用户停止或重启留下的暂停状态。 */
   collaborationReady(taskId:string){return this.serial(async()=>{safeId(taskId);await this.pump(taskId)})}
   /** 协作事实无法核实时立即建立停止屏障，再持久化队列暂停；拦住已进入串行事务但尚未启动的旧消息。 */
-  pauseCollaboration(taskId:string,reason:string){safeId(taskId);this.resultContinuationStopped.add(taskId);return this.serial(async()=>{await (await this.queue()).pause(taskId,reason)})}
+  pauseCollaboration(taskId:string,reason:string){safeId(taskId);this.resultContinuationStopped.add(taskId);this.cancelInsertions(taskId);return this.serial(async()=>{await (await this.queue()).pause(taskId,reason)})}
   async stop(taskId:string){
     safeId(taskId);this.stopVersions.set(taskId,(this.stopVersions.get(taskId)??0)+1);this.resultContinuationStopped.add(taskId);
+    this.cancelInsertions(taskId);this.cancelApprovals(taskId);
     this.pendingLaunches.get(taskId)?.abort(Object.assign(Error('启动期间已收到停止请求'),{code:'COLLABORATION_STOPPED'}));
+    // 不排在可能等待附件或 RPC 的插入事务之后；立即发停止，仍等待真实收尾并报告失败。
+    const active=this.active.get(taskId),stopped=active?.loop.runtime.stop(taskId).then(()=>undefined,error=>error);
     let collaborationError:unknown;
     try{await this.collaboration?.stop(taskId)}catch(error){collaborationError=error}
     try{await this.serial(async()=>{await (await this.queue()).pause(taskId,'已暂停，请点击继续队列')})}
-    finally{this.cancelApprovals(taskId);await this.active.get(taskId)?.loop.runtime.stop(taskId)}
+    finally{
+      // 只收束停止开始时捕获的运行；当时未登记的启动已有 controller，不能补扫并停止后来显式新建的一轮。
+      const error=await stopped;if(error)throw error;
+    }
     if(collaborationError)throw collaborationError;
   }
   private directory(){return path.join(this.workspace.paths.project(this.workspace.entry.id),'loop-engine','tasks')}
@@ -456,5 +500,12 @@ export class WorkspaceExecutionManager {
     return records;
   }
   /** 禁止新任务，等待启动登记完成，然后停止并排空所有运行。 */
-  async close(){this.closing=true;this.cancelPendingLaunches();await this.pending;this.cancelApprovals();await Promise.all([...this.active.values()].map(x=>x.loop.runtime.close()));this.active.clear();this.listeners.clear();for(const release of this.queueSubscriptions)release();this.queueSubscriptions.clear()}
+  async close(){
+    this.closing=true;this.cancelPendingLaunches();this.cancelApprovals();
+    const active=[...this.active.values()],closing=Promise.allSettled(active.map(x=>x.loop.runtime.close()));
+    await this.pending;
+    const results=[...await closing,...await Promise.allSettled([...this.active.values()].filter(x=>!active.includes(x)).map(x=>x.loop.runtime.close()))];
+    this.active.clear();this.listeners.clear();for(const release of this.queueSubscriptions)release();this.queueSubscriptions.clear();
+    const failure=results.find((result):result is PromiseRejectedResult=>result.status==='rejected');if(failure)throw failure.reason;
+  }
 }

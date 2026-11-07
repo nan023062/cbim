@@ -2,6 +2,7 @@
  * 作用定位：Pi 引擎适配器，负责隔离配置、主对话与成员原生会话校验、工具桥与公开执行事件转换。
  * 设计原因：每轮冻结模型、权限和上下文；原生注册与能力预检共用 Core 工具表。成员求助/基线/检查点及按冻结要求提供的 JSON 验证沿真实调用 ID 入日志，结构拒绝不冒称通过；成员回传与人工决定用系统 custom 接续，结束只认 agent_settled。
  * 职责边界：不保存私有推理正文；记录实际用量与生成耗时，未知计价保持未知。明确停止后的标准取消文本才归为取消，其他错误及未知工具副作用交由运行时保留。
+ * 插入边界：原生状态查询后再次核停止；只有 queued 回复表示已接收，发送后的失败不推断未执行或自动重发。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -12,6 +13,7 @@ import type {ResolvedLlm} from '../llm/ports';
 import {modelStopError} from '../model-errors';
 import {buildPiRuntimeSettings,requestedThinkingLevel} from './runtime-config';
 import {nativeToolNames} from '../../tools/native-tools';
+import {fail} from '../../foundation/errors';
 
 /** 单次 Pi 适配器配置；agentHome 只属于 CBIM 工作区，turnTimeoutMs 为回合等待上限毫秒。 */
 export interface PiOptions {
@@ -195,14 +197,21 @@ export class PiEngine implements AgentEngine {
     }
   }
   private redact(value:string){const key=this.options.llm?.apiKey;return key&&this.options.llm?.profile.auth==='api-key'?value.split(key).join('[REDACTED]'):value}
-  /** Pi 原生 steer 在当前工具批次结束后处理；能力与权限沿用本次运行，不能借插入升级授权。 */
-  async steer(message:string,images:import('../types').InputImage[]=[]){
-    if(!this.rpc||!this.settlement||this.stopped||this.closing)throw Error('当前执行已结束，请继续队列');
-    const state=await this.rpc.request('get_state');
-    if(!state.isStreaming)throw Error('当前执行已结束，请继续队列');
+  /** 发送前取消可明确拒绝；发送后只认原回复，停止不能把 queued 改写成未接收。 */
+  async steer(message:string,images:import('../types').InputImage[],signal:AbortSignal){
+    const assertReady=()=>{
+      if(signal.aborted||this.stopped||this.closing)fail('QUEUE_INSERT_STOPPED','当前运行已停止插入，原消息仍保留在队列');
+      if(!this.rpc||!this.settlement)fail('QUEUE_INSERT_STALE','原主运行已结束，原消息仍保留在队列');
+    };
+    assertReady();const rpc=this.rpc!;
+    const state=await rpc.request('get_state');
+    assertReady();
+    if(!state.isStreaming)fail('QUEUE_INSERT_STALE','原主运行已结束，原消息仍保留在队列');
     if(images.length&&!state.model?.input?.includes('image'))throw Error('当前运行的模型不支持图片，请保留在队列中由视觉模型执行');
-    const result=await this.rpc.request('steer',{message,...(images.length?{images}:{})});
-    if(result?.disposition!=='queued')throw Error('Pi 未确认接收插入消息，请核实执行记录后再继续');
+    try{
+      const result=await rpc.request('steer',{message,...(images.length?{images}:{})});
+      if(result?.disposition!=='queued')throw Error('unconfirmed');
+    }catch{fail('QUEUE_INSERT_UNKNOWN','插入结果未确认，队列将保持暂停，请先核实原运行记录，勿重复发送')}
   }
   /** 先保留停止意图，再请求原生 abort；请求失败则关闭进程，最终结算由 LoopRuntime 完成。 */
   async stop(){this.stopped=true;if(this.rpc)try{await this.rpc.request('abort',{},10000)}catch{await this.rpc.close()}}

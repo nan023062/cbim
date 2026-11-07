@@ -3,6 +3,7 @@
  * 设计原因：通过 ApplicationServices 隔离实现；人工保存仅注入本机提交标记且不启动模型，humanContinue 是另一个明确入口并只消费已保存决定。计量、文本补充与新周期保持各自身份和受理边界。
  * 资源连接：桌面显式登记、授权与核验分别路由；只读原回执和未受理证明不重放知识提交，不接受客户端地址或令牌。
  * 模块治理：登记、观察、决定与独立实施按原命令路由；只有可信桌面闭包提供人工来源，普通 commit 没有批准参数。
+ * 队列插入：原样传递用户操作时的 expectedRunId，由执行管理器统一拒绝缺省、过期或停止请求，不替客户端猜当前运行。
  */
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
@@ -75,7 +76,7 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'loop.queueChange':return app.execution(args.id).changeQueued(args.taskId,args.queueId,args.action);
     case 'loop.queueEdit':return app.execution(args.id).editQueued(args.taskId,args.queueId,args.message,args.expected);
     case 'loop.queueMove':return app.execution(args.id).moveQueued(args.taskId,args.queueId,args.beforeId);
-    case 'loop.queueInsert':return app.execution(args.id).insertQueued(args.taskId,args.queueId);
+    case 'loop.queueInsert':return app.execution(args.id).insertQueued(args.taskId,args.queueId,args.expectedRunId);
     case 'loop.queueContinue':return app.execution(args.id).continueQueue(args.taskId);
     case 'loop.chat':return app.execution(args.id).chat(await new ChatInputs(app.workspace(args.id)).message(args.message,args.attachments),await app.chatOptions(args.id,args.options,args.attachments));
     case 'loop.resume':return app.execution(args.id).resume(args.taskId,args.runId,await new ChatInputs(app.workspace(args.id)).message(args.message,args.attachments),await app.chatOptions(args.id,args.options,args.attachments),args.reconciledToolIds);

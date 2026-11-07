@@ -25,9 +25,12 @@ import {MemberEventStreams,memberPublicTask} from './member-events';
 import {ExecutionReportService} from './execution-report-service';
 import type {ExecutionReport} from '../../core/tasks/execution-report';
 import type {ExecutionAdmissionWait} from './admission-wait';
+import {rejectBudget,type ScopeBudgetService,type ScopeBudgetRejected} from './scope-budget-service';
 
 /** 装配主进程提供模型与磁盘能力，调度层不解密密钥或导入平台实现。 */
 export interface MemberExecutionPorts {
+  /** 同一派发事务内读取 canonical 用量；拒绝事实先保存，绝不借查询接口发放许可。 */
+  budgets?:ScopeBudgetService;
   /** 工作区装配代际仍有效；退役时先失效，即使管理器 close 尚在等待协调收尾也不得继续启动。 */
   isCurrent?():boolean;
   /** 装配退役立即中断原生启动窗口，不能只等待 manager.close 才停止尚未进入 active 的模型。 */
@@ -82,6 +85,7 @@ export class MemberExecutionManager {
   })()}
 
   /**
+   * 领取前同事务核实软限额；在途等待不占名额，拒绝先保存独立预算事实且不创建运行。
    * 返回已提交的领取回执，不等待模型开始或任务结束；后续状态由 inspect/events 查询。
    * 重复 commandId 返回原回执，不重新解析模型、不重复启动进程；同一任务已有 run 时不能换命令重跑。
    */
@@ -96,7 +100,7 @@ export class MemberExecutionManager {
     const isCurrent=()=>!this.closing&&!pending.stopping&&!this.ports.signal?.aborted&&this.ports.isCurrent?.()!==false&&(!wait||wait.isCurrent());
     const assertCurrent=()=>{if(!isCurrent())fail('COLLABORATION_STOPPED','成员启动所属工作区或协作批次已停止')};
     try{
-      const receipt=await this.store.transact(this.command('member.start',input),async state=>{
+      const receipt=await this.store.transact<MemberStartReceipt|ScopeBudgetRejected>(this.command('member.start',input),async state=>{
         this.check(input.workspaceId);
         const {graph,task,member,session}=memberTask(state,input.rootSessionId,input.taskId);
         if(state.scopes?.some(scope=>scope.rootSessionId===input.rootSessionId&&scope.status==='waiting'))fail('GOAL_WAITING','当前主会话目标处于安全等待，不能从历史任务启动执行');
@@ -121,7 +125,11 @@ export class MemberExecutionManager {
         // 等待只由仍活动的自动协作批次授权；公开手动启动缺少该回调，容量不足明确拒绝而不假排队。
         assertCurrent();
         if(wait&&wait.scopeId!==task.scopeId)fail('COLLABORATION_STOPPED','成员启动所属协作批次周期不匹配');
-        const runId=randomUUID();release=this.ports.acquire(runId,input.options.permission,member.agentInstanceId,{task,commandId:input.commandId,wait});
+        const runId=randomUUID(),scope=state.scopes?.find(value=>value.scopeId===task.scopeId);
+        const admitted=scope?await this.ports.budgets?.admit(state,scope,{kind:'member',taskId:task.taskId,runId}):undefined;
+        assertCurrent();
+        if(admitted?.rejected)return {scopes:[admitted.scope],receipt:admitted.rejected};
+        release=this.ports.acquire(runId,input.options.permission,member.agentInstanceId,{task,commandId:input.commandId,wait});
         // 取得名额不代表后续 await 期间仍获准启动；停止不能等到 claim 后才生效。
         const prepared=await prepareDispatchExecutionContext(this.owner,task);assertCurrent();
         const engine=await this.ports.prepare(input.options);assertCurrent();
@@ -141,8 +149,9 @@ export class MemberExecutionManager {
         const batch=memberBatch(graph,input.commandId,'message.accepted',[{type:'task.upserted',task:updated},{type:'agent.upserted',agent:memberView(graph,occupied,updated)},...dependencies]);
         await recheckDispatchExecutionContext(this.owner,prepared);this.check(input.workspaceId);assertCurrent();
         launch={run,task:updated,engine};
-        return {runs:[run],members:[occupied],messages:[{...assignment,delivery:'claimed' as const,claim:{runId,leaseEpoch:member.leaseEpoch}}],batch,receipt:{taskId:task.taskId,runId,cursor:{...graph.identity,streamId:batch.streamId,seq:batch.seq}}};
+        return {scopes:admitted&&admitted.scope!==scope?[admitted.scope]:undefined,runs:[run],members:[occupied],messages:[{...assignment,delivery:'claimed' as const,claim:{runId,leaseEpoch:member.leaseEpoch}}],batch,receipt:{taskId:task.taskId,runId,cursor:{...graph.identity,streamId:batch.streamId,seq:batch.seq}}};
       });
+      if('budgetRejected' in receipt)rejectBudget(receipt);
       if(launch){
         const {run,task,engine}=launch;
         // 磁盘提交本身不可撤回；若提交期间停止，保留真实意图但只结算取消，不创建大脑。

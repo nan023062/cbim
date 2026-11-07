@@ -41,7 +41,8 @@ export function validateScopeRunTracking(previous:DispatchState,next:DispatchSta
         const history=scope.continuations??[],prior=old.continuations??[],supplement=history.length===prior.length+1;
         valid(scope.status==='active'&&(old.status==='active'||old.status==='waiting'&&supplement),'等待或封存周期不能登记新运行');
         valid(mutation.scopes?.length===1&&!mutation.batch&&!mutation.runs?.length&&!mutation.members?.length&&!mutation.sessions?.length&&!mutation.messages?.length,'主运行登记只能更新所属周期，不能顺带更改任务或成员');
-        if(!supplement)valid(equal({...old,runTracking:tracking},scope),'主运行追加不能顺带修改目标或周期状态');
+        // 启用预算时准入证明必须与真实运行一起追加；策略和证明的边界由预算不变量独立核实。
+        if(!supplement)valid(equal({...old,runTracking:tracking,budget:scope.budget},scope),'主运行追加不能顺带修改目标或周期状态');
       }
     }
     const fresh=scopeFreshContext(scope);

@@ -1,6 +1,6 @@
 /**
  * 作用定位：调度引擎：工作区执行管理，负责主 Agent 普通对话、团队任务执行与多轮历史读取，拒绝旧轮次分叉，挂起并处理逐次工具审批与结构化用户问题，持久化消息队列并在成功结束后串行续接；本次全部通过仅在当前执行期间有效。
- * 设计原因：容量准入发生在周期/运行意图创建前，beforeRun把真实运行ID送往周期登记；直接启动不足明确未受理。补充、核实与正式重规划仍分别核实可靠意图，当前历史损坏不能回退旧头。
+ * 设计原因：容量准入发生在周期/运行意图创建前，beforeRun把真实运行ID送往额度门禁及周期登记，并持可信启动占位直到引擎关闭；补充、核实与正式重规划分别核实意图，当前坏历史不能回退旧头。
  */
 import {MessageQueue,type QueueCounts} from '../conversation/message-queue';
 import {ApprovalQueue} from '../conversation/approvals';
@@ -58,6 +58,8 @@ export interface ExecutionCollaboration {
   /** 工厂准备完成、启动模型之前打开或续接周期；message 是本轮原文而非首次 goal，source 表示可信结果回注，不创建新目标。 */
   /** Runtime在日志/引擎之前给出真实runId；缺省仅供旧独立装配兼容，不能补造完整归属。 */
   starting?(task:TaskSpec,options:Options,source:RunInputSource|undefined,message:string,runId?:string):Promise<void>;
+  /** 覆盖持久登记至日志/引擎关闭的真实主运行窗口；仅可信装配使用，不从历史推测在途。 */
+  holdMain?(runId:string):()=>void;
   /** 启动未成功时清理已经打开的周期；成员结果遇到暂时占用可保留原周期等待。 */
   startFailed?(task:TaskSpec,source:RunInputSource|undefined,error:unknown):Promise<void>;
   /** 当前主会话仍有协作批次时，用户消息留在原队列，不抢占成员执行资源。 */
@@ -212,7 +214,7 @@ export class WorkspaceExecutionManager {
     const stopVersion=this.stopVersions.get(task.taskId)??0;
     const controller=new AbortController();this.pendingLaunches.set(task.taskId,controller);
     let loop:Awaited<ReturnType<typeof createWorkspaceLoop>>|undefined;
-    let accepted=false,preparingScope=false;
+    let accepted=false,preparingScope=false,releaseBudget:(()=>void)|undefined;
     try{
       loop=await this.factory({...options,allowNativeExecution:options.permission?options.permission!=='read':options.allowNativeExecution,mode:task.mode,requestQuestion:(args,signal)=>this.questions.ask(task.taskId,args,signal),requestApproval:call=>this.approvalQueue.request(task.taskId,call),onEvent:event=>{for(const listener of this.listeners)try{listener(event)}catch{/* observers are not transactions */}}},structuredClone(task),{requestId:source?.kind==='member-results'?source.continuationId:randomUUID(),scopeId:admissionWait?.scopeId??continuation?.scopeId??recovery?.commandId??replan?.commandId,wait:admissionWait,signal:controller.signal});
       controller.signal.throwIfAborted();
@@ -222,6 +224,7 @@ export class WorkspaceExecutionManager {
       if(this.closing||(this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
       const run=fresh?await loop.runtime.startFreshMain(task,message,{signal:controller.signal,knownRunIds:()=>this.collaboration?.recoveryRunIds?.(task.taskId)??Promise.resolve([]),beforeRun:async context=>{
         controller.signal.throwIfAborted();
+        releaseBudget=this.collaboration?.holdMain?.(context.runId);
         if(recovery){
           if(!this.collaboration?.acceptRecovery)fail('RECOVERY_UNAVAILABLE','当前工作区未装配新核实周期');
           await this.collaboration.acceptRecovery(recovery,task,context);
@@ -236,6 +239,7 @@ export class WorkspaceExecutionManager {
       }}):await loop.runtime.start(task,message,resume,source,{signal:controller.signal,beforeRun:async({runId}:{runId:string})=>{
         // Runtime 已取得全局及工作区租约；此刻才打开普通目标，容量拒绝不会留下假的失败周期。
         controller.signal.throwIfAborted();
+        releaseBudget=this.collaboration?.holdMain?.(runId);
         preparingScope=true;
         await this.collaboration?.starting?.(task,options,source,message,runId);
         if(continuation){
@@ -253,6 +257,7 @@ export class WorkspaceExecutionManager {
       void run.done.catch(()=>undefined).then(async summary=>{
         this.cancelApprovals(task.taskId);
         try{await runningLoop.runtime.close()}catch{summary=undefined}
+        releaseBudget?.();releaseBudget=undefined;
         if(this.active.get(task.taskId)?.runId===run.runId)this.active.delete(task.taskId);
         if(!this.closing)await this.serial(async()=>{
           try{this.collaboration?.settled(structuredClone(task),structuredClone(options),summary)}catch{await (await this.queue()).pause(task.taskId,'协作结算未能确认，请核实后继续');return}
@@ -260,7 +265,7 @@ export class WorkspaceExecutionManager {
         });
       }).catch(()=>{});
       return {workspaceId:task.workspaceId,taskId:task.taskId,runId:run.runId};
-    }catch(error){await loop?.runtime.close();const code=(error as {code?:string})?.code;if(((!continuation&&!fresh)||accepted)&&(accepted||preparingScope||code!=='CAPACITY_WAITING'&&code!=='CAPACITY_BUSY'))await this.collaboration?.startFailed?.(task,source,error);throw error}
+    }catch(error){try{await loop?.runtime.close()}finally{releaseBudget?.();releaseBudget=undefined}const code=(error as {code?:string})?.code;if(((!continuation&&!fresh)||accepted)&&(accepted||preparingScope||code!=='CAPACITY_WAITING'&&code!=='CAPACITY_BUSY'))await this.collaboration?.startFailed?.(task,source,error);throw error}
     finally{if(this.pendingLaunches.get(task.taskId)===controller)this.pendingLaunches.delete(task.taskId)}
   }
   /** 用户明确提交一个新只读核实目标；旧源记录不恢复，观察只是用户陈述，稳定请求先查已提交事实。 */

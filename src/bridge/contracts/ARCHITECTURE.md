@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-可序列化的 IPC 数据与公开展示契约。图、目标与准入使用独立游标；周期用量公开已报告数字与缺口，不暴露日志路径或许可。核实和重规划分别声明来源与回执，不从剩余历史猜续聊头。
+可序列化的 IPC 数据与公开展示契约。图、目标与准入用独立游标；软限额只公开新目标设置与冻结摘要，周期用量标明缺口，不暴露日志路径或许可。核实/重规划各自声明来源与回执。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -19,6 +19,7 @@
 | [models.ts](models.ts) | 模型配置界面消费的公开模型信息与停止原因格式化。 |
 | [resources.ts](resources.ts) | 资源种类、仓库快照、登录占位及仓库状态的共享类型。 |
 | [runtime.ts](runtime.ts) | 公开应用级成员、任务负载和运行用量的可序列化观察契约。 |
+| [scope-budget.ts](scope-budget.ts) | 公开目标周期软限额的可序列化策略，供设置和目标卡片经 IPC 读写、展示。 |
 | [scope-usage.ts](scope-usage.ts) | 向桌面任务视图公开周期用量的严格查询与报告契约。 |
 | [usage.ts](usage.ts) | 向界面公开 Core 的纯执行计量函数及单轮用量类型。 |
 | [workspace.ts](workspace.ts) | 跨进程工作区、知识事务与 IPC 数据契约。 |
@@ -280,6 +281,16 @@ class N_src_bridge_contracts_runtime_ts["runtime.ts"] {
 ```
 直接依赖：[../../backend/core/runtime/types.ts](../../backend/core/runtime/types.ts)。
 
+### scope-budget.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_scope_budget_ts["scope-budget.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../backend/core/tasks/scope-budget.ts](../../backend/core/tasks/scope-budget.ts)。
+
 ### scope-usage.ts
 
 ```mermaid
@@ -370,6 +381,10 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 目标软限额设置与投影
+
+`scope-budget` 仅导出严格软限额策略与周期摘要。桌面可明确保存新周期默认值，不能指定当前周期的新限额、编造准入证明或预算消费；当前策略与拒绝从真实目标摘要读取。
 
 ### 主会话历史展示契约
 

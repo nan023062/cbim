@@ -15,6 +15,7 @@ import type {AgentHistoryService} from '../../scheduler-engine/runtime/agent-his
 import type {RuntimeCursor,RuntimeRead,RuntimeSnapshot} from '../../core/runtime/types';
 import type {Catalog as CatalogData, WorkspaceView} from '../../../bridge/contracts/workspace';
 import type {AdmissionSettings} from '../persistence/settings/admission-settings';
+import type {BudgetSettings} from '../persistence/settings/budget-settings';
 import type {AdmissionCursor,AdmissionRead} from '../../core/runtime/admission';
 
 /** 应用向路由提供的内部服务；工作区调用始终携带身份，生命周期仍由应用实现管理。 */
@@ -26,6 +27,8 @@ export interface ApplicationServices {
   /** 真正执行准入独立于监管索引；只暴露游标读取和可靠设置，不把领取能力交给页面。 */
   readonly admission:{read(cursor?:AdmissionCursor):AdmissionRead};
   readonly admissionSettings:AdmissionSettings;
+  /** 应用设置只为未来周期提供默认策略，不修改当前周期的冻结额度或发放启动许可。 */
+  readonly budgetSettings:BudgetSettings;
   /** 应用级活动和用量投影；只读路由不向渲染进程暴露写入事实或接管任务的能力。 */
   readonly runtime:{snapshot():RuntimeSnapshot;read(cursor?:RuntimeCursor):RuntimeRead;rename(workspaceId:string,name:string):void};
   /** 仅观察已运行实例；路由重命名时同步实例显示名，不负责增删实例。 */

@@ -1,0 +1,8 @@
+/* 软限额表单与资源设置共享主题；窄屏纵排，金额和 Token 分项明确，不靠颜色表示是否启用。 */
+.budget-settings-toggle{display:flex!important;align-items:center;gap:8px;margin:14px 0}
+.budget-settings-toggle input{width:auto!important}
+.budget-settings-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.budget-settings-fields label{display:flex;flex-direction:column;gap:6px;min-width:0}
+.budget-settings-fields input{width:100%;min-width:0;box-sizing:border-box}
+.budget-settings-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+@media(max-width:600px){.budget-settings-fields{grid-template-columns:minmax(0,1fr)}}

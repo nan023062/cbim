@@ -1,6 +1,6 @@
 /**
  * 作用定位：为已关闭周期的异常执行创建独立只读核实周期，持久化用户观察和一次性全新上下文意图。
- * 设计原因：旧运行未知时不能续接或重放；新周期原子登记首轮，隔离集合包含无日志的既有主清单。事务核对来源与会话槽，重复命令只读原事实，独立业务重规划也不放宽 recovery 只读权限。
+ * 设计原因：旧运行未知时不能续接或重放；新周期原子登记首轮与当前软限额，隔离集合包含无日志的旧主清单。事务核对来源与会话槽，重复命令只读原事实，不放宽 recovery 只读权限。
  */
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
@@ -25,7 +25,7 @@ export type AcceptedRecovery={scope:DispatchScope;recovery:ScopeRecovery;fresh:b
 function check(condition:unknown,code:string,message:string):asserts condition{if(!condition)fail(code,message)}
 
 export class ScopeRecoveryService {
-  constructor(private owner:Owner,private store:DispatchStore,private logs?:Pick<ScopeGoalPorts,'inspectMember'>){}
+  constructor(private owner:Owner,private store:DispatchStore,private logs?:Pick<ScopeGoalPorts,'inspectMember'>,private budgets?:import('./scope-budget-service').ScopeBudgetService){}
   private parse<S extends z.ZodTypeAny>(schema:S,raw:unknown):z.output<S>{const parsed=schema.safeParse(raw);if(!parsed.success)fail('RECOVERY_INPUT_INVALID','只读核实请求或可信启动参数无效');return parsed.data}
   private identity(state:DispatchState,identity:GraphIdentity){
     this.owner.assert();check(identity.workspaceId===this.owner.entry.id&&state.workspaceId===identity.workspaceId,'RECOVERY_IDENTITY','核实请求不属于当前工作区');
@@ -76,7 +76,7 @@ export class ScopeRecoveryService {
     check(report.execution!=='in_flight','RECOVERY_BUSY','来源执行仍在途，请等待结束后核实');
     return report;
   }
-  /** 新周期及真实启动意图在一个事务提交；同命令变参拒绝，重复命令不重新读取日志或提供 fresh。 */
+  /** 新周期、当前软限额策略及首轮证明同事务提交；同命令变参拒绝，重复不读日志或提供 fresh。 */
   async accept(raw:RecoveryRequest,trusted:RecoveryLaunch):Promise<AcceptedRecovery>{
     const input=this.parse(recoveryRequestSchema,raw),context=this.parse(recoveryContextSchema,{initialRunId:trusted.runId,nativeSessionId:trusted.nativeSessionId,excludedRunIds:trusted.excludedRunIds});
     let fresh=false;
@@ -89,7 +89,8 @@ export class ScopeRecoveryService {
       check(!state.runs?.some(r=>r.binding.runId===context.initialRunId)&&!state.scopes?.some(s=>s.runTracking?.mainRunIds.includes(context.initialRunId)||s.continuations?.some(c=>c.runId===context.initialRunId)||scopeFreshContext(s)?.initialRunId===context.initialRunId||scopeFreshContext(s)?.nativeSessionId===context.nativeSessionId),'RECOVERY_CONTEXT_CONFLICT','新的主运行或原生上下文身份已被使用');
       check([...priorContexts.flatMap(c=>c.excludedRunIds),...priorRuns].every(id=>context.excludedRunIds.includes(id)),'RECOVERY_CONTEXT_CONFLICT','新上下文必须隔离此前明确登记的全部主运行，包括没有日志的旧意图');
       const acceptedAt=new Date().toISOString(),recovery:ScopeRecovery={recoveryId:input.commandId,acceptedAt,source:{...input.source,taskRevision:report.basis.taskRevision,planRevision:report.basis.planRevision,scopeOutcome:source.outcome!,reportExecution:report.execution,logState:report.log.state,unknownToolCount:report.tools.counts.unknown},operation:input.operation,observation:input.observation,input:input.input,options:input.options,context};
-      const scope:DispatchScope={workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,scopeId:input.commandId,status:'active',createdAt:acceptedAt,goal:{revision:1,input:{message:input.input.message,attachmentIds:[]}},runTracking:createScopeRunTracking(context.initialRunId),recovery};
+      let scope:DispatchScope={workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,scopeId:input.commandId,status:'active',createdAt:acceptedAt,goal:{revision:1,input:{message:input.input.message,attachmentIds:[]}},runTracking:createScopeRunTracking(context.initialRunId),recovery};
+      if(this.budgets)scope=this.budgets.initialize(scope,{kind:'main',taskId:input.rootSessionId,runId:context.initialRunId});
       fresh=true;return {scopes:[scope],receipt:this.receipt(scope)};
     });
     const scope=this.found(await this.store.read(),input);

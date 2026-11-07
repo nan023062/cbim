@@ -1,12 +1,13 @@
 /**
  * 作用定位：单次运行授权、版本化队列增量和结构化问题按工作区路由；排队时冻结附件内容与模型身份。Application：登记及重命名工作区、装配模型供应商与服务，并统一派发主 Agent 对话、附件快照、工具审批和历史操作。
- * 设计原因：主会话绑定独立主实例；全应用共享真实并发准入，工作区装配代际隔离等待票据。关闭先撤销排队资格，再停运行和排空历史；不会通过删除观察记录假释放活动名额。
+ * 设计原因：主会话绑定独立主实例；应用共享并发准入，软限额设置在新周期创建时冻结。工作区代际隔离等待票据；关闭先撤票再停运行和排空历史，不通过删除观察记录假释放名额。
  */
 import path from 'node:path';
 import {dispatchApplication} from './ipc/dispatch';
 import type {ApplicationServices} from './ipc/services';
 import {LlmProfiles,type SecretCipher} from './persistence/settings/llm-profiles';
 import {AdmissionSettings} from './persistence/settings/admission-settings';
+import {BudgetSettings} from './persistence/settings/budget-settings';
 import {createExecutionManager} from './execution';
 import {createMemberServices} from './member-dispatch';
 import type {WorkspaceDispatchService} from '../scheduler-engine/execution/dispatch-service';
@@ -45,6 +46,8 @@ export class Application implements ApplicationServices {
   /** 准入控制与只读监管分离；名额只由真实租约领取/释放改变，策略保存后才生效。 */
   readonly admission=new GlobalRunAdmission();
   readonly admissionSettings:AdmissionSettings;
+  /** 保存的新默认仅在周期创建事务读取；运行中和安全等待沿用原周期冻结值。 */
+  readonly budgetSettings:BudgetSettings;
   private nextAdmissionEpoch=0;
   private admissionOwners=new Map<string,()=>void>();
   private retireAdmission(id:string){this.admissionOwners.get(id)?.();this.admissionOwners.delete(id)}
@@ -73,8 +76,8 @@ export class Application implements ApplicationServices {
   private stopping=false;private shutdownPromise?:Promise<void>;
   /** IPC 新增工作区前检查关停状态；只暴露读取，不允许路由修改生命周期。 */
   get isStopping(){return this.stopping}
-  constructor(readonly paths:Paths,designRoot:string,secretCipher?:SecretCipher) {this.models=new LlmProfiles(path.join(paths.userRoot,'llm.json'),secretCipher);this.admissionSettings=new AdmissionSettings(path.join(paths.userRoot,'run-admission.json'),this.admission);this.catalog=new Catalog(paths);this.rules=new Rules(designRoot);this.resources=new ResourceRepositories(paths)}
-  async init(){await this.catalog.init();await this.rules.init();await this.resources.init();await this.admissionSettings.init();await this.restore()}
+  constructor(readonly paths:Paths,designRoot:string,secretCipher?:SecretCipher) {this.models=new LlmProfiles(path.join(paths.userRoot,'llm.json'),secretCipher);this.admissionSettings=new AdmissionSettings(path.join(paths.userRoot,'run-admission.json'),this.admission);this.budgetSettings=new BudgetSettings(path.join(paths.userRoot,'scope-budget.json'));this.catalog=new Catalog(paths);this.rules=new Rules(designRoot);this.resources=new ResourceRepositories(paths)}
+  async init(){await this.catalog.init();await this.rules.init();await this.resources.init();await this.admissionSettings.init();await this.budgetSettings.init();await this.restore()}
   async list(){const data=await this.catalog.read();return {...data,warning:this.catalog.warning,entries:await Promise.all(data.entries.map(async e=>this.running.get(e.id)?.view()||{...e,state:await exists(e.path)?'registered':'missing',tasks:[]}))}}
   workspace(id:string){const ws=this.running.get(id);if(!ws)fail('NOT_RUNNING','工作区未运行，请由用户在桌面打开');return ws}
   /** 合并同工作区的并发打开并装配内部执行服务；restart 只更换此工作区实例，不修改外部工具配置。 */
@@ -92,7 +95,7 @@ export class Application implements ApplicationServices {
         const monitor=new WorkspaceRuntimeMonitor(this.runtime,id,entry.name,history);this.monitors.set(id,monitor);
         try{
           await ws.open();
-          const lease=new WorkspaceExecutionLease(),admission=this.bindAdmission(ws,lease),{dispatch:service,members}=createMemberServices(ws,this.models,lease,monitor.dispatchObserver,admission),execution=createExecutionManager(ws,this.models,lease,()=>this.collaborations.get(id),service,admission);
+          const lease=new WorkspaceExecutionLease(),admission=this.bindAdmission(ws,lease),{dispatch:service,members}=createMemberServices(ws,this.models,lease,monitor.dispatchObserver,admission,()=>this.budgetSettings.read()),execution=createExecutionManager(ws,this.models,lease,()=>this.collaborations.get(id),service,admission);
           this.dispatchers.set(id,service);this.executions.set(id,execution);this.memberExecutions.set(id,members);
           await monitor.initialize(ws,service,execution,members);
           const collaboration=new AutoCollaboration(ws,service,members,execution,lease,(root,error)=>monitor.collaborationIssue(root,error));

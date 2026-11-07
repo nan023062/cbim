@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-模型、仓库及全局运行并发配置。并发设置显式版本化保存，显示实际占用与等待，实时刷新不覆盖草稿；凭据仅提交主进程，账户仍按当前占位语义处理。
+模型、仓库、并发及新目标软限额配置。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。凭据只提交主进程，账户仍为占位。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -11,9 +11,12 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [AdmissionSettings.tsx](AdmissionSettings.tsx) | 配置应用级 Agent 并发上限，展示真实准入占用与等待数量。 |
+| [budget-settings-state.ts](budget-settings-state.ts) | 管理软限额设置草稿、显式读取和版本化保存，隔离页面卸载后的异步响应。 |
+| [budget-settings.css](budget-settings.css) | 对应界面的布局与视觉样式。 |
+| [BudgetSettings.tsx](BudgetSettings.tsx) | 展示用户显式配置的新目标 Token/费用软限额，与全局并发设置相邻但独立保存。 |
 | [models.css](models.css) | 供应商列表和模型表单布局。 |
 | [ModelSettings.tsx](ModelSettings.tsx) | 设置页的自定义供应商、连接表单与模型目录编辑器。 |
-| [SettingsView.tsx](SettingsView.tsx) | 模型供应商、运行并发、仓库目录、共享服务和账号服务器占位设置。 |
+| [SettingsView.tsx](SettingsView.tsx) | 模型供应商、运行并发、新目标软限额、仓库与共享服务设置。 |
 
 ## 架构类图
 
@@ -28,6 +31,81 @@ class N_src_frontend_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
 ```
 
 直接依赖：[../../bridge/contracts/admission.ts](../../bridge/contracts/admission.ts)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)、[../tasks/admission.css](../tasks/admission.css)。
+
+### budget-settings-state.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_settings_budget_settings_state_ts["budget-settings-state.ts"] {
+  <<module>>
+  +budgetSettingsInput()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_settings_budget_settings_state_ts["budget-settings-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_settings_budget_settings_state_ts_BudgetSettingsDraft["BudgetSettingsDraft"] {
+  <<interface>>
+  +enabled
+  +tokens
+  +estimatedCostUsd
+}
+N_src_frontend_settings_budget_settings_state_ts ..> N_src_frontend_settings_budget_settings_state_ts_BudgetSettingsDraft : 声明
+class N_src_frontend_settings_budget_settings_state_ts_BudgetSettingsState["BudgetSettingsState"] {
+  <<interface>>
+  +policy
+  +busy
+  +error
+  +notice
+}
+N_src_frontend_settings_budget_settings_state_ts ..> N_src_frontend_settings_budget_settings_state_ts_BudgetSettingsState : 声明
+N_src_frontend_settings_budget_settings_state_ts_BudgetSettingsDraft <|-- N_src_frontend_settings_budget_settings_state_ts_BudgetSettingsState
+class N_src_frontend_settings_budget_settings_state_ts_Call["Call"] {
+  <<type>>
+
+}
+N_src_frontend_settings_budget_settings_state_ts ..> N_src_frontend_settings_budget_settings_state_ts_Call : 声明
+class N_src_frontend_settings_budget_settings_state_ts_BudgetSettingsController["BudgetSettingsController"] {
+  +snapshot
+  +subscribe
+  +edit()
+  +cancel()
+  +load()
+  +save()
+  -call
+  -state
+  -generation
+  -listeners
+  -publish()
+}
+N_src_frontend_settings_budget_settings_state_ts ..> N_src_frontend_settings_budget_settings_state_ts_BudgetSettingsController : 声明
+```
+
+直接依赖：[../../bridge/contracts/scope-budget.ts](../../bridge/contracts/scope-budget.ts)。
+
+### budget-settings.css
+
+```mermaid
+classDiagram
+class N_src_frontend_settings_budget_settings_css["budget-settings.css"] {
+  <<stylesheet>>
+}
+```
+
+### BudgetSettings.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
+  <<component>>
+  +BudgetSettings()
+}
+```
+
+直接依赖：[budget-settings-state.ts](budget-settings-state.ts)、[budget-settings.css](budget-settings.css)。
 
 ### models.css
 
@@ -60,12 +138,21 @@ class N_src_frontend_settings_SettingsView_tsx["SettingsView.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[ModelSettings.tsx](ModelSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)。
+直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[ModelSettings.tsx](ModelSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)。
 
 ### 本目录调用边界
 
 ```mermaid
 classDiagram
+class N_src_frontend_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
+  <<component>>
+}
+class N_src_frontend_settings_budget_settings_state_ts["budget-settings-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_settings_budget_settings_css["budget-settings.css"] {
+  <<stylesheet>>
+}
 class N_src_frontend_settings_ModelSettings_tsx["ModelSettings.tsx"] {
   <<component>>
 }
@@ -75,12 +162,25 @@ class N_src_frontend_settings_models_css["models.css"] {
 class N_src_frontend_settings_SettingsView_tsx["SettingsView.tsx"] {
   <<component>>
 }
+N_src_frontend_settings_BudgetSettings_tsx ..> N_src_frontend_settings_budget_settings_state_ts : 导入依赖
+N_src_frontend_settings_BudgetSettings_tsx ..> N_src_frontend_settings_budget_settings_css : 导入依赖
+N_src_frontend_settings_ModelSettings_tsx ..> N_src_frontend_settings_models_css : 导入依赖
+N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_ModelSettings_tsx : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_settings_SettingsView_tsx["SettingsView.tsx"] {
+  <<component>>
+}
 class N_src_frontend_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
   <<component>>
 }
-N_src_frontend_settings_ModelSettings_tsx ..> N_src_frontend_settings_models_css : 导入依赖
-N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_ModelSettings_tsx : 导入依赖
+class N_src_frontend_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
+  <<component>>
+}
 N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_AdmissionSettings_tsx : 导入依赖
+N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_BudgetSettings_tsx : 导入依赖
 ```
 
 
@@ -98,8 +198,10 @@ N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_AdmissionSe
 
 # 设置界面
 
-`SettingsView` 独立装配模型、执行并发和资源仓库设置，仓库服务失败不阻止配置模型与并发。
+`SettingsView` 独立装配模型、执行并发、新目标软限额和资源仓库设置，仓库服务失败不阻止配置运行策略。运行设置表单始终保留在同一渲染位置，仓库异步加载只改变仓库区域，不重挂载已可交互的表单或清除草稿。
 
 `AdmissionSettings` 从可靠设置读取版本，显式保存 1～32 的全局运行上限。输入草稿不随占用变化重置；版本冲突后由用户刷新确认。`useAdmission` 与会话共用一个窗口级游标订阅，显示实际占用/上限和等待数量；降低上限可以暂时出现占用高于上限，不结束已有任务。读取失败保留旧数据并明确可能过期。
 
-此处不领取运行、不解除审批、不恢复历史或配置预算。设置保存只影响新准入；真实启动仍须经过调度、知识基线、成员及工作区租约检查。
+`BudgetSettings` 默认关闭，用户至少明确一项 Token / 美元额度才可启用。`budget-settings-state` 保留草稿和期望版本，显式读取/保存、不轮询、不重复提交；读取未成功时禁用表单，保存失败保留输入，未知结果先刷新核实。禁用提交清除额度；重新启用须重新明确。设置只冻结到之后创建的周期，既有目标和 waiting 不受全局改配影响。
+
+界面明确“运行间软限额”：单轮中的多个请求、重试或自动摘要可能超额；在途须先结算，用量未知不能按零放行，同周期启用后串行结算。设置页不领取运行、不解除审批、不消费 waiting 或恢复历史；真正启动仍由调度事务、知识基线、成员及工作区租约检查。

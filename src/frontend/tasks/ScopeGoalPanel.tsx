@@ -1,12 +1,13 @@
 /**
  * 作用定位：复用展示本轮真实目标、静态角色分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。
- * 设计原因：周期状态与模型声明分开呈现；尚未登记计划的正式任务依据 origin 显示规划中，避免误称普通问答。等待补充和核实后的业务新目标各用独立共享控制器，不改旧周期权限或构成人工验收。
+ * 设计原因：周期状态、冻结软限额与模型声明分开呈现，预算拒绝不改原等待输入；尚未登记计划的正式任务按 origin 显示规划中。补充和新业务各用独立控制器，不改旧周期权限或构成人工验收。
  */
 import type {ScopeGoalState} from './scope-state';
 import {Icon} from '../components/Icon';
 import {ScopeContinuationForm} from './ScopeContinuationForm';
 import type {ScopeContinuationView} from './useScopeContinuation';
 import {ScopeReplanForm} from './ScopeReplanForm';
+import {ScopeBudgetPanel} from './ScopeBudgetPanel';
 import type {ScopeReplanView} from './useScopeReplan';
 import './scope-goal.css';
 
@@ -29,6 +30,7 @@ export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel',co
     {error&&<p className="scope-goal-alert" role="alert">{error}；保留上次已确认的目标记录。</p>}
     {!summary?<p className="scope-goal-muted">{loading?'正在同步本轮目标…':'当前会话还没有保存目标周期。普通聊天不会被补造成业务任务。'}</p>:<>
       <p className="scope-goal-title" title={title}>{title}</p>
+      <ScopeBudgetPanel budget={summary.budget} waiting={summary.status==='waiting'}/>
       {summary.status==='waiting'&&<div className="scope-goal-waiting" data-testid="scope-goal-waiting"><p>{summary.wait?.reason}</p><p className="scope-goal-muted">在本目标卡片补充说明后继续。普通排队消息不会恢复本目标或代替人工验收。</p></div>}
       {continuation&&continuation.scopeId===selectedScopeId&&<ScopeContinuationForm state={continuation}/>}
       {replan&&replan.inspectionScopeId===selectedScopeId&&<ScopeReplanForm state={replan}/>}

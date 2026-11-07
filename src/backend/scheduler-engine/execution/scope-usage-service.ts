@@ -1,7 +1,7 @@
 /**
  * 作用定位：按指定目标周期的持久主运行清单与成员绑定，读取 canonical 日志并生成只读消耗报告。
  * 设计原因：同一主会话可跨多个目标，不能按时间或最近日志猜归属；缺失记录与未知价格保留不完整，不参与执行许可。
- * 职责边界：一次显式查询只读有界来源，前后核实归属基线，不扫描其它主会话、不修复或启动模型。
+ * 职责边界：公开查询只读有界来源并前后核实基线；collect 为预算事务复用相同 canonical 校验但不重入存储，不扫描其它主会话、不修复或启动模型。
  */
 import {fail} from '../../core/foundation/errors';
 import {hash,json} from '../../core/foundation/serialization';
@@ -53,11 +53,11 @@ export class ScopeUsageService {
     const binding=summary.conversationBinding,root=facts.root?.agent,session=facts.sessions.find(item=>item.agentSessionId===binding?.agentSessionId&&item.purpose==='conversation');
     return summary.task.mode==='chat'&&summary.task.agentId==='cbim:main'&&!summary.memberBinding&&binding?.workspaceId===input.workspaceId&&binding.rootSessionId===input.rootSessionId&&binding.agentId==='cbim:main'&&binding.agentInstanceId===root?.agentInstanceId&&session?.workspaceId===input.workspaceId&&session.rootSessionId===input.rootSessionId&&session.agentId==='cbim:main'&&session.agentInstanceId===root?.agentInstanceId&&session.teamId===binding.teamId;
   }
-  /** 查询无自动重试；不同步的来源与日志只降低完整性，不按错误结果估算零消耗。 */
-  async read(raw:unknown):Promise<ScopeUsageReport>{
+  /** 使用调用方已持有的事务快照核实日志；不重入 store.read，也不把公开报告缓存当作启动许可。 */
+  async collect(state:DispatchState,raw:unknown){
     const parsed=scopeUsageInputSchema.safeParse(raw);if(!parsed.success)fail('SCOPE_USAGE_INPUT','周期消耗查询身份无效');const input=parsed.data;
     this.owner.assert();if(input.workspaceId!==this.owner.entry.id)fail('SCOPE_USAGE_IDENTITY','周期消耗不属于当前工作区');
-    const state=await this.store.read(),facts=this.facts(state,input);
+    const facts=this.facts(state,input);
     if(state.workspaceId!==input.workspaceId||!facts.scope||!facts.root)fail('SCOPE_USAGE_IDENTITY','目标周期不属于当前主会话或缺少可信图根');
     const sources=this.sources(facts,input),runs:ScopeUsageRun[]=[],logStamps:unknown[]=[];
     for(const source of sources){
@@ -80,10 +80,15 @@ export class ScopeUsageService {
       }
       runs.push(result);
     }
+    return {input,facts,runs,logStamps};
+  }
+  /** 查询无自动重试；不同步的来源与日志只降低完整性，不按错误结果估算零消耗。 */
+  async read(raw:unknown):Promise<ScopeUsageReport>{
+    const {input,facts,runs,logStamps}=await this.collect(await this.store.read(),raw);
     const after=await this.store.read();this.owner.assert();
     const consistency=after.workspaceId===input.workspaceId&&matches(facts,this.facts(after,input))?'stable':'changed_during_read';
-    const coverage=facts.scope.runTracking?'tracked':'legacy';
+    const coverage=facts.scope!.runTracking?'tracked':'legacy';
     const issues=[...(coverage==='legacy'?[{code:'SCOPE_USAGE_LEGACY',message:'旧周期没有从创建起登记完整主运行清单；只展示可核实成员来源，不推断完整总数。'}]:[]),...(consistency==='changed_during_read'?[{code:'SCOPE_USAGE_CHANGED',message:'读取期间周期或运行归属发生变化，本次仅为部分观察，请重新读取。'}]:[])];
-    return scopeUsageReportSchema.parse({identity:input,checkedAt:new Date().toISOString(),basis:hash(json({facts,logStamps,consistency})),consistency,coverage,scopeStatus:facts.scope.status,scopeOutcome:facts.scope.outcome,totals:summarizeScopeUsage(runs,coverage,consistency),runs,issues});
+    return scopeUsageReportSchema.parse({identity:input,checkedAt:new Date().toISOString(),basis:hash(json({facts,logStamps,consistency})),consistency,coverage,scopeStatus:facts.scope!.status,scopeOutcome:facts.scope!.outcome,totals:summarizeScopeUsage(runs,coverage,consistency),runs,issues});
   }
 }

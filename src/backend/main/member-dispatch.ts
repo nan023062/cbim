@@ -1,6 +1,6 @@
 /**
  * 作用定位：为已运行工作区装配成员派发、大脑执行及目标审阅的可信日志读取端口。
- * 设计原因：派发、目标审阅和只读核实共用可信存储；成员在领取前接入应用并发准入与工作区占用，等待不产生执行意图。密钥留在工厂闭包，审批互不继承。
+ * 设计原因：派发、目标审阅及周期额度共用可信存储与日志端口；成员领取事务先核实冻结软限额，再取得并发和工作区占用，等待不产生意图。密钥留在工厂闭包，审批互不继承。
  */
 import path from 'node:path';
 import type {Workspace} from './workspace/workspace';
@@ -17,6 +17,7 @@ import {guard} from './platform/tool-guard';
 import {safeId} from '../core/foundation/identity';
 import {fail} from '../core/foundation/errors';
 import {admissionRequestId,acquireExecutionLease,type WorkspaceAdmission} from './execution-admission';
+import type {ScopeBudgetPolicy} from '../core/tasks/scope-budget';
 
 /** 应用对每个活动工作区只调用一次；关闭服务必须早于释放工作区锁。 */
 export function createMemberDispatch(workspace:Workspace,observer?:DispatchObserver){
@@ -28,7 +29,7 @@ export function createMemberDispatch(workspace:Workspace,observer?:DispatchObser
  * 应用级装配入口，每个工作区仅创建一次。members 须先关闭并结算，之后由 dispatch 关闭共享 store。
  * prepare 固定公开模型参数和凭据，create 不重新读取默认设置；没有已保存模型时拒绝启动。
  */
-export function createMemberServices(workspace:Workspace,models:LlmProfiles,lease:WorkspaceExecutionLease,observer?:DispatchObserver,admission?:WorkspaceAdmission){
+export function createMemberServices(workspace:Workspace,models:LlmProfiles,lease:WorkspaceExecutionLease,observer?:DispatchObserver,admission?:WorkspaceAdmission,budgetPolicy?:()=>ScopeBudgetPolicy){
   workspace.assert();
   const directory=path.join(workspace.paths.project(workspace.entry.id),'dispatch');
   const store=new FileDispatchStore(directory,workspace.entry.id,observer),storage=new FileRunStorage();
@@ -46,8 +47,9 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
     const summary=await storage.read(path.join(workspace.paths.project(workspace.entry.id),'loop-engine','tasks',safeId(rootSessionId),safeId(runId)));
     if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path||summary.task.taskId!==rootSessionId||summary.runId!==runId||summary.task.agentId!=='cbim:main')throw Error('主调度证据不属于当前会话或运行');
     return summary;
-  }});
+  }},budgetPolicy);
   const members=new MemberExecutionManager(workspace,store,{
+    budgets:dispatch.budgets,
     isCurrent:()=>admission?.isCurrent()??true,
     signal:admission?.signal,
     acquire:(key,permission,agentInstanceId,context)=>{

@@ -1,6 +1,6 @@
 /**
  * 作用定位：在完成的只读核实基础上创建独立业务周期，冻结真实证据、原人工约束和用户明确的新目标。
- * 设计原因：旧任务和未知回执保持封存；预览与受理都重读 canonical 证据，新首轮清单与意图原子保存并隔离全部旧登记。重复命令只读回执，fresh 仅当前事务产生，新业务不修改只读核实权限。
+ * 设计原因：旧任务和未知回执保持封存；预览与受理重读 canonical 证据，新首轮清单、当前软限额与意图原子保存并隔离旧登记。重复命令只读回执，fresh 仅当前事务产生，不修改只读核实权限。
  */
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
@@ -21,7 +21,7 @@ export type ReplanLaunch={runId:string;nativeSessionId:string;excludedRunIds:str
 export type AcceptedReplan={scope:DispatchScope;replan:ScopeReplan;fresh:boolean};
 function check(condition:unknown,code:string,message:string):asserts condition{if(!condition)fail(code,message)}
 export class ScopeReplanService {
-  constructor(private owner:Owner,private store:DispatchStore,private goals:ScopeGoalService,private logs?:ScopeGoalPorts){}
+  constructor(private owner:Owner,private store:DispatchStore,private goals:ScopeGoalService,private logs?:ScopeGoalPorts,private budgets?:import('./scope-budget-service').ScopeBudgetService){}
   private parse<S extends z.ZodTypeAny>(schema:S,raw:unknown):z.output<S>{const value=schema.safeParse(raw);if(!value.success)fail('REPLAN_INPUT_INVALID','业务重规划请求或启动参数无效');return value.data}
   private identity(state:DispatchState,input:{workspaceId:string;rootSessionId:string}){
     this.owner.assert();check(state.workspaceId===input.workspaceId&&this.owner.entry.id===input.workspaceId,'REPLAN_IDENTITY','业务重规划不属于当前工作区');
@@ -60,7 +60,7 @@ export class ScopeReplanService {
     try{const state=await this.store.read(),value=await this.proof(state,input);check(sameGoalValue(state,await this.store.read()),'REPLAN_STALE','派发记录在预览期间变化');return {identity:input,eligible:true,basis:value.basis,graphCursor:value.graphCursor,inspectionGoalRevision:value.proof.inspectionGoalRevision,knowledgeRevision:value.proof.knowledgeRevision,requiredModules:value.proof.requiredModules,inheritedHuman:value.proof.inheritedHuman,issues:[]}}
     catch(error){const code=(error as {code?:string})?.code;return {identity:input,eligible:false,requiredModules:[],inheritedHuman:[],issues:[{code:typeof code==='string'&&/^(REPLAN_|GOAL_)/.test(code)?code:'REPLAN_PROOF_INVALID',message:'当前核实证据未满足业务重规划条件，请检查来源周期、完整日志、知识版本和模块覆盖。'}]}}
   }
-  /** 预检不授予启动权；仅 accept 在可信真实 runId 到达后原子记录一次新意图。 */
+  /** 预检不授予启动权；accept 在可信 runId 到达后原子冻结当前软限额及首轮证明，记录一次新意图。 */
   async preflight(raw:ReplanRequest){const input=this.parse(replanRequestSchema,raw),value=await this.proof(await this.store.read(),{workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,inspectionScopeId:input.source.inspectionScopeId});check(value.basis===input.source.expectedBasis,'REPLAN_STALE','业务重规划依据已变化，请重新预览');return value}
   async accept(raw:ReplanRequest,trusted:ReplanLaunch):Promise<AcceptedReplan>{
     const input=this.parse(replanRequestSchema,raw),context=this.parse(freshContextSchema,{initialRunId:trusted.runId,nativeSessionId:trusted.nativeSessionId,excludedRunIds:trusted.excludedRunIds});let fresh=false;
@@ -71,7 +71,8 @@ export class ScopeReplanService {
       const contexts=(state.scopes??[]).map(scopeFreshContext).filter(item=>item!==undefined),prior=(state.scopes??[]).filter(item=>item.rootSessionId===input.rootSessionId).flatMap(item=>{const c=scopeFreshContext(item);return [...(item.runTracking?.mainRunIds??[]),...(item.continuations??[]).map(c=>c.runId),...(c?[c.initialRunId,...c.excludedRunIds]:[])]});
       check(!state.runs?.some(item=>item.binding.runId===context.initialRunId)&&!state.scopes?.some(item=>item.runTracking?.mainRunIds.includes(context.initialRunId)||item.continuations?.some(c=>c.runId===context.initialRunId))&&!contexts.some(c=>c.initialRunId===context.initialRunId||c.nativeSessionId===context.nativeSessionId)&&prior.every(id=>context.excludedRunIds.includes(id)),'REPLAN_CONTEXT_CONFLICT','新的原生上下文身份冲突或没有隔离此前运行');
       const acceptedAt=new Date().toISOString(),replan:ScopeReplan={replanId:input.commandId,acceptedAt,source:{...input.source,proof:value.proof},operation:'business_replan',input:input.input,options:input.options,context},scope:DispatchScope={workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,scopeId:input.commandId,status:'active',createdAt:acceptedAt,goal:{revision:1,input:{message:input.input.message,attachmentIds:[]}},runTracking:createScopeRunTracking(context.initialRunId),replan};
-      fresh=true;return {scopes:[scope],receipt:this.receipt(scope)};
+      const budgeted=this.budgets?this.budgets.initialize(scope,{kind:'main',taskId:input.rootSessionId,runId:context.initialRunId}):scope;
+      fresh=true;return {scopes:[budgeted],receipt:this.receipt(budgeted)};
     });
     const scope=this.found(await this.store.read(),input);check(scope?.replan&&scope.scopeId===receipt.scopeId&&scope.replan.context.initialRunId===receipt.replan.runId,'REPLAN_UNKNOWN','已提交业务意图与当前记录不一致，请查询原命令');this.sameRequest(scope,input);return {scope,replan:scope.replan,fresh};
   }

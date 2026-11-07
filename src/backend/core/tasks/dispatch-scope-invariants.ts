@@ -1,6 +1,6 @@
 /**
  * 作用定位：校验用户任务周期与执行实例、图任务及运行的跨对象生命周期。
- * 设计原因：提交和重放共同保护输入、等待及启动意图；新周期完整登记主运行，旧周期不补造。核实保持只读，fresh 隔离同时包含尚无日志的登记，迟到回调不能改写历史或复活实例。
+ * 设计原因：提交和重放共同保护输入、等待、冻结额度及启动意图；新周期完整登记主运行，旧周期不补造。预算拒绝只追加独立事实，不消费等待；迟到回调不能改写历史或复活实例。
  * 职责边界：不决定整轮任务是否完成、不停止模型；求助仅在活动周期正常结算，关闭后只允许收件确认，不能补发或复活实例。
  */
 import {z} from 'zod';
@@ -14,9 +14,11 @@ import {scopeReplanSchema} from './scope-replan';
 import {scopeFreshContext} from './fresh-context';
 import {scopeRunTrackingSchema} from './scope-run-tracking';
 import {validateScopeRunTracking} from './scope-run-invariants';
+import {scopeBudgetSchema} from './scope-budget';
+import {validateScopeBudgets} from './scope-budget-invariants';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
-const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),runTracking:scopeRunTrackingSchema.optional(),wait:dispatchScopeWaitSchema.optional(),continuations:z.array(scopeContinuationSchema).max(31).optional(),recovery:scopeRecoverySchema.optional(),replan:scopeReplanSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
+const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),runTracking:scopeRunTrackingSchema.optional(),budget:scopeBudgetSchema.optional(),wait:dispatchScopeWaitSchema.optional(),continuations:z.array(scopeContinuationSchema).max(31).optional(),recovery:scopeRecoverySchema.optional(),replan:scopeReplanSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
 function valid(condition:unknown,message:string):asserts condition {if(!condition)fail('GRAPH_INPUT_INVALID',message)}
 function ordered(value:unknown):unknown {return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,ordered(item)])):value}
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
@@ -113,7 +115,8 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
       valid(old.workspaceId===scope.workspaceId&&old.rootSessionId===scope.rootSessionId&&old.createdAt===scope.createdAt,'不能改绑周期或创建时间');
       validateScopeGoalTransition(old.goal,scope.goal,false,supplement);
       if(old.wait&&!supplement)valid(equal(old.wait,scope.wait)&&equal(old.goal,scope.goal),'等待检查点及其目标不能改写或移除');
-      if(old.status==='waiting')valid(supplement||scope.status==='closed'||equal(old,scope),'等待周期只能明确补充、保留或显式关闭');
+      // 额度拒绝由独立不变量核实，只追加预算事实，不改变 wait、目标或消费输入。
+      if(old.status==='waiting')valid(supplement||scope.status==='closed'||equal({...old,budget:scope.budget},scope),'等待周期只能明确补充、记录预算拒绝、保留或显式关闭');
       if(old.status==='closed')valid(equal(old,scope),'已关闭调度周期不能重开或改写结果');
     }else {valid(scope.status==='active'&&!history.length,'新周期必须从 active 开始且不含补充历史');validateScopeGoalTransition(undefined,scope.goal,true)}
     if(scope.wait&&!old?.wait)valid(old?.status==='active'&&scope.status==='waiting','只能从活动周期创建真实等待检查点');
@@ -133,6 +136,7 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
   }
   valid([...continuationCommands].every(id=>!recoveryIds.has(id))&&[...continuationRuns].every(id=>!recoveryRuns.has(id)),'补充与核实启动意图不能重用命令或主运行身份');
   validateScopeRunTracking(previous,next,mutation);
+  validateScopeBudgets(previous,next,mutation);
   for(const member of next.members){
     const scoped=member.executionScopeId!==undefined||member.executionTaskId!==undefined;
     if(!scoped){valid(member.lifecycle===undefined&&member.releasedAt===undefined,'持久主实例和旧角色实例不属于可释放周期');continue}

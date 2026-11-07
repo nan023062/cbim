@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {Application} from '../src/backend/main/application';
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import type {DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import {seedTeam} from './team-fixture';
@@ -8,16 +10,19 @@ import {request} from './helpers';
 import {globalAdmissionFixture as data,type AdmissionProject} from './global-admission-provider';
 
 /** Both projects share the actual Application and model catalog, while knowledge and business files stay isolated. */
-export async function seedGlobalAdmission(app:Application,paths:Record<AdmissionProject,string>,provider:{url:string;bind:(key:AdmissionProject,agentId:string,moduleId:string)=>void}){
+export async function seedGlobalAdmission(app:Application,paths:Record<AdmissionProject,string>,provider:{url:string;bind:(key:AdmissionProject,agentId:string,moduleId:string,selection?:OwnerExecutionSelection)=>void}){
   await app.models.save({profile:{name:'Global admission fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:data.model('a'),models:(['a','b'] as const).map(key=>({id:data.model(key),name:'Admission '+key.toUpperCase(),enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}))}});
+  const profileId=(await app.models.list()).selectedId!;
   const seed=async(key:AdmissionProject)=>{
-    const entry=await app.dispatch('add',{path:paths[key]}),workspace=app.workspace(entry.id),team=await seedTeam(workspace);provider.bind(key,team.input.agentId,team.input.moduleId);
+    const entry=await app.dispatch('add',{path:paths[key]}),workspace=app.workspace(entry.id),team=await seedTeam(workspace);
     const snapshot=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
     definition.maintenance={bindingId:'admission-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'admission-review',source:'local_user',confirmedAt:new Date().toISOString()}};
     await workspace.commit(request(snapshot,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
-    await fs.writeFile(path.join(paths[key],data.file),data.fact(key));return {entry,team};
+    const owner=await registerExplicitFixtureOwner(app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId,modelId:data.model(key),name:'准入测试岗位 '+key.toUpperCase()});
+    provider.bind(key,team.input.agentId,team.input.moduleId,owner.selection);
+    await fs.writeFile(path.join(paths[key],data.file),data.fact(key));return {entry,team,owner};
   };
-  return {a:await seed('a'),b:await seed('b'),profileId:(await app.models.list()).selectedId!};
+  return {a:await seed('a'),b:await seed('b'),profileId};
 }
 
 /** Complete committed scope records only; never opens another dispatch writer beside a running application. */

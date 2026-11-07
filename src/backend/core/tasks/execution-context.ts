@@ -1,6 +1,6 @@
 /**
  * 作用定位：成员业务执行所需的可持久化知识快照，以及存储与调度共用的完整性校验。
- * 设计原因：派发图只公开引用，实际运行需要冻结角色、模块与流程正文；将快照契约放在 Core，避免存储反向依赖调度实现。
+ * 设计原因：实际运行须冻结岗位适配及角色/Skill、模块和流程正文；能力 hash 必须对应原采纳岗位，避免重算上下文指纹掩盖未采纳内容，Core 不反向依赖调度实现。
  * 职责边界：这是执行知识而非权限快照，不含模型凭据；指纹只能证明内容一致，不能代替知识来源、权限和产物基线复核。
  */
 import {z} from 'zod';
@@ -9,6 +9,9 @@ import {fail} from '../foundation/errors';
 import type {AgentConfigurationSnapshot} from '../team/agent-types';
 import type {ModuleBinding} from './graph-types';
 import {parseWorkflowContract,workflowContractSchema,type WorkflowContract} from '../workspace/workflow-contract';
+import {ownerExecutionBindingSchema,ownerExecutionBindingMatches,type OwnerExecutionBinding} from '../team/member-execution-binding';
+import {workspaceMemberAdaptationSchema,type WorkspaceMemberAdaptation} from '../team/workspace-member';
+import {workspaceMemberCapabilityHash} from '../team/workspace-member-rules';
 
 /** 模块绑定与正文保持一一对应；通用流程也保存实际采用的正文，不借用其他模块流程。 */
 export interface PreparedDispatchModule {
@@ -33,6 +36,8 @@ export interface PreparedDispatchKnowledge {
   agentDefinition:Record<string,unknown>;
   modules:PreparedDispatchModule[];
   standards:Array<{id:string;version:string;text:string}>;
+  /** 岗位适配只加入这次冻结上下文，不改通用 Agent；旧执行缺省保留原状。 */
+  memberContext?:{binding:OwnerExecutionBinding;name:string;position:string;adaptation:WorkspaceMemberAdaptation};
   /** 除本字段外所有冻结内容的稳定 JSON SHA-256；没有授权含义。 */
   fingerprint:string;
 }
@@ -50,7 +55,7 @@ const shape=z.object({version:z.literal(1),workspaceId:id,knowledgeRevision:id,
     effectiveSkills:z.array(z.object({skillId:id,ownerId:id,inherited:z.boolean(),content:text}).strict()),
   }).strict(),agentDefinition:definition,
   modules:z.array(z.object({binding:moduleBinding,definition,overview:text,workflowText:text,workflowContract:workflowContractSchema.optional()}).strict()).min(1).max(100),
-  standards:z.array(z.object({id,version:id,text}).strict()).min(1),fingerprint:z.string().regex(/^[a-f0-9]{64}$/),
+  standards:z.array(z.object({id,version:id,text}).strict()).min(1),memberContext:z.object({binding:ownerExecutionBindingSchema,name:z.string().min(1).max(100),position:z.string().min(1).max(500),adaptation:workspaceMemberAdaptationSchema}).strict().optional(),fingerprint:z.string().regex(/^[a-f0-9]{64}$/),
 }).strict();
 
 /** 为序列化字段排序，数组顺序仍有业务含义；调用者须先保证输入为可序列化快照。 */
@@ -74,6 +79,7 @@ export function validatePreparedDispatchKnowledge(value:unknown):asserts value i
   const prepared=value as PreparedDispatchKnowledge;
   const invalid=(condition:boolean,reason:string)=>{if(condition)fail('EXECUTION_CONTEXT_INVALID',reason)};
   invalid(prepared.agent.workspaceId!==prepared.workspaceId||prepared.agent.knowledgeRevision!==prepared.knowledgeRevision,'成员与执行知识基线不一致');
+  if(prepared.memberContext){const binding=prepared.memberContext.binding;invalid(!ownerExecutionBindingMatches(binding,prepared.workspaceId,prepared.agent.agentId,prepared.modules.map(module=>module.binding.moduleId))||binding.capability.teamId!==prepared.agent.teamId||workspaceMemberCapabilityHash(prepared.agent)!==binding.capability.capabilityHash,'岗位冻结身份、能力正文或模块与执行知识不一致');}
   invalid(new Set(prepared.modules.map(module=>module.binding.moduleId)).size!==prepared.modules.length,'执行模块不能重复');
   invalid(new Set(prepared.standards.map(standard=>standard.id)).size!==prepared.standards.length,'内置规范不能重复');
   invalid(new Set(prepared.agent.effectiveSkills.map(skill=>skill.skillId)).size!==prepared.agent.effectiveSkills.length,'角色有效 Skill 不能重复');

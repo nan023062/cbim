@@ -1,12 +1,13 @@
 import {it,expect,vi} from 'vitest';
 import path from 'node:path';
-import {fixture,request} from './helpers';
+import {fixture} from './helpers';
 import {Application} from '../src/backend/main/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
 import type {RunSummary} from '../src/backend/core/brain/types';
 import {moduleOwnershipProvider,moduleOwnershipToolNames,type ModuleOwnershipMode} from './module-ownership-provider';
 import {seedModuleOwnership,moduleOwnershipFixture as data,moduleOwnershipDetail,moduleOwnershipJournal,moduleOwnershipKnowledgeEvidence,moduleOwnershipRunRecords,moduleOwnershipNativeBytes} from './module-ownership-fixture';
+import {seedOwnerExecution,ownerExecutionData,ownerExecutionRecords} from './owner-execution-fixture';
+import {ownerExecutionProvider} from './owner-execution-provider';
 
 it.each(['read','ask-deny','ask-approve','execute','bad-wire','stop'] as ModuleOwnershipMode[])('real main Pi discovers registered positions and controls ownership through actual authorization without business execution (%s)',async mode=>{
   const f=await fixture(),provider=await moduleOwnershipProvider(mode);let app=f.app;
@@ -47,15 +48,15 @@ it.each(['read','ask-deny','ask-approve','execute','bad-wire','stop'] as ModuleO
 },90000);
 
 it('actual executor Pi has none of the four ownership-control tools despite registered positions',async()=>{
-  const f=await fixture(),provider=await moduleOwnershipProvider('member');
+  const f=await fixture(),provider=await ownerExecutionProvider('complete');
   try{
-    const seeded=await seedModuleOwnership(f.app,f.temp,provider.url),id=seeded.entry.id,dispatch=f.app.memberDispatch(id),members=f.app.memberExecution(id),identity={workspaceId:id,rootSessionId:'ownership-member-probe'};
-    // Tool discovery still requires a genuinely dispatchable module; responsibility registration does not grant maintainer confirmation.
-    const workspace=f.app.workspace(id),snapshot=await workspace.snapshot(),modulePath=seeded.moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
-    definition.maintenance={bindingId:'ownership-probe-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'ownership-probe-review',source:'local_user',confirmedAt:new Date().toISOString()}};
-    await workspace.commit(request(snapshot,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
-    const scope=await dispatch.openScope(identity,'ownership-member-probe-scope'),assigned=await dispatch.dispatchTask({...identity,commandId:'ownership-member-assign',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[seeded.moduleId],goal:'仅核实执行者实际工具目录，不进行业务交付',acceptance:[{id:'tools',text:'真实工具目录没有主责任控制入口'}],prerequisites:[]}},scope.scopeId),taskIdentity={...identity,taskId:assigned.taskId};
-    const run=await members.start({...taskIdentity,commandId:'ownership-member-start',expectedRevision:1,options:{profileId:seeded.profileId,permission:'read',turnTimeoutMs:60000}});await members.waitForSettlement(taskIdentity);
-    const summary=await new FileRunStorage().read(path.join(f.user,id,'dispatch','runs','tasks',assigned.taskId,run.runId));expect(summary.status).toBe('completed');expect(summary.memberBinding?.agentId).toBe('cbim:executor');expect(summary.toolReceipts??[]).toEqual([]);expect(provider.requests).toHaveLength(1);expect(provider.errors).toEqual([]);expect(provider.requests[0].tools?.some(tool=>moduleOwnershipToolNames.includes(tool.function.name))).toBe(false);expect((await moduleOwnershipDetail(f.app,id,seeded.moduleId)).history.total).toBe(0);await dispatch.closeScope(identity,scope.scopeId,'cancelled');
-  }finally{provider.release();await f.cleanup();await provider.close()}
+    // The former direct builtin dispatch bypass is closed. Explicit registration, sources, responsibility and a real main plan now precede member execution.
+    const seeded=await seedOwnerExecution(f.app,f.a,provider.urls),id=seeded.entry.id;provider.bind(seeded.team.input.agentId,seeded.modules);provider.releaseMain();
+    await f.app.dispatch('loop.chat',{id,message:ownerExecutionData.goal,options:seeded.mainOptions});
+    await vi.waitFor(async()=>{expect(provider.errors).toEqual([]);expect((await ownerExecutionRecords(f.user,id)).scopes[0]?.status).toBe('closed');expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:45000,interval:30});
+    const saved=await ownerExecutionRecords(f.user,id);expect(saved.scopes[0].outcome).toBe('completed');expect(saved.runs).toHaveLength(2);
+    expect(provider.members.map(requests=>requests.length)).toEqual([5,5]);
+    for(const body of provider.members.flat())expect(body.tools?.some(tool=>moduleOwnershipToolNames.includes(tool.function.name))).toBe(false);
+    for(const moduleId of seeded.modules)expect((await moduleOwnershipDetail(f.app,id,moduleId)).history.total).toBe(1);
+  }finally{provider.releaseMain();provider.releaseMembers();await f.cleanup();await provider.close()}
 },60000);

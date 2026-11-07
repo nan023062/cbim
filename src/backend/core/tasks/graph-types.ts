@@ -1,6 +1,6 @@
 /**
  * 作用定位：任务派发图的可序列化领域契约，供调度、持久化和 Bridge 共同引用。
- * 设计原因：把会话、成员、任务与执行轮次分开；前置追加/替换保留独立审计，检查点、求助和撤销不能改选任务方法或冒充结果。
+ * 设计原因：把登记岗位、执行实例、任务与轮次分开；负责人绑定永久保留原版本，前置修订和检查点不能改换岗位、执行方法或冒充结果。
  * 职责边界：这里只声明事实形状；权限、知识核实、磁盘提交和模型执行由各自服务负责。
  */
 import type {MemberHelpRecord} from './member-help';
@@ -10,6 +10,7 @@ import type {DependencyAddition} from './queued-dependency-addition';
 import type {MemberCheckpointRecord} from './member-checkpoint';
 import type {MemberResumeRequest} from './queued-member-resume';
 import type {WorkflowSelection} from './workflow-selection';
+import type {OwnerExecutionBinding} from '../team/member-execution-binding';
 export type GraphIdentity = {workspaceId:string;rootSessionId:string};
 export type AgentRef = {
   agentId:string;agentInstanceId:string;agentSessionId:string;
@@ -38,6 +39,8 @@ export type TaskNode = {
   requester:AgentRef;assignee:AgentRef;modules:ModuleBinding[];
   /** 创建时的显式流程选择；缺省沿旧默认模式，不代表可任意换选，已有任务不可改写。 */
   workflowSelections?:WorkflowSelection[];
+  /** 真实派发时冻结的岗位与责任；旧记录缺省不补造，创建后不得换人或更新配置。 */
+  ownerBinding?:OwnerExecutionBinding;
   goal:string;acceptance:{id:string;text:string}[];
   /** revision 跟踪所有节点变化，planRevision 仅跟踪目标、范围、责任和验收变化。 */
   revision:number;planRevision:number;status:TaskStatus;

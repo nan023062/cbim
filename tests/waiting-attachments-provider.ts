@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 
 export const attachmentFixture={
   mainGoal:'WAIT_ATTACH_MAIN: 核实项目文件，等待补充参考资料后再复核并汇报',
@@ -21,7 +22,7 @@ export function requestImages(body:AttachmentProviderRequest){return body.messag
 /** 只有模型响应确定；Pi、工具、工作区快照、真实读文件、等待/补充及回注均经过产品。 */
 export async function waitingAttachmentsProvider(){
   const mainRequests:AttachmentProviderRequest[]=[],memberRequests:AttachmentProviderRequest[]=[],errors:string[]=[];
-  let agentId='',moduleId='',expectedImage='',release=()=>{};
+  let agentId='',moduleId='',expectedImage='',release=()=>{};let ownerSelection:OwnerExecutionSelection;
   const gate=new Promise<void>(resolve=>{release=resolve});
   const server=http.createServer(async(req,res)=>{
     try{
@@ -32,8 +33,8 @@ export async function waitingAttachmentsProvider(){
       const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'waiting-attachments-'+(mainRequests.length+memberRequests.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
       const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
       const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
-      const plan=(revision=1)=>goalPlanArguments({objective:attachmentFixture.mainGoal,agentId,moduleIds:[moduleId],acceptance:attachmentFixture.acceptance},revision);
-      const dispatch=(goal:string)=>({agentId,moduleIds:[moduleId],goal,acceptance:attachmentFixture.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+      const plan=(revision=1)=>goalPlanArguments({objective:attachmentFixture.mainGoal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:attachmentFixture.acceptance},revision);
+      const dispatch=(goal:string)=>({agentId,moduleIds:[moduleId],ownerSelection,goal,acceptance:attachmentFixture.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
       if(main){
         if(turn===0)tool('attach-initial-plan','cbim_goal_plan',plan());
         else if(turn===1)tool('attach-initial-dispatch','cbim_dispatch_task',dispatch(attachmentFixture.memberGoal));
@@ -67,5 +68,5 @@ export async function waitingAttachmentsProvider(){
     }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Waiting attachment fixture failure')}
   });
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,bind:(agent:string,module:string,image:string)=>{agentId=agent;moduleId=module;expectedImage=image},release,close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,bind:(agent:string,module:string,image:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;expectedImage=image;ownerSelection=selection},release,close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

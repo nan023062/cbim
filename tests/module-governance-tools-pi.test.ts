@@ -8,6 +8,7 @@ import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage'
 import type {RunSummary} from '../src/backend/core/brain/types';
 import {moduleGovernanceToolsProvider,moduleGovernanceToolsFixture as data,type ModuleGovernanceToolsMode} from './module-governance-tools-provider';
 import {seedModuleGovernanceTools,moduleGovernanceToolsRecords,moduleGovernanceToolsLogBytes,moduleGovernanceToolsJournalBytes,moduleGovernanceToolsHistory} from './module-governance-tools-fixture';
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 
 it.each(['complete','invalid','lost-reply','stop'] as ModuleGovernanceToolsMode[])('real main Pi records bounded governance proposals without formal writes or repeat after uncertainty (%s)',async mode=>{
   const f=await fixture(),provider=await moduleGovernanceToolsProvider(mode);let app=f.app;
@@ -44,8 +45,11 @@ it.each(['complete','invalid','lost-reply','stop'] as ModuleGovernanceToolsMode[
 it('actual executor Pi has none of the four main governance tools',async()=>{
   const f=await fixture(),provider=await moduleGovernanceToolsProvider('member');
   try{
-    const seeded=await seedModuleGovernanceTools(f.app,f.a,provider),dispatch=f.app.memberDispatch(seeded.entry.id),members=f.app.memberExecution(seeded.entry.id),identity={workspaceId:seeded.entry.id,rootSessionId:'governance-member-probe'},scope=await dispatch.openScope(identity,'governance-member-probe-scope');
-    const task=await dispatch.dispatchTask({...identity,commandId:'governance-member-probe-assign',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[data.moduleId],goal:'只核实执行者的实际工具清单，不实施业务',acceptance:[{id:'tools',text:'记录真实模型上下文中的工具清单'}],prerequisites:[]}},scope.scopeId),taskIdentity={...identity,taskId:task.taskId};
+    const seeded=await seedModuleGovernanceTools(f.app,f.a,provider),dispatch=f.app.memberDispatch(seeded.entry.id),members=f.app.memberExecution(seeded.entry.id),identity={workspaceId:seeded.entry.id,rootSessionId:'governance-member-probe'};
+    const owner=await registerExplicitFixtureOwner(f.app,seeded.entry.id,{agentId:'cbim:executor',moduleIds:[data.moduleId],profileId:seeded.profileId,modelId:data.model});
+    const scope=await dispatch.openScope(identity,'governance-member-probe-scope',{message:'Inspect executor tool visibility'},'governance-member-probe-main');
+    await dispatch.goals.plan(identity,scope.scopeId,'governance-member-probe-main','governance-member-probe-plan',{expectedRevision:1,objective:'Inspect executor tool visibility',constraints:[],criteria:[{id:'tools',text:'Inspect actual executor tool catalog',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[data.moduleId],ownerSelection:owner.selection,criterionIds:['tools'],reason:'Use the explicitly registered executor position'}],reason:'Record the explicit business assignment before claiming the executor'});
+    const task=await dispatch.dispatchTask({...identity,commandId:'governance-member-probe-assign',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[data.moduleId],ownerSelection:owner.selection,goal:'只核实执行者的实际工具清单，不实施业务',acceptance:[{id:'tools',text:'记录真实模型上下文中的工具清单'}],prerequisites:[]}},scope.scopeId),taskIdentity={...identity,taskId:task.taskId};
     const run=await members.start({...taskIdentity,commandId:'governance-member-probe-start',expectedRevision:1,options:{permission:'read',turnTimeoutMs:60000}});await members.waitForSettlement(taskIdentity);
     const summary=await new FileRunStorage().read(path.join(f.user,seeded.entry.id,'dispatch','runs','tasks',task.taskId,run.runId));expect(summary.status).toBe('completed');expect(summary.memberBinding?.agentId).toBe('cbim:executor');expect(summary.toolReceipts??[]).toEqual([]);expect(provider.requests).toHaveLength(1);expect(provider.errors).toEqual([]);expect((await moduleGovernanceToolsHistory(f.app,seeded.entry.id)).proposals).toEqual([]);expect((await f.app.workspace(seeded.entry.id).snapshot()).files).toEqual(seeded.snapshot.files);await dispatch.closeScope(identity,scope.scopeId,'cancelled');
   }finally{provider.release();await f.cleanup();await provider.close()}

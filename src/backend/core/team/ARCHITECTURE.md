@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履历契约。主实例归主会话，业务实例归周期与任务；履历按角色聚合真实通道，释放或删定义后保留，旧记录不补造实例。另含稳定工作区岗位的严格DTO、采纳快照与不可变登记规则；岗位启用不等于执行许可。
+Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履历契约。主实例归主会话，业务实例归周期与任务；履历按角色聚合真实通道，释放或删定义后保留，旧记录不补造实例。另含稳定工作区岗位的严格DTO、采纳快照与不可变登记规则；岗位启用不等于执行许可。 负责岗位选择、冻结执行绑定、当前来源/能力/模型判定及只读分组发现均为纯契约；同角色多岗位独立。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -11,7 +11,10 @@ Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履
 | 文件 | 当前职责 |
 | --- | --- |
 | [agent-types.ts](agent-types.ts) | 虚拟成员的角色配置、持久化实例及独立会话身份，供调度和存储共同使用。 |
+| [member-execution-binding.ts](member-execution-binding.ts) | 岗位负责人派发的纯选择与冻结身份契约，供目标、任务、运行和公开视图共用。 |
+| [member-execution-rules.ts](member-execution-rules.ts) | 从同一岗位、责任与来源登记快照核实执行选择，供调度和存储共用。 |
 | [model.ts](model.ts) | 团队：Team/小组/Agent、真人花名册与 Agent 自身和祖先 Skill的核心封装。 |
+| [owner-execution-discovery.ts](owner-execution-discovery.ts) | 岗位执行选择的有界只读发现协议，供主工具和任务详情共用。 |
 | [session-history-storage.ts](session-history-storage.ts) | 静态 Agent 会话历史的持久化索引契约，连接调度查询服务与本机磁盘适配。 |
 | [session-history.ts](session-history.ts) | 定义按静态 Agent 归档的独立 Session、任务轮次及公开事件查询协议。 |
 | [workspace-member-rules.ts](workspace-member-rules.ts) | 岗位登记的规范指纹、预览依据、不可变审计与单条事件投影；由可信服务与 Store 重放共同调用。 |
@@ -92,6 +95,73 @@ N_src_backend_core_team_agent_types_ts_AgentIdentity <|-- N_src_backend_core_tea
 ```
 
 
+### member-execution-binding.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_member_execution_binding_ts["member-execution-binding.ts"] {
+  <<module>>
+  +ownerExecutionSelectionFor()
+  +ownerExecutionSelectionMatches()
+  +sameOwnerExecutionForModules()
+  +ownerExecutionBindingMatches()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_member_execution_binding_ts["member-execution-binding.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_member_execution_binding_ts_ExpectedModuleOwner["ExpectedModuleOwner"] {
+  <<type>>
+
+}
+N_src_backend_core_team_member_execution_binding_ts ..> N_src_backend_core_team_member_execution_binding_ts_ExpectedModuleOwner : 声明
+class N_src_backend_core_team_member_execution_binding_ts_OwnerExecutionSelection["OwnerExecutionSelection"] {
+  <<type>>
+
+}
+N_src_backend_core_team_member_execution_binding_ts ..> N_src_backend_core_team_member_execution_binding_ts_OwnerExecutionSelection : 声明
+class N_src_backend_core_team_member_execution_binding_ts_OwnerExecutionBinding["OwnerExecutionBinding"] {
+  <<type>>
+
+}
+N_src_backend_core_team_member_execution_binding_ts ..> N_src_backend_core_team_member_execution_binding_ts_OwnerExecutionBinding : 声明
+```
+
+直接依赖：[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)。
+
+### member-execution-rules.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_member_execution_rules_ts["member-execution-rules.ts"] {
+  <<module>>
+  +resolveOwnerExecutionSelection()
+  +assertCurrentOwnerExecutionBinding()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_member_execution_rules_ts["member-execution-rules.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_member_execution_rules_ts_OwnerExecutionRegistry["OwnerExecutionRegistry"] {
+  <<interface>>
+  +workspaceMembers
+  +moduleOwnerships
+}
+N_src_backend_core_team_member_execution_rules_ts ..> N_src_backend_core_team_member_execution_rules_ts_OwnerExecutionRegistry : 声明
+class N_src_backend_core_team_member_execution_rules_ts_external_KnowledgeSourceRegistry["KnowledgeSourceRegistry (外部契约)"] {
+  <<external>>
+}
+N_src_backend_core_team_member_execution_rules_ts_external_KnowledgeSourceRegistry <|-- N_src_backend_core_team_member_execution_rules_ts_OwnerExecutionRegistry
+```
+
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[workspace-member.ts](workspace-member.ts)、[workspace-member-rules.ts](workspace-member-rules.ts)、[../workspace/module-ownership.ts](../workspace/module-ownership.ts)、[../workspace/knowledge-source-rules.ts](../workspace/knowledge-source-rules.ts)、[member-execution-binding.ts](member-execution-binding.ts)。
+
 ### model.ts
 
 ```mermaid
@@ -109,6 +179,32 @@ N_src_backend_core_team_model_ts ..> N_src_backend_core_team_model_ts_Team : 声
 ```
 
 直接依赖：[../knowledge/snapshot.ts](../knowledge/snapshot.ts)、[../foundation/json.ts](../foundation/json.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../knowledge/types.ts](../knowledge/types.ts)。
+
+### owner-execution-discovery.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_owner_execution_discovery_ts["owner-execution-discovery.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_owner_execution_discovery_ts_OwnerExecutionDiscovery["OwnerExecutionDiscovery"] {
+  <<type>>
+
+}
+N_src_backend_core_team_owner_execution_discovery_ts ..> N_src_backend_core_team_owner_execution_discovery_ts_OwnerExecutionDiscovery : 声明
+class N_src_backend_core_team_owner_execution_discovery_ts_TaskOwnerInspectInput["TaskOwnerInspectInput"] {
+  <<type>>
+
+}
+N_src_backend_core_team_owner_execution_discovery_ts ..> N_src_backend_core_team_owner_execution_discovery_ts_TaskOwnerInspectInput : 声明
+class N_src_backend_core_team_owner_execution_discovery_ts_TaskOwnerInspectOutput["TaskOwnerInspectOutput"] {
+  <<type>>
+
+}
+N_src_backend_core_team_owner_execution_discovery_ts ..> N_src_backend_core_team_owner_execution_discovery_ts_TaskOwnerInspectOutput : 声明
+```
+
+直接依赖：[member-execution-binding.ts](member-execution-binding.ts)、[workspace-member.ts](workspace-member.ts)、[../workspace/module-ownership.ts](../workspace/module-ownership.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)。
 
 ### session-history-storage.ts
 
@@ -513,6 +609,35 @@ N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspac
 
 ```mermaid
 classDiagram
+class N_src_backend_core_team_member_execution_rules_ts["member-execution-rules.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_workspace_member_rules_ts["workspace-member-rules.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_member_execution_binding_ts["member-execution-binding.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_owner_execution_discovery_ts["owner-execution-discovery.ts"] {
+  <<module>>
+}
+N_src_backend_core_team_member_execution_rules_ts ..> N_src_backend_core_team_workspace_member_ts : 导入依赖
+N_src_backend_core_team_member_execution_rules_ts ..> N_src_backend_core_team_workspace_member_rules_ts : 导入依赖
+N_src_backend_core_team_member_execution_rules_ts ..> N_src_backend_core_team_member_execution_binding_ts : 导入依赖
+N_src_backend_core_team_owner_execution_discovery_ts ..> N_src_backend_core_team_member_execution_binding_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_owner_execution_discovery_ts["owner-execution-discovery.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
+  <<module>>
+}
 class N_src_backend_core_team_session_history_storage_ts["session-history-storage.ts"] {
   <<module>>
 }
@@ -522,9 +647,7 @@ class N_src_backend_core_team_session_history_ts["session-history.ts"] {
 class N_src_backend_core_team_workspace_member_rules_ts["workspace-member-rules.ts"] {
   <<module>>
 }
-class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
-  <<module>>
-}
+N_src_backend_core_team_owner_execution_discovery_ts ..> N_src_backend_core_team_workspace_member_ts : 导入依赖
 N_src_backend_core_team_session_history_storage_ts ..> N_src_backend_core_team_session_history_ts : 导入依赖
 N_src_backend_core_team_workspace_member_rules_ts ..> N_src_backend_core_team_workspace_member_ts : 导入依赖
 ```
@@ -542,6 +665,14 @@ N_src_backend_core_team_workspace_member_rules_ts ..> N_src_backend_core_team_wo
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 负责人执行选择
+
+`member-execution-binding.ts` 提供纯选择和冻结绑定，`member-execution-rules.ts` 从同一岗位、责任和来源登记核实新许可。请求不提交正文或来源证明；实际绑定保存岗位版本、原成员内容 hash、采纳来源、公开模型指纹和逐模块责任。静态 Agent 相同不能合并不同 memberId、执行实例、模型或适配。
+
+`resolveOwnerExecutionSelection` 必须精确覆盖本次模块，所有模块有同一 active 岗位的明确责任，不隐式继承父模块。它核当前成员 revision、能力/模型指纹和逐模块 bindingId/revision，要求工作区 Agent/Module 的已采纳 sourceRef 仍是当前代次；内置执行者只按内容引用。A→B→A、登记元信息修改或模型重新采纳仍会使旧选择失效。`assertCurrentOwnerExecutionBinding` 不更新原绑定，只在新业务许可处重核；历史读取和已领取结算不调用它否定原事实。
+
+历史缺省不补造；纯规则不读当前知识、模型或凭据，可信调用方仍须持知识和模型短锁核外部事实。`active` 不等于可执行，captureId 不等于来源代次。存量交接和跨周期复活不属于此协议。
+
 ### 虚拟成员与独立会话契约
 
 已实现 `agent-types.ts` 的角色、成员及会话类型；调度层 `prepareMember` 与工作区持久化注册成员身份。每个主会话持有一个长期 `cbim:main` 调度实例；新的自动派发按用户任务周期，为每个业务 Task 创建独立执行实例，周期结束后释放。成员执行已接通原生大脑会话、占用、消息消费和状态循环。`Team` 仍是固定知识快照只读查询，不承载运行管理。
@@ -553,7 +684,7 @@ N_src_backend_core_team_workspace_member_rules_ts ..> N_src_backend_core_team_wo
 - `Team.agents()`、`Team.agent()` 和 `Team.people()` 继续提供组织、角色定义、有效 Skill 与真人责任信息；角色定义不包含运行进程或可变会话状态。
 - Team 根与小组是组织节点，只有叶子是 Agent。成员继承自身与所有祖先的 Skill，角色解析仍服从现有冲突校验。
 - 默认主 Agent 是内置角色 `cbim:main`，与自定义成员使用同一大脑、工具策略和执行内核。主 Agent 的调度职责只在其主会话开放，不享有隐含的业务工具权限提升，也不是其它成员的父执行进程。
-- 主 Agent 负责调度与团队/业务知识管理，可经受控知识服务 CRUD；不能承接正式业务执行。其他成员是独立执行 Agent，没有合适自定义角色时使用内置静态 `cbim:executor`。执行者保留自己的状态、Session、模型思考与环境探索，按目标模块工作并返回证据或缺口，不获得派发权。
+- 主 Agent 负责调度与团队/业务知识管理，可经受控知识服务 CRUD；不能承接正式业务执行。内置静态 `cbim:executor` 可以显式登记成岗位并分配模块责任后执行，不是缺少负责人时的自动回退。执行者保留自己的状态、Session、模型思考与环境探索，按目标模块工作并返回证据或缺口，不获得派发权。
 - 本目录持有成员身份、配置快照、状态投影的领域契约。实例注册、邮箱排队、工作交接和生命周期由调度层实现；持久化与平台资源由 `main` 注入。
 
 #### 身份、配置和通道

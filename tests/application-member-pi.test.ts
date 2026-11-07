@@ -11,6 +11,7 @@ import type {OpenGraphReceipt,DispatchReceipt} from '../src/backend/core/tasks/d
 import type {ChatApproval} from '../src/backend/core/policy/types';
 import type {MemberEventsRead,MemberEventCursor} from '../src/backend/core/tasks/member-events';
 import type {StoredEvent} from '../src/backend/core/brain/types';
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 
 /** Actual Application, dispatch transactions, policy, persistence and pinned Pi; only the model provider is a deterministic localhost fixture. */
 it('runs a dispatched member through approval, verified candidate and inbox acknowledgement; restart preserves identity and later tasks get fresh approval',async()=>{
@@ -54,9 +55,15 @@ it('runs a dispatched member through approval, verified candidate and inbox ackn
     const definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
     definition.maintenance={bindingId:'member-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'member-review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
     await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
+    const {selection:ownerSelection}=await registerExplicitFixtureOwner(f.app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId:(await f.app.models.list()).selectedId!,modelId:'member-fixture'});
     const identity={workspaceId:entry.id,rootSessionId:'member-root'};
     const root=await f.app.dispatch('dispatch.open',{...identity,commandId:'open-root'}) as OpenGraphReceipt;
-    const dispatch=async(goal:string,commandId:string,graph=identity)=>await f.app.dispatch('dispatch.task',{...graph,commandId,expectedParentRevision:1,task:{assigneeAgentId:team.input.agentId,moduleIds:[team.input.moduleId],goal,acceptance:acceptance.map((text,i)=>({id:'criterion-'+i,text})),prerequisites:[]}}) as DispatchReceipt;
+    const scopes=new Map<string,string>(),openPlanned=async(graph:typeof identity,scopeId:string)=>{
+      const service=f.app.memberDispatch(entry.id),runId='main-'+scopeId;await service.openScope(graph,scopeId,{message:'验证原权限、证据与成员实例隔离'},runId);
+      await service.goals.plan(graph,scopeId,runId,'plan-'+scopeId,{expectedRevision:1,objective:'验证原权限、证据与成员实例隔离',constraints:[],criteria:acceptance.map((text,i)=>({id:'criterion-'+i,text,kind:'evidence'})),assignments:[{agentId:team.input.agentId,moduleIds:[team.input.moduleId],ownerSelection,criterionIds:acceptance.map((_,i)=>'criterion-'+i),reason:'真实模块负责岗位'}],reason:'明确规划再派发'});scopes.set(graph.rootSessionId,scopeId);
+    };
+    await openPlanned(identity,'member-cycle-one');
+    const dispatch=async(goal:string,commandId:string,graph=identity)=>await f.app.dispatch('dispatch.task',{...graph,scopeId:scopes.get(graph.rootSessionId),commandId,expectedParentRevision:1,task:{assigneeAgentId:team.input.agentId,moduleIds:[team.input.moduleId],ownerSelection,goal,acceptance:acceptance.map((text,i)=>({id:'criterion-'+i,text})),prerequisites:[]}}) as DispatchReceipt;
     const assigned=await dispatch(firstGoal,'assign-first'),taskIdentity={...identity,taskId:assigned.taskId};
     const startInput={...taskIdentity,commandId:'start-first',expectedRevision:1,options:{permission:'ask',turnTimeoutMs:15000}};
     const started=await f.app.dispatch('dispatch.executionStart',startInput) as MemberStartReceipt;
@@ -115,13 +122,14 @@ it('runs a dispatched member through approval, verified candidate and inbox ackn
       if(restored.mode==='noop')throw Error('expected restored reset');expect(restored.events).toEqual(publicEvents);
       expect(await readEvents(restored.cursor)).toMatchObject({mode:'noop',run:{status:'completed'}});expect(restoredReads).toHaveBeenCalledTimes(1);
     }finally{restoredReads.mockRestore()}
-    await expect(f.app.dispatch('dispatch.executionStart',{...startInput,commandId:'retry-completed',expectedRevision:completed.task.revision})).rejects.toMatchObject({code:'TASK_NOT_STARTABLE'});
+    await expect(f.app.dispatch('dispatch.executionStart',{...startInput,commandId:'retry-completed',expectedRevision:completed.task.revision})).rejects.toMatchObject({code:'MEMBER_RELEASED'});
 
-    // A completed channel may handle a new task. The previous run's allowAll must not survive.
+    // 重开已封存原周期；新任务须新周期与独立实例，旧 allowAll 和原生历史都不能继承。
+    await openPlanned(identity,'member-cycle-two');
     const second=await dispatch(cancelGoal,'assign-second'),secondIdentity={...identity,taskId:second.taskId};
     const next=await f.app.dispatch('dispatch.executionStart',{...secondIdentity,commandId:'start-second',expectedRevision:1,options:{permission:'ask',turnTimeoutMs:15000}}) as MemberStartReceipt;
     await vi.waitFor(async()=>expect(await f.app.dispatch('dispatch.approvals',secondIdentity)).toHaveLength(1),{timeout:15000,interval:30});
-    expect(JSON.stringify(requests.at(-1)?.messages)).toContain(firstGoal);
+    expect(JSON.stringify(requests.at(-1)?.messages)).not.toContain(firstGoal);
     await f.app.stop(entry.id); // Closing a workspace must drain its member before the shared store closes.
     await f.app.open(entry.id);
     const stopped=await f.app.dispatch('dispatch.executionInspect',secondIdentity) as MemberExecutionView;
@@ -130,11 +138,12 @@ it('runs a dispatched member through approval, verified candidate and inbox ackn
     await expect(fs.readFile(path.join(f.a,'must-not-exist.txt'),'utf8')).rejects.toMatchObject({code:'ENOENT'});
     const storage=new FileRunStorage(),runDirectory=path.join(f.user,entry.id,'dispatch','runs','tasks');
     const firstRun=await storage.read(path.join(runDirectory,assigned.taskId,started.runId)),nextRun=await storage.read(path.join(runDirectory,second.taskId,next.runId));
-    expect(nextRun.sessionFile).toBe(firstRun.sessionFile);expect(nextRun.memberBinding?.agentSessionId).toBe(firstRun.memberBinding?.agentSessionId);
+    expect(nextRun.sessionFile).not.toBe(firstRun.sessionFile);expect(nextRun.memberBinding?.agentSessionId).not.toBe(firstRun.memberBinding?.agentSessionId);
 
     // A different root gets its own member channel; plain model completion remains blocked without a structured result.
     const otherIdentity={workspaceId:entry.id,rootSessionId:'other-member-root'};
     await f.app.dispatch('dispatch.open',{...otherIdentity,commandId:'open-other'});
+    await openPlanned(otherIdentity,'other-member-cycle');
     const plain=await dispatch(plainGoal,'assign-plain',otherIdentity),plainIdentity={...otherIdentity,taskId:plain.taskId};
     await f.app.dispatch('dispatch.executionStart',{...plainIdentity,commandId:'start-plain',expectedRevision:1,options:{permission:'read',turnTimeoutMs:15000}});
     await vi.waitFor(async()=>expect((await f.app.dispatch('dispatch.executionInspect',plainIdentity) as MemberExecutionView).task.status).toBe('blocked'),{timeout:15000,interval:30});

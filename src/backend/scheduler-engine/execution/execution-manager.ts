@@ -1,5 +1,5 @@
 /**
- * 作用定位：调度引擎：工作区执行管理，负责主 Agent 普通对话、团队任务执行与多轮历史读取，拒绝旧轮次分叉，挂起并处理逐次工具审批与结构化用户问题，持久化消息队列并在成功结束后串行续接；本次全部通过仅在当前执行期间有效。
+ * 作用定位：工作区主对话管理，负责普通 chat、目标周期接续、多轮历史和消息队列；旧直接团队业务入口拒绝新执行，业务成员统一经岗位派发领取。
  * 设计原因：原命令先查回执；等待补充的附件一次准备，图片仅留本轮。容量准入先于意图，beforeRun 核额度、停止与清单后登记运行；人工决定仍走独立系统来源，当前坏历史不能回退旧头。
  * 插入边界：先查原 scope/run/queue 回执再领取和读附件；绑定明确的原主 run，停止信号先于串行清理。周期输入接收落盘后才移除队列，未知结果同时阻止内存自动推进。
  */
@@ -11,7 +11,7 @@ import {randomUUID} from 'node:crypto';
 import {mainAgentId} from '../conversation/main-agent';
 import {z} from 'zod';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import {fail} from '../../core/foundation/errors';
+import {fail,Fault} from '../../core/foundation/errors';
 import {safeId} from '../../core/foundation/identity';
 import type {RunStorage} from '../../core/brain/storage';
 import type {StoredEvent,TaskSpec} from '../../core/brain';
@@ -262,7 +262,7 @@ export class WorkspaceExecutionManager {
     return view;
   }
   /** 新任务重新准备上下文，不接收调用方伪造的知识正文或任务身份。 */
-  start(input:TeamTaskInput,options:Options){return this.serial(async()=>this.launch(await prepareTeamTask(this.workspace,input),executionOptions.parse(options)))}
+  start(_input:TeamTaskInput,_options:Options):Promise<{workspaceId:string;taskId:string;runId:string}>{return Promise.reject(new Fault('OWNER_DISPATCH_REQUIRED','新业务必须由主调度按模块负责人正式派发；旧任务和历史记录保持可读'))}
   /** 普通对话由内置主 Agent 接待，不依赖团队注册表或知识结构通过校验。 */
   chat(message:string,options:Options){return this.serial(async()=>{
     const goal=z.string().trim().min(1).parse(message);
@@ -270,6 +270,7 @@ export class WorkspaceExecutionManager {
   })}
   /** 自动队列与结果回注在工厂等待前后都复核停止屏障，防止停止协作期间重新唤起旧消息。 */
   private async launch(task:TaskSpec,options:Options,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,automaticQueue=false,continuation?:GoalContinuationRequest,recovery?:RecoveryRequest,replan?:ReplanRequest,admissionWait?:ExecutionAdmissionWait,human?:HumanContinuationRequest){
+    if(task.mode!=='chat')fail('OWNER_DISPATCH_REQUIRED','旧直接业务入口不能创建新执行轮，请由主调度重新规划派发');
     if(recovery&&replan)fail('FRESH_MAIN_CONFLICT','同一启动不能混合只读核实和业务重规划');
     const fresh=Boolean(recovery||replan);
     if(this.active.has(task.taskId))fail('TASK_RUNNING','任务正在执行');
@@ -449,6 +450,7 @@ export class WorkspaceExecutionManager {
   resume(taskId:string,runId:string,message:string,options:Options,reconciledToolIds:string[]=[]){return this.serial(async()=>{
     if(!message?.trim())fail('MESSAGE','恢复说明不能为空');
     const prior=await this.inspect(taskId,runId);
+    if(prior.task.mode!=='chat')fail('OWNER_DISPATCH_REQUIRED','旧业务任务不能直接续执行，请按模块负责人重新派发；原历史保持不变');
     const history=await this.thread(taskId);if(history.at(-1)?.runId!==runId)fail('STALE_RUN','已有更新的对话轮次，请刷新后继续');
     const parsed=executionOptions.parse(options);
     if(prior.task.mode==='chat'&&this.collaboration?.busy(taskId)){

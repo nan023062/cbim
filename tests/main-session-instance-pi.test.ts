@@ -1,3 +1,5 @@
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -92,20 +94,20 @@ it('registers one real main instance per conversation root, keeps empty chats ta
   }finally{await f.cleanup();await local.close()}
 },90000);
 
-it('executes the default executor in a separate scoped instance, returns evidence to the original root and counts usage once',async()=>{
+it('executes an explicitly registered builtin executor in a separate scoped instance, returns evidence to the original root and counts usage once',async()=>{
   const f=await fixture();
   const mainGoal='EXECUTOR_MAIN_REQUEST: 请核实业务模块文件并提交可验证结果';
   const executorGoal='EXECUTOR_BUSINESS_TASK: 读取 executor-input.txt 并记录事实';
   const mainPrivate='MAIN_CHAT_ONLY_BACKGROUND_14ccef',fact='EXECUTOR_REAL_FILE_FACT_98d1cb',candidate='已读取 executor-input.txt，事实为 '+fact;
   const acceptance=['实际读取 executor-input.txt 并提交读取证据'];
   const mainRequests:ProviderRequest[]=[],taskRequests:ProviderRequest[]=[];
-  let moduleId='';
+  let moduleId='';let ownerSelection:OwnerExecutionSelection|undefined;
   const local=await provider(body=>{
     const isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true;
     const requests=isMain?mainRequests:taskRequests,turn=requests.length;requests.push(body);
     if(isMain){
-      if(turn===0)return {text:mainPrivate,tool:{id:'executor-goal-plan',name:'cbim_goal_plan',args:goalPlanArguments({objective:mainGoal,agentId:'cbim:executor',moduleIds:[moduleId],acceptance})}};
-      if(turn===1)return {tool:{id:'dispatch-executor',name:'cbim_dispatch_task',args:{moduleIds:[moduleId],goal:executorGoal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]}}};
+      if(turn===0)return {text:mainPrivate,tool:{id:'executor-goal-plan',name:'cbim_goal_plan',args:goalPlanArguments({objective:mainGoal,agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,acceptance})}};
+      if(turn===1)return {tool:{id:'dispatch-executor',name:'cbim_dispatch_task',args:{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,goal:executorGoal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]}}};
       if(turn===2)return {text:'已登记默认执行成员的正式业务任务，等待执行证据。'};
       if(turn===3)return {tool:{id:'executor-goal-inspect',name:'cbim_goal_inspect',args:{}}};
       if(turn===4)return {tool:{id:'executor-goal-review',name:'cbim_goal_review',args:goalCompleteArguments(body,'executor-goal-inspect')}};
@@ -127,6 +129,7 @@ it('executes the default executor in a separate scoped instance, returns evidenc
     const knowledge=await workspace.snapshot(),modulePath=moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);
     definition.maintenance={bindingId:'executor-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'executor-review',source:'local_user',confirmedAt:'2026-11-07T00:00:00.000Z'}};
     await workspace.commit(request(knowledge,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
+    ownerSelection=(await registerExplicitFixtureOwner(f.app,entry.id,{agentId:'cbim:executor',moduleIds:[moduleId],profileId:(await f.app.models.list()).selectedId!,modelId:'main-instance-fixture'})).selection;
     await fs.writeFile(path.join(f.a,'executor-input.txt'),fact);
     const started=await f.app.dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'read',turnTimeoutMs:15000}}) as {taskId:string;runId:string};
     const history=await completedThread(f,entry.id,started.taskId,2),identity={workspaceId:entry.id,rootSessionId:started.taskId};

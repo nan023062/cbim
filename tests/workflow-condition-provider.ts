@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalPlanArguments,goalInspection,goalCompleteArguments,type GoalFixtureRequest} from './goal-provider-fixture';
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 
 export type WorkflowConditionMode='complete'|'missing-capability'|'stop'|'parallel-effects';
 export const workflowConditionFixture={model:'workflow-condition-fixture',goal:'WORKFLOW_CONDITION_MAIN: 按保存的模块执行约定交付真实成果',memberGoal:'WORKFLOW_CONDITION_MEMBER: 计划前不可写入，实际读取后才能交付',file:'workflow-condition-result.txt',fact:'WORKFLOW_CONDITION_REAL_FILE_7e41c',parallelInitial:'WORKFLOW_PARALLEL_OLD_BYTES',parallelStarted:'workflow-parallel-started',parallelRelease:'workflow-parallel-release',acceptance:['按模块Workflow先计划再写入，并引用本轮实际read回执交付'],draft:'保留原会话普通草稿，Workflow校验不能发送它。',otherDraft:'另一个会话的独立草稿也应保留。',final:'模块Workflow的真实工具条件已核实，成员成果已完成主调度审阅。'};
@@ -10,7 +11,7 @@ function gate(){let release=()=>{};const promise=new Promise<void>(resolve=>{rel
 
 /** Model responses are local; saved workflows, permissions, approvals and every native file receipt are real. */
 export async function workflowConditionProvider(mode:WorkflowConditionMode='complete'){
-  const d=workflowConditionFixture,main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[],beforePlan=gate(),beforeRead=gate();let agentId='',moduleId='';
+  const d=workflowConditionFixture,main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[],beforePlan=gate(),beforeRead=gate();let agentId='',moduleId='',ownerSelection:OwnerExecutionSelection|undefined;
   const state:{earlyWrite?:any;prematureDelivery?:any;delivery?:any;blockedTask?:unknown;parallelInspect?:any;staleStep?:any}={};
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(value=>value.function.name==='cbim_dispatch_task')===true,turn=(isMain?main:member).length;(isMain?main:member).push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
@@ -18,8 +19,8 @@ export async function workflowConditionProvider(mode:WorkflowConditionMode='comp
     const batch=(calls:Array<{id:string;name:string;args:unknown}>)=>{emit({role:'assistant',tool_calls:calls.map((call,index)=>({index,id:call.id,type:'function',function:{name:call.name,arguments:JSON.stringify(call.args)}}))});emit({},'tool_calls')},tool=(id:string,name:string,args:unknown)=>batch([{id,name,args}]),reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     if(isMain){
       assert.ok(body.tools?.every(value=>!['write','edit','bash'].includes(value.function.name)));
-      if(turn===0)tool('workflow-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],acceptance:d.acceptance}));
-      else if(turn===1)tool('workflow-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+      if(turn===0){assert.ok(ownerSelection,'测试必须先通过真实登记/责任查询准备岗位选择');tool('workflow-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],acceptance:d.acceptance,ownerSelection}))}
+      else if(turn===1)tool('workflow-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
       else if(turn===2)reply('已按真实模块Workflow派发执行任务。');
       else if(turn===3){if(mode==='missing-capability'){const source=JSON.stringify(body.messages);assert.ok(source.includes('当前权限或引擎未提供 Workflow 必需工具：write'),'主会话必须收到真实缺能力 limitation，不能只听模型假设');}tool('workflow-inspect','cbim_goal_inspect',{})}
       else if(turn===4){
@@ -55,5 +56,5 @@ export async function workflowConditionProvider(mode:WorkflowConditionMode='comp
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Workflow condition fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');const releaseAll=()=>{beforePlan.release();beforeRead.release()};
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},releasePlan:()=>beforePlan.release(),releaseRead:()=>beforeRead.release(),releaseAll,close:async()=>{releaseAll();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=structuredClone(selection)},releasePlan:()=>beforePlan.release(),releaseRead:()=>beforeRead.release(),releaseAll,close:async()=>{releaseAll();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

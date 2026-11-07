@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-知识快照、校验、领域查询、对象变更和可移植静态包规划。私有v2计划冻结有序操作与整包替换范围，公共变更不能提供来源证明；物理事务与缓存经端口注入。团队能力可独立复用，业务模板必须完整，不携带动态成员或任务。
+知识快照、校验、领域查询、对象变更和可移植静态包规划。私有v2计划冻结有序操作与整包替换范围，公共变更不能提供来源证明；物理事务与缓存经端口注入。团队能力可独立复用，业务模板必须完整，不携带动态成员或任务。 SourceSnapshotReader 只提供知识队列外层的同版快照，调用方不得在任务事务内反向获取。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -320,6 +320,11 @@ classDiagram
 class N_src_backend_core_knowledge_ports_ts["ports.ts"] {
   <<module>>
 }
+class N_src_backend_core_knowledge_ports_ts_SourceSnapshotReader["SourceSnapshotReader"] {
+  <<interface>>
+  +withSourceSnapshot()
+}
+N_src_backend_core_knowledge_ports_ts ..> N_src_backend_core_knowledge_ports_ts_SourceSnapshotReader : 声明
 class N_src_backend_core_knowledge_ports_ts_KnowledgeCommit["KnowledgeCommit"] {
   <<interface>>
   +state

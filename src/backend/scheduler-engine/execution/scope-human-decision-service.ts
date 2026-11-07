@@ -1,12 +1,12 @@
 /**
  * 作用定位：核实安全等待中的人工验收项和明确选定文件，保存本机显式决定及不可变依据。
- * 设计原因：历史候选真实性与当前接受许可分开；负面意见允许当前文件变化，接受须合并核实所选基线和全部冻结 JSON 文件。预览不授予提交权，提交在事务内重建依据。
+ * 设计原因：历史候选真实性与当前接受许可分开；提交在事务外重建文件及日志依据，再按知识快照→任务短事务核版本，避免知识来源写入与验收形成逆向等待。
  * 职责边界：这里只保存决定，不修改 goal、wait、图或运行许可；共享文件端口供另一专用接续服务重新核实，保存本身不启动模型。哈希只描述有界观察。
  */
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
 import {hash,json} from '../../core/foundation/serialization';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
+import type {KnowledgeWorkspace,SourceSnapshotReader} from '../../core/knowledge/ports';
 import type {DispatchState,DispatchStore} from '../../core/tasks/dispatch-storage';
 import type {DispatchScope} from '../../core/tasks/dispatch-scope';
 import {goalInputRevision,sameGoalValue} from '../../core/tasks/scope-goal';
@@ -16,9 +16,10 @@ import {humanDecisionPreviewInputSchema,humanDecisionRequestSchema,humanDecision
 import {humanDecisionBasis,humanDecisionProof} from '../../core/tasks/human-decision-proof';
 import {ScopeGoalService,type ScopeGoalPorts} from './scope-goal-service';
 import type {HumanDecisionPorts} from './human-decision-evidence';
+import {humanEvidenceStateStamp} from './human-evidence-state';
 export type {HumanDecisionPorts} from './human-decision-evidence';
 
-type Owner=Pick<KnowledgeWorkspace,'entry'|'assert'|'read'>;
+type Owner=Pick<KnowledgeWorkspace,'entry'|'assert'|'read'>&Partial<SourceSnapshotReader>;
 function check(condition:unknown,code:string,message:string):asserts condition{if(!condition)fail(code,message)}
 const compare=(a:string,b:string)=>a<b?-1:a>b?1:0;
 
@@ -40,10 +41,9 @@ export class ScopeHumanDecisionService {
   /** 有界历史通过同一持久存储读取，关闭后仍保留；不把过去的接受当作当前执行许可。 */
   async history(raw:HumanDecisionHistoryInput):Promise<HumanDecisionHistory>{const input=this.parse(humanDecisionHistoryInputSchema,raw),scope=this.scope(await this.store.read(),input);return {...input,scopeStatus:scope.status,decisionRevision:scope.humanDecisions?.revision??0,records:structuredClone(scope.humanDecisions?.records??[])}}
   private stateStamp(state:DispatchState,input:HumanDecisionHistoryInput){
-    const scope=this.scope(state,input),{humanDecisions:_,...subject}=scope;
-    return hash(json({scope:subject,graph:state.graphs.find(graph=>graph.identity.rootSessionId===input.rootSessionId),runs:state.runs?.filter(run=>run.binding.rootSessionId===input.rootSessionId),members:state.members.filter(member=>member.executionScopeId===input.scopeId||member.agentId==='cbim:main'&&member.mainRootSessionId===input.rootSessionId),sessions:state.sessions.filter(session=>session.rootSessionId===input.rootSessionId)}));
+    this.scope(state,input);return humanEvidenceStateStamp(state,input);
   }
-  /** 单次收集只使用传入事务快照，不重入 store；所有候选共享一份文件读取预算。 */
+  /** 单次收集使用原状态快照且不占任务事务；所有候选共享一份文件读取预算。 */
   private async collect(state:DispatchState,input:HumanDecisionPreviewInput):Promise<HumanDecisionPreview>{
     const scope=this.scope(state,input);check(this.logs&&this.ports,'HUMAN_UNAVAILABLE','尚未接入人工决定所需的可信日志与文件核实入口');
     const value=await this.goals.validateHumanCandidates(state,scope,input.criterionId);this.current();
@@ -121,23 +121,33 @@ export class ScopeHumanDecisionService {
     catch(error){return this.unavailable(input,scope,error)}
   }
   /**
-   * 只有可信桌面闭包传入 actor。重复命令返回旧回执；新命令在事务内复核全部依据，先可靠落盘再返回。
+   * 只有可信桌面闭包传入 actor。重复命令返回旧回执；新命令先核证，提交在知识快照下核原状态与决定版本，先可靠落盘再返回。
    * 文件/知识并非同一存储，不能承诺外部原子快照；保存只追加记录，不消费 wait 或触发任何模型调用。
    */
   async decide(raw:HumanDecisionRequest,trustedActor:HumanDecisionActor):Promise<HumanDecisionReceipt>{
-    const input=this.parse(humanDecisionRequestSchema,raw),actor=this.parse(humanDecisionActorSchema,trustedActor);this.current();
-    const before=await this.store.read(),old=this.receipt(this.scope(before,input),input.commandId);
+    const input=this.parse(humanDecisionRequestSchema,raw),actor=this.parse(humanDecisionActorSchema,trustedActor);
     const command={commandId:'human-decision-'+input.commandId,fingerprint:hash(json({operation:'human.decision',input,actor}))};
-    return this.reading(!old&&!!input.baselines.length,()=>this.store.transact(command,async state=>{
+    const old=await this.store.commandReceipt(command.commandId);
+    if(old){check(old.fingerprint===command.fingerprint,'COMMAND_ID_CONFLICT','相同命令 ID 已用于不同请求');return old.receipt as HumanDecisionReceipt}
+    this.current();const before=await this.store.read(),stamp=this.stateStamp(before,input);
+    check(this.owner.withSourceSnapshot,'HUMAN_UNAVAILABLE','人工决定缺少可信知识快照提交入口');
+    try{return await this.reading(!!input.baselines.length,async()=>{
+      let preview:HumanDecisionPreview;try{preview=await this.collect(before,{workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,scopeId:input.scopeId,criterionId:input.criterionId,baselines:input.baselines})}catch(error){const code=(error as {code?:string})?.code;if(code?.startsWith('HUMAN_'))throw error;fail('HUMAN_EVIDENCE_INVALID','当前日志、知识或文件依据无法核实，未保存人工决定')}
+      return this.owner.withSourceSnapshot!(snapshot=>this.store.transact(command,async state=>{
       const scope=this.scope(state,input),revision=scope.humanDecisions?.revision??0;
       check(revision===input.expectedDecisionRevision,'HUMAN_REVISION_CONFLICT','人工决定记录已更新，请重新核实后提交');
       check(revision<humanDecisionLimit,'HUMAN_LIMIT','本周期人工决定已达到 64 条上限');
-      let preview:HumanDecisionPreview;try{preview=await this.collect(state,{workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,scopeId:input.scopeId,criterionId:input.criterionId,baselines:input.baselines})}catch(error){const code=(error as {code?:string})?.code;if(code?.startsWith('HUMAN_'))throw error;fail('HUMAN_EVIDENCE_INVALID','当前日志、知识或文件依据无法核实，未保存人工决定')}
+      check(stamp===this.stateStamp(state,input),'HUMAN_STALE','人工核实期间调度状态发生变化，请重新核实');
+      check(snapshot.revision===preview.source?.knowledgeRevision,'HUMAN_KNOWLEDGE_CHANGED','知识在人工核实期间变化，请重新安排核实');
       check(preview.basis===input.expectedBasis,'HUMAN_STALE','人工决定依据已经变化，请重新核实后提交');
       check(preview.allowedDecisions.includes(input.decision),'HUMAN_DECISION_UNAVAILABLE','所选决定尚不满足当前候选与文件核实要求');this.current();
       const records=scope.humanDecisions?.records??[],supersedes=records.filter(record=>record.criterionId===input.criterionId&&record.basis===input.expectedBasis).at(-1);
       const record=humanDecisionRecordSchema.parse({decisionId:input.commandId,revision:revision+1,recordedAt:new Date().toISOString(),actor,criterionId:input.criterionId,decision:input.decision,comment:input.comment,basis:input.expectedBasis,baselines:input.baselines,proof:humanDecisionProof(preview),...(supersedes?{supersedesDecisionId:supersedes.decisionId}:{})}),next={...scope,humanDecisions:{revision:revision+1,records:[...records,record]}};
       return {scopes:[next],receipt:this.receipt(next,input.commandId)!};
-    }));
+      }));
+    })}catch(error){
+      // 并发同命令可能已由另一个请求保存；只查其原回执，不重建证明或换命令再提交。
+      const settled=await this.store.commandReceipt(command.commandId);if(settled){check(settled.fingerprint===command.fingerprint,'COMMAND_ID_CONFLICT','相同命令 ID 已用于不同请求');return settled.receipt as HumanDecisionReceipt}throw error;
+    }
   }
 }

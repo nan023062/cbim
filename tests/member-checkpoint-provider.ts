@@ -1,3 +1,4 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -30,6 +31,7 @@ export async function memberCheckpointProvider(mode:CheckpointFixtureMode='compl
   let agentId='',moduleId='',releaseCheckpoint=()=>{},releaseResume=()=>{};
   const checkpointGate=new Promise<void>(resolve=>{releaseCheckpoint=resolve}),resumeGate=new Promise<void>(resolve=>{releaseResume=resolve});
   const state:{baseline?:any;checkpoint?:unknown;checkpointRejected?:unknown;parked?:GraphSnapshot;resume?:any;resumeProgressVersion?:number;initialProgressVersion?:number}={};
+  let ownerSelection:OwnerExecutionSelection|undefined;
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
     const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,list=isMain?main:member,turn=list.length;list.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
@@ -39,8 +41,8 @@ export async function memberCheckpointProvider(mode:CheckpointFixtureMode='compl
     const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     if(isMain){
       assert.ok(body.tools?.every(tool=>!['write','edit','bash','cbim_task_checkpoint'].includes(tool.function.name)));
-      if(turn===0)tool('checkpoint-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],acceptance:d.acceptance}));
-      else if(turn>=1&&turn<=3){const prerequisites=turn===1?[]:[{taskId:toolValue(body,'checkpoint-dispatch-'+(turn-1)).taskId,expectedPlanRevision:1}];tool('checkpoint-dispatch-'+turn,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:d.goals[turn-1],acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites})}
+      if(turn===0)tool('checkpoint-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance}));
+      else if(turn>=1&&turn<=3){const prerequisites=turn===1?[]:[{taskId:toolValue(body,'checkpoint-dispatch-'+(turn-1)).taskId,expectedPlanRevision:1}];tool('checkpoint-dispatch-'+turn,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:d.goals[turn-1],acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites})}
       else if(turn===4)reply('已依次登记A、B和C，等待A的真实运行结果。');
       else if(turn===5)tool('checkpoint-goal-inspect','cbim_goal_inspect',{});
       else if(turn===6){
@@ -88,5 +90,5 @@ export async function memberCheckpointProvider(mode:CheckpointFixtureMode='compl
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Member checkpoint fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},releaseCheckpoint:()=>releaseCheckpoint(),releaseResume:()=>releaseResume(),close:async()=>{releaseCheckpoint();releaseResume();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=structuredClone(selection)},releaseCheckpoint:()=>releaseCheckpoint(),releaseResume:()=>releaseResume(),close:async()=>{releaseCheckpoint();releaseResume();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

@@ -1,6 +1,6 @@
 /**
  * 作用定位：在主对话中展示最近的成员任务与公开执行动态，并链接到对应任务节点详情。
- * 设计原因：执行成员输出保持独立署名，默认只展开最近一段公开回复；检查点、求助和调度审计只读真实记录，停泊与待续执行不显示成完成或模型正在生成。
+ * 设计原因：执行成员输出保持原岗位署名和冻结模型，默认只展开最近一段公开回复；旧绑定缺省不猜岗位，检查点、求助和调度审计只读真实记录，停泊不显示成完成。
  */
 import {useState} from 'react';
 import type {TaskNode} from '../../bridge/contracts/dispatch';
@@ -12,6 +12,7 @@ import {committedMemberHelp} from './member-help-state';
 import {MemberCancellationNotice} from './MemberCancellationNotice';
 import {MemberDependencyNotice} from './MemberDependencyNotice';
 import {MemberCheckpointNotice} from './MemberCheckpointNotice';
+import {MemberOwnerNotice} from './OwnerExecutionDetails';
 import {memberCheckpointView,checkpointPhaseLabels} from './member-checkpoint-state';
 import {committedMemberCancellation,memberCancellationLabel} from './member-cancellation-state';
 import './member-activity.css';
@@ -26,6 +27,7 @@ function MemberActivityCard({workspaceId,rootSessionId,task,onSelectTask,active}
   return <article className="member-activity-card" aria-label={'成员任务 · '+task.assignee.name}>
     <header><span className="member-avatar"><Icon name="team" size={17}/></span><div><strong>{task.assignee.name}</strong><span className="member-role-caption">执行 Agent</span></div><span className={'member-state '+task.status}>{task.status==='running'&&<span className="work-spinner"/>}{memberTaskLabel(task)}</span></header>
     <p className="member-task-goal">{task.goal}</p>
+    <MemberOwnerNotice task={task} compact/>
     <MemberHelpNotice task={task} runId={latest} compact/>
     <MemberCancellationNotice task={task} compact/>
     <MemberDependencyNotice task={task} compact/>

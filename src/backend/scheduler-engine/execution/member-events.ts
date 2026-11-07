@@ -11,8 +11,8 @@ import type {TaskProgress} from '../../core/tasks/progress';
 import type {MemberEventCursor,MemberEventsRead,MemberRunView} from '../../core/tasks/member-events';
 import {projectRunEvent} from './public-run-events';
 
-/** 业务目标来自已派发节点；不传播完整角色/模块上下文或原生会话绑定。 */
-export function memberPublicTask(task:TaskNode,root:string):TaskSpec{return {taskId:task.taskId,workspaceId:task.identity.workspaceId,root,goal:task.goal,moduleIds:task.modules.map(module=>module.moduleId),agentId:task.assignee.agentId,acceptance:task.acceptance.map(item=>item.text)}}
+/** 业务目标和岗位执行绑定来自原节点；同时用于 Runtime 头与公开核验，不传播能力正文或原生会话绑定。 */
+export function memberPublicTask(task:TaskNode,root:string):TaskSpec{return {taskId:task.taskId,workspaceId:task.identity.workspaceId,root,goal:task.goal,moduleIds:task.modules.map(module=>module.moduleId),agentId:task.assignee.agentId,acceptance:task.acceptance.map(item=>item.text),...(task.ownerBinding?{ownerBinding:structuredClone(task.ownerBinding)}:{})}}
 
 interface Stream {
   /** 首次登记时固定的身份与任务；read 使用传入的最新 DispatchRun 生成公开运行状态。 */

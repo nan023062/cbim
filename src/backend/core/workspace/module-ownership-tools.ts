@@ -1,11 +1,12 @@
 /**
  * 作用定位：主运行负责人四工具的严格输入、业务输出和可信端口协议。
  * 设计原因：模型只提交责任选择与预览依据；命令、运行身份和权限由闭包注入，唯一输出快照核验后才交付。
- * 边界：查询覆盖工作区责任控制面，不代表派发或验收；回执不存在保持 unknown，不授权重新写入。
+ * 边界：模块查询包含真实岗位执行选择及缺口，但选择仅是预期，不能替代服务重核或验收；回执不存在保持 unknown，不授权重新写入。
  */
 import {z} from 'zod';
 import {moduleOwnershipChangeInputSchema,moduleOwnershipCursorSchema,moduleOwnershipPageSchema,moduleOwnershipPreviewSchema,moduleOwnershipReadBasisSchema,moduleOwnershipReceiptSchema} from './module-ownership';
 import {workspaceMemberListSchema,workspaceRegistryCursorSchema} from '../team/workspace-member';
+import {ownerExecutionDiscoverySchema} from '../team/owner-execution-discovery';
 
 const id=z.string().min(1).max(1024),uuid=z.string().uuid(),sha=z.string().regex(/^[a-f0-9]{64}$/);
 const modules=z.object({moduleIds:z.array(id).min(1).max(20).refine(ids=>new Set(ids).size===ids.length)}).strict();
@@ -21,7 +22,8 @@ export type ModuleOwnerCommitInput=z.infer<typeof moduleOwnerCommitInputSchema>;
 export type ModuleOwnerReceiptInput=z.infer<typeof moduleOwnerReceiptInputSchema>;
 export const moduleOwnerIdentitySchema=z.object({workspaceId:z.string().min(1).max(512),rootSessionId:id}).strict();
 export const moduleOwnerInspectOutputSchema=z.union([
-  z.object({identity:moduleOwnerIdentitySchema,readOnly:z.literal(true),selection:z.union([modules,byMember]),page:moduleOwnershipPageSchema}).strict(),
+  z.object({identity:moduleOwnerIdentitySchema,readOnly:z.literal(true),selection:modules,page:moduleOwnershipPageSchema,execution:ownerExecutionDiscoverySchema}).strict(),
+  z.object({identity:moduleOwnerIdentitySchema,readOnly:z.literal(true),selection:byMember,page:moduleOwnershipPageSchema}).strict(),
   z.object({identity:moduleOwnerIdentitySchema,readOnly:z.literal(true),selection:members,memberPage:workspaceMemberListSchema}).strict(),
 ]);
 export const moduleOwnerPreviewOutputSchema=z.object({identity:moduleOwnerIdentitySchema,preview:moduleOwnershipPreviewSchema}).strict();

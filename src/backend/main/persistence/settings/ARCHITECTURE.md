@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-应用级模型、并发与新目标软限额存储。密钥系统加密；策略串行版本校验与原子保存，缺文件才使用默认值。软限额只冻结新周期，设置恢复不重放模型或改变既有目标。
+应用级模型、并发与新目标软限额存储。密钥系统加密；策略串行版本校验与原子保存，缺文件才使用默认值。软限额只冻结新周期，设置恢复不重放模型或改变既有目标。 公开配置批量短锁与运行配置捕获使用同一设置队列；解密只在领取准入成功后，捕获后编辑不热替换本段。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -75,8 +75,6 @@ N_src_backend_main_persistence_settings_budget_settings_ts ..> N_src_backend_mai
 
 ### llm-profiles.ts
 
-成员 1/2（同名节点为同一声明，跨图合并阅读）。
-
 ```mermaid
 classDiagram
 class N_src_backend_main_persistence_settings_llm_profiles_ts["llm-profiles.ts"] {
@@ -99,6 +97,27 @@ class N_src_backend_main_persistence_settings_llm_profiles_ts_ModelFile["ModelFi
   +profiles
 }
 N_src_backend_main_persistence_settings_llm_profiles_ts ..> N_src_backend_main_persistence_settings_llm_profiles_ts_ModelFile : 声明
+class N_src_backend_main_persistence_settings_llm_profiles_ts_ExplicitModelReference["ExplicitModelReference"] {
+  <<interface>>
+  +profileId
+  +modelId
+}
+N_src_backend_main_persistence_settings_llm_profiles_ts ..> N_src_backend_main_persistence_settings_llm_profiles_ts_ExplicitModelReference : 声明
+class N_src_backend_main_persistence_settings_llm_profiles_ts_LockedModelConfiguration["LockedModelConfiguration"] {
+  <<interface>>
+  +profile
+  +resolve()
+}
+N_src_backend_main_persistence_settings_llm_profiles_ts ..> N_src_backend_main_persistence_settings_llm_profiles_ts_LockedModelConfiguration : 声明
+```
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_persistence_settings_llm_profiles_ts["llm-profiles.ts"] {
+  <<module>>
+}
 class N_src_backend_main_persistence_settings_llm_profiles_ts_LlmProfiles["LlmProfiles"] {
   +list()
   +save()
@@ -106,6 +125,8 @@ class N_src_backend_main_persistence_settings_llm_profiles_ts_LlmProfiles["LlmPr
   +remove()
   +resolve()
   +configuration()
+  +withConfigurations()
+  +withRuntimeConfiguration()
   +discover()
   +discoverDetails()
   +test()
@@ -114,8 +135,6 @@ class N_src_backend_main_persistence_settings_llm_profiles_ts_LlmProfiles["LlmPr
   -queue
   -read()
   -view()
-  -change()
-  -decrypt()
 }
 N_src_backend_main_persistence_settings_llm_profiles_ts ..> N_src_backend_main_persistence_settings_llm_profiles_ts_LlmProfiles : 声明
 ```
@@ -128,6 +147,9 @@ class N_src_backend_main_persistence_settings_llm_profiles_ts["llm-profiles.ts"]
   <<module>>
 }
 class N_src_backend_main_persistence_settings_llm_profiles_ts_LlmProfiles["LlmProfiles"] {
+  -change()
+  -decrypt()
+  -explicit()
   -headers()
   -request()
 }
@@ -153,7 +175,9 @@ N_src_backend_main_persistence_settings_llm_profiles_ts ..> N_src_backend_main_p
 
 `LlmProfiles` 管理供应商和模型配置，凭据通过平台注入的加密接口保存，运行时才解密。`AdmissionSettings` 独立管理全局执行并发配置，不能读取或修改模型凭据。
 
-`configuration(profileId,modelId)` 供岗位登记读取明确选定的公开模型快照，与真实运行的 `resolve` 共用同一纯选型函数。必须给出两个标识，不使用默认选择，不解密、不调用网络；无供应商、缺模型或禁用模型会拒绝。输出只包含实际运行公开 profile 字段，不含 apiKey、encryptedKey、hasKey 或默认选择。配置可读不代表凭据有效或模型可执行；只有原 `resolve` 在选型之后进入解密。
+`configuration(profileId,modelId)` 供岗位登记读取明确选定的公开模型快照，与真实运行共用同一纯选型函数。必须给出两个标识，不使用默认选择，不解密、不调用网络；无供应商、缺模型或禁用模型会拒绝。输出只包含实际运行公开 profile 字段，不含 apiKey、encryptedKey、hasKey 或默认选择。配置可读不代表凭据有效或模型可执行。
+
+`withConfigurations` 在与 save/remove/select 相同的队列中一次固定多岗位公开配置，供 Knowledge → 模型配置 → DispatchStore 的短事务使用。`withRuntimeConfiguration` 另提供限回调期间使用的 resolve，预算和占用通过后只解密该已捕获定义，不读盘、不重新排队、不联网。领取提交后放锁，真正引擎沿原闭包启动；后来的配置修改不热替换已领取运行。凭据不进入任务、绑定、公开指纹或运行日志。
 
 并发设置文件只保存 `version:1` 与 `policy:{revision,maxConcurrentRuns}`。默认 4，允许 1～32；应用在打开工作区前初始化一次，缺文件使用默认值，损坏文件明确失败而不覆盖。`read()` 只读已生效策略，`configure()` 用原版本串行校验，原子写盘成功后同步交给准入器。写入失败保持原限额，版本冲突要求刷新；降低上限不结束现有执行。
 

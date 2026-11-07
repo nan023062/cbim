@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-执行日志、附件快照、派发事务与角色履历。目录首层、URL指针、真实有界网页及授权仓库资料快照分别保存，导入取消与等待受理分离；来源变化不改历史。日志只读完整前缀并报告未完整尾行，损坏不透传原始片段、不截断修复。图/目标/详情同屏障读取，未知操作不自动重放。同日志追加岗位审计并派生独立registry游标，原命令可只读核实，不将长期岗位计为运行实例。
+执行日志、附件快照、派发事务与角色履历。目录首层、URL指针、真实有界网页及授权仓库资料快照分别保存，导入取消与等待受理分离；来源变化不改历史。日志只读完整前缀并报告未完整尾行，损坏不透传原始片段、不截断修复。图/目标/详情同屏障读取，未知操作不自动重放。同日志追加岗位审计并派生独立registry游标，原命令可只读核实，不将长期岗位计为运行实例。 新事务标记由Store生成，旧日志前缀可读而不能在新协议后降级；新任务/准备与历史岗位审计严格对应。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -156,7 +156,7 @@ class N_src_backend_main_persistence_tasks_chat_source_readers_ts["chat-source-r
 
 ### dispatch-store.ts
 
-成员 1/2（同名节点为同一声明，跨图合并阅读）。
+成员 1/3（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -166,6 +166,7 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts["dispatch-store.ts"
 class N_src_backend_main_persistence_tasks_dispatch_store_ts_TransactionBody["TransactionBody"] {
   <<interface>>
   +version
+  +executionProtocol
   +workspaceId
   +transactionSeq
   +previousHash
@@ -204,7 +205,7 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchSt
 N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchStore <|.. N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore
 ```
 
-成员 2/2（同名节点为同一声明，跨图合并阅读）。
+成员 2/3（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -214,6 +215,7 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts["dispatch-store.ts"
 class N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore["FileDispatchStore"] {
   -transactionSeq
   -lastHash
+  -ownerProtocolSeen
   -initialization
   -tail
   -closing
@@ -227,6 +229,22 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore["
   -graph()
   -publish()
   -project()
+}
+N_src_backend_main_persistence_tasks_dispatch_store_ts ..> N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore : 声明
+class N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchStore["DispatchStore (外部契约)"] {
+  <<external>>
+}
+N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchStore <|.. N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore
+```
+
+成员 3/3（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_persistence_tasks_dispatch_store_ts["dispatch-store.ts"] {
+  <<module>>
+}
+class N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore["FileDispatchStore"] {
   -load()
 }
 N_src_backend_main_persistence_tasks_dispatch_store_ts ..> N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore : 声明
@@ -236,7 +254,7 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchSt
 N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchStore <|.. N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore
 ```
 
-直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/tasks/graph-reducer.ts](../../../core/tasks/graph-reducer.ts)、[../../../core/tasks/dispatch-invariants.ts](../../../core/tasks/dispatch-invariants.ts)、[../../../core/tasks/dispatch-scope-invariants.ts](../../../core/tasks/dispatch-scope-invariants.ts)、[../../../core/tasks/workspace-member-invariants.ts](../../../core/tasks/workspace-member-invariants.ts)、[../../../core/tasks/module-ownership-invariants.ts](../../../core/tasks/module-ownership-invariants.ts)、[../../../core/tasks/dispatch-storage.ts](../../../core/tasks/dispatch-storage.ts)、[../../../core/tasks/graph-types.ts](../../../core/tasks/graph-types.ts)、[../../../core/tasks/scope-view.ts](../../../core/tasks/scope-view.ts)、[../../../core/tasks/dispatch-scope.ts](../../../core/tasks/dispatch-scope.ts)、[../../../core/tasks/knowledge-source-invariants.ts](../../../core/tasks/knowledge-source-invariants.ts)。
+直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/tasks/graph-reducer.ts](../../../core/tasks/graph-reducer.ts)、[../../../core/tasks/dispatch-invariants.ts](../../../core/tasks/dispatch-invariants.ts)、[../../../core/tasks/dispatch-scope-invariants.ts](../../../core/tasks/dispatch-scope-invariants.ts)、[../../../core/tasks/workspace-member-invariants.ts](../../../core/tasks/workspace-member-invariants.ts)、[../../../core/tasks/module-ownership-invariants.ts](../../../core/tasks/module-ownership-invariants.ts)、[../../../core/tasks/dispatch-storage.ts](../../../core/tasks/dispatch-storage.ts)、[../../../core/tasks/graph-types.ts](../../../core/tasks/graph-types.ts)、[../../../core/tasks/scope-view.ts](../../../core/tasks/scope-view.ts)、[../../../core/tasks/dispatch-scope.ts](../../../core/tasks/dispatch-scope.ts)、[../../../core/tasks/knowledge-source-invariants.ts](../../../core/tasks/knowledge-source-invariants.ts)、[../../../core/tasks/owner-execution-invariants.ts](../../../core/tasks/owner-execution-invariants.ts)。
 
 ### run-journal.ts
 
@@ -331,6 +349,12 @@ N_src_backend_main_persistence_tasks_run_storage_ts ..> N_src_backend_main_persi
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 新旧负责人执行协议
+
+FileDispatchStore 在自身 transaction body 写入 `executionProtocol:module_owner_v1`，调用者 mutation 不可设置。旧完整日志前缀按旧执行规则回放，第一次新协议之后不得退回旧写法；未知协议或降级后缀即使哈希链一致也拒绝。不重写旧字节、回执或尚未绑定的历史。新 live 事务始终校验新业务绑定，旧已存在 run 的状态收束可以保留缺省字段。
+
+新协议不是权限证明或来源 generation，只选择持久不变量的版本。岗位、责任、来源与运行事实仍由各自完整规则核验；原命令查询优先和 fsync 后发布保持原行为。新任务/新领取缺绑定或绑定过期时，图、运行、邮箱及日志原字节全部不变；在途运行后发生岗位暂停或换人不回滚该运行的原身份和公开模型。真实 Store 回归覆盖旧前缀→新结算、原回执、幂等、降级后缀和同 Agent 多岗位独立实例。
 
 ### 安全等待的附件快照
 

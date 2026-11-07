@@ -21,8 +21,8 @@ import {
 const inputs={cbim_module_owner_inspect:moduleOwnerInspectInputSchema,cbim_module_owner_change_preview:moduleOwnerPreviewInputSchema,cbim_module_owner_change_commit:moduleOwnerCommitInputSchema,cbim_module_owner_receipt:moduleOwnerReceiptInputSchema};
 const outputs={cbim_module_owner_inspect:moduleOwnerInspectOutputSchema,cbim_module_owner_change_preview:moduleOwnerPreviewOutputSchema,cbim_module_owner_change_commit:moduleOwnerRecordedOutputSchema,cbim_module_owner_receipt:moduleOwnerReceiptOutputSchema};
 const descriptions={
-  cbim_module_owner_inspect:'用members:true分页发现真实岗位摘要和memberId；用moduleIds查询模块责任，或用memberId反查当前负责模块。责任引用稳定岗位，不发能力正文；当前登记尚未用于派发，不能从静态Agent或旧任务assignee推断负责人。模块观察不证明删除重建连续性。',
-  cbim_module_owner_change_preview:'只读预览单模块设置、换人、解除责任或用 kind=adopt_source 明确采纳当前来源代次。adopt_source 保留原负责人且不传 nextOwner；先查询实际模块与岗位。预览不提交、不改派任务，也不启用岗位派发。',
+  cbim_module_owner_inspect:'用members:true分页发现岗位摘要；用moduleIds查询真实责任与execution.groups中的岗位执行选择或具体缺口；不同负责人须拆任务。selection是当前预期，业务goal和dispatch必须原样引用，实际领取仍重核。用memberId可反查责任；不发能力正文/凭据，不保证供应商可用。',
+  cbim_module_owner_change_preview:'只读预览单模块设置、换人、解除责任或用 kind=adopt_source 明确采纳当前来源代次。adopt_source 保留原负责人且不传 nextOwner；先查询实际模块与岗位。预览不提交或改派旧任务，正式执行另经计划、岗位和领取门禁。',
   cbim_module_owner_change_commit:'按原 change 和预览依据提交一次责任变更，使用本轮知识写权限及真实审批。仅登记负责人，不改知识正文、不切换派发或执行模型；结果未知只查错误中的原 commandId，不能再次提交。',
   cbim_module_owner_receipt:'只读查询同一根会话主工具原 commandId 的不可变回执。可查旧周期；unknown不表示未受理，不由当前关系相同推断原命令成功，不重放提交。',
 };
@@ -51,7 +51,7 @@ export class ModuleOwnershipTools {
           if(!bound(value)||!isDeepStrictEqual(value.selection,expected))return false;
           if('members' in expected)return 'memberPage' in value&&value.memberPage.identity.workspaceId===this.binding.workspaceId&&value.memberPage.identity.instanceId===this.binding.instanceId&&value.memberPage.offset===(expected.offset??0)&&value.memberPage.items.length<=(expected.limit??20)&&(!expected.expectedRegistryCursor||isDeepStrictEqual(value.memberPage.registryCursor,expected.expectedRegistryCursor));
           if(!('page' in value)||value.page.identity.workspaceId!==this.binding.workspaceId||value.page.identity.instanceId!==this.binding.instanceId)return false;
-          return 'moduleIds' in expected?value.page.total===expected.moduleIds.length&&value.page.offset===0&&isDeepStrictEqual(value.page.items.map(item=>item.moduleId),expected.moduleIds):value.page.offset===(expected.offset??0)&&value.page.items.length<=(expected.limit??20)&&value.page.items.every(item=>item.binding?.ownerMemberId===expected.memberId)&&(!expected.expectedReadBasis||isDeepStrictEqual(value.page.basis,expected.expectedReadBasis));
+          return 'moduleIds' in expected?'execution' in value&&value.execution.workspaceId===this.binding.workspaceId&&value.execution.instanceId===this.binding.instanceId&&isDeepStrictEqual(value.execution.moduleIds,expected.moduleIds)&&value.page.total===expected.moduleIds.length&&value.page.offset===0&&isDeepStrictEqual(value.page.items.map(item=>item.moduleId),expected.moduleIds):value.page.offset===(expected.offset??0)&&value.page.items.length<=(expected.limit??20)&&value.page.items.every(item=>item.binding?.ownerMemberId===expected.memberId)&&(!expected.expectedReadBasis||isDeepStrictEqual(value.page.basis,expected.expectedReadBasis));
         });
       }else if(name==='cbim_module_owner_change_preview'){
         const expected=this.parse(moduleOwnerPreviewInputSchema,raw);output=await this.port.preview(structuredClone(expected),signal);

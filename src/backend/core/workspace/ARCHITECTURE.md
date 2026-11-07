@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-领域工程、Module、Workflow与稳定岗位责任协议。来源代次和写前屏障由纯规则投影；内容指纹、来源身份、负责人关系分别核实。同负责人明确采纳递增关系版本，不迁移任务；旧缺省记录不补造来源。Workflow验证不自行读文件或签发业务验收。
+领域工程、Module、Workflow与稳定岗位责任协议。来源代次和写前屏障由纯规则投影；内容指纹、来源身份、负责人关系分别核实。同负责人明确采纳递增关系版本，不迁移任务；旧缺省记录不补造来源。Workflow验证不自行读文件或签发业务验收。 主调度的负责人发现按所选模块真实分组，缺口不推测继承或默认负责者。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -410,7 +410,7 @@ class N_src_backend_core_workspace_module_ownership_tools_ts_ModuleOwnershipTool
 N_src_backend_core_workspace_module_ownership_tools_ts ..> N_src_backend_core_workspace_module_ownership_tools_ts_ModuleOwnershipToolsPort : 声明
 ```
 
-直接依赖：[module-ownership.ts](module-ownership.ts)、[../team/workspace-member.ts](../team/workspace-member.ts)。
+直接依赖：[module-ownership.ts](module-ownership.ts)、[../team/workspace-member.ts](../team/workspace-member.ts)、[../team/owner-execution-discovery.ts](../team/owner-execution-discovery.ts)。
 
 ### module-ownership.ts
 

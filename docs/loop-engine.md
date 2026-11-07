@@ -2,28 +2,30 @@
 
 唯一引擎为固定版本 `@earendil-works/pi-coding-agent@1.5.0`。CBIM 在应用内部管理工作区执行实例、模型配置、运行权限和工具调用。
 
-源码分层：`src/backend/core/brain/` 是通用执行层（大脑），`src/backend/scheduler-engine/` 是管理工作区、知识和团队流程的调度引擎。目录改名不改变 `loop.*` 接口、`pnpm loop` 命令和既有 `loop-engine/` 数据目录。
+源码分层：`src/backend/core/brain/` 是通用执行层（大脑），`src/backend/scheduler-engine/` 是管理工作区、知识和团队流程的调度引擎。既有 `loop-engine/` 数据目录保留；接口名称仍存在不代表旧业务启动路径继续开放，当前限制见下文。
 
 调度引擎与 Core 平级，单向依赖 Core。工作区使用 `KnowledgeWorkspace` 契约，任务锁与工具策略通过 `ExecutionServices` 注入；平台实现位于 `main/execution.ts`。开发 CLI 位于 `main/commands/loop-cli.ts`，由 main 负责应用装配。
 
 ## 当前调用链
 
 ```text
-Application / 开发 CLI
+Application / 桌面主对话
   → WorkspaceExecutionManager
-    → prepareTeamTask：模块、Agent、有效 Skill、选定 Workflow、内置规范
-    → LoopRuntime：任务锁、持久化事件、执行与恢复
+    → loop.chat / 普通对话 loop.resume
+    → LoopRuntime：任务锁、持久化事件、主会话执行
       → PiEngine：真实 Pi 子进程、工具策略、原生会话
         → 临时能力桥 → KnowledgeService → 工作区查询与事务
 
 Application / 可信桌面 IPC
-  → WorkspaceDispatchService：成员身份、主会话派发图与任务信封
-  → MemberExecutionManager：显式领取、冻结知识与前置结果、模型/权限、终态事务
+  → WorkspaceDispatchService：活动 scope、当前 goal 计划、明确 ownerSelection
+  → 冻结 ownerBinding：岗位、能力来源、模块责任、岗位模型配置
+  → MemberExecutionManager：领取前复核、冻结知识与前置结果、岗位模型/权限、终态事务
     → 同一个 LoopRuntime.startMember：固定成员与通道绑定、持久化事件
       → 独立 PiEngine：成员专属原生会话、同一工具门禁与内部知识服务
 
 当前主聊天运行
-  → cbim_dispatch_task：绑定本轮身份，可靠入队，不同步等待成员
+  → cbim_module_owner_inspect：查询模块当前负责岗位及可用选择
+  → cbim_goal_plan → cbim_dispatch_task：同一负责人选择与模块范围，可靠入队
   → 主轮安全完成并释放占用
     → AutoCollaboration → MemberExecutionManager → 独立成员执行
     → 成员终态持久化且释放占用
@@ -38,15 +40,17 @@ KnowledgeService 提供领域查询与事务能力，KnowledgeTools 维护内部
 
 ## 团队工作流准备
 
-既有 `loop.prepare/start` 的团队任务明确目标、一个模块 ID、一名叶子 Agent ID、当前模块登记的 Workflow ID，以及至少一项验收要求。真人责任人可选，填写时必须存在于花名册。
+`loop.prepare` 保留旧团队上下文的只读校验：输入目标、一个模块 ID、一名叶子 Agent ID、当前模块登记的 Workflow ID，以及至少一项验收要求。真人责任人可选，填写时必须存在于花名册。准备成功不创建正式任务，也不授予执行许可；`loop.start` 已拒绝新业务执行。
 
 程序加载模块正文、Agent 原则、自身与所有祖先 Skill、选定 Workflow、内置需求实现流程和通用规范。不继承父模块或兄弟模块的 Workflow。
 
-知识结构错误、正文缺失、Skill 冲突、错误流程归属、未知责任人或准备期间知识变化均拒绝启动。完整正文及知识版本保存在 `TaskSpec.workflowContext`，随 `run.started` 持久化，并注入 Pi 专用系统指引。
+知识结构错误、正文缺失、Skill 冲突、错误流程归属、未知责任人或准备期间知识变化会阻止上下文准备。旧直接团队运行中的 `TaskSpec.workflowContext` 只保留历史事实，不能据此绕过当前岗位派发门禁创建新轮次。
 
-已派发成员任务另使用 `prepareDispatchExecutionContext`：支持内置默认执行角色 `cbim:executor` 或自定义成员，拒绝以 `cbim:main` 执行。多个真实模块各自带维护关系与自身 Workflow；角色原则、有效 Skill、模块正文和内置规范完整冻结。无本模块 Workflow 时采用通用流程。启动前复核版本并冻结已满足前置任务的候选摘要、证据及限制。
+正式成员任务使用 `prepareDispatchExecutionContext`，必须由当前活动 scope 的目标计划派发。先为业务模块登记负责岗位，并明确采纳能力、来源和模型配置；`ownerSelection` 是预期版本，服务重新解析后冻结 `ownerBinding`。`cbim:executor` 仍可作为明确登记岗位的内置能力，但不再因省略角色或负责人而自动回退；`cbim:main` 不能执行成员业务。
 
-成员的计划必须原样保留派发 goal、验收文本及顺序；步骤可以修订，目标或范围改变需要重新派发。Workflow 仍由模型按正文执行；当前没有自动业务验收、完整治理待办流转或执行者求助后可恢复等待。成员执行具体 IPC 及限制见[成员执行与结果回传](member-execution.md)。
+多个模块必须属于同一所选岗位；不同负责岗位拆分任务。模块各自保留维护关系和自身 Workflow，角色原则、有效 Skill、岗位名称与适配、模块正文及内置规范完整冻结。未显式选择 Workflow 时沿用本模块默认流程，不继承父模块或兄弟流程。成员使用岗位采纳的模型，不继承主会话模型。计划、派发及领取按 Knowledge → 模型配置短锁 → DispatchStore 顺序复核；新领取还冻结已满足前置任务的候选摘要、证据及限制。
+
+成员的计划必须原样保留派发 goal、验收文本及顺序；步骤可以修订，目标、范围或负责人改变需要重新派发。Workflow 正文供模型执行，程序核验已声明的结构化条件，不能代替业务判断。安全检查点与求助不同：检查点仅支持原任务的一次受控续执行，求助不提供旧任务恢复许可。成员执行具体 IPC 及限制见[成员执行与结果回传](member-execution.md)。
 
 ## 工作区执行接口
 
@@ -55,19 +59,22 @@ KnowledgeService 提供领域查询与事务能力，KnowledgeTools 维护内部
 | 操作 | 参数 | 结果 |
 |---|---|---|
 | `loop.prepare` | `id, task` | 返回校验后的上下文，不启动或持久化任务 |
-| `loop.start` | `id, task, options` | 重新准备并启动，返回 workspaceId/taskId/runId |
+| `loop.start` | 原 `id, task, options` | 拒绝新业务执行，返回 `OWNER_DISPATCH_REQUIRED` |
+| `loop.chat` | `id, message, options?, attachments?` | 创建主对话；业务工作由当前目标计划正式派发 |
 | `loop.stop` | `id, taskId` | 请求停止，不回滚副作用 |
 | `loop.inspect` | `id, taskId, runId` | 状态、上下文、持久化事件和未确认操作 |
 | `loop.list` | `id` | 从日志恢复历史，明确报告损坏记录 |
-| `loop.resume` | `id, taskId, runId, message, options, reconciledToolIds?` | 继续原生会话；知识变化或未核实操作阻止恢复 |
+| `loop.resume` | `id, taskId, runId, message, options, reconciledToolIds?` | 仅普通主对话可续聊；旧非 chat 业务任务拒绝，未核实操作仍阻止继续 |
 
-`task` 包含 `goal, moduleId, agentId, workflowId, acceptance` 和可选 `responsiblePerson`。`options` 包含 `provider, model`、默认关闭的 `allowNativeExecution`、可选 `turnTimeoutMs`（1000～3600000 毫秒）。IPC 不接收任意子进程命令或环境变量。
+`loop.prepare` 的旧 `task` 包含 `goal, moduleId, agentId, workflowId, acceptance` 和可选 `responsiblePerson`，与正式派发输入不同。主对话 `options` 可选择 `profileId/model` 和权限模式；保留的兼容字段不构成成员模型选择入口。IPC 不接收任意子进程命令或环境变量。
 
 主进程通过 `Application.execution(id).subscribe()` 订阅落盘事件。页面关闭不停止执行；工作区替换、移除和应用退出先排空 loop，再关闭知识服务。桌面对话已接入发送、公开文本增量展示、工具证据、停止与继续；默认供应商由 Application 解析后传给大脑。
 
-成员任务保留 `dispatch.executionStart/Stop/Inspect`、`dispatch.messages/acknowledge` 和独立审批/选项接口。真实主聊天运行另装配 `cbim_dispatch_task` 和 `cbim_dispatch_inspect`：模型只指定角色、模块、目标与验收，调度绑定身份，并冻结主轮用户选定的模型及权限模式；不能从参数提升权限。工具入队后由协调器等待主轮释放占用再启动成员，不把长期等待放进工具调用或执行槽。显式 IPC 派发不会自动进入该批次。
+成员任务保留 `dispatch.executionStart/Stop/Inspect`、`dispatch.messages/acknowledge` 和独立审批/选项接口。主工具先发现模块负责岗位，再以明确 `agentId/ownerSelection` 保存目标分配并派发；服务绑定真实主会话、scope 和 run。显式 `dispatch.task` IPC 同样必须携带当前活动 `scopeId`，任务与当前 goal 计划的角色、模块、Workflow 和负责人绑定一致；缺少 scope 或 ownerSelection 不创建新任务。显式 IPC 派发不会自动进入主工具的内存批次。
 
-主对话成员卡片与图节点详情通过 `dispatch.executionEvents` 读取公开增量，详情可操作审批、选项和停止；`Application.memberExecution(id).subscribe()` 提供已落盘事件。成员通道上次正常 completed 且身份、原生会话和未决工具核验通过后，才可接下一项任务；失败、取消或中断通道本阶段拒绝续接。
+自动协作只沿用本轮权限模式和执行超时，不把主模型传给成员，也不从模型参数提升权限。岗位公开模型配置指纹在计划/派发时固定，领取在模型短锁下核实并解析同一配置；密钥不进入岗位绑定或运行日志。工具入队后由协调器等待主轮释放占用再启动成员，不把长期等待放进工具调用或执行槽。
+
+主对话成员卡片与图节点详情通过 `dispatch.executionEvents` 读取公开增量，详情可操作审批、选项和停止；`Application.memberExecution(id).subscribe()` 提供已落盘事件。长期岗位 memberId 与任务执行实例、通道和 run 不同；同岗位的新任务仍创建独立执行实例。已有任务仅在真实安全检查点及一次续执行预约通过后可沿原身份继续，预约和领取都复核原岗位/模型/知识；失败、取消、中断或缺少 ownerBinding 的旧任务不能直接复活。旧日志继续可读，已运行段的历史结算不因后来换负责人而改写。
 
 自动回注只在原主轮安全完成且没有未决工具时续接同一原生 Session。`RunInputSource` 保存 continuationId、结果 messageIds 与 taskIds，允许没有候选信封的失败或受阻任务回报。Pi 用 custom 消息保存成员任务数据，不伪造用户消息或授权；日志先记录回注尝试，再确认结果收件。按批次和消息 ID 去重不等于业务验收，也不提供失败自动重放。用户队列保留原正文和配置，在协作期间暂缓，主续跑安全结束后继续。
 
@@ -87,15 +94,11 @@ KnowledgeService 提供领域查询与事务能力，KnowledgeTools 维护内部
 
 ## 开发调用
 
-需 Node.js 22.19+ 和项目依赖。CLI 独立持有工作区锁，先关闭占用此工程的 CBIM。凭据通过供应商环境变量或工作区专用 Pi home 配置，不写进目标或命令参数。
+`package.json` 仍将 `pnpm loop` 指向 [loop-cli.ts](../src/backend/main/commands/loop-cli.ts)。它复用 Application 和工作区锁，需 Node.js 22.19+、项目依赖，并先关闭占用该工程的 CBIM。
 
-```powershell
-pnpm loop --root "C:/Projects/Game" --provider "<供应商>" --model "<模型>" --goal "验证资源加载" --module ".cbim/workspace/client/loading" --agent ".cbim/team/client/developer" --workflow ".cbim/workspace/client/loading/workflows/verify" --acceptance "提交结果与证据"
+这不是当前岗位业务派发 CLI：带 `--goal/--module/--agent/--workflow/--acceptance` 的旧调用最终进入 `WorkspaceExecutionManager.start`，现在固定拒绝为 `OWNER_DISPATCH_REQUIRED`。`--task/--resume` 分支只可能继续已有普通 chat，旧业务运行仍拒绝；CLI 没有新建主对话或登记岗位、目标计划与 ownerSelection 的命令。保留的 `--allow-execution`、`--person` 等参数不能解除这些门禁。
 
-pnpm loop --root "C:/Projects/Game" --provider "<供应商>" --model "<模型>" --task "<taskId>" --resume "<runId>" --message "已核实产物，继续"
-```
-
-`--user-data` 指定数据根，`--person` 指定责任人，`--allow-execution` 开放原生执行。未确认操作逐个提供 `--reconciled-tool`，Ctrl+C 请求停止。
+需要执行业务时使用桌面主对话及正式调度链。保留的 CLI 显式 provider/model 模式不自动读取桌面加密凭据；若用于已有普通对话的受限调试，凭据应来自供应商环境变量或专用 Pi 配置，不能写进目标或命令参数。它不替代桌面岗位模型配置，也不授予成员业务执行权限。
 
 ## 验证边界
 
@@ -103,7 +106,7 @@ pnpm loop --root "C:/Projects/Game" --provider "<供应商>" --model "<模型>" 
 
 本步 `tests/application-collaboration-pi.test.ts` 已用真实 Application/Pi 验证主工具派发、成员读写及候选回注，并检查 ask 批准隔离、用户消息排队、停止和重开不重放；`tests/member-continuation-pi.test.ts` 验证 custom 回注与 user 续聊的原生历史。以上模型响应来自本机可控服务，不代表本步新增链路已经经过打包 UI 或真实供应商验证。
 
-`pnpm package` 将 Pi 及安装时解析的生产依赖复制到 `resources/pi-runtime/`，附带版本清单。`pnpm test:loop` 启动打包后的 CBIM.exe，通过桌面 IPC 准备团队任务、启动实际 Pi 并验证内部工具调用；模型服务为隔离的本机确定性测试服务。
+`pnpm package` 将 Pi 及安装时解析的生产依赖复制到 `resources/pi-runtime/`，附带版本清单。`pnpm test:loop` 仍指向 [loop-smoke.mjs](../scripts/loop-smoke.mjs)，该历史脚本实际从对话页发送消息，且仍含主 Agent 直接 write/bash 的旧断言，不是当前岗位派发的可执行示例或验收依据；本次文档更新没有运行或迁移它。岗位模型与派发门禁的实际验证以对应阶段的验证记录为准，不能从旧脚本存在推断当前链路已验收。
 
 ## 自定义模型供应商
 
@@ -113,15 +116,15 @@ pnpm loop --root "C:/Projects/Game" --provider "<供应商>" --model "<模型>" 
 
 配置保存在 CBIM 用户目录 llm.json；密钥通过 Electron safeStorage 加密，系统加密不可用时拒绝明文回退。IPC models.list/save/select/remove/discover/test 只返回公开字段，测试发送最小文本请求，可能产生费用，不发送工作区知识。编辑地址或协议时必须重新输入密钥。测试文本成功不代表完整工具调用能力。
 
-loop.start/resume 未传供应商时使用全局默认；options.profileId 可选择供应商、options.model 可选其启用模型。新运行冻结已解析配置；编辑或删除供应商不改变已启动进程，恢复任务使用恢复时选择的配置。开发 CLI 仍支持显式 provider/model，不自动读取桌面加密凭据。
+普通主对话 `loop.chat/resume` 未选供应商时使用全局默认；`options.profileId/model` 可明确选型。成员使用负责岗位显式采纳的 profile/model 及配置指纹，没有负责人或配置过期时拒绝新领取，不回退主模型或全局默认。编辑模型不会回写已领取段的冻结配置；后续新任务及检查点预约/领取仍须按当前登记重新核实，不能通过恢复参数给旧任务换模型。旧 `loop.start` 业务入口已经关闭。
 
 ## 对话页面
 
 对话页默认内置主 Agent，直接输入文字即可发送，不需要模块、团队 Agent、Workflow、责任人或验收表单。空工作区也能聊天，知识按需通过内部工具查询。可选模型或沿用默认模型；桌面默认采用逐次询问，业务文件、知识提交和命令共用运行权限。模式变更在下次发送时生效。
 
-loop.chat 创建 mode=chat、agentId=cbim:main 的普通对话；loop.choices 仅保留给显式团队任务调用方，聊天页面不调用。loop.thread 按 taskId 返回全部运行轮次。页签只保存 taskId 和草稿，消息、工具、错误及执行状态从主进程日志恢复。页面每秒串行刷新，不持久化私有思维；公开文本增量随后由最终消息替换。普通轮次的 run.started 保存用户消息，旧记录回退原始目标；带 source 的成员回注轮次显示系统来源提示，不作为用户消息展示，主 Agent 回复继续正常流式显示。
+loop.chat 创建 mode=chat、agentId=cbim:main 的普通对话；loop.choices 只保留旧上下文选择查询，聊天页面不调用，也不提供新业务启动许可。loop.thread 按 taskId 返回全部运行轮次。页签只保存 taskId 和草稿，消息、工具、错误及执行状态从主进程日志恢复。页面每秒串行刷新，不持久化私有思维；公开文本增量随后由最终消息替换。普通轮次的 run.started 保存用户消息，旧记录回退原始目标；带 source 的成员回注轮次显示系统来源提示，不作为用户消息展示，主 Agent 回复继续正常流式显示。
 
-切换页签、关闭页签或查看其他工作区不停止任务；使用“停止执行”请求中断。可在历史选择器重新打开任务。继续对话使用最新轮次和原生会话，知识变化不阻断普通聊天；既有团队任务仍校验原始知识快照。旧轮次、缺少原生会话或未核实工具结果会阻止恢复。未确认工具需查看证据、核实产物后逐项确认。团队任务执行完成仍不等于验收通过，普通对话不展示验收状态。
+切换页签、关闭页签或查看其他工作区不停止任务；使用“停止执行”请求中断。可在历史选择器重新打开任务。继续对话使用最新轮次和原生会话，知识变化不阻断普通聊天；旧直接团队任务只保留历史，不能经 loop.resume 新建执行轮。旧轮次、缺少原生会话或未核实工具结果会阻止普通对话继续。未确认工具需查看证据、核实产物后逐项确认。成员业务的检查点续执行走独立预约与领取门禁，执行结束仍不等于验收通过。
 
 长度限制诊断：模型 stopReason=length 表示输出被截断，不能显示为执行成功。界面显示配置上限和实际用量；低于配置上限时，不能据此确定是输出、上下文还是供应商侧限制，不只建议调大预算。核对后可继续原会话，不自动重放副作用工具。开启推理的低预算模型在设置页显示提示。
 
@@ -135,9 +138,9 @@ loop.chat 创建 mode=chat、agentId=cbim:main 的普通对话；loop.choices �
 
 工具绑定当前真实运行，经相同 gate 调用，但只修改执行记录，不改项目与正式知识，故只读模式也可以规划和记录读取证据。业务写、知识写及命令放行前使旧证据失效；恢复和修改计划也要求重新核实，未知结果仍需显式确认且不自动重放。命令可能改变产物，因此即便是测试命令也保守失效旧证据；应完成修改与验证后再关联本轮有效回执。
 
-新主会话的 `run.started.conversationBinding` 记录与图根一致的真实主实例；同会话续跑不换实例，不同主会话不合并。主 Agent 只能派发给独立执行者，没有合适自定义角色时省略 agentId 即使用 `cbim:executor`。用户任务启动一个调度周期，跨主模型调用、成员执行及结果回注；最终答复、失败或停止后收口运行并释放执行实例，保留主实例、图和证据。普通问答保留根而无业务节点，旧日志不按角色名补造绑定。
+新主会话的 `run.started.conversationBinding` 记录与图根一致的真实主实例；同会话续跑不换实例，不同主会话不合并。主 Agent 只能向明确的模块负责岗位派发；内置 `cbim:executor` 也须真实岗位登记和模型采纳，省略 agentId 或 ownerSelection 不能自动产生默认执行者。用户任务启动一个调度周期，跨主模型调用、成员执行及结果回注；目标通过完成门禁，或失败、停止后收口并释放执行实例，保留主实例、图和证据。普通问答保留根而无业务节点，旧日志不按角色名补造岗位绑定。
 
-当前未检测 Loop 外的产物修改，未按验收条目验证证据语义；计划责任文本本身不代表已派发。正式任务须经真实派发工具或可信 IPC 创建；运行仅在目标/验收与派发任务一致、存在有效结构化候选且知识版本仍一致时产生 result_ready 和结果信封。主会话自动回注和收件确认不签发验收。执行者可恢复等待、通用自动邮箱消费、全局公平调度与预算限额仍未实现。工具真实接入不保证任意模型都会按指引调用，应核对计划与回执。
+计划责任文本本身不代表已派发。正式任务须经当前 scope/goal/ownerSelection 门禁创建；运行仅在目标、验收和冻结岗位与派发任务一致、存在有效结构化候选且知识版本仍一致时产生 result_ready 和结果信封。检查点和显式产物验证只覆盖其声明的范围，不保证所有外部产物变化或验收语义都已自动识别。主会话自动回注和收件确认不签发验收，工具真实接入也不保证任意模型都会按指引调用，应核对计划与回执。
 
 ## Cindy Pi 运行配置对齐
 
@@ -147,7 +150,7 @@ loop.chat 创建 mode=chat、agentId=cbim:main 的普通对话；loop.choices �
 - 思考：设置页支持 off/minimal/low/medium/high/xhigh；缺省 medium，非推理模型 off。Pi 根据实际模型能力收敛，运行日志记录请求档位和实际档位；供应商的协议映射仍由固定版本 Pi 实现，不保证未知自定义端点接受所有档位。
 - 压缩：每次启动、恢复都通过 RPC 开启并读回。无预算和阈值设置时使用 Pi 默认；设置后 reserveTokens = ceil(模型容量 - 工作预算 × 阈值)，工作预算缺省为完整容量，指定预算时阈值缺省 90%。压缩由 Pi 执行，CBIM 只显示事件，不自行裁剪历史。
 - 重试：SSE，enabled=true，maxRetries=6，baseDelayMs=2000，provider.maxRetries=0。只沿用 Pi 的可重试错误判断，不把 length 当作网络错误，不重放工具副作用。停止仍可取消等待。
-- 生命周期：每轮独立 provider/settings.json；恢复后重新应用当前模型意图，已有运行快照不变；配置 RPC 失败拒绝发送。CBIM 切换模型在下一轮新建 Pi 进程时生效，不支持运行中热切换。
+- 生命周期：每轮独立 provider/settings.json；普通主对话续聊应用本次选型，正式成员及其检查点续执行使用已核实的原岗位模型，不能从主对话配置换入。已有运行快照不变，配置 RPC 失败拒绝发送，不支持运行中热切换。
 
 验证包含真实 Pi + 本机确定性接口；不使用用户的供应商凭据，不代表真实供应商推理质量或各档位效果。
 

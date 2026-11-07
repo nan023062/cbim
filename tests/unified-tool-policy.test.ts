@@ -3,6 +3,7 @@ import {authorizeRunTool} from '../src/backend/core/policy/tool-policy';
 import {knowledgeTools} from '../src/backend/scheduler-engine/tools/knowledge-tools';
 import {fixture,request} from './helpers';
 import {seedTeam} from './team-fixture';
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
 import path from 'node:path';
@@ -32,18 +33,20 @@ test('real Pi executor routes knowledge commit through read, ask and execute mod
   });
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
   try{
-    await f.app.models.save({profile:{name:'Policy executor fixture',api:'openai-completions',baseUrl:`http://127.0.0.1:${(server.address() as any).port}/v1`,auth:'none',defaultModel:'policy-model',models:[{id:'policy-model',name:'Policy',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+    const models=await f.app.models.save({profile:{name:'Policy executor fixture',api:'openai-completions',baseUrl:`http://127.0.0.1:${(server.address() as any).port}/v1`,auth:'none',defaultModel:'policy-model',models:[{id:'policy-model',name:'Policy',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
     const entry=await f.app.dispatch('add',{path:f.a}),ws=f.app.workspace(entry.id),team=await seedTeam(ws);
     const initial=await ws.snapshot(),modulePath=team.input.moduleId+'/module.json';
     const definition=JSON.parse(initial.files.find(file=>file.path===modulePath)!.text);
     definition.maintenance={bindingId:'policy-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'policy-review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
     await ws.commit(request(initial,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
+    const profile=models.profiles.find(item=>item.name==='Policy executor fixture')!,registered=await registerExplicitFixtureOwner(f.app,entry.id,{agentId:'cbim:executor',moduleIds:[team.input.moduleId],profileId:profile.id,modelId:'policy-model'}),ownerSelection=registered.selection;
     const dispatch=f.app.memberDispatch(entry.id),manager=f.app.memberExecution(entry.id),identity={workspaceId:entry.id,rootSessionId:'policy-root'};
     for(const permission of ['read','ask','execute'] as const){
       turn=0;
       const snap=await ws.snapshot();args={workspaceId:entry.id,instanceId:ws.instanceId,revision:snap.revision,requestId:randomUUID(),changes:[]};
-      const scope=await dispatch.openScope(identity,'policy-'+permission);
-      const assigned=await dispatch.dispatchTask({...identity,commandId:'assign-'+permission,expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[team.input.moduleId],goal:'验证统一知识写入权限',acceptance:[{id:'receipt',text:'记录真实工具授权回执'}],prerequisites:[]}},scope.scopeId);
+      const scope=await dispatch.openScope(identity,'policy-'+permission,{message:'Inspect authorization receipts'},'policy-main-'+permission);
+      await dispatch.goals.plan(identity,scope.scopeId,'policy-main-'+permission,'policy-plan-'+permission,{expectedRevision:1,objective:'Inspect authorization receipts',constraints:[],criteria:[{id:'receipt',text:'Actual tool authorization receipt',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[team.input.moduleId],ownerSelection,criterionIds:['receipt'],reason:'Registered executor'}],reason:'Explicit authorization probe'});
+      const assigned=await dispatch.dispatchTask({...identity,commandId:'assign-'+permission,expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[team.input.moduleId],ownerSelection,goal:'验证统一知识写入权限',acceptance:[{id:'receipt',text:'记录真实工具授权回执'}],prerequisites:[]}},scope.scopeId);
       const taskIdentity={...identity,taskId:assigned.taskId};
       const run=await manager.start({...taskIdentity,commandId:'start-'+permission,expectedRevision:1,options:{permission,turnTimeoutMs:20000}});
       if(permission==='ask'){
@@ -56,7 +59,7 @@ test('real Pi executor routes knowledge commit through read, ask and execute mod
       expect(result.memberBinding).toMatchObject({...taskIdentity,agentId:'cbim:executor',runId:run.runId});
       expect(result.toolReceipts,JSON.stringify(result.events.filter(e=>e.type.startsWith('tool.')))).toMatchObject([{toolCallId:'knowledge-write',outcome:permission==='read'?'denied':'succeeded',workspaceId:entry.id,runId:run.runId,effects:['knowledge-write']}]);
       expect((await manager.inspect(taskIdentity)).task.assignee.agentInstanceId).not.toBe((await dispatch.snapshot(identity)).root.agent.agentInstanceId);
-      await dispatch.closeScope(identity,scope.scopeId,'completed');
+      await dispatch.closeScope(identity,scope.scopeId,'cancelled');
     }
     expect(advertisedTools.every(names=>names.includes('cbim_knowledge_commit')&&!names.includes('cbim_dispatch_task'))).toBe(true);
   }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}

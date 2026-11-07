@@ -1,11 +1,12 @@
 /**
  * 作用定位：定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。
- * 设计原因：业务 taskId、一次 runId 与成员的 agentSessionId 分开，允许同一通道先后处理不同任务；旧对话仍使用原 start/resume 协议。
+ * 设计原因：稳定岗位、执行实例、业务 taskId、一次 runId 与逻辑通道分开；新任务保存负责人绑定，检查点沿原任务通道续轮，旧对话仍使用原 start/resume 协议。
  * 职责边界：这里只校验身份，不签发租约、权限或恢复许可；sessionFile 属于后端私有启动数据，不进入公开任务图。
  */
 import {safeId} from '../foundation/identity';
 import {fail} from '../foundation/errors';
 import type {TaskSpec} from '../tasks/types';
+import {ownerExecutionBindingMatches} from '../team/member-execution-binding';
 
 /** 调度先可靠保存执行意图，再把这份固定绑定交给大脑；runId 不能由模型生成。 */
 export interface MemberRunBinding {
@@ -13,9 +14,9 @@ export interface MemberRunBinding {
   /** 知识中的组织与角色身份；与持久化成员实例分开，不能用展示名称替代。 */
   teamId:string;
   agentId:string;
-  /** 工作区内稳定成员身份；跨主会话复用，同一时刻只能占用一个执行槽。 */
+  /** 执行实例身份；新的成员任务每周期独立创建，不是工作区稳定岗位 memberId。 */
   agentInstanceId:string;
-  /** 当前成员在 rootSessionId 下的逻辑通道；不同业务任务可先后使用，区别于 Pi 原生 sessionId。 */
+  /** 当前任务在 rootSessionId 下的逻辑通道；检查点续轮保留，区别于 Pi 原生 sessionId。 */
   agentSessionId:string;
   /** 拥有派发图的主会话；不是本次业务任务或原生引擎会话。 */
   rootSessionId:string;
@@ -56,6 +57,7 @@ export function checkedMemberRunBinding(value:unknown,task:TaskSpec,runId?:strin
   if(!Number.isSafeInteger(binding.leaseEpoch)||(binding.leaseEpoch as number)<0||!Number.isSafeInteger(binding.planRevision)||(binding.planRevision as number)<1)fail('MEMBER_RUN_IDENTITY','成员租约或计划版本无效');
   if(binding.workspaceId!==task.workspaceId||binding.taskId!==task.taskId||binding.agentId!==task.agentId||runId!==undefined&&binding.runId!==runId)fail('MEMBER_RUN_IDENTITY','成员运行绑定与任务或轮次不一致');
   if(task.mode==='chat'||!task.moduleIds.length)fail('MEMBER_RUN_IDENTITY','成员业务运行需要明确的模块任务，不能借用普通对话身份');
+  if(task.ownerBinding&&(!ownerExecutionBindingMatches(task.ownerBinding,task.workspaceId,binding.agentId as string,task.moduleIds)||task.ownerBinding.capability.teamId!==binding.teamId))fail('MEMBER_RUN_IDENTITY','成员任务的岗位绑定与本轮角色、模块不一致');
   return structuredClone(value) as MemberRunBinding;
 }
 

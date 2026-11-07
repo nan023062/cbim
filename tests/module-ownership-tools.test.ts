@@ -22,7 +22,7 @@ async function setup(){
   const main=await dispatch.conversationBinding(task),identity={workspaceId:seed.entry.id,rootSessionId:task.taskId};await dispatch.openScope(identity,scopeId,{message:task.goal},runId);
   const binding={...identity,instanceId:workspace.instanceId,scopeId,runId,agentInstanceId:main.agentInstanceId,agentSessionId:main.agentSessionId};
   const context={binding,assertCurrent:(value:AbortSignal)=>value.throwIfAborted(),track:<T>(operation:()=>Promise<T>)=>operation()};
-  const port=mainModuleOwnershipTools(workspace,service,f.app.workspaceMembers(seed.entry.id),task,runId,main,context),tools=new ModuleOwnershipTools(port,binding);
+  const port=mainModuleOwnershipTools(workspace,service,f.app.workspaceMembers(seed.entry.id),task,runId,main,context,dispatch.owners),tools=new ModuleOwnershipTools(port,binding);
   const change={moduleId:seed.moduleId,expectedBinding:null,nextOwner:{memberId:seed.first.receipt.memberId,expectedRevision:1},reason:'Explicit main registration'};
   const preview=(await port.preview({change},signal())) as {preview:{basis:string;ownershipCursor:null}};
   const input={change,expectedOwnershipCursor:preview.preview.ownershipCursor,expectedBasis:preview.preview.basis};
@@ -50,6 +50,8 @@ it('main tools discover real member summaries and module ownership without retur
   expect(page.items[0].memberId).toBe(f.first.receipt.memberId);expect(JSON.stringify(page)).not.toContain('effectiveSkills');expect(page.items[0]).not.toHaveProperty('adoption');
   const next=decoded(await f.tools.call('cbim_module_owner_inspect',{members:true,offset:1,limit:1,expectedRegistryCursor:page.registryCursor},signal()));expect(next.memberPage.items[0].memberId).toBe(f.second.receipt.memberId);
   const modules=decoded(await f.tools.call('cbim_module_owner_inspect',{moduleIds:[f.moduleId]},signal()));expect(modules.page.items[0].binding).toBeNull();
+  expect(modules.execution.groups).toEqual([{moduleIds:[f.moduleId],issues:[{code:'OWNER_UNASSIGNED',message:expect.any(String)}]}]);
+  for(const privateField of ['effectiveSkills','apiKey','baseUrl','principles'])expect(JSON.stringify(modules)).not.toContain(privateField);
   const metadata=f.tools.list();expect(metadata).toHaveLength(4);for(const tool of metadata){expect(tool.version).toBe(1);expect(tool.outputSchema).toBeDefined();expect(tool.cancellation.mode).toBe('preflight_only')}
 });
 

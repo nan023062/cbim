@@ -1,6 +1,6 @@
 /**
  * 作用定位：将岗位、模块责任和来源代次审计，以及执行实例、会话、任务图和信封可靠保存到同一工作区日志。
- * 设计原因：追加日志是唯一权威记录；fsync 后才发布。来源先核精确捕获/消费者组合许可，各控制面独立游标，不能夹带执行；旧记录不迁移改写。
+ * 设计原因：追加日志是唯一权威记录，fsync 后才发布；新事务由存储标记负责人协议，旧前缀只回放不重写，控制面不得夹带执行，旧在途按原事实结算。
  * 职责边界：应用须先持有工作区唯一写入锁；本类串行化该实例内的事务，不启动大脑、不消费 outbox。
  */
 import fs from 'node:fs/promises';
@@ -17,10 +17,13 @@ import type {AgentRef, GraphCursor, GraphDelta, GraphEventBatch, GraphIdentity, 
 import {applyScopeBatch,dispatchSessionReadInput,emptyScopeSnapshot,readScopeDelta,readScopeDetail,summarizeScope,scopeViewHistoryLimit,type DispatchSessionReadInput,type DispatchSessionRead,type ScopeSnapshot,type ScopeEventBatch} from '../../../core/tasks/scope-view';
 import type {DispatchScope} from '../../../core/tasks/dispatch-scope';
 import {projectKnowledgeSourceMutation} from '../../../core/tasks/knowledge-source-invariants';
+import {validateOwnerExecutionMutation,type DispatchExecutionProtocol} from '../../../core/tasks/owner-execution-invariants';
 
 /** transactionSeq 是工作区日志序号，与单张图的 batch.seq 分开。 */
 interface TransactionBody {
   version: 1;
+  /** 仅本 Store 写入；缺省只允许旧日志前缀，不能让新请求选择旧业务许可。 */
+  executionProtocol?:'module_owner_v1';
   workspaceId: string;
   transactionSeq: number;
   previousHash: string;
@@ -52,6 +55,7 @@ export class FileDispatchStore implements DispatchStore {
   private readonly scopeEvents=new Map<string,ScopeEventBatch[]>();
   private transactionSeq=0;
   private lastHash='';
+  private ownerProtocolSeen=false;
   private initialization?:Promise<void>;
   private tail:Promise<void>=Promise.resolve();
   private closing=false;
@@ -128,8 +132,8 @@ export class FileDispatchStore implements DispatchStore {
       valid(proposed&&Object.hasOwn(proposed,'receipt')&&proposed.receipt!==undefined,'事务必须返回可持久化回执');
       let mutation:DispatchMutation<T>;
       try{const serialized=JSON.stringify(proposed);valid(text(serialized),'事务无法序列化');mutation=JSON.parse(serialized)}catch{fail('GRAPH_INPUT_INVALID','事务必须是可序列化 JSON')}
-      const next=this.project(mutation,fixedCommand);
-      const body:TransactionBody={version:1,workspaceId:this.workspaceId,transactionSeq:this.transactionSeq+1,previousHash:this.lastHash,command:fixedCommand,mutation};
+      const next=this.project(mutation,fixedCommand,'module_owner_v1');
+      const body:TransactionBody={version:1,executionProtocol:'module_owner_v1',workspaceId:this.workspaceId,transactionSeq:this.transactionSeq+1,previousHash:this.lastHash,command:fixedCommand,mutation};
       const checksum=hash(JSON.stringify(body));
       try{
         await fs.mkdir(this.directory,{recursive:true});
@@ -159,6 +163,7 @@ export class FileDispatchStore implements DispatchStore {
 
   private publish(body:TransactionBody,checksum:string,next:DispatchState){
     this.state=next;this.transactionSeq=body.transactionSeq;this.lastHash=checksum;
+    if(body.executionProtocol==='module_owner_v1')this.ownerProtocolSeen=true;
     this.commands.set(body.command.commandId,{fingerprint:body.command.fingerprint,receipt:body.mutation.receipt});
     const batch=body.mutation.batch;
     if(batch){const events=this.events.get(batch.identity.rootSessionId)??[];events.push(batch);this.events.set(batch.identity.rootSessionId,events)}
@@ -174,7 +179,7 @@ export class FileDispatchStore implements DispatchStore {
   }
 
   /** 验证整次 mutation 后才返回候选投影；图、成员会话与信封引用在同一个候选状态内核对。 */
-  private project(mutation:DispatchMutation,command:DispatchCommand):DispatchState{
+  private project(mutation:DispatchMutation,command:DispatchCommand,protocol:DispatchExecutionProtocol):DispatchState{
     valid(mutation&&typeof mutation==='object','无效调度事务');
     const source=projectKnowledgeSourceMutation(this.state,mutation,command);
     const registry=projectWorkspaceMemberMutation(this.state,mutation,command,source.permit);
@@ -224,6 +229,7 @@ export class FileDispatchStore implements DispatchStore {
     }
     validateDispatchScopes(this.state,next,mutation);
     validateDispatchExecution(this.state,next,mutation,command);
+    validateOwnerExecutionMutation(this.state,next,mutation,protocol);
     if(batch)for(const change of batch.changes){
       if(change.type==='task.upserted'&&!this.state.graphs.find(g=>sameGraph(g.identity,batch.identity))?.tasks.some(t=>t.taskId===change.task.taskId)){
         valid(messages.some(m=>m.kind==='assignment'&&m.taskId===change.task.taskId),'新任务必须与待投递信封一起提交');
@@ -248,7 +254,9 @@ export class FileDispatchStore implements DispatchStore {
         valid(text(record.checksum)&&hash(JSON.stringify(body))===record.checksum,'日志校验和不匹配');
         valid(text(body.command?.commandId)&&text(body.command.fingerprint)&&!this.commands.has(body.command.commandId),'日志命令无效或重复');
         valid(body.mutation&&Object.hasOwn(body.mutation,'receipt'),'日志缺少命令回执');
-        const next=this.project(body.mutation,body.command);this.publish(body,record.checksum,next);
+        valid(body.executionProtocol===undefined||body.executionProtocol==='module_owner_v1','不支持的执行协议');
+        valid(!this.ownerProtocolSeen||body.executionProtocol==='module_owner_v1','负责人执行协议开始后不能回退旧日志格式');
+        const next=this.project(body.mutation,body.command,body.executionProtocol??'legacy');this.publish(body,record.checksum,next);
       }catch(error:any){
         if(error.code==='GRAPH_VERSION_UNSUPPORTED')throw error;
         fail('GRAPH_LOG_CORRUPT','任务派发日志损坏或不满足引用约束，不能继续派发');

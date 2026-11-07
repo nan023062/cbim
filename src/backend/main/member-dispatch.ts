@@ -1,6 +1,6 @@
 /**
  * 作用定位：为已运行工作区装配成员派发、大脑执行、目标审阅、岗位及模块负责人服务；复用工作区恢复前创建的唯一 DispatchStore，来源、责任、岗位与执行保持独立审计投影。
- * 设计原因：派发、审阅及周期额度共用可信日志；Workflow 能力按真实工具与验证端口预检，冻结约定只注入正式成员。JSON 验证以同一安全读取字节判定，交付及审阅复用有界文件复核；密钥留在工厂闭包，只读报告不启动成员。
+ * 设计原因：知识→模型设置→Store 锁序固定岗位配置，预算和租约通过后才解密；成员不继承主模型。Workflow 能力按实际端口预检，密钥只留工厂闭包，锁释放后创建引擎；历史报告不启动成员。
  */
 import path from 'node:path';
 import type {Workspace} from './workspace/workspace';
@@ -8,7 +8,7 @@ import {WorkspaceDispatchService} from '../scheduler-engine/execution/dispatch-s
 import type {DispatchObserver} from '../core/tasks/dispatch-storage';
 import type {LlmProfiles} from './persistence/settings/llm-profiles';
 import type {WorkspaceExecutionLease} from '../scheduler-engine/execution/workspace-lease';
-import {MemberExecutionManager} from '../scheduler-engine/execution/member-execution';
+import {MemberExecutionManager,type PreparedEngine} from '../scheduler-engine/execution/member-execution';
 import {createWorkspaceLoop} from '../scheduler-engine/execution/loop-engine';
 import {memberExecutionPrompt,recheckDispatchExecutionContext} from '../scheduler-engine/context/execution-context';
 import {ArtifactFiles,normalizeArtifactPath} from './platform/artifact-files';
@@ -25,6 +25,9 @@ import {preparedWorkflowContracts} from '../core/tasks/execution-context';
 import {nativeToolNames} from '../core/tools/native-tools';
 import {WorkspaceMembers} from './workspace/workspace-members';
 import {ModuleOwnerships} from './workspace/module-ownerships';
+import type {ResolvedLlm} from '../core/brain/llm/ports';
+import type {MemberStartOptions} from '../core/tasks/member-commands';
+import {workspaceMemberModelHash} from '../core/team/workspace-member-rules';
 
 /** 应用对每个活动工作区只调用一次；关闭服务必须早于释放工作区锁。 */
 export function createMemberDispatch(workspace:Workspace,observer?:DispatchObserver){
@@ -59,20 +62,8 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
     const summary=await storage.read(path.join(workspace.paths.project(workspace.entry.id),'loop-engine','tasks',safeId(rootSessionId),safeId(runId)));
     if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path||summary.task.taskId!==rootSessionId||summary.runId!==runId||summary.task.agentId!=='cbim:main')throw Error('主调度证据不属于当前会话或运行');
     return summary;
-  }},budgetPolicy,{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),acquireRead:()=>{workspace.assert();return lease.acquire('human-decision:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('HUMAN_UNAVAILABLE','工作区正在停止，未保存新的人工决定')}});
-  const members=new MemberExecutionManager(workspace,store,{
-    artifacts:{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),acquireRead:()=>{workspace.assert();return lease.acquire('artifact-report:'+randomUUID(),'read')}},
-    checkpoints:{nativeFingerprint:(session,signal)=>nativeFiles.read(session,signal)},
-    budgets:dispatch.budgets,
-    isCurrent:()=>admission?.isCurrent()??true,
-    signal:admission?.signal,
-    acquire:(key,permission,agentInstanceId,context)=>{
-      if(!context){if(admission)fail('ADMISSION_IDENTITY','成员准入缺少可信任务与命令身份');return lease.acquire('member:'+key,permission,agentInstanceId)}
-      return acquireExecutionLease(lease,'member:'+key,{workspaceId:workspace.entry.id,rootSessionId:context.task.identity.rootSessionId,taskId:context.task.taskId,scopeId:context.task.scopeId,requestId:admissionRequestId('member',context.commandId),agentInstanceId,source:context.wait?'member':'direct',workspacePermission:permission},admission,context.wait);
-    },
-    prepare:async options=>{
-      workspace.assert();
-      const llm=await models.resolve(options.profileId,options.model);
+  }},budgetPolicy,{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),acquireRead:()=>{workspace.assert();return lease.acquire('human-decision:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('HUMAN_UNAVAILABLE','工作区正在停止，未保存新的人工决定')}},models);
+  const prepareEngine=(llm:ResolvedLlm,options:MemberStartOptions):PreparedEngine=>{
       return {model:structuredClone(llm.profile),availableTools:nativeToolNames(options.permission!=='read'),availableValidators:['json-schema-v1'],create:async(run,task,hooks)=>{
         workspace.assert();
         if(run.binding.workspaceId!==workspace.entry.id||task.identity.workspaceId!==workspace.entry.id)throw Error('成员运行与工作区身份不匹配');
@@ -94,7 +85,24 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
         });
         return loop.runtime;
       }};
+  };
+  const members=new MemberExecutionManager(workspace,store,{
+    artifacts:{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),acquireRead:()=>{workspace.assert();return lease.acquire('artifact-report:'+randomUUID(),'read')}},
+    checkpoints:{nativeFingerprint:(session,signal)=>nativeFiles.read(session,signal)},
+    budgets:dispatch.budgets,
+    isCurrent:()=>admission?.isCurrent()??true,
+    signal:admission?.signal,
+    acquire:(key,permission,agentInstanceId,context)=>{
+      if(!context){if(admission)fail('ADMISSION_IDENTITY','成员准入缺少可信任务与命令身份');return lease.acquire('member:'+key,permission,agentInstanceId)}
+      return acquireExecutionLease(lease,'member:'+key,{workspaceId:workspace.entry.id,rootSessionId:context.task.identity.rootSessionId,taskId:context.task.taskId,scopeId:context.task.scopeId,requestId:admissionRequestId('member',context.commandId),agentInstanceId,source:context.wait?'member':'direct',workspacePermission:permission},admission,context.wait);
     },
+    owners:dispatch.owners,
+    prepare:async options=>prepareEngine(await models.resolve(options.profileId,options.model),options),
+    withEngineConfiguration:(model,options,use)=>models.withRuntimeConfiguration(model,async configuration=>{
+      workspace.assert();
+      if(workspaceMemberModelHash(configuration.profile)!==model.configurationHash)fail('OWNER_MODEL_CHANGED','岗位模型配置已变化，请明确采纳后重新规划');
+      return use({model:configuration.profile,prepare:()=>prepareEngine(configuration.resolve(),options)});
+    }),
     inspect:inspectMember,
   });
   const workspaceMembers=new WorkspaceMembers(workspace,store,models,()=>admission?.isCurrent()??true);

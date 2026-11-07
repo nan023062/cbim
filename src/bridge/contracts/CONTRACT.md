@@ -1,3 +1,11 @@
+### 按模块负责人执行的公开契约
+
+公开绑定协议从 Core 的纯叶子 Schema 重导出：选择只携带预期岗位、能力/模型指纹和模块责任版本，不能提交完整配置、凭据或自证来源；实际任务及目标分配保存服务生成的不可变 `OwnerExecutionBinding`。工作区岗位 `memberId`、静态 `agentId`、执行实例与运行各自保持独立身份。
+
+新显式 `dispatch.task` 要求原主会话的活动 `scopeId`，与模型工具共用真实计划和负责人门禁；旧成功命令只查询原事实，不能据旧无 scope 输入创建新任务。执行请求保留权限与超时，成员模型由已采纳岗位配置确定，主聊天的模型选项不替换成员模型。只读差异查询必须同时绑定原工作区、会话和任务，不修改来源、任务或模型。
+
+`dispatch.ownerInspect` 同时核原 workspace/root/task/revision 与原冻结绑定，返回一次当前负责人配置观察；不重派任务或隐式采纳。任务和目标视图分别展示原派发绑定与本次查询的差异。旧缺失绑定只说明历史无可信岗位记录，新领取须重新规划；查询一致也不是未来领取许可。
+
 ### 工作区资源仓库连接
 
 `execution.ts` 重导出仓库 ToolScope 的纯严格 Schema 与类型，主对话/核实报告可展示历史仓库身份；不导出主进程读取闭包、授权存储或凭据。
@@ -239,6 +247,6 @@ governance.ts 仅重导 Core 严格纯协议。界面按明确工作区/实例/�
 
 `knowledge-source.ts` 只重导来源引用、核实状态和预览选择；不公开 source authority、journal正文或写前屏障的写端口。预览中的 expectedRef 只是当前版本预期，客户端不能提交自证来源。岗位/责任旧记录可缺省来源，新明确采纳由后端生成；责任独立 `adopt_source` 允许同owner增加一版，不能被一般负责人变更冒用。
 
-`workspace-members.ts` 只重导 Core team 的严格 DTO/Schema。五个 `workspace.members.*` IPC 传递明确岗位选择、实例、版本、预览依据及紧凑原命令回执；界面不能提交 actor、能力正文或模型凭据。registry cursor 与任务图/周期游标分开，稳定 memberId 不取代现有 agentInstanceId。当前岗位登记尚未切换实际派发协议。
+`workspace-members.ts` 只重导 Core team 的严格 DTO/Schema。五个 `workspace.members.*` IPC 传递明确岗位选择、实例、版本、预览依据及紧凑原命令回执；界面不能提交 actor、能力正文或模型凭据。registry cursor 与任务图/周期游标分开，稳定 memberId 不取代现有 agentInstanceId。登记回执本身不是执行许可；正式派发另行核实原计划和模块负责人。
 
-`module-ownership.ts` 重导 Core workspace 的责任关系、查询依据、预览和回执协议；六个 `workspace.ownerships.*` IPC 不开放任意审计或 actor 写入。负责人引用 memberId，与静态 Agent、真人维护人和运行实例分别表达。查询分页同时冻结责任/岗位游标与知识版本；单条责任变更不改任务图。来源观察 hash 不是受控来源代次；当前桥接不提供负责人派发或旧任务交接授权。
+`module-ownership.ts` 重导 Core workspace 的责任关系、查询依据、预览和回执协议；六个 `workspace.ownerships.*` IPC 不开放任意审计或 actor 写入。负责人引用 memberId，与静态 Agent、真人维护人和运行实例分别表达。查询分页同时冻结责任/岗位游标与知识版本；单条责任变更不改任务图。来源观察 hash 不是受控来源代次；登记接口不提供旧任务交接授权，新任务经独立派发门禁进入当前负责人执行。

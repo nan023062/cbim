@@ -3,6 +3,7 @@ import path from 'node:path';
 import {expect,it,vi} from 'vitest';
 import {fixture,request} from './helpers';
 import {seedTeam} from './team-fixture';
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import type {GraphDelta,GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import type {OpenGraphReceipt,CreateMemberReceipt,DispatchReceipt} from '../src/backend/core/tasks/dispatch-commands';
@@ -18,9 +19,12 @@ async function setup(){
       return {path:id+'/module.json',text:json(definition)};
     });
     await w.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},...changes]));
-    const identity={workspaceId:entry.id,rootSessionId:'main-session'};
-    const task={assigneeAgentId:team.input.agentId,moduleIds:[team.input.moduleId,team.child],goal:'完成可验证的模块交付',acceptance:[{id:'verified',text:'给出真实验证证据'}],prerequisites:[]};
-    return {...f,entry,w,team,identity,task};
+    const models=await f.app.models.save({profile:{name:'Member dispatch fixture',api:'openai-completions',auth:'none',baseUrl:'https://example.test/v1',defaultModel:'fixture',models:[{id:'fixture',name:'fixture',enabled:true,contextWindow:65536,maxTokens:1024,reasoning:false}]}}),profile=models.profiles.find(item=>item.name==='Member dispatch fixture')!;
+    const registered=await registerExplicitFixtureOwner(f.app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId,team.child],profileId:profile.id,modelId:'fixture'}),ownerSelection=registered.selection;
+    const identity={workspaceId:entry.id,rootSessionId:'main-session'},scopeId='member-dispatch-scope',dispatch=f.app.memberDispatch(entry.id);
+    const beginScope=async()=>{await dispatch.openScope(identity,scopeId,{message:'Explicit dispatch probe'},'dispatch-main');await dispatch.goals.plan(identity,scopeId,'dispatch-main','dispatch-plan',{expectedRevision:1,objective:'Explicit dispatch probe',constraints:[],criteria:[{id:'verified',text:'Actual evidence',kind:'evidence'}],assignments:[{agentId:team.input.agentId,moduleIds:[team.input.moduleId,team.child],ownerSelection,criterionIds:['verified'],reason:'Registered module owner'}],reason:'Freeze intended task ownership before dispatch'})};
+    const task={assigneeAgentId:team.input.agentId,moduleIds:[team.input.moduleId,team.child],ownerSelection,goal:'完成可验证的模块交付',acceptance:[{id:'verified',text:'给出真实验证证据'}],prerequisites:[]};
+    return {...f,entry,w,team,identity,scopeId,beginScope,task};
   }catch(error){await f.cleanup();throw error}
 }
 
@@ -33,7 +37,8 @@ it('真实应用入口完成成员创建、可靠派发和增量；重开保持�
     expect(root.cursor.seq).toBe(1);expect(member.cursor.seq).toBe(2);
     expect(member.member).toMatchObject({agentId:f.team.input.agentId,activity:'idle',leaseEpoch:1});
     expect(member.session.agentSessionId).not.toBe(root.agent.agentSessionId);
-    const command={...f.identity,commandId:'dispatch-first',expectedParentRevision:1,task:f.task};
+    await f.beginScope();
+    const command={...f.identity,scopeId:f.scopeId,commandId:'dispatch-first',expectedParentRevision:1,task:f.task};
     const receipt=await f.app.dispatch('dispatch.task',command) as DispatchReceipt;
     expect(receipt).toMatchObject({disposition:'queued',cursor:{seq:3}});
     const delta=await f.app.dispatch('dispatch.graphDelta',{identity:f.identity,cursor:member.cursor}) as GraphDelta;
@@ -43,7 +48,7 @@ it('真实应用入口完成成员创建、可靠派发和增量；重开保持�
     expect(delta.batches[0].changes.map(c=>c.type)).toEqual(['task.upserted','edge.upserted','agent.upserted']);
     const graph=await f.app.dispatch('dispatch.graphSnapshot',{identity:f.identity}) as GraphSnapshot;
     expect(graph.tasks).toHaveLength(1);expect(graph.tasks[0]).toMatchObject({taskId:receipt.taskId,status:'queued',runIds:[],modules:[{moduleId:f.team.input.moduleId,maintainerPersonIds:['owner']},{moduleId:f.team.child}]});
-    expect(graph.tasks[0].assignee).toEqual(member.agent);
+    expect(graph.tasks[0].assignee.agentId).toBe(member.agent.agentId);expect(graph.tasks[0].assignee.agentInstanceId).not.toBe(member.agent.agentInstanceId);expect(graph.tasks[0].assignee.agentSessionId).not.toBe(member.agent.agentSessionId);expect(graph.tasks[0].ownerBinding?.memberId).toBe(f.task.ownerSelection.memberId);
     expect(await f.app.dispatch('dispatch.graphDelta',{identity:f.identity,cursor:receipt.cursor})).toEqual({mode:'noop',cursor:receipt.cursor});
     const file=path.join(f.user,f.entry.id,'dispatch','dispatch.jsonl');
     const journal=await fs.readFile(file,'utf8');
@@ -51,12 +56,14 @@ it('真实应用入口完成成员创建、可靠派发和增量；重开保持�
     expect(transaction.body.mutation.messages[0]).toMatchObject({taskId:receipt.taskId,messageId:receipt.messageId,delivery:'pending'});
     expect(await f.app.dispatch('dispatch.task',command)).toEqual(receipt);
     expect(await fs.readFile(file,'utf8')).toBe(journal);
+    await f.app.memberDispatch(f.entry.id).closeScope(f.identity,f.scopeId,'cancelled');
+    const closedGraph=await f.app.dispatch('dispatch.graphSnapshot',{identity:f.identity}) as GraphSnapshot,closedJournal=await fs.readFile(file,'utf8');expect(closedGraph.tasks[0]).toMatchObject({taskId:receipt.taskId,status:'cancelled',runIds:[],assignee:graph.tasks[0].assignee,ownerBinding:graph.tasks[0].ownerBinding});
     await f.app.open(f.entry.id,true);
     expect(await f.app.dispatch('dispatch.task',command)).toEqual(receipt);
-    expect(await f.app.dispatch('dispatch.graphSnapshot',{identity:f.identity})).toEqual(graph);
+    expect(await f.app.dispatch('dispatch.graphSnapshot',{identity:f.identity})).toEqual(closedGraph);expect(await fs.readFile(file,'utf8')).toBe(closedJournal);
     const restored=await f.app.dispatch('dispatch.memberCreate',{...f.identity,commandId:'member-after-restart',agentId:f.team.input.agentId}) as CreateMemberReceipt;
     expect(restored.agent).toEqual(member.agent);
-    expect(restored.cursor).toEqual(receipt.cursor);
+    expect(restored.cursor).toEqual(closedGraph.cursor);
   }finally{await f.cleanup()}
 });
 
@@ -64,10 +71,12 @@ it('并发派发串行提交；不同主会话复用成员但隔离Session与图
   const f=await setup();
   try{
     const root=await f.app.dispatch('dispatch.open',{...f.identity,commandId:'open'}) as OpenGraphReceipt;
-    const command={...f.identity,expectedParentRevision:1,task:f.task};
+    await f.beginScope();
+    const command={...f.identity,scopeId:f.scopeId,expectedParentRevision:1,task:f.task};
     const receipts=await Promise.all(Array.from({length:4},(_,i)=>f.app.dispatch('dispatch.task',{...command,commandId:'dispatch-'+i}))) as DispatchReceipt[];
     expect(receipts.map(r=>r.cursor.seq)).toEqual([2,3,4,5]);
     expect(new Set(receipts.map(r=>r.taskId)).size).toBe(4);
+    const actual=await f.app.dispatch('dispatch.graphSnapshot',{identity:f.identity}) as GraphSnapshot;expect(new Set(actual.tasks.map(task=>task.assignee.agentInstanceId)).size).toBe(4);expect(actual.tasks.every(task=>task.ownerBinding?.memberId===f.task.ownerSelection.memberId)).toBe(true);
     const delta=await f.app.dispatch('dispatch.graphDelta',{identity:f.identity,cursor:root.cursor,limit:2}) as GraphDelta;
     expect(delta).toMatchObject({mode:'delta',hasMore:true,cursor:{seq:3}});
     const other={...f.identity,rootSessionId:'another-session'};
@@ -84,7 +93,7 @@ it('并发派发串行提交；不同主会话复用成员但隔离Session与图
     const graph=await f.app.dispatch('dispatch.graphSnapshot',{identity:f.identity}) as GraphSnapshot;
     expect(graph.tasks.at(-1)).toMatchObject({status:'waiting',runIds:[]});
     expect(graph.edges.at(-1)).toMatchObject({kind:'dependency',condition:{kind:'result_ready',planRevision:1}});
-    expect(graph.agents.find(a=>a.agentId===f.team.input.agentId)?.state).toBe('waiting');
+    expect(graph.agents.find(a=>a.agentInstanceId===graph.tasks.at(-1)!.assignee.agentInstanceId)?.state).toBe('waiting');
     const stillLocal=await f.app.dispatch('dispatch.memberCreate',{...other,commandId:'local-view',agentId:f.team.input.agentId}) as CreateMemberReceipt;
     expect(stillLocal.member.activity).toBe('idle');expect(stillLocal.member.waitingTaskIds).toEqual([]);
   }finally{await f.cleanup()}
@@ -94,7 +103,8 @@ it('缺维护关系、伪造身份、命令重用与跨图依赖失败时没有�
   const f=await setup();
   try{
     await f.app.dispatch('dispatch.open',{...f.identity,commandId:'open'});
-    const command={...f.identity,commandId:'dispatch-one',expectedParentRevision:1,task:f.task};
+    await f.beginScope();
+    const command={...f.identity,scopeId:f.scopeId,commandId:'dispatch-one',expectedParentRevision:1,task:f.task};
     const receipt=await f.app.dispatch('dispatch.task',command);
     const before=await f.app.dispatch('dispatch.graphSnapshot',{identity:f.identity});
     await expect(f.app.dispatch('dispatch.task',{...command,task:{...f.task,goal:'different'}})).rejects.toMatchObject({code:'COMMAND_ID_CONFLICT'});

@@ -57,6 +57,28 @@ const scope={
  'src/frontend/team':'工作区唯一的静态Team/组/Agent图、继承与人才复用，节点按Session查看只读履历。岗位面板独立登记、明确采纳和暂停退休；改名和模型更新保留原能力来源。来源屏障首次拒绝可重新编辑，未知仍查原命令；反查责任委托workspace，不启动模型。',
  'src/frontend/workspace':'工作区唯一的工程/模块图及自身Workflow。负责人面板展示来源和有界历史，支持同负责人明确采纳当前来源；原回执必须匹配同一关系、版本及owner，未知不换命令。知识编辑和整架构复用委托knowledge/resources；登记不移交旧任务。',
 };
+// 负责人进入实际执行后，各层增加的职责仍分别归属原边界；不把登记回执描述成运行许可。
+const ownerExecutionScopes={
+ 'src/backend/core/brain':'成员的公开任务和原生运行共用冻结岗位绑定，历史缺省可读但不授权应用新领取。',
+ 'src/backend/core/knowledge':'SourceSnapshotReader 只提供知识队列外层的同版快照，调用方不得在任务事务内反向获取。',
+ 'src/backend/core/tasks':'正式协议将目标分配、任务、准备、模型和历史审计相互核对；岗位绑定不可重写，旧在途仅按原事实收束。',
+ 'src/backend/core/team':'负责岗位选择、冻结执行绑定、当前来源/能力/模型判定及只读分组发现均为纯契约；同角色多岗位独立。',
+ 'src/backend/core/workspace':'主调度的负责人发现按所选模块真实分组，缺口不推测继承或默认负责者。',
+ 'src/bridge/contracts':'owner-execution 公开原岗位绑定与显式当前观察；按任务修订核对身份，不公开解密配置。',
+ 'src/backend/scheduler-engine/context':'执行上下文同时冻结负责岗位、项目适配、采纳能力与模型身份，主模型不会替换成员配置。',
+ 'src/backend/scheduler-engine/conversation':'主调度先查询模块负责人，将真实岗位选择写入计划和派发；缺负责人先治理，不自行执行业务。',
+ 'src/backend/scheduler-engine/execution':'OwnerExecutionService 按知识→模型→任务事务核新派发及实际领取；原命令先查，锁释放后才启动。人工证据外部观察与最终知识快照/CAS 分离，避免反向串行等待。',
+ 'src/backend/scheduler-engine/tools':'负责人发现和计划/派发选择共享严格协议，固定主运行身份，历史回执不签发新领取许可。',
+ 'src/backend/main':'工作区唯一账本装配岗位模型端口；明确拒绝旧直接业务启动，原聊天和知识治理保持独立。',
+ 'src/backend/main/ipc':'dispatch.ownerInspect 只读核原任务并返回当前观察；正式派发必须显式绑定主周期。',
+ 'src/backend/main/persistence/settings':'公开配置批量短锁与运行配置捕获使用同一设置队列；解密只在领取准入成功后，捕获后编辑不热替换本段。',
+ 'src/backend/main/persistence/tasks':'新事务标记由Store生成，旧日志前缀可读而不能在新协议后降级；新任务/准备与历史岗位审计严格对应。',
+ 'src/backend/main/workspace':'负责岗位和模块责任只读发现供实际主工具调用；当前配置观察与历史执行事实分开。',
+ 'src/frontend/tasks':'成员卡片、节点详情和目标分配展示原岗位及模型；手动核实当前配置独立显示差异，迟到响应按原任务/修订隔离。',
+ 'src/frontend/team':'当前岗位启用不是运行许可，真正执行还核模块责任和原计划；编辑不会搬运历史。',
+ 'src/frontend/workspace':'关联任务包含新旧协议节点，负责人变更不移交旧任务；实际领取重核原版本。',
+};
+for(const [directory,description] of Object.entries(ownerExecutionScopes))scope[directory]+=' '+description;
 const norm=p=>p.replaceAll('\\','/');
 const walk=p=>fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(p+'/'+e.name):[p+'/'+e.name]);
 const files=walk('src').filter(f=>/\.(tsx?|jsx?|mjs|cjs|css)$/.test(f));

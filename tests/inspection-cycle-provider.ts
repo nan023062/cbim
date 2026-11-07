@@ -1,3 +1,4 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -22,7 +23,7 @@ type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]}
 /** The initial real command appends once then fails; the fresh cycle can only read that side effect. */
 export async function inspectionCycleProvider(options:{holdFresh?:boolean;holdOld?:boolean;again?:boolean}={}){
   const mainRequests:Request[]=[],memberRequests:Request[]=[],errors:string[]=[];
-  let agentId='',moduleId='',releaseFresh=()=>{},releaseOld=()=>{};
+  let ownerSelection:OwnerExecutionSelection|undefined;let agentId='',moduleId='',releaseFresh=()=>{},releaseOld=()=>{};
   const gate=new Promise<void>(resolve=>{releaseFresh=resolve});
   const oldGate=new Promise<void>(resolve=>{releaseOld=resolve});
   const server=http.createServer(async(req,res)=>{
@@ -38,8 +39,8 @@ export async function inspectionCycleProvider(options:{holdFresh?:boolean;holdOl
         // The first fresh stream is explicitly cancelled before dispatch. A second user command
         // starts at plan again, never at the cancelled stream's next tool or previous native head.
         const step=options.again&&turn>=7?turn-1:turn;
-        if(step===0)tool('inspection-old-plan','cbim_goal_plan',goalPlanArguments({objective:inspectionFixture.oldGoal,agentId,moduleIds:[moduleId],acceptance:inspectionFixture.oldAcceptance}));
-        else if(step===1)tool('inspection-old-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:inspectionFixture.oldMemberGoal,acceptance:inspectionFixture.oldAcceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+        if(step===0)tool('inspection-old-plan','cbim_goal_plan',goalPlanArguments({objective:inspectionFixture.oldGoal,agentId,ownerSelection,moduleIds:[moduleId],acceptance:inspectionFixture.oldAcceptance}));
+        else if(step===1)tool('inspection-old-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:inspectionFixture.oldMemberGoal,acceptance:inspectionFixture.oldAcceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
         else if(step===2)reply('已派发。'+inspectionFixture.oldSecret);
         else if(step===3)tool('inspection-old-inspect','cbim_goal_inspect',{});
         else if(step===4){const {scope}=goalInspection(body,'inspection-old-inspect');tool('inspection-old-review','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'blocked',checks:scope.goal.plan.criteria.map(criterion=>({criterionId:criterion.id,outcome:'unmet',reason:inspectionFixture.oldFailure,evidence:[]})),superseded:[],gaps:[inspectionFixture.oldFailure],reason:inspectionFixture.oldFailure})}
@@ -50,8 +51,8 @@ export async function inspectionCycleProvider(options:{holdFresh?:boolean;holdOl
           assert.ok(JSON.stringify(body.messages).includes(inspectionFixture.newGoal),'新核实目标必须作为显式用户输入');
           assert.ok(body.tools?.every(item=>!['write','edit','bash'].includes(item.function.name)),'新主周期保持只读工具边界');
           if(options.holdFresh&&turn===6){emit({role:'assistant',content:inspectionFixture.live});await gate}
-          tool('inspection-new-plan','cbim_goal_plan',goalPlanArguments({objective:inspectionFixture.newGoal,agentId,moduleIds:[moduleId],acceptance:inspectionFixture.newAcceptance}));
-        }else if(step===7)tool('inspection-new-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:inspectionFixture.newMemberGoal,acceptance:inspectionFixture.newAcceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+          tool('inspection-new-plan','cbim_goal_plan',goalPlanArguments({objective:inspectionFixture.newGoal,agentId,ownerSelection,moduleIds:[moduleId],acceptance:inspectionFixture.newAcceptance}));
+        }else if(step===7)tool('inspection-new-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:inspectionFixture.newMemberGoal,acceptance:inspectionFixture.newAcceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
         else if(step===8)reply('已派发新的只读执行者，旧操作不重放。');
         else if(step===9)tool('inspection-new-inspect','cbim_goal_inspect',{});
         else if(step===10)tool('inspection-new-review','cbim_goal_review',goalCompleteArguments(body,'inspection-new-inspect'));
@@ -73,5 +74,5 @@ export async function inspectionCycleProvider(options:{holdFresh?:boolean;holdOl
     }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Inspection cycle fixture failed')}
   });
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,releaseFresh,releaseOld,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},close:async()=>{releaseFresh();releaseOld();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,releaseFresh,releaseOld,bind:(agent:string,module:string,selection?:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection?structuredClone(selection):undefined},close:async()=>{releaseFresh();releaseOld();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

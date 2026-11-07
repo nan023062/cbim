@@ -1,3 +1,4 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -27,6 +28,7 @@ export async function memberHelpProvider(options:{waiting?:boolean;holdHelp?:boo
   const mainRequests:Request[]=[],memberRequests:Request[]=[],errors:string[]=[];
   let agentId='',moduleId='',releaseHelp=()=>{};
   const helpGate=new Promise<void>(resolve=>{releaseHelp=resolve}),d=memberHelpFixture;
+  let ownerSelection:OwnerExecutionSelection|undefined;
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
     const body=JSON.parse(raw) as Request,isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,list=isMain?mainRequests:memberRequests,turn=list.length;list.push(body);
@@ -34,10 +36,10 @@ export async function memberHelpProvider(options:{waiting?:boolean;holdHelp?:boo
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'member-help-'+(mainRequests.length+memberRequests.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
-    const dispatch=(id:string,goal:string)=>tool(id,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+    const dispatch=(id:string,goal:string)=>tool(id,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
     if(isMain){
       assert.ok(body.tools?.every(item=>!['write','edit','bash','cbim_task_help'].includes(item.function.name)),'主调度不执行成员工具');
-      if(turn===0)tool('help-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.mainGoal,agentId,moduleIds:[moduleId],acceptance:d.acceptance}));
+      if(turn===0)tool('help-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.mainGoal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance}));
       else if(turn===1)dispatch('help-dispatch',d.memberGoal);
       else if(turn===2)reply('独立成员已派发，等待真实执行结果。');
       else if(turn===3){if(!options.unknownHelp)assert.ok(JSON.stringify(body.messages).includes(d.reason),'主续跑必须包含真实求助而非普通失败猜测');tool('help-goal-inspect','cbim_goal_inspect',{})}
@@ -46,7 +48,7 @@ export async function memberHelpProvider(options:{waiting?:boolean;holdHelp?:boo
         assert.equal(first.result,undefined);assert.equal(first.activeRunId,undefined);
         if(options.unknownHelp){assert.ok(['interrupted','failed','blocked'].includes(first.status));assert.equal(first.help,undefined);assert.ok(first.waitReason);tool('help-invalid-review','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'blocked',checks:scope.goal.plan.criteria.map(criterion=>({criterionId:criterion.id,outcome:'unmet',reason:'成员日志无法核实，不把暂存请求当成求助交接',evidence:[]})),superseded:[],gaps:['必须先核实不完整成员记录，不可复用旧执行'],reason:'当前执行事实未知，停止自动补做，不重放旧操作'})}
         else if(options.waiting){assert.equal(first.help?.input.reason,d.reason);tool('help-wait-review','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'awaiting_user',checks:scope.goal.plan.criteria.map(criterion=>({criterionId:criterion.id,outcome:'unmet',reason:d.waitReason,evidence:[]})),superseded:[],gaps:[d.waitReason],reason:d.waitReason})}
-        else tool('help-replan','cbim_goal_plan',{...goalPlanArguments({objective:d.mainGoal,agentId,moduleIds:[moduleId],acceptance:d.acceptance},scope.goal.revision),reason:'原成员安全求助后，以新任务和独立实例补齐验证材料；保留原节点事实'});
+        else tool('help-replan','cbim_goal_plan',{...goalPlanArguments({objective:d.mainGoal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance},scope.goal.revision),reason:'原成员安全求助后，以新任务和独立实例补齐验证材料；保留原节点事实'});
       }else if(turn===5){if(options.unknownHelp)reply('成员记录不完整，已保留失败事实；没有消费求助或重放成员操作。');else if(options.waiting)reply(d.waitReason);else dispatch('help-replacement',d.replacementGoal)}
       else if(turn===6&&!options.waiting)reply(d.handoff);
       else if(turn===7&&!options.waiting)tool('help-final-inspect','cbim_goal_inspect',{});
@@ -78,5 +80,5 @@ export async function memberHelpProvider(options:{waiting?:boolean;holdHelp?:boo
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Member help fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,releaseHelp,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},close:async()=>{releaseHelp();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,releaseHelp,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=structuredClone(selection)},close:async()=>{releaseHelp();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

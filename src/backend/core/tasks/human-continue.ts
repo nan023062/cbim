@@ -1,19 +1,20 @@
 /**
  * 作用定位：定义按本机已保存人工决定显式继续原目标的严格协议与业务主体快照。
- * 设计原因：用户点击继续与保存决定分开；业务主体包含原流程选择，不能改选方法后借用旧接受，也不把系统转交意见伪造成用户新目标。
+ * 设计原因：用户点击继续与保存决定分开；业务主体包含原负责人和流程选择，不能换岗位或方法后借用旧接受，也不把系统转交意见伪造成用户新目标。
  * 职责边界：仅表达身份和不可变启动意图；主知识治理不能声明执行业务 Workflow，真实候选、文件、权限与运行准入由可信服务核实。
  */
 import {z} from 'zod';
 import {dispatchScopeWaitSchema,scopeContinuationOptionsSchema} from './scope-continuation';
 import {humanDecisionIdentitySchema} from './human-decisions';
 import {workflowSelectionsSchema,validateWorkflowSelections} from './workflow-selection';
+import {ownerExecutionBindingSchema} from '../team/member-execution-binding';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
 const text=z.string().trim().min(1).max(16000),revision=z.number().int().min(1).max(65);
 const unique=(values:string[])=>new Set(values).size===values.length;
 const decisionIds=z.array(z.string().uuid()).min(1).max(50).refine(unique,'同一决定不能重复消费');
 const criterion=z.object({id,text,kind:z.enum(['evidence','human'])}).strict();
-const assignment=z.object({agentId:id,moduleIds:z.array(id).max(50).refine(unique),workflowSelections:workflowSelectionsSchema.optional(),criterionIds:z.array(id).min(1).max(50).refine(unique)}).strict().superRefine((value,context)=>{try{validateWorkflowSelections(value.moduleIds,value.workflowSelections)}catch{context.addIssue({code:'custom',message:'人工主体的 Workflow 选择不属于分配模块'})}if(value.agentId==='cbim:main'&&value.workflowSelections!==undefined)context.addIssue({code:'custom',message:'主调度知识治理不能声明执行业务 Workflow'})});
+const assignment=z.object({agentId:id,moduleIds:z.array(id).max(50).refine(unique),workflowSelections:workflowSelectionsSchema.optional(),ownerBinding:ownerExecutionBindingSchema.optional(),criterionIds:z.array(id).min(1).max(50).refine(unique)}).strict().superRefine((value,context)=>{try{validateWorkflowSelections(value.moduleIds,value.workflowSelections)}catch{context.addIssue({code:'custom',message:'人工主体的 Workflow 选择不属于分配模块'})}if(value.agentId==='cbim:main'&&(value.workflowSelections!==undefined||value.ownerBinding!==undefined))context.addIssue({code:'custom',message:'主调度知识治理不能声明执行业务 Workflow 或岗位'});if(value.ownerBinding&&(value.ownerBinding.capability.agentId!==value.agentId||value.ownerBinding.owners.length!==value.moduleIds.length||!value.moduleIds.every(id=>value.ownerBinding!.owners.some(owner=>owner.moduleId===id))))context.addIssue({code:'custom',message:'人工主体的负责岗位不属于分配模块'})});
 /** 排除轮次/时钟/解释 reason，固定原目标、约束、验收及角色模块流程；旧缺省选择不补写。 */
 export const humanContinuationSubjectSchema=z.object({objective:text,constraints:z.array(text).max(50),criteria:z.array(criterion).min(1).max(50),assignments:z.array(assignment).min(1).max(100)}).strict().superRefine((value,context)=>{
   const ids=value.criteria.map(item=>item.id);
@@ -34,5 +35,5 @@ export type HumanContinuationReceipt=z.infer<typeof humanContinuationReceiptSche
 /** 可信服务从当前计划提取；稳定排序消除列表重排，不去重或降低原验收条件。 */
 export function humanContinuationSubject(plan:HumanContinuationSubject):HumanContinuationSubject{
   const compare=(a:string,b:string)=>a<b?-1:a>b?1:0;
-  return humanContinuationSubjectSchema.parse({objective:plan.objective,constraints:[...plan.constraints],criteria:plan.criteria.map(({id,text,kind})=>({id,text,kind})).sort((a,b)=>compare(a.id,b.id)),assignments:plan.assignments.map(({agentId,moduleIds,criterionIds,workflowSelections})=>({agentId,moduleIds:[...moduleIds].sort(compare),criterionIds:[...criterionIds].sort(compare),...(workflowSelections===undefined?{}:{workflowSelections:workflowSelections.map(selection=>({...selection})).sort((a,b)=>compare(a.moduleId,b.moduleId))})})).sort((a,b)=>compare(JSON.stringify(a),JSON.stringify(b)))});
+  return humanContinuationSubjectSchema.parse({objective:plan.objective,constraints:[...plan.constraints],criteria:plan.criteria.map(({id,text,kind})=>({id,text,kind})).sort((a,b)=>compare(a.id,b.id)),assignments:plan.assignments.map(({agentId,moduleIds,criterionIds,workflowSelections,ownerBinding})=>({agentId,moduleIds:[...moduleIds].sort(compare),criterionIds:[...criterionIds].sort(compare),...(workflowSelections===undefined?{}:{workflowSelections:workflowSelections.map(selection=>({...selection})).sort((a,b)=>compare(a.moduleId,b.moduleId))}),...(ownerBinding===undefined?{}:{ownerBinding:{...structuredClone(ownerBinding),owners:[...ownerBinding.owners].sort((a,b)=>compare(a.moduleId,b.moduleId))}})})).sort((a,b)=>compare(JSON.stringify(a),JSON.stringify(b)))});
 }

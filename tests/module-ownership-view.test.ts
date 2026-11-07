@@ -76,5 +76,5 @@ it('本机记录不能把已有未知事实伪装成明确未受理',async()=>{
 });
 
 it('责任详情按文本展示来源限制和有界历史，不生成执行能力或解析内容脚本',()=>{
-  const d=detail();d.view.module!.name='<script>bad</script>';const html=renderToStaticMarkup(createElement(ModuleOwnershipDetailView,{detail:d}));expect(html).toContain('&lt;script&gt;bad&lt;/script&gt;');expect(html).not.toContain('<script>');expect(html).toContain('尚未接入按负责人派发');expect(html).toContain('责任历史');
+  const d=detail();d.view.module!.name='<script>bad</script>';const html=renderToStaticMarkup(createElement(ModuleOwnershipDetailView,{detail:d}));expect(html).toContain('&lt;script&gt;bad&lt;/script&gt;');expect(html).not.toContain('<script>');expect(html).toContain('新业务按模块负责人派发');expect(html).toContain('责任历史');
 });

@@ -1,6 +1,6 @@
 /**
  * 作用定位：把主调度的派发、查询、未启动撤销、追加/替换依赖及一次检查点续执行预约转换为内部工具，并组合目标工具。
- * 设计原因：模型只表达责任角色、模块、目标与本模块 Workflow 选择；可信闭包固定身份，严格输入拒绝夹带授权，业务输出核同一份 wire。校验失败不回滚或重做已入队事实。
+ * 设计原因：模型明确提交发现所得 ownerSelection、角色、模块和 Workflow；不自动填默认角色。可信闭包固定身份，严格输入拒绝夹带授权，输出核同一份 wire，失败不回滚或重做已入队事实。
  * 职责边界：派发只是入队，续执行只是预约，撤销和依赖修订只记录调度事实，不算验收。本模块不装配成员递归派发、活动任务中止或手工结果工具。
  */
 import {z} from 'zod';
@@ -17,8 +17,8 @@ import type {GoalTools} from './goal-tools';
 import {resumeMemberInputSchema,type ResumeMemberInput,type ResumeMemberReceipt} from '../../core/tasks/queued-member-resume';
 
 const {assigneeAgentId,...taskFields}=dispatchTaskFields.shape;
-// 未选定专业执行角色时使用内置静态默认执行者；主角色永远不能被派为执行者。
-const taskInput=z.object({agentId:assigneeAgentId.default('cbim:executor').refine(id=>id!=='cbim:main','主 Agent 只能调度，不能承担执行任务'),...taskFields}).strict().superRefine((value,context)=>{try{validateWorkflowSelections(value.moduleIds,value.workflowSelections)}catch{context.addIssue({code:'custom',message:'Workflow 选择必须属于本次任务模块'})}});
+// 角色只核对岗位能力，不再作为默认路由；实际岗位预期来自模块负责人发现。
+const taskInput=z.object({agentId:assigneeAgentId.refine(id=>id!=='cbim:main','主 Agent 只能调度，不能承担执行任务'),...taskFields}).strict().superRefine((value,context)=>{if(!value.ownerSelection)context.addIssue({code:'custom',message:'必须提供模块负责岗位的 ownerSelection'});try{validateWorkflowSelections(value.moduleIds,value.workflowSelections)}catch{context.addIssue({code:'custom',message:'Workflow 选择必须属于本次任务模块'})}});
 const inspectInput=z.object({taskId:z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/).optional()}).strict();
 const definitions={
   cbim_dispatch_add_dependency:{
@@ -30,7 +30,7 @@ const definitions={
     schema:resumeMemberInputSchema,effects:['maintenance'] as const,
   },
   cbim_dispatch_task:{
-    description:'将任务交给当前主会话的执行 Agent。先查询 Team 与模块，明确 goal、moduleIds 和 acceptance；可用 workflowSelections:[{moduleId,workflowId}] 选择本模块实际挂载的流程，须与当前目标计划一致，未列模块使用默认首项或空清单通用流程。已有任务不能改选，失效选择不会回退；不能提交任意路径、正文或版本。没有专业 Agent 时省略 agentId 或用 cbim:executor。主 Agent 只调度，不能选择 cbim:main。成功仅表示排队，结束本轮让调度继续；不要轮询或宣称已完成，不能指定实例、权限或伪造维护人。',
+    description:'按当前目标计划向模块负责岗位派发任务。先用 cbim_module_owner_inspect 的 moduleIds 查询 execution.groups，明确 agentId、ownerSelection、goal、moduleIds、acceptance；不同负责人拆任务，无负责人或配置失效不能回退主模型或默认执行者。workflowSelections 只选对应模块实际挂载流程，与计划一致。成功仅表示排队，结束本轮让调度继续；不能指定实例、权限、知识正文或伪造维护人。',
     schema:taskInput,effects:['maintenance'] as const,
   },
   cbim_dispatch_inspect:{
@@ -75,7 +75,7 @@ export class DispatchTools {
   constructor(private readonly port:DispatchToolsPort,private readonly goals?:GoalTools){this.binding=Object.freeze(structuredClone(port.binding))}
   /** 只有装配了真实端口才构造本对象；返回值不包含未来工具占位。 */
   private available(name:string){return (name!=='cbim_dispatch_cancel'||!!this.port.cancel)&&(name!=='cbim_dispatch_replace_dependency'||!!this.port.replaceDependency)&&(name!=='cbim_dispatch_add_dependency'||!!this.port.addDependency)&&(name!=='cbim_dispatch_resume'||!!this.port.resume)}
-  list(){return [...Object.entries(definitions).filter(([name])=>this.available(name)).map(([name,d])=>({name,version:1 as const,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>,...mainToolContract(name as DispatchToolName)})),...(this.goals?.list()??[])]}
+  list(){return [...Object.entries(definitions).filter(([name])=>this.available(name)).map(([name,d])=>({name,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>,...mainToolContract(name as DispatchToolName)})),...(this.goals?.list()??[])]}
   /** 名称检测不执行操作，供 Loop 在知识工具之前选择本适配器。 */
   has(name:string):boolean{return (Object.hasOwn(definitions,name)&&this.available(name))||!!this.goals?.has(name)}
   private parse(name:string,input:unknown){

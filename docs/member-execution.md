@@ -2,17 +2,17 @@
 
 当前接通“主会话工具派发 → 主轮释放执行占用 → 独立成员 Pi 会话 → 结构化交付候选、已核实求助或真实失败 → 原主会话自动续跑”，同时保留可信桌面的显式派发和启动接口。主对话展示成员实时动态，任务视图展示可选中节点的派发流程图。主 Agent 和自定义 Agent 使用同一大脑、工具与权限门禁，区别来自角色配置、Skill 和各模块 Workflow。
 
-自动协作仅推进当前应用进程中、由真实主聊天运行发出的委派，不扫描所有邮箱启动任务，也不提供成员递归派发。下面的 `window.cbim.call` 示例仍是独立的桌面开发和集成接口；没有成员启动表单。操作真实项目会调用已配置供应商并产生工具副作用，由用户选择工作区、目标和本轮权限，模型不能自行升级。
+自动协作仅推进当前应用进程中、由真实主聊天运行发出的委派，不扫描所有邮箱启动任务，也不提供成员递归派发。下面的 `window.cbim.call` 示例用于可信桌面集成；显式派发同样必须属于已有主调度周期和目标计划，没有无周期业务执行入口或成员启动表单。操作真实项目会调用已配置供应商并产生工具副作用，由用户选择工作区、目标和本轮权限，模型不能自行升级。
 
 ## 主会话自动协作
 
-主 Agent 是具备工程思维、架构思维和结构化思维的团队与技术管理者：核实现状、目标和约束，维护模块职责、依赖和责任，将任务组织为执行者、模块列表、目标与验收要求，审阅证据并安排后续工作。它直接通过受控知识服务增删改查 `.cbim/`、治理团队和业务架构，按证据渐进演进；业务文件实现、命令和业务验证交给执行 Agent。知识写入仍受 read/ask/execute、版本与事务控制，重要人工决定不由模型伪造。没有合适自定义执行角色时使用内置静态 `cbim:executor`，继承 Team 根 Skill，由独立任务实例执行，不把默认定义写入 `.cbim/`。
+主 Agent 是具备工程思维、架构思维和结构化思维的团队与技术管理者：核实现状、目标和约束，维护模块职责、依赖和责任，将任务组织为执行者、模块列表、目标与验收要求，审阅证据并安排后续工作。它直接通过受控知识服务增删改查 `.cbim/`、治理团队和业务架构，按证据渐进演进；业务文件实现、命令和业务验证交给执行 Agent。知识写入仍受 read/ask/execute、版本与事务控制，重要人工决定不由模型伪造。没有合适自定义角色时，可将内置静态 `cbim:executor` 明确登记为项目岗位并设置模块责任；它继承 Team 根 Skill，由独立任务实例执行，不把默认定义写入 `.cbim/`，也不跳过岗位及模型采纳。
 
 现有成员状态由可靠事务推进：依赖未就绪为 `waiting`；领取/启动意图为 `communicating`；真实引擎就绪为 `working`；终态或安全检查点释放执行占用后回到 `idle` 或仍有前置待办的 `waiting`。模型正文不能直接改状态。“自身思考”指独立模型上下文中的理解、规划和工具选择，不承诺导出私有思维。当前支持同周期内一次受限文件任务的检查点续执行；长期驻留自治、跨重启恢复和更细粒度通信状态仍需后续实现。
 
-1. 主 Agent 通过知识工具定位已有 Agent、模块与维护关系，调用 `cbim_dispatch_task` 提交角色、模块列表、目标、验收要求及前置依赖；`cbim_dispatch_inspect` 只读查询本会话派发图。工作区、主会话、运行和调用身份均来自后端绑定，不接受模型指定权限或发送方。
+1. 主 Agent 定位模块与真人维护关系，通过 `cbim_module_owner_inspect` 查询负责岗位，将真实查询返回的 `ownerSelection` 保存到目标计划和 `cbim_dispatch_task` 请求。同负责人模块可合并，不同负责人分开派发；服务生成不可变 `ownerBinding`，不能由模型提供证明。`cbim_dispatch_inspect` 只读查询本会话派发图。工作区、主会话、运行和调用身份均来自后端绑定，不接受模型指定权限或发送方。
 2. 派发工具只可靠入队，不在工具调用中等待成员。主轮安全完成、引擎关闭且工作区占用释放后，`AutoCollaboration` 启动可执行成员；已有占用释放时再推进，不以长时间等待占据主执行槽。
-3. 成员使用主轮用户选择的模型和权限模式，独立执行冻结的团队任务上下文。主轮的“本次任务全部通过”不传给成员；ask 成员仍单独审批，前置候选未验收且不扩大权限。
+3. 成员使用项目岗位独立采纳的模型、Skill 和项目适配，实际领取复核责任及配置版本；主会话的模型选择不能覆盖成员模型。权限模式仍来自本轮用户授权，“本次任务全部通过”不传给成员；ask 成员仍单独审批，前置候选未验收且不扩大权限。
 4. 成员完成并释放占用后，调度读取候选、证据与限制，或者失败、受阻、仍待前置等真实状态。结果以带批次来源的 Pi custom 消息进入同一个主原生会话，明确是任务数据而非用户新指令或授权；主 Agent 再处理原目标。失败且没有结果信封的批次也可以回报。
 5. 回注来源先保存在主运行日志，按 `continuationId` 和结果消息 ID 防止重复启动，再确认结果收件。前端显示系统回传提示，不生成虚假的用户消息。已有用户消息保留在原可编辑队列，协作期间暂缓，主续跑安全完成后再处理。
 
@@ -78,54 +78,44 @@
 
 ## 启动前具备的内容
 
-- 工作区已在 CBIM 打开，知识结构有效，设置中已有可用的默认模型。
+- 工作区已在 CBIM 打开，知识结构有效；主聊天有可用模型，执行岗位已独立采纳可用模型和能力配置。
 - 使用真实叶子 Agent ID，或内置默认执行角色 `cbim:executor`；`cbim:main` 不能成为执行者。目标模块已登记并具备显式维护关系与真人维护人，默认角色不绕过这些检查。
+- 在团队架构“项目岗位”登记稳定成员，并在业务模块设置唯一负责人；默认执行角色也须明确登记及绑定，不能用缺省角色或主模型补齐失效配置。
 - 每个模块使用自己的 Workflow；没有专属 Workflow 时明确采用通用执行流程，不继承父模块或兄弟模块的流程。
 - 主会话使用固定 `rootSessionId`，必须等于所属主对话的 `taskId`（由 `loop.chat` 返回），不是页面页签 ID 或成员任务 ID。独立逻辑主会话不会自动创建聊天页面，也不会混入其他聊天的图。
 
 模块、角色或维护关系缺失时，应先通过授权知识服务补齐。不能伪造注册表、直接修改 `.cbim/` 或把任务派发当作知识治理授权。
 
-## 1. 创建成员并派发
+## 1. 通过主会话规划与派发
 
-在可信桌面调试环境中执行；将示例工作区、成员和模块 ID 换成实际查询值。`commandId` 在整个工作区内标识一次操作，网络重试应复用同一 ID 和输入；不同主会话或不同操作也应使用新的 ID，不能把去重范围理解为单张图。
+在已完成岗位及责任配置的可信桌面调试环境中发起主任务。正式派发由主 Agent 查询负责人、保存目标计划后调用工具；普通问答不伪造业务节点。下面的查询可能发生在模型尚未派发时，图中暂时没有成员任务是正常状态。
 
 ```js
 const call = (action, args = {}) => window.cbim.call(action, args);
 const workspaceId = '从 list 返回值选择的工作区 ID';
-const rootSessionId = '从所属主对话的 loop.chat 回执取得 taskId';
+const main = await call('loop.chat', {
+  id: workspaceId,
+  message: '核实资源加载模块并给出真实验证证据',
+  options: {permission: 'read'},
+});
+const rootSessionId = main.taskId;
 const identity = {workspaceId, rootSessionId};
-const agentId = '.cbim/team/developer';
-const moduleId = '.cbim/workspace/client/loading';
-
-const root = await call('dispatch.open', {
-  ...identity, commandId: crypto.randomUUID(),
-});
-await call('dispatch.memberCreate', {
-  ...identity, commandId: crypto.randomUUID(), agentId,
-});
 let graph = await call('dispatch.graphSnapshot', {identity});
-const taskInput = {
-  assigneeAgentId: agentId,
-  moduleIds: [moduleId],
-  goal: '核实资源加载模块并给出真实验证证据',
-  acceptance: [{id: 'verified', text: '指出核实依据、结果及未验证限制'}],
-  prerequisites: [],
-};
-const dispatchCommand = {
-  ...identity, commandId: crypto.randomUUID(),
-  expectedParentRevision: graph.root.revision,
-  task: taskInput,
-};
-const sent = await call('dispatch.task', dispatchCommand);
+const root = graph.root;
 ```
 
-派发回执只证明任务、信封和图增量可靠入队，没有启动模型。上述显式 IPC 是兼容的无周期开发入口；新主会话自动派发由可信调度器注入周期，每个任务创建独立执行实例，模型不能伪造周期和实例字段。
+派发回执只证明任务、信封和图增量可靠入队，没有启动模型。集成方若使用 `dispatch.task`，必须提供实际活动 `scopeId`、匹配既有目标分配的完整模块集合和最新 `ownerSelection`，不能靠 `dispatch.open/memberCreate` 绕过计划。`commandId` 在工作区内标识一次操作，未知回包先查询原命令，不用新命令重复派发。旧 `loop.start` 及旧业务续轮明确返回 `OWNER_DISPATCH_REQUIRED`；历史仍可读取。
+
+任务详情显示派发时的岗位、模型和来源；“核实当前负责人配置”调用 `dispatch.ownerInspect` 只读比较当前配置。修改负责人、岗位或模型不会改写旧任务，A→B→A 也不恢复旧绑定。旧无绑定排队任务不能新领取；已有运行按原事实收束。存量任务的显式交接另属 R02-D，当前不会自动转交。
 
 ## 2. 显式启动与观察
 
+通常由自动协调器领取。以下启动接口仅供控制该活动周期的可信集成方使用；已领取、版本变化或责任失效时会拒绝，不能与自动协调器争抢后强制重试。
+
 ```js
 graph = await call('dispatch.graphSnapshot', {identity});
-const node = graph.tasks.find(task => task.taskId === sent.taskId);
+const taskId = '从本会话图中明确选择的任务 ID';
+const node = graph.tasks.find(task => task.taskId === taskId);
 if (!node) throw new Error('任务不存在，请重新查询派发图');
 const taskIdentity = {...identity, taskId: node.taskId};
 const startCommand = {
@@ -142,7 +132,7 @@ const delta = await call('dispatch.graphDelta', {
 const monitor = await call('runtime.snapshot');
 ```
 
-`options` 支持 `profileId`、`model`、`permission` 和 `turnTimeoutMs`（1000～3600000 毫秒）。未选模型时采用已保存默认配置，未选权限时为 read。权限含义：
+`options` 支持 `permission` 和 `turnTimeoutMs`（1000～3600000 毫秒），未选权限时为 read。成员模型从原岗位绑定取得；若兼容调用还传 `profileId/model`，必须与绑定完全一致，否则 `OWNER_MODEL_MISMATCH`。缺失、过期或禁用配置不会回退全局默认。权限含义：
 
 | 权限 | 当前效果 |
 | --- | --- |
@@ -252,7 +242,7 @@ const observed = await call('dispatch.artifactReport', {
 - 任务视图默认展示主 Agent 根节点与正式派发的任务节点，实线箭头表示派发，虚线箭头表示前置依赖。主会话的普通执行轮次不会被伪造为成员任务。
 - 点击根节点查看主会话实例、通道及调度记录；点击任务节点查看独立执行成员的公开流式正文、工具状态、计划/证据和交付候选，也可查看历史轮次。实例释放不删除这些证据；候选始终标为“尚未验收”。
 - 图与成员日志分别按游标增量刷新，空响应保留引用，后台页签降低频率；页面切换和刷新不停止成员执行。图同步失败保留上次可信图，并提供重试。
-- `pnpm test:members` 是既有显式派发界面验证入口；`pnpm test:collaboration` 验证主会话模型自动派发到结果续跑的打包界面链路。两者使用实际 Pi 与本机可控 SSE，不证明真实供应商下的自主分工质量。自动协作构建及本步证据见[验证报告](../design/verification/auto-collaboration-20261106.md)。
+- 旧 `test:members` / `test:collaboration` 的无绑定样例对应其历史构建，不能作为当前协议的启动示例。当前岗位派发桌面验证使用 `pnpm exec tsx scripts/owner-execution-ui-smoke.mts`，加 `--stale` 验证责任变化；按 `CBIM_TEST_EXE` 或最新构建选择实际程序。真实 Pi 配合 localhost 固定响应，不证明在线自主分工质量，见[本步报告](../design/verification/module-owner-dispatch-20261108.md)。
 
 ## 成员执行事件公开接口
 

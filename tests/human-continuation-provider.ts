@@ -1,3 +1,4 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -13,8 +14,9 @@ function gate(){let release=()=>{};const promise=new Promise<void>(resolve=>{rel
 export async function humanContinuationProvider(mode:HumanContinuationMode='accept'){
   const d=humanContinuationFixture,main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[],continued=gate(),final=gate();let agentId='',moduleId='';
   const state:{baselineId?:string;reworkBaselineId?:string;continuation?:any;continuedScope?:any;finalReview?:any}={};
-  const plan=(expectedRevision=1)=>{const value=goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],acceptance:d.acceptance},expectedRevision);return {...value,criteria:[...value.criteria,{id:d.humanId,text:d.humanCriterion,kind:'human'}],assignments:value.assignments.map(item=>({...item,criterionIds:[...item.criterionIds,d.humanId]}))}};
+  const plan=(expectedRevision=1)=>{const value=goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance},expectedRevision);return {...value,criteria:[...value.criteria,{id:d.humanId,text:d.humanCriterion,kind:'human'}],assignments:value.assignments.map(item=>({...item,criterionIds:[...item.criterionIds,d.humanId]}))}};
   const evidence=(task:any)=>{assert.equal(task.status,'result_ready');assert.ok(task.result);return {kind:'member-result',taskId:task.taskId,runId:task.result.runId,resultId:task.result.resultId,planRevision:task.result.planRevision,toolCallIds:task.result.evidenceRefs}};
+  let ownerSelection:OwnerExecutionSelection|undefined;
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(value=>value.function.name==='cbim_dispatch_task')===true,list=isMain?main:member,turn=list.length;list.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
     assert.ok(body.tools?.every(value=>!value.function.name.startsWith('cbim_human')));res.writeHead(200,{'Content-Type':'text/event-stream'});
@@ -23,7 +25,7 @@ export async function humanContinuationProvider(mode:HumanContinuationMode='acce
     if(isMain){
       assert.ok(body.tools?.every(value=>!['write','edit','bash'].includes(value.function.name)));
       if(turn===0)tool('human-continuation-plan','cbim_goal_plan',plan());
-      else if(turn===1)tool('human-continuation-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+      else if(turn===1)tool('human-continuation-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
       else if(turn===2)reply('已派发真实成果任务。');
       else if(turn===3)tool('human-continuation-inspect','cbim_goal_inspect',{});
       else if(turn===4){const {scope,graph}=result(body,'human-continuation-inspect'),task=graph.tasks.find((value:any)=>value.scopeId===scope.scopeId);tool('human-continuation-wait','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'awaiting_user',checks:scope.goal.plan.criteria.map((item:any)=>({criterionId:item.id,outcome:item.kind==='human'?'needs_human':'satisfied',reason:item.kind==='human'?d.reason:'已核实实际读取',evidence:[evidence(task)]})),superseded:[],gaps:[d.reason],reason:d.reason})}
@@ -31,7 +33,7 @@ export async function humanContinuationProvider(mode:HumanContinuationMode='acce
       else if(turn===6){emit({role:'assistant',content:'已收到已保存人工意见的系统接续，先核对当前目标。'});await continued.promise;tool('human-continued-inspect','cbim_goal_inspect',{})}
       else if(turn===7){const {scope}=result(body,'human-continued-inspect');state.continuedScope=scope;state.continuation=scope.continuations.at(-1);assert.equal(state.continuation.kind,'human_decisions');assert.equal(state.continuation.input,undefined);assert.equal(state.continuation.inputRevision,2);const next=plan(scope.goal.revision);if(mode==='subject-changed')next.objective+='（已改变业务主体）';tool('human-continued-plan','cbim_goal_plan',next)}
       else if(mode==='reject'||mode==='request_evidence'){
-        if(turn===8)tool('human-rework-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:d.reworkGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+        if(turn===8)tool('human-rework-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:d.reworkGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
         else if(turn===9)reply('旧候选保留，根据人工意见派发新任务。');
         else if(turn===10)tool('human-rework-inspect','cbim_goal_inspect',{});
         else if(turn===11){const {scope,graph}=result(body,'human-rework-inspect'),old=graph.tasks.find((value:any)=>value.goal===d.memberGoal),next=graph.tasks.find((value:any)=>value.goal===d.reworkGoal);assert.ok(old?.result);assert.ok(next?.result);tool('human-rework-wait','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'awaiting_user',checks:scope.goal.plan.criteria.map((item:any)=>({criterionId:item.id,outcome:item.kind==='human'?'needs_human':'satisfied',reason:item.kind==='human'?'新候选需要新的人工决定':'已核实真实新候选',evidence:[evidence(next)]})),superseded:[{taskId:old.taskId,replacementTaskIds:[next.taskId],reason:'按本次消费的人工决定保留旧结果并补做',humanDecision:{decisionId:state.continuation.decisionIds[0],continuationId:state.continuation.continuationId}}],gaps:['新候选需要新的人工决定'],reason:'保留旧意见，不将旧批准扩展到新成果'})}
@@ -54,5 +56,5 @@ export async function humanContinuationProvider(mode:HumanContinuationMode='acce
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Human continuation fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');const releaseAll=()=>{continued.release();final.release()};
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},releaseContinuation:()=>continued.release(),releaseFinal:()=>final.release(),releaseAll,close:async()=>{releaseAll();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=structuredClone(selection)},releaseContinuation:()=>continued.release(),releaseFinal:()=>final.release(),releaseAll,close:async()=>{releaseAll();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

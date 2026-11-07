@@ -1,6 +1,6 @@
 /**
  * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
- * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；派发保存原 Workflow 选择及实际绑定，同命令不能改选。周期冻结输入、归属及软限额；人工继续同事务消费等待和登记运行，关闭封存待办，旧回执不能重开周期。
+ * 设计原因：新派发按知识→模型→Store 锁序核当前岗位、能力及责任，保存原 Workflow 选择与不可变执行绑定，同命令不能改选。周期冻结输入及软限额，关闭封存待办；旧回执不能重开周期。
  * 职责边界：本模块负责可靠入队、显式撤销未启动集合及受审计的单条依赖追加/替换，由独立 MemberExecutionManager 执行；调度维护不停止活动运行，不复活旧实例，也不代表目标完成。
  * 关闭边界：普通无计划聊天与纯负责人控制面不强造业务计划，但仍核活动输入和真实工具终态；已有业务计划或派发必须审阅，未知输入只可失败或取消封存。
  */
@@ -41,15 +41,18 @@ import {prepareMember} from './agent-manager';
 import {dispatchSessionReadInput} from '../../core/tasks/scope-view';
 import {createScopeRunTracking,appendScopeMainRun} from '../../core/tasks/scope-run-tracking';
 import {isModuleOwnershipControlReceipt} from '../../core/workspace/module-ownership-tool-policy';
+import {OwnerExecutionService,type OwnerExecutionModelPorts,type OwnerExecutionWorkspace} from './owner-execution-service';
 
 /** 只需工作区状态与知识快照，不依赖桌面或具体文件存储。 */
-type DispatchWorkspace=Pick<KnowledgeWorkspace,'entry'|'instanceId'|'assert'|'snapshot'|'read'|'rules'>;
+type DispatchWorkspace=OwnerExecutionWorkspace;
 const scopeIdentityInput=graphIdentityInput.extend({scopeId:z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/)}).strict();
 
 export class WorkspaceDispatchService {
   private closed=false;
   /** 目标计划与审阅复用派发事务；日志证据由应用只读端口注入，不从模型参数接受。 */
   readonly goals:ScopeGoalService;
+  /** 岗位执行发现与短事务门禁，复用唯一知识、模型和 Store，不另建登记。 */
+  readonly owners:OwnerExecutionService;
   /** 可信用户补充的消费与只读回执；启动和停止屏障仍由运行管理器掌管。 */
   readonly continuations:ScopeContinuationService;
   /** 原运行插入的准备与接收，不创建新运行或修改原始输入。 */
@@ -69,8 +72,9 @@ export class WorkspaceDispatchService {
   private readonly queuedCancellation:QueuedTaskCancelService;
   private readonly queuedDependencyReplacement:QueuedDependencyReplacementService;
   private readonly queuedDependencyAddition:QueuedDependencyAdditionService;
-  constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts,budgetPolicy?:()=>ScopeBudgetPolicy,humanPorts?:HumanDecisionPorts){
-    this.goals=new ScopeGoalService(owner,store,goalPorts,humanPorts);
+  constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts,budgetPolicy?:()=>ScopeBudgetPolicy,humanPorts?:HumanDecisionPorts,modelPorts?:OwnerExecutionModelPorts){
+    this.owners=new OwnerExecutionService(owner,store,modelPorts);
+    this.goals=new ScopeGoalService(owner,store,goalPorts,humanPorts,this.owners);
     this.usage=new ScopeUsageService(owner,store,goalPorts);
     this.budgets=new ScopeBudgetService(this.usage,budgetPolicy);
     this.continuations=new ScopeContinuationService(owner,store,this.budgets);
@@ -80,16 +84,19 @@ export class WorkspaceDispatchService {
     this.humanDecisions=new ScopeHumanDecisionService(owner,store,this.goals,goalPorts,humanPorts,()=>this.check(owner.entry.id));
     this.humanContinuations=new ScopeHumanContinuationService(owner,store,this.goals,goalPorts,humanPorts,this.budgets);
     this.queuedCancellation=new QueuedTaskCancelService(owner,store);
-    this.queuedDependencyReplacement=new QueuedDependencyReplacementService(owner,store,this.goals);
-    this.queuedDependencyAddition=new QueuedDependencyAdditionService(owner,store,this.goals);
+    this.queuedDependencyReplacement=new QueuedDependencyReplacementService(owner,store,this.goals,this.owners);
+    this.queuedDependencyAddition=new QueuedDependencyAdditionService(owner,store,this.goals,this.owners);
   }
+
+  /** 原任务与当前岗位观察分开返回，不刷新或领取旧待办。 */
+  ownerInspect(raw:unknown){return this.owners.inspectTask(raw)}
 
   /** 主调度显式撤销未领取的完整依赖集合；不停止活动运行、不把撤销当作完成。 */
   cancelQueued(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,input:CancelQueuedTasksInput):Promise<CancelQueuedTasksReceipt>{this.check(identity.workspaceId);return this.queuedCancellation.cancel(identity,scopeId,runId,commandId,input)}
   /** 主轮显式修订未启动前置；停止检查覆盖证据读取前后，成功只返回待跟踪集合，不启动执行。 */
-  replaceQueuedDependency(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,input:ReplaceQueuedDependencyInput,assertCurrent?:()=>void):Promise<ReplaceQueuedDependencyReceipt>{this.check(identity.workspaceId);return this.queuedDependencyReplacement.replace(identity,scopeId,runId,commandId,input,assertCurrent)}
+  replaceQueuedDependency(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,input:ReplaceQueuedDependencyInput,assertCurrent?:()=>void):Promise<ReplaceQueuedDependencyReceipt>{return this.queuedDependencyReplacement.replace(identity,scopeId,runId,commandId,input,()=>{this.check(identity.workspaceId);assertCurrent?.()})}
   /** 只加强尚未领取待办的前置门禁；后继闭包、知识和停止均在提交内复核，不启动成员。 */
-  addQueuedDependency(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,input:AddQueuedDependencyInput,assertCurrent?:()=>void):Promise<AddQueuedDependencyReceipt>{this.check(identity.workspaceId);return this.queuedDependencyAddition.add(identity,scopeId,runId,commandId,input,assertCurrent)}
+  addQueuedDependency(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,input:AddQueuedDependencyInput,assertCurrent?:()=>void):Promise<AddQueuedDependencyReceipt>{return this.queuedDependencyAddition.add(identity,scopeId,runId,commandId,input,()=>{this.check(identity.workspaceId);assertCurrent?.()})}
 
   /** 工作区启动时恢复事务存储，触发存储观察者的基线；不创建成员、不消费任务。 */
   async initialize(){this.check(this.owner.entry.id);await this.store.read()}
@@ -309,11 +316,15 @@ export class WorkspaceDispatchService {
   }
 
   /** 可信桌面或绑定主轮的协调器从主会话派发任务；身份从根取得，不接受模型冒充其他成员递归派发。 */
-  async dispatchTask(raw:unknown,trustedScopeId?:string):Promise<DispatchReceipt>{
-    const input=this.parse(dispatchTaskInput,raw);this.check(input.workspaceId);
+  async dispatchTask(raw:unknown,trustedScopeId?:string,assertCurrent?:()=>void):Promise<DispatchReceipt>{
+    const input=this.parse(dispatchTaskInput,raw),command=this.command('dispatch',trustedScopeId===undefined?input:{...input,scopeId:trustedScopeId});
+    const old=await this.owners.replay<DispatchReceipt>(command);if(old)return old.receipt;this.check(input.workspaceId);
+    const alive=()=>{this.check(input.workspaceId);assertCurrent?.()};alive();
+    if(!trustedScopeId)fail('DISPATCH_SCOPE_REQUIRED','新业务派发必须属于已有主调度周期，请重新规划后派发');
     if(input.task.assigneeAgentId==='cbim:main')fail('AGENT_NOT_EXECUTABLE','主 Agent 不直接执行业务，请指定执行 Agent 或默认执行角色');
     if(new Set(input.task.moduleIds).size!==input.task.moduleIds.length||new Set(input.task.acceptance.map(a=>a.id)).size!==input.task.acceptance.length||new Set(input.task.prerequisites.map(p=>p.taskId)).size!==input.task.prerequisites.length)fail('GRAPH_INPUT_INVALID','模块、验收条目和前置任务不能重复');
-    return this.store.transact(this.command('dispatch',trustedScopeId===undefined?input:{...input,scopeId:trustedScopeId}),async state=>{
+    return this.owners.withContext(()=>{if(!input.task.ownerSelection)fail('OWNER_SELECTION_REQUIRED','请查询模块负责人并提交明确的岗位选择');return [input.task.ownerSelection]},context=>this.store.transact(command,async state=>{
+      alive();
       this.check(input.workspaceId);const graph=this.graph(state,input.rootSessionId);
       if(state.scopes?.some(scope=>scope.rootSessionId===input.rootSessionId&&scope.status==='waiting'))fail('DISPATCH_SCOPE_WAITING','当前主会话正在安全等待，不能派发新任务');
       if(trustedScopeId!==undefined){
@@ -324,13 +335,15 @@ export class WorkspaceDispatchService {
         if(graph.tasks.filter(task=>task.scopeId===trustedScopeId).length>=500)fail('DISPATCH_SCOPE_LIMIT','本次用户任务已达到 500 个派发节点，请结束本周期后继续');
       }
       if(graph.root.revision!==input.expectedParentRevision)fail('GRAPH_REVISION_CONFLICT','主会话根版本已变化');
-      const snapshot=await this.owner.snapshot();
+      const snapshot=context.snapshot,ownerBinding=await this.owners.resolve(state,context,input.task.ownerSelection!,input.task.moduleIds,input.task.assigneeAgentId);
+      const registered=state.workspaceMembers!.find(member=>member.memberId===ownerBinding.memberId)!;
       if(trustedScopeId!==undefined){
         const scope=state.scopes!.find(value=>value.scopeId===trustedScopeId)!;
-        if(scope.goal)this.goals.validateDispatch(state,scope,input.task,snapshot.revision);
+        this.goals.validateDispatch(state,scope,input.task,snapshot.revision,ownerBinding);
       }
       const taskId=randomUUID();
       const prepared=prepareMember(state,await resolveDispatchAgent(snapshot,input.task.assigneeAgentId),input.rootSessionId,'task',trustedScopeId===undefined?undefined:{scopeId:trustedScopeId,taskId});
+      prepared.agent.name=registered.name;
       const modules=await resolveDispatchModules(snapshot,input.task.moduleIds,input.task.workflowSelections);
       const now=new Date().toISOString();
       const edges:GraphEdge[]=[{edgeId:randomUUID(),identity:graph.identity,kind:'dispatch',fromNodeId:graph.root.nodeId,toNodeId:'task:'+taskId,revision:1,enabled:true}];
@@ -343,7 +356,7 @@ export class WorkspaceDispatchService {
         if(!ready)waiting=true;
         edges.push({edgeId:randomUUID(),identity:graph.identity,kind:'dependency',fromNodeId:source.nodeId,toNodeId:'task:'+taskId,revision:1,enabled:true,condition:{kind:'result_ready',planRevision:source.planRevision,...(ready?{resultId:source.result!.resultId}:{})}});
       }
-      const task:TaskNode={kind:'task',nodeId:'task:'+taskId,taskId,...(trustedScopeId===undefined?{}:{scopeId:trustedScopeId}),identity:graph.identity,requester:graph.root.agent,assignee:prepared.agent,modules,...(input.task.workflowSelections?{workflowSelections:input.task.workflowSelections}:{}),goal:input.task.goal,acceptance:input.task.acceptance,revision:1,planRevision:1,status:waiting?'waiting':'queued',awaitedChildren:[],runIds:[],createdAt:now,updatedAt:now,...(waiting?{waitReason:'等待前置任务的有效结果'}:{})};
+      const task:TaskNode={kind:'task',nodeId:'task:'+taskId,taskId,scopeId:trustedScopeId,identity:graph.identity,requester:graph.root.agent,assignee:prepared.agent,ownerBinding,modules,...(input.task.workflowSelections?{workflowSelections:input.task.workflowSelections}:{}),goal:input.task.goal,acceptance:input.task.acceptance,revision:1,planRevision:1,status:waiting?'waiting':'queued',awaitedChildren:[],runIds:[],createdAt:now,updatedAt:now,...(waiting?{waitReason:'等待前置任务的有效结果'}:{})};
       const previous=graph.agents.find(a=>a.agentInstanceId===prepared.member.agentInstanceId);
       const waitingTaskIds=[...(previous?.waitingTaskIds??[]),...(waiting?[taskId]:[])];
       // 新派发不能覆盖成员正在其他任务中的占用；图只保留本图已经确认的活动任务。
@@ -353,8 +366,9 @@ export class WorkspaceDispatchService {
       const batch=this.batch(graph.identity,input.commandId,'task.dispatched',[{type:'task.upserted',task},...edges.map(edge=>({type:'edge.upserted' as const,edge})),{type:'agent.upserted',agent}],graph);
       const messageId=randomUUID();
       await this.recheck(snapshot);
+      alive();
       return {members:[prepared.member],sessions:[prepared.session],batch,messages:[{kind:'assignment',messageId,commandId:input.commandId,identity:graph.identity,from:graph.root.agent,to:prepared.agent,taskId,planRevision:1,createdAt:now,delivery:'pending'}],receipt:{commandId:input.commandId,taskId,messageId,cursor:this.cursor(batch),disposition:waiting?'waiting':'queued'}};
-    });
+    }),alive);
   }
 
   /** 首次只读不会创建任务图；公开查询不包含成员其他 Session、邮箱和模型凭据。 */

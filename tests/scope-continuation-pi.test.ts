@@ -1,3 +1,4 @@
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -15,10 +16,12 @@ it.each(['complete-restart','wait-again','stop-race'] as const)('resumes only ex
   try{
     await app.models.save({profile:{name:'Scope continuation fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:'continue-fixture',models:[{id:'continue-fixture',name:'Continue fixture',enabled:true,contextWindow:65536,maxTokens:2048,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
     const profileId=(await app.models.list()).selectedId!;
-    const entry=await app.dispatch('add',{path:f.a}),workspace=app.workspace(entry.id),team=await seedTeam(workspace);provider.bind(team.input.agentId,team.input.moduleId);
+    const entry=await app.dispatch('add',{path:f.a}),workspace=app.workspace(entry.id),team=await seedTeam(workspace);
     const knowledge=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);
     definition.maintenance={bindingId:'continue-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'continue-review',source:'local_user',confirmedAt:new Date().toISOString()}};
     await workspace.commit(request(knowledge,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
+    const owner=await registerExplicitFixtureOwner(app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId:(await app.models.list()).selectedId!,modelId:'continue-fixture'});
+    provider.bind(team.input.agentId,team.input.moduleId,owner.selection);
     await fs.writeFile(path.join(f.a,'continue-input.txt'),continuationFixture.fact);
     const scopes=async()=>{
       const raw=await fs.readFile(path.join(f.user,entry.id,'dispatch','dispatch.jsonl'),'utf8'),found=new Map<string,DispatchScope>();

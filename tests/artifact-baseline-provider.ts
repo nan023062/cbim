@@ -1,3 +1,4 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalCompleteArguments,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -18,7 +19,7 @@ type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]}
 /** Only localhost model responses are deterministic; native read/capture, journals and validation are real. */
 export async function artifactBaselineProvider(){
   const d=artifactBaselineFixture,main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[];
-  let agentId='',moduleId='',release=()=>{};const capturedGate=new Promise<void>(resolve=>{release=resolve});
+  let ownerSelection:OwnerExecutionSelection|undefined;let agentId='',moduleId='',release=()=>{};const capturedGate=new Promise<void>(resolve=>{release=resolve});
   const state:{captured?:unknown}={};
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
@@ -30,8 +31,8 @@ export async function artifactBaselineProvider(){
     const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     if(isMain){
       assert.ok(body.tools?.every(tool=>!['write','edit','bash','cbim_task_artifact_capture'].includes(tool.function.name)));
-      if(turn===0)tool('artifact-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],acceptance:d.acceptance}));
-      else if(turn===1)tool('artifact-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+      if(turn===0)tool('artifact-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,ownerSelection,moduleIds:[moduleId],acceptance:d.acceptance}));
+      else if(turn===1)tool('artifact-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
       else if(turn===2)reply('已派发独立执行成员，等待真实读取证据。');
       else if(turn===3)tool('artifact-goal-inspect','cbim_goal_inspect',{});
       else if(turn===4)tool('artifact-goal-review','cbim_goal_review',goalCompleteArguments(body,'artifact-goal-inspect'));
@@ -57,5 +58,5 @@ export async function artifactBaselineProvider(){
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Artifact baseline fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},releaseMember:()=>release(),close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,bind:(agent:string,module:string,selection?:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection?structuredClone(selection):undefined},releaseMember:()=>release(),close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

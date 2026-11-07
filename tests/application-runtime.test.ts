@@ -10,6 +10,7 @@ import type {RuntimeSnapshot} from '../src/backend/core/runtime/types';
 import * as loops from '../src/backend/scheduler-engine/execution/loop-engine';
 import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
 import type {TaskSpec} from '../src/backend/core/brain/types';
+import {registerServiceOwner} from './owner-service-fixture';
 
 it('真实应用汇总两个工作区的成员及任务，幂等重试和重启不重复，关闭后不残留活动',async()=>{
   const f=await fixture();
@@ -19,8 +20,12 @@ it('真实应用汇总两个工作区的成员及任务，幂等重试和重启�
     const file=team.input.moduleId+'/module.json',definition=JSON.parse(snap.files.find(x=>x.path===file)!.text);
     definition.maintenance={bindingId:'binding',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'confirmed',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
     await wa.commit(request(snap,[{path:file,text:json(definition)},{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'Owner',team:'.cbim/team'}]})}]));
+    await registerServiceOwner(f.app,wa,team.input.agentId,[team.input.moduleId]);
     for(const id of [a.id,b.id])await f.app.dispatch('dispatch.open',{workspaceId:id,rootSessionId:'same-session',commandId:'open'});
-    const command={workspaceId:a.id,rootSessionId:'same-session',commandId:'send',expectedParentRevision:1,task:{assigneeAgentId:team.input.agentId,moduleIds:[team.input.moduleId],goal:'Verify module',acceptance:[{id:'test',text:'Tests pass'}]}};
+    const service=f.app.memberDispatch(a.id),identity={workspaceId:a.id,rootSessionId:'same-session'},scopeId='runtime-member-cycle',ownerSelection=(await service.owners.discover([team.input.moduleId])).groups[0].selection!;
+    await service.openScope(identity,scopeId,{message:'Verify module'},'runtime-main');
+    await service.goals.plan(identity,scopeId,'runtime-main','runtime-goal-plan',{expectedRevision:1,objective:'Verify module',constraints:[],criteria:[{id:'test',text:'Tests pass',kind:'evidence'}],assignments:[{agentId:team.input.agentId,moduleIds:[team.input.moduleId],ownerSelection,criterionIds:['test'],reason:'Registered owner'}],reason:'Explicit current plan'});
+    const command={...identity,scopeId,commandId:'send',expectedParentRevision:1,task:{assigneeAgentId:team.input.agentId,moduleIds:[team.input.moduleId],ownerSelection,goal:'Verify module',acceptance:[{id:'test',text:'Tests pass'}]}};
     const sent=await f.app.dispatch('dispatch.task',command);
     const snapshot=await f.app.dispatch('runtime.snapshot') as RuntimeSnapshot;
     expect(snapshot.complete).toBe(true);
@@ -32,7 +37,10 @@ it('真实应用汇总两个工作区的成员及任务，幂等重试和重启�
     await f.app.dispatch('rename',{id:a.id,name:'renamed'});
     expect(f.app.runtime.snapshot().workspaces.find(w=>w.workspaceId===a.id)?.name).toBe('renamed');
     await f.app.open(a.id,true);
-    expect(f.app.runtime.snapshot().pressure).toMatchObject({memberInstances:3,taskInstances:1,queuedDispatchTasks:1,pendingOutbox:1});
+    // 重开封存原活动周期：历史任务保留，未领取信封被明确取消且实例释放，不能伪装仍可领取。
+    expect(f.app.runtime.snapshot().pressure).toMatchObject({memberInstances:2,taskInstances:1,queuedDispatchTasks:0,pendingOutbox:0});
+    expect(f.app.runtime.snapshot().tasks.find(task=>task.taskId===sent.taskId)).toMatchObject({status:'cancelled',runIds:[]});
+    expect(f.app.runtime.snapshot().scopes.find(scope=>scope.scopeId===scopeId)).toMatchObject({status:'closed',outcome:'interrupted'});
     expect(f.app.runtime.snapshot().members.filter(m=>m.workspaceId===a.id).every(m=>!m.activityCurrent)).toBe(true);
     await f.app.stop(a.id);
     expect(f.app.runtime.snapshot().workspaces.find(w=>w.workspaceId===a.id)?.availability).toBe('closed');

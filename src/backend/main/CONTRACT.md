@@ -4,7 +4,7 @@
 
 `createMemberServices` 为 `WorkspaceMembers` 注入与派发共用的 FileDispatchStore、工作区代际及 `LlmProfiles.configuration` 公开配置端口。Application 按工作区保存该服务，关闭/重开先退役代际，原 store 排空后更换实例；岗位没有独立运行或重放生命周期。
 
-岗位只保存长期身份、名称/职责、项目适应、能力采纳及公开模型配置。此阶段不改变任何任务的角色、模型选择、会话绑定或默认执行者回退；active 不代表已经接入派发。原回执查重早于新请求的实例和来源校验，重开仍可核实旧命令，不自动重新提交。
+岗位登记保存长期身份、名称/职责、项目适应、能力采纳及公开模型配置，不直接创建运行。新业务执行从真实模块责任解析该岗位，核来源、能力和配置后冻结到计划、任务与运行；active 单独不代表可执行。原回执查重早于新请求的实例和来源校验，重开仍可核实旧命令，不自动重新提交。
 
 ## 安全等待补充的附件准备
 
@@ -75,7 +75,13 @@
 
 `createMemberServices` 在同一 DispatchStore 上构造岗位及 `ModuleOwnerships`，Application 按工作区生命周期注册和移除服务。六个桌面入口与主工具复用同一责任事务，不创建第二份责任文件，不改知识或实际派发。主运行工厂在 Runtime.beforeRun 已登记周期后，经 AutoCollaboration 的实际主工具上下文取得 scope/run 与停止屏障，再构造四工具端口；成员、CLI 和缺少真实绑定的运行不注册这些工具。
 
-桌面提交来源由 IPC 注入 local_desktop/explicit_submit；主提交来源由当前主实例、会话、周期和 toolCallId 生成。原命令优先只读恢复，未知结果不能自动换命令重做。岗位 active 状态及模块责任关系不承诺已具备实际运行配置，不改变旧默认执行者回退。
+桌面提交来源由 IPC 注入 local_desktop/explicit_submit；主提交来源由当前主实例、会话、周期和 toolCallId 生成。原命令优先只读恢复，未知结果不能自动换命令重做。岗位 active 状态及责任关系仍需实际能力、来源和模型核验；新业务缺负责人时拒绝，不回退默认执行者。
+
+## 岗位模型与正式领取
+
+`createMemberServices` 注入同一个 `OwnerExecutionService`，按 Knowledge 串行快照→模型设置短锁→DispatchStore 事务核验计划、派发、领取、检查点预约及依赖闭包。多岗位规划一次取得公开模型快照，不解密；领取在原预算和租约通过后才同步解密已经捕获的岗位配置。全部短锁释放后才构造实际 Pi 引擎，不把密钥放入 binding、Prepared、日志或工具回包。
+
+主会话选型仅供主模型。成员工厂使用冻结岗位 profile/model/hash；领取后配置修改不替换本段，后续恢复重新核原绑定。原生头的 TaskSpec 与 Prepared.memberContext 均保留同一绑定、岗位名/职责及适应内容；适应引用只是资料定位，不自动读取或授予权限。旧直接业务 loop 入口拒绝新启动，历史读取和已领取运行结算保留。
 
 ## 来源恢复与共享 Store 生命周期
 

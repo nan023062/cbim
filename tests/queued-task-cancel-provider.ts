@@ -1,3 +1,4 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -23,7 +24,7 @@ function toolText(body:Request,id:string){const message=body.messages.find(item=
 
 /** Local deterministic responses; dispatch, canonical logs, read tools and goal gates are real. */
 export async function queuedTaskCancelProvider(options:{holdContinuation?:boolean;invalidComplete?:boolean}={}){
-  const mainRequests:Request[]=[],memberRequests:Request[]=[],errors:string[]=[];let agentId='',moduleId='',releaseContinuation=()=>{};
+  const mainRequests:Request[]=[],memberRequests:Request[]=[],errors:string[]=[];let ownerSelection:OwnerExecutionSelection;let agentId='',moduleId='',releaseContinuation=()=>{};
   const continuationGate=new Promise<void>(resolve=>{releaseContinuation=resolve}),d=queuedTaskCancelFixture;
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
@@ -32,10 +33,10 @@ export async function queuedTaskCancelProvider(options:{holdContinuation?:boolea
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'queued-cancel-'+(mainRequests.length+memberRequests.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
-    const dispatch=(id:string,goal:string,prior?:string)=>tool(id,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:prior?[{taskId:prior,expectedPlanRevision:1}]:[]});
+    const dispatch=(id:string,goal:string,prior?:string)=>tool(id,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:prior?[{taskId:prior,expectedPlanRevision:1}]:[]});
     if(isMain){
       assert.ok(body.tools?.some(item=>item.function.name==='cbim_dispatch_cancel'),'主调度必须有明确撤销入口');
-      if(turn===0)tool('cancel-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.mainGoal,agentId,moduleIds:[moduleId],acceptance:d.acceptance}));
+      if(turn===0)tool('cancel-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.mainGoal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance}));
       else if(turn===1)dispatch('cancel-old-a',d.oldGoals[0]);
       else if(turn===2)dispatch('cancel-old-b',d.oldGoals[1],toolValue(body,'cancel-old-a').taskId);
       else if(turn===3)dispatch('cancel-old-c',d.oldGoals[2],toolValue(body,'cancel-old-b').taskId);
@@ -53,7 +54,7 @@ export async function queuedTaskCancelProvider(options:{holdContinuation?:boolea
       else if(turn===12){if(options.invalidComplete)reply('仅文字声称目标完成，没有合法完成审阅。');else{const {scope}=goalInspection(body,'cancel-wait-inspect');tool('cancel-wait-review','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'awaiting_user',checks:scope.goal.plan.criteria.map(criterion=>({criterionId:criterion.id,outcome:'unmet',reason:d.waitReason,evidence:[]})),superseded:[],gaps:[d.waitReason],reason:d.waitReason})}}
       else if(turn===13&&!options.invalidComplete)reply(d.waitReason);
       else if(turn===14){assert.ok(JSON.stringify(body.messages.filter(message=>message.role==='user').at(-1)?.content).includes(d.supplement));if(options.holdContinuation){emit({role:'assistant',content:d.continuationLive});await continuationGate}tool('cancel-resume-inspect','cbim_goal_inspect',{})}
-      else if(turn===15){const {scope}=goalInspection(body,'cancel-resume-inspect');tool('cancel-replan','cbim_goal_plan',{...goalPlanArguments({objective:d.mainGoal,agentId,moduleIds:[moduleId],acceptance:d.acceptance},scope.goal.revision),reason:'按用户补充新建三项任务与依赖，旧求助/撤销历史不可复活'})}
+      else if(turn===15){const {scope}=goalInspection(body,'cancel-resume-inspect');tool('cancel-replan','cbim_goal_plan',{...goalPlanArguments({objective:d.mainGoal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance},scope.goal.revision),reason:'按用户补充新建三项任务与依赖，旧求助/撤销历史不可复活'})}
       else if(turn===16)dispatch('cancel-new-a',d.newGoals[0]);
       else if(turn===17)dispatch('cancel-new-b',d.newGoals[1],toolValue(body,'cancel-new-a').taskId);
       else if(turn===18)dispatch('cancel-new-c',d.newGoals[2],toolValue(body,'cancel-new-b').taskId);
@@ -83,5 +84,5 @@ export async function queuedTaskCancelProvider(options:{holdContinuation?:boolea
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Queued task cancellation fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,releaseContinuation,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},close:async()=>{releaseContinuation();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,releaseContinuation,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection},close:async()=>{releaseContinuation();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

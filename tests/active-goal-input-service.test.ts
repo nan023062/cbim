@@ -14,13 +14,14 @@ import type {TaskSpec} from '../src/backend/core/brain/types';
 import type {DispatchCommand,DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
 import {MemberExecutionManager,type MemberExecutionPorts} from '../src/backend/scheduler-engine/execution/member-execution';
 import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/execution/workspace-lease';
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 
 const plan=(expectedRevision=1):GoalPlanInput=>({expectedRevision,objective:'维护知识',constraints:['不改业务文件'],criteria:[{id:'c1',text:'提交可追溯',kind:'evidence'}],assignments:[{agentId:'cbim:main',moduleIds:[],criterionIds:['c1'],reason:'知识治理'}],reason:'保存完整目标'});
 const review=(expectedRevision=2):GoalReviewInput=>({expectedRevision,decision:'complete',checks:[{criterionId:'c1',outcome:'satisfied',reason:'已核实',evidence:[{kind:'main-knowledge',toolCallIds:['commit']}]}],superseded:[],gaps:[],reason:'完整审阅'});
 async function setup(){
-  const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),directory=path.join(f.user,'active-input-dispatch'),store=new FileDispatchStore(directory,entry.id);
+  const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),store=workspace.dispatchStore,directory=store.directory;
   const rootSessionId='active-input-root',runId='active-input-run',identity={workspaceId:entry.id,rootSessionId},task:TaskSpec={mode:'chat',taskId:rootSessionId,workspaceId:entry.id,root:f.a,goal:'原始输入',moduleIds:[],agentId:'cbim:main',acceptance:[]};
-  const journal=new RunJournal(path.join(f.user,'active-input-log'),task,runId),service=new WorkspaceDispatchService(workspace,store,{inspectMain:()=>RunJournal.read(journal.directory),inspectMember:async()=>{throw Error('no member')}});
+  const journal=new RunJournal(path.join(f.user,'active-input-log'),task,runId),service=new WorkspaceDispatchService(workspace,store,{inspectMain:()=>RunJournal.read(journal.directory),inspectMember:async()=>{throw Error('no member')}},undefined,undefined,f.app.models);
   const binding=await service.conversationBinding(task),scope=await service.openScope(identity,'active-input-scope',{message:'原始输入'},runId);
   await journal.init();await journal.append({type:'run.started',data:{task,message:'原始输入',conversationBinding:binding}});
   const prepare=(message='新增要求',queueId:string=randomUUID(),signal=new AbortController().signal)=>service.activeInputs.prepare(identity,scope.scopeId,runId,queueId,{message},signal);
@@ -37,8 +38,10 @@ async function business(f:Awaited<ReturnType<typeof setup>>,scopeId=f.scope.scop
   const team=await seedTeam(f.workspace),snapshot=await f.workspace.snapshot(),moduleId=team.input.moduleId,definition=JSON.parse(snapshot.files.find(file=>file.path===moduleId+'/module.json')!.text);
   definition.maintenance={bindingId:'active-input-owner',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'active-input-review',source:'local_user',confirmedAt:new Date().toISOString()}};
   await f.workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:JSON.stringify(definition)}]));
-  await f.service.goals.plan(f.identity,scopeId,runId,'business-plan-'+scopeId,{expectedRevision:1,objective:'核实业务产物',constraints:[],criteria:[{id:'verified',text:'真实文件证据',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],criterionIds:['verified'],reason:'独立执行'}],reason:'新周期计划'});
-  return {...f.identity,commandId:'business-dispatch-'+scopeId,expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],goal:'核实业务产物',acceptance:[{id:'verified',text:'真实文件证据'}],prerequisites:[]}};
+  const saved=await f.app.models.save({profile:{name:'运行补充业务测试',api:'openai-completions',baseUrl:'https://example.test/v1',auth:'none',defaultModel:'test-model',models:[{id:'test-model',name:'测试',enabled:true,contextWindow:65536,maxTokens:1000,reasoning:false}]}}),profileId=saved.profiles.find(item=>item.name==='运行补充业务测试')!.id;
+  const {selection:ownerSelection}=await registerExplicitFixtureOwner(f.app,f.entry.id,{agentId:'cbim:executor',moduleIds:[moduleId],profileId,modelId:'test-model'});
+  await f.service.goals.plan(f.identity,scopeId,runId,'business-plan-'+scopeId,{expectedRevision:1,objective:'核实业务产物',constraints:[],criteria:[{id:'verified',text:'真实文件证据',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,criterionIds:['verified'],reason:'独立执行'}],reason:'新周期计划'});
+  return {...f.identity,commandId:'business-dispatch-'+scopeId,expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,goal:'核实业务产物',acceptance:[{id:'verified',text:'真实文件证据'}],prerequisites:[]}};
 }
 
 it('真实旧完成审阅后接收补充，只增版一次并清审阅，必须重新规划审阅才能完成',async()=>{
@@ -110,7 +113,7 @@ it('真实关闭unknown后同root新周期仍可规划、派发并持久领取�
     const input=await business(f,scopeId,runId),assigned=await f.service.dispatchTask(input,scopeId),lease=new WorkspaceExecutionLease();
     // 到达 create 之前已真实落盘 claim；此测试只验证领取，不伪造模型或候选执行。
     const create=vi.fn<Awaited<ReturnType<MemberExecutionPorts['prepare']>>['create']>(async()=>{throw Error('test stops after persisted claim')});
-    members=new MemberExecutionManager(f.workspace,f.store,{acquire:(key,permission,instance)=>lease.acquire(key,permission,instance),prepare:async()=>({model:{id:'test-provider',model:'test-model',name:'测试',api:'openai-completions',auth:'none',baseUrl:'https://example.test/v1',contextWindow:65536,maxTokens:1000,reasoning:false},create}),inspect:async()=>{throw Error('no model was started')}});
+    members=new MemberExecutionManager(f.workspace,f.store,{owners:f.service.owners,acquire:(key,permission,instance)=>lease.acquire(key,permission,instance),prepare:async()=>{throw Error('旧准备端口不能用于实际领取')},withEngineConfiguration:(reference,_options,use)=>f.app.models.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare:()=>({model:configuration.profile,create})})),inspect:async()=>{throw Error('no model was started')}});
     const receipt=await members.start({...f.identity,taskId:assigned.taskId,commandId:'fresh-claim',expectedRevision:1,options:{permission:'read'}});
     await members.waitForSettlement({...f.identity,taskId:assigned.taskId});
     const stored=await f.store.read(),run=stored.runs!.find(item=>item.binding.runId===receipt.runId)!;

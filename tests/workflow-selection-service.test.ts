@@ -1,3 +1,4 @@
+import {registerServiceOwner} from './owner-service-fixture';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {expect,it} from 'vitest';
@@ -26,13 +27,15 @@ async function setup(){
       return {path:moduleId+'/module.json',text:json(definition)};
     });
     await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},...changes]));
-    const directory=path.join(f.user,'workflow-dispatch'),store=new FileDispatchStore(directory,entry.id),service=new WorkspaceDispatchService(workspace,store),identity={workspaceId:entry.id,rootSessionId:'workflow-root'},scopeId='workflow-scope',runId='workflow-main';
+    const {registered}=await registerServiceOwner(f.app,workspace,'cbim:executor',moduleIds);
+    const store=workspace.dispatchStore,directory=store.directory,service=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.models),identity={workspaceId:entry.id,rootSessionId:'workflow-root'},scopeId='workflow-scope',runId='workflow-main';
     await service.openScope(identity,scopeId,{message:'选择正确流程核实模块'},runId);
+    const ownerSelection=(await service.owners.discover(moduleIds)).groups[0].selection!;
     const selections:WorkflowSelection[]=[{moduleId:team.input.moduleId,workflowId:secondId}];
-    const task={assigneeAgentId:'cbim:executor',moduleIds,goal:'按已选择流程核实两个模块',acceptance:[{id:'verified',text:'提供真实结果'}],prerequisites:[]};
-    const plan=(workflowSelections?:WorkflowSelection[],expectedRevision=1,commandId='workflow-plan')=>service.goals.plan(identity,scopeId,runId,commandId,{expectedRevision,objective:'核实目标模块',constraints:[],criteria:[{id:'verified',text:'提供真实结果',kind:'evidence'}],assignments:[{agentId:task.assigneeAgentId,moduleIds,criterionIds:['verified'],reason:'按模块执行',...(workflowSelections?{workflowSelections}:{})}],reason:'冻结本次流程选择'});
+    const task={assigneeAgentId:'cbim:executor',moduleIds,ownerSelection,goal:'按已选择流程核实两个模块',acceptance:[{id:'verified',text:'提供真实结果'}],prerequisites:[]};
+    const plan=(workflowSelections?:WorkflowSelection[],expectedRevision=1,commandId='workflow-plan')=>service.goals.plan(identity,scopeId,runId,commandId,{expectedRevision,objective:'核实目标模块',constraints:[],criteria:[{id:'verified',text:'提供真实结果',kind:'evidence'}],assignments:[{agentId:task.assigneeAgentId,moduleIds,ownerSelection,criterionIds:['verified'],reason:'按模块执行',...(workflowSelections?{workflowSelections}:{})}],reason:'冻结本次流程选择'});
     const command=(workflowSelections?:WorkflowSelection[],commandId='workflow-dispatch')=>({...identity,commandId,expectedParentRevision:1,task:{...task,...(workflowSelections?{workflowSelections}:{})}});
-    return {...f,entry,workspace,team,secondId,body,moduleIds,selections,directory,store,service,identity,scopeId,runId,task,plan,command,cleanup:async()=>{await service.close();await f.cleanup()}};
+    return {...f,entry,workspace,team,member:registered.member,secondId,body,moduleIds,selections,directory,store,service,identity,scopeId,runId,task,plan,command,cleanup:async()=>{await service.close();await f.cleanup()}};
   }catch(error){await f.cleanup();throw error}
 }
 
@@ -42,11 +45,11 @@ it('显式第二流程与部分覆盖按真实模块解析，未选模块维持�
     expect(defaults[0].workflow.id).toBe(f.team.input.workflowId);expect(defaults[1].workflow.kind).toBe('general');
     expect(selected[0].workflow).toEqual({kind:'module',id:f.secondId,version:hash(f.body)});expect(selected[1]).toEqual(defaults[1]);
     await f.plan(f.selections);const receipt=await f.service.dispatchTask(f.command(f.selections),f.scopeId),task=(await f.service.snapshot(f.identity)).tasks.find(task=>task.taskId===receipt.taskId)!;
-    const prepared=await prepareDispatchExecutionContext(f.workspace,task);
+    const prepared=await prepareDispatchExecutionContext(f.workspace,task,undefined,f.member);
     expect(prepared.modules[0]).toMatchObject({binding:selected[0],workflowText:f.body,workflowContract:{version:1,beforeEffects:{requirePlan:true}}});expect(prepared.modules[1].binding).toEqual(defaults[1]);
     expect(memberExecutionPrompt(prepared,task)).toContain(f.secondId);expect(task.workflowSelections).toEqual(f.selections);
     const forged={...task,workflowSelections:[{moduleId:f.team.input.moduleId,workflowId:f.team.input.workflowId}]};
-    await expect(prepareDispatchExecutionContext(f.workspace,forged)).rejects.toMatchObject({code:'WORKFLOW_SELECTION_INVALID'});
+    await expect(prepareDispatchExecutionContext(f.workspace,forged,undefined,f.member)).rejects.toMatchObject({code:'WORKFLOW_SELECTION_INVALID'});
     expect(()=>memberExecutionPrompt(prepared,forged)).toThrowError(expect.objectContaining({code:'WORKFLOW_SELECTION_INVALID'}));
   }finally{await f.cleanup()}
 });
@@ -105,7 +108,7 @@ it.each(['body','unmount','reorder'] as const)('派发后知识%s变化不刷新
     await f.plan(f.selections);const command=f.command(f.selections),receipt=await f.service.dispatchTask(command,f.scopeId),task=(await f.service.snapshot(f.identity)).tasks[0],snapshot=await f.workspace.snapshot(),modulePath=f.team.input.moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
     // 真实知识事务不允许留下孤立流程正文；卸载须连同原正文删除，不能靠非法 fixture 绕过规则。
     const changes=mutation==='body'?[{path:f.secondId+'/workflow.md',text:f.body+'\n流程补充\n'}]:(definition.workflows=mutation==='unmount'?definition.workflows.slice(0,1):[...definition.workflows].reverse(),[{path:modulePath,text:json(definition)},...(mutation==='unmount'?[{path:f.secondId+'/workflow.md',text:null}]:[])]);
-    await f.workspace.commit(request(snapshot,changes));await expect(prepareDispatchExecutionContext(f.workspace,task)).rejects.toMatchObject({code:'KNOWLEDGE_CHANGED'});
+    await f.workspace.commit(request(snapshot,changes));await expect(prepareDispatchExecutionContext(f.workspace,task,undefined,f.member)).rejects.toMatchObject({code:'KNOWLEDGE_CHANGED'});
     expect(await f.service.dispatchTask(command,f.scopeId)).toEqual(receipt);expect((await f.service.snapshot(f.identity)).tasks[0]).toEqual(task);
     if(mutation==='unmount')await expect(resolveDispatchModules(await f.workspace.snapshot(),f.moduleIds,f.selections)).rejects.toMatchObject({code:'WORKFLOW_SELECTION_INVALID'});
   }finally{await f.cleanup()}

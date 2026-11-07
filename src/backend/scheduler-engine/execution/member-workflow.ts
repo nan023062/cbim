@@ -1,6 +1,6 @@
 /**
  * 作用定位：在成员交付结算与主目标审阅时重算冻结 Workflow，并复核被验证文件的当前字节。
- * 设计原因：工具成功不等于结构验证通过；canonical 核验、原要求及当前文件共同约束出口。历史返工核实保留原证明，不能因文件已修改而抹掉过去的真实结果。
+ * 设计原因：工具成功不等于结构验证通过；canonical 核验包括本轮冻结岗位身份，原要求及当前文件共同约束出口。历史返工核实保留原证明，不能因文件已修改而抹掉过去的真实结果。
  * 职责边界：直接调用受限文件端口，不重入派发存储或执行脚本；仅观察选定文件，不签署业务验收或承诺跨文件原子快照。
  */
 import {fail} from '../../core/foundation/errors';
@@ -28,7 +28,7 @@ export function memberWorkflowFiles(task:TaskNode,run:DispatchRun,summary:RunSum
   const required=bindings.some(binding=>binding.contract.delivery?.requiredValidations?.length);
   if(required&&!normalizePath)fail('WORKFLOW_VALIDATION_UNAVAILABLE','本次未装配验证文件路径核实端口');
   const records=required?verifyValidationRecords(summary.events,run.binding,run.prepared.knowledgeRevision,bindings,normalizePath!):[];
-  validateWorkflowEvidence(summary.events,{workspaceId:task.identity.workspaceId,taskId:task.taskId,goal:task.goal,acceptance:task.acceptance.map(item=>item.text)},bindings,records);
+  validateWorkflowEvidence(summary.events,memberPublicTask(task,root),bindings,records);
   if(!required)return [];
   const ids=new Set(summary.taskProgress!.steps.flatMap(step=>step.evidence));
   const selected=selectWorkflowValidations(bindings,(summary.toolReceipts??[]).filter(receipt=>ids.has(receipt.toolCallId)),{workspaceId:task.identity.workspaceId,taskId:task.taskId,runId:run.binding.runId},records);

@@ -7,6 +7,7 @@ import {resolveDispatchModules} from '../src/backend/scheduler-engine/context/di
 import {prepareDispatchExecutionContext} from '../src/backend/scheduler-engine/context/execution-context';
 import type {ObjectOperation} from '../src/bridge/contracts/architecture';
 import {fixture,summary,moduleFiles,internalKnowledge} from './helpers';
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 
 const owner={id:'owner',name:'项目维护人',team:'.cbim/team'};
 const maintenance={maintainerPersonIds:['owner'],confirmed:true};
@@ -121,10 +122,14 @@ it('工作区静态定义修改不重建成员或改写两个主会话派发图�
     const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),service=new ArchitectureService(workspace);
     const initial=await identity(workspace),created=await service.preview({...initial,operations:[agentCreate,moduleCreate],peopleUpserts:[owner],maintenance});
     await service.commit({workspaceId:entry.id,instanceId:workspace.instanceId,planId:created.planId});
+    const models=await f.app.models.save({profile:{name:'Architecture dispatch fixture',api:'openai-completions',auth:'none',baseUrl:'https://example.test/v1',defaultModel:'fixture',models:[{id:'fixture',name:'fixture',enabled:true,contextWindow:65536,maxTokens:1024,reasoning:false}]}}),profile=models.profiles.find(item=>item.name==='Architecture dispatch fixture')!;
+    const registered=await registerExplicitFixtureOwner(f.app,entry.id,{agentId:'.cbim/team/developer',moduleIds:['.cbim/workspace/game'],profileId:profile.id,modelId:'fixture'}),ownerSelection=registered.selection,dispatch=f.app.memberDispatch(entry.id);
     const identities=['first-session','second-session'].map(rootSessionId=>({workspaceId:entry.id,rootSessionId}));
     for(const [index,identity] of identities.entries()){
       await f.app.dispatch('dispatch.open',{...identity,commandId:'open-'+index});
-      await f.app.dispatch('dispatch.task',{...identity,commandId:'assign-'+index,expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/developer',moduleIds:['.cbim/workspace/game'],goal:'独立会话目标 '+index,acceptance:[{id:'verified',text:'真实验证本会话目标'}]}});
+      const scope=await dispatch.openScope(identity,'architecture-scope-'+index,{message:'Independent graph probe'},'architecture-main-'+index);
+      await dispatch.goals.plan(identity,scope.scopeId,'architecture-main-'+index,'architecture-plan-'+index,{expectedRevision:1,objective:'Independent graph probe',constraints:[],criteria:[{id:'verified',text:'Actual evidence',kind:'evidence'}],assignments:[{agentId:'.cbim/team/developer',moduleIds:['.cbim/workspace/game'],ownerSelection,criterionIds:['verified'],reason:'Registered module owner'}],reason:'Freeze separate original contexts'});
+      await f.app.dispatch('dispatch.task',{...identity,scopeId:scope.scopeId,commandId:'assign-'+index,expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/developer',moduleIds:['.cbim/workspace/game'],ownerSelection,goal:'独立会话目标 '+index,acceptance:[{id:'verified',text:'真实验证本会话目标'}]}});
     }
     const graphs=structuredClone(await Promise.all(identities.map(identity=>f.app.dispatch('dispatch.graphSnapshot',{identity}))));
     const runtime=structuredClone(f.app.runtime.snapshot()),before=await workspace.snapshot();

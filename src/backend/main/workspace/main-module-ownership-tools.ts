@@ -1,6 +1,6 @@
 /**
  * 作用定位：把工作区责任服务绑定真实主运行及当前协作周期，提供四项模型窄端口。
- * 设计原因：scope 必须在 beforeRun 完成后从原批次取得；actor 和原命令由闭包生成，模型不能自报身份、权限或重放来源。
+ * 设计原因：scope 必须从 beforeRun 后原批次取得；模块责任与岗位执行发现核同一组游标，actor 和原命令由闭包生成，模型不能自报身份、权限或重放来源。
  * 停止边界：原命令查询与提交全程纳入周期在途集合；保存之后不再抛明确未受理错误，回包失败保留原 commandId。
  */
 import {fail} from '../../core/foundation/errors';
@@ -13,9 +13,11 @@ import type {MainToolContext} from '../../scheduler-engine/execution/auto-collab
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {ModuleOwnerships} from './module-ownerships';
 import type {WorkspaceMembers} from './workspace-members';
+import type {OwnerExecutionService} from '../../scheduler-engine/execution/owner-execution-service';
+import {isDeepStrictEqual} from 'node:util';
 
 /** 只在本轮 createEngine 同步工厂装配；调用方已经建立真实主 scope，未装配成员没有入口。 */
-export function mainModuleOwnershipTools(owner:KnowledgeWorkspace,service:ModuleOwnerships,members:WorkspaceMembers,task:TaskSpec,runId:string,binding:ConversationAgentBinding,context:MainToolContext):ModuleOwnershipToolsPort{
+export function mainModuleOwnershipTools(owner:KnowledgeWorkspace,service:ModuleOwnerships,members:WorkspaceMembers,task:TaskSpec,runId:string,binding:ConversationAgentBinding,context:MainToolContext,execution?:OwnerExecutionService):ModuleOwnershipToolsPort{
   const main=checkedConversationAgentBinding(binding,task),identity={workspaceId:owner.entry.id,instanceId:owner.instanceId},publicIdentity={workspaceId:owner.entry.id,rootSessionId:main.rootSessionId},fixed=Object.freeze({...context.binding});
   if(fixed.workspaceId!==owner.entry.id||fixed.rootSessionId!==main.rootSessionId||fixed.runId!==runId||task.root!==owner.entry.path)fail('OWNERSHIP_ACTOR','负责人端口与本轮真实主身份不一致');
   const current=(signal:AbortSignal)=>{signal.throwIfAborted();owner.assert(identity);context.assertCurrent(signal)};
@@ -24,6 +26,12 @@ export function mainModuleOwnershipTools(owner:KnowledgeWorkspace,service:Module
       current(signal);const input=moduleOwnerInspectInputSchema.parse(raw);
       if('members' in input){const {members:_,...query}=input,memberPage=await members.list({...identity,...query,limit:query.limit??20});current(signal);return {identity:publicIdentity,readOnly:true,selection:input,memberPage}}
       const page='moduleIds' in input?await service.inspectModules(identity,input.moduleIds):await service.byMember({...identity,...input});current(signal);
+      if('moduleIds' in input){
+        if(!execution)fail('OWNER_EXECUTION_UNAVAILABLE','本轮未装配岗位执行发现');
+        const discovered=await execution.discover(input.moduleIds);current(signal);
+        if(page.basis.knowledgeRevision!==discovered.knowledgeRevision||!isDeepStrictEqual(page.basis.memberRegistryCursor,discovered.registryCursor)||!isDeepStrictEqual(page.basis.ownershipCursor,discovered.ownershipCursor)||!isDeepStrictEqual(page.basis.sourceCursor,discovered.sourceCursor))fail('OWNER_READ_STALE','责任和执行选择在查询期间变化，请重新查询');
+        return {identity:publicIdentity,readOnly:true,selection:input,page,execution:discovered};
+      }
       return {identity:publicIdentity,readOnly:true,selection:input,page};
     },
     preview:async(raw,signal)=>{current(signal);const input=moduleOwnerPreviewInputSchema.parse(raw),preview=await service.preview({...identity,...input});current(signal);return {identity:publicIdentity,preview}},

@@ -3,6 +3,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture,request} from './helpers';
 import {seedTeam} from './team-fixture';
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
+import type {Application} from '../src/backend/main/application';
+
+async function registerExecutor(app:Application,workspaceId:string,moduleId:string){
+  const settings=await app.models.save({profile:{name:'Conversation identity fixture',api:'openai-completions',auth:'none',baseUrl:'https://example.test/v1',defaultModel:'fixture',models:[{id:'fixture',name:'fixture',enabled:true,contextWindow:200000,maxTokens:1000,reasoning:false}]}}),profile=settings.profiles.find(item=>item.name==='Conversation identity fixture')!;
+  return registerExplicitFixtureOwner(app,workspaceId,{agentId:'cbim:executor',moduleIds:[moduleId],profileId:profile.id,modelId:'fixture'});
+}
 import {json} from '../src/backend/core/foundation/serialization';
 import type {TaskSpec} from '../src/backend/core/tasks/types';
 import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/execution/workspace-lease';
@@ -36,7 +43,7 @@ it('主对话绑定可靠复用本会话根实例；不同主会话拥有独立�
   }finally{await f.cleanup()}
 });
 
-it('主实例只调度，周期默认执行者与图根实例分离；关闭周期保留图根和任务历史',async()=>{
+it('主实例只调度，显式登记的执行岗位与图根实例分离；关闭周期保留图根和任务历史',async()=>{
   const f=await fixture();try{
     const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),team=await seedTeam(workspace);
     const snapshot=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json';
@@ -45,8 +52,10 @@ it('主实例只调度，周期默认执行者与图根实例分离；关闭周�
     await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
     const task:TaskSpec={mode:'chat',taskId:'main-session',workspaceId:entry.id,root:workspace.entry.path,goal:'检查模块',agentId:'cbim:main',moduleIds:[],acceptance:[]};
     const service=f.app.memberDispatch(entry.id),binding=await service.conversationBinding(task),identity={workspaceId:entry.id,rootSessionId:task.taskId};
-    const scope=await service.openScope(identity,'user-cycle-1');
-    const input={...identity,commandId:'executor-task',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[team.input.moduleId],goal:'验证模块行为',acceptance:[{id:'verified',text:'提供验证证据'}],prerequisites:[]}};
+    const registered=await registerExecutor(f.app,entry.id,team.input.moduleId),ownerSelection=registered.selection;
+    const scope=await service.openScope(identity,'user-cycle-1',{message:'Inspect module behavior'},'conversation-probe-main');
+    await service.goals.plan(identity,scope.scopeId,'conversation-probe-main','conversation-probe-plan',{expectedRevision:1,objective:'Inspect module behavior',constraints:[],criteria:[{id:'verified',text:'Actual evidence',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[team.input.moduleId],ownerSelection,criterionIds:['verified'],reason:'Explicit executor position'}],reason:'Keep main and executor identities separate'});
+    const input={...identity,commandId:'executor-task',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[team.input.moduleId],ownerSelection,goal:'验证模块行为',acceptance:[{id:'verified',text:'提供验证证据'}],prerequisites:[]}};
     await expect(service.dispatchTask({...input,commandId:'invalid-self',task:{...input.task,assigneeAgentId:'cbim:main'}},scope.scopeId)).rejects.toMatchObject({code:'AGENT_NOT_EXECUTABLE'});
     const receipt=await service.dispatchTask(input,scope.scopeId);
     const graph=await service.snapshot(identity),executed=graph.tasks.find(item=>item.taskId===receipt.taskId)!;
@@ -74,17 +83,24 @@ it('错误角色、非聊天任务、错误路径与其他工作区不能创建�
 
 it('知识结构异常仍可登记主实例进行诊断，正式执行角色注册与派发仍拒绝无效知识',async()=>{
   const f=await fixture();try{
-    const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),snapshot=await workspace.snapshot();
+    const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),team=await seedTeam(workspace),initial=await workspace.snapshot(),moduleId=team.input.moduleId,definition=JSON.parse(initial.files.find(file=>file.path===moduleId+'/module.json')!.text);
+    definition.maintenance={bindingId:'diagnostic-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'diagnostic-review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
+    await workspace.commit(request(initial,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'Maintainer',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:json(definition)}]));
+    const registered=await registerExecutor(f.app,entry.id,moduleId),ownerSelection=registered.selection,service=f.app.memberDispatch(entry.id),identity={workspaceId:entry.id,rootSessionId:'diagnosis'};
+    const scope=await service.openScope(identity,'diagnosis-scope',{message:'Diagnose invalid knowledge'},'diagnosis-main');
+    await service.goals.plan(identity,scope.scopeId,'diagnosis-main','diagnosis-plan',{expectedRevision:1,objective:'Diagnose invalid knowledge',constraints:[],criteria:[{id:'verified',text:'Evidence',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,criterionIds:['verified'],reason:'Registered position'}],reason:'Freeze valid intent before injecting knowledge corruption'});
+    const snapshot=await workspace.snapshot();
     const invalid={...snapshot,validation:{...snapshot.validation!,structural:false}};
+    // 先建立合法岗位和计划，再在真实知识读取锁中注入损坏；避免被更早的缺 scope/岗位门禁遮蔽。
+    const original=workspace.withSourceSnapshot.bind(workspace),sourceSpy=vi.spyOn(workspace,'withSourceSnapshot').mockImplementation(use=>original(()=>use(invalid)));
     const spy=vi.spyOn(workspace,'snapshot').mockResolvedValue(invalid);
     try{
-      const service=f.app.memberDispatch(entry.id),identity={workspaceId:entry.id,rootSessionId:'diagnosis'};
       const binding=await service.conversationBinding({mode:'chat',taskId:identity.rootSessionId,workspaceId:entry.id,root:workspace.entry.path,goal:'诊断知识异常',agentId:'cbim:main',moduleIds:[],acceptance:[]});
       expect((await service.snapshot(identity)).root.agent.agentInstanceId).toBe(binding.agentInstanceId);
       await expect(service.createMember({...identity,commandId:'formal-member',agentId:'cbim:executor'})).rejects.toMatchObject({code:'KNOWLEDGE_INVALID'});
-      await expect(service.dispatchTask({...identity,commandId:'formal-task',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:['.cbim/workspace/game'],goal:'执行模块任务',acceptance:[{id:'verified',text:'验证结果'}],prerequisites:[]}})).rejects.toMatchObject({code:'KNOWLEDGE_INVALID'});
+      await expect(service.dispatchTask({...identity,commandId:'formal-task',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,goal:'执行模块任务',acceptance:[{id:'verified',text:'验证结果'}],prerequisites:[]}},scope.scopeId)).rejects.toMatchObject({code:'KNOWLEDGE_INVALID'});
       expect((await service.snapshot(identity)).tasks).toEqual([]);
-    }finally{spy.mockRestore()}
+    }finally{spy.mockRestore();sourceSpy.mockRestore()}
   }finally{await f.cleanup()}
 });
 

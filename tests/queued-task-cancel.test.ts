@@ -10,7 +10,8 @@ import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-
 import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
 import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
 import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
-import {MemberExecutionManager} from '../src/backend/scheduler-engine/execution/member-execution';
+import {MemberExecutionManager,type PreparedEngine} from '../src/backend/scheduler-engine/execution/member-execution';
+import {registerFixtureOwner} from './owner-execution-fixture';
 import {LoopRuntime} from '../src/backend/core/brain/runtime';
 import type {TaskSpec} from '../src/backend/core/brain/types';
 import type {DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
@@ -19,17 +20,20 @@ async function setup(){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),owner=f.app.workspace(entry.id),team=await seedTeam(owner),snapshot=await owner.snapshot(),moduleId=team.input.moduleId;
   const definition=JSON.parse(snapshot.files.find(item=>item.path===moduleId+'/module.json')!.text);definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
   await owner.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:json(definition)}]));
-  const directory=path.join(f.temp,'cancel-queue'),store=new FileDispatchStore(directory,entry.id),storage=new FileRunStorage(),identity={workspaceId:entry.id,rootSessionId:'main-root'},scopeId='cycle',runId='main-run';
-  let journal:RunJournal;const service=new WorkspaceDispatchService(owner,store,{inspectMain:()=>RunJournal.read(journal.directory),inspectMember:run=>storage.read(path.join(directory,'runs',run.binding.taskId,run.binding.runId))});
+  const saved=await f.app.models.save({profile:{name:'撤销竞争执行岗位',api:'openai-completions',baseUrl:'https://example.test/v1',auth:'none',defaultModel:'fixture',models:[{id:'fixture',name:'fixture',enabled:true,contextWindow:200000,maxTokens:1000,reasoning:false,vision:false}]}}),profileId=saved.profiles.find(item=>item.name==='撤销竞争执行岗位')!.id;
+  await registerFixtureOwner(f.app,entry.id,{agentId:'cbim:executor',moduleIds:[moduleId],profileId,modelId:'fixture',name:'撤销竞争岗位',adaptation:{instructions:'只处理分配模块的明确任务。',references:[]}});
+  const store=owner.dispatchStore,directory=store.directory,model=await f.app.models.configuration(profileId,'fixture'),storage=new FileRunStorage(),identity={workspaceId:entry.id,rootSessionId:'main-root'},scopeId='cycle',runId='main-run';
+  let journal:RunJournal;const service=new WorkspaceDispatchService(owner,store,{inspectMain:()=>RunJournal.read(journal.directory),inspectMember:run=>storage.read(path.join(directory,'runs',run.binding.taskId,run.binding.runId))},undefined,undefined,f.app.models);
   const task:TaskSpec={mode:'chat',taskId:identity.rootSessionId,workspaceId:entry.id,root:f.a,goal:'完成目标',agentId:'cbim:main',moduleIds:[],acceptance:[]},binding=await service.conversationBinding(task);
   await service.openScope(identity,scopeId,{message:'完成明确业务目标'});journal=new RunJournal(path.join(directory,'main'),task,runId);await journal.init();await journal.append({type:'run.started',data:{task,conversationBinding:binding}});
-  const plan={expectedRevision:1,objective:'完成明确业务目标',constraints:[],criteria:[{id:'artifact',text:'真实产物',kind:'evidence' as const}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],criterionIds:['artifact'],reason:'按模块执行'}],reason:'按图派发'};
+  const ownerSelection=(await service.owners.discover([moduleId])).groups[0].selection!;
+  const plan={expectedRevision:1,objective:'完成明确业务目标',constraints:[],criteria:[{id:'artifact',text:'真实产物',kind:'evidence' as const}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,criterionIds:['artifact'],reason:'按模块执行'}],reason:'按图派发'};
   await service.goals.plan(identity,scopeId,runId,'goal-plan',plan);let count=0;
-  const assign=(prerequisites:string[]=[])=>service.dispatchTask({...identity,commandId:'assign-'+(++count),expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],goal:'工作'+count,acceptance:[{id:'artifact',text:'真实产物'}],prerequisites:prerequisites.map(taskId=>({taskId,expectedPlanRevision:1}))}},scopeId);
+  const assign=(prerequisites:string[]=[])=>service.dispatchTask({...identity,commandId:'assign-'+(++count),expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,goal:'工作'+count,acceptance:[{id:'artifact',text:'真实产物'}],prerequisites:prerequisites.map(taskId=>({taskId,expectedPlanRevision:1}))}},scopeId);
   const a=await assign(),b=await assign([a.taskId]),c=await assign([b.taskId]);
   const input=async(ids=[b.taskId,c.taskId])=>{const graph=await service.snapshot(identity);return {expectedGraphCursor:{streamId:graph.cursor.streamId,seq:graph.cursor.seq},targets:ids.map(taskId=>({taskId,expectedRevision:graph.tasks.find(task=>task.taskId===taskId)!.revision})),reason:'缺少上游输入，撤销未启动依赖并等待补充'}};
   const cancel=(draft:Awaited<ReturnType<typeof input>>,commandId='cancel-one')=>service.cancelQueued(identity,scopeId,runId,commandId,draft);
-  return {...f,entry,owner,directory,store,storage,identity,scopeId,runId,service,journal,plan,a,b,c,assign,input,cancel,cleanup:async()=>{await service.close();await f.cleanup()}};
+  return {...f,entry,owner,directory,store,storage,model,identity,scopeId,runId,service,journal,plan,a,b,c,assign,input,cancel,cleanup:async()=>{await service.close();await f.cleanup()}};
 }
 
 it('B→C必须显式完整撤销，节点/信封/待办原子提交，幂等与重放不启动或改写历史',async()=>{
@@ -107,8 +111,10 @@ it('持久事务不能遗漏依赖后继、顺带改目标、伪造领取或重�
 it('领取与撤销竞争只有一个提交者；已登记运行绝不改称未启动撤销',async()=>{
   for(const winner of ['cancel','start'] as const){const f=await setup();let wake=()=>{},releasePrepare=()=>{};let members:MemberExecutionManager|undefined;try{
     const target=await f.assign(),draft=await f.input([target.taskId]);let preparing=()=>{};const prepareReached=new Promise<void>(resolve=>{preparing=resolve}),prepareGate=new Promise<void>(resolve=>{releasePrepare=resolve});
-    const model={id:'fixture',model:'fixture',name:'fixture',api:'openai-completions' as const,auth:'api-key' as const,baseUrl:'https://example.test/v1',contextWindow:200000,maxTokens:1000,reasoning:false};
-    members=new MemberExecutionManager(f.owner,f.store,{acquire:()=>()=>{},inspect:run=>f.storage.read(path.join(f.directory,'runs',run.binding.taskId,run.binding.runId)),prepare:async()=>{preparing();if(winner==='start')await prepareGate;return {model,create:async(_run,_task,hooks)=>new LoopRuntime({storage:f.storage,directory:path.join(f.directory,'runs'),acquireLease:async()=>()=>{},onEngineReady:hooks.onEngineReady,onEvent:hooks.onEvent,toolPolicy:async()=>({allow:true}),createEngine:()=>({kind:'cancel-race',start:async context=>context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:path.join(f.directory,'native-'+context.nativeSessionId)}}),run:()=>new Promise(resolve=>{wake=()=>resolve({status:'cancelled'})}),stop:async()=>wake(),close:async()=>{}})})}}});await members.initialize();
+    // 在实际领取事务的岗位核验中暂停，保持原用例“领取先占事务、撤销随后竞争”的顺序。
+    const verify=f.service.owners.verifyTask.bind(f.service.owners);vi.spyOn(f.service.owners,'verifyTask').mockImplementation(async(...args)=>{const binding=await verify(...args);preparing();if(winner==='start')await prepareGate;return binding});
+    const prepare=():PreparedEngine=>({model:f.model,create:async(_run,_task,hooks)=>new LoopRuntime({storage:f.storage,directory:path.join(f.directory,'runs'),acquireLease:async()=>()=>{},onEngineReady:hooks.onEngineReady,onEvent:hooks.onEvent,toolPolicy:async()=>({allow:true}),createEngine:()=>({kind:'cancel-race',start:async context=>context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:path.join(f.directory,'native-'+context.nativeSessionId)}}),run:()=>new Promise(resolve=>{wake=()=>resolve({status:'cancelled'})}),stop:async()=>wake(),close:async()=>{}})})});
+    members=new MemberExecutionManager(f.owner,f.store,{acquire:()=>()=>{},inspect:run=>f.storage.read(path.join(f.directory,'runs',run.binding.taskId,run.binding.runId)),owners:f.service.owners,prepare:async()=>prepare(),withEngineConfiguration:(reference,_options,use)=>f.app.models.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare}))});await members.initialize();
     const start=()=>members!.start({...f.identity,taskId:target.taskId,expectedRevision:1,commandId:'start-race',options:{permission:'read'}});
     if(winner==='cancel'){await f.cancel(draft,'cancel-race');await expect(start()).rejects.toMatchObject({code:'GRAPH_REVISION_CONFLICT'});expect((await members.inspect({...f.identity,taskId:target.taskId})).runs).toEqual([])}
     else {const launched=start();await prepareReached;const cancellation=f.cancel(draft,'cancel-race');releasePrepare();await launched;await expect(cancellation).rejects.toMatchObject({code:'CANCEL_GRAPH_STALE'});const view=await members.inspect({...f.identity,taskId:target.taskId});expect(view.runs).toHaveLength(1);expect(view.task.cancelledBeforeStart).toBeUndefined();await members.stop({...f.identity,taskId:target.taskId});await members.waitForSettlement({...f.identity,taskId:target.taskId});await expect(f.cancel(await f.input([target.taskId]),'after-run')).rejects.toMatchObject({code:'CANCEL_NOT_ALLOWED'})}

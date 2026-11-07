@@ -1,3 +1,4 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -21,7 +22,7 @@ type ProviderRequest=GoalFixtureRequest&{model:string;tools?:{function:{name:str
 /** Model transport fixture only: native Pi, tool authorization, evidence and continuation records are real. */
 export async function scopeContinuationProvider(options:{holdContinuation?:boolean;waitAgain?:boolean}={}){
   const mainRequests:ProviderRequest[]=[],memberRequests:ProviderRequest[]=[],errors:string[]=[];
-  let agentId='',moduleId='',releaseContinuation=()=>{};
+  let ownerSelection:OwnerExecutionSelection|undefined;let agentId='',moduleId='',releaseContinuation=()=>{};
   const continuationGate=new Promise<void>(resolve=>{releaseContinuation=resolve});
   const server=http.createServer(async(req,res)=>{
     try{
@@ -34,8 +35,8 @@ export async function scopeContinuationProvider(options:{holdContinuation?:boole
       const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
       const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
       if(isMain){
-        if(turn===0)tool('continue-goal-plan','cbim_goal_plan',goalPlanArguments({objective:continuationFixture.mainGoal,agentId,moduleIds:[moduleId],acceptance:continuationFixture.acceptance}));
-        else if(turn===1)tool('continue-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:continuationFixture.memberGoal,acceptance:continuationFixture.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+        if(turn===0)tool('continue-goal-plan','cbim_goal_plan',goalPlanArguments({objective:continuationFixture.mainGoal,agentId,ownerSelection,moduleIds:[moduleId],acceptance:continuationFixture.acceptance}));
+        else if(turn===1)tool('continue-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:continuationFixture.memberGoal,acceptance:continuationFixture.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
         else if(turn===2)reply('成员已派发，等待读取结果。');
         else if(turn===3)tool('continue-wait-inspect','cbim_goal_inspect',{});
         else if(turn===4){const review=goalCompleteArguments(body,'continue-wait-inspect');tool('continue-wait-review','cbim_goal_review',{...review,decision:'awaiting_user',gaps:[continuationFixture.waitReason],reason:continuationFixture.waitReason})}
@@ -51,7 +52,7 @@ export async function scopeContinuationProvider(options:{holdContinuation?:boole
         }else if(turn===8){
           const result=body.messages.find(message=>message.role==='tool'&&message.tool_call_id==='continue-stale-review');assert.ok(result&&JSON.stringify(result.content).includes('GOAL_REPLAN_REQUIRED'),'补充后旧计划必须拒绝直接完成审阅');
           const {scope}=goalInspection(body,'continue-before-plan');
-          tool('continue-replan','cbim_goal_plan',{...goalPlanArguments({objective:continuationFixture.mainGoal,agentId,moduleIds:[moduleId],acceptance:continuationFixture.acceptance},scope.goal.revision),constraints:['仅汇报已核实的文件事实','使用用户补充的简短列表格式'],reason:'根据已登记的用户补充重新核对计划；不授予人工验收'});
+          tool('continue-replan','cbim_goal_plan',{...goalPlanArguments({objective:continuationFixture.mainGoal,agentId,ownerSelection,moduleIds:[moduleId],acceptance:continuationFixture.acceptance},scope.goal.revision),constraints:['仅汇报已核实的文件事实','使用用户补充的简短列表格式'],reason:'根据已登记的用户补充重新核对计划；不授予人工验收'});
         }else if(turn===9)tool('continue-after-plan','cbim_goal_inspect',{});
         else if(turn===10){const review=goalCompleteArguments(body,'continue-after-plan');tool('continue-final-review','cbim_goal_review',options.waitAgain?{...review,decision:'awaiting_user',gaps:['还需要补充列表标题'],reason:'第二个明确补充请求'}:review)}
         else if(turn===11)reply(options.waitAgain?'补充已登记，还需要列表标题。':continuationFixture.final);
@@ -69,5 +70,5 @@ export async function scopeContinuationProvider(options:{holdContinuation?:boole
     }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Scope continuation fixture failed')}
   });
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},releaseContinuation,close:async()=>{releaseContinuation();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,bind:(agent:string,module:string,selection?:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection?structuredClone(selection):undefined},releaseContinuation,close:async()=>{releaseContinuation();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

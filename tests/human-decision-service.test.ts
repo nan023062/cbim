@@ -77,7 +77,7 @@ it('读取期间知识或canonical发生变化不拼接证明，原目标与决�
     f.inspect.mockImplementation(async run=>{const summary=await f.read(run);if(++reads>1)summary.events.at(-1)!.time='2026-11-07T00:00:00.000Z';return summary});
     await expect(f.service.humanDecisions.decide(input,f.actor)).rejects.toMatchObject({code:'HUMAN_STALE'});expect(await f.store.read()).toEqual(before);
     f.inspect.mockImplementation(f.read);f.checkFiles.mockImplementation(async(files,signal)=>{const result=await f.files.checkFiles(files,signal),snapshot=await f.workspace.snapshot();await f.workspace.commit(request(snapshot,[{path:'.cbim/README.md',text:'# 新知识版本'}]));return result});
-    await expect(f.service.humanDecisions.decide(input,f.actor)).rejects.toMatchObject({code:'HUMAN_KNOWLEDGE_CHANGED'});expect(await f.store.read()).toEqual(before);
+    await expect(f.service.humanDecisions.decide(input,f.actor)).rejects.toMatchObject({code:'HUMAN_KNOWLEDGE_CHANGED'});const after=await f.store.read();expect(after.graphs).toEqual(before.graphs);expect(after.runs).toEqual(before.runs);expect(after.scopes).toEqual(before.scopes);expect(await f.service.humanDecisions.inspect({...f.identity,scopeId:f.scopeId,commandId:input.commandId})).toBeUndefined();
   }finally{await f.cleanup()}
 });
 

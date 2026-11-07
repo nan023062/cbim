@@ -1,11 +1,12 @@
 /**
  * 作用定位：定义调度周期目标的原始输入、版本化计划、审阅证据和持久化转换规则。
- * 设计原因：计划与模型回合分离，原始需求不可改写；目标分配保留可选模块 Workflow 选择，显式补充使旧计划过期，审阅引用真实运行，重放同样限制版本演进。
+ * 设计原因：计划与模型回合分离，原始需求不可改写；业务分配保留负责人选择及可信绑定、可选 Workflow，显式补充使旧计划过期，历史缺省不伪造新身份。
  * 职责边界：主角色可管理模块知识但不能声明执行 Workflow；人工满足项须引用真实决定及显式接续，运行、知识、文件和批准归属仍由调度服务重核，complete 仅是申请。
  */
 import {z} from 'zod';
 import {workflowSelectionsSchema,validateWorkflowSelections,type WorkflowSelection} from './workflow-selection';
 import {fail} from '../foundation/errors';
+import {ownerExecutionSelectionSchema,ownerExecutionBindingSchema,ownerExecutionSelectionMatches} from '../team/member-execution-binding';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
 const text=z.string().trim().min(1).max(16000);
@@ -18,9 +19,10 @@ export const scopeGoalDecisionLimit=64;
 export interface DispatchScopeInput {message:string;attachmentIds?:string[]}
 export const dispatchScopeInputSchema=z.object({message,attachmentIds:attachments.optional()}).strict();
 const criterion=z.object({id,text,kind:z.enum(['evidence','human'])}).strict();
-const assignmentFields=z.object({agentId:id,moduleIds:z.array(id).max(50).refine(unique),workflowSelections:workflowSelectionsSchema.optional(),criterionIds:z.array(id).min(1).max(50).refine(unique),reason:text}).strict();
+const assignmentFields=z.object({agentId:id,moduleIds:z.array(id).max(50).refine(unique),workflowSelections:workflowSelectionsSchema.optional(),ownerSelection:ownerExecutionSelectionSchema.optional(),criterionIds:z.array(id).min(1).max(50).refine(unique),reason:text}).strict();
 const assignmentSelection=(value:{agentId:string;moduleIds:string[];workflowSelections?:WorkflowSelection[]},context:z.RefinementCtx)=>{try{validateWorkflowSelections(value.moduleIds,value.workflowSelections)}catch{context.addIssue({code:'custom',message:'Workflow 选择不属于目标分配的模块'})}if(value.agentId==='cbim:main'&&value.workflowSelections!==undefined)context.addIssue({code:'custom',message:'主调度知识治理不能声明执行业务 Workflow'})};
-const assignment=assignmentFields.superRefine(assignmentSelection);
+// 旧原命令仍可按相同输入查回执；新业务计划的必需选择由工具、服务和 Store 新协议共同限制。
+const assignment=assignmentFields.superRefine((value,context)=>{assignmentSelection(value,context);if(value.agentId==='cbim:main'?value.ownerSelection!==undefined:value.ownerSelection&&(value.ownerSelection.expectedOwners.length!==value.moduleIds.length||!value.moduleIds.every(id=>value.ownerSelection!.expectedOwners.some(owner=>owner.moduleId===id))))context.addIssue({code:'custom',message:'业务分配的负责人选择必须精确覆盖模块，主治理不得携带业务选择'})});
 /** 工具不能指定周期、运行身份或知识版本；这些字段由可信调用入口和知识服务注入。 */
 export const goalPlanInputSchema=z.object({expectedRevision:revision,objective:text,constraints:z.array(text).max(50),criteria:z.array(criterion).min(1).max(50),assignments:z.array(assignment).min(1).max(100),reason:text}).strict();
 const memberEvidence=z.object({kind:z.literal('member-result'),taskId:id,runId:id,resultId:id,planRevision:z.number().int().positive(),toolCallIds:z.array(id).min(1).max(100).refine(unique)}).strict();
@@ -39,7 +41,12 @@ const cursor=z.object({streamId:id,seq:z.number().int().nonnegative()}).strict()
 const inputRevision=z.number().int().min(1).max(32);
 const stamp={revision,inputRevision:inputRevision.optional(),runId:id,recordedAt:z.string().datetime(),knowledgeRevision:id,graphCursor:cursor};
 /** 已解析角色及模块的知识基线；显式流程选择保留输入，缺省不补值，不复制 Skill 正文或密钥。 */
-const resolvedAssignment=assignmentFields.extend({agentName:text,teamId:id,moduleNames:z.array(text).max(50)}).strict().superRefine(assignmentSelection);
+const resolvedAssignment=assignmentFields.extend({agentName:text,teamId:id,moduleNames:z.array(text).max(50),ownerBinding:ownerExecutionBindingSchema.optional()}).strict().superRefine((value,context)=>{
+  assignmentSelection(value,context);
+  if(value.agentId==='cbim:main'?(value.ownerSelection!==undefined||value.ownerBinding!==undefined):value.ownerSelection!==undefined||value.ownerBinding!==undefined){
+    if(value.agentId==='cbim:main'||!value.ownerSelection||!value.ownerBinding||!ownerExecutionSelectionMatches(value.ownerSelection,value.ownerBinding)||value.ownerBinding.capability.agentId!==value.agentId||value.ownerBinding.capability.teamId!==value.teamId||value.ownerBinding.owners.length!==value.moduleIds.length||!value.moduleIds.every(id=>value.ownerBinding!.owners.some(owner=>owner.moduleId===id)))context.addIssue({code:'custom',message:'目标分配的可信负责人绑定与原选择不一致'});
+  }
+});
 const plan=goalPlanInputSchema.omit({expectedRevision:true,assignments:true}).extend({...stamp,assignments:z.array(resolvedAssignment).min(1).max(100)}).strict();
 const review=goalReviewInputSchema.omit({expectedRevision:true}).extend({...stamp,planRevision:revision,observedSeq:z.number().int().nonnegative(),lastEffectSeq:z.number().int().nonnegative()}).strict();
 /** 缺省整个 goal 只兼容旧周期；不能给已有旧记录猜测或补造原始输入。 */

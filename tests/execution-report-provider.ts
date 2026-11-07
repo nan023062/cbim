@@ -1,3 +1,4 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -17,7 +18,7 @@ type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]}
 /** Only model transport is deterministic: native bash/read, policy, receipts and disk effects remain real. */
 export async function executionReportProvider(options:{success?:boolean;hold?:boolean}={}){
   const mainRequests:Request[]=[],memberRequests:Request[]=[],errors:string[]=[];
-  let agentId='',moduleId='',release=()=>{};
+  let ownerSelection:OwnerExecutionSelection|undefined;let agentId='',moduleId='',release=()=>{};
   const gate=new Promise<void>(resolve=>{release=resolve});
   const server=http.createServer(async(req,res)=>{
     try{
@@ -30,8 +31,8 @@ export async function executionReportProvider(options:{success?:boolean;hold?:bo
       const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
       const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
       if(isMain){
-        if(turn===0)tool('report-plan','cbim_goal_plan',goalPlanArguments({objective:reportFixture.mainGoal,agentId,moduleIds:[moduleId],acceptance:reportFixture.acceptance}));
-        else if(turn===1)tool('report-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:reportFixture.memberGoal,acceptance:reportFixture.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+        if(turn===0)tool('report-plan','cbim_goal_plan',goalPlanArguments({objective:reportFixture.mainGoal,agentId,ownerSelection,moduleIds:[moduleId],acceptance:reportFixture.acceptance}));
+        else if(turn===1)tool('report-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:reportFixture.memberGoal,acceptance:reportFixture.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
         else if(turn===2)reply('已派发，等待真实工具结果。');
         else if(turn===3)tool('report-inspect','cbim_goal_inspect',{});
         else if(turn===4){
@@ -61,5 +62,5 @@ export async function executionReportProvider(options:{success?:boolean;hold?:bo
     }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Execution report fixture failed')}
   });
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,release,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,release,bind:(agent:string,module:string,selection?:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection?structuredClone(selection):undefined},close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

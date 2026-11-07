@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture,request} from './helpers';
 import {seedTeam} from './team-fixture';
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {hash,json} from '../src/backend/core/foundation/serialization';
 import {jsonToolResult} from '../src/backend/core/tools/results';
 import {memberHelpInputSchema} from '../src/backend/core/tasks/member-help';
@@ -19,13 +20,15 @@ async function setup(mode:'help'|'hold'|'failed'|'close-error'|'write-first'|'po
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),owner=f.app.workspace(entry.id),team=await seedTeam(owner),snapshot=await owner.snapshot(),moduleId=team.input.moduleId;
   const definition=JSON.parse(snapshot.files.find(item=>item.path===moduleId+'/module.json')!.text);definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
   await owner.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:json(definition)}]));
-  const directory=path.join(f.temp,'help'),store=new FileDispatchStore(directory,entry.id),storage=new FileRunStorage(),identity={workspaceId:entry.id,rootSessionId:'main-root'},service=new WorkspaceDispatchService(owner,store);
+  const settings=await f.app.models.save({profile:{name:'Help service fixture',api:'openai-completions',auth:'none',baseUrl:'https://example.test/v1',defaultModel:'fixture',models:[{id:'fixture',name:'fixture',enabled:true,contextWindow:200000,maxTokens:1000,reasoning:false}]}}),profile=settings.profiles.find(item=>item.name==='Help service fixture')!;
+  const registered=await registerExplicitFixtureOwner(f.app,entry.id,{agentId:'cbim:executor',moduleIds:[moduleId],profileId:profile.id,modelId:'fixture'}),ownerSelection=registered.selection,model=await f.app.models.configuration(profile.id,'fixture');
+  // 登记、模块责任、派发和领取共享唯一真实账本；仅引擎事件由本测试受控地产生。
+  const store=owner.dispatchStore,directory=store.directory,storage=new FileRunStorage(),identity={workspaceId:entry.id,rootSessionId:'main-root'},service=new WorkspaceDispatchService(owner,store,undefined,undefined,undefined,f.app.models);
   await service.openScope(identity,'cycle',{message:'完成明确业务目标'});
-  await service.goals.plan(identity,'cycle','main-run','goal-plan',{expectedRevision:1,objective:'完成明确业务目标',constraints:[],criteria:[{id:'artifact',text:'真实产物',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],criterionIds:['artifact'],reason:'由执行成员实现'}],reason:'按业务图与团队图派发'});
+  await service.goals.plan(identity,'cycle','main-run','goal-plan',{expectedRevision:1,objective:'完成明确业务目标',constraints:[],criteria:[{id:'artifact',text:'真实产物',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,criterionIds:['artifact'],reason:'由执行成员实现'}],reason:'按业务图与团队图派发'});
   let wake=()=>{},stagedResolve=()=>{},closed=0;const staged=new Promise<void>(resolve=>{stagedResolve=resolve});
-  const model={id:'fixture',model:'fixture',name:'fixture',api:'openai-completions' as const,auth:'api-key' as const,baseUrl:'https://example.test/v1',contextWindow:200000,maxTokens:1000,reasoning:false};
   const inspect=vi.fn<MemberExecutionPorts['inspect']>(run=>storage.read(path.join(directory,'runs',run.binding.taskId,run.binding.runId)));
-  const prepare=vi.fn<MemberExecutionPorts['prepare']>(async()=>({model,create:async(_run,_task,hooks)=>{
+  const prepare=vi.fn<()=>Awaited<ReturnType<MemberExecutionPorts['prepare']>>>(()=>({model,create:async(_run,_task,hooks)=>{
     let context:EngineContext;return new LoopRuntime({storage,directory:path.join(directory,'runs'),acquireLease:async()=>()=>{},onEngineReady:hooks.onEngineReady,onEvent:hooks.onEvent,toolPolicy:async call=>({allow:true,effects:[call.name==='read'?'read':call.name==='write'?'business-write':'maintenance'],scope:{kind:'workspace',workspaceId:entry.id}}),createEngine:()=>({kind:'help-fixture',start:async value=>{context=value;await context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:path.join(directory,'native-'+context.nativeSessionId+'.jsonl')}})},stop:async()=>wake(),close:async()=>{closed++;if(mode==='close-error')throw Error('close failed')},run:async()=>{
       if(mode==='write-first'){expect((await context.beforeTool({id:'write-1',name:'write',input:{path:'marker.txt',content:'once'}})).allow).toBe(true);await fs.writeFile(path.join(f.a,'marker.txt'),'once');await context.emit({type:'tool.finished',data:{id:'write-1',name:'write',result:jsonToolResult('write',{written:true}),isError:false}})}
       const read={id:'read-1',name:'read',input:{path:'src/app.ts'}};expect((await context.beforeTool(read)).allow).toBe(true);await context.emit({type:'tool.finished',data:{id:read.id,name:read.name,result:jsonToolResult('read',{verified:true}),isError:false}});
@@ -36,8 +39,8 @@ async function setup(mode:'help'|'hold'|'failed'|'close-error'|'write-first'|'po
       return {status:mode==='failed'?'failed':'completed'};
     }})});
   }}));
-  const release=vi.fn(),members=new MemberExecutionManager(owner,store,{acquire:()=>release,prepare,inspect});await members.initialize();let index=0;
-  const assign=()=>service.dispatchTask({...identity,commandId:'assign-'+(++index),expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],goal:'完成业务目标',acceptance:[{id:'artifact',text:'真实产物'}],prerequisites:[]}},'cycle');
+  const release=vi.fn(),members=new MemberExecutionManager(owner,store,{acquire:()=>release,prepare:async()=>prepare(),owners:service.owners,withEngineConfiguration:(reference,_options,use)=>f.app.models.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare})),inspect});await members.initialize();let index=0;
+  const assign=()=>service.dispatchTask({...identity,commandId:'assign-'+(++index),expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,goal:'完成业务目标',acceptance:[{id:'artifact',text:'真实产物'}],prerequisites:[]}},'cycle');
   const assigned=await assign(),input={...identity,taskId:assigned.taskId};
   const start=()=>members.start({...input,commandId:'start',expectedRevision:1,options:{permission:mode==='write-first'?'execute':'read'}});
   return {...f,owner,entry,identity,directory,store,storage,service,members,inspect,prepare,assigned,input,assign,start,staged,release,get closed(){return closed},cleanup:async()=>{wake();await members.close();await service.close();await f.cleanup()}};

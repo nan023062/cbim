@@ -1,6 +1,6 @@
 /**
  * 作用定位：为已派发成员任务冻结完整执行知识和各模块可选 Workflow 程序约定，并在启动、恢复或未启动依赖替换前复核基线。
- * 设计原因：任务图引用不足以恢复执行知识；从同一快照按任务原 Workflow 选择装配正文并核完整绑定，不能改选或刷新旧任务。正式业务任务均限制为执行者，权限和模型仍由可信入口独立处理。
+ * 设计原因：任务图引用不足以恢复执行知识；从同一快照按原 Workflow 与岗位绑定冻结原则、有效 Skill、岗位职责和适应内容，不能改选或刷新旧任务。引用文字不自动读取，权限和模型由可信领取入口处理。
  * 职责边界：只读知识与应用内置规范，不运行成员、不写任务图；维护关系和指引正文都不能扩大工具权限。
  */
 import {hash} from '../../core/foundation/serialization';
@@ -8,6 +8,8 @@ import {fail} from '../../core/foundation/errors';
 import {data} from '../../core/knowledge/snapshot';
 import {Builtins} from '../../core/knowledge/builtins';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
+import type {Snapshot} from '../../core/knowledge/types';
+import type {WorkspaceMember} from '../../core/team/workspace-member';
 import {BusinessWorkspace} from '../../core/workspace/model';
 import type {TaskNode} from '../../core/tasks/graph-types';
 import {dispatchKnowledgeFingerprint,validatePreparedDispatchKnowledge,type PreparedDispatchKnowledge} from '../../core/tasks/execution-context';
@@ -38,10 +40,10 @@ function body(value:{available:boolean;text?:unknown},subject:string):string{
  * 只为已派发任务准备知识；按持久化原选择解析，所有模块须匹配派发时的知识版本及维护/Workflow 绑定。
  * 读取结束前再次核对知识和内置规范，返回独立的可序列化快照；缺失正文不降级为其他流程。
  */
-export async function prepareDispatchExecutionContext(workspace:DispatchKnowledgeWorkspace,task:TaskNode):Promise<PreparedDispatchKnowledge>{
+export async function prepareDispatchExecutionContext(workspace:DispatchKnowledgeWorkspace,task:TaskNode,fixedSnapshot?:Snapshot,member?:WorkspaceMember):Promise<PreparedDispatchKnowledge>{
   workspace.assert();
   if(task.identity.workspaceId!==workspace.entry.id)fail('GRAPH_IDENTITY_MISMATCH','成员任务不属于当前工作区');
-  const snapshot=await workspace.snapshot();
+  const snapshot=fixedSnapshot??await workspace.snapshot();
   if(snapshot.workspaceId!==workspace.entry.id)fail('GRAPH_IDENTITY_MISMATCH','知识快照不属于当前工作区');
   if(!task.modules.length||task.modules.some(module=>module.knowledgeRevision!==snapshot.revision))fail('KNOWLEDGE_CHANGED','派发后的知识版本已经变化，请核实后重新准备任务');
   const agent=await resolveDispatchAgent(snapshot,task.assignee.agentId);
@@ -64,7 +66,9 @@ export async function prepareDispatchExecutionContext(workspace:DispatchKnowledg
     return {binding,definition:module.definition,overview,workflowText,...(workflowContract?{workflowContract}:{})};
   }));
   const agentDefinition=agent.source==='workspace'?data(snapshot,agent.agentId+'/agent.json'):{...defaultExecutorDefinition};
-  const content={version:1 as const,workspaceId:workspace.entry.id,knowledgeRevision:snapshot.revision,agent,agentDefinition,modules,standards};
+  if(task.ownerBinding&&(!member||member.memberId!==task.ownerBinding.memberId||member.revision!==task.ownerBinding.memberRevision))fail('OWNER_BINDING_STALE','准备执行知识缺少原岗位的精确登记');
+  const content={version:1 as const,workspaceId:workspace.entry.id,knowledgeRevision:snapshot.revision,agent,agentDefinition,modules,standards,
+    ...(task.ownerBinding&&member?{memberContext:{binding:structuredClone(task.ownerBinding),name:member.name,position:member.position,adaptation:structuredClone(member.adaptation)}}:{})};
   const prepared:PreparedDispatchKnowledge=structuredClone({...content,fingerprint:dispatchKnowledgeFingerprint(content)});
   await recheckDispatchExecutionContext(workspace,prepared);
   return prepared;

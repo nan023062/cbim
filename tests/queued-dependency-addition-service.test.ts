@@ -10,6 +10,7 @@ import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-
 import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
 import {DispatchTools} from '../src/backend/scheduler-engine/tools/dispatch-tools';
 import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
+import {registerServiceOwner} from './owner-service-fixture';
 
 function deferred(){let resolve!:()=>void;const promise=new Promise<void>(r=>{resolve=r});return {promise,resolve}}
 async function setup(){
@@ -17,11 +18,13 @@ async function setup(){
   const snapshot=await workspace.snapshot(),moduleId=team.input.moduleId,file=moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(value=>value.path===file)!.text);
   definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
   await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:file,text:json(definition)}]));
-  const directory=path.join(f.user,'addition'),store=new FileDispatchStore(directory,entry.id),service=new WorkspaceDispatchService(workspace,store),identity={workspaceId:entry.id,rootSessionId:'addition-root'},scopeId='addition-scope',mainRunId='main-run';
+  await registerServiceOwner(f.app,workspace,'cbim:executor',[moduleId]);
+  const store=workspace.dispatchStore,directory=store.directory,service=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.models),identity={workspaceId:entry.id,rootSessionId:'addition-root'},scopeId='addition-scope',mainRunId='main-run';
   await service.openScope(identity,scopeId,{message:'为先创建的任务补充真实前置'},mainRunId);
+  const ownerSelection=(await service.owners.discover([moduleId])).groups[0].selection!;
   const workflowSelections=[{moduleId,workflowId:team.input.workflowId}];
-  await service.goals.plan(identity,scopeId,mainRunId,'plan-one',{expectedRevision:1,objective:'核实业务',constraints:[],criteria:[{id:'c1',kind:'evidence',text:'可追溯结果'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],workflowSelections,criterionIds:['c1'],reason:'按模块执行'}],reason:'计划'});
-  const assign=async(commandId:string,prerequisites:{taskId:string;expectedPlanRevision:number}[]=[])=>service.dispatchTask({...identity,commandId,expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],workflowSelections,goal:commandId,acceptance:[{id:'c1',text:'真实证据'}],prerequisites}},scopeId);
+  await service.goals.plan(identity,scopeId,mainRunId,'plan-one',{expectedRevision:1,objective:'核实业务',constraints:[],criteria:[{id:'c1',kind:'evidence',text:'可追溯结果'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,workflowSelections,criterionIds:['c1'],reason:'按模块执行'}],reason:'计划'});
+  const assign=async(commandId:string,prerequisites:{taskId:string;expectedPlanRevision:number}[]=[])=>service.dispatchTask({...identity,commandId,expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,workflowSelections,goal:commandId,acceptance:[{id:'c1',text:'真实证据'}],prerequisites}},scopeId);
   const b=await assign('B'),c=await assign('C',[{taskId:b.taskId,expectedPlanRevision:1}]),a=await assign('A'),d=await assign('D',[{taskId:a.taskId,expectedPlanRevision:1}]);
   const graph=await service.snapshot(identity),source=graph.tasks.find(task=>task.taskId===a.taskId)!,target=graph.tasks.find(task=>task.taskId===b.taskId)!;
   const input:AddQueuedDependencyInput={expectedGraphCursor:{streamId:graph.cursor.streamId,seq:graph.cursor.seq},expectedGoalRevision:2,source:{taskId:source.taskId,expectedRevision:source.revision,expectedPlanRevision:source.planRevision},target:{taskId:target.taskId,expectedRevision:target.revision,expectedPlanRevision:target.planRevision},reason:'先完成新发现的前置 A'};
@@ -47,21 +50,21 @@ it('真实存储追加后来创建的来源，保留两端后继原身份与信�
 });
 
 it.each(['stop','knowledge'] as const)('真实知识准备 await 期间 %s 会整体拒绝，不留下边、审计或信封变化',async mode=>{
-  const f=await setup(),entered=deferred(),resume=deferred(),snapshot=f.workspace.snapshot.bind(f.workspace);let stopped=false;
+  const f=await setup(),entered=deferred(),resume=deferred(),snapshot=f.workspace.withSourceSnapshot.bind(f.workspace);let stopped=false;
   try{
     const before=await f.store.read(),file=path.join(f.directory,'dispatch.jsonl'),bytes=await fs.readFile(file);
-    const spy=vi.spyOn(f.workspace,'snapshot').mockImplementationOnce(async()=>{const value=await snapshot();entered.resolve();await resume.promise;return value});
+    const spy=vi.spyOn(f.workspace,'withSourceSnapshot').mockImplementationOnce(use=>snapshot(async value=>{entered.resolve();await resume.promise;return use(value)}));
     const adding=f.add('add-held',()=>{if(stopped)throw Object.assign(Error('主调度停止'),{code:'COLLABORATION_STOPPED'})});
     await entered.promise;
-    if(mode==='stop')stopped=true;else await f.workspace.commit(request(await snapshot(),[{path:'.cbim/README.md',text:'# changed during preparation'}]));
-    resume.resolve();await expect(adding).rejects.toMatchObject({code:mode==='stop'?'COLLABORATION_STOPPED':'KNOWLEDGE_CHANGED'});
+    if(mode==='stop')stopped=true;else await fs.writeFile(path.join(f.workspace.entry.path,'.cbim/README.md'),'# external change during preparation');
+    resume.resolve();await expect(adding).rejects.toMatchObject({code:mode==='stop'?'COLLABORATION_STOPPED':'DEPENDENCY_KNOWLEDGE_STALE'});
     expect(await f.store.read()).toEqual(before);expect(await fs.readFile(file)).toEqual(bytes);spy.mockRestore();
   }finally{resume.resolve();await f.cleanup()}
 });
 
 it('知识已更新不能刷新原待办后继续追加前置',async()=>{
   const f=await setup();try{
-    const before=await f.store.read();await f.workspace.commit(request(await f.workspace.snapshot(),[{path:'.cbim/README.md',text:'# changed before addition'}]));
+    await f.workspace.commit(request(await f.workspace.snapshot(),[{path:'.cbim/README.md',text:'# changed before addition'}]));const before=await f.store.read();
     await expect(f.add()).rejects.toMatchObject({code:'DEPENDENCY_KNOWLEDGE_STALE'});expect(await f.store.read()).toEqual(before);
   }finally{await f.cleanup()}
 });

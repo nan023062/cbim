@@ -38,7 +38,7 @@ it.each(['complete','stop','cancel-not-success'] as const)('explicitly cancels u
     if(mode==='stop')await app.dispatch('loop.stop',{id:entry.id,taskId:started.taskId});else provider.releaseContinuation();
     await vi.waitFor(async()=>{expect((await records()).scopes[0].status).toBe('closed');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:35000,interval:30});
     const final=await records(),closed=final.scopes[0],finished=await graph();expect(final.scopes).toHaveLength(1);expect(closed.scopeId).toBe(scope.scopeId);expect(closed.goal?.input).toEqual(scope.goal?.input);expect(closed.goal?.inputRevision).toBe(2);expect(closed.continuations).toHaveLength(1);expect(finished.root.agent).toEqual(before.root.agent);expect(finished.tasks.filter(task=>old.some(previous=>previous.taskId===task.taskId))).toEqual(before.tasks);
-    expect(closed.outcome).toBe(mode==='stop'?'cancelled':'completed');
+    expect(closed.outcome,JSON.stringify({outcome:closed.outcome,blocked:closed.goal?.blocked,providerErrors:provider.errors,requests:{main:provider.mainRequests.length,member:provider.memberRequests.length}})).toBe(mode==='stop'?'cancelled':'completed');
     if(mode==='stop'){expect(finished.tasks).toHaveLength(3);expect(provider.mainRequests).toHaveLength(15);expect(provider.memberRequests).toHaveLength(4)}
     else{
       expect(finished.tasks).toHaveLength(6);const fresh=data.newGoals.map(goal=>finished.tasks.find(task=>task.goal===goal)!);expect(new Set(finished.tasks.map(task=>task.assignee.agentInstanceId)).size).toBe(6);expect(new Set(finished.tasks.map(task=>task.assignee.agentSessionId)).size).toBe(6);

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-工作区唯一的工程/模块图及自身Workflow。负责人面板展示来源和有界历史，支持同负责人明确采纳当前来源；原回执必须匹配同一关系、版本及owner，未知不换命令。知识编辑和整架构复用委托knowledge/resources；登记不移交旧任务。
+工作区唯一的工程/模块图及自身Workflow。负责人面板展示来源和有界历史，支持同负责人明确采纳当前来源；原回执必须匹配同一关系、版本及owner，未知不换命令。知识编辑和整架构复用委托knowledge/resources；登记不移交旧任务。 关联任务包含新旧协议节点，负责人变更不移交旧任务；实际领取重核原版本。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -13,7 +13,7 @@
 | [module-ownership-state.ts](module-ownership-state.ts) | 模块负责人面板的回包核对和持久原命令状态，跨业务架构与项目岗位视图共享。 |
 | [module-ownership.css](module-ownership.css) | 对应界面的布局与视觉样式。 |
 | [ModuleOwnershipDetail.tsx](ModuleOwnershipDetail.tsx) | 显示模块当前负责人、来源观察与有界审计，供责任面板单独审阅。 |
-| [ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx) | 业务架构和项目岗位共用的模块责任控制面，提供查询、预览、明确提交和原命令核实。 |
+| [ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx) | 业务架构和项目岗位共用的模块责任控制面，提供查询、预览、明确提交、关联任务统计和原命令核实。 |
 | [workspace-view.css](workspace-view.css) | 对应界面的布局与视觉样式。 |
 | [WorkspaceView.tsx](WorkspaceView.tsx) | 工作区唯一的静态业务架构，维护模块和 Workflow、复用完整业务模板，并进入独立模块负责人控制面。 |
 
@@ -249,7 +249,7 @@ N_src_frontend_workspace_WorkspaceView_tsx ..> N_src_frontend_workspace_workspac
 
 ## 单模块负责人控制面
 
-`ModuleOwnershipPanel` 由业务架构工具栏/模块详情进入，也供项目岗位反查当前负责的模块。负责人使用稳定 memberId，与真人维护人分开；一个模块只有一个关系头，解除保留关系和历史，重新设置沿原 bindingId 升版。此界面只登记责任，未接实际派发、旧任务移交或来源代次，不把 active 岗位称为可执行。
+`ModuleOwnershipPanel` 由业务架构工具栏/模块详情进入，也供项目岗位反查当前负责的模块。负责人使用稳定 memberId，与真人维护人分开；一个模块只有一个关系头，解除保留关系和历史，重新设置沿原 bindingId 升版。正式派发和领取由调度系统核实，此界面不移交旧任务或创建执行。预览的关联任务统计包含该模块的真实新旧节点，不再笼统称为旧协议任务；它是影响范围而不是可以移交的资格。来源通过独立明确采纳更新，active 岗位不等于可执行。
 
 列表按 ownershipCursor、岗位 registryCursor、knowledgeRevision 三项依据分页；来源无法读取不假报空架构。详情展示当前岗位、真实来源观察和近20条明确有界历史；main_agent 与 local_desktop 来源分开，不把主工具审批伪造成人工责任决定。元信息、当前来源差异每次显式核实，不周期回读。
 

@@ -65,7 +65,7 @@ it('已领取后引擎准备窗口中文件变化，在新模型开始前拒绝�
 it('预约后主调度修订目标，即使模块相同也不能消费原计划下的续执行信封',async()=>{
   const f=await checkpointServiceFixture();try{
     await f.reserve();const state=await f.store.read(),plan=state.scopes![0].goal!.plan!;
-    await f.service.goals.plan(f.identity,f.scopeId,f.mainRunId,'replan-after-reservation',{expectedRevision:2,objective:plan.objective,constraints:plan.constraints,criteria:plan.criteria,assignments:plan.assignments.map(({agentId,moduleIds,criterionIds,reason})=>({agentId,moduleIds,criterionIds,reason})),reason:'主调度明确修订计划'});
+    await f.service.goals.plan(f.identity,f.scopeId,f.mainRunId,'replan-after-reservation',{expectedRevision:2,objective:plan.objective,constraints:plan.constraints,criteria:plan.criteria,assignments:plan.assignments.map(({agentId,moduleIds,ownerSelection,criterionIds,reason})=>({agentId,moduleIds,ownerSelection,criterionIds,reason})),reason:'主调度明确修订计划'});
     const before=await f.store.read();await expect(f.resume()).rejects.toMatchObject({code:'MEMBER_RESUME_STALE'});expect(await f.store.read()).toEqual(before);expect(f.starts).toBe(1);
   }finally{await f.cleanup()}
 });

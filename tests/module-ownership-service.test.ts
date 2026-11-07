@@ -80,10 +80,19 @@ it('a real newly queued related task invalidates the preview impact without chan
   const f=await setup(),s=await f.workspace.snapshot(),modulePath=f.moduleId+'/module.json',definition=JSON.parse(s.files.find(item=>item.path===modulePath)!.text);
   definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'explicit-test',source:'local_user',confirmedAt:'2026-11-07T00:00:00.000Z'}};
   await f.workspace.commit(request(s,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'Owner',team:'.cbim/team'}]})}]));
-  const command=f.command(await f.preview()),dispatch=f.app.memberDispatch(f.identity.workspaceId),identity={workspaceId:f.identity.workspaceId,rootSessionId:'ownership-related-root'};
-  await dispatch.openGraph({...identity,commandId:randomUUID()});const graph=await dispatch.snapshot(identity);
-  await dispatch.dispatchTask({...identity,commandId:randomUUID(),expectedParentRevision:graph.root.revision,task:{assigneeAgentId:f.team.input.agentId,moduleIds:[f.moduleId],goal:'a real queued task',acceptance:[{id:'evidence',text:'evidence'}],prerequisites:[]}});
+  // 先明确登记原负责人及真实目标计划；预览换人之后只新增排队事实，不能借旧无周期派发绕过岗位门禁。
+  const assigned=await commitModuleOwnership(f.app,f.identity.workspaceId,f.change()),change=await moduleOwnershipChange(f.app,f.identity.workspaceId,f.moduleId,{memberId:f.second.receipt.memberId,expectedRevision:1});
+  const dispatch=f.app.memberDispatch(f.identity.workspaceId),identity={workspaceId:f.identity.workspaceId,rootSessionId:'ownership-related-root'},scopeId=randomUUID(),runId=randomUUID();
+  await dispatch.openScope(identity,scopeId,{message:'a real queued task'},runId);
+  const ownerSelection=(await dispatch.owners.discover([f.moduleId])).groups[0].selection!;
+  expect(ownerSelection.memberId).toBe(f.first.receipt.memberId);
+  await dispatch.goals.plan(identity,scopeId,runId,randomUUID(),{expectedRevision:1,objective:'a real queued task',constraints:[],criteria:[{id:'evidence',text:'evidence',kind:'evidence'}],assignments:[{agentId:f.team.input.agentId,moduleIds:[f.moduleId],ownerSelection,criterionIds:['evidence'],reason:'由原负责人执行当前模块任务'}],reason:'为真实排队影响建立当前目标计划'});
+  const command=f.command(await f.preview(change)),before=(await moduleOwnershipJournal(f.user,f.identity.workspaceId)).records.filter(record=>record.body.command.commandId.startsWith('module-ownership-')),graph=await dispatch.snapshot(identity);
+  const queued=await dispatch.dispatchTask({...identity,commandId:randomUUID(),expectedParentRevision:graph.root.revision,task:{assigneeAgentId:f.team.input.agentId,moduleIds:[f.moduleId],ownerSelection,goal:'a real queued task',acceptance:[{id:'evidence',text:'evidence'}],prerequisites:[]}},scopeId);
+  expect((await dispatch.snapshot(identity)).tasks.find(task=>task.taskId===queued.taskId)).toMatchObject({status:'queued',runIds:[],ownerBinding:{memberId:f.first.receipt.memberId}});
   await expect(f.commit(command)).rejects.toMatchObject({code:'OWNERSHIP_BASIS_STALE'});
-  const preview=await f.preview();expect(preview.impact).toMatchObject({total:1,counts:{unclaimed:1}});expect(preview.basis).not.toBe(command.expectedBasis);
-  const records=(await moduleOwnershipJournal(f.user,f.identity.workspaceId)).records;expect(records.filter(record=>record.body.command.commandId.startsWith('module-ownership-'))).toHaveLength(0);
+  const preview=await f.preview(change);expect(preview.impact).toMatchObject({total:1,counts:{unclaimed:1}});expect(preview.basis).not.toBe(command.expectedBasis);
+  expect((await f.service.get({...f.identity,moduleId:f.moduleId})).view.binding).toMatchObject({bindingId:assigned.receipt.bindingId,revision:assigned.receipt.revision,ownerMemberId:f.first.receipt.memberId});
+  expect(await f.service.receipt({workspaceId:f.identity.workspaceId,commandId:command.commandId})).toBeUndefined();
+  const records=(await moduleOwnershipJournal(f.user,f.identity.workspaceId)).records;expect(records.filter(record=>record.body.command.commandId.startsWith('module-ownership-'))).toEqual(before);
 });

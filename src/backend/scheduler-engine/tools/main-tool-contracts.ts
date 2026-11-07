@@ -23,7 +23,7 @@ export function mainToolContract(name:MainToolName){
   const recovery:ToolRecovery=read
     ?{mode:'read_again',description:'可显式重新读取当前事实；新结果不代表旧时刻的快照，不触发执行。'}
     :{mode:'inspect_before_retry',queryTool:name.startsWith('cbim_goal_')?'cbim_goal_inspect':'cbim_dispatch_inspect',description:'先核实原目标或任务事实。可信原 run/toolCall 对应稳定命令；模型再次调用会产生新请求，不能以新调用重放未知结果，查询也不自动恢复执行。'};
-  return {outputSchema:zodToJsonSchema(mainToolOutputSchemas[name]) as Record<string,unknown>,cancellation,recovery};
+  return {version:name==='cbim_goal_plan'||name==='cbim_dispatch_task'?2:1,outputSchema:zodToJsonSchema(mainToolOutputSchemas[name]) as Record<string,unknown>,cancellation,recovery};
 }
 
 /** 领域方法已执行后只校验这一次原 wire；不得对 Schema 解析结果重新编码或重新提交。 */

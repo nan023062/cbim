@@ -1,3 +1,5 @@
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -18,7 +20,7 @@ it.each(['missing-review','failed-member','forged-evidence','replan'] as const)(
   const queuedGoal='GOAL_REVIEW_QUEUED: 前项完成后再处理本项';
   const acceptance=['实际读取 review-input.txt 并提交证据'],fact='REAL_GOAL_REVIEW_FACT_67295';
   const mainRequests:ProviderRequest[]=[],memberRequests:ProviderRequest[]=[],errors:unknown[]=[];
-  let moduleId='',agentId='',release=()=>{};
+  let moduleId='',agentId='',release=()=>{};let ownerSelection:OwnerExecutionSelection|undefined;
   const gate=new Promise<void>(resolve=>{release=resolve});
   const server=http.createServer(async(req,res)=>{
     try{
@@ -30,8 +32,8 @@ it.each(['missing-review','failed-member','forged-evidence','replan'] as const)(
       const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
       const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
       if(isMain){
-        const plan=(revision:number)=>goalPlanArguments({objective:mainGoal,agentId,moduleIds:[moduleId],acceptance},revision);
-        const dispatch=()=>({agentId,moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+        const plan=(revision:number)=>goalPlanArguments({objective:mainGoal,agentId,moduleIds:[moduleId],ownerSelection,acceptance},revision);
+        const dispatch=()=>({agentId,moduleIds:[moduleId],ownerSelection,goal:memberGoal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
         if(turn===0)tool('goal-plan-first','cbim_goal_plan',plan(1));
         else if(turn===1)tool('goal-dispatch-first','cbim_dispatch_task',dispatch());
         else if(turn===2)reply('首批已派发，等待执行证据。');
@@ -80,6 +82,7 @@ it.each(['missing-review','failed-member','forged-evidence','replan'] as const)(
     const snapshot=await workspace.snapshot(),modulePath=moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
     definition.maintenance={bindingId:'goal-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'goal-review',source:'local_user',confirmedAt:'2026-11-07T00:00:00.000Z'}};
     await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
+    ownerSelection=(await registerExplicitFixtureOwner(f.app,entry.id,{agentId,moduleIds:[moduleId],profileId:(await f.app.models.list()).selectedId!,modelId:'goal-fixture'})).selection;
     await fs.writeFile(path.join(f.a,'review-input.txt'),fact);
     const scopes=async()=>{
       // Never open a recovering store over an active writer; only read complete committed records.

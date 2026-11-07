@@ -1,3 +1,4 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -23,7 +24,7 @@ function toolValue(body:Request,id:string){const message=body.messages.find(item
 
 /** Local model responses drive three real Pi cycles: failed write, read-only inspection, new work. */
 export async function businessReplanProvider(options:{holdBusiness?:boolean;holdOld?:boolean}={}){
-  const mainRequests:Request[]=[],memberRequests:Request[]=[],errors:string[]=[];let agentId='',moduleId='',releaseBusiness=()=>{},releaseOld=()=>{};
+  const mainRequests:Request[]=[],memberRequests:Request[]=[],errors:string[]=[];let ownerSelection:OwnerExecutionSelection|undefined;let agentId='',moduleId='',releaseBusiness=()=>{},releaseOld=()=>{};
   const businessGate=new Promise<void>(resolve=>{releaseBusiness=resolve}),oldGate=new Promise<void>(resolve=>{releaseOld=resolve}),d=businessReplanFixture;
   const acceptance=['提交当前目标实际工具回执和读取验证'];
   const server=http.createServer(async(req,res)=>{try{
@@ -33,8 +34,8 @@ export async function businessReplanProvider(options:{holdBusiness?:boolean;hold
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'replan-'+(mainRequests.length+memberRequests.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
-    const dispatch=(id:string,goal:string)=>tool(id,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
-    const plan=(id:string,goal:string)=>tool(id,'cbim_goal_plan',goalPlanArguments({objective:goal,agentId,moduleIds:[moduleId],acceptance}));
+    const dispatch=(id:string,goal:string)=>tool(id,'cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+    const plan=(id:string,goal:string)=>tool(id,'cbim_goal_plan',goalPlanArguments({objective:goal,agentId,ownerSelection,moduleIds:[moduleId],acceptance}));
     if(isMain){
       assert.ok(body.tools?.every(item=>!['write','edit','bash'].includes(item.function.name)),'主Agent始终只调度，不直接执行业务');
       if(turn===0)plan('old-plan',d.oldGoal);
@@ -81,5 +82,5 @@ export async function businessReplanProvider(options:{holdBusiness?:boolean;hold
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Business replan fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,releaseBusiness,releaseOld,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},close:async()=>{releaseBusiness();releaseOld();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,releaseBusiness,releaseOld,bind:(agent:string,module:string,selection?:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection?structuredClone(selection):undefined},close:async()=>{releaseBusiness();releaseOld();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

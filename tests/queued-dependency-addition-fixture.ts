@@ -1,3 +1,5 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -15,12 +17,13 @@ import {seedTeam} from './team-fixture';
 import {request} from './helpers';
 import {dependencyAdditionData as data} from './queued-dependency-addition-provider';
 
-export async function seedDependencyAddition(app:Application,project:string,provider:{url:string;bind:(agent:string,module:string)=>void}){
+export async function seedDependencyAddition(app:Application,project:string,provider:{url:string;bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>void}){
   await fs.mkdir(project,{recursive:true});await app.models.save({profile:{name:'Dependency addition fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:data.model,models:[{id:data.model,name:data.model,enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-  const entry=await app.dispatch('add',{path:project}),workspace=app.workspace(entry.id),team=await seedTeam(workspace);provider.bind(team.input.agentId,team.input.moduleId);
+  const entry=await app.dispatch('add',{path:project}),workspace=app.workspace(entry.id),team=await seedTeam(workspace);
   const snapshot=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'addition-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'addition-review',source:'local_user',confirmedAt:new Date().toISOString()}};
   await workspace.commit(request(snapshot,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
+  const profileId=(await app.models.list()).selectedId!,registered=await registerExplicitFixtureOwner(app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId,modelId:data.model});provider.bind(team.input.agentId,team.input.moduleId,registered.selection);
   await Promise.all(data.files.map((file,index)=>fs.writeFile(path.join(project,file),data.facts[index])));return {entry,workspace,team};
 }
 /** Read committed journal bodies without opening a second writer or repairing the tested state. */

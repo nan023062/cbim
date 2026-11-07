@@ -16,6 +16,7 @@ import {MemberExecutionManager,type MemberExecutionPorts} from '../src/backend/s
 import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/execution/workspace-lease';
 import {recheckDispatchExecutionContext} from '../src/backend/scheduler-engine/context/execution-context';
 import {verifyMemberCheckpointProof,verifyMemberCheckpointInputs} from '../src/backend/scheduler-engine/execution/member-checkpoint-verifier';
+import {registerServiceOwner} from './owner-service-fixture';
 
 export function gate(){let resolve!:()=>void;const promise=new Promise<void>(r=>{resolve=r});return {promise,resolve}}
 export async function checkpointServiceFixture(){
@@ -23,13 +24,15 @@ export async function checkpointServiceFixture(){
   const snapshot=await workspace.snapshot(),moduleId=team.input.moduleId,definition=JSON.parse(snapshot.files.find(file=>file.path===moduleId+'/module.json')!.text);
   definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
   await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:json(definition)}]));await fs.writeFile(path.join(f.a,'checkpoint.txt'),'captured bytes');
-  const directory=path.join(f.user,'checkpoint'),logs=path.join(f.user,'member-logs'),store=new FileDispatchStore(directory,entry.id),storage=new FileRunStorage(),lease=new WorkspaceExecutionLease(),files=new ArtifactFiles(f.a,()=>workspace.assert());
+  const {model}=await registerServiceOwner(f.app,workspace,'cbim:executor',[moduleId]);
+  const store=workspace.dispatchStore,directory=store.directory,logs=path.join(f.user,'member-logs'),storage=new FileRunStorage(),lease=new WorkspaceExecutionLease(),files=new ArtifactFiles(f.a,()=>workspace.assert());
   const read=(run:DispatchRun)=>storage.read(path.join(logs,run.binding.taskId,run.binding.runId)),inspect=vi.fn(read),native=vi.fn(async()=>({byteLength:128,sha256:'a'.repeat(64)})),checkFiles=vi.fn(files.checkFiles.bind(files));
-  const service=new WorkspaceDispatchService(workspace,store),identity={workspaceId:entry.id,rootSessionId:'checkpoint-root'},scopeId='checkpoint-scope',mainRunId='main-one';
+  const service=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.models),identity={workspaceId:entry.id,rootSessionId:'checkpoint-root'},scopeId='checkpoint-scope',mainRunId='main-one';
   await service.openScope(identity,scopeId,{message:'继续同一成员任务'},mainRunId);
-  await service.goals.plan(identity,scopeId,mainRunId,'plan',{expectedRevision:1,objective:'核实目标',constraints:[],criteria:[{id:'c1',text:'实际证据',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],criterionIds:['c1'],reason:'原执行者'}],reason:'派发'});
-  const model={id:'test-provider',model:'checkpoint',name:'fixture',api:'openai-completions' as const,auth:'none' as const,baseUrl:'https://example.test/v1',contextWindow:200000,maxTokens:1000,reasoning:false,vision:undefined};let starts=0,beforeCreate=async()=>{};
-  const prepare=vi.fn<MemberExecutionPorts['prepare']>(async()=>({model,create:async(run,_task,hooks)=>{
+  const ownerSelection=(await service.owners.discover([moduleId])).groups[0].selection!;
+  await service.goals.plan(identity,scopeId,mainRunId,'plan',{expectedRevision:1,objective:'核实目标',constraints:[],criteria:[{id:'c1',text:'实际证据',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,criterionIds:['c1'],reason:'原执行者'}],reason:'派发'});
+  let starts=0,beforeCreate=async()=>{};
+  const prepare=vi.fn<()=>Awaited<ReturnType<MemberExecutionPorts['prepare']>>>(()=>({model,create:async(run,_task,hooks)=>{
     await beforeCreate();const previous=run.resumeFrom?(await store.read()).runs!.find(old=>old.binding.runId===run.resumeFrom!.runId):undefined;
     let context!:EngineContext;const engine:AgentEngine={kind:'checkpoint-fixture',start:async c=>{starts++;context=c;await c.emit({type:'session.bound',data:{sessionId:c.nativeSessionId,sessionFile:c.sessionFile??path.join(logs,'native-'+c.nativeSessionId+'.jsonl')}})},stop:async()=>{},close:async()=>{},run:async()=>{
       let seq=0;const invoke=async(name:string,input:Record<string,unknown>)=>{const id='call-'+(++seq),decision=await context.beforeTool({name,id,input});expect(decision.allow).toBe(true);const result=name==='read'?jsonToolResult(name,{text:await fs.readFile(path.join(f.a,'checkpoint.txt'),'utf8')}):name==='cbim_task_artifact_capture'?await context.artifactTools!.call(name,input,id):name==='cbim_task_checkpoint'?await context.memberCheckpointTools!.call(name,input,id):await context.taskTools!.call(name,input);await context.emit({type:'tool.finished',data:{name,id,result,isError:false}});return {id,body:JSON.parse(result.content[0].text)}};
@@ -39,9 +42,9 @@ export async function checkpointServiceFixture(){
     const checkpointPorts={inspect,normalizePath:(raw:string)=>normalizeArtifactPath(f.a,raw),checkFiles,nativeFingerprint:native};
     return new LoopRuntime({storage,directory:logs,createEngine:()=>engine,acquireLease:async()=>()=>{},onEvent:hooks.onEvent,onEngineReady:hooks.onEngineReady,artifacts:{knowledgeRevision:run.prepared.knowledgeRevision,normalizePath:raw=>normalizeArtifactPath(f.a,raw),assertCurrentKnowledge:()=>recheckDispatchExecutionContext(workspace,run.prepared),captureFiles:(paths,signal)=>files.captureFiles(paths,signal)},assertMemberResume:previous?async()=>{await verifyMemberCheckpointProof(workspace,_task,previous,checkpointPorts,()=>{},previous.checkpointProof)}:undefined,assertMemberResumeInputs:previous?()=>verifyMemberCheckpointInputs(workspace,_task,previous,checkpointPorts,()=>{},previous.checkpointProof!):undefined,toolPolicy:async call=>({allow:true,effects:[call.name==='read'?'read':'maintenance'],scope:{kind:'workspace',workspaceId:entry.id}})});
   }}));
-  const ports:MemberExecutionPorts={acquire:(key,permission,agent)=>lease.acquire(key,permission,agent),prepare,inspect,artifacts:{normalizePath:raw=>normalizeArtifactPath(f.a,raw),checkFiles,acquireRead:()=>()=>{}},checkpoints:{nativeFingerprint:native}};
+  const ports:MemberExecutionPorts={acquire:(key,permission,agent)=>lease.acquire(key,permission,agent),prepare:async()=>prepare(),owners:service.owners,withEngineConfiguration:(reference,_options,use)=>f.app.models.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare})),inspect,artifacts:{normalizePath:raw=>normalizeArtifactPath(f.a,raw),checkFiles,acquireRead:()=>()=>{}},checkpoints:{nativeFingerprint:native}};
   const members=new MemberExecutionManager(workspace,store,ports);await members.initialize();
-  const assigned=await service.dispatchTask({...identity,commandId:'assign',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],goal:'核实原文件',acceptance:[{id:'c1',text:'新轮真实证据'}]}},scopeId);
+  const assigned=await service.dispatchTask({...identity,commandId:'assign',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,goal:'核实原文件',acceptance:[{id:'c1',text:'新轮真实证据'}]}},scopeId);
   const taskId=assigned.taskId;
   await members.start({...identity,taskId,commandId:'start',expectedRevision:1,options:{permission:'read'}});await members.waitForSettlement({...identity,taskId});
   const graph=await service.snapshot(identity),task=graph.tasks.find(t=>t.taskId===taskId)!;expect(task.status).toBe('checkpointed');

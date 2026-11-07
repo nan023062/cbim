@@ -1,3 +1,4 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -19,16 +20,16 @@ function value(body:Request,id:string){const message=body.messages.find(item=>it
 export async function dependencyAdditionProvider(options:{lostReply?:boolean}={}){
   const d=dependencyAdditionData,main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[];
   const state:{before?:GraphSnapshot;recovered?:GraphSnapshot;input?:AddQueuedDependencyInput;receipt?:AddQueuedDependencyReceipt;scopeId?:string}={};
-  let agentId='',moduleId='',release=()=>{};const gate=new Promise<void>(resolve=>release=resolve),heldTurn=options.lostReply?7:6;
+  let ownerSelection:OwnerExecutionSelection;let agentId='',moduleId='',release=()=>{};const gate=new Promise<void>(resolve=>release=resolve),heldTurn=options.lostReply?7:6;
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
     const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
     res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'dependency-addition-'+sequence.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(text:string)=>{emit({role:'assistant',content:text});emit({},'stop')};
-    const dispatch=(id:string,index:number,prior?:string)=>tool(id,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:d.goals[index],acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:prior?[{taskId:prior,expectedPlanRevision:1}]:[]});
+    const dispatch=(id:string,index:number,prior?:string)=>tool(id,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:d.goals[index],acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:prior?[{taskId:prior,expectedPlanRevision:1}]:[]});
     if(isMain){
       assert.ok(body.tools?.some(item=>item.function.name==='cbim_dispatch_add_dependency'));assert.ok(body.tools?.every(item=>!['write','edit','bash'].includes(item.function.name)));
-      if(turn===0)tool('addition-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],acceptance:d.acceptance}));
+      if(turn===0)tool('addition-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance}));
       else if(turn===1)dispatch('addition-b',1);
       else if(turn===2)dispatch('addition-c',2,value(body,'addition-b').taskId);
       else if(turn===3)dispatch('addition-a',0);
@@ -56,5 +57,5 @@ export async function dependencyAdditionProvider(options:{lostReply?:boolean}={}
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Dependency addition fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,heldTurn,releaseMain:()=>release(),bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,heldTurn,releaseMain:()=>release(),bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection},close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

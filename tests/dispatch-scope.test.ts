@@ -6,6 +6,7 @@ import {seedTeam} from './team-fixture';
 import {hash,json} from '../src/backend/core/foundation/serialization';
 import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
 import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
+import {registerServiceOwner} from './owner-service-fixture';
 
 async function setup(){
   const f=await fixture();
@@ -14,10 +15,16 @@ async function setup(){
   const definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
   await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
-  const directory=path.join(f.user,'scope-fixture'),store=new FileDispatchStore(directory,entry.id),service=new WorkspaceDispatchService(workspace,store);
+  await registerServiceOwner(f.app,workspace,'cbim:executor',[team.input.moduleId]);
+  const store=workspace.dispatchStore,directory=store.directory,service=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.models);
   const identity={workspaceId:entry.id,rootSessionId:'root-one'};
-  const input=(commandId:string,agentId='cbim:executor',rootSessionId=identity.rootSessionId)=>({...identity,rootSessionId,commandId,expectedParentRevision:1,task:{assigneeAgentId:agentId,moduleIds:[team.input.moduleId],goal:'验证模块行为',acceptance:[{id:'evidence',text:'提交验证证据'}],prerequisites:[]}});
-  return {...f,entry,workspace,team,directory,store,service,identity,input,cleanup:async()=>{await store.close();await f.cleanup()}};
+  const ownerSelection=(await service.owners.discover([team.input.moduleId])).groups[0].selection!;
+  const input=(commandId:string,agentId='cbim:executor',rootSessionId=identity.rootSessionId)=>({...identity,rootSessionId,commandId,expectedParentRevision:1,task:{assigneeAgentId:agentId,moduleIds:[team.input.moduleId],ownerSelection,goal:'验证模块行为',acceptance:[{id:'evidence',text:'提交验证证据'}],prerequisites:[]}});
+  const openPlanned=async(scopeId:string)=>{
+    const runId='main-'+scopeId;await service.openScope(identity,scopeId,{message:'验证模块行为'},runId);
+    return service.goals.plan(identity,scopeId,runId,'plan-'+scopeId,{expectedRevision:1,objective:'验证模块行为',constraints:[],criteria:[{id:'evidence',text:'提交验证证据',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[team.input.moduleId],ownerSelection,criterionIds:['evidence'],reason:'由当前负责岗位执行'}],reason:'保留真实目标计划后派发'});
+  };
+  return {...f,entry,workspace,team,directory,store,service,identity,input,openPlanned,cleanup:async()=>{await store.close();await f.cleanup()}};
 }
 
 it('新周期首轮与回注清单原子登记，重复不增量、旧周期不补造，真实重开保留隔离集合',async()=>{
@@ -55,7 +62,7 @@ it('同一用户周期幂等复用，主会话周期互斥；不同主会话隔�
 
 it('每个派发任务创建独立执行实例，关闭原子取消未执行任务并释放实例；历史可重放',async()=>{
   const f=await setup();try{
-    await f.service.openScope(f.identity,'scope-one');
+    await f.openPlanned('scope-one');
     const root=(await f.service.snapshot(f.identity)).root;
     const first=await f.service.dispatchTask(f.input('dispatch-one'),'scope-one');
     expect(await f.service.dispatchTask(f.input('dispatch-one'),'scope-one')).toEqual(first);
@@ -78,7 +85,7 @@ it('每个派发任务创建独立执行实例，关闭原子取消未执行任�
     const delta=await f.service.delta(f.identity,graph.cursor);expect(delta.mode).toBe('delta');if(delta.mode==='delta')expect(delta.batches[0].changes.filter(change=>change.type==='agent.upserted')).toHaveLength(2);
     const reader=new FileDispatchStore(f.directory,f.entry.id);try{expect(await reader.read()).toEqual(state)}finally{await reader.close()}
     await expect(f.service.dispatchTask(f.input('late-task'),'scope-one')).rejects.toMatchObject({code:'DISPATCH_SCOPE_CLOSED'});
-    await f.service.openScope(f.identity,'scope-next');
+    await f.openPlanned('scope-next');
     const next=await f.service.dispatchTask(f.input('new-cycle'),'scope-next');
     expect((await f.service.snapshot(f.identity)).tasks.find(task=>task.taskId===next.taskId)?.assignee.agentInstanceId).not.toBe(graph.tasks[0].assignee.agentInstanceId);
   }finally{await f.cleanup()}
@@ -86,7 +93,7 @@ it('每个派发任务创建独立执行实例，关闭原子取消未执行任�
 
 it('存储拒绝半次周期关闭、提前释放及关闭后的实例复活和任务重写',async()=>{
   const f=await setup();try{
-    await f.service.openScope(f.identity,'scope-one');await f.service.dispatchTask(f.input('dispatch-one'),'scope-one');
+    await f.openPlanned('scope-one');await f.service.dispatchTask(f.input('dispatch-one'),'scope-one');
     const state=await f.store.read(),member=state.members.find(item=>item.executionScopeId==='scope-one')!,scope=state.scopes![0];
     await expect(f.store.transact({commandId:'partial-close',fingerprint:'partial-close'},async()=>({scopes:[{...scope,status:'closed',closedAt:new Date().toISOString(),outcome:'cancelled'}],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
     await expect(f.store.transact({commandId:'early-release',fingerprint:'early-release'},async()=>({members:[{...member,lifecycle:'released',releasedAt:new Date().toISOString()}],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
@@ -105,7 +112,7 @@ it('存储拒绝半次周期关闭、提前释放及关闭后的实例复活和�
 it('恢复将未关闭周期标记 interrupted 并释放执行实例，不启动任务或改变既有关闭结果',async()=>{
   const f=await setup();try{
     await f.service.openScope(f.identity,'already-done');await f.service.closeScope(f.identity,'already-done','completed');
-    await f.service.openScope(f.identity,'unfinished');await f.service.dispatchTask(f.input('unstarted'),'unfinished');
+    await f.openPlanned('unfinished');await f.service.dispatchTask(f.input('unstarted'),'unfinished');
     await f.service.recoverScopes();await f.service.recoverScopes();
     const state=await f.store.read();
     expect(state.scopes).toEqual(expect.arrayContaining([expect.objectContaining({scopeId:'already-done',status:'closed',outcome:'completed'}),expect.objectContaining({scopeId:'unfinished',status:'closed',outcome:'interrupted'})]));
@@ -178,7 +185,7 @@ it('提交和完整校验和的日志重放都拒绝改写/移除goal或input，
       expect(await fs.readFile(file,'utf8')).toBe(original);
       // 伪造下一条完整且校验和正确的事务，证明拒绝来自领域重放校验而不只是 hash 检查。
       const previous=JSON.parse(original.trim().split('\n').at(-1)!);
-      const body={version:1,workspaceId:f.entry.id,transactionSeq:previous.body.transactionSeq+1,previousHash:previous.checksum,command:{commandId:'replayed-mutation-'+i,fingerprint:'replayed-mutation-'+i},mutation:{scopes:[changes[i]],receipt:true}};
+      const body={version:1,executionProtocol:'module_owner_v1',workspaceId:f.entry.id,transactionSeq:previous.body.transactionSeq+1,previousHash:previous.checksum,command:{commandId:'replayed-mutation-'+i,fingerprint:'replayed-mutation-'+i},mutation:{scopes:[changes[i]],receipt:true}};
       await fs.writeFile(file,original+JSON.stringify({body,checksum:hash(JSON.stringify(body))})+'\n');
       const reader=new FileDispatchStore(f.directory,f.entry.id);try{await expect(reader.read()).rejects.toMatchObject({code:'GRAPH_LOG_CORRUPT'})}finally{await reader.close();await fs.writeFile(file,original)}
     }

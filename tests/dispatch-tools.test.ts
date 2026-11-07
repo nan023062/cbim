@@ -1,10 +1,10 @@
 import {test,expect,vi} from 'vitest';
 import {DispatchTools,type DispatchToolsPort} from '../src/backend/scheduler-engine/tools/dispatch-tools';
 import {authorizeRunTool} from '../src/backend/core/policy/tool-policy';
-import {mainToolBinding,mainToolTask} from './main-tool-output-fixture';
+import {mainToolBinding,mainToolTask,mainToolOwnerSelection} from './main-tool-output-fixture';
 import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
 
-const task={agentId:'.cbim/team/developer',moduleIds:['.cbim/workspace/client'],goal:'核实资源加载',acceptance:[{id:'verified',text:'提供真实读取证据'}]};
+const task={agentId:'.cbim/team/developer',moduleIds:['.cbim/workspace/client'],ownerSelection:mainToolOwnerSelection(['.cbim/workspace/client']),goal:'核实资源加载',acceptance:[{id:'verified',text:'提供真实读取证据'}]};
 function fixture(){
   const dispatch=vi.fn<DispatchToolsPort['dispatch']>().mockImplementation(async(_input,call)=>({commandId:mainToolCommandId('cbim_dispatch_task',mainToolBinding,call.toolCallId)!,taskId:'task',messageId:'message',cursor:{workspaceId:'workspace',rootSessionId:'root',streamId:'stream',seq:1},disposition:'queued'}));
   const inspect=vi.fn<DispatchToolsPort['inspect']>().mockResolvedValue(mainToolTask());
@@ -16,13 +16,15 @@ test('dispatch exposes only implemented main-session tools and uses trusted invo
   expect(f.tools.has('cbim_dispatch_self')).toBe(false);
   expect(f.tools.has('cbim_dispatch_wait')).toBe(false);
   const result=await f.tools.call('cbim_dispatch_task',task,signal,'native-tool-call');
-  expect(f.dispatch).toHaveBeenCalledWith({assigneeAgentId:task.agentId,moduleIds:task.moduleIds,goal:task.goal,acceptance:task.acceptance,prerequisites:[]},{toolCallId:'native-tool-call',signal});
+  expect(f.dispatch).toHaveBeenCalledWith({assigneeAgentId:task.agentId,moduleIds:task.moduleIds,ownerSelection:task.ownerSelection,goal:task.goal,acceptance:task.acceptance,prerequisites:[]},{toolCallId:'native-tool-call',signal});
   expect(JSON.parse(result.content[0].text)).toMatchObject({taskId:'task',disposition:'queued'});
   expect(f.tools.list()[0].inputSchema).toMatchObject({additionalProperties:false});
 });
-test('missing specialized role selects the builtin executor and the main role can never execute',async()=>{
+test('missing role or owner is rejected; builtin executor needs an explicit owner and main never executes',async()=>{
   const f=fixture(),signal=new AbortController().signal,{agentId,...fallback}=task;
-  const result=await f.tools.call('cbim_dispatch_task',fallback,signal,'default-call');
+  await expect(f.tools.call('cbim_dispatch_task',fallback,signal,'no-role')).rejects.toThrow('参数无效');
+  await expect(f.tools.call('cbim_dispatch_task',{...task,ownerSelection:undefined},signal,'no-owner')).rejects.toThrow('参数无效');
+  const result=await f.tools.call('cbim_dispatch_task',{...fallback,agentId:'cbim:executor'},signal,'default-call');
   expect(f.dispatch).toHaveBeenCalledWith({...fallback,prerequisites:[],assigneeAgentId:'cbim:executor'},{toolCallId:'default-call',signal});
   expect(JSON.parse(result.content[0].text)).toMatchObject({disposition:'queued'});
   for(const field of ['assigneeAgentId','agentInstanceId','rootSessionId','permission']){
@@ -75,5 +77,5 @@ test('原run/call命令与回执必须一致，坏回包不自动重派或把que
   ]){f.dispatch.mockResolvedValueOnce(invalid);await expect(f.tools.call('cbim_dispatch_task',task,signal,'call')).rejects.toMatchObject({code:'TOOL_OUTPUT_INVALID'})}
   expect(f.dispatch).toHaveBeenCalledTimes(2);expect(f.inspect).not.toHaveBeenCalled();
   const metadata=f.tools.list().find(tool=>tool.name==='cbim_dispatch_task')!;
-  expect(metadata).toMatchObject({version:1,effects:['maintenance'],cancellation:{mode:'preflight_only'},recovery:{mode:'inspect_before_retry',queryTool:'cbim_dispatch_inspect'}});expect(metadata.outputSchema).toBeTruthy();
+  expect(metadata).toMatchObject({version:2,effects:['maintenance'],cancellation:{mode:'preflight_only'},recovery:{mode:'inspect_before_retry',queryTool:'cbim_dispatch_inspect'}});expect(metadata.outputSchema).toBeTruthy();
 });

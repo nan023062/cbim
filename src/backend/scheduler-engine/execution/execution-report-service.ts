@@ -1,8 +1,9 @@
 /**
  * 作用定位：以持久派发状态和指定成员运行日志生成异常核实报告。
- * 设计原因：观察流程独立于执行恢复；只有可信撤销记录及无领取事实共同成立才报告未启动，普通 cancelled 不表示没有副作用。安全检查点只说明本轮结束，不当成交付；前后屏障防止拼接证据。
+ * 设计原因：观察流程独立于执行恢复；只有可信撤销记录及无领取事实共同成立才报告未启动。原岗位绑定按该轮冻结值核验，不用当前责任或模型覆盖历史；前后屏障防止拼接证据。
  */
 import {fail} from '../../core/foundation/errors';
+import {isDeepStrictEqual} from 'node:util';
 import {hash,json} from '../../core/foundation/serialization';
 import {executionReportInputSchema,executionReportSchema,type ExecutionReport} from '../../core/tasks/execution-report';
 import type {DispatchStore,DispatchState} from '../../core/tasks/dispatch-storage';
@@ -117,6 +118,6 @@ export class ExecutionReportService {
   private bound(run:DispatchRun,task:ReturnType<ExecutionReportService['facts']>['task'],workspaceId:string,rootSessionId:string){const b=run.binding;return b.workspaceId===workspaceId&&b.rootSessionId===rootSessionId&&b.taskId===task.taskId&&b.agentId===task.assignee.agentId&&b.agentInstanceId===task.assignee.agentInstanceId&&b.agentSessionId===task.assignee.agentSessionId}
   private matches(summary:RunSummary,run:DispatchRun){
     const b=run.binding;
-    return ['running','completed','cancelled','failed','interrupted'].includes(summary.status)&&summary.runId===b.runId&&summary.task.workspaceId===b.workspaceId&&summary.task.taskId===b.taskId&&summary.task.agentId===b.agentId&&summary.task.root===this.owner.entry.path&&json(summary.memberBinding)===json(b)&&summary.events.length>0&&summary.events[0].type==='run.started'&&summary.events.every((event,index)=>event.seq===index+1&&event.runId===b.runId&&event.taskId===b.taskId&&event.workspaceId===b.workspaceId)&&(!run.session.sessionFile||summary.sessionFile===run.session.sessionFile);
+    return ['running','completed','cancelled','failed','interrupted'].includes(summary.status)&&summary.runId===b.runId&&summary.task.workspaceId===b.workspaceId&&summary.task.taskId===b.taskId&&summary.task.agentId===b.agentId&&summary.task.root===this.owner.entry.path&&isDeepStrictEqual(summary.task.ownerBinding,run.prepared.memberContext?.binding)&&json(summary.memberBinding)===json(b)&&summary.events.length>0&&summary.events[0].type==='run.started'&&summary.events.every((event,index)=>event.seq===index+1&&event.runId===b.runId&&event.taskId===b.taskId&&event.workspaceId===b.workspaceId)&&(!run.session.sessionFile||summary.sessionFile===run.session.sessionFile);
   }
 }

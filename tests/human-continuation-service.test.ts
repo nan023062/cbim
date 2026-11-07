@@ -22,7 +22,7 @@ async function prepareReview(f:Fixture,kind:'accept'|'reject'='accept'){
   await journal.init();await journal.append({type:'run.started',data:{task:old.task,conversationBinding:old.conversationBinding,message:'可信人工决定系统转交',resumeFrom:old.runId,source:{kind:'human_decisions',continuationId:request.commandId,scopeId:f.scopeId,waitId:request.waitId,inputRevision:request.expectedInputRevision+1,decisionRevision:request.expectedDecisionRevision,decisionIds:request.decisionIds}}});
   await journal.append({type:'session.bound',data:{sessionId:'human-main-native',sessionFile:old.sessionFile}});
   f.inspectMain.mockImplementation((_root,id)=>RunJournal.read(id===runId?journal.directory:f.journal.directory));
-  const plan=accepted.scope.goal!.plan!,draft={expectedRevision:accepted.scope.goal!.revision,objective:plan.objective,constraints:plan.constraints,criteria:plan.criteria,assignments:plan.assignments.map(({agentId,moduleIds,criterionIds,reason})=>({agentId,moduleIds,criterionIds,reason})),reason:'按保存意见重新审阅原目标'};
+  const plan=accepted.scope.goal!.plan!,draft={expectedRevision:accepted.scope.goal!.revision,objective:plan.objective,constraints:plan.constraints,criteria:plan.criteria,assignments:plan.assignments.map(({agentId,moduleIds,criterionIds,reason,ownerSelection})=>({agentId,moduleIds,criterionIds,reason,ownerSelection})),reason:'按保存意见重新审阅原目标'};
   const planned=await f.service.goals.plan(f.identity,f.scopeId,runId,'human-replan',draft),review:GoalReviewInput={expectedRevision:planned.goal!.revision,decision:'complete',checks:[{criterionId:'c1',outcome:'satisfied',reason:'引用明确接受并重核',evidence:[{kind:'human-decision',decisionId:saved.record.decisionId,continuationId:request.commandId}]}],superseded:[],gaps:[],reason:'精确证据复核'};
   return {saved,request,accepted,runId,journal,plan,draft,review};
 }
@@ -53,7 +53,7 @@ it('接受后的文件、知识或canonical改变，在实际消费之前拒绝�
     const saved=await decision(f),req=await input(f,[saved.record.decisionId]),before=await f.store.read(),file=path.join(f.a,'human-0.txt'),bytes=await fs.readFile(file);
     await fs.writeFile(file,'changed');await expect(f.service.humanContinuations.accept(req,'new-main')).rejects.toMatchObject({code:'HUMAN_CONTINUATION_STALE'});expect(await f.store.read()).toEqual(before);await fs.writeFile(file,bytes);
     f.inspect.mockImplementation(async run=>{const summary=await f.read(run);summary.logIntegrity=undefined;return summary});await expect(f.service.humanContinuations.accept(req,'new-main')).rejects.toMatchObject({code:'GOAL_EVIDENCE_INVALID'});expect(await f.store.read()).toEqual(before);f.inspect.mockImplementation(f.read);
-    const snapshot=await f.workspace.snapshot();await f.workspace.commit(knowledgeRequest(snapshot,[{path:'.cbim/README.md',text:'# changed knowledge'}]));await expect(f.service.humanContinuations.accept(req,'new-main')).rejects.toMatchObject({code:'HUMAN_KNOWLEDGE_CHANGED'});expect(await f.store.read()).toEqual(before);
+    const snapshot=await f.workspace.snapshot();await f.workspace.commit(knowledgeRequest(snapshot,[{path:'.cbim/README.md',text:'# changed knowledge'}]));const afterKnowledge=await f.store.read();expect(afterKnowledge.graphs).toEqual(before.graphs);expect(afterKnowledge.scopes).toEqual(before.scopes);await expect(f.service.humanContinuations.accept(req,'new-main')).rejects.toMatchObject({code:'HUMAN_KNOWLEDGE_CHANGED'});expect(await f.store.read()).toEqual(afterKnowledge);
   }finally{await f.cleanup()}
 });
 
@@ -62,6 +62,20 @@ it('文件核实await期间停止，在落盘前拒绝且归还只读占用',asy
     const saved=await decision(f),req=await input(f,[saved.record.decisionId]),before=await f.store.read(),abort=new AbortController();f.checkFiles.mockImplementation(async(files,signal)=>{entered.resolve();await release.promise;return f.files.checkFiles(files,signal)});
     const pending=f.service.humanContinuations.accept(req,'stopped-main',()=>abort.signal.throwIfAborted());await entered.promise;abort.abort();release.resolve();await expect(pending).rejects.toMatchObject({name:'AbortError'});expect(await f.store.read()).toEqual(before);expect(f.lease.canAcquire('probe','execute')).toBeUndefined();expect(await f.service.humanContinuations.inspect({...f.identity,scopeId:f.scopeId,commandId:req.commandId})).toBeUndefined();
   }finally{release.resolve();await f.cleanup()}
+});
+
+it('人工接续核证与受控知识提交共用账本时不逆序等待，知识变化不消费原等待',async()=>{
+  const f=await humanServiceFixture();try{
+    const saved=await decision(f),req=await input(f,[saved.record.decisionId]),before=await f.store.read();
+    f.checkFiles.mockImplementation(async(files,signal)=>{
+      const observed=await f.files.checkFiles(files,signal),snapshot=await f.workspace.snapshot();
+      await f.workspace.commit(knowledgeRequest(snapshot,[{path:'.cbim/README.md',text:'# 验收期间的新知识'}]));
+      return observed;
+    });
+    await expect(f.service.humanContinuations.accept(req,'no-deadlock-run')).rejects.toMatchObject({code:'HUMAN_CONTINUATION_STALE'});
+    const after=await f.store.read();expect(after.scopes).toEqual(before.scopes);expect(after.graphs).toEqual(before.graphs);expect(after.runs).toEqual(before.runs);
+    expect(await f.service.humanContinuations.inspect({...f.identity,scopeId:f.scopeId,commandId:req.commandId})).toBeUndefined();
+  }finally{await f.cleanup()}
 });
 
 it('新计划同主体可凭已消费接受审阅，完成前再次核文件；原目标与记录不改写',async()=>{
@@ -91,7 +105,7 @@ it('人工意图的canonical原始来源被改写时，不能仅凭持久意图�
 it('人工返工重新核实被拒原日志，不能用superseded隐藏损坏来源；文件本身可由新任务改变',async()=>{
   const f=await humanServiceFixture();try{
     const p=await prepareReview(f,'reject'),source=(await f.service.snapshot(f.identity)).tasks[0];await fs.writeFile(path.join(f.a,'human-rework.txt'),'reworked');
-    const assigned=await f.service.dispatchTask({...f.identity,commandId:'rework-assignment',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:p.plan.assignments[0].moduleIds,goal:'human-rework.txt',acceptance:[{id:'c1',text:'有真实读取'}]}},f.scopeId);
+    const assigned=await f.service.dispatchTask({...f.identity,commandId:'rework-assignment',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:p.plan.assignments[0].moduleIds,ownerSelection:p.plan.assignments[0].ownerSelection,goal:'human-rework.txt',acceptance:[{id:'c1',text:'有真实读取'}]}},f.scopeId);
     await f.members.start({...f.identity,taskId:assigned.taskId,commandId:'start-rework',expectedRevision:1,options:{permission:'execute'}});await f.members.waitForSettlement({...f.identity,taskId:assigned.taskId});
     const replacement=(await f.service.snapshot(f.identity)).tasks.find(task=>task.taskId===assigned.taskId)!,draft:GoalReviewInput={...p.review,decision:'awaiting_user',checks:[{criterionId:'c1',outcome:'needs_human',reason:'请确认返工',evidence:[{kind:'member-result',taskId:replacement.taskId,runId:replacement.result!.runId,resultId:replacement.result!.resultId,planRevision:replacement.planRevision,toolCallIds:replacement.result!.evidenceRefs}]}],superseded:[{taskId:source.taskId,replacementTaskIds:[replacement.taskId],reason:'按明确拒绝新做',humanDecision:{decisionId:p.saved.record.decisionId,continuationId:p.request.commandId}}],gaps:['待用户重新核实']},before=await f.store.read();
     f.inspect.mockImplementation(async run=>{const summary=await f.read(run);if(run.binding.taskId===source.taskId)summary.events.at(-1)!.time='2026-11-07T00:00:00.000Z';return summary});
@@ -111,7 +125,7 @@ it('后续主回注引用人工意图时，旧来源日志完整行截断仍拒�
 
 it('已接受的人工项不能混入接续后新候选或借旧接受代替新产物验收',async()=>{
   const f=await humanServiceFixture();try{
-    const p=await prepareReview(f);await fs.writeFile(path.join(f.a,'extra-candidate.txt'),'new candidate');const assigned=await f.service.dispatchTask({...f.identity,commandId:'extra-assignment',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:p.plan.assignments[0].moduleIds,goal:'extra-candidate.txt',acceptance:[{id:'c1',text:'有真实读取'}]}},f.scopeId);
+    const p=await prepareReview(f);await fs.writeFile(path.join(f.a,'extra-candidate.txt'),'new candidate');const assigned=await f.service.dispatchTask({...f.identity,commandId:'extra-assignment',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:p.plan.assignments[0].moduleIds,ownerSelection:p.plan.assignments[0].ownerSelection,goal:'extra-candidate.txt',acceptance:[{id:'c1',text:'有真实读取'}]}},f.scopeId);
     await f.members.start({...f.identity,taskId:assigned.taskId,commandId:'start-extra',expectedRevision:1,options:{permission:'execute'}});await f.members.waitForSettlement({...f.identity,taskId:assigned.taskId});const task=(await f.service.snapshot(f.identity)).tasks.find(item=>item.taskId===assigned.taskId)!,before=await f.store.read();
     await expect(f.service.goals.review(f.identity,f.scopeId,p.runId,'mix-unaccepted',{...p.review,checks:[{...p.review.checks[0],evidence:[...p.review.checks[0].evidence,{kind:'member-result',taskId:task.taskId,runId:task.result!.runId,resultId:task.result!.resultId,planRevision:task.planRevision,toolCallIds:task.result!.evidenceRefs}]}]})).rejects.toMatchObject({code:'GOAL_HUMAN_CANDIDATE'});expect(await f.store.read()).toEqual(before);
   }finally{await f.cleanup()}

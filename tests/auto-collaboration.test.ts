@@ -10,7 +10,7 @@ import type {GraphSnapshot,TaskNode} from '../src/backend/core/tasks/graph-types
 import {GlobalRunAdmission} from '../src/backend/scheduler-engine/runtime/run-admission';
 import type {ExecutionAdmissionWait} from '../src/backend/scheduler-engine/execution/admission-wait';
 import {admissionRequestId,acquireExecutionLease} from '../src/backend/main/execution-admission';
-import {mainToolReplacement} from './main-tool-output-fixture';
+import {mainToolOwnerSelection,mainToolReplacement} from './main-tool-output-fixture';
 import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
 import type {AddQueuedDependencyInput,AddQueuedDependencyReceipt} from '../src/backend/core/tasks/queued-dependency-addition';
 import type {MainToolOutputBinding} from '../src/backend/core/tasks/main-tool-output';
@@ -67,7 +67,8 @@ async function setup(admission?:GlobalRunAdmission){
     return {workspaceId:task.workspaceId,taskId:task.taskId,runId:'continued'};
   });
   const tools=coordinator.tools(task,'parent-run',options)!;
-  const assign=()=>tools.call('cbim_dispatch_task',{agentId:'member',moduleIds:['module'],goal:'核实产物',acceptance:[{id:'actual',text:'真实文件证据'}]},new AbortController().signal,'dispatch-call');
+  // 纯协调器测试的合法输入只使用静态预期；不把 mock 岗位写入真实登记账本。
+  const assign=()=>tools.call('cbim_dispatch_task',{agentId:'member',ownerSelection:mainToolOwnerSelection(['module']),moduleIds:['module'],goal:'核实产物',acceptance:[{id:'actual',text:'真实文件证据'}]},new AbortController().signal,'dispatch-call');
   const settleParent=(status:RunSummary['status']='completed')=>hooks.settled(task,options,{task,runId:'parent-run',status,acceptance:'not_evaluated',unresolvedTools:[],events:[]});
   const finishMember=(candidate=true)=>{
     Object.assign(graph.tasks[0],{activeRunId:undefined,status:candidate?'result_ready':'blocked',...(candidate?{result:{resultId:'result-1',runId:'member-run',planRevision:1,summary:'真实读取结果',evidenceRefs:['read'],limitations:[],acceptance:'not_evaluated'}}:{waitReason:'没有有效候选'})});
@@ -238,7 +239,9 @@ it('主轮委派只入队，释放占用后成员才能运行；结果确认失�
     release();await vi.waitFor(()=>expect(f.graph.tasks[0].status).toBe('running'));
     expect(f.dispatch.openScope).toHaveBeenCalledTimes(1);expect(f.dispatch.closeScope).not.toHaveBeenCalled();
     expect(f.dispatch.openScope).toHaveBeenCalledWith(f.graph.identity,expect.any(String),{message:'本轮实际输入',attachmentIds:undefined},'parent-run');
-    expect(f.members.start.mock.calls.at(-1)![0].options).toMatchObject({permission:'ask',model:'model',profileId:f.options.profileId});
+    expect(f.members.start.mock.calls.at(-1)![0].options).toMatchObject({permission:'ask'});
+    expect(f.members.start.mock.calls.at(-1)![0].options).not.toHaveProperty('model');
+    expect(f.members.start.mock.calls.at(-1)![0].options).not.toHaveProperty('profileId');
     expect(f.members.start.mock.calls.at(-1)![0].options).not.toHaveProperty('allowAll');
     f.members.acknowledge.mockRejectedValueOnce(Error('ack disk unavailable'));f.finishMember();
     await vi.waitFor(()=>expect(f.execution.continueFromResults).toHaveBeenCalledTimes(1));

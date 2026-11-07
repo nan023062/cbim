@@ -11,6 +11,7 @@ import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-cont
 import {seedTeam} from './team-fixture';
 import {request} from './helpers';
 import {attachmentFixture,waitingAttachmentsProvider} from './waiting-attachments-provider';
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 
 export const attachmentHash=(data:string|Buffer)=>createHash('sha256').update(data).digest('hex');
 function pngChunk(type:string,data:Buffer){const body=Buffer.concat([Buffer.from(type),data]);let crc=0xffffffff;for(const byte of body){crc^=byte;for(let i=0;i<8;i++)crc=(crc>>>1)^((crc&1)?0xedb88320:0)}const head=Buffer.alloc(4),tail=Buffer.alloc(4);head.writeUInt32BE(data.length);tail.writeUInt32BE((crc^0xffffffff)>>>0);return Buffer.concat([head,body,tail])}
@@ -26,7 +27,8 @@ export async function seedWaitingAttachments(app:Application,project:string,prov
   const knowledge=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'attachment-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'attachment-review',source:'local_user',confirmedAt:new Date().toISOString()}};
   await workspace.commit(request(knowledge,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
-  provider.bind(team.input.agentId,team.input.moduleId,png.toString('base64'));
+  const registered=await registerExplicitFixtureOwner(app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId,modelId:'attachment-vision',name:'等待附件核实岗位'});
+  provider.bind(team.input.agentId,team.input.moduleId,png.toString('base64'),registered.selection);
   const scopes=async()=>{const raw=await fs.readFile(path.join(app.paths.project(entry.id),'dispatch','dispatch.jsonl'),'utf8'),found=new Map<string,DispatchScope>();for(const line of raw.slice(0,raw.lastIndexOf('\n')).split('\n').filter(Boolean)){const {body}=JSON.parse(line);assert.equal(body.workspaceId,entry.id);for(const scope of body.mutation.scopes??[])found.set(scope.scopeId,scope)}return [...found.values()]};
   const options={provider:'cbim-'+profileId,model:'attachment-vision',profileId,permission:'read' as const,turnTimeoutMs:30000};
   const continuation=(scope:DispatchScope,ids:string[],overrides:Partial<GoalContinuationRequest>={}):GoalContinuationRequest=>({...{workspaceId:entry.id,rootSessionId:scope.rootSessionId,scopeId:scope.scopeId,waitId:scope.wait!.waitId,expectedGoalRevision:scope.goal!.revision,expectedInputRevision:scope.goal!.inputRevision??1,commandId:randomUUID(),input:{message:attachmentFixture.supplement,attachmentIds:ids},options},...overrides});

@@ -1,3 +1,5 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -16,12 +18,13 @@ export async function dependencyRuns(user:string,workspaceId:string){
   for(const line of raw.slice(0,raw.lastIndexOf('\n')).split('\n').filter(Boolean)){const {body}=JSON.parse(line) as {body:{workspaceId:string;mutation:DispatchMutation}};assert.equal(body.workspaceId,workspaceId);for(const run of body.mutation.runs??[])runs.set(run.binding.runId,run)}
   return [...runs.values()];
 }
-export async function seedDependencyReplacement(app:Application,project:string,provider:{url:string;bind:(agent:string,module:string)=>void}){
+export async function seedDependencyReplacement(app:Application,project:string,provider:{url:string;bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>void}){
   await app.models.save({profile:{name:'Dependency replacement fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:'dependency-replacement-fixture',models:[{id:'dependency-replacement-fixture',name:'Dependency replacement fixture',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-  const entry=await app.dispatch('add',{path:project}),workspace=app.workspace(entry.id),team=await seedTeam(workspace);provider.bind(team.input.agentId,team.input.moduleId);
+  const entry=await app.dispatch('add',{path:project}),workspace=app.workspace(entry.id),team=await seedTeam(workspace);
   const snapshot=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'dependency-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'dependency-review',source:'local_user',confirmedAt:new Date().toISOString()}};
   await workspace.commit(request(snapshot,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
+  const profileId=(await app.models.list()).selectedId!,registered=await registerExplicitFixtureOwner(app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId,modelId:'dependency-replacement-fixture'});provider.bind(team.input.agentId,team.input.moduleId,registered.selection);
   await Promise.all(data.files.map((file,index)=>fs.writeFile(path.join(project,file),data.facts[index])));return {entry,team};
 }
 

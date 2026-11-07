@@ -1,3 +1,4 @@
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -18,10 +19,12 @@ it.each(['parked-restart','shutdown-before-park','missing-review'] as const)('ke
   const leaseSpy=vi.spyOn(WorkspaceExecutionLease.prototype,'acquire').mockImplementation(function(this:WorkspaceExecutionLease,...args:Parameters<typeof originalAcquire>){const release=originalAcquire.apply(this,args);leases.add(args[0]);return ()=>{release();leases.delete(args[0])}});
   try{
     await app.models.save({profile:{name:'Scope waiting fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:'wait-fixture',models:[{id:'wait-fixture',name:'Wait fixture',enabled:true,contextWindow:65536,maxTokens:2048,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-    const entry=await app.dispatch('add',{path:f.a}),workspace=app.workspace(entry.id),team=await seedTeam(workspace);provider.bind(team.input.agentId,team.input.moduleId);
+    const entry=await app.dispatch('add',{path:f.a}),workspace=app.workspace(entry.id),team=await seedTeam(workspace);
     const knowledge=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);
     definition.maintenance={bindingId:'wait-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'wait-review',source:'local_user',confirmedAt:new Date().toISOString()}};
     await workspace.commit(request(knowledge,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
+    const owner=await registerExplicitFixtureOwner(app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId:(await app.models.list()).selectedId!,modelId:'wait-fixture'});
+    provider.bind(team.input.agentId,team.input.moduleId,owner.selection);
     await fs.writeFile(path.join(f.a,'wait-input.txt'),waitFixture.fact);
     const scopes=async()=>{
       const raw=await fs.readFile(path.join(f.user,entry.id,'dispatch','dispatch.jsonl'),'utf8'),found=new Map<string,DispatchScope>();

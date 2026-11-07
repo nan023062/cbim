@@ -4,7 +4,7 @@
  * 资源连接：桌面显式登记、授权与核验分别路由；只读原回执和未受理证明不重放知识提交，不接受客户端地址或令牌。
  * 模块治理：登记、观察、决定与独立实施按原命令路由；只有可信桌面闭包提供人工来源，普通 commit 没有批准参数。
  * 队列插入：原样传递用户操作时的 expectedRunId，由执行管理器统一拒绝缺省、过期或停止请求，不替客户端猜当前运行。
- * 岗位登记：五个桌面入口共享派发存储，提交者来源由主进程注入；登记状态不代表岗位已接入实际派发。
+ * 岗位执行：显式派发必须传当前 scopeId，由服务核计划、责任和岗位；旧 loop.start 在解析模型前拒绝新业务执行，历史读取不变。
  * 模块责任：六个桌面入口复用同一责任服务，人工 actor 由本闭包注入；查询原回执不重新提交或改派执行成员。
  */
 import type {ApplicationServices} from './services';
@@ -55,7 +55,8 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'models.discoverDetails':return app.models.discoverDetails(args);
     case 'dispatch.open':return app.memberDispatch(args.workspaceId).openGraph(args);
     case 'dispatch.memberCreate':return app.memberDispatch(args.workspaceId).createMember(args);
-    case 'dispatch.task':return app.memberDispatch(args.workspaceId).dispatchTask(args);
+    case 'dispatch.task':{const {scopeId,...request}=args;return app.memberDispatch(args.workspaceId).dispatchTask(request,scopeId)}
+    case 'dispatch.ownerInspect':return app.memberDispatch(args.workspaceId).ownerInspect(args);
     case 'dispatch.graphSnapshot':return app.memberDispatch(args.identity?.workspaceId).snapshot(args.identity);
     case 'dispatch.graphDelta':return app.memberDispatch(args.identity?.workspaceId).delta(args.identity,args.cursor,args.limit);
     case 'dispatch.sessionRead':return app.memberDispatch(args.identity?.workspaceId).sessionRead(args);
@@ -82,7 +83,7 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'loop.choices':return app.execution(args.id).choices();
     case 'loop.thread':return app.execution(args.id).thread(args.taskId);
     case 'loop.threadView':return app.execution(args.id).threadView(args.taskId);
-    case 'loop.start':return app.execution(args.id).start(args.task,await app.modelOptions(args.options));
+    case 'loop.start':fail('OWNER_DISPATCH_REQUIRED','业务执行必须通过当前目标计划和负责岗位派发；旧任务历史仍可读取');
     case 'loop.queue':return app.execution(args.id).queued(args.taskId);
     case 'loop.queueDelta':return app.execution(args.id).queueDelta(args.taskId,args.cursor);
     case 'loop.enqueue':return app.execution(args.id).enqueue(args.taskId,await new ChatInputs(app.workspace(args.id)).message(args.message,args.attachments),await app.chatOptions(args.id,args.options,args.attachments));

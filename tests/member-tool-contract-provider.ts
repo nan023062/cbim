@@ -1,3 +1,4 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -8,14 +9,15 @@ type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]}
 
 /** Only model responses are deterministic. The test corrupts one returned value after real canonical staging. */
 export async function memberToolContractProvider(mode:MemberToolFault){
-  const main:Request[]=[],member:Request[]=[],errors:string[]=[],state:{fault?:unknown;denied?:unknown;baselineId?:string;progressVersion?:number}={};let agentId='',moduleId='';
+  const main:Request[]=[],member:Request[]=[],errors:string[]=[],state:{fault?:unknown;denied?:unknown;baselineId?:string;progressVersion?:number}={};let ownerSelection:OwnerExecutionSelection|undefined;let agentId='',moduleId='';
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw)as Request;assert.equal(body.model,data.model);const isMain=body.tools?.some(item=>item.function.name==='cbim_dispatch_task')===true,list=isMain?main:member,turn=list.length;list.push(body);
     res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'member-contract-'+(main.length+member.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n'),tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     if(isMain){
+      assert.ok(ownerSelection,'Fixture must bind an actual registered owner before business planning');
       assert.ok(body.tools?.every(item=>!['cbim_task_help','cbim_task_artifact_capture','cbim_task_checkpoint','write','edit','bash'].includes(item.function.name)));
-      if(turn===0)tool('member-contract-goal-plan','cbim_goal_plan',goalPlanArguments({objective:data.goal,agentId,moduleIds:[moduleId],acceptance:data.acceptance}));
-      else if(turn===1)tool('member-contract-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:data.memberGoal,acceptance:data.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+      if(turn===0)tool('member-contract-goal-plan','cbim_goal_plan',goalPlanArguments({objective:data.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:data.acceptance}));
+      else if(turn===1)tool('member-contract-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:data.memberGoal,acceptance:data.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
       else if(turn===2)reply('唯一任务已交给执行成员。');
       else if(turn===3)tool('member-contract-goal-inspect','cbim_goal_inspect',{});
       else if(turn===4){const {scope,graph}=goalInspection(body,'member-contract-goal-inspect');assert.equal(graph.tasks.length,1);assert.equal(graph.tasks[0].status,'blocked');assert.equal(graph.tasks[0].result,undefined);assert.equal(graph.tasks[0].help,undefined);assert.equal(graph.tasks[0].checkpoints,undefined);tool('member-contract-review','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'blocked',checks:scope.goal.plan.criteria.map(criterion=>({criterionId:criterion.id,outcome:'unmet',reason:'成员输出失败，不能把暂存请求当作安全交接或业务候选',evidence:[]})),superseded:[],gaps:['须核实原执行记录，不自动重做请求'],reason:'保留原任务与失败回执，不自动派发或恢复'})}
@@ -43,5 +45,5 @@ export async function memberToolContractProvider(mode:MemberToolFault){
     }
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Member tool contract fixture failed')}});
-  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,state,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},close:async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,state,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=structuredClone(selection)},close:async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

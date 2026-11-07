@@ -3,9 +3,13 @@ import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {GoalPlanInput,GoalReviewInput} from '../src/backend/core/tasks/scope-goal';
 import type {GraphSnapshot,TaskNode} from '../src/backend/core/tasks/graph-types';
 import type {ReplaceQueuedDependencyInput,ReplaceQueuedDependencyReceipt} from '../src/backend/core/tasks/queued-dependency-replacement';
+import type {OwnerExecutionBinding,OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 
 export const mainToolBinding:MainToolOutputBinding={workspaceId:'workspace',rootSessionId:'root',scopeId:'bound-scope',runId:'e5f28867-d117-451e-826e-b5bb4f7962c0'};
 export const mainToolTime='2026-11-07T00:00:00.000Z';
+/** 纯 wire 包装夹具使用明确的预期和对应服务绑定；不把这份静态数据写进真实登记 Store。 */
+export function mainToolOwnerSelection(moduleIds:readonly string[]):OwnerExecutionSelection{return {version:1,memberId:'10000000-0000-4000-8000-000000000001',expectedMemberRevision:1,expectedCapabilityHash:'a'.repeat(64),expectedConfigurationHash:'b'.repeat(64),expectedOwners:moduleIds.map((moduleId,index)=>({moduleId,bindingId:`20000000-0000-4000-8000-${String(index+1).padStart(12,'0')}`,revision:1,ownerMemberId:'10000000-0000-4000-8000-000000000001'}))}}
+export function mainToolOwnerBinding(agentId:string,selection:OwnerExecutionSelection,binding=mainToolBinding):OwnerExecutionBinding{return {version:1,workspaceId:binding.workspaceId,memberId:selection.memberId,memberRevision:selection.expectedMemberRevision,memberHash:'c'.repeat(64),capability:{agentId,teamId:'.cbim/team',captureId:'30000000-0000-4000-8000-000000000001',capabilityHash:selection.expectedCapabilityHash,sourceRef:agentId==='cbim:executor'?{kind:'builtin',id:'cbim:executor',contentHash:selection.expectedCapabilityHash}:{version:1,workspaceId:binding.workspaceId,source:{kind:'agent',sourceId:agentId},generationId:'40000000-0000-4000-8000-000000000001'}},model:{profileId:'50000000-0000-4000-8000-000000000001',modelId:'fixture',configurationHash:selection.expectedConfigurationHash},owners:selection.expectedOwners.map((owner,index)=>({...owner,sourceRef:{version:1,workspaceId:binding.workspaceId,source:{kind:'module',sourceId:owner.moduleId},generationId:`60000000-0000-4000-8000-${String(index+1).padStart(12,'0')}`}}))}}
 export function mainToolGraph(binding=mainToolBinding):GraphSnapshot{
   const identity={workspaceId:binding.workspaceId,rootSessionId:binding.rootSessionId},agent={agentId:'cbim:main',agentInstanceId:'main-instance',agentSessionId:'main-session',name:'Main'};
   return {version:1,identity,cursor:{...identity,streamId:'stream',seq:1},root:{kind:'session-root',identity,nodeId:'session:'+binding.rootSessionId,agent,revision:1,createdAt:mainToolTime},tasks:[],edges:[],agents:[{agentInstanceId:agent.agentInstanceId,agentId:agent.agentId,name:agent.name,revision:1,state:'idle',waitingTaskIds:[]}]};
@@ -17,7 +21,7 @@ export function mainToolTask(binding=mainToolBinding,taskId='task'):TaskNode{
 export function mainToolScope(binding:MainToolOutputBinding,plan?:GoalPlanInput,review?:GoalReviewInput):DispatchScope{
   const scope:DispatchScope={scopeId:binding.scopeId,workspaceId:binding.workspaceId,rootSessionId:binding.rootSessionId,status:'active',createdAt:mainToolTime,goal:{revision:1,inputRevision:1,input:{message:'Original user goal',attachmentIds:[]}}};
   const stamp={runId:binding.runId,recordedAt:mainToolTime,knowledgeRevision:'knowledge',graphCursor:{streamId:'stream',seq:1},inputRevision:1};
-  if(plan){const {expectedRevision,...body}=plan;scope.goal!.revision=expectedRevision+1;scope.goal!.plan={...body,...stamp,revision:expectedRevision+1,assignments:body.assignments.map(item=>({...item,agentName:'Executor',teamId:'.cbim/team',moduleNames:item.moduleIds.map(()=>'Module')}))}}
+  if(plan){const {expectedRevision,...body}=plan;scope.goal!.revision=expectedRevision+1;scope.goal!.plan={...body,...stamp,revision:expectedRevision+1,assignments:body.assignments.map(item=>({...item,agentName:'Executor',teamId:'.cbim/team',moduleNames:item.moduleIds.map(()=>'Module'),...(item.ownerSelection?{ownerBinding:mainToolOwnerBinding(item.agentId,item.ownerSelection,binding)}:{})}))}}
   if(review){const {expectedRevision,...body}=review;scope.goal!.revision=expectedRevision+1;scope.goal!.review={...body,...stamp,revision:expectedRevision+1,planRevision:scope.goal!.plan!.revision,observedSeq:4,lastEffectSeq:0}}
   return scope;
 }

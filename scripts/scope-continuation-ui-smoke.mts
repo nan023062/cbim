@@ -9,6 +9,7 @@ import {Paths} from '../src/backend/main/platform/paths';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
 import {seedTeam} from '../tests/team-fixture';
+import {registerExplicitFixtureOwner} from '../tests/explicit-owner-fixture';
 import {request} from '../tests/helpers';
 import {scopeContinuationProvider,continuationFixture as data} from '../tests/scope-continuation-provider';
 import {latestExecutable} from './build-artifact.mjs';
@@ -25,10 +26,12 @@ let desktop:ElectronApplication|undefined,setup:Application|undefined,keepTemp=f
 try{
   setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();
   await setup.models.save({profile:{name:'Local continuation UI',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:'continue-fixture',models:[{id:'continue-fixture',name:'Continue fixture',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-  const profileId=(await setup.models.list()).selectedId!,entry=await setup.dispatch('add',{path:project}),workspace=setup.workspace(entry.id),team=await seedTeam(workspace);provider.bind(team.input.agentId,team.input.moduleId);
+  const profileId=(await setup.models.list()).selectedId!,entry=await setup.dispatch('add',{path:project}),workspace=setup.workspace(entry.id),team=await seedTeam(workspace);
   const knowledge=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'continue-ui-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'continue-ui-review',source:'local_user',confirmedAt:new Date().toISOString()}};
-  await workspace.commit(request(knowledge,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));await setup.shutdown();setup=undefined;
+  await workspace.commit(request(knowledge,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
+  const owner=await registerExplicitFixtureOwner(setup,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId,modelId:'continue-fixture'});
+  provider.bind(team.input.agentId,team.input.moduleId,owner.selection);await setup.shutdown();setup=undefined;
   const scopes=async()=>{
     const raw=await fs.readFile(path.join(user,entry.id,'dispatch','dispatch.jsonl'),'utf8'),found=new Map<string,DispatchScope>();
     for(const line of raw.slice(0,raw.lastIndexOf('\n')).split('\n').filter(Boolean)){const {body}=JSON.parse(line);assert.equal(body.workspaceId,entry.id);for(const scope of body.mutation.scopes??[])found.set(scope.scopeId,scope)}return [...found.values()];

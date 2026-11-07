@@ -1,3 +1,4 @@
+import {registerServiceOwner} from './owner-service-fixture';
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -92,9 +93,11 @@ it('真实撤销服务产生的never-run任务可报告not_started，读取不�
     const entry=await f.app.dispatch('add',{path:f.a}),owner=f.app.workspace(entry.id),team=await seedTeam(owner),snapshot=await owner.snapshot(),moduleId=team.input.moduleId;
     const definition=JSON.parse(snapshot.files.find(item=>item.path===moduleId+'/module.json')!.text);definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
     await owner.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:json(definition)}]));
-    const directory=path.join(f.temp,'cancelled-report'),store=new FileDispatchStore(directory,entry.id),identity={workspaceId:entry.id,rootSessionId:'report-root'};service=new WorkspaceDispatchService(owner,store);
-    await service.openScope(identity,'cycle',{message:'完成目标'});await service.goals.plan(identity,'cycle','main-run','plan',{expectedRevision:1,objective:'完成目标',constraints:[],criteria:[{id:'c1',text:'真实产物',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],criterionIds:['c1'],reason:'负责业务模块'}],reason:'按图派发'});
-    const assigned=await service.dispatchTask({...identity,commandId:'assign',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],goal:'实现模块',acceptance:[{id:'c1',text:'真实产物'}],prerequisites:[]}},'cycle'),graph=await service.snapshot(identity);
+    await registerServiceOwner(f.app,owner,'cbim:executor',[moduleId]);
+    const store=owner.dispatchStore,directory=store.directory,identity={workspaceId:entry.id,rootSessionId:'report-root'};service=new WorkspaceDispatchService(owner,store,undefined,undefined,undefined,f.app.models);
+    const ownerSelection=(await service.owners.discover([moduleId])).groups[0].selection!;
+    await service.openScope(identity,'cycle',{message:'完成目标'},'main-run');await service.goals.plan(identity,'cycle','main-run','plan',{expectedRevision:1,objective:'完成目标',constraints:[],criteria:[{id:'c1',text:'真实产物',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,criterionIds:['c1'],reason:'负责业务模块'}],reason:'按图派发'});
+    const assigned=await service.dispatchTask({...identity,commandId:'assign',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,goal:'实现模块',acceptance:[{id:'c1',text:'真实产物'}],prerequisites:[]}},'cycle'),graph=await service.snapshot(identity);
     await service.cancelQueued(identity,'cycle','main-run','cancel',{expectedGraphCursor:{streamId:graph.cursor.streamId,seq:graph.cursor.seq},targets:[{taskId:assigned.taskId,expectedRevision:1}],reason:'缺少输入，撤销排队工作'});
     const inspect=vi.fn(async()=>{throw Error('must not read missing logs')}),prepare=vi.fn(async()=>{throw Error('must not create model')}),acquire=vi.fn(()=>{throw Error('must not acquire lease')}),manager=new MemberExecutionManager(owner,store,{inspect,prepare,acquire});
     const bytes=await fs.readFile(path.join(directory,'dispatch.jsonl')),state=await store.read();

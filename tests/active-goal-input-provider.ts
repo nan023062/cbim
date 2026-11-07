@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 
 export const activeInputData={
   model:'active-goal-input-fixture',goal:'ACTIVE_INPUT_MAIN: 核实业务文件并按照最新用户要求汇报',
@@ -18,7 +19,7 @@ type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]}
 /** Only local model responses are deterministic; every plan, read, candidate, review and steer stays real. */
 export async function activeInputProvider(mode:ActiveInputMode='replan'){
   const d=activeInputData,main:Request[]=[],member:Request[]=[],errors:string[]=[];
-  let agentId='',moduleId='';const gates=new Map<number,{promise:Promise<void>;release:()=>void}>();
+  let agentId='',moduleId='',ownerSelection:OwnerExecutionSelection;const gates=new Map<number,{promise:Promise<void>;release:()=>void}>();
   const gate=(turn:number)=>{let item=gates.get(turn);if(!item){let release!:()=>void;const promise=new Promise<void>(resolve=>release=resolve);item={promise,release};gates.set(turn,item)}return item};
   const twice=mode==='twice'||mode==='twice-waiting';gate(5);if(twice)gate(11);
   const server=http.createServer(async(req,res)=>{try{
@@ -28,11 +29,11 @@ export async function activeInputProvider(mode:ActiveInputMode='replan'){
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'active-input-'+(main.length+member.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
-    const plan=(revision=1)=>goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],acceptance:d.acceptance},revision);
+    const plan=(revision=1)=>goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance},revision);
     if(isMain){
       assert.ok(body.tools?.every(item=>!['write','edit','bash'].includes(item.function.name)));
       if(turn===0)tool('active-plan','cbim_goal_plan',plan());
-      else if(turn===1)tool('active-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+      else if(turn===1)tool('active-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
       else if(turn===2)reply('已派发真实文件核实任务，等待成员结果。');
       else if(turn===3)tool('active-before-input','cbim_goal_inspect',{});
       else if(turn===4){const review=goalCompleteArguments(body,'active-before-input');tool('active-old-review','cbim_goal_review',mode==='stale-waiting'?{...review,decision:'awaiting_user',gaps:[d.waitReason],reason:d.waitReason}:review)}
@@ -65,5 +66,5 @@ export async function activeInputProvider(mode:ActiveInputMode='replan'){
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Active input fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},release:(turn=5)=>gate(turn).release(),close:async()=>{for(const item of gates.values())item.release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection},release:(turn=5)=>gate(turn).release(),close:async()=>{for(const item of gates.values())item.release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

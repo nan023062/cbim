@@ -3,7 +3,7 @@
  * 设计原因：主会话与图根共享实例，在创建 run 前取得全局名额及业务文件读取占用；知识治理仍由独立知识事务与用户权限保护。等待回调来自可信启动上下文，不混入可序列化模型设置。
  * 仓库边界：仅桌面主运行工厂捕获已有授权连接，不在准备时联网；CLI/成员和未就绪连接不装配仓库工具。
  * 治理边界：四个观察/提案端口在真实 run 创建时绑定主身份，不共享给成员，不包含桌面批准或实施。
- * 责任边界：负责人四工具在 beforeRun 后从真实主周期捕获身份，提交加入周期在途屏障；知识写权限不等于业务执行或验收许可。
+ * 责任边界：负责人四工具在 beforeRun 后从真实主周期捕获身份，查询提供实际岗位选择，提交加入周期在途屏障；主模型选型不覆盖执行成员岗位配置。
  * 附件边界：目标补充直接使用一次准备的图片，模型配置视觉预检在意图前；不重读附件或把图片放入后续协作配置。
  */
 import path from 'node:path';
@@ -52,7 +52,7 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles,le
     conversationBinding,
     repositoryTools,
     governanceTools:conversationBinding?({task,runId})=>mainGovernanceTools(workspace,task,runId,conversationBinding):undefined,
-    ownershipTools:conversationBinding&&ownerships?({task,runId})=>{const context=collaboration?.()?.mainToolContext(task,runId);return context?{port:mainModuleOwnershipTools(workspace,ownerships.service,ownerships.members,task,runId,conversationBinding,context),binding:{...context.binding,instanceId:workspace.instanceId,agentInstanceId:conversationBinding.agentInstanceId,agentSessionId:conversationBinding.agentSessionId}}:undefined}:undefined,
+    ownershipTools:conversationBinding&&ownerships?({task,runId})=>{const context=collaboration?.()?.mainToolContext(task,runId);return context?{port:mainModuleOwnershipTools(workspace,ownerships.service,ownerships.members,task,runId,conversationBinding,context,dispatch?.owners),binding:{...context.binding,instanceId:workspace.instanceId,agentInstanceId:conversationBinding.agentInstanceId,agentSessionId:conversationBinding.agentSessionId}}:undefined}:undefined,
     dispatchTools:({task,runId})=>collaboration?.()?.tools(task,runId,options),
     acquireLease:async task=>{
       workspace.assert();

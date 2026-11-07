@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 
 /** Local provider helpers produce real goal-tool calls; they never mutate scheduler state or invent result identities. */
-export interface GoalFixturePlan {objective:string;agentId:string;moduleIds:string[];acceptance:string[]}
+export interface GoalFixturePlan {objective:string;agentId:string;moduleIds:string[];acceptance:string[];ownerSelection?:OwnerExecutionSelection}
 export interface GoalFixtureRequest {messages:{role:string;content:unknown;tool_call_id?:string}[]}
 
 export function goalPlanArguments(plan:GoalFixturePlan,expectedRevision=1){
   const criteria=plan.acceptance.map((text,index)=>({id:'goal-criterion-'+index,text,kind:'evidence' as const}));
-  return {expectedRevision,objective:plan.objective,constraints:['只处理授权目标，业务验收仍需核实'],criteria,assignments:[{agentId:plan.agentId,moduleIds:[...plan.moduleIds],criterionIds:criteria.map(item=>item.id),reason:'由实际团队角色核实目标模块并提交可追溯证据'}],reason:'先保存总体目标及证据要求，再派发独立执行成员'};
+  return {expectedRevision,objective:plan.objective,constraints:['只处理授权目标，业务验收仍需核实'],criteria,assignments:[{agentId:plan.agentId,moduleIds:[...plan.moduleIds],...(plan.ownerSelection?{ownerSelection:structuredClone(plan.ownerSelection)}:{}),criterionIds:criteria.map(item=>item.id),reason:'由实际团队角色核实目标模块并提交可追溯证据'}],reason:'先保存总体目标及证据要求，再派发独立执行成员'};
 }
 
 /** The selected call must have a real tool response in Pi's model history; errors or missing results fail the fixture. */

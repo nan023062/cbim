@@ -1,7 +1,8 @@
 /**
  * 作用定位：业务目标和冻结上下文的任务定义。
- * 设计原因：任务身份独立于某次模型执行；当前仅承载定义，不虚构自动验收或工作流状态机。
+ * 设计原因：任务身份独立于某次模型执行；正式成员保存原负责人绑定供日志核验，旧缺省不推断岗位，不把定义当自动验收。
  */
+import type {OwnerExecutionBinding} from '../team/member-execution-binding';
 /** 不随运行重试改变的任务定义；恢复必须与最初持久化的定义一致。 */
 export interface TaskSpec {
   /** chat 使用内置主 Agent；缺省为既有团队任务，不能绕过团队快照校验。 */
@@ -14,6 +15,8 @@ export interface TaskSpec {
   goal: string;
   moduleIds: string[];
   agentId?: string;
+  /** 正式派发的真实岗位快照，主对话和旧日志缺省；不能从 agentId 推断。 */
+  ownerBinding?:OwnerExecutionBinding;
   responsiblePerson?: string;
   /** 人声明的验收要求；当前运行时只记录，不自动判断是否通过。 */
   acceptance: string[];

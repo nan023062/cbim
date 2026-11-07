@@ -10,6 +10,8 @@ import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
 import type {DispatchMutation,DispatchState,AssignmentMessage} from '../src/backend/core/tasks/dispatch-storage';
 import type {AgentInstance,AgentSessionBinding} from '../src/backend/core/team/agent-types';
 import type {AgentRef,GraphEventBatch,GraphIdentity,TaskNode} from '../src/backend/core/tasks/graph-types';
+import {seedExecutionOwner} from './owner-execution-store-support';
+import {bindingFor} from './owner-execution-core-fixture';
 
 const identity:GraphIdentity={workspaceId:'workspace-1',rootSessionId:'root-session-1'};
 const createdAt='2026-11-06T10:00:00.000Z',startedAt='2026-11-06T10:00:01.000Z',settledAt='2026-11-06T10:00:02.000Z';
@@ -18,21 +20,22 @@ const dev:AgentRef={agentId:'.cbim/team/dev',agentInstanceId:'dev-instance',agen
 const member=(ref:AgentRef):AgentInstance=>({workspaceId:identity.workspaceId,teamId:'.cbim/team',agentId:ref.agentId,agentInstanceId:ref.agentInstanceId,leaseEpoch:0,configurationRevision:'knowledge-1',agentSessionIds:[ref.agentSessionId],activity:'idle',waitingTaskIds:[],communicatingMessageIds:[]});
 const session=(ref:AgentRef):AgentSessionBinding=>({workspaceId:identity.workspaceId,teamId:'.cbim/team',agentId:ref.agentId,agentInstanceId:ref.agentInstanceId,agentSessionId:ref.agentSessionId,rootSessionId:identity.rootSessionId});
 const batch=(commandId:string,seq:number,changes:GraphEventBatch['changes'],cause:GraphEventBatch['cause']='task.dispatched'):GraphEventBatch=>({version:1,identity,streamId:'stream-1',seq,eventId:`event-${seq}`,commandId,cause,committedAt:createdAt,changes});
-const task=():TaskNode=>({kind:'task',nodeId:'task:task-1',taskId:'task-1',identity,requester:main,assignee:dev,modules:[{moduleId:'.cbim/workspace/game',name:'game',knowledgeRevision:'knowledge-1',maintenanceBindingId:'maintenance-1',maintainerPersonIds:['person-1'],workflow:{kind:'general',id:'cbim:general',version:'1',reason:'无专属流程'}}],goal:'生成网页游戏',acceptance:[{id:'a1',text:'可以在浏览器运行'}],revision:1,planRevision:1,status:'queued',awaitedChildren:[],runIds:[],createdAt,updatedAt:createdAt});
-function prepared():PreparedDispatchKnowledge{
-  const value={version:1 as const,workspaceId:identity.workspaceId,knowledgeRevision:'knowledge-1',agent:{workspaceId:identity.workspaceId,teamId:'.cbim/team',agentId:dev.agentId,knowledgeRevision:'knowledge-1',name:dev.name,source:'workspace' as const,principles:'按照可验证的任务执行',effectiveSkills:[]},agentDefinition:{name:dev.name},modules:task().modules.map(binding=>({binding,definition:{id:binding.moduleId},overview:'负责网页游戏',workflowText:'business-execution'})),standards:['business-execution','common-rules'].map(id=>({id,text:id,version:hash(id)}))};
+const task=(state:DispatchState):TaskNode=>({kind:'task',nodeId:'task:task-1',taskId:'task-1',identity,requester:main,assignee:dev,scopeId:'owner-scope',ownerBinding:bindingFor(state),modules:[{moduleId:'.cbim/workspace/game',name:'game',knowledgeRevision:'knowledge-1',maintenanceBindingId:'maintenance-1',maintainerPersonIds:['person-1'],workflow:{kind:'general',id:'cbim:general',version:'1',reason:'无专属流程'}}],goal:'生成网页游戏',acceptance:[{id:'a1',text:'可以在浏览器运行'}],revision:1,planRevision:1,status:'queued',awaitedChildren:[],runIds:[],createdAt,updatedAt:createdAt});
+function prepared(state:DispatchState,node=state.graphs[0].tasks[0]):PreparedDispatchKnowledge{
+  const member=state.workspaceMembers!.find(member=>member.memberId===node.ownerBinding!.memberId)!;
+  const value={version:1 as const,workspaceId:identity.workspaceId,knowledgeRevision:'knowledge-1',agent:structuredClone(member.adoption.configuration),agentDefinition:{name:member.adoption.configuration.name},modules:node.modules.map(binding=>({binding,definition:{id:binding.moduleId},overview:'负责网页游戏',workflowText:'business-execution'})),standards:['business-execution','common-rules'].map(id=>({id,text:id,version:hash(id)})),memberContext:{binding:node.ownerBinding!,name:member.name,position:member.position,adaptation:member.adaptation}};
   return {...value,fingerprint:dispatchKnowledgeFingerprint(value)};
 }
-function run():DispatchRun{return {binding:{...identity,teamId:'.cbim/team',agentId:dev.agentId,agentInstanceId:dev.agentInstanceId,agentSessionId:dev.agentSessionId,taskId:'task-1',runId:'run-1',leaseEpoch:0,planRevision:1},assignmentMessageId:'message-1',status:'starting',prepared:prepared(),model:{id:'provider-1',model:'model-1',name:'测试模型',api:'openai-completions',baseUrl:'https://example.test/v1',auth:'api-key',contextWindow:200000,maxTokens:16384,reasoning:true},permission:'ask',session:{nativeSessionId:'native-1'},createdAt}}
+function run(state:DispatchState,node=state.graphs[0].tasks[0]):DispatchRun{return {binding:{...identity,teamId:'.cbim/team',agentId:node.assignee.agentId,agentInstanceId:node.assignee.agentInstanceId,agentSessionId:node.assignee.agentSessionId,taskId:node.taskId,runId:'run-1',leaseEpoch:0,planRevision:1},assignmentMessageId:'message-1',status:'starting',prepared:prepared(state,node),model:state.workspaceMembers!.find(member=>member.memberId===node.ownerBinding!.memberId)!.runtimePolicy.snapshot,permission:'ask',session:{nativeSessionId:'native-1'},createdAt}}
 const command=(commandId:string)=>({commandId,fingerprint:commandId});
 function update(state:DispatchState,commandId:string,nextTask:TaskNode,nextMember:AgentInstance,cause:GraphEventBatch['cause']):DispatchMutation{
-  const graph=state.graphs[0],view=graph.agents.find(agent=>agent.agentInstanceId===dev.agentInstanceId)!;
+  const graph=state.graphs[0],view=graph.agents.find(agent=>agent.agentInstanceId===nextTask.assignee.agentInstanceId)!;
   const {runningTaskId:_,...rest}=view;
   return {members:[nextMember],batch:batch(commandId,graph.cursor.seq+1,[{type:'task.upserted',task:nextTask},{type:'agent.upserted',agent:{...rest,revision:view.revision+1,state:nextMember.activity,waitingTaskIds:[],...(nextTask.status==='running'?{runningTaskId:nextTask.taskId}:{})}}],cause),receipt:{commandId}};
 }
 function claimMutation(state:DispatchState,commandId='claim'):DispatchMutation{
   const current=state.graphs[0].tasks[0],m=state.members.find(member=>member.agentInstanceId===dev.agentInstanceId)!;
-  return {...update(state,commandId,{...current,revision:current.revision+1,runIds:['run-1'],activeRunId:'run-1'},{...m,activity:'communicating',activeTaskId:current.taskId,activeRunId:'run-1'},'message.accepted'),runs:[run()],sessions:[{...state.sessions.find(session=>session.agentSessionId===dev.agentSessionId)!,nativeSessionId:'native-1'}],messages:[{...state.outbox[0] as AssignmentMessage,delivery:'claimed',claim:{runId:'run-1',leaseEpoch:0}}]};
+  return {...update(state,commandId,{...current,revision:current.revision+1,runIds:['run-1'],activeRunId:'run-1'},{...m,activity:'communicating',activeTaskId:current.taskId,activeRunId:'run-1'},'message.accepted'),runs:[run(state)],sessions:[{...state.sessions.find(session=>session.agentSessionId===dev.agentSessionId)!,nativeSessionId:'native-1'}],messages:[{...state.outbox[0] as AssignmentMessage,delivery:'claimed',claim:{runId:'run-1',leaseEpoch:0}}]};
 }
 function runningMutation(state:DispatchState,commandId='running'):DispatchMutation{
   const current=state.graphs[0].tasks[0],m=state.members.find(member=>member.agentInstanceId===dev.agentInstanceId)!;
@@ -49,11 +52,12 @@ function settleMutation(state:DispatchState,status:DispatchRun['status']='comple
 async function setup(){
   const dir=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-execution-store-')),store=new FileDispatchStore(dir,identity.workspaceId);
   await store.transact(command('root'),async()=>({members:[member(main)],sessions:[session(main)],batch:batch('root',1,[{type:'root.upserted',root:{kind:'session-root',nodeId:`session:${identity.rootSessionId}`,identity,agent:main,revision:1,createdAt}},{type:'agent.upserted',agent:{agentInstanceId:main.agentInstanceId,agentId:main.agentId,name:main.name,revision:1,state:'idle',waitingTaskIds:[]}}],'graph.created'),receipt:'root'}));
-  await store.transact(command('dispatch'),async()=>({members:[member(dev)],sessions:[session(dev)],batch:batch('dispatch',2,[{type:'task.upserted',task:task()},{type:'edge.upserted',edge:{edgeId:'edge-1',identity,kind:'dispatch',fromNodeId:`session:${identity.rootSessionId}`,toNodeId:'task:task-1',revision:1,enabled:true}},{type:'agent.upserted',agent:{agentInstanceId:dev.agentInstanceId,agentId:dev.agentId,name:dev.name,revision:1,state:'idle',waitingTaskIds:[]}}]),messages:[{kind:'assignment',messageId:'message-1',commandId:'dispatch',identity,from:main,to:dev,taskId:'task-1',planRevision:1,createdAt,delivery:'pending'}],receipt:'dispatch'}));
+  await seedExecutionOwner(store,identity,dev.name,createdAt);
+  await store.transact(command('dispatch'),async state=>({members:[{...member(dev),executionScopeId:'owner-scope',executionTaskId:'task-1',lifecycle:'active'}],sessions:[session(dev)],batch:batch('dispatch',2,[{type:'task.upserted',task:task(state)},{type:'edge.upserted',edge:{edgeId:'edge-1',identity,kind:'dispatch',fromNodeId:`session:${identity.rootSessionId}`,toNodeId:'task:task-1',revision:1,enabled:true}},{type:'agent.upserted',agent:{agentInstanceId:dev.agentInstanceId,agentId:dev.agentId,name:dev.name,revision:1,state:'idle',waitingTaskIds:[]}}]),messages:[{kind:'assignment',messageId:'message-1',commandId:'dispatch',identity,from:main,to:dev,taskId:'task-1',planRevision:1,createdAt,delivery:'pending'}],receipt:'dispatch'}));
   return {dir,store,cleanup:async()=>{await store.close();await fs.rm(dir,{recursive:true,force:true})}};
 }
 
-test('legacy v1 journals read empty runs; claim is atomic, idempotent and does not assert execution started',async()=>{
+test('registered owner claim is atomic, idempotent and does not assert execution started',async()=>{
   const f=await setup();try{
     expect((await f.store.read()).runs).toEqual([]);
     await f.store.transact(command('claim'),async state=>claimMutation(state));
@@ -148,17 +152,18 @@ test('claim freezes exactly the satisfied prerequisite candidate and rejects lat
     await f.store.transact(command('claim'),async state=>claimMutation(state));
     await f.store.transact(command('running'),async state=>runningMutation(state));
     await f.store.transact(command('settle'),async state=>settleMutation(state,'completed',true));
+    const second={...dev,agentInstanceId:'second-instance',agentSessionId:'second-session'};
     await f.store.transact(command('dispatch-2'),async state=>{
-      const nextTask={...task(),taskId:'task-2',nodeId:'task:task-2'},graph=state.graphs[0];
-      return {batch:batch('dispatch-2',graph.cursor.seq+1,[{type:'task.upserted',task:nextTask},{type:'edge.upserted',edge:{edgeId:'edge-2',identity,kind:'dispatch',fromNodeId:graph.root.nodeId,toNodeId:nextTask.nodeId,revision:1,enabled:true}},{type:'edge.upserted',edge:{edgeId:'dependency-1',identity,kind:'dependency',fromNodeId:'task:task-1',toNodeId:nextTask.nodeId,revision:1,enabled:true,condition:{kind:'result_ready',planRevision:1}}}]),messages:[{kind:'assignment',messageId:'message-2',commandId:'dispatch-2',identity,from:main,to:dev,taskId:'task-2',planRevision:1,createdAt,delivery:'pending'}],receipt:'dispatch-2'};
+      const nextTask={...task(state),taskId:'task-2',nodeId:'task:task-2',assignee:second},graph=state.graphs[0];
+      return {members:[{...member(second),executionScopeId:'owner-scope',executionTaskId:'task-2',lifecycle:'active'}],sessions:[session(second)],batch:batch('dispatch-2',graph.cursor.seq+1,[{type:'task.upserted',task:nextTask},{type:'agent.upserted',agent:{agentInstanceId:second.agentInstanceId,agentId:second.agentId,name:second.name,revision:1,state:'idle',waitingTaskIds:[]}},{type:'edge.upserted',edge:{edgeId:'edge-2',identity,kind:'dispatch',fromNodeId:graph.root.nodeId,toNodeId:nextTask.nodeId,revision:1,enabled:true}},{type:'edge.upserted',edge:{edgeId:'dependency-1',identity,kind:'dependency',fromNodeId:'task:task-1',toNodeId:nextTask.nodeId,revision:1,enabled:true,condition:{kind:'result_ready',planRevision:1}}}]),messages:[{kind:'assignment',messageId:'message-2',commandId:'dispatch-2',identity,from:main,to:second,taskId:'task-2',planRevision:1,createdAt,delivery:'pending'}],receipt:'dispatch-2'};
     });
     const claimSecond=(state:DispatchState):DispatchMutation=>{
-      const current=state.graphs[0].tasks[1],prerequisite=state.graphs[0].tasks[0],m=state.members[1],first=run();
+      const current=state.graphs[0].tasks[1],prerequisite=state.graphs[0].tasks[0],m=state.members[2],first=run(state,current);
       const mutation=update(state,'claim-2',{...current,revision:2,runIds:['run-2'],activeRunId:'run-2'},{...m,activity:'communicating',activeTaskId:'task-2',activeRunId:'run-2'},'message.accepted');
       const edge=state.graphs[0].edges.find(edge=>edge.edgeId==='dependency-1')!;
       if(edge.kind!=='dependency')throw Error('dependency missing');
       mutation.batch!.changes.push({type:'edge.upserted',edge:{...edge,revision:2,condition:{...edge.condition,resultId:prerequisite.result!.resultId}}});
-      return {...mutation,runs:[{...first,binding:{...first.binding,taskId:'task-2',runId:'run-2'},assignmentMessageId:'message-2',prerequisites:[{taskId:prerequisite.taskId,planRevision:1,result:prerequisite.result!}]}],messages:[{...state.outbox.find(message=>message.messageId==='message-2')!,delivery:'claimed',claim:{runId:'run-2',leaseEpoch:0}}]};
+      return {...mutation,runs:[{...first,binding:{...first.binding,taskId:'task-2',runId:'run-2'},assignmentMessageId:'message-2',session:{nativeSessionId:'native-2'},prerequisites:[{taskId:prerequisite.taskId,planRevision:1,result:prerequisite.result!}]}],messages:[{...state.outbox.find(message=>message.messageId==='message-2')!,delivery:'claimed',claim:{runId:'run-2',leaseEpoch:0}}]};
     };
     for(const variant of ['missing','wrong-result','extra-field'] as const)await expect(f.store.transact(command('claim-2'),async state=>{const mutation=claimSecond(state);if(variant==='missing')delete mutation.runs![0].prerequisites;else if(variant==='wrong-result')mutation.runs![0].prerequisites![0].result.summary='伪造的前置正文';else (mutation.runs![0].prerequisites![0] as any).private='not-allowed';return mutation})).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
     await f.store.transact(command('claim-2'),async state=>claimSecond(state));
@@ -166,7 +171,7 @@ test('claim freezes exactly the satisfied prerequisite candidate and rejects lat
     expect(frozen).toEqual([{taskId:'task-1',planRevision:1,result:state.graphs[0].tasks[0].result}]);
     await expect(f.store.transact(command('tamper-prerequisite'),async state=>{
       const current=state.graphs[0].tasks[1],record=state.runs![1];
-      const mutation=update(state,'tamper-prerequisite',{...current,revision:3,status:'running'},{...state.members[1],activity:'working'},'task.started');
+      const mutation=update(state,'tamper-prerequisite',{...current,revision:3,status:'running'},{...state.members[2],activity:'working'},'task.started');
       return {...mutation,runs:[{...record,status:'running',startedAt,prerequisites:[]}]};
     })).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
     // Upstream can enter a new plan; the already claimed run keeps the evidence it actually consumed.
@@ -176,7 +181,7 @@ test('claim freezes exactly the satisfied prerequisite candidate and rejects lat
     });
     await f.store.transact(command('running-2'),async state=>{
       const current=state.graphs[0].tasks[1],record=state.runs![1];
-      return {...update(state,'running-2',{...current,revision:3,status:'running'},{...state.members[1],activity:'working'},'task.started'),runs:[{...record,status:'running',startedAt}]};
+      return {...update(state,'running-2',{...current,revision:3,status:'running'},{...state.members[2],activity:'working'},'task.started'),runs:[{...record,status:'running',startedAt}]};
     });
     expect((await f.store.read()).runs![1].prerequisites).toEqual(frozen);
   }finally{await f.cleanup()}

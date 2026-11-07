@@ -1,3 +1,4 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -18,7 +19,7 @@ type ProviderRequest=GoalFixtureRequest&{model:string;tools?:{function:{name:str
 /** Deterministic localhost model only; all tools, canonical records and Pi sessions remain real. */
 export async function scopeWaitProvider(options:{missingReview?:boolean;holdFinal?:boolean}={}){
   const mainRequests:ProviderRequest[]=[],memberRequests:ProviderRequest[]=[],errors:string[]=[];
-  let agentId='',moduleId='',releaseFinal=()=>{};
+  let ownerSelection:OwnerExecutionSelection|undefined;let agentId='',moduleId='',releaseFinal=()=>{};
   const finalGate=new Promise<void>(resolve=>{releaseFinal=resolve});
   const server=http.createServer(async(req,res)=>{
     try{
@@ -32,9 +33,9 @@ export async function scopeWaitProvider(options:{missingReview?:boolean;holdFina
       const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
       if(isMain){
         if(turn===0){
-          const plan=goalPlanArguments({objective:waitFixture.mainGoal,agentId,moduleIds:[moduleId],acceptance:waitFixture.acceptance});
+          const plan=goalPlanArguments({objective:waitFixture.mainGoal,agentId,ownerSelection,moduleIds:[moduleId],acceptance:waitFixture.acceptance});
           tool('wait-goal-plan','cbim_goal_plan',{...plan,criteria:[...plan.criteria,{id:waitFixture.humanId,text:waitFixture.humanCriterion,kind:'human'}],assignments:plan.assignments.map(item=>({...item,criterionIds:[...item.criterionIds,waitFixture.humanId]}))});
-        }else if(turn===1)tool('wait-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:waitFixture.memberGoal,acceptance:waitFixture.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+        }else if(turn===1)tool('wait-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:waitFixture.memberGoal,acceptance:waitFixture.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
         else if(turn===2)reply('成员已派发，等待读取结果。');
         else if(options.missingReview){assert.equal(turn,3);reply('没有结构化审阅，但文字声称已完成。')}
         else if(turn===3)tool('wait-goal-inspect','cbim_goal_inspect',{});
@@ -57,5 +58,5 @@ export async function scopeWaitProvider(options:{missingReview?:boolean;holdFina
     }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Scope wait fixture failed')}
   });
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},releaseFinal,close:async()=>{releaseFinal();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,bind:(agent:string,module:string,selection?:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection?structuredClone(selection):undefined},releaseFinal,close:async()=>{releaseFinal();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

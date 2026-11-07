@@ -4,10 +4,12 @@ import path from 'node:path';
 import os from 'node:os';
 import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
 import {hash} from '../src/backend/core/foundation/serialization';
-import type {DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchMutation,DispatchState} from '../src/backend/core/tasks/dispatch-storage';
 import type {AgentInstance, AgentSessionBinding} from '../src/backend/core/team/agent-types';
 import type {AgentRef, GraphEventBatch, GraphIdentity, TaskNode} from '../src/backend/core/tasks/graph-types';
 import {prepareMember} from '../src/backend/scheduler-engine/execution/agent-manager';
+import {seedExecutionOwner} from './owner-execution-store-support';
+import {bindingFor} from './owner-execution-core-fixture';
 
 const identity:GraphIdentity={workspaceId:'workspace-1',rootSessionId:'root-session-1'};
 const createdAt='2026-11-06T10:00:00.000Z';
@@ -23,9 +25,9 @@ function rootMutation():DispatchMutation<{root:string}>{return {
     {type:'agent.upserted',agent:{agentInstanceId:main.agentInstanceId,agentId:main.agentId,name:main.name,revision:1,state:'idle',waitingTaskIds:[]}}
   ])
 }}
-function taskMutation():DispatchMutation<{taskId:string}>{
-  const task:TaskNode={kind:'task',nodeId:'task:task-1',taskId:'task-1',identity,requester:main,assignee:dev,modules:[{moduleId:'.cbim/workspace/game',name:'game',knowledgeRevision:'knowledge-1',maintenanceBindingId:'maintenance-1',maintainerPersonIds:['person-1'],workflow:{kind:'general',id:'cbim:general',version:'1',reason:'无专属流程'}}],goal:'生成网页游戏',acceptance:[{id:'a1',text:'可以在浏览器运行'}],revision:1,planRevision:1,status:'queued',awaitedChildren:[],runIds:[],createdAt,updatedAt:createdAt};
-  return {members:[member(dev)],sessions:[session(dev)],receipt:{taskId:task.taskId},
+function taskMutation(state:DispatchState):DispatchMutation<{taskId:string}>{
+  const task:TaskNode={kind:'task',nodeId:'task:task-1',taskId:'task-1',identity,requester:main,assignee:dev,scopeId:'owner-scope',ownerBinding:bindingFor(state),modules:[{moduleId:'.cbim/workspace/game',name:'game',knowledgeRevision:'knowledge-1',maintenanceBindingId:'maintenance-1',maintainerPersonIds:['person-1'],workflow:{kind:'general',id:'cbim:general',version:'1',reason:'无专属流程'}}],goal:'生成网页游戏',acceptance:[{id:'a1',text:'可以在浏览器运行'}],revision:1,planRevision:1,status:'queued',awaitedChildren:[],runIds:[],createdAt,updatedAt:createdAt};
+  return {members:[{...member(dev),executionScopeId:task.scopeId,executionTaskId:task.taskId,lifecycle:'active'}],sessions:[session(dev)],receipt:{taskId:task.taskId},
     batch:batch('dispatch-task',2,[
       {type:'task.upserted',task},
       {type:'edge.upserted',edge:{edgeId:'dispatch-edge-1',identity,kind:'dispatch',fromNodeId:`session:${identity.rootSessionId}`,toNodeId:task.nodeId,revision:1,enabled:true}},
@@ -38,8 +40,8 @@ afterEach(()=>vi.restoreAllMocks());
 
 test('dispatch commit restores members, independent channels, graph and one pending assignment atomically',async()=>{
   const f=await setup();try{
-    await commitRoot(f.store);const before=(await f.store.snapshot(identity)).cursor;
-    await f.store.transact({commandId:'dispatch-task',fingerprint:'task-input'},async()=>taskMutation());
+    await commitRoot(f.store);await seedExecutionOwner(f.store,identity,dev.name,createdAt);const before=(await f.store.snapshot(identity)).cursor;
+    await f.store.transact({commandId:'dispatch-task',fingerprint:'task-input'},async state=>taskMutation(state));
     const delta=await f.store.delta(identity,before);
     expect(delta.mode).toBe('delta');if(delta.mode!=='delta')throw Error('missing delta');
     expect(delta.batches).toHaveLength(1);expect(delta.batches[0].changes.map(c=>c.type)).toEqual(['task.upserted','edge.upserted','agent.upserted']);
@@ -71,14 +73,14 @@ test('idempotent retry runs prepare once, survives reopen and rejects same ID wi
 
 test('invalid half-dispatch and cross-workspace messages leave graph and WAL unchanged',async()=>{
   const f=await setup();try{
-    await commitRoot(f.store);const file=path.join(f.dir,'dispatch.jsonl');const before=await fs.readFile(file,'utf8');
-    await expect(f.store.transact({commandId:'dispatch-task',fingerprint:'task-input'},async()=>({...taskMutation(),messages:[]}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
-    const foreign=taskMutation();foreign.messages![0].identity={...identity,workspaceId:'other-workspace'};
+    await commitRoot(f.store);await seedExecutionOwner(f.store,identity,dev.name,createdAt);const file=path.join(f.dir,'dispatch.jsonl');const before=await fs.readFile(file,'utf8');
+    await expect(f.store.transact({commandId:'dispatch-task',fingerprint:'task-input'},async state=>({...taskMutation(state),messages:[]}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
+    const foreign=taskMutation(await f.store.read());foreign.messages![0].identity={...identity,workspaceId:'other-workspace'};
     await expect(f.store.transact({commandId:'dispatch-task',fingerprint:'task-input'},async()=>foreign)).rejects.toMatchObject({code:'GRAPH_IDENTITY_MISMATCH'});
     expect(await fs.readFile(file,'utf8')).toBe(before);expect((await f.store.snapshot(identity)).tasks).toEqual([]);
     await expect(f.store.snapshot({...identity,workspaceId:'other-workspace'})).rejects.toMatchObject({code:'GRAPH_IDENTITY_MISMATCH'});
     // Validation failure must not poison a later valid transaction.
-    await f.store.transact({commandId:'dispatch-task',fingerprint:'task-input'},async()=>taskMutation());
+    await f.store.transact({commandId:'dispatch-task',fingerprint:'task-input'},async state=>taskMutation(state));
     expect((await f.store.read()).outbox).toHaveLength(1);
   }finally{await f.cleanup()}
 });
@@ -96,7 +98,7 @@ test('recovery truncates only an incomplete tail; a complete corrupt line fails 
 
 test('no-op delta uses memory and a syncing failure closes the write chain until recovery',async()=>{
   const f=await setup();try{
-    await commitRoot(f.store);const cursor=(await f.store.snapshot(identity)).cursor;
+    await commitRoot(f.store);await seedExecutionOwner(f.store,identity,dev.name,createdAt);const cursor=(await f.store.snapshot(identity)).cursor;
     const read=vi.spyOn(fs,'readFile');expect((await f.store.delta(identity,cursor)).mode).toBe('noop');expect(read).not.toHaveBeenCalled();read.mockRestore();
     const originalOpen=fs.open.bind(fs);
     const open=vi.spyOn(fs,'open').mockImplementation(async(...args:any[])=>{
@@ -104,7 +106,7 @@ test('no-op delta uses memory and a syncing failure closes the write chain until
       if(args[1]!=='a')return file;
       return new Proxy(file,{get(target,key){if(key==='sync')return async()=>{throw Error('simulated fsync failure')};const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value}});
     });
-    await expect(f.store.transact({commandId:'dispatch-task',fingerprint:'task-input'},async()=>taskMutation())).rejects.toMatchObject({code:'GRAPH_STORAGE_FAILED'});
+    await expect(f.store.transact({commandId:'dispatch-task',fingerprint:'task-input'},async state=>taskMutation(state))).rejects.toMatchObject({code:'GRAPH_STORAGE_FAILED'});
     open.mockRestore();
     await expect(f.store.transact({commandId:'next',fingerprint:'next'},async()=>({receipt:'no'}))).rejects.toMatchObject({code:'GRAPH_STORAGE_FAILED'});
     await expect(f.store.snapshot(identity)).rejects.toMatchObject({code:'GRAPH_STORAGE_FAILED'});
@@ -132,9 +134,10 @@ test('recovery rejects changed complete records, broken transaction order and fo
 
 test('close drains already accepted commits and rejects later commands',async()=>{
   const f=await setup();try{
+    await commitRoot(f.store);await seedExecutionOwner(f.store,identity,dev.name,createdAt);
     let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve});
-    const first=f.store.transact({commandId:'create-root',fingerprint:'root-input'},async()=>{await gate;return rootMutation()});
-    const second=f.store.transact({commandId:'dispatch-task',fingerprint:'task-input'},async()=>taskMutation());
+    const first=f.store.transact({commandId:'accepted-before-close',fingerprint:'accepted-before-close'},async()=>{await gate;return {receipt:'accepted'}});
+    const second=f.store.transact({commandId:'dispatch-task',fingerprint:'task-input'},async state=>taskMutation(state));
     const close=f.store.close();await expect(f.store.transact({commandId:'later',fingerprint:'later'},async()=>({receipt:'no'}))).rejects.toMatchObject({code:'GRAPH_STORE_CLOSED'});
     release();await Promise.all([first,second,close]);
     const reopened=new FileDispatchStore(f.dir,identity.workspaceId);expect((await reopened.read()).outbox).toHaveLength(1);await reopened.close();

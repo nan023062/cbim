@@ -5,6 +5,9 @@
 import type {StoragePaths as Paths} from '../foundation/paths';
 import type {ChangeRequest,Preview,Snapshot,TaskView} from './types';
 
+/** 可信知识串行域；调用方须在其内再取得模型与派发锁，不得从派发事务反向进入。 */
+export interface SourceSnapshotReader {withSourceSnapshot<T>(use:(snapshot:Snapshot)=>Promise<T>):Promise<T>}
+
 /** 提交完成的持久化回执；结构校验通过不等于业务验收通过。 */
 export interface KnowledgeCommit {
   state:string;workspaceId:string;instanceId:string;requestId:string;revision:string;changed:string[];

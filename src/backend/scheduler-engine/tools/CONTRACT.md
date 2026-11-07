@@ -136,3 +136,5 @@ raw 输入在任何领域调用前严格校验；发送端口的对象与原期�
 ### 模块来源明确采纳
 
 责任工具的原严格 change 协议增加 `kind:adopt_source`，只带原绑定、模块和理由，不接 nextOwner/来源证明；由真实主工厂复用服务采纳当前来源。唯一输出 wire 核 action=adopt_source、原负责人和原 bindingId，不能把缺省 nextOwner 误判为解除。权限仍为原 knowledge-write，回执仍排除业务验收，未知后只查原 commandId。
+
+岗位进入执行后，明确模块 inspect 另返回按真实岗位分组的执行选择与缺口，选择不保证未来领取、凭据或供应商可用。业务 goal/dispatch 输入必须明确 ownerSelection；服务重建 ownerBinding，不能靠模型声明身份、主模型选型或默认执行者补齐。工具仍在唯一 wire 校验实际输入/绑定，保存后坏回包不得重新派工。

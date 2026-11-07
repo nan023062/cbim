@@ -1,6 +1,6 @@
 /**
  * 作用定位：团队页面的项目岗位登记面板，浏览采纳差异、显式变更，并反查该岗位当前负责的模块。
- * 设计原因：静态能力树与临时运行实例各有归属；登记与能力采纳明确展示来源选择，改名或启用不暗中更新采纳或启动任务。
+ * 设计原因：静态能力树与临时运行实例各有归属；登记与能力采纳明确展示来源选择，岗位模型供正式派发核实，改名或启用不暗中更新旧任务或启动执行。
  */
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
@@ -59,7 +59,7 @@ export function WorkspaceMembers({workspace,agents,onClose}:WorkspaceMembersProp
   if(ownershipMember)return <ModuleOwnershipPanel key={workspace.id+workspace.instanceId+ownershipMember} identity={identity} memberId={ownershipMember} onClose={()=>{setOwnershipMember(undefined);void select(ownershipMember)}}/>;
   return <section className="workspace-members" data-testid="workspace-members" aria-label="项目岗位成员">
     <header><div><p className="overline">工作区 / 稳定岗位</p><h2>项目岗位</h2></div><button onClick={onClose}>返回团队定义</button></header>
-    <p className="workspace-member-note">静态 Agent 提供专业能力，岗位保存本项目采纳的能力和模型。当前仅管理登记；尚未接入按岗位派发，启用不代表正在运行或具备执行资格。</p>
+    <p className="workspace-member-note">静态 Agent 提供专业能力，岗位保存本项目采纳的能力和模型。新业务由主 Agent 按模块负责人派发；岗位启用本身不代表正在运行，能力来源、模型和责任版本仍须通过领取核实。</p>
     <div className="team-definition-actions"><button data-testid="workspace-member-register" disabled={!available||blocked||loading} onClick={()=>start('register')}>登记项目岗位</button><button disabled={loading} onClick={()=>void list()}>刷新岗位列表</button></div>
     {(error||state.error)&&<p role="alert">{error||state.error}</p>}
     {loading&&<p role="status">正在核实岗位资料…</p>}

@@ -87,12 +87,12 @@ function effectFinished(events:readonly ArtifactEvidenceEvent[],identity:Workflo
  * 在成员结算和主目标核验时重算完整 canonical，而非信任 taskProgress 的命中字段。
  * 有约定的新运行必须保留自己的计划和成功交付调用；续执行也须建立本轮计划，旧轮次回执不会继承。
  */
-export function validateWorkflowEvidence(events:readonly ArtifactEvidenceEvent[],task:Pick<TaskSpec,'workspaceId'|'taskId'|'goal'|'acceptance'>,bindings:readonly WorkflowContractBinding[],validations:readonly ValidationRecord[]=[]):WorkflowEvidenceProof|undefined{
+export function validateWorkflowEvidence(events:readonly ArtifactEvidenceEvent[],task:Pick<TaskSpec,'workspaceId'|'taskId'|'goal'|'acceptance'|'ownerBinding'>,bindings:readonly WorkflowContractBinding[],validations:readonly ValidationRecord[]=[]):WorkflowEvidenceProof|undefined{
   if(!bindings.length)return;checkedBindings(bindings);
   const first=events[0],last=events.at(-1),identity={workspaceId:task.workspaceId,taskId:task.taskId,runId:first?.runId};
   valid(first?.type==='run.started'&&first.runId&&same(first.data.workflowContracts,bindings)&&last?.type==='run.settled'&&last.data.status==='completed','WORKFLOW_LOG_INVALID','Workflow 运行缺少完整来源、冻结约定或正常终态');
   valid(events.every((event,index)=>event.seq===index+1&&event.workspaceId===identity.workspaceId&&event.taskId===identity.taskId&&event.runId===identity.runId),'WORKFLOW_LOG_INVALID','Workflow 日志身份或连续顺序不完整');
-  const taskData=first.data.task as Partial<TaskSpec>|undefined;valid(taskData?.workspaceId===task.workspaceId&&taskData.taskId===task.taskId&&taskData.goal===task.goal&&same(taskData.acceptance,task.acceptance),'WORKFLOW_LOG_INVALID','Workflow 运行来源与真实任务不一致');
+  const taskData=first.data.task as Partial<TaskSpec>|undefined;valid(taskData?.workspaceId===task.workspaceId&&taskData.taskId===task.taskId&&taskData.goal===task.goal&&same(taskData.acceptance,task.acceptance)&&same(taskData.ownerBinding,task.ownerBinding),'WORKFLOW_LOG_INVALID','Workflow 运行来源与真实任务及冻结岗位不一致');
   const candidateEvent=events.filter(event=>event.type==='task.updated').at(-1),candidate=candidateEvent?.data.progress as TaskProgress|undefined;
   valid(candidateEvent&&candidate?.state==='awaiting_review'&&candidate.delivery&&candidate.steps.length&&candidate.goal===task.goal&&same(candidate.acceptance,task.acceptance),'WORKFLOW_LOG_INVALID','Workflow 缺少当前任务的待审阅交付记录');
   const deliveries=events.filter(event=>event.type==='tool.finished'&&event.data.name==='cbim_delivery_prepare'&&event.seq>candidateEvent.seq&&(event.data.receipt as ToolReceipt|undefined)?.outcome==='succeeded'&&same(progressResult(event),candidate));

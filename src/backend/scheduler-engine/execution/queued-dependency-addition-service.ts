@@ -1,6 +1,6 @@
 /**
  * 作用定位：在同一派发事务核实未领取任务及两端后继，为原目标追加一条结果前置。
- * 设计原因：后创建的任务也能成为先前待办的前置；冻结角色、模块及 Workflow 逐项重核，审计和等待状态一起保存，不能靠事件名称绕过领域门禁。
+ * 设计原因：后创建的任务也能成为先前待办的前置；在 Knowledge→模型→Store 锁序内重核全部待办岗位、角色和 Workflow，审计和等待状态一起保存，不能靠事件名称绕过门禁。
  * 职责边界：不创建运行、不改原信封或任务计划；成功只登记依赖，当前主轮结束后仍沿原权限、预算和结果领取规则执行。
  */
 import {randomUUID} from 'node:crypto';
@@ -14,24 +14,30 @@ import {queuedDependencyAdditionSelection} from '../../core/tasks/queued-depende
 import {prepareDispatchExecutionContext,recheckDispatchExecutionContext,type DispatchKnowledgeWorkspace} from '../context/execution-context';
 import {memberBatch,memberView} from './member-state';
 import type {ScopeGoalService} from './scope-goal-service';
+import type {OwnerExecutionService} from './owner-execution-service';
+import {ownerExecutionSelectionFor} from '../../core/team/member-execution-binding';
 
 const id=z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 const contextSchema=z.object({workspaceId:id,rootSessionId:id,scopeId:id,runId:id,commandId:id}).strict();
 export class QueuedDependencyAdditionService {
-  constructor(private readonly owner:DispatchKnowledgeWorkspace,private readonly store:DispatchStore,private readonly goals:ScopeGoalService){}
+  constructor(private readonly owner:DispatchKnowledgeWorkspace,private readonly store:DispatchStore,private readonly goals:ScopeGoalService,private readonly owners?:OwnerExecutionService){}
   /** 主轮闭包提供身份和停止屏障；同命令先返回原提交回执，变参拒绝，读取/停止不自动重新加边。 */
   async add(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,raw:AddQueuedDependencyInput,assertCurrent?:()=>void):Promise<AddQueuedDependencyReceipt>{
     const parsed=addQueuedDependencyInputSchema.safeParse(raw),context=contextSchema.safeParse({...identity,scopeId,runId,commandId});
     if(!parsed.success||!context.success)fail('DEPENDENCY_INPUT_INVALID','前置追加参数或主调度运行身份无效');
-    const input=parsed.data,fixed=context.data,alive=()=>{this.owner.assert();assertCurrent?.();if(fixed.workspaceId!==this.owner.entry.id)fail('GRAPH_IDENTITY_MISMATCH','前置追加不属于当前工作区')};alive();
-    return this.store.transact({commandId:fixed.commandId,fingerprint:hash(json({operation:'dispatch.addDependency',context:fixed,input}))},async state=>{
+    const input=parsed.data,fixed=context.data,alive=()=>{this.owner.assert();assertCurrent?.();if(fixed.workspaceId!==this.owner.entry.id)fail('GRAPH_IDENTITY_MISMATCH','前置追加不属于当前工作区')};
+    const command={commandId:fixed.commandId,fingerprint:hash(json({operation:'dispatch.addDependency',context:fixed,input}))};
+    if(!this.owners)fail('OWNER_EXECUTION_UNAVAILABLE','未装配岗位前置核验');const old=await this.owners.replay<AddQueuedDependencyReceipt>(command);if(old)return old.receipt;
+    alive();
+    return this.owners.withContext(state=>this.owners!.selections(queuedDependencyAdditionSelection(state,fixed,scopeId,runId,input).tasks),context=>this.store.transact(command,async state=>{
       alive();const {graph,scope,source,target,tasks,members}=queuedDependencyAdditionSelection(state,fixed,scopeId,runId,input);
       const knowledgeRevision=scope.goal!.plan!.knowledgeRevision;
       if((await this.owner.read()).revision!==knowledgeRevision)fail('DEPENDENCY_KNOWLEDGE_STALE','知识基线已变化，不能给旧待办追加前置');alive();
       let latest:Awaited<ReturnType<typeof prepareDispatchExecutionContext>>|undefined;
       for(const task of tasks){
-        this.goals.validateDispatch(state,scope,{assigneeAgentId:task.assignee.agentId,moduleIds:task.modules.map(module=>module.moduleId),...(task.workflowSelections?{workflowSelections:task.workflowSelections}:{}),goal:task.goal,acceptance:task.acceptance,prerequisites:[]},knowledgeRevision);
-        latest=await prepareDispatchExecutionContext(this.owner,task);alive();
+        const binding=await this.owners!.verifyTask(state,context,task);alive();
+        this.goals.validateDispatch(state,scope,{assigneeAgentId:task.assignee.agentId,ownerSelection:ownerExecutionSelectionFor(binding),moduleIds:task.modules.map(module=>module.moduleId),...(task.workflowSelections?{workflowSelections:task.workflowSelections}:{}),goal:task.goal,acceptance:task.acceptance,prerequisites:[]},knowledgeRevision,binding);
+        latest=await prepareDispatchExecutionContext(this.owner,task,context.snapshot,state.workspaceMembers!.find(member=>member.memberId===binding.memberId));alive();
         if(latest.knowledgeRevision!==knowledgeRevision||latest.agent.teamId!==members.find(member=>member.agentInstanceId===task.assignee.agentInstanceId)!.teamId)fail('DEPENDENCY_KNOWLEDGE_STALE','待办角色、模块或 Workflow 已经变化');
       }
       if(!latest)fail('DEPENDENCY_INPUT_INVALID','前置追加缺少完整待办范围');
@@ -44,6 +50,6 @@ export class QueuedDependencyAdditionService {
       const member=members.find(value=>value.agentInstanceId===target.assignee.agentInstanceId)!,nextMember={...member,activity:'waiting' as const,waitingTaskIds:[target.taskId]};
       const batch={...memberBatch(graph,commandId,'dependency.changed',[{type:'edge.upserted',edge},{type:'task.upserted',task:updated},{type:'agent.upserted',agent:memberView(graph,nextMember,updated)}]),committedAt:now};
       return {members:[nextMember],batch,receipt:{workspaceId:fixed.workspaceId,rootSessionId:fixed.rootSessionId,scopeId,mainRunId:runId,commandId,taskId:target.taskId,status:'waiting',trackedTaskIds,addition,graphCursor:{streamId:batch.streamId,seq:batch.seq}}};
-    });
+    }),alive);
   }
 }

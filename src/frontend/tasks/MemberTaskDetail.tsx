@@ -1,6 +1,6 @@
 /**
  * 作用定位：展示任务图选中成员的公开正文、工具、计划与候选；独立报告核实执行事实，独立表单显式创建新的只读核实周期。
- * 设计原因：按工作区/主会话/任务/轮次隔离观察；模块流程显示真实冻结绑定，只有保存过的选择才标为指定流程。求助、检查点、撤销与结构验证独立展示，不把旧候选或通过结论借给新轮次。
+ * 设计原因：按工作区/主会话/任务/轮次隔离观察；岗位与模型展示原冻结绑定，旧记录不猜负责人。流程、求助、检查点、撤销与结构验证独立展示，不把旧候选或通过结论借给新轮次。
  */
 import {useEffect,useRef,useState} from 'react';
 import type {GraphCursor,ScopeSummary,TaskNode} from '../../bridge/contracts/dispatch';
@@ -15,6 +15,8 @@ import {MemberCancellationNotice} from './MemberCancellationNotice';
 import {MemberDependencyNotice} from './MemberDependencyNotice';
 import {MemberCheckpointNotice} from './MemberCheckpointNotice';
 import {MemberValidationPanel} from './MemberValidationPanel';
+import {MemberOwnerNotice} from './OwnerExecutionDetails';
+import {OwnerExecutionInspection} from './OwnerExecutionInspection';
 import type {ExecutionRecoveryContext} from './useExecutionRecovery';
 import {memberTaskLabel} from './MemberActivity';
 import './member-activity.css';
@@ -30,6 +32,8 @@ export function MemberTaskDetail({workspaceId,rootSessionId,task,onBack,active=t
     <header className="member-detail-heading"><div><span className="member-role-caption">执行 Agent</span><h3>{task.assignee.name}</h3></div>{onBack&&<button onClick={onBack}>返回任务图</button>}</header>
     {!valid?<p className="member-error" role="alert">所选任务不属于当前会话，请返回任务图重新选择。</p>:<>
       <span className={'member-state '+task.status}>{memberTaskLabel(task)}</span><h4>任务目标</h4><p className="member-detail-goal">{task.goal}</p>
+      <MemberOwnerNotice task={task}/>
+      <OwnerExecutionInspection key={'owner:'+JSON.stringify([workspaceId,rootSessionId,task.taskId])} task={task}/>
       <details className="member-scope"><summary>实例与执行通道</summary><p>执行实例 <code>{task.assignee.agentInstanceId}</code></p><p>业务任务通道 <code>{task.assignee.agentSessionId}</code></p></details>
       {task.waitReason&&<p className="member-warning">{task.waitReason}</p>}
       <details className="member-scope"><summary>涉及 {task.modules.length} 个模块 · 计划版本 {task.planRevision}</summary><ul>{task.modules.map(module=><li key={module.moduleId} data-module-id={module.moduleId} data-workflow-id={module.workflow.id}><strong>{module.name}</strong><code>{module.moduleId}</code><small>{task.workflowSelections?.some(item=>item.moduleId===module.moduleId&&item.workflowId===module.workflow.id)?'指定流程：':''}{module.workflow.kind==='general'?'通用流程':module.workflow.id}</small></li>)}</ul></details>

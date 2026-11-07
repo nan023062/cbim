@@ -1,3 +1,4 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -22,23 +23,23 @@ function toolValue(body:Request,id:string){const item=body.messages.find(message
 /** The provider never edits state: every task, candidate, edge and receipt is obtained through real Pi tool calls. */
 export async function dependencyReplacementProvider(){
   const main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[],d=dependencyReplacementFixture;
-  const state:{initialGraph?:GraphSnapshot;beforeReplacement?:GraphSnapshot;receipt?:ReplaceQueuedDependencyReceipt}={};let agentId='',moduleId='',release=()=>{};const gate=new Promise<void>(resolve=>{release=resolve});
+  const state:{initialGraph?:GraphSnapshot;beforeReplacement?:GraphSnapshot;receipt?:ReplaceQueuedDependencyReceipt}={};let ownerSelection:OwnerExecutionSelection;let agentId='',moduleId='',release=()=>{};const gate=new Promise<void>(resolve=>{release=resolve});
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
     const body=JSON.parse(raw) as Request,isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
     res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'dependency-replacement-'+sequence.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(text:string)=>{emit({role:'assistant',content:text});emit({},'stop')};
-    const dispatch=(id:string,goal:string,prior?:string)=>tool(id,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:prior?[{taskId:prior,expectedPlanRevision:1}]:[]});
+    const dispatch=(id:string,goal:string,prior?:string)=>tool(id,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:prior?[{taskId:prior,expectedPlanRevision:1}]:[]});
     if(isMain){
       assert.ok(body.tools?.some(item=>item.function.name==='cbim_dispatch_replace_dependency'));
-      if(turn===0)tool('replace-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],acceptance:d.acceptance}));
+      if(turn===0)tool('replace-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance}));
       else if(turn===1)dispatch('replace-a',d.goals[0]);
       else if(turn===2)dispatch('replace-b',d.goals[1],toolValue(body,'replace-a').taskId);
       else if(turn===3)dispatch('replace-c',d.goals[2],toolValue(body,'replace-b').taskId);
       else if(turn===4)reply('A、B、C已按依赖派发，先执行A。');
       else if(turn===5){assert.ok(JSON.stringify(body.messages).includes(d.helpReason));tool('replace-help-inspect','cbim_goal_inspect',{})}
-      else if(turn===6){const {scope,graph}=goalInspection(body,'replace-help-inspect');state.initialGraph=structuredClone(graph);assert.equal(graph.tasks.length,3);tool('replace-goal-replan','cbim_goal_plan',{...goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],acceptance:d.acceptance},scope.goal.revision),reason:'由新A2补齐验证口径；保留原B/C的目标、范围、责任及验收'})}
+      else if(turn===6){const {scope,graph}=goalInspection(body,'replace-help-inspect');state.initialGraph=structuredClone(graph);assert.equal(graph.tasks.length,3);tool('replace-goal-replan','cbim_goal_plan',{...goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance},scope.goal.revision),reason:'由新A2补齐验证口径；保留原B/C的目标、范围、责任及验收'})}
       else if(turn===7)dispatch('replace-a2',d.goals[3]);
       else if(turn===8)reply('独立A2已派发，原B/C继续等待可靠前置。');
       else if(turn===9)tool('replace-ready-inspect','cbim_goal_inspect',{});
@@ -70,5 +71,5 @@ export async function dependencyReplacementProvider(){
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Queued dependency replacement fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,releaseMain:()=>release(),bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,releaseMain:()=>release(),bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection},close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

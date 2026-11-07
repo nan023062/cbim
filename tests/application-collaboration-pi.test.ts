@@ -1,3 +1,5 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -28,7 +30,7 @@ it('automatically executes a model dispatch and returns its candidate to the sam
   const acceptance=['实际读取 collaboration-input.txt 并提供读取回执'];
   const requests:ProviderRequest[]=[],mainRequests:ProviderRequest[]=[],memberRequests:ProviderRequest[]=[];
   const transportErrors:unknown[]=[];
-  let agentId='',moduleId='';
+  let agentId='',moduleId='';let ownerSelection:OwnerExecutionSelection|undefined;
   const server=http.createServer(async(req,res)=>{
     try{
       let raw='';for await(const chunk of req)raw+=chunk;
@@ -40,8 +42,8 @@ it('automatically executes a model dispatch and returns its candidate to the sam
       const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]},null);emit({},'tool_calls')};
       const reply=(content:string)=>{emit({role:'assistant',content},null);emit({},'stop')};
       if(isMain){
-        if(turn===0)tool('main-goal-plan','cbim_goal_plan',goalPlanArguments({objective:mainGoal,agentId,moduleIds:[moduleId],acceptance}));
-        else if(turn===1)tool('main-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,i)=>({id:'criterion-'+i,text})),prerequisites:[]});
+        if(turn===0)tool('main-goal-plan','cbim_goal_plan',goalPlanArguments({objective:mainGoal,agentId,ownerSelection,moduleIds:[moduleId],acceptance}));
+        else if(turn===1)tool('main-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,i)=>({id:'criterion-'+i,text})),prerequisites:[]});
         else if(turn===2)reply('已登记成员任务，等待返回，尚未宣称完成。');
         else if(turn===3)tool('main-goal-inspect','cbim_goal_inspect',{});
         else if(turn===4)tool('main-goal-review','cbim_goal_review',goalCompleteArguments(body,'main-goal-inspect'));
@@ -68,6 +70,7 @@ it('automatically executes a model dispatch and returns its candidate to the sam
     const definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
     definition.maintenance={bindingId:'collaboration-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'collaboration-review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
     await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
+    ownerSelection=(await registerExplicitFixtureOwner(f.app,entry.id,{agentId,moduleIds:[moduleId],profileId:(await f.app.models.list()).selectedId!,modelId:'collaboration-fixture'})).selection;
     await fs.writeFile(path.join(f.a,'collaboration-input.txt'),businessFact);
 
     const started=await f.app.dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'read',turnTimeoutMs:15000}}) as {taskId:string;runId:string};
@@ -129,7 +132,7 @@ it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input 
   const followupMessage='RESUMED_USER_NEW_GOAL: 这是独立的下一轮目标，请说明当前交付限制';
   const requests:ProviderRequest[]=[],mainRequests:ProviderRequest[]=[],memberRequests:ProviderRequest[]=[];
   const transportErrors:unknown[]=[];
-  let agentId='',moduleId='';
+  let agentId='',moduleId='';let ownerSelection:OwnerExecutionSelection|undefined;
   const server=http.createServer(async(req,res)=>{
     try{
       let raw='';for await(const chunk of req)raw+=chunk;
@@ -142,8 +145,8 @@ it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input 
       const reply=(content:string)=>{emit({role:'assistant',content},null);emit({},'stop')};
       if(isMain){
         if(turn===0)tool('main-ask-write','write',{path:'ask-main-note.txt',content:'main run approved only'});
-        else if(turn===1)tool('main-ask-goal-plan','cbim_goal_plan',goalPlanArguments({objective:mainGoal,agentId,moduleIds:[moduleId],acceptance}));
-        else if(turn===2)tool('main-ask-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,i)=>({id:'criterion-'+i,text})),prerequisites:[]});
+        else if(turn===1)tool('main-ask-goal-plan','cbim_goal_plan',goalPlanArguments({objective:mainGoal,agentId,ownerSelection,moduleIds:[moduleId],acceptance}));
+        else if(turn===2)tool('main-ask-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,i)=>({id:'criterion-'+i,text})),prerequisites:[]});
         else if(turn===3)reply('已派发成员任务，本轮让出执行占用。');
         else if(turn===4)tool('main-ask-goal-inspect','cbim_goal_inspect',{});
         else if(turn===5)tool('main-ask-goal-review','cbim_goal_review',goalCompleteArguments(body,'main-ask-goal-inspect'));
@@ -174,6 +177,7 @@ it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input 
     const definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
     definition.maintenance={bindingId:'ask-collaboration-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'ask-collaboration-review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
     await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
+    ownerSelection=(await registerExplicitFixtureOwner(f.app,entry.id,{agentId,moduleIds:[moduleId],profileId:(await f.app.models.list()).selectedId!,modelId:'ask-collaboration-fixture'})).selection;
 
     const scopesOpened=vi.spyOn(f.app.memberDispatch(entry.id),'openScope'),scopesClosed=vi.spyOn(f.app.memberDispatch(entry.id),'closeScope');
     const started=await f.app.dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'ask',turnTimeoutMs:20000}}) as {taskId:string;runId:string};

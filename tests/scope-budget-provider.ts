@@ -1,3 +1,4 @@
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -18,7 +19,7 @@ function gate(){let release=()=>{};const promise=new Promise<void>(resolve=>{rel
 
 /** Each real Pi run may cross the limit internally; deterministic usage makes the next-run boundary observable. */
 export async function scopeBudgetProvider(mode:BudgetFixtureMode){
-  const d=scopeBudgetFixture,main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[],mainGate=gate(),memberGate=gate();let agentId='',moduleId='';
+  const d=scopeBudgetFixture,main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[],mainGate=gate(),memberGate=gate();let ownerSelection:OwnerExecutionSelection|undefined;let agentId='',moduleId='';
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
     const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
@@ -27,8 +28,8 @@ export async function scopeBudgetProvider(mode:BudgetFixtureMode){
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(text:string)=>{emit({role:'assistant',content:text});emit({},'stop')};
     if(isMain){
       assert.ok(body.tools?.every(item=>!['write','edit','bash'].includes(item.function.name)));
-      if(turn===0){const plan=goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],acceptance:d.acceptance});tool('budget-goal-plan','cbim_goal_plan',mode==='waiting'?{...plan,criteria:[...plan.criteria,{id:d.humanId,text:d.humanCriterion,kind:'human'}],assignments:plan.assignments.map(item=>({...item,criterionIds:[...item.criterionIds,d.humanId]}))}:plan)}
-      else if(turn===1)tool('budget-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+      if(turn===0){const plan=goalPlanArguments({objective:d.goal,agentId,ownerSelection,moduleIds:[moduleId],acceptance:d.acceptance});tool('budget-goal-plan','cbim_goal_plan',mode==='waiting'?{...plan,criteria:[...plan.criteria,{id:d.humanId,text:d.humanCriterion,kind:'human'}],assignments:plan.assignments.map(item=>({...item,criterionIds:[...item.criterionIds,d.humanId]}))}:plan)}
+      else if(turn===1)tool('budget-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
       else if(turn===2){emit({role:'assistant',content:'已派发成员，主轮尚未结算。'});await mainGate.promise;reply('本主轮结束，由调度系统核实下一轮准入。')}
       else if(turn===3)tool('budget-goal-inspect','cbim_goal_inspect',{});
       else if(turn===4){
@@ -50,5 +51,5 @@ export async function scopeBudgetProvider(mode:BudgetFixtureMode){
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Scope budget fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');const releaseAll=()=>{mainGate.release();memberGate.release()};
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},releaseMain:()=>mainGate.release(),releaseMember:()=>memberGate.release(),releaseAll,close:async()=>{releaseAll();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,bind:(agent:string,module:string,selection?:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection?structuredClone(selection):undefined},releaseMain:()=>mainGate.release(),releaseMember:()=>memberGate.release(),releaseAll,close:async()=>{releaseAll();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

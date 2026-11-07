@@ -106,7 +106,7 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
     validateScopeInputHistory(scope);
     const seenCommands=new Set<string>(),seenWaits=new Set<string>(),seenRuns=new Set<string>();
     for(const [index,item] of history.entries()){
-      // 附件引用和可信清单同属不可变启动意图；旧文本和人工分支不补造附件字段。
+      // v1 文件与 v2 多来源清单同属不可变启动意图；历史不升级版本，旧文本和人工分支不补造附件字段。
       if(!isHumanContinuation(item)){try{assertContinuationAttachmentManifest(item.input,item.attachmentManifest)}catch{valid(false,'补充附件引用与可信快照清单不一致')}}
       valid(!recovery||item.options.permission==='read','只读核实周期的后续补充不能提升权限');
       valid(!seenCommands.has(item.continuationId)&&!seenWaits.has(item.wait.waitId)&&!seenRuns.has(item.runId),'补充身份重复');

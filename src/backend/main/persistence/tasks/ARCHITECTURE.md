@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-执行日志、附件快照、派发事务与角色履历。日志只读完整前缀并报告未完整尾行，损坏不透传原始片段、不截断修复。图/目标/详情同屏障读取，未知操作不自动重放。
+执行日志、附件快照、派发事务与角色履历。目录首层、URL指针、真实有界网页及授权仓库资料快照分别保存，导入取消与等待受理分离；来源变化不改历史。日志只读完整前缀并报告未完整尾行，损坏不透传原始片段、不截断修复。图/目标/详情同屏障读取，未知操作不自动重放。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -12,6 +12,8 @@
 | --- | --- |
 | [agent-history.ts](agent-history.ts) | 把静态 Agent 的 Session 归档索引保存到应用用户目录，并为只读详情定位原运行日志。 |
 | [chat-inputs.ts](chat-inputs.ts) | 将用户明确添加的文件、文件夹、链接、网页与链接器定义保存为本机对话输入快照。 |
+| [chat-material-imports.ts](chat-material-imports.ts) | 应用内显式资料导入的取消、工作区归属及真实资源仓库读取入口。 |
+| [chat-source-readers.ts](chat-source-readers.ts) | 桌面明确导入目录、URL 指针和网页时，生成有界文本及真实来源事实。 |
 | [dispatch-store.ts](dispatch-store.ts) | 将成员、独立会话、任务图批次、领取意图和结果信封作为一个工作区事务可靠保存。 |
 | [run-journal.ts](run-journal.ts) | 本机执行事件日志，顺序追加并 fsync，从记录恢复摘要和未确认工具。 |
 | [run-storage.ts](run-storage.ts) | 将本机运行目录和 RunJournal 装配为大脑及调度共享的存储端口。 |
@@ -66,6 +68,7 @@ class N_src_backend_main_persistence_tasks_chat_inputs_ts_PreparedContinuationIn
 }
 N_src_backend_main_persistence_tasks_chat_inputs_ts ..> N_src_backend_main_persistence_tasks_chat_inputs_ts_PreparedContinuationInput : 声明
 class N_src_backend_main_persistence_tasks_chat_inputs_ts_ChatInputs["ChatInputs"] {
+  +saveSource()
   +path()
   +connectors()
   +preview()
@@ -81,7 +84,75 @@ class N_src_backend_main_persistence_tasks_chat_inputs_ts_ChatInputs["ChatInputs
 N_src_backend_main_persistence_tasks_chat_inputs_ts ..> N_src_backend_main_persistence_tasks_chat_inputs_ts_ChatInputs : 声明
 ```
 
-直接依赖：[../../../core/foundation/files.ts](../../../core/foundation/files.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/tasks/scope-continuation-attachments.ts](../../../core/tasks/scope-continuation-attachments.ts)、[../../../core/brain/types.ts](../../../core/brain/types.ts)、[../../../core/knowledge/ports.ts](../../../core/knowledge/ports.ts)、[../../../../bridge/contracts/chat.ts](../../../../bridge/contracts/chat.ts)。
+直接依赖：[../../../core/foundation/files.ts](../../../core/foundation/files.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/tasks/scope-continuation-attachments.ts](../../../core/tasks/scope-continuation-attachments.ts)、[../../../core/brain/types.ts](../../../core/brain/types.ts)、[../../../core/knowledge/ports.ts](../../../core/knowledge/ports.ts)、[../../../../bridge/contracts/chat.ts](../../../../bridge/contracts/chat.ts)、[../../../core/tasks/continuation-source-snapshot.ts](../../../core/tasks/continuation-source-snapshot.ts)、[chat-source-readers.ts](chat-source-readers.ts)。
+
+### chat-material-imports.ts
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_persistence_tasks_chat_material_imports_ts["chat-material-imports.ts"] {
+  <<module>>
+}
+class N_src_backend_main_persistence_tasks_chat_material_imports_ts_ImportOperation["ImportOperation"] {
+  <<type>>
+  +workspaceId
+  +controller
+  +started
+  +finished
+}
+N_src_backend_main_persistence_tasks_chat_material_imports_ts ..> N_src_backend_main_persistence_tasks_chat_material_imports_ts_ImportOperation : 声明
+class N_src_backend_main_persistence_tasks_chat_material_imports_ts_ChatMaterialImports["ChatMaterialImports"] {
+  +cancel()
+  +targets()
+  +list()
+  +import()
+  +pick()
+  +retireWorkspace()
+  +close()
+  -workspace
+  -repositories
+  -operations
+  -pending
+  -closed
+  -key()
+  -assert()
+  -operation()
+  -run()
+}
+N_src_backend_main_persistence_tasks_chat_material_imports_ts ..> N_src_backend_main_persistence_tasks_chat_material_imports_ts_ChatMaterialImports : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_persistence_tasks_chat_material_imports_ts["chat-material-imports.ts"] {
+  <<module>>
+}
+class N_src_backend_main_persistence_tasks_chat_material_imports_ts_ChatMaterialImports["ChatMaterialImports"] {
+  -port()
+  -selection()
+}
+N_src_backend_main_persistence_tasks_chat_material_imports_ts ..> N_src_backend_main_persistence_tasks_chat_material_imports_ts_ChatMaterialImports : 声明
+```
+
+直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/knowledge/ports.ts](../../../core/knowledge/ports.ts)、[../../../core/connectors/repository-tools.ts](../../../core/connectors/repository-tools.ts)、[../../resources/repository-connections.ts](../../resources/repository-connections.ts)、[chat-inputs.ts](chat-inputs.ts)、[chat-source-readers.ts](chat-source-readers.ts)。
+
+### chat-source-readers.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_persistence_tasks_chat_source_readers_ts["chat-source-readers.ts"] {
+  <<module>>
+  +sourceExcerpt()
+  +readDirectorySource()
+  +readUrlSource()
+}
+```
+
+直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/tasks/continuation-source-snapshot.ts](../../../core/tasks/continuation-source-snapshot.ts)。
 
 ### dispatch-store.ts
 
@@ -221,10 +292,29 @@ class N_src_backend_main_persistence_tasks_agent_history_ts["agent-history.ts"] 
 class N_src_backend_main_persistence_tasks_run_storage_ts["run-storage.ts"] {
   <<module>>
 }
-class N_src_backend_main_persistence_tasks_run_journal_ts["run-journal.ts"] {
+class N_src_backend_main_persistence_tasks_chat_inputs_ts["chat-inputs.ts"] {
+  <<module>>
+}
+class N_src_backend_main_persistence_tasks_chat_source_readers_ts["chat-source-readers.ts"] {
+  <<module>>
+}
+class N_src_backend_main_persistence_tasks_chat_material_imports_ts["chat-material-imports.ts"] {
   <<module>>
 }
 N_src_backend_main_persistence_tasks_agent_history_ts ..> N_src_backend_main_persistence_tasks_run_storage_ts : 导入依赖
+N_src_backend_main_persistence_tasks_chat_inputs_ts ..> N_src_backend_main_persistence_tasks_chat_source_readers_ts : 导入依赖
+N_src_backend_main_persistence_tasks_chat_material_imports_ts ..> N_src_backend_main_persistence_tasks_chat_inputs_ts : 导入依赖
+N_src_backend_main_persistence_tasks_chat_material_imports_ts ..> N_src_backend_main_persistence_tasks_chat_source_readers_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_persistence_tasks_run_storage_ts["run-storage.ts"] {
+  <<module>>
+}
+class N_src_backend_main_persistence_tasks_run_journal_ts["run-journal.ts"] {
+  <<module>>
+}
 N_src_backend_main_persistence_tasks_run_storage_ts ..> N_src_backend_main_persistence_tasks_run_journal_ts : 导入依赖
 ```
 
@@ -243,9 +333,15 @@ N_src_backend_main_persistence_tasks_run_storage_ts ..> N_src_backend_main_persi
 
 ### 安全等待的附件快照
 
-`ChatInputs.prepareContinuation` 只读取当前工作区已保存的 file 附件 ID，每份私有 JSON 只打开一次；读取前后核对普通文件身份、大小与时间，并受停止信号及有界读取限制。正文、图片和清单从同一份字节派生，不重新打开原始 source 路径。跨工作区、缺失、损坏、非 file 或超限的附件在消费等待前明确拒绝，旧文本补充不生成空清单。
+`ChatInputs.prepareContinuation` 只读取当前工作区已保存的附件 ID，每份私有 JSON 只打开一次；读取前后核对普通文件身份、大小与时间，并受停止信号及有界读取限制。正文、图片和清单从同一份字节派生，不重新打开原始 source 路径或联网。仅文件/图片继续使用原 v1 清单；混入真实新来源使用严格 v2。跨工作区、缺失、损坏、无来源版本的旧非文件或超限附件在消费等待前明确拒绝；旧文本补充不生成空清单。
 
-每次最多 12 项、私有快照单项 8 MiB、图片单项 5 MiB/合计 20 MiB、展开消息 512 KiB；超过上限不截断后假装完整。清单仅保存 ID、名称、种类、字节数及哈希，不含 source、正文或 base64。`snapshotHash` 绑定私有 JSON 原字节，`contentHash` 绑定这次送入模型的保存文本或解码图片；文本始终明确是可能截取的保存快照，不证明当前源文件全文。
+每次最多 12 项、私有快照单项 8 MiB、图片单项 5 MiB/合计 20 MiB、展开消息 512 KiB；超过总额度不截断后假装完整。清单仅保存 ID、名称、种类、字节数、哈希及新来源的紧凑 proof，不含原目录路径、正文或 base64。`snapshotHash` 绑定私有 JSON 原字节，`contentHash` 绑定这次送入模型的保存文本或解码图片；文件文本明确是可能截取的保存快照，不证明当前源文件全文。
+
+`ChatMaterialImports` 是应用唯一的显式导入/取消入口。`importId` 在本次应用内只执行一次，取消先到仍保留墓碑；目录、网页或仓库读取迟到后不能返回给新目标。工作区退役先 abort，应用关闭排空真实操作；原生选择器不能强制关闭，但取消立即结束导入，之后返回的路径不读取。已原子写入后取消不冒称磁盘回滚，未被表单接收的孤立快照不会自动进入任何模型输入。每次应用最多 4096 个导入/取消标识，不自动淘汰后重放旧 ID。
+
+目录由原生选择器指定真实路径，拒绝 `.cbim`，有界枚举首层最多 200 项及溢出哨兵，不递归、不读取文件正文或链接目标；同时受 64 KiB UTF-8 保存上限，真实部分性写入 proof。URL 指针零 fetch。网页仅一次 HTTP(S) GET，不使用登录凭据、不跟随重定向或执行脚本；15 秒超时/显式取消贯穿正文，完整响应最多 1 MiB，支持 UTF-8 `text/*` 或 `application/json`。完整有界原字节 hash 与实际文本摘录 hash 分开，摘录最多 64 KiB UTF-8，不切断字符；不是浏览器渲染、登录页面读取或公网 IP 隔离。
+
+仓库资料仅通过已授权 `resource_repository_v1` 当前共享闭包读取，冻结连接代次和资源版本，一次实际 HTTP 返回后保存七类静态资源正文。proof 记录当时定义、授权 revision、仓库/资源身份、全文 hash/字节数和真实截取状态；落盘后交付前再次核实授权。正文不会安装、应用或执行。后续撤权/停止共享禁止新导入，不篡改已经保存的历史资料；安全等待准备只读取原快照，不重新联网、换源或复活授权。旧 connector 附件仍只是静态定义，不能冒充真实仓库资料。
 
 ### 静态 Agent 会话归档索引
 

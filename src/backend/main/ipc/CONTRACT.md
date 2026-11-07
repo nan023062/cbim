@@ -42,6 +42,10 @@ Electron 接入仍核对本窗口与主 Frame；`humanDecide` 在可信闭包注
 
 ### 显式目标补充
 
+`chat.materialTargets({id})` 只返回当前工作区已授权、共享就绪的仓库目标，不访问 HTTP。`chat.materialList` 使用 importId、connectorId、connectionId 及可选分页/expectedRevision 读取真实目录。`chat.import` 只接受 link/web URL 或 repository_resource 的 connectorId、connectionId、expectedRevision、resourceId；不接受路径、proof、token 或授权字段。所有参数严格校验，七类仓库正文均作为静态资料保存。
+
+`chat.importCancel({id,importId})` 取消同一在途操作并保留墓碑，不能用于撤销已保存文件或业务事务。原生 `chat.pick` 的 importId 走同一取消表。未知导入结果不自动重做；每个新显式导入使用新 ID，已保存但未返回的快照不会自动进入等待请求。`chat.attach` 的旧 connector 分支仍是定义引用，安全等待必须重新选择真实资料来源。
+
 `loop.goalContinue` 接收完整 `GoalContinuationRequest`，纯文本、明确模型配置与权限、scope/wait/input 版本和稳定 commandId 交执行管理器。不能提交原生会话路径、来源或人工批准字段。相同请求查询原回执，不再启动；原等待已消费时换 ID 拒绝。
 
 `loop.goalContinuation` 只读查询同一工作区/主会话/scope/commandId 的回执。返回 undefined 不保证旧请求从未在途，客户端仍须复用原 ID；回执含完整身份、当前 scopeStatus 和原补充记录，不代表模型正在运行或验收通过。普通 `loop.resume/enqueue` 不变成此入口。

@@ -1,7 +1,7 @@
 /**
  * 作用定位：桌面资源仓库连接的知识预览/登记、独立本机授权和显式 HTTP 只读核验。
  * 设计原因：静态定义不等于权限，登记与授权分别返回真实回执；所有网络来源由当前共享闭包绑定，模型不能提供地址、令牌或授权。
- * 职责边界：桌面负责显式授权；主 Loop 仅捕获已有授权的只读闭包，不启动共享、不执行资源内容、不自动重试或本地回退。
+ * 职责边界：桌面负责显式授权；主 Loop 与桌面资料导入仅捕获已有授权的只读闭包，不启动共享、不执行资源内容、不自动重试或本地回退。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -37,6 +37,8 @@ const definitionHash=(definition:ConnectorDefinition)=>hash(json(definition));
 function checkedInput<T>(schema:z.ZodType<T>,raw:unknown):T{const result=schema.safeParse(raw);if(!result.success)fail('REPOSITORY_CONNECTION_INPUT','资源仓库连接请求字段无效');return result.data}
 /** 查询原提交的端口归本机知识事务，不扩大 Core 普通知识调用权限。 */
 export interface RepositoryConnectionWorkspace extends KnowledgeWorkspace {committedReceipt(request:ChangeRequest):Promise<KnowledgeCommit|undefined>;hasRecordedRequest(request:ChangeRequest):Promise<boolean>}
+/** 私有捕获事实只交给桌面快照导入；令牌与地址始终留在原共享闭包。 */
+interface CapturedRepositoryTarget {target:RepositoryToolTarget;definitionHash:string;grantRevision:number;verify(signal:AbortSignal):Promise<void>;read(signal:AbortSignal):ReturnType<SharedRepositoryReadConnection['read']>}
 
 /** 全应用一个服务；授权写入串行，慢速 check 不占写队列，撤销可中止它且仍有前后版本屏障。 */
 export class RepositoryConnections {
@@ -122,13 +124,13 @@ export class RepositoryConnections {
    * 主运行创建时只读捕获已就绪授权，不联网；坏静态注册表不妨碍主会话诊断知识。
    * 每个闭包固定原实例/定义/授权/共享代际。后续显式授权或重新共享只影响新运行，旧运行不能静默换源。
    */
-  async prepareTools(input:RepositoryConnectionIdentity):Promise<RepositoryToolsPort|undefined>{
+  private async captureTargets(input:RepositoryConnectionIdentity){
     input=Object.freeze(identity(input));
     const owner=this.owner(input),sharing=this.resources.sharedIdentity();if(!sharing)return undefined;
     let entries:ConnectorDefinition[];try{({entries}=await this.definitions(owner))}catch(error:any){if(error.code==='REPOSITORY_CONNECTION_DEFINITION')return undefined;throw error}
     this.assertOwner(owner,input);
     if(new Set(entries.map(entry=>entry.id)).size!==entries.length)return undefined;
-    const grants=this.store.grants(input.workspaceId),captured=new Map<string,{target:RepositoryToolTarget;read(signal:AbortSignal):ReturnType<SharedRepositoryReadConnection['read']>}>();
+    const grants=this.store.grants(input.workspaceId),captured=new Map<string,CapturedRepositoryTarget>();
     for(const definition of entries){
       if(!isResourceRepositoryConnector(definition)||definition.repository.repositoryId!==sharing.repositoryId)continue;
       const grant=grants.find(item=>item.connectorId===definition.id),digest=definitionHash(definition);
@@ -142,13 +144,33 @@ export class RepositoryConnections {
         const latest=this.store.grant(input.workspaceId,definition.id);
         if(current.definitionHash!==digest||!latest?.enabled||latest.revision!==grant.revision||latest.definitionHash!==digest||latest.repositoryId!==grant.repositoryId)fail('REPOSITORY_CONNECTION_STALE','本轮仓库定义或只读授权已变化，原连接不可继续使用');
       };
-      captured.set(definition.id,{target,read:signal=>{
+      captured.set(definition.id,{target,definitionHash:digest,grantRevision:grant.revision,verify,read:signal=>{
         const controller=new AbortController(),combined=AbortSignal.any([signal,controller.signal]);this.checks.set(controller,{workspaceId:input.workspaceId,connectorId:definition.id});
         const operation=(async()=>{try{await verify(combined);const result=await connection.read(combined);await verify(combined);return result}finally{this.checks.delete(controller)}})();
         this.reads.add(operation);void operation.finally(()=>this.reads.delete(operation)).catch(()=>{});return operation;
       }});
     }
     if(!captured.size)return undefined;
+    return captured;
+  }
+  /** 主运行仍只取得原 list/get 能力；捕获本身不联网。 */
+  async prepareTools(input:RepositoryConnectionIdentity):Promise<RepositoryToolsPort|undefined>{
+    const captured=await this.captureTargets(input);return captured?this.tools(captured):undefined;
+  }
+  /** 桌面显式资料导入使用同一授权闭包，一次 HTTP 读取完整选定版本，不能拼接多次分页冒充同一快照。 */
+  async prepareMaterials(input:RepositoryConnectionIdentity){
+    const captured=await this.captureTargets(input);if(!captured)return undefined;
+    const tools=this.tools(captured);
+    return {targets:tools.targets,list:tools.list,capture:async(raw:{connectorId:string;connectionId:string;expectedRevision:string;resourceId:string},signal:AbortSignal)=>{
+      const entry=captured.get(raw.connectorId);if(!entry)fail('REPOSITORY_CONNECTION_NOT_GRANTED','该资料来源不属于当前工作区已授权连接');
+      if(entry.target.connectionId!==raw.connectionId)fail('REPOSITORY_CONNECTION_STALE','资料连接已变化，请重新选择来源');
+      const result=await entry.read(signal);
+      if(result.revision!==raw.expectedRevision)fail('REPOSITORY_REVISION_CHANGED','仓库资料已变化，请重新读取目录版本');
+      const resource=result.items.find(item=>item.id===raw.resourceId);if(!resource)fail('REPOSITORY_RESOURCE_MISSING','当前仓库版本没有该资源');
+      return {target:{...entry.target},definitionHash:entry.definitionHash,grantRevision:entry.grantRevision,revision:result.revision,resource:{...resource},assertCurrent:entry.verify};
+    }};
+  }
+  private tools(captured:Map<string,CapturedRepositoryTarget>):RepositoryToolsPort{
     const selected=(connectorId:string)=>{const target=captured.get(connectorId);if(!target)fail('REPOSITORY_CONNECTION_NOT_GRANTED','该链接器不属于本轮已捕获的只读授权');return target};
     return {
       targets:Object.freeze([...captured.values()].map(item=>Object.freeze({...item.target}))),

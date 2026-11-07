@@ -1,5 +1,5 @@
 /**
- * 作用定位：定义 IPC 路由需要的应用服务、执行审批、静态角色履历、全局监管与准入投影、配额设置、桌面资源连接、模块治理和工作区生命周期入口。
+ * 作用定位：定义 IPC 路由需要的应用服务、执行审批、静态角色履历、全局监管、配额、桌面资源连接与资料导入、模块治理和工作区生命周期入口。
  * 设计原因：路由依赖此契约，Application 负责实现和装配，避免路由反向引用应用类形成类型循环。
  * 职责边界：这里只声明内部调用能力，不代表渲染进程可以直接访问这些服务。
  */
@@ -18,6 +18,7 @@ import type {RuntimeCursor,RuntimeRead,RuntimeSnapshot} from '../../core/runtime
 import type {Catalog as CatalogData, WorkspaceView} from '../../../bridge/contracts/workspace';
 import type {AdmissionSettings} from '../persistence/settings/admission-settings';
 import type {BudgetSettings} from '../persistence/settings/budget-settings';
+import type {ChatMaterialImports} from '../persistence/tasks/chat-material-imports';
 import type {AdmissionCursor,AdmissionRead} from '../../core/runtime/admission';
 
 /** 应用向路由提供的内部服务；工作区调用始终携带身份，生命周期仍由应用实现管理。 */
@@ -28,6 +29,8 @@ export interface ApplicationServices {
   readonly resources: ResourceRepositories;
   /** 桌面显式登记、授权和真实只读核验；没有模型入口或任意 URL/凭据参数。 */
   readonly repositoryConnections:RepositoryConnections;
+  /** 仅桌面显式导入及取消；不授予仓库权限，不启动执行。 */
+  readonly chatMaterials:ChatMaterialImports;
   /** 真正执行准入独立于监管索引；只暴露游标读取和可靠设置，不把领取能力交给页面。 */
   readonly admission:{read(cursor?:AdmissionCursor):AdmissionRead};
   readonly admissionSettings:AdmissionSettings;

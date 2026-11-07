@@ -8,6 +8,9 @@ export type {
   RepositoryConnectionCommitInput,RepositoryConnectionLookup,RepositoryConnectionCommitLookup,
   RepositoryConnectionUnacceptedInput,RepositoryConnectionUnaccepted,
 } from '../../backend/core/connectors/repository-connection';
+/** 仅公开授权目标摘要和真实目录页；正文由 Main 保存为私有附件快照。 */
+export type {RepositoryToolTarget,RepositoryListOutput} from '../../backend/core/connectors/repository-tools';
+export {repositoryToolTargetSchema,repositoryListOutputSchema} from '../../backend/core/connectors/repository-tools';
 export {
   repositoryConnectionCommitInputSchema,repositoryConnectionCommitSchema,repositoryConnectionCommitLookupSchema,
   repositoryConnectionGrantInputSchema,repositoryConnectionRevokeInputSchema,repositoryConnectionGrantSchema,

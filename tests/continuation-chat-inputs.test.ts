@@ -23,13 +23,13 @@ it('一次读取已保存文本、图片与二进制引用，同字节构造有�
   }finally{await f.cleanup()}
 });
 
-it('未知、跨工作区、非文件、重复及损坏快照明确拒绝，不将附件丢弃成纯文本',async()=>{
+it('未知、跨工作区、旧非文件、重复及损坏快照明确拒绝，不将附件丢弃成纯文本',async()=>{
   const f=await setup();try{
     const file=path.join(f.a,'note.txt');await fs.writeFile(file,'text');const item=await f.inputs.path('file',file),snapshotFile=path.join(f.directory,item.id+'.json'),original=await fs.readFile(snapshotFile,'utf8');
     const other=await f.app.dispatch('add',{path:f.b});await expect(new ChatInputs(f.app.workspace(other.id)).prepareContinuation('x',[item.id],f.signal)).rejects.toMatchObject({code:'GOAL_ATTACHMENT_MISSING'});
     await expect(f.inputs.prepareContinuation('x',[randomUUID()],f.signal)).rejects.toMatchObject({code:'GOAL_ATTACHMENT_MISSING'});
     await expect(f.inputs.prepareContinuation('x',[item.id,item.id],f.signal)).rejects.toMatchObject({code:'GOAL_ATTACHMENT_INPUT'});
-    const folder=await f.inputs.path('folder',f.a);await expect(f.inputs.prepareContinuation('x',[folder.id],f.signal)).rejects.toMatchObject({code:'GOAL_ATTACHMENT_UNSUPPORTED'});
+    const folder=await f.inputs.path('folder',f.a),folderFile=path.join(f.directory,folder.id+'.json'),oldFolder=JSON.parse(await fs.readFile(folderFile,'utf8'));delete oldFolder.version;delete oldFolder.proof;await fs.writeFile(folderFile,JSON.stringify(oldFolder));await expect(f.inputs.prepareContinuation('x',[folder.id],f.signal)).rejects.toMatchObject({code:'GOAL_ATTACHMENT_UNSUPPORTED'});
     for(const text of ['{',JSON.stringify({...JSON.parse(original),id:randomUUID()}),JSON.stringify({...JSON.parse(original),image:{type:'image',mimeType:'image/png',data:'YQ=='}}),JSON.stringify({...JSON.parse(original),text:{secret:'invalid'}})]){
       await fs.writeFile(snapshotFile,text);await expect(f.inputs.prepareContinuation('x',[item.id],f.signal)).rejects.toMatchObject({code:'GOAL_ATTACHMENT_INVALID'});
     }

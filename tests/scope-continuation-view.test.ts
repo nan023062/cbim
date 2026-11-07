@@ -92,7 +92,7 @@ it('只有当前waiting详情同身份同版本可写，历史选择/换根/同�
 
 it('历史表单不提供提交或重试按钮，未知与受理不冒充执行或人工验收',()=>{
   const request={...target,commandId:command,input:{message:'补充'},options};
-  const base:ScopeContinuationView={workspaceId:'workspace',attachments:[],importing:false,pickFiles:async()=>{},removeFile:()=>{},scopeId:'scope',waitId:'wait',text:'补充',editable:false,canSubmit:false,canRetry:false,pending:false,error:'',modelLabel:'model',edit:()=>{},submit:async()=>{},query:async()=>{},retry:async()=>{}};
+  const base:ScopeContinuationView={sourceSelectionKey:JSON.stringify(target),importSource:async()=>{},materialTargets:async()=>undefined,materialList:async()=>undefined,cancelImport:()=>{},workspaceId:'workspace',attachments:[],importing:false,pickFiles:async()=>{},removeFile:()=>{},scopeId:'scope',waitId:'wait',text:'补充',editable:false,canSubmit:false,canRetry:false,pending:false,error:'',modelLabel:'model',edit:()=>{},submit:async()=>{},query:async()=>{},retry:async()=>{}};
   const unknown=renderToStaticMarkup(createElement(ScopeContinuationForm,{state:{...base,record:{scopeId:'scope',waitId:'wait',text:'补充',attempt:{request,phase:'unknown',uncertain:true}}}}));expect(unknown).toMatch(/readonly=""/i);expect(unknown).toContain('查询提交状态');expect(unknown).not.toContain('scope-continuation-submit');expect(unknown).not.toContain('scope-continuation-retry');expect(unknown).toContain('不代表人工验收');
   const accepted=renderToStaticMarkup(createElement(ScopeContinuationForm,{state:{...base,record:{scopeId:'scope',waitId:'wait',text:'补充',attempt:{request,phase:'accepted',uncertain:false,receipt:receipt(request)}}}}));expect(accepted).toContain('补充已受理');expect(accepted).not.toContain('正在运行');
 });

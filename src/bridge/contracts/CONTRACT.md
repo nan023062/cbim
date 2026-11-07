@@ -230,3 +230,8 @@ governance.ts 仅重导 Core 严格纯协议。界面按明确工作区/实例/�
 ### 排队消息插入的原运行身份
 
 `execution.ts` 的 `QueueInsertRequest` 固定 `{id,taskId,queueId,expectedRunId}`。`id` 是目标工作区，`expectedRunId` 是用户明确插入时正在执行的主轮，必填且不能由路由补成最新运行。请求只是尝试插入已有排队消息，不修改它保存的权限或模型，也不授权成员等待或目标 waiting 恢复。拒绝与未知结果不自动换轮重试。
+### 等待资料与来源快照
+
+`chat.ts` 的 `repository_resource` 表示已导入的静态资料，`ChatMaterialImport` 只传选择身份，不含正文或授权证明。目录/文件由原生选择器返回，网络导入和目录分页使用独立 `importId` 关联取消。`repository-connections.ts` 公开现有纯目录页和目标 Schema，供界面严格核对原工作区、共享代际及版本；不暴露网络地址或凭据。
+
+`dispatch.ts` 公开 continuation manifest v1/v2 类型。旧 v1 保持原结构，新来源的 v2 记录导入事实与截取范围；授权版本只是当时记录，不授予重连、安装或执行权。

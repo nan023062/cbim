@@ -32,3 +32,5 @@ export {replanPreviewInputSchema,replanPreviewSchema,replanRequestSchema,replanL
 /** 运行中插入仅报告真实接收状态，不授予恢复或业务验收；hash/事务校验保留在后端。 */
 export {scopeActiveInputSchema,scopeActiveInputStatus,scopeHasUnresolvedActiveInput,scopeActiveInputLimits} from '../../backend/core/tasks/scope-active-input';
 export type {ScopeActiveInput} from '../../backend/core/tasks/scope-active-input';
+/** 已受理附件清单的纯公开契约；来源证明不授予重新联网或执行权。 */
+export type {ContinuationAttachmentManifest,ContinuationAttachmentItem} from '../../backend/core/tasks/scope-continuation-attachments';

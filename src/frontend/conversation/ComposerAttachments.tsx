@@ -6,7 +6,7 @@
 import {useEffect,useRef,useState} from 'react';
 import type {ChatAttachment} from '../../bridge/contracts/chat';
 import {Icon} from '../components/Icon';
-const kinds={file:'文件',folder:'文件夹',link:'链接',web:'网页',connector:'链接器'};
+const kinds={file:'文件',folder:'目录清单',link:'链接指针',web:'网页摘录',connector:'链接器定义',repository_resource:'仓库静态资料'};
 export function ComposerAttachments({items,workspaceId,disabled,onRemove}:{items:ChatAttachment[];workspaceId:string;disabled:boolean;onRemove:(id:string)=>void}){
   const [preview,setPreview]=useState<{name:string;source:string;note?:string;text:string}>(),[error,setError]=useState(''),[loading,setLoading]=useState('');const dialog=useRef<HTMLDialogElement>(null),request=useRef(0);
   useEffect(()=>()=>{request.current++},[]);

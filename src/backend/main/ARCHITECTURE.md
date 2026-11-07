@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Electron 入口与应用装配。应用单例持有全局准入和持久策略，主/成员共享许可；工作区代际退役撤销等待，已有运行真实退出才释放。注入可信身份及证据，重启不执行历史票据或等待周期。 可信桌面提交注入本机明确操作来源，选定文件核实共用只读租约与平台端口。
+Electron 入口与应用装配。显式资料导入共用应用级取消表，关闭撤销在途读取，原生选择迟到不落新会话。应用单例持有全局准入和持久策略，主/成员共享许可；工作区代际退役撤销等待，已有运行真实退出才释放。注入可信身份及证据，重启不执行历史票据或等待周期。 可信桌面提交注入本机明确操作来源，选定文件核实共用只读租约与平台端口。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -45,6 +45,7 @@ N_src_backend_main_ipc ..> N_src_backend_main_persistence : 导入依赖
 N_src_backend_main_ipc ..> N_src_backend_main_resources : 导入依赖
 N_src_backend_main_ipc ..> N_src_backend_main_platform : 导入依赖
 N_src_backend_main_ipc ..> N_src_backend_main_governance : 导入依赖
+N_src_backend_main_persistence ..> N_src_backend_main_resources : 导入依赖
 N_src_backend_main_resources ..> N_src_backend_main_platform : 导入依赖
 ```
 
@@ -120,6 +121,7 @@ class N_src_backend_main_runtime_monitor_ts["runtime-monitor.ts"] {
 - `member-dispatch.ts` → `platform`：导入。
 - `member-dispatch.ts` → `execution-admission.ts`：导入。
 - `persistence` → `workspace`：导入。
+- `persistence` → `resources`：导入。
 - `resources` → `platform`：导入。
 - `runtime-monitor.ts` → `workspace`：导入。
 - `runtime-monitor.ts` → `persistence`：导入。
@@ -166,10 +168,10 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 
 - [commands/](commands/ARCHITECTURE.md)：CLI 入口，复用应用和调度，不拥有第二套领域规则。
 - [governance/](governance/ARCHITECTURE.md)：工作区模块知识治理服务、可信桌面操作与独立主运行端口。登记保护、决定及实施只属桌面；模型仅可读取、观察、提案和核查回执；反馈来源在批准与实施前串行复核，未知不重放。
-- [ipc/](ipc/ARCHITECTURE.md)：应用 action 路由；队列插入传递原expectedRunId，由调度拒绝缺失、过期及停止。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。
+- [ipc/](ipc/ARCHITECTURE.md)：应用 action 路由；等待资料独立导入/目录/取消入口不启动模型，受理只读保存快照。队列插入传递原expectedRunId，由调度拒绝缺失、过期及停止。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。
 - [persistence/](persistence/ARCHITECTURE.md)：本机持久化适配：知识事务、运行日志、对话附件、模型配置。保留原数据路径与格式，目录调整不迁移用户数据。
 - [platform/](platform/ARCHITECTURE.md)：本机路径、系统锁、凭据加密、终端与工具访问检查。固定根有界读取并核前后句柄/路径，拒绝链接、越界和Windows备用数据流；JSON验证由同一Buffer计算指纹和结构结论，正文不出端口。原生历史不完整拒绝恢复，不承诺外部原子隔离。
-- [resources/](resources/ARCHITECTURE.md)：链接器、人才和完整业务模板共用的本地/远端资源仓库。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。
+- [resources/](resources/ARCHITECTURE.md)：链接器、人才和完整业务模板共用的本地/远端资源仓库。静态资料单次HTTP捕获前后核授权与共享代际，正文快照不安装执行。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。
 - [workspace/](workspace/ARCHITECTURE.md)：本机工作区登记、运行实例与可信桌面静态架构编辑。持锁打开、监听、关闭，知识事务委托 persistence/knowledge；模块维护确认和真人条目同事务，不变更动态任务图。
 
 [返回上层](../ARCHITECTURE.md)。
@@ -185,6 +187,8 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 ## 安全等待补充的附件准备
 
 `createExecutionManager` 将 `ChatInputs.prepareContinuation` 注入主运行管理器。仅新的附件补充在创建工厂前准备一次正文、图片与清单；模型工厂使用 `ExecutionLaunchContext.preparedInputImages`，包括明确的空数组，不再读取附件 ID。图片不写入 `WorkspaceLoopOptions`，后续成员结果回注不会再次附加图片，原生历史仍保留先前真实用户图消息。
+
+`Application.chatMaterials` 统一管理显式目录、链接、网页与已授权仓库资料导入，绑定原工作区实例及唯一 importId；停止工作区、重开和应用关闭先取消在途来源读取。仓库资料经当前授权闭包真实 HTTP 读取并复核；不执行资源，不为旧 connector 定义补造来源。续跑只读已经保存的 v1 文件或 v2 多来源快照，导入后的撤权不改写历史资料，也不触发重新联网。
 
 同一真实模型配置在受理前核实视觉能力，明确不支持时返回 `GOAL_ATTACHMENT_VISION`，等待与原输入不消费。实际 Pi 初始化、网络或通信失败可能发生在受理后，不能据此宣称未执行；应保留原 commandId 并查询持久回执，不换 ID 自动重发。
 
@@ -237,6 +241,8 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 ## 原生附件选择上限
 
 `chat.pick` 使用系统文件选择器，只导入用户明确选择的路径。超过12项时在读取和保存任何附件快照前明确拒绝，不能截取前12项后冒充完整选择；取消选择返回空列表。该限制同时适用于普通聊天和安全等待补充，后者另在受理前核实本工作区快照、总量和视觉能力。
+
+安全等待选择器额外携带 importId，进入共享取消表。取消后即使系统对话框稍后返回，也不读取路径或保存资料；不能强制关闭系统对话框不等于导入仍有效。旧普通聊天不带 importId 的调用保持原行为。
 
 ## 目标周期消耗读取
 

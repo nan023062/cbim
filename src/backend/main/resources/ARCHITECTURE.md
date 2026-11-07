@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-链接器、人才和完整业务模板共用的本地/远端资源仓库。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。
+链接器、人才和完整业务模板共用的本地/远端资源仓库。静态资料单次HTTP捕获前后核授权与共享代际，正文快照不安装执行。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -49,7 +49,7 @@ N_src_backend_main_resources_repository_connection_store_ts ..> N_src_backend_ma
 
 ### repository-connections.ts
 
-成员 1/2（同名节点为同一声明，跨图合并阅读）。
+成员 1/3（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -71,6 +71,15 @@ class N_src_backend_main_resources_repository_connections_ts_external_KnowledgeW
   <<external>>
 }
 N_src_backend_main_resources_repository_connections_ts_external_KnowledgeWorkspace <|-- N_src_backend_main_resources_repository_connections_ts_RepositoryConnectionWorkspace
+class N_src_backend_main_resources_repository_connections_ts_CapturedRepositoryTarget["CapturedRepositoryTarget"] {
+  <<interface>>
+  +target
+  +definitionHash
+  +grantRevision
+  +verify()
+  +read()
+}
+N_src_backend_main_resources_repository_connections_ts ..> N_src_backend_main_resources_repository_connections_ts_CapturedRepositoryTarget : 声明
 class N_src_backend_main_resources_repository_connections_ts_RepositoryConnections["RepositoryConnections"] {
   +init()
   +list()
@@ -82,17 +91,17 @@ class N_src_backend_main_resources_repository_connections_ts_RepositoryConnectio
   +revoke()
   +receipt()
   +prepareTools()
+  +prepareMaterials()
   +check()
   +retireWorkspace()
   +close()
   -resources
   -workspace
-  -queue
 }
 N_src_backend_main_resources_repository_connections_ts ..> N_src_backend_main_resources_repository_connections_ts_RepositoryConnections : 声明
 ```
 
-成员 2/2（同名节点为同一声明，跨图合并阅读）。
+成员 2/3（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -100,6 +109,7 @@ class N_src_backend_main_resources_repository_connections_ts["repository-connect
   <<module>>
 }
 class N_src_backend_main_resources_repository_connections_ts_RepositoryConnections["RepositoryConnections"] {
+  -queue
   -closed
   -checks
   -reads
@@ -115,6 +125,20 @@ class N_src_backend_main_resources_repository_connections_ts_RepositoryConnectio
   -readPlan()
   -commitResult()
   -abortChecks()
+}
+N_src_backend_main_resources_repository_connections_ts ..> N_src_backend_main_resources_repository_connections_ts_RepositoryConnections : 声明
+```
+
+成员 3/3（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_resources_repository_connections_ts["repository-connections.ts"] {
+  <<module>>
+}
+class N_src_backend_main_resources_repository_connections_ts_RepositoryConnections["RepositoryConnections"] {
+  -captureTargets()
+  -tools()
   -checkOnce()
 }
 N_src_backend_main_resources_repository_connections_ts ..> N_src_backend_main_resources_repository_connections_ts_RepositoryConnections : 声明
@@ -383,3 +407,5 @@ N_src_backend_main_resources_workspace_packages_ts ..> N_src_backend_main_resour
 捕获端口只公开安全目标摘要和 `list/get`，不公开私有指纹、权限版本、地址或令牌。实际网络前后均重新核对原定义、授权、实例与共享代际；撤销、工作区退役和退出取消在途读取，迟到结果不交付。后来的重新授权或共享只能由新主运行捕获，旧端口保持失效。
 
 每次调用仍经过生产 Resource Repository v1 HTTP GET 和原 8 MiB 响应边界。模型目录最多返回 50 项摘要，续页固定 expectedRevision；正文最多 4096 个 Unicode codepoint，按明确 resourceId/revision/offset 读取。结果提供完整原文 SHA-256、总字符数、实际分块和 nextOffset，只有 offset=0 且包含全文才 complete=true。目录或正文版本变化拒绝原请求，不自动刷新版本重读。仓库资料不作为文件基线、成员交付或检查点证据。
+
+桌面 `prepareMaterials(identity)` 与主运行共用同一授权捕获器，但提供独立的单次正文快照读取：用户指定原 connectionId、expectedRevision 和 resourceId，实际 HTTP 返回整份有界仓库后选出原资源。不能循环模型 get 分页拼出不同版本，也不开放 URL、token 或新授权。该端口额外给 Main 保存真实 definitionHash/grantRevision，并在快照落盘后再次核实原捕获；信息只作为当时来源，不成为可复用权限。支持 connector/team/agent/skill/architecture/module/workflow 七种正文，全部是静态资料，不安装、不执行、不导入正式知识。已保存本机快照后撤权不删除历史资料，续跑不再次调用仓库。

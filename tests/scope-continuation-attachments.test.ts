@@ -6,13 +6,13 @@ import {fixture} from './helpers';
 import {hash,json} from '../src/backend/core/foundation/serialization';
 import {checkedRunInputSource} from '../src/backend/core/brain/input-source';
 import type {TaskSpec} from '../src/backend/core/brain/types';
-import {continuationAttachmentManifestSchema,assertContinuationAttachmentManifest,continuationAttachmentLimits,type ContinuationAttachmentManifest} from '../src/backend/core/tasks/scope-continuation-attachments';
+import {continuationAttachmentManifestSchema,assertContinuationAttachmentManifest,continuationAttachmentLimits,type ContinuationAttachmentManifestV1} from '../src/backend/core/tasks/scope-continuation-attachments';
 import {goalContinuationRequestSchema,goalContinuationReceiptSchema,type GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
 import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
 import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
 import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
 
-function manifest(ids:string[],message='补充说明'):ContinuationAttachmentManifest{return {version:1,items:ids.map((attachmentId,index)=>({attachmentId,kind:'file',contentKind:index?'image':'text',name:index?'figure.png':'notes.txt',snapshotHash:hash('snapshot-'+index),contentHash:hash('content-'+index),byteLength:16,...(index?{mimeType:'image/png' as const}:{})})) as ContinuationAttachmentManifest['items'],expandedMessageHash:hash(message+'\n保存的附件快照'),expandedMessageBytes:256}}
+function manifest(ids:string[],message='补充说明'):ContinuationAttachmentManifestV1{return {version:1,items:ids.map((attachmentId,index)=>({attachmentId,kind:'file',contentKind:index?'image':'text',name:index?'figure.png':'notes.txt',snapshotHash:hash('snapshot-'+index),contentHash:hash('content-'+index),byteLength:16,...(index?{mimeType:'image/png' as const}:{})})) as ContinuationAttachmentManifestV1['items'],expandedMessageHash:hash(message+'\n保存的附件快照'),expandedMessageBytes:256}}
 function lookup(input:GoalContinuationRequest){const {workspaceId,rootSessionId,scopeId,commandId}=input;return {workspaceId,rootSessionId,scopeId,commandId}}
 async function setup(){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),identity={workspaceId:entry.id,rootSessionId:'attachment-root'},directory=path.join(f.user,'attachment-continuations'),store=new FileDispatchStore(directory,entry.id);

@@ -519,3 +519,10 @@ Progress 保存前独立冻结验证记录，原 wire 证明必须能由这些�
 `TaskNode.dependencyAdditions` 最多 32 条、只追加且不可改删；追加与替换历史的 commandId 和 previousTaskRevision 跨数组唯一。图校验保留 enabled 图的完整环检查；追加边后来真实领取或正式替换退役时仍保留原审计，退役边不能重新启用。历史只要求主运行仍属于原周期，不因随后登记新主轮而失效。
 
 `mainToolOutputSchemas` 纳入第九项 `cbim_dispatch_add_dependency`；唯一 wire 校验绑定当前工作区/根/周期/主运行/命令、原输入两端版本、精确审计以及后继游标。坏回包不撤销已保存事实、不补默认字段、不自动重新追加。
+## 安全等待的多来源静态资料快照
+
+`continuation-source-snapshot.ts` 是不访问文件或网络的纯协议。Main 显式导入的目录、链接、网页和资源仓库资料保存独立 `version:1` 私有文本快照，严格匹配来源种类与摘要；无版本、无来源的旧非文件快照不能按新事实自动升级。目录只列首层最多 200 项；URL 指针不等于抓取正文；网页响应 body 最多 1 MiB，保存摘录最多 64 KiB UTF-8，区分纯文本与 HTML 文本提取；资源仓库保留实际授权版本、共享代际、仓库/资源身份和完整正文指纹，七类资源均只是静态资料，不安装或执行。
+
+`continuationAttachmentManifestV1Schema` 保持原 file/text/image/reference 字段与限制。只有包含新来源才使用 v2，允许与旧 file 项混合；新项分别标记 `directory_listing`、`url_reference`、`web_excerpt`、`resource_excerpt`，包含保存正文指纹、字节数及导入时来源摘要，不包含原目录绝对路径、图片字节、正文或网络令牌。仓库截取指纹与完整正文指纹分开；未截取时必须一致。所有版本仍限制 12 项、有序唯一 IDs、原图片总量及 512 KiB 展开正文；Schema 不补默认值、不规范化改写来源。
+
+公开补充请求仍只能提供 message/attachmentIds，不能提供 proof/manifest/path/权限证明。Main 从同次受管快照读取生成展开正文和清单；`RunInputSource.attachmentManifestHash` 继续绑定完整原清单，无新增执行权。ScopeContinuation 及派发持久不变量复用同一严格版本联合，接受后的清单、原等待和原输入完全冻结；重复原命令返回原事实，不重新读取远程来源、不升级旧回执。新资料不绕过预算、停止、待重规划、输入版本或人工验收约束。

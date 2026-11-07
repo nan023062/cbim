@@ -5,8 +5,10 @@
  */
 import {goalContinuationRequestSchema,goalContinuationReceiptSchema} from '../../bridge/contracts/dispatch';
 import type {GoalContinuationRequest,GoalContinuationReceipt} from '../../bridge/contracts/dispatch';
-import type {ChatAttachment} from '../../bridge/contracts/chat';
-import {continuationFiles,appendContinuationFiles} from './continuation-attachments';
+import type {ChatAttachment,ChatMaterialImport} from '../../bridge/contracts/chat';
+import type {RepositoryToolTarget,RepositoryListOutput} from '../../bridge/contracts/repository-connections';
+import {continuationFiles,continuationAttachments,appendContinuationAttachments} from './continuation-attachments';
+import {checkedMaterialTargets,checkedMaterialPage} from './continuation-source-state';
 
 export type ContinuationTarget=Pick<GoalContinuationRequest,'workspaceId'|'rootSessionId'|'scopeId'|'waitId'|'expectedGoalRevision'|'expectedInputRevision'>;
 export type ContinuationPhase='submitting'|'unknown'|'accepted'|'rejected';
@@ -20,6 +22,8 @@ export interface ContinuationAttempt {
 }
 export interface ContinuationDraft {scopeId:string;waitId:string;text:string;/** 仅公开快照元数据；无附件的旧草稿不添加空字段。 */ attachments?:ChatAttachment[];attempt?:ContinuationAttempt}
 export interface ContinuationState {records:readonly ContinuationDraft[];error:string}
+export type ContinuationSourceSelection={kind:'file'|'folder'}|ChatMaterialImport;
+export interface ContinuationMaterialPage {target:RepositoryToolTarget;expectedRevision?:string;offset?:number}
 /** IO 端口允许测试真正的超时、重复请求与重开；不包含模型执行或知识路径。 */
 export interface ContinuationPorts {
   storage:Pick<Storage,'getItem'|'setItem'>;
@@ -28,6 +32,10 @@ export interface ContinuationPorts {
   uuid:()=>string;
   /** 原生选择器返回本工作区保存的文件快照；不接受 renderer 传任意源文件路径。 */
   pickFiles?:()=>Promise<unknown>;
+  /** 一次显式导入；取消信号属于原等待，不能迁移到新会话。 */
+  importSource?:(selection:ContinuationSourceSelection,signal:AbortSignal)=>Promise<unknown>;
+  materialTargets?:(signal:AbortSignal)=>Promise<unknown>;
+  materialList?:(selection:ContinuationMaterialPage,signal:AbortSignal)=>Promise<unknown>;
 }
 const equal=(a:unknown,b:unknown):boolean=>{const order=(value:unknown):unknown=>Array.isArray(value)?value.map(order):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,order(v)])):value;return JSON.stringify(order(a))===JSON.stringify(order(b))};
 const textError=(error:unknown)=>error instanceof Error?error.message:String(error);
@@ -51,6 +59,7 @@ export class ScopeContinuationController {
   private pending=new Set<string>();
   /** 同一主会话的两个表单共用；选择器返回前不提交或回收控制器。 */
   private importing=false;
+  private sourceOperation?:{target:string;abort:AbortController};
   readonly storageKey:string;
   constructor(readonly workspaceId:string,readonly rootSessionId:string,private ports:ContinuationPorts){
     this.storageKey='cbim.goal-continuation.v1.'+JSON.stringify([workspaceId,rootSessionId]);
@@ -61,7 +70,7 @@ export class ScopeContinuationController {
       const records:ContinuationDraft[]=saved.records.map((entry:any)=>{
         if(typeof entry.scopeId!=='string'||!entry.scopeId||typeof entry.waitId!=='string'||!entry.waitId||typeof entry.text!=='string')throw Error('本地补充草稿缺少目标身份');
         const key=JSON.stringify([entry.scopeId,entry.waitId]);if(keys.has(key))throw Error('本地补充记录出现重复目标');keys.add(key);
-        const attachments=entry.attachments===undefined?undefined:continuationFiles(entry.attachments);
+        const attachments=entry.attachments===undefined?undefined:continuationAttachments(entry.attachments);
         const draft={scopeId:entry.scopeId,waitId:entry.waitId,text:entry.text,...(attachments?.length?{attachments}:{})};
         if(!entry.attempt)return draft;
         const request=goalContinuationRequestSchema.parse(entry.attempt.request);
@@ -104,14 +113,44 @@ export class ScopeContinuationController {
   }
   /** 主视图提供当前身份复核；切换、关闭或等待变化后的选择结果被丢弃，不写入旧目标或新目标。 */
   async pickFiles(target:ContinuationTarget,isCurrent:()=>boolean){
-    if(this.importing||!this.ports.pickFiles||!this.canEdit(target)||!isCurrent())return;
-    this.importing=true;this.emit();
+    await this.importSource(target,{kind:'file'},isCurrent);
+  }
+  /** 选择和目录分页共享同一在途锁；结果必须仍属于原等待且未取消才可进入公开草稿。 */
+  private async source<T>(target:ContinuationTarget,isCurrent:()=>boolean,read:(signal:AbortSignal)=>Promise<T>,accept?:(result:T)=>void):Promise<T|undefined>{
+    if(this.importing||!this.canEdit(target)||!isCurrent())return;
+    const operation={target:JSON.stringify(target),abort:new AbortController()};this.sourceOperation=operation;this.importing=true;this.emit();
     try{
-      const picked=await this.ports.pickFiles();if(!isCurrent()||!this.canEdit(target))return;
-      const old=this.record(target.scopeId,target.waitId),attachments=appendContinuationFiles(old?.attachments??[],picked);
+      const result=await read(operation.abort.signal);
+      if(operation.abort.signal.aborted||!isCurrent()||!this.canEdit(target))return;
+      accept?.(result);return result;
+    }catch(error){if(!operation.abort.signal.aborted&&isCurrent()){this.value={...this.value,error:'补充附件未能添加：'+textError(error)};this.emit()}}
+    finally{if(this.sourceOperation===operation){this.sourceOperation=undefined;this.importing=false;this.emit()}}
+  }
+  /** 取消当前来源准备，不消费等待、不改变已选附件，也不取消运行或原生系统对话框本身。 */
+  cancelImport(target?:ContinuationTarget){if(!target||this.sourceOperation?.target===JSON.stringify(target))this.sourceOperation?.abort.abort()}
+  async importSource(target:ContinuationTarget,selection:ContinuationSourceSelection,isCurrent:()=>boolean){
+    await this.source(target,isCurrent,async signal=>{
+      const picked=this.ports.importSource?await this.ports.importSource(selection,signal):selection.kind==='file'&&this.ports.pickFiles?await this.ports.pickFiles():undefined;
+      if(picked===undefined)throw Error('当前来源导入入口不可用');
+      const items=selection.kind==='file'?continuationFiles(picked):continuationAttachments(picked);
+      if(items.some(item=>item.kind!==selection.kind))throw Error('来源回包与原选择种类不一致');
+      return items;
+    },items=>{
+      const old=this.record(target.scopeId,target.waitId),attachments=appendContinuationAttachments(old?.attachments??[],items);
       if(attachments.length)this.update({...old,scopeId:target.scopeId,waitId:target.waitId,text:old?.text??'',attachments});
-    }catch(error){if(isCurrent()){this.value={...this.value,error:'补充附件未能添加：'+textError(error)};this.emit()}}
-    finally{this.importing=false;this.emit()}
+    });
+  }
+  async materialTargets(target:ContinuationTarget,isCurrent:()=>boolean):Promise<RepositoryToolTarget[]|undefined>{
+    return this.source(target,isCurrent,async signal=>{
+      if(!this.ports.materialTargets)throw Error('仓库资料入口不可用');
+      return checkedMaterialTargets(await this.ports.materialTargets(signal),this.workspaceId);
+    });
+  }
+  async materialList(target:ContinuationTarget,selection:ContinuationMaterialPage,isCurrent:()=>boolean):Promise<RepositoryListOutput|undefined>{
+    return this.source(target,isCurrent,async signal=>{
+      if(!this.ports.materialList)throw Error('仓库目录入口不可用');
+      return checkedMaterialPage(await this.ports.materialList(selection,signal),this.workspaceId,selection);
+    });
   }
   /** 仅未提交或明确拒绝的草稿可移除附件，未知和已受理请求保持原顺序与身份。 */
   removeFile(target:ContinuationTarget,id:string){

@@ -1,12 +1,14 @@
 /**
  * 作用定位：在主会话层装配唯一补充控制器，向对话卡和任务根提供同一份草稿、提交锁及回执状态。
- * 设计原因：历史选择只切换只读视图；请求绑定原等待身份且核实周期补充保持只读，迟到结果不能写进新目标。挂载只查询本地未知命令，不自动续跑。
+ * 设计原因：请求绑定原等待身份和会话可见代次；外壳保留隐藏会话时也撤销在途资料准备，迟到结果不能进入旧/新草稿。核实周期保持只读，挂载只查询未知命令，不自动续跑。
  */
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {GoalContinuationRequest} from '../../bridge/contracts/dispatch';
 import type {ChatAttachment} from '../../bridge/contracts/chat';
+import type {RepositoryToolTarget,RepositoryListOutput} from '../../bridge/contracts/repository-connections';
 import type {ScopeGoalState} from './scope-state';
-import {ScopeContinuationPool,type ContinuationDraft,type ContinuationTarget} from './continuation-state';
+import {ScopeContinuationPool,type ContinuationDraft,type ContinuationTarget,type ContinuationSourceSelection,type ContinuationMaterialPage} from './continuation-state';
+import {continuationSourcePorts} from './continuation-source-io';
 
 // 同 renderer 的工作区切换不能产生两个写同一本机索引的在途控制器；真正重开应用仍从磁盘读取。
 const controllers=new ScopeContinuationPool();
@@ -24,6 +26,12 @@ export interface ScopeContinuationView {
   error:string;modelLabel:string;
   edit:(text:string)=>void;submit:()=>Promise<void>;query:()=>Promise<void>;retry:()=>Promise<void>;
   pickFiles:()=>Promise<void>;removeFile:(id:string)=>void;
+  /** 随原等待身份/选择代次变化，用于清除表单未提交的来源选择。 */
+  sourceSelectionKey:string;
+  importSource:(selection:ContinuationSourceSelection)=>Promise<void>;
+  materialTargets:()=>Promise<RepositoryToolTarget[]|undefined>;
+  materialList:(selection:ContinuationMaterialPage)=>Promise<RepositoryListOutput|undefined>;
+  cancelImport:()=>void;
 }
 /** 仅当前 waiting 且详情已与摘要核对时产生写入目标，模型等待申请和历史选择均不能构造恢复身份。 */
 export function continuationTarget(workspaceId:string,rootSessionId:string|undefined,state:ScopeGoalState):ContinuationTarget|undefined{
@@ -33,7 +41,8 @@ export function continuationTarget(workspaceId:string,rootSessionId:string|undef
   return {workspaceId,rootSessionId,scopeId:scope.scopeId,waitId:scope.wait.waitId,expectedGoalRevision:scope.goal.revision,expectedInputRevision:scope.goal.inputRevision??1};
 }
 
-export function useScopeContinuation(workspaceId:string,rootSessionId:string|undefined,state:ScopeGoalState,model:ContinuationModel|undefined,refresh:()=>void):ScopeContinuationView{
+/** active 来自外壳的会话选择，不能用组件是否挂载替代；隐藏仅撤销未提交资料，不取消已经受理的目标继续。 */
+export function useScopeContinuation(workspaceId:string,rootSessionId:string|undefined,state:ScopeGoalState,model:ContinuationModel|undefined,refresh:()=>void,active:boolean):ScopeContinuationView{
   const effectiveModel=continuationModel(model,state);
   const key=JSON.stringify([workspaceId,rootSessionId]),keyRef=useRef(key);keyRef.current=key;
   const refreshRef=useRef(refresh);refreshRef.current=refresh;
@@ -41,6 +50,7 @@ export function useScopeContinuation(workspaceId:string,rootSessionId:string|und
     storage:{getItem:name=>window.localStorage.getItem(name),setItem:(name,value)=>window.localStorage.setItem(name,value)},
     submit:request=>window.cbim.call('loop.goalContinue',request),lookup:request=>window.cbim.call('loop.goalContinuation',request),uuid:()=>crypto.randomUUID(),
     pickFiles:()=>window.cbim.call('chat.pick',{id:workspaceId,kind:'file'}),
+    ...continuationSourcePorts(workspaceId,(action,args)=>window.cbim.call(action,args),()=>crypto.randomUUID()),
   }):undefined,[workspaceId,rootSessionId]);
   const [,changed]=useState(0);
   const mounted=useRef(false);
@@ -51,15 +61,17 @@ export function useScopeContinuation(workspaceId:string,rootSessionId:string|und
     void controller.restore().then(()=>{if(keyRef.current===key)refreshRef.current()});
     return ()=>{mounted.current=false;unsubscribe()};
   },[controller,key]);
-  const target=continuationTarget(workspaceId,rootSessionId,state),records=controller?.snapshot.records??[];
+  const target=active?continuationTarget(workspaceId,rootSessionId,state):undefined,records=controller?.snapshot.records??[];
   // 记录发生过的切换，即使选择器返回前又切回相同目标，也不把迟到文件自动附到恢复后的草稿。
-  const stamp=JSON.stringify([key,target]),selection=useRef({stamp,generation:0});
+  const stamp=JSON.stringify([key,active,target]),selection=useRef({stamp,generation:0});
   if(selection.current.stamp!==stamp)selection.current={stamp,generation:selection.current.generation+1};
+  useEffect(()=>()=>{if(target)controller?.cancelImport(target)},[controller,stamp]);
   const record=target?controller?.record(target.scopeId,target.waitId):[...records].reverse().find(item=>item.scopeId===state.selectedScopeId);
   const pending=controller?.isPending(record)??false,attempt=record?.attempt,error=controller?.snapshot.error??'';
   const editable=!!target&&!!controller?.available&&!pending&&(!attempt||attempt.phase==='rejected');
   const importing=controller?.isImporting??false;
   const refreshAfter=async(work:()=>Promise<void>)=>{await work();if(keyRef.current===key)refreshRef.current()};
+  const currentSelection=()=>{const generation=selection.current.generation;return ()=>mounted.current&&selection.current.generation===generation&&selection.current.stamp===stamp};
   return {
     workspaceId,attachments:record?.attachments??[],importing,
     scopeId:target?.scopeId??record?.scopeId,waitId:target?.waitId??record?.waitId,text:record?.text??'',record,
@@ -67,6 +79,11 @@ export function useScopeContinuation(workspaceId:string,rootSessionId:string|und
     modelLabel:attempt&&attempt.phase!=='rejected'?`${attempt.request.options.model} · ${{read:'只读访问',ask:'默认权限',execute:'完全访问'}[attempt.request.options.permission]}（本次提交已固定）`:effectiveModel?.label??'请先选择可用模型',
     edit:text=>{if(editable&&target)controller!.edit(target,text)},
     pickFiles:async()=>{if(!editable||!target||!controller)return;const generation=selection.current.generation;await controller.pickFiles(target,()=>mounted.current&&selection.current.generation===generation&&selection.current.stamp===stamp)},
+    sourceSelectionKey:stamp+':'+selection.current.generation,
+    importSource:async input=>{if(editable&&target&&controller)await controller.importSource(target,input,currentSelection())},
+    materialTargets:async()=>editable&&target&&controller?controller.materialTargets(target,currentSelection()):undefined,
+    materialList:async input=>editable&&target&&controller?controller.materialList(target,input,currentSelection()):undefined,
+    cancelImport:()=>{if(target)controller?.cancelImport(target)},
     removeFile:id=>{if(editable&&target)controller!.removeFile(target,id)},
     submit:()=>refreshAfter(async()=>{if(editable&&target&&effectiveModel)await controller!.submit(target,effectiveModel.options)}),
     query:()=>refreshAfter(async()=>{if(record)await controller!.query(record.scopeId,record.waitId)}),

@@ -1,7 +1,7 @@
 /**
  * 作用定位：本机后端的 Electron 装配入口，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。
  * 设计原因：把 Electron 窗口与 IPC 留在唯一桌面入口，服务层可以脱离窗口验证；模型凭据加密通过系统 safeStorage 注入；手动终端固定工作区目录，退出时释放子进程。
- * 附件边界：原生多选超过12项时在任何快照导入前拒绝，不能静默舍弃用户选择。
+ * 附件边界：原生多选超过12项时在任何快照导入前拒绝；安全等待的 importId 贯穿选择器，取消后迟到路径不读取、不返回给另一目标。
  */
 import {app,BrowserWindow,ipcMain,dialog,shell} from 'electron';
 import path from 'node:path';
@@ -52,7 +52,8 @@ app.whenReady().then(async()=>{
       }return {ok:true,value:true};
     }catch(e:any){return {ok:false,error:{code:'OPEN_LINK',message:e.message}}}
     if(action==='chat.pick')try{
-      const request=args as {id:string;kind:string};if(!['file','folder'].includes(request.kind))throw Error('未知附件类型');
+      const request=args as {id:string;kind:string;importId?:string};if(!['file','folder'].includes(request.kind))throw Error('未知附件类型');
+      if(request.importId!==undefined){const value=await application.chatMaterials.pick(request,async()=>{const result=await dialog.showOpenDialog(window,{properties:request.kind==='folder'?['openDirectory']:['openFile','multiSelections']});return result.canceled?[]:result.filePaths});return {ok:true,value}}
       const inputs=new ChatInputs(application.workspace(request.id));const result=await dialog.showOpenDialog(window,{properties:request.kind==='folder'?['openDirectory']:['openFile','multiSelections']});
       // 在导入第一份快照前拒绝超量选择，不能静默裁剪用户明确选中的资料。
       if(!result.canceled&&result.filePaths.length>12)throw Error('最多选择12个附件，请减少选择后重试');

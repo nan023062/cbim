@@ -1,6 +1,6 @@
 /**
  * 作用定位：定义安全等待检查点、用户显式补充原目标的请求和一次性启动意图。
- * 设计原因：补充保留原等待、原文、附件 ID 与可信快照清单，派发日志先消费启动权再运行；重复请求只能查询原回执，不能重放模型或把“同意”当作人工验收。
+ * 设计原因：补充保留原等待、原文、附件 ID 与版本化快照清单；v1 文件与 v2 多来源资料均冻结为原回执，不能重导重放或把资料/“同意”当作人工验收。
  */
 import {z} from 'zod';
 import {continuationAttachmentIdsSchema,continuationAttachmentManifestSchema,assertContinuationAttachmentManifest} from './scope-continuation-attachments';

@@ -1,6 +1,6 @@
 /**
  * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
- * 设计原因：通过 ApplicationServices 隔离实现；人工保存仅注入本机提交标记且不启动模型，humanContinue 是另一个明确入口并只消费已保存决定。计量、文本补充与新周期保持各自身份和受理边界。
+ * 设计原因：通过 ApplicationServices 隔离实现；人工保存不启动模型，humanContinue 只消费已保存决定。资料导入/取消独立于等待受理，IPC 不接收来源 proof 或仓库凭据。
  * 资源连接：桌面显式登记、授权与核验分别路由；只读原回执和未受理证明不重放知识提交，不接受客户端地址或令牌。
  * 模块治理：登记、观察、决定与独立实施按原命令路由；只有可信桌面闭包提供人工来源，普通 commit 没有批准参数。
  * 队列插入：原样传递用户操作时的 expectedRunId，由执行管理器统一拒绝缺省、过期或停止请求，不替客户端猜当前运行。
@@ -89,6 +89,10 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'loop.replanStart':return app.execution(args.workspaceId).replanExecution(args);
     case 'loop.replanReceipt':return app.memberDispatch(args.workspaceId).replans.inspect(args);
     case 'chat.attach':return new ChatInputs(app.workspace(args.id)).add(args.attachment);
+    case 'chat.materialTargets':return app.chatMaterials.targets(args);
+    case 'chat.materialList':return app.chatMaterials.list(args);
+    case 'chat.import':return app.chatMaterials.import(args);
+    case 'chat.importCancel':return app.chatMaterials.cancel(args);
     case 'chat.connectors':return new ChatInputs(app.workspace(args.id)).connectors();
     case 'chat.preview':return new ChatInputs(app.workspace(args.id)).preview(args.attachmentId);
     case 'loop.questions':return app.execution(args.id).pendingQuestions(args.taskId);

@@ -6,6 +6,8 @@
 
 `get` 的显式记录不存在即拒绝，不自动挑最新。`receipt` 限同根会话真实模型来源，未查到是 unknown。取消在持久化前检查，进入保存后不承诺撤销已发生的记录；治理回执不进入 TaskProgress、Workflow 或目标完成业务证据。
 
+治理修订仍使用这四个工具。主模型读取显式源提案的真实反馈后，用新的观察和精确正文方案提交最多8条 `respondsToDecisionIds`；服务冻结来源且核实 current。get 显示当前/已替代状态和真实本机评价，模型不能提交 feedback/assessments、批准或实施。引用不是已回应，批准不是已理解；正文不需修改的纯解释仍为普通对话，不伪造正文差异来建立治理记录。
+
 ### 主调度资源仓库只读工具
 
 `RepositoryTools` 只消费本轮可信捕获的 `RepositoryToolsPort`，注册 `cbim_repository_list/get` 两项真实只读工具；不并入 `cbim_knowledge_tool_catalog/describe` 的知识工具族。执行成员和没有端口的兼容装配不注册它们。工具描述提供有界目标名称/ID，资料正文、名称和目录都不构成新的指令或授权。

@@ -3,6 +3,7 @@
  * 设计原因：账本只有追加命令，独立世代/字节锚防丢失回退；没有可冒充知识提交的 applied 缓存，已生效状态须由原知识 journal 推导。
  * 职责边界：本类不拥有队列、不回调工作区；调用方必须持有 KnowledgeStore 的同一串行屏障。
  * 来源边界：新观察/提案的可信来源进入原命令指纹；旧缺省不补造，模型命令须能从真实来源重算。
+ * 历史边界：反馈引用、评价和实施按当时已见命令顺序核实，后来的决定不能倒推改写已合法记录。
  */
 import fs from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
@@ -13,6 +14,7 @@ import {fail} from '../../../core/foundation/errors';
 import {moduleGovernanceRegisterInputSchema,moduleGovernanceObserveInputSchema,moduleGovernanceProposeInputSchema,moduleGovernanceDecideInputSchema,moduleGovernanceApplyInputSchema,moduleGovernanceReceiptSchema,moduleGovernanceApplyIntentSchema,type ModuleGovernanceReceipt,type ModuleGovernanceApplyIntent,type ModuleGovernanceProtection,type ModuleGovernanceProposal,type ModuleGovernanceObservation,type ModuleGovernanceDecision} from '../../../core/governance/module-governance';
 import {validateModuleGovernanceProposal,validateModuleGovernanceDecisionAppend,validateModuleGovernanceRecordOrigin,validateModuleGovernanceMainObservation} from '../../../core/governance/module-governance-rules';
 import {moduleGovernanceOriginSchema} from '../../../core/governance/module-governance';
+import {resolveModuleGovernanceResponses,validateModuleGovernanceResponseSources,validateModuleGovernanceAssessments} from '../../../core/governance/module-governance-feedback';
 
 const inputSchema=z.union([moduleGovernanceRegisterInputSchema,moduleGovernanceObserveInputSchema,moduleGovernanceProposeInputSchema,moduleGovernanceDecideInputSchema,moduleGovernanceApplyInputSchema]);
 const commandSchema=z.object({input:inputSchema,fingerprint:z.string().regex(/^[a-f0-9]{64}$/),receipt:moduleGovernanceReceiptSchema,intent:moduleGovernanceApplyIntentSchema.optional(),origin:moduleGovernanceOriginSchema.optional()}).strict();
@@ -57,6 +59,8 @@ export class ModuleGovernanceStore {
   }
   private validate(commands:GovernanceCommand[]){
     const ids=new Set<string>(),protections=new Map<string,ModuleGovernanceProtection>(),modules=new Set<string>(),observations=new Map<string,ModuleGovernanceObservation>(),proposals=new Map<string,ModuleGovernanceProposal>(),decisions=new Map<string,ModuleGovernanceDecision[]>();
+    // 顺序校验只看此前已出现的记录；后来替代意见不会把过去合法批准或实施倒推成损坏。
+    const sources=()=>[...proposals.values()].map(proposal=>({proposal,decisions:decisions.get(proposal.proposalId)??[]}));
     for(const command of commands){
       const {input,receipt,intent,origin}=command,id=receipt.commandId;
       valid(!ids.has(id)&&input.commandId===id&&command.fingerprint===governanceCommandFingerprint(receipt.action,input,origin),'治理命令重复或原请求指纹不一致');ids.add(id);
@@ -71,14 +75,18 @@ export class ModuleGovernanceStore {
       }else if(receipt.action==='propose'){
         const value=receipt.record,request=moduleGovernanceProposeInputSchema.parse(input),protection=protections.get(value.protectionId),observation=observations.get(value.observationId);
         valid(protection&&observation&&value.proposalId===id&&value.protectionId===request.protectionId&&value.observationId===request.observationId&&value.base.protectionRevision===request.expectedProtectionRevision&&value.base.knowledgeRevision===request.expectedKnowledgeRevision&&value.change.afterText===request.newOverviewText&&value.reason===request.reason&&same(value.alternatives,request.alternatives)&&same(value.invariants,request.invariants)&&value.rollbackNotes===request.rollbackNotes,'提案与原请求或观察不一致');
+        const respondsTo=request.respondsToDecisionIds?resolveModuleGovernanceResponses({workspaceId:this.workspaceId,protectionId:value.protectionId},request.respondsToDecisionIds,sources()):undefined;
+        valid(same(value.respondsTo,respondsTo),'提案回应来源与当时最新的真实反馈不一致');
         validateModuleGovernanceProposal(value,{...protection,revision:observation.protectionRevision,overview:{path:protection.overview.path,hash:observation.overviewHash}},observation);if(origin?.kind==='main_agent')validateModuleGovernanceMainObservation(observation,origin);proposals.set(id,value);
       }else if(receipt.action==='decide'){
         const value=receipt.record,request=moduleGovernanceDecideInputSchema.parse(input),proposal=proposals.get(value.proposalId),previous=decisions.get(value.proposalId)??[];
-        valid(proposal&&value.decisionId===id&&value.proposalId===request.proposalId&&value.basis===proposal.basis&&value.basis===request.expectedBasis&&value.revision===request.expectedDecisionRevision+1&&value.decision===request.decision&&value.comment===request.comment&&value.revisitCondition===request.revisitCondition,'决定与原提案或请求不一致');validateModuleGovernanceDecisionAppend(previous,value);decisions.set(value.proposalId,[...previous,value]);
+        valid(proposal&&value.decisionId===id&&value.proposalId===request.proposalId&&value.basis===proposal.basis&&value.basis===request.expectedBasis&&value.revision===request.expectedDecisionRevision+1&&value.decision===request.decision&&value.comment===request.comment&&value.revisitCondition===request.revisitCondition&&same(value.feedback,request.feedback)&&same(value.assessments,request.assessments),'决定与原提案或请求不一致');
+        validateModuleGovernanceAssessments(proposal,value.assessments);if(value.decision==='approve'||value.assessments)validateModuleGovernanceResponseSources(proposal,sources(),'current');validateModuleGovernanceDecisionAppend(previous,value);decisions.set(value.proposalId,[...previous,value]);
       }else{
         const value=receipt.record,request=moduleGovernanceApplyInputSchema.parse(input),proposal=proposals.get(value.proposalId),decision=decisions.get(value.proposalId)?.at(-1);
         valid(intent&&value.state==='pending'&&value.intentId===id&&intent.intentId===id&&value.requestId===id&&intent.request.requestId===id&&intent.request.instanceId===input.instanceId&&intent.request.workspaceId===this.workspaceId,'实施意图缺失或伪造已提交缓存');
         valid(proposal&&decision&&decision.decision==='approve'&&decision.decisionId===request.decisionId&&intent.decisionId===decision.decisionId&&value.decisionId===decision.decisionId&&request.proposalId===proposal.proposalId&&intent.proposalId===proposal.proposalId&&value.proposalId===proposal.proposalId&&intent.protectionId===proposal.protectionId&&value.protectionId===proposal.protectionId&&intent.basis===proposal.basis&&value.basis===proposal.basis&&request.expectedBasis===proposal.basis,'实施意图不是当时最新批准的精确提案');
+        validateModuleGovernanceResponseSources(proposal,sources(),'current');
         valid(intent.requestFingerprint===hash(json(intent.request))&&value.requestFingerprint===intent.requestFingerprint&&value.createdAt===intent.createdAt&&intent.workspaceId===this.workspaceId&&intent.request.revision===proposal.base.knowledgeRevision&&same(intent.request.changes,[{path:proposal.change.path,text:proposal.change.afterText}]),'实施意图原知识请求不一致');
       }
     }

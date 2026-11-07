@@ -47,8 +47,8 @@ export function checkedGovernanceUnaccepted(raw:unknown,pending:GovernancePendin
   return result;
 }
 
-/** 仅用于第一次 RPC 的明确预受理拒绝；已未知、恢复查询、接受回执或后续刷新失败时禁止调用此判定解除记录。 */
+/** 仅用于第一次 RPC 的明确预受理拒绝，含来源已过期及评价错误；已未知、恢复查询或后续刷新失败禁止据此解除记录。 */
 export function isFirstGovernanceRejection(error:unknown){
   const text=error instanceof Error?error.message:String(error),code=/^(?:Error: )?([A-Z][A-Z_]+):/.exec(text)?.[1];
-  return code!==undefined&&new Set(['GOVERNANCE_INPUT','GOVERNANCE_IDENTITY','GOVERNANCE_PROTECTION','GOVERNANCE_EXISTS','GOVERNANCE_SOURCE','GOVERNANCE_OBSERVATION','GOVERNANCE_PROPOSAL','GOVERNANCE_STALE','GOVERNANCE_DRIFT','GOVERNANCE_VALIDATION','GOVERNANCE_PROTECTED','GOVERNANCE_DECISION','GOVERNANCE_LIMIT','GOVERNANCE_INTENT','STALE_INSTANCE','NOT_RUNNING','SHUTTING_DOWN']).has(code);
+  return code!==undefined&&new Set(['GOVERNANCE_INPUT','GOVERNANCE_IDENTITY','GOVERNANCE_PROTECTION','GOVERNANCE_EXISTS','GOVERNANCE_SOURCE','GOVERNANCE_OBSERVATION','GOVERNANCE_PROPOSAL','GOVERNANCE_STALE','GOVERNANCE_DRIFT','GOVERNANCE_VALIDATION','GOVERNANCE_PROTECTED','GOVERNANCE_DECISION','GOVERNANCE_FEEDBACK_STALE','GOVERNANCE_FEEDBACK_SOURCE','GOVERNANCE_ASSESSMENT','GOVERNANCE_LIMIT','GOVERNANCE_INTENT','STALE_INSTANCE','NOT_RUNNING','SHUTTING_DOWN']).has(code);
 }

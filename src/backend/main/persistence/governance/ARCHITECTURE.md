@@ -52,7 +52,7 @@ class N_src_backend_main_persistence_governance_module_governance_store_ts_Modul
 N_src_backend_main_persistence_governance_module_governance_store_ts ..> N_src_backend_main_persistence_governance_module_governance_store_ts_ModuleGovernanceStore : 声明
 ```
 
-直接依赖：[../../../core/foundation/files.ts](../../../core/foundation/files.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/governance/module-governance.ts](../../../core/governance/module-governance.ts)、[../../../core/governance/module-governance-rules.ts](../../../core/governance/module-governance-rules.ts)。
+直接依赖：[../../../core/foundation/files.ts](../../../core/foundation/files.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/governance/module-governance.ts](../../../core/governance/module-governance.ts)、[../../../core/governance/module-governance-rules.ts](../../../core/governance/module-governance-rules.ts)、[../../../core/governance/module-governance-feedback.ts](../../../core/governance/module-governance-feedback.ts)。
 
 
 ## 子目录导航
@@ -72,6 +72,8 @@ N_src_backend_main_persistence_governance_module_governance_store_ts ..> N_src_b
 每个工作区在用户数据目录保存 `governance/module-ledger.json`，不进入 `.cbim`、资源包或普通知识 CRUD。账本最多 512 条命令、32 MiB；超限拒绝新写，不裁剪历史。完整输入、稳定命令、回执及可选实施意图构成唯一追加链，加载时核身份、指纹、登记/观察/提案/决定顺序以及实施所引用的当时批准。
 
 观察与提案可携带可信 origin，私有命令封装与公开记录必须逐字段一致，且参与原请求指纹。模型来源还须从工作区、根会话、run、toolCallId 与工具名重算相同命令 UUID；模型提案的原观察须属于同一主实例及逻辑通道。新桌面记录明确标注本机操作；旧记录缺省沿用旧指纹，不补造来源，不得冒领为模型调用。登记、决定和实施不接受模型 origin。
+
+反馈、回应引用和评价同样是原命令/记录的一部分。新增提案按当前已见来源冻结 respondsTo，决定中的 feedback/assessments 须与原输入一致；批准、带评价的决定及实施意图在其出现时复核来源仍 current。加载完整账本按持久命令顺序核验，不拿末尾最新意见否认前面当时合法的记录。当前展示的 superseded 不写回历史；可选旧字段缺省不自动补空数组或 addressed。
 
 `module-ledger.json.anchor` 绑定账本 UUID、命令数量及完整文件字节哈希。首次创建空账本和锚完成后才发布服务；旧锚存在但账本丢失、合法 JSON 被回退为空、删除完整分支或来源不一致都失败关闭，不能重新初始化为空保护。
 

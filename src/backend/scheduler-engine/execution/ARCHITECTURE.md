@@ -1663,6 +1663,8 @@ N_src_backend_scheduler_engine_execution_scope_usage_service_ts ..> N_src_backen
 
 主治理端口另在每次 createEngine 工厂创建，必须同时有 coordinator 和真实 conversationBinding；四项工具不进入成员共享知识缓存。list/describe/call 使用同一包装，真实调用 ID 原样透传；提示明确观察/提案仅是私有待办，桌面批准与实施不能被模型或普通聊天代替。`ScopeGoalService` 在工具证据入口排除全部 cbim_governance_ 回执，不允许把待办保存当成业务或正式知识完成。
 
+主提示要求读取当前真实反馈后取得新观察并准备修订提案；已替代来源不能沿用。模型只引用决定 ID，不填写本机逐项评价，不把引用、批准或工具成功当作已理解。反馈保存不会自动唤醒模型，后续运行仍由既有明确发送与调度生命周期决定。
+
 仓库调用沿既有 gate 和 canonical 回执链保存 `repository` 范围：workspaceId、connectorId、repositoryId、connectionId 与 list/get 操作。`executionToolFacts` 比较完整范围及调用名称/connectorId/read 效果，不能将互相匹配但语义错误的伪造 receipt 当作工作区读取。`public-run-events` 在主历史和工具状态中保留安全范围身份，不透传正文、地址、凭据或私有授权版本。仓库资料不进入成员进度、文件基线和恢复资格；主提示明确它是资料而非指令。
 
 ### 安全等待中的本机人工决定

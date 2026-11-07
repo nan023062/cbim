@@ -1,6 +1,10 @@
 import {expect,it} from 'vitest';
 import {createGovernancePendingStore,checkedGovernanceReceipt,checkedGovernanceUnaccepted,isFirstGovernanceRejection,GOVERNANCE_PENDING_KEY,type GovernancePending} from '../src/frontend/governance/governance-pending';
 const pending:GovernancePending={workspaceId:'workspace',instanceId:'10000000-0000-4000-8000-000000000001',moduleId:'.cbim/workspace/project',commandId:'20000000-0000-4000-8000-000000000001',action:'apply'};
+it('反馈类明确预受理拒绝可识别，未知结果仍不能据此解除',()=>{
+  for(const code of ['GOVERNANCE_FEEDBACK_STALE','GOVERNANCE_FEEDBACK_SOURCE','GOVERNANCE_ASSESSMENT'])expect(isFirstGovernanceRejection(new Error(code+': 拒绝本次受理'))).toBe(true);
+  expect(isFirstGovernanceRejection(new Error('GOVERNANCE_UNKNOWN: 后续发现 GOVERNANCE_FEEDBACK_STALE'))).toBe(false);
+});
 function storage(){const values=new Map<string,string>();return {values,getItem:(k:string)=>values.get(k)??null,setItem:(k:string,v:string)=>{values.set(k,v)}}}
 it('治理原命令跨组件保留，迟到结果不能清除或覆盖新请求',()=>{const disk=storage(),store=createGovernancePendingStore(disk);store.save(pending);expect(createGovernancePendingStore(disk).read('workspace')).toEqual(pending);expect(()=>store.save({...pending,commandId:'30000000-0000-4000-8000-000000000001'})).toThrow();expect(()=>store.remove({...pending,action:'decide'})).toThrow();store.remove(pending);expect(store.read('workspace')).toBeUndefined()});
 it('坏本地记录不降级为空表，不可写存储不放行新命令',()=>{const disk=storage();disk.values.set(GOVERNANCE_PENDING_KEY,'{broken');const store=createGovernancePendingStore(disk);expect(()=>store.read('workspace')).toThrow();expect(()=>store.save(pending)).toThrow();expect(disk.values.get(GOVERNANCE_PENDING_KEY)).toBe('{broken');expect(()=>createGovernancePendingStore({getItem:()=>null,setItem:()=>{throw Error('full')}}).save(pending)).toThrow('无法保存')});

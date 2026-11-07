@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-模块知识治理的纯协议、保护规则与有界主工具投影。可信运行来源独立于人工决定，观察和提案不改变正式知识，不把治理记录当业务验收。
+模块知识治理的纯协议、保护规则与有界主工具投影。可信来源、冻结意见引用与本机评价独立于正式实施，旧意见替代不改历史，不把治理记录当业务验收。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,11 +10,46 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [module-governance-feedback.ts](module-governance-feedback.ts) | 核实新提案对原本机反馈的精确回应引用，并派生当前/已替代状态与逐项评价范围。 |
 | [module-governance-rules.ts](module-governance-rules.ts) | 模块知识治理的纯事实投影、提案依据、决定追加和知识写入门禁。 |
 | [module-governance-tools.ts](module-governance-tools.ts) | 主 Agent 治理工具的严格输入、真实来源端口和有界业务输出；不承载桌面批准或正式知识实施。 |
 | [module-governance.ts](module-governance.ts) | 单个 Module 正式知识治理的严格输入、不可变提案、本机决定及实施回执协议。 |
 
 ## 架构类图
+
+### module-governance-feedback.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_governance_module_governance_feedback_ts["module-governance-feedback.ts"] {
+  <<module>>
+  +resolveModuleGovernanceResponses()
+  +validateModuleGovernanceResponseSources()
+  +validateModuleGovernanceAssessments()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_governance_module_governance_feedback_ts["module-governance-feedback.ts"] {
+  <<module>>
+}
+class N_src_backend_core_governance_module_governance_feedback_ts_ModuleGovernanceResponseSource["ModuleGovernanceResponseSource"] {
+  <<interface>>
+  +proposal
+  +decisions
+}
+N_src_backend_core_governance_module_governance_feedback_ts ..> N_src_backend_core_governance_module_governance_feedback_ts_ModuleGovernanceResponseSource : 声明
+class N_src_backend_core_governance_module_governance_feedback_ts_ModuleGovernanceResponseTarget["ModuleGovernanceResponseTarget"] {
+  <<interface>>
+  +workspaceId
+  +protectionId
+  +proposalId
+}
+N_src_backend_core_governance_module_governance_feedback_ts ..> N_src_backend_core_governance_module_governance_feedback_ts_ModuleGovernanceResponseTarget : 声明
+```
+
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[module-governance.ts](module-governance.ts)、[module-governance-rules.ts](module-governance-rules.ts)。
 
 ### module-governance-rules.ts
 
@@ -212,6 +247,33 @@ classDiagram
 class N_src_backend_core_governance_module_governance_ts["module-governance.ts"] {
   <<module>>
 }
+class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceFeedback["ModuleGovernanceFeedback"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_governance_module_governance_ts_ModuleGovernanceFeedback : 声明
+class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceResponseRef["ModuleGovernanceResponseRef"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_governance_module_governance_ts_ModuleGovernanceResponseRef : 声明
+class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceResponseAssessment["ModuleGovernanceResponseAssessment"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_governance_module_governance_ts_ModuleGovernanceResponseAssessment : 声明
+class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceResponseState["ModuleGovernanceResponseState"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_governance_module_governance_ts_ModuleGovernanceResponseState : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_governance_module_governance_ts["module-governance.ts"] {
+  <<module>>
+}
 class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceProtection["ModuleGovernanceProtection"] {
   <<type>>
 
@@ -342,17 +404,32 @@ N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_govern
 
 ```mermaid
 classDiagram
-class N_src_backend_core_governance_module_governance_rules_ts["module-governance-rules.ts"] {
+class N_src_backend_core_governance_module_governance_feedback_ts["module-governance-feedback.ts"] {
   <<module>>
 }
 class N_src_backend_core_governance_module_governance_ts["module-governance.ts"] {
   <<module>>
 }
+class N_src_backend_core_governance_module_governance_rules_ts["module-governance-rules.ts"] {
+  <<module>>
+}
 class N_src_backend_core_governance_module_governance_tools_ts["module-governance-tools.ts"] {
   <<module>>
 }
+N_src_backend_core_governance_module_governance_feedback_ts ..> N_src_backend_core_governance_module_governance_ts : 导入依赖
+N_src_backend_core_governance_module_governance_feedback_ts ..> N_src_backend_core_governance_module_governance_rules_ts : 导入依赖
 N_src_backend_core_governance_module_governance_rules_ts ..> N_src_backend_core_governance_module_governance_ts : 导入依赖
 N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_governance_module_governance_rules_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_governance_module_governance_tools_ts["module-governance-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_core_governance_module_governance_ts["module-governance.ts"] {
+  <<module>>
+}
 N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_governance_module_governance_ts : 导入依赖
 ```
 
@@ -406,3 +483,13 @@ N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_
 模型原/新 overview 各限 16 KiB UTF-8，理由/观察/回退说明各限 1024 字符，替代方案和不变量各最多 8 条、每条 512 字符。完整正文输出携带 `state:complete`、真实字节数和完整 hash；超限正文只有 `state:oversized` 元数据，不含 text。即使字节数符合上限，JSON 转义超过 32 KiB 的单正文也明确交回桌面处理。目录最多 20 项并声明真实 total/truncated；合法长来源组合可能进一步缩短目录，但不会裁剪选定正文的一部分。既有桌面 2 MiB 能力不变。
 
 纯投影校验原正文 hash，不执行领域调用。模型读目录或指定记录返回有界 DTO；写回执和原命令查询只返回 compact 身份、版本、来源及 hash，不复制大正文或私有实施请求。最终工具包装必须对已生成的唯一 JSON 文本再次核对 128 KiB 字节上限，输出校验失败不表示已有记录回滚。原回执可按 commandId 或原 action/toolCallId/runId 查询，省略 runId 只使用本轮真实运行；没有记录返回 unknown，不授权重建、换 ID 重试或自动实施。
+
+### 本机反馈、修订方案与当前适用性
+
+决定可携带 `feedback`：`evidence_request` 只随明确 `defer`，`objection` 只随明确 `reject`；原 comment 是具体问题，focus 标记关注点，expectedResponse 是非空的期望回应。普通问题不能通过反馈字段隐式撤销批准，approve 不允许附带这两类否定反馈。缺省字段保持旧记录原样，不补造理解状态。
+
+新提案只接 `respondsToDecisionIds`，最多 8 个唯一决定 ID。`resolveModuleGovernanceResponses` 从调用方同一串行边界内的真实账本冻结 `{decisionId,proposalId,basis,decisionRevision}`；来源必须同一保护对象，且分别是原提案当前最新、带结构化反馈的本机决定。不回退寻找更早的旧意见，每个来源提案只引用一个决定，不允许自引用。冻结 `respondsTo` 参与新提案 basis，旧批准不能迁移到新方案。原观察、完整正文变更、当前知识版本及既有权限约束保持不变；模型不能写人工评价或批准。
+
+`validateModuleGovernanceResponseSources` 的 historical 模式保留原引用并派生 `current/superseded` 及最新决定 ID；current 模式还拒绝被替代的来源。新批准、任何含 assessments 的本机决定以及实施最终门禁使用 current；不含评价的驳回/暂缓可继续记录。历史账本按命令当时已见记录验证 current，之后读取已提交 journal 不把后来的来源变化倒推成提交失败或回滚。List.selected.responseStates 是只读派生信息，必须完整对应冻结引用，不能写回提案或原命令回执。
+
+`assessments` 只能逐项引用本提案实际回应的原意见，明确选择 addressed、needs_evidence 或 disputed，并填写非空具体说明。允许缺省或只评价部分；批准不补 addressed，也没有强制全部 addressed 的新门槛。它只表示本机实际反馈，不认证专业理解、账户身份或业务验收。模型 get 投影保留这些事实，并明确截断长意见；来源变化不会修改过去的评价，界面必须同时展示当前来源已被替代的状态。本片没有自动演练、自动启动任务或自动实施。

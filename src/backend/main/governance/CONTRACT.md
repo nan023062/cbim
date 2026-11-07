@@ -15,3 +15,9 @@
 账本中的 apply 永久保留原 pending 意图。公开 `committed` 和保护新 revision/hash 从匹配的原知识 journal 派生；必须核前后正文、请求指纹、治理关联及真实 changed 集合，不凭当前文件相同推断成功。旧实例的意图完全没有 journal 时显示 `not_applied`，不冒称回滚；当前实例未知或尚在提交仍显示 pending。准备/提交中、回滚和恢复冲突分别保留原事实，不自动实施。
 
 `receipt` 只查询原命令，可返回旧实例身份；重复命令不同内容拒绝。`unaccepted` 仅在旧实例退役、同队列排空、账本和原 journal 都无记录时为 true。不存在、通信错误或版本错误本身不是未受理证明。重新打开只校验历史并恢复元数据，不能唤醒模型、调用业务执行或重放知识写入。
+
+本机 `decide` 可在暂缓/驳回时分别记录补证/异议 feedback；关切沿原 comment，期望回应和关注类别单独保存。`propose.respondsToDecisionIds` 只接受同保护对象的当前最新、实际带反馈的决定，服务在同一知识串行队列冻结原提案、basis 和决定版本到新提案 `respondsTo`。引用进入提案 basis，但不代表问题已经解决。
+
+本机 assessments 仅针对该提案冻结引用，允许部分评价，缺省保持未评价；不要求全部 addressed，批准不表示已理解。保存新批准或任何带评价的决定、新 apply 以及 KnowledgeStore 的最终可信门禁，都复核回应来源仍是最新决定。来源已替代返回 `GOVERNANCE_FEEDBACK_STALE`；不含评价的普通驳回/暂缓仍可保留明确否定意见。
+
+`list.selected.responseStates` 从真实当前历史派生 current/superseded，保留原意见、最新决定 ID 和版本；不改写提案、原评价或回执。已 committed 的真实 journal 按原记录派生成功，后来反馈替代不会倒推回滚，重开不自动重新评审或执行。旧无反馈/引用/评价字段的记录继续沿用原 basis 和指纹。

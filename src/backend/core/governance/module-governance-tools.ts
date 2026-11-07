@@ -9,6 +9,7 @@ import {hash as contentHash} from '../foundation/serialization';
 import {validateModuleGovernanceRecordOrigin} from './module-governance-rules';
 import {
   moduleGovernanceListSchema,moduleGovernanceReceiptSchema,moduleGovernanceOriginSchema,moduleGovernanceMainOriginSchema,
+  moduleGovernanceDecisionIdsSchema,moduleGovernanceResponseRefsSchema,moduleGovernanceResponseRefSchema,moduleGovernanceFeedbackSchema,moduleGovernanceAssessmentsSchema,
   type ModuleGovernanceList,type ModuleGovernanceReceipt,
 } from './module-governance';
 
@@ -31,7 +32,7 @@ export const governanceToolIdentitySchema=z.object({workspaceId:z.string().min(1
 
 export const governanceGetInputSchema=z.object({moduleId,observationId:uuid.optional(),proposalId:uuid.optional()}).strict().refine(value=>!(value.observationId&&value.proposalId),'一次只读取一个明确记录');
 export const governanceObserveInputSchema=z.object({protectionId:uuid,expectedProtectionRevision:positive,expectedKnowledgeRevision:digest,statement:note}).strict();
-export const governanceProposeInputSchema=z.object({protectionId:uuid,observationId:uuid,expectedProtectionRevision:positive,expectedKnowledgeRevision:digest,newOverviewText:body,reason:note,alternatives:z.array(shortNote).min(1).max(8),invariants:z.array(shortNote).min(1).max(8),rollbackNotes:note}).strict();
+export const governanceProposeInputSchema=z.object({protectionId:uuid,observationId:uuid,expectedProtectionRevision:positive,expectedKnowledgeRevision:digest,newOverviewText:body,reason:note,alternatives:z.array(shortNote).min(1).max(8),invariants:z.array(shortNote).min(1).max(8),rollbackNotes:note,respondsToDecisionIds:moduleGovernanceDecisionIdsSchema.optional()}).strict();
 /** 原调用查询不发写请求；缺省 runId 仅表示可信当前运行，不推断最新历史运行。 */
 export const governanceReceiptInputSchema=z.union([
   z.object({commandId:uuid}).strict(),
@@ -58,12 +59,17 @@ const list=<T extends z.ZodTypeAny>(item:T)=>z.object({total:count,truncated:z.b
 });
 const base=z.object({knowledgeRevision:digest,protectionRevision:positive,definitionHash:digest,overviewHash:digest}).strict();
 const selectedObservation=observationSummary.extend({body:governanceBodyViewSchema,structural:z.boolean()}).strict();
-const selectedProposal=proposalSummary.extend({base,path,before:governanceBodyViewSchema,after:governanceBodyViewSchema,alternatives:list(preview),invariants:list(preview),rollbackNotes:preview,decisions:list(z.object({decisionId:uuid,revision:positive,decision:z.enum(['approve','reject','defer']),comment:preview,recordedAt:timestamp}).strict()),applications:list(z.object({intentId:uuid,decisionId:uuid,state:z.enum(['pending','not_applied','rolled_back','recovery_required','committed']),createdAt:timestamp}).strict())}).strict();
+const responseState=z.object({reference:moduleGovernanceResponseRefSchema,state:z.enum(['current','superseded']),latestDecisionId:uuid,latestDecisionRevision:positive,feedback:moduleGovernanceFeedbackSchema,comment:preview}).strict();
+const selectedProposal=proposalSummary.extend({base,path,before:governanceBodyViewSchema,after:governanceBodyViewSchema,alternatives:list(preview),invariants:list(preview),rollbackNotes:preview,respondsTo:moduleGovernanceResponseRefsSchema.optional(),responseStates:z.array(responseState).max(8).optional(),decisions:list(z.object({decisionId:uuid,revision:positive,decision:z.enum(['approve','reject','defer']),comment:preview,recordedAt:timestamp,feedback:moduleGovernanceFeedbackSchema.optional(),assessments:moduleGovernanceAssessmentsSchema.optional()}).strict()),applications:list(z.object({intentId:uuid,decisionId:uuid,state:z.enum(['pending','not_applied','rolled_back','recovery_required','committed']),createdAt:timestamp}).strict())}).strict().superRefine((value,ctx)=>{
+  const refs=value.respondsTo??[],states=value.responseStates??[];
+  if(refs.length!==states.length||refs.some((ref,index)=>JSON.stringify(ref)!==JSON.stringify(states[index]?.reference)))ctx.addIssue({code:z.ZodIssueCode.custom,message:'回应引用和当前状态必须完整对应'});
+  for(const state of states){const current=state.latestDecisionId===state.reference.decisionId&&state.latestDecisionRevision===state.reference.decisionRevision;if((state.state==='current')!==current||state.latestDecisionRevision<state.reference.decisionRevision||!current&&(state.latestDecisionId===state.reference.decisionId||state.latestDecisionRevision===state.reference.decisionRevision))ctx.addIssue({code:z.ZodIssueCode.custom,message:'回应当前状态与最新来源不一致'});}
+});
 export const governanceGetOutputSchema=z.object({identity:governanceToolIdentitySchema,moduleId,knowledgeRevision:digest,protection:z.object({protectionId:uuid,revision:positive,definitionHash:digest,overview:file}).strict().optional(),observations:list(observationSummary),proposals:list(proposalSummary),selectedObservation:selectedObservation.optional(),selectedProposal:selectedProposal.optional(),issues:list(z.object({severity:z.enum(['error','warning']),code:preview,message:preview}).strict())}).strict().refine(value=>!(value.selectedObservation&&value.selectedProposal),'一次只返回一个明确记录');
 
 const mainOrigin=moduleGovernanceMainOriginSchema;
 const observedRecord=z.object({observationId:uuid,protectionId:uuid,protectionRevision:positive,knowledgeRevision:digest,overview:file,utf8Bytes:count,observedAt:timestamp,origin:mainOrigin}).strict();
-const proposedRecord=z.object({proposalId:uuid,moduleId,protectionId:uuid,observationId:uuid,basis:digest,base,change:z.object({path,beforeHash:digest,afterHash:digest}).strict(),createdAt:timestamp,origin:mainOrigin}).strict();
+const proposedRecord=z.object({proposalId:uuid,moduleId,protectionId:uuid,observationId:uuid,basis:digest,base,change:z.object({path,beforeHash:digest,afterHash:digest}).strict(),createdAt:timestamp,origin:mainOrigin,respondsTo:moduleGovernanceResponseRefsSchema.optional()}).strict();
 export const governanceRecordedReceiptSchema=z.discriminatedUnion('action',[
   z.object({identity:governanceToolIdentitySchema,status:z.literal('recorded'),commandId:uuid,action:z.literal('observe'),record:observedRecord}).strict(),
   z.object({identity:governanceToolIdentitySchema,status:z.literal('recorded'),commandId:uuid,action:z.literal('propose'),record:proposedRecord}).strict(),
@@ -111,7 +117,14 @@ export function projectGovernanceGet(raw:ModuleGovernanceList,rawIdentity:Govern
   const selected=value.selected,chosen=value.selectedObservation;
   const output:GovernanceGetOutput={identity,moduleId:value.moduleId,knowledgeRevision:value.knowledgeRevision,...(value.protection?{protection:{protectionId:value.protection.protectionId,revision:value.protection.revision,definitionHash:value.protection.definition.hash,overview:value.protection.overview}}:{}),observations:recent(value.observations.map(observation)),proposals:recent(value.proposals.map(proposal)),issues:recent(value.issues.map(issue=>({severity:issue.severity,code:textPreview(issue.code),message:textPreview(issue.message)})))};
   if(chosen)output.selectedObservation={...observation({...chosen,overview:{path:chosen.overview.path,hash:chosen.overview.hash}}),body:projectGovernanceBody(chosen.overview.text,chosen.overview.hash),structural:chosen.validation.structural};
-  if(selected){const p=selected.proposal;output.selectedProposal={...proposal({proposalId:p.proposalId,protectionId:p.protectionId,observationId:p.observationId,basis:p.basis,reason:p.reason,createdAt:p.createdAt,decisionRevision:selected.decisions.at(-1)?.revision??0,...(p.origin?{origin:p.origin}:{})}),base:p.base,path:p.change.path,before:projectGovernanceBody(p.change.beforeText,p.change.beforeHash),after:projectGovernanceBody(p.change.afterText,p.change.afterHash),alternatives:recent(p.alternatives.map(textPreview)),invariants:recent(p.invariants.map(textPreview)),rollbackNotes:textPreview(p.rollbackNotes),decisions:recent(selected.decisions.map(d=>({decisionId:d.decisionId,revision:d.revision,decision:d.decision,comment:textPreview(d.comment),recordedAt:d.recordedAt}))),applications:recent(selected.applications.map(a=>({intentId:a.intentId,decisionId:a.decisionId,state:a.state,createdAt:a.createdAt})))};}
+  if(selected){const p=selected.proposal;output.selectedProposal={
+    ...proposal({proposalId:p.proposalId,protectionId:p.protectionId,observationId:p.observationId,basis:p.basis,reason:p.reason,createdAt:p.createdAt,decisionRevision:selected.decisions.at(-1)?.revision??0,...(p.origin?{origin:p.origin}:{})}),
+    base:p.base,path:p.change.path,before:projectGovernanceBody(p.change.beforeText,p.change.beforeHash),after:projectGovernanceBody(p.change.afterText,p.change.afterHash),
+    alternatives:recent(p.alternatives.map(textPreview)),invariants:recent(p.invariants.map(textPreview)),rollbackNotes:textPreview(p.rollbackNotes),
+    ...(p.respondsTo?{respondsTo:p.respondsTo}:{}),...(selected.responseStates?{responseStates:selected.responseStates.map(state=>({...state,comment:textPreview(state.comment)}))}:{}),
+    decisions:recent(selected.decisions.map(d=>({decisionId:d.decisionId,revision:d.revision,decision:d.decision,comment:textPreview(d.comment),recordedAt:d.recordedAt,...(d.feedback?{feedback:d.feedback}:{}),...(d.assessments?{assessments:d.assessments}:{})}))),
+    applications:recent(selected.applications.map(a=>({intentId:a.intentId,decisionId:a.decisionId,state:a.state,createdAt:a.createdAt}))),
+  };}
   const result=governanceGetOutputSchema.parse(output);
   // 这里只量度已经由严格 Schema 复制的普通 DTO；真正发送的单次编码仍由工具包装层校验。
   // 超长合法路径/来源组合可能撑大目录，缩小有标识目录而不删选定正文的一部分。
@@ -133,5 +146,5 @@ export function projectGovernanceReceipt(raw:ModuleGovernanceReceipt|undefined,r
   validateModuleGovernanceRecordOrigin(value.record);
   const common={identity,status:'recorded' as const,commandId,action:value.action};
   if(value.action==='observe'){const r=value.record;return governanceRecordedReceiptSchema.parse({...common,record:{observationId:r.observationId,protectionId:r.protectionId,protectionRevision:r.protectionRevision,knowledgeRevision:r.knowledgeRevision,overview:{path:r.overview.path,hash:r.overview.hash},utf8Bytes:utf8(r.overview.text),observedAt:r.observedAt,origin:r.origin}});}
-  const r=value.record;return governanceRecordedReceiptSchema.parse({...common,record:{proposalId:r.proposalId,moduleId:r.moduleId,protectionId:r.protectionId,observationId:r.observationId,basis:r.basis,base:r.base,change:{path:r.change.path,beforeHash:r.change.beforeHash,afterHash:r.change.afterHash},createdAt:r.createdAt,origin:r.origin}});
+  const r=value.record;return governanceRecordedReceiptSchema.parse({...common,record:{proposalId:r.proposalId,moduleId:r.moduleId,protectionId:r.protectionId,observationId:r.observationId,basis:r.basis,base:r.base,change:{path:r.change.path,beforeHash:r.change.beforeHash,afterHash:r.change.afterHash},createdAt:r.createdAt,origin:r.origin,...(r.respondsTo?{respondsTo:r.respondsTo}:{})}});
 }

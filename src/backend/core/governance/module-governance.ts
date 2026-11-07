@@ -23,6 +23,24 @@ const file=z.object({path:filePath,hash:digest}).strict();
 export const moduleGovernanceIssueSchema=z.object({severity:z.enum(['error','warning']),code:id,message:z.string(),path:z.string().optional()}).strict();
 const validation=z.object({structural:z.boolean(),issues:z.array(moduleGovernanceIssueSchema),architecture:z.literal('review-required'),business:z.literal('not-run')}).strict();
 
+/** 反馈只是本机明确提出的补证/异议；实际问题沿决定 comment 保存，不从已读或批准推断理解。 */
+export const moduleGovernanceFeedbackSchema=z.object({kind:z.enum(['evidence_request','objection']),focus:z.enum(['evidence','invariant','risk','rollback']),expectedResponse:z.string().max(1024).refine(value=>value.trim().length>0)}).strict();
+/** 新方案引用原精确决定；调用者只传 ID，其余字段由可信账本冻结，并参与新提案 basis。 */
+export const moduleGovernanceResponseRefSchema=z.object({decisionId:uuid,proposalId:uuid,basis:digest,decisionRevision:positive}).strict();
+export const moduleGovernanceDecisionIdsSchema=z.array(uuid).min(1).max(8).refine(ids=>new Set(ids).size===ids.length,'反馈决定不能重复');
+export const moduleGovernanceResponseRefsSchema=z.array(moduleGovernanceResponseRefSchema).min(1).max(8).refine(refs=>new Set(refs.map(ref=>ref.decisionId)).size===refs.length&&new Set(refs.map(ref=>ref.proposalId)).size===refs.length,'回应来源不能重复，每个来源提案只引用一个决定');
+/** 无评价字段表示未评价；即使批准，也不会默认产生 addressed。 */
+export const moduleGovernanceResponseAssessmentSchema=z.object({decisionId:uuid,outcome:z.enum(['addressed','needs_evidence','disputed']),explanation:z.string().max(1024).refine(value=>value.trim().length>0)}).strict();
+export const moduleGovernanceAssessmentsSchema=z.array(moduleGovernanceResponseAssessmentSchema).min(1).max(8).refine(values=>new Set(values.map(value=>value.decisionId)).size===values.length,'同一意见不能重复评价');
+/** 只读派生态不写回历史提案或回执；superseded 表示该原问题已被后续决定替代。 */
+export const moduleGovernanceResponseStateSchema=z.object({reference:moduleGovernanceResponseRefSchema,state:z.enum(['current','superseded']),latestDecisionId:uuid,latestDecisionRevision:positive,feedback:moduleGovernanceFeedbackSchema,comment:note}).strict().superRefine((value,ctx)=>{
+  const current=value.latestDecisionId===value.reference.decisionId&&value.latestDecisionRevision===value.reference.decisionRevision;
+  if((value.state==='current')!==current||value.latestDecisionRevision<value.reference.decisionRevision||!current&&(value.latestDecisionId===value.reference.decisionId||value.latestDecisionRevision===value.reference.decisionRevision))ctx.addIssue({code:z.ZodIssueCode.custom,message:'回应来源状态与最新决定不一致'});
+});
+function checkedFeedback(value:{decision:string;feedback?:z.infer<typeof moduleGovernanceFeedbackSchema>},ctx:z.RefinementCtx){
+  if(value.feedback&&value.decision!==(value.feedback.kind==='evidence_request'?'defer':'reject'))ctx.addIssue({code:z.ZodIssueCode.custom,path:['feedback'],message:'补证只能随明确暂缓登记，异议只能随明确驳回登记'});
+}
+
 /** revision 表示此保护对象已生效正文基线的版本；初始登记与后续已提交 journal 派生它，普通 CRUD 不可改写。 */
 export const moduleGovernanceProtectionSchema=z.object({protectionId:uuid,workspaceId:id,moduleId,revision:positive,definition:file,overview:file,registeredAt:timestamp,actor:moduleGovernanceActorSchema}).strict();
 export const moduleGovernanceObservationSchema=z.object({observationId:uuid,workspaceId:id,protectionId:uuid,protectionRevision:positive,knowledgeRevision:digest,definitionHash:digest,overviewHash:digest,overview:z.object({path:filePath,text:body,hash:digest}).strict(),statement:nonempty,validation,observedAt:timestamp,origin:moduleGovernanceOriginSchema.optional()}).strict();
@@ -31,9 +49,10 @@ export const moduleGovernanceProposalSchema=z.object({
   proposalId:uuid,workspaceId:id,moduleId,protectionId:uuid,observationId:uuid,
   base:z.object({knowledgeRevision:digest,protectionRevision:positive,definitionHash:digest,overviewHash:digest}).strict(),
   change:z.object({path:filePath,beforeText:body,afterText:body,beforeHash:digest,afterHash:digest}).strict(),
-  reason:nonempty,alternatives:z.array(nonempty).min(1).max(16),invariants:z.array(nonempty).min(1).max(32),rollbackNotes:nonempty,basis:digest,createdAt:timestamp,origin:moduleGovernanceOriginSchema.optional(),
+  reason:nonempty,alternatives:z.array(nonempty).min(1).max(16),invariants:z.array(nonempty).min(1).max(32),rollbackNotes:nonempty,basis:digest,createdAt:timestamp,origin:moduleGovernanceOriginSchema.optional(),respondsTo:moduleGovernanceResponseRefsSchema.optional(),
 }).strict();
-export const moduleGovernanceDecisionSchema=z.object({decisionId:uuid,workspaceId:id,proposalId:uuid,revision:positive,basis:digest,decision:z.enum(['approve','reject','defer']),comment:note,revisitCondition:nonempty.optional(),actor:moduleGovernanceActorSchema,recordedAt:timestamp,supersedesDecisionId:uuid.optional()}).strict().superRefine((value,context)=>{
+export const moduleGovernanceDecisionSchema=z.object({decisionId:uuid,workspaceId:id,proposalId:uuid,revision:positive,basis:digest,decision:z.enum(['approve','reject','defer']),comment:note,revisitCondition:nonempty.optional(),actor:moduleGovernanceActorSchema,recordedAt:timestamp,supersedesDecisionId:uuid.optional(),feedback:moduleGovernanceFeedbackSchema.optional(),assessments:moduleGovernanceAssessmentsSchema.optional()}).strict().superRefine((value,context)=>{
+  checkedFeedback(value,context);
   if(value.decision!=='approve'&&!value.comment.trim())context.addIssue({code:z.ZodIssueCode.custom,path:['comment'],message:'驳回或暂缓须说明原因'});
   if(value.decision==='defer'&&!value.revisitCondition)context.addIssue({code:z.ZodIssueCode.custom,path:['revisitCondition'],message:'暂缓须记录复查条件'});
 });
@@ -52,8 +71,9 @@ export const moduleGovernanceApplicationSchema=z.union([
 
 export const moduleGovernanceRegisterInputSchema=z.object({...identityShape,commandId:uuid,expectedKnowledgeRevision:digest,moduleId}).strict();
 export const moduleGovernanceObserveInputSchema=z.object({...identityShape,commandId:uuid,protectionId:uuid,expectedProtectionRevision:positive,expectedKnowledgeRevision:digest,statement:nonempty}).strict();
-export const moduleGovernanceProposeInputSchema=z.object({...identityShape,commandId:uuid,protectionId:uuid,observationId:uuid,expectedProtectionRevision:positive,expectedKnowledgeRevision:digest,newOverviewText:body,reason:nonempty,alternatives:z.array(nonempty).min(1).max(16),invariants:z.array(nonempty).min(1).max(32),rollbackNotes:nonempty}).strict();
-export const moduleGovernanceDecideInputSchema=z.object({...identityShape,commandId:uuid,proposalId:uuid,expectedDecisionRevision:count,expectedBasis:digest,decision:z.enum(['approve','reject','defer']),comment:note,revisitCondition:nonempty.optional()}).strict().superRefine((value,context)=>{
+export const moduleGovernanceProposeInputSchema=z.object({...identityShape,commandId:uuid,protectionId:uuid,observationId:uuid,expectedProtectionRevision:positive,expectedKnowledgeRevision:digest,newOverviewText:body,reason:nonempty,alternatives:z.array(nonempty).min(1).max(16),invariants:z.array(nonempty).min(1).max(32),rollbackNotes:nonempty,respondsToDecisionIds:moduleGovernanceDecisionIdsSchema.optional()}).strict();
+export const moduleGovernanceDecideInputSchema=z.object({...identityShape,commandId:uuid,proposalId:uuid,expectedDecisionRevision:count,expectedBasis:digest,decision:z.enum(['approve','reject','defer']),comment:note,revisitCondition:nonempty.optional(),feedback:moduleGovernanceFeedbackSchema.optional(),assessments:moduleGovernanceAssessmentsSchema.optional()}).strict().superRefine((value,context)=>{
+  checkedFeedback(value,context);
   if(value.decision!=='approve'&&!value.comment.trim())context.addIssue({code:z.ZodIssueCode.custom,path:['comment'],message:'驳回或暂缓须说明原因'});
   if(value.decision==='defer'&&!value.revisitCondition)context.addIssue({code:z.ZodIssueCode.custom,path:['revisitCondition'],message:'暂缓须记录复查条件'});
 });
@@ -74,12 +94,20 @@ export const moduleGovernanceReceiptSchema=z.discriminatedUnion('action',[
 ]);
 /** 目录不批量返回所有提案正文；明确 proposalId 后只展开该提案、决定和实施记录。 */
 const observationSummary=moduleGovernanceObservationSchema.omit({overview:true,validation:true}).extend({overview:file}).strict();
-export const moduleGovernanceListSchema=z.object({identity:moduleGovernanceIdentitySchema,moduleId,knowledgeRevision:digest,protection:moduleGovernanceProtectionSchema.optional(),observations:z.array(observationSummary),selectedObservation:moduleGovernanceObservationSchema.optional(),proposals:z.array(z.object({proposalId:uuid,protectionId:uuid,observationId:uuid,basis:digest,reason:nonempty,createdAt:timestamp,decisionRevision:count,origin:moduleGovernanceOriginSchema.optional()}).strict()),selected:z.object({proposal:moduleGovernanceProposalSchema,decisions:z.array(moduleGovernanceDecisionSchema),applications:z.array(moduleGovernanceApplicationSchema)}).strict().optional(),issues:z.array(moduleGovernanceIssueSchema)}).strict();
+const selectedProposal=z.object({proposal:moduleGovernanceProposalSchema,decisions:z.array(moduleGovernanceDecisionSchema),applications:z.array(moduleGovernanceApplicationSchema),responseStates:z.array(moduleGovernanceResponseStateSchema).max(8).optional()}).strict().superRefine((value,ctx)=>{
+  const refs=value.proposal.respondsTo??[],states=value.responseStates??[];
+  if(refs.length!==states.length||refs.some((ref,index)=>JSON.stringify(ref)!==JSON.stringify(states[index]?.reference)))ctx.addIssue({code:z.ZodIssueCode.custom,path:['responseStates'],message:'必须返回每条冻结回应来源的当前状态'});
+});
+export const moduleGovernanceListSchema=z.object({identity:moduleGovernanceIdentitySchema,moduleId,knowledgeRevision:digest,protection:moduleGovernanceProtectionSchema.optional(),observations:z.array(observationSummary),selectedObservation:moduleGovernanceObservationSchema.optional(),proposals:z.array(z.object({proposalId:uuid,protectionId:uuid,observationId:uuid,basis:digest,reason:nonempty,createdAt:timestamp,decisionRevision:count,origin:moduleGovernanceOriginSchema.optional()}).strict()),selected:selectedProposal.optional(),issues:z.array(moduleGovernanceIssueSchema)}).strict();
 
 export type ModuleGovernanceIdentity=z.infer<typeof moduleGovernanceIdentitySchema>;
 export type ModuleGovernanceActor=z.infer<typeof moduleGovernanceActorSchema>;
 export type ModuleGovernanceOrigin=z.infer<typeof moduleGovernanceOriginSchema>;
 export type ModuleGovernanceMainOrigin=z.infer<typeof moduleGovernanceMainOriginSchema>;
+export type ModuleGovernanceFeedback=z.infer<typeof moduleGovernanceFeedbackSchema>;
+export type ModuleGovernanceResponseRef=z.infer<typeof moduleGovernanceResponseRefSchema>;
+export type ModuleGovernanceResponseAssessment=z.infer<typeof moduleGovernanceResponseAssessmentSchema>;
+export type ModuleGovernanceResponseState=z.infer<typeof moduleGovernanceResponseStateSchema>;
 export type ModuleGovernanceProtection=z.infer<typeof moduleGovernanceProtectionSchema>;
 export type ModuleGovernanceObservation=z.infer<typeof moduleGovernanceObservationSchema>;
 export type ModuleGovernanceProposal=z.infer<typeof moduleGovernanceProposalSchema>;

@@ -5,3 +5,6 @@
 
 /* 原运行身份是核对依据；长标识可换行，窄窗逐行显示，不挤压差异正文。 */
 .governance-origin{overflow-wrap:anywhere}.governance-origin dl{display:grid;grid-template-columns:80px minmax(0,1fr);gap:6px 12px;margin:12px 0}.governance-origin dd{margin:0;min-width:0;font-family:monospace}@media(max-width:480px){.governance-origin dl{grid-template-columns:1fr}.governance-origin dt{font-weight:600}}
+
+/* 具体反馈按原意见分组；选择和说明紧邻，窄窗不横向展开。 */
+.governance-assessment{padding:12px 0;border-bottom:1px solid var(--border)}.module-governance select{width:100%;min-width:0}.module-governance h4{margin:8px 0}

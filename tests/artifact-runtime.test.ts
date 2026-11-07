@@ -1,4 +1,5 @@
-import {it,expect} from 'vitest';
+import {it,expect,vi} from 'vitest';
+import type {ArtifactBaselineStaged,ArtifactCaptureInput} from '../src/backend/core/tasks/artifact-baseline';
 import {artifactRuntimeFixture,seedProgress,invoke,captureInput,deferred} from './artifact-runtime-fixture';
 import {verifyArtifactBaselines} from '../src/backend/core/tasks/artifact-evidence';
 import {artifactBinding} from './artifact-runtime-fixture';
@@ -49,4 +50,22 @@ it('knowledge change after hashing refuses capture; missing ports and ordinary m
     const absent=await artifactRuntimeFixture(async c=>{expect(c.artifactTools).toBeUndefined();expect((await c.beforeTool({name:'cbim_task_artifact_capture',id:'fake',input:captureInput})).allow).toBe(false)},{port:main?undefined:false});
     try{const run=main?await absent.runtime.start({...absent.task,mode:'chat',agentId:'cbim:main'}):await absent.start();await run.done;expect(absent.captureFiles).not.toHaveBeenCalled()}finally{await absent.cleanup()}
   }
+});
+
+it('真实采集已落盘后坏回包保留原事件，不能成为引用且仅在失败结束后释放短锁',async()=>{
+  let captureCalls=0;const f=await artifactRuntimeFixture(async c=>{
+    await seedProgress(c);
+    const tools=c.artifactTools as unknown as {ports:{capture(input:ArtifactCaptureInput,id:string):Promise<ArtifactBaselineStaged>}},original=tools.ports.capture;
+    tools.ports.capture=vi.fn(async(input,id)=>{captureCalls++;const saved=await original(input,id);return {...saved,binding:{...saved.binding,agentSessionId:'foreign'}}});
+    expect((await c.beforeTool({name:'cbim_task_artifact_capture',id:'capture',input:captureInput})).allow).toBe(true);
+    const error=await c.artifactTools!.call('cbim_task_artifact_capture',captureInput,'capture').catch(value=>value);expect(error.code).toBe('TOOL_OUTPUT_INVALID');
+    expect((await c.beforeTool({name:'read',id:'before-end',input:{path:'File.txt'}})).allow).toBe(false);
+    await c.emit({type:'tool.finished',data:{name:'cbim_task_artifact_capture',id:'capture',isError:true,result:{content:[{type:'text',text:error.message}]}}});
+    const inspected=await invoke(c,'cbim_task_inspect','inspect-after',{});expect(inspected.artifacts).toEqual([]);
+    await invoke(c,'read','after-end',{path:'File.txt'});
+  });try{
+    const summary=await (await f.start()).done;expect(summary.status).toBe('completed');expect(captureCalls).toBe(1);expect(f.captureFiles).toHaveBeenCalledTimes(1);
+    const staged=summary.events.filter(event=>event.type==='artifact.baseline_captured');expect(staged).toHaveLength(1);expect((staged[0].data.baseline as ArtifactBaselineStaged).binding).toEqual(artifactBinding);
+    expect(summary.events.find(event=>event.type==='tool.finished'&&event.data.id==='capture')?.data.receipt).toMatchObject({outcome:'failed'});expect(verifyArtifactBaselines(summary.events,artifactBinding,'knowledge-one',f.port.normalizePath).refs).toEqual([]);
+  }finally{await f.cleanup()}
 });

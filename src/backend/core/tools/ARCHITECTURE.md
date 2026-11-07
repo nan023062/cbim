@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-工具 Schema、版本、副作用、调用决策、结构化提问及回执；统一校验结果的 JSON 传输快照，拒绝缺失文本等无效内容。回执绑定运行身份与输入结果哈希；注册和发现不授予执行权限。
+工具 Schema、版本、副作用、调用决策、结构化提问及回执。结果只核唯一 JSON 传输快照，不用解析改写制造成功；回执结构由异常报告和进度工具共用，历史可读不等于当前业务证据有效。注册和发现不授予执行权限。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -13,6 +13,7 @@
 | [contracts.ts](contracts.ts) | 工具取消、恢复说明及按需契约发现的纯协议，不导入具体领域或执行服务。 |
 | [native-tools.ts](native-tools.ts) | 定义当前引擎真实装配的原生工具及可信副作用分类。 |
 | [questions.ts](questions.ts) | 结构化用户问题的 Schema 和待答快照。 |
+| [receipt-schema.ts](receipt-schema.ts) | 执行报告与任务工具共用的真实工具回执字段协议。 |
 | [receipts.ts](receipts.ts) | 把已核实的工具调用、授权和终态整理为可追溯回执。 |
 | [registry.ts](registry.ts) | 实际内部工具的输入/业务输出协议、版本、副作用及取消/恢复说明，支持摘要与按需完整描述。 |
 | [results.ts](results.ts) | 校验内部工具传给大脑的结果，并将领域返回值封装为合法文本块。 |
@@ -85,6 +86,16 @@ N_src_backend_core_tools_questions_ts ..> N_src_backend_core_tools_questions_ts_
 N_src_backend_core_tools_questions_ts_QuestionInput <|-- N_src_backend_core_tools_questions_ts_PendingQuestion
 ```
 
+
+### receipt-schema.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tools_receipt_schema_ts["receipt-schema.ts"] {
+  <<module>>
+}
+```
+直接依赖：[scope-schema.ts](scope-schema.ts)。
 
 ### receipts.ts
 
@@ -240,6 +251,12 @@ N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_types_ts_ToolRece
 
 ```mermaid
 classDiagram
+class N_src_backend_core_tools_receipt_schema_ts["receipt-schema.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tools_scope_schema_ts["scope-schema.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tools_receipts_ts["receipts.ts"] {
   <<module>>
 }
@@ -252,23 +269,27 @@ class N_src_backend_core_tools_registry_ts["registry.ts"] {
 class N_src_backend_core_tools_results_ts["results.ts"] {
   <<module>>
 }
-class N_src_backend_core_tools_contracts_ts["contracts.ts"] {
-  <<module>>
-}
+N_src_backend_core_tools_receipt_schema_ts ..> N_src_backend_core_tools_scope_schema_ts : 导入依赖
 N_src_backend_core_tools_receipts_ts ..> N_src_backend_core_tools_types_ts : 导入依赖
 N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_types_ts : 导入依赖
 N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_results_ts : 导入依赖
-N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_contracts_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_tools_registry_ts["registry.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tools_contracts_ts["contracts.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tools_types_ts["types.ts"] {
   <<module>>
 }
 class N_src_backend_core_tools_scope_schema_ts["scope-schema.ts"] {
   <<module>>
 }
+N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_contracts_ts : 导入依赖
 N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_scope_schema_ts : 导入依赖
 ```
 
@@ -333,3 +354,11 @@ PiBridge ..> ResultsModule : 进入会话前校验
 `scope-schema.ts` 是授权策略、工具回执和证据解析共用的纯范围协议。原 workspace/knowledge/unknown 分支保留 `{kind,workspaceId}` 形状；repository 分支严格保存 workspaceId、connectorId、repositoryId、connectionId 与 list/get 操作，不接受 URL、凭据或调用方声明的授权。仓库身份来自本轮可信捕获描述，不从模型输入直接创建能力。
 
 成功的 repository read 表示所绑定仓库操作收到真实回执，不能降格为 workspace read，也不能冒充本地文件、任务交付或成员检查点的证据。共享解析保留这种身份供主运行历史与 canonical 核实；下游业务证据仍分别检查来源边界。
+
+### 共享回执结构与当前证据资格
+
+`receipt-schema.ts` 提供报告、执行进度公开输出共同使用的 `toolReceiptSchema` 与副作用枚举。它保持历史报告原结构：空 effects、空 toolName 和缺省 resultHash 仍可读取，不能因此补造成功结果或执行范围；各字段的真实归属、日志链及业务用途由调用层核实。
+
+进度工具在此结构之上要求真实 workspaceId/taskId/runId、相同作用域工作区、明确 succeeded、非空工具名与实际 resultHash。内部维护、目标调度、治理和 repository 资料不作为业务交付证据。Schema 通过仅说明返回协议合法，不授予执行、验收或重试权。
+
+`checkedJsonToolResult` 也供主调度八工具与成员七工具使用。保存后输出异常不会回滚领域记录；工具包装必须在调用端口前独立冻结请求、绑定和必要前态，不能将端口可能改动的原对象同时作为核验依据。

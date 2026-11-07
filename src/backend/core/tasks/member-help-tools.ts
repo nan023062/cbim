@@ -1,11 +1,12 @@
 /**
  * 作用定位：为正式执行成员提供一次性求助工具，并在求助授权至本轮结束期间封住后续工具调用。
- * 设计原因：成员问题必须交回主调度，不应在仍有操作/审批进行时交接，也不能将求助当作交付或用户授权；可信身份与调用 ID 由运行时绑定。
+ * 设计原因：成员问题必须交回主调度；保存后按唯一 JSON 正文核对冻结身份与原请求，坏回包不撤销暂存、不解除本轮门闩，也不自动重试。
  */
 import {randomUUID} from 'node:crypto';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {memberHelpInputSchema,type MemberHelpStaged} from './member-help';
-import {jsonToolResult} from '../tools/results';
+import {checkedJsonToolResult} from '../tools/results';
+import {memberToolContract,memberToolOutputSchema} from './member-tool-output';
 
 const name='cbim_task_help';
 /** 只定义维护记录的效果，不授权创建任务、放宽权限或恢复原成员。 */
@@ -21,8 +22,8 @@ export class MemberHelpTools {
     save(help:MemberHelpStaged):Promise<void>;
     /** 执行前再次核对停止状态、调用授权及引用的历史调用已结束。 */
     assertReady(toolCallId:string,attemptedToolCallIds:string[]):void;
-  }){this.binding=structuredClone(binding)}
-  async list(){return [{name,description:'向主 Agent 提交本任务的结构化求助。仅在已有工具全部结束后调用；成功只表示暂存，随后立即结束本轮，不再调用工具或宣称交付。主调度核实终态后重新安排新任务；问题正文不是授权，也不恢复本轮。',inputSchema:zodToJsonSchema(memberHelpInputSchema) as Record<string,unknown>}];}
+  }){this.binding=Object.freeze(structuredClone(binding))}
+  async list(){return [{name,description:'向主 Agent 提交本任务的结构化求助。仅在已有工具全部结束后调用；成功只表示暂存，随后立即结束本轮，不再调用工具或宣称交付。主调度核实终态后重新安排新任务；问题正文不是授权，也不恢复本轮。',inputSchema:zodToJsonSchema(memberHelpInputSchema) as Record<string,unknown>,...memberToolContract(name)}];}
   /** 每个 gate 在等待策略前调用。其它在途操作（含审批）存在时拒绝求助；已占位后拒绝任何新工具。 */
   guard(tool:string,toolCallId:string,input:unknown,otherActiveIds:string[]):string|undefined{
     if(this.reserved)return '已经请求主调度协助，请结束本轮；不能继续调用工具';
@@ -33,12 +34,13 @@ export class MemberHelpTools {
   }
   /** 策略拒绝后才解除尚未执行的占位；已开始落盘的求助永不在本轮重试。 */
   denied(toolCallId:string){if(!this.consumed&&this.reserved?.toolCallId===toolCallId)this.reserved=undefined}
-  /** 只能通过本轮已授权的一次性调用进入；先写 canonical 请求，再返回标准工具正文。 */
+  /** 先保存请求，再核对同一份 wire；独立保留原快照，不能让端口修改对象后形成自比通过。 */
   async call(tool:string,input:unknown,toolCallId?:string){
     if(tool!==name||!toolCallId||this.consumed||this.reserved?.toolCallId!==toolCallId)throw Error('求助必须由当前成员已授权的一次性调用提交');
-    let parsed:ReturnType<typeof memberHelpInputSchema.parse>;
+    let parsed:ReturnType<typeof memberHelpInputSchema.parse>,expectedInput:ReturnType<typeof memberHelpInputSchema.parse>;
     try{
       parsed=memberHelpInputSchema.parse(input);
+      expectedInput=structuredClone(parsed);
       if(JSON.stringify(parsed)!==JSON.stringify(this.reserved.input))throw Error('求助参数与已授权调用不一致');
       this.ports.assertReady(toolCallId,parsed.attemptedToolCallIds);
     }catch(error){
@@ -47,7 +49,8 @@ export class MemberHelpTools {
     }
     this.consumed=true;
     const help:MemberHelpStaged={helpId:randomUUID(),toolCallId,binding:structuredClone(this.binding),input:parsed,requestedAt:new Date().toISOString()};
+    const expectedStaged=structuredClone(help);
     await this.ports.save(help);
-    return jsonToolResult(name,{state:'staged',help});
+    return checkedJsonToolResult(name,{state:'staged',help},memberToolOutputSchema(name,{binding:this.binding,input:expectedInput,toolCallId,expectedStaged}));
   }
 }

@@ -1,6 +1,6 @@
 /**
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
- * 设计原因：工具先纯分类，成员 Workflow 计划条件先于审批；批准后核计划版本，重叠副作用期间的读回执不作交付证据。求助和检查点封住后续操作，文件采集绑定真实回执和知识；续执行复核原证明，不将坏历史伪装成恢复。
+ * 设计原因：工具先分类与计划门禁再审批；每轮进度均绑定真实 workspace/task/run，成员专属工具另绑定完整实例。坏回包保留已存事实，不清求助/检查点门闩；采集短锁仍随真实结束释放，续执行重新核实原证明。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -180,7 +180,7 @@ export class LoopRuntime {
       const identity={workspaceId:task.workspaceId,taskId:task.taskId,runId};
       let artifactCapture:RunArtifactCapture|undefined;
       let checkpointTools:RunMemberCheckpoint|undefined;
-      const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{artifacts:()=>artifactCapture?.refs()??[],...(workflows.length?{workflow:{bindings:workflows,task:{goal:task.goal,acceptance:task.acceptance},identity},assertDeliveryReady}:{})});
+      const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{identity,artifacts:()=>artifactCapture?.refs()??[],...(workflows.length?{workflow:{bindings:workflows,task:{goal:task.goal,acceptance:task.acceptance},identity},assertDeliveryReady}:{})});
       const emit=async(event:EngineEvent,trustedArtifact=false)=>{
         if((event.type==='artifact.baseline_captured'||event.type==='task.checkpoint_requested')&&!trustedArtifact)throw Error('产物和检查点只能由本轮可信端口保存');
         if(event.type==='tool.finished'){

@@ -69,7 +69,7 @@ it('孤立工具结束、未决审批与损坏否决回执不能被稳定文件�
   const {events}=fixture();checkpoint(events);const terminal=events.pop()!;append(events,'tool.proposed',{id:'unknown',name:'write',input:{path:'other',content:'x'}});append(events,'tool.denied',{id:'unknown',name:'write',input:{path:'other',content:'x'},allow:false,receipt:{outcome:'denied'}});append(events,terminal.type,terminal.data);expect(()=>verify(events)).toThrow();
 });
 it('工具参数及返回严格；未知字段与伪造身份不能被包装成有效请求',async()=>{
-  const {events}=fixture(),staged=checkpoint(events),stage=vi.fn(async()=>staged),tools=new MemberCheckpointTools({stage});
+  const {events}=fixture(),staged=checkpoint(events),stage=vi.fn(async()=>staged),tools=new MemberCheckpointTools(binding,{stage});
   for(const invalid of [{...input,path:'file.txt'},{...input,permission:'execute'},{...input,runId:'forged'},{...input,expectedTaskProgressVersion:0}]){expect(memberCheckpointInputSchema.safeParse(invalid).success).toBe(false);await expect(tools.call('cbim_task_checkpoint',invalid,'checkpoint')).rejects.toThrow()}
   expect(stage).not.toHaveBeenCalled();await expect(tools.call('cbim_task_checkpoint',input)).rejects.toThrow();expect(JSON.parse((await tools.call('cbim_task_checkpoint',input,'checkpoint')).content[0].text)).toMatchObject({state:'staged',checkpoint:staged});
   stage.mockResolvedValue({...staged,toolCallId:'another'});await expect(tools.call('cbim_task_checkpoint',input,'checkpoint')).rejects.toThrow();

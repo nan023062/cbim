@@ -86,10 +86,10 @@ it('无关调用的授权范围缺失或错绑也保留未知，不将损坏字�
   }
 });
 it('工具包装只传严格输入和真实callId；查询基线不变成完成证据且current返回副本',async()=>{
-  const {events,baseline}=setup(),capturePort=vi.fn(async()=>baseline),tools=new ArtifactTools({capture:capturePort}),input={expectedTaskProgressVersion:1,sourceToolCallIds:['source']};
+  const {events,baseline}=setup(),capturePort=vi.fn(async()=>baseline),tools=new ArtifactTools(binding,{capture:capturePort}),input={expectedTaskProgressVersion:1,sourceToolCallIds:['source']};
   await expect(tools.call(artifactCaptureToolName,{...input,path:'forged'},'capture-1')).rejects.toThrow();expect(capturePort).not.toHaveBeenCalled();await expect(tools.call(artifactCaptureToolName,input)).rejects.toThrow();
   const result=await tools.call(artifactCaptureToolName,input,'capture-1');expect(JSON.parse(result.content[0].text)).toMatchObject({state:'captured',baseline});expect(capturePort).toHaveBeenCalledWith(input,'capture-1');
-  const refs=verify(events).refs,progress=new TaskProgressTools(undefined,async()=>{}, {artifacts:()=>refs});await progress.call('cbim_task_plan',{expectedVersion:0,goal:'目标',acceptance:['验收'],reason:'计划',steps:[{id:'s',title:'做事',owner:'成员'}]});
+  const refs=verify(events).refs,progress=new TaskProgressTools(undefined,async()=>{}, {identity:{workspaceId:binding.workspaceId,taskId:binding.taskId,runId:binding.runId},artifacts:()=>refs});await progress.call('cbim_task_plan',{expectedVersion:0,goal:'目标',acceptance:['验收'],reason:'计划',steps:[{id:'s',title:'做事',owner:'成员'}]});
   const current=progress.current()!;current.goal='改写';expect(progress.current()!.goal).toBe('目标');progress.record(events[8].data.receipt as ToolReceipt,progress.generation);
   const inspect=await progress.call('cbim_task_inspect',{}),view=JSON.parse(inspect.content[0].text);expect(view.artifacts).toEqual(refs);expect(view.evidence).toEqual([]);expect(progress.current()!.version).toBe(1);
   const report={identity:{workspaceId:'workspace',rootSessionId:'root',taskId:'task',runId:'run'},checkedAt:stamp,basis:hash('basis'),consistency:'stable',log:{state:'verified',lastSeq:9},coverage:'selected_files_only',impact:'selected_files_only',baselines:refs,issues:[]};expect(artifactReportSchema.safeParse(report).success).toBe(true);

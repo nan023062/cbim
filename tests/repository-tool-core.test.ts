@@ -84,7 +84,7 @@ it('缺范围、错目标、错操作、跨工作区或假原生/写入描述均
 });
 
 it('仓库成功回执保留canonical身份，但不能作为任务步骤或Workflow交付证据',async()=>{
-  const tools=new TaskProgressTools(undefined,async()=>{}),remote=toolReceipt(identity,request,decision,'succeeded',{text:'资料'});
+  const tools=new TaskProgressTools(undefined,async()=>{},{identity}),remote=toolReceipt(identity,request,decision,'succeeded',{text:'资料'});
   await tools.call('cbim_task_plan',{expectedVersion:0,goal:'业务目标',reason:'执行业务',acceptance:['读取业务文件'],steps:[{id:'s',title:'核实成果',owner:'executor'}]});
   const variants=[remote,{...remote,toolName:'read'},{...remote,scope:{kind:'workspace' as const,workspaceId:'workspace'}}];
   for(const receipt of variants)tools.record(receipt,tools.generation);

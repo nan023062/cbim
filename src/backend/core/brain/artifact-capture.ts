@@ -1,7 +1,7 @@
 /**
  * 作用定位：成员运行的短时文件采集门闩，绑定真实授权、进度、知识基线与 canonical 事件。
  * 设计原因：采集跨多个异步文件读取；必须先阻止其它工具/审批进入，并在保存前复核停止与版本，不能接受模型路径或哈希。
- * 职责边界：文件系统由平台端口实现；本模块不授权恢复、不把基线作为业务完成证据，暂存记录须有成功工具回执才可引用。
+ * 职责边界：向工具包装冻结完整成员身份与知识版本；坏回包不自动重采，暂存须有成功回执才可引用，短门闩仅由真实工具结束释放。
  */
 import {randomUUID} from 'node:crypto';
 import {fail} from '../foundation/errors';
@@ -30,7 +30,7 @@ export class RunArtifactCapture {
     current():TaskProgress|undefined;
     assertReady(toolCallId:string):void;
     save(baseline:ArtifactBaselineStaged):Promise<void>;
-  }){this.tools=new ArtifactTools({capture:(input,id)=>this.capture(input,id)})}
+  }){this.binding=Object.freeze(structuredClone(binding));this.tools=new ArtifactTools(this.binding,{knowledgeRevision:port.knowledgeRevision,capture:(input,id)=>this.capture(input,id)})}
   /** beforeTool 的同步入口；在其它操作进入异步审批之前预占，不能等待写入结束后偷偷补采。 */
   guard(name:string,id:string,input:unknown,activeIds:readonly string[]):string|undefined{
     if(this.reserved)return '正在采集文件基线，请等待本次采集结束后再调用工具';

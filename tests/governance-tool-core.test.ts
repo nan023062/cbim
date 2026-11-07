@@ -132,7 +132,7 @@ describe('治理作用域和业务证据边界',()=>{
     expect((await authorizeRunTool({...call,name:'other_read'},{...good,effects:['read']},context)).allow).toBe(false);
   });
   it('治理成功回执不能成为步骤或Workflow交付证据，真实文件读取仍可用',async()=>{
-    const p=new TaskProgressTools(undefined,async()=>{});const receipt=(name:string):ToolReceipt=>({version:1,toolCallId:name,toolName:name,workspaceId,taskId:'task',runId:'run',outcome:'succeeded',inputHash:hash('{}'),resultHash:hash('{}'),effects:['read'],scope:{kind:'knowledge',workspaceId},recordedAt:now});
+    const p=new TaskProgressTools(undefined,async()=>{},{identity:{workspaceId,taskId:'task',runId:'run'}});const receipt=(name:string):ToolReceipt=>({version:1,toolCallId:name,toolName:name,workspaceId,taskId:'task',runId:'run',outcome:'succeeded',inputHash:hash('{}'),resultHash:hash('{}'),effects:['read'],scope:{kind:'knowledge',workspaceId},recordedAt:now});
     for(const name of [...Object.keys(governanceToolEffects),'cbim_governance_future']){
       p.record(receipt(name),p.generation);expect(()=>evaluateWorkflowDelivery([], [receipt(name)],{workspaceId,taskId:'task',runId:'run'})).toThrow();
     }

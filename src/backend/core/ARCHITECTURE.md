@@ -100,16 +100,16 @@ N_src_backend_core_team ..> N_src_backend_core_tasks : 导入依赖
 
 ## 子目录导航
 
-- [brain/](brain/ARCHITECTURE.md)：引擎无关的执行循环、事件与计量。文件采集和检查点沿真实工具授权封闭并发；专用成员续执行保留身份并清空旧证据，普通启动不变成恢复入口。停止覆盖准备与复核，正常关闭后才确认停泊。
+- [brain/](brain/ARCHITECTURE.md)：引擎无关的执行循环、事件与计量。进度工具绑定本轮身份，正式成员工具绑定原实例、通道、租约和知识版本；坏输出不能变成有效基线或安全交接。文件采集临时锁随工具结束释放，求助/检查点保存后结束本轮；续执行清空旧证据，停止不冒充回滚。
 - [connectors/](connectors/ARCHITECTURE.md)：链接器定义、查询与唯一身份检查；当前不执行外部插件。
 - [foundation/](foundation/ARCHITECTURE.md)：少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。
 - [governance/](governance/ARCHITECTURE.md)：模块知识治理的纯协议、保护规则与有界主工具投影。可信来源、冻结意见引用与本机评价独立于正式实施，旧意见替代不改历史，不把治理记录当业务验收。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识快照、校验、领域查询、对象变更和可移植静态包规划。团队能力可独立复用，业务模板必须完整；物理事务与预览缓存经端口注入，不携带动态成员或任务。Team/Workspace 只依赖快照辅助，不依赖查询门面。
 - [policy/](policy/ARCHITECTURE.md)：内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；不声称操作系统隔离。
 - [runtime/](runtime/ARCHITECTURE.md)：应用级只读监管、真实周期白名单与独立准入契约。周期等待/结算和模型轮次分开，严格传输不补造缺失计量；游标、票据和占用不签发恢复权。
-- [tasks/](tasks/ARCHITECTURE.md)：任务计划、派发图、目标与等待。检查点纯规则核实文件操作全集、成功回执及正常终态，预约与领取消费分别持久化；原任务/实例/会话不变且只续一次。关闭封存待办，历史不冒充验收或恢复授权。 人工决定用独立有界追加历史绑定当前依据，模型不能构造批准或夹带图变化。
+- [tasks/](tasks/ARCHITECTURE.md)：任务计划、派发图、目标与等待。执行过程七工具在唯一输出快照核对保存前依据及真实运行，不向计划补造身份；旧证据和失败回包不能成为交付或安全交接。检查点预约与消费分别持久化，关闭封存待办；人工意见绑定当前依据，模型不能构造批准。
 - [team/](team/ARCHITECTURE.md)：Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履历契约。主实例归主会话，业务实例归周期与任务；履历按角色聚合真实通道，释放或删定义后保留，旧记录不补造实例。
-- [tools/](tools/ARCHITECTURE.md)：工具 Schema、版本、副作用、调用决策、结构化提问及回执；统一校验结果的 JSON 传输快照，拒绝缺失文本等无效内容。回执绑定运行身份与输入结果哈希；注册和发现不授予执行权限。
+- [tools/](tools/ARCHITECTURE.md)：工具 Schema、版本、副作用、调用决策、结构化提问及回执。结果只核唯一 JSON 传输快照，不用解析改写制造成功；回执结构由异常报告和进度工具共用，历史可读不等于当前业务证据有效。注册和发现不授予执行权限。
 - [workspace/](workspace/ARCHITECTURE.md)：领域工程、Module、本模块 Workflow 的只读视图及显式维护关系类型；作者与维护人分开，与 main/workspace 生命周期分开。
 
 [返回上层](../ARCHITECTURE.md)。

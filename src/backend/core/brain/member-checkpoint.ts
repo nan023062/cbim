@@ -1,6 +1,6 @@
 /**
  * 作用定位：成员单次合作式停泊的运行时门闩，沿真实工具授权保存非终结检查点请求。
- * 设计原因：工具成功仅表示请求已暂存，不能在未结束调用或未知影响下释放运行；保存后封住该轮所有后续工具，由正常终态交给调度核实。
+ * 设计原因：向工具冻结完整成员身份及知识版本；保存后即使回包校验失败也封住该轮工具，只有真实成功回执与正常终态才可交给调度核实。
  */
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
@@ -21,7 +21,8 @@ export class RunMemberCheckpoint {
   private staged=false;
   private controller=new AbortController();
   constructor(private readonly binding:MemberRunBinding,private readonly port:ArtifactCapturePort,private readonly context:{current():TaskProgress|undefined;assertReady(id:string):void;save(value:MemberCheckpointStaged):Promise<void>}){
-    this.tools=new MemberCheckpointTools({stage:(input,id)=>this.stage(input,id)});
+    this.binding=Object.freeze(structuredClone(binding));
+    this.tools=new MemberCheckpointTools(this.binding,{knowledgeRevision:port.knowledgeRevision,stage:(input,id)=>this.stage(input,id)});
   }
   /** 策略或审批 await 之前预占；失败参数可修正，开始保存后永久封住本轮，直到安全结算。 */
   guard(name:string,id:string,input:unknown,active:readonly string[]):string|undefined{

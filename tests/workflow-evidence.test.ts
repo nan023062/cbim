@@ -12,7 +12,7 @@ const bindings:WorkflowContractBinding[]=[{moduleId:'project/module',workflowId:
 const planInput={expectedVersion:0,goal:task.goal,acceptance:task.acceptance,reason:'按模块约定执行',steps:[{id:'implement',title:'实现并读取成果',owner:'executor'}]};
 const decision=(name:string):ToolDecision=>({allow:true,effects:name==='write'?['business-write']:name==='bash'?['command']:name.startsWith('cbim_')?['maintenance']:['read'],scope:{kind:name==='bash'?'unknown':'workspace',workspaceId:identity.workspaceId}});
 function evidence(name='read',id='read-one'):ToolReceipt{const call={id,name,input:{path:'result.txt'}};return toolReceipt(identity,call,decision(name),'succeeded',{content:[{type:'text',text:'actual result'}]})}
-function progress(){const states:TaskProgress[]=[];const tools=new TaskProgressTools(undefined,async value=>{states.push(structuredClone(value))},{artifacts:()=>[],workflow:{bindings,task,identity}});return {tools,states}}
+function progress(){const states:TaskProgress[]=[];const tools=new TaskProgressTools(undefined,async value=>{states.push(structuredClone(value))},{identity,artifacts:()=>[],workflow:{bindings,task,identity}});return {tools,states}}
 
 it('有约定的业务操作先要求本轮原目标计划，审批后版本变化不得使旧操作获准',async()=>{
   const f=progress();expect(()=>f.tools.beforeEffects()).toThrow(expect.objectContaining({code:'WORKFLOW_PLAN_REQUIRED'}));expect(f.states).toEqual([]);
@@ -22,7 +22,7 @@ it('有约定的业务操作先要求本轮原目标计划，审批后版本变�
 });
 it('旧轮计划不能冒充本轮前置，模型改写原目标也不能放行',async()=>{
   const f=progress();await f.tools.call('cbim_task_plan',{...planInput,goal:'另一个目标'});expect(()=>f.tools.beforeEffects()).toThrow(expect.objectContaining({code:'WORKFLOW_PLAN_REQUIRED'}));
-  const resumed=new TaskProgressTools(f.tools.current(),async()=>{},{artifacts:()=>[],workflow:{bindings,task,identity}});expect(()=>resumed.beforeEffects()).toThrow(expect.objectContaining({code:'WORKFLOW_PLAN_REQUIRED'}));
+  const resumed=new TaskProgressTools(f.tools.current(),async()=>{},{identity,artifacts:()=>[],workflow:{bindings,task,identity}});expect(()=>resumed.beforeEffects()).toThrow(expect.objectContaining({code:'WORKFLOW_PLAN_REQUIRED'}));
 });
 it('交付缺指定read回执拒绝；实际引用后程序生成proof，模型不能传入pass',async()=>{
   const f=progress();await f.tools.call('cbim_task_plan',planInput);f.tools.record(evidence('write','write-one'),f.tools.generation);
@@ -44,7 +44,7 @@ it('所有模块条件分别评价，成功回执不能跨运行且命令范围�
 
 async function canonical(){
   const events:ArtifactEvidenceEvent[]=[];const emit=(type:string,data:Record<string,unknown>)=>{events.push({...identity,seq:events.length+1,type,data:structuredClone(data)})};emit('run.started',{task,workflowContracts:bindings});
-  const tools=new TaskProgressTools(undefined,async progress=>{emit('task.updated',{progress})},{artifacts:()=>[],workflow:{bindings,task,identity}});
+  const tools=new TaskProgressTools(undefined,async progress=>{emit('task.updated',{progress})},{identity,artifacts:()=>[],workflow:{bindings,task,identity}});
   async function call(id:string,name:string,input:Record<string,unknown>){const call:ToolCall={id,name,input},auth=decision(name);emit('tool.proposed',{...call});if(name==='write')await tools.invalidate('写入前',tools.beforeEffects());emit('tool.allowed',{...call,...auth});const generation=tools.generation,result=name.startsWith('cbim_')?await tools.call(name,input):{content:[{type:'text',text:name==='read'?'actual file':'written'}]};const receipt=toolReceipt(identity,call,auth,'succeeded',result);emit('tool.finished',{id,name,result,receipt});tools.record(receipt,generation)}
   await call('plan','cbim_task_plan',planInput);await call('write-one','write',{path:'result.txt',content:'actual file'});await call('read-one','read',{path:'result.txt'});await call('step','cbim_task_step',{expectedVersion:2,id:'implement',state:'reported_done',evidenceIds:['write-one','read-one']});await call('deliver','cbim_delivery_prepare',{expectedVersion:3,summary:'成果',limitations:[]});emit('run.settled',{status:'completed'});return events;
 }
@@ -57,7 +57,7 @@ async function overlappingWrite(order:'after-delivery'|'before-delivery'|'before
   const events:ArtifactEvidenceEvent[]=[];
   const emit=(type:string,data:Record<string,unknown>)=>events.push({...identity,seq:events.length+1,type,data:structuredClone(data)});
   emit('run.started',{task,workflowContracts:bindings});
-  const tools=new TaskProgressTools(undefined,async progress=>{emit('task.updated',{progress})},{artifacts:()=>[],workflow:{bindings,task,identity}});
+  const tools=new TaskProgressTools(undefined,async progress=>{emit('task.updated',{progress})},{identity,artifacts:()=>[],workflow:{bindings,task,identity}});
   async function call(id:string,name:string,input:Record<string,unknown>){
     const request:ToolCall={id,name,input},auth=decision(name);emit('tool.proposed',{...request});emit('tool.allowed',{...request,...auth});
     const generation=tools.generation,result=name.startsWith('cbim_')?await tools.call(name,input):{content:[{type:'text',text:'read bytes'}]};

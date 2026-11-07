@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主实例与图根共享身份；依赖追加在同事务重验两端及后继的知识/流程/停止状态，成功后重纳当前周期跟踪，仍待主轮结束并按原领取链执行。补充发送前预留、ACK后登记新输入，与cycle在途操作一起结算；停止先作用引擎，旧计划不再领取，最终门禁核对接收日志。目标分工、派发及人工来源核对原流程选择；交付/审阅从canonical复核真实证据与当前文件。检查点与前置调整不改选；额度/准入等待不消费，停止和重启封存不重放。 OwnerExecutionService 按知识→模型→任务事务核新派发及实际领取；原命令先查，锁释放后才启动。人工证据外部观察与最终知识快照/CAS 分离，避免反向串行等待。 CheckpointAbandonmentService 先读原命令，再核历史 canonical 与冻结证明，最后短事务裁决；不重读当前 native 或恢复旧模型，Auto 同步撤销旧恢复准入并等待处置收口。 原命令核实从固定主运行的 canonical 复原历史解析与指纹，比较读取前后依据；只返回严格公共摘要，不重发原命令或签发恢复资格。 EffectObservationService 复用原 canonical、控制面证据及平台单文件观察；恢复和重规划先在事务外取证，最终版本 CAS 后才建立独立周期，不自动重放原调用。
+主实例与图根共享身份；依赖追加在同事务重验两端及后继的知识/流程/停止状态，成功后重纳当前周期跟踪，仍待主轮结束并按原领取链执行。补充发送前预留、ACK后登记新输入，与cycle在途操作一起结算；停止先作用引擎，旧计划不再领取，最终门禁核对接收日志。目标分工、派发及人工来源核对原流程选择；交付/审阅从canonical复核真实证据与当前文件。检查点与前置调整不改选；额度/准入等待不消费，停止和重启封存不重放。 OwnerExecutionService 按知识→模型→任务事务核新派发及实际领取；原命令先查，锁释放后才启动。人工证据外部观察与最终知识快照/CAS 分离，避免反向串行等待。 CheckpointAbandonmentService 先读原命令，再核历史 canonical 与冻结证明，最后短事务裁决；不重读当前 native 或恢复旧模型，Auto 同步撤销旧恢复准入并等待处置收口。 原命令核实从固定主运行的 canonical 复原历史解析与指纹，比较读取前后依据；只返回严格公共摘要，不重发原命令或签发恢复资格。 EffectObservationService 复用原 canonical、控制面证据及平台单文件观察；恢复和重规划先在事务外取证，最终版本 CAS 后才建立独立周期，不自动重放原调用。 实际成员执行注入固定运行的受控文件端口，主调度不获得业务写入口，运行租约保持到物理操作排空。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -802,6 +802,7 @@ class N_src_backend_scheduler_engine_execution_loop_engine_ts_ExecutionServices[
   +member
   +artifacts
   +validations
+  +controlledFiles
   +assertMemberResume()
   +assertMemberResumeInputs()
   +onEngineReady()
@@ -812,7 +813,7 @@ class N_src_backend_scheduler_engine_execution_loop_engine_ts_ExecutionServices[
 N_src_backend_scheduler_engine_execution_loop_engine_ts ..> N_src_backend_scheduler_engine_execution_loop_engine_ts_ExecutionServices : 声明
 ```
 
-直接依赖：[../tools/question-tools.ts](../tools/question-tools.ts)、[../../core/foundation/paths.ts](../../core/foundation/paths.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../tools/knowledge-tools.ts](../tools/knowledge-tools.ts)、[../context/team-workflow.ts](../context/team-workflow.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/brain/index.ts](../../core/brain/index.ts)、[../../core/brain/pi/rpc.ts](../../core/brain/pi/rpc.ts)、[../../core/brain/llm/ports.ts](../../core/brain/llm/ports.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/tasks/progress-tools.ts](../../core/tasks/progress-tools.ts)、[../../core/tasks/member-help-tools.ts](../../core/tasks/member-help-tools.ts)、[../../core/tasks/artifact-tools.ts](../../core/tasks/artifact-tools.ts)、[../../core/brain/artifact-capture.ts](../../core/brain/artifact-capture.ts)、[../../core/brain/run-validation.ts](../../core/brain/run-validation.ts)、[../../core/tasks/validation-tools.ts](../../core/tasks/validation-tools.ts)、[../../core/tasks/member-checkpoint-tools.ts](../../core/tasks/member-checkpoint-tools.ts)、[../tools/dispatch-tools.ts](../tools/dispatch-tools.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[../../core/connectors/repository-tools.ts](../../core/connectors/repository-tools.ts)、[../tools/repository-tools.ts](../tools/repository-tools.ts)、[../../core/governance/module-governance-tools.ts](../../core/governance/module-governance-tools.ts)、[../tools/governance-tools.ts](../tools/governance-tools.ts)、[../tools/module-ownership-tools.ts](../tools/module-ownership-tools.ts)、[../../core/workspace/module-ownership-tools.ts](../../core/workspace/module-ownership-tools.ts)、[../../core/brain/storage.ts](../../core/brain/storage.ts)。
+直接依赖：[../tools/question-tools.ts](../tools/question-tools.ts)、[../../core/foundation/paths.ts](../../core/foundation/paths.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../tools/knowledge-tools.ts](../tools/knowledge-tools.ts)、[../context/team-workflow.ts](../context/team-workflow.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/brain/index.ts](../../core/brain/index.ts)、[../../core/brain/pi/rpc.ts](../../core/brain/pi/rpc.ts)、[../../core/brain/llm/ports.ts](../../core/brain/llm/ports.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/tasks/progress-tools.ts](../../core/tasks/progress-tools.ts)、[../../core/tasks/member-help-tools.ts](../../core/tasks/member-help-tools.ts)、[../../core/tasks/artifact-tools.ts](../../core/tasks/artifact-tools.ts)、[../../core/brain/artifact-capture.ts](../../core/brain/artifact-capture.ts)、[../../core/brain/run-controlled-file.ts](../../core/brain/run-controlled-file.ts)、[../../core/tasks/controlled-file-operation.ts](../../core/tasks/controlled-file-operation.ts)、[../../core/brain/run-validation.ts](../../core/brain/run-validation.ts)、[../../core/tasks/validation-tools.ts](../../core/tasks/validation-tools.ts)、[../../core/tasks/member-checkpoint-tools.ts](../../core/tasks/member-checkpoint-tools.ts)、[../tools/dispatch-tools.ts](../tools/dispatch-tools.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[../../core/connectors/repository-tools.ts](../../core/connectors/repository-tools.ts)、[../tools/repository-tools.ts](../tools/repository-tools.ts)、[../../core/governance/module-governance-tools.ts](../../core/governance/module-governance-tools.ts)、[../tools/governance-tools.ts](../tools/governance-tools.ts)、[../tools/module-ownership-tools.ts](../tools/module-ownership-tools.ts)、[../../core/workspace/module-ownership-tools.ts](../../core/workspace/module-ownership-tools.ts)、[../../core/brain/storage.ts](../../core/brain/storage.ts)。
 
 ### main-command-request.ts
 
@@ -958,6 +959,7 @@ class N_src_backend_scheduler_engine_execution_member_execution_ts_Handle["Handl
   +isCurrent()
   +controller
   +done
+  +finishDrain
 }
 N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_member_execution_ts_Handle : 声明
 class N_src_backend_scheduler_engine_execution_member_execution_ts_MemberExecutionManager["MemberExecutionManager"] {
@@ -2864,3 +2866,11 @@ edit 当前文件观察接受两种互斥严格形状：Pi 1.5 的 `{path,edits:
 桌面处置只追加不可变附录，先查原命令，再在事务外取证，最后短 Store CAS；该事务不读取知识、模型或 canonical。仅进入事务前的确定输入/依据拒绝使用 `EFFECT_PREACCEPT_*`；CAS、IO、保存及回复异常不归为未受理，保留原命令查询。摘要有界缩略理由，完整记录由回执读取。关系只从后续 recovery/replan 已存引用派生，不改原 unknown。
 
 新恢复来源有 main/member 分支，原无 kind 形状及指纹保持。核实仅引用同主体同 basis 的 inspect_more 处置；业务重规划仅引用 repair_in_new_cycle，并仍验证新只读周期的完整证据、原计划模块和人工约束。主来源无原计划时只允许只读核实。canonical IO 全在 Store callback 外，最终身份/版本 CAS 在知识快照锁内按 Knowledge→Store 顺序提交；受理后停止不回滚原意图。普通 chat 的未确认调用不能凭裸 reconciledToolIds 续接原 native。
+
+## 受控单文件写入与显式补偿
+
+受控文件能力仅由 Electron 桌面装配，独立 utilityProcess 在同一线程持有 Win32 独占句柄。普通 Node 宿主没有该能力。只允许现有 UTF-8 普通单文件；原 native write/edit 不因此获得自动撤销能力。
+
+Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，短门闩排除其它工具/审批；模型与 emit 事件不能签发许可。Main 在 Store 外取得文件句柄和可靠 before/intended-after 私有备份，单条 prepared→executing→terminal 附录由唯一 Store 保存。只有可靠 applied 返回成功；进入 executing 后的 IO/截断/进程退出均可能部分写入，不自动回滚或重发。
+
+停止先中断原进程，排空实际文件操作并确认 child 退出后才释放工作区占用。退出码不证明写成功。补偿是桌面明确提交的新命令，仅原 applied、原周期已关闭、当前同一文件仍等于原 after 才可恢复保存的 before。原日志、unknown 和原操作不改写；原命令查询先于今日配置，任何保存未知只查原记录。

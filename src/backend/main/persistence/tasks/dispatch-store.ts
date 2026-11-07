@@ -1,7 +1,7 @@
 /**
- * 作用定位：将岗位、模块责任和来源代次审计，以及执行实例、会话、任务图和信封可靠保存到同一工作区日志。
+ * 作用定位：将岗位、模块责任、来源代次和受控文件阶段，以及执行实例、会话、任务图和信封可靠保存到同一工作区日志。
  * 设计原因：追加日志是唯一权威记录，fsync 后才发布；原命令前态与回执由同次 publish/load 派生，旧前缀只回放不重写，控制面不得夹带执行，旧在途按原事实结算。
- * 职责边界：应用须先持有工作区唯一写入锁；本类串行化该实例内的事务，不启动大脑、不消费 outbox。
+ * 职责边界：应用须先持有工作区唯一写入锁；本类不打开业务文件或执行补偿，文件阶段通过同一严格投影重放，原记录不自动推进。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -13,6 +13,7 @@ import {validateDispatchScopes} from '../../../core/tasks/dispatch-scope-invaria
 import {projectWorkspaceMemberMutation} from '../../../core/tasks/workspace-member-invariants';
 import {projectModuleOwnershipMutation} from '../../../core/tasks/module-ownership-invariants';
 import {projectEffectDispositionMutation} from '../../../core/tasks/effect-observation-invariants';
+import {projectControlledFileMutation} from '../../../core/tasks/controlled-file-invariants';
 import type {DispatchCommand, DispatchCommandEvidence, DispatchMutation, DispatchObserver, DispatchState, DispatchStore} from '../../../core/tasks/dispatch-storage';
 import type {AgentRef, GraphCursor, GraphDelta, GraphEventBatch, GraphIdentity, GraphSnapshot} from '../../../core/tasks/graph-types';
 import {applyScopeBatch,dispatchSessionReadInput,emptyScopeSnapshot,readScopeDelta,readScopeDetail,summarizeScope,scopeViewHistoryLimit,type DispatchSessionReadInput,type DispatchSessionRead,type ScopeSnapshot,type ScopeEventBatch} from '../../../core/tasks/scope-view';
@@ -197,11 +198,12 @@ export class FileDispatchStore implements DispatchStore {
     const registry=projectWorkspaceMemberMutation(this.state,mutation,command,source.permit);
     const ownership=projectModuleOwnershipMutation(this.state,mutation,command,source.permit);
     const disposition=projectEffectDispositionMutation(this.state,mutation,command);
+    const controlledFiles=projectControlledFileMutation(this.state,mutation,command);
     const members=mutation.members??[],sessions=mutation.sessions??[],messages=mutation.messages??[],runs=mutation.runs??[],scopes=mutation.scopes??[];
     valid(Array.isArray(members)&&Array.isArray(sessions)&&Array.isArray(messages)&&Array.isArray(runs)&&Array.isArray(scopes),'事务集合必须是数组');
     unique(members,m=>m.agentInstanceId,'成员');unique(sessions,s=>s.agentSessionId,'会话');unique(messages,m=>m.messageId,'消息');unique(runs,r=>r.binding?.runId,'运行');unique(scopes,s=>s.scopeId,'周期');
     // 旧 v1 日志没有 runs；按空集合投影且保留原校验和，不通过迁移重写历史。
-    const next:DispatchState={workspaceId:this.workspaceId,members:upsert(this.state.members,members,m=>m.agentInstanceId),sessions:upsert(this.state.sessions,sessions,s=>s.agentSessionId),graphs:[...this.state.graphs],outbox:upsert(this.state.outbox,messages,m=>m.messageId),runs:upsert(this.state.runs??[],runs,r=>r.binding.runId),scopes:upsert(this.state.scopes??[],scopes,s=>s.scopeId),...registry,...ownership,...source.projection,...disposition};
+    const next:DispatchState={workspaceId:this.workspaceId,members:upsert(this.state.members,members,m=>m.agentInstanceId),sessions:upsert(this.state.sessions,sessions,s=>s.agentSessionId),graphs:[...this.state.graphs],outbox:upsert(this.state.outbox,messages,m=>m.messageId),runs:upsert(this.state.runs??[],runs,r=>r.binding.runId),scopes:upsert(this.state.scopes??[],scopes,s=>s.scopeId),...registry,...ownership,...source.projection,...disposition,...controlledFiles};
     unique(next.members,m=>JSON.stringify(m.agentId==='cbim:main'?['main',m.mainRootSessionId??null]:m.executionScopeId?['execution',m.executionScopeId,m.executionTaskId]:['legacy',m.agentId]),'主会话、周期任务或旧角色实例');unique(next.sessions,s=>s.agentSessionId,'会话');unique(next.outbox,m=>m.messageId,'消息');
     for(const member of members){
       valid(member.workspaceId===this.workspaceId&&text(member.teamId)&&text(member.agentId),'成员必须属于当前工作区的明确团队角色');

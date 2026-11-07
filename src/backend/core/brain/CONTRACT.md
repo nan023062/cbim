@@ -327,3 +327,13 @@ LoopRuntime ..> AgentEngine : 通过既有契约驱动
 ### 未确认调用与新核实
 
 普通 chat 原运行仍有 unresolvedTools 时，Runtime 在创建引擎前拒绝原 native 接续，即使请求携带 reconciledToolIds。旧记录中的字段保持可读，但勾选调用 ID 不是可信核实决定。明确只读核实使用新的运行/原生上下文；观察或后来修复都不清除旧 unknown。没有未确认调用的普通对话续聊与正式成员检查点协议保持独立。
+
+## 受控单文件写入与显式补偿
+
+受控写入已消费后，运行保留独立的待核实调用集合。端口失败、applied 后坏 wire 或失败结束事件均不能仅靠 tool.finished 解除；只有准确原授权的持久 not_applied 和真实进程退出能证明未写。其余情况允许原生 read/grep/find/ls、任务查询与记录求助，拒绝新调用 ID 的业务写、命令、交付、产物采集与检查点。交付端口另行复核，不能绕过 beforeTool；最终写入 run.interrupted 的 unverifiedControlledCalls，保留原 failed 回执，不补造 unknown 回执或可消费帮助信封。
+
+受控文件能力仅由 Electron 桌面装配，独立 utilityProcess 在同一线程持有 Win32 独占句柄。普通 Node 宿主没有该能力。只允许现有 UTF-8 普通单文件；原 native write/edit 不因此获得自动撤销能力。
+
+Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，短门闩排除其它工具/审批；模型与 emit 事件不能签发许可。Main 在 Store 外取得文件句柄和可靠 before/intended-after 私有备份，单条 prepared→executing→terminal 附录由唯一 Store 保存。只有可靠 applied 返回成功；进入 executing 后的 IO/截断/进程退出均可能部分写入，不自动回滚或重发。
+
+停止先中断原进程，排空实际文件操作并确认 child 退出后才释放工作区占用。退出码不证明写成功。补偿是桌面明确提交的新命令，仅原 applied、原周期已关闭、当前同一文件仍等于原 after 才可恢复保存的 before。原日志、unknown 和原操作不改写；原命令查询先于今日配置，任何保存未知只查原记录。

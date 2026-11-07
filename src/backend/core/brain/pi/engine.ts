@@ -1,4 +1,5 @@
 /**
+ * 受控文件边界：仅转发正式成员的工具与原 callId/取消信号；平台写入和补偿不会在 Pi 原生 write/edit 上自动附加。
  * 作用定位：Pi 引擎适配器，负责隔离配置、主对话与成员原生会话校验、工具桥与公开执行事件转换。
  * 设计原因：每轮冻结模型、权限和上下文；原生注册与能力预检共用 Core 工具表。成员求助/基线/检查点及按冻结要求提供的 JSON 验证沿真实调用 ID 入日志，结构拒绝不冒称通过；成员回传与人工决定用系统 custom 接续，结束只认 agent_settled。
  * 职责边界：不保存私有推理正文；记录实际用量与生成耗时，未知计价保持未知。明确停止后的标准取消文本才归为取消，其他错误及未知工具副作用交由运行时保留。
@@ -66,8 +67,9 @@ export class PiEngine implements AgentEngine {
     const helpNames=new Set((await context.memberHelpTools?.list()??[]).map(t=>t.name));
     const artifactNames=new Set((await context.artifactTools?.list()??[]).map(t=>t.name));
     const checkpointNames=new Set((await context.memberCheckpointTools?.list()??[]).map(t=>t.name));
+    const controlledNames=new Set<string>((await context.controlledFileTools?.list()??[]).map(t=>t.name));
     const validationNames=new Set((await context.validationTools?.list()??[]).map(t=>t.name));
-    const tools:KnowledgeBridge={list:async()=>[...await this.options.knowledge.list(),...await context.taskTools?.list()??[],...await context.memberHelpTools?.list()??[],...await context.artifactTools?.list()??[],...await context.memberCheckpointTools?.list()??[],...await context.validationTools?.list()??[]],call:(name,args,signal,toolCallId)=>validationNames.has(name)?context.validationTools!.call(name,args,toolCallId):checkpointNames.has(name)?context.memberCheckpointTools!.call(name,args,toolCallId):artifactNames.has(name)?context.artifactTools!.call(name,args,toolCallId):helpNames.has(name)?context.memberHelpTools!.call(name,args,toolCallId):taskNames.has(name)?context.taskTools!.call(name,args):this.options.knowledge.call(name,args,signal,toolCallId)};
+    const tools:KnowledgeBridge={list:async()=>[...await this.options.knowledge.list(),...await context.taskTools?.list()??[],...await context.memberHelpTools?.list()??[],...await context.artifactTools?.list()??[],...await context.memberCheckpointTools?.list()??[],...await context.validationTools?.list()??[],...await context.controlledFileTools?.list()??[]],call:(name,args,signal,toolCallId)=>controlledNames.has(name)?context.controlledFileTools!.call(name,args,toolCallId,signal):validationNames.has(name)?context.validationTools!.call(name,args,toolCallId):checkpointNames.has(name)?context.memberCheckpointTools!.call(name,args,toolCallId):artifactNames.has(name)?context.artifactTools!.call(name,args,toolCallId):helpNames.has(name)?context.memberHelpTools!.call(name,args,toolCallId):taskNames.has(name)?context.taskTools!.call(name,args):this.options.knowledge.call(name,args,signal,toolCallId)};
     this.bridge=await openBridge(tools,context.beforeTool,async usage=>{
       this.events=this.events.then(()=>context.emit({type:'engine.status',data:{label:'上下文用量已更新',metric:'context',...usage}}));await this.events;
     },async limit=>{this.requestLimit=limit;this.events=this.events.then(()=>context.emit({type:'engine.status',data:{label:'模型请求额度',metric:'request-limit',maxTokens:limit}}));await this.events});

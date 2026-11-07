@@ -265,3 +265,6 @@ effect-observation.ts 只重导Core的严格来源、观察、处置与关系DTO
 dispatch.ts 扩展recovery来源联合及纯身份helper，旧无kind字段保持原shape；新main分支不含成员task。可选dispositionId只在新recovery/replan意图创建时固定，不能回填旧记录；公开回执对原来源、处置和独立新run作严格核对。
 
 任务详情使用 `PublicDispatchScope`，与主工具共用纯 `scope-public.ts` 白名单。它保留真实 `recovery/replan` 的公开来源和处置引用，但不含 `context`、原生会话路径或隔离清单；前端不再把这个投影声明为完整持久 `DispatchScope`。
+### 受控文件公共边界
+
+`controlled-files.ts` 只重导 Core 的公共严格输入、字节摘要、操作报告和补偿预览/请求/回执。原调用使用 workspace/root/task/run/toolCall；新的补偿绑定当前 workspace instance、原operation、稳定command、版本和basis。恢复正文、平台file identity、私有blob与阶段事件不跨 Bridge，也不提供任意路径文件写入端口。回执 applied 仅表示独立操作已可靠保存，不签署任务验收或改写原工具结果。

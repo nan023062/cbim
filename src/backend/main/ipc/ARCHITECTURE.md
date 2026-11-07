@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-应用 action 路由；等待资料独立导入/目录/取消入口不启动模型，受理只读保存快照。队列插入传递原expectedRunId，由调度拒绝缺失、过期及停止。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。 dispatch.ownerInspect 只读核原任务并返回当前观察；正式派发必须显式绑定主周期。 dispatch.commandReport 固定原工作区、主根、运行和调用，桌面与模型共用同一只读服务。 五项影响观察／处置／原回执／历史／关联入口相互分开，查询不启动新任务；保存只接受本机显式决定。
+应用 action 路由；等待资料独立导入/目录/取消入口不启动模型，受理只读保存快照。队列插入传递原expectedRunId，由调度拒绝缺失、过期及停止。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。 dispatch.ownerInspect 只读核原任务并返回当前观察；正式派发必须显式绑定主周期。 dispatch.commandReport 固定原工作区、主根、运行和调用，桌面与模型共用同一只读服务。 五项影响观察／处置／原回执／历史／关联入口相互分开，查询不启动新任务；保存只接受本机显式决定。 四个文件报告/补偿入口固定原调用或原命令；actor 由桌面入口注入，查询不启动文件操作，补偿不得改变目标路径或内容。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -68,6 +68,7 @@ class N_src_backend_main_ipc_services_ts["services.ts"] {
 class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationServices"] {
   <<interface>>
   +workspaceOwnerships()
+  +controlledFiles()
   +execution()
   +memberDispatch()
   +memberExecution()
@@ -81,7 +82,7 @@ class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationService
 N_src_backend_main_ipc_services_ts ..> N_src_backend_main_ipc_services_ts_ApplicationServices : 声明
 ```
 
-直接依赖：[../workspace/catalog.ts](../workspace/catalog.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../platform/paths.ts](../platform/paths.ts)、[../persistence/settings/llm-profiles.ts](../persistence/settings/llm-profiles.ts)、[../resources/resource-repository.ts](../resources/resource-repository.ts)、[../resources/repository-connections.ts](../resources/repository-connections.ts)、[../governance/module-governance.ts](../governance/module-governance.ts)、[../../scheduler-engine/execution/execution-manager.ts](../../scheduler-engine/execution/execution-manager.ts)、[../../scheduler-engine/execution/dispatch-service.ts](../../scheduler-engine/execution/dispatch-service.ts)、[../../scheduler-engine/execution/member-execution.ts](../../scheduler-engine/execution/member-execution.ts)、[../../scheduler-engine/runtime/agent-history.ts](../../scheduler-engine/runtime/agent-history.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)、[../persistence/settings/admission-settings.ts](../persistence/settings/admission-settings.ts)、[../persistence/settings/budget-settings.ts](../persistence/settings/budget-settings.ts)、[../workspace/workspace-members.ts](../workspace/workspace-members.ts)、[../workspace/module-ownerships.ts](../workspace/module-ownerships.ts)、[../persistence/tasks/chat-material-imports.ts](../persistence/tasks/chat-material-imports.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)。
+直接依赖：[../workspace/catalog.ts](../workspace/catalog.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../platform/paths.ts](../platform/paths.ts)、[../persistence/settings/llm-profiles.ts](../persistence/settings/llm-profiles.ts)、[../resources/resource-repository.ts](../resources/resource-repository.ts)、[../resources/repository-connections.ts](../resources/repository-connections.ts)、[../governance/module-governance.ts](../governance/module-governance.ts)、[../../scheduler-engine/execution/execution-manager.ts](../../scheduler-engine/execution/execution-manager.ts)、[../../scheduler-engine/execution/dispatch-service.ts](../../scheduler-engine/execution/dispatch-service.ts)、[../../scheduler-engine/execution/member-execution.ts](../../scheduler-engine/execution/member-execution.ts)、[../../scheduler-engine/runtime/agent-history.ts](../../scheduler-engine/runtime/agent-history.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)、[../persistence/settings/admission-settings.ts](../persistence/settings/admission-settings.ts)、[../persistence/settings/budget-settings.ts](../persistence/settings/budget-settings.ts)、[../workspace/workspace-members.ts](../workspace/workspace-members.ts)、[../workspace/module-ownerships.ts](../workspace/module-ownerships.ts)、[../workspace/controlled-files.ts](../workspace/controlled-files.ts)、[../persistence/tasks/chat-material-imports.ts](../persistence/tasks/chat-material-imports.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)。
 
 ### 本目录调用边界
 
@@ -194,3 +195,7 @@ Electron 接入仍核对本窗口与主 Frame；`humanDecide` 在可信闭包注
 `dispatch.commandReport({workspaceId,rootSessionId,runId,toolCallId})` 路由到已有工作区的 `WorkspaceDispatchService.commandReport`。原工具名、input、scope、commandId 和 fingerprint 均由可信日志与 Store 推导，客户端不能补身份或结论；不调用 execute/commit/start/resume 来试探回执。查无记录仍是未知，不清原未确认工具。
 
 `dispatch.effectObserve`、`effectDispositionList`、`effectDispositionReceipt` 和 `effectRelations` 仅读已打开工作区；`effectDisposition` 才由本机显式提交入口注入 local_desktop actor。五入口共用同一服务，模型不装配新的处置工具；请求不收任意文件路径、scope 身份或自行声明的核实结果。loop.resume 对未确认调用拒绝裸 ID 解锁，直接 IPC 与 Runtime 门禁一致。
+
+## 受控操作与补偿桌面入口
+
+四入口 dispatch.controlledFileReport/fileCompensationPreview/fileCompensate/fileCompensationReceipt 只路由到已打开工作区的 ControlledFiles。报告与回执不启动模型或执行文件；预览只核当前文件，提交必须携稳定 command 和明确预览依据。原操作、补偿意图及原未知工具记录分开，模型没有桌面补偿能力。

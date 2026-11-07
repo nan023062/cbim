@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-引擎无关的执行循环、事件与计量；运行内补充只由可信入口写绑定scope/run/queue的接收日志，返回真实序号；queued后日志失败保持未知。插入绑定原run和停止信号，原生确认与未知分别记录，结算先排空插入日志。正式成员按冻结Workflow验证JSON指定字节，验证与交付复核各持短锁，前后核版本/知识/停止；checked暂存不等于passed有效证明。求助/检查点保存后结束本轮，文件采集随真实工具结束释放短锁；续执行不借旧证据。 成员的公开任务和原生运行共用冻结岗位绑定，历史缺省可读但不授权应用新领取。 新的未知工具不能仅凭 reconciledToolIds 恢复旧原生上下文，保留历史字段可读；正常无未决工具的续聊不受影响。
+引擎无关的执行循环、事件与计量；运行内补充只由可信入口写绑定scope/run/queue的接收日志，返回真实序号；queued后日志失败保持未知。插入绑定原run和停止信号，原生确认与未知分别记录，结算先排空插入日志。正式成员按冻结Workflow验证JSON指定字节，验证与交付复核各持短锁，前后核版本/知识/停止；checked暂存不等于passed有效证明。求助/检查点保存后结束本轮，文件采集随真实工具结束释放短锁；续执行不借旧证据。 成员的公开任务和原生运行共用冻结岗位绑定，历史缺省可读但不授权应用新领取。 新的未知工具不能仅凭 reconciledToolIds 恢复旧原生上下文，保留历史字段可读；正常无未决工具的续聊不受影响。 正式成员受控文件工具使用 Runtime 单次授权；未知写入后整轮只准读取/求助，新ID不能绕过，交付独立复核并以interrupted封存；停止和结算等待实际文件进程退出。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -17,6 +17,7 @@
 | [member-checkpoint.ts](member-checkpoint.ts) | 成员单次合作式停泊的运行时门闩，沿真实工具授权保存非终结检查点请求。 |
 | [member-run.ts](member-run.ts) | 定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。 |
 | [model-errors.ts](model-errors.ts) | 把模型结束原因转换为用户可理解的执行错误，供实时引擎和历史回放共用。 |
+| [run-controlled-file.ts](run-controlled-file.ts) | 正式成员受控文件工具的单次授权与短门闩，平台写入只经过此可信运行端口。 |
 | [run-validation.ts](run-validation.ts) | 正式成员的 JSON 产物验证短门闩，连接冻结 Workflow、真实基线与平台同字节读取。 |
 | [runtime.ts](runtime.ts) | 大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。 |
 | [scope-usage.ts](scope-usage.ts) | 从单轮 canonical 摘要提取保守的已报告消耗，并汇总指定周期的主/成员计量。 |
@@ -64,24 +65,28 @@ class N_src_backend_core_brain_member_run_ts["member-run.ts"] {
 class N_src_backend_core_brain_model_errors_ts["model-errors.ts"] {
   <<module>>
 }
+class N_src_backend_core_brain_run_controlled_file_ts["run-controlled-file.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_run_validation_ts["run-validation.ts"] {
   <<module>>
 }
 class N_src_backend_core_brain_runtime_ts["runtime.ts"] {
   <<module>>
 }
-class N_src_backend_core_brain_scope_usage_ts["scope-usage.ts"] {
-  <<module>>
-}
 N_src_backend_core_brain_member_checkpoint_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
 N_src_backend_core_brain_run_validation_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_member_checkpoint_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_validation_ts : 导入依赖
+N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_controlled_file_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_brain_scope_usage_ts["scope-usage.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_storage_ts["storage.ts"] {
   <<module>>
 }
@@ -91,6 +96,7 @@ class N_src_backend_core_brain_types_ts["types.ts"] {
 class N_src_backend_core_brain_usage_ts["usage.ts"] {
   <<module>>
 }
+N_src_backend_core_brain_scope_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_storage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 ```
@@ -120,6 +126,7 @@ N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入
 - `runtime.ts` → `member-checkpoint.ts`：导入。
 - `runtime.ts` → `artifact-capture.ts`：导入。
 - `runtime.ts` → `run-validation.ts`：导入。
+- `runtime.ts` → `run-controlled-file.ts`：导入。
 - `runtime.ts` → `member-run.ts`：导入。
 - `runtime.ts` → `input-source.ts`：导入。
 - `runtime.ts` → `conversation-binding.ts`：导入。
@@ -129,6 +136,7 @@ N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入
 - `types.ts` → `member-run.ts`：导入。
 - `types.ts` → `input-source.ts`：导入。
 - `types.ts` → `conversation-binding.ts`：导入。
+- `types.ts` → `run-controlled-file.ts`：导入。
 - `usage.ts` → `types.ts`：导入。
 
 ### conversation-binding.ts 公开入口
@@ -207,7 +215,7 @@ class N_src_backend_core_brain_usage_ts["usage.ts"] {
 ## 子目录导航
 
 - [llm/](llm/ARCHITECTURE.md)：公开模型参数、能力元数据及运行快照端口。实际配置文件和加密凭据由 main/persistence/settings 持有。
-- [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取消，发送后只凭queued回复确认，不自动重试。工具经一次性gate授权并校验结果；结构验证仅在正式成员有冻结要求及真实端口时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为custom数据，不冒充用户授权。 主角色提示同样要求内置执行角色先登记岗位、模块责任及独立模型，不以缺省角色绕过真实派发门禁。
+- [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取消，发送后只凭queued回复确认，不自动重试。工具经一次性gate授权并校验结果；结构验证仅在正式成员有冻结要求及真实端口时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为custom数据，不冒充用户授权。 主角色提示同样要求内置执行角色先登记岗位、模块责任及独立模型，不以缺省角色绕过真实派发门禁。 受控文件工具仅在真实端口存在时安装，维持桥接容量及调用授权，工具结果和实际文件操作终态分别校验。
 
 [返回上层](../ARCHITECTURE.md)。
 
@@ -546,3 +554,13 @@ LoopRuntime ..> AgentEngine : 通过既有契约驱动
 ### 未确认调用与新核实
 
 普通 chat 原运行仍有 unresolvedTools 时，Runtime 在创建引擎前拒绝原 native 接续，即使请求携带 reconciledToolIds。旧记录中的字段保持可读，但勾选调用 ID 不是可信核实决定。明确只读核实使用新的运行/原生上下文；观察或后来修复都不清除旧 unknown。没有未确认调用的普通对话续聊与正式成员检查点协议保持独立。
+
+## 受控单文件写入与显式补偿
+
+受控写入已消费后，运行保留独立的待核实调用集合。端口失败、applied 后坏 wire 或失败结束事件均不能仅靠 tool.finished 解除；只有准确原授权的持久 not_applied 和真实进程退出能证明未写。其余情况允许原生 read/grep/find/ls、任务查询与记录求助，拒绝新调用 ID 的业务写、命令、交付、产物采集与检查点。交付端口另行复核，不能绕过 beforeTool；最终写入 run.interrupted 的 unverifiedControlledCalls，保留原 failed 回执，不补造 unknown 回执或可消费帮助信封。
+
+受控文件能力仅由 Electron 桌面装配，独立 utilityProcess 在同一线程持有 Win32 独占句柄。普通 Node 宿主没有该能力。只允许现有 UTF-8 普通单文件；原 native write/edit 不因此获得自动撤销能力。
+
+Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，短门闩排除其它工具/审批；模型与 emit 事件不能签发许可。Main 在 Store 外取得文件句柄和可靠 before/intended-after 私有备份，单条 prepared→executing→terminal 附录由唯一 Store 保存。只有可靠 applied 返回成功；进入 executing 后的 IO/截断/进程退出均可能部分写入，不自动回滚或重发。
+
+停止先中断原进程，排空实际文件操作并确认 child 退出后才释放工作区占用。退出码不证明写成功。补偿是桌面明确提交的新命令，仅原 applied、原周期已关闭、当前同一文件仍等于原 after 才可恢复保存的 before。原日志、unknown 和原操作不改写；原命令查询先于今日配置，任何保存未知只查原记录。

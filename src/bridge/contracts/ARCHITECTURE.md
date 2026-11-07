@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-可序列化 IPC 与展示契约；多来源附件只传选择身份，公开旧v1/新v2清单与真实仓库目录，不暴露凭据。图增量公开前置追加/替换审计而非执行许可，目标摘要公开运行内补充计数与未核实状态，详情保留已接收快照，纯协议不携IO。排队插入必须传用户点击时的原主run，缺失不推测当前轮次。检查点私有恢复证明留在后端；结构验证公开当时文件/规则指纹及无原值诊断，人工决定与文件观察保留真实依据。岗位IPC只传明确选择与公开采纳/回执，类型不带凭据或后端哈希IO。 owner-execution 公开原岗位绑定与显式当前观察；按任务修订核对身份，不公开解密配置。 公开检查点放弃审计和请求/回执纯契约，不向渲染进程授予主调度处置身份。 command-verification 只导出严格公共报告和八工具支持矩阵，隐藏原事务和执行准备信息。 effect-observation 只公开来源联合及严格公共 DTO，恢复／重规划保留旧协议并显式绑定新处置，不暴露正文备份或原生上下文。
+可序列化 IPC 与展示契约；多来源附件只传选择身份，公开旧v1/新v2清单与真实仓库目录，不暴露凭据。图增量公开前置追加/替换审计而非执行许可，目标摘要公开运行内补充计数与未核实状态，详情保留已接收快照，纯协议不携IO。排队插入必须传用户点击时的原主run，缺失不推测当前轮次。检查点私有恢复证明留在后端；结构验证公开当时文件/规则指纹及无原值诊断，人工决定与文件观察保留真实依据。岗位IPC只传明确选择与公开采纳/回执，类型不带凭据或后端哈希IO。 owner-execution 公开原岗位绑定与显式当前观察；按任务修订核对身份，不公开解密配置。 公开检查点放弃审计和请求/回执纯契约，不向渲染进程授予主调度处置身份。 command-verification 只导出严格公共报告和八工具支持矩阵，隐藏原事务和执行准备信息。 effect-observation 只公开来源联合及严格公共 DTO，恢复／重规划保留旧协议并显式绑定新处置，不暴露正文备份或原生上下文。 controlled-files 仅导出公开纯协议与限制，隐藏 blob、原生文件身份、句柄和后端规则。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -15,6 +15,7 @@
 | [architecture.ts](architecture.ts) | 团队/业务架构编辑的桌面 IPC 契约，只公开对象操作、预览差异和提交回执。 |
 | [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
 | [command-verification.ts](command-verification.ts) | 向桌面视图导出原主命令的只读核实协议和固定支持矩阵。 |
+| [controlled-files.ts](controlled-files.ts) | 向桌面公开受控文件原操作查询和显式补偿的纯协议。 |
 | [dispatch.ts](dispatch.ts) | 向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。 |
 | [effect-observation.ts](effect-observation.ts) | 向桌面公开原调用影响观察、明确处置与后续周期关系的纯契约。 |
 | [execution.ts](execution.ts) | 对话、运行和排队在 IPC 中传递的可序列化类型。 |
@@ -142,6 +143,16 @@ class N_src_bridge_contracts_command_verification_ts["command-verification.ts"] 
 }
 ```
 直接依赖：[../../backend/core/tasks/command-verification.ts](../../backend/core/tasks/command-verification.ts)。
+
+### controlled-files.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_controlled_files_ts["controlled-files.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../backend/core/tasks/controlled-file-operation.ts](../../backend/core/tasks/controlled-file-operation.ts)。
 
 ### dispatch.ts
 
@@ -778,3 +789,6 @@ effect-observation.ts 只重导Core的严格来源、观察、处置与关系DTO
 dispatch.ts 扩展recovery来源联合及纯身份helper，旧无kind字段保持原shape；新main分支不含成员task。可选dispositionId只在新recovery/replan意图创建时固定，不能回填旧记录；公开回执对原来源、处置和独立新run作严格核对。
 
 任务详情使用 `PublicDispatchScope`，与主工具共用纯 `scope-public.ts` 白名单。它保留真实 `recovery/replan` 的公开来源和处置引用，但不含 `context`、原生会话路径或隔离清单；前端不再把这个投影声明为完整持久 `DispatchScope`。
+### 受控文件公共边界
+
+`controlled-files.ts` 只重导 Core 的公共严格输入、字节摘要、操作报告和补偿预览/请求/回执。原调用使用 workspace/root/task/run/toolCall；新的补偿绑定当前 workspace instance、原operation、稳定command、版本和basis。恢复正文、平台file identity、私有blob与阶段事件不跨 Bridge，也不提供任意路径文件写入端口。回执 applied 仅表示独立操作已可靠保存，不签署任务验收或改写原工具结果。

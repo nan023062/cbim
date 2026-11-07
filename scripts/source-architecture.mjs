@@ -119,6 +119,23 @@ const effectObservationScopes={
  'src/frontend/tasks':'成员详情可选择原调用并显式观察；处置先保存本机稳定请求，丢回包只查原命令。历史选择与后续关系按同一处置展示，迟到读取不覆盖其他来源；各面板共享根会话时效，PublicDispatchScope 真实提供新核实和修复来源，沿既有资格创建。',
 };
 for(const [directory,description] of Object.entries(effectObservationScopes))scope[directory]+=' '+description;
+// 真实文件写入由成员授权和平台句柄共同约束；补偿另存事实，不改变原工具或验收结果。
+const controlledFileScopes={
+ 'src/backend/core/policy':'受控文件工具必须是本轮实际内部注册、唯一 business-write 效果及固定工作区范围；只读拒写，本轮免询不绕过平台检查。',
+ 'src/backend/core/brain':'正式成员受控文件工具使用 Runtime 单次授权；未知写入后整轮只准读取/求助，新ID不能绕过，交付独立复核并以interrupted封存；停止和结算等待实际文件进程退出。',
+ 'src/backend/core/brain/pi':'受控文件工具仅在真实端口存在时安装，维持桥接容量及调用授权，工具结果和实际文件操作终态分别校验。',
+ 'src/backend/core/tasks':'单文件操作公开协议不含正文备份；私有意图与阶段严格绑定原成员运行和原授权，补偿引用可靠 applied 与真实 before，终态不可改写。',
+ 'src/backend/main':'装配独立文件 utility 及唯一工作区服务；原运行释放前确认物理操作排空，缺少平台能力时不装配可写工具。',
+ 'src/backend/main/ipc':'四个文件报告/补偿入口固定原调用或原命令；actor 由桌面入口注入，查询不启动文件操作，补偿不得改变目标路径或内容。',
+ 'src/backend/main/platform':'独立 utility 持有 Win32 目录与文件句柄，执行单次有界替换、flush 与读回；私有 blob 保留真实 before，进程退出不表示内容回滚。',
+ 'src/backend/main/persistence/tasks':'受控文件附录在同一账本单条追加，prepared/executing/终态各有回执与空间预留，旧日志缺省不补造，重放不继续文件 IO。',
+ 'src/backend/main/workspace':'ControlledFiles 连接原成员授权、唯一 Store、文件平台与私有备份；原not_applied与真实退出才解除运行屏障，显式补偿重新核文件身份/摘要/关闭周期，未知不重试。',
+ 'src/backend/scheduler-engine/execution':'实际成员执行注入固定运行的受控文件端口，主调度不获得业务写入口，运行租约保持到物理操作排空。',
+ 'src/bridge/contracts':'controlled-files 仅导出公开纯协议与限制，隐藏 blob、原生文件身份、句柄和后端规则。',
+ 'src/frontend/tasks':'原调用卡分别显示工具/文件操作/补偿结果；显式预览读取当前文件，提交前保存固定本机请求，丢回复只查原命令；查询错误保留已知拒绝/终态，预览过期不能提交。',
+ 'src/frontend/conversation':'当前工作区实例传入成员详情用于补偿预览时效，主聊天草稿不受补偿控制器影响，挂载不触发文件读取或写入。',
+};
+for(const [directory,description] of Object.entries(controlledFileScopes))scope[directory]+=' '+description;
 const norm=p=>p.replaceAll('\\','/');
 const walk=p=>fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(p+'/'+e.name):[p+'/'+e.name]);
 const files=walk('src').filter(f=>/\.(tsx?|jsx?|mjs|cjs|css)$/.test(f));

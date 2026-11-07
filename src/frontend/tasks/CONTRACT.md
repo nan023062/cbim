@@ -336,3 +336,12 @@ UseRecoverySource --> ExecutionRecoveryController : 冻结来源与处置引用
 ScopeReplanForm --> EffectObservationPanel : 显式修复决定
 UseScopeReplan --> EffectObservationController : 明确选定的原处置
 ```
+### 受控文件原操作与显式补偿
+
+查询失败保留已经明确观察到的受理前 rejected 或最终 receipt，同时展示查询错误。unknown 不能因查询错误码升级成 rejected；已有 rejected 也不降为 unknown。重新提交始终需要新预览，不由查询触发。
+
+`ControlledFilePanel` 只从已加载的成员执行报告选择 `cbim_file_write_controlled`，不把旧 native write/edit/bash 推导成有写前备份的操作。`Conversation → SessionTaskView → MemberTaskDetail → MemberExecutionReport` 单独传递当前工作区 `instanceId`，原 task/run/call 保留历史身份；缺当前实例只能查询，不能构造补偿预览。
+
+`ControlledFileController` 每主会话共享，挂载、重开和图变化均不调用后端。原操作报告不读当前文件，用户明确预览才检查文件；预览按实例和图时效隔离，实际提交仍由后端重核。工具失败、操作 applied、补偿 applied 各自展示，均不代表业务验收。旧报告读取失败继续保留，跨来源或倒退回包不能抹掉已有事实。
+
+补偿提交前先保存严格原请求及原公开操作摘要；本机最多64条/2MiB，为未知结果预留回执空间，不含 before 正文、blob、native路径。保存失败不发请求，坏索引不覆盖。原命令未知或未结算只查询，不换ID再写；回执可跳过未观察的中间阶段但不能倒退或修改终态。明确 not_applied 后可重新准备并预览，成功/unknown 不提供重试入口。原后端历史可显式查询，不能凭查无判定未执行；普通对话草稿、附件、模型和队列独立。

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；不声称操作系统隔离。
+内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；不声称操作系统隔离。 受控文件工具必须是本轮实际内部注册、唯一 business-write 效果及固定工作区范围；只读拒写，本轮免询不绕过平台检查。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -114,3 +114,7 @@ JSON 验证仅允许准确的 `cbim_validation_run` 名称、非原生且单一 
 ### 模块岗位负责人逐次授权
 
 `module-ownership-tool-policy.ts` 的四项精确工具表独立于知识目录。inspect/receipt 为 read，change_preview 为 preview，change_commit 为 knowledge-write；只有非原生、单一匹配效果和当前工作区 knowledge scope 才可分类。未知同前缀、模型传入范围或混合效果不能取得例外。提交在 read 下拒绝，在 ask 下沿真实审批，在 execute 下仍须通过来源、版本和串行事务门禁；授权不代表业务验收或已经按该岗位派发。
+
+## 受控业务写权限
+
+`cbim_file_write_controlled` 只能按准确的内部 business-write 和本工作区 scope 分类。read 拒绝，ask 逐次批准，execute 仍需要正式成员工厂和 Runtime 的一次授权；主调度在上层始终拒绝业务写。native:false 不进入原 native guard，因此实际平台独立核完整路径和句柄，不能据工具名字推断沙箱。

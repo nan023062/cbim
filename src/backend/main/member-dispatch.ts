@@ -1,4 +1,5 @@
 /**
+ * 受控写边界：实际领取成员固定 scope/run/岗位来源并沿用成员写租约；桌面补偿独立取得写租约，不继承模型批准。
  * 作用定位：为已运行工作区装配成员派发、大脑执行、目标审阅、岗位及模块负责人服务；复用工作区恢复前创建的唯一 DispatchStore，来源、责任、岗位与执行保持独立审计投影。
  * 设计原因：知识→模型设置→Store 锁序固定岗位配置，预算和租约通过后才解密；成员不继承主模型。Workflow 能力按实际端口预检，密钥只留工厂闭包，锁释放后创建引擎；历史报告不启动成员。
  * 交接处置只复用原 canonical 读取与路径规范化，既存检查点证明不因今日 native/知识/模型变化被刷新；恢复执行仍走全部当前基线核验。
@@ -30,6 +31,8 @@ import {ModuleOwnerships} from './workspace/module-ownerships';
 import type {ResolvedLlm} from '../core/brain/llm/ports';
 import type {MemberStartOptions} from '../core/tasks/member-commands';
 import {workspaceMemberModelHash} from '../core/team/workspace-member-rules';
+import {ControlledFiles} from './workspace/controlled-files';
+import type {ControlledFileTransport} from './platform/controlled-file-protocol';
 
 /** 应用对每个活动工作区只调用一次；关闭服务必须早于释放工作区锁。 */
 export function createMemberDispatch(workspace:Workspace,observer?:DispatchObserver){
@@ -42,7 +45,7 @@ export function createMemberDispatch(workspace:Workspace,observer?:DispatchObser
  * prepare 固定公开模型参数和凭据，create 不重新读取默认设置；没有已保存模型时拒绝启动。
  * workspaceMembers 复用此 store 保存独立岗位审计；只调用 configuration 读取公开配置，不进入 prepare/create 或影响派发选择。
  */
-export function createMemberServices(workspace:Workspace,models:LlmProfiles,lease:WorkspaceExecutionLease,observer?:DispatchObserver,admission?:WorkspaceAdmission,budgetPolicy?:()=>ScopeBudgetPolicy){
+export function createMemberServices(workspace:Workspace,models:LlmProfiles,lease:WorkspaceExecutionLease,observer?:DispatchObserver,admission?:WorkspaceAdmission,budgetPolicy?:()=>ScopeBudgetPolicy,controlledTransport?:ControlledFileTransport){
   workspace.assert();
   const directory=path.join(workspace.paths.project(workspace.entry.id),'dispatch');
   const store=workspace.dispatchStore,storage=new FileRunStorage();
@@ -59,6 +62,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
     return summary;
   };
   const checkpointPorts={inspect:inspectMember,normalizePath:normalizeArtifact,checkFiles:artifactFiles.checkFiles.bind(artifactFiles),nativeFingerprint:nativeFiles.read.bind(nativeFiles)};
+  const controlledFiles=new ControlledFiles(workspace,store,lease,controlledTransport,inspectMember,()=>admission?.isCurrent()??true);
   const dispatch=new WorkspaceDispatchService(workspace,store,{inspectMember,normalizeValidationPath:normalizeArtifact,checkValidationFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),inspectMain:async(rootSessionId,runId)=>{
     workspace.assert();
     const summary=await storage.read(path.join(workspace.paths.project(workspace.entry.id),'loop-engine','tasks',safeId(rootSessionId),safeId(runId)));
@@ -78,6 +82,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
           storage,member:{directory:runsDirectory,prompt:memberExecutionPrompt(run.prepared,task,run.prerequisites),workflowContracts:preparedWorkflowContracts(run.prepared)},onEngineReady:hooks.onEngineReady,
           artifacts:{knowledgeRevision:run.prepared.knowledgeRevision,normalizePath:normalizeArtifact,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},captureFiles:(paths,signal)=>artifactFiles.captureFiles(paths,signal)},
           validations:{validateFile:(file,schema,signal)=>artifactFiles.validateFile(file,schema,signal),checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal)},
+          controlledFiles:task.scopeId?controlledFiles.forRun(run,task.scopeId):undefined,
           // 领取后到 Pi 发出首条 prompt 前仍有异步准备；每个准备边界复核原证明，不只核原生文件而遗漏外部业务文件变化。
           assertMemberResume:previous?async()=>{await verifyMemberCheckpointProof(workspace,task,previous,checkpointPorts,()=>workspace.assert(),previous.checkpointProof)}:undefined,
           assertMemberResumeInputs:previous?()=>verifyMemberCheckpointInputs(workspace,task,previous,checkpointPorts,()=>workspace.assert(),previous.checkpointProof!):undefined,
@@ -109,5 +114,5 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
   });
   const workspaceMembers=new WorkspaceMembers(workspace,store,models,()=>admission?.isCurrent()??true);
   const moduleOwnerships=new ModuleOwnerships(workspace,store,()=>admission?.isCurrent()??true);
-  return {dispatch,members,workspaceMembers,moduleOwnerships};
+  return {dispatch,members,workspaceMembers,moduleOwnerships,controlledFiles};
 }

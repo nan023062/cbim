@@ -1,7 +1,7 @@
 /**
- * 作用定位：定义工作区长期岗位、模块责任、受控来源审计以及执行实例、会话和任务派发的原子持久化端口。
+ * 作用定位：定义工作区长期岗位、模块责任、来源/文件操作审计以及执行实例、会话和任务派发的原子持久化端口。
  * 设计原因：调度层只表达领域变化，main 负责落盘；任务、领取意图、消息和成员占用一起提交，界面在同一屏障读取图与独立周期投影，观察端口只接收已提交事实。
- * 职责边界：长期岗位只经独立审计追加，不创建执行实例；持久化入队或 starting 意图都不是模型已经运行，确认候选、问题或检查点均不代表验收或续执行授权。
+ * 职责边界：独立审计不能夹带执行变化；受控文件事件不含字节正文、不实施 IO，持久化意图、文件 applied 与业务验收分开。
  */
 import type {AgentInstance, AgentSessionBinding} from '../team/agent-types';
 import type {AgentRef, GraphIdentity, GraphEventBatch, GraphSnapshot, GraphCursor, GraphDelta} from './graph-types';
@@ -13,6 +13,7 @@ import type {WorkspaceMember,WorkspaceMemberChange,WorkspaceRegistryCursor} from
 import type {ModuleOwnership,ModuleOwnershipChange,ModuleOwnershipCursor} from '../workspace/module-ownership';
 import type {KnowledgeSourceGeneration,KnowledgeSourceTransition,KnowledgeSourceChange,KnowledgeSourceCursor} from '../workspace/knowledge-source';
 import type {EffectDispositionRecord} from './effect-observation';
+import type {ControlledFileChange} from './controlled-file-event';
 
 /** 信封身份固定；claim 记录领取时的 run 与租约代际，消费后保留用于审计。 */
 export interface DispatchMessageBase {
@@ -62,6 +63,8 @@ export interface DispatchState {
   sourceCursor?:KnowledgeSourceCursor|null;
   /** 影响处置只追加当时观察；旧缺省不补数组，不改变原任务/周期或未知工具事实。 */
   effectDispositions?:EffectDispositionRecord[];
+  /** 私有受控文件阶段附录；旧缺省不补数组，公共读取只返回安全摘要。 */
+  controlledFileChanges?:ControlledFileChange[];
 }
 
 /** 幂等键由可信入口产生；fingerprint 是包括调用者在内的规范化输入摘要。 */
@@ -86,6 +89,8 @@ export interface DispatchCommandEvidence {
 
 /** 一个命令的完整提交单元；可选数组按对象 ID 写入完整新记录，省略不改变集合，重复 ID 须拒绝。 */
 export interface DispatchMutation<T = unknown> {
+  /** 一次一阶段，不能与任何执行、知识或登记变更混写。 */
+  controlledFileChanges?:ControlledFileChange[];
   /** 一次只追加一个本机处置及回执，不与任何执行或其它领域事务混写。 */
   effectDispositions?:EffectDispositionRecord[];
   members?: AgentInstance[];

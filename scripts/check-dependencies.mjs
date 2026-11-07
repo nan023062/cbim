@@ -23,6 +23,7 @@ const layerOf = file => file.startsWith('src/frontend/') ? 'frontend' : file.spl
 // 非字面量加载不能静态证明目标，只允许逐项核实的外部依赖；表达式变化必须重新审核。
 export const externalLoads = [
   {file:'src/backend/main/platform/locking.ts', expression:"requireNative(packagedNative&&fs.existsSync(packagedNative)?packagedNative:'koffi')", reason:'仅从安装包或 node_modules 加载第三方 koffi 原生库'},
+  {file:'src/backend/main/platform/controlled-file-win32.ts', expression:'requireNative(koffiPath)', reason:'专用 utility 的私有参数仅由 Main 固定 resources/koffi 或 require.resolve(koffi) 注入；独立 Electron 测试宿主同样使用真实第三方库，不来自模型或桌面 IPC'},
   {file:'tests/model-catalog.test.ts', expression:"import(pathToFileURL(path.resolve('node_modules/@earendil-works/pi-ai/dist/api/simple-options.js')).href)", reason:'测试固定版本的第三方 Pi 内部容量函数'},
 ];
 

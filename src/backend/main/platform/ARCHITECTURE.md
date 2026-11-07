@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-本机路径、系统锁、凭据加密、终端与工具访问检查。固定根有界读取并核前后句柄/路径，拒绝链接、越界和Windows备用数据流；JSON验证由同一Buffer计算指纹和结构结论，正文不出端口。原生历史不完整拒绝恢复，不承诺外部原子隔离。 ArtifactFileService 只观察明确原调用的有界文件，独立返回缺失、不可信和当前字节；路径与链接检查不宣称操作系统隔离。
+本机路径、系统锁、凭据加密、终端与工具访问检查。固定根有界读取并核前后句柄/路径，拒绝链接、越界和Windows备用数据流；JSON验证由同一Buffer计算指纹和结构结论，正文不出端口。原生历史不完整拒绝恢复，不承诺外部原子隔离。 ArtifactFileService 只观察明确原调用的有界文件，独立返回缺失、不可信和当前字节；路径与链接检查不宣称操作系统隔离。 独立 utility 持有 Win32 目录与文件句柄，执行单次有界替换、flush 与读回；私有 blob 保留真实 before，进程退出不表示内容回滚。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -11,6 +11,11 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [artifact-files.ts](artifact-files.ts) | 在固定工作区根内安全读取业务文件，供指纹采集、复核、无基线当前观察及冻结 JSON 结构验证共用。 |
+| [controlled-file-blobs.ts](controlled-file-blobs.ts) | 保存受控写入的私有 before/intended-after 字节，公开回执只引用 UUID 与哈希。 |
+| [controlled-file-child.ts](controlled-file-child.ts) | 独立 Electron utility 文件工人入口，只接收固定私有消息，不启动 Application 或模型。 |
+| [controlled-file-protocol.ts](controlled-file-protocol.ts) | Main 与专用文件 utility 子进程之间的严格私有消息及不透明会话端口。 |
+| [controlled-file-transport.ts](controlled-file-transport.ts) | Electron 主进程为每个受控单文件操作创建专用 utility 子进程，并返回不透明会话。 |
+| [controlled-file-win32.ts](controlled-file-win32.ts) | 专用 utility 子进程的同步 Win32 单文件实现；全程拥有文件及目录句柄。 |
 | [locking.ts](locking.ts) | KernelLock：使用 Windows mutex 或 POSIX flock，防止跨进程并发持有。 |
 | [native-session-files.ts](native-session-files.ts) | 在本工作区受管 Pi 会话目录内核实已关闭的原生上下文，供成员检查点与续执行使用。 |
 | [paths.ts](paths.ts) | 本机应用目录、工程身份和知识路径的实际解析。 |
@@ -50,6 +55,217 @@ N_src_backend_main_platform_artifact_files_ts ..> N_src_backend_main_platform_ar
 ```
 
 直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/artifact-baseline.ts](../../core/tasks/artifact-baseline.ts)、[../../core/workspace/json-validation-schema.ts](../../core/workspace/json-validation-schema.ts)、[../../core/tasks/effect-observation.ts](../../core/tasks/effect-observation.ts)。
+
+### controlled-file-blobs.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_controlled_file_blobs_ts["controlled-file-blobs.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_controlled_file_blobs_ts_ControlledFileBlobs["ControlledFileBlobs"] {
+  +savePair()
+  +read()
+  -directory
+  -tail
+  -checkedDirectory()
+  -save()
+}
+N_src_backend_main_platform_controlled_file_blobs_ts ..> N_src_backend_main_platform_controlled_file_blobs_ts_ControlledFileBlobs : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/controlled-file-operation.ts](../../core/tasks/controlled-file-operation.ts)、[../../core/tasks/controlled-file-event.ts](../../core/tasks/controlled-file-event.ts)。
+
+### controlled-file-child.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_controlled_file_child_ts["controlled-file-child.ts"] {
+  <<module>>
+}
+```
+直接依赖：[controlled-file-protocol.ts](controlled-file-protocol.ts)、[controlled-file-win32.ts](controlled-file-win32.ts)。
+
+### controlled-file-protocol.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_controlled_file_protocol_ts["controlled-file-protocol.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_controlled_file_protocol_ts_ControlledChildRequest["ControlledChildRequest"] {
+  <<type>>
+
+}
+N_src_backend_main_platform_controlled_file_protocol_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts_ControlledChildRequest : 声明
+class N_src_backend_main_platform_controlled_file_protocol_ts_ControlledFileIdentity["ControlledFileIdentity"] {
+  <<type>>
+
+}
+N_src_backend_main_platform_controlled_file_protocol_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts_ControlledFileIdentity : 声明
+class N_src_backend_main_platform_controlled_file_protocol_ts_ControlledContentFact["ControlledContentFact"] {
+  <<type>>
+
+}
+N_src_backend_main_platform_controlled_file_protocol_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts_ControlledContentFact : 声明
+class N_src_backend_main_platform_controlled_file_protocol_ts_ControlledChildReply["ControlledChildReply"] {
+  <<type>>
+
+}
+N_src_backend_main_platform_controlled_file_protocol_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts_ControlledChildReply : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_controlled_file_protocol_ts["controlled-file-protocol.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_controlled_file_protocol_ts_ExclusiveControlledFile["ExclusiveControlledFile"] {
+  <<interface>>
+  +readBefore()
+  +recheckIdentity()
+  +replaceAndFlush()
+  +writeIssued
+}
+N_src_backend_main_platform_controlled_file_protocol_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts_ExclusiveControlledFile : 声明
+class N_src_backend_main_platform_controlled_file_protocol_ts_ControlledFileTransport["ControlledFileTransport"] {
+  <<interface>>
+  +withExclusiveExisting()
+  +drain()
+  +close()
+}
+N_src_backend_main_platform_controlled_file_protocol_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts_ControlledFileTransport : 声明
+```
+
+
+### controlled-file-transport.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_controlled_file_transport_ts["controlled-file-transport.ts"] {
+  <<module>>
+  +createControlledFileTransport()
+}
+```
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_controlled_file_transport_ts["controlled-file-transport.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_controlled_file_transport_ts_Request["Request"] {
+  <<type>>
+
+}
+N_src_backend_main_platform_controlled_file_transport_ts ..> N_src_backend_main_platform_controlled_file_transport_ts_Request : 声明
+class N_src_backend_main_platform_controlled_file_transport_ts_UtilityControlledFiles["UtilityControlledFiles"] {
+  +withExclusiveExisting()
+  +drain()
+  +close()
+  -entryPath
+  -koffiPath
+  -sessions
+  -closing
+}
+N_src_backend_main_platform_controlled_file_transport_ts ..> N_src_backend_main_platform_controlled_file_transport_ts_UtilityControlledFiles : 声明
+class N_src_backend_main_platform_controlled_file_transport_ts_external_ControlledFileTransport["ControlledFileTransport (外部契约)"] {
+  <<external>>
+}
+N_src_backend_main_platform_controlled_file_transport_ts_external_ControlledFileTransport <|.. N_src_backend_main_platform_controlled_file_transport_ts_UtilityControlledFiles
+class N_src_backend_main_platform_controlled_file_transport_ts_UtilityFileSession["UtilityFileSession"] {
+  +exited
+  +writeIssued
+  +open()
+  +readBefore()
+  +recheckIdentity()
+  +replaceAndFlush()
+  +close()
+  -child
+  -signal
+  -token
+  -seq
+  -dead
+  -closing
+  -pending
+  -before
+  -issued
+}
+N_src_backend_main_platform_controlled_file_transport_ts ..> N_src_backend_main_platform_controlled_file_transport_ts_UtilityFileSession : 声明
+class N_src_backend_main_platform_controlled_file_transport_ts_external_ExclusiveControlledFile["ExclusiveControlledFile (外部契约)"] {
+  <<external>>
+}
+N_src_backend_main_platform_controlled_file_transport_ts_external_ExclusiveControlledFile <|.. N_src_backend_main_platform_controlled_file_transport_ts_UtilityFileSession
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_controlled_file_transport_ts["controlled-file-transport.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_controlled_file_transport_ts_UtilityFileSession["UtilityFileSession"] {
+  -resolveExit
+  -abort
+  -reject()
+  -request()
+}
+N_src_backend_main_platform_controlled_file_transport_ts ..> N_src_backend_main_platform_controlled_file_transport_ts_UtilityFileSession : 声明
+class N_src_backend_main_platform_controlled_file_transport_ts_external_ExclusiveControlledFile["ExclusiveControlledFile (外部契约)"] {
+  <<external>>
+}
+N_src_backend_main_platform_controlled_file_transport_ts_external_ExclusiveControlledFile <|.. N_src_backend_main_platform_controlled_file_transport_ts_UtilityFileSession
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[controlled-file-protocol.ts](controlled-file-protocol.ts)。
+
+### controlled-file-win32.ts
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_controlled_file_win32_ts["controlled-file-win32.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_controlled_file_win32_ts_Win32ControlledFile["Win32ControlledFile"] {
+  +writeIssued
+  +read()
+  +replace()
+  +close()
+  -root
+  -relativePath
+  -koffi
+  -api
+  -handles
+  -file
+  -applied
+  -original
+  -bool()
+  -openHandle()
+  -final()
+  -info()
+}
+N_src_backend_main_platform_controlled_file_win32_ts ..> N_src_backend_main_platform_controlled_file_win32_ts_Win32ControlledFile : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_controlled_file_win32_ts["controlled-file-win32.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_controlled_file_win32_ts_Win32ControlledFile["Win32ControlledFile"] {
+  -open()
+  -checkedIdentity()
+}
+N_src_backend_main_platform_controlled_file_win32_ts ..> N_src_backend_main_platform_controlled_file_win32_ts_Win32ControlledFile : 声明
+```
+
+直接依赖：[controlled-file-protocol.ts](controlled-file-protocol.ts)。
 
 ### locking.ts
 
@@ -155,6 +371,28 @@ class N_src_backend_main_platform_tool_guard_ts["tool-guard.ts"] {
 ```
 
 
+### 本目录调用边界
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_controlled_file_child_ts["controlled-file-child.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_controlled_file_protocol_ts["controlled-file-protocol.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_controlled_file_win32_ts["controlled-file-win32.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_controlled_file_transport_ts["controlled-file-transport.ts"] {
+  <<module>>
+}
+N_src_backend_main_platform_controlled_file_child_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts : 导入依赖
+N_src_backend_main_platform_controlled_file_child_ts ..> N_src_backend_main_platform_controlled_file_win32_ts : 导入依赖
+N_src_backend_main_platform_controlled_file_transport_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts : 导入依赖
+N_src_backend_main_platform_controlled_file_win32_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts : 导入依赖
+```
+
 
 ## 子目录导航
 
@@ -191,3 +429,13 @@ AbortSignal、工作区退役与文件变化在异步读取期间持续核对，
 ### 无基线的当前文件观察
 
 `ArtifactFiles.observeFiles` 复用同一安全文件读取，每次最多 16 个路径、每文件 8 MiB、共享 32 MiB，只返回 present/missing/unverifiable、长度和 SHA-256。路径由 Scheduler 已核原调用推导，平台再次拒绝越界、链接、硬链接、设备和受管知识路径；不接受 UI 任意路径，不输出正文。取消或工作区失效终止读取，前后身份变化不交付确定哈希；此观察不证明原操作成功，也不生成成功产物基线。
+
+## 受控单文件写入与显式补偿
+
+utility entry 允许在 app.asar 中，进程 cwd 必须通过 original-fs 解析为 process.execPath 所在的真实目录。不能将 ASAR 内虚拟目录交给原生进程，也不以业务工程为 cwd；目录不可用在 fork 和任何文件意图保存前拒绝。
+
+受控文件能力仅由 Electron 桌面装配，独立 utilityProcess 在同一线程持有 Win32 独占句柄。普通 Node 宿主没有该能力。只允许现有 UTF-8 普通单文件；原 native write/edit 不因此获得自动撤销能力。
+
+Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，短门闩排除其它工具/审批；模型与 emit 事件不能签发许可。Main 在 Store 外取得文件句柄和可靠 before/intended-after 私有备份，单条 prepared→executing→terminal 附录由唯一 Store 保存。只有可靠 applied 返回成功；进入 executing 后的 IO/截断/进程退出均可能部分写入，不自动回滚或重发。
+
+停止先中断原进程，排空实际文件操作并确认 child 退出后才释放工作区占用。退出码不证明写成功。补偿是桌面明确提交的新命令，仅原 applied、原周期已关闭、当前同一文件仍等于原 after 才可恢复保存的 before。原日志、unknown 和原操作不改写；原命令查询先于今日配置，任何保存未知只查原记录。

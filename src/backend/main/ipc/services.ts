@@ -1,4 +1,5 @@
 /**
+ * 受控文件边界：只向已打开工作区提供查询和显式补偿，查询不初始化 Store 或启动 utility 工人。
  * 作用定位：定义 IPC 路由需要的执行审批、静态角色履历、岗位与模块责任、全局监管、配额、桌面资源导入、模块治理和工作区生命周期入口。
  * 设计原因：路由依赖此契约，Application 负责实现和装配，避免路由反向引用应用类形成类型循环。
  * 职责边界：这里只声明内部调用能力，不代表渲染进程可以直接访问这些服务。
@@ -20,6 +21,7 @@ import type {AdmissionSettings} from '../persistence/settings/admission-settings
 import type {BudgetSettings} from '../persistence/settings/budget-settings';
 import type {WorkspaceMembers} from '../workspace/workspace-members';
 import type {ModuleOwnerships} from '../workspace/module-ownerships';
+import type {ControlledFiles} from '../workspace/controlled-files';
 import type {ChatMaterialImports} from '../persistence/tasks/chat-material-imports';
 import type {AdmissionCursor,AdmissionRead} from '../../core/runtime/admission';
 
@@ -51,6 +53,8 @@ export interface ApplicationServices {
   workspaceMembers(id:string):WorkspaceMembers;
   /** 桌面责任写入只注入本机提交来源，和主工具共用同一服务及持久化裁决。 */
   workspaceOwnerships(id:string):ModuleOwnerships;
+  /** 仅已打开工作区；报告只读，补偿必须由明确桌面提交生成新命令。 */
+  controlledFiles(id:string):ControlledFiles;
   execution(id: string): WorkspaceExecutionManager;
   /** 取得已装配的工作区成员图及人工决定服务；未就绪则拒绝，人工记录不隐式启动大脑或改变权限。 */
   memberDispatch(id:string):WorkspaceDispatchService;

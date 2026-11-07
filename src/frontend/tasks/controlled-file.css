@@ -1,0 +1,10 @@
+/* 原工具、原文件操作与独立补偿分段；窄栏折行，不靠颜色暗示业务验收。 */
+.controlled-file{min-width:0;border:1px solid var(--border);border-radius:10px;padding:14px;margin:12px 0;color:var(--text);font-size:13px;line-height:1.55}
+.controlled-file header,.controlled-actions{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.controlled-file p{margin:8px 0}.controlled-file h4{margin:10px 0}.controlled-file button{font-size:12px}
+.controlled-file code{display:block;max-width:100%;font-size:11px;overflow-wrap:anywhere;white-space:normal}
+.controlled-file [role=alert]{color:var(--danger)}.controlled-muted{color:var(--muted)}
+.file-compensation-form,.file-compensation-history article{border-top:1px solid var(--border);padding-top:10px;margin-top:10px}
+.file-compensation-form label{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.file-compensation-form textarea{width:100%;min-width:0;box-sizing:border-box;min-height:70px;resize:vertical}
+.controlled-file details{margin:8px 0;min-width:0}.controlled-file ul{padding-left:20px}.controlled-actions{justify-content:flex-start}

@@ -1,4 +1,5 @@
 /**
+ * 受控补偿边界：四项桌面入口只查原操作、预览和显式提交新补偿；模型无补偿入口，原 unknown 和原日志不改写。
  * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
  * 设计原因：通过 ApplicationServices 隔离实现；人工保存不启动模型，humanContinue 只消费已保存决定。资料导入/取消独立于等待受理，IPC 不接收来源 proof 或仓库凭据。
  * 资源连接：桌面显式登记、授权与核验分别路由；只读原回执和未受理证明不重放知识提交，不接受客户端地址或令牌。
@@ -16,6 +17,10 @@ import {WorkspacePackages} from '../resources/workspace-packages';
 import {fail} from '../../core/foundation/errors';
   /** 桌面 IPC 的操作路由；请求必须显式携带目标身份，不读取界面选中项。 */
 export async function dispatchApplication(app:ApplicationServices,action:string,args:any={}){switch(action){
+    case 'dispatch.controlledFileReport':return app.controlledFiles(args.workspaceId).report(args);
+    case 'dispatch.fileCompensationPreview':return app.controlledFiles(args.workspaceId).preview(args);
+    case 'dispatch.fileCompensate':return app.controlledFiles(args.workspaceId).compensate(args);
+    case 'dispatch.fileCompensationReceipt':return app.controlledFiles(args.workspaceId).receipt(args);
     case 'workspace.members.list':return app.workspaceMembers(args.workspaceId).list(args);
     case 'workspace.members.get':return app.workspaceMembers(args.workspaceId).get(args);
     case 'workspace.members.preview':return app.workspaceMembers(args.workspaceId).preview(args);

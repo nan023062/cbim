@@ -69,3 +69,7 @@ Workflow 计划与交付门禁位于共享 Runtime 和任务工具，Pi 仍经�
 # 原生插入的发送边界
 
 `PiEngine.steer` 使用原运行模型和权限，并接收可信停止信号。`get_state` 返回后再次检查停止、关闭和 streaming；此检查至 `steer` 命令发送之间不再等待其它异步操作。停止在发送前发生时不发新消息；发送之后只有原回复的 `disposition:queued` 确认接收，迟到取消不把它改称未接收。发送后的错误、超时或不明确回复统一保留 `QUEUE_INSERT_UNKNOWN`，不泄露底层回包或重发。
+
+## 受控文件桥
+
+Pi 仅发现正式成员实际装配的受控写工具，桥保留原 toolCallId 和取消 signal 进入 Runtime helper；不提供补偿工具，不替换原 native write/edit。只有已可靠落盘 applied 的严格唯一 wire 可返回成功。桥关闭不等于文件工人已退出，Runtime 另行 drain 实际平台会话。

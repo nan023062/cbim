@@ -2,6 +2,7 @@
  * 作用定位：以节点流程图展示当前主会话的派发任务，并在选择根或任务后显示对应执行详情。
  * 设计原因：全局项目架构与会话派工分开；所选周期提供按需用量核对，读取不触发模型或持续扫日志。根详情共享目标、审阅与显式补充，整图保留并突出所选周期，持久等待不触发队列恢复。 人工决定接续与文本补充分开，共享意图但不共享自动启动权。
  * 职责边界：运行轮次不是派发节点；根审阅中的原任务/新成果只导航本周期真实节点，不新增连线或执行。正式业务重规划与只读核实各有独立控制器，新周期准入取真实开放状态。
+ * 文件补偿：当前工作区实例沿真实会话传给成员详情；图身份不签发新的文件操作许可。
  * 异常核实：根与成员详情共享真实会话的显式观察/新核实入口，不用根节点伪造业务任务来源。
  * 停止入口：使用会话独立的停止在途状态，消息插入或附件准备忙碌时仍可停止。
  */
@@ -35,6 +36,8 @@ export function sessionRoot(history:RunSummary[],taskId:string,pending:number,gr
 /** 主会话视图输入；图与日志由外层读取，本组件只过滤展示并转交显式操作。 */
 export interface SessionTaskViewProps {
   workspaceId:string;
+  /** 当前已打开的工作区所有者实例，仅供新的显式文件补偿；不从历史运行推导。 */
+  workspaceInstanceId?:string;
   /** 主对话沿用的 taskId，在派发图中对应 rootSessionId；草稿尚无此值。 */
   taskId?:string;
   runs:RunSummary[];queued:QueuedMessage[];
@@ -113,7 +116,7 @@ export function SessionTaskView(props:SessionTaskViewProps){
     {!root?<div className="task-graph-draft"><h3>尚未开始会话</h3><p>发送第一条消息后，这里显示主 Agent；派发成员任务后显示团队任务流程。</p><button onClick={onChat}>开始对话</button></div>:<div className={'session-graph-layout'+(hasDetail?' with-detail':'')}>
       <DispatchGraph key={workspaceId+':'+taskId} graph={matching} root={root} selectedTaskId={selected} onSelectTask={select} highlightedScopeId={scopeState?.selectedScopeId}/>
       {hasDetail&&<aside className="session-graph-detail" aria-label={rootSelected?'主 Agent 详情':'成员任务详情'} data-testid="session-graph-detail"><header><strong>{rootSelected?'主会话调度':'成员任务'}</strong><button onClick={()=>select(undefined)} aria-label="关闭详情，返回流程图">返回流程图</button></header>
-        {rootSelected?<RootTaskDetail onSelectTask={select} history={history} pending={pending} now={now} busy={busy} stopping={props.stopping} onQueueChange={onQueueChange} onQueueContinue={onQueueContinue} onStop={onStop} graph={matching} scopeState={scopeState} continuation={props.continuation} replan={props.replan} humanDecisions={props.humanDecisions} humanContinuation={props.humanContinuation} recovery={props.recovery} historyIssueCount={props.historyIssueCount}/>:selectedTask&&taskId&&<MemberTaskDetail active={props.active} key={workspaceId+':'+taskId+':'+selectedTask.taskId} workspaceId={workspaceId} rootSessionId={taskId} task={selectedTask} graphCursor={matching?.cursor} scope={scopeState?.scopes.find(scope=>scope.scopeId===selectedTask.scopeId)} recovery={props.recovery}/>}
+        {rootSelected?<RootTaskDetail onSelectTask={select} history={history} pending={pending} now={now} busy={busy} stopping={props.stopping} onQueueChange={onQueueChange} onQueueContinue={onQueueContinue} onStop={onStop} graph={matching} scopeState={scopeState} continuation={props.continuation} replan={props.replan} humanDecisions={props.humanDecisions} humanContinuation={props.humanContinuation} recovery={props.recovery} historyIssueCount={props.historyIssueCount}/>:selectedTask&&taskId&&<MemberTaskDetail active={props.active} key={workspaceId+':'+taskId+':'+selectedTask.taskId} workspaceId={workspaceId} workspaceInstanceId={props.workspaceInstanceId} rootSessionId={taskId} task={selectedTask} graphCursor={matching?.cursor} scope={scopeState?.scopes.find(scope=>scope.scopeId===selectedTask.scopeId)} recovery={props.recovery}/>}
       </aside>}
     </div>}
   </div>;

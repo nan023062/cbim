@@ -1,4 +1,5 @@
 /**
+ * 受控文件边界：引擎只取得严格 list/call，不取得平台原端口或授权签发能力。
  * 作用定位：大脑 执行层：与具体引擎无关的任务、事件、工具策略和执行摘要契约。
  * 设计原因：任务身份与原生上下文分开；成员基线、JSON 验证与检查点由独立可信端口记录，不由引擎自报。续执行准备复核原冻结证明，历史读取不猜测恢复。
  */
@@ -56,6 +57,8 @@ export interface EngineContext {
   /** 成员首轮的一次合作式停泊请求；成功暂存后须正常结束，本任务续执行轮不再提供。 */
   memberCheckpointTools?:Pick<import('../tasks/member-checkpoint-tools').MemberCheckpointTools,'list'|'call'>;
   /** 仅有冻结 JSON 验证要求的正式成员装配；路径、Schema 和结论来自可信端口。 */
+  /** ?????????????????????????????? */
+  controlledFileTools?:Pick<import('./run-controlled-file').RunControlledFile,'list'|'call'>;
   validationTools?:Pick<import('../tasks/validation-tools').ValidationTools,'list'|'call'>;
   /** 可信续执行的完整冻结证明复核，Pi 在载入前及载入后配置前调用；同时核实文件、知识、日志和原生指纹。 */
   assertMemberResume?():Promise<void>;

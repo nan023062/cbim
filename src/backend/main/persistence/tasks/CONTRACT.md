@@ -175,3 +175,9 @@ prepared/resolved 为来源独立事务，原 journal 指纹属于内部可信�
 # 影响处置附录（Step36 协议实施中）
 
 FileDispatchStore 在原 journal 的完整校验与 durable publish 中投影 effectDispositions；旧缺省保持缺省。单次只有一条处置和它的严格回执，不能混入 graph/scopes/runs/登记审计；原 commandReceipt/commandEvidence 继续负责幂等和只读查询。记录不创建运行、推进图或周期游标，不重读今天文件来改判旧决定。写入失败沿原存储封闭规则处理，重开只核原帧；不增加第二份恢复账本。中文接口与实际字段随 Core 契约同步，整体功能验收由正式步骤记录。
+
+## 受控文件阶段附录（Step37）
+
+`controlledFileChanges` 沿原 dispatch.jsonl 保存，`projectControlledFileMutation` 同时用于实时提交及历史重放。每次严格单条 append，prepared/executing/terminal 各有固定命令，两个终态共用一把原命令键；补偿是新 operation，不覆盖原写。原 commands 索引继续保存阶段原回执，可靠 sync 后才 publish；写入结果未确认则封闭当前实例，重开只核已存在的完整帧，不重启文件子进程或自动补终态。
+
+旧日志缺省不补 controlledFileChanges 数组，附录不推进图、周期、岗位或来源游标。Store 内不读 blob/业务文件、不等待平台进程、模型或知识队列，公共报告须经 Core 显式白名单投影。真实 before/执行结果由 Main 的受控会话产生；Store 不声称文件写具有断电原子性，也不从今天字节猜原 applied。

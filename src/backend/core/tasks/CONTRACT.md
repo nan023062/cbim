@@ -590,3 +590,13 @@ Store 继续用同一串行提交、原命令回执和原协议裁决，不增�
 `effect-observation-invariants.ts` 只允许原周期关闭后的单条独立 append，核原命令指纹、回执、来源版本和观察 hash，禁止混入 scope/图/运行或其它领域写入。新 recovery/replan 创建时仅引用已保存且同源的明确处置；已有意图不可回填。recovery 对应 inspect_more，replan 对应 repair_in_new_cycle，均重核精确 basis 和调用集合；原只读权限、模块覆盖、人工标准及当前负责人执行门禁继续生效。服务取证、界面和最终验收进度以本片正式记录为准。
 
 `scope-public.ts` 是主工具与 `dispatch.sessionRead` 选中详情共用的纯公开白名单；`PublicDispatchScope` 明确区别于私有持久 `DispatchScope`。公开详情保留原 `recovery.source`、`replan.source.proof`、权限、人工约束与可选 `dispositionId`，剔除两类 `context` 及其原生身份/旧运行排除集合，旧未配置字段继续缺省。`readScopeDetail` 在真实同一 Store 读取屏障上校验公开 Schema，再独立复制；stamp 相同仍返回 noop。主工具复用同一基础 Schema，另加后端身份/哈希语义核验，浏览器不引入 Node 哈希实现。前端只持有公开类型，不能据来源投影推断新的恢复许可或业务验收。
+
+## 受控单文件操作（Step37 Core/Store 协议）
+
+`controlled-file-operation.ts` 是纯公共叶子：工具仅输入 path、expectedBefore、content；applied 输出只含原调用/绑定及字节摘要，acceptance 固定 not_evaluated。补偿只接原 operationId、原命令、预期版本、basis 和明确理由，不接 actor、文件身份、正文或备份。公开报告区分不存在/不可核实与已存阶段，不把查无记录当作未执行。正文各 1 MiB UTF-8、参数 JSON 3 MiB、公共 wire 128 KiB；路径只做纯相对结构检查，Windows 平台必须另核文件系统、保留目录和普通单链接身份。
+
+`controlled-file-event.ts` 是私有叶子，只有元数据而无实际字节：before/intendedAfter 是可靠 blob 引用，origin 是正式成员 claim 的完整绑定、原岗位/知识/权限与 Runtime 自身可靠 tool.allowed 序号。模型与引擎 emit 不能签发该授权。`controlled-file-rules.ts` 唯一负责新协议指纹、阶段命令、意图 hash、补偿 basis 与公开白名单投影，不改变任何旧命令算法；Bridge 不导这些后端规则或私有事件。
+
+`controlled-file-invariants.ts` 每次只接受一条阶段与精确回执，不允许空集合或未知字段伪装独立操作。prepared→executing→applied/unknown，或确认 write_not_issued 的 not_applied；终态不可变。新原写需同一真实 running 成员及 active 非只读周期，首次 leaseEpoch=0 合法；executing 前仍复核，终态只核原意图和实际结果，不因运行停止或今日岗位变化丢弃事实。相同授权序号不能转借另一调用，原写 blob 不能重新绑定到新操作。
+
+补偿另建意图及阶段，只能引用原可靠 applied、关闭周期和已结算运行；同文件身份、当前 after 摘要与原两个 blob 必须精确对应，不能对补偿再补偿。原调用记录和所有业务证据不改。每原 run 8 写、root 64 操作、工作区 256 操作、每原写 8 次明确补偿；16 MiB 附录在 prepared 时预留余下阶段空间，超限不删历史。真实 blob 64 MiB 与平台 IO/占用/停止由 Main 执行，Core 不把结构校验冒称物理证明。未结算或未知只能查原记录，重开不自动续写；Workflow、artifact 与 checkpoint 的现有白名单不扩大。

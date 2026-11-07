@@ -574,3 +574,11 @@ edit 当前文件观察接受两种互斥严格形状：Pi 1.5 的 `{path,edits:
 桌面处置只追加不可变附录，先查原命令，再在事务外取证，最后短 Store CAS；该事务不读取知识、模型或 canonical。仅进入事务前的确定输入/依据拒绝使用 `EFFECT_PREACCEPT_*`；CAS、IO、保存及回复异常不归为未受理，保留原命令查询。摘要有界缩略理由，完整记录由回执读取。关系只从后续 recovery/replan 已存引用派生，不改原 unknown。
 
 新恢复来源有 main/member 分支，原无 kind 形状及指纹保持。核实仅引用同主体同 basis 的 inspect_more 处置；业务重规划仅引用 repair_in_new_cycle，并仍验证新只读周期的完整证据、原计划模块和人工约束。主来源无原计划时只允许只读核实。canonical IO 全在 Store callback 外，最终身份/版本 CAS 在知识快照锁内按 Knowledge→Store 顺序提交；受理后停止不回滚原意图。普通 chat 的未确认调用不能凭裸 reconciledToolIds 续接原 native。
+
+## 受控单文件写入与显式补偿
+
+受控文件能力仅由 Electron 桌面装配，独立 utilityProcess 在同一线程持有 Win32 独占句柄。普通 Node 宿主没有该能力。只允许现有 UTF-8 普通单文件；原 native write/edit 不因此获得自动撤销能力。
+
+Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，短门闩排除其它工具/审批；模型与 emit 事件不能签发许可。Main 在 Store 外取得文件句柄和可靠 before/intended-after 私有备份，单条 prepared→executing→terminal 附录由唯一 Store 保存。只有可靠 applied 返回成功；进入 executing 后的 IO/截断/进程退出均可能部分写入，不自动回滚或重发。
+
+停止先中断原进程，排空实际文件操作并确认 child 退出后才释放工作区占用。退出码不证明写成功。补偿是桌面明确提交的新命令，仅原 applied、原周期已关闭、当前同一文件仍等于原 after 才可恢复保存的 before。原日志、unknown 和原操作不改写；原命令查询先于今日配置，任何保存未知只查原记录。

@@ -81,3 +81,13 @@ Workspace *-- KernelLock : 打开时持有，关闭时释放
 `WorkspaceMembers.get` 每次核当前来源并在返回前比较来源游标。责任列表依据额外绑定 `sourceCursor`，即使知识字节恢复相同也不能混用旧页；详情、预览最后复核岗位/责任/来源变化。`adopt_source` 保留原 bindingId 与负责人，要求当前负责人 active、精确原关系及当前预览，只提升关系版本与来源引用，不自动派发。原命令回执先于新实例、来源和状态判断。
 
 主运行的 `mainModuleOwnershipTools` 对 moduleIds 查询同时调用 `OwnerExecutionService.discover`，两份读取的知识、岗位、责任和来源游标必须一致才返回。只读分组提供可提交的选择或具体缺口；实际计划/派发重新核实，发现结果不充当执行许可。岗位查询不返回解密凭据，原任务对照不覆盖历史绑定。
+
+## 受控文件与显式补偿
+
+forRun 的 confirmNotApplied 仅等待原平台排空并读原账本；核对冻结 binding、scope、workspaceInstanceId、toolCallId、inputHash 和 allowedSeq。只有可靠 not_applied 为 true；查无、applied、unknown、错身份、Store 读取或退出失败都不解除运行屏障，不启动新 child 或文件操作。
+
+`ControlledFiles` 复用唯一 DispatchStore 保存每条文件阶段；原 member 工厂冻结 scope/run/岗位来源，Runtime 的可靠 allowed 序号只消费一次。文件/备份 IO 全在 Store 回调之外，prepared 和 executing 分别提交后才发送实际 apply；终态不因迟到停止、当前模型或知识变化被撤销。平台或保存未知不重做。原命令查询先于今日实例和文件校验。
+
+`preview` 只取得短只读占用、打开独占句柄并核实原 applied/关闭周期/当前同文件 after/私有 before，返回只读摘要和 basis。`compensate` 是独立本机显式命令，重新持有写占用与同句柄，保存独立意图后恢复原 before；不改写原操作或原 canonical。`receipt` 仅读已有阶段，缺记录不推断未执行。首次确定预拒仅 FILE_COMPENSATION_PRE_ACCEPT_INPUT/REJECTED；任何 Store CAS/IO/保存后异常均保持未知。
+
+关闭先 abort 在途文件会话并等待真实 child 退出；失败保留 lease/服务及 Store。再次关闭只确认原进程并释放占用，不触发 apply。文件身份证明不覆盖 ACL/ADS/外部恶意进程；readonly mapping 仍可能导致内容写后截断失败，unknown 不自动补偿。

@@ -1,9 +1,11 @@
 /**
+ * 文件工人边界：app.ready 后装配独立打包 utility 入口，不复用窗口主入口作为工人；退出等待所有原文件操作排空。
  * 作用定位：本机后端的 Electron 装配入口，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。
  * 设计原因：把 Electron 窗口与 IPC 留在唯一桌面入口，服务层可以脱离窗口验证；模型凭据加密通过系统 safeStorage 注入；手动终端固定工作区目录，退出时释放子进程。
  * 附件边界：原生多选超过12项时在任何快照导入前拒绝；安全等待的 importId 贯穿选择器，取消后迟到路径不读取、不返回给另一目标。
  */
 import {app,BrowserWindow,ipcMain,dialog,shell} from 'electron';
+import {createControlledFileTransport} from './platform/controlled-file-transport';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import {TerminalSessions} from './platform/terminal';
@@ -22,7 +24,7 @@ if(userRoot){app.setPath('userData',path.join(userRoot,'desktop'));app.setPath('
 else {const root=path.join(app.getPath('home'),'.cbim');app.setPath('userData',path.join(root,'desktop'));app.setPath('sessionData',path.join(root,'desktop'))}
 app.whenReady().then(async()=>{
   const install=app.isPackaged?process.resourcesPath:app.getAppPath();
-  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install),path.join(install,'design'),systemSecretCipher);await application.init();
+  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install),path.join(install,'design'),systemSecretCipher,{controlledFiles:createControlledFileTransport()});await application.init();
   window=new BrowserWindow({width:1320,height:860,minWidth:760,minHeight:520,title:'CBIM Assistant',webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   window.webContents.setWindowOpenHandler(()=>({action:'deny'}));window.webContents.on('will-navigate',(event)=>event.preventDefault());
   // 拖放走独立 IPC；与原生选择器共用快照和 .cbim 边界检查。

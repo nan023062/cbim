@@ -1,0 +1,77 @@
+/**
+ * 作用定位：专用 utility 子进程的同步 Win32 单文件实现；全程拥有文件及目录句柄。
+ * 设计原因：同线程立即捕获 GetLastError，避免同步磁盘 IO 堵塞 Main；独占共享规则不被描述为命名空间沙箱。
+ * 写入边界：同句柄 write/截断/flush/读回可能部分失败，失败绝不自行恢复 before。
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import {createRequire} from 'node:module';
+import {createHash} from 'node:crypto';
+import type Koffi from 'koffi';
+import {controlledPlatformBytes,type ControlledFileIdentity,type ControlledContentFact} from './controlled-file-protocol';
+
+const requireNative=createRequire(typeof __filename==='string'?__filename:import.meta.url);
+const normal=(value:string)=>value.replace(/^\\\\\?\\/,'').toLowerCase();
+const beneath=(root:string,file:string)=>{const rel=path.relative(root,file);return rel===''||!path.isAbsolute(rel)&&rel!=='..'&&!rel.startsWith('..'+path.sep)};
+const error=(code:string):never=>{throw Object.assign(new Error(code),{code})};
+/** 同一个对象只可 apply 一次；CloseHandle 失败保留句柄，进程退出由父级另行确认。 */
+export class Win32ControlledFile {
+  private readonly koffi:typeof Koffi;
+  private readonly api:Record<string,(...args:any[])=>any>;
+  private handles:any[]=[];private file:any;private applied=false;private original?:ControlledFileIdentity;
+  writeIssued=false;
+  constructor(private readonly root:string,private readonly relativePath:string,protectedRoots:readonly string[],koffiPath:string){
+    if(process.platform!=='win32')error('CONTROLLED_PLATFORM_UNSUPPORTED');
+    this.koffi=requireNative(koffiPath);
+    const dll=this.koffi.load('kernel32.dll');
+    this.api={open:dll.func('void * __stdcall CreateFileW(str16,uint32,uint32,void *,uint32,uint32,void *)'),last:dll.func('uint32 __stdcall GetLastError()'),close:dll.func('int __stdcall CloseHandle(void *)'),read:dll.func('int __stdcall ReadFile(void *,void *,uint32,void *,void *)'),write:dll.func('int __stdcall WriteFile(void *,void *,uint32,void *,void *)'),seek:dll.func('int __stdcall SetFilePointerEx(void *,int64,void *,uint32)'),eof:dll.func('int __stdcall SetEndOfFile(void *)'),flush:dll.func('int __stdcall FlushFileBuffers(void *)'),info:dll.func('int __stdcall GetFileInformationByHandle(void *,void *)'),final:dll.func('uint32 __stdcall GetFinalPathNameByHandleW(void *,void *,uint32,uint32)'),volume:dll.func('int __stdcall GetVolumeInformationByHandleW(void *,void *,uint32,void *,void *,void *,void *,uint32)'),type:dll.func('uint32 __stdcall GetFileType(void *)'),drive:dll.func('uint32 __stdcall GetDriveTypeW(str16)')};
+    try{this.open(protectedRoots)}catch(e){this.close();throw e}
+  }
+  private bool(value:number){if(!value){const n=this.api.last();error('CONTROLLED_WIN32_'+n)}}
+  private openHandle(file:string,access:number,share:number,flags:number){const h=this.api.open(file,access,share,null,3,flags,null),n=this.api.last();if(!h||this.koffi.address(h)===0xffffffffffffffffn)error('CONTROLLED_WIN32_'+n);this.handles.push(h);return h}
+  private final(h:any){const b=Buffer.alloc(65536),n=this.api.final(h,b,32768,0);if(!n||n>=32768)error('CONTROLLED_PATH');return b.subarray(0,n*2).toString('utf16le')}
+  private info(h:any){const b=Buffer.alloc(52);this.bool(this.api.info(h,b));return {attributes:b.readUInt32LE(0),size:b.readUInt32LE(36)+b.readUInt32LE(32)*2**32,links:b.readUInt32LE(40),volumeId:b.readUInt32LE(28).toString(16),fileId:b.subarray(44,52).toString('hex')}}
+  private open(protectedRoots:readonly string[]){
+    const parts=this.relativePath.split('/');
+    if(!this.relativePath||this.relativePath.length>2048||/[\\:<>"|?*\x00-\x1f\x7f]/.test(this.relativePath)||parts.some(p=>!p||p==='.'||p==='..'||['.cbim','.git'].includes(p.toLowerCase())||/[. ]$/.test(p)||/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(p)))error('CONTROLLED_PATH');
+    if(!/^[A-Za-z]:\\/.test(this.root)||normal(fs.realpathSync(this.root))!==normal(path.resolve(this.root)))error('CONTROLLED_PATH');
+    const file=path.join(this.root,...parts),drive=path.parse(this.root).root;
+    if(this.api.drive(drive)!==3||protectedRoots.some(p=>beneath(path.resolve(p),file)))error('CONTROLLED_PATH');
+    // 从卷根到目标父目录持不分享 DELETE 的目录句柄；每一级拒绝 reparse，核实际对象路径。
+    let current=drive;
+    for(const part of ['',...path.relative(drive,path.dirname(file)).split(path.sep).filter(Boolean)]){
+      if(part)current=path.join(current,part);
+      const h=this.openHandle(current,0x80,3,0x2000000|0x200000),facts=this.info(h);
+      if(!(facts.attributes&0x10)||facts.attributes&0x400||normal(this.final(h))!==normal(current))error('CONTROLLED_PATH');
+    }
+    this.file=this.openHandle(file,0xc0000000,0,0x200080);
+    const volume=Buffer.alloc(512);this.bool(this.api.volume(this.file,null,0,null,null,null,volume,256));
+    if(volume.toString('utf16le').split('\0')[0]!=='NTFS'||this.api.type(this.file)!==1)error('CONTROLLED_PLATFORM_UNSUPPORTED');
+    this.original=this.checkedIdentity();
+  }
+  private checkedIdentity():ControlledFileIdentity{
+    if(!this.file)error('CONTROLLED_SESSION_CLOSED');
+    const info=this.info(this.file);
+    if(info.links!==1||info.attributes&(0x1|0x10|0x400|0x1000|0x40000|0x400000)||info.size>controlledPlatformBytes||normal(this.final(this.file))!==normal(path.join(this.root,...this.relativePath.split('/'))))error('CONTROLLED_FILE_CHANGED');
+    const value:ControlledFileIdentity={kind:'windows_file',volumeId:info.volumeId,fileId:info.fileId,links:1};
+    if(this.original&&JSON.stringify(this.original)!==JSON.stringify(value))error('CONTROLLED_FILE_CHANGED');return value;
+  }
+  read(){
+    const identity=this.checkedIdentity(),before=this.info(this.file);this.bool(this.api.seek(this.file,0,null,0));
+    const bytes=Buffer.alloc(before.size),count=Buffer.alloc(4);let offset=0;
+    while(offset<bytes.length){this.bool(this.api.read(this.file,bytes.subarray(offset),Math.min(65536,bytes.length-offset),count,null));const n=count.readUInt32LE();if(!n)error('CONTROLLED_FILE_CHANGED');offset+=n}
+    new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
+    if(this.info(this.file).size!==before.size)error('CONTROLLED_FILE_CHANGED');this.checkedIdentity();
+    return {identity,bytes,fact:{byteLength:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')} satisfies ControlledContentFact};
+  }
+  replace(bytes:Uint8Array){
+    if(this.applied||bytes.byteLength>controlledPlatformBytes)error('CONTROLLED_SESSION_USED');this.applied=true;this.checkedIdentity();
+    new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);this.bool(this.api.seek(this.file,0,null,0));
+    const count=Buffer.alloc(4);this.writeIssued=true;
+    // 即使空正文也进入实际修改阶段；SetEndOfFile 失败可能已发生前缀写，绝不回滚。
+    if(bytes.byteLength){this.bool(this.api.write(this.file,bytes,bytes.byteLength,count,null));if(count.readUInt32LE()!==bytes.byteLength)error('CONTROLLED_PARTIAL_WRITE')}
+    this.bool(this.api.eof(this.file));this.bool(this.api.flush(this.file));const result=this.read();
+    if(!Buffer.from(bytes).equals(result.bytes))error('CONTROLLED_FILE_CHANGED');return result;
+  }
+  close(){let failed=false;for(let i=this.handles.length-1;i>=0;i--){if(this.api.close(this.handles[i]))this.handles.splice(i,1);else failed=true}if(failed)error('CONTROLLED_CLOSE_FAILED');this.file=undefined}
+}

@@ -83,3 +83,7 @@ Electron 接入仍核对本窗口与主 Frame；`humanDecide` 在可信闭包注
 `dispatch.commandReport({workspaceId,rootSessionId,runId,toolCallId})` 路由到已有工作区的 `WorkspaceDispatchService.commandReport`。原工具名、input、scope、commandId 和 fingerprint 均由可信日志与 Store 推导，客户端不能补身份或结论；不调用 execute/commit/start/resume 来试探回执。查无记录仍是未知，不清原未确认工具。
 
 `dispatch.effectObserve`、`effectDispositionList`、`effectDispositionReceipt` 和 `effectRelations` 仅读已打开工作区；`effectDisposition` 才由本机显式提交入口注入 local_desktop actor。五入口共用同一服务，模型不装配新的处置工具；请求不收任意文件路径、scope 身份或自行声明的核实结果。loop.resume 对未确认调用拒绝裸 ID 解锁，直接 IPC 与 Runtime 门禁一致。
+
+## 受控操作与补偿桌面入口
+
+四入口 dispatch.controlledFileReport/fileCompensationPreview/fileCompensate/fileCompensationReceipt 只路由到已打开工作区的 ControlledFiles。报告与回执不启动模型或执行文件；预览只核当前文件，提交必须携稳定 command 和明确预览依据。原操作、补偿意图及原未知工具记录分开，模型没有桌面补偿能力。

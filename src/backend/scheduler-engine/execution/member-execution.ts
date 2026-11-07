@@ -1,4 +1,5 @@
 /**
+ * 文件退出边界：child 未确认退出时保留原成员占用；再次关闭只排空原进程及结算原日志，不重发工具或创建新运行。
  * 作用定位：让已派发任务在独立成员会话中执行，提交领取、启动、结果、中断及一次安全停泊/续执行事实。
  * 设计原因：全局准入及本地租约先同步领取，容量等待不创建 run 或 claim；按任务原 Workflow 选择核实际能力，续执行不得借新计划改选。候选结算重读 canonical 并复核当前文件，占用持续到终态事务完成。
  * 职责边界：本成员 Loop 不递归派发或继承批准；求助在关闭后单向交接。检查点须完整关闭及复核后释放占用；主调度预约一次原任务新轮，失败、停止和重启不复活旧实例。只读报告不触发续执行，候选及匹配哈希不等于验收。
@@ -75,7 +76,7 @@ export interface MemberExecutionPorts {
 }
 export type PreparedEngine=Awaited<ReturnType<MemberExecutionPorts['prepare']>>;
 /** 一个业务任务当前的进程句柄；done 包含运行关闭和终态事务，失败时句柄保留以阻止再次领取。 */
-type Handle={binding:DispatchRun['binding'];runtime?:LoopRuntime;stopping:boolean;isCurrent():boolean;controller:AbortController;done:Promise<void>};
+type Handle={binding:DispatchRun['binding'];runtime?:LoopRuntime;stopping:boolean;isCurrent():boolean;controller:AbortController;done:Promise<void>;finishDrain?:()=>Promise<void>};
 const activeRun=(run:DispatchRun)=>run.status==='starting'||run.status==='running';
 
 /** 每个活动工作区一个执行管理器，与派发服务共享 store；调用方须先关闭本管理器再关闭存储。 */
@@ -267,7 +268,14 @@ export class MemberExecutionManager {
     finally{
       this.ports.signal?.removeEventListener('abort',retired);
       this.approvals.cancel(task.taskId);this.questions.cancel(task.taskId);
-      try{await handle.runtime?.close()}catch{error='成员进程未能正常关闭，请核实运行日志';summary=undefined}
+      try{await handle.runtime?.close()}catch(problem){
+        if((problem as {code?:string})?.code==='CONTROLLED_FILE_DRAIN_PENDING'){
+          // 保留原租约与句柄；下次关闭只排空原进程并结算，不创建运行或重发任何工具。
+          handle.finishDrain=async()=>{await handle.runtime!.close();const observed=await handle.runtime!.inspect(task.taskId,run.binding.runId);await this.settle(run,observed,'interrupted','文件进程退出后按原日志封存');this.handles.delete(task.taskId);release()};
+          throw problem;
+        }
+        error='成员进程未能正常关闭，请核实运行日志';summary=undefined;
+      }
       try{
         if(summary||error)await this.settle(run,summary,summary&&handle.stopping&&hasMemberHelp(summary)?'cancelled':summary?.status==='running'?'interrupted':summary?.status??'interrupted',error);
         this.handles.delete(task.taskId);release();
@@ -384,7 +392,7 @@ export class MemberExecutionManager {
   async answerQuestion(raw:unknown,id:string,answers:unknown){return this.questions.answer(await this.interaction(raw),id,answers)}
   /**
    * 拒绝新请求，等待已接收的启动、停止及结算尝试后清理观察缓存；调用方随后关闭共享 DispatchStore。
-   * 收尾错误不从 close 重抛；未成功结算的持久化活动记录留给下次 initialize 标记中断。
+   * 普通结算失败留给下次 initialize 核实；文件 child 排空未确认必须重抛并保留占用，不能继续关闭 Store。
    */
-  async close(){this.closing=true;await Promise.allSettled([...this.launches]);const handles=[...this.handles.entries()];await Promise.allSettled(handles.map(async([taskId,handle])=>{handle.stopping=true;handle.controller.abort(Error('成员执行服务正在关闭'));const stopping=handle.runtime?.stop(taskId);this.approvals.cancel(taskId);this.questions.cancel(taskId);await stopping}));await Promise.allSettled(handles.map(([,h])=>h.done));this.listeners.clear();this.eventStreams.clear()}
+  async close(){this.closing=true;await Promise.allSettled([...this.launches]);const handles=[...this.handles.entries()];await Promise.allSettled(handles.map(async([taskId,handle])=>{handle.stopping=true;handle.controller.abort(Error('成员执行服务正在关闭'));const stopping=handle.runtime?.stop(taskId);this.approvals.cancel(taskId);this.questions.cancel(taskId);await stopping}));await Promise.allSettled(handles.map(([,h])=>h.done));const drained=await Promise.allSettled(handles.map(([,h])=>h.finishDrain?.()));const failed=drained.find(r=>r.status==='rejected');if(failed?.status==='rejected')throw failed.reason;this.listeners.clear();this.eventStreams.clear()}
 }

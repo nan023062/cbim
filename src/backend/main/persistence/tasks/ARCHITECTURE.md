@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-执行日志、附件快照、派发事务与角色履历。目录首层、URL指针、真实有界网页及授权仓库资料快照分别保存，导入取消与等待受理分离；来源变化不改历史。日志只读完整前缀并报告未完整尾行，损坏不透传原始片段、不截断修复。图/目标/详情同屏障读取，未知操作不自动重放。同日志追加岗位审计并派生独立registry游标，原命令可只读核实，不将长期岗位计为运行实例。 新事务标记由Store生成，旧日志前缀可读而不能在新协议后降级；新任务/准备与历史岗位审计严格对应。 原命令证据索引从真实已保存事务前态派生，保留原根修订与日志协议；不重写历史或按当前图补造依据。 明确处置在同一 DispatchStore 有界追加并按稳定命令核实；旧任务与原异常不可改写，关联仅从真实后续周期派生。
+执行日志、附件快照、派发事务与角色履历。目录首层、URL指针、真实有界网页及授权仓库资料快照分别保存，导入取消与等待受理分离；来源变化不改历史。日志只读完整前缀并报告未完整尾行，损坏不透传原始片段、不截断修复。图/目标/详情同屏障读取，未知操作不自动重放。同日志追加岗位审计并派生独立registry游标，原命令可只读核实，不将长期岗位计为运行实例。 新事务标记由Store生成，旧日志前缀可读而不能在新协议后降级；新任务/准备与历史岗位审计严格对应。 原命令证据索引从真实已保存事务前态派生，保留原根修订与日志协议；不重写历史或按当前图补造依据。 明确处置在同一 DispatchStore 有界追加并按稳定命令核实；旧任务与原异常不可改写，关联仅从真实后续周期派生。 受控文件附录在同一账本单条追加，prepared/executing/终态各有回执与空间预留，旧日志缺省不补造，重放不继续文件 IO。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -14,7 +14,7 @@
 | [chat-inputs.ts](chat-inputs.ts) | 将用户明确添加的文件、文件夹、链接、网页与链接器定义保存为本机对话输入快照。 |
 | [chat-material-imports.ts](chat-material-imports.ts) | 应用内显式资料导入的取消、工作区归属及真实资源仓库读取入口。 |
 | [chat-source-readers.ts](chat-source-readers.ts) | 桌面明确导入目录、URL 指针和网页时，生成有界文本及真实来源事实。 |
-| [dispatch-store.ts](dispatch-store.ts) | 将岗位、模块责任和来源代次审计，以及执行实例、会话、任务图和信封可靠保存到同一工作区日志。 |
+| [dispatch-store.ts](dispatch-store.ts) | 将岗位、模块责任、来源代次和受控文件阶段，以及执行实例、会话、任务图和信封可靠保存到同一工作区日志。 |
 | [run-journal.ts](run-journal.ts) | 本机执行事件日志，顺序追加并 fsync，从记录恢复摘要和未确认工具。 |
 | [run-storage.ts](run-storage.ts) | 将本机运行目录和 RunJournal 装配为大脑及调度共享的存储端口。 |
 
@@ -255,7 +255,7 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchSt
 N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchStore <|.. N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore
 ```
 
-直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/tasks/graph-reducer.ts](../../../core/tasks/graph-reducer.ts)、[../../../core/tasks/dispatch-invariants.ts](../../../core/tasks/dispatch-invariants.ts)、[../../../core/tasks/dispatch-scope-invariants.ts](../../../core/tasks/dispatch-scope-invariants.ts)、[../../../core/tasks/workspace-member-invariants.ts](../../../core/tasks/workspace-member-invariants.ts)、[../../../core/tasks/module-ownership-invariants.ts](../../../core/tasks/module-ownership-invariants.ts)、[../../../core/tasks/effect-observation-invariants.ts](../../../core/tasks/effect-observation-invariants.ts)、[../../../core/tasks/dispatch-storage.ts](../../../core/tasks/dispatch-storage.ts)、[../../../core/tasks/graph-types.ts](../../../core/tasks/graph-types.ts)、[../../../core/tasks/scope-view.ts](../../../core/tasks/scope-view.ts)、[../../../core/tasks/dispatch-scope.ts](../../../core/tasks/dispatch-scope.ts)、[../../../core/tasks/knowledge-source-invariants.ts](../../../core/tasks/knowledge-source-invariants.ts)、[../../../core/tasks/owner-execution-invariants.ts](../../../core/tasks/owner-execution-invariants.ts)。
+直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/tasks/graph-reducer.ts](../../../core/tasks/graph-reducer.ts)、[../../../core/tasks/dispatch-invariants.ts](../../../core/tasks/dispatch-invariants.ts)、[../../../core/tasks/dispatch-scope-invariants.ts](../../../core/tasks/dispatch-scope-invariants.ts)、[../../../core/tasks/workspace-member-invariants.ts](../../../core/tasks/workspace-member-invariants.ts)、[../../../core/tasks/module-ownership-invariants.ts](../../../core/tasks/module-ownership-invariants.ts)、[../../../core/tasks/effect-observation-invariants.ts](../../../core/tasks/effect-observation-invariants.ts)、[../../../core/tasks/controlled-file-invariants.ts](../../../core/tasks/controlled-file-invariants.ts)、[../../../core/tasks/dispatch-storage.ts](../../../core/tasks/dispatch-storage.ts)、[../../../core/tasks/graph-types.ts](../../../core/tasks/graph-types.ts)、[../../../core/tasks/scope-view.ts](../../../core/tasks/scope-view.ts)、[../../../core/tasks/dispatch-scope.ts](../../../core/tasks/dispatch-scope.ts)、[../../../core/tasks/knowledge-source-invariants.ts](../../../core/tasks/knowledge-source-invariants.ts)、[../../../core/tasks/owner-execution-invariants.ts](../../../core/tasks/owner-execution-invariants.ts)。
 
 ### run-journal.ts
 
@@ -528,3 +528,9 @@ prepared/resolved 为来源独立事务，原 journal 指纹属于内部可信�
 # 影响处置附录（Step36 协议实施中）
 
 FileDispatchStore 在原 journal 的完整校验与 durable publish 中投影 effectDispositions；旧缺省保持缺省。单次只有一条处置和它的严格回执，不能混入 graph/scopes/runs/登记审计；原 commandReceipt/commandEvidence 继续负责幂等和只读查询。记录不创建运行、推进图或周期游标，不重读今天文件来改判旧决定。写入失败沿原存储封闭规则处理，重开只核原帧；不增加第二份恢复账本。中文接口与实际字段随 Core 契约同步，整体功能验收由正式步骤记录。
+
+## 受控文件阶段附录（Step37）
+
+`controlledFileChanges` 沿原 dispatch.jsonl 保存，`projectControlledFileMutation` 同时用于实时提交及历史重放。每次严格单条 append，prepared/executing/terminal 各有固定命令，两个终态共用一把原命令键；补偿是新 operation，不覆盖原写。原 commands 索引继续保存阶段原回执，可靠 sync 后才 publish；写入结果未确认则封闭当前实例，重开只核已存在的完整帧，不重启文件子进程或自动补终态。
+
+旧日志缺省不补 controlledFileChanges 数组，附录不推进图、周期、岗位或来源游标。Store 内不读 blob/业务文件、不等待平台进程、模型或知识队列，公共报告须经 Core 显式白名单投影。真实 before/执行结果由 Main 的受控会话产生；Store 不声称文件写具有断电原子性，也不从今天字节猜原 applied。

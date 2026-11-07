@@ -1,4 +1,5 @@
 /**
+ * 受控写边界：自身 beforeTool 可靠保存 allowed 才签发一次许可；未确认写入后整轮限制为读取/求助并按 interrupted 封存，原失败回执不改写。停止等待文件 child 退出，失败保留原占用。
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
  * 设计原因：工具先分类与计划门禁再审批；每轮进度绑定真实 workspace/task/run，成员专属工具另绑定完整实例。JSON 验证及交付复核各持短锁，异步读取前后核知识、计划与停止；坏回包保留事实，求助/检查点不解锁，采集/验证只随真实结束释放。
  * 插入边界：核对原 run、可信周期令牌和发送前停止信号；原生接受后返回真实日志序号，适配器不能伪造该令牌。终态等待在途记录排空，接受后的保存失败仍属未知，不自动重放。
@@ -19,6 +20,8 @@ import {hash,json} from '../foundation/serialization';
 import {isDeepStrictEqual} from 'node:util';
 import {RunArtifactCapture,type ArtifactCapturePort} from './artifact-capture';
 import {RunValidation,type ValidationFilePort} from './run-validation';
+import {RunControlledFile,type ControlledFileRunPort} from './run-controlled-file';
+import {controlledFileWriteToolName} from '../tasks/controlled-file-operation';
 import {validationToolName} from '../tasks/validation';
 import {jsonValidationLimits} from '../workspace/json-validation-schema';
 import {checkedMemberRunLaunch,type MemberRunLaunch} from './member-run';
@@ -44,6 +47,8 @@ export interface RuntimeOptions {
   artifacts?:ArtifactCapturePort;
   /** 仅成员冻结 Workflow 含 JSON 要求时使用；平台同字节验证与交付前当前文件复核。 */
   validations?:ValidationFilePort;
+  /** 仅已领取成员的实际桌面写入端口；缺省绝不注册工具。 */
+  controlledFiles?:ControlledFileRunPort;
   /** 仅正式成员的冻结模块约定；没有约定的旧运行保持原策略，存在约定必须装配可信分类端口。 */
   workflowContracts?:WorkflowContractBinding[];
   /** 纯分类与参数解析，不询问批准或运行工具；同一个描述继续交给授权端，避免两套 effects 判断。 */
@@ -83,7 +88,7 @@ export interface FreshMainStartControl {
 /** 管理任务级运行和日志；成员跨任务的互斥、通道复用及结果交接由外层调度负责。 */
 export class LoopRuntime {
   /** taskId 为键；同任务在本运行时中只允许一个活动运行。 */
-  private active=new Map<string,{runId:string;engine:AgentEngine;stop:()=>Promise<void>;done:Promise<RunSummary>}>();
+  private active=new Map<string,{runId:string;engine:AgentEngine;stop:()=>Promise<void>;done:Promise<RunSummary>;drain?:()=>Promise<void>}>();
   /** 原运行独占插入入口及在途记录；结算前排空，防止停止后的迟到确认写到终态之后。 */
   private injections=new Map<string,{runId:string;pending:Set<Promise<ScopeActiveInputSendReceipt|undefined>>;send:(message:string,images:import('./types').InputImage[],signal:AbortSignal,activeInput?:RunSteerControl['activeInput'])=>Promise<ScopeActiveInputSendReceipt|undefined>}>();
   /** 关闭时先等待启动注册完成，防止启动/关闭竞争泄漏子进程。 */
@@ -190,13 +195,15 @@ export class LoopRuntime {
       const calls=new Map<string,{call:ToolCall;decision:ToolDecision;generation:number;overlappedEffect?:boolean;effect?:boolean}>();
       // 仅声明 Workflow 的运行启用：重叠读取仍记录真实回执，但不能证明副作用结束后的产物。
       const effectsInFlight=new Set<string>();
-      const assertDeliveryReady=()=>{if(effectsInFlight.size)fail('WORKFLOW_EFFECT_PENDING','仍有未结束的副作用，不能准备交付；结束后须重新读取并验证')};
+      const assertDeliveryReady=()=>{controlledFile?.assertVerified();if(effectsInFlight.size)fail('WORKFLOW_EFFECT_PENDING','仍有未结束的副作用，不能准备交付；结束后须重新读取并验证')};
       const identity={workspaceId:task.workspaceId,taskId:task.taskId,runId};
       let artifactCapture:RunArtifactCapture|undefined;
       let checkpointTools:RunMemberCheckpoint|undefined;
       let validation:RunValidation|undefined;
-      const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{identity,artifacts:()=>artifactCapture?.refs()??[],...(validationRequired?{validations:{records:()=>validation?.records()??[],verifyCurrent:async records=>{if(!validation)fail('VALIDATION_UNAVAILABLE','本轮验证端口尚未就绪');await validation.verifyCurrent(records)}}}:{}),...(workflows.length?{workflow:{bindings:workflows,task:{goal:task.goal,acceptance:task.acceptance},identity},assertDeliveryReady}:{})});
+      let controlledFile:RunControlledFile|undefined;
+      const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{identity,assertDeliveryReady,artifacts:()=>artifactCapture?.refs()??[],...(validationRequired?{validations:{records:()=>validation?.records()??[],verifyCurrent:async records=>{if(!validation)fail('VALIDATION_UNAVAILABLE','本轮验证端口尚未就绪');await validation.verifyCurrent(records)}}}:{}),...(workflows.length?{workflow:{bindings:workflows,task:{goal:task.goal,acceptance:task.acceptance},identity}}:{})});
       const emit=async(event:EngineEvent,trustedArtifact=false)=>{
+        if(event.type==='tool.allowed'&&event.data.name===controlledFileWriteToolName&&!trustedArtifact)fail('CONTROLLED_FILE_AUTHORIZATION','受控写授权只能由本轮策略可靠保存');
         if(event.type==='engine.status'&&event.data.activeInput!==undefined&&!trustedArtifact)throw Error('目标补充身份只能由可信插入端口保存');
         if(['artifact.baseline_captured','task.checkpoint_requested','validation.checked'].includes(event.type)&&!trustedArtifact)throw Error('产物、JSON 验证与检查点只能由本轮可信端口保存');
         if(event.type==='tool.finished'){
@@ -212,6 +219,7 @@ export class LoopRuntime {
         artifactCapture?.observed(saved);
         checkpointTools?.observed(saved);
         validation?.observed(saved);
+        controlledFile?.observed(saved.type,saved.data.id,saved.data.isError===true);
         if(event.type==='session.bound'&&typeof event.data.sessionFile==='string')boundSessionFile=event.data.sessionFile;
         if(event.type==='tool.finished'&&event.data.receipt){
           const known=calls.get(String(event.data.id))!;
@@ -252,6 +260,9 @@ export class LoopRuntime {
         save:async value=>{await emit({type:'validation.checked',data:{validation:value}},true)},
       });
       let finishing=false;
+      if(member&&this.options.controlledFiles)controlledFile=new RunControlledFile(member.binding,this.options.controlledFiles,id=>{
+        if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))fail('CONTROLLED_FILE_CALL','受控写已停止、未获准或有其他在途工具');
+      });
       const injection={runId,pending:new Set<Promise<ScopeActiveInputSendReceipt|undefined>>(),send:async(message:string,images:import('./types').InputImage[],signal:AbortSignal,activeInput?:RunSteerControl['activeInput'])=>{
         const assertReady=()=>{
           if(stopping||this.closing||signal.aborted)fail('QUEUE_INSERT_STOPPED','当前运行已停止插入，原消息仍保留在队列');
@@ -280,7 +291,7 @@ export class LoopRuntime {
       await emit({type:'run.started',data:{task,message,engine:engine.kind,resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[],...(workflows.length?{workflowContracts:workflows}:{}),...(memberResume?{memberResume:{checkpointId:memberResume.checkpointId,runId:memberResume.runId}}:{}),...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),...(member?{memberBinding:member.binding,nativeSessionId:member.session.nativeSessionId}:{}),...(fresh?{freshMain:{nativeSessionId,excludedRunIds}}:{})}});
       await taskTools.invalidate('新一轮执行需要重新核实产物与证据');
       const stop=async()=>{
-        if(stopping)return;stopping=true;artifactCapture?.stop();checkpointTools?.stop();validation?.stop();
+        if(stopping)return;stopping=true;artifactCapture?.stop();checkpointTools?.stop();validation?.stop();controlledFile?.stop();
         try{await emit({type:'run.stop_requested',data:{}})}catch(error){stopFailure=error}
         // 记录失败不能阻止实际 abort；失败事实在收尾按 interrupted 保留，不把无日志停止写成正常求助。
         try{await engine.stop()}catch(error){stopFailure??=error}
@@ -293,11 +304,12 @@ export class LoopRuntime {
         let failure:unknown;
         try{
           if(control?.signal.aborted)await stop();
-          if(!stopping)await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
+          if(!stopping)await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,controlledFileTools:controlledFile,assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
             call=structuredClone(call);
             if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
             // 验证、采集与停泊先同步预占，再进入策略；短读锁不会绕过求助/检查点的本轮结束门闩。
-            const validationReason=validation?.guard(call.name,call.id,call.input,[...activeCalls])??(!validation&&call.name===validationToolName?'本轮未提供冻结要求的 JSON 产物验证工具':undefined);
+            const controlledReason=controlledFile?.guard(call.name,call.id,call.input,[...activeCalls])??(!controlledFile&&call.name===controlledFileWriteToolName?'本轮未提供受控文件工具':undefined);
+            const validationReason=controlledReason??validation?.guard(call.name,call.id,call.input,[...activeCalls])??(!validation&&call.name===validationToolName?'本轮未提供冻结要求的 JSON 产物验证工具':undefined);
             const checkpointReason=validationReason??checkpointTools?.guard(call.name,call.id,call.input,[...activeCalls])??(!checkpointTools&&call.name===memberCheckpointToolName?'本任务最多一次检查点和一次续执行，本轮不能再申请停泊':undefined);
             const artifactReason=checkpointReason??artifactCapture?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactCapture&&call.name===artifactCaptureToolName?'本轮未提供成员文件基线采集能力':undefined);
             const helpReason=artifactReason??memberHelpTools?.guard(call.name,call.id,call.input,[...activeCalls])??(!memberHelpTools&&call.name==='cbim_task_help'?'仅正式执行成员可提交求助':undefined);
@@ -326,11 +338,12 @@ export class LoopRuntime {
               try{await taskTools.invalidate('即将执行可能改变产物的操作，需要重新验证',planVersion)}catch(error){const code=(error as {code?:string})?.code;decision={...decision,allow:false,reason:(code?.startsWith('WORKFLOW_')?code+': ':'')+(error instanceof Error?error.message:String(error))}}
             }
             calls.set(call.id,{...calls.get(call.id)!,call,decision,generation:taskTools.generation});
-            await emit({type:decision.allow?'tool.allowed':'tool.denied',data:{...call,...decision,...(!decision.allow?{receipt:toolReceipt(identity,call,decision,'denied')}: {})}});
+            const authorization=await emit({type:decision.allow?'tool.allowed':'tool.denied',data:{...call,...decision,...(!decision.allow?{receipt:toolReceipt(identity,call,decision,'denied')}: {})}},true);
             if(stopping&&decision.allow){
               decision={...decision,allow:false,reason:'任务正在停止'};calls.set(call.id,{...calls.get(call.id)!,call,decision,generation:taskTools.generation});
               await emit({type:'tool.denied',data:{...call,...decision,receipt:toolReceipt(identity,call,decision,'denied')}});
             }
+            if(decision.allow)controlledFile?.authorize(call.id,authorization.seq);
             if(!decision.allow)memberHelpTools?.denied(call.id);
             return decision;
           }});
@@ -346,16 +359,23 @@ export class LoopRuntime {
           control?.signal.removeEventListener('abort',abort);
           artifactCapture?.stop();
           checkpointTools?.stop();
-          validation?.stop();
+          validation?.stop();controlledFile?.stop();
           try{await engine.close()}catch(error){failure??=error}
-          await Promise.allSettled([...injection.pending]);
-          failure??=stopFailure;
-          try{
-            if(failure||pendingTools.size)await emit({type:'run.interrupted',data:{error:failure instanceof Error?failure.message:String(failure||'工具结果未确认'),unresolvedTools:[...pendingTools],receipts:[...pendingTools].map(id=>{const item=calls.get(id)!;return toolReceipt(identity,item.call,item.decision,'unknown')})}});
+          // 只重试原收尾屏障，不重试文件写。首次退出未确认保留 active；再次 close 可确认原 child 后完成日志收尾。
+          let draining:Promise<void>|undefined;
+          const drain=()=>draining??=(async()=>{
+            await controlledFile?.drain();
+            await Promise.allSettled([...injection.pending]);
+            failure??=stopFailure;
+            try{
+            const unverifiedControlledCalls=controlledFile?.unverifiedCallIds??[];
+            if(failure||pendingTools.size||unverifiedControlledCalls.length)await emit({type:'run.interrupted',data:{error:failure instanceof Error?failure.message:String(failure||(unverifiedControlledCalls.length?'CONTROLLED_FILE_REVIEW_REQUIRED: 原受控写结果待核实，本轮不能安全交接':'工具结果未确认')),unresolvedTools:[...pendingTools],...(unverifiedControlledCalls.length?{unverifiedControlledCalls}:{}),receipts:[...pendingTools].map(id=>{const item=calls.get(id)!;return toolReceipt(identity,item.call,item.decision,'unknown')})}});
             // close 仍属于本轮生命周期：在排空引擎期间收到停止，不能把已暂存的 completed 写成正常交接。
             else await emit({type:'run.settled',data:{...(stopping&&result?.status==='completed'?{status:'cancelled' as const}:result),acceptance:'not_evaluated'}});
             await journal.flush();
-          }finally{this.active.delete(task.taskId);this.injections.delete(task.taskId);release()}
+            }finally{this.active.delete(task.taskId);this.injections.delete(task.taskId);release()}
+          })().catch(error=>{draining=undefined;throw error});
+          const current=this.active.get(task.taskId);if(current)current.drain=drain;await drain();
         }
         return this.options.storage.read(directory);
       })();
@@ -380,5 +400,5 @@ export class LoopRuntime {
     try{return await pending}finally{inject.pending.delete(pending)}
   }
   /** 禁止新启动，等待在途注册后停止并收束活动运行；逐项失败不会阻止其余资源释放。 */
-  async close(){this.closing=true;await Promise.allSettled([...this.starting]);const active=[...this.active.values()];await Promise.allSettled(active.map(x=>x.stop()));await Promise.allSettled(active.map(x=>x.done))}
+  async close(){this.closing=true;await Promise.allSettled([...this.starting]);const active=[...this.active.values()];await Promise.allSettled(active.map(x=>x.stop()));await Promise.allSettled(active.map(x=>x.done));const drains=await Promise.allSettled([...this.active.values()].map(x=>x.drain?.()));const failed=drains.find(r=>r.status==='rejected');if(failed?.status==='rejected')throw failed.reason}
 }

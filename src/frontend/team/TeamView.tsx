@@ -1,6 +1,6 @@
 /**
- * 作用定位：静态团队架构浏览、知识编辑与人才市场入口，并按静态角色打开只读 Session 履历。
- * 设计原因：历史只作为独立查询面板，不把运行实例或已删除角色混入正式树；编辑与导入交给预览事务，历史读取不授权或恢复执行。
+ * 作用定位：静态团队架构、知识编辑与人才市场入口；独立打开角色 Session 履历和项目岗位登记。
+ * 设计原因：长期岗位、运行实例与静态能力不能混成一棵树；岗位仅登记采纳与状态，编辑和导入交给预览事务，浏览与登记不授权执行。
  */
 import React,{useEffect,useMemo,useState,type ReactNode} from 'react';
 import type {Snapshot,WorkspaceView} from '../../bridge/contracts/workspace';
@@ -9,6 +9,7 @@ import {MarkdownMessage} from '../conversation/MarkdownMessage';
 import {ArchitectureEditor} from '../knowledge/ArchitectureEditor';
 import {WorkspaceResourceTransfer} from '../resources/WorkspaceResourceTransfer';
 import {AgentSessionHistory} from './AgentSessionHistory';
+import {WorkspaceMembers} from './WorkspaceMembers';
 import {availableTeamSkills,buildTeamModel,TEAM_ROOT,visibleTeamNodes} from './team-model';
 import './team-view.css';
 
@@ -22,7 +23,8 @@ export function TeamView({snapshot,workspace,refresh}:{snapshot?:Snapshot;worksp
   const [collapsed,setCollapsed]=useState<Set<string>>(new Set()),[zoom,setZoom]=useState(14);
   const [editor,setEditor]=useState<Editor>(),[transfer,setTransfer]=useState<Transfer>(),[error,setError]=useState('');
   const [history,setHistory]=useState<{workspaceId:string;agentId?:string}>();
-  useEffect(()=>{setChosen(TEAM_ROOT);setSkillId('');setQuery('');setEditor(undefined);setTransfer(undefined);setHistory(undefined);setError('')},[workspace.id]);
+  const [members,setMembers]=useState(false);
+  useEffect(()=>{setChosen(TEAM_ROOT);setSkillId('');setQuery('');setEditor(undefined);setTransfer(undefined);setHistory(undefined);setMembers(false);setError('')},[workspace.id]);
   const node=model.nodes[chosen]??model.nodes[TEAM_ROOT];
   const skills=availableTeamSkills(model,node.id),skill=skills.find(item=>item.id===skillId);
   const visible=visibleTeamNodes(model,query),agents=Object.values(model.nodes).filter(item=>item.kind==='agent');
@@ -45,6 +47,7 @@ export function TeamView({snapshot,workspace,refresh}:{snapshot?:Snapshot;worksp
       {isGroup&&expanded&&<div className="team-tree-children">{item.children.map(branch)}</div>}
     </div>;
   }
+  if(members)return <div className="view-page team-management"><WorkspaceMembers key={JSON.stringify([workspace.id,workspace.instanceId])} workspace={workspace} agents={Object.values(model.nodes).filter(item=>item.kind==='agent'||item.id==='cbim:executor').map(item=>({id:item.id,name:item.name}))} onClose={()=>setMembers(false)}/></div>;
   return <div className="view-page team-management">
     <div className="view-heading"><div><p className="overline">团队 / 静态能力架构</p><h1>团队组织架构</h1><p>定义团队成员、职责与共享 Skill。节点可查看独立 Session 履历，动态派工仍在会话任务图中。</p></div><span className="subtle-badge">{agents.length} 位自定义成员</span></div>
     <div className="team-toolbar">
@@ -52,6 +55,7 @@ export function TeamView({snapshot,workspace,refresh}:{snapshot?:Snapshot;worksp
       <button disabled={!canEdit} onClick={()=>setEditor({kind:'agent',parentId:newAgentParent})}><Icon name="plus" size={15}/> 新建 Agent</button>
       <button disabled={!canEdit} onClick={()=>setTransfer({mode:'import',kind:node.kind==='agent'?'skill':undefined,targetParentId:owner})}>从人才市场下载</button>
       <button data-testid="team-history-roles" onClick={()=>setHistory({workspaceId:workspace.id})}>历史角色</button>
+      <button data-testid="team-workspace-members" disabled={workspace.state!=='running'||!workspace.instanceId} onClick={()=>setMembers(true)}>项目岗位</button>
       <details className="team-view-controls"><summary>视图</summary><div><button onClick={()=>setCollapsed(new Set())}>全部展开</button><button onClick={()=>setCollapsed(new Set(Object.keys(model.nodes)))}>全部折叠</button><button aria-label="缩小组织架构文字" onClick={()=>setZoom(value=>Math.max(12,value-1))}>A−</button><button aria-label="放大组织架构文字" onClick={()=>setZoom(value=>Math.min(20,value+1))}>A+</button></div></details>
     </div>
     {error&&<p role="alert">{error} <button onClick={()=>void reload()}>重试刷新</button></p>}

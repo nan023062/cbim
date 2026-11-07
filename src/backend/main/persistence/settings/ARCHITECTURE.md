@@ -105,6 +105,7 @@ class N_src_backend_main_persistence_settings_llm_profiles_ts_LlmProfiles["LlmPr
   +select()
   +remove()
   +resolve()
+  +configuration()
   +discover()
   +discoverDetails()
   +test()
@@ -115,7 +116,6 @@ class N_src_backend_main_persistence_settings_llm_profiles_ts_LlmProfiles["LlmPr
   -view()
   -change()
   -decrypt()
-  -headers()
 }
 N_src_backend_main_persistence_settings_llm_profiles_ts ..> N_src_backend_main_persistence_settings_llm_profiles_ts_LlmProfiles : 声明
 ```
@@ -128,6 +128,7 @@ class N_src_backend_main_persistence_settings_llm_profiles_ts["llm-profiles.ts"]
   <<module>>
 }
 class N_src_backend_main_persistence_settings_llm_profiles_ts_LlmProfiles["LlmProfiles"] {
+  -headers()
   -request()
 }
 N_src_backend_main_persistence_settings_llm_profiles_ts ..> N_src_backend_main_persistence_settings_llm_profiles_ts_LlmProfiles : 声明
@@ -151,6 +152,8 @@ N_src_backend_main_persistence_settings_llm_profiles_ts ..> N_src_backend_main_p
 # 本机设置持久化边界
 
 `LlmProfiles` 管理供应商和模型配置，凭据通过平台注入的加密接口保存，运行时才解密。`AdmissionSettings` 独立管理全局执行并发配置，不能读取或修改模型凭据。
+
+`configuration(profileId,modelId)` 供岗位登记读取明确选定的公开模型快照，与真实运行的 `resolve` 共用同一纯选型函数。必须给出两个标识，不使用默认选择，不解密、不调用网络；无供应商、缺模型或禁用模型会拒绝。输出只包含实际运行公开 profile 字段，不含 apiKey、encryptedKey、hasKey 或默认选择。配置可读不代表凭据有效或模型可执行；只有原 `resolve` 在选型之后进入解密。
 
 并发设置文件只保存 `version:1` 与 `policy:{revision,maxConcurrentRuns}`。默认 4，允许 1～32；应用在打开工作区前初始化一次，缺文件使用默认值，损坏文件明确失败而不覆盖。`read()` 只读已生效策略，`configure()` 用原版本串行校验，原子写盘成功后同步交给准入器。写入失败保持原限额，版本冲突要求刷新；降低上限不结束现有执行。
 

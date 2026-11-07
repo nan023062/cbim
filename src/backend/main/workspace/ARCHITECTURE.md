@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-本机工作区登记、运行实例与可信桌面静态架构编辑。持锁打开、监听、关闭，知识事务委托 persistence/knowledge；模块维护确认和真人条目同事务，不变更动态任务图。
+本机工作区登记、运行实例与可信桌面静态架构编辑。持锁打开、监听、关闭，知识事务委托 persistence/knowledge；模块维护确认和真人条目同事务，不变更动态任务图。岗位登记与当前差异共用工作区DispatchStore，明确选型仅读公开模型配置；不创建运行实例或任务。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -12,6 +12,7 @@
 | --- | --- |
 | [architecture-service.ts](architecture-service.ts) | 将团队/业务架构表单接到受控知识事务，作为可信桌面的预览与手动提交入口。 |
 | [catalog.ts](catalog.ts) | Catalog：维护本机工作区清单、显示名称、路径身份、并发更新和重新定位。 |
+| [workspace-members.ts](workspace-members.ts) | 将桌面岗位登记、采纳与当前差异查询接到工作区唯一 DispatchStore，公开模型配置由 Main 注入。 |
 | [workspace.ts](workspace.ts) | 管理本机工作区的身份、独占锁、知识监听和维护任务。 |
 
 ## 架构类图
@@ -56,6 +57,68 @@ N_src_backend_main_workspace_catalog_ts ..> N_src_backend_main_workspace_catalog
 ```
 
 直接依赖：[../platform/locking.ts](../platform/locking.ts)、[../platform/paths.ts](../platform/paths.ts)、[../../core/foundation/files.ts](../../core/foundation/files.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)。
+
+### workspace-members.ts
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_workspace_workspace_members_ts["workspace-members.ts"] {
+  <<module>>
+}
+class N_src_backend_main_workspace_workspace_members_ts_WorkspaceMemberModels["WorkspaceMemberModels"] {
+  <<interface>>
+  +configuration()
+}
+N_src_backend_main_workspace_workspace_members_ts ..> N_src_backend_main_workspace_workspace_members_ts_WorkspaceMemberModels : 声明
+class N_src_backend_main_workspace_workspace_members_ts_PreparedMember["PreparedMember"] {
+  <<interface>>
+  +preview
+  +knowledgeRevision
+  +model
+}
+N_src_backend_main_workspace_workspace_members_ts ..> N_src_backend_main_workspace_workspace_members_ts_PreparedMember : 声明
+class N_src_backend_main_workspace_workspace_members_ts_WorkspaceMembers["WorkspaceMembers"] {
+  +list()
+  +get()
+  +preview()
+  +receipt()
+  +commit()
+  -owner
+  -store
+  -models
+  -isCurrent
+  -assert()
+  -identity()
+  -sameWorkspace()
+  -cursor()
+  -member()
+  -checkedReceipt()
+  -capability()
+}
+N_src_backend_main_workspace_workspace_members_ts ..> N_src_backend_main_workspace_workspace_members_ts_WorkspaceMembers : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_workspace_workspace_members_ts["workspace-members.ts"] {
+  <<module>>
+}
+class N_src_backend_main_workspace_workspace_members_ts_WorkspaceMembers["WorkspaceMembers"] {
+  -policy()
+  -prepare()
+  -verifySources()
+  -selectedCapability()
+  -selectedPolicy()
+  -diff()
+}
+N_src_backend_main_workspace_workspace_members_ts ..> N_src_backend_main_workspace_workspace_members_ts_WorkspaceMembers : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)、[../../scheduler-engine/context/dispatch-context.ts](../../scheduler-engine/context/dispatch-context.ts)。
 
 ### workspace.ts
 
@@ -201,6 +264,18 @@ Workspace *-- KernelLock : 打开时持有，关闭时释放
 - 工作区诊断只读展示状态与问题，不提供重启操作。打开流程不修改项目的其他开发工具配置。
 
 知识存储与平台边界分别见 [persistence/knowledge](../persistence/knowledge/ARCHITECTURE.md)、[platform](../platform/ARCHITECTURE.md)。
+
+### 长期岗位登记
+
+`WorkspaceMembers` 与成员派发使用同一 `DispatchStore`，通过单条 `workspaceMemberChanges` 审计派生当前岗位；不另外建立 registry 文件，不创建 AgentInstance、Session、任务图、信封或模型运行。`memberId` 是长期岗位身份；静态 `agentId` 是采纳来源，二者均不等于执行实例身份。岗位的 active/suspended/retired 只表示登记状态，配置尚未接入实际派发，也不修改默认执行者回退。
+
+`preview/commit` 接收明确实例、变更与版本。登记和能力采纳读取实际原则及有效继承 Skill；模型配置使用显式 profileId/modelId 的公开字段，不解密、不探测网络。预览不生成岗位或采纳 ID。提交在 Store 串行回调内重建预览并复验登记游标、basis 及选定来源；知识和模型配置是独立存储，前后读取复验不宣称跨存储原子锁。读取期间关闭或来源变更拒绝新提交。
+
+元信息修改只改明确选择的字段；能力与模型必须分别采纳，相同模型引用的配置刷新不能夹在普通编辑中。能力内容 hash 不包含整库知识 revision，模型 hash 保守包含完整公开配置及名称。暂停和恢复不要求当前来源可用，仍保留实际 currentDiff；退休终态不可修改或复活。
+
+`list` 只给摘要，按初次登记顺序分页，后续页必须绑定同登记游标。`get` 每次重新读取知识与公开模型配置，返回 same/changed/missing/invalid；外部来源变化不推进登记游标，也不覆盖已采纳正文。详情读取前后再次比较登记游标，发生并发变更时明确要求重读。
+
+提交先以完整原请求指纹查 `commandReceipt`，已提交命令即使原实例退役或来源不可用也返回原紧凑回执。冲突不能覆盖；只读 receipt 不调用 transact、知识读取或模型解析。未查到不等于证明未受理；未知响应只核实原命令，不自动换 ID 或重做操作。容量累计计算退休岗位与历史审计，超限拒绝写入而不删历史。
 
 ### 桌面架构编辑
 

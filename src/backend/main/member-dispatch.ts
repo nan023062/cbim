@@ -1,5 +1,5 @@
 /**
- * 作用定位：为已运行工作区装配成员派发、大脑执行及目标审阅的可信日志读取端口。
+ * 作用定位：为已运行工作区装配成员派发、大脑执行、目标审阅及独立岗位登记；岗位与执行共用同一 DispatchStore。
  * 设计原因：派发、审阅及周期额度共用可信日志；Workflow 能力按真实工具与验证端口预检，冻结约定只注入正式成员。JSON 验证以同一安全读取字节判定，交付及审阅复用有界文件复核；密钥留在工厂闭包，只读报告不启动成员。
  */
 import path from 'node:path';
@@ -24,6 +24,7 @@ import {admissionRequestId,acquireExecutionLease,type WorkspaceAdmission} from '
 import type {ScopeBudgetPolicy} from '../core/tasks/scope-budget';
 import {preparedWorkflowContracts} from '../core/tasks/execution-context';
 import {nativeToolNames} from '../core/tools/native-tools';
+import {WorkspaceMembers} from './workspace/workspace-members';
 
 /** 应用对每个活动工作区只调用一次；关闭服务必须早于释放工作区锁。 */
 export function createMemberDispatch(workspace:Workspace,observer?:DispatchObserver){
@@ -34,6 +35,7 @@ export function createMemberDispatch(workspace:Workspace,observer?:DispatchObser
 /**
  * 应用级装配入口，每个工作区仅创建一次。members 须先关闭并结算，之后由 dispatch 关闭共享 store。
  * prepare 固定公开模型参数和凭据，create 不重新读取默认设置；没有已保存模型时拒绝启动。
+ * workspaceMembers 复用此 store 保存独立岗位审计；只调用 configuration 读取公开配置，不进入 prepare/create 或影响派发选择。
  */
 export function createMemberServices(workspace:Workspace,models:LlmProfiles,lease:WorkspaceExecutionLease,observer?:DispatchObserver,admission?:WorkspaceAdmission,budgetPolicy?:()=>ScopeBudgetPolicy){
   workspace.assert();
@@ -95,5 +97,6 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
     },
     inspect:inspectMember,
   });
-  return {dispatch,members};
+  const workspaceMembers=new WorkspaceMembers(workspace,store,models,()=>admission?.isCurrent()??true);
+  return {dispatch,members,workspaceMembers};
 }

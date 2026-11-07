@@ -235,3 +235,6 @@ governance.ts 仅重导 Core 严格纯协议。界面按明确工作区/实例/�
 `chat.ts` 的 `repository_resource` 表示已导入的静态资料，`ChatMaterialImport` 只传选择身份，不含正文或授权证明。目录/文件由原生选择器返回，网络导入和目录分页使用独立 `importId` 关联取消。`repository-connections.ts` 公开现有纯目录页和目标 Schema，供界面严格核对原工作区、共享代际及版本；不暴露网络地址或凭据。
 
 `dispatch.ts` 公开 continuation manifest v1/v2 类型。旧 v1 保持原结构，新来源的 v2 记录导入事实与截取范围；授权版本只是当时记录，不授予重连、安装或执行权。
+# 项目岗位登记数据边界
+
+`workspace-members.ts` 只重导 Core team 的严格 DTO/Schema。五个 `workspace.members.*` IPC 传递明确岗位选择、实例、版本、预览依据及紧凑原命令回执；界面不能提交 actor、能力正文或模型凭据。registry cursor 与任务图/周期游标分开，稳定 memberId 不取代现有 agentInstanceId。当前岗位登记尚未切换实际派发协议。

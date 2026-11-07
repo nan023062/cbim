@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-执行日志、附件快照、派发事务与角色履历。目录首层、URL指针、真实有界网页及授权仓库资料快照分别保存，导入取消与等待受理分离；来源变化不改历史。日志只读完整前缀并报告未完整尾行，损坏不透传原始片段、不截断修复。图/目标/详情同屏障读取，未知操作不自动重放。
+执行日志、附件快照、派发事务与角色履历。目录首层、URL指针、真实有界网页及授权仓库资料快照分别保存，导入取消与等待受理分离；来源变化不改历史。日志只读完整前缀并报告未完整尾行，损坏不透传原始片段、不截断修复。图/目标/详情同屏障读取，未知操作不自动重放。同日志追加岗位审计并派生独立registry游标，原命令可只读核实，不将长期岗位计为运行实例。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -14,7 +14,7 @@
 | [chat-inputs.ts](chat-inputs.ts) | 将用户明确添加的文件、文件夹、链接、网页与链接器定义保存为本机对话输入快照。 |
 | [chat-material-imports.ts](chat-material-imports.ts) | 应用内显式资料导入的取消、工作区归属及真实资源仓库读取入口。 |
 | [chat-source-readers.ts](chat-source-readers.ts) | 桌面明确导入目录、URL 指针和网页时，生成有界文本及真实来源事实。 |
-| [dispatch-store.ts](dispatch-store.ts) | 将成员、独立会话、任务图批次、领取意图和结果信封作为一个工作区事务可靠保存。 |
+| [dispatch-store.ts](dispatch-store.ts) | 将长期岗位审计、执行实例、独立会话、任务图批次、领取意图和结果信封可靠保存到同一工作区日志。 |
 | [run-journal.ts](run-journal.ts) | 本机执行事件日志，顺序追加并 fsync，从记录恢复摘要和未确认工具。 |
 | [run-storage.ts](run-storage.ts) | 将本机运行目录和 RunJournal 装配为大脑及调度共享的存储端口。 |
 
@@ -183,6 +183,7 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore["
   +directory
   +workspaceId
   +read()
+  +commandReceipt()
   +snapshot()
   +delta()
   +sessionRead()
@@ -195,7 +196,6 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore["
   -events
   -scopeViews
   -scopeEvents
-  -transactionSeq
 }
 N_src_backend_main_persistence_tasks_dispatch_store_ts ..> N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore : 声明
 class N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchStore["DispatchStore (外部契约)"] {
@@ -212,6 +212,7 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts["dispatch-store.ts"
   <<module>>
 }
 class N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore["FileDispatchStore"] {
+  -transactionSeq
   -lastHash
   -initialization
   -tail
@@ -235,7 +236,7 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchSt
 N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchStore <|.. N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore
 ```
 
-直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/tasks/graph-reducer.ts](../../../core/tasks/graph-reducer.ts)、[../../../core/tasks/dispatch-invariants.ts](../../../core/tasks/dispatch-invariants.ts)、[../../../core/tasks/dispatch-scope-invariants.ts](../../../core/tasks/dispatch-scope-invariants.ts)、[../../../core/tasks/dispatch-storage.ts](../../../core/tasks/dispatch-storage.ts)、[../../../core/tasks/graph-types.ts](../../../core/tasks/graph-types.ts)、[../../../core/tasks/scope-view.ts](../../../core/tasks/scope-view.ts)、[../../../core/tasks/dispatch-scope.ts](../../../core/tasks/dispatch-scope.ts)。
+直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/tasks/graph-reducer.ts](../../../core/tasks/graph-reducer.ts)、[../../../core/tasks/dispatch-invariants.ts](../../../core/tasks/dispatch-invariants.ts)、[../../../core/tasks/dispatch-scope-invariants.ts](../../../core/tasks/dispatch-scope-invariants.ts)、[../../../core/tasks/workspace-member-invariants.ts](../../../core/tasks/workspace-member-invariants.ts)、[../../../core/tasks/dispatch-storage.ts](../../../core/tasks/dispatch-storage.ts)、[../../../core/tasks/graph-types.ts](../../../core/tasks/graph-types.ts)、[../../../core/tasks/scope-view.ts](../../../core/tasks/scope-view.ts)、[../../../core/tasks/dispatch-scope.ts](../../../core/tasks/dispatch-scope.ts)。
 
 ### run-journal.ts
 
@@ -475,3 +476,11 @@ interface DispatchStore {
 ### 运行日志的只读完整性诊断
 
 `RunJournal.read` 仅解析完整行并报告 `logIntegrity.partialTail`，保留未完成尾行的原始字节、不截断或修复。零字节文件返回 `RUN_LOG_EMPTY`；结构、绑定或 JSON 损坏返回 `RUN_LOG_INVALID`，错误不包含原始片段。文件系统错误保留系统码，缺失日志不能解释为未执行。正常读取依旧重建可信回执、未知工具与终态，完成前缀不代表尾行也完整。
+
+### 岗位登记沿用同一日志与提交屏障
+
+`FileDispatchStore` 使用原 `dispatch.jsonl` 追加单条 `workspaceMemberChanges`，不再保存第二份权威岗位文件。`projectWorkspaceMemberMutation` 核验不可变审计后派生当前岗位及独立登记游标；登记 mutation 只能包含审计和回执，不能同事务修改任何执行数据。正文只保存在审计 `next`，当前岗位是内存投影，回执只含紧凑引用。没有图或周期变化时，其既有增量游标不推进。
+
+加载和新提交使用同一领域校验；即使重算外层日志校验和，伪造版本、源快照指纹、actor、命令、回执或直接岗位头仍拒绝。旧 v1 日志没有登记字段时按空数组/null 恢复，不写迁移记录、不修改旧字节。正常重开恢复相同岗位 ID、原采纳、全部审计与登记游标。
+
+`commandReceipt(commandId)` 从已恢复的命令索引等待提交屏障后返回深拷贝，不调用事务回调、知识或模型端口；未找到不是“肯定未受理”的证明。岗位命令仍遵循先查原指纹的幂等规则。fsync 或写入结果未确认时封闭当前 Store，不能返回过时投影；重新打开只按原完整日志核实，不自动重放登记。

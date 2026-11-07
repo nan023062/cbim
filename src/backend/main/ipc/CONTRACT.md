@@ -1,3 +1,9 @@
+### 工作区岗位登记
+
+`workspace.members.list/get/preview/commit/receipt` 仅为桌面提供岗位摘要、实时差异、预览、明确提交与原命令查询。前四项绑定当前 workspaceId/instanceId；receipt 只带 workspaceId/commandId，允许读旧实例回执。提交的 actor 由可信主 Frame 路由固定为 local_desktop/explicit_submit，请求不能自报模型快照、能力正文或签署者。
+
+列表和详情不创建运行；提交仅在原 DispatchStore 追加岗位审计。未知通信、存储错误或命令冲突须保留原命令查询；只有首次明确的输入、身份、版本、basis、来源、无变化、退休或容量拒绝能确认没有本次提交。回执不存在仍是未知，不授权自动换 ID。模型工具没有这五个入口，岗位 active 不是执行或审批许可。
+
 ### 单模块知识治理
 
 `governance.list/register/observe/propose/decide/apply/receipt/unaccepted` 显式绑定工作区；写动作还绑定实例、稳定命令及对应版本。模型没有此工具族。主 Frame 守卫核实发送方，register/decide 在后端注入 `local_desktop / explicit_submit`；保存决定和实施知识是两个独立动作，无额外模型、业务执行或权限提升。

@@ -1,6 +1,6 @@
 /**
- * 作用定位：将成员、独立会话、任务图批次、领取意图和结果信封作为一个工作区事务可靠保存。
- * 设计原因：追加日志是唯一权威记录；fsync 后才发布投影。独立周期摘要游标从同一日志重建，不推进任务图证据游标；同屏读取共享提交屏障，旧无范围记录不迁移。
+ * 作用定位：将长期岗位审计、执行实例、独立会话、任务图批次、领取意图和结果信封可靠保存到同一工作区日志。
+ * 设计原因：追加日志是唯一权威记录；fsync 后才发布投影。岗位头及独立登记游标只由原审计重建，岗位事务不能夹带执行变化；周期摘要仍有自己的游标，旧记录不迁移改写。
  * 职责边界：应用须先持有工作区唯一写入锁；本类串行化该实例内的事务，不启动大脑、不消费 outbox。
  */
 import fs from 'node:fs/promises';
@@ -10,6 +10,7 @@ import {hash} from '../../../core/foundation/serialization';
 import {applyGraphBatch, readGraphDelta} from '../../../core/tasks/graph-reducer';
 import {validateDispatchExecution} from '../../../core/tasks/dispatch-invariants';
 import {validateDispatchScopes} from '../../../core/tasks/dispatch-scope-invariants';
+import {projectWorkspaceMemberMutation} from '../../../core/tasks/workspace-member-invariants';
 import type {DispatchCommand, DispatchMutation, DispatchObserver, DispatchState, DispatchStore} from '../../../core/tasks/dispatch-storage';
 import type {AgentRef, GraphCursor, GraphDelta, GraphEventBatch, GraphIdentity, GraphSnapshot} from '../../../core/tasks/graph-types';
 import {applyScopeBatch,dispatchSessionReadInput,emptyScopeSnapshot,readScopeDelta,readScopeDetail,summarizeScope,scopeViewHistoryLimit,type DispatchSessionReadInput,type DispatchSessionRead,type ScopeSnapshot,type ScopeEventBatch} from '../../../core/tasks/scope-view';
@@ -59,7 +60,7 @@ export class FileDispatchStore implements DispatchStore {
   constructor(readonly directory:string,readonly workspaceId:string,private readonly observer?:DispatchObserver){
     valid(text(workspaceId),'存储必须绑定明确工作区');
     this.file=path.join(directory,'dispatch.jsonl');
-    this.state={workspaceId,members:[],sessions:[],graphs:[],outbox:[],runs:[],scopes:[]};
+    this.state={workspaceId,members:[],sessions:[],graphs:[],outbox:[],runs:[],scopes:[],workspaceMembers:[],workspaceMemberChanges:[],registryCursor:null};
   }
 
   private available(){
@@ -83,6 +84,11 @@ export class FileDispatchStore implements DispatchStore {
 
   /** 内部管理快照；返回深拷贝，不允许调用方改写权威内存状态。 */
   async read():Promise<DispatchState>{this.available();await this.init();await this.tail;if(this.storageFailure)throw this.storageFailure;return clone(this.state)}
+  /** 原命令查询只读日志恢复出的索引；不触发新事务，也不按当前知识或配置重算历史结果。 */
+  async commandReceipt(commandId:string):Promise<{fingerprint:string;receipt:unknown}|undefined>{
+    this.available();valid(text(commandId),'查询需要原命令身份');await this.init();await this.tail;this.available();
+    return clone(this.commands.get(commandId));
+  }
   /** 只返回明确主会话的图，不暴露全工作区邮箱或其他会话正文。 */
   async snapshot(identity:GraphIdentity):Promise<GraphSnapshot>{this.available();await this.init();await this.tail;if(this.storageFailure)throw this.storageFailure;return clone(this.graph(identity))}
   /** 无变化时只生成游标响应；不重新打开日志或复制全部工作区状态。 */
@@ -168,11 +174,12 @@ export class FileDispatchStore implements DispatchStore {
   /** 验证整次 mutation 后才返回候选投影；图、成员会话与信封引用在同一个候选状态内核对。 */
   private project(mutation:DispatchMutation,command:DispatchCommand):DispatchState{
     valid(mutation&&typeof mutation==='object','无效调度事务');
+    const registry=projectWorkspaceMemberMutation(this.state,mutation,command);
     const members=mutation.members??[],sessions=mutation.sessions??[],messages=mutation.messages??[],runs=mutation.runs??[],scopes=mutation.scopes??[];
     valid(Array.isArray(members)&&Array.isArray(sessions)&&Array.isArray(messages)&&Array.isArray(runs)&&Array.isArray(scopes),'事务集合必须是数组');
     unique(members,m=>m.agentInstanceId,'成员');unique(sessions,s=>s.agentSessionId,'会话');unique(messages,m=>m.messageId,'消息');unique(runs,r=>r.binding?.runId,'运行');unique(scopes,s=>s.scopeId,'周期');
     // 旧 v1 日志没有 runs；按空集合投影且保留原校验和，不通过迁移重写历史。
-    const next:DispatchState={workspaceId:this.workspaceId,members:upsert(this.state.members,members,m=>m.agentInstanceId),sessions:upsert(this.state.sessions,sessions,s=>s.agentSessionId),graphs:[...this.state.graphs],outbox:upsert(this.state.outbox,messages,m=>m.messageId),runs:upsert(this.state.runs??[],runs,r=>r.binding.runId),scopes:upsert(this.state.scopes??[],scopes,s=>s.scopeId)};
+    const next:DispatchState={workspaceId:this.workspaceId,members:upsert(this.state.members,members,m=>m.agentInstanceId),sessions:upsert(this.state.sessions,sessions,s=>s.agentSessionId),graphs:[...this.state.graphs],outbox:upsert(this.state.outbox,messages,m=>m.messageId),runs:upsert(this.state.runs??[],runs,r=>r.binding.runId),scopes:upsert(this.state.scopes??[],scopes,s=>s.scopeId),...registry};
     unique(next.members,m=>JSON.stringify(m.agentId==='cbim:main'?['main',m.mainRootSessionId??null]:m.executionScopeId?['execution',m.executionScopeId,m.executionTaskId]:['legacy',m.agentId]),'主会话、周期任务或旧角色实例');unique(next.sessions,s=>s.agentSessionId,'会话');unique(next.outbox,m=>m.messageId,'消息');
     for(const member of members){
       valid(member.workspaceId===this.workspaceId&&text(member.teamId)&&text(member.agentId),'成员必须属于当前工作区的明确团队角色');

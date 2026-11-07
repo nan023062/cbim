@@ -526,3 +526,11 @@ Progress 保存前独立冻结验证记录，原 wire 证明必须能由这些�
 `continuationAttachmentManifestV1Schema` 保持原 file/text/image/reference 字段与限制。只有包含新来源才使用 v2，允许与旧 file 项混合；新项分别标记 `directory_listing`、`url_reference`、`web_excerpt`、`resource_excerpt`，包含保存正文指纹、字节数及导入时来源摘要，不包含原目录绝对路径、图片字节、正文或网络令牌。仓库截取指纹与完整正文指纹分开；未截取时必须一致。所有版本仍限制 12 项、有序唯一 IDs、原图片总量及 512 KiB 展开正文；Schema 不补默认值、不规范化改写来源。
 
 公开补充请求仍只能提供 message/attachmentIds，不能提供 proof/manifest/path/权限证明。Main 从同次受管快照读取生成展开正文和清单；`RunInputSource.attachmentManifestHash` 继续绑定完整原清单，无新增执行权。ScopeContinuation 及派发持久不变量复用同一严格版本联合，接受后的清单、原等待和原输入完全冻结；重复原命令返回原事实，不重新读取远程来源、不升级旧回执。新资料不绕过预算、停止、待重规划、输入版本或人工验收约束。
+
+### 长期岗位的独立登记事务
+
+`DispatchState.workspaceMembers` 是岗位审计的当前投影，不能与 `members` 执行实例互换；`workspaceMemberChanges` 保存完整不可变 `next`，`registryCursor` 独立于图和周期游标。旧日志缺省按空登记投影，不能从旧角色或执行历史猜测岗位。
+
+`workspace-member-invariants.ts` 在真实提交和重放中只允许每次追加一条岗位审计，核对工作区、独立游标 CAS、原岗位版本/指纹、明确输入、状态迁移、完整快照哈希、本机提交 actor、命令指纹及派生回执。不能直接 upsert 岗位头或游标，不能夹带执行实例、会话、图、消息、运行或周期字段，即使是空集合也拒绝。岗位原审计保留，当前头只由完整合法前缀派生；新登记不改变知识、图或运行事实。
+
+`DispatchStore.commandReceipt` 是必需的内部只读端口，返回原命令的 fingerprint 与 receipt 深拷贝，等待同一提交屏障但不运行 prepare 或新增事务。新岗位命令固定 `workspace-member-` 命名空间；相同 ID 异参拒绝，原回执查询和同请求重送不能读取新来源后覆盖旧采纳或重建身份。容量错误拒绝写入，未知存储结果保留原命令供重新打开后核实。

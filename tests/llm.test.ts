@@ -25,6 +25,18 @@ test('no plaintext fallback and decrypt failure does not expose cipher text',asy
   const saved=await new LlmProfiles(filename,cipher).save({profile:{...profile(),auth:'api-key'},apiKey:'private'});
   await expect(new LlmProfiles(filename,{...cipher,decrypt:()=>{throw Error('private')}}).resolve(saved.selectedId)).rejects.toThrow('无法解密');
 });
+test('explicit registration configuration shares resolved public fields without decryption or default fallback',async()=>{
+  let decryptions=0;const encryption={...cipher,decrypt:(value:string)=>{decryptions++;return cipher.decrypt(value)}};
+  const {service,filename}=await fixture(encryption),p={...profile(),auth:'api-key' as const,models:[{...profile().models[0],vision:true,thinkingLevel:'low' as const,workingContextWindow:16000,compactionPercent:70,pricing:{input:1,output:2,cacheRead:0.2,cacheWrite:0.3}},profile().models[1]]};
+  const saved=await service.save({profile:p,apiKey:'private-registration-test-key'}),id=saved.selectedId!;
+  const snapshot=await service.configuration(id,'model-a');expect(decryptions).toBe(0);
+  expect(snapshot).toEqual((await service.resolve(id,'model-a')).profile);expect(decryptions).toBe(1);
+  const unavailable=new LlmProfiles(filename,{...cipher,available:()=>false,decrypt:()=>{throw Error('must not decrypt')}});
+  expect(await unavailable.configuration(id,'model-a')).toEqual(snapshot);
+  expect(JSON.stringify(snapshot)).not.toMatch(/private-registration-test-key|apiKey|encryptedKey|hasKey|selectedId/);
+  await expect(service.configuration('', 'model-a')).rejects.toMatchObject({code:'LLM_REQUIRED'});
+  await expect(service.configuration(id,'model-b')).rejects.toMatchObject({code:'LLM_MODEL'});
+});
 test('selection and concurrent saves preserve providers',async()=>{
   const {service}=await fixture();await Promise.all([service.save({profile:profile()}),service.save({profile:{...profile(),name:'second'}})]);
   const s=await service.list();expect(s.profiles).toHaveLength(2);await service.select(s.profiles[1].id);expect((await service.resolve()).profile.name).toBe('second');

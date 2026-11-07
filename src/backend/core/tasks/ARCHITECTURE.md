@@ -19,7 +19,7 @@
 | [dispatch-invariants.ts](dispatch-invariants.ts) | 在派发事务提交和日志恢复时校验成员执行、任务图和邮箱的联合约束。 |
 | [dispatch-scope-invariants.ts](dispatch-scope-invariants.ts) | 校验调度周期、等待检查点、运行中补充和显式接续的持久状态及原子变更，供派发存储提交与重放共用。 |
 | [dispatch-scope.ts](dispatch-scope.ts) | 定义一次用户任务的调度周期，与长期主会话和单次模型运行区分。 |
-| [dispatch-storage.ts](dispatch-storage.ts) | 定义工作区成员注册、会话绑定及任务派发的原子持久化端口。 |
+| [dispatch-storage.ts](dispatch-storage.ts) | 定义工作区长期岗位登记、执行实例、会话绑定及任务派发的原子持久化端口。 |
 | [execution-context.ts](execution-context.ts) | 成员业务执行所需的可持久化知识快照，以及存储与调度共用的完整性校验。 |
 | [execution-report.ts](execution-report.ts) | 成员执行异常核实的只读报告协议，供调度服务与界面共享。 |
 | [fresh-context.ts](fresh-context.ts) | 定义显式新周期共用的原生上下文隔离边界。 |
@@ -77,6 +77,7 @@
 | [validation.ts](validation.ts) | JSON 产物验证工具、不可变检查事实及 Workflow 精确出口的叶子契约。 |
 | [workflow-evidence.ts](workflow-evidence.ts) | 核实可选 Workflow 的计划前置、工具回执及精确 JSON 文件结构出口，供运行时与调度结算共用。 |
 | [workflow-selection.ts](workflow-selection.ts) | 目标分配、派发和任务历史共用的 Workflow 选择叶子协议，不依赖知识或调度实现。 |
+| [workspace-member-invariants.ts](workspace-member-invariants.ts) | 将岗位登记的单条审计规则接到工作区 DispatchStore 的提交与重放边界。 |
 
 ## 架构类图
 
@@ -475,6 +476,9 @@ class N_src_backend_core_tasks_dispatch_storage_ts_DispatchState["DispatchState"
   +outbox
   +runs
   +scopes
+  +workspaceMembers
+  +workspaceMemberChanges
+  +registryCursor
 }
 N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_dispatch_storage_ts_DispatchState : 声明
 class N_src_backend_core_tasks_dispatch_storage_ts_DispatchCommand["DispatchCommand"] {
@@ -498,6 +502,7 @@ class N_src_backend_core_tasks_dispatch_storage_ts_DispatchMutation["DispatchMut
   +messages
   +runs
   +scopes
+  +workspaceMemberChanges
   +receipt
 }
 N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_dispatch_storage_ts_DispatchMutation : 声明
@@ -511,6 +516,7 @@ N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_dispat
 class N_src_backend_core_tasks_dispatch_storage_ts_DispatchStore["DispatchStore"] {
   <<interface>>
   +read()
+  +commandReceipt()
   +transact()
   +snapshot()
   +delta()
@@ -520,7 +526,7 @@ class N_src_backend_core_tasks_dispatch_storage_ts_DispatchStore["DispatchStore"
 N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_dispatch_storage_ts_DispatchStore : 声明
 ```
 
-直接依赖：[../team/agent-types.ts](../team/agent-types.ts)、[graph-types.ts](graph-types.ts)、[dispatch-execution.ts](dispatch-execution.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[scope-view.ts](scope-view.ts)、[member-checkpoint.ts](member-checkpoint.ts)。
+直接依赖：[../team/agent-types.ts](../team/agent-types.ts)、[graph-types.ts](graph-types.ts)、[dispatch-execution.ts](dispatch-execution.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[scope-view.ts](scope-view.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[../team/workspace-member.ts](../team/workspace-member.ts)。
 
 ### execution-context.ts
 
@@ -2618,6 +2624,18 @@ N_src_backend_core_tasks_workflow_selection_ts ..> N_src_backend_core_tasks_work
 
 直接依赖：[../foundation/errors.ts](../foundation/errors.ts)。
 
+### workspace-member-invariants.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_workspace_member_invariants_ts["workspace-member-invariants.ts"] {
+  <<module>>
+  +projectWorkspaceMemberMutation()
+}
+```
+
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../team/workspace-member-rules.ts](../team/workspace-member-rules.ts)、[../team/workspace-member.ts](../team/workspace-member.ts)、[dispatch-storage.ts](dispatch-storage.ts)。
+
 ### 本目录调用边界
 
 ```mermaid
@@ -3967,6 +3985,17 @@ N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_valid
 N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_validation_evidence_ts : 导入依赖
 ```
 
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_workspace_member_invariants_ts["workspace-member-invariants.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_workspace_member_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
+```
+
 
 ## 子目录导航
 
@@ -4508,3 +4537,11 @@ Progress 保存前独立冻结验证记录，原 wire 证明必须能由这些�
 `continuationAttachmentManifestV1Schema` 保持原 file/text/image/reference 字段与限制。只有包含新来源才使用 v2，允许与旧 file 项混合；新项分别标记 `directory_listing`、`url_reference`、`web_excerpt`、`resource_excerpt`，包含保存正文指纹、字节数及导入时来源摘要，不包含原目录绝对路径、图片字节、正文或网络令牌。仓库截取指纹与完整正文指纹分开；未截取时必须一致。所有版本仍限制 12 项、有序唯一 IDs、原图片总量及 512 KiB 展开正文；Schema 不补默认值、不规范化改写来源。
 
 公开补充请求仍只能提供 message/attachmentIds，不能提供 proof/manifest/path/权限证明。Main 从同次受管快照读取生成展开正文和清单；`RunInputSource.attachmentManifestHash` 继续绑定完整原清单，无新增执行权。ScopeContinuation 及派发持久不变量复用同一严格版本联合，接受后的清单、原等待和原输入完全冻结；重复原命令返回原事实，不重新读取远程来源、不升级旧回执。新资料不绕过预算、停止、待重规划、输入版本或人工验收约束。
+
+### 长期岗位的独立登记事务
+
+`DispatchState.workspaceMembers` 是岗位审计的当前投影，不能与 `members` 执行实例互换；`workspaceMemberChanges` 保存完整不可变 `next`，`registryCursor` 独立于图和周期游标。旧日志缺省按空登记投影，不能从旧角色或执行历史猜测岗位。
+
+`workspace-member-invariants.ts` 在真实提交和重放中只允许每次追加一条岗位审计，核对工作区、独立游标 CAS、原岗位版本/指纹、明确输入、状态迁移、完整快照哈希、本机提交 actor、命令指纹及派生回执。不能直接 upsert 岗位头或游标，不能夹带执行实例、会话、图、消息、运行或周期字段，即使是空集合也拒绝。岗位原审计保留，当前头只由完整合法前缀派生；新登记不改变知识、图或运行事实。
+
+`DispatchStore.commandReceipt` 是必需的内部只读端口，返回原命令的 fingerprint 与 receipt 深拷贝，等待同一提交屏障但不运行 prepare 或新增事务。新岗位命令固定 `workspace-member-` 命名空间；相同 ID 异参拒绝，原回执查询和同请求重送不能读取新来源后覆盖旧采纳或重建身份。容量错误拒绝写入，未知存储结果保留原命令供重新打开后核实。

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-工作区唯一的静态 Team/组/Agent 图及角色维护、继承与人才复用。Agent 节点可按 Session 查看只读执行履历；历史角色独立导航，删定义不回填团队树。详情按需分页，不轮询全量历史或启动执行。
+工作区唯一的静态 Team/组/Agent 图及角色维护、继承与人才复用。Agent 节点可按 Session 查看只读执行履历；历史角色独立导航，删定义不回填团队树。详情按需分页，不轮询全量历史或启动执行。项目岗位在独立面板登记、采纳和暂停退休；预览后固定命令，未知只查询原回执，不启动模型。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -15,8 +15,13 @@
 | [AgentSessionHistory.tsx](AgentSessionHistory.tsx) | 在静态 Agent 下浏览长期 Session 履历，按独立会话和运行展示公开消息、工具过程与计划证据。 |
 | [team-model.ts](team-model.ts) | 从工作区知识快照构建静态 Team、分组、Agent 与 Skill 视图模型。 |
 | [team-view.css](team-view.css) | 对应界面的布局与视觉样式。 |
-| [TeamView.tsx](TeamView.tsx) | 静态团队架构浏览、知识编辑与人才市场入口，并按静态角色打开只读 Session 履历。 |
+| [TeamView.tsx](TeamView.tsx) | 静态团队架构、知识编辑与人才市场入口；独立打开角色 Session 履历和项目岗位登记。 |
 | [useAgentHistory.ts](useAgentHistory.ts) | 为只读角色历史面板提供按需分页与单轮公开事件读取。 |
+| [workspace-member-state.ts](workspace-member-state.ts) | 项目岗位页面的严格回包核对与持久提交控制器；跨同工作区页面共享未决命令。 |
+| [workspace-members.css](workspace-members.css) | 对应界面的布局与视觉样式。 |
+| [WorkspaceMemberDetail.tsx](WorkspaceMemberDetail.tsx) | 只读展示项目岗位的稳定身份、采纳内容与本次核实的外部差异。 |
+| [WorkspaceMemberForm.tsx](WorkspaceMemberForm.tsx) | 项目岗位登记、元信息编辑、明确采纳及状态变更的表单。 |
+| [WorkspaceMembers.tsx](WorkspaceMembers.tsx) | 团队页面的项目岗位登记面板，浏览稳定岗位、采纳差异和显式预览/提交结果。 |
 
 ## 架构类图
 
@@ -185,7 +190,7 @@ class N_src_frontend_team_TeamView_tsx_Transfer["Transfer"] {
 N_src_frontend_team_TeamView_tsx ..> N_src_frontend_team_TeamView_tsx_Transfer : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../conversation/MarkdownMessage.tsx](../conversation/MarkdownMessage.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[AgentSessionHistory.tsx](AgentSessionHistory.tsx)、[team-model.ts](team-model.ts)、[team-view.css](team-view.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../conversation/MarkdownMessage.tsx](../conversation/MarkdownMessage.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[AgentSessionHistory.tsx](AgentSessionHistory.tsx)、[WorkspaceMembers.tsx](WorkspaceMembers.tsx)、[team-model.ts](team-model.ts)、[team-view.css](team-view.css)。
 
 ### useAgentHistory.ts
 
@@ -211,6 +216,187 @@ N_src_frontend_team_useAgentHistory_ts ..> N_src_frontend_team_useAgentHistory_t
 ```
 
 直接依赖：[../../bridge/contracts/agent-history.ts](../../bridge/contracts/agent-history.ts)、[../tasks/member-event-state.ts](../tasks/member-event-state.ts)、[agent-history-state.ts](agent-history-state.ts)。
+
+### workspace-member-state.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_team_workspace_member_state_ts["workspace-member-state.ts"] {
+  <<module>>
+  +checkedWorkspaceMemberList()
+  +checkedWorkspaceMemberDetail()
+  +checkedWorkspaceMemberPreview()
+  +checkedWorkspaceMemberReceipt()
+  +workspaceMemberPreRejected()
+}
+```
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_frontend_team_workspace_member_state_ts["workspace-member-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_team_workspace_member_state_ts_WorkspaceMemberAttempt["WorkspaceMemberAttempt"] {
+  <<interface>>
+  +request
+  +phase
+  +uncertain
+  +receipt
+  +error
+}
+N_src_frontend_team_workspace_member_state_ts ..> N_src_frontend_team_workspace_member_state_ts_WorkspaceMemberAttempt : 声明
+class N_src_frontend_team_workspace_member_state_ts_WorkspaceMemberCommandState["WorkspaceMemberCommandState"] {
+  <<interface>>
+  +records
+  +error
+}
+N_src_frontend_team_workspace_member_state_ts ..> N_src_frontend_team_workspace_member_state_ts_WorkspaceMemberCommandState : 声明
+class N_src_frontend_team_workspace_member_state_ts_WorkspaceMemberCommandPorts["WorkspaceMemberCommandPorts"] {
+  <<interface>>
+  +storage
+  +commit
+  +lookup
+  +uuid
+}
+N_src_frontend_team_workspace_member_state_ts ..> N_src_frontend_team_workspace_member_state_ts_WorkspaceMemberCommandPorts : 声明
+class N_src_frontend_team_workspace_member_state_ts_WorkspaceMemberCommands["WorkspaceMemberCommands"] {
+  +workspaceId
+  +storageKey
+  +snapshot
+  +blocked
+  +canRelease
+  +subscribe()
+  +isPending()
+  +submit()
+  +retry()
+  +query()
+  +restore()
+  -ports
+  -value
+  -listeners
+  -pending
+  -unavailable
+}
+N_src_frontend_team_workspace_member_state_ts ..> N_src_frontend_team_workspace_member_state_ts_WorkspaceMemberCommands : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_frontend_team_workspace_member_state_ts["workspace-member-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_team_workspace_member_state_ts_WorkspaceMemberCommands["WorkspaceMemberCommands"] {
+  -corrupt
+  -emit()
+  -save()
+  -send()
+}
+N_src_frontend_team_workspace_member_state_ts ..> N_src_frontend_team_workspace_member_state_ts_WorkspaceMemberCommands : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_team_workspace_member_state_ts["workspace-member-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_team_workspace_member_state_ts_WorkspaceMemberCommandPool["WorkspaceMemberCommandPool"] {
+  +get()
+  -values
+}
+N_src_frontend_team_workspace_member_state_ts ..> N_src_frontend_team_workspace_member_state_ts_WorkspaceMemberCommandPool : 声明
+```
+
+直接依赖：[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)。
+
+### workspace-members.css
+
+```mermaid
+classDiagram
+class N_src_frontend_team_workspace_members_css["workspace-members.css"] {
+  <<stylesheet>>
+}
+```
+
+### WorkspaceMemberDetail.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_team_WorkspaceMemberDetail_tsx["WorkspaceMemberDetail.tsx"] {
+  <<component>>
+  +WorkspaceMemberDetailView()
+}
+```
+
+直接依赖：[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)。
+
+### WorkspaceMemberForm.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_team_WorkspaceMemberForm_tsx["WorkspaceMemberForm.tsx"] {
+  <<component>>
+  +WorkspaceMemberForm()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_team_WorkspaceMemberForm_tsx["WorkspaceMemberForm.tsx"] {
+  <<component>>
+}
+class N_src_frontend_team_WorkspaceMemberForm_tsx_WorkspaceMemberFormProps["WorkspaceMemberFormProps"] {
+  <<interface>>
+  +kind
+  +member
+  +agents
+  +models
+  +target
+  +nextState
+  +disabled
+  +onEdit
+  +onPreview
+  +onClose
+}
+N_src_frontend_team_WorkspaceMemberForm_tsx ..> N_src_frontend_team_WorkspaceMemberForm_tsx_WorkspaceMemberFormProps : 声明
+```
+
+直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)。
+
+### WorkspaceMembers.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_team_WorkspaceMembers_tsx["WorkspaceMembers.tsx"] {
+  <<component>>
+  +WorkspaceMembers()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_team_WorkspaceMembers_tsx["WorkspaceMembers.tsx"] {
+  <<component>>
+}
+class N_src_frontend_team_WorkspaceMembers_tsx_WorkspaceMemberAgentOption["WorkspaceMemberAgentOption"] {
+  <<interface>>
+  +id
+  +name
+}
+N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_WorkspaceMembers_tsx_WorkspaceMemberAgentOption : 声明
+class N_src_frontend_team_WorkspaceMembers_tsx_WorkspaceMembersProps["WorkspaceMembersProps"] {
+  <<interface>>
+  +workspace
+  +agents
+  +onClose
+}
+N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_WorkspaceMembers_tsx_WorkspaceMembersProps : 声明
+```
+
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[workspace-member-state.ts](workspace-member-state.ts)、[WorkspaceMemberForm.tsx](WorkspaceMemberForm.tsx)、[WorkspaceMemberDetail.tsx](WorkspaceMemberDetail.tsx)、[workspace-members.css](workspace-members.css)。
 
 ### 本目录调用边界
 
@@ -242,6 +428,9 @@ classDiagram
 class N_src_frontend_team_TeamView_tsx["TeamView.tsx"] {
   <<component>>
 }
+class N_src_frontend_team_WorkspaceMembers_tsx["WorkspaceMembers.tsx"] {
+  <<component>>
+}
 class N_src_frontend_team_team_model_ts["team-model.ts"] {
   <<module>>
 }
@@ -254,9 +443,33 @@ class N_src_frontend_team_useAgentHistory_ts["useAgentHistory.ts"] {
 class N_src_frontend_team_agent_history_state_ts["agent-history-state.ts"] {
   <<module>>
 }
+N_src_frontend_team_TeamView_tsx ..> N_src_frontend_team_WorkspaceMembers_tsx : 导入依赖
 N_src_frontend_team_TeamView_tsx ..> N_src_frontend_team_team_model_ts : 导入依赖
 N_src_frontend_team_TeamView_tsx ..> N_src_frontend_team_team_view_css : 导入依赖
 N_src_frontend_team_useAgentHistory_ts ..> N_src_frontend_team_agent_history_state_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_team_WorkspaceMembers_tsx["WorkspaceMembers.tsx"] {
+  <<component>>
+}
+class N_src_frontend_team_workspace_member_state_ts["workspace-member-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_team_WorkspaceMemberForm_tsx["WorkspaceMemberForm.tsx"] {
+  <<component>>
+}
+class N_src_frontend_team_WorkspaceMemberDetail_tsx["WorkspaceMemberDetail.tsx"] {
+  <<component>>
+}
+class N_src_frontend_team_workspace_members_css["workspace-members.css"] {
+  <<stylesheet>>
+}
+N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_workspace_member_state_ts : 导入依赖
+N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_WorkspaceMemberForm_tsx : 导入依赖
+N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_WorkspaceMemberDetail_tsx : 导入依赖
+N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_workspace_members_css : 导入依赖
 ```
 
 
@@ -273,6 +486,18 @@ N_src_frontend_team_useAgentHistory_ts ..> N_src_frontend_team_agent_history_sta
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 静态团队架构契约
+
+## 项目岗位登记
+
+`TeamView` 的“项目岗位”打开独立 `WorkspaceMembers`；稳定岗位不加入静态能力树，也不冒充在线实例。只有当前工作区运行身份可发起新操作；岗位浏览入口不依赖当前知识树是否完整，缺失来源仍可读取历史或停用岗位。当前实现只登记，尚未按岗位派发，active 不是执行许可。
+
+列表按登记顺序分页，后续页固定 registry cursor；详情每次明确读取当前能力与公开模型差异。暂停、退休、能力采纳和模型采纳分别预览，编辑元信息不顺带采纳变化。同一静态能力可登记多岗位，`cbim:main` 不可作为业务岗位能力；已采纳原则、继承 Skill 和模型参数按文本只读展示，不执行其中内容。
+
+`WorkspaceMemberForm` 要求明确模型与变更原因，不默认沿用主对话模型。`WorkspaceMembers` 核预览原输入、实例、版本及实际字段；切换对象/编辑字段使旧预览失效，迟到预览不覆盖新选择。列表与详情核完整身份/分页，失败保留明确提示，不根据显示名称改绑岗位。
+
+同一 renderer 的同工作区页面共用 `WorkspaceMemberCommands`，先将完整原命令写入本机再提交。未知结果阻止新的岗位写入，只查询或明确重送同一请求；重开仅查询，不预览或提交。原回执全部字段不可变，只有精确列举的首次提交前拒绝可重新准备。已发生超时后再收到旧依据拒绝仍是未知，不能换 ID。
+
+本机最多保留 128 条命令/2 MiB，超限或损坏明确停止新提交，不删除未知记录。受理后的本机保存失败仍保留原回执，可通过只读查询恢复保存，不声称回滚。后台权威审计与本机命令索引分开；登记、查询、采纳均不创建运行实例或发起模型请求。
 
 - `TeamView` 的组织树仅展示工作区正式 Team、分组、Agent 和 Skill 定义，不把 AgentInstance、在线状态、执行活动或任务图混入树。动态派工仍属于当前会话任务视图；静态 Agent 详情可单独打开只读执行履历。
 - `team-model.ts` 只读同一 `Snapshot`，节点身份从知识路径派生，不能被 `agent.json` 内额外的 `id` 覆盖。空 Team 根与 `cbim:main`、`cbim:executor` 两个只读内置角色始终可见；解析失败单独提示。

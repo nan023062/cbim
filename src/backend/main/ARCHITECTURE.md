@@ -14,7 +14,7 @@ Electron 入口与应用装配。显式资料导入共用应用级取消表，�
 | [execution-admission.ts](execution-admission.ts) | 把应用级并发准入与本工作区文件/实例租约组合为主轮和成员轮共用的同步领取入口。 |
 | [execution.ts](execution.ts) | 主进程执行装配，将工作区、已解析模型、原生锁与平台访问策略注入调度引擎。 |
 | [main.ts](main.ts) | 本机后端的 Electron 装配入口，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。 |
-| [member-dispatch.ts](member-dispatch.ts) | 为已运行工作区装配成员派发、大脑执行及目标审阅的可信日志读取端口。 |
+| [member-dispatch.ts](member-dispatch.ts) | 为已运行工作区装配成员派发、大脑执行、目标审阅及独立岗位登记；岗位与执行共用同一 DispatchStore。 |
 | [runtime-monitor.ts](runtime-monitor.ts) | 把工作区派发/周期事务、两套运行日志和对话队列接入全局监管，同时维护静态 Agent 的持久化历史归档。 |
 
 ## 架构类图
@@ -172,7 +172,7 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 - [persistence/](persistence/ARCHITECTURE.md)：本机持久化适配：知识事务、运行日志、对话附件、模型配置。保留原数据路径与格式，目录调整不迁移用户数据。
 - [platform/](platform/ARCHITECTURE.md)：本机路径、系统锁、凭据加密、终端与工具访问检查。固定根有界读取并核前后句柄/路径，拒绝链接、越界和Windows备用数据流；JSON验证由同一Buffer计算指纹和结构结论，正文不出端口。原生历史不完整拒绝恢复，不承诺外部原子隔离。
 - [resources/](resources/ARCHITECTURE.md)：链接器、人才和完整业务模板共用的本地/远端资源仓库。静态资料单次HTTP捕获前后核授权与共享代际，正文快照不安装执行。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。
-- [workspace/](workspace/ARCHITECTURE.md)：本机工作区登记、运行实例与可信桌面静态架构编辑。持锁打开、监听、关闭，知识事务委托 persistence/knowledge；模块维护确认和真人条目同事务，不变更动态任务图。
+- [workspace/](workspace/ARCHITECTURE.md)：本机工作区登记、运行实例与可信桌面静态架构编辑。持锁打开、监听、关闭，知识事务委托 persistence/knowledge；模块维护确认和真人条目同事务，不变更动态任务图。岗位登记与当前差异共用工作区DispatchStore，明确选型仅读公开模型配置；不创建运行实例或任务。
 
 [返回上层](../ARCHITECTURE.md)。
 
@@ -183,6 +183,12 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 主进程运行装配契约
+
+## 长期岗位登记的独立装配
+
+`createMemberServices` 为 `WorkspaceMembers` 注入与派发共用的 FileDispatchStore、工作区代际及 `LlmProfiles.configuration` 公开配置端口。Application 按工作区保存该服务，关闭/重开先退役代际，原 store 排空后更换实例；岗位没有独立运行或重放生命周期。
+
+岗位只保存长期身份、名称/职责、项目适应、能力采纳及公开模型配置。此阶段不改变任何任务的角色、模型选择、会话绑定或默认执行者回退；active 不代表已经接入派发。原回执查重早于新请求的实例和来源校验，重开仍可核实旧命令，不自动重新提交。
 
 ## 安全等待补充的附件准备
 

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履历契约。主实例归主会话，业务实例归周期与任务；履历按角色聚合真实通道，释放或删定义后保留，旧记录不补造实例。
+Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履历契约。主实例归主会话，业务实例归周期与任务；履历按角色聚合真实通道，释放或删定义后保留，旧记录不补造实例。另含稳定工作区岗位的严格DTO、采纳快照与不可变登记规则；岗位启用不等于执行许可。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -14,6 +14,8 @@ Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履
 | [model.ts](model.ts) | 团队：Team/小组/Agent、真人花名册与 Agent 自身和祖先 Skill的核心封装。 |
 | [session-history-storage.ts](session-history-storage.ts) | 静态 Agent 会话历史的持久化索引契约，连接调度查询服务与本机磁盘适配。 |
 | [session-history.ts](session-history.ts) | 定义按静态 Agent 归档的独立 Session、任务轮次及公开事件查询协议。 |
+| [workspace-member-rules.ts](workspace-member-rules.ts) | 岗位登记的规范指纹、预览依据、不可变审计与单条事件投影；由可信服务与 Store 重放共同调用。 |
+| [workspace-member.ts](workspace-member.ts) | 定义工作区长期岗位、采纳快照、版本化登记命令与公开查询协议，供 Main、Store 和桌面共用。 |
 
 ## 架构类图
 
@@ -284,6 +286,228 @@ N_src_backend_core_team_session_history_ts ..> N_src_backend_core_team_session_h
 
 直接依赖：[../brain/types.ts](../brain/types.ts)、[../tasks/member-events.ts](../tasks/member-events.ts)。
 
+### workspace-member-rules.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_workspace_member_rules_ts["workspace-member-rules.ts"] {
+  <<module>>
+  +workspaceMemberCanonical()
+  +workspaceMemberModelHash()
+  +workspaceMemberCapabilityHash()
+  +workspaceMemberHash()
+  +workspaceMemberCommand()
+  +workspaceMemberProposed()
+  +workspaceMemberChangedFields()
+  +workspaceMemberPreviewBasis()
+  +workspaceMemberReceipt()
+  +applyWorkspaceMemberChange()
+  +validateWorkspaceMember()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_workspace_member_rules_ts["workspace-member-rules.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_workspace_member_rules_ts_WorkspaceMemberRegistry["WorkspaceMemberRegistry"] {
+  <<interface>>
+  +workspaceId
+  +workspaceMembers
+  +workspaceMemberChanges
+  +registryCursor
+}
+N_src_backend_core_team_workspace_member_rules_ts ..> N_src_backend_core_team_workspace_member_rules_ts_WorkspaceMemberRegistry : 声明
+```
+
+直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[workspace-member.ts](workspace-member.ts)。
+
+### workspace-member.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
+  <<module>>
+  +summarizeWorkspaceMember()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberIdentity["WorkspaceMemberIdentity"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberIdentity : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceRegistryCursor["WorkspaceRegistryCursor"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceRegistryCursor : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberState["WorkspaceMemberState"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberState : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberAdaptation["WorkspaceMemberAdaptation"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberAdaptation : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberModelRef["WorkspaceMemberModelRef"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberModelRef : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberModelSnapshot["WorkspaceMemberModelSnapshot"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberModelSnapshot : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberRuntimePolicy["WorkspaceMemberRuntimePolicy"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberRuntimePolicy : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberCapability["WorkspaceMemberCapability"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberCapability : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberAdoption["WorkspaceMemberAdoption"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberAdoption : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMember["WorkspaceMember"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMember : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberChangeInput["WorkspaceMemberChangeInput"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberChangeInput : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberPreviewInput["WorkspaceMemberPreviewInput"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberPreviewInput : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberCommitInput["WorkspaceMemberCommitInput"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberCommitInput : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberLookup["WorkspaceMemberLookup"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberLookup : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberProposed["WorkspaceMemberProposed"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberProposed : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberField["WorkspaceMemberField"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberField : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberPreview["WorkspaceMemberPreview"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberPreview : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberReceipt["WorkspaceMemberReceipt"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberReceipt : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberChange["WorkspaceMemberChange"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberChange : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberSummary["WorkspaceMemberSummary"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberSummary : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberListInput["WorkspaceMemberListInput"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberListInput : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberList["WorkspaceMemberList"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberList : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberGetInput["WorkspaceMemberGetInput"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberGetInput : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberCurrentDiff["WorkspaceMemberCurrentDiff"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberCurrentDiff : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberDetail["WorkspaceMemberDetail"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberDetail : 声明
+```
+
+
 ### 本目录调用边界
 
 ```mermaid
@@ -294,7 +518,14 @@ class N_src_backend_core_team_session_history_storage_ts["session-history-storag
 class N_src_backend_core_team_session_history_ts["session-history.ts"] {
   <<module>>
 }
+class N_src_backend_core_team_workspace_member_rules_ts["workspace-member-rules.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
+  <<module>>
+}
 N_src_backend_core_team_session_history_storage_ts ..> N_src_backend_core_team_session_history_ts : 导入依赖
+N_src_backend_core_team_workspace_member_rules_ts ..> N_src_backend_core_team_workspace_member_ts : 导入依赖
 ```
 
 
@@ -444,3 +675,13 @@ MemberScheduler ..> BrainPort : 绑定成员通道并执行
 ```
 
 本图表达跨目录契约边界，具体文件类图见各目录 `ARCHITECTURE.md`。Team 不导入调度器、大脑实现或平台存储；成员共享类型放在独立契约文件，避免 `model.ts` 与运行管理器相互依赖。任务节点与增量事件见 [任务契约](../tasks/CONTRACT.md)，执行通道边界见 [大脑契约](../brain/CONTRACT.md)。
+
+### 项目岗位登记与明确采纳
+
+`workspace-member.ts` 定义独立的稳定 `memberId`、岗位元信息、状态及采纳快照，与既有 `AgentInstance`/执行通道分开。相同静态执行能力可以登记多个岗位，主调度角色不能登记为业务岗位。本片只登记，不创建任务或运行，也不切换现有派发身份。`active` 仅表示登记启用；暂停可恢复，退休不可改写或复活，均不删除历史。
+
+采纳保存真实原则及有效继承 Skill。`captureId` 是一次采纳身份，不是静态来源删除重建的代次。能力指纹覆盖完整能力内容但排除整库知识 revision；模型指纹覆盖明确选择的完整公开配置，包括名称、能力和价格，不含密钥、默认选择或凭据可用性。公共 DTO 不导入大脑或后端哈希实现，严格 schema 不裁剪、变换或补默认字段。
+
+`workspace-member-rules.ts` 规范化指纹和预览依据，并从单条不可变变更派生当前岗位。编辑只改显式字段，不顺带采纳外部变化；同一模型引用的配置更新必须用 `adopt:model`，能力采纳不能改绑另一角色。状态变化不读取来源、不能修改快照；当前来源差异是每次查询得到的独立观察，不把岗位启用状态当作来源仍相同或可执行的证明。
+
+单能力最多 1 MiB、256 项有效 Skill；累计最多 256 个岗位（含退休）、4096 条审计、32 MiB，单事件最多 2 MiB。超限拒绝新写入，不裁剪正文或删除旧审计。列表只含摘要，默认分页由服务确定、最大 100，后续页绑定登记游标且必须前进；详情单独返回原快照与当前差异。原命令回执仅保留真实结果引用和指纹，后续版本不重写旧回执。

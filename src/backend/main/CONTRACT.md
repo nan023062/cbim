@@ -1,5 +1,11 @@
 # 主进程运行装配契约
 
+## 长期岗位登记的独立装配
+
+`createMemberServices` 为 `WorkspaceMembers` 注入与派发共用的 FileDispatchStore、工作区代际及 `LlmProfiles.configuration` 公开配置端口。Application 按工作区保存该服务，关闭/重开先退役代际，原 store 排空后更换实例；岗位没有独立运行或重放生命周期。
+
+岗位只保存长期身份、名称/职责、项目适应、能力采纳及公开模型配置。此阶段不改变任何任务的角色、模型选择、会话绑定或默认执行者回退；active 不代表已经接入派发。原回执查重早于新请求的实例和来源校验，重开仍可核实旧命令，不自动重新提交。
+
 ## 安全等待补充的附件准备
 
 `createExecutionManager` 将 `ChatInputs.prepareContinuation` 注入主运行管理器。仅新的附件补充在创建工厂前准备一次正文、图片与清单；模型工厂使用 `ExecutionLaunchContext.preparedInputImages`，包括明确的空数组，不再读取附件 ID。图片不写入 `WorkspaceLoopOptions`，后续成员结果回注不会再次附加图片，原生历史仍保留先前真实用户图消息。

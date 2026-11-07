@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-应用级运行监管及独立准入契约：真实实例用量与执行许可分离，策略、票据和占用按可信身份表达；独立游标只读投影不签发执行权。
+应用级只读监管、真实周期白名单与独立准入契约。周期等待/结算和模型轮次分开，严格传输不补造缺失计量；游标、票据和占用不签发恢复权。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -11,6 +11,8 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [admission.ts](admission.ts) | 定义应用级执行准入的公开策略、身份、占用、等待票据与独立读取游标。 |
+| [runtime-scope.ts](runtime-scope.ts) | 从已提交 DispatchScope 生成应用级监管的最小周期事实，供运行索引恢复和增量提交共用。 |
+| [runtime-validation.ts](runtime-validation.ts) | 校验全局运行总览的跨进程只读快照，供 Bridge 和界面共享真实字段边界。 |
 | [types.ts](types.ts) | 定义应用级人员、任务与运行消耗的只读监管契约，供调度索引和桌面桥接共同使用。 |
 
 ## 架构类图
@@ -89,6 +91,28 @@ N_src_backend_core_runtime_admission_ts ..> N_src_backend_core_runtime_admission
 ```
 
 
+### runtime-scope.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_runtime_runtime_scope_ts["runtime-scope.ts"] {
+  <<module>>
+  +projectRuntimeScope()
+}
+```
+
+直接依赖：[../tasks/dispatch-scope.ts](../tasks/dispatch-scope.ts)、[types.ts](types.ts)、[runtime-validation.ts](runtime-validation.ts)。
+
+### runtime-validation.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_runtime_runtime_validation_ts["runtime-validation.ts"] {
+  <<module>>
+}
+```
+直接依赖：[types.ts](types.ts)。
+
 ### types.ts
 
 ```mermaid
@@ -166,6 +190,7 @@ class N_src_backend_core_runtime_types_ts_RuntimeDispatchTask["RuntimeDispatchTa
   +workspaceId
   +rootSessionId
   +taskId
+  +scopeId
   +agentId
   +agentInstanceId
   +moduleIds
@@ -218,6 +243,23 @@ class N_src_backend_core_runtime_types_ts_RuntimeTask["RuntimeTask"] {
 
 }
 N_src_backend_core_runtime_types_ts ..> N_src_backend_core_runtime_types_ts_RuntimeTask : 声明
+class N_src_backend_core_runtime_types_ts_RuntimeScope["RuntimeScope"] {
+  <<interface>>
+  +workspaceId
+  +rootSessionId
+  +scopeId
+  +status
+  +createdAt
+  +closedAt
+  +outcome
+  +hasGoal
+  +goalRevision
+  +reviewDecision
+  +goalBlocked
+  +wait
+  +budgetBlocked
+}
+N_src_backend_core_runtime_types_ts ..> N_src_backend_core_runtime_types_ts_RuntimeScope : 声明
 class N_src_backend_core_runtime_types_ts_RuntimeRun["RuntimeRun"] {
   <<interface>>
   +workspaceId
@@ -246,6 +288,13 @@ class N_src_backend_core_runtime_types_ts_external_RunUsage["RunUsage (外部契
   <<external>>
 }
 N_src_backend_core_runtime_types_ts_external_RunUsage <|-- N_src_backend_core_runtime_types_ts_RuntimeUsage
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_runtime_types_ts["types.ts"] {
+  <<module>>
+}
 class N_src_backend_core_runtime_types_ts_RuntimePressure["RuntimePressure"] {
   <<interface>>
   +taskInstances
@@ -266,13 +315,6 @@ class N_src_backend_core_runtime_types_ts_RuntimePressure["RuntimePressure"] {
   +insertingConversationMessages
 }
 N_src_backend_core_runtime_types_ts ..> N_src_backend_core_runtime_types_ts_RuntimePressure : 声明
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_runtime_types_ts["types.ts"] {
-  <<module>>
-}
 class N_src_backend_core_runtime_types_ts_RuntimeSnapshot["RuntimeSnapshot"] {
   <<interface>>
   +cursor
@@ -280,6 +322,7 @@ class N_src_backend_core_runtime_types_ts_RuntimeSnapshot["RuntimeSnapshot"] {
   +members
   +tasks
   +runs
+  +scopes
   +pressure
   +usage
   +complete
@@ -293,6 +336,24 @@ N_src_backend_core_runtime_types_ts ..> N_src_backend_core_runtime_types_ts_Runt
 ```
 
 直接依赖：[../brain/types.ts](../brain/types.ts)、[../brain/usage.ts](../brain/usage.ts)、[../tasks/graph-types.ts](../tasks/graph-types.ts)、[../team/agent-types.ts](../team/agent-types.ts)、[../brain/member-run.ts](../brain/member-run.ts)、[../brain/conversation-binding.ts](../brain/conversation-binding.ts)。
+
+### 本目录调用边界
+
+```mermaid
+classDiagram
+class N_src_backend_core_runtime_runtime_scope_ts["runtime-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_runtime_types_ts["types.ts"] {
+  <<module>>
+}
+class N_src_backend_core_runtime_runtime_validation_ts["runtime-validation.ts"] {
+  <<module>>
+}
+N_src_backend_core_runtime_runtime_scope_ts ..> N_src_backend_core_runtime_types_ts : 导入依赖
+N_src_backend_core_runtime_runtime_scope_ts ..> N_src_backend_core_runtime_runtime_validation_ts : 导入依赖
+N_src_backend_core_runtime_runtime_validation_ts ..> N_src_backend_core_runtime_types_ts : 导入依赖
+```
 
 
 ## 子目录导航
@@ -321,6 +382,9 @@ N_src_backend_core_runtime_types_ts ..> N_src_backend_core_runtime_types_ts_Runt
 - RuntimeUsage 是累计报告消费；上下文占用不计入总数，未知用量/价格有显式字段。
 - `complete=false` 表示存在未加载/损坏来源，部分数字不是全系统精确值。
 - RuntimeRead 无变化只返回游标，有变化返回快照。投影不签发调度、租约、权限或验收。
+- `RuntimeSnapshot.scopes` 始终存在，按真实工作区和主会话区分目标周期；旧无周期记录保持空集，不按角色、时间或运行日志补造。派发任务的可选 `scopeId` 只复制原节点归属。
+- `RuntimeScope` 公开 active/waiting/closed、关闭结果、目标版本和审阅申请，以及最多 240 字符的等待/阻塞原因。`reviewDecision=complete` 不是目标完成；只有原周期的 closed/outcome 表示已提交结算。关闭后的 wait 是历史，不能自动恢复。预算阻塞只公开原因，不带额度、证明或新的准入许可。
+- `runtime-scope.ts` 显式投影白名单，排除目标正文、完整审阅、人工记录、原生检查点和运行清单。`runtime-validation.ts` 严格校验传输字段、引用身份、唯一集合及外层/快照游标；无 default、transform 或缺省计量补值。工作区来源完整与用量完整是两件事，`complete=true` 不能当成全额计量或业务验收。
 - 成员日志与对话日志均纳入累计消费，按 workspace/task/run/seq 去重；公开成员绑定只有身份和版本，不包含原生会话文件、知识正文或授权。
 
 详见[全局管理设计与实际范围](../../../../docs/global-runtime-management.md)。

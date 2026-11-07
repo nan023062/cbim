@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-监管、履历与全局并发准入职责分离。检查点任务计入待办压力而不占活动运行名额；监管消费真实用量，准入协调名额和租约，稳定票据 FIFO 等待。历史和进程票据不签发恢复执行权。
+监管、履历与全局并发准入职责分离。可靠提交同步周期白名单，scope-only 更新独立游标，未变投影不重复发布；检查点计待办而不占活动名额，报告用量不授予额度或恢复权。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -11,7 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [agent-history.ts](agent-history.ts) | 按工作区静态角色归档 Session 与运行摘要，向团队节点提供分页历史和受限事件详情。 |
-| [global-runtime.ts](global-runtime.ts) | 维护整个应用的成员实例、派发任务及实际 Loop 消耗索引，接收 main 在可靠提交后送来的事实；成员轮次归属派发节点，不重复生成对话任务。 |
+| [global-runtime.ts](global-runtime.ts) | 维护整个应用的成员、派发任务、目标周期与实际 Loop 消耗索引，接收 main 的可靠提交；周期结算独立于模型轮次，成员运行不重复生成任务。 |
 | [run-admission.ts](run-admission.ts) | 为应用内主轮和成员轮统一提供同步执行准入、FIFO 等待及独立只读投影。 |
 
 ## 架构类图
@@ -135,6 +135,7 @@ class N_src_backend_scheduler_engine_runtime_global_runtime_ts_WorkspaceIndex["W
   +view
   +members
   +tasks
+  +scopes
   +runs
   +outbox
   +graphSequences
@@ -175,6 +176,7 @@ class N_src_backend_scheduler_engine_runtime_global_runtime_ts_GlobalRuntimeMana
   -current()
   -cursor()
   -interrupt()
+  -projectScopes()
   -member()
   -task()
   -phase()
@@ -183,7 +185,7 @@ class N_src_backend_scheduler_engine_runtime_global_runtime_ts_GlobalRuntimeMana
 N_src_backend_scheduler_engine_runtime_global_runtime_ts ..> N_src_backend_scheduler_engine_runtime_global_runtime_ts_GlobalRuntimeManager : 声明
 ```
 
-直接依赖：[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/brain/member-run.ts](../../core/brain/member-run.ts)、[../../core/brain/conversation-binding.ts](../../core/brain/conversation-binding.ts)、[../../core/brain/usage.ts](../../core/brain/usage.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)。
+直接依赖：[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/brain/member-run.ts](../../core/brain/member-run.ts)、[../../core/brain/conversation-binding.ts](../../core/brain/conversation-binding.ts)、[../../core/brain/usage.ts](../../core/brain/usage.ts)、[../../core/runtime/runtime-scope.ts](../../core/runtime/runtime-scope.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)。
 
 ### run-admission.ts
 
@@ -306,6 +308,8 @@ GlobalRuntimeManager 由 Application 单例持有，管理所有接入工作区�
 
 - begin/ready/unavailable/detach/forget/rename 管理接入代际和可用性；旧 epoch 不污染新实例，关闭保留历史并清除活动观察。
 - restoreDispatch/dispatchCommitted 接收初始基线与新事务；增量只更新受影响对象，不读取磁盘。邮箱只计 pending，claimed/processed 事务使信封退出待消费负载。
+- 目标周期从同一 `DispatchObserver.loaded/committed` 白名单投影到 `WorkspaceIndex.scopes`。store 在可靠提交后按工作区串行同步通知；scope-only 提交独立推进全局游标，不借用图序号或 goalRevision。同一公开投影重放保持 noop，一次成员/任务/周期组合提交只增加一次全局版本；先核整批周期身份，失败不留下半批周期、成员或任务。
+- 周期覆盖保留持久插入顺序，不按时间推断最新；旧日志没有 scopes 时不造周期。关闭工作区只改变可用性和当前运行观察，不改写持久等待或关闭结果；重开由新的 epoch 恢复真实周期，旧代际回调被忽略。Loop 最近运行 completed 与目标 waiting 可以同时存在，界面必须分开展示。
 - restoreRun/runEvent 按 workspace/task/run/seq 去重；较新未结束的恢复记录不会把 live run 判成中断，有真实终态时收口。成员绑定从 run.started 或 RunSummary 明确读取并校验，摘要与起始记录冲突时拒绝发布。
 - 带 memberBinding 的轮次计入运行与累计消耗，业务任务只使用 dispatch 图节点；不会再合成第二个 source=loop 任务。普通主对话使用 conversationBinding 对应的实例和对话通道，同一轮次禁止同时携带两种绑定。摘要与起始会话绑定冲突时拒绝发布；同角色名的既有无绑定对话仍保持 role-only。
 - 主对话活动由本代际真实 run.started 和后续 phase 投影到已登记成员；每个主会话默认有独立主实例，计数不按 cbim:main 角色合并。等待授权、工具执行和终态即时更新 activeConversation/活动统计，不改写持久化 AgentInstance，也不创建 TaskNode。缺少登记实例时保留运行记录但不补造人员；关闭、不可用和历史恢复不计算对话活跃。
@@ -314,7 +318,7 @@ GlobalRuntimeManager 由 Application 单例持有，管理所有接入工作区�
 - 周期释放事务携带的成员 lifecycle= released 立即投影为非当前活动；公开成员、任务与运行历史保留，当前实例数和活跃/排队压力排除释放的执行实例。主调度实例没有执行周期，保持会话身份；累计 Token 消费不随释放清零。
 - snapshot/read 输出公开 DTO；issue 明示不完整来源。未知价格和未报告消费不当成免费。
 
-负载是观察量，不是并发配额。成员执行槽与邮箱领取由 execution 服务管理，GlobalRuntimeManager 只接收事实；全局准入由本目录独立的 GlobalRunAdmission 实现，预算策略尚未接通。main 的 WorkspaceRuntimeMonitor 在恢复前订阅对话与成员运行，启动恢复不调用模型；历史分别扫描 loop-engine/tasks 与 dispatch/runs/tasks，并核验来源、任务与成员绑定。
+负载是观察量，不是并发配额。成员执行槽与邮箱领取由 execution 服务管理，GlobalRuntimeManager 只接收事实；全局准入由本目录独立的 GlobalRunAdmission 实现，周期预算由 execution 的可信运行门禁核实，不能使用此监管用量授权。main 的 WorkspaceRuntimeMonitor 在恢复前订阅对话与成员运行，启动恢复不调用模型；历史分别扫描 loop-engine/tasks 与 dispatch/runs/tasks，并核验来源、任务与成员绑定。
 
 #### 当前关键协作关系
 
@@ -335,6 +339,7 @@ class WorkspaceIndex {
   <<interface>>
   members
   tasks
+  scopes
   runs
   outbox
 }
@@ -351,6 +356,12 @@ class RuntimeMember {
 class RuntimeDispatchTask {
   <<core-contract>>
 }
+class RuntimeScope {
+  <<core-contract>>
+  status
+  outcome
+  reviewDecision
+}
 class RuntimeSnapshot {
   <<core-contract>>
 }
@@ -362,6 +373,7 @@ GlobalRuntimeManager *-- WorkspaceIndex : 按工作区持有
 WorkspaceIndex *-- ObservedRun : runs 索引
 WorkspaceIndex --> RuntimeMember : members 投影
 WorkspaceIndex --> RuntimeDispatchTask : tasks 投影
+WorkspaceIndex --> RuntimeScope : 真实周期白名单
 GlobalRuntimeManager ..> BrainUsage : 用量归并
 GlobalRuntimeManager ..> RuntimeSnapshot : 返回隔离副本
 ```

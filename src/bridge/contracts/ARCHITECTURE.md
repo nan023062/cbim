@@ -22,7 +22,7 @@
 | [models.ts](models.ts) | 模型配置界面消费的公开模型信息与停止原因格式化。 |
 | [repository-connections.ts](repository-connections.ts) | 向桌面公开工作区资源仓库链接器的登记、授权和真实 HTTP 核验协议。 |
 | [resources.ts](resources.ts) | 资源种类、仓库快照、登录占位及仓库状态的共享类型。 |
-| [runtime.ts](runtime.ts) | 公开应用级成员、任务负载和运行用量的可序列化观察契约。 |
+| [runtime.ts](runtime.ts) | 公开应用级成员、任务、目标周期和已报告用量的只读契约及严格传输校验。 |
 | [scope-budget.ts](scope-budget.ts) | 公开目标周期软限额的可序列化策略，供设置和目标卡片经 IPC 读写、展示。 |
 | [scope-usage.ts](scope-usage.ts) | 向桌面任务视图公开周期用量的严格查询与报告契约。 |
 | [usage.ts](usage.ts) | 向界面公开 Core 的纯执行计量函数及单轮用量类型。 |
@@ -323,7 +323,7 @@ class N_src_bridge_contracts_runtime_ts["runtime.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/runtime/types.ts](../../backend/core/runtime/types.ts)。
+直接依赖：[../../backend/core/runtime/types.ts](../../backend/core/runtime/types.ts)、[../../backend/core/runtime/runtime-validation.ts](../../backend/core/runtime/runtime-validation.ts)。
 
 ### scope-budget.ts
 

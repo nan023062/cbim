@@ -12,6 +12,9 @@
 - RuntimeUsage 是累计报告消费；上下文占用不计入总数，未知用量/价格有显式字段。
 - `complete=false` 表示存在未加载/损坏来源，部分数字不是全系统精确值。
 - RuntimeRead 无变化只返回游标，有变化返回快照。投影不签发调度、租约、权限或验收。
+- `RuntimeSnapshot.scopes` 始终存在，按真实工作区和主会话区分目标周期；旧无周期记录保持空集，不按角色、时间或运行日志补造。派发任务的可选 `scopeId` 只复制原节点归属。
+- `RuntimeScope` 公开 active/waiting/closed、关闭结果、目标版本和审阅申请，以及最多 240 字符的等待/阻塞原因。`reviewDecision=complete` 不是目标完成；只有原周期的 closed/outcome 表示已提交结算。关闭后的 wait 是历史，不能自动恢复。预算阻塞只公开原因，不带额度、证明或新的准入许可。
+- `runtime-scope.ts` 显式投影白名单，排除目标正文、完整审阅、人工记录、原生检查点和运行清单。`runtime-validation.ts` 严格校验传输字段、引用身份、唯一集合及外层/快照游标；无 default、transform 或缺省计量补值。工作区来源完整与用量完整是两件事，`complete=true` 不能当成全额计量或业务验收。
 - 成员日志与对话日志均纳入累计消费，按 workspace/task/run/seq 去重；公开成员绑定只有身份和版本，不包含原生会话文件、知识正文或授权。
 
 详见[全局管理设计与实际范围](../../../../docs/global-runtime-management.md)。

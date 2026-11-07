@@ -15,7 +15,7 @@ Electron 入口与应用装配。应用单例持有全局准入和持久策略�
 | [execution.ts](execution.ts) | 主进程执行装配，将工作区、已解析模型、原生锁与平台访问策略注入调度引擎。 |
 | [main.ts](main.ts) | 本机后端的 Electron 装配入口，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。 |
 | [member-dispatch.ts](member-dispatch.ts) | 为已运行工作区装配成员派发、大脑执行及目标审阅的可信日志读取端口。 |
-| [runtime-monitor.ts](runtime-monitor.ts) | 把工作区派发事务、两套运行日志和对话队列接入全局监管，同时维护静态 Agent 的持久化历史归档。 |
+| [runtime-monitor.ts](runtime-monitor.ts) | 把工作区派发/周期事务、两套运行日志和对话队列接入全局监管，同时维护静态 Agent 的持久化历史归档。 |
 
 ## 架构类图
 

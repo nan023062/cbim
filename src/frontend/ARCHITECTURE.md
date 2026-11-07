@@ -42,6 +42,9 @@ classDiagram
 class N_src_frontend_resources["resources/"] {
   <<directory>>
 }
+class N_src_frontend_runtime["runtime/"] {
+  <<directory>>
+}
 class N_src_frontend_settings["settings/"] {
   <<directory>>
 }
@@ -54,22 +57,22 @@ class N_src_frontend_tasks["tasks/"] {
 class N_src_frontend_team["team/"] {
   <<directory>>
 }
-class N_src_frontend_workspace["workspace/"] {
-  <<directory>>
-}
+N_src_frontend_runtime ..> N_src_frontend_tasks : 导入依赖
 N_src_frontend_settings ..> N_src_frontend_tasks : 导入依赖
 N_src_frontend_shell ..> N_src_frontend_resources : 导入依赖
 N_src_frontend_shell ..> N_src_frontend_settings : 导入依赖
+N_src_frontend_shell ..> N_src_frontend_runtime : 导入依赖
 N_src_frontend_shell ..> N_src_frontend_team : 导入依赖
-N_src_frontend_shell ..> N_src_frontend_workspace : 导入依赖
 N_src_frontend_tasks ..> N_src_frontend_shell : 导入依赖
 N_src_frontend_team ..> N_src_frontend_tasks : 导入依赖
 N_src_frontend_team ..> N_src_frontend_resources : 导入依赖
-N_src_frontend_workspace ..> N_src_frontend_resources : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_frontend_workspace["workspace/"] {
+  <<directory>>
+}
 class N_src_frontend_main_tsx["main.tsx"] {
   <<component>>
 }
@@ -82,11 +85,13 @@ class N_src_frontend_main_tsx["main.tsx"] {
 - `conversation` → `tasks`：导入。
 - `main.tsx` → `shell`：导入。
 - `resources` → `knowledge`：导入。
+- `runtime` → `tasks`：导入。
 - `settings` → `tasks`：导入。
 - `shell` → `resources`：导入。
 - `shell` → `settings`：导入。
 - `shell` → `components`：导入。
 - `shell` → `conversation`：导入。
+- `shell` → `runtime`：导入。
 - `shell` → `team`：导入。
 - `shell` → `workspace`：导入。
 - `shell` → `automation`：导入。
@@ -113,6 +118,7 @@ class N_src_frontend_main_tsx["main.tsx"] {
 - [governance/](governance/ARCHITECTURE.md)：静态业务模块的知识治理面板。展示真实来源、精确差异、补证/异议与回应评价。审阅绑定来源版本，未评价不补造理解，人工决定与实施分开；原命令先保存再发送，未知只查询。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识问题、预览提交和静态对象表单；固定编辑基线，模块维护人同事务确认，删除先检查影响。业务架构展示位于 workspace。
 - [resources/](resources/ARCHITECTURE.md)：统一资源仓库的查看、编辑、静态包发布与下载应用。人才按团队/Agent/Skill复用，业务按整套架构应用；工作区身份及预览版本固定。设置通过统一入口打开。
+- [runtime/](runtime/ARCHITECTURE.md)：全局只读运行管理。分别呈现目标周期、人员、任务、准入等待和已报告消耗；单次在途游标读取保留未变行，隐藏时退订，按真实身份定位既有会话而不执行任务。
 - [settings/](settings/ARCHITECTURE.md)：模型、仓库、并发及新目标软限额配置。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。凭据只提交主进程，账户仍为占位。
 - [shell/](shell/ARCHITECTURE.md)：工作区侧栏、会话选择、用户栏与右侧扩展页签；会话区与项目级视图区分开。向会话传递活动页签状态，隐藏页签保留草稿/节点选择并降低成员与任务图同步频率。
 - [tasks/](tasks/ARCHITECTURE.md)：主会话任务图、目标与准入状态。检查点沿同一任务节点显示保存、待续、新轮登记或封存；按选定 run 隔离旧检查点与新候选，不提供读即恢复。文件基线手动选择复核，用量按需读取，旧观察与迟到响应隔离。 人工决定选择候选及基线后按需核实；持久草稿/原命令在双卡共享，未知只查或原请求重试，历史不冒充已验收。

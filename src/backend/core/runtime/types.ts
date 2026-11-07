@@ -1,6 +1,6 @@
 /**
  * 作用定位：定义应用级人员、任务与运行消耗的只读监管契约，供调度索引和桌面桥接共同使用。
- * 设计原因：全局观察不能混淆静态角色、持久化成员、派发任务与旧对话轮次；契约只含身份、状态和计量，不传播知识正文或凭据。
+ * 设计原因：全局观察不能混淆静态角色、持久化成员、派发任务、目标周期与旧对话轮次；只公开身份、状态和有界原因，不传播完整正文或凭据。
  * 职责边界：监管快照不签发任务、租约、权限或验收；未知用量和工作区不可用必须明确呈现。
  */
 import type {RunStatus} from '../brain/types';
@@ -42,6 +42,8 @@ export interface RuntimeMember {
 /** 已派发业务任务；runIds 为空表示尚未创建执行轮次。 */
 export interface RuntimeDispatchTask {
   source:'dispatch';binding:'instance';workspaceId:string;rootSessionId:string;taskId:string;
+  /** 只复制派发节点的真实周期归属；旧节点缺省，不能按最近对话或时间补造。 */
+  scopeId?:string;
   agentId:string;agentInstanceId:string;moduleIds:string[];status:TaskStatus;
   revision:number;planRevision:number;runIds:string[];updatedAt:string;
 }
@@ -51,6 +53,20 @@ export type RuntimeLoopTask={
   moduleIds:string[];status:RunStatus;runIds:string[];activeRunIds:string[];lastRunId:string;updatedAt:string;
 }&({binding:'role-only'}|{binding:'instance';agentInstanceId:string;agentSessionId:string;rootSessionId:string});
 export type RuntimeTask=RuntimeDispatchTask|RuntimeLoopTask;
+/** 目标周期与模型轮次分开展示；审阅 complete 是申请，只有 closed/outcome 才是已提交的周期结算。 */
+export interface RuntimeScope {
+  workspaceId:string;rootSessionId:string;scopeId:string;
+  status:'active'|'waiting'|'closed';createdAt:string;closedAt?:string;
+  outcome?:'completed'|'failed'|'cancelled'|'interrupted';
+  /** false 仅表示旧周期没有结构化目标，不能从日志内容补造。 */
+  hasGoal:boolean;goalRevision?:number;
+  reviewDecision?:'complete'|'replan'|'blocked'|'awaiting_user';
+  /** 原因最多 240 个字符；不传播目标正文、验收证据或私有等待检查点。 */
+  goalBlocked?:{reason:string};
+  wait?:{createdAt:string;reason:string};
+  /** 只说明此前真实预算拒绝，不是额度配置、用量证明或新的准入许可。 */
+  budgetBlocked?:{reason:'token_limit'|'cost_limit'|'usage_unverifiable'};
+}
 export interface RuntimeRun {
   workspaceId:string;taskId:string;runId:string;agentId?:string;status:RunStatus;
   /** 来自 run.started 的已核验成员身份；存在时归属派发任务，不再生成重复的 role-only 任务。 */
@@ -76,7 +92,7 @@ export interface RuntimePressure {
 }
 export interface RuntimeSnapshot {
   cursor:RuntimeCursor;workspaces:RuntimeWorkspace[];members:RuntimeMember[];
-  tasks:RuntimeTask[];runs:RuntimeRun[];pressure:RuntimePressure;usage:RuntimeUsage;
+  tasks:RuntimeTask[];runs:RuntimeRun[];scopes:RuntimeScope[];pressure:RuntimePressure;usage:RuntimeUsage;
   /** 任一工作区尚未载入、不可用或有诊断时为 false；缺失数据不能当作零负载。 */
   complete:boolean;
 }

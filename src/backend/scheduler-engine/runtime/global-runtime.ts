@@ -1,5 +1,5 @@
 /**
- * 作用定位：维护整个应用的成员实例、派发任务及实际 Loop 消耗索引，接收 main 在可靠提交后送来的事实；成员轮次归属派发节点，不重复生成对话任务。
+ * 作用定位：维护整个应用的成员、派发任务、目标周期与实际 Loop 消耗索引，接收 main 的可靠提交；周期结算独立于模型轮次，成员运行不重复生成任务。
  * 设计原因：主会话活动按可信实例绑定投影；安全停泊计等待压力而非活动运行，周期释放后保留历史但退出当前压力。运行身份和事件序号避免重复计费，观察不代替生命周期管理。
  * 职责边界：不读取文件、不启动引擎、不调度跨工作区任务；待消费负载只计 pending 信封，任何快照都不包含消息、知识或工具正文。
  */
@@ -8,10 +8,11 @@ import type {RunSummary,StoredEvent,TaskSpec} from '../../core/brain/types';
 import {checkedMemberRunBinding} from '../../core/brain/member-run';
 import {checkedConversationAgentBinding} from '../../core/brain/conversation-binding';
 import {runUsage} from '../../core/brain/usage';
+import {projectRuntimeScope} from '../../core/runtime/runtime-scope';
 import type {DispatchMutation,DispatchState} from '../../core/tasks/dispatch-storage';
 import type {TaskNode} from '../../core/tasks/graph-types';
 import type {AgentInstance} from '../../core/team/agent-types';
-import type {RuntimeCursor,RuntimeDispatchTask,RuntimeLoopTask,RuntimeMember,RuntimePressure,RuntimeQueueCounts,RuntimeRead,RuntimeRun,RuntimeSnapshot,RuntimeUsage,RuntimeWorkspace} from '../../core/runtime/types';
+import type {RuntimeCursor,RuntimeDispatchTask,RuntimeLoopTask,RuntimeMember,RuntimePressure,RuntimeQueueCounts,RuntimeRead,RuntimeRun,RuntimeScope,RuntimeSnapshot,RuntimeUsage,RuntimeWorkspace} from '../../core/runtime/types';
 
 interface ObservedRun {
   view:RuntimeRun;moduleIds:string[];measurements:StoredEvent[];
@@ -22,6 +23,8 @@ interface ObservedRun {
 }
 interface WorkspaceIndex {
   view:RuntimeWorkspace;members:Map<string,RuntimeMember>;tasks:Map<string,RuntimeDispatchTask>;
+  /** 按持久插入顺序保存周期白名单；覆盖既有项不改次序，不按时间或最近运行猜归属。 */
+  scopes:Map<string,RuntimeScope>;
   runs:Map<string,ObservedRun>;outbox:Set<string>;graphSequences:Map<string,{streamId:string;seq:number}>;
 }
 const clone=<T>(value:T):T=>structuredClone(value);
@@ -67,7 +70,7 @@ export class GlobalRuntimeManager {
   /** 开始接管工作区投影；旧代际即刻失效，恢复期间的数据完整性明确标为 loading。 */
   begin(workspaceId:string,name:string):number {
     const epoch=++this.nextEpoch;
-    this.workspaces.set(workspaceId,{view:{workspaceId,name,epoch,availability:'loading',issues:[],queue:{pending:0,paused:0,inserting:0}},members:new Map(),tasks:new Map(),runs:new Map(),outbox:new Set(),graphSequences:new Map()});
+    this.workspaces.set(workspaceId,{view:{workspaceId,name,epoch,availability:'loading',issues:[],queue:{pending:0,paused:0,inserting:0}},members:new Map(),tasks:new Map(),scopes:new Map(),runs:new Map(),outbox:new Set(),graphSequences:new Map()});
     this.changed();return epoch;
   }
   /** 仅装配方在派发、历史运行和排队恢复完成后调用；有 issues 时快照仍标记不完整。 */
@@ -85,7 +88,7 @@ export class GlobalRuntimeManager {
     const state=this.current(id,epoch);if(!state||state.view.issues.some(i=>i.source===source&&i.message===message))return;
     state.view.issues.push({source,message});if(state.view.issues.length>100)state.view.issues.shift();this.changed();
   }
-  /** 首次恢复基线，不用于定时回读；成员的历史活动只能说明已存状态，不能证明当前活跃。 */
+  /** 首次恢复基线，不用于定时回读；旧记录没有周期时保持空集，恢复等待也不代表重新启动模型。 */
   restoreDispatch(id:string,epoch:number,baseline:DispatchState){
     const state=this.current(id,epoch);if(!state)return;
     if(baseline.workspaceId!==id)throw Error('全局监管收到其他工作区的派发记录');
@@ -96,9 +99,10 @@ export class GlobalRuntimeManager {
       sequences.set(graph.identity.rootSessionId,{streamId:graph.cursor.streamId,seq:graph.cursor.seq});
       for(const task of graph.tasks)tasks.set(key(task.identity.rootSessionId,task.taskId),this.task(task));
     }
-    state.members=members;state.tasks=tasks;state.graphSequences=sequences;state.outbox=new Set(baseline.outbox.filter(m=>m.delivery==='pending').map(m=>m.messageId));this.changed();
+    const scopes=this.projectScopes(id,sequences,new Map(),baseline.scopes??[]);
+    state.members=members;state.tasks=tasks;state.scopes=scopes;state.graphSequences=sequences;state.outbox=new Set(baseline.outbox.filter(m=>m.delivery==='pending').map(m=>m.messageId));this.changed();
   }
-  /** 只在事务可靠提交后调用；增量更新受影响对象，不重新读取或复制整个工作区日志。 */
+  /** 同工作区提交由 store 同步串行通知；scope-only 也更新全局版本，不借用图序号或目标版本，不读取日志。 */
   dispatchCommitted(id:string,epoch:number,mutation:DispatchMutation){
     const state=this.current(id,epoch);if(!state)return;
     const batch=mutation.batch;
@@ -106,6 +110,9 @@ export class GlobalRuntimeManager {
     if((mutation.messages??[]).some(m=>m.identity.workspaceId!==id))throw Error('信封身份与监管工作区不一致');
     if(batch?.changes.some(change=>change.type==='task.upserted'&&(change.task.identity.workspaceId!==id||change.task.identity.rootSessionId!==batch.identity.rootSessionId)))throw Error('任务身份与提交不一致');
     if(batch){const previous=state.graphSequences.get(batch.identity.rootSessionId);if(previous?.streamId===batch.streamId&&batch.seq<=previous.seq)return;if(previous&&(previous.streamId!==batch.streamId||batch.seq!==previous.seq+1)){this.issue(id,epoch,'dispatch','派发事件游标不连续，需要重新载入');return}}
+    // 先准备整批周期候选；身份错误不能留下半次成员/任务/周期投影。新图与周期允许在同次提交建立。
+    let scopes=state.scopes;
+    if(mutation.scopes?.length){const roots=new Map(state.graphSequences);if(batch)roots.set(batch.identity.rootSessionId,{streamId:batch.streamId,seq:batch.seq});scopes=this.projectScopes(id,roots,state.scopes,mutation.scopes)}
     let changed=false;
     for(const member of mutation.members??[]){const view=this.member(member,true),old=state.members.get(member.agentInstanceId);if(JSON.stringify(old)!==JSON.stringify(view)){state.members.set(member.agentInstanceId,view);changed=true}}
     if(batch){
@@ -119,13 +126,27 @@ export class GlobalRuntimeManager {
       if(message.delivery==='pending'){if(!state.outbox.has(message.messageId)){state.outbox.add(message.messageId);changed=true}}
       else if(state.outbox.delete(message.messageId))changed=true;
     }
+    for(const scope of mutation.scopes??[]){const next=scopes.get(scope.scopeId)!;if(JSON.stringify(state.scopes.get(scope.scopeId))!==JSON.stringify(next)){state.scopes.set(scope.scopeId,next);changed=true}}
     if(changed)this.changed();
+  }
+  /** 只接受明确属于现有/同事务新建根的周期；不能用同 scope ID 改写主会话归属。 */
+  private projectScopes(id:string,roots:ReadonlyMap<string,unknown>,previous:ReadonlyMap<string,RuntimeScope>,updates:NonNullable<DispatchState['scopes']>):Map<string,RuntimeScope>{
+    if(!Array.isArray(updates)||new Set(updates.map(scope=>scope?.scopeId)).size!==updates.length)throw Error('周期提交集合无效或身份重复');
+    const next=new Map(previous);
+    for(const scope of updates){
+      const value=projectRuntimeScope(scope),old=previous.get(value.scopeId);
+      if(value.workspaceId!==id||!roots.has(value.rootSessionId)||old&&old.rootSessionId!==value.rootSessionId)throw Error('周期身份与监管工作区或主会话不一致');
+      next.set(value.scopeId,value);
+    }
+    const open=new Set<string>();
+    for(const scope of next.values())if(scope.status!=='closed'){if(open.has(scope.rootSessionId))throw Error('同一主会话不能有多个未关闭周期');open.add(scope.rootSessionId)}
+    return next;
   }
   private member(value:AgentInstance,current:boolean):RuntimeMember {
     return {workspaceId:value.workspaceId,teamId:value.teamId,agentId:value.agentId,agentInstanceId:value.agentInstanceId,leaseEpoch:value.leaseEpoch,...(value.mainRootSessionId?{mainRootSessionId:value.mainRootSessionId}:{}),...(value.executionScopeId?{executionScopeId:value.executionScopeId,executionTaskId:value.executionTaskId}:{}),...(value.lifecycle?{lifecycle:value.lifecycle,releasedAt:value.releasedAt}:{}),activity:value.activity,activityCurrent:current&&value.lifecycle!=='released',availability:'loading',sessionCount:value.agentSessionIds.length,activeTaskId:value.activeTaskId,activeRunId:value.activeRunId,waitingTaskIds:[...value.waitingTaskIds],communicatingMessageIds:[...value.communicatingMessageIds]};
   }
   private task(value:TaskNode):RuntimeDispatchTask {
-    return {source:'dispatch',binding:'instance',workspaceId:value.identity.workspaceId,rootSessionId:value.identity.rootSessionId,taskId:value.taskId,agentId:value.assignee.agentId,agentInstanceId:value.assignee.agentInstanceId,moduleIds:value.modules.map(m=>m.moduleId),status:value.status,revision:value.revision,planRevision:value.planRevision,runIds:[...value.runIds],updatedAt:value.updatedAt};
+    return {source:'dispatch',binding:'instance',workspaceId:value.identity.workspaceId,rootSessionId:value.identity.rootSessionId,taskId:value.taskId,...(value.scopeId?{scopeId:value.scopeId}:{}),agentId:value.assignee.agentId,agentInstanceId:value.assignee.agentInstanceId,moduleIds:value.modules.map(m=>m.moduleId),status:value.status,revision:value.revision,planRevision:value.planRevision,runIds:[...value.runIds],updatedAt:value.updatedAt};
   }
 
   /** 恢复可信 RunSummary；重复恢复相同轮次不累计消费，历史 running 强制降为 interrupted。 */
@@ -212,10 +233,10 @@ export class GlobalRuntimeManager {
   }
   /** 汇总只读副本；多个工作区使用相同任务/运行字符串也不会相互覆盖。 */
   snapshot():RuntimeSnapshot {
-    const workspaces:RuntimeWorkspace[]=[],members:RuntimeMember[]=[],tasks:Array<RuntimeDispatchTask|RuntimeLoopTask>=[],runs:RuntimeRun[]=[];
+    const workspaces:RuntimeWorkspace[]=[],members:RuntimeMember[]=[],tasks:Array<RuntimeDispatchTask|RuntimeLoopTask>=[],runs:RuntimeRun[]=[],scopes:RuntimeScope[]=[];
     const pressure:RuntimePressure={taskInstances:0,memberInstances:0,openWorkspaces:0,unavailableWorkspaces:0,activeMembers:0,workingMembers:0,waitingMembers:0,communicatingMembers:0,activeRuns:0,queuedDispatchTasks:0,waitingDispatchTasks:0,blockedDispatchTasks:0,pendingOutbox:0,queuedConversationMessages:0,pausedConversationMessages:0,insertingConversationMessages:0};
     for(const state of this.workspaces.values()){
-      const availability=state.view.availability;workspaces.push(clone(state.view));
+      const availability=state.view.availability;workspaces.push(clone(state.view));scopes.push(...state.scopes.values());
       if(availability==='ready')pressure.openWorkspaces++;if(availability==='unavailable')pressure.unavailableWorkspaces++;
       // 仅真实起始事件能证明当前活动；历史恢复、同名角色和已关闭工作区不能制造活跃实例。
       const conversations=new Map<string,RuntimeRun>();
@@ -258,6 +279,6 @@ export class GlobalRuntimeManager {
       if(value.cost!==undefined)usage.cost=(usage.cost??0)+value.cost;
       usage.costPartial||=value.costPartial||!value.usageReported;
     }
-    return clone({cursor:this.cursor(),workspaces,members,tasks,runs,pressure,usage,complete:workspaces.every(w=>(w.availability==='ready'||w.availability==='closed')&&!w.issues.length)});
+    return clone({cursor:this.cursor(),workspaces,members,tasks,runs,scopes,pressure,usage,complete:workspaces.every(w=>(w.availability==='ready'||w.availability==='closed')&&!w.issues.length)});
   }
 }

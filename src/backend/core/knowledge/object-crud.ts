@@ -8,12 +8,13 @@ import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import type {KnowledgeWorkspace,KnowledgeCommit} from './ports';
 import {fail} from '../foundation/errors';
-import {json,hash} from '../foundation/serialization';
+import {json} from '../foundation/serialization';
 import {INDEXES} from './knowledge';
 import {parseJson} from '../foundation/json';
 import type {ChangeRequest,Preview} from './types';
 import type {ModuleMaintenanceDefinition} from '../workspace/maintenance';
 import {parseWorkflowContract} from '../workspace/workflow-contract';
+import {knowledgePlanHash,type ResolvedObjectOperation} from './planned-commit';
 
 const fields={name:z.string().min(1).optional(),summary:z.string().optional(),authors:z.array(z.string()).optional(),capabilities:z.array(z.string()).optional(),limitations:z.array(z.string()).optional(),connectors:z.array(z.string()).optional(),sources:z.array(z.object({location:z.string(),scope:z.string()}).strict()).optional(),purpose:z.string().optional()};
 export const objectOperation=z.object({kind:z.enum(['agent','module','skill','workflow']),action:z.enum(['create','update','delete']),id:z.string().optional(),parentId:z.string().optional(),slug:z.string().optional(),data:z.object(fields).strict().optional(),body:z.string().max(2*1024*1024).optional(),cascade:z.boolean().optional()}).strict();
@@ -36,7 +37,7 @@ export class ObjectCrud {
   /** 根据语义操作生成完整事务并持久化预览计划；不会自动编造原则或模块正文。options 仅由桌面显式确认入口提供，不能作为运行权限。 */
   async preview(revision:string,operations:ObjectOperation[],options:ObjectPreviewOptions={}):Promise<ObjectPreview>{
     const s=await this.w.snapshot();if(s.revision!==revision)fail('CONFLICT','知识版本已变化，请重新查询');
-    const map=new Map(s.files.map(f=>[f.path,f.text])),objects:string[]=[],deletedRoots:string[]=[];
+    const map=new Map(s.files.map(f=>[f.path,f.text])),objects:string[]=[],deletedRoots:string[]=[],resolvedOperations:ResolvedObjectOperation[]=[];
     const get=(p:string)=>{const text=map.get(p);if(text===undefined)fail('OBJECT_NOT_FOUND',`对象不存在：${p}`);return parseJson(text)};
     const set=(p:string,d:any)=>map.set(p,json(d));
     if(options.peopleUpserts?.length){
@@ -63,7 +64,8 @@ export class ObjectCrud {
         else {if(op.kind==='skill'){if(!group(owner)&&!map.has(owner+'/agent.json'))fail('OWNER','Skill 必须属于已知 Team/小组或 Agent')}else get(owner+'/module.json');id=owner+(op.kind==='skill'?'/skills/':'/workflows/')+op.slug;if(op.kind==='workflow'&&op.slug.includes('-'))fail('OBJECT_ID','Workflow 使用 snake_case')}
         await this.w.paths.knowledge(this.w.entry.path,id+'/__check__');
         if([...map.keys()].some(p=>p.toLowerCase()===id.toLowerCase()||p.toLowerCase().startsWith(id.toLowerCase()+'/')))fail('EXISTS','对象位置已被使用');
-        await this.w.objects.assertAbsent(id);
+        // 同一已核知识专用删除计划可在原位置重建；这不是对现存目录的任意覆盖，生命周期保留有序删除事实。
+        if(!deletedRoots.some(root=>id===root||id.startsWith(root+'/')))await this.w.objects.assertAbsent(id);
         if(!op.body?.trim())fail('BODY','创建必须提供正文，不自动编造专业原则或业务知识');
       }else{
         if(!id||op.parentId||op.slug)fail('OBJECT_ID','更新或删除只接受查询返回的 id');
@@ -105,6 +107,7 @@ export class ObjectCrud {
         if(op.kind==='module'){const p=pp.dirname(id)+'/module.json';if(map.has(p)){const d=get(p);d.children=d.children.filter((c:string)=>c!==id);set(p,d)}}
       }
       objects.push(id);
+      resolvedOperations.push({kind:op.kind,action:op.action,id,...(op.cascade!==undefined?{cascade:op.cascade}:{})});
     }
     if(options.maintenance){
       const {moduleId,maintainerPersonIds,confirmed}=options.maintenance;
@@ -119,15 +122,16 @@ export class ObjectCrud {
     const changes=[...new Set([...s.files.map(f=>f.path),...map.keys()])].filter(p=>!INDEXES.includes(p)&&s.files.find(f=>f.path===p)?.text!==map.get(p)).map(p=>({path:p,text:map.get(p)??null}));
     const request:ChangeRequest={workspaceId:s.workspaceId,instanceId:s.instanceId,revision,requestId:randomUUID(),changes};
     const preview=await this.w.preview(request);const planId=request.requestId;
-    await this.w.objects.savePlan(planId,{request,hash:hash(json(request)),deletedRoots});
+    const plan={version:2 as const,request,operations:resolvedOperations,deletedRoots};
+    await this.w.objects.savePlan(planId,{...plan,planHash:knowledgePlanHash(plan)});
     return {...preview,planId,objects,notice:'仅预览。调用 cbim_object_commit(planId) 才提交；校验失败不能提交。空目录可能保留，不删除业务源码或资源。'};
   }
   /** 读取计划并核验指纹、实例和版本；写授权由核心知识服务调用边界检查。 */
   async commit(planId:string):Promise<ObjectCommit>{
     if(!/^[0-9a-f-]{36}$/.test(planId))fail('PLAN','无效预览标识');
     const plan=await this.w.objects.readPlan(planId);
-    if(hash(json(plan.request))!==plan.hash||plan.request.requestId!==planId)fail('PLAN','预览数据不一致');
-    this.w.assert(plan.request);const result=await this.w.commit(plan.request);
+    if(plan.request.requestId!==planId)fail('PLAN','预览数据不一致');
+    const result=await this.w.commitPlanned({kind:'object_plan',planId});
     // Prune only empty object directories; never recursively delete resources.
 
     const cleanupWarnings:string[]=[];

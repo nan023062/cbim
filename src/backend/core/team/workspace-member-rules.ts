@@ -1,10 +1,11 @@
 /**
  * 作用定位：岗位登记的规范指纹、预览依据、不可变审计与单条事件投影；由可信服务与 Store 重放共同调用。
  * 设计原因：正文只保存在审计 next 中，当前岗位由原日志派生；哈希函数留在后端模块，公开 schema 不把 crypto 带入前端。
- * 职责边界：核对固定事实与合法迁移，不读取当前知识/profile，不把岗位启用状态当作执行许可。
+ * 职责边界：核对固定事实与合法迁移，来源选择进入 basis、新代次属于明确能力采纳；不读取知识/profile，不把启用当执行许可。
  */
 import {hash} from '../foundation/serialization';
 import {fail} from '../foundation/errors';
+import type {SourceSelection} from '../workspace/knowledge-source';
 import {workspaceMemberChangeSchema,workspaceMemberSchema,workspaceMemberLimits,type WorkspaceMember,type WorkspaceMemberChange,type WorkspaceMemberCapability,type WorkspaceMemberModelSnapshot,type WorkspaceMemberProposed,type WorkspaceMemberChangeInput,type WorkspaceMemberCommitInput,type WorkspaceMemberReceipt,type WorkspaceRegistryCursor,type WorkspaceMemberField} from './workspace-member';
 
 /** 对象键排序、数组保序；只用于已经过 strict schema 的 JSON 领域值。 */
@@ -23,19 +24,22 @@ export function workspaceMemberCommand(request:WorkspaceMemberCommitInput){retur
 
 /** 只去掉新登记时尚不存在的身份、采纳时间和版本；未选中的配置保持原保存事实。 */
 export function workspaceMemberProposed(member:WorkspaceMember):WorkspaceMemberProposed{
-  return structuredClone({name:member.name,position:member.position,adaptation:member.adaptation,state:member.state,capability:{configuration:member.adoption.configuration,capabilityHash:member.adoption.capabilityHash},runtimePolicy:member.runtimePolicy});
+  return structuredClone({name:member.name,position:member.position,adaptation:member.adaptation,state:member.state,capability:{configuration:member.adoption.configuration,capabilityHash:member.adoption.capabilityHash,...(member.adoption.sourceRef?{sourceRef:member.adoption.sourceRef}:{})},runtimePolicy:member.runtimePolicy});
 }
 /** 固定差异字段顺序；能力比较内容 hash，不把整库版本刷新当作岗位语义变化。 */
 export function workspaceMemberChangedFields(previous:WorkspaceMember|undefined,proposed:WorkspaceMemberProposed):WorkspaceMemberField[]{
   const fields:WorkspaceMemberField[]=['name','position','adaptation','capability','runtimePolicy','state'];
   if(!previous)return fields;
   const old=workspaceMemberProposed(previous);
-  return fields.filter(field=>field==='capability'?old.capability.capabilityHash!==proposed.capability.capabilityHash:!equal(old[field],proposed[field]));
+  return fields.filter(field=>field==='capability'?old.capability.capabilityHash!==proposed.capability.capabilityHash||!equal(old.capability.sourceRef,proposed.capability.sourceRef):!equal(old[field],proposed[field]));
 }
-/** 时钟、待生成身份及整库知识 revision 不进入依据；成员原版本与独立登记游标均被冻结。 */
-export function workspaceMemberPreviewBasis(input:{workspaceId:string;change:WorkspaceMemberChangeInput;registryCursor:WorkspaceRegistryCursor|null;previousMember?:WorkspaceMember;proposed:WorkspaceMemberProposed}):string{
+/** 时钟、待生成身份及整库知识 revision 不进入依据；来源代次、定义内容、成员原版本与登记游标仍被冻结。 */
+export function workspaceMemberPreviewBasis(input:{workspaceId:string;change:WorkspaceMemberChangeInput;registryCursor:WorkspaceRegistryCursor|null;previousMember?:WorkspaceMember;proposed:WorkspaceMemberProposed;sourceSelection?:SourceSelection}):string{
   const {knowledgeRevision:_,...configuration}=input.proposed.capability.configuration;
-  return hash(workspaceMemberCanonical({version:1,workspaceId:input.workspaceId,change:input.change,registryCursor:input.registryCursor,previousMemberHash:input.previousMember?workspaceMemberHash(input.previousMember):null,proposedDigest:hash(workspaceMemberCanonical({...input.proposed,capability:{configuration,capabilityHash:input.proposed.capability.capabilityHash}}))}));
+  // source 的全库版本也是观察出处；无关知识编辑不能作废同能力预览，事件仍保存完整真实观察。
+  const sourceSelection=input.sourceSelection?.kind==='workspace'?{...input.sourceSelection,observation:{definitionHash:input.sourceSelection.observation.definitionHash,visible:input.sourceSelection.observation.visible}}:input.sourceSelection;
+  // 新 capture 的随机代次尚不存在，依据固定 selection；其余操作必须把已有 sourceRef 继续纳入摘要。
+  return hash(workspaceMemberCanonical({version:1,workspaceId:input.workspaceId,change:input.change,registryCursor:input.registryCursor,previousMemberHash:input.previousMember?workspaceMemberHash(input.previousMember):null,...(sourceSelection?{sourceSelection}:{}),proposedDigest:hash(workspaceMemberCanonical({...input.proposed,capability:{configuration,capabilityHash:input.proposed.capability.capabilityHash,...(!input.sourceSelection&&input.proposed.capability.sourceRef?{sourceRef:input.proposed.capability.sourceRef}:{})}}))}));
 }
 /** 紧凑回执来自实际事件；后续编辑不重算或覆盖原命令回执。 */
 export function workspaceMemberReceipt(change:WorkspaceMemberChange):WorkspaceMemberReceipt{
@@ -81,7 +85,7 @@ function validateTransition(previous:WorkspaceMember|undefined,event:WorkspaceMe
     valid(equal(next.adoption,previous.adoption),'状态变化不能改写能力采纳');
   }else if(input.target==='capability'){
     expected.capability=proposed.capability;freshCapture();
-    valid(next.adoption.capabilityHash!==previous.adoption.capabilityHash,'能力内容没有变化','MEMBER_NO_CHANGE');
+    valid(next.adoption.capabilityHash!==previous.adoption.capabilityHash||!equal(next.adoption.sourceRef,previous.adoption.sourceRef),'能力内容及来源没有变化','MEMBER_NO_CHANGE');
   }else{
     valid(equal(next.adoption,previous.adoption)&&next.runtimePolicy.profileId===previous.runtimePolicy.profileId&&next.runtimePolicy.modelId===previous.runtimePolicy.modelId,'模型采纳只能更新原模型引用');
     expected.runtimePolicy=next.runtimePolicy;
@@ -102,7 +106,7 @@ export function applyWorkspaceMemberChange(state:WorkspaceMemberRegistry,raw:Wor
   valid(!history.some(item=>item.changeId===event.changeId||item.request.commandId===event.request.commandId),'登记审计或命令身份重复');
   const previous=members.find(item=>item.memberId===event.next.memberId);
   validateTransition(previous,event,history);
-  valid(event.request.expectedBasis===workspaceMemberPreviewBasis({workspaceId:state.workspaceId,change:event.request.change,registryCursor:cursor,previousMember:previous,proposed:workspaceMemberProposed(event.next)}),'预览依据与实际提交不一致','MEMBER_BASIS_STALE');
+  valid(event.request.expectedBasis===workspaceMemberPreviewBasis({workspaceId:state.workspaceId,change:event.request.change,registryCursor:cursor,previousMember:previous,proposed:workspaceMemberProposed(event.next),...(event.sourceSelection?{sourceSelection:event.sourceSelection}:{})}),'预览依据与实际提交不一致','MEMBER_BASIS_STALE');
   valid(members.length+(previous?0:1)<=workspaceMemberLimits.members&&history.length<workspaceMemberLimits.changes,'岗位或审计数量超过上限','MEMBER_LIMIT');
   const bytes=(value:unknown)=>new TextEncoder().encode(JSON.stringify(value)).length;
   valid(history.reduce((total,item)=>total+bytes(item),0)+bytes(event)<=workspaceMemberLimits.historyBytes,'岗位审计累计超过容量上限','MEMBER_LIMIT');

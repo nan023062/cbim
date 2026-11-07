@@ -42,6 +42,14 @@ it('先持久化再发送；双击与同工作区两个面板只产生一个命�
   const pool=new WorkspaceMemberCommandPool();expect(pool.get('workspace',f.ports)).toBe(pool.get('workspace',f.ports));
 });
 
+it('改名和状态编辑保留原来源，不能借预览暗中补齐或更换采纳',()=>{
+  const old=member();old.adoption.sourceRef={kind:'builtin',id:'cbim:executor',contentHash:hash};
+  const change={kind:'update' as const,memberId:old.memberId,expectedRevision:old.revision,patch:{name:'新名称'},reason:'只更名'};
+  const value:WorkspaceMemberPreview={...preview,change,previousMember:old,previousRevision:old.revision,registryCursor:cursor,changedFields:['name'],proposed:{...preview.proposed,name:'新名称',capability:{configuration:old.adoption.configuration,capabilityHash:old.adoption.capabilityHash,sourceRef:old.adoption.sourceRef}}};
+  expect(checkedWorkspaceMemberPreview(value,{...identity,change})).toEqual(value);
+  for(const sourceRef of [undefined,{kind:'builtin',id:'cbim:executor',contentHash:modelHash}])expect(()=>checkedWorkspaceMemberPreview({...value,proposed:{...value.proposed,capability:{...value.proposed.capability,sourceRef}}},{...identity,change})).toThrow();
+});
+
 it('编辑和明确采纳的预览不能顺带改能力身份、状态或另一侧模型',()=>{
   const old=member(),change={kind:'update' as const,memberId:old.memberId,expectedRevision:1,patch:{name:'岗位新名称'},reason:'调整显示名称'},request={...identity,change};
   const update={...preview,change,registryCursor:cursor,previousRevision:1,previousMember:old,proposed:{...preview.proposed,name:'岗位新名称'},changedFields:['name' as const]};

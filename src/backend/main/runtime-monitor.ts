@@ -1,7 +1,7 @@
 /**
  * 作用定位：把工作区派发/周期事务、两套运行日志和对话队列接入全局监管，同时维护静态 Agent 的持久化历史归档。
  * 设计原因：共用一次启动扫描；原 store 同步送达的周期提交与运行结算分开投影，后续只有已提交事实进入索引，页面读取不重复扫描正文。
- * 生命周期：先订阅，再结算中断成员并关闭不安全的活动周期；已提交的无活动执行等待检查点保留，最后恢复历史，不自动运行模型。回调绑定本次打开的 epoch，关闭先排空业务服务再撤销订阅。
+ * 生命周期：工作区核实路径并持锁后先恢复历史索引，再允许 Store 的基线与恢复提交进入观察器；随后订阅运行、结算中断成员并关闭不安全的活动周期。已提交的无活动执行等待检查点保留，最后回补运行日志，不自动运行模型。回调绑定本次打开的 epoch，关闭先排空业务服务再撤销订阅。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -44,12 +44,18 @@ export class WorkspaceRuntimeMonitor {
   collaborationIssue(rootSessionId:string,error:unknown){this.issue('collaboration:'+rootSessionId,'自动协作暂停，请核实主会话与成员任务后继续',error)}
 
   /**
-   * 每次工作区装配调用一次：先接订阅，再恢复派发与两套历史，成员 initialize 只收口中断。
+   * 由 Workspace 的可信 beforeDispatchLoad 阶段调用；先装载磁盘索引，防止 Store 投影提前写入后被误判为持久索引重复。
+   * 复用历史服务的初始化 promise；后续 initialize 再调用不会重复读取，也不缓存、遗漏或重播已提交观察事件。
+   */
+  async initializeHistory(){await this.history?.initialize()}
+
+  /**
+   * 每次工作区装配调用一次：历史索引已在 Store 加载前恢复；这里复核初始化完成，再接订阅和回补两套运行日志，成员 initialize 只收口中断。
    * 各来源恢复失败记录为独立 issue，其他来源继续恢复；最终 ready 不表示统计一定完整。
    */
   async initialize(workspace:Workspace,dispatch:WorkspaceDispatchService,execution:WorkspaceExecutionManager,members?:MemberExecutionManager){
     const id=this.workspaceId,epoch=this.epoch;
-    await this.history?.initialize();
+    await this.initializeHistory();
     this.unsubscribers.push(execution.subscribe(event=>{
       this.history?.observeRun(event,'loop');
       try{this.global.runEvent(id,epoch,event)}catch(error){this.issue('run','运行事实无法更新，当前统计可能不完整',error)}

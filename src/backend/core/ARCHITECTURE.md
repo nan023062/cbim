@@ -63,6 +63,7 @@ N_src_backend_core_tasks ..> N_src_backend_core_tools : 导入依赖
 N_src_backend_core_tasks ..> N_src_backend_core_team : 导入依赖
 N_src_backend_core_tasks ..> N_src_backend_core_workspace : 导入依赖
 N_src_backend_core_team ..> N_src_backend_core_tasks : 导入依赖
+N_src_backend_core_team ..> N_src_backend_core_workspace : 导入依赖
 N_src_backend_core_workspace ..> N_src_backend_core_team : 导入依赖
 N_src_backend_core_workspace ..> N_src_backend_core_tools : 导入依赖
 ```
@@ -96,6 +97,7 @@ N_src_backend_core_workspace ..> N_src_backend_core_tools : 导入依赖
 - `team` → `foundation`：导入。
 - `team` → `tasks`：导入。
 - `team` → `brain`：导入。
+- `team` → `workspace`：导入。
 - `tools` → `policy`：导入。
 - `tools` → `foundation`：导入。
 - `tools` → `connectors`：导入。
@@ -110,13 +112,13 @@ N_src_backend_core_workspace ..> N_src_backend_core_tools : 导入依赖
 - [connectors/](connectors/ARCHITECTURE.md)：链接器定义、查询与唯一身份检查；当前不执行外部插件。
 - [foundation/](foundation/ARCHITECTURE.md)：少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。
 - [governance/](governance/ARCHITECTURE.md)：模块知识治理的纯协议、保护规则与有界主工具投影。可信来源、冻结意见引用与本机评价独立于正式实施，旧意见替代不改历史，不把治理记录当业务验收。
-- [knowledge/](knowledge/ARCHITECTURE.md)：知识快照、校验、领域查询、对象变更和可移植静态包规划。团队能力可独立复用，业务模板必须完整；物理事务与预览缓存经端口注入，不携带动态成员或任务。Team/Workspace 只依赖快照辅助，不依赖查询门面。
+- [knowledge/](knowledge/ARCHITECTURE.md)：知识快照、校验、领域查询、对象变更和可移植静态包规划。私有v2计划冻结有序操作与整包替换范围，公共变更不能提供来源证明；物理事务与缓存经端口注入。团队能力可独立复用，业务模板必须完整，不携带动态成员或任务。
 - [policy/](policy/ARCHITECTURE.md)：内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；不声称操作系统隔离。
 - [runtime/](runtime/ARCHITECTURE.md)：应用级只读监管、真实周期白名单与独立准入契约。周期等待/结算和模型轮次分开，严格传输不补造缺失计量；游标、票据和占用不签发恢复权。
 - [tasks/](tasks/ARCHITECTURE.md)：任务计划、派发图、目标与等待。资料清单保留旧文件v1，新增严格v2来源并核同序与字节；快照不等于当前来源或业务验收。依赖追加核实两端及后继未领取、当前计划与真实图，完整审计验证后才放行精确新边；保留原任务/实例，领取时绑定真实结果。运行内补充以pending/accepted/rejected/unknown分开，接受与waiting共享连续输入版本，未知阻止完成。流程选择共用叶子契约，缺省与显式分开匹配，已派发选择不可改写；严格输出区分保存与交付，历史不补造授权或证据。
 - [team/](team/ARCHITECTURE.md)：Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履历契约。主实例归主会话，业务实例归周期与任务；履历按角色聚合真实通道，释放或删定义后保留，旧记录不补造实例。另含稳定工作区岗位的严格DTO、采纳快照与不可变登记规则；岗位启用不等于执行许可。
 - [tools/](tools/ARCHITECTURE.md)：工具 Schema、版本、副作用、调用决策、严格提问/答案及回执。提问按原题同序核验，取消与答案排他；during_wait只承诺结束未完成交互。结果只核唯一 JSON 快照，不用解析改写制造成功；历史可读不等于当前业务证据有效。注册、发现及用户回答不授予权限。
-- [workspace/](workspace/ARCHITECTURE.md)：领域工程、Module、本模块Workflow、显式维护关系与稳定岗位责任协议。责任控制面的观察、版本和回执不冒充来源代次或实际派发；主工具按严格权限分类。Workflow支持有界JSON结构验证，不自行读文件或签发业务验收。与本机工作区生命周期分开。
+- [workspace/](workspace/ARCHITECTURE.md)：领域工程、Module、Workflow与稳定岗位责任协议。来源代次和写前屏障由纯规则投影；内容指纹、来源身份、负责人关系分别核实。同负责人明确采纳递增关系版本，不迁移任务；旧缺省记录不补造来源。Workflow验证不自行读文件或签发业务验收。
 
 [返回上层](../ARCHITECTURE.md)。
 

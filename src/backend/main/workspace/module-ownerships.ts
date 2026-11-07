@@ -1,6 +1,6 @@
 /**
  * 作用定位：桌面与真实主工具共用的模块负责人服务，关系和岗位在唯一 DispatchStore 内裁决。
- * 设计原因：责任登记与业务派发分离；观察真实可见模块定义，不把同路径指纹当来源代次。知识读取前后复核而不宣称跨存储原子锁。
+ * 设计原因：责任登记与业务派发分离；来源引用只消费真实来源日志，旧记录不按路径或相同指纹补造代次。采纳固定知识串行快照后进入 Store；列表依据包含来源游标，防同字节重建混页。
  * 恢复边界：原命令先查不可变回执，未找到才核当前实例和来源；保存后不重新执行、不撤回，解除允许来源缺失。
  */
 import {randomUUID} from 'node:crypto';
@@ -8,7 +8,6 @@ import {isDeepStrictEqual} from 'node:util';
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
 import {hash} from '../../core/foundation/serialization';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {Snapshot} from '../../core/knowledge/types';
 import {BusinessWorkspace} from '../../core/workspace/model';
 import type {DispatchState,DispatchStore} from '../../core/tasks/dispatch-storage';
@@ -16,20 +15,22 @@ import {summarizeWorkspaceMember} from '../../core/team/workspace-member';
 import {
   moduleOwnershipActorSchema,moduleOwnershipByMemberInputSchema,moduleOwnershipCommitInputSchema,moduleOwnershipDetailSchema,
   moduleOwnershipGetInputSchema,moduleOwnershipListInputSchema,moduleOwnershipLookupSchema,moduleOwnershipPageSchema,
-  moduleOwnershipPreviewInputSchema,moduleOwnershipPreviewSchema,moduleOwnershipReceiptSchema,summarizeModuleOwnershipChange,
+  moduleOwnershipPreviewInputSchema,moduleOwnershipPreviewSchema,moduleOwnershipReceiptSchema,summarizeModuleOwnershipChange,isModuleOwnershipSourceAdoption,
   type ModuleOwnership,type ModuleOwnershipActor,type ModuleOwnershipChange,type ModuleOwnershipIdentity,
   type ModuleOwnershipPreview,type ModuleOwnershipPreviewInput,type ModuleOwnershipReadBasis,type ModuleOwnershipReceipt,
   type ModuleOwnershipView,type ObservedModule,
 } from '../../core/workspace/module-ownership';
 import {moduleOwnershipBasis,moduleOwnershipCommand,moduleOwnershipHash,moduleOwnershipReceipt} from '../../core/workspace/module-ownership-rules';
 import {checkModuleOwnershipActor,moduleOwnershipImpact} from '../../core/tasks/module-ownership-invariants';
+import type {KnowledgeSourceWorkspace} from './knowledge-sources';
+import {knowledgeSourcePending} from '../../core/workspace/knowledge-source-rules';
 
 function input<S extends z.ZodTypeAny>(schema:S,raw:unknown):z.output<S>{const result=schema.safeParse(raw);if(!result.success)fail('OWNERSHIP_INPUT','责任请求不完整或包含不支持的字段');return result.data}
 type Knowledge={snapshot?:Snapshot;visible:Map<string,{name:string;summary:string}>;issue?:'invalid'|'unavailable'};
 
 /** 无执行器和模型端口；写入只追加单条责任审计，不改变知识、任务或默认执行者。 */
 export class ModuleOwnerships {
-  constructor(private readonly owner:KnowledgeWorkspace,private readonly store:DispatchStore,private readonly isCurrent:()=>boolean=()=>true){}
+  constructor(private readonly owner:KnowledgeSourceWorkspace,private readonly store:DispatchStore,private readonly isCurrent:()=>boolean=()=>true){}
   private identity(){return {workspaceId:this.owner.entry.id,instanceId:this.owner.instanceId}}
   private assert(identity:ModuleOwnershipIdentity){
     if(identity.workspaceId!==this.owner.entry.id||identity.instanceId!==this.owner.instanceId)fail('OWNERSHIP_IDENTITY','工作区实例已变化，请重新读取责任关系');
@@ -37,9 +38,9 @@ export class ModuleOwnerships {
   }
   private workspace(id:string){if(id!==this.owner.entry.id)fail('OWNERSHIP_IDENTITY','责任记录不属于当前工作区')}
   private cursor(state:DispatchState){return state.ownershipCursor??null}
-  private basis(state:DispatchState,knowledge:Knowledge):ModuleOwnershipReadBasis{return {ownershipCursor:this.cursor(state),memberRegistryCursor:state.registryCursor??null,knowledgeRevision:knowledge.snapshot?.revision??null}}
-  private async knowledge():Promise<Knowledge>{
-    let snapshot:Snapshot;try{snapshot=await this.owner.snapshot()}catch{return {visible:new Map(),issue:'unavailable'}}
+  private basis(state:DispatchState,knowledge:Knowledge):ModuleOwnershipReadBasis{return {ownershipCursor:this.cursor(state),memberRegistryCursor:state.registryCursor??null,knowledgeRevision:knowledge.snapshot?.revision??null,sourceCursor:state.sourceCursor??null}}
+  private async knowledge(fixed?:Snapshot):Promise<Knowledge>{
+    let snapshot:Snapshot;try{snapshot=fixed??await this.owner.snapshot()}catch{return {visible:new Map(),issue:'unavailable'}}
     if(snapshot.workspaceId!==this.owner.entry.id||!snapshot.validation?.structural)return {snapshot,visible:new Map(),issue:'invalid'};
     try{
       const modules=(await new BusinessWorkspace(snapshot).modules()).modules as Array<{id:string;summary:string}>;
@@ -59,7 +60,8 @@ export class ModuleOwnerships {
     const observed=this.observed(knowledge,moduleId),module=knowledge.visible.get(moduleId);
     const source:ModuleOwnershipView['source']=observed?{status:binding?(observed.definitionHash===binding.observedModule.definitionHash?'same':'changed'):'observed',knowledgeRevision:observed.knowledgeRevision,definitionHash:observed.definitionHash}
       :{status:knowledge.issue??(module?'invalid':'missing'),issue:knowledge.issue==='unavailable'?'当前知识无法读取；保留原责任记录':knowledge.issue==='invalid'||module?'当前模块知识未通过结构校验':'模块缺失或不在当前可见注册表；不自动解除责任'};
-    return {moduleId,...(module?{module}:{}),binding,...(member?{owner:summarizeWorkspaceMember(member)}:{}),status:!binding?.ownerMemberId?'unassigned':!member?'owner_missing':member.state==='active'?'assigned':member.state==='suspended'?'owner_suspended':'owner_retired',source};
+    const pending=knowledgeSourcePending(state),sourceStatus=pending?{status:'pending' as const,transitionId:pending.transitionId}:knowledge.snapshot?this.owner.sources!.status(state,knowledge.snapshot,{kind:'module',sourceId:moduleId},binding?.sourceRef):{status:'unverifiable' as const,issue:'当前知识无法核实来源'};
+    return {moduleId,...(module?{module}:{}),binding,...(member?{owner:summarizeWorkspaceMember(member)}:{}),status:!binding?.ownerMemberId?'unassigned':!member?'owner_missing':member.state==='active'?'assigned':member.state==='suspended'?'owner_suspended':'owner_retired',source,sourceStatus};
   }
   /** 每次都读真实知识；游标只绑定页，不缓存模块存在性或当前岗位状态。 */
   async list(raw:unknown){return this.page(input(moduleOwnershipListInputSchema,raw))}
@@ -102,28 +104,32 @@ export class ModuleOwnerships {
   private async verifyRead(state:DispatchState,knowledge:Knowledge,identity:ModuleOwnershipIdentity){
     await this.verifyKnowledge(knowledge,identity);
     const after=await this.store.read();this.assert(identity);
-    if(!isDeepStrictEqual(this.cursor(state),this.cursor(after))||!isDeepStrictEqual(state.registryCursor??null,after.registryCursor??null))fail('OWNERSHIP_REGISTRY_STALE','读取期间责任或岗位变化，请重新读取');
+    if(!isDeepStrictEqual(this.cursor(state),this.cursor(after))||!isDeepStrictEqual(state.registryCursor??null,after.registryCursor??null)||!isDeepStrictEqual(state.sourceCursor,after.sourceCursor))fail('OWNERSHIP_REGISTRY_STALE','读取期间责任、岗位或来源变化，请重新读取');
   }
   /** 只读重建依据；不保存预览、不生成关系身份。 */
   async preview(raw:unknown){
     const request=input(moduleOwnershipPreviewInputSchema,raw);this.assert(request);const state=await this.store.read(),prepared=await this.prepare(state,request);
     await this.verifyKnowledge(prepared.knowledge,request);const after=await this.store.read();this.assert(request);
-    if(!isDeepStrictEqual(this.cursor(state),this.cursor(after))||!isDeepStrictEqual(state.registryCursor??null,after.registryCursor??null)||moduleOwnershipImpact(after,request.change.moduleId).digest!==prepared.preview.impact.digest)fail('OWNERSHIP_REGISTRY_STALE','预览期间责任、岗位或关联任务变化，请重新预览');
+    if(!isDeepStrictEqual(this.cursor(state),this.cursor(after))||!isDeepStrictEqual(state.registryCursor??null,after.registryCursor??null)||!isDeepStrictEqual(state.sourceCursor,after.sourceCursor)||moduleOwnershipImpact(after,request.change.moduleId).digest!==prepared.preview.impact.digest)fail('OWNERSHIP_REGISTRY_STALE','预览期间责任、岗位、来源或关联任务变化，请重新预览');
     return prepared.preview;
   }
-  private async prepare(state:DispatchState,request:ModuleOwnershipPreviewInput,assertCurrent?:()=>void){
+  private async prepare(state:DispatchState,request:ModuleOwnershipPreviewInput,assertCurrent?:()=>void,fixed?:Snapshot){
     this.assert(request);assertCurrent?.();const change=request.change,previous=state.moduleOwnerships?.find(item=>item.moduleId===change.moduleId)??null;
     const actual=previous?{bindingId:previous.bindingId,revision:previous.revision,ownerMemberId:previous.ownerMemberId}:null;
     if(!isDeepStrictEqual(change.expectedBinding,actual))fail('OWNERSHIP_BINDING_STALE','模块责任版本已变化，请重新预览');
     const previousOwner=previous?.ownerMemberId?state.workspaceMembers?.find(item=>item.memberId===previous.ownerMemberId):undefined;
-    const nextOwner=change.nextOwner?state.workspaceMembers?.find(item=>item.memberId===change.nextOwner!.memberId):undefined;
-    if(change.nextOwner&&(!nextOwner||nextOwner.state!=='active'))fail('OWNERSHIP_MEMBER_UNAVAILABLE','新负责人必须是本工作区启用的岗位');
-    if(nextOwner&&nextOwner.revision!==change.nextOwner!.expectedRevision)fail('OWNERSHIP_MEMBER_CHANGED','岗位版本已变化，请重新预览');
+    const adopting=isModuleOwnershipSourceAdoption(change),requiresSource=adopting||!!change.nextOwner;
+    if(requiresSource&&knowledgeSourcePending(state))fail('OWNERSHIP_SOURCE_PENDING','来源事务待核实，尚未保存新的责任采纳');
+    const nextOwner=adopting?previousOwner:change.nextOwner?state.workspaceMembers?.find(item=>item.memberId===change.nextOwner!.memberId):undefined;
+    if(requiresSource&&(!nextOwner||nextOwner.state!=='active'))fail('OWNERSHIP_MEMBER_UNAVAILABLE','负责人必须是本工作区启用的岗位');
+    if(change.nextOwner&&nextOwner&&nextOwner.revision!==change.nextOwner.expectedRevision)fail('OWNERSHIP_MEMBER_CHANGED','岗位版本已变化，请重新预览');
     // 解除不读取已失效来源；原 observedModule 由关系头保留，不制造新的观察时间。
-    const knowledge:Knowledge=change.nextOwner?await this.knowledge():{visible:new Map()};this.assert(request);assertCurrent?.();
-    const observedModule=change.nextOwner?this.observed(knowledge,change.moduleId):undefined;
-    if(change.nextOwner&&!observedModule)fail('OWNERSHIP_SOURCE_INVALID','新责任需要真实、可见且结构有效的模块');
-    const facts={workspaceId:request.workspaceId,change,ownershipCursor:this.cursor(state),previous,...(previousOwner?{previousOwner:summarizeWorkspaceMember(previousOwner)}:{}),...(nextOwner?{nextOwner:summarizeWorkspaceMember(nextOwner)}:{}),...(observedModule?{observedModule}:{}),impact:moduleOwnershipImpact(state,change.moduleId)};
+    const knowledge:Knowledge=requiresSource?await this.knowledge(fixed):{visible:new Map()};this.assert(request);assertCurrent?.();
+    const observedModule=requiresSource?this.observed(knowledge,change.moduleId):undefined;
+    if(requiresSource&&!observedModule)fail('OWNERSHIP_SOURCE_INVALID','新责任需要真实、可见且结构有效的模块');
+    const sourceSelection=requiresSource?this.owner.sources!.selection(state,knowledge.snapshot!,{kind:'module',sourceId:change.moduleId}):undefined;
+    if(adopting&&sourceSelection?.kind==='workspace'&&sourceSelection.expectedRef&&isDeepStrictEqual(previous?.sourceRef,sourceSelection.expectedRef))fail('OWNERSHIP_NO_CHANGE','原负责人已经采纳当前来源');
+    const facts={workspaceId:request.workspaceId,change,ownershipCursor:this.cursor(state),previous,...(previousOwner?{previousOwner:summarizeWorkspaceMember(previousOwner)}:{}),...(nextOwner?{nextOwner:summarizeWorkspaceMember(nextOwner)}:{}),...(observedModule?{observedModule}:{}),...(sourceSelection?{sourceSelection}:{}),impact:moduleOwnershipImpact(state,change.moduleId)};
     const {workspaceId:_,...body}=facts;
     const preview:ModuleOwnershipPreview=moduleOwnershipPreviewSchema.parse({identity:this.identity(),readOnly:true,...body,basis:moduleOwnershipBasis(facts),checkedAt:new Date().toISOString(),issues:[]});
     return {preview,knowledge};
@@ -145,16 +151,20 @@ export class ModuleOwnerships {
     if(old){if(old.fingerprint!==command.fingerprint)fail('OWNERSHIP_COMMAND_CONFLICT','原命令已绑定其他请求，请查询原回执');return this.checkedReceipt(old.receipt,request.workspaceId,request.commandId)}
     if(actor.kind==='main_agent'&&!assertCurrent)fail('OWNERSHIP_ACTOR','主运行责任写入缺少可信生命周期端口');
     this.assert(request);assertCurrent?.();
-    return this.store.transact(command,async state=>{
+    const requiresSource=isModuleOwnershipSourceAdoption(request.change)||!!request.change.nextOwner;
+    const execute=(snapshot?:Snapshot)=>this.store.transact(command,async state=>{
       this.assert(request);assertCurrent?.();checkModuleOwnershipActor(state,actor);
       if(!isDeepStrictEqual(this.cursor(state),request.expectedOwnershipCursor))fail('OWNERSHIP_REGISTRY_STALE','责任登记版本已变化，请重新预览');
-      const prepared=await this.prepare(state,request,assertCurrent),p=prepared.preview;
+      const prepared=await this.prepare(state,request,assertCurrent,snapshot),p=prepared.preview;
       if(p.basis!==request.expectedBasis)fail('OWNERSHIP_BASIS_STALE','模块、岗位或任务影响已变化，请重新预览');
       await this.verifyKnowledge(prepared.knowledge,request,assertCurrent);checkModuleOwnershipActor(state,actor);
       const time=new Date().toISOString(),changeId=randomUUID(),previous=p.previous,cursor=this.cursor(state);
-      const next:ModuleOwnership={workspaceId:request.workspaceId,bindingId:previous?.bindingId??randomUUID(),moduleId:request.change.moduleId,revision:(previous?.revision??0)+1,ownerMemberId:request.change.nextOwner?.memberId??null,observedModule:p.observedModule??previous!.observedModule,createdAt:previous?.createdAt??time,updatedAt:time,lastChangeId:changeId};
-      const change:ModuleOwnershipChange={version:1,request,actor,changeId,ownershipCursor:{kind:'module_ownership',workspaceId:request.workspaceId,streamId:cursor?.streamId??randomUUID(),seq:(cursor?.seq??0)+1},previousRevision:previous?.revision??0,previousBindingHash:previous?moduleOwnershipHash(previous):null,next,impact:p.impact,committedAt:time};
-      return {ownershipChanges:[change],receipt:moduleOwnershipReceipt(change)};
+      const capture=p.sourceSelection?this.owner.sources!.capture(state,p.sourceSelection,{kind:'module_ownership',changeId},time):undefined;
+      if(capture&&'kind' in capture.ref)fail('OWNERSHIP_SOURCE_INVALID','模块责任不能采用内置能力来源');
+      const next:ModuleOwnership={workspaceId:request.workspaceId,bindingId:previous?.bindingId??randomUUID(),moduleId:request.change.moduleId,revision:(previous?.revision??0)+1,ownerMemberId:isModuleOwnershipSourceAdoption(request.change)?previous!.ownerMemberId:request.change.nextOwner?.memberId??null,observedModule:p.observedModule??previous!.observedModule,...(capture?{sourceRef:capture.ref as NonNullable<ModuleOwnership['sourceRef']>}:previous?.sourceRef?{sourceRef:previous.sourceRef}:{}),createdAt:previous?.createdAt??time,updatedAt:time,lastChangeId:changeId};
+      const change:ModuleOwnershipChange={version:1,request,actor,changeId,ownershipCursor:{kind:'module_ownership',workspaceId:request.workspaceId,streamId:cursor?.streamId??randomUUID(),seq:(cursor?.seq??0)+1},previousRevision:previous?.revision??0,previousBindingHash:previous?moduleOwnershipHash(previous):null,...(p.sourceSelection?{sourceSelection:p.sourceSelection}:{}),next,impact:p.impact,committedAt:time};
+      return {ownershipChanges:[change],...(capture?.event?{knowledgeSourceChanges:[capture.event]}:{}),receipt:moduleOwnershipReceipt(change)};
     });
+    return requiresSource?this.owner.withSourceSnapshot(execute):execute();
   }
 }

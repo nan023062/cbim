@@ -3,9 +3,10 @@
  * 设计原因：领域层规划对象及引用，主进程负责真实文件系统；清理只能删除空目录，不能扩大为业务资源删除。
  */
 import type {ChangeRequest,KnowledgeFile} from './types';
+import type {ObjectPlanV2} from './planned-commit';
 
 /** 指纹由领域层生成并在提交时复核；计划绑定创建时的工作区实例。 */
-export interface ObjectPlan {request:ChangeRequest;hash:string;deletedRoots:string[]}
+export type ObjectPlan=ObjectPlanV2|{request:ChangeRequest;hash:string;deletedRoots:string[]};
 export interface ObjectStorage {
   assertAbsent(id:string):Promise<void>;
   assertKnowledgeOnly(id:string,files:KnowledgeFile[]):Promise<void>;

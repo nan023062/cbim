@@ -1,6 +1,6 @@
 import {afterEach,expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {fixture} from './helpers';
+import {fixture,request} from './helpers';
 import {seedModuleOwnership,moduleOwnershipJournal} from './module-ownership-fixture';
 import {ModuleOwnershipTools} from '../src/backend/scheduler-engine/tools/module-ownership-tools';
 import {mainModuleOwnershipTools} from '../src/backend/main/workspace/main-module-ownership-tools';
@@ -29,6 +29,21 @@ async function setup(){
   const commandId=(call:string)=>moduleOwnershipMainCommandId(seed.entry.id,{kind:'main_agent',rootSessionId:task.taskId,scopeId,runId,agentInstanceId:main.agentInstanceId,agentSessionId:main.agentSessionId,toolName:'cbim_module_owner_change_commit',toolCallId:call});
   return {...f,...seed,workspace,service,dispatch,task,identity,binding,port,tools,input,commandId};
 }
+
+it('main tool explicitly adopts a new module source without changing its owner and keeps source-aware pages distinct',async()=>{
+  const f=await setup(),assigned=decoded(await f.tools.call('cbim_module_owner_change_commit',f.input,signal(),'assign-source'));
+  const first=await f.service.get({workspaceId:f.identity.workspaceId,instanceId:f.workspace.instanceId,moduleId:f.moduleId});
+  const before=await f.workspace.snapshot();await f.workspace.commit(request(before,[{path:'.cbim/.cbimignore',text:f.moduleId+'/\n'}]));
+  await f.workspace.commit(request(await f.workspace.snapshot(),[{path:'.cbim/.cbimignore',text:null}]));
+  const current=await f.service.get({workspaceId:f.identity.workspaceId,instanceId:f.workspace.instanceId,moduleId:f.moduleId});
+  expect(current.basis.knowledgeRevision).toBe(first.basis.knowledgeRevision);expect(current.basis.sourceCursor).not.toEqual(first.basis.sourceCursor);expect(current.view.sourceStatus?.status).toBe('retired');
+  await expect(f.service.list({workspaceId:f.identity.workspaceId,instanceId:f.workspace.instanceId,expectedReadBasis:first.basis})).rejects.toMatchObject({code:'OWNERSHIP_REGISTRY_STALE'});
+  const change={kind:'adopt_source' as const,moduleId:f.moduleId,expectedBinding:{bindingId:assigned.receipt.bindingId,revision:assigned.receipt.revision,ownerMemberId:assigned.receipt.ownerMemberId},reason:'Explicitly adopt the new source generation'};
+  const preview=decoded(await f.tools.call('cbim_module_owner_change_preview',{change},signal())).preview;
+  const result=decoded(await f.tools.call('cbim_module_owner_change_commit',{change,expectedOwnershipCursor:preview.ownershipCursor,expectedBasis:preview.basis},signal(),'adopt-source'));
+  expect(result.receipt.action).toBe('adopt_source');expect(result.receipt.ownerMemberId).toBe(assigned.receipt.ownerMemberId);expect(result.receipt.bindingId).toBe(assigned.receipt.bindingId);
+  expect((await f.service.get({workspaceId:f.identity.workspaceId,instanceId:f.workspace.instanceId,moduleId:f.moduleId})).view.sourceStatus?.status).toBe('current');
+});
 
 it('main tools discover real member summaries and module ownership without returning capability bodies',async()=>{
   const f=await setup(),members=decoded(await f.tools.call('cbim_module_owner_inspect',{members:true,limit:1},signal())),page=members.memberPage;

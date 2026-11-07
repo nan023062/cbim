@@ -1,10 +1,9 @@
 /**
- * 作用定位：为已运行工作区装配成员派发、大脑执行、目标审阅、岗位及模块负责人服务；责任、岗位与执行共用同一 DispatchStore，但保持独立审计投影。
+ * 作用定位：为已运行工作区装配成员派发、大脑执行、目标审阅、岗位及模块负责人服务；复用工作区恢复前创建的唯一 DispatchStore，来源、责任、岗位与执行保持独立审计投影。
  * 设计原因：派发、审阅及周期额度共用可信日志；Workflow 能力按真实工具与验证端口预检，冻结约定只注入正式成员。JSON 验证以同一安全读取字节判定，交付及审阅复用有界文件复核；密钥留在工厂闭包，只读报告不启动成员。
  */
 import path from 'node:path';
 import type {Workspace} from './workspace/workspace';
-import {FileDispatchStore} from './persistence/tasks/dispatch-store';
 import {WorkspaceDispatchService} from '../scheduler-engine/execution/dispatch-service';
 import type {DispatchObserver} from '../core/tasks/dispatch-storage';
 import type {LlmProfiles} from './persistence/settings/llm-profiles';
@@ -30,7 +29,7 @@ import {ModuleOwnerships} from './workspace/module-ownerships';
 /** 应用对每个活动工作区只调用一次；关闭服务必须早于释放工作区锁。 */
 export function createMemberDispatch(workspace:Workspace,observer?:DispatchObserver){
   workspace.assert();
-  return new WorkspaceDispatchService(workspace,new FileDispatchStore(path.join(workspace.paths.project(workspace.entry.id),'dispatch'),workspace.entry.id,observer));
+  return new WorkspaceDispatchService(workspace,workspace.dispatchStore);
 }
 
 /**
@@ -41,7 +40,7 @@ export function createMemberDispatch(workspace:Workspace,observer?:DispatchObser
 export function createMemberServices(workspace:Workspace,models:LlmProfiles,lease:WorkspaceExecutionLease,observer?:DispatchObserver,admission?:WorkspaceAdmission,budgetPolicy?:()=>ScopeBudgetPolicy){
   workspace.assert();
   const directory=path.join(workspace.paths.project(workspace.entry.id),'dispatch');
-  const store=new FileDispatchStore(directory,workspace.entry.id,observer),storage=new FileRunStorage();
+  const store=workspace.dispatchStore,storage=new FileRunStorage();
   const runsDirectory=path.join(directory,'runs');
   const artifactFiles=new ArtifactFiles(workspace.entry.path,()=>workspace.assert());
   const nativeFiles=new NativeSessionFiles(path.join(runsDirectory,'pi','sessions'),()=>workspace.assert());

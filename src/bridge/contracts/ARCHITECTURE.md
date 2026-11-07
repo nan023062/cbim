@@ -19,6 +19,7 @@
 | [governance.ts](governance.ts) | 向业务架构界面公开模块知识治理的纯数据与严格校验协议。 |
 | [human-continue.ts](human-continue.ts) | 公开按已保存人工决定继续原目标的严格请求与回执，连接桌面和调度入口。 |
 | [human-decisions.ts](human-decisions.ts) | 向桌面公开人工决定的序列化请求、依据预览与不可变记录。 |
+| [knowledge-source.ts](knowledge-source.ts) | 向桌面公开知识来源身份、采纳预览和当前核实状态的纯数据协议。 |
 | [models.ts](models.ts) | 模型配置界面消费的公开模型信息与停止原因格式化。 |
 | [module-ownership.ts](module-ownership.ts) | 公开模块负责人控制面的纯数据协议，供业务架构、项目岗位与 Main IPC 使用。 |
 | [repository-connections.ts](repository-connections.ts) | 向桌面公开工作区资源仓库链接器的登记、授权和真实 HTTP 核验协议。 |
@@ -192,6 +193,16 @@ class N_src_bridge_contracts_human_decisions_ts["human-decisions.ts"] {
 }
 ```
 直接依赖：[../../backend/core/tasks/human-decisions.ts](../../backend/core/tasks/human-decisions.ts)。
+
+### knowledge-source.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_knowledge_source_ts["knowledge-source.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../backend/core/workspace/knowledge-source.ts](../../backend/core/workspace/knowledge-source.ts)。
 
 ### models.ts
 
@@ -705,6 +716,8 @@ governance.ts 仅重导 Core 严格纯协议。界面按明确工作区/实例/�
 
 `dispatch.ts` 公开 continuation manifest v1/v2 类型。旧 v1 保持原结构，新来源的 v2 记录导入事实与截取范围；授权版本只是当时记录，不授予重连、安装或执行权。
 # 项目岗位登记数据边界
+
+`knowledge-source.ts` 只重导来源引用、核实状态和预览选择；不公开 source authority、journal正文或写前屏障的写端口。预览中的 expectedRef 只是当前版本预期，客户端不能提交自证来源。岗位/责任旧记录可缺省来源，新明确采纳由后端生成；责任独立 `adopt_source` 允许同owner增加一版，不能被一般负责人变更冒用。
 
 `workspace-members.ts` 只重导 Core team 的严格 DTO/Schema。五个 `workspace.members.*` IPC 传递明确岗位选择、实例、版本、预览依据及紧凑原命令回执；界面不能提交 actor、能力正文或模型凭据。registry cursor 与任务图/周期游标分开，稳定 memberId 不取代现有 agentInstanceId。当前岗位登记尚未切换实际派发协议。
 

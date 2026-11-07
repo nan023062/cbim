@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-领域工程、Module、本模块Workflow、显式维护关系与稳定岗位责任协议。责任控制面的观察、版本和回执不冒充来源代次或实际派发；主工具按严格权限分类。Workflow支持有界JSON结构验证，不自行读文件或签发业务验收。与本机工作区生命周期分开。
+领域工程、Module、Workflow与稳定岗位责任协议。来源代次和写前屏障由纯规则投影；内容指纹、来源身份、负责人关系分别核实。同负责人明确采纳递增关系版本，不迁移任务；旧缺省记录不补造来源。Workflow验证不自行读文件或签发业务验收。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -11,6 +11,8 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [json-validation-schema.ts](json-validation-schema.ts) | JSON 产物验证的有界声明和纯结构校验，供冻结 Workflow、运行时及知识入口共用。 |
+| [knowledge-source-rules.ts](knowledge-source-rules.ts) | 来源代次日志的纯投影、游标、依据和幂等命令规则，供知识协调器与 DispatchStore 共同使用。 |
+| [knowledge-source.ts](knowledge-source.ts) | 受控知识来源代次、读取状态和原日志握手的纯协议，供岗位、责任、Store 与桌面共用。 |
 | [maintenance.ts](maintenance.ts) | 模块长期维护责任的知识契约，区别于 Task 的执行 Agent 与历史作者。 |
 | [model.ts](model.ts) | 业务工作区：领域工程与模块注册表、模块知识和仅本模块 Workflow的核心封装。 |
 | [module-ownership-rules.ts](module-ownership-rules.ts) | 负责人登记的规范依据、命令指纹、不可变审计与关系头投影，供 Main 与 Store 重放共同调用。 |
@@ -76,6 +78,168 @@ N_src_backend_core_workspace_json_validation_schema_ts ..> N_src_backend_core_wo
 ```
 
 直接依赖：[../foundation/json.ts](../foundation/json.ts)、[../foundation/errors.ts](../foundation/errors.ts)。
+
+### knowledge-source-rules.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_knowledge_source_rules_ts["knowledge-source-rules.ts"] {
+  <<module>>
+  +knowledgeSourceCanonical()
+  +knowledgeSourceRef()
+  +currentKnowledgeSource()
+  +knowledgeSourcePending()
+  +nextKnowledgeSourceCursor()
+  +knowledgeSourceSelection()
+  +knowledgeSourceStatus()
+  +createKnowledgeSourceCapture()
+  +knowledgeSourceCommand()
+  +knowledgeSourceReceipt()
+  +applyKnowledgeSourceChange()
+  +validateKnowledgeSourceSelection()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_knowledge_source_rules_ts["knowledge-source-rules.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_knowledge_source_rules_ts_KnowledgeSourceRegistry["KnowledgeSourceRegistry"] {
+  <<interface>>
+  +workspaceId
+  +knowledgeSourceGenerations
+  +knowledgeSourceTransitions
+  +knowledgeSourceChanges
+  +sourceCursor
+}
+N_src_backend_core_workspace_knowledge_source_rules_ts ..> N_src_backend_core_workspace_knowledge_source_rules_ts_KnowledgeSourceRegistry : 声明
+```
+
+直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[knowledge-source.ts](knowledge-source.ts)。
+
+### knowledge-source.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_knowledge_source_ts["knowledge-source.ts"] {
+  <<module>>
+  +knowledgeSourceKey()
+  +sameKnowledgeSourceKey()
+  +sourceRefMatches()
+  +sourceSelectionMatches()
+  +sourceReadStateMatches()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_knowledge_source_ts["knowledge-source.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceKey["KnowledgeSourceKey"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceKey : 声明
+class N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceRef["KnowledgeSourceRef"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceRef : 声明
+class N_src_backend_core_workspace_knowledge_source_ts_BuiltinCapabilitySourceRef["BuiltinCapabilitySourceRef"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_BuiltinCapabilitySourceRef : 声明
+class N_src_backend_core_workspace_knowledge_source_ts_CapabilitySourceRef["CapabilitySourceRef"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_CapabilitySourceRef : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_knowledge_source_ts["knowledge-source.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceObservation["KnowledgeSourceObservation"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceObservation : 声明
+class N_src_backend_core_workspace_knowledge_source_ts_SourceSelection["SourceSelection"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_SourceSelection : 声明
+class N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceReadState["KnowledgeSourceReadState"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceReadState : 声明
+class N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceCursor["KnowledgeSourceCursor"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceCursor : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_knowledge_source_ts["knowledge-source.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceGeneration["KnowledgeSourceGeneration"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceGeneration : 声明
+class N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceMutationPlan["KnowledgeSourceMutationPlan"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceMutationPlan : 声明
+class N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceTransition["KnowledgeSourceTransition"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceTransition : 声明
+class N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceCapture["KnowledgeSourceCapture"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceCapture : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_knowledge_source_ts["knowledge-source.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourcePrepared["KnowledgeSourcePrepared"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourcePrepared : 声明
+class N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceResolved["KnowledgeSourceResolved"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceResolved : 声明
+class N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceChange["KnowledgeSourceChange"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceChange : 声明
+class N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceReceipt["KnowledgeSourceReceipt"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceReceipt : 声明
+```
+
 
 ### maintenance.ts
 
@@ -150,6 +314,7 @@ class N_src_backend_core_workspace_module_ownership_rules_ts_ModuleOwnershipBasi
   +nextOwner
   +observedModule
   +impact
+  +sourceSelection
 }
 N_src_backend_core_workspace_module_ownership_rules_ts ..> N_src_backend_core_workspace_module_ownership_rules_ts_ModuleOwnershipBasisFacts : 声明
 class N_src_backend_core_workspace_module_ownership_rules_ts_ModuleOwnershipRegistry["ModuleOwnershipRegistry"] {
@@ -163,7 +328,7 @@ class N_src_backend_core_workspace_module_ownership_rules_ts_ModuleOwnershipRegi
 N_src_backend_core_workspace_module_ownership_rules_ts ..> N_src_backend_core_workspace_module_ownership_rules_ts_ModuleOwnershipRegistry : 声明
 ```
 
-直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../team/workspace-member-rules.ts](../team/workspace-member-rules.ts)、[../team/workspace-member.ts](../team/workspace-member.ts)、[module-ownership.ts](module-ownership.ts)。
+直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../team/workspace-member-rules.ts](../team/workspace-member-rules.ts)、[../team/workspace-member.ts](../team/workspace-member.ts)、[module-ownership.ts](module-ownership.ts)、[knowledge-source.ts](knowledge-source.ts)。
 
 ### module-ownership-tool-policy.ts
 
@@ -253,6 +418,7 @@ N_src_backend_core_workspace_module_ownership_tools_ts ..> N_src_backend_core_wo
 classDiagram
 class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
   <<module>>
+  +isModuleOwnershipSourceAdoption()
   +summarizeModuleOwnershipChange()
 }
 ```
@@ -419,7 +585,7 @@ class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipDetail["Mo
 N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipDetail : 声明
 ```
 
-直接依赖：[../team/workspace-member.ts](../team/workspace-member.ts)。
+直接依赖：[knowledge-source.ts](knowledge-source.ts)、[../team/workspace-member.ts](../team/workspace-member.ts)。
 
 ### workflow-contract.ts
 
@@ -459,6 +625,12 @@ N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspa
 
 ```mermaid
 classDiagram
+class N_src_backend_core_workspace_knowledge_source_rules_ts["knowledge-source-rules.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_knowledge_source_ts["knowledge-source.ts"] {
+  <<module>>
+}
 class N_src_backend_core_workspace_module_ownership_rules_ts["module-ownership-rules.ts"] {
   <<module>>
 }
@@ -468,14 +640,27 @@ class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
 class N_src_backend_core_workspace_module_ownership_tools_ts["module-ownership-tools.ts"] {
   <<module>>
 }
+N_src_backend_core_workspace_knowledge_source_rules_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
+N_src_backend_core_workspace_module_ownership_rules_ts ..> N_src_backend_core_workspace_module_ownership_ts : 导入依赖
+N_src_backend_core_workspace_module_ownership_rules_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
+N_src_backend_core_workspace_module_ownership_tools_ts ..> N_src_backend_core_workspace_module_ownership_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_knowledge_source_ts["knowledge-source.ts"] {
+  <<module>>
+}
 class N_src_backend_core_workspace_workflow_contract_ts["workflow-contract.ts"] {
   <<module>>
 }
 class N_src_backend_core_workspace_json_validation_schema_ts["json-validation-schema.ts"] {
   <<module>>
 }
-N_src_backend_core_workspace_module_ownership_rules_ts ..> N_src_backend_core_workspace_module_ownership_ts : 导入依赖
-N_src_backend_core_workspace_module_ownership_tools_ts ..> N_src_backend_core_workspace_module_ownership_ts : 导入依赖
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_json_validation_schema_ts : 导入依赖
 ```
 
@@ -566,3 +751,17 @@ ModuleBinding ..> ModuleMaintenanceBinding : 固定关系及知识版本
 `module-ownership-tools.ts` 定义主运行专用的四项严格输入、输出及可信端口，不包含桌面 actor 或模型可填写的工作区/周期身份。inspect 支持明确模块列表、按岗位反查，以及 members:true 的岗位摘要发现；模型每页最多 20 项，继续页绑定真实游标，不返回已采纳能力正文或凭据。preview/commit 的 basis 只是版本依据，不是新权限。
 
 四工具输出在唯一 JSON wire 上校验，保留输入的独立快照，单次最多 128 KiB。新查询、预览和提交核当前工作区实例，原命令回执允许同主根的旧实例/旧周期历史；未查到返回 unknown，不依据当前负责人反推原命令成功。原提交已发生但回包损坏时保留原 commandId，不回滚、不自动重新提交。
+
+### 受控来源代次与明确采纳
+
+`knowledge-source.ts` 是不含 Node、知识实现或任务类型的叶子协议。workspace 来源引用固定 workspace、agent/module 逻辑 ID 和不可复用 generationId；内置执行者使用独立 builtin 内容引用。`observed_existing` 只表示从真实采集开始追踪，不证明更早历史，也不能发现未经受控事务的离线同字节删除重建。旧 captureId、知识 revision、内容 hash 不升级为代次。
+
+`knowledge-source-rules.ts` 只投影可信输入的 capture/prepared/resolved 审计。prepared 保留旧头；只有原 journal 的 committed 结算才退休旧代次和建立新代次，rolled_back 不应用计划。普通内容编辑可以是空生命周期变化。所有代次和事件保留，回滚计划中的预分配 ID 也不能再用；未知 pending 不能被新请求覆盖。纯规则不自行读取或证明磁盘 journal。
+
+来源上限为 4,096 个代次、8,192 个事件、每计划 512 个逻辑对象、单事件 512 KiB、累计 16 MiB。prepare 同时预留一个 terminal 事件和 16 KiB 最坏 UTF-8 容量；pending 时不接受新的 capture 或来源写，避免成功写知识后才发现结算容量不足。终态严格绑定原 transition、请求与 journal 指纹，原回执不可随当前来源变动。
+
+责任 `sourceRef` 是明确采纳，`sourceSelection` 是服务重建的预览依据，不是请求可自报的证明。首次捕获 UUID/时钟不进入 basis；原关系指纹、实际来源选择及观察、当前岗位版本和任务影响仍进入。新增 `adopt_source` 请求不带 nextOwner，只能沿原非空 owner/binding 明确采纳不同来源；当前 owner 须 active。原普通同 owner 变更仍拒绝，解除保留原观察和引用，允许来源已经缺失。每次采纳推进原责任 revision，旧记录不改写。
+
+公开 sourceStatus 区分 untracked、needs_adoption、current、retired、pending 及 missing/invalid/unverifiable；current 必须精确匹配已采纳引用，所有 ref 与逻辑对象/工作区绑定。来源 current 和岗位 active 都不等于实际派发许可；本片尚未把执行任务切换为负责人岗位。
+
+责任读取依据增加可选 sourceCursor，新查询固定来源流，旧缺省只保持原读取格式、不补默认字段。翻页须比较完整依据，防止定义字节与知识 hash 恰好恢复相同时，把旧 current 与新 retired 混在一页链中。

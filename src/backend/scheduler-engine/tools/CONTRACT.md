@@ -132,3 +132,7 @@ DispatchToolAdapter ..> AgentDispatchService : 提交请求
 `ModuleOwnershipTools` 只在真实主周期端口存在时注册 `cbim_module_owner_inspect/change_preview/change_commit/receipt`，不进入共享知识目录或成员工具集合。inspect 支持岗位摘要发现、明确模块查询及岗位反查，分页最多 20 项并校验原选择/游标；不返回能力正文或凭据。change_commit 的 knowledge-write 效果沿既有 read/ask/execute 授权，不把预览 basis 当成批准。
 
 raw 输入在任何领域调用前严格校验；发送端口的对象与原期望独立克隆。结果只执行一次 JSON 编码，在同一 wire 校验身份、原输入、游标、关系动作和真实主 actor，之后发送原编码文本，最多 128 KiB。新读写必须匹配当前 instanceId，原回执查询可返回同主根旧实例记录。提交后坏输出或停止不撤销原审计；安全错误保留稳定 commandId，恢复只查询原命令，不自动重写。
+
+### 模块来源明确采纳
+
+责任工具的原严格 change 协议增加 `kind:adopt_source`，只带原绑定、模块和理由，不接 nextOwner/来源证明；由真实主工厂复用服务采纳当前来源。唯一输出 wire 核 action=adopt_source、原负责人和原 bindingId，不能把缺省 nextOwner 误判为解除。权限仍为原 knowledge-write，回执仍排除业务验收，未知后只查原 commandId。

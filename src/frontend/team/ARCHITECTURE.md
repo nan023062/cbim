@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-工作区唯一的静态Team/组/Agent图、继承与人才复用，节点按Session查看只读履历。独立项目岗位面板登记、采纳和暂停退休，反查模块责任委托workspace控制面；首次明确拒绝可重新编辑，未知保持原命令。不轮询全部历史或启动模型。
+工作区唯一的静态Team/组/Agent图、继承与人才复用，节点按Session查看只读履历。岗位面板独立登记、明确采纳和暂停退休；改名和模型更新保留原能力来源。来源屏障首次拒绝可重新编辑，未知仍查原命令；反查责任委托workspace，不启动模型。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -331,7 +331,7 @@ class N_src_frontend_team_WorkspaceMemberDetail_tsx["WorkspaceMemberDetail.tsx"]
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)。
+直接依赖：[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)。
 
 ### WorkspaceMemberForm.tsx
 
@@ -396,7 +396,7 @@ class N_src_frontend_team_WorkspaceMembers_tsx_WorkspaceMembersProps["WorkspaceM
 N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_WorkspaceMembers_tsx_WorkspaceMembersProps : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[workspace-member-state.ts](workspace-member-state.ts)、[WorkspaceMemberForm.tsx](WorkspaceMemberForm.tsx)、[WorkspaceMemberDetail.tsx](WorkspaceMemberDetail.tsx)、[../workspace/ModuleOwnershipPanel.tsx](../workspace/ModuleOwnershipPanel.tsx)、[workspace-members.css](workspace-members.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[workspace-member-state.ts](workspace-member-state.ts)、[WorkspaceMemberForm.tsx](WorkspaceMemberForm.tsx)、[WorkspaceMemberDetail.tsx](WorkspaceMemberDetail.tsx)、[../workspace/ModuleOwnershipPanel.tsx](../workspace/ModuleOwnershipPanel.tsx)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)、[workspace-members.css](workspace-members.css)。
 
 ### 本目录调用边界
 
@@ -488,6 +488,8 @@ N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_workspace_membe
 # 静态团队架构契约
 
 ## 项目岗位登记
+
+能力详情通过 `KnowledgeSourceDetails` 分开显示内容差异和受控来源身份；登记及“采纳当前能力”的原预览中显示 `sourceSelection`。旧记录未采纳来源时明确提示，不因读取、改名、暂停或模型采纳自动补齐。来源替换即使内容相同，也须明确采纳；本片仍不启动岗位执行。
 
 `TeamView` 的“项目岗位”打开独立 `WorkspaceMembers`；稳定岗位不加入静态能力树，也不冒充在线实例。只有当前工作区运行身份可发起新操作；岗位浏览入口不依赖当前知识树是否完整，缺失来源仍可读取历史或停用岗位。当前实现只登记，尚未按岗位派发，active 不是执行许可。
 

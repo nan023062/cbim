@@ -72,3 +72,17 @@ ModuleBinding ..> ModuleMaintenanceBinding : 固定关系及知识版本
 `module-ownership-tools.ts` 定义主运行专用的四项严格输入、输出及可信端口，不包含桌面 actor 或模型可填写的工作区/周期身份。inspect 支持明确模块列表、按岗位反查，以及 members:true 的岗位摘要发现；模型每页最多 20 项，继续页绑定真实游标，不返回已采纳能力正文或凭据。preview/commit 的 basis 只是版本依据，不是新权限。
 
 四工具输出在唯一 JSON wire 上校验，保留输入的独立快照，单次最多 128 KiB。新查询、预览和提交核当前工作区实例，原命令回执允许同主根的旧实例/旧周期历史；未查到返回 unknown，不依据当前负责人反推原命令成功。原提交已发生但回包损坏时保留原 commandId，不回滚、不自动重新提交。
+
+### 受控来源代次与明确采纳
+
+`knowledge-source.ts` 是不含 Node、知识实现或任务类型的叶子协议。workspace 来源引用固定 workspace、agent/module 逻辑 ID 和不可复用 generationId；内置执行者使用独立 builtin 内容引用。`observed_existing` 只表示从真实采集开始追踪，不证明更早历史，也不能发现未经受控事务的离线同字节删除重建。旧 captureId、知识 revision、内容 hash 不升级为代次。
+
+`knowledge-source-rules.ts` 只投影可信输入的 capture/prepared/resolved 审计。prepared 保留旧头；只有原 journal 的 committed 结算才退休旧代次和建立新代次，rolled_back 不应用计划。普通内容编辑可以是空生命周期变化。所有代次和事件保留，回滚计划中的预分配 ID 也不能再用；未知 pending 不能被新请求覆盖。纯规则不自行读取或证明磁盘 journal。
+
+来源上限为 4,096 个代次、8,192 个事件、每计划 512 个逻辑对象、单事件 512 KiB、累计 16 MiB。prepare 同时预留一个 terminal 事件和 16 KiB 最坏 UTF-8 容量；pending 时不接受新的 capture 或来源写，避免成功写知识后才发现结算容量不足。终态严格绑定原 transition、请求与 journal 指纹，原回执不可随当前来源变动。
+
+责任 `sourceRef` 是明确采纳，`sourceSelection` 是服务重建的预览依据，不是请求可自报的证明。首次捕获 UUID/时钟不进入 basis；原关系指纹、实际来源选择及观察、当前岗位版本和任务影响仍进入。新增 `adopt_source` 请求不带 nextOwner，只能沿原非空 owner/binding 明确采纳不同来源；当前 owner 须 active。原普通同 owner 变更仍拒绝，解除保留原观察和引用，允许来源已经缺失。每次采纳推进原责任 revision，旧记录不改写。
+
+公开 sourceStatus 区分 untracked、needs_adoption、current、retired、pending 及 missing/invalid/unverifiable；current 必须精确匹配已采纳引用，所有 ref 与逻辑对象/工作区绑定。来源 current 和岗位 active 都不等于实际派发许可；本片尚未把执行任务切换为负责人岗位。
+
+责任读取依据增加可选 sourceCursor，新查询固定来源流，旧缺省只保持原读取格式、不补默认字段。翻页须比较完整依据，防止定义字节与知识 hash 恰好恢复相同时，把旧 current 与新 retired 混在一页链中。

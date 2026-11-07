@@ -1,13 +1,15 @@
 /**
  * 作用定位：业务架构和项目岗位共用的模块责任控制面，提供查询、预览、明确提交和原命令核实。
- * 设计原因：同一模块的唯一岗位关系属于工作区；视图只发受控命令，不改模块正文、任务身份或业务执行状态。
+ * 设计原因：同一模块的唯一岗位关系属于工作区；明确区分更换负责人和采纳当前模块来源，二者都先预览，不改旧任务身份。
  */
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {ModuleOwnershipIdentity,ModuleOwnershipPage,ModuleOwnershipDetail,ModuleOwnershipPreview,ModuleOwnershipChangeInput,ModuleOwnershipPreviewInput} from '../../bridge/contracts/module-ownership';
+import {isModuleOwnershipSourceAdoption} from '../../bridge/contracts/module-ownership';
 import type {WorkspaceMemberList} from '../../bridge/contracts/workspace-members';
 import {checkedWorkspaceMemberList} from '../team/workspace-member-state';
 import {ModuleOwnershipCommandPool,checkedModuleOwnershipPage,checkedModuleOwnershipDetail,checkedModuleOwnershipPreview} from './module-ownership-state';
 import {ModuleOwnershipDetailView,ownershipStatus} from './ModuleOwnershipDetail';
+import {KnowledgeSourceSelection} from '../knowledge/KnowledgeSourceDetails';
 import './module-ownership.css';
 
 const commands=new ModuleOwnershipCommandPool();
@@ -39,10 +41,13 @@ export function ModuleOwnershipPanel({identity,initialModuleId,memberId,onClose}
     finally{lock.current=false;if(alive.current&&generation.current===token)setLoading(false)}
   }
   function invalidate(){selection.current++;setPreview(undefined)}
-  async function prepare(){
+  async function prepare(adoptSource=false){
     if(!detail||blocked||lock.current)return;const binding=detail.view.binding,next=members.find(item=>item.memberId===nextId);
-    if(nextId&&(!next||next.state!=='active')){setError('请选择当前已启用的项目岗位');return}
-    const change:ModuleOwnershipChangeInput={moduleId:detail.view.moduleId,expectedBinding:binding?{bindingId:binding.bindingId,revision:binding.revision,ownerMemberId:binding.ownerMemberId}:null,nextOwner:nextId&&next?{memberId:next.memberId,expectedRevision:next.revision}:null,reason};
+    if(adoptSource&&!binding?.ownerMemberId){setError('先设置负责人，再明确采纳新的模块来源');return}
+    if(!adoptSource&&nextId&&(!next||next.state!=='active')){setError('请选择当前已启用的项目岗位');return}
+    const expectedBinding=binding?{bindingId:binding.bindingId,revision:binding.revision,ownerMemberId:binding.ownerMemberId}:null;
+    // 来源采纳保留原负责人；不能将界面选中的另一个岗位夹带进此命令。
+    const change:ModuleOwnershipChangeInput=adoptSource?{kind:'adopt_source',moduleId:detail.view.moduleId,expectedBinding:expectedBinding!,reason}:{moduleId:detail.view.moduleId,expectedBinding,nextOwner:nextId&&next?{memberId:next.memberId,expectedRevision:next.revision}:null,reason};
     const input:ModuleOwnershipPreviewInput={...identity,change};lock.current=true;const token=selection.current;setLoading(true);setError('');setPreview(undefined);
     try{const value=checkedModuleOwnershipPreview(await window.cbim.call('workspace.ownerships.preview',input),input);if(alive.current&&selection.current===token)setPreview(value)}
     catch(cause){if(alive.current&&selection.current===token)setError('负责人变更预览失败：'+failure(cause))}
@@ -69,10 +74,11 @@ export function ModuleOwnershipPanel({identity,initialModuleId,memberId,onClose}
           <label>负责人岗位<select aria-label="负责人岗位" value={nextId} onChange={event=>{setNextId(event.target.value);invalidate()}}><option value="">不设置负责人 / 解除</option>{members.map(member=><option key={member.memberId} value={member.memberId} disabled={member.state!=='active'}>{member.name} · 第 {member.revision} 版{member.state!=='active'?' · '+(member.state==='suspended'?'已暂停':'已退休'):''}</option>)}{nextId&&!members.some(member=>member.memberId===nextId)&&<option value={nextId} disabled>原负责人暂不可选</option>}</select></label>
           <label>变更原因<textarea aria-label="负责人变更原因" required maxLength={2000} value={reason} onChange={event=>{setReason(event.target.value);invalidate()}}/></label>
           <button data-testid="module-ownership-preview" type="submit" disabled={sameOwner||!reason.trim()}>预览负责人变更</button>
+          {binding?.ownerMemberId&&<button data-testid="module-ownership-adopt-source" type="button" disabled={!sameOwner||!reason.trim()} onClick={()=>void prepare(true)}>预览采纳当前来源</button>}
         </fieldset></form>
       </>}
       {!detail&&!loading&&<p>选择模块查看或修改负责人。</p>}
-      {preview&&<section className="module-ownership-preview" data-testid="module-ownership-preview-result"><h3>负责人变更预览</h3><p>{preview.previousOwner?.name??'未设置'} → <strong>{preview.nextOwner?.name??'解除负责人'}</strong></p><p>{preview.change.reason}</p><p>关联旧协议任务 {preview.impact.total} 个：未领取 {preview.impact.counts.unclaimed}、执行中 {preview.impact.counts.inFlight}、检查点 {preview.impact.counts.checkpointed}、已终结 {preview.impact.counts.terminal}、其他 {preview.impact.counts.other}。此次登记不会改变这些任务。</p>{preview.issues.map((issue,index)=><p key={index}>{issue.message}</p>)}<button data-testid="module-ownership-commit" disabled={blocked||loading} onClick={()=>void commit()}>确认保存负责人</button></section>}
+      {preview&&<section className="module-ownership-preview" data-testid="module-ownership-preview-result"><h3>{isModuleOwnershipSourceAdoption(preview.change)?'来源采纳预览':'负责人变更预览'}</h3><KnowledgeSourceSelection selection={preview.sourceSelection}/><p>{preview.previousOwner?.name??'未设置'} → <strong>{preview.nextOwner?.name??'解除负责人'}</strong></p><p>{preview.change.reason}</p><p>关联旧协议任务 {preview.impact.total} 个：未领取 {preview.impact.counts.unclaimed}、执行中 {preview.impact.counts.inFlight}、检查点 {preview.impact.counts.checkpointed}、已终结 {preview.impact.counts.terminal}、其他 {preview.impact.counts.other}。此次登记不会改变这些任务。</p>{preview.issues.map((issue,index)=><p key={index}>{issue.message}</p>)}<button data-testid="module-ownership-commit" disabled={blocked||loading} onClick={()=>void commit()}>{isModuleOwnershipSourceAdoption(preview.change)?'确认采纳当前来源':'确认保存负责人'}</button></section>}
     </div></div>
     {!!state.records.length&&<details className="module-ownership-commands" open={blocked}><summary>本机责任提交记录 · {state.records.length}</summary>{[...state.records].reverse().map(record=><div key={record.request.commandId} data-command-id={record.request.commandId}><strong>{{submitting:'正在提交',unknown:'结果未确认',accepted:'已受理',rejected:'未受理'}[record.phase]}</strong><code>{record.request.commandId}</code>{record.error&&<p role="alert">{record.error}</p>}{record.receipt&&<p>{record.receipt.moduleId} · 责任第 {record.receipt.revision} 版</p>}{record.phase!=='rejected'&&<button data-testid="module-ownership-receipt-query" disabled={controller.isPending(record.request.commandId)} onClick={()=>void query(record.request.commandId)}>查询原命令</button>}{record.phase==='unknown'&&<button disabled={controller.isPending(record.request.commandId)} onClick={()=>void query(record.request.commandId,true)}>重送同一请求</button>}{record.receipt&&<button disabled={loading} onClick={()=>void select(record.receipt!.moduleId)}>查看模块责任</button>}</div>)}</details>}
   </section>;

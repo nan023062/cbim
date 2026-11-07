@@ -1,5 +1,8 @@
 import {afterEach,expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import type {Snapshot} from '../src/backend/core/knowledge/types';
 import {fixture,request} from './helpers';
 import {seedWorkspaceMembers,commitWorkspaceMember,changeWorkspaceMemberCapability} from './workspace-member-fixture';
 import type {WorkspaceMemberChangeInput,WorkspaceMemberCommitInput,WorkspaceMemberPreview} from '../src/backend/core/team/workspace-member';
@@ -62,7 +65,8 @@ it('knowledge changing while public model preparation awaits is rejected before 
   const f=await setup(),p=await f.preview(f.register()),command=f.command(p),original=f.app.models.configuration.bind(f.app.models);
   vi.spyOn(f.app.models,'configuration').mockImplementationOnce(async(...args)=>{
     const value=await original(...args);
-    await changeWorkspaceMemberCapability(f.app,f.identity.workspaceId,f.team.input.agentId,f.team.shared);
+    // 采纳已持知识串行锁；外部文件变化仍可能发生，不能在同锁回调中排队并等待另一知识提交。
+    await fs.writeFile(path.join(f.workspace.entry.path,f.team.input.agentId,'principles.md'),'# Changed externally during model configuration');
     return value;
   });
   await expect(f.commit(command)).rejects.toMatchObject({code:'MEMBER_SOURCE_CHANGED'});
@@ -81,8 +85,8 @@ it('public model changes during preparation are caught by the final source rerea
 });
 
 it('workspace retirement while a real source read awaits rejects new registration and drains without creating runtime state',async()=>{
-  const f=await setup(),p=await f.preview(f.register()),command=f.command(p),entered=deferred(),release=deferred(),original=f.workspace.snapshot.bind(f.workspace);
-  vi.spyOn(f.workspace,'snapshot').mockImplementationOnce(async()=>{const value=await original();entered.resolve();await release.promise;return value});
+  const f=await setup(),p=await f.preview(f.register()),command=f.command(p),entered=deferred(),release=deferred(),original=f.workspace.withSourceSnapshot.bind(f.workspace);
+  vi.spyOn(f.workspace,'withSourceSnapshot').mockImplementationOnce(<T>(operation:(s:Snapshot)=>Promise<T>)=>original(async value=>{entered.resolve();await release.promise;return operation(value)}));
   const pending=f.commit(command);await entered.promise;
   const stopped=f.app.stop(f.identity.workspaceId);release.resolve();
   await expect(pending).rejects.toMatchObject({code:'MEMBER_UNAVAILABLE'});await stopped;

@@ -544,3 +544,10 @@ Progress 保存前独立冻结验证记录，原 wire 证明必须能由这些�
 责任指派与岗位退休在同一 DispatchStore 队列裁决。`workspace-member-invariants.ts` 遇仍被任一当前关系引用的 retired 变更返回 `MEMBER_OWNERSHIP_ACTIVE`；先解除/更换后才可退休。暂停不清责任，恢复 active 也不表示具备执行条件。本片不接入来源代次或实际派发身份切换。
 
 `cbim_module_owner_*` 回执保留在真实执行日志，但从 `isProgressEvidence`、成员候选、Workflow 交付和目标/人工候选的业务证据入口排除。查询或责任提交不能证明业务文件、知识正文或人工条件已经验收。提交的 knowledge-write 效果仍使旧进度失效并参与审阅后的副作用检查，控制面例外不会绕过已有业务目标。
+### 来源日志与登记的精确组合许可
+
+`DispatchState` 增加独立 knowledgeSourceGenerations、knowledgeSourceTransitions、knowledgeSourceChanges 与 sourceCursor，旧缺省按空历史读取。`knowledge-source-invariants.ts` 先核整个来源 mutation，prepare/resolved 只许来源审计和原回执；capture 只许与其明确的一条 workspace_member 或 module_ownership 消费者同事务、同提交时间保存。捕获 source key、工作区、当前不存在的头、预览 observation、next.sourceRef 和消费者 changeId 必须逐项一致。
+
+两个原登记门禁只接受该完整验证返回的精确许可，不能因出现 source 字段就忽略混合写。其他岗位、责任、图、实例、会话、信封、运行或周期集合即使空数组也不能夹带。已有来源采纳不产生 capture；builtin 不产生 workspace generation。任一 pending 阻止新捕获、能力采纳和负责人设置，但不阻止保留原来源的元信息/模型/状态变化或责任解除；退休仍须先解除真实责任引用。
+
+原日志在首次来源追踪前没有 selection/ref 的历史保持原样；来源开始追踪后，新来源消费者必须提供完整选择与当前引用。控制面来源屏障不宣称已经覆盖旧成员派发，实际负责人运行接线属于后续范围。

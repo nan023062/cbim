@@ -1,6 +1,6 @@
 /**
  * 作用定位：项目岗位页面的严格回包核对与持久提交控制器；跨同工作区页面共享未决命令。
- * 设计原因：岗位登记不应因超时重复创建。先保存完整原请求再发送，未知只查询或明确重送；已受理事实不因界面保存失败被当作回滚。
+ * 设计原因：岗位登记不应因超时重复创建。来源只随明确能力采纳改变；先保存完整原请求再发送，未知只查询或明确重送。
  */
 import {workspaceMemberCommitInputSchema,workspaceMemberPreviewSchema,workspaceMemberReceiptSchema,workspaceMemberListSchema,workspaceMemberDetailSchema} from '../../bridge/contracts/workspace-members';
 import type {WorkspaceMemberIdentity,WorkspaceMemberPreviewInput,WorkspaceMemberPreview,WorkspaceMemberCommitInput,WorkspaceMemberReceipt,WorkspaceMemberListInput,WorkspaceMemberList,WorkspaceMemberGetInput,WorkspaceMemberDetail,WorkspaceMemberLookup} from '../../bridge/contracts/workspace-members';
@@ -31,7 +31,7 @@ export function checkedWorkspaceMemberPreview(raw:unknown,input:WorkspaceMemberP
   if(old&&change.kind!=='register'){
     const source=old.adoption.configuration,next=p.capability.configuration;
     if(source.agentId!==next.agentId||source.teamId!==next.teamId||source.source!==next.source)throw Error('岗位预览不能更换静态能力身份');
-    const expected={name:old.name,position:old.position,adaptation:old.adaptation,state:old.state,capability:{configuration:source,capabilityHash:old.adoption.capabilityHash},runtimePolicy:old.runtimePolicy};
+    const expected={name:old.name,position:old.position,adaptation:old.adaptation,state:old.state,capability:{configuration:source,capabilityHash:old.adoption.capabilityHash,...(old.adoption.sourceRef?{sourceRef:old.adoption.sourceRef}:{})},runtimePolicy:old.runtimePolicy};
     if(change.kind==='update'){const {runtimePolicy,...patch}=change.patch;Object.assign(expected,patch);if(runtimePolicy)expected.runtimePolicy=p.runtimePolicy}
     else if(change.kind==='state')expected.state=change.nextState;
     else if(change.target==='capability')expected.capability=p.capability;
@@ -54,7 +54,7 @@ export interface WorkspaceMemberAttempt {request:WorkspaceMemberCommitInput;phas
 export interface WorkspaceMemberCommandState {records:readonly WorkspaceMemberAttempt[];error:string}
 export interface WorkspaceMemberCommandPorts {storage:Pick<Storage,'getItem'|'setItem'>;commit:(input:WorkspaceMemberCommitInput)=>Promise<unknown>;lookup:(input:WorkspaceMemberLookup)=>Promise<unknown>;uuid:()=>string}
 /** 精确列举首次受理前拒绝，包含仍有模块责任时的退休拒绝；未知、IO 与命令冲突不能解释为可换 ID 重做。 */
-export function workspaceMemberPreRejected(error:unknown){return /^MEMBER_(?:INPUT_INVALID|NOT_FOUND|IDENTITY|REGISTRY_STALE|REVISION_CONFLICT|BASIS_STALE|SOURCE_INVALID|MODEL_INVALID|NO_CHANGE|RETIRED|LIMIT|SOURCE_CHANGED|OWNERSHIP_ACTIVE):/.test(message(error))}
+export function workspaceMemberPreRejected(error:unknown){return /^MEMBER_(?:INPUT_INVALID|NOT_FOUND|IDENTITY|REGISTRY_STALE|REVISION_CONFLICT|BASIS_STALE|SOURCE_INVALID|SOURCE_PENDING|MODEL_INVALID|NO_CHANGE|RETIRED|LIMIT|SOURCE_CHANGED|OWNERSHIP_ACTIVE):/.test(message(error))}
 
 /** 每工作区共享的本机命令日志；卸载视图不取消已经送达的登记，也不删除未决记录。 */
 export class WorkspaceMemberCommands {

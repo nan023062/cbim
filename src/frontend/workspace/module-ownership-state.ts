@@ -1,8 +1,9 @@
 /**
  * 作用定位：模块负责人面板的回包核对和持久原命令状态，跨业务架构与项目岗位视图共享。
- * 设计原因：责任变更必须绑定实际预览和版本，回复未知不代表未保存；重开只查询，绝不自动换命令重做。
+ * 设计原因：更换负责人和同负责人采纳来源分别核对；回复未知不代表未保存，重开只查询原命令，不改请求或补造来源。
  */
-import {moduleOwnershipCommitInputSchema,moduleOwnershipPreviewSchema,moduleOwnershipReceiptSchema,moduleOwnershipPageSchema,moduleOwnershipDetailSchema} from '../../bridge/contracts/module-ownership';
+import {moduleOwnershipCommitInputSchema,moduleOwnershipPreviewSchema,moduleOwnershipReceiptSchema,moduleOwnershipPageSchema,moduleOwnershipDetailSchema,isModuleOwnershipSourceAdoption} from '../../bridge/contracts/module-ownership';
+import {sourceReadStateMatches} from '../../bridge/contracts/knowledge-source';
 import type {ModuleOwnershipIdentity,ModuleOwnershipPreviewInput,ModuleOwnershipPreview,ModuleOwnershipCommitInput,ModuleOwnershipReceipt,ModuleOwnershipListInput,ModuleOwnershipByMemberInput,ModuleOwnershipPage,ModuleOwnershipGetInput,ModuleOwnershipDetail,ModuleOwnershipLookup,ModuleOwnershipView} from '../../bridge/contracts/module-ownership';
 
 const message=(error:unknown)=>error instanceof Error?error.message:String(error);
@@ -11,6 +12,7 @@ const same=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(or
 const identity=(value:ModuleOwnershipIdentity,input:ModuleOwnershipIdentity)=>same(value,{workspaceId:input.workspaceId,instanceId:input.instanceId});
 function checkView(view:ModuleOwnershipView,workspaceId:string){
   if(view.binding&&(view.binding.workspaceId!==workspaceId||view.binding.moduleId!==view.moduleId)||view.owner&&(!view.binding||view.owner.memberId!==view.binding.ownerMemberId))throw Error('模块责任与岗位身份不一致');
+  if(view.sourceStatus&&!sourceReadStateMatches(view.sourceStatus,workspaceId,{kind:'module',sourceId:view.moduleId},view.binding?.sourceRef))throw Error('模块来源不属于当前工作区或责任记录');
 }
 /** 三项读取依据一起冻结后续页；岗位改名、知识变化或关系变更均不能拼入旧列表。 */
 export function checkedModuleOwnershipPage(raw:unknown,input:ModuleOwnershipListInput|ModuleOwnershipByMemberInput):ModuleOwnershipPage{
@@ -29,15 +31,19 @@ export function checkedModuleOwnershipDetail(raw:unknown,input:ModuleOwnershipGe
 export function checkedModuleOwnershipPreview(raw:unknown,input:ModuleOwnershipPreviewInput):ModuleOwnershipPreview{
   const value=moduleOwnershipPreviewSchema.parse(raw),change=input.change,previous=value.previous,expected=change.expectedBinding;
   if(!identity(value.identity,input)||!same(value.change,change)||value.ownershipCursor&&value.ownershipCursor.workspaceId!==input.workspaceId||expected===null&&previous!==null||expected!==null&&(!previous||previous.workspaceId!==input.workspaceId||previous.moduleId!==change.moduleId||previous.bindingId!==expected.bindingId||previous.revision!==expected.revision||previous.ownerMemberId!==expected.ownerMemberId))throw Error('负责人预览与原关系或选择不一致');
-  if(change.nextOwner?(!value.nextOwner||value.nextOwner.memberId!==change.nextOwner.memberId||value.nextOwner.revision!==change.nextOwner.expectedRevision||value.nextOwner.state!=='active'||!value.observedModule):value.nextOwner!==undefined)throw Error('负责人预览改变了目标岗位');
+  if(isModuleOwnershipSourceAdoption(change)){
+    if(!previous?.ownerMemberId||!value.previousOwner||!same(value.previousOwner,value.nextOwner)||value.nextOwner?.memberId!==previous.ownerMemberId||!value.observedModule)throw Error('来源采纳预览改变了原负责人');
+  }else if(change.nextOwner?(!value.nextOwner||value.nextOwner.memberId!==change.nextOwner.memberId||value.nextOwner.revision!==change.nextOwner.expectedRevision||value.nextOwner.state!=='active'||!value.observedModule):value.nextOwner!==undefined)throw Error('负责人预览改变了目标岗位');
   if(value.previousOwner&&value.previousOwner.memberId!==previous?.ownerMemberId)throw Error('负责人预览改变了原岗位');
   return value;
 }
 /** 桌面原请求只能对应本机明确提交来源；回执一经受理，全部事实保持不变。 */
 export function checkedModuleOwnershipReceipt(raw:unknown,request:ModuleOwnershipCommitInput,previous?:ModuleOwnershipReceipt):ModuleOwnershipReceipt{
   const value=moduleOwnershipReceiptSchema.parse(raw),expected=request.change.expectedBinding,cursor=request.expectedOwnershipCursor,revision=expected?.revision??0;
-  const action=request.change.nextOwner?(expected?.ownerMemberId?'replace':'assign'):'unassign';
-  if(!identity(value.identity,request)||value.commandId!==request.commandId||value.action!==action||value.moduleId!==request.change.moduleId||value.basis!==request.expectedBasis||value.previousRevision!==revision||value.revision!==revision+1||expected&&value.bindingId!==expected.bindingId||value.previousOwnerMemberId!==(expected?.ownerMemberId??null)||value.ownerMemberId!==(request.change.nextOwner?.memberId??null)||value.ownershipCursor.workspaceId!==request.workspaceId||value.ownershipCursor.seq!==(cursor?.seq??0)+1||cursor&&value.ownershipCursor.streamId!==cursor.streamId||!same(value.actor,{kind:'local_desktop',interaction:'explicit_submit'})||previous&&!same(value,previous))throw Error('责任回执与原命令不一致，请查询原命令');
+  const sourceAdoption=isModuleOwnershipSourceAdoption(request.change);
+  const owner=sourceAdoption?expected?.ownerMemberId??null:request.change.nextOwner?.memberId??null;
+  const action=sourceAdoption?'adopt_source':owner?(expected?.ownerMemberId?'replace':'assign'):'unassign';
+  if(!identity(value.identity,request)||value.commandId!==request.commandId||value.action!==action||value.moduleId!==request.change.moduleId||value.basis!==request.expectedBasis||value.previousRevision!==revision||value.revision!==revision+1||expected&&value.bindingId!==expected.bindingId||value.previousOwnerMemberId!==(expected?.ownerMemberId??null)||value.ownerMemberId!==owner||sourceAdoption&&!owner||value.ownershipCursor.workspaceId!==request.workspaceId||value.ownershipCursor.seq!==(cursor?.seq??0)+1||cursor&&value.ownershipCursor.streamId!==cursor.streamId||!same(value.actor,{kind:'local_desktop',interaction:'explicit_submit'})||previous&&!same(value,previous))throw Error('责任回执与原命令不一致，请查询原命令');
   return value;
 }
 
@@ -46,7 +52,7 @@ export interface ModuleOwnershipAttempt {request:ModuleOwnershipCommitInput;phas
 export interface ModuleOwnershipCommandState {records:readonly ModuleOwnershipAttempt[];error:string}
 export interface ModuleOwnershipCommandPorts {storage:Pick<Storage,'getItem'|'setItem'>;commit:(input:ModuleOwnershipCommitInput)=>Promise<unknown>;lookup:(input:ModuleOwnershipLookup)=>Promise<unknown>;uuid:()=>string}
 /** 精确列举首次受理前拒绝；未知、IO 与命令冲突不能被解释为可换 ID 的拒绝。 */
-export function moduleOwnershipPreRejected(error:unknown){return /^OWNERSHIP_(?:INPUT|IDENTITY|NOT_FOUND|REGISTRY_STALE|BINDING_STALE|MEMBER_CHANGED|MEMBER_UNAVAILABLE|SOURCE_INVALID|SOURCE_CHANGED|BASIS_STALE|NO_CHANGE|LIMIT):/.test(message(error))}
+export function moduleOwnershipPreRejected(error:unknown){return /^OWNERSHIP_(?:INPUT|IDENTITY|NOT_FOUND|REGISTRY_STALE|BINDING_STALE|MEMBER_CHANGED|MEMBER_UNAVAILABLE|SOURCE_INVALID|SOURCE_CHANGED|SOURCE_PENDING|BASIS_STALE|NO_CHANGE|LIMIT):/.test(message(error))}
 
 /** 每工作区共享的本机命令日志；卸载视图不取消已经送达的登记，也不删除未决记录。 */
 export class ModuleOwnershipCommands {

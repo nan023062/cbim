@@ -1,13 +1,12 @@
 /**
  * 作用定位：将桌面岗位登记、采纳与当前差异查询接到工作区唯一 DispatchStore，公开模型配置由 Main 注入。
  * 设计原因：稳定 memberId 与运行实例分离；登记只保存实际原则、有效 Skill 和无凭据模型快照，不派工、不修改知识或默认执行角色。
- * 事务边界：登记在 Store 队列内重建预览，来源读取前后复验；知识和模型配置没有跨存储锁。原命令先查回执，重开不能重做已提交动作。
+ * 事务边界：能力采纳固定知识串行快照后进入同一 Store，未追踪来源捕获与岗位事件同事务；模型配置仍前后复验，不宣称拥有跨存储原子锁。原命令先查回执，重开不能重做已提交动作。
  */
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {DispatchState,DispatchStore} from '../../core/tasks/dispatch-storage';
 import {
   workspaceMemberCapabilitySchema,workspaceMemberCommitInputSchema,workspaceMemberDetailSchema,
@@ -25,6 +24,10 @@ import {
   workspaceMemberProposed,workspaceMemberReceipt,
 } from '../../core/team/workspace-member-rules';
 import {resolveDispatchAgent} from '../../scheduler-engine/context/dispatch-context';
+import type {Snapshot} from '../../core/knowledge/types';
+import {knowledgeSourcePending} from '../../core/workspace/knowledge-source-rules';
+import type {SourceSelection,KnowledgeSourceReadState} from '../../core/workspace/knowledge-source';
+import type {KnowledgeSourceWorkspace} from './knowledge-sources';
 
 /** 只接收明确供应商和模型的公开参数；不得在实现中解密、网络探测或读取默认选择。 */
 export interface WorkspaceMemberModels {configuration(profileId:string,modelId:string):Promise<WorkspaceMemberModelSnapshot>}
@@ -38,7 +41,7 @@ function issue(error:unknown){return error&&typeof error==='object'&&'code' in e
 
 /** 每个工作区实例只装配一次，共用派发存储；本服务没有执行、领取或停止模型的端口。 */
 export class WorkspaceMembers {
-  constructor(private readonly owner:KnowledgeWorkspace,private readonly store:DispatchStore,private readonly models:WorkspaceMemberModels,private readonly isCurrent:()=>boolean=()=>true){}
+  constructor(private readonly owner:KnowledgeSourceWorkspace,private readonly store:DispatchStore,private readonly models:WorkspaceMemberModels,private readonly isCurrent:()=>boolean=()=>true){}
   private assert(identity:WorkspaceMemberIdentity){
     if(identity.workspaceId!==this.owner.entry.id||identity.instanceId!==this.owner.instanceId)fail('MEMBER_IDENTITY','工作区实例已变化，请重新读取岗位登记');
     this.owner.assert(identity);if(!this.isCurrent())fail('MEMBER_UNAVAILABLE','工作区正在关闭，未接受新的岗位登记');
@@ -63,9 +66,11 @@ export class WorkspaceMembers {
     const request=input(workspaceMemberGetInputSchema,raw);this.assert(request);
     const state=await this.store.read(),member=this.member(state,request.memberId);this.assert(request);
     const currentDiff=await this.diff(member);this.assert(request);
+    let sourceStatus:KnowledgeSourceReadState;
+    try{const snapshot=await this.owner.snapshot(),configuration=member.adoption.configuration,pending=knowledgeSourcePending(state);sourceStatus=pending?{status:'pending',transitionId:pending.transitionId}:configuration.source==='builtin'?await this.builtinStatus(member,snapshot):this.owner.sources!.status(state,snapshot,{kind:'agent',sourceId:configuration.agentId},member.adoption.sourceRef)}catch{sourceStatus={status:'invalid',issue:'当前知识无法核实来源，原采纳仍保留'}}
     const after=await this.store.read();this.assert(request);
-    if(!isDeepStrictEqual(this.cursor(state),this.cursor(after)))fail('MEMBER_REGISTRY_STALE','读取期间岗位登记发生变化，请重新读取');
-    return workspaceMemberDetailSchema.parse({identity:this.identity(),registryCursor:this.cursor(state),member,currentDiff});
+    if(!isDeepStrictEqual(this.cursor(state),this.cursor(after))||!isDeepStrictEqual(state.sourceCursor,after.sourceCursor))fail('MEMBER_REGISTRY_STALE','读取期间岗位或来源登记发生变化，请重新读取');
+    return workspaceMemberDetailSchema.parse({identity:this.identity(),registryCursor:this.cursor(state),member,currentDiff,sourceStatus});
   }
 
   /** 预览只读取来源，不生成岗位、采纳 ID 或审计记录。 */
@@ -73,7 +78,7 @@ export class WorkspaceMembers {
     const request=input(workspaceMemberPreviewInputSchema,raw);this.assert(request);
     const state=await this.store.read(),prepared=await this.prepare(state,request);await this.verifySources(prepared,request);
     const after=await this.store.read();this.assert(request);
-    if(!isDeepStrictEqual(this.cursor(state),this.cursor(after)))fail('MEMBER_REGISTRY_STALE','预览期间岗位登记已变化，请重新预览');
+    if(!isDeepStrictEqual(this.cursor(state),this.cursor(after))||!isDeepStrictEqual(state.sourceCursor,after.sourceCursor))fail('MEMBER_REGISTRY_STALE','预览期间岗位或来源登记已变化，请重新预览');
     return prepared.preview;
   }
 
@@ -96,25 +101,28 @@ export class WorkspaceMembers {
     if(existing){if(existing.fingerprint!==command.fingerprint)fail('MEMBER_COMMAND_CONFLICT','原命令已用于另一份请求，请查询原回执');return this.checkedReceipt(existing.receipt,request.workspaceId,request.commandId)}
     if(!actor||actor.kind!=='local_desktop'||actor.interaction!=='explicit_submit')fail('MEMBER_ACTOR','岗位登记需要明确的本机提交');
     this.assert(request);
-    return this.store.transact(command,async state=>{
+    const adopting=request.change.kind==='register'||request.change.kind==='adopt'&&request.change.target==='capability';
+    const execute=(snapshot?:Snapshot)=>this.store.transact(command,async state=>{
       this.assert(request);
       if(!isDeepStrictEqual(this.cursor(state),request.expectedRegistryCursor))fail('MEMBER_REGISTRY_STALE','岗位登记版本已变化，请重新预览');
-      const prepared=await this.prepare(state,request),preview=prepared.preview;
+      const prepared=await this.prepare(state,request,snapshot),preview=prepared.preview;
       if(preview.basis!==request.expectedBasis)fail('MEMBER_BASIS_STALE','岗位或来源内容已变化，请重新预览');
       await this.verifySources(prepared,request);this.assert(request);
-      const time=new Date().toISOString(),old=preview.previousMember,p=preview.proposed;
+      const time=new Date().toISOString(),old=preview.previousMember,p=preview.proposed,changeId=randomUUID();
       const adopt=!old||request.change.kind==='adopt'&&request.change.target==='capability';
+      const capture=adopt&&preview.sourceSelection?this.owner.sources!.capture(state,preview.sourceSelection,{kind:'workspace_member',changeId},time):undefined;
       const member:WorkspaceMember={workspaceId:request.workspaceId,memberId:old?.memberId??randomUUID(),revision:(old?.revision??0)+1,
         name:p.name,position:p.position,adaptation:p.adaptation,state:p.state,
-        adoption:adopt?{captureId:randomUUID(),capturedAt:time,knowledgeRevision:p.capability.configuration.knowledgeRevision,capabilityHash:p.capability.capabilityHash,configuration:p.capability.configuration}:old!.adoption,
+        adoption:adopt?{captureId:randomUUID(),capturedAt:time,knowledgeRevision:p.capability.configuration.knowledgeRevision,capabilityHash:p.capability.capabilityHash,configuration:p.capability.configuration,...(capture?{sourceRef:capture.ref}:{})}:old!.adoption,
         runtimePolicy:p.runtimePolicy,createdAt:old?.createdAt??time,updatedAt:time};
-      const cursor=this.cursor(state),change:WorkspaceMemberChange={version:1,request,changeId:randomUUID(),registryCursor:{kind:'workspace_registry',workspaceId:request.workspaceId,streamId:cursor?.streamId??randomUUID(),seq:(cursor?.seq??0)+1},previousRevision:old?.revision??0,previousMemberHash:old?workspaceMemberHash(old):null,next:member,actor:{kind:'local_desktop',interaction:'explicit_submit'},committedAt:time};
-      return {workspaceMemberChanges:[change],receipt:workspaceMemberReceipt(change)};
+      const cursor=this.cursor(state),change:WorkspaceMemberChange={version:1,request,changeId,registryCursor:{kind:'workspace_registry',workspaceId:request.workspaceId,streamId:cursor?.streamId??randomUUID(),seq:(cursor?.seq??0)+1},previousRevision:old?.revision??0,previousMemberHash:old?workspaceMemberHash(old):null,...(preview.sourceSelection?{sourceSelection:preview.sourceSelection}:{}),next:member,actor:{kind:'local_desktop',interaction:'explicit_submit'},committedAt:time};
+      return {workspaceMemberChanges:[change],...(capture?.event?{knowledgeSourceChanges:[capture.event]}:{}),receipt:workspaceMemberReceipt(change)};
     });
+    return adopting?this.owner.withSourceSnapshot(execute):execute();
   }
 
-  private async capability(agentId:string):Promise<WorkspaceMemberCapability>{
-    const snapshot=await this.owner.snapshot();
+  private async capability(agentId:string,fixed?:Snapshot):Promise<WorkspaceMemberCapability>{
+    const snapshot=fixed??await this.owner.snapshot();
     const configuration=await resolveDispatchAgent(snapshot,agentId);
     const parsed=workspaceMemberCapabilitySchema.safeParse(configuration);if(!parsed.success)fail('MEMBER_SOURCE_INVALID','当前角色能力不符合岗位快照协议或超过容量');
     return parsed.data;
@@ -123,12 +131,15 @@ export class WorkspaceMembers {
     const snapshot=workspaceMemberModelSnapshotSchema.parse(await this.models.configuration(ref.profileId,ref.modelId));
     return {...ref,snapshot,configurationHash:workspaceMemberModelHash(snapshot)};
   }
-  private async prepare(state:DispatchState,request:WorkspaceMemberPreviewInput):Promise<PreparedMember>{
+  private async prepare(state:DispatchState,request:WorkspaceMemberPreviewInput,fixed?:Snapshot):Promise<PreparedMember>{
     this.assert(request);const change=request.change,old=change.kind==='register'?undefined:this.member(state,change.memberId);
     if(old){if(old.revision!==('expectedRevision' in change?change.expectedRevision:0))fail('MEMBER_REVISION_CONFLICT','岗位版本已变化，请重新读取');if(old.state==='retired')fail('MEMBER_RETIRED','岗位已退休，历史可读但不能修改或恢复')}
-    let proposed=old?workspaceMemberProposed(old):undefined,knowledgeRevision:string|undefined,model:WorkspaceMemberRuntimePolicy|undefined;
+    let proposed=old?workspaceMemberProposed(old):undefined,knowledgeRevision:string|undefined,model:WorkspaceMemberRuntimePolicy|undefined,sourceSelection:SourceSelection|undefined;
+    const adopting=change.kind==='register'||change.kind==='adopt'&&change.target==='capability';
+    if(adopting&&knowledgeSourcePending(state))fail('MEMBER_SOURCE_PENDING','来源事务待核实，尚未保存新的岗位采纳');
+    const snapshot=adopting?(fixed??await this.owner.snapshot()):undefined;
     if(change.kind==='register'){
-      const configuration=await this.selectedCapability(change.agentId);this.assert(request);knowledgeRevision=configuration.knowledgeRevision;
+      const configuration=await this.selectedCapability(change.agentId,snapshot);this.assert(request);knowledgeRevision=configuration.knowledgeRevision;
       model=await this.selectedPolicy(change.runtimePolicy);this.assert(request);
       proposed={name:change.name,position:change.position,adaptation:change.adaptation,state:'active',capability:{configuration,capabilityHash:workspaceMemberCapabilityHash(configuration)},runtimePolicy:model};
     }else if(change.kind==='update'){
@@ -139,15 +150,21 @@ export class WorkspaceMembers {
       }
     }else if(change.kind==='adopt'){
       if(change.target==='capability'){
-        const configuration=await this.selectedCapability(old!.adoption.configuration.agentId);this.assert(request);
+        const configuration=await this.selectedCapability(old!.adoption.configuration.agentId,snapshot);this.assert(request);
         const source=old!.adoption.configuration;
         if(configuration.workspaceId!==source.workspaceId||configuration.teamId!==source.teamId||configuration.agentId!==source.agentId||configuration.source!==source.source)fail('MEMBER_SOURCE_CHANGED','能力来源身份发生变化，不能作为原岗位的能力采纳');
         knowledgeRevision=configuration.knowledgeRevision;proposed!.capability={configuration,capabilityHash:workspaceMemberCapabilityHash(configuration)};
       }else {model=await this.selectedPolicy({profileId:old!.runtimePolicy.profileId,modelId:old!.runtimePolicy.modelId});this.assert(request);proposed!.runtimePolicy=model}
     }else proposed!.state=change.nextState;
-    const changedFields=workspaceMemberChangedFields(old,proposed!);if(!changedFields.length)fail('MEMBER_NO_CHANGE','本次操作没有改变岗位登记内容');
-    const registryCursor=this.cursor(state),basis=workspaceMemberPreviewBasis({workspaceId:request.workspaceId,change,registryCursor,previousMember:old,proposed:proposed!});
-    const preview=workspaceMemberPreviewSchema.parse({identity:this.identity(),change,registryCursor,basis,checkedAt:new Date().toISOString(),previousRevision:old?.revision??0,...(old?{previousMember:old}:{}),proposed,changedFields});
+    if(adopting){
+      const configuration=proposed!.capability.configuration;
+      try{sourceSelection=configuration.source==='builtin'?{kind:'builtin',ref:{kind:'builtin',id:'cbim:executor',contentHash:proposed!.capability.capabilityHash}}:this.owner.sources!.selection(state,snapshot!,{kind:'agent',sourceId:configuration.agentId})}catch{fail('MEMBER_SOURCE_INVALID','当前来源无法明确采纳')}
+      const ref=sourceSelection.kind==='builtin'?sourceSelection.ref:sourceSelection.expectedRef;
+      proposed!.capability={configuration,capabilityHash:proposed!.capability.capabilityHash,...(ref?{sourceRef:ref}:{})};
+    }
+    const changedFields=workspaceMemberChangedFields(old,proposed!);if(adopting&&sourceSelection?.kind==='workspace'&&!sourceSelection.expectedRef&&!changedFields.includes('capability'))changedFields.push('capability');if(!changedFields.length)fail('MEMBER_NO_CHANGE','本次操作没有改变岗位登记内容');
+    const registryCursor=this.cursor(state),basis=workspaceMemberPreviewBasis({workspaceId:request.workspaceId,change,registryCursor,previousMember:old,proposed:proposed!,...(sourceSelection?{sourceSelection}:{})});
+    const preview=workspaceMemberPreviewSchema.parse({identity:this.identity(),change,registryCursor,basis,checkedAt:new Date().toISOString(),previousRevision:old?.revision??0,...(old?{previousMember:old}:{}),...(sourceSelection?{sourceSelection}:{}),proposed,changedFields});
     return {preview,knowledgeRevision,model};
   }
   /** 独立来源最后复验后立即返回 mutation；不宣称模型设置与知识存储拥有同一事务锁。 */
@@ -156,7 +173,8 @@ export class WorkspaceMembers {
     if(prepared.model){const current=await this.selectedPolicy(prepared.model);this.assert(identity);if(current.configurationHash!==prepared.model.configurationHash)fail('MEMBER_SOURCE_CHANGED','读取期间模型配置发生变化，请重新预览')}
     this.assert(identity);
   }
-  private async selectedCapability(agentId:string){try{return await this.capability(agentId)}catch{fail('MEMBER_SOURCE_INVALID','无法采纳当前角色能力，请检查角色、原则、有效 Skill 与知识结构')}}
+  private async selectedCapability(agentId:string,snapshot?:Snapshot){try{return await this.capability(agentId,snapshot)}catch{fail('MEMBER_SOURCE_INVALID','无法采纳当前角色能力，请检查角色、原则、有效 Skill 与知识结构')}}
+  private async builtinStatus(member:WorkspaceMember,snapshot:Snapshot):Promise<KnowledgeSourceReadState>{const configuration=await this.capability('cbim:executor',snapshot),ref={kind:'builtin' as const,id:'cbim:executor' as const,contentHash:workspaceMemberCapabilityHash(configuration)};return isDeepStrictEqual(member.adoption.sourceRef,ref)?{status:'current',ref}:{status:'needs_adoption',currentRef:ref}}
   private async selectedPolicy(ref:WorkspaceMemberModelRef){try{return await this.policy(ref)}catch{fail('MEMBER_MODEL_INVALID','无法读取明确选定的公开模型配置，请检查供应商与已启用模型')}}
   private async diff(member:WorkspaceMember):Promise<WorkspaceMemberCurrentDiff>{
     let capability:WorkspaceMemberCurrentDiff['capability'],model:WorkspaceMemberCurrentDiff['model'];

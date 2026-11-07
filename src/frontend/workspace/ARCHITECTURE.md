@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-工作区唯一的领域工程/模块图及自身Workflow；知识编辑和整架构复用分别委托knowledge/resources。独立负责人面板提供模块列表、岗位反查、预览和原命令核实，责任历史与来源观察明确有界；登记不移交旧任务，多个主会话共享静态定义。
+工作区唯一的工程/模块图及自身Workflow。负责人面板展示来源和有界历史，支持同负责人明确采纳当前来源；原回执必须匹配同一关系、版本及owner，未知不换命令。知识编辑和整架构复用委托knowledge/resources；登记不移交旧任务。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -112,7 +112,7 @@ class N_src_frontend_workspace_module_ownership_state_ts_ModuleOwnershipCommandP
 N_src_frontend_workspace_module_ownership_state_ts ..> N_src_frontend_workspace_module_ownership_state_ts_ModuleOwnershipCommandPool : 声明
 ```
 
-直接依赖：[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)。
+直接依赖：[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../../bridge/contracts/knowledge-source.ts](../../bridge/contracts/knowledge-source.ts)。
 
 ### module-ownership.css
 
@@ -134,7 +134,7 @@ class N_src_frontend_workspace_ModuleOwnershipDetail_tsx["ModuleOwnershipDetail.
 }
 ```
 
-直接依赖：[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)。
+直接依赖：[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)。
 
 ### ModuleOwnershipPanel.tsx
 
@@ -161,7 +161,7 @@ class N_src_frontend_workspace_ModuleOwnershipPanel_tsx_ModuleOwnershipPanelProp
 N_src_frontend_workspace_ModuleOwnershipPanel_tsx ..> N_src_frontend_workspace_ModuleOwnershipPanel_tsx_ModuleOwnershipPanelProps : 声明
 ```
 
-直接依赖：[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[module-ownership-state.ts](module-ownership-state.ts)、[ModuleOwnershipDetail.tsx](ModuleOwnershipDetail.tsx)、[module-ownership.css](module-ownership.css)。
+直接依赖：[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[module-ownership-state.ts](module-ownership-state.ts)、[ModuleOwnershipDetail.tsx](ModuleOwnershipDetail.tsx)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)、[module-ownership.css](module-ownership.css)。
 
 ### workspace-view.css
 
@@ -234,6 +234,10 @@ N_src_frontend_workspace_WorkspaceView_tsx ..> N_src_frontend_workspace_workspac
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 工作区静态业务图
+
+## 责任来源的明确采纳
+
+负责人详情分别显示原定义观察和受控来源状态；旧缺省、退役、待核实不从同路径或同hash猜成当前有效。新增“预览采纳当前来源”使用原原因输入和独立 `adopt_source` 命令，要求保持原负责人；预览展示实际来源，确认后保留 bindingId/owner并增加责任版本。更换负责人仍使用原协议，不能借来源采纳夹带换人。原命令保存、未知查询和晚到响应隔离与责任变更共用。
 
 `WorkspaceView` 展示唯一业务定义树，根为 Workspace，第一层为领域工程节点，下层为模块。模块详情显示自身正文、源目录、真人维护人和自身 Workflow，不继承父模块 Workflow。
 

@@ -54,7 +54,7 @@ export class FileAgentHistoryStore implements AgentHistoryStore {
   }
 }
 
-/** 工作区已打开后装配，服务关闭前不释放工作区；详情定位只能由历史索引中的固定 source/task/run 决定。 */
+/** 构造不读盘；工作区持锁并核实路径后、Store 观察器接收投影前初始化索引。详情定位只能由固定 source/task/run 决定，服务关闭前不释放工作区。 */
 export function createAgentHistory(workspace:Workspace,diagnostic?:(message:string)=>void){
   const project=workspace.paths.project(workspace.entry.id),storage=new FileRunStorage();
   return new AgentHistoryService(workspace.entry.id,workspace.entry.path,{

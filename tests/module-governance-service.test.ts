@@ -72,7 +72,7 @@ it('账本或原journal关联损坏不得伪造成功；同串行屏障仅证明
     const journalPath=path.join(f.user,f.entry.id,'transactions',input.commandId+'.json'),bytes=await fs.readFile(journalPath,'utf8'),journal=JSON.parse(bytes);delete journal.governance;await fs.writeFile(journalPath,json(journal));await expect(f.app.dispatch('governance.receipt',{workspaceId:f.entry.id,commandId:input.commandId})).rejects.toMatchObject({code:'GOVERNANCE_DATA'});await fs.writeFile(journalPath,bytes);
     for(const [mutate,code] of [
       [(value:any)=>{value.after[f.overviewPath]='wrong bytes'},'RECOVERY'],
-      [(value:any)=>{value.before[f.overviewPath]='wrong baseline'},'GOVERNANCE_DATA'],
+      [(value:any)=>{value.before[f.overviewPath]='wrong baseline'},'SOURCE_JOURNAL_INVALID'],
       [(value:any)=>{value.result.changed=[]},'RECOVERY'],
     ] as const){const changed=JSON.parse(bytes);mutate(changed);await fs.writeFile(journalPath,json(changed));await expect(f.app.dispatch('governance.receipt',{workspaceId:f.entry.id,commandId:input.commandId})).rejects.toMatchObject({code});await fs.writeFile(journalPath,bytes)}
     await f.app.stop(f.entry.id);const ledger=JSON.parse(await fs.readFile(f.ledger,'utf8'));ledger.commands=ledger.commands.filter((command:any)=>command.receipt.action!=='register');await fs.writeFile(f.ledger,json(ledger));await expect(f.app.open(f.entry.id)).rejects.toMatchObject({code:'GOVERNANCE_DATA'});expect(f.app.workspace(f.entry.id).state).toBe('failed');

@@ -321,7 +321,7 @@ class N_src_backend_core_team_workspace_member_rules_ts_WorkspaceMemberRegistry[
 N_src_backend_core_team_workspace_member_rules_ts ..> N_src_backend_core_team_workspace_member_rules_ts_WorkspaceMemberRegistry : 声明
 ```
 
-直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[workspace-member.ts](workspace-member.ts)。
+直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)、[workspace-member.ts](workspace-member.ts)。
 
 ### workspace-member.ts
 
@@ -507,6 +507,7 @@ class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberDetail["Workspa
 N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberDetail : 声明
 ```
 
+直接依赖：[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)。
 
 ### 本目录调用边界
 
@@ -685,3 +686,8 @@ MemberScheduler ..> BrainPort : 绑定成员通道并执行
 `workspace-member-rules.ts` 规范化指纹和预览依据，并从单条不可变变更派生当前岗位。编辑只改显式字段，不顺带采纳外部变化；同一模型引用的配置更新必须用 `adopt:model`，能力采纳不能改绑另一角色。状态变化不读取来源、不能修改快照；当前来源差异是每次查询得到的独立观察，不把岗位启用状态当作来源仍相同或可执行的证明。
 
 单能力最多 1 MiB、256 项有效 Skill；累计最多 256 个岗位（含退休）、4096 条审计、32 MiB，单事件最多 2 MiB。超限拒绝新写入，不裁剪正文或删除旧审计。列表只含摘要，默认分页由服务确定、最大 100，后续页绑定登记游标且必须前进；详情单独返回原快照与当前差异。原命令回执仅保留真实结果引用和指纹，后续版本不重写旧回执。
+### 岗位能力的来源采纳
+
+`WorkspaceMemberAdoption.sourceRef` 可选保存受控 workspace Agent 代次或真实 builtin 内容引用。旧采纳缺省保持缺省；改名、岗位说明、状态和模型采纳原样保留原 sourceRef，不能暗补或删除。register/capability adopt 才可通过可信 sourceSelection 采纳当前来源；相同能力字节但来源代次变化仍构成实质变更。captureId 始终只是该次能力采纳 ID，不被重解释为代次。
+
+预览 sourceSelection 的 workspace、逻辑源、expectedRef、definitionHash 和 visible 纳入原 basis，新捕获随机 generationId 与观察的全库 knowledgeRevision 不进入依据；仅无关知识编辑不作废同能力预览，来源删除重建或定义变化仍使原依据失效。实际事件保存完整观察 revision，提交仍在同知识锁下核当前快照。实际 next、完整 sourceRef 和能力正文进入原 memberHash。builtin 内容 hash 必须等于真实能力规范 hash，不能伪造工作区 generation。sourceStatus 在详情中与本岗位 workspace/agent/已采纳引用严格绑定；读取不自动采纳，旧回执不补新字段。

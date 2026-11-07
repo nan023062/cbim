@@ -10,6 +10,7 @@ import {fail,Fault} from '../../core/foundation/errors';
 import {checkedJsonToolResult} from '../../core/tools/results';
 import type {RunToolDescriptor} from '../../core/policy/tool-policy';
 import {moduleOwnershipMainCommandId} from '../../core/workspace/module-ownership-rules';
+import {isModuleOwnershipSourceAdoption} from '../../core/workspace/module-ownership';
 import {moduleOwnershipToolEffects,isModuleOwnershipToolName,type ModuleOwnershipToolName} from '../../core/workspace/module-ownership-tool-policy';
 import {
   moduleOwnerInspectInputSchema,moduleOwnerPreviewInputSchema,moduleOwnerCommitInputSchema,moduleOwnerReceiptInputSchema,
@@ -21,7 +22,7 @@ const inputs={cbim_module_owner_inspect:moduleOwnerInspectInputSchema,cbim_modul
 const outputs={cbim_module_owner_inspect:moduleOwnerInspectOutputSchema,cbim_module_owner_change_preview:moduleOwnerPreviewOutputSchema,cbim_module_owner_change_commit:moduleOwnerRecordedOutputSchema,cbim_module_owner_receipt:moduleOwnerReceiptOutputSchema};
 const descriptions={
   cbim_module_owner_inspect:'用members:true分页发现真实岗位摘要和memberId；用moduleIds查询模块责任，或用memberId反查当前负责模块。责任引用稳定岗位，不发能力正文；当前登记尚未用于派发，不能从静态Agent或旧任务assignee推断负责人。模块观察不证明删除重建连续性。',
-  cbim_module_owner_change_preview:'只读预览单模块设置、换人或解除责任，提供当前关系、岗位版本和旧协议关联任务影响。先查询实际模块与岗位；预览不提交、不改派任务。',
+  cbim_module_owner_change_preview:'只读预览单模块设置、换人、解除责任或用 kind=adopt_source 明确采纳当前来源代次。adopt_source 保留原负责人且不传 nextOwner；先查询实际模块与岗位。预览不提交、不改派任务，也不启用岗位派发。',
   cbim_module_owner_change_commit:'按原 change 和预览依据提交一次责任变更，使用本轮知识写权限及真实审批。仅登记负责人，不改知识正文、不切换派发或执行模型；结果未知只查错误中的原 commandId，不能再次提交。',
   cbim_module_owner_receipt:'只读查询同一根会话主工具原 commandId 的不可变回执。可查旧周期；unknown不表示未受理，不由当前关系相同推断原命令成功，不重放提交。',
 };
@@ -59,7 +60,7 @@ export class ModuleOwnershipTools {
         const expected=this.parse(moduleOwnerCommitInputSchema,raw);if(!toolCallId)fail('OWNERSHIP_ACTOR','责任提交缺少真实工具调用身份');
         const {workspaceId,instanceId:_,...identity}=this.binding,actor={kind:'main_agent' as const,...identity,toolCallId,toolName:name};
         commandId=moduleOwnershipMainCommandId(workspaceId,actor);output=await this.port.commit(structuredClone(expected),toolCallId,signal);
-        schema=moduleOwnerRecordedOutputSchema.refine(value=>bound(value)&&value.commandId===commandId&&value.receipt.commandId===commandId&&value.receipt.identity.workspaceId===workspaceId&&value.receipt.identity.instanceId===this.binding.instanceId&&isDeepStrictEqual(value.receipt.actor,actor)&&value.receipt.moduleId===expected.change.moduleId&&value.receipt.ownerMemberId===(expected.change.nextOwner?.memberId??null)&&value.receipt.previousOwnerMemberId===(expected.change.expectedBinding?.ownerMemberId??null)&&value.receipt.previousRevision===(expected.change.expectedBinding?.revision??0)&&(!expected.change.expectedBinding||value.receipt.bindingId===expected.change.expectedBinding.bindingId)&&value.receipt.basis===expected.expectedBasis&&value.receipt.ownershipCursor.seq===(expected.expectedOwnershipCursor?.seq??0)+1&&(!expected.expectedOwnershipCursor||value.receipt.ownershipCursor.streamId===expected.expectedOwnershipCursor.streamId));
+        schema=moduleOwnerRecordedOutputSchema.refine(value=>bound(value)&&value.commandId===commandId&&value.receipt.commandId===commandId&&value.receipt.identity.workspaceId===workspaceId&&value.receipt.identity.instanceId===this.binding.instanceId&&isDeepStrictEqual(value.receipt.actor,actor)&&value.receipt.moduleId===expected.change.moduleId&&value.receipt.action===(isModuleOwnershipSourceAdoption(expected.change)?'adopt_source':!expected.change.nextOwner?'unassign':!expected.change.expectedBinding?.ownerMemberId?'assign':'replace')&&value.receipt.ownerMemberId===(isModuleOwnershipSourceAdoption(expected.change)?expected.change.expectedBinding!.ownerMemberId:expected.change.nextOwner?.memberId??null)&&value.receipt.previousOwnerMemberId===(expected.change.expectedBinding?.ownerMemberId??null)&&value.receipt.previousRevision===(expected.change.expectedBinding?.revision??0)&&(!expected.change.expectedBinding||value.receipt.bindingId===expected.change.expectedBinding.bindingId)&&value.receipt.basis===expected.expectedBasis&&value.receipt.ownershipCursor.seq===(expected.expectedOwnershipCursor?.seq??0)+1&&(!expected.expectedOwnershipCursor||value.receipt.ownershipCursor.streamId===expected.expectedOwnershipCursor.streamId));
       }else{
         const expected=this.parse(moduleOwnerReceiptInputSchema,raw);output=await this.port.receipt(structuredClone(expected),signal);
         schema=moduleOwnerReceiptOutputSchema.refine(value=>bound(value)&&value.commandId===expected.commandId&&(value.status==='unknown'||value.receipt.commandId===expected.commandId&&value.receipt.identity.workspaceId===this.binding.workspaceId&&value.receipt.actor.kind==='main_agent'&&value.receipt.actor.rootSessionId===this.binding.rootSessionId));

@@ -1,5 +1,8 @@
 import {afterEach,expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import type {Snapshot} from '../src/backend/core/knowledge/types';
 import {fixture,request} from './helpers';
 import {seedModuleOwnership,moduleOwnershipChange,commitModuleOwnership,moduleOwnershipJournal} from './module-ownership-fixture';
 import {commitWorkspaceMember} from './workspace-member-fixture';
@@ -44,15 +47,15 @@ it('both adopted member revision and actual knowledge changes invalidate a new c
 });
 
 it('knowledge changing after the captured snapshot is rejected before the shared journal append',async()=>{
-  const f=await setup(),command=f.command(await f.preview()),original=f.workspace.snapshot.bind(f.workspace);
-  vi.spyOn(f.workspace,'snapshot').mockImplementationOnce(async()=>{const s=await original();await f.workspace.commit(request(s,[{path:'.cbim/README.md',text:'# Changed during ownership capture'}]));return s});
+  const f=await setup(),command=f.command(await f.preview()),original=f.workspace.withSourceSnapshot.bind(f.workspace);
+  vi.spyOn(f.workspace,'withSourceSnapshot').mockImplementationOnce(<T>(operation:(s:Snapshot)=>Promise<T>)=>original(async s=>{await fs.writeFile(path.join(f.workspace.entry.path,'.cbim/README.md'),'# Changed outside the knowledge queue during capture');return operation(s)}));
   await expect(f.commit(command)).rejects.toMatchObject({code:'OWNERSHIP_SOURCE_CHANGED'});
   expect(await f.service.receipt({workspaceId:f.identity.workspaceId,commandId:command.commandId})).toBeUndefined();
 });
 
 it('workspace stop during source capture prevents new registration and drains the same store',async()=>{
-  const f=await setup(),command=f.command(await f.preview()),entered=deferred(),release=deferred(),original=f.workspace.snapshot.bind(f.workspace);
-  vi.spyOn(f.workspace,'snapshot').mockImplementationOnce(async()=>{const s=await original();entered.resolve();await release.promise;return s});
+  const f=await setup(),command=f.command(await f.preview()),entered=deferred(),release=deferred(),original=f.workspace.withSourceSnapshot.bind(f.workspace);
+  vi.spyOn(f.workspace,'withSourceSnapshot').mockImplementationOnce(<T>(operation:(s:Snapshot)=>Promise<T>)=>original(async s=>{entered.resolve();await release.promise;return operation(s)}));
   const pending=f.commit(command),checked=expect(pending).rejects.toMatchObject({code:'OWNERSHIP_UNAVAILABLE'});await entered.promise;
   const stopped=f.app.stop(f.identity.workspaceId);release.resolve();await checked;await stopped;await f.app.open(f.identity.workspaceId);
   expect(await f.app.workspaceOwnerships(f.identity.workspaceId).receipt({workspaceId:f.identity.workspaceId,commandId:command.commandId})).toBeUndefined();

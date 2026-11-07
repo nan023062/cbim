@@ -1,5 +1,5 @@
 /**
- * 作用定位：定义工作区长期岗位登记、执行实例、会话绑定及任务派发的原子持久化端口。
+ * 作用定位：定义工作区长期岗位、模块责任、受控来源审计以及执行实例、会话和任务派发的原子持久化端口。
  * 设计原因：调度层只表达领域变化，main 负责落盘；任务、领取意图、消息和成员占用一起提交，界面在同一屏障读取图与独立周期投影，观察端口只接收已提交事实。
  * 职责边界：长期岗位只经独立审计追加，不创建执行实例；持久化入队或 starting 意图都不是模型已经运行，确认候选、问题或检查点均不代表验收或续执行授权。
  */
@@ -11,6 +11,7 @@ import type {DispatchSessionReadInput,DispatchSessionRead} from './scope-view';
 import type {MemberResumeFrom} from './member-checkpoint';
 import type {WorkspaceMember,WorkspaceMemberChange,WorkspaceRegistryCursor} from '../team/workspace-member';
 import type {ModuleOwnership,ModuleOwnershipChange,ModuleOwnershipCursor} from '../workspace/module-ownership';
+import type {KnowledgeSourceGeneration,KnowledgeSourceTransition,KnowledgeSourceChange,KnowledgeSourceCursor} from '../workspace/knowledge-source';
 
 /** 信封身份固定；claim 记录领取时的 run 与租约代际，消费后保留用于审计。 */
 export interface DispatchMessageBase {
@@ -53,6 +54,11 @@ export interface DispatchState {
   ownershipChanges?:ModuleOwnershipChange[];
   /** 责任审计独立编号，不推进岗位、图或周期游标。 */
   ownershipCursor?:ModuleOwnershipCursor|null;
+  /** 来源当前头与退役历史均由审计派生；旧缺省不把路径或 captureId 冒充代次。 */
+  knowledgeSourceGenerations?:KnowledgeSourceGeneration[];
+  knowledgeSourceTransitions?:KnowledgeSourceTransition[];
+  knowledgeSourceChanges?:KnowledgeSourceChange[];
+  sourceCursor?:KnowledgeSourceCursor|null;
 }
 
 /** 幂等键由可信入口产生；fingerprint 是包括调用者在内的规范化输入摘要。 */
@@ -66,10 +72,12 @@ export interface DispatchMutation<T = unknown> {
   messages?: DispatchMessage[];
   runs?:DispatchRun[];
   scopes?:DispatchScope[];
-  /** 本片每次恰好追加一条岗位审计，禁止同批混入任务、实例或周期修改。 */
+  /** 每次一条岗位审计，只允许精确对应的来源 capture 同批，不可混入执行变化。 */
   workspaceMemberChanges?:WorkspaceMemberChange[];
-  /** 每次仅一条责任审计；不能与岗位编辑、任务或执行变化合并提交。 */
+  /** 每次一条责任审计，仅可附其准确消费的首次来源 capture。 */
   ownershipChanges?:ModuleOwnershipChange[];
+  /** prepare/resolve 独立提交；capture 仅与其明确的一条采纳事件同批，不能夹带执行。 */
+  knowledgeSourceChanges?:KnowledgeSourceChange[];
   receipt: T;
 }
 

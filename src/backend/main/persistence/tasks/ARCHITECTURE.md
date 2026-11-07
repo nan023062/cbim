@@ -14,7 +14,7 @@
 | [chat-inputs.ts](chat-inputs.ts) | 将用户明确添加的文件、文件夹、链接、网页与链接器定义保存为本机对话输入快照。 |
 | [chat-material-imports.ts](chat-material-imports.ts) | 应用内显式资料导入的取消、工作区归属及真实资源仓库读取入口。 |
 | [chat-source-readers.ts](chat-source-readers.ts) | 桌面明确导入目录、URL 指针和网页时，生成有界文本及真实来源事实。 |
-| [dispatch-store.ts](dispatch-store.ts) | 将长期岗位及模块责任审计、执行实例、独立会话、任务图、领取意图和信封可靠保存到同一工作区日志。 |
+| [dispatch-store.ts](dispatch-store.ts) | 将岗位、模块责任和来源代次审计，以及执行实例、会话、任务图和信封可靠保存到同一工作区日志。 |
 | [run-journal.ts](run-journal.ts) | 本机执行事件日志，顺序追加并 fsync，从记录恢复摘要和未确认工具。 |
 | [run-storage.ts](run-storage.ts) | 将本机运行目录和 RunJournal 装配为大脑及调度共享的存储端口。 |
 
@@ -236,7 +236,7 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchSt
 N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchStore <|.. N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore
 ```
 
-直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/tasks/graph-reducer.ts](../../../core/tasks/graph-reducer.ts)、[../../../core/tasks/dispatch-invariants.ts](../../../core/tasks/dispatch-invariants.ts)、[../../../core/tasks/dispatch-scope-invariants.ts](../../../core/tasks/dispatch-scope-invariants.ts)、[../../../core/tasks/workspace-member-invariants.ts](../../../core/tasks/workspace-member-invariants.ts)、[../../../core/tasks/module-ownership-invariants.ts](../../../core/tasks/module-ownership-invariants.ts)、[../../../core/tasks/dispatch-storage.ts](../../../core/tasks/dispatch-storage.ts)、[../../../core/tasks/graph-types.ts](../../../core/tasks/graph-types.ts)、[../../../core/tasks/scope-view.ts](../../../core/tasks/scope-view.ts)、[../../../core/tasks/dispatch-scope.ts](../../../core/tasks/dispatch-scope.ts)。
+直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/tasks/graph-reducer.ts](../../../core/tasks/graph-reducer.ts)、[../../../core/tasks/dispatch-invariants.ts](../../../core/tasks/dispatch-invariants.ts)、[../../../core/tasks/dispatch-scope-invariants.ts](../../../core/tasks/dispatch-scope-invariants.ts)、[../../../core/tasks/workspace-member-invariants.ts](../../../core/tasks/workspace-member-invariants.ts)、[../../../core/tasks/module-ownership-invariants.ts](../../../core/tasks/module-ownership-invariants.ts)、[../../../core/tasks/dispatch-storage.ts](../../../core/tasks/dispatch-storage.ts)、[../../../core/tasks/graph-types.ts](../../../core/tasks/graph-types.ts)、[../../../core/tasks/scope-view.ts](../../../core/tasks/scope-view.ts)、[../../../core/tasks/dispatch-scope.ts](../../../core/tasks/dispatch-scope.ts)、[../../../core/tasks/knowledge-source-invariants.ts](../../../core/tasks/knowledge-source-invariants.ts)。
 
 ### run-journal.ts
 
@@ -352,7 +352,7 @@ N_src_backend_main_persistence_tasks_run_storage_ts ..> N_src_backend_main_persi
 
 `createAgentHistory` 将固定运行根及 `FileRunStorage` 注入查询服务。详情仅根据已核验索引的 source/task/run 定位，检查真实目录边界、符号链接及日志身份；首次读取后由已落盘观察维护增量。模型启动前已持久化但尚未创建 canonical 的派发意图也可归档，详情只呈现真实空前缀与失败状态。
 
-启动加载索引后，`WorkspaceRuntimeMonitor` 在原有两套日志扫描中幂等回补，并同时消费派发 loaded/committed 与主/成员事件；没有第二套定时全量扫描。列表只查轻量索引。异步索引错误进入服务及全局诊断，不阻断已提交的执行；关闭顺序为执行收尾、撤销观察、排空索引写入、释放工作区。
+启动时先核工作区路径、持有工程锁，再通过可信 `beforeDispatchLoad` 阶段加载历史索引；完成后唯一 Store 才首次读取，loaded 与来源恢复的 committed 都不会抢在历史装载之前。`WorkspaceRuntimeMonitor` 随后在原有两套日志扫描中幂等回补，并同时消费派发 loaded/committed 与主/成员事件；没有第二套定时全量扫描，也不为启动顺序放宽持久索引重复检测。列表只查轻量索引。异步索引错误进入服务及全局诊断，不阻断已提交的执行；关闭顺序为执行收尾、撤销观察、排空索引写入、释放工作区。
 
 ### 任务派发图持久化职责
 
@@ -490,3 +490,8 @@ interface DispatchStore {
 `ownershipChanges` 也只写入原 dispatch.jsonl；`projectModuleOwnershipMutation` 从原不可变事件派生责任当前头和 ownershipCursor，不另建责任账本。岗位 registryCursor、图游标和周期摘要不会因单独责任提交推进；控制面不修改执行状态。责任指派和岗位退休共享同一队列，两种竞争顺序都按先提交的真实状态拒绝后者，不能出现退休岗位被新指派或仍有引用却退休。
 
 每条责任事件在当时前缀核验 source actor、模块/岗位版本、任务影响 digest、basis、完整原命令指纹和回执；后续 main scope 关闭不影响已保存事件的合法性。旧日志缺省空责任投影，不重写旧字节。相同命令从原索引返回回执，不再次执行准备或来源读取；写入/同步结果未知时沿原 Store 封闭语义，重开只按日志恢复，不能自动重做责任操作。
+### 原 Dispatch 日志中的来源屏障
+
+来源 capture/prepared/resolved 直接追加至同一 dispatch.jsonl，当前代次和过渡状态只由历史派生，不保存第二份来源账本。Store 先执行 `projectKnowledgeSourceMutation`，再把精确 capture 许可交给两个登记门禁；所有规则及原命令/回执核验完成后才可靠落盘并发布。来源游标不推进任务图、岗位登记或责任游标；仅明确 capture+consumer 同批才同时推进对应登记流。
+
+prepared/resolved 为来源独立事务，原 journal 指纹属于内部可信协议，不接收知识正文。旧无来源字段日志保持字节与回执不变，首次读取只返回空来源集合/null 游标。重开重放相同前缀与严格校验；source 的命令查询沿原只读索引，无自动知识重做。知识协调器持知识 serial 后调用 Store，Store 回调不得反向排队知识；两日志并非跨存储 ACID，无法核实的 pending 仍保留屏障。

@@ -4,7 +4,7 @@
  */
 export {
   moduleOwnershipChangeInputSchema,moduleOwnershipPreviewInputSchema,moduleOwnershipPreviewSchema,
-  moduleOwnershipCommitInputSchema,moduleOwnershipReceiptSchema,moduleOwnershipPageSchema,moduleOwnershipDetailSchema,
+  moduleOwnershipCommitInputSchema,moduleOwnershipReceiptSchema,moduleOwnershipPageSchema,moduleOwnershipDetailSchema,isModuleOwnershipSourceAdoption,
 } from '../../backend/core/workspace/module-ownership';
 export type {
   ModuleOwnership,ModuleOwnershipIdentity,ModuleOwnershipReadBasis,ModuleOwnershipView,

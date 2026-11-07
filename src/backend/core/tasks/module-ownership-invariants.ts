@@ -1,12 +1,13 @@
 /**
  * 作用定位：将负责人控制面接到同一派发事务，重算关联任务影响并核实真实主运行来源。
- * 设计原因：单条审计不能夹带执行变化，读取和重放均使用当时前缀；旧任务只按明确模块关联，不猜岗位身份。
+ * 设计原因：单条审计仅可附预先核验的对应来源捕获，不能夹带执行变化；重放使用当时前缀，旧任务不猜岗位身份。
  */
 import {fail} from '../foundation/errors';
 import {hash} from '../foundation/serialization';
 import {applyModuleOwnershipChange,moduleOwnershipCanonical,moduleOwnershipCommand,moduleOwnershipReceipt} from '../workspace/module-ownership-rules';
 import {moduleOwnershipActorSchema,type ModuleOwnership,type ModuleOwnershipActor,type ModuleOwnershipChange,type ModuleOwnershipCursor,type ModuleOwnershipImpact} from '../workspace/module-ownership';
 import type {DispatchState,DispatchMutation,DispatchCommand} from './dispatch-storage';
+import type {KnowledgeSourceCapturePermit} from './knowledge-source-invariants';
 
 /** 本地 actor 由 IPC 注入；主 actor 还须属于当前活动周期最后登记的主运行与原 conversation 通道。 */
 export function checkModuleOwnershipActor(state:DispatchState,actor:ModuleOwnershipActor):void{
@@ -37,7 +38,7 @@ export function moduleOwnershipImpact(state:DispatchState,moduleId:string):Modul
 }
 
 /** 责任 mutation 只许一条审计及其回执；最终投影由原事件重算，不能直接 upsert 头或混入任务。 */
-export function projectModuleOwnershipMutation(previous:DispatchState,mutation:DispatchMutation,command:DispatchCommand):{moduleOwnerships:ModuleOwnership[];ownershipChanges:ModuleOwnershipChange[];ownershipCursor:ModuleOwnershipCursor|null}{
+export function projectModuleOwnershipMutation(previous:DispatchState,mutation:DispatchMutation,command:DispatchCommand,sourcePermit?:KnowledgeSourceCapturePermit):{moduleOwnerships:ModuleOwnership[];ownershipChanges:ModuleOwnershipChange[];ownershipCursor:ModuleOwnershipCursor|null}{
   const check=(condition:unknown,message:string)=>{if(!condition)fail('OWNERSHIP_AUDIT',message)};
   check(!Object.hasOwn(mutation,'moduleOwnerships')&&!Object.hasOwn(mutation,'ownershipCursor'),'不能直接修改责任头或游标');
   if(mutation.ownershipChanges===undefined){
@@ -45,7 +46,8 @@ export function projectModuleOwnershipMutation(previous:DispatchState,mutation:D
     return {moduleOwnerships:previous.moduleOwnerships??[],ownershipChanges:previous.ownershipChanges??[],ownershipCursor:previous.ownershipCursor??null};
   }
   check(Array.isArray(mutation.ownershipChanges)&&mutation.ownershipChanges.length===1,'责任事务必须恰好追加一条审计');
-  check(Object.keys(mutation).every(key=>key==='ownershipChanges'||key==='receipt'),'责任事务不能夹带岗位、图或执行变化');
+  const captureAllowed=sourcePermit?.kind==='module_ownership'&&sourcePermit.changeId===mutation.ownershipChanges[0]?.changeId&&sourcePermit.captureChangeId===mutation.knowledgeSourceChanges?.[0]?.changeId;
+  check(Object.keys(mutation).every(key=>key==='ownershipChanges'||key==='receipt'||key==='knowledgeSourceChanges'&&captureAllowed),'责任事务不能夹带岗位、图或执行变化');
   const event=mutation.ownershipChanges[0];
   const next=applyModuleOwnershipChange(previous,event,moduleOwnershipImpact(previous,event?.request?.change?.moduleId));
   checkModuleOwnershipActor(previous,event.actor);

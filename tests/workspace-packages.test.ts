@@ -6,6 +6,8 @@ import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import {buildWorkspacePackage,parseWorkspacePackage,workspacePackageFingerprint,type WorkspacePackage} from '../src/backend/core/knowledge/portable-package';
 import {WorkspacePackages} from '../src/backend/main/resources/workspace-packages';
+import {Application} from '../src/backend/main/application';
+import {Paths} from '../src/backend/main/platform/paths';
 
 async function setup(){
   const f=await fixture();try{
@@ -18,6 +20,17 @@ async function setup(){
     return {...f,source,target,team,publish,preview,commit,service};
   }catch(error){await f.cleanup();throw error}
 }
+
+it('重开后旧已提交包只查原 journal 和索引回执，不复活旧实例未提交计划',async()=>{
+  const f=await setup();let reopened:Application|undefined;try{
+    const published=await f.publish('team'),done=await f.preview(published.resourceId,{slug:'complete'}),pending=await f.preview(published.resourceId,{slug:'unaccepted'}),receipt=await f.commit(done.planId);
+    const id=f.target.entry.id,dir=path.join(f.user,id,'transactions'),evidence=async()=>Promise.all((await fs.readdir(dir)).sort().map(async name=>[name,await fs.readFile(path.join(dir,name),'utf8')]));
+    const before=await evidence();await f.app.shutdown();reopened=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await reopened.init();
+    const w=reopened.workspace(id),service=new WorkspacePackages(w,reopened.resources);
+    expect(await service.commit({workspaceId:id,instanceId:w.instanceId,planId:done.planId})).toEqual(receipt);expect(await evidence()).toEqual(before);
+    await expect(service.commit({workspaceId:id,instanceId:w.instanceId,planId:pending.planId})).rejects.toMatchObject({code:'STALE_INSTANCE'});expect(await evidence()).toEqual(before);
+  }finally{if(reopened)await reopened.shutdown();await f.cleanup()}
+});
 
 it('团队整包只发布静态定义，持久化预览无正式写入；跨门面并发重试只有一个回执',async()=>{
   const f=await setup();try{

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-本机工作区生命周期与可信静态架构编辑，知识事务委托persistence/knowledge。岗位及模块负责人控制面共用DispatchStore，读取真实来源、版本化提交与核实原命令；模型仅读公开配置，主工具来源由实际运行注入。责任登记不改动态任务图或启动实例。
+本机工作区、静态编辑与受控来源协调。获取工作区锁后在唯一DispatchStore核身份、恢复知识和来源，再发布服务。岗位和负责人以同知识快照明确采纳；首次真实观察与消费者同事务保存。来源、能力、模型分别展示，不以登记回执启动实例或改写旧任务。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -12,6 +12,7 @@
 | --- | --- |
 | [architecture-service.ts](architecture-service.ts) | 将团队/业务架构表单接到受控知识事务，作为可信桌面的预览与手动提交入口。 |
 | [catalog.ts](catalog.ts) | Catalog：维护本机工作区清单、显示名称、路径身份、并发更新和重新定位。 |
+| [knowledge-sources.ts](knowledge-sources.ts) | 将原知识事务的来源屏障与岗位/责任的明确来源采纳接到唯一 DispatchStore。 |
 | [main-module-ownership-tools.ts](main-module-ownership-tools.ts) | 把工作区责任服务绑定真实主运行及当前协作周期，提供四项模型窄端口。 |
 | [module-ownerships.ts](module-ownerships.ts) | 桌面与真实主工具共用的模块负责人服务，关系和岗位在唯一 DispatchStore 内裁决。 |
 | [workspace-members.ts](workspace-members.ts) | 将桌面岗位登记、采纳与当前差异查询接到工作区唯一 DispatchStore，公开模型配置由 Main 注入。 |
@@ -59,6 +60,54 @@ N_src_backend_main_workspace_catalog_ts ..> N_src_backend_main_workspace_catalog
 ```
 
 直接依赖：[../platform/locking.ts](../platform/locking.ts)、[../platform/paths.ts](../platform/paths.ts)、[../../core/foundation/files.ts](../../core/foundation/files.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)。
+
+### knowledge-sources.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_workspace_knowledge_sources_ts["knowledge-sources.ts"] {
+  <<module>>
+  +sourceObservations()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_workspace_knowledge_sources_ts["knowledge-sources.ts"] {
+  <<module>>
+}
+class N_src_backend_main_workspace_knowledge_sources_ts_KnowledgeSourceWorkspace["KnowledgeSourceWorkspace"] {
+  <<interface>>
+  +sources
+  +withSourceSnapshot()
+}
+N_src_backend_main_workspace_knowledge_sources_ts ..> N_src_backend_main_workspace_knowledge_sources_ts_KnowledgeSourceWorkspace : 声明
+class N_src_backend_main_workspace_knowledge_sources_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (外部契约)"] {
+  <<external>>
+}
+N_src_backend_main_workspace_knowledge_sources_ts_external_KnowledgeWorkspace <|-- N_src_backend_main_workspace_knowledge_sources_ts_KnowledgeSourceWorkspace
+class N_src_backend_main_workspace_knowledge_sources_ts_KnowledgeSources["KnowledgeSources"] {
+  +workspaceId
+  +build()
+  +prepare()
+  +settle()
+  +verify()
+  +pending()
+  +transitions()
+  +assertAvailable()
+  +selection()
+  +capture()
+  +status()
+  -store
+}
+N_src_backend_main_workspace_knowledge_sources_ts ..> N_src_backend_main_workspace_knowledge_sources_ts_KnowledgeSources : 声明
+class N_src_backend_main_workspace_knowledge_sources_ts_external_KnowledgeSourceAuthority["KnowledgeSourceAuthority (外部契约)"] {
+  <<external>>
+}
+N_src_backend_main_workspace_knowledge_sources_ts_external_KnowledgeSourceAuthority <|.. N_src_backend_main_workspace_knowledge_sources_ts_KnowledgeSources
+```
+
+直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/json.ts](../../core/foundation/json.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/planned-commit.ts](../../core/knowledge/planned-commit.ts)、[../../core/workspace/knowledge-source.ts](../../core/workspace/knowledge-source.ts)、[../../core/workspace/knowledge-source-rules.ts](../../core/workspace/knowledge-source-rules.ts)、[../persistence/knowledge/source-journal.ts](../persistence/knowledge/source-journal.ts)。
 
 ### main-module-ownership-tools.ts
 
@@ -128,7 +177,7 @@ class N_src_backend_main_workspace_module_ownerships_ts_ModuleOwnerships["Module
 N_src_backend_main_workspace_module_ownerships_ts ..> N_src_backend_main_workspace_module_ownerships_ts_ModuleOwnerships : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/workspace/module-ownership.ts](../../core/workspace/module-ownership.ts)、[../../core/workspace/module-ownership-rules.ts](../../core/workspace/module-ownership-rules.ts)、[../../core/tasks/module-ownership-invariants.ts](../../core/tasks/module-ownership-invariants.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/workspace/module-ownership.ts](../../core/workspace/module-ownership.ts)、[../../core/workspace/module-ownership-rules.ts](../../core/workspace/module-ownership-rules.ts)、[../../core/tasks/module-ownership-invariants.ts](../../core/tasks/module-ownership-invariants.ts)、[knowledge-sources.ts](knowledge-sources.ts)、[../../core/workspace/knowledge-source-rules.ts](../../core/workspace/knowledge-source-rules.ts)。
 
 ### workspace-members.ts
 
@@ -184,13 +233,14 @@ class N_src_backend_main_workspace_workspace_members_ts_WorkspaceMembers["Worksp
   -prepare()
   -verifySources()
   -selectedCapability()
+  -builtinStatus()
   -selectedPolicy()
   -diff()
 }
 N_src_backend_main_workspace_workspace_members_ts ..> N_src_backend_main_workspace_workspace_members_ts_WorkspaceMembers : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)、[../../scheduler-engine/context/dispatch-context.ts](../../scheduler-engine/context/dispatch-context.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)、[../../scheduler-engine/context/dispatch-context.ts](../../scheduler-engine/context/dispatch-context.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/workspace/knowledge-source-rules.ts](../../core/workspace/knowledge-source-rules.ts)、[../../core/workspace/knowledge-source.ts](../../core/workspace/knowledge-source.ts)、[knowledge-sources.ts](knowledge-sources.ts)。
 
 ### workspace.ts
 
@@ -215,9 +265,9 @@ class N_src_backend_main_workspace_workspace_ts_Workspace["Workspace"] {
   +changed
   +lastRevision
   +tasks
+  +sources
   +view()
   +assert()
-  +open()
 }
 N_src_backend_main_workspace_workspace_ts ..> N_src_backend_main_workspace_workspace_ts_Workspace : 声明
 class N_src_backend_main_workspace_workspace_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (外部契约)"] {
@@ -234,10 +284,15 @@ class N_src_backend_main_workspace_workspace_ts["workspace.ts"] {
   <<module>>
 }
 class N_src_backend_main_workspace_workspace_ts_Workspace["Workspace"] {
+  +attachDispatchStore()
+  +dispatchStore
+  +open()
   +read()
   +snapshot()
   +preview()
   +commit()
+  +commitPlanned()
+  +withSourceSnapshot()
   +governed()
   +committedReceipt()
   +hasRecordedRequest()
@@ -245,11 +300,6 @@ class N_src_backend_main_workspace_workspace_ts_Workspace["Workspace"] {
   +startTask()
   +cancelTask()
   +localData()
-  +close()
-  -controllers
-  -lock
-  -watcher
-  -polling
 }
 N_src_backend_main_workspace_workspace_ts ..> N_src_backend_main_workspace_workspace_ts_Workspace : 声明
 class N_src_backend_main_workspace_workspace_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (外部契约)"] {
@@ -266,7 +316,15 @@ class N_src_backend_main_workspace_workspace_ts["workspace.ts"] {
   <<module>>
 }
 class N_src_backend_main_workspace_workspace_ts_Workspace["Workspace"] {
+  +prepareClose()
+  +close()
+  -controllers
+  -lock
+  -watcher
+  -polling
   -knowledge
+  -closePreparation
+  -sharedDispatch
   -log()
 }
 N_src_backend_main_workspace_workspace_ts ..> N_src_backend_main_workspace_workspace_ts_Workspace : 声明
@@ -276,7 +334,7 @@ class N_src_backend_main_workspace_workspace_ts_external_KnowledgeWorkspace["Kno
 N_src_backend_main_workspace_workspace_ts_external_KnowledgeWorkspace <|.. N_src_backend_main_workspace_workspace_ts_Workspace
 ```
 
-直接依赖：[../persistence/knowledge/object-storage.ts](../persistence/knowledge/object-storage.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../platform/paths.ts](../platform/paths.ts)、[../../core/foundation/files.ts](../../core/foundation/files.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../platform/locking.ts](../platform/locking.ts)、[../../core/knowledge/knowledge.ts](../../core/knowledge/knowledge.ts)、[../persistence/knowledge/knowledge-store.ts](../persistence/knowledge/knowledge-store.ts)、[../governance/module-governance.ts](../governance/module-governance.ts)、[../persistence/knowledge/governance-port.ts](../persistence/knowledge/governance-port.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)。
+直接依赖：[../persistence/knowledge/object-storage.ts](../persistence/knowledge/object-storage.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../platform/paths.ts](../platform/paths.ts)、[../../core/foundation/files.ts](../../core/foundation/files.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../platform/locking.ts](../platform/locking.ts)、[../../core/knowledge/knowledge.ts](../../core/knowledge/knowledge.ts)、[../persistence/knowledge/knowledge-store.ts](../persistence/knowledge/knowledge-store.ts)、[../governance/module-governance.ts](../governance/module-governance.ts)、[../persistence/tasks/dispatch-store.ts](../persistence/tasks/dispatch-store.ts)、[knowledge-sources.ts](knowledge-sources.ts)、[../../core/knowledge/planned-commit.ts](../../core/knowledge/planned-commit.ts)、[../persistence/knowledge/governance-port.ts](../persistence/knowledge/governance-port.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)。
 
 ### 本目录调用边界
 
@@ -291,8 +349,24 @@ class N_src_backend_main_workspace_module_ownerships_ts["module-ownerships.ts"] 
 class N_src_backend_main_workspace_workspace_members_ts["workspace-members.ts"] {
   <<module>>
 }
+class N_src_backend_main_workspace_knowledge_sources_ts["knowledge-sources.ts"] {
+  <<module>>
+}
 N_src_backend_main_workspace_main_module_ownership_tools_ts ..> N_src_backend_main_workspace_module_ownerships_ts : 导入依赖
 N_src_backend_main_workspace_main_module_ownership_tools_ts ..> N_src_backend_main_workspace_workspace_members_ts : 导入依赖
+N_src_backend_main_workspace_module_ownerships_ts ..> N_src_backend_main_workspace_knowledge_sources_ts : 导入依赖
+N_src_backend_main_workspace_workspace_members_ts ..> N_src_backend_main_workspace_knowledge_sources_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_workspace_workspace_ts["workspace.ts"] {
+  <<module>>
+}
+class N_src_backend_main_workspace_knowledge_sources_ts["knowledge-sources.ts"] {
+  <<module>>
+}
+N_src_backend_main_workspace_workspace_ts ..> N_src_backend_main_workspace_knowledge_sources_ts : 导入依赖
 ```
 
 
@@ -343,7 +417,7 @@ Workspace *-- KnowledgeStore : 事务与初始化
 Workspace *-- KernelLock : 打开时持有，关闭时释放
 ```
 
-- `open()` 校验真实路径身份、取得独占锁、恢复事务、初始化缺失知识并校验，之后进入 `running`。知识校验错误计入 `knowledgeErrors`，不伪装为生命周期失败。
+- `open()` 校验真实路径身份、取得独占锁、核本地历史归属，再 await Main 注入的可信 `beforeDispatchLoad` 阶段，然后读取唯一 Store、恢复事务、初始化缺失知识并校验，之后进入 `running`。该阶段只为 Store 观察器提前恢复历史索引，不接 IPC/模型参数；失败不继续 Store 读取或事务恢复，沿原失败路径释放锁。知识校验错误计入 `knowledgeErrors`，不伪装为生命周期失败。
 - `assert(identity)` 拒绝未运行或旧实例请求。`instanceId` 每次创建变化，不能用旧预览跨实例提交。
 - `snapshot/preview/commit` 委托知识存储；运行授权由上层调用边界核验，事务仍校验版本、结构和幂等请求。
 - `governance` 使用私有账本保存显式模块保护、观察、提案、人工决定和实施意图；`governed` 与普通知识提交共用队列。打开先核账本完整性锚，再恢复原事务并核 journal 关联；损坏失败关闭，不默默解除保护。重开不执行旧实施意图。
@@ -381,3 +455,11 @@ Workspace *-- KernelLock : 打开时持有，关闭时释放
 `commit` 只接受 `workspaceId + instanceId + planId`，使用冻结计划复核并提交，不接受正文或维护关系覆盖。此服务是用户操作的桌面入口，不加入 Agent 工具注册表；运行中的知识工具仍执行逐次权限门禁。无模型调用、成员启动或业务文件修改副作用。
 
 团队图和业务图是工作区共享的静态知识；多个主会话可同时持有各自独立的成员/目标/模块任务图。架构 CRUD 不创建动态成员，也不追改已派发任务中的角色或模块快照。知识版本变化后，由既有执行上下文检查拒绝过期基线，必须核实并重新准备任务。
+
+## 受控知识来源与明确采纳
+
+`KnowledgeSources` 只协调唯一 DispatchStore 的来源事件，不另建 registry。普通内容/方法编辑保留代次；实际创建、删除、可见性变化及可信对象/包重建范围才形成受控过渡。校验器省略无效定义不证明删除：原定义文件仍在时，普通修复保留已有代次，未追踪来源仍待明确采纳。不能识别没有受控事件的离线同字节重建。
+
+`Workspace` 在持工程锁并核本地路径身份后加载同一 Store，先恢复来源握手再发布运行服务。能力或模块来源采纳使用 Knowledge→Store 单向锁序；新捕获和消费者审计在同一 Store 事务，预览不分配来源代次。旧岗位/责任不自动补引用，改名、状态、模型采纳及解除不采纳新能力/模块来源。
+
+`WorkspaceMembers.get` 每次核当前来源并在返回前比较来源游标。责任列表依据额外绑定 `sourceCursor`，即使知识字节恢复相同也不能混用旧页；详情、预览最后复核岗位/责任/来源变化。`adopt_source` 保留原 bindingId 与负责人，要求当前负责人 active、精确原关系及当前预览，只提升关系版本与来源引用，不启用岗位派发。原命令回执先于新实例、来源和状态判断。

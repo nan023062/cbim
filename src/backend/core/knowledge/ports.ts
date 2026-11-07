@@ -24,6 +24,10 @@ export interface KnowledgeWorkspace {
   snapshot():Promise<Snapshot>;
   preview(request:ChangeRequest):Promise<Preview>;
   commit(request:ChangeRequest):Promise<KnowledgeCommit>;
+  /** 只读核原完整请求的成功 journal；缓存回执不能替代权威成功证明。 */
+  committedReceipt(request:ChangeRequest):Promise<KnowledgeCommit|undefined>;
+  /** 内部计划提交只接固定类型与标识；实现重新读取完整私有计划，不能接调用者自报替换意图。 */
+  commitPlanned(reference:import('./planned-commit').KnowledgePlanRef):Promise<KnowledgeCommit>;
   planMove(snapshot:Snapshot,from:string,to:string|null):Promise<ChangeRequest>;
   startTask(name:'validate'|'reindex'):TaskView;
   /** 仅接受本实例的维护任务 ID；未运行或未知任务须抛错，返回当前真实状态而非承诺已停止。终态重复请求保持原结果。 */

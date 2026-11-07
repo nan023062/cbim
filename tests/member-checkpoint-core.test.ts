@@ -37,7 +37,7 @@ it('完整路径包括输入文件；同路径此前成功写入可覆盖，命�
   const same=fixture(events=>{finish(events,start(events,'write','write',{path:'file.txt',content:'bytes'},['business-write']),jsonToolResult('write',{ok:true}))});expect(()=>validateCheckpointEligibility(same.events,binding,'knowledge',normalize,input)).not.toThrow();
   for(const [name,args,effect,outcome] of [
     ['read',{path:'other.txt'},'read','succeeded'],['write',{path:'other.txt',content:'x'},'business-write','succeeded'],['write',{path:'file.txt',content:'x'},'business-write','failed'],
-    ['grep',{pattern:'x',path:'.'},'read','succeeded'],['find',{pattern:'*'},'read','succeeded'],['ls',{path:'.'},'read','succeeded'],['bash',{command:'echo ok'},'command','succeeded'],['plugin_fetch',{url:'https://example.test'},'read','succeeded'],['cbim_knowledge_query',{query:'x'},'read','succeeded'],
+    ['grep',{pattern:'x',path:'.'},'read','succeeded'],['find',{pattern:'*'},'read','succeeded'],['ls',{path:'.'},'read','succeeded'],['bash',{command:'echo ok'},'command','succeeded'],['plugin_fetch',{url:'https://example.test'},'read','succeeded'],['cbim_knowledge_query',{query:'x'},'read','succeeded'],['cbim_governance_get',{moduleId:'.cbim/workspace/module'},'read','succeeded'],['cbim_governance_propose',{observationId:'saved'},'preview','succeeded'],
   ] as const){const f=fixture(events=>finish(events,start(events,'unsupported',name,args,[effect]),jsonToolResult(name,{ok:true}),outcome));expect(()=>validateCheckpointEligibility(f.events,binding,'knowledge',normalize,input)).toThrow()}
 });
 it('真实仓库只读范围即使有完整本地文件基线，也不能建立原成员续执行检查点',()=>{

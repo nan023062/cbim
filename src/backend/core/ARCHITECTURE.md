@@ -37,6 +37,7 @@ N_src_backend_core_brain ..> N_src_backend_core_policy : 导入依赖
 N_src_backend_core_governance ..> N_src_backend_core_foundation : 导入依赖
 N_src_backend_core_knowledge ..> N_src_backend_core_foundation : 导入依赖
 N_src_backend_core_knowledge ..> N_src_backend_core_connectors : 导入依赖
+N_src_backend_core_policy ..> N_src_backend_core_governance : 导入依赖
 ```
 
 ```mermaid
@@ -77,6 +78,7 @@ N_src_backend_core_team ..> N_src_backend_core_tasks : 导入依赖
 - `knowledge` → `workspace`：导入。
 - `knowledge` → `connectors`：导入。
 - `policy` → `tools`：导入。
+- `policy` → `governance`：导入。
 - `runtime` → `brain`：导入。
 - `runtime` → `tasks`：导入。
 - `runtime` → `team`：导入。
@@ -101,7 +103,7 @@ N_src_backend_core_team ..> N_src_backend_core_tasks : 导入依赖
 - [brain/](brain/ARCHITECTURE.md)：引擎无关的执行循环、事件与计量。文件采集和检查点沿真实工具授权封闭并发；专用成员续执行保留身份并清空旧证据，普通启动不变成恢复入口。停止覆盖准备与复核，正常关闭后才确认停泊。
 - [connectors/](connectors/ARCHITECTURE.md)：链接器定义、查询与唯一身份检查；当前不执行外部插件。
 - [foundation/](foundation/ARCHITECTURE.md)：少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。
-- [governance/](governance/ARCHITECTURE.md)：模块知识治理的纯协议和保护规则。观察、提案、人工决定与真实实施分开；不持有存储、模型或 IPC，不把知识结构验证当业务验收。
+- [governance/](governance/ARCHITECTURE.md)：模块知识治理的纯协议、保护规则与有界主工具投影。可信运行来源独立于人工决定，观察和提案不改变正式知识，不把治理记录当业务验收。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识快照、校验、领域查询、对象变更和可移植静态包规划。团队能力可独立复用，业务模板必须完整；物理事务与预览缓存经端口注入，不携带动态成员或任务。Team/Workspace 只依赖快照辅助，不依赖查询门面。
 - [policy/](policy/ARCHITECTURE.md)：内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；不声称操作系统隔离。
 - [runtime/](runtime/ARCHITECTURE.md)：应用级运行监管及独立准入契约：真实实例用量与执行许可分离，策略、票据和占用按可信身份表达；独立游标只读投影不签发执行权。

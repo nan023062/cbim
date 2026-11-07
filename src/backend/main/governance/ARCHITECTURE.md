@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-工作区模块知识治理服务及可信桌面操作。登记、提案、决定和显式实施经知识事务屏障核实，读取不启动执行或重放未知操作。
+工作区模块知识治理服务、可信桌面操作与独立主运行端口。登记保护、决定及实施只属桌面；模型仅可读取、观察、提案和核查原回执，未知不重放。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,9 +10,22 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [module-governance.ts](module-governance.ts) | 桌面单模块治理服务，组织保护、观察、精确提案、本机决定和独立实施。 |
+| [main-governance-tools.ts](main-governance-tools.ts) | 把工作区治理服务绑定到一个真实主运行，提供模型专用的四个窄端口。 |
+| [module-governance.ts](module-governance.ts) | 单模块治理服务，组织桌面保护与决定、可信主运行观察和提案、独立实施。 |
 
 ## 架构类图
+
+### main-governance-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_governance_main_governance_tools_ts["main-governance-tools.ts"] {
+  <<module>>
+  +mainGovernanceTools()
+}
+```
+
+直接依赖：[../../core/tasks/types.ts](../../core/tasks/types.ts)、[../../core/brain/conversation-binding.ts](../../core/brain/conversation-binding.ts)、[../../core/foundation/identity.ts](../../core/foundation/identity.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/governance/module-governance.ts](../../core/governance/module-governance.ts)、[../../core/governance/module-governance-rules.ts](../../core/governance/module-governance-rules.ts)、[../../core/governance/module-governance-tools.ts](../../core/governance/module-governance-tools.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)。
 
 ### module-governance.ts
 
@@ -52,13 +65,13 @@ class N_src_backend_main_governance_module_governance_ts_ModuleGovernanceService
   +verify()
   +register()
   +observe()
+  +observeFromMain()
   +propose()
+  +proposeFromMain()
   +decide()
   +apply()
   +lookup()
   +unaccepted()
-  +list()
-  -owner
 }
 N_src_backend_main_governance_module_governance_ts ..> N_src_backend_main_governance_module_governance_ts_ModuleGovernanceService : 声明
 class N_src_backend_main_governance_module_governance_ts_external_KnowledgeGovernanceAuthority["KnowledgeGovernanceAuthority (外部契约)"] {
@@ -75,6 +88,9 @@ class N_src_backend_main_governance_module_governance_ts["module-governance.ts"]
   <<module>>
 }
 class N_src_backend_main_governance_module_governance_ts_ModuleGovernanceService["ModuleGovernanceService"] {
+  +list()
+  +readForMain()
+  -owner
   -proposal()
   -decisions()
   -derive()
@@ -83,6 +99,9 @@ class N_src_backend_main_governance_module_governance_ts_ModuleGovernanceService
   -receipt()
   -known()
   -save()
+  -observeWithOrigin()
+  -proposeWithOrigin()
+  -readList()
 }
 N_src_backend_main_governance_module_governance_ts ..> N_src_backend_main_governance_module_governance_ts_ModuleGovernanceService : 声明
 class N_src_backend_main_governance_module_governance_ts_external_KnowledgeGovernanceAuthority["KnowledgeGovernanceAuthority (外部契约)"] {
@@ -91,7 +110,7 @@ class N_src_backend_main_governance_module_governance_ts_external_KnowledgeGover
 N_src_backend_main_governance_module_governance_ts_external_KnowledgeGovernanceAuthority <|.. N_src_backend_main_governance_module_governance_ts_ModuleGovernanceService
 ```
 
-直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/governance/module-governance.ts](../../core/governance/module-governance.ts)、[../../core/governance/module-governance-rules.ts](../../core/governance/module-governance-rules.ts)、[../persistence/governance/module-governance-store.ts](../persistence/governance/module-governance-store.ts)、[../persistence/knowledge/governance-port.ts](../persistence/knowledge/governance-port.ts)。
+直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/governance/module-governance.ts](../../core/governance/module-governance.ts)、[../../core/governance/module-governance-tools.ts](../../core/governance/module-governance-tools.ts)、[../../core/governance/module-governance-rules.ts](../../core/governance/module-governance-rules.ts)、[../persistence/governance/module-governance-store.ts](../persistence/governance/module-governance-store.ts)、[../persistence/knowledge/governance-port.ts](../persistence/knowledge/governance-port.ts)。
 
 
 ## 子目录导航
@@ -108,7 +127,13 @@ N_src_backend_main_governance_module_governance_ts_external_KnowledgeGovernanceA
 
 # 单模块知识治理服务
 
-`ModuleGovernanceService` 是每个工作区唯一的桌面治理门面，同时实现知识提交所需的私有授权端口。服务不拥有第二个队列；登记、观察、提案、决定、实施和回执读取都通过 `Workspace.governed` 进入 `KnowledgeStore` 的同一串行屏障。回调内只能使用未再次排队的事务端口，不得重入公开 `commit/preview`。
+`ModuleGovernanceService` 是每个工作区唯一的治理门面，同时实现知识提交所需的私有授权端口。服务不拥有第二个队列；登记、观察、提案、决定、实施和回执读取都通过 `Workspace.governed` 进入 `KnowledgeStore` 的同一串行屏障。回调内只能使用未再次排队的事务端口，不得重入公开 `commit/preview`。
+
+`mainGovernanceTools` 只在真实主运行工厂创建，固定 workspace/instance、根会话、主实例/逻辑通道与 run。模型端口仅有 get/observe/propose/receipt，原输入先严格校验再注入可信身份；普通桌面 IPC 没有 origin 参数。模型观察和提案记录 `main_agent` 来源，新的桌面观察/提案记录本机来源，旧缺省不补造。模型提案只能引用同一主实例/逻辑通道的真实观察。
+
+原命令 UUID 由工作区、根会话、run、真实 toolCallId 和精确工具名稳定派生；重开只读查询不依赖旧 instanceId。接收和保存前检查当前实例及取消信号；进入可靠保存后不承诺取消或回滚，响应失败给出原 commandId，不能自动新建请求。回执只投影同根会话模型来源，不存在返回 unknown；未知不是未受理证明。
+
+主工具读取只交有界目录和显式所选记录，缺失 ID 不换为最新。原/新正文各限 16 KiB UTF-8，原正文不能完整交付时返回 oversized/recorded=false 且不保存观察。提案和治理读回执不是业务完成证据，批准和独立 apply 仍仅由桌面明确操作。
 
 用户明确登记真实 Module 的定义和 overview；首片没有解除、移动、删除或定义修改入口。观察保存当时的结构校验和原正文，提案固定唯一 overview 差异及理由、替代方案、不变量、恢复说明。决定仅接受可信桌面闭包的 `local_desktop / explicit_submit`，它不代表认证负责人或业务验收。批准、驳回和暂缓只保存记录，不写正式知识。
 

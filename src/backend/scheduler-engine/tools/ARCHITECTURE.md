@@ -12,6 +12,7 @@
 | --- | --- |
 | [dispatch-tools.ts](dispatch-tools.ts) | 把主调度的派发、查询、未启动撤销、依赖替换及一次检查点续执行预约转换为内部工具，并组合目标工具。 |
 | [goal-tools.ts](goal-tools.ts) | 将主 Agent 当前用户目标的读取、规划和审阅端口注册为内部 Loop 工具。 |
+| [governance-tools.ts](governance-tools.ts) | 将每个真实主运行的治理窄端口装配成发现、分类与调用一致的四项工具。 |
 | [knowledge-contracts.ts](knowledge-contracts.ts) | 将实际知识工具与 Core 业务输出 Schema、取消及恢复说明绑定，供工具注册使用。 |
 | [knowledge-tools.ts](knowledge-tools.ts) | 向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。 |
 | [repository-tools.ts](repository-tools.ts) | 把主进程捕获的资源仓库只读端口装配为主调度可调用的两个工具。 |
@@ -97,6 +98,37 @@ N_src_backend_scheduler_engine_tools_goal_tools_ts ..> N_src_backend_scheduler_e
 ```
 
 直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)。
+
+### governance-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_tools_governance_tools_ts["governance-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_tools_governance_tools_ts_GovernanceRunBinding["GovernanceRunBinding"] {
+  <<interface>>
+  +workspaceId
+  +rootSessionId
+  +agentInstanceId
+  +agentSessionId
+  +runId
+}
+N_src_backend_scheduler_engine_tools_governance_tools_ts ..> N_src_backend_scheduler_engine_tools_governance_tools_ts_GovernanceRunBinding : 声明
+class N_src_backend_scheduler_engine_tools_governance_tools_ts_GovernanceTools["GovernanceTools"] {
+  +has()
+  +list()
+  +describe()
+  +call()
+  -port
+  -binding
+  -parse()
+  -command()
+}
+N_src_backend_scheduler_engine_tools_governance_tools_ts ..> N_src_backend_scheduler_engine_tools_governance_tools_ts_GovernanceTools : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/governance/module-governance-rules.ts](../../core/governance/module-governance-rules.ts)、[../../core/governance/module-governance-tools.ts](../../core/governance/module-governance-tools.ts)。
 
 ### knowledge-contracts.ts
 
@@ -194,6 +226,14 @@ N_src_backend_scheduler_engine_tools_knowledge_tools_ts ..> N_src_backend_schedu
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 主调度模块治理工具
+
+`GovernanceTools` 仅消费本轮真实主实例的独立端口，实际发现和调用 `cbim_governance_get/observe/propose/receipt` 四项，不混入知识 catalog，不注册保护登记、批准或实施。严格校验原始参数后才调用领域端口，模型不能提交 workspace/root/run/commandId/actor/权限或路径；可信 scope 固定为当前 knowledge，effects 逐项为 read/maintenance/preview/read，私有待办持久化不冒充正式知识写入。
+
+每个工具仅执行一次领域操作，再通过 `checkedJsonToolResult` 核唯一 JSON 输出快照、真实身份和原请求选择；对同一编码文本检查 128 KiB 上限，不再序列化原对象或重试领域调用。输出失败不回显正文；写操作的错误附可信原 commandId 供只读核实，不能换 ID 重放。摘要最多最近20条并说明 total/truncated，原/新正文各限16 KiB UTF-8，只有 complete 携带全文；oversized 不带片段，不可据此完整替换。
+
+`get` 的显式记录不存在即拒绝，不自动挑最新。`receipt` 限同根会话真实模型来源，未查到是 unknown。取消在持久化前检查，进入保存后不承诺撤销已发生的记录；治理回执不进入 TaskProgress、Workflow 或目标完成业务证据。
 
 ### 主调度资源仓库只读工具
 

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-模块知识治理的纯协议和保护规则。观察、提案、人工决定与真实实施分开；不持有存储、模型或 IPC，不把知识结构验证当业务验收。
+模块知识治理的纯协议、保护规则与有界主工具投影。可信运行来源独立于人工决定，观察和提案不改变正式知识，不把治理记录当业务验收。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -11,6 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [module-governance-rules.ts](module-governance-rules.ts) | 模块知识治理的纯事实投影、提案依据、决定追加和知识写入门禁。 |
+| [module-governance-tools.ts](module-governance-tools.ts) | 主 Agent 治理工具的严格输入、真实来源端口和有界业务输出；不承载桌面批准或正式知识实施。 |
 | [module-governance.ts](module-governance.ts) | 单个 Module 正式知识治理的严格输入、不可变提案、本机决定及实施回执协议。 |
 
 ## 架构类图
@@ -21,6 +22,9 @@
 classDiagram
 class N_src_backend_core_governance_module_governance_rules_ts["module-governance-rules.ts"] {
   <<module>>
+  +moduleGovernanceMainCommandId()
+  +validateModuleGovernanceRecordOrigin()
+  +validateModuleGovernanceMainObservation()
   +moduleGovernanceBinding()
   +moduleGovernanceProposalBasis()
   +validateModuleGovernanceProposal()
@@ -75,6 +79,105 @@ N_src_backend_core_governance_module_governance_rules_ts ..> N_src_backend_core_
 
 直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[module-governance.ts](module-governance.ts)。
 
+### module-governance-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_governance_module_governance_tools_ts["module-governance-tools.ts"] {
+  <<module>>
+  +isGovernanceToolName()
+  +projectGovernanceBody()
+  +projectGovernanceGet()
+  +projectGovernanceReceipt()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_governance_module_governance_tools_ts["module-governance-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_core_governance_module_governance_tools_ts_GovernanceToolName["GovernanceToolName"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_governance_module_governance_tools_ts_GovernanceToolName : 声明
+class N_src_backend_core_governance_module_governance_tools_ts_GovernanceToolIdentity["GovernanceToolIdentity"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_governance_module_governance_tools_ts_GovernanceToolIdentity : 声明
+class N_src_backend_core_governance_module_governance_tools_ts_GovernanceGetInput["GovernanceGetInput"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_governance_module_governance_tools_ts_GovernanceGetInput : 声明
+class N_src_backend_core_governance_module_governance_tools_ts_GovernanceObserveInput["GovernanceObserveInput"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_governance_module_governance_tools_ts_GovernanceObserveInput : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_governance_module_governance_tools_ts["module-governance-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_core_governance_module_governance_tools_ts_GovernanceProposeInput["GovernanceProposeInput"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_governance_module_governance_tools_ts_GovernanceProposeInput : 声明
+class N_src_backend_core_governance_module_governance_tools_ts_GovernanceReceiptInput["GovernanceReceiptInput"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_governance_module_governance_tools_ts_GovernanceReceiptInput : 声明
+class N_src_backend_core_governance_module_governance_tools_ts_GovernanceGetOutput["GovernanceGetOutput"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_governance_module_governance_tools_ts_GovernanceGetOutput : 声明
+class N_src_backend_core_governance_module_governance_tools_ts_GovernanceRecordedReceipt["GovernanceRecordedReceipt"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_governance_module_governance_tools_ts_GovernanceRecordedReceipt : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_governance_module_governance_tools_ts["module-governance-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_core_governance_module_governance_tools_ts_GovernanceWriteOutput["GovernanceWriteOutput"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_governance_module_governance_tools_ts_GovernanceWriteOutput : 声明
+class N_src_backend_core_governance_module_governance_tools_ts_GovernanceReceiptOutput["GovernanceReceiptOutput"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_governance_module_governance_tools_ts_GovernanceReceiptOutput : 声明
+class N_src_backend_core_governance_module_governance_tools_ts_GovernanceBodyView["GovernanceBodyView"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_governance_module_governance_tools_ts_GovernanceBodyView : 声明
+class N_src_backend_core_governance_module_governance_tools_ts_GovernanceToolsPort["GovernanceToolsPort"] {
+  <<interface>>
+  +get()
+  +observe()
+  +propose()
+  +receipt()
+}
+N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_governance_module_governance_tools_ts_GovernanceToolsPort : 声明
+```
+
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[module-governance-rules.ts](module-governance-rules.ts)、[module-governance.ts](module-governance.ts)。
+
 ### module-governance.ts
 
 ```mermaid
@@ -92,6 +195,23 @@ class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceActor["
 
 }
 N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_governance_module_governance_ts_ModuleGovernanceActor : 声明
+class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceOrigin["ModuleGovernanceOrigin"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_governance_module_governance_ts_ModuleGovernanceOrigin : 声明
+class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceMainOrigin["ModuleGovernanceMainOrigin"] {
+  <<type>>
+
+}
+N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_governance_module_governance_ts_ModuleGovernanceMainOrigin : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_governance_module_governance_ts["module-governance.ts"] {
+  <<module>>
+}
 class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceProtection["ModuleGovernanceProtection"] {
   <<type>>
 
@@ -102,13 +222,6 @@ class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceObserva
 
 }
 N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_governance_module_governance_ts_ModuleGovernanceObservation : 声明
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_governance_module_governance_ts["module-governance.ts"] {
-  <<module>>
-}
 class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceProposal["ModuleGovernanceProposal"] {
   <<type>>
 
@@ -119,6 +232,13 @@ class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceDecisio
 
 }
 N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_governance_module_governance_ts_ModuleGovernanceDecision : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_governance_module_governance_ts["module-governance.ts"] {
+  <<module>>
+}
 class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceChangeRequest["ModuleGovernanceChangeRequest"] {
   <<type>>
 
@@ -129,13 +249,6 @@ class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceApplyIn
 
 }
 N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_governance_module_governance_ts_ModuleGovernanceApplyIntent : 声明
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_governance_module_governance_ts["module-governance.ts"] {
-  <<module>>
-}
 class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceKnowledgeReceipt["ModuleGovernanceKnowledgeReceipt"] {
   <<type>>
 
@@ -146,6 +259,13 @@ class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceApplica
 
 }
 N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_governance_module_governance_ts_ModuleGovernanceApplication : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_governance_module_governance_ts["module-governance.ts"] {
+  <<module>>
+}
 class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceRegisterInput["ModuleGovernanceRegisterInput"] {
   <<type>>
 
@@ -156,13 +276,6 @@ class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceObserve
 
 }
 N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_governance_module_governance_ts_ModuleGovernanceObserveInput : 声明
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_governance_module_governance_ts["module-governance.ts"] {
-  <<module>>
-}
 class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceProposeInput["ModuleGovernanceProposeInput"] {
   <<type>>
 
@@ -173,6 +286,13 @@ class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceDecideI
 
 }
 N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_governance_module_governance_ts_ModuleGovernanceDecideInput : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_governance_module_governance_ts["module-governance.ts"] {
+  <<module>>
+}
 class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceApplyInput["ModuleGovernanceApplyInput"] {
   <<type>>
 
@@ -183,13 +303,6 @@ class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceLookup[
 
 }
 N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_governance_module_governance_ts_ModuleGovernanceLookup : 声明
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_governance_module_governance_ts["module-governance.ts"] {
-  <<module>>
-}
 class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceUnacceptedInput["ModuleGovernanceUnacceptedInput"] {
   <<type>>
 
@@ -200,6 +313,13 @@ class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceUnaccep
 
 }
 N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_governance_module_governance_ts_ModuleGovernanceUnaccepted : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_governance_module_governance_ts["module-governance.ts"] {
+  <<module>>
+}
 class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceListInput["ModuleGovernanceListInput"] {
   <<type>>
 
@@ -210,13 +330,6 @@ class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceList["M
 
 }
 N_src_backend_core_governance_module_governance_ts ..> N_src_backend_core_governance_module_governance_ts_ModuleGovernanceList : 声明
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_governance_module_governance_ts["module-governance.ts"] {
-  <<module>>
-}
 class N_src_backend_core_governance_module_governance_ts_ModuleGovernanceReceipt["ModuleGovernanceReceipt"] {
   <<type>>
 
@@ -235,7 +348,12 @@ class N_src_backend_core_governance_module_governance_rules_ts["module-governanc
 class N_src_backend_core_governance_module_governance_ts["module-governance.ts"] {
   <<module>>
 }
+class N_src_backend_core_governance_module_governance_tools_ts["module-governance-tools.ts"] {
+  <<module>>
+}
 N_src_backend_core_governance_module_governance_rules_ts ..> N_src_backend_core_governance_module_governance_ts : 导入依赖
+N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_governance_module_governance_rules_ts : 导入依赖
+N_src_backend_core_governance_module_governance_tools_ts ..> N_src_backend_core_governance_module_governance_ts : 导入依赖
 ```
 
 
@@ -277,4 +395,14 @@ N_src_backend_core_governance_module_governance_rules_ts ..> N_src_backend_core_
 
 专属 authorized 只由持锁的可信存储加载真实私有意图、提案和最新决定。规则再次核对工作区、知识/保护版本、批准依据、完整原请求指纹及唯一 overview 差异；其他正文不可夹带，仅允许既有知识服务生成两个派生注册索引。批准一个 Module 不授权另一个 Module。`advanceModuleGovernanceProtection` 仅在调用方已经核实 journal 的治理关联后推导下一正文基线，普通知识回执或 pending 意图不能单独作为来源。
 
-规则不会替代完整知识结构校验、原事务回滚/恢复或真实 journal 核实。Schema 合格、结构合格、批准、已提交和业务验收是不同事实；本片只核实精确知识实施，业务迁移、专业语义验证、账户认证及模型治理工具不在本目录承诺范围内。
+规则不会替代完整知识结构校验、原事务回滚/恢复或真实 journal 核实。Schema 合格、结构合格、批准、已提交和业务验收是不同事实；业务迁移、专业语义验证和账户认证不在本目录承诺范围内。
+
+### 主 Agent 的观察和提案协议
+
+`module-governance-tools.ts` 仅声明 `cbim_governance_get/read`、`cbim_governance_receipt/read`、`cbim_governance_observe/maintenance`、`cbim_governance_propose/preview`。端口由实际主运行闭包装配；模型请求不含工作区身份、根会话、主实例、run、actor、commandId、路径或权限。四工具均为非原生的 `knowledge` scope；保存私有观察/提案不能标为 `knowledge-write`，也不等于正式知识已经变更。没有登记保护、批准、驳回、暂缓或实施模型入口。
+
+观察及提案的可选 `origin` 区分本机明确提交与真实主运行。旧记录缺省表示未登记来源，不补造本机或账户身份。主来源冻结 rootSessionId、agentInstanceId、agentSessionId、runId、toolCallId 和确切工具名；工作区从外层记录取得。`moduleGovernanceMainCommandId` 以固定命名空间和 workspace/root/run/toolCall/toolName 生成稳定名称型 UUID，不混入重开后的工作区实例。持久命令仍须核实完整原输入和来源指纹，相同调用身份变化不能靠新 UUID 绕过冲突。提案 basis 包含来源；本机提案可依据可信主观察建立，不要求两者同种来源。模型提案则通过 `validateModuleGovernanceMainObservation` 限定到自己主实例及逻辑通道已登记的观察，允许同通道不同运行。
+
+模型原/新 overview 各限 16 KiB UTF-8，理由/观察/回退说明各限 1024 字符，替代方案和不变量各最多 8 条、每条 512 字符。完整正文输出携带 `state:complete`、真实字节数和完整 hash；超限正文只有 `state:oversized` 元数据，不含 text。即使字节数符合上限，JSON 转义超过 32 KiB 的单正文也明确交回桌面处理。目录最多 20 项并声明真实 total/truncated；合法长来源组合可能进一步缩短目录，但不会裁剪选定正文的一部分。既有桌面 2 MiB 能力不变。
+
+纯投影校验原正文 hash，不执行领域调用。模型读目录或指定记录返回有界 DTO；写回执和原命令查询只返回 compact 身份、版本、来源及 hash，不复制大正文或私有实施请求。最终工具包装必须对已生成的唯一 JSON 文本再次核对 128 KiB 字节上限，输出校验失败不表示已有记录回滚。原回执可按 commandId 或原 action/toolCallId/runId 查询，省略 runId 只使用本轮真实运行；没有记录返回 unknown，不授权重建、换 ID 重试或自动实施。

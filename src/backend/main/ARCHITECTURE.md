@@ -104,6 +104,8 @@ class N_src_backend_main_runtime_monitor_ts["runtime-monitor.ts"] {
 - `execution.ts` → `platform`：导入。
 - `execution.ts` → `execution-admission.ts`：导入。
 - `execution.ts` → `resources`：导入。
+- `execution.ts` → `governance`：导入。
+- `governance` → `workspace`：导入。
 - `governance` → `persistence`：导入。
 - `ipc` → `persistence`：导入。
 - `ipc` → `workspace`：导入。
@@ -163,7 +165,7 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 ## 子目录导航
 
 - [commands/](commands/ARCHITECTURE.md)：CLI 入口，复用应用和调度，不拥有第二套领域规则。
-- [governance/](governance/ARCHITECTURE.md)：工作区模块知识治理服务及可信桌面操作。登记、提案、决定和显式实施经知识事务屏障核实，读取不启动执行或重放未知操作。
+- [governance/](governance/ARCHITECTURE.md)：工作区模块知识治理服务、可信桌面操作与独立主运行端口。登记保护、决定及实施只属桌面；模型仅可读取、观察、提案和核查原回执，未知不重放。
 - [ipc/](ipc/ARCHITECTURE.md)：应用 action 路由。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。
 - [persistence/](persistence/ARCHITECTURE.md)：本机持久化适配：知识事务、运行日志、对话附件、模型配置。保留原数据路径与格式，目录调整不迁移用户数据。
 - [platform/](platform/ARCHITECTURE.md)：本机路径、系统锁、凭据加密、终端与工具访问检查。业务文件及受管原生会话各用固定根、有界读取与前后身份核实，拒绝链接、越界和 Windows 备用数据流；原生历史不完整则拒绝恢复，不修补原文件或承诺外部原子隔离。
@@ -183,6 +185,8 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 ## 模块知识保护与桌面治理
 
 每个 `Workspace` 装配独立 `ModuleGovernanceService` 和用户数据账本；`Application.governance(id)` 只返回已就绪实例。桌面登记和人工决定由 IPC 注入本机明确操作标记，模型工具、普通知识参数和资源内容不能签发批准。正式实施另走显式 apply，仍由原 KnowledgeStore 串行事务写入；服务关闭随知识队列排空，不恢复未完成意图。
+
+`createExecutionManager` 仅为已登记主对话实例提供 `ExecutionServices.governanceTools` 工厂；实际 createEngine 得到 runId 后才绑定四个窄端口。端口不缓存到共享 KnowledgeTools，执行成员及未装配 CLI 没有治理工具。主模型只读依据、保存观察/提案和查询原回执；作用域为当前 knowledge，但不授予知识写或业务执行权限。来源和稳定命令来自可信主绑定与工具调用 ID，输出有界，停止后的未知结果仍只查询原命令。
 
 ## 本机资源仓库连接生命周期
 

@@ -2,6 +2,7 @@
  * 作用定位：主进程执行装配，将工作区、已解析模型、原生锁与平台访问策略注入调度引擎。
  * 设计原因：主会话与图根共享实例，在创建 run 前取得全局名额及业务文件读取占用；知识治理仍由独立知识事务与用户权限保护。等待回调来自可信启动上下文，不混入可序列化模型设置。
  * 仓库边界：仅桌面主运行工厂捕获已有授权连接，不在准备时联网；CLI/成员和未就绪连接不装配仓库工具。
+ * 治理边界：四个观察/提案端口在真实 run 创建时绑定主身份，不共享给成员，不包含桌面批准或实施。
  */
 import path from 'node:path';
 import {FileRunStorage} from './persistence/tasks/run-storage';
@@ -18,6 +19,7 @@ import type {AutoCollaboration} from '../scheduler-engine/execution/auto-collabo
 import type {WorkspaceDispatchService} from '../scheduler-engine/execution/dispatch-service';
 import {admissionRequestId,acquireExecutionLease,type WorkspaceAdmission} from './execution-admission';
 import type {RepositoryConnections} from './resources/repository-connections';
+import {mainGovernanceTools} from './governance/main-governance-tools';
 
 /**
  * 每个工作区实例装配独立管理器；锁键和访问策略固定绑定本实例身份。
@@ -38,6 +40,7 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles,le
     storage,
     conversationBinding,
     repositoryTools,
+    governanceTools:conversationBinding?({task,runId})=>mainGovernanceTools(workspace,task,runId,conversationBinding):undefined,
     dispatchTools:({task,runId})=>collaboration?.()?.tools(task,runId,options),
     acquireLease:async task=>{
       workspace.assert();

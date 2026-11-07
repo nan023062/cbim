@@ -1,6 +1,12 @@
 # 单模块知识治理服务
 
-`ModuleGovernanceService` 是每个工作区唯一的桌面治理门面，同时实现知识提交所需的私有授权端口。服务不拥有第二个队列；登记、观察、提案、决定、实施和回执读取都通过 `Workspace.governed` 进入 `KnowledgeStore` 的同一串行屏障。回调内只能使用未再次排队的事务端口，不得重入公开 `commit/preview`。
+`ModuleGovernanceService` 是每个工作区唯一的治理门面，同时实现知识提交所需的私有授权端口。服务不拥有第二个队列；登记、观察、提案、决定、实施和回执读取都通过 `Workspace.governed` 进入 `KnowledgeStore` 的同一串行屏障。回调内只能使用未再次排队的事务端口，不得重入公开 `commit/preview`。
+
+`mainGovernanceTools` 只在真实主运行工厂创建，固定 workspace/instance、根会话、主实例/逻辑通道与 run。模型端口仅有 get/observe/propose/receipt，原输入先严格校验再注入可信身份；普通桌面 IPC 没有 origin 参数。模型观察和提案记录 `main_agent` 来源，新的桌面观察/提案记录本机来源，旧缺省不补造。模型提案只能引用同一主实例/逻辑通道的真实观察。
+
+原命令 UUID 由工作区、根会话、run、真实 toolCallId 和精确工具名稳定派生；重开只读查询不依赖旧 instanceId。接收和保存前检查当前实例及取消信号；进入可靠保存后不承诺取消或回滚，响应失败给出原 commandId，不能自动新建请求。回执只投影同根会话模型来源，不存在返回 unknown；未知不是未受理证明。
+
+主工具读取只交有界目录和显式所选记录，缺失 ID 不换为最新。原/新正文各限 16 KiB UTF-8，原正文不能完整交付时返回 oversized/recorded=false 且不保存观察。提案和治理读回执不是业务完成证据，批准和独立 apply 仍仅由桌面明确操作。
 
 用户明确登记真实 Module 的定义和 overview；首片没有解除、移动、删除或定义修改入口。观察保存当时的结构校验和原正文，提案固定唯一 overview 差异及理由、替代方案、不变量、恢复说明。决定仅接受可信桌面闭包的 `local_desktop / explicit_submit`，它不代表认证负责人或业务验收。批准、驳回和暂缓只保存记录，不写正式知识。
 

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-私有治理记录的有界严格持久化，保留原命令与不可变提案；不反向调用知识事务或创建第二条提交队列。
+私有治理记录的有界严格持久化，核对真实来源、原命令指纹与不可变提案；旧数据不补造来源，不反向调用知识事务或创建第二条提交队列。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -15,6 +15,14 @@
 ## 架构类图
 
 ### module-governance-store.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_persistence_governance_module_governance_store_ts["module-governance-store.ts"] {
+  <<module>>
+  +governanceCommandFingerprint()
+}
+```
 
 ```mermaid
 classDiagram
@@ -62,6 +70,8 @@ N_src_backend_main_persistence_governance_module_governance_store_ts ..> N_src_b
 # 私有治理账本
 
 每个工作区在用户数据目录保存 `governance/module-ledger.json`，不进入 `.cbim`、资源包或普通知识 CRUD。账本最多 512 条命令、32 MiB；超限拒绝新写，不裁剪历史。完整输入、稳定命令、回执及可选实施意图构成唯一追加链，加载时核身份、指纹、登记/观察/提案/决定顺序以及实施所引用的当时批准。
+
+观察与提案可携带可信 origin，私有命令封装与公开记录必须逐字段一致，且参与原请求指纹。模型来源还须从工作区、根会话、run、toolCallId 与工具名重算相同命令 UUID；模型提案的原观察须属于同一主实例及逻辑通道。新桌面记录明确标注本机操作；旧记录缺省沿用旧指纹，不补造来源，不得冒领为模型调用。登记、决定和实施不接受模型 origin。
 
 `module-ledger.json.anchor` 绑定账本 UUID、命令数量及完整文件字节哈希。首次创建空账本和锚完成后才发布服务；旧锚存在但账本丢失、合法 JSON 被回退为空、删除完整分支或来源不一致都失败关闭，不能重新初始化为空保护。
 

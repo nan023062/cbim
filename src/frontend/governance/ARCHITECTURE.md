@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-静态业务模块的知识治理面板。显式登记、观察和精确差异提案，人工决定与实施分开；原命令先保存再发送，未知只查询，迟到结果不改变新目标。
+静态业务模块的知识治理面板。展示真实本机/主运行来源与精确差异，人工决定与实施分开；原命令先保存再发送，未知只查询，迟到结果不改变新目标。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -11,8 +11,9 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [governance-pending.ts](governance-pending.ts) | 模块知识治理写操作的有界本地待确认元数据，供面板卸载或应用重开后查询原命令。 |
+| [GovernanceOrigin.tsx](GovernanceOrigin.tsx) | 治理历史中呈现观察和提案的可信来源，区分本机明确提交、主 Agent 运行与未记录来源的旧数据。 |
 | [module-governance.css](module-governance.css) | 对应界面的布局与视觉样式。 |
-| [ModuleGovernancePanel.tsx](ModuleGovernancePanel.tsx) | 业务架构节点的模块知识治理面板，展示真实观察、精确正文提案、本机决定与独立实施结果。 |
+| [ModuleGovernancePanel.tsx](ModuleGovernancePanel.tsx) | 业务架构节点的模块知识治理面板，展示真实观察、精确正文提案及来源、本机决定与独立实施结果。 |
 
 ## 架构类图
 
@@ -39,6 +40,18 @@ class N_src_frontend_governance_governance_pending_ts_GovernancePending["Governa
 
 }
 N_src_frontend_governance_governance_pending_ts ..> N_src_frontend_governance_governance_pending_ts_GovernancePending : 声明
+```
+
+直接依赖：[../../bridge/contracts/governance.ts](../../bridge/contracts/governance.ts)。
+
+### GovernanceOrigin.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_governance_GovernanceOrigin_tsx["GovernanceOrigin.tsx"] {
+  <<component>>
+  +GovernanceOrigin()
+}
 ```
 
 直接依赖：[../../bridge/contracts/governance.ts](../../bridge/contracts/governance.ts)。
@@ -77,7 +90,7 @@ class N_src_frontend_governance_ModuleGovernancePanel_tsx_Props["Props"] {
 N_src_frontend_governance_ModuleGovernancePanel_tsx ..> N_src_frontend_governance_ModuleGovernancePanel_tsx_Props : 声明
 ```
 
-直接依赖：[../../bridge/contracts/governance.ts](../../bridge/contracts/governance.ts)、[governance-pending.ts](governance-pending.ts)、[module-governance.css](module-governance.css)。
+直接依赖：[../../bridge/contracts/governance.ts](../../bridge/contracts/governance.ts)、[governance-pending.ts](governance-pending.ts)、[GovernanceOrigin.tsx](GovernanceOrigin.tsx)、[module-governance.css](module-governance.css)。
 
 ### 本目录调用边界
 
@@ -89,10 +102,14 @@ class N_src_frontend_governance_ModuleGovernancePanel_tsx["ModuleGovernancePanel
 class N_src_frontend_governance_governance_pending_ts["governance-pending.ts"] {
   <<module>>
 }
+class N_src_frontend_governance_GovernanceOrigin_tsx["GovernanceOrigin.tsx"] {
+  <<component>>
+}
 class N_src_frontend_governance_module_governance_css["module-governance.css"] {
   <<stylesheet>>
 }
 N_src_frontend_governance_ModuleGovernancePanel_tsx ..> N_src_frontend_governance_governance_pending_ts : 导入依赖
+N_src_frontend_governance_ModuleGovernancePanel_tsx ..> N_src_frontend_governance_GovernanceOrigin_tsx : 导入依赖
 N_src_frontend_governance_ModuleGovernancePanel_tsx ..> N_src_frontend_governance_module_governance_css : 导入依赖
 ```
 
@@ -114,6 +131,8 @@ N_src_frontend_governance_ModuleGovernancePanel_tsx ..> N_src_frontend_governanc
 界面只从明确选择的静态 Module 打开，不属于会话任务图。保护登记、观察、精确正文提案、人工决定与实施分别发送命令；批准不会自动写知识，结构验证与知识提交不会被显示为业务验收。
 
 每个新操作清除上次的成功提示。当前回复丢失时，只显示当前错误和待确认状态，不同时保留旧命令的“已确认”提示；历史回执仍有原命令身份。
+
+`GovernanceOrigin` 展示服务保存的观察与提案来源：本机明确提交、主 Agent 的根会话/实例/成员通道/run/toolCall，或者旧记录未保存来源。来源不是批准记录；模型提案继续经过独立桌面决定和实施。查看来源只展示身份，不启动或恢复原会话。历史中存在多人、多轮提案时仍按明确选定的原 proposalId 展示精确差异。
 
 `governance-pending.ts` 只持久化公开身份和原命令元数据，不持久化知识正文或批准证明。每工作区最多一个待确认命令，整体 64 条和 256 KiB 上限；先同步保存后发送，坏数据或存储失败不覆盖旧记录。迟到结果必须匹配完整原请求才可解除。重开仅恢复记录和查看当前状态，不自动重发；查不到回执不证明未受理。
 

@@ -6,6 +6,7 @@
 import type {ChatPermission} from './types';
 import type {ToolCall,ToolDecision,ToolEffect,ToolScope} from '../tools/types';
 import {toolScopeSchema} from '../tools/scope-schema';
+import {governanceToolEffects,isGovernanceToolName} from '../governance/module-governance-tools';
 
 /** 已由调度层识别和解析的调用；不接受模型自行声明 effects 或权限。 */
 export interface RunToolDescriptor {effects:readonly ToolEffect[];native:boolean;
@@ -20,13 +21,19 @@ export interface RunPolicyContext {
 }
 /** 每次调用独立评估；审批缓存由运行所有者清理，本策略不持久化授权。 */
 export async function authorizeRunTool(call:ToolCall,tool:RunToolDescriptor,context:RunPolicyContext):Promise<ToolDecision>{
-  let scope:ToolScope={kind:tool.effects.includes('command')?'unknown':tool.effects.includes('knowledge-write')?'knowledge':'workspace',workspaceId:context.workspaceId};
+  const governance=call.name.startsWith('cbim_governance_');
+  let scope:ToolScope={kind:governance||tool.effects.includes('command')?'unknown':tool.effects.includes('knowledge-write')?'knowledge':'workspace',workspaceId:context.workspaceId};
   const decision=(allow:boolean,reason?:string):ToolDecision=>({allow,reason,effects:tool.effects,scope});
+  // 这四项由真实主运行注册；保存私有观察/提案不等于正式知识写入，也不能伪装为业务文件读取。
+  if(governance&&(!isGovernanceToolName(call.name)||tool.native||tool.effects.length!==1||tool.effects[0]!==governanceToolEffects[call.name]||tool.scope?.kind!=='knowledge'))return decision(false,'治理工具缺少本轮真实注册的知识作用域或效果不一致');
   if(call.name.startsWith('cbim_repository_')&&tool.scope?.kind!=='repository')return decision(false,'仓库工具缺少本轮可信捕获范围');
   if(tool.scope!==undefined){
     const captured=toolScopeSchema.safeParse(tool.scope);
     if(!captured.success||captured.data.workspaceId!==context.workspaceId)return decision(false,'工具捕获范围与本轮工作区不一致');
-    if(captured.data.kind==='repository'){
+    if(governance){
+      if(captured.data.kind!=='knowledge')return decision(false,'治理工具必须使用本轮知识作用域');
+      scope=captured.data;
+    }else if(captured.data.kind==='repository'){
       if(tool.native||tool.effects.length!==1||tool.effects[0]!=='read'||call.name!==`cbim_repository_${captured.data.operation}`||call.input.connectorId!==captured.data.connectorId)return decision(false,'仓库工具仅允许真实已捕获目标的只读操作');
       scope=captured.data;
     }else if(captured.data.kind!==scope.kind)return decision(false,'工具范围与真实副作用分类不一致');

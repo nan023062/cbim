@@ -2,6 +2,7 @@
  * 作用定位：在派发事务中保存本轮目标计划与结构化审阅，并为目标门禁、依赖修订和本机人工决定核验真实候选、角色及模块基线。
  * 设计原因：模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用；成员 Workflow 条件沿冻结知识从 canonical 重算。检查点仍是未完任务，截断前缀或模型生成的程序 proof 不能成为完成依据。
  * 职责边界：人工项仅引用当前实际消费的接受；审阅和完成均复核原业务主体、精确候选与选定字节，负面意见只能明确安排新任务返工。不关闭周期或签署，外部文件核实不构成原子快照。
+ * 证据边界：治理观察、提案和查询仅是私有待办事实，不能被主知识引用或成员候选包装成业务完成证据。
  */
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
@@ -116,7 +117,7 @@ export class ScopeGoalService {
     const receipt=receipts[0],event=events[0],allowed=summary.events.find(item=>item.type==='tool.allowed'&&item.data.id===toolCallId);
     check(receipt.outcome==='succeeded'&&receipt.workspaceId===summary.task.workspaceId&&receipt.taskId===summary.task.taskId&&receipt.runId===summary.runId&&event.workspaceId===receipt.workspaceId&&event.taskId===receipt.taskId&&event.runId===receipt.runId&&event.data.isError!==true&&sameGoalValue(event.data.receipt,receipt)&&receipt.resultHash===hash(JSON.stringify(event.data.result)),'GOAL_EVIDENCE_INVALID','工具回执或结果正文不匹配');
     check(allowed&&allowed.seq<event.seq&&allowed.data.name===receipt.toolName&&receipt.inputHash===hash(JSON.stringify(allowed.data.input))&&allowed.seq>=lastEffect(summary),'GOAL_EVIDENCE_STALE','证据不属于最后一次副作用之后的有效执行');
-    check(!receipt.toolName.startsWith('cbim_task_')&&!receipt.toolName.startsWith('cbim_dispatch_')&&!receipt.toolName.startsWith('cbim_goal_')&&receipt.toolName!=='cbim_delivery_prepare','GOAL_EVIDENCE_INVALID','调度、计划或审阅回执不能作为业务完成证据');
+    check(!receipt.toolName.startsWith('cbim_task_')&&!receipt.toolName.startsWith('cbim_dispatch_')&&!receipt.toolName.startsWith('cbim_goal_')&&!receipt.toolName.startsWith('cbim_governance_')&&receipt.toolName!=='cbim_delivery_prepare','GOAL_EVIDENCE_INVALID','调度、计划、审阅或治理待办回执不能作为业务完成证据');
     return {receipt,event};
   }
   private async member(state:DispatchState,scope:DispatchScope,graph:GraphSnapshot,task:TaskNode,knowledgeRevision:string){

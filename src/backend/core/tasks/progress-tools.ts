@@ -60,7 +60,8 @@ export class TaskProgressTools {
     await this.persist({...this.state,version:this.state.version+1,state:'executing',reason,delivery:undefined,steps:this.state.steps.map(s=>({...s,state:s.state==='reported_done'?'pending':s.state,evidence:[]}))});
   })}
   /** 只接收运行时生成的业务回执；外部仓库资料、任务记录、派发、目标审阅与候选工具不能替代实际业务交付证据。 */
-  record(receipt:ToolReceipt,generation:number){if(generation===this.generation&&receipt.outcome==='succeeded'&&receipt.scope.kind!=='repository'&&!receipt.toolName.startsWith('cbim_repository_')&&!receipt.toolName.startsWith('cbim_task_')&&!receipt.toolName.startsWith('cbim_dispatch_')&&!receipt.toolName.startsWith('cbim_goal_')&&receipt.toolName!=='cbim_delivery_prepare')this.evidence.set(receipt.toolCallId,receipt)}
+  /** 治理观察和提案只是私有记录，不能用其成功回包替代业务产物证据。 */
+  record(receipt:ToolReceipt,generation:number){if(generation===this.generation&&receipt.outcome==='succeeded'&&receipt.scope.kind!=='repository'&&!receipt.toolName.startsWith('cbim_repository_')&&!receipt.toolName.startsWith('cbim_governance_')&&!receipt.toolName.startsWith('cbim_task_')&&!receipt.toolName.startsWith('cbim_dispatch_')&&!receipt.toolName.startsWith('cbim_goal_')&&receipt.toolName!=='cbim_delivery_prepare')this.evidence.set(receipt.toolCallId,receipt)}
   /** 桥的一次性 gate 之后调用；状态版本和证据再次核验，返回可序列化工具结果。 */
   call(name:string,input:unknown){return this.serial(async()=>{
     const parsed=progressTool(name,input);if(!parsed)throw Error('未知任务工具');const args=parsed.args as any;

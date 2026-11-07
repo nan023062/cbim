@@ -37,7 +37,7 @@ export function assertWorkflowPlan(bindings:readonly WorkflowContractBinding[],p
 export function evaluateWorkflowDelivery(bindings:readonly WorkflowContractBinding[],receipts:readonly ToolReceipt[],identity:WorkflowRunIdentity):WorkflowEvidenceProof{
   const values=checkedBindings(bindings),unique=new Map<string,ToolReceipt>();
   for(const receipt of receipts){
-    valid(receipt.workspaceId===identity.workspaceId&&receipt.taskId===identity.taskId&&receipt.runId===identity.runId&&receipt.scope.workspaceId===identity.workspaceId&&receipt.scope.kind!=='repository'&&!receipt.toolName.startsWith('cbim_repository_')&&receipt.outcome==='succeeded'&&hex(receipt.inputHash)&&hex(receipt.resultHash),'WORKFLOW_EVIDENCE_INVALID','Workflow 交付回执必须是本任务本轮的真实业务成功结果，外部仓库资料不能作交付证据');
+    valid(receipt.workspaceId===identity.workspaceId&&receipt.taskId===identity.taskId&&receipt.runId===identity.runId&&receipt.scope.workspaceId===identity.workspaceId&&receipt.scope.kind!=='repository'&&!receipt.toolName.startsWith('cbim_repository_')&&!receipt.toolName.startsWith('cbim_governance_')&&receipt.outcome==='succeeded'&&hex(receipt.inputHash)&&hex(receipt.resultHash),'WORKFLOW_EVIDENCE_INVALID','Workflow 交付回执必须是本任务本轮的真实业务成功结果，外部资料与治理记录不能作交付证据');
     valid(!unique.has(receipt.toolCallId)||same(unique.get(receipt.toolCallId),receipt),'WORKFLOW_EVIDENCE_INVALID','同一工具 ID 的 Workflow 证据不一致');unique.set(receipt.toolCallId,receipt);
   }
   const checks:WorkflowEvidenceProof['checks']=[];

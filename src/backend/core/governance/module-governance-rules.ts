@@ -4,9 +4,11 @@
  * 职责边界：调用方负责可信文件读取、完整知识校验、私有记录及 journal 来源；此处不读文件、不签发身份、不执行事务或补造实施成功。
  */
 import {hash,json} from '../foundation/serialization';
+import {createHash} from 'node:crypto';
 import {fail} from '../foundation/errors';
 import {
   moduleGovernanceProtectionSchema,moduleGovernanceProposalSchema,moduleGovernanceObservationSchema,moduleGovernanceDecisionSchema,moduleGovernanceApplyIntentSchema,moduleGovernanceKnowledgeReceiptSchema,
+  moduleGovernanceMainOriginSchema,type ModuleGovernanceMainOrigin,
   type ModuleGovernanceProtection,type ModuleGovernanceProposal,type ModuleGovernanceObservation,type ModuleGovernanceDecision,type ModuleGovernanceApplyIntent,type ModuleGovernanceKnowledgeReceipt,
 } from './module-governance';
 
@@ -23,6 +25,31 @@ function canonical(value:unknown):string{
   if(Array.isArray(value))return '['+value.map(canonical).join(',')+']';
   if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical((value as Record<string,unknown>)[key])).join(',')+'}';
   return JSON.stringify(value);
+}
+
+/** 名称型 UUID 绑定真实的一次主工具调用；不含重开后的工作区实例，查询原回执时仍可重算。 */
+export function moduleGovernanceMainCommandId(workspaceId:string,raw:ModuleGovernanceMainOrigin):string{
+  const source=moduleGovernanceMainOriginSchema.parse(raw);
+  check(typeof workspaceId==='string'&&workspaceId.length>0&&workspaceId.length<=512,'GOVERNANCE_IDENTITY','治理来源缺少真实工作区');
+  const namespace=Buffer.from('39e9718496d65cc5a5c0e661833e1f26','hex');
+  const bytes=createHash('sha1').update(namespace).update(canonical([workspaceId,source.rootSessionId,source.runId,source.toolCallId,source.toolName])).digest().subarray(0,16);
+  bytes[6]=(bytes[6]&0x0f)|0x50;bytes[8]=(bytes[8]&0x3f)|0x80;
+  const hex=bytes.toString('hex');return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+}
+
+/** 只核持久来源与原命令的一致性，不凭记录字段认证主实例；实际运行身份必须由调用闭包核实。 */
+export function validateModuleGovernanceRecordOrigin(record:ModuleGovernanceObservation|ModuleGovernanceProposal):void{
+  if(record.origin?.kind!=='main_agent')return;
+  const observation='observationId' in record&&!('proposalId' in record),id=observation?(record as ModuleGovernanceObservation).observationId:(record as ModuleGovernanceProposal).proposalId;
+  check(record.origin.toolName===(observation?'cbim_governance_observe':'cbim_governance_propose')&&id===moduleGovernanceMainCommandId(record.workspaceId,record.origin),'GOVERNANCE_IDENTITY','治理来源与原工具命令不一致');
+}
+
+/** 模型写提案必须先取得自己主通道的真实观察；本机提案不受此约束，可明确审阅任何可信原观察。 */
+export function validateModuleGovernanceMainObservation(observation:ModuleGovernanceObservation,rawSource:ModuleGovernanceMainOrigin):void{
+  const source=moduleGovernanceMainOriginSchema.parse(rawSource);
+  validateModuleGovernanceRecordOrigin(observation);
+  const origin=observation.origin;
+  check(source.toolName==='cbim_governance_propose'&&origin?.kind==='main_agent'&&origin.toolName==='cbim_governance_observe'&&origin.rootSessionId===source.rootSessionId&&origin.agentInstanceId===source.agentInstanceId&&origin.agentSessionId===source.agentSessionId,'GOVERNANCE_SOURCE','模型提案须引用同一主实例及逻辑通道登记的真实观察');
 }
 
 /** 只登记已被实际知识索引公开的 Module；现行 module.schema 的 overview 固定为 module.md，仍须解析真实定义核对绑定。 */
@@ -45,6 +72,7 @@ export function moduleGovernanceProposalBasis(proposal:Omit<ModuleGovernanceProp
 /** 提案必须从该保护对象的一次真实冻结观察形成；不能把新版本与更旧正文混在一起。 */
 export function validateModuleGovernanceProposal(raw:ModuleGovernanceProposal,rawProtection:ModuleGovernanceProtection,rawObservation:ModuleGovernanceObservation):void{
   const p=moduleGovernanceProposalSchema.parse(raw),protection=moduleGovernanceProtectionSchema.parse(rawProtection),observation=moduleGovernanceObservationSchema.parse(rawObservation);
+  validateModuleGovernanceRecordOrigin(p);validateModuleGovernanceRecordOrigin(observation);
   check(p.workspaceId===protection.workspaceId&&p.workspaceId===observation.workspaceId&&p.moduleId===protection.moduleId&&p.protectionId===protection.protectionId&&p.protectionId===observation.protectionId&&p.observationId===observation.observationId,'GOVERNANCE_IDENTITY','提案、观察和保护对象身份不一致');
   check(p.base.protectionRevision===protection.revision&&observation.protectionRevision===protection.revision&&p.base.knowledgeRevision===observation.knowledgeRevision&&p.base.definitionHash===protection.definition.hash&&observation.definitionHash===protection.definition.hash&&p.base.overviewHash===protection.overview.hash&&observation.overviewHash===protection.overview.hash,'GOVERNANCE_STALE','提案或观察的知识/保护基线已过期');
   check(p.change.path===protection.overview.path&&observation.overview.path===protection.overview.path&&observation.overview.hash===protection.overview.hash&&hash(observation.overview.text)===observation.overview.hash&&p.change.beforeText===observation.overview.text,'GOVERNANCE_PROTECTED','提案只能更新观察时已绑定的 overview 正文');

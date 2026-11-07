@@ -47,7 +47,7 @@ class N_src_backend_core_policy_tool_policy_ts_RunPolicyContext["RunPolicyContex
 N_src_backend_core_policy_tool_policy_ts ..> N_src_backend_core_policy_tool_policy_ts_RunPolicyContext : 声明
 ```
 
-直接依赖：[types.ts](types.ts)、[../tools/types.ts](../tools/types.ts)、[../tools/scope-schema.ts](../tools/scope-schema.ts)。
+直接依赖：[types.ts](types.ts)、[../tools/types.ts](../tools/types.ts)、[../tools/scope-schema.ts](../tools/scope-schema.ts)、[../governance/module-governance-tools.ts](../governance/module-governance-tools.ts)。
 
 ### types.ts
 
@@ -100,6 +100,8 @@ N_src_backend_core_policy_tool_policy_ts ..> N_src_backend_core_policy_types_ts 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 ### 可信工具范围与逐次权限评估
+
+四个主治理工具由 `module-governance-tools.ts` 的精确效果表分类。只有非原生、单一匹配效果、严格 `knowledge` scope 且工作区一致的可信描述可用；缺作用域、额外效果、未知治理名、伪原生或跨工作区全部拒绝。这个例外不扩展到其他 read/preview 工具，模型不能传 scope。观察/提案保存私有记录，不产生正式知识写入权限，不触发 ask 模式的知识提交批准；原正式写入门禁保持不变。
 
 `tool-policy.ts` 只消费调度层已识别的工具描述与可信运行权限。副作用决定 read/ask/execute 行为；原生路径守卫先于 ask 审批，拒绝或缺失审批不能放行。命令被标记为 unknown 范围，不据此承诺目录沙箱或已知副作用集合。
 

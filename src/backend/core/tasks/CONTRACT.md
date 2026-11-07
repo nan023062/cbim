@@ -445,3 +445,6 @@ accept 必须覆盖此人工项当前审阅的全部真实成员候选，为每�
 执行记录共用 `toolScopeSchema`，因此主运行 canonical 和历史保留真实 repository 目标及操作，不将合法外部 read 误报为日志损坏。`TaskProgressTools.record` 排除 repository 范围及 cbim_repository_ 名称；Workflow 交付核实同样拒绝此类引用，不能借本地工具名称或外部资料充当本轮业务文件证据。
 
 `artifactSources` 仍仅接受 workspace 范围的 read/write/edit 单文件调用；基线采集自身也必须属于 workspace。同轮出现外部仓库读取时，基线核实保留 `ARTIFACT_EXTERNAL_SOURCE` 范围限制：所列文件指纹不能证明外部资料或整个运行的闭合状态。成员检查点明确拒绝 repository 来源，即使本地文件全部 matches 也不扩大恢复白名单。这些限制不把成功的外部 read 回执伪称为工具结果未知，只限制它能够证明的业务事实。
+### 治理记录与业务证据
+
+`TaskProgressTools.record` 与 `evaluateWorkflowDelivery` 排除全部 `cbim_governance_*` 回执。真实观察、精确提案或其成功回包仅证明治理记录已保存，不能替代业务文件、模块交付或人工验收。既有产物采集仍只接受真实 read/write/edit 单文件调用；可恢复成员检查点的窄工具白名单不含治理工具，不能凭知识作用域或同文件 hash 放宽恢复。运行报告仍可展示实际工具事实，排除证据不删除日志。

@@ -110,7 +110,7 @@ class N_src_frontend_main_tsx["main.tsx"] {
 - [components/](components/ARCHITECTURE.md)：通用展示组件，不持有领域服务与运行状态。
 - [conversation/](conversation/ARCHITECTURE.md)：中央主对话、目标摘要、输入、附件及队列。进程准入等待与持久用户等待分别展示，纯等待不累计工作时长；未受理保留草稿。核实与重规划权限分离，可续聊头由后端核实。 双视图共享人工决定控制器，保存意见不清除聊天草稿或消费等待。
 - [diagnostics/](diagnostics/ARCHITECTURE.md)：只读展示工作区运行状态和知识校验问题，不把工作区就绪视为知识校验通过。
-- [governance/](governance/ARCHITECTURE.md)：静态业务模块的知识治理面板。显式登记、观察和精确差异提案，人工决定与实施分开；原命令先保存再发送，未知只查询，迟到结果不改变新目标。
+- [governance/](governance/ARCHITECTURE.md)：静态业务模块的知识治理面板。展示真实本机/主运行来源与精确差异，人工决定与实施分开；原命令先保存再发送，未知只查询，迟到结果不改变新目标。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识问题、预览提交和静态对象表单；固定编辑基线，模块维护人同事务确认，删除先检查影响。业务架构展示位于 workspace。
 - [resources/](resources/ARCHITECTURE.md)：统一资源仓库的查看、编辑、静态包发布与下载应用。人才按团队/Agent/Skill复用，业务按整套架构应用；工作区身份及预览版本固定。设置通过统一入口打开。
 - [settings/](settings/ARCHITECTURE.md)：模型、仓库、并发及新目标软限额配置。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。凭据只提交主进程，账户仍为占位。

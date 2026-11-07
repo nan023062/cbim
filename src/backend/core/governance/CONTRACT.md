@@ -24,4 +24,14 @@
 
 专属 authorized 只由持锁的可信存储加载真实私有意图、提案和最新决定。规则再次核对工作区、知识/保护版本、批准依据、完整原请求指纹及唯一 overview 差异；其他正文不可夹带，仅允许既有知识服务生成两个派生注册索引。批准一个 Module 不授权另一个 Module。`advanceModuleGovernanceProtection` 仅在调用方已经核实 journal 的治理关联后推导下一正文基线，普通知识回执或 pending 意图不能单独作为来源。
 
-规则不会替代完整知识结构校验、原事务回滚/恢复或真实 journal 核实。Schema 合格、结构合格、批准、已提交和业务验收是不同事实；本片只核实精确知识实施，业务迁移、专业语义验证、账户认证及模型治理工具不在本目录承诺范围内。
+规则不会替代完整知识结构校验、原事务回滚/恢复或真实 journal 核实。Schema 合格、结构合格、批准、已提交和业务验收是不同事实；业务迁移、专业语义验证和账户认证不在本目录承诺范围内。
+
+### 主 Agent 的观察和提案协议
+
+`module-governance-tools.ts` 仅声明 `cbim_governance_get/read`、`cbim_governance_receipt/read`、`cbim_governance_observe/maintenance`、`cbim_governance_propose/preview`。端口由实际主运行闭包装配；模型请求不含工作区身份、根会话、主实例、run、actor、commandId、路径或权限。四工具均为非原生的 `knowledge` scope；保存私有观察/提案不能标为 `knowledge-write`，也不等于正式知识已经变更。没有登记保护、批准、驳回、暂缓或实施模型入口。
+
+观察及提案的可选 `origin` 区分本机明确提交与真实主运行。旧记录缺省表示未登记来源，不补造本机或账户身份。主来源冻结 rootSessionId、agentInstanceId、agentSessionId、runId、toolCallId 和确切工具名；工作区从外层记录取得。`moduleGovernanceMainCommandId` 以固定命名空间和 workspace/root/run/toolCall/toolName 生成稳定名称型 UUID，不混入重开后的工作区实例。持久命令仍须核实完整原输入和来源指纹，相同调用身份变化不能靠新 UUID 绕过冲突。提案 basis 包含来源；本机提案可依据可信主观察建立，不要求两者同种来源。模型提案则通过 `validateModuleGovernanceMainObservation` 限定到自己主实例及逻辑通道已登记的观察，允许同通道不同运行。
+
+模型原/新 overview 各限 16 KiB UTF-8，理由/观察/回退说明各限 1024 字符，替代方案和不变量各最多 8 条、每条 512 字符。完整正文输出携带 `state:complete`、真实字节数和完整 hash；超限正文只有 `state:oversized` 元数据，不含 text。即使字节数符合上限，JSON 转义超过 32 KiB 的单正文也明确交回桌面处理。目录最多 20 项并声明真实 total/truncated；合法长来源组合可能进一步缩短目录，但不会裁剪选定正文的一部分。既有桌面 2 MiB 能力不变。
+
+纯投影校验原正文 hash，不执行领域调用。模型读目录或指定记录返回有界 DTO；写回执和原命令查询只返回 compact 身份、版本、来源及 hash，不复制大正文或私有实施请求。最终工具包装必须对已生成的唯一 JSON 文本再次核对 128 KiB 字节上限，输出校验失败不表示已有记录回滚。原回执可按 commandId 或原 action/toolCallId/runId 查询，省略 runId 只使用本轮真实运行；没有记录返回 unknown，不授权重建、换 ID 重试或自动实施。

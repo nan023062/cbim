@@ -16,6 +16,7 @@
 | [knowledge-contracts.ts](knowledge-contracts.ts) | 将实际知识工具与 Core 业务输出 Schema、取消及恢复说明绑定，供工具注册使用。 |
 | [knowledge-tools.ts](knowledge-tools.ts) | 向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。 |
 | [main-tool-contracts.ts](main-tool-contracts.ts) | 绑定主调度九项工具的公开回包、取消恢复说明及可信命令键，依赖追加使用独立命令域。 |
+| [module-ownership-tools.ts](module-ownership-tools.ts) | 把本轮真实主运行的模块责任端口转换为发现、分类和执行一致的四工具。 |
 | [question-tools.ts](question-tools.ts) | 为已装配用户交互端口的主/成员运行提供结构化提问工具及严格答案回包。 |
 | [repository-tools.ts](repository-tools.ts) | 把主进程捕获的资源仓库只读端口装配为主调度可调用的两个工具。 |
 
@@ -191,6 +192,27 @@ class N_src_backend_scheduler_engine_tools_main_tool_contracts_ts["main-tool-con
 ```
 
 直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[../../core/tools/contracts.ts](../../core/tools/contracts.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)。
+
+### module-ownership-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_tools_module_ownership_tools_ts["module-ownership-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_tools_module_ownership_tools_ts_ModuleOwnershipTools["ModuleOwnershipTools"] {
+  +has()
+  +list()
+  +describe()
+  +call()
+  -port
+  -binding
+  -parse()
+}
+N_src_backend_scheduler_engine_tools_module_ownership_tools_ts ..> N_src_backend_scheduler_engine_tools_module_ownership_tools_ts_ModuleOwnershipTools : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/workspace/module-ownership-rules.ts](../../core/workspace/module-ownership-rules.ts)、[../../core/workspace/module-ownership-tool-policy.ts](../../core/workspace/module-ownership-tool-policy.ts)、[../../core/workspace/module-ownership-tools.ts](../../core/workspace/module-ownership-tools.ts)。
 
 ### question-tools.ts
 
@@ -401,3 +423,9 @@ DispatchToolAdapter ..> AgentDispatchService : 提交请求
 `QuestionTools` 仅在真实用户交互端口存在时提供 `cbim_ask_user_question`，不加入知识工具目录。list、describe 和 call 共用严格输入；分类仍为 read，不扩大主或成员权限，也不触发工具审批。元数据公开真实输出 Schema、等待期间可取消及先核实后重试的限制。
 
 调用前独立冻结已解析原题，传给端口的对象变异不能改变核验依据。领域等待只调用一次，结果沿 `checkedJsonToolResult` 单次编码、校验原 wire 并直接发送，保持 answers 或 cancelled 形状，不补用户、批准或运行身份。用户回答已消费后发生 `TOOL_OUTPUT_INVALID` 仍不回滚、不重新弹题、不自动重复请求；输出异常不泄露正文。
+
+### 模块岗位负责人主工具
+
+`ModuleOwnershipTools` 只在真实主周期端口存在时注册 `cbim_module_owner_inspect/change_preview/change_commit/receipt`，不进入共享知识目录或成员工具集合。inspect 支持岗位摘要发现、明确模块查询及岗位反查，分页最多 20 项并校验原选择/游标；不返回能力正文或凭据。change_commit 的 knowledge-write 效果沿既有 read/ask/execute 授权，不把预览 basis 当成批准。
+
+raw 输入在任何领域调用前严格校验；发送端口的对象与原期望独立克隆。结果只执行一次 JSON 编码，在同一 wire 校验身份、原输入、游标、关系动作和真实主 actor，之后发送原编码文本，最多 128 KiB。新读写必须匹配当前 instanceId，原回执查询可返回同主根旧实例记录。提交后坏输出或停止不撤销原审计；安全错误保留稳定 commandId，恢复只查询原命令，不自动重写。

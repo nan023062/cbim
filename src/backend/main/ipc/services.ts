@@ -1,5 +1,5 @@
 /**
- * 作用定位：定义 IPC 路由需要的执行审批、静态角色履历、独立岗位登记、全局监管、配额、桌面资源导入、模块治理和工作区生命周期入口。
+ * 作用定位：定义 IPC 路由需要的执行审批、静态角色履历、岗位与模块责任、全局监管、配额、桌面资源导入、模块治理和工作区生命周期入口。
  * 设计原因：路由依赖此契约，Application 负责实现和装配，避免路由反向引用应用类形成类型循环。
  * 职责边界：这里只声明内部调用能力，不代表渲染进程可以直接访问这些服务。
  */
@@ -19,6 +19,7 @@ import type {Catalog as CatalogData, WorkspaceView} from '../../../bridge/contra
 import type {AdmissionSettings} from '../persistence/settings/admission-settings';
 import type {BudgetSettings} from '../persistence/settings/budget-settings';
 import type {WorkspaceMembers} from '../workspace/workspace-members';
+import type {ModuleOwnerships} from '../workspace/module-ownerships';
 import type {ChatMaterialImports} from '../persistence/tasks/chat-material-imports';
 import type {AdmissionCursor,AdmissionRead} from '../../core/runtime/admission';
 
@@ -48,6 +49,8 @@ export interface ApplicationServices {
   governance(id:string):ModuleGovernanceService;
   /** 稳定岗位登记独立于执行实例；只读公开配置，无模型调用或派发副作用。 */
   workspaceMembers(id:string):WorkspaceMembers;
+  /** 桌面责任写入只注入本机提交来源，和主工具共用同一服务及持久化裁决。 */
+  workspaceOwnerships(id:string):ModuleOwnerships;
   execution(id: string): WorkspaceExecutionManager;
   /** 取得已装配的工作区成员图及人工决定服务；未就绪则拒绝，人工记录不隐式启动大脑或改变权限。 */
   memberDispatch(id:string):WorkspaceDispatchService;

@@ -1,5 +1,5 @@
 /**
- * 问答边界：普通答案和取消都只记录交互事实，不进入可引用的步骤或交付证据；原工具日志保持可读。
+ * 证据边界：普通问答、模块负责人查询与变更仅记录交互或控制面事实，不进入步骤、成员候选或交付证据；原工具日志保持可读。
  * 作用定位：执行进度四工具及正式成员三工具的严格输出、真实归属和公开恢复说明。
  * 设计原因：计划本身没有运行身份，而求助、文件基线和检查点已有完整绑定；分别校验，不能向旧状态补造身份或把暂存当成交付。
  * 职责边界：只校验唯一 JSON wire，并用冻结的 JSON 验证记录重算交付证明；不读文件、回滚或重试，当前字节与 canonical 仍由运行时和结算核实。
@@ -52,7 +52,7 @@ export interface MemberToolOutputExpectation {
 export function isProgressEvidence(receipt:unknown,identity:ProgressToolIdentity):receipt is ToolReceipt {
   const checked=toolReceiptSchema.safeParse(receipt);if(!checked.success)return false;
   const value=checked.data;
-  return value.workspaceId===identity.workspaceId&&value.taskId===identity.taskId&&value.runId===identity.runId&&value.scope.workspaceId===identity.workspaceId&&value.outcome==='succeeded'&&!!value.resultHash&&!!value.toolName.trim()&&value.scope.kind!=='repository'&&!['cbim_repository_','cbim_governance_','cbim_task_','cbim_dispatch_','cbim_goal_'].some(prefix=>value.toolName.startsWith(prefix))&&value.toolName!=='cbim_delivery_prepare'&&value.toolName!==questionToolName;
+  return value.workspaceId===identity.workspaceId&&value.taskId===identity.taskId&&value.runId===identity.runId&&value.scope.workspaceId===identity.workspaceId&&value.outcome==='succeeded'&&!!value.resultHash&&!!value.toolName.trim()&&value.scope.kind!=='repository'&&!['cbim_repository_','cbim_governance_','cbim_module_owner_','cbim_task_','cbim_dispatch_','cbim_goal_'].some(prefix=>value.toolName.startsWith(prefix))&&value.toolName!=='cbim_delivery_prepare'&&value.toolName!==questionToolName;
 }
 
 /** 公开的是实际协议和限制；求助、检查点的门闩不允许模型为了查询而继续调用工具。 */

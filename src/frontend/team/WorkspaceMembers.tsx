@@ -1,5 +1,5 @@
 /**
- * 作用定位：团队页面的项目岗位登记面板，浏览稳定岗位、采纳差异和显式预览/提交结果。
+ * 作用定位：团队页面的项目岗位登记面板，浏览采纳差异、显式变更，并反查该岗位当前负责的模块。
  * 设计原因：静态能力树与临时运行实例各有归属；本面板只维护长期岗位，任何登记、改名或启用均不启动任务或自动采用新能力。
  */
 import {useEffect,useMemo,useRef,useState} from 'react';
@@ -10,6 +10,7 @@ import type {WorkspaceMemberChangeInput,WorkspaceMemberDetail,WorkspaceMemberLis
 import {WorkspaceMemberCommandPool,checkedWorkspaceMemberDetail,checkedWorkspaceMemberList,checkedWorkspaceMemberPreview} from './workspace-member-state';
 import {WorkspaceMemberForm} from './WorkspaceMemberForm';
 import {WorkspaceMemberDetailView} from './WorkspaceMemberDetail';
+import {ModuleOwnershipPanel} from '../workspace/ModuleOwnershipPanel';
 import './workspace-members.css';
 
 const commands=new WorkspaceMemberCommandPool();
@@ -22,6 +23,7 @@ export function WorkspaceMembers({workspace,agents,onClose}:WorkspaceMembersProp
   const [tick,setTick]=useState(0),[page,setPage]=useState<WorkspaceMemberList>(),[detail,setDetail]=useState<WorkspaceMemberDetail>(),[models,setModels]=useState<LlmSettings>();
   const [editing,setEditing]=useState<WorkspaceMemberChangeInput['kind']>(),[special,setSpecial]=useState<{target?:'capability'|'model';nextState?:'active'|'suspended'|'retired'}>({});
   const [preview,setPreview]=useState<WorkspaceMemberPreview>(),[error,setError]=useState(''),[loading,setLoading]=useState(false);
+  const [ownershipMember,setOwnershipMember]=useState<string>();
   const alive=useRef(false),epoch=useRef(0),lock=useRef(false),selection=useRef(0);
   const identity={workspaceId:workspace.id,instanceId:workspace.instanceId??''};
   const state=controller.snapshot,blocked=controller.blocked,available=workspace.state==='running'&&!!workspace.instanceId;
@@ -50,9 +52,10 @@ export function WorkspaceMembers({workspace,agents,onClose}:WorkspaceMembersProp
   async function commit(){
     if(!preview||blocked||lock.current)return;lock.current=true;setLoading(true);const input:WorkspaceMemberPreviewInput={...identity,change:preview.change};
     await controller.submit(input,preview);lock.current=false;if(!alive.current)return;setLoading(false);setPreview(undefined);
-    const record=controller.snapshot.records.at(-1);if(record?.phase==='accepted'){setEditing(undefined);await list();if(alive.current)await select(record.receipt!.memberId)}
+    const record=controller.snapshot.records.at(-1);if(record?.phase==='accepted'){setEditing(undefined);await list();if(alive.current)await select(record.receipt!.memberId)}else if(record?.error)setError(record.error);
   }
   async function query(commandId:string,retry=false){if(retry)await controller.retry(commandId);else await controller.query(commandId);if(alive.current)await list()}
+  if(ownershipMember)return <ModuleOwnershipPanel key={workspace.id+workspace.instanceId+ownershipMember} identity={identity} memberId={ownershipMember} onClose={()=>{setOwnershipMember(undefined);void select(ownershipMember)}}/>;
   return <section className="workspace-members" data-testid="workspace-members" aria-label="项目岗位成员">
     <header><div><p className="overline">工作区 / 稳定岗位</p><h2>项目岗位</h2></div><button onClick={onClose}>返回团队定义</button></header>
     <p className="workspace-member-note">静态 Agent 提供专业能力，岗位保存本项目采纳的能力和模型。当前仅管理登记；尚未接入按岗位派发，启用不代表正在运行或具备执行资格。</p>
@@ -64,7 +67,7 @@ export function WorkspaceMembers({workspace,agents,onClose}:WorkspaceMembersProp
       {page&&!page.total&&<p>还没有项目岗位。登记不会自动创建任务。</p>}
       {page&&<div className="workspace-member-paging"><small>共 {page.total} 个（含退休）</small>{page.offset>0&&<button disabled={loading} onClick={()=>void list()}>回到首页</button>}{page.nextOffset!==undefined&&<button disabled={loading} onClick={()=>void list(page.nextOffset)}>下一页</button>}</div>}
     </aside><div className="workspace-member-body">
-      {detail&&!editing&&<><WorkspaceMemberDetailView detail={detail}/><div className="team-definition-actions"><button disabled={loading} onClick={()=>void select(detail.member.memberId)}>重新核实当前差异</button>{detail.member.state!=='retired'&&<>
+      {detail&&!editing&&<><WorkspaceMemberDetailView detail={detail}/><div className="team-definition-actions"><button disabled={loading} onClick={()=>void select(detail.member.memberId)}>重新核实当前差异</button><button data-testid="workspace-member-ownerships" disabled={loading} onClick={()=>setOwnershipMember(detail.member.memberId)}>负责的模块</button>{detail.member.state!=='retired'&&<>
         <button data-testid="workspace-member-edit" disabled={blocked||loading} onClick={()=>start('update')}>修改岗位</button>
         <button data-testid="workspace-member-adopt-capability" disabled={blocked||loading} onClick={()=>start('adopt',{target:'capability'})}>采纳当前能力</button>
         <button data-testid="workspace-member-adopt-model" disabled={blocked||loading} onClick={()=>start('adopt',{target:'model'})}>采纳当前模型配置</button>

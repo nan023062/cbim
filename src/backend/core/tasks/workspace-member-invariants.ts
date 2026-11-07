@@ -1,6 +1,6 @@
 /**
  * 作用定位：将岗位登记的单条审计规则接到工作区 DispatchStore 的提交与重放边界。
- * 设计原因：长期岗位使用同一串行事务，但不能借登记混入派发、创建实例或改写已有执行；当前头只能从审计派生。
+ * 设计原因：长期岗位使用同一串行事务，但不能借登记混入派发、创建实例或改写已有执行；退休须先明确解除责任，当前头只能从审计派生。
  */
 import {fail} from '../foundation/errors';
 import {applyWorkspaceMemberChange,workspaceMemberCanonical,workspaceMemberCommand,workspaceMemberReceipt} from '../team/workspace-member-rules';
@@ -19,6 +19,7 @@ export function projectWorkspaceMemberMutation(previous:DispatchState,mutation:D
   invalid(Object.keys(mutation).some(key=>!['workspaceMemberChanges','receipt'].includes(key)),'岗位登记不能夹带执行、任务或周期变更');
   const event=mutation.workspaceMemberChanges[0];
   const next=applyWorkspaceMemberChange(previous,event),expected=workspaceMemberCommand(event.request);
+  if(event.next.state==='retired'&&(previous.moduleOwnerships??[]).some(binding=>binding.ownerMemberId===event.next.memberId))fail('MEMBER_OWNERSHIP_ACTIVE','岗位仍负责模块，请先明确解除或更换负责人');
   invalid(command.commandId!==expected.commandId||command.fingerprint!==expected.fingerprint,'岗位审计与原命令指纹不一致');
   invalid(workspaceMemberCanonical(mutation.receipt)!==workspaceMemberCanonical(workspaceMemberReceipt(event)),'岗位回执不能脱离真实审计结果');
   return next;

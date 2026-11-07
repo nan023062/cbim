@@ -3,6 +3,7 @@
  * 设计原因：主会话与图根共享实例，在创建 run 前取得全局名额及业务文件读取占用；知识治理仍由独立知识事务与用户权限保护。等待回调来自可信启动上下文，不混入可序列化模型设置。
  * 仓库边界：仅桌面主运行工厂捕获已有授权连接，不在准备时联网；CLI/成员和未就绪连接不装配仓库工具。
  * 治理边界：四个观察/提案端口在真实 run 创建时绑定主身份，不共享给成员，不包含桌面批准或实施。
+ * 责任边界：负责人四工具在 beforeRun 后从真实主周期捕获身份，提交加入周期在途屏障；知识写权限不等于业务执行或验收许可。
  * 附件边界：目标补充直接使用一次准备的图片，模型配置视觉预检在意图前；不重读附件或把图片放入后续协作配置。
  */
 import path from 'node:path';
@@ -22,6 +23,9 @@ import type {WorkspaceDispatchService} from '../scheduler-engine/execution/dispa
 import {admissionRequestId,acquireExecutionLease,type WorkspaceAdmission} from './execution-admission';
 import type {RepositoryConnections} from './resources/repository-connections';
 import {mainGovernanceTools} from './governance/main-governance-tools';
+import {mainModuleOwnershipTools} from './workspace/main-module-ownership-tools';
+import type {ModuleOwnerships} from './workspace/module-ownerships';
+import type {WorkspaceMembers} from './workspace/workspace-members';
 
 /**
  * 每个工作区实例装配独立管理器；锁键和访问策略固定绑定本实例身份。
@@ -29,7 +33,7 @@ import {mainGovernanceTools} from './governance/main-governance-tools';
  * 独立 CLI/测试未装配 dispatch 时保留旧只按会话执行的边界，不编造已登记的成员身份。
  * repositories 是可选可信服务，不接受运行选项提供地址或授权；每次工厂调用固定自己的连接代际。
  */
-export function createExecutionManager(workspace:Workspace,models:LlmProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections){
+export function createExecutionManager(workspace:Workspace,models:LlmProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers}){
   const storage=new FileRunStorage();
   return new WorkspaceExecutionManager(workspace,storage,async(options,task,launch)=>{
     const llm=options.profileId?await models.resolve(options.profileId,options.model):undefined;
@@ -48,6 +52,7 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles,le
     conversationBinding,
     repositoryTools,
     governanceTools:conversationBinding?({task,runId})=>mainGovernanceTools(workspace,task,runId,conversationBinding):undefined,
+    ownershipTools:conversationBinding&&ownerships?({task,runId})=>{const context=collaboration?.()?.mainToolContext(task,runId);return context?{port:mainModuleOwnershipTools(workspace,ownerships.service,ownerships.members,task,runId,conversationBinding,context),binding:{...context.binding,instanceId:workspace.instanceId,agentInstanceId:conversationBinding.agentInstanceId,agentSessionId:conversationBinding.agentSessionId}}:undefined}:undefined,
     dispatchTools:({task,runId})=>collaboration?.()?.tools(task,runId,options),
     acquireLease:async task=>{
       workspace.assert();

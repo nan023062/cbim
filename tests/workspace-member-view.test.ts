@@ -20,6 +20,11 @@ function deferred<T>(){let resolve!:(value:T)=>void;const promise=new Promise<T>
 function member():WorkspaceMember{return {workspaceId:'workspace',memberId:randomUUID(),revision:1,name:'岗位一',position:'核实业务成果',adaptation:{instructions:'按项目约束执行',references:[]},state:'active',adoption:{captureId:randomUUID(),capturedAt:time,knowledgeRevision:hash,capabilityHash:hash,configuration},runtimePolicy:policy,createdAt:time,updatedAt:time}}
 function detail():WorkspaceMemberDetail{return {identity,registryCursor:cursor,member:member(),currentDiff:{checkedAt:time,capability:{status:'same',adoptedHash:hash,currentHash:hash},model:{status:'same',adoptedHash:modelHash,currentHash:modelHash}}}}
 
+it('本机未知事实不能通过错误的拒绝标志恢复可写',async()=>{
+  const f=fixture({commit:async()=>{throw Error('IPC_TIMEOUT')}});await f.controller.submit(input,preview);const key=f.controller.storageKey,raw=JSON.parse(f.saved.get(key)!);raw.records[0].phase='rejected';f.saved.set(key,JSON.stringify(raw));
+  const restored=new WorkspaceMemberCommands('workspace',f.ports);expect(restored.blocked).toBe(true);expect(restored.snapshot.error).toContain('无法读取');
+});
+
 it('严格核对预览、原回执和分页身份，不接受另一选择或另一实例',()=>{
   expect(checkedWorkspaceMemberPreview(preview,input)).toEqual(preview);
   expect(()=>checkedWorkspaceMemberPreview({...preview,identity:{...identity,instanceId:randomUUID()}},input)).toThrow();
@@ -57,6 +62,8 @@ it('空查询或后来的预拒不证明未知未受理，明确重试仍使用�
   const commit=vi.fn(async()=>{throw Error('IPC_TIMEOUT')}),f=fixture({commit});await f.controller.submit(input,preview);const record=f.controller.snapshot.records[0];await f.controller.query(record.request.commandId);expect(f.controller.snapshot.records[0].phase).toBe('unknown');
   commit.mockImplementation(async()=>{throw Error('MEMBER_BASIS_STALE: 已变化')});await f.controller.retry(record.request.commandId);expect(f.controller.snapshot.records[0].phase).toBe('unknown');expect(commit.mock.calls[0]).toEqual(commit.mock.calls[1]);
   expect(workspaceMemberPreRejected(Error('MEMBER_REGISTRY_STALE: stale'))).toBe(true);for(const code of ['MEMBER_COMMAND_CONFLICT','MEMBER_RECEIPT_INVALID','EIO','MEMBER_NEW_ERROR'])expect(workspaceMemberPreRejected(Error(code+': unknown'))).toBe(false);
+  expect(workspaceMemberPreRejected(Error('MEMBER_OWNERSHIP_ACTIVE: 请先解除模块责任'))).toBe(true);
+  commit.mockImplementation(async()=>{throw Error('MEMBER_OWNERSHIP_ACTIVE: 仍有模块责任')});await f.controller.retry(record.request.commandId);expect(f.controller.snapshot.records[0].phase).toBe('unknown');
   const rejected=fixture({commit:async()=>{throw Error('MEMBER_BASIS_STALE: stale')}});await rejected.controller.submit(input,preview);expect(rejected.controller.snapshot.records[0].phase).toBe('rejected');expect(rejected.controller.blocked).toBe(false);
 });
 

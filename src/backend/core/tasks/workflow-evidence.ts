@@ -1,5 +1,5 @@
 /**
- * 问答边界：交付只核步骤实际引用的业务证据，提问与取消不能作证；未引用的问答不使整轮失效。
+ * 证据边界：交付只核步骤实际引用的业务证据，提问、取消及模块负责人控制面不能作证；未引用的查询不使整轮失效，真实知识写仍参与副作用时序。
  * 作用定位：核实可选 Workflow 的计划前置、工具回执及精确 JSON 文件结构出口，供运行时与调度结算共用。
  * 设计原因：工具调用事实必须与固定模块约定、当前运行及最后副作用的真实结束边界一致；并发早读不能替代写入后的验证，不能相信模型自报 pass 或只检查内存状态。
  * 职责边界：仅作确定性记录校验；选定 JSON 文件的当前字节另由平台端口复核，不执行脚本、不签发权限或宣称覆盖整个模块。
@@ -44,7 +44,7 @@ export function evaluateWorkflowDelivery(bindings:readonly WorkflowContractBindi
   const values=checkedBindings(bindings),unique=new Map<string,ToolReceipt>();
   for(const receipt of receipts){
     valid(receipt.toolName!==questionToolName,'WORKFLOW_EVIDENCE_INVALID','问题回答与取消只表示交互事实，不能作为 Workflow 交付证据');
-    valid(receipt.workspaceId===identity.workspaceId&&receipt.taskId===identity.taskId&&receipt.runId===identity.runId&&receipt.scope.workspaceId===identity.workspaceId&&receipt.scope.kind!=='repository'&&!receipt.toolName.startsWith('cbim_repository_')&&!receipt.toolName.startsWith('cbim_governance_')&&receipt.outcome==='succeeded'&&hex(receipt.inputHash)&&hex(receipt.resultHash),'WORKFLOW_EVIDENCE_INVALID','Workflow 交付回执必须是本任务本轮的真实业务成功结果，外部资料与治理记录不能作交付证据');
+    valid(receipt.workspaceId===identity.workspaceId&&receipt.taskId===identity.taskId&&receipt.runId===identity.runId&&receipt.scope.workspaceId===identity.workspaceId&&receipt.scope.kind!=='repository'&&!receipt.toolName.startsWith('cbim_repository_')&&!receipt.toolName.startsWith('cbim_governance_')&&!receipt.toolName.startsWith('cbim_module_owner_')&&receipt.outcome==='succeeded'&&hex(receipt.inputHash)&&hex(receipt.resultHash),'WORKFLOW_EVIDENCE_INVALID','Workflow 交付回执必须是本任务本轮的真实业务成功结果，外部资料与治理记录不能作交付证据');
     valid(!unique.has(receipt.toolCallId)||same(unique.get(receipt.toolCallId),receipt),'WORKFLOW_EVIDENCE_INVALID','同一工具 ID 的 Workflow 证据不一致');unique.set(receipt.toolCallId,receipt);
   }
   const checks:WorkflowEvidenceProof['checks']=[];

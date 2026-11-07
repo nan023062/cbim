@@ -10,6 +10,7 @@ import type {DispatchScope} from './dispatch-scope';
 import type {DispatchSessionReadInput,DispatchSessionRead} from './scope-view';
 import type {MemberResumeFrom} from './member-checkpoint';
 import type {WorkspaceMember,WorkspaceMemberChange,WorkspaceRegistryCursor} from '../team/workspace-member';
+import type {ModuleOwnership,ModuleOwnershipChange,ModuleOwnershipCursor} from '../workspace/module-ownership';
 
 /** 信封身份固定；claim 记录领取时的 run 与租约代际，消费后保留用于审计。 */
 export interface DispatchMessageBase {
@@ -47,6 +48,11 @@ export interface DispatchState {
   workspaceMemberChanges?:WorkspaceMemberChange[];
   /** 未发生登记为 null/旧缺省，首次登记后由独立流推进；图及周期游标不受影响。 */
   registryCursor?:WorkspaceRegistryCursor|null;
+  /** 单模块责任是独立控制面；旧日志缺省为空，不从静态角色或任务执行者猜测。 */
+  moduleOwnerships?:ModuleOwnership[];
+  ownershipChanges?:ModuleOwnershipChange[];
+  /** 责任审计独立编号，不推进岗位、图或周期游标。 */
+  ownershipCursor?:ModuleOwnershipCursor|null;
 }
 
 /** 幂等键由可信入口产生；fingerprint 是包括调用者在内的规范化输入摘要。 */
@@ -62,6 +68,8 @@ export interface DispatchMutation<T = unknown> {
   scopes?:DispatchScope[];
   /** 本片每次恰好追加一条岗位审计，禁止同批混入任务、实例或周期修改。 */
   workspaceMemberChanges?:WorkspaceMemberChange[];
+  /** 每次仅一条责任审计；不能与岗位编辑、任务或执行变化合并提交。 */
+  ownershipChanges?:ModuleOwnershipChange[];
   receipt: T;
 }
 

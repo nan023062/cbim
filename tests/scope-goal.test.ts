@@ -103,6 +103,19 @@ it('真实知识提交可成为主治理证据，review只登记请求，settled
   }finally{await f.cleanup()}
 });
 
+it('纯负责人控制面写入不强造业务计划，但已有业务审阅仍必须覆盖其后续写入',async()=>{
+  for(const business of [false,true]){
+    const f=await setup();try{
+      if(business){await f.service.goals.plan(f.identity,f.scope.scopeId,f.runId,'ownership-plan',plan());await f.commit();await f.service.goals.review(f.identity,f.scope.scopeId,f.runId,'ownership-review',review())}
+      await f.emitTool({id:'owner-commit',name:'cbim_module_owner_change_commit',input:{}},{allow:true,effects:['knowledge-write'],scope:{kind:'knowledge',workspaceId:f.entry.id}},jsonToolResult('cbim_module_owner_change_commit',{status:'recorded'}));
+      await f.journal.append({type:'run.settled',data:{status:'completed'}});
+      const summary=await RunJournal.read(f.journal.directory);
+      if(business)await expect(f.service.closeScope(f.identity,f.scope.scopeId,'completed',summary)).rejects.toMatchObject({code:'GOAL_EFFECT_CHANGED'});
+      else expect((await f.service.closeScope(f.identity,f.scope.scopeId,'completed',summary)).outcome).toBe('completed');
+    }finally{await f.cleanup()}
+  }
+});
+
 it('人工验收不能由模型代签或replan删除/降级，完整校验和的重放也拒绝',async()=>{
   const f=await setup();try{
     const draft=plan();draft.criteria[0].kind='human';const planned=await f.service.goals.plan(f.identity,f.scope.scopeId,f.runId,'human-plan',draft);

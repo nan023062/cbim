@@ -104,6 +104,8 @@ class N_src_frontend_main_tsx["main.tsx"] {
 - `team` → `knowledge`：导入。
 - `team` → `components`：导入。
 - `team` → `resources`：导入。
+- `team` → `workspace`：导入。
+- `workspace` → `team`：导入。
 - `workspace` → `components`：导入。
 - `workspace` → `knowledge`：导入。
 - `workspace` → `resources`：导入。
@@ -122,8 +124,8 @@ class N_src_frontend_main_tsx["main.tsx"] {
 - [settings/](settings/ARCHITECTURE.md)：模型、仓库、并发及新目标软限额配置。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。凭据只提交主进程，账户仍为占位。
 - [shell/](shell/ARCHITECTURE.md)：工作区侧栏、会话选择、用户栏与右侧扩展页签；会话区与项目级视图区分开。向会话传递活动页签状态，隐藏页签保留草稿/节点选择并降低成员与任务图同步频率。
 - [tasks/](tasks/ARCHITECTURE.md)：主会话任务图、目标与准入状态；依赖追加/替换只读历史核对身份和节点修订，摘要按实际版本选择最新，图沿真实启用边排列，不补造结果。运行内补充按真实接收记录显示，未知优先旧审阅，同版摘要/详情核对后增量呈现。根停止使用独立在途标记，插入等待不锁住停止按钮。等待补充共享多来源草稿与导入锁，原等待选择代次阻止迟到导入；明确目录/链接/网页/授权仓库来源，普通聊天草稿独立。流程、验证、检查点、基线、人工决定与用量保留各自冻结身份和证据，不把历史当当前验收。
-- [team/](team/ARCHITECTURE.md)：工作区唯一的静态 Team/组/Agent 图及角色维护、继承与人才复用。Agent 节点可按 Session 查看只读执行履历；历史角色独立导航，删定义不回填团队树。详情按需分页，不轮询全量历史或启动执行。项目岗位在独立面板登记、采纳和暂停退休；预览后固定命令，未知只查询原回执，不启动模型。
-- [workspace/](workspace/ARCHITECTURE.md)：工作区唯一的静态领域工程/模块图及自身 Workflow。语义编辑委托 knowledge，完整业务模板复用委托 resources；多个主会话共享定义、动态任务各自独立。
+- [team/](team/ARCHITECTURE.md)：工作区唯一的静态Team/组/Agent图、继承与人才复用，节点按Session查看只读履历。独立项目岗位面板登记、采纳和暂停退休，反查模块责任委托workspace控制面；首次明确拒绝可重新编辑，未知保持原命令。不轮询全部历史或启动模型。
+- [workspace/](workspace/ARCHITECTURE.md)：工作区唯一的领域工程/模块图及自身Workflow；知识编辑和整架构复用分别委托knowledge/resources。独立负责人面板提供模块列表、岗位反查、预览和原命令核实，责任历史与来源观察明确有界；登记不移交旧任务，多个主会话共享静态定义。
 
 [返回上层](../ARCHITECTURE.md)。
 

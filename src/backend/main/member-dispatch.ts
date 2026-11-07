@@ -1,5 +1,5 @@
 /**
- * 作用定位：为已运行工作区装配成员派发、大脑执行、目标审阅及独立岗位登记；岗位与执行共用同一 DispatchStore。
+ * 作用定位：为已运行工作区装配成员派发、大脑执行、目标审阅、岗位及模块负责人服务；责任、岗位与执行共用同一 DispatchStore，但保持独立审计投影。
  * 设计原因：派发、审阅及周期额度共用可信日志；Workflow 能力按真实工具与验证端口预检，冻结约定只注入正式成员。JSON 验证以同一安全读取字节判定，交付及审阅复用有界文件复核；密钥留在工厂闭包，只读报告不启动成员。
  */
 import path from 'node:path';
@@ -25,6 +25,7 @@ import type {ScopeBudgetPolicy} from '../core/tasks/scope-budget';
 import {preparedWorkflowContracts} from '../core/tasks/execution-context';
 import {nativeToolNames} from '../core/tools/native-tools';
 import {WorkspaceMembers} from './workspace/workspace-members';
+import {ModuleOwnerships} from './workspace/module-ownerships';
 
 /** 应用对每个活动工作区只调用一次；关闭服务必须早于释放工作区锁。 */
 export function createMemberDispatch(workspace:Workspace,observer?:DispatchObserver){
@@ -98,5 +99,6 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
     inspect:inspectMember,
   });
   const workspaceMembers=new WorkspaceMembers(workspace,store,models,()=>admission?.isCurrent()??true);
-  return {dispatch,members,workspaceMembers};
+  const moduleOwnerships=new ModuleOwnerships(workspace,store,()=>admission?.isCurrent()??true);
+  return {dispatch,members,workspaceMembers,moduleOwnerships};
 }

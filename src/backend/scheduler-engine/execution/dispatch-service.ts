@@ -2,7 +2,7 @@
  * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
  * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；派发保存原 Workflow 选择及实际绑定，同命令不能改选。周期冻结输入、归属及软限额；人工继续同事务消费等待和登记运行，关闭封存待办，旧回执不能重开周期。
  * 职责边界：本模块负责可靠入队、显式撤销未启动集合及受审计的单条依赖追加/替换，由独立 MemberExecutionManager 执行；调度维护不停止活动运行，不复活旧实例，也不代表目标完成。
- * 关闭边界：活动输入由独立服务准备和确认；普通无计划聊天的成功例外也须先核实输入记录，未知输入只可失败或取消封存。
+ * 关闭边界：普通无计划聊天与纯负责人控制面不强造业务计划，但仍核活动输入和真实工具终态；已有业务计划或派发必须审阅，未知输入只可失败或取消封存。
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
@@ -40,6 +40,7 @@ import {resolveConversationAgent,resolveDispatchAgent,resolveDispatchModules} fr
 import {prepareMember} from './agent-manager';
 import {dispatchSessionReadInput} from '../../core/tasks/scope-view';
 import {createScopeRunTracking,appendScopeMainRun} from '../../core/tasks/scope-run-tracking';
+import {isModuleOwnershipControlReceipt} from '../../core/workspace/module-ownership-tool-policy';
 
 /** 只需工作区状态与知识快照，不依赖桌面或具体文件存储。 */
 type DispatchWorkspace=Pick<KnowledgeWorkspace,'entry'|'instanceId'|'assert'|'snapshot'|'read'|'rules'>;
@@ -162,7 +163,8 @@ export class WorkspaceDispatchService {
       const tasks=graph.tasks.filter(task=>task.scopeId===scopeId),taskIds=new Set(tasks.map(task=>task.taskId));
       // 普通问答只关闭生命周期；一旦规划或派工，必须引用同周期主轮结束事实及显式审阅。
       // 在同一派发事务内复核，避免工具中申请完成后又出现新任务，提前释放成员。
-      const recordedWork=mainSummary?.toolReceipts?.some(receipt=>receipt.effects.includes('knowledge-write')||['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task'].includes(receipt.toolName));
+      // 责任登记不是业务派发；只排除精确控制面写入的单独工作意图，已有计划和全部副作用时序仍须验收。
+      const recordedWork=mainSummary?.toolReceipts?.some(receipt=>receipt.effects.includes('knowledge-write')&&!isModuleOwnershipControlReceipt(receipt,input.workspaceId)||['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task'].includes(receipt.toolName));
       if(outcome==='completed'&&scope.goal&&(scope.goal.plan||tasks.length||recordedWork)){
         if(!mainSummary)fail('GOAL_REVIEW_REQUIRED','业务任务需要主调度的结构化目标审阅，不能直接标为完成');
         await this.goals.validateCompletion(state,scope,mainSummary);

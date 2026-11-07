@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-工作区唯一的静态 Team/组/Agent 图及角色维护、继承与人才复用。Agent 节点可按 Session 查看只读执行履历；历史角色独立导航，删定义不回填团队树。详情按需分页，不轮询全量历史或启动执行。项目岗位在独立面板登记、采纳和暂停退休；预览后固定命令，未知只查询原回执，不启动模型。
+工作区唯一的静态Team/组/Agent图、继承与人才复用，节点按Session查看只读履历。独立项目岗位面板登记、采纳和暂停退休，反查模块责任委托workspace控制面；首次明确拒绝可重新编辑，未知保持原命令。不轮询全部历史或启动模型。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -21,7 +21,7 @@
 | [workspace-members.css](workspace-members.css) | 对应界面的布局与视觉样式。 |
 | [WorkspaceMemberDetail.tsx](WorkspaceMemberDetail.tsx) | 只读展示项目岗位的稳定身份、采纳内容与本次核实的外部差异。 |
 | [WorkspaceMemberForm.tsx](WorkspaceMemberForm.tsx) | 项目岗位登记、元信息编辑、明确采纳及状态变更的表单。 |
-| [WorkspaceMembers.tsx](WorkspaceMembers.tsx) | 团队页面的项目岗位登记面板，浏览稳定岗位、采纳差异和显式预览/提交结果。 |
+| [WorkspaceMembers.tsx](WorkspaceMembers.tsx) | 团队页面的项目岗位登记面板，浏览采纳差异、显式变更，并反查该岗位当前负责的模块。 |
 
 ## 架构类图
 
@@ -396,7 +396,7 @@ class N_src_frontend_team_WorkspaceMembers_tsx_WorkspaceMembersProps["WorkspaceM
 N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_WorkspaceMembers_tsx_WorkspaceMembersProps : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[workspace-member-state.ts](workspace-member-state.ts)、[WorkspaceMemberForm.tsx](WorkspaceMemberForm.tsx)、[WorkspaceMemberDetail.tsx](WorkspaceMemberDetail.tsx)、[workspace-members.css](workspace-members.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[workspace-member-state.ts](workspace-member-state.ts)、[WorkspaceMemberForm.tsx](WorkspaceMemberForm.tsx)、[WorkspaceMemberDetail.tsx](WorkspaceMemberDetail.tsx)、[../workspace/ModuleOwnershipPanel.tsx](../workspace/ModuleOwnershipPanel.tsx)、[workspace-members.css](workspace-members.css)。
 
 ### 本目录调用边界
 
@@ -498,6 +498,8 @@ N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_workspace_membe
 同一 renderer 的同工作区页面共用 `WorkspaceMemberCommands`，先将完整原命令写入本机再提交。未知结果阻止新的岗位写入，只查询或明确重送同一请求；重开仅查询，不预览或提交。原回执全部字段不可变，只有精确列举的首次提交前拒绝可重新准备。已发生超时后再收到旧依据拒绝仍是未知，不能换 ID。
 
 本机最多保留 128 条命令/2 MiB，超限或损坏明确停止新提交，不删除未知记录。受理后的本机保存失败仍保留原回执，可通过只读查询恢复保存，不声称回滚。后台权威审计与本机命令索引分开；登记、查询、采纳均不创建运行实例或发起模型请求。
+
+岗位详情的“负责的模块”进入同一个 `ModuleOwnershipPanel`，按稳定 memberId 反查当前非空关系；返回后重新读取岗位，不能按静态 Agent 名字猜责任。暂停保留关系；有当前模块责任时后端拒绝退休，首次明确 `MEMBER_OWNERSHIP_ACTIVE` 可回到编辑，若原提交已经未知则仍保留未知，不能换命令重试。责任控制面和岗位登记共用工作区权威 Store，但前端原命令记录分别保存。
 
 - `TeamView` 的组织树仅展示工作区正式 Team、分组、Agent 和 Skill 定义，不把 AgentInstance、在线状态、执行活动或任务图混入树。动态派工仍属于当前会话任务视图；静态 Agent 详情可单独打开只读执行履历。
 - `team-model.ts` 只读同一 `Snapshot`，节点身份从知识路径派生，不能被 `agent.json` 内额外的 `id` 覆盖。空 Team 根与 `cbim:main`、`cbim:executor` 两个只读内置角色始终可见；解析失败单独提示。

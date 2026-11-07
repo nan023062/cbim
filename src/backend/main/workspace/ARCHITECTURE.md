@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-本机工作区登记、运行实例与可信桌面静态架构编辑。持锁打开、监听、关闭，知识事务委托 persistence/knowledge；模块维护确认和真人条目同事务，不变更动态任务图。岗位登记与当前差异共用工作区DispatchStore，明确选型仅读公开模型配置；不创建运行实例或任务。
+本机工作区生命周期与可信静态架构编辑，知识事务委托persistence/knowledge。岗位及模块负责人控制面共用DispatchStore，读取真实来源、版本化提交与核实原命令；模型仅读公开配置，主工具来源由实际运行注入。责任登记不改动态任务图或启动实例。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -12,6 +12,8 @@
 | --- | --- |
 | [architecture-service.ts](architecture-service.ts) | 将团队/业务架构表单接到受控知识事务，作为可信桌面的预览与手动提交入口。 |
 | [catalog.ts](catalog.ts) | Catalog：维护本机工作区清单、显示名称、路径身份、并发更新和重新定位。 |
+| [main-module-ownership-tools.ts](main-module-ownership-tools.ts) | 把工作区责任服务绑定真实主运行及当前协作周期，提供四项模型窄端口。 |
+| [module-ownerships.ts](module-ownerships.ts) | 桌面与真实主工具共用的模块负责人服务，关系和岗位在唯一 DispatchStore 内裁决。 |
 | [workspace-members.ts](workspace-members.ts) | 将桌面岗位登记、采纳与当前差异查询接到工作区唯一 DispatchStore，公开模型配置由 Main 注入。 |
 | [workspace.ts](workspace.ts) | 管理本机工作区的身份、独占锁、知识监听和维护任务。 |
 
@@ -57,6 +59,76 @@ N_src_backend_main_workspace_catalog_ts ..> N_src_backend_main_workspace_catalog
 ```
 
 直接依赖：[../platform/locking.ts](../platform/locking.ts)、[../platform/paths.ts](../platform/paths.ts)、[../../core/foundation/files.ts](../../core/foundation/files.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)。
+
+### main-module-ownership-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_workspace_main_module_ownership_tools_ts["main-module-ownership-tools.ts"] {
+  <<module>>
+  +mainModuleOwnershipTools()
+}
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/brain/conversation-binding.ts](../../core/brain/conversation-binding.ts)、[../../core/tasks/types.ts](../../core/tasks/types.ts)、[../../core/workspace/module-ownership.ts](../../core/workspace/module-ownership.ts)、[../../core/workspace/module-ownership-rules.ts](../../core/workspace/module-ownership-rules.ts)、[../../core/workspace/module-ownership-tools.ts](../../core/workspace/module-ownership-tools.ts)、[../../scheduler-engine/execution/auto-collaboration.ts](../../scheduler-engine/execution/auto-collaboration.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[module-ownerships.ts](module-ownerships.ts)、[workspace-members.ts](workspace-members.ts)。
+
+### module-ownerships.ts
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_workspace_module_ownerships_ts["module-ownerships.ts"] {
+  <<module>>
+}
+class N_src_backend_main_workspace_module_ownerships_ts_Knowledge["Knowledge"] {
+  <<type>>
+  +snapshot
+  +visible
+  +issue
+}
+N_src_backend_main_workspace_module_ownerships_ts ..> N_src_backend_main_workspace_module_ownerships_ts_Knowledge : 声明
+class N_src_backend_main_workspace_module_ownerships_ts_ModuleOwnerships["ModuleOwnerships"] {
+  +list()
+  +byMember()
+  +inspectModules()
+  +get()
+  +preview()
+  +receipt()
+  +commit()
+  -owner
+  -store
+  -isCurrent
+  -identity()
+  -assert()
+  -workspace()
+  -cursor()
+  -basis()
+  -knowledge()
+}
+N_src_backend_main_workspace_module_ownerships_ts ..> N_src_backend_main_workspace_module_ownerships_ts_ModuleOwnerships : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_workspace_module_ownerships_ts["module-ownerships.ts"] {
+  <<module>>
+}
+class N_src_backend_main_workspace_module_ownerships_ts_ModuleOwnerships["ModuleOwnerships"] {
+  -observed()
+  -view()
+  -page()
+  -verifyKnowledge()
+  -verifyRead()
+  -prepare()
+  -checkedReceipt()
+}
+N_src_backend_main_workspace_module_ownerships_ts ..> N_src_backend_main_workspace_module_ownerships_ts_ModuleOwnerships : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/workspace/module-ownership.ts](../../core/workspace/module-ownership.ts)、[../../core/workspace/module-ownership-rules.ts](../../core/workspace/module-ownership-rules.ts)、[../../core/tasks/module-ownership-invariants.ts](../../core/tasks/module-ownership-invariants.ts)。
 
 ### workspace-members.ts
 
@@ -206,6 +278,23 @@ N_src_backend_main_workspace_workspace_ts_external_KnowledgeWorkspace <|.. N_src
 
 直接依赖：[../persistence/knowledge/object-storage.ts](../persistence/knowledge/object-storage.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../platform/paths.ts](../platform/paths.ts)、[../../core/foundation/files.ts](../../core/foundation/files.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../platform/locking.ts](../platform/locking.ts)、[../../core/knowledge/knowledge.ts](../../core/knowledge/knowledge.ts)、[../persistence/knowledge/knowledge-store.ts](../persistence/knowledge/knowledge-store.ts)、[../governance/module-governance.ts](../governance/module-governance.ts)、[../persistence/knowledge/governance-port.ts](../persistence/knowledge/governance-port.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)。
 
+### 本目录调用边界
+
+```mermaid
+classDiagram
+class N_src_backend_main_workspace_main_module_ownership_tools_ts["main-module-ownership-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_main_workspace_module_ownerships_ts["module-ownerships.ts"] {
+  <<module>>
+}
+class N_src_backend_main_workspace_workspace_members_ts["workspace-members.ts"] {
+  <<module>>
+}
+N_src_backend_main_workspace_main_module_ownership_tools_ts ..> N_src_backend_main_workspace_module_ownerships_ts : 导入依赖
+N_src_backend_main_workspace_main_module_ownership_tools_ts ..> N_src_backend_main_workspace_workspace_members_ts : 导入依赖
+```
+
 
 ## 子目录导航
 
@@ -276,6 +365,14 @@ Workspace *-- KernelLock : 打开时持有，关闭时释放
 `list` 只给摘要，按初次登记顺序分页，后续页必须绑定同登记游标。`get` 每次重新读取知识与公开模型配置，返回 same/changed/missing/invalid；外部来源变化不推进登记游标，也不覆盖已采纳正文。详情读取前后再次比较登记游标，发生并发变更时明确要求重读。
 
 提交先以完整原请求指纹查 `commandReceipt`，已提交命令即使原实例退役或来源不可用也返回原紧凑回执。冲突不能覆盖；只读 receipt 不调用 transact、知识读取或模型解析。未查到不等于证明未受理；未知响应只核实原命令，不自动换 ID 或重做操作。容量累计计算退休岗位与历史审计，超限拒绝写入而不删历史。
+
+### 模块岗位负责人服务
+
+`ModuleOwnerships` 与岗位和派发复用同一 Store，通过独立 ownershipChanges 保存单模块关系。指定或更换时从真实知识快照的模块注册表确认可见性，并从同一已验证树读取名称、从原 module.json 核实定义哈希；没有旧关系时返回 observed，不把同路径同字节当成来源代次证明。解除只核原关系与版本，知识缺失也可显式解除，不自动转派其他岗位。
+
+列表、详情与反查每次重新读取来源及岗位状态；分页 basis 包含责任游标、岗位游标与知识版本。preview/commit 还冻结原关系、相关岗位版本和真实已派任务影响摘要。新提交在 Store 串行回调内重建依据，读取知识后再次核实来源、实例和停止信号；不在回调内重入 Store，也不声称知识与责任存储存在跨存储原子锁。已派任务只显示关联，不追改任务身份或流程。
+
+原 commandReceipt 查询先于当前实例和来源校验；同原请求返回原回执，异参拒绝。持久提交后停止或输出失效保留原事实，不声称未受理。`main-module-ownership-tools.ts` 仅接实际当前主周期、主实例、conversation 通道、run 和工具调用；提交加入该周期在途集合，停止先撤销未受理操作再排空已在途事务。模型不能提供 actor，历史回执只查询同工作区同主根。
 
 ### 桌面架构编辑
 

@@ -68,3 +68,9 @@ Electron 接入仍核对本窗口与主 Frame；`humanDecide` 在可信闭包注
 ### 队列插入绑定原主轮
 
 `loop.queueInsert` 将 `taskId/queueId/expectedRunId` 原样传入执行管理器。路由不查询并替换客户端原 run，不给旧请求补字段；缺失、非法或已变化的主运行统一由后台拒绝，原排队消息保留。停止请求仍走独立入口，后端判断发送前拒绝、原生已接受或结果未知，IPC 不将迟到停止解释为消息未被接受或自动重发依据。
+
+### 模块岗位负责人
+
+`workspace.ownerships.list/get/byMember/preview/commit/receipt` 路由到当前工作区同一责任服务。新读写携带明确 instanceId；只读原回执按 workspaceId/commandId 核实，不要求旧实例重新运行。commit 只接冻结变更、责任游标、basis 与 commandId，由本路由注入本机显式 actor，不接受客户端主运行来源或权限证明。
+
+指定、换人和解除不修改任务派发，也不替岗位执行模型。第一次确定的预受理错误允许用户修改请求；通信、存储或已提交回包异常必须保留原命令核实，receipt 缺失不证明未受理，不能按当前关系相等推断提交成功。

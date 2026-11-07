@@ -525,3 +525,11 @@ JSON 结构要求另按实际工厂的 `availableValidators` 与文件端口预�
 queued 与接受日志确认后才移除队列项，迟到停止不撤销接受。通信、接受日志或移除/暂停保存失败保持未知并设置独立 `queueAdvanceStopped`，即使暂停写盘失败也不自动推进旧队列；它只阻止普通自动队列，不误停合法成员结果回注。显式继续队列在原 waiting 门禁和持久恢复成功后清除此屏障。旧队列重开仍全部暂停，不迁移或重放。
 
 停止只绑定开始时的活动运行及当时尚未登记的启动 controller，不在慢收尾之后补扫并停止后来明确启动的新轮。同会话旧队列仍按原停止语义暂停。关闭排空各运行后报告实际失败，不以 allSettled 吞掉错误或漏清其它资源。
+
+### 负责人控制面的主运行上下文
+
+`AutoCollaboration.mainToolContext` 在当前主批次已经登记后返回可信 workspace/root/scope/run、实时停止断言和操作跟踪端口。Main 在 Runtime.beforeRun 之后据此构造负责人四工具，不能从旧 launch 参数猜 scope。提交 Promise 在业务开始前加入 cycle.operations；关闭等待这些操作排空，不在 Store 回调中重入周期或存储锁。
+
+纯负责人提交使用精确工具名、当前工作区 knowledge scope 和单一 knowledge-write 回执识别；Auto.settled 与 closeScope 均不因它单独产生业务 workRequested 或强造业务计划。已有派发、计划及其它知识写仍保留原验收要求，不能清除已有 workRequested。Runtime 进度失效、最后副作用和审阅后时序仍包含这次真实写入，因此已有业务审阅之后的负责人提交仍须重新审阅。
+
+`ScopeGoalService.receipt` 拒绝全部 `cbim_module_owner_*` 作为当前、历史及人工候选依据；真实日志继续可读。关系回执是控制面事实，不是业务产物或人工接受证明，不修改成员执行权或原任务绑定。

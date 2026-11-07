@@ -534,3 +534,13 @@ Progress 保存前独立冻结验证记录，原 wire 证明必须能由这些�
 `workspace-member-invariants.ts` 在真实提交和重放中只允许每次追加一条岗位审计，核对工作区、独立游标 CAS、原岗位版本/指纹、明确输入、状态迁移、完整快照哈希、本机提交 actor、命令指纹及派生回执。不能直接 upsert 岗位头或游标，不能夹带执行实例、会话、图、消息、运行或周期字段，即使是空集合也拒绝。岗位原审计保留，当前头只由完整合法前缀派生；新登记不改变知识、图或运行事实。
 
 `DispatchStore.commandReceipt` 是必需的内部只读端口，返回原命令的 fingerprint 与 receipt 深拷贝，等待同一提交屏障但不运行 prepare 或新增事务。新岗位命令固定 `workspace-member-` 命名空间；相同 ID 异参拒绝，原回执查询和同请求重送不能读取新来源后覆盖旧采纳或重建身份。容量错误拒绝写入，未知存储结果保留原命令供重新打开后核实。
+
+### 模块岗位责任与执行数据隔离
+
+`DispatchState.moduleOwnerships`、`ownershipChanges`、`ownershipCursor` 分别是责任当前头、不可变事件和独立游标，旧日志缺省为空。`module-ownership-invariants.ts` 在提交及历史前缀重放中只允许恰好一条责任事件和对应回执，拒绝直接头/游标以及任何混合岗位、图、成员、消息、周期或运行变更；空集合也不是例外。原命令指纹、事件身份、版本、关系/岗位 CAS、完整 next、basis 和回执须一致，不能仅靠重算外层日志校验和洗白。
+
+主 Agent actor 必须属于当前 active scope 最后登记的主 run、该根真实主实例和 conversation 通道；本机 actor 由可信桌面入口注入。重放在当时前缀核验，之后关闭周期不否定合法旧事件。`moduleOwnershipImpact` 只统计 TaskNode 显式模块关联，digest 包含任务、真实运行及 assignment 领取状态以令过期预览失效，不从旧 assignee 猜测岗位负责人或转移结果。
+
+责任指派与岗位退休在同一 DispatchStore 队列裁决。`workspace-member-invariants.ts` 遇仍被任一当前关系引用的 retired 变更返回 `MEMBER_OWNERSHIP_ACTIVE`；先解除/更换后才可退休。暂停不清责任，恢复 active 也不表示具备执行条件。本片不接入来源代次或实际派发身份切换。
+
+`cbim_module_owner_*` 回执保留在真实执行日志，但从 `isProgressEvidence`、成员候选、Workflow 交付和目标/人工候选的业务证据入口排除。查询或责任提交不能证明业务文件、知识正文或人工条件已经验收。提交的 knowledge-write 效果仍使旧进度失效并参与审阅后的副作用检查，控制面例外不会绕过已有业务目标。

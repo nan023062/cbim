@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-领域工程、Module、本模块Workflow与显式维护关系。可选执行条件含工具回执和指定JSON文件结构；有界Schema白名单及纯字节校验拒绝引用/脚本/转换，不自行读文件或签发业务验收。作者与维护人分开，与main/workspace生命周期分开。
+领域工程、Module、本模块Workflow、显式维护关系与稳定岗位责任协议。责任控制面的观察、版本和回执不冒充来源代次或实际派发；主工具按严格权限分类。Workflow支持有界JSON结构验证，不自行读文件或签发业务验收。与本机工作区生命周期分开。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -13,6 +13,10 @@
 | [json-validation-schema.ts](json-validation-schema.ts) | JSON 产物验证的有界声明和纯结构校验，供冻结 Workflow、运行时及知识入口共用。 |
 | [maintenance.ts](maintenance.ts) | 模块长期维护责任的知识契约，区别于 Task 的执行 Agent 与历史作者。 |
 | [model.ts](model.ts) | 业务工作区：领域工程与模块注册表、模块知识和仅本模块 Workflow的核心封装。 |
+| [module-ownership-rules.ts](module-ownership-rules.ts) | 负责人登记的规范依据、命令指纹、不可变审计与关系头投影，供 Main 与 Store 重放共同调用。 |
+| [module-ownership-tool-policy.ts](module-ownership-tool-policy.ts) | 模块责任控制面四项工具的纯名称、效果及业务工作分类，供授权与周期收口共用。 |
+| [module-ownership-tools.ts](module-ownership-tools.ts) | 主运行负责人四工具的严格输入、业务输出和可信端口协议。 |
+| [module-ownership.ts](module-ownership.ts) | 单模块负责人控制面的严格公开协议，供岗位、责任服务、持久化及桌面共用。 |
 | [workflow-contract.ts](workflow-contract.ts) | 定义模块 Workflow 正文中可选执行条件的严格协议，供知识治理、资源包与执行准备共同解析。 |
 
 ## 架构类图
@@ -116,6 +120,307 @@ N_src_backend_core_workspace_model_ts ..> N_src_backend_core_workspace_model_ts_
 
 直接依赖：[../knowledge/snapshot.ts](../knowledge/snapshot.ts)、[../foundation/json.ts](../foundation/json.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../knowledge/types.ts](../knowledge/types.ts)。
 
+### module-ownership-rules.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_module_ownership_rules_ts["module-ownership-rules.ts"] {
+  <<module>>
+  +moduleOwnershipHash()
+  +moduleOwnershipMainCommandId()
+  +moduleOwnershipCommand()
+  +moduleOwnershipBasis()
+  +moduleOwnershipReceipt()
+  +applyModuleOwnershipChange()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_module_ownership_rules_ts["module-ownership-rules.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_module_ownership_rules_ts_ModuleOwnershipBasisFacts["ModuleOwnershipBasisFacts"] {
+  <<interface>>
+  +workspaceId
+  +change
+  +ownershipCursor
+  +previous
+  +previousOwner
+  +nextOwner
+  +observedModule
+  +impact
+}
+N_src_backend_core_workspace_module_ownership_rules_ts ..> N_src_backend_core_workspace_module_ownership_rules_ts_ModuleOwnershipBasisFacts : 声明
+class N_src_backend_core_workspace_module_ownership_rules_ts_ModuleOwnershipRegistry["ModuleOwnershipRegistry"] {
+  <<interface>>
+  +workspaceId
+  +workspaceMembers
+  +moduleOwnerships
+  +ownershipChanges
+  +ownershipCursor
+}
+N_src_backend_core_workspace_module_ownership_rules_ts ..> N_src_backend_core_workspace_module_ownership_rules_ts_ModuleOwnershipRegistry : 声明
+```
+
+直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../team/workspace-member-rules.ts](../team/workspace-member-rules.ts)、[../team/workspace-member.ts](../team/workspace-member.ts)、[module-ownership.ts](module-ownership.ts)。
+
+### module-ownership-tool-policy.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_module_ownership_tool_policy_ts["module-ownership-tool-policy.ts"] {
+  <<module>>
+  +isModuleOwnershipToolName()
+  +isModuleOwnershipControlReceipt()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_module_ownership_tool_policy_ts["module-ownership-tool-policy.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_module_ownership_tool_policy_ts_ModuleOwnershipToolName["ModuleOwnershipToolName"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_tool_policy_ts ..> N_src_backend_core_workspace_module_ownership_tool_policy_ts_ModuleOwnershipToolName : 声明
+```
+
+直接依赖：[../tools/types.ts](../tools/types.ts)。
+
+### module-ownership-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_module_ownership_tools_ts["module-ownership-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_module_ownership_tools_ts_ModuleOwnerInspectInput["ModuleOwnerInspectInput"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_tools_ts ..> N_src_backend_core_workspace_module_ownership_tools_ts_ModuleOwnerInspectInput : 声明
+class N_src_backend_core_workspace_module_ownership_tools_ts_ModuleOwnerPreviewInput["ModuleOwnerPreviewInput"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_tools_ts ..> N_src_backend_core_workspace_module_ownership_tools_ts_ModuleOwnerPreviewInput : 声明
+class N_src_backend_core_workspace_module_ownership_tools_ts_ModuleOwnerCommitInput["ModuleOwnerCommitInput"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_tools_ts ..> N_src_backend_core_workspace_module_ownership_tools_ts_ModuleOwnerCommitInput : 声明
+class N_src_backend_core_workspace_module_ownership_tools_ts_ModuleOwnerReceiptInput["ModuleOwnerReceiptInput"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_tools_ts ..> N_src_backend_core_workspace_module_ownership_tools_ts_ModuleOwnerReceiptInput : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_module_ownership_tools_ts["module-ownership-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_module_ownership_tools_ts_ModuleOwnerRunBinding["ModuleOwnerRunBinding"] {
+  <<interface>>
+  +workspaceId
+  +instanceId
+  +rootSessionId
+  +scopeId
+  +agentInstanceId
+  +agentSessionId
+  +runId
+}
+N_src_backend_core_workspace_module_ownership_tools_ts ..> N_src_backend_core_workspace_module_ownership_tools_ts_ModuleOwnerRunBinding : 声明
+class N_src_backend_core_workspace_module_ownership_tools_ts_ModuleOwnershipToolsPort["ModuleOwnershipToolsPort"] {
+  <<interface>>
+  +inspect()
+  +preview()
+  +commit()
+  +receipt()
+}
+N_src_backend_core_workspace_module_ownership_tools_ts ..> N_src_backend_core_workspace_module_ownership_tools_ts_ModuleOwnershipToolsPort : 声明
+```
+
+直接依赖：[module-ownership.ts](module-ownership.ts)、[../team/workspace-member.ts](../team/workspace-member.ts)。
+
+### module-ownership.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
+  <<module>>
+  +summarizeModuleOwnershipChange()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipIdentity["ModuleOwnershipIdentity"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipIdentity : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipCursor["ModuleOwnershipCursor"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipCursor : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ObservedModule["ObservedModule"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ObservedModule : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnership["ModuleOwnership"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnership : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipExpected["ModuleOwnershipExpected"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipExpected : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipChangeInput["ModuleOwnershipChangeInput"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipChangeInput : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipMainActor["ModuleOwnershipMainActor"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipMainActor : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipActor["ModuleOwnershipActor"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipActor : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipPreviewInput["ModuleOwnershipPreviewInput"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipPreviewInput : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipCommitInput["ModuleOwnershipCommitInput"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipCommitInput : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipLookup["ModuleOwnershipLookup"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipLookup : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipImpact["ModuleOwnershipImpact"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipImpact : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipPreview["ModuleOwnershipPreview"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipPreview : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipReceipt["ModuleOwnershipReceipt"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipReceipt : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipChange["ModuleOwnershipChange"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipChange : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipReadBasis["ModuleOwnershipReadBasis"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipReadBasis : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_module_ownership_ts_ModuleSourceObservation["ModuleSourceObservation"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleSourceObservation : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipView["ModuleOwnershipView"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipView : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipListInput["ModuleOwnershipListInput"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipListInput : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipGetInput["ModuleOwnershipGetInput"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipGetInput : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipByMemberInput["ModuleOwnershipByMemberInput"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipByMemberInput : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipPage["ModuleOwnershipPage"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipPage : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipChangeSummary["ModuleOwnershipChangeSummary"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipChangeSummary : 声明
+class N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipDetail["ModuleOwnershipDetail"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_module_ownership_ts_ModuleOwnershipDetail : 声明
+```
+
+直接依赖：[../team/workspace-member.ts](../team/workspace-member.ts)。
+
 ### workflow-contract.ts
 
 ```mermaid
@@ -154,12 +459,23 @@ N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspa
 
 ```mermaid
 classDiagram
+class N_src_backend_core_workspace_module_ownership_rules_ts["module-ownership-rules.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_module_ownership_tools_ts["module-ownership-tools.ts"] {
+  <<module>>
+}
 class N_src_backend_core_workspace_workflow_contract_ts["workflow-contract.ts"] {
   <<module>>
 }
 class N_src_backend_core_workspace_json_validation_schema_ts["json-validation-schema.ts"] {
   <<module>>
 }
+N_src_backend_core_workspace_module_ownership_rules_ts ..> N_src_backend_core_workspace_module_ownership_ts : 导入依赖
+N_src_backend_core_workspace_module_ownership_tools_ts ..> N_src_backend_core_workspace_module_ownership_ts : 导入依赖
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_json_validation_schema_ts : 导入依赖
 ```
 
@@ -236,3 +552,17 @@ ModuleBinding ..> ModuleMaintenanceBinding : 固定关系及知识版本
 ```
 
 上图保留领域关系设计；实际代码清单与类图见上方当前结构。维护字段现可经已有知识文件 preview/commit 读写并参与事务和索引更新；语义对象 CRUD 字段清单和维护关系编辑界面尚未扩展。旧 authors 不自动迁移。已测试缺失真人、退休关系、日期/标识错误及本模块 Workflow 范围。详见 [任务图契约](../tasks/CONTRACT.md) 和 [上下文装配](../../scheduler-engine/context/CONTRACT.md)。
+
+### 单模块岗位负责人控制面
+
+`module-ownership.ts` 定义单模块唯一负责人关系、严格请求/回执、正反查询与有界审计摘要。负责人引用长期 `memberId`，不是静态 `agentId` 或执行 `agentInstanceId`。首次指定创建稳定 `bindingId`；更换、解除、再次指定保留该身份并连续升版，解除保存 `ownerMemberId:null`，不删除原关系或审计。只有 active 岗位可成为新负责人；暂停保留关系，有引用的岗位不能退休。登记不创建或修改派发任务、执行实例、知识文件或模型运行。
+
+`observedModule` 仅保存知识版本、真实定义哈希及观察时间。查询的 observed/same/changed/missing/invalid/unavailable 只描述当前读取；同路径同字节不证明来源代次连续，观察差异不自动采纳。没有关系时不能声明 same；源已缺失仍可按原关系明确解除。该控制面不改变现有任务的执行身份，也不把旧任务按角色 ID 反推为岗位任务。
+
+`module-ownership-rules.ts` 与纯 DTO 分开，后端规范哈希不进入浏览器。预览 basis 绑定明确输入、当前责任游标、原关系指纹、相关岗位版本摘要、观察内容及真实关联任务 digest，不包含新观察时钟。提交按单模块原版本、独立 ownershipCursor 和 basis 一起核验；主调用命令由工作区、实际主根/周期/运行/通道/工具调用稳定派生，模型不能提供 actor。原回执来自不可变事件，不随之后岗位改名或状态变化重写。
+
+列表每页最多 100 项；继续分页必须携带同一 read basis。详情返回一个关系及最近 20 条审计摘要，并声明总数和截断；完整审计留在 Store。最多 1,024 个关系、4,096 条事件，单事件 16 KiB、累计 16 MiB，达到上限拒绝新提交，不裁剪历史。只读结果的 readOnly 不代表派发许可、专业验收或人工认证。
+
+`module-ownership-tools.ts` 定义主运行专用的四项严格输入、输出及可信端口，不包含桌面 actor 或模型可填写的工作区/周期身份。inspect 支持明确模块列表、按岗位反查，以及 members:true 的岗位摘要发现；模型每页最多 20 项，继续页绑定真实游标，不返回已采纳能力正文或凭据。preview/commit 的 basis 只是版本依据，不是新权限。
+
+四工具输出在唯一 JSON wire 上校验，保留输入的独立快照，单次最多 128 KiB。新查询、预览和提交核当前工作区实例，原命令回执允许同主根的旧实例/旧周期历史；未查到返回 unknown，不依据当前负责人反推原命令成功。原提交已发生但回包损坏时保留原 commandId，不回滚、不自动重新提交。

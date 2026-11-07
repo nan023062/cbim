@@ -5,6 +5,7 @@
  * 模块治理：登记、观察、决定与独立实施按原命令路由；只有可信桌面闭包提供人工来源，普通 commit 没有批准参数。
  * 队列插入：原样传递用户操作时的 expectedRunId，由执行管理器统一拒绝缺省、过期或停止请求，不替客户端猜当前运行。
  * 岗位登记：五个桌面入口共享派发存储，提交者来源由主进程注入；登记状态不代表岗位已接入实际派发。
+ * 模块责任：六个桌面入口复用同一责任服务，人工 actor 由本闭包注入；查询原回执不重新提交或改派执行成员。
  */
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
@@ -18,6 +19,12 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'workspace.members.preview':return app.workspaceMembers(args.workspaceId).preview(args);
     case 'workspace.members.receipt':return app.workspaceMembers(args.workspaceId).receipt(args);
     case 'workspace.members.commit':return app.workspaceMembers(args.workspaceId).commit(args,{kind:'local_desktop',interaction:'explicit_submit'});
+    case 'workspace.ownerships.list':return app.workspaceOwnerships(args.workspaceId).list(args);
+    case 'workspace.ownerships.get':return app.workspaceOwnerships(args.workspaceId).get(args);
+    case 'workspace.ownerships.byMember':return app.workspaceOwnerships(args.workspaceId).byMember(args);
+    case 'workspace.ownerships.preview':return app.workspaceOwnerships(args.workspaceId).preview(args);
+    case 'workspace.ownerships.receipt':return app.workspaceOwnerships(args.workspaceId).receipt(args);
+    case 'workspace.ownerships.commit':return app.workspaceOwnerships(args.workspaceId).commit(args,{kind:'local_desktop',interaction:'explicit_submit'});
     case 'governance.list':return app.governance(args.workspaceId).list(args);
     case 'governance.receipt':return app.governance(args.workspaceId).lookup(args);
     case 'governance.unaccepted':return app.governance(args.workspaceId).unaccepted(args);

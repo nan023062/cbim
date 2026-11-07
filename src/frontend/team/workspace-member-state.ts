@@ -53,8 +53,8 @@ export interface WorkspaceMemberAttempt {request:WorkspaceMemberCommitInput;phas
 /** 只含公开请求和紧凑回执，历史正文仍由 Main 的权威审计持有。 */
 export interface WorkspaceMemberCommandState {records:readonly WorkspaceMemberAttempt[];error:string}
 export interface WorkspaceMemberCommandPorts {storage:Pick<Storage,'getItem'|'setItem'>;commit:(input:WorkspaceMemberCommitInput)=>Promise<unknown>;lookup:(input:WorkspaceMemberLookup)=>Promise<unknown>;uuid:()=>string}
-/** 精确列举首次受理前拒绝；未知、IO 与命令冲突不能被解释为可换 ID 的拒绝。 */
-export function workspaceMemberPreRejected(error:unknown){return /^MEMBER_(?:INPUT_INVALID|NOT_FOUND|IDENTITY|REGISTRY_STALE|REVISION_CONFLICT|BASIS_STALE|SOURCE_INVALID|MODEL_INVALID|NO_CHANGE|RETIRED|LIMIT|SOURCE_CHANGED):/.test(message(error))}
+/** 精确列举首次受理前拒绝，包含仍有模块责任时的退休拒绝；未知、IO 与命令冲突不能解释为可换 ID 重做。 */
+export function workspaceMemberPreRejected(error:unknown){return /^MEMBER_(?:INPUT_INVALID|NOT_FOUND|IDENTITY|REGISTRY_STALE|REVISION_CONFLICT|BASIS_STALE|SOURCE_INVALID|MODEL_INVALID|NO_CHANGE|RETIRED|LIMIT|SOURCE_CHANGED|OWNERSHIP_ACTIVE):/.test(message(error))}
 
 /** 每工作区共享的本机命令日志；卸载视图不取消已经送达的登记，也不删除未决记录。 */
 export class WorkspaceMemberCommands {
@@ -64,7 +64,7 @@ export class WorkspaceMemberCommands {
   constructor(readonly workspaceId:string,private ports:WorkspaceMemberCommandPorts){
     this.storageKey='cbim.workspace-members.commands.v1.'+workspaceId;
     try{const raw=ports.storage.getItem(this.storageKey);if(!raw)return;if(new TextEncoder().encode(raw).length>2*1024*1024)throw Error('超过本机记录容量');const parsed=JSON.parse(raw);if(parsed.version!==1||parsed.workspaceId!==workspaceId||Object.keys(parsed).some(key=>!['version','workspaceId','records'].includes(key))||!Array.isArray(parsed.records)||parsed.records.length>128)throw Error('记录格式错误');const ids=new Set<string>();
-      const records:WorkspaceMemberAttempt[]=parsed.records.map((item:any)=>{const request=workspaceMemberCommitInputSchema.parse(item.request);if(request.workspaceId!==workspaceId||ids.has(request.commandId)||Object.keys(item).some(key=>!['request','phase','uncertain','receipt','error'].includes(key))||!['submitting','unknown','accepted','rejected'].includes(item.phase)||typeof item.uncertain!=='boolean'||item.error!==undefined&&typeof item.error!=='string')throw Error('请求身份或状态错误');ids.add(request.commandId);const receipt=item.receipt?checkedWorkspaceMemberReceipt(item.receipt,request):undefined;if(item.phase==='accepted'?!receipt:receipt!==undefined)throw Error('回执与提交状态不一致');return {request,phase:item.phase==='submitting'?'unknown':item.phase,uncertain:item.uncertain||['submitting','unknown'].includes(item.phase),receipt,error:item.error}});this.value={records,error:''};
+      const records:WorkspaceMemberAttempt[]=parsed.records.map((item:any)=>{const request=workspaceMemberCommitInputSchema.parse(item.request);if(request.workspaceId!==workspaceId||ids.has(request.commandId)||Object.keys(item).some(key=>!['request','phase','uncertain','receipt','error'].includes(key))||!['submitting','unknown','accepted','rejected'].includes(item.phase)||typeof item.uncertain!=='boolean'||item.phase==='rejected'&&item.uncertain||item.phase==='unknown'&&!item.uncertain||item.error!==undefined&&typeof item.error!=='string')throw Error('请求身份或状态错误');ids.add(request.commandId);const receipt=item.receipt?checkedWorkspaceMemberReceipt(item.receipt,request):undefined;if(item.phase==='accepted'?!receipt:receipt!==undefined)throw Error('回执与提交状态不一致');return {request,phase:item.phase==='submitting'?'unknown':item.phase,uncertain:item.uncertain||['submitting','unknown'].includes(item.phase),receipt,error:item.error}});this.value={records,error:''};
     }catch(error){this.corrupt=true;this.unavailable=true;this.value={records:[],error:'岗位本机提交记录无法读取，未发送请求：'+message(error)}}
   }
   get snapshot(){return this.value}

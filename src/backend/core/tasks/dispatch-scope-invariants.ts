@@ -1,6 +1,6 @@
 /**
- * 作用定位：校验调度周期、等待检查点和显式接续的持久状态及原子变更，供派发存储提交与重放共用。
- * 设计原因：旧目标和已消费意图必须保持不可变；附件引用与可信清单严格配对，主运行、输入版本及预算跨等待累积。
+ * 作用定位：校验调度周期、等待检查点、运行中补充和显式接续的持久状态及原子变更，供派发存储提交与重放共用。
+ * 设计原因：旧目标和已消费意图必须保持不可变；实际接收与等待接续合并输入版本，未核实发送不能沿旧计划完成，主运行及预算仍独立累积。
  * 职责边界：只校验已记录事实，不读取附件、不启动模型，不将用户补充当作业务验收或工具提权。
  */
 import {z} from 'zod';
@@ -10,6 +10,8 @@ import {dispatchScopeGoalSchema,dispatchScopeWaitSchema} from './dispatch-scope'
 import {validateScopeGoalTransition,goalInputRevision} from './scope-goal';
 import {scopeContinuationTotalTextLimit} from './scope-continuation';
 import {scopeContinuationRecordSchema,isHumanContinuation} from './scope-continuation-record';
+import {scopeActiveInputSchema,validateScopeInputHistory} from './scope-active-input';
+import {validateScopeActiveInputs} from './scope-active-input-rules';
 import {assertContinuationAttachmentManifest} from './scope-continuation-attachments';
 import {scopeRecoverySchema} from './scope-recovery';
 import {scopeReplanSchema} from './scope-replan';
@@ -24,7 +26,7 @@ import {validateHumanDecisions} from './human-decision-invariants';
 import {validateHumanContinuations} from './human-continuation-invariants';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
-const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),runTracking:scopeRunTrackingSchema.optional(),budget:scopeBudgetSchema.optional(),humanDecisions:scopeHumanDecisionsSchema.optional(),wait:dispatchScopeWaitSchema.optional(),continuations:z.array(scopeContinuationRecordSchema).max(31).optional(),recovery:scopeRecoverySchema.optional(),replan:scopeReplanSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
+const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),runTracking:scopeRunTrackingSchema.optional(),budget:scopeBudgetSchema.optional(),humanDecisions:scopeHumanDecisionsSchema.optional(),wait:dispatchScopeWaitSchema.optional(),continuations:z.array(scopeContinuationRecordSchema).max(31).optional(),activeInputs:z.array(scopeActiveInputSchema).min(1).max(64).optional(),recovery:scopeRecoverySchema.optional(),replan:scopeReplanSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
 function valid(condition:unknown,message:string):asserts condition {if(!condition)fail('GRAPH_INPUT_INVALID',message)}
 function ordered(value:unknown):unknown {return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,ordered(item)])):value}
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
@@ -33,6 +35,7 @@ const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(o
 export function validateDispatchScopes(previous:DispatchState,next:DispatchState,mutation:DispatchMutation):void{
   validateHumanDecisions(previous,next,mutation);
   validateHumanContinuations(previous,next,mutation);
+  const activeSupplements=validateScopeActiveInputs(previous,next,mutation);
   const scopes=next.scopes??[],activeRoots=new Set<string>(),continuationCommands=new Set<string>(),continuationRuns=new Set<string>(),recoveryIds=new Set<string>(),recoveryRuns=new Set<string>(),recoveryNatives=new Set<string>();
   for(const scope of scopes){
     valid(shape.safeParse(scope).success&&scope.workspaceId===next.workspaceId,'调度周期结构或工作区身份无效');
@@ -100,14 +103,13 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
     valid(history.length>=priorHistory.length&&history.length<=priorHistory.length+1&&priorHistory.every((item,index)=>equal(item,history[index])),'补充启动意图只能原样保留并一次追加一项');
     valid(!old?.continuations||!!scope.continuations,'补充历史字段不能删除');
     valid(history.reduce((total,item)=>total+(isHumanContinuation(item)?0:item.input.message.length),0)<=scopeContinuationTotalTextLimit,'补充正文累计超过允许大小');
-    valid(!history.length||scope.goal&&goalInputRevision(scope.goal)===history.length+1,'补充历史与目标输入版本不一致');
-    if(scope.goal)valid(goalInputRevision(scope.goal)===(history.length+1),'输入版本只能随显式补充逐次增加');
+    validateScopeInputHistory(scope);
     const seenCommands=new Set<string>(),seenWaits=new Set<string>(),seenRuns=new Set<string>();
     for(const [index,item] of history.entries()){
       // 附件引用和可信清单同属不可变启动意图；旧文本和人工分支不补造附件字段。
       if(!isHumanContinuation(item)){try{assertContinuationAttachmentManifest(item.input,item.attachmentManifest)}catch{valid(false,'补充附件引用与可信快照清单不一致')}}
       valid(!recovery||item.options.permission==='read','只读核实周期的后续补充不能提升权限');
-      valid(item.inputRevision===index+2&&!seenCommands.has(item.continuationId)&&!seenWaits.has(item.wait.waitId)&&!seenRuns.has(item.runId),'补充身份重复或输入版本不连续');
+      valid(!seenCommands.has(item.continuationId)&&!seenWaits.has(item.wait.waitId)&&!seenRuns.has(item.runId),'补充身份重复');
       valid(!continuationCommands.has(item.continuationId)&&!continuationRuns.has(item.runId),'补充命令或主运行不能跨周期重用');continuationCommands.add(item.continuationId);continuationRuns.add(item.runId);
       valid(item.wait.mainRunIds.length<32&&!item.wait.mainRunIds.includes(item.runId),'补充不能重用既有运行或重置主运行预算');
       valid(Date.parse(item.acceptedAt)>=Date.parse(item.wait.createdAt)&&Date.parse(item.wait.createdAt)>=Date.parse(scope.createdAt),'补充时间早于等待检查点');
@@ -123,7 +125,7 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
     }
     if(old){
       valid(old.workspaceId===scope.workspaceId&&old.rootSessionId===scope.rootSessionId&&old.createdAt===scope.createdAt,'不能改绑周期或创建时间');
-      validateScopeGoalTransition(old.goal,scope.goal,false,supplement);
+      validateScopeGoalTransition(old.goal,scope.goal,false,supplement,activeSupplements.has(scope.scopeId));
       if(old.wait&&!supplement)valid(equal(old.wait,scope.wait)&&equal(old.goal,scope.goal),'等待检查点及其目标不能改写或移除');
       // 预算与人工决定分别经过精确独立不变量；只允许各自单项追加，不通用忽略字段。
       if(old.status==='waiting')valid(supplement||scope.status==='closed'||equal({...old,budget:scope.budget},scope)||equal({...old,humanDecisions:scope.humanDecisions},scope),'等待周期只能明确补充、追加人工决定/预算拒绝、保留或显式关闭');

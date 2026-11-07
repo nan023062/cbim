@@ -11,7 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [dispatch-tools.ts](dispatch-tools.ts) | 把主调度的派发、查询、未启动撤销、依赖替换及一次检查点续执行预约转换为内部工具，并组合目标工具。 |
-| [goal-tools.ts](goal-tools.ts) | 将主 Agent 当前用户目标的读取、规划和审阅端口注册为内部 Loop 工具。 |
+| [goal-tools.ts](goal-tools.ts) | 将主 Agent 当前用户目标、真实补充历史的读取及规划审阅端口注册为内部 Loop 工具。 |
 | [governance-tools.ts](governance-tools.ts) | 将每个真实主运行的治理窄端口装配成发现、分类与调用一致的四项工具。 |
 | [knowledge-contracts.ts](knowledge-contracts.ts) | 将实际知识工具与 Core 业务输出 Schema、取消及恢复说明绑定，供工具注册使用。 |
 | [knowledge-tools.ts](knowledge-tools.ts) | 向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。 |
@@ -271,6 +271,10 @@ N_src_backend_scheduler_engine_tools_knowledge_tools_ts ..> N_src_backend_schedu
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 主目标查询的活动输入
+
+`cbim_goal_inspect` 的同一快照包含原 input、活动补充记录和等待 continuations。提示明确区分 pending/unknown 与已接收快照：接收后使用新 inputRevision 重规划，不把旧计划或已清除的 review 当成当前结论；未知时只查询原事实，不自动重派或声称完成。严格输出保持真实记录形状，不从工具成功回执推断用户验收或新增权限。
 
 ### 主调度模块治理工具
 

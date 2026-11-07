@@ -1,7 +1,7 @@
 /**
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
  * 设计原因：工具先分类与计划门禁再审批；每轮进度绑定真实 workspace/task/run，成员专属工具另绑定完整实例。JSON 验证及交付复核各持短锁，异步读取前后核知识、计划与停止；坏回包保留事实，求助/检查点不解锁，采集/验证只随真实结束释放。
- * 插入边界：核对原 run 和发送前停止信号；原生接受后保存真实事实，终态等待在途插入记录排空，不自动重放未知输入。
+ * 插入边界：核对原 run、可信周期令牌和发送前停止信号；原生接受后返回真实日志序号，适配器不能伪造该令牌。终态等待在途记录排空，接受后的保存失败仍属未知，不自动重放。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -28,6 +28,8 @@ import type {RunToolDescriptor} from '../policy/tool-policy';
 import type {WorkflowContractBinding} from '../tasks/execution-context';
 import {workflowHasEffects} from '../tasks/workflow-evidence';
 import {fail} from '../foundation/errors';
+import {scopeActiveInputTokenSchema,type ScopeActiveInputToken,type ScopeActiveInputSendReceipt} from '../tasks/scope-active-input';
+import {scopedActiveInputHash} from '../tasks/scope-active-input-rules';
 
 /** 运行装配端口；可靠启动确认与只读事件观察分开，业务状态不能靠观察回调提交。 */
 export interface RuntimeOptions {
@@ -68,7 +70,7 @@ export interface RunStartControl {
   beforeRun?(input:{task:TaskSpec;runId:string}):Promise<void>;
 }
 /** 插入绑定用户选定的原主运行；停止信号只阻止发送前准备，不撤销已确认接收。 */
-export interface RunSteerControl {expectedRunId:string;signal:AbortSignal}
+export interface RunSteerControl {expectedRunId:string;signal:AbortSignal;activeInput?:{token:ScopeActiveInputToken;attachmentIds?:string[]}}
 /** 可信调度器专用的新主上下文入口；运行/原生身份及旧运行集合由大脑在租约内生成，公开请求不能提供。 */
 export interface FreshMainStartControl {
   signal:AbortSignal;
@@ -82,7 +84,7 @@ export class LoopRuntime {
   /** taskId 为键；同任务在本运行时中只允许一个活动运行。 */
   private active=new Map<string,{runId:string;engine:AgentEngine;stop:()=>Promise<void>;done:Promise<RunSummary>}>();
   /** 原运行独占插入入口及在途记录；结算前排空，防止停止后的迟到确认写到终态之后。 */
-  private injections=new Map<string,{runId:string;pending:Set<Promise<void>>;send:(message:string,images:import('./types').InputImage[],signal:AbortSignal)=>Promise<void>}>();
+  private injections=new Map<string,{runId:string;pending:Set<Promise<ScopeActiveInputSendReceipt|undefined>>;send:(message:string,images:import('./types').InputImage[],signal:AbortSignal,activeInput?:RunSteerControl['activeInput'])=>Promise<ScopeActiveInputSendReceipt|undefined>}>();
   /** 关闭时先等待启动注册完成，防止启动/关闭竞争泄漏子进程。 */
   private starting=new Set<Promise<{runId:string;done:Promise<RunSummary>}>>();
   private closing=false;
@@ -194,6 +196,7 @@ export class LoopRuntime {
       let validation:RunValidation|undefined;
       const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{identity,artifacts:()=>artifactCapture?.refs()??[],...(validationRequired?{validations:{records:()=>validation?.records()??[],verifyCurrent:async records=>{if(!validation)fail('VALIDATION_UNAVAILABLE','本轮验证端口尚未就绪');await validation.verifyCurrent(records)}}}:{}),...(workflows.length?{workflow:{bindings:workflows,task:{goal:task.goal,acceptance:task.acceptance},identity},assertDeliveryReady}:{})});
       const emit=async(event:EngineEvent,trustedArtifact=false)=>{
+        if(event.type==='engine.status'&&event.data.activeInput!==undefined&&!trustedArtifact)throw Error('目标补充身份只能由可信插入端口保存');
         if(['artifact.baseline_captured','task.checkpoint_requested','validation.checked'].includes(event.type)&&!trustedArtifact)throw Error('产物、JSON 验证与检查点只能由本轮可信端口保存');
         if(event.type==='tool.finished'){
           const known=calls.get(String(event.data.id));
@@ -216,6 +219,7 @@ export class LoopRuntime {
         if(event.type==='tool.allowed')pendingTools.add(String(event.data.id));
         if(event.type==='tool.finished'||event.type==='tool.denied'){pendingTools.delete(String(event.data.id));activeCalls.delete(String(event.data.id));effectsInFlight.delete(String(event.data.id))}
         try{void Promise.resolve(this.options.onEvent?.(saved)).catch(()=>{})}catch{/* observers cannot change durable execution */}
+        return saved;
       };
       let stopping=false;
       let stopFailure:unknown;
@@ -247,20 +251,25 @@ export class LoopRuntime {
         save:async value=>{await emit({type:'validation.checked',data:{validation:value}},true)},
       });
       let finishing=false;
-      const injection={runId,pending:new Set<Promise<void>>(),send:async(message:string,images:import('./types').InputImage[],signal:AbortSignal)=>{
+      const injection={runId,pending:new Set<Promise<ScopeActiveInputSendReceipt|undefined>>(),send:async(message:string,images:import('./types').InputImage[],signal:AbortSignal,activeInput?:RunSteerControl['activeInput'])=>{
         const assertReady=()=>{
           if(stopping||this.closing||signal.aborted)fail('QUEUE_INSERT_STOPPED','当前运行已停止插入，原消息仍保留在队列');
           if(finishing||task.mode!=='chat'||task.agentId!=='cbim:main'||!engine.steer)fail('QUEUE_INSERT_STALE','原主运行已结束或不支持插入，原消息仍保留在队列');
         };
         assertReady();
-        await emit({type:'engine.status',data:{metric:'insertion',state:'requested',message,label:'正在插入用户补充'}});
+        const token=activeInput?scopeActiveInputTokenSchema.parse(structuredClone(activeInput.token)):undefined;
+        if(token&&(token.runId!==runId||token.inputHash!==scopedActiveInputHash({message,...(activeInput?.attachmentIds?{attachmentIds:activeInput.attachmentIds}:{})})))fail('QUEUE_INSERT_STALE','原插入快照与准备记录不一致，原消息仍保留在队列');
+        const requested=await emit({type:'engine.status',data:{metric:'insertion',state:'requested',message,...(token?{activeInput:token}:{}),label:'正在插入用户补充'}},true);
+        let nativeAccepted=false;
         try{
           assertReady();await engine.steer!(message,images,signal);
+          nativeAccepted=true;
           // queued 已由原生确认；迟到停止不抹去接受事实，持久化失败仍交由上层保留未知。
-          await emit({type:'engine.status',data:{metric:'insertion',state:'accepted',message,label:'已插入，当前动作完成后处理'}});
+          const accepted=await emit({type:'engine.status',data:{metric:'insertion',state:'accepted',message,...(token?{activeInput:token}:{}),label:'已插入，当前动作完成后处理'}},true);
+          return token?{...token,requestedSeq:requested.seq,acceptedSeq:accepted.seq}:undefined;
         }catch(error){
-          const rejected=['QUEUE_INSERT_STOPPED','QUEUE_INSERT_STALE'].includes((error as {code?:string})?.code??'');
-          try{await emit({type:'engine.status',data:{metric:'insertion',state:'failed',message,label:rejected?'插入未发送，原消息保留在队列':'插入未确认，请核实后继续'}})}catch{fail('QUEUE_INSERT_UNKNOWN','插入结果未确认，请先核实原运行记录，勿重复发送')}
+          const rejected=!nativeAccepted&&['QUEUE_INSERT_STOPPED','QUEUE_INSERT_STALE'].includes((error as {code?:string})?.code??'');
+          try{await emit({type:'engine.status',data:{metric:'insertion',state:'failed',message,...(token?{activeInput:token}:{}),label:rejected?'插入未发送，原消息保留在队列':'插入未确认，请核实后继续'}},true)}catch{fail('QUEUE_INSERT_UNKNOWN','插入结果未确认，请先核实原运行记录，勿重复发送')}
           if(rejected)throw error;
           fail('QUEUE_INSERT_UNKNOWN','插入结果未确认，请先核实原运行记录，勿重复发送');
         }
@@ -283,7 +292,7 @@ export class LoopRuntime {
         let failure:unknown;
         try{
           if(control?.signal.aborted)await stop();
-          if(!stopping)await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:event=>emit(event),beforeTool:async call=>{
+          if(!stopping)await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
             call=structuredClone(call);
             if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
             // 验证、采集与停泊先同步预占，再进入策略；短读锁不会绕过求助/检查点的本轮结束门闩。
@@ -366,8 +375,8 @@ export class LoopRuntime {
     if(this.closing||control?.signal?.aborted)fail('QUEUE_INSERT_STOPPED','当前运行已停止插入，原消息仍保留在队列');
     const inject=this.injections.get(taskId);
     if(!control?.signal||!control.expectedRunId||this.active.get(taskId)?.runId!==control.expectedRunId||inject?.runId!==control.expectedRunId)fail('QUEUE_INSERT_STALE','原主运行已变化，原消息仍保留在队列');
-    const pending=inject.send(message,images,control.signal);inject.pending.add(pending);
-    try{await pending}finally{inject.pending.delete(pending)}
+    const pending=inject.send(message,images,control.signal,control.activeInput?structuredClone(control.activeInput):undefined);inject.pending.add(pending);
+    try{return await pending}finally{inject.pending.delete(pending)}
   }
   /** 禁止新启动，等待在途注册后停止并收束活动运行；逐项失败不会阻止其余资源释放。 */
   async close(){this.closing=true;await Promise.allSettled([...this.starting]);const active=[...this.active.values()];await Promise.allSettled(active.map(x=>x.stop()));await Promise.allSettled(active.map(x=>x.done))}

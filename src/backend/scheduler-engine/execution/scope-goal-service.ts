@@ -4,9 +4,12 @@
  * 设计原因：目标与图查询使用同一存储快照；模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用。计划与候选逐模块匹配显式 Workflow 或原缺省模式，再沿冻结知识从 canonical 重算；明确返工只保留旧候选历史，不把旧文件再次放行。
  * 职责边界：人工项仅引用当前实际消费的接受；审阅和完成均复核原业务主体、精确候选与选定字节，负面意见只能明确安排新任务返工。不关闭周期或签署，外部文件核实不构成原子快照。
  * 证据边界：治理观察、提案和查询仅是私有待办事实，不能被主知识引用或成员候选包装成业务完成证据。
+ * 输入边界：运行中补充按真实接收提升输入版本；未决记录阻止推进，审阅、完成和安全等待还双向核对可信插入日志，不能沿旧审阅遗漏新增要求。
  */
 import {z} from 'zod';
 import {questionToolName} from '../../core/tools/questions';
+import {scopeHasUnresolvedActiveInput} from '../../core/tasks/scope-active-input';
+import {validateScopeActiveInputLog} from './scope-active-input-evidence';
 import {fail} from '../../core/foundation/errors';
 import {hash,json} from '../../core/foundation/serialization';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
@@ -56,6 +59,7 @@ export class ScopeGoalService {
   }
   private graph(state:DispatchState,scope:DispatchScope){const graph=state.graphs.find(value=>value.identity.rootSessionId===scope.rootSessionId&&value.identity.workspaceId===scope.workspaceId);check(graph,'GOAL_IDENTITY','目标缺少主会话任务图');return graph}
   private editable(scope:DispatchScope,expectedRevision:number){
+    check(!scopeHasUnresolvedActiveInput(scope),'GOAL_ACTIVE_INPUT_UNRESOLVED','运行中补充尚未核实，不能沿旧目标继续决策');
     check(scope.status!=='waiting','GOAL_WAITING','目标已安全等待，请由用户显式补充并继续或停止');
     check(scope.status==='active','GOAL_CLOSED','目标周期已经结束');
     check(scope.goal,'GOAL_LEGACY','旧周期没有可信原始输入，不能补造目标');
@@ -108,6 +112,7 @@ export class ScopeGoalService {
 
   /** 正式派发必须匹配当前计划的角色、模块集合及选择模式；缺省不是任意 Workflow，完成申请后须先重规划。 */
   validateDispatch(state:DispatchState,scope:DispatchScope,input:DispatchTaskInput['task'],knowledgeRevision:string):void{
+    check(!scopeHasUnresolvedActiveInput(scope),'GOAL_ACTIVE_INPUT_UNRESOLVED','运行中补充尚未核实，不能派发新任务');
     this.scope(state,{workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId},scope.scopeId);
     // 旧无 goal 周期保持读取/运行兼容，不给历史记录补造计划。
     if(!scope.goal)return;
@@ -118,6 +123,14 @@ export class ScopeGoalService {
     check(!scope.goal.review,'GOAL_REPLAN_REQUIRED','已有目标审阅，请显式重规划后再派发');
     check(plan.knowledgeRevision===knowledgeRevision,'GOAL_KNOWLEDGE_CHANGED','计划知识基线已变化，请重新规划');
     check(plan.assignments.some(item=>item.agentId===input.assigneeAgentId&&sameSet(item.moduleIds,input.moduleIds)&&sameWorkflowSelectionsForModules(item.workflowSelections,input.workflowSelections,input.moduleIds)),'GOAL_ASSIGNMENT_MISMATCH','派发角色、模块集合或 Workflow 选择不在当前目标计划中');
+  }
+
+  /** 普通聊天与业务完成共用；只读原日志，不重入派发 store，也不补造缺失接收记录。 */
+  async validateActiveInputs(scope:DispatchScope,main?:RunSummary):Promise<void>{
+    check(!scopeHasUnresolvedActiveInput(scope),'GOAL_ACTIVE_INPUT_UNRESOLVED','运行中补充仍在接收或结果未知，不能沿旧目标完成或安全等待');
+    if(main)validateScopeActiveInputLog(scope,main);
+    const runs=new Set((scope.activeInputs??[]).filter(item=>item.status==='accepted').map(item=>item.runId));
+    for(const runId of runs)if(runId!==main?.runId)validateScopeActiveInputLog(scope,await this.logs().inspectMain(scope.rootSessionId,runId));
   }
 
   private logs(){check(this.ports,'GOAL_EVIDENCE_UNAVAILABLE','尚未接入可信运行日志，不能审阅或完成目标');return this.ports}
@@ -321,6 +334,7 @@ export class ScopeGoalService {
       check(!goalNeedsReplan(goal),'GOAL_REPLAN_REQUIRED','用户已补充目标，必须按最新输入重新规划再审阅');
       const main=await this.logs().inspectMain(scope.rootSessionId,runId);this.main(state,main,scope,graph,runId);
       check(!main.logIntegrity?.partialTail,'GOAL_EVIDENCE_INVALID','主运行日志尾行不完整，不能据此前缀审阅');
+      await this.validateActiveInputs(scope,main);
       const snapshot=await this.owner.read();await this.evidence(state,scope,graph,draft,main,snapshot.revision);
       check((await this.owner.read()).revision===snapshot.revision,'GOAL_KNOWLEDGE_CHANGED','审阅期间知识版本发生变化');
       const {expectedRevision:_,...body}=draft,review:ScopeGoalReview={...body,revision:goal.revision+1,inputRevision:goalInputRevision(goal),planRevision:goal.plan.revision,runId,recordedAt:new Date().toISOString(),knowledgeRevision:snapshot.revision,graphCursor:cursor(graph),observedSeq:main.events.at(-1)?.seq??0,lastEffectSeq:lastEffect(main)};
@@ -329,6 +343,7 @@ export class ScopeGoalService {
   }
   /** 在父级关闭事务中调用，不重入 store；复核同一主运行真实终态及完成申请之后的图/知识/副作用变化。 */
   async validateCompletion(state:DispatchState,scope:DispatchScope,summary:RunSummary):Promise<void>{
+    await this.validateActiveInputs(scope,summary);
     this.logs();const graph=this.graph(state,scope),goal=scope.goal,review=goal?.review;
     check(scope.status==='active'&&goal&&!goal.blocked&&goal.plan&&review?.decision==='complete'&&review.revision===goal.revision&&review.planRevision===goal.plan.revision,'GOAL_REVIEW_REQUIRED','目标尚未有当前版本的完成审阅');
     check(!goalNeedsReplan(goal)&&goalInputRevision(review)===goalInputRevision(goal),'GOAL_REPLAN_REQUIRED','完成审阅没有覆盖最新用户补充');
@@ -395,6 +410,7 @@ export class ScopeGoalService {
    * 等待只接受当前 awaiting_user 审阅；已失败但明确结束的成员可保留，未知工具、在途租约和未开始任务均拒绝。
    */
   async validateWaiting(state:DispatchState,scope:DispatchScope,summary:RunSummary,mainRunIds:string[]):Promise<void>{
+    await this.validateActiveInputs(scope,summary);
     const logs=this.logs(),graph=this.graph(state,scope),goal=scope.goal,review=goal?.review;
     check(scope.status==='active'&&goal&&!goal.blocked&&goal.plan&&review?.decision==='awaiting_user'&&review.revision===goal.revision&&review.planRevision===goal.plan.revision,'GOAL_WAIT_REQUIRED','只有当前版本的等待用户审阅可以建立安全检查点');
     check(!goalNeedsReplan(goal)&&goalInputRevision(review)===goalInputRevision(goal),'GOAL_REPLAN_REQUIRED','等待审阅没有覆盖最新用户补充');

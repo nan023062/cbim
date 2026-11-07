@@ -1,7 +1,7 @@
 /**
  * 作用定位：复用展示本轮真实目标、静态角色分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。
  * 设计原因：周期状态、冻结软限额与模型声明分开呈现；分配只展示已保存的显式流程，不根据当前知识推断旧选择。人工意见与继续是独立动作，补充和新业务不改写原始输入。
- * 接续附件：历史只展示后端已受理清单，不重读原文件，也不把文件引用当作验收证据。
+ * 接续附件：历史只展示后端已受理清单；运行内补充另列接收状态与实际输入快照，不重读原文件或把原生接收当作验收。
  */
 import type {ScopeGoalState} from './scope-state';
 import {Icon} from '../components/Icon';
@@ -9,6 +9,7 @@ import {ScopeContinuationForm} from './ScopeContinuationForm';
 import type {ScopeContinuationView} from './useScopeContinuation';
 import {ScopeReplanForm} from './ScopeReplanForm';
 import {ScopeBudgetPanel} from './ScopeBudgetPanel';
+import {ScopeActiveInputs} from './ScopeActiveInputs';
 import type {ScopeReplanView} from './useScopeReplan';
 import {HumanDecisionPanel} from './HumanDecisionPanel';
 import type {HumanDecisionsView} from './useHumanDecisions';
@@ -37,6 +38,7 @@ export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel',co
     {!summary?<p className="scope-goal-muted">{loading?'正在同步本轮目标…':'当前会话还没有保存目标周期。普通聊天不会被补造成业务任务。'}</p>:<>
       <p className="scope-goal-title" title={title}>{title}</p>
       <ScopeBudgetPanel budget={summary.budget} waiting={summary.status==='waiting'}/>
+      {summary.activeInputStatus&&<p className="scope-goal-blocked" role="status" data-testid="scope-active-input-notice">{summary.activeInputStatus==='unknown'?'运行内补充的接收结果待核实，不能沿旧审阅完成或自动重发。':summary.status==='closed'?'本周期已结束，仍有补充未确认接收；重开不会自动发送。':'正在确认运行内补充，旧目标的完成与派工暂时停用。'}</p>}
       {summary.status==='waiting'&&<div className="scope-goal-waiting" data-testid="scope-goal-waiting"><p>{summary.wait?.reason}</p><p className="scope-goal-muted">在本目标卡片补充说明后继续。普通排队消息不会恢复本目标或代替人工验收。</p></div>}
       {continuation&&continuation.scopeId===selectedScopeId&&<ScopeContinuationForm state={continuation}/>}
       {replan&&replan.inspectionScopeId===selectedScopeId&&<ScopeReplanForm state={replan}/>}
@@ -49,6 +51,7 @@ export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel',co
           {scope.wait&&<div className="scope-goal-section" data-testid="scope-goal-wait-detail"><h4>{scope.status==='waiting'?'等待补充原因':'等待记录'}</h4><p className="scope-goal-wait-reason">{scope.wait.reason}</p><p className="scope-goal-muted">记录于 {new Date(scope.wait.createdAt).toLocaleString()} · 目标第 {scope.wait.goalRevision} 版</p></div>}
           {goal?.blocked&&<div className="scope-goal-section" data-testid="scope-goal-blocked-detail"><h4>完整受阻原因</h4><p className="scope-goal-blocked">{goal.blocked.reason}</p></div>}
           <div className="scope-goal-section"><h4>本轮原始输入</h4><div className="scope-goal-input" data-testid="scope-goal-input">{goal!.input.message}</div>{goal!.input.attachmentIds.length>0&&<p className="scope-goal-muted">{goal!.input.attachmentIds.length} 份附件快照</p>}</div>
+          {scope.activeInputs&&<ScopeActiveInputs items={scope.activeInputs}/>}
           {!!scope.continuations?.length&&<div className="scope-goal-section" data-testid="scope-goal-continuations"><h4>已受理的目标接续</h4>{scope.continuations.map(item=><div key={item.continuationId}><p className="scope-goal-metadata">输入第 {item.inputRevision} 版 · {new Date(item.acceptedAt).toLocaleString()}</p><div className="scope-goal-input">{isHumanContinuation(item)?<>系统按已保存人工决定接续 · {item.decisionIds.length} 条决定<br/><span className="scope-goal-muted">原始输入保留；此记录不是新增用户正文。</span></>:item.input.message}</div>{!isHumanContinuation(item)&&item.attachmentManifest&&<details data-testid="scope-continuation-manifest"><summary>{item.attachmentManifest.items.length} 份已受理附件快照</summary>{item.attachmentManifest.items.map(file=><p key={file.attachmentId}>{file.name} · {file.contentKind==='image'?'图片':file.contentKind==='reference'?'二进制引用':'文本快照'} · {file.byteLength} 字节{file.note&&<><br/><span className="scope-goal-muted">{file.note}</span></>}</p>)}</details>}</div>)}</div>}
           {plan?<div className="scope-goal-section" data-testid="scope-goal-plan"><h4>目标计划 <small>第 {plan.revision} 版 · 输入第 {plan.inputRevision??1} 版</small></h4>{summary.needsReplan&&<p className="scope-goal-muted">此计划早于最新补充，等待主 Agent 更新。</p>}<p>{plan.objective}</p><p className="scope-goal-muted">{plan.reason}</p>
             {plan.constraints.length>0&&<><h5>约束</h5><ul>{plan.constraints.map((item,index)=><li key={index}>{item}</li>)}</ul></>}

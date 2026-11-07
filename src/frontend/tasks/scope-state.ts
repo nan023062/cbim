@@ -1,9 +1,9 @@
 /**
  * 作用定位：主会话目标周期的增量投影和展示状态，供对话摘要与任务根详情共用。
  * 设计原因：目标版本独立于任务图；先核对身份和连续游标再合并，完成申请与真正关闭分开显示，历史选择不能覆盖当前任务状态。
- * 职责边界：只投影后端事实；成员检查点仍是未完任务，等待主调度安排。尚无计划时按持久 origin 区分业务规划、只读核实和普通问答，不从正文推断验收或调用执行接口。
+ * 职责边界：只投影后端事实；运行内补充优先展示接收中/待核实，已接收也不是完成。摘要与详情须核对同一补充状态，不能用旧审阅盖过未知输入。
  */
-import {applyScopeBatch,validateScopeSnapshot} from '../../bridge/contracts/dispatch';
+import {applyScopeBatch,validateScopeSnapshot,scopeActiveInputStatus,scopeActiveInputSchema} from '../../bridge/contracts/dispatch';
 import type {DispatchScope,DispatchSessionRead,GraphIdentity,GraphSnapshot,ScopeCursor,ScopeDelta,ScopeSnapshot,ScopeSummary,ScopeDetailStamp} from '../../bridge/contracts/dispatch';
 import {SessionGraphProjection} from './graph-state';
 
@@ -44,11 +44,14 @@ export function scopeGoalView(scope:ScopeSummary|undefined,graph?:GraphSnapshot)
   if(!scope)return {phase:'none',label:'尚无本轮目标记录',tone:'neutral'};
   if(!scope.hasGoal)return {phase:'legacy',label:'旧周期 · 未保存原始目标',tone:'neutral'};
   if(scope.status==='closed'){
+    if(scope.outcome==='completed'&&scope.activeInputStatus)return {phase:'completion_unverified',label:'周期已结束 · 补充接收未确认',tone:'warning'};
     if(scope.outcome==='completed')return scope.hasPlan?(scope.reviewDecision==='complete'&&!scope.needsReplan?{phase:'completed',label:'目标已完成',tone:'success'}:{phase:'completion_unverified',label:'周期已结束 · 完成依据不完整',tone:'warning'}):{phase:'conversation_finished',label:'本轮对话结束',tone:'neutral'};
     if(scope.outcome==='cancelled')return {phase:'cancelled',label:'本轮已停止',tone:'neutral'};
     if(scope.outcome==='interrupted')return {phase:'interrupted',label:'目标执行中断',tone:'warning'};
     return {phase:scope.blockedReason?'blocked':'failed',label:'目标未完成',tone:'warning'};
   }
+  if(scope.activeInputStatus==='unknown')return {phase:'input_unknown',label:'补充接收结果待核实',tone:'warning'};
+  if(scope.activeInputStatus==='pending')return {phase:'input_pending',label:'正在确认补充接收',tone:'running'};
   if(scope.status==='waiting')return {phase:'waiting',label:'等待补充 · 执行已暂停',tone:'warning'};
   if(scope.needsReplan)return {phase:'replanning',label:'补充已受理 · 等待更新计划',tone:'running'};
   if(scope.blockedReason||scope.reviewDecision==='blocked')return {phase:'blocked',label:'目标受阻',tone:'warning'};
@@ -106,6 +109,7 @@ export class SessionReadProjection {
       const scope=cached.scope;
       if(scope.status!==summary.status||scope.outcome!==summary.outcome||scope.createdAt!==summary.createdAt||scope.closedAt!==summary.closedAt||Boolean(scope.goal)!==summary.hasGoal||scope.goal?.revision!==summary.goalRevision||Boolean(scope.goal?.plan)!==summary.hasPlan||scope.goal?.review?.decision!==summary.reviewDecision)throw Error('目标摘要与同版本详情不一致');
       if(summary.inputRevision!==undefined&&(scope.goal?.inputRevision??1)!==summary.inputRevision)throw Error('目标补充版本与同版本摘要不一致');
+      if(scope.activeInputs!==undefined&&(!Array.isArray(scope.activeInputs)||!scope.activeInputs.length||scope.activeInputs.length>64||scope.activeInputs.some(item=>!scopeActiveInputSchema.safeParse(item).success)||new Set(scope.activeInputs.map(item=>item.insertionId)).size!==scope.activeInputs.length)||summary.activeInputStatus!==scopeActiveInputStatus(scope)||summary.activeInputCount!==(scope.activeInputs?.length||undefined))throw Error('运行内补充与同版本摘要不一致');
       if(summary.needsReplan!==undefined&&summary.needsReplan!==(!!scope.goal?.plan&&(scope.goal.plan.inputRevision??1)!==(scope.goal.inputRevision??1)))throw Error('目标计划输入版本与同版本摘要不一致');
       if(Boolean(scope.wait)!==Boolean(summary.wait)||scope.wait?.waitId!==summary.wait?.waitId||scope.wait?.goalRevision!==summary.wait?.goalRevision||scope.wait?.createdAt!==summary.wait?.createdAt)throw Error('目标等待记录与同版本摘要不一致');
       if(scope.goal&&(!scope.goal.input||typeof scope.goal.input.message!=='string'||!Array.isArray(scope.goal.input.attachmentIds)))throw Error('目标详情缺少原始输入');

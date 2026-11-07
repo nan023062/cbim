@@ -1,6 +1,6 @@
 /**
  * 作用定位：向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。
- * 设计原因：前端经 Bridge 消费 Core 契约，不导入调度或文件存储；检查点只公开交接和预约，文件基线复核与执行报告分开，不导出原生文件指纹、执行许可或凭据。
+ * 设计原因：前端经 Bridge 消费 Core 契约，不导入调度或文件存储；运行中补充只公开持久尝试和状态计算，检查点只公开交接与预约，不导出原生文件指纹、执行许可或凭据。
  */
 export type {GraphIdentity,GraphCursor,GraphSnapshot,GraphDelta,GraphEventBatch,GraphChange,TaskNode,GraphEdge,AgentGraphView} from '../../backend/core/tasks/graph-types';
 export type {DependencyReplacement} from '../../backend/core/tasks/queued-dependency-replacement';
@@ -27,3 +27,6 @@ export type {RecoveryRequest,RecoveryLookup,RecoveryReceipt} from '../../backend
 export {recoveryRequestSchema,recoveryLookupSchema,recoveryReceiptSchema} from '../../backend/core/tasks/scope-recovery';
 export type {ReplanPreviewInput,ReplanPreview,ReplanRequest,ReplanLookup,ReplanReceipt} from '../../backend/core/tasks/scope-replan';
 export {replanPreviewInputSchema,replanPreviewSchema,replanRequestSchema,replanLookupSchema,replanReceiptSchema} from '../../backend/core/tasks/scope-replan';
+/** 运行中插入仅报告真实接收状态，不授予恢复或业务验收；hash/事务校验保留在后端。 */
+export {scopeActiveInputSchema,scopeActiveInputStatus,scopeHasUnresolvedActiveInput,scopeActiveInputLimits} from '../../backend/core/tasks/scope-active-input';
+export type {ScopeActiveInput} from '../../backend/core/tasks/scope-active-input';

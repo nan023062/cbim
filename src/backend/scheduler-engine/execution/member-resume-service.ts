@@ -1,6 +1,6 @@
 /**
  * 作用定位：当前主调度为本周期安全检查点预约一次原任务续执行，提交独立待领取信封。
- * 设计原因：主轮仍占执行资源时不能立刻启动成员；预约和真正领取分开，保留完整幂等审计，停止或重启不会自动重放。
+ * 设计原因：主轮仍占执行资源时不能立刻启动成员；预约和真正领取分开，保留完整幂等审计。未确认的活动补充阻止新预约，停止或重启不会自动重放。
  */
 import {randomUUID} from 'node:crypto';
 import {fail} from '../../core/foundation/errors';
@@ -10,6 +10,7 @@ import type {DispatchStore} from '../../core/tasks/dispatch-storage';
 import type {GraphIdentity} from '../../core/tasks/graph-types';
 import {resumeMemberInputSchema,type ResumeMemberInput,type ResumeMemberReceipt} from '../../core/tasks/queued-member-resume';
 import {memberResumeSelection} from '../../core/tasks/queued-member-resume-rules';
+import {scopeHasUnresolvedActiveInput} from '../../core/tasks/scope-active-input';
 import {memberBatch} from './member-state';
 import {verifyMemberCheckpointProof,type MemberCheckpointVerificationPorts} from './member-checkpoint-verifier';
 
@@ -22,6 +23,7 @@ export class MemberResumeService {
     const check=()=>{this.owner.assert();assertCurrent();if(identity.workspaceId!==this.owner.entry.id)fail('GRAPH_IDENTITY_MISMATCH','检查点不属于当前工作区')};check();
     return this.store.transact(command,async state=>{
       check();const selected=memberResumeSelection(state,identity,scopeId,mainRunId,input),{graph,scope,task,run,checkpoint,trackedTaskIds}=selected;
+      if(scopeHasUnresolvedActiveInput(scope))fail('GOAL_ACTIVE_INPUT_UNRESOLVED','运行中补充尚未核实，不能预约成员续执行');
       await verifyMemberCheckpointProof(this.owner,task,run,this.ports,check,run.checkpointProof);check();
       const requestId=randomUUID(),now=new Date().toISOString(),resumeFrom={checkpointId:checkpoint.checkpointId,runId:run.binding.runId};
       const resumeRequest={requestId,commandId,scopeId,mainRunId,...resumeFrom,requestedAt:now,reason:input.reason,graphCursor:{streamId:graph.cursor.streamId,seq:graph.cursor.seq},goalRevision:scope.goal!.revision,previousTaskRevision:task.revision,trackedTaskIds};

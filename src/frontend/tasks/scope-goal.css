@@ -1,6 +1,6 @@
 /**
  * 作用定位：对话摘要与任务根详情共用的目标计划卡片、历史选择和证据排版。
- * 设计原因：默认收起长正文，展开后保留原文与验收层级；沿用应用主题变量，窄视口自动换行，不影响输入框和任务画布。
+ * 设计原因：默认收起长正文和运行内补充快照，展开后保留接收状态与验收层级；沿用主题变量，窄视口换行，不影响输入框和任务画布。
  */
 .scope-goal-panel{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 14px;min-width:0;background:var(--surface);color:var(--text);font-size:12px;line-height:1.65}
 .scope-goal-panel>header{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
@@ -19,6 +19,7 @@
 .scope-goal-input{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;line-height:1.75}
 .scope-goal-kind{display:inline-block;margin-left:8px;font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px;font-weight:400}
 .scope-goal-evidence{margin:10px 0}.scope-goal-evidence>summary{cursor:pointer;color:var(--muted)}.scope-goal-evidence>div{border-left:1px solid var(--line);padding-left:10px;margin-top:10px}
+.scope-active-input{border-left:1px solid var(--line);padding-left:10px;margin:10px 0}.scope-active-input>summary{cursor:pointer;overflow-wrap:anywhere}.scope-active-input[data-input-status=unknown]>summary{color:var(--warning)}.scope-active-input .scope-goal-input{margin-top:8px}
 .scope-goal-panel code{font-size:10px;overflow-wrap:anywhere}.scope-goal-panel .scope-goal-metadata{font-size:10px;margin-top:15px}
 .scope-goal-panel.compact{margin:0 auto 16px;width:100%;max-width:850px;background:transparent}
 @media(max-width:600px){.scope-goal-panel{padding:10px}.scope-goal-history{width:100%}.scope-goal-history select{max-width:none}.scope-goal-kind{margin-left:4px}.scope-goal-panel.compact{margin-bottom:12px}}

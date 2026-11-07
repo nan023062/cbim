@@ -1,7 +1,7 @@
 /**
  * 作用定位：调度引擎：工作区执行管理，负责主 Agent 普通对话、团队任务执行与多轮历史读取，拒绝旧轮次分叉，挂起并处理逐次工具审批与结构化用户问题，持久化消息队列并在成功结束后串行续接；本次全部通过仅在当前执行期间有效。
  * 设计原因：原命令先查回执；等待补充的附件一次准备，图片仅留本轮。容量准入先于意图，beforeRun 核额度、停止与清单后登记运行；人工决定仍走独立系统来源，当前坏历史不能回退旧头。
- * 插入边界：绑定明确的原主 run，停止信号先于串行清理；已确认接收才移除队列，未知结果同时阻止内存自动推进。
+ * 插入边界：先查原 scope/run/queue 回执再领取和读附件；绑定明确的原主 run，停止信号先于串行清理。周期输入接收落盘后才移除队列，未知结果同时阻止内存自动推进。
  */
 import {MessageQueue,type QueueCounts} from '../conversation/message-queue';
 import {ApprovalQueue} from '../conversation/approvals';
@@ -23,6 +23,8 @@ import {Team} from '../../core/team/model';
 import {BusinessWorkspace} from '../../core/workspace/model';
 import {goalContinuationRequestSchema,type GoalContinuationRequest,type GoalContinuationReceipt} from '../../core/tasks/scope-continuation';
 import type {DispatchScopeWait} from '../../core/tasks/dispatch-scope';
+import type {ScopeActiveInput,ScopeActiveInputPayload,ScopeActiveInputToken,ScopeActiveInputSendReceipt} from '../../core/tasks/scope-active-input';
+import {scopedActiveInputHash} from '../../core/tasks/scope-active-input-rules';
 import {sameGoalValue} from '../../core/tasks/scope-goal';
 import {hash,json} from '../../core/foundation/serialization';
 import {assertContinuationAttachmentManifest,type ContinuationAttachmentManifest,type TrustedContinuationInput} from '../../core/tasks/scope-continuation-attachments';
@@ -37,6 +39,10 @@ export const executionOptions=z.object({provider:z.string().trim().min(1),model:
 type Options=z.infer<typeof executionOptions>;
 /** 由可信工作区装配一次；回调只登记或唤醒协调器，不在 settled 内等待成员执行。 */
 export interface ExecutionCollaboration {
+  /** 原插入结果先查，不依赖队列仍存在；未知结果不得再次获取发送权。 */
+  activeInputReceipt?(rootSessionId:string,runId:string,queueId:string):Promise<ScopeActiveInput|undefined>;
+  /** 整个准备/发送/结算加入周期在途操作；回调不重入 Manager.serial，停止先发给原引擎。 */
+  insertActiveInput?(rootSessionId:string,runId:string,queueId:string,input:ScopeActiveInputPayload,signal:AbortSignal,send:(token?:ScopeActiveInputToken)=>Promise<ScopeActiveInputSendReceipt|undefined>):Promise<void>;
   /** 人工接续有独立意图和系统来源；查询不核实或启动，只有 beforeRun 可消费当前等待。 */
   humanContinuationReceipt?(query:HumanContinuationLookup):Promise<HumanContinuationReceipt|undefined>;
   humanContinuationPreflight?(request:HumanContinuationRequest):Promise<{wait:DispatchScopeWait;message:string}>;
@@ -124,6 +130,14 @@ export class WorkspaceExecutionManager {
     const pending=this.serial(async()=>{
       safeId(taskId);
       try{if(typeof expectedRunId!=='string')throw Error('missing');safeId(expectedRunId)}catch{fail('QUEUE_INSERT_STALE','缺少有效的原主运行标识，原消息仍保留在队列')}
+      const original=await this.collaboration?.activeInputReceipt?.(taskId,expectedRunId,id);
+      if(original){
+        const queue=await this.queue(),entry=queue.list(taskId).find(item=>item.id===id);
+        if(entry&&scopedActiveInputHash({message:entry.message,...(entry.options.attachmentIds?{attachmentIds:entry.options.attachmentIds}:{})})!==original.inputHash)fail('GOAL_ACTIVE_INPUT_CONFLICT','原队列身份已绑定不同输入快照，不能重新发送');
+        if(original.status==='accepted'){if(entry)await queue.complete(id);return}
+        if(original.status==='rejected')fail('QUEUE_INSERT_STOPPED','原插入已明确未发送，消息仍保留在队列；请核实后编辑或另行发送');
+        fail('QUEUE_INSERT_UNKNOWN','插入结果未确认，队列保持暂停，请先核实原运行记录，勿重复发送');
+      }
       const active=this.active.get(taskId);
       const assertCurrent=()=>{
         if(this.closing||this.insertionsClosed||controller.signal.aborted||(this.stopVersions.get(taskId)??0)!==stopVersion||this.resultContinuationStopped.has(taskId))fail('QUEUE_INSERT_STOPPED','当前运行已停止插入，原消息仍保留在队列');
@@ -136,7 +150,10 @@ export class WorkspaceExecutionManager {
         const entry=await q.claim(taskId,id);claimed=true;assertCurrent();
         const images=await this.inputImages(entry.options.attachmentIds);assertCurrent();
         enteredRuntime=true;
-        await active!.loop.runtime.steer(taskId,entry.message,images,{expectedRunId,signal:controller.signal});
+        const input={message:entry.message,...(entry.options.attachmentIds?{attachmentIds:[...entry.options.attachmentIds]}:{})};
+        const send=(token?:ScopeActiveInputToken)=>active!.loop.runtime.steer(taskId,entry.message,images,{expectedRunId,signal:controller.signal,...(token?{activeInput:{token,attachmentIds:input.attachmentIds}}:{})});
+        if(this.collaboration?.insertActiveInput)await this.collaboration.insertActiveInput(taskId,expectedRunId,id,input,controller.signal,send);
+        else await send();
         // 原生 queued 和接受日志均已确认。这里不再按迟到 stop 撤销消费，保存失败只能保持未知。
         await q.complete(id);
       }catch(error){

@@ -2,6 +2,7 @@
  * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
  * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；派发保存原 Workflow 选择及实际绑定，同命令不能改选。周期冻结输入、归属及软限额；人工继续同事务消费等待和登记运行，关闭封存待办，旧回执不能重开周期。
  * 职责边界：本模块负责可靠入队、显式撤销未启动集合及受审计的单条依赖替换，由独立 MemberExecutionManager 执行；调度维护不停止活动运行，不复活旧实例，也不代表目标完成。
+ * 关闭边界：活动输入由独立服务准备和确认；普通无计划聊天的成功例外也须先核实输入记录，未知输入只可失败或取消封存。
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
@@ -17,6 +18,7 @@ import type {TaskSpec} from '../../core/tasks/types';
 import type {RunSummary} from '../../core/brain/types';
 import {ScopeGoalService,type ScopeGoalPorts} from './scope-goal-service';
 import {ScopeContinuationService} from './scope-continuation-service';
+import {ScopeActiveInputService} from './scope-active-input-service';
 import {ScopeRecoveryService} from './scope-recovery-service';
 import {ScopeReplanService} from './scope-replan-service';
 import {ScopeHumanDecisionService,type HumanDecisionPorts} from './scope-human-decision-service';
@@ -47,6 +49,8 @@ export class WorkspaceDispatchService {
   readonly goals:ScopeGoalService;
   /** 可信用户补充的消费与只读回执；启动和停止屏障仍由运行管理器掌管。 */
   readonly continuations:ScopeContinuationService;
+  /** 原运行插入的准备与接收，不创建新运行或修改原始输入。 */
+  readonly activeInputs:ScopeActiveInputService;
   /** 已关闭周期的显式只读核实；创建新周期与原生上下文意图，不复活或重放来源。 */
   readonly recoveries:ScopeRecoveryService;
   /** 独立业务新周期；来源必须是完整完成的只读核实，不放宽 recoveries 的只读边界。 */
@@ -66,6 +70,7 @@ export class WorkspaceDispatchService {
     this.usage=new ScopeUsageService(owner,store,goalPorts);
     this.budgets=new ScopeBudgetService(this.usage,budgetPolicy);
     this.continuations=new ScopeContinuationService(owner,store,this.budgets);
+    this.activeInputs=new ScopeActiveInputService(owner,store);
     this.recoveries=new ScopeRecoveryService(owner,store,goalPorts,this.budgets);
     this.replans=new ScopeReplanService(owner,store,this.goals,goalPorts,this.budgets);
     this.humanDecisions=new ScopeHumanDecisionService(owner,store,this.goals,goalPorts,humanPorts,()=>this.check(owner.entry.id));
@@ -145,6 +150,8 @@ export class WorkspaceDispatchService {
       this.check(input.workspaceId);const graph=this.graph(state,input.rootSessionId),scope=state.scopes?.find(value=>value.scopeId===scopeId);
       if(!scope||scope.rootSessionId!==input.rootSessionId)fail('DISPATCH_SCOPE_IDENTITY','调度周期不属于当前主会话');
       if(scope.status==='closed')return {receipt:scope};
+      // 即使尚未建业务计划，也不能把未知插入当成普通对话顺利结束。
+      if(outcome==='completed')await this.goals.validateActiveInputs(scope,mainSummary);
       if(scope.status==='waiting'&&outcome==='completed')fail('GOAL_WAITING','等待周期不能跳过目标完成复核，请保留或显式停止');
       const tasks=graph.tasks.filter(task=>task.scopeId===scopeId),taskIds=new Set(tasks.map(task=>task.taskId));
       // 普通问答只关闭生命周期；一旦规划或派工，必须引用同周期主轮结束事实及显式审阅。

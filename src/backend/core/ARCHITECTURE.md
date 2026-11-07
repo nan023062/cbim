@@ -101,14 +101,14 @@ N_src_backend_core_team ..> N_src_backend_core_tasks : 导入依赖
 
 ## 子目录导航
 
-- [brain/](brain/ARCHITECTURE.md)：引擎无关的执行循环、事件与计量；插入绑定原run和停止信号，原生确认与未知分别记录，结算先排空插入日志。正式成员按冻结Workflow验证JSON指定字节，验证与交付复核各持短锁，前后核版本/知识/停止；checked暂存不等于passed有效证明。求助/检查点保存后结束本轮，文件采集随真实工具结束释放短锁；续执行不借旧证据。
+- [brain/](brain/ARCHITECTURE.md)：引擎无关的执行循环、事件与计量；运行内补充只由可信入口写绑定scope/run/queue的接收日志，返回真实序号；queued后日志失败保持未知。插入绑定原run和停止信号，原生确认与未知分别记录，结算先排空插入日志。正式成员按冻结Workflow验证JSON指定字节，验证与交付复核各持短锁，前后核版本/知识/停止；checked暂存不等于passed有效证明。求助/检查点保存后结束本轮，文件采集随真实工具结束释放短锁；续执行不借旧证据。
 - [connectors/](connectors/ARCHITECTURE.md)：链接器定义、查询与唯一身份检查；当前不执行外部插件。
 - [foundation/](foundation/ARCHITECTURE.md)：少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。
 - [governance/](governance/ARCHITECTURE.md)：模块知识治理的纯协议、保护规则与有界主工具投影。可信来源、冻结意见引用与本机评价独立于正式实施，旧意见替代不改历史，不把治理记录当业务验收。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识快照、校验、领域查询、对象变更和可移植静态包规划。团队能力可独立复用，业务模板必须完整；物理事务与预览缓存经端口注入，不携带动态成员或任务。Team/Workspace 只依赖快照辅助，不依赖查询门面。
 - [policy/](policy/ARCHITECTURE.md)：内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；不声称操作系统隔离。
 - [runtime/](runtime/ARCHITECTURE.md)：应用级只读监管、真实周期白名单与独立准入契约。周期等待/结算和模型轮次分开，严格传输不补造缺失计量；游标、票据和占用不签发恢复权。
-- [tasks/](tasks/ARCHITECTURE.md)：任务计划、派发图、目标与等待。流程选择共用叶子契约，缺省与显式分开匹配，已派发选择不可改写；人工与检查点不得跨流程借用旧依据。严格输出区分保存与交付；Workflow出口按当前引用的passed、Schema、基线和原调用重算，历史不补造授权或证据。
+- [tasks/](tasks/ARCHITECTURE.md)：任务计划、派发图、目标与等待。运行内补充以持久pending/accepted/rejected/unknown分开，接受与waiting共享连续输入版本，未知阻止完成，普通对话不造计划。流程选择共用叶子契约，缺省与显式分开匹配，已派发选择不可改写；人工与检查点不得跨流程借用旧依据。严格输出区分保存与交付；Workflow出口按当前引用的passed、Schema、基线和原调用重算，历史不补造授权或证据。
 - [team/](team/ARCHITECTURE.md)：Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履历契约。主实例归主会话，业务实例归周期与任务；履历按角色聚合真实通道，释放或删定义后保留，旧记录不补造实例。
 - [tools/](tools/ARCHITECTURE.md)：工具 Schema、版本、副作用、调用决策、严格提问/答案及回执。提问按原题同序核验，取消与答案排他；during_wait只承诺结束未完成交互。结果只核唯一 JSON 快照，不用解析改写制造成功；历史可读不等于当前业务证据有效。注册、发现及用户回答不授予权限。
 - [workspace/](workspace/ARCHITECTURE.md)：领域工程、Module、本模块Workflow与显式维护关系。可选执行条件含工具回执和指定JSON文件结构；有界Schema白名单及纯字节校验拒绝引用/脚本/转换，不自行读文件或签发业务验收。作者与维护人分开，与main/workspace生命周期分开。

@@ -11,7 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [approvals.ts](approvals.ts) | 任务内操作确认及本次运行全部放行的生命周期。 |
-| [main-agent.ts](main-agent.ts) | 定义内置主 Agent 的固定身份、业务调度与团队/业务知识管理指引。 |
+| [main-agent.ts](main-agent.ts) | 定义内置主 Agent 的固定身份、业务调度与团队/业务知识管理指引，区分原始目标、已接收补充及未核实插入。 |
 | [message-queue.ts](message-queue.ts) | 保存工作区各对话的待执行消息与发送时的模型/权限快照。 |
 | [questions.ts](questions.ts) | 管理工作区内等待用户回答的结构化问题，供 Loop 工具与对话界面共享。 |
 
@@ -139,6 +139,10 @@ N_src_backend_scheduler_engine_conversation_questions_ts ..> N_src_backend_sched
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 运行中补充与原目标
+
+主提示要求插入消息到达后查询原 input、accepted activeInputs 和 continuations，以最新 inputRevision 重规划并保留必需人工条件；accepted 正文称为“已接收的输入快照”，可能包含附件展开资料，不还原成原始用户措辞。pending/unknown 只允许核实与说明，不能盲目重发、继续派工或沿旧 review 宣告完成、安全等待。普通无业务计划对话仍保持轻量，输入记录不新增权限或替代人工接受。
 
 ### 结构化问题的一次回答与取消
 

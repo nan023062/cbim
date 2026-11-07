@@ -1,6 +1,6 @@
 /**
  * 作用定位：原子消费安全等待，保存用户原始补充、可选附件快照清单和一次性主运行意图。
- * 设计原因：先查原命令，再由可信启动闭包提交清单；预算读取后及提交前复核停止，拒绝不会消费等待或运行额度。
+ * 设计原因：先查原命令，再由可信启动闭包提交清单；运行中插入与等待补充共用输入次数和正文额度。预算读取后及提交前复核停止，拒绝不会消费等待或运行额度。
  * 职责边界：旧纯文本兼容，不读取附件或启动模型，不签署人工项；事务已提交后的失败保留原意图，不还原等待或重放。
  */
 import {z} from 'zod';
@@ -16,6 +16,7 @@ import {assertContinuationAttachmentManifest,type TrustedContinuationInput} from
 import {goalContinuationRequestSchema,scopeContinuationLookupSchema,scopeContinuationTotalTextLimit,type GoalContinuationRequest,type GoalContinuationReceipt,type ScopeContinuation,type ScopeContinuationLookup} from '../../core/tasks/scope-continuation';
 import {rejectBudget,type ScopeBudgetService,type ScopeBudgetRejected} from './scope-budget-service';
 import {isHumanContinuation} from '../../core/tasks/scope-continuation-record';
+import {scopeActiveInputLimits} from '../../core/tasks/scope-active-input';
 
 type Owner=Pick<KnowledgeWorkspace,'entry'|'assert'>;
 function check(condition:unknown,code:string,message:string):asserts condition{if(!condition)fail(code,message)}
@@ -63,9 +64,10 @@ export class ScopeContinuationService {
       check(wait.waitId===input.waitId,'GOAL_WAIT_CONFLICT','等待检查点已变化，请刷新目标');
       check(goal.revision===input.expectedGoalRevision&&goalInputRevision(goal)===input.expectedInputRevision,'GOAL_REVISION_CONFLICT','目标或补充版本已变化，请刷新后重试');
       check(wait.mainRunIds.length<32,'GOAL_CYCLE_LIMIT','本次目标已达到 32 次主调度运行，不能通过补充重置预算');
+      check(goalInputRevision(goal)<scopeActiveInputLimits.inputs,'GOAL_INPUT_LIMIT','当前目标输入版本已达到上限，不能通过等待继续重置次数');
       check(goal.revision+3<=scopeGoalDecisionLimit+1,'GOAL_DECISION_LIMIT','剩余目标版本不足以接收补充并重新规划审阅');
       check(!wait.mainRunIds.includes(runId)&&!state.runs?.some(run=>run.binding.runId===runId)&&!state.scopes?.some(value=>value.continuations?.some(item=>item.runId===runId)),'GOAL_RUN_CONFLICT','主运行身份已经被使用，不能重复启动');
-      check((scope.continuations??[]).reduce((total,item)=>total+(isHumanContinuation(item)?0:item.input.message.length),0)+input.input.message.length<=scopeContinuationTotalTextLimit,'GOAL_INPUT_LIMIT','本目标补充正文累计超过允许大小，请结束后另建目标');
+      check((scope.continuations??[]).reduce((total,item)=>total+(isHumanContinuation(item)?0:item.input.message.length),0)+(scope.activeInputs??[]).reduce((total,item)=>total+(item.status==='rejected'?0:item.messageCharacters),0)+input.input.message.length<=scopeContinuationTotalTextLimit,'GOAL_INPUT_LIMIT','本目标补充正文累计超过允许大小，请结束后另建目标');
       check(!state.runs?.some(run=>run.binding.rootSessionId===scope.rootSessionId&&['starting','running'].includes(run.status)),'GOAL_WORK_PENDING','本主会话仍有在途成员运行');
       const admitted=await this.budgets?.admit(state,scope,{kind:'main',taskId:scope.rootSessionId,runId});
       // 额度读取可能等待磁盘；停止后的拒绝结果也不能顺带修改原安全等待。

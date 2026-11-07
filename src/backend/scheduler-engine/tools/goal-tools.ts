@@ -1,5 +1,5 @@
 /**
- * 作用定位：将主 Agent 当前用户目标的读取、规划和审阅端口注册为内部 Loop 工具。
+ * 作用定位：将主 Agent 当前用户目标、真实补充历史的读取及规划审阅端口注册为内部 Loop 工具。
  * 设计原因：输入复用 Core 严格协议并保留分配中的 Workflow 选择；输出只序列化一次并核实公开 Schema 与本轮身份，坏回包不重做已发生的决策。模型不能自行指定目标所属会话或签发验收。
  * 职责边界：complete 只申请主轮次结算后的复核；人工项只能引用用户已保存且经专用入口消费的接受，模型不能签署或继续等待。工具层不执行成员或重造证据。
  */
@@ -13,7 +13,7 @@ import {checkedMainToolResult,mainToolContract} from './main-tool-contracts';
 const inspectInput=z.object({}).strict();
 const definitions={
   cbim_goal_inspect:{
-    description:'读取当前用户任务的原始输入、目标版本、计划和审阅状态，以及装配端提供的本会话任务图。先读取最新 revision 和真实候选再规划或审阅；读取不推进执行、不代表验收，不轮询等待。',
+    description:'读取当前用户任务的原始 input、activeInputs 接收历史、continuations、目标版本、计划和审阅及本会话任务图。运行中插入后先读取 accepted 快照（可能含附件展开资料），按最新 inputRevision 重新规划并保留 human 条件；pending/unknown 不能重试发送、派工或宣称完成。先读取最新 revision 和真实候选再规划审阅；读取不推进执行、不代表验收，不轮询等待。',
     schema:inspectInput,effects:['read'] as const,
   },
   cbim_goal_plan:{

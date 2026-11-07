@@ -1,3 +1,11 @@
+### 活动目标的输入准备、接收与关闭
+
+`ScopeActiveInputService` 先持久准备记录，按原 scope/run/queue 派生稳定键，预留尝试数、输入版本、目标决策及累计正文额度，再由 Runtime 发送。明确未发送记录为 rejected；真实 queued 和接受日志序号确认后，同事务保存 accepted、提升 goal/input 版本并清除旧 review，原 input 和旧 plan 保留供重规划。正文是实际发送的队列快照，可能包含附件展开资料，不追认原始用户措辞。等待文本、人工接续和活动补充共用输入次数，不能借切换入口重置限制。
+
+管理器在领取和读取附件之前先查原接收记录；已接受只核实或清理原队列，不重新发送。`AutoCollaboration` 将准备、发送和确认立即纳入 cycle.operations：停止先撤销原引擎，再等操作收口后关闭，不等待管理器串行锁中的自身。接受后的保存错误保持 pending/unknown 并暂停普通队列，不伪装 rejected、不自动重插。取消和失败可以封存未决事实，重启不自动发送。
+
+pending/unknown 阻止规划、派发、续执行预约、新成员领取、成功完成和安全等待；普通聊天成功例外也不能绕过。accepted 使旧计划需要重规划，但无业务计划的普通聊天不强制建计划。审阅与最终关闭通过 `scope-active-input-evidence.ts` 双向核对原令牌、正文哈希和 requested/accepted 日志序号：缺记录的接受日志或缺日志的 accepted 都不能授权完成；已在运行的成员仍可结算真实事实。
+
 ### 结构化提问的运行装配
 
 `loop-engine` 只在实际 requestQuestion 端口存在时创建 `QuestionTools`，主对话和执行成员复用同一严格包装，未装配的运行没有提问入口。原任务队列与 canonical run/call 继续绑定真实调用，模型参数不能提供身份。授权前只描述 read，不弹题；实际调用才等待用户明确提交或取消。输出失败不再次调用端口，工具等待的取消不代表业务副作用回滚。

@@ -1,5 +1,6 @@
 /**
  * 附件边界：显式补充的可信清单和停止信号仅转交受理事务，不进入后续成员回注选项；提交后错误保留原意图。
+ * 活动输入：准备、原生发送和结果确认立即纳入周期在途集合；停止先撤销引擎，再等输入记录收口后封存，不重入管理器串行锁或回滚已接受事实。
  * 作用定位：管理一次用户任务的调度周期，串接主 Agent 调度、执行成员和结果回传，周期结束后释放执行实例。
  * 设计原因：周期冻结输入、主运行归属及软限额；主工具由本轮身份和原调用生成命令，公开回包去除私有上下文并严格核验。回注先核额度和登记再启模型，容量等待或预算拒绝不重放未知运行。
  * 职责边界：主 Agent 只调度和治理知识；依赖替换与成员续执行须等主轮结算才领取。人工继续只消费专用意图，不从普通消息猜批准；所有接续仍经预算准入和停止屏障，退出/重启不重放。
@@ -11,6 +12,7 @@ import type {TaskSpec,RunSummary,RunInputSource} from '../../core/brain/types';
 import type {DispatchScope,DispatchScopeOutcome} from '../../core/tasks/dispatch-scope';
 import type {GoalContinuationRequest} from '../../core/tasks/scope-continuation';
 import type {TrustedContinuationInput} from '../../core/tasks/scope-continuation-attachments';
+import type {ScopeActiveInputPayload,ScopeActiveInputToken,ScopeActiveInputSendReceipt} from '../../core/tasks/scope-active-input';
 import type {HumanContinuationRequest} from '../../core/tasks/human-continue';
 import type {RecoveryRequest} from '../../core/tasks/scope-recovery';
 import type {ReplanRequest} from '../../core/tasks/scope-replan';
@@ -46,9 +48,31 @@ export class AutoCollaboration {
   private pending:Promise<void>=Promise.resolve();
   private scheduled=false;
   private releaseListener:()=>void;
+  /** 接收与封存共享 cycle.operations；停止不等串行入口，封存却必须等真实发送结果收口。 */
+  private insertActiveInput(rootSessionId:string,runId:string,queueId:string,input:ScopeActiveInputPayload,signal:AbortSignal,send:(token?:ScopeActiveInputToken)=>Promise<ScopeActiveInputSendReceipt|undefined>):Promise<void>{
+    const cycle=this.cycles.get(rootSessionId);
+    if(!cycle)return send().then(()=>{}); // 未装配业务周期的独立聊天仍保持旧轻量行为。
+    if(this.closed||cycle.stopped||!cycle.mainRuns.has(runId))return Promise.reject(Object.assign(Error('原主运行已经停止插入，消息仍保留在队列'),{code:'QUEUE_INSERT_STOPPED'}));
+    const fixed=structuredClone(input),identity=this.identity(cycle);
+    const operation=(async()=>{
+      const prepared=await this.dispatch.activeInputs.prepare(identity,cycle.scopeId,runId,queueId,fixed,signal);
+      if(!prepared.fresh){if(prepared.record.status==='accepted')return;fail('QUEUE_INSERT_UNKNOWN','原插入已有记录，请核实原运行，不能再次发送')}
+      let receipt:ScopeActiveInputSendReceipt|undefined;
+      try{receipt=await send(prepared.token)}catch(error){
+        const rejected=['QUEUE_INSERT_STOPPED','QUEUE_INSERT_STALE'].includes((error as {code?:string})?.code??'');
+        try{await this.dispatch.activeInputs.resolve(identity,prepared.token,{status:rejected?'rejected':'unknown',reason:rejected?'原生发送前已停止或原运行失效':'原生发送或接受日志未能确认，不能自动重发'})}catch{fail('QUEUE_INSERT_UNKNOWN','插入结算记录未能确认，原尝试保留，请核实后处理')}
+        throw error;
+      }
+      // queued 后不再检查 signal；目标记录失败也不能伪装 rejected，原 pending 会阻止成功关闭。
+      if(!receipt)fail('QUEUE_INSERT_UNKNOWN','原生接收缺少可信日志依据，原尝试保留待核实');
+      try{await this.dispatch.activeInputs.resolve(identity,prepared.token,{status:'accepted',input:fixed,receipt})}
+      catch{fail('QUEUE_INSERT_UNKNOWN','原生已确认接收，但目标记录未能确认；请查询原记录，勿重复发送')}
+    })();
+    return this.track(cycle,operation);
+  }
   constructor(private owner:KnowledgeWorkspace,private dispatch:WorkspaceDispatchService,private members:MemberExecutionManager,private execution:WorkspaceExecutionManager,lease:WorkspaceExecutionLease,private reportIssue:(rootSessionId:string,error:unknown)=>void=()=>{}){
     this.releaseListener=lease.observeRelease(()=>this.schedule());
-    execution.attachCollaboration({holdMain:runId=>dispatch.budgets.holdMain(runId),busy:id=>this.busy(id),waiting:id=>this.waitingSlots.has(id),humanContinuationReceipt:query=>dispatch.humanContinuations.inspect(query),humanContinuationPreflight:request=>this.humanContinuationPreflight(request),acceptHumanContinuation:(request,task,runId,signal)=>this.acceptHumanContinuation(request,task,runId,signal),replanReceipt:query=>dispatch.replans.inspect(query),replanPreflight:request=>this.replanPreflight(request),acceptReplan:(request,task,context)=>this.acceptReplan(request,task,context),recoveryReceipt:query=>dispatch.recoveries.inspect(query),recoveryPreflight:request=>this.recoveryPreflight(request),acceptRecovery:(request,task,context)=>this.acceptRecovery(request,task,context),recoveryContext:rootSessionId=>dispatch.recoveries.latestContext({workspaceId:owner.entry.id,rootSessionId}),recoveryRunIds:rootSessionId=>dispatch.recoveries.priorRunIds({workspaceId:owner.entry.id,rootSessionId}),continuationReceipt:query=>dispatch.continuations.inspect(query),continuationCheckpoint:request=>this.continuationCheckpoint(request),acceptContinuation:(request,task,runId,trusted)=>this.acceptContinuation(request,task,runId,trusted),starting:(task,options,source,message,runId)=>this.starting(task,source,!!options.profileId,message,options.attachmentIds,runId),startFailed:(task,source,error)=>this.startFailed(task,source,error),settled:(task,_options,summary)=>this.settled(task,summary),stop:id=>this.stop(id)});
+    execution.attachCollaboration({activeInputReceipt:(rootSessionId,runId,queueId)=>dispatch.activeInputs.inspect({workspaceId:owner.entry.id,rootSessionId},runId,queueId),insertActiveInput:(rootSessionId,runId,queueId,input,signal,send)=>this.insertActiveInput(rootSessionId,runId,queueId,input,signal,send),holdMain:runId=>dispatch.budgets.holdMain(runId),busy:id=>this.busy(id),waiting:id=>this.waitingSlots.has(id),humanContinuationReceipt:query=>dispatch.humanContinuations.inspect(query),humanContinuationPreflight:request=>this.humanContinuationPreflight(request),acceptHumanContinuation:(request,task,runId,signal)=>this.acceptHumanContinuation(request,task,runId,signal),replanReceipt:query=>dispatch.replans.inspect(query),replanPreflight:request=>this.replanPreflight(request),acceptReplan:(request,task,context)=>this.acceptReplan(request,task,context),recoveryReceipt:query=>dispatch.recoveries.inspect(query),recoveryPreflight:request=>this.recoveryPreflight(request),acceptRecovery:(request,task,context)=>this.acceptRecovery(request,task,context),recoveryContext:rootSessionId=>dispatch.recoveries.latestContext({workspaceId:owner.entry.id,rootSessionId}),recoveryRunIds:rootSessionId=>dispatch.recoveries.priorRunIds({workspaceId:owner.entry.id,rootSessionId}),continuationReceipt:query=>dispatch.continuations.inspect(query),continuationCheckpoint:request=>this.continuationCheckpoint(request),acceptContinuation:(request,task,runId,trusted)=>this.acceptContinuation(request,task,runId,trusted),starting:(task,options,source,message,runId)=>this.starting(task,source,!!options.profileId,message,options.attachmentIds,runId),startFailed:(task,source,error)=>this.startFailed(task,source,error),settled:(task,_options,summary)=>this.settled(task,summary),stop:id=>this.stop(id)});
   }
 
   /** 人工意见沿专用入口预检；普通补充和队列消息不能选择或消费决定。 */

@@ -46,7 +46,8 @@ const review=goalReviewInputSchema.omit({expectedRevision:true}).extend({...stam
 export const dispatchScopeGoalSchema=z.object({revision,inputRevision:inputRevision.optional(),input:z.object({message,attachmentIds:attachments}).strict(),plan:plan.optional(),review:review.optional(),blocked:z.object({reason:text,at:z.string().datetime()}).strict().optional()}).strict().superRefine((goal,context)=>{
   const issue=(message:string)=>context.addIssue({code:z.ZodIssueCode.custom,message});
   if(goal.revision===1){if(goal.plan||goal.review||(goal.inputRevision??1)!==1)issue('初始目标不能包含决策或补充');return}
-  if(!goal.plan){issue('后续版本必须保留计划');return}
+  // 普通对话可在同轮接收补充而尚未规划；输入增版不强迫创建业务计划。
+  if(!goal.plan){if(goal.review||goal.revision!==(goal.inputRevision??1))issue('无计划目标只能随真实补充增加输入版本');return}
   const criteria=goal.plan.criteria.map(item=>item.id);
   if(!unique(criteria)||!goal.plan.assignments.every(item=>item.criterionIds.every(id=>criteria.includes(id)))||!criteria.every(id=>goal.plan!.assignments.some(item=>item.criterionIds.includes(id))))issue('计划验收项及责任映射无效');
   if(goal.plan.revision<2||goal.plan.revision>goal.revision)issue('计划版本超出目标版本');
@@ -75,17 +76,17 @@ export function goalNeedsReplan(goal:DispatchScopeGoal):boolean{return !!goal.pl
 function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([key,item])=>[key,ordered(item)])):value}
 export const sameGoalValue=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 function valid(condition:unknown,message:string):asserts condition{if(!condition)fail('GRAPH_INPUT_INVALID',message)}
-/** 提交与重放共用；supplement 只能在周期不变量已匹配一次等待消费时传入，普通决策不能擅自提升输入版本。 */
-export function validateScopeGoalTransition(previous:DispatchScopeGoal|undefined,next:DispatchScopeGoal|undefined,isNew:boolean,supplement=false):void{
+/** 提交与重放共用；supplement 来自已核实等待消费，activeSupplement 仅在 validateScopeActiveInputs 匹配真实 pending→accepted 时传入，二者互斥，不能作为普通决策提升输入版本的豁免。 */
+export function validateScopeGoalTransition(previous:DispatchScopeGoal|undefined,next:DispatchScopeGoal|undefined,isNew:boolean,supplement=false,activeSupplement=false):void{
   if(isNew){valid(!next||(next.revision===1&&!next.plan&&!next.review&&!next.blocked),'新目标必须从未规划的第 1 版开始');return}
   if(sameGoalValue(previous,next))return;
   valid(previous&&next,'周期输入创建后不能改写、移除或给旧记录补造');
   valid(sameGoalValue(previous.input,next.input),'原始用户输入不可改写');
   valid(!previous.blocked,'已冻结阻塞的目标不可继续改写');
-  if(supplement){
-    valid(previous.review?.decision==='awaiting_user'&&!next.blocked&&next.revision===previous.revision+1&&goalInputRevision(next)===goalInputRevision(previous)+1&&sameGoalValue(previous.plan,next.plan)&&!next.review,'补充必须提升输入及目标版本、保留旧计划并清除审阅');return;
+  if(supplement||activeSupplement){
+    valid(!(supplement&&activeSupplement)&&(activeSupplement||previous.review?.decision==='awaiting_user')&&!next.blocked&&next.revision===previous.revision+1&&goalInputRevision(next)===goalInputRevision(previous)+1&&sameGoalValue(previous.plan,next.plan)&&!next.review,'补充必须提升输入及目标版本、保留旧计划并清除审阅');return;
   }
-  valid(sameGoalValue(previous.inputRevision,next.inputRevision),'只有绑定等待检查点的显式补充可以提升输入版本');
+  valid(sameGoalValue(previous.inputRevision,next.inputRevision),'只有已核实的等待接续或运行中接受可以提升输入版本');
   if(next.blocked){valid(next.revision===previous.revision&&sameGoalValue(previous.plan,next.plan)&&sameGoalValue(previous.review,next.review),'阻塞记录不能顺带修改计划或审阅');return}
   valid(next.revision===previous.revision+1&&next.revision<=scopeGoalDecisionLimit+1,'目标决策版本必须逐次增加且不超过上限');
   if(!sameGoalValue(previous.plan,next.plan)){

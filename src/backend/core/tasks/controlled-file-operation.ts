@@ -1,6 +1,6 @@
 /**
  * 作用定位：受控单文件写入、原操作报告和本机补偿的公共纯协议，供运行时与 Bridge 共用。
- * 设计原因：只公开身份与字节摘要，真实备份和平台文件身份留在私有事件；applied 只证明操作事实，不是业务验收。
+ * 设计原因：只公开身份与字节摘要，真实备份和平台文件身份留在私有事件；applied 只证明操作事实，不是业务验收。ledger 纯契约供影响观察复用，查询时钟不进入处置依据。
  */
 import {z} from 'zod';
 
@@ -35,10 +35,12 @@ export const controlledFileOperationSummarySchema=z.object({operationId:digest,s
 export type ControlledFileOperationSummary=z.infer<typeof controlledFileOperationSummarySchema>;
 export const fileCompensationSummarySchema=z.object({compensationId:digest,commandId:uuid,revision:positive.max(3),phase:controlledFilePhaseSchema,preparedAt:time,updatedAt:time,issue:controlledFileIssueSchema.optional()}).strict().refine(phaseRevision,'补偿阶段与版本不一致');
 export type FileCompensationSummary=z.infer<typeof fileCompensationSummarySchema>;
-export const controlledFileReportSchema=z.object({version:z.literal(1),identity:controlledFileReportInputSchema,checkedAt:time,ledger:z.union([
+/** 原阶段及补偿序列是稳定事实；不含查询时钟或新的补偿资格。 */
+export const controlledFileLedgerSchema=z.union([
   z.object({state:z.enum(['absent','unverifiable']),issues}).strict(),
   z.object({state:z.literal('recorded'),operation:controlledFileOperationSummarySchema,originalExecution:z.enum(['in_flight','settled','unavailable']),compensationRevision:count.max(controlledFileLimits.compensations),compensations:z.array(fileCompensationSummarySchema).max(controlledFileLimits.compensations)}).strict(),
-]),readOnly:z.literal(true),acceptance:z.literal('not_evaluated')}).strict().superRefine((v,c)=>{if(v.ledger.state!=='recorded')return;const {binding,toolCallId}=v.ledger.operation;if(['workspaceId','rootSessionId','taskId','runId'].some(k=>binding[k as keyof ControlledFileBinding]!==v.identity[k as keyof ControlledFileReportInput])||toolCallId!==v.identity.toolCallId||v.ledger.compensationRevision!==v.ledger.compensations.length||new Set(v.ledger.compensations.map(x=>x.compensationId)).size!==v.ledger.compensations.length)c.addIssue({code:'custom',message:'报告与原调用身份或补偿序列不一致'})});
+]);
+export const controlledFileReportSchema=z.object({version:z.literal(1),identity:controlledFileReportInputSchema,checkedAt:time,ledger:controlledFileLedgerSchema,readOnly:z.literal(true),acceptance:z.literal('not_evaluated')}).strict().superRefine((v,c)=>{if(v.ledger.state!=='recorded')return;const {binding,toolCallId}=v.ledger.operation;if(['workspaceId','rootSessionId','taskId','runId'].some(k=>binding[k as keyof ControlledFileBinding]!==v.identity[k as keyof ControlledFileReportInput])||toolCallId!==v.identity.toolCallId||v.ledger.compensationRevision!==v.ledger.compensations.length||new Set(v.ledger.compensations.map(x=>x.compensationId)).size!==v.ledger.compensations.length)c.addIssue({code:'custom',message:'报告与原调用身份或补偿序列不一致'})});
 export type ControlledFileReport=z.infer<typeof controlledFileReportSchema>;
 export const fileCompensationPreviewInputSchema=z.object({workspaceId:id,instanceId:uuid,rootSessionId:id,operationId:digest}).strict();
 export type FileCompensationPreviewInput=z.infer<typeof fileCompensationPreviewInputSchema>;

@@ -609,3 +609,7 @@ Store 继续用同一串行提交、原命令回执和原协议裁决，不增�
 ## 原治理与责任保存核实（Step39）
 
 `persistent-write-observation.ts` 是纯公开叶子：只记录原命令身份、解析来源摘要、保存状态与有界原记录信息，不含正文或权限。`persistent-write-input.ts` 仅后端使用，复用三项实际严格工具参数与稳定命令算法；原 root/run/call、主实例/通道及负责人 scope 来自已核 canonical。`persistent_record` 为可选观察分支，旧报告及 basis 不补字段；主记录须匹配原工具、knowledge 作用域与其 maintenance/preview/knowledge-write 效果。recorded 仅证明保存，absent 不证明未执行。
+
+## 受控文件统一影响观察（Step40）
+
+受控文件的 `controlledFileLedgerSchema` 从原报告抽出为同形纯协议；影响报告可选 `controlled_file` 分支只保存原阶段/补偿序列，不含 checkedAt、备份路径或平台身份。仅原成员、workspace/business-write 授权可使用，scope/run/task/call 和补偿序列必须一致。旧报告不补字段或改变 basis，not_applied 与 absent 不混同。

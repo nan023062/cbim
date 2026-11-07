@@ -591,3 +591,7 @@ EffectObservationService 仅从完整可信主 canonical 的原 proposed/allowed
 ## 原治理与责任保存核实（Step39）
 
 影响观察通过可选 `observePersistent` 端口核实 cbim_governance_observe/propose 与 cbim_module_owner_change_commit。只在可信唯一主来源与原严格授权均匹配时重建引用，两次核实原命令；来源摘要/身份不符保持不可核实，读取变化使处置依据失效。旧失败/unknown 不清除，记录保存不签发批准、迁移、派发或恢复资格。取证在任务事务外，不在 Store 锁内反向等待知识队列。
+
+## 受控文件统一影响观察（Step40）
+
+`effect-controlled-file.ts` 把既有原受控报告与可信成员完整绑定、scope、原路径、expectedBefore、UTF-8 intendedAfter 及稳定 operationId 再核对。影响服务在事务外两次读取同一原引用，原阶段或补偿变化使旧观察过期；异常保留不可核实，停止继续向外传播。仅返回无查询时钟的 ledger，不获取文件/备份、不调用预览或执行补偿。

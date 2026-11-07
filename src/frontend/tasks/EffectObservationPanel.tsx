@@ -1,5 +1,5 @@
 /**
- * 作用定位：展示原调用状态、当前文件、原控制面/知识事务、原治理/责任保存记录、本机处置和后续独立周期关系。
+ * 作用定位：展示原调用状态、当前文件、原控制面/知识事务、原治理/责任记录、受控写/补偿阶段、本机处置和后续独立周期关系。
  * 设计原因：用户可以核实影响并明确决定下一步，但这些观察不能覆盖旧失败、签署业务验收或自动启动修复。主与成员共用面板，身份不互相伪装。
  */
 import {useState} from 'react';
@@ -15,6 +15,7 @@ import './effect-observation.css';
 const decisions:Record<EffectDecision,string>={inspect_more:'继续核实',repair_in_new_cycle:'新业务修复',leave_unresolved:'保留未解决'};
 const outcomes={succeeded:'原工具成功',failed:'原工具失败',denied:'原操作被拒绝',unknown:'原结果未知',not_authorized:'未记录授权'};
 const knowledgeStates={absent:'未查到原知识事务',prepared:'原事务保存到准备阶段',committing:'原事务记录停留在提交阶段',committed:'原知识事务已提交',rolled_back:'原事务记录为已回滚',recovery_required:'原知识事务仍需人工核实',unverifiable:'原知识事务不可核实'};
+const controlledPhases={prepared:'已保存准备记录',executing:'停留在执行阶段',applied:'已记录写入完成',not_applied:'已确认未发出写入',unknown:'写入结果未知'};
 /** 所选处置明确显示本机来源，不能被误读为账号签名或专业验收。 */
 export function EffectDispositionSummary({record}:{record:EffectDispositionRecord}){return <div className="effect-disposition-summary" data-testid="effect-selected-disposition"><strong>{decisions[record.request.decision]}</strong><p>{record.request.reason}</p><small>本机明确保存 · {new Date(record.recordedAt).toLocaleString()} · 非业务验收</small><code>{record.dispositionId}</code></div>}
 
@@ -35,6 +36,14 @@ export function EffectObservationPanel({identity,anchor,context}:{identity:Effec
         <strong>{call.toolName??'原调用'} · {outcomes[call.outcome]}</strong>
         {call.coverage==='control_commit_only'&&<p>{call.command?.state==='committed'?'原控制面事务已保存':call.command?.state==='absent'?'未查到原保存回执':'原事务仍不可核实'}；不表示业务工作已完成。</p>}
         {call.coverage==='unsupported'&&<p>本项影响暂不支持结构化核实，未知状态保留。</p>}
+        {call.controlled&&<div data-testid="effect-controlled-file" data-state={call.controlled.state}>
+          {call.controlled.state==='recorded'?<><p>原受控写入：{controlledPhases[call.controlled.operation.phase]}</p><p><code>{call.controlled.operation.relativePath}</code></p><p>原操作 <code>{call.controlled.operation.operationId}</code></p>
+            <p>原字节 {call.controlled.operation.before.byteLength} 字节 → 预期 {call.controlled.operation.intendedAfter.byteLength} 字节</p>
+            <p>独立补偿 {call.controlled.compensationRevision} 次；补偿不改写原操作与工具结果。</p>
+            {call.controlled.compensations.map(item=><p key={item.compensationId}>补偿命令 <code>{item.commandId}</code> · {controlledPhases[item.phase]}</p>)}
+          </>:<><p>{call.controlled.state==='absent'?'未查到原受控记录；不证明未写入。':'原受控记录不可核实。'}</p>{call.controlled.issues.map((item,i)=><p key={i}>{item.message}</p>)}</>}
+          <p>当前字节和补偿资格仍需通过原受控操作的预览核实；本观察不执行补偿。</p>
+        </div>}
         {call.persistent&&<div data-testid="effect-persistent-record" data-state={call.persistent.state}>
           <p>{call.persistent.state==='recorded'?(call.persistent.record?.kind==='observation'?'原治理观察已保存':call.persistent.record?.kind==='proposal'?'原治理提案已保存':'原负责人变更已保存'):call.persistent.state==='absent'?'未查到原保存记录':'原保存记录不可核实'}</p>
           <p>原命令 <code>{call.persistent.identity.commandId}</code></p>

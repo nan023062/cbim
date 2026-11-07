@@ -1,5 +1,5 @@
 /**
- * 作用定位：组合原调用授权、已提交控制面、原知识事务、原治理/责任保存记录与当前选定文件，保存本机明确处置并派生新周期关联。
+ * 作用定位：组合原调用授权、已提交控制面、原知识事务、原治理/责任记录、受控文件阶段与当前选定文件，保存本机明确处置并派生新周期关联。
  * 设计原因：原 unknown、今天的字节和后来修复完成各自保留；取证在任务事务外，提交只做原身份/版本 CAS，不执行工具或反向等知识/模型队列。
  * 职责边界：只操作已打开工作区的唯一 Store；edit 仅接受当前数组与旧单对两种严格原形状，没有成功基线也可观察可信原路径，但不补造基线、清除 unknown 或授予续跑。
  */
@@ -20,6 +20,8 @@ import {knowledgeTransactionObservationSchema,type KnowledgeTransactionObservati
 import {originalKnowledgeWrite,originalKnowledgeIdentity,type KnowledgeWriteReference} from '../../core/knowledge/knowledge-write-input';
 import {persistentWriteObservationSchema,persistentWriteEffects,type PersistentWriteObservation,type PersistentWriteName} from '../../core/tasks/persistent-write-observation';
 import {originalPersistentWrite,persistentWriteIdentity,persistentWriteSourceHash,type PersistentWriteReference} from '../../core/tasks/persistent-write-input';
+import {controlledFileWriteInputSchema,controlledFileWriteToolName,type ControlledFileReportInput,type ControlledFileReport} from '../../core/tasks/controlled-file-operation';
+import {observeControlledEffect,type ControlledEffectReference} from './effect-controlled-file';
 
 /** Main 固定工作区根的可信只读端口；路径仍须二次规范化，释放只读占用不代表原调用已核实成功。 */
 export interface EffectObservationPorts extends EffectSourcePorts {
@@ -30,6 +32,8 @@ export interface EffectObservationPorts extends EffectSourcePorts {
   observeKnowledge?(reference:KnowledgeWriteReference,signal?:AbortSignal):Promise<KnowledgeTransactionObservation>;
   /** 原治理账本或责任审计的保存证明；不读取当前关系替代原命令，不实施或批准。 */
   observePersistent?(reference:PersistentWriteReference,signal?:AbortSignal):Promise<PersistentWriteObservation>;
+  /** 复用原成员受控阶段/补偿只读报告，不获取业务文件、备份或补偿写入口。 */
+  observeControlled?(input:ControlledFileReportInput,signal?:AbortSignal):Promise<ControlledFileReport>;
   assertCurrent?():void;
 }
 // 只识别原授权中无歧义的单文件形状，不执行 Pi 的字符串/单对象参数纠正，也不合并新旧字段。
@@ -57,7 +61,7 @@ export class EffectObservationService {
     this.alive(input.workspaceId,signal);const before=await this.store.read();check(before.workspaceId===input.workspaceId,'EFFECT_IDENTITY','存储不属于当前工作区');
     const first=await readEffectSource(before,input,this.owner.entry.path,this.ports,this.commands);this.alive(input.workspaceId,signal);
     const report:EffectObservationReport={version:1,identity:input,checkedAt:new Date().toISOString(),basis:'0'.repeat(64),dispositionRevision:effectDispositionRevision(before,input.rootSessionId),consistency:'stable',source:first.source,calls:[],limitations:['本报告仅覆盖明确选择的调用和文件；当前观察不证明原操作完整效果，也不代表业务验收。'],readOnly:true,acceptance:'not_evaluated'};
-    const paths=new Map<string,string>(),knowledge=new Map<string,KnowledgeWriteReference>(),persistent=new Map<string,PersistentWriteReference>(),readable=first.source.state==='verified'&&first.summary&&first.facts;
+    const paths=new Map<string,string>(),knowledge=new Map<string,KnowledgeWriteReference>(),persistent=new Map<string,PersistentWriteReference>(),controlled=new Map<string,ControlledEffectReference>(),readable=first.source.state==='verified'&&first.summary&&first.facts;
     for(const toolCallId of input.subject.toolCallIds){
       const fact=readable?first.facts!.items.find(x=>x.toolCallId===toolCallId):undefined;
       const item:EffectCallObservation={toolCallId,outcome:fact?.status??'unknown',coverage:'unsupported',limitations:[]};report.calls.push(item);
@@ -70,6 +74,15 @@ export class EffectObservationService {
         if(control.consistency!=='stable')report.consistency='changed_during_read';continue;
       }
       const name=fact.toolName;
+      if(input.subject.kind==='member_run'&&name===controlledFileWriteToolName&&fact.allowedSeq&&fact.status!=='denied'&&fact.scope.kind==='workspace'&&fact.scope.workspaceId===input.workspaceId&&fact.effects.length===1&&fact.effects[0]==='business-write'&&this.ports?.observeControlled&&first.run&&first.source.scopeId){
+        const parsed=controlledFileWriteInputSchema.safeParse(original);
+        if(!parsed.success){item.limitations.push('原受控写入参数不符合严格协议，未查询阶段。');continue}
+        const reference:ControlledEffectReference={identity:{workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,taskId:input.subject.taskId,runId:input.subject.runId,toolCallId},scopeId:first.source.scopeId,binding:first.run.binding,input:parsed.data};
+        item.coverage='controlled_file';item.controlled=await observeControlledEffect(reference,this.ports.observeControlled,()=>this.alive(input.workspaceId,signal),signal);controlled.set(toolCallId,reference);
+        item.limitations.push('仅核实原写入和独立补偿阶段；不读取当前文件，不授予补偿或业务验收。');
+        if(item.controlled.state==='absent')item.limitations.push('未查到原受控记录不等于没有写入，不可据此重试。');
+        continue;
+      }
       if(input.subject.kind==='main_run'&&Object.prototype.hasOwnProperty.call(persistentWriteEffects,name)&&fact.allowedSeq&&fact.status!=='denied'&&fact.scope.kind==='knowledge'&&fact.scope.workspaceId===input.workspaceId&&fact.effects.length===1&&fact.effects[0]===persistentWriteEffects[name as PersistentWriteName]&&this.ports?.observePersistent){
         const main=first.summary!.conversationBinding;
         const reference=main&&first.source.scopeId?originalPersistentWrite(name,original,{workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,scopeId:first.source.scopeId,agentInstanceId:main.agentInstanceId,agentSessionId:main.agentSessionId,runId:input.subject.runId,toolCallId}):undefined;
@@ -109,6 +122,7 @@ export class EffectObservationService {
     // 两次核实同一原引用；prepared 等阶段变化不能沿用第一次观察保存确定依据。
     for(const [toolCallId,reference]of knowledge){const again=await this.knowledge(reference,signal);if(!isDeepStrictEqual(report.calls.find(call=>call.toolCallId===toolCallId)!.knowledge,again)){report.consistency='changed_during_read';report.limitations.push('读取期间原知识事务发生变化，请重新核实。')}}
     for(const [toolCallId,reference]of persistent){const again=await this.persistent(reference,signal);if(!isDeepStrictEqual(report.calls.find(call=>call.toolCallId===toolCallId)!.persistent,again)){report.consistency='changed_during_read';report.limitations.push('读取期间原保存记录发生变化，请重新核实。')}}
+    for(const [toolCallId,reference]of controlled){const again=await observeControlledEffect(reference,this.ports!.observeControlled!,()=>this.alive(input.workspaceId,signal),signal);if(!isDeepStrictEqual(report.calls.find(call=>call.toolCallId===toolCallId)!.controlled,again)){report.consistency='changed_during_read';report.limitations.push('读取期间原受控阶段或补偿历史变化，请重新核实。')}}
     const last=await readEffectSource(before,input,this.owner.entry.path,this.ports,this.commands);this.alive(input.workspaceId,signal);
     const after=await this.store.read();this.alive(input.workspaceId,signal);
     if(first.stamp!==last.stamp||effectStateStamp(before,input)!==effectStateStamp(after,input)||report.dispositionRevision!==effectDispositionRevision(after,input.rootSessionId)){report.consistency='changed_during_read';report.limitations.push('读取期间来源、周期或处置版本变化，请重新核实；本次不作为确定保存依据。')}

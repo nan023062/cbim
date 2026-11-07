@@ -1,6 +1,6 @@
 /**
  * 作用定位：让已派发任务在独立成员会话中执行，提交领取、启动、结果、中断及一次安全停泊/续执行事实。
- * 设计原因：全局准入及本地租约先同步领取，容量等待不创建 run 或 claim；Workflow 必需工具按真实能力先核，候选结算重读 canonical 条件。已释放实例、已关闭或安全等待的周期不能执行，占用持续到终态事务完成。
+ * 设计原因：全局准入及本地租约先同步领取，容量等待不创建 run 或 claim；Workflow 工具及结构验证器按实际能力先核，候选结算重读 canonical 并复核当前文件。占用持续到终态事务完成，异步核实期间停止仍阻止候选发布。
  * 职责边界：本成员 Loop 不递归派发或继承批准；求助在关闭后单向交接。检查点须完整关闭及复核后释放占用；主调度预约一次原任务新轮，失败、停止和重启不复活旧实例。只读报告不触发续执行，候选及匹配哈希不等于验收。
  */
 import {randomUUID} from 'node:crypto';
@@ -36,6 +36,7 @@ import type {ResumeMemberInput,ResumeMemberReceipt} from '../../core/tasks/queue
 import {goalNeedsReplan} from '../../core/tasks/scope-goal';
 import {preparedWorkflowContracts} from '../../core/tasks/execution-context';
 import {validateMemberWorkflow} from './member-workflow';
+import {jsonValidationLimits} from '../../core/workspace/json-validation-schema';
 
 /** 装配主进程提供模型与磁盘能力，调度层不解密密钥或导入平台实现。 */
 export interface MemberExecutionPorts {
@@ -56,6 +57,8 @@ export interface MemberExecutionPorts {
     model:ResolvedLlm['profile'];
     /** 与本轮实际引擎注册参数一致的工具清单；仅能力预检，不能替代权限或批准。 */
     availableTools?:readonly string[];
+    /** 工厂实际提供的受限验证器；仅有名称不能替代冻结要求、文件端口或授权。 */
+    availableValidators?:readonly string[];
     create(run:DispatchRun,task:TaskNode,hooks:{onEvent(event:StoredEvent):void;onEngineReady(input:{taskId:string;runId:string;sessionFile?:string}):Promise<void>;requestApproval(call:ToolCall):Promise<ToolDecision>;requestQuestion(args:unknown,signal:AbortSignal):Promise<unknown>}):Promise<LoopRuntime>;
   }>;
   /** 读取指定 run 的真实日志，校验通道安全续接；不得用最新运行或内存猜测替代。 */
@@ -167,8 +170,12 @@ export class MemberExecutionManager {
         const workflows=preparedWorkflowContracts(prepared);
         if(workflows.length){
           if(!engine.availableTools)fail('WORKFLOW_CAPABILITIES_UNAVAILABLE','本次引擎未提供可信工具能力清单，不能执行带约定的 Workflow');
-          const missing=[...new Set(workflows.flatMap(binding=>binding.contract.delivery?.requiredToolEvidence.map(item=>item.toolName)??[]))].filter(name=>!engine.availableTools!.includes(name));
+          const missing=[...new Set(workflows.flatMap(binding=>binding.contract.delivery?.requiredToolEvidence?.map(item=>item.toolName)??[]))].filter(name=>!engine.availableTools!.includes(name));
           if(missing.length)fail('WORKFLOW_TOOL_UNAVAILABLE','当前权限或引擎未提供 Workflow 必需工具：'+missing.join('、'));
+          const validationRequirements=workflows.flatMap(binding=>binding.contract.delivery?.requiredValidations??[]);
+          if(validationRequirements.length>jsonValidationLimits.records)fail('WORKFLOW_VALIDATION_LIMIT','本任务的结构验证要求超过单轮记录上限，请拆分明确模块任务');
+          const validators=[...new Set(validationRequirements.map(item=>item.validator))];
+          if(validators.some(validator=>!engine.availableValidators?.includes(validator))||validators.length&&!this.ports.artifacts)fail('WORKFLOW_VALIDATION_UNAVAILABLE','当前引擎或文件端口未提供 Workflow 必需结构验证能力');
         }
         if(member.configurationRevision!==prepared.knowledgeRevision)fail('DISPATCH_CONTEXT_CHANGED','成员配置版本已变化，请重新登记派发');
         const prerequisites=graph.edges.filter(edge=>edge.enabled&&edge.kind==='dependency'&&edge.toNodeId===task.nodeId).map(edge=>{
@@ -267,7 +274,7 @@ export class MemberExecutionManager {
       const run=this.currentRun(state,original),{graph,task,member,session}=memberTask(state,run.binding.rootSessionId,run.binding.taskId);
       if(summary&&(json(summary.memberBinding)!==json(run.binding)||summary.task.taskId!==task.taskId||summary.runId!==run.binding.runId))fail('MEMBER_RUN_MISMATCH','执行摘要身份不一致');
       let result=status==='completed'&&summary?memberCandidate(task,summary):undefined,help:MemberHelpRecord|undefined,checkpoint:MemberCheckpointRecord|undefined,checkpointProof:MemberCheckpointProof|undefined;
-      if(result&&preparedWorkflowContracts(run.prepared).length)try{const canonical=await this.ports.inspect(run);validateMemberWorkflow(task,run,canonical,this.owner.entry.path);result=memberCandidate(task,canonical)}catch(problem){result=undefined;error='Workflow 交付条件未通过可信运行核实：'+(problem instanceof Error?problem.message:String(problem))}
+      if(result&&preparedWorkflowContracts(run.prepared).length)try{const canonical=await this.ports.inspect(run);await validateMemberWorkflow(task,run,canonical,this.owner.entry.path,this.ports.artifacts?{...this.ports.artifacts,signal:this.ports.signal}:undefined);result=memberCandidate(task,canonical)}catch(problem){result=undefined;error='Workflow 交付条件未通过可信运行核实：'+(problem instanceof Error?problem.message:String(problem))}
       if(!recovery&&status==='completed'&&summary?.events.some(event=>event.type==='task.checkpoint_requested')){
         result=undefined;
         try{
@@ -282,7 +289,7 @@ export class MemberExecutionManager {
       }
       if(result)try{await recheckDispatchExecutionContext(this.owner,run.prepared)}catch{result=undefined;error='执行期间知识基线变化，交付候选需要重新核实'}
       // canonical 重读期间用户仍可能停止；在没有进一步 await 的提交准备末端再次核对，不能发布迟到安全交接。
-      if((help||checkpoint)&&this.handles.get(task.taskId)?.stopping){help=undefined;checkpoint=undefined;checkpointProof=undefined;status='cancelled';error='用户停止了本次运行'}
+      if((result||help||checkpoint)&&(this.handles.get(task.taskId)?.stopping||this.ports.signal?.aborted||this.ports.isCurrent?.()===false)){result=undefined;help=undefined;checkpoint=undefined;checkpointProof=undefined;status='cancelled';error='用户停止了本次运行'}
       const now=new Date().toISOString(),taskStatus=checkpoint?'checkpointed' as const:result?'result_ready' as const:status==='completed'?'blocked' as const:status;
       const updated:TaskNode={...task,revision:task.revision+1,status:taskStatus,activeRunId:undefined,result,help,...(checkpoint?{checkpoints:[checkpoint]}:{}),updatedAt:now,waitReason:checkpoint?'成员已安全停泊，等待主调度决定是否沿原任务续执行一次':result?undefined:help?'本轮执行结束，待主调度新安排：'+help.input.reason:error??(status==='completed'?'本轮未提交与派发目标一致的有效计划和交付证据':status==='cancelled'?'用户停止了本次运行':'执行未正常结束，请核实产物')};
       const waitingTaskIds=member.waitingTaskIds.filter(id=>id!==task.taskId);

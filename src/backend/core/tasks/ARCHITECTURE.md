@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-任务计划、派发图、目标与等待。执行过程七工具在唯一输出快照核对保存前依据及真实运行，不向计划补造身份；旧证据和失败回包不能成为交付或安全交接。检查点预约与消费分别持久化，关闭封存待办；人工意见绑定当前依据，模型不能构造批准。
+任务计划、派发图、目标与等待。严格输出和可信运行区分保存事实与交付；Workflow结构出口只选当前明确引用的passed验证，按要求/Schema/基线/原调用重算，不以工具success代替专业符合。检查点一次续跑、人工决定与等待各自绑定真实来源，历史不补造授权或证据。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -65,7 +65,10 @@
 | [scope-usage.ts](scope-usage.ts) | 定义指定调度周期的只读运行计量报告，供调度服务、Bridge 和任务视图共用。 |
 | [scope-view.ts](scope-view.ts) | 定义主会话调度周期的公开摘要、选中详情和独立增量投影，供存储与界面共享。 |
 | [types.ts](types.ts) | 业务目标和冻结上下文的任务定义。 |
-| [workflow-evidence.ts](workflow-evidence.ts) | 核实可选 Workflow 的计划前置和交付回执，供运行时与调度结算共用。 |
+| [validation-evidence.ts](validation-evidence.ts) | 从可信冻结 Workflow 与本轮日志核实 JSON 验证事实，供 Runtime、交付和主目标复核共同使用。 |
+| [validation-tools.ts](validation-tools.ts) | 为已装配 JSON 验证要求的正式成员提供严格输入、唯一 wire 输出及真实能力说明。 |
+| [validation.ts](validation.ts) | JSON 产物验证工具、不可变检查事实及 Workflow 精确出口的叶子契约。 |
+| [workflow-evidence.ts](workflow-evidence.ts) | 核实可选 Workflow 的计划前置、工具回执及精确 JSON 文件结构出口，供运行时与调度结算共用。 |
 
 ## 架构类图
 
@@ -1395,6 +1398,7 @@ class N_src_backend_core_tasks_member_tool_output_ts_ProgressOutputBasis["Progre
   +evidence
   +workflow
   +artifactsAvailable
+  +validations
 }
 N_src_backend_core_tasks_member_tool_output_ts ..> N_src_backend_core_tasks_member_tool_output_ts_ProgressOutputBasis : 声明
 class N_src_backend_core_tasks_member_tool_output_ts_MemberToolOutputExpectation["MemberToolOutputExpectation"] {
@@ -1409,7 +1413,7 @@ class N_src_backend_core_tasks_member_tool_output_ts_MemberToolOutputExpectation
 N_src_backend_core_tasks_member_tool_output_ts ..> N_src_backend_core_tasks_member_tool_output_ts_MemberToolOutputExpectation : 声明
 ```
 
-直接依赖：[../foundation/identity.ts](../foundation/identity.ts)、[../tools/contracts.ts](../tools/contracts.ts)、[../tools/receipt-schema.ts](../tools/receipt-schema.ts)、[../tools/types.ts](../tools/types.ts)、[progress-schema.ts](progress-schema.ts)、[progress.ts](progress.ts)、[member-help.ts](member-help.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[scope-goal.ts](scope-goal.ts)、[workflow-evidence.ts](workflow-evidence.ts)。
+直接依赖：[../foundation/identity.ts](../foundation/identity.ts)、[../tools/contracts.ts](../tools/contracts.ts)、[../tools/receipt-schema.ts](../tools/receipt-schema.ts)、[../tools/types.ts](../tools/types.ts)、[progress-schema.ts](progress-schema.ts)、[progress.ts](progress.ts)、[member-help.ts](member-help.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[scope-goal.ts](scope-goal.ts)、[workflow-evidence.ts](workflow-evidence.ts)、[validation.ts](validation.ts)。
 
 ### progress-schema.ts
 
@@ -1440,7 +1444,7 @@ class N_src_backend_core_tasks_progress_schema_ts_TaskProgressInspect["TaskProgr
 N_src_backend_core_tasks_progress_schema_ts ..> N_src_backend_core_tasks_progress_schema_ts_TaskProgressInspect : 声明
 ```
 
-直接依赖：[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[../tools/receipt-schema.ts](../tools/receipt-schema.ts)、[artifact-baseline.ts](artifact-baseline.ts)。
+直接依赖：[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[../tools/receipt-schema.ts](../tools/receipt-schema.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[validation.ts](validation.ts)、[../workspace/json-validation-schema.ts](../workspace/json-validation-schema.ts)。
 
 ### progress-tools.ts
 
@@ -1493,7 +1497,7 @@ class N_src_backend_core_tasks_progress_tools_ts_TaskProgressTools["TaskProgress
 N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_progress_tools_ts_TaskProgressTools : 声明
 ```
 
-直接依赖：[progress.ts](progress.ts)、[../tools/types.ts](../tools/types.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[../tools/results.ts](../tools/results.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[workflow-evidence.ts](workflow-evidence.ts)、[progress-schema.ts](progress-schema.ts)、[member-tool-output.ts](member-tool-output.ts)。
+直接依赖：[progress.ts](progress.ts)、[../tools/types.ts](../tools/types.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[../tools/results.ts](../tools/results.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[workflow-evidence.ts](workflow-evidence.ts)、[validation.ts](validation.ts)、[progress-schema.ts](progress-schema.ts)、[member-tool-output.ts](member-tool-output.ts)。
 
 ### progress.ts
 
@@ -1516,6 +1520,7 @@ class N_src_backend_core_tasks_progress_ts_WorkflowEvidenceProof["WorkflowEviden
   +version
   +bindingsHash
   +checks
+  +validationChecks
 }
 N_src_backend_core_tasks_progress_ts ..> N_src_backend_core_tasks_progress_ts_WorkflowEvidenceProof : 声明
 class N_src_backend_core_tasks_progress_ts_TaskProgress["TaskProgress"] {
@@ -1531,6 +1536,7 @@ class N_src_backend_core_tasks_progress_ts_TaskProgress["TaskProgress"] {
 N_src_backend_core_tasks_progress_ts ..> N_src_backend_core_tasks_progress_ts_TaskProgress : 声明
 ```
 
+直接依赖：[validation.ts](validation.ts)。
 
 ### queue.ts
 
@@ -2230,6 +2236,111 @@ N_src_backend_core_tasks_types_ts ..> N_src_backend_core_tasks_types_ts_TaskSpec
 ```
 
 
+### validation-evidence.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_validation_evidence_ts["validation-evidence.ts"] {
+  <<module>>
+  +validationRequirement()
+  +verifyValidationRecords()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_validation_evidence_ts["validation-evidence.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_validation_evidence_ts_ValidationWorkflowBinding["ValidationWorkflowBinding"] {
+  <<interface>>
+  +moduleId
+  +workflowId
+  +workflowVersion
+  +contract
+}
+N_src_backend_core_tasks_validation_evidence_ts ..> N_src_backend_core_tasks_validation_evidence_ts_ValidationWorkflowBinding : 声明
+```
+
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[../workspace/json-validation-schema.ts](../workspace/json-validation-schema.ts)、[artifact-evidence.ts](artifact-evidence.ts)、[validation.ts](validation.ts)。
+
+### validation-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_validation_tools_ts["validation-tools.ts"] {
+  <<module>>
+  +validationTool()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_validation_tools_ts["validation-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_validation_tools_ts_ValidationTools["ValidationTools"] {
+  +list()
+  +call()
+  -binding
+  -port
+  -knowledgeRevision
+  -bindings
+}
+N_src_backend_core_tasks_validation_tools_ts ..> N_src_backend_core_tasks_validation_tools_ts_ValidationTools : 声明
+```
+
+直接依赖：[../tools/results.ts](../tools/results.ts)、[validation.ts](validation.ts)、[validation-evidence.ts](validation-evidence.ts)。
+
+### validation.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_validation_ts["validation.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_validation_ts_ValidationInput["ValidationInput"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_validation_ts ..> N_src_backend_core_tasks_validation_ts_ValidationInput : 声明
+class N_src_backend_core_tasks_validation_ts_ValidationResult["ValidationResult"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_validation_ts ..> N_src_backend_core_tasks_validation_ts_ValidationResult : 声明
+class N_src_backend_core_tasks_validation_ts_ValidationBinding["ValidationBinding"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_validation_ts ..> N_src_backend_core_tasks_validation_ts_ValidationBinding : 声明
+class N_src_backend_core_tasks_validation_ts_ValidationRecord["ValidationRecord"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_validation_ts ..> N_src_backend_core_tasks_validation_ts_ValidationRecord : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_validation_ts["validation.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_validation_ts_WorkflowValidationCheck["WorkflowValidationCheck"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_validation_ts ..> N_src_backend_core_tasks_validation_ts_WorkflowValidationCheck : 声明
+class N_src_backend_core_tasks_validation_ts_ProgressValidationPort["ProgressValidationPort"] {
+  <<interface>>
+  +records()
+  +verifyCurrent()
+}
+N_src_backend_core_tasks_validation_ts ..> N_src_backend_core_tasks_validation_ts_ProgressValidationPort : 声明
+```
+
+直接依赖：[artifact-baseline.ts](artifact-baseline.ts)、[../tools/receipt-schema.ts](../tools/receipt-schema.ts)、[../workspace/json-validation-schema.ts](../workspace/json-validation-schema.ts)。
+
 ### workflow-evidence.ts
 
 ```mermaid
@@ -2239,6 +2350,7 @@ class N_src_backend_core_tasks_workflow_evidence_ts["workflow-evidence.ts"] {
   +workflowHasEffects()
   +assertWorkflowPlan()
   +evaluateWorkflowDelivery()
+  +selectWorkflowValidations()
   +validateWorkflowEvidence()
 }
 ```
@@ -2264,7 +2376,7 @@ class N_src_backend_core_tasks_workflow_evidence_ts_WorkflowProgressContext["Wor
 N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_workflow_evidence_ts_WorkflowProgressContext : 声明
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[execution-context.ts](execution-context.ts)、[progress.ts](progress.ts)、[types.ts](types.ts)、[../tools/types.ts](../tools/types.ts)、[../tools/native-tools.ts](../tools/native-tools.ts)、[artifact-evidence.ts](artifact-evidence.ts)。
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[execution-context.ts](execution-context.ts)、[progress.ts](progress.ts)、[types.ts](types.ts)、[../tools/types.ts](../tools/types.ts)、[../tools/native-tools.ts](../tools/native-tools.ts)、[artifact-evidence.ts](artifact-evidence.ts)、[validation.ts](validation.ts)、[validation-evidence.ts](validation-evidence.ts)、[../workspace/json-validation-schema.ts](../workspace/json-validation-schema.ts)。
 
 ### 本目录调用边界
 
@@ -2999,22 +3111,19 @@ class N_src_backend_core_tasks_member_tool_output_ts["member-tool-output.ts"] {
 class N_src_backend_core_tasks_workflow_evidence_ts["workflow-evidence.ts"] {
   <<module>>
 }
+class N_src_backend_core_tasks_validation_ts["validation.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_progress_schema_ts["progress-schema.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_artifact_baseline_ts["artifact-baseline.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_progress_tools_ts["progress-tools.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_progress_ts["progress.ts"] {
-  <<module>>
-}
 N_src_backend_core_tasks_member_tool_output_ts ..> N_src_backend_core_tasks_workflow_evidence_ts : 导入依赖
+N_src_backend_core_tasks_member_tool_output_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
 N_src_backend_core_tasks_progress_schema_ts ..> N_src_backend_core_tasks_artifact_baseline_ts : 导入依赖
-N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_progress_ts : 导入依赖
-N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_artifact_baseline_ts : 导入依赖
+N_src_backend_core_tasks_progress_schema_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
 ```
 
 ```mermaid
@@ -3022,7 +3131,27 @@ classDiagram
 class N_src_backend_core_tasks_progress_tools_ts["progress-tools.ts"] {
   <<module>>
 }
+class N_src_backend_core_tasks_progress_ts["progress.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_artifact_baseline_ts["artifact-baseline.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_workflow_evidence_ts["workflow-evidence.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_validation_ts["validation.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_progress_ts : 导入依赖
+N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_artifact_baseline_ts : 导入依赖
+N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_workflow_evidence_ts : 导入依赖
+N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_progress_tools_ts["progress-tools.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_progress_schema_ts["progress-schema.ts"] {
@@ -3031,15 +3160,21 @@ class N_src_backend_core_tasks_progress_schema_ts["progress-schema.ts"] {
 class N_src_backend_core_tasks_member_tool_output_ts["member-tool-output.ts"] {
   <<module>>
 }
+class N_src_backend_core_tasks_progress_ts["progress.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_validation_ts["validation.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_queued_dependency_replacement_invariants_ts["queued-dependency-replacement-invariants.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_workflow_evidence_ts : 导入依赖
 N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_progress_schema_ts : 导入依赖
 N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_member_tool_output_ts : 导入依赖
+N_src_backend_core_tasks_progress_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
 N_src_backend_core_tasks_queued_dependency_replacement_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 ```
 
@@ -3276,6 +3411,32 @@ N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_scope_budget
 
 ```mermaid
 classDiagram
+class N_src_backend_core_tasks_validation_evidence_ts["validation-evidence.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_artifact_evidence_ts["artifact-evidence.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_validation_ts["validation.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_validation_tools_ts["validation-tools.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_validation_evidence_ts ..> N_src_backend_core_tasks_artifact_evidence_ts : 导入依赖
+N_src_backend_core_tasks_validation_evidence_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
+N_src_backend_core_tasks_validation_tools_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
+N_src_backend_core_tasks_validation_tools_ts ..> N_src_backend_core_tasks_validation_evidence_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_validation_ts["validation.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_artifact_baseline_ts["artifact-baseline.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_workflow_evidence_ts["workflow-evidence.ts"] {
   <<module>>
 }
@@ -3288,13 +3449,29 @@ class N_src_backend_core_tasks_progress_ts["progress.ts"] {
 class N_src_backend_core_tasks_types_ts["types.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_artifact_evidence_ts["artifact-evidence.ts"] {
-  <<module>>
-}
+N_src_backend_core_tasks_validation_ts ..> N_src_backend_core_tasks_artifact_baseline_ts : 导入依赖
 N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_execution_context_ts : 导入依赖
 N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_progress_ts : 导入依赖
 N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_types_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_workflow_evidence_ts["workflow-evidence.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_artifact_evidence_ts["artifact-evidence.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_validation_ts["validation.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_validation_evidence_ts["validation-evidence.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_artifact_evidence_ts : 导入依赖
+N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
+N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_validation_evidence_ts : 导入依赖
 ```
 
 
@@ -3782,3 +3959,13 @@ accept 必须覆盖此人工项当前审阅的全部真实成员候选，为每�
 `record` 只保存当前代次的真实三身份、相同工作区作用域、明确成功且带结果哈希的可引用回执，并隔离其副本。历史报告仍可读取缺哈希或空工具名的旧事实，但它们不能成为本轮步骤证据。Workflow 继续在实际交付边界复核在途操作、全部模块条件及当前所选回执，保存后的输出证明须与重新计算的证明一致；awaiting_review 仅是交付候选。
 
 三项成员工具保持已有暂存结构和工具调用身份。捕获核对明确来源集合、进度及可信知识版本；求助和检查点核对原输入及独立冻结的暂存事实，不能把 staged 变为 completed。开始保存后失败可能已有记录：artifact 的短门闩只在真实 finished/denied 后释放；help/checkpoint 的交接门闩不因坏回包解锁，模型须结束当前轮，由主调度或界面核实原记录，不能继续查询或自动重复暂存。
+
+### 指定 JSON 产物的精确结构出口
+
+`validation.ts` 保留严格的要求引用输入、完整成员绑定结果与 canonical 记录。`cbim_validation_run` 仅在有冻结 JSON 要求的正式成员中装配；输入只有 moduleId/requirementId/baselineId/expectedTaskProgressVersion，真实路径、Schema、知识和结论不能来自模型。`validation-tools.ts` 独立冻结完整绑定、要求及输入后调用端口一次，输出按原唯一 wire 核验；错误不删除检查事件或自动重试。
+
+`validation-evidence.ts` 复用成功工具链与文件基线核验：要求是唯一冻结模块声明，文件路径与指纹须精确匹配所选本轮有效基线；检查当时进度、知识、最后副作用序号和调用窗口一致。基线进度可早于后来步骤版本，但计划修订或业务/知识副作用后失效。`validation.checked` 只有匹配的实际成功结束回执才派生 `ValidationRecord`；失败/未结束暂存不会变成证明，成功却没有事件、坏身份/哈希/正文/重复记录均拒绝。运行缓存可省略无关事件，外层仍须核完整 canonical 顺序、头、原生会话与终态。
+
+工具成功和结构通过分别表达。rejected 保留真实已执行事实，也可被步骤引用；`selectWorkflowValidations` 只接受步骤明确引用、属于该条件的唯一 passed 记录。`WorkflowEvidenceProof.validationChecks` 固定验证/调用/Schema/基线/文件身份，每个模块条件独立匹配；一次成员最多16项 JSON 条件，旧无此声明不补空字段。`TaskProgressTools` 的可选验证端口提供当前代次记录，并在保存交付之前异步复核实际选定 passed 文件；旧 rejected 或未选记录不会被偷偷当作出口，普通步骤更新不清同代证据。
+
+Progress 保存前独立冻结验证记录，原 wire 证明必须能由这些事实重算；成员结算、主目标审阅和最终完成还须通过可信平台再次核实当前文件字节，不能仅信历史 passed。文件变化不重写旧检查结论，取消不表示回滚；该能力不扩大 checkpoint 工具白名单、主 Agent 业务执行权限、整个工作区覆盖或人工验收语义。

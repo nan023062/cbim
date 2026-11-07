@@ -251,3 +251,9 @@ GraphLayout --> GraphContract : 真实节点与连线
 `MemberArtifactReport` 只挂载在已经明确选中的成员 run 下。首次不查询，加载列表不读业务文件、不自动选最新记录；用户选定 baselineId 再点击复核。`ArtifactReportController` 校验 workspace/root/task/run、唯一基线和文件、逐文件字节与摘要一致性，双击合并读取，换选项/卸载隔离迟到响应。图或周期变化只标过期，不扫描或启动模型。
 
 `dispatch.artifactReport` 与执行报告、工具分页和恢复预览使用独立依据。显示仅限相对路径、字节、哈希和核实问题；变化、缺失与不可核实分开，部分文件一致不签署验收、不证明整个工作区未变。错误保留旧报告并明确标注，旧观察不能悄悄替代当前结果。
+
+## 产物结构验证记录
+
+`MemberValidationPanel` 在当前成员轮次详情展示公开的 `validation.checked`，结合相同 workspace/task/run/toolCall 的唯一真实完成回执决定是否已确认。坏回包或缺终态保持“验证结果未确认”，不能根据暂存 passed 先显示成功。
+
+`member-validation-state` 保留每次原始 passed/rejected，并将可见后续写入、命令或新计划使旧依据过期的事实单独表达。外部文件变化无法由此事件流持续检测，不伪造过期事件；当前候选由后端交付/审阅复核。记录只显示当时文件与规则指纹和无原值诊断，不提供验证执行或重试入口。

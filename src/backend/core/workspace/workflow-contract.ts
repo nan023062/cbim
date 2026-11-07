@@ -1,11 +1,12 @@
 /**
  * 作用定位：定义模块 Workflow 正文中可选执行条件的严格协议，供知识治理、资源包与执行准备共同解析。
  * 设计原因：自然语言方法仍由模型运用，只有显式声明的少量稳定条件才交程序检查；坏声明不能静默退回无约束流程。
- * 职责边界：纯解析，不读取工程、不执行工具或签发权限，也不将工具名称匹配解释为专业验收通过。
+ * 职责边界：纯解析，JSON 验证要求固定明确产物和受限 Schema；不读取工程、执行工具或签发权限，工具命中也不表示专业验收。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
 import {parseJson} from '../foundation/json';
+import {boundedJsonSchemaSchema} from './json-validation-schema';
 
 /** 限制单份条件的规模；正文其它自然语言仍沿原知识文件大小规则。 */
 export const workflowContractLimits={requirements:16,blockBytes:64*1024} as const;
@@ -13,14 +14,17 @@ export const workflowContractLimits={requirements:16,blockBytes:64*1024} as cons
 export const workflowToolNameSchema=z.enum(['read','write','edit','grep','find','ls','bash']);
 export type WorkflowToolName=z.infer<typeof workflowToolNameSchema>;
 const requirement=z.object({id:z.string().regex(/^[A-Za-z0-9_-]{1,80}$/),toolName:workflowToolNameSchema}).strict();
+const artifactPath=z.string().min(1).max(2048).refine(value=>!/[\\:\x00-\x1f]/.test(value)&&!value.startsWith('/')&&value.split('/').every(part=>!!part&&part!=='.'&&part!=='..'&&part.toLowerCase()!=='.cbim'));
+export const jsonValidationRequirementSchema=z.object({id:z.string().regex(/^[A-Za-z0-9_-]{1,80}$/),validator:z.literal('json-schema-v1'),artifactPath,schema:boundedJsonSchemaSchema}).strict();
+export type JsonValidationRequirement=z.infer<typeof jsonValidationRequirementSchema>;
 /** 至少一项显式条件；requirePlan:false、未知字段和重复证据要求 ID 均拒绝，不做隐式默认。 */
 export const workflowContractSchema=z.object({
   version:z.literal(1),
   beforeEffects:z.object({requirePlan:z.literal(true)}).strict().optional(),
-  delivery:z.object({requiredToolEvidence:z.array(requirement).min(1).max(workflowContractLimits.requirements)}).strict().optional(),
+  delivery:z.object({requiredToolEvidence:z.array(requirement).min(1).max(workflowContractLimits.requirements).optional(),requiredValidations:z.array(jsonValidationRequirementSchema).min(1).max(workflowContractLimits.requirements).optional()}).strict().refine(value=>!!value.requiredToolEvidence||!!value.requiredValidations,'交付至少声明一种非空条件').optional(),
 }).strict().superRefine((value,context)=>{
   if(!value.beforeEffects&&!value.delivery)context.addIssue({code:z.ZodIssueCode.custom,message:'至少声明一项执行条件'});
-  const ids=value.delivery?.requiredToolEvidence.map(item=>item.id)??[];
+  const ids=[...value.delivery?.requiredToolEvidence??[],...value.delivery?.requiredValidations??[]].map(item=>item.id);
   if(new Set(ids).size!==ids.length)context.addIssue({code:z.ZodIssueCode.custom,path:['delivery','requiredToolEvidence'],message:'证据要求 ID 不能重复'});
 });
 export type WorkflowContract=z.infer<typeof workflowContractSchema>;

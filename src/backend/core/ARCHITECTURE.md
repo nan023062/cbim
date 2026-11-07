@@ -70,6 +70,7 @@ N_src_backend_core_team ..> N_src_backend_core_tasks : 导入依赖
 - `brain` → `foundation`：导入。
 - `brain` → `tasks`：导入。
 - `brain` → `tools`：导入。
+- `brain` → `workspace`：导入。
 - `brain` → `policy`：导入。
 - `connectors` → `tools`：导入。
 - `governance` → `foundation`：导入。
@@ -95,22 +96,22 @@ N_src_backend_core_team ..> N_src_backend_core_tasks : 导入依赖
 - `tools` → `policy`：导入。
 - `tools` → `foundation`：导入。
 - `tools` → `connectors`：导入。
-- `workspace` → `knowledge`：导入。
 - `workspace` → `foundation`：导入。
+- `workspace` → `knowledge`：导入。
 
 ## 子目录导航
 
-- [brain/](brain/ARCHITECTURE.md)：引擎无关的执行循环、事件与计量。进度工具绑定本轮身份，正式成员工具绑定原实例、通道、租约和知识版本；坏输出不能变成有效基线或安全交接。文件采集临时锁随工具结束释放，求助/检查点保存后结束本轮；续执行清空旧证据，停止不冒充回滚。
+- [brain/](brain/ARCHITECTURE.md)：引擎无关的执行循环、事件与计量。正式成员按冻结Workflow验证JSON指定字节，验证与交付复核各持短锁，前后核版本/知识/停止；checked暂存不等于passed有效证明。求助/检查点保存后结束本轮，文件采集随真实工具结束释放短锁；续执行不借旧证据。
 - [connectors/](connectors/ARCHITECTURE.md)：链接器定义、查询与唯一身份检查；当前不执行外部插件。
 - [foundation/](foundation/ARCHITECTURE.md)：少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。
 - [governance/](governance/ARCHITECTURE.md)：模块知识治理的纯协议、保护规则与有界主工具投影。可信来源、冻结意见引用与本机评价独立于正式实施，旧意见替代不改历史，不把治理记录当业务验收。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识快照、校验、领域查询、对象变更和可移植静态包规划。团队能力可独立复用，业务模板必须完整；物理事务与预览缓存经端口注入，不携带动态成员或任务。Team/Workspace 只依赖快照辅助，不依赖查询门面。
 - [policy/](policy/ARCHITECTURE.md)：内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；不声称操作系统隔离。
 - [runtime/](runtime/ARCHITECTURE.md)：应用级只读监管、真实周期白名单与独立准入契约。周期等待/结算和模型轮次分开，严格传输不补造缺失计量；游标、票据和占用不签发恢复权。
-- [tasks/](tasks/ARCHITECTURE.md)：任务计划、派发图、目标与等待。执行过程七工具在唯一输出快照核对保存前依据及真实运行，不向计划补造身份；旧证据和失败回包不能成为交付或安全交接。检查点预约与消费分别持久化，关闭封存待办；人工意见绑定当前依据，模型不能构造批准。
+- [tasks/](tasks/ARCHITECTURE.md)：任务计划、派发图、目标与等待。严格输出和可信运行区分保存事实与交付；Workflow结构出口只选当前明确引用的passed验证，按要求/Schema/基线/原调用重算，不以工具success代替专业符合。检查点一次续跑、人工决定与等待各自绑定真实来源，历史不补造授权或证据。
 - [team/](team/ARCHITECTURE.md)：Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履历契约。主实例归主会话，业务实例归周期与任务；履历按角色聚合真实通道，释放或删定义后保留，旧记录不补造实例。
 - [tools/](tools/ARCHITECTURE.md)：工具 Schema、版本、副作用、调用决策、结构化提问及回执。结果只核唯一 JSON 传输快照，不用解析改写制造成功；回执结构由异常报告和进度工具共用，历史可读不等于当前业务证据有效。注册和发现不授予执行权限。
-- [workspace/](workspace/ARCHITECTURE.md)：领域工程、Module、本模块 Workflow 的只读视图及显式维护关系类型；作者与维护人分开，与 main/workspace 生命周期分开。
+- [workspace/](workspace/ARCHITECTURE.md)：领域工程、Module、本模块Workflow与显式维护关系。可选执行条件含工具回执和指定JSON文件结构；有界Schema白名单及纯字节校验拒绝引用/脚本/转换，不自行读文件或签发业务验收。作者与维护人分开，与main/workspace生命周期分开。
 
 [返回上层](../ARCHITECTURE.md)。
 

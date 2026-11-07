@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-引擎无关的执行循环、事件与计量。进度工具绑定本轮身份，正式成员工具绑定原实例、通道、租约和知识版本；坏输出不能变成有效基线或安全交接。文件采集临时锁随工具结束释放，求助/检查点保存后结束本轮；续执行清空旧证据，停止不冒充回滚。
+引擎无关的执行循环、事件与计量。正式成员按冻结Workflow验证JSON指定字节，验证与交付复核各持短锁，前后核版本/知识/停止；checked暂存不等于passed有效证明。求助/检查点保存后结束本轮，文件采集随真实工具结束释放短锁；续执行不借旧证据。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -17,6 +17,7 @@
 | [member-checkpoint.ts](member-checkpoint.ts) | 成员单次合作式停泊的运行时门闩，沿真实工具授权保存非终结检查点请求。 |
 | [member-run.ts](member-run.ts) | 定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。 |
 | [model-errors.ts](model-errors.ts) | 把模型结束原因转换为用户可理解的执行错误，供实时引擎和历史回放共用。 |
+| [run-validation.ts](run-validation.ts) | 正式成员的 JSON 产物验证短门闩，连接冻结 Workflow、真实基线与平台同字节读取。 |
 | [runtime.ts](runtime.ts) | 大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。 |
 | [scope-usage.ts](scope-usage.ts) | 从单轮 canonical 摘要提取保守的已报告消耗，并汇总指定周期的主/成员计量。 |
 | [storage.ts](storage.ts) | 执行循环使用的日志和任务目录存储端口。 |
@@ -63,29 +64,34 @@ class N_src_backend_core_brain_member_run_ts["member-run.ts"] {
 class N_src_backend_core_brain_model_errors_ts["model-errors.ts"] {
   <<module>>
 }
+class N_src_backend_core_brain_run_validation_ts["run-validation.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_runtime_ts["runtime.ts"] {
   <<module>>
 }
 class N_src_backend_core_brain_scope_usage_ts["scope-usage.ts"] {
   <<module>>
 }
-class N_src_backend_core_brain_storage_ts["storage.ts"] {
-  <<module>>
-}
 N_src_backend_core_brain_member_checkpoint_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
-N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_storage_ts : 导入依赖
+N_src_backend_core_brain_run_validation_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_member_checkpoint_ts : 导入依赖
+N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_validation_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_brain_storage_ts["storage.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_types_ts["types.ts"] {
   <<module>>
 }
 class N_src_backend_core_brain_usage_ts["usage.ts"] {
   <<module>>
 }
+N_src_backend_core_brain_storage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 ```
 
@@ -107,9 +113,13 @@ N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入
 - `pi` → `input-source.ts`：导入。
 - `pi` → `llm`：导入。
 - `pi` → `model-errors.ts`：导入。
+- `run-validation.ts` → `artifact-capture.ts`：导入。
+- `run-validation.ts` → `member-run.ts`：导入。
+- `run-validation.ts` → `types.ts`：导入。
 - `runtime.ts` → `storage.ts`：导入。
 - `runtime.ts` → `member-checkpoint.ts`：导入。
 - `runtime.ts` → `artifact-capture.ts`：导入。
+- `runtime.ts` → `run-validation.ts`：导入。
 - `runtime.ts` → `member-run.ts`：导入。
 - `runtime.ts` → `input-source.ts`：导入。
 - `runtime.ts` → `conversation-binding.ts`：导入。
@@ -197,7 +207,7 @@ class N_src_backend_core_brain_usage_ts["usage.ts"] {
 ## 子目录导航
 
 - [llm/](llm/ARCHITECTURE.md)：公开模型参数、能力元数据及运行快照端口。实际配置文件和加密凭据由 main/persistence/settings 持有。
-- [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数。工具经一次性 gate 授权并校验结果；成员检查点只在可信端口存在时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为 custom 数据，不冒充用户授权。
+- [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数。工具经一次性gate授权并校验结果；结构验证仅在正式成员有冻结要求及真实端口时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为custom数据，不冒充用户授权。
 
 [返回上层](../ARCHITECTURE.md)。
 
@@ -206,6 +216,16 @@ class N_src_backend_core_brain_usage_ts["usage.ts"] {
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 冻结 JSON 产物验证与交付复核
+
+`RuntimeOptions.validations` 只向具有 `requiredValidations` 的正式成员提供。`RunValidation` 依据冻结模块要求与本轮已确认、未失效的文件基线选取路径和 Schema；模型只传模块、要求、基线和进度版本。知识、进度版本、证据代次及停止在每次异步读取前后复核，平台在同一次读取的字节上计算指纹和结构判定，不从模型声明取得验证结论。
+
+验证调用在任何策略等待前预占短锁，阻止其它工具及审批重叠；另一个独立短锁只覆盖交付前的文件复核，`finally` 不能释放真正验证调用的占位。交付复核前后还检查当前调用集合和进度代次，写入不能趁异步读取保存过期证明。步骤增版保留同代验证，重新计划或副作用使旧验证不再进入当前可用记录。
+
+运行时先保存 `validation.checked {validation}`，只有匹配的真实成功 `tool.finished` 才形成可引用的验证记录。`rejected` 是真实执行事实，可解释步骤，但不能满足要求的 `passed`；暂存后坏回包或停止不会删除已存事件，也不自动重试或把暂存冒充有效验证记录。验证短锁只随原调用的真实结束/拒绝释放；求助和检查点的本轮结束门闩保持原义。交付、成员结算和主审阅还须重新核实当前文件字节；结构通过不代表业务验收或人工接受。
+
+每轮最多保存 16 条验证事实，包括被结构拒绝或后续回包失败的尝试。冻结模块要求总数超过这一容量时，在取得运行资源、创建日志和模型前明确拒绝；容量不是自动重试次数，不删除失败历史腾位。
 
 ### 成员文件基线的短时采集边界
 

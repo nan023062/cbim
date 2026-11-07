@@ -1,7 +1,7 @@
 /**
- * 作用定位：核实可选 Workflow 的计划前置和交付回执，供运行时与调度结算共用。
+ * 作用定位：核实可选 Workflow 的计划前置、工具回执及精确 JSON 文件结构出口，供运行时与调度结算共用。
  * 设计原因：工具调用事实必须与固定模块约定、当前运行及最后副作用的真实结束边界一致；并发早读不能替代写入后的验证，不能相信模型自报 pass 或只检查内存状态。
- * 职责边界：仅作确定性记录校验，不执行脚本、不签发权限，也不宣称命令具有专业验证语义或覆盖整个模块。
+ * 职责边界：仅作确定性记录校验；选定 JSON 文件的当前字节另由平台端口复核，不执行脚本、不签发权限或宣称覆盖整个模块。
  */
 import {fail} from '../foundation/errors';
 import {hash} from '../foundation/serialization';
@@ -12,6 +12,9 @@ import type {TaskSpec} from './types';
 import type {ToolReceipt,ToolEffect} from '../tools/types';
 import {nativeToolDescriptor} from '../tools/native-tools';
 import {artifactSucceededCall,type ArtifactEvidenceEvent} from './artifact-evidence';
+import {validationRecordSchema,validationToolName,type ValidationRecord,type WorkflowValidationCheck} from './validation';
+import {validationRequirement} from './validation-evidence';
+import {jsonValidationLimits} from '../workspace/json-validation-schema';
 
 export interface WorkflowRunIdentity {workspaceId:string;taskId:string;runId:string}
 /** 只能由本轮装配提供；任务要求不可由模型在创建局部计划时扩大或删减。 */
@@ -25,6 +28,7 @@ export function workflowHasEffects(effects:readonly ToolEffect[]){return effects
 function checkedBindings(bindings:readonly WorkflowContractBinding[]){
   valid(bindings.length<=100&&new Set(bindings.map(item=>item.moduleId)).size===bindings.length,'WORKFLOW_CONTEXT_INVALID','Workflow 模块约定数量或归属重复');
   for(const item of bindings)valid(item.moduleId&&item.workflowId&&item.workflowVersion&&workflowContractSchema.safeParse(item.contract).success,'WORKFLOW_CONTEXT_INVALID','冻结的 Workflow 约定无效');
+  valid(bindings.reduce((count,item)=>count+(item.contract.delivery?.requiredValidations?.length??0),0)<=jsonValidationLimits.records,'WORKFLOW_CONTEXT_INVALID','一次成员执行最多包含 16 项 JSON 验证要求');
   return [...bindings].sort((a,b)=>a.moduleId<b.moduleId?-1:a.moduleId>b.moduleId?1:0);
 }
 /** 执行业务副作用前核对当前计划；没有声明 requirePlan 时不新增该门禁。 */
@@ -34,7 +38,7 @@ export function assertWorkflowPlan(bindings:readonly WorkflowContractBinding[],p
   return plan.version;
 }
 /** 只评价调用方已核实且实际列入步骤的当前代次回执，不自动挑选未引用的其他工具。 */
-export function evaluateWorkflowDelivery(bindings:readonly WorkflowContractBinding[],receipts:readonly ToolReceipt[],identity:WorkflowRunIdentity):WorkflowEvidenceProof{
+export function evaluateWorkflowDelivery(bindings:readonly WorkflowContractBinding[],receipts:readonly ToolReceipt[],identity:WorkflowRunIdentity,validations:readonly ValidationRecord[]=[]):WorkflowEvidenceProof{
   const values=checkedBindings(bindings),unique=new Map<string,ToolReceipt>();
   for(const receipt of receipts){
     valid(receipt.workspaceId===identity.workspaceId&&receipt.taskId===identity.taskId&&receipt.runId===identity.runId&&receipt.scope.workspaceId===identity.workspaceId&&receipt.scope.kind!=='repository'&&!receipt.toolName.startsWith('cbim_repository_')&&!receipt.toolName.startsWith('cbim_governance_')&&receipt.outcome==='succeeded'&&hex(receipt.inputHash)&&hex(receipt.resultHash),'WORKFLOW_EVIDENCE_INVALID','Workflow 交付回执必须是本任务本轮的真实业务成功结果，外部资料与治理记录不能作交付证据');
@@ -46,7 +50,20 @@ export function evaluateWorkflowDelivery(bindings:readonly WorkflowContractBindi
     valid(ids.length,'WORKFLOW_EVIDENCE_REQUIRED',`模块 ${binding.moduleId} 的 Workflow 条件 ${requirement.id} 缺少当前步骤引用的 ${requirement.toolName} 成功回执`);
     checks.push({moduleId:binding.moduleId,workflowId:binding.workflowId,workflowVersion:binding.workflowVersion,requirementId:requirement.id,toolName:requirement.toolName,toolCallIds:ids});
   }
-  return {version:1,bindingsHash:hash(JSON.stringify(ordered(values))),checks};
+  const selected=selectWorkflowValidations(values,receipts,identity,validations),validationChecks:WorkflowValidationCheck[]=selected.map(({result})=>({...result.requirement,validator:result.validator,validationId:result.validationId,toolCallId:result.toolCallId,baselineId:result.baselineId,artifact:structuredClone(result.artifact)}));
+  return {version:1,bindingsHash:hash(JSON.stringify(ordered(values))),checks,...(validationChecks.length?{validationChecks}:{})};
+}
+/** 从步骤实际引用中选唯一 passed 记录；rejected 的成功回执只证明执行过检查，不能满足此出口。 */
+export function selectWorkflowValidations(bindings:readonly WorkflowContractBinding[],receipts:readonly ToolReceipt[],identity:WorkflowRunIdentity,records:readonly ValidationRecord[]):ValidationRecord[]{
+  const selected:ValidationRecord[]=[];
+  for(const binding of checkedBindings(bindings))for(const requirement of binding.contract.delivery?.requiredValidations??[]){
+    const expected=validationRequirement(bindings,binding.moduleId,requirement.id),matches=records.filter(record=>record.result.requirement.moduleId===binding.moduleId&&record.result.requirement.requirementId===requirement.id&&record.result.outcome==='passed'&&receipts.some(receipt=>receipt.toolCallId===record.result.toolCallId));
+    valid(matches.length===1,'WORKFLOW_VALIDATION_REQUIRED',`模块 ${binding.moduleId} 的 JSON 条件 ${requirement.id} 缺少唯一、明确引用的通过记录`);
+    const record=matches[0],r=record.result,receipt=receipts.find(value=>value.toolCallId===r.toolCallId)!;
+    valid(validationRecordSchema.safeParse(record).success&&same(receipt,record.receipt)&&receipt.toolName===validationToolName&&receipt.outcome==='succeeded'&&same(receipt.effects,['read'])&&receipt.scope.kind==='workspace'&&receipt.scope.workspaceId===identity.workspaceId&&receipt.workspaceId===identity.workspaceId&&receipt.taskId===identity.taskId&&receipt.runId===identity.runId&&r.binding.workspaceId===identity.workspaceId&&r.binding.taskId===identity.taskId&&r.binding.runId===identity.runId&&same(r.requirement,{moduleId:binding.moduleId,workflowId:binding.workflowId,workflowVersion:binding.workflowVersion,requirementId:requirement.id,schemaHash:expected.schemaHash})&&r.artifact.relativePath===requirement.artifactPath,'WORKFLOW_VALIDATION_INVALID','JSON 验证记录、调用归属、冻结要求或文件不一致');
+    selected.push(record);
+  }
+  return selected;
 }
 function progressResult(event:ArtifactEvidenceEvent):TaskProgress{
   const content=(event.data.result as {content?:unknown[]}|undefined)?.content;
@@ -67,7 +84,7 @@ function effectFinished(events:readonly ArtifactEvidenceEvent[],identity:Workflo
  * 在成员结算和主目标核验时重算完整 canonical，而非信任 taskProgress 的命中字段。
  * 有约定的新运行必须保留自己的计划和成功交付调用；续执行也须建立本轮计划，旧轮次回执不会继承。
  */
-export function validateWorkflowEvidence(events:readonly ArtifactEvidenceEvent[],task:Pick<TaskSpec,'workspaceId'|'taskId'|'goal'|'acceptance'>,bindings:readonly WorkflowContractBinding[]):WorkflowEvidenceProof|undefined{
+export function validateWorkflowEvidence(events:readonly ArtifactEvidenceEvent[],task:Pick<TaskSpec,'workspaceId'|'taskId'|'goal'|'acceptance'>,bindings:readonly WorkflowContractBinding[],validations:readonly ValidationRecord[]=[]):WorkflowEvidenceProof|undefined{
   if(!bindings.length)return;checkedBindings(bindings);
   const first=events[0],last=events.at(-1),identity={workspaceId:task.workspaceId,taskId:task.taskId,runId:first?.runId};
   valid(first?.type==='run.started'&&first.runId&&same(first.data.workflowContracts,bindings)&&last?.type==='run.settled'&&last.data.status==='completed','WORKFLOW_LOG_INVALID','Workflow 运行缺少完整来源、冻结约定或正常终态');
@@ -99,5 +116,5 @@ export function validateWorkflowEvidence(events:readonly ArtifactEvidenceEvent[]
   const ids=[...new Set(candidate.steps.flatMap(step=>step.evidence))],receipts=ids.map(id=>{
     const call=artifactSucceededCall(events,identity,id),ownEffect=effectEnds.some(effect=>effect.allowed.data.id===id);valid(call.allowed.seq>plan.savedSeq&&call.allowed.seq>=lastEffect&&call.finished.seq<delivery.allowed.seq&&(ownEffect||call.allowed.seq>lastEffectEnd),'WORKFLOW_EVIDENCE_INVALID','Workflow 证据必须在当前计划内，读取验证不得与尚未结束的副作用重叠');return call.receipt;
   });
-  const proof=evaluateWorkflowDelivery(bindings,receipts,identity);valid(same(proof,candidate.delivery.workflow),'WORKFLOW_EVIDENCE_INVALID','Workflow 交付条件与真实日志重算结果不一致');return proof;
+  const proof=evaluateWorkflowDelivery(bindings,receipts,identity,validations);valid(same(proof,candidate.delivery.workflow),'WORKFLOW_EVIDENCE_INVALID','Workflow 交付条件与真实日志重算结果不一致');return proof;
 }

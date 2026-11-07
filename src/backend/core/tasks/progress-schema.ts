@@ -1,12 +1,14 @@
 /**
  * 作用定位：执行计划、Workflow 命中证明与进度查询的严格公开结构。
- * 设计原因：TaskProgress 自身没有运行身份；只描述实际保存的目标、步骤和待审阅候选，不向旧记录补造身份或验收结论。
+ * 设计原因：TaskProgress 自身没有运行身份；JSON 检查事实和精确出口为可选结构，旧流程不补空证明，也不将 rejected 的执行事实改成通过。
  * 职责边界：这里只核字段和局部状态，可信运行归属、当前证据及请求匹配由工具输出边界核对。
  */
 import {z} from 'zod';
 import {workflowContractSchema,workflowToolNameSchema} from '../workspace/workflow-contract';
 import {toolReceiptSchema} from '../tools/receipt-schema';
 import {artifactBaselineRefSchema,artifactLimits} from './artifact-baseline';
+import {validationResultSchema,workflowValidationCheckSchema} from './validation';
+import {jsonValidationLimits} from '../workspace/json-validation-schema';
 
 const text=z.string().min(1).max(4000).refine(value=>!!value.trim()),planText=z.string().min(1).max(16000).refine(value=>!!value.trim()),id=z.string().min(1).max(512);
 const unique=(values:string[])=>new Set(values).size===values.length;
@@ -22,7 +24,7 @@ export type ProgressPlanInput=z.infer<typeof progressToolInputSchemas.cbim_task_
 export type ProgressStepInput=z.infer<typeof progressToolInputSchemas.cbim_task_step>;
 export type ProgressDeliveryInput=z.infer<typeof progressToolInputSchemas.cbim_delivery_prepare>;
 /** 命中仅指本轮真实指定工具回执，不能解释为专业验证或完整模块覆盖。 */
-export const workflowEvidenceProofSchema=z.object({version:z.literal(1),bindingsHash:z.string().regex(/^[a-f0-9]{64}$/),checks:z.array(z.object({moduleId:id,workflowId:id,workflowVersion:id,requirementId:z.string().regex(/^[A-Za-z0-9_-]{1,80}$/),toolName:workflowToolNameSchema,toolCallIds:z.array(z.string().min(1).max(128)).min(1).max(1500).refine(unique)}).strict()).max(1600)}).strict().refine(value=>unique(value.checks.map(item=>JSON.stringify([item.moduleId,item.requirementId]))),'Workflow 条件不得重复');
+export const workflowEvidenceProofSchema=z.object({version:z.literal(1),bindingsHash:z.string().regex(/^[a-f0-9]{64}$/),checks:z.array(z.object({moduleId:id,workflowId:id,workflowVersion:id,requirementId:z.string().regex(/^[A-Za-z0-9_-]{1,80}$/),toolName:workflowToolNameSchema,toolCallIds:z.array(z.string().min(1).max(128)).min(1).max(1500).refine(unique)}).strict()).max(1600),validationChecks:z.array(workflowValidationCheckSchema).min(1).max(jsonValidationLimits.records).optional()}).strict().refine(value=>unique([...value.checks,...value.validationChecks??[]].map(item=>JSON.stringify([item.moduleId,item.requirementId]))),'Workflow 条件不得重复');
 export const workflowContractBindingSchema=z.object({moduleId:id,workflowId:id,workflowVersion:id,contract:workflowContractSchema}).strict();
 const step=z.object({id:z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/),title:text,owner:text,state:z.enum(['pending','working','reported_done']),evidence:z.array(text).max(30)}).strict();
 export const taskProgressSchema=z.object({version:z.number().int().positive().safe(),goal:planText,acceptance:z.array(planText).min(1).max(50),steps:z.array(step).min(1).max(50),state:z.enum(['executing','awaiting_review']),reason:text,delivery:z.object({summary:text,limitations:z.array(text).max(30),workflow:workflowEvidenceProofSchema.optional()}).strict().optional()}).strict().superRefine((value,context)=>{
@@ -35,6 +37,7 @@ export const taskProgressSchema=z.object({version:z.number().int().positive().sa
 export const taskProgressInspectSchema=z.object({
   plan:taskProgressSchema.nullable(),evidence:z.array(toolReceiptSchema),
   artifacts:z.array(artifactBaselineRefSchema).max(artifactLimits.baselines).optional(),
+  validations:z.array(validationResultSchema).max(jsonValidationLimits.records).refine(values=>unique(values.map(value=>value.validationId))&&unique(values.map(value=>value.toolCallId))).optional(),
   workflowContracts:z.array(workflowContractBindingSchema).min(1).max(100).refine(values=>unique(values.map(item=>item.moduleId))).optional(),
 }).strict().superRefine((value,context)=>{
   if(!unique(value.evidence.map(item=>item.toolCallId))||value.artifacts&&!unique(value.artifacts.map(item=>item.baselineId)))context.addIssue({code:'custom',message:'进度查询的调用或基线身份重复'});

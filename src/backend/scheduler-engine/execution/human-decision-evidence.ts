@@ -1,6 +1,6 @@
 /**
  * 作用定位：复核已消费人工接受的精确候选和选定文件，供显式接续、目标审阅及最终完成共用。
- * 设计原因：人的历史意见不等于当前产物未变；独立端口避免目标服务与人工服务相互引用，所有接受项共享有界文件预算。
+ * 设计原因：人的历史意见不等于当前产物未变；独立端口避免目标服务与人工服务相互引用，全部接受项的选定基线及冻结 JSON 验证文件共享一次有界读取。
  * 职责边界：只读可信 canonical 与业务字节，不消费等待、不复制签署身份，也不恢复未知操作。
  */
 import {fail} from '../../core/foundation/errors';
@@ -17,6 +17,7 @@ import {currentHumanContinuation,referencedHumanDecision} from '../../core/tasks
 import {sameGoalValue} from '../../core/tasks/scope-goal';
 import {artifactLimits,artifactFileCheckSchema,type ArtifactFileFact,type ArtifactFileCheck} from '../../core/tasks/artifact-baseline';
 import {verifyArtifactBaselines} from '../../core/tasks/artifact-evidence';
+import {memberWorkflowFiles} from './member-workflow';
 
 /** 固定工作区文件端口；只读占用不领取模型名额，关闭/退役检查覆盖异步读取。 */
 export interface HumanDecisionPorts {
@@ -27,7 +28,7 @@ export interface HumanDecisionPorts {
 }
 /** 只接已登记的运行身份；平台自行解析 canonical 路径，模型或客户端不能指定日志文件。 */
 export interface HumanEvidenceLogs {inspectMember(run:DispatchRun):Promise<RunSummary>;inspectMain(rootSessionId:string,runId:string):Promise<RunSummary>}
-/** 注入目标服务的完整候选校验，不用简化摘要绕过原生绑定与真实回执。 */
+/** 注入目标服务的完整历史候选校验；当前文件在本模块合并复核，不用简化摘要绕过真实回执。 */
 export type HumanCandidateValidator=(state:DispatchState,scope:DispatchScope,graph:GraphSnapshot,task:TaskNode,knowledgeRevision:string)=>Promise<RunSummary>;
 function check(value:unknown,code:string,message:string):asserts value{if(!value)fail(code,message)}
 
@@ -43,7 +44,7 @@ export function assertHumanSubject(scope:DispatchScope,continuation:ScopeHumanCo
 }
 /**
  * 所有接受项合并文件后一次核实；前后读取 canonical 和知识，外部文件变化不承诺跨存储原子隔离。
- * validateCandidate 由目标服务注入，保留其完整任务/原生绑定/交付证据门禁，不能传模型摘要替代。
+ * validateCandidate 只验证历史完整任务/原生绑定/交付证据；本模块复核全部当前 JSON 文件，不能只选未变的基线绕过。
  */
 export async function validateHumanAcceptances(owner:Pick<KnowledgeWorkspace,'entry'|'assert'|'read'>,state:DispatchState,scope:DispatchScope,records:readonly HumanDecisionRecord[],logs:HumanEvidenceLogs|undefined,ports:HumanDecisionPorts|undefined,validateCandidate:HumanCandidateValidator):Promise<void>{
   if(!records.length)return;check(logs&&ports,'HUMAN_CONTINUATION_UNAVAILABLE','尚未接入人工接受所需的可信日志及文件核实');
@@ -59,7 +60,10 @@ export async function validateHumanAcceptances(owner:Pick<KnowledgeWorkspace,'en
         const task=graph.tasks.find(item=>item.taskId===candidate.taskId),selected=candidate.selected;
         check(task&&task.scopeId===scope.scopeId&&task.revision===candidate.taskRevision&&task.planRevision===candidate.planRevision&&task.result?.resultId===candidate.resultId&&task.result.runId===candidate.runId&&selected&&!selected.invalidated&&selected.files.length&&selected.files.every(file=>file.state==='matches'),'HUMAN_CONTINUATION_STALE','接受的成员候选或选定文件基线已经变化');
         let log=observed.get(candidate.runId);
-        if(!log){const summary=await validateCandidate(state,scope,graph,task,knowledge.revision);current();const run=state.runs?.find(item=>item.binding.taskId===task.taskId&&item.binding.runId===candidate.runId);check(run,'HUMAN_CONTINUATION_STALE','接受的运行登记已经变化');log={run,summary};observed.set(candidate.runId,log)}
+        if(!log){
+          const summary=await validateCandidate(state,scope,graph,task,knowledge.revision);current();const run=state.runs?.find(item=>item.binding.taskId===task.taskId&&item.binding.runId===candidate.runId);check(run,'HUMAN_CONTINUATION_STALE','接受的运行登记已经变化');log={run,summary};observed.set(candidate.runId,log);
+          for(const file of memberWorkflowFiles(task,run,summary,owner.entry.path,ports.normalizePath)){const existing=files.get(file.relativePath);check(!existing||sameGoalValue(existing,file),'HUMAN_CONTINUATION_STALE','人工接受之间的程序验证文件指纹不一致');files.set(file.relativePath,file)}
+        }
         check(hash(json(log.summary.events))===candidate.logHash&&candidate.evidenceToolCallIds.every(id=>task.result!.evidenceRefs.includes(id)),'HUMAN_CONTINUATION_STALE','接受的日志或证据引用已经变化');
         const artifacts=verifyArtifactBaselines(log.summary.events,log.run.binding,knowledge.revision,ports.normalizePath,selected.baselineId),baseline=artifacts.records.find(item=>item.baseline.baselineId===selected.baselineId),ref=artifacts.refs.find(item=>item.baselineId===selected.baselineId);
         check(baseline&&ref&&!ref.invalidated&&baseline.capturedSeq===selected.capturedSeq&&baseline.finishedSeq===selected.finishedSeq&&baseline.baseline.captureToolCallId===selected.captureToolCallId&&baseline.baseline.knowledgeRevision===selected.knowledgeRevision&&baseline.baseline.progressVersion===selected.progressVersion&&baseline.baseline.files.length===selected.files.length,'HUMAN_CONTINUATION_STALE','接受的采集事件、成功回执或基线版本不再有效');

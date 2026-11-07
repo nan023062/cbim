@@ -1,6 +1,6 @@
 /**
  * 作用定位：核实安全等待中的人工验收项和明确选定文件，保存本机显式决定及不可变依据。
- * 设计原因：成员候选、模型审阅与人的选择分开；预览不授予提交权，提交在派发事务内重建依据并按独立序列追加。
+ * 设计原因：历史候选真实性与当前接受许可分开；负面意见允许当前文件变化，接受须合并核实所选基线和全部冻结 JSON 文件。预览不授予提交权，提交在事务内重建依据。
  * 职责边界：这里只保存决定，不修改 goal、wait、图或运行许可；共享文件端口供另一专用接续服务重新核实，保存本身不启动模型。哈希只描述有界观察。
  */
 import {z} from 'zod';
@@ -67,11 +67,25 @@ export class ScopeHumanDecisionService {
       }
       candidates.push(projected);
     }
-    check(expectedFiles.size<=artifactLimits.files&&[...expectedFiles.values()].reduce((total,file)=>total+file.byteLength,0)<=artifactLimits.totalBytes,'HUMAN_LIMIT','本次人工决定的文件超过 16 个或总计 32 MiB 上限');
+    const inBudget=(files:Map<string,ArtifactFileFact>)=>files.size<=artifactLimits.files&&[...files.values()].reduce((total,file)=>total+file.byteLength,0)<=artifactLimits.totalBytes;
+    check(inBudget(expectedFiles),'HUMAN_LIMIT','本次人工决定的文件超过 16 个或总计 32 MiB 上限');
+    const workflowFiles=value.candidates.flatMap(candidate=>candidate.workflowFiles),selectedComplete=candidates.every(candidate=>candidate.selected&&!candidate.selected.invalidated&&candidate.selected.knowledgeRevision===value.knowledgeRevision&&candidate.selected.files.length);
+    let workflowCurrent=workflowFiles.length===0,checkWorkflow=false;
+    // 没有完整显式选择时仍仅列历史，不隐式读文件。可能接受时，所有程序验证文件也进入同一有界读取。
+    if(selectedComplete&&workflowFiles.length){
+      const combined=new Map(expectedFiles);
+      for(const file of workflowFiles){const old=combined.get(file.relativePath);if(!old||old.byteLength<file.byteLength)combined.set(file.relativePath,file)}
+      if(inBudget(combined)){for(const [key,file] of combined)expectedFiles.set(key,file);checkWorkflow=true}
+      else addIssue('HUMAN_WORKFLOW_UNAVAILABLE','全部程序验证文件与所选基线超过本次核实上限；仍可拒绝或要求补证，不能接受');
+    }
     if(expectedFiles.size){
       const expected=[...expectedFiles.values()].sort((a,b)=>compare(a.relativePath,b.relativePath)),signal=AbortSignal.timeout(15000),observations=await ports.checkFiles(expected,signal);this.current();signal.throwIfAborted();
       check(observations.length===expected.length,'HUMAN_EVIDENCE_INVALID','文件核实结果与请求范围不一致');
       for(let index=0;index<expected.length;index++){const parsed=artifactFileCheckSchema.safeParse(observations[index]),file=expected[index];check(parsed.success&&parsed.data.relativePath===file.relativePath&&sameGoalValue(parsed.data.expected,{byteLength:file.byteLength,sha256:file.sha256}),'HUMAN_EVIDENCE_INVALID','文件端口返回了错误路径或期望指纹')}
+      if(checkWorkflow){
+        workflowCurrent=workflowFiles.every(file=>{const observation=observations.find(item=>item.relativePath===file.relativePath);return observation&&['matches','changed'].includes(observation.state)&&sameGoalValue(observation.observed,{byteLength:file.byteLength,sha256:file.sha256})});
+        if(!workflowCurrent)addIssue('HUMAN_WORKFLOW_UNAVAILABLE','程序验证的文件已变化、缺失或无法核实；原验证历史仍保留，当前不能接受');
+      }
       for(const candidate of candidates)if(candidate.selected)candidate.selected.files=candidate.selected.files.map(file=>{
         const observation=observations.find(item=>item.relativePath===file.relativePath)!;
         if(!observation.observed)return {...observation,expected:file.expected};
@@ -83,7 +97,7 @@ export class ScopeHumanDecisionService {
     for(const candidate of value.candidates){const again=await this.logs.inspectMember(candidate.run);this.current();check(sameGoalValue(again,candidate.summary),'HUMAN_STALE','成员日志在人工核实期间变化，请重新核实')}
     const main=await this.logs.inspectMain(scope.rootSessionId,review.runId);this.current();check(sameGoalValue(main,value.main),'HUMAN_STALE','主审阅日志在人工核实期间变化，请重新核实');
     check((await this.owner.read()).revision===value.knowledgeRevision,'HUMAN_KNOWLEDGE_CHANGED','知识在人工核实期间变化，请重新安排核实');this.current();
-    const complete=candidates.every(candidate=>candidate.selected&&!candidate.selected.invalidated&&candidate.selected.knowledgeRevision===value.knowledgeRevision&&candidate.selected.files.length&&candidate.selected.files.every(file=>file.state==='matches'));
+    const complete=workflowCurrent&&candidates.every(candidate=>candidate.selected&&!candidate.selected.invalidated&&candidate.selected.knowledgeRevision===value.knowledgeRevision&&candidate.selected.files.length&&candidate.selected.files.every(file=>file.state==='matches'));
     if(!complete)addIssue('HUMAN_ACCEPT_UNAVAILABLE','接受需要为全部候选明确选择当前有效基线，并且所选文件全部匹配');
     const allowedDecisions:HumanDecisionKind[]=complete?['accept','reject','request_evidence']:['reject','request_evidence'];
     const preview:HumanDecisionPreview={identity:{workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,scopeId:scope.scopeId,criterionId:input.criterionId},checkedAt:new Date().toISOString(),decisionRevision:scope.humanDecisions?.revision??0,source:{waitId:scope.wait!.waitId,goalRevision:goal.revision,inputRevision:goalInputRevision(goal),planRevision:goal.plan!.revision,reviewRevision:review.revision,reviewRunId:review.runId,reviewLogHash:hash(json(value.main.events)),knowledgeRevision:value.knowledgeRevision,graphCursor:{streamId:value.graph.cursor.streamId,seq:value.graph.cursor.seq},criterion:value.criterion},candidates,allowedDecisions,limitations,issues};

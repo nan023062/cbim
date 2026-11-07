@@ -35,7 +35,7 @@ it.each(['complete','missing-capability','stop'] as WorkflowConditionMode[])('en
       expect(saved.runs).toHaveLength(1);const run=saved.runs[0],summary=await new FileRunStorage().read(path.join(f.user,entry.id,'dispatch','runs','tasks',member.taskId,run.binding.runId));expect(summary.status).toBe(mode==='stop'?'cancelled':'completed');expect(summary.unresolvedTools).toEqual([]);expect(summary.toolReceipts?.filter(receipt=>receipt.toolName==='write'&&receipt.outcome==='succeeded')).toHaveLength(1);expect(await fs.readFile(path.join(f.a,data.file),'utf8')).toBe(data.fact);
       if(mode==='complete'){
         expect(member.result?.evidenceRefs).toEqual(['workflow-member-read']);expect(summary.toolReceipts?.find(receipt=>receipt.toolCallId==='workflow-member-read')).toMatchObject({outcome:'succeeded'});expect(summary.taskProgress?.state).toBe('awaiting_review');expect(summary.events[0].data.workflowContracts).toEqual([expect.objectContaining({moduleId:seeded.team.input.moduleId,workflowId:seeded.team.input.workflowId,contract:seeded.contract})]);expect(summary.taskProgress?.delivery?.workflow).toMatchObject({version:1,checks:[{moduleId:seeded.team.input.moduleId,requirementId:'inspect-result',toolName:'read',toolCallIds:['workflow-member-read']}]});expect(scope.goal?.review?.decision).toBe('complete');
-        expect(()=>validateMemberWorkflow(member,run,summary,f.a)).not.toThrow();const mutations:Array<[string,(draft:RunSummary)=>void]>=[
+        await expect(validateMemberWorkflow(member,run,summary,f.a)).resolves.toBeUndefined();const mutations:Array<[string,(draft:RunSummary)=>void]>=[
           ['缺原生绑定但序号仍连续',draft=>{draft.events=draft.events.filter(event=>event.type!=='session.bound').map((event,index)=>({...event,seq:index+1}))}],
           ['汇总任务模块与冻结任务不同',draft=>{draft.task.moduleIds=['foreign-module']}],
           ['来源任务模块与汇总不同',draft=>{(draft.events[0].data.task as Record<string,unknown>).moduleIds=['foreign-module']}],
@@ -44,7 +44,7 @@ it.each(['complete','missing-capability','stop'] as WorkflowConditionMode[])('en
           ['来源移除Workflow约定',draft=>{delete draft.events[0].data.workflowContracts}],
           ['原生ID为空',draft=>{for(const event of draft.events)if(event.type==='session.bound')event.data.sessionId=''}],
           ['尾部存在未完成记录',draft=>{draft.logIntegrity={partialTail:true}}],
-        ];for(const [label,mutate] of mutations){const bad=structuredClone(summary);mutate(bad);expect(()=>validateMemberWorkflow(member,run,bad,f.a),label).toThrow()}
+        ];for(const [label,mutate] of mutations){const bad=structuredClone(summary);mutate(bad);await expect(validateMemberWorkflow(member,run,bad,f.a),label).rejects.toThrow()}
       }
       else{expect(member.result).toBeUndefined();expect(summary.toolReceipts?.some(receipt=>receipt.toolCallId==='workflow-member-read')).toBe(false)}
     }

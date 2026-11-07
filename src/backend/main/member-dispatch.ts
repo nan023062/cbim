@@ -1,6 +1,6 @@
 /**
  * 作用定位：为已运行工作区装配成员派发、大脑执行及目标审阅的可信日志读取端口。
- * 设计原因：派发、审阅及周期额度共用可信日志；Workflow 能力按实际 Pi 清单和权限预检，冻结约定只注入正式成员。检查点与人工决定复用有界文件证明，密钥留在工厂闭包，只读报告不启动成员。
+ * 设计原因：派发、审阅及周期额度共用可信日志；Workflow 能力按真实工具与验证端口预检，冻结约定只注入正式成员。JSON 验证以同一安全读取字节判定，交付及审阅复用有界文件复核；密钥留在工厂闭包，只读报告不启动成员。
  */
 import path from 'node:path';
 import type {Workspace} from './workspace/workspace';
@@ -52,7 +52,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
     return summary;
   };
   const checkpointPorts={inspect:inspectMember,normalizePath:normalizeArtifact,checkFiles:artifactFiles.checkFiles.bind(artifactFiles),nativeFingerprint:nativeFiles.read.bind(nativeFiles)};
-  const dispatch=new WorkspaceDispatchService(workspace,store,{inspectMember,inspectMain:async(rootSessionId,runId)=>{
+  const dispatch=new WorkspaceDispatchService(workspace,store,{inspectMember,normalizeValidationPath:normalizeArtifact,checkValidationFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),inspectMain:async(rootSessionId,runId)=>{
     workspace.assert();
     const summary=await storage.read(path.join(workspace.paths.project(workspace.entry.id),'loop-engine','tasks',safeId(rootSessionId),safeId(runId)));
     if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path||summary.task.taskId!==rootSessionId||summary.runId!==runId||summary.task.agentId!=='cbim:main')throw Error('主调度证据不属于当前会话或运行');
@@ -71,7 +71,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
     prepare:async options=>{
       workspace.assert();
       const llm=await models.resolve(options.profileId,options.model);
-      return {model:structuredClone(llm.profile),availableTools:nativeToolNames(options.permission!=='read'),create:async(run,task,hooks)=>{
+      return {model:structuredClone(llm.profile),availableTools:nativeToolNames(options.permission!=='read'),availableValidators:['json-schema-v1'],create:async(run,task,hooks)=>{
         workspace.assert();
         if(run.binding.workspaceId!==workspace.entry.id||task.identity.workspaceId!==workspace.entry.id)throw Error('成员运行与工作区身份不匹配');
         if(JSON.stringify(run.model)!==JSON.stringify(llm.profile))throw Error('成员运行模型快照与启动配置不一致');
@@ -82,6 +82,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
         },{
           storage,member:{directory:runsDirectory,prompt:memberExecutionPrompt(run.prepared,task,run.prerequisites),workflowContracts:preparedWorkflowContracts(run.prepared)},onEngineReady:hooks.onEngineReady,
           artifacts:{knowledgeRevision:run.prepared.knowledgeRevision,normalizePath:normalizeArtifact,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},captureFiles:(paths,signal)=>artifactFiles.captureFiles(paths,signal)},
+          validations:{validateFile:(file,schema,signal)=>artifactFiles.validateFile(file,schema,signal),checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal)},
           // 领取后到 Pi 发出首条 prompt 前仍有异步准备；每个准备边界复核原证明，不只核原生文件而遗漏外部业务文件变化。
           assertMemberResume:previous?async()=>{await verifyMemberCheckpointProof(workspace,task,previous,checkpointPorts,()=>workspace.assert(),previous.checkpointProof)}:undefined,
           assertMemberResumeInputs:previous?()=>verifyMemberCheckpointInputs(workspace,task,previous,checkpointPorts,()=>workspace.assert(),previous.checkpointProof!):undefined,

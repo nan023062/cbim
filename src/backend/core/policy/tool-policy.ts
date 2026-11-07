@@ -1,7 +1,7 @@
 /**
  * 作用定位：内部 Loop 的统一工具授权策略，同时处理业务文件与正式知识写入。
  * 设计原因：权限来自可信运行配置，副作用和仓库范围来自已注册工具的捕获描述；模型参数不能提高权限或把外部资料冒充项目文件。
- * 职责边界：原生路径检查先于人工确认；未知命令范围不被描述为沙箱隔离。
+ * 职责边界：原生路径检查先于人工确认；JSON 验证仅接受准确名称、非原生、单一 read 效果，是否具备冻结能力仍由装配核实；未知命令范围不被描述为沙箱隔离。
  */
 import type {ChatPermission} from './types';
 import type {ToolCall,ToolDecision,ToolEffect,ToolScope} from '../tools/types';
@@ -24,6 +24,8 @@ export async function authorizeRunTool(call:ToolCall,tool:RunToolDescriptor,cont
   const governance=call.name.startsWith('cbim_governance_');
   let scope:ToolScope={kind:governance||tool.effects.includes('command')?'unknown':tool.effects.includes('knowledge-write')?'knowledge':'workspace',workspaceId:context.workspaceId};
   const decision=(allow:boolean,reason?:string):ToolDecision=>({allow,reason,effects:tool.effects,scope});
+  // 验证只读固定文件，注册与参数由正式成员装配核对；不得借此名称要求命令或知识写入。
+  if(call.name.startsWith('cbim_validation_')&&(call.name!=='cbim_validation_run'||tool.native||tool.effects.length!==1||tool.effects[0]!=='read'))return decision(false,'JSON 验证工具必须是本轮实际注册的只读能力');
   // 这四项由真实主运行注册；保存私有观察/提案不等于正式知识写入，也不能伪装为业务文件读取。
   if(governance&&(!isGovernanceToolName(call.name)||tool.native||tool.effects.length!==1||tool.effects[0]!==governanceToolEffects[call.name]||tool.scope?.kind!=='knowledge'))return decision(false,'治理工具缺少本轮真实注册的知识作用域或效果不一致');
   if(call.name.startsWith('cbim_repository_')&&tool.scope?.kind!=='repository')return decision(false,'仓库工具缺少本轮可信捕获范围');

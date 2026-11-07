@@ -28,7 +28,7 @@ class N_src_bridge_preload["preload/"] {
 
 ## 子目录导航
 
-- [contracts/](contracts/ARCHITECTURE.md)：可序列化 IPC 与展示契约。图增量公开检查点及续执行预约，私有日志/原生会话恢复证明留在后端。文件观察、前置替换、软限额和用量公开冻结事实及缺口，不签发启动许可。 人工决定只公开严格选择/意见和有界证明，身份、基线及回执互相核对。
+- [contracts/](contracts/ARCHITECTURE.md)：可序列化 IPC 与展示契约。图增量公开检查点及续执行预约，私有恢复证明留在后端。结构验证只公开当时文件/规则指纹及无原值诊断，不含Schema或正文；人工决定与文件观察保留真实依据，不签发启动许可。
 - [preload/](preload/ARCHITECTURE.md)：固定 Electron IPC 桥；不向页面暴露 Node、凭据或任意磁盘 API。
 
 [返回上层](../ARCHITECTURE.md)。

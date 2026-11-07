@@ -1,6 +1,6 @@
 /**
  * 作用定位：在派发事务中保存本轮目标计划与结构化审阅，并为目标门禁、依赖修订和本机人工决定核验真实候选、角色及模块基线。
- * 设计原因：目标与图查询使用同一存储快照；模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用。成员 Workflow 条件沿冻结知识从 canonical 重算，检查点仍是未完任务。
+ * 设计原因：目标与图查询使用同一存储快照；模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用。成员 Workflow 沿冻结知识从 canonical 重算，结构验证另核当前文件；明确返工只保留旧候选历史，不把旧文件再次放行。
  * 职责边界：人工项仅引用当前实际消费的接受；审阅和完成均复核原业务主体、精确候选与选定字节，负面意见只能明确安排新任务返工。不关闭周期或签署，外部文件核实不构成原子快照。
  * 证据边界：治理观察、提案和查询仅是私有待办事实，不能被主知识引用或成员候选包装成业务完成证据。
  */
@@ -23,12 +23,16 @@ import {memberPublicTask} from './member-events';
 import {consumedHumanDecision,assertHumanSubject,validateHumanAcceptances,type HumanDecisionPorts} from './human-decision-evidence';
 import type {HumanDecisionRecord} from '../../core/tasks/human-decisions';
 import {currentHumanContinuation} from '../../core/tasks/human-continuation-rules';
-import {validateMemberWorkflow} from './member-workflow';
+import {validateMemberWorkflow,memberWorkflowFiles} from './member-workflow';
+import type {ArtifactFileFact,ArtifactFileCheck} from '../../core/tasks/artifact-baseline';
 
 /** 端口只按可信已登记身份读取 canonical 日志；不能接受模型提供路径或摘要。 */
 export interface ScopeGoalPorts {
   inspectMember(run:DispatchRun):Promise<RunSummary>;
   inspectMain(rootSessionId:string,runId:string):Promise<RunSummary>;
+  /** 与执行端同一纯路径规则及只读文件能力；不得通过报告服务重入当前派发事务。 */
+  normalizeValidationPath?(raw:string):string;
+  checkValidationFiles?(files:readonly ArtifactFileFact[],signal:AbortSignal):Promise<ArtifactFileCheck[]>;
 }
 type Owner=Pick<KnowledgeWorkspace,'entry'|'instanceId'|'assert'|'snapshot'|'read'>;
 const effects=new Set(['business-write','knowledge-write','command']);
@@ -126,7 +130,7 @@ export class ScopeGoalService {
     check(!receipt.toolName.startsWith('cbim_task_')&&!receipt.toolName.startsWith('cbim_dispatch_')&&!receipt.toolName.startsWith('cbim_goal_')&&!receipt.toolName.startsWith('cbim_governance_')&&receipt.toolName!=='cbim_delivery_prepare','GOAL_EVIDENCE_INVALID','调度、计划、审阅或治理待办回执不能作为业务完成证据');
     return {receipt,event};
   }
-  private async member(state:DispatchState,scope:DispatchScope,graph:GraphSnapshot,task:TaskNode,knowledgeRevision:string){
+  private async member(state:DispatchState,scope:DispatchScope,graph:GraphSnapshot,task:TaskNode,knowledgeRevision:string,historical=false){
     const result=task.result;
     check(task.scopeId===scope.scopeId&&task.identity.workspaceId===scope.workspaceId&&task.identity.rootSessionId===scope.rootSessionId&&task.status==='result_ready'&&!task.activeRunId&&result&&result.planRevision===task.planRevision&&task.runIds.includes(result.runId),'GOAL_EVIDENCE_INVALID','成员任务没有当前周期的有效交付候选');
     const run=state.runs?.find(item=>item.binding.runId===result.runId&&item.binding.taskId===task.taskId);
@@ -137,7 +141,10 @@ export class ScopeGoalService {
     const progress=summary.taskProgress;
     check(progress?.state==='awaiting_review'&&progress.delivery&&progress.goal===task.goal&&sameGoalValue(progress.acceptance,task.acceptance.map(item=>item.text))&&progress.delivery.summary===result.summary&&sameGoalValue(progress.delivery.limitations,result.limitations)&&progress.steps.length&&progress.steps.every(step=>step.state==='reported_done'&&step.evidence.length)&&sameSet([...new Set(progress.steps.flatMap(step=>step.evidence))],result.evidenceRefs),'GOAL_EVIDENCE_INVALID','候选内容与运行的真实交付记录不一致');
     for(const id of result.evidenceRefs)this.receipt(summary,id);
-    try{validateMemberWorkflow(task,run,summary,this.owner.entry.path)}catch(error){fail('GOAL_WORKFLOW_UNMET',error instanceof Error?error.message:'成员 Workflow 程序条件无法核实')}
+    try{
+      if(historical)memberWorkflowFiles(task,run,summary,this.owner.entry.path,this.ports?.normalizeValidationPath);
+      else await validateMemberWorkflow(task,run,summary,this.owner.entry.path,this.ports?.checkValidationFiles&&this.ports.normalizeValidationPath?{normalizePath:this.ports.normalizeValidationPath,checkFiles:this.ports.checkValidationFiles}:undefined);
+    }catch(error){fail('GOAL_WORKFLOW_UNMET',error instanceof Error?error.message:'成员 Workflow 程序条件无法核实')}
     return summary;
   }
   /** 调度修订复用交付证据规则，并要求 canonical 头、连续事件及实际终态完整；不把候选视为验收。 */
@@ -145,9 +152,14 @@ export class ScopeGoalService {
     const summary=await this.member(state,scope,graph,task,knowledgeRevision),run=state.runs!.find(item=>item.binding.runId===task.result!.runId&&item.binding.taskId===task.taskId)!;
     this.memberTerminal(scope,task,run,summary);return summary;
   }
+  /** 仅核历史真实交付；人工负面可据此记录，接受调用方必须另合并核全部当前验证及基线文件。 */
+  async validateHistoricalMemberCandidate(state:DispatchState,scope:DispatchScope,graph:GraphSnapshot,task:TaskNode,knowledgeRevision:string):Promise<RunSummary>{
+    const summary=await this.member(state,scope,graph,task,knowledgeRevision,true),run=state.runs!.find(item=>item.binding.runId===task.result!.runId&&item.binding.taskId===task.taskId)!;
+    this.memberTerminal(scope,task,run,summary);return summary;
+  }
   /**
-   * 人工决定只读取当前安全等待中的一个 human 项及其全部真实成员候选；不替人签署，也不修改目标或等待。
-   * 返回 canonical 摘要供同批文件校验复用。调用者须在落盘前复核日志、知识和派发屏障，不能把预览当作许可。
+   * 人工决定只读取当前安全等待中的一个 human 项及其全部真实历史候选；文件变化不能阻止拒绝或补证。
+   * 返回 canonical 摘要及冻结验证文件供同批当前字节校验。接受另须核全部验证文件，不能只选未变化的基线子集。
    */
   async validateHumanCandidates(state:DispatchState,scope:DispatchScope,criterionId:string){
     const graph=this.graph(state,scope),goal=scope.goal,review=goal?.review,wait=scope.wait,plan=goal?.plan;
@@ -161,13 +173,17 @@ export class ScopeGoalService {
     const head=main.events[0],tail=main.events.at(-1),bounds=main.events.filter(event=>event.type==='session.bound'),facts=executionToolFacts(main,{binding:{workspaceId:scope.workspaceId,taskId:scope.rootSessionId,runId:review.runId}});
     check(main.status==='completed'&&main.logIntegrity?.partialTail===false&&!main.unresolvedTools.length&&head?.type==='run.started'&&sameGoalValue(head.data.task,main.task)&&sameGoalValue(head.data.conversationBinding,main.conversationBinding)&&!head.data.memberBinding&&tail?.type==='run.settled'&&tail.data.status==='completed'&&main.events.every((event,index)=>event.seq===index+1&&event.workspaceId===scope.workspaceId&&event.taskId===scope.rootSessionId&&event.runId===review.runId)&&!!main.sessionFile&&bounds.length&&bounds.every(event=>event.data.sessionFile===main.sessionFile&&typeof event.data.sessionId==='string'&&!!event.data.sessionId&&event.data.sessionId===bounds[0].data.sessionId)&&!facts.invalid&&!facts.counts.unknown&&!facts.counts.not_authorized,'HUMAN_EVIDENCE_INVALID','主审阅日志或原生通道登记不完整，不能据此保存人工决定');
     check(sameGoalValue(wait.graphCursor,review.graphCursor)&&sameGoalValue(review.graphCursor,cursor(graph))&&lastEffect(main)===review.lastEffectSeq&&review.observedSeq<tail.seq,'HUMAN_STALE','等待后的任务图、主审阅或副作用依据发生变化');
-    const selected=new Map<string,{task:TaskNode;run:DispatchRun;summary:RunSummary;evidenceToolCallIds:string[]}>();
+    const selected=new Map<string,{task:TaskNode;run:DispatchRun;summary:RunSummary;evidenceToolCallIds:string[];workflowFiles:ArtifactFileFact[]}>();
     for(const reference of item.evidence){
       check(reference.kind==='member-result','HUMAN_SOURCE_INVALID','人工验收只支持成员结果');
       const task=graph.tasks.find(task=>task.taskId===reference.taskId),result=task?.result;
       check(task&&result&&result.runId===reference.runId&&result.resultId===reference.resultId&&result.planRevision===reference.planRevision&&reference.toolCallIds.length&&reference.toolCallIds.every(id=>result.evidenceRefs.includes(id))&&plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&sameSet(assignment.moduleIds,task.modules.map(module=>module.moduleId))&&assignment.criterionIds.includes(criterionId)),'HUMAN_SOURCE_INVALID','候选、证据或模块分工不属于此人工验收项');
       let candidate=selected.get(task.taskId);
-      if(!candidate){const summary=await this.validateMemberCandidate(state,scope,graph,task,snapshot.revision),run=state.runs!.find(run=>run.binding.runId===result.runId&&run.binding.taskId===task.taskId)!;candidate={task,run,summary,evidenceToolCallIds:[]};selected.set(task.taskId,candidate)}
+      if(!candidate){
+        const summary=await this.validateHistoricalMemberCandidate(state,scope,graph,task,snapshot.revision),run=state.runs!.find(run=>run.binding.runId===result.runId&&run.binding.taskId===task.taskId)!;
+        const workflowFiles=memberWorkflowFiles(task,run,summary,this.owner.entry.path,this.ports?.normalizeValidationPath);
+        candidate={task,run,summary,evidenceToolCallIds:[],workflowFiles};selected.set(task.taskId,candidate);
+      }
       for(const id of reference.toolCallIds){this.receipt(candidate.summary,id);if(!candidate.evidenceToolCallIds.includes(id))candidate.evidenceToolCallIds.push(id)}
     }
     check(selected.size<=16,'HUMAN_LIMIT','单项人工决定最多核实 16 个成员候选');
@@ -244,7 +260,7 @@ export class ScopeGoalService {
         check(item.evidence.every(reference=>reference.kind==='human-decision'||reference.kind==='member-result'&&record.proof.candidates.some(candidate=>candidate.taskId===reference.taskId&&candidate.runId===reference.runId&&candidate.resultId===reference.resultId&&candidate.planRevision===reference.planRevision&&reference.toolCallIds.every(id=>candidate.evidenceToolCallIds.includes(id)))),'GOAL_HUMAN_CANDIDATE','人工满足不能混入此次接受以外的新候选或证据');
       }
     }
-    try{await validateHumanAcceptances(this.owner,state,scope,[...acceptedHumans.values()],this.ports,this.humanPorts,this.validateMemberCandidate.bind(this))}catch(error){
+    try{await validateHumanAcceptances(this.owner,state,scope,[...acceptedHumans.values()],this.ports,this.humanPorts,this.validateHistoricalMemberCandidate.bind(this))}catch(error){
       // 完成门禁保留 GOAL 命名空间，让协调器记录阻塞并收束；接受依据失效不能留下悬挂的活动周期。
       fail('GOAL_HUMAN_STALE',error instanceof Error?error.message:'人工接受的当前依据无法核实');
     }
@@ -266,7 +282,8 @@ export class ScopeGoalService {
         const candidate=human.record.proof.candidates.find(candidate=>candidate.taskId===source?.taskId);
         check(human.record.decision!=='accept'&&source?.status==='result_ready'&&candidate&&candidate.taskRevision===source.revision&&candidate.planRevision===source.planRevision&&candidate.resultId===source.result?.resultId&&candidate.runId===source.result?.runId,'GOAL_SUPERSESSION_INVALID','返工引用必须是本次消费的拒绝或补证及其精确旧候选');
         // 返工允许文件变化，但不能把旧运行损坏或未知结果藏在 superseded 后跳过完成核实。
-        const summary=await this.validateMemberCandidate(state,scope,graph,source,human.record.proof.source.knowledgeRevision);
+        const summary=await this.member(state,scope,graph,source,human.record.proof.source.knowledgeRevision,true),historicalRun=state.runs!.find(run=>run.binding.runId===source.result!.runId&&run.binding.taskId===source.taskId)!;
+        this.memberTerminal(scope,source,historicalRun,summary);
         check(hash(json(summary.events))===candidate.logHash&&candidate.evidenceToolCallIds.every(id=>source.result!.evidenceRefs.includes(id)),'GOAL_SUPERSESSION_INVALID','被拒候选的原始日志或证据已经变化，不能用旧决定替代');
       }
       check(source&&source.scopeId===scope.scopeId&&(['failed','blocked','cancelled','interrupted'].includes(source.status)||stale||human),'GOAL_SUPERSESSION_INVALID','只能替代失败、基线过期或本次人工决定明确要求返工的候选');

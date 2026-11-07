@@ -1,6 +1,6 @@
 /**
  * 作用定位：内部 Loop 的任务计划、步骤证据和交付工具，状态通过注入的持久化回调保存。
- * 设计原因：普通问答不创建计划；真实运行身份和代次限定证据。保存前冻结请求和前态，保存后只核一次原 wire，失败不回滚已保存版本；Workflow 仍在真实交付时复核在途副作用。
+ * 设计原因：普通问答不创建计划；真实身份和代次限定证据。JSON 验证 rejected 仍可记录步骤事实，交付必须选择 passed 并复核文件；保存前冻结依据，输出错误不回滚版本。
  */
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import type {TaskProgress} from './progress';
@@ -8,12 +8,13 @@ import type {ToolReceipt} from '../tools/types';
 import type {ArtifactBaselineRef} from './artifact-baseline';
 import {checkedJsonToolResult} from '../tools/results';
 import {fail} from '../foundation/errors';
-import {assertWorkflowPlan,evaluateWorkflowDelivery,type WorkflowProgressContext} from './workflow-evidence';
+import {assertWorkflowPlan,evaluateWorkflowDelivery,selectWorkflowValidations,type WorkflowProgressContext} from './workflow-evidence';
+import type {ProgressValidationPort} from './validation';
 import {progressToolInputSchemas,type ProgressPlanInput,type ProgressStepInput,type ProgressDeliveryInput} from './progress-schema';
 import {isProgressEvidence,memberToolContract,memberToolOutputSchema,progressToolIdentitySchema,type MemberToolName,type ProgressToolIdentity,type ProgressOutputBasis} from './member-tool-output';
 
 const definitions={
-  cbim_task_inspect:{description:'读取本会话执行计划和本轮可引用的成功工具回执。普通问答无需创建计划。',schema:progressToolInputSchemas.cbim_task_inspect},
+  cbim_task_inspect:{description:'读取本会话执行计划、本轮可引用的成功工具回执及已装配的 JSON 验证事实。rejected 是检查已执行但不符合要求，不能满足交付出口。普通问答无需创建计划。',schema:progressToolInputSchemas.cbim_task_inspect},
   cbim_task_plan:{description:'创建或修订执行计划。expectedVersion 初次为 0；修订清除旧证据并保留历史。责任是描述，不会派发其他 Agent。',schema:progressToolInputSchemas.cbim_task_plan},
   cbim_task_step:{description:'更新步骤；reported_done 必须引用 cbim_task_inspect 返回的本轮有效 evidenceIds。完成声明仍需人工判断。',schema:progressToolInputSchemas.cbim_task_step},
   cbim_delivery_prepare:{description:'准备交付候选。全部步骤须有有效回执证据；只标记待审阅，不能表示业务验收通过。',schema:progressToolInputSchemas.cbim_delivery_prepare},
@@ -42,7 +43,7 @@ export class TaskProgressTools {
   private readonly workflow?:WorkflowProgressContext;
   private readonly identity:ProgressToolIdentity;
   /** save 成功才替换内存状态；恢复保留计划，但不沿用上轮尚未重新核实的证据。 */
-  constructor(previous:TaskProgress|undefined,private save:(state:TaskProgress)=>Promise<void>,private readonly ports:{identity:ProgressToolIdentity;artifacts?():ArtifactBaselineRef[];workflow?:WorkflowProgressContext;
+  constructor(previous:TaskProgress|undefined,private save:(state:TaskProgress)=>Promise<void>,private readonly ports:{identity:ProgressToolIdentity;artifacts?():ArtifactBaselineRef[];workflow?:WorkflowProgressContext;validations?:ProgressValidationPort;
     /** 真正执行交付时再同步核在途副作用，防止已获 gate 后才出现写入；不请求权限或执行 I/O。 */
     assertDeliveryReady?():void;
   }){this.state=previous?structuredClone(previous):undefined;this.workflow=ports.workflow?structuredClone(ports.workflow):undefined;this.identity=structuredClone(ports.identity);if(!progressToolIdentitySchema.safeParse(this.identity).success)fail('TASK_PROGRESS_IDENTITY','执行进度必须绑定真实工作区、任务与运行')}
@@ -69,11 +70,11 @@ export class TaskProgressTools {
   call(name:string,input:unknown){return this.serial(async()=>{
     const parsed=progressTool(name,input);if(!parsed)throw Error('未知任务工具');
     const args=structuredClone(parsed.args) as ProgressPlanInput|ProgressStepInput|ProgressDeliveryInput;
-    const basis:ProgressOutputBasis={previous:this.current(),expected:undefined,evidence:structuredClone([...this.evidence.values()]),...(this.workflow?{workflow:structuredClone(this.workflow)}:{})};
+    const basis:ProgressOutputBasis={previous:this.current(),expected:undefined,evidence:structuredClone([...this.evidence.values()]),...(this.workflow?{workflow:structuredClone(this.workflow)}:{}),...(this.ports.validations?{validations:structuredClone(this.ports.validations.records())}:{})};
     const expectedInput=structuredClone(args);
     let result:unknown;
     if(name==='cbim_task_inspect'){
-      basis.expected={plan:this.current()??null,evidence:structuredClone([...this.evidence.values()]),...(this.workflow?.bindings.length?{workflowContracts:structuredClone(this.workflow.bindings)}:{})};
+      basis.expected={plan:this.current()??null,evidence:structuredClone([...this.evidence.values()]),...(this.workflow?.bindings.length?{workflowContracts:structuredClone(this.workflow.bindings)}:{}),...(basis.validations?{validations:basis.validations.map(record=>structuredClone(record.result))}:{})};
       basis.artifactsAvailable=!!this.ports.artifacts;
       // 外部端口值不先 clone/parse；它必须以原 JSON wire 通过严格 Schema，不把 toJSON 或缺字段隐藏在预处理里。
       result={...basis.expected as object,...(this.ports.artifacts?{artifacts:this.ports.artifacts()}: {})};
@@ -102,7 +103,9 @@ export class TaskProgressTools {
           if(this.workflow?.bindings.length){
             if(!this.planEstablished||next.goal!==this.workflow.task.goal||JSON.stringify(next.acceptance)!==JSON.stringify(this.workflow.task.acceptance))fail('WORKFLOW_PLAN_REQUIRED','Workflow 交付要求本轮保存与原任务一致的计划');
             const selected=[...new Set(next.steps.flatMap(step=>step.evidence))].map(id=>this.evidence.get(id)!);
-            next.delivery.workflow=evaluateWorkflowDelivery(this.workflow.bindings,selected,this.workflow.identity);
+            const validations=selectWorkflowValidations(this.workflow.bindings,selected,this.workflow.identity,basis.validations??[]);
+            if(validations.length){if(!this.ports.validations)fail('WORKFLOW_VALIDATION_UNAVAILABLE','本轮没有可信文件验证端口');await this.ports.validations.verifyCurrent(validations);this.ports.assertDeliveryReady?.()}
+            next.delivery.workflow=evaluateWorkflowDelivery(this.workflow.bindings,selected,this.workflow.identity,basis.validations);
           }
         }
         basis.expected=structuredClone(next);result=await this.persist(next);

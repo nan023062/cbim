@@ -1,6 +1,6 @@
 /**
  * 作用定位：展示任务图选中成员的公开正文、工具、计划与候选；独立报告核实执行事实，独立表单显式创建新的只读核实周期。
- * 设计原因：按工作区/主会话/任务/轮次隔离观察；求助、检查点、撤销和前置替换独立展示，日志损坏也不遮住可信审计。检查点保留源与续执行关系，不把旧候选借给新轮次。
+ * 设计原因：按工作区/主会话/任务/轮次隔离观察；求助、检查点、撤销与结构验证独立展示。验证区分暂存与真实工具终态，只说明当时字节，不把旧候选或通过结论借给新轮次。
  */
 import {useEffect,useRef,useState} from 'react';
 import type {GraphCursor,ScopeSummary,TaskNode} from '../../bridge/contracts/dispatch';
@@ -14,6 +14,7 @@ import {MemberHelpNotice} from './MemberHelpNotice';
 import {MemberCancellationNotice} from './MemberCancellationNotice';
 import {MemberDependencyNotice} from './MemberDependencyNotice';
 import {MemberCheckpointNotice} from './MemberCheckpointNotice';
+import {MemberValidationPanel} from './MemberValidationPanel';
 import type {ExecutionRecoveryContext} from './useExecutionRecovery';
 import {memberTaskLabel} from './MemberActivity';
 import './member-activity.css';
@@ -89,6 +90,7 @@ function MemberRunDetail({workspaceId,rootSessionId,task,runId,active}:{workspac
     {current&&questions.map(question=><QuestionCard key={question.id} request={question} onAnswer={answers=>operate('dispatch.answerQuestion',{questionId:question.id,answers})}/>)}
     {run&&<>
       <MemberRunTranscript run={run} workspaceId={workspaceId} memberName={task.assignee.name} active={active}/>
+      <MemberValidationPanel run={run}/>
       {run.taskProgress&&<details className="member-progress"><summary>本轮计划与步骤 · 版本 {run.taskProgress.version}</summary><ol>{run.taskProgress.steps.map(step=><li key={step.id}><strong>{step.title}</strong><span>{step.owner} · {step.state==='reported_done'?'已报告完成，待核验':step.state==='working'?'执行中':'待执行'}</span>{!!step.evidence.length&&<details><summary>{step.evidence.length} 条工具证据</summary>{step.evidence.map(id=><code key={id}>{id}</code>)}</details>}</li>)}</ol></details>}
       {!!run.unresolvedTools.length&&<p className="member-warning">有 {run.unresolvedTools.length} 项操作结果尚需核实。当前不自动续接异常成员通道。</p>}
     </>}

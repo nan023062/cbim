@@ -39,10 +39,11 @@ export class ScopeHumanContinuationService {
     check(records.length&&records.length===input.decisionIds.length&&records.every(record=>input.decisionIds.includes(record.decisionId)),'HUMAN_CONTINUATION_STALE','必须消费当前等待每个验收项最新决定的完整集合，不能选择旧接受或遗漏新意见');
     for(const record of records){
       check(record.proof.source.goalRevision===goal.revision&&record.proof.source.inputRevision===goalInputRevision(goal)&&record.proof.source.planRevision===goal.plan.revision&&record.proof.source.reviewRunId===goal.review.runId,'HUMAN_CONTINUATION_STALE','人工意见不属于当前目标、输入或审阅');
+      // 全部意见先核历史真实来源；负面意见允许文件已变，接受在下方另核当前全部验证文件及所选字节。
       const verified=await this.goals.validateHumanCandidates(state,scope,record.criterionId);this.current();
       check(hash(json(verified.main.events))===record.proof.source.reviewLogHash&&verified.knowledgeRevision===record.proof.source.knowledgeRevision&&verified.candidates.length===record.proof.candidates.length&&verified.candidates.every(candidate=>record.proof.candidates.some(saved=>saved.taskId===candidate.task.taskId&&saved.taskRevision===candidate.task.revision&&saved.runId===candidate.run.binding.runId&&saved.resultId===candidate.task.result!.resultId&&saved.planRevision===candidate.task.planRevision&&saved.logHash===hash(json(candidate.summary.events))&&sameGoalValue([...saved.evidenceToolCallIds].sort(),[...candidate.evidenceToolCallIds].sort()))),'HUMAN_CONTINUATION_STALE','人工决定的候选或日志依据已变化，请重新核实');
     }
-    await validateHumanAcceptances(this.owner,state,scope,records.filter(record=>record.decision==='accept'),this.logs,this.artifacts,this.goals.validateMemberCandidate.bind(this.goals));this.current();
+    await validateHumanAcceptances(this.owner,state,scope,records.filter(record=>record.decision==='accept'),this.logs,this.artifacts,this.goals.validateHistoricalMemberCandidate.bind(this.goals));this.current();
     return {scope,wait,records,subject:humanContinuationSubject(goal.plan)};
   }
   /** 只预检固定意见和原主等待；系统摘要是可信资料，不是新自由文本或运行许可。 */

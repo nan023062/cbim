@@ -1,6 +1,6 @@
 /**
  * 作用定位：调度引擎：将工作区内部知识服务、内核锁与前置策略注入独立 LoopRuntime。
- * 设计原因：工具纯分类只做一次，交给成员 Workflow 计划门禁和既有授权共用；主调度业务写入/命令仍始终拒绝。文件采集、检查点和冻结约定仅向正式成员注入，旧声明约定的单任务入口不能绕过。
+ * 设计原因：工具纯分类只做一次，交给成员 Workflow 计划门禁和既有授权共用；主调度业务写入/命令仍始终拒绝。文件采集、检查点与 JSON 验证仅向正式成员注入，验证还须冻结要求和真实平台端口，旧声明约定的单任务入口不能绕过。
  * 仓库边界：仅主会话使用已捕获只读端口；发现、分类、调用各走独立适配器，资料不是指令，成员不因装配参数获得外部读取能力。
  * 治理边界：只有真实主绑定和独立 per-run 工厂可注册四项治理工具；私有待办不扩大知识写或业务执行权。
  * 反馈指引：回应先读取真实当前意见并准备新提案，人工评价与批准仍独立，不从模型自述推断理解。
@@ -25,6 +25,8 @@ import {progressTool} from '../../core/tasks/progress-tools';
 import {memberHelpTool} from '../../core/tasks/member-help-tools';
 import {artifactTool} from '../../core/tasks/artifact-tools';
 import type {ArtifactCapturePort} from '../../core/brain/artifact-capture';
+import type {ValidationFilePort} from '../../core/brain/run-validation';
+import {validationTool} from '../../core/tasks/validation-tools';
 import {memberCheckpointTool} from '../../core/tasks/member-checkpoint-tools';
 import type {DispatchTools} from '../tools/dispatch-tools';
 import {nativeToolDescriptor} from '../../core/tools/native-tools';
@@ -70,6 +72,8 @@ export interface ExecutionServices {
   member?:{prompt:string;directory:string;workflowContracts?:WorkflowContractBinding[]};
   /** 仅成员装配提供文件读取与当前知识复核；不存在时模型无法发现或调用采集工具。 */
   artifacts?:ArtifactCapturePort;
+  /** 冻结 JSON 约定的成员专用同字节验证；主运行不会获得此端口或工具。 */
+  validations?:ValidationFilePort;
   /** 仅已领取的成员续执行装配原日志/业务文件/知识/原生历史复核；不向主会话或模型公开。 */
   assertMemberResume?():Promise<void>;
   /** 原生已配置后、模型 prompt 前核业务文件/知识/canonical；原 native 指纹在载入前后另行核实。 */
@@ -126,6 +130,7 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
   const describeTool=(call:ToolCall):RunToolDescriptor=>{
     owner.assert();
     const progress=progressTool(call.name,call.input);if(progress)return progress;
+    const validation=validationTool(call.name,call.input);if(validation){if(!services.member||!services.artifacts||!services.validations||!services.member.workflowContracts?.some(binding=>binding.contract.delivery?.requiredValidations?.length))throw Error('本轮未提供冻结 JSON 产物验证能力');return validation}
     const artifact=artifactTool(call.name,call.input);if(artifact){if(!services.member||!services.artifacts)throw Error('本轮未提供成员文件基线采集能力');return artifact}
     const checkpoint=memberCheckpointTool(call.name,call.input);if(checkpoint){if(!services.member||!services.artifacts)throw Error('本轮未提供成员检查点能力');return checkpoint}
     const help=memberHelpTool(call.name,call.input);if(help){if(!services.member)throw Error('主 Agent 负责处理成员求助，不能以成员身份提交求助');return help}
@@ -139,6 +144,7 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
   const runtime=new LoopRuntime({
     conversationBinding:services.conversationBinding,
     artifacts:services.member?services.artifacts:undefined,
+    validations:services.member?services.validations:undefined,
     assertMemberResume:services.member?services.assertMemberResume:undefined,
     assertMemberResumeInputs:services.member?services.assertMemberResumeInputs:undefined,
     workflowContracts:services.member?.workflowContracts,

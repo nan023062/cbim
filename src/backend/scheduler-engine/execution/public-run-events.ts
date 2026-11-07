@@ -3,12 +3,14 @@
  * 设计原因：任务详情与静态 Agent 历史使用同一字段白名单，排除原生会话路径、冻结知识、工具输入正文及私有推理；公开正文限长，但不声称识别正文中的全部敏感信息。
  * 职责边界：这里只做纯投影，读取方须先核验完整归属；人工决定的系统转交仅公开来源种类和固定摘要，不当用户原话或透传意见正文，不把运行结束当作验收。
  * 仓库范围：保留真实链接器、仓库、共享代际与操作，正文/地址/凭据不经公开投影透传。
+ * 验证范围：只公开核验当时的要求身份、指定文件指纹和无原值诊断；暂存结果仍须结合工具终态，不代表当前文件持续有效。
  */
 import path from 'node:path';
 import type {StoredEvent,TaskSpec} from '../../core/brain/types';
 import type {TaskProgress} from '../../core/tasks/progress';
 import type {ToolReceipt} from '../../core/tools/types';
 import {repositoryToolScopeSchema} from '../../core/tools/scope-schema';
+import {validationResultSchema} from '../../core/tasks/validation';
 
 /** 已核实的运行身份；成员、主对话和旧日志都不能通过投影改变其归属。 */
 export interface PublicRunIdentity {workspaceId:string;taskId:string;runId:string}
@@ -73,6 +75,12 @@ export function projectRunEvent(event:StoredEvent,identity:PublicRunIdentity,tas
       break;
     }
     case 'task.updated':{const state=progress(source.progress);data=state?{progress:state}:{};break}
+    case 'validation.checked':{
+      const parsed=validationResultSchema.safeParse(source.validation),value=parsed.success?parsed.data:undefined;
+      if(!value||value.binding.workspaceId!==identity.workspaceId||value.binding.taskId!==identity.taskId||value.binding.runId!==identity.runId){type='engine.status';data={label:'执行记录已更新'};break}
+      data={validation:{validationId:value.validationId,toolCallId:value.toolCallId,validator:value.validator,requirement:{moduleId:value.requirement.moduleId,workflowId:value.requirement.workflowId,workflowVersion:value.requirement.workflowVersion,requirementId:value.requirement.requirementId,schemaHash:value.requirement.schemaHash},artifact:{relativePath:value.artifact.relativePath,byteLength:value.artifact.byteLength,sha256:value.artifact.sha256},checkedAt:value.checkedAt,outcome:value.outcome,issues:value.issues.map(issue=>({code:issue.code,instancePath:issue.instancePath,...(issue.schemaPath!==undefined?{schemaPath:issue.schemaPath}:{}),...(issue.keyword!==undefined?{keyword:issue.keyword}:{})}))}};
+      break;
+    }
     case 'engine.status':{
       data={label:labels.has(String(source.label))?source.label:'运行状态已更新'};
       if(['activity','context','request-limit','run-usage','insertion'].includes(String(source.metric)))data.metric=source.metric;

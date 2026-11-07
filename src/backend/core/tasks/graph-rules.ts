@@ -1,6 +1,6 @@
 /**
  * 作用定位：任务图的纯领域校验，完整图与单项公开查询共用节点状态规则，并检查身份、派发父关系及依赖/等待无环。
- * 设计原因：存储重放与新提交共用局部结构规则；负责人及检查点放弃审计严格对应原任务，图防环覆盖全部启用边，不以创建顺序代替依赖顺序。
+ * 设计原因：存储重放与新提交共用局部结构规则；依赖增删审计保留原版本与退役边，图防环覆盖全部启用边，不以创建顺序代替依赖顺序。
  * 职责边界：结构通过不等于知识维护人已认证或任务已获授权，调度层仍需核实来源。
  */
 import {z} from 'zod';
@@ -10,6 +10,7 @@ import type {AgentRef,GraphEventBatch,GraphIdentity,GraphSnapshot,TaskNode} from
 import {memberHelpRecordSchema} from './member-help';
 import {dependencyReplacementSchema} from './queued-dependency-replacement';
 import {dependencyAdditionSchema} from './queued-dependency-addition';
+import {dependencyRevisionSchema} from './queued-dependency-revision';
 import {memberCheckpointRecordSchema} from './member-checkpoint';
 import {memberResumeRequestSchema} from './queued-member-resume';
 import {checkpointAbandonmentSchema} from './checkpoint-handoff';
@@ -40,6 +41,7 @@ const task=z.object({kind:z.literal('task'),nodeId:id,taskId:id,identity,scopeId
   cancelledBeforeStart:queuedTaskCancellationSchema.optional(),
   dependencyReplacements:z.array(dependencyReplacementSchema).min(1).max(32).optional(),
   dependencyAdditions:z.array(dependencyAdditionSchema).min(1).max(32).optional(),
+  dependencyRevisions:z.array(dependencyRevisionSchema).min(1).max(32).optional(),
   createdAt:time,updatedAt:time}).strict();
 const edgeBase={edgeId:id,identity,fromNodeId:id,toNodeId:id,revision,enabled:z.boolean()};
 const edge=z.discriminatedUnion('kind',[
@@ -89,7 +91,8 @@ function acyclic(nodes:string[],edges:[string,string][],code:string){
   for(let i=0;i<queue.length;i++){const from=queue[i];seen++;for(const to of outgoing.get(from)??[]){const n=incoming.get(to)!-1;incoming.set(to,n);if(n===0)queue.push(to)}}
   if(seen!==nodes.length)fail(code,code==='GRAPH_WAIT_CYCLE'?'任务等待关系形成互等':'任务派发与依赖形成循环');
 }
-function usableResult(task:TaskNode,planRevision:number,resultId?:string){return task.status==='result_ready'&&task.result?.planRevision===planRevision&&task.planRevision===planRevision&&(!resultId||task.result.resultId===resultId)}
+/** 仅当前计划的真实候选可满足前置；有固定 resultId 时不能换用其它结果。 */
+export function usableResult(task:TaskNode,planRevision:number,resultId?:string){return task.status==='result_ready'&&task.result?.planRevision===planRevision&&task.planRevision===planRevision&&(!resultId||task.result.resultId===resultId)}
 
 /** 单项查询与完整图共用节点自身可核实的不变量；跨节点、图流及边关系仍由 validateGraph 核验。 */
 export function validateTaskNode(t:TaskNode):void {
@@ -118,6 +121,16 @@ export function validateTaskNode(t:TaskNode):void {
   for(let index=0;index<additions.length;index++){
     const record=additions[index],prior=additions[index-1];
     if(record.scopeId!==t.scopeId||record.targetPlanRevision>t.planRevision||record.previousTaskRevision>=t.revision||record.dependency.sourceTaskId===t.taskId||!record.trackedTaskIds.includes(t.taskId)||!record.trackedTaskIds.includes(record.dependency.sourceTaskId)||Date.parse(record.addedAt)<Date.parse(t.createdAt)||Date.parse(record.addedAt)>Date.parse(t.updatedAt)||prior&&(prior.previousTaskRevision>=record.previousTaskRevision||prior.graphCursor.seq>=record.graphCursor.seq))fail('GRAPH_INPUT_INVALID','前置追加历史与任务版本或闭包身份不一致');
+  }
+  const revisions=t.dependencyRevisions??[];
+  unique([...replacements,...additions,...revisions].map(r=>r.commandId),'前置变更命令');
+  unique([...replacements,...additions].map(r=>String(r.previousTaskRevision)).concat(revisions.map(r=>String(r.request.target.expectedRevision))),'前置变更版本');
+  unique([...replacements.map(r=>r.retired.edgeId),...revisions.flatMap(r=>r.removed.map(e=>e.edgeId))],'前置退役边');
+  unique([...additions.map(r=>r.dependency.edgeId),...replacements.map(r=>r.replacement.edgeId),...revisions.flatMap(r=>r.added.map(e=>e.edgeId))],'前置新增边');
+  for(let i=0;i<revisions.length;i++){
+    const r=revisions[i],q=r.request,p=revisions[i-1];
+    if(r.scopeId!==t.scopeId||q.target.taskId!==t.taskId||q.target.expectedRevision>=t.revision||q.target.expectedPlanRevision>t.planRevision||r.goalPlanRevision!==q.expectedGoalRevision||!r.trackedTaskIds.includes(t.taskId)||[...r.removed,...r.added].some(e=>e.sourceTaskId===t.taskId||!r.trackedTaskIds.includes(e.sourceTaskId))||Date.parse(r.revisedAt)<Date.parse(t.createdAt)||Date.parse(r.revisedAt)>Date.parse(t.updatedAt)||p&&(p.request.target.expectedRevision>=q.target.expectedRevision||p.request.expectedGraphCursor.seq>=q.expectedGraphCursor.seq))fail('GRAPH_INPUT_INVALID','前置修订历史与原任务或图版本不一致');
+    if(r.removed.length!==q.remove.length||r.added.length!==q.add.length||r.removed.some((e,i)=>e.edgeId!==q.remove[i].edgeId||e.edgeRevision!==q.remove[i].expectedRevision)||r.added.some((e,i)=>e.sourceTaskId!==q.add[i].taskId||e.sourceTaskRevision!==q.add[i].expectedRevision||e.sourcePlanRevision!==q.add[i].expectedPlanRevision))fail('GRAPH_INPUT_INVALID','修订审计与原增删请求不一致');
   }
 }
 
@@ -158,7 +171,17 @@ export function validateGraph(value:GraphSnapshot):void {
       if(record.graphCursor.streamId!==value.cursor.streamId||record.graphCursor.seq>=value.cursor.seq||record.trackedTaskIds.some(id=>tasks.get(id)?.scopeId!==t.scopeId)||!source||source.scopeId!==t.scopeId||source.revision<record.dependency.sourceTaskRevision||source.planRevision<record.dependency.sourcePlanRevision)fail('GRAPH_INPUT_INVALID','前置追加历史不属于当前图或原任务基线');
       if(edge?.kind!=='dependency'||edge.fromNodeId!==source.nodeId||edge.toNodeId!==t.nodeId||edge.condition.planRevision!==record.dependency.sourcePlanRevision)fail('GRAPH_INPUT_INVALID','新增前置与不可变追加审计不一致');
       // 首次领取可 pin 真结果，后续正式替换可退役；不能要求新增边永远未消费或始终启用。
-      if(!edge.enabled&&!replacements.some(item=>item.retired.edgeId===edge.edgeId))fail('GRAPH_INPUT_INVALID','追加的依赖缺少真实退役审计');
+      if(!edge.enabled&&!replacements.some(item=>item.retired.edgeId===edge.edgeId)&&!t.dependencyRevisions?.some(r=>r.removed.some(e=>e.edgeId===edge.edgeId)))fail('GRAPH_INPUT_INVALID','追加的依赖缺少真实退役审计');
+    }
+    for(const r of t.dependencyRevisions??[]){
+      const cursor=r.request.expectedGraphCursor;
+      if(cursor.streamId!==value.cursor.streamId||cursor.seq>=value.cursor.seq||r.trackedTaskIds.some(id=>tasks.get(id)?.scopeId!==t.scopeId))fail('GRAPH_INPUT_INVALID','修订历史不属于当前图或原闭包');
+      for(const e of [...r.removed,...r.added]){
+        const edge=value.edges.find(item=>item.edgeId===e.edgeId),source=tasks.get(e.sourceTaskId);
+        if(!source||source.scopeId!==t.scopeId||source.revision<e.sourceTaskRevision||source.planRevision<e.sourcePlanRevision||edge?.kind!=='dependency'||edge.fromNodeId!==source.nodeId||edge.toNodeId!==t.nodeId||edge.condition.planRevision!==e.sourcePlanRevision)fail('GRAPH_INPUT_INVALID','修订边不属于原来源或目标');
+        if('edgeRevision' in e){if(typeof e.edgeRevision!=='number'||edge.enabled||edge.revision!==e.edgeRevision+1||edge.condition.resultId)fail('GRAPH_INPUT_INVALID','修订退役边必须保持原未消费状态')}
+        else if(!edge.enabled&&!replacements.some(item=>item.retired.edgeId===edge.edgeId)&&!t.dependencyRevisions?.some(later=>later.request.target.expectedRevision>r.request.target.expectedRevision&&later.removed.some(item=>item.edgeId===edge.edgeId)))fail('GRAPH_INPUT_INVALID','修订新增边缺少后续退役审计');
+      }
     }
     for(const awaited of t.awaitedChildren){const child=tasks.get(awaited.taskId);if(!child||child.parentTaskId!==t.taskId)fail('GRAPH_INPUT_INVALID','等待的不是当前任务直接派发的子任务');if(!usableResult(child,awaited.planRevision))waits.push([t.nodeId,child.nodeId])}
   }

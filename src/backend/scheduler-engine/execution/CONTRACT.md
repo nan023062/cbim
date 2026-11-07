@@ -599,3 +599,9 @@ EffectObservationService 仅从完整可信主 canonical 的原 proposed/allowed
 ### 刷新原事务与契约版本
 
 EffectObservationService 从已核实原 allowed 事件取得 contractVersion，只有 refresh v2 才使用原输入构造 changes=[] 的知识引用，复用两次 journal 查询及稳定依据。v1、缺版本、错误版本和仅 input 自报版本均不适配，不按最近 journal 推断。原失败和 committed 分开，处置/重开不重试。
+
+## 原子增删未领取前置（Step42）
+
+QueuedDependencyRevisionService 与追加/可靠失败替换并列，按 Knowledge→模型→Store 锁序核完整闭包的当前来源、岗位、配置、知识与 Workflow。原命令优先只读返回；首次提交在外部准备前后和短事务内检查停止、图/目标/节点版本与领取。增删和等待状态一次提交，无新运行、信封或执行实例。
+
+Auto 为原命令生成独立 auto-revise-dependencies 键，将操作纳入在途屏障，成功后只将原闭包纳入当前批次；主轮安全结束后仍按新图的真实候选、预算和权限领取。坏回包不撤回已保存边，原 canonical/run/call 经共享 request 算法核 dispatch.reviseDependencies，查询不更新 workRequested、不重做。

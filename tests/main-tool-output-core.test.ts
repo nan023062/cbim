@@ -28,7 +28,7 @@ function result(name:MainToolName,value:unknown,input:unknown={},activeBinding=b
 function rejects(name:MainToolName,value:unknown,input:unknown={},activeBinding=binding,expectedCommandId:string|undefined=commandId){expect(()=>result(name,value,input,activeBinding,expectedCommandId)).toThrowError(expect.objectContaining({code:'TOOL_OUTPUT_INVALID'}))}
 
 test('nine actual output schemas describe strict structures and preserve legacy absence without defaults',()=>{
-  expect(Object.keys(mainToolOutputSchemas)).toHaveLength(10);
+  expect(Object.keys(mainToolOutputSchemas)).toHaveLength(11);
   for(const schema of Object.values(mainToolOutputSchemas))expect(zodToJsonSchema(schema)).toBeTypeOf('object');
   const legacy={...identity,scopeId:'scope',status:'active' as const,createdAt:time};
   expect(result('cbim_goal_inspect',{scope:projectMainScope(legacy),graph:graph()})).toEqual({scope:legacy,graph:graph()});

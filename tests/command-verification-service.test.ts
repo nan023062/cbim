@@ -30,12 +30,12 @@ test('旧pre-owner派发保留默认角色/空前置，原隐藏父版本不取�
   expect(rawInputHash(raw)).not.toBe(rawInputHash({...raw,agentId:'cbim:executor'}));
 });
 
-test('八项指纹保持原字段键序/操作域；cancel没有凭空goalRevision，resume没有command正文',()=>{
+test('已支持主命令指纹保持原字段键序/操作域；cancel没有凭空goalRevision，resume没有command正文',()=>{
   const pair={workspaceId:identity.workspaceId,rootSessionId:identity.rootSessionId};
   for(const c of reportInputs()){
     const r=restoreMainCommand(c.name,binding,identity.toolCallId,c.input,7);
     if(c.name==='cbim_dispatch_task')continue;
-    const operation={cbim_goal_plan:'goal.plan',cbim_goal_review:'goal.review',cbim_dispatch_cancel:'dispatch.cancelQueued',cbim_dispatch_replace_dependency:'dispatch.replaceDependency',cbim_dispatch_add_dependency:'dispatch.addDependency',cbim_dispatch_resume:'member.resume.request',cbim_dispatch_abandon_checkpoint:'member.checkpoint.abandon'}[c.name];
+    const operation={cbim_goal_plan:'goal.plan',cbim_goal_review:'goal.review',cbim_dispatch_cancel:'dispatch.cancelQueued',cbim_dispatch_replace_dependency:'dispatch.replaceDependency',cbim_dispatch_add_dependency:'dispatch.addDependency',cbim_dispatch_revise_dependencies:'dispatch.reviseDependencies',cbim_dispatch_resume:'member.resume.request',cbim_dispatch_abandon_checkpoint:'member.checkpoint.abandon'}[c.name];
     const original=c.name.startsWith('cbim_goal_')?{operation,identity:pair,scopeId:binding.scopeId,runId:binding.runId,draft:r.input}:c.name==='cbim_dispatch_resume'?{operation,identity:pair,scopeId:binding.scopeId,mainRunId:binding.runId,input:r.input}:{operation,context:{...pair,scopeId:binding.scopeId,...(c.name==='cbim_dispatch_abandon_checkpoint'?{mainRunId:binding.runId}:{runId:binding.runId}),commandId:r.commandId},input:r.input};
     expect(r.fingerprint).toBe(hash(json(original)));
   }

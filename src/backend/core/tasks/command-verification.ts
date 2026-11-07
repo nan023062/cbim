@@ -1,11 +1,11 @@
 /**
- * 作用定位：声明原主命令只读核实的严格请求、有界报告及八项写工具支持矩阵，供后端与界面共享。
+ * 作用定位：声明原主命令只读核实的严格请求、有界报告及写工具支持矩阵，含多边前置修订摘要。
  * 设计原因：原工具失败、领域已提交和业务未验收可以同时成立；叶子协议不导入日志、Store 或命令算法，不把查询变成恢复授权。
  */
 import {z} from 'zod';
 
 export const commandReportToolName='cbim_dispatch_command_report';
-export const commandVerificationToolNames=['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task','cbim_dispatch_cancel','cbim_dispatch_replace_dependency','cbim_dispatch_add_dependency','cbim_dispatch_resume','cbim_dispatch_abandon_checkpoint'] as const;
+export const commandVerificationToolNames=['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task','cbim_dispatch_cancel','cbim_dispatch_replace_dependency','cbim_dispatch_add_dependency','cbim_dispatch_revise_dependencies','cbim_dispatch_resume','cbim_dispatch_abandon_checkpoint'] as const;
 export type VerifiableMainToolName=typeof commandVerificationToolNames[number];
 export const commandVerificationLimits={summaryItems:20,issues:20,outputBytes:128*1024} as const;
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f\x7f]/.test(value),'标识包含空白边界或控制字符');
@@ -32,6 +32,7 @@ export const commandResultSummarySchema=z.discriminatedUnion('toolName',[
   z.object({toolName:z.literal('cbim_dispatch_cancel'),cancelled:taskList,graphCursor}).strict(),
   z.object({toolName:z.literal('cbim_dispatch_replace_dependency'),taskId:id,status:z.enum(['queued','waiting']),retiredEdgeId:id,replacementEdgeId:id,sourceTaskId:id,sourceRunId:id,sourceResultId:id,tracked:taskList,graphCursor}).strict(),
   z.object({toolName:z.literal('cbim_dispatch_add_dependency'),taskId:id,status:z.literal('waiting'),edgeId:id,sourceTaskId:id,tracked:taskList,graphCursor}).strict(),
+  z.object({toolName:z.literal('cbim_dispatch_revise_dependencies'),taskId:id,status:z.enum(['queued','waiting']),removedCount:seq.max(32),addedCount:seq.max(32),tracked:taskList,graphCursor}).strict(),
   z.object({toolName:z.literal('cbim_dispatch_resume'),taskId:id,checkpointId:id,requestId:id,tracked:taskList,cursor:fullCursor}).strict(),
   z.object({toolName:z.literal('cbim_dispatch_abandon_checkpoint'),taskId:id,status:z.literal('cancelled'),checkpointId:id,sourceRunId:id,resumeRequestId:id.nullable(),previousLeaseEpoch:seq,nextLeaseEpoch:seq,abandonedAt:z.string().datetime(),graphCursor}).strict(),
 ]);
@@ -65,6 +66,7 @@ export const commandVerificationReportSchema=z.object({
     const result=value.command.result;
     if('cursor' in result&&(result.cursor.workspaceId!==value.identity.workspaceId||result.cursor.rootSessionId!==value.identity.rootSessionId))issue('原回执游标不属于报告主会话');
     if(result.toolName==='cbim_dispatch_abandon_checkpoint'&&result.nextLeaseEpoch!==result.previousLeaseEpoch+1)issue('原交接租约变化无效');
+    if(result.toolName==='cbim_dispatch_revise_dependencies'&&result.removedCount+result.addedCount===0)issue('原前置修订不能是空变更');
   }
   if(value.command.state==='absent'&&(source.state!=='verified'||!source.allowedSeq||!source.toolName||!isVerifiableMainToolName(source.toolName)||!value.scope||value.consistency!=='stable'))issue('查无回执仍须有稳定原调用、授权和周期依据');
   if(value.command.state==='not_applicable'){
@@ -80,5 +82,5 @@ export function commandVerificationReportForInput(input:CommandVerificationInput
     if((Object.keys(expected) as (keyof CommandVerificationInput)[]).some(key=>value.identity[key]!==expected[key]))context.addIssue({code:'custom',message:'原命令报告不属于本次明确选择'});
   });
 }
-/** 只认固定八项，原型属性或近似名称不属于已支持命令。 */
+/** 只认显式支持矩阵，原型属性或近似名称不属于已支持命令。 */
 export function isVerifiableMainToolName(name:string):name is VerifiableMainToolName{return (commandVerificationToolNames as readonly string[]).includes(name)}

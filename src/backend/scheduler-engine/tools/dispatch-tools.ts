@@ -12,6 +12,7 @@ import {validateWorkflowSelections} from '../../core/tasks/workflow-selection';
 import {cancelQueuedTasksInputSchema,type CancelQueuedTasksInput,type CancelQueuedTasksReceipt} from '../../core/tasks/queued-task-cancel';
 import {replaceQueuedDependencyInputSchema,type ReplaceQueuedDependencyInput,type ReplaceQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-replacement';
 import {addQueuedDependencyInputSchema,type AddQueuedDependencyInput,type AddQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-addition';
+import {reviseQueuedDependenciesInputSchema,type ReviseQueuedDependenciesInput,type ReviseQueuedDependenciesReceipt} from '../../core/tasks/queued-dependency-revision';
 import type {MainToolOutputBinding} from '../../core/tasks/main-tool-output';
 import {checkedMainToolResult,mainToolContract} from './main-tool-contracts';
 import {commandReportContract,checkedCommandReportResult} from './command-report-contract';
@@ -25,6 +26,10 @@ const {assigneeAgentId,...taskFields}=dispatchTaskFields.shape;
 const taskInput=z.object({agentId:assigneeAgentId.refine(id=>id!=='cbim:main','主 Agent 只能调度，不能承担执行任务'),...taskFields}).strict().superRefine((value,context)=>{if(!value.ownerSelection)context.addIssue({code:'custom',message:'必须提供模块负责岗位的 ownerSelection'});try{validateWorkflowSelections(value.moduleIds,value.workflowSelections)}catch{context.addIssue({code:'custom',message:'Workflow 选择必须属于本次任务模块'})}});
 const inspectInput=z.object({taskId:z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/).optional()}).strict();
 const definitions={
+  cbim_dispatch_revise_dependencies:{
+    description:'一次原子增删当前未领取目标的多条前置。先读取目标和整图，传 expectedGraphCursor/expectedGoalRevision、target 任务/计划版本、remove 原边/版本、add 新来源任务/计划版本及 reason。各至多32条，至少一项；目标、被增删来源和全部启用后继均须未领取/执行且匹配当前岗位、知识、计划。按全部修改后的图判环，原边只退役，新边不预填结果；保留任务、角色、验收、实例和原信封。已执行来源不能删除以掩盖失败或未知；可靠失败替换走 replace_dependency。回执只证明修订，主轮结束后仍按真实结果和预算领取；未知回包查询原命令，不换调用重发。',
+    schema:reviseQueuedDependenciesInputSchema,effects:['maintenance'] as const,
+  },
   cbim_dispatch_command_report:{
     description:'只读核实同一主会话原 runId/toolCallId 的真实调用与原命令提交事实，支持目标计划/审阅、派发、撤销、加边、换边、恢复预约和检查点放弃。坏输出后先查原调用，不换调用重做。committed 仅表示原领域记录已提交，absent 不证明未执行或可重试；报告不会清除 unknown、恢复任务或通过业务验收，原生工具等无账本族明确未支持。',
     schema:commandReportToolInputSchema,effects:['read'] as const,
@@ -79,6 +84,8 @@ export interface DispatchToolsPort {
   replaceDependency?(input:ReplaceQueuedDependencyInput,invocation:DispatchToolInvocation):Promise<ReplaceQueuedDependencyReceipt>;
   /** 仅追加单边；真实闭包与知识核实在服务完成，当前主轮结束后才可按新依赖领取。 */
   addDependency?(input:AddQueuedDependencyInput,invocation:DispatchToolInvocation):Promise<AddQueuedDependencyReceipt>;
+  /** 一个目标的多边增删同事务提交，固定原任务和信封；后继按新图重新跟踪。 */
+  reviseDependencies?(input:ReviseQueuedDependenciesInput,invocation:DispatchToolInvocation):Promise<ReviseQueuedDependenciesReceipt>;
   /** 仅当前主轮预约，成员实际续执行在本主轮安全结束后另经领取门禁。 */
   resume?(input:ResumeMemberInput,invocation:DispatchToolInvocation):Promise<ResumeMemberReceipt>;
   /** 只终止未消费的旧待办；原运行与证明不变，历史读取和最终 CAS 由服务负责。 */
@@ -90,7 +97,7 @@ export class DispatchTools {
   private readonly binding:MainToolOutputBinding;
   constructor(private readonly port:DispatchToolsPort,private readonly goals?:GoalTools){this.binding=Object.freeze(structuredClone(port.binding))}
   /** 只有装配了真实端口才构造本对象；返回值不包含未来工具占位。 */
-  private available(name:string){return (name!=='cbim_dispatch_command_report'||!!this.port.commandReport)&&(name!=='cbim_dispatch_cancel'||!!this.port.cancel)&&(name!=='cbim_dispatch_replace_dependency'||!!this.port.replaceDependency)&&(name!=='cbim_dispatch_add_dependency'||!!this.port.addDependency)&&(name!=='cbim_dispatch_resume'||!!this.port.resume)&&(name!=='cbim_dispatch_abandon_checkpoint'||!!this.port.abandonCheckpoint)}
+  private available(name:string){return (name!=='cbim_dispatch_command_report'||!!this.port.commandReport)&&(name!=='cbim_dispatch_cancel'||!!this.port.cancel)&&(name!=='cbim_dispatch_replace_dependency'||!!this.port.replaceDependency)&&(name!=='cbim_dispatch_add_dependency'||!!this.port.addDependency)&&(name!=='cbim_dispatch_revise_dependencies'||!!this.port.reviseDependencies)&&(name!=='cbim_dispatch_resume'||!!this.port.resume)&&(name!=='cbim_dispatch_abandon_checkpoint'||!!this.port.abandonCheckpoint)}
   list(){return [...Object.entries(definitions).filter(([name])=>this.available(name)).map(([name,d])=>({name,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>,...(name==='cbim_dispatch_command_report'?commandReportContract():mainToolContract(name as Exclude<DispatchToolName,'cbim_dispatch_command_report'>))})),...(this.goals?.list()??[])]}
   /** 名称检测不执行操作，供 Loop 在知识工具之前选择本适配器。 */
   has(name:string):boolean{return (Object.hasOwn(definitions,name)&&this.available(name))||!!this.goals?.has(name)}
@@ -120,6 +127,7 @@ export class DispatchTools {
     else if(parsed.name==='cbim_dispatch_cancel')value=await this.port.cancel!(parsed.args as CancelQueuedTasksInput,{toolCallId,signal});
     else if(parsed.name==='cbim_dispatch_replace_dependency')value=await this.port.replaceDependency!(parsed.args as ReplaceQueuedDependencyInput,{toolCallId,signal});
     else if(parsed.name==='cbim_dispatch_add_dependency')value=await this.port.addDependency!(parsed.args as AddQueuedDependencyInput,{toolCallId,signal});
+    else if(parsed.name==='cbim_dispatch_revise_dependencies')value=await this.port.reviseDependencies!(parsed.args as ReviseQueuedDependenciesInput,{toolCallId,signal});
     else if(parsed.name==='cbim_dispatch_resume')value=await this.port.resume!(parsed.args as ResumeMemberInput,{toolCallId,signal});
     else if(parsed.name==='cbim_dispatch_abandon_checkpoint')value=await this.port.abandonCheckpoint!(parsed.args as AbandonCheckpointInput,{toolCallId,signal});
     else{const {agentId,...task}=parsed.args as z.infer<typeof taskInput>;value=await this.port.dispatch({...task,assigneeAgentId:agentId},{toolCallId,signal})}

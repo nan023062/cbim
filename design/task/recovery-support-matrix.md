@@ -1,10 +1,10 @@
 # 异常恢复支持矩阵
 
-2026-11-08，按 Step35–41 的实际代码归纳。Step41 刷新已通过真实Pi及最终EXE，见[验证](../verification/refresh-effect-verification-20261108.md)。本表定义覆盖与缺口，不把通用异常恢复标为全部完成；实时状态见 [roadmap](../tool-architecture-roadmap.md)。
+2026-11-08，按 Step35–42 的实际代码归纳。Step41 刷新已通过真实Pi及最终EXE，见[验证](../verification/refresh-effect-verification-20261108.md)。Step42新增前置原子修订的原命令核实已通过相关测试及最终EXE，见[验证](../verification/queued-dependency-revision-20261108.md)。本表定义覆盖与缺口，不把通用异常恢复标为全部完成；实时状态见 [roadmap](../tool-architecture-roadmap.md)。
 
 | 原通道 | 可核实的事实和处理 | 仍未覆盖的事实 |
 | --- | --- | --- |
-| 主 goal plan/review、dispatch task/cancel/add/replace/resume/abandon | 原 canonical、唯一周期、实际请求与八类已保存命令；显式处置及符合资格的新只读核实/新业务修复 | 保存控制面不表示业务已执行或验收 |
+| 主 goal plan/review、dispatch task/cancel/add/replace/revise/resume/abandon | 原 canonical、唯一周期、实际请求与九类已保存命令；显式处置及符合资格的新只读核实/新业务修复 | 保存控制面不表示业务已执行或验收 |
 | 原生 read/write/edit 的明确单文件 | 原授权路径的当前存在性、字节数/哈希、已有显式基线 | 当前值不能证明原操作完整效果；旧调用没有 before 正文，不补造补偿 |
 | cbim_file_write_controlled | 原 prepared/executing/applied/not_applied/unknown、完整成员绑定、独立补偿历史；满足原预览资格才能另建显式补偿 | Windows NTFS 现有 UTF-8 单链接普通文件、正文各≤1MiB；不覆盖创建/删除/重命名、元数据或外部命令 |
 | knowledge_commit、object_commit | 精确原请求或私有原计划的已校验 journal，失败回包和 committed 分开 | 对象后置空目录清理仅保留警告；缺计划不按当前正文恢复来源 |

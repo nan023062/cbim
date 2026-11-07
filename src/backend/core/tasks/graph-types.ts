@@ -1,12 +1,13 @@
 /**
  * 作用定位：任务派发图的可序列化领域契约，供调度、持久化和 Bridge 共同引用。
- * 设计原因：把登记岗位、执行实例、任务与轮次分开；负责人绑定永久保留原版本，检查点交接放弃只增加终止审计，不能改换岗位、执行方法或冒充结果。
+ * 设计原因：把登记岗位、执行实例、任务与轮次分开；前置增删永久保留原请求和审计，不改变原计划、负责人或执行事实。
  * 职责边界：这里只声明事实形状；权限、知识核实、磁盘提交和模型执行由各自服务负责。
  */
 import type {MemberHelpRecord} from './member-help';
 import type {QueuedTaskCancellation} from './queued-task-cancel';
 import type {DependencyReplacement} from './queued-dependency-replacement';
 import type {DependencyAddition} from './queued-dependency-addition';
+import type {DependencyRevision} from './queued-dependency-revision';
 import type {MemberCheckpointRecord} from './member-checkpoint';
 import type {MemberResumeRequest} from './queued-member-resume';
 import type {CheckpointAbandonment} from './checkpoint-handoff';
@@ -65,6 +66,8 @@ export type TaskNode = {
   dependencyReplacements?:DependencyReplacement[];
   /** 未领取时明确追加的前置；不预填来源结果，后续领取与替换保留此不可变历史。 */
   dependencyAdditions?:DependencyAddition[];
+  /** 未领取时的多边原子增删；原计划与信封保留，审计不得改删或跨目标使用。 */
+  dependencyRevisions?:DependencyRevision[];
   /** 时间均为可信后端生成的 UTC ISO 8601 字符串。 */
   createdAt:string;updatedAt:string;
 };

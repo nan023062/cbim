@@ -1,5 +1,5 @@
 /**
- * 作用定位：主调度十个工具的公开业务输出契约与可信调用归属校验。
+ * 作用定位：主调度工具的公开业务输出契约与可信调用归属校验，前置修订严格对应原增删请求。
  * 设计原因：JSON 可解析不代表目标、图或回执属于本次调用；唯一 wire 核对身份、Workflow 与负责人原始选择，不将解析后补值当作原请求事实。
  * 职责边界：排队、追加/替换前置及续执行预约均不是执行完成；检查点放弃只取消原待办，输出失败不撤销已提交事务，也不授权自动重试。
  */
@@ -10,6 +10,7 @@ import {mainToolScopeSchema,type MainToolScope} from './main-tool-scope';
 import {goalInputRevision,sameGoalValue,type GoalPlanInput,type GoalReviewInput} from './scope-goal';
 import {dependencyReplacementSchema,type ReplaceQueuedDependencyInput} from './queued-dependency-replacement';
 import {dependencyAdditionSchema,type AddQueuedDependencyInput} from './queued-dependency-addition';
+import {reviseQueuedDependenciesReceiptSchema,type ReviseQueuedDependenciesInput} from './queued-dependency-revision';
 import type {CancelQueuedTasksInput} from './queued-task-cancel';
 import type {ResumeMemberInput} from './queued-member-resume';
 import {abandonCheckpointReceiptSchema,type AbandonCheckpointInput} from './checkpoint-handoff';
@@ -39,6 +40,7 @@ export const mainToolOutputSchemas={
   cbim_dispatch_cancel:cancelQueuedTasksOutputSchema,
   cbim_dispatch_replace_dependency:replaceQueuedDependencyOutputSchema,
   cbim_dispatch_add_dependency:addQueuedDependencyOutputSchema,
+  cbim_dispatch_revise_dependencies:reviseQueuedDependenciesReceiptSchema,
   cbim_dispatch_resume:resumeMemberOutputSchema,
   cbim_dispatch_abandon_checkpoint:abandonCheckpointReceiptSchema,
 } as const;
@@ -104,8 +106,14 @@ function validateMainToolOutput(name:MainToolName,value:unknown,expected:MainToo
     if(receipt.taskId!==request.taskId||record.commandId!==receipt.commandId||record.scopeId!==binding.scopeId||record.mainRunId!==binding.runId||record.checkpointId!==request.checkpointId||record.resumeRequestId!==request.expectedResumeRequestId||record.previousTaskRevision!==request.expectedRevision||record.planRevision!==request.expectedPlanRevision||record.goalRevision!==request.expectedGoalRevision||record.reason!==request.reason||!sameGoalValue(record.graphCursor,request.expectedGraphCursor))issue('检查点放弃审计与原请求及任务基线不一致');
     return;
   }
-  const result=value as MainToolOutput<'cbim_dispatch_cancel'>|MainToolOutput<'cbim_dispatch_replace_dependency'>|MainToolOutput<'cbim_dispatch_add_dependency'>;
+  const result=value as MainToolOutput<'cbim_dispatch_cancel'>|MainToolOutput<'cbim_dispatch_replace_dependency'>|MainToolOutput<'cbim_dispatch_add_dependency'>|MainToolOutput<'cbim_dispatch_revise_dependencies'>;
   if(!sameIdentity(result)||result.scopeId!==binding.scopeId||result.mainRunId!==binding.runId)issue('调度变更回执不属于当前主运行');commandCheck(result.commandId);
+  if(name==='cbim_dispatch_revise_dependencies'){
+    const receipt=result as MainToolOutput<'cbim_dispatch_revise_dependencies'>,request=input as ReviseQueuedDependenciesInput,record=receipt.revision;
+    cursorCheck(receipt.graphCursor,request.expectedGraphCursor);
+    if(receipt.taskId!==request.target.taskId||record.commandId!==receipt.commandId||record.scopeId!==binding.scopeId||record.mainRunId!==binding.runId||record.goalPlanRevision!==request.expectedGoalRevision||!sameGoalValue(record.request,request)||!sameGoalValue(record.trackedTaskIds,receipt.trackedTaskIds)||!receipt.trackedTaskIds.includes(receipt.taskId)||[...record.removed,...record.added].some(e=>!receipt.trackedTaskIds.includes(e.sourceTaskId))||record.removed.length!==request.remove.length||record.removed.some((e,i)=>e.edgeId!==request.remove[i].edgeId||e.edgeRevision!==request.remove[i].expectedRevision)||record.added.length!==request.add.length||record.added.some((e,i)=>e.sourceTaskId!==request.add[i].taskId||e.sourceTaskRevision!==request.add[i].expectedRevision||e.sourcePlanRevision!==request.add[i].expectedPlanRevision)||record.added.length>0&&receipt.status!=='waiting')issue('修订回执与原请求、增删来源或闭包不一致');
+    return;
+  }
   if(name==='cbim_dispatch_cancel'){
     const receipt=result as MainToolOutput<'cbim_dispatch_cancel'>,request=input as CancelQueuedTasksInput;
     cursorCheck(receipt.graphCursor,request.expectedGraphCursor);

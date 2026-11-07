@@ -617,3 +617,54 @@ Store 继续用同一串行提交、原命令回执和原协议裁决，不增�
 ### 刷新原事务与契约版本
 
 effectCallObservation 的 knowledge_transaction 可表达 cbim_knowledge_refresh 的原事务。实际接受必须由 Scheduler 先核 canonical 原授权 v2 及精确空变更请求；纯 DTO 不执行查询或信任页面声明版本。旧报告不加默认字段，旧 basis 保持。
+
+## 未领取任务的原子前置修订（Step42）
+
+queued-dependency-revision 是无 IO 叶子协议：一个目标，remove/add 各至多32项，至少一项；固定原图、目标、来源版本及理由。dependencyRevisions 最多32条、只能追加；各类前置历史的命令、目标版本和退役边不能复用。原边封存、新边全新身份且不预填结果；目标只升节点 revision，计划/负责人/Workflow/原信封不变。
+
+纯规则先应用完整增删再判环，闭包覆盖目标及增删两端在修改前后图的全部启用后继，不按创建时间排序；未变化的反向前置不被扩入。闭包全部尚未领取/运行，当前计划与知识一致，原实例无其它占用。删除后的剩余真实结果决定 queued/waiting，已执行来源不能删除以掩盖失败、未知或检查点。
+
+通用 Store 在旧状态重算闭包，精确核原请求、边/任务/成员变化和回执；校验生成的本批新增/退役许可才交统一依赖门禁。不能只改 cause、夹带其它领域、篡改历史或复活退役边。负责人不变量对完整闭包逐一核当前登记。原命令报告新增第九类写命令，只公开原增删数量与有界任务摘要；committed 仍不表示领取或业务验收。
+
+以下补充 `queued-dependency-revision.ts` 中从 Schema 推断的类型成员，与上方自动清单的同名节点对应：
+
+```mermaid
+classDiagram
+class ReviseQueuedDependenciesInput {
+  <<type>>
+  +expectedGraphCursor
+  +expectedGoalRevision
+  +target
+  +remove
+  +add
+  +reason
+}
+class DependencyRevision {
+  <<type>>
+  +commandId
+  +scopeId
+  +mainRunId
+  +revisedAt
+  +request
+  +goalPlanRevision
+  +knowledgeRevision
+  +removed
+  +added
+  +trackedTaskIds
+}
+class ReviseQueuedDependenciesReceipt {
+  <<type>>
+  +taskId
+  +status
+  +trackedTaskIds
+  +revision
+  +graphCursor
+}
+class TaskNode {
+  <<graph-types.ts type>>
+  +dependencyRevisions
+}
+TaskNode *-- DependencyRevision : 不可变历史
+DependencyRevision *-- ReviseQueuedDependenciesInput : 原请求
+ReviseQueuedDependenciesReceipt *-- DependencyRevision : 原保存审计
+```

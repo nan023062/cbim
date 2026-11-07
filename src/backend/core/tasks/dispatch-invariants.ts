@@ -13,6 +13,7 @@ import type {AgentRef,GraphIdentity} from './graph-types';
 import {validateQueuedTaskCancellation} from './queued-task-cancel-rules';
 import {validateQueuedDependencyReplacement} from './queued-dependency-replacement-invariants';
 import {validateQueuedDependencyAddition} from './queued-dependency-addition-invariants';
+import {validateQueuedDependencyRevision} from './queued-dependency-revision-invariants';
 import {memberCheckpointProofSchema,memberResumeFromSchema} from './member-checkpoint';
 import {validateMemberCheckpoints} from './member-checkpoint-invariants';
 import {validateCheckpointAbandonment} from './checkpoint-handoff-invariants';
@@ -162,9 +163,10 @@ export function validateDispatchExecution(previous:DispatchState,next:DispatchSt
   validateHumanDecisionCommand(previous,mutation,command);
   validateHumanContinuationCommand(previous,mutation,command);
   validateQueuedTaskCancellation(previous,next,mutation,command);
-  // 新边许可只能由完整追加校验生成，再交统一依赖门禁；不能用批次 cause 或审计存在代替。
+  // 新边和退役许可只能由完整事务校验生成；cause 或审计存在本身不授予变更许可。
   const addedEdges=validateQueuedDependencyAddition(previous,next,mutation,command);
-  validateQueuedDependencyReplacement(previous,next,mutation,command,addedEdges);
+  const revised=validateQueuedDependencyRevision(previous,next,mutation,command);
+  validateQueuedDependencyReplacement(previous,next,mutation,command,new Set([...addedEdges,...revised.added]),revised.retired);
   const abandoned=validateCheckpointAbandonment(previous,next,mutation,command);
   validateMemberCheckpoints(previous,next,mutation,command,abandoned);
   const runs=next.runs??[];

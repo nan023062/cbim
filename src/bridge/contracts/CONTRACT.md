@@ -256,7 +256,7 @@ governance.ts 仅重导 Core 严格纯协议。界面按明确工作区/实例/�
 `module-ownership.ts` 重导 Core workspace 的责任关系、查询依据、预览和回执协议；六个 `workspace.ownerships.*` IPC 不开放任意审计或 actor 写入。负责人引用 memberId，与静态 Agent、真人维护人和运行实例分别表达。查询分页同时冻结责任/岗位游标与知识版本；单条责任变更不改任务图。来源观察 hash 不是受控来源代次；登记接口不提供旧任务交接授权，新任务经独立派发门禁进入当前负责人执行。
 # 原主命令核实
 
-`command-verification.ts` 只转出 Core 的严格请求、报告及固定八工具支持矩阵。桌面传原 workspace/root/run/call，scope、稳定命令与指纹由后端原记录推导；公共结果不包含 Prepared、native、私有路径或原始事务帧。`committed` 仅证明原控制面事务已保存，`absent` 不能证明未执行，报告不签发恢复或验收资格。
+`command-verification.ts` 只转出 Core 的严格请求、报告及九类写工具支持矩阵。桌面传原 workspace/root/run/call，scope、稳定命令与指纹由后端原记录推导；公共结果不包含 Prepared、native、私有路径或原始事务帧。`committed` 仅证明原控制面事务已保存，`absent` 不能证明未执行，报告不签发恢复或验收资格。
 
 ## 异常影响与新周期关联
 
@@ -268,3 +268,7 @@ dispatch.ts 扩展recovery来源联合及纯身份helper，旧无kind字段保�
 ### 受控文件公共边界
 
 `controlled-files.ts` 只重导 Core 的公共严格输入、字节摘要、操作报告和补偿预览/请求/回执。原调用使用 workspace/root/task/run/toolCall；新的补偿绑定当前 workspace instance、原operation、稳定command、版本和basis。恢复正文、平台file identity、私有blob与阶段事件不跨 Bridge，也不提供任意路径文件写入端口。回执 applied 仅表示独立操作已可靠保存，不签署任务验收或改写原工具结果。
+
+## 前置修订公开审计
+
+dispatch.ts 重导纯 DependencyRevision 与严格 Schema；TaskNode 可选历史缺省不补值，不暴露 Store 或写入端口。一个原目标的增删请求及来源审计供只读展示，不能据其创建新执行、复活退役边或改当前责任。原命令报告的九类写入矩阵包含前置增删摘要，旧分支保持原形。

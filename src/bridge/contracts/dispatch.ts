@@ -1,6 +1,6 @@
 /**
  * 作用定位：向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。
- * 设计原因：前端经 Bridge 消费 Core 契约，不导入调度或文件存储；检查点公开交接、预约与显式放弃的审计，均不代表执行许可、业务成果或回滚。
+ * 设计原因：前端经 Bridge 消费 Core 契约，不导入调度或文件存储；前置原子增删和检查点只公开原审计，均不代表执行许可、业务成果或回滚。
  * 恢复来源：公开严格主／成员联合及兼容历史辅助函数；新的处置引用必须显式提供，不能给旧无 kind 记录补造来源。
  */
 export type {GraphIdentity,GraphCursor,GraphSnapshot,GraphDelta,GraphEventBatch,GraphChange,TaskNode,GraphEdge,AgentGraphView} from '../../backend/core/tasks/graph-types';
@@ -8,6 +8,8 @@ export type {DependencyReplacement} from '../../backend/core/tasks/queued-depend
 export {dependencyReplacementSchema} from '../../backend/core/tasks/queued-dependency-replacement';
 export type {DependencyAddition} from '../../backend/core/tasks/queued-dependency-addition';
 export {dependencyAdditionSchema} from '../../backend/core/tasks/queued-dependency-addition';
+export type {DependencyRevision} from '../../backend/core/tasks/queued-dependency-revision';
+export {dependencyRevisionSchema} from '../../backend/core/tasks/queued-dependency-revision';
 export type {MemberCheckpointRecord} from '../../backend/core/tasks/member-checkpoint';
 export {memberCheckpointRecordSchema} from '../../backend/core/tasks/member-checkpoint';
 export type {AbandonCheckpointInput,CheckpointAbandonment,AbandonCheckpointReceipt} from '../../backend/core/tasks/checkpoint-handoff';

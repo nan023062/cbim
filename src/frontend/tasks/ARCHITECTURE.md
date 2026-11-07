@@ -45,7 +45,7 @@
 | [member-cancellation-state.ts](member-cancellation-state.ts) | 为成员卡、任务节点和详情提供未启动撤销的统一只读投影。 |
 | [member-checkpoint-state.ts](member-checkpoint-state.ts) | 将同任务的检查点交接和后续运行投影为成员卡片、节点与详情共用的只读状态。 |
 | [member-checkpoint.css](member-checkpoint.css) | 成员检查点的只读交接、预约、放弃审计和轮次引用排版。 |
-| [member-dependency-state.ts](member-dependency-state.ts) | 将任务节点的前置追加和替换审计转换为主对话和任务详情共用的只读历史投影。 |
+| [member-dependency-state.ts](member-dependency-state.ts) | 将任务节点的前置追加、替换和原子增删转换为主对话与详情共用的只读历史投影。 |
 | [member-dependency.css](member-dependency.css) | 排版成员前置追加和替换的只读历史，供主对话摘要与任务详情共用。 |
 | [member-event-state.ts](member-event-state.ts) | 把成员公开事件分页归并为稳定的运行视图，供卡片与任务详情共用。 |
 | [member-help-state.ts](member-help-state.ts) | 为成员动态、任务节点和详情提供同一份求助交接投影与中文分类。 |
@@ -55,7 +55,7 @@
 | [MemberArtifactReport.tsx](MemberArtifactReport.tsx) | 成员节点详情中的独立文件基线面板，手动列出记录并复核明确选择的一份。 |
 | [MemberCancellationNotice.tsx](MemberCancellationNotice.tsx) | 在主对话成员卡和任务详情中显示主调度已经提交的未启动撤销事实。 |
 | [MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx) | 在主对话和任务详情展示检查点、续执行预约、显式放弃与新旧轮次关系。 |
-| [MemberDependencyNotice.tsx](MemberDependencyNotice.tsx) | 在成员动态和任务详情中展示主调度已提交的前置追加/替换原因，以及当时的前置或候选身份。 |
+| [MemberDependencyNotice.tsx](MemberDependencyNotice.tsx) | 在成员动态和详情中展示前置追加/替换/原子增删原因，保留原边和来源身份。 |
 | [MemberExecutionReport.tsx](MemberExecutionReport.tsx) | 在任务节点详情中展示一次显式核实的派发、日志与工具回执报告，独立于成员流式正文。 |
 | [MemberHelpNotice.tsx](MemberHelpNotice.tsx) | 在主对话成员卡和任务详情中只读呈现已经结算的求助交接记录。 |
 | [MemberRunTranscript.tsx](MemberRunTranscript.tsx) | 以成员身份显示公开消息和工具过程，供主会话成员卡片及任务详情共用。 |
@@ -1329,6 +1329,7 @@ class N_src_frontend_tasks_member_checkpoint_css["member-checkpoint.css"] {
 classDiagram
 class N_src_frontend_tasks_member_dependency_state_ts["member-dependency-state.ts"] {
   <<module>>
+  +memberDependencyRevisionHistory()
   +memberDependencyHistory()
   +memberDependencyAdditionHistory()
 }
@@ -1351,6 +1352,12 @@ class N_src_frontend_tasks_member_dependency_state_ts_MemberDependencyAdditionHi
   +invalid
 }
 N_src_frontend_tasks_member_dependency_state_ts ..> N_src_frontend_tasks_member_dependency_state_ts_MemberDependencyAdditionHistory : 声明
+class N_src_frontend_tasks_member_dependency_state_ts_MemberDependencyRevisionHistory["MemberDependencyRevisionHistory"] {
+  <<interface>>
+  +records
+  +invalid
+}
+N_src_frontend_tasks_member_dependency_state_ts ..> N_src_frontend_tasks_member_dependency_state_ts_MemberDependencyRevisionHistory : 声明
 ```
 
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
@@ -3858,3 +3865,7 @@ EffectObservationPanel 在同一显式核实入口展示原事务阶段、原请
 ## 受控文件统一影响观察（Step40）
 
 原成员影响面板可显示受控写的五种阶段、原前后字节大小及独立补偿命令/阶段，继续保留原工具结果。记录处置不执行补偿；当前字节与实际资格仍在既有 ControlledFilePanel 显式预览。重开默认不查询，明确选择原调用后才读取，原操作与补偿均不被新处置改写。
+
+## 原子前置增删历史
+
+MemberDependencyNotice 与 member-dependency-state 同时支持追加、可靠失败替换和多边修订；compact 按原任务 revision 选择最新记录，详情显示全部历史。修订显示原原因、退役/新增数量、来源任务和主运行，原请求按普通文本转义。坏 scope/目标/请求或跨历史重复命令/版本显示核实错误，旧缺省不猜历史。没有新增执行按钮、请求或轮询；状态以当前节点为准，历史不代表验收。

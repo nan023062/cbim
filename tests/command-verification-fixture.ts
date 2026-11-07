@@ -21,6 +21,7 @@ export function reportInputs():Array<{name:VerifiableMainToolName;input:unknown}
   {name:'cbim_dispatch_add_dependency',input:{expectedGraphCursor:cursor,expectedGoalRevision:2,source,target,reason:' 明确加边 '}},
   {name:'cbim_dispatch_resume',input:{expectedGraphCursor:cursor,expectedGoalRevision:2,taskId:'target',expectedRevision:2,checkpointId:'checkpoint',reason:' 明确预约 '}},
   {name:'cbim_dispatch_abandon_checkpoint',input:{expectedGraphCursor:cursor,expectedGoalRevision:2,taskId:'target',expectedRevision:2,expectedPlanRevision:1,checkpointId:'checkpoint',expectedResumeRequestId:null,reason:'明确放弃'}},
+  {name:'cbim_dispatch_revise_dependencies',input:{expectedGraphCursor:cursor,expectedGoalRevision:2,target,remove:[{edgeId:'old-edge',expectedRevision:1}],add:[source],reason:' 原子修订 '}},
 ]}
 /** 这是只读适配器的已校验端口样本，不写入 Store 或制造新的执行资格。 */
 export function reportReceipt(name:VerifiableMainToolName,input:any,commandId:string):unknown{
@@ -32,6 +33,7 @@ export function reportReceipt(name:VerifiableMainToolName,input:any,commandId:st
   if(name==='cbim_dispatch_replace_dependency')return mainToolReplacement(reportBinding,commandId,input);
   if(name==='cbim_dispatch_add_dependency')return {...context,taskId:'target',status:'waiting',trackedTaskIds:['source','target'],graphCursor:nextCursor,addition:{commandId,scopeId:reportBinding.scopeId,mainRunId:reportBinding.runId,reason:input.reason,graphCursor:cursor,goalRevision:2,goalPlanRevision:2,knowledgeRevision:'knowledge',previousTaskRevision:2,targetPlanRevision:1,trackedTaskIds:['source','target'],addedAt:mainToolTime,dependency:{edgeId:'new-edge',sourceTaskId:'source',sourceTaskRevision:1,sourcePlanRevision:1}}};
   if(name==='cbim_dispatch_resume')return {taskId:'target',checkpointId:'checkpoint',requestId:'resume-message',trackedTaskIds:['target'],cursor:{...identity,...nextCursor}};
+  if(name==='cbim_dispatch_revise_dependencies')return {...context,taskId:'target',status:'waiting',trackedTaskIds:['target','old-source','source'],graphCursor:nextCursor,revision:{commandId,scopeId:context.scopeId,mainRunId:context.mainRunId,revisedAt:mainToolTime,request:input,goalPlanRevision:2,knowledgeRevision:'knowledge',removed:[{edgeId:'old-edge',edgeRevision:1,sourceTaskId:'old-source',sourceTaskRevision:1,sourcePlanRevision:1}],added:[{edgeId:'new-edge',sourceTaskId:'source',sourceTaskRevision:1,sourcePlanRevision:1}],trackedTaskIds:['target','old-source','source']}};
   return {...context,taskId:'target',status:'cancelled',graphCursor:nextCursor,abandonment:{kind:'abandoned_by_handoff',commandId,scopeId:reportBinding.scopeId,mainRunId:reportBinding.runId,graphCursor:cursor,goalRevision:2,previousTaskRevision:2,planRevision:1,checkpointId:'checkpoint',sourceRunId:'source-run',resumeRequestId:null,previousLeaseEpoch:1,nextLeaseEpoch:2,reason:input.reason,abandonedAt:mainToolTime}};
 }
 export function reportFixture(name:string,input:unknown,evidence?:DispatchCommandEvidence){

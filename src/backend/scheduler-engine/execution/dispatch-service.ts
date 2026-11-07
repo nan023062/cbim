@@ -1,7 +1,7 @@
 /**
  * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
  * 设计原因：新派发按知识→模型→Store 锁序核当前岗位、能力及责任，保存原 Workflow 选择与不可变执行绑定，同命令不能改选。周期冻结输入及软限额，关闭封存待办；旧回执不能重开周期。
- * 职责边界：本模块负责可靠入队、显式撤销未启动集合及受审计的单条依赖追加/替换，由独立 MemberExecutionManager 执行；调度维护不停止活动运行，不复活旧实例，也不代表目标完成。
+ * 职责边界：负责可靠入队、未启动撤销及受审计的前置追加/替换/多边修订，由独立 MemberExecutionManager 执行；调度维护不停止活动运行或复活旧实例。
  * 关闭边界：普通无计划聊天与纯负责人控制面不强造业务计划，但仍核活动输入和真实工具终态；已有业务计划或派发必须审阅，未知输入只可失败或取消封存。
  * 交接边界：检查点放弃独立核原历史，IO 后短事务取消旧待办，不要求今日岗位仍可执行，也不改原运行或恢复证明。
  * 查询边界：原主命令报告只读本工作区已初始化 Store 与 canonical；不借查询进入事务、打开工作区或重新判断旧命令的当前执行资格。
@@ -32,6 +32,8 @@ import {ScopeHumanContinuationService} from './scope-human-continuation-service'
 import {QueuedTaskCancelService} from './queued-task-cancel-service';
 import {QueuedDependencyReplacementService} from './queued-dependency-replacement-service';
 import {QueuedDependencyAdditionService} from './queued-dependency-addition-service';
+import {QueuedDependencyRevisionService} from './queued-dependency-revision-service';
+import type {ReviseQueuedDependenciesInput,ReviseQueuedDependenciesReceipt} from '../../core/tasks/queued-dependency-revision';
 import {CheckpointAbandonmentService} from './checkpoint-abandonment-service';
 import type {MemberCheckpointHistoryPorts} from './member-checkpoint-verifier';
 import type {AbandonCheckpointInput,AbandonCheckpointReceipt} from '../../core/tasks/checkpoint-handoff';
@@ -83,6 +85,7 @@ export class WorkspaceDispatchService {
   private readonly queuedCancellation:QueuedTaskCancelService;
   private readonly queuedDependencyReplacement:QueuedDependencyReplacementService;
   private readonly queuedDependencyAddition:QueuedDependencyAdditionService;
+  private readonly queuedDependencyRevision:QueuedDependencyRevisionService;
   private readonly checkpointAbandonment:CheckpointAbandonmentService;
   private readonly commandVerification:CommandVerificationService;
   constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts,budgetPolicy?:()=>ScopeBudgetPolicy,humanPorts?:HumanDecisionPorts,modelPorts?:OwnerExecutionModelPorts,checkpointHistory?:MemberCheckpointHistoryPorts,effectPorts?:EffectObservationPorts){
@@ -101,6 +104,7 @@ export class WorkspaceDispatchService {
     this.queuedCancellation=new QueuedTaskCancelService(owner,store);
     this.queuedDependencyReplacement=new QueuedDependencyReplacementService(owner,store,this.goals,this.owners);
     this.queuedDependencyAddition=new QueuedDependencyAdditionService(owner,store,this.goals,this.owners);
+    this.queuedDependencyRevision=new QueuedDependencyRevisionService(owner,store,this.goals,this.owners);
     this.checkpointAbandonment=new CheckpointAbandonmentService(owner,store,checkpointHistory);
   }
 
@@ -115,6 +119,8 @@ export class WorkspaceDispatchService {
   replaceQueuedDependency(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,input:ReplaceQueuedDependencyInput,assertCurrent?:()=>void):Promise<ReplaceQueuedDependencyReceipt>{return this.queuedDependencyReplacement.replace(identity,scopeId,runId,commandId,input,()=>{this.check(identity.workspaceId);assertCurrent?.()})}
   /** 只加强尚未领取待办的前置门禁；后继闭包、知识和停止均在提交内复核，不启动成员。 */
   addQueuedDependency(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,input:AddQueuedDependencyInput,assertCurrent?:()=>void):Promise<AddQueuedDependencyReceipt>{return this.queuedDependencyAddition.add(identity,scopeId,runId,commandId,input,()=>{this.check(identity.workspaceId);assertCurrent?.()})}
+  /** 同一未领取目标原子增删多条前置；完整闭包重新核实，成功不创建运行或改原信封。 */
+  reviseQueuedDependencies(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,input:ReviseQueuedDependenciesInput,assertCurrent?:()=>void):Promise<ReviseQueuedDependenciesReceipt>{return this.queuedDependencyRevision.revise(identity,scopeId,runId,commandId,input,()=>{this.check(identity.workspaceId);assertCurrent?.()})}
   /** 原回执优先；只明确封存未消费检查点，新执行仍由岗位派发与领取门禁决定。 */
   abandonCheckpoint(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,input:AbandonCheckpointInput,assertCurrent:()=>void):Promise<AbandonCheckpointReceipt>{return this.checkpointAbandonment.abandon(identity,scopeId,runId,commandId,input,()=>{this.check(identity.workspaceId);assertCurrent()})}
   /** 回包损坏或停止后仅查原命令；不启动历史核验或重复处置事务。 */

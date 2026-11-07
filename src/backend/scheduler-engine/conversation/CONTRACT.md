@@ -50,3 +50,7 @@
 ### 原命令结果核实
 
 主 Agent 已收到调度坏输出时，只用 `cbim_dispatch_command_report` 明确查询原 run/toolCall，再区分原工具结果、原事务保存与当前业务状态。查询不重放，不把 committed 当业务完成，不清 unknown 或自动勾选人工核实；无法核实时说明缺项，不新建调用猜测重做。
+
+## 未领取前置的组合调整
+
+主提示明确使用 cbim_dispatch_revise_dependencies 原子删除/新增同一目标的多条前置，完整当前图判环并保留原节点/实例/计划。增删两端及后继均须未执行；已失败来源仍使用有可靠候选证明的 replace_dependency，不借删除消除旧事实。成功后结束主轮，坏输出只查原 run/call；文字规划、修订回执均不是交付证据。

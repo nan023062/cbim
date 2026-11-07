@@ -13,8 +13,8 @@ function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(or
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 function valid(value:unknown,message:string):asserts value{if(!value)fail('GRAPH_INPUT_INVALID',message)}
 
-/** 新增审计须对应唯一四项图变更；addedEdges 只由统一提交入口在完整校验追加事务后提供，不能来自请求或回执。 */
-export function validateQueuedDependencyReplacement(previous:DispatchState,next:DispatchState,mutation:DispatchMutation,command:DispatchCommand,addedEdges:ReadonlySet<string>=new Set()):void{
+/** 替换审计须对应唯一四项图变更；新增/退役许可只由统一提交入口完整校验追加或多边修订后提供，不能来自请求或回执。 */
+export function validateQueuedDependencyReplacement(previous:DispatchState,next:DispatchState,mutation:DispatchMutation,command:DispatchCommand,addedEdges:ReadonlySet<string>=new Set(),retiredEdges:ReadonlySet<string>=new Set()):void{
   const additions:{task:TaskNode;record:DependencyReplacement}[]=[];
   for(const graph of next.graphs)for(const task of graph.tasks){
     const old=previous.graphs.find(value=>value.identity.rootSessionId===graph.identity.rootSessionId)?.tasks.find(value=>value.taskId===task.taskId),history=old?.dependencyReplacements??[],records=task.dependencyReplacements??[];
@@ -60,7 +60,7 @@ export function validateQueuedDependencyReplacement(previous:DispatchState,next:
       continue;
     }
     valid(old.kind==='dependency'&&old.enabled,'退役依赖已封存，不能重新启用或修改');
-    if(!edge.enabled){valid(addition?.record.retired.edgeId===edge.edgeId,'禁用依赖必须同时提交完整替换审计');continue}
+    if(!edge.enabled){valid(addition?.record.retired.edgeId===edge.edgeId||retiredEdges.has(edge.edgeId),'禁用依赖必须同时提交完整替换或修订审计');continue}
     const target=graph.tasks.find(value=>value.nodeId===edge.toNodeId),source=graph.tasks.find(value=>value.nodeId===edge.fromNodeId);
     const run=mutation.runs?.find(value=>value.binding.taskId===target?.taskId&&value.binding.rootSessionId===graph.identity.rootSessionId&&!previous.runs?.some(prior=>prior.binding.runId===value.binding.runId));
     valid(target&&source?.result&&run?.status==='starting'&&mutation.messages?.some(value=>value.kind==='assignment'&&value.taskId===target.taskId&&value.delivery==='claimed'&&value.claim?.runId===run.binding.runId),'普通依赖更新仅允许首次领取原子固定前置候选');

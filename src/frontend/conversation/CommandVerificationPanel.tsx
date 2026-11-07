@@ -1,6 +1,6 @@
 /**
  * 作用定位：在主对话的原工具记录中展示显式核实入口，分别呈现原工具结果、事务保存事实与验收边界。
- * 设计原因：通信失败不等于事务未提交；只展示有界公共身份与版本，挂载不请求、查询不恢复、不改写原工具失败或普通输入草稿。
+ * 设计原因：通信失败不等于事务未提交；前置增删显示原保存数量，不以现在的图推断原结果，挂载不请求、查询不恢复或改写原工具失败。
  */
 import {useEffect,useMemo,useSyncExternalStore} from 'react';
 import type {CommandResultSummary,CommandVerificationReport} from '../../bridge/contracts/command-verification';
@@ -22,6 +22,7 @@ function ResultSummary({result}:{result:CommandResultSummary}){
     case 'cbim_dispatch_cancel':return <p>原撤销事务包含 {result.cancelled.total} 个待执行任务；不表示撤回已有业务影响。</p>;
     case 'cbim_dispatch_replace_dependency':return <p>已保存任务 <code>{result.taskId}</code> 的前置替换，原结果来自 <code>{result.sourceTaskId}</code>。</p>;
     case 'cbim_dispatch_add_dependency':return <p>已为任务 <code>{result.taskId}</code> 追加前置 <code>{result.sourceTaskId}</code>，原状态为等待。</p>;
+    case 'cbim_dispatch_revise_dependencies':return <p>已保存任务 <code>{result.taskId}</code> 的前置修订：退役 {result.removedCount} 条，新增 {result.addedCount} 条，原状态为{result.status==='waiting'?'等待前置':'排队'}。不代表成员已执行。</p>;
     case 'cbim_dispatch_resume':return <p>已保存任务 <code>{result.taskId}</code> 的检查点续执行预约；预约不代表已经启动。</p>;
     case 'cbim_dispatch_abandon_checkpoint':return <p>已放弃任务 <code>{result.taskId}</code> 的原检查点，原租约 {result.previousLeaseEpoch} → {result.nextLeaseEpoch}；不是回滚或交付成功。</p>;
   }

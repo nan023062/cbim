@@ -39,7 +39,7 @@ test('请求只选择原调用，合法旧首字符保留；模型不能注入sc
   expect(commandVerificationInputSchema.parse({...identity,workspaceId:'_workspace',rootSessionId:'-root'}).workspaceId).toBe('_workspace');
   for(const field of ['scopeId','commandId','fingerprint','toolName','actor','receipt','input'])expect(commandVerificationInputSchema.safeParse({...identity,[field]:'forged'}).success).toBe(false);
   expect(commandReportToolInputSchema.safeParse({runId:'run',toolCallId:'call',workspaceId:'another'}).success).toBe(false);
-  expect(commandVerificationToolNames).toHaveLength(8);expect(isVerifiableMainToolName('constructor')).toBe(false);expect(isVerifiableMainToolName(commandReportToolName)).toBe(false);
+  expect(commandVerificationToolNames).toHaveLength(9);expect(isVerifiableMainToolName('constructor')).toBe(false);expect(isVerifiableMainToolName(commandReportToolName)).toBe(false);
 });
 
 test.each(cases())('$name 完整原回执按原身份及输入核实后仅公开紧凑事实',({name,input,raw})=>{

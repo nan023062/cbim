@@ -1,5 +1,5 @@
 /**
- * 作用定位：共享主调度原命令的指纹构造，并从已核实 canonical 参数复原八项历史请求。
+ * 作用定位：共享主调度原命令的指纹构造，从已核实 canonical 参数复原历史请求，包含原子前置增删。
  * 设计原因：运行原始 inputHash 与领域解析后的指纹不同；复原保留 trim、缺省和键序，不能用今日执行资格拒绝旧命令查询。
  * 职责边界：纯转换不读 Store、不授权、不执行；派发隐藏父版本只能由调用方提供可信原事务前态。
  */
@@ -13,6 +13,7 @@ import {goalPlanInputSchema,goalReviewInputSchema} from '../../core/tasks/scope-
 import {cancelQueuedTasksInputSchema} from '../../core/tasks/queued-task-cancel';
 import {replaceQueuedDependencyInputSchema} from '../../core/tasks/queued-dependency-replacement';
 import {addQueuedDependencyInputSchema} from '../../core/tasks/queued-dependency-addition';
+import {reviseQueuedDependenciesInputSchema} from '../../core/tasks/queued-dependency-revision';
 import {resumeMemberInputSchema} from '../../core/tasks/queued-member-resume';
 import {abandonCheckpointInputSchema} from '../../core/tasks/checkpoint-handoff';
 import type {VerifiableMainToolName} from '../../core/tasks/command-verification';
@@ -53,7 +54,7 @@ export function restoreMainCommand(name:VerifiableMainToolName,binding:MainToolO
     const input=abandonCheckpointInputSchema.parse(raw),context={...identity,scopeId,mainRunId:runId,commandId};
     return {...contextualMainCommand('member.checkpoint.abandon',context,input),input};
   }
-  const input=name==='cbim_dispatch_cancel'?cancelQueuedTasksInputSchema.parse(raw):name==='cbim_dispatch_add_dependency'?addQueuedDependencyInputSchema.parse(raw):replaceQueuedDependencyInputSchema.parse(raw);
-  const operation=name==='cbim_dispatch_cancel'?'dispatch.cancelQueued':name==='cbim_dispatch_add_dependency'?'dispatch.addDependency':'dispatch.replaceDependency';
+  const input=name==='cbim_dispatch_cancel'?cancelQueuedTasksInputSchema.parse(raw):name==='cbim_dispatch_add_dependency'?addQueuedDependencyInputSchema.parse(raw):name==='cbim_dispatch_revise_dependencies'?reviseQueuedDependenciesInputSchema.parse(raw):replaceQueuedDependencyInputSchema.parse(raw);
+  const operation=name==='cbim_dispatch_cancel'?'dispatch.cancelQueued':name==='cbim_dispatch_add_dependency'?'dispatch.addDependency':name==='cbim_dispatch_revise_dependencies'?'dispatch.reviseDependencies':'dispatch.replaceDependency';
   return {...contextualMainCommand(operation,{...identity,scopeId,runId,commandId},input),input};
 }

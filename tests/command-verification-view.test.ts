@@ -64,7 +64,7 @@ it('新日志仅提示报告时效，原提交仍展示；序号相同不凭时�
   delete value.basis.throughSeq;delete value.basis.logPrefixHash;value.command={state:'unverifiable',reason:'source_unverified'};expect(commandVerificationStale(value,999)).toBe(false);
 });
 
-it('只给固定八项真实主实例调用显示入口，不为成员、旧无绑定或只读工具创建入口',()=>{
+it('只给已支持的真实主实例调用显示入口，不为成员、旧无绑定或只读工具创建入口',()=>{
   for(const name of commandVerificationToolNames){const value=run(name),before=JSON.stringify(value),html=renderToStaticMarkup(createElement(ToolActivity,{run:value}));expect(html).toContain('command-verification-panel');expect(html).toContain('BAD_RETURN');expect(html).toContain('执行失败');expect(JSON.stringify(value)).toBe(before)}
   for(const name of ['read','cbim_dispatch_command_report','cbim_goal_inspect','cbim_knowledge_commit'])expect(renderToStaticMarkup(createElement(ToolActivity,{run:run(name)}))).not.toContain('command-verification-panel');
   for(const modify of [(value:RunSummary)=>{delete value.conversationBinding},(value:RunSummary)=>{value.task.mode=undefined},(value:RunSummary)=>{value.task.agentId='executor'},(value:RunSummary)=>{value.conversationBinding!.rootSessionId='other'},(value:RunSummary)=>{value.conversationBinding!.workspaceId='other'}]){const value=run();modify(value);expect(mainCommandSelection(value,'original-call','cbim_goal_plan')).toBeUndefined();expect(renderToStaticMarkup(createElement(ToolActivity,{run:value}))).not.toContain('command-verification-panel')}

@@ -605,3 +605,7 @@ Store 继续用同一串行提交、原命令回执和原协议裁决，不增�
 ### 原知识事务观察扩展
 
 影响报告可选 knowledge_transaction 覆盖，只接受可信主运行、原 knowledge-write / knowledge 授权及两类已支持知识提交工具。原工具 failed/unknown 与原事务 committed 分开，原回滚或查无记录不证明今天的正文或可重放。知识摘要纳入原观察 basis 和明确处置；旧报告缺省不补字段、不重算旧依据。
+
+## 原治理与责任保存核实（Step39）
+
+`persistent-write-observation.ts` 是纯公开叶子：只记录原命令身份、解析来源摘要、保存状态与有界原记录信息，不含正文或权限。`persistent-write-input.ts` 仅后端使用，复用三项实际严格工具参数与稳定命令算法；原 root/run/call、主实例/通道及负责人 scope 来自已核 canonical。`persistent_record` 为可选观察分支，旧报告及 basis 不补字段；主记录须匹配原工具、knowledge 作用域与其 maintenance/preview/knowledge-write 效果。recorded 仅证明保存，absent 不证明未执行。

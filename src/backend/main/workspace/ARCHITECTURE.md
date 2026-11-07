@@ -17,6 +17,7 @@
 | [knowledge-sources.ts](knowledge-sources.ts) | 将原知识事务的来源屏障与岗位/责任的明确来源采纳接到唯一 DispatchStore。 |
 | [main-module-ownership-tools.ts](main-module-ownership-tools.ts) | 把工作区责任服务绑定真实主运行及当前协作周期，提供四项模型窄端口。 |
 | [module-ownerships.ts](module-ownerships.ts) | 桌面与真实主工具共用的模块负责人服务，关系和岗位在唯一 DispatchStore 内裁决。 |
+| [persistent-effect-reader.ts](persistent-effect-reader.ts) | 只读原治理命令与责任审计，向影响观察投影有界的“原记录已保存”证据。 |
 | [workspace-members.ts](workspace-members.ts) | 将桌面岗位登记、采纳与当前差异查询接到工作区唯一 DispatchStore，公开模型配置由 Main 注入。 |
 | [workspace.ts](workspace.ts) | 管理本机工作区的身份、独占锁、知识监听和维护任务。 |
 
@@ -263,6 +264,34 @@ N_src_backend_main_workspace_module_ownerships_ts ..> N_src_backend_main_workspa
 ```
 
 直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/workspace/module-ownership.ts](../../core/workspace/module-ownership.ts)、[../../core/workspace/module-ownership-rules.ts](../../core/workspace/module-ownership-rules.ts)、[../../core/tasks/module-ownership-invariants.ts](../../core/tasks/module-ownership-invariants.ts)、[knowledge-sources.ts](knowledge-sources.ts)、[../../core/workspace/knowledge-source-rules.ts](../../core/workspace/knowledge-source-rules.ts)。
+
+### persistent-effect-reader.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_workspace_persistent_effect_reader_ts["persistent-effect-reader.ts"] {
+  <<module>>
+  +observePersistentWrite()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_workspace_persistent_effect_reader_ts["persistent-effect-reader.ts"] {
+  <<module>>
+}
+class N_src_backend_main_workspace_persistent_effect_reader_ts_PersistentEffectOwner["PersistentEffectOwner"] {
+  <<interface>>
+  +entry
+  +assert()
+  +dispatchStore
+  +governance
+  +governed()
+}
+N_src_backend_main_workspace_persistent_effect_reader_ts ..> N_src_backend_main_workspace_persistent_effect_reader_ts_PersistentEffectOwner : 声明
+```
+
+直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/persistent-write-observation.ts](../../core/tasks/persistent-write-observation.ts)、[../../core/tasks/persistent-write-input.ts](../../core/tasks/persistent-write-input.ts)、[../../core/governance/module-governance.ts](../../core/governance/module-governance.ts)、[../../core/workspace/module-ownership.ts](../../core/workspace/module-ownership.ts)、[../../core/workspace/module-ownership-rules.ts](../../core/workspace/module-ownership-rules.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../persistence/governance/module-governance-store.ts](../persistence/governance/module-governance-store.ts)。
 
 ### workspace-members.ts
 
@@ -575,3 +604,7 @@ forRun 的 confirmNotApplied 仅等待原平台排空并读原账本；核对冻
 ### 原知识请求只读核实
 
 knowledge-effect-reader.ts 在已打开工作区复用 governed 串行队列的 journal 读取，固定对象计划从原私有缓存加载并核原实例/requestId。来源、治理和前后正文核验仍由 KnowledgeStore 负责；查询不提交、刷新、恢复事务或修剪目录，不创建第二个存储。错误返回有界不可核实诊断，停止/关闭仍传播。当前实例身份不替换原请求，重开可只读原事务。
+
+## 原治理与责任保存核实（Step39）
+
+`persistent-effect-reader.ts` 只读已打开且验证通过的治理账本、唯一 DispatchStore 的责任审计与原回执。治理查询借用同一知识串行屏障，责任查询严格核完整事件、原输入、actor、指纹及派生回执；原实例来自匹配的持久请求，不换成当前实例。治理账本的整链完整性由原 init/append 校验，本查询不重读磁盘或初始化 Store。记录或端口未知均保留不可核实，不通过预览、当前保护/负责人、提交或模型来猜测。

@@ -587,3 +587,7 @@ Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，
 ### 原知识调用的影响观察
 
 EffectObservationService 仅从完整可信主 canonical 的原 proposed/allowed 解析知识提交或对象计划引用。窄 observeKnowledge 端口在事务外读取原 journal，严格复核返回身份、直接请求指纹和有界 Schema；两次读取变化标 changed_during_read，不能沿用为稳定处置。此证明是历史事务阶段，不刷新当前知识，也不授予原调用重放许可；索引 refresh 与其它领域通道未适配时仍 unsupported。
+
+## 原治理与责任保存核实（Step39）
+
+影响观察通过可选 `observePersistent` 端口核实 cbim_governance_observe/propose 与 cbim_module_owner_change_commit。只在可信唯一主来源与原严格授权均匹配时重建引用，两次核实原命令；来源摘要/身份不符保持不可核实，读取变化使处置依据失效。旧失败/unknown 不清除，记录保存不签发批准、迁移、派发或恢复资格。取证在任务事务外，不在 Store 锁内反向等待知识队列。

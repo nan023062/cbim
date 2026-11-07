@@ -765,3 +765,7 @@ ModuleBinding ..> ModuleMaintenanceBinding : 固定关系及知识版本
 公开 sourceStatus 区分 untracked、needs_adoption、current、retired、pending 及 missing/invalid/unverifiable；current 必须精确匹配已采纳引用，所有 ref 与逻辑对象/工作区绑定。来源 current 和岗位 active 都不等于实际派发许可；本片尚未把执行任务切换为负责人岗位。
 
 责任读取依据增加可选 sourceCursor，新查询固定来源流，旧缺省只保持原读取格式、不补默认字段。翻页须比较完整依据，防止定义字节与知识 hash 恰好恢复相同时，把旧 current 与新 retired 混在一页链中。
+
+## 原治理与责任保存核实（Step39）
+
+影响观察的负责人分支核实原不可变责任事件及精确原命令回执，完整 request/actor 与原调用匹配；当前关系头、岗位名称或今日 owner 不参与原成功推断。旧实例可只读原命令，不改任务、成员或责任头，也不签发存量交接资格。

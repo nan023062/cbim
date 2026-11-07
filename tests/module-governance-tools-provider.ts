@@ -3,7 +3,7 @@ import http from 'node:http';
 import type {GoalFixtureRequest} from './goal-provider-fixture';
 import {governanceGetOutputSchema,governanceRecordedReceiptSchema,governanceReceiptOutputSchema} from '../src/backend/core/governance/module-governance-tools';
 
-export type ModuleGovernanceToolsMode='complete'|'invalid'|'lost-reply'|'stop'|'member';
+export type ModuleGovernanceToolsMode='complete'|'invalid'|'lost-reply'|'lost-observation'|'stop'|'member';
 export const moduleGovernanceToolsFixture={model:'module-governance-tools-fixture',moduleId:'.cbim/workspace/governed',goal:'MODULE_GOVERNANCE_TOOLS_MAIN: 核实受保护模块并提出精确知识方案，等待人工决定',marker:'MODULE_GOVERNANCE_REAL_PROPOSAL_18b_93ef',draft:'主治理对话草稿保持，不自动提交。',otherDraft:'另一个主会话的草稿保持独立。',final:'真实观察与精确提案已保存，正式知识未修改；请在业务架构审阅，人工决定与实施仍需分别操作。',statement:'模块说明需要明确知识维护与业务实现的区别，保持已有边界。',reason:'依据真实现状提出精确正文，不代替人工决定或业务实现。',alternative:'保留现有原文，通过临时人工说明补充含义。',invariant:'模块身份、维护人、路径和定义不变。',rollback:'如需调整，重新观察并提出新的精确方案，不直接覆盖受保护正文。'};
 export const moduleGovernanceToolNames=['cbim_governance_get','cbim_governance_observe','cbim_governance_propose','cbim_governance_receipt'] as const;
 export type GovernanceToolsRequest=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]};
@@ -29,7 +29,7 @@ export async function moduleGovernanceToolsProvider(mode:ModuleGovernanceToolsMo
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     if(mode==='member'){assert.equal(turn,0);emit({role:'assistant',content:'执行者没有主治理四工具。本轮只核实能力清单，不宣称业务交付。'});emit({},'stop')}
     else{
-      const steps=['get',...(mode==='invalid'?['invalid-identity']:[]),'observe','observation','observation-receipt',...(mode==='invalid'?['oversized']:[]),'propose','proposal-receipt','proposal','done'],step=steps[turn],data=moduleGovernanceToolsFixture;
+      const steps=['get',...(mode==='invalid'?['invalid-identity']:[]),'observe',...(mode==='lost-observation'?['observation-recovery']:[]),'observation','observation-receipt',...(mode==='invalid'?['oversized']:[]),'propose','proposal-receipt','proposal','done'],step=steps[turn],data=moduleGovernanceToolsFixture;
       const proposalArguments=()=>({protectionId:state.get.protection.protectionId,observationId:state.observed.record.observationId,expectedProtectionRevision:state.get.protection.revision,expectedKnowledgeRevision:state.get.knowledgeRevision,newOverviewText:state.observation.selectedObservation.body.text.replace('管理资源。','管理资源。\n\n'+data.marker+'\n\n知识维护与业务实现分别核实，所有变更保持既有模块身份与责任边界。'),reason:data.reason,alternatives:[data.alternative],invariants:[data.invariant],rollbackNotes:data.rollback});
       if(step==='get')tool('governance-get','cbim_governance_get',{moduleId:data.moduleId});
       else if(step==='invalid-identity'){state.get=governanceGetOutputSchema.parse(governanceToolsResult(body,'governance-get'));tool('governance-invalid-identity','cbim_governance_get',{moduleId:data.moduleId,workspaceId:'forged-workspace',actor:{kind:'local_desktop'}})}
@@ -37,8 +37,12 @@ export async function moduleGovernanceToolsProvider(mode:ModuleGovernanceToolsMo
         state.get=governanceGetOutputSchema.parse(governanceToolsResult(body,'governance-get'));assert.ok(state.get.protection);assert.equal(state.get.observations.total,0);assert.equal(state.get.proposals.total,0);
         if(mode==='invalid'){state.invalidIdentity=governanceToolsResult(body,'governance-invalid-identity');assert.equal(typeof state.invalidIdentity.error,'string')}
         tool('governance-observe','cbim_governance_observe',{protectionId:state.get.protection.protectionId,expectedProtectionRevision:state.get.protection.revision,expectedKnowledgeRevision:state.get.knowledgeRevision,statement:data.statement});
+      }else if(step==='observation-recovery'){
+        state.observedReply=governanceToolsResult(body,'governance-observe');assert.match(String(state.observedReply.error),/GOVERNANCE_UNKNOWN/);assert.match(String(state.observedReply.error),/commandId=[a-f0-9-]{36}/);assert.ok(!String(state.observedReply.error).includes('TEST_RESPONSE_LOST'));
+        tool('governance-observe-recovery','cbim_governance_receipt',{action:'observe',toolCallId:'governance-observe'});
       }else if(step==='observation'){
-        state.observed=governanceRecordedReceiptSchema.parse(governanceToolsResult(body,'governance-observe'));assert.equal(state.observed.action,'observe');assert.equal(state.observed.record.origin.toolCallId,'governance-observe');
+        state.observed=governanceRecordedReceiptSchema.parse(governanceToolsResult(body,mode==='lost-observation'?'governance-observe-recovery':'governance-observe'));assert.equal(state.observed.action,'observe');assert.equal(state.observed.record.origin.toolCallId,'governance-observe');
+        if(mode==='lost-observation')assert.ok(String(state.observedReply.error).includes(state.observed.commandId));
         tool('governance-observation','cbim_governance_get',{moduleId:data.moduleId,observationId:state.observed.record.observationId});
       }else if(step==='observation-receipt'){
         state.observation=governanceGetOutputSchema.parse(governanceToolsResult(body,'governance-observation'));assert.equal(state.observation.selectedObservation.body.state,'complete');assert.equal(state.observation.selectedObservation.structural,true);

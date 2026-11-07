@@ -17,7 +17,7 @@
 | [checkpoint-abandonment-service.ts](checkpoint-abandonment-service.ts) | 主调度明确放弃本周期尚未消费的检查点及可选恢复预约，保留旧执行与证明。 |
 | [command-verification-service.ts](command-verification-service.ts) | 把原主运行的 canonical 调用与同一 Store 已提交命令只读关联，供桌面和主工具共用。 |
 | [dispatch-service.ts](dispatch-service.ts) | 工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。 |
-| [effect-observation-service.ts](effect-observation-service.ts) | 组合原调用授权、已提交控制面、原知识事务与当前选定文件，保存本机明确处置并派生新周期关联。 |
+| [effect-observation-service.ts](effect-observation-service.ts) | 组合原调用授权、已提交控制面、原知识事务、原治理/责任保存记录与当前选定文件，保存本机明确处置并派生新周期关联。 |
 | [effect-source.ts](effect-source.ts) | 从唯一任务存储与 canonical 日志核实原成员/主运行，供影响观察和新核实来源共用。 |
 | [execution-manager.ts](execution-manager.ts) | 工作区主对话管理，负责普通 chat、目标周期接续、多轮历史和消息队列；旧直接团队业务入口拒绝新执行，业务成员统一经岗位派发领取。 |
 | [execution-report-facts.ts](execution-report-facts.ts) | 从已核对身份的成员运行日志提取工具授权与回执事实。 |
@@ -430,6 +430,8 @@ N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_s
 
 ### effect-observation-service.ts
 
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
 ```mermaid
 classDiagram
 class N_src_backend_scheduler_engine_execution_effect_observation_service_ts["effect-observation-service.ts"] {
@@ -441,6 +443,7 @@ class N_src_backend_scheduler_engine_execution_effect_observation_service_ts_Eff
   +observeFiles()
   +acquireRead()
   +observeKnowledge()
+  +observePersistent()
   +assertCurrent()
 }
 N_src_backend_scheduler_engine_execution_effect_observation_service_ts ..> N_src_backend_scheduler_engine_execution_effect_observation_service_ts_EffectObservationPorts : 声明
@@ -468,13 +471,26 @@ class N_src_backend_scheduler_engine_execution_effect_observation_service_ts_Eff
   -alive()
   -prepare()
   -knowledge()
+  -persistent()
   -baselines()
+}
+N_src_backend_scheduler_engine_execution_effect_observation_service_ts ..> N_src_backend_scheduler_engine_execution_effect_observation_service_ts_EffectObservationService : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_execution_effect_observation_service_ts["effect-observation-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_effect_observation_service_ts_EffectObservationService["EffectObservationService"] {
   -recordReady()
 }
 N_src_backend_scheduler_engine_execution_effect_observation_service_ts ..> N_src_backend_scheduler_engine_execution_effect_observation_service_ts_EffectObservationService : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/effect-observation.ts](../../core/tasks/effect-observation.ts)、[../../core/tasks/effect-observation-rules.ts](../../core/tasks/effect-observation-rules.ts)、[../../core/tasks/command-verification.ts](../../core/tasks/command-verification.ts)、[../../core/tasks/artifact-evidence.ts](../../core/tasks/artifact-evidence.ts)、[../../core/tasks/artifact-baseline.ts](../../core/tasks/artifact-baseline.ts)、[command-verification-service.ts](command-verification-service.ts)、[effect-source.ts](effect-source.ts)、[../../core/knowledge/knowledge-write-observation.ts](../../core/knowledge/knowledge-write-observation.ts)、[../../core/knowledge/knowledge-write-input.ts](../../core/knowledge/knowledge-write-input.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/effect-observation.ts](../../core/tasks/effect-observation.ts)、[../../core/tasks/effect-observation-rules.ts](../../core/tasks/effect-observation-rules.ts)、[../../core/tasks/command-verification.ts](../../core/tasks/command-verification.ts)、[../../core/tasks/artifact-evidence.ts](../../core/tasks/artifact-evidence.ts)、[../../core/tasks/artifact-baseline.ts](../../core/tasks/artifact-baseline.ts)、[command-verification-service.ts](command-verification-service.ts)、[effect-source.ts](effect-source.ts)、[../../core/knowledge/knowledge-write-observation.ts](../../core/knowledge/knowledge-write-observation.ts)、[../../core/knowledge/knowledge-write-input.ts](../../core/knowledge/knowledge-write-input.ts)、[../../core/tasks/persistent-write-observation.ts](../../core/tasks/persistent-write-observation.ts)、[../../core/tasks/persistent-write-input.ts](../../core/tasks/persistent-write-input.ts)。
 
 ### effect-source.ts
 
@@ -2881,3 +2897,7 @@ Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，
 ### 原知识调用的影响观察
 
 EffectObservationService 仅从完整可信主 canonical 的原 proposed/allowed 解析知识提交或对象计划引用。窄 observeKnowledge 端口在事务外读取原 journal，严格复核返回身份、直接请求指纹和有界 Schema；两次读取变化标 changed_during_read，不能沿用为稳定处置。此证明是历史事务阶段，不刷新当前知识，也不授予原调用重放许可；索引 refresh 与其它领域通道未适配时仍 unsupported。
+
+## 原治理与责任保存核实（Step39）
+
+影响观察通过可选 `observePersistent` 端口核实 cbim_governance_observe/propose 与 cbim_module_owner_change_commit。只在可信唯一主来源与原严格授权均匹配时重建引用，两次核实原命令；来源摘要/身份不符保持不可核实，读取变化使处置依据失效。旧失败/unknown 不清除，记录保存不签发批准、迁移、派发或恢复资格。取证在任务事务外，不在 Store 锁内反向等待知识队列。

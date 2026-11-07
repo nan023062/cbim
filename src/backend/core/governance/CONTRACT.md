@@ -45,3 +45,7 @@
 `validateModuleGovernanceResponseSources` 的 historical 模式保留原引用并派生 `current/superseded` 及最新决定 ID；current 模式还拒绝被替代的来源。新批准、任何含 assessments 的本机决定以及实施最终门禁使用 current；不含评价的驳回/暂缓可继续记录。历史账本按命令当时已见记录验证 current，之后读取已提交 journal 不把后来的来源变化倒推成提交失败或回滚。List.selected.responseStates 是只读派生信息，必须完整对应冻结引用，不能写回提案或原命令回执。
 
 `assessments` 只能逐项引用本提案实际回应的原意见，明确选择 addressed、needs_evidence 或 disputed，并填写非空具体说明。允许缺省或只评价部分；批准不补 addressed，也没有强制全部 addressed 的新门槛。它只表示本机实际反馈，不认证专业理解、账户身份或业务验收。模型 get 投影保留这些事实，并明确截断长意见；来源变化不会修改过去的评价，界面必须同时展示当前来源已被替代的状态。本片没有自动演练、自动启动任务或自动实施。
+
+## 原治理与责任保存核实（Step39）
+
+影响观察可把原主 observe/propose 的可信来源与实际严格工具参数重建成原命令引用，再核已校验账本的完整指纹。只返回保存摘要，既不读取当前保护代替原记录，也不推导批准或实施。来源及参数缺失/不符不能借相同 commandId 冒领；不增加模型写工具或桌面批准入口。

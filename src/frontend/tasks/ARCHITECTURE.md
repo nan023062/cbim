@@ -28,7 +28,7 @@
 | [effect-observation-state.ts](effect-observation-state.ts) | 为同一主会话的主/成员调用保存显式影响观察、处置草稿、稳定命令及后续关联。 |
 | [effect-observation.css](effect-observation.css) | 对应界面的布局与视觉样式。 |
 | [effect-recovery-state.ts](effect-recovery-state.ts) | 将显式影响观察与已保存的本机处置转换为新只读核实的界面候选。 |
-| [EffectObservationPanel.tsx](EffectObservationPanel.tsx) | 展示原调用状态、当前文件、原控制面/知识事务、本机处置和后续独立周期关系。 |
+| [EffectObservationPanel.tsx](EffectObservationPanel.tsx) | 展示原调用状态、当前文件、原控制面/知识事务、原治理/责任保存记录、本机处置和后续独立周期关系。 |
 | [execution-report-state.ts](execution-report-state.ts) | 验证成员执行核实报告的身份和分页基线，并保存一次显式读取的前端状态。 |
 | [execution-report.css](execution-report.css) | 选中成员任务的只读执行核实报告排版。 |
 | [ExecutionRecoveryForm.tsx](ExecutionRecoveryForm.tsx) | 异常执行报告后的显式新周期入口，将用户观察与新的只读核实目标分开呈现。 |
@@ -3850,3 +3850,7 @@ UseScopeReplan --> EffectObservationController : 明确选定的原处置
 ### 原知识事务与工具状态
 
 EffectObservationPanel 在同一显式核实入口展示原事务阶段、原请求标识及 committed 的原版本/变更数量。原工具失败、原事务已提交、今天的知识及业务验收独立表达；查无记录/计划缺失不显示未执行或重试按钮。处置及历史仍复用原稳定请求、只读查询与跨来源隔离，挂载不触发事务读取。
+
+## 原治理与责任保存核实（Step39）
+
+`EffectObservationPanel` 将原工具失败与原观察/提案/负责人变更已保存并列展示，显示原命令及记录身份、保存时间，责任只显示原版本。查无与不可核实保留诊断；“保存不等于批准、实施或任务交接”。显式处置仍沿同一 controller/附录/历史，不自动启动恢复或改写原状态。

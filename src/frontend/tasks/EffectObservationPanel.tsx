@@ -1,5 +1,5 @@
 /**
- * 作用定位：展示原调用状态、当前文件、原控制面/知识事务、本机处置和后续独立周期关系。
+ * 作用定位：展示原调用状态、当前文件、原控制面/知识事务、原治理/责任保存记录、本机处置和后续独立周期关系。
  * 设计原因：用户可以核实影响并明确决定下一步，但这些观察不能覆盖旧失败、签署业务验收或自动启动修复。主与成员共用面板，身份不互相伪装。
  */
 import {useState} from 'react';
@@ -35,6 +35,13 @@ export function EffectObservationPanel({identity,anchor,context}:{identity:Effec
         <strong>{call.toolName??'原调用'} · {outcomes[call.outcome]}</strong>
         {call.coverage==='control_commit_only'&&<p>{call.command?.state==='committed'?'原控制面事务已保存':call.command?.state==='absent'?'未查到原保存回执':'原事务仍不可核实'}；不表示业务工作已完成。</p>}
         {call.coverage==='unsupported'&&<p>本项影响暂不支持结构化核实，未知状态保留。</p>}
+        {call.persistent&&<div data-testid="effect-persistent-record" data-state={call.persistent.state}>
+          <p>{call.persistent.state==='recorded'?(call.persistent.record?.kind==='observation'?'原治理观察已保存':call.persistent.record?.kind==='proposal'?'原治理提案已保存':'原负责人变更已保存'):call.persistent.state==='absent'?'未查到原保存记录':'原保存记录不可核实'}</p>
+          <p>原命令 <code>{call.persistent.identity.commandId}</code></p>
+          {call.persistent.record&&<><p>原记录 <code>{call.persistent.record.recordId}</code></p><small>保存于 {new Date(call.persistent.record.recordedAt).toLocaleString()}{call.persistent.record.kind==='ownership'?` · 原责任第 ${call.persistent.record.revision} 版`:''}</small></>}
+          {call.persistent.reason&&<p>{call.persistent.reason==='original_record_unverifiable'?'原记录、输入或来源未通过完整性核实。':'当前无法可靠查询原记录。'}</p>}
+          <p>保存不等于批准、实施或任务交接，也不改变原工具结果。</p>
+        </div>}
         {call.knowledge&&<div data-testid="effect-knowledge-transaction" data-state={call.knowledge.state}>
           <p>{knowledgeStates[call.knowledge.state]}</p><p>原请求 <code>{call.knowledge.identity.requestId}</code></p>
           {call.knowledge.revision&&<p>原提交版本 <code>{call.knowledge.revision}</code> · {call.knowledge.changedCount} 项变更</p>}

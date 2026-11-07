@@ -1,4 +1,4 @@
-import {it,expect} from 'vitest';
+import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture,request} from './helpers';
@@ -42,6 +42,17 @@ async function setup(){
   };
   return {...f,entry,workspace,directory,memberDirectory,store,service,identity,scope,journal,task,runId,emitTool,commit,setSummary:(value:RunSummary)=>{summary=value},cleanup:async()=>{await store.close();await f.cleanup()}};
 }
+
+it('主目标与任务图查询只读取一次权威派发快照，不拼接分开的周期和图版本',async()=>{
+  const f=await setup();try{
+    await f.service.goals.plan(f.identity,f.scope.scopeId,f.runId,'inspect-plan',plan());
+    const before=await f.store.read(),read=vi.spyOn(f.store,'read'),separateScope=vi.spyOn(f.service.goals,'inspect'),separateGraph=vi.spyOn(f.service,'snapshot');
+    const inspected=await f.service.goals.inspectWithGraph(f.identity,f.scope.scopeId);
+    expect(read).toHaveBeenCalledTimes(1);expect(separateScope).not.toHaveBeenCalled();expect(separateGraph).not.toHaveBeenCalled();
+    expect(inspected).toEqual({scope:before.scopes!.find(scope=>scope.scopeId===f.scope.scopeId),graph:before.graphs.find(graph=>graph.identity.rootSessionId===f.identity.rootSessionId)});
+    expect(await f.store.read()).toEqual(before);
+  }finally{await f.cleanup()}
+});
 
 it('计划核实真实身份并逐版持久化，幂等命令不重做；输入、旧记录与重放保持原样',async()=>{
   const f=await setup();try{

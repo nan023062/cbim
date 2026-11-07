@@ -201,8 +201,8 @@ class N_src_backend_scheduler_engine_execution_auto_collaboration_ts_AutoCollabo
   -startFailed()
   -track()
   -identity()
+  -toolBinding()
   -admissionWait()
-  -withdrawAdmissions()
 }
 N_src_backend_scheduler_engine_execution_auto_collaboration_ts ..> N_src_backend_scheduler_engine_execution_auto_collaboration_ts_AutoCollaboration : 声明
 ```
@@ -215,6 +215,7 @@ class N_src_backend_scheduler_engine_execution_auto_collaboration_ts["auto-colla
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_auto_collaboration_ts_AutoCollaboration["AutoCollaboration"] {
+  -withdrawAdmissions()
   -retireBatch()
   -assertLive()
   -assign()
@@ -228,7 +229,7 @@ class N_src_backend_scheduler_engine_execution_auto_collaboration_ts_AutoCollabo
 N_src_backend_scheduler_engine_execution_auto_collaboration_ts ..> N_src_backend_scheduler_engine_execution_auto_collaboration_ts_AutoCollaboration : 声明
 ```
 
-直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/scope-continuation.ts](../../core/tasks/scope-continuation.ts)、[../../core/tasks/human-continue.ts](../../core/tasks/human-continue.ts)、[../../core/tasks/scope-recovery.ts](../../core/tasks/scope-recovery.ts)、[../../core/tasks/scope-replan.ts](../../core/tasks/scope-replan.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../tools/dispatch-tools.ts](../tools/dispatch-tools.ts)、[../tools/goal-tools.ts](../tools/goal-tools.ts)、[dispatch-service.ts](dispatch-service.ts)、[member-execution.ts](member-execution.ts)、[execution-manager.ts](execution-manager.ts)、[loop-engine.ts](loop-engine.ts)、[workspace-lease.ts](workspace-lease.ts)、[admission-wait.ts](admission-wait.ts)。
+直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/scope-continuation.ts](../../core/tasks/scope-continuation.ts)、[../../core/tasks/human-continue.ts](../../core/tasks/human-continue.ts)、[../../core/tasks/scope-recovery.ts](../../core/tasks/scope-recovery.ts)、[../../core/tasks/scope-replan.ts](../../core/tasks/scope-replan.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../tools/dispatch-tools.ts](../tools/dispatch-tools.ts)、[../tools/goal-tools.ts](../tools/goal-tools.ts)、[../tools/main-tool-contracts.ts](../tools/main-tool-contracts.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[dispatch-service.ts](dispatch-service.ts)、[member-execution.ts](member-execution.ts)、[execution-manager.ts](execution-manager.ts)、[loop-engine.ts](loop-engine.ts)、[workspace-lease.ts](workspace-lease.ts)、[admission-wait.ts](admission-wait.ts)。
 
 ### dispatch-service.ts
 
@@ -993,6 +994,7 @@ class N_src_backend_scheduler_engine_execution_scope_goal_service_ts_Owner["Owne
 N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts_Owner : 声明
 class N_src_backend_scheduler_engine_execution_scope_goal_service_ts_ScopeGoalService["ScopeGoalService"] {
   +inspect()
+  +inspectWithGraph()
   +plan()
   +validateDispatch()
   +validateMemberCandidate()
@@ -1007,7 +1009,6 @@ class N_src_backend_scheduler_engine_execution_scope_goal_service_ts_ScopeGoalSe
   -store
   -ports
   -humanPorts
-  -parse()
 }
 N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts_ScopeGoalService : 声明
 ```
@@ -1020,6 +1021,7 @@ class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_scope_goal_service_ts_ScopeGoalService["ScopeGoalService"] {
+  -parse()
   -scope()
   -graph()
   -editable()
@@ -1656,6 +1658,14 @@ N_src_backend_scheduler_engine_execution_scope_usage_service_ts ..> N_src_backen
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 主调度公开回包与一致读取
+
+`AutoCollaboration.tools` 为 Goal 三工具和 Dispatch 五工具绑定本轮 workspace/root/scope/run；`mainToolCommandId` 由实际桥调用 ID 计算原有命令键，提交与回包核验共用此算法，不改写已持久化命令。公开输出只验证事实，不产生权限或新的执行能力。
+
+`ScopeGoalService.inspectWithGraph` 仅一次 `DispatchStore.read()`，从相同权威快照选择本 scope 与本 root 图，避免两次读取之间的变更被拼成一致事实。Auto 只投影公开 scope：保留重规划/只读核实的约束与来源证明，去除私有 native/排除集合 context；空返回仍交工具业务 Schema 拒绝，不降级到另一读取。
+
+调用方先执行领域事务，再校验唯一序列化的公开 wire。回包损坏可以发生在可靠提交之后，因此 `TOOL_OUTPUT_INVALID` 不回滚、不重试，不抹掉已派发任务或原审阅；协调器批次关联仅读取形状可用的 taskId/任务 ID 数组，空值、缺字段和坏类型不补造或提前抛字段访问异常，原结果继续交唯一 wire 校验。关联不等于业务输出合格，主轮结束后仍须通过原启动和业务完成门禁。查询原记录与重开存储均不重放命令。
 
 ### 主运行资源仓库读取与回执
 

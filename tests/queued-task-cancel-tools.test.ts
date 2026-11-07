@@ -1,15 +1,18 @@
 import {expect,test,vi} from 'vitest';
 import {DispatchTools,type DispatchToolsPort} from '../src/backend/scheduler-engine/tools/dispatch-tools';
 import {authorizeRunTool} from '../src/backend/core/policy/tool-policy';
+import {mainToolBinding} from './main-tool-output-fixture';
+import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
 
 const input={expectedGraphCursor:{streamId:'stream-one',seq:5},targets:[{taskId:'task-one',expectedRevision:2},{taskId:'task-two',expectedRevision:1}],reason:'等待用户补充，撤销尚未启动的依赖工作'};
 function fixture(){
-  const receipt={workspaceId:'workspace-one',rootSessionId:'root-one',scopeId:'scope-one',mainRunId:'main-one',commandId:'command-one',cancelledTaskIds:['task-one','task-two'],graphCursor:{streamId:'stream-one',seq:6}};
+  const binding={workspaceId:'workspace-one',rootSessionId:'root-one',scopeId:'scope-one',runId:'main-one'};
+  const receipt={workspaceId:binding.workspaceId,rootSessionId:binding.rootSessionId,scopeId:binding.scopeId,mainRunId:binding.runId,commandId:mainToolCommandId('cbim_dispatch_cancel',binding,'native-call-one')!,cancelledTaskIds:['task-one','task-two'],graphCursor:{streamId:'stream-one',seq:6}};
   const cancel=vi.fn<NonNullable<DispatchToolsPort['cancel']>>().mockResolvedValue(receipt),dispatch=vi.fn(),inspect=vi.fn();
-  return {cancel,receipt,tools:new DispatchTools({dispatch,inspect,cancel})};
+  return {cancel,receipt,tools:new DispatchTools({binding,dispatch,inspect,cancel})};
 }
 test('unconfigured compatibility ports neither advertise nor allow cancellation',async()=>{
-  const tools=new DispatchTools({dispatch:vi.fn(),inspect:vi.fn()});
+  const tools=new DispatchTools({binding:mainToolBinding,dispatch:vi.fn(),inspect:vi.fn()});
   expect(tools.list().some(tool=>tool.name==='cbim_dispatch_cancel')).toBe(false);expect(tools.has('cbim_dispatch_cancel')).toBe(false);
   expect(()=>tools.describe('cbim_dispatch_cancel',input)).toThrow('没有此');
   await expect(tools.call('cbim_dispatch_cancel',input,new AbortController().signal,'call-one')).rejects.toThrow('没有此');

@@ -1,12 +1,14 @@
 import {test,expect,vi} from 'vitest';
 import {DispatchTools,type DispatchToolsPort} from '../src/backend/scheduler-engine/tools/dispatch-tools';
 import {authorizeRunTool} from '../src/backend/core/policy/tool-policy';
+import {mainToolBinding,mainToolTask} from './main-tool-output-fixture';
+import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
 
 const task={agentId:'.cbim/team/developer',moduleIds:['.cbim/workspace/client'],goal:'核实资源加载',acceptance:[{id:'verified',text:'提供真实读取证据'}]};
 function fixture(){
-  const dispatch=vi.fn<DispatchToolsPort['dispatch']>().mockResolvedValue({commandId:'request',taskId:'task',messageId:'message',cursor:{workspaceId:'workspace',rootSessionId:'root',streamId:'stream',seq:1},disposition:'queued'});
-  const inspect=vi.fn<DispatchToolsPort['inspect']>().mockResolvedValue({taskId:'task',status:'result_ready',result:{acceptance:'not_evaluated'}});
-  return {tools:new DispatchTools({dispatch,inspect}),dispatch,inspect};
+  const dispatch=vi.fn<DispatchToolsPort['dispatch']>().mockImplementation(async(_input,call)=>({commandId:mainToolCommandId('cbim_dispatch_task',mainToolBinding,call.toolCallId)!,taskId:'task',messageId:'message',cursor:{workspaceId:'workspace',rootSessionId:'root',streamId:'stream',seq:1},disposition:'queued'}));
+  const inspect=vi.fn<DispatchToolsPort['inspect']>().mockResolvedValue(mainToolTask());
+  return {tools:new DispatchTools({binding:mainToolBinding,dispatch,inspect}),dispatch,inspect};
 }
 test('dispatch exposes only implemented main-session tools and uses trusted invocation metadata',async()=>{
   const f=fixture(),signal=new AbortController().signal;
@@ -64,4 +66,14 @@ test('dispatch only records work; readonly delegation does not grant child write
   expect(approve).not.toHaveBeenCalled();
   expect(guard).not.toHaveBeenCalled();
   expect(f.dispatch).not.toHaveBeenCalled();
+});
+test('原run/call命令与回执必须一致，坏回包不自动重派或把queued改成running',async()=>{
+  const f=fixture(),signal=new AbortController().signal;
+  for(const invalid of [
+    {commandId:'foreign-command',taskId:'task',messageId:'message',cursor:{workspaceId:'workspace',rootSessionId:'root',streamId:'stream',seq:1},disposition:'queued' as const},
+    {commandId:mainToolCommandId('cbim_dispatch_task',mainToolBinding,'call')!,taskId:'task',messageId:'message',cursor:{workspaceId:'workspace',rootSessionId:'foreign',streamId:'stream',seq:1},disposition:'queued' as const},
+  ]){f.dispatch.mockResolvedValueOnce(invalid);await expect(f.tools.call('cbim_dispatch_task',task,signal,'call')).rejects.toMatchObject({code:'TOOL_OUTPUT_INVALID'})}
+  expect(f.dispatch).toHaveBeenCalledTimes(2);expect(f.inspect).not.toHaveBeenCalled();
+  const metadata=f.tools.list().find(tool=>tool.name==='cbim_dispatch_task')!;
+  expect(metadata).toMatchObject({version:1,effects:['maintenance'],cancellation:{mode:'preflight_only'},recovery:{mode:'inspect_before_retry',queryTool:'cbim_dispatch_inspect'}});expect(metadata.outputSchema).toBeTruthy();
 });

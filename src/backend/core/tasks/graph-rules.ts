@@ -1,5 +1,5 @@
 /**
- * 作用定位：任务图的纯领域校验，检查序列化形状、身份、派发父关系及依赖/等待无环。
+ * 作用定位：任务图的纯领域校验，完整图与单项公开查询共用节点状态规则，并检查身份、派发父关系及依赖/等待无环。
  * 设计原因：存储重放与新提交共用规则；检查点及其一次续预约保留固定身份，求助、撤销和依赖替换不混入成功候选或活动占用。
  * 职责边界：结构通过不等于知识维护人已认证或任务已获授权，调度层仍需核实来源。
  */
@@ -53,6 +53,12 @@ const batch=z.object({version:z.literal(1),identity,streamId:id,seq:revision,eve
   committedAt:time,changes:z.array(change).min(1).max(1000)}).strict();
 const snapshot=z.object({version:z.literal(1),identity,cursor,root,tasks:z.array(task),edges:z.array(edge),agents:z.array(agentView)}).strict();
 
+/** 主调度公开输出复用真实图字段，避免输出边界另造一套会漂移的任务协议。 */
+export const taskNodeSchema=task.superRefine((value,context)=>{try{validateTaskNode(value)}catch{context.addIssue({code:'custom',message:'任务节点局部关系无效'})}});
+/** Schema 检查字段；完整图的身份、引用和 DAG 规则仍由 validateGraph 统一校验。 */
+export const graphSnapshotSchema=snapshot;
+export const graphCursorSchema=cursor;
+
 function shape(schema:z.ZodTypeAny,value:unknown){const result=schema.safeParse(value);if(!result.success)fail('GRAPH_INPUT_INVALID',`任务图字段无效：${result.error.issues[0]?.path.join('.')??''}`)}
 /** 严格校验公开身份，不允许空串、未知字段或隐式工作区切换。 */
 export function validateGraphIdentity(value:GraphIdentity){shape(identity,value)}
@@ -79,6 +85,28 @@ function acyclic(nodes:string[],edges:[string,string][],code:string){
 }
 function usableResult(task:TaskNode,planRevision:number,resultId?:string){return task.status==='result_ready'&&task.result?.planRevision===planRevision&&task.planRevision===planRevision&&(!resultId||task.result.resultId===resultId)}
 
+/** 单项查询与完整图共用节点自身可核实的不变量；跨节点、图流及边关系仍由 validateGraph 核验。 */
+export function validateTaskNode(t:TaskNode):void {
+  shape(task,t);
+  if(t.nodeId!==`task:${t.taskId}`)fail('GRAPH_INPUT_INVALID','任务 ID 与节点 ID 不一致');
+  unique(t.modules.map(m=>m.moduleId),'任务模块');unique(t.acceptance.map(a=>a.id),'验收要求');unique(t.runIds,'执行轮次');unique(t.awaitedChildren.map(c=>c.taskId),'等待子任务');
+  for(const m of t.modules)unique(m.maintainerPersonIds,'模块维护人');
+  if(t.activeRunId&&!t.runIds.includes(t.activeRunId))fail('GRAPH_INPUT_INVALID','活动轮次不属于该任务');
+  if(t.result&&(t.result.planRevision!==t.planRevision||!t.runIds.includes(t.result.runId)||t.status!=='result_ready'))fail('GRAPH_INPUT_INVALID','任务候选结果已失效或不属于该执行');
+  if(t.status==='result_ready'&&!t.result)fail('GRAPH_INPUT_INVALID','可交接任务缺少真实候选结果');
+  if(t.help){const binding=t.help.binding;if(t.result||t.status!=='blocked'||t.activeRunId||!t.scopeId||binding.workspaceId!==t.identity.workspaceId||binding.rootSessionId!==t.identity.rootSessionId||binding.taskId!==t.taskId||binding.planRevision!==t.planRevision||!t.runIds.includes(binding.runId)||binding.agentId!==t.assignee.agentId||binding.agentInstanceId!==t.assignee.agentInstanceId||binding.agentSessionId!==t.assignee.agentSessionId)fail('GRAPH_INPUT_INVALID','成员求助必须绑定本周期已结束的执行任务，且不能作为成功候选')}
+  const checkpoint=t.checkpoints?.[0],request=t.resumeRequest;
+  if(checkpoint){const binding=checkpoint.binding;if(!t.scopeId||t.help?.binding.runId===binding.runId||t.cancelledBeforeStart||binding.workspaceId!==t.identity.workspaceId||binding.rootSessionId!==t.identity.rootSessionId||binding.taskId!==t.taskId||binding.planRevision!==t.planRevision||binding.runId!==t.runIds[0]||!sameMember(t.assignee,{...binding,name:''})||t.runIds.length>2||t.runIds.length===2&&!request||t.result?.runId===binding.runId)fail('GRAPH_INPUT_INVALID','检查点必须保留同任务原实例且不能替代交付或重复续执行')}
+  if(t.status==='checkpointed'&&(!checkpoint||t.runIds.length!==1||t.activeRunId||t.result||request))fail('GRAPH_INPUT_INVALID','检查点任务缺少已结束原运行或被重复预约');
+  if(request&&(!checkpoint||request.checkpointId!==checkpoint.checkpointId||request.runId!==checkpoint.binding.runId||request.scopeId!==t.scopeId||request.previousTaskRevision>=t.revision||request.trackedTaskIds[0]!==t.taskId||Date.parse(request.requestedAt)>Date.parse(t.updatedAt)))fail('GRAPH_INPUT_INVALID','续执行预约缺少原检查点、固定任务或有效版本');
+  if(t.cancelledBeforeStart){const record=t.cancelledBeforeStart;if(t.status!=='cancelled'||t.runIds.length||t.activeRunId||t.result||t.help||t.awaitedChildren.length||!t.scopeId||record.scopeId!==t.scopeId||record.previousRevision+1!==t.revision||record.cancelledAt!==t.updatedAt||t.waitReason!==record.reason)fail('GRAPH_INPUT_INVALID','未启动撤销记录与任务终态、版本不一致')}
+  const replacements=t.dependencyReplacements??[];unique(replacements.map(record=>record.commandId),'前置替换命令');unique(replacements.map(record=>record.retired.edgeId),'退役依赖');
+  for(let index=0;index<replacements.length;index++){
+    const record=replacements[index],prior=replacements[index-1];
+    if(record.scopeId!==t.scopeId||record.targetPlanRevision>t.planRevision||record.previousTaskRevision>=t.revision||record.trackedTaskIds[0]!==t.taskId||Date.parse(record.replacedAt)>Date.parse(t.updatedAt)||prior&&(prior.previousTaskRevision>=record.previousTaskRevision||prior.graphCursor.seq>=record.graphCursor.seq))fail('GRAPH_INPUT_INVALID','前置替换历史与任务版本不一致');
+  }
+}
+
 /**
  * 验证完整的已提交投影；允许端点在同批创建后一起验证，不读取文件或修改传入对象。
  * 这里只检验结构事实，不实现未来结果提交、取消或执行状态机。
@@ -96,25 +124,17 @@ export function validateGraph(value:GraphSnapshot):void {
   checkAgent(value.root.agent);
   for(const t of value.tasks){
     assertGraphIdentity(value.identity,t.identity);
-    if(t.nodeId!==`task:${t.taskId}`)fail('GRAPH_INPUT_INVALID','任务 ID 与节点 ID 不一致');
-    checkAgent(t.requester);checkAgent(t.assignee);unique(t.modules.map(m=>m.moduleId),'任务模块');unique(t.acceptance.map(a=>a.id),'验收要求');unique(t.runIds,'执行轮次');unique(t.awaitedChildren.map(c=>c.taskId),'等待子任务');
-    for(const m of t.modules)unique(m.maintainerPersonIds,'模块维护人');
+    validateTaskNode(t);checkAgent(t.requester);checkAgent(t.assignee);
     const parent=t.parentTaskId?tasks.get(t.parentTaskId):undefined;
     if(t.parentTaskId&&!parent)fail('GRAPH_INPUT_INVALID','派发父任务不存在');
     if(!sameMember(t.requester,parent?.assignee??value.root.agent))fail('GRAPH_INPUT_INVALID','任务请求人不是父节点的责任成员');
-    if(t.activeRunId&&!t.runIds.includes(t.activeRunId))fail('GRAPH_INPUT_INVALID','活动轮次不属于该任务');
-    if(t.result&&(t.result.planRevision!==t.planRevision||!t.runIds.includes(t.result.runId)||t.status!=='result_ready'))fail('GRAPH_INPUT_INVALID','任务候选结果已失效或不属于该执行');
-    if(t.status==='result_ready'&&!t.result)fail('GRAPH_INPUT_INVALID','可交接任务缺少真实候选结果');
-    if(t.help){const binding=t.help.binding;if(t.result||t.status!=='blocked'||t.activeRunId||!t.scopeId||binding.workspaceId!==t.identity.workspaceId||binding.rootSessionId!==t.identity.rootSessionId||binding.taskId!==t.taskId||binding.planRevision!==t.planRevision||!t.runIds.includes(binding.runId)||binding.agentId!==t.assignee.agentId||binding.agentInstanceId!==t.assignee.agentInstanceId||binding.agentSessionId!==t.assignee.agentSessionId)fail('GRAPH_INPUT_INVALID','成员求助必须绑定本周期已结束的执行任务，且不能作为成功候选')}
-    const checkpoint=t.checkpoints?.[0],request=t.resumeRequest;
-    if(checkpoint){const binding=checkpoint.binding;if(!t.scopeId||t.help?.binding.runId===binding.runId||t.cancelledBeforeStart||binding.workspaceId!==t.identity.workspaceId||binding.rootSessionId!==t.identity.rootSessionId||binding.taskId!==t.taskId||binding.planRevision!==t.planRevision||binding.runId!==t.runIds[0]||!sameMember(t.assignee,{...binding,name:''})||t.runIds.length>2||t.runIds.length===2&&!request||t.result?.runId===binding.runId)fail('GRAPH_INPUT_INVALID','检查点必须保留同任务原实例且不能替代交付或重复续执行')}
-    if(t.status==='checkpointed'&&(!checkpoint||t.runIds.length!==1||t.activeRunId||t.result||request))fail('GRAPH_INPUT_INVALID','检查点任务缺少已结束原运行或被重复预约');
-    if(request&&(!checkpoint||request.checkpointId!==checkpoint.checkpointId||request.runId!==checkpoint.binding.runId||request.scopeId!==t.scopeId||request.previousTaskRevision>=t.revision||request.graphCursor.streamId!==value.cursor.streamId||request.graphCursor.seq>=value.cursor.seq||request.trackedTaskIds[0]!==t.taskId||request.trackedTaskIds.some(id=>tasks.get(id)?.scopeId!==t.scopeId)||Date.parse(request.requestedAt)>Date.parse(t.updatedAt)))fail('GRAPH_INPUT_INVALID','续执行预约缺少原检查点、固定任务或可信图历史');
-    if(t.cancelledBeforeStart){const record=t.cancelledBeforeStart;if(t.status!=='cancelled'||t.runIds.length||t.activeRunId||t.result||t.help||t.awaitedChildren.length||!t.scopeId||record.scopeId!==t.scopeId||record.previousRevision+1!==t.revision||record.cancelledAt!==t.updatedAt||t.waitReason!==record.reason||record.graphCursor.streamId!==value.cursor.streamId||record.graphCursor.seq>=value.cursor.seq)fail('GRAPH_INPUT_INVALID','未启动撤销记录与任务终态、版本或图基线不一致')}
-    const replacements=t.dependencyReplacements??[];unique(replacements.map(record=>record.commandId),'前置替换命令');unique(replacements.map(record=>record.retired.edgeId),'退役依赖');
+    const request=t.resumeRequest;
+    if(request&&(request.graphCursor.streamId!==value.cursor.streamId||request.graphCursor.seq>=value.cursor.seq||request.trackedTaskIds.some(id=>tasks.get(id)?.scopeId!==t.scopeId)))fail('GRAPH_INPUT_INVALID','续执行预约不属于当前图历史或后继集合');
+    if(t.cancelledBeforeStart){const record=t.cancelledBeforeStart;if(record.graphCursor.streamId!==value.cursor.streamId||record.graphCursor.seq>=value.cursor.seq)fail('GRAPH_INPUT_INVALID','未启动撤销记录与图基线不一致')}
+    const replacements=t.dependencyReplacements??[];
     for(let index=0;index<replacements.length;index++){
-      const record=replacements[index],retired=value.edges.find(edge=>edge.edgeId===record.retired.edgeId),fresh=value.edges.find(edge=>edge.edgeId===record.replacement.edgeId),prior=replacements[index-1];
-      if(record.scopeId!==t.scopeId||record.targetPlanRevision>t.planRevision||record.previousTaskRevision>=t.revision||record.graphCursor.streamId!==value.cursor.streamId||record.graphCursor.seq>=value.cursor.seq||record.trackedTaskIds[0]!==t.taskId||record.trackedTaskIds.some(id=>tasks.get(id)?.scopeId!==t.scopeId)||Date.parse(record.replacedAt)>Date.parse(t.updatedAt)||prior&&(prior.previousTaskRevision>=record.previousTaskRevision||prior.graphCursor.seq>=record.graphCursor.seq))fail('GRAPH_INPUT_INVALID','前置替换历史与任务、后继或图基线不一致');
+      const record=replacements[index],retired=value.edges.find(edge=>edge.edgeId===record.retired.edgeId),fresh=value.edges.find(edge=>edge.edgeId===record.replacement.edgeId);
+      if(record.graphCursor.streamId!==value.cursor.streamId||record.graphCursor.seq>=value.cursor.seq||record.trackedTaskIds.some(id=>tasks.get(id)?.scopeId!==t.scopeId))fail('GRAPH_INPUT_INVALID','前置替换历史与后继或图基线不一致');
       if(retired?.kind!=='dependency'||retired.enabled||retired.revision!==record.retired.revision+1||retired.fromNodeId!==`task:${record.retired.sourceTaskId}`||retired.toNodeId!==t.nodeId||retired.condition.planRevision!==record.retired.sourcePlanRevision||retired.condition.resultId!==record.retired.resultId)fail('GRAPH_INPUT_INVALID','退役边与不可变替换审计不一致');
       if(fresh?.kind!=='dependency'||fresh.fromNodeId!==`task:${record.replacement.sourceTaskId}`||fresh.toNodeId!==t.nodeId||fresh.condition.planRevision!==record.replacement.sourcePlanRevision||fresh.condition.resultId!==record.replacement.resultId)fail('GRAPH_INPUT_INVALID','替代边与固定候选审计不一致');
     }

@@ -1,6 +1,6 @@
 /**
  * 作用定位：在派发事务中保存本轮目标计划与结构化审阅，并为目标门禁、依赖修订和本机人工决定核验真实候选、角色及模块基线。
- * 设计原因：模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用；成员 Workflow 条件沿冻结知识从 canonical 重算。检查点仍是未完任务，截断前缀或模型生成的程序 proof 不能成为完成依据。
+ * 设计原因：目标与图查询使用同一存储快照；模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用。成员 Workflow 条件沿冻结知识从 canonical 重算，检查点仍是未完任务。
  * 职责边界：人工项仅引用当前实际消费的接受；审阅和完成均复核原业务主体、精确候选与选定字节，负面意见只能明确安排新任务返工。不关闭周期或签署，外部文件核实不构成原子快照。
  * 证据边界：治理观察、提案和查询仅是私有待办事实，不能被主知识引用或成员候选包装成业务完成证据。
  */
@@ -62,6 +62,12 @@ export class ScopeGoalService {
   }
   /** 只读固定身份的周期快照；不创建计划、不读取完整运行日志。 */
   async inspect(identity:GraphIdentity,scopeId:string):Promise<DispatchScope>{return this.scope(await this.store.read(),identity,scopeId)}
+
+  /** 主工具的一次权威读取；scope 与 graph 来自同一快照，公开字段由调用方投影，不拼接两次读取的版本。 */
+  async inspectWithGraph(identity:GraphIdentity,scopeId:string):Promise<{scope:DispatchScope;graph:GraphSnapshot}>{
+    const state=await this.store.read(),scope=this.scope(state,identity,scopeId);
+    return {scope,graph:this.graph(state,scope)};
+  }
 
   /** 核实真实角色、维护模块及知识版本后追加计划版本；显式重规划清除旧审阅。 */
   async plan(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,raw:GoalPlanInput):Promise<DispatchScope>{

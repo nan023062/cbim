@@ -23,7 +23,7 @@
 | [execution-report.ts](execution-report.ts) | 成员执行异常核实的只读报告协议，供调度服务与界面共享。 |
 | [fresh-context.ts](fresh-context.ts) | 定义显式新周期共用的原生上下文隔离边界。 |
 | [graph-reducer.ts](graph-reducer.ts) | 把已提交的图事件原子转换为内存投影，并按游标输出增量读取结果。 |
-| [graph-rules.ts](graph-rules.ts) | 任务图的纯领域校验，检查序列化形状、身份、派发父关系及依赖/等待无环。 |
+| [graph-rules.ts](graph-rules.ts) | 任务图的纯领域校验，完整图与单项公开查询共用节点状态规则，并检查身份、派发父关系及依赖/等待无环。 |
 | [graph-types.ts](graph-types.ts) | 任务派发图的可序列化领域契约，供调度、持久化和 Bridge 共同引用。 |
 | [human-continuation-invariants.ts](human-continuation-invariants.ts) | 在提交和重放中保护人工意见的一次等待消费、主体冻结及完成/返工引用。 |
 | [human-continuation-rules.ts](human-continuation-rules.ts) | 提供人工接续的最新记录选择、当前输入版本定位和业务主体比较。 |
@@ -31,6 +31,8 @@
 | [human-decision-invariants.ts](human-decision-invariants.ts) | 保护人工决定在周期联合事务及重放中的追加历史、当前依据和无执行副作用边界。 |
 | [human-decision-proof.ts](human-decision-proof.ts) | 将人工决定预览收敛为有界的真实依据，并生成与读取时间、并发序列无关的内容指纹。 |
 | [human-decisions.ts](human-decisions.ts) | 定义本机显式人工决定的请求、精确依据和只读历史，供调度与桌面共同校验。 |
+| [main-tool-output.ts](main-tool-output.ts) | 主调度八个工具的公开业务输出契约与可信调用归属校验。 |
+| [main-tool-scope.ts](main-tool-scope.ts) | 主调度工具读取周期的公开白名单投影，保留规划、审阅和显式接续实际需要的事实。 |
 | [member-checkpoint-evidence.ts](member-checkpoint-evidence.ts) | 运行时和结算端共用成员检查点的纯证据门禁，核实文件来源全集、暂存/结束回执和正常终态。 |
 | [member-checkpoint-invariants.ts](member-checkpoint-invariants.ts) | 检查成员检查点、续执行预约和唯一消费在图/运行/邮箱联合事务中的一致性。 |
 | [member-checkpoint-tools.ts](member-checkpoint-tools.ts) | 包装正式执行成员的检查点工具，限制模型输入并将真实调用 ID 交给运行时。 |
@@ -615,6 +617,7 @@ class N_src_backend_core_tasks_graph_rules_ts["graph-rules.ts"] {
   +validateGraphBatch()
   +assertGraphIdentity()
   +validateGraphCursor()
+  +validateTaskNode()
   +validateGraph()
 }
 ```
@@ -1031,6 +1034,74 @@ N_src_backend_core_tasks_human_decisions_ts ..> N_src_backend_core_tasks_human_d
 ```
 
 直接依赖：[artifact-baseline.ts](artifact-baseline.ts)。
+
+### main-tool-output.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_main_tool_output_ts["main-tool-output.ts"] {
+  <<module>>
+  +mainToolOutputSchema()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_main_tool_output_ts["main-tool-output.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_main_tool_output_ts_MainToolName["MainToolName"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_main_tool_output_ts_MainToolName : 声明
+class N_src_backend_core_tasks_main_tool_output_ts_MainToolOutput["MainToolOutput"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_main_tool_output_ts_MainToolOutput : 声明
+class N_src_backend_core_tasks_main_tool_output_ts_MainToolOutputBinding["MainToolOutputBinding"] {
+  <<interface>>
+  +workspaceId
+  +rootSessionId
+  +scopeId
+  +runId
+}
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_main_tool_output_ts_MainToolOutputBinding : 声明
+class N_src_backend_core_tasks_main_tool_output_ts_MainToolOutputExpectation["MainToolOutputExpectation"] {
+  <<interface>>
+  +binding
+  +input
+  +expectedCommandId
+}
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_main_tool_output_ts_MainToolOutputExpectation : 声明
+```
+
+直接依赖：[graph-rules.ts](graph-rules.ts)、[graph-types.ts](graph-types.ts)、[main-tool-scope.ts](main-tool-scope.ts)、[scope-goal.ts](scope-goal.ts)、[queued-dependency-replacement.ts](queued-dependency-replacement.ts)、[queued-task-cancel.ts](queued-task-cancel.ts)、[queued-member-resume.ts](queued-member-resume.ts)。
+
+### main-tool-scope.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_main_tool_scope_ts["main-tool-scope.ts"] {
+  <<module>>
+  +projectMainScope()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_main_tool_scope_ts["main-tool-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_main_tool_scope_ts_MainToolScope["MainToolScope"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_main_tool_scope_ts_MainToolScope : 声明
+```
+
+直接依赖：[dispatch-scope.ts](dispatch-scope.ts)、[scope-goal.ts](scope-goal.ts)、[scope-continuation.ts](scope-continuation.ts)、[scope-continuation-record.ts](scope-continuation-record.ts)、[scope-run-tracking.ts](scope-run-tracking.ts)、[scope-budget.ts](scope-budget.ts)、[human-decisions.ts](human-decisions.ts)、[scope-recovery.ts](scope-recovery.ts)、[scope-replan.ts](scope-replan.ts)。
 
 ### member-checkpoint-evidence.ts
 
@@ -2545,15 +2616,113 @@ class N_src_backend_core_tasks_human_decisions_ts["human-decisions.ts"] {
 class N_src_backend_core_tasks_artifact_baseline_ts["artifact-baseline.ts"] {
   <<module>>
 }
+class N_src_backend_core_tasks_main_tool_output_ts["main-tool-output.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_graph_rules_ts["graph-rules.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_human_decision_invariants_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
+N_src_backend_core_tasks_human_decision_proof_ts ..> N_src_backend_core_tasks_human_decisions_ts : 导入依赖
+N_src_backend_core_tasks_human_decisions_ts ..> N_src_backend_core_tasks_artifact_baseline_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_graph_rules_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_main_tool_output_ts["main-tool-output.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_main_tool_scope_ts["main-tool-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_queued_dependency_replacement_ts["queued-dependency-replacement.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_main_tool_scope_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_queued_dependency_replacement_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_main_tool_output_ts["main-tool-output.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_queued_task_cancel_ts["queued-task-cancel.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_queued_member_resume_ts["queued-member-resume.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_main_tool_scope_ts["main-tool-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_queued_task_cancel_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_queued_member_resume_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_dispatch_scope_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_main_tool_scope_ts["main-tool-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_continuation_ts["scope-continuation.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_continuation_record_ts["scope-continuation-record.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_run_tracking_ts["scope-run-tracking.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_budget_ts["scope-budget.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_continuation_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_continuation_record_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_run_tracking_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_budget_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_main_tool_scope_ts["main-tool-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_human_decisions_ts["human-decisions.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_recovery_ts["scope-recovery.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_replan_ts["scope-replan.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_member_checkpoint_evidence_ts["member-checkpoint-evidence.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_artifact_evidence_ts["artifact-evidence.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_human_decision_invariants_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
-N_src_backend_core_tasks_human_decision_proof_ts ..> N_src_backend_core_tasks_human_decisions_ts : 导入依赖
-N_src_backend_core_tasks_human_decisions_ts ..> N_src_backend_core_tasks_artifact_baseline_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_human_decisions_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_recovery_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_replan_ts : 导入依赖
 N_src_backend_core_tasks_member_checkpoint_evidence_ts ..> N_src_backend_core_tasks_artifact_evidence_ts : 导入依赖
 ```
 
@@ -3394,3 +3563,15 @@ accept 必须覆盖此人工项当前审阅的全部真实成员候选，为每�
 ### 治理记录与业务证据
 
 `TaskProgressTools.record` 与 `evaluateWorkflowDelivery` 排除全部 `cbim_governance_*` 回执。真实观察、精确提案或其成功回包仅证明治理记录已保存，不能替代业务文件、模块交付或人工验收。既有产物采集仍只接受真实 read/write/edit 单文件调用；可恢复成员检查点的窄工具白名单不含治理工具，不能凭知识作用域或同文件 hash 放宽恢复。运行报告仍可展示实际工具事实，排除证据不删除日志。
+
+### 主调度八项工具的公开业务输出
+
+`main-tool-scope.ts` 将 `DispatchScope` 投影为公开白名单。保留原目标、计划与审阅、主运行清单、预算事实、等待、文本及人工接续、人工决定原证明。只读核实和正式重规划保留 `operation/source/input/options`，包括未知来源、明确只读限制、已核实模块与继承人工项；仅剔除 `recovery.context/replan.context` 的私有原生身份和旧链隔离集合。旧字段缺省保持缺省，畸形已存在字段不能通过真假判断变成缺省。投影不解析或补默认值，不授权恢复。
+
+`main-tool-output.ts` 提供 `mainToolOutputSchemas`、`mainToolOutputSchema` 和可信 `MainToolOutputBinding`。三项目标工具与五项派发工具在领域调用之后，对 `checkedJsonToolResult` 生成的唯一 JSON wire 同时验证严格结构和本次调用归属；不采用 Schema 改写后的输出，不再序列化另一份对象。既有领域文本 Schema 中的规范化不得改变实际 wire，发生改变会由统一边界拒绝。模型不能声明工作区、主会话、周期、主运行或可信命令。
+
+目标查询返回同一权威存储屏障中的公开周期与任务图；计划和审阅回执须对应请求版本、正文及当前主运行。`review.decision=complete` 仍是活动周期中的完成申请，不接受用关闭状态伪装本次审阅。完整图复用 `validateGraph`，单项任务与完整图共用 `validateTaskNode` 的局部状态、候选、求助、检查点、撤销和替换审计规则；边、后继和 DAG 关系仅在完整图中核实。同一主会话的历史周期任务仍可查询，不把全部历史节点误限为当前周期。
+
+派发回执只证明队列信封已提交；撤销回执必须恰好对应明确目标集合；换边须固定请求中的原边、真实新候选和后继集合；续执行回执只证明原任务检查点已预约，不返回或猜造新运行。含图基线的变更回执必须是该基线的单次原子后继。归属核验仅比较协议实际存在的字段：派发通过真实命令和主图游标绑定，预约没有 command/scope/run 字段，不能假装从不存在的字段证明身份。
+
+输出错误可能发生于领域事务已提交之后，只报告 `TOOL_OUTPUT_INVALID` 与脱敏结构位置；不会回滚、重放、自动重试或签发执行/验收许可。真实持久记录与原工具调用命令仍是核实既有操作的依据。

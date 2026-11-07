@@ -2,6 +2,8 @@ import {test,expect,vi} from 'vitest';
 import {GoalTools,type GoalToolsPort} from '../src/backend/scheduler-engine/tools/goal-tools';
 import {DispatchTools,type DispatchToolsPort} from '../src/backend/scheduler-engine/tools/dispatch-tools';
 import {authorizeRunTool} from '../src/backend/core/policy/tool-policy';
+import type {GoalPlanInput,GoalReviewInput} from '../src/backend/core/tasks/scope-goal';
+import {mainToolBinding,mainToolGraph,mainToolTask,mainToolScope} from './main-tool-output-fixture';
 
 const taskId='f8878ef0-4c3e-42f2-8afc-0020036a49b0';
 const runId='e5f28867-d117-451e-826e-b5bb4f7962c0';
@@ -9,16 +11,19 @@ const resultId='18b0994e-1b69-452f-bb9a-4f2755bbff4f';
 const plan={expectedRevision:1,objective:'完成网页',constraints:[],criteria:[{id:'c1',text:'页面可打开',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:['.cbim/workspace/app'],criterionIds:['c1'],reason:'实现页面'}],reason:'按需求拆分'};
 const review={expectedRevision:2,decision:'complete',checks:[{criterionId:'c1',outcome:'satisfied',reason:'已验证',evidence:[{kind:'member-result',taskId,runId,resultId,planRevision:1,toolCallIds:['call_1']}]}],superseded:[],gaps:[],reason:'满足目标'};
 function fixture(){
-  const state={scope:{scopeId:'bound-scope',status:'active',goal:{revision:2}},graph:{identity:{workspaceId:'workspace',rootSessionId:'root'},tasks:[]}};
+  const state={scope:mainToolScope(mainToolBinding,plan as GoalPlanInput),graph:mainToolGraph()};
   const inspect=vi.fn<GoalToolsPort['inspect']>().mockResolvedValue(state);
-  const savePlan=vi.fn<GoalToolsPort['plan']>().mockResolvedValue({scopeId:'bound-scope',status:'active',goal:{revision:2,plan}});
-  const saveReview=vi.fn<GoalToolsPort['review']>().mockResolvedValue({scopeId:'bound-scope',status:'active',goal:{revision:3,review:{decision:'complete'}}});
-  return {tools:new GoalTools({inspect,plan:savePlan,review:saveReview}),inspect,savePlan,saveReview,state};
+  const savePlan=vi.fn<GoalToolsPort['plan']>().mockResolvedValue(mainToolScope(mainToolBinding,plan as GoalPlanInput));
+  const saveReview=vi.fn<GoalToolsPort['review']>().mockResolvedValue(mainToolScope(mainToolBinding,plan as GoalPlanInput,review as GoalReviewInput));
+  return {tools:new GoalTools({binding:mainToolBinding,inspect,plan:savePlan,review:saveReview}),inspect,savePlan,saveReview,state};
 }
 test('goal tools expose only implemented strict schemas and inspection is read-only',async()=>{
   const f=fixture();
   expect(f.tools.list().map(tool=>tool.name)).toEqual(['cbim_goal_inspect','cbim_goal_plan','cbim_goal_review']);
-  for(const tool of f.tools.list())expect(tool.inputSchema).toMatchObject({additionalProperties:false});
+  for(const tool of f.tools.list()){
+    expect(tool.inputSchema).toMatchObject({additionalProperties:false});expect(tool.outputSchema).toBeTruthy();
+    expect(tool.version).toBe(1);expect(tool.cancellation.mode).toBe('preflight_only');expect(tool.recovery.mode).toBe(tool.name==='cbim_goal_inspect'?'read_again':'inspect_before_retry');
+  }
   expect(f.tools.has('cbim_goal_review')).toBe(true);
   expect(f.tools.has('cbim_goal_finish')).toBe(false);
   expect(f.tools.describe('cbim_goal_inspect',{})).toEqual({effects:['read'],native:false});
@@ -41,7 +46,7 @@ test('complete review keeps the service pending result without closing scope or 
   expect(f.saveReview).not.toHaveBeenCalled();
   const result=await f.tools.call('cbim_goal_review',review,signal,'review-call');
   expect(f.saveReview).toHaveBeenCalledWith(review,{toolCallId:'review-call',signal});
-  expect(JSON.parse(result.content[0].text)).toEqual({scopeId:'bound-scope',status:'active',goal:{revision:3,review:{decision:'complete'}}});
+  expect(JSON.parse(result.content[0].text)).toMatchObject({scopeId:'bound-scope',status:'active',goal:{revision:3,review:{decision:'complete'}}});
   expect(f.tools.list().find(tool=>tool.name==='cbim_goal_review')!.description).toContain('不立即结束任务');
 });
 test('goal inputs reject forged identity, authority and nested acceptance fields without entering services',async()=>{
@@ -72,8 +77,18 @@ test('domain errors and invalid service results remain failures and are not retr
   await expect(f.tools.call('cbim_goal_review',review,signal,'review-call')).rejects.toThrow('证据已过期');
   expect(f.saveReview).toHaveBeenCalledTimes(1);
   f.savePlan.mockResolvedValueOnce(undefined);
-  await expect(f.tools.call('cbim_goal_plan',plan,signal,'plan-call')).rejects.toThrow('返回无效工具结果');
+  await expect(f.tools.call('cbim_goal_plan',plan,signal,'plan-call')).rejects.toMatchObject({code:'TOOL_OUTPUT_INVALID'});
   expect(f.savePlan).toHaveBeenCalledTimes(1);
+});
+test('输出只序列化一次且严格绑定主运行，额外字段和错误身份不能经JSON透传',async()=>{
+  const f=fixture(),signal=new AbortController().signal,valid=mainToolScope(mainToolBinding,plan as GoalPlanInput),toJSON=vi.fn(()=>valid);
+  f.savePlan.mockResolvedValueOnce({toJSON});
+  expect(JSON.parse((await f.tools.call('cbim_goal_plan',plan,signal,'wire-once')).content[0].text)).toEqual(valid);expect(toJSON).toHaveBeenCalledTimes(1);
+  for(const invalid of [{...valid,workspaceId:'foreign'}, {...valid,extra:'secret'}, {...valid,goal:{...valid.goal,plan:{...valid.goal!.plan,runId:'other-run'}}}]){
+    f.savePlan.mockResolvedValueOnce(invalid);
+    await expect(f.tools.call('cbim_goal_plan',plan,signal,'bad-output')).rejects.toMatchObject({code:'TOOL_OUTPUT_INVALID'});
+  }
+  expect(f.savePlan).toHaveBeenCalledTimes(4);
 });
 test('read-only policy may maintain goals but neither grants writes nor invokes approval',async()=>{
   const f=fixture(),approve=vi.fn(),guard=vi.fn();
@@ -84,8 +99,8 @@ test('read-only policy may maintain goals but neither grants writes nor invokes 
 test('dispatch composition registers and routes goals only when a real adapter is supplied',async()=>{
   const f=fixture(),signal=new AbortController().signal;
   const dispatch=vi.fn<DispatchToolsPort['dispatch']>();
-  const inspect=vi.fn<DispatchToolsPort['inspect']>().mockResolvedValue({taskId,status:'result_ready'});
-  const legacy=new DispatchTools({dispatch,inspect}),combined=new DispatchTools({dispatch,inspect},f.tools);
+  const inspect=vi.fn<DispatchToolsPort['inspect']>().mockResolvedValue(mainToolTask(mainToolBinding,taskId));
+  const legacy=new DispatchTools({binding:mainToolBinding,dispatch,inspect}),combined=new DispatchTools({binding:mainToolBinding,dispatch,inspect},f.tools);
   expect(legacy.has('cbim_goal_inspect')).toBe(false);
   await expect(legacy.call('cbim_goal_inspect',{},signal,'legacy')).rejects.toThrow('没有此成员派发工具');
   expect(combined.list().map(tool=>tool.name)).toEqual(['cbim_dispatch_task','cbim_dispatch_inspect','cbim_goal_inspect','cbim_goal_plan','cbim_goal_review']);

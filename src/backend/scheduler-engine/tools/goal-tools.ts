@@ -1,13 +1,14 @@
 /**
  * 作用定位：将主 Agent 当前用户目标的读取、规划和审阅端口注册为内部 Loop 工具。
- * 设计原因：输入复用 Core 的严格协议，周期、运行及命令身份由可信装配闭包决定；模型只提交计划和有引用的判断，不能自行指定目标所属会话或签发验收。
+ * 设计原因：输入复用 Core 严格协议；输出只序列化一次并核实公开 Schema 与本轮身份，坏回包不重做已发生的决策。模型不能自行指定目标所属会话或签发验收。
  * 职责边界：complete 只申请主轮次结算后的复核；人工项只能引用用户已保存且经专用入口消费的接受，模型不能签署或继续等待。工具层不执行成员或重造证据。
  */
 import {z} from 'zod';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {fail} from '../../core/foundation/errors';
 import {goalPlanInputSchema,goalReviewInputSchema} from '../../core/tasks/scope-goal';
-import {jsonToolResult} from '../../core/tools/results';
+import type {MainToolOutputBinding} from '../../core/tasks/main-tool-output';
+import {checkedMainToolResult,mainToolContract} from './main-tool-contracts';
 
 const inspectInput=z.object({}).strict();
 const definitions={
@@ -33,6 +34,8 @@ export interface GoalToolInvocation {toolCallId:string;signal:AbortSignal}
  * inspect 返回当前真实状态；写入口负责幂等、版本和证据核验，失败不能被工具层改写为成功。
  */
 export interface GoalToolsPort {
+  /** 可信主运行固定身份，不能取自模型输入或服务返回；构造时复制，避免运行中换绑。 */
+  readonly binding:MainToolOutputBinding;
   inspect():Promise<unknown>;
   plan(input:z.infer<typeof goalPlanInputSchema>,invocation:GoalToolInvocation):Promise<unknown>;
   review(input:z.infer<typeof goalReviewInputSchema>,invocation:GoalToolInvocation):Promise<unknown>;
@@ -40,9 +43,10 @@ export interface GoalToolsPort {
 
 /** 仅在主调度装配真实目标服务时注册；成员执行 Loop 不获得规划整轮用户目标的入口。 */
 export class GoalTools {
-  constructor(private readonly port:GoalToolsPort){}
+  private readonly binding:MainToolOutputBinding;
+  constructor(private readonly port:GoalToolsPort){this.binding=Object.freeze(structuredClone(port.binding))}
   /** 工具表只公布已绑定端口，不包含未来人工确认或完成按钮的占位。 */
-  list(){return Object.entries(definitions).map(([name,d])=>({name,version:1 as const,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>}))}
+  list(){return Object.entries(definitions).map(([name,d])=>({name,version:1 as const,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>,...mainToolContract(name as GoalToolName)}))}
   /** 精确匹配已实现名称，不按 cbim_goal_ 前缀放行未知操作。 */
   has(name:string):name is GoalToolName{return Object.hasOwn(definitions,name)}
   private parse(name:string,input:unknown){
@@ -59,8 +63,9 @@ export class GoalTools {
     const parsed=this.parse(name,input);
     if(typeof toolCallId!=='string'||!toolCallId.trim()||toolCallId.length>512)fail('GOAL_CALL_ID_REQUIRED','目标工具缺少可信调用标识');
     const invocation={toolCallId,signal};
-    if(parsed.name==='cbim_goal_inspect')return jsonToolResult(name,await this.port.inspect());
-    if(parsed.name==='cbim_goal_plan')return jsonToolResult(name,await this.port.plan(parsed.args as z.infer<typeof goalPlanInputSchema>,invocation));
-    return jsonToolResult(name,await this.port.review(parsed.args as z.infer<typeof goalReviewInputSchema>,invocation));
+    const value=parsed.name==='cbim_goal_inspect'?await this.port.inspect():parsed.name==='cbim_goal_plan'
+      ?await this.port.plan(parsed.args as z.infer<typeof goalPlanInputSchema>,invocation)
+      :await this.port.review(parsed.args as z.infer<typeof goalReviewInputSchema>,invocation);
+    return checkedMainToolResult(parsed.name,value,this.binding,parsed.args,toolCallId);
   }
 }

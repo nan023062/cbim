@@ -1,6 +1,6 @@
 /**
  * 作用定位：管理一次用户任务的调度周期，串接主 Agent 调度、执行成员和结果回传，周期结束后释放执行实例。
- * 设计原因：周期冻结输入、主运行归属及软限额；回注 beforeRun 先核额度和登记再启模型。容量或同周期在途由原批次等待；预算拒绝直接保存未完成并暂停队列，不额外调用模型解释，不重放未知运行。
+ * 设计原因：周期冻结输入、主运行归属及软限额；主工具由本轮身份和原调用生成命令，公开回包去除私有上下文并严格核验。回注先核额度和登记再启模型，容量等待或预算拒绝不重放未知运行。
  * 职责边界：主 Agent 只调度和治理知识；依赖替换与成员续执行须等主轮结算才领取。人工继续只消费专用意图，不从普通消息猜批准；所有接续仍经预算准入和停止屏障，退出/重启不重放。
  */
 import {hash,json} from '../../core/foundation/serialization';
@@ -17,6 +17,8 @@ import type {DispatchTaskInput} from '../../core/tasks/dispatch-commands';
 import type {GraphSnapshot,TaskNode} from '../../core/tasks/graph-types';
 import {DispatchTools} from '../tools/dispatch-tools';
 import {GoalTools} from '../tools/goal-tools';
+import {mainToolCommandId} from '../tools/main-tool-contracts';
+import {projectMainScope} from '../../core/tasks/main-tool-output';
 import type {WorkspaceDispatchService} from './dispatch-service';
 import type {MemberExecutionManager} from './member-execution';
 import type {WorkspaceExecutionManager} from './execution-manager';
@@ -216,31 +218,38 @@ export class AutoCollaboration {
     cycle.mainRuns.add(runId);
     const batch:Batch={cycle,task:structuredClone(task),runId,options:{provider:options.provider,model:options.model,profileId:options.profileId,permission,allowNativeExecution:permission!=='read',turnTimeoutMs:options.turnTimeoutMs},tasks:[],calls:new Set(),stopped:false,failures:new Map(),watched:new Set(),admissions:new Map()};
     this.batches.set(runId,batch);
-    const goals=new GoalTools({
-      inspect:async()=>({scope:await this.dispatch.goals.inspect(this.identity(batch),cycle.scopeId),graph:await this.dispatch.snapshot(this.identity(batch))}),
-      plan:(input,call)=>{this.assertLive(batch,call.signal);cycle.workRequested=true;return this.track(cycle,this.dispatch.goals.plan(this.identity(batch),cycle.scopeId,runId,'auto-goal-plan-'+hash(runId+':'+call.toolCallId),input))},
-      review:(input,call)=>{this.assertLive(batch,call.signal);cycle.workRequested=true;return this.track(cycle,this.dispatch.goals.review(this.identity(batch),cycle.scopeId,runId,'auto-goal-review-'+hash(runId+':'+call.toolCallId),input))},
+    const binding=this.toolBinding(batch);
+    const goals=new GoalTools({binding,
+      inspect:async()=>{const value=await this.dispatch.goals.inspectWithGraph(this.identity(batch),cycle.scopeId);if(!value||typeof value!=='object'||Array.isArray(value))return value;return {scope:projectMainScope(value.scope),graph:value.graph}},
+      plan:(input,call)=>{this.assertLive(batch,call.signal);cycle.workRequested=true;return this.track(cycle,this.dispatch.goals.plan(this.identity(batch),cycle.scopeId,runId,mainToolCommandId('cbim_goal_plan',binding,call.toolCallId)!,input).then(projectMainScope))},
+      review:(input,call)=>{this.assertLive(batch,call.signal);cycle.workRequested=true;return this.track(cycle,this.dispatch.goals.review(this.identity(batch),cycle.scopeId,runId,mainToolCommandId('cbim_goal_review',binding,call.toolCallId)!,input).then(projectMainScope))},
     });
-    return new DispatchTools({dispatch:(input,call)=>this.track(cycle,this.assign(batch,input,call.toolCallId,call.signal)),cancel:(input,call)=>{
+    return new DispatchTools({binding,dispatch:(input,call)=>this.track(cycle,this.assign(batch,input,call.toolCallId,call.signal)),cancel:(input,call)=>{
       this.assertLive(batch,call.signal);cycle.workRequested=true;
+      // 这里只做可用字段的批次关联；坏回包原样交唯一 wire 校验，不因空值先抛 TypeError，也不据此重做持久化。
       // 仅撤销列出的未启动待办。成功后从本轮待执行批次移除，避免派发后同轮撤销又制造无意义的模型回注；周期历史仍完整保留。
-      const commandId='auto-cancel-'+hash(json({identity:this.identity(batch),runId:batch.runId,toolCallId:call.toolCallId}));
+      const commandId=mainToolCommandId('cbim_dispatch_cancel',binding,call.toolCallId)!;
       return this.track(cycle,this.dispatch.cancelQueued(this.identity(batch),cycle.scopeId,batch.runId,commandId,input).then(receipt=>{
-        const cancelled=new Set(receipt.cancelledTaskIds);batch.tasks=batch.tasks.filter(id=>!cancelled.has(id));this.withdrawAdmissions(batch,cancelled);return receipt;
+        const ids=receipt?.cancelledTaskIds;
+        if(Array.isArray(ids)&&ids.every(id=>typeof id==='string')){const cancelled=new Set(ids);batch.tasks=batch.tasks.filter(id=>!cancelled.has(id));this.withdrawAdmissions(batch,cancelled)}
+        return receipt;
       }));
     },replaceDependency:(input,call)=>{
       this.assertLive(batch,call.signal);cycle.workRequested=true;
-      const commandId='auto-dependency-'+hash(json({identity:this.identity(batch),runId:batch.runId,toolCallId:call.toolCallId}));
+      const commandId=mainToolCommandId('cbim_dispatch_replace_dependency',binding,call.toolCallId)!;
       return this.track(cycle,this.dispatch.replaceQueuedDependency(this.identity(batch),cycle.scopeId,batch.runId,commandId,input,()=>this.assertLive(batch,call.signal)).then(receipt=>{
         // 旧批次已经退役，换边后必须显式重纳入当前批次；这里仅关联，advance仍等待本主轮settled。
-        for(const taskId of receipt.trackedTaskIds){if(!batch.tasks.includes(taskId))batch.tasks.push(taskId);cycle.tasks.add(taskId)}
+        const ids=receipt?.trackedTaskIds;
+        if(Array.isArray(ids)&&ids.every(id=>typeof id==='string'))for(const taskId of ids){if(!batch.tasks.includes(taskId))batch.tasks.push(taskId);cycle.tasks.add(taskId)}
         return receipt;
       }));
     },resume:(input,call)=>{
       this.assertLive(batch,call.signal);cycle.workRequested=true;
-      const commandId='auto-resume-'+hash(json({identity:this.identity(batch),runId:batch.runId,toolCallId:call.toolCallId}));
+      const commandId=mainToolCommandId('cbim_dispatch_resume',binding,call.toolCallId)!;
       return this.track(cycle,this.members.requestResume(this.identity(batch),cycle.scopeId,batch.runId,commandId,input,()=>this.assertLive(batch,call.signal)).then(receipt=>{
-        for(const taskId of receipt.trackedTaskIds){if(!batch.tasks.includes(taskId))batch.tasks.push(taskId);cycle.tasks.add(taskId)}return receipt;
+        const ids=receipt?.trackedTaskIds;
+        if(Array.isArray(ids)&&ids.every(id=>typeof id==='string'))for(const taskId of ids){if(!batch.tasks.includes(taskId))batch.tasks.push(taskId);cycle.tasks.add(taskId)}
+        return receipt;
       }));
     },inspect:async taskId=>{
       const graph=await this.dispatch.snapshot(this.identity(batch));
@@ -249,6 +258,8 @@ export class AutoCollaboration {
     }},goals);
   }
   private identity(batch:{task:TaskSpec}){return {workspaceId:this.owner.entry.id,rootSessionId:batch.task.taskId}}
+  /** 同一闭包用于实际命令和公开回包核验，不能从返回结果反推本轮身份。 */
+  private toolBinding(batch:Batch){return {...this.identity(batch),scopeId:batch.cycle.scopeId,runId:batch.runId}}
   /** 等待票据仅绑定仍在本进程活动的原批次；通知只是重新核实，不直接启动成员或回注模型。 */
   private admissionWait(batch:Batch,taskId?:string):ExecutionAdmissionWait{
     const isCurrent=()=>!this.closed&&!batch.stopped&&!batch.cycle.stopped&&!batch.cycle.ending&&this.batches.get(batch.runId)===batch&&(taskId===undefined||batch.tasks.includes(taskId));
@@ -265,10 +276,10 @@ export class AutoCollaboration {
     const identity=this.identity(batch),key=hash(json({identity,runId:batch.runId,toolCallId}));
     await this.dispatch.openGraph({...identity,commandId:'auto-open-'+key});
     const graph=await this.dispatch.snapshot(identity);this.assertLive(batch,signal);
-    const receipt=await this.dispatch.dispatchTask({...identity,commandId:'auto-task-'+key,expectedParentRevision:graph.root.revision,task:input},batch.cycle.scopeId);
-    // 提交后即使停止也保留关联；停止只禁止启动，不抹掉已经入队的真实任务。
-    if(!batch.tasks.includes(receipt.taskId))batch.tasks.push(receipt.taskId);
-    batch.cycle.tasks.add(receipt.taskId);
+    const receipt=await this.dispatch.dispatchTask({...identity,commandId:mainToolCommandId('cbim_dispatch_task',this.toolBinding(batch),toolCallId)!,expectedParentRevision:graph.root.revision,task:input},batch.cycle.scopeId);
+    // 提交后即使停止也保留可用身份的关联；缺失身份不补造，原坏回包由工具契约拒绝。
+    const taskId=receipt?.taskId;
+    if(typeof taskId==='string'&&taskId){if(!batch.tasks.includes(taskId))batch.tasks.push(taskId);batch.cycle.tasks.add(taskId)}
     return receipt;
   }
   /** 未关闭目标始终占本会话入口；持久等待不占模型槽，但普通用户队列不能借它续跑。 */

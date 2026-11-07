@@ -1,3 +1,11 @@
+### 主调度公开回包与一致读取
+
+`AutoCollaboration.tools` 为 Goal 三工具和 Dispatch 五工具绑定本轮 workspace/root/scope/run；`mainToolCommandId` 由实际桥调用 ID 计算原有命令键，提交与回包核验共用此算法，不改写已持久化命令。公开输出只验证事实，不产生权限或新的执行能力。
+
+`ScopeGoalService.inspectWithGraph` 仅一次 `DispatchStore.read()`，从相同权威快照选择本 scope 与本 root 图，避免两次读取之间的变更被拼成一致事实。Auto 只投影公开 scope：保留重规划/只读核实的约束与来源证明，去除私有 native/排除集合 context；空返回仍交工具业务 Schema 拒绝，不降级到另一读取。
+
+调用方先执行领域事务，再校验唯一序列化的公开 wire。回包损坏可以发生在可靠提交之后，因此 `TOOL_OUTPUT_INVALID` 不回滚、不重试，不抹掉已派发任务或原审阅；协调器批次关联仅读取形状可用的 taskId/任务 ID 数组，空值、缺字段和坏类型不补造或提前抛字段访问异常，原结果继续交唯一 wire 校验。关联不等于业务输出合格，主轮结束后仍须通过原启动和业务完成门禁。查询原记录与重开存储均不重放命令。
+
 ### 主运行资源仓库读取与回执
 
 `loop-engine` 只有 coordinator 且收到可信 `repositoryTools` 端口时才组合仓库工具的 list/describe/call；成员即使错误传入端口也不会注册或调用。纯分类提供完整仓库 scope，统一授权仍逐次核对只读操作和工作区，主角色的业务写入/命令限制不改变。没有端口的 CLI 和旧测试装配维持原能力清单。

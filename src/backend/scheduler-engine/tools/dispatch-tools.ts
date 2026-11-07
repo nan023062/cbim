@@ -1,6 +1,6 @@
 /**
  * 作用定位：把主调度的派发、查询、未启动撤销、依赖替换及一次检查点续执行预约转换为内部工具，并组合目标工具。
- * 设计原因：模型只表达责任角色、模块与目标，运行身份和权限由装配方闭包注入；严格 Schema 拒绝夹带授权或跨会话身份。
+ * 设计原因：模型只表达责任角色、模块与目标；可信闭包固定身份，严格输入拒绝夹带授权，业务输出核同一份 wire。校验失败不回滚或重做已入队事实。
  * 职责边界：派发只是入队，续执行只是预约，撤销和依赖替换只记录调度事实，不算验收。本模块不装配成员递归派发、活动任务中止或手工结果工具。
  */
 import {z} from 'zod';
@@ -9,7 +9,8 @@ import {fail} from '../../core/foundation/errors';
 import {dispatchTaskInput,type DispatchTaskInput,type DispatchReceipt} from '../../core/tasks/dispatch-commands';
 import {cancelQueuedTasksInputSchema,type CancelQueuedTasksInput,type CancelQueuedTasksReceipt} from '../../core/tasks/queued-task-cancel';
 import {replaceQueuedDependencyInputSchema,type ReplaceQueuedDependencyInput,type ReplaceQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-replacement';
-import {jsonToolResult} from '../../core/tools/results';
+import type {MainToolOutputBinding} from '../../core/tasks/main-tool-output';
+import {checkedMainToolResult,mainToolContract} from './main-tool-contracts';
 import type {GoalTools} from './goal-tools';
 import {resumeMemberInputSchema,type ResumeMemberInput,type ResumeMemberReceipt} from '../../core/tasks/queued-member-resume';
 
@@ -48,6 +49,8 @@ export interface DispatchToolInvocation {toolCallId:string;signal:AbortSignal}
  * dispatch 保持调用幂等并可靠入队，inspect 必须限制在同一主会话；启动与结果续跑由调度器负责。
  */
 export interface DispatchToolsPort {
+  /** 本次主运行的可信身份；可选能力仍由真实端口存在决定，不从模型或输出猜测。 */
+  readonly binding:MainToolOutputBinding;
   dispatch(task:DispatchTaskInput['task'],invocation:DispatchToolInvocation):Promise<DispatchReceipt>;
   inspect(taskId?:string):Promise<unknown>;
   /** 可选能力仅在真实服务装配后公开；身份/周期及命令键仍来自主运行，不能由模型提供。 */
@@ -60,17 +63,18 @@ export interface DispatchToolsPort {
 
 /** 工具解析在权限检查前和执行前各做一次，不默默剥离模型提供的额外字段。 */
 export class DispatchTools {
-  constructor(private readonly port:DispatchToolsPort,private readonly goals?:GoalTools){}
+  private readonly binding:MainToolOutputBinding;
+  constructor(private readonly port:DispatchToolsPort,private readonly goals?:GoalTools){this.binding=Object.freeze(structuredClone(port.binding))}
   /** 只有装配了真实端口才构造本对象；返回值不包含未来工具占位。 */
   private available(name:string){return (name!=='cbim_dispatch_cancel'||!!this.port.cancel)&&(name!=='cbim_dispatch_replace_dependency'||!!this.port.replaceDependency)&&(name!=='cbim_dispatch_resume'||!!this.port.resume)}
-  list(){return [...Object.entries(definitions).filter(([name])=>this.available(name)).map(([name,d])=>({name,version:1 as const,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>})),...(this.goals?.list()??[])]}
+  list(){return [...Object.entries(definitions).filter(([name])=>this.available(name)).map(([name,d])=>({name,version:1 as const,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>,...mainToolContract(name as DispatchToolName)})),...(this.goals?.list()??[])]}
   /** 名称检测不执行操作，供 Loop 在知识工具之前选择本适配器。 */
   has(name:string):boolean{return (Object.hasOwn(definitions,name)&&this.available(name))||!!this.goals?.has(name)}
   private parse(name:string,input:unknown){
     if(!Object.hasOwn(definitions,name)||!this.available(name))fail('TOOL_NOT_FOUND','当前运行没有此成员派发工具');
     const definition=definitions[name as DispatchToolName],parsed=definition.schema.safeParse(input);
     if(!parsed.success)fail('DISPATCH_TOOL_INPUT_INVALID','成员工具参数无效：'+parsed.error.issues.map(issue=>issue.path.join('.')+': '+issue.message).join('；'));
-    return {name,args:parsed.data,effects:definition.effects};
+    return {name:name as DispatchToolName,args:parsed.data,effects:definition.effects};
   }
   /** 描述入队/读取副作用；成员业务工具仍独立经过其运行权限，不继承本次免询问批准。 */
   describe(name:string,input:unknown){if(this.goals?.has(name))return this.goals.describe(name,input);const parsed=this.parse(name,input);return {effects:parsed.effects,native:false}}
@@ -80,11 +84,12 @@ export class DispatchTools {
     if(this.goals?.has(name))return this.goals.call(name,input,signal,toolCallId);
     const parsed=this.parse(name,input);
     if(typeof toolCallId!=='string'||!toolCallId.trim()||toolCallId.length>512)fail('DISPATCH_CALL_ID_REQUIRED','成员工具缺少可信调用标识');
-    if(parsed.name==='cbim_dispatch_inspect')return jsonToolResult(name,await this.port.inspect((parsed.args as z.infer<typeof inspectInput>).taskId));
-    if(parsed.name==='cbim_dispatch_cancel')return jsonToolResult(name,await this.port.cancel!(parsed.args as CancelQueuedTasksInput,{toolCallId,signal}));
-    if(parsed.name==='cbim_dispatch_replace_dependency')return jsonToolResult(name,await this.port.replaceDependency!(parsed.args as ReplaceQueuedDependencyInput,{toolCallId,signal}));
-    if(parsed.name==='cbim_dispatch_resume')return jsonToolResult(name,await this.port.resume!(parsed.args as ResumeMemberInput,{toolCallId,signal}));
-    const {agentId,...task}=parsed.args as z.infer<typeof taskInput>;
-    return jsonToolResult(name,await this.port.dispatch({...task,assigneeAgentId:agentId},{toolCallId,signal}));
+    let value:unknown;
+    if(parsed.name==='cbim_dispatch_inspect')value=await this.port.inspect((parsed.args as z.infer<typeof inspectInput>).taskId);
+    else if(parsed.name==='cbim_dispatch_cancel')value=await this.port.cancel!(parsed.args as CancelQueuedTasksInput,{toolCallId,signal});
+    else if(parsed.name==='cbim_dispatch_replace_dependency')value=await this.port.replaceDependency!(parsed.args as ReplaceQueuedDependencyInput,{toolCallId,signal});
+    else if(parsed.name==='cbim_dispatch_resume')value=await this.port.resume!(parsed.args as ResumeMemberInput,{toolCallId,signal});
+    else{const {agentId,...task}=parsed.args as z.infer<typeof taskInput>;value=await this.port.dispatch({...task,assigneeAgentId:agentId},{toolCallId,signal})}
+    return checkedMainToolResult(parsed.name,value,this.binding,parsed.args,toolCallId);
   }
 }

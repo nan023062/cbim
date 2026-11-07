@@ -78,13 +78,19 @@
 
 持久等待必须来自 `scope.status=waiting`，显示“等待补充 · 执行已暂停”；模型 `review.awaiting_user` 仅显示“已请求补充 · 等待暂停确认”，不冒充检查点已提交。`openScope` 包含 active/waiting，`activeScope` 仅含 active，`waitingScope` 仅含 waiting；三者从完整摘要列表选取，独立于历史浏览。自动选择优先未关闭周期，后台等待不能被最近历史覆盖。
 
-等待卡展示摘要原因，展开后读取完整 `scope.wait.reason` 与记录时间；关闭后保留等待历史，但取消状态优先于旧等待状态。等待根保留“取消当前任务”，浏览历史时说明当前另有待补充目标，按钮不会复活所选历史。显式纯文本补充及按已保存人工决定继续分别通过独立表单提交；普通队列不能作为恢复入口，根队列也禁用“继续队列”。同版本详情必须匹配摘要中的等待身份、目标版本、输入版本与创建时间，旧等待详情不能拼到新摘要上。
+等待卡展示摘要原因，展开后读取完整 `scope.wait.reason` 与记录时间；关闭后保留等待历史，但取消状态优先于旧等待状态。等待根保留“取消当前任务”，浏览历史时说明当前另有待补充目标，按钮不会复活所选历史。显式正文与文件/图片补充及按已保存人工决定继续分别通过独立表单提交；普通队列不能作为恢复入口，根队列也禁用“继续队列”。同版本详情必须匹配摘要中的等待身份、目标版本、输入版本与创建时间，旧等待详情不能拼到新摘要上。
 
 #### 显式补充与通信未知
 
 `ScopeContinuationForm` 仅显示 `useScopeContinuation` 提供的状态与操作，不自行生成命令。主对话和任务根接收同一 Hook 返回值；仅当前 waiting、选中详情和摘要身份/版本一致且同步正常时允许写入。历史选择只读，不能通过旧卡片恢复当前目标。接受补充后旧计划保留，但 `needsReplan` 显示“补充已受理 · 等待更新计划”；详情按记录展示补充正文和输入版本，不将旧审阅自动视为新输入已完成。
 
-`ScopeContinuationController` 按 workspace/root 隔离本机索引，草稿按 scope/wait 保存。首次提交先持久化严格冻结的 `GoalContinuationRequest`，包括真实 waiting、两个预期版本、UUID 命令、未经裁剪的纯文本和实际模型/权限；保存失败不调用 IPC。仅在用户点击时调用 `loop.goalContinue`，不存在挂载、刷新或模型判断触发的自动提交。附件与人工批准不属于本步请求。
+`ScopeContinuationController` 按 workspace/root 隔离本机索引，草稿按 scope/wait 保存。首次提交先持久化严格冻结的 `GoalContinuationRequest`，包括真实 waiting、两个预期版本、UUID 命令、未经裁剪的正文、有序文件附件 IDs 和实际模型/权限；保存失败不调用 IPC。仅点击“补充并继续”时调用 `loop.goalContinue`，不存在挂载、刷新或模型判断触发的自动提交；人工批准仍是独立操作。无附件的旧请求不添加空数组。
+
+文件和图片通过真实 `chat.pick(file)` 保存为当前工作区快照，表单复用 `ComposerAttachments` 预览；普通聊天输入的附件与草稿不受影响。`continuation-attachments.ts` 只校验展示元数据，不保存正文或 base64，Main 在受理前核实内容。控制器持有共享导入锁，导入期间禁止提交/移除及重复打开选择器，但可编辑补充文字；返回后合并最新正文。Hook 用目标身份代次和挂载状态过滤迟到结果，切换或等待变化后即使切回原目标也不自动附上旧选择。
+
+未知和已受理请求冻结附件身份与顺序，回执同时核对正文、IDs、选项及目标；损坏本地记录不能丢弃后新发。确定受理前的 `GOAL_ATTACHMENT_*` 错误保留可编辑草稿；通用引擎视觉错误可能发生在受理后，不能解锁。曾出现未知的请求即使再次收到附件错误也保持原请求，只查询或原命令重试。
+
+已有已受理回执再次查询时，`scopeStatus` 可随目标周期结束变化，完整 `continuation` 必须保持原值。矛盾的 runId、受理时间或附件 hash 不覆盖本机已知事实，保留 accepted 和原回执并提示查询错误，不因此开放重新发送。
 
 `ScopeContinuationPool` 在同一 renderer 中复用同会话控制器，避免切换工作区后旧回执覆盖重新打开的草稿；超过缓存目标数时只回收无订阅、无在途请求的历史对象。真正重开应用从本机记录恢复，不共享另一个 renderer 的内存状态；服务端仍以 wait/command 的持久化幂等保护处理多窗口重复请求。
 
@@ -215,6 +221,8 @@ class ExecutionReportController { <<module>> }
 class ScopeGoalPanel { <<component>> }
 class ScopeContinuationForm { <<component>> }
 class ScopeContinuationController { <<module>> }
+class ContinuationAttachments { <<module>> }
+class ComposerAttachments { <<component boundary>> }
 class UseScopeContinuation { <<module>> }
 class ScopeReplanForm { <<component>> }
 class ScopeReplanController { <<module>> }
@@ -236,7 +244,9 @@ MemberExecutionReport --> ExecutionReportController : 显式读取与同基线�
 SessionTaskView --> ScopeGoalPanel : 复用选中目标详情
 ScopeGoalPanel --> ScopeContinuationForm : 当前等待显式补充
 ScopeContinuationForm --> UseScopeContinuation : 共享视图与操作
+ScopeContinuationForm --> ComposerAttachments : 当前工作区快照预览
 UseScopeContinuation --> ScopeContinuationController : 草稿冻结与回执恢复
+ScopeContinuationController --> ContinuationAttachments : 有序公开元数据校验
 ScopeGoalPanel --> ScopeReplanForm : 核实后独立业务新目标
 ScopeReplanForm --> UseScopeReplan : 共享条件与明确提交
 UseScopeReplan --> ScopeReplanController : 来源隔离与稳定请求

@@ -4,23 +4,26 @@
  */
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {GoalContinuationRequest} from '../../bridge/contracts/dispatch';
+import type {ChatAttachment} from '../../bridge/contracts/chat';
 import type {ScopeGoalState} from './scope-state';
 import {ScopeContinuationPool,type ContinuationDraft,type ContinuationTarget} from './continuation-state';
 
 // 同 renderer 的工作区切换不能产生两个写同一本机索引的在途控制器；真正重开应用仍从磁盘读取。
 const controllers=new ScopeContinuationPool();
 
-/** 模型身份由主输入区解析为实际供应商配置，纯文本补充不读取或移除聊天附件。 */
+/** 模型身份由主输入区解析为实际供应商配置，补充附件与普通聊天输入独立；视觉能力由后端受理前复核。 */
 export interface ContinuationModel {options:GoalContinuationRequest['options'];label:string}
 /** 核实周期的只读约束来自真实开放周期，不受用户查看历史或切换输入区权限影响。 */
 export function continuationModel(model:ContinuationModel|undefined,state:Pick<ScopeGoalState,'openScope'>):ContinuationModel|undefined{
   return model&&state.openScope?.readOnly?{options:{...model.options,permission:'read'},label:model.options.model+' · 只读核实'}:model;
 }
 export interface ScopeContinuationView {
+  workspaceId:string;attachments:ChatAttachment[];importing:boolean;
   scopeId?:string;waitId?:string;text:string;record?:ContinuationDraft;
   editable:boolean;canSubmit:boolean;canRetry:boolean;pending:boolean;
   error:string;modelLabel:string;
   edit:(text:string)=>void;submit:()=>Promise<void>;query:()=>Promise<void>;retry:()=>Promise<void>;
+  pickFiles:()=>Promise<void>;removeFile:(id:string)=>void;
 }
 /** 仅当前 waiting 且详情已与摘要核对时产生写入目标，模型等待申请和历史选择均不能构造恢复身份。 */
 export function continuationTarget(workspaceId:string,rootSessionId:string|undefined,state:ScopeGoalState):ContinuationTarget|undefined{
@@ -37,24 +40,34 @@ export function useScopeContinuation(workspaceId:string,rootSessionId:string|und
   const controller=useMemo(()=>rootSessionId?controllers.get(workspaceId,rootSessionId,{
     storage:{getItem:name=>window.localStorage.getItem(name),setItem:(name,value)=>window.localStorage.setItem(name,value)},
     submit:request=>window.cbim.call('loop.goalContinue',request),lookup:request=>window.cbim.call('loop.goalContinuation',request),uuid:()=>crypto.randomUUID(),
+    pickFiles:()=>window.cbim.call('chat.pick',{id:workspaceId,kind:'file'}),
   }):undefined,[workspaceId,rootSessionId]);
   const [,changed]=useState(0);
+  const mounted=useRef(false);
   useEffect(()=>{
+    mounted.current=true;
     if(!controller)return;
     const unsubscribe=controller.subscribe(()=>changed(value=>value+1));
     void controller.restore().then(()=>{if(keyRef.current===key)refreshRef.current()});
-    return unsubscribe;
+    return ()=>{mounted.current=false;unsubscribe()};
   },[controller,key]);
   const target=continuationTarget(workspaceId,rootSessionId,state),records=controller?.snapshot.records??[];
+  // 记录发生过的切换，即使选择器返回前又切回相同目标，也不把迟到文件自动附到恢复后的草稿。
+  const stamp=JSON.stringify([key,target]),selection=useRef({stamp,generation:0});
+  if(selection.current.stamp!==stamp)selection.current={stamp,generation:selection.current.generation+1};
   const record=target?controller?.record(target.scopeId,target.waitId):[...records].reverse().find(item=>item.scopeId===state.selectedScopeId);
   const pending=controller?.isPending(record)??false,attempt=record?.attempt,error=controller?.snapshot.error??'';
   const editable=!!target&&!!controller?.available&&!pending&&(!attempt||attempt.phase==='rejected');
+  const importing=controller?.isImporting??false;
   const refreshAfter=async(work:()=>Promise<void>)=>{await work();if(keyRef.current===key)refreshRef.current()};
   return {
+    workspaceId,attachments:record?.attachments??[],importing,
     scopeId:target?.scopeId??record?.scopeId,waitId:target?.waitId??record?.waitId,text:record?.text??'',record,
-    editable,canSubmit:editable&&!!effectiveModel&&!!record?.text.trim(),canRetry:!!target&&!pending&&attempt?.phase==='unknown',pending,error,
+    editable,canSubmit:editable&&!importing&&!!effectiveModel&&!!record?.text.trim(),canRetry:!!target&&!pending&&attempt?.phase==='unknown',pending,error,
     modelLabel:attempt&&attempt.phase!=='rejected'?`${attempt.request.options.model} · ${{read:'只读访问',ask:'默认权限',execute:'完全访问'}[attempt.request.options.permission]}（本次提交已固定）`:effectiveModel?.label??'请先选择可用模型',
     edit:text=>{if(editable&&target)controller!.edit(target,text)},
+    pickFiles:async()=>{if(!editable||!target||!controller)return;const generation=selection.current.generation;await controller.pickFiles(target,()=>mounted.current&&selection.current.generation===generation&&selection.current.stamp===stamp)},
+    removeFile:id=>{if(editable&&target)controller!.removeFile(target,id)},
     submit:()=>refreshAfter(async()=>{if(editable&&target&&effectiveModel)await controller!.submit(target,effectiveModel.options)}),
     query:()=>refreshAfter(async()=>{if(record)await controller!.query(record.scopeId,record.waitId)}),
     retry:()=>refreshAfter(async()=>{if(target&&attempt?.phase==='unknown')await controller!.retry(target.scopeId,target.waitId)}),

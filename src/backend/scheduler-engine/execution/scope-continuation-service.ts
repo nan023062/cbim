@@ -1,7 +1,7 @@
 /**
- * 作用定位：在既有派发日志中可靠消费安全等待，并保存用户显式补充与一次性主运行启动意图。
- * 设计原因：运行时在租约和历史预检后注入真实 runId，按冻结软限额核实后才与消费等待同事务追加清单；预算拒绝仅登记独立阻塞，不消费等待、输入版本或启动意图。旧周期不补造归属，核实补充仍须 read。
- * 职责边界：只接受文本分支，不返回或伪造人工接续；不启动模型、不批准 human 项。调用方须核验停止信号，提交后失败不得还原等待或重用意图。
+ * 作用定位：原子消费安全等待，保存用户原始补充、可选附件快照清单和一次性主运行意图。
+ * 设计原因：先查原命令，再由可信启动闭包提交清单；预算读取后及提交前复核停止，拒绝不会消费等待或运行额度。
+ * 职责边界：旧纯文本兼容，不读取附件或启动模型，不签署人工项；事务已提交后的失败保留原意图，不还原等待或重放。
  */
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
@@ -11,7 +11,8 @@ import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {DispatchStore,DispatchState} from '../../core/tasks/dispatch-storage';
 import type {DispatchScope} from '../../core/tasks/dispatch-scope';
 import {appendScopeMainRun} from '../../core/tasks/scope-run-tracking';
-import {goalInputRevision,scopeGoalDecisionLimit} from '../../core/tasks/scope-goal';
+import {goalInputRevision,scopeGoalDecisionLimit,sameGoalValue} from '../../core/tasks/scope-goal';
+import {assertContinuationAttachmentManifest,type TrustedContinuationInput} from '../../core/tasks/scope-continuation-attachments';
 import {goalContinuationRequestSchema,scopeContinuationLookupSchema,scopeContinuationTotalTextLimit,type GoalContinuationRequest,type GoalContinuationReceipt,type ScopeContinuation,type ScopeContinuationLookup} from '../../core/tasks/scope-continuation';
 import {rejectBudget,type ScopeBudgetService,type ScopeBudgetRejected} from './scope-budget-service';
 import {isHumanContinuation} from '../../core/tasks/scope-continuation-record';
@@ -38,11 +39,23 @@ export class ScopeContinuationService {
    * 仅可信 beforeRun 调用，runId 已由运行时分配。指纹不含随机 runId，相同命令永远返回第一次接收记录；变更请求则冲突。
    * waiting→active、补充输入版本及旧检查点归档在同一事务提交；未提交不消费，提交后错误由调用方关闭并保留历史，不自动重试。
    */
-  async accept(raw:GoalContinuationRequest,trustedRunId:string):Promise<AcceptedScopeContinuation>{
+  async accept(raw:GoalContinuationRequest,trustedRunId:string,trusted:TrustedContinuationInput={}):Promise<AcceptedScopeContinuation>{
     const input=this.parse(goalContinuationRequestSchema,raw),runId=safeId(trustedRunId);
     this.owner.assert();check(input.workspaceId===this.owner.entry.id,'GOAL_IDENTITY','目标不属于当前工作区');
+    // 在第一个 await 前隔离可信快照；已受理重查不需要快照仍存在，也不验证后来提供的快照。
+    const signal=trusted.signal;let attachmentManifest:unknown,manifestCopyFailed=false;
+    try{attachmentManifest=structuredClone(trusted.attachmentManifest)}catch{manifestCopyFailed=true}
+    const observed=this.scope(await this.store.read(),input),existing=observed.continuations?.find(item=>item.continuationId===input.commandId);
+    if(existing){
+      check(!isHumanContinuation(existing)&&existing.wait.waitId===input.waitId&&existing.wait.goalRevision===input.expectedGoalRevision&&existing.inputRevision===input.expectedInputRevision+1&&sameGoalValue(existing.input,input.input)&&sameGoalValue(existing.options,input.options),'COMMAND_ID_CONFLICT','原命令已受理，不能更换补充正文、附件、等待版本或运行选项');
+      return {scope:observed,continuation:existing,fresh:false};
+    }
+    const alive=()=>{this.owner.assert();signal?.throwIfAborted()};alive();
+    if(manifestCopyFailed)fail('GOAL_ATTACHMENT_MANIFEST','附件快照清单无法复制，尚未受理补充');
+    assertContinuationAttachmentManifest(input.input,attachmentManifest);
     let fresh=false;
-    const receipt=await this.store.transact<GoalContinuationReceipt|ScopeBudgetRejected>({commandId:'scope-continue-'+input.commandId,fingerprint:hash(json({operation:'scope.continue',input}))},async state=>{
+    const receipt=await this.store.transact<GoalContinuationReceipt|ScopeBudgetRejected>({commandId:'scope-continue-'+input.commandId,fingerprint:hash(json({operation:'scope.continue',input,...(attachmentManifest===undefined?{}:{attachmentManifest})}))},async state=>{
+      alive();
       const scope=this.scope(state,input),goal=scope.goal,wait=scope.wait;
       check(scope.status==='waiting'&&wait,'GOAL_NOT_WAITING','目标不处于安全等待，不能继续或重复消费等待');
       check(goal&&!goal.blocked&&goal.plan&&goal.review?.decision==='awaiting_user','GOAL_CONTINUATION_UNAVAILABLE','目标没有可继续的安全等待记录');
@@ -55,12 +68,14 @@ export class ScopeContinuationService {
       check((scope.continuations??[]).reduce((total,item)=>total+(isHumanContinuation(item)?0:item.input.message.length),0)+input.input.message.length<=scopeContinuationTotalTextLimit,'GOAL_INPUT_LIMIT','本目标补充正文累计超过允许大小，请结束后另建目标');
       check(!state.runs?.some(run=>run.binding.rootSessionId===scope.rootSessionId&&['starting','running'].includes(run.status)),'GOAL_WORK_PENDING','本主会话仍有在途成员运行');
       const admitted=await this.budgets?.admit(state,scope,{kind:'main',taskId:scope.rootSessionId,runId});
+      // 额度读取可能等待磁盘；停止后的拒绝结果也不能顺带修改原安全等待。
+      alive();
       if(admitted?.rejected)return {scopes:[admitted.scope],receipt:admitted.rejected};
-      const continuation:ScopeContinuation={continuationId:input.commandId,acceptedAt:new Date().toISOString(),wait:structuredClone(wait),inputRevision:goalInputRevision(goal)+1,input:input.input,runId,options:input.options};
+      const continuation:ScopeContinuation={continuationId:input.commandId,acceptedAt:new Date().toISOString(),wait:structuredClone(wait),inputRevision:goalInputRevision(goal)+1,input:input.input,runId,options:input.options,...(attachmentManifest===undefined?{}:{attachmentManifest})};
       const {wait:_consumed,...rest}=admitted?.scope??scope,{review:_stale,...originalGoal}=goal;
       const next=appendScopeMainRun<DispatchScope>({...rest,status:'active',goal:{...originalGoal,revision:goal.revision+1,inputRevision:continuation.inputRevision},continuations:[...(scope.continuations??[]),continuation]},runId);
       const saved:GoalContinuationReceipt={workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,scopeId:scope.scopeId,scopeStatus:next.status,continuation};
-      fresh=true;return {scopes:[next],receipt:saved};
+      alive();fresh=true;return {scopes:[next],receipt:saved};
     });
     if('budgetRejected' in receipt)rejectBudget(receipt);
     const scope=this.scope(await this.store.read(),input),continuation=scope.continuations?.find(item=>item.continuationId===input.commandId);

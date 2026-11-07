@@ -1,6 +1,6 @@
 /**
  * 作用定位：定义可信入口提交的成员结果、真实用户补充与人工决定系统转交来源。
- * 设计原因：接续须持久化身份防止重复启动；仅真实补充作为用户消息，人工决定按固定记录转交，不伪造自由正文或扩大批准范围。
+ * 设计原因：接续须持久化身份防止重复启动；真实附件补充只引用可信清单指纹，人工决定按固定记录转交，不伪造自由正文或扩大批准范围。
  */
 import {safeId} from '../foundation/identity';
 
@@ -22,6 +22,8 @@ export interface UserContinuationSource {
   waitId:string;
   /** 原始输入为 1；本条真实补充提交后的输入版本。 */
   inputRevision:number;
+  /** 可信启动闭包生成，绑定同次快照清单；旧文本来源缺省，不携带图片字节或权限。 */
+  attachmentManifestHash?:string;
 }
 /** 仅独立显式继续入口生成，正文为系统转交的已保存决定摘要，不是用户新业务目标。 */
 export interface HumanDecisionsSource {
@@ -39,8 +41,8 @@ export function checkedRunInputSource(value:unknown):RunInputSource {
     return {kind:'human_decisions',continuationId:safeId(source.continuationId as string),scopeId:safeId(source.scopeId as string),waitId:safeId(source.waitId as string),inputRevision:source.inputRevision as number,decisionRevision:source.decisionRevision as number,decisionIds:(source.decisionIds as string[]).map(safeId)};
   }
   if(source.kind==='user-continuation'){
-    if(Object.keys(source).some(key=>!['kind','continuationId','scopeId','waitId','inputRevision'].includes(key))||!['continuationId','scopeId','waitId'].every(key=>typeof source[key]==='string')||!Number.isSafeInteger(source.inputRevision)||(source.inputRevision as number)<2||(source.inputRevision as number)>32)throw Error('无效目标补充来源');
-    return {kind:'user-continuation',continuationId:safeId(source.continuationId as string),scopeId:safeId(source.scopeId as string),waitId:safeId(source.waitId as string),inputRevision:source.inputRevision as number};
+    if(Object.keys(source).some(key=>!['kind','continuationId','scopeId','waitId','inputRevision','attachmentManifestHash'].includes(key))||!['continuationId','scopeId','waitId'].every(key=>typeof source[key]==='string')||!Number.isSafeInteger(source.inputRevision)||(source.inputRevision as number)<2||(source.inputRevision as number)>32||source.attachmentManifestHash!==undefined&&(typeof source.attachmentManifestHash!=='string'||!/^[a-f0-9]{64}$/.test(source.attachmentManifestHash)))throw Error('无效目标补充来源');
+    return {kind:'user-continuation',continuationId:safeId(source.continuationId as string),scopeId:safeId(source.scopeId as string),waitId:safeId(source.waitId as string),inputRevision:source.inputRevision as number,...(source.attachmentManifestHash===undefined?{}:{attachmentManifestHash:source.attachmentManifestHash as string})};
   }
   if(source.kind!=='member-results'||Object.keys(source).some(key=>!['kind','continuationId','messageIds','taskIds'].includes(key)))throw Error('无效成员接续来源');
   if(typeof source.continuationId!=='string')throw Error('缺少成员接续标识');

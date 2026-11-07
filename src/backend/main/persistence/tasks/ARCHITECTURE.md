@@ -58,21 +58,30 @@ classDiagram
 class N_src_backend_main_persistence_tasks_chat_inputs_ts["chat-inputs.ts"] {
   <<module>>
 }
+class N_src_backend_main_persistence_tasks_chat_inputs_ts_PreparedContinuationInput["PreparedContinuationInput"] {
+  <<interface>>
+  +message
+  +images
+  +manifest
+}
+N_src_backend_main_persistence_tasks_chat_inputs_ts ..> N_src_backend_main_persistence_tasks_chat_inputs_ts_PreparedContinuationInput : 声明
 class N_src_backend_main_persistence_tasks_chat_inputs_ts_ChatInputs["ChatInputs"] {
   +path()
   +connectors()
   +preview()
   +images()
+  +prepareContinuation()
   +add()
   +message()
   -workspace
   -directory()
   -save()
+  -continuationSnapshot()
 }
 N_src_backend_main_persistence_tasks_chat_inputs_ts ..> N_src_backend_main_persistence_tasks_chat_inputs_ts_ChatInputs : 声明
 ```
 
-直接依赖：[../../../core/foundation/files.ts](../../../core/foundation/files.ts)、[../../../core/knowledge/ports.ts](../../../core/knowledge/ports.ts)、[../../../../bridge/contracts/chat.ts](../../../../bridge/contracts/chat.ts)。
+直接依赖：[../../../core/foundation/files.ts](../../../core/foundation/files.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/tasks/scope-continuation-attachments.ts](../../../core/tasks/scope-continuation-attachments.ts)、[../../../core/brain/types.ts](../../../core/brain/types.ts)、[../../../core/knowledge/ports.ts](../../../core/knowledge/ports.ts)、[../../../../bridge/contracts/chat.ts](../../../../bridge/contracts/chat.ts)。
 
 ### dispatch-store.ts
 
@@ -231,6 +240,12 @@ N_src_backend_main_persistence_tasks_run_storage_ts ..> N_src_backend_main_persi
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 安全等待的附件快照
+
+`ChatInputs.prepareContinuation` 只读取当前工作区已保存的 file 附件 ID，每份私有 JSON 只打开一次；读取前后核对普通文件身份、大小与时间，并受停止信号及有界读取限制。正文、图片和清单从同一份字节派生，不重新打开原始 source 路径。跨工作区、缺失、损坏、非 file 或超限的附件在消费等待前明确拒绝，旧文本补充不生成空清单。
+
+每次最多 12 项、私有快照单项 8 MiB、图片单项 5 MiB/合计 20 MiB、展开消息 512 KiB；超过上限不截断后假装完整。清单仅保存 ID、名称、种类、字节数及哈希，不含 source、正文或 base64。`snapshotHash` 绑定私有 JSON 原字节，`contentHash` 绑定这次送入模型的保存文本或解码图片；文本始终明确是可能截取的保存快照，不证明当前源文件全文。
 
 ### 静态 Agent 会话归档索引
 

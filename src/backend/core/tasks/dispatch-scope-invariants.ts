@@ -1,7 +1,7 @@
 /**
- * 作用定位：校验用户任务周期与执行实例、图任务及运行的跨对象生命周期。
- * 设计原因：提交和重放共同保护输入、等待、额度及启动意图；文本补充和显式人工接续共用有序预算，单纯保存决定不消费等待。新周期完整登记主运行，旧周期不补造；迟到回调不能复活实例。
- * 职责边界：不决定整轮任务是否完成、不停止模型；求助与检查点仅在活动周期正常结算。未消费检查点不能进入用户等待，关闭须封存，不能复活实例。
+ * 作用定位：校验调度周期、等待检查点和显式接续的持久状态及原子变更，供派发存储提交与重放共用。
+ * 设计原因：旧目标和已消费意图必须保持不可变；附件引用与可信清单严格配对，主运行、输入版本及预算跨等待累积。
+ * 职责边界：只校验已记录事实，不读取附件、不启动模型，不将用户补充当作业务验收或工具提权。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
@@ -10,6 +10,7 @@ import {dispatchScopeGoalSchema,dispatchScopeWaitSchema} from './dispatch-scope'
 import {validateScopeGoalTransition,goalInputRevision} from './scope-goal';
 import {scopeContinuationTotalTextLimit} from './scope-continuation';
 import {scopeContinuationRecordSchema,isHumanContinuation} from './scope-continuation-record';
+import {assertContinuationAttachmentManifest} from './scope-continuation-attachments';
 import {scopeRecoverySchema} from './scope-recovery';
 import {scopeReplanSchema} from './scope-replan';
 import {scopeFreshContext} from './fresh-context';
@@ -103,6 +104,8 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
     if(scope.goal)valid(goalInputRevision(scope.goal)===(history.length+1),'输入版本只能随显式补充逐次增加');
     const seenCommands=new Set<string>(),seenWaits=new Set<string>(),seenRuns=new Set<string>();
     for(const [index,item] of history.entries()){
+      // 附件引用和可信清单同属不可变启动意图；旧文本和人工分支不补造附件字段。
+      if(!isHumanContinuation(item)){try{assertContinuationAttachmentManifest(item.input,item.attachmentManifest)}catch{valid(false,'补充附件引用与可信快照清单不一致')}}
       valid(!recovery||item.options.permission==='read','只读核实周期的后续补充不能提升权限');
       valid(item.inputRevision===index+2&&!seenCommands.has(item.continuationId)&&!seenWaits.has(item.wait.waitId)&&!seenRuns.has(item.runId),'补充身份重复或输入版本不连续');
       valid(!continuationCommands.has(item.continuationId)&&!continuationRuns.has(item.runId),'补充命令或主运行不能跨周期重用');continuationCommands.add(item.continuationId);continuationRuns.add(item.runId);

@@ -1,6 +1,7 @@
 /**
  * 作用定位：本机后端的 Electron 装配入口，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。
  * 设计原因：把 Electron 窗口与 IPC 留在唯一桌面入口，服务层可以脱离窗口验证；模型凭据加密通过系统 safeStorage 注入；手动终端固定工作区目录，退出时释放子进程。
+ * 附件边界：原生多选超过12项时在任何快照导入前拒绝，不能静默舍弃用户选择。
  */
 import {app,BrowserWindow,ipcMain,dialog,shell} from 'electron';
 import path from 'node:path';
@@ -53,7 +54,9 @@ app.whenReady().then(async()=>{
     if(action==='chat.pick')try{
       const request=args as {id:string;kind:string};if(!['file','folder'].includes(request.kind))throw Error('未知附件类型');
       const inputs=new ChatInputs(application.workspace(request.id));const result=await dialog.showOpenDialog(window,{properties:request.kind==='folder'?['openDirectory']:['openFile','multiSelections']});
-      const items=[];if(!result.canceled)for(const file of result.filePaths.slice(0,12))items.push(await inputs.path(request.kind as 'file'|'folder',file));return {ok:true,value:items};
+      // 在导入第一份快照前拒绝超量选择，不能静默裁剪用户明确选中的资料。
+      if(!result.canceled&&result.filePaths.length>12)throw Error('最多选择12个附件，请减少选择后重试');
+      const items=[];if(!result.canceled)for(const file of result.filePaths)items.push(await inputs.path(request.kind as 'file'|'folder',file));return {ok:true,value:items};
     }catch(e:any){return {ok:false,error:{code:e.code||'ATTACHMENT',message:e.message}}}
     try{if(action==='chooseFolder'){const result=await dialog.showOpenDialog(window,{properties:['openDirectory']});return {ok:true,value:result.canceled?null:result.filePaths[0]}}return {ok:true,value:await application.dispatch(action,args)}}catch(e:any){return {ok:false,error:{code:e.code||'ERROR',message:e.message}}}});
   if(MAIN_WINDOW_VITE_DEV_SERVER_URL)await window.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);else await window.loadFile(path.join(__dirname,`../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));

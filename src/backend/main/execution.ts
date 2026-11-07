@@ -3,6 +3,7 @@
  * 设计原因：主会话与图根共享实例，在创建 run 前取得全局名额及业务文件读取占用；知识治理仍由独立知识事务与用户权限保护。等待回调来自可信启动上下文，不混入可序列化模型设置。
  * 仓库边界：仅桌面主运行工厂捕获已有授权连接，不在准备时联网；CLI/成员和未就绪连接不装配仓库工具。
  * 治理边界：四个观察/提案端口在真实 run 创建时绑定主身份，不共享给成员，不包含桌面批准或实施。
+ * 附件边界：目标补充直接使用一次准备的图片，模型配置视觉预检在意图前；不重读附件或把图片放入后续协作配置。
  */
 import path from 'node:path';
 import {FileRunStorage} from './persistence/tasks/run-storage';
@@ -12,6 +13,7 @@ import type {Workspace} from './workspace/workspace';
 import {KernelLock} from './platform/locking';
 import {guard} from './platform/tool-guard';
 import {hash} from '../core/foundation/serialization';
+import {fail} from '../core/foundation/errors';
 import {WorkspaceExecutionManager} from '../scheduler-engine/execution/execution-manager';
 import {createWorkspaceLoop} from '../scheduler-engine/execution/loop-engine';
 import {WorkspaceExecutionLease} from '../scheduler-engine/execution/workspace-lease';
@@ -32,8 +34,13 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles,le
   return new WorkspaceExecutionManager(workspace,storage,async(options,task,launch)=>{
     const llm=options.profileId?await models.resolve(options.profileId,options.model):undefined;
     if(llm&&(options.provider!=='cbim-'+llm.profile.id||options.model!==llm.profile.model))throw Error('模型配置已变化，请重新启动任务');
-    const images=await new ChatInputs(workspace).images(options.attachmentIds);
-    if(images.length&&llm&&!llm.profile.vision)throw Error('当前模型未启用图片输入，请在设置中确认视觉能力，或切换支持图片的模型');
+    launch.signal.throwIfAborted();
+    const images=launch.preparedInputImages===undefined?await new ChatInputs(workspace).images(options.attachmentIds):launch.preparedInputImages.map(image=>({...image}));
+    launch.signal.throwIfAborted();
+    if(images.length&&(!llm||!llm.profile.vision)){
+      if(launch.preparedInputImages!==undefined)fail('GOAL_ATTACHMENT_VISION','当前模型配置未启用图片输入，请选择视觉模型后再补充');
+      if(llm)throw Error('当前模型未启用图片输入，请在设置中确认视觉能力，或切换支持图片的模型');
+    }
     const conversationBinding=task.mode==='chat'?await dispatch?.conversationBinding(task):undefined;
     const repositoryTools=task.mode==='chat'?await repositories?.prepareTools({workspaceId:workspace.entry.id,instanceId:workspace.instanceId}):undefined;
     return createWorkspaceLoop(workspace.paths,workspace,{...options,llm,images},{
@@ -57,5 +64,5 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles,le
       const reason=guard({name:mapped,input:call.input},workspace.entry.path);
       return {allow:!reason,reason};
     },
-  });},ids=>new ChatInputs(workspace).images(ids));
+  });},ids=>new ChatInputs(workspace).images(ids),(input,signal)=>new ChatInputs(workspace).prepareContinuation(input.message,input.attachmentIds,signal));
 }

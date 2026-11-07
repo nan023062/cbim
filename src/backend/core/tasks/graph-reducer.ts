@@ -1,6 +1,6 @@
 /**
  * 作用定位：把已提交的图事件原子转换为内存投影，并按游标输出增量读取结果。
- * 设计原因：节点、边和成员状态必须一起可见；已派发流程选择与检查点、续预约、求助及替换审计原样保留，防止增量改写历史。
+ * 设计原因：节点、边和成员状态必须一起可见；已派发流程选择、检查点和前置追加/替换审计原样保留，防止增量改写历史或借依赖修订改任务计划。
  * 职责边界：不落盘、不分配事件序号、不启动任务；调用方必须先可靠提交再发布结果。
  */
 import {fail} from '../foundation/errors';
@@ -36,6 +36,9 @@ function taskRevision(previous:TaskNode,next:TaskNode){
   const oldHistory=previous.dependencyReplacements??[],history=next.dependencyReplacements??[];
   if(history.length<oldHistory.length||history.length>oldHistory.length+1||oldHistory.some((record,index)=>stable(record)!==stable(history[index])))fail('GRAPH_INPUT_INVALID','前置替换审计只能逐次追加，不能改删历史');
   if(history.length>oldHistory.length&&changed)fail('GRAPH_INPUT_INVALID','替换前置不能同时修改任务目标、范围、责任或验收');
+  const oldAdditions=previous.dependencyAdditions??[],additions=next.dependencyAdditions??[];
+  if(additions.length<oldAdditions.length||additions.length>oldAdditions.length+1||oldAdditions.some((record,index)=>stable(record)!==stable(additions[index]))||previous.dependencyAdditions&&!next.dependencyAdditions)fail('GRAPH_INPUT_INVALID','前置追加审计只能逐次追加，不能改删历史');
+  if(additions.length>oldAdditions.length&&changed)fail('GRAPH_INPUT_INVALID','追加前置不能同时修改任务目标、范围、责任或验收');
 }
 
 /**
@@ -71,7 +74,7 @@ export function applyGraphBatch(previous:GraphSnapshot|undefined,event:GraphEven
       case 'task.upserted':{
         const old=tasks.get(change.task.taskId);nextRevision(old,change.task);
         if(old)taskRevision(old,change.task);
-        else if(change.task.planRevision!==1||!['planned','queued','waiting'].includes(change.task.status)||change.task.runIds.length||change.task.result||change.task.help||change.task.cancelledBeforeStart||change.task.dependencyReplacements||change.task.checkpoints||change.task.resumeRequest)fail('GRAPH_INPUT_INVALID','新任务必须从尚未执行的计划版本 1 创建');
+        else if(change.task.planRevision!==1||!['planned','queued','waiting'].includes(change.task.status)||change.task.runIds.length||change.task.result||change.task.help||change.task.cancelledBeforeStart||change.task.dependencyReplacements||change.task.dependencyAdditions||change.task.checkpoints||change.task.resumeRequest)fail('GRAPH_INPUT_INVALID','新任务必须从尚未执行的计划版本 1 创建');
         tasks.set(change.task.taskId,structuredClone(change.task));break;
       }
       case 'edge.upserted':{

@@ -1,6 +1,6 @@
 /**
  * 作用定位：校验前置替换的原子审计，以及所有依赖边变更的持久化边界。
- * 设计原因：服务核实证据后仍须防止通用事务绕过换边协议；退役边与历史审计不可复活，正常首次派发和领取固定候选继续有效。
+ * 设计原因：服务核实证据后仍须防止通用事务绕过换边协议；追加边只能消费先前完整不变量核实的本批许可，退役边与历史审计不可复活。
  * 职责边界：纯状态约束不读取模型日志；canonical 证据与当前知识由提交服务在同一存储屏障内核实。
  */
 import {fail} from '../foundation/errors';
@@ -13,8 +13,8 @@ function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(or
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 function valid(value:unknown,message:string):asserts value{if(!value)fail('GRAPH_INPUT_INVALID',message)}
 
-/** 新增审计须对应唯一四项图变更；后续运行只保留审计，不再次修改其目标或复活旧来源。 */
-export function validateQueuedDependencyReplacement(previous:DispatchState,next:DispatchState,mutation:DispatchMutation,command:DispatchCommand):void{
+/** 新增审计须对应唯一四项图变更；addedEdges 只由统一提交入口在完整校验追加事务后提供，不能来自请求或回执。 */
+export function validateQueuedDependencyReplacement(previous:DispatchState,next:DispatchState,mutation:DispatchMutation,command:DispatchCommand,addedEdges:ReadonlySet<string>=new Set()):void{
   const additions:{task:TaskNode;record:DependencyReplacement}[]=[];
   for(const graph of next.graphs)for(const task of graph.tasks){
     const old=previous.graphs.find(value=>value.identity.rootSessionId===graph.identity.rootSessionId)?.tasks.find(value=>value.taskId===task.taskId),history=old?.dependencyReplacements??[],records=task.dependencyReplacements??[];
@@ -56,7 +56,7 @@ export function validateQueuedDependencyReplacement(previous:DispatchState,next:
     const edge=change.edge,old=graph.edges.find(value=>value.edgeId===edge.edgeId);
     if(!old){
       const target=graph.tasks.find(value=>value.nodeId===edge.toNodeId);
-      valid(!target||addition?.record.replacement.edgeId===edge.edgeId,'既有任务增加依赖必须通过显式替换审计');
+      valid(!target||addition?.record.replacement.edgeId===edge.edgeId||addedEdges.has(edge.edgeId),'既有任务增加依赖必须通过已完整核实的追加或替换审计');
       continue;
     }
     valid(old.kind==='dependency'&&old.enabled,'退役依赖已封存，不能重新启用或修改');

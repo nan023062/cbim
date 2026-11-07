@@ -1,11 +1,12 @@
 /**
  * 作用定位：任务派发图的可序列化领域契约，供调度、持久化和 Bridge 共同引用。
- * 设计原因：把会话、成员、任务与执行轮次分开；流程选择保留原请求，检查点、求助、撤销与前置替换不能悄悄改选任务方法。
+ * 设计原因：把会话、成员、任务与执行轮次分开；前置追加/替换保留独立审计，检查点、求助和撤销不能改选任务方法或冒充结果。
  * 职责边界：这里只声明事实形状；权限、知识核实、磁盘提交和模型执行由各自服务负责。
  */
 import type {MemberHelpRecord} from './member-help';
 import type {QueuedTaskCancellation} from './queued-task-cancel';
 import type {DependencyReplacement} from './queued-dependency-replacement';
+import type {DependencyAddition} from './queued-dependency-addition';
 import type {MemberCheckpointRecord} from './member-checkpoint';
 import type {MemberResumeRequest} from './queued-member-resume';
 import type {WorkflowSelection} from './workflow-selection';
@@ -56,6 +57,8 @@ export type TaskNode = {
   cancelledBeforeStart?:QueuedTaskCancellation;
   /** 主调度显式换入真实前置候选的历史；只追加，不改变本任务计划或把旧来源标为成功。 */
   dependencyReplacements?:DependencyReplacement[];
+  /** 未领取时明确追加的前置；不预填来源结果，后续领取与替换保留此不可变历史。 */
+  dependencyAdditions?:DependencyAddition[];
   /** 时间均为可信后端生成的 UTC ISO 8601 字符串。 */
   createdAt:string;updatedAt:string;
 };

@@ -1,5 +1,5 @@
 /**
- * 作用定位：排版成员前置替换的只读历史，供主对话摘要与任务详情共用。
+ * 作用定位：排版成员前置追加和替换的只读历史，供主对话摘要与任务详情共用。
  * 设计原因：采用现有主题和纵向布局，长身份可换行；完整审计留在详情，不挤占固定尺寸任务节点。
  */
 .member-dependency-notice{border-left:2px solid var(--line);padding:10px 14px;margin:12px 0;color:var(--text);font-size:12px;line-height:1.6;min-width:0}

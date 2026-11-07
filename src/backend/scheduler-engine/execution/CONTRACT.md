@@ -1,3 +1,9 @@
+### 未领取待办的单条前置追加
+
+`QueuedDependencyAdditionService` 在同一 DispatchStore 事务读取图与目标，核 source/target 及两端启用依赖后继均未领取、未运行、原成员及信封未占用；原 Workflow 选择逐项保留。每次知识准备 await 后及最终知识重读后复核停止和实例，知识基线改变则整次拒绝。只原子新增无 resultId 的前置边、目标 waiting/revision/审计和其成员等待视图；原计划、权限、实例、信封及其他节点不变。通用 Store 也核精确审计与三项变更，不能借事件 cause 新增任意依赖。
+
+同命令同参数直接查询原回执，不重新读取知识；异参冲突。协调器立即跟踪追加操作，按真实 trackedTaskIds 将两端及后继重新纳入当前批次，主轮 settled 前不领取。停止等待已开始提交的回执收口，不因迟到成功启动下游；原生执行仍只由既有准入、预算、知识和依赖门禁授权，首次领取在同事务固定来源候选 resultId。工具失败也被识别为业务尝试，不能按普通聊天完成。
+
 ### 活动目标的输入准备、接收与关闭
 
 `ScopeActiveInputService` 先持久准备记录，按原 scope/run/queue 派生稳定键，预留尝试数、输入版本、目标决策及累计正文额度，再由 Runtime 发送。明确未发送记录为 rejected；真实 queued 和接受日志序号确认后，同事务保存 accepted、提升 goal/input 版本并清除旧 review，原 input 和旧 plan 保留供重规划。正文是实际发送的队列快照，可能包含附件展开资料，不追认原始用户措辞。等待文本、人工接续和活动补充共用输入次数，不能借切换入口重置限制。
@@ -22,7 +28,7 @@ pending/unknown 阻止规划、派发、续执行预约、新成员领取、成�
 
 `workflowSelections` 只用于执行角色分工。`cbim:main` 可保留 moduleIds 定位受控知识治理，但不能声明业务流程选择；严格输入、持久计划和公开输出均拒绝该组合，主知识回执不代替业务 Workflow 条件。
 
-`AutoCollaboration.tools` 为 Goal 三工具和 Dispatch 五工具绑定本轮 workspace/root/scope/run；`mainToolCommandId` 由实际桥调用 ID 计算原有命令键，提交与回包核验共用此算法，不改写已持久化命令。公开输出只验证事实，不产生权限或新的执行能力。
+`AutoCollaboration.tools` 为 Goal 三工具和 Dispatch 六工具绑定本轮 workspace/root/scope/run；`mainToolCommandId` 由实际桥调用 ID 计算原有命令键，追加依赖使用独立命令域，提交与回包核验共用此算法，不改写已持久化命令。公开输出只验证事实，不产生权限或新的执行能力。
 
 `ScopeGoalService.inspectWithGraph` 仅一次 `DispatchStore.read()`，从相同权威快照选择本 scope 与本 root 图，避免两次读取之间的变更被拼成一致事实。Auto 只投影公开 scope：保留重规划/只读核实的约束与来源证明，去除私有 native/排除集合 context；空返回仍交工具业务 Schema 拒绝，不降级到另一读取。
 

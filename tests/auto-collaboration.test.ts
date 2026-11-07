@@ -12,6 +12,8 @@ import type {ExecutionAdmissionWait} from '../src/backend/scheduler-engine/execu
 import {admissionRequestId,acquireExecutionLease} from '../src/backend/main/execution-admission';
 import {mainToolReplacement} from './main-tool-output-fixture';
 import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
+import type {AddQueuedDependencyInput,AddQueuedDependencyReceipt} from '../src/backend/core/tasks/queued-dependency-addition';
+import type {MainToolOutputBinding} from '../src/backend/core/tasks/main-tool-output';
 
 function deferred<T>(){let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>{resolve=r});return {promise,resolve}}
 async function setup(admission?:GlobalRunAdmission){
@@ -36,6 +38,9 @@ async function setup(admission?:GlobalRunAdmission){
     }),
     replaceQueuedDependency:vi.fn(async(_identity:any,scopeId:string,runId:string,commandId:string,input:any,assertCurrent?:()=>void)=>{
       assertCurrent?.();graph.cursor.seq=input.expectedGraphCursor.seq+1;return mainToolReplacement({...identity,scopeId,runId},commandId,input);
+    }),
+    addQueuedDependency:vi.fn(async(_identity:any,scopeId:string,runId:string,commandId:string,input:AddQueuedDependencyInput,assertCurrent?:()=>void)=>{
+      assertCurrent?.();graph.cursor.seq=input.expectedGraphCursor.seq+1;return addedDependency({...identity,scopeId,runId},commandId,input);
     }),
     dispatchTask:vi.fn(async(input:any,scopeId?:string)=>{
       const node:TaskNode={kind:'task',scopeId,taskId:'assigned-1',nodeId:'task:assigned-1',identity,requester:graph.root.agent,assignee:agent,modules:[],goal:input.task.goal,acceptance:input.task.acceptance,revision:1,planRevision:1,status:'queued',awaitedChildren:[],runIds:[],createdAt:'2026-11-06',updatedAt:'2026-11-06'};
@@ -72,6 +77,11 @@ async function setup(admission?:GlobalRunAdmission){
 }
 
 const dependencyInput={expectedGraphCursor:{streamId:'stream',seq:5},expectedGoalRevision:3,target:{taskId:'assigned-1',expectedRevision:1,expectedPlanRevision:1},replace:{edgeId:'A-B',expectedRevision:1},with:{taskId:'A2',expectedRevision:4,expectedPlanRevision:1,runId:'A2-run',resultId:'A2-result'},reason:'保留未启动的原下游任务'};
+const additionInput:AddQueuedDependencyInput={expectedGraphCursor:{streamId:'stream',seq:5},expectedGoalRevision:3,source:{taskId:'source-A',expectedRevision:1,expectedPlanRevision:1},target:{taskId:'assigned-1',expectedRevision:1,expectedPlanRevision:1},reason:'原待办等待后来创建的来源'};
+function addedDependency(binding:MainToolOutputBinding,commandId:string,input:AddQueuedDependencyInput):AddQueuedDependencyReceipt{
+  const {runId,...identity}=binding,trackedTaskIds=[input.target.taskId,input.source.taskId];
+  return {...identity,mainRunId:runId,commandId,taskId:input.target.taskId,status:'waiting',trackedTaskIds,graphCursor:{streamId:input.expectedGraphCursor.streamId,seq:input.expectedGraphCursor.seq+1},addition:{commandId,scopeId:binding.scopeId,mainRunId:runId,addedAt:'2026-11-07T00:00:00.000Z',reason:input.reason,graphCursor:input.expectedGraphCursor,goalRevision:input.expectedGoalRevision,goalPlanRevision:input.expectedGoalRevision,knowledgeRevision:'knowledge-one',previousTaskRevision:input.target.expectedRevision,targetPlanRevision:input.target.expectedPlanRevision,dependency:{edgeId:'new-A-B',sourceTaskId:input.source.taskId,sourceTaskRevision:input.source.expectedRevision,sourcePlanRevision:input.source.expectedPlanRevision},trackedTaskIds}};
+}
 
 it('权威联合查询返回空值时由业务输出契约拒绝，不崩溃或降级拼接别的读取',async()=>{
   const f=await setup();try{
@@ -84,7 +94,7 @@ it('权威联合查询返回空值时由业务输出契约拒绝，不崩溃或�
   }finally{await f.coordinator.close()}
 });
 
-it.each(['assign','cancel','replace','resume'] as const)('%s 的空值或缺失数组原样交输出契约拒绝，不在批次关联中抛TypeError或重试',async operation=>{
+it.each(['assign','cancel','replace','add','resume'] as const)('%s 的空值或缺失数组原样交输出契约拒绝，不在批次关联中抛TypeError或重试',async operation=>{
   const f=await setup();try{
     const signal=new AbortController().signal;
     let invoke:()=>Promise<unknown>,calls:()=>number;
@@ -96,6 +106,9 @@ it.each(['assign','cancel','replace','resume'] as const)('%s 的空值或缺失�
     }else if(operation==='replace'){
       f.dispatch.replaceQueuedDependency.mockResolvedValueOnce({} as never);
       invoke=()=>f.tools.call('cbim_dispatch_replace_dependency',dependencyInput,signal,'replace-bad');calls=()=>f.dispatch.replaceQueuedDependency.mock.calls.length;
+    }else if(operation==='add'){
+      f.dispatch.addQueuedDependency.mockResolvedValueOnce({} as never);
+      invoke=()=>f.tools.call('cbim_dispatch_add_dependency',additionInput,signal,'add-bad');calls=()=>f.dispatch.addQueuedDependency.mock.calls.length;
     }else{
       f.members.requestResume.mockResolvedValueOnce({});
       invoke=()=>f.tools.call('cbim_dispatch_resume',{expectedGraphCursor:{streamId:'stream',seq:1},expectedGoalRevision:2,taskId:'assigned-1',expectedRevision:1,checkpointId:'checkpoint-one',reason:'按原目标续执行'},signal,'resume-bad');calls=()=>f.members.requestResume.mock.calls.length;
@@ -130,6 +143,20 @@ it('已进入提交的替换与停止竞争：停止等待回执收口，不启�
     expect(f.members.start).not.toHaveBeenCalled();expect(f.execution.continueFromResults).not.toHaveBeenCalled();
     expect(f.dispatch.closeScope).toHaveBeenCalledWith(f.graph.identity,f.dispatch.openScope.mock.calls[0][1],'cancelled');
   }finally{committed.resolve({});await f.coordinator.close()}
+});
+
+it('追加前置的已提交回执迟到时，停止等待同一操作收口且不启动或重复加边',async()=>{
+  const f=await setup(),committed=deferred<AddQueuedDependencyReceipt>();try{
+    await f.dispatch.dispatchTask({task:{goal:'原待办',acceptance:[]}},f.dispatch.openScope.mock.calls[0][1]);
+    f.dispatch.addQueuedDependency.mockImplementation(()=>committed.promise);
+    const call=f.tools.call('cbim_dispatch_add_dependency',additionInput,new AbortController().signal,'add-call');
+    const stopped=f.hooks().stop(f.task.taskId);await Promise.resolve();expect(f.dispatch.closeScope).not.toHaveBeenCalled();
+    const binding={...f.graph.identity,scopeId:f.dispatch.openScope.mock.calls[0][1],runId:'parent-run'};
+    committed.resolve(addedDependency(binding,mainToolCommandId('cbim_dispatch_add_dependency',binding,'add-call')!,additionInput));
+    await call;await stopped;f.settleParent();await Promise.resolve();
+    expect(f.dispatch.addQueuedDependency).toHaveBeenCalledTimes(1);expect(f.members.start).not.toHaveBeenCalled();expect(f.execution.continueFromResults).not.toHaveBeenCalled();
+    expect(f.dispatch.closeScope).toHaveBeenCalledWith(f.graph.identity,binding.scopeId,'cancelled');
+  }finally{await f.coordinator.close()}
 });
 
 function occupy(admission:GlobalRunAdmission){
@@ -268,7 +295,7 @@ it('成功关闭门禁失败时保存阻塞原因并关闭失败周期，不能�
   }finally{await f.coordinator.close()}
 });
 
-it.each(['cbim_object_commit','cbim_goal_plan','cbim_goal_review','cbim_dispatch_cancel','cbim_dispatch_replace_dependency'])('未建计划的%s调用不能绕过为普通聊天成功',async toolName=>{
+it.each(['cbim_object_commit','cbim_goal_plan','cbim_goal_review','cbim_dispatch_cancel','cbim_dispatch_replace_dependency','cbim_dispatch_add_dependency'])('未建计划的%s调用不能绕过为普通聊天成功',async toolName=>{
   const f=await setup();try{
     f.dispatch.goals.inspect.mockResolvedValue({goal:{}} as any);
     f.hooks().settled(f.task,f.options,{task:f.task,runId:'parent-run',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[],toolReceipts:[{toolName,effects:toolName==='cbim_object_commit'?['knowledge-write']:['maintenance']} as any]});

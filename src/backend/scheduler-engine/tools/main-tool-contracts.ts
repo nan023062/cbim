@@ -1,5 +1,5 @@
 /**
- * 作用定位：绑定主调度八项工具的公开回包、取消恢复说明及既有可信命令键。
+ * 作用定位：绑定主调度九项工具的公开回包、取消恢复说明及可信命令键，依赖追加使用独立命令域。
  * 设计原因：提交方和输出核验共用原 run/call 映射；只在一次序列化的 wire 上核对业务结构与归属，不重新执行动作，也不把回包失败解释为回滚。
  */
 import {zodToJsonSchema} from 'zod-to-json-schema';
@@ -12,7 +12,7 @@ import {checkedJsonToolResult} from '../../core/tools/results';
 export function mainToolCommandId(name:MainToolName,binding:MainToolOutputBinding,toolCallId:string):string|undefined{
   if(name==='cbim_goal_inspect'||name==='cbim_dispatch_inspect')return undefined;
   if(name==='cbim_goal_plan'||name==='cbim_goal_review')return (name==='cbim_goal_plan'?'auto-goal-plan-':'auto-goal-review-')+hash(binding.runId+':'+toolCallId);
-  const prefix={cbim_dispatch_task:'auto-task-',cbim_dispatch_cancel:'auto-cancel-',cbim_dispatch_replace_dependency:'auto-dependency-',cbim_dispatch_resume:'auto-resume-'}[name];
+  const prefix={cbim_dispatch_task:'auto-task-',cbim_dispatch_cancel:'auto-cancel-',cbim_dispatch_replace_dependency:'auto-dependency-',cbim_dispatch_add_dependency:'auto-add-dependency-',cbim_dispatch_resume:'auto-resume-'}[name];
   return prefix+hash(json({identity:{workspaceId:binding.workspaceId,rootSessionId:binding.rootSessionId},runId:binding.runId,toolCallId}));
 }
 

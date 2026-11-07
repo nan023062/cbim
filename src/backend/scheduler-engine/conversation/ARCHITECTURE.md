@@ -140,6 +140,10 @@ N_src_backend_scheduler_engine_conversation_questions_ts ..> N_src_backend_sched
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 先创建待办再追加前置
+
+主提示区分未领取任务的追加与失败前置的替换。可以先创建 B/C，再创建 A，通过真实 `cbim_dispatch_add_dependency` 明确加 A→B；两端和各自全部启用后继都须未领取，且符合当前目标、知识和 Workflow。不能删除其他边或改变原任务/成员/权限，不用规划文字冒称已经建边。成功后结束主轮，等待真实 A 结果和原预算准入；未知时核对原审计，不换调用重加。该维护回执不替代业务证据或人工验收。
+
 ### 运行中补充与原目标
 
 主提示要求插入消息到达后查询原 input、accepted activeInputs 和 continuations，以最新 inputRevision 重规划并保留必需人工条件；accepted 正文称为“已接收的输入快照”，可能包含附件展开资料，不还原成原始用户措辞。pending/unknown 只允许核实与说明，不能盲目重发、继续派工或沿旧 review 宣告完成、安全等待。普通无业务计划对话仍保持轻量，输入记录不新增权限或替代人工接受。

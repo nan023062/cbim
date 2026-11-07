@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主会话任务图、目标与准入状态；运行内补充按真实接收记录显示，未知优先旧审阅，同版摘要/详情核对后增量呈现。根停止共用会话独立在途标记，插入等待不锁住停止按钮。安全等待补充共享正文、文件/图片草稿及导入锁，按原附件身份冻结请求，切换后丢弃迟到选择，普通聊天草稿独立。目标与节点只显示各自保存的流程选择与冻结绑定，不以当前知识推断旧历史。结构验证按同轮真实工具终态区分未确认、当时符合/不符合和后续操作造成的过期。检查点、基线、人工决定与用量独立核实；跨轮次隔离，不提供读即恢复或把历史当当前验收。
+主会话任务图、目标与准入状态；依赖追加/替换只读历史核对身份和节点修订，摘要按实际版本选择最新，图沿真实启用边排列，不补造结果。运行内补充按真实接收记录显示，未知优先旧审阅，同版摘要/详情核对后增量呈现。根停止使用独立在途标记，插入等待不锁住停止按钮。等待补充共享正文、文件/图片草稿及导入锁，普通聊天草稿独立。流程、验证、检查点、基线、人工决定与用量保留各自冻结身份和证据，不把历史当当前验收。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -34,8 +34,8 @@
 | [member-cancellation-state.ts](member-cancellation-state.ts) | 为成员卡、任务节点和详情提供未启动撤销的统一只读投影。 |
 | [member-checkpoint-state.ts](member-checkpoint-state.ts) | 将同任务的检查点交接和后续运行投影为成员卡片、节点与详情共用的只读状态。 |
 | [member-checkpoint.css](member-checkpoint.css) | 成员检查点的只读交接、预约和轮次引用排版。 |
-| [member-dependency-state.ts](member-dependency-state.ts) | 将任务节点的前置替换审计转换为主对话和任务详情共用的只读历史投影。 |
-| [member-dependency.css](member-dependency.css) | 排版成员前置替换的只读历史，供主对话摘要与任务详情共用。 |
+| [member-dependency-state.ts](member-dependency-state.ts) | 将任务节点的前置追加和替换审计转换为主对话和任务详情共用的只读历史投影。 |
+| [member-dependency.css](member-dependency.css) | 排版成员前置追加和替换的只读历史，供主对话摘要与任务详情共用。 |
 | [member-event-state.ts](member-event-state.ts) | 把成员公开事件分页归并为稳定的运行视图，供卡片与任务详情共用。 |
 | [member-help-state.ts](member-help-state.ts) | 为成员动态、任务节点和详情提供同一份求助交接投影与中文分类。 |
 | [member-validation-state.ts](member-validation-state.ts) | 从当前成员公开事件推导结构验证展示状态，保留当时不符合与后续通过的各次事实。 |
@@ -44,7 +44,7 @@
 | [MemberArtifactReport.tsx](MemberArtifactReport.tsx) | 成员节点详情中的独立文件基线面板，手动列出记录并复核明确选择的一份。 |
 | [MemberCancellationNotice.tsx](MemberCancellationNotice.tsx) | 在主对话成员卡和任务详情中显示主调度已经提交的未启动撤销事实。 |
 | [MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx) | 在主对话和任务详情展示检查点、续执行预约与新旧轮次关系。 |
-| [MemberDependencyNotice.tsx](MemberDependencyNotice.tsx) | 在成员动态和任务详情中展示主调度已提交的前置替换原因、原来源与新候选身份。 |
+| [MemberDependencyNotice.tsx](MemberDependencyNotice.tsx) | 在成员动态和任务详情中展示主调度已提交的前置追加/替换原因，以及当时的前置或候选身份。 |
 | [MemberExecutionReport.tsx](MemberExecutionReport.tsx) | 在任务节点详情中展示一次显式核实的派发、日志与工具回执报告，独立于成员流式正文。 |
 | [MemberHelpNotice.tsx](MemberHelpNotice.tsx) | 在主对话成员卡和任务详情中只读呈现已经结算的求助交接记录。 |
 | [MemberRunTranscript.tsx](MemberRunTranscript.tsx) | 以成员身份显示公开消息和工具过程，供主会话成员卡片及任务详情共用。 |
@@ -877,6 +877,7 @@ classDiagram
 class N_src_frontend_tasks_member_dependency_state_ts["member-dependency-state.ts"] {
   <<module>>
   +memberDependencyHistory()
+  +memberDependencyAdditionHistory()
 }
 ```
 
@@ -891,6 +892,12 @@ class N_src_frontend_tasks_member_dependency_state_ts_MemberDependencyHistory["M
   +invalid
 }
 N_src_frontend_tasks_member_dependency_state_ts ..> N_src_frontend_tasks_member_dependency_state_ts_MemberDependencyHistory : 声明
+class N_src_frontend_tasks_member_dependency_state_ts_MemberDependencyAdditionHistory["MemberDependencyAdditionHistory"] {
+  <<interface>>
+  +records
+  +invalid
+}
+N_src_frontend_tasks_member_dependency_state_ts ..> N_src_frontend_tasks_member_dependency_state_ts_MemberDependencyAdditionHistory : 声明
 ```
 
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
@@ -2746,9 +2753,11 @@ N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts 
 
 返工的新等待可能使用同一验收项但新的候选。用户可明确“清除旧选择，重新核实”：只清除本地基线选择、决定及旧预览，保留意见文字与后端历史，再查询当前候选；不自动选择或提交。未知/在途请求不能清除，迟到旧预览不能覆盖新菜单。
 
-### 未启动任务前置替换的历史展示
+### 未启动任务前置追加与替换的历史展示
 
-`MemberDependencyNotice` 在主对话成员卡显示最新替换摘要，在任务详情展示全部已提交记录；与成员运行日志分离，无额外请求或轮询。Bridge 提供严格审计 Schema，`memberDependencyHistory` 校验所属周期、版本顺序、命令唯一性和待办集合，异常明确提示，不把缺失审计、模型文字或普通等待解释为已替换。
+`MemberDependencyNotice` 在主对话成员卡显示最新依赖调整摘要，在任务详情分组展示全部追加与替换；与成员运行日志分离，无额外请求或轮询。Bridge 提供严格审计 Schema，`memberDependencyHistory` 与 `memberDependencyAdditionHistory` 校验所属周期、版本顺序、命令唯一性和待办集合。两类审计不能重复占用同一命令或节点修订；compact 按 `previousTaskRevision` 选择最新，不按时间猜顺序。异常明确提示，不把缺失审计、模型文字或普通等待解释为已调整。
+
+追加审计展示 source task/plan、原因、原主运行和后端时间，不补造当时尚未产生的结果。只有真实受理才显示记录，后续领取或换边不抹掉历史；不根据历史记录推断当前仍在等待或已经执行。缺少新字段的旧节点保持原有替换行为。界面不提供加边/恢复按钮，是否可调整由主工具和服务验证。
 
 记录展示原前置、新前置、采用的 run/result、原因和后端时间，后续成员执行不隐藏历史。历史审计不证明现在仍可执行、原任务成功或业务验收通过，不提供恢复/批准按钮。主对话与详情先核对工作区和主会话身份；compact 仅省略旧记录展示，不丢弃节点数据。
 

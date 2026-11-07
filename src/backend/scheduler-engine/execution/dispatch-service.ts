@@ -1,7 +1,7 @@
 /**
  * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
  * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；派发保存原 Workflow 选择及实际绑定，同命令不能改选。周期冻结输入、归属及软限额；人工继续同事务消费等待和登记运行，关闭封存待办，旧回执不能重开周期。
- * 职责边界：本模块负责可靠入队、显式撤销未启动集合及受审计的单条依赖替换，由独立 MemberExecutionManager 执行；调度维护不停止活动运行，不复活旧实例，也不代表目标完成。
+ * 职责边界：本模块负责可靠入队、显式撤销未启动集合及受审计的单条依赖追加/替换，由独立 MemberExecutionManager 执行；调度维护不停止活动运行，不复活旧实例，也不代表目标完成。
  * 关闭边界：活动输入由独立服务准备和确认；普通无计划聊天的成功例外也须先核实输入记录，未知输入只可失败或取消封存。
  */
 import {randomUUID} from 'node:crypto';
@@ -25,6 +25,8 @@ import {ScopeHumanDecisionService,type HumanDecisionPorts} from './scope-human-d
 import {ScopeHumanContinuationService} from './scope-human-continuation-service';
 import {QueuedTaskCancelService} from './queued-task-cancel-service';
 import {QueuedDependencyReplacementService} from './queued-dependency-replacement-service';
+import {QueuedDependencyAdditionService} from './queued-dependency-addition-service';
+import type {AddQueuedDependencyInput,AddQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-addition';
 import type {ReplaceQueuedDependencyInput,ReplaceQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-replacement';
 import {isMemberCheckpointPending} from '../../core/tasks/member-checkpoint';
 import {ScopeUsageService} from './scope-usage-service';
@@ -65,6 +67,7 @@ export class WorkspaceDispatchService {
   readonly budgets:ScopeBudgetService;
   private readonly queuedCancellation:QueuedTaskCancelService;
   private readonly queuedDependencyReplacement:QueuedDependencyReplacementService;
+  private readonly queuedDependencyAddition:QueuedDependencyAdditionService;
   constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts,budgetPolicy?:()=>ScopeBudgetPolicy,humanPorts?:HumanDecisionPorts){
     this.goals=new ScopeGoalService(owner,store,goalPorts,humanPorts);
     this.usage=new ScopeUsageService(owner,store,goalPorts);
@@ -77,12 +80,15 @@ export class WorkspaceDispatchService {
     this.humanContinuations=new ScopeHumanContinuationService(owner,store,this.goals,goalPorts,humanPorts,this.budgets);
     this.queuedCancellation=new QueuedTaskCancelService(owner,store);
     this.queuedDependencyReplacement=new QueuedDependencyReplacementService(owner,store,this.goals);
+    this.queuedDependencyAddition=new QueuedDependencyAdditionService(owner,store,this.goals);
   }
 
   /** 主调度显式撤销未领取的完整依赖集合；不停止活动运行、不把撤销当作完成。 */
   cancelQueued(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,input:CancelQueuedTasksInput):Promise<CancelQueuedTasksReceipt>{this.check(identity.workspaceId);return this.queuedCancellation.cancel(identity,scopeId,runId,commandId,input)}
   /** 主轮显式修订未启动前置；停止检查覆盖证据读取前后，成功只返回待跟踪集合，不启动执行。 */
   replaceQueuedDependency(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,input:ReplaceQueuedDependencyInput,assertCurrent?:()=>void):Promise<ReplaceQueuedDependencyReceipt>{this.check(identity.workspaceId);return this.queuedDependencyReplacement.replace(identity,scopeId,runId,commandId,input,assertCurrent)}
+  /** 只加强尚未领取待办的前置门禁；后继闭包、知识和停止均在提交内复核，不启动成员。 */
+  addQueuedDependency(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,input:AddQueuedDependencyInput,assertCurrent?:()=>void):Promise<AddQueuedDependencyReceipt>{this.check(identity.workspaceId);return this.queuedDependencyAddition.add(identity,scopeId,runId,commandId,input,assertCurrent)}
 
   /** 工作区启动时恢复事务存储，触发存储观察者的基线；不创建成员、不消费任务。 */
   async initialize(){this.check(this.owner.entry.id);await this.store.read()}

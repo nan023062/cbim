@@ -3,7 +3,7 @@
  * 活动输入：准备、原生发送和结果确认立即纳入周期在途集合；停止先撤销引擎，再等输入记录收口后封存，不重入管理器串行锁或回滚已接受事实。
  * 作用定位：管理一次用户任务的调度周期，串接主 Agent 调度、执行成员和结果回传，周期结束后释放执行实例。
  * 设计原因：周期冻结输入、主运行归属及软限额；主工具由本轮身份和原调用生成命令，公开回包去除私有上下文并严格核验。回注先核额度和登记再启模型，容量等待或预算拒绝不重放未知运行。
- * 职责边界：主 Agent 只调度和治理知识；依赖替换与成员续执行须等主轮结算才领取。人工继续只消费专用意图，不从普通消息猜批准；所有接续仍经预算准入和停止屏障，退出/重启不重放。
+ * 职责边界：主 Agent 只调度和治理知识；依赖追加/替换与成员续执行重新跟踪原待办，须等主轮结算才领取。追加操作纳入在途关闭屏障，不因迟到回执启动已停止周期。人工继续只消费专用意图，不从普通消息猜批准。
  */
 import {hash,json} from '../../core/foundation/serialization';
 import {randomUUID} from 'node:crypto';
@@ -274,6 +274,15 @@ export class AutoCollaboration {
         if(Array.isArray(ids)&&ids.every(id=>typeof id==='string'))for(const taskId of ids){if(!batch.tasks.includes(taskId))batch.tasks.push(taskId);cycle.tasks.add(taskId)}
         return receipt;
       }));
+    },addDependency:(input,call)=>{
+      this.assertLive(batch,call.signal);cycle.workRequested=true;
+      const commandId=mainToolCommandId('cbim_dispatch_add_dependency',binding,call.toolCallId)!;
+      return this.track(cycle,this.dispatch.addQueuedDependency(this.identity(batch),cycle.scopeId,batch.runId,commandId,input,()=>this.assertLive(batch,call.signal)).then(receipt=>{
+        // 来源可晚于目标创建；保留图顺序，仅重纳当前批次，ready/claim 在主轮结束后决定真实执行顺序。
+        const ids=receipt?.trackedTaskIds;
+        if(Array.isArray(ids)&&ids.every(id=>typeof id==='string'))for(const taskId of ids){if(!batch.tasks.includes(taskId))batch.tasks.push(taskId);cycle.tasks.add(taskId)}
+        return receipt;
+      }));
     },resume:(input,call)=>{
       this.assertLive(batch,call.signal);cycle.workRequested=true;
       const commandId=mainToolCommandId('cbim_dispatch_resume',binding,call.toolCallId)!;
@@ -319,7 +328,7 @@ export class AutoCollaboration {
     if(!summary){const cycle=this.cycles.get(task.taskId);if(cycle)cycle.ending='interrupted';this.reportIssue(task.taskId,Error('主轮没有可核实的终态'));this.schedule();return}
     const batch=this.batches.get(summary.runId);if(!batch)return;
     // Schema/权限拒绝可能发生在端口调用前；以可信回执补记工作意图，直接知识写也不能绕过目标审阅。
-    if(summary.toolReceipts?.some(receipt=>receipt.effects.includes('knowledge-write')||['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task','cbim_dispatch_cancel','cbim_dispatch_replace_dependency','cbim_dispatch_resume'].includes(receipt.toolName)))batch.cycle.workRequested=true;
+    if(summary.toolReceipts?.some(receipt=>receipt.effects.includes('knowledge-write')||['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task','cbim_dispatch_cancel','cbim_dispatch_replace_dependency','cbim_dispatch_add_dependency','cbim_dispatch_resume'].includes(receipt.toolName)))batch.cycle.workRequested=true;
     batch.settled=summary;
     if(summary.status!=='completed'||summary.unresolvedTools.length||!batch.tasks.length){this.retireBatch(batch);batch.cycle.completionSummary=summary;batch.cycle.ending=summary.status==='completed'&&!summary.unresolvedTools.length?'completed':summary.status==='failed'?'failed':summary.status==='cancelled'?'cancelled':'interrupted'}
     this.schedule();

@@ -1,7 +1,7 @@
 /**
- * 作用定位：主调度八个工具的公开业务输出契约与可信调用归属校验。
+ * 作用定位：主调度九个工具的公开业务输出契约与可信调用归属校验。
  * 设计原因：JSON 可解析不代表目标、图或回执属于本次调用；复用领域 Schema 并在唯一 wire 上核对身份、Workflow 原始选择和请求事实。
- * 职责边界：排队、换边、续执行预约均不是执行完成；输出失败不撤销可能已提交的事务，也不授权自动重试。
+ * 职责边界：排队、追加/替换前置及续执行预约均不是执行完成；输出失败不撤销可能已提交的事务，也不授权自动重试。
  */
 import {z} from 'zod';
 import {graphCursorSchema,graphSnapshotSchema,taskNodeSchema,validateGraph} from './graph-rules';
@@ -9,6 +9,7 @@ import type {GraphSnapshot,TaskNode} from './graph-types';
 import {mainToolScopeSchema,type MainToolScope} from './main-tool-scope';
 import {goalInputRevision,sameGoalValue,type GoalPlanInput,type GoalReviewInput} from './scope-goal';
 import {dependencyReplacementSchema,type ReplaceQueuedDependencyInput} from './queued-dependency-replacement';
+import {dependencyAdditionSchema,type AddQueuedDependencyInput} from './queued-dependency-addition';
 import type {CancelQueuedTasksInput} from './queued-task-cancel';
 import type {ResumeMemberInput} from './queued-member-resume';
 export {projectMainScope,mainToolScopeSchema} from './main-tool-scope';
@@ -25,6 +26,7 @@ const graphOutputSchema=graphSnapshotSchema.superRefine((value,context)=>{try{va
 export const dispatchTaskOutputSchema=z.object({commandId:id,taskId:id,messageId:id,cursor:graphCursorSchema,disposition:z.enum(['queued','waiting'])}).strict();
 export const cancelQueuedTasksOutputSchema=z.object({...receiptIdentity,cancelledTaskIds:z.array(id).min(1).max(100).refine(values=>new Set(values).size===values.length),graphCursor:shortCursor}).strict();
 export const replaceQueuedDependencyOutputSchema=z.object({...receiptIdentity,taskId:id,status:z.enum(['queued','waiting']),trackedTaskIds:ids,replacement:dependencyReplacementSchema,graphCursor:shortCursor}).strict();
+export const addQueuedDependencyOutputSchema=z.object({...receiptIdentity,taskId:id,status:z.literal('waiting'),trackedTaskIds:ids.refine(values=>values.length>=2),addition:dependencyAdditionSchema,graphCursor:shortCursor}).strict();
 /** requestId 是预约信封，原任务和原检查点保留；没有新 runId，不能把预约称为已续执行。 */
 export const resumeMemberOutputSchema=z.object({taskId:id,checkpointId:id,requestId:id,trackedTaskIds:ids,cursor:graphCursorSchema}).strict();
 export const mainToolOutputSchemas={
@@ -35,6 +37,7 @@ export const mainToolOutputSchemas={
   cbim_dispatch_inspect:z.union([taskNodeSchema,graphOutputSchema]),
   cbim_dispatch_cancel:cancelQueuedTasksOutputSchema,
   cbim_dispatch_replace_dependency:replaceQueuedDependencyOutputSchema,
+  cbim_dispatch_add_dependency:addQueuedDependencyOutputSchema,
   cbim_dispatch_resume:resumeMemberOutputSchema,
 } as const;
 export type MainToolName=keyof typeof mainToolOutputSchemas;
@@ -92,12 +95,18 @@ function validateMainToolOutput(name:MainToolName,value:unknown,expected:MainToo
     if(!sameIdentity(result.cursor)||result.taskId!==request.taskId||result.checkpointId!==request.checkpointId||result.trackedTaskIds[0]!==result.taskId)issue('预约回执与原任务或检查点不一致');
     cursorCheck(result.cursor,request.expectedGraphCursor);return;
   }
-  const result=value as MainToolOutput<'cbim_dispatch_cancel'>|MainToolOutput<'cbim_dispatch_replace_dependency'>;
+  const result=value as MainToolOutput<'cbim_dispatch_cancel'>|MainToolOutput<'cbim_dispatch_replace_dependency'>|MainToolOutput<'cbim_dispatch_add_dependency'>;
   if(!sameIdentity(result)||result.scopeId!==binding.scopeId||result.mainRunId!==binding.runId)issue('调度变更回执不属于当前主运行');commandCheck(result.commandId);
   if(name==='cbim_dispatch_cancel'){
     const receipt=result as MainToolOutput<'cbim_dispatch_cancel'>,request=input as CancelQueuedTasksInput;
     cursorCheck(receipt.graphCursor,request.expectedGraphCursor);
     if(!sameGoalValue([...receipt.cancelledTaskIds].sort(),request.targets.map(item=>item.taskId).sort()))issue('撤销回执不是精确请求的任务集合');return;
+  }
+  if(name==='cbim_dispatch_add_dependency'){
+    const receipt=result as MainToolOutput<'cbim_dispatch_add_dependency'>,request=input as AddQueuedDependencyInput,record=receipt.addition;
+    cursorCheck(receipt.graphCursor,request.expectedGraphCursor);
+    if(request.source.taskId===request.target.taskId||receipt.taskId!==request.target.taskId||!receipt.trackedTaskIds.includes(receipt.taskId)||!receipt.trackedTaskIds.includes(request.source.taskId)||!sameGoalValue(receipt.trackedTaskIds,record.trackedTaskIds)||record.commandId!==receipt.commandId||record.scopeId!==binding.scopeId||record.mainRunId!==binding.runId||record.reason!==request.reason||!sameGoalValue(record.graphCursor,request.expectedGraphCursor)||record.goalRevision!==request.expectedGoalRevision||record.goalPlanRevision!==request.expectedGoalRevision||record.previousTaskRevision!==request.target.expectedRevision||record.targetPlanRevision!==request.target.expectedPlanRevision||record.dependency.sourceTaskId!==request.source.taskId||record.dependency.sourceTaskRevision!==request.source.expectedRevision||record.dependency.sourcePlanRevision!==request.source.expectedPlanRevision)issue('追加审计与本次精确前置或任务基线不一致');
+    return;
   }
   const receipt=result as MainToolOutput<'cbim_dispatch_replace_dependency'>,request=input as ReplaceQueuedDependencyInput,record=receipt.replacement;
   cursorCheck(receipt.graphCursor,request.expectedGraphCursor);

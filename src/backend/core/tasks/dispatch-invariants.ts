@@ -1,7 +1,7 @@
 /**
  * 作用定位：在派发事务提交和日志恢复时校验成员执行、任务图和邮箱的联合约束。
  * 设计原因：仅验证每条记录形状不能防止半次领取、重复占用或旧 run 回调；把跨对象约束集中在 Core，磁盘适配器只负责可靠提交。
- * 职责边界：不启动模型、不访问文件、不签发权限；人工保存与显式接续用不同专属命令，记录本身不能冒充完成或自行消费等待。
+ * 职责边界：不启动模型、不访问文件、不签发权限；依赖追加须完整核验后才给通用边门禁精确许可，人工保存与显式接续记录本身不能冒充完成或自行消费等待。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
@@ -12,6 +12,7 @@ import type {DispatchRun} from './dispatch-execution';
 import type {AgentRef,GraphIdentity} from './graph-types';
 import {validateQueuedTaskCancellation} from './queued-task-cancel-rules';
 import {validateQueuedDependencyReplacement} from './queued-dependency-replacement-invariants';
+import {validateQueuedDependencyAddition} from './queued-dependency-addition-invariants';
 import {memberCheckpointProofSchema,memberResumeFromSchema} from './member-checkpoint';
 import {validateMemberCheckpoints} from './member-checkpoint-invariants';
 import {validateHumanDecisionCommand} from './human-decision-invariants';
@@ -160,7 +161,9 @@ export function validateDispatchExecution(previous:DispatchState,next:DispatchSt
   validateHumanDecisionCommand(previous,mutation,command);
   validateHumanContinuationCommand(previous,mutation,command);
   validateQueuedTaskCancellation(previous,next,mutation,command);
-  validateQueuedDependencyReplacement(previous,next,mutation,command);
+  // 新边许可只能由完整追加校验生成，再交统一依赖门禁；不能用批次 cause 或审计存在代替。
+  const addedEdges=validateQueuedDependencyAddition(previous,next,mutation,command);
+  validateQueuedDependencyReplacement(previous,next,mutation,command,addedEdges);
   validateMemberCheckpoints(previous,next,mutation,command);
   const runs=next.runs??[];
   for(const run of mutation.runs??[])validateRun((previous.runs??[]).find(item=>item.binding.runId===run.binding.runId),run,next,mutation);

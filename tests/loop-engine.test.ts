@@ -48,16 +48,18 @@ it('durably records gates before execution; engine completion never means busine
   }finally{await f.cleanup()}
 });
 
-it('crashed tool operations require explicit reconciliation, and recovery keeps task identity',async()=>{
+it('unknown tools cannot resume their native context through bare reconciliation IDs',async()=>{
   let count=0;
   class Crash extends StubEngine{async run():Promise<{status:'completed'}>{await this.context.beforeTool({id:'uncertain-write',name:'write',input:{path:'src/result'}});throw Error('process lost')}}
   const f=await setup(()=>count++===0?new Crash():new StubEngine());try{
     const first=await f.runtime.start(f.task),result=await first.done;expect(result.status).toBe('interrupted');expect(result.unresolvedTools).toEqual(['uncertain-write']);
     expect(result.toolReceipts).toMatchObject([{toolCallId:'uncertain-write',outcome:'unknown'}]);
-    await expect(f.runtime.start(f.task,'continue',{runId:first.runId})).rejects.toThrow('先核实');
+    await expect(f.runtime.start(f.task,'continue',{runId:first.runId})).rejects.toMatchObject({code:'RECOVERY_INSPECTION_REQUIRED'});
     await expect(f.runtime.start({...f.task,root:'wrong'},'continue',{runId:first.runId})).rejects.toThrow('原任务');
-    const next=await f.runtime.start(f.task,'verified file; continue',{runId:first.runId,reconciledToolIds:['uncertain-write']});
-    expect((await next.done).status).toBe('completed');expect(next.runId).not.toBe(first.runId);
+    const before=await fs.readFile(path.join(f.directory,f.task.taskId,first.runId,'events.jsonl'));
+    await expect(f.runtime.start(f.task,'verified file; continue',{runId:first.runId,reconciledToolIds:['uncertain-write']})).rejects.toMatchObject({code:'RECOVERY_INSPECTION_REQUIRED'});
+    expect(count).toBe(1);expect(await fs.readFile(path.join(f.directory,f.task.taskId,first.runId,'events.jsonl'))).toEqual(before);
+    expect((await f.runtime.inspect(f.task.taskId,first.runId)).unresolvedTools).toEqual(['uncertain-write']);
   }finally{await f.cleanup()}
 });
 

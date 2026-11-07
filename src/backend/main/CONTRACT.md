@@ -95,3 +95,5 @@ Application 在 Workspace.open 前只构造一个带监控观察器的 DispatchS
 ### 原命令报告装配
 
 原主命令核实仅复用已打开、初始化完成工作区的唯一 DispatchStore 与指定主 canonical 读取端口，不为查询 open/init/recover，不创建模型、执行器或业务名额。桌面与真实主工具共用同一 CommandVerificationService；当前模型配置、岗位或知识变化不代替原提交证明。停止/关闭使未完成查询不可交付，但不会改写原事务；原回执通过白名单投影后才跨 IPC。
+
+影响观察装配唯一 Store、原主/成员 canonical、安全文件只读端口和短只读占用；不加载模型、不发 HTTP、不触碰 native。明确处置只来自桌面提交，后续核实/修复启动沿既有 Manager 意图和权限门禁；原命令重查优先于重新读取文件。Main 不把今天的文件哈希、控制面提交或用户处置当作原工具成功与业务验收。

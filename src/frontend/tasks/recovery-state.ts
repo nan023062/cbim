@@ -1,12 +1,12 @@
 /**
  * 作用定位：保存用户从异常报告新建只读核实周期的草稿、冻结命令和受理回执。
- * 设计原因：新周期不是恢复旧运行；先持久化再发送，首次容量拒绝可编辑，曾未知结果仍只查原命令。再次核实须确认旧周期关闭并保留历史，保存失败不解锁，报告版本不参与来源键。
+ * 设计原因：新周期不是恢复旧运行；严格区分真实主/成员来源并保留旧无 kind 协议。先持久化再发送，处置引用随命令冻结；未知结果只查原命令，报告版本不参与来源键。
  */
-import {recoveryRequestSchema,recoveryReceiptSchema} from '../../bridge/contracts/dispatch';
-import type {RecoveryRequest,RecoveryLookup,RecoveryReceipt} from '../../bridge/contracts/dispatch';
+import {recoveryRequestSchema,recoveryReceiptSchema,recoverySourceSelectionSchema,recoverySourceKey,recoveryRequestSource} from '../../bridge/contracts/dispatch';
+import type {RecoveryRequest,RecoveryLookup,RecoveryReceipt,RecoverySourceSelection} from '../../bridge/contracts/dispatch';
 
-export type RecoverySource=Omit<RecoveryRequest['source'],'reportBasis'>;
-export type RecoveryTarget=Pick<RecoveryRequest,'workspaceId'|'rootSessionId'|'source'>;
+export type RecoverySource=RecoverySourceSelection;
+export type RecoveryTarget=Pick<RecoveryRequest,'workspaceId'|'rootSessionId'|'source'|'dispositionId'>;
 export interface RecoveryAttempt {
   /** 保存时即固定正文、核实依据与只读模型设置；后续界面选择不能改写在途请求。 */
   request:RecoveryRequest;phase:'submitting'|'unknown'|'accepted'|'rejected';uncertain:boolean;
@@ -22,8 +22,12 @@ export interface RecoveryPorts {
   uuid:()=>string;
 }
 /** 报告更新不改变草稿归属；workspace/root 由外层控制器固定，不与目标补充的 waitId 混用。 */
-export const recoverySourceKey=(source:RecoverySource)=>JSON.stringify([source.scopeId,source.taskId,source.runId]);
-const sourceIdentity=(source:RecoverySource):RecoverySource=>({scopeId:source.scopeId,taskId:source.taskId,...(source.runId?{runId:source.runId}:{})});
+export {recoverySourceKey};
+const sourceIdentity=(source:RecoverySource):RecoverySource=>{
+  // 旧调用方可传带 reportBasis 的目标；草稿身份明确剔除此易变字段，其余字段仍严格验证。
+  if('reportBasis' in source){const {reportBasis:_,...selection}=source;return recoverySourceSelectionSchema.parse(selection)}
+  return recoverySourceSelectionSchema.parse(source);
+};
 const textError=(error:unknown)=>error instanceof Error?error.message:String(error);
 const sameOptions=(a:RecoveryRequest['options'],b:RecoveryRequest['options'])=>a.provider===b.provider&&a.model===b.model&&a.profileId===b.profileId&&a.permission===b.permission&&a.turnTimeoutMs===b.turnTimeoutMs;
 /** 上限只拒绝新增保存，不淘汰旧请求；实际浏览器配额不足也须保留原锁定状态。 */
@@ -36,7 +40,7 @@ export function recoveryRejected(error:unknown){return /^(?:CAPACITY_BUSY|RECOVE
 /** 回执需匹配原始命令及内容，新周期和新运行不能借用来源身份；受理不等于正在运行。 */
 export function checkedRecoveryReceipt(raw:unknown,request:RecoveryRequest,previous?:RecoveryReceipt):RecoveryReceipt{
   const receipt=recoveryReceiptSchema.parse(raw),value=receipt.recovery;
-  if(receipt.workspaceId!==request.workspaceId||receipt.rootSessionId!==request.rootSessionId||receipt.scopeId!==request.commandId||receipt.scopeId===request.source.scopeId||value.recoveryId!==request.commandId||recoverySourceKey(value.source)!==recoverySourceKey(request.source)||value.source.reportBasis!==request.source.reportBasis||value.operation!==request.operation||value.observation.text!==request.observation.text||value.input.message!==request.input.message||!sameOptions(value.options,request.options)||value.runId===request.source.runId)throw Error('核实任务回执与冻结请求不一致，请查询原命令');
+  if(receipt.workspaceId!==request.workspaceId||receipt.rootSessionId!==request.rootSessionId||receipt.scopeId!==request.commandId||receipt.scopeId===value.source.scopeId||value.recoveryId!==request.commandId||JSON.stringify(recoveryRequestSource(value.source))!==JSON.stringify(recoveryRequestSchema.shape.source.parse(request.source))||value.dispositionId!==request.dispositionId||value.operation!==request.operation||value.observation.text!==request.observation.text||value.input.message!==request.input.message||!sameOptions(value.options,request.options)||value.runId===request.source.runId)throw Error('核实任务回执与冻结请求不一致，请查询原命令');
   // 受理事实不可改写；后续查询仅允许周期状态演进，不能把同命令指向另一个启动运行或来源版本。
   if(previous&&(JSON.stringify(value)!==JSON.stringify(previous.recovery)||previous.scopeStatus==='closed'&&receipt.scopeStatus!=='closed'))throw Error('同一核实命令的受理事实发生冲突，保留原回执');
   return receipt;
@@ -68,7 +72,7 @@ export class ExecutionRecoveryController {
         return {request,phase:unresolved?'unknown':raw.phase,uncertain:unresolved||!!raw.uncertain,receipt,error:typeof raw.error==='string'?raw.error:undefined};
       };
       const records:RecoveryDraft[]=saved.records.map((entry:any)=>{
-        const source=recoveryRequestSchema.shape.source.omit({reportBasis:true}).parse(entry.source);
+        const source=recoverySourceSelectionSchema.parse(entry.source);
         if(typeof entry.observation!=='string'||typeof entry.message!=='string'||entry.observation.length>64000||entry.message.length>64000)throw Error('本地核实草稿无效');
         const key=recoverySourceKey(source);if(keys.has(key))throw Error('本地核实来源重复');keys.add(key);
         if(entry.history!==undefined&&!Array.isArray(entry.history))throw Error('本地核实历史格式不匹配');

@@ -1,0 +1,12 @@
+/* 原异常、当前观察与本机处置分段展示；窄栏自然折行，不用颜色暗示已经验收。 */
+.effect-observation{color:var(--text);border:1px solid var(--border);border-radius:10px;padding:14px;margin:12px 0;min-width:0;font-size:13px;line-height:1.55}
+.effect-observation header,.effect-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.effect-observation p{margin:8px 0}.effect-observation code{display:inline-block;max-width:100%;overflow-wrap:anywhere;white-space:normal;font-size:11px}
+.effect-observation button{color:var(--text);font-size:12px}.effect-observation [role=alert]{color:var(--danger)}
+.effect-muted,.effect-observation small{color:var(--muted)}
+.effect-call,.effect-disposition-form,.effect-disposition-summary,.effect-observation [data-testid=effect-relations] article{border-top:1px solid var(--border);padding:10px 0;margin-top:8px}
+.effect-disposition-form label{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.effect-disposition-form textarea,.effect-disposition-form select{width:100%;min-width:0;box-sizing:border-box}.effect-disposition-form textarea{min-height:70px;resize:vertical}
+.effect-actions{justify-content:flex-start;margin-top:12px}.effect-observation [data-testid=effect-history]{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.effect-member-select details>label{display:flex;gap:6px;align-items:flex-start;overflow-wrap:anywhere;margin:7px 0}
+.effect-observation .execution-recovery{margin-top:12px}.effect-observation details{min-width:0}.effect-observation ul{padding-left:20px}

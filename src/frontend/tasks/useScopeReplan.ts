@@ -1,9 +1,14 @@
 /**
  * 作用定位：在主会话装配独立业务重规划控制器，把同一草稿与核验结果交给对话目标卡和任务根。
  * 设计原因：入口只接受本会话最后提交且已完成的核实周期，准入同时取整个 root 的真实开放状态；旧证据不能跨后续业务周期沿用，新业务权限独立选择。
+ * 新影响来源：复用共享处置控制器的明确选择；主来源不虚构 taskId，缺少修复处置时不能提交新业务。
  */
 import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import type {ReplanRequest} from '../../bridge/contracts/dispatch';
+import {recoveryRequestSource,recoverySourceSelection} from '../../bridge/contracts/dispatch';
+import type {EffectObservationInput} from '../../bridge/contracts/effect-observation';
+import {effectController} from './useEffectObservation';
+import {effectObservationAnchor} from './effect-recovery-state';
 import type {ScopeGoalState} from './scope-state';
 import {ScopeReplanPool,type ReplanDraft,type ReplanPreviewState,type ReplanTarget} from './replan-state';
 
@@ -14,6 +19,8 @@ export interface ScopeReplanView {
   visible:boolean;inspectionScopeId?:string;record?:ReplanDraft;message:string;permission:'ask'|'execute';
   previewState?:ReplanPreviewState;editable:boolean;canPreview:boolean;canSubmit:boolean;pending:boolean;
   error:string;reason:string;modelLabel:string;
+  /** 新协议来源须明确保存并选择修复处置；旧无 kind 的核实记录继续沿原协议。 */
+  effectSource?:EffectObservationInput;effectAnchor?:string;dispositionId?:string;
   edit:(message:string,permission:'ask'|'execute')=>void;
   preview:()=>Promise<void>;submit:()=>Promise<void>;query:()=>Promise<void>;retry:()=>Promise<void>;showCreated:()=>void;
 }
@@ -41,10 +48,15 @@ export function useScopeReplan(workspaceId:string,rootSessionId:string|undefined
     preview:input=>window.cbim.call('dispatch.replans.preview',input),submit:request=>window.cbim.call('loop.replanStart',request),lookup:input=>window.cbim.call('loop.replanReceipt',input),uuid:()=>crypto.randomUUID(),
   }):undefined,[workspaceId,rootSessionId]);
   const [,changed]=useState(0);
+  const effects=useMemo(()=>rootSessionId?effectController(workspaceId,rootSessionId):undefined,[workspaceId,rootSessionId]);
+  useEffect(()=>effects?.subscribe(()=>changed(value=>value+1)),[effects]);
   useEffect(()=>{if(!controller)return;const unsubscribe=controller.subscribe(()=>changed(value=>value+1));void controller.restore().then(()=>{if(rootRef.current===rootKey)refreshRef.current()});return()=>{unsubscribe();controller.observeTarget(undefined)}},[controller,rootKey]);
-  const eligibility=replanTarget(workspaceId,rootSessionId,state,JSON.stringify(model?.options)),target=eligibility.target;
+  const oldSource=state.selectedScope?.recovery?.source,selection=oldSource?recoverySourceSelection(recoveryRequestSource(oldSource)):undefined;
+  const effectSource:EffectObservationInput|undefined=rootSessionId&&selection&&'kind' in selection?{workspaceId,rootSessionId,subject:selection}:undefined;
+  const disposition=effectSource?effects?.selected(effectSource):undefined,dispositionId=disposition?.request.decision==='repair_in_new_cycle'?disposition.dispositionId:undefined;
+  const eligibility=replanTarget(workspaceId,rootSessionId,state,JSON.stringify(model?.options)),target=eligibility.target?{...eligibility.target,...(dispositionId?{dispositionId}:{})}:undefined;
   // 布局提交时先作废旧来源/版本；即使请求在切换窗口后返回，也不能启用另一来源的提交按钮。
-  useLayoutEffect(()=>controller?.observeTarget(target),[controller,target?.anchor,target?.inspectionScopeId]);
+  useLayoutEffect(()=>controller?.observeTarget(target),[controller,target?.anchor,target?.inspectionScopeId,target?.dispositionId]);
   const source=state.selectedScopeId,record=source?controller?.record(source):undefined,attempt=record?.attempt;
   const pending=controller?.isPending(record)??false,editable=!!target&&!!controller?.available&&!pending&&(!attempt||attempt.phase==='rejected');
   const summary=state.scopes.find(item=>item.scopeId===source),observedPreview=controller?.snapshot.preview,previewState=observedPreview?.target.inspectionScopeId===source?observedPreview:undefined;
@@ -52,10 +64,11 @@ export function useScopeReplan(workspaceId:string,rootSessionId:string|undefined
   const after=async(work:()=>Promise<void>)=>{await work();if(rootRef.current===rootKey)refreshRef.current()};
   return {
     visible:Boolean(record||summary?.origin==='inspection'&&summary.status==='closed'&&summary.outcome==='completed'),inspectionScopeId:source,record,message:record?.message??'',permission:record?.permission??'ask',previewState,editable,
-    canPreview:editable&&!previewState?.loading,canSubmit:editable&&!!record?.message.trim()&&!!model&&!!fresh,pending,error:controller?.snapshot.error??'',reason:eligibility.reason,modelLabel,
+    canPreview:editable&&!previewState?.loading,canSubmit:editable&&!!record?.message.trim()&&!!model&&!!fresh&&(!effectSource||!!dispositionId),pending,error:controller?.snapshot.error??'',reason:eligibility.reason||(effectSource&&!dispositionId?'请核实原调用影响，并明确选择一条“新业务修复”处置。':''),modelLabel,
+    effectSource,effectAnchor:effectObservationAnchor(state),dispositionId,
     edit:(message,permission)=>{if(editable&&source)controller!.edit(source,message,permission)},
     preview:()=>after(async()=>{if(editable&&target)await controller!.preview(target)}),
-    submit:()=>after(async()=>{if(editable&&target&&model)await controller!.submit(target,model.options)}),
+    submit:()=>after(async()=>{if(editable&&target&&model&&(!effectSource||dispositionId))await controller!.submit(target,model.options)}),
     query:()=>after(async()=>{if(record)await controller!.query(record.inspectionScopeId)}),
     // 已冻结命令先由后端去重；当前已有周期或预览过期不能隐藏它的查询/原请求重试入口。
     retry:()=>after(async()=>{if(record&&attempt?.phase==='unknown')await controller!.retry(record.inspectionScopeId)}),

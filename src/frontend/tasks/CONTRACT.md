@@ -164,7 +164,7 @@
 
 模型来自主输入区的实际 profile/provider/model，权限始终固定 `read`，不取输入区可写权限，也不包含附件。显式点击 `loop.recoveryStart` 才创建新周期；报告刷新、表单展示与编辑都不启动模型。受理后只刷新同一 root 的图与历史，“查看新目标”改变查看选择，不切换主会话或清空草稿、附件、队列。
 
-`ExecutionRecoveryController` 按 workspace/root 保存独立本机 v2 索引，来源键包含 scope/task/run，不包含会变动的报告 basis。独立键 `cbim.execution-recovery.v2.*` 优先读取；不存在时可读 v1，后续保存写 v2 并保持 v1 原字节。损坏 v2 不回退旧 v1，以免隐藏新命令。发送前冻结 commandId、basis、观察、目标与模型选项；同 renderer 的池复用在途控制器。刷新报告、切换节点和重开不能隐藏未知命令并生成第二次请求。未知结果只查询 `loop.recoveryReceipt` 或原命令原正文重试；查询 undefined 仍为未知，一旦通信不确定，后续拒绝也不能解冻改发。仅首次明确预受理拒绝可保留草稿修正；持久化失败不发送，损坏本地记录不自动覆盖。
+`ExecutionRecoveryController` 按 workspace/root 保存独立本机 v2 索引，旧来源键包含 scope/task/run；新来源键区分 main_run/member_run、原 run 和调用顺序，均不包含会变动的报告 basis。独立键 `cbim.execution-recovery.v2.*` 优先读取；不存在时可读 v1，后续保存写 v2 并保持 v1 原字节。损坏 v2 不回退旧 v1，以免隐藏新命令。发送前冻结 commandId、basis、观察、目标与模型选项；同 renderer 的池复用在途控制器。刷新报告、切换节点和重开不能隐藏未知命令并生成第二次请求。未知结果只查询 `loop.recoveryReceipt` 或原命令原正文重试；查询 undefined 仍为未知，一旦通信不确定，后续拒绝也不能解冻改发。仅首次明确预受理拒绝可保留草稿修正；持久化失败不发送，损坏本地记录不自动覆盖。
 
 回执通过 Bridge Schema 后仍核对 workspace/root/command、source+basis、operation、观察、目标和 options；新 scopeId 必须等于稳定 commandId，且新 scope/run 不能借用来源。受理后 recovery 事实保持不可变，只允许周期状态演进，closed 不能回退为开放。矛盾查询保留原回执并提示错误。`accepted` 仅表示创建意图受理，不能当作正在运行或核实通过。未知请求的同 ID 查询/重试不套用首次提交的“当前空闲/报告新鲜”条件，后端先去重再决定是否需要执行。
 
@@ -305,3 +305,34 @@ GraphLayout --> GraphContract : 真实节点与连线
 任务详情和目标计划显示原派发时保存的岗位身份、能力采纳、模型与模块责任版本，不按当前同名 Agent 猜测岗位，也不把当前岗位名称覆盖原记录。只读当前配置核实须显式点击；响应核原任务身份与绑定，切换任务隔离迟到响应，读取一致不表示已获执行许可。
 
 无绑定旧记录按状态解释：旧待办与未消费检查点提示重新规划，旧在途仍只报告原运行，旧候选保持历史身份。显示不自动补绑、换人、采纳、领取或重放。普通消息、草稿、审批与主模型选择不因核实操作改变。接口、类图和验证随本片实现同步。
+
+## 原调用影响与明确处置
+
+EffectObservationPanel 同时用于真实主工具记录与成员报告选择的调用。界面只传 workspace/root 和严格 main_run/member_run 来源，不传路径或可信 scope；原结果、当前文件观察、原控制面提交、明确处置和新任务结果分段展示。覆盖值保留 control_commit_only / selected_files_now / unsupported，不把原 unknown 显示为成功。当前 hash 不是原成功基线；没有 before 正文不提供回滚。
+
+EffectObservationController 按主会话共享稳定请求，报告只在内存；挂载、订阅、重开和普通轮询均不读取报告或创建任务。显式观察/列表/历史选择/关系查询分别读取。来源及调用顺序严格核对；读取失败保留旧报告，日志或图版本变化只使依据过期；同来源历史查询按最后点击选择生效，迟到回包只保存原事实。
+
+主工具、成员详情和重规划面板统一以根任务图游标及各周期的真实 stamp 判断时效，不把当前页签或选中周期当作原来源版本，隐藏面板不使另一面板永久过期。切换处置清除上一条的关联显示，历史查询失败在该来源明确提示且保留已有真实记录。`SessionReadProjection` 和 `useSessionGraph` 只持有 `PublicDispatchScope`；新恢复来源从实际 `sessionRead` 白名单取得，不依赖前端臆造完整存储对象。
+
+处置正文与决定在本机独立索引 cbim.effect-dispositions.v1 保存，发送前固定 commandId、basis、root附录版本和原选择。已知事务前 EFFECT_PREACCEPT_* 拒绝可重新核实/编辑；事务CAS、IO与丢回包均保持unknown且只查询原命令，不自动重发、不换ID。上限64条、2MiB并为未决回执预留空间；配额不足不发请求，坏索引不覆盖，已保存处置不可更改。actor只表示本机明确操作，不是账户签名或业务验收。
+
+继续核实必须选择 inspect_more 处置和匹配的当前观察，再沿 useRecoverySource / ExecutionRecoveryController 创建独立只读周期。主来源不伪造TaskNode，缺可信closed原scope仅展示诊断。旧无kind成员来源保持原协议与键；新kind来源不补字段到旧journal。新recovery回执同时核原来源、处置ID和新运行；原scope/run不得复用。
+
+ScopeReplanForm 对新来源显式显示原调用影响入口；用户保存或选择 repair_in_new_cycle 处置后才能创建新业务目标，选项变化使旧预览失效。处置ID随请求/回执固定；完整来源、知识、模块、人工约束与当前负责人仍由既有后端门禁核验。无原计划主来源可以只读调查，不能凭处置声明获得业务修复资格。关系查询只跳转实际新周期，新完成不反写原工具状态。
+
+```mermaid
+classDiagram
+class EffectObservationPanel { <<component>> }
+class EffectObservationController { <<module>> }
+class EffectRecoveryTarget { <<module>> }
+class UseRecoverySource { <<module>> }
+class ExecutionRecoveryController { <<module>> }
+class ScopeReplanForm { <<component>> }
+class UseScopeReplan { <<module>> }
+EffectObservationPanel --> EffectObservationController : 显式观察与稳定处置
+EffectObservationPanel --> EffectRecoveryTarget : 真实主或成员来源
+EffectObservationPanel --> UseRecoverySource : 独立只读核实
+UseRecoverySource --> ExecutionRecoveryController : 冻结来源与处置引用
+ScopeReplanForm --> EffectObservationPanel : 显式修复决定
+UseScopeReplan --> EffectObservationController : 明确选定的原处置
+```

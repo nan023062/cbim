@@ -1,9 +1,10 @@
 /**
  * 作用定位：按主对话 taskId 同步派发图、目标摘要和选中详情，为主对话和任务图提供同一投影与历史选择。
  * 设计原因：两条独立增量流在同一读取屏障返回；详情 stamp 避免反复传输大正文，选择历史不改变当前执行状态，后台降频及作用域令牌防止串会话。
+ * 公共边界：选中详情使用显式公共周期类型；恢复来源可以展示，私有 context/native 隔离字段不进入 renderer。
  */
 import {useCallback,useEffect,useRef,useState} from 'react';
-import type {DispatchSessionRead,GraphSnapshot,ScopeSummary,DispatchScope} from '../../bridge/contracts/dispatch';
+import type {DispatchSessionRead,GraphSnapshot,ScopeSummary,PublicDispatchScope} from '../../bridge/contracts/dispatch';
 import {SessionReadProjection,completeSessionRead,currentScope,scopeGoalView,type ScopeGoalState} from './scope-state';
 
 /**
@@ -12,7 +13,7 @@ import {SessionReadProjection,completeSessionRead,currentScope,scopeGoalView,typ
  */
 export function useSessionGraph(workspaceId:string,rootSessionId?:string,active=true):ScopeGoalState&{refresh:()=>void}{
   const scope=JSON.stringify([workspaceId,rootSessionId]);
-  const [state,setState]=useState<{scope:string;graph?:GraphSnapshot;scopes:readonly ScopeSummary[];detail?:DispatchScope;loading:boolean;error:string}>({scope,scopes:[],loading:!!rootSessionId,error:''});
+  const [state,setState]=useState<{scope:string;graph?:GraphSnapshot;scopes:readonly ScopeSummary[];detail?:PublicDispatchScope;loading:boolean;error:string}>({scope,scopes:[],loading:!!rootSessionId,error:''});
   const [selection,setSelection]=useState<{scope:string;id?:string}>({scope});
   const selectionRef=useRef<string|undefined>(undefined);selectionRef.current=selection.scope===scope?selection.id:undefined;
   const activeRef=useRef(active);activeRef.current=active;

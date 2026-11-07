@@ -580,3 +580,13 @@ Store 继续用同一串行提交、原命令回执和原协议裁决，不增�
 `DispatchStore.commandEvidence` 是内部只读端口，保留原 fingerprint/receipt 并提供原提交序号、校验值、执行协议及图的真实前态根版本/游标；这些内部值必须先严格核原输入与绑定再公开投影。原 `commandReceipt` 形状不变。命令算法与原 parsed 指纹由 Scheduler 的唯一适配器维护；工具协议版本与 Store 执行协议不是一回事。
 
 `command-verification-output.ts` 仅供后端：原回执先按既有主输出 Schema 核输入/身份/版本，并拒绝解析产生的 trim/默认化，再生成八支紧凑摘要。任务列表最多 20 项，明确 total/truncated，完整原集合不能先裁剪再核；公开报告最多 20 条 issue、128 KiB wire，业务验收固定 not_evaluated。Bridge 仅导 `command-verification.ts` 叶子，不能把后端回执读取或原私有上下文导入浏览器。
+
+## 影响观察与处置附录（Step36 Core 协议）
+
+`effect-observation.ts` 分开原主/成员调用、当前文件观察、原提交事实及本机处置；所有公开对象 strict，不接受客户端 scope、参数、文件 hash 或 actor 作为证明。新 source/proof 的 kind 明确区分主与成员；旧无 kind 分支原样读取，不默认升级、不重新编码原 journal。主来源不能借成员任务版本，缺原可信计划只允许只读核实，不签发业务重规划资格。
+
+`effect-observation-rules.ts` 是观察 basis 与处置命令唯一后端算法。新报告先经 strict Schema 固定字段次序，basis 排除 checkedAt 和独立 dispositionRevision；提交仍严格比较 root head，不拿该新算法重算任何旧命令。处置只保存当时观察、限制和本机明确选择，不清 unknown，不作为交付或人工验收证据。首次支持 16 调用/文件、每文件 8 MiB、按路径去重后的读取合计 32 MiB，公开报告 128 KiB；root 64 条、工作区 512 条及 16 MiB 历史上限，达到上限拒新增而不删除旧证据。列表每条理由只展示最多 512 字符并以 reasonTruncated 标明缩略，完整理由保留在原回执。
+
+`effect-observation-invariants.ts` 只允许原周期关闭后的单条独立 append，核原命令指纹、回执、来源版本和观察 hash，禁止混入 scope/图/运行或其它领域写入。新 recovery/replan 创建时仅引用已保存且同源的明确处置；已有意图不可回填。recovery 对应 inspect_more，replan 对应 repair_in_new_cycle，均重核精确 basis 和调用集合；原只读权限、模块覆盖、人工标准及当前负责人执行门禁继续生效。服务取证、界面和最终验收进度以本片正式记录为准。
+
+`scope-public.ts` 是主工具与 `dispatch.sessionRead` 选中详情共用的纯公开白名单；`PublicDispatchScope` 明确区别于私有持久 `DispatchScope`。公开详情保留原 `recovery.source`、`replan.source.proof`、权限、人工约束与可选 `dispositionId`，剔除两类 `context` 及其原生身份/旧运行排除集合，旧未配置字段继续缺省。`readScopeDetail` 在真实同一 Store 读取屏障上校验公开 Schema，再独立复制；stamp 相同仍返回 noop。主工具复用同一基础 Schema，另加后端身份/哈希语义核验，浏览器不引入 Node 哈希实现。前端只持有公开类型，不能据来源投影推断新的恢复许可或业务验收。

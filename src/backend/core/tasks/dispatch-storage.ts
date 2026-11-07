@@ -12,6 +12,7 @@ import type {MemberResumeFrom} from './member-checkpoint';
 import type {WorkspaceMember,WorkspaceMemberChange,WorkspaceRegistryCursor} from '../team/workspace-member';
 import type {ModuleOwnership,ModuleOwnershipChange,ModuleOwnershipCursor} from '../workspace/module-ownership';
 import type {KnowledgeSourceGeneration,KnowledgeSourceTransition,KnowledgeSourceChange,KnowledgeSourceCursor} from '../workspace/knowledge-source';
+import type {EffectDispositionRecord} from './effect-observation';
 
 /** 信封身份固定；claim 记录领取时的 run 与租约代际，消费后保留用于审计。 */
 export interface DispatchMessageBase {
@@ -59,6 +60,8 @@ export interface DispatchState {
   knowledgeSourceTransitions?:KnowledgeSourceTransition[];
   knowledgeSourceChanges?:KnowledgeSourceChange[];
   sourceCursor?:KnowledgeSourceCursor|null;
+  /** 影响处置只追加当时观察；旧缺省不补数组，不改变原任务/周期或未知工具事实。 */
+  effectDispositions?:EffectDispositionRecord[];
 }
 
 /** 幂等键由可信入口产生；fingerprint 是包括调用者在内的规范化输入摘要。 */
@@ -83,6 +86,8 @@ export interface DispatchCommandEvidence {
 
 /** 一个命令的完整提交单元；可选数组按对象 ID 写入完整新记录，省略不改变集合，重复 ID 须拒绝。 */
 export interface DispatchMutation<T = unknown> {
+  /** 一次只追加一个本机处置及回执，不与任何执行或其它领域事务混写。 */
+  effectDispositions?:EffectDispositionRecord[];
   members?: AgentInstance[];
   sessions?: AgentSessionBinding[];
   batch?: GraphEventBatch;

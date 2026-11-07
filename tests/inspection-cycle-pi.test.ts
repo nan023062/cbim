@@ -51,7 +51,7 @@ it.each(['complete-restart','stop','again'] as const)('starts a new read-only Pi
         const firstLog=path.join(f.user,entry.id,'loop-engine','tasks',started.taskId,receipt.recovery.runId,'events.jsonl'),firstBytes=await fs.readFile(firstLog,'utf8');
         const freshReport=await app.dispatch('dispatch.executionReport',query),next:RecoveryRequest={...req,commandId:randomUUID(),source:{...req.source,reportBasis:freshReport.basis.key}};
         provider.releaseFresh();const nextReceipt=await app.dispatch('loop.recoveryStart',next) as RecoveryReceipt;repeated={request:next,receipt:nextReceipt};
-        expect(nextReceipt.scopeId).not.toBe(receipt.scopeId);expect(nextReceipt.recovery.runId).not.toBe(receipt.recovery.runId);expect(nextReceipt.recovery.source.taskId).toBe(oldTask.taskId);
+        expect(nextReceipt.scopeId).not.toBe(receipt.scopeId);expect(nextReceipt.recovery.runId).not.toBe(receipt.recovery.runId);expect('kind' in nextReceipt.recovery.source).toBe(false);if('kind' in nextReceipt.recovery.source)throw Error('旧请求不可自动升级来源协议');expect(nextReceipt.recovery.source.taskId).toBe(oldTask.taskId);
         await vi.waitFor(async()=>{expect((await scopes())[2]).toMatchObject({status:'closed',outcome:'completed'});expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:30000,interval:30});
         const second=(await scopes())[2],after=await graph(),newTask=after.tasks.find(task=>task.scopeId===second.scopeId)!;
         expect((await scopes()).slice(0,2)).toEqual([oldScope,firstClosed]);expect(await fs.readFile(firstLog,'utf8')).toBe(firstBytes);expect(after.root.agent).toEqual(originalGraph.root.agent);

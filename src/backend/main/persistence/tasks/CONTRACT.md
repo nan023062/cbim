@@ -172,3 +172,6 @@ prepared/resolved 为来源独立事务，原 journal 指纹属于内部可信�
 `commandEvidence` 只从原 commands 索引派生事实：实时提交可靠 fsync 后、历史重放完成原校验后，用同一 publish 路径保存提交前 graph.root.revision 和前后图游标。无前图不补默认版本；旧 journal 不改格式或字节，也不保存第二账本。查询等待现有提交屏障返回隔离副本，不能调用 prepare/transact 或再扫描日志。
 
 原 `commandReceipt` 仍只含 fingerprint/receipt；新增证据不自动扩散给旧消费者。IO 未确认或损坏不能返回 absent。应用报告只接已打开且初始化完成的工作区，不以查询触发 open/init/recover；内部完整回执不可直接返回 UI/模型。
+# 影响处置附录（Step36 协议实施中）
+
+FileDispatchStore 在原 journal 的完整校验与 durable publish 中投影 effectDispositions；旧缺省保持缺省。单次只有一条处置和它的严格回执，不能混入 graph/scopes/runs/登记审计；原 commandReceipt/commandEvidence 继续负责幂等和只读查询。记录不创建运行、推进图或周期游标，不重读今天文件来改判旧决定。写入失败沿原存储封闭规则处理，重开只核原帧；不增加第二份恢复账本。中文接口与实际字段随 Core 契约同步，整体功能验收由正式步骤记录。

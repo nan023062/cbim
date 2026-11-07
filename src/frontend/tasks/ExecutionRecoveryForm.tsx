@@ -1,6 +1,6 @@
 /**
  * 作用定位：异常执行报告后的显式新周期入口，将用户观察与新的只读核实目标分开呈现。
- * 设计原因：观察不是对旧结果的更正或人工批准；只有确认旧核实周期关闭并完整归档后才能准备新草稿。报告清空时仍保留表单和历史，未知结果只能查询原请求。
+ * 设计原因：观察不是对旧结果的更正或人工批准；主来源只显示真实运行，不伪造任务节点。处置引用随新周期固定，旧请求、历史和未知结果仍保留。
  */
 import type {ExecutionRecoveryView} from './useExecutionRecovery';
 
@@ -28,7 +28,7 @@ export function ExecutionRecoveryForm({state}:{state:ExecutionRecoveryView}){
       {phase==='accepted'&&attempt?.receipt?.scopeStatus==='closed'&&<button data-testid="execution-recovery-prepare" disabled={!state.canPrepare} onClick={()=>void state.prepare()}>准备再次核实</button>}
     </div>
     {phase==='accepted'&&attempt?.receipt?.scopeStatus==='closed'&&<p className="member-muted">再次核实会先确认此周期已结束并保存原请求。准备后须重新核实来源报告，再明确提交新任务。{!state.canPrepare&&!state.pending&&state.reason&&' '+state.reason}</p>}
-    {attempt&&<details><summary>请求与来源标识</summary><p>命令 <code>{attempt.request.commandId}</code></p><p>来源任务 <code>{attempt.request.source.taskId}</code></p><p>原报告依据 <code>{attempt.request.source.reportBasis}</code></p></details>}
+    {attempt&&<details><summary>请求与来源标识</summary><p>命令 <code>{attempt.request.commandId}</code></p>{'taskId' in attempt.request.source&&<p>来源任务 <code>{attempt.request.source.taskId}</code></p>}<p>原运行 <code>{attempt.request.source.runId??'未开始'}</code></p><p>原报告依据 <code>{attempt.request.source.reportBasis}</code></p>{attempt.request.dispositionId&&<p>关联处置 <code>{attempt.request.dispositionId}</code></p>}</details>}
     {!!state.record?.history?.length&&<details className="execution-recovery-history" data-testid="execution-recovery-history"><summary>已保存的核实历史（{state.record.history.length}）</summary>{state.record.history.map(item=><article data-testid="execution-recovery-history-item" key={item.request.commandId}><p>已受理 · 周期已结束</p><p>命令 <code>{item.request.commandId}</code></p><p>核实目标：{item.request.input.message}</p><p>用户观察：{item.request.observation.text}</p><p>目标周期 <code>{item.receipt.scopeId}</code> · 运行 <code>{item.receipt.recovery.runId}</code></p><p>来源依据 <code>{item.request.source.reportBasis}</code></p></article>)}</details>}
   </section>;
 }

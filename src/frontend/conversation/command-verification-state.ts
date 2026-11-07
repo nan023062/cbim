@@ -1,6 +1,7 @@
 /**
  * 作用定位：保存一次原主工具调用的显式核实状态，校验报告身份并隔离迟到的异步响应。
  * 设计原因：工具失败与事务已保存可能同时成立；查询不得自动重试执行、清除未确认项或随轮询反复回读。读取失败保留旧报告并提示其时效。
+ * 来源边界：旧或不完整轨道缺少 task 时只保留原展示，不创建核实入口，也不把角色名当成完整主会话身份。
  */
 import {commandVerificationInputSchema,commandVerificationReportSchema} from '../../bridge/contracts/command-verification';
 import type {CommandVerificationInput,CommandVerificationReport} from '../../bridge/contracts/command-verification';
@@ -14,7 +15,7 @@ export const commandVerificationKey=(selection:CommandVerificationSelection)=>JS
 /** 仅真实主实例的工具轨道可装配入口；成员日志和无绑定旧日志不能按角色名推测主运行。 */
 export function mainCommandSelection(run:RunSummary,toolCallId:string,toolName:string):CommandVerificationSelection|undefined{
   const binding=run.conversationBinding,task=run.task;
-  if(task.mode!=='chat'||task.agentId!=='cbim:main'||run.memberBinding||!binding||binding.agentId!=='cbim:main'||binding.workspaceId!==task.workspaceId||binding.rootSessionId!==task.taskId)return;
+  if(!task||task.mode!=='chat'||task.agentId!=='cbim:main'||run.memberBinding||!binding||binding.agentId!=='cbim:main'||binding.workspaceId!==task.workspaceId||binding.rootSessionId!==task.taskId)return;
   const parsed=commandVerificationInputSchema.safeParse({workspaceId:task.workspaceId,rootSessionId:binding.rootSessionId,runId:run.runId,toolCallId});
   return parsed.success?{...parsed.data,expectedToolName:toolName}:undefined;
 }

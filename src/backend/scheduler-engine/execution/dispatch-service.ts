@@ -5,6 +5,7 @@
  * 关闭边界：普通无计划聊天与纯负责人控制面不强造业务计划，但仍核活动输入和真实工具终态；已有业务计划或派发必须审阅，未知输入只可失败或取消封存。
  * 交接边界：检查点放弃独立核原历史，IO 后短事务取消旧待办，不要求今日岗位仍可执行，也不改原运行或恢复证明。
  * 查询边界：原主命令报告只读本工作区已初始化 Store 与 canonical；不借查询进入事务、打开工作区或重新判断旧命令的当前执行资格。
+ * 影响边界：主/成员原调用观察、明确处置附录及后续核实/修复引用共用唯一 Store；观察端口不包含模型或 native 恢复能力。
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
@@ -12,6 +13,7 @@ import {fail} from '../../core/foundation/errors';
 import {hash,json} from '../../core/foundation/serialization';
 import {dispatchCommand} from './main-command-request';
 import {CommandVerificationService} from './command-verification-service';
+import {EffectObservationService,type EffectObservationPorts} from './effect-observation-service';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {Snapshot} from '../../core/knowledge/types';
 import type {ConversationAgentBinding} from '../../core/brain/conversation-binding';
@@ -68,6 +70,8 @@ export class WorkspaceDispatchService {
   readonly recoveries:ScopeRecoveryService;
   /** 独立业务新周期；来源必须是完整完成的只读核实，不放宽 recoveries 的只读边界。 */
   readonly replans:ScopeReplanService;
+  /** 原调用影响与本机处置；仅当前字节和新周期关联，不修改原 unknown。 */
+  readonly effects:EffectObservationService;
   /** 本机显式人工决定只追加等待周期记录，不消费等待、修改候选或授予运行许可。 */
   readonly humanDecisions:ScopeHumanDecisionService;
   /** 按已保存决定独立消费等待；普通文本补充不进入此来源。 */
@@ -81,22 +85,23 @@ export class WorkspaceDispatchService {
   private readonly queuedDependencyAddition:QueuedDependencyAdditionService;
   private readonly checkpointAbandonment:CheckpointAbandonmentService;
   private readonly commandVerification:CommandVerificationService;
-  constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts,budgetPolicy?:()=>ScopeBudgetPolicy,humanPorts?:HumanDecisionPorts,modelPorts?:OwnerExecutionModelPorts,checkpointHistory?:MemberCheckpointHistoryPorts){
+  constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts,budgetPolicy?:()=>ScopeBudgetPolicy,humanPorts?:HumanDecisionPorts,modelPorts?:OwnerExecutionModelPorts,checkpointHistory?:MemberCheckpointHistoryPorts,effectPorts?:EffectObservationPorts){
     this.owners=new OwnerExecutionService(owner,store,modelPorts);
     this.goals=new ScopeGoalService(owner,store,goalPorts,humanPorts,this.owners);
     this.usage=new ScopeUsageService(owner,store,goalPorts);
     this.budgets=new ScopeBudgetService(this.usage,budgetPolicy);
     this.continuations=new ScopeContinuationService(owner,store,this.budgets);
     this.activeInputs=new ScopeActiveInputService(owner,store);
-    this.recoveries=new ScopeRecoveryService(owner,store,goalPorts,this.budgets);
-    this.replans=new ScopeReplanService(owner,store,this.goals,goalPorts,this.budgets);
+    this.commandVerification=new CommandVerificationService(owner,store,goalPorts?.inspectMain?{inspectMain:goalPorts.inspectMain}:undefined);
+    this.effects=new EffectObservationService(owner,store,this.commandVerification,effectPorts);
+    this.recoveries=new ScopeRecoveryService(owner,store,goalPorts,this.budgets,this.effects);
+    this.replans=new ScopeReplanService(owner,store,this.goals,goalPorts,this.budgets,this.effects);
     this.humanDecisions=new ScopeHumanDecisionService(owner,store,this.goals,goalPorts,humanPorts,()=>this.check(owner.entry.id));
     this.humanContinuations=new ScopeHumanContinuationService(owner,store,this.goals,goalPorts,humanPorts,this.budgets);
     this.queuedCancellation=new QueuedTaskCancelService(owner,store);
     this.queuedDependencyReplacement=new QueuedDependencyReplacementService(owner,store,this.goals,this.owners);
     this.queuedDependencyAddition=new QueuedDependencyAdditionService(owner,store,this.goals,this.owners);
     this.checkpointAbandonment=new CheckpointAbandonmentService(owner,store,checkpointHistory);
-    this.commandVerification=new CommandVerificationService(owner,store,goalPorts?.inspectMain?{inspectMain:goalPorts.inspectMain}:undefined);
   }
 
   /** 原任务与当前岗位观察分开返回，不刷新或领取旧待办。 */

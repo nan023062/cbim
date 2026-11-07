@@ -40,3 +40,14 @@ it('stopping or retiring the owner refuses capture; reads do not continue throug
     await expect(f.files.captureFiles(['file'],controller.signal)).rejects.toThrow('已停止');f.retire();await expect(f.files.captureFiles(['file'],new AbortController().signal)).rejects.toThrow('退役');
   }finally{await f.cleanup()}
 });
+
+it('观察没有成功基线的当前文件，零字节/缺失/超限各保留真实事实',async()=>{
+  const f=await fixture();try{
+    const signal=new AbortController().signal;await fs.writeFile(path.join(f.root,'empty'),'');await fs.writeFile(path.join(f.root,'large'),Buffer.alloc(artifactFileLimits.bytesPerFile+1));
+    const observed=await f.files.observeFiles(['empty','missing','large'],signal);
+    expect(observed[0]).toEqual({relativePath:'empty',state:'present',byteLength:0,sha256:createHash('sha256').update('').digest('hex')});expect(observed[1]).toMatchObject({relativePath:'missing',state:'missing'});expect(observed[2]).toMatchObject({relativePath:'large',state:'unverifiable'});expect(observed[2]).not.toHaveProperty('sha256');
+    expect(observed.every(file=>!('baselineId'in file)&&!('content'in file))).toBe(true);
+    await fs.writeFile(path.join(f.root,'empty'),'changed');expect((await f.files.observeFiles(['empty'],signal))[0]).toMatchObject({state:'present',byteLength:7});
+    await expect(f.files.observeFiles(['../outside'],signal)).rejects.toBeTruthy();const stopped=new AbortController();stopped.abort(Error('stop observation'));await expect(f.files.observeFiles(['empty'],stopped.signal)).rejects.toThrow('stop observation');
+  }finally{await f.cleanup()}
+});

@@ -2,6 +2,7 @@
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
  * 设计原因：工具先分类与计划门禁再审批；每轮进度绑定真实 workspace/task/run，成员专属工具另绑定完整实例。JSON 验证及交付复核各持短锁，异步读取前后核知识、计划与停止；坏回包保留事实，求助/检查点不解锁，采集/验证只随真实结束释放。
  * 插入边界：核对原 run、可信周期令牌和发送前停止信号；原生接受后返回真实日志序号，适配器不能伪造该令牌。终态等待在途记录排空，接受后的保存失败仍属未知，不自动重放。
+ * 核实边界：历史 reconciledToolIds 仅保留可读；新请求不能据裸调用 ID 续接存在 unknown 的原生上下文，必须创建独立只读核实。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -162,7 +163,7 @@ export class LoopRuntime {
         // 已绑定历史不得改换或丢失登记身份；旧未绑定历史可在明确续聊时首次绑定，不重写旧记录。
         if(previous.conversationBinding&&(!conversationBinding||Object.entries(previous.conversationBinding).some(([key,value])=>conversationBinding[key as keyof ConversationAgentBinding]!==value)))throw Error('恢复必须使用原主对话实例与通道身份');
         if(previous.task.workspaceId!==task.workspaceId||previous.task.root!==task.root||JSON.stringify(previous.task)!==JSON.stringify(task))throw Error('恢复必须使用原任务定义与工作区');
-        if(previous.unresolvedTools.some(id=>!resume.reconciledToolIds?.includes(id)))throw Error('存在结果未确认的工具操作，先核实产物再显式确认恢复');
+        if(previous.unresolvedTools.length)fail('RECOVERY_INSPECTION_REQUIRED','原运行存在未确认工具结果，请显式创建新的只读核实；勾选调用 ID 不能续接原生上下文');
         if(!previous.sessionFile)throw Error('缺少原生会话记录，不能伪装成恢复');
         // 文件位置与原生身份必须来自同一次可靠绑定；不能以逻辑 agentSessionId 或聊天 taskId 猜测旧原生 ID。
         const bound=[...previous.events].reverse().find(event=>event.type==='session.bound');

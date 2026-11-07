@@ -1,5 +1,5 @@
 /**
- * 作用定位：在固定工作区根内安全读取业务文件，供指纹采集、复核及冻结 JSON 结构验证共用。
+ * 作用定位：在固定工作区根内安全读取业务文件，供指纹采集、复核、无基线当前观察及冻结 JSON 结构验证共用。
  * 设计原因：哈希与 JSON 验证必须使用同一次句柄读取的字节；路径逐级拒绝链接/越界，句柄与路径前后核对，超限不截断作证。
  * 职责边界：不运行命令、不读取目录或知识库、不返回文件正文；外部并发修改仅尽力检测，不构成操作系统沙箱或原子快照。
  */
@@ -10,6 +10,7 @@ import {createHash} from 'node:crypto';
 import {fail} from '../../core/foundation/errors';
 import {artifactLimits,type ArtifactFileFact,type ArtifactFileCheck} from '../../core/tasks/artifact-baseline';
 import {jsonValidationLimits,validateJsonArtifact,type BoundedJsonSchema} from '../../core/workspace/json-validation-schema';
+import type {EffectFileObservation} from '../../core/tasks/effect-observation';
 
 export const artifactFileLimits={files:artifactLimits.files,bytesPerFile:artifactLimits.fileBytes,totalBytes:artifactLimits.totalBytes} as const;
 const sameFile=(a:import('node:fs').Stats,b:import('node:fs').Stats)=>a.dev===b.dev&&a.ino===b.ino&&a.size===b.size&&a.mtimeMs===b.mtimeMs&&a.ctimeMs===b.ctimeMs;
@@ -44,6 +45,20 @@ export class ArtifactFiles {
   /** 输入与输出逐项对应；重复别名也占读取额度，调用方只能在可信指纹返回后归并。 */
   async captureFiles(paths:readonly string[],signal:AbortSignal):Promise<ArtifactFileFact[]>{
     return this.readFiles(paths,signal,{readBytes:0});
+  }
+  /** 原授权路径的当前观察不要求成功基线；不存在与空文件分开，失败不读取正文或推断旧操作结果。 */
+  async observeFiles(paths:readonly string[],signal:AbortSignal):Promise<EffectFileObservation[]>{
+    if(!paths.length||paths.length>artifactFileLimits.files)fail('ARTIFACT_LIMIT','一次最多观察 16 个文件');
+    const budget={readBytes:0},result:EffectFileObservation[]=[];
+    for(const raw of paths){
+      const relativePath=normalizeArtifactPath(this.root,raw);
+      try{const {fact}=await this.readFile(relativePath,signal,budget,artifactFileLimits.bytesPerFile,false);result.push({relativePath,state:'present',byteLength:fact.byteLength,sha256:fact.sha256})}
+      catch(error){
+        this.assert();signal.throwIfAborted();const code=(error as {code?:string})?.code;
+        result.push({relativePath,state:code==='ENOENT'?'missing':'unverifiable',reason:code==='ENOENT'?'当前文件不存在':code==='ARTIFACT_CHANGED'?'读取期间文件发生变化':code==='ARTIFACT_LIMIT'?'文件超过本次观察的字节上限':'文件不能安全读取，未取得当前内容证明'});
+      }
+    }
+    return result;
   }
   /** 仅可信冻结要求调用；同一 Buffer 同时确定哈希、严格解析与验证，正文不离开平台端口。 */
   async validateFile(expected:ArtifactFileFact,schema:BoundedJsonSchema,signal:AbortSignal){

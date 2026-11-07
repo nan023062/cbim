@@ -257,3 +257,11 @@ governance.ts 仅重导 Core 严格纯协议。界面按明确工作区/实例/�
 # 原主命令核实
 
 `command-verification.ts` 只转出 Core 的严格请求、报告及固定八工具支持矩阵。桌面传原 workspace/root/run/call，scope、稳定命令与指纹由后端原记录推导；公共结果不包含 Prepared、native、私有路径或原始事务帧。`committed` 仅证明原控制面事务已保存，`absent` 不能证明未执行，报告不签发恢复或验收资格。
+
+## 异常影响与新周期关联
+
+effect-observation.ts 只重导Core的严格来源、观察、处置与关系DTO，不暴露平台文件服务或Store。五个桌面IPC分别观察、保存本机明确处置、查询原回执、读取同来源处置摘要和查询后续关系。客户端不提交actor、文件内容/路径、scope、native或证明；source始终区分真实main/member。
+
+dispatch.ts 扩展recovery来源联合及纯身份helper，旧无kind字段保持原shape；新main分支不含成员task。可选dispositionId只在新recovery/replan意图创建时固定，不能回填旧记录；公开回执对原来源、处置和独立新run作严格核对。
+
+任务详情使用 `PublicDispatchScope`，与主工具共用纯 `scope-public.ts` 白名单。它保留真实 `recovery/replan` 的公开来源和处置引用，但不含 `context`、原生会话路径或隔离清单；前端不再把这个投影声明为完整持久 `DispatchScope`。

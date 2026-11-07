@@ -1,8 +1,11 @@
 /**
  * 作用定位：已完成只读核实周期之后的正式业务新目标表单，复用于对话目标卡和任务根。
  * 设计原因：条件预览只核对真实来源、模块和继承约束；新目标及执行权限由用户另行明确提交，不能把核实完成当作旧业务验收或人工批准。
+ * 处置关联：新来源须先明确选择新业务修复处置；切换处置使预览失效，旧无关联核实仍按原协议读取。
  */
 import type {ScopeReplanView} from './useScopeReplan';
+import {EffectObservationPanel} from './EffectObservationPanel';
+import {effectSelectionKey} from './effect-observation-state';
 import './scope-replan.css';
 
 /** 纯显示组件；显示、展开及权限选择均不调用模型，只有显式提交才创建独立业务周期。 */
@@ -11,6 +14,8 @@ export function ScopeReplanForm({state}:{state:ScopeReplanView}){
   const attempt=state.record?.attempt,phase=attempt?.phase,preview=state.previewState?.result;
   return <section className="scope-replan" data-testid="scope-replan-form" data-inspection-scope={state.inspectionScopeId} data-replan-phase={state.pending?'pending':phase??'draft'}>
     <h4>新建业务任务</h4><p className="scope-goal-muted">依据这次只读核实，在当前会话创建独立业务周期。保留旧记录，由成员执行新的业务工作；不会重放旧任务或更改原核实周期的只读权限。</p>
+    {state.effectSource&&<details className="replan-effect-source" data-testid="replan-effect-source"><summary>原调用影响与修复处置{state.dispositionId?' · 已明确选择':''}</summary><p>先保存或选择“新业务修复”处置。保存不启动任务，最终创建仍须通过以下条件核验。</p><EffectObservationPanel key={effectSelectionKey(state.effectSource)} identity={state.effectSource} anchor={state.effectAnchor??''}/></details>}
+    {state.dispositionId&&<p data-testid="replan-disposition-link">本次新业务关联处置 <code>{state.dispositionId}</code></p>}
     <label>新业务目标<textarea data-testid="scope-replan-input" aria-label="新业务目标" maxLength={64000} readOnly={!state.editable} value={state.message} placeholder="说明这次需要实现的业务结果及约束。" onChange={event=>state.edit(event.target.value,state.permission)}/></label>
     <label>新任务权限<select data-testid="scope-replan-permission" aria-label="新业务任务权限" disabled={!state.editable} value={state.permission} onChange={event=>state.edit(state.message,event.target.value as 'ask'|'execute')}><option value="ask">默认权限 · 操作前确认</option><option value="execute">完全访问 · 允许执行</option></select></label>
     <p className="scope-goal-muted" data-testid="scope-replan-model">{state.modelLabel}</p>

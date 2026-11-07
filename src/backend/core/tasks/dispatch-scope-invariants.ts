@@ -13,7 +13,8 @@ import {scopeContinuationRecordSchema,isHumanContinuation} from './scope-continu
 import {scopeActiveInputSchema,validateScopeInputHistory} from './scope-active-input';
 import {validateScopeActiveInputs} from './scope-active-input-rules';
 import {assertContinuationAttachmentManifest} from './scope-continuation-attachments';
-import {scopeRecoverySchema} from './scope-recovery';
+import {scopeRecoverySchema,isMainRecoverySource} from './scope-recovery';
+import {validateEffectDispositionLink} from './effect-observation-invariants';
 import {scopeReplanSchema} from './scope-replan';
 import {scopeFreshContext} from './fresh-context';
 import {scopeRunTrackingSchema} from './scope-run-tracking';
@@ -45,6 +46,7 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
     const old=previous.scopes?.find(item=>item.scopeId===scope.scopeId);
     const recovery=scope.recovery;
     const replan=scope.replan,fresh=scopeFreshContext(scope),intent=recovery??replan;
+    validateEffectDispositionLink(next,scope);
     valid(!(recovery&&replan),'只读核实与正式业务重规划意图互斥');
     if(old)valid(equal(old.replan,replan),'业务重规划意图创建后不可补造、移除或改写');
     if(intent&&fresh){
@@ -65,9 +67,21 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
       const inspection=scopes.find(item=>item.scopeId===replan.source.inspectionScopeId),proof=replan.source.proof;
       valid(inspection?.recovery&&inspection.status==='closed'&&inspection.outcome==='completed'&&inspection.rootSessionId===scope.rootSessionId&&inspection.workspaceId===scope.workspaceId&&scopes.indexOf(inspection)<scopes.indexOf(scope),'业务重规划必须引用此前完成的本会话只读核实');
       valid(inspection.goal?.review?.decision==='complete'&&inspection.goal.revision===proof.inspectionGoalRevision&&inspection.goal.plan?.revision===proof.inspectionPlanRevision&&inspection.goal.review.runId===proof.reviewRunId&&inspection.goal.review.knowledgeRevision===proof.knowledgeRevision,'业务重规划的核实证明与封存周期不一致');
-      const original=scopes.find(item=>item.scopeId===proof.sourceScopeId),task=graph.tasks.find(item=>item.taskId===proof.sourceTaskId);
-      valid(original?.goal?.plan&&original.status==='closed'&&original.scopeId===inspection.recovery.source.scopeId&&task?.scopeId===original.scopeId&&task.taskId===inspection.recovery.source.taskId&&proof.sourceRunId===inspection.recovery.source.runId,'业务重规划必须继承真实原业务来源，不补造旧计划');
-      const required=[...new Set([...task.modules.map(item=>item.moduleId),...original.goal.plan.assignments.flatMap(item=>item.moduleIds)])].sort();
+      const original=scopes.find(item=>item.scopeId===proof.sourceScopeId),origin=inspection.recovery.source;
+      valid(original?.goal?.plan&&original.status==='closed'&&original.scopeId===origin.scopeId&&proof.sourceRunId===origin.runId,'业务重规划必须继承真实原业务来源，不补造旧计划');
+      let taskModules:string[]=[];
+      if('kind' in proof&&proof.kind==='main_run'){
+        valid(isMainRecoverySource(origin)&&original.runTracking?.mainRunIds.includes(proof.sourceRunId)&&equal(proof.sourceToolCallIds,origin.toolCallIds),'主来源重规划必须绑定原主运行及调用集合');
+        valid(proof.sourceGoalRevision===original.goal.revision&&proof.sourceInputRevision===(original.goal.inputRevision??1)&&proof.sourcePlanRevision===original.goal.plan.revision,'主来源重规划的原目标版本不一致');
+      }else{
+        valid(!isMainRecoverySource(origin),'成员证明不能用于主来源');
+        const task=graph.tasks.find(item=>item.taskId===proof.sourceTaskId);
+        valid(task&&task.scopeId===original.scopeId&&task.taskId===origin.taskId,'成员重规划必须引用原真实任务');taskModules=task.modules.map(item=>item.moduleId);
+        valid(('kind' in proof)===('kind' in origin),'重规划不能隐式更改原来源协议');
+        if('kind' in proof&&'kind' in origin)valid(equal(proof.sourceToolCallIds,origin.toolCallIds),'重规划调用集合与核实来源不一致');
+      }
+      const required=[...new Set([...taskModules,...original.goal.plan.assignments.flatMap(item=>item.moduleIds)])].sort();
+      valid(required.length>0&&required.length<=50,'重规划需要非空的原目标模块集合');
       valid(equal(required,[...proof.requiredModules.map(item=>item.moduleId)].sort()),'重规划必须冻结原业务的完整目标模块集合');
       const superseded=new Set(inspection.goal.review.superseded.map(item=>item.taskId)),covered=graph.tasks.filter(item=>item.scopeId===inspection.scopeId&&item.status==='result_ready'&&item.result&&!superseded.has(item.taskId)).flatMap(item=>item.modules.map(module=>module.moduleId));
       valid(required.every(module=>covered.includes(module)),'核实周期的成功候选必须覆盖重规划目标模块');
@@ -86,10 +100,19 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
       valid(!next.runs?.some(run=>run.binding.runId===recovery.context.initialRunId),'核实主运行不能借用成员执行身份');
       if(scope.wait)valid(scope.wait.mainRunIds.includes(recovery.context.initialRunId),'核实周期等待不能丢失首次主运行预算');
       for(const item of scope.continuations??[])valid(item.wait.mainRunIds.includes(recovery.context.initialRunId),'核实周期补充历史不能丢失首次主运行预算');
-      const source=scopes.find(item=>item.scopeId===recovery.source.scopeId),task=graph.tasks.find(item=>item.taskId===recovery.source.taskId);
+      const source=scopes.find(item=>item.scopeId===recovery.source.scopeId);
       valid(source&&source.scopeId!==scope.scopeId&&source.workspaceId===scope.workspaceId&&source.rootSessionId===scope.rootSessionId&&source.status==='closed'&&source.outcome===recovery.source.scopeOutcome&&scopes.indexOf(source)<scopes.indexOf(scope),'核实必须引用此前已关闭的同主会话周期');
-      valid(task&&task.scopeId===source.scopeId&&task.revision===recovery.source.taskRevision&&task.planRevision===recovery.source.planRevision&&!task.activeRunId,'核实来源任务的身份或冻结版本不一致');
-      valid(recovery.source.runId?task.runIds.includes(recovery.source.runId):!task.runIds.length,'已有执行历史必须明确选择来源运行');
+      const origin=recovery.source;
+      if(isMainRecoverySource(origin)){
+        const owners=scopes.filter(item=>item.workspaceId===scope.workspaceId&&item.rootSessionId===scope.rootSessionId&&item.runTracking?.mainRunIds.includes(origin.runId));
+        valid(owners.length===1&&owners[0].scopeId===source.scopeId,'主核实来源必须属于唯一原周期');
+        valid(origin.sourceGoalRevision===source.goal?.revision&&origin.sourceInputRevision===(source.goal?(source.goal.inputRevision??1):undefined)&&origin.sourcePlanRevision===source.goal?.plan?.revision,'主核实来源目标版本不一致');
+        valid(next.sessions.some(s=>s.workspaceId===scope.workspaceId&&s.rootSessionId===scope.rootSessionId&&s.purpose==='conversation'&&s.agentId==='cbim:main'&&s.agentInstanceId===graph.root.agent.agentInstanceId),'主核实来源缺少真实对话通道');
+      }else{
+        const task=graph.tasks.find(item=>item.taskId===origin.taskId);
+        valid(task&&task.scopeId===source.scopeId&&task.revision===origin.taskRevision&&task.planRevision===origin.planRevision&&!task.activeRunId,'核实来源任务的身份或冻结版本不一致');
+        valid(origin.runId?task.runIds.includes(origin.runId):!task.runIds.length,'已有执行历史必须明确选择来源运行');
+      }
       if(!old){
         valid(previous.scopes?.some(item=>item.scopeId===source.scopeId&&item.status==='closed'),'来源周期必须在创建核实意图前已经关闭');
         valid(mutation.scopes?.length===1&&!mutation.batch&&!mutation.runs?.length&&!mutation.members?.length&&!mutation.sessions?.length&&!mutation.messages?.length,'核实意图不能顺带修改来源、任务图、成员或执行记录');

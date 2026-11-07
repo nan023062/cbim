@@ -105,6 +105,20 @@ const commandVerificationScopes={
  'src/frontend/conversation':'原工具记录显式核实保存事实，保留原失败；控制器按四重身份隔离迟到响应，轮询不重复读取，失败保留旧报告并提示时效。',
 };
 for(const [directory,description] of Object.entries(commandVerificationScopes))scope[directory]+=' '+description;
+// 影响核实只关联新的明确处置及独立周期，不把当前文件或原回执转换成原执行成功。
+const effectObservationScopes={
+ 'src/backend/core/brain':'新的未知工具不能仅凭 reconciledToolIds 恢复旧原生上下文，保留历史字段可读；正常无未决工具的续聊不受影响。',
+ 'src/backend/core/tasks':'主／成员影响来源使用严格联合；观察、不可变处置和新核实／修复引用分别表达，当前文件不补造成功基线或业务验收。纯 scope-public 白名单供主工具与会话详情共用，保留安全恢复来源并隐藏原生上下文。',
+ 'src/backend/main/persistence/tasks':'明确处置在同一 DispatchStore 有界追加并按稳定命令核实；旧任务与原异常不可改写，关联仅从真实后续周期派生。',
+ 'src/backend/scheduler-engine/execution':'EffectObservationService 复用原 canonical、控制面证据及平台单文件观察；恢复和重规划先在事务外取证，最终版本 CAS 后才建立独立周期，不自动重放原调用。',
+ 'src/backend/main/platform':'ArtifactFileService 只观察明确原调用的有界文件，独立返回缺失、不可信和当前字节；路径与链接检查不宣称操作系统隔离。',
+ 'src/backend/main':'影响服务装配已打开工作区端口，真实本机处置身份不由模型或 IPC 参数指定。',
+ 'src/backend/main/ipc':'五项影响观察／处置／原回执／历史／关联入口相互分开，查询不启动新任务；保存只接受本机显式决定。',
+ 'src/bridge/contracts':'effect-observation 只公开来源联合及严格公共 DTO，恢复／重规划保留旧协议并显式绑定新处置，不暴露正文备份或原生上下文。',
+ 'src/frontend/conversation':'主调用提供显式影响观察；未知不再凭勾选调用 ID 直接续跑，进入独立只读核实，普通草稿不受影响。',
+ 'src/frontend/tasks':'成员详情可选择原调用并显式观察；处置先保存本机稳定请求，丢回包只查原命令。历史选择与后续关系按同一处置展示，迟到读取不覆盖其他来源；各面板共享根会话时效，PublicDispatchScope 真实提供新核实和修复来源，沿既有资格创建。',
+};
+for(const [directory,description] of Object.entries(effectObservationScopes))scope[directory]+=' '+description;
 const norm=p=>p.replaceAll('\\','/');
 const walk=p=>fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(p+'/'+e.name):[p+'/'+e.name]);
 const files=walk('src').filter(f=>/\.(tsx?|jsx?|mjs|cjs|css)$/.test(f));

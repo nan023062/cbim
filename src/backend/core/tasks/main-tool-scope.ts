@@ -5,30 +5,14 @@
  */
 import {z} from 'zod';
 import {hash,json} from '../foundation/serialization';
-import type {DispatchScope} from './dispatch-scope';
-import {dispatchScopeGoalSchema,goalNeedsReplan,sameGoalValue} from './scope-goal';
-import {dispatchScopeWaitSchema} from './scope-continuation';
-import {scopeContinuationRecordSchema} from './scope-continuation-record';
-import {scopeRunTrackingSchema} from './scope-run-tracking';
-import {scopeBudgetSchema} from './scope-budget';
-import {scopeHumanDecisionsSchema} from './human-decisions';
-import {scopeRecoverySchema} from './scope-recovery';
-import {scopeReplanSchema} from './scope-replan';
-import {scopeActiveInputSchema,scopeHasUnresolvedActiveInput,validateScopeInputHistory} from './scope-active-input';
+import {goalNeedsReplan,sameGoalValue} from './scope-goal';
+import {scopeHasUnresolvedActiveInput,validateScopeInputHistory} from './scope-active-input';
 import {ownerExecutionBindingMatches} from '../team/member-execution-binding';
+import {publicDispatchScopeSchema} from './scope-public';
+export {projectMainScope} from './scope-public';
 
-const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
 /** 仅剔除私有 context；来源未知事实、只读权限、已核实模块和继承人工项不可随展示裁剪。 */
-export const mainToolScopeSchema=z.object({
-  scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),
-  goal:dispatchScopeGoalSchema.optional(),runTracking:scopeRunTrackingSchema.optional(),budget:scopeBudgetSchema.optional(),
-  humanDecisions:scopeHumanDecisionsSchema.optional(),wait:dispatchScopeWaitSchema.optional(),
-  continuations:z.array(scopeContinuationRecordSchema).max(31).optional(),
-  activeInputs:z.array(scopeActiveInputSchema).min(1).max(64).optional(),
-  recovery:scopeRecoverySchema.omit({context:true}).strict().optional(),
-  replan:scopeReplanSchema.omit({context:true}).strict().optional(),
-  closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional(),
-}).strict().superRefine((scope,context)=>{
+export const mainToolScopeSchema=publicDispatchScopeSchema.superRefine((scope,context)=>{
   const issue=(message:string)=>context.addIssue({code:'custom',message});
   for(const assignment of scope.goal?.plan?.assignments??[])if(assignment.ownerBinding&&!ownerExecutionBindingMatches(assignment.ownerBinding,scope.workspaceId,assignment.agentId,assignment.moduleIds))issue('目标负责岗位不属于返回周期的工作区、角色或模块');
   if(scope.status==='closed'?(!scope.closedAt||!scope.outcome):(scope.closedAt!==undefined||scope.outcome!==undefined))issue('周期状态与关闭事实不一致');
@@ -58,22 +42,3 @@ export const mainToolScopeSchema=z.object({
   for(const record of scope.humanDecisions?.records??[])if(record.proof.identity.workspaceId!==scope.workspaceId||record.proof.identity.rootSessionId!==scope.rootSessionId||record.proof.identity.scopeId!==scope.scopeId)issue('人工决定不属于该周期');
 });
 export type MainToolScope=z.infer<typeof mainToolScopeSchema>;
-
-/** 只选取公开字段，不解析、默认化或修改领域值；真正输出校验在唯一 JSON wire 形成后进行。 */
-export function projectMainScope(scope:DispatchScope):MainToolScope {
-  // 坏端口返回值仍交给唯一 wire 边界拒绝；不在投影阶段抛出含内部对象的 TypeError。
-  if(!scope||typeof scope!=='object'||Array.isArray(scope))return scope as unknown as MainToolScope;
-  const result:MainToolScope={scopeId:scope.scopeId,workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,status:scope.status,createdAt:scope.createdAt};
-  for(const key of ['goal','runTracking','budget','humanDecisions','wait','continuations','activeInputs','closedAt','outcome'] as const){
-    if(scope[key]!==undefined)Object.assign(result,{[key]:scope[key]});
-  }
-  if(scope.recovery!==undefined){
-    if(!scope.recovery||typeof scope.recovery!=='object'||Array.isArray(scope.recovery))result.recovery=scope.recovery;
-    else {const {recoveryId,acceptedAt,source,operation,observation,input,options}=scope.recovery;result.recovery={recoveryId,acceptedAt,source,operation,observation,input,options}}
-  }
-  if(scope.replan!==undefined){
-    if(!scope.replan||typeof scope.replan!=='object'||Array.isArray(scope.replan))result.replan=scope.replan;
-    else {const {replanId,acceptedAt,source,operation,input,options}=scope.replan;result.replan={replanId,acceptedAt,source,operation,input,options}}
-  }
-  return result;
-}

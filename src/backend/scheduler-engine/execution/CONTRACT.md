@@ -564,3 +564,13 @@ Auto 在任何异步处置前立即登记 cycle.operations，停止先作用原�
 报告 IO 在事务外，按 Store→canonical→command→command→canonical→Store 反向闭合观察；变化返回不稳定且不交付已核实回执。图根 task 邮箱与 canonical conversation 通道分别核同主实例、团队和 root，不要求两通道 ID 相同。原始日志只允许一条首 started 和至多一个终态，在途允许无终态；终态后的迟到 stop 不构成新工具执行。原工具事实 helper 仅为本报告接受 512 字符调用 ID，旧执行报告保持其 128 字符公开域。
 
 有图回执须匹配原事务 afterCursor；派发另核原 command 的 assignment.messageId/taskId/from 与任务不可变身份，不拿今日任务状态、计划版本或受旧协议允许修订的 assignee 否定原派发。只读查询不进入 transact、不启动引擎、不获取模型或知识锁、不修 canonical，也不将 absent 当未执行。已保存事务可与原工具 failed/unknown 同时存在；结果使用有界安全投影，不公开 Prepared、私有恢复上下文或 native 路径。
+
+### 原调用影响观察与明确处置
+
+`EffectObservationService` 按显式 main_run/member_run 与调用集合推导原周期、canonical 身份和可信授权路径。仅原生 read/write/edit 的单工作区文件可读当前字节；原控制面八写复用命令报告，其余保留 unsupported。没有成功基线仍可观察当前文件，但不能补造原成功回执；同文件仅比较持久顺序最近八份成功基线并说明截断。日志、图、周期和处置 head 在读取前后复核，变化只给不稳定观察。
+
+edit 当前文件观察接受两种互斥严格形状：Pi 1.5 的 `{path,edits:[{oldText,newText},...]}`（非空数组，每项无额外字段），以及旧 `{path,oldText,newText}`。不把字符串/单对象转成数组，不合并同时出现的新旧字段，不从替换正文推断原成功或恢复资格；非法形状保留 unsupported 且不读取文件。该兼容仅用于当前影响观察；成功产物基线的 `artifact-evidence` 仍沿既有旧 edit 参数协议，新数组 edit 不直接成为其成功来源，可由后续真实 read 再采集。没有可核实基线时仅展示当前字节，不补造基线，也不宣称整轮影响已覆盖。
+
+桌面处置只追加不可变附录，先查原命令，再在事务外取证，最后短 Store CAS；该事务不读取知识、模型或 canonical。仅进入事务前的确定输入/依据拒绝使用 `EFFECT_PREACCEPT_*`；CAS、IO、保存及回复异常不归为未受理，保留原命令查询。摘要有界缩略理由，完整记录由回执读取。关系只从后续 recovery/replan 已存引用派生，不改原 unknown。
+
+新恢复来源有 main/member 分支，原无 kind 形状及指纹保持。核实仅引用同主体同 basis 的 inspect_more 处置；业务重规划仅引用 repair_in_new_cycle，并仍验证新只读周期的完整证据、原计划模块和人工约束。主来源无原计划时只允许只读核实。canonical IO 全在 Store callback 外，最终身份/版本 CAS 在知识快照锁内按 Knowledge→Store 顺序提交；受理后停止不回滚原意图。普通 chat 的未确认调用不能凭裸 reconciledToolIds 续接原 native。

@@ -12,6 +12,7 @@ import {validateDispatchExecution} from '../../../core/tasks/dispatch-invariants
 import {validateDispatchScopes} from '../../../core/tasks/dispatch-scope-invariants';
 import {projectWorkspaceMemberMutation} from '../../../core/tasks/workspace-member-invariants';
 import {projectModuleOwnershipMutation} from '../../../core/tasks/module-ownership-invariants';
+import {projectEffectDispositionMutation} from '../../../core/tasks/effect-observation-invariants';
 import type {DispatchCommand, DispatchCommandEvidence, DispatchMutation, DispatchObserver, DispatchState, DispatchStore} from '../../../core/tasks/dispatch-storage';
 import type {AgentRef, GraphCursor, GraphDelta, GraphEventBatch, GraphIdentity, GraphSnapshot} from '../../../core/tasks/graph-types';
 import {applyScopeBatch,dispatchSessionReadInput,emptyScopeSnapshot,readScopeDelta,readScopeDetail,summarizeScope,scopeViewHistoryLimit,type DispatchSessionReadInput,type DispatchSessionRead,type ScopeSnapshot,type ScopeEventBatch} from '../../../core/tasks/scope-view';
@@ -195,11 +196,12 @@ export class FileDispatchStore implements DispatchStore {
     const source=projectKnowledgeSourceMutation(this.state,mutation,command);
     const registry=projectWorkspaceMemberMutation(this.state,mutation,command,source.permit);
     const ownership=projectModuleOwnershipMutation(this.state,mutation,command,source.permit);
+    const disposition=projectEffectDispositionMutation(this.state,mutation,command);
     const members=mutation.members??[],sessions=mutation.sessions??[],messages=mutation.messages??[],runs=mutation.runs??[],scopes=mutation.scopes??[];
     valid(Array.isArray(members)&&Array.isArray(sessions)&&Array.isArray(messages)&&Array.isArray(runs)&&Array.isArray(scopes),'事务集合必须是数组');
     unique(members,m=>m.agentInstanceId,'成员');unique(sessions,s=>s.agentSessionId,'会话');unique(messages,m=>m.messageId,'消息');unique(runs,r=>r.binding?.runId,'运行');unique(scopes,s=>s.scopeId,'周期');
     // 旧 v1 日志没有 runs；按空集合投影且保留原校验和，不通过迁移重写历史。
-    const next:DispatchState={workspaceId:this.workspaceId,members:upsert(this.state.members,members,m=>m.agentInstanceId),sessions:upsert(this.state.sessions,sessions,s=>s.agentSessionId),graphs:[...this.state.graphs],outbox:upsert(this.state.outbox,messages,m=>m.messageId),runs:upsert(this.state.runs??[],runs,r=>r.binding.runId),scopes:upsert(this.state.scopes??[],scopes,s=>s.scopeId),...registry,...ownership,...source.projection};
+    const next:DispatchState={workspaceId:this.workspaceId,members:upsert(this.state.members,members,m=>m.agentInstanceId),sessions:upsert(this.state.sessions,sessions,s=>s.agentSessionId),graphs:[...this.state.graphs],outbox:upsert(this.state.outbox,messages,m=>m.messageId),runs:upsert(this.state.runs??[],runs,r=>r.binding.runId),scopes:upsert(this.state.scopes??[],scopes,s=>s.scopeId),...registry,...ownership,...source.projection,...disposition};
     unique(next.members,m=>JSON.stringify(m.agentId==='cbim:main'?['main',m.mainRootSessionId??null]:m.executionScopeId?['execution',m.executionScopeId,m.executionTaskId]:['legacy',m.agentId]),'主会话、周期任务或旧角色实例');unique(next.sessions,s=>s.agentSessionId,'会话');unique(next.outbox,m=>m.messageId,'消息');
     for(const member of members){
       valid(member.workspaceId===this.workspaceId&&text(member.teamId)&&text(member.agentId),'成员必须属于当前工作区的明确团队角色');

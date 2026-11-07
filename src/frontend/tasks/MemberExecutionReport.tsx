@@ -1,6 +1,7 @@
 /**
  * 作用定位：在任务节点详情中展示一次显式核实的派发、日志与工具回执报告，独立于成员流式正文。
  * 设计原因：坏日志也必须能查看核实诊断；仓库 scope 保留独立来源，不当作文件基线或恢复证据。独立表单才可显式新建只读核实周期，不恢复旧任务或提供业务验收。
+ * 当前影响：用户明确选择原调用后才观察文件和保存处置；原报告与新影响分别显示，不因当前文件存在而清除 unknown。
  */
 import type {ExecutionReport,GraphCursor,ScopeSummary,TaskNode} from '../../bridge/contracts/dispatch';
 import {useExecutionReport} from './useExecutionReport';
@@ -8,6 +9,8 @@ import type {ExecutionReportState} from './execution-report-state';
 import {useExecutionRecovery,type ExecutionRecoveryContext} from './useExecutionRecovery';
 import {ExecutionRecoveryForm} from './ExecutionRecoveryForm';
 import {MemberArtifactReport} from './MemberArtifactReport';
+import {MemberEffectObservation} from './EffectObservationPanel';
+import {effectObservationAnchor} from './effect-recovery-state';
 import {RepositoryScopeDetails} from '../components/RepositoryScopeDetails';
 import './execution-report.css';
 
@@ -59,5 +62,5 @@ export function ExecutionReportPanel({state,taskId,runId}:{state:ExecutionReport
 export function MemberExecutionReport({workspaceId,rootSessionId,task,runId,graphCursor,scope,recovery}:{workspaceId:string;rootSessionId:string;task:TaskNode;runId?:string;graphCursor?:GraphCursor;scope?:ScopeSummary;recovery?:ExecutionRecoveryContext}){
   const state=useExecutionReport({workspaceId,rootSessionId,taskId:task.taskId,scopeId:task.scopeId,runId},task,graphCursor,scope);
   const creation=useExecutionRecovery(workspaceId,rootSessionId,task,runId,state.report,state.stale||state.loading||!!state.error,recovery,state.invalidate);
-  return <><ExecutionReportPanel state={state} taskId={task.taskId} runId={runId}/>{runId&&<MemberArtifactReport identity={{workspaceId,rootSessionId,taskId:task.taskId,runId}} task={task} graphCursor={graphCursor} scope={scope}/>}<ExecutionRecoveryForm state={creation}/></>;
+  return <><ExecutionReportPanel state={state} taskId={task.taskId} runId={runId}/>{runId&&<MemberArtifactReport identity={{workspaceId,rootSessionId,taskId:task.taskId,runId}} task={task} graphCursor={graphCursor} scope={scope}/>}<ExecutionRecoveryForm state={creation}/>{state.report&&<MemberEffectObservation key={runId} report={state.report} anchor={effectObservationAnchor(recovery?.state)} context={recovery}/>}</>;
 }

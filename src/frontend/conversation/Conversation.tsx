@@ -2,6 +2,7 @@
  * 作用定位：会话双页签入口（对话/本会话任务），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。
  * 设计原因：主运行、开放周期和准入等待分开。配额不足保留首轮草稿，已受理协作使用只读票据提示；无实际占用时停止工作动画和等待期间计时。目标补充、核实与业务重规划仍使用各自可靠意图，不因容量等待重放旧任务。 人工决定草稿和未知请求在两处目标卡共享，记录与任务恢复分离。 人工决定接续与文本补充分开，共享意图但不共享自动启动权。
  * 导航边界：全局运行页传一次性原会话定位请求，目标审阅也可定位本周期原任务/替代成果；均只选择真实节点，不修改输入、附件或运行状态。
+ * 异常边界：unknown 不凭勾选调用标识续接旧 native；显式影响核实和新周期共用真实主会话上下文。
  * 插入边界：两处操作在点击时冻结主 runId；先入队成功再清草稿，插入失败只刷新真实队列，不跨轮重发或误删消息。
  * 资料边界：切到其他会话时本组件可能只被隐藏；必须把 active 传给补充控制器，撤销未完成的资料导入并隔离迟到回包。
  */
@@ -37,6 +38,7 @@ import {conversationExecutionState} from './conversation-state';
 import {captureQueueInsertTarget,enqueueConversationMessage,insertQueuedMessage} from './queue-insertion';
 import {ConversationStopGate} from './conversation-stop';
 import {useScopeContinuation} from '../tasks/useScopeContinuation';
+import type {ExecutionRecoveryContext} from '../tasks/useExecutionRecovery';
 import {useScopeReplan} from '../tasks/useScopeReplan';
 import {useHumanDecisions} from '../tasks/useHumanDecisions';
 import {useHumanContinuation} from '../tasks/useHumanContinuation';
@@ -82,7 +84,7 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
   useEffect(()=>{try{localStorage.setItem(preferenceKey,JSON.stringify({selection,permission}))}catch{}},[preferenceKey,selection,permission]);
   const [attachmentBusy,setAttachmentBusy]=useState(false),[dragActive,setDragActive]=useState(false);
   const dragDepth=useRef(0),importing=useRef(false);
-  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[pollError,setPollError]=useState(''),[loaded,setLoaded]=useState(false),[confirmed,setConfirmed]=useState<string[]>([]);
+  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[pollError,setPollError]=useState(''),[loaded,setLoaded]=useState(false);
   const {items:queued,error:queueError,refresh:refreshQueue,invalidate:invalidateQueue}=useMessageQueue(workspace.id,tab.taskId);
   const [nextTip,setNextTip]=useState(0);
   useEffect(()=>{if(!nextTip)return;const timer=setTimeout(()=>setNextTip(0),5000);return()=>clearTimeout(timer)},[nextTip]);
@@ -103,7 +105,7 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
   useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
   useEffect(()=>{let cancelled=false;void api.call('models.list').then(x=>{if(!cancelled)setModels(x)}).catch((e:Error)=>{if(!cancelled)setError(e.message)});return()=>{cancelled=true}},[workspace.id]);
   // 历史/审批串行轮询，队列由独立增量 Hook 同步，不再等待日志读取。
-  useEffect(()=>{let cancelled=false,timer:ReturnType<typeof setTimeout>;setRuns([]);setThreadIssues([]);setResumeRunId(undefined);setLoaded(false);setConfirmed([]);
+  useEffect(()=>{let cancelled=false,timer:ReturnType<typeof setTimeout>;setRuns([]);setThreadIssues([]);setResumeRunId(undefined);setLoaded(false);
     async function poll(){try{const list:HistoryItem[]=await api.call('loop.list',{id:workspace.id});const view:ConversationThreadView=tab.taskId?await api.call('loop.threadView',{id:workspace.id,taskId:tab.taskId}):{runs:[],issues:[]};const data=view.runs;
       const approvals:ChatApproval[]=tab.taskId?await api.call('loop.approvals',{id:workspace.id,taskId:tab.taskId}):[];
       const questions:PendingQuestion[]=tab.taskId?await api.call('loop.questions',{id:workspace.id,taskId:tab.taskId}):[];
@@ -113,7 +115,6 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
     }catch(e:any){if(!cancelled){setPollError(e.message);setLoaded(false)}}finally{if(!cancelled)timer=setTimeout(()=>void poll(),1000)}}
     void poll();return()=>{cancelled=true;clearTimeout(timer)};
   },[workspace.id,tab.taskId]);
-  useEffect(()=>{setConfirmed([])},[currentRun?.runId]);
   // 正文排版后、浏览器绘制前跟随末尾，避免 Markdown 高度变化误判为用户向上滚动。
   useLayoutEffect(()=>{if(section==='chat'&&follow.current&&scroll.current)scroll.current.scrollTop=scroll.current.scrollHeight},[runs,questions,section]);
   // 成员输出在自己的 Hook 中更新；只在用户仍跟随底部时跟随高度，避免抢走查看旧消息的位置。
@@ -137,7 +138,7 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
       // 即使离开页面，旧回调也只更新原工作区页签；历史可找回已启动任务。
       const accepted=(result:{taskId:string})=>{onBind(result.taskId);onDraft('');onAttachments([])};
       const queued=!!tab.taskId&&shouldQueue;
-      const result=queued?await enqueueConversationMessage({enqueue:()=>api.call('loop.enqueue',{id:workspace.id,taskId:tab.taskId,message,attachments:attachments.map(a=>a.id),options}),accepted,insert:request=>api.call('loop.queueInsert',request)},insertion):tab.taskId?await api.call('loop.resume',{id:workspace.id,taskId:tab.taskId,runId:resumeRunId,message,attachments:attachments.map(a=>a.id),options,reconciledToolIds:confirmed}):await api.call('loop.chat',{id:workspace.id,message,attachments:attachments.map(a=>a.id),options});
+      const result=queued?await enqueueConversationMessage({enqueue:()=>api.call('loop.enqueue',{id:workspace.id,taskId:tab.taskId,message,attachments:attachments.map(a=>a.id),options}),accepted,insert:request=>api.call('loop.queueInsert',request)},insertion):tab.taskId?await api.call('loop.resume',{id:workspace.id,taskId:tab.taskId,runId:resumeRunId,message,attachments:attachments.map(a=>a.id),options}):await api.call('loop.chat',{id:workspace.id,message,attachments:attachments.map(a=>a.id),options});
       if(!queued)accepted(result);
       if(alive.current){const view:ConversationThreadView=await api.call('loop.threadView',{id:workspace.id,taskId:result.taskId});if(alive.current){setRuns(view.runs);setThreadIssues(view.issues);setResumeRunId(view.resumeRunId);setLoaded(true);follow.current=true}}
     });
@@ -152,11 +153,13 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
   const humanContinuation=useHumanContinuation(workspace.id,tab.taskId,graph,continuationConfig,graph.refresh);
   // 业务重规划仅共享实际模型身份，权限在独立表单默认 ask 并由用户明确选择；两处卡片共用一份请求。
   const replan=useScopeReplan(workspace.id,tab.taskId,graph,modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,graph.refresh,id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')});
+  // 影响核实共用实际会话状态和模型，仅显式新建核实任务时使用模型；不触碰聊天草稿。
+  const recovery:ExecutionRecoveryContext={state:graph,refresh:graph.refresh,model:modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,showScope:id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}};
   // 人工决定只有一份本机会话控制器，保存不改普通草稿、权限或当前等待状态。
   const humanDecisions=useHumanDecisions(workspace.id,tab.taskId,graph,graph.refresh);
   // 初次周期读取尚未完成时不能凭运行日志猜测 resume；等待信息就绪后再决定发送或排队。
   const resumeRun=currentRun;
-  const canSend=loaded&&!pollError&&!graph.loading&&!busy&&!stopping&&!attachmentBusy&&modelAvailable&&(!!tab.draft?.trim()||attachments.length>0)&&(tab.taskId?taskOpen||!!resumeRun?.sessionFile&&resumeRun.unresolvedTools.every(id=>confirmed.includes(id)):true);
+  const canSend=loaded&&!pollError&&!graph.loading&&!busy&&!stopping&&!attachmentBusy&&modelAvailable&&(!!tab.draft?.trim()||attachments.length>0)&&(tab.taskId?taskOpen||!!resumeRun?.sessionFile&&resumeRun.unresolvedTools.length===0:true);
   // 标题只展示用户首行目标，避免把附加参考资料和内部标记放进导航。
   const taskHistory=[...new Map(history.filter(h=>h.task).map(h=>[h.task!.taskId,h])).values()];
   const queueOperation=async(action:string,args:Record<string,unknown>)=>{const stopPending=!!tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId});const insertion=action==='loop.queueInsert'?captureQueueInsertTarget(workspace.id,tab.taskId,currentRun,canInsert&&!stopPending):undefined;if(action==='loop.queueInsert'&&!insertion)return false;let saved=false;await operate(async()=>{if(insertion)await insertQueuedMessage(insertion,args.queueId as string,request=>api.call('loop.queueInsert',request));else await api.call(action,{id:workspace.id,taskId:tab.taskId,...args});saved=true});return saved};
@@ -164,7 +167,7 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
   const queueContinue=()=>{if(canContinueQueue&&!graph.loading&&tab.taskId&&!stopGate.current.pending({id:workspace.id,taskId:tab.taskId}))void operate(async()=>{await api.call('loop.queueContinue',{id:workspace.id,taskId:tab.taskId})})};
   return <div className="chat-page"><nav className="session-tabs" role="tablist" aria-label="会话内容"><button id={'session-chat-'+tab.id} role="tab" aria-selected={section==='chat'} aria-controls={'session-dialog-'+tab.id} onClick={()=>selectSection('chat')}>对话</button><button id={'session-tasks-'+tab.id} role="tab" aria-selected={section==='tasks'} aria-controls={'session-task-panel-'+tab.id} onClick={()=>selectSection('tasks')}>任务视图</button></nav>
     <>{navigationError&&<p role="alert" className="shell-alert" data-testid="runtime-navigation-error">{navigationError}</p>}</><AdmissionNotice tickets={admissionState.waiting} error={tab.taskId?admission.error:undefined}/>
-    {section==='tasks'&&<section className="session-task-panel" role="tabpanel" id={'session-task-panel-'+tab.id} aria-labelledby={'session-tasks-'+tab.id}><SessionTaskView active={active} workspaceId={workspace.id} taskId={tab.taskId} runs={runs} historyIssueCount={threadIssues.length} queued={queued} now={now} busy={busy} stopping={stopping} graph={graph.graph} scopeState={graph} continuation={continuation} replan={replan} humanDecisions={humanDecisions} humanContinuation={humanContinuation} recovery={{state:graph,refresh:graph.refresh,model:modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,showScope:id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}}} graphLoading={graph.loading} graphError={graph.error} onRefreshGraph={graph.refresh} selectedTaskId={selectedTaskId} onSelectTask={selectTask} onQueueChange={queueChange} onQueueContinue={queueContinue} onChat={()=>selectSection('chat')} onStop={()=>void stopCurrent()}/><ThreadHistoryNotice issues={threadIssues}/>{pollError&&<p role="alert">{pollError}</p>}</section>}
+    {section==='tasks'&&<section className="session-task-panel" role="tabpanel" id={'session-task-panel-'+tab.id} aria-labelledby={'session-tasks-'+tab.id}><SessionTaskView active={active} workspaceId={workspace.id} taskId={tab.taskId} runs={runs} historyIssueCount={threadIssues.length} queued={queued} now={now} busy={busy} stopping={stopping} graph={graph.graph} scopeState={graph} continuation={continuation} replan={replan} humanDecisions={humanDecisions} humanContinuation={humanContinuation} recovery={recovery} graphLoading={graph.loading} graphError={graph.error} onRefreshGraph={graph.refresh} selectedTaskId={selectedTaskId} onSelectTask={selectTask} onQueueChange={queueChange} onQueueContinue={queueContinue} onChat={()=>selectSection('chat')} onStop={()=>void stopCurrent()}/><ThreadHistoryNotice issues={threadIssues}/>{pollError&&<p role="alert">{pollError}</p>}</section>}
     <div className="conversation-dialog" hidden={section!=='chat'} role="tabpanel" id={'session-dialog-'+tab.id} aria-labelledby={'session-chat-'+tab.id}>
     <div className="chat-toolbar"><Icon name="chat" size={15}/><span className="chat-title">{latest?.task.goal.split('\n')[0]||'新对话'}</span><details className="chat-menu chat-header-menu" onKeyDown={e=>{if(e.key==='Escape')e.currentTarget.removeAttribute('open')}}><summary aria-label="对话菜单" title="对话菜单">···</summary><div className="chat-menu-content"><button disabled={busy} onClick={()=>{onBind(undefined);setRuns([]);setError('')}}><Icon name="plus" size={15}/>新对话</button><label>历史对话<select aria-label="对话历史" disabled={busy} value={tab.taskId||''} onChange={e=>{onBind(e.target.value||undefined);setError('')}}><option value="">新对话</option>{taskHistory.map(h=><option key={h.task!.taskId} value={h.task!.taskId}>{h.task!.goal.split('\n')[0].slice(0,60)}</option>)}</select></label><button onClick={()=>openView('knowledge')}>项目架构</button><button onClick={()=>openView('team')}>团队能力</button><button onClick={openSettings}>模型设置</button></div></details></div>
     {(error||pollError||queueError)&&<div className="shell-alert" role="alert">{error||pollError||queueError}</div>}
@@ -178,13 +181,13 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
       {runs.map(run=>{const items=transcript(run);return <section key={run.runId} className="chat-turn" aria-label="对话轮次">
         {items[0]?.kind==='system'&&<p className="chat-model-notice" role="status">{items[0].text}</p>}
         {items.filter((i,index)=>index===0&&i.kind==='user').map(item=><MessageCard key={item.id} speaker="user" text={item.text} time={run.events[0]?.time}><div className="chat-text">{item.text}</div>{item.attachments&&<div className="chat-attachments">{item.attachments.map((a,i)=><span key={i} title={a.source}><Icon name="knowledge" size={13}/>{a.name}</span>)}</div>}</MessageCard>)}
-        <WorkStatus run={run} now={now}/>
+        <WorkStatus run={run} now={now} recovery={recovery}/>
         {items.slice(1).filter(i=>i.kind==='assistant'||i.kind==='error'||i.kind==='user').map(item=><MessageCard key={item.id} speaker={item.kind==='user'?'user':item.kind==='assistant'?'assistant':'error'} text={item.text} time={run.events.at(-1)?.time}>{item.kind==='user'?<div className="chat-text">{item.text}</div>:<MarkdownMessage text={item.text} streaming={item.pending} workspaceId={workspace.id}/>}</MessageCard>)}
       </section>})}
       <div ref={memberContent}>{tab.taskId&&graph.graph?.tasks.length?<MemberActivity workspaceId={workspace.id} rootSessionId={tab.taskId} tasks={graph.graph.tasks} active={active&&section==='chat'} onSelectTask={viewMember} onViewAll={()=>setSection('tasks')}/>:null}</div>
       {graph.error&&<p role="alert">{graph.error} <button onClick={graph.refresh}>重新同步成员动态</button></p>}
       {questions.map(q=><QuestionCard key={q.id} request={q} onAnswer={async answers=>{await api.call('loop.answerQuestion',{id:workspace.id,taskId:q.taskId,questionId:q.id,answers})}}/>)}
-      {currentRun&&!mainRunning&&currentRun.unresolvedTools.length>0&&<div className="chat-reconcile"><h3>继续前核实未确认操作</h3><p>展开上方工具证据，核实实际产物后逐项勾选。系统不会自动重放。</p>{currentRun.unresolvedTools.map(id=><label key={id}><input type="checkbox" checked={confirmed.includes(id)} onChange={e=>setConfirmed(x=>e.target.checked?[...x,id]:x.filter(v=>v!==id))}/>已核实操作 {id}</label>)}</div>}
+      {currentRun&&!mainRunning&&currentRun.unresolvedTools.length>0&&<div className="chat-reconcile" data-testid="unresolved-tools-notice"><h3>原操作结果尚未确认</h3><p>展开原工具记录，明确核实当前影响并保存处置。需要继续调查时创建独立只读核实任务；原记录保留，勾选调用标识不能恢复原运行。</p><ul>{currentRun.unresolvedTools.map(id=><li key={id}><code>{id}</code></li>)}</ul></div>}
       {tab.taskId&&loaded&&!taskOpen&&!resumeRunId&&<p role="alert" data-testid="thread-resume-unavailable">当前会话没有可安全续接的执行记录；请先在任务视图核实，或新建对话。原记录已保留。</p>}
     </div>
     <div className="chat-composer">

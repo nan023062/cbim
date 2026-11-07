@@ -6,6 +6,7 @@
  * 职责边界：主 Agent 只调度和治理知识；依赖追加/替换与成员续执行重新跟踪原待办，须等主轮结算才领取。追加操作纳入在途关闭屏障，不因迟到回执启动已停止周期。人工继续只消费专用意图，不从普通消息猜批准。
  * 责任控制面：提交绑定当前主周期并纳入在途屏障；精确负责人回执不单独发起业务验收，已有目标和派发仍保留原审阅门禁。
  * 检查点交接：放弃操作在开始前即纳入停止屏障；成功撤销旧恢复的调度与准入票据，周期历史和原检查点收件仍保留，坏回包不重做。
+ * 新核实/修复：启动信号透传受理服务，事务外 IO 后停止不得保存新意图；已受理意图仍按原命令查询，不清原 unknown。
  */
 import {hash,json} from '../../core/foundation/serialization';
 import {randomUUID} from 'node:crypto';
@@ -119,7 +120,7 @@ export class AutoCollaboration {
     await this.dispatch.replans.preflight(request);
   }
   /** 新业务周期使用新的执行实例，既有只读周期和旧失败任务保持封存；停止共享受理屏障。 */
-  private acceptReplan(request:ReplanRequest,task:TaskSpec,context:{runId:string;nativeSessionId:string;excludedRunIds:string[]}):Promise<void>{
+  private acceptReplan(request:ReplanRequest,task:TaskSpec,context:{runId:string;nativeSessionId:string;excludedRunIds:string[];signal?:AbortSignal}):Promise<void>{
     if(this.closed||this.resuming.has(task.taskId))return Promise.reject(Object.assign(Error('业务重规划正在关闭或已有提交'),{code:'COLLABORATION_STOPPED'}));
     const pending=(async()=>{
       if(task.mode!=='chat'||task.agentId!=='cbim:main'||task.taskId!==request.rootSessionId||task.workspaceId!==request.workspaceId||task.root!==this.owner.entry.path||task.goal!==request.input.message)fail('COLLABORATION_IDENTITY','业务目标与主会话身份或明确输入不一致');
@@ -146,7 +147,7 @@ export class AutoCollaboration {
     await this.dispatch.recoveries.preflight(request);
   }
   /** 新周期不复活旧成员；可靠意图先落盘，之后绑定同一主实例的全新原生上下文，等待停止屏障收束。 */
-  private acceptRecovery(request:RecoveryRequest,task:TaskSpec,context:{runId:string;nativeSessionId:string;excludedRunIds:string[]}):Promise<void>{
+  private acceptRecovery(request:RecoveryRequest,task:TaskSpec,context:{runId:string;nativeSessionId:string;excludedRunIds:string[];signal?:AbortSignal}):Promise<void>{
     if(this.closed||this.resuming.has(task.taskId))return Promise.reject(Object.assign(Error('新核实周期正在关闭或已有提交'),{code:'COLLABORATION_STOPPED'}));
     const pending=(async()=>{
       if(task.mode!=='chat'||task.agentId!=='cbim:main'||task.taskId!==request.rootSessionId||task.workspaceId!==request.workspaceId)fail('COLLABORATION_IDENTITY','核实目标与主会话身份不一致');

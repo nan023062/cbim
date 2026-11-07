@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-任务计划、派发图、目标与等待。资料清单保留旧文件v1，新增严格v2来源并核同序与字节；快照不等于当前来源或业务验收。依赖追加核实两端及后继未领取、当前计划与真实图，完整审计验证后才放行精确新边；保留原任务/实例，领取时绑定真实结果。运行内补充以pending/accepted/rejected/unknown分开，接受与waiting共享连续输入版本，未知阻止完成。流程选择共用叶子契约，缺省与显式分开匹配，已派发选择不可改写；严格输出区分保存与交付，历史不补造授权或证据。 正式协议将目标分配、任务、准备、模型和历史审计相互核对；岗位绑定不可重写，旧在途仅按原事实收束。 检查点显式放弃有独立严格协议与精确联合变更校验；原任务和检查点证据不可重写，纯 ACK 与后续周期释放保持可用。 原主命令核实定义八工具的有界报告；原工具结果、事务保存和业务验收分开，查询回执不能成为交付证据。
+任务计划、派发图、目标与等待。资料清单保留旧文件v1，新增严格v2来源并核同序与字节；快照不等于当前来源或业务验收。依赖追加核实两端及后继未领取、当前计划与真实图，完整审计验证后才放行精确新边；保留原任务/实例，领取时绑定真实结果。运行内补充以pending/accepted/rejected/unknown分开，接受与waiting共享连续输入版本，未知阻止完成。流程选择共用叶子契约，缺省与显式分开匹配，已派发选择不可改写；严格输出区分保存与交付，历史不补造授权或证据。 正式协议将目标分配、任务、准备、模型和历史审计相互核对；岗位绑定不可重写，旧在途仅按原事实收束。 检查点显式放弃有独立严格协议与精确联合变更校验；原任务和检查点证据不可重写，纯 ACK 与后续周期释放保持可用。 原主命令核实定义八工具的有界报告；原工具结果、事务保存和业务验收分开，查询回执不能成为交付证据。 主／成员影响来源使用严格联合；观察、不可变处置和新核实／修复引用分别表达，当前文件不补造成功基线或业务验收。纯 scope-public 白名单供主工具与会话详情共用，保留安全恢复来源并隐藏原生上下文。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -25,6 +25,9 @@
 | [dispatch-scope-invariants.ts](dispatch-scope-invariants.ts) | 校验调度周期、等待检查点、运行中补充和显式接续的持久状态及原子变更，供派发存储提交与重放共用。 |
 | [dispatch-scope.ts](dispatch-scope.ts) | 定义一次用户任务的调度周期，与长期主会话和单次模型运行区分。 |
 | [dispatch-storage.ts](dispatch-storage.ts) | 定义工作区长期岗位、模块责任、受控来源审计以及执行实例、会话和任务派发的原子持久化端口。 |
+| [effect-observation-invariants.ts](effect-observation-invariants.ts) | 在唯一派发 Store 的实时提交与原日志重放中核实影响处置附录及新周期引用。 |
+| [effect-observation-rules.ts](effect-observation-rules.ts) | 计算影响观察的事实依据与处置命令，并构造原不可变回执/摘要。 |
+| [effect-observation.ts](effect-observation.ts) | 定义原成员/主调用的影响观察、本机处置附录及后续周期关系的公开叶子契约。 |
 | [execution-context.ts](execution-context.ts) | 成员业务执行所需的可持久化知识快照，以及存储与调度共用的完整性校验。 |
 | [execution-report.ts](execution-report.ts) | 成员执行异常核实的只读报告协议，供调度服务与界面共享。 |
 | [fresh-context.ts](fresh-context.ts) | 定义显式新周期共用的原生上下文隔离边界。 |
@@ -73,6 +76,7 @@
 | [scope-continuation-record.ts](scope-continuation-record.ts) | 组合真实文本补充与人工决定接续的共同有序持久历史。 |
 | [scope-continuation.ts](scope-continuation.ts) | 定义安全等待检查点、用户显式补充原目标的请求和一次性启动意图。 |
 | [scope-goal.ts](scope-goal.ts) | 定义调度周期目标的原始输入、版本化计划、审阅证据和持久化转换规则。 |
+| [scope-public.ts](scope-public.ts) | 提供周期详情与主工具共用的纯公开 Schema、类型和白名单投影。 |
 | [scope-recovery.ts](scope-recovery.ts) | 定义用户显式新建只读核实周期的请求、冻结启动意图及公开回执。 |
 | [scope-replan.ts](scope-replan.ts) | 定义完成只读核实后显式创建业务新周期的预览、启动意图和公开回执。 |
 | [scope-run-invariants.ts](scope-run-invariants.ts) | 在派发事务提交和重放时核验周期主运行清单的完整归属及追加边界。 |
@@ -484,7 +488,7 @@ class N_src_backend_core_tasks_dispatch_scope_invariants_ts["dispatch-scope-inva
 }
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[dispatch-storage.ts](dispatch-storage.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[scope-goal.ts](scope-goal.ts)、[scope-continuation.ts](scope-continuation.ts)、[scope-continuation-record.ts](scope-continuation-record.ts)、[scope-active-input.ts](scope-active-input.ts)、[scope-active-input-rules.ts](scope-active-input-rules.ts)、[scope-continuation-attachments.ts](scope-continuation-attachments.ts)、[scope-recovery.ts](scope-recovery.ts)、[scope-replan.ts](scope-replan.ts)、[fresh-context.ts](fresh-context.ts)、[scope-run-tracking.ts](scope-run-tracking.ts)、[scope-run-invariants.ts](scope-run-invariants.ts)、[scope-budget.ts](scope-budget.ts)、[scope-budget-invariants.ts](scope-budget-invariants.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[human-decisions.ts](human-decisions.ts)、[human-decision-invariants.ts](human-decision-invariants.ts)、[human-continuation-invariants.ts](human-continuation-invariants.ts)。
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[dispatch-storage.ts](dispatch-storage.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[scope-goal.ts](scope-goal.ts)、[scope-continuation.ts](scope-continuation.ts)、[scope-continuation-record.ts](scope-continuation-record.ts)、[scope-active-input.ts](scope-active-input.ts)、[scope-active-input-rules.ts](scope-active-input-rules.ts)、[scope-continuation-attachments.ts](scope-continuation-attachments.ts)、[scope-recovery.ts](scope-recovery.ts)、[effect-observation-invariants.ts](effect-observation-invariants.ts)、[scope-replan.ts](scope-replan.ts)、[fresh-context.ts](fresh-context.ts)、[scope-run-tracking.ts](scope-run-tracking.ts)、[scope-run-invariants.ts](scope-run-invariants.ts)、[scope-budget.ts](scope-budget.ts)、[scope-budget-invariants.ts](scope-budget-invariants.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[human-decisions.ts](human-decisions.ts)、[human-decision-invariants.ts](human-decision-invariants.ts)、[human-continuation-invariants.ts](human-continuation-invariants.ts)。
 
 ### dispatch-scope.ts
 
@@ -632,6 +636,7 @@ class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
 class N_src_backend_core_tasks_dispatch_storage_ts_DispatchState["DispatchState"] {
   <<interface>>
   +sourceCursor
+  +effectDispositions
 }
 N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_dispatch_storage_ts_DispatchState : 声明
 ```
@@ -651,6 +656,7 @@ class N_src_backend_core_tasks_dispatch_storage_ts_DispatchCommandEvidence["Disp
 N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_dispatch_storage_ts_DispatchCommandEvidence : 声明
 class N_src_backend_core_tasks_dispatch_storage_ts_DispatchMutation["DispatchMutation"] {
   <<interface>>
+  +effectDispositions
   +members
   +sessions
   +batch
@@ -684,7 +690,151 @@ class N_src_backend_core_tasks_dispatch_storage_ts_DispatchStore["DispatchStore"
 N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_dispatch_storage_ts_DispatchStore : 声明
 ```
 
-直接依赖：[../team/agent-types.ts](../team/agent-types.ts)、[graph-types.ts](graph-types.ts)、[dispatch-execution.ts](dispatch-execution.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[scope-view.ts](scope-view.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[../team/workspace-member.ts](../team/workspace-member.ts)、[../workspace/module-ownership.ts](../workspace/module-ownership.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)。
+直接依赖：[../team/agent-types.ts](../team/agent-types.ts)、[graph-types.ts](graph-types.ts)、[dispatch-execution.ts](dispatch-execution.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[scope-view.ts](scope-view.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[../team/workspace-member.ts](../team/workspace-member.ts)、[../workspace/module-ownership.ts](../workspace/module-ownership.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)、[effect-observation.ts](effect-observation.ts)。
+
+### effect-observation-invariants.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_effect_observation_invariants_ts["effect-observation-invariants.ts"] {
+  <<module>>
+  +projectEffectDispositionMutation()
+  +validateEffectDispositionLink()
+}
+```
+
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[effect-observation.ts](effect-observation.ts)、[effect-observation-rules.ts](effect-observation-rules.ts)、[dispatch-storage.ts](dispatch-storage.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[scope-recovery.ts](scope-recovery.ts)。
+
+### effect-observation-rules.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_effect_observation_rules_ts["effect-observation-rules.ts"] {
+  <<module>>
+  +effectObservationBasis()
+  +effectDispositionCommand()
+  +effectDispositionRevision()
+  +effectDispositionReceipt()
+  +summarizeEffectDisposition()
+}
+```
+
+直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[effect-observation.ts](effect-observation.ts)。
+
+### effect-observation.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_effect_observation_ts["effect-observation.ts"] {
+  <<module>>
+  +sameEffectSubject()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_effect_observation_ts["effect-observation.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_effect_observation_ts_EffectSubject["EffectSubject"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_effect_observation_ts_EffectSubject : 声明
+class N_src_backend_core_tasks_effect_observation_ts_EffectObservationInput["EffectObservationInput"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_effect_observation_ts_EffectObservationInput : 声明
+class N_src_backend_core_tasks_effect_observation_ts_EffectFileObservation["EffectFileObservation"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_effect_observation_ts_EffectFileObservation : 声明
+class N_src_backend_core_tasks_effect_observation_ts_EffectCallObservation["EffectCallObservation"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_effect_observation_ts_EffectCallObservation : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_effect_observation_ts["effect-observation.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_effect_observation_ts_EffectObservationReport["EffectObservationReport"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_effect_observation_ts_EffectObservationReport : 声明
+class N_src_backend_core_tasks_effect_observation_ts_EffectDispositionInput["EffectDispositionInput"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_effect_observation_ts_EffectDispositionInput : 声明
+class N_src_backend_core_tasks_effect_observation_ts_EffectDispositionRequest["EffectDispositionRequest"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_effect_observation_ts_EffectDispositionRequest : 声明
+class N_src_backend_core_tasks_effect_observation_ts_EffectDispositionLookup["EffectDispositionLookup"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_effect_observation_ts_EffectDispositionLookup : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_effect_observation_ts["effect-observation.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_effect_observation_ts_EffectDispositionRecord["EffectDispositionRecord"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_effect_observation_ts_EffectDispositionRecord : 声明
+class N_src_backend_core_tasks_effect_observation_ts_EffectDispositionReceipt["EffectDispositionReceipt"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_effect_observation_ts_EffectDispositionReceipt : 声明
+class N_src_backend_core_tasks_effect_observation_ts_EffectDispositionListInput["EffectDispositionListInput"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_effect_observation_ts_EffectDispositionListInput : 声明
+class N_src_backend_core_tasks_effect_observation_ts_EffectDispositionSummary["EffectDispositionSummary"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_effect_observation_ts_EffectDispositionSummary : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_effect_observation_ts["effect-observation.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_effect_observation_ts_EffectDispositionList["EffectDispositionList"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_effect_observation_ts_EffectDispositionList : 声明
+class N_src_backend_core_tasks_effect_observation_ts_EffectRelationsInput["EffectRelationsInput"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_effect_observation_ts_EffectRelationsInput : 声明
+class N_src_backend_core_tasks_effect_observation_ts_EffectRelations["EffectRelations"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_effect_observation_ts_EffectRelations : 声明
+```
+
+直接依赖：[artifact-baseline.ts](artifact-baseline.ts)、[command-verification.ts](command-verification.ts)、[../tools/scope-schema.ts](../tools/scope-schema.ts)、[../tools/receipt-schema.ts](../tools/receipt-schema.ts)。
 
 ### execution-context.ts
 
@@ -1316,14 +1466,6 @@ N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_main_t
 classDiagram
 class N_src_backend_core_tasks_main_tool_scope_ts["main-tool-scope.ts"] {
   <<module>>
-  +projectMainScope()
-}
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_tasks_main_tool_scope_ts["main-tool-scope.ts"] {
-  <<module>>
 }
 class N_src_backend_core_tasks_main_tool_scope_ts_MainToolScope["MainToolScope"] {
   <<type>>
@@ -1332,7 +1474,7 @@ class N_src_backend_core_tasks_main_tool_scope_ts_MainToolScope["MainToolScope"]
 N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_main_tool_scope_ts_MainToolScope : 声明
 ```
 
-直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[scope-goal.ts](scope-goal.ts)、[scope-continuation.ts](scope-continuation.ts)、[scope-continuation-record.ts](scope-continuation-record.ts)、[scope-run-tracking.ts](scope-run-tracking.ts)、[scope-budget.ts](scope-budget.ts)、[human-decisions.ts](human-decisions.ts)、[scope-recovery.ts](scope-recovery.ts)、[scope-replan.ts](scope-replan.ts)、[scope-active-input.ts](scope-active-input.ts)、[../team/member-execution-binding.ts](../team/member-execution-binding.ts)。
+直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[scope-goal.ts](scope-goal.ts)、[scope-active-input.ts](scope-active-input.ts)、[../team/member-execution-binding.ts](../team/member-execution-binding.ts)、[scope-public.ts](scope-public.ts)。
 
 ### member-checkpoint-evidence.ts
 
@@ -2371,13 +2513,58 @@ N_src_backend_core_tasks_scope_goal_ts ..> N_src_backend_core_tasks_scope_goal_t
 
 直接依赖：[workflow-selection.ts](workflow-selection.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../team/member-execution-binding.ts](../team/member-execution-binding.ts)。
 
+### scope-public.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_scope_public_ts["scope-public.ts"] {
+  <<module>>
+  +projectMainScope()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_scope_public_ts["scope-public.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_public_ts_PublicDispatchScope["PublicDispatchScope"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_scope_public_ts ..> N_src_backend_core_tasks_scope_public_ts_PublicDispatchScope : 声明
+```
+
+直接依赖：[dispatch-scope.ts](dispatch-scope.ts)、[scope-goal.ts](scope-goal.ts)、[scope-continuation.ts](scope-continuation.ts)、[scope-continuation-record.ts](scope-continuation-record.ts)、[scope-run-tracking.ts](scope-run-tracking.ts)、[scope-budget.ts](scope-budget.ts)、[human-decisions.ts](human-decisions.ts)、[scope-recovery.ts](scope-recovery.ts)、[scope-replan.ts](scope-replan.ts)、[scope-active-input.ts](scope-active-input.ts)。
+
 ### scope-recovery.ts
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_scope_recovery_ts["scope-recovery.ts"] {
   <<module>>
+  +isMainRecoverySource()
+  +recoveryRequestSource()
+  +recoverySourceKey()
+  +recoverySourceSelection()
 }
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_scope_recovery_ts["scope-recovery.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_recovery_ts_RecoveryRequestSource["RecoveryRequestSource"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_scope_recovery_ts ..> N_src_backend_core_tasks_scope_recovery_ts_RecoveryRequestSource : 声明
+class N_src_backend_core_tasks_scope_recovery_ts_RecoverySourceSelection["RecoverySourceSelection"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_scope_recovery_ts ..> N_src_backend_core_tasks_scope_recovery_ts_RecoverySourceSelection : 声明
 class N_src_backend_core_tasks_scope_recovery_ts_RecoveryRequest["RecoveryRequest"] {
   <<type>>
 
@@ -2388,6 +2575,13 @@ class N_src_backend_core_tasks_scope_recovery_ts_RecoveryLookup["RecoveryLookup"
 
 }
 N_src_backend_core_tasks_scope_recovery_ts ..> N_src_backend_core_tasks_scope_recovery_ts_RecoveryLookup : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_scope_recovery_ts["scope-recovery.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_scope_recovery_ts_RecoveryContext["RecoveryContext"] {
   <<type>>
 
@@ -2398,13 +2592,6 @@ class N_src_backend_core_tasks_scope_recovery_ts_ScopeRecovery["ScopeRecovery"] 
 
 }
 N_src_backend_core_tasks_scope_recovery_ts ..> N_src_backend_core_tasks_scope_recovery_ts_ScopeRecovery : 声明
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_tasks_scope_recovery_ts["scope-recovery.ts"] {
-  <<module>>
-}
 class N_src_backend_core_tasks_scope_recovery_ts_RecoveryReceipt["RecoveryReceipt"] {
   <<type>>
 
@@ -2412,9 +2599,17 @@ class N_src_backend_core_tasks_scope_recovery_ts_RecoveryReceipt["RecoveryReceip
 N_src_backend_core_tasks_scope_recovery_ts ..> N_src_backend_core_tasks_scope_recovery_ts_RecoveryReceipt : 声明
 ```
 
-直接依赖：[dispatch-commands.ts](dispatch-commands.ts)、[scope-continuation.ts](scope-continuation.ts)、[execution-report.ts](execution-report.ts)、[fresh-context.ts](fresh-context.ts)。
+直接依赖：[dispatch-commands.ts](dispatch-commands.ts)、[scope-continuation.ts](scope-continuation.ts)、[execution-report.ts](execution-report.ts)、[fresh-context.ts](fresh-context.ts)、[effect-observation.ts](effect-observation.ts)。
 
 ### scope-replan.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_scope_replan_ts["scope-replan.ts"] {
+  <<module>>
+  +inspectionProofSource()
+}
+```
 
 ```mermaid
 classDiagram
@@ -2655,7 +2850,7 @@ class N_src_backend_core_tasks_scope_view_ts_DispatchSessionRead["DispatchSessio
 N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_scope_view_ts_DispatchSessionRead : 声明
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[dispatch-commands.ts](dispatch-commands.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[graph-types.ts](graph-types.ts)、[graph-rules.ts](graph-rules.ts)、[scope-goal.ts](scope-goal.ts)、[scope-active-input.ts](scope-active-input.ts)、[scope-budget.ts](scope-budget.ts)。
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[dispatch-commands.ts](dispatch-commands.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[graph-types.ts](graph-types.ts)、[graph-rules.ts](graph-rules.ts)、[scope-goal.ts](scope-goal.ts)、[scope-active-input.ts](scope-active-input.ts)、[scope-budget.ts](scope-budget.ts)、[scope-public.ts](scope-public.ts)。
 
 ### types.ts
 
@@ -3132,6 +3327,9 @@ classDiagram
 class N_src_backend_core_tasks_dispatch_scope_invariants_ts["dispatch-scope-invariants.ts"] {
   <<module>>
 }
+class N_src_backend_core_tasks_effect_observation_invariants_ts["effect-observation-invariants.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_scope_replan_ts["scope-replan.ts"] {
   <<module>>
 }
@@ -3141,18 +3339,18 @@ class N_src_backend_core_tasks_fresh_context_ts["fresh-context.ts"] {
 class N_src_backend_core_tasks_scope_run_tracking_ts["scope-run-tracking.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_scope_run_invariants_ts["scope-run-invariants.ts"] {
-  <<module>>
-}
+N_src_backend_core_tasks_dispatch_scope_invariants_ts ..> N_src_backend_core_tasks_effect_observation_invariants_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_scope_invariants_ts ..> N_src_backend_core_tasks_scope_replan_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_scope_invariants_ts ..> N_src_backend_core_tasks_fresh_context_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_scope_invariants_ts ..> N_src_backend_core_tasks_scope_run_tracking_ts : 导入依赖
-N_src_backend_core_tasks_dispatch_scope_invariants_ts ..> N_src_backend_core_tasks_scope_run_invariants_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_dispatch_scope_invariants_ts["dispatch-scope-invariants.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_run_invariants_ts["scope-run-invariants.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_scope_budget_ts["scope-budget.ts"] {
@@ -3164,18 +3362,18 @@ class N_src_backend_core_tasks_scope_budget_invariants_ts["scope-budget-invarian
 class N_src_backend_core_tasks_member_checkpoint_ts["member-checkpoint.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_human_decisions_ts["human-decisions.ts"] {
-  <<module>>
-}
+N_src_backend_core_tasks_dispatch_scope_invariants_ts ..> N_src_backend_core_tasks_scope_run_invariants_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_scope_invariants_ts ..> N_src_backend_core_tasks_scope_budget_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_scope_invariants_ts ..> N_src_backend_core_tasks_scope_budget_invariants_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_scope_invariants_ts ..> N_src_backend_core_tasks_member_checkpoint_ts : 导入依赖
-N_src_backend_core_tasks_dispatch_scope_invariants_ts ..> N_src_backend_core_tasks_human_decisions_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_dispatch_scope_invariants_ts["dispatch-scope-invariants.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_human_decisions_ts["human-decisions.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_human_decision_invariants_ts["human-decision-invariants.ts"] {
@@ -3190,18 +3388,18 @@ class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
 class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_scope_continuation_ts["scope-continuation.ts"] {
-  <<module>>
-}
+N_src_backend_core_tasks_dispatch_scope_invariants_ts ..> N_src_backend_core_tasks_human_decisions_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_scope_invariants_ts ..> N_src_backend_core_tasks_human_decision_invariants_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_scope_invariants_ts ..> N_src_backend_core_tasks_human_continuation_invariants_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_scope_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
-N_src_backend_core_tasks_dispatch_scope_ts ..> N_src_backend_core_tasks_scope_continuation_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_continuation_ts["scope-continuation.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_scope_continuation_record_ts["scope-continuation-record.ts"] {
@@ -3213,18 +3411,18 @@ class N_src_backend_core_tasks_scope_recovery_ts["scope-recovery.ts"] {
 class N_src_backend_core_tasks_scope_replan_ts["scope-replan.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_scope_run_tracking_ts["scope-run-tracking.ts"] {
-  <<module>>
-}
+N_src_backend_core_tasks_dispatch_scope_ts ..> N_src_backend_core_tasks_scope_continuation_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_scope_ts ..> N_src_backend_core_tasks_scope_continuation_record_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_scope_ts ..> N_src_backend_core_tasks_scope_recovery_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_scope_ts ..> N_src_backend_core_tasks_scope_replan_ts : 导入依赖
-N_src_backend_core_tasks_dispatch_scope_ts ..> N_src_backend_core_tasks_scope_run_tracking_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_run_tracking_ts["scope-run-tracking.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_scope_budget_ts["scope-budget.ts"] {
@@ -3236,21 +3434,18 @@ class N_src_backend_core_tasks_human_decisions_ts["human-decisions.ts"] {
 class N_src_backend_core_tasks_scope_active_input_ts["scope-active-input.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
-  <<module>>
-}
+N_src_backend_core_tasks_dispatch_scope_ts ..> N_src_backend_core_tasks_scope_run_tracking_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_scope_ts ..> N_src_backend_core_tasks_scope_budget_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_scope_ts ..> N_src_backend_core_tasks_human_decisions_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_scope_ts ..> N_src_backend_core_tasks_scope_active_input_ts : 导入依赖
-N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_dispatch_execution_ts["dispatch-execution.ts"] {
@@ -3262,17 +3457,72 @@ class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
 class N_src_backend_core_tasks_scope_view_ts["scope-view.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_member_checkpoint_ts["member-checkpoint.ts"] {
-  <<module>>
-}
+N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_dispatch_execution_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_dispatch_scope_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_scope_view_ts : 导入依赖
-N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_member_checkpoint_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_member_checkpoint_ts["member-checkpoint.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_effect_observation_ts["effect-observation.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_effect_observation_invariants_ts["effect-observation-invariants.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_effect_observation_rules_ts["effect-observation-rules.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_member_checkpoint_ts : 导入依赖
+N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_effect_observation_ts : 导入依赖
+N_src_backend_core_tasks_effect_observation_invariants_ts ..> N_src_backend_core_tasks_effect_observation_ts : 导入依赖
+N_src_backend_core_tasks_effect_observation_invariants_ts ..> N_src_backend_core_tasks_effect_observation_rules_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_effect_observation_invariants_ts["effect-observation-invariants.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_recovery_ts["scope-recovery.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_effect_observation_rules_ts["effect-observation-rules.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_effect_observation_ts["effect-observation.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_effect_observation_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
+N_src_backend_core_tasks_effect_observation_invariants_ts ..> N_src_backend_core_tasks_dispatch_scope_ts : 导入依赖
+N_src_backend_core_tasks_effect_observation_invariants_ts ..> N_src_backend_core_tasks_scope_recovery_ts : 导入依赖
+N_src_backend_core_tasks_effect_observation_rules_ts ..> N_src_backend_core_tasks_effect_observation_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_effect_observation_ts["effect-observation.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_artifact_baseline_ts["artifact-baseline.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_command_verification_ts["command-verification.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_execution_context_ts["execution-context.ts"] {
   <<module>>
 }
@@ -3285,6 +3535,17 @@ class N_src_backend_core_tasks_execution_report_ts["execution-report.ts"] {
 class N_src_backend_core_tasks_member_commands_ts["member-commands.ts"] {
   <<module>>
 }
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_artifact_baseline_ts : 导入依赖
+N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_command_verification_ts : 导入依赖
+N_src_backend_core_tasks_execution_context_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
+N_src_backend_core_tasks_execution_report_ts ..> N_src_backend_core_tasks_member_commands_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_execution_report_ts["execution-report.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_dispatch_commands_ts["dispatch-commands.ts"] {
   <<module>>
 }
@@ -3294,38 +3555,27 @@ class N_src_backend_core_tasks_graph_reducer_ts["graph-reducer.ts"] {
 class N_src_backend_core_tasks_graph_rules_ts["graph-rules.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_execution_context_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
-N_src_backend_core_tasks_execution_report_ts ..> N_src_backend_core_tasks_member_commands_ts : 导入依赖
+class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_queued_task_cancel_ts["queued-task-cancel.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_execution_report_ts ..> N_src_backend_core_tasks_dispatch_commands_ts : 导入依赖
 N_src_backend_core_tasks_graph_reducer_ts ..> N_src_backend_core_tasks_graph_rules_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_tasks_graph_reducer_ts["graph-reducer.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_graph_rules_ts["graph-rules.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_queued_task_cancel_ts["queued-task-cancel.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_member_help_ts["member-help.ts"] {
-  <<module>>
-}
 N_src_backend_core_tasks_graph_reducer_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
 N_src_backend_core_tasks_graph_rules_ts ..> N_src_backend_core_tasks_queued_task_cancel_ts : 导入依赖
-N_src_backend_core_tasks_graph_rules_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
-N_src_backend_core_tasks_graph_rules_ts ..> N_src_backend_core_tasks_member_help_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_graph_rules_ts["graph-rules.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_member_help_ts["member-help.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_queued_dependency_replacement_ts["queued-dependency-replacement.ts"] {
@@ -3334,21 +3584,21 @@ class N_src_backend_core_tasks_queued_dependency_replacement_ts["queued-dependen
 class N_src_backend_core_tasks_queued_dependency_addition_ts["queued-dependency-addition.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_member_checkpoint_ts["member-checkpoint.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_queued_member_resume_ts["queued-member-resume.ts"] {
-  <<module>>
-}
+N_src_backend_core_tasks_graph_rules_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
+N_src_backend_core_tasks_graph_rules_ts ..> N_src_backend_core_tasks_member_help_ts : 导入依赖
 N_src_backend_core_tasks_graph_rules_ts ..> N_src_backend_core_tasks_queued_dependency_replacement_ts : 导入依赖
 N_src_backend_core_tasks_graph_rules_ts ..> N_src_backend_core_tasks_queued_dependency_addition_ts : 导入依赖
-N_src_backend_core_tasks_graph_rules_ts ..> N_src_backend_core_tasks_member_checkpoint_ts : 导入依赖
-N_src_backend_core_tasks_graph_rules_ts ..> N_src_backend_core_tasks_queued_member_resume_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_graph_rules_ts["graph-rules.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_member_checkpoint_ts["member-checkpoint.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_queued_member_resume_ts["queued-member-resume.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_checkpoint_handoff_ts["checkpoint-handoff.ts"] {
@@ -3357,6 +3607,14 @@ class N_src_backend_core_tasks_checkpoint_handoff_ts["checkpoint-handoff.ts"] {
 class N_src_backend_core_tasks_workflow_selection_ts["workflow-selection.ts"] {
   <<module>>
 }
+N_src_backend_core_tasks_graph_rules_ts ..> N_src_backend_core_tasks_member_checkpoint_ts : 导入依赖
+N_src_backend_core_tasks_graph_rules_ts ..> N_src_backend_core_tasks_queued_member_resume_ts : 导入依赖
+N_src_backend_core_tasks_graph_rules_ts ..> N_src_backend_core_tasks_checkpoint_handoff_ts : 导入依赖
+N_src_backend_core_tasks_graph_rules_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
   <<module>>
 }
@@ -3366,21 +3624,21 @@ class N_src_backend_core_tasks_member_help_ts["member-help.ts"] {
 class N_src_backend_core_tasks_queued_task_cancel_ts["queued-task-cancel.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_graph_rules_ts ..> N_src_backend_core_tasks_checkpoint_handoff_ts : 导入依赖
-N_src_backend_core_tasks_graph_rules_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
+class N_src_backend_core_tasks_queued_dependency_replacement_ts["queued-dependency-replacement.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_queued_dependency_addition_ts["queued-dependency-addition.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_graph_types_ts ..> N_src_backend_core_tasks_member_help_ts : 导入依赖
 N_src_backend_core_tasks_graph_types_ts ..> N_src_backend_core_tasks_queued_task_cancel_ts : 导入依赖
+N_src_backend_core_tasks_graph_types_ts ..> N_src_backend_core_tasks_queued_dependency_replacement_ts : 导入依赖
+N_src_backend_core_tasks_graph_types_ts ..> N_src_backend_core_tasks_queued_dependency_addition_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_queued_dependency_replacement_ts["queued-dependency-replacement.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_queued_dependency_addition_ts["queued-dependency-addition.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_member_checkpoint_ts["member-checkpoint.ts"] {
@@ -3389,23 +3647,20 @@ class N_src_backend_core_tasks_member_checkpoint_ts["member-checkpoint.ts"] {
 class N_src_backend_core_tasks_queued_member_resume_ts["queued-member-resume.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_graph_types_ts ..> N_src_backend_core_tasks_queued_dependency_replacement_ts : 导入依赖
-N_src_backend_core_tasks_graph_types_ts ..> N_src_backend_core_tasks_queued_dependency_addition_ts : 导入依赖
-N_src_backend_core_tasks_graph_types_ts ..> N_src_backend_core_tasks_member_checkpoint_ts : 导入依赖
-N_src_backend_core_tasks_graph_types_ts ..> N_src_backend_core_tasks_queued_member_resume_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
-  <<module>>
-}
 class N_src_backend_core_tasks_checkpoint_handoff_ts["checkpoint-handoff.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_workflow_selection_ts["workflow-selection.ts"] {
   <<module>>
 }
+N_src_backend_core_tasks_graph_types_ts ..> N_src_backend_core_tasks_member_checkpoint_ts : 导入依赖
+N_src_backend_core_tasks_graph_types_ts ..> N_src_backend_core_tasks_queued_member_resume_ts : 导入依赖
+N_src_backend_core_tasks_graph_types_ts ..> N_src_backend_core_tasks_checkpoint_handoff_ts : 导入依赖
+N_src_backend_core_tasks_graph_types_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_backend_core_tasks_human_continuation_invariants_ts["human-continuation-invariants.ts"] {
   <<module>>
 }
@@ -3415,10 +3670,16 @@ class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
 class N_src_backend_core_tasks_scope_continuation_record_ts["scope-continuation-record.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_graph_types_ts ..> N_src_backend_core_tasks_checkpoint_handoff_ts : 导入依赖
-N_src_backend_core_tasks_graph_types_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
+class N_src_backend_core_tasks_human_continue_ts["human-continue.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_human_continuation_rules_ts["human-continuation-rules.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_human_continuation_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 N_src_backend_core_tasks_human_continuation_invariants_ts ..> N_src_backend_core_tasks_scope_continuation_record_ts : 导入依赖
+N_src_backend_core_tasks_human_continuation_invariants_ts ..> N_src_backend_core_tasks_human_continue_ts : 导入依赖
+N_src_backend_core_tasks_human_continuation_invariants_ts ..> N_src_backend_core_tasks_human_continuation_rules_ts : 导入依赖
 ```
 
 ```mermaid
@@ -3426,27 +3687,13 @@ classDiagram
 class N_src_backend_core_tasks_human_continuation_invariants_ts["human-continuation-invariants.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_human_continue_ts["human-continue.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_human_continuation_rules_ts["human-continuation-rules.ts"] {
-  <<module>>
-}
 class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
+class N_src_backend_core_tasks_human_continuation_rules_ts["human-continuation-rules.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_human_continuation_invariants_ts ..> N_src_backend_core_tasks_human_continue_ts : 导入依赖
-N_src_backend_core_tasks_human_continuation_invariants_ts ..> N_src_backend_core_tasks_human_continuation_rules_ts : 导入依赖
-N_src_backend_core_tasks_human_continuation_invariants_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
-N_src_backend_core_tasks_human_continuation_rules_ts ..> N_src_backend_core_tasks_dispatch_scope_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_tasks_human_continuation_rules_ts["human-continuation-rules.ts"] {
+class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_human_decisions_ts["human-decisions.ts"] {
@@ -3455,20 +3702,23 @@ class N_src_backend_core_tasks_human_decisions_ts["human-decisions.ts"] {
 class N_src_backend_core_tasks_human_continue_ts["human-continue.ts"] {
   <<module>>
 }
+N_src_backend_core_tasks_human_continuation_invariants_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
+N_src_backend_core_tasks_human_continuation_rules_ts ..> N_src_backend_core_tasks_dispatch_scope_ts : 导入依赖
+N_src_backend_core_tasks_human_continuation_rules_ts ..> N_src_backend_core_tasks_human_decisions_ts : 导入依赖
+N_src_backend_core_tasks_human_continuation_rules_ts ..> N_src_backend_core_tasks_human_continue_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_human_continuation_rules_ts["human-continuation-rules.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_scope_continuation_record_ts["scope-continuation-record.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_human_continuation_rules_ts ..> N_src_backend_core_tasks_human_decisions_ts : 导入依赖
-N_src_backend_core_tasks_human_continuation_rules_ts ..> N_src_backend_core_tasks_human_continue_ts : 导入依赖
-N_src_backend_core_tasks_human_continuation_rules_ts ..> N_src_backend_core_tasks_scope_continuation_record_ts : 导入依赖
-N_src_backend_core_tasks_human_continuation_rules_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_backend_core_tasks_human_continue_ts["human-continue.ts"] {
   <<module>>
 }
@@ -3478,6 +3728,17 @@ class N_src_backend_core_tasks_scope_continuation_ts["scope-continuation.ts"] {
 class N_src_backend_core_tasks_human_decisions_ts["human-decisions.ts"] {
   <<module>>
 }
+N_src_backend_core_tasks_human_continuation_rules_ts ..> N_src_backend_core_tasks_scope_continuation_record_ts : 导入依赖
+N_src_backend_core_tasks_human_continuation_rules_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
+N_src_backend_core_tasks_human_continue_ts ..> N_src_backend_core_tasks_scope_continuation_ts : 导入依赖
+N_src_backend_core_tasks_human_continue_ts ..> N_src_backend_core_tasks_human_decisions_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_human_continue_ts["human-continue.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_workflow_selection_ts["workflow-selection.ts"] {
   <<module>>
 }
@@ -3487,21 +3748,21 @@ class N_src_backend_core_tasks_human_decision_invariants_ts["human-decision-inva
 class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_human_continue_ts ..> N_src_backend_core_tasks_scope_continuation_ts : 导入依赖
-N_src_backend_core_tasks_human_continue_ts ..> N_src_backend_core_tasks_human_decisions_ts : 导入依赖
+class N_src_backend_core_tasks_human_decisions_ts["human-decisions.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_human_decision_proof_ts["human-decision-proof.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_human_continue_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
 N_src_backend_core_tasks_human_decision_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
+N_src_backend_core_tasks_human_decision_invariants_ts ..> N_src_backend_core_tasks_human_decisions_ts : 导入依赖
+N_src_backend_core_tasks_human_decision_invariants_ts ..> N_src_backend_core_tasks_human_decision_proof_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_human_decision_invariants_ts["human-decision-invariants.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_human_decisions_ts["human-decisions.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_human_decision_proof_ts["human-decision-proof.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
@@ -3510,14 +3771,6 @@ class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
 class N_src_backend_core_tasks_workflow_selection_ts["workflow-selection.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_human_decision_invariants_ts ..> N_src_backend_core_tasks_human_decisions_ts : 导入依赖
-N_src_backend_core_tasks_human_decision_invariants_ts ..> N_src_backend_core_tasks_human_decision_proof_ts : 导入依赖
-N_src_backend_core_tasks_human_decision_invariants_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
-N_src_backend_core_tasks_human_decision_invariants_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_backend_core_tasks_human_decision_proof_ts["human-decision-proof.ts"] {
   <<module>>
 }
@@ -3527,6 +3780,14 @@ class N_src_backend_core_tasks_human_decisions_ts["human-decisions.ts"] {
 class N_src_backend_core_tasks_artifact_baseline_ts["artifact-baseline.ts"] {
   <<module>>
 }
+N_src_backend_core_tasks_human_decision_invariants_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
+N_src_backend_core_tasks_human_decision_invariants_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
+N_src_backend_core_tasks_human_decision_proof_ts ..> N_src_backend_core_tasks_human_decisions_ts : 导入依赖
+N_src_backend_core_tasks_human_decisions_ts ..> N_src_backend_core_tasks_artifact_baseline_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_backend_core_tasks_knowledge_source_invariants_ts["knowledge-source-invariants.ts"] {
   <<module>>
 }
@@ -3539,21 +3800,21 @@ class N_src_backend_core_tasks_main_tool_output_ts["main-tool-output.ts"] {
 class N_src_backend_core_tasks_graph_rules_ts["graph-rules.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_human_decision_proof_ts ..> N_src_backend_core_tasks_human_decisions_ts : 导入依赖
-N_src_backend_core_tasks_human_decisions_ts ..> N_src_backend_core_tasks_artifact_baseline_ts : 导入依赖
+class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_main_tool_scope_ts["main-tool-scope.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_knowledge_source_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_graph_rules_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_main_tool_scope_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_main_tool_output_ts["main-tool-output.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_main_tool_scope_ts["main-tool-scope.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
@@ -3562,21 +3823,21 @@ class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
 class N_src_backend_core_tasks_queued_dependency_replacement_ts["queued-dependency-replacement.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
-N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_main_tool_scope_ts : 导入依赖
+class N_src_backend_core_tasks_queued_dependency_addition_ts["queued-dependency-addition.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_queued_task_cancel_ts["queued-task-cancel.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
 N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_queued_dependency_replacement_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_queued_dependency_addition_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_queued_task_cancel_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_main_tool_output_ts["main-tool-output.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_queued_dependency_addition_ts["queued-dependency-addition.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_queued_task_cancel_ts["queued-task-cancel.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_queued_member_resume_ts["queued-member-resume.ts"] {
@@ -3585,67 +3846,27 @@ class N_src_backend_core_tasks_queued_member_resume_ts["queued-member-resume.ts"
 class N_src_backend_core_tasks_checkpoint_handoff_ts["checkpoint-handoff.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_queued_dependency_addition_ts : 导入依赖
-N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_queued_task_cancel_ts : 导入依赖
-N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_queued_member_resume_ts : 导入依赖
-N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_checkpoint_handoff_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_backend_core_tasks_main_tool_scope_ts["main-tool-scope.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_scope_continuation_ts["scope-continuation.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_scope_continuation_record_ts["scope-continuation-record.ts"] {
-  <<module>>
-}
-N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_dispatch_scope_ts : 导入依赖
-N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
-N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_continuation_ts : 导入依赖
-N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_continuation_record_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_tasks_main_tool_scope_ts["main-tool-scope.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_scope_run_tracking_ts["scope-run-tracking.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_scope_budget_ts["scope-budget.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_human_decisions_ts["human-decisions.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_scope_recovery_ts["scope-recovery.ts"] {
-  <<module>>
-}
-N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_run_tracking_ts : 导入依赖
-N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_budget_ts : 导入依赖
-N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_human_decisions_ts : 导入依赖
-N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_recovery_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_tasks_main_tool_scope_ts["main-tool-scope.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_scope_replan_ts["scope-replan.ts"] {
-  <<module>>
-}
 class N_src_backend_core_tasks_scope_active_input_ts["scope-active-input.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_queued_member_resume_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_output_ts ..> N_src_backend_core_tasks_checkpoint_handoff_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
+N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_active_input_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_main_tool_scope_ts["main-tool-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_public_ts["scope-public.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_member_checkpoint_evidence_ts["member-checkpoint-evidence.ts"] {
@@ -3657,18 +3878,21 @@ class N_src_backend_core_tasks_artifact_evidence_ts["artifact-evidence.ts"] {
 class N_src_backend_core_tasks_member_checkpoint_ts["member-checkpoint.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_replan_ts : 导入依赖
-N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_active_input_ts : 导入依赖
+class N_src_backend_core_tasks_member_checkpoint_invariants_ts["member-checkpoint-invariants.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_main_tool_scope_ts ..> N_src_backend_core_tasks_scope_public_ts : 导入依赖
 N_src_backend_core_tasks_member_checkpoint_evidence_ts ..> N_src_backend_core_tasks_artifact_evidence_ts : 导入依赖
 N_src_backend_core_tasks_member_checkpoint_evidence_ts ..> N_src_backend_core_tasks_member_checkpoint_ts : 导入依赖
+N_src_backend_core_tasks_member_checkpoint_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_member_checkpoint_invariants_ts["member-checkpoint-invariants.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
@@ -3680,18 +3904,18 @@ class N_src_backend_core_tasks_member_checkpoint_ts["member-checkpoint.ts"] {
 class N_src_backend_core_tasks_queued_member_resume_ts["queued-member-resume.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_member_checkpoint_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
+class N_src_backend_core_tasks_queued_member_resume_rules_ts["queued-member-resume-rules.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_member_checkpoint_invariants_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
 N_src_backend_core_tasks_member_checkpoint_invariants_ts ..> N_src_backend_core_tasks_member_checkpoint_ts : 导入依赖
 N_src_backend_core_tasks_member_checkpoint_invariants_ts ..> N_src_backend_core_tasks_queued_member_resume_ts : 导入依赖
+N_src_backend_core_tasks_member_checkpoint_invariants_ts ..> N_src_backend_core_tasks_queued_member_resume_rules_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_member_checkpoint_invariants_ts["member-checkpoint-invariants.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_queued_member_resume_rules_ts["queued-member-resume-rules.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
@@ -3706,20 +3930,17 @@ class N_src_backend_core_tasks_member_checkpoint_tools_ts["member-checkpoint-too
 class N_src_backend_core_tasks_member_checkpoint_ts["member-checkpoint.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_member_checkpoint_invariants_ts ..> N_src_backend_core_tasks_queued_member_resume_rules_ts : 导入依赖
+class N_src_backend_core_tasks_member_tool_output_ts["member-tool-output.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_member_checkpoint_invariants_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
 N_src_backend_core_tasks_member_checkpoint_invariants_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
 N_src_backend_core_tasks_member_checkpoint_tools_ts ..> N_src_backend_core_tasks_member_checkpoint_ts : 导入依赖
+N_src_backend_core_tasks_member_checkpoint_tools_ts ..> N_src_backend_core_tasks_member_tool_output_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_core_tasks_member_checkpoint_tools_ts["member-checkpoint-tools.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_member_tool_output_ts["member-tool-output.ts"] {
-  <<module>>
-}
 class N_src_backend_core_tasks_member_commands_ts["member-commands.ts"] {
   <<module>>
 }
@@ -3732,18 +3953,21 @@ class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
 class N_src_backend_core_tasks_dispatch_execution_ts["dispatch-execution.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_member_checkpoint_tools_ts ..> N_src_backend_core_tasks_member_tool_output_ts : 导入依赖
+class N_src_backend_core_tasks_member_events_ts["member-events.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_types_ts["types.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_member_commands_ts ..> N_src_backend_core_tasks_dispatch_commands_ts : 导入依赖
 N_src_backend_core_tasks_member_commands_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
 N_src_backend_core_tasks_member_commands_ts ..> N_src_backend_core_tasks_dispatch_execution_ts : 导入依赖
+N_src_backend_core_tasks_member_events_ts ..> N_src_backend_core_tasks_types_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_member_events_ts["member-events.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_types_ts["types.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_progress_ts["progress.ts"] {
@@ -3758,17 +3982,17 @@ class N_src_backend_core_tasks_member_help_tools_ts["member-help-tools.ts"] {
 class N_src_backend_core_tasks_member_help_ts["member-help.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_member_events_ts ..> N_src_backend_core_tasks_types_ts : 导入依赖
+class N_src_backend_core_tasks_member_tool_output_ts["member-tool-output.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_member_events_ts ..> N_src_backend_core_tasks_progress_ts : 导入依赖
 N_src_backend_core_tasks_member_events_ts ..> N_src_backend_core_tasks_member_commands_ts : 导入依赖
 N_src_backend_core_tasks_member_help_tools_ts ..> N_src_backend_core_tasks_member_help_ts : 导入依赖
+N_src_backend_core_tasks_member_help_tools_ts ..> N_src_backend_core_tasks_member_tool_output_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_core_tasks_member_help_tools_ts["member-help-tools.ts"] {
-  <<module>>
-}
 class N_src_backend_core_tasks_member_tool_output_ts["member-tool-output.ts"] {
   <<module>>
 }
@@ -3781,18 +4005,18 @@ class N_src_backend_core_tasks_progress_ts["progress.ts"] {
 class N_src_backend_core_tasks_member_help_ts["member-help.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_member_help_tools_ts ..> N_src_backend_core_tasks_member_tool_output_ts : 导入依赖
+class N_src_backend_core_tasks_artifact_baseline_ts["artifact-baseline.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_member_tool_output_ts ..> N_src_backend_core_tasks_progress_schema_ts : 导入依赖
 N_src_backend_core_tasks_member_tool_output_ts ..> N_src_backend_core_tasks_progress_ts : 导入依赖
 N_src_backend_core_tasks_member_tool_output_ts ..> N_src_backend_core_tasks_member_help_ts : 导入依赖
+N_src_backend_core_tasks_member_tool_output_ts ..> N_src_backend_core_tasks_artifact_baseline_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_member_tool_output_ts["member-tool-output.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_artifact_baseline_ts["artifact-baseline.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_member_checkpoint_ts["member-checkpoint.ts"] {
@@ -3804,20 +4028,17 @@ class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
 class N_src_backend_core_tasks_workflow_evidence_ts["workflow-evidence.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_member_tool_output_ts ..> N_src_backend_core_tasks_artifact_baseline_ts : 导入依赖
+class N_src_backend_core_tasks_validation_ts["validation.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_member_tool_output_ts ..> N_src_backend_core_tasks_member_checkpoint_ts : 导入依赖
 N_src_backend_core_tasks_member_tool_output_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
 N_src_backend_core_tasks_member_tool_output_ts ..> N_src_backend_core_tasks_workflow_evidence_ts : 导入依赖
+N_src_backend_core_tasks_member_tool_output_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_core_tasks_member_tool_output_ts["member-tool-output.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_validation_ts["validation.ts"] {
-  <<module>>
-}
 class N_src_backend_core_tasks_module_ownership_invariants_ts["module-ownership-invariants.ts"] {
   <<module>>
 }
@@ -3830,18 +4051,18 @@ class N_src_backend_core_tasks_knowledge_source_invariants_ts["knowledge-source-
 class N_src_backend_core_tasks_owner_execution_invariants_ts["owner-execution-invariants.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_member_tool_output_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
+class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_module_ownership_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 N_src_backend_core_tasks_module_ownership_invariants_ts ..> N_src_backend_core_tasks_knowledge_source_invariants_ts : 导入依赖
 N_src_backend_core_tasks_owner_execution_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
+N_src_backend_core_tasks_owner_execution_invariants_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_owner_execution_invariants_ts["owner-execution-invariants.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
@@ -3853,18 +4074,21 @@ class N_src_backend_core_tasks_workflow_selection_ts["workflow-selection.ts"] {
 class N_src_backend_core_tasks_scope_active_input_ts["scope-active-input.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_owner_execution_invariants_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
+class N_src_backend_core_tasks_progress_schema_ts["progress-schema.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_artifact_baseline_ts["artifact-baseline.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_owner_execution_invariants_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
 N_src_backend_core_tasks_owner_execution_invariants_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
 N_src_backend_core_tasks_owner_execution_invariants_ts ..> N_src_backend_core_tasks_scope_active_input_ts : 导入依赖
+N_src_backend_core_tasks_progress_schema_ts ..> N_src_backend_core_tasks_artifact_baseline_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_progress_schema_ts["progress-schema.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_artifact_baseline_ts["artifact-baseline.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_validation_ts["validation.ts"] {
@@ -3876,18 +4100,21 @@ class N_src_backend_core_tasks_progress_tools_ts["progress-tools.ts"] {
 class N_src_backend_core_tasks_progress_ts["progress.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_progress_schema_ts ..> N_src_backend_core_tasks_artifact_baseline_ts : 导入依赖
+class N_src_backend_core_tasks_artifact_baseline_ts["artifact-baseline.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_workflow_evidence_ts["workflow-evidence.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_progress_schema_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
 N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_progress_ts : 导入依赖
 N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_artifact_baseline_ts : 导入依赖
+N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_workflow_evidence_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_progress_tools_ts["progress-tools.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_workflow_evidence_ts["workflow-evidence.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_validation_ts["validation.ts"] {
@@ -3899,20 +4126,17 @@ class N_src_backend_core_tasks_progress_schema_ts["progress-schema.ts"] {
 class N_src_backend_core_tasks_member_tool_output_ts["member-tool-output.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_workflow_evidence_ts : 导入依赖
+class N_src_backend_core_tasks_progress_ts["progress.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
 N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_progress_schema_ts : 导入依赖
 N_src_backend_core_tasks_progress_tools_ts ..> N_src_backend_core_tasks_member_tool_output_ts : 导入依赖
+N_src_backend_core_tasks_progress_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_core_tasks_progress_ts["progress.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_validation_ts["validation.ts"] {
-  <<module>>
-}
 class N_src_backend_core_tasks_queued_dependency_addition_invariants_ts["queued-dependency-addition-invariants.ts"] {
   <<module>>
 }
@@ -3925,18 +4149,18 @@ class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
 class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_progress_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
+class N_src_backend_core_tasks_queued_dependency_addition_ts["queued-dependency-addition.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_queued_dependency_addition_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 N_src_backend_core_tasks_queued_dependency_addition_invariants_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
 N_src_backend_core_tasks_queued_dependency_addition_invariants_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
+N_src_backend_core_tasks_queued_dependency_addition_invariants_ts ..> N_src_backend_core_tasks_queued_dependency_addition_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_queued_dependency_addition_invariants_ts["queued-dependency-addition-invariants.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_queued_dependency_addition_ts["queued-dependency-addition.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_queued_dependency_addition_rules_ts["queued-dependency-addition-rules.ts"] {
@@ -3948,18 +4172,18 @@ class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
 class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_queued_dependency_addition_invariants_ts ..> N_src_backend_core_tasks_queued_dependency_addition_ts : 导入依赖
+class N_src_backend_core_tasks_queued_dependency_addition_ts["queued-dependency-addition.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_queued_dependency_addition_invariants_ts ..> N_src_backend_core_tasks_queued_dependency_addition_rules_ts : 导入依赖
 N_src_backend_core_tasks_queued_dependency_addition_rules_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 N_src_backend_core_tasks_queued_dependency_addition_rules_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
+N_src_backend_core_tasks_queued_dependency_addition_rules_ts ..> N_src_backend_core_tasks_queued_dependency_addition_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_queued_dependency_addition_rules_ts["queued-dependency-addition-rules.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_queued_dependency_addition_ts["queued-dependency-addition.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
@@ -3971,18 +4195,21 @@ class N_src_backend_core_tasks_scope_active_input_ts["scope-active-input.ts"] {
 class N_src_backend_core_tasks_workflow_selection_ts["workflow-selection.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_queued_dependency_addition_rules_ts ..> N_src_backend_core_tasks_queued_dependency_addition_ts : 导入依赖
+class N_src_backend_core_tasks_queued_dependency_replacement_invariants_ts["queued-dependency-replacement-invariants.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_queued_dependency_addition_rules_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
 N_src_backend_core_tasks_queued_dependency_addition_rules_ts ..> N_src_backend_core_tasks_scope_active_input_ts : 导入依赖
 N_src_backend_core_tasks_queued_dependency_addition_rules_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
+N_src_backend_core_tasks_queued_dependency_replacement_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_queued_dependency_replacement_invariants_ts["queued-dependency-replacement-invariants.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
@@ -3994,18 +4221,18 @@ class N_src_backend_core_tasks_queued_dependency_replacement_ts["queued-dependen
 class N_src_backend_core_tasks_queued_dependency_replacement_rules_ts["queued-dependency-replacement-rules.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_queued_dependency_replacement_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
+class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_queued_dependency_replacement_invariants_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
 N_src_backend_core_tasks_queued_dependency_replacement_invariants_ts ..> N_src_backend_core_tasks_queued_dependency_replacement_ts : 导入依赖
 N_src_backend_core_tasks_queued_dependency_replacement_invariants_ts ..> N_src_backend_core_tasks_queued_dependency_replacement_rules_ts : 导入依赖
+N_src_backend_core_tasks_queued_dependency_replacement_rules_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_queued_dependency_replacement_rules_ts["queued-dependency-replacement-rules.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
@@ -4017,20 +4244,17 @@ class N_src_backend_core_tasks_queued_dependency_replacement_ts["queued-dependen
 class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_queued_dependency_replacement_rules_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
+class N_src_backend_core_tasks_workflow_selection_ts["workflow-selection.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_queued_dependency_replacement_rules_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
 N_src_backend_core_tasks_queued_dependency_replacement_rules_ts ..> N_src_backend_core_tasks_queued_dependency_replacement_ts : 导入依赖
 N_src_backend_core_tasks_queued_dependency_replacement_rules_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
+N_src_backend_core_tasks_queued_dependency_replacement_rules_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_core_tasks_queued_dependency_replacement_rules_ts["queued-dependency-replacement-rules.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_workflow_selection_ts["workflow-selection.ts"] {
-  <<module>>
-}
 class N_src_backend_core_tasks_queued_member_resume_rules_ts["queued-member-resume-rules.ts"] {
   <<module>>
 }
@@ -4043,18 +4267,18 @@ class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
 class N_src_backend_core_tasks_queued_member_resume_ts["queued-member-resume.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_queued_dependency_replacement_rules_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
+class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_queued_member_resume_rules_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 N_src_backend_core_tasks_queued_member_resume_rules_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
 N_src_backend_core_tasks_queued_member_resume_rules_ts ..> N_src_backend_core_tasks_queued_member_resume_ts : 导入依赖
+N_src_backend_core_tasks_queued_member_resume_rules_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_queued_member_resume_rules_ts["queued-member-resume-rules.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_workflow_selection_ts["workflow-selection.ts"] {
@@ -4069,20 +4293,17 @@ class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
 class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_queued_member_resume_rules_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
+class N_src_backend_core_tasks_queued_task_cancel_ts["queued-task-cancel.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_queued_member_resume_rules_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
 N_src_backend_core_tasks_queued_task_cancel_rules_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 N_src_backend_core_tasks_queued_task_cancel_rules_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
+N_src_backend_core_tasks_queued_task_cancel_rules_ts ..> N_src_backend_core_tasks_queued_task_cancel_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_core_tasks_queued_task_cancel_rules_ts["queued-task-cancel-rules.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_queued_task_cancel_ts["queued-task-cancel.ts"] {
-  <<module>>
-}
 class N_src_backend_core_tasks_scope_active_input_rules_ts["scope-active-input-rules.ts"] {
   <<module>>
 }
@@ -4095,18 +4316,18 @@ class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
 class N_src_backend_core_tasks_scope_continuation_ts["scope-continuation.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_queued_task_cancel_rules_ts ..> N_src_backend_core_tasks_queued_task_cancel_ts : 导入依赖
+class N_src_backend_core_tasks_scope_continuation_record_ts["scope-continuation-record.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_scope_active_input_rules_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 N_src_backend_core_tasks_scope_active_input_rules_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
 N_src_backend_core_tasks_scope_active_input_rules_ts ..> N_src_backend_core_tasks_scope_continuation_ts : 导入依赖
+N_src_backend_core_tasks_scope_active_input_rules_ts ..> N_src_backend_core_tasks_scope_continuation_record_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_scope_active_input_rules_ts["scope-active-input-rules.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_scope_continuation_record_ts["scope-continuation-record.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_scope_active_input_ts["scope-active-input.ts"] {
@@ -4121,20 +4342,17 @@ class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
 class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_scope_active_input_rules_ts ..> N_src_backend_core_tasks_scope_continuation_record_ts : 导入依赖
+class N_src_backend_core_tasks_scope_budget_ts["scope-budget.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_scope_active_input_rules_ts ..> N_src_backend_core_tasks_scope_active_input_ts : 导入依赖
 N_src_backend_core_tasks_scope_budget_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 N_src_backend_core_tasks_scope_budget_invariants_ts ..> N_src_backend_core_tasks_dispatch_scope_ts : 导入依赖
+N_src_backend_core_tasks_scope_budget_invariants_ts ..> N_src_backend_core_tasks_scope_budget_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_core_tasks_scope_budget_invariants_ts["scope-budget-invariants.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_scope_budget_ts["scope-budget.ts"] {
-  <<module>>
-}
 class N_src_backend_core_tasks_scope_continuation_attachments_ts["scope-continuation-attachments.ts"] {
   <<module>>
 }
@@ -4150,41 +4368,87 @@ class N_src_backend_core_tasks_scope_continuation_ts["scope-continuation.ts"] {
 class N_src_backend_core_tasks_human_continue_ts["human-continue.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_scope_budget_invariants_ts ..> N_src_backend_core_tasks_scope_budget_ts : 导入依赖
 N_src_backend_core_tasks_scope_continuation_attachments_ts ..> N_src_backend_core_tasks_continuation_source_snapshot_ts : 导入依赖
 N_src_backend_core_tasks_scope_continuation_record_ts ..> N_src_backend_core_tasks_scope_continuation_ts : 导入依赖
 N_src_backend_core_tasks_scope_continuation_record_ts ..> N_src_backend_core_tasks_human_continue_ts : 导入依赖
+N_src_backend_core_tasks_scope_continuation_ts ..> N_src_backend_core_tasks_scope_continuation_attachments_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_core_tasks_scope_continuation_ts["scope-continuation.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_scope_continuation_attachments_ts["scope-continuation-attachments.ts"] {
-  <<module>>
-}
 class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_workflow_selection_ts["workflow-selection.ts"] {
   <<module>>
 }
+class N_src_backend_core_tasks_scope_public_ts["scope-public.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_continuation_ts["scope-continuation.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_scope_goal_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
+N_src_backend_core_tasks_scope_public_ts ..> N_src_backend_core_tasks_dispatch_scope_ts : 导入依赖
+N_src_backend_core_tasks_scope_public_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
+N_src_backend_core_tasks_scope_public_ts ..> N_src_backend_core_tasks_scope_continuation_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_scope_public_ts["scope-public.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_continuation_record_ts["scope-continuation-record.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_run_tracking_ts["scope-run-tracking.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_budget_ts["scope-budget.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_human_decisions_ts["human-decisions.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_scope_public_ts ..> N_src_backend_core_tasks_scope_continuation_record_ts : 导入依赖
+N_src_backend_core_tasks_scope_public_ts ..> N_src_backend_core_tasks_scope_run_tracking_ts : 导入依赖
+N_src_backend_core_tasks_scope_public_ts ..> N_src_backend_core_tasks_scope_budget_ts : 导入依赖
+N_src_backend_core_tasks_scope_public_ts ..> N_src_backend_core_tasks_human_decisions_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_scope_public_ts["scope-public.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_scope_recovery_ts["scope-recovery.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_replan_ts["scope-replan.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_active_input_ts["scope-active-input.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_dispatch_commands_ts["dispatch-commands.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_scope_continuation_ts ..> N_src_backend_core_tasks_scope_continuation_attachments_ts : 导入依赖
-N_src_backend_core_tasks_scope_goal_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
+N_src_backend_core_tasks_scope_public_ts ..> N_src_backend_core_tasks_scope_recovery_ts : 导入依赖
+N_src_backend_core_tasks_scope_public_ts ..> N_src_backend_core_tasks_scope_replan_ts : 导入依赖
+N_src_backend_core_tasks_scope_public_ts ..> N_src_backend_core_tasks_scope_active_input_ts : 导入依赖
 N_src_backend_core_tasks_scope_recovery_ts ..> N_src_backend_core_tasks_dispatch_commands_ts : 导入依赖
-N_src_backend_core_tasks_scope_recovery_ts ..> N_src_backend_core_tasks_scope_continuation_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_scope_recovery_ts["scope-recovery.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_continuation_ts["scope-continuation.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_execution_report_ts["execution-report.ts"] {
@@ -4193,6 +4457,17 @@ class N_src_backend_core_tasks_execution_report_ts["execution-report.ts"] {
 class N_src_backend_core_tasks_fresh_context_ts["fresh-context.ts"] {
   <<module>>
 }
+class N_src_backend_core_tasks_effect_observation_ts["effect-observation.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_scope_recovery_ts ..> N_src_backend_core_tasks_scope_continuation_ts : 导入依赖
+N_src_backend_core_tasks_scope_recovery_ts ..> N_src_backend_core_tasks_execution_report_ts : 导入依赖
+N_src_backend_core_tasks_scope_recovery_ts ..> N_src_backend_core_tasks_fresh_context_ts : 导入依赖
+N_src_backend_core_tasks_scope_recovery_ts ..> N_src_backend_core_tasks_effect_observation_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_backend_core_tasks_scope_replan_ts["scope-replan.ts"] {
   <<module>>
 }
@@ -4200,17 +4475,6 @@ class N_src_backend_core_tasks_dispatch_commands_ts["dispatch-commands.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_scope_continuation_ts["scope-continuation.ts"] {
-  <<module>>
-}
-N_src_backend_core_tasks_scope_recovery_ts ..> N_src_backend_core_tasks_execution_report_ts : 导入依赖
-N_src_backend_core_tasks_scope_recovery_ts ..> N_src_backend_core_tasks_fresh_context_ts : 导入依赖
-N_src_backend_core_tasks_scope_replan_ts ..> N_src_backend_core_tasks_dispatch_commands_ts : 导入依赖
-N_src_backend_core_tasks_scope_replan_ts ..> N_src_backend_core_tasks_scope_continuation_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_tasks_scope_replan_ts["scope-replan.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_fresh_context_ts["fresh-context.ts"] {
@@ -4222,21 +4486,21 @@ class N_src_backend_core_tasks_scope_run_invariants_ts["scope-run-invariants.ts"
 class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_scope_run_tracking_ts["scope-run-tracking.ts"] {
-  <<module>>
-}
+N_src_backend_core_tasks_scope_replan_ts ..> N_src_backend_core_tasks_dispatch_commands_ts : 导入依赖
+N_src_backend_core_tasks_scope_replan_ts ..> N_src_backend_core_tasks_scope_continuation_ts : 导入依赖
 N_src_backend_core_tasks_scope_replan_ts ..> N_src_backend_core_tasks_fresh_context_ts : 导入依赖
 N_src_backend_core_tasks_scope_run_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
-N_src_backend_core_tasks_scope_run_invariants_ts ..> N_src_backend_core_tasks_dispatch_scope_ts : 导入依赖
-N_src_backend_core_tasks_scope_run_invariants_ts ..> N_src_backend_core_tasks_scope_run_tracking_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_scope_run_invariants_ts["scope-run-invariants.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_scope_run_tracking_ts["scope-run-tracking.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_fresh_context_ts["fresh-context.ts"] {
@@ -4248,21 +4512,21 @@ class N_src_backend_core_tasks_scope_view_ts["scope-view.ts"] {
 class N_src_backend_core_tasks_dispatch_commands_ts["dispatch-commands.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
-  <<module>>
-}
+N_src_backend_core_tasks_scope_run_invariants_ts ..> N_src_backend_core_tasks_dispatch_scope_ts : 导入依赖
+N_src_backend_core_tasks_scope_run_invariants_ts ..> N_src_backend_core_tasks_scope_run_tracking_ts : 导入依赖
 N_src_backend_core_tasks_scope_run_invariants_ts ..> N_src_backend_core_tasks_fresh_context_ts : 导入依赖
 N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_dispatch_commands_ts : 导入依赖
-N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_dispatch_scope_ts : 导入依赖
-N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_scope_view_ts["scope-view.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_graph_rules_ts["graph-rules.ts"] {
@@ -4271,24 +4535,41 @@ class N_src_backend_core_tasks_graph_rules_ts["graph-rules.ts"] {
 class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
   <<module>>
 }
+N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_dispatch_scope_ts : 导入依赖
+N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
+N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_graph_rules_ts : 导入依赖
+N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_scope_view_ts["scope-view.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_scope_active_input_ts["scope-active-input.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_scope_budget_ts["scope-budget.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_graph_rules_ts : 导入依赖
-N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
+class N_src_backend_core_tasks_scope_public_ts["scope-public.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_validation_evidence_ts["validation-evidence.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_artifact_evidence_ts["artifact-evidence.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_scope_active_input_ts : 导入依赖
 N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_scope_budget_ts : 导入依赖
+N_src_backend_core_tasks_scope_view_ts ..> N_src_backend_core_tasks_scope_public_ts : 导入依赖
+N_src_backend_core_tasks_validation_evidence_ts ..> N_src_backend_core_tasks_artifact_evidence_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_validation_evidence_ts["validation-evidence.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_artifact_evidence_ts["artifact-evidence.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_validation_ts["validation.ts"] {
@@ -4297,20 +4578,17 @@ class N_src_backend_core_tasks_validation_ts["validation.ts"] {
 class N_src_backend_core_tasks_validation_tools_ts["validation-tools.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_validation_evidence_ts ..> N_src_backend_core_tasks_artifact_evidence_ts : 导入依赖
+class N_src_backend_core_tasks_artifact_baseline_ts["artifact-baseline.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_validation_evidence_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
 N_src_backend_core_tasks_validation_tools_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
 N_src_backend_core_tasks_validation_tools_ts ..> N_src_backend_core_tasks_validation_evidence_ts : 导入依赖
+N_src_backend_core_tasks_validation_ts ..> N_src_backend_core_tasks_artifact_baseline_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_core_tasks_validation_ts["validation.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_artifact_baseline_ts["artifact-baseline.ts"] {
-  <<module>>
-}
 class N_src_backend_core_tasks_workflow_evidence_ts["workflow-evidence.ts"] {
   <<module>>
 }
@@ -4323,18 +4601,18 @@ class N_src_backend_core_tasks_progress_ts["progress.ts"] {
 class N_src_backend_core_tasks_types_ts["types.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_validation_ts ..> N_src_backend_core_tasks_artifact_baseline_ts : 导入依赖
+class N_src_backend_core_tasks_command_verification_ts["command-verification.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_execution_context_ts : 导入依赖
 N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_progress_ts : 导入依赖
 N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_types_ts : 导入依赖
+N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_command_verification_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tasks_workflow_evidence_ts["workflow-evidence.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_command_verification_ts["command-verification.ts"] {
   <<module>>
 }
 class N_src_backend_core_tasks_artifact_evidence_ts["artifact-evidence.ts"] {
@@ -4346,10 +4624,16 @@ class N_src_backend_core_tasks_validation_ts["validation.ts"] {
 class N_src_backend_core_tasks_validation_evidence_ts["validation-evidence.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_command_verification_ts : 导入依赖
+class N_src_backend_core_tasks_workspace_member_invariants_ts["workspace-member-invariants.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
+  <<module>>
+}
 N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_artifact_evidence_ts : 导入依赖
 N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
 N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_validation_evidence_ts : 导入依赖
+N_src_backend_core_tasks_workspace_member_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 ```
 
 ```mermaid
@@ -4357,13 +4641,9 @@ classDiagram
 class N_src_backend_core_tasks_workspace_member_invariants_ts["workspace-member-invariants.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
-  <<module>>
-}
 class N_src_backend_core_tasks_knowledge_source_invariants_ts["knowledge-source-invariants.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_workspace_member_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 N_src_backend_core_tasks_workspace_member_invariants_ts ..> N_src_backend_core_tasks_knowledge_source_invariants_ts : 导入依赖
 ```
 
@@ -4962,3 +5242,13 @@ Store 继续用同一串行提交、原命令回执和原协议裁决，不增�
 `DispatchStore.commandEvidence` 是内部只读端口，保留原 fingerprint/receipt 并提供原提交序号、校验值、执行协议及图的真实前态根版本/游标；这些内部值必须先严格核原输入与绑定再公开投影。原 `commandReceipt` 形状不变。命令算法与原 parsed 指纹由 Scheduler 的唯一适配器维护；工具协议版本与 Store 执行协议不是一回事。
 
 `command-verification-output.ts` 仅供后端：原回执先按既有主输出 Schema 核输入/身份/版本，并拒绝解析产生的 trim/默认化，再生成八支紧凑摘要。任务列表最多 20 项，明确 total/truncated，完整原集合不能先裁剪再核；公开报告最多 20 条 issue、128 KiB wire，业务验收固定 not_evaluated。Bridge 仅导 `command-verification.ts` 叶子，不能把后端回执读取或原私有上下文导入浏览器。
+
+## 影响观察与处置附录（Step36 Core 协议）
+
+`effect-observation.ts` 分开原主/成员调用、当前文件观察、原提交事实及本机处置；所有公开对象 strict，不接受客户端 scope、参数、文件 hash 或 actor 作为证明。新 source/proof 的 kind 明确区分主与成员；旧无 kind 分支原样读取，不默认升级、不重新编码原 journal。主来源不能借成员任务版本，缺原可信计划只允许只读核实，不签发业务重规划资格。
+
+`effect-observation-rules.ts` 是观察 basis 与处置命令唯一后端算法。新报告先经 strict Schema 固定字段次序，basis 排除 checkedAt 和独立 dispositionRevision；提交仍严格比较 root head，不拿该新算法重算任何旧命令。处置只保存当时观察、限制和本机明确选择，不清 unknown，不作为交付或人工验收证据。首次支持 16 调用/文件、每文件 8 MiB、按路径去重后的读取合计 32 MiB，公开报告 128 KiB；root 64 条、工作区 512 条及 16 MiB 历史上限，达到上限拒新增而不删除旧证据。列表每条理由只展示最多 512 字符并以 reasonTruncated 标明缩略，完整理由保留在原回执。
+
+`effect-observation-invariants.ts` 只允许原周期关闭后的单条独立 append，核原命令指纹、回执、来源版本和观察 hash，禁止混入 scope/图/运行或其它领域写入。新 recovery/replan 创建时仅引用已保存且同源的明确处置；已有意图不可回填。recovery 对应 inspect_more，replan 对应 repair_in_new_cycle，均重核精确 basis 和调用集合；原只读权限、模块覆盖、人工标准及当前负责人执行门禁继续生效。服务取证、界面和最终验收进度以本片正式记录为准。
+
+`scope-public.ts` 是主工具与 `dispatch.sessionRead` 选中详情共用的纯公开白名单；`PublicDispatchScope` 明确区别于私有持久 `DispatchScope`。公开详情保留原 `recovery.source`、`replan.source.proof`、权限、人工约束与可选 `dispositionId`，剔除两类 `context` 及其原生身份/旧运行排除集合，旧未配置字段继续缺省。`readScopeDetail` 在真实同一 Store 读取屏障上校验公开 Schema，再独立复制；stamp 相同仍返回 noop。主工具复用同一基础 Schema，另加后端身份/哈希语义核验，浏览器不引入 Node 哈希实现。前端只持有公开类型，不能据来源投影推断新的恢复许可或业务验收。

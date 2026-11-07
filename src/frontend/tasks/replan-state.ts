@@ -2,12 +2,13 @@
  * 作用定位：保存从已完成核实周期创建正式业务周期的独立草稿、条件预览和稳定提交命令。
  * 设计原因：只读核实不能原地提权；提交前保存新目标和 ask/execute 权限。首次容量拒绝不锁死草稿，曾通信未知仍只能查询或重试原命令，不能借准入等待重放业务。
  * 职责边界：本模块不复活旧任务、不批准人工验收；来源与知识是否仍有效由后端在受理时再次核验。
+ * 新影响来源：dispositionId 纳入目标键、预览和稳定命令；回执必须匹配原选择，不为历史请求补造关联。
  */
 import {replanPreviewSchema,replanRequestSchema,replanReceiptSchema} from '../../bridge/contracts/dispatch';
 import type {ReplanPreviewInput,ReplanPreview,ReplanRequest,ReplanLookup,ReplanReceipt} from '../../bridge/contracts/dispatch';
 
 /** anchor 是视图已核对的图/周期/模型选择版本，仅用于丢弃迟到预览，不作为后端授权字段。 */
-export interface ReplanTarget extends ReplanPreviewInput {anchor:string;graphCursor:{streamId:string;seq:number};inspectionGoalRevision:number}
+export interface ReplanTarget extends ReplanPreviewInput {anchor:string;graphCursor:{streamId:string;seq:number};inspectionGoalRevision:number;dispositionId?:string}
 export interface ReplanAttempt {
   request:ReplanRequest;proof:ReplanPreview;
   phase:'submitting'|'unknown'|'accepted'|'rejected';uncertain:boolean;
@@ -24,7 +25,7 @@ export interface ReplanPorts {
   lookup:(input:ReplanLookup)=>Promise<unknown>;
   uuid:()=>string;
 }
-const key=(target:ReplanTarget|undefined)=>target?JSON.stringify([target.workspaceId,target.rootSessionId,target.inspectionScopeId,target.anchor]):'';
+const key=(target:ReplanTarget|undefined)=>target?JSON.stringify([target.workspaceId,target.rootSessionId,target.inspectionScopeId,target.anchor,target.dispositionId]):'';
 const draftKey=(draft:ReplanDraft|undefined)=>JSON.stringify([draft?.message??'',draft?.permission??'ask']);
 const textError=(error:unknown)=>error instanceof Error?error.message:String(error);
 const bytes=(value:unknown)=>new TextEncoder().encode(JSON.stringify(value)).length;
@@ -43,6 +44,7 @@ export function checkedReplanPreview(raw:unknown,input:ReplanPreviewInput):Repla
 /** 受理不表示执行已开始；同命令的来源、目标、权限、初始运行和受理时间不可被后续查询替换。 */
 export function checkedReplanReceipt(raw:unknown,request:ReplanRequest,proof:ReplanPreview,previous?:ReplanReceipt):ReplanReceipt{
   const receipt=replanReceiptSchema.parse(raw),value=receipt.replan;
+  if(value.dispositionId!==request.dispositionId)throw Error('新业务周期回执关联了其他处置，请查询原命令');
   if(receipt.workspaceId!==request.workspaceId||receipt.rootSessionId!==request.rootSessionId||receipt.scopeId!==request.commandId||receipt.scopeId===request.source.inspectionScopeId||value.replanId!==request.commandId||value.operation!=='business_replan'||value.source.inspectionScopeId!==request.source.inspectionScopeId||value.source.expectedBasis!==request.source.expectedBasis||value.input.message!==request.input.message||JSON.stringify(value.options)!==JSON.stringify(request.options)||proof.basis!==request.source.expectedBasis)throw Error('新业务周期回执与冻结请求不一致，请查询原命令');
   const facts=value.source.proof;
   if(facts.inspectionGoalRevision!==proof.inspectionGoalRevision||facts.knowledgeRevision!==proof.knowledgeRevision||JSON.stringify(facts.requiredModules)!==JSON.stringify(proof.requiredModules)||JSON.stringify(facts.inheritedHuman)!==JSON.stringify(proof.inheritedHuman)||value.runId===facts.reviewRunId||value.runId===facts.sourceRunId)throw Error('新业务周期回执的前置依据与已核验条件不一致');
@@ -146,7 +148,7 @@ export class ScopeReplanController {
     if(this.unavailable||!record||!proof?.basis||record.attempt&&record.attempt.phase!=='rejected'||this.isPending(record))return;
     let request:ReplanRequest;
     try{
-      request=replanRequestSchema.parse({workspaceId:this.workspaceId,rootSessionId:this.rootSessionId,commandId:this.ports.uuid(),source:{inspectionScopeId:target.inspectionScopeId,expectedBasis:proof.basis},input:{message:record.message},options:{...model,permission:record.permission}});
+      request=replanRequestSchema.parse({workspaceId:this.workspaceId,rootSessionId:this.rootSessionId,commandId:this.ports.uuid(),source:{inspectionScopeId:target.inspectionScopeId,expectedBasis:proof.basis},input:{message:record.message},options:{...model,permission:record.permission},...(target.dispositionId?{dispositionId:target.dispositionId}:{})});
       if(this.value.records.some(item=>item.attempt?.request.commandId===request.commandId))throw Error('命令标识与已有业务请求重复');
     }catch(error){this.value={...this.value,error:'新业务目标或模型无效：'+textError(error)};this.emit();return}
     const next={...record,attempt:{request,proof,phase:'submitting' as const,uncertain:false}};

@@ -21,7 +21,7 @@ function occupied(admission:GlobalRunAdmission){
   if(attempt.kind!=='granted')throw Error('fixture occupancy was denied');return attempt.release;
 }
 
-async function fixture(admission?:GlobalRunAdmission){
+async function fixture(admission?:GlobalRunAdmission,allowTools=false){
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-conversation-collaboration-'));
   const workspace={entry:{id:'workspace-one',path:directory},paths:{project:()=>directory},assert:()=>{}} as unknown as KnowledgeWorkspace;
   const storage=new FileRunStorage();
@@ -45,7 +45,7 @@ async function fixture(admission?:GlobalRunAdmission){
         const release=acquireExecutionLease(lease,task.taskId,{workspaceId:task.workspaceId,rootSessionId:task.taskId,taskId:task.taskId,requestId:admissionRequestId('main',launch.requestId),scopeId:launch.scopeId,source:launch.wait?'main-result':'direct',workspacePermission:'read'},admission?{manager:admission,ownerEpoch:1,isCurrent:()=>true}:undefined,launch.wait);
         if(leased)throw Error('lease overlaps');leased=true;return ()=>{leased=false;release()};
       },
-      createEngine:()=>engine,toolPolicy:async()=>({allow:false}),onEvent:config.onEvent,
+      createEngine:()=>engine,toolPolicy:async()=>({allow:allowTools,effects:['business-write']}),onEvent:config.onEvent,
     });
     return {runtime} as any;
   });
@@ -73,6 +73,16 @@ test('初始输入与显式续聊传入本轮原文，原会话 TaskSpec 保持�
     await f.finish();
     await f.manager.resume(chat.taskId,chat.runId,second,options);
     expect(f.starting).toHaveBeenLastCalledWith(expect.objectContaining({taskId:chat.taskId,goal:first.trim()}),expect.anything(),undefined,second,expect.any(String));
+  }finally{await f.cleanup()}
+});
+
+test('直接 Manager resume 不能用裸调用 ID 解除真实未知，既不入队也不创建新引擎',async()=>{
+  const f=await fixture(undefined,true);try{
+    const chat=await f.manager.chat('原未知操作',options),call={id:'unknown-native-call',name:'write',input:{path:'result.txt',content:'original'}};
+    expect((await f.runs[0].context!.beforeTool(call)).allow).toBe(true);await f.finish(0,'failed');
+    const summary=await f.manager.inspect(chat.taskId,chat.runId);expect(summary.unresolvedTools).toEqual([call.id]);
+    for(const ids of [[],[call.id]])await expect(f.manager.resume(chat.taskId,chat.runId,'我已检查',options,ids)).rejects.toMatchObject({code:'RECOVERY_INSPECTION_REQUIRED'});
+    expect(f.factory).toHaveBeenCalledTimes(1);expect(await f.manager.queued(chat.taskId)).toEqual([]);expect(await f.manager.inspect(chat.taskId,chat.runId)).toEqual(summary);
   }finally{await f.cleanup()}
 });
 

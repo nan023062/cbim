@@ -45,6 +45,14 @@ export function recoveryTarget(workspaceId:string,rootSessionId:string,task:Task
 
 /** 同一个 root 共用本机请求索引；卸载只停止观察，不撤销提交或丢失迟到回执。 */
 export function useExecutionRecovery(workspaceId:string,rootSessionId:string,task:TaskNode,runId:string|undefined,report:ExecutionReport|undefined,reportUnavailable:boolean,context?:ExecutionRecoveryContext,invalidateReport?:()=>void):ExecutionRecoveryView{
+  const source:RecoverySource|undefined=task.scopeId?{scopeId:task.scopeId,taskId:task.taskId,...(runId?{runId}:{})}:undefined;
+  const eligibility=context?recoveryTarget(workspaceId,rootSessionId,task,runId,report,reportUnavailable,context.state):{reason:'当前视图不支持创建核实周期。'};
+  const prepareReason=context?recoverySourceReason(workspaceId,rootSessionId,task,runId,context.state):'当前视图不支持创建核实周期。';
+  return useRecoverySource(workspaceId,rootSessionId,source,eligibility,prepareReason,!!report,context,invalidateReport);
+}
+
+/** 共用稳定请求控制器；新主来源直接传真实 run，不构造成员 TaskNode 或虚假 ExecutionReport。 */
+export function useRecoverySource(workspaceId:string,rootSessionId:string,source:RecoverySource|undefined,eligibility:{target?:RecoveryTarget;reason:string},prepareReason:string,hasReport:boolean,context?:ExecutionRecoveryContext,invalidateReport?:()=>void):ExecutionRecoveryView{
   const key=JSON.stringify([workspaceId,rootSessionId]),keyRef=useRef(key);keyRef.current=key;
   const refreshRef=useRef(context?.refresh);refreshRef.current=context?.refresh;
   const controller=useMemo(()=>context?controllers.get(workspaceId,rootSessionId,{
@@ -52,19 +60,17 @@ export function useExecutionRecovery(workspaceId:string,rootSessionId:string,tas
     submit:request=>window.cbim.call('loop.recoveryStart',request),lookup:request=>window.cbim.call('loop.recoveryReceipt',request),uuid:()=>crypto.randomUUID(),
   }):undefined,[workspaceId,rootSessionId,Boolean(context)]);
   const [,changed]=useState(0);
-  const source:RecoverySource|undefined=task.scopeId?{scopeId:task.scopeId,taskId:task.taskId,...(runId?{runId}:{})}:undefined;
   const sourceKey=source?recoverySourceKey(source):'',observedHistoryCount=source?controller?.record(source)?.history?.length??0:0;
   // 同来源两处卡片共用命令，但各自报告独立；归档通知必须让两份旧报告都失效。
   useEffect(()=>{if(!controller)return;return source?controller.subscribeSource(source,()=>changed(value=>value+1),()=>invalidateReport?.(),observedHistoryCount):controller.subscribe(()=>changed(value=>value+1))},[controller,key,sourceKey,invalidateReport]);
   useEffect(()=>{if(controller)void controller.restore().then(()=>{if(keyRef.current===key)refreshRef.current?.()})},[controller,key]);
   const record=source?controller?.record(source):undefined,attempt=record?.attempt,pending=controller?.isPending(record)??false;
-  const eligibility=context?recoveryTarget(workspaceId,rootSessionId,task,runId,report,reportUnavailable,context.state):{reason:'当前视图不支持创建核实周期。'};
   const editable=Boolean(eligibility.target&&controller?.available&&!pending&&(!attempt||attempt.phase==='rejected'));
-  const canPrepare=Boolean(context&&source&&controller?.available&&!pending&&attempt?.phase==='accepted'&&attempt.receipt?.scopeStatus==='closed'&&!recoverySourceReason(workspaceId,rootSessionId,task,runId,context.state));
+  const canPrepare=Boolean(context&&source&&controller?.available&&!pending&&attempt?.phase==='accepted'&&attempt.receipt?.scopeStatus==='closed'&&!prepareReason);
   const after=async(work:()=>Promise<void>)=>{await work();if(keyRef.current===key)refreshRef.current?.()};
   return {
-    visible:!!context&&Boolean(report||record||controller?.snapshot.error),record,observation:record?.observation??'',message:record?.message??'',editable,
-    canSubmit:editable&&!!context?.model&&!!record?.observation.trim()&&!!record?.message.trim(),canPrepare,pending,error:controller?.snapshot.error??'',reason:!report&&record?.history?.length?'请重新核实来源报告，再提交新的核实任务。':eligibility.reason,
+    visible:!!context&&Boolean(hasReport||record||controller?.snapshot.error),record,observation:record?.observation??'',message:record?.message??'',editable,
+    canSubmit:editable&&!!context?.model&&!!record?.observation.trim()&&!!record?.message.trim(),canPrepare,pending,error:controller?.snapshot.error??'',reason:!hasReport&&record?.history?.length?'请重新核实来源报告，再提交新的核实任务。':eligibility.reason,
     modelLabel:attempt&&attempt.phase!=='rejected'?attempt.request.options.model+' · 只读访问（本次请求已固定）':context?.model?context.model.label+' · 本次核实仅只读':'请先在对话输入区选择可用模型',
     edit:fields=>{if(editable&&source)controller!.edit(source,fields)},
     submit:()=>after(async()=>{if(editable&&eligibility.target&&context?.model)await controller!.submit(eligibility.target,{...context.model.options,permission:'read'})}),

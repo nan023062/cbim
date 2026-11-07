@@ -100,7 +100,9 @@ it('严格请求、过期联合基线与知识变动拒绝；受理后返回读�
   const f=await setup();try{
     expect(replanRequestSchema.safeParse({...f.input,options:{...f.input.options,permission:'read'}}).success).toBe(false);expect(replanRequestSchema.safeParse({...f.input,runId:'untrusted'}).success).toBe(false);
     await expect(f.service.replans.accept({...f.input,source:{...f.input.source,expectedBasis:'f'.repeat(64)}},await f.launch())).rejects.toMatchObject({code:'REPLAN_STALE'});
-    const start=await f.launch(),read=vi.spyOn(f.store,'read');read.mockRejectedValueOnce(Error('postcommit read failed'));await expect(f.service.replans.accept(f.input,start)).rejects.toThrow('postcommit read failed');
+    const start=await f.launch(),read=vi.spyOn(f.store,'read'),transact=f.store.transact.bind(f.store);
+    vi.spyOn(f.store,'transact').mockImplementationOnce(async(...args)=>{const receipt=await transact(...args);read.mockRejectedValueOnce(Error('postcommit read failed'));return receipt});
+    await expect(f.service.replans.accept(f.input,start)).rejects.toThrow('postcommit read failed');
     expect((await f.service.replans.inspect({...f.identity,commandId:f.input.commandId}))?.replan.runId).toBe(start.runId);expect((await f.service.replans.accept(f.input,await f.launch())).fresh).toBe(false);
     await expect(f.service.replans.accept({...f.input,input:{message:'改参'}},await f.launch())).rejects.toMatchObject({code:'COMMAND_ID_CONFLICT'});
     await f.service.closeScope(f.identity,f.input.commandId,'cancelled');const snapshot=await f.workspace.snapshot();await f.workspace.commit(request(snapshot,[{path:'.cbim/README.md',text:'# 已变更的知识'}]));expect((await f.service.replans.preview(f.previewInput)).eligible).toBe(false);

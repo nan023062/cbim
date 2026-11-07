@@ -2,6 +2,7 @@
  * 作用定位：把原主运行的 canonical 调用与同一 Store 已提交命令只读关联，供桌面和主工具共用。
  * 设计原因：坏回包不代表提交失败；原参数哈希、领域指纹和提交事实分别核验，派发隐藏父版本只取原事务前态。
  * 职责边界：只读取已打开工作区，前后观察变化则保留未知；不执行、恢复、修日志、清除 unresolved 或签发业务验收。
+ * 内部复用：影响观察可获取已核主来源供选定调用适配，但完整 canonical 仅留后端，不经公开报告返回。
  */
 import {isDeepStrictEqual} from 'node:util';
 import {fail} from '../../core/foundation/errors';
@@ -18,12 +19,15 @@ import {executionToolFacts} from './execution-report-facts';
 import {restoreMainCommand} from './main-command-request';
 
 type Source=CommandVerificationReport['source'];
-type ReadLog={summary?:RunSummary;source:Source;stamp:string;raw?:unknown;logPrefixHash?:string;throughSeq?:number};
+export type VerifiedMainCallSource={summary?:RunSummary;source:Source;stamp:string;raw?:unknown;logPrefixHash?:string;throughSeq?:number};
+type ReadLog=VerifiedMainCallSource;
 /** 端口只读已有 canonical；不能为了查询创建运行管理器或打开工作区。 */
 export interface CommandVerificationPorts {inspectMain(rootSessionId:string,runId:string):Promise<RunSummary>}
 
 export class CommandVerificationService {
   constructor(private readonly owner:Pick<KnowledgeWorkspace,'entry'|'assert'>,private readonly store:Pick<DispatchStore,'read'|'commandEvidence'>,private readonly ports?:CommandVerificationPorts){}
+  /** 后端影响观察复用同一主身份/授权核验；返回含私有日志，禁止直接作为 IPC 或模型输出。 */
+  inspectSource(input:CommandVerificationInput,state:DispatchState):Promise<VerifiedMainCallSource>{this.owner.assert();return this.log(input,state)}
   /** 原 run/call 必须明确；取消只结束本次读取，不修改任何原事实。 */
   async read(raw:unknown,signal?:AbortSignal):Promise<CommandVerificationReport>{
     const parsed=commandVerificationInputSchema.safeParse(raw);

@@ -2,9 +2,10 @@
  * 作用定位：主会话目标周期的增量投影和展示状态，供对话摘要与任务根详情共用。
  * 设计原因：目标版本独立于任务图；先核对身份和连续游标再合并，完成申请与真正关闭分开显示，历史选择不能覆盖当前任务状态。
  * 职责边界：只投影后端事实；运行内补充优先展示接收中/待核实，已接收也不是完成。摘要与详情须核对同一补充状态，不能用旧审阅盖过未知输入。
+ * 详情契约：只持有 PublicDispatchScope 的安全来源和新处置引用，不能将公共投影当作含原生上下文的完整持久周期。
  */
 import {applyScopeBatch,validateScopeSnapshot,scopeActiveInputStatus,scopeActiveInputSchema} from '../../bridge/contracts/dispatch';
-import type {DispatchScope,DispatchSessionRead,GraphIdentity,GraphSnapshot,ScopeCursor,ScopeDelta,ScopeSnapshot,ScopeSummary,ScopeDetailStamp} from '../../bridge/contracts/dispatch';
+import type {PublicDispatchScope,DispatchSessionRead,GraphIdentity,GraphSnapshot,ScopeCursor,ScopeDelta,ScopeSnapshot,ScopeSummary,ScopeDetailStamp} from '../../bridge/contracts/dispatch';
 import {SessionGraphProjection} from './graph-state';
 
 const sameCursor=(a:ScopeCursor,b:ScopeCursor)=>a.kind===b.kind&&a.workspaceId===b.workspaceId&&a.rootSessionId===b.rootSessionId&&a.streamId===b.streamId&&a.seq===b.seq;
@@ -77,7 +78,7 @@ const sameStamp=(a:ScopeDetailStamp,b:ScopeDetailStamp)=>a.scopeId===b.scopeId&&
 export class SessionReadProjection {
   private graphs:SessionGraphProjection;
   private goals:SessionScopeProjection;
-  private details=new Map<string,{stamp:ScopeDetailStamp;scope:DispatchScope}>();
+  private details=new Map<string,{stamp:ScopeDetailStamp;scope:PublicDispatchScope}>();
   constructor(readonly identity:GraphIdentity){this.graphs=new SessionGraphProjection(identity);this.goals=new SessionScopeProjection(identity)}
   get graph(){return this.graphs.snapshot}
   get scopes(){return this.goals.snapshot?.scopes}
@@ -129,7 +130,7 @@ export interface ScopeGoalState {
   selectedScopeId?:string;
   /** undefined 表示自动跟随，区别于 selectedScopeId 已解析出的实际周期 ID。 */
   historyScopeId?:string;
-  selectedScope?:DispatchScope;
+  selectedScope?:PublicDispatchScope;
   /** 当前未关闭目标，包含持久等待；决定发送入队与取消入口，不受历史选择影响。 */
   openScope?:ScopeSummary;
   /** 只有 active 表示调度仍在推进，waiting 不计入生成动画或工作时间。 */

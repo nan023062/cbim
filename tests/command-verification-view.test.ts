@@ -70,6 +70,12 @@ it('只给固定八项真实主实例调用显示入口，不为成员、旧无�
   for(const modify of [(value:RunSummary)=>{delete value.conversationBinding},(value:RunSummary)=>{value.task.mode=undefined},(value:RunSummary)=>{value.task.agentId='executor'},(value:RunSummary)=>{value.conversationBinding!.rootSessionId='other'},(value:RunSummary)=>{value.conversationBinding!.workspaceId='other'}]){const value=run();modify(value);expect(mainCommandSelection(value,'original-call','cbim_goal_plan')).toBeUndefined();expect(renderToStaticMarkup(createElement(ToolActivity,{run:value}))).not.toContain('command-verification-panel')}
 });
 
+it('缺少任务身份的旧工具轨道仍能展示错误，不生成主命令或影响观察入口',()=>{
+  const complete=run(),{task:_task,...old}=complete,value=old as RunSummary;
+  expect(mainCommandSelection(value,'original-call','cbim_goal_plan')).toBeUndefined();
+  const html=renderToStaticMarkup(createElement(ToolActivity,{run:value}));expect(html).toContain('BAD_RETURN');expect(html).not.toContain('command-verification-panel');expect(html).not.toContain('effect-observation-panel');
+});
+
 it('八种保存结果均使用控制面事实文案，预约不等于启动，放弃不等于回滚',()=>{
   const cursor={workspaceId:'workspace',rootSessionId:'root',streamId:'graph',seq:10},graphCursor={streamId:'graph',seq:10},tracked={total:0,taskIds:[],truncated:false};
   const results:CommandResultSummary[]=[

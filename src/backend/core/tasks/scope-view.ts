@@ -1,7 +1,7 @@
 /**
  * 作用定位：定义主会话调度周期的公开摘要、选中详情和独立增量投影，供存储与界面共享。
  * 设计原因：目标计划与审阅不能推进用于证据校验的任务图游标；列表只传摘要，完整输入仅在选中周期变化时传输。
- * 职责边界：只投影已提交事实，不创建周期或推断验收；人工决定与插入尝试分别投影计数及未核实状态，完整历史随选中详情同步。新周期不泄露原生上下文隔离清单，旧记录不补造 goal、尝试或额度。
+ * 职责边界：只投影已提交事实，不创建周期或推断验收；选中详情保留安全的恢复/重规划来源及处置引用，不泄露原生上下文隔离清单，旧记录不补造 goal、尝试或额度。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
@@ -12,6 +12,7 @@ import {assertGraphIdentity} from './graph-rules';
 import {sameGoalValue,goalInputRevision,goalNeedsReplan} from './scope-goal';
 import {scopeActiveInputStatus} from './scope-active-input';
 import {scopeBudgetSummarySchema} from './scope-budget';
+import {publicDispatchScopeSchema,projectMainScope,type PublicDispatchScope} from './scope-public';
 
 const id=z.string().min(1).max(512);
 const seq=z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
@@ -39,7 +40,7 @@ export type ScopeDelta=
   |{mode:'delta';from:ScopeCursor;cursor:ScopeCursor;batches:ScopeEventBatch[];hasMore:boolean}
   |{mode:'noop';cursor:ScopeCursor};
 export type ScopeDetailRead=
-  |{mode:'updated';stamp:ScopeDetailStamp;scope:DispatchScope}
+  |{mode:'updated';stamp:ScopeDetailStamp;scope:PublicDispatchScope}
   |{mode:'noop';stamp:ScopeDetailStamp}
   |{mode:'empty'};
 /** 两条增量和详情来自同一已提交屏障；分页增量可尚未追到头部，详情始终反映该屏障的最新状态。 */
@@ -124,5 +125,6 @@ export function readScopeDetail(snapshot:ScopeSnapshot,scopes:readonly DispatchS
   if(stamp&&sameGoalValue(stamp,selected.stamp))return {mode:'noop',stamp:selected.stamp};
   const scope=scopes.find(item=>item.scopeId===selected.scopeId&&item.workspaceId===snapshot.identity.workspaceId&&item.rootSessionId===snapshot.identity.rootSessionId);
   valid(scope,'周期详情与摘要不一致');
-  return {mode:'updated',stamp:selected.stamp,scope:{scopeId:scope.scopeId,workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,status:scope.status,createdAt:scope.createdAt,...(scope.goal?{goal:structuredClone(scope.goal)}:{}),...(scope.budget?{budget:structuredClone(scope.budget)}:{}),...(scope.humanDecisions?{humanDecisions:structuredClone(scope.humanDecisions)}:{}),...(scope.wait?{wait:structuredClone(scope.wait)}:{}),...(scope.continuations?{continuations:structuredClone(scope.continuations)}:{}),...(scope.activeInputs?{activeInputs:structuredClone(scope.activeInputs)}:{}),...(scope.closedAt?{closedAt:scope.closedAt}:{}),...(scope.outcome?{outcome:scope.outcome}:{})}};
+  const projected=projectMainScope(scope);valid(publicDispatchScopeSchema.safeParse(projected).success,'周期公开详情字段无效');
+  return {mode:'updated',stamp:selected.stamp,scope:structuredClone(projected)};
 }

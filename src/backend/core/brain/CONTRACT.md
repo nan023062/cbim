@@ -323,3 +323,7 @@ LoopRuntime ..> AgentEngine : 通过既有契约驱动
 ### 用户附件补充来源
 
 `RunInputSource.user-continuation` 可附 `attachmentManifestHash`，由本次启动闭包对实际准备清单计算；它与真实展开正文一起进入 `run.started`，没有图片、附件路径或权限字段。旧纯文本来源不补摘要，成员回注和人工决定来源拒绝此字段。实际图片仅进入本次工厂上下文，不进入后续调度批次选项，也不把用户资料变成系统指令或验收意见。
+
+### 未确认调用与新核实
+
+普通 chat 原运行仍有 unresolvedTools 时，Runtime 在创建引擎前拒绝原 native 接续，即使请求携带 reconciledToolIds。旧记录中的字段保持可读，但勾选调用 ID 不是可信核实决定。明确只读核实使用新的运行/原生上下文；观察或后来修复都不清除旧 unknown。没有未确认调用的普通对话续聊与正式成员检查点协议保持独立。

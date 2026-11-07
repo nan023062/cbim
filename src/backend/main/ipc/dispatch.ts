@@ -7,6 +7,7 @@
  * 岗位执行：显式派发必须传当前 scopeId，由服务核计划、责任和岗位；旧 loop.start 在解析模型前拒绝新业务执行，历史读取不变。
  * 模块责任：六个桌面入口复用同一责任服务，人工 actor 由本闭包注入；查询原回执不重新提交或改派执行成员。
  * 原命令报告：客户端只选择 workspace/root/run/call；已有服务核原 canonical 与 Store，不隐式打开工作区或补充提交证明。
+ * 影响处置：五个桌面入口共用只读观察和不可变附录；只有明确保存注入本机 actor，当前文件事实不清除原 unknown。
  */
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
@@ -60,6 +61,12 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'dispatch.ownerInspect':return app.memberDispatch(args.workspaceId).ownerInspect(args);
     // 仅已打开工作区可查询；服务从原 canonical 推导命令，不接受客户端命令键或恢复授权。
     case 'dispatch.commandReport':return app.memberDispatch(args.workspaceId).commandReport(args);
+    // 当前影响观察与本机处置各自保留；路径、scope 和 actor 不由客户端签发。
+    case 'dispatch.effectObserve':return app.memberDispatch(args.workspaceId).effects.observe(args);
+    case 'dispatch.effectDispositionList':return app.memberDispatch(args.workspaceId).effects.list(args);
+    case 'dispatch.effectDispositionReceipt':return app.memberDispatch(args.workspaceId).effects.receipt(args);
+    case 'dispatch.effectRelations':return app.memberDispatch(args.workspaceId).effects.relations(args);
+    case 'dispatch.effectDisposition':if(app.isStopping)fail('SHUTTING_DOWN','CBIM 正在退出，未保存新处置');return app.memberDispatch(args.workspaceId).effects.record(args,{kind:'local_desktop',interaction:'explicit_submit'});
     case 'dispatch.graphSnapshot':return app.memberDispatch(args.identity?.workspaceId).snapshot(args.identity);
     case 'dispatch.graphDelta':return app.memberDispatch(args.identity?.workspaceId).delta(args.identity,args.cursor,args.limit);
     case 'dispatch.sessionRead':return app.memberDispatch(args.identity?.workspaceId).sessionRead(args);

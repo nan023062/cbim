@@ -40,7 +40,7 @@ async function setup(withRun=true){
   if(withRun){const run=await start(assigned.taskId);runId=run.runId;await members.waitForSettlement({...identity,taskId:assigned.taskId})}
   await service.closeScope(identity,'source','failed');
   const report=await members.report({...identity,taskId:assigned.taskId,runId});
-  const input:RecoveryRequest={...identity,commandId:randomUUID(),source:{scopeId:'source',taskId:assigned.taskId,...(runId?{runId}:{}),reportBasis:report.basis.key},operation:'inspect_effects',observation:{text:'  已看到文件可能被修改\n请核实'},input:{message:'只读取当前产物，核实是否存在改动'},options:{profileId:randomUUID(),provider:'fixture',model:'fixture',permission:'read'}};
+  const input={...identity,commandId:randomUUID(),source:{scopeId:'source',taskId:assigned.taskId,...(runId?{runId}:{}),reportBasis:report.basis.key},operation:'inspect_effects',observation:{text:'  已看到文件可能被修改\n请核实'},input:{message:'只读取当前产物，核实是否存在改动'},options:{profileId:randomUUID(),provider:'fixture',model:'fixture',permission:'read'}} satisfies RecoveryRequest;
   const launch=()=>({runId:randomUUID(),nativeSessionId:randomUUID(),excludedRunIds:['old-main-run']});
   const plan=async(scopeId:string,runId:string)=>service.goals.plan(identity,scopeId,runId,'plan-'+randomUUID(),{expectedRevision:1,objective:'核实当前产物',constraints:['只读'],criteria:[{id:'fact',text:'核实当前状态',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,criterionIds:['fact'],reason:'读取产物'}],reason:'只读核实，不重放旧执行'});
   return {...f,entry,workspace,identity,directory,store,storage,service,members,inspect,prepare,input,launch,report,assign,start,plan,mainJournals,cleanup:async()=>{await members.close();await service.close();await f.cleanup()}};
@@ -48,9 +48,16 @@ async function setup(withRun=true){
 
 it('核实受理只创建新只读周期；同命令并发及重启仅返回原意图，旧图和历史不变',async()=>{
   const f=await setup();try{
-    const before=await f.store.read(),native=f.launch(),prepared=f.prepare.mock.calls.length;
-    const accepted=await Promise.all([f.service.recoveries.accept(f.input,native),f.service.recoveries.accept(f.input,f.launch())]);
-    expect(accepted.filter(item=>item.fresh)).toHaveLength(1);expect(accepted[0].scope).toEqual(accepted[1].scope);
+    const before=await f.store.read(),slower=f.launch(),native=f.launch(),prepared=f.prepare.mock.calls.length;
+    // 取证在短事务外，并发调用允许后发先提交；只有实际赢得原命令的上下文取得 fresh。
+    let release!:()=>void,entered!:()=>void;
+    const held=new Promise<void>(resolve=>{release=resolve}),started=new Promise<void>(resolve=>{entered=resolve}),inspect=f.inspect.getMockImplementation()!;
+    f.inspect.mockImplementationOnce(async run=>{entered();await held;return inspect(run)});
+    const first=f.service.recoveries.accept(f.input,slower);await started;
+    let second:Awaited<typeof first>;
+    try{second=await f.service.recoveries.accept(f.input,native)}finally{release()}
+    const accepted=[await first,second];
+    expect(accepted.map(item=>item.fresh)).toEqual([false,true]);expect(accepted[0].scope).toEqual(accepted[1].scope);
     const state=await f.store.read();expect(state.graphs).toEqual(before.graphs);expect(state.scopes![0]).toEqual(before.scopes![0]);expect(state.runs).toEqual(before.runs);expect(state.members).toEqual(before.members);
     expect(accepted[0].scope).toMatchObject({scopeId:f.input.commandId,status:'active',goal:{revision:1,input:{message:f.input.input.message,attachmentIds:[]}},recovery:{observation:f.input.observation,context:{initialRunId:native.runId}}});
     const publicView=await f.service.sessionRead({identity:f.identity,selectedScopeId:f.input.commandId});expect(publicView.scopes.mode).toBe('reset');if(publicView.scopes.mode==='reset')expect(publicView.scopes.snapshot.scopes.at(-1)?.readOnly).toBe(true);expect(JSON.stringify(publicView)).not.toMatch(/excludedRunIds|nativeSessionId/);
@@ -79,7 +86,7 @@ it('日志丢失后的新报告保持unknown并能新建核实；旧报告变更
   const f=await setup();try{
     f.inspect.mockRejectedValue(Object.assign(Error('private damaged log'),{code:'RUN_LOG_INVALID'}));
     await expect(f.service.recoveries.accept(f.input,f.launch())).rejects.toMatchObject({code:'RECOVERY_REPORT_STALE'});
-    const next=await f.members.report({...f.identity,taskId:f.input.source.taskId,runId:f.input.source.runId});expect(next.execution).toBe('unknown');
+    const next=await f.members.report({...f.identity,taskId:f.report.identity.taskId,runId:f.input.source.runId});expect(next.execution).toBe('unknown');
     const accepted=await f.service.recoveries.accept({...f.input,source:{...f.input.source,reportBasis:next.basis.key}},f.launch());expect(accepted.recovery.source).toMatchObject({reportExecution:'unknown',logState:'invalid'});
   }finally{await f.cleanup()}
   const noRun=await setup(false);try{expect(noRun.input.source.runId).toBeUndefined();expect((await noRun.service.recoveries.accept(noRun.input,noRun.launch())).fresh).toBe(true)}finally{await noRun.cleanup()}
@@ -108,7 +115,7 @@ it('无日志受理意图仍冻结在下一上下文；按持久插入顺序选�
     const launch={...f.launch(),excludedRunIds:await f.service.recoveries.priorRunIds(f.identity)},second=await f.service.recoveries.accept(input,launch);
     expect(await f.service.recoveries.latestContext(f.identity)).toEqual(second.recovery.context);expect((await f.store.read()).scopes![1].outcome).toBe('interrupted');
     expect(second.scope.scopeId).not.toBe(first.scope.scopeId);expect(second.recovery.context.nativeSessionId).not.toBe(first.recovery.context.nativeSessionId);expect(second.recovery.context.excludedRunIds).toContain(first.recovery.context.initialRunId);
-    const graph=await f.service.snapshot(f.identity);expect(graph.root.agent).toEqual(original.root.agent);expect(graph.tasks.find(task=>task.taskId===f.input.source.taskId)).toEqual(original.tasks.find(task=>task.taskId===f.input.source.taskId));
+    const graph=await f.service.snapshot(f.identity);expect(graph.root.agent).toEqual(original.root.agent);expect(graph.tasks.find(task=>task.taskId===f.report.identity.taskId)).toEqual(original.tasks.find(task=>task.taskId===f.report.identity.taskId));
     expect((await f.service.recoveries.accept(f.input,f.launch())).scope.outcome).toBe('interrupted');
     // Recovery may append, so replay an exact committed-byte copy instead of opening a second writer beside the live workspace Store.
     const restoredDirectory=path.join(f.temp,'recovery-journal-copy');await fs.mkdir(restoredDirectory);await fs.copyFile(path.join(f.directory,'dispatch.jsonl'),path.join(restoredDirectory,'dispatch.jsonl'));
@@ -134,10 +141,22 @@ it('只读核实等待后补充仍不能升权，同意正文不能签发人工�
 
 it('受理落盘后读取失败仍能按原命令查询，不签发第二次fresh或抹掉启动意图',async()=>{
   const f=await setup(false);try{
-    const launch=f.launch(),read=vi.spyOn(f.store,'read');read.mockRejectedValueOnce(Error('read failure after commit'));
+    const launch=f.launch(),read=vi.spyOn(f.store,'read'),transact=f.store.transact.bind(f.store);
+    vi.spyOn(f.store,'transact').mockImplementationOnce(async(...args)=>{const receipt=await transact(...args);read.mockRejectedValueOnce(Error('read failure after commit'));return receipt});
     await expect(f.service.recoveries.accept(f.input,launch)).rejects.toThrow('read failure after commit');
     const looked=await f.service.recoveries.inspect({...f.identity,commandId:f.input.commandId});expect(looked?.recovery.runId).toBe(launch.runId);
     const repeated=await f.service.recoveries.accept(f.input,f.launch());expect(repeated.fresh).toBe(false);expect(repeated.recovery.context).toEqual({initialRunId:launch.runId,nativeSessionId:launch.nativeSessionId,excludedRunIds:launch.excludedRunIds});
     expect((await f.store.read()).scopes).toHaveLength(2);expect(f.prepare).not.toHaveBeenCalled();
   }finally{await f.cleanup()}
+});
+
+it('canonical 核实不占 Store 事务，停止或取证后新的周期让 CAS 拒绝',async()=>{
+  for(const change of ['stop','scope'] as const){const f=await setup();try{
+    const controller=new AbortController(),inspect=f.inspect.getMockImplementation()!;
+    f.inspect.mockImplementationOnce(async run=>{await f.store.read();const result=await inspect(run);if(change==='stop')controller.abort(Error('stopped before acceptance'));else await f.service.openScope(f.identity,'concurrent-cycle');return result});
+    const launch={...f.launch(),signal:controller.signal};
+    if(change==='stop')await expect(f.service.recoveries.accept(f.input,launch)).rejects.toThrow('stopped before acceptance');
+    else await expect(f.service.recoveries.accept(f.input,launch)).rejects.toMatchObject({code:'RECOVERY_REPORT_STALE'});
+    expect(await f.service.recoveries.inspect({...f.identity,commandId:f.input.commandId})).toBeUndefined();
+  }finally{await f.cleanup()}}
 });

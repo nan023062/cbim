@@ -3,10 +3,11 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {SessionReadProjection,SessionScopeProjection,completeSessionRead,scopeGoalView,currentScope,type ScopeGoalState} from '../src/frontend/tasks/scope-state';
 import {ScopeGoalPanel} from '../src/frontend/tasks/ScopeGoalPanel';
+import {MemberTaskDetail} from '../src/frontend/tasks/MemberTaskDetail';
 import {SessionTaskView,sessionRoot} from '../src/frontend/tasks/SessionTaskView';
 import {applyGraphBatch} from '../src/backend/core/tasks/graph-reducer';
 import {summarizeScope} from '../src/backend/core/tasks/scope-view';
-import type {DispatchScope,DispatchSessionRead,ScopeSnapshot,ScopeDetailRead,GraphEventBatch,GraphSnapshot} from '../src/bridge/contracts/dispatch';
+import type {DispatchScope,DispatchSessionRead,ScopeSnapshot,ScopeDetailRead,GraphEventBatch,GraphSnapshot,TaskNode} from '../src/bridge/contracts/dispatch';
 
 const identity={workspaceId:'workspace',rootSessionId:'main-session'},time='2026-11-07T00:00:00.000Z';
 const agent={agentId:'cbim:main',agentInstanceId:'main',agentSessionId:'channel',name:'主 Agent'};
@@ -19,6 +20,18 @@ function reset(value=scope(),seq=1):DispatchSessionRead{const scopes=snapshot([v
 function planned(){const value=scope();value.goal!.revision=2;value.goal!.plan={revision:2,runId:'main-run',recordedAt:time,knowledgeRevision:'knowledge',graphCursor:{streamId:'graph',seq:1},objective:'当前周期的治理目标',constraints:['仅管理知识'],criteria:[{id:'c1',kind:'evidence',text:'提供真实提交证据'}],assignments:[{agentId:'cbim:main',agentName:'主 Agent',teamId:'.cbim/team',moduleIds:[],moduleNames:[],criterionIds:['c1'],reason:'治理知识'}],reason:'按真实目标安排'};return value}
 function reviewed(){const value=planned();value.goal!.revision=3;value.goal!.review={revision:3,planRevision:2,runId:'main-run',recordedAt:time,knowledgeRevision:'knowledge',graphCursor:{streamId:'graph',seq:1},observedSeq:10,lastEffectSeq:4,decision:'complete',checks:[{criterionId:'c1',outcome:'satisfied',reason:'有真实证据',evidence:[{kind:'main-knowledge',toolCallIds:['commit-one']}]}],superseded:[],gaps:[],reason:'程序尚需复核'};return value}
 function view(value:DispatchScope):ScopeGoalState{const summary=summarizeScope(value,streamId,1),goalView=scopeGoalView(summary,graph);return {scopes:[summary],selectedScopeId:value.scopeId,selectedScope:value,openScope:value.status!=='closed'?summary:undefined,activeScope:value.status==='active'?summary:undefined,waitingScope:value.status==='waiting'?summary:undefined,selectedGoalView:goalView,currentGoalView:goalView,graph,loading:false,detailLoading:false,error:'',selectScope:()=>{}}}
+
+it('目标与成员只展示各自持久的指定流程，切回无选择历史不补造选择',()=>{
+  const moduleId='.cbim/workspace/game',workflowId=moduleId+'/workflows/validate_json',value=planned();
+  value.goal!.plan!.assignments[0]={...value.goal!.plan!.assignments[0],agentId:'cbim:executor',agentName:'执行者',moduleIds:[moduleId],moduleNames:['游戏'],workflowSelections:[{moduleId,workflowId}]};
+  const selected=renderToStaticMarkup(createElement(ScopeGoalPanel,{state:view(value)}));expect(selected).toContain('data-testid="goal-workflow-selection"');expect(selected).toContain('指定流程：游戏');expect(selected).toContain(workflowId);
+  const old=structuredClone(value);delete old.goal!.plan!.assignments[0].workflowSelections;
+  const oldHtml=renderToStaticMarkup(createElement(ScopeGoalPanel,{state:view(old)}));expect(oldHtml).not.toContain('goal-workflow-selection');expect(oldHtml).not.toContain(workflowId);expect(old.goal!.plan!.assignments[0]).not.toHaveProperty('workflowSelections');
+  const task:TaskNode={kind:'task',nodeId:'task:member',taskId:'member',identity,requester:agent,assignee:{...agent,agentId:'cbim:executor',name:'执行者'},modules:[{moduleId,name:'游戏',knowledgeRevision:'knowledge',maintenanceBindingId:'maintenance',maintainerPersonIds:['owner'],workflow:{kind:'module',id:workflowId,version:'frozen'}}],workflowSelections:[{moduleId,workflowId}],goal:'验证文件',acceptance:[],revision:1,planRevision:1,status:'queued',awaitedChildren:[],runIds:[],createdAt:time,updatedAt:time};
+  const render=(item:TaskNode)=>renderToStaticMarkup(createElement(MemberTaskDetail,{workspaceId:identity.workspaceId,rootSessionId:identity.rootSessionId,task:item}));
+  const current=render(task);expect(current).toContain('指定流程：');expect(current).toContain('data-workflow-id="'+workflowId+'"');
+  const legacy=structuredClone(task);delete legacy.workflowSelections;const historic=render(legacy);expect(historic).toContain(workflowId);expect(historic).not.toContain('指定流程：');expect(legacy).not.toHaveProperty('workflowSelections');
+});
 
 it('目标变化独立于graph游标，noop保留全部对象引用并省略大正文',()=>{
   const state=new SessionReadProjection(identity),first=reset();state.apply(first);

@@ -48,9 +48,9 @@ N_src_backend_scheduler_engine_tools ..> N_src_backend_scheduler_engine_context 
 
 ## 子目录导航
 
-- [context/](context/ARCHITECTURE.md)：内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/维护关系、Workflow 与规范。前置替换重验待办并保留原实例；配置过期不能借重新准备刷新旧任务，主角色仍不执行业务。
+- [context/](context/ARCHITECTURE.md)：内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/维护关系、Workflow与规范。显式流程只从本模块挂载清单解析，准备按任务原选择重核，不回退默认或刷新旧绑定；前置替换保留原实例和流程，主角色仍不执行业务。
 - [conversation/](conversation/ARCHITECTURE.md)：主 Agent 的规划、审阅与团队管理指引，以及提问、审批和队列。主调度可安排求助补做，再显式替换未启动前置或撤销待办；旧失败不改写，普通消息不替代人工决定或恢复。
-- [execution/](execution/ARCHITECTURE.md)：主实例与图根共享身份。成员启动前核实际工具及结构验证能力；交付结算和主目标审阅从canonical复核冻结要求、真实passed及当前文件。历史返工只保留原证明，不将旧字节放行。检查点一次续跑保留身份和新证据，额度/准入等待不消费；停止和重启封存不重放。
+- [execution/](execution/ARCHITECTURE.md)：主实例与图根共享身份。目标分工、派发、候选及人工来源核对原流程选择；成员启动核实际能力，交付/审阅从canonical复核要求、真实passed及当前文件。历史返工保留原证明。检查点与前置替换不改选；额度/准入等待不消费，停止和重启封存不重放。
 - [runtime/](runtime/ARCHITECTURE.md)：监管、履历与全局并发准入职责分离。可靠提交同步周期白名单，scope-only 更新独立游标，未变投影不重复发布；检查点计待办而不占活动名额，报告用量不授予额度或恢复权。
 - [tools/](tools/ARCHITECTURE.md)：把知识 CRUD、目标计划/审阅和主调度命令注册为 cbim_ 工具。主调度八工具使用固定运行身份、既有命令映射与严格单次 wire 输出校验；坏回包先核实原记录，不重做已提交操作。维护回执不算业务证据，执行者不获得调度权。
 

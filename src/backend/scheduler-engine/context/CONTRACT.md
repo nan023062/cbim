@@ -1,5 +1,7 @@
 ### 多成员、多模块任务上下文契约
 
+`resolveDispatchModules(snapshot, moduleIds, workflowSelections?)` 只从对应模块实际挂载的 Workflow 清单解析显式 ID。部分选择只覆盖指定模块；缺省仍取该模块首项或空清单的 general，但不作为匹配任意流程的通配符。显式选择缺失、跨模块或已卸载时拒绝，不回退。`prepareDispatchExecutionContext` 按 Task 原选择重新解析并比较完整绑定和知识版本；任务原本缺省的字段不会补成空数组，旧任务不能就地改选。
+
 `DispatchKnowledgeWorkspace` 明确只读的 `entry/assert/snapshot/read/rules` 能力。未启动依赖替换复用 `prepareDispatchExecutionContext` 逐个核对待办闭包的原角色、模块、维护关系与当前规范，并用 `recheckDispatchExecutionContext` 最后核对替代候选的冻结知识。版本变化整体拒绝，不刷新旧任务或扩大权限；仍不声称锁定外部业务产物。
 
 已实现 `resolveDispatchAgent` 与 `resolveDispatchModules`：同快照解析自定义执行角色或静态内置默认执行角色 `cbim:executor`、继承 Skill、多个真实模块及维护关系。`cbim:main` 不承担业务执行，正式执行解析、冻结恢复和执行提示构造均拒绝该角色；主会话直接治理受控知识不通过该业务任务入口。缺失关系抛出明确错误码；默认采用各模块 Workflow 清单首项，空清单明确标为 general，不继承父模块。`prepareDispatchExecutionContext` 在执行前冻结完整角色、模块与流程正文；`recheckDispatchExecutionContext` 在启动或恢复时核对知识和内置规范版本。旧 `prepareTeamTask` 继续处理原单模块执行。新任务模型见 [core/tasks](../../core/tasks/CONTRACT.md)。
@@ -71,7 +73,7 @@ class DispatchContext["dispatch-context.ts"] {
   <<module>>
   +resolveConversationAgent(snapshot)
   +resolveDispatchAgent(snapshot, agentId)
-  +resolveDispatchModules(snapshot, moduleIds)
+  +resolveDispatchModules(snapshot, moduleIds, workflowSelections)
 }
 class BusinessWorkspace { <<core boundary>> }
 class DefaultExecutor["default-executor.ts"] {

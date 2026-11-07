@@ -15,7 +15,7 @@ import {MemberExecutionManager} from '../src/backend/scheduler-engine/execution/
 import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
 
 function deferred<T>(){let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>{resolve=r});return {promise,resolve}}
-async function setup(){
+async function setup(explicitWorkflow=false){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),team=await seedTeam(workspace);
   const snapshot=await workspace.snapshot(),moduleId=team.input.moduleId,definition=JSON.parse(snapshot.files.find(file=>file.path===moduleId+'/module.json')!.text);
   definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
@@ -25,7 +25,8 @@ async function setup(){
   const inspect=vi.fn(read),service=new WorkspaceDispatchService(workspace,store,{inspectMember:inspect,inspectMain:async()=>{throw Error('replacement must not read or run main')}});
   const identity={workspaceId:entry.id,rootSessionId:'dependency-root'},scopeId='dependency-scope',mainRunId='main-run';
   await service.openScope(identity,scopeId,{message:'安全替换前置，保持下游身份'},mainRunId);
-  await service.goals.plan(identity,scopeId,mainRunId,'plan-one',{expectedRevision:1,objective:'核实业务',constraints:[],criteria:[{id:'c1',kind:'evidence',text:'可追溯的结果'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],criterionIds:['c1'],reason:'独立执行'}],reason:'计划'});
+  const selected=explicitWorkflow?{workflowSelections:[{moduleId,workflowId:team.input.workflowId}]}:{};
+  await service.goals.plan(identity,scopeId,mainRunId,'plan-one',{expectedRevision:1,objective:'核实业务',constraints:[],criteria:[{id:'c1',kind:'evidence',text:'可追溯的结果'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],...selected,criterionIds:['c1'],reason:'独立执行'}],reason:'计划'});
   let failRun=true;
   const model={id:'fixture',model:'fixture',name:'fixture',api:'openai-completions' as const,auth:'api-key' as const,baseUrl:'https://example.test/v1',contextWindow:200000,maxTokens:1000,reasoning:false};
   const members=new MemberExecutionManager(workspace,store,{
@@ -48,7 +49,7 @@ async function setup(){
       return new LoopRuntime({storage,directory:logs,createEngine:()=>engine,acquireLease:async()=>()=>{},onEngineReady:hooks.onEngineReady,onEvent:hooks.onEvent,toolPolicy:async call=>({allow:true,effects:[call.name==='read'?'read':'maintenance'],scope:{kind:'workspace',workspaceId:entry.id}})});
     }}),
   });await members.initialize();
-  const assign=async(commandId:string,prerequisites:{taskId:string;expectedPlanRevision:number}[]=[])=>service.dispatchTask({...identity,commandId,expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],goal:commandId,acceptance:[{id:'c1',text:'真实证据'}],prerequisites}},scopeId);
+  const assign=async(commandId:string,prerequisites:{taskId:string;expectedPlanRevision:number}[]=[])=>service.dispatchTask({...identity,commandId,expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],...selected,goal:commandId,acceptance:[{id:'c1',text:'真实证据'}],prerequisites}},scopeId);
   const execute=async(taskId:string)=>{await members.start({...identity,taskId,commandId:'start-'+taskId,expectedRevision:1,options:{permission:'read'}});await members.waitForSettlement({...identity,taskId})};
   const a=await assign('A'),b=await assign('B',[{taskId:a.taskId,expectedPlanRevision:1}]),c=await assign('C',[{taskId:b.taskId,expectedPlanRevision:1}]);
   await execute(a.taskId);failRun=false;const a2=await assign('A2');await execute(a2.taskId);
@@ -70,6 +71,14 @@ it('真实日志核实后原子换边且不启动下游，同命令不回读，�
     f.inspect.mockClear();expect(await f.replace()).toEqual(receipt);expect(f.inspect).not.toHaveBeenCalled();
     await expect(f.service.replaceQueuedDependency(f.identity,f.scopeId,f.mainRunId,'replace-one',{...f.input,reason:'改写原因'})).rejects.toMatchObject({code:'COMMAND_ID_CONFLICT'});
     const reader=new FileDispatchStore(f.directory,f.entry.id);try{expect(await reader.read()).toEqual(after)}finally{await reader.close()}
+  }finally{await f.cleanup()}
+});
+
+it('换边重验待办时保留原显式Workflow选择，不降为缺省或改变后继流程',async()=>{
+  const f=await setup(true);try{
+    const before=await f.store.read(),receipt=await f.replace(),after=await f.store.read(),updated=after.graphs[0].tasks.find(task=>task.taskId===f.target.taskId)!;
+    expect(updated.workflowSelections).toEqual(f.target.workflowSelections);expect(updated.workflowSelections).toHaveLength(1);expect(updated.modules).toEqual(f.target.modules);
+    expect(after.graphs[0].tasks.find(task=>task.taskId===f.c.taskId)).toEqual(before.graphs[0].tasks.find(task=>task.taskId===f.c.taskId));expect(after.runs).toEqual(before.runs);expect(new Set(receipt.trackedTaskIds)).toEqual(new Set([f.target.taskId,f.c.taskId]));
   }finally{await f.cleanup()}
 });
 

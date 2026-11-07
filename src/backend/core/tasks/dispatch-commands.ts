@@ -1,10 +1,11 @@
 /**
  * 作用定位：第一阶段成员注册与主会话派发的命令及回执契约。
- * 设计原因：跨进程只传角色、模块和目标，不接收伪造的成员实例、维护关系或执行状态；内核再解析真实知识。
+ * 设计原因：跨进程只传角色、模块、目标和可选流程 ID，不接收伪造实例、正文版本或执行状态；内核解析实际挂载并冻结选择。
  */
 import {z} from 'zod';
 import type {AgentInstance, AgentSessionBinding} from '../team/agent-types';
 import type {AgentRef, GraphCursor} from './graph-types';
+import {workflowSelectionsSchema,validateWorkflowSelections} from './workflow-selection';
 
 const identifier=z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 const text=z.string().trim().min(1).max(16000);
@@ -12,15 +13,18 @@ const text=z.string().trim().min(1).max(16000);
 export const graphIdentityInput=z.object({workspaceId:identifier,rootSessionId:identifier}).strict();
 export const openGraphInput=graphIdentityInput.extend({commandId:identifier}).strict();
 export const createMemberInput=openGraphInput.extend({agentId:text.max(512)}).strict();
-export const dispatchTaskInput=openGraphInput.extend({
-  expectedParentRevision:z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
-  task:z.object({
+/** 工具可复用字段声明重命名 assignee；完整输入仍通过下方跨模块选择校验。 */
+export const dispatchTaskFields=z.object({
     assigneeAgentId:text.max(512),
     moduleIds:z.array(text.max(512)).min(1).max(50),
+    workflowSelections:workflowSelectionsSchema.optional(),
     goal:text,
     acceptance:z.array(z.object({id:identifier,text}).strict()).min(1).max(50),
     prerequisites:z.array(z.object({taskId:identifier,expectedPlanRevision:z.number().int().min(1).max(Number.MAX_SAFE_INTEGER)}).strict()).max(100).default([]),
-  }).strict(),
+  }).strict();
+export const dispatchTaskInput=openGraphInput.extend({
+  expectedParentRevision:z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
+  task:dispatchTaskFields.superRefine((value,context)=>{try{validateWorkflowSelections(value.moduleIds,value.workflowSelections)}catch{context.addIssue({code:'custom',message:'Workflow 选择不属于本次任务模块'})}}),
 }).strict();
 export type OpenGraphInput=z.infer<typeof openGraphInput>;
 export type CreateMemberInput=z.infer<typeof createMemberInput>;

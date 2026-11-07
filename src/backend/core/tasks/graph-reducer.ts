@@ -1,6 +1,6 @@
 /**
  * 作用定位：把已提交的图事件原子转换为内存投影，并按游标输出增量读取结果。
- * 设计原因：节点、边和成员状态必须一起可见；检查点与续预约、求助、撤销、替换审计及退役边原样保留，防止增量改写历史。
+ * 设计原因：节点、边和成员状态必须一起可见；已派发流程选择与检查点、续预约、求助及替换审计原样保留，防止增量改写历史。
  * 职责边界：不落盘、不分配事件序号、不启动任务；调用方必须先可靠提交再发布结果。
  */
 import {fail} from '../foundation/errors';
@@ -24,6 +24,7 @@ function nextRevision(previous:{revision:number}|undefined,next:{revision:number
 function taskRevision(previous:TaskNode,next:TaskNode){
   if(previous.cancelledBeforeStart)fail('GRAPH_INPUT_INVALID','已撤销的未启动任务已封存，不能再次改写或执行');
   if(previous.scopeId!==next.scopeId||previous.parentTaskId!==next.parentTaskId||stable(previous.requester)!==stable(next.requester)||previous.createdAt!==next.createdAt)fail('GRAPH_INPUT_INVALID','任务调度周期、派发父关系、请求人和创建时间不能改写');
+  if(stable(previous.workflowSelections)!==stable(next.workflowSelections))fail('GRAPH_INPUT_INVALID','已有任务的 Workflow 选择不能增删或改写，请重新规划并派发新任务');
   const plan=(t:TaskNode)=>({goal:t.goal,acceptance:t.acceptance,modules:t.modules,assignee:t.assignee});
   const changed=stable(plan(previous))!==stable(plan(next));
   if(next.planRevision!==previous.planRevision+(changed?1:0))fail('GRAPH_REVISION_CONFLICT','任务计划版本与范围修订不一致');

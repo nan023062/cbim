@@ -257,3 +257,7 @@ GraphLayout --> GraphContract : 真实节点与连线
 `MemberValidationPanel` 在当前成员轮次详情展示公开的 `validation.checked`，结合相同 workspace/task/run/toolCall 的唯一真实完成回执决定是否已确认。坏回包或缺终态保持“验证结果未确认”，不能根据暂存 passed 先显示成功。
 
 `member-validation-state` 保留每次原始 passed/rejected，并将可见后续写入、命令或新计划使旧依据过期的事实单独表达。外部文件变化无法由此事件流持续检测，不伪造过期事件；当前候选由后端交付/审阅复核。记录只显示当时文件与规则指纹和无原值诊断，不提供验证执行或重试入口。
+
+## 模块 Workflow 选择
+
+目标责任分配只展示已保存的 `workflowSelections`，未声明不补造选择。成员详情仍显示每个模块真实 `ModuleBinding.workflow`；仅当原显式选择与绑定相同才标注“指定流程”。切换历史周期或任务不查询当前知识来改写原流程，不提供修改已派发任务选择的界面。

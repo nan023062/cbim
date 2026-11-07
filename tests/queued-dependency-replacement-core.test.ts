@@ -52,6 +52,13 @@ it('已领取或已执行后继、别的成员活动和不匹配目标分工整�
   const cases:Array<(state:DispatchState)=>void>=[s=>{s.graphs[0].tasks[2].runIds=['run-c']},s=>{s.graphs[0].tasks[2].status='cancelled'},s=>{s.graphs[0].tasks[2].scopeId='other'},s=>{s.outbox[2].claim={runId:'claimed',leaseEpoch:1}},s=>{s.members[2].communicatingMessageIds=['busy']},s=>{s.members[2].lifecycle='released'},s=>{s.scopes![0].goal!.plan!.assignments[0].moduleIds=['other']}];
   for(const alter of cases){const {state,input}=fixture();alter(state);expect(()=>queuedDependencyReplacementSelection(state,identity,scopeId,input)).toThrow()}
 });
+it('目标计划改选 Workflow 后不能重新启用原默认待办，后继选择也必须逐项匹配',()=>{
+  const {state,input}=fixture(),assignment=state.scopes![0].goal!.plan!.assignments[0];assignment.workflowSelections=[{moduleId:'module',workflowId:'explicit'}];
+  const before=structuredClone(state);expect(()=>queuedDependencyReplacementSelection(state,identity,scopeId,input)).toThrow(expect.objectContaining({code:'DEPENDENCY_KNOWLEDGE_STALE'}));expect(state).toEqual(before);
+  for(const task of state.graphs[0].tasks.slice(1,3)){task.workflowSelections=structuredClone(assignment.workflowSelections);task.modules[0].workflow={kind:'module',id:'explicit',version:'1'}}
+  expect(queuedDependencyReplacementSelection(state,identity,scopeId,input).tasks.map(task=>task.taskId)).toEqual(['b','c']);
+  state.graphs[0].tasks[2].workflowSelections=[{moduleId:'module',workflowId:'other'}];expect(()=>queuedDependencyReplacementSelection(state,identity,scopeId,input)).toThrow();
+});
 it('检测重复前置和后继候选造成的环，其余未满足前置不会被单条替换移除',()=>{
   for(const kind of ['duplicate','cycle'] as const){const {state,input}=fixture();state.graphs[0].edges.push({edgeId:'extra',identity,kind:'dependency',fromNodeId:kind==='duplicate'?'task:a2':'task:c',toNodeId:kind==='duplicate'?'task:b':'task:a2',revision:1,enabled:true,condition:{kind:'result_ready',planRevision:1}});expect(()=>queuedDependencyReplacementSelection(state,identity,scopeId,input)).toThrow()}
   const {state,input}=fixture(),x=task('x','queued');state.graphs[0].tasks.push(x);state.graphs[0].edges.push({edgeId:'x-b',identity,kind:'dependency',fromNodeId:x.nodeId,toNodeId:'task:b',revision:1,enabled:true,condition:{kind:'result_ready',planRevision:1}});expect(queuedDependencyReplacementSelection(state,identity,scopeId,input).status).toBe('waiting');

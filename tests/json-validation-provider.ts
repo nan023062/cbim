@@ -15,16 +15,17 @@ function gate(){let release=()=>{};const promise=new Promise<void>(resolve=>{rel
 
 /** Real product write/read/capture/validator calls; only localhost model responses and explicit pauses are scripted. */
 export async function jsonValidationProvider(mode:JsonValidationMode='complete'){
-  const d=jsonValidationFixture,main:Request[]=[],member:Request[]=[],errors:string[]=[],repair=gate(),review=gate();let agentId='',moduleId='';
+  const d=jsonValidationFixture,main:Request[]=[],member:Request[]=[],errors:string[]=[],repair=gate(),review=gate();let agentId='',moduleId='',workflowId:string|undefined;
   const state:{badProgress?:any;badCapture?:any;rejected?:any;badStep?:any;deniedDelivery?:any;freshProgress?:any;freshCapture?:any;passed?:any;freshStep?:any;delivery?:any;readyForReview?:boolean;reviewInput?:any;reviewError?:any}={};
-  const goalPlan=(expectedRevision=1)=>{const plan=goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],acceptance:d.acceptance},expectedRevision);return mode==='human-negative'?{...plan,criteria:[...plan.criteria,{id:d.humanId,text:d.humanCriterion,kind:'human'}],assignments:plan.assignments.map(item=>({...item,criterionIds:[...item.criterionIds,d.humanId]}))}:plan};
+  const selection=()=>workflowId?{workflowSelections:[{moduleId,workflowId}]}:{};
+  const goalPlan=(expectedRevision=1)=>{const original=goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],acceptance:d.acceptance},expectedRevision),plan={...original,assignments:original.assignments.map(item=>({...item,...selection()}))};return mode==='human-negative'?{...plan,criteria:[...plan.criteria,{id:d.humanId,text:d.humanCriterion,kind:'human'}],assignments:plan.assignments.map(item=>({...item,criterionIds:[...item.criterionIds,d.humanId]}))}:plan};
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw)as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(item=>item.function.name==='cbim_dispatch_task')===true,list=isMain?main:member,turn=list.length;list.push(body);
     res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'json-validation-'+(main.length+member.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n'),tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     if(isMain){
       assert.ok(body.tools?.every(item=>!['cbim_validation_run','write','edit','bash'].includes(item.function.name)));
       if(turn===0)tool('json-goal-plan','cbim_goal_plan',goalPlan());
-      else if(turn===1)tool('json-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+      else if(turn===1)tool('json-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],...selection(),goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
       else if(turn===2)reply('已交给独立成员按冻结JSON结构要求验证。');
       else if(turn===3)tool('json-goal-inspect','cbim_goal_inspect',{});
       else if(turn===4){
@@ -61,5 +62,5 @@ export async function jsonValidationProvider(mode:JsonValidationMode='complete')
     }
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('JSON validation fixture failed')}});
-  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');const releaseAll=()=>{repair.release();review.release()};return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,state,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},releaseRepair:repair.release,releaseReview:review.release,releaseAll,close:async()=>{releaseAll();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');const releaseAll=()=>{repair.release();review.release()};return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,state,bind:(agent:string,module:string,selectedWorkflow?:string)=>{agentId=agent;moduleId=module;workflowId=selectedWorkflow},releaseRepair:repair.release,releaseReview:review.release,releaseAll,close:async()=>{releaseAll();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

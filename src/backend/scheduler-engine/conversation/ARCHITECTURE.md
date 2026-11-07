@@ -142,6 +142,10 @@ N_src_backend_scheduler_engine_conversation_questions_ts ..> N_src_backend_sched
 
 ### 主会话业务调度与知识管理职责
 
+主提示要求先查询模块实际挂载的 Workflow，在计划分工和派发中使用相同的可选 `workflowSelections`。未选择的模块保留原缺省规则，显式 ID 失效则报告并重新规划，不自动回退；已派任务不能改选。旧候选、人工接受与停泊续执行不能因模块相同而跨流程沿用，选择也不签发新权限。
+
+流程选择仅属于执行角色分工；主角色仍可用 moduleIds 治理受控知识，但不能填流程选择，也不能以知识提交回执声称业务 Workflow 已执行。
+
 `main-agent.ts` 只声明内置调度角色 `cbim:main`，不再存在主角色的业务执行模式：
 
 - `mainAgentInstructions` 仅用于主会话。主 Agent 对业务只调度，先定位真实业务模块、维护责任和 Team 能力，再派发给独立执行 Agent，最后核实实际返回；不实现、修改或运行验证业务产物。其他主会话的实例和图保持独立。

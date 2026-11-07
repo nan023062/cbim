@@ -1,6 +1,6 @@
 /**
  * 作用定位：检查成员检查点、续执行预约和唯一消费在图/运行/邮箱联合事务中的一致性。
- * 设计原因：不能只在工具入口防重；存储重放和普通事务同样不得补造检查点、改写旧终态、复用信封或将预约当成运行。
+ * 设计原因：不能只在工具入口防重；存储重放和普通事务须保留原流程选择，不得补造检查点、复用信封或将预约当成运行。
  */
 import {fail} from '../foundation/errors';
 import type {DispatchState,DispatchMutation,DispatchCommand} from './dispatch-storage';
@@ -9,10 +9,11 @@ import {memberCheckpointProofSchema,memberCheckpointRecordSchema} from './member
 import {memberResumeRequestSchema} from './queued-member-resume';
 import {memberResumeSelection} from './queued-member-resume-rules';
 import {goalNeedsReplan} from './scope-goal';
+import {sameWorkflowSelectionsForModules} from './workflow-selection';
 function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,ordered(v)])):value}
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 function valid(value:unknown,message:string):asserts value{if(!value)fail('GRAPH_INPUT_INVALID',message)}
-const fixed=(task:TaskNode)=>({goal:task.goal,acceptance:task.acceptance,modules:task.modules,assignee:task.assignee,requester:task.requester,scopeId:task.scopeId,planRevision:task.planRevision});
+const fixed=(task:TaskNode)=>({goal:task.goal,acceptance:task.acceptance,modules:task.modules,workflowSelections:task.workflowSelections,assignee:task.assignee,requester:task.requester,scopeId:task.scopeId,planRevision:task.planRevision});
 /** 验证真实联合状态，不访问磁盘；文件和原生内容证明须由结算/领取的可信服务产生并再次核实。 */
 export function validateMemberCheckpoints(previous:DispatchState,next:DispatchState,mutation:DispatchMutation,command:DispatchCommand):void{
   const checkpointIds=new Set<string>(),consumed=new Set<string>();
@@ -60,7 +61,7 @@ export function validateMemberCheckpoints(previous:DispatchState,next:DispatchSt
       if(!previous.runs?.some(prior=>prior.binding.runId===run.binding.runId)){
         valid(old?.resumeRequest&&old.runIds.length===1&&old.status==='queued'&&scope.status==='active'&&previous.outbox.some(message=>message.messageId===request.requestId&&message.delivery==='pending'&&!message.claim),'只有待领取预约可原子消费检查点');
         // 预约后的主轮还可修改目标；不能把曾经有效的意图当成领取时仍然有效。
-        valid(scope.goal?.plan&&scope.goal.revision===request.goalRevision&&!scope.goal.blocked&&!scope.goal.review&&!goalNeedsReplan(scope.goal)&&scope.goal.plan.knowledgeRevision===source.prepared.knowledgeRevision&&scope.goal.plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&task.modules.every(module=>assignment.moduleIds.includes(module.moduleId))),'续执行预约的目标计划已变化或进入审阅，必须重新安排任务');
+        valid(scope.goal?.plan&&scope.goal.revision===request.goalRevision&&!scope.goal.blocked&&!scope.goal.review&&!goalNeedsReplan(scope.goal)&&scope.goal.plan.knowledgeRevision===source.prepared.knowledgeRevision&&scope.goal.plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&task.modules.every(module=>assignment.moduleIds.includes(module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))),'续执行预约的目标计划或流程选择已变化或进入审阅，必须重新安排任务');
       }
     }else{
       valid(!task.activeRunId&&!task.result&&!task.help,'尚未续执行的检查点不能产生占用或交付');

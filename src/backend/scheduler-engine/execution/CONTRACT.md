@@ -1,5 +1,9 @@
 ### 主调度公开回包与一致读取
 
+目标分工与派发任务可保存原始可选 `workflowSelections`，命令指纹包含选择，重复命令返回原记录。缺省模式与显式选择首项仍是不同的约定；目标匹配、普通候选和人工候选均按实际目标模块比较模式与 ID，不只比较角色和模块集合。续执行领取保留原模块子集语义并重核选择；依赖替换构造待办核验请求时同样保留原选择，不将它降为缺省。改变流程需要新计划和新任务，不修改既有任务、历史候选或人工主体。
+
+`workflowSelections` 只用于执行角色分工。`cbim:main` 可保留 moduleIds 定位受控知识治理，但不能声明业务流程选择；严格输入、持久计划和公开输出均拒绝该组合，主知识回执不代替业务 Workflow 条件。
+
 `AutoCollaboration.tools` 为 Goal 三工具和 Dispatch 五工具绑定本轮 workspace/root/scope/run；`mainToolCommandId` 由实际桥调用 ID 计算原有命令键，提交与回包核验共用此算法，不改写已持久化命令。公开输出只验证事实，不产生权限或新的执行能力。
 
 `ScopeGoalService.inspectWithGraph` 仅一次 `DispatchStore.read()`，从相同权威快照选择本 scope 与本 root 图，避免两次读取之间的变更被拼成一致事实。Auto 只投影公开 scope：保留重规划/只读核实的约束与来源证明，去除私有 native/排除集合 context；空返回仍交工具业务 Schema 拒绝，不降级到另一读取。

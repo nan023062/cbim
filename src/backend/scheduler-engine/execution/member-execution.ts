@@ -1,6 +1,6 @@
 /**
  * 作用定位：让已派发任务在独立成员会话中执行，提交领取、启动、结果、中断及一次安全停泊/续执行事实。
- * 设计原因：全局准入及本地租约先同步领取，容量等待不创建 run 或 claim；Workflow 工具及结构验证器按实际能力先核，候选结算重读 canonical 并复核当前文件。占用持续到终态事务完成，异步核实期间停止仍阻止候选发布。
+ * 设计原因：全局准入及本地租约先同步领取，容量等待不创建 run 或 claim；按任务原 Workflow 选择核实际能力，续执行不得借新计划改选。候选结算重读 canonical 并复核当前文件，占用持续到终态事务完成。
  * 职责边界：本成员 Loop 不递归派发或继承批准；求助在关闭后单向交接。检查点须完整关闭及复核后释放占用；主调度预约一次原任务新轮，失败、停止和重启不复活旧实例。只读报告不触发续执行，候选及匹配哈希不等于验收。
  */
 import {randomUUID} from 'node:crypto';
@@ -37,6 +37,7 @@ import {goalNeedsReplan} from '../../core/tasks/scope-goal';
 import {preparedWorkflowContracts} from '../../core/tasks/execution-context';
 import {validateMemberWorkflow} from './member-workflow';
 import {jsonValidationLimits} from '../../core/workspace/json-validation-schema';
+import {sameWorkflowSelectionsForModules} from '../../core/tasks/workflow-selection';
 
 /** 装配主进程提供模型与磁盘能力，调度层不解密密钥或导入平台实现。 */
 export interface MemberExecutionPorts {
@@ -159,6 +160,7 @@ export class MemberExecutionManager {
         if(wait&&wait.scopeId!==task.scopeId)fail('COLLABORATION_STOPPED','成员启动所属协作批次周期不匹配');
         const runId=randomUUID(),scope=state.scopes?.find(value=>value.scopeId===task.scopeId);
         if(resuming&&(!scope?.goal||scope.goal.revision!==task.resumeRequest!.goalRevision||scope.goal.review||scope.goal.blocked||goalNeedsReplan(scope.goal)))fail('MEMBER_RESUME_STALE','预约后的目标计划已变化，不能消费原续执行请求');
+        if(resuming&&(!scope?.goal?.plan||scope.goal.plan.knowledgeRevision!==previous!.prepared.knowledgeRevision||!scope.goal.plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&task.modules.every(module=>assignment.moduleIds.includes(module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId)))))fail('MEMBER_RESUME_STALE','当前计划不再保留原成员、模块、Workflow 选择或知识基线');
         const admitted=scope?await this.ports.budgets?.admit(state,scope,{kind:'member',taskId:task.taskId,runId}):undefined;
         assertCurrent();
         if(admitted?.rejected)return {scopes:[admitted.scope],receipt:admitted.rejected};

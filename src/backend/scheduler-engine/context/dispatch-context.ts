@@ -1,6 +1,6 @@
 /**
  * 作用定位：解析主会话内置身份，以及正式派发所需的角色知识与多模块绑定。
- * 设计原因：诊断对话的主实例登记不依赖业务知识完好；正式任务只接受自定义或内置默认执行角色，主调度角色永远不能成为执行者。
+ * 设计原因：诊断主实例不依赖业务知识完好；正式任务严格解析执行角色与各模块已挂载的显式或默认 Workflow，失效选择不能回退，主调度角色永远不能成为执行者。
  * 职责边界：只读并冻结输入，不创建实例、不派发消息、不把本机维护声明当作权限批准。
  */
 import {fail} from '../../core/foundation/errors';
@@ -10,6 +10,7 @@ import type {Snapshot} from '../../core/knowledge/types';
 import {Team} from '../../core/team/model';
 import type {AgentConfigurationSnapshot} from '../../core/team/agent-types';
 import type {ModuleBinding} from '../../core/tasks/graph-types';
+import {validateWorkflowSelections,type WorkflowSelection} from '../../core/tasks/workflow-selection';
 import type {ModuleMaintenanceDefinition} from '../../core/workspace/maintenance';
 import {BusinessWorkspace} from '../../core/workspace/model';
 import {mainAgentId,mainAgentInstructions} from '../conversation/main-agent';
@@ -47,19 +48,22 @@ export async function resolveDispatchAgent(snapshot:Snapshot,agentId:string):Pro
 }
 
 /**
- * 解析至少一个真实模块，核实显式维护关系并固定该模块自己的默认 Workflow。
- * v1 尚无流程选择参数，按各模块清单首项为默认；空清单显式采用 general，不继承父模块。
+ * 解析至少一个真实模块，核实维护关系与本模块实际挂载的 Workflow。
+ * 显式选择只按逻辑 ID 查本模块清单；未选择的模块沿用首项或空清单 general，不回退失效选择、不继承父模块。
  */
-export async function resolveDispatchModules(snapshot:Snapshot,moduleIds:string[]):Promise<ModuleBinding[]>{
+export async function resolveDispatchModules(snapshot:Snapshot,moduleIds:string[],workflowSelections?:readonly WorkflowSelection[]):Promise<ModuleBinding[]>{
   assertSnapshot(snapshot);
   if(!Array.isArray(moduleIds)||!moduleIds.length||moduleIds.length>100||moduleIds.some(id=>typeof id!=='string'||!id.trim())||new Set(moduleIds).size!==moduleIds.length)fail('MODULE_MISSING','任务需要 1–100 个不重复的真实模块 ID');
+  validateWorkflowSelections(moduleIds,workflowSelections);
   const people=new Set<string>(data(snapshot,'.cbim/team/people.json').people.map((person:{id:string})=>person.id));
   const workspace=new BusinessWorkspace(snapshot),bindings:ModuleBinding[]=[];
   for(const moduleId of moduleIds){
     if(!Object.hasOwn(snapshot.validation!.tree.nodes,moduleId))fail('MODULE_MISSING',`模块不存在：${moduleId}`);
     const module=await workspace.module(moduleId),maintenance=module.definition.maintenance as ModuleMaintenanceDefinition|undefined;
     if(!maintenance||maintenance.state!=='active'||!maintenance.maintainerPersonIds.length||maintenance.maintainerPersonIds.some(id=>!people.has(id)))fail('MAINTAINER_UNCONFIRMED',`模块尚无有效维护关系：${moduleId}`);
-    const workflow=module.workflows[0];
+    const selected=workflowSelections?.find(item=>item.moduleId===moduleId);
+    const workflow=selected?module.workflows.find((item:{id:string})=>item.id===selected.workflowId):module.workflows[0];
+    if(selected&&!workflow)fail('WORKFLOW_SELECTION_INVALID','选定的 Workflow 未挂载于对应模块，请查询当前模块后重新规划');
     bindings.push({moduleId,name:module.definition.name,knowledgeRevision:snapshot.revision,
       maintenanceBindingId:maintenance.bindingId,maintainerPersonIds:[...maintenance.maintainerPersonIds],
       workflow:workflow?{kind:'module',id:workflow.id,version:hash(textOf(workflow.content))}

@@ -1,6 +1,6 @@
 /**
  * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
- * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；周期冻结输入、归属及软限额。人工保存和人工继续分设服务，继续同事务消费等待和登记运行；关闭封存待办，旧回执不能重开周期。
+ * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；派发保存原 Workflow 选择及实际绑定，同命令不能改选。周期冻结输入、归属及软限额；人工继续同事务消费等待和登记运行，关闭封存待办，旧回执不能重开周期。
  * 职责边界：本模块负责可靠入队、显式撤销未启动集合及受审计的单条依赖替换，由独立 MemberExecutionManager 执行；调度维护不停止活动运行，不复活旧实例，也不代表目标完成。
  */
 import {randomUUID} from 'node:crypto';
@@ -316,7 +316,7 @@ export class WorkspaceDispatchService {
       }
       const taskId=randomUUID();
       const prepared=prepareMember(state,await resolveDispatchAgent(snapshot,input.task.assigneeAgentId),input.rootSessionId,'task',trustedScopeId===undefined?undefined:{scopeId:trustedScopeId,taskId});
-      const modules=await resolveDispatchModules(snapshot,input.task.moduleIds);
+      const modules=await resolveDispatchModules(snapshot,input.task.moduleIds,input.task.workflowSelections);
       const now=new Date().toISOString();
       const edges:GraphEdge[]=[{edgeId:randomUUID(),identity:graph.identity,kind:'dispatch',fromNodeId:graph.root.nodeId,toNodeId:'task:'+taskId,revision:1,enabled:true}];
       let waiting=false;
@@ -328,7 +328,7 @@ export class WorkspaceDispatchService {
         if(!ready)waiting=true;
         edges.push({edgeId:randomUUID(),identity:graph.identity,kind:'dependency',fromNodeId:source.nodeId,toNodeId:'task:'+taskId,revision:1,enabled:true,condition:{kind:'result_ready',planRevision:source.planRevision,...(ready?{resultId:source.result!.resultId}:{})}});
       }
-      const task:TaskNode={kind:'task',nodeId:'task:'+taskId,taskId,...(trustedScopeId===undefined?{}:{scopeId:trustedScopeId}),identity:graph.identity,requester:graph.root.agent,assignee:prepared.agent,modules,goal:input.task.goal,acceptance:input.task.acceptance,revision:1,planRevision:1,status:waiting?'waiting':'queued',awaitedChildren:[],runIds:[],createdAt:now,updatedAt:now,...(waiting?{waitReason:'等待前置任务的有效结果'}:{})};
+      const task:TaskNode={kind:'task',nodeId:'task:'+taskId,taskId,...(trustedScopeId===undefined?{}:{scopeId:trustedScopeId}),identity:graph.identity,requester:graph.root.agent,assignee:prepared.agent,modules,...(input.task.workflowSelections?{workflowSelections:input.task.workflowSelections}:{}),goal:input.task.goal,acceptance:input.task.acceptance,revision:1,planRevision:1,status:waiting?'waiting':'queued',awaitedChildren:[],runIds:[],createdAt:now,updatedAt:now,...(waiting?{waitReason:'等待前置任务的有效结果'}:{})};
       const previous=graph.agents.find(a=>a.agentInstanceId===prepared.member.agentInstanceId);
       const waitingTaskIds=[...(previous?.waitingTaskIds??[]),...(waiting?[taskId]:[])];
       // 新派发不能覆盖成员正在其他任务中的占用；图只保留本图已经确认的活动任务。

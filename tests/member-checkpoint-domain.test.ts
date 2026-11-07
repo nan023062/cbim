@@ -64,6 +64,14 @@ it('预约后主计划改版、移除责任或进入审阅，旧意图不能在�
     }
   }finally{await f.cleanup()}
 });
+it('同模块默认与显式 Workflow 不混同，改选计划同时阻止检查点预约和真实消费',async()=>{
+  const f=await setup();try{
+    const task=f.parked.graphs[0].tasks[0],graph=f.parked.graphs[0],selections=[{moduleId:task.modules[0].moduleId,workflowId:task.modules[0].workflow.id}],input={expectedGraphCursor:{streamId:graph.cursor.streamId,seq:graph.cursor.seq},expectedGoalRevision:2,taskId:task.taskId,expectedRevision:task.revision,checkpointId:'checkpoint',reason:'沿原选择继续'};
+    const changed=structuredClone(f.parked);changed.scopes![0].goal!.plan!.assignments[0].workflowSelections=selections;expect(()=>memberResumeSelection(changed,f.identity,f.scopeId,f.mainRunId,input)).toThrow(expect.objectContaining({code:'MEMBER_RESUME_STALE'}));
+    const claimed=structuredClone(f.reserved);claimed.scopes![0].goal!.plan!.assignments[0].workflowSelections=selections;expect(()=>checked(claimed,f.claim())).toThrow();expect(claimed.graphs[0].tasks[0].runIds).toEqual(['first-run']);
+    changed.graphs[0].tasks[0].workflowSelections=selections;expect(memberResumeSelection(changed,f.identity,f.scopeId,f.mainRunId,input).task.workflowSelections).toEqual(selections);expect(()=>checked(changed,f.reserve(changed))).not.toThrow();
+  }finally{await f.cleanup()}
+});
 it('停止周期封存尚未消费的检查点和预约；不保留可恢复状态、不删除原proof',async()=>{
   const f=await setup();try{for(const before of [f.parked,f.reserved]){
     const task=before.graphs[0].tasks[0],member=before.members.find(member=>member.agentInstanceId===task.assignee.agentInstanceId)!,view=before.graphs[0].agents.find(view=>view.agentInstanceId===member.agentInstanceId)!,now=new Date().toISOString(),mutation:DispatchMutation={scopes:[{...before.scopes![0],status:'closed',closedAt:now,outcome:'cancelled'}],members:[{...member,lifecycle:'released',releasedAt:now,leaseEpoch:member.leaseEpoch+1}],messages:before.outbox.filter(message=>message.kind==='assignment'&&message.delivery==='pending').map(message=>({...message,delivery:'processed'})),batch:batch(before,'close-'+before.graphs[0].cursor.seq,'task.cancelled',{...task,status:'cancelled',revision:task.revision+1,updatedAt:now,waitReason:'周期停止'},{...view,revision:view.revision+1}),receipt:true};

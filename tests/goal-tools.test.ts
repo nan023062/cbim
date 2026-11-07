@@ -40,6 +40,13 @@ test('planning forwards domain input with separate trusted invocation metadata',
   expect(f.savePlan).toHaveBeenCalledWith(plan,{toolCallId:'plan-call',signal});
   expect(JSON.parse(result.content[0].text)).toMatchObject({status:'active',goal:{revision:2}});
 });
+test('主角色业务Workflow选择在端口前拒绝，原模块知识治理仍可正常规划',async()=>{
+  const f=fixture(),signal=new AbortController().signal,input:GoalPlanInput={...plan,criteria:[{id:'c1',text:'页面可打开',kind:'evidence'}],assignments:[{...plan.assignments[0],agentId:'cbim:main'}]},invalid={...input,assignments:[{...input.assignments[0],workflowSelections:[{moduleId:input.assignments[0].moduleIds[0],workflowId:'.cbim/workspace/app/workflows/build'}]}]};
+  expect(()=>f.tools.describe('cbim_goal_plan',invalid)).toThrowError(expect.objectContaining({code:'GOAL_TOOL_INPUT_INVALID'}));
+  await expect(f.tools.call('cbim_goal_plan',invalid,signal,'main-business-workflow')).rejects.toMatchObject({code:'GOAL_TOOL_INPUT_INVALID'});expect(f.savePlan).not.toHaveBeenCalled();
+  f.savePlan.mockResolvedValueOnce(mainToolScope(mainToolBinding,input));
+  await f.tools.call('cbim_goal_plan',input,signal,'main-knowledge');expect(f.savePlan).toHaveBeenCalledExactlyOnceWith(input,{toolCallId:'main-knowledge',signal});
+});
 test('complete review keeps the service pending result without closing scope or granting human acceptance',async()=>{
   const f=fixture(),signal=new AbortController().signal;
   expect(f.tools.describe('cbim_goal_review',review)).toEqual({effects:['maintenance'],native:false});

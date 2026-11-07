@@ -113,6 +113,12 @@ it('拒绝旧basis、跨身份、候选遗漏、错误运行与不属验收项�
   for(const mutate of [(state:DispatchState)=>{state.graphs[0].cursor.seq++},(state:DispatchState)=>{state.scopes![0].goal!.revision++},(state:DispatchState)=>{state.scopes![0].goal!.plan!.assignments[0].criterionIds=['other']},(state:DispatchState)=>{state.graphs[0].tasks[0].result!.evidenceRefs=[]},(state:DispatchState)=>{state.runs![0].status='failed'},(state:DispatchState)=>{state.runs![0].binding.rootSessionId='other'},(state:DispatchState)=>{state.runs![0].prepared.knowledgeRevision='new'},(state:DispatchState)=>{state.graphs[0].tasks[0].revision++},(state:DispatchState)=>{state.scopes![0].goal!.review!.checks[0].evidence.push({kind:'member-result',taskId:'other',runId:'other-run',resultId:'other-result',planRevision:1,toolCallIds:['other']})}]){const before=setup();mutate(before);const saved=append(before);expect(()=>validateHumanDecisions(before,saved.after,saved.mutation)).toThrow()}
   const before=setup(),wrong=record();wrong.proof.identity.scopeId='other';wrong.basis=humanDecisionBasis(wrong.proof);const saved=append(before,wrong);expect(()=>validateHumanDecisions(before,saved.after,saved.mutation)).toThrow();
 });
+it('人工候选必须匹配原 Workflow 选择，默认不是对显式方案的批准通配',()=>{
+  const selection=[{moduleId:'module',workflowId:'workflow'}],before=setup();before.scopes![0].goal!.plan!.assignments[0].workflowSelections=selection;
+  const mismatch=append(before);expect(()=>validateHumanDecisions(before,mismatch.after,mismatch.mutation)).toThrow('人工决定不能跨责任、模块或 Workflow 选择引用候选');
+  before.graphs[0].tasks[0].workflowSelections=selection;const saved=append(before);expect(()=>verify(before,saved.after,saved.mutation)).not.toThrow();
+  const unselected=setup();unselected.graphs[0].tasks[0].workflowSelections=selection;const rejected=append(unselected);expect(()=>validateHumanDecisions(unselected,rejected.after,rejected.mutation)).toThrow();
+});
 
 it('追加后不能改删旧意见或伪造hash，也不能跨周期复用command',()=>{
   const original=setup(),saved=append(original);verify(original,saved.after,saved.mutation);

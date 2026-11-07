@@ -1,12 +1,13 @@
 /**
  * 作用定位：把主调度的派发、查询、未启动撤销、依赖替换及一次检查点续执行预约转换为内部工具，并组合目标工具。
- * 设计原因：模型只表达责任角色、模块与目标；可信闭包固定身份，严格输入拒绝夹带授权，业务输出核同一份 wire。校验失败不回滚或重做已入队事实。
+ * 设计原因：模型只表达责任角色、模块、目标与本模块 Workflow 选择；可信闭包固定身份，严格输入拒绝夹带授权，业务输出核同一份 wire。校验失败不回滚或重做已入队事实。
  * 职责边界：派发只是入队，续执行只是预约，撤销和依赖替换只记录调度事实，不算验收。本模块不装配成员递归派发、活动任务中止或手工结果工具。
  */
 import {z} from 'zod';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {fail} from '../../core/foundation/errors';
-import {dispatchTaskInput,type DispatchTaskInput,type DispatchReceipt} from '../../core/tasks/dispatch-commands';
+import {dispatchTaskFields,type DispatchTaskInput,type DispatchReceipt} from '../../core/tasks/dispatch-commands';
+import {validateWorkflowSelections} from '../../core/tasks/workflow-selection';
 import {cancelQueuedTasksInputSchema,type CancelQueuedTasksInput,type CancelQueuedTasksReceipt} from '../../core/tasks/queued-task-cancel';
 import {replaceQueuedDependencyInputSchema,type ReplaceQueuedDependencyInput,type ReplaceQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-replacement';
 import type {MainToolOutputBinding} from '../../core/tasks/main-tool-output';
@@ -14,9 +15,9 @@ import {checkedMainToolResult,mainToolContract} from './main-tool-contracts';
 import type {GoalTools} from './goal-tools';
 import {resumeMemberInputSchema,type ResumeMemberInput,type ResumeMemberReceipt} from '../../core/tasks/queued-member-resume';
 
-const {assigneeAgentId,...taskFields}=dispatchTaskInput.shape.task.shape;
+const {assigneeAgentId,...taskFields}=dispatchTaskFields.shape;
 // 未选定专业执行角色时使用内置静态默认执行者；主角色永远不能被派为执行者。
-const taskInput=z.object({agentId:assigneeAgentId.default('cbim:executor').refine(id=>id!=='cbim:main','主 Agent 只能调度，不能承担执行任务'),...taskFields}).strict();
+const taskInput=z.object({agentId:assigneeAgentId.default('cbim:executor').refine(id=>id!=='cbim:main','主 Agent 只能调度，不能承担执行任务'),...taskFields}).strict().superRefine((value,context)=>{try{validateWorkflowSelections(value.moduleIds,value.workflowSelections)}catch{context.addIssue({code:'custom',message:'Workflow 选择必须属于本次任务模块'})}});
 const inspectInput=z.object({taskId:z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/).optional()}).strict();
 const definitions={
   cbim_dispatch_resume:{
@@ -24,7 +25,7 @@ const definitions={
     schema:resumeMemberInputSchema,effects:['maintenance'] as const,
   },
   cbim_dispatch_task:{
-    description:'将任务交给当前主会话的执行 Agent。先查询 Team 与模块，明确 goal、moduleIds 和 acceptance；没有可选的专业 Agent 时省略 agentId 或使用 cbim:executor，由内置默认执行者承担。主 Agent 只调度，不能选择 cbim:main。成功仅表示排队，本轮调度器启动执行并将结果返回；不要轮询等待，不宣称已完成。不能指定实例、权限或伪造维护人。',
+    description:'将任务交给当前主会话的执行 Agent。先查询 Team 与模块，明确 goal、moduleIds 和 acceptance；可用 workflowSelections:[{moduleId,workflowId}] 选择本模块实际挂载的流程，须与当前目标计划一致，未列模块使用默认首项或空清单通用流程。已有任务不能改选，失效选择不会回退；不能提交任意路径、正文或版本。没有专业 Agent 时省略 agentId 或用 cbim:executor。主 Agent 只调度，不能选择 cbim:main。成功仅表示排队，结束本轮让调度继续；不要轮询或宣称已完成，不能指定实例、权限或伪造维护人。',
     schema:taskInput,effects:['maintenance'] as const,
   },
   cbim_dispatch_inspect:{

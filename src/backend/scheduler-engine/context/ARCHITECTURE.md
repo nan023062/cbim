@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/维护关系、Workflow 与规范。前置替换重验待办并保留原实例；配置过期不能借重新准备刷新旧任务，主角色仍不执行业务。
+内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/维护关系、Workflow与规范。显式流程只从本模块挂载清单解析，准备按任务原选择重核，不回退默认或刷新旧绑定；前置替换保留原实例和流程，主角色仍不执行业务。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -41,7 +41,7 @@ class N_src_backend_scheduler_engine_context_dispatch_context_ts["dispatch-conte
 }
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/snapshot.ts](../../core/knowledge/snapshot.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/team/model.ts](../../core/team/model.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/workspace/maintenance.ts](../../core/workspace/maintenance.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[default-executor.ts](default-executor.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/snapshot.ts](../../core/knowledge/snapshot.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/team/model.ts](../../core/team/model.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[../../core/workspace/maintenance.ts](../../core/workspace/maintenance.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[default-executor.ts](default-executor.ts)。
 
 ### execution-context.ts
 
@@ -67,7 +67,7 @@ class N_src_backend_scheduler_engine_context_execution_context_ts_DispatchKnowle
 N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_scheduler_engine_context_execution_context_ts_DispatchKnowledgeWorkspace : 声明
 ```
 
-直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/snapshot.ts](../../core/knowledge/snapshot.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[dispatch-context.ts](dispatch-context.ts)、[default-executor.ts](default-executor.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)。
+直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/snapshot.ts](../../core/knowledge/snapshot.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[dispatch-context.ts](dispatch-context.ts)、[default-executor.ts](default-executor.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)。
 
 ### team-workflow.ts
 
@@ -126,6 +126,8 @@ N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_sc
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 ### 多成员、多模块任务上下文契约
+
+`resolveDispatchModules(snapshot, moduleIds, workflowSelections?)` 只从对应模块实际挂载的 Workflow 清单解析显式 ID。部分选择只覆盖指定模块；缺省仍取该模块首项或空清单的 general，但不作为匹配任意流程的通配符。显式选择缺失、跨模块或已卸载时拒绝，不回退。`prepareDispatchExecutionContext` 按 Task 原选择重新解析并比较完整绑定和知识版本；任务原本缺省的字段不会补成空数组，旧任务不能就地改选。
 
 `DispatchKnowledgeWorkspace` 明确只读的 `entry/assert/snapshot/read/rules` 能力。未启动依赖替换复用 `prepareDispatchExecutionContext` 逐个核对待办闭包的原角色、模块、维护关系与当前规范，并用 `recheckDispatchExecutionContext` 最后核对替代候选的冻结知识。版本变化整体拒绝，不刷新旧任务或扩大权限；仍不声称锁定外部业务产物。
 
@@ -198,7 +200,7 @@ class DispatchContext["dispatch-context.ts"] {
   <<module>>
   +resolveConversationAgent(snapshot)
   +resolveDispatchAgent(snapshot, agentId)
-  +resolveDispatchModules(snapshot, moduleIds)
+  +resolveDispatchModules(snapshot, moduleIds, workflowSelections)
 }
 class BusinessWorkspace { <<core boundary>> }
 class DefaultExecutor["default-executor.ts"] {

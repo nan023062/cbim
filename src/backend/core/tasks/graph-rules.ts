@@ -1,6 +1,6 @@
 /**
  * 作用定位：任务图的纯领域校验，完整图与单项公开查询共用节点状态规则，并检查身份、派发父关系及依赖/等待无环。
- * 设计原因：存储重放与新提交共用规则；检查点及其一次续预约保留固定身份，求助、撤销和依赖替换不混入成功候选或活动占用。
+ * 设计原因：存储重放与新提交共用规则；显式流程必须匹配已冻结模块，检查点及一次续预约保留固定身份，不把缺省选择当成任意方法。
  * 职责边界：结构通过不等于知识维护人已认证或任务已获授权，调度层仍需核实来源。
  */
 import {z} from 'zod';
@@ -11,6 +11,7 @@ import {memberHelpRecordSchema} from './member-help';
 import {dependencyReplacementSchema} from './queued-dependency-replacement';
 import {memberCheckpointRecordSchema} from './member-checkpoint';
 import {memberResumeRequestSchema} from './queued-member-resume';
+import {workflowSelectionsSchema,validateTaskWorkflowSelections} from './workflow-selection';
 
 const text=z.string().trim().min(1).max(100000);
 const id=z.string().min(1).max(512).refine(s=>s.trim()===s&&!/[\x00-\x1f]/.test(s));
@@ -26,7 +27,7 @@ const moduleBinding=z.object({moduleId:id,name:text,knowledgeRevision:id,mainten
   ])}).strict();
 const root=z.object({kind:z.literal('session-root'),nodeId:id,identity,agent,revision,createdAt:time}).strict();
 const task=z.object({kind:z.literal('task'),nodeId:id,taskId:id,identity,scopeId:id.optional(),parentTaskId:id.optional(),requester:agent,assignee:agent,
-  modules:z.array(moduleBinding).min(1),goal:text,acceptance:z.array(z.object({id,text}).strict()).min(1),
+  modules:z.array(moduleBinding).min(1),workflowSelections:workflowSelectionsSchema.optional(),goal:text,acceptance:z.array(z.object({id,text}).strict()).min(1),
   revision,planRevision:revision,status:z.enum(['planned','queued','running','waiting','result_ready','blocked','failed','cancelled','interrupted','checkpointed']),
   awaitedChildren:z.array(z.object({taskId:id,planRevision:revision}).strict()),waitReason:text.optional(),runIds:z.array(id),activeRunId:id.optional(),
   result:z.object({resultId:id,runId:id,planRevision:revision,summary:text,evidenceRefs:z.array(id),limitations:z.array(text),acceptance:z.literal('not_evaluated')}).strict().optional(),
@@ -90,6 +91,7 @@ export function validateTaskNode(t:TaskNode):void {
   shape(task,t);
   if(t.nodeId!==`task:${t.taskId}`)fail('GRAPH_INPUT_INVALID','任务 ID 与节点 ID 不一致');
   unique(t.modules.map(m=>m.moduleId),'任务模块');unique(t.acceptance.map(a=>a.id),'验收要求');unique(t.runIds,'执行轮次');unique(t.awaitedChildren.map(c=>c.taskId),'等待子任务');
+  validateTaskWorkflowSelections(t.workflowSelections,t.modules);
   for(const m of t.modules)unique(m.maintainerPersonIds,'模块维护人');
   if(t.activeRunId&&!t.runIds.includes(t.activeRunId))fail('GRAPH_INPUT_INVALID','活动轮次不属于该任务');
   if(t.result&&(t.result.planRevision!==t.planRevision||!t.runIds.includes(t.result.runId)||t.status!=='result_ready'))fail('GRAPH_INPUT_INVALID','任务候选结果已失效或不属于该执行');

@@ -1,7 +1,7 @@
 /**
  * 作用定位：主调度在同一事务核实旧前置、安全替代候选与未启动后继，并原子提交单条依赖替换。
  * 设计原因：图上的 result_ready 不足以授权后续执行；复用目标证据核验与冻结知识准备，保留旧边和审计，不重启已执行任务。
- * 职责边界：不运行成员、不改变目标、权限或实例身份；回执仅供当前主轮重新跟踪待办，停止或重开不能自动消费。
+ * 职责边界：不运行成员、不改变目标、Workflow 选择、权限或实例身份；按原选择复核待办，回执仅供当前主轮重新跟踪，停止或重开不能自动消费。
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
@@ -33,7 +33,7 @@ export class QueuedDependencyReplacementService {
       await this.goals.validateMemberCandidate(state,scope,graph,replacement,knowledgeRevision);alive();
       const candidateRun=state.runs!.find(run=>run.binding.runId===replacement.result!.runId&&run.binding.taskId===replacement.taskId)!;
       for(const task of tasks){
-        this.goals.validateDispatch(state,scope,{assigneeAgentId:task.assignee.agentId,moduleIds:task.modules.map(module=>module.moduleId),goal:task.goal,acceptance:task.acceptance,prerequisites:[]},knowledgeRevision);
+        this.goals.validateDispatch(state,scope,{assigneeAgentId:task.assignee.agentId,moduleIds:task.modules.map(module=>module.moduleId),...(task.workflowSelections?{workflowSelections:task.workflowSelections}:{}),goal:task.goal,acceptance:task.acceptance,prerequisites:[]},knowledgeRevision);
         const prepared=await prepareDispatchExecutionContext(this.owner,task);alive();
         if(prepared.knowledgeRevision!==knowledgeRevision||prepared.agent.teamId!==members.find(member=>member.agentInstanceId===task.assignee.agentInstanceId)!.teamId)fail('DEPENDENCY_KNOWLEDGE_STALE','待办角色或模块基线已经过期');
       }

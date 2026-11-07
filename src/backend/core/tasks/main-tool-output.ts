@@ -1,6 +1,6 @@
 /**
  * 作用定位：主调度八个工具的公开业务输出契约与可信调用归属校验。
- * 设计原因：JSON 可解析不代表目标、图或回执属于本次调用；复用领域 Schema 并在唯一 wire 上核对身份和请求事实。
+ * 设计原因：JSON 可解析不代表目标、图或回执属于本次调用；复用领域 Schema 并在唯一 wire 上核对身份、Workflow 原始选择和请求事实。
  * 职责边界：排队、换边、续执行预约均不是执行完成；输出失败不撤销可能已提交的事务，也不授权自动重试。
  */
 import {z} from 'zod';
@@ -70,7 +70,7 @@ function validateMainToolOutput(name:MainToolName,value:unknown,expected:MainToo
     if(name==='cbim_goal_plan'){
       const proposed=draft as GoalPlanInput,plan=goal.plan;
       if(!plan||goal.review||plan.runId!==binding.runId||plan.revision!==goal.revision||goalInputRevision(plan)!==goalInputRevision(goal)){issue('计划未绑定本次主运行');return}
-      const actual={objective:plan.objective,constraints:plan.constraints,criteria:plan.criteria,assignments:plan.assignments.map(({agentId,moduleIds,criterionIds,reason})=>({agentId,moduleIds,criterionIds,reason})),reason:plan.reason};
+      const actual={objective:plan.objective,constraints:plan.constraints,criteria:plan.criteria,assignments:plan.assignments.map(({agentId,moduleIds,criterionIds,reason,workflowSelections})=>({agentId,moduleIds,criterionIds,reason,...(workflowSelections===undefined?{}:{workflowSelections})})),reason:plan.reason};
       const {expectedRevision:_,...requested}=proposed;if(!sameGoalValue(actual,requested))issue('保存计划与请求正文不一致');
     }else{
       const review=goal.review;if(!review||review.runId!==binding.runId||review.revision!==goal.revision||goalInputRevision(review)!==goalInputRevision(goal)){issue('审阅未绑定本次主运行');return}

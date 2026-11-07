@@ -1,6 +1,6 @@
 /**
  * 作用定位：纯选取单条前置替换的目标、可靠候选及完整未启动后继集合，供提交服务和重放校验共用。
- * 设计原因：替换不能扩大到已领取任务、过期角色或其他周期；任务身份和计划保持不变，重新纳入调度不等于直接放行执行。
+ * 设计原因：替换不能扩大到已领取任务、过期角色或其他周期；任务与原流程选择保持不变，重新纳入调度不等于直接放行执行。
  * 职责边界：只检查持久结构和基线，不读取 canonical 证据或知识正文；调度服务仍须在提交前复核这些事实。
  */
 import {fail} from '../foundation/errors';
@@ -8,6 +8,7 @@ import type {DispatchState} from './dispatch-storage';
 import type {GraphIdentity,TaskNode} from './graph-types';
 import type {ReplaceQueuedDependencyInput} from './queued-dependency-replacement';
 import {goalNeedsReplan} from './scope-goal';
+import {sameWorkflowSelectionsForModules} from './workflow-selection';
 
 function check(value:unknown,code:string,message:string):asserts value{if(!value)fail(code,message)}
 const sameSet=(a:string[],b:string[])=>a.length===b.length&&a.every(value=>b.includes(value));
@@ -50,7 +51,7 @@ export function queuedDependencyReplacementSelection(state:DispatchState,identit
     check(task?.scopeId===scopeId,'DEPENDENCY_NOT_ALLOWED','待办依赖后继不属于当前周期');
     check(task.taskId!==replacement.taskId,'GRAPH_CYCLE','新前置属于目标后继，将形成依赖循环');
     check(pending(task)&&!task.runIds.length&&!task.activeRunId&&!task.result&&!task.help&&!task.cancelledBeforeStart&&!task.awaitedChildren.length&&!(state.runs??[]).some(value=>value.binding.taskId===task.taskId),'DEPENDENCY_NOT_ALLOWED','目标或依赖后继已领取、执行或结束，不能替换前置：'+task.taskId);
-    check(task.modules.every(module=>module.knowledgeRevision===plan.knowledgeRevision)&&plan.assignments.some(value=>value.agentId===task.assignee.agentId&&sameSet(value.moduleIds,task.modules.map(module=>module.moduleId))),'DEPENDENCY_KNOWLEDGE_STALE','待办角色、模块或知识不再匹配当前目标计划：'+task.taskId);
+    check(task.modules.every(module=>module.knowledgeRevision===plan.knowledgeRevision)&&plan.assignments.some(value=>value.agentId===task.assignee.agentId&&sameSet(value.moduleIds,task.modules.map(module=>module.moduleId))&&sameWorkflowSelectionsForModules(value.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))),'DEPENDENCY_KNOWLEDGE_STALE','待办角色、模块流程或知识不再匹配当前目标计划：'+task.taskId);
     tasks.push(task);
     for(const nodeId of outgoing.get(task.nodeId)??[])if(!seen.has(nodeId)){seen.add(nodeId);queue.push(nodeId)}
   }

@@ -1,6 +1,6 @@
 /**
  * 作用定位：Core 知识规则：校验领域结构、人员与显式模块维护关系，并派生注册索引。
- * 设计原因：调度、桌面和外部适配共用规则；模块 Workflow 的显式程序条件不能绕过完整事务校验。作者不自动升级为维护人，结构校验也不签发执行或架构批准。
+ * 设计原因：调度、桌面和外部适配共用规则；模块 Workflow 的显式程序条件不能绕过完整事务校验。Ajv 使用不改变字段值的兼容副本，原严格 JSON 解析仍保留危险键和重复键拒绝。作者不自动升级为维护人，结构校验也不签发执行或架构批准。
  */
 import fs from 'node:fs/promises';
 import {ConnectorRegistry} from '../connectors/registry';
@@ -36,7 +36,12 @@ export class Rules {
     const data=(p:string)=>parsed.get(p);
     for(const file of files)if(file.path.endsWith('.json'))try{parsed.set(file.path,parseJson(file.text))}catch(e:any){add(file.path,'json',e.message)}
     for(const file of files)if(file.path.startsWith('.cbim/workspace/')&&file.path.endsWith('/workflow.md'))try{parseWorkflowContract(file.text)}catch{add(file.path,'workflow_contract','Workflow 执行约定无效：请核对唯一的 cbim-workflow 块及版本、条件、工具和证据 ID')}
-    const schema=(p:string,key:string)=>{const value=data(p);if(value===undefined){add(p,'missing','缺少有效知识定义');return false}const validator=this.validators.get(key)!;if(!validator(value)){for(const error of validator.errors||[])add(p,'schema',`${error.instancePath} ${error.message}`);return false}return true};
+    const schema=(p:string,key:string)=>{const value=data(p);if(value===undefined){add(p,'missing','缺少有效知识定义');return false}const validator=this.validators.get(key)!;
+      // 严格解析产出无原型对象；Ajv 的 uniqueItems 比较依赖 Object.prototype。
+      // clone 仅给校验器恢复普通对象原型，不删除 own key、不经 JSON 再编码改变数值，也不修改查询使用的原事实。
+      // 畸形 own valueOf/toString/constructor 仍须拒绝；第三方比较器不能把这类输入变成未处理异常。
+      try{if(!validator(structuredClone(value))){for(const error of validator.errors||[])add(p,'schema',`${error.instancePath} ${error.message}`);return false}}
+      catch{add(p,'schema','知识定义包含校验器无法处理的无效结构');return false}return true};
     const ref=(owner:string,reference:string)=>{const target=pp.normalize(pp.join(owner,reference.split('#')[0]));if(!target.startsWith('.cbim/')||!texts.has(target))add(owner,'reference',`引用不存在或越界：${reference}`);return target};
     const summary=(p:string,s:string)=>{const length=Array.from(s.replace(/\s/g,'')).length;if(s!==s.trim()||/[\r\n]/.test(s)||length<100||length>250)add(p,'summary','摘要须为 100–250 个非空白字符的单行文本')};
     const modules=new Map<string,any>(),agents=new Map<string,any>();const groups=new Set<string>();const sourceRows:{module:string;key:string;scope:string;location:string}[]=[];

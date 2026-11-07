@@ -1,6 +1,6 @@
 /**
  * 作用定位：任务派发图的可序列化领域契约，供调度、持久化和 Bridge 共同引用。
- * 设计原因：把会话、成员、任务与执行轮次分开；检查点保留原实例但新建续执行轮次，交付、求助、撤销和前置替换仍分别记录。
+ * 设计原因：把会话、成员、任务与执行轮次分开；流程选择保留原请求，检查点、求助、撤销与前置替换不能悄悄改选任务方法。
  * 职责边界：这里只声明事实形状；权限、知识核实、磁盘提交和模型执行由各自服务负责。
  */
 import type {MemberHelpRecord} from './member-help';
@@ -8,6 +8,7 @@ import type {QueuedTaskCancellation} from './queued-task-cancel';
 import type {DependencyReplacement} from './queued-dependency-replacement';
 import type {MemberCheckpointRecord} from './member-checkpoint';
 import type {MemberResumeRequest} from './queued-member-resume';
+import type {WorkflowSelection} from './workflow-selection';
 export type GraphIdentity = {workspaceId:string;rootSessionId:string};
 export type AgentRef = {
   agentId:string;agentInstanceId:string;agentSessionId:string;
@@ -34,6 +35,8 @@ export type TaskNode = {
   /** 缺省表示主会话根派发；创建后不能迁移父节点。 */
   parentTaskId?:string;
   requester:AgentRef;assignee:AgentRef;modules:ModuleBinding[];
+  /** 创建时的显式流程选择；缺省沿旧默认模式，不代表可任意换选，已有任务不可改写。 */
+  workflowSelections?:WorkflowSelection[];
   goal:string;acceptance:{id:string;text:string}[];
   /** revision 跟踪所有节点变化，planRevision 仅跟踪目标、范围、责任和验收变化。 */
   revision:number;planRevision:number;status:TaskStatus;

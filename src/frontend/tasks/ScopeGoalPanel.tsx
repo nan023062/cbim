@@ -1,6 +1,6 @@
 /**
  * 作用定位：复用展示本轮真实目标、静态角色分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。
- * 设计原因：周期状态、冻结软限额与模型声明分开呈现；保存人工意见与按决定继续是独立动作，满足结论须引用真实决定并复核。补充、人工接续和新业务各用独立控制器，不改写原始输入。
+ * 设计原因：周期状态、冻结软限额与模型声明分开呈现；分配只展示已保存的显式流程，不根据当前知识推断旧选择。人工意见与继续是独立动作，补充和新业务不改写原始输入。
  */
 import type {ScopeGoalState} from './scope-state';
 import {Icon} from '../components/Icon';
@@ -52,7 +52,7 @@ export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel',co
           {plan?<div className="scope-goal-section" data-testid="scope-goal-plan"><h4>目标计划 <small>第 {plan.revision} 版 · 输入第 {plan.inputRevision??1} 版</small></h4>{summary.needsReplan&&<p className="scope-goal-muted">此计划早于最新补充，等待主 Agent 更新。</p>}<p>{plan.objective}</p><p className="scope-goal-muted">{plan.reason}</p>
             {plan.constraints.length>0&&<><h5>约束</h5><ul>{plan.constraints.map((item,index)=><li key={index}>{item}</li>)}</ul></>}
             <h5>验收要求</h5><ol className="scope-goal-criteria">{plan.criteria.map(criterion=>{const check=review?.checks.find(item=>item.criterionId===criterion.id);return <li key={criterion.id}><div><strong>{criterion.text}</strong><span className="scope-goal-kind">{criterion.kind==='human'?'人工确认':'证据核验'}</span></div><p className="scope-goal-muted">{criterion.kind==='human'?(check?.outcome==='satisfied'&&check.evidence.some(value=>value.kind==='human-decision')?'主 Agent 已引用人工决定并复核当前依据':scope.humanDecisions?.records.some(value=>value.criterionId===criterion.id)?'已有人工作出决定；请查看记录与当时依据，不代表整体目标完成':'尚未取得人工验收决定'):check?.outcome==='satisfied'?'主 Agent 报告已满足，有证据引用':check?.outcome==='unmet'?'尚未满足':check?.outcome==='needs_human'?'需要人工判断':'尚未审阅'}</p>{check?.reason&&<p>{check.reason}</p>}</li>})}</ol>
-            <h5>责任分配</h5><ul className="scope-goal-assignments">{plan.assignments.map((item,index)=><li key={index}><strong>{item.agentName}</strong><p>{item.moduleNames.length?item.moduleNames.join('、'):'团队 / 业务知识治理'}</p><p className="scope-goal-muted">{item.reason}</p><small>对应验收：{item.criterionIds.map(id=>plan.criteria.find(criterion=>criterion.id===id)?.text??id).join('；')}</small></li>)}</ul>
+            <h5>责任分配</h5><ul className="scope-goal-assignments">{plan.assignments.map((item,index)=><li key={index}><strong>{item.agentName}</strong><p>{item.moduleNames.length?item.moduleNames.join('、'):'团队 / 业务知识治理'}</p>{item.workflowSelections?.map(selection=><p className="scope-goal-muted" key={selection.moduleId} data-testid="goal-workflow-selection" data-module-id={selection.moduleId} data-workflow-id={selection.workflowId}>指定流程：{item.moduleNames[item.moduleIds.indexOf(selection.moduleId)]??selection.moduleId} · {selection.workflowId}</p>)}<p className="scope-goal-muted">{item.reason}</p><small>对应验收：{item.criterionIds.map(id=>plan.criteria.find(criterion=>criterion.id===id)?.text??id).join('；')}</small></li>)}</ul>
           </div>:<p className="scope-goal-muted">{noPlanText}</p>}
           {review&&<div className="scope-goal-section" data-testid="scope-goal-review"><h4>目标审阅 <small>第 {review.revision} 版 · {reviewLabels[review.decision]}</small></h4><p>{review.reason}</p>{review.decision==='complete'&&<p className="scope-goal-muted">{scope.status==='closed'&&scope.outcome==='completed'?'程序已核验证据、任务终态及适用的人工决定；完成范围以逐项审阅为准。':'这是完成申请，仍需等待主运行结束和程序复核。'}</p>}
             {review.gaps.length>0&&<><h5>剩余缺口</h5><ul>{review.gaps.map((gap,index)=><li key={index}>{gap}</li>)}</ul></>}

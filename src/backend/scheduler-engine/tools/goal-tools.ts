@@ -1,6 +1,6 @@
 /**
  * 作用定位：将主 Agent 当前用户目标的读取、规划和审阅端口注册为内部 Loop 工具。
- * 设计原因：输入复用 Core 严格协议；输出只序列化一次并核实公开 Schema 与本轮身份，坏回包不重做已发生的决策。模型不能自行指定目标所属会话或签发验收。
+ * 设计原因：输入复用 Core 严格协议并保留分配中的 Workflow 选择；输出只序列化一次并核实公开 Schema 与本轮身份，坏回包不重做已发生的决策。模型不能自行指定目标所属会话或签发验收。
  * 职责边界：complete 只申请主轮次结算后的复核；人工项只能引用用户已保存且经专用入口消费的接受，模型不能签署或继续等待。工具层不执行成员或重造证据。
  */
 import {z} from 'zod';
@@ -17,7 +17,7 @@ const definitions={
     schema:inspectInput,effects:['read'] as const,
   },
   cbim_goal_plan:{
-    description:'按 expectedRevision 保存当前用户目标的结构化计划：目标、约束、验收项与模块/执行 Agent 分工。先查询真实业务图和团队图；不能改写原始用户输入、缩减用户要求或伪造模块/角色。保存计划不派发任务、不授予业务写权限。',
+    description:'按 expectedRevision 保存当前用户目标的结构化计划：目标、约束、验收项与模块/执行 Agent 分工。先查询真实业务图和团队图；执行角色 assignments 可用 workflowSelections:[{moduleId,workflowId}] 选择本模块实际挂载的流程，未列模块按默认首项或空清单通用流程。cbim:main 可保留 moduleIds 治理知识，但不得填写 workflowSelections 或执行业务流程。派发须保留同一选择，改选需新计划及新任务，旧候选不能跨流程满足新分工。不能改写原始用户输入、缩减要求或伪造模块/角色；保存计划不派发任务、不授予业务写权限。',
     schema:goalPlanInputSchema,effects:['maintenance'] as const,
   },
   cbim_goal_review:{

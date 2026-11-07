@@ -1,9 +1,10 @@
 /**
  * 作用定位：定义调度周期目标的原始输入、版本化计划、审阅证据和持久化转换规则。
- * 设计原因：计划与模型回合分离，原始需求不可改写；显式补充提升输入版本并使旧计划过期，审阅引用真实运行，重放同样限制版本演进。
- * 职责边界：人工满足项须引用真实决定及显式接续，但 Schema 只准许形状；运行、知识、文件和批准归属由调度服务重核，complete 仍仅是申请。
+ * 设计原因：计划与模型回合分离，原始需求不可改写；目标分配保留可选模块 Workflow 选择，显式补充使旧计划过期，审阅引用真实运行，重放同样限制版本演进。
+ * 职责边界：主角色可管理模块知识但不能声明执行 Workflow；人工满足项须引用真实决定及显式接续，运行、知识、文件和批准归属仍由调度服务重核，complete 仅是申请。
  */
 import {z} from 'zod';
+import {workflowSelectionsSchema,validateWorkflowSelections,type WorkflowSelection} from './workflow-selection';
 import {fail} from '../foundation/errors';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
@@ -17,7 +18,9 @@ export const scopeGoalDecisionLimit=64;
 export interface DispatchScopeInput {message:string;attachmentIds?:string[]}
 export const dispatchScopeInputSchema=z.object({message,attachmentIds:attachments.optional()}).strict();
 const criterion=z.object({id,text,kind:z.enum(['evidence','human'])}).strict();
-const assignment=z.object({agentId:id,moduleIds:z.array(id).max(50).refine(unique),criterionIds:z.array(id).min(1).max(50).refine(unique),reason:text}).strict();
+const assignmentFields=z.object({agentId:id,moduleIds:z.array(id).max(50).refine(unique),workflowSelections:workflowSelectionsSchema.optional(),criterionIds:z.array(id).min(1).max(50).refine(unique),reason:text}).strict();
+const assignmentSelection=(value:{agentId:string;moduleIds:string[];workflowSelections?:WorkflowSelection[]},context:z.RefinementCtx)=>{try{validateWorkflowSelections(value.moduleIds,value.workflowSelections)}catch{context.addIssue({code:'custom',message:'Workflow 选择不属于目标分配的模块'})}if(value.agentId==='cbim:main'&&value.workflowSelections!==undefined)context.addIssue({code:'custom',message:'主调度知识治理不能声明执行业务 Workflow'})};
+const assignment=assignmentFields.superRefine(assignmentSelection);
 /** 工具不能指定周期、运行身份或知识版本；这些字段由可信调用入口和知识服务注入。 */
 export const goalPlanInputSchema=z.object({expectedRevision:revision,objective:text,constraints:z.array(text).max(50),criteria:z.array(criterion).min(1).max(50),assignments:z.array(assignment).min(1).max(100),reason:text}).strict();
 const memberEvidence=z.object({kind:z.literal('member-result'),taskId:id,runId:id,resultId:id,planRevision:z.number().int().positive(),toolCallIds:z.array(id).min(1).max(100).refine(unique)}).strict();
@@ -35,8 +38,8 @@ export type GoalEvidence=z.infer<typeof evidence>;
 const cursor=z.object({streamId:id,seq:z.number().int().nonnegative()}).strict();
 const inputRevision=z.number().int().min(1).max(32);
 const stamp={revision,inputRevision:inputRevision.optional(),runId:id,recordedAt:z.string().datetime(),knowledgeRevision:id,graphCursor:cursor};
-/** 已解析真实角色及模块的知识基线；不复制 Skill 正文或密钥。 */
-const resolvedAssignment=assignment.extend({agentName:text,teamId:id,moduleNames:z.array(text).max(50)}).strict();
+/** 已解析角色及模块的知识基线；显式流程选择保留输入，缺省不补值，不复制 Skill 正文或密钥。 */
+const resolvedAssignment=assignmentFields.extend({agentName:text,teamId:id,moduleNames:z.array(text).max(50)}).strict().superRefine(assignmentSelection);
 const plan=goalPlanInputSchema.omit({expectedRevision:true,assignments:true}).extend({...stamp,assignments:z.array(resolvedAssignment).min(1).max(100)}).strict();
 const review=goalReviewInputSchema.omit({expectedRevision:true}).extend({...stamp,planRevision:revision,observedSeq:z.number().int().nonnegative(),lastEffectSeq:z.number().int().nonnegative()}).strict();
 /** 缺省整个 goal 只兼容旧周期；不能给已有旧记录猜测或补造原始输入。 */

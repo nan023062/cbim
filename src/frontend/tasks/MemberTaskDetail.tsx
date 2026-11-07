@@ -1,6 +1,6 @@
 /**
  * 作用定位：展示任务图选中成员的公开正文、工具、计划与候选；独立报告核实执行事实，独立表单显式创建新的只读核实周期。
- * 设计原因：按工作区/主会话/任务/轮次隔离观察；求助、检查点、撤销与结构验证独立展示。验证区分暂存与真实工具终态，只说明当时字节，不把旧候选或通过结论借给新轮次。
+ * 设计原因：按工作区/主会话/任务/轮次隔离观察；模块流程显示真实冻结绑定，只有保存过的选择才标为指定流程。求助、检查点、撤销与结构验证独立展示，不把旧候选或通过结论借给新轮次。
  */
 import {useEffect,useRef,useState} from 'react';
 import type {GraphCursor,ScopeSummary,TaskNode} from '../../bridge/contracts/dispatch';
@@ -32,7 +32,7 @@ export function MemberTaskDetail({workspaceId,rootSessionId,task,onBack,active=t
       <span className={'member-state '+task.status}>{memberTaskLabel(task)}</span><h4>任务目标</h4><p className="member-detail-goal">{task.goal}</p>
       <details className="member-scope"><summary>实例与执行通道</summary><p>执行实例 <code>{task.assignee.agentInstanceId}</code></p><p>业务任务通道 <code>{task.assignee.agentSessionId}</code></p></details>
       {task.waitReason&&<p className="member-warning">{task.waitReason}</p>}
-      <details className="member-scope"><summary>涉及 {task.modules.length} 个模块 · 计划版本 {task.planRevision}</summary><ul>{task.modules.map(module=><li key={module.moduleId}><strong>{module.name}</strong><code>{module.moduleId}</code><small>{module.workflow.kind==='general'?'通用流程':module.workflow.id}</small></li>)}</ul></details>
+      <details className="member-scope"><summary>涉及 {task.modules.length} 个模块 · 计划版本 {task.planRevision}</summary><ul>{task.modules.map(module=><li key={module.moduleId} data-module-id={module.moduleId} data-workflow-id={module.workflow.id}><strong>{module.name}</strong><code>{module.moduleId}</code><small>{task.workflowSelections?.some(item=>item.moduleId===module.moduleId&&item.workflowId===module.workflow.id)?'指定流程：':''}{module.workflow.kind==='general'?'通用流程':module.workflow.id}</small></li>)}</ul></details>
       <details className="member-scope"><summary>验收要求</summary><ul>{task.acceptance.map(item=><li key={item.id}>{item.text}</li>)}</ul></details>
       {!!task.runIds.length&&<label className="member-run-selector">执行轮次<select aria-label="成员执行轮次" value={runId} onChange={event=>setSelected(event.target.value)}>{task.runIds.map((id,index)=><option key={id} value={id}>第 {index+1} 次 · {id.slice(0,8)}{id===task.activeRunId?' · 当前执行':''}</option>)}</select></label>}
       {runId&&<MemberHelpNotice key={'help:'+JSON.stringify([workspaceId,rootSessionId,task.taskId,runId])} task={task} runId={runId}/>}

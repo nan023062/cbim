@@ -6,6 +6,12 @@
 
 ### 可选 Workflow 稳定条件
 
+`workflow-selection.ts` 是目标分配、派发输入和公开任务节点共用的叶子协议。可选 `workflowSelections` 只传 `{moduleId, workflowId}`，存在时必须非空、有界且每模块唯一，不能携带正文、版本或路径覆盖。每项必须属于当前 assignment/task 的模块；未列模块保留旧默认模式。缺省与显式指定首项仍是不同输入事实，缺省不是通配，旧记录不补空字段。`cbim:main` 的目标分配继续允许原模块知识治理范围，但输入、保存目标和人工主体均拒绝其声明 `workflowSelections`；主知识回执不执行成员业务 Workflow 的验证条件。
+
+派发节点永久保留原始选择；`ModuleBinding.workflow` 另外冻结真实解析的 ID、正文版本和通用回退原因。单任务与完整图校验均要求显式选择对应 `kind:module` 及相同 ID，图更新不能增删或改变已有选择，即使尚未启动或提高 `planRevision`。改选须建立新计划和新任务。主工具唯一 wire 校验同时比较保存后的选择与原请求，不能漏回或补造该字段。
+
+计划匹配按本次目标模块投影比较选择模式，保留调用者原有角色和模块集合/子集规则；检查点预约、实际消费、未启动前置替换和人工候选不能沿已改选的计划使用旧任务。人工业务主体仅在原计划明确有选择时保存并按模块排序，缺省历史主体及原 Workflow proof 形状保持不变。知识目录挂载、正文版本及当前时效仍由调度解析器核实，纯 ID 比较不代替这些检查。
+
 `PreparedDispatchModule.workflowContract` 保存与同份 `workflowText` 解析完全一致的程序约定；专属流程仍按正文 SHA-256 固定版本，整体快照仍复核稳定指纹。没有声明不补规则，不继承父模块；`preparedWorkflowContracts` 提取所有绑定，保留每个模块及其 Workflow 身份，不能合并成无来源的全局要求。声明结构由 workspace 层的 `workflow-contract.ts` 校验。
 
 `WorkflowProgressContext` 由可信运行时注入冻结绑定、原始 TaskSpec 目标/验收项和工作区/任务/运行身份。`TaskProgressTools.beforeEffects()` 对声明了 `beforeEffects.requirePlan` 的运行检查本轮已保存且与原要求一致的计划；它返回审批前版本，`invalidate(reason, expectedPlanVersion)` 在串行持久化队列中再核对，审批期间版本变化则拒绝，不能沿旧批准执行。知识写、业务写及命令仍使旧回执代次失效；计划门禁只覆盖业务写/命令，不新增任何操作权限。新运行不能把旧计划当成本轮计划。

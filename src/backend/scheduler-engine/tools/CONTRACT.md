@@ -32,6 +32,10 @@
 
 ### 成员派发工具适配契约
 
+目标分工与 `cbim_dispatch_task` 的可选 `workflowSelections` 按模块显式选择实际挂载的流程；工具严格核对选择唯一且属于本次 moduleIds，再交服务解析真实知识。缺省保持首项行为，显式选择必须与目标计划一致。描述明确禁止借其他模块的流程、填写正文/版本或将已失效 ID 静默换成首项；这不新增工具或业务权限。
+
+`cbim_goal_plan` 的主角色分工仍可绑定治理 moduleIds，但不得带 `workflowSelections`；工具在实际端口前拒绝，避免将未执行的业务流程包装为知识治理完成。执行角色选择规则不变。
+
 当前适配器已实现 `cbim_dispatch_task`、`cbim_dispatch_inspect`、`cbim_dispatch_cancel`、`cbim_dispatch_replace_dependency` 和 `cbim_dispatch_resume`。后三项分别只有真实 `cancel`、`replaceDependency`、`resume` 端口存在时注册；兼容装配不广告或接受不存在的能力。主 Agent 永远不能成为执行者；省略 agentId 使用静态默认执行角色 `cbim:executor`。执行成员没有派发、撤销、换边或续执行预约权，其他未实现名称不进入活动清单。
 
 `DispatchTools` 可以通过第二个构造参数组合真实 `GoalTools`。缺省不注册任何目标工具，已有派发端口保持不变；组合后 list、has、describe、call 都按实际名称转交目标适配器，不因 `cbim_goal_` 前缀接受未知操作。
@@ -40,7 +44,7 @@
 
 | 工具与状态 | 模型提交内容 | 服务返回内容 |
 | --- | --- | --- |
-| `cbim_dispatch_task`（当前） | 自定义执行角色或默认 cbim:executor、moduleIds、goal、acceptance、前置版本；拒绝 cbim:main | taskId、messageId、图游标；本周期创建独立执行实例，不是执行结果 |
+| `cbim_dispatch_task`（当前） | 自定义执行角色或默认 cbim:executor、moduleIds、可选 workflowSelections、goal、acceptance、前置版本；拒绝 cbim:main | taskId、messageId、图游标；本周期创建独立执行实例，不是执行结果 |
 | `cbim_dispatch_inspect`（当前） | 可选本图 taskId，缺省查本图 | 经授权的任务/依赖/有效结果，不含其他成员私有上下文；当前不接收模型图游标 |
 | `cbim_dispatch_cancel`（当前，未启动任务） | expectedGraphCursor 的 streamId/seq、targets 的 taskId/expectedRevision、reason | 当前周期明确集合的原子撤销回执；不自动扩展后继，不停止活动运行，不造候选或执行日志 |
 | `cbim_dispatch_wait`（待实现） | 当前任务的 children（taskId + planRevision）与 reason | staged 等待提交；大脑安全让出执行槽后才切换 waiting |

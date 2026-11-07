@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主会话任务图、目标与准入状态。全窗口共享单次在途配额轮询，无变化保持引用，按 root 过滤等待。求助/撤销事实不冒充成功；恢复类请求仅在明确未受理时解冻，未知结果保留原请求。
+主会话任务图、目标与准入状态。周期用量按需读取、标明截至时间及缺失，切换隔离迟到响应；不增加日志轮询。准入共用游标，求助/撤销不冒充成功，未知恢复请求保持冻结。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -36,9 +36,12 @@
 | [scope-goal.css](scope-goal.css) | 对话摘要与任务根详情共用的目标计划卡片、历史选择和证据排版。 |
 | [scope-replan.css](scope-replan.css) | 正式业务重规划表单与条件核验摘要排版，嵌入既有目标卡。 |
 | [scope-state.ts](scope-state.ts) | 主会话目标周期的增量投影和展示状态，供对话摘要与任务根详情共用。 |
+| [scope-usage-state.ts](scope-usage-state.ts) | 管理任务周期用量的一次显式读取，并验证返回身份、计量来源与汇总一致性。 |
+| [scope-usage.css](scope-usage.css) | 对应界面的布局与视觉样式。 |
 | [ScopeContinuationForm.tsx](ScopeContinuationForm.tsx) | 目标卡片中的显式纯文本补充入口，展示已冻结请求、查询与同命令重试。 |
 | [ScopeGoalPanel.tsx](ScopeGoalPanel.tsx) | 复用展示本轮真实目标、静态角色分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。 |
 | [ScopeReplanForm.tsx](ScopeReplanForm.tsx) | 已完成只读核实周期之后的正式业务新目标表单，复用于对话目标卡和任务根。 |
+| [ScopeUsagePanel.tsx](ScopeUsagePanel.tsx) | 在会话任务视图按需展示所选目标周期的主/成员已报告消耗与逐运行来源。 |
 | [SessionTaskView.tsx](SessionTaskView.tsx) | 以节点流程图展示当前主会话的派发任务，并在选择根或任务后显示对应执行详情。 |
 | [task-graph.css](task-graph.css) | 主会话派发图、可读任务节点与按需详情的自适应布局。 |
 | [useAdmission.ts](useAdmission.ts) | 将当前窗口唯一的准入快照订阅接入 React，供多个会话与设置共用。 |
@@ -955,6 +958,56 @@ N_src_frontend_tasks_scope_state_ts ..> N_src_frontend_tasks_scope_state_ts_Scop
 
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[graph-state.ts](graph-state.ts)。
 
+### scope-usage-state.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_scope_usage_state_ts["scope-usage-state.ts"] {
+  <<module>>
+  +scopeUsageKey()
+  +scopeUsageGroup()
+  +checkedScopeUsage()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_scope_usage_state_ts["scope-usage-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_scope_usage_state_ts_ScopeUsageState["ScopeUsageState"] {
+  <<interface>>
+  +report
+  +loading
+  +error
+}
+N_src_frontend_tasks_scope_usage_state_ts ..> N_src_frontend_tasks_scope_usage_state_ts_ScopeUsageState : 声明
+class N_src_frontend_tasks_scope_usage_state_ts_ScopeUsageController["ScopeUsageController"] {
+  +identity
+  +snapshot
+  +subscribe
+  +cancel()
+  +read()
+  -request
+  -value
+  -generation
+  -listeners
+  -publish()
+}
+N_src_frontend_tasks_scope_usage_state_ts ..> N_src_frontend_tasks_scope_usage_state_ts_ScopeUsageController : 声明
+```
+
+直接依赖：[../../bridge/contracts/scope-usage.ts](../../bridge/contracts/scope-usage.ts)。
+
+### scope-usage.css
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_scope_usage_css["scope-usage.css"] {
+  <<stylesheet>>
+}
+```
+
 ### ScopeContinuationForm.tsx
 
 ```mermaid
@@ -1006,6 +1059,20 @@ class N_src_frontend_tasks_ScopeReplanForm_tsx["ScopeReplanForm.tsx"] {
 ```
 
 直接依赖：[useScopeReplan.ts](useScopeReplan.ts)、[scope-replan.css](scope-replan.css)。
+
+### ScopeUsagePanel.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_ScopeUsagePanel_tsx["ScopeUsagePanel.tsx"] {
+  <<component>>
+  +ScopeUsageSummary()
+  +ScopeUsageReadView()
+  +ScopeUsagePanel()
+}
+```
+
+直接依赖：[../../bridge/contracts/scope-usage.ts](../../bridge/contracts/scope-usage.ts)、[../../bridge/contracts/usage.ts](../../bridge/contracts/usage.ts)、[scope-usage-state.ts](scope-usage-state.ts)、[scope-usage.css](scope-usage.css)。
 
 ### SessionTaskView.tsx
 
@@ -1067,7 +1134,7 @@ class N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTask
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_SessionTaskView_tsx_SessionTaskViewProps : 声明
 ```
 
-直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../conversation/WorkStatus.tsx](../conversation/WorkStatus.tsx)、[../conversation/MessageQueue.tsx](../conversation/MessageQueue.tsx)、[DispatchGraph.tsx](DispatchGraph.tsx)、[MemberTaskDetail.tsx](MemberTaskDetail.tsx)、[ScopeGoalPanel.tsx](ScopeGoalPanel.tsx)、[scope-state.ts](scope-state.ts)、[useScopeContinuation.ts](useScopeContinuation.ts)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[useScopeReplan.ts](useScopeReplan.ts)、[task-graph.css](task-graph.css)。
+直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../conversation/WorkStatus.tsx](../conversation/WorkStatus.tsx)、[../conversation/MessageQueue.tsx](../conversation/MessageQueue.tsx)、[DispatchGraph.tsx](DispatchGraph.tsx)、[MemberTaskDetail.tsx](MemberTaskDetail.tsx)、[ScopeGoalPanel.tsx](ScopeGoalPanel.tsx)、[ScopeUsagePanel.tsx](ScopeUsagePanel.tsx)、[scope-state.ts](scope-state.ts)、[useScopeContinuation.ts](useScopeContinuation.ts)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[useScopeReplan.ts](useScopeReplan.ts)、[task-graph.css](task-graph.css)。
 
 ### task-graph.css
 
@@ -1562,6 +1629,15 @@ N_src_frontend_tasks_ScopeReplanForm_tsx ..> N_src_frontend_tasks_scope_replan_c
 
 ```mermaid
 classDiagram
+class N_src_frontend_tasks_ScopeUsagePanel_tsx["ScopeUsagePanel.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_scope_usage_state_ts["scope-usage-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_scope_usage_css["scope-usage.css"] {
+  <<stylesheet>>
+}
 class N_src_frontend_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
   <<component>>
 }
@@ -1571,16 +1647,10 @@ class N_src_frontend_tasks_DispatchGraph_tsx["DispatchGraph.tsx"] {
 class N_src_frontend_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
   <<component>>
 }
-class N_src_frontend_tasks_ScopeGoalPanel_tsx["ScopeGoalPanel.tsx"] {
-  <<component>>
-}
-class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
-  <<module>>
-}
+N_src_frontend_tasks_ScopeUsagePanel_tsx ..> N_src_frontend_tasks_scope_usage_state_ts : 导入依赖
+N_src_frontend_tasks_ScopeUsagePanel_tsx ..> N_src_frontend_tasks_scope_usage_css : 导入依赖
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_DispatchGraph_tsx : 导入依赖
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_MemberTaskDetail_tsx : 导入依赖
-N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_ScopeGoalPanel_tsx : 导入依赖
-N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
 ```
 
 ```mermaid
@@ -1588,8 +1658,28 @@ classDiagram
 class N_src_frontend_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
   <<component>>
 }
+class N_src_frontend_tasks_ScopeGoalPanel_tsx["ScopeGoalPanel.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_ScopeUsagePanel_tsx["ScopeUsagePanel.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
+  <<module>>
+}
 class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
   <<module>>
+}
+N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_ScopeGoalPanel_tsx : 导入依赖
+N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_ScopeUsagePanel_tsx : 导入依赖
+N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
+N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useScopeContinuation_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
+  <<component>>
 }
 class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
   <<module>>
@@ -1600,20 +1690,20 @@ class N_src_frontend_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
 class N_src_frontend_tasks_task_graph_css["task-graph.css"] {
   <<stylesheet>>
 }
-N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useScopeContinuation_ts : 导入依赖
-N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
-N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useScopeReplan_ts : 导入依赖
-N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_task_graph_css : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_frontend_tasks_useAdmission_ts["useAdmission.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_admission_state_ts["admission-state.ts"] {
   <<module>>
 }
+N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
+N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useScopeReplan_ts : 导入依赖
+N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_task_graph_css : 导入依赖
+N_src_frontend_tasks_useAdmission_ts ..> N_src_frontend_tasks_admission_state_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
   <<module>>
 }
@@ -1626,20 +1716,17 @@ class N_src_frontend_tasks_recovery_state_ts["recovery-state.ts"] {
 class N_src_frontend_tasks_execution_report_state_ts["execution-report-state.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_useAdmission_ts ..> N_src_frontend_tasks_admission_state_ts : 导入依赖
+class N_src_frontend_tasks_useExecutionReport_ts["useExecutionReport.ts"] {
+  <<module>>
+}
 N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
 N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_recovery_state_ts : 导入依赖
 N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_execution_report_state_ts : 导入依赖
+N_src_frontend_tasks_useExecutionReport_ts ..> N_src_frontend_tasks_execution_report_state_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_frontend_tasks_useExecutionReport_ts["useExecutionReport.ts"] {
-  <<module>>
-}
-class N_src_frontend_tasks_execution_report_state_ts["execution-report-state.ts"] {
-  <<module>>
-}
 class N_src_frontend_tasks_useMemberRun_ts["useMemberRun.ts"] {
   <<module>>
 }
@@ -1655,18 +1742,18 @@ class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
 class N_src_frontend_tasks_continuation_state_ts["continuation-state.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_useExecutionReport_ts ..> N_src_frontend_tasks_execution_report_state_ts : 导入依赖
+class N_src_frontend_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
+  <<module>>
+}
 N_src_frontend_tasks_useMemberRun_ts ..> N_src_frontend_tasks_member_event_state_ts : 导入依赖
 N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
 N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_continuation_state_ts : 导入依赖
+N_src_frontend_tasks_useScopeReplan_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
-  <<module>>
-}
-class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_replan_state_ts["replan-state.ts"] {
@@ -1675,7 +1762,9 @@ class N_src_frontend_tasks_replan_state_ts["replan-state.ts"] {
 class N_src_frontend_tasks_useSessionGraph_ts["useSessionGraph.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_useScopeReplan_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
+class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
+  <<module>>
+}
 N_src_frontend_tasks_useScopeReplan_ts ..> N_src_frontend_tasks_replan_state_ts : 导入依赖
 N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
 ```
@@ -1692,6 +1781,12 @@ N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts 
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 周期用量的显式读取
+
+`ScopeUsagePanel` 位于任务图周期筛选下，绑定 workspace/root/scope。首次只有读取按钮，没有定时扫描；每次返回标明截至时间，逐运行来源默认折叠，任务节点图保留主展示位置。`ScopeUsageController` 仅在用户读取/刷新时请求 `dispatch.scopeUsage`，重复点击不并发读取，切换或卸载作废迟到响应。
+
+报告严格核对身份、唯一运行、主轮所属 root、逐运行与汇总数字以及完整标志；推理不重复计入 total。错误保留旧快照并标明可能过期，不自动重读。部分 token 与未知价格明确呈现；显式零价可显示零，未知不填零。这里没有预算或验收操作，也不会把只读报告当作执行许可。
 
 ### 全局并发准入的只读提示
 

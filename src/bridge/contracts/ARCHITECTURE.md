@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-可序列化的 IPC 数据与公开展示契约。图、目标与全局准入各用独立游标；配额接口不暴露释放句柄。核实和重规划分别声明来源、配置、预览与回执，可信续聊头不从剩余历史猜测。
+可序列化的 IPC 数据与公开展示契约。图、目标与准入使用独立游标；周期用量公开已报告数字与缺口，不暴露日志路径或许可。核实和重规划分别声明来源与回执，不从剩余历史猜续聊头。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -19,6 +19,7 @@
 | [models.ts](models.ts) | 模型配置界面消费的公开模型信息与停止原因格式化。 |
 | [resources.ts](resources.ts) | 资源种类、仓库快照、登录占位及仓库状态的共享类型。 |
 | [runtime.ts](runtime.ts) | 公开应用级成员、任务负载和运行用量的可序列化观察契约。 |
+| [scope-usage.ts](scope-usage.ts) | 向桌面任务视图公开周期用量的严格查询与报告契约。 |
 | [usage.ts](usage.ts) | 向界面公开 Core 的纯执行计量函数及单轮用量类型。 |
 | [workspace.ts](workspace.ts) | 跨进程工作区、知识事务与 IPC 数据契约。 |
 
@@ -279,6 +280,16 @@ class N_src_bridge_contracts_runtime_ts["runtime.ts"] {
 ```
 直接依赖：[../../backend/core/runtime/types.ts](../../backend/core/runtime/types.ts)。
 
+### scope-usage.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_scope_usage_ts["scope-usage.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../backend/core/tasks/scope-usage.ts](../../backend/core/tasks/scope-usage.ts)。
+
 ### usage.ts
 
 ```mermaid
@@ -520,6 +531,10 @@ interface DispatchGraphApi {
 此图只显示当前主 Agent Session 调度的任务；执行者没有递归派发权。`agents` 的状态及任务引用均为本图局部事实投影；兼容历史成员可能跨图共享引用，本图 idle 不意味着全局空闲。工作区组织图保持静态定义，其角色履历使用独立的只读历史接口，不在任务图协议中隐式夹带其他会话内容。
 
 图中的 `result_ready` 表示待交接候选，与执行完成、消息确认及业务验收分别表达。公开图不允许前端或模型把“收到返回消息”“进程结束”“有成功工具回执”自动转换成业务验收通过。
+
+### 周期用量读取
+
+`scope-usage.ts` 重导出严格的 `ScopeUsageInput / ScopeUsageReport` 及 Schema。`dispatch.scopeUsage` 只接 workspaceId/rootSessionId/scopeId，不接路径或写入操作。公开已登记运行、已报告 token、估算美元、读取时间及缺失/未知情况；不包含原生会话文件、模型凭据或聊天/工具正文。完整归属与完整计量分别声明，读取不是预算授权或业务验收。
 
 ### 桌面架构 CRUD 契约
 

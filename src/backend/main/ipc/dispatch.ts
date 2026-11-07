@@ -1,6 +1,6 @@
 /**
  * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
- * 设计原因：通过 ApplicationServices 契约隔离应用实现；全局配额只公开观察与可靠设置，不能经 IPC 领取名额。目标补充、核实和业务重规划各自保持明确身份及受理边界。
+ * 设计原因：通过 ApplicationServices 契约隔离应用实现；周期计量只按明确身份读取，不能经统计或全局配额接口领取名额。目标补充、核实和业务重规划各自保持明确身份及受理边界。
  */
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
@@ -32,6 +32,7 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'dispatch.graphSnapshot':return app.memberDispatch(args.identity?.workspaceId).snapshot(args.identity);
     case 'dispatch.graphDelta':return app.memberDispatch(args.identity?.workspaceId).delta(args.identity,args.cursor,args.limit);
     case 'dispatch.sessionRead':return app.memberDispatch(args.identity?.workspaceId).sessionRead(args);
+    case 'dispatch.scopeUsage':return app.memberDispatch(args.workspaceId).usage.read(args);
     case 'dispatch.executionStart':return app.memberExecution(args.workspaceId).start(args);
     case 'dispatch.executionStop':return app.memberExecution(args.workspaceId).stop(args);
     case 'dispatch.executionInspect':return app.memberExecution(args.workspaceId).inspect(args);

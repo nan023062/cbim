@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-引擎无关的执行循环与事件契约。成员求助在所有工具及审批结束后封住后续调用，暂存不等于交接；停止覆盖准备和关闭窗口。显式新上下文冻结旧运行，不读写或重放坏历史。
+引擎无关的执行循环、事件与计量。停止贯穿原生准备窗口，求助暂存不等于交接。周期计量严格区分完整汇总、部分消息和未知价格；新上下文隔离旧运行，不重放坏历史。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -16,6 +16,7 @@
 | [member-run.ts](member-run.ts) | 定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。 |
 | [model-errors.ts](model-errors.ts) | 把模型结束原因转换为用户可理解的执行错误，供实时引擎和历史回放共用。 |
 | [runtime.ts](runtime.ts) | 大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。 |
+| [scope-usage.ts](scope-usage.ts) | 从单轮 canonical 摘要提取保守的已报告消耗，并汇总指定周期的主/成员计量。 |
 | [storage.ts](storage.ts) | 执行循环使用的日志和任务目录存储端口。 |
 | [types.ts](types.ts) | 大脑 执行层：与具体引擎无关的任务、事件、工具策略和执行摘要契约。 |
 | [usage.ts](usage.ts) | 从大脑持久化事件计算单轮用量、任务累计消耗、生成速度和当前上下文，供全局监管与界面共用。 |
@@ -58,6 +59,9 @@ class N_src_backend_core_brain_model_errors_ts["model-errors.ts"] {
 class N_src_backend_core_brain_runtime_ts["runtime.ts"] {
   <<module>>
 }
+class N_src_backend_core_brain_scope_usage_ts["scope-usage.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_storage_ts["storage.ts"] {
   <<module>>
 }
@@ -69,6 +73,7 @@ class N_src_backend_core_brain_usage_ts["usage.ts"] {
 }
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_storage_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
+N_src_backend_core_brain_scope_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_storage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 ```
@@ -91,6 +96,7 @@ N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入
 - `runtime.ts` → `input-source.ts`：导入。
 - `runtime.ts` → `conversation-binding.ts`：导入。
 - `runtime.ts` → `types.ts`：导入。
+- `scope-usage.ts` → `types.ts`：导入。
 - `storage.ts` → `types.ts`：导入。
 - `types.ts` → `member-run.ts`：导入。
 - `types.ts` → `input-source.ts`：导入。
@@ -138,6 +144,19 @@ classDiagram
 class N_src_backend_core_brain_model_errors_ts["model-errors.ts"] {
   <<module>>
   +modelStopError()
+}
+```
+
+
+### scope-usage.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_backend_core_brain_scope_usage_ts["scope-usage.ts"] {
+  <<module>>
+  +emptyScopeRunUsage()
+  +measureScopeRunUsage()
+  +summarizeScopeUsage()
 }
 ```
 
@@ -432,3 +451,11 @@ LoopRuntime ..> AgentEngine : 通过既有契约驱动
 ### 磁盘执行证据完整性
 
 `RunSummary.logIntegrity` 为可选的磁盘读取诊断，当前 `RunJournal.read` 总会提供 `partialTail`。完整前缀仍可供展示；尾行未写完不解析、不截断，也不能据前缀的 settled 证明完整日志。`LoopRuntime` 在创建新引擎或调用启动意图前拒绝续接已知不完整的原日志，并释放预检租约；即使传入工具核实 ID 也不能跳过。内存摘要或旧端口未提供该字段时不补造磁盘诊断。读取本身不授权重放。
+
+### 周期的保守计量
+
+`scope-usage.ts` 是无 I/O 的计量模块，消费已核实归属的 `RunSummary`，不使用界面宽松的 `usageReported` 推断完整性。`measureScopeRunUsage` 验证事件身份与顺序；消息只提供部分数字，最终有效 `run-usage` 覆盖此前消息消耗，不能把两者相加。reasoning 是 output 的子集，不再次计入 total。
+
+只有位于最后一条模型消息之后的完整原生汇总、匹配且位于日志末尾的终态，以及明确 `logIntegrity.partialTail === false`，才能标记本轮 reported；缺省完整性、截断、在途或矛盾汇总保留 partial/missing 及原因。失败或取消仍可有已报告消耗；缺失 Token 与未知价格不能当作零。已知价格可形成估算，已明确免费才可显示零费用。
+
+`summarizeScopeUsage` 汇总同一周期的唯一运行集合，遇重复身份或超出安全数字范围会明确拒绝，不归零伪装成功。legacy、读取期间变化、空集合、缺日志或在途运行均不能声明周期计量完整。结果只代表已经报告的消耗与估算费用，不覆盖未报告的供应商费用，也不参与预算授权、停止或恢复。

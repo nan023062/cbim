@@ -1,0 +1,12 @@
+/* 按需计量保留任务流程图的主位置；窄视图统计纵向排列，运行 ID 可换行，不扩大页面宽度。 */
+.scope-usage-panel{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 14px;font-size:13px;line-height:1.6}
+.scope-usage-panel>header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.scope-usage-panel h3{font-size:14px;margin:0}
+.scope-usage-muted,.scope-usage-identity{color:var(--muted)}
+.scope-usage-panel p{margin:7px 0}
+.scope-usage-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:12px 0}
+.scope-usage-groups>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.scope-usage-runs article{border-top:1px solid var(--line);padding:10px 0}
+.scope-usage-identity{overflow-wrap:anywhere;font-size:12px}
+.scope-usage-panel summary{cursor:pointer}
+@media(max-width:900px){.scope-usage-groups{grid-template-columns:1fr}}

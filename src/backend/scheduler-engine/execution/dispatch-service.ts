@@ -1,6 +1,6 @@
 /**
  * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
- * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；周期冻结真实输入并支持安全等待。异常历史只经独立 recovery 意图开新只读周期，初始化不自动续跑，幂等旧回执不能重开已关闭周期。
+ * 设计原因：知识核验和任务/邮箱/事件在串行事务内关联；周期冻结真实输入与主运行归属，消耗由独立只读服务按精确来源核实。安全等待和fresh意图保持独立，幂等旧回执不能重开已关闭周期。
  * 职责边界：本模块负责可靠入队与主调度显式撤销未启动集合，由独立 MemberExecutionManager 执行；撤销不停止活动运行，也不代表目标完成。
  */
 import {randomUUID} from 'node:crypto';
@@ -20,6 +20,7 @@ import {ScopeContinuationService} from './scope-continuation-service';
 import {ScopeRecoveryService} from './scope-recovery-service';
 import {ScopeReplanService} from './scope-replan-service';
 import {QueuedTaskCancelService} from './queued-task-cancel-service';
+import {ScopeUsageService} from './scope-usage-service';
 import type {CancelQueuedTasksInput,CancelQueuedTasksReceipt} from '../../core/tasks/queued-task-cancel';
 import {openGraphInput,createMemberInput,dispatchTaskInput,graphIdentityInput} from '../../core/tasks/dispatch-commands';
 import type {OpenGraphReceipt,CreateMemberReceipt,DispatchReceipt} from '../../core/tasks/dispatch-commands';
@@ -27,6 +28,7 @@ import type {GraphIdentity,GraphCursor,GraphSnapshot,GraphChange,GraphEventBatch
 import {resolveConversationAgent,resolveDispatchAgent,resolveDispatchModules} from '../context/dispatch-context';
 import {prepareMember} from './agent-manager';
 import {dispatchSessionReadInput} from '../../core/tasks/scope-view';
+import {createScopeRunTracking,appendScopeMainRun} from '../../core/tasks/scope-run-tracking';
 
 /** 只需工作区状态与知识快照，不依赖桌面或具体文件存储。 */
 type DispatchWorkspace=Pick<KnowledgeWorkspace,'entry'|'instanceId'|'assert'|'snapshot'|'read'>;
@@ -42,12 +44,15 @@ export class WorkspaceDispatchService {
   readonly recoveries:ScopeRecoveryService;
   /** 独立业务新周期；来源必须是完整完成的只读核实，不放宽 recoveries 的只读边界。 */
   readonly replans:ScopeReplanService;
+  /** 指定周期的按需统计；复用 canonical 日志端口，不影响运行许可或修复历史。 */
+  readonly usage:ScopeUsageService;
   private readonly queuedCancellation:QueuedTaskCancelService;
   constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts){
     this.goals=new ScopeGoalService(owner,store,goalPorts);
     this.continuations=new ScopeContinuationService(owner,store);
     this.recoveries=new ScopeRecoveryService(owner,store,goalPorts);
     this.replans=new ScopeReplanService(owner,store,this.goals,goalPorts);
+    this.usage=new ScopeUsageService(owner,store,goalPorts);
     this.queuedCancellation=new QueuedTaskCancelService(owner,store);
   }
 
@@ -59,25 +64,27 @@ export class WorkspaceDispatchService {
 
   /**
    * 主用户任务开始时冻结本轮正文与附件身份；跨模型回合复用同一周期，不从旧 TaskSpec 推断本轮输入。
-   * 第三参数缺省仅兼容旧调用；同 scope 重发必须保持输入，不能通过命中幂等回执绕过校验。
+   * 第三/四参数缺省仅兼容旧调用；有真实runId时原子创建完整清单。同 scope 重发须保持输入及首轮身份，不能通过幂等回执绕过校验。
    */
-  async openScope(identity:GraphIdentity,scopeId:string,rawInput?:DispatchScopeInput):Promise<DispatchScope>{
+  async openScope(identity:GraphIdentity,scopeId:string,rawInput?:DispatchScopeInput,trustedRunId?:string):Promise<DispatchScope>{
     const input=this.parse(scopeIdentityInput,{...identity,scopeId});this.check(input.workspaceId);
     // 在第一次 await 前校验并复制，调用者之后修改原对象不能改变正在保存的输入。
     const parsed=rawInput===undefined?undefined:this.parse(dispatchScopeInputSchema,rawInput);
     const goal:DispatchScopeGoal|undefined=parsed?{revision:1,input:{message:parsed.message,attachmentIds:[...(parsed.attachmentIds??[])]}}:undefined;
+    const runTracking=trustedRunId===undefined?undefined:createScopeRunTracking(trustedRunId);
     const verifyGoal=(scope:DispatchScope)=>{
       if((scope.goal===undefined)!==(goal===undefined)||scope.goal?.input.message!==goal?.input.message||JSON.stringify(scope.goal?.input.attachmentIds)!==JSON.stringify(goal?.input.attachmentIds))fail('DISPATCH_SCOPE_INPUT_CONFLICT','同一调度周期不能重新绑定用户正文或附件');
+      if((scope.runTracking===undefined)!==(runTracking===undefined)||scope.runTracking?.mainRunIds[0]!==runTracking?.mainRunIds[0])fail('DISPATCH_SCOPE_RUN_CONFLICT','同一周期不能重新绑定首个主运行');
     };
     await this.openGraph({...identity,commandId:'scope-root-'+hash(json(input))});
     // 命令键保持身份稳定，输入进入指纹；无 goal 的旧调用保留原指纹以读取历史回执。
-    const command={...input,commandId:'scope-open-'+hash(json(input)),...(goal?{goal}:{})};
+    const command={...input,commandId:'scope-open-'+hash(json(input)),...(goal?{goal}:{}),...(runTracking?{runTracking}:{})};
     await this.store.transact(this.command('scope.open',command),async state=>{
       this.check(input.workspaceId);this.graph(state,input.rootSessionId);
       const previous=state.scopes?.find(scope=>scope.scopeId===scopeId);
       if(previous){if(previous.rootSessionId!==input.rootSessionId)fail('DISPATCH_SCOPE_IDENTITY','调度周期属于其他主会话');verifyGoal(previous);if(previous.status==='waiting')fail('DISPATCH_SCOPE_WAITING','调度周期正在安全等待，必须通过显式补充入口继续');if(previous.status!=='active')fail('DISPATCH_SCOPE_CLOSED','调度周期已结束');return {receipt:previous}}
       if(state.scopes?.some(scope=>scope.rootSessionId===input.rootSessionId&&scope.status!=='closed'))fail('DISPATCH_SCOPE_BUSY','当前主会话还有未结束或等待中的用户任务周期');
-      const scope:DispatchScope={...input,status:'active',createdAt:new Date().toISOString(),...(goal?{goal}:{})};return {scopes:[scope],receipt:scope};
+      const scope:DispatchScope={...input,status:'active',createdAt:new Date().toISOString(),...(goal?{goal}:{}),...(runTracking?{runTracking}:{})};return {scopes:[scope],receipt:scope};
     });
     const scope=(await this.store.read()).scopes?.find(value=>value.scopeId===scopeId);
     if(!scope||scope.workspaceId!==input.workspaceId||scope.rootSessionId!==input.rootSessionId)fail('DISPATCH_SCOPE_IDENTITY','调度周期不属于当前主会话');
@@ -85,6 +92,19 @@ export class WorkspaceDispatchService {
     if(scope.status==='waiting')fail('DISPATCH_SCOPE_WAITING','调度周期正在安全等待，必须通过显式补充入口继续');
     if(scope.status!=='active')fail('DISPATCH_SCOPE_CLOSED','调度周期已结束，不能重新打开');
     return scope;
+  }
+
+  /** 可信主运行 beforeRun 登记回注轮次；旧周期不补造清单，幂等相同运行不重复计数。 */
+  async registerMainRun(identity:GraphIdentity,scopeId:string,runId:string):Promise<DispatchScope>{
+    const input=this.parse(scopeIdentityInput,{...identity,scopeId}),checked=createScopeRunTracking(runId).mainRunIds[0];this.check(input.workspaceId);
+    const command={...input,runId:checked,commandId:'scope-main-'+hash(json({...input,runId:checked}))};
+    await this.store.transact(this.command('scope.main',command),async state=>{
+      this.check(input.workspaceId);const scope=state.scopes?.find(value=>value.scopeId===scopeId&&value.rootSessionId===input.rootSessionId);
+      if(!scope)fail('DISPATCH_SCOPE_IDENTITY','主运行不属于当前目标周期');
+      const next=appendScopeMainRun(scope,checked);return {scopes:next===scope?undefined:[next],receipt:true};
+    });
+    const scope=(await this.store.read()).scopes?.find(value=>value.scopeId===scopeId&&value.rootSessionId===input.rootSessionId);
+    if(!scope)fail('DISPATCH_SCOPE_IDENTITY','主运行所属目标周期不可读');return scope;
   }
 
   /**

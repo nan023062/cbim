@@ -260,3 +260,11 @@ LoopRuntime ..> AgentEngine : 通过既有契约驱动
 ### 磁盘执行证据完整性
 
 `RunSummary.logIntegrity` 为可选的磁盘读取诊断，当前 `RunJournal.read` 总会提供 `partialTail`。完整前缀仍可供展示；尾行未写完不解析、不截断，也不能据前缀的 settled 证明完整日志。`LoopRuntime` 在创建新引擎或调用启动意图前拒绝续接已知不完整的原日志，并释放预检租约；即使传入工具核实 ID 也不能跳过。内存摘要或旧端口未提供该字段时不补造磁盘诊断。读取本身不授权重放。
+
+### 周期的保守计量
+
+`scope-usage.ts` 是无 I/O 的计量模块，消费已核实归属的 `RunSummary`，不使用界面宽松的 `usageReported` 推断完整性。`measureScopeRunUsage` 验证事件身份与顺序；消息只提供部分数字，最终有效 `run-usage` 覆盖此前消息消耗，不能把两者相加。reasoning 是 output 的子集，不再次计入 total。
+
+只有位于最后一条模型消息之后的完整原生汇总、匹配且位于日志末尾的终态，以及明确 `logIntegrity.partialTail === false`，才能标记本轮 reported；缺省完整性、截断、在途或矛盾汇总保留 partial/missing 及原因。失败或取消仍可有已报告消耗；缺失 Token 与未知价格不能当作零。已知价格可形成估算，已明确免费才可显示零费用。
+
+`summarizeScopeUsage` 汇总同一周期的唯一运行集合，遇重复身份或超出安全数字范围会明确拒绝，不归零伪装成功。legacy、读取期间变化、空集合、缺日志或在途运行均不能声明周期计量完整。结果只代表已经报告的消耗与估算费用，不覆盖未报告的供应商费用，也不参与预算授权、停止或恢复。

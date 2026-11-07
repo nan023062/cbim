@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主实例与图根共享身份。主/成员启动先取得全局与本地许可，已受理批次等待不创建 run 或持锁；取消撤票且迟到通知无效。求助、未启动撤销和目标门禁保留原真实证据，原用户队列独立。
+主实例与图根共享身份，主/成员先取得全局与本地许可。周期启动意图原子登记主运行清单，成员沿用派发绑定；只读用量按指定 canonical 核实。等待、求助、撤销和完成门禁保持独立，原用户队列不混用。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -28,6 +28,7 @@
 | [scope-goal-service.ts](scope-goal-service.ts) | 在派发事务中保存本轮目标计划与结构化审阅，并核验真实日志、角色和模块基线。 |
 | [scope-recovery-service.ts](scope-recovery-service.ts) | 为已关闭周期的异常执行创建独立只读核实周期，持久化用户观察和一次性全新上下文意图。 |
 | [scope-replan-service.ts](scope-replan-service.ts) | 在完成的只读核实基础上创建独立业务周期，冻结真实证据、原人工约束和用户明确的新目标。 |
+| [scope-usage-service.ts](scope-usage-service.ts) | 按指定目标周期的持久主运行清单与成员绑定，读取 canonical 日志并生成只读消耗报告。 |
 | [workspace-lease.ts](workspace-lease.ts) | 同一已打开工作区内，主会话与独立成员共享的执行占用协调器。 |
 
 ## 架构类图
@@ -208,9 +209,11 @@ class N_src_backend_scheduler_engine_execution_dispatch_service_ts_WorkspaceDisp
   +continuations
   +recoveries
   +replans
+  +usage
   +cancelQueued()
   +initialize()
   +openScope()
+  +registerMainRun()
   +closeScope()
   +parkScope()
   +waitingScopes()
@@ -218,8 +221,6 @@ class N_src_backend_scheduler_engine_execution_dispatch_service_ts_WorkspaceDisp
   +openGraph()
   +conversationBinding()
   +createMember()
-  +dispatchTask()
-  +snapshot()
 }
 N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
@@ -232,6 +233,8 @@ class N_src_backend_scheduler_engine_execution_dispatch_service_ts["dispatch-ser
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_dispatch_service_ts_WorkspaceDispatchService["WorkspaceDispatchService"] {
+  +dispatchTask()
+  +snapshot()
   +delta()
   +sessionRead()
   +close()
@@ -250,7 +253,7 @@ class N_src_backend_scheduler_engine_execution_dispatch_service_ts_WorkspaceDisp
 N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/brain/conversation-binding.ts](../../core/brain/conversation-binding.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/tasks/types.ts](../../core/tasks/types.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[scope-goal-service.ts](scope-goal-service.ts)、[scope-continuation-service.ts](scope-continuation-service.ts)、[scope-recovery-service.ts](scope-recovery-service.ts)、[scope-replan-service.ts](scope-replan-service.ts)、[queued-task-cancel-service.ts](queued-task-cancel-service.ts)、[../../core/tasks/queued-task-cancel.ts](../../core/tasks/queued-task-cancel.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../context/dispatch-context.ts](../context/dispatch-context.ts)、[agent-manager.ts](agent-manager.ts)、[../../core/tasks/scope-view.ts](../../core/tasks/scope-view.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/brain/conversation-binding.ts](../../core/brain/conversation-binding.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/tasks/types.ts](../../core/tasks/types.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[scope-goal-service.ts](scope-goal-service.ts)、[scope-continuation-service.ts](scope-continuation-service.ts)、[scope-recovery-service.ts](scope-recovery-service.ts)、[scope-replan-service.ts](scope-replan-service.ts)、[queued-task-cancel-service.ts](queued-task-cancel-service.ts)、[scope-usage-service.ts](scope-usage-service.ts)、[../../core/tasks/queued-task-cancel.ts](../../core/tasks/queued-task-cancel.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../context/dispatch-context.ts](../context/dispatch-context.ts)、[agent-manager.ts](agent-manager.ts)、[../../core/tasks/scope-view.ts](../../core/tasks/scope-view.ts)、[../../core/tasks/scope-run-tracking.ts](../../core/tasks/scope-run-tracking.ts)。
 
 ### execution-manager.ts
 
@@ -735,7 +738,7 @@ class N_src_backend_scheduler_engine_execution_scope_continuation_service_ts_Sco
 N_src_backend_scheduler_engine_execution_scope_continuation_service_ts ..> N_src_backend_scheduler_engine_execution_scope_continuation_service_ts_ScopeContinuationService : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/identity.ts](../../core/foundation/identity.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/tasks/scope-continuation.ts](../../core/tasks/scope-continuation.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/identity.ts](../../core/foundation/identity.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/scope-run-tracking.ts](../../core/tasks/scope-run-tracking.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/tasks/scope-continuation.ts](../../core/tasks/scope-continuation.ts)。
 
 ### scope-goal-service.ts
 
@@ -844,7 +847,7 @@ class N_src_backend_scheduler_engine_execution_scope_recovery_service_ts_ScopeRe
 N_src_backend_scheduler_engine_execution_scope_recovery_service_ts ..> N_src_backend_scheduler_engine_execution_scope_recovery_service_ts_ScopeRecoveryService : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/scope-recovery.ts](../../core/tasks/scope-recovery.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/tasks/fresh-context.ts](../../core/tasks/fresh-context.ts)、[execution-report-service.ts](execution-report-service.ts)、[scope-goal-service.ts](scope-goal-service.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/scope-recovery.ts](../../core/tasks/scope-recovery.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/tasks/fresh-context.ts](../../core/tasks/fresh-context.ts)、[execution-report-service.ts](execution-report-service.ts)、[scope-goal-service.ts](scope-goal-service.ts)、[../../core/tasks/scope-run-tracking.ts](../../core/tasks/scope-run-tracking.ts)。
 
 ### scope-replan-service.ts
 
@@ -891,7 +894,43 @@ class N_src_backend_scheduler_engine_execution_scope_replan_service_ts_ScopeRepl
 N_src_backend_scheduler_engine_execution_scope_replan_service_ts ..> N_src_backend_scheduler_engine_execution_scope_replan_service_ts_ScopeReplanService : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/fresh-context.ts](../../core/tasks/fresh-context.ts)、[../../core/tasks/scope-replan.ts](../../core/tasks/scope-replan.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[scope-goal-service.ts](scope-goal-service.ts)、[execution-report-service.ts](execution-report-service.ts)、[../context/dispatch-context.ts](../context/dispatch-context.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/fresh-context.ts](../../core/tasks/fresh-context.ts)、[../../core/tasks/scope-replan.ts](../../core/tasks/scope-replan.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[scope-goal-service.ts](scope-goal-service.ts)、[../../core/tasks/scope-run-tracking.ts](../../core/tasks/scope-run-tracking.ts)、[execution-report-service.ts](execution-report-service.ts)、[../context/dispatch-context.ts](../context/dispatch-context.ts)。
+
+### scope-usage-service.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_execution_scope_usage_service_ts["scope-usage-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_scope_usage_service_ts_Owner["Owner"] {
+  <<type>>
+
+}
+N_src_backend_scheduler_engine_execution_scope_usage_service_ts ..> N_src_backend_scheduler_engine_execution_scope_usage_service_ts_Owner : 声明
+class N_src_backend_scheduler_engine_execution_scope_usage_service_ts_Source["Source"] {
+  <<type>>
+  +kind
+  +taskId
+  +runId
+  +task
+  +run
+  +invalid
+}
+N_src_backend_scheduler_engine_execution_scope_usage_service_ts ..> N_src_backend_scheduler_engine_execution_scope_usage_service_ts_Source : 声明
+class N_src_backend_scheduler_engine_execution_scope_usage_service_ts_ScopeUsageService["ScopeUsageService"] {
+  +read()
+  -owner
+  -store
+  -logs
+  -facts()
+  -sources()
+  -bound()
+}
+N_src_backend_scheduler_engine_execution_scope_usage_service_ts ..> N_src_backend_scheduler_engine_execution_scope_usage_service_ts_ScopeUsageService : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/brain/scope-usage.ts](../../core/brain/scope-usage.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-execution.ts](../../core/tasks/dispatch-execution.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/scope-usage.ts](../../core/tasks/scope-usage.ts)、[scope-goal-service.ts](scope-goal-service.ts)。
 
 ### workspace-lease.ts
 
@@ -977,17 +1016,23 @@ class N_src_backend_scheduler_engine_execution_scope_replan_service_ts["scope-re
 class N_src_backend_scheduler_engine_execution_queued_task_cancel_service_ts["queued-task-cancel-service.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_agent_manager_ts["agent-manager.ts"] {
+class N_src_backend_scheduler_engine_execution_scope_usage_service_ts["scope-usage-service.ts"] {
   <<module>>
 }
 N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_scope_recovery_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_scope_replan_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_queued_task_cancel_service_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_agent_manager_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_scope_usage_service_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_scheduler_engine_execution_dispatch_service_ts["dispatch-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_agent_manager_ts["agent-manager.ts"] {
+  <<module>>
+}
 class N_src_backend_scheduler_engine_execution_execution_manager_ts["execution-manager.ts"] {
   <<module>>
 }
@@ -1003,16 +1048,33 @@ class N_src_backend_scheduler_engine_execution_execution_report_service_ts["exec
 class N_src_backend_scheduler_engine_execution_execution_report_facts_ts["execution-report-facts.ts"] {
   <<module>>
 }
+N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_agent_manager_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_execution_manager_ts ..> N_src_backend_scheduler_engine_execution_loop_engine_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_execution_manager_ts ..> N_src_backend_scheduler_engine_execution_admission_wait_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_execution_report_service_ts ..> N_src_backend_scheduler_engine_execution_execution_report_facts_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_backend_scheduler_engine_execution_member_events_ts["member-events.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_public_run_events_ts["public-run-events.ts"] {
   <<module>>
 }
-N_src_backend_scheduler_engine_execution_execution_manager_ts ..> N_src_backend_scheduler_engine_execution_loop_engine_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_execution_manager_ts ..> N_src_backend_scheduler_engine_execution_admission_wait_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_execution_report_service_ts ..> N_src_backend_scheduler_engine_execution_execution_report_facts_ts : 导入依赖
+class N_src_backend_scheduler_engine_execution_member_execution_ts["member-execution.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_member_state_ts["member-state.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_execution_report_service_ts["execution-report-service.ts"] {
+  <<module>>
+}
 N_src_backend_scheduler_engine_execution_member_events_ts ..> N_src_backend_scheduler_engine_execution_public_run_events_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_member_state_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_member_events_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_execution_report_service_ts : 导入依赖
 ```
 
 ```mermaid
@@ -1020,26 +1082,9 @@ classDiagram
 class N_src_backend_scheduler_engine_execution_member_execution_ts["member-execution.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_member_state_ts["member-state.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_execution_member_events_ts["member-events.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_execution_execution_report_service_ts["execution-report-service.ts"] {
-  <<module>>
-}
 class N_src_backend_scheduler_engine_execution_admission_wait_ts["admission-wait.ts"] {
   <<module>>
 }
-N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_member_state_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_member_events_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_execution_report_service_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_admission_wait_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_backend_scheduler_engine_execution_member_help_state_ts["member-help-state.ts"] {
   <<module>>
 }
@@ -1052,21 +1097,18 @@ class N_src_backend_scheduler_engine_execution_member_state_ts["member-state.ts"
 class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal-service.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_scope_recovery_service_ts["scope-recovery-service.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_execution_execution_report_service_ts["execution-report-service.ts"] {
-  <<module>>
-}
+N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_admission_wait_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_member_help_state_ts ..> N_src_backend_scheduler_engine_execution_execution_report_facts_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_member_state_ts ..> N_src_backend_scheduler_engine_execution_member_help_state_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_execution_report_facts_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_scope_recovery_service_ts ..> N_src_backend_scheduler_engine_execution_execution_report_service_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_scheduler_engine_execution_scope_recovery_service_ts["scope-recovery-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_execution_report_service_ts["execution-report-service.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal-service.ts"] {
@@ -1075,12 +1117,21 @@ class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal
 class N_src_backend_scheduler_engine_execution_scope_replan_service_ts["scope-replan-service.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_execution_report_service_ts["execution-report-service.ts"] {
-  <<module>>
-}
+N_src_backend_scheduler_engine_execution_scope_recovery_service_ts ..> N_src_backend_scheduler_engine_execution_execution_report_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_recovery_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_replan_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_replan_service_ts ..> N_src_backend_scheduler_engine_execution_execution_report_service_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_execution_scope_usage_service_ts["scope-usage-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal-service.ts"] {
+  <<module>>
+}
+N_src_backend_scheduler_engine_execution_scope_usage_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts : 导入依赖
 ```
 
 
@@ -1473,3 +1524,11 @@ AutoCollaboration 只在成功撤销回执后，从当前派发批次的待启�
 `AutoCollaboration` 的每个活动批次保存按稳定请求键去重的撤票回调。成员启动或主结果回注遇 `CAPACITY_WAITING` 保留原批次、原任务与信封，不写失败、不确认收件、不产生新 run。额度与本地租约变化只通知批次重新推进；重新推进仍检查当前周期、实例、任务版本、知识及依赖。批次停止、撤销对应未启动任务、正常退出或应用关闭立即撤票，迟到回调不能复活旧任务。容量等待不等同持久 `scope.status=waiting`，也不构成工作时长或 Token 消耗。
 
 首次聊天和普通用户队列不加入协作准入票。首轮拒绝保留用户草稿；已保存用户队列尝试不足则保留并暂停原条目，额度释放不会自行解除暂停，用户须明确继续。显式补充/核实/重规划仍先核对原命令回执，未受理时准入错误不得被描述为已创建新周期。重启不恢复准入票；原安全等待与未知结果的持久门禁保持不变。
+
+### 周期运行归属与按需计量
+
+普通主轮在 Runtime 的 beforeRun 取得真实 runId 后，使用 `openScope(identity,scopeId,input,runId)` 原子创建周期与 `runTracking`。结果回注通过 `registerMainRun` 追加原周期；显式补充在消费 waiting 的事务内追加，新核实与业务重规划各在其受理事务登记独立首轮。追加只保存周期、不顺带改变图或目标。legacy 缺少清单时原样保留，不能从时间、TaskSpec 或已有文件猜测完整归属。已登记却无日志的运行仍保留为未核实意图；fresh 上下文排除集合包含这些清单。
+
+`ScopeUsageService.read` 只读取所选 scope 的最多 32 个主轮及有界成员来源。成员使用 task.scopeId/runIds 与 DispatchRun.binding，保留实例释放后的历史；主轮必须匹配登记实例及 conversation 通道。日志事件顺序、身份和 run.started 正文绑定必须与摘要一致。日志缺失、损坏、未知完整性、部分用量或未知价格分别报告，不能视为免费或零消耗。
+
+服务复用 canonical 日志端口；每次显式查询前后读取派发基线，变化时整份报告标记 changed_during_read，不签发完整总数。它不扫描无关主会话、不初始化成员、不补写日志、不修复任务、不轮询或启动模型。两次派发屏障不能证明整个查询跨文件原子，活动日志可能继续增长；读取时间只代表本次观察。金额是已知价格下的估算，不是供应商账单；本步没有 Token/费用限额或预算授权。

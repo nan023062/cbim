@@ -1,6 +1,6 @@
 /**
  * 作用定位：为已关闭周期的异常执行创建独立只读核实周期，持久化用户观察和一次性全新上下文意图。
- * 设计原因：旧运行未知时不能续接或重放；事务核对来源与会话槽，重复命令只返回原事实。上下文查询同时尊重独立业务重规划的 fresh 边界，不因此放宽 recovery 只读权限。
+ * 设计原因：旧运行未知时不能续接或重放；新周期原子登记首轮，隔离集合包含无日志的既有主清单。事务核对来源与会话槽，重复命令只读原事实，独立业务重规划也不放宽 recovery 只读权限。
  */
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
@@ -15,6 +15,7 @@ import {sameGoalValue} from '../../core/tasks/scope-goal';
 import {scopeFreshContext} from '../../core/tasks/fresh-context';
 import {ExecutionReportService} from './execution-report-service';
 import type {ScopeGoalPorts} from './scope-goal-service';
+import {createScopeRunTracking} from '../../core/tasks/scope-run-tracking';
 
 type Owner=Pick<KnowledgeWorkspace,'entry'|'assert'>;
 /** 真实启动标识和被隔离旧运行由运行时在租约内取得，不能接受模型或公开请求传入。 */
@@ -55,7 +56,7 @@ export class ScopeRecoveryService {
   /** 即使旧启动意图尚未产生日志，也纳入下一次 fresh 上下文的隔离集合；普通旧聊天可以尚无任务图。 */
   async priorRunIds(raw:GraphIdentity):Promise<string[]>{
     const identity=this.parse(graphIdentityInput,raw),state=await this.store.read();this.workspace(state,identity);
-    return [...new Set((state.scopes??[]).filter(s=>s.rootSessionId===identity.rootSessionId&&s.workspaceId===identity.workspaceId).flatMap(s=>{const context=scopeFreshContext(s);return [...(s.continuations??[]).map(c=>c.runId),...(context?[context.initialRunId,...context.excludedRunIds]:[])]}))].sort();
+    return [...new Set((state.scopes??[]).filter(s=>s.rootSessionId===identity.rootSessionId&&s.workspaceId===identity.workspaceId).flatMap(s=>{const context=scopeFreshContext(s);return [...(s.runTracking?.mainRunIds??[]),...(s.continuations??[]).map(c=>c.runId),...(context?[context.initialRunId,...context.excludedRunIds]:[])]}))].sort();
   }
   private workspace(state:DispatchState,identity:GraphIdentity){this.owner.assert();check(identity.workspaceId===this.owner.entry.id&&state.workspaceId===identity.workspaceId,'RECOVERY_IDENTITY','核实请求不属于当前工作区')}
   /** 预检不消费启动权；accept 在取得真实 runId 后必须重新执行相同检查。 */
@@ -84,11 +85,11 @@ export class ScopeRecoveryService {
       check(!state.scopes?.some(s=>s.scopeId===input.commandId),'RECOVERY_COMMAND_CONFLICT','核实命令标识已被其它周期使用');
       const report=await this.report(state,input),source=state.scopes!.find(s=>s.scopeId===input.source.scopeId)!;
       const priorContexts=(state.scopes??[]).filter(s=>s.rootSessionId===input.rootSessionId).map(scopeFreshContext).filter(c=>c!==undefined);
-      const priorRuns=(state.scopes??[]).filter(s=>s.rootSessionId===input.rootSessionId).flatMap(s=>[...(s.continuations??[]).map(item=>item.runId),...(scopeFreshContext(s)?[scopeFreshContext(s)!.initialRunId]:[])]);
-      check(!state.runs?.some(r=>r.binding.runId===context.initialRunId)&&!state.scopes?.some(s=>s.continuations?.some(c=>c.runId===context.initialRunId)||scopeFreshContext(s)?.initialRunId===context.initialRunId||scopeFreshContext(s)?.nativeSessionId===context.nativeSessionId),'RECOVERY_CONTEXT_CONFLICT','新的主运行或原生上下文身份已被使用');
+      const priorRuns=(state.scopes??[]).filter(s=>s.rootSessionId===input.rootSessionId).flatMap(s=>[...(s.runTracking?.mainRunIds??[]),...(s.continuations??[]).map(item=>item.runId),...(scopeFreshContext(s)?[scopeFreshContext(s)!.initialRunId]:[])]);
+      check(!state.runs?.some(r=>r.binding.runId===context.initialRunId)&&!state.scopes?.some(s=>s.runTracking?.mainRunIds.includes(context.initialRunId)||s.continuations?.some(c=>c.runId===context.initialRunId)||scopeFreshContext(s)?.initialRunId===context.initialRunId||scopeFreshContext(s)?.nativeSessionId===context.nativeSessionId),'RECOVERY_CONTEXT_CONFLICT','新的主运行或原生上下文身份已被使用');
       check([...priorContexts.flatMap(c=>c.excludedRunIds),...priorRuns].every(id=>context.excludedRunIds.includes(id)),'RECOVERY_CONTEXT_CONFLICT','新上下文必须隔离此前明确登记的全部主运行，包括没有日志的旧意图');
       const acceptedAt=new Date().toISOString(),recovery:ScopeRecovery={recoveryId:input.commandId,acceptedAt,source:{...input.source,taskRevision:report.basis.taskRevision,planRevision:report.basis.planRevision,scopeOutcome:source.outcome!,reportExecution:report.execution,logState:report.log.state,unknownToolCount:report.tools.counts.unknown},operation:input.operation,observation:input.observation,input:input.input,options:input.options,context};
-      const scope:DispatchScope={workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,scopeId:input.commandId,status:'active',createdAt:acceptedAt,goal:{revision:1,input:{message:input.input.message,attachmentIds:[]}},recovery};
+      const scope:DispatchScope={workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,scopeId:input.commandId,status:'active',createdAt:acceptedAt,goal:{revision:1,input:{message:input.input.message,attachmentIds:[]}},runTracking:createScopeRunTracking(context.initialRunId),recovery};
       fresh=true;return {scopes:[scope],receipt:this.receipt(scope)};
     });
     const scope=this.found(await this.store.read(),input);

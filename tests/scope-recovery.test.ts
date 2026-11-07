@@ -115,6 +115,7 @@ it('无日志受理意图仍冻结在下一上下文；按持久插入顺序选�
 it('只读核实等待后补充仍不能升权，同意正文不能签发人工验收',async()=>{
   const f=await setup(false);try{
     const accepted=await f.service.recoveries.accept(f.input,f.launch()),scopeId=accepted.scope.scopeId,runId=randomUUID();
+    await f.service.registerMainRun(f.identity,scopeId,runId);
     const task:TaskSpec={mode:'chat',taskId:f.identity.rootSessionId,workspaceId:f.entry.id,root:f.a,goal:f.input.input.message,agentId:'cbim:main',moduleIds:[],acceptance:[]},binding=await f.service.conversationBinding(task),journal=new RunJournal(path.join(f.directory,'main',runId),task,runId);await journal.init();await journal.append({type:'run.started',data:{task,message:f.input.input.message,conversationBinding:binding}});f.mainJournals.set(runId,journal);
     await f.service.goals.plan(f.identity,scopeId,runId,'human-plan',{expectedRevision:1,objective:'核实需要人工提供的现状',constraints:[],criteria:[{id:'human',text:'人工核实实际现状',kind:'human'}],assignments:[{agentId:'cbim:main',moduleIds:[],criterionIds:['human'],reason:'等待观察'}],reason:'等待人工信息'});
     await f.service.goals.review(f.identity,scopeId,runId,'wait-review',{expectedRevision:2,decision:'awaiting_user',checks:[{criterionId:'human',outcome:'needs_human',reason:'需补充',evidence:[]}],superseded:[],gaps:['需补充'],reason:'需真实信息'});await journal.append({type:'run.settled',data:{status:'completed'}});

@@ -22,6 +22,7 @@ async function setup(admission?:GlobalRunAdmission){
   const dispatch={
     goals:{inspect:vi.fn(async()=>({goal:{plan:{}}})),plan:vi.fn(async()=>({})),review:vi.fn(async()=>({})),block:vi.fn(async()=>({}))},
     openScope:vi.fn(async(_identity:any,scopeId:string)=>({...identity,scopeId,status:'active',createdAt:'2026-11-07'})),
+    registerMainRun:vi.fn(async()=>({})),
     waitingScopes:vi.fn<()=>Promise<any[]>>(async()=>[]),
     parkScope:vi.fn(async(_identity:any,scopeId:string,summary:RunSummary,mainRunIds:string[])=>({...identity,scopeId,status:'waiting',createdAt:'2026-11-07',wait:{waitId:'wait-one',runId:summary.runId,mainRunIds}})),
     closeScope:vi.fn(async(_identity:any,scopeId:string,outcome:string,_summary?:RunSummary)=>{if(graph.tasks.some(task=>task.activeRunId))throw Error('scope still active');return {...identity,scopeId,status:'closed',outcome}}),
@@ -46,11 +47,11 @@ async function setup(admission?:GlobalRunAdmission){
   const execution={attachCollaboration:(value:ExecutionCollaboration)=>{hooks=value},continueFromResults:vi.fn(async(..._args:unknown[])=>({workspaceId:task.workspaceId,taskId:task.taskId,runId:'continued'})),collaborationReady:vi.fn(async()=>{}),pauseCollaboration:vi.fn(async()=>{}),cancelPendingLaunches:vi.fn()};
   const issues=vi.fn();
   const coordinator=new AutoCollaboration({entry:{id:task.workspaceId,path:task.root},assert:()=>{}} as KnowledgeWorkspace,dispatch as unknown as WorkspaceDispatchService,members as unknown as MemberExecutionManager,execution as unknown as WorkspaceExecutionManager,lease,issues);
-  await hooks.starting?.(task,options,undefined,'本轮实际输入');
+  await hooks.starting?.(task,options,undefined,'本轮实际输入','parent-run');
   execution.continueFromResults.mockImplementation(async(...args:unknown[])=>{
     const wait=args[4] as ExecutionAdmissionWait|undefined;
     const releaseMain=admission?acquireExecutionLease(lease,'main-return',{workspaceId:task.workspaceId,rootSessionId:task.taskId,requestId:admissionRequestId('main',(args[3] as {continuationId:string}).continuationId),workspacePermission:'read',source:'main-result',scopeId:wait?.scopeId},{manager:admission,ownerEpoch:1,isCurrent:()=>true},wait):()=>{};
-    await hooks.starting?.(task,options,args[3] as any,args[1] as string);coordinator.tools(task,'continued',options);
+    await hooks.starting?.(task,options,args[3] as any,args[1] as string,'continued');coordinator.tools(task,'continued',options);
     queueMicrotask(()=>{releaseMain();hooks.settled(task,options,{task,runId:'continued',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[]})});
     return {workspaceId:task.workspaceId,taskId:task.taskId,runId:'continued'};
   });
@@ -142,7 +143,7 @@ it('主轮委派只入队，释放占用后成员才能运行；结果确认失�
     f.settleParent();await vi.waitFor(()=>expect(f.members.start).toHaveBeenCalledTimes(1));expect(f.graph.tasks[0].status).toBe('queued');
     release();await vi.waitFor(()=>expect(f.graph.tasks[0].status).toBe('running'));
     expect(f.dispatch.openScope).toHaveBeenCalledTimes(1);expect(f.dispatch.closeScope).not.toHaveBeenCalled();
-    expect(f.dispatch.openScope).toHaveBeenCalledWith(f.graph.identity,expect.any(String),{message:'本轮实际输入',attachmentIds:undefined});
+    expect(f.dispatch.openScope).toHaveBeenCalledWith(f.graph.identity,expect.any(String),{message:'本轮实际输入',attachmentIds:undefined},'parent-run');
     expect(f.members.start.mock.calls.at(-1)![0].options).toMatchObject({permission:'ask',model:'model',profileId:f.options.profileId});
     expect(f.members.start.mock.calls.at(-1)![0].options).not.toHaveProperty('allowAll');
     f.members.acknowledge.mockRejectedValueOnce(Error('ack disk unavailable'));f.finishMember();

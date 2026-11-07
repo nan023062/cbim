@@ -6,6 +6,7 @@ import type {DispatchScopeGoal} from './scope-goal';
 import type {DispatchScopeWait,ScopeContinuation} from './scope-continuation';
 import type {ScopeRecovery} from './scope-recovery';
 import type {ScopeReplan} from './scope-replan';
+import type {ScopeRunTracking} from './scope-run-tracking';
 export {dispatchScopeWaitSchema} from './scope-continuation';
 export type {DispatchScopeWait} from './scope-continuation';
 export {dispatchScopeGoalSchema,dispatchScopeInputSchema} from './scope-goal';
@@ -21,6 +22,8 @@ export interface DispatchScope {
   createdAt:string;
   /** 原始输入冻结，计划/审阅逐版追加；缺省仅表示旧记录，不从首轮任务或历史正文猜测补造。 */
   goal?:DispatchScopeGoal;
+  /** 新周期自创建起登记的主运行启动意图；旧周期缺省，不以日志时间或计划内容补造归属。 */
+  runTracking?:ScopeRunTracking;
   /** waiting 必有；显式补充原样移入 continuations，取消关闭仍原样保留；不等于模型可自动恢复。 */
   wait?:DispatchScopeWait;
   /** 仅可信用户继续入口追加，含已消费旧 wait 和真实启动 ID；原始 input 永不覆盖，旧历史缺省。 */

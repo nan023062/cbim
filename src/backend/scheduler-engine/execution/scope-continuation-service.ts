@@ -1,6 +1,6 @@
 /**
  * 作用定位：在既有派发日志中可靠消费安全等待，并保存用户显式补充与一次性主运行启动意图。
- * 设计原因：运行时在租约和历史预检后注入真实 runId；只有本次新提交产生 fresh，重复请求只读原事实，崩溃不会自动重放模型。核实周期补充仍须 read，不能借新输入提升权限或签发人工通过。
+ * 设计原因：运行时在租约和历史预检后注入真实 runId，与消费等待同事务追加原周期清单；只有本次新提交产生 fresh，重复只读。旧周期不补造完整归属，核实补充仍须 read，不能签发人工通过。
  * 职责边界：不启动模型、不清除停止屏障、不批准 human 项；调用方必须在提交前后核验停止信号，提交后失败不得还原等待或重用意图。
  */
 import {z} from 'zod';
@@ -10,6 +10,7 @@ import {hash,json} from '../../core/foundation/serialization';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {DispatchStore,DispatchState} from '../../core/tasks/dispatch-storage';
 import type {DispatchScope} from '../../core/tasks/dispatch-scope';
+import {appendScopeMainRun} from '../../core/tasks/scope-run-tracking';
 import {goalInputRevision,scopeGoalDecisionLimit} from '../../core/tasks/scope-goal';
 import {goalContinuationRequestSchema,scopeContinuationLookupSchema,scopeContinuationTotalTextLimit,type GoalContinuationRequest,type GoalContinuationReceipt,type ScopeContinuation,type ScopeContinuationLookup} from '../../core/tasks/scope-continuation';
 
@@ -53,7 +54,7 @@ export class ScopeContinuationService {
       check(!state.runs?.some(run=>run.binding.rootSessionId===scope.rootSessionId&&['starting','running'].includes(run.status)),'GOAL_WORK_PENDING','本主会话仍有在途成员运行');
       const continuation:ScopeContinuation={continuationId:input.commandId,acceptedAt:new Date().toISOString(),wait:structuredClone(wait),inputRevision:goalInputRevision(goal)+1,input:input.input,runId,options:input.options};
       const {wait:_consumed,...rest}=scope,{review:_stale,...originalGoal}=goal;
-      const next:DispatchScope={...rest,status:'active',goal:{...originalGoal,revision:goal.revision+1,inputRevision:continuation.inputRevision},continuations:[...(scope.continuations??[]),continuation]};
+      const next=appendScopeMainRun<DispatchScope>({...rest,status:'active',goal:{...originalGoal,revision:goal.revision+1,inputRevision:continuation.inputRevision},continuations:[...(scope.continuations??[]),continuation]},runId);
       const saved:GoalContinuationReceipt={workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,scopeId:scope.scopeId,scopeStatus:next.status,continuation};
       fresh=true;return {scopes:[next],receipt:saved};
     });

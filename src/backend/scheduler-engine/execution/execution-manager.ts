@@ -1,6 +1,6 @@
 /**
  * 作用定位：调度引擎：工作区执行管理，负责主 Agent 普通对话、团队任务执行与多轮历史读取，拒绝旧轮次分叉，挂起并处理逐次工具审批与结构化用户问题，持久化消息队列并在成功结束后串行续接；本次全部通过仅在当前执行期间有效。
- * 设计原因：容量准入发生在周期/运行意图创建前，已受理结果回注由原批次等待；直接启动不足明确未受理。补充、核实与正式重规划仍分别核实可靠意图，当前历史损坏不能回退旧头。
+ * 设计原因：容量准入发生在周期/运行意图创建前，beforeRun把真实运行ID送往周期登记；直接启动不足明确未受理。补充、核实与正式重规划仍分别核实可靠意图，当前历史损坏不能回退旧头。
  */
 import {MessageQueue,type QueueCounts} from '../conversation/message-queue';
 import {ApprovalQueue} from '../conversation/approvals';
@@ -56,7 +56,8 @@ export interface ExecutionCollaboration {
   /** 取得真实 runId 后原子消费等待；只有新提交可转入本进程的活动周期。 */
   acceptContinuation?(request:GoalContinuationRequest,task:TaskSpec,runId:string):Promise<void>;
   /** 工厂准备完成、启动模型之前打开或续接周期；message 是本轮原文而非首次 goal，source 表示可信结果回注，不创建新目标。 */
-  starting?(task:TaskSpec,options:Options,source:RunInputSource|undefined,message:string):Promise<void>;
+  /** Runtime在日志/引擎之前给出真实runId；缺省仅供旧独立装配兼容，不能补造完整归属。 */
+  starting?(task:TaskSpec,options:Options,source:RunInputSource|undefined,message:string,runId?:string):Promise<void>;
   /** 启动未成功时清理已经打开的周期；成员结果遇到暂时占用可保留原周期等待。 */
   startFailed?(task:TaskSpec,source:RunInputSource|undefined,error:unknown):Promise<void>;
   /** 当前主会话仍有协作批次时，用户消息留在原队列，不抢占成员执行资源。 */
@@ -236,7 +237,7 @@ export class WorkspaceExecutionManager {
         // Runtime 已取得全局及工作区租约；此刻才打开普通目标，容量拒绝不会留下假的失败周期。
         controller.signal.throwIfAborted();
         preparingScope=true;
-        await this.collaboration?.starting?.(task,options,source,message);
+        await this.collaboration?.starting?.(task,options,source,message,runId);
         if(continuation){
         controller.signal.throwIfAborted();
         if(!this.collaboration?.acceptContinuation)fail('GOAL_CONTINUATION_UNAVAILABLE','当前工作区未装配目标恢复');

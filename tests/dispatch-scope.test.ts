@@ -20,6 +20,20 @@ async function setup(){
   return {...f,entry,workspace,team,directory,store,service,identity,input,cleanup:async()=>{await store.close();await f.cleanup()}};
 }
 
+it('新周期首轮与回注清单原子登记，重复不增量、旧周期不补造，真实重开保留隔离集合',async()=>{
+  const f=await setup();try{
+    const initial=await f.service.openScope(f.identity,'tracked',{message:'本轮目标'},'main-first');expect(initial.runTracking).toEqual({version:1,mainRunIds:['main-first']});
+    await f.service.registerMainRun(f.identity,'tracked','main-return');await f.service.registerMainRun(f.identity,'tracked','main-return');
+    expect((await f.service.openScope(f.identity,'tracked',{message:'本轮目标'},'main-first')).runTracking?.mainRunIds).toEqual(['main-first','main-return']);
+    await expect(f.service.openScope(f.identity,'tracked',{message:'本轮目标'},'other-first')).rejects.toBeDefined();
+    await f.service.closeScope(f.identity,'tracked','failed');await expect(f.service.registerMainRun(f.identity,'tracked','late-run')).rejects.toMatchObject({code:'DISPATCH_SCOPE_CLOSED'});
+    await f.service.openScope(f.identity,'legacy');await f.service.registerMainRun(f.identity,'legacy','do-not-invent');expect((await f.service.goals.inspect(f.identity,'legacy')).runTracking).toBeUndefined();
+    await f.service.closeScope(f.identity,'legacy','cancelled');await f.store.close();
+    const reopened=new FileDispatchStore(f.directory,f.entry.id),service=new WorkspaceDispatchService(f.workspace,reopened);
+    try{expect((await service.goals.inspect(f.identity,'tracked')).runTracking?.mainRunIds).toEqual(['main-first','main-return']);expect(await service.recoveries.priorRunIds(f.identity)).toEqual(['main-first','main-return']);expect((await service.goals.inspect(f.identity,'legacy')).runTracking).toBeUndefined()}finally{await reopened.close()}
+  }finally{await f.cleanup()}
+});
+
 it('同一用户周期幂等复用，主会话周期互斥；不同主会话隔离且关闭不可重开',async()=>{
   const f=await setup();try{
     const [first,same]=await Promise.all([f.service.openScope(f.identity,'scope-one'),f.service.openScope(f.identity,'scope-one')]);

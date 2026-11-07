@@ -1,6 +1,6 @@
 /**
  * 作用定位：在完成的只读核实基础上创建独立业务周期，冻结真实证据、原人工约束和用户明确的新目标。
- * 设计原因：旧任务和未知回执保持封存；预览与受理都重读 canonical 证据，同命令只读回执，fresh 仅当前事务产生。新业务权限不修改只读核实契约。
+ * 设计原因：旧任务和未知回执保持封存；预览与受理都重读 canonical 证据，新首轮清单与意图原子保存并隔离全部旧登记。重复命令只读回执，fresh 仅当前事务产生，新业务不修改只读核实权限。
  */
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
@@ -12,6 +12,7 @@ import {freshContextSchema,scopeFreshContext} from '../../core/tasks/fresh-conte
 import {replanPreviewInputSchema,replanRequestSchema,replanLookupSchema,type ReplanPreviewInput,type ReplanPreview,type ReplanRequest,type ReplanLookup,type ReplanReceipt,type ScopeReplan,type InspectionProof} from '../../core/tasks/scope-replan';
 import {sameGoalValue} from '../../core/tasks/scope-goal';
 import {ScopeGoalService,type ScopeGoalPorts} from './scope-goal-service';
+import {createScopeRunTracking} from '../../core/tasks/scope-run-tracking';
 import {ExecutionReportService} from './execution-report-service';
 import {resolveDispatchModules} from '../context/dispatch-context';
 
@@ -67,9 +68,9 @@ export class ScopeReplanService {
       const old=this.found(state,input);if(old){this.sameRequest(old,input);return {receipt:this.receipt(old)}}
       check(!state.scopes?.some(item=>item.scopeId===input.commandId),'REPLAN_COMMAND_CONFLICT','命令标识已经被其它周期使用');
       const value=await this.proof(state,{workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,inspectionScopeId:input.source.inspectionScopeId});check(value.basis===input.source.expectedBasis,'REPLAN_STALE','业务重规划依据已变化，请重新预览');
-      const contexts=(state.scopes??[]).map(scopeFreshContext).filter(item=>item!==undefined),prior=(state.scopes??[]).filter(item=>item.rootSessionId===input.rootSessionId).flatMap(item=>{const c=scopeFreshContext(item);return [...(item.continuations??[]).map(c=>c.runId),...(c?[c.initialRunId,...c.excludedRunIds]:[])]});
-      check(!state.runs?.some(item=>item.binding.runId===context.initialRunId)&&!state.scopes?.some(item=>item.continuations?.some(c=>c.runId===context.initialRunId))&&!contexts.some(c=>c.initialRunId===context.initialRunId||c.nativeSessionId===context.nativeSessionId)&&prior.every(id=>context.excludedRunIds.includes(id)),'REPLAN_CONTEXT_CONFLICT','新的原生上下文身份冲突或没有隔离此前运行');
-      const acceptedAt=new Date().toISOString(),replan:ScopeReplan={replanId:input.commandId,acceptedAt,source:{...input.source,proof:value.proof},operation:'business_replan',input:input.input,options:input.options,context},scope:DispatchScope={workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,scopeId:input.commandId,status:'active',createdAt:acceptedAt,goal:{revision:1,input:{message:input.input.message,attachmentIds:[]}},replan};
+      const contexts=(state.scopes??[]).map(scopeFreshContext).filter(item=>item!==undefined),prior=(state.scopes??[]).filter(item=>item.rootSessionId===input.rootSessionId).flatMap(item=>{const c=scopeFreshContext(item);return [...(item.runTracking?.mainRunIds??[]),...(item.continuations??[]).map(c=>c.runId),...(c?[c.initialRunId,...c.excludedRunIds]:[])]});
+      check(!state.runs?.some(item=>item.binding.runId===context.initialRunId)&&!state.scopes?.some(item=>item.runTracking?.mainRunIds.includes(context.initialRunId)||item.continuations?.some(c=>c.runId===context.initialRunId))&&!contexts.some(c=>c.initialRunId===context.initialRunId||c.nativeSessionId===context.nativeSessionId)&&prior.every(id=>context.excludedRunIds.includes(id)),'REPLAN_CONTEXT_CONFLICT','新的原生上下文身份冲突或没有隔离此前运行');
+      const acceptedAt=new Date().toISOString(),replan:ScopeReplan={replanId:input.commandId,acceptedAt,source:{...input.source,proof:value.proof},operation:'business_replan',input:input.input,options:input.options,context},scope:DispatchScope={workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,scopeId:input.commandId,status:'active',createdAt:acceptedAt,goal:{revision:1,input:{message:input.input.message,attachmentIds:[]}},runTracking:createScopeRunTracking(context.initialRunId),replan};
       fresh=true;return {scopes:[scope],receipt:this.receipt(scope)};
     });
     const scope=this.found(await this.store.read(),input);check(scope?.replan&&scope.scopeId===receipt.scopeId&&scope.replan.context.initialRunId===receipt.replan.runId,'REPLAN_UNKNOWN','已提交业务意图与当前记录不一致，请查询原命令');this.sameRequest(scope,input);return {scope,replan:scope.replan,fresh};

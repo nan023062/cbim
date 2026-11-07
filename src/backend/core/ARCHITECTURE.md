@@ -87,13 +87,13 @@ N_src_backend_core_team ..> N_src_backend_core_tasks : 导入依赖
 
 ## 子目录导航
 
-- [brain/](brain/ARCHITECTURE.md)：引擎无关的执行循环与事件契约。成员求助在所有工具及审批结束后封住后续调用，暂存不等于交接；停止覆盖准备和关闭窗口。显式新上下文冻结旧运行，不读写或重放坏历史。
+- [brain/](brain/ARCHITECTURE.md)：引擎无关的执行循环、事件与计量。停止贯穿原生准备窗口，求助暂存不等于交接。周期计量严格区分完整汇总、部分消息和未知价格；新上下文隔离旧运行，不重放坏历史。
 - [connectors/](connectors/ARCHITECTURE.md)：链接器定义、查询与唯一身份检查；当前不执行外部插件。
 - [foundation/](foundation/ARCHITECTURE.md)：少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识快照、校验、领域查询、对象变更和可移植静态包规划。团队能力可独立复用，业务模板必须完整；物理事务与预览缓存经端口注入，不携带动态成员或任务。Team/Workspace 只依赖快照辅助，不依赖查询门面。
 - [policy/](policy/ARCHITECTURE.md)：内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；不声称操作系统隔离。
 - [runtime/](runtime/ARCHITECTURE.md)：应用级运行监管及独立准入契约：真实实例用量与执行许可分离，策略、票据和占用按可信身份表达；独立游标只读投影不签发执行权。
-- [tasks/](tasks/ARCHITECTURE.md)：任务计划、派发图、目标与等待。求助和未启动撤销分别保留不可变事实；明确撤销集合及依赖后继在提交/重放共用校验，不能隐藏旧运行。核实与正式重规划各有意图，候选、求助和撤销都不签发验收。
+- [tasks/](tasks/ARCHITECTURE.md)：任务计划、派发图、目标与等待。周期主运行归属从创建起唯一有序追加，提交与重放共用不变量；旧缺省不补造。求助、撤销、核实和重规划保留真实意图；统计报告不签发验收或预算。
 - [team/](team/ARCHITECTURE.md)：Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履历契约。主实例归主会话，业务实例归周期与任务；履历按角色聚合真实通道，释放或删定义后保留，旧记录不补造实例。
 - [tools/](tools/ARCHITECTURE.md)：工具 Schema、版本、副作用、调用决策、结构化提问及回执；统一校验结果的 JSON 传输快照，拒绝缺失文本等无效内容。回执绑定运行身份与输入结果哈希；注册和发现不授予执行权限。
 - [workspace/](workspace/ARCHITECTURE.md)：领域工程、Module、本模块 Workflow 的只读视图及显式维护关系类型；作者与维护人分开，与 main/workspace 生命周期分开。

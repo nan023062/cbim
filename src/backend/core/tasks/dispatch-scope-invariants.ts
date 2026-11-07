@@ -1,6 +1,6 @@
 /**
  * 作用定位：校验用户任务周期与执行实例、图任务及运行的跨对象生命周期。
- * 设计原因：提交和重放共同保护输入、等待及启动意图；核实保持只读，独立重规划冻结完成证明、模块范围与人工条件。两类新周期共享 fresh 身份隔离，迟到回调不能改写历史或复活实例。
+ * 设计原因：提交和重放共同保护输入、等待及启动意图；新周期完整登记主运行，旧周期不补造。核实保持只读，fresh 隔离同时包含尚无日志的登记，迟到回调不能改写历史或复活实例。
  * 职责边界：不决定整轮任务是否完成、不停止模型；求助仅在活动周期正常结算，关闭后只允许收件确认，不能补发或复活实例。
  */
 import {z} from 'zod';
@@ -12,9 +12,11 @@ import {scopeContinuationSchema,scopeContinuationTotalTextLimit} from './scope-c
 import {scopeRecoverySchema} from './scope-recovery';
 import {scopeReplanSchema} from './scope-replan';
 import {scopeFreshContext} from './fresh-context';
+import {scopeRunTrackingSchema} from './scope-run-tracking';
+import {validateScopeRunTracking} from './scope-run-invariants';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
-const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),wait:dispatchScopeWaitSchema.optional(),continuations:z.array(scopeContinuationSchema).max(31).optional(),recovery:scopeRecoverySchema.optional(),replan:scopeReplanSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
+const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),runTracking:scopeRunTrackingSchema.optional(),wait:dispatchScopeWaitSchema.optional(),continuations:z.array(scopeContinuationSchema).max(31).optional(),recovery:scopeRecoverySchema.optional(),replan:scopeReplanSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
 function valid(condition:unknown,message:string):asserts condition {if(!condition)fail('GRAPH_INPUT_INVALID',message)}
 function ordered(value:unknown):unknown {return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,ordered(item)])):value}
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
@@ -42,7 +44,7 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
       if(!old){
         valid(mutation.scopes?.length===1&&!mutation.batch&&!mutation.runs?.length&&!mutation.members?.length&&!mutation.sessions?.length&&!mutation.messages?.length,'新周期意图不能顺带改写其它记录');
         valid(!previous.runs?.some(run=>run.binding.rootSessionId===scope.rootSessionId&&['starting','running'].includes(run.status)),'不能在成员活动时隔离主上下文');
-        const prior=(previous.scopes??[]).filter(item=>item.rootSessionId===scope.rootSessionId),excluded=prior.flatMap(item=>{const context=scopeFreshContext(item);return [...(item.continuations??[]).map(value=>value.runId),...(context?[context.initialRunId,...context.excludedRunIds]:[])]});
+        const prior=(previous.scopes??[]).filter(item=>item.rootSessionId===scope.rootSessionId),excluded=prior.flatMap(item=>{const context=scopeFreshContext(item);return [...(item.runTracking?.mainRunIds??[]),...(item.continuations??[]).map(value=>value.runId),...(context?[context.initialRunId,...context.excludedRunIds]:[])]});
         valid(excluded.every(runId=>fresh.excludedRunIds.includes(runId)),'新上下文不能重新包含此前隔离的运行或无日志意图');
       }
     }
@@ -80,7 +82,7 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
         valid(mutation.scopes?.length===1&&!mutation.batch&&!mutation.runs?.length&&!mutation.members?.length&&!mutation.sessions?.length&&!mutation.messages?.length,'核实意图不能顺带修改来源、任务图、成员或执行记录');
         valid(!previous.runs?.some(run=>run.binding.rootSessionId===scope.rootSessionId&&['starting','running'].includes(run.status)),'不能在成员活动时隔离主上下文');
         const prior=(previous.scopes??[]).filter(item=>item.rootSessionId===scope.rootSessionId);
-        const excluded=prior.flatMap(item=>{const context=scopeFreshContext(item);return [...(item.continuations??[]).map(value=>value.runId),...(context?[context.initialRunId,...context.excludedRunIds]:[])]});
+        const excluded=prior.flatMap(item=>{const context=scopeFreshContext(item);return [...(item.runTracking?.mainRunIds??[]),...(item.continuations??[]).map(value=>value.runId),...(context?[context.initialRunId,...context.excludedRunIds]:[])]});
         valid(excluded.every(runId=>recovery.context.excludedRunIds.includes(runId)),'新核实上下文不能重新包含此前隔离的旧运行或无日志意图');
       }
     }
@@ -130,6 +132,7 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
     if(scope.wait&&scope.status==='closed')valid(scope.outcome!=='completed','等待周期不能跳过完成复核直接标为成功');
   }
   valid([...continuationCommands].every(id=>!recoveryIds.has(id))&&[...continuationRuns].every(id=>!recoveryRuns.has(id)),'补充与核实启动意图不能重用命令或主运行身份');
+  validateScopeRunTracking(previous,next,mutation);
   for(const member of next.members){
     const scoped=member.executionScopeId!==undefined||member.executionTaskId!==undefined;
     if(!scoped){valid(member.lifecycle===undefined&&member.releasedAt===undefined,'持久主实例和旧角色实例不属于可释放周期');continue}

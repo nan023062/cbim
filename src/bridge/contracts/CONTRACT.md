@@ -159,6 +159,10 @@ interface DispatchGraphApi {
 
 图中的 `result_ready` 表示待交接候选，与执行完成、消息确认及业务验收分别表达。公开图不允许前端或模型把“收到返回消息”“进程结束”“有成功工具回执”自动转换成业务验收通过。
 
+### 周期用量读取
+
+`scope-usage.ts` 重导出严格的 `ScopeUsageInput / ScopeUsageReport` 及 Schema。`dispatch.scopeUsage` 只接 workspaceId/rootSessionId/scopeId，不接路径或写入操作。公开已登记运行、已报告 token、估算美元、读取时间及缺失/未知情况；不包含原生会话文件、模型凭据或聊天/工具正文。完整归属与完整计量分别声明，读取不是预算授权或业务验收。
+
 ### 桌面架构 CRUD 契约
 
 `architecture.ts` 导出 `ObjectOperation`、`ArchitecturePreviewRequest/CommitRequest` 和对应回执。预览绑定工作区/实例/知识版本，响应保留完整校验、差异、受影响路径、对象 ID 和 planId；确认提交只携带身份及 planId。创建/编辑模块时，界面显式选择真实维护人并确认，可附 `peopleUpserts` 在同一事务增加真人。后端生成维护记录，前端不能伪造 `confirmation`；声明不授予模型写权限。字段类型不暴露桌面服务实例或存储实现。

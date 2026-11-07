@@ -1,6 +1,6 @@
 /**
  * 作用定位：以节点流程图展示当前主会话的派发任务，并在选择根或任务后显示对应执行详情。
- * 设计原因：全局项目架构与会话派工分开；根详情共享当前/历史周期目标、审阅与显式补充状态，整张会话图保留并突出所选周期。开放周期可停止或取消，持久等待不触发队列恢复。
+ * 设计原因：全局项目架构与会话派工分开；所选周期提供按需用量核对，读取不触发模型或持续扫日志。根详情共享目标、审阅与显式补充，整图保留并突出所选周期，持久等待不触发队列恢复。
  * 职责边界：运行轮次不是派发节点；核实报告按需读取并使用节点实际归属。正式业务重规划与只读核实各有独立控制器，新周期准入取真实开放状态，不借历史筛选替换任务身份或权限。
  */
 import {useEffect,useState} from 'react';
@@ -11,6 +11,7 @@ import {MessageQueue} from '../conversation/MessageQueue';
 import {DispatchGraph,type DispatchRootView} from './DispatchGraph';
 import {MemberTaskDetail} from './MemberTaskDetail';
 import {ScopeGoalPanel} from './ScopeGoalPanel';
+import {ScopeUsagePanel} from './ScopeUsagePanel';
 import type {ScopeGoalState} from './scope-state';
 import type {ScopeContinuationView} from './useScopeContinuation';
 import type {ExecutionRecoveryContext} from './useExecutionRecovery';
@@ -98,6 +99,7 @@ export function SessionTaskView(props:SessionTaskViewProps){
     {error&&<p role="alert" className="task-graph-error">任务图同步中断：{error}{matching?'。保留上次已确认的图。':''}</p>}
     {graphLoading&&<p role="status" className="task-graph-loading">正在同步任务图…</p>}
     {scopeState&&scopeState.scopes.length>0&&<div className="task-scope-filter"><label>突出显示周期<select aria-label="任务图目标周期" data-testid="task-scope-select" value={scopeState.historyScopeId??''} onChange={event=>scopeState.selectScope(event.target.value||undefined)}><option value="">当前 / 最新目标</option>{[...scopeState.scopes].reverse().map(scope=><option value={scope.scopeId} key={scope.scopeId}>{scope.objective??scope.inputPreview??'旧周期'} · {new Date(scope.createdAt).toLocaleString()}</option>)}</select></label><span data-testid="task-scope-status">{scopeState.selectedGoalView.label}</span><small>全会话节点仍保留，其他周期降低突出显示。</small></div>}
+    {taskId&&scopeState?.selectedScopeId&&<ScopeUsagePanel key={JSON.stringify([workspaceId,taskId,scopeState.selectedScopeId])} identity={{workspaceId,rootSessionId:taskId,scopeId:scopeState.selectedScopeId}}/>}
     {!root?<div className="task-graph-draft"><h3>尚未开始会话</h3><p>发送第一条消息后，这里显示主 Agent；派发成员任务后显示团队任务流程。</p><button onClick={onChat}>开始对话</button></div>:<div className={'session-graph-layout'+(hasDetail?' with-detail':'')}>
       <DispatchGraph key={workspaceId+':'+taskId} graph={matching} root={root} selectedTaskId={selected} onSelectTask={select} highlightedScopeId={scopeState?.selectedScopeId}/>
       {hasDetail&&<aside className="session-graph-detail" aria-label={rootSelected?'主 Agent 详情':'成员任务详情'} data-testid="session-graph-detail"><header><strong>{rootSelected?'主会话调度':'成员任务'}</strong><button onClick={()=>select(undefined)} aria-label="关闭详情，返回流程图">返回流程图</button></header>

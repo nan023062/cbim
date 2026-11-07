@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-可序列化 IPC 与展示契约。图增量公开检查点及续执行预约，私有日志/原生会话恢复证明留在后端。文件观察、前置替换、软限额和用量公开冻结事实及缺口，不签发启动许可。
+可序列化 IPC 与展示契约。图增量公开检查点及续执行预约，私有日志/原生会话恢复证明留在后端。文件观察、前置替换、软限额和用量公开冻结事实及缺口，不签发启动许可。 人工决定只公开严格选择/意见和有界证明，身份、基线及回执互相核对。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -16,6 +16,7 @@
 | [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
 | [dispatch.ts](dispatch.ts) | 向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。 |
 | [execution.ts](execution.ts) | 对话、运行和排队在 IPC 中传递的可序列化类型。 |
+| [human-decisions.ts](human-decisions.ts) | 向桌面公开人工决定的序列化请求、依据预览与不可变记录。 |
 | [models.ts](models.ts) | 模型配置界面消费的公开模型信息与停止原因格式化。 |
 | [resources.ts](resources.ts) | 资源种类、仓库快照、登录占位及仓库状态的共享类型。 |
 | [runtime.ts](runtime.ts) | 公开应用级成员、任务负载和运行用量的可序列化观察契约。 |
@@ -137,6 +138,16 @@ class N_src_bridge_contracts_execution_ts["execution.ts"] {
 }
 ```
 直接依赖：[../../backend/core/brain/types.ts](../../backend/core/brain/types.ts)、[../../backend/core/tasks/types.ts](../../backend/core/tasks/types.ts)、[../../backend/core/tasks/queue.ts](../../backend/core/tasks/queue.ts)、[../../backend/core/tools/questions.ts](../../backend/core/tools/questions.ts)。
+
+### human-decisions.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_human_decisions_ts["human-decisions.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../backend/core/tasks/human-decisions.ts](../../backend/core/tasks/human-decisions.ts)。
 
 ### models.ts
 
@@ -381,6 +392,12 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 人工决定的桌面契约
+
+`human-decisions.ts` 只重导出 Core 严格序列化 DTO 与校验器。`dispatch.humanPreview` 接 workspace/root/scope/criterion 与明确 baseline 选择；响应返回来源、所选有界文件观察、basis、独立决定序列及限制，预览不是提交许可。`dispatch.humanDecide` 另接 commandId、expectedBasis、expectedDecisionRevision、决定及意见；actor/文件正文/可信证明不可由请求传入。
+
+`dispatch.humanReceipt` 按原命令读取回执，`dispatch.humanHistory` 返回本周期最多 64 条不可变记录。回执和历史的 proof.identity 必须匹配外层身份。图与主模型完成结论不因记录改变；只在周期摘要增加独立 humanDecisions 计数和时间，完整历史来自已核验的详情。无模型工具可调用人工提交，也没有隐式继续/批准接口。
 
 ### 已提交的前置替换审计
 

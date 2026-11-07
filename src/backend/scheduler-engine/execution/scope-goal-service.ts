@@ -1,5 +1,5 @@
 /**
- * 作用定位：在派发事务中保存本轮目标计划与结构化审阅，并为目标门禁及未启动依赖替换核验真实日志、角色和模块基线。
+ * 作用定位：在派发事务中保存本轮目标计划与结构化审阅，并为目标门禁、依赖修订和本机人工决定核验真实候选、角色及模块基线。
  * 设计原因：模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用；检查点和待领续请求仍属于未完任务，用户补充使旧计划过期而不丢 human 项。截断日志前缀不可成为完成或等待证据。
  * 职责边界：不关闭周期、不释放成员、不运行工具；知识和派发日志不是跨存储原子事务，证据也不是外部产物指纹。
  */
@@ -132,6 +132,35 @@ export class ScopeGoalService {
   async validateMemberCandidate(state:DispatchState,scope:DispatchScope,graph:GraphSnapshot,task:TaskNode,knowledgeRevision:string):Promise<RunSummary>{
     const summary=await this.member(state,scope,graph,task,knowledgeRevision),run=state.runs!.find(item=>item.binding.runId===task.result!.runId&&item.binding.taskId===task.taskId)!;
     this.memberTerminal(scope,task,run,summary);return summary;
+  }
+  /**
+   * 人工决定只读取当前安全等待中的一个 human 项及其全部真实成员候选；不替人签署，也不修改目标或等待。
+   * 返回 canonical 摘要供同批文件校验复用。调用者须在落盘前复核日志、知识和派发屏障，不能把预览当作许可。
+   */
+  async validateHumanCandidates(state:DispatchState,scope:DispatchScope,criterionId:string){
+    const graph=this.graph(state,scope),goal=scope.goal,review=goal?.review,wait=scope.wait,plan=goal?.plan;
+    check(scope.status==='waiting'&&goal&&!goal.blocked&&plan&&review?.decision==='awaiting_user'&&wait&&wait.runId===review.runId&&wait.goalRevision===goal.revision&&review.revision===goal.revision&&review.planRevision===plan.revision&&!goalNeedsReplan(goal)&&goalInputRevision(review)===goalInputRevision(goal),'HUMAN_NOT_WAITING','人工决定只接受当前安全等待的目标及审阅');
+    const criterion=plan.criteria.find(item=>item.id===criterionId),item=review.checks.find(item=>item.criterionId===criterionId);
+    check(criterion?.kind==='human'&&item&&item.evidence.length&&item.evidence.every(reference=>reference.kind==='member-result'),'HUMAN_SOURCE_INVALID','请选择含真实成员候选的人工验收项；本步不接主知识治理证据');
+    check(!graph.tasks.some(task=>task.scopeId===scope.scopeId&&(task.activeRunId||['planned','queued','running','waiting','checkpointed'].includes(task.status)))&&!state.runs?.some(run=>run.binding.rootSessionId===scope.rootSessionId&&['starting','running'].includes(run.status))&&!state.members.some(member=>member.executionScopeId===scope.scopeId&&(member.activeRunId||member.activeTaskId||member.activity!=='idle'||member.waitingTaskIds.length||member.communicatingMessageIds.length)),'HUMAN_NOT_WAITING','当前周期仍有活动或待执行工作，不能保存人工决定');
+    const snapshot=await this.owner.read();
+    check(snapshot.revision===review.knowledgeRevision&&snapshot.revision===wait.knowledgeRevision&&snapshot.revision===plan.knowledgeRevision,'HUMAN_KNOWLEDGE_CHANGED','人工验收依据的知识版本已变化，需要重新安排核实');
+    const main=await this.logs().inspectMain(scope.rootSessionId,review.runId);this.main(state,main,scope,graph,review.runId);
+    const head=main.events[0],tail=main.events.at(-1),bounds=main.events.filter(event=>event.type==='session.bound'),facts=executionToolFacts(main,{binding:{workspaceId:scope.workspaceId,taskId:scope.rootSessionId,runId:review.runId}});
+    check(main.status==='completed'&&main.logIntegrity?.partialTail===false&&!main.unresolvedTools.length&&head?.type==='run.started'&&sameGoalValue(head.data.task,main.task)&&sameGoalValue(head.data.conversationBinding,main.conversationBinding)&&!head.data.memberBinding&&tail?.type==='run.settled'&&tail.data.status==='completed'&&main.events.every((event,index)=>event.seq===index+1&&event.workspaceId===scope.workspaceId&&event.taskId===scope.rootSessionId&&event.runId===review.runId)&&!!main.sessionFile&&bounds.length&&bounds.every(event=>event.data.sessionFile===main.sessionFile&&typeof event.data.sessionId==='string'&&!!event.data.sessionId&&event.data.sessionId===bounds[0].data.sessionId)&&!facts.invalid&&!facts.counts.unknown&&!facts.counts.not_authorized,'HUMAN_EVIDENCE_INVALID','主审阅日志或原生通道登记不完整，不能据此保存人工决定');
+    check(sameGoalValue(wait.graphCursor,review.graphCursor)&&sameGoalValue(review.graphCursor,cursor(graph))&&lastEffect(main)===review.lastEffectSeq&&review.observedSeq<tail.seq,'HUMAN_STALE','等待后的任务图、主审阅或副作用依据发生变化');
+    const selected=new Map<string,{task:TaskNode;run:DispatchRun;summary:RunSummary;evidenceToolCallIds:string[]}>();
+    for(const reference of item.evidence){
+      check(reference.kind==='member-result','HUMAN_SOURCE_INVALID','人工验收只支持成员结果');
+      const task=graph.tasks.find(task=>task.taskId===reference.taskId),result=task?.result;
+      check(task&&result&&result.runId===reference.runId&&result.resultId===reference.resultId&&result.planRevision===reference.planRevision&&reference.toolCallIds.length&&reference.toolCallIds.every(id=>result.evidenceRefs.includes(id))&&plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&sameSet(assignment.moduleIds,task.modules.map(module=>module.moduleId))&&assignment.criterionIds.includes(criterionId)),'HUMAN_SOURCE_INVALID','候选、证据或模块分工不属于此人工验收项');
+      let candidate=selected.get(task.taskId);
+      if(!candidate){const summary=await this.validateMemberCandidate(state,scope,graph,task,snapshot.revision),run=state.runs!.find(run=>run.binding.runId===result.runId&&run.binding.taskId===task.taskId)!;candidate={task,run,summary,evidenceToolCallIds:[]};selected.set(task.taskId,candidate)}
+      for(const id of reference.toolCallIds){this.receipt(candidate.summary,id);if(!candidate.evidenceToolCallIds.includes(id))candidate.evidenceToolCallIds.push(id)}
+    }
+    check(selected.size<=16,'HUMAN_LIMIT','单项人工决定最多核实 16 个成员候选');
+    check((await this.owner.read()).revision===snapshot.revision,'HUMAN_KNOWLEDGE_CHANGED','人工验收依据读取期间知识版本发生变化');
+    return {graph,criterion:{...criterion,kind:'human' as const},main,knowledgeRevision:snapshot.revision,candidates:[...selected.values()].sort((a,b)=>a.task.taskId<b.task.taskId?-1:1)};
   }
   /** 换边前核验完整执行来源；只有无通道且无工具事实的明确启动失败可省略原生绑定。 */
   private memberTerminal(scope:DispatchScope,task:TaskNode,run:DispatchRun,summary:RunSummary){

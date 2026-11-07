@@ -1,6 +1,6 @@
 /**
  * 作用定位：定义一次用户任务的调度周期，与长期主会话和单次模型运行区分。
- * 设计原因：一次目标可以经历多轮调度、执行和结果回注；冻结原始输入与运行间软限额，以 waiting 安全等待。异常核实和正式重规划各建立新周期，旧周期保持关闭，不能续接损坏执行链。
+ * 设计原因：一次目标可以经历多轮调度、执行和结果回注；冻结原始输入与运行间软限额，以 waiting 安全等待。人工决定独立追加，不消费等待；异常核实和正式重规划各建新周期，旧周期不能续接损坏执行链。
  */
 import type {DispatchScopeGoal} from './scope-goal';
 import type {DispatchScopeWait,ScopeContinuation} from './scope-continuation';
@@ -8,6 +8,7 @@ import type {ScopeRecovery} from './scope-recovery';
 import type {ScopeReplan} from './scope-replan';
 import type {ScopeRunTracking} from './scope-run-tracking';
 import type {ScopeBudget} from './scope-budget';
+import type {ScopeHumanDecisions} from './human-decisions';
 export {dispatchScopeWaitSchema} from './scope-continuation';
 export type {DispatchScopeWait} from './scope-continuation';
 export {dispatchScopeGoalSchema,dispatchScopeInputSchema} from './scope-goal';
@@ -27,6 +28,8 @@ export interface DispatchScope {
   runTracking?:ScopeRunTracking;
   /** 创建时冻结运行间软限额；legacy 缺省不补造，拒绝记录不替代目标阻塞或人工验收。 */
   budget?:ScopeBudget;
+  /** 本机显式选择的有界追加历史；不改变 goal/review，不消费等待，不代表整个目标已验收。 */
+  humanDecisions?:ScopeHumanDecisions;
   /** waiting 必有；显式补充原样移入 continuations，取消关闭仍原样保留；不等于模型可自动恢复。 */
   wait?:DispatchScopeWait;
   /** 仅可信用户继续入口追加，含已消费旧 wait 和真实启动 ID；原始 input 永不覆盖，旧历史缺省。 */

@@ -37,7 +37,7 @@ export interface ApplicationServices {
   list(): Promise<Omit<CatalogData, 'entries'> & {warning: string; entries: WorkspaceView[]}>;
   workspace(id: string): Workspace;
   execution(id: string): WorkspaceExecutionManager;
-  /** 取得已装配的工作区成员图服务；未就绪则拒绝，不隐式启动大脑或改变知识写权限。 */
+  /** 取得已装配的工作区成员图及人工决定服务；未就绪则拒绝，人工记录不隐式启动大脑或改变权限。 */
   memberDispatch(id:string):WorkspaceDispatchService;
   /** 只接收已派发任务的可信执行命令，成员会话与模型快照由后端绑定。 */
   memberExecution(id:string):MemberExecutionManager;

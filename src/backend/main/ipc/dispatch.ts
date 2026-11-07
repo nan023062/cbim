@@ -1,6 +1,6 @@
 /**
  * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
- * 设计原因：通过 ApplicationServices 隔离实现；周期计量和文件基线只按明确身份读取，文件复核还需指定基线，不启动模型。设置只影响未来周期，补充、核实和业务重规划保持明确受理边界。
+ * 设计原因：通过 ApplicationServices 隔离实现；显式人工保存仅在受控桌面路由注入本机提交标记，不冒充登录身份或启动模型。计量/文件读取与补充、新周期运行各自保持明确身份和受理边界。
  */
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
@@ -41,6 +41,11 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'dispatch.executionReport':return app.memberExecution(args.workspaceId).report(args);
     case 'dispatch.artifactReport':return app.memberExecution(args.workspaceId).artifactReport(args);
     case 'dispatch.replans.preview':return app.memberDispatch(args.workspaceId).replans.preview(args);
+    case 'dispatch.humanPreview':return app.memberDispatch(args.workspaceId).humanDecisions.preview(args);
+    case 'dispatch.humanReceipt':return app.memberDispatch(args.workspaceId).humanDecisions.inspect(args);
+    case 'dispatch.humanHistory':return app.memberDispatch(args.workspaceId).humanDecisions.history(args);
+    // 发送窗口/主 Frame 已由 Electron 接入核验。标记只代表本机明确提交，不宣称认证账号；模型工具表没有此入口。
+    case 'dispatch.humanDecide':if(app.isStopping)fail('SHUTTING_DOWN','CBIM 正在退出，未保存新的人工决定');return app.memberDispatch(args.workspaceId).humanDecisions.decide(args,{kind:'local_desktop',interaction:'explicit_submit'});
     case 'dispatch.executionEvents':return app.memberExecution(args.workspaceId).events(args);
     case 'dispatch.messages':return app.memberExecution(args.workspaceId).messages(args);
     case 'dispatch.acknowledge':return app.memberExecution(args.workspaceId).acknowledge(args);

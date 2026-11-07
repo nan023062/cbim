@@ -19,6 +19,7 @@ import {ScopeGoalService,type ScopeGoalPorts} from './scope-goal-service';
 import {ScopeContinuationService} from './scope-continuation-service';
 import {ScopeRecoveryService} from './scope-recovery-service';
 import {ScopeReplanService} from './scope-replan-service';
+import {ScopeHumanDecisionService,type HumanDecisionPorts} from './scope-human-decision-service';
 import {QueuedTaskCancelService} from './queued-task-cancel-service';
 import {QueuedDependencyReplacementService} from './queued-dependency-replacement-service';
 import type {ReplaceQueuedDependencyInput,ReplaceQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-replacement';
@@ -49,19 +50,22 @@ export class WorkspaceDispatchService {
   readonly recoveries:ScopeRecoveryService;
   /** 独立业务新周期；来源必须是完整完成的只读核实，不放宽 recoveries 的只读边界。 */
   readonly replans:ScopeReplanService;
+  /** 本机显式人工决定只追加等待周期记录，不消费等待、修改候选或授予运行许可。 */
+  readonly humanDecisions:ScopeHumanDecisionService;
   /** 指定周期的按需统计；复用 canonical 日志端口，不影响运行许可或修复历史。 */
   readonly usage:ScopeUsageService;
   /** 运行间软限额门禁；证明与归属同事务，公开统计不能代替本入口。 */
   readonly budgets:ScopeBudgetService;
   private readonly queuedCancellation:QueuedTaskCancelService;
   private readonly queuedDependencyReplacement:QueuedDependencyReplacementService;
-  constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts,budgetPolicy?:()=>ScopeBudgetPolicy){
+  constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts,budgetPolicy?:()=>ScopeBudgetPolicy,humanPorts?:HumanDecisionPorts){
     this.goals=new ScopeGoalService(owner,store,goalPorts);
     this.usage=new ScopeUsageService(owner,store,goalPorts);
     this.budgets=new ScopeBudgetService(this.usage,budgetPolicy);
     this.continuations=new ScopeContinuationService(owner,store,this.budgets);
     this.recoveries=new ScopeRecoveryService(owner,store,goalPorts,this.budgets);
     this.replans=new ScopeReplanService(owner,store,this.goals,goalPorts,this.budgets);
+    this.humanDecisions=new ScopeHumanDecisionService(owner,store,this.goals,goalPorts,humanPorts,()=>this.check(owner.entry.id));
     this.queuedCancellation=new QueuedTaskCancelService(owner,store);
     this.queuedDependencyReplacement=new QueuedDependencyReplacementService(owner,store,this.goals);
   }

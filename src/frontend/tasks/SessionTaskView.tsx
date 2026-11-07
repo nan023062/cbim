@@ -16,6 +16,7 @@ import type {ScopeGoalState} from './scope-state';
 import type {ScopeContinuationView} from './useScopeContinuation';
 import type {ExecutionRecoveryContext} from './useExecutionRecovery';
 import type {ScopeReplanView} from './useScopeReplan';
+import type {HumanDecisionsView} from './useHumanDecisions';
 import './task-graph.css';
 
 /** 只接收当前工作区、当前会话的记录；草稿会话没有 taskId，因此没有运行历史。 */
@@ -46,6 +47,8 @@ export interface SessionTaskViewProps {
   continuation?:ScopeContinuationView;
   /** 与主对话共享正式业务新目标草稿和稳定请求；不会在任务根另外启动预览或模型。 */
   replan?:ScopeReplanView;
+  /** 当前人工项的持久草稿与决定共享主对话控制器；保存不启动调度。 */
+  humanDecisions?:HumanDecisionsView;
   /** 从历史报告新建只读核实周期；模型与真实开放周期来自主会话，历史选择不改变两者。 */
   recovery?:ExecutionRecoveryContext;
   /** 隐藏的会话仍保留节点选择，但其成员详情降低同步频率。 */
@@ -57,7 +60,7 @@ export interface SessionTaskViewProps {
 }
 
 /** 主根详情保留调度与知识治理的对话轮次、计划和停止入口；业务执行详情仅由任务节点展开。 */
-function RootTaskDetail({history,pending,now,busy,onQueueChange,onQueueContinue,onStop,graph,scopeState,continuation,replan,historyIssueCount=0}:Pick<SessionTaskViewProps,'now'|'busy'|'onQueueChange'|'onQueueContinue'|'onStop'|'graph'|'scopeState'|'continuation'|'replan'|'historyIssueCount'>&{history:RunSummary[];pending:QueuedMessage[]}){
+function RootTaskDetail({history,pending,now,busy,onQueueChange,onQueueContinue,onStop,graph,scopeState,continuation,replan,humanDecisions,historyIssueCount=0}:Pick<SessionTaskViewProps,'now'|'busy'|'onQueueChange'|'onQueueContinue'|'onStop'|'graph'|'scopeState'|'continuation'|'replan'|'humanDecisions'|'historyIssueCount'>&{history:RunSummary[];pending:QueuedMessage[]}){
   // 旧局部运行计划没有 scope 归属，不能借历史目标选择把它冒充所选周期的目标计划。
   const progress=scopeState?.selectedScopeId?undefined:history.at(-1)?.taskProgress;
   // 身份来自后端保存的绑定；旧日志无该字段时明确未知，不用角色名补造通道。
@@ -67,7 +70,7 @@ function RootTaskDetail({history,pending,now,busy,onQueueChange,onQueueContinue,
   const openScope=scopeState?.openScope,waiting=openScope?.status==='waiting';
   return <div className="root-task-detail" aria-label="主 Agent 调度详情" data-testid="root-task-detail">
     <h3>主 Agent</h3><p>已读 {history.length} 轮记录{historyIssueCount?` · ${historyIssueCount} 轮待核实`:''} · {pending.length} 条待执行</p>
-    {scopeState&&<ScopeGoalPanel state={scopeState} testId="dispatch-root-goal" continuation={continuation} replan={replan}/>}
+    {scopeState&&<ScopeGoalPanel state={scopeState} testId="dispatch-root-goal" continuation={continuation} replan={replan} humanDecisions={humanDecisions}/>}
     {openScope&&<div>{scopeState!.selectedScopeId!==openScope.scopeId&&<p>{waiting?'当前另有待补充任务：':'当前另有任务运行：'}{openScope.objective??openScope.inputPreview??'当前周期'}</p>}<button data-testid="scope-stop" disabled={busy} onClick={onStop}>{waiting?'取消当前任务':scopeState!.selectedScopeId===openScope.scopeId?'停止当前任务':'停止正在运行的任务'}</button></div>}
     <details className="member-scope" open><summary>主会话实例与通道</summary>
       {instance?<p>主 Agent 实例 <code>{instance}</code></p>:<p>历史记录未保存主 Agent 实例绑定。</p>}
@@ -103,7 +106,7 @@ export function SessionTaskView(props:SessionTaskViewProps){
     {!root?<div className="task-graph-draft"><h3>尚未开始会话</h3><p>发送第一条消息后，这里显示主 Agent；派发成员任务后显示团队任务流程。</p><button onClick={onChat}>开始对话</button></div>:<div className={'session-graph-layout'+(hasDetail?' with-detail':'')}>
       <DispatchGraph key={workspaceId+':'+taskId} graph={matching} root={root} selectedTaskId={selected} onSelectTask={select} highlightedScopeId={scopeState?.selectedScopeId}/>
       {hasDetail&&<aside className="session-graph-detail" aria-label={rootSelected?'主 Agent 详情':'成员任务详情'} data-testid="session-graph-detail"><header><strong>{rootSelected?'主会话调度':'成员任务'}</strong><button onClick={()=>select(undefined)} aria-label="关闭详情，返回流程图">返回流程图</button></header>
-        {rootSelected?<RootTaskDetail history={history} pending={pending} now={now} busy={busy} onQueueChange={onQueueChange} onQueueContinue={onQueueContinue} onStop={onStop} graph={matching} scopeState={scopeState} continuation={props.continuation} replan={props.replan} historyIssueCount={props.historyIssueCount}/>:selectedTask&&taskId&&<MemberTaskDetail active={props.active} key={workspaceId+':'+taskId+':'+selectedTask.taskId} workspaceId={workspaceId} rootSessionId={taskId} task={selectedTask} graphCursor={matching?.cursor} scope={scopeState?.scopes.find(scope=>scope.scopeId===selectedTask.scopeId)} recovery={props.recovery}/>}
+        {rootSelected?<RootTaskDetail history={history} pending={pending} now={now} busy={busy} onQueueChange={onQueueChange} onQueueContinue={onQueueContinue} onStop={onStop} graph={matching} scopeState={scopeState} continuation={props.continuation} replan={props.replan} humanDecisions={props.humanDecisions} historyIssueCount={props.historyIssueCount}/>:selectedTask&&taskId&&<MemberTaskDetail active={props.active} key={workspaceId+':'+taskId+':'+selectedTask.taskId} workspaceId={workspaceId} rootSessionId={taskId} task={selectedTask} graphCursor={matching?.cursor} scope={scopeState?.scopes.find(scope=>scope.scopeId===selectedTask.scopeId)} recovery={props.recovery}/>}
       </aside>}
     </div>}
   </div>;

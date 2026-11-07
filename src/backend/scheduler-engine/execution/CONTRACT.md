@@ -1,3 +1,13 @@
+### 安全等待中的本机人工决定
+
+`WorkspaceDispatchService.humanDecisions` 提供 `ScopeHumanDecisionService.preview / decide / inspect / history`。只有当前 waiting 周期中含真实成员结果的 human 验收项可提交；`ScopeGoalService.validateHumanCandidates` 重读主审阅及整项成员候选，核对完整 canonical、原生通道登记、真实交付、角色/模块分工和当前知识。缺失、截断、矛盾或未决工具事实不能补签。只读文件报告的 matches 不是授权依据。
+
+预览不默认选择基线；明确选择后才取得短期业务读占用。所有候选的文件合并为一次有界读取（最多 16 个、单文件 8 MiB、总计 32 MiB），不逐候选重置上限。接受要求整项全部候选有同轮有效采集记录、成功回执和完全匹配的文件；拒绝/补证可没有选择或保留 changed/missing 观察，但不能借坏日志伪造候选。成功命令的影响范围不可枚举时保留限制，不与真实 unknown 工具结果混淆；决定不证明整个工作区或全部副作用已核实。
+
+`decide` 只接可信桌面注入的 `local_desktop / explicit_submit` 标记，不冒称认证账号。事务中重新生成依据，核对内容 basis 与独立决定 revision，只追加本周期 `humanDecisions`；同命令同内容返回原回执、不重读文件，相同人工项和依据的新决定只关联上条记录，历史不删。日志/知识前后复核不构成与外部文件系统的原子快照。关闭或工作区退役期间的迟到读取不能继续提交；只读占用始终释放，不领取模型名额。
+
+保存和查询均不改 goal、wait、图、成员、信封、权限或运行清单，不继续用户队列，不调用模型。已有 human satisfied 与目标完成门禁仍保持；“决定已记录”不等于目标已完成。显式按决定继续和返工留待独立步骤。
+
 ### 成员文件基线与独立只读报告
 
 `loop-engine` 只向可信成员注入 `ArtifactCapturePort`，并将 `cbim_task_artifact_capture` 描述为 maintenance 工具，复用真实 gate/receipt 链。主调度没有该能力。知识复核每次重新核对已冻结执行上下文，不因成员持有业务读/写占用而假定知识不变。

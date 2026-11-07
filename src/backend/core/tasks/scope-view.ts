@@ -1,7 +1,7 @@
 /**
  * 作用定位：定义主会话调度周期的公开摘要、选中详情和独立增量投影，供存储与界面共享。
  * 设计原因：目标计划与审阅不能推进用于证据校验的任务图游标；列表只传摘要，完整输入仅在选中周期变化时传输。
- * 职责边界：只投影已提交事实，不创建周期或推断验收；预算摘要只传策略与拒绝，证明留在详情。新周期不泄露原生上下文隔离清单，旧记录不补造 goal 或额度。
+ * 职责边界：只投影已提交事实，不创建周期或推断验收；人工决定摘要只传版本与条数，完整历史随选中详情同步。新周期不泄露原生上下文隔离清单，旧记录不补造 goal 或额度。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
@@ -19,7 +19,8 @@ const scopeCursor=graphCursor.extend({kind:z.literal('scopes')}).strict();
 const detailStamp=z.object({scopeId:id,streamId:id,seq:seq.min(1)}).strict();
 const outcome=z.enum(['completed','failed','cancelled','interrupted']);
 const waitSummary=z.object({waitId:id,reason:z.string().max(240),goalRevision:seq.min(1),createdAt:z.string()}).strict();
-const summary=z.object({scopeId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string(),closedAt:z.string().optional(),outcome:outcome.optional(),hasGoal:z.boolean(),goalRevision:seq.min(1).optional(),inputRevision:seq.min(1).optional(),needsReplan:z.boolean().optional(),inputPreview:z.string().max(240).optional(),objective:z.string().max(240).optional(),hasPlan:z.boolean(),reviewDecision:z.enum(['complete','replan','blocked','awaiting_user']).optional(),blockedReason:z.string().max(240).optional(),budget:scopeBudgetSummarySchema.optional(),wait:waitSummary.optional(),readOnly:z.literal(true).optional(),origin:z.enum(['inspection','business_replan']).optional(),stamp:detailStamp}).strict();
+const humanSummary=z.object({revision:seq.min(1).max(64),count:seq.min(1).max(64),lastDecisionAt:z.string().datetime()}).strict().refine(value=>value.revision===value.count);
+const summary=z.object({scopeId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string(),closedAt:z.string().optional(),outcome:outcome.optional(),hasGoal:z.boolean(),goalRevision:seq.min(1).optional(),inputRevision:seq.min(1).optional(),needsReplan:z.boolean().optional(),inputPreview:z.string().max(240).optional(),objective:z.string().max(240).optional(),hasPlan:z.boolean(),reviewDecision:z.enum(['complete','replan','blocked','awaiting_user']).optional(),blockedReason:z.string().max(240).optional(),budget:scopeBudgetSummarySchema.optional(),humanDecisions:humanSummary.optional(),wait:waitSummary.optional(),readOnly:z.literal(true).optional(),origin:z.enum(['inspection','business_replan']).optional(),stamp:detailStamp}).strict();
 
 /** 只读请求的身份及选择均显式传入；游标和 stamp 是缓存证明，不授予跨会话读取权。 */
 export const dispatchSessionReadInput=z.object({identity:graphIdentityInput,graphCursor:graphCursor.optional(),scopeCursor:scopeCursor.optional(),selectedScopeId:id.optional(),detailStamp:detailStamp.optional(),limit:seq.min(1).max(500).optional()}).strict();
@@ -57,7 +58,7 @@ export function summarizeScope(scope:DispatchScope,streamId:string,seq:number):S
   return {scopeId:scope.scopeId,status:scope.status,createdAt:scope.createdAt,...(scope.closedAt?{closedAt:scope.closedAt}:{}),...(scope.outcome?{outcome:scope.outcome}:{}),hasGoal:!!goal,hasPlan:!!goal?.plan,
     ...(goal?{goalRevision:goal.revision,inputRevision:goalInputRevision(goal),needsReplan:goalNeedsReplan(goal),inputPreview:preview(goal.input.message)}:{}),
     ...(goal?.plan?{objective:preview(goal.plan.objective)}:{}),...(goal?.review?{reviewDecision:goal.review.decision}:{}),...(scope.recovery?{readOnly:true as const,origin:'inspection' as const}:scope.replan?{origin:'business_replan' as const}:{}),
-    ...(goal?.blocked?{blockedReason:preview(goal.blocked.reason)}:{}),...(scope.budget?{budget:{policy:structuredClone(scope.budget.policy),...(scope.budget.blocked?{blocked:structuredClone(scope.budget.blocked)}:{})}}:{}),...(scope.wait?{wait:{waitId:scope.wait.waitId,reason:preview(scope.wait.reason),goalRevision:scope.wait.goalRevision,createdAt:scope.wait.createdAt}}:{}),stamp:{scopeId:scope.scopeId,streamId,seq}};
+    ...(goal?.blocked?{blockedReason:preview(goal.blocked.reason)}:{}),...(scope.budget?{budget:{policy:structuredClone(scope.budget.policy),...(scope.budget.blocked?{blocked:structuredClone(scope.budget.blocked)}:{})}}:{}),...(scope.humanDecisions?{humanDecisions:{revision:scope.humanDecisions.revision,count:scope.humanDecisions.records.length,lastDecisionAt:scope.humanDecisions.records.at(-1)!.recordedAt}}:{}),...(scope.wait?{wait:{waitId:scope.wait.waitId,reason:preview(scope.wait.reason),goalRevision:scope.wait.goalRevision,createdAt:scope.wait.createdAt}}:{}),stamp:{scopeId:scope.scopeId,streamId,seq}};
 }
 function validateSummaries(scopes:ScopeSummary[],cursor:Pick<ScopeCursor,'streamId'|'seq'>,batch=false){
   valid(Array.isArray(scopes)&&new Set(scopes.map(item=>item?.scopeId)).size===scopes.length,'周期摘要标识重复或集合无效');
@@ -120,5 +121,5 @@ export function readScopeDetail(snapshot:ScopeSnapshot,scopes:readonly DispatchS
   if(stamp&&sameGoalValue(stamp,selected.stamp))return {mode:'noop',stamp:selected.stamp};
   const scope=scopes.find(item=>item.scopeId===selected.scopeId&&item.workspaceId===snapshot.identity.workspaceId&&item.rootSessionId===snapshot.identity.rootSessionId);
   valid(scope,'周期详情与摘要不一致');
-  return {mode:'updated',stamp:selected.stamp,scope:{scopeId:scope.scopeId,workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,status:scope.status,createdAt:scope.createdAt,...(scope.goal?{goal:structuredClone(scope.goal)}:{}),...(scope.budget?{budget:structuredClone(scope.budget)}:{}),...(scope.wait?{wait:structuredClone(scope.wait)}:{}),...(scope.continuations?{continuations:structuredClone(scope.continuations)}:{}),...(scope.closedAt?{closedAt:scope.closedAt}:{}),...(scope.outcome?{outcome:scope.outcome}:{})}};
+  return {mode:'updated',stamp:selected.stamp,scope:{scopeId:scope.scopeId,workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,status:scope.status,createdAt:scope.createdAt,...(scope.goal?{goal:structuredClone(scope.goal)}:{}),...(scope.budget?{budget:structuredClone(scope.budget)}:{}),...(scope.humanDecisions?{humanDecisions:structuredClone(scope.humanDecisions)}:{}),...(scope.wait?{wait:structuredClone(scope.wait)}:{}),...(scope.continuations?{continuations:structuredClone(scope.continuations)}:{}),...(scope.closedAt?{closedAt:scope.closedAt}:{}),...(scope.outcome?{outcome:scope.outcome}:{})}};
 }

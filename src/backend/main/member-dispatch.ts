@@ -1,6 +1,6 @@
 /**
  * 作用定位：为已运行工作区装配成员派发、大脑执行及目标审阅的可信日志读取端口。
- * 设计原因：派发、审阅及周期额度共用可信日志；检查点结算和续执行准备共用完整日志/文件/知识/原生指纹复核。领取先核限额与并发，等待不消费检查点，密钥留在工厂闭包；显式报告不启动成员。
+ * 设计原因：派发、审阅及周期额度共用可信日志；人工决定复用有界文件读取和本机只读占用。检查点结算和续执行共用完整证明；密钥留在工厂闭包，人工保存和显式报告均不启动成员。
  */
 import path from 'node:path';
 import type {Workspace} from './workspace/workspace';
@@ -55,7 +55,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
     const summary=await storage.read(path.join(workspace.paths.project(workspace.entry.id),'loop-engine','tasks',safeId(rootSessionId),safeId(runId)));
     if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path||summary.task.taskId!==rootSessionId||summary.runId!==runId||summary.task.agentId!=='cbim:main')throw Error('主调度证据不属于当前会话或运行');
     return summary;
-  }},budgetPolicy);
+  }},budgetPolicy,{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),acquireRead:()=>{workspace.assert();return lease.acquire('human-decision:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('HUMAN_UNAVAILABLE','工作区正在停止，未保存新的人工决定')}});
   const members=new MemberExecutionManager(workspace,store,{
     artifacts:{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),acquireRead:()=>{workspace.assert();return lease.acquire('artifact-report:'+randomUUID(),'read')}},
     checkpoints:{nativeFingerprint:(session,signal)=>nativeFiles.read(session,signal)},

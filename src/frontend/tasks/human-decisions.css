@@ -1,0 +1,10 @@
+/**
+ * 作用定位：人工决定预览、选择与历史的目标卡排版。
+ * 设计原因：沿用主题与可换行的来源引用；移动端选择卡纵向排列，决定按钮与明确提交分离，避免选择即发送。
+ */
+.human-decisions{border-top:1px solid var(--line);padding-top:14px;margin-top:14px;min-width:0;overflow-wrap:anywhere}
+.human-decisions header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.human-decisions header>span,.human-muted,.human-decisions small,.human-decisions time{color:var(--muted);font-size:11px}.human-warning{color:var(--warning)}
+.human-field{display:flex;flex-direction:column;gap:5px;margin:10px 0}.human-field select,.human-field textarea{width:100%;min-width:0;max-width:100%;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text);padding:8px;font:inherit}.human-field textarea{min-height:76px;resize:vertical}.human-decisions button{font-size:12px}.human-decisions button:disabled{opacity:.5;cursor:default}
+.human-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:13px}.human-options button{display:flex;flex-direction:column;text-align:left;gap:6px;white-space:normal;line-height:1.5;padding:9px;border:1px solid var(--line);border-radius:7px;background:transparent;color:var(--text)}.human-options button[aria-pressed=true]{border-color:var(--text);background:var(--surface)}.human-options span{font-size:11px;color:var(--muted)}
+.human-candidates article,.human-history article{border:1px solid var(--line);border-radius:7px;padding:10px;margin-top:10px;min-width:0}.human-decisions code{font-size:10px;overflow-wrap:anywhere}.human-candidates ul{padding-left:18px}.human-candidates li{margin:5px 0}.human-candidates li span{color:var(--muted)}.human-limitations{color:var(--muted);margin:10px 0;padding-left:9px;border-left:2px solid var(--line)}.human-history{margin-top:14px}.human-decisions summary{cursor:pointer;color:var(--muted)}.human-history time{display:block;margin-top:4px}.human-history p,.human-request-state p{white-space:pre-wrap}.human-request-state button+button{margin-left:7px}
+@media(max-width:600px){.human-options{grid-template-columns:1fr}.human-options button{padding:10px}.human-field select{font-size:12px}}

@@ -1,6 +1,6 @@
 /**
  * 作用定位：向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。
- * 设计原因：先声明实际能力再消费运行授权；领域执行一次，业务输出按唯一 JSON 快照校验，不因返回异常重放事务。提交输入与原事务观察共用解析定义，保持实际参数顺序和旧 strip 行为。
+ * 设计原因：先声明实际能力和契约版本再消费运行授权；领域执行一次，业务输出按唯一 JSON 快照校验，不因返回异常重放事务。提交/刷新与原事务观察共用输入解析，保持实际参数顺序和旧 strip 行为。
  */
 import {z} from 'zod';
 import {ToolRegistry,type ToolDefinition} from '../../core/tools/registry';
@@ -13,7 +13,7 @@ import type {ToolEffect} from '../../core/tools/types';
 import {knowledgeToolContract} from './knowledge-contracts';
 import {context as snapshotContext} from '../../core/knowledge/snapshot';
 import {defaultExecutorId,defaultExecutorDefinition,defaultExecutorConfiguration} from '../context/default-executor';
-import {knowledgeCommitInputSchema,knowledgeObjectCommitInputSchema} from '../../core/knowledge/knowledge-write-input';
+import {knowledgeCommitInputSchema,knowledgeObjectCommitInputSchema,knowledgeRefreshInputSchema} from '../../core/knowledge/knowledge-write-input';
 const identity={workspaceId:z.string(),instanceId:z.string()};
 export class KnowledgeTools {
   private readonly registry=new ToolRegistry<boolean>();
@@ -22,7 +22,7 @@ export class KnowledgeTools {
     const builtins=new Builtins(workspace.rules.designRoot);
     const queries=this.queries=new KnowledgeQueries(workspace);
     const objects=new ObjectCrud(workspace);
-    const register=(name:string,config:{description?:string;inputSchema:z.ZodRawShape;effects?:readonly ToolEffect[]},execute:ToolDefinition<boolean>['execute'])=>{this.registry.register({name,version:1,effects:['read'],...config,...knowledgeToolContract(name),execute})};
+    const register=(name:string,config:{version?:number;description?:string;inputSchema:z.ZodRawShape;effects?:readonly ToolEffect[]},execute:ToolDefinition<boolean>['execute'])=>{this.registry.register({name,version:1,effects:['read'],...config,...knowledgeToolContract(name),execute})};
     const wrap=(fn:(args:any,write:boolean)=>Promise<unknown>|unknown)=>async(args:any,write:boolean)=>{
       return await fn(args,write);
     };
@@ -43,7 +43,7 @@ export class KnowledgeTools {
       const snapshot=await workspace.snapshot(),agent=defaultExecutorConfiguration(snapshot);
       return {...snapshotContext(snapshot),id:defaultExecutorId,source:'builtin',definition:{...defaultExecutorDefinition},principles:{available:true,text:agent.principles},skillChain:[agent.teamId],skillConflicts:[],skillSelectionValid:true,skills:agent.effectiveSkills.map(skill=>({id:skill.skillId,owner:skill.ownerId,inherited:true,content:{available:true,text:skill.content}}))};
     }));
-    register('cbim_knowledge_refresh',{effects:['knowledge-write'],description:'重新校验当前知识并刷新派生注册表；所有知识修改必须通过 CBIM 知识服务。需取得本次运行的知识写入授权，全部结构校验通过才事务更新派生注册表，不修改用户正文。错误返回问题清单，改完再调用。',inputSchema:identity},wrap(()=>queries.refresh()));
+    register('cbim_knowledge_refresh',{version:2,effects:['knowledge-write'],description:'按已读取的 revision 和明确 requestId 校验知识并刷新派生索引，不修改正文。需本轮知识写入授权；同ID只查询/复用完全相同原请求，结果未知不得换ID重试。结构无效返回问题清单，修正后重新读取。',inputSchema:knowledgeRefreshInputSchema.shape},wrap(args=>queries.refresh(args)));
     register('cbim_object_preview',{effects:['preview'],description:'预览 Agent/Module/Skill/Workflow 的创建、更新或删除。创建传 parentId、slug、data、body；更新传 id 与需修改字段；删除传 id，包含子对象时需 cascade。服务规划路径、清单和父子引用，不写正式知识。返回 planId、变更及校验。',inputSchema:{...identity,revision:z.string(),operations:z.array(objectOperation).min(1).max(100)}},wrap(args=>objects.preview(args.revision,args.operations)));
     register('cbim_object_commit',{effects:['knowledge-write'],description:'提交 cbim_object_preview 返回的 planId。须取得本次运行的知识写入授权；核对原版本，事务写入知识及索引，同一计划幂等。',inputSchema:knowledgeObjectCommitInputSchema.shape},wrap((args,write)=>{if(!write)fail('FORBIDDEN','当前调用未获得知识写入权限');return objects.commit(args.planId)}));
     const changeSchema=knowledgeCommitInputSchema.shape;
@@ -60,7 +60,7 @@ export class KnowledgeTools {
   describe(name:string,input:unknown){
     const {tool,args}=this.registry.resolve(name,input);
     this.workspace.assert(name==='cbim_workspace_identity'?undefined:args as {workspaceId:string;instanceId:string});
-    return {effects:tool.effects,native:false};
+    return {effects:tool.effects,native:false,contractVersion:tool.version};
   }
   /** 由执行桥在一次性 gate 授权后调用；write 来自运行策略，不能由模型输入自行授予。 */
   async callFromRun(name:string,input:unknown,write:boolean,signal?:AbortSignal){

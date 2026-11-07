@@ -564,3 +564,7 @@ LoopRuntime ..> AgentEngine : 通过既有契约驱动
 Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，短门闩排除其它工具/审批；模型与 emit 事件不能签发许可。Main 在 Store 外取得文件句柄和可靠 before/intended-after 私有备份，单条 prepared→executing→terminal 附录由唯一 Store 保存。只有可靠 applied 返回成功；进入 executing 后的 IO/截断/进程退出均可能部分写入，不自动回滚或重发。
 
 停止先中断原进程，排空实际文件操作并确认 child 退出后才释放工作区占用。退出码不证明写成功。补偿是桌面明确提交的新命令，仅原 applied、原周期已关闭、当前同一文件仍等于原 after 才可恢复保存的 before。原日志、unknown 和原操作不改写；原命令查询先于今日配置，任何保存未知只查原记录。
+
+### 刷新原事务与契约版本
+
+可信 describeTool 可声明 contractVersion。Runtime 仅在自身授权事件记录正整数版本，不从模型参数/调用顶层或引擎 emit 读取；不可信事件中的同名字段被剔除。原日志无版本保持缺失，不回填，不影响旧回执形状或权限。该来源用于区分 v1/v2 刷新，不能被工具成功结果替代。

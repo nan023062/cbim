@@ -1,3 +1,4 @@
+import {randomUUID} from 'node:crypto';
 import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -32,8 +33,8 @@ it('刷新接口仅更新派生索引，错误保留问题与原索引，查询�
     const index=path.join(f.a,'.cbim/workspace/registry.json'),before=await fs.readFile(index,'utf8');
     for(const file of moduleFiles('game')){await fs.mkdir(path.dirname(path.join(f.a,file.path)),{recursive:true});await fs.writeFile(path.join(f.a,file.path),file.text)}
     expect((await call('cbim_module_registry')).modules).toHaveLength(1);expect(await fs.readFile(index,'utf8')).toBe(before);
-    await fs.writeFile(path.join(f.a,'.cbim/README.md'),'[bad](../../../missing.md)');expect((await call('cbim_knowledge_refresh',{},true)).state).toBe('invalid');expect(await fs.readFile(index,'utf8')).toBe(before);
-    await fs.writeFile(path.join(f.a,'.cbim/README.md'),'# Valid');expect((await call('cbim_knowledge_refresh',{},true)).state).toBe('refreshed');expect(JSON.parse(await fs.readFile(index,'utf8')).modules).toHaveLength(1);
+    await fs.writeFile(path.join(f.a,'.cbim/README.md'),'[bad](../../../missing.md)');expect((await call('cbim_knowledge_refresh',{revision:(await call('cbim_knowledge_snapshot')).revision,requestId:randomUUID()},true)).state).toBe('invalid');expect(await fs.readFile(index,'utf8')).toBe(before);
+    await fs.writeFile(path.join(f.a,'.cbim/README.md'),'# Valid');expect((await call('cbim_knowledge_refresh',{revision:(await call('cbim_knowledge_snapshot')).revision,requestId:randomUUID()},true)).state).toBe('refreshed');expect(JSON.parse(await fs.readFile(index,'utf8')).modules).toHaveLength(1);
   }finally{await f.cleanup()}
 });
 

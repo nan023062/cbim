@@ -3,7 +3,7 @@
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
  * 设计原因：工具先分类与计划门禁再审批；每轮进度绑定真实 workspace/task/run，成员专属工具另绑定完整实例。JSON 验证及交付复核各持短锁，异步读取前后核知识、计划与停止；坏回包保留事实，求助/检查点不解锁，采集/验证只随真实结束释放。
  * 插入边界：核对原 run、可信周期令牌和发送前停止信号；原生接受后返回真实日志序号，适配器不能伪造该令牌。终态等待在途记录排空，接受后的保存失败仍属未知，不自动重放。
- * 核实边界：历史 reconciledToolIds 仅保留可读；新请求不能据裸调用 ID 续接存在 unknown 的原生上下文，必须创建独立只读核实。
+ * 核实边界：历史 reconciledToolIds 仅保留可读；新请求不能据裸调用 ID 续接 unknown。授权记录中的契约版本只取可信工具描述，旧记录不补造版本。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -203,6 +203,8 @@ export class LoopRuntime {
       let controlledFile:RunControlledFile|undefined;
       const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{identity,assertDeliveryReady,artifacts:()=>artifactCapture?.refs()??[],...(validationRequired?{validations:{records:()=>validation?.records()??[],verifyCurrent:async records=>{if(!validation)fail('VALIDATION_UNAVAILABLE','本轮验证端口尚未就绪');await validation.verifyCurrent(records)}}}:{}),...(workflows.length?{workflow:{bindings:workflows,task:{goal:task.goal,acceptance:task.acceptance},identity}}:{})});
       const emit=async(event:EngineEvent,trustedArtifact=false)=>{
+        // 契约版本来自真实描述和授权；模型/引擎事件不能给旧调用补造新协议来源。
+        if(!trustedArtifact&&event.data.contractVersion!==undefined){const {contractVersion:_,...data}=event.data;event={...event,data}}
         if(event.type==='tool.allowed'&&event.data.name===controlledFileWriteToolName&&!trustedArtifact)fail('CONTROLLED_FILE_AUTHORIZATION','受控写授权只能由本轮策略可靠保存');
         if(event.type==='engine.status'&&event.data.activeInput!==undefined&&!trustedArtifact)throw Error('目标补充身份只能由可信插入端口保存');
         if(['artifact.baseline_captured','task.checkpoint_requested','validation.checked'].includes(event.type)&&!trustedArtifact)throw Error('产物、JSON 验证与检查点只能由本轮可信端口保存');
@@ -338,7 +340,7 @@ export class LoopRuntime {
               try{await taskTools.invalidate('即将执行可能改变产物的操作，需要重新验证',planVersion)}catch(error){const code=(error as {code?:string})?.code;decision={...decision,allow:false,reason:(code?.startsWith('WORKFLOW_')?code+': ':'')+(error instanceof Error?error.message:String(error))}}
             }
             calls.set(call.id,{...calls.get(call.id)!,call,decision,generation:taskTools.generation});
-            const authorization=await emit({type:decision.allow?'tool.allowed':'tool.denied',data:{...call,...decision,...(!decision.allow?{receipt:toolReceipt(identity,call,decision,'denied')}: {})}},true);
+            const authorization=await emit({type:decision.allow?'tool.allowed':'tool.denied',data:{id:call.id,name:call.name,input:call.input,...decision,...(Number.isSafeInteger(descriptor?.contractVersion)&&descriptor!.contractVersion!>0?{contractVersion:descriptor!.contractVersion}:{}),...(!decision.allow?{receipt:toolReceipt(identity,call,decision,'denied')}: {})}},true);
             if(stopping&&decision.allow){
               decision={...decision,allow:false,reason:'任务正在停止'};calls.set(call.id,{...calls.get(call.id)!,call,decision,generation:taskTools.generation});
               await emit({type:'tool.denied',data:{...call,...decision,receipt:toolReceipt(identity,call,decision,'denied')}});

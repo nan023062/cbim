@@ -28,7 +28,7 @@ it('按真实预览、提交和维护协议描述恢复，不把新ID当作未�
     expect(await recovery('cbim_knowledge_move_preview')).toMatchObject({mode:'new_preview',description:expect.stringContaining('新的 requestId')});
     expect(await recovery('cbim_knowledge_commit')).toMatchObject({mode:'same_request',keyFields:['requestId']});
     expect(await recovery('cbim_object_commit')).toMatchObject({mode:'same_plan',keyFields:['planId']});
-    expect(await recovery('cbim_knowledge_refresh')).toMatchObject({mode:'inspect_before_retry'});
+    expect(await recovery('cbim_knowledge_refresh')).toMatchObject({mode:'same_request',keyFields:['requestId']});
     expect(await recovery('cbim_rules_validate')).toMatchObject({mode:'query_task',queryTool:'cbim_task_status'});
     expect(await recovery('cbim_task_cancel')).toMatchObject({mode:'query_task',queryTool:'cbim_task_status',keyFields:['taskId']});
   }finally{await f.cleanup()}

@@ -1,3 +1,4 @@
+import {knowledgeRefreshProvider} from '../tests/knowledge-refresh-provider';
 import {_electron as electron,type ElectronApplication,type Page,type Locator} from 'playwright-core';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -15,16 +16,16 @@ import {moduleFiles,request} from '../tests/helpers';
 import {latestExecutable} from './build-artifact.mjs';
 
 // 只在隔离源码 Application 中破坏一次实际提交后的返回；最终 EXE 通过真实点击查询/处置，产品没有测试入口。
-const mode=process.argv.includes('--object')?'object':'direct',artifact='knowledge-effect-'+mode,exe=await latestExecutable();
+const mode=process.argv.includes('--refresh')?'refresh':process.argv.includes('--object')?'object':'direct',artifact='knowledge-effect-'+mode,exe=await latestExecutable();
 const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-knowledge-effect-ui-')),user=path.join(temp,'user'),project=path.join(temp,'knowledge-effect-project');await fs.mkdir(project);
-const provider=mode==='direct'?await knowledgeContractProvider('malformed-after-commit'):await knowledgeEffectObjectProvider(),callId=mode==='direct'?'contract-commit':'object-commit',expectedRequests=mode==='direct'?11:8;
+const provider=mode==='direct'?await knowledgeContractProvider('malformed-after-commit'):mode==='refresh'?await knowledgeRefreshProvider():await knowledgeEffectObjectProvider(),callId=mode==='direct'?'contract-commit':mode==='refresh'?'refresh-commit':'object-commit',expectedRequests=mode==='direct'?11:8;
 const pageErrors:string[]=[],transportErrors:string[]=[],screenshots:string[]=[];let setup:Application|undefined,desktop:ElectronApplication|undefined,page!:Page,keep=false,report:Record<string,unknown>|undefined;
 const cleanup={desktopClosed:false,providerClosed:false,tempRemoved:false};
 try{
  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();const {entry}=await seedKnowledgeContract(setup,project,provider),workspace=setup.workspace(entry.id);
- if(mode==='object')await workspace.commit(request(await workspace.snapshot(),moduleFiles()));
+ if(mode==='object')await workspace.commit(request(await workspace.snapshot(),moduleFiles()));if(mode==='refresh')for(const file of moduleFiles()){const target=path.join(project,file.path);await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,file.text)}
  let writes=0;const actual=workspace.commit.bind(workspace),planned=workspace.commitPlanned.bind(workspace);
- if(mode==='direct')workspace.commit=async input=>{const value=await actual(input);writes++;return {...value,changed:'PRIVATE_INVALID_OUTPUT_SENTINEL'} as unknown as typeof value};
+ if(mode!=='object')workspace.commit=async input=>{const value=await actual(input);writes++;return {...value,changed:'PRIVATE_INVALID_OUTPUT_SENTINEL'} as unknown as typeof value};
  else workspace.commitPlanned=async input=>{const value=await planned(input);writes++;return {...value,changed:'PRIVATE_INVALID_OUTPUT_SENTINEL'} as unknown as typeof value};
  const started=await setup.dispatch('loop.chat',{id:entry.id,message:data.goal,options:{permission:'execute',turnTimeoutMs:60000}}),identity={workspaceId:entry.id,rootSessionId:started.taskId};
  const until=async(check:()=>Promise<boolean>,label:string)=>{const end=Date.now()+90000;while(Date.now()<end){assert.deepEqual(provider.errors,[]);if(await check())return;await new Promise(resolve=>setTimeout(resolve,35))}throw Error('Knowledge effect UI timeout: '+label)};

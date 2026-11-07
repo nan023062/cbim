@@ -613,3 +613,7 @@ Store 继续用同一串行提交、原命令回执和原协议裁决，不增�
 ## 受控文件统一影响观察（Step40）
 
 受控文件的 `controlledFileLedgerSchema` 从原报告抽出为同形纯协议；影响报告可选 `controlled_file` 分支只保存原阶段/补偿序列，不含 checkedAt、备份路径或平台身份。仅原成员、workspace/business-write 授权可使用，scope/run/task/call 和补偿序列必须一致。旧报告不补字段或改变 basis，not_applied 与 absent 不混同。
+
+### 刷新原事务与契约版本
+
+effectCallObservation 的 knowledge_transaction 可表达 cbim_knowledge_refresh 的原事务。实际接受必须由 Scheduler 先核 canonical 原授权 v2 及精确空变更请求；纯 DTO 不执行查询或信任页面声明版本。旧报告不加默认字段，旧 basis 保持。

@@ -34,6 +34,7 @@ class N_src_backend_core_policy_tool_policy_ts_RunToolDescriptor["RunToolDescrip
   <<interface>>
   +effects
   +native
+  +contractVersion
   +scope
 }
 N_src_backend_core_policy_tool_policy_ts ..> N_src_backend_core_policy_tool_policy_ts_RunToolDescriptor : 声明
@@ -118,3 +119,7 @@ JSON 验证仅允许准确的 `cbim_validation_run` 名称、非原生且单一 
 ## 受控业务写权限
 
 `cbim_file_write_controlled` 只能按准确的内部 business-write 和本工作区 scope 分类。read 拒绝，ask 逐次批准，execute 仍需要正式成员工厂和 Runtime 的一次授权；主调度在上层始终拒绝业务写。native:false 不进入原 native guard，因此实际平台独立核完整路径和句柄，不能据工具名字推断沙箱。
+
+### 刷新原事务与契约版本
+
+RunToolDescriptor.contractVersion 是实际注册表的可选元数据，供 Runtime 原授权记录；不参与权限授予，缺省表示未声明，不从 input 补齐。已有 read/ask/execute、守卫与审批顺序保持。

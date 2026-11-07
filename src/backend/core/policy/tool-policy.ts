@@ -1,7 +1,7 @@
 /**
  * 受控文件边界：精确内部 business-write/workspace 能力沿同一批准策略；平台独立再次核实完整路径，不借 native:false 绕过权限。
  * 作用定位：内部 Loop 的统一工具授权策略，同时处理业务文件与正式知识写入。
- * 设计原因：权限来自可信运行配置，副作用和仓库范围来自已注册工具的捕获描述；模型参数不能提高权限或把外部资料冒充项目文件。
+ * 设计原因：权限来自可信运行配置，副作用、契约版本和仓库范围来自已注册工具的捕获描述；模型参数不能提高权限或把外部资料冒充项目文件。
  * 职责边界：原生路径检查先于人工确认；模块负责人四工具须精确匹配知识范围与效果，提交沿 read/ask/execute 门禁。JSON 验证只接受准确名称和 read 效果；未知命令范围不被描述为沙箱隔离。
  */
 import type {ChatPermission} from './types';
@@ -12,6 +12,8 @@ import {isModuleOwnershipToolName,moduleOwnershipToolEffects,moduleOwnershipTool
 
 /** 已由调度层识别和解析的调用；不接受模型自行声明 effects 或权限。 */
 export interface RunToolDescriptor {effects:readonly ToolEffect[];native:boolean;
+  /** 实际注册表的契约版本，仅供可信运行边界记录；缺省表示旧/未声明协议，不从模型参数补齐。 */
+  contractVersion?:number;
   /** 仅可信装配提供；仓库分支须绑定实际注册操作、链接器和工作区，不由模型填写。 */
   scope?:ToolScope;
 }

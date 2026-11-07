@@ -150,3 +150,7 @@ raw 输入在任何领域调用前严格校验；发送端口的对象与原期�
 ### 知识提交原输入复原
 
 cbim_knowledge_commit、知识预览与 cbim_object_commit 使用 Core 的共享输入定义。字段顺序和既有 strip 语义不变，真实执行仍由当前实例和一次性权限门禁控制；历史观察仅复原同一解析后的原请求，不能借共享 Schema 调用写入口或获得授权。
+
+### 刷新原事务与契约版本
+
+cbim_knowledge_refresh 实际注册 v2，要求 revision/requestId，恢复元数据 same_request；新调用缺字段在授权/执行前拒绝，不再内部生成随机 ID。其它知识工具保持 v1。describe 从实际条目返回 contractVersion，领域只执行一次，坏回包不重发。

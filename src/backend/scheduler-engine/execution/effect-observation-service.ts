@@ -1,7 +1,7 @@
 /**
  * 作用定位：组合原调用授权、已提交控制面、原知识事务、原治理/责任记录、受控文件阶段与当前选定文件，保存本机明确处置并派生新周期关联。
  * 设计原因：原 unknown、今天的字节和后来修复完成各自保留；取证在任务事务外，提交只做原身份/版本 CAS，不执行工具或反向等知识/模型队列。
- * 职责边界：只操作已打开工作区的唯一 Store；edit 仅接受当前数组与旧单对两种严格原形状，没有成功基线也可观察可信原路径，但不补造基线、清除 unknown 或授予续跑。
+ * 职责边界：只操作已打开工作区的唯一 Store；refresh只识别原授权中的v2契约。edit只接受当前数组与旧单对形状，不补造基线、清除unknown或授予续跑。
  */
 import {z} from 'zod';
 import {isDeepStrictEqual} from 'node:util';
@@ -92,8 +92,9 @@ export class EffectObservationService {
         if(item.persistent.state==='absent')item.limitations.push('未查到原保存记录不等于从未执行，原结果保持。');
         continue;
       }
-      if(input.subject.kind==='main_run'&&(name==='cbim_knowledge_commit'||name==='cbim_object_commit')&&fact.allowedSeq&&fact.status!=='denied'&&fact.scope.kind==='knowledge'&&fact.scope.workspaceId===input.workspaceId&&fact.effects.length===1&&fact.effects[0]==='knowledge-write'&&this.ports?.observeKnowledge){
-        const reference=originalKnowledgeWrite(name,original);
+      if(input.subject.kind==='main_run'&&(name==='cbim_knowledge_commit'||name==='cbim_object_commit'||name==='cbim_knowledge_refresh')&&fact.allowedSeq&&fact.status!=='denied'&&fact.scope.kind==='knowledge'&&fact.scope.workspaceId===input.workspaceId&&fact.effects.length===1&&fact.effects[0]==='knowledge-write'&&this.ports?.observeKnowledge){
+        const version=first.summary!.events.find(e=>e.seq===fact.allowedSeq)?.data.contractVersion;
+        const reference=originalKnowledgeWrite(name,original,typeof version==='number'?version:undefined);
         if(!reference||originalKnowledgeIdentity(reference).workspaceId!==input.workspaceId){item.limitations.push('原知识参数缺少可核实的请求或计划身份，未查询事务。');continue}
         item.coverage='knowledge_transaction';item.knowledge=await this.knowledge(reference,signal);knowledge.set(toolCallId,reference);
         item.limitations.push('仅核实原知识事务阶段，不证明今天的正文、业务验收或可安全重放。');

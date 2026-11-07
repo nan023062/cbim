@@ -1,7 +1,7 @@
 /**
  * 作用定位：定义原成员/主调用的影响观察、本机处置附录及后续周期关系的公开叶子契约。
  * 设计原因：当前文件、原知识事务、原私有记录、受控文件原阶段/补偿、原工具结果和新业务结果是不同事实；客户端只选择身份，可信服务采集依据，处置不能清除未知或授予恢复权限。领域摘要是可选扩展，旧处置不补字段。
- * 职责边界：不含原参数/正文、凭据或 native 路径；旧 recovery 协议由其自身联合分支保留，不在这里默认化。
+ * 职责边界：不含原参数/正文、凭据或 native 路径；知识刷新只有可信原v2授权可适配，旧 recovery 协议不在这里默认化。
  */
 import {z} from 'zod';
 import {artifactFileCheckSchema,artifactRelativePathSchema} from './artifact-baseline';
@@ -43,7 +43,7 @@ export const effectCallObservationSchema=z.object({
   if(v.coverage!=='selected_files_now'&&(v.file||v.baselineChecks))issue('未覆盖文件的调用不能携带字节证明');
   if(v.coverage==='control_commit_only'?!v.command:v.command!==undefined)issue('控制面核实必须与其覆盖范围一致');
   if(v.coverage==='knowledge_transaction'?!v.knowledge:v.knowledge!==undefined)issue('知识事务摘要必须与其覆盖范围一致');
-  if(v.knowledge&&(!v.toolName||!['cbim_knowledge_commit','cbim_object_commit'].includes(v.toolName)||!v.inputHash||!v.allowedSeq||v.outcome==='denied'||v.scope?.kind!=='knowledge'||v.scope.workspaceId!==v.knowledge.identity.workspaceId||v.effects?.length!==1||v.effects[0]!=='knowledge-write'))issue('知识事务必须来自原明确授权的知识提交');
+  if(v.knowledge&&(!v.toolName||!['cbim_knowledge_commit','cbim_object_commit','cbim_knowledge_refresh'].includes(v.toolName)||!v.inputHash||!v.allowedSeq||v.outcome==='denied'||v.scope?.kind!=='knowledge'||v.scope.workspaceId!==v.knowledge.identity.workspaceId||v.effects?.length!==1||v.effects[0]!=='knowledge-write'))issue('知识事务必须来自原明确授权的知识提交或v2刷新');
   if(v.coverage==='persistent_record'?!v.persistent:v.persistent!==undefined)issue('原保存记录必须与其覆盖范围一致');
   if(v.persistent){const i=v.persistent.identity;if(v.toolName!==i.toolName||v.toolCallId!==i.toolCallId||!v.inputHash||!v.allowedSeq||v.outcome==='denied'||v.scope?.kind!=='knowledge'||v.scope.workspaceId!==i.workspaceId||v.effects?.length!==1||v.effects[0]!==persistentWriteEffects[i.toolName])issue('原保存记录必须来自同一次明确授权的主调用')}
   if(v.coverage==='controlled_file'?!v.controlled:v.controlled!==undefined)issue('原受控阶段必须与覆盖范围一致');

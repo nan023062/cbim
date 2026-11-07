@@ -130,6 +130,6 @@ test('internal per-call knowledge permission cannot skip identity or revision an
     const value=await tools.callFromRun('cbim_knowledge_commit',args,true);
     expect(JSON.parse(value.content[0].text)).toMatchObject({state:'committed',workspaceId:entry.id});
     await expect(tools.callFromRun('cbim_knowledge_commit',args,false)).rejects.toThrow('知识写入权限');
-    for(const tool of tools.list()){expect(tool.version).toBe(1);expect(tool.effects?.length).toBeGreaterThan(0)}
+    for(const tool of tools.list()){expect(tool.version).toBe(tool.name==='cbim_knowledge_refresh'?2:1);expect(tool.effects?.length).toBeGreaterThan(0)}
   }finally{await f.cleanup()}
 });

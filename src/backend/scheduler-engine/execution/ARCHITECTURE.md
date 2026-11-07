@@ -2944,3 +2944,7 @@ EffectObservationService 仅从完整可信主 canonical 的原 proposed/allowed
 ## 受控文件统一影响观察（Step40）
 
 `effect-controlled-file.ts` 把既有原受控报告与可信成员完整绑定、scope、原路径、expectedBefore、UTF-8 intendedAfter 及稳定 operationId 再核对。影响服务在事务外两次读取同一原引用，原阶段或补偿变化使旧观察过期；异常保留不可核实，停止继续向外传播。仅返回无查询时钟的 ledger，不获取文件/备份、不调用预览或执行补偿。
+
+### 刷新原事务与契约版本
+
+EffectObservationService 从已核实原 allowed 事件取得 contractVersion，只有 refresh v2 才使用原输入构造 changes=[] 的知识引用，复用两次 journal 查询及稳定依据。v1、缺版本、错误版本和仅 input 自报版本均不适配，不按最近 journal 推断。原失败和 committed 分开，处置/重开不重试。

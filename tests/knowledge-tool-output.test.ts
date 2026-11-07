@@ -116,10 +116,10 @@ it('对象提交保留已提交结果和空目录清理警告，不将警告误�
 it('刷新可能未写入，也可能刷新后才发现外部知识变坏，两种诊断均有效',async()=>{
   const f=await fixture();try{
     const entry=await f.app.dispatch('add',{path:f.a}),ws=f.app.workspace(entry.id),{call}=internalKnowledge(ws),readme=path.join(f.a,'.cbim/README.md');
-    await fs.writeFile(readme,'[missing](../../../missing.md)');const invalid=accepts(knowledgeRefreshOutputSchema,await call('cbim_knowledge_refresh',{},true));expect(invalid).toMatchObject({state:'invalid',indexesUpdated:false,structural:false});
-    await fs.writeFile(readme,'# Valid');expect(accepts(knowledgeRefreshOutputSchema,await call('cbim_knowledge_refresh',{},true))).toMatchObject({state:'refreshed',indexesUpdated:true});
-    const snapshot=ws.snapshot.bind(ws);let reads=0;ws.snapshot=async()=>{if(++reads===2)await fs.writeFile(readme,'[external change](../../../missing.md)');return snapshot()};
-    try{expect(accepts(knowledgeRefreshOutputSchema,await call('cbim_knowledge_refresh',{},true))).toMatchObject({state:'invalid',indexesUpdated:true,structural:false})}finally{ws.snapshot=snapshot}
+    await fs.writeFile(readme,'[missing](../../../missing.md)');const invalid=accepts(knowledgeRefreshOutputSchema,await call('cbim_knowledge_refresh',{revision:(await call('cbim_knowledge_snapshot')).revision,requestId:randomUUID()},true));expect(invalid).toMatchObject({state:'invalid',indexesUpdated:false,structural:false});
+    await fs.writeFile(readme,'# Valid');expect(accepts(knowledgeRefreshOutputSchema,await call('cbim_knowledge_refresh',{revision:(await call('cbim_knowledge_snapshot')).revision,requestId:randomUUID()},true))).toMatchObject({state:'refreshed',indexesUpdated:true});
+    const refreshInput={revision:(await ws.snapshot()).revision,requestId:randomUUID()};const snapshot=ws.snapshot.bind(ws);let reads=0;ws.snapshot=async()=>{if(++reads===2)await fs.writeFile(readme,'[external change](../../../missing.md)');return snapshot()};
+    try{expect(accepts(knowledgeRefreshOutputSchema,await call('cbim_knowledge_refresh',refreshInput,true))).toMatchObject({state:'invalid',indexesUpdated:true,structural:false})}finally{ws.snapshot=snapshot}
     expect(knowledgeRefreshOutputSchema.safeParse({...invalid,state:'refreshed'}).success).toBe(false);
   }finally{await f.cleanup()}
 });

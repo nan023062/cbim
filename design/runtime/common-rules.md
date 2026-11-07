@@ -18,7 +18,7 @@ Agent 禁止通过原生读写、扫描、shell 或脚本直接访问 .cbim/。�
 
 cbim_knowledge_preview/cbim_knowledge_commit 保留为文件级受控事务，修改现有内容使用服务返回的 path、revision；project.json 与派生注册表由服务维护，不手工写入。知识维护需要移动可用 cbim_knowledge_move_preview。缺少创建位置规划的其他对象记录接口缺口，不猜路径。
 
-cbim_knowledge_refresh 检查当前知识并刷新派生注册表，用于人类变更后的同步；它属于知识写入，同样受运行权限控制，不是绕过 CRUD 的入口。结构校验不能替代语义、专业质量或架构审批。
+cbim_knowledge_refresh v2 接受已读取的 revision 和明确保存的 requestId，检查知识并仅刷新派生注册表；它属于知识写入，同样受运行权限控制。先核实原请求，结果未知不换 ID 重试；同请求仅复用原事务，当前校验不冒充原快照。旧 v1 没有可绑定的内部请求身份，保留未知。结构校验不能替代语义、专业质量或架构审批。
 
 ## 结构与缺口
 

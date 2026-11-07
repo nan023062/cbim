@@ -1,6 +1,6 @@
 /**
  * 作用定位：将实际知识工具与 Core 业务输出 Schema、取消及恢复说明绑定，供工具注册使用。
- * 设计原因：元数据按现有事务行为逐项声明；不能用工具名猜授权，也不能把协议失败视为未提交或通用可重试。
+ * 设计原因：元数据按现有事务行为逐项声明；v2 刷新保留原请求身份，不能用工具名猜授权或把协议失败视为未提交及通用可重试。
  */
 import type {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
@@ -29,7 +29,7 @@ const recovery:Record<string,ToolRecovery>={
   cbim_object_preview:{mode:'new_preview',description:'每次预览可能新建实例内计划。返回丢失时先核实；重新预览会产生另一 planId，旧计划不自动提交。'},
   cbim_knowledge_commit:{mode:'same_request',keyFields:['requestId'],description:'先核实是否已提交；仅原 requestId 与完全相同输入可按原事务协议取得回执，不能更换 ID 重放未知结果。'},
   cbim_object_commit:{mode:'same_plan',keyFields:['planId'],description:'先核实原计划提交；同实例原 planId 复用原知识事务，不接受新计划代替未知结果。目录清理警告可能变化，不承诺整个返回逐字相同。'},
-  cbim_knowledge_refresh:{mode:'inspect_before_retry',description:'刷新可提交派生索引且没有公开调用级幂等 ID；返回不明时先核实当前知识版本与索引，不自动重试。'},
+  cbim_knowledge_refresh:{mode:'same_request',keyFields:['requestId'],description:'v2先核实原requestId及原revision对应的空变更事务；只有完全相同请求可复用原journal，不更换ID重放。当前校验可能变化；旧v1无原请求身份，保持未知。'},
   cbim_rules_validate:{mode:'query_task',queryTool:'cbim_task_status',description:'已取得维护 taskId 时查询状态；任务启动结果丢失时先核实实例内维护记录，不能盲目再创建任务。'},
   cbim_task_cancel:{mode:'query_task',keyFields:['taskId'],queryTool:'cbim_task_status',description:'这里只请求取消指定维护任务；返回后查询真实终态，不代表已停止或回滚，不接受对话或成员任务 ID。'},
 };

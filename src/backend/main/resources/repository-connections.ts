@@ -1,7 +1,7 @@
 /**
  * 作用定位：桌面资源仓库连接的知识预览/登记、独立本机授权和显式 HTTP 只读核验。
  * 设计原因：静态定义不等于权限，登记与授权分别返回真实回执；所有网络来源由当前共享闭包绑定，模型不能提供地址、令牌或授权。
- * 职责边界：本片只服务明确桌面操作，不接入 Loop、不启动共享、不执行资源内容、不自动重试或本地回退。
+ * 职责边界：桌面负责显式授权；主 Loop 仅捕获已有授权的只读闭包，不启动共享、不执行资源内容、不自动重试或本地回退。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -22,7 +22,11 @@ import {
   type RepositoryConnectionIdentity,type RepositoryConnectionPreview,type RepositoryConnectionCommit,type RepositoryConnectionGrant,type RepositoryConnectionReceipt,
 } from '../../core/connectors/repository-connection';
 import {RepositoryConnectionStore} from './repository-connection-store';
-import type {ResourceRepositories} from './resource-repository';
+import type {ResourceRepositories,SharedRepositoryReadConnection} from './resource-repository';
+import {
+  repositoryListInputSchema,repositoryGetInputSchema,repositoryToolLimits,
+  type RepositoryToolsPort,type RepositoryToolTarget,
+} from '../../core/connectors/repository-tools';
 
 const registryPath='.cbim/connectors/registry.json';
 const requestSchema=z.object({workspaceId:z.string(),instanceId:z.string().uuid(),revision:z.string(),requestId:z.string().uuid(),changes:z.array(z.object({path:z.string(),text:z.string().nullable()}).strict())}).strict();
@@ -114,6 +118,59 @@ export class RepositoryConnections {
   })}
   /** 查询原授权命令，不校验共享、不发送网络请求，也不复活已被后续撤销的授权。 */
   receipt(raw:unknown){const input=checkedInput(repositoryConnectionLookupSchema,raw);this.current();return this.store.receipt(input.workspaceId,input.commandId)}
+  /**
+   * 主运行创建时只读捕获已就绪授权，不联网；坏静态注册表不妨碍主会话诊断知识。
+   * 每个闭包固定原实例/定义/授权/共享代际。后续显式授权或重新共享只影响新运行，旧运行不能静默换源。
+   */
+  async prepareTools(input:RepositoryConnectionIdentity):Promise<RepositoryToolsPort|undefined>{
+    input=Object.freeze(identity(input));
+    const owner=this.owner(input),sharing=this.resources.sharedIdentity();if(!sharing)return undefined;
+    let entries:ConnectorDefinition[];try{({entries}=await this.definitions(owner))}catch(error:any){if(error.code==='REPOSITORY_CONNECTION_DEFINITION')return undefined;throw error}
+    this.assertOwner(owner,input);
+    if(new Set(entries.map(entry=>entry.id)).size!==entries.length)return undefined;
+    const grants=this.store.grants(input.workspaceId),captured=new Map<string,{target:RepositoryToolTarget;read(signal:AbortSignal):ReturnType<SharedRepositoryReadConnection['read']>}>();
+    for(const definition of entries){
+      if(!isResourceRepositoryConnector(definition)||definition.repository.repositoryId!==sharing.repositoryId)continue;
+      const grant=grants.find(item=>item.connectorId===definition.id),digest=definitionHash(definition);
+      if(!grant?.enabled||grant.definitionHash!==digest||grant.repositoryId!==sharing.repositoryId)continue;
+      const connection=this.resources.readConnection(grant.repositoryId);
+      if(connection.connectionId!==sharing.connectionId)fail('REPOSITORY_CONNECTION_STALE','准备期间共享连接已变化');
+      const target:RepositoryToolTarget={workspaceId:input.workspaceId,connectorId:definition.id,repositoryId:connection.repositoryId,connectionId:connection.connectionId,name:definition.name.slice(0,100),summary:definition.summary.slice(0,1000)};
+      const verify=async(signal:AbortSignal)=>{
+        signal.throwIfAborted();this.assertOwner(owner,input);connection.assertCurrent();
+        const current=await this.definition(owner,definition.id);this.assertOwner(owner,input);signal.throwIfAborted();connection.assertCurrent();
+        const latest=this.store.grant(input.workspaceId,definition.id);
+        if(current.definitionHash!==digest||!latest?.enabled||latest.revision!==grant.revision||latest.definitionHash!==digest||latest.repositoryId!==grant.repositoryId)fail('REPOSITORY_CONNECTION_STALE','本轮仓库定义或只读授权已变化，原连接不可继续使用');
+      };
+      captured.set(definition.id,{target,read:signal=>{
+        const controller=new AbortController(),combined=AbortSignal.any([signal,controller.signal]);this.checks.set(controller,{workspaceId:input.workspaceId,connectorId:definition.id});
+        const operation=(async()=>{try{await verify(combined);const result=await connection.read(combined);await verify(combined);return result}finally{this.checks.delete(controller)}})();
+        this.reads.add(operation);void operation.finally(()=>this.reads.delete(operation)).catch(()=>{});return operation;
+      }});
+    }
+    if(!captured.size)return undefined;
+    const selected=(connectorId:string)=>{const target=captured.get(connectorId);if(!target)fail('REPOSITORY_CONNECTION_NOT_GRANTED','该链接器不属于本轮已捕获的只读授权');return target};
+    return {
+      targets:Object.freeze([...captured.values()].map(item=>Object.freeze({...item.target}))),
+      list:async(raw,signal)=>{
+        const request=checkedInput(repositoryListInputSchema,raw),entry=selected(request.connectorId),result=await entry.read(signal);
+        if(request.expectedRevision!==undefined&&request.expectedRevision!==result.revision)fail('REPOSITORY_REVISION_CHANGED','仓库资料已变化，请明确重新读取目录版本');
+        const offset=request.offset??0,limit=request.limit??20;if(offset>result.items.length)fail('REPOSITORY_PAGE_INVALID','目录偏移超出当前版本范围');
+        const items=result.items.slice(offset,offset+limit).map(({content:_,...item})=>item),end=offset+items.length;
+        const {workspaceId,connectorId,repositoryId,connectionId}=entry.target;
+        return {scope:{kind:'repository',workspaceId,connectorId,repositoryId,connectionId,operation:'list'},revision:result.revision,offset,totalItems:result.items.length,items,...(end<result.items.length?{nextOffset:end}:{}),readOnly:true};
+      },
+      get:async(raw,signal)=>{
+        const request=checkedInput(repositoryGetInputSchema,raw),entry=selected(request.connectorId),result=await entry.read(signal);
+        if(request.expectedRevision!==result.revision)fail('REPOSITORY_REVISION_CHANGED','仓库资料已变化，请明确重新读取目录版本');
+        const item=result.items.find(item=>item.id===request.resourceId);if(!item)fail('REPOSITORY_RESOURCE_MISSING','当前仓库版本没有该资源');
+        const characters=Array.from(item.content),offset=request.offset??0,limit=request.limit??repositoryToolLimits.contentCharacters;
+        if(offset>characters.length)fail('REPOSITORY_PAGE_INVALID','正文偏移超出当前版本范围');
+        const text=characters.slice(offset,offset+limit).join(''),end=offset+Array.from(text).length,{content:_,...resource}=item,{workspaceId,connectorId,repositoryId,connectionId}=entry.target;
+        return {scope:{kind:'repository',workspaceId,connectorId,repositoryId,connectionId,operation:'get'},revision:result.revision,resource,content:{text,offset,totalCharacters:characters.length,contentHash:hash(item.content),...(end<characters.length?{nextOffset:end}:{}),complete:offset===0&&end===characters.length},readOnly:true};
+      },
+    };
+  }
   /** 仅显式核验发起真实 HTTP；读到内容后再次核对实例、定义、授权和共享代际，绝不返回迟到旧结果。 */
   check(raw:unknown){const operation=this.checkOnce(raw);this.reads.add(operation);void operation.finally(()=>this.reads.delete(operation)).catch(()=>{});return operation}
   private async checkOnce(raw:unknown){const input=checkedInput(repositoryConnectionCheckInputSchema,raw),owner=this.owner(input),grant=this.store.grant(input.workspaceId,input.connectorId);

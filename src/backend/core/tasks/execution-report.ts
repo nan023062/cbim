@@ -5,13 +5,15 @@
 import {z} from 'zod';
 import {memberTaskInput} from './member-commands';
 import {graphIdentityInput} from './dispatch-commands';
+import {toolScopeSchema} from '../tools/scope-schema';
 
 const id=z.string().min(1).max(128);
 const short=z.string().max(512);
 const seq=z.number().int().nonnegative();
 const cursor=z.object({basis:z.string().regex(/^[a-f0-9]{64}$/),offset:seq}).strict();
 const effect=z.enum(['read','preview','maintenance','business-write','knowledge-write','command']);
-const scope=z.object({kind:z.enum(['workspace','knowledge','unknown']),workspaceId:id}).strict();
+// 同一回执解析也用于主调度 canonical 核实；仓库读取保持真实外部身份，不能降成工作区文件。
+const scope=toolScopeSchema;
 const runStatus=z.enum(['running','completed','cancelled','failed','interrupted']);
 const receipt=z.object({version:z.literal(1),toolCallId:id,toolName:short,workspaceId:id,taskId:id,runId:id,outcome:z.enum(['succeeded','failed','denied','unknown']),inputHash:z.string().regex(/^[a-f0-9]{64}$/),resultHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),effects:z.array(effect),scope,recordedAt:z.string().datetime()}).strict();
 

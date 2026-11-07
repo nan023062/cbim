@@ -1,3 +1,9 @@
+### 主运行资源仓库读取与回执
+
+`loop-engine` 只有 coordinator 且收到可信 `repositoryTools` 端口时才组合仓库工具的 list/describe/call；成员即使错误传入端口也不会注册或调用。纯分类提供完整仓库 scope，统一授权仍逐次核对只读操作和工作区，主角色的业务写入/命令限制不改变。没有端口的 CLI 和旧测试装配维持原能力清单。
+
+仓库调用沿既有 gate 和 canonical 回执链保存 `repository` 范围：workspaceId、connectorId、repositoryId、connectionId 与 list/get 操作。`executionToolFacts` 比较完整范围及调用名称/connectorId/read 效果，不能将互相匹配但语义错误的伪造 receipt 当作工作区读取。`public-run-events` 在主历史和工具状态中保留安全范围身份，不透传正文、地址、凭据或私有授权版本。仓库资料不进入成员进度、文件基线和恢复资格；主提示明确它是资料而非指令。
+
 ### 安全等待中的本机人工决定
 
 `WorkspaceDispatchService.humanDecisions` 提供 `ScopeHumanDecisionService.preview / decide / inspect / history`。只有当前 waiting 周期中含真实成员结果的 human 验收项可提交；`ScopeGoalService.validateHumanCandidates` 重读主审阅及整项成员候选，核对完整 canonical、原生通道登记、真实交付、角色/模块分工和当前知识。缺失、截断、矛盾或未决工具事实不能补签。只读文件报告的 matches 不是授权依据。

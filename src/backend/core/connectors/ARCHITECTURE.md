@@ -13,6 +13,7 @@
 | [definition.ts](definition.ts) | 链接器静态定义的纯协议，供知识校验、桌面连接管理与注册查询共用。 |
 | [registry.ts](registry.ts) | 链接器领域封装，管理插件或资源仓库的静态身份、查询与重复校验。 |
 | [repository-connection.ts](repository-connection.ts) | 桌面资源仓库链接器的输入、静态登记、独立只读授权与 HTTP 核验回执协议。 |
+| [repository-tools.ts](repository-tools.ts) | 主 Loop 资源仓库只读工具的严格分页、正文分块协议和可信捕获端口。 |
 
 ## 架构类图
 
@@ -192,6 +193,56 @@ N_src_backend_core_connectors_repository_connection_ts ..> N_src_backend_core_co
 
 直接依赖：[definition.ts](definition.ts)。
 
+### repository-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_connectors_repository_tools_ts["repository-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_core_connectors_repository_tools_ts_RepositoryToolTarget["RepositoryToolTarget"] {
+  <<type>>
+
+}
+N_src_backend_core_connectors_repository_tools_ts ..> N_src_backend_core_connectors_repository_tools_ts_RepositoryToolTarget : 声明
+class N_src_backend_core_connectors_repository_tools_ts_RepositoryListInput["RepositoryListInput"] {
+  <<type>>
+
+}
+N_src_backend_core_connectors_repository_tools_ts ..> N_src_backend_core_connectors_repository_tools_ts_RepositoryListInput : 声明
+class N_src_backend_core_connectors_repository_tools_ts_RepositoryGetInput["RepositoryGetInput"] {
+  <<type>>
+
+}
+N_src_backend_core_connectors_repository_tools_ts ..> N_src_backend_core_connectors_repository_tools_ts_RepositoryGetInput : 声明
+class N_src_backend_core_connectors_repository_tools_ts_RepositoryListOutput["RepositoryListOutput"] {
+  <<type>>
+
+}
+N_src_backend_core_connectors_repository_tools_ts ..> N_src_backend_core_connectors_repository_tools_ts_RepositoryListOutput : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_connectors_repository_tools_ts["repository-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_core_connectors_repository_tools_ts_RepositoryGetOutput["RepositoryGetOutput"] {
+  <<type>>
+
+}
+N_src_backend_core_connectors_repository_tools_ts ..> N_src_backend_core_connectors_repository_tools_ts_RepositoryGetOutput : 声明
+class N_src_backend_core_connectors_repository_tools_ts_RepositoryToolsPort["RepositoryToolsPort"] {
+  <<interface>>
+  +targets
+  +list()
+  +get()
+}
+N_src_backend_core_connectors_repository_tools_ts ..> N_src_backend_core_connectors_repository_tools_ts_RepositoryToolsPort : 声明
+```
+
+直接依赖：[definition.ts](definition.ts)、[../tools/scope-schema.ts](../tools/scope-schema.ts)。
+
 ### 本目录调用边界
 
 ```mermaid
@@ -205,8 +256,12 @@ class N_src_backend_core_connectors_definition_ts["definition.ts"] {
 class N_src_backend_core_connectors_repository_connection_ts["repository-connection.ts"] {
   <<module>>
 }
+class N_src_backend_core_connectors_repository_tools_ts["repository-tools.ts"] {
+  <<module>>
+}
 N_src_backend_core_connectors_registry_ts ..> N_src_backend_core_connectors_definition_ts : 导入依赖
 N_src_backend_core_connectors_repository_connection_ts ..> N_src_backend_core_connectors_definition_ts : 导入依赖
+N_src_backend_core_connectors_repository_tools_ts ..> N_src_backend_core_connectors_definition_ts : 导入依赖
 ```
 
 
@@ -241,3 +296,11 @@ N_src_backend_core_connectors_repository_connection_ts ..> N_src_backend_core_co
 `unaccepted` 请求固定原工作区、原实例、操作类型与命令/计划 ID。只有后端串行核实原实例已退役、没有原授权命令或知识事务凭据时，才能返回明确未受理；当前实例查不到回执、存储损坏或不明事务状态不构成该结论。此接口只读，不取消、重放或重新授权。界面必须严格匹配原请求并获得 `unaccepted:true` 才能清除待确认记录。
 
 `check` 回执明确记录真实 HTTP、只读、仓库版本、授权版本和核验时刻，最多包含 20 个资源目录摘要，并报告总数与截断标志。它不包含资源正文，也不承诺导入资源、下载文件、模型工具调用或业务验收。授权的持久化、共享关闭及重开失效、并发重新核对和网络取消由本机实现负责，不能仅凭本协议对象作权限判断。
+
+### 主运行中的真实只读仓库工具
+
+`repository-tools.ts` 定义 `cbim_repository_list/get` 的模型输入、业务输出和可信 `RepositoryToolsPort`。主进程在本轮创建时捕获已就绪链接器的固定目标；公开目标只有工作区、链接器、仓库、共享连接身份和有界名称/简介，授权版本、定义指纹及网络凭据留在闭包。捕获不读取 HTTP；实际端口调用须在网络前后核实原目标、原授权与共享代际，不因变化换源或自动重新授权。
+
+模型输入只选择 connectorId、资源、原仓库版本及分页范围，拒绝工作区、仓库身份、共享身份、地址、token 和权限。目录每页至多 50 条，后续页必须指定原 revision，返回精确 totalItems/nextOffset；单项名称至多 100 字符、简介至多 1000 字符，不能以原始超长字段撑大工具结果。正文按 Unicode codepoint 分块，每块至多 4096 个 codepoint，必须指定 expectedRevision 和 resourceId。contentHash 始终代表原完整 UTF-8 正文，complete 仅在本块从 0 开始且包含全部正文时为 true；最后一页不等于完整正文。严格输出拒绝错误范围、重复目录项、未知字段和矛盾分页，不补造无效资源事实。
+
+该协议只让主运行读取已授权资料，不授予成员工具、安装资源、执行正文或使用资料作为文件交付证据。工具回执使用独立 repository scope；当前输出仍须通过共同工具结果边界，Schema 通过不代表业务验收或整个外部仓库已读取。

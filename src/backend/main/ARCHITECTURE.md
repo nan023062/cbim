@@ -96,6 +96,7 @@ N_src_backend_main_member_dispatch_ts ..> N_src_backend_main_execution_admission
 - `execution.ts` → `workspace`：导入。
 - `execution.ts` → `platform`：导入。
 - `execution.ts` → `execution-admission.ts`：导入。
+- `execution.ts` → `resources`：导入。
 - `ipc` → `persistence`：导入。
 - `ipc` → `workspace`：导入。
 - `ipc` → `resources`：导入。
@@ -171,6 +172,8 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 ## 本机资源仓库连接生命周期
 
 `Application.repositoryConnections` 是应用唯一的桌面连接服务，使用 `ResourceRepositories` 当前真实共享闭包和工作区知识事务端口；用户目录保存授权与命令回执，知识目录只保存可移植的链接器定义。初始化读取授权但不自动共享或联网，工作区关闭/重开先取消该工作区在途核验；应用退出先拒绝新连接操作、排空读写，再关闭共享服务。原回执查询不创建运行、调用模型或恢复旧工作区实例。
+
+`createExecutionManager` 仅为 chat 主运行调用 `prepareTools`，把本轮固定的已授权只读端口注入 `ExecutionServices.repositoryTools`。能力捕获不访问 HTTP；实际模型调用才读取，执行成员、未装配的 CLI 和没有就绪连接的主轮不注册两项仓库工具。端口不从 ChatOptions 或模型参数取得授权，不改变主角色业务写入/命令禁令。
 
 ## 正式成员的 Workflow 能力装配
 

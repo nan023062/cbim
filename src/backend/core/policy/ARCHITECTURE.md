@@ -34,6 +34,7 @@ class N_src_backend_core_policy_tool_policy_ts_RunToolDescriptor["RunToolDescrip
   <<interface>>
   +effects
   +native
+  +scope
 }
 N_src_backend_core_policy_tool_policy_ts ..> N_src_backend_core_policy_tool_policy_ts_RunToolDescriptor : 声明
 class N_src_backend_core_policy_tool_policy_ts_RunPolicyContext["RunPolicyContext"] {
@@ -46,7 +47,7 @@ class N_src_backend_core_policy_tool_policy_ts_RunPolicyContext["RunPolicyContex
 N_src_backend_core_policy_tool_policy_ts ..> N_src_backend_core_policy_tool_policy_ts_RunPolicyContext : 声明
 ```
 
-直接依赖：[types.ts](types.ts)、[../tools/types.ts](../tools/types.ts)。
+直接依赖：[types.ts](types.ts)、[../tools/types.ts](../tools/types.ts)、[../tools/scope-schema.ts](../tools/scope-schema.ts)。
 
 ### types.ts
 
@@ -93,3 +94,15 @@ N_src_backend_core_policy_tool_policy_ts ..> N_src_backend_core_policy_types_ts 
 [返回上层](../ARCHITECTURE.md)。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+## 设计契约 v1 与落地范围
+
+以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 可信工具范围与逐次权限评估
+
+`tool-policy.ts` 只消费调度层已识别的工具描述与可信运行权限。副作用决定 read/ask/execute 行为；原生路径守卫先于 ask 审批，拒绝或缺失审批不能放行。命令被标记为 unknown 范围，不据此承诺目录沙箱或已知副作用集合。
+
+`RunToolDescriptor.scope` 为可选的可信装配范围。repository 范围必须匹配本轮 workspaceId、实际 cbim_repository_list/get 名称、connectorId 和操作；仅允许非原生且恰好 read 的工具。缺少捕获范围、跨工作区、混合副作用或模型伪造目标均拒绝。旧工具没有新范围时保持原分类行为；策略只核形状和绑定，真实仓库授权与共享代际仍由主进程端口在网络前后复核。
+
+每次调用独立产生决定；策略不存储凭据、不缓存业务批准、不复制外部资源，也不把只读回执转成任务验收。

@@ -12,7 +12,7 @@
 | --- | --- |
 | [repository-connection-state.ts](repository-connection-state.ts) | 资源仓库连接写请求的本地待确认记录与严格回执匹配，供链接器界面跨卸载、重开核对原请求。 |
 | [repository-connections.css](repository-connections.css) | 对应界面的布局与视觉样式。 |
-| [RepositoryConnections.tsx](RepositoryConnections.tsx) | 在链接器页按明确工作区登记仓库身份、独立授予只读连接并查看真实 HTTP 核验摘要。 |
+| [RepositoryConnections.tsx](RepositoryConnections.tsx) | 在链接器页按明确工作区登记仓库身份、独立授予主 Agent 只读连接并查看真实 HTTP 核验摘要。 |
 | [resource-application.ts](resource-application.ts) | 资源列表的静态包识别与可创建种类策略，供列表和测试复用。 |
 | [ResourceRepositoryView.tsx](ResourceRepositoryView.tsx) | 三类资源共用的定义列表与编辑器；链接器页附带独立工作区仓库连接，人才包/完整业务架构有明确应用入口。 |
 | [workspace-transfer.css](workspace-transfer.css) | 静态资源发布/导入的选择列表与回执。设计原因：共享库来源、应用目标和整包替换在窄屏上仍可明确辨认。 */ |
@@ -292,7 +292,7 @@ N_src_frontend_resources_WorkspaceResourceTransfer_tsx ..> N_src_frontend_resour
 
 授权或登记结果未知时保留原命令/计划，只查原回执或重试原请求，不新建写操作。首次明确预提交拒绝可以解除；曾未知或重开恢复后不能用后来错误推断未发生。页面重入只恢复本地记录并读取当前状态，不重放操作。实例已更换时只查原回执；另一个显式“核实未受理并解除”操作必须取得服务关于旧实例退役且无原事务/命令的肯定证明，查不到回执本身不足以清记录。
 
-此阶段仅桌面连接和核验，主 Agent 工具尚未装配。CSS 按现有主题变量排版，窄窗口换行；资源标识不撑宽页面。
+授权页面明确说明资料可进入本工作区所选模型的上下文。主 Agent 每轮只装配已授权的目录与资料工具，固定原连接；撤销或换代后不能继续沿旧目标读取或交付迟到结果。该提示不代表自动安装资料，桌面核验也不启动模型。CSS 按现有主题变量排版，窄窗口换行；资源标识不撑宽页面。
 
 ## 静态资源发布与应用
 

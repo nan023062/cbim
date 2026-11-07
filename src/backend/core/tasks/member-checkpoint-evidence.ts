@@ -52,6 +52,8 @@ export function validateCheckpointEligibility(events:readonly ArtifactEvidenceEv
     const id=event.data.id;check(typeof id==='string'&&!ids.has(id),'工具放行身份缺失或重复');ids.add(id);
     if(id===activeCheckpointToolCallId){check(event.data.name===name&&equal(memberCheckpointInputSchema.parse(event.data.input),input),'当前检查点调用参数与授权不一致');continue}
     const call=artifactSucceededCall(events,binding,id),tool=call.receipt.toolName;
+    // 仓库正文即使字面看似文件或维护回执，也不能纳入同实例续执行的本地文件闭包。
+    check(call.receipt.scope.kind!=='repository'&&!tool.startsWith('cbim_repository_'),'外部仓库读取不属于可恢复成员的文件检查点来源');
     if(['read','write','edit'].includes(tool)){
       const source=artifactSources(events,binding,[id]).sources[0];paths.add(normalizePath(source.path));
       check(call.receipt.effects.every(effect=>effect===(tool==='read'?'read':'business-write')),'文件来源包含未支持的额外副作用');

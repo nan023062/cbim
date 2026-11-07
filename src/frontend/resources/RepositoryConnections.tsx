@@ -1,5 +1,5 @@
 /**
- * 作用定位：在链接器页按明确工作区登记仓库身份、独立授予只读连接并查看真实 HTTP 核验摘要。
+ * 作用定位：在链接器页按明确工作区登记仓库身份、独立授予主 Agent 只读连接并查看真实 HTTP 核验摘要。
  * 设计原因：知识声明不能代替运行授权；每次操作固定目标与版本，异步结果仅交回原视图。写命令未知时保留原请求核实，不自动重试或换目标。
  * 职责边界：不启动共享、不展示密钥、不执行资源内容，也不把桌面核验宣称为 Agent 已调用。
  */
@@ -120,7 +120,7 @@ export function RepositoryConnections({onSettings}:{onSettings:()=>void}){
   }
   const blocked=busy||!!pending||storageError,sharing=!!list?.sharing;
   return <section className="repository-connections" data-testid="repository-connections">
-    <header><div><h2>工作区仓库连接</h2><p>连接当前已共享的资源仓库。定义登记与访问授权分别保存；当前支持桌面只读核验。</p></div><button disabled={busy} onClick={()=>void refresh()}>刷新连接状态</button></header>
+    <header><div><h2>工作区仓库连接</h2><p>连接当前已共享的资源仓库。允许只读连接后，主 Agent 可按任务读取目录和资料，内容会进入本工作区所选模型的上下文。授权和连接在每轮开始时固定，运行中不会自动换源；撤销会阻止后续读取和迟到结果。</p></div><button disabled={busy} onClick={()=>void refresh()}>刷新连接状态</button></header>
     {!status?.sharing&&<p>请先在设置中启动仓库共享。<button disabled={blocked} onClick={onSettings}>前往仓库设置</button></p>}
     <label>目标工作区<select data-testid="connection-workspace" aria-label="连接目标工作区" disabled={busy} value={workspaceId} onChange={event=>void select(event.target.value)}><option value="">选择已就绪工作区</option>{workspaces.map(workspace=><option key={workspace.id} value={workspace.id} disabled={workspace.state!=='running'}>{workspace.name}{workspace.state!=='running'?'（未就绪）':''}</option>)}</select></label>
     {error&&<p role="alert" data-testid="connection-error">{error}</p>}

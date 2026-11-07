@@ -16,6 +16,7 @@
 | [receipts.ts](receipts.ts) | 把已核实的工具调用、授权和终态整理为可追溯回执。 |
 | [registry.ts](registry.ts) | 实际内部工具的输入/业务输出协议、版本、副作用及取消/恢复说明，支持摘要与按需完整描述。 |
 | [results.ts](results.ts) | 校验内部工具传给大脑的结果，并将领域返回值封装为合法文本块。 |
+| [scope-schema.ts](scope-schema.ts) | 工具回执与可信授权描述共用的纯范围协议，区分项目文件、知识、未知影响和外部仓库读取。 |
 | [types.ts](types.ts) | 引擎无关的工具调用、副作用、策略决策及运行回执契约。 |
 
 ## 架构类图
@@ -167,6 +168,27 @@ N_src_backend_core_tools_results_ts ..> N_src_backend_core_tools_results_ts_Tool
 
 直接依赖：[../foundation/errors.ts](../foundation/errors.ts)。
 
+### scope-schema.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tools_scope_schema_ts["scope-schema.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tools_scope_schema_ts_RepositoryToolScope["RepositoryToolScope"] {
+  <<type>>
+
+}
+N_src_backend_core_tools_scope_schema_ts ..> N_src_backend_core_tools_scope_schema_ts_RepositoryToolScope : 声明
+class N_src_backend_core_tools_scope_schema_ts_ToolScope["ToolScope"] {
+  <<type>>
+
+}
+N_src_backend_core_tools_scope_schema_ts ..> N_src_backend_core_tools_scope_schema_ts_ToolScope : 声明
+```
+
+直接依赖：[../connectors/definition.ts](../connectors/definition.ts)。
+
 ### types.ts
 
 ```mermaid
@@ -186,12 +208,6 @@ class N_src_backend_core_tools_types_ts_ToolEffect["ToolEffect"] {
 
 }
 N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_types_ts_ToolEffect : 声明
-class N_src_backend_core_tools_types_ts_ToolScope["ToolScope"] {
-  <<interface>>
-  +kind
-  +workspaceId
-}
-N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_types_ts_ToolScope : 声明
 class N_src_backend_core_tools_types_ts_ToolDecision["ToolDecision"] {
   <<interface>>
   +allow
@@ -200,13 +216,6 @@ class N_src_backend_core_tools_types_ts_ToolDecision["ToolDecision"] {
   +scope
 }
 N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_types_ts_ToolDecision : 声明
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_tools_types_ts["types.ts"] {
-  <<module>>
-}
 class N_src_backend_core_tools_types_ts_ToolReceipt["ToolReceipt"] {
   <<interface>>
   +version
@@ -225,6 +234,7 @@ class N_src_backend_core_tools_types_ts_ToolReceipt["ToolReceipt"] {
 N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_types_ts_ToolReceipt : 声明
 ```
 
+直接依赖：[scope-schema.ts](scope-schema.ts)。
 
 ### 本目录调用边界
 
@@ -249,6 +259,17 @@ N_src_backend_core_tools_receipts_ts ..> N_src_backend_core_tools_types_ts : 导
 N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_types_ts : 导入依赖
 N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_results_ts : 导入依赖
 N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_contracts_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tools_types_ts["types.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tools_scope_schema_ts["scope-schema.ts"] {
+  <<module>>
+}
+N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_scope_schema_ts : 导入依赖
 ```
 
 
@@ -306,3 +327,9 @@ PiBridge ..> ResultsModule : 进入会话前校验
 `native-tools.ts` 保存当前引擎实际支持的原生工具描述，供 Pi 注册、正式成员能力预检、授权分类和 Workflow canonical 评价共用。`nativeToolDescriptor` 返回独立描述，未知名称及对象继承属性不属于注册工具；`nativeToolNames(false)` 只包含只读工具。
 
 表中 read/grep/find/ls 属于 read，write/edit 属于 business-write，bash 属于 command。该清单不发放权限、不执行工具、不决定路径是否可访问；路径守卫、ask 审批与工作区身份仍由策略执行。任务评价只能核对实际成功调用，不能凭名称声明业务验证或完整文件覆盖。
+
+### 工具范围与外部资料身份
+
+`scope-schema.ts` 是授权策略、工具回执和证据解析共用的纯范围协议。原 workspace/knowledge/unknown 分支保留 `{kind,workspaceId}` 形状；repository 分支严格保存 workspaceId、connectorId、repositoryId、connectionId 与 list/get 操作，不接受 URL、凭据或调用方声明的授权。仓库身份来自本轮可信捕获描述，不从模型输入直接创建能力。
+
+成功的 repository read 表示所绑定仓库操作收到真实回执，不能降格为 workspace read，也不能冒充本地文件、任务交付或成员检查点的证据。共享解析保留这种身份供主运行历史与 canonical 核实；下游业务证据仍分别检查来源边界。

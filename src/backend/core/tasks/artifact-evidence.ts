@@ -6,6 +6,7 @@
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
 import {hash} from '../foundation/serialization';
+import {toolScopeSchema} from '../tools/scope-schema';
 import {artifactCaptureInputSchema,artifactBaselineStagedSchema,artifactBaselineRecordSchema,artifactCaptureResultSchema,artifactLimits,type ArtifactBaselineStaged,type ArtifactBaselineRecord,type ArtifactBaselineRef,type ArtifactSourceCall} from './artifact-baseline';
 
 /** 只依赖事件的最小结构，不反向导入 brain/types；消息正文无需留在运行时采集缓存。 */
@@ -13,8 +14,8 @@ export interface ArtifactEvidenceEvent {type:string;seq:number;workspaceId:strin
 type Binding=ArtifactBaselineStaged['binding'];
 type Issue={code:string;message:string};
 const effects=z.array(z.enum(['read','preview','maintenance','business-write','knowledge-write','command']));
-const authorization=z.object({id:z.string().min(1).max(128),name:z.string().min(1).max(512),effects,scope:z.object({kind:z.enum(['workspace','knowledge','unknown']),workspaceId:z.string()}).strict()}).passthrough();
-const receipt=z.object({version:z.literal(1),toolCallId:z.string().min(1).max(128),toolName:z.string().min(1).max(512),workspaceId:z.string(),taskId:z.string(),runId:z.string(),outcome:z.enum(['succeeded','failed','denied','unknown']),inputHash:z.string().regex(/^[a-f0-9]{64}$/),resultHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),effects,scope:z.object({kind:z.enum(['workspace','knowledge','unknown']),workspaceId:z.string()}).strict(),recordedAt:z.string().datetime()}).strict();
+const authorization=z.object({id:z.string().min(1).max(128),name:z.string().min(1).max(512),effects,scope:toolScopeSchema}).passthrough();
+const receipt=z.object({version:z.literal(1),toolCallId:z.string().min(1).max(128),toolName:z.string().min(1).max(512),workspaceId:z.string(),taskId:z.string(),runId:z.string(),outcome:z.enum(['succeeded','failed','denied','unknown']),inputHash:z.string().regex(/^[a-f0-9]{64}$/),resultHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),effects,scope:toolScopeSchema,recordedAt:z.string().datetime()}).strict();
 const nativeInput={read:z.object({path:z.string().min(1).max(32768),offset:z.number().int().positive().optional(),limit:z.number().int().positive().optional()}).strict(),write:z.object({path:z.string().min(1).max(32768),content:z.string()}).strict(),edit:z.object({path:z.string().min(1).max(32768),oldText:z.string(),newText:z.string()}).strict()};
 const captureName='cbim_task_artifact_capture';
 const altered=(event:ArtifactEvidenceEvent)=>event.type==='tool.allowed'&&(Array.isArray(event.data.effects)&&event.data.effects.some(effect=>['business-write','knowledge-write','command'].includes(String(effect)))||['write','edit','bash'].includes(String(event.data.name)));
@@ -58,7 +59,7 @@ export function verifyArtifactBaselines(events:readonly ArtifactEvidenceEvent[],
       const parsed=artifactBaselineStagedSchema.safeParse(event.data.baseline);valid(parsed.success,'采集事件字段无效');const baseline=parsed.data;
       valid(equal(baseline.binding,binding)&&baseline.knowledgeRevision===knowledgeRevision&&ids.get(baseline.baselineId)===1&&calls.get(baseline.captureToolCallId)===1,'基线身份、知识或唯一标识不一致');
       const own=artifactSucceededCall(events,binding,baseline.captureToolCallId),input=artifactCaptureInputSchema.safeParse(own.allowed.data.input);
-      valid(own.receipt.toolName===captureName&&own.receipt.effects.includes('maintenance')&&input.success&&input.data.expectedTaskProgressVersion===baseline.progressVersion,'采集调用与进度版本不一致');
+      valid(own.receipt.toolName===captureName&&own.receipt.scope.kind==='workspace'&&own.receipt.effects.includes('maintenance')&&input.success&&input.data.expectedTaskProgressVersion===baseline.progressVersion,'采集调用范围与进度版本不一致');
       const content=(own.finished.data.result as {content?:unknown[]}|undefined)?.content;valid(Array.isArray(content)&&content.length===1,'采集工具正文不完整');
       const block=content[0] as {type?:unknown;text?:unknown};valid(block?.type==='text'&&typeof block.text==='string','采集工具没有结构化文本结果');
       const body=artifactCaptureResultSchema.safeParse(JSON.parse(block.text));valid(body.success&&equal(body.data.baseline,baseline),'采集暂存事件与真实成功回执不一致');
@@ -85,7 +86,8 @@ export function verifyArtifactBaselines(events:readonly ArtifactEvidenceEvent[],
     const authorized=authorization.safeParse(event.data);
     if(!authorized.success||authorized.data.scope.workspaceId!==binding.workspaceId){impact='unknown';add('ARTIFACT_AUTHORIZATION_INVALID','存在范围或身份不可核实的工具授权，所列文件不能代表完整影响范围');continue}
     const values=authorized.data.effects,scope=authorized.data.scope;
-    if(values.includes('command')||scope?.kind==='unknown'||event.data.name==='bash'){impact='unknown';add('ARTIFACT_COMMAND_SCOPE','命令或未知范围不能由文件指纹推断完整影响')}
+    if(scope.kind==='repository'){impact='unknown';add('ARTIFACT_EXTERNAL_SOURCE','存在外部仓库资料，文件指纹不能证明该来源内容或工作区完整覆盖')}
+    else if(values.includes('command')||scope.kind==='unknown'||event.data.name==='bash'){impact='unknown';add('ARTIFACT_COMMAND_SCOPE','命令或未知范围不能由文件指纹推断完整影响')}
     else if(values.includes('business-write')||['write','edit'].includes(String(event.data.name))){
       try{const name=event.data.name;valid(name==='write'||name==='edit','未知写入工具');artifactSucceededCall(events,binding,String(event.data.id));const parsed=nativeInput[name].parse(event.data.input);valid(covered.has(normalizePath(parsed.path)),'写入文件未被采集')}
       catch{impact='unknown';add('ARTIFACT_UNCOVERED_WRITE','存在未覆盖或不可解析的写入，基线只代表明确列出的文件')}

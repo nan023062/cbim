@@ -65,6 +65,7 @@ N_src_backend_core_team ..> N_src_backend_core_tasks : 导入依赖
 - `brain` → `tasks`：导入。
 - `brain` → `tools`：导入。
 - `brain` → `policy`：导入。
+- `connectors` → `tools`：导入。
 - `knowledge` → `foundation`：导入。
 - `knowledge` → `team`：导入。
 - `knowledge` → `workspace`：导入。
@@ -85,6 +86,7 @@ N_src_backend_core_team ..> N_src_backend_core_tasks : 导入依赖
 - `team` → `brain`：导入。
 - `tools` → `policy`：导入。
 - `tools` → `foundation`：导入。
+- `tools` → `connectors`：导入。
 - `workspace` → `knowledge`：导入。
 - `workspace` → `foundation`：导入。
 

@@ -1,6 +1,7 @@
 /**
  * 作用定位：从已核对身份的成员运行日志提取工具授权与回执事实。
  * 设计原因：工具结束、运行终态和业务验收不能互相替代；以最小可信运行身份复用于成员报告及主核实证明，缺少授权链时保留未知，不从模型正文推断成功。
+ * 范围边界：仓库操作及链接器须与完整授权/回执范围一致，外部只读不能降为工作区文件事实。
  */
 import {executionReportSchema,type ExecutionReport} from '../../core/tasks/execution-report';
 import type {RunSummary} from '../../core/brain/types';
@@ -37,7 +38,11 @@ export function executionToolFacts(summary:RunSummary,run:{binding:Pick<Dispatch
       if(item.finishedSeq!==undefined||gate.has(id)&&!(gate.get(id)==='allowed'&&event.type==='tool.denied')||inputs.get(id)!==inputHash(data.input))invalid.add(id);
       const effects=effectsSchema.safeParse(data.effects??[]),scope=scopeSchema.safeParse(data.scope??{kind:'unknown',workspaceId:binding.workspaceId});
       if(!effects.success||!scope.success||scope.data.workspaceId!==binding.workspaceId)invalid.add(id);
-      else {item.effects=effects.data;item.scope=scope.data}
+      else {
+        item.effects=effects.data;item.scope=scope.data;
+        // 仓库只读范围必须与真实操作和调用参数对应；即使伪造的 allowed/receipt 彼此相等也不能改成另一来源。
+        if(scope.data.kind==='repository'&&(name!==`cbim_repository_${scope.data.operation}`||(data.input as Record<string,unknown>|undefined)?.connectorId!==scope.data.connectorId||effects.data.length!==1||effects.data[0]!=='read')||event.type==='tool.allowed'&&name.startsWith('cbim_repository_')&&scope.data.kind!=='repository')invalid.add(id);
+      }
       gate.set(id,event.type==='tool.allowed'?'allowed':'denied');
       if(event.type==='tool.allowed'){item.allowedSeq=event.seq;item.status='unknown'}
     }

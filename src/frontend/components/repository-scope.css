@@ -1,0 +1,4 @@
+/* 只展示安全的历史范围身份；长标识换行，避免挤出窄窗口的工具详情。 */
+.repository-scope-details{display:flex;flex-direction:column;gap:5px;margin:12px 0;padding:10px 12px;border-left:2px solid var(--line);font-size:12px;line-height:1.6}
+.repository-scope-details span,.repository-scope-details code{overflow-wrap:anywhere;white-space:normal}
+.repository-scope-details small{color:var(--muted);font-size:11px}

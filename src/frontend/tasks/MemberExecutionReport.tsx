@@ -1,6 +1,6 @@
 /**
  * 作用定位：在任务节点详情中展示一次显式核实的派发、日志与工具回执报告，独立于成员流式正文。
- * 设计原因：坏日志也必须能查看核实诊断；文件基线使用独立按需面板，不混入工具分页或恢复依据。独立表单才可显式新建只读核实周期，不恢复旧任务或提供业务验收。
+ * 设计原因：坏日志也必须能查看核实诊断；仓库 scope 保留独立来源，不当作文件基线或恢复证据。独立表单才可显式新建只读核实周期，不恢复旧任务或提供业务验收。
  */
 import type {ExecutionReport,GraphCursor,ScopeSummary,TaskNode} from '../../bridge/contracts/dispatch';
 import {useExecutionReport} from './useExecutionReport';
@@ -8,6 +8,7 @@ import type {ExecutionReportState} from './execution-report-state';
 import {useExecutionRecovery,type ExecutionRecoveryContext} from './useExecutionRecovery';
 import {ExecutionRecoveryForm} from './ExecutionRecoveryForm';
 import {MemberArtifactReport} from './MemberArtifactReport';
+import {RepositoryScopeDetails} from '../components/RepositoryScopeDetails';
 import './execution-report.css';
 
 export interface ExecutionReportView extends ExecutionReportState {stale:boolean;inspect:()=>Promise<void>;more:()=>Promise<void>}
@@ -15,7 +16,7 @@ const executionLabels:Record<ExecutionReport['execution'],string>={not_started:'
 const logLabels:Record<ExecutionReport['log']['state'],string>={not_expected:'没有已登记的运行日志',not_selected:'尚未选择执行轮次',verified:'运行日志已通过核对',missing:'运行日志缺失',incomplete:'运行日志不完整',invalid:'运行日志无效',identity_mismatch:'运行日志身份不匹配',unavailable:'运行日志暂时无法读取'};
 const toolLabels={succeeded:'收到成功回执',failed:'收到失败回执',denied:'已拒绝授权',unknown:'结果尚未确认',not_authorized:'未记录执行授权'};
 const effectLabels:Record<string,string>={read:'读取',preview:'预览',maintenance:'维护', 'business-write':'业务写入','knowledge-write':'知识写入',command:'命令'};
-const scopeLabels:Record<string,string>={workspace:'业务工作区',knowledge:'知识库',unknown:'范围未知'};
+const scopeLabels:Record<string,string>={workspace:'业务工作区',knowledge:'知识库',unknown:'范围未知',repository:'资源仓库'};
 const runLabels={starting:'启动意图已登记',running:'执行中',completed:'本轮结束',failed:'执行失败',cancelled:'已停止',interrupted:'执行中断'};
 
 /** 呈现后端核实事实；纯组件不读取数据，测试和桌面入口使用相同安全文案。 */
@@ -40,6 +41,7 @@ export function ExecutionReportPanel({state,taskId,runId}:{state:ExecutionReport
           <p className="member-muted">已显示 {report.tools.items.length} / {report.tools.total} 项。失败回执也可能伴随已发生的改动；未确认结果不能当作未执行。</p>
           {report.tools.items.map(item=><details className="execution-report-tool" key={item.toolCallId} data-testid="execution-report-tool" data-tool-status={item.status}><summary><strong>{item.toolName||'未记录工具名称'}</strong><span>{toolLabels[item.status]}</span></summary>
             <p><code>{item.toolCallId}</code></p><p>{item.effects.map(effect=>effectLabels[effect]??effect).join('、')||'未记录副作用分类'} · {scopeLabels[item.scope.kind]??'范围未知'}</p>
+            <RepositoryScopeDetails scope={item.scope}/>
             <p className="member-muted">提议记录：{item.proposedSeq??'未知'} · 授权记录：{item.allowedSeq??'未知'} · 结果记录：{item.finishedSeq??'未知'}</p>
             {item.receipt?<><p className="member-muted">回执时间：{new Date(item.receipt.recordedAt).toLocaleString()}</p><p className="member-muted">输入记录哈希：<code>{item.receipt.inputHash}</code>{item.receipt.resultHash&&<> · 结果记录哈希：<code>{item.receipt.resultHash}</code></>}</p><p className="member-muted">这些哈希对应调用记录，不是业务产物指纹。</p></>:<p className="member-warning">没有可核实的完整回执。</p>}
           </details>)}

@@ -179,7 +179,7 @@ class N_src_backend_core_tasks_artifact_evidence_ts_Issue["Issue"] {
 N_src_backend_core_tasks_artifact_evidence_ts ..> N_src_backend_core_tasks_artifact_evidence_ts_Issue : 声明
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[artifact-baseline.ts](artifact-baseline.ts)。
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../tools/scope-schema.ts](../tools/scope-schema.ts)、[artifact-baseline.ts](artifact-baseline.ts)。
 
 ### artifact-tools.ts
 
@@ -553,7 +553,7 @@ class N_src_backend_core_tasks_execution_report_ts_ExecutionReport["ExecutionRep
 N_src_backend_core_tasks_execution_report_ts ..> N_src_backend_core_tasks_execution_report_ts_ExecutionReport : 声明
 ```
 
-直接依赖：[member-commands.ts](member-commands.ts)、[dispatch-commands.ts](dispatch-commands.ts)。
+直接依赖：[member-commands.ts](member-commands.ts)、[dispatch-commands.ts](dispatch-commands.ts)、[../tools/scope-schema.ts](../tools/scope-schema.ts)。
 
 ### fresh-context.ts
 
@@ -3385,3 +3385,9 @@ accept 必须覆盖此人工项当前审阅的全部真实成员候选，为每�
 `GoalEvidence` 新分支是 `{kind:'human-decision',decisionId,continuationId}`，模型只引用记录。human satisfied 的形状必须恰有一个此类引用；普通 evidence 项、未满足项不能借它替代工具证据。人工引用可独立使用；同项额外列出的 member-result 必须属于该接受的精确候选和证据集合，不能混入未被接受的新成果。纯提交不变量要求当前意图、最新接受、同 criterion、原业务主体、知识及候选身份；真正 canonical 和文件有效性由服务在审阅与最终完成分别重核。记录存在或 Schema 通过都不代表已完成。
 
 `superseded.humanDecision` 显式引用本次消费的拒绝/补证，允许对其原 result_ready 候选安排返工。原任务版本、运行、结果及证据引用仍须与决定精确一致；替代结果必须来自 priorTaskIds 之外的本周期新任务，真实成功且覆盖原模块；原结果与人工历史不改写。接受不能使用此例外，单纯文字 reason 也不能替代引用；原失败/阻塞/过期知识替代协议保持独立。
+
+### 外部仓库读取不作为文件与交付证明
+
+执行记录共用 `toolScopeSchema`，因此主运行 canonical 和历史保留真实 repository 目标及操作，不将合法外部 read 误报为日志损坏。`TaskProgressTools.record` 排除 repository 范围及 cbim_repository_ 名称；Workflow 交付核实同样拒绝此类引用，不能借本地工具名称或外部资料充当本轮业务文件证据。
+
+`artifactSources` 仍仅接受 workspace 范围的 read/write/edit 单文件调用；基线采集自身也必须属于 workspace。同轮出现外部仓库读取时，基线核实保留 `ARTIFACT_EXTERNAL_SOURCE` 范围限制：所列文件指纹不能证明外部资料或整个运行的闭合状态。成员检查点明确拒绝 repository 来源，即使本地文件全部 matches 也不扩大恢复白名单。这些限制不把成功的外部 read 回执伪称为工具结果未知，只限制它能够证明的业务事实。

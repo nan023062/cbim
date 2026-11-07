@@ -40,6 +40,15 @@ it('完整路径包括输入文件；同路径此前成功写入可覆盖，命�
     ['grep',{pattern:'x',path:'.'},'read','succeeded'],['find',{pattern:'*'},'read','succeeded'],['ls',{path:'.'},'read','succeeded'],['bash',{command:'echo ok'},'command','succeeded'],['plugin_fetch',{url:'https://example.test'},'read','succeeded'],['cbim_knowledge_query',{query:'x'},'read','succeeded'],
   ] as const){const f=fixture(events=>finish(events,start(events,'unsupported',name,args,[effect]),jsonToolResult(name,{ok:true}),outcome));expect(()=>validateCheckpointEligibility(f.events,binding,'knowledge',normalize,input)).toThrow()}
 });
+it('真实仓库只读范围即使有完整本地文件基线，也不能建立原成员续执行检查点',()=>{
+  const f=fixture(events=>{
+    const allowed=start(events,'repository','cbim_repository_get',{connectorId:'.cbim/connectors/resources',expectedRevision:'a'.repeat(64),resourceId:'30000000-0000-0000-0000-000000000001'},['read']);
+    allowed.data.scope={kind:'repository',workspaceId:binding.workspaceId,connectorId:'.cbim/connectors/resources',repositoryId:'10000000-0000-0000-0000-000000000001',connectionId:'20000000-0000-0000-0000-000000000001',operation:'get'};
+    finish(events,allowed,jsonToolResult('cbim_repository_get',{reference:'资料'}));
+  });
+  expect(f.baseline.files).toHaveLength(1);
+  expect(()=>validateCheckpointEligibility(f.events,binding,'knowledge',normalize,input)).toThrow();
+});
 it('进度/知识/基线变化及交付、求助、重复检查点不能建立新的安全资格',()=>{
   const mutations:Array<(events:ArtifactEvidenceEvent[])=>void>=[events=>append(events,'task.updated',{progress:{version:2,state:'executing'}}),(events:ArtifactEvidenceEvent[])=>append(events,'task.updated',{progress:{version:1,state:'awaiting_review',delivery:{summary:'已交付'}}}),(events:ArtifactEvidenceEvent[])=>append(events,'task.help_requested',{help:{}}),(events:ArtifactEvidenceEvent[])=>append(events,'task.checkpoint_requested',{checkpoint:{}}),(events:ArtifactEvidenceEvent[])=>append(events,'run.stop_requested',{}),(events:ArtifactEvidenceEvent[])=>append(events,'run.interrupted',{}),(events:ArtifactEvidenceEvent[])=>{const a=start(events,'later','write',{path:'file.txt',content:'changed'},['business-write']);finish(events,a,jsonToolResult('write',{ok:true}))}];
   for(const mutate of mutations){const {events}=fixture();mutate(events);expect(()=>validateCheckpointEligibility(events,binding,'knowledge',normalize,input)).toThrow()}

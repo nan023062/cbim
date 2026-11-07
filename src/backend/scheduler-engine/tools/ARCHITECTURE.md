@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-把知识 CRUD、目标计划/审阅和主调度命令注册为 cbim_ 工具。主调度八工具使用固定运行身份、既有命令映射与严格单次 wire 输出校验；坏回包先核实原记录，不重做已提交操作。维护回执不算业务证据，执行者不获得调度权。
+把知识、主调度及实际装配的用户交互注册为 cbim_ 工具。QuestionTools在等待前冻结原题，唯一wire严格核验答案或取消，坏回包不重问。主调度八工具使用固定运行身份、原命令映射与严格输出；坏回包先核实原记录。维护和问答回执不算业务证据，执行者不获得调度权。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -16,6 +16,7 @@
 | [knowledge-contracts.ts](knowledge-contracts.ts) | 将实际知识工具与 Core 业务输出 Schema、取消及恢复说明绑定，供工具注册使用。 |
 | [knowledge-tools.ts](knowledge-tools.ts) | 向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。 |
 | [main-tool-contracts.ts](main-tool-contracts.ts) | 绑定主调度八项工具的公开回包、取消恢复说明及既有可信命令键。 |
+| [question-tools.ts](question-tools.ts) | 为已装配用户交互端口的主/成员运行提供结构化提问工具及严格答案回包。 |
 | [repository-tools.ts](repository-tools.ts) | 把主进程捕获的资源仓库只读端口装配为主调度可调用的两个工具。 |
 
 ## 架构类图
@@ -189,6 +190,26 @@ class N_src_backend_scheduler_engine_tools_main_tool_contracts_ts["main-tool-con
 ```
 
 直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[../../core/tools/contracts.ts](../../core/tools/contracts.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)。
+
+### question-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_tools_question_tools_ts["question-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_tools_question_tools_ts_QuestionTools["QuestionTools"] {
+  +has()
+  +list()
+  +describe()
+  +call()
+  -request
+  -parse()
+}
+N_src_backend_scheduler_engine_tools_question_tools_ts ..> N_src_backend_scheduler_engine_tools_question_tools_ts_QuestionTools : 声明
+```
+
+直接依赖：[../../core/tools/questions.ts](../../core/tools/questions.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/contracts.ts](../../core/tools/contracts.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
 
 ### repository-tools.ts
 
@@ -364,3 +385,8 @@ DispatchToolAdapter ..> AgentDispatchService : 提交请求
 # 已消费人工意见的目标引用
 
 `cbim_goal_review` 的人工证据仅支持 `{kind:human-decision,decisionId,continuationId}`，只用于当前输入版本已实际消费的 accept 对应 human satisfied。模型没有保存或继续人工决定的工具。负面决定只通过 `superseded.humanDecision` 溯源，必须由接续后新任务补做；需要新人工意见时仍引用真实 member-result 并等待。工具回执不等于决定或目标已完成，最终仍由运行结算门禁复核主体、日志、知识和选定文件。
+### 结构化提问工具包装
+
+`QuestionTools` 仅在真实用户交互端口存在时提供 `cbim_ask_user_question`，不加入知识工具目录。list、describe 和 call 共用严格输入；分类仍为 read，不扩大主或成员权限，也不触发工具审批。元数据公开真实输出 Schema、等待期间可取消及先核实后重试的限制。
+
+调用前独立冻结已解析原题，传给端口的对象变异不能改变核验依据。领域等待只调用一次，结果沿 `checkedJsonToolResult` 单次编码、校验原 wire 并直接发送，保持 answers 或 cancelled 形状，不补用户、批准或运行身份。用户回答已消费后发生 `TOOL_OUTPUT_INVALID` 仍不回滚、不重新弹题、不自动重复请求；输出异常不泄露正文。

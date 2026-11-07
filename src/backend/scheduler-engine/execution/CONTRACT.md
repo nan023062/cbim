@@ -1,3 +1,7 @@
+### 结构化提问的运行装配
+
+`loop-engine` 只在实际 requestQuestion 端口存在时创建 `QuestionTools`，主对话和执行成员复用同一严格包装，未装配的运行没有提问入口。原任务队列与 canonical run/call 继续绑定真实调用，模型参数不能提供身份。授权前只描述 read，不弹题；实际调用才等待用户明确提交或取消。输出失败不再次调用端口，工具等待的取消不代表业务副作用回滚。
+
 ### 安全等待附件的运行准备与回执
 
 `WorkspaceExecutionManager.continueGoal` 先查询原命令回执，同原始 message、附件 ID 顺序和 options 的已受理请求直接返回，快照后来缺失也不重新准备或运行。新请求先核 waiting，再在本次 pending 停止信号下准备附件，使用同一模型配置预检视觉能力，随后取得全局/本地准入；`beforeRun` 才把可信清单和 signal 交给原预算/CAS 事务消费等待。原 input 保留用户正文及 ID，运行正文使用该次展开快照，canonical source 绑定清单哈希。
@@ -494,3 +498,9 @@ JSON 结构要求另按实际工厂的 `availableValidators` 与文件端口预�
 `ScopeContinuationService.accept(request, runId, trusted?)` 在首次等待前隔离原请求及可信清单；已受理命令先按原正文、附件顺序、等待版本和选项返回原记录，不要求附件仍在磁盘。新命令才核实清单并纳入原事务指纹，清单与等待消费、目标输入升级及主运行登记同时提交。预算读取之后和交付事务变更之前复核 owner 与 AbortSignal，停止不会顺带登记预算阻塞或消费等待。
 
 `AutoCollaboration.acceptContinuation` 只在本次启动闭包透传清单和信号，不保存到 Cycle/Batch。受理后遇到错误依旧按本次真实 runId 核实并封存，不回滚意图或重新执行；旧回执不能被新失败请求误关闭。`GOAL_ATTACHMENT_*` 只报告尚未受理的附件问题，已经提交的异常仍保留原记录供查询。
+
+### 结构化问答的证据边界
+
+`memberCandidate` 复用进度证据的真实身份、作用域、结果哈希与工具用途筛选，防止无 Workflow 的旧进度或合成记录仅凭 `succeeded` 形成候选。问答答案、取消及其他不可引用的维护记录不能被混入步骤证据；原始运行日志保持可读，不改写已有事实。
+
+`ScopeGoalService.receipt` 另行拒绝共享 `questionToolName`，同时覆盖当前候选、历史返工候选和人工决定预览的来源核验。普通问答不能变为业务完成证明或人工接受；真实人工决定仍走原本机提交及显式接续协议。一个运行曾经提问并不失效：只引用真实业务回执的候选和人工预览仍按原门禁核实。

@@ -6,8 +6,8 @@ import {z} from 'zod';
 
 const text=z.string().min(1),name=z.string().regex(/^cbim_[A-Za-z0-9_]+$/);
 export const toolEffectsSchema=z.array(z.enum(['read','preview','maintenance','business-write','knowledge-write','command'])).min(1).refine(values=>new Set(values).size===values.length);
-/** 目前知识调用只在执行前检查 AbortSignal；开始后不承诺打断领域事务。 */
-export const toolCancellationSchema=z.object({mode:z.literal('preflight_only'),description:text}).strict();
+/** preflight_only 不承诺中断已开始事务；during_wait 仅表示未完成的用户交互可以取消，已消费答案不回滚。 */
+export const toolCancellationSchema=z.object({mode:z.enum(['preflight_only','during_wait']),description:text}).strict();
 /** 恢复类别是操作说明而非调度策略；同 ID 重试仍必须符合原领域版本、身份与幂等规则。 */
 export const toolRecoverySchema=z.object({mode:z.enum(['read_again','new_preview','same_request','same_plan','query_task','inspect_before_retry']),description:text,keyFields:z.array(text).min(1).optional(),queryTool:name.optional()}).strict();
 export type ToolCancellation=z.infer<typeof toolCancellationSchema>;

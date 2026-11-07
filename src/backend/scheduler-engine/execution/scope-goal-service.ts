@@ -1,10 +1,12 @@
 /**
+ * 问答边界：当前与历史候选共用真实业务回执校验，普通回答及取消不能替代目标完成或人工验收依据。
  * 作用定位：在派发事务中保存本轮目标计划与结构化审阅，并为目标门禁、依赖修订和本机人工决定核验真实候选、角色及模块基线。
  * 设计原因：目标与图查询使用同一存储快照；模型只能申请完成或等待，必须等主运行结算后核实证据、任务压力与副作用。计划与候选逐模块匹配显式 Workflow 或原缺省模式，再沿冻结知识从 canonical 重算；明确返工只保留旧候选历史，不把旧文件再次放行。
  * 职责边界：人工项仅引用当前实际消费的接受；审阅和完成均复核原业务主体、精确候选与选定字节，负面意见只能明确安排新任务返工。不关闭周期或签署，外部文件核实不构成原子快照。
  * 证据边界：治理观察、提案和查询仅是私有待办事实，不能被主知识引用或成员候选包装成业务完成证据。
  */
 import {z} from 'zod';
+import {questionToolName} from '../../core/tools/questions';
 import {fail} from '../../core/foundation/errors';
 import {hash,json} from '../../core/foundation/serialization';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
@@ -128,6 +130,7 @@ export class ScopeGoalService {
     const receipts=(summary.toolReceipts??[]).filter(item=>item.toolCallId===toolCallId),events=summary.events.filter(event=>event.type==='tool.finished'&&event.data.id===toolCallId);
     check(receipts.length===1&&events.length===1,'GOAL_EVIDENCE_INVALID','工具证据缺失或身份重复');
     const receipt=receipts[0],event=events[0],allowed=summary.events.find(item=>item.type==='tool.allowed'&&item.data.id===toolCallId);
+    check(receipt.toolName!==questionToolName,'GOAL_EVIDENCE_INVALID','问题回答与取消不是业务完成证据或人工验收决定');
     check(receipt.outcome==='succeeded'&&receipt.workspaceId===summary.task.workspaceId&&receipt.taskId===summary.task.taskId&&receipt.runId===summary.runId&&event.workspaceId===receipt.workspaceId&&event.taskId===receipt.taskId&&event.runId===receipt.runId&&event.data.isError!==true&&sameGoalValue(event.data.receipt,receipt)&&receipt.resultHash===hash(JSON.stringify(event.data.result)),'GOAL_EVIDENCE_INVALID','工具回执或结果正文不匹配');
     check(allowed&&allowed.seq<event.seq&&allowed.data.name===receipt.toolName&&receipt.inputHash===hash(JSON.stringify(allowed.data.input))&&allowed.seq>=lastEffect(summary),'GOAL_EVIDENCE_STALE','证据不属于最后一次副作用之后的有效执行');
     check(!receipt.toolName.startsWith('cbim_task_')&&!receipt.toolName.startsWith('cbim_dispatch_')&&!receipt.toolName.startsWith('cbim_goal_')&&!receipt.toolName.startsWith('cbim_governance_')&&receipt.toolName!=='cbim_delivery_prepare','GOAL_EVIDENCE_INVALID','调度、计划、审阅或治理待办回执不能作为业务完成证据');

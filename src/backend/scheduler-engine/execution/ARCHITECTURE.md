@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主实例与图根共享身份。目标分工、派发、候选及人工来源核对原流程选择；成员启动核实际能力，交付/审阅从canonical复核要求、真实passed及当前文件。历史返工保留原证明。检查点与前置替换不改选；额度/准入等待不消费，停止和重启封存不重放。
+主实例与图根共享身份。只在真实用户交互端口存在时装配提问工具；成员候选和目标审阅排除问答回执，但保留历史事实与真实业务证据。目标分工、派发及人工来源核对原流程选择；交付/审阅从canonical复核要求、真实passed及当前文件。检查点与前置替换不改选；额度/准入等待不消费，停止和重启封存不重放。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -600,7 +600,7 @@ class N_src_backend_scheduler_engine_execution_loop_engine_ts_ExecutionServices[
 N_src_backend_scheduler_engine_execution_loop_engine_ts ..> N_src_backend_scheduler_engine_execution_loop_engine_ts_ExecutionServices : 声明
 ```
 
-直接依赖：[../conversation/questions.ts](../conversation/questions.ts)、[../../core/foundation/paths.ts](../../core/foundation/paths.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../tools/knowledge-tools.ts](../tools/knowledge-tools.ts)、[../context/team-workflow.ts](../context/team-workflow.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/brain/index.ts](../../core/brain/index.ts)、[../../core/brain/pi/rpc.ts](../../core/brain/pi/rpc.ts)、[../../core/brain/llm/ports.ts](../../core/brain/llm/ports.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/tools/questions.ts](../../core/tools/questions.ts)、[../../core/tasks/progress-tools.ts](../../core/tasks/progress-tools.ts)、[../../core/tasks/member-help-tools.ts](../../core/tasks/member-help-tools.ts)、[../../core/tasks/artifact-tools.ts](../../core/tasks/artifact-tools.ts)、[../../core/brain/artifact-capture.ts](../../core/brain/artifact-capture.ts)、[../../core/brain/run-validation.ts](../../core/brain/run-validation.ts)、[../../core/tasks/validation-tools.ts](../../core/tasks/validation-tools.ts)、[../../core/tasks/member-checkpoint-tools.ts](../../core/tasks/member-checkpoint-tools.ts)、[../tools/dispatch-tools.ts](../tools/dispatch-tools.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[../../core/connectors/repository-tools.ts](../../core/connectors/repository-tools.ts)、[../tools/repository-tools.ts](../tools/repository-tools.ts)、[../../core/governance/module-governance-tools.ts](../../core/governance/module-governance-tools.ts)、[../tools/governance-tools.ts](../tools/governance-tools.ts)、[../../core/brain/storage.ts](../../core/brain/storage.ts)。
+直接依赖：[../tools/question-tools.ts](../tools/question-tools.ts)、[../../core/foundation/paths.ts](../../core/foundation/paths.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../tools/knowledge-tools.ts](../tools/knowledge-tools.ts)、[../context/team-workflow.ts](../context/team-workflow.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/brain/index.ts](../../core/brain/index.ts)、[../../core/brain/pi/rpc.ts](../../core/brain/pi/rpc.ts)、[../../core/brain/llm/ports.ts](../../core/brain/llm/ports.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/tasks/progress-tools.ts](../../core/tasks/progress-tools.ts)、[../../core/tasks/member-help-tools.ts](../../core/tasks/member-help-tools.ts)、[../../core/tasks/artifact-tools.ts](../../core/tasks/artifact-tools.ts)、[../../core/brain/artifact-capture.ts](../../core/brain/artifact-capture.ts)、[../../core/brain/run-validation.ts](../../core/brain/run-validation.ts)、[../../core/tasks/validation-tools.ts](../../core/tasks/validation-tools.ts)、[../../core/tasks/member-checkpoint-tools.ts](../../core/tasks/member-checkpoint-tools.ts)、[../tools/dispatch-tools.ts](../tools/dispatch-tools.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[../../core/connectors/repository-tools.ts](../../core/connectors/repository-tools.ts)、[../tools/repository-tools.ts](../tools/repository-tools.ts)、[../../core/governance/module-governance-tools.ts](../../core/governance/module-governance-tools.ts)、[../tools/governance-tools.ts](../tools/governance-tools.ts)、[../../core/brain/storage.ts](../../core/brain/storage.ts)。
 
 ### member-checkpoint-verifier.ts
 
@@ -828,7 +828,7 @@ class N_src_backend_scheduler_engine_execution_member_state_ts["member-state.ts"
 }
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[member-help-state.ts](member-help-state.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/tasks/member-tool-output.ts](../../core/tasks/member-tool-output.ts)、[member-help-state.ts](member-help-state.ts)。
 
 ### member-workflow.ts
 
@@ -1059,7 +1059,7 @@ class N_src_backend_scheduler_engine_execution_scope_goal_service_ts_ScopeGoalSe
 N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts_ScopeGoalService : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/tools/types.ts](../../core/tools/types.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-execution.ts](../../core/tasks/dispatch-execution.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../context/dispatch-context.ts](../context/dispatch-context.ts)、[execution-report-facts.ts](execution-report-facts.ts)、[member-help-state.ts](member-help-state.ts)、[member-events.ts](member-events.ts)、[human-decision-evidence.ts](human-decision-evidence.ts)、[../../core/tasks/human-decisions.ts](../../core/tasks/human-decisions.ts)、[../../core/tasks/human-continuation-rules.ts](../../core/tasks/human-continuation-rules.ts)、[member-workflow.ts](member-workflow.ts)、[../../core/tasks/artifact-baseline.ts](../../core/tasks/artifact-baseline.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)。
+直接依赖：[../../core/tools/questions.ts](../../core/tools/questions.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/tools/types.ts](../../core/tools/types.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-execution.ts](../../core/tasks/dispatch-execution.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../context/dispatch-context.ts](../context/dispatch-context.ts)、[execution-report-facts.ts](execution-report-facts.ts)、[member-help-state.ts](member-help-state.ts)、[member-events.ts](member-events.ts)、[human-decision-evidence.ts](human-decision-evidence.ts)、[../../core/tasks/human-decisions.ts](../../core/tasks/human-decisions.ts)、[../../core/tasks/human-continuation-rules.ts](../../core/tasks/human-continuation-rules.ts)、[member-workflow.ts](member-workflow.ts)、[../../core/tasks/artifact-baseline.ts](../../core/tasks/artifact-baseline.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)。
 
 ### scope-human-continuation-service.ts
 
@@ -1685,6 +1685,10 @@ N_src_backend_scheduler_engine_execution_scope_usage_service_ts ..> N_src_backen
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 结构化提问的运行装配
+
+`loop-engine` 只在实际 requestQuestion 端口存在时创建 `QuestionTools`，主对话和执行成员复用同一严格包装，未装配的运行没有提问入口。原任务队列与 canonical run/call 继续绑定真实调用，模型参数不能提供身份。授权前只描述 read，不弹题；实际调用才等待用户明确提交或取消。输出失败不再次调用端口，工具等待的取消不代表业务副作用回滚。
+
 ### 安全等待附件的运行准备与回执
 
 `WorkspaceExecutionManager.continueGoal` 先查询原命令回执，同原始 message、附件 ID 顺序和 options 的已受理请求直接返回，快照后来缺失也不重新准备或运行。新请求先核 waiting，再在本次 pending 停止信号下准备附件，使用同一模型配置预检视觉能力，随后取得全局/本地准入；`beforeRun` 才把可信清单和 signal 交给原预算/CAS 事务消费等待。原 input 保留用户正文及 ID，运行正文使用该次展开快照，canonical source 绑定清单哈希。
@@ -2181,3 +2185,9 @@ JSON 结构要求另按实际工厂的 `availableValidators` 与文件端口预�
 `ScopeContinuationService.accept(request, runId, trusted?)` 在首次等待前隔离原请求及可信清单；已受理命令先按原正文、附件顺序、等待版本和选项返回原记录，不要求附件仍在磁盘。新命令才核实清单并纳入原事务指纹，清单与等待消费、目标输入升级及主运行登记同时提交。预算读取之后和交付事务变更之前复核 owner 与 AbortSignal，停止不会顺带登记预算阻塞或消费等待。
 
 `AutoCollaboration.acceptContinuation` 只在本次启动闭包透传清单和信号，不保存到 Cycle/Batch。受理后遇到错误依旧按本次真实 runId 核实并封存，不回滚意图或重新执行；旧回执不能被新失败请求误关闭。`GOAL_ATTACHMENT_*` 只报告尚未受理的附件问题，已经提交的异常仍保留原记录供查询。
+
+### 结构化问答的证据边界
+
+`memberCandidate` 复用进度证据的真实身份、作用域、结果哈希与工具用途筛选，防止无 Workflow 的旧进度或合成记录仅凭 `succeeded` 形成候选。问答答案、取消及其他不可引用的维护记录不能被混入步骤证据；原始运行日志保持可读，不改写已有事实。
+
+`ScopeGoalService.receipt` 另行拒绝共享 `questionToolName`，同时覆盖当前候选、历史返工候选和人工决定预览的来源核验。普通问答不能变为业务完成证明或人工接受；真实人工决定仍走原本机提交及显式接续协议。一个运行曾经提问并不失效：只引用真实业务回执的候选和人工预览仍按原门禁核实。

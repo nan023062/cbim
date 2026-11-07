@@ -1,4 +1,5 @@
 /**
+ * 问答边界：结算复用当前业务证据谓词，旧记录或合成进度不能借成功的答案/取消回执产生候选；不禁止未引用的提问。
  * 作用定位：成员执行事务的图增量、占用和交付候选投影，并提供独立求助验证入口。
  * 设计原因：纯状态计算与进程生命周期分开；已请求求助的运行不能同时产出交付候选，模型正文不签发完成或验收事实。
  */
@@ -8,6 +9,7 @@ import type {RunSummary} from '../../core/brain/types';
 import type {DispatchState} from '../../core/tasks/dispatch-storage';
 import type {GraphSnapshot,GraphEventBatch,GraphChange,TaskNode,AgentGraphView} from '../../core/tasks/graph-types';
 import type {AgentInstance} from '../../core/team/agent-types';
+import {isProgressEvidence} from '../../core/tasks/member-tool-output';
 import {hasMemberHelp} from './member-help-state';
 export {memberHelpCandidate,hasMemberHelp} from './member-help-state';
 
@@ -46,7 +48,8 @@ export function memberCandidate(task:TaskNode,summary:RunSummary):TaskNode['resu
   const progress=summary.taskProgress;
   if(hasMemberHelp(summary)||summary.status!=='completed'||summary.unresolvedTools.length||progress?.state!=='awaiting_review'||!progress.delivery||!progress.steps.length)return;
   if(progress.goal!==task.goal||JSON.stringify(progress.acceptance)!==JSON.stringify(task.acceptance.map(a=>a.text)))return;
-  const receipts=new Set((summary.toolReceipts??[]).filter(r=>r.workspaceId===task.identity.workspaceId&&r.taskId===task.taskId&&r.runId===summary.runId&&r.outcome==='succeeded').map(r=>r.toolCallId));
+  const identity={workspaceId:task.identity.workspaceId,taskId:task.taskId,runId:summary.runId};
+  const receipts=new Set((summary.toolReceipts??[]).filter(receipt=>isProgressEvidence(receipt,identity)).map(receipt=>receipt.toolCallId));
   if(progress.steps.some(step=>step.state!=='reported_done'||!step.evidence.length||step.evidence.some(id=>!receipts.has(id))))return;
   return {resultId:randomUUID(),runId:summary.runId,planRevision:task.planRevision,summary:progress.delivery.summary,limitations:progress.delivery.limitations,evidenceRefs:[...new Set(progress.steps.flatMap(step=>step.evidence))],acceptance:'not_evaluated'};
 }

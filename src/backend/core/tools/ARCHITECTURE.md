@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-工具 Schema、版本、副作用、调用决策、结构化提问及回执。结果只核唯一 JSON 传输快照，不用解析改写制造成功；回执结构由异常报告和进度工具共用，历史可读不等于当前业务证据有效。注册和发现不授予执行权限。
+工具 Schema、版本、副作用、调用决策、严格提问/答案及回执。提问按原题同序核验，取消与答案排他；during_wait只承诺结束未完成交互。结果只核唯一 JSON 快照，不用解析改写制造成功；历史可读不等于当前业务证据有效。注册、发现及用户回答不授予权限。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -12,7 +12,7 @@
 | --- | --- |
 | [contracts.ts](contracts.ts) | 工具取消、恢复说明及按需契约发现的纯协议，不导入具体领域或执行服务。 |
 | [native-tools.ts](native-tools.ts) | 定义当前引擎真实装配的原生工具及可信副作用分类。 |
-| [questions.ts](questions.ts) | 结构化用户问题的 Schema 和待答快照。 |
+| [questions.ts](questions.ts) | 结构化提问的严格输入、桌面答案、排他结果与待答快照，供队列、工具包装和证据边界共用。 |
 | [receipt-schema.ts](receipt-schema.ts) | 执行报告与任务工具共用的真实工具回执字段协议。 |
 | [receipts.ts](receipts.ts) | 把已核实的工具调用、授权和终态整理为可追溯回执。 |
 | [registry.ts](registry.ts) | 实际内部工具的输入/业务输出协议、版本、副作用及取消/恢复说明，支持摘要与按需完整描述。 |
@@ -71,6 +71,14 @@ class N_src_backend_core_tools_native_tools_ts["native-tools.ts"] {
 classDiagram
 class N_src_backend_core_tools_questions_ts["questions.ts"] {
   <<module>>
+  +questionResultForInput()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tools_questions_ts["questions.ts"] {
+  <<module>>
 }
 class N_src_backend_core_tools_questions_ts_QuestionInput["QuestionInput"] {
   <<type>>
@@ -84,6 +92,11 @@ class N_src_backend_core_tools_questions_ts_PendingQuestion["PendingQuestion"] {
 }
 N_src_backend_core_tools_questions_ts ..> N_src_backend_core_tools_questions_ts_PendingQuestion : 声明
 N_src_backend_core_tools_questions_ts_QuestionInput <|-- N_src_backend_core_tools_questions_ts_PendingQuestion
+class N_src_backend_core_tools_questions_ts_QuestionResult["QuestionResult"] {
+  <<type>>
+
+}
+N_src_backend_core_tools_questions_ts ..> N_src_backend_core_tools_questions_ts_QuestionResult : 声明
 ```
 
 
@@ -305,6 +318,12 @@ N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_scope_schema_ts :
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 结构化提问的纯契约
+
+`questions.ts` 统一 `questionToolName`、严格嵌套问题输入、桌面答案输入与排他的 answers/cancelled 输出。模型不能夹带身份、批准或范围字段；桌面只提交原选项索引或其它文字。`questionResultForInput` 独立保存已解析原题，核对回答数量、顺序、原题文字及补充的选项关系，不裁剪、填默认值或修剪输出 wire。
+
+没有 supplement 的答案可能来自选项或其它文字，不能反推选择来源、认证身份、工具授权或人工验收。工具成功和取消事实保留在日志，但不成为业务完成证据。取消元数据 `during_wait` 只用于尚未完成的交互；其它工具的 `preflight_only` 及既有领域事务语义不改变。
 
 ### 当前工具结果边界
 

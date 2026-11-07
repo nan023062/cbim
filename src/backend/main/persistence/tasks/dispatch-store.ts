@@ -1,6 +1,6 @@
 /**
  * 作用定位：将岗位、模块责任和来源代次审计，以及执行实例、会话、任务图和信封可靠保存到同一工作区日志。
- * 设计原因：追加日志是唯一权威记录，fsync 后才发布；新事务由存储标记负责人协议，旧前缀只回放不重写，控制面不得夹带执行，旧在途按原事实结算。
+ * 设计原因：追加日志是唯一权威记录，fsync 后才发布；原命令前态与回执由同次 publish/load 派生，旧前缀只回放不重写，控制面不得夹带执行，旧在途按原事实结算。
  * 职责边界：应用须先持有工作区唯一写入锁；本类串行化该实例内的事务，不启动大脑、不消费 outbox。
  */
 import fs from 'node:fs/promises';
@@ -12,7 +12,7 @@ import {validateDispatchExecution} from '../../../core/tasks/dispatch-invariants
 import {validateDispatchScopes} from '../../../core/tasks/dispatch-scope-invariants';
 import {projectWorkspaceMemberMutation} from '../../../core/tasks/workspace-member-invariants';
 import {projectModuleOwnershipMutation} from '../../../core/tasks/module-ownership-invariants';
-import type {DispatchCommand, DispatchMutation, DispatchObserver, DispatchState, DispatchStore} from '../../../core/tasks/dispatch-storage';
+import type {DispatchCommand, DispatchCommandEvidence, DispatchMutation, DispatchObserver, DispatchState, DispatchStore} from '../../../core/tasks/dispatch-storage';
 import type {AgentRef, GraphCursor, GraphDelta, GraphEventBatch, GraphIdentity, GraphSnapshot} from '../../../core/tasks/graph-types';
 import {applyScopeBatch,dispatchSessionReadInput,emptyScopeSnapshot,readScopeDelta,readScopeDetail,summarizeScope,scopeViewHistoryLimit,type DispatchSessionReadInput,type DispatchSessionRead,type ScopeSnapshot,type ScopeEventBatch} from '../../../core/tasks/scope-view';
 import type {DispatchScope} from '../../../core/tasks/dispatch-scope';
@@ -47,7 +47,7 @@ export class FileDispatchStore implements DispatchStore {
   private readonly file:string;
   private state:DispatchState;
   /** commandId 在整个工作区内去重；指纹同时包含操作与主会话等输入，跨图复用同键也会冲突。 */
-  private readonly commands=new Map<string,{fingerprint:string;receipt:unknown}>();
+  private readonly commands=new Map<string,DispatchCommandEvidence>();
   /** 按 rootSessionId 保存已提交图批次；图序号独立于包含无图变更事务的 transactionSeq。 */
   private readonly events=new Map<string,GraphEventBatch[]>();
   /** 从 scopes 提交派生，每个主会话独立连续编号；正常重放恢复相同游标，不保存第二份日志。 */
@@ -93,6 +93,14 @@ export class FileDispatchStore implements DispatchStore {
   /** 原命令查询只读日志恢复出的索引；不触发新事务，也不按当前知识或配置重算历史结果。 */
   async commandReceipt(commandId:string):Promise<{fingerprint:string;receipt:unknown}|undefined>{
     this.available();valid(text(commandId),'查询需要原命令身份');await this.init();await this.tail;this.available();
+    const record=this.commands.get(commandId);
+    return record?clone({fingerprint:record.fingerprint,receipt:record.receipt}):undefined;
+  }
+  /** 内部原命令证据不重算当前业务状态；没有记录不是未执行证明，完整回执不得原样公开。 */
+  async commandEvidence(commandId:string):Promise<DispatchCommandEvidence|undefined>{
+    this.available();valid(text(commandId),'查询需要原命令身份');
+    if(!this.initialization)fail('GRAPH_STORE_NOT_READY','工作区尚未初始化，不能通过原命令查询触发恢复');
+    await this.initialization;await this.tail;this.available();
     return clone(this.commands.get(commandId));
   }
   /** 只返回明确主会话的图，不暴露全工作区邮箱或其他会话正文。 */
@@ -162,10 +170,13 @@ export class FileDispatchStore implements DispatchStore {
   }
 
   private publish(body:TransactionBody,checksum:string,next:DispatchState){
+    // 必须先取原前态；实时 fsync 与已验证 load 共用此处，后来的根版本不能改变原命令依据。
+    const batch=body.mutation.batch;
+    const previousGraph=batch?this.state.graphs.find(graph=>sameGraph(graph.identity,batch.identity)):undefined;
+    const evidence:DispatchCommandEvidence={fingerprint:body.command.fingerprint,receipt:body.mutation.receipt,commit:{transactionSeq:body.transactionSeq,checksum,executionProtocol:body.executionProtocol??'legacy'},...(batch?{graph:{identity:clone(batch.identity),...(previousGraph?{before:{cursor:clone(previousGraph.cursor),rootRevision:previousGraph.root.revision}}:{}),afterCursor:{...batch.identity,streamId:batch.streamId,seq:batch.seq},cause:batch.cause}}:{})};
     this.state=next;this.transactionSeq=body.transactionSeq;this.lastHash=checksum;
     if(body.executionProtocol==='module_owner_v1')this.ownerProtocolSeen=true;
-    this.commands.set(body.command.commandId,{fingerprint:body.command.fingerprint,receipt:body.mutation.receipt});
-    const batch=body.mutation.batch;
+    this.commands.set(body.command.commandId,evidence);
     if(batch){const events=this.events.get(batch.identity.rootSessionId)??[];events.push(batch);this.events.set(batch.identity.rootSessionId,events)}
     const groups=new Map<string,DispatchScope[]>();
     for(const scope of body.mutation.scopes??[]){const values=groups.get(scope.rootSessionId)??[];values.push(scope);groups.set(scope.rootSessionId,values)}

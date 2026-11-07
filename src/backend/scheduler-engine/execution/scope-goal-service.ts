@@ -12,6 +12,7 @@ import {scopeHasUnresolvedActiveInput} from '../../core/tasks/scope-active-input
 import {validateScopeActiveInputLog} from './scope-active-input-evidence';
 import {fail} from '../../core/foundation/errors';
 import {hash,json} from '../../core/foundation/serialization';
+import {goalCommand} from './main-command-request';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {RunSummary,StoredEvent} from '../../core/brain/types';
 import type {ToolReceipt} from '../../core/tools/types';
@@ -71,7 +72,7 @@ export class ScopeGoalService {
   }
   private command(operation:string,identity:GraphIdentity,scopeId:string,runId:string,commandId:string,draft:unknown){
     check(typeof runId==='string'&&runId.trim().length>0&&typeof commandId==='string'&&commandId.trim().length>0,'GOAL_IDENTITY','目标决策缺少可信运行或命令身份');
-    return {commandId,fingerprint:hash(json({operation,identity,scopeId,runId,draft}))};
+    return goalCommand(operation,identity,scopeId,runId,commandId,draft);
   }
   /** 只读固定身份的周期快照；不创建计划、不读取完整运行日志。 */
   async inspect(identity:GraphIdentity,scopeId:string):Promise<DispatchScope>{return this.scope(await this.store.read(),identity,scopeId)}

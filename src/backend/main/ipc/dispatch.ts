@@ -6,6 +6,7 @@
  * 队列插入：原样传递用户操作时的 expectedRunId，由执行管理器统一拒绝缺省、过期或停止请求，不替客户端猜当前运行。
  * 岗位执行：显式派发必须传当前 scopeId，由服务核计划、责任和岗位；旧 loop.start 在解析模型前拒绝新业务执行，历史读取不变。
  * 模块责任：六个桌面入口复用同一责任服务，人工 actor 由本闭包注入；查询原回执不重新提交或改派执行成员。
+ * 原命令报告：客户端只选择 workspace/root/run/call；已有服务核原 canonical 与 Store，不隐式打开工作区或补充提交证明。
  */
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
@@ -57,6 +58,8 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'dispatch.memberCreate':return app.memberDispatch(args.workspaceId).createMember(args);
     case 'dispatch.task':{const {scopeId,...request}=args;return app.memberDispatch(args.workspaceId).dispatchTask(request,scopeId)}
     case 'dispatch.ownerInspect':return app.memberDispatch(args.workspaceId).ownerInspect(args);
+    // 仅已打开工作区可查询；服务从原 canonical 推导命令，不接受客户端命令键或恢复授权。
+    case 'dispatch.commandReport':return app.memberDispatch(args.workspaceId).commandReport(args);
     case 'dispatch.graphSnapshot':return app.memberDispatch(args.identity?.workspaceId).snapshot(args.identity);
     case 'dispatch.graphDelta':return app.memberDispatch(args.identity?.workspaceId).delta(args.identity,args.cursor,args.limit);
     case 'dispatch.sessionRead':return app.memberDispatch(args.identity?.workspaceId).sessionRead(args);

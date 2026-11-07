@@ -142,3 +142,6 @@ raw 输入在任何领域调用前严格校验；发送端口的对象与原期�
 ### 检查点交接放弃
 
 `cbim_dispatch_abandon_checkpoint` 仅在主调度装配真实端口时注册，effects 为 maintenance，取消说明为受理前检查，未知结果先 inspect 原任务的 checkpointAbandonment。请求明确图/目标/任务/计划/检查点版本及可空的原恢复预约 ID；workspace/root/scope/run/command 从可信闭包取得。独立冻结输入后才调用服务，回执只编码一次并核原身份和审计，不因输出错误重新放弃。回执不能用作业务或人工验收证据，不证明已回滚、迁移或执行新任务。
+### 原主命令核实工具
+
+`cbim_dispatch_command_report` 仅在真实主运行的可选只读端口存在时注册，严格参数只有 runId/toolCallId；可信闭包固定 workspace/root，与桌面报告使用同一服务。read 效果不触发写审批，没有写 commandId、不改变 Auto.workRequested；dispatch 前缀继续排除业务证据。输入在 await 前独立冻结，结果沿唯一 JSON wire 严格核原选择与主身份并限制 128 KiB UTF-8；坏输出不查询第二次、不执行原工具。八项写工具的 recovery.queryTool 指向此报告，原指纹构造由 main-command-request 与提交方共用，查询自身没有写命令映射。

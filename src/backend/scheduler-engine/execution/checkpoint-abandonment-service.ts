@@ -8,6 +8,7 @@ import {isDeepStrictEqual} from 'node:util';
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
 import {hash,json} from '../../core/foundation/serialization';
+import {contextualMainCommand} from './main-command-request';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {DispatchStore} from '../../core/tasks/dispatch-storage';
 import type {GraphIdentity,TaskNode} from '../../core/tasks/graph-types';
@@ -24,7 +25,7 @@ export class CheckpointAbandonmentService {
   private request(identity:GraphIdentity,scopeId:string,mainRunId:string,commandId:string,raw:AbandonCheckpointInput){
     const parsed=abandonCheckpointInputSchema.safeParse(raw),context=contextSchema.safeParse({...identity,scopeId,mainRunId,commandId});
     if(!parsed.success||!context.success)fail('CHECKPOINT_HANDOFF_INPUT','检查点放弃参数或主运行身份无效');
-    const input=parsed.data,fixed=context.data,command={commandId,fingerprint:hash(json({operation:'member.checkpoint.abandon',context:fixed,input}))};
+    const input=parsed.data,fixed=context.data,command=contextualMainCommand('member.checkpoint.abandon',fixed,input);
     return {input,fixed,command};
   }
   private async lookup(command:{commandId:string;fingerprint:string}):Promise<AbandonCheckpointReceipt|undefined>{

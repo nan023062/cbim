@@ -275,7 +275,11 @@ export class AutoCollaboration {
       plan:(input,call)=>{this.assertLive(batch,call.signal);cycle.workRequested=true;return this.track(cycle,this.dispatch.goals.plan(this.identity(batch),cycle.scopeId,runId,mainToolCommandId('cbim_goal_plan',binding,call.toolCallId)!,input,()=>this.assertLive(batch,call.signal)).then(projectMainScope))},
       review:(input,call)=>{this.assertLive(batch,call.signal);cycle.workRequested=true;return this.track(cycle,this.dispatch.goals.review(this.identity(batch),cycle.scopeId,runId,mainToolCommandId('cbim_goal_review',binding,call.toolCallId)!,input).then(projectMainScope))},
     });
-    return new DispatchTools({binding,dispatch:(input,call)=>this.track(cycle,this.assign(batch,input,call.toolCallId,call.signal)),cancel:(input,call)=>{
+    return new DispatchTools({binding,commandReport:(input,call)=>{
+      this.assertLive(batch,call.signal);
+      // 查询本身不置 workRequested，也不修复原未知；加入操作集合使停止等待本次只读收尾。
+      return this.track(cycle,this.dispatch.commandReport({...this.identity(batch),...input},call.signal));
+    },dispatch:(input,call)=>this.track(cycle,this.assign(batch,input,call.toolCallId,call.signal)),cancel:(input,call)=>{
       this.assertLive(batch,call.signal);cycle.workRequested=true;
       // 这里只做可用字段的批次关联；坏回包原样交唯一 wire 校验，不因空值先抛 TypeError，也不据此重做持久化。
       // 仅撤销列出的未启动待办。成功后从本轮待执行批次移除，避免派发后同轮撤销又制造无意义的模型回注；周期历史仍完整保留。

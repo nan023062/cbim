@@ -557,3 +557,10 @@ queued 与接受日志确认后才移除队列项，迟到停止不撤销接受�
 最终短 Store 事务重新选择原检查点并比较图、scope、task、run/proof、session、lease 及可选 resume assignment；停止检查覆盖全部等待至提交末端。只取消原节点、固定不可变 abandoned_by_handoff 审计、递增一次成员租约与图版本，并将明确的 pending resume assignment 置 processed。原 checkpoint 结果信封不被代 ACK，也不纳入历史观察 stamp，允许主回注后的迟到纯 ACK。原运行/知识/岗位/模型/边/检查点及预约审计不变。
 
 Auto 在任何异步处置前立即登记 cycle.operations，停止先作用原引擎再等操作收口。处置后（包括坏回包或异常）只查询一次精确原 command receipt；匹配严格身份与审计时移除旧待领取任务并撤相应 admission 票据，保留 cycle.tasks 历史。查询错误报告未核实、不改原输出或错误、不循环重试；停止统一撤票。新任务仍走当前岗位门禁，旧后继仍须显式取消和重建，最终 complete 必须有真实替代候选。
+## 原主命令只读核实
+
+`CommandVerificationService` 按 workspace/root/run/toolCall 读取已持久 canonical，核原主实例和唯一 runTracking 周期，再通过同一 Store 的原 commandEvidence 核八项主写命令。原始 inputHash 与领域解析后的 fingerprint 分开：保留原 trim、缺省值、agentId 映射及键序，派发父版本只取已验证事务前态；历史查询不套当前 ownerSelection 执行资格。
+
+报告 IO 在事务外，按 Store→canonical→command→command→canonical→Store 反向闭合观察；变化返回不稳定且不交付已核实回执。图根 task 邮箱与 canonical conversation 通道分别核同主实例、团队和 root，不要求两通道 ID 相同。原始日志只允许一条首 started 和至多一个终态，在途允许无终态；终态后的迟到 stop 不构成新工具执行。原工具事实 helper 仅为本报告接受 512 字符调用 ID，旧执行报告保持其 128 字符公开域。
+
+有图回执须匹配原事务 afterCursor；派发另核原 command 的 assignment.messageId/taskId/from 与任务不可变身份，不拿今日任务状态、计划版本或受旧协议允许修订的 assignee 否定原派发。只读查询不进入 transact、不启动引擎、不获取模型或知识锁、不修 canonical，也不将 absent 当未执行。已保存事务可与原工具 failed/unknown 同时存在；结果使用有界安全投影，不公开 Prepared、私有恢复上下文或 native 路径。

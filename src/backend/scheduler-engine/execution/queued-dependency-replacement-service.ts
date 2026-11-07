@@ -7,6 +7,7 @@ import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
 import {hash,json} from '../../core/foundation/serialization';
+import {contextualMainCommand} from './main-command-request';
 import type {DispatchStore} from '../../core/tasks/dispatch-storage';
 import type {GraphIdentity,GraphEdge,TaskNode} from '../../core/tasks/graph-types';
 import {replaceQueuedDependencyInputSchema,type ReplaceQueuedDependencyInput,type DependencyReplacement,type ReplaceQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-replacement';
@@ -26,7 +27,7 @@ export class QueuedDependencyReplacementService {
     const parsed=replaceQueuedDependencyInputSchema.safeParse(raw),context=contextSchema.safeParse({...identity,scopeId,runId,commandId});
     if(!parsed.success||!context.success)fail('DEPENDENCY_INPUT_INVALID','前置替换参数或主调度运行身份无效');
     const input=parsed.data,fixed=context.data,alive=()=>{this.owner.assert();assertCurrent?.();if(fixed.workspaceId!==this.owner.entry.id)fail('GRAPH_IDENTITY_MISMATCH','前置替换不属于当前工作区')};
-    const command={commandId:fixed.commandId,fingerprint:hash(json({operation:'dispatch.replaceDependency',context:fixed,input}))};
+    const command=contextualMainCommand('dispatch.replaceDependency',fixed,input);
     if(!this.owners)fail('OWNER_EXECUTION_UNAVAILABLE','未装配岗位前置核验');const old=await this.owners.replay<ReplaceQueuedDependencyReceipt>(command);if(old)return old.receipt;
     alive();
     return this.owners.withContext(state=>this.owners!.selections(queuedDependencyReplacementSelection(state,fixed,scopeId,input).tasks),context=>this.store.transact(command,async state=>{

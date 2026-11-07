@@ -167,3 +167,8 @@ interface DispatchStore {
 来源 capture/prepared/resolved 直接追加至同一 dispatch.jsonl，当前代次和过渡状态只由历史派生，不保存第二份来源账本。Store 先执行 `projectKnowledgeSourceMutation`，再把精确 capture 许可交给两个登记门禁；所有规则及原命令/回执核验完成后才可靠落盘并发布。来源游标不推进任务图、岗位登记或责任游标；仅明确 capture+consumer 同批才同时推进对应登记流。
 
 prepared/resolved 为来源独立事务，原 journal 指纹属于内部可信协议，不接收知识正文。旧无来源字段日志保持字节与回执不变，首次读取只返回空来源集合/null 游标。重开重放相同前缀与严格校验；source 的命令查询沿原只读索引，无自动知识重做。知识协调器持知识 serial 后调用 Store，Store 回调不得反向排队知识；两日志并非跨存储 ACID，无法核实的 pending 仍保留屏障。
+# 原命令前态证据（Step35 已实现协议）
+
+`commandEvidence` 只从原 commands 索引派生事实：实时提交可靠 fsync 后、历史重放完成原校验后，用同一 publish 路径保存提交前 graph.root.revision 和前后图游标。无前图不补默认版本；旧 journal 不改格式或字节，也不保存第二账本。查询等待现有提交屏障返回隔离副本，不能调用 prepare/transact 或再扫描日志。
+
+原 `commandReceipt` 仍只含 fingerprint/receipt；新增证据不自动扩散给旧消费者。IO 未确认或损坏不能返回 absent。应用报告只接已打开且初始化完成的工作区，不以查询触发 open/init/recover；内部完整回执不可直接返回 UI/模型。

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-中央主对话、目标摘要、输入、附件及队列；附件区明确显示目录清单、URL指针、网页摘录与仓库静态资料。两处插入口冻结原run，入队成功保留事实，停止锁独立于插入等待。进程准入等待与持久用户等待分别展示，纯等待不累计工作时长；未受理保留草稿。核实与重规划权限分离，可续聊头由后端核实。 双视图共享人工决定控制器，保存意见不清除聊天草稿或消费等待。 目标摘要可跳转本周期原任务或替代成果，沿已有任务详情导航，不改草稿、附件或执行状态。
+中央主对话、目标摘要、输入、附件及队列；附件区明确显示目录清单、URL指针、网页摘录与仓库静态资料。两处插入口冻结原run，入队成功保留事实，停止锁独立于插入等待。进程准入等待与持久用户等待分别展示，纯等待不累计工作时长；未受理保留草稿。核实与重规划权限分离，可续聊头由后端核实。 双视图共享人工决定控制器，保存意见不清除聊天草稿或消费等待。 目标摘要可跳转本周期原任务或替代成果，沿已有任务详情导航，不改草稿、附件或执行状态。 原工具记录显式核实保存事实，保留原失败；控制器按四重身份隔离迟到响应，轮询不重复读取，失败保留旧报告并提示时效。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -12,6 +12,9 @@
 | --- | --- |
 | [AttachmentMenu.tsx](AttachmentMenu.tsx) | Cindy 风格的加号上下文菜单，接入 CBIM 原生选择器与附件快照服务。 |
 | [brain-status.ts](brain-status.ts) | 将公开运行事件投影为输入框左上角的大脑状态。 |
+| [command-verification-state.ts](command-verification-state.ts) | 保存一次原主工具调用的显式核实状态，校验报告身份并隔离迟到的异步响应。 |
+| [command-verification.css](command-verification.css) | 原命令核实卡的主题排版与独立状态颜色。 |
+| [CommandVerificationPanel.tsx](CommandVerificationPanel.tsx) | 在主对话的原工具记录中展示显式核实入口，分别呈现原工具结果、事务保存事实与验收边界。 |
 | [ComposerAttachments.tsx](ComposerAttachments.tsx) | 按 Cindy ThumbnailStrip 的 56px 卡片、类型标识和角落移除按钮展示草稿附件。 |
 | [ComposerCard.tsx](ComposerCard.tsx) | 从 Cindy ComposerCard 移植的统一输入卡片与内容间距。 |
 | [ComposerPicker.tsx](ComposerPicker.tsx) | Cindy 风格的权限和模型 chip，向上展开可搜索、键盘可操作的选择面板。 |
@@ -64,6 +67,92 @@ class N_src_frontend_conversation_brain_status_ts["brain-status.ts"] {
 ```
 
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)。
+
+### command-verification-state.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_conversation_command_verification_state_ts["command-verification-state.ts"] {
+  <<module>>
+  +commandVerificationKey()
+  +mainCommandSelection()
+  +applyCommandVerification()
+  +commandVerificationStale()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_conversation_command_verification_state_ts["command-verification-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_conversation_command_verification_state_ts_CommandVerificationSelection["CommandVerificationSelection"] {
+  <<type>>
+  +expectedToolName
+}
+N_src_frontend_conversation_command_verification_state_ts ..> N_src_frontend_conversation_command_verification_state_ts_CommandVerificationSelection : 声明
+class N_src_frontend_conversation_command_verification_state_ts_CommandVerificationState["CommandVerificationState"] {
+  <<interface>>
+  +report
+  +loading
+  +error
+}
+N_src_frontend_conversation_command_verification_state_ts ..> N_src_frontend_conversation_command_verification_state_ts_CommandVerificationState : 声明
+class N_src_frontend_conversation_command_verification_state_ts_CommandVerificationController["CommandVerificationController"] {
+  +selection
+  +snapshot
+  +subscribe
+  +cancel()
+  +inspect()
+  -read
+  -value
+  -generation
+  -listeners
+  -publish()
+}
+N_src_frontend_conversation_command_verification_state_ts ..> N_src_frontend_conversation_command_verification_state_ts_CommandVerificationController : 声明
+```
+
+直接依赖：[../../bridge/contracts/command-verification.ts](../../bridge/contracts/command-verification.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)。
+
+### command-verification.css
+
+```mermaid
+classDiagram
+class N_src_frontend_conversation_command_verification_css["command-verification.css"] {
+  <<stylesheet>>
+}
+```
+
+### CommandVerificationPanel.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_conversation_CommandVerificationPanel_tsx["CommandVerificationPanel.tsx"] {
+  <<component>>
+  +CommandVerificationPanel()
+  +MainCommandVerification()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_conversation_CommandVerificationPanel_tsx["CommandVerificationPanel.tsx"] {
+  <<component>>
+}
+class N_src_frontend_conversation_CommandVerificationPanel_tsx_CommandVerificationView["CommandVerificationView"] {
+  <<interface>>
+  +stale
+  +inspect
+}
+N_src_frontend_conversation_CommandVerificationPanel_tsx ..> N_src_frontend_conversation_CommandVerificationPanel_tsx_CommandVerificationView : 声明
+class N_src_frontend_conversation_CommandVerificationPanel_tsx_external_CommandVerificationState["CommandVerificationState (外部契约)"] {
+  <<external>>
+}
+N_src_frontend_conversation_CommandVerificationPanel_tsx_external_CommandVerificationState <|-- N_src_frontend_conversation_CommandVerificationPanel_tsx_CommandVerificationView
+```
+
+直接依赖：[../../bridge/contracts/command-verification.ts](../../bridge/contracts/command-verification.ts)、[command-verification-state.ts](command-verification-state.ts)、[command-verification.css](command-verification.css)。
 
 ### ComposerAttachments.tsx
 
@@ -377,7 +466,7 @@ class N_src_frontend_conversation_ToolActivity_tsx["ToolActivity.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../components/RepositoryScopeDetails.tsx](../components/RepositoryScopeDetails.tsx)。
+直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../components/RepositoryScopeDetails.tsx](../components/RepositoryScopeDetails.tsx)、[../../bridge/contracts/command-verification.ts](../../bridge/contracts/command-verification.ts)、[command-verification-state.ts](command-verification-state.ts)、[CommandVerificationPanel.tsx](CommandVerificationPanel.tsx)。
 
 ### transcript.ts
 
@@ -483,6 +572,15 @@ class N_src_frontend_conversation_WorkStatus_tsx["WorkStatus.tsx"] {
 
 ```mermaid
 classDiagram
+class N_src_frontend_conversation_CommandVerificationPanel_tsx["CommandVerificationPanel.tsx"] {
+  <<component>>
+}
+class N_src_frontend_conversation_command_verification_state_ts["command-verification-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_conversation_command_verification_css["command-verification.css"] {
+  <<stylesheet>>
+}
 class N_src_frontend_conversation_Conversation_tsx["Conversation.tsx"] {
   <<component>>
 }
@@ -492,22 +590,22 @@ class N_src_frontend_conversation_transcript_ts["transcript.ts"] {
 class N_src_frontend_conversation_MarkdownMessage_tsx["MarkdownMessage.tsx"] {
   <<component>>
 }
-class N_src_frontend_conversation_WorkStatus_tsx["WorkStatus.tsx"] {
-  <<component>>
-}
-class N_src_frontend_conversation_session_tabs_css["session-tabs.css"] {
-  <<stylesheet>>
-}
+N_src_frontend_conversation_CommandVerificationPanel_tsx ..> N_src_frontend_conversation_command_verification_state_ts : 导入依赖
+N_src_frontend_conversation_CommandVerificationPanel_tsx ..> N_src_frontend_conversation_command_verification_css : 导入依赖
 N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_transcript_ts : 导入依赖
 N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_MarkdownMessage_tsx : 导入依赖
-N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_WorkStatus_tsx : 导入依赖
-N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_session_tabs_css : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_conversation_Conversation_tsx["Conversation.tsx"] {
   <<component>>
+}
+class N_src_frontend_conversation_WorkStatus_tsx["WorkStatus.tsx"] {
+  <<component>>
+}
+class N_src_frontend_conversation_session_tabs_css["session-tabs.css"] {
+  <<stylesheet>>
 }
 class N_src_frontend_conversation_MessageQueue_tsx["MessageQueue.tsx"] {
   <<component>>
@@ -515,21 +613,21 @@ class N_src_frontend_conversation_MessageQueue_tsx["MessageQueue.tsx"] {
 class N_src_frontend_conversation_useMessageQueue_ts["useMessageQueue.ts"] {
   <<module>>
 }
-class N_src_frontend_conversation_QuestionCard_tsx["QuestionCard.tsx"] {
-  <<component>>
-}
-class N_src_frontend_conversation_UsageStatus_tsx["UsageStatus.tsx"] {
-  <<component>>
-}
+N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_WorkStatus_tsx : 导入依赖
+N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_session_tabs_css : 导入依赖
 N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_MessageQueue_tsx : 导入依赖
 N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_useMessageQueue_ts : 导入依赖
-N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_QuestionCard_tsx : 导入依赖
-N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_UsageStatus_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_conversation_Conversation_tsx["Conversation.tsx"] {
+  <<component>>
+}
+class N_src_frontend_conversation_QuestionCard_tsx["QuestionCard.tsx"] {
+  <<component>>
+}
+class N_src_frontend_conversation_UsageStatus_tsx["UsageStatus.tsx"] {
   <<component>>
 }
 class N_src_frontend_conversation_MessageCard_tsx["MessageCard.tsx"] {
@@ -538,21 +636,21 @@ class N_src_frontend_conversation_MessageCard_tsx["MessageCard.tsx"] {
 class N_src_frontend_conversation_conversation_css["conversation.css"] {
   <<stylesheet>>
 }
-class N_src_frontend_conversation_ComposerCard_tsx["ComposerCard.tsx"] {
-  <<component>>
-}
-class N_src_frontend_conversation_SendButton_tsx["SendButton.tsx"] {
-  <<component>>
-}
+N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_QuestionCard_tsx : 导入依赖
+N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_UsageStatus_tsx : 导入依赖
 N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_MessageCard_tsx : 导入依赖
 N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_conversation_css : 导入依赖
-N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_ComposerCard_tsx : 导入依赖
-N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_SendButton_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_conversation_Conversation_tsx["Conversation.tsx"] {
+  <<component>>
+}
+class N_src_frontend_conversation_ComposerCard_tsx["ComposerCard.tsx"] {
+  <<component>>
+}
+class N_src_frontend_conversation_SendButton_tsx["SendButton.tsx"] {
   <<component>>
 }
 class N_src_frontend_conversation_AttachmentMenu_tsx["AttachmentMenu.tsx"] {
@@ -561,16 +659,10 @@ class N_src_frontend_conversation_AttachmentMenu_tsx["AttachmentMenu.tsx"] {
 class N_src_frontend_conversation_ComposerPicker_tsx["ComposerPicker.tsx"] {
   <<component>>
 }
-class N_src_frontend_conversation_ComposerAttachments_tsx["ComposerAttachments.tsx"] {
-  <<component>>
-}
-class N_src_frontend_conversation_conversation_state_ts["conversation-state.ts"] {
-  <<module>>
-}
+N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_ComposerCard_tsx : 导入依赖
+N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_SendButton_tsx : 导入依赖
 N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_AttachmentMenu_tsx : 导入依赖
 N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_ComposerPicker_tsx : 导入依赖
-N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_ComposerAttachments_tsx : 导入依赖
-N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_conversation_state_ts : 导入依赖
 ```
 
 ```mermaid
@@ -578,11 +670,28 @@ classDiagram
 class N_src_frontend_conversation_Conversation_tsx["Conversation.tsx"] {
   <<component>>
 }
+class N_src_frontend_conversation_ComposerAttachments_tsx["ComposerAttachments.tsx"] {
+  <<component>>
+}
+class N_src_frontend_conversation_conversation_state_ts["conversation-state.ts"] {
+  <<module>>
+}
 class N_src_frontend_conversation_queue_insertion_ts["queue-insertion.ts"] {
   <<module>>
 }
 class N_src_frontend_conversation_conversation_stop_ts["conversation-stop.ts"] {
   <<module>>
+}
+N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_ComposerAttachments_tsx : 导入依赖
+N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_conversation_state_ts : 导入依赖
+N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_queue_insertion_ts : 导入依赖
+N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_conversation_stop_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_conversation_Conversation_tsx["Conversation.tsx"] {
+  <<component>>
 }
 class N_src_frontend_conversation_ThreadHistoryNotice_tsx["ThreadHistoryNotice.tsx"] {
   <<component>>
@@ -593,14 +702,6 @@ class N_src_frontend_conversation_MarkdownMessage_tsx["MarkdownMessage.tsx"] {
 class N_src_frontend_conversation_repairStreamingMarkdown_ts["repairStreamingMarkdown.ts"] {
   <<module>>
 }
-N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_queue_insertion_ts : 导入依赖
-N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_conversation_stop_ts : 导入依赖
-N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_ThreadHistoryNotice_tsx : 导入依赖
-N_src_frontend_conversation_MarkdownMessage_tsx ..> N_src_frontend_conversation_repairStreamingMarkdown_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_frontend_conversation_MessageQueue_tsx["MessageQueue.tsx"] {
   <<component>>
 }
@@ -613,6 +714,23 @@ class N_src_frontend_conversation_QuestionCard_tsx["QuestionCard.tsx"] {
 class N_src_frontend_conversation_questions_css["questions.css"] {
   <<stylesheet>>
 }
+N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_ThreadHistoryNotice_tsx : 导入依赖
+N_src_frontend_conversation_MarkdownMessage_tsx ..> N_src_frontend_conversation_repairStreamingMarkdown_ts : 导入依赖
+N_src_frontend_conversation_MessageQueue_tsx ..> N_src_frontend_conversation_message_queue_css : 导入依赖
+N_src_frontend_conversation_QuestionCard_tsx ..> N_src_frontend_conversation_questions_css : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_conversation_ToolActivity_tsx["ToolActivity.tsx"] {
+  <<component>>
+}
+class N_src_frontend_conversation_command_verification_state_ts["command-verification-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_conversation_CommandVerificationPanel_tsx["CommandVerificationPanel.tsx"] {
+  <<component>>
+}
 class N_src_frontend_conversation_UsageStatus_tsx["UsageStatus.tsx"] {
   <<component>>
 }
@@ -622,8 +740,8 @@ class N_src_frontend_conversation_brain_status_ts["brain-status.ts"] {
 class N_src_frontend_conversation_usage_ts["usage.ts"] {
   <<module>>
 }
-N_src_frontend_conversation_MessageQueue_tsx ..> N_src_frontend_conversation_message_queue_css : 导入依赖
-N_src_frontend_conversation_QuestionCard_tsx ..> N_src_frontend_conversation_questions_css : 导入依赖
+N_src_frontend_conversation_ToolActivity_tsx ..> N_src_frontend_conversation_command_verification_state_ts : 导入依赖
+N_src_frontend_conversation_ToolActivity_tsx ..> N_src_frontend_conversation_CommandVerificationPanel_tsx : 导入依赖
 N_src_frontend_conversation_UsageStatus_tsx ..> N_src_frontend_conversation_brain_status_ts : 导入依赖
 N_src_frontend_conversation_UsageStatus_tsx ..> N_src_frontend_conversation_usage_ts : 导入依赖
 ```
@@ -667,6 +785,10 @@ N_src_frontend_conversation_WorkStatus_tsx ..> N_src_frontend_conversation_ToolA
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 会话执行与持久等待交互
+
+原主工具轨道为八项已接入的调度写命令提供“核实原命令”。`MainCommandVerification` 通过唯一 `dispatch.commandReport` 入口传原 workspace/root/run/call 身份；主实例绑定必须与日志一致，成员轨道与无可信主绑定旧日志不猜测入口。工具失败与原事务已保存分别展示，查询不修改原日志、未确认项、验收、恢复资格或普通草稿。
+
+`CommandVerificationController` 仅显式点击读取，同身份在途点击合并；轮询、挂载和展开不查询。严格核对报告 Schema、四重身份和原工具名，切换/卸载忽略迟到响应；失败保留旧报告并标明时效。`throughSeq` 早于当前日志仅提示有更新，不撤回已保存事实或自动刷新。界面只展示有界公共结果、序号和摘要，不导入后端命令算法，不显示 Prepared/native/私有事务。查无回执仍然未知，不能据此重新执行；本卡不提供重试或恢复按钮。
 
 目标摘要中的原任务/替代成果沿 `viewMember` 切到同一主会话任务页并选择已有节点；`ScopeGoalPanel` 先核对所选周期与图、节点归属。只读定位不重新派发、不迁移旧负责人、不清除普通草稿/附件，也不修改原审阅或绘制额外执行边。
 

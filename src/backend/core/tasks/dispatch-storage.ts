@@ -64,6 +64,23 @@ export interface DispatchState {
 /** 幂等键由可信入口产生；fingerprint 是包括调用者在内的规范化输入摘要。 */
 export interface DispatchCommand { commandId: string; fingerprint: string }
 
+/**
+ * 原命令内部依据，仅从已可靠提交或已验证重放的原前态派生。
+ * receipt 仍是后端私有值，公开前须领域校验与白名单投影；不导出完整事务或 Prepared。
+ */
+export interface DispatchCommandEvidence {
+  fingerprint:string;
+  receipt:unknown;
+  commit:{transactionSeq:number;checksum:string;executionProtocol:'legacy'|'module_owner_v1'};
+  graph?:{
+    identity:GraphIdentity;
+    /** 首次创建图没有前态，不得用当前图或默认版本补造。 */
+    before?:{cursor:GraphCursor;rootRevision:number};
+    afterCursor:GraphCursor;
+    cause:GraphEventBatch['cause'];
+  };
+}
+
 /** 一个命令的完整提交单元；可选数组按对象 ID 写入完整新记录，省略不改变集合，重复 ID 须拒绝。 */
 export interface DispatchMutation<T = unknown> {
   members?: AgentInstance[];
@@ -97,6 +114,8 @@ export interface DispatchStore {
   read(): Promise<DispatchState>;
   /** 只查已提交原命令；共享提交屏障，返回隔离副本，不调用 prepare 或重新执行操作。 */
   commandReceipt(commandId:string):Promise<{fingerprint:string;receipt:unknown}|undefined>;
+  /** 只读原命令及窄提交前态；缺失不代表未执行，不能借此调用事务或恢复原操作。 */
+  commandEvidence(commandId:string):Promise<DispatchCommandEvidence|undefined>;
   /** 相同键和摘要直接返回原回执，不重复执行 prepare；冲突不能覆盖原记录。 */
   transact<T>(command: DispatchCommand, prepare: (state: DispatchState) => Promise<DispatchMutation<T>>): Promise<T>;
   /** 读取指定主会话的已提交图；尚未建图应报 GRAPH_NOT_FOUND，不自动创建节点。 */

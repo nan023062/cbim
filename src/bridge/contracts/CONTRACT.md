@@ -254,3 +254,6 @@ governance.ts 仅重导 Core 严格纯协议。界面按明确工作区/实例/�
 `workspace-members.ts` 只重导 Core team 的严格 DTO/Schema。五个 `workspace.members.*` IPC 传递明确岗位选择、实例、版本、预览依据及紧凑原命令回执；界面不能提交 actor、能力正文或模型凭据。registry cursor 与任务图/周期游标分开，稳定 memberId 不取代现有 agentInstanceId。登记回执本身不是执行许可；正式派发另行核实原计划和模块负责人。
 
 `module-ownership.ts` 重导 Core workspace 的责任关系、查询依据、预览和回执协议；六个 `workspace.ownerships.*` IPC 不开放任意审计或 actor 写入。负责人引用 memberId，与静态 Agent、真人维护人和运行实例分别表达。查询分页同时冻结责任/岗位游标与知识版本；单条责任变更不改任务图。来源观察 hash 不是受控来源代次；登记接口不提供旧任务交接授权，新任务经独立派发门禁进入当前负责人执行。
+# 原主命令核实
+
+`command-verification.ts` 只转出 Core 的严格请求、报告及固定八工具支持矩阵。桌面传原 workspace/root/run/call，scope、稳定命令与指纹由后端原记录推导；公共结果不包含 Prepared、native、私有路径或原始事务帧。`committed` 仅证明原控制面事务已保存，`absent` 不能证明未执行，报告不签发恢复或验收资格。

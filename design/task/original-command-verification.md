@@ -1,6 +1,6 @@
 # 原命令核实与异常恢复分流
 
-Step35 / R03-A。状态：待实施。承接 R02 的负责岗位派发与显式存量交接；先完成 Step34 最终回归和独立提交，再进入本片。R03 全包仍包含更广异常核实、显式修复关联及必要补偿，本片不能替代完整交付。
+Step35 / R03-A。状态：2026-11-08 已完成，承接 Step34 提交 `a519dd4`。全仓 276 文件、1771 项全部通过，无失败或跳过，最终 EXE 030214 两场、真实 Pi 三分支、类型与架构均通过。详见[验证报告](../verification/original-command-verification-20261108.md)。下一片见[异常影响核实与新修复关联](effect-observation-repair.md)。R03 全包仍包含更广异常核实、显式修复关联及必要补偿，本片不能替代完整交付。
 
 ## 解决的问题
 
@@ -27,7 +27,7 @@ Step35 / R03-A。状态：待实施。承接 R02 的负责岗位派发与显式�
 
 ## 唯一 Store 的历史依据
 
-`dispatch_task` 的隐藏 `expectedParentRevision` 不能从今天的 root revision 猜测。拟在现有 commands 内存索引旁派生窄 `commandEvidence`：原 fingerprint/receipt、真实事务序号/校验值/协议，以及有图事务的前后游标和提交前 root revision。
+`dispatch_task` 的隐藏 `expectedParentRevision` 不能从今天的 root revision 猜测。已在现有 commands 内存索引旁派生窄 `commandEvidence`：原 fingerprint/receipt、真实事务序号/校验值/协议，以及有图事务的前后游标和提交前 root revision。
 
 依据从现有 live publish 和 load 的已验证原事务前态产生，live 必须已经可靠保存，load 必须已经通过原重放校验。保持原 `commandReceipt` 两字段行为；不改写旧 journal、不另建持久账本，不在每次查询时重新扫描或重放全历史。缺少可信原前态时明确不可核实，不能补造父版本。
 

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-任务计划、派发图、目标与等待。资料清单保留旧文件v1，新增严格v2来源并核同序与字节；快照不等于当前来源或业务验收。依赖追加核实两端及后继未领取、当前计划与真实图，完整审计验证后才放行精确新边；保留原任务/实例，领取时绑定真实结果。运行内补充以pending/accepted/rejected/unknown分开，接受与waiting共享连续输入版本，未知阻止完成。流程选择共用叶子契约，缺省与显式分开匹配，已派发选择不可改写；严格输出区分保存与交付，历史不补造授权或证据。 正式协议将目标分配、任务、准备、模型和历史审计相互核对；岗位绑定不可重写，旧在途仅按原事实收束。 检查点显式放弃有独立严格协议与精确联合变更校验；原任务和检查点证据不可重写，纯 ACK 与后续周期释放保持可用。
+任务计划、派发图、目标与等待。资料清单保留旧文件v1，新增严格v2来源并核同序与字节；快照不等于当前来源或业务验收。依赖追加核实两端及后继未领取、当前计划与真实图，完整审计验证后才放行精确新边；保留原任务/实例，领取时绑定真实结果。运行内补充以pending/accepted/rejected/unknown分开，接受与waiting共享连续输入版本，未知阻止完成。流程选择共用叶子契约，缺省与显式分开匹配，已派发选择不可改写；严格输出区分保存与交付，历史不补造授权或证据。 正式协议将目标分配、任务、准备、模型和历史审计相互核对；岗位绑定不可重写，旧在途仅按原事实收束。 检查点显式放弃有独立严格协议与精确联合变更校验；原任务和检查点证据不可重写，纯 ACK 与后续周期释放保持可用。 原主命令核实定义八工具的有界报告；原工具结果、事务保存和业务验收分开，查询回执不能成为交付证据。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -16,6 +16,8 @@
 | [checkpoint-handoff-invariants.ts](checkpoint-handoff-invariants.ts) | 核实检查点放弃的不可变历史和精确联合事务，返回仅供检查点状态机使用的任务许可。 |
 | [checkpoint-handoff-rules.ts](checkpoint-handoff-rules.ts) | 从同一派发快照选择尚未消费、可以明确终止的原检查点及恢复预约。 |
 | [checkpoint-handoff.ts](checkpoint-handoff.ts) | 定义主调度明确放弃未消费检查点的严格请求、不可变处置审计和回执。 |
+| [command-verification-output.ts](command-verification-output.ts) | 后端原命令报告的回执归属校验与紧凑公共投影，复用现有主工具输出契约。 |
+| [command-verification.ts](command-verification.ts) | 声明原主命令只读核实的严格请求、有界报告及八项写工具支持矩阵，供后端与界面共享。 |
 | [continuation-source-snapshot.ts](continuation-source-snapshot.ts) | 安全等待资料导入的严格来源摘要与私有文本快照协议，供 Main 保存及 Core 清单校验共用。 |
 | [dispatch-commands.ts](dispatch-commands.ts) | 第一阶段成员注册与主会话派发的命令及回执契约。 |
 | [dispatch-execution.ts](dispatch-execution.ts) | 声明成员任务执行的后端持久化记录，连接已派发任务与同一大脑内核的运行身份。 |
@@ -276,6 +278,74 @@ class N_src_backend_core_tasks_checkpoint_handoff_ts_AbandonCheckpointReceipt["A
 
 }
 N_src_backend_core_tasks_checkpoint_handoff_ts ..> N_src_backend_core_tasks_checkpoint_handoff_ts_AbandonCheckpointReceipt : 声明
+```
+
+
+### command-verification-output.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_command_verification_output_ts["command-verification-output.ts"] {
+  <<module>>
+  +projectCommandReceipt()
+}
+```
+
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[scope-goal.ts](scope-goal.ts)、[main-tool-output.ts](main-tool-output.ts)、[command-verification.ts](command-verification.ts)。
+
+### command-verification.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_command_verification_ts["command-verification.ts"] {
+  <<module>>
+  +commandVerificationReportForInput()
+  +isVerifiableMainToolName()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_command_verification_ts["command-verification.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_command_verification_ts_VerifiableMainToolName["VerifiableMainToolName"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_command_verification_ts ..> N_src_backend_core_tasks_command_verification_ts_VerifiableMainToolName : 声明
+class N_src_backend_core_tasks_command_verification_ts_CommandVerificationInput["CommandVerificationInput"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_command_verification_ts ..> N_src_backend_core_tasks_command_verification_ts_CommandVerificationInput : 声明
+class N_src_backend_core_tasks_command_verification_ts_CommandReportToolInput["CommandReportToolInput"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_command_verification_ts ..> N_src_backend_core_tasks_command_verification_ts_CommandReportToolInput : 声明
+class N_src_backend_core_tasks_command_verification_ts_CommandResultSummary["CommandResultSummary"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_command_verification_ts ..> N_src_backend_core_tasks_command_verification_ts_CommandResultSummary : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_command_verification_ts["command-verification.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_command_verification_ts_CommandRecord["CommandRecord"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_command_verification_ts ..> N_src_backend_core_tasks_command_verification_ts_CommandRecord : 声明
+class N_src_backend_core_tasks_command_verification_ts_CommandVerificationReport["CommandVerificationReport"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_command_verification_ts ..> N_src_backend_core_tasks_command_verification_ts_CommandVerificationReport : 声明
 ```
 
 
@@ -571,6 +641,14 @@ classDiagram
 class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
   <<module>>
 }
+class N_src_backend_core_tasks_dispatch_storage_ts_DispatchCommandEvidence["DispatchCommandEvidence"] {
+  <<interface>>
+  +fingerprint
+  +receipt
+  +commit
+  +graph
+}
+N_src_backend_core_tasks_dispatch_storage_ts ..> N_src_backend_core_tasks_dispatch_storage_ts_DispatchCommandEvidence : 声明
 class N_src_backend_core_tasks_dispatch_storage_ts_DispatchMutation["DispatchMutation"] {
   <<interface>>
   +members
@@ -596,6 +674,7 @@ class N_src_backend_core_tasks_dispatch_storage_ts_DispatchStore["DispatchStore"
   <<interface>>
   +read()
   +commandReceipt()
+  +commandEvidence()
   +transact()
   +snapshot()
   +delta()
@@ -2744,7 +2823,7 @@ class N_src_backend_core_tasks_workflow_evidence_ts_WorkflowProgressContext["Wor
 N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_workflow_evidence_ts_WorkflowProgressContext : 声明
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[execution-context.ts](execution-context.ts)、[progress.ts](progress.ts)、[types.ts](types.ts)、[../tools/types.ts](../tools/types.ts)、[../tools/native-tools.ts](../tools/native-tools.ts)、[../tools/questions.ts](../tools/questions.ts)、[artifact-evidence.ts](artifact-evidence.ts)、[validation.ts](validation.ts)、[validation-evidence.ts](validation-evidence.ts)、[../workspace/json-validation-schema.ts](../workspace/json-validation-schema.ts)。
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[execution-context.ts](execution-context.ts)、[progress.ts](progress.ts)、[types.ts](types.ts)、[../tools/types.ts](../tools/types.ts)、[../tools/native-tools.ts](../tools/native-tools.ts)、[../tools/questions.ts](../tools/questions.ts)、[command-verification.ts](command-verification.ts)、[artifact-evidence.ts](artifact-evidence.ts)、[validation.ts](validation.ts)、[validation-evidence.ts](validation-evidence.ts)、[../workspace/json-validation-schema.ts](../workspace/json-validation-schema.ts)。
 
 ### workflow-selection.ts
 
@@ -2869,6 +2948,29 @@ class N_src_backend_core_tasks_scope_goal_ts["scope-goal.ts"] {
 class N_src_backend_core_tasks_scope_active_input_ts["scope-active-input.ts"] {
   <<module>>
 }
+class N_src_backend_core_tasks_command_verification_output_ts["command-verification-output.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_checkpoint_handoff_rules_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
+N_src_backend_core_tasks_checkpoint_handoff_rules_ts ..> N_src_backend_core_tasks_scope_active_input_ts : 导入依赖
+N_src_backend_core_tasks_command_verification_output_ts ..> N_src_backend_core_tasks_dispatch_scope_ts : 导入依赖
+N_src_backend_core_tasks_command_verification_output_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_command_verification_output_ts["command-verification-output.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_main_tool_output_ts["main-tool-output.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_command_verification_ts["command-verification.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_dispatch_commands_ts["dispatch-commands.ts"] {
   <<module>>
 }
@@ -2878,8 +2980,8 @@ class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
 class N_src_backend_core_tasks_workflow_selection_ts["workflow-selection.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_checkpoint_handoff_rules_ts ..> N_src_backend_core_tasks_scope_goal_ts : 导入依赖
-N_src_backend_core_tasks_checkpoint_handoff_rules_ts ..> N_src_backend_core_tasks_scope_active_input_ts : 导入依赖
+N_src_backend_core_tasks_command_verification_output_ts ..> N_src_backend_core_tasks_main_tool_output_ts : 导入依赖
+N_src_backend_core_tasks_command_verification_output_ts ..> N_src_backend_core_tasks_command_verification_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_commands_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_commands_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
 ```
@@ -4232,6 +4334,9 @@ classDiagram
 class N_src_backend_core_tasks_workflow_evidence_ts["workflow-evidence.ts"] {
   <<module>>
 }
+class N_src_backend_core_tasks_command_verification_ts["command-verification.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_artifact_evidence_ts["artifact-evidence.ts"] {
   <<module>>
 }
@@ -4241,16 +4346,10 @@ class N_src_backend_core_tasks_validation_ts["validation.ts"] {
 class N_src_backend_core_tasks_validation_evidence_ts["validation-evidence.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_workspace_member_invariants_ts["workspace-member-invariants.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
-  <<module>>
-}
+N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_command_verification_ts : 导入依赖
 N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_artifact_evidence_ts : 导入依赖
 N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_validation_ts : 导入依赖
 N_src_backend_core_tasks_workflow_evidence_ts ..> N_src_backend_core_tasks_validation_evidence_ts : 导入依赖
-N_src_backend_core_tasks_workspace_member_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 ```
 
 ```mermaid
@@ -4258,9 +4357,13 @@ classDiagram
 class N_src_backend_core_tasks_workspace_member_invariants_ts["workspace-member-invariants.ts"] {
   <<module>>
 }
+class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_knowledge_source_invariants_ts["knowledge-source-invariants.ts"] {
   <<module>>
 }
+N_src_backend_core_tasks_workspace_member_invariants_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
 N_src_backend_core_tasks_workspace_member_invariants_ts ..> N_src_backend_core_tasks_knowledge_source_invariants_ts : 导入依赖
 ```
 
@@ -4852,3 +4955,10 @@ Progress 保存前独立冻结验证记录，原 wire 证明必须能由这些�
 `checkpoint-handoff-invariants.ts` 先完整核验，再向检查点状态机提供按主会话与任务编码的窄许可。唯一事务只能包含原任务 cancelled/revision+1/不可变审计、原空闲实例 leaseEpoch+1、对应图投影 revision+1、可选原 pending 恢复 assignment processed 及严格回执；未知集合或混合写入拒绝。原 checkpoint 信封不改动，可独立迟到 ACK。放弃后的整个 TaskNode 不再改写，后续周期关闭可以再次提高实例租约，历史审计仍保留原 before/after 值。
 
 Store 继续用同一串行提交、原命令回执和原协议裁决，不增第二份日志或后台恢复。第十项主输出在一次原 wire 上核对真实调用身份及精确请求；坏回包不回滚、不重复提交。`cbim_dispatch_` 的统一证据排除覆盖本工具，其成功回执不能成为业务步骤/交付或人工接受的证明。新任务、领取与 resume 仍受负责人当前资格门禁约束，交接终止不为它们开例外。
+# 原命令只读核实（Step35 已实现协议）
+
+`command-verification.ts` 定义八项主写命令的有界公开报告，原工具 outcome、Store committed/absent/不可核实与业务 `not_evaluated` 分开。请求只含 workspace/root/run/toolCall，原 scope 和命令依据由后端推导；报告不传 Prepared、原参数正文、私有恢复上下文或原完整事务，不清 unknown、不作为业务证据、不授予重试或恢复。`cbim_dispatch_command_report` 只读且无写命令，沿 dispatch 前缀排除业务完成证据。
+
+`DispatchStore.commandEvidence` 是内部只读端口，保留原 fingerprint/receipt 并提供原提交序号、校验值、执行协议及图的真实前态根版本/游标；这些内部值必须先严格核原输入与绑定再公开投影。原 `commandReceipt` 形状不变。命令算法与原 parsed 指纹由 Scheduler 的唯一适配器维护；工具协议版本与 Store 执行协议不是一回事。
+
+`command-verification-output.ts` 仅供后端：原回执先按既有主输出 Schema 核输入/身份/版本，并拒绝解析产生的 trim/默认化，再生成八支紧凑摘要。任务列表最多 20 项，明确 total/truncated，完整原集合不能先裁剪再核；公开报告最多 20 条 issue、128 KiB wire，业务验收固定 not_evaluated。Bridge 仅导 `command-verification.ts` 叶子，不能把后端回执读取或原私有上下文导入浏览器。

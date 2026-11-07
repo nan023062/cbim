@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-应用 action 路由；等待资料独立导入/目录/取消入口不启动模型，受理只读保存快照。队列插入传递原expectedRunId，由调度拒绝缺失、过期及停止。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。 dispatch.ownerInspect 只读核原任务并返回当前观察；正式派发必须显式绑定主周期。
+应用 action 路由；等待资料独立导入/目录/取消入口不启动模型，受理只读保存快照。队列插入传递原expectedRunId，由调度拒绝缺失、过期及停止。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。 dispatch.ownerInspect 只读核原任务并返回当前观察；正式派发必须显式绑定主周期。 dispatch.commandReport 固定原工作区、主根、运行和调用，桌面与模型共用同一只读服务。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -189,3 +189,6 @@ Electron 接入仍核对本窗口与主 Frame；`humanDecide` 在可信闭包注
 ### 正式岗位执行入口
 
 `dispatch.task` 必须显式携带原 active `scopeId`，路由剥离该字段后交同一派发服务核验当前计划和 `ownerSelection`，不会根据界面或最近周期猜 scope。`dispatch.ownerInspect` 只读返回指定任务的原 revision/binding 及当前分组观察；不改绑定、不领取任务。`loop.start` 在模型选型前明确拒绝新的旧业务通道，普通 chat 续聊及历史查询保留。
+### 原主调用命令报告
+
+`dispatch.commandReport({workspaceId,rootSessionId,runId,toolCallId})` 路由到已有工作区的 `WorkspaceDispatchService.commandReport`。原工具名、input、scope、commandId 和 fingerprint 均由可信日志与 Store 推导，客户端不能补身份或结论；不调用 execute/commit/start/resume 来试探回执。查无记录仍是未知，不清原未确认工具。

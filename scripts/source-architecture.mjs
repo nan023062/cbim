@@ -92,6 +92,19 @@ const checkpointHandoffScopes={
  'src/frontend/conversation':'目标摘要可跳转本周期原任务或替代成果，沿已有任务详情导航，不改草稿、附件或执行状态。',
 };
 for(const [directory,description] of Object.entries(checkpointHandoffScopes))scope[directory]+=' '+description;
+// 原命令核实共享原日志与账本；公共报告、历史指纹适配及视图时效分层，不形成新的执行入口。
+const commandVerificationScopes={
+ 'src/backend/core/tasks':'原主命令核实定义八工具的有界报告；原工具结果、事务保存和业务验收分开，查询回执不能成为交付证据。',
+ 'src/backend/main/persistence/tasks':'原命令证据索引从真实已保存事务前态派生，保留原根修订与日志协议；不重写历史或按当前图补造依据。',
+ 'src/backend/scheduler-engine/execution':'原命令核实从固定主运行的 canonical 复原历史解析与指纹，比较读取前后依据；只返回严格公共摘要，不重发原命令或签发恢复资格。',
+ 'src/backend/scheduler-engine/tools':'主 Agent 可按明确原 run/call 查询控制面事务；可信闭包固定工作区和根，读取本身无写命令且不触发成员执行。',
+ 'src/backend/scheduler-engine/conversation':'收到坏回包可先核实原命令保存事实，查无回执不等于未执行，原业务仍沿实际任务和验收流程决策。',
+ 'src/backend/main':'原命令核实只装配已打开工作区的 canonical 和唯一账本，不隐式启动、初始化或恢复。',
+ 'src/backend/main/ipc':'dispatch.commandReport 固定原工作区、主根、运行和调用，桌面与模型共用同一只读服务。',
+ 'src/bridge/contracts':'command-verification 只导出严格公共报告和八工具支持矩阵，隐藏原事务和执行准备信息。',
+ 'src/frontend/conversation':'原工具记录显式核实保存事实，保留原失败；控制器按四重身份隔离迟到响应，轮询不重复读取，失败保留旧报告并提示时效。',
+};
+for(const [directory,description] of Object.entries(commandVerificationScopes))scope[directory]+=' '+description;
 const norm=p=>p.replaceAll('\\','/');
 const walk=p=>fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(p+'/'+e.name):[p+'/'+e.name]);
 const files=walk('src').filter(f=>/\.(tsx?|jsx?|mjs|cjs|css)$/.test(f));

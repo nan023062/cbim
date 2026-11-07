@@ -78,3 +78,6 @@ Electron 接入仍核对本窗口与主 Frame；`humanDecide` 在可信闭包注
 ### 正式岗位执行入口
 
 `dispatch.task` 必须显式携带原 active `scopeId`，路由剥离该字段后交同一派发服务核验当前计划和 `ownerSelection`，不会根据界面或最近周期猜 scope。`dispatch.ownerInspect` 只读返回指定任务的原 revision/binding 及当前分组观察；不改绑定、不领取任务。`loop.start` 在模型选型前明确拒绝新的旧业务通道，普通 chat 续聊及历史查询保留。
+### 原主调用命令报告
+
+`dispatch.commandReport({workspaceId,rootSessionId,runId,toolCallId})` 路由到已有工作区的 `WorkspaceDispatchService.commandReport`。原工具名、input、scope、commandId 和 fingerprint 均由可信日志与 Store 推导，客户端不能补身份或结论；不调用 execute/commit/start/resume 来试探回执。查无记录仍是未知，不清原未确认工具。

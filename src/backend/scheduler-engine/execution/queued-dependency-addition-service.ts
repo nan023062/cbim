@@ -7,6 +7,7 @@ import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
 import {hash,json} from '../../core/foundation/serialization';
+import {contextualMainCommand} from './main-command-request';
 import type {DispatchStore} from '../../core/tasks/dispatch-storage';
 import type {GraphIdentity,GraphEdge,TaskNode} from '../../core/tasks/graph-types';
 import {addQueuedDependencyInputSchema,type AddQueuedDependencyInput,type DependencyAddition,type AddQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-addition';
@@ -26,7 +27,7 @@ export class QueuedDependencyAdditionService {
     const parsed=addQueuedDependencyInputSchema.safeParse(raw),context=contextSchema.safeParse({...identity,scopeId,runId,commandId});
     if(!parsed.success||!context.success)fail('DEPENDENCY_INPUT_INVALID','前置追加参数或主调度运行身份无效');
     const input=parsed.data,fixed=context.data,alive=()=>{this.owner.assert();assertCurrent?.();if(fixed.workspaceId!==this.owner.entry.id)fail('GRAPH_IDENTITY_MISMATCH','前置追加不属于当前工作区')};
-    const command={commandId:fixed.commandId,fingerprint:hash(json({operation:'dispatch.addDependency',context:fixed,input}))};
+    const command=contextualMainCommand('dispatch.addDependency',fixed,input);
     if(!this.owners)fail('OWNER_EXECUTION_UNAVAILABLE','未装配岗位前置核验');const old=await this.owners.replay<AddQueuedDependencyReceipt>(command);if(old)return old.receipt;
     alive();
     return this.owners.withContext(state=>this.owners!.selections(queuedDependencyAdditionSelection(state,fixed,scopeId,runId,input).tasks),context=>this.store.transact(command,async state=>{

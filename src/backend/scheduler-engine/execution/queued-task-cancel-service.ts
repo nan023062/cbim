@@ -6,6 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
 import {hash,json} from '../../core/foundation/serialization';
+import {contextualMainCommand} from './main-command-request';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {DispatchStore} from '../../core/tasks/dispatch-storage';
 import type {GraphIdentity,GraphChange,TaskNode} from '../../core/tasks/graph-types';
@@ -26,7 +27,7 @@ export class QueuedTaskCancelService {
     if(!parsed.success||!context.success)fail('CANCEL_INPUT_INVALID','撤销参数或主调度运行身份无效');
     const input=parsed.data,fixed=context.data;this.owner.assert();
     if(fixed.workspaceId!==this.owner.entry.id)fail('GRAPH_IDENTITY_MISMATCH','撤销目标不属于当前工作区');
-    const command={commandId:fixed.commandId,fingerprint:hash(json({operation:'dispatch.cancelQueued',context:fixed,input}))};
+    const command=contextualMainCommand('dispatch.cancelQueued',fixed,input);
     return this.store.transact(command,async state=>{
       this.owner.assert();const selected=queuedCancellationSelection(state,fixed,fixed.scopeId,input),{graph,tasks,assignments,members}=selected;
       const now=new Date().toISOString(),changes:GraphChange[]=[];

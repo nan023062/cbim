@@ -22,7 +22,7 @@ export function mainToolContract(name:MainToolName){
   const cancellation:ToolCancellation={mode:'preflight_only',description:'入口先检查取消，服务在支持的受理前边界复核；进入事务后不承诺中断或回滚，返回失败仍可能已有记录。'};
   const recovery:ToolRecovery=read
     ?{mode:'read_again',description:'可显式重新读取当前事实；新结果不代表旧时刻的快照，不触发执行。'}
-    :{mode:'inspect_before_retry',queryTool:name.startsWith('cbim_goal_')?'cbim_goal_inspect':'cbim_dispatch_inspect',description:'先核实原目标或任务事实。可信原 run/toolCall 对应稳定命令；模型再次调用会产生新请求，不能以新调用重放未知结果，查询也不自动恢复执行。'};
+    :{mode:'inspect_before_retry',queryTool:'cbim_dispatch_command_report',description:'先以原 runId/toolCallId 核实原命令，再查询当前目标或任务。再次调用写工具会产生新请求；查无回执不证明未执行，不重放未知结果，查询不自动恢复执行。'};
   return {version:name==='cbim_goal_plan'||name==='cbim_dispatch_task'?2:1,outputSchema:zodToJsonSchema(mainToolOutputSchemas[name]) as Record<string,unknown>,cancellation,recovery};
 }
 

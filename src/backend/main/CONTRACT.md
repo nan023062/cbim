@@ -92,3 +92,6 @@ Application 在 Workspace.open 前只构造一个带监控观察器的 DispatchS
 ## 检查点交接历史端口
 
 成员服务装配为检查点放弃单独提供原运行 canonical 读取与路径规范化；不传当前文件、native 或模型配置读取端口，不创建或恢复执行。读取仍核工作区路径和原成员绑定，冻结证明由 Scheduler 历史核验及 Store CAS 共同裁决。原命令查询只读唯一 Store，不新增 IPC、模型查询工具或另一套任务登记；任何新执行继续使用原岗位/知识/模型短锁与准入协议。
+### 原命令报告装配
+
+原主命令核实仅复用已打开、初始化完成工作区的唯一 DispatchStore 与指定主 canonical 读取端口，不为查询 open/init/recover，不创建模型、执行器或业务名额。桌面与真实主工具共用同一 CommandVerificationService；当前模型配置、岗位或知识变化不代替原提交证明。停止/关闭使未完成查询不可交付，但不会改写原事务；原回执通过白名单投影后才跨 IPC。

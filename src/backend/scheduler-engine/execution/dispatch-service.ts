@@ -4,11 +4,14 @@
  * 职责边界：本模块负责可靠入队、显式撤销未启动集合及受审计的单条依赖追加/替换，由独立 MemberExecutionManager 执行；调度维护不停止活动运行，不复活旧实例，也不代表目标完成。
  * 关闭边界：普通无计划聊天与纯负责人控制面不强造业务计划，但仍核活动输入和真实工具终态；已有业务计划或派发必须审阅，未知输入只可失败或取消封存。
  * 交接边界：检查点放弃独立核原历史，IO 后短事务取消旧待办，不要求今日岗位仍可执行，也不改原运行或恢复证明。
+ * 查询边界：原主命令报告只读本工作区已初始化 Store 与 canonical；不借查询进入事务、打开工作区或重新判断旧命令的当前执行资格。
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
 import {hash,json} from '../../core/foundation/serialization';
+import {dispatchCommand} from './main-command-request';
+import {CommandVerificationService} from './command-verification-service';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {Snapshot} from '../../core/knowledge/types';
 import type {ConversationAgentBinding} from '../../core/brain/conversation-binding';
@@ -77,6 +80,7 @@ export class WorkspaceDispatchService {
   private readonly queuedDependencyReplacement:QueuedDependencyReplacementService;
   private readonly queuedDependencyAddition:QueuedDependencyAdditionService;
   private readonly checkpointAbandonment:CheckpointAbandonmentService;
+  private readonly commandVerification:CommandVerificationService;
   constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts,budgetPolicy?:()=>ScopeBudgetPolicy,humanPorts?:HumanDecisionPorts,modelPorts?:OwnerExecutionModelPorts,checkpointHistory?:MemberCheckpointHistoryPorts){
     this.owners=new OwnerExecutionService(owner,store,modelPorts);
     this.goals=new ScopeGoalService(owner,store,goalPorts,humanPorts,this.owners);
@@ -92,10 +96,13 @@ export class WorkspaceDispatchService {
     this.queuedDependencyReplacement=new QueuedDependencyReplacementService(owner,store,this.goals,this.owners);
     this.queuedDependencyAddition=new QueuedDependencyAdditionService(owner,store,this.goals,this.owners);
     this.checkpointAbandonment=new CheckpointAbandonmentService(owner,store,checkpointHistory);
+    this.commandVerification=new CommandVerificationService(owner,store,goalPorts?.inspectMain?{inspectMain:goalPorts.inspectMain}:undefined);
   }
 
   /** 原任务与当前岗位观察分开返回，不刷新或领取旧待办。 */
   ownerInspect(raw:unknown){return this.owners.inspectTask(raw)}
+  /** 仅读原 canonical 与已提交命令，不打开工作区、不重放，也不改变原未知或验收状态。 */
+  commandReport(raw:unknown,signal?:AbortSignal){this.check(this.owner.entry.id);return this.commandVerification.read(raw,signal)}
 
   /** 主调度显式撤销未领取的完整依赖集合；不停止活动运行、不把撤销当作完成。 */
   cancelQueued(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,input:CancelQueuedTasksInput):Promise<CancelQueuedTasksReceipt>{this.check(identity.workspaceId);return this.queuedCancellation.cancel(identity,scopeId,runId,commandId,input)}
@@ -255,7 +262,7 @@ export class WorkspaceDispatchService {
   }
   private command<T extends {commandId:string}>(operation:string,input:T){
     // 保留旧命令指纹的盐值以兼容已保存回执；此字段不是认证主体，真实来源由入口和运行工具回执核验。
-    return {commandId:input.commandId,fingerprint:hash(json({operation,actor:'desktop-local-user',input}))};
+    return dispatchCommand(operation,input);
   }
   private batch(identity:GraphIdentity,commandId:string,cause:GraphEventBatch['cause'],changes:GraphChange[],graph?:GraphSnapshot):GraphEventBatch{
     return {version:1,identity,streamId:graph?.cursor.streamId??randomUUID(),seq:(graph?.cursor.seq??0)+1,eventId:randomUUID(),commandId,cause,committedAt:new Date().toISOString(),changes};

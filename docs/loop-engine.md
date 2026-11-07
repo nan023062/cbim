@@ -88,6 +88,10 @@ KnowledgeService 提供领域查询与事务能力，KnowledgeTools 维护内部
 
 工具放行前记录提议、授权决定并 fsync，写失败拒绝执行。未收到结果的获准操作需要核实，不自动重放。`agent_settled` 才结束运行；`completed` 只表示引擎结束，验收仍为 `not_evaluated`。
 
+主调度另有 `cbim_dispatch_command_report({runId, toolCallId})` 只读工具，桌面原工具记录的“核实原命令”通过 `dispatch.commandReport` 调用同一服务。当前支持目标计划/审阅、派发、未领取撤销、前置追加/替换、检查点续执行预约和显式放弃八类原写命令。服务核对原主实例、独立对话通道、周期归属、canonical 输入与原账本指纹；派发隐藏父版本取原事务前态，不用当前图推测。已关闭周期仍可明确查询，同名 Agent 的其它主会话不能借用记录。
+
+报告分别说明原工具结果、事务保存事实与核实限制。因此原工具失败时也可能显示“原事务已保存”；查无回执仍然未知，不能判断没有执行。查询不重发操作、不修改原日志或未确认项、不恢复旧原生会话、不提供业务验收。其它工具暂沿各自原查询能力，不以执行入口探测回执。界面仅显式读取，普通轮询不重复核实；迟到结果按原身份隔离，读取失败保留旧报告并提示重新核实。
+
 记录位于 `<CBIM 用户目录>/<workspaceId>/loop-engine/tasks/<taskId>/<runId>/events.jsonl`。Pi 会话位于同工作区的 `loop-engine/pi/sessions/`。使用设置页配置时，每次运行在自己的 `provider/models.json` 生成非敏感配置，密钥仅由环境变量注入。记录可能含业务正文，不自动共享，不保存私有推理。知识目录防误操作检查不是操作系统沙箱。
 
 成员派发与领取事务位于同工作区 `dispatch/dispatch.jsonl`；成员运行日志位于 `dispatch/runs/tasks/<taskId>/<runId>/events.jsonl`，原生会话位于 `dispatch/runs/pi/sessions/`。`starting` 意图先落盘，实际引擎就绪后才提交 running，工具不能先于启动确认执行。重启将未完成领取标为 interrupted，不重放模型或工具，也不恢复内存中的自动协作批次。主会话与成员共用工作区写入占用，每个运行的审批队列及“本次全部通过”互相隔离。停止主任务还会阻止后续自动启动、请求关联成员停止，并暂停用户队列；迟到事件不能重新拉起任务。

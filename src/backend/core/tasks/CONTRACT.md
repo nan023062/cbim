@@ -573,3 +573,10 @@ Progress 保存前独立冻结验证记录，原 wire 证明必须能由这些�
 `checkpoint-handoff-invariants.ts` 先完整核验，再向检查点状态机提供按主会话与任务编码的窄许可。唯一事务只能包含原任务 cancelled/revision+1/不可变审计、原空闲实例 leaseEpoch+1、对应图投影 revision+1、可选原 pending 恢复 assignment processed 及严格回执；未知集合或混合写入拒绝。原 checkpoint 信封不改动，可独立迟到 ACK。放弃后的整个 TaskNode 不再改写，后续周期关闭可以再次提高实例租约，历史审计仍保留原 before/after 值。
 
 Store 继续用同一串行提交、原命令回执和原协议裁决，不增第二份日志或后台恢复。第十项主输出在一次原 wire 上核对真实调用身份及精确请求；坏回包不回滚、不重复提交。`cbim_dispatch_` 的统一证据排除覆盖本工具，其成功回执不能成为业务步骤/交付或人工接受的证明。新任务、领取与 resume 仍受负责人当前资格门禁约束，交接终止不为它们开例外。
+# 原命令只读核实（Step35 已实现协议）
+
+`command-verification.ts` 定义八项主写命令的有界公开报告，原工具 outcome、Store committed/absent/不可核实与业务 `not_evaluated` 分开。请求只含 workspace/root/run/toolCall，原 scope 和命令依据由后端推导；报告不传 Prepared、原参数正文、私有恢复上下文或原完整事务，不清 unknown、不作为业务证据、不授予重试或恢复。`cbim_dispatch_command_report` 只读且无写命令，沿 dispatch 前缀排除业务完成证据。
+
+`DispatchStore.commandEvidence` 是内部只读端口，保留原 fingerprint/receipt 并提供原提交序号、校验值、执行协议及图的真实前态根版本/游标；这些内部值必须先严格核原输入与绑定再公开投影。原 `commandReceipt` 形状不变。命令算法与原 parsed 指纹由 Scheduler 的唯一适配器维护；工具协议版本与 Store 执行协议不是一回事。
+
+`command-verification-output.ts` 仅供后端：原回执先按既有主输出 Schema 核输入/身份/版本，并拒绝解析产生的 trim/默认化，再生成八支紧凑摘要。任务列表最多 20 项，明确 total/truncated，完整原集合不能先裁剪再核；公开报告最多 20 条 issue、128 KiB wire，业务验收固定 not_evaluated。Bridge 仅导 `command-verification.ts` 叶子，不能把后端回执读取或原私有上下文导入浏览器。

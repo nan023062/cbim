@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-执行日志、附件快照、派发事务与角色履历。目录首层、URL指针、真实有界网页及授权仓库资料快照分别保存，导入取消与等待受理分离；来源变化不改历史。日志只读完整前缀并报告未完整尾行，损坏不透传原始片段、不截断修复。图/目标/详情同屏障读取，未知操作不自动重放。同日志追加岗位审计并派生独立registry游标，原命令可只读核实，不将长期岗位计为运行实例。 新事务标记由Store生成，旧日志前缀可读而不能在新协议后降级；新任务/准备与历史岗位审计严格对应。
+执行日志、附件快照、派发事务与角色履历。目录首层、URL指针、真实有界网页及授权仓库资料快照分别保存，导入取消与等待受理分离；来源变化不改历史。日志只读完整前缀并报告未完整尾行，损坏不透传原始片段、不截断修复。图/目标/详情同屏障读取，未知操作不自动重放。同日志追加岗位审计并派生独立registry游标，原命令可只读核实，不将长期岗位计为运行实例。 新事务标记由Store生成，旧日志前缀可读而不能在新协议后降级；新任务/准备与历史岗位审计严格对应。 原命令证据索引从真实已保存事务前态派生，保留原根修订与日志协议；不重写历史或按当前图补造依据。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -185,6 +185,7 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore["
   +workspaceId
   +read()
   +commandReceipt()
+  +commandEvidence()
   +snapshot()
   +delta()
   +sessionRead()
@@ -196,7 +197,6 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore["
   -commands
   -events
   -scopeViews
-  -scopeEvents
 }
 N_src_backend_main_persistence_tasks_dispatch_store_ts ..> N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore : 声明
 class N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchStore["DispatchStore (外部契约)"] {
@@ -213,6 +213,7 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts["dispatch-store.ts"
   <<module>>
 }
 class N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore["FileDispatchStore"] {
+  -scopeEvents
   -transactionSeq
   -lastHash
   -ownerProtocolSeen
@@ -228,7 +229,6 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore["
   -checkIdentity()
   -graph()
   -publish()
-  -project()
 }
 N_src_backend_main_persistence_tasks_dispatch_store_ts ..> N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore : 声明
 class N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchStore["DispatchStore (外部契约)"] {
@@ -245,6 +245,7 @@ class N_src_backend_main_persistence_tasks_dispatch_store_ts["dispatch-store.ts"
   <<module>>
 }
 class N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore["FileDispatchStore"] {
+  -project()
   -load()
 }
 N_src_backend_main_persistence_tasks_dispatch_store_ts ..> N_src_backend_main_persistence_tasks_dispatch_store_ts_FileDispatchStore : 声明
@@ -519,3 +520,8 @@ interface DispatchStore {
 来源 capture/prepared/resolved 直接追加至同一 dispatch.jsonl，当前代次和过渡状态只由历史派生，不保存第二份来源账本。Store 先执行 `projectKnowledgeSourceMutation`，再把精确 capture 许可交给两个登记门禁；所有规则及原命令/回执核验完成后才可靠落盘并发布。来源游标不推进任务图、岗位登记或责任游标；仅明确 capture+consumer 同批才同时推进对应登记流。
 
 prepared/resolved 为来源独立事务，原 journal 指纹属于内部可信协议，不接收知识正文。旧无来源字段日志保持字节与回执不变，首次读取只返回空来源集合/null 游标。重开重放相同前缀与严格校验；source 的命令查询沿原只读索引，无自动知识重做。知识协调器持知识 serial 后调用 Store，Store 回调不得反向排队知识；两日志并非跨存储 ACID，无法核实的 pending 仍保留屏障。
+# 原命令前态证据（Step35 已实现协议）
+
+`commandEvidence` 只从原 commands 索引派生事实：实时提交可靠 fsync 后、历史重放完成原校验后，用同一 publish 路径保存提交前 graph.root.revision 和前后图游标。无前图不补默认版本；旧 journal 不改格式或字节，也不保存第二账本。查询等待现有提交屏障返回隔离副本，不能调用 prepare/transact 或再扫描日志。
+
+原 `commandReceipt` 仍只含 fingerprint/receipt；新增证据不自动扩散给旧消费者。IO 未确认或损坏不能返回 absent。应用报告只接已打开且初始化完成的工作区，不以查询触发 open/init/recover；内部完整回执不可直接返回 UI/模型。

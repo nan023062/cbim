@@ -77,5 +77,5 @@ test('原run/call命令与回执必须一致，坏回包不自动重派或把que
   ]){f.dispatch.mockResolvedValueOnce(invalid);await expect(f.tools.call('cbim_dispatch_task',task,signal,'call')).rejects.toMatchObject({code:'TOOL_OUTPUT_INVALID'})}
   expect(f.dispatch).toHaveBeenCalledTimes(2);expect(f.inspect).not.toHaveBeenCalled();
   const metadata=f.tools.list().find(tool=>tool.name==='cbim_dispatch_task')!;
-  expect(metadata).toMatchObject({version:2,effects:['maintenance'],cancellation:{mode:'preflight_only'},recovery:{mode:'inspect_before_retry',queryTool:'cbim_dispatch_inspect'}});expect(metadata.outputSchema).toBeTruthy();
+  expect(metadata).toMatchObject({version:2,effects:['maintenance'],cancellation:{mode:'preflight_only'},recovery:{mode:'inspect_before_retry',queryTool:'cbim_dispatch_command_report'}});expect(metadata.outputSchema).toBeTruthy();
 });

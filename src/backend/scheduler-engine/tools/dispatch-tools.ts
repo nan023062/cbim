@@ -2,6 +2,7 @@
  * 作用定位：把主调度的派发、查询、未启动撤销、依赖修订及检查点预约/明确放弃转换为内部工具，并组合目标工具。
  * 设计原因：模型明确提交发现所得 ownerSelection、角色、模块和 Workflow；不自动填默认角色。可信闭包固定身份，严格输入拒绝夹带授权，输出核同一份 wire，失败不回滚或重做已入队事实。
  * 职责边界：派发只是入队，续执行只是预约，撤销和依赖修订只记录调度事实，不算验收。本模块不装配成员递归派发、活动任务中止或手工结果工具。
+ * 原命令报告是独立 read 入口；只接受原 run/call，不产生新的写命令，也不能清除旧未知结果。
  */
 import {z} from 'zod';
 import {zodToJsonSchema} from 'zod-to-json-schema';
@@ -13,6 +14,8 @@ import {replaceQueuedDependencyInputSchema,type ReplaceQueuedDependencyInput,typ
 import {addQueuedDependencyInputSchema,type AddQueuedDependencyInput,type AddQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-addition';
 import type {MainToolOutputBinding} from '../../core/tasks/main-tool-output';
 import {checkedMainToolResult,mainToolContract} from './main-tool-contracts';
+import {commandReportContract,checkedCommandReportResult} from './command-report-contract';
+import {commandReportToolInputSchema,type CommandReportToolInput,type CommandVerificationReport} from '../../core/tasks/command-verification';
 import type {GoalTools} from './goal-tools';
 import {resumeMemberInputSchema,type ResumeMemberInput,type ResumeMemberReceipt} from '../../core/tasks/queued-member-resume';
 import {abandonCheckpointInputSchema,type AbandonCheckpointInput,type AbandonCheckpointReceipt} from '../../core/tasks/checkpoint-handoff';
@@ -22,6 +25,10 @@ const {assigneeAgentId,...taskFields}=dispatchTaskFields.shape;
 const taskInput=z.object({agentId:assigneeAgentId.refine(id=>id!=='cbim:main','主 Agent 只能调度，不能承担执行任务'),...taskFields}).strict().superRefine((value,context)=>{if(!value.ownerSelection)context.addIssue({code:'custom',message:'必须提供模块负责岗位的 ownerSelection'});try{validateWorkflowSelections(value.moduleIds,value.workflowSelections)}catch{context.addIssue({code:'custom',message:'Workflow 选择必须属于本次任务模块'})}});
 const inspectInput=z.object({taskId:z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/).optional()}).strict();
 const definitions={
+  cbim_dispatch_command_report:{
+    description:'只读核实同一主会话原 runId/toolCallId 的真实调用与原命令提交事实，支持目标计划/审阅、派发、撤销、加边、换边、恢复预约和检查点放弃。坏输出后先查原调用，不换调用重做。committed 仅表示原领域记录已提交，absent 不证明未执行或可重试；报告不会清除 unknown、恢复任务或通过业务验收，原生工具等无账本族明确未支持。',
+    schema:commandReportToolInputSchema,effects:['read'] as const,
+  },
   cbim_dispatch_abandon_checkpoint:{
     description:'明确放弃当前活动周期尚未消费的可靠检查点及可选恢复预约，供负责人变更后的交接。先读取原图与目标，提交 expectedGraphCursor、expectedGoalRevision、taskId、expectedRevision、expectedPlanRevision、checkpointId、expectedResumeRequestId（未预约明确 null）和 reason。只取消原待办并保存审计，不迁移原任务、不运行或回滚、不证明业务完成；当前知识/文件/模型变化不阻止历史处置，损坏或缺失原 canonical 则拒绝。旧后继仍阻塞，按需显式撤销完整未启动闭包，再按当前负责岗位重新规划/派发；complete 仍须真实新候选逐项 superseded。未知回包先查原任务 checkpointAbandonment，不换调用重做。',
     schema:abandonCheckpointInputSchema,effects:['maintenance'] as const,
@@ -64,6 +71,8 @@ export interface DispatchToolsPort {
   readonly binding:MainToolOutputBinding;
   dispatch(task:DispatchTaskInput['task'],invocation:DispatchToolInvocation):Promise<DispatchReceipt>;
   inspect(taskId?:string):Promise<unknown>;
+  /** 仅本主 root 的原调用；无写命令、无调度工作意图，停止只取消本次查询。 */
+  commandReport?(input:CommandReportToolInput,invocation:DispatchToolInvocation):Promise<CommandVerificationReport>;
   /** 可选能力仅在真实服务装配后公开；身份/周期及命令键仍来自主运行，不能由模型提供。 */
   cancel?(input:CancelQueuedTasksInput,invocation:DispatchToolInvocation):Promise<CancelQueuedTasksReceipt>;
   /** 仅主调度装配；候选核实、停机屏障及原子审计由可信后端负责。 */
@@ -81,8 +90,8 @@ export class DispatchTools {
   private readonly binding:MainToolOutputBinding;
   constructor(private readonly port:DispatchToolsPort,private readonly goals?:GoalTools){this.binding=Object.freeze(structuredClone(port.binding))}
   /** 只有装配了真实端口才构造本对象；返回值不包含未来工具占位。 */
-  private available(name:string){return (name!=='cbim_dispatch_cancel'||!!this.port.cancel)&&(name!=='cbim_dispatch_replace_dependency'||!!this.port.replaceDependency)&&(name!=='cbim_dispatch_add_dependency'||!!this.port.addDependency)&&(name!=='cbim_dispatch_resume'||!!this.port.resume)&&(name!=='cbim_dispatch_abandon_checkpoint'||!!this.port.abandonCheckpoint)}
-  list(){return [...Object.entries(definitions).filter(([name])=>this.available(name)).map(([name,d])=>({name,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>,...mainToolContract(name as DispatchToolName)})),...(this.goals?.list()??[])]}
+  private available(name:string){return (name!=='cbim_dispatch_command_report'||!!this.port.commandReport)&&(name!=='cbim_dispatch_cancel'||!!this.port.cancel)&&(name!=='cbim_dispatch_replace_dependency'||!!this.port.replaceDependency)&&(name!=='cbim_dispatch_add_dependency'||!!this.port.addDependency)&&(name!=='cbim_dispatch_resume'||!!this.port.resume)&&(name!=='cbim_dispatch_abandon_checkpoint'||!!this.port.abandonCheckpoint)}
+  list(){return [...Object.entries(definitions).filter(([name])=>this.available(name)).map(([name,d])=>({name,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>,...(name==='cbim_dispatch_command_report'?commandReportContract():mainToolContract(name as Exclude<DispatchToolName,'cbim_dispatch_command_report'>))})),...(this.goals?.list()??[])]}
   /** 名称检测不执行操作，供 Loop 在知识工具之前选择本适配器。 */
   has(name:string):boolean{return (Object.hasOwn(definitions,name)&&this.available(name))||!!this.goals?.has(name)}
   private parse(name:string,input:unknown){
@@ -101,6 +110,11 @@ export class DispatchTools {
     if(typeof toolCallId!=='string'||!toolCallId.trim()||toolCallId.length>512)fail('DISPATCH_CALL_ID_REQUIRED','成员工具缺少可信调用标识');
     // 领域端口不得通过修改传入对象改变回包核验依据；在首次 await 前独立冻结本次原请求。
     const expectedInput=structuredClone(parsed.args);
+    if(parsed.name==='cbim_dispatch_command_report'){
+      const value=await this.port.commandReport!(parsed.args as CommandReportToolInput,{toolCallId,signal});
+      signal.throwIfAborted();
+      return checkedCommandReportResult(value,{workspaceId:this.binding.workspaceId,rootSessionId:this.binding.rootSessionId,...expectedInput as CommandReportToolInput});
+    }
     let value:unknown;
     if(parsed.name==='cbim_dispatch_inspect')value=await this.port.inspect((parsed.args as z.infer<typeof inspectInput>).taskId);
     else if(parsed.name==='cbim_dispatch_cancel')value=await this.port.cancel!(parsed.args as CancelQueuedTasksInput,{toolCallId,signal});

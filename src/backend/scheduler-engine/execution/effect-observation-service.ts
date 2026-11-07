@@ -1,5 +1,5 @@
 /**
- * 作用定位：组合原调用授权、已提交控制面与当前选定文件，保存本机明确处置并派生新周期关联。
+ * 作用定位：组合原调用授权、已提交控制面、原知识事务与当前选定文件，保存本机明确处置并派生新周期关联。
  * 设计原因：原 unknown、今天的字节和后来修复完成各自保留；取证在任务事务外，提交只做原身份/版本 CAS，不执行工具或反向等知识/模型队列。
  * 职责边界：只操作已打开工作区的唯一 Store；edit 仅接受当前数组与旧单对两种严格原形状，没有成功基线也可观察可信原路径，但不补造基线、清除 unknown 或授予续跑。
  */
@@ -16,12 +16,16 @@ import {verifyArtifactBaselines} from '../../core/tasks/artifact-evidence';
 import {artifactRelativePathSchema} from '../../core/tasks/artifact-baseline';
 import {CommandVerificationService} from './command-verification-service';
 import {readEffectSource,effectStateStamp,type EffectSourcePorts,type EffectSourceRead} from './effect-source';
+import {knowledgeTransactionObservationSchema,type KnowledgeTransactionObservation} from '../../core/knowledge/knowledge-write-observation';
+import {originalKnowledgeWrite,originalKnowledgeIdentity,type KnowledgeWriteReference} from '../../core/knowledge/knowledge-write-input';
 
 /** Main 固定工作区根的可信只读端口；路径仍须二次规范化，释放只读占用不代表原调用已核实成功。 */
 export interface EffectObservationPorts extends EffectSourcePorts {
   normalizePath(raw:string):string;
   observeFiles(paths:readonly string[],signal:AbortSignal):Promise<EffectFileObservation[]>;
   acquireRead():()=>void;
+  /** 仅核原请求或固定计划的 journal；不提交、刷新、恢复或修剪文件。旧实例只可查询。 */
+  observeKnowledge?(reference:KnowledgeWriteReference,signal?:AbortSignal):Promise<KnowledgeTransactionObservation>;
   assertCurrent?():void;
 }
 // 只识别原授权中无歧义的单文件形状，不执行 Pi 的字符串/单对象参数纠正，也不合并新旧字段。
@@ -49,7 +53,7 @@ export class EffectObservationService {
     this.alive(input.workspaceId,signal);const before=await this.store.read();check(before.workspaceId===input.workspaceId,'EFFECT_IDENTITY','存储不属于当前工作区');
     const first=await readEffectSource(before,input,this.owner.entry.path,this.ports,this.commands);this.alive(input.workspaceId,signal);
     const report:EffectObservationReport={version:1,identity:input,checkedAt:new Date().toISOString(),basis:'0'.repeat(64),dispositionRevision:effectDispositionRevision(before,input.rootSessionId),consistency:'stable',source:first.source,calls:[],limitations:['本报告仅覆盖明确选择的调用和文件；当前观察不证明原操作完整效果，也不代表业务验收。'],readOnly:true,acceptance:'not_evaluated'};
-    const paths=new Map<string,string>(),readable=first.source.state==='verified'&&first.summary&&first.facts;
+    const paths=new Map<string,string>(),knowledge=new Map<string,KnowledgeWriteReference>(),readable=first.source.state==='verified'&&first.summary&&first.facts;
     for(const toolCallId of input.subject.toolCallIds){
       const fact=readable?first.facts!.items.find(x=>x.toolCallId===toolCallId):undefined;
       const item:EffectCallObservation={toolCallId,outcome:fact?.status??'unknown',coverage:'unsupported',limitations:[]};report.calls.push(item);
@@ -62,6 +66,15 @@ export class EffectObservationService {
         if(control.consistency!=='stable')report.consistency='changed_during_read';continue;
       }
       const name=fact.toolName;
+      if(input.subject.kind==='main_run'&&(name==='cbim_knowledge_commit'||name==='cbim_object_commit')&&fact.allowedSeq&&fact.status!=='denied'&&fact.scope.kind==='knowledge'&&fact.scope.workspaceId===input.workspaceId&&fact.effects.length===1&&fact.effects[0]==='knowledge-write'&&this.ports?.observeKnowledge){
+        const reference=originalKnowledgeWrite(name,original);
+        if(!reference||originalKnowledgeIdentity(reference).workspaceId!==input.workspaceId){item.limitations.push('原知识参数缺少可核实的请求或计划身份，未查询事务。');continue}
+        item.coverage='knowledge_transaction';item.knowledge=await this.knowledge(reference,signal);knowledge.set(toolCallId,reference);
+        item.limitations.push('仅核实原知识事务阶段，不证明今天的正文、业务验收或可安全重放。');
+        if(name==='cbim_object_commit')item.limitations.push('对象事务提交不证明后续空目录修剪成功；查询不会修剪目录。');
+        if(item.knowledge.state==='absent')item.limitations.push('未查到原事务不等于从未执行，原结果保持。');
+        continue;
+      }
       if((name!=='read'&&name!=='write'&&name!=='edit')||!fact.allowedSeq||fact.status==='denied'||fact.scope.kind!=='workspace'||fact.effects.length!==1||fact.effects[0]!==(name==='read'?'read':'business-write')||!this.ports){item.limitations.push('没有受支持的单文件授权适配；不执行补充命令，不把查无记录解释为未执行。');continue}
       const parsed=nativeInputs[name].safeParse(original);
       if(!parsed.success){item.limitations.push('原单文件参数不符合支持协议，未读取文件。');continue}
@@ -80,6 +93,8 @@ export class EffectObservationService {
       }catch(error){this.alive(input.workspaceId,signal);for(const item of report.calls)if(paths.has(item.toolCallId)){item.coverage='unsupported';delete item.file;delete item.baselineChecks;item.limitations.push('文件只读占用、读取或返回值不可核实；没有取得当前证明。')}}
       finally{release?.()}
     }
+    // 两次核实同一原引用；prepared 等阶段变化不能沿用第一次观察保存确定依据。
+    for(const [toolCallId,reference]of knowledge){const again=await this.knowledge(reference,signal);if(!isDeepStrictEqual(report.calls.find(call=>call.toolCallId===toolCallId)!.knowledge,again)){report.consistency='changed_during_read';report.limitations.push('读取期间原知识事务发生变化，请重新核实。')}}
     const last=await readEffectSource(before,input,this.owner.entry.path,this.ports,this.commands);this.alive(input.workspaceId,signal);
     const after=await this.store.read();this.alive(input.workspaceId,signal);
     if(first.stamp!==last.stamp||effectStateStamp(before,input)!==effectStateStamp(after,input)||report.dispositionRevision!==effectDispositionRevision(after,input.rootSessionId)){report.consistency='changed_during_read';report.limitations.push('读取期间来源、周期或处置版本变化，请重新核实；本次不作为确定保存依据。')}
@@ -87,6 +102,12 @@ export class EffectObservationService {
     const checked=effectObservationReportSchema.parse(report);checked.basis=effectObservationBasis(checked);
     check(Buffer.byteLength(JSON.stringify(checked),'utf8')<=effectObservationLimits.outputBytes,'EFFECT_LIMIT','观察超过公开输出上限');
     return {report:checked,stateStamp:effectStateStamp(before,input)};
+  }
+  /** 可信端口同样核身份与输出；异常只给出不可核实诊断，不产生未写入证明。 */
+  private async knowledge(reference:KnowledgeWriteReference,signal?:AbortSignal):Promise<KnowledgeTransactionObservation>{
+    const identity=originalKnowledgeIdentity(reference);this.alive(identity.workspaceId,signal);
+    try{const value=knowledgeTransactionObservationSchema.parse(await this.ports!.observeKnowledge!(reference,signal));this.alive(identity.workspaceId,signal);check(isDeepStrictEqual(value.identity,identity),'EFFECT_PORT_INVALID','知识观察不属于原请求');if(reference.kind==='request')check(value.requestHash===undefined||value.requestHash===hash(json(reference.request)),'EFFECT_PORT_INVALID','知识观察的原请求指纹不一致');return value}
+    catch{this.alive(identity.workspaceId,signal);return knowledgeTransactionObservationSchema.parse({identity,state:'unverifiable',reason:'query_unavailable'})}
   }
   private baselines(source:EffectSourceRead,report:EffectObservationReport){
     if(!source.run||!source.summary||!this.ports)return;

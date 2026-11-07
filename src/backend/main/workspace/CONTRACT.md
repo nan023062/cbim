@@ -91,3 +91,8 @@ forRun 的 confirmNotApplied 仅等待原平台排空并读原账本；核对冻
 `preview` 只取得短只读占用、打开独占句柄并核实原 applied/关闭周期/当前同文件 after/私有 before，返回只读摘要和 basis。`compensate` 是独立本机显式命令，重新持有写占用与同句柄，保存独立意图后恢复原 before；不改写原操作或原 canonical。`receipt` 仅读已有阶段，缺记录不推断未执行。首次确定预拒仅 FILE_COMPENSATION_PRE_ACCEPT_INPUT/REJECTED；任何 Store CAS/IO/保存后异常均保持未知。
 
 关闭先 abort 在途文件会话并等待真实 child 退出；失败保留 lease/服务及 Store。再次关闭只确认原进程并释放占用，不触发 apply。文件身份证明不覆盖 ACL/ADS/外部恶意进程；readonly mapping 仍可能导致内容写后截断失败，unknown 不自动补偿。
+
+
+### 原知识请求只读核实
+
+knowledge-effect-reader.ts 在已打开工作区复用 governed 串行队列的 journal 读取，固定对象计划从原私有缓存加载并核原实例/requestId。来源、治理和前后正文核验仍由 KnowledgeStore 负责；查询不提交、刷新、恢复事务或修剪目录，不创建第二个存储。错误返回有界不可核实诊断，停止/关闭仍传播。当前实例身份不替换原请求，重开可只读原事务。

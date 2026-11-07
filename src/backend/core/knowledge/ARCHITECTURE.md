@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-知识快照、校验、领域查询、对象变更和可移植静态包规划。私有v2计划冻结有序操作与整包替换范围，公共变更不能提供来源证明；物理事务与缓存经端口注入。团队能力可独立复用，业务模板必须完整，不携带动态成员或任务。 SourceSnapshotReader 只提供知识队列外层的同版快照，调用方不得在任务事务内反向获取。
+知识快照、校验、领域查询、对象变更和可移植静态包规划。私有v2计划冻结有序操作与整包替换范围，公共变更不能提供来源证明；物理事务与缓存经端口注入。团队能力可独立复用，业务模板必须完整，不携带动态成员或任务。 SourceSnapshotReader 只提供知识队列外层的同版快照，调用方不得在任务事务内反向获取。 原知识工具和事务观察共用实际输入解析，纯摘要区分未查到、持久阶段及不可核实，不返回正文或私有路径。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -12,6 +12,8 @@
 | --- | --- |
 | [builtins.ts](builtins.ts) | Builtins：白名单发布内置 Skill、规范和 Schema，返回正文、版本与解析引用。 |
 | [knowledge-queries.ts](knowledge-queries.ts) | 核心知识查询门面，装配团队与业务工作区领域视图并刷新索引。 |
+| [knowledge-write-input.ts](knowledge-write-input.ts) | 知识提交工具与后端原事务核实共用的输入解析和原引用构造。 |
+| [knowledge-write-observation.ts](knowledge-write-observation.ts) | 原知识事务的有界公开观察协议，供后端与界面共同校验，只有纯 Schema 依赖。 |
 | [knowledge.ts](knowledge.ts) | Core 知识规则：校验领域结构、人员与显式模块维护关系，并派生注册索引。 |
 | [object-crud.ts](object-crud.ts) | Core 对象治理：规划 Agent/Module/Skill/Workflow 变更，按计划提交受控事务。 |
 | [object-storage.ts](object-storage.ts) | 对象 CRUD 所需的目录检查、预览计划存储和空目录清理端口。 |
@@ -65,6 +67,46 @@ N_src_backend_core_knowledge_knowledge_queries_ts ..> N_src_backend_core_knowled
 ```
 
 直接依赖：[ports.ts](ports.ts)、[snapshot.ts](snapshot.ts)、[../team/model.ts](../team/model.ts)、[../workspace/model.ts](../workspace/model.ts)。
+
+### knowledge-write-input.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_knowledge_knowledge_write_input_ts["knowledge-write-input.ts"] {
+  <<module>>
+  +originalKnowledgeWrite()
+  +originalKnowledgeIdentity()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_knowledge_knowledge_write_input_ts["knowledge-write-input.ts"] {
+  <<module>>
+}
+class N_src_backend_core_knowledge_knowledge_write_input_ts_KnowledgeWriteReference["KnowledgeWriteReference"] {
+  <<type>>
+
+}
+N_src_backend_core_knowledge_knowledge_write_input_ts ..> N_src_backend_core_knowledge_knowledge_write_input_ts_KnowledgeWriteReference : 声明
+```
+
+直接依赖：[planned-commit.ts](planned-commit.ts)、[types.ts](types.ts)。
+
+### knowledge-write-observation.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_knowledge_knowledge_write_observation_ts["knowledge-write-observation.ts"] {
+  <<module>>
+}
+class N_src_backend_core_knowledge_knowledge_write_observation_ts_KnowledgeTransactionObservation["KnowledgeTransactionObservation"] {
+  <<type>>
+
+}
+N_src_backend_core_knowledge_knowledge_write_observation_ts ..> N_src_backend_core_knowledge_knowledge_write_observation_ts_KnowledgeTransactionObservation : 声明
+```
+
 
 ### knowledge.ts
 
@@ -598,19 +640,39 @@ class N_src_backend_core_knowledge_ports_ts["ports.ts"] {
 class N_src_backend_core_knowledge_snapshot_ts["snapshot.ts"] {
   <<module>>
 }
-class N_src_backend_core_knowledge_knowledge_ts["knowledge.ts"] {
+class N_src_backend_core_knowledge_knowledge_write_input_ts["knowledge-write-input.ts"] {
+  <<module>>
+}
+class N_src_backend_core_knowledge_planned_commit_ts["planned-commit.ts"] {
   <<module>>
 }
 class N_src_backend_core_knowledge_types_ts["types.ts"] {
-  <<module>>
-}
-class N_src_backend_core_knowledge_object_crud_ts["object-crud.ts"] {
   <<module>>
 }
 N_src_backend_core_knowledge_knowledge_queries_ts ..> N_src_backend_core_knowledge_ports_ts : 导入依赖
 N_src_backend_core_knowledge_knowledge_queries_ts ..> N_src_backend_core_knowledge_snapshot_ts : 导入依赖
+N_src_backend_core_knowledge_knowledge_write_input_ts ..> N_src_backend_core_knowledge_planned_commit_ts : 导入依赖
+N_src_backend_core_knowledge_knowledge_write_input_ts ..> N_src_backend_core_knowledge_types_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_knowledge_knowledge_ts["knowledge.ts"] {
+  <<module>>
+}
+class N_src_backend_core_knowledge_types_ts["types.ts"] {
+  <<module>>
+}
+class N_src_backend_core_knowledge_object_crud_ts["object-crud.ts"] {
+  <<module>>
+}
+class N_src_backend_core_knowledge_ports_ts["ports.ts"] {
+  <<module>>
+}
 N_src_backend_core_knowledge_knowledge_ts ..> N_src_backend_core_knowledge_types_ts : 导入依赖
 N_src_backend_core_knowledge_object_crud_ts ..> N_src_backend_core_knowledge_ports_ts : 导入依赖
+N_src_backend_core_knowledge_object_crud_ts ..> N_src_backend_core_knowledge_knowledge_ts : 导入依赖
+N_src_backend_core_knowledge_object_crud_ts ..> N_src_backend_core_knowledge_types_ts : 导入依赖
 ```
 
 ```mermaid
@@ -618,30 +680,13 @@ classDiagram
 class N_src_backend_core_knowledge_object_crud_ts["object-crud.ts"] {
   <<module>>
 }
-class N_src_backend_core_knowledge_knowledge_ts["knowledge.ts"] {
+class N_src_backend_core_knowledge_planned_commit_ts["planned-commit.ts"] {
+  <<module>>
+}
+class N_src_backend_core_knowledge_object_storage_ts["object-storage.ts"] {
   <<module>>
 }
 class N_src_backend_core_knowledge_types_ts["types.ts"] {
-  <<module>>
-}
-class N_src_backend_core_knowledge_planned_commit_ts["planned-commit.ts"] {
-  <<module>>
-}
-class N_src_backend_core_knowledge_object_storage_ts["object-storage.ts"] {
-  <<module>>
-}
-N_src_backend_core_knowledge_object_crud_ts ..> N_src_backend_core_knowledge_knowledge_ts : 导入依赖
-N_src_backend_core_knowledge_object_crud_ts ..> N_src_backend_core_knowledge_types_ts : 导入依赖
-N_src_backend_core_knowledge_object_crud_ts ..> N_src_backend_core_knowledge_planned_commit_ts : 导入依赖
-N_src_backend_core_knowledge_object_storage_ts ..> N_src_backend_core_knowledge_types_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_knowledge_object_storage_ts["object-storage.ts"] {
-  <<module>>
-}
-class N_src_backend_core_knowledge_planned_commit_ts["planned-commit.ts"] {
   <<module>>
 }
 class N_src_backend_core_knowledge_portable_package_ts["portable-package.ts"] {
@@ -650,20 +695,20 @@ class N_src_backend_core_knowledge_portable_package_ts["portable-package.ts"] {
 class N_src_backend_core_knowledge_knowledge_ts["knowledge.ts"] {
   <<module>>
 }
-class N_src_backend_core_knowledge_types_ts["types.ts"] {
-  <<module>>
-}
-class N_src_backend_core_knowledge_ports_ts["ports.ts"] {
-  <<module>>
-}
+N_src_backend_core_knowledge_object_crud_ts ..> N_src_backend_core_knowledge_planned_commit_ts : 导入依赖
+N_src_backend_core_knowledge_object_storage_ts ..> N_src_backend_core_knowledge_types_ts : 导入依赖
 N_src_backend_core_knowledge_object_storage_ts ..> N_src_backend_core_knowledge_planned_commit_ts : 导入依赖
 N_src_backend_core_knowledge_portable_package_ts ..> N_src_backend_core_knowledge_knowledge_ts : 导入依赖
-N_src_backend_core_knowledge_portable_package_ts ..> N_src_backend_core_knowledge_types_ts : 导入依赖
-N_src_backend_core_knowledge_ports_ts ..> N_src_backend_core_knowledge_types_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_knowledge_portable_package_ts["portable-package.ts"] {
+  <<module>>
+}
+class N_src_backend_core_knowledge_types_ts["types.ts"] {
+  <<module>>
+}
 class N_src_backend_core_knowledge_ports_ts["ports.ts"] {
   <<module>>
 }
@@ -673,6 +718,14 @@ class N_src_backend_core_knowledge_object_storage_ts["object-storage.ts"] {
 class N_src_backend_core_knowledge_planned_commit_ts["planned-commit.ts"] {
   <<module>>
 }
+N_src_backend_core_knowledge_portable_package_ts ..> N_src_backend_core_knowledge_types_ts : 导入依赖
+N_src_backend_core_knowledge_ports_ts ..> N_src_backend_core_knowledge_types_ts : 导入依赖
+N_src_backend_core_knowledge_ports_ts ..> N_src_backend_core_knowledge_object_storage_ts : 导入依赖
+N_src_backend_core_knowledge_ports_ts ..> N_src_backend_core_knowledge_planned_commit_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_backend_core_knowledge_snapshot_ts["snapshot.ts"] {
   <<module>>
 }
@@ -685,23 +738,14 @@ class N_src_backend_core_knowledge_tool_output_builtins_ts["tool-output-builtins
 class N_src_backend_core_knowledge_tool_output_base_ts["tool-output-base.ts"] {
   <<module>>
 }
-N_src_backend_core_knowledge_ports_ts ..> N_src_backend_core_knowledge_object_storage_ts : 导入依赖
-N_src_backend_core_knowledge_ports_ts ..> N_src_backend_core_knowledge_planned_commit_ts : 导入依赖
-N_src_backend_core_knowledge_snapshot_ts ..> N_src_backend_core_knowledge_types_ts : 导入依赖
-N_src_backend_core_knowledge_tool_output_builtins_ts ..> N_src_backend_core_knowledge_tool_output_base_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_backend_core_knowledge_tool_output_queries_ts["tool-output-queries.ts"] {
-  <<module>>
-}
-class N_src_backend_core_knowledge_tool_output_base_ts["tool-output-base.ts"] {
   <<module>>
 }
 class N_src_backend_core_knowledge_tool_output_transactions_ts["tool-output-transactions.ts"] {
   <<module>>
 }
+N_src_backend_core_knowledge_snapshot_ts ..> N_src_backend_core_knowledge_types_ts : 导入依赖
+N_src_backend_core_knowledge_tool_output_builtins_ts ..> N_src_backend_core_knowledge_tool_output_base_ts : 导入依赖
 N_src_backend_core_knowledge_tool_output_queries_ts ..> N_src_backend_core_knowledge_tool_output_base_ts : 导入依赖
 N_src_backend_core_knowledge_tool_output_transactions_ts ..> N_src_backend_core_knowledge_tool_output_base_ts : 导入依赖
 ```
@@ -764,3 +808,8 @@ Workflow 可在原 `workflow.md` 中声明一个严格的 `cbim-workflow` JSON �
 `planned-commit.ts` 固定 v2 对象/包计划：完整原请求、按顺序解析后的对象操作、删除根或整包替换目标均参与不可变指纹。`ObjectCrud` 只传 planId 给固定私有加载器；公共 `ChangeRequest` 不接来源证明。净差异相同不能抹掉同计划先删后建的事实；未提交旧 request-only 计划须重新预览，已提交旧计划仅核原 journal。
 
 对象同事务重建只允许之前已通过知识专用删除核验的根，不允许覆盖未知资源。包的全零差异仍拒绝；实际 replace 的同字节对象仍属于可信替换域。Schema 严格核原 wire，不以字段重排改变既有请求或计划指纹。
+
+
+### 原知识事务的有界观察
+
+knowledge-write-input.ts 让真实知识工具与后端历史观察复用同一字段解析和顺序，保留既有 strip 行为；knowledge-write-observation.ts 仅导出纯公开 Schema，不引用请求/计划规则或 Node 哈希。只有知识提交完整原请求或对象提交固定 planId 可以形成原引用；旧 refresh 缺少事务绑定时不猜测。公共摘要严格区分 absent、prepared、committing、committed、rolled_back、recovery_required 与 unverifiable，仅 committed 携带原结果版本和变更数量；缺计划不补 requestHash，摘要不含正文、文件清单或私有路径。解析不是授权，原实例只能查历史。

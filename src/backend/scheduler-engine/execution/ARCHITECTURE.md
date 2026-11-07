@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主实例与图根共享身份；依赖追加在同事务重验两端及后继的知识/流程/停止状态，成功后重纳当前周期跟踪，仍待主轮结束并按原领取链执行。补充发送前预留、ACK后登记新输入，与cycle在途操作一起结算；停止先作用引擎，旧计划不再领取，最终门禁核对接收日志。目标分工、派发及人工来源核对原流程选择；交付/审阅从canonical复核真实证据与当前文件。检查点与前置调整不改选；额度/准入等待不消费，停止和重启封存不重放。 OwnerExecutionService 按知识→模型→任务事务核新派发及实际领取；原命令先查，锁释放后才启动。人工证据外部观察与最终知识快照/CAS 分离，避免反向串行等待。 CheckpointAbandonmentService 先读原命令，再核历史 canonical 与冻结证明，最后短事务裁决；不重读当前 native 或恢复旧模型，Auto 同步撤销旧恢复准入并等待处置收口。 原命令核实从固定主运行的 canonical 复原历史解析与指纹，比较读取前后依据；只返回严格公共摘要，不重发原命令或签发恢复资格。 EffectObservationService 复用原 canonical、控制面证据及平台单文件观察；恢复和重规划先在事务外取证，最终版本 CAS 后才建立独立周期，不自动重放原调用。 实际成员执行注入固定运行的受控文件端口，主调度不获得业务写入口，运行租约保持到物理操作排空。
+主实例与图根共享身份；依赖追加在同事务重验两端及后继的知识/流程/停止状态，成功后重纳当前周期跟踪，仍待主轮结束并按原领取链执行。补充发送前预留、ACK后登记新输入，与cycle在途操作一起结算；停止先作用引擎，旧计划不再领取，最终门禁核对接收日志。目标分工、派发及人工来源核对原流程选择；交付/审阅从canonical复核真实证据与当前文件。检查点与前置调整不改选；额度/准入等待不消费，停止和重启封存不重放。 OwnerExecutionService 按知识→模型→任务事务核新派发及实际领取；原命令先查，锁释放后才启动。人工证据外部观察与最终知识快照/CAS 分离，避免反向串行等待。 CheckpointAbandonmentService 先读原命令，再核历史 canonical 与冻结证明，最后短事务裁决；不重读当前 native 或恢复旧模型，Auto 同步撤销旧恢复准入并等待处置收口。 原命令核实从固定主运行的 canonical 复原历史解析与指纹，比较读取前后依据；只返回严格公共摘要，不重发原命令或签发恢复资格。 EffectObservationService 复用原 canonical、控制面证据及平台单文件观察；恢复和重规划先在事务外取证，最终版本 CAS 后才建立独立周期，不自动重放原调用。 真实主调用原知识授权与请求先核实，再两次读取原事务阶段；变化使处置依据失效，未知不重放。 实际成员执行注入固定运行的受控文件端口，主调度不获得业务写入口，运行租约保持到物理操作排空。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -17,7 +17,7 @@
 | [checkpoint-abandonment-service.ts](checkpoint-abandonment-service.ts) | 主调度明确放弃本周期尚未消费的检查点及可选恢复预约，保留旧执行与证明。 |
 | [command-verification-service.ts](command-verification-service.ts) | 把原主运行的 canonical 调用与同一 Store 已提交命令只读关联，供桌面和主工具共用。 |
 | [dispatch-service.ts](dispatch-service.ts) | 工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。 |
-| [effect-observation-service.ts](effect-observation-service.ts) | 组合原调用授权、已提交控制面与当前选定文件，保存本机明确处置并派生新周期关联。 |
+| [effect-observation-service.ts](effect-observation-service.ts) | 组合原调用授权、已提交控制面、原知识事务与当前选定文件，保存本机明确处置并派生新周期关联。 |
 | [effect-source.ts](effect-source.ts) | 从唯一任务存储与 canonical 日志核实原成员/主运行，供影响观察和新核实来源共用。 |
 | [execution-manager.ts](execution-manager.ts) | 工作区主对话管理，负责普通 chat、目标周期接续、多轮历史和消息队列；旧直接团队业务入口拒绝新执行，业务成员统一经岗位派发领取。 |
 | [execution-report-facts.ts](execution-report-facts.ts) | 从已核对身份的成员运行日志提取工具授权与回执事实。 |
@@ -440,6 +440,7 @@ class N_src_backend_scheduler_engine_execution_effect_observation_service_ts_Eff
   +normalizePath()
   +observeFiles()
   +acquireRead()
+  +observeKnowledge()
   +assertCurrent()
 }
 N_src_backend_scheduler_engine_execution_effect_observation_service_ts ..> N_src_backend_scheduler_engine_execution_effect_observation_service_ts_EffectObservationPorts : 声明
@@ -466,13 +467,14 @@ class N_src_backend_scheduler_engine_execution_effect_observation_service_ts_Eff
   -output()
   -alive()
   -prepare()
+  -knowledge()
   -baselines()
   -recordReady()
 }
 N_src_backend_scheduler_engine_execution_effect_observation_service_ts ..> N_src_backend_scheduler_engine_execution_effect_observation_service_ts_EffectObservationService : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/effect-observation.ts](../../core/tasks/effect-observation.ts)、[../../core/tasks/effect-observation-rules.ts](../../core/tasks/effect-observation-rules.ts)、[../../core/tasks/command-verification.ts](../../core/tasks/command-verification.ts)、[../../core/tasks/artifact-evidence.ts](../../core/tasks/artifact-evidence.ts)、[../../core/tasks/artifact-baseline.ts](../../core/tasks/artifact-baseline.ts)、[command-verification-service.ts](command-verification-service.ts)、[effect-source.ts](effect-source.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/effect-observation.ts](../../core/tasks/effect-observation.ts)、[../../core/tasks/effect-observation-rules.ts](../../core/tasks/effect-observation-rules.ts)、[../../core/tasks/command-verification.ts](../../core/tasks/command-verification.ts)、[../../core/tasks/artifact-evidence.ts](../../core/tasks/artifact-evidence.ts)、[../../core/tasks/artifact-baseline.ts](../../core/tasks/artifact-baseline.ts)、[command-verification-service.ts](command-verification-service.ts)、[effect-source.ts](effect-source.ts)、[../../core/knowledge/knowledge-write-observation.ts](../../core/knowledge/knowledge-write-observation.ts)、[../../core/knowledge/knowledge-write-input.ts](../../core/knowledge/knowledge-write-input.ts)。
 
 ### effect-source.ts
 
@@ -2874,3 +2876,8 @@ edit 当前文件观察接受两种互斥严格形状：Pi 1.5 的 `{path,edits:
 Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，短门闩排除其它工具/审批；模型与 emit 事件不能签发许可。Main 在 Store 外取得文件句柄和可靠 before/intended-after 私有备份，单条 prepared→executing→terminal 附录由唯一 Store 保存。只有可靠 applied 返回成功；进入 executing 后的 IO/截断/进程退出均可能部分写入，不自动回滚或重发。
 
 停止先中断原进程，排空实际文件操作并确认 child 退出后才释放工作区占用。退出码不证明写成功。补偿是桌面明确提交的新命令，仅原 applied、原周期已关闭、当前同一文件仍等于原 after 才可恢复保存的 before。原日志、unknown 和原操作不改写；原命令查询先于今日配置，任何保存未知只查原记录。
+
+
+### 原知识调用的影响观察
+
+EffectObservationService 仅从完整可信主 canonical 的原 proposed/allowed 解析知识提交或对象计划引用。窄 observeKnowledge 端口在事务外读取原 journal，严格复核返回身份、直接请求指纹和有界 Schema；两次读取变化标 changed_during_read，不能沿用为稳定处置。此证明是历史事务阶段，不刷新当前知识，也不授予原调用重放许可；索引 refresh 与其它领域通道未适配时仍 unsupported。

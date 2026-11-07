@@ -1,6 +1,6 @@
 /**
  * 作用定位：向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。
- * 设计原因：先声明实际能力再消费运行授权；领域执行一次，业务输出按唯一 JSON 快照校验，不因返回异常重放事务。按需契约仅描述本知识注册表，内置角色不写项目知识。
+ * 设计原因：先声明实际能力再消费运行授权；领域执行一次，业务输出按唯一 JSON 快照校验，不因返回异常重放事务。提交输入与原事务观察共用解析定义，保持实际参数顺序和旧 strip 行为。
  */
 import {z} from 'zod';
 import {ToolRegistry,type ToolDefinition} from '../../core/tools/registry';
@@ -13,6 +13,7 @@ import type {ToolEffect} from '../../core/tools/types';
 import {knowledgeToolContract} from './knowledge-contracts';
 import {context as snapshotContext} from '../../core/knowledge/snapshot';
 import {defaultExecutorId,defaultExecutorDefinition,defaultExecutorConfiguration} from '../context/default-executor';
+import {knowledgeCommitInputSchema,knowledgeObjectCommitInputSchema} from '../../core/knowledge/knowledge-write-input';
 const identity={workspaceId:z.string(),instanceId:z.string()};
 export class KnowledgeTools {
   private readonly registry=new ToolRegistry<boolean>();
@@ -44,8 +45,8 @@ export class KnowledgeTools {
     }));
     register('cbim_knowledge_refresh',{effects:['knowledge-write'],description:'重新校验当前知识并刷新派生注册表；所有知识修改必须通过 CBIM 知识服务。需取得本次运行的知识写入授权，全部结构校验通过才事务更新派生注册表，不修改用户正文。错误返回问题清单，改完再调用。',inputSchema:identity},wrap(()=>queries.refresh()));
     register('cbim_object_preview',{effects:['preview'],description:'预览 Agent/Module/Skill/Workflow 的创建、更新或删除。创建传 parentId、slug、data、body；更新传 id 与需修改字段；删除传 id，包含子对象时需 cascade。服务规划路径、清单和父子引用，不写正式知识。返回 planId、变更及校验。',inputSchema:{...identity,revision:z.string(),operations:z.array(objectOperation).min(1).max(100)}},wrap(args=>objects.preview(args.revision,args.operations)));
-    register('cbim_object_commit',{effects:['knowledge-write'],description:'提交 cbim_object_preview 返回的 planId。须取得本次运行的知识写入授权；核对原版本，事务写入知识及索引，同一计划幂等。',inputSchema:{...identity,planId:z.string()}},wrap((args,write)=>{if(!write)fail('FORBIDDEN','当前调用未获得知识写入权限');return objects.commit(args.planId)}));
-    const changeSchema={...identity,revision:z.string(),requestId:z.string(),changes:z.array(z.object({path:z.string(),text:z.string().nullable()})).max(1000)};
+    register('cbim_object_commit',{effects:['knowledge-write'],description:'提交 cbim_object_preview 返回的 planId。须取得本次运行的知识写入授权；核对原版本，事务写入知识及索引，同一计划幂等。',inputSchema:knowledgeObjectCommitInputSchema.shape},wrap((args,write)=>{if(!write)fail('FORBIDDEN','当前调用未获得知识写入权限');return objects.commit(args.planId)}));
+    const changeSchema=knowledgeCommitInputSchema.shape;
     register('cbim_knowledge_preview',{effects:['preview'],description:'校验修改并预览影响，不写入。',inputSchema:changeSchema},wrap(args=>workspace.preview(args)));
     register('cbim_knowledge_commit',{effects:['knowledge-write'],description:'取得本次运行的知识写入授权后提交文件事务，核对读取版本与幂等请求标识。',inputSchema:changeSchema},wrap((args,write)=>{if(!write)fail('FORBIDDEN','当前调用未获得知识写入权限');return workspace.commit(args)}));
     register('cbim_knowledge_move_preview',{effects:['preview'],inputSchema:{...identity,from:z.string(),to:z.string().nullable()}},wrap(async args=>workspace.preview(await workspace.planMove(await workspace.read(),args.from,args.to))));

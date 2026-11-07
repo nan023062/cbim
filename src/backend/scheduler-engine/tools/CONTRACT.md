@@ -145,3 +145,8 @@ raw 输入在任何领域调用前严格校验；发送端口的对象与原期�
 ### 原主命令核实工具
 
 `cbim_dispatch_command_report` 仅在真实主运行的可选只读端口存在时注册，严格参数只有 runId/toolCallId；可信闭包固定 workspace/root，与桌面报告使用同一服务。read 效果不触发写审批，没有写 commandId、不改变 Auto.workRequested；dispatch 前缀继续排除业务证据。输入在 await 前独立冻结，结果沿唯一 JSON wire 严格核原选择与主身份并限制 128 KiB UTF-8；坏输出不查询第二次、不执行原工具。八项写工具的 recovery.queryTool 指向此报告，原指纹构造由 main-command-request 与提交方共用，查询自身没有写命令映射。
+
+
+### 知识提交原输入复原
+
+cbim_knowledge_commit、知识预览与 cbim_object_commit 使用 Core 的共享输入定义。字段顺序和既有 strip 语义不变，真实执行仍由当前实例和一次性权限门禁控制；历史观察仅复原同一解析后的原请求，不能借共享 Schema 调用写入口或获得授权。

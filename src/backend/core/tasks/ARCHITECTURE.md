@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-任务计划、派发图、目标与等待。资料清单保留旧文件v1，新增严格v2来源并核同序与字节；快照不等于当前来源或业务验收。依赖追加核实两端及后继未领取、当前计划与真实图，完整审计验证后才放行精确新边；保留原任务/实例，领取时绑定真实结果。运行内补充以pending/accepted/rejected/unknown分开，接受与waiting共享连续输入版本，未知阻止完成。流程选择共用叶子契约，缺省与显式分开匹配，已派发选择不可改写；严格输出区分保存与交付，历史不补造授权或证据。 正式协议将目标分配、任务、准备、模型和历史审计相互核对；岗位绑定不可重写，旧在途仅按原事实收束。 检查点显式放弃有独立严格协议与精确联合变更校验；原任务和检查点证据不可重写，纯 ACK 与后续周期释放保持可用。 原主命令核实定义八工具的有界报告；原工具结果、事务保存和业务验收分开，查询回执不能成为交付证据。 主／成员影响来源使用严格联合；观察、不可变处置和新核实／修复引用分别表达，当前文件不补造成功基线或业务验收。纯 scope-public 白名单供主工具与会话详情共用，保留安全恢复来源并隐藏原生上下文。 单文件操作公开协议不含正文备份；私有意图与阶段严格绑定原成员运行和原授权，补偿引用可靠 applied 与真实 before，终态不可改写。
+任务计划、派发图、目标与等待。资料清单保留旧文件v1，新增严格v2来源并核同序与字节；快照不等于当前来源或业务验收。依赖追加核实两端及后继未领取、当前计划与真实图，完整审计验证后才放行精确新边；保留原任务/实例，领取时绑定真实结果。运行内补充以pending/accepted/rejected/unknown分开，接受与waiting共享连续输入版本，未知阻止完成。流程选择共用叶子契约，缺省与显式分开匹配，已派发选择不可改写；严格输出区分保存与交付，历史不补造授权或证据。 正式协议将目标分配、任务、准备、模型和历史审计相互核对；岗位绑定不可重写，旧在途仅按原事实收束。 检查点显式放弃有独立严格协议与精确联合变更校验；原任务和检查点证据不可重写，纯 ACK 与后续周期释放保持可用。 原主命令核实定义八工具的有界报告；原工具结果、事务保存和业务验收分开，查询回执不能成为交付证据。 主／成员影响来源使用严格联合；观察、不可变处置和新核实／修复引用分别表达，当前文件不补造成功基线或业务验收。纯 scope-public 白名单供主工具与会话详情共用，保留安全恢复来源并隐藏原生上下文。 影响报告的可选知识事务摘要保留原工具状态并参与观察依据；旧处置缺省不补字段。 单文件操作公开协议不含正文备份；私有意图与阶段严格绑定原成员运行和原授权，补偿引用可靠 applied 与真实 before，终态不可改写。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -1112,7 +1112,7 @@ class N_src_backend_core_tasks_effect_observation_ts_EffectRelations["EffectRela
 N_src_backend_core_tasks_effect_observation_ts ..> N_src_backend_core_tasks_effect_observation_ts_EffectRelations : 声明
 ```
 
-直接依赖：[artifact-baseline.ts](artifact-baseline.ts)、[command-verification.ts](command-verification.ts)、[../tools/scope-schema.ts](../tools/scope-schema.ts)、[../tools/receipt-schema.ts](../tools/receipt-schema.ts)。
+直接依赖：[artifact-baseline.ts](artifact-baseline.ts)、[command-verification.ts](command-verification.ts)、[../tools/scope-schema.ts](../tools/scope-schema.ts)、[../tools/receipt-schema.ts](../tools/receipt-schema.ts)、[../knowledge/knowledge-write-observation.ts](../knowledge/knowledge-write-observation.ts)。
 
 ### execution-context.ts
 
@@ -5598,3 +5598,8 @@ Store 继续用同一串行提交、原命令回执和原协议裁决，不增�
 `controlled-file-invariants.ts` 每次只接受一条阶段与精确回执，不允许空集合或未知字段伪装独立操作。prepared→executing→applied/unknown，或确认 write_not_issued 的 not_applied；终态不可变。新原写需同一真实 running 成员及 active 非只读周期，首次 leaseEpoch=0 合法；executing 前仍复核，终态只核原意图和实际结果，不因运行停止或今日岗位变化丢弃事实。相同授权序号不能转借另一调用，原写 blob 不能重新绑定到新操作。
 
 补偿另建意图及阶段，只能引用原可靠 applied、关闭周期和已结算运行；同文件身份、当前 after 摘要与原两个 blob 必须精确对应，不能对补偿再补偿。原调用记录和所有业务证据不改。每原 run 8 写、root 64 操作、工作区 256 操作、每原写 8 次明确补偿；16 MiB 附录在 prepared 时预留余下阶段空间，超限不删历史。真实 blob 64 MiB 与平台 IO/占用/停止由 Main 执行，Core 不把结构校验冒称物理证明。未结算或未知只能查原记录，重开不自动续写；Workflow、artifact 与 checkpoint 的现有白名单不扩大。
+
+
+### 原知识事务观察扩展
+
+影响报告可选 knowledge_transaction 覆盖，只接受可信主运行、原 knowledge-write / knowledge 授权及两类已支持知识提交工具。原工具 failed/unknown 与原事务 committed 分开，原回滚或查无记录不证明今天的正文或可重放。知识摘要纳入原观察 basis 和明确处置；旧报告缺省不补字段、不重算旧依据。

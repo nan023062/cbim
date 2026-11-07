@@ -1,6 +1,6 @@
 /**
  * 作用定位：定义原成员/主调用的影响观察、本机处置附录及后续周期关系的公开叶子契约。
- * 设计原因：当前文件、原工具结果和新业务结果是不同事实；客户端只选择身份，可信服务采集依据，处置不能清除未知或授予恢复权限。
+ * 设计原因：当前文件、原知识事务、原工具结果和新业务结果是不同事实；客户端只选择身份，可信服务采集依据，处置不能清除未知或授予恢复权限。知识摘要是可选扩展，旧处置不补字段。
  * 职责边界：不含原参数/正文、凭据或 native 路径；旧 recovery 协议由其自身联合分支保留，不在这里默认化。
  */
 import {z} from 'zod';
@@ -8,6 +8,7 @@ import {artifactFileCheckSchema,artifactRelativePathSchema} from './artifact-bas
 import {commandRecordSchema} from './command-verification';
 import {toolScopeSchema} from '../tools/scope-schema';
 import {toolReceiptEffectSchema} from '../tools/receipt-schema';
+import {knowledgeTransactionObservationSchema} from '../knowledge/knowledge-write-observation';
 
 const id=z.string().min(1).max(512).refine(v=>v.trim()===v&&!/[\x00-\x1f]/.test(v));
 const digest=z.string().regex(/^[a-f0-9]{64}$/),seq=z.number().int().nonnegative().safe(),positive=seq.min(1),time=z.string().datetime();
@@ -28,10 +29,10 @@ export const effectFileObservationSchema=z.object({relativePath:artifactRelative
 });
 export type EffectFileObservation=z.infer<typeof effectFileObservationSchema>;
 export const effectCallObservationSchema=z.object({
-  toolCallId:id,toolName:id.optional(),outcome,coverage:z.enum(['control_commit_only','selected_files_now','unsupported']),
+  toolCallId:id,toolName:id.optional(),outcome,coverage:z.enum(['control_commit_only','selected_files_now','knowledge_transaction','unsupported']),
   inputHash:digest.optional(),proposedSeq:positive.optional(),allowedSeq:positive.optional(),finishedSeq:positive.optional(),
   scope:toolScopeSchema.optional(),effects:z.array(toolReceiptEffectSchema).max(8).optional(),
-  file:effectFileObservationSchema.optional(),command:commandRecordSchema.optional(),
+  file:effectFileObservationSchema.optional(),command:commandRecordSchema.optional(),knowledge:knowledgeTransactionObservationSchema.optional(),
   baselineChecks:z.array(z.object({baselineId:id,invalidated:z.boolean(),file:artifactFileCheckSchema}).strict()).max(effectObservationLimits.baselines).optional(),
   limitations:z.array(z.string().min(1).max(512)).max(effectObservationLimits.limitations),
 }).strict().superRefine((v,c)=>{
@@ -39,6 +40,8 @@ export const effectCallObservationSchema=z.object({
   if(v.coverage==='selected_files_now'&&(!v.file||!v.toolName||!['read','write','edit'].includes(v.toolName)||!v.inputHash||!v.allowedSeq||v.scope?.kind!=='workspace'))issue('文件观察必须来自明确授权的单文件调用');
   if(v.coverage!=='selected_files_now'&&(v.file||v.baselineChecks))issue('未覆盖文件的调用不能携带字节证明');
   if(v.coverage==='control_commit_only'?!v.command:v.command!==undefined)issue('控制面核实必须与其覆盖范围一致');
+  if(v.coverage==='knowledge_transaction'?!v.knowledge:v.knowledge!==undefined)issue('知识事务摘要必须与其覆盖范围一致');
+  if(v.knowledge&&(!v.toolName||!['cbim_knowledge_commit','cbim_object_commit'].includes(v.toolName)||!v.inputHash||!v.allowedSeq||v.outcome==='denied'||v.scope?.kind!=='knowledge'||v.scope.workspaceId!==v.knowledge.identity.workspaceId||v.effects?.length!==1||v.effects[0]!=='knowledge-write'))issue('知识事务必须来自原明确授权的知识提交');
   if(v.baselineChecks?.some(b=>b.file.relativePath!==v.file?.relativePath))issue('历史基线只能比较同一文件');
   if(v.proposedSeq!==undefined&&v.allowedSeq!==undefined&&v.proposedSeq>=v.allowedSeq||v.allowedSeq!==undefined&&v.finishedSeq!==undefined&&v.allowedSeq>=v.finishedSeq)issue('原调用的事件顺序不一致');
 });
@@ -59,6 +62,7 @@ export const effectObservationReportSchema=z.object({
   if(s.state==='verified'&&(!s.scopeId||!s.scopeStatus||s.logState!=='verified'||s.logPrefixHash===undefined))issue('可信来源缺少周期或完整日志依据');
   if(s.scopeStatus==='closed'?!s.scopeOutcome:s.scopeOutcome!==undefined)issue('原周期关闭状态不一致');
   if(v.identity.subject.kind==='main_run'&&(s.taskRevision!==undefined||s.planRevision!==undefined))issue('主来源不能伪装成成员任务版本');
+  if(v.identity.subject.kind!=='main_run'&&v.calls.some(call=>call.knowledge))issue('知识提交观察只接受可信主运行');
   if(s.state==='verified'&&v.identity.subject.kind==='member_run'&&(!s.taskRevision||!s.planRevision))issue('成员来源缺少任务版本');
   if(v.calls.some(x=>x.scope&&x.scope.workspaceId!==v.identity.workspaceId))issue('调用范围属于其它工作区');
   if(s.state!=='verified'&&v.calls.some(x=>x.coverage!=='unsupported'))issue('不可核实来源不能给出结构化影响证明');

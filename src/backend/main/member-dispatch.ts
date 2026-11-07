@@ -3,7 +3,7 @@
  * 作用定位：为已运行工作区装配成员派发、大脑执行、目标审阅、岗位及模块负责人服务；复用工作区恢复前创建的唯一 DispatchStore，来源、责任、岗位与执行保持独立审计投影。
  * 设计原因：知识→模型设置→Store 锁序固定岗位配置，预算和租约通过后才解密；成员不继承主模型。Workflow 能力按实际端口预检，密钥只留工厂闭包，锁释放后创建引擎；历史报告不启动成员。
  * 交接处置只复用原 canonical 读取与路径规范化，既存检查点证明不因今日 native/知识/模型变化被刷新；恢复执行仍走全部当前基线核验。
- * 影响观察另提供安全文件读取和短只读占用，不启动模型；明确处置、新只读核实与业务修复各走独立门禁。
+ * 影响观察另提供安全文件读取、短只读占用和原知识事务查询；知识端口复用原串行队列，不启动模型或执行旧提交，明确处置、新只读核实与业务修复各走独立门禁。
  */
 import path from 'node:path';
 import type {Workspace} from './workspace/workspace';
@@ -33,6 +33,7 @@ import type {MemberStartOptions} from '../core/tasks/member-commands';
 import {workspaceMemberModelHash} from '../core/team/workspace-member-rules';
 import {ControlledFiles} from './workspace/controlled-files';
 import type {ControlledFileTransport} from './platform/controlled-file-protocol';
+import {observeKnowledgeTransaction} from './workspace/knowledge-effect-reader';
 
 /** 应用对每个活动工作区只调用一次；关闭服务必须早于释放工作区锁。 */
 export function createMemberDispatch(workspace:Workspace,observer?:DispatchObserver){
@@ -68,7 +69,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
     const summary=await storage.read(path.join(workspace.paths.project(workspace.entry.id),'loop-engine','tasks',safeId(rootSessionId),safeId(runId)));
     if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path||summary.task.taskId!==rootSessionId||summary.runId!==runId||summary.task.agentId!=='cbim:main')throw Error('主调度证据不属于当前会话或运行');
     return summary;
-  }},budgetPolicy,{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),acquireRead:()=>{workspace.assert();return lease.acquire('human-decision:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('HUMAN_UNAVAILABLE','工作区正在停止，未保存新的人工决定')}},models,{inspect:inspectMember,normalizePath:normalizeArtifact},{inspectMember,normalizePath:normalizeArtifact,observeFiles:(paths,signal)=>artifactFiles.observeFiles(paths,signal),acquireRead:()=>{workspace.assert();return lease.acquire('effect-observation:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('EFFECT_UNAVAILABLE','工作区正在停止，未保存新的处置')}});
+  }},budgetPolicy,{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),acquireRead:()=>{workspace.assert();return lease.acquire('human-decision:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('HUMAN_UNAVAILABLE','工作区正在停止，未保存新的人工决定')}},models,{inspect:inspectMember,normalizePath:normalizeArtifact},{inspectMember,observeKnowledge:(reference,signal)=>observeKnowledgeTransaction(workspace,reference,signal),normalizePath:normalizeArtifact,observeFiles:(paths,signal)=>artifactFiles.observeFiles(paths,signal),acquireRead:()=>{workspace.assert();return lease.acquire('effect-observation:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('EFFECT_UNAVAILABLE','工作区正在停止，未保存新的处置')}});
   const prepareEngine=(llm:ResolvedLlm,options:MemberStartOptions):PreparedEngine=>{
       return {model:structuredClone(llm.profile),availableTools:nativeToolNames(options.permission!=='read'),availableValidators:['json-schema-v1'],create:async(run,task,hooks)=>{
         workspace.assert();

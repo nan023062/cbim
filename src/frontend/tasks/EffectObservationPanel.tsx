@@ -1,5 +1,5 @@
 /**
- * 作用定位：展示原调用状态、当前文件/控制面观察、本机处置和后续独立周期关系。
+ * 作用定位：展示原调用状态、当前文件、原控制面/知识事务、本机处置和后续独立周期关系。
  * 设计原因：用户可以核实影响并明确决定下一步，但这些观察不能覆盖旧失败、签署业务验收或自动启动修复。主与成员共用面板，身份不互相伪装。
  */
 import {useState} from 'react';
@@ -14,6 +14,7 @@ import './effect-observation.css';
 
 const decisions:Record<EffectDecision,string>={inspect_more:'继续核实',repair_in_new_cycle:'新业务修复',leave_unresolved:'保留未解决'};
 const outcomes={succeeded:'原工具成功',failed:'原工具失败',denied:'原操作被拒绝',unknown:'原结果未知',not_authorized:'未记录授权'};
+const knowledgeStates={absent:'未查到原知识事务',prepared:'原事务保存到准备阶段',committing:'原事务记录停留在提交阶段',committed:'原知识事务已提交',rolled_back:'原事务记录为已回滚',recovery_required:'原知识事务仍需人工核实',unverifiable:'原知识事务不可核实'};
 /** 所选处置明确显示本机来源，不能被误读为账号签名或专业验收。 */
 export function EffectDispositionSummary({record}:{record:EffectDispositionRecord}){return <div className="effect-disposition-summary" data-testid="effect-selected-disposition"><strong>{decisions[record.request.decision]}</strong><p>{record.request.reason}</p><small>本机明确保存 · {new Date(record.recordedAt).toLocaleString()} · 非业务验收</small><code>{record.dispositionId}</code></div>}
 
@@ -34,6 +35,12 @@ export function EffectObservationPanel({identity,anchor,context}:{identity:Effec
         <strong>{call.toolName??'原调用'} · {outcomes[call.outcome]}</strong>
         {call.coverage==='control_commit_only'&&<p>{call.command?.state==='committed'?'原控制面事务已保存':call.command?.state==='absent'?'未查到原保存回执':'原事务仍不可核实'}；不表示业务工作已完成。</p>}
         {call.coverage==='unsupported'&&<p>本项影响暂不支持结构化核实，未知状态保留。</p>}
+        {call.knowledge&&<div data-testid="effect-knowledge-transaction" data-state={call.knowledge.state}>
+          <p>{knowledgeStates[call.knowledge.state]}</p><p>原请求 <code>{call.knowledge.identity.requestId}</code></p>
+          {call.knowledge.revision&&<p>原提交版本 <code>{call.knowledge.revision}</code> · {call.knowledge.changedCount} 项变更</p>}
+          {call.knowledge.reason&&<p>{{original_plan_unavailable:'原对象计划缺失、损坏或身份不匹配。',original_record_unverifiable:'原事务记录未通过完整性核实。',query_unavailable:'当前无法可靠查询原事务。'}[call.knowledge.reason]}</p>}
+          <p>这是原事务记录，不表示当前知识仍相同，也不改变原工具结果或业务验收。</p>
+        </div>}
         {call.file&&<div data-testid="effect-current-file" data-state={call.file.state}><p><code>{call.file.relativePath}</code> · {{present:'当前文件存在',missing:'当前文件缺失',unverifiable:'当前文件不可核实'}[call.file.state]}</p>{call.file.byteLength!==undefined&&<small>{call.file.byteLength.toLocaleString()} 字节</small>}{call.file.sha256&&<code>{call.file.sha256}</code>}{call.file.reason&&<p>{call.file.reason}</p>}<p>这是当前观察，不是原操作的成功基线或完整影响证明。</p></div>}
         {!!call.baselineChecks?.length&&<details><summary>已有文件基线对照</summary>{call.baselineChecks.map(item=><p key={item.baselineId}><code>{item.baselineId}</code> · {{matches:'当前一致',changed:'已变化',missing:'文件缺失',unverifiable:'不可核实'}[item.file.state]}{item.invalidated?' · 原基线之后有操作':''}</p>)}</details>}
         {!!call.limitations.length&&<ul>{call.limitations.map((v,i)=><li key={i}>{v}</li>)}</ul>}

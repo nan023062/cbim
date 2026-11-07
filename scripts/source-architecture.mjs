@@ -119,6 +119,16 @@ const effectObservationScopes={
  'src/frontend/tasks':'成员详情可选择原调用并显式观察；处置先保存本机稳定请求，丢回包只查原命令。历史选择与后续关系按同一处置展示，迟到读取不覆盖其他来源；各面板共享根会话时效，PublicDispatchScope 真实提供新核实和修复来源，沿既有资格创建。',
 };
 for(const [directory,description] of Object.entries(effectObservationScopes))scope[directory]+=' '+description;
+const knowledgeEffectScopes={
+ 'src/backend/core/knowledge':'原知识工具和事务观察共用实际输入解析，纯摘要区分未查到、持久阶段及不可核实，不返回正文或私有路径。',
+ 'src/backend/core/tasks':'影响报告的可选知识事务摘要保留原工具状态并参与观察依据；旧处置缺省不补字段。',
+ 'src/backend/main/workspace':'原知识事务适配复用现有串行 journal 核验，固定计划与旧实例只读；不提交、刷新、恢复或修剪目录。',
+ 'src/backend/main':'影响观察注入原知识事务窄读取端口，不向调度层开放写入或恢复方法。',
+ 'src/backend/scheduler-engine/execution':'真实主调用原知识授权与请求先核实，再两次读取原事务阶段；变化使处置依据失效，未知不重放。',
+ 'src/backend/scheduler-engine/tools':'知识提交和对象提交的执行参数与历史核实使用同一解析定义，权限及当前实例核验仍在实际执行入口。',
+ 'src/frontend/tasks':'同一影响面板分别显示原工具失败和原知识事务阶段，明确处置继续绑定原观察，查询不取得写权限。',
+};
+for(const [directory,description] of Object.entries(knowledgeEffectScopes))scope[directory]+=' '+description;
 // 真实文件写入由成员授权和平台句柄共同约束；补偿另存事实，不改变原工具或验收结果。
 const controlledFileScopes={
  'src/backend/core/policy':'受控文件工具必须是本轮实际内部注册、唯一 business-write 效果及固定工作区范围；只读拒写，本轮免询不绕过平台检查。',

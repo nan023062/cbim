@@ -582,3 +582,8 @@ edit 当前文件观察接受两种互斥严格形状：Pi 1.5 的 `{path,edits:
 Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，短门闩排除其它工具/审批；模型与 emit 事件不能签发许可。Main 在 Store 外取得文件句柄和可靠 before/intended-after 私有备份，单条 prepared→executing→terminal 附录由唯一 Store 保存。只有可靠 applied 返回成功；进入 executing 后的 IO/截断/进程退出均可能部分写入，不自动回滚或重发。
 
 停止先中断原进程，排空实际文件操作并确认 child 退出后才释放工作区占用。退出码不证明写成功。补偿是桌面明确提交的新命令，仅原 applied、原周期已关闭、当前同一文件仍等于原 after 才可恢复保存的 before。原日志、unknown 和原操作不改写；原命令查询先于今日配置，任何保存未知只查原记录。
+
+
+### 原知识调用的影响观察
+
+EffectObservationService 仅从完整可信主 canonical 的原 proposed/allowed 解析知识提交或对象计划引用。窄 observeKnowledge 端口在事务外读取原 journal，严格复核返回身份、直接请求指纹和有界 Schema；两次读取变化标 changed_during_read，不能沿用为稳定处置。此证明是历史事务阶段，不刷新当前知识，也不授予原调用重放许可；索引 refresh 与其它领域通道未适配时仍 unsupported。

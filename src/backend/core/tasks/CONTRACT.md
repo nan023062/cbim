@@ -600,3 +600,8 @@ Store 继续用同一串行提交、原命令回执和原协议裁决，不增�
 `controlled-file-invariants.ts` 每次只接受一条阶段与精确回执，不允许空集合或未知字段伪装独立操作。prepared→executing→applied/unknown，或确认 write_not_issued 的 not_applied；终态不可变。新原写需同一真实 running 成员及 active 非只读周期，首次 leaseEpoch=0 合法；executing 前仍复核，终态只核原意图和实际结果，不因运行停止或今日岗位变化丢弃事实。相同授权序号不能转借另一调用，原写 blob 不能重新绑定到新操作。
 
 补偿另建意图及阶段，只能引用原可靠 applied、关闭周期和已结算运行；同文件身份、当前 after 摘要与原两个 blob 必须精确对应，不能对补偿再补偿。原调用记录和所有业务证据不改。每原 run 8 写、root 64 操作、工作区 256 操作、每原写 8 次明确补偿；16 MiB 附录在 prepared 时预留余下阶段空间，超限不删历史。真实 blob 64 MiB 与平台 IO/占用/停止由 Main 执行，Core 不把结构校验冒称物理证明。未结算或未知只能查原记录，重开不自动续写；Workflow、artifact 与 checkpoint 的现有白名单不扩大。
+
+
+### 原知识事务观察扩展
+
+影响报告可选 knowledge_transaction 覆盖，只接受可信主运行、原 knowledge-write / knowledge 授权及两类已支持知识提交工具。原工具 failed/unknown 与原事务 committed 分开，原回滚或查无记录不证明今天的正文或可重放。知识摘要纳入原观察 basis 和明确处置；旧报告缺省不补字段、不重算旧依据。

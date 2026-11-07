@@ -1,6 +1,6 @@
 /**
  * 作用定位：大脑 执行层：与具体引擎无关的任务、事件、工具策略和执行摘要契约。
- * 设计原因：任务身份与原生上下文分开；历史读取单独报告坏记录，不伪造运行摘要。可续接头只来自完整的当前上下文，旧历史可展示但不能成为异常回退入口。
+ * 设计原因：任务身份与原生上下文分开；成员文件基线通过独立可信端口记录，不由引擎声明。历史读取单独报告坏记录，可续接头只来自完整当前上下文。
  */
 import type {TaskSpec} from '../tasks/types';
 import type {ToolCall,ToolDecision} from '../tools/types';
@@ -15,7 +15,7 @@ export type {ToolCall,ToolDecision} from '../tools/types';
 export type RunStatus = 'running' | 'completed' | 'cancelled' | 'failed' | 'interrupted';
 export interface EngineEvent {
   type: 'run.started' | 'session.bound' | 'message' | 'message.delta' | 'tool.started' | 'tool.finished' |
-    'tool.proposed' | 'tool.allowed' | 'tool.denied' | 'tool.updated' | 'task.updated' | 'task.help_requested' | 'engine.status' | 'run.stop_requested' | 'run.settled' | 'run.interrupted';
+    'tool.proposed' | 'tool.allowed' | 'tool.denied' | 'tool.updated' | 'task.updated' | 'task.help_requested' | 'artifact.baseline_captured' | 'engine.status' | 'run.stop_requested' | 'run.settled' | 'run.interrupted';
   data: Record<string, unknown>;
 }
 /** 事件落盘后的身份与顺序信息；观察者只能收到成功持久化的记录。 */
@@ -51,6 +51,8 @@ export interface EngineContext {
   taskTools?:Pick<import('../tasks/progress-tools').TaskProgressTools,'list'|'call'>;
   /** 仅正式成员运行具备；求助是待安全结算的记录，必须传递桥提供的真实 toolCallId。 */
   memberHelpTools?:Pick<import('../tasks/member-help-tools').MemberHelpTools,'list'|'call'>;
+  /** 仅注入可信文件端口的成员具备；采集由运行时核对真实工具来源，不接受模型路径。 */
+  artifactTools?:Pick<import('../tasks/artifact-tools').ArtifactTools,'list'|'call'>;
   /** 返回前完成持久化；失败必须停止依赖这份证据的操作。 */
   emit(event: EngineEvent): Promise<void>;
   /** 决策及证据先落盘，返回 allow 才可执行。 */

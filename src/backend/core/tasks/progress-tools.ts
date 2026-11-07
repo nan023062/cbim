@@ -1,11 +1,12 @@
 /**
  * 作用定位：内部 Loop 的任务计划、步骤证据和交付工具，状态通过注入的持久化回调保存。
- * 设计原因：普通问答不创建计划；目标和验收项容量对齐正式派发协议，允许逐字保留责任范围。执行按版本修订，证据关联真实成功回执；派发、目标审阅与查询记录不能自证业务完成，只提供待审阅状态，不提供模型验收工具。
+ * 设计原因：普通问答不创建计划；目标和验收项逐字保留责任范围。执行按版本修订，证据关联真实成功回执；文件基线经只读端口展示，采集及其它任务记录不能自证业务完成，不提供模型验收工具。
  */
 import {z} from 'zod';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import type {TaskProgress} from './progress';
 import type {ToolReceipt} from '../tools/types';
+import type {ArtifactBaselineRef} from './artifact-baseline';
 import {jsonToolResult} from '../tools/results';
 
 const text=z.string().trim().min(1).max(4000),planText=z.string().trim().min(1).max(16000),version=z.number().int().nonnegative();
@@ -34,7 +35,9 @@ export class TaskProgressTools {
   generation=0;
   private tail:Promise<unknown>=Promise.resolve();
   /** save 成功才替换内存状态；恢复保留计划，但不沿用上轮尚未重新核实的证据。 */
-  constructor(previous:TaskProgress|undefined,private save:(state:TaskProgress)=>Promise<void>){this.state=previous?structuredClone(previous):undefined}
+  constructor(previous:TaskProgress|undefined,private save:(state:TaskProgress)=>Promise<void>,private readonly ports?:{artifacts():ArtifactBaselineRef[]}){this.state=previous?structuredClone(previous):undefined}
+  /** 只返回当前计划副本；可信采集端口用它核实版本，不允许工具或调用方直接修改计划。 */
+  current():TaskProgress|undefined{return this.state?structuredClone(this.state):undefined}
   private serial<T>(work:()=>Promise<T>):Promise<T>{const next=this.tail.then(work);this.tail=next.catch(()=>{});return next}
   private async persist(next:TaskProgress){await this.save(next);this.state=next;return structuredClone(next)}
   /** 新轮次或任何写入/命令放行前使证据失效；失败/取消也不能假设产物未改变。 */
@@ -48,7 +51,7 @@ export class TaskProgressTools {
   call(name:string,input:unknown){return this.serial(async()=>{
     const parsed=progressTool(name,input);if(!parsed)throw Error('未知任务工具');const args=parsed.args as any;
     let result:unknown;
-    if(name==='cbim_task_inspect')result={plan:this.state??null,evidence:[...this.evidence.values()]};
+    if(name==='cbim_task_inspect')result={plan:this.state??null,evidence:[...this.evidence.values()],...(this.ports?{artifacts:structuredClone(this.ports.artifacts())}:{})};
     else{
       if(args.expectedVersion!==(this.state?.version??0))throw Error('任务计划版本已变化，请重新读取');
       if(name==='cbim_task_plan'){

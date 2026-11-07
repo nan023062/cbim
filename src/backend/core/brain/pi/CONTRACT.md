@@ -1,3 +1,7 @@
+### 成员文件基线工具接入
+
+Pi 仅在可信 `EngineContext.artifactTools` 存在时注册采集工具，并经既有 `/gate`、一次性 `/call` 许可透传原生 toolCallId。采集结果沿标准工具完成事件进入 canonical 日志，不能由工具名、模型正文或独立桥接事件自行签发基线。主调度没有此端口；没有新增路径、命令或恢复权限。
+
 ### 当前成员结果接续
 
 普通用户输入及 `user-continuation` 显式目标补充保持 RPC `prompt` 的 `started` 行为；只有 `EngineContext.source.kind==='member-results'` 时，`bridgeExtensionForSource` 才为本轮生成一次性可信输入处理器。首条输入写为 `customType:'cbim-member-results'` 的原生 custom 消息，保存来源 details，通过 `triggerTurn:true` 发起生成，原 prompt 返回 `handled`。后续用户 steer 不被拦截，custom 正文明示“任务数据、非用户新指令或授权、候选尚未验收”。输入加普通文字前缀，避免结果正文被当成斜杠命令。

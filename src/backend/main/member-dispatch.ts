@@ -1,6 +1,6 @@
 /**
  * 作用定位：为已运行工作区装配成员派发、大脑执行及目标审阅的可信日志读取端口。
- * 设计原因：派发、目标审阅及周期额度共用可信存储与日志端口；成员领取事务先核实冻结软限额，再取得并发和工作区占用，等待不产生意图。密钥留在工厂闭包，审批互不继承。
+ * 设计原因：派发、审阅及周期额度共用可信日志；成员采集注入有界文件读取和实时知识复核，显式报告仅临时取得业务读占用。领取先核限额与并发，等待不产生意图，密钥留在工厂闭包。
  */
 import path from 'node:path';
 import type {Workspace} from './workspace/workspace';
@@ -11,7 +11,9 @@ import type {LlmProfiles} from './persistence/settings/llm-profiles';
 import type {WorkspaceExecutionLease} from '../scheduler-engine/execution/workspace-lease';
 import {MemberExecutionManager} from '../scheduler-engine/execution/member-execution';
 import {createWorkspaceLoop} from '../scheduler-engine/execution/loop-engine';
-import {memberExecutionPrompt} from '../scheduler-engine/context/execution-context';
+import {memberExecutionPrompt,recheckDispatchExecutionContext} from '../scheduler-engine/context/execution-context';
+import {ArtifactFiles,normalizeArtifactPath} from './platform/artifact-files';
+import {randomUUID} from 'node:crypto';
 import {FileRunStorage} from './persistence/tasks/run-storage';
 import {guard} from './platform/tool-guard';
 import {safeId} from '../core/foundation/identity';
@@ -34,6 +36,8 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
   const directory=path.join(workspace.paths.project(workspace.entry.id),'dispatch');
   const store=new FileDispatchStore(directory,workspace.entry.id,observer),storage=new FileRunStorage();
   const runsDirectory=path.join(directory,'runs');
+  const artifactFiles=new ArtifactFiles(workspace.entry.path,()=>workspace.assert());
+  const normalizeArtifact=(raw:string)=>normalizeArtifactPath(workspace.entry.path,raw);
   /** 主/成员的权威运行日志只在后端读取；不能以公开摘要或模型传来的“成功”替代。 */
   const inspectMember=async(run:import('../core/tasks/dispatch-execution').DispatchRun)=>{
     workspace.assert();
@@ -49,6 +53,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
     return summary;
   }},budgetPolicy);
   const members=new MemberExecutionManager(workspace,store,{
+    artifacts:{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),acquireRead:()=>{workspace.assert();return lease.acquire('artifact-report:'+randomUUID(),'read')}},
     budgets:dispatch.budgets,
     isCurrent:()=>admission?.isCurrent()??true,
     signal:admission?.signal,
@@ -67,6 +72,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
           permission:run.permission,turnTimeoutMs:run.turnTimeoutMs,onEvent:hooks.onEvent,requestApproval:hooks.requestApproval,requestQuestion:hooks.requestQuestion,
         },{
           storage,member:{directory:runsDirectory,prompt:memberExecutionPrompt(run.prepared,task,run.prerequisites)},onEngineReady:hooks.onEngineReady,
+          artifacts:{knowledgeRevision:run.prepared.knowledgeRevision,normalizePath:normalizeArtifact,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},captureFiles:(paths,signal)=>artifactFiles.captureFiles(paths,signal)},
           // 成员管理器已在领取事务前取得共享占用，并持有到结算完成；大脑不能提前释放或再次领取。
           acquireLease:async input=>{workspace.assert();if(input.workspaceId!==workspace.entry.id||input.root!==workspace.entry.path||input.taskId!==task.taskId)throw Error('成员任务与工作区身份不匹配');return ()=>{}},
           authorizeNative:async call=>{workspace.assert();const reason=guard({name:call.name==='find'?'Glob':call.name,input:call.input},workspace.entry.path);return {allow:!reason,reason}},

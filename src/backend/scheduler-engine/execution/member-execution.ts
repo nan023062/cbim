@@ -1,7 +1,7 @@
 /**
  * 作用定位：让已派发任务在独立成员会话中执行，提交领取、启动、结果及中断事实。
  * 设计原因：全局准入及本地租约先同步领取，容量等待不创建 run 或 claim；启动意图落盘后模型工具才可执行。已释放实例、已关闭或安全等待的主会话不能执行业务，占用持续到终态事务完成。
- * 职责边界：可信桌面或主会话协调器启动成员，本成员 Loop 不递归派发或继承免询问批准；求助在正常关闭后重读日志核实并单向交接，不恢复旧运行，候选交付不等于业务验收。
+ * 职责边界：可信桌面或主会话协调器启动成员，本成员 Loop 不递归派发或继承批准；求助在关闭后核实并单向交接。执行记录与文件基线报告均只读，不恢复旧运行，候选及匹配哈希不等于业务验收。
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
@@ -23,12 +23,16 @@ import type {MemberHelpRecord} from '../../core/tasks/member-help';
 import {memberEventsInput,type MemberEventsRead} from '../../core/tasks/member-events';
 import {MemberEventStreams,memberPublicTask} from './member-events';
 import {ExecutionReportService} from './execution-report-service';
+import {ArtifactReportService,type ArtifactReportPorts} from './artifact-report-service';
+import type {ArtifactReport} from '../../core/tasks/artifact-baseline';
 import type {ExecutionReport} from '../../core/tasks/execution-report';
 import type {ExecutionAdmissionWait} from './admission-wait';
 import {rejectBudget,type ScopeBudgetService,type ScopeBudgetRejected} from './scope-budget-service';
 
 /** 装配主进程提供模型与磁盘能力，调度层不解密密钥或导入平台实现。 */
 export interface MemberExecutionPorts {
+  /** 独立只读文件复核能力，不隐式采集旧日志或运行模型。 */
+  artifacts?:Omit<ArtifactReportPorts,'inspect'>;
   /** 同一派发事务内读取 canonical 用量；拒绝事实先保存，绝不借查询接口发放许可。 */
   budgets?:ScopeBudgetService;
   /** 工作区装配代际仍有效；退役时先失效，即使管理器 close 尚在等待协调收尾也不得继续启动。 */
@@ -68,6 +72,8 @@ export class MemberExecutionManager {
   constructor(private owner:KnowledgeWorkspace,private store:DispatchStore,private ports:MemberExecutionPorts){this.eventStreams=new MemberEventStreams(run=>ports.inspect(run))}
   /** 手动只读核实指定任务/轮次；不调用 initialize，不恢复、启动、确认消息或重写异常日志。 */
   async report(raw:unknown):Promise<ExecutionReport>{this.owner.assert();return new ExecutionReportService(this.owner,this.store,run=>this.ports.inspect(run)).read(raw)}
+  /** 必须明确指定运行；不传 baselineId 时只列举，不能猜测最近一份或启动采集。 */
+  async artifactReport(raw:unknown):Promise<ArtifactReport>{this.owner.assert();if(!this.ports.artifacts)fail('ARTIFACT_UNAVAILABLE','文件基线复核服务未装配');return new ArtifactReportService(this.owner,this.store,{...this.ports.artifacts,inspect:run=>this.ports.inspect(run)}).read(raw)}
   private check(workspaceId:string){
     if(this.closing)fail('MEMBER_EXECUTION_CLOSED','成员执行服务正在关闭');
     this.owner.assert();if(workspaceId!==this.owner.entry.id)fail('GRAPH_IDENTITY_MISMATCH','成员任务不属于当前工作区');

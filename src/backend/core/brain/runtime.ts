@@ -1,6 +1,6 @@
 /**
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
- * 设计原因：先持久化工具决策再放行；成员求助在所有工具/审批结束后封住后续操作，仅记录待结算交接。新主上下文冻结旧运行并提交一次性意图，不将坏历史伪装成恢复。
+ * 设计原因：先持久化工具决策再放行；成员求助封住后续操作，文件采集则用短门闩绑定真实回执、进度和实时知识。新主上下文冻结旧运行并提交一次性意图，不将坏历史伪装成恢复。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -9,6 +9,8 @@ import type {RunStorage} from './storage';
 import {toolReceipt} from '../tools/receipts';
 import {TaskProgressTools} from '../tasks/progress-tools';
 import {MemberHelpTools} from '../tasks/member-help-tools';
+import {artifactCaptureToolName} from '../tasks/artifact-tools';
+import {RunArtifactCapture,type ArtifactCapturePort} from './artifact-capture';
 import {checkedMemberRunLaunch,type MemberRunLaunch} from './member-run';
 import {checkedRunInputSource,type RunInputSource} from './input-source';
 import {checkedConversationAgentBinding,type ConversationAgentBinding} from './conversation-binding';
@@ -22,6 +24,8 @@ export interface RuntimeOptions {
   directory:string;
   /** 由后端已登记主实例装配；只用于普通对话，不由模型或前端提供，不改写原生会话来源。 */
   conversationBinding?:ConversationAgentBinding;
+  /** 成员专用的有界文件和实时知识复核端口；缺省不注册采集工具，不能仅靠角色名取得能力。 */
+  artifacts?:ArtifactCapturePort;
   /** 返回覆盖完整运行生命周期的跨进程任务租约释放函数；拒绝时不创建运行日志或引擎。 */
   acquireLease(task:TaskSpec):Promise<()=>void>;
   /** 每轮创建独立引擎，并以已确定的任务/运行身份装配工具；不接受模型指定身份。 */
@@ -136,8 +140,10 @@ export class LoopRuntime {
       const activeCalls=new Set<string>();
       const calls=new Map<string,{call:ToolCall;decision:ToolDecision;generation:number}>();
       const identity={workspaceId:task.workspaceId,taskId:task.taskId,runId};
-      const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})});
-      const emit=async(event:EngineEvent)=>{
+      let artifactCapture:RunArtifactCapture|undefined;
+      const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{artifacts:()=>artifactCapture?.refs()??[]});
+      const emit=async(event:EngineEvent,trustedArtifact=false)=>{
+        if(event.type==='artifact.baseline_captured'&&!trustedArtifact)throw Error('产物基线只能由本轮可信采集端口保存');
         if(event.type==='tool.finished'){
           const known=calls.get(String(event.data.id));
           const {receipt:_untrustedReceipt,...data}=event.data;
@@ -148,6 +154,7 @@ export class LoopRuntime {
           }else event={...event,data};
         }
         const saved=await journal.append(event);
+        artifactCapture?.observed(saved);
         if(event.type==='session.bound'&&typeof event.data.sessionFile==='string')boundSessionFile=event.data.sessionFile;
         if(event.type==='tool.finished'&&event.data.receipt)taskTools.record(event.data.receipt as import('../tools/types').ToolReceipt,calls.get(String(event.data.id))!.generation);
         if(event.type==='tool.allowed')pendingTools.add(String(event.data.id));
@@ -164,6 +171,14 @@ export class LoopRuntime {
           if(attempted.some(other=>other===id||!calls.has(other)||activeCalls.has(other)))throw Error('求助引用了本轮不存在或未结束的工具调用');
         },
       }):undefined;
+      if(member&&this.options.artifacts)artifactCapture=new RunArtifactCapture(member.binding,this.options.artifacts,{
+        current:()=>taskTools.current(),
+        assertReady:id=>{
+          if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id))throw Error('文件采集已停止或未获得当前调用授权');
+          if([...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))throw Error('存在其它在途工具或审批，不能采集文件基线');
+        },
+        save:async baseline=>{await emit({type:'artifact.baseline_captured',data:{baseline}},true)},
+      });
       this.injections.set(task.taskId,async(message,images)=>{
         if(stopping||!engine.steer)throw Error('当前执行不支持插入消息');
         await emit({type:'engine.status',data:{metric:'insertion',state:'requested',message,label:'正在插入用户补充'}});
@@ -174,7 +189,7 @@ export class LoopRuntime {
       await emit({type:'run.started',data:{task,message,engine:engine.kind,resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[],...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),...(member?{memberBinding:member.binding,nativeSessionId:member.session.nativeSessionId}:{}),...(fresh?{freshMain:{nativeSessionId,excludedRunIds}}:{})}});
       await taskTools.invalidate('新一轮执行需要重新核实产物与证据');
       const stop=async()=>{
-        if(stopping)return;stopping=true;
+        if(stopping)return;stopping=true;artifactCapture?.stop();
         try{await emit({type:'run.stop_requested',data:{}})}catch(error){stopFailure=error}
         // 记录失败不能阻止实际 abort；失败事实在收尾按 interrupted 保留，不把无日志停止写成正常求助。
         try{await engine.stop()}catch(error){stopFailure??=error}
@@ -187,11 +202,12 @@ export class LoopRuntime {
         let failure:unknown;
         try{
           if(control?.signal.aborted)await stop();
-          if(!stopping)await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,emit,beforeTool:async call=>{
+          if(!stopping)await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,emit:event=>emit(event),beforeTool:async call=>{
             call=structuredClone(call);
             if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
             // 同步预占求助边界，先于任何 await；主 Agent 即便伪造工具名也不能取得成员求助能力。
-            const helpReason=memberHelpTools?.guard(call.name,call.id,call.input,[...activeCalls])??(!memberHelpTools&&call.name==='cbim_task_help'?'仅正式执行成员可提交求助':undefined);
+            const artifactReason=artifactCapture?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactCapture&&call.name===artifactCaptureToolName?'本轮未提供成员文件基线采集能力':undefined);
+            const helpReason=artifactReason??memberHelpTools?.guard(call.name,call.id,call.input,[...activeCalls])??(!memberHelpTools&&call.name==='cbim_task_help'?'仅正式执行成员可提交求助':undefined);
             // 门闩明确拒绝的调用只记录拒绝事实，绝无执行机会，不能反过来阻塞已经获准的求助。
             if(!helpReason&&!stopping)activeCalls.add(call.id);
             calls.set(call.id,{call,decision:{allow:false},generation:taskTools.generation});
@@ -216,6 +232,7 @@ export class LoopRuntime {
           failure=error;
         }finally{
           control?.signal.removeEventListener('abort',abort);
+          artifactCapture?.stop();
           try{await engine.close()}catch(error){failure??=error}
           failure??=stopFailure;
           try{

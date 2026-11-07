@@ -1,6 +1,6 @@
 /**
  * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
- * 设计原因：通过 ApplicationServices 隔离实现；周期计量只按明确身份读取，预算设置只影响未来周期，不能经统计或设置接口领取名额。补充、核实和业务重规划保持明确受理边界。
+ * 设计原因：通过 ApplicationServices 隔离实现；周期计量和文件基线只按明确身份读取，文件复核还需指定基线，不启动模型。设置只影响未来周期，补充、核实和业务重规划保持明确受理边界。
  */
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
@@ -39,6 +39,7 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'dispatch.executionStop':return app.memberExecution(args.workspaceId).stop(args);
     case 'dispatch.executionInspect':return app.memberExecution(args.workspaceId).inspect(args);
     case 'dispatch.executionReport':return app.memberExecution(args.workspaceId).report(args);
+    case 'dispatch.artifactReport':return app.memberExecution(args.workspaceId).artifactReport(args);
     case 'dispatch.replans.preview':return app.memberDispatch(args.workspaceId).replans.preview(args);
     case 'dispatch.executionEvents':return app.memberExecution(args.workspaceId).events(args);
     case 'dispatch.messages':return app.memberExecution(args.workspaceId).messages(args);

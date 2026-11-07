@@ -1,0 +1,8 @@
+/**
+ * 作用定位：任务详情的文件基线列表与逐文件观察排版。
+ * 设计原因：沿用当前主题，长路径与哈希纵向换行；不以整页宽表格挤压会话，核实操作与历史观察保持相邻。
+ */
+.artifact-report{border:1px solid var(--line);border-radius:9px;padding:12px;margin:14px 0;min-width:0;overflow-wrap:anywhere;font-size:12px;line-height:1.6}
+.artifact-report>header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}.member-task-detail .artifact-report h4{margin:0}.artifact-report p{margin:8px 0}
+.artifact-report label{display:block;margin:10px 0}.artifact-report select{display:block;width:100%;max-width:100%;box-sizing:border-box;margin-top:6px;padding:7px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--text);font:inherit}
+.artifact-report article{border-top:1px solid var(--line);padding:10px 0;min-width:0}.artifact-report article>span{display:block}.artifact-report-result{font-weight:600}.artifact-report details{font-size:11px;color:var(--muted)}.artifact-report summary{cursor:pointer}.artifact-report code{display:block;white-space:normal;word-break:break-all;font-size:10px}.artifact-report-issues{padding-left:18px}.artifact-report-issues small{display:block;color:var(--muted)}.artifact-report-basis{margin-top:10px}

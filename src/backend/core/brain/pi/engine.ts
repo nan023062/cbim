@@ -1,6 +1,6 @@
 /**
  * 作用定位：Pi 引擎适配器，负责隔离配置、主对话与成员原生会话校验、工具桥与公开执行事件转换。
- * 设计原因：每轮冻结模型、权限和上下文，主 Agent 只做调度与知识管理；成员求助沿真实调用 ID 进入日志，主回传经 custom 消息接续。所有工具经过门禁，结束只认 agent_settled。
+ * 设计原因：每轮冻结模型、权限和上下文，主 Agent 只做调度与知识管理；成员求助和文件基线采集沿真实调用 ID 进入日志，主回传经 custom 消息接续。所有工具经过门禁，结束只认 agent_settled。
  * 职责边界：不保存私有推理正文；记录实际用量与生成耗时，未知计价保持未知。明确停止后的标准取消文本才归为取消，其他错误及未知工具副作用交由运行时保留。
  */
 import fs from 'node:fs/promises';
@@ -60,7 +60,8 @@ export class PiEngine implements AgentEngine {
     // 任务工具绑定真实运行日志；仅在内部 Loop 存在时注册，不借外部知识接口伪造任务身份。
     const taskNames=new Set((await context.taskTools?.list()??[]).map(t=>t.name));
     const helpNames=new Set((await context.memberHelpTools?.list()??[]).map(t=>t.name));
-    const tools:KnowledgeBridge={list:async()=>[...await this.options.knowledge.list(),...await context.taskTools?.list()??[],...await context.memberHelpTools?.list()??[]],call:(name,args,signal,toolCallId)=>helpNames.has(name)?context.memberHelpTools!.call(name,args,toolCallId):taskNames.has(name)?context.taskTools!.call(name,args):this.options.knowledge.call(name,args,signal,toolCallId)};
+    const artifactNames=new Set((await context.artifactTools?.list()??[]).map(t=>t.name));
+    const tools:KnowledgeBridge={list:async()=>[...await this.options.knowledge.list(),...await context.taskTools?.list()??[],...await context.memberHelpTools?.list()??[],...await context.artifactTools?.list()??[]],call:(name,args,signal,toolCallId)=>artifactNames.has(name)?context.artifactTools!.call(name,args,toolCallId):helpNames.has(name)?context.memberHelpTools!.call(name,args,toolCallId):taskNames.has(name)?context.taskTools!.call(name,args):this.options.knowledge.call(name,args,signal,toolCallId)};
     this.bridge=await openBridge(tools,context.beforeTool,async usage=>{
       this.events=this.events.then(()=>context.emit({type:'engine.status',data:{label:'上下文用量已更新',metric:'context',...usage}}));await this.events;
     },async limit=>{this.requestLimit=limit;this.events=this.events.then(()=>context.emit({type:'engine.status',data:{label:'模型请求额度',metric:'request-limit',maxTokens:limit}}));await this.events});

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-引擎无关的执行循环、事件与计量。停止贯穿原生准备窗口，求助暂存不等于交接。周期计量严格区分完整汇总、部分消息和未知价格；新上下文隔离旧运行，不重放坏历史。
+引擎无关的执行循环、事件与计量。成员文件采集在可信门闩内核实工具来源、进度与知识，成功回执才确认基线。停止覆盖准备与采集；求助不等于交接，计量不混淆未知价格，新上下文不重放旧运行。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,6 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [artifact-capture.ts](artifact-capture.ts) | 成员运行的短时文件采集门闩，绑定真实授权、进度、知识基线与 canonical 事件。 |
 | [conversation-binding.ts](conversation-binding.ts) | 定义主对话与已登记 Agent 实例、逻辑会话之间的可信绑定，供运行时和日志恢复共用。 |
 | [index.ts](index.ts) | 大脑执行层：对外重导出 Loop 契约、主对话实例绑定、成员执行绑定、可信回注来源、存储端口、运行时与 Pi 适配器。 |
 | [input-source.ts](input-source.ts) | 定义可信入口提交的成员结果与用户目标补充来源，供运行日志和引擎识别。 |
@@ -31,6 +32,9 @@ class N_src_backend_core_brain_llm["llm/"] {
 class N_src_backend_core_brain_pi["pi/"] {
   <<directory>>
 }
+class N_src_backend_core_brain_artifact_capture_ts["artifact-capture.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_conversation_binding_ts["conversation-binding.ts"] {
   <<module>>
 }
@@ -40,10 +44,6 @@ class N_src_backend_core_brain_index_ts["index.ts"] {
 class N_src_backend_core_brain_input_source_ts["input-source.ts"] {
   <<module>>
 }
-class N_src_backend_core_brain_member_run_ts["member-run.ts"] {
-  <<module>>
-}
-N_src_backend_core_brain_index_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
 N_src_backend_core_brain_index_ts ..> N_src_backend_core_brain_input_source_ts : 导入依赖
 N_src_backend_core_brain_index_ts ..> N_src_backend_core_brain_conversation_binding_ts : 导入依赖
 N_src_backend_core_brain_index_ts ..> N_src_backend_core_brain_pi : 导入依赖
@@ -53,6 +53,9 @@ N_src_backend_core_brain_pi ..> N_src_backend_core_brain_llm : 导入依赖
 
 ```mermaid
 classDiagram
+class N_src_backend_core_brain_member_run_ts["member-run.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_model_errors_ts["model-errors.ts"] {
   <<module>>
 }
@@ -68,18 +71,25 @@ class N_src_backend_core_brain_storage_ts["storage.ts"] {
 class N_src_backend_core_brain_types_ts["types.ts"] {
   <<module>>
 }
-class N_src_backend_core_brain_usage_ts["usage.ts"] {
-  <<module>>
-}
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_storage_ts : 导入依赖
+N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_scope_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_storage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
-N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
+N_src_backend_core_brain_types_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_brain_usage_ts["usage.ts"] {
+  <<module>>
+}
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
+- `artifact-capture.ts` → `member-run.ts`：导入。
+- `artifact-capture.ts` → `types.ts`：导入。
 - `index.ts` → `types.ts`：导入。
 - `index.ts` → `storage.ts`：导入。
 - `index.ts` → `runtime.ts`：导入。
@@ -92,6 +102,7 @@ N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入
 - `pi` → `llm`：导入。
 - `pi` → `model-errors.ts`：导入。
 - `runtime.ts` → `storage.ts`：导入。
+- `runtime.ts` → `artifact-capture.ts`：导入。
 - `runtime.ts` → `member-run.ts`：导入。
 - `runtime.ts` → `input-source.ts`：导入。
 - `runtime.ts` → `conversation-binding.ts`：导入。
@@ -188,6 +199,14 @@ class N_src_backend_core_brain_usage_ts["usage.ts"] {
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 成员文件基线的短时采集边界
+
+`RuntimeOptions.artifacts` 由可信成员装配提供固定知识版本、实时知识复核、路径归一化与有界文件读取端口；普通主会话即使伪造工具名也不能访问。`RunArtifactCapture` 在异步策略之前预占本轮门闩，正在审批或运行的其它工具会阻止采集，采集未结束时新工具一律拒绝。停止立即中止采集信号，所有异步步骤返回后再次核对停止、授权和进度版本。
+
+`cbim_task_artifact_capture` 仅接收进度版本与同轮已成功的 read/write/edit 调用 ID。路径来自已持久化授权与成功回执，不接受模型提供的路径或哈希。文件读取前后都实时核对冻结知识，记录真实成员绑定、来源摘要、进度版本和最后副作用序号。运行时先保存 `artifact.baseline_captured`，工具桥随后保存匹配的成功 `tool.finished`；缺任意一项都不能生成已确认引用。引擎不能自行通过 emit 写入采集事件。
+
+进度 inspect 只附加已核实基线引用，采集维护回执不能充当业务完成证据。每轮最多 8 份成功基线，单次最多 16 个文件；后续计划修订或副作用使旧引用失效但不删除历史。字节指纹仅证明采集时所选文件，不能倒推旧 read 或测试使用了这些字节，也不授权成员恢复。
 
 ### 成员启动期间的可信停止
 

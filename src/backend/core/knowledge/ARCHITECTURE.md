@@ -18,6 +18,10 @@
 | [portable-package.ts](portable-package.ts) | 把工作区静态团队能力或完整业务架构转为可复用资源包，并纯计算目标知识变更。 |
 | [ports.ts](ports.ts) | 核心知识领域需要的工作区存取与事务接口。 |
 | [snapshot.ts](snapshot.ts) | 已校验知识快照的版本信息、定义读取和受限正文引用解析。 |
+| [tool-output-base.ts](tool-output-base.ts) | 知识工具的身份、文件、校验与快照输出协议，供注册边界及具体查询协议复用。 |
+| [tool-output-builtins.ts](tool-output-builtins.ts) | 内置资料目录、正文以及 Skill 别名工具共享的业务输出协议。 |
+| [tool-output-queries.ts](tool-output-queries.ts) | 团队、模块、人员注册表与详情的纯业务输出协议。 |
+| [tool-output-transactions.ts](tool-output-transactions.ts) | 知识预览、提交、刷新及实例内维护任务的业务输出协议。 |
 | [types.ts](types.ts) | 知识快照、校验与事务的数据契约，维护任务与业务任务分开。 |
 
 ## 架构类图
@@ -309,6 +313,99 @@ class N_src_backend_core_knowledge_snapshot_ts["snapshot.ts"] {
 
 直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/json.ts](../foundation/json.ts)、[types.ts](types.ts)。
 
+### tool-output-base.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_knowledge_tool_output_base_ts["tool-output-base.ts"] {
+  <<module>>
+}
+class N_src_backend_core_knowledge_tool_output_base_ts_KnowledgeJsonValue["KnowledgeJsonValue"] {
+  <<type>>
+
+}
+N_src_backend_core_knowledge_tool_output_base_ts ..> N_src_backend_core_knowledge_tool_output_base_ts_KnowledgeJsonValue : 声明
+class N_src_backend_core_knowledge_tool_output_base_ts_KnowledgeSnapshotOutput["KnowledgeSnapshotOutput"] {
+  <<type>>
+
+}
+N_src_backend_core_knowledge_tool_output_base_ts ..> N_src_backend_core_knowledge_tool_output_base_ts_KnowledgeSnapshotOutput : 声明
+class N_src_backend_core_knowledge_tool_output_base_ts_KnowledgeSearchOutput["KnowledgeSearchOutput"] {
+  <<type>>
+
+}
+N_src_backend_core_knowledge_tool_output_base_ts ..> N_src_backend_core_knowledge_tool_output_base_ts_KnowledgeSearchOutput : 声明
+```
+
+
+### tool-output-builtins.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_knowledge_tool_output_builtins_ts["tool-output-builtins.ts"] {
+  <<module>>
+}
+class N_src_backend_core_knowledge_tool_output_builtins_ts_BuiltinCatalogOutput["BuiltinCatalogOutput"] {
+  <<type>>
+
+}
+N_src_backend_core_knowledge_tool_output_builtins_ts ..> N_src_backend_core_knowledge_tool_output_builtins_ts_BuiltinCatalogOutput : 声明
+class N_src_backend_core_knowledge_tool_output_builtins_ts_BuiltinReadOutput["BuiltinReadOutput"] {
+  <<type>>
+
+}
+N_src_backend_core_knowledge_tool_output_builtins_ts ..> N_src_backend_core_knowledge_tool_output_builtins_ts_BuiltinReadOutput : 声明
+```
+
+直接依赖：[tool-output-base.ts](tool-output-base.ts)。
+
+### tool-output-queries.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_knowledge_tool_output_queries_ts["tool-output-queries.ts"] {
+  <<module>>
+}
+class N_src_backend_core_knowledge_tool_output_queries_ts_ModuleGetOutput["ModuleGetOutput"] {
+  <<type>>
+
+}
+N_src_backend_core_knowledge_tool_output_queries_ts ..> N_src_backend_core_knowledge_tool_output_queries_ts_ModuleGetOutput : 声明
+class N_src_backend_core_knowledge_tool_output_queries_ts_AgentGetOutput["AgentGetOutput"] {
+  <<type>>
+
+}
+N_src_backend_core_knowledge_tool_output_queries_ts ..> N_src_backend_core_knowledge_tool_output_queries_ts_AgentGetOutput : 声明
+```
+
+直接依赖：[tool-output-base.ts](tool-output-base.ts)。
+
+### tool-output-transactions.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_knowledge_tool_output_transactions_ts["tool-output-transactions.ts"] {
+  <<module>>
+}
+class N_src_backend_core_knowledge_tool_output_transactions_ts_KnowledgePreviewOutput["KnowledgePreviewOutput"] {
+  <<type>>
+
+}
+N_src_backend_core_knowledge_tool_output_transactions_ts ..> N_src_backend_core_knowledge_tool_output_transactions_ts_KnowledgePreviewOutput : 声明
+class N_src_backend_core_knowledge_tool_output_transactions_ts_KnowledgeCommitOutput["KnowledgeCommitOutput"] {
+  <<type>>
+
+}
+N_src_backend_core_knowledge_tool_output_transactions_ts ..> N_src_backend_core_knowledge_tool_output_transactions_ts_KnowledgeCommitOutput : 声明
+class N_src_backend_core_knowledge_tool_output_transactions_ts_MaintenanceTaskOutput["MaintenanceTaskOutput"] {
+  <<type>>
+
+}
+N_src_backend_core_knowledge_tool_output_transactions_ts ..> N_src_backend_core_knowledge_tool_output_transactions_ts_MaintenanceTaskOutput : 声明
+```
+
+直接依赖：[tool-output-base.ts](tool-output-base.ts)。
+
 ### types.ts
 
 ```mermaid
@@ -488,6 +585,25 @@ N_src_backend_core_knowledge_ports_ts ..> N_src_backend_core_knowledge_object_st
 N_src_backend_core_knowledge_snapshot_ts ..> N_src_backend_core_knowledge_types_ts : 导入依赖
 ```
 
+```mermaid
+classDiagram
+class N_src_backend_core_knowledge_tool_output_builtins_ts["tool-output-builtins.ts"] {
+  <<module>>
+}
+class N_src_backend_core_knowledge_tool_output_base_ts["tool-output-base.ts"] {
+  <<module>>
+}
+class N_src_backend_core_knowledge_tool_output_queries_ts["tool-output-queries.ts"] {
+  <<module>>
+}
+class N_src_backend_core_knowledge_tool_output_transactions_ts["tool-output-transactions.ts"] {
+  <<module>>
+}
+N_src_backend_core_knowledge_tool_output_builtins_ts ..> N_src_backend_core_knowledge_tool_output_base_ts : 导入依赖
+N_src_backend_core_knowledge_tool_output_queries_ts ..> N_src_backend_core_knowledge_tool_output_base_ts : 导入依赖
+N_src_backend_core_knowledge_tool_output_transactions_ts ..> N_src_backend_core_knowledge_tool_output_base_ts : 导入依赖
+```
+
 
 ## 子目录导航
 
@@ -500,6 +616,18 @@ N_src_backend_core_knowledge_snapshot_ts ..> N_src_backend_core_knowledge_types_
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 知识工具业务输出协议
+
+`tool-output-base.ts` 定义身份、知识文件、问题、派生校验及快照协议；`tool-output-queries.ts` 定义模块、团队、人员注册表与详情；`tool-output-builtins.ts` 定义内置目录、正文与 Skill 别名返回；`tool-output-transactions.ts` 定义知识/对象预览、提交、刷新及维护任务状态。四份协议只依赖 Zod 和本目录纯协议，不依赖 Team/Workspace 查询实现、Scheduler、IPC 或运行权限。
+
+服务生成对象使用严格字段结构，不以默认值、类型转换或裁剪字段修补返回。原始知识定义保留为 JSON 对象，人员条目、作者条目及不可用正文的原引用保留 JSON 值；这些位置允许结构无效的知识事实，不再次套用有效知识定义 Schema。原始值使用无转换谓词检查，避免 Zod record 删除合法 JSON 自有 `__proto__` 键；按需 JSON Schema 中它们是带说明的开放 JSON 事实槽，不能把它们解释为执行参数或知识有效性证明。
+
+完整快照包含 Validation；搜索仅筛选 files，版本仍属于完整读取，不从子集补造校验或重新计算版本。`structural:false`、空正文、缺失引用、继承冲突和原人员定义错误均为合法诊断。自定义 Agent 与内置 `cbim:executor` 使用独立形状，后者没有项目定义文件或正文文件哈希，不伪造项目来源。内置资料保持只读、版本和引用状态，读取 Skill 资料不表示已执行流程。
+
+Preview 的实际 changes 可以包含请求之外的派生索引；空正文、删除和空提交保持领域语义。已提交结果只能声明 `committed`，对象空目录清理警告不等于回滚。Refresh 区分未提交的 invalid 与已更新索引后观察到的 refreshed/invalid，不能把索引更新当作结构或业务验收。维护任务只包含 validate/reindex，运行中取消仍可返回 running；完成结果分别为 Validation/Commit，失败或取消保留错误，只有查询允许独立 not_found 分支。
+
+这些 Schema 校验的是执行后唯一 JSON 传输快照，标准文本封装、协议错误和原样发送由 Core tools 与 Scheduler 边界负责。校验通过不签署业务验收，校验失败不表示事务已回滚；原幂等请求、预览版本、实例隔离和取消边界不由输出协议改写。原生工具、派发及人工决定的输出不因此宣称已迁入本协议。
 
 ### 对象治理与桌面维护声明
 

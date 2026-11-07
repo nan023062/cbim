@@ -3,7 +3,7 @@
  * 设计原因：不同工具共用可追溯身份与结果语义；回执区分拒绝、失败与未知，不依赖具体知识服务。
  */
 export interface ToolCall {id: string; name: string; input: Record<string, unknown>}
-/** 声明操作事实，不表示已经获得权限；preview 仅维护本地预览缓存。 */
+/** 声明操作事实，不表示已经获得权限；preview 不提交正式知识，可维护实例内预览缓存。 */
 export type ToolEffect='read'|'preview'|'maintenance'|'business-write'|'knowledge-write'|'command';
 /** 范围未知时显式标记；shell 的实际影响不能由命令字符串证明。 */
 export interface ToolScope {kind:'workspace'|'knowledge'|'unknown';workspaceId:string}

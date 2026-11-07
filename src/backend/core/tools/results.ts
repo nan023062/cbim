@@ -1,9 +1,11 @@
 /**
  * 作用定位：校验内部工具传给大脑的结果，并将领域返回值封装为合法文本块。
- * 设计原因：undefined 在 JSON 中会被省略，缺失 text 的块会污染会话并使后续上下文计量失败；在工具边界拒绝无效结果，保留明确失败而不补造成功。
+ * 设计原因：工具外壳与业务字段都需核验；固定唯一 JSON 快照，防缺字段、Schema 改写或重复序列化补造成功，同时拒绝会污染会话的缺失 text。
  * 职责边界：只检查返回协议，不重放工具；校验失败不代表工具的既有副作用已回滚。
  */
 import {fail} from '../foundation/errors';
+import {isDeepStrictEqual} from 'node:util';
+import type {z} from 'zod';
 
 /** 当前内部工具支持文本与图片；返回给模型的文本必须是字符串，不能依靠隐式转换。 */
 export type ToolResultContent={type:'text';text:string}|{type:'image';data:string;mimeType:string};
@@ -29,6 +31,25 @@ function encode(name:string,value:unknown):string{
 /** 包装确定的领域返回值；null 是显式结果，undefined 必须由领域接口改为明确状态或错误。 */
 export function jsonToolResult(name:string,value:unknown):{content:{type:'text';text:string}[]}{
   return {content:[{type:'text',text:encode(name,value)}]};
+}
+
+/**
+ * 领域调用完成后只生成一次 JSON 字节快照；严格核验同一快照，实际发送原编码，不采用 Schema 改写的数据。
+ * 错误只报告结构位置/类别。操作可能已经发生，返回无效不代表回滚，调用方不得自动重试领域调用。
+ */
+export function checkedJsonToolResult(name:string,value:unknown,schema:z.ZodTypeAny):{content:{type:'text';text:string}[]}{
+  const reject=(category:string,path:readonly(string|number)[]=[]):never=>{
+    // record 的动态键可能含正文或凭据，位置仅保留层级和数组索引，不把 Zod message / keys 回显。
+    const location='output'+path.map(part=>typeof part==='number'?'['+part+']':'.<field>').join('');
+    return fail('TOOL_OUTPUT_INVALID',`${name} 业务输出无效（位置 ${location}；类别 ${category}）。操作可能已经发生，请核实已有记录，不自动重试。`);
+  };
+  const encoded=(()=>{try{const encoded=JSON.stringify(value);return typeof encoded==='string'?encoded:reject('serialization')}catch{return reject('serialization')}})();
+  const wire:unknown=JSON.parse(encoded);
+  // Schema 的自定义校验也可能原地修改参数；隔离输入，才能与不可变的实际发送快照核对。
+  const checked=(()=>{try{return schema.safeParse(structuredClone(wire))}catch{return reject('schema_exception')}})();
+  if(!checked.success){const issue=checked.error.issues[0];return reject(issue?.code??'schema',issue?.path)}
+  if(!isDeepStrictEqual(wire,checked.data))reject('schema_changed_output');
+  return {content:[{type:'text',text:encoded}]};
 }
 
 /**

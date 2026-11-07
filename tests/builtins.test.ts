@@ -5,7 +5,8 @@ import {hash} from '../src/backend/core/foundation/serialization';
 it('内部知识工具发现并读取治理流程、规范及解析引用，校验版本与身份',async()=>{
   const f=await fixture();try{
     const e=await f.app.dispatch('add',{path:f.a}),{service,call}=internalKnowledge(f.app.workspace(e.id));
-    const names=service.list().map(t=>t.name);expect(names).toHaveLength(26);
+    const names=service.list().map(t=>t.name);expect(names).toHaveLength(28);
+    expect(names).toContain('cbim_knowledge_tool_catalog');expect(names).toContain('cbim_knowledge_tool_describe');
     expect(names.every(name=>name.startsWith('cbim_'))).toBe(true);expect(new Set(names).size).toBe(names.length);
     expect(names).toContain('cbim_builtin_catalog');expect(names).toContain('cbim_builtin_read');
     for(const id of ['knowledge_query','business_execution','knowledge_governance','architecture_governance','create_agent_skill','create_workflow','core_check']){

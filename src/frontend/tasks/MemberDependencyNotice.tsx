@@ -1,6 +1,6 @@
 /**
  * 作用定位：在成员动态和详情中展示前置追加/替换/原子增删原因，保留原边和来源身份。
- * 设计原因：任务、实例与失败来源保持独立历史；按节点版本判断最新审计，不按时间猜顺序，不把改边解释为成功或立即执行，也不新增轮询与操作入口。
+ * 设计原因：任务、实例与原失败/求助/检查点放弃保持独立历史；按节点版本判断最新审计，不把改边解释为成功或立即执行，也不新增轮询与操作入口。
  */
 import type {TaskNode} from '../../bridge/contracts/dispatch';
 import {memberDependencyHistory,memberDependencyAdditionHistory,memberDependencyRevisionHistory} from './member-dependency-state';
@@ -38,7 +38,7 @@ export function MemberDependencyNotice({task,compact=false}:{task:TaskNode;compa
     {records.map(record=><details key={record.commandId} open={!compact} data-replacement-id={record.commandId}>
       <summary>{record.reason}</summary>
       <dl><div><dt>原前置任务</dt><dd><code>{record.retired.sourceTaskId}</code></dd></div><div><dt>新前置任务</dt><dd><code>{record.replacement.sourceTaskId}</code></dd></div><div><dt>采用的候选</dt><dd><code>{record.replacement.resultId}</code></dd></div><div><dt>候选执行轮次</dt><dd><code>{record.replacement.runId}</code></dd></div></dl>
-      <p>原依赖连线已退役，原任务及其失败或求助记录保留。任务仍须等待全部前置，并通过权限、额度与并发检查；本记录不代表业务验收。</p>
+      <p>原依赖连线已退役，原任务及其失败、求助或检查点放弃记录保留。任务仍须等待全部前置，并通过权限、额度与并发检查；本记录不代表业务验收。</p>
       <time dateTime={record.replacedAt}>记录于 {new Date(record.replacedAt).toLocaleString()}</time>
     </details>)}
     {compact&&<small>查看任务详情可回顾全部替换记录。</small>}

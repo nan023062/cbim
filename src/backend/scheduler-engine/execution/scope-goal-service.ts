@@ -1,6 +1,6 @@
 /**
  * 问答边界：当前与历史候选共用真实业务回执校验，普通回答及取消不能替代目标完成或人工验收依据。
- * 作用定位：在派发事务中保存本轮目标计划与结构化审阅，并为目标门禁、依赖修订和本机人工决定核验真实候选、角色及模块基线。
+ * 作用定位：保存本轮目标计划与审阅，为门禁、依赖修订和人工决定核验真实候选；已放弃检查点换边仍核原冻结日志，不复活旧任务。
  * 设计原因：业务计划重核岗位、来源和模型后冻结绑定；候选按原岗位及 Workflow 比较，不用当前登记覆盖历史。模型只能申请完成或等待，结算再核证据、任务压力与副作用；明确返工不把旧文件再次放行。
  * 职责边界：人工项仅引用当前实际消费的接受；审阅和完成均复核原业务主体、精确候选与选定字节，负面意见只能明确安排新任务返工。不关闭周期或签署，外部文件核实不构成原子快照。
  * 证据边界：治理待办与模块负责人查询、变更都不能被主知识引用或成员候选包装成业务完成证据；负责人提交仍属于真实知识写时序，旧业务审阅不能跨过它。
@@ -34,6 +34,8 @@ import type {ArtifactFileFact,ArtifactFileCheck} from '../../core/tasks/artifact
 import {sameWorkflowSelectionsForModules,validateWorkflowSelections} from '../../core/tasks/workflow-selection';
 import {sameOwnerExecutionForModules,type OwnerExecutionBinding} from '../../core/team/member-execution-binding';
 import type {OwnerExecutionService} from './owner-execution-service';
+import {abandonedCheckpointSource} from '../../core/tasks/checkpoint-handoff-rules';
+import {verifyMemberCheckpointHistory} from './member-checkpoint-verifier';
 
 /** 端口只按可信已登记身份读取 canonical 日志；不能接受模型提供路径或摘要。 */
 export interface ScopeGoalPorts {
@@ -232,8 +234,14 @@ export class ScopeGoalService {
     check(summary.sessionFile===run.session.sessionFile&&(bindings.length?!!run.session.sessionFile&&bindings.every(event=>event.data.sessionId===run.session.nativeSessionId&&event.data.sessionFile===run.session.sessionFile):summary.status==='failed'&&!summary.sessionFile&&!summary.toolReceipts?.length&&!summary.events.some(event=>event.type.startsWith('tool.'))),'GOAL_EVIDENCE_IDENTITY','成员原生会话绑定与已登记运行不一致');
     const facts=executionToolFacts(summary,run);check(!facts.invalid&&!facts.counts.unknown&&!facts.counts.not_authorized,'GOAL_EVIDENCE_INVALID','成员工具仍有未知副作用或缺失授权链');
   }
-  /** 只接受可靠求助或明确失败来源；重读全部已登记运行，不能以换边隐藏未决操作或把失败当未执行。 */
+  /** 重读可靠求助/失败或已明确放弃检查点的原日志；后者只核历史，不刷新旧文件/native证明或恢复执行。 */
   async validateDependencySource(state:DispatchState,scope:DispatchScope,task:TaskNode):Promise<void>{
+    if(task.status==='cancelled'&&task.checkpointAbandonment){
+      const run=abandonedCheckpointSource(state,{workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId},scope.scopeId,task),ports=this.logs();
+      check(ports.normalizeValidationPath,'GOAL_EVIDENCE_INVALID','未装配原检查点路径核验，不能替换已放弃来源');
+      await verifyMemberCheckpointHistory(this.owner,task,run,{inspect:r=>ports.inspectMember(r),normalizePath:raw=>ports.normalizeValidationPath!(raw)},()=>this.owner.assert());
+      return;
+    }
     check(task.scopeId===scope.scopeId&&!task.activeRunId&&!task.result&&(task.status==='failed'||task.status==='blocked'&&task.help),'GOAL_EVIDENCE_INVALID','原前置没有可安全替换的失败或求助记录');
     const runs=(state.runs??[]).filter(run=>run.binding.taskId===task.taskId&&run.binding.rootSessionId===scope.rootSessionId);
     check(runs.length>0&&sameSet(runs.map(run=>run.binding.runId),task.runIds),'GOAL_EVIDENCE_IDENTITY','原前置运行登记不完整');

@@ -158,3 +158,7 @@ cbim_knowledge_refresh 实际注册 v2，要求 revision/requestId，恢复元�
 ## 多边前置修订工具（Step42）
 
 cbim_dispatch_revise_dependencies 仅在主实例 reviseDependencies 真实端口存在时公开。严格输入是 expectedGraphCursor/expectedGoalRevision、target、remove、add、reason，不接工作区/actor/权限/结果；effects=maintenance，v1，preflight_only，inspect_before_retry 指向原命令报告。唯一 wire 比较原请求、身份、命令、图后继、增删来源与原闭包，端口修改参数不能改变校验依据。输出失败不回滚原事务，不换键重做；成员没有本能力。
+
+#### 已放弃检查点的单条替换
+
+cbim_dispatch_replace_dependency 的原严格输入/wire/维护契约不变，来源资格扩展为已经通过 abandon_checkpoint 明确放弃的可靠检查点；普通取消、未放弃、已续执行或未知来源不具资格。实际工具描述明确原日志、证明及信封完整、新候选和当前后继绑定。回包损坏仍只核原命令，不重新放弃或换边。

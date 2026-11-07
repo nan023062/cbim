@@ -605,3 +605,7 @@ EffectObservationService 从已核实原 allowed 事件取得 contractVersion，
 QueuedDependencyRevisionService 与追加/可靠失败替换并列，按 Knowledge→模型→Store 锁序核完整闭包的当前来源、岗位、配置、知识与 Workflow。原命令优先只读返回；首次提交在外部准备前后和短事务内检查停止、图/目标/节点版本与领取。增删和等待状态一次提交，无新运行、信封或执行实例。
 
 Auto 为原命令生成独立 auto-revise-dependencies 键，将操作纳入在途屏障，成功后只将原闭包纳入当前批次；主轮安全结束后仍按新图的真实候选、预算和权限领取。坏回包不撤回已保存边，原 canonical/run/call 经共享 request 算法核 dispatch.reviseDependencies，查询不更新 workRequested、不重做。
+
+### 已放弃检查点来源换边
+
+ScopeGoalService.validateDependencySource 对明确放弃的 cancelled 来源先使用 abandonedCheckpointSource 核原状态，再经 verifyMemberCheckpointHistory 两次只读 canonical 并比原冻结检查点/logHash。需要真实 normalizeValidationPath 端口；不读取今日旧 native 或更新旧文件基线，不签发恢复许可。QueuedDependencyReplacementService 沿原 Knowledge→模型→Store 顺序核当前后继岗位和新候选，任何停止、坏日志、知识或领取变化均不保存半条边。原任务、原运行和已处置预约不变；Auto 只重新跟踪原未启动闭包，完成仍须真实候选及 superseded 审阅。

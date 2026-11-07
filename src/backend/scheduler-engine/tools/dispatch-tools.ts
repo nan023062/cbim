@@ -1,6 +1,6 @@
 /**
  * 作用定位：把主调度的派发、查询、未启动撤销、依赖修订及检查点预约/明确放弃转换为内部工具，并组合目标工具。
- * 设计原因：模型明确提交发现所得 ownerSelection、角色、模块和 Workflow；不自动填默认角色。可信闭包固定身份，严格输入拒绝夹带授权，输出核同一份 wire，失败不回滚或重做已入队事实。
+ * 设计原因：模型明确提交发现所得 ownerSelection、角色、模块和 Workflow；不自动填默认角色。可靠失败/求助和已放弃检查点换边共用原协议；可信闭包固定身份，严格输入拒绝夹带授权，输出核同一份 wire，失败不回滚或重做已入队事实。
  * 职责边界：派发只是入队，续执行只是预约，撤销和依赖修订只记录调度事实，不算验收。本模块不装配成员递归派发、活动任务中止或手工结果工具。
  * 原命令报告是独立 read 入口；只接受原 run/call，不产生新的写命令，也不能清除旧未知结果。
  */
@@ -59,7 +59,7 @@ const definitions={
     schema:cancelQueuedTasksInputSchema,effects:['maintenance'] as const,
   },
   cbim_dispatch_replace_dependency:{
-    description:'将当前目标内尚未领取任务的一条失败或安全求助前置，替换为同周期后续任务的真实交付候选。先读取 cbim_goal_inspect 和 cbim_dispatch_inspect；提供 expectedGraphCursor/expectedGoalRevision、target 节点与计划版本、replace 旧边版本、with 新前置节点/计划/run/result 身份及 reason。B及全部依赖后继必须从未执行，知识和角色不能过期；A2须覆盖原前置模块并有可核实日志。不删除任意依赖，不恢复原执行、不修改权限或人工验收。成功仅将原待办重新交给本轮协调器，当前主轮结束后仍须按真实前置和运行门禁启动；最终审阅仍须明确原前置被新候选替代。',
+    description:'将当前目标内尚未领取任务的一条明确失败、安全求助或已显式放弃的可靠检查点前置，替换为同周期后续任务的真实交付候选。先读取 cbim_goal_inspect 和 cbim_dispatch_inspect；提供 expectedGraphCursor/expectedGoalRevision、target 节点与计划版本、replace 旧边版本、with 新前置节点/计划/run/result 身份及 reason。B及全部依赖后继必须从未执行，知识和角色不能过期；A2须覆盖原前置模块并有可核实日志。检查点须先由 abandon_checkpoint 明确放弃，原日志/证明/处置和信封完整；普通取消、未消费检查点、已恢复或未知来源不能替换。不删除任意依赖，不恢复原执行、不修改权限或人工验收。成功仅将原待办重新交给本轮协调器，当前主轮结束后仍须按真实前置和运行门禁启动；最终审阅仍须明确原前置被新候选替代。',
     schema:replaceQueuedDependencyInputSchema,effects:['maintenance'] as const,
   },
 };

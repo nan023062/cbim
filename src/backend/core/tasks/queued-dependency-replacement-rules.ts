@@ -1,6 +1,6 @@
 /**
  * 作用定位：纯选取单条前置替换的目标、可靠候选及完整未启动后继集合，供提交服务和重放校验共用。
- * 设计原因：替换不能扩大到已领取任务、过期角色或其他周期；任务与原流程选择保持不变，重新纳入调度不等于直接放行执行。
+ * 设计原因：可靠失败/求助及明确放弃检查点可换入真实候选；不能扩大到普通取消、已领取任务、过期角色或其他周期，旧来源与后继身份保持。
  * 职责边界：只检查持久结构和基线，不读取 canonical 证据或知识正文；调度服务仍须在提交前复核这些事实。
  */
 import {fail} from '../foundation/errors';
@@ -9,6 +9,7 @@ import type {GraphIdentity,TaskNode} from './graph-types';
 import type {ReplaceQueuedDependencyInput} from './queued-dependency-replacement';
 import {goalNeedsReplan} from './scope-goal';
 import {sameWorkflowSelectionsForModules} from './workflow-selection';
+import {abandonedCheckpointSource} from './checkpoint-handoff-rules';
 
 function check(value:unknown,code:string,message:string):asserts value{if(!value)fail(code,message)}
 const sameSet=(a:string[],b:string[])=>a.length===b.length&&a.every(value=>b.includes(value));
@@ -31,9 +32,10 @@ export function queuedDependencyReplacementSelection(state:DispatchState,identit
   check(edge?.kind==='dependency'&&edge.enabled&&edge.toNodeId===target.nodeId,'DEPENDENCY_EDGE_INVALID','只能明确替换目标当前启用的一条前置依赖');
   check(edge.revision===input.replace.expectedRevision,'DEPENDENCY_EDGE_STALE','原依赖版本已变化');
   const source=graph.tasks.find(task=>task.nodeId===edge.fromNodeId),replacement=graph.tasks.find(task=>task.taskId===input.with.taskId);
-  check(source?.scopeId===scopeId&&source.planRevision===edge.condition.planRevision&&!source.activeRunId&&!source.result&&source.runIds.length&&(source.status==='failed'||source.status==='blocked'&&source.help),'DEPENDENCY_SOURCE_INVALID','原来源必须是同周期安全求助或明确失败，不能替换未决或仍执行的来源');
+  check(source?.scopeId===scopeId&&source.planRevision===edge.condition.planRevision&&!source.activeRunId&&!source.result&&source.runIds.length&&(source.status==='failed'||source.status==='blocked'&&source.help||source.status==='cancelled'&&source.checkpointAbandonment),'DEPENDENCY_SOURCE_INVALID','原来源必须是可靠失败、求助或明确放弃的检查点，不能替换未决或仍执行的来源');
+  if(source.status==='cancelled')abandonedCheckpointSource(state,identity,scopeId,source);
   const sourceRuns=(state.runs??[]).filter(run=>run.binding.taskId===source.taskId&&run.binding.rootSessionId===identity.rootSessionId);
-  check(sourceRuns.length===source.runIds.length&&sourceRuns.every(run=>source.runIds.includes(run.binding.runId)&&run.binding.workspaceId===identity.workspaceId&&run.binding.planRevision===source.planRevision&&run.status===(source.help?'completed':'failed')),'DEPENDENCY_SOURCE_INVALID','原来源缺少匹配的已结算运行');
+  check(sourceRuns.length===source.runIds.length&&sourceRuns.every(run=>source.runIds.includes(run.binding.runId)&&run.binding.workspaceId===identity.workspaceId&&run.binding.planRevision===source.planRevision&&run.status===(source.help||source.checkpointAbandonment?'completed':'failed')),'DEPENDENCY_SOURCE_INVALID','原来源缺少匹配的已结算运行');
   check(replacement?.scopeId===scopeId&&replacement.taskId!==target.taskId&&graph.tasks.indexOf(replacement)>graph.tasks.indexOf(source),'DEPENDENCY_CANDIDATE_INVALID','新前置必须是同周期后续创建的其它任务');
   check(replacement.revision===input.with.expectedRevision&&replacement.planRevision===input.with.expectedPlanRevision,'DEPENDENCY_TASK_STALE','新前置任务版本已变化');
   const result=replacement.result,run=(state.runs??[]).find(value=>value.binding.taskId===replacement.taskId&&value.binding.runId===input.with.runId);

@@ -1,16 +1,43 @@
 /**
- * 作用定位：从同一派发快照选择尚未消费、可以明确终止的原检查点及恢复预约。
- * 设计原因：处置不授予新执行资格，不读取今日知识、模型或产物；完整历史日志由服务核实，这里裁决身份、版本和领取竞争。
+ * 作用定位：从同一派发快照选择可明确终止的检查点，或核实已放弃来源供后继换边。
+ * 设计原因：处置和换边不授予旧任务执行资格，不读取今日知识、模型或产物；完整历史日志由服务核实，这里裁决身份、版本、原信封和领取竞争。
  */
 import {fail} from '../foundation/errors';
 import type {DispatchState} from './dispatch-storage';
-import type {GraphIdentity} from './graph-types';
-import {abandonCheckpointInputSchema,type AbandonCheckpointInput} from './checkpoint-handoff';
+import type {GraphIdentity,TaskNode} from './graph-types';
+import {abandonCheckpointInputSchema,checkpointAbandonmentSchema,type AbandonCheckpointInput} from './checkpoint-handoff';
 import {memberCheckpointProofSchema} from './member-checkpoint';
 import {sameGoalValue} from './scope-goal';
 import {scopeHasUnresolvedActiveInput} from './scope-active-input';
 
 function check(value:unknown,code:string,message:string):asserts value{if(!value)fail(code,message)}
+/**
+ * 已保存的放弃可成为换边来源，但不能仅凭 cancelled 或一个审计字段放行。
+ * 只读同一快照的原身份、证明及信封；返回唯一完成段供服务核 canonical，绝不消费恢复预约。
+ */
+export function abandonedCheckpointSource(state:DispatchState,identity:GraphIdentity,scopeId:string,task:TaskNode){
+  const code='DEPENDENCY_SOURCE_INVALID',record=task.checkpointAbandonment,checkpoint=task.checkpoints?.[0];
+  const graph=state.graphs.find(g=>g.identity.workspaceId===identity.workspaceId&&g.identity.rootSessionId===identity.rootSessionId);
+  const scope=state.scopes?.find(s=>s.scopeId===scopeId&&s.workspaceId===identity.workspaceId&&s.rootSessionId===identity.rootSessionId);
+  check(state.workspaceId===identity.workspaceId&&graph&&scope?.status==='active'&&task.identity.workspaceId===identity.workspaceId&&task.identity.rootSessionId===identity.rootSessionId&&task.scopeId===scopeId&&sameGoalValue(graph.tasks.find(t=>t.taskId===task.taskId),task),code,'已放弃检查点不属于当前活动周期');
+  check(task.status==='cancelled'&&!task.activeRunId&&!task.result&&!task.help&&!task.cancelledBeforeStart&&!task.awaitedChildren.length&&task.checkpoints?.length===1&&checkpoint&&record&&checkpointAbandonmentSchema.safeParse(record).success,code,'原来源必须具有明确的检查点放弃记录，普通取消不能替代');
+  check(record.scopeId===scopeId&&record.planRevision===task.planRevision&&record.previousTaskRevision+1===task.revision&&record.abandonedAt===task.updatedAt&&record.reason===task.waitReason&&record.checkpointId===checkpoint.checkpointId&&record.sourceRunId===checkpoint.binding.runId&&record.previousLeaseEpoch===checkpoint.binding.leaseEpoch&&(task.resumeRequest?.requestId??null)===record.resumeRequestId&&record.graphCursor.streamId===graph.cursor.streamId&&record.graphCursor.seq<graph.cursor.seq&&scope.runTracking?.mainRunIds.includes(record.mainRunId)&&!state.runs?.some(r=>r.binding.runId===record.mainRunId),code,'检查点放弃与原版本、租约或主运行不一致');
+  const runs=(state.runs??[]).filter(r=>r.binding.taskId===task.taskId&&r.binding.rootSessionId===identity.rootSessionId),run=runs[0];
+  check(runs.length===1&&task.runIds.length===1&&task.runIds[0]===record.sourceRunId&&run.binding.runId===record.sourceRunId&&run.status==='completed'&&!run.resumeFrom&&memberCheckpointProofSchema.safeParse(run.checkpointProof).success&&sameGoalValue(run.checkpointProof!.checkpoint,checkpoint)&&sameGoalValue(run.binding,checkpoint.binding),code,'已放弃来源缺少唯一且未恢复的原检查点完成段');
+  const binding=run.binding;
+  check(binding.workspaceId===identity.workspaceId&&binding.rootSessionId===identity.rootSessionId&&binding.taskId===task.taskId&&binding.planRevision===task.planRevision&&binding.agentId===task.assignee.agentId&&binding.agentInstanceId===task.assignee.agentInstanceId&&binding.agentSessionId===task.assignee.agentSessionId&&checkpoint.knowledgeRevision===run.prepared.knowledgeRevision,code,'原检查点证明与任务身份或冻结基线不一致');
+  const member=state.members.find(m=>m.agentInstanceId===binding.agentInstanceId),session=state.sessions.find(s=>s.agentSessionId===binding.agentSessionId);
+  check(member&&member.lifecycle==='active'&&member.workspaceId===identity.workspaceId&&member.executionScopeId===scopeId&&member.executionTaskId===task.taskId&&member.agentId===binding.agentId&&member.teamId===binding.teamId&&member.leaseEpoch===record.nextLeaseEpoch&&member.activity==='idle'&&!member.activeRunId&&!member.activeTaskId&&!member.waitingTaskIds.length&&!member.communicatingMessageIds.length,code,'已放弃来源的原成员仍被占用或租约不一致');
+  check(session&&session.workspaceId===identity.workspaceId&&session.rootSessionId===identity.rootSessionId&&session.agentInstanceId===member.agentInstanceId&&session.agentId===binding.agentId&&member.agentSessionIds.includes(session.agentSessionId)&&session.lastRunId===binding.runId&&session.lastTaskId===task.taskId&&session.nativeSessionId===run.session.nativeSessionId&&!!run.session.sessionFile,code,'原检查点通道与完成段不一致');
+  const assignments=state.outbox.filter(m=>m.kind==='assignment'&&m.identity.rootSessionId===identity.rootSessionId&&m.taskId===task.taskId),original=assignments.find(m=>m.messageId===run.assignmentMessageId),resume=assignments.find(m=>m.kind==='assignment'&&m.resumeFrom);
+  check(assignments.length===(task.resumeRequest?2:1)&&original?.delivery==='processed'&&original.claim?.runId===binding.runId&&original.claim.leaseEpoch===binding.leaseEpoch,code,'已放弃来源的原领取信封不完整');
+  if(task.resumeRequest)check(resume?.kind==='assignment'&&resume.messageId===record.resumeRequestId&&resume.delivery==='processed'&&!resume.claim&&sameGoalValue(resume.resumeFrom,{checkpointId:checkpoint.checkpointId,runId:binding.runId}),code,'已放弃的恢复预约必须已处置且从未领取');
+  else check(!resume,code,'未预约检查点不能补造恢复信封');
+  const messages=state.outbox.filter(m=>m.kind==='checkpoint'&&m.identity.rootSessionId===identity.rootSessionId&&m.taskId===task.taskId);
+  check(messages.length===1&&messages[0].kind==='checkpoint'&&messages[0].checkpointId===checkpoint.checkpointId&&messages[0].runId===binding.runId&&messages[0].replyTo===run.assignmentMessageId,code,'原检查点交接信封缺失或错配');
+  return run;
+}
+
 /** 无文件 IO、不修改输入；原 checkpoint 交接信封可独立 ACK，不作为服务前后比较的可变 stamp。 */
 export function checkpointAbandonmentSelection(state:DispatchState,identity:GraphIdentity,scopeId:string,mainRunId:string,input:AbandonCheckpointInput){
   check(abandonCheckpointInputSchema.safeParse(input).success,'CHECKPOINT_HANDOFF_INPUT','检查点处置请求格式无效');

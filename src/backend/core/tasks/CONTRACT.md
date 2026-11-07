@@ -668,3 +668,7 @@ TaskNode *-- DependencyRevision : 不可变历史
 DependencyRevision *-- ReviseQueuedDependenciesInput : 原请求
 ReviseQueuedDependenciesReceipt *-- DependencyRevision : 原保存审计
 ```
+
+### 已放弃检查点的依赖来源
+
+abandonedCheckpointSource 在同一活动快照核 cancelled 与严格 checkpointAbandonment、唯一原完成段/冻结证明、原成员租约/通道、原领取信封、已处置且未领取的恢复预约及检查点交接信封。普通 cancelled、未放弃、已恢复、未知或错配来源拒绝；不要求原岗位今日仍是负责人，但后继与新候选仍各走当前资格。queuedDependencyReplacementSelection 仅对该完整来源扩展可靠候选替换，统一换边不变量仍独立选取并保护原任务/检查点/处置及退役边。审计沿用原来源 task/plan 定位不可变历史，不迁移旧实例、不补造新运行。

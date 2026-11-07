@@ -18,7 +18,7 @@ function task():TaskNode{return {kind:'task',nodeId:'task:B',taskId:'B',identity
 it('明确审计独立于运行正文展示前后来源，不提供执行或验收按钮',()=>{
   const value=task(),html=renderToStaticMarkup(createElement(MemberDependencyNotice,{task:value}));
   expect(memberDependencyHistory(value)).toMatchObject({invalid:false,records:[record()]});
-  for(const text of ['前置任务已替换','原成员缺少数据','A2-result','A2-run','原任务及其失败或求助记录保留','不代表业务验收'])expect(html).toContain(text);
+  for(const text of ['前置任务已替换','原成员缺少数据','A2-result','A2-run','原任务及其失败、求助或检查点放弃记录保留','不代表业务验收'])expect(html).toContain(text);
   expect(html).toContain('data-replacement-id="replace-command"');expect(html).toContain('dateTime="'+time+'"');expect(html).not.toMatch(/<(button|input|select|form)\b/);
   const detail=renderToStaticMarkup(createElement(MemberTaskDetail,{...identity,task:value}));expect(detail).toContain('member-dependency-replacement');expect(detail).toContain('该任务没有登记的执行轮次');expect(detail).not.toContain('停止成员执行');
 });

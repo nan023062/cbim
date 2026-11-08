@@ -1,5 +1,5 @@
 /**
- * 新决定必须保持原运行完整/选定文件模式及冻结范围，旧意见不可补字段或换绑；文件与日志真实性仍由服务核验。
+ * 新决定必须保持原运行完整/选定文件模式及冻结范围；跨等待关联只能引用同项最近意见，旧记录不可换绑，真实日志由服务重读。
  * 作用定位：保护人工决定在周期联合事务及重放中的追加历史、当前依据和无执行副作用边界。
  * 设计原因：不能只依赖桌面按钮；普通事务不得补造批准、跨流程借候选、修改目标或借提交决定启动模型。
  * 职责边界：校验持久关系及证明内容指纹，真实日志与文件须由可信服务复核；actor 只表示本机提交来源。
@@ -23,7 +23,7 @@ export function validateHumanDecisions(previous:DispatchState,next:DispatchState
   for(const scope of next.scopes??[]){
     const old=previous.scopes?.find(item=>item.scopeId===scope.scopeId),history=scope.humanDecisions,prior=old?.humanDecisions;
     if(history){
-      valid(scopeHumanDecisionsSchema.safeParse(history).success,'人工决定历史结构、顺序或替代关系无效');
+      valid(scopeHumanDecisionsSchema.safeParse(history).success,'人工决定历史结构、顺序、同依据替代或跨等待关联无效');
       for(const record of history.records){
         valid(!ids.has(record.decisionId),'人工决定命令不能跨周期重用');ids.add(record.decisionId);
         valid(equal(record.proof.identity,{workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,scopeId:scope.scopeId}),'人工决定证明必须属于保存它的工作区、主会话与周期');

@@ -2,6 +2,7 @@ import {expect,it} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import {humanDecisionRequestSchema,humanDecisionPreviewSchema,humanDecisionRecordSchema,scopeHumanDecisionsSchema,humanDecisionHistorySchema,humanDecisionReceiptSchema,humanDecisionCoverageLimitation,type HumanDecisionPreview,type HumanDecisionRecord} from '../src/backend/core/tasks/human-decisions';
 import {humanDecisionBasis,humanDecisionProof} from '../src/backend/core/tasks/human-decision-proof';
+import {compareHumanReconsideration} from '../src/backend/core/tasks/human-reconsideration';
 import {validateHumanDecisions,validateHumanDecisionCommand} from '../src/backend/core/tasks/human-decision-invariants';
 import {validateDispatchScopes} from '../src/backend/core/tasks/dispatch-scope-invariants';
 import {dispatchScopeGoalSchema} from '../src/backend/core/tasks/scope-goal';
@@ -41,6 +42,38 @@ function append(before:DispatchState,item=record()){
   return {after,mutation:{scopes:[scope],receipt:true} as DispatchMutation};
 }
 function verify(before:DispatchState,after:DispatchState,mutation:DispatchMutation){validateDispatchScopes(before,after,mutation);validateHumanDecisionCommand(before,mutation,{commandId:'human-decision-'+after.scopes![0].humanDecisions!.records.at(-1)!.decisionId,fingerprint:'fingerprint'})}
+
+it('跨等待比较不批准；逐项识别人、知识、候选/日志、选择与实际字节变化',()=>{
+  const prior=record(),current=preview();current.source!.waitId='next-wait';const input={criterionId:criterion.id,reconsidersDecisionId:prior.decisionId};
+  const match=compareHumanReconsideration([prior],input,current,true);expect(match).toMatchObject({status:'evidence_matches',canReconsider:true,previousWaitId:'wait',currentWaitId:'next-wait'});expect(match.checks.find(c=>c.key==='waiting')?.state).toBe('changed');expect(current).not.toHaveProperty('reconsideration');
+  for(const [key,mutate] of [
+    ['criterion',(p:HumanDecisionPreview)=>{p.source!.criterion.text='新要求'}],
+    ['knowledge',(p:HumanDecisionPreview)=>{p.source!.knowledgeRevision='new-knowledge'}],
+    ['candidates',(p:HumanDecisionPreview)=>{p.candidates[0].resultId='new-result'}],
+    ['candidates',(p:HumanDecisionPreview)=>{p.candidates[0].logHash=otherDigest}],
+    ['selection',(p:HumanDecisionPreview)=>{p.candidates[0].selected!.baselineId='another-baseline'}],
+    ['artifacts',(p:HumanDecisionPreview)=>{p.candidates[0].selected!.files[0].state='changed';p.candidates[0].selected!.files[0].observed!.sha256=otherDigest;p.allowedDecisions=['reject','request_evidence']}],
+  ] as const){const changed=structuredClone(current);mutate(changed);const report=compareHumanReconsideration([prior],input,changed,true);expect(report.status).toBe('changed');expect(report.checks.find(c=>c.key===key)?.state).toBe('changed');expect(report.canReconsider).toBe(true)}
+  const unselected=structuredClone(current);delete unselected.candidates[0].selected;unselected.allowedDecisions=['reject','request_evidence'];expect(compareHumanReconsideration([prior],input,unselected,true).status).toBe('unverifiable');
+  const display=structuredClone(current);display.candidates[0].selected!.files[0].reason='端口的观察说明';expect(compareHumanReconsideration([prior],input,display,true).status).toBe('evidence_matches');
+});
+
+it('无法核实原来源、已被取代、同等待及外部意见不能形成有效新关联',()=>{
+  const prior=record(),next=record(preview(),{revision:2,decision:'reject',comment:'新意见',supersedesDecisionId:prior.decisionId}),current=preview();current.source!.waitId='next-wait';const input={criterionId:criterion.id,reconsidersDecisionId:prior.decisionId};
+  expect(compareHumanReconsideration([prior],input,current,false)).toMatchObject({status:'unverifiable',canReconsider:false});expect(compareHumanReconsideration([prior,next],input,current,true)).toMatchObject({status:'superseded',canReconsider:false});expect(compareHumanReconsideration([prior],input,preview(),true)).toMatchObject({status:'same_wait',canReconsider:false});expect(compareHumanReconsideration([prior],{...input,reconsidersDecisionId:randomUUID()},current,true).canReconsider).toBe(false);
+  const bad={...current,reconsideration:compareHumanReconsideration([prior],input,current,false)};expect(humanDecisionPreviewSchema.safeParse(bad).success).toBe(false);bad.allowedDecisions=[];delete bad.basis;expect(humanDecisionPreviewSchema.safeParse(bad).success).toBe(true);
+  bad.reconsideration.status='evidence_matches';expect(humanDecisionPreviewSchema.safeParse(bad).success).toBe(false);
+});
+
+it('跨等待新旧关系在提交和重放同时保护，旧无关联记录兼容，不能自引/换项/跳过更新意见',()=>{
+  const old=preview();old.source!.waitId='earlier-wait';const prior=record(old),before=setup();before.scopes![0].humanDecisions={revision:1,records:[prior]};
+  const current=record(preview(),{revision:2,reconsidersDecisionId:prior.decisionId}),saved=append(before,current);verify(before,saved.after,saved.mutation);expect(()=>validateHumanDecisions(saved.after,saved.after,{receipt:true})).not.toThrow();
+  const check=(item:HumanDecisionRecord)=>scopeHumanDecisionsSchema.safeParse({revision:2,records:[prior,item]}).success;
+  expect(check(current)).toBe(true);expect(check({...current,reconsidersDecisionId:undefined})).toBe(true);expect(check({...current,reconsidersDecisionId:randomUUID()})).toBe(false);expect(check({...current,reconsidersDecisionId:current.decisionId})).toBe(false);
+  const same=record(old,{revision:2,reconsidersDecisionId:prior.decisionId,supersedesDecisionId:prior.decisionId});expect(check(same)).toBe(false);
+  const third=record(preview(),{revision:3,reconsidersDecisionId:prior.decisionId,supersedesDecisionId:current.decisionId});expect(scopeHumanDecisionsSchema.safeParse({revision:3,records:[prior,current,third]}).success).toBe(false);
+  const forged=structuredClone(saved.after);forged.scopes![0].humanDecisions!.records[0].proof.identity.scopeId='foreign';expect(()=>validateHumanDecisions(before,forged,{scopes:[forged.scopes![0]],receipt:true})).toThrow();
+});
 
 it('请求严格拒绝模型actor/证明/路径和未知字段，拒绝及补证须给出意见',()=>{
   const item=record(),request={...identity,criterionId:criterion.id,commandId:item.decisionId,expectedDecisionRevision:0,expectedBasis:item.basis,baselines:item.baselines,decision:'accept',comment:''};

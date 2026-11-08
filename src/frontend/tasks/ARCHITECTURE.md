@@ -1147,6 +1147,7 @@ class N_src_frontend_tasks_human_decision_state_ts_HumanDecisionDraft["HumanDeci
   +criterionId
   +baselines
   +manifests
+  +reconsidersDecisionId
   +decision
   +comment
   +attempt
@@ -1199,9 +1200,9 @@ class N_src_frontend_tasks_human_decision_state_ts_HumanDecisionController["Huma
   +locked()
   +edit()
   +resetBaselines()
+  +reconsider()
   +currentPreview()
   +preview()
-  +submit()
 }
 N_src_frontend_tasks_human_decision_state_ts ..> N_src_frontend_tasks_human_decision_state_ts_HumanDecisionController : 声明
 class N_src_frontend_tasks_human_decision_state_ts_HumanDecisionPool["HumanDecisionPool"] {
@@ -1219,6 +1220,7 @@ class N_src_frontend_tasks_human_decision_state_ts["human-decision-state.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_human_decision_state_ts_HumanDecisionController["HumanDecisionController"] {
+  +submit()
   +retry()
   +query()
   +restore()
@@ -2574,6 +2576,7 @@ class N_src_frontend_tasks_useHumanContinuation_ts["useHumanContinuation.ts"] {
   <<module>>
   +currentHumanDecisions()
   +humanContinuationTarget()
+  +humanContinuationDraftForView()
   +useHumanContinuation()
 }
 ```
@@ -2625,6 +2628,7 @@ class N_src_frontend_tasks_useHumanDecisions_ts["useHumanDecisions.ts"] {
 class N_src_frontend_tasks_useHumanDecisions_ts_HumanDecisionsView["HumanDecisionsView"] {
   <<interface>>
   +scopeId
+  +waitId
   +criterionId
   +criteria
   +record
@@ -2639,7 +2643,6 @@ class N_src_frontend_tasks_useHumanDecisions_ts_HumanDecisionsView["HumanDecisio
   +error
   +select
   +chooseBaseline
-  +chooseManifest
 }
 N_src_frontend_tasks_useHumanDecisions_ts ..> N_src_frontend_tasks_useHumanDecisions_ts_HumanDecisionsView : 声明
 ```
@@ -2653,6 +2656,7 @@ class N_src_frontend_tasks_useHumanDecisions_ts["useHumanDecisions.ts"] {
 }
 class N_src_frontend_tasks_useHumanDecisions_ts_HumanDecisionsView["HumanDecisionsView"] {
   <<interface>>
+  +chooseManifest
   +chooseDecision
   +comment
   +inspect
@@ -2660,6 +2664,7 @@ class N_src_frontend_tasks_useHumanDecisions_ts_HumanDecisionsView["HumanDecisio
   +submit
   +query
   +retry
+  +reconsider
 }
 N_src_frontend_tasks_useHumanDecisions_ts ..> N_src_frontend_tasks_useHumanDecisions_ts_HumanDecisionsView : 声明
 ```
@@ -4087,6 +4092,14 @@ MemberOutputManifest 与旧文件面板并列，只在明确成员 run 下显示
 ## R07-B1 完整集合共同验收
 
 HumanDecisionController保留显式manifests选择并随原请求持久冻结；身份、选择或目标变化使旧预览失效，重开仅查未知命令。HumanDecisionPanel完整模式只显示原交付清单、全部固定根/后代范围和条目数量，不提供文件子集或自动最新选择。接受仅凭后端当前allowedDecisions，变化后的负面观察和历史意见仍可阅读。MemberValidationPanel显示其原完整清单身份，不把当时结构符合称为当前业务验收。
+
+## R08 跨等待意见与明确新决定
+
+`HumanDecisionController.reconsider` 仅由明确点击触发，清空原选择、意见和决定后列出当前菜单；不会复制旧接受或自动读产物。原意见 ID 随草稿/冻结命令保存，预览与回执必须精确匹配。退出对照同样是明确操作；未知/在途请求不能退出、改 ID 或清空，重开只查原命令。成功后再编辑表示独立新决定，移除已经消费的旧关联并使旧预览失效。
+
+`useHumanDecisions` 公开当前 waitId，`HumanDecisionPanel` 只对本项最新且来自先前等待的记录提供对照入口；显示八项原因、“所比较证据一致仍须重新决定”和历史新旧链接。选择、目标或原意见变化及迟到响应均不能混用。坏旧来源可以退出对照，但当前等待的其他可信证据仍须满足原核验条件，不能借独立入口绕过损坏的当前日志。保存与独立继续保持分离，普通对话草稿不受影响。
+
+`humanContinuationDraftForView` 在当前等待没有新意见时也按 waitId 选择接续卡，不回退展示上一次已受理意图；加载未追齐时不借旧卡填充。原请求仍完整留在控制器，重开未知查询及非等待历史展示保持，新的已保存决定建立本等待独立意图。
 
 ## R07-B2 原删除与移动证明
 

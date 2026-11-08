@@ -551,6 +551,10 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 
 `repository-connections.ts` 仅重导出 Core 桌面 DTO 与纯 Schema。知识 preview/commit 与本机 grant/revoke 是独立操作；授权命令具有固定 commandId、定义哈希及独立授权版本。list 公开安全状态，check 只返回真实 HTTP 的前 20 项资源摘要、身份和版本；不公开令牌、地址、正文或运行服务。receipt/commitReceipt 查询只核实原命令/事务，不重放；unaccepted 只在旧实例退役、真实存储没有原记录时证明未受理，普通缺回执不能冒充此证明。
 
+### R08 跨等待意见公开边界
+
+原人工预览/提交请求增加可选 `reconsidersDecisionId`，预览增加 `HumanReconsideration` 八项对照，记录保留原意见链接。Bridge 只重导严格序列化契约，不导出后端日志读取、Node 比较实现或“来源已验证”参数。旧请求与记录不回填新字段，没有新增 IPC 或模型批准工具。
+
 ### 人工决定接续的桌面契约
 
 `human-continue.ts` 只公开 Core 的严格请求、查询、回执和联合类型判别。`loop.humanContinue` 接当前等待、目标/输入/决定版本、最新决定 ID 全集、稳定命令及明确模型权限；不接自由正文、actor 或证明。`loop.humanContinuation` 按完整 workspace/root/scope/command 读取原意图，读取不执行。

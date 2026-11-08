@@ -1,6 +1,7 @@
 /**
  * 作用定位：在主会话装配按人工决定继续的唯一控制器，向两个目标卡提供固定选择和提交状态。
  * 设计原因：只有与摘要同步的当前等待可启动；每项取跨依据的最新意见，不能挑旧接受跳过新拒绝。历史与普通补充始终独立。
+ * 展示边界：新等待尚无意见时不回退到上次已受理接续；旧请求仍保存在控制器中供原命令查询。
  */
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {HumanDecisionRecord} from '../../bridge/contracts/human-decisions';
@@ -21,6 +22,14 @@ export function humanContinuationTarget(workspaceId:string,rootSessionId:string|
   if(!base||!revision||state.waitingScope?.humanDecisions?.revision!==revision||scope?.goal?.review?.decision!=='awaiting_user'||!records.length)return;
   return {...base,expectedDecisionRevision:revision,decisionIds:records.map(record=>record.decisionId)};
 }
+/** 当前等待只展示同 wait 的意图；没有当前意见不等于可以拿上一等待的已受理卡填充。 */
+export function humanContinuationDraftForView(state:ScopeGoalState,records:readonly HumanContinuationDraft[],target?:HumanContinuationTarget):HumanContinuationDraft|undefined{
+  if(target)return records.find(item=>item.scopeId===target.scopeId&&item.waitId===target.waitId);
+  if(state.loading||state.detailLoading)return;
+  const scope=state.selectedScope;
+  if(scope?.status==='waiting')return scope.scopeId===state.selectedScopeId&&scope.wait?records.find(item=>item.scopeId===scope.scopeId&&item.waitId===scope.wait!.waitId):undefined;
+  return [...records].reverse().find(item=>item.scopeId===state.selectedScopeId);
+}
 export interface HumanContinuationView {
   scopeId?:string;waitId?:string;record?:HumanContinuationDraft;decisions:HumanDecisionRecord[];
   eligible:boolean;pending:boolean;canSubmit:boolean;canRetry:boolean;error:string;modelLabel:string;
@@ -31,7 +40,7 @@ export function useHumanContinuation(workspaceId:string,rootSessionId:string|und
   const [,render]=useState(0),identity=JSON.stringify([workspaceId,rootSessionId]),identityRef=useRef(identity),refreshRef=useRef(refresh);identityRef.current=identity;refreshRef.current=refresh;
   const controller=useMemo(()=>rootSessionId?controllers.get(workspaceId,rootSessionId,{storage:{getItem:key=>window.localStorage.getItem(key),setItem:(key,value)=>window.localStorage.setItem(key,value)},submit:input=>window.cbim.call('loop.humanContinue',input),lookup:input=>window.cbim.call('loop.humanContinuation',input),uuid:()=>crypto.randomUUID()}):undefined,[workspaceId,rootSessionId]);
   useEffect(()=>{if(!controller)return;const unsubscribe=controller.subscribe(()=>render(value=>value+1));void controller.restore().then(()=>{if(identityRef.current===identity)refreshRef.current()});return unsubscribe},[controller,identity]);
-  const target=humanContinuationTarget(workspaceId,rootSessionId,state),records=controller?.snapshot.records??[],record=target?controller?.record(target.scopeId,target.waitId):[...records].reverse().find(item=>item.scopeId===state.selectedScopeId),attempt=record?.attempt,pending=controller?.isPending(record)??false,effectiveModel=continuationModel(model,state);
+  const target=humanContinuationTarget(workspaceId,rootSessionId,state),records=controller?.snapshot.records??[],record=humanContinuationDraftForView(state,records,target),attempt=record?.attempt,pending=controller?.isPending(record)??false,effectiveModel=continuationModel(model,state);
   const editable=!!target&&!!controller?.available&&!pending&&(!attempt||attempt.phase==='rejected'),frozen=attempt&&attempt.phase!=='rejected';
   const decisions=frozen?(state.selectedScope?.humanDecisions?.records??[]).filter(value=>attempt.request.decisionIds.includes(value.decisionId)):currentHumanDecisions(state);
   const after=async(action:()=>Promise<void>)=>{await action();if(identityRef.current===identity)refreshRef.current()};

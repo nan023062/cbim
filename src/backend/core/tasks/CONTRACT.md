@@ -727,3 +727,34 @@ complete-output-evidence统一选择原完整清单、重算证明、比较当�
 ## R07-B2 原删除与移动证明
 
 artifact-transition 是纯严格协议；artifact-transition-evidence 从原有效清单、真实 allowed v1、prepared/executing/applied 和唯一成功 wire 重建因果证明。阶段顺序、原字节、身份、知识、进度及精确完整集合增减均须一致；普通副作用、重规划或集合变化不能沿用旧操作。output-manifest-identity 抽成单向摘要基础，验证器仍独立核 canonical。交付 proof 必须完整覆盖冻结操作；仅证明对应源根可缺失，唯一文件删除可交付空集合，普通缺失继续拒绝。公开证明不保存文件正文或私有对象身份，也不是恢复备份。
+
+## R08 跨等待人工意见对照
+
+`human-reconsideration.ts` 是只比较可信输入的模块，依赖 `human-decisions` 叶子契约；不读取文件、日志或改变接受资格。八项检查分别说明原来源、最新意见、等待、验收原文、知识、候选/日志、明确选择和当前产物。`evidence_matches` 只表示所比较证据一致，等待变化仍必须新决定；不比较未保存的旧业务正文或声称业务语义等价。缺选择或原来源不可核实不能显示一致；新候选/知识/文件变化分别表达。固定范围、完整清单原身份和原操作证明随选择一起比较。
+
+预览/请求可选 `reconsidersDecisionId`，记录保存同名指针与新的不可变 proof。只允许同 workspace/root/scope/criterion 最新、来自先前等待的意见；`scopeHumanDecisionsSchema` 和提交/重放不变量共同拒绝自引、越过新意见、换项/跨周期及同等待关联。旧无字段记录保持原形，同 basis 的 `supersedesDecisionId` 规则不变。对照结果不进入原 basis 算法，保存的两份 proof 和原引用独立可查；命令指纹仍绑定原引用与全部请求。
+
+```mermaid
+classDiagram
+class HumanReconsideration {
+ <<human-decisions.ts type>>
+ +decisionId
+ +previousWaitId
+ +currentWaitId
+ +status
+ +canReconsider
+ +checks
+}
+class HumanDecisionRecord {
+ <<human-decisions.ts type>>
+ +reconsidersDecisionId
+ +supersedesDecisionId
+ +proof
+}
+class HumanReconsiderationModule {
+ <<human-reconsideration.ts module>>
+ +compareHumanReconsideration()
+}
+HumanReconsiderationModule ..> HumanDecisionRecord : 只读历史与当前预览
+HumanReconsiderationModule ..> HumanReconsideration : 返回证据对照
+```

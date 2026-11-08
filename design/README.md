@@ -8,6 +8,7 @@
 | --- | --- |
 | [开发路线图](tool-architecture-roadmap.md) | 全局目标、五阶段状态、上一步成果、当前步骤、下一步与剩余项；当前进度的唯一维护位置 |
 | [开发记录](development-log.md) | 每个已实施步骤的完成事实、验证证据、限制和后续交接；不另建一份实时待办表 |
+| [开发者可持续维护 Skill](../docs/developer-skills.md) | 本地三个项目级入口：架构演进与共性沉淀、源码与项目认知维护、开发推进；按实际问题协作 |
 | [本轮开发收尾总结（2026-11-08）](development-closeout-20261108.md) | 截至 Step55 的已交付能力、交付包缺口、验证边界与最终成品；收尾快照，不代替路线图 |
 | [Cindy + Git 岗位开发管线](cindy-development-pipeline.md) | 产品反馈 Skill、GitHub Issue、开发岗位与工单交接、CI、人工合并及软件更新日志；反馈／正式发布／手动升级已验收，内部开发管线待实施 |
 | [GitHub OAuth 配置与线上验收](task/github-feedback-setup.md) | OAuth App 注册字段、Device Flow 登录、固定仓库及一条真实 Issue 验收步骤；实际结果另记验证报告 |

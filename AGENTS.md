@@ -4,7 +4,27 @@
 
 开发 Skill 入口：[通用项目](.agents/skills/cbim-development/SKILL.md)、[Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md)，三份内容同步维护。只读分析或计划讨论不自动触发代码实施。
 
-固定架构维护流程见 [.claude Skill](.claude/skills/architecture-maintenance/SKILL.md) 和 [.codex Skill](.codex/skills/architecture-maintenance/SKILL.md)，两份内容保持同步。文件模块之间禁止循环依赖，包含类型引用；运行 `pnpm check:dependencies` 检查，运行 `pnpm check:architecture` 同时检查目录类图是否与代码同步。
+固定架构维护流程见 [通用项目 Skill](.agents/skills/architecture-maintenance/SKILL.md)、[Claude Code Skill](.claude/skills/architecture-maintenance/SKILL.md) 和 [Codex Skill](.codex/skills/architecture-maintenance/SKILL.md)，三个入口内容保持同步。文件模块之间禁止循环依赖，包含类型引用；运行 `pnpm check:dependencies` 检查，运行 `pnpm check:architecture` 同时检查目录类图是否与代码同步。
+
+## 开发者可持续维护
+
+分层、模块化与抽象的共同目标是沉淀变化频率低、可持续复用的稳定系统，使常规业务迭代尽量局限在变化点，减少对稳定能力的连带修改。所有系统、模块和类的封装遵循以下原则：
+
+- **单一职责：** 按同一类业务决策和变化原因组织职责。互不相关的变化不应迫使同一封装反复修改；不以方法少或文件小替代职责判断。
+- **变化边界：** 模块和类的边界按业务变化点划分，变化频率不同的代码不得混在同一封装中。低频稳定机制与高频业务策略分别封装，通过稳定契约组合；变化节奏以业务驱动和实际证据判断，不能仅按提交次数或表面相似程度拆分／合并。
+- **开闭原则：** 对已经识别的变化，通过稳定契约、组合、策略或满足可替换性的继承扩展，尽量不修改既有稳定核心。装配点可以注册新实现；真实契约改变或缺陷修复仍需明确影响和验证，不用大量开关或预设扩展点假装封闭。
+- **单向依赖：** 实际层、模块和文件的允许依赖形成有向无环结构，包含类型依赖；易变业务与实现细节依赖稳定契约，稳定核心不反向认识具体业务。通过明确归属的接口和装配解开反向依赖，不能用动态加载、事件或全局状态隐藏耦合。
+- **渐进治理：** 以真实使用、变更原因和影响范围判断稳定性，区分接口与实现的稳定。每次演进说明保护了哪部分稳定能力、把哪些变化限制在哪里，并用小步迁移与行为验证逐渐收敛；无环之外仍检查依赖过密和职责混杂。
+
+每次实现先确认改动所属层、调用方与状态归属，从全局边界理解局部需求。按实际问题使用以下项目级 Skill，复用已核实的上下文，不为小改动机械运行全部流程：
+
+- [architecture-evolution](.agents/skills/architecture-evolution/SKILL.md)：统一评估全局分层、职责与共性，依据业务变化点、语义和真实消费者选择封装、组合、继承与多态，通过渐进重构沉淀稳定能力。
+- [architecture-maintenance](.agents/skills/architecture-maintenance/SKILL.md)：同步源码注释、类图和依赖说明，交付职责、关键调用链、设计取舍及下一次修改入口，保障维护者可以理解、审阅和接手。
+- [cbim-development](.agents/skills/cbim-development/SKILL.md)：回顾全局与上一步成果，推进已授权步骤、验证结果并维护开发接续。
+
+源码实现继续遵循 `architecture-maintenance`；重要职责、公共抽象或状态流变化同时说明维护者需要更新的认知。只要求评估不自动重构，已经授权的实施不逐步重复请求批准。三种项目 Skill 的 `.agents/skills/`、`.claude/skills/`、`.codex/skills/` 入口保持同名同内容。使用例子见 [开发者 Skill 说明](docs/developer-skills.md)。
+
+## 源码维护范围
 
 本文件中的代码注释、架构类图及同步维护规则**仅适用于 `src/` 及其子目录**，不要求为仓库根目录、`tests/`、`scripts/`、`design/`、`docs/` 等目录生成类图或补齐脚本注释。注释的主要读者是需要 review 和理解代码的项目维护者，默认使用简体中文；类型、接口、协议和工具名称保留原始标识。
 

@@ -15,6 +15,7 @@
 | [chat-material-imports.ts](chat-material-imports.ts) | 应用内显式资料导入的取消、工作区归属及真实资源仓库读取入口。 |
 | [chat-source-readers.ts](chat-source-readers.ts) | 桌面明确导入目录、URL 指针和网页时，生成有界文本及真实来源事实。 |
 | [dispatch-store.ts](dispatch-store.ts) | 将岗位、模块责任、来源代次和受控文件阶段，以及执行实例、会话、任务图和信封可靠保存到同一工作区日志。 |
+| [isolation-records.ts](isolation-records.ts) | 原隔离执行的私有追加记录，保存启动前来源与资源清理阶段。 |
 | [run-journal.ts](run-journal.ts) | 本机执行事件日志，顺序追加并 fsync，从记录恢复摘要和未确认工具。 |
 | [run-storage.ts](run-storage.ts) | 将本机运行目录和 RunJournal 装配为大脑及调度共享的存储端口。 |
 
@@ -256,6 +257,58 @@ N_src_backend_main_persistence_tasks_dispatch_store_ts_external_DispatchStore <|
 ```
 
 直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/tasks/graph-reducer.ts](../../../core/tasks/graph-reducer.ts)、[../../../core/tasks/dispatch-invariants.ts](../../../core/tasks/dispatch-invariants.ts)、[../../../core/tasks/dispatch-scope-invariants.ts](../../../core/tasks/dispatch-scope-invariants.ts)、[../../../core/tasks/workspace-member-invariants.ts](../../../core/tasks/workspace-member-invariants.ts)、[../../../core/tasks/module-ownership-invariants.ts](../../../core/tasks/module-ownership-invariants.ts)、[../../../core/tasks/effect-observation-invariants.ts](../../../core/tasks/effect-observation-invariants.ts)、[../../../core/tasks/controlled-file-invariants.ts](../../../core/tasks/controlled-file-invariants.ts)、[../../../core/tasks/model-request-budget-invariants.ts](../../../core/tasks/model-request-budget-invariants.ts)、[../../../core/tasks/dispatch-storage.ts](../../../core/tasks/dispatch-storage.ts)、[../../../core/tasks/graph-types.ts](../../../core/tasks/graph-types.ts)、[../../../core/tasks/scope-view.ts](../../../core/tasks/scope-view.ts)、[../../../core/tasks/dispatch-scope.ts](../../../core/tasks/dispatch-scope.ts)、[../../../core/tasks/knowledge-source-invariants.ts](../../../core/tasks/knowledge-source-invariants.ts)、[../../../core/tasks/owner-execution-invariants.ts](../../../core/tasks/owner-execution-invariants.ts)。
+
+### isolation-records.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_persistence_tasks_isolation_records_ts["isolation-records.ts"] {
+  <<module>>
+  +isolationOperationId()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_persistence_tasks_isolation_records_ts["isolation-records.ts"] {
+  <<module>>
+}
+class N_src_backend_main_persistence_tasks_isolation_records_ts_IsolationChange["IsolationChange"] {
+  <<type>>
+
+}
+N_src_backend_main_persistence_tasks_isolation_records_ts ..> N_src_backend_main_persistence_tasks_isolation_records_ts_IsolationChange : 声明
+class N_src_backend_main_persistence_tasks_isolation_records_ts_IsolationHead["IsolationHead"] {
+  <<interface>>
+  +record
+  +changes
+  +revision
+  +checksum
+  +phase
+}
+N_src_backend_main_persistence_tasks_isolation_records_ts ..> N_src_backend_main_persistence_tasks_isolation_records_ts_IsolationHead : 声明
+class N_src_backend_main_persistence_tasks_isolation_records_ts_FileIsolationRecords["FileIsolationRecords"] {
+  +directory
+  +read()
+  +list()
+  +append()
+  +drain()
+  -tail
+  -failure
+  -file()
+  -regular()
+  -validate()
+}
+N_src_backend_main_persistence_tasks_isolation_records_ts ..> N_src_backend_main_persistence_tasks_isolation_records_ts_FileIsolationRecords : 声明
+class N_src_backend_main_persistence_tasks_isolation_records_ts_MemoryEntry["MemoryEntry"] {
+  <<interface>>
+  +operationId
+  +head
+}
+N_src_backend_main_persistence_tasks_isolation_records_ts ..> N_src_backend_main_persistence_tasks_isolation_records_ts_MemoryEntry : 声明
+```
+
+直接依赖：[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/identity.ts](../../../core/foundation/identity.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../platform/isolation-record.ts](../../platform/isolation-record.ts)。
 
 ### run-journal.ts
 
@@ -538,3 +591,7 @@ FileDispatchStore 在原 journal 的完整校验与 durable publish 中投影 ef
 ## 逐请求预算（R06）
 
 请求预算附录与现有领域共用唯一 dispatch.jsonl 与 fsync 屏障；追加和重放调用相同严格投影，初次申请的决定在事务内读取全部预留。写后未确认时封住本实例；加载只按实际日志恢复，不补造释放或重新请求。
+
+## 原隔离执行核实与清理
+
+FileIsolationRecords是独立私有fsync追加链，绑定原run/call、完整运行身份、原scope/input摘要和平台资源；只追加合法prepared/started/settled/cleaned或cleanup_requested/cleanup_complete阶段。读取不建目录、不修尾、不重放；每条链256KiB/32帧，每run256调用；损坏拒绝，写入未知封闭实例。目录受工作区独占锁及当前本地用户信任边界保护，不防同用户恶意重写整个私有数据库。

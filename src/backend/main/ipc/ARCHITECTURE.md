@@ -69,6 +69,7 @@ class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationService
   <<interface>>
   +workspaceOwnerships()
   +controlledFiles()
+  +isolatedExecutions()
   +requestBudgets()
   +execution()
   +memberDispatch()
@@ -83,7 +84,7 @@ class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationService
 N_src_backend_main_ipc_services_ts ..> N_src_backend_main_ipc_services_ts_ApplicationServices : 声明
 ```
 
-直接依赖：[../workspace/catalog.ts](../workspace/catalog.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../platform/paths.ts](../platform/paths.ts)、[../persistence/settings/llm-profiles.ts](../persistence/settings/llm-profiles.ts)、[../resources/resource-repository.ts](../resources/resource-repository.ts)、[../resources/repository-connections.ts](../resources/repository-connections.ts)、[../governance/module-governance.ts](../governance/module-governance.ts)、[../../scheduler-engine/execution/execution-manager.ts](../../scheduler-engine/execution/execution-manager.ts)、[../../scheduler-engine/execution/dispatch-service.ts](../../scheduler-engine/execution/dispatch-service.ts)、[../../scheduler-engine/execution/member-execution.ts](../../scheduler-engine/execution/member-execution.ts)、[../../scheduler-engine/runtime/agent-history.ts](../../scheduler-engine/runtime/agent-history.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)、[../persistence/settings/admission-settings.ts](../persistence/settings/admission-settings.ts)、[../persistence/settings/budget-settings.ts](../persistence/settings/budget-settings.ts)、[../workspace/workspace-members.ts](../workspace/workspace-members.ts)、[../workspace/module-ownerships.ts](../workspace/module-ownerships.ts)、[../workspace/controlled-files.ts](../workspace/controlled-files.ts)、[../persistence/tasks/chat-material-imports.ts](../persistence/tasks/chat-material-imports.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)、[../../scheduler-engine/execution/model-request-budget-service.ts](../../scheduler-engine/execution/model-request-budget-service.ts)。
+直接依赖：[../workspace/catalog.ts](../workspace/catalog.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../platform/paths.ts](../platform/paths.ts)、[../persistence/settings/llm-profiles.ts](../persistence/settings/llm-profiles.ts)、[../resources/resource-repository.ts](../resources/resource-repository.ts)、[../resources/repository-connections.ts](../resources/repository-connections.ts)、[../governance/module-governance.ts](../governance/module-governance.ts)、[../../scheduler-engine/execution/execution-manager.ts](../../scheduler-engine/execution/execution-manager.ts)、[../../scheduler-engine/execution/dispatch-service.ts](../../scheduler-engine/execution/dispatch-service.ts)、[../../scheduler-engine/execution/member-execution.ts](../../scheduler-engine/execution/member-execution.ts)、[../../scheduler-engine/runtime/agent-history.ts](../../scheduler-engine/runtime/agent-history.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)、[../persistence/settings/admission-settings.ts](../persistence/settings/admission-settings.ts)、[../persistence/settings/budget-settings.ts](../persistence/settings/budget-settings.ts)、[../workspace/workspace-members.ts](../workspace/workspace-members.ts)、[../workspace/module-ownerships.ts](../workspace/module-ownerships.ts)、[../workspace/controlled-files.ts](../workspace/controlled-files.ts)、[../workspace/isolated-executions.ts](../workspace/isolated-executions.ts)、[../persistence/tasks/chat-material-imports.ts](../persistence/tasks/chat-material-imports.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)、[../../scheduler-engine/execution/model-request-budget-service.ts](../../scheduler-engine/execution/model-request-budget-service.ts)。
 
 ### 本目录调用边界
 
@@ -209,3 +210,7 @@ Electron 接入仍核对本窗口与主 Frame；`humanDecide` 在可信闭包注
 ## R07-A 完整产物清单运行与复核
 
 dispatch.manifestReport 必须明确 workspace/root/task/run；省略 manifestId 只列原 canonical 引用，明确选定才重新枚举完整冻结范围。无隐式最新、补采、恢复或验收；错误和变化保留原历史。
+
+## 原隔离执行核实与清理
+
+dispatch.isolatedExecutionReport显式读取原运行，dispatch.isolatedExecutionCleanup显式提交当前instanceId及原执行/basis/commandId；不允许renderer传入路径、PID、profile或运行脚本。

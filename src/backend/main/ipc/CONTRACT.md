@@ -96,3 +96,7 @@ Electron 接入仍核对本窗口与主 Frame；`humanDecide` 在可信闭包注
 ## R07-A 完整产物清单运行与复核
 
 dispatch.manifestReport 必须明确 workspace/root/task/run；省略 manifestId 只列原 canonical 引用，明确选定才重新枚举完整冻结范围。无隐式最新、补采、恢复或验收；错误和变化保留原历史。
+
+## 原隔离执行核实与清理
+
+dispatch.isolatedExecutionReport显式读取原运行，dispatch.isolatedExecutionCleanup显式提交当前instanceId及原执行/basis/commandId；不允许renderer传入路径、PID、profile或运行脚本。

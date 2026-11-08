@@ -48,6 +48,7 @@
 | [human-decision-proof.ts](human-decision-proof.ts) | 将人工决定预览收敛为有界的真实依据，并生成与读取时间、并发序列无关的内容指纹。 |
 | [human-decisions.ts](human-decisions.ts) | 定义本机显式人工决定的请求、精确依据和只读历史，供调度与桌面共同校验。 |
 | [human-reconsideration.ts](human-reconsideration.ts) | 比较原人工意见与当前等待的真实预览，给出逐项差异和明确重新决定资格。 |
+| [isolated-execution-recovery.ts](isolated-execution-recovery.ts) | 隔离执行的可信调用授权与桌面核实、清理公开协议。 |
 | [knowledge-source-invariants.ts](knowledge-source-invariants.ts) | 来源事件与岗位/责任采纳的同事务许可，连接纯来源日志和 DispatchStore。 |
 | [main-tool-output.ts](main-tool-output.ts) | 主调度工具的公开业务输出契约与可信调用归属校验，前置修订严格对应原增删请求。 |
 | [main-tool-scope.ts](main-tool-scope.ts) | 主调度工具读取周期的公开白名单投影，保留规划、审阅和显式接续实际需要的事实。 |
@@ -1822,6 +1823,48 @@ class N_src_backend_core_tasks_human_reconsideration_ts["human-reconsideration.t
 ```
 
 直接依赖：[human-decisions.ts](human-decisions.ts)。
+
+### isolated-execution-recovery.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_isolated_execution_recovery_ts["isolated-execution-recovery.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_isolated_execution_recovery_ts_ScopedExecutionAuthorization["ScopedExecutionAuthorization"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_isolated_execution_recovery_ts ..> N_src_backend_core_tasks_isolated_execution_recovery_ts_ScopedExecutionAuthorization : 声明
+class N_src_backend_core_tasks_isolated_execution_recovery_ts_IsolatedExecutionRun["IsolatedExecutionRun"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_isolated_execution_recovery_ts ..> N_src_backend_core_tasks_isolated_execution_recovery_ts_IsolatedExecutionRun : 声明
+class N_src_backend_core_tasks_isolated_execution_recovery_ts_IsolatedExecutionItem["IsolatedExecutionItem"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_isolated_execution_recovery_ts ..> N_src_backend_core_tasks_isolated_execution_recovery_ts_IsolatedExecutionItem : 声明
+class N_src_backend_core_tasks_isolated_execution_recovery_ts_IsolatedExecutionReport["IsolatedExecutionReport"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_isolated_execution_recovery_ts ..> N_src_backend_core_tasks_isolated_execution_recovery_ts_IsolatedExecutionReport : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_isolated_execution_recovery_ts["isolated-execution-recovery.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_isolated_execution_recovery_ts_IsolatedExecutionCleanup["IsolatedExecutionCleanup"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_isolated_execution_recovery_ts ..> N_src_backend_core_tasks_isolated_execution_recovery_ts_IsolatedExecutionCleanup : 声明
+```
+
 
 ### knowledge-source-invariants.ts
 
@@ -6895,3 +6938,7 @@ artifactValidatorSchema增加png-raster-v1及固定PNG诊断（损坏、不支�
 ## 冻结范围成员执行
 
 scoped-execution.ts 严格限定入口/文件/参数/输出，无模型可填预算、执行器、环境或运行身份。结果含实际执行器与输入/输出摘要，私有输出不回写。artifactSourceCall与来源核实接受cbim_scoped_read并保留原名称；纯只读范围调用可进入既有文件检查点，命令与受控写仍保持原检查点拒绝域。Workflow证据按真实效果核验，普通命令成功不等于专业检查通过。
+
+## 原隔离执行核实与清理
+
+isolated-execution-recovery只公开原运行、执行ID、报告basis、资源状态与原清理commandId/basis；不公开路径、PID或profile。清理回执只代表原资源回收，不代表业务完成。

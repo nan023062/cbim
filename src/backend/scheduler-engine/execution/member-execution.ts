@@ -1,4 +1,5 @@
 /**
+ * 隔离执行与受控文件共用未收尾占用规则；再次close只等待原资源并把原运行封存为interrupted，不重启成员。
  * 领取前按真实scopedTools单独核验范围模式能力；缺端口不回退native，续执行仍复核原知识与权限。
  * 完整出口结算从原canonical重建清单并经真实全集合端口重核；只有JSON文件未变不足以保存候选。
  * 成员续段结算追加检查点并核累计文件，领取只消费最新段；历史完整前缀不能替代本轮真实证据。
@@ -287,9 +288,9 @@ export class MemberExecutionManager {
       this.ports.signal?.removeEventListener('abort',retired);
       this.approvals.cancel(task.taskId);this.questions.cancel(task.taskId);
       try{await handle.runtime?.close()}catch(problem){
-        if((problem as {code?:string})?.code==='CONTROLLED_FILE_DRAIN_PENDING'){
+        if(['CONTROLLED_FILE_DRAIN_PENDING','EXECUTION_SCOPE_DRAIN_PENDING'].includes((problem as {code?:string})?.code??'')){
           // 保留原租约与句柄；下次关闭只排空原进程并结算，不创建运行或重发任何工具。
-          handle.finishDrain=async()=>{await handle.runtime!.close();const observed=await handle.runtime!.inspect(task.taskId,run.binding.runId);await this.settle(run,observed,'interrupted','文件进程退出后按原日志封存');this.handles.delete(task.taskId);release()};
+          handle.finishDrain=async()=>{await handle.runtime!.close();const observed=await handle.runtime!.inspect(task.taskId,run.binding.runId);await this.settle(run,observed,'interrupted','原执行资源退出后按原日志封存');this.handles.delete(task.taskId);release()};
           throw problem;
         }
         error='成员进程未能正常关闭，请核实运行日志';summary=undefined;

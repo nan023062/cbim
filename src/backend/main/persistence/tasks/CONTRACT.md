@@ -185,3 +185,7 @@ FileDispatchStore 在原 journal 的完整校验与 durable publish 中投影 ef
 ## 逐请求预算（R06）
 
 请求预算附录与现有领域共用唯一 dispatch.jsonl 与 fsync 屏障；追加和重放调用相同严格投影，初次申请的决定在事务内读取全部预留。写后未确认时封住本实例；加载只按实际日志恢复，不补造释放或重新请求。
+
+## 原隔离执行核实与清理
+
+FileIsolationRecords是独立私有fsync追加链，绑定原run/call、完整运行身份、原scope/input摘要和平台资源；只追加合法prepared/started/settled/cleaned或cleanup_requested/cleanup_complete阶段。读取不建目录、不修尾、不重放；每条链256KiB/32帧，每run256调用；损坏拒绝，写入未知封闭实例。目录受工作区独占锁及当前本地用户信任边界保护，不防同用户恶意重写整个私有数据库。

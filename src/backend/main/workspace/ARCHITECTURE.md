@@ -14,6 +14,7 @@
 | [artifact-transitions.ts](artifact-transitions.ts) | 把已打开工作区的真实文件 utility 能力装配为成员删除/移动端口，不暴露平台句柄到 Core。 |
 | [catalog.ts](catalog.ts) | Catalog：维护本机工作区清单、显示名称、路径身份、并发更新和重新定位。 |
 | [controlled-files.ts](controlled-files.ts) | 已打开工作区的受控写入与桌面补偿服务，连接运行许可、私有备份、独占子进程和唯一 DispatchStore。 |
+| [isolated-executions.ts](isolated-executions.ts) | 正式成员隔离记录的可信装配，以及原运行的桌面核实／显式清理服务。 |
 | [knowledge-effect-reader.ts](knowledge-effect-reader.ts) | 在已打开工作区内只读核实原知识工具请求和事务，向调度影响观察提供有界摘要。 |
 | [knowledge-sources.ts](knowledge-sources.ts) | 将原知识事务的来源屏障与岗位/责任的明确来源采纳接到唯一 DispatchStore。 |
 | [main-module-ownership-tools.ts](main-module-ownership-tools.ts) | 把工作区责任服务绑定真实主运行及当前协作周期，提供四项模型窄端口。 |
@@ -132,6 +133,51 @@ N_src_backend_main_workspace_controlled_files_ts ..> N_src_backend_main_workspac
 ```
 
 直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[workspace.ts](workspace.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-execution.ts](../../core/tasks/dispatch-execution.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/brain/run-controlled-file.ts](../../core/brain/run-controlled-file.ts)、[../../core/tasks/controlled-file-operation.ts](../../core/tasks/controlled-file-operation.ts)、[../../core/tasks/controlled-file-event.ts](../../core/tasks/controlled-file-event.ts)、[../../core/tasks/controlled-file-rules.ts](../../core/tasks/controlled-file-rules.ts)、[../../core/tasks/controlled-file-invariants.ts](../../core/tasks/controlled-file-invariants.ts)、[../platform/controlled-file-blobs.ts](../platform/controlled-file-blobs.ts)、[../platform/controlled-file-protocol.ts](../platform/controlled-file-protocol.ts)、[../../scheduler-engine/execution/workspace-lease.ts](../../scheduler-engine/execution/workspace-lease.ts)。
+
+### isolated-executions.ts
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_workspace_isolated_executions_ts["isolated-executions.ts"] {
+  <<module>>
+}
+class N_src_backend_main_workspace_isolated_executions_ts_IsolatedExecutions["IsolatedExecutions"] {
+  +records
+  +forRun()
+  +report()
+  +cleanup()
+  +close()
+  -owner
+  -store
+  -lease
+  -inspect
+  -isCurrent
+  -tail
+  -closed
+  -assert()
+  -platform()
+  -run()
+  -source()
+}
+N_src_backend_main_workspace_isolated_executions_ts ..> N_src_backend_main_workspace_isolated_executions_ts_IsolatedExecutions : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_workspace_isolated_executions_ts["isolated-executions.ts"] {
+  <<module>>
+}
+class N_src_backend_main_workspace_isolated_executions_ts_IsolatedExecutions["IsolatedExecutions"] {
+  -item()
+}
+N_src_backend_main_workspace_isolated_executions_ts ..> N_src_backend_main_workspace_isolated_executions_ts_IsolatedExecutions : 声明
+```
+
+直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-execution.ts](../../core/tasks/dispatch-execution.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/workspace/execution-scope.ts](../../core/workspace/execution-scope.ts)、[../../core/tasks/scoped-execution.ts](../../core/tasks/scoped-execution.ts)、[../../core/tasks/isolated-execution-recovery.ts](../../core/tasks/isolated-execution-recovery.ts)、[../platform/isolation-record.ts](../platform/isolation-record.ts)、[../persistence/tasks/isolation-records.ts](../persistence/tasks/isolation-records.ts)、[../platform/isolation-recovery-win32.ts](../platform/isolation-recovery-win32.ts)、[workspace.ts](workspace.ts)、[../../scheduler-engine/execution/workspace-lease.ts](../../scheduler-engine/execution/workspace-lease.ts)。
 
 ### knowledge-effect-reader.ts
 
@@ -476,35 +522,39 @@ class N_src_backend_main_workspace_workspace_ts["workspace.ts"] {
 class N_src_backend_main_workspace_controlled_files_ts["controlled-files.ts"] {
   <<module>>
 }
+class N_src_backend_main_workspace_isolated_executions_ts["isolated-executions.ts"] {
+  <<module>>
+}
 class N_src_backend_main_workspace_main_module_ownership_tools_ts["main-module-ownership-tools.ts"] {
   <<module>>
 }
 class N_src_backend_main_workspace_module_ownerships_ts["module-ownerships.ts"] {
   <<module>>
 }
-class N_src_backend_main_workspace_workspace_members_ts["workspace-members.ts"] {
-  <<module>>
-}
 N_src_backend_main_workspace_artifact_transitions_ts ..> N_src_backend_main_workspace_workspace_ts : 导入依赖
 N_src_backend_main_workspace_controlled_files_ts ..> N_src_backend_main_workspace_workspace_ts : 导入依赖
+N_src_backend_main_workspace_isolated_executions_ts ..> N_src_backend_main_workspace_workspace_ts : 导入依赖
 N_src_backend_main_workspace_main_module_ownership_tools_ts ..> N_src_backend_main_workspace_module_ownerships_ts : 导入依赖
-N_src_backend_main_workspace_main_module_ownership_tools_ts ..> N_src_backend_main_workspace_workspace_members_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_main_workspace_main_module_ownership_tools_ts["main-module-ownership-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_main_workspace_workspace_members_ts["workspace-members.ts"] {
+  <<module>>
+}
 class N_src_backend_main_workspace_module_ownerships_ts["module-ownerships.ts"] {
   <<module>>
 }
 class N_src_backend_main_workspace_knowledge_sources_ts["knowledge-sources.ts"] {
   <<module>>
 }
-class N_src_backend_main_workspace_workspace_members_ts["workspace-members.ts"] {
-  <<module>>
-}
 class N_src_backend_main_workspace_workspace_ts["workspace.ts"] {
   <<module>>
 }
+N_src_backend_main_workspace_main_module_ownership_tools_ts ..> N_src_backend_main_workspace_workspace_members_ts : 导入依赖
 N_src_backend_main_workspace_module_ownerships_ts ..> N_src_backend_main_workspace_knowledge_sources_ts : 导入依赖
 N_src_backend_main_workspace_workspace_members_ts ..> N_src_backend_main_workspace_knowledge_sources_ts : 导入依赖
 N_src_backend_main_workspace_workspace_ts ..> N_src_backend_main_workspace_knowledge_sources_ts : 导入依赖
@@ -629,3 +679,7 @@ knowledge-effect-reader.ts 在已打开工作区复用 governed 串行队列的 
 ## R07-B2 原删除与移动证明
 
 artifact-transitions 将冻结定义适配为同一 production ControlledFileTransport.withExclusiveTransition；每个真实读取/操作前复核原工作区实例和当前运行，用户根与安装根仍受保护。平台身份及原字节回执严格对照固定操作，withExclusive 返回前必须确认 utility 已退出；不复制正文、不自建任务存储、不自动补偿。
+
+## 原隔离执行核实与清理
+
+IsolatedExecutions复核原冻结run/scope和唯一canonical proposed/allowed。报告只读；无旧记录不能认定未执行。显式清理要求当前实例、原报告basis、宿主创建身份已退出/复用且Job无活动进程。先持原目录对象，再可靠登记cleanup_requested，再删除profile与原对象，最后登记complete；中断后只接受原commandId/basis继续清理。原业务状态与日志不改。不同Windows登录会话、损坏来源、历史无协议资源或对象变化保留为不可核实。

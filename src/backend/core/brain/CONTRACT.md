@@ -366,3 +366,7 @@ ValidationFilePort.validateImage须在具有PNG冻结要求的成员启动前实
 ## 冻结范围成员执行
 
 范围执行由 RunScopedExecution 在审批前预占，Runtime 可靠 allowed 才签发一次许可，精确绑定原调用ID/参数hash。原生文件/命令始终拒绝；未知受控写/删除移动只保留范围读取。停止与结算等待实际平台 drain，失败保持 active/租约。端口结果校验唯一JSON快照，非零/超时/取消标记工具失败，不自行重放。
+
+## 原隔离执行核实与清理
+
+RunScopedExecution把原toolCallId/inputHash/allowedSeq作为可信授权传给平台。原Node物理收尾未知后，本轮仅允许cbim_scoped_read；drain统一EXECUTION_SCOPE_DRAIN_PENDING，保留运行占用，再次关闭只重试原清理。

@@ -295,3 +295,7 @@ output-manifest.ts 只公开严格清单 DTO；Node 哈希、日志核实及平�
 ## R07-B2 原删除与移动证明
 
 完整清单引用可携带严格原删除/移动证明；Bridge 只重导出 DTO，不公开句柄、Win32 或日志验证实现。旧清单无 operations 不补造；完整候选的 proof 才要求覆盖全部冻结操作。
+
+## 原隔离执行核实与清理
+
+isolated-executions只重导出Core的公开核实和清理协议，不引用Main对象或私有资源字段。

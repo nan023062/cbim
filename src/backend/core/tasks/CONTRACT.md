@@ -770,3 +770,7 @@ artifactValidatorSchema增加png-raster-v1及固定PNG诊断（损坏、不支�
 ## 冻结范围成员执行
 
 scoped-execution.ts 严格限定入口/文件/参数/输出，无模型可填预算、执行器、环境或运行身份。结果含实际执行器与输入/输出摘要，私有输出不回写。artifactSourceCall与来源核实接受cbim_scoped_read并保留原名称；纯只读范围调用可进入既有文件检查点，命令与受控写仍保持原检查点拒绝域。Workflow证据按真实效果核验，普通命令成功不等于专业检查通过。
+
+## 原隔离执行核实与清理
+
+isolated-execution-recovery只公开原运行、执行ID、报告basis、资源状态与原清理commandId/basis；不公开路径、PID或profile。清理回执只代表原资源回收，不代表业务完成。

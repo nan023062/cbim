@@ -3,6 +3,7 @@
  * 设计原因：坏日志也必须能查看核实诊断；仓库 scope 保留独立来源，不当作文件基线或恢复证据。独立表单才可显式新建只读核实周期，不恢复旧任务或提供业务验收。
  * 受控补偿：只对原正式工具显示独立账本/预览入口；新操作核当前实例，原工具失败不被新补偿改写。
  * 当前影响：用户明确选择原调用后才观察文件和保存处置；原报告与新影响分别显示，不因当前文件存在而清除 unknown。
+ * 隔离资源：独立显式查询原运行，清理不依赖业务日志面板是否已打开，也不改写任务结果。
  */
 import type {ExecutionReport,GraphCursor,ScopeSummary,TaskNode} from '../../bridge/contracts/dispatch';
 import {useExecutionReport} from './useExecutionReport';
@@ -13,6 +14,7 @@ import {MemberArtifactReport} from './MemberArtifactReport';
 import {MemberOutputManifest} from './MemberOutputManifest';
 import {MemberEffectObservation} from './EffectObservationPanel';
 import {MemberControlledFiles} from './ControlledFilePanel';
+import {IsolatedExecutionPanel} from './IsolatedExecutionPanel';
 import {effectObservationAnchor} from './effect-recovery-state';
 import {RepositoryScopeDetails} from '../components/RepositoryScopeDetails';
 import './execution-report.css';
@@ -65,5 +67,5 @@ export function ExecutionReportPanel({state,taskId,runId}:{state:ExecutionReport
 export function MemberExecutionReport({workspaceId,workspaceInstanceId,rootSessionId,task,runId,graphCursor,scope,recovery}:{workspaceId:string;workspaceInstanceId?:string;rootSessionId:string;task:TaskNode;runId?:string;graphCursor?:GraphCursor;scope?:ScopeSummary;recovery?:ExecutionRecoveryContext}){
   const state=useExecutionReport({workspaceId,rootSessionId,taskId:task.taskId,scopeId:task.scopeId,runId},task,graphCursor,scope);
   const creation=useExecutionRecovery(workspaceId,rootSessionId,task,runId,state.report,state.stale||state.loading||!!state.error,recovery,state.invalidate);
-  return <><ExecutionReportPanel state={state} taskId={task.taskId} runId={runId}/>{runId&&<><MemberArtifactReport identity={{workspaceId,rootSessionId,taskId:task.taskId,runId}} task={task} graphCursor={graphCursor} scope={scope}/><MemberOutputManifest identity={{workspaceId,rootSessionId,taskId:task.taskId,runId}} task={task} graphCursor={graphCursor} scope={scope}/></>}<ExecutionRecoveryForm state={creation}/>{state.report&&<MemberControlledFiles report={state.report} instanceId={workspaceInstanceId} anchor={effectObservationAnchor(recovery?.state)}/>}{state.report&&<MemberEffectObservation key={runId} report={state.report} anchor={effectObservationAnchor(recovery?.state)} context={recovery}/>}</>;
+  return <><ExecutionReportPanel state={state} taskId={task.taskId} runId={runId}/>{runId&&<><IsolatedExecutionPanel key={JSON.stringify([workspaceId,workspaceInstanceId,rootSessionId,task.taskId,runId])} identity={{workspaceId,rootSessionId,taskId:task.taskId,runId}} instanceId={workspaceInstanceId}/><MemberArtifactReport identity={{workspaceId,rootSessionId,taskId:task.taskId,runId}} task={task} graphCursor={graphCursor} scope={scope}/><MemberOutputManifest identity={{workspaceId,rootSessionId,taskId:task.taskId,runId}} task={task} graphCursor={graphCursor} scope={scope}/></>}<ExecutionRecoveryForm state={creation}/>{state.report&&<MemberControlledFiles report={state.report} instanceId={workspaceInstanceId} anchor={effectObservationAnchor(recovery?.state)}/>}{state.report&&<MemberEffectObservation key={runId} report={state.report} anchor={effectObservationAnchor(recovery?.state)} context={recovery}/>}</>;
 }

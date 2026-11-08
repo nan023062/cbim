@@ -1,4 +1,5 @@
 /**
+ * 隔离资源核实只读；清理接受原运行/执行/报告版本和当前实例，无法通过IPC指定路径或PID。
  * 受控补偿边界：四项桌面入口只查原操作、预览和显式提交新补偿；模型无补偿入口，原 unknown 和原日志不改写。
  * 请求预算仅路由完整身份的只读摘要；设置改变只影响新目标，IPC 没有清除预留或签发发送许可的入口。
  * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
@@ -18,6 +19,8 @@ import {WorkspacePackages} from '../resources/workspace-packages';
 import {fail} from '../../core/foundation/errors';
   /** 桌面 IPC 的操作路由；请求必须显式携带目标身份，不读取界面选中项。 */
 export async function dispatchApplication(app:ApplicationServices,action:string,args:any={}){switch(action){
+    case 'dispatch.isolatedExecutionReport':return app.isolatedExecutions(args.workspaceId).report(args);
+    case 'dispatch.isolatedExecutionCleanup':return app.isolatedExecutions(args.workspaceId).cleanup(args);
     case 'dispatch.controlledFileReport':return app.controlledFiles(args.workspaceId).report(args);
     case 'dispatch.fileCompensationPreview':return app.controlledFiles(args.workspaceId).preview(args);
     case 'dispatch.fileCompensate':return app.controlledFiles(args.workspaceId).compensate(args);

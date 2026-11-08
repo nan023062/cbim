@@ -3261,3 +3261,7 @@ PNG解码结果沿同一冻结要求、原文件/完整集合和真实工具结�
 ## 冻结范围成员执行
 
 领取与恢复按冻结全模块范围选择scopedTools预检，缺能力明确拒绝。Loop注册与描述须同时具备声明及实际端口；先核文件范围再进入原审批策略。范围知识不签发新任务权限，模型不可换解释器/预算/环境绕行。
+
+## 原隔离执行核实与清理
+
+MemberExecutionManager同时识别CONTROLLED_FILE_DRAIN_PENDING与EXECUTION_SCOPE_DRAIN_PENDING，保留句柄/工作区占用，后续close只执行finishDrain封存原运行，不释放占用给新业务执行。

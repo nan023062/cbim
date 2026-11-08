@@ -87,6 +87,10 @@ it('模型只有正文或改写了派发目标时，完成回合保留 completed
     expect((await f.store.read()).outbox.filter(m=>m.kind==='result')).toEqual([]);
   }finally{await f.cleanup()}
 });
+it('隔离资源未确认收尾时成员保留工作区占用，再次close只封存原运行',async()=>{
+ const f=await setup();let blocked=true;const close=LoopRuntime.prototype.close,mock=vi.spyOn(LoopRuntime.prototype,'close').mockImplementation(async function(this:LoopRuntime){if(blocked)throw Object.assign(Error('original isolation pending'),{code:'EXECUTION_SCOPE_DRAIN_PENDING'});return close.call(this)});
+ try{f.setBehavior('text');const task=await f.assign();await f.start(task.taskId,'execute');await until(()=>f.members.inspect(f.input(task.taskId)),v=>v.task.status==='running');await expect(f.members.close()).rejects.toMatchObject({code:'EXECUTION_SCOPE_DRAIN_PENDING'});expect(f.lease.canAcquire('other','execute')).toBe('workspace_conflict');expect((await f.store.read()).graphs[0].tasks.find(t=>t.taskId===task.taskId)?.result).toBeUndefined();blocked=false;await f.members.close();expect(f.lease.canAcquire('other','execute')).toBeUndefined();expect((await f.store.read()).runs!.find(r=>r.binding.taskId===task.taskId)?.status).toBe('interrupted');expect(f.prepare).toHaveBeenCalledTimes(1)}finally{blocked=false;mock.mockRestore();await f.cleanup()}
+});
 
 it('同任务不能重复领取；同岗位新任务独立实例，不借停止后的异常原生通道',async()=>{
   const f=await setup();try{

@@ -1,4 +1,5 @@
 /**
+ * 正式隔离Node装配可信生命周期：原canonical授权先核实，再记录宿主与目录身份；桌面服务与成员共用工作区租约。
  * 范围成员使用独立Win32读取/枚举和LPAC端口；原受控写、删除/移动两端再核冻结写范围，恢复文件复核复用同一受限读取。
  * 同一OutputManifestFiles装配成员结算、主目标与人工接受/继续，沿用原工作区身份和只读占用，不另建文件执行通道。
  * 工厂按已提交历史计算剩余额度，恢复闭包持有全链快照以保护早期未再触及文件。
@@ -43,6 +44,7 @@ import type {ResolvedLlm} from '../core/brain/llm/ports';
 import type {MemberStartOptions} from '../core/tasks/member-commands';
 import {workspaceMemberModelHash} from '../core/team/workspace-member-rules';
 import {ControlledFiles} from './workspace/controlled-files';
+import {IsolatedExecutions} from './workspace/isolated-executions';
 import {createArtifactTransitionPort} from './workspace/artifact-transitions';
 import type {ControlledFileTransport} from './platform/controlled-file-protocol';
 import {observeKnowledgeTransaction} from './workspace/knowledge-effect-reader';
@@ -79,6 +81,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
   };
   const checkpointPorts={inspect:inspectMember,normalizePath:normalizeArtifact,checkFiles:artifactFiles.checkFiles.bind(artifactFiles),nativeFingerprint:nativeFiles.read.bind(nativeFiles)};
   const controlledFiles=new ControlledFiles(workspace,store,lease,controlledTransport,inspectMember,()=>admission?.isCurrent()??true);
+  const isolatedExecutions=new IsolatedExecutions(workspace,store,lease,inspectMember,()=>admission?.isCurrent()??true);
   const dispatch=new WorkspaceDispatchService(workspace,store,{inspectMember,normalizeValidationPath:normalizeArtifact,checkValidationFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),checkManifest:(snapshot,signal)=>manifestFiles.check(snapshot,signal),inspectMain:async(rootSessionId,runId)=>{
     workspace.assert();
     const summary=await storage.read(path.join(workspace.paths.project(workspace.entry.id),'loop-engine','tasks',safeId(rootSessionId),safeId(runId)));
@@ -94,7 +97,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
         const checkpointState=await store.read(),previous=run.resumeFrom?checkpointState.runs?.find(old=>old.binding.runId===run.resumeFrom!.runId):undefined;
         if(run.resumeFrom&&(!previous?.checkpointProof||previous.checkpointProof.checkpoint.checkpointId!==run.resumeFrom.checkpointId))fail('MEMBER_CHECKPOINT_INVALID','续执行缺少原检查点证明');
         const executionScope=preparedExecutionScope(run.prepared.modules.map(module=>({contract:module.workflowContract})));
-        const scopedExecution=executionScope?new ScopedExecutionFiles(workspace.entry.path,executionScope,()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('EXECUTION_SCOPE_STOPPED','工作区正在停止')},[workspace.paths.userRoot,workspace.paths.installRoot]):undefined;
+        const scopedExecution=executionScope?new ScopedExecutionFiles(workspace.entry.path,executionScope,()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('EXECUTION_SCOPE_STOPPED','工作区正在停止')},[workspace.paths.userRoot,workspace.paths.installRoot],isolatedExecutions.forRun(run,task.scopeId!,executionScope)):undefined;
         const runFiles=scopedExecution?new ArtifactFiles(workspace.entry.path,()=>workspace.assert(),(file,signal)=>scopedExecution.snapshot(file,signal)):artifactFiles;
         const runManifests=scopedExecution?new OutputManifestFiles(workspace.entry.path,()=>workspace.assert(),{files:runFiles,lockDirectory:file=>scopedExecution.lockDirectory(file)}):manifestFiles;
         const controlled=task.scopeId?controlledFiles.forRun(run,task.scopeId):undefined;
@@ -145,5 +148,5 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
   });
   const workspaceMembers=new WorkspaceMembers(workspace,store,models,()=>admission?.isCurrent()??true);
   const moduleOwnerships=new ModuleOwnerships(workspace,store,()=>admission?.isCurrent()??true);
-  return {dispatch,members,workspaceMembers,moduleOwnerships,controlledFiles,requestBudgets};
+  return {dispatch,members,workspaceMembers,moduleOwnerships,controlledFiles,isolatedExecutions,requestBudgets};
 }

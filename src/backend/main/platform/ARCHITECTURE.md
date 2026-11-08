@@ -19,6 +19,8 @@
 | [isolated-node-protocol.ts](isolated-node-protocol.ts) | 声明平台隔离执行器的有界输入与返回事实，供可信装配和独立平台验收使用。 |
 | [isolated-node-win32.ts](isolated-node-win32.ts) | 以 Win32 LPAC Token、显式 ACL 和 Job Object 启动并收束真实程序，属于 Main 平台边界。 |
 | [isolated-node.ts](isolated-node.ts) | 把可信调用方给出的字节快照和本机执行器复制到私有目录，执行有界 LPAC 程序并返回真实平台事实。 |
+| [isolation-record.ts](isolation-record.ts) | Main 私有的隔离资源身份和生命周期协议，连接执行器、可靠记录与核实平台。 |
+| [isolation-recovery-win32.ts](isolation-recovery-win32.ts) | 核实原宿主创建身份、命名 Job 和自有目录，并以固定 Win32 句柄回收残留。 |
 | [locking.ts](locking.ts) | KernelLock：使用 Windows mutex 或 POSIX flock，防止跨进程并发持有。 |
 | [native-session-files.ts](native-session-files.ts) | 在本工作区受管 Pi 会话目录内核实已关闭的原生上下文，供成员检查点与续执行使用。 |
 | [output-manifest-files.ts](output-manifest-files.ts) | 在固定工作区内枚举声明范围的全部目录和普通文件，生成完整产物观察并按原集合复核。 |
@@ -350,7 +352,7 @@ class N_src_backend_main_platform_isolated_node_win32_ts["isolated-node-win32.ts
 }
 ```
 
-成员 1/2（同名节点为同一声明，跨图合并阅读）。
+成员 1/3（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -359,11 +361,13 @@ class N_src_backend_main_platform_isolated_node_win32_ts["isolated-node-win32.ts
 }
 class N_src_backend_main_platform_isolated_node_win32_ts_Win32IsolatedNode["Win32IsolatedNode"] {
   +profileName
+  +jobName
   +capabilityName
   +ownerSid
   +packageSid
   +grant()
   +start()
+  +resume()
   +read()
   +state()
   +terminate()
@@ -372,13 +376,11 @@ class N_src_backend_main_platform_isolated_node_win32_ts_Win32IsolatedNode["Win3
   -api
   -sid
   -capability
-  -allocated
-  -handles
 }
 N_src_backend_main_platform_isolated_node_win32_ts ..> N_src_backend_main_platform_isolated_node_win32_ts_Win32IsolatedNode : 声明
 ```
 
-成员 2/2（同名节点为同一声明，跨图合并阅读）。
+成员 2/3（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -386,6 +388,8 @@ class N_src_backend_main_platform_isolated_node_win32_ts["isolated-node-win32.ts
   <<module>>
 }
 class N_src_backend_main_platform_isolated_node_win32_ts_Win32IsolatedNode["Win32IsolatedNode"] {
+  -allocated
+  -handles
   -attributes
   -job
   -process
@@ -394,11 +398,24 @@ class N_src_backend_main_platform_isolated_node_win32_ts_Win32IsolatedNode["Win3
   -writePipe
   -profileCreated
   -used
+  -resumed
   -pins
   -check()
   -keep()
   -release()
   -stringSid()
+}
+N_src_backend_main_platform_isolated_node_win32_ts ..> N_src_backend_main_platform_isolated_node_win32_ts_Win32IsolatedNode : 声明
+```
+
+成员 3/3（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_isolated_node_win32_ts["isolated-node-win32.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_isolated_node_win32_ts_Win32IsolatedNode["Win32IsolatedNode"] {
   -token()
   -attribute()
 }
@@ -426,12 +443,110 @@ class N_src_backend_main_platform_isolated_node_ts_IsolatedNodeOptions["Isolated
   +executable
   +koffiPath
   +onStarted
+  +lifecycle
+  +onCleanupPending
   +onSettled
 }
 N_src_backend_main_platform_isolated_node_ts ..> N_src_backend_main_platform_isolated_node_ts_IsolatedNodeOptions : 声明
 ```
 
-直接依赖：[isolated-node-win32.ts](isolated-node-win32.ts)、[isolated-node-protocol.ts](isolated-node-protocol.ts)。
+直接依赖：[isolated-node-win32.ts](isolated-node-win32.ts)、[isolation-recovery-win32.ts](isolation-recovery-win32.ts)、[isolation-record.ts](isolation-record.ts)、[isolated-node-protocol.ts](isolated-node-protocol.ts)。
+
+### isolation-record.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_isolation_record_ts["isolation-record.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_isolation_record_ts_IsolationProcess["IsolationProcess"] {
+  <<type>>
+
+}
+N_src_backend_main_platform_isolation_record_ts ..> N_src_backend_main_platform_isolation_record_ts_IsolationProcess : 声明
+class N_src_backend_main_platform_isolation_record_ts_IsolationDirectory["IsolationDirectory"] {
+  <<type>>
+
+}
+N_src_backend_main_platform_isolation_record_ts ..> N_src_backend_main_platform_isolation_record_ts_IsolationDirectory : 声明
+class N_src_backend_main_platform_isolation_record_ts_IsolationResource["IsolationResource"] {
+  <<type>>
+
+}
+N_src_backend_main_platform_isolation_record_ts ..> N_src_backend_main_platform_isolation_record_ts_IsolationResource : 声明
+class N_src_backend_main_platform_isolation_record_ts_IsolationOrigin["IsolationOrigin"] {
+  <<type>>
+
+}
+N_src_backend_main_platform_isolation_record_ts ..> N_src_backend_main_platform_isolation_record_ts_IsolationOrigin : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_isolation_record_ts["isolation-record.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_isolation_record_ts_IsolationRecord["IsolationRecord"] {
+  <<type>>
+
+}
+N_src_backend_main_platform_isolation_record_ts ..> N_src_backend_main_platform_isolation_record_ts_IsolationRecord : 声明
+class N_src_backend_main_platform_isolation_record_ts_IsolationLifecycle["IsolationLifecycle"] {
+  <<interface>>
+  +prepared()
+  +started()
+  +settled()
+  +cleaned()
+}
+N_src_backend_main_platform_isolation_record_ts ..> N_src_backend_main_platform_isolation_record_ts_IsolationLifecycle : 声明
+```
+
+直接依赖：[../../core/tasks/controlled-file-operation.ts](../../core/tasks/controlled-file-operation.ts)、[../../core/tasks/isolated-execution-recovery.ts](../../core/tasks/isolated-execution-recovery.ts)。
+
+### isolation-recovery-win32.ts
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_isolation_recovery_win32_ts["isolation-recovery-win32.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_isolation_recovery_win32_ts_Win32IsolationRecovery["Win32IsolationRecovery"] {
+  +processIdentity()
+  +host()
+  +job()
+  +directoryIdentity()
+  +lockTree()
+  +deleteProfile()
+  -k
+  -api
+  -check()
+  -close()
+  -processHandle()
+  -processFacts()
+  -final()
+  -information()
+  -open()
+  -parents()
+}
+N_src_backend_main_platform_isolation_recovery_win32_ts ..> N_src_backend_main_platform_isolation_recovery_win32_ts_Win32IsolationRecovery : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_isolation_recovery_win32_ts["isolation-recovery-win32.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_isolation_recovery_win32_ts_Win32IsolationRecovery["Win32IsolationRecovery"] {
+  -rootPath()
+}
+N_src_backend_main_platform_isolation_recovery_win32_ts ..> N_src_backend_main_platform_isolation_recovery_win32_ts_Win32IsolationRecovery : 声明
+```
+
+直接依赖：[isolation-record.ts](isolation-record.ts)。
 
 ### locking.ts
 
@@ -568,7 +683,9 @@ class N_src_backend_main_platform_scoped_execution_files_ts_ScopedExecutionFiles
   -root
   -assertCurrent
   -protectedRoots
+  -lifecycle
   -unsettled
+  -cleanupRetries
   -koffiPath
 }
 N_src_backend_main_platform_scoped_execution_files_ts ..> N_src_backend_main_platform_scoped_execution_files_ts_ScopedExecutionFiles : 声明
@@ -578,7 +695,7 @@ class N_src_backend_main_platform_scoped_execution_files_ts_external_ScopedExecu
 N_src_backend_main_platform_scoped_execution_files_ts_external_ScopedExecutionPort <|.. N_src_backend_main_platform_scoped_execution_files_ts_ScopedExecutionFiles
 ```
 
-直接依赖：[../../core/workspace/execution-scope.ts](../../core/workspace/execution-scope.ts)、[../../core/tasks/scoped-execution.ts](../../core/tasks/scoped-execution.ts)、[../../core/brain/run-scoped-execution.ts](../../core/brain/run-scoped-execution.ts)、[controlled-file-win32.ts](controlled-file-win32.ts)、[isolated-node.ts](isolated-node.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
+直接依赖：[../../core/workspace/execution-scope.ts](../../core/workspace/execution-scope.ts)、[../../core/tasks/scoped-execution.ts](../../core/tasks/scoped-execution.ts)、[../../core/brain/run-scoped-execution.ts](../../core/brain/run-scoped-execution.ts)、[controlled-file-win32.ts](controlled-file-win32.ts)、[isolated-node.ts](isolated-node.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/isolated-execution-recovery.ts](../../core/tasks/isolated-execution-recovery.ts)、[isolation-record.ts](isolation-record.ts)。
 
 ### secrets.ts
 
@@ -661,7 +778,30 @@ class N_src_backend_main_platform_isolated_node_ts["isolated-node.ts"] {
 class N_src_backend_main_platform_isolated_node_win32_ts["isolated-node-win32.ts"] {
   <<module>>
 }
+class N_src_backend_main_platform_isolation_recovery_win32_ts["isolation-recovery-win32.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_isolation_record_ts["isolation-record.ts"] {
+  <<module>>
+}
+N_src_backend_main_platform_controlled_file_win32_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts : 导入依赖
+N_src_backend_main_platform_isolated_node_ts ..> N_src_backend_main_platform_isolated_node_win32_ts : 导入依赖
+N_src_backend_main_platform_isolated_node_ts ..> N_src_backend_main_platform_isolation_recovery_win32_ts : 导入依赖
+N_src_backend_main_platform_isolated_node_ts ..> N_src_backend_main_platform_isolation_record_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_isolated_node_ts["isolated-node.ts"] {
+  <<module>>
+}
 class N_src_backend_main_platform_isolated_node_protocol_ts["isolated-node-protocol.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_isolation_recovery_win32_ts["isolation-recovery-win32.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_isolation_record_ts["isolation-record.ts"] {
   <<module>>
 }
 class N_src_backend_main_platform_output_manifest_files_ts["output-manifest-files.ts"] {
@@ -670,10 +810,16 @@ class N_src_backend_main_platform_output_manifest_files_ts["output-manifest-file
 class N_src_backend_main_platform_artifact_files_ts["artifact-files.ts"] {
   <<module>>
 }
-N_src_backend_main_platform_controlled_file_win32_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts : 导入依赖
-N_src_backend_main_platform_isolated_node_ts ..> N_src_backend_main_platform_isolated_node_win32_ts : 导入依赖
+class N_src_backend_main_platform_scoped_execution_files_ts["scoped-execution-files.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_controlled_file_win32_ts["controlled-file-win32.ts"] {
+  <<module>>
+}
 N_src_backend_main_platform_isolated_node_ts ..> N_src_backend_main_platform_isolated_node_protocol_ts : 导入依赖
+N_src_backend_main_platform_isolation_recovery_win32_ts ..> N_src_backend_main_platform_isolation_record_ts : 导入依赖
 N_src_backend_main_platform_output_manifest_files_ts ..> N_src_backend_main_platform_artifact_files_ts : 导入依赖
+N_src_backend_main_platform_scoped_execution_files_ts ..> N_src_backend_main_platform_controlled_file_win32_ts : 导入依赖
 ```
 
 ```mermaid
@@ -681,14 +827,14 @@ classDiagram
 class N_src_backend_main_platform_scoped_execution_files_ts["scoped-execution-files.ts"] {
   <<module>>
 }
-class N_src_backend_main_platform_controlled_file_win32_ts["controlled-file-win32.ts"] {
-  <<module>>
-}
 class N_src_backend_main_platform_isolated_node_ts["isolated-node.ts"] {
   <<module>>
 }
-N_src_backend_main_platform_scoped_execution_files_ts ..> N_src_backend_main_platform_controlled_file_win32_ts : 导入依赖
+class N_src_backend_main_platform_isolation_record_ts["isolation-record.ts"] {
+  <<module>>
+}
 N_src_backend_main_platform_scoped_execution_files_ts ..> N_src_backend_main_platform_isolated_node_ts : 导入依赖
+N_src_backend_main_platform_scoped_execution_files_ts ..> N_src_backend_main_platform_isolation_record_ts : 导入依赖
 ```
 
 
@@ -773,3 +919,7 @@ ArtifactFiles.validateImage将同一安全句柄得到的≤1 MiB文件字节同
 ## 冻结范围成员执行
 
 ScopedExecutionFiles固定原root/范围/生命周期断言，真实Win32仅读句柄持全部祖先防替换，普通单链接文件最多1MiB，输入合计8MiB；目录枚举持实际目标及祖先句柄。Node只接受这些快照，预算来自冻结声明；输出仅在原Job全部退出后读取，不自动写回。开发Electron从项目依赖解析koffi，打包使用resources/koffi。平台失败仅在原资源确认收束后通知onSettled；未知保持任务占用。
+
+## 原隔离执行核实与清理
+
+IsolationLifecycle在创建profile前保存私有来源，在恢复挂起线程前保存真实进程创建时间；失败不执行脚本。Win32IsolatedNode使用当前登录会话唯一命名Job，重名拒绝且不终止已有Job。Win32IsolationRecovery核FILETIME/session，只有原宿主退出后才查询Job，避免提前持句柄影响KILL_ON_JOB_CLOSE。暂存目录核volume/fileId、owner随机值与真实临时父目录，扫描并持有全部原对象句柄后才删；链接/硬链接/替换/超限拒绝，最多4096对象和64层。清理不按PID终止、不创建profile或重跑程序。原运行异常收尾通过闭包重试同一资源；没有分配资源的前置失败释放等待标记。

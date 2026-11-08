@@ -409,3 +409,7 @@ MemberValidationPanel 显式显示 CSV 表格检查或 JSON 结构检查；CSV �
 ### PNG 验证显示
 
 MemberValidationPanel显式显示PNG图片检查与损坏/不支持/像素尺寸/通道诊断；同一公开事件只保留文件和规则指纹，不渲染或返回像素正文。暂存、rejected、passed和后续失效仍分开，程序符合不显示为人工视觉验收。
+
+## 原隔离执行核实与清理
+
+IsolatedExecutionPanel位于原成员运行的独立核实区域；挂载、切换、重开不发查询或清理。显式核实按workspace/root/task/run和当前实例隔离迟到响应，报告经schema及完整身份核对。只有新鲜、可清理的报告启用按钮；未知回复先核实，原commandId跨重开从服务端报告取回，不能因未知创建第二个清理。成功展示原资源已清理，原任务结果保持不变；不重试脚本或修改草稿/图。

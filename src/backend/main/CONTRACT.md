@@ -147,3 +147,7 @@ CSV 能力由同一成员工厂的真实平台实现公开；知识声明、岗�
 ## 冻结范围成员执行
 
 成员工厂只对已冻结executionScope装配ScopedExecutionFiles、受限ArtifactFiles/OutputManifestFiles；原文件受控写和删除移动逐次再次核范围。能力预检独立scopedTools；主会话不获得范围业务执行工具。历史桌面核实仍是独立可信只读流程，不借模型扩大范围。
+
+## 原隔离执行核实与清理
+
+Application按当前工作区装配唯一IsolatedExecutions，共享DispatchStore、inspectMember和WorkspaceExecutionLease。关闭先排空成员、再等待隔离清理账本、最后释放工作区锁；未知物理退出保持占用并允许再次原关闭。

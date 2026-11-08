@@ -22,6 +22,7 @@
 | [governance.ts](governance.ts) | 向业务架构界面公开模块知识治理的纯数据与严格校验协议。 |
 | [human-continue.ts](human-continue.ts) | 公开按已保存人工决定继续原目标的严格请求与回执，连接桌面和调度入口。 |
 | [human-decisions.ts](human-decisions.ts) | 向桌面公开人工决定的序列化请求、依据预览与不可变记录。 |
+| [isolated-executions.ts](isolated-executions.ts) | 向桌面导出原隔离执行核实与清理的公开 DTO。 |
 | [knowledge-source.ts](knowledge-source.ts) | 向桌面公开知识来源身份、采纳预览和当前核实状态的纯数据协议。 |
 | [models.ts](models.ts) | 模型配置界面消费的公开模型信息与停止原因格式化。 |
 | [module-ownership.ts](module-ownership.ts) | 公开模块负责人控制面的纯数据协议，供业务架构、项目岗位与 Main IPC 使用。 |
@@ -228,6 +229,16 @@ class N_src_bridge_contracts_human_decisions_ts["human-decisions.ts"] {
 }
 ```
 直接依赖：[../../backend/core/tasks/human-decisions.ts](../../backend/core/tasks/human-decisions.ts)。
+
+### isolated-executions.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_isolated_executions_ts["isolated-executions.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../backend/core/tasks/isolated-execution-recovery.ts](../../backend/core/tasks/isolated-execution-recovery.ts)。
 
 ### knowledge-source.ts
 
@@ -830,3 +841,7 @@ output-manifest.ts 只公开严格清单 DTO；Node 哈希、日志核实及平�
 ## R07-B2 原删除与移动证明
 
 完整清单引用可携带严格原删除/移动证明；Bridge 只重导出 DTO，不公开句柄、Win32 或日志验证实现。旧清单无 operations 不补造；完整候选的 proof 才要求覆盖全部冻结操作。
+
+## 原隔离执行核实与清理
+
+isolated-executions只重导出Core的公开核实和清理协议，不引用Main对象或私有资源字段。

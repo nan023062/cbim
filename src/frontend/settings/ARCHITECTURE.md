@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-模型、资源仓库、GitHub 反馈连接、并发及新目标软限额配置。GitHub 采用 Device Flow，页面仅持公开 Client ID 与短期授权码；资源服务器账号仍为占位。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。 正式版展示当前及新版日志，分别点击检查、下载与重启安装；反馈预置公开产品连接。
+模型、资源仓库、GitHub 反馈连接、并发及新目标软限额配置。GitHub 采用 Device Flow，页面仅持公开 Client ID 与短期授权码；资源服务器账号仍为占位。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。 反馈预置公开产品连接；版本更新迁到账号菜单的独立弹窗，设置表单不因查看日志而卸载。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -17,9 +17,7 @@
 | [GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx) | 设置页的 GitHub 反馈连接入口，展示设备授权码及固定目标仓库。 |
 | [models.css](models.css) | 供应商列表和模型表单布局。 |
 | [ModelSettings.tsx](ModelSettings.tsx) | 设置页的自定义供应商、连接表单与模型目录编辑器。 |
-| [SettingsView.tsx](SettingsView.tsx) | 软件版本与手动更新、模型供应商、运行并发、新目标软限额、GitHub 反馈连接、仓库与共享服务设置。 |
-| [software-updates.css](software-updates.css) | 对应界面的布局与视觉样式。 |
-| [SoftwareUpdates.tsx](SoftwareUpdates.tsx) | 设置页的版本／日志／手动更新入口，以及外壳中的新版提醒。 |
+| [SettingsView.tsx](SettingsView.tsx) | 模型供应商、运行并发、新目标软限额、GitHub 反馈连接、仓库与共享服务设置；版本与更新由账号菜单独立打开。 |
 
 ## 架构类图
 
@@ -154,29 +152,7 @@ class N_src_frontend_settings_SettingsView_tsx["SettingsView.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[ModelSettings.tsx](ModelSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx)、[SoftwareUpdates.tsx](SoftwareUpdates.tsx)。
-
-### software-updates.css
-
-```mermaid
-classDiagram
-class N_src_frontend_settings_software_updates_css["software-updates.css"] {
-  <<stylesheet>>
-}
-```
-
-### SoftwareUpdates.tsx
-
-```mermaid
-classDiagram
-class N_src_frontend_settings_SoftwareUpdates_tsx["SoftwareUpdates.tsx"] {
-  <<component>>
-  +SoftwareUpdates()
-  +SoftwareUpdateNotice()
-}
-```
-
-直接依赖：[../../bridge/contracts/desktop-updates.ts](../../bridge/contracts/desktop-updates.ts)、[software-updates.css](software-updates.css)。
+直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[ModelSettings.tsx](ModelSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx)。
 
 ### 本目录调用边界
 
@@ -220,24 +196,9 @@ class N_src_frontend_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
 class N_src_frontend_settings_GitHubFeedbackSettings_tsx["GitHubFeedbackSettings.tsx"] {
   <<component>>
 }
-class N_src_frontend_settings_SoftwareUpdates_tsx["SoftwareUpdates.tsx"] {
-  <<component>>
-}
 N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_AdmissionSettings_tsx : 导入依赖
 N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_BudgetSettings_tsx : 导入依赖
 N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_GitHubFeedbackSettings_tsx : 导入依赖
-N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_SoftwareUpdates_tsx : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_frontend_settings_SoftwareUpdates_tsx["SoftwareUpdates.tsx"] {
-  <<component>>
-}
-class N_src_frontend_settings_software_updates_css["software-updates.css"] {
-  <<stylesheet>>
-}
-N_src_frontend_settings_SoftwareUpdates_tsx ..> N_src_frontend_settings_software_updates_css : 导入依赖
 ```
 
 
@@ -255,7 +216,7 @@ N_src_frontend_settings_SoftwareUpdates_tsx ..> N_src_frontend_settings_software
 
 # 设置界面
 
-`SoftwareUpdates` 展示实际当前版本、离线本版日志与公开新版日志。页面只轮询本机状态，检查／下载／重启安装分别由用户点击；日志为纯文本。下载完成后按钮明确提示停止任务与重启，常规退出不安装缓存。`SoftwareUpdateNotice` 只打开设置，遵循原有未提交编辑离页检查。
+版本与更新已迁到左下角账号菜单，由独立 [updates](../updates/ARCHITECTURE.md) 视图展示；设置页不再重复装配更新组件。打开更新弹窗不会卸载设置页，模型、预算与 GitHub 反馈连接草稿继续由各表单持有。
 
 GitHub 连接已预置公开产品配置；普通用户直接连接，高级字段保留在折叠区，不要求复制 Client ID。
 

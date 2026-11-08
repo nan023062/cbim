@@ -70,6 +70,9 @@ N_src_frontend_team ..> N_src_frontend_resources : 导入依赖
 
 ```mermaid
 classDiagram
+class N_src_frontend_updates["updates/"] {
+  <<directory>>
+}
 class N_src_frontend_workspace["workspace/"] {
   <<directory>>
 }
@@ -89,6 +92,7 @@ class N_src_frontend_main_tsx["main.tsx"] {
 - `settings` → `tasks`：导入。
 - `shell` → `resources`：导入。
 - `shell` → `settings`：导入。
+- `shell` → `updates`：导入。
 - `shell` → `components`：导入。
 - `shell` → `conversation`：导入。
 - `shell` → `runtime`：导入。
@@ -105,6 +109,7 @@ class N_src_frontend_main_tsx["main.tsx"] {
 - `team` → `components`：导入。
 - `team` → `resources`：导入。
 - `team` → `workspace`：导入。
+- `updates` → `components`：导入。
 - `workspace` → `knowledge`：导入。
 - `workspace` → `team`：导入。
 - `workspace` → `components`：导入。
@@ -121,10 +126,11 @@ class N_src_frontend_main_tsx["main.tsx"] {
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识问题、预览提交、静态表单与共用来源说明。展示当前、退役、待采纳及待核实状态，不从路径或正文相同猜来源连续；来源组件无提交副作用。固定编辑基线，模块维护人同事务确认，业务架构展示位于workspace。
 - [resources/](resources/ARCHITECTURE.md)：统一资源仓库的查看、编辑、静态包发布与下载应用。人才按团队/Agent/Skill复用，业务按整套架构应用；工作区身份及预览版本固定。设置通过统一入口打开。
 - [runtime/](runtime/ARCHITECTURE.md)：全局只读运行管理。分别呈现目标周期、人员、任务、准入等待和已报告消耗；单次在途游标读取保留未变行，隐藏时退订，按真实身份定位既有会话而不执行任务。
-- [settings/](settings/ARCHITECTURE.md)：模型、资源仓库、GitHub 反馈连接、并发及新目标软限额配置。GitHub 采用 Device Flow，页面仅持公开 Client ID 与短期授权码；资源服务器账号仍为占位。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。 正式版展示当前及新版日志，分别点击检查、下载与重启安装；反馈预置公开产品连接。
-- [shell/](shell/ARCHITECTURE.md)：工作区侧栏、会话选择、用户栏与右侧扩展页签；会话区与项目级视图区分开。向会话传递活动页签状态，隐藏页签保留草稿/节点选择并降低成员与任务图同步频率。 软件内新版提醒只打开设置，沿用编辑离页检查，不隐式下载或重启。
+- [settings/](settings/ARCHITECTURE.md)：模型、资源仓库、GitHub 反馈连接、并发及新目标软限额配置。GitHub 采用 Device Flow，页面仅持公开 Client ID 与短期授权码；资源服务器账号仍为占位。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。 反馈预置公开产品连接；版本更新迁到账号菜单的独立弹窗，设置表单不因查看日志而卸载。
+- [shell/](shell/ARCHITECTURE.md)：工作区侧栏、会话选择、用户栏与右侧扩展页签；会话区与项目级视图区分开。向会话传递活动页签状态，隐藏页签保留草稿/节点选择并降低成员与任务图同步频率。 账号菜单和新版提醒打开独立更新弹窗，当前页面及草稿保持挂载，不隐式下载或重启。
 - [tasks/](tasks/ARCHITECTURE.md)：主会话任务图、目标与准入状态；依赖追加/替换只读历史核对身份和节点修订，摘要按实际版本选择最新，图沿真实启用边排列，不补造结果。运行内补充按真实接收记录显示，未知优先旧审阅，同版摘要/详情核对后增量呈现。根停止使用独立在途标记，插入等待不锁住停止按钮。等待补充共享多来源草稿与导入锁，原等待选择代次阻止迟到导入；明确目录/链接/网页/授权仓库来源，普通聊天草稿独立。流程、验证、检查点、基线、人工决定与用量保留各自冻结身份和证据，不把历史当当前验收。 成员卡片、节点详情和目标分配展示原岗位及模型；手动核实当前配置独立显示差异，迟到响应按原任务/修订隔离。 主对话、图和详情区分显式交接放弃与普通封存，保留原岗位和运行；审阅中的原/新任务仅按同周期真实节点导航。 成员详情可选择原调用并显式观察；处置先保存本机稳定请求，丢回包只查原命令。历史选择与后续关系按同一处置展示，迟到读取不覆盖其他来源；各面板共享根会话时效，PublicDispatchScope 真实提供新核实和修复来源，沿既有资格创建。 同一影响面板分别显示原工具失败和原知识事务阶段，明确处置继续绑定原观察，查询不取得写权限。 原调用卡分别显示工具/文件操作/补偿结果；显式预览读取当前文件，提交前保存固定本机请求，丢回复只查原命令；查询错误保留已知拒绝/终态，预览过期不能提交。
 - [team/](team/ARCHITECTURE.md)：工作区唯一的静态Team/组/Agent图、继承与人才复用，节点按Session查看只读履历。岗位面板独立登记、明确采纳和暂停退休；改名和模型更新保留原能力来源。来源屏障首次拒绝可重新编辑，未知仍查原命令；反查责任委托workspace，不启动模型。 当前岗位启用不是运行许可，真正执行还核模块责任和原计划；编辑不会搬运历史。
+- [updates/](updates/ARCHITECTURE.md)：账号入口的版本与更新弹窗、最近发布说明及新版提醒。共享窗口级本机更新快照；查看日志保留原页面与草稿，检查、下载和重启安装分别显式操作。只依赖公开 IPC，不导入后端更新实现。
 - [workspace/](workspace/ARCHITECTURE.md)：工作区唯一的工程/模块图及自身Workflow。负责人面板展示来源和有界历史，支持同负责人明确采纳当前来源；原回执必须匹配同一关系、版本及owner，未知不换命令。知识编辑和整架构复用委托knowledge/resources；登记不移交旧任务。 关联任务包含新旧协议节点，负责人变更不移交旧任务；实际领取重核原版本。
 
 [返回上层](../ARCHITECTURE.md)。

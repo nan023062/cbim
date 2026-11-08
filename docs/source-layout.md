@@ -46,6 +46,7 @@ src/
     diagnostics/        工作区知识问题诊断
     shell/              侧栏、用户栏及扩展区域
     settings/           应用设置
+    updates/            账号入口的版本日志、更新弹窗及共享本机更新状态
     resources/          三类共享资源
     automation/         工作区自动化展示
     components/         公共展示组件

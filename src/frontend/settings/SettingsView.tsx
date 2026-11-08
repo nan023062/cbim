@@ -1,5 +1,5 @@
 /**
- * 作用定位：软件版本与手动更新、模型供应商、运行并发、新目标软限额、GitHub 反馈连接、仓库与共享服务设置。
+ * 作用定位：模型供应商、运行并发、新目标软限额、GitHub 反馈连接、仓库与共享服务设置；版本与更新由账号菜单独立打开。
  * 设计原因：模型、并发、周期软限额在固定位置独立加载和保存；仓库读取不重挂载表单或丢失草稿，新额度不改写正在执行的目标。
  */
 import {useEffect,useState} from 'react';
@@ -8,7 +8,6 @@ import {ModelSettings} from './ModelSettings';
 import {AdmissionSettings} from './AdmissionSettings';
 import {BudgetSettings} from './BudgetSettings';
 import {GitHubFeedbackSettings} from './GitHubFeedbackSettings';
-import {SoftwareUpdates} from './SoftwareUpdates';
 const api=window.cbim;
 export function SettingsView(){
   const [status,setStatus]=useState<RepositoryStatus>(),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(true);
@@ -25,7 +24,6 @@ export function SettingsView(){
     <p className="inline-note">链接器、人才市场、业务模板共用当前身份对应的仓库。登录后自动切换，不搬迁或合并本地资源。</p>
     {error&&<div className="shell-alert" role="alert">{error}</div>}
     {notice&&<p role="status">{notice}</p>}
-    <SoftwareUpdates/>
     <ModelSettings/>
     <AdmissionSettings/>
     <BudgetSettings/>

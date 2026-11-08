@@ -43,6 +43,27 @@ async function fixture(options:{secure?:boolean}={}){
 }
 
 describe('GitHub device authorization',()=>{
+  it('distinguishes local authorization pending from a saved connection without polling as a side effect',async()=>{
+    const f=await fixture(),started=await f.service.auth.begin(config);
+    f.advance(5000);expect(await f.service.auth.checkConnection()).toEqual({code:'GITHUB_AUTH_PENDING'});
+    expect(f.calls).toHaveLength(1);expect(await f.service.prepare(binding,()=>{})).toBeUndefined();
+    await f.service.auth.poll({flowId:started.flow!.id});expect(await f.service.auth.checkConnection()).toMatchObject({code:'GITHUB_CONNECTED'});
+    await f.service.auth.disconnect();await f.service.auth.begin(config);f.advance(900000);
+    expect(await f.service.auth.checkConnection()).toEqual({code:'GITHUB_NOT_CONNECTED'});
+    await f.service.auth.begin(config);await f.service.auth.cancel();expect(await f.service.auth.checkConnection()).toEqual({code:'GITHUB_NOT_CONNECTED'});
+  });
+  it('diagnoses local connection and generation without decrypting credentials or requesting GitHub',async()=>{
+    const f=await fixture();expect(await f.service.auth.checkConnection()).toEqual({code:'GITHUB_NOT_CONNECTED'});expect(f.calls).toHaveLength(0);
+    await f.login();const scope=(await f.service.prepare(binding,()=>{}))!.scope,calls=f.calls.length,decrypt=vi.spyOn(cipher,'decrypt');
+    expect(await f.service.auth.checkConnection(scope)).toEqual({code:'GITHUB_CONNECTED',repository:{owner:'test-owner',repo:'cbim'}});
+    expect(f.calls).toHaveLength(calls);expect(decrypt).not.toHaveBeenCalled();
+    await f.service.auth.disconnect();expect(await f.service.auth.checkConnection(scope)).toEqual({code:'GITHUB_NOT_CONNECTED'});
+    await f.login();expect(await f.service.auth.checkConnection(scope)).toMatchObject({code:'GITHUB_CONNECTION_CHANGED'});
+    const available=vi.spyOn(cipher,'available').mockReturnValue(false);expect(await f.service.auth.checkConnection()).toMatchObject({code:'GITHUB_SECRET_STORAGE'});available.mockRestore();
+    const file=path.join(f.directory,'connection.json'),data=JSON.parse(await fs.readFile(file,'utf8'));data.connection.expiresAt=1;await fs.writeFile(file,JSON.stringify(data));
+    expect(await f.service.auth.checkConnection()).toMatchObject({code:'GITHUB_EXPIRED'});
+    await fs.writeFile(file,'broken private settings');expect(await f.service.auth.checkConnection()).toEqual({code:'GITHUB_SETTINGS'});
+  });
   it('requires safe storage before any network request',async()=>{const f=await fixture({secure:false});await expect(f.service.auth.begin(config)).rejects.toMatchObject({code:'GITHUB_SECRET_STORAGE'});expect(f.calls).toHaveLength(0)});
   it('keeps token/device code private and saves only encrypted credential',async()=>{
     const f=await fixture(),started=await f.service.auth.begin(config);expect(JSON.stringify(started)).not.toContain('PRIVATE_DEVICE_CODE');expect(started.flow?.userCode).toBe('ABCD-EFGH');

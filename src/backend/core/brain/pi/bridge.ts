@@ -1,12 +1,12 @@
 /**
  * 作用定位：大脑 执行层：内部知识 Schema/调用的本机临时桥及 Pi 扩展，工具授权先落盘再放行。
- * 设计原因：把工具 Schema、一次性授权和可信来源交给受控扩展；成员数据和人工决定系统转交分别写成 custom，真实文本补充仍是用户消息。工具调用 ID 透传且结果再次校验，随机凭据保护单轮调用。
+ * 设计原因：把工具 Schema、一次性授权和可信来源交给受控扩展；成员数据和人工决定系统转交分别写成 custom，真实文本补充仍是用户消息。工具调用 ID 透传且结果再次校验，随机凭据保护单轮调用。模型启动前回报真实活动工具名并核对注册清单，不记录参数或凭据。
  */
 import http from 'node:http';
 import {randomBytes,timingSafeEqual} from 'node:crypto';
 import type {ToolCall,ToolDecision} from '../types';
 import {validateToolResult} from '../../tools/results';
-import {Fault} from '../../foundation/errors';
+import {Fault,fail} from '../../foundation/errors';
 import {checkedRunInputSource,type RunInputSource} from '../input-source';
 
 /** 从注入知识服务清单返回的工具 Schema，禁止仅凭名称伪造参数。 */
@@ -18,7 +18,7 @@ export interface KnowledgeBridge {
   call(name:string,args:Record<string,unknown>,signal:AbortSignal,toolCallId?:string):Promise<unknown>;
 }
 /** 临时桥只接受本次实例令牌；工具授权绑定调用 ID、名称和原始参数。 */
-export async function openBridge(knowledge:KnowledgeBridge,beforeTool:(call:ToolCall)=>Promise<ToolDecision>,onContext?:(usage:{tokens:number|null;contextWindow:number})=>Promise<void>,onRequestLimit?:(limit:number)=>Promise<void>){
+export async function openBridge(knowledge:KnowledgeBridge,beforeTool:(call:ToolCall)=>Promise<ToolDecision>,onContext?:(usage:{tokens:number|null;contextWindow:number})=>Promise<void>,onRequestLimit?:(limit:number)=>Promise<void>,onTools?:(catalog:{expected:string[];active:string[];missing:string[]})=>Promise<void>){
   const tools=await knowledge.list();
   if(tools.some(t=>!/^cbim_[a-z0-9_]+$/.test(t.name)))throw Error('CBIM 工具名必须使用 cbim_ 前缀');
   const names=new Set(tools.map(t=>t.name)),token=randomBytes(32).toString('hex');
@@ -30,8 +30,16 @@ export async function openBridge(knowledge:KnowledgeBridge,beforeTool:(call:Tool
     const controller=new AbortController();res.on('close',()=>{if(!res.writableEnded)controller.abort()});
     try{
       if(req.method==='GET'&&req.url==='/catalog'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(tools));return}
-      if(req.method!=='POST'||!['/gate','/call','/context','/request-limit'].includes(req.url||'')){res.writeHead(404).end();return}
+      if(req.method!=='POST'||!['/gate','/call','/context','/request-limit','/tools'].includes(req.url||'')){res.writeHead(404).end();return}
       let body='';for await(const chunk of req){body+=chunk;if(Buffer.byteLength(body)>4*1024*1024)throw Error('工具参数过大')}
+      if(req.url==='/tools'){
+        const value=JSON.parse(body);
+        if(!value||Object.keys(value).length!==1||!Array.isArray(value.active)||value.active.length>2048||value.active.some((name:unknown)=>typeof name!=='string'||!/^[a-z][a-z0-9_-]{0,127}$/.test(name))||new Set(value.active).size!==value.active.length)fail('TOOL_CATALOG_INVALID','活动工具清单无效');
+        const active:string[]=[...value.active].sort(),expected=[...names].sort(),missing=expected.filter(name=>!active.includes(name));
+        await onTools?.({expected,active,missing});
+        if(missing.length)fail('TOOL_CATALOG_MISMATCH','本轮工具装配不完整，请重启 CBIM 并查看运行日志；缺少：'+missing.join(', '));
+        res.setHeader('Content-Type','application/json');res.end('{}');return;
+      }
       if(req.url==='/request-limit'){
         const value=JSON.parse(body);if(!Number.isInteger(value.maxTokens)||value.maxTokens<1||value.maxTokens>2000000)throw Error('无效请求额度');
         await onRequestLimit?.(value.maxTokens);res.setHeader('Content-Type','application/json');res.end('{}');return;
@@ -96,6 +104,7 @@ export default async function(pi) {
   // 恢复会话时以真实活动工具为准；这里只更新指引，不添加工具、不绕过 gate。
   pi.on('before_agent_start',async(event)=>{
     const active=pi.getActiveTools();
+    await request('/tools',{active});
     event.systemPromptOptions.promptGuidelines.push('本轮实际活动工具：'+active.join(', ')+'。权限事实以本轮工具和调用结果为准，不沿用历史助手消息中的只读、不可写或缺少工具结论。');
     if(active.includes('write'))event.systemPromptOptions.promptGuidelines.push('本轮可调用 write 创建工作区业务文件（包括根目录下的 tetris.html），edit 修改文件；实际写入仍需通过 CBIM 授权。业务写入与知识提交共用本轮权限；知识必须通过 cbim_ 工具操作，不能用原生工具直接修改 .cbim/。用户要求实现时应调用工具落盘并验证，不用长篇源码回复代替执行；仅在真实拒绝或错误后报告对应阻塞。');
     else event.systemPromptOptions.promptGuidelines.push('本轮未启用 write，请遵守只读权限；需要落盘时提示用户选择逐次询问或允许执行。');

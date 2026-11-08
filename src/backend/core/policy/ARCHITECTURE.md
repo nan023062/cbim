@@ -105,6 +105,14 @@ N_src_backend_core_policy_tool_policy_ts ..> N_src_backend_core_policy_types_ts 
 
 只有本轮可信 `feedbackGrant`、完整相等的 `github-feedback` 范围、版本 1、非原生和精确工具效果同时成立时，`cbim_feedback_submit` 才能以 external-write 执行。read 始终拒绝；ask/execute 采用桌面连接时明确授予的该仓库自动提交许可，不再逐 Issue 弹审批。`cbim_feedback_receipt` 只读原提交。其它名字、伪效果、未知 external-write、变更连接或目标都拒绝，不能把该窄授权用于命令、业务写或知识写。
 
+`cbim_feedback_status` 是独立只读诊断，只接受精确名称、版本 1、非原生、单一 read 效果和本工作区 scope；不要求 GitHub 写授权，也不授予该授权。缺 scope、跨工作区、额外效果或伪原生均拒绝。它不是对 `cbim_feedback_*` 前缀的通用放行规则。
+
+```mermaid
+classDiagram
+class toolPolicy["tool-policy.ts"] { <<module>> }
+note for toolPolicy "authorizeRunTool：反馈诊断只读本工作区；submit／receipt 仍须原反馈范围，read 不允许提交。"
+```
+
 ### 可信工具范围与逐次权限评估
 
 四个主治理工具由 `module-governance-tools.ts` 的精确效果表分类。只有非原生、单一匹配效果、严格 `knowledge` scope 且工作区一致的可信描述可用；缺作用域、额外效果、未知治理名、伪原生或跨工作区全部拒绝。这个例外不扩展到其他 read/preview 工具，模型不能传 scope。观察/提案保存私有记录，不产生正式知识写入权限，不触发 ask 模式的知识提交批准；原正式写入门禁保持不变。

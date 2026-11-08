@@ -144,10 +144,12 @@ N_src_backend_scheduler_engine_conversation_questions_ts ..> N_src_backend_sched
 
 主 Agent 将两项菜单请求分别路由到 `cbim_skill_bug_feedback` 与 `cbim_skill_feature_wish`：先读流程，再按格式收集上下文。信息齐备后调用已装配的 `cbim_feedback_submit`，不增草稿确认；submitted 后结束，不追加成功消息、链接、编号或进度。缺连接、只读拒绝或明确错误时简短说明；未知只核实原提交，不能重发。GitHub 连接须由桌面设置明确建立，不把 BUG 报告解释成修复授权，不把愿望解释成已采纳开发任务。
 
+缺少 submit／receipt 任一项时，先用实际提供的 `cbim_feedback_status` 区分原因；knowledge catalog 只覆盖知识族，不能证明反馈工具缺失。尚待本机接收授权时回到设置页等待，已连接但本轮未装配时发送新消息，不反复登录。诊断入口也缺失时说明工具不可用、连接状态未核实，保留用户上下文。状态查询不证明原提交结果；未知只在实际核实入口可用时查询一次，不能换正文或会话重发。
+
 ```mermaid
 classDiagram
 class mainAgentInstructions { <<module>> }
-note for mainAgentInstructions "BUG 反馈先读 cbim_skill_bug_feedback；需求许愿先读 cbim_skill_feature_wish。工具名是注册别名，不是本模块方法。普通反馈不建立业务目标或派工。"
+note for mainAgentInstructions "BUG／需求分别读对应 Skill；缺操作工具先查反馈状态并沿用上下文。工具名是注册别名，不是本模块方法；普通反馈不建业务目标或派工。"
 ```
 
 ### 先创建待办再追加前置

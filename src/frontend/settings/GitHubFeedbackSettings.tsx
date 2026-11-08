@@ -1,6 +1,6 @@
 /**
  * 作用定位：设置页的 GitHub 反馈连接入口，展示设备授权码及固定目标仓库。
- * 设计原因：预置公开产品连接并折叠维护者配置；一次明确连接即可授权两项 Skill 自动提交，页面只轮询授权状态，不展示反馈结果或处理进度。
+ * 设计原因：预置公开产品连接并折叠维护者配置；页面提示保持打开，直到本机接收授权并显示已连接。页面只轮询授权状态，不展示反馈结果或处理进度。
  */
 import {useEffect,useState} from 'react';
 import type {GitHubFeedbackStatus} from '../../bridge/contracts/github-feedback';
@@ -34,7 +34,7 @@ export function GitHubFeedbackSettings(){
         <p>反馈目标：{owner}/{repo}</p>
         {visibility==='public'?<p>提交的内容会公开在此 GitHub 仓库。请只填写愿意公开的上下文。</p>:<p>GitHub OAuth 的 repo 权限覆盖账号可访问的私有仓库；CBIM 的反馈工具只向上面明确连接的仓库提交。</p>}
         {!status.secureStorage&&<p role="alert">系统安全存储不可用，暂不能连接 GitHub。</p>}
-        {status.flow?<><p>在 GitHub 登录页输入授权码：<strong>{status.flow.userCode}</strong></p><button disabled={busy} onClick={()=>void api.call('github.feedback.openLogin').catch((e:Error)=>setError(e.message))}>打开 GitHub 授权页</button><button disabled={busy} onClick={()=>void change('cancel')}>取消授权</button><p>等待授权；授权码过期后需重新连接。</p></>:<button className="solid-button" disabled={busy||!status.secureStorage||!clientId.trim()||!owner.trim()||!repo.trim()} onClick={()=>void change('begin')}>连接并允许反馈自动提交</button>}
+        {status.flow?<><p>在 GitHub 登录页输入授权码：<strong>{status.flow.userCode}</strong></p><button disabled={busy} onClick={()=>void api.call('github.feedback.openLogin').catch((e:Error)=>setError(e.message))}>打开 GitHub 授权页</button><button disabled={busy} onClick={()=>void change('cancel')}>取消授权</button><p>请保持此设置页打开；网页授权后，等待这里显示“已连接”再继续反馈。授权码过期后需重新连接。</p></>:<button className="solid-button" disabled={busy||!status.secureStorage||!clientId.trim()||!owner.trim()||!repo.trim()} onClick={()=>void change('begin')}>连接并允许反馈自动提交</button>}
       </>}
     </>}
   </section>;

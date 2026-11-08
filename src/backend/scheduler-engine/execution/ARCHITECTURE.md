@@ -867,6 +867,7 @@ class N_src_backend_scheduler_engine_execution_loop_engine_ts_ExecutionServices[
   +conversationBinding
   +repositoryTools
   +feedbackTools()
+  +feedbackStatus()
   +governanceTools()
   +ownershipTools()
   +dispatchTools()
@@ -878,7 +879,6 @@ class N_src_backend_scheduler_engine_execution_loop_engine_ts_ExecutionServices[
   +scopedExecution
   +artifactTransitions
   +assertMemberResume()
-  +memberCheckpointAllowance
 }
 N_src_backend_scheduler_engine_execution_loop_engine_ts ..> N_src_backend_scheduler_engine_execution_loop_engine_ts_ExecutionServices : 声明
 ```
@@ -892,6 +892,7 @@ class N_src_backend_scheduler_engine_execution_loop_engine_ts["loop-engine.ts"] 
 }
 class N_src_backend_scheduler_engine_execution_loop_engine_ts_ExecutionServices["ExecutionServices"] {
   <<interface>>
+  +memberCheckpointAllowance
   +assertMemberResumeInputs()
   +onEngineReady()
   +storage
@@ -901,7 +902,7 @@ class N_src_backend_scheduler_engine_execution_loop_engine_ts_ExecutionServices[
 N_src_backend_scheduler_engine_execution_loop_engine_ts ..> N_src_backend_scheduler_engine_execution_loop_engine_ts_ExecutionServices : 声明
 ```
 
-直接依赖：[../tools/question-tools.ts](../tools/question-tools.ts)、[../../core/foundation/paths.ts](../../core/foundation/paths.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../tools/knowledge-tools.ts](../tools/knowledge-tools.ts)、[../context/team-workflow.ts](../context/team-workflow.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/brain/index.ts](../../core/brain/index.ts)、[../../core/brain/pi/rpc.ts](../../core/brain/pi/rpc.ts)、[../../core/brain/llm/ports.ts](../../core/brain/llm/ports.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/tasks/progress-tools.ts](../../core/tasks/progress-tools.ts)、[../../core/tasks/member-help-tools.ts](../../core/tasks/member-help-tools.ts)、[../../core/tasks/artifact-tools.ts](../../core/tasks/artifact-tools.ts)、[../../core/brain/artifact-capture.ts](../../core/brain/artifact-capture.ts)、[../../core/brain/output-manifest-capture.ts](../../core/brain/output-manifest-capture.ts)、[../../core/tasks/output-manifest-tools.ts](../../core/tasks/output-manifest-tools.ts)、[../../core/brain/run-controlled-file.ts](../../core/brain/run-controlled-file.ts)、[../../core/tasks/controlled-file-operation.ts](../../core/tasks/controlled-file-operation.ts)、[../../core/brain/run-artifact-transition.ts](../../core/brain/run-artifact-transition.ts)、[../../core/tasks/artifact-transition.ts](../../core/tasks/artifact-transition.ts)、[../../core/brain/run-validation.ts](../../core/brain/run-validation.ts)、[../../core/tasks/validation-tools.ts](../../core/tasks/validation-tools.ts)、[../../core/tasks/member-checkpoint-tools.ts](../../core/tasks/member-checkpoint-tools.ts)、[../tools/dispatch-tools.ts](../tools/dispatch-tools.ts)、[../../core/brain/run-scoped-execution.ts](../../core/brain/run-scoped-execution.ts)、[../../core/tasks/scoped-execution.ts](../../core/tasks/scoped-execution.ts)、[../../core/workspace/execution-scope.ts](../../core/workspace/execution-scope.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[../../core/connectors/repository-tools.ts](../../core/connectors/repository-tools.ts)、[../tools/feedback-tools.ts](../tools/feedback-tools.ts)、[../../core/connectors/github-feedback.ts](../../core/connectors/github-feedback.ts)、[../tools/repository-tools.ts](../tools/repository-tools.ts)、[../../core/governance/module-governance-tools.ts](../../core/governance/module-governance-tools.ts)、[../tools/governance-tools.ts](../tools/governance-tools.ts)、[../tools/module-ownership-tools.ts](../tools/module-ownership-tools.ts)、[../../core/workspace/module-ownership-tools.ts](../../core/workspace/module-ownership-tools.ts)、[../../core/brain/llm/request-budget.ts](../../core/brain/llm/request-budget.ts)、[../../core/brain/storage.ts](../../core/brain/storage.ts)。
+直接依赖：[../tools/question-tools.ts](../tools/question-tools.ts)、[../../core/foundation/paths.ts](../../core/foundation/paths.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../tools/knowledge-tools.ts](../tools/knowledge-tools.ts)、[../context/team-workflow.ts](../context/team-workflow.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/brain/index.ts](../../core/brain/index.ts)、[../../core/brain/pi/rpc.ts](../../core/brain/pi/rpc.ts)、[../../core/brain/llm/ports.ts](../../core/brain/llm/ports.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/tasks/progress-tools.ts](../../core/tasks/progress-tools.ts)、[../../core/tasks/member-help-tools.ts](../../core/tasks/member-help-tools.ts)、[../../core/tasks/artifact-tools.ts](../../core/tasks/artifact-tools.ts)、[../../core/brain/artifact-capture.ts](../../core/brain/artifact-capture.ts)、[../../core/brain/output-manifest-capture.ts](../../core/brain/output-manifest-capture.ts)、[../../core/tasks/output-manifest-tools.ts](../../core/tasks/output-manifest-tools.ts)、[../../core/brain/run-controlled-file.ts](../../core/brain/run-controlled-file.ts)、[../../core/tasks/controlled-file-operation.ts](../../core/tasks/controlled-file-operation.ts)、[../../core/brain/run-artifact-transition.ts](../../core/brain/run-artifact-transition.ts)、[../../core/tasks/artifact-transition.ts](../../core/tasks/artifact-transition.ts)、[../../core/brain/run-validation.ts](../../core/brain/run-validation.ts)、[../../core/tasks/validation-tools.ts](../../core/tasks/validation-tools.ts)、[../../core/tasks/member-checkpoint-tools.ts](../../core/tasks/member-checkpoint-tools.ts)、[../tools/dispatch-tools.ts](../tools/dispatch-tools.ts)、[../../core/brain/run-scoped-execution.ts](../../core/brain/run-scoped-execution.ts)、[../../core/tasks/scoped-execution.ts](../../core/tasks/scoped-execution.ts)、[../../core/workspace/execution-scope.ts](../../core/workspace/execution-scope.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[../../core/connectors/repository-tools.ts](../../core/connectors/repository-tools.ts)、[../tools/feedback-tools.ts](../tools/feedback-tools.ts)、[../tools/feedback-status-tool.ts](../tools/feedback-status-tool.ts)、[../../core/connectors/github-feedback.ts](../../core/connectors/github-feedback.ts)、[../tools/repository-tools.ts](../tools/repository-tools.ts)、[../../core/governance/module-governance-tools.ts](../../core/governance/module-governance-tools.ts)、[../tools/governance-tools.ts](../tools/governance-tools.ts)、[../tools/module-ownership-tools.ts](../tools/module-ownership-tools.ts)、[../../core/workspace/module-ownership-tools.ts](../../core/workspace/module-ownership-tools.ts)、[../../core/brain/llm/request-budget.ts](../../core/brain/llm/request-budget.ts)、[../../core/brain/storage.ts](../../core/brain/storage.ts)。
 
 ### main-command-request.ts
 
@@ -2603,6 +2604,12 @@ N_src_backend_scheduler_engine_execution_scope_usage_service_ts ..> N_src_backen
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 主会话反馈连接与本轮装配
+
+`ExecutionServices.feedbackTools` 由桌面为每次主运行捕获固定连接；`feedbackStatus` 单独提供只读本机连接检查，调度只依赖 Core 纯协议，不导入桌面认证实现。`loop-engine` 根据实际端口一次性成对装配 submit／receipt；独立 `FeedbackStatusTool` 在未连接时仍存在，执行成员不继承。没有桌面端口的主会话报告组件未装配，不因此获得外部写权限。
+
+普通对话新一轮及继续原会话都会重新创建运行并捕获当前连接；同一活动运行中途登录不替换原端口或权限，诊断明确要求新一轮。已连接只表示本机保存了连接，不承诺网络可达或提交成功；未知提交的原目标与防重屏障继续由反馈服务负责。诊断变化不进入派发、业务验收或更新子系统。
 
 ### R08 跨等待重新决定
 

@@ -95,6 +95,16 @@ classDiagram
 class N_src_backend_core_connectors_github_feedback_ts["github-feedback.ts"] {
   <<module>>
 }
+class N_src_backend_core_connectors_github_feedback_ts_FeedbackConnectionCheck["FeedbackConnectionCheck"] {
+  <<type>>
+
+}
+N_src_backend_core_connectors_github_feedback_ts ..> N_src_backend_core_connectors_github_feedback_ts_FeedbackConnectionCheck : 声明
+class N_src_backend_core_connectors_github_feedback_ts_FeedbackAvailability["FeedbackAvailability"] {
+  <<type>>
+
+}
+N_src_backend_core_connectors_github_feedback_ts ..> N_src_backend_core_connectors_github_feedback_ts_FeedbackAvailability : 声明
 class N_src_backend_core_connectors_github_feedback_ts_GitHubFeedbackConfig["GitHubFeedbackConfig"] {
   <<type>>
 
@@ -342,6 +352,8 @@ N_src_backend_core_connectors_repository_tools_ts ..> N_src_backend_core_connect
 ### GitHub 反馈纯协议
 
 `github-feedback.ts` 定义 BUG／需求的严格字段、最小 submitted 回执、已绑定目标端口及公开设置类型。`feedbackIssue` 只排版本次用户字段，保留标记不接受模型指定；不从本层发 HTTP、读凭据或授予权限。实际外部写由主进程实现，GitHub 工具不混入静态链接器注册或知识目录。
+
+`FeedbackConnectionCheck` 仅表达本机保存的连接、尚待授权回包、过期、代际变化或设置／安全存储故障；不含凭据、设备码或提交记录。`FeedbackAvailability` 由调度层合成本轮实际装配与本机连接事实，两项操作工具必须同时存在或同时缺失。READY 不证明网络可达、权限允许或 Issue 已创建；诊断也不能把原未知提交改判为未发送。
 
 ### 静态定义与提供方身份
 

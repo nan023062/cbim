@@ -10,6 +10,7 @@ import {budgetScopes,seedScopeBudget} from './scope-budget-fixture';
 import {scopeBudgetProvider,scopeBudgetFixture} from './scope-budget-provider';
 import {requestBudgetReportSchema} from '../src/backend/core/tasks/model-request-budget';
 import type {ResolvedLlm} from '../src/backend/core/brain/llm/ports';
+import type {RunSummary} from '../src/backend/core/brain/types';
 
 it.each(['openai-completions','openai-responses','anthropic-messages'] as ResolvedLlm['profile']['api'][])('实际Application/Pi的 %s 经过启动门禁并可靠结算缓存与推理用量，重开查询不发送',async api=>{
   const f=await fixture(),provider=await modelRequestBudgetProvider(api);let app=f.app;
@@ -21,6 +22,8 @@ it.each(['openai-completions','openai-responses','anthropic-messages'] as Resolv
     await vi.waitFor(async()=>expect((await budgetScopes(f.user,entry.id))[0]?.status).toBe('closed'),{timeout:30000});
     const scope=(await budgetScopes(f.user,entry.id))[0],query={workspaceId:entry.id,rootSessionId:start.taskId,scopeId:scope.scopeId};
     expect(scope.outcome).toBe('completed');expect(provider.errors).toEqual([]);expect(provider.requests).toHaveLength(1);
+    const inspected:RunSummary=await app.dispatch('loop.inspect',{id:entry.id,...start});
+    expect(inspected.events.find(event=>event.type==='engine.status'&&event.data.metric==='tool-catalog'&&event.data.stage==='active')?.data.missing).toEqual([]);
     const report=requestBudgetReportSchema.parse(await app.dispatch('dispatch.requestBudget',query));expect(report).toMatchObject({requests:1,reported:1,tokens:120,reservedTokens:0,unknown:0,estimatedCostUsd:0.000125});
     const journal=path.join(app.paths.project(entry.id),'dispatch','dispatch.jsonl'),bytes=await fs.readFile(journal);expect(bytes.toString()).not.toContain('Request budget verified.');
     await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();await app.open(entry.id);expect(await app.dispatch('dispatch.requestBudget',query)).toEqual(report);expect(await fs.readFile(journal)).toEqual(bytes);expect(provider.requests).toHaveLength(1);
@@ -63,7 +66,7 @@ it.each(['main-block','member-block','complete'] as const)('实际主轮与正�
     provider.releaseAll();const start=await f.app.dispatch('loop.chat',{id:entry.id,message:scopeBudgetFixture.goal,options:{profileId,model:scopeBudgetFixture.model,permission:'read',turnTimeoutMs:60000}});
     await vi.waitFor(async()=>expect((await budgetScopes(f.user,entry.id))[0]?.status).toBe('closed'),{timeout:45000});const scope=(await budgetScopes(f.user,entry.id))[0];const report=requestBudgetReportSchema.parse(await f.app.dispatch('dispatch.requestBudget',{workspaceId:entry.id,rootSessionId:start.taskId,scopeId:scope.scopeId}));
     expect(provider.errors).toEqual([]);expect(report.reported).toBe(provider.main.length+provider.member.length);expect(report.unknown).toBe(0);expect(report.reservedTokens).toBe(0);
-    if(mode==='main-block'){expect(provider.main).toHaveLength(1);expect(provider.member).toHaveLength(0);expect(report.denied).toBe(1)}else if(mode==='member-block'){expect(provider.main).toHaveLength(3);expect(provider.member).toHaveLength(1);expect(report.denied).toBe(1)}else{expect(provider.main).toHaveLength(6);expect(provider.member).toHaveLength(5);expect(report.tokens).toBe(1920);expect(report.denied).toBe(0)}
+    if(mode==='main-block'){expect(provider.main).toHaveLength(1);expect(provider.member).toHaveLength(0);expect(report.denied).toBe(1)}else if(mode==='member-block'){expect(provider.main).toHaveLength(3);expect(provider.member).toHaveLength(1);expect(report.denied).toBe(1)}else{expect(provider.main,JSON.stringify({outcome:scope.outcome,report,sequence:provider.sequence})).toHaveLength(6);expect(provider.member).toHaveLength(5);expect(report.tokens).toBe(1920);expect(report.denied).toBe(0)}
     expect(scope.outcome).toBe(mode==='complete'?'completed':'failed');
   }finally{provider.releaseAll();await provider.close();await f.cleanup()}
 },60000);

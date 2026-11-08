@@ -4,7 +4,7 @@
  * 受控文件边界：仅转发正式成员的写入及冻结删除/移动工具与原 callId/取消信号；平台操作证明和补偿不会在 Pi 原生 write/edit 上自动附加。
  * 作用定位：Pi 引擎适配器，负责隔离配置、主对话与成员原生会话校验、工具桥与公开执行事件转换。
  * 设计原因：每轮冻结模型、权限和上下文；原生注册与能力预检共用 Core 工具表。成员求助/基线/检查点及按冻结要求提供的产物验证沿真实调用 ID 入日志，结构拒绝不冒称通过；成员回传与人工决定用系统 custom 接续，结束只认 agent_settled。
- * 职责边界：不保存私有推理正文；记录实际用量与生成耗时，未知计价保持未知。明确停止后的标准取消文本才归为取消，其他错误及未知工具副作用交由运行时保留。
+ * 职责边界：不保存私有推理正文；记录实际用量与生成耗时，未知计价保持未知。工具清单日志区分宿主准备与 Pi 实际活动清单，只保存名称和缺失项。明确停止后的标准取消文本才归为取消，其他错误及未知工具副作用交由运行时保留。
  * 插入边界：原生状态查询后再次核停止；只有 queued 回复表示已接收，发送后的失败不推断未执行或自动重发。
  * 主角色指引：内置执行角色也需明确岗位、模块负责人及独立采纳模型，提示不能把默认角色误写为绕过责任绑定的入口。
  * 请求预算：可信端口启用时，启动前安装父进程代理；终态与工具授权都受可靠结算屏障约束，停止先结束实际请求。
@@ -88,7 +88,10 @@ export class PiEngine implements AgentEngine {
     const tools:KnowledgeBridge={list:async()=>[...await this.options.knowledge.list(),...await context.taskTools?.list()??[],...await context.memberHelpTools?.list()??[],...await context.artifactTools?.list()??[],...await context.manifestTools?.list()??[],...await context.memberCheckpointTools?.list()??[],...await context.validationTools?.list()??[],...await context.controlledFileTools?.list()??[],...await context.artifactTransitionTools?.list()??[],...await context.scopedExecutionTools?.list()??[]],call:(name,args,signal,toolCallId)=>{const budgetError=this.budgetTransport?.error();if(budgetError)throw Error(budgetError);return scopedNames.has(name)?context.scopedExecutionTools!.call(name,args,toolCallId,signal):transitionNames.has(name)?context.artifactTransitionTools!.call(name,args,toolCallId,signal):controlledNames.has(name)?context.controlledFileTools!.call(name,args,toolCallId,signal):validationNames.has(name)?context.validationTools!.call(name,args,toolCallId):checkpointNames.has(name)?context.memberCheckpointTools!.call(name,args,toolCallId):manifestNames.has(name)?context.manifestTools!.call(name,args,toolCallId):artifactNames.has(name)?context.artifactTools!.call(name,args,toolCallId):helpNames.has(name)?context.memberHelpTools!.call(name,args,toolCallId):taskNames.has(name)?context.taskTools!.call(name,args):this.options.knowledge.call(name,args,signal,toolCallId)}};
     this.bridge=await openBridge(tools,call=>this.budgetTransport?.error()?Promise.resolve({allow:false,reason:this.budgetTransport.error()}):context.beforeTool(call),async usage=>{
       this.events=this.events.then(()=>context.emit({type:'engine.status',data:{label:'上下文用量已更新',metric:'context',...usage}}));await this.events;
-    },async limit=>{this.requestLimit=limit;this.events=this.events.then(()=>context.emit({type:'engine.status',data:{label:'模型请求额度',metric:'request-limit',maxTokens:limit}}));await this.events});
+    },async limit=>{this.requestLimit=limit;this.events=this.events.then(()=>context.emit({type:'engine.status',data:{label:'模型请求额度',metric:'request-limit',maxTokens:limit}}));await this.events},async catalog=>{
+      this.events=this.events.then(()=>context.emit({type:'engine.status',data:{label:catalog.missing.length?'工具装配不完整':'活动工具已核对',metric:'tool-catalog',stage:'active',...catalog,...(catalog.missing.length?{code:'TOOL_CATALOG_MISMATCH'}:{})}}));await this.events;
+    });
+    await context.emit({type:'engine.status',data:{label:'宿主工具清单已准备',metric:'tool-catalog',stage:'prepared',expected:this.bridge.tools.map(tool=>tool.name).sort()}});
     const extension=path.join(context.directory,'cbim-extension.mjs'),prompt=path.join(context.directory,'instructions.md');
     // 业务上下文随任务持久化；执行恢复使用原快照，当前知识修改仍由服务校验版本。
     // 普通对话的用户文字与附件只经用户消息发送，不抬升为系统指引。

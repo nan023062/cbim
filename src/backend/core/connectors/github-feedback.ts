@@ -1,6 +1,6 @@
 /**
  * 作用定位：CBIM 反馈 Skill、可信 GitHub 端口和桌面登录共用的纯协议。
- * 设计原因：模型只填写用户提供的业务上下文；账号、仓库和自动提交授权由本机设置绑定，凭据不进入工具或公开设置。
+ * 设计原因：模型只填写用户提供的业务上下文；账号、仓库和自动提交授权由本机设置绑定，凭据不进入工具或公开设置。只读诊断将连接事实与本轮工具装配分开，不授予提交权限。
  */
 import {z} from 'zod';
 import {githubFeedbackScopeSchema} from '../tools/scope-schema';
@@ -23,6 +23,21 @@ export interface FeedbackToolsPort {
   submit(input:FeedbackInput,signal:AbortSignal):Promise<FeedbackResult>;
   receipt(signal:AbortSignal):Promise<FeedbackResult>;
 }
+
+/** 本机连接检查只读公开状态与代际，不请求 GitHub、不解密令牌、不查询提交历史。 */
+export const feedbackConnectionCheckSchema=z.object({
+  code:z.enum(['GITHUB_CONNECTED','GITHUB_NOT_CONNECTED','GITHUB_AUTH_PENDING','GITHUB_CONNECTION_CHANGED','GITHUB_EXPIRED','GITHUB_SECRET_STORAGE','GITHUB_SETTINGS']),
+  repository:z.object({owner:z.string().min(1).max(100),repo:z.string().min(1).max(100)}).strict().optional(),
+}).strict();
+export type FeedbackConnectionCheck=z.infer<typeof feedbackConnectionCheckSchema>;
+/** 只描述当前运行可用性；READY 不等于网络可达或提交成功，两项操作始终成对装配。 */
+export const feedbackAvailabilitySchema=z.object({
+  code:z.enum(['FEEDBACK_READY','FEEDBACK_TOOL_NOT_LOADED','FEEDBACK_NEW_TURN_REQUIRED','GITHUB_NOT_CONNECTED','GITHUB_AUTH_PENDING','GITHUB_CONNECTION_CHANGED','GITHUB_EXPIRED','GITHUB_SECRET_STORAGE','GITHUB_SETTINGS']),
+  submitAvailable:z.boolean(),receiptAvailable:z.boolean(),
+  repository:z.object({owner:z.string().min(1).max(100),repo:z.string().min(1).max(100)}).strict().optional(),
+  message:z.string().min(1).max(600),
+}).strict().refine(value=>value.submitAvailable===value.receiptAvailable,'反馈提交与核实工具必须成对装配');
+export type FeedbackAvailability=z.infer<typeof feedbackAvailabilitySchema>;
 
 export const githubFeedbackConfigSchema=z.object({
   clientId:z.string().regex(/^[A-Za-z0-9_.-]{6,100}$/),

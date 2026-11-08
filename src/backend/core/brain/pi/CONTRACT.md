@@ -1,3 +1,21 @@
+### 宿主工具装配与实际活动清单
+
+`PiEngine` 启动桥后记录 `engine.status` / `metric:tool-catalog` / `stage:prepared` 的期望内部工具名；受控扩展在 `before_agent_start` 从 `pi.getActiveTools()` 取真实活动名称，经随机令牌保护的 `/tools` 上报。桥比较当前内部注册项，记录 active／expected／missing，缺项返回 `TOOL_CATALOG_MISMATCH`，由扩展错误和运行日志保留。该核对不是模型文字推断，也不使用只覆盖知识族的 catalog。
+
+上报仅接受有界、唯一的工具名称列表；不带参数、模型消息、设备码或凭据，不授予工具许可或重新注册缺项。原生工具可作为额外活动项记录，实际调用继续走 `/gate` 和一次性 `/call`。启用逐请求预算时，`request-budget-bootstrap.ts` 同样只放行本轮桥 origin 上无查询／fragment 的 `/tools` 固定路径，原随机令牌由桥继续检查；其他地址仍拒绝。通用桥不认识 GitHub 连接或反馈业务规则；未来其他工具装配故障复用同一名称核对机制。
+
+```mermaid
+classDiagram
+class PiEngine { +start() }
+class bridge["bridge.ts"] { <<module>> }
+class bootstrap["request-budget-bootstrap.ts"] { <<module>> }
+PiEngine ..> bridge : openBridge 与工具清单回调
+PiEngine ..> bootstrap : 预算运行注入固定本机桥路径
+note for PiEngine "engine.ts：准备清单与实际清单分别写入本轮 engine.status，不含调用参数。"
+note for bridge "扩展读取 Pi 活动工具，经受保护的 /tools 对比期望清单；缺项保留明确错误。"
+note for bootstrap "只转发原桥的固定路由；不因工具清单上报扩大外部请求目标。"
+```
+
 ### 主调度提示与负责人门禁
 
 Pi 主角色提示与上层真实工具保持一致：查询模块负责岗位、保存匹配目标计划再派发。内置 `cbim:executor` 是可登记静态角色，也须项目岗位、模块责任及独立采纳模型；没有主模型回退或缺省派发。提示只说明边界，实际资格仍由任务服务判定，不将提示文字视为执行授权。

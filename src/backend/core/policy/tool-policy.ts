@@ -4,7 +4,7 @@
  * 作用定位：内部 Loop 的统一工具授权策略，同时处理业务文件与正式知识写入。
  * 设计原因：权限来自可信运行配置，副作用、契约版本和仓库范围来自已注册工具的捕获描述；模型参数不能提高权限或把外部资料冒充项目文件。
  * 职责边界：原生路径检查先于人工确认；模块负责人四工具须精确匹配知识范围与效果，提交沿 read/ask/execute 门禁。产物验证只接受准确名称和 read 效果；未知命令范围不被描述为沙箱隔离。
- * 反馈边界：只有桌面明确连接并允许自动提交的精确 GitHub 范围可免逐条 ask；read 仍拒绝外部写，模型不能声明或扩大授权。
+ * 反馈边界：只有桌面明确连接并允许自动提交的精确 GitHub 范围可免逐条 ask；read 仍拒绝外部写。独立状态查询严格限制为工作区只读，不需要也不产生连接授权。
  */
 import type {ChatPermission} from './types';
 import type {ToolCall,ToolDecision,ToolEffect,ToolScope} from '../tools/types';
@@ -44,7 +44,9 @@ export async function authorizeRunTool(call:ToolCall,tool:RunToolDescriptor,cont
   // 责任治理只允许实际主运行注册的固定效果；read/preview 不因知识范围自动获得写权。
   if(ownership&&(!isModuleOwnershipToolName(call.name)||tool.native||tool.effects.length!==1||tool.effects[0]!==moduleOwnershipToolEffects[call.name]||tool.scope?.kind!=='knowledge'))return decision(false,'模块责任工具缺少本轮真实知识范围或效果不一致');
   if(call.name.startsWith('cbim_repository_')&&tool.scope?.kind!=='repository')return decision(false,'仓库工具缺少本轮可信捕获范围');
-  const feedback=call.name.startsWith('cbim_feedback_');
+  const feedbackStatus=call.name==='cbim_feedback_status';
+  if(feedbackStatus&&(tool.native||tool.contractVersion!==1||tool.effects.length!==1||tool.effects[0]!=='read'||tool.scope?.kind!=='workspace'))return decision(false,'反馈状态查询必须是本轮注册的工作区只读工具');
+  const feedback=call.name.startsWith('cbim_feedback_')&&!feedbackStatus;
   if(feedback||tool.effects.includes('external-write')||tool.scope?.kind==='github-feedback'){
     if(!['cbim_feedback_submit','cbim_feedback_receipt'].includes(call.name)||tool.native||tool.contractVersion!==1||tool.effects.length!==1||tool.effects[0]!== (call.name==='cbim_feedback_submit'?'external-write':'read')||!context.feedbackGrant||!isDeepStrictEqual(tool.scope,context.feedbackGrant))return decision(false,'GitHub 反馈缺少本轮明确授权的固定目标');
   }

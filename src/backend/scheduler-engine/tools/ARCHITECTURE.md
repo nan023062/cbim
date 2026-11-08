@@ -12,6 +12,7 @@
 | --- | --- |
 | [command-report-contract.ts](command-report-contract.ts) | 声明主调度原命令核实工具的只读元数据及唯一 wire 归属校验。 |
 | [dispatch-tools.ts](dispatch-tools.ts) | 把主调度的派发、查询、未启动撤销、依赖修订及检查点预约/明确放弃转换为内部工具，并组合目标工具。 |
+| [feedback-status-tool.ts](feedback-status-tool.ts) | 主会话的反馈可用性只读诊断，区分本轮装配事实与当前本机连接事实。 |
 | [feedback-tools.ts](feedback-tools.ts) | 主会话的 GitHub 反馈提交与原提交核实工具，承接两项内置 Skill 的格式字段。 |
 | [goal-tools.ts](goal-tools.ts) | 将主 Agent 当前用户目标、真实补充历史的读取及规划审阅端口注册为内部 Loop 工具。 |
 | [governance-tools.ts](governance-tools.ts) | 将每个真实主运行的治理窄端口装配成发现、分类与调用一致的四项工具。 |
@@ -84,6 +85,29 @@ N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_schedul
 ```
 
 直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[../../core/tasks/queued-task-cancel.ts](../../core/tasks/queued-task-cancel.ts)、[../../core/tasks/queued-dependency-replacement.ts](../../core/tasks/queued-dependency-replacement.ts)、[../../core/tasks/queued-dependency-addition.ts](../../core/tasks/queued-dependency-addition.ts)、[../../core/tasks/queued-dependency-revision.ts](../../core/tasks/queued-dependency-revision.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)、[command-report-contract.ts](command-report-contract.ts)、[../../core/tasks/command-verification.ts](../../core/tasks/command-verification.ts)、[goal-tools.ts](goal-tools.ts)、[../../core/tasks/queued-member-resume.ts](../../core/tasks/queued-member-resume.ts)、[../../core/tasks/checkpoint-handoff.ts](../../core/tasks/checkpoint-handoff.ts)。
+
+### feedback-status-tool.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_tools_feedback_status_tool_ts["feedback-status-tool.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_tools_feedback_status_tool_ts_FeedbackStatusTool["FeedbackStatusTool"] {
+  +has()
+  +list()
+  +describe()
+  +snapshot()
+  +call()
+  -workspaceId
+  -registered
+  -check
+  -parse()
+}
+N_src_backend_scheduler_engine_tools_feedback_status_tool_ts ..> N_src_backend_scheduler_engine_tools_feedback_status_tool_ts_FeedbackStatusTool : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/connectors/github-feedback.ts](../../core/connectors/github-feedback.ts)。
 
 ### feedback-tools.ts
 
@@ -345,6 +369,10 @@ N_src_backend_scheduler_engine_tools_knowledge_tools_ts ..> N_src_backend_schedu
 ### 主会话 GitHub 反馈工具
 
 `FeedbackTools` 只包装实际装配的可信端口。submit 输入按 BUG／需求分支严格解析，不接受仓库、地址、凭据或授权字段；receipt 无参数，只核实原提交。单次端口调用后校验唯一 JSON 快照，成功只含 submitted 与 operationId，坏输出不重发。目标和授权经 loop-engine 交统一策略；缺连接时不注册，成员／CLI 不继承，不混入知识工具目录。
+
+`FeedbackStatusTool` 独立提供主会话的 `cbim_feedback_status`；没有提交端口时仍可诊断。两项操作工具的装配事实来自实际 `FeedbackTools` 实例，本机连接事实来自注入的只读端口；没有诊断服务时明确报告组件未装配，端口异常不转换成未连接。输入只接受空对象，输出严格区分未连接、等待本机接收授权、已连接但本轮需更新、代际变化及故障。不刷新冻结目标，不读提交历史，不调用写端口。
+
+诊断文案和反馈可用性判断独立于稳定的提交／去重机制；需要调整用户下一步提示时修改本工具及产品 Skill，不修改 GitHub 写入账本或 Pi 通用桥。变化频率目前来自本次缺陷和交互需求，未以提交次数证明长期稳定性。
 
 ### 主目标查询的活动输入
 

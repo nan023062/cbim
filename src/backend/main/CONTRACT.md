@@ -1,5 +1,17 @@
 # 主进程运行装配契约
 
+## 反馈连接诊断与提交端口
+
+`createExecutionManager` 只在桌面 chat 主运行注入反馈服务：`feedbackTools` 捕获固定连接，`feedbackStatus` 独立调用 `GitHubFeedbackAuth.checkConnection` 并检查工作区仍有效。未连接时只读诊断仍可用，运行中连接变化不替换原提交范围。认证状态及保存仍归 resources，工具命名／提示归调度层，更新程序不参与。
+
+```mermaid
+classDiagram
+class execution["execution.ts"] { <<module>> }
+class resources["resources/"] { <<directory>> }
+execution ..> resources : 捕获提交端口和只读连接检查
+note for execution "主 chat 分别注入 feedbackTools 与 feedbackStatus；新运行重新捕获，原运行范围不刷新。"
+```
+
 ## 长期岗位登记的独立装配
 
 `createMemberServices` 为 `WorkspaceMembers` 注入与派发共用的 FileDispatchStore、工作区代际及 `LlmProfiles.configuration` 公开配置端口。Application 按工作区保存该服务，关闭/重开先退役代际，原 store 排空后更换实例；岗位没有独立运行或重放生命周期。

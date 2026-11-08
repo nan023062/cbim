@@ -1,7 +1,7 @@
 /**
  * 作用定位：桌面 GitHub Device Flow、账号／仓库绑定和本机加密凭据管理。
  * 设计原因：公开 Client ID 可以随应用配置，授权令牌只留在主进程；连接代际和串行队列使换号、断开与在途提交具有确定顺序。
- * 生命周期：轮询由可见设置页驱动，后端强制 interval/slow_down/过期；退出取消授权请求，不在后台无限轮询。
+ * 生命周期：轮询由可见设置页驱动，后端强制 interval/slow_down/过期；退出取消授权请求，不在后台无限轮询。运行诊断单独检查公开连接事实与原绑定，不解密、不联网。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -12,7 +12,7 @@ import {fail,Fault} from '../../core/foundation/errors';
 import {hash} from '../../core/foundation/serialization';
 import {KernelLock} from '../platform/locking';
 import type {SecretCipher} from '../../core/brain/llm/ports';
-import {githubFeedbackConfigSchema,type GitHubFeedbackStatus,type FeedbackScope} from '../../core/connectors/github-feedback';
+import {githubFeedbackConfigSchema,type GitHubFeedbackStatus,type FeedbackScope,type FeedbackConnectionCheck} from '../../core/connectors/github-feedback';
 import {githubRequest,type GitHubRequest} from './github-api';
 
 const connectionSchema=z.object({id:z.string().uuid(),accountId:z.number().int().positive(),login:z.string().regex(/^[A-Za-z0-9-]{1,100}$/),repositoryId:z.number().int().positive(),encryptedToken:z.string().min(1).max(32000),expiresAt:z.number().positive().optional()}).strict();
@@ -46,6 +46,16 @@ export class GitHubFeedbackAuth {
     return {secureStorage:this.cipher?.available()===true,config:{clientId:config.clientId,owner:config.owner,repo:config.repo,visibility:config.visibility},...(data.connection?{connected:{login:data.connection.login,owner:config.owner,repo:config.repo}}:{}),...(flow?{flow:{id:flow.id,userCode:flow.userCode,verificationUri:'https://github.com/login/device' as const,expiresAt:flow.expiresAt,nextPollAt:flow.nextPollAt}}:{})};
   }
   status(){return this.serial(async()=>this.view(await this.read()))}
+  /** 诊断不能凭“工具缺失”推断未登录；本机仍等待授权回包、读取失败与账号断开分开。旧绑定变化只提示开启新一轮。 */
+  checkConnection(scope?:FeedbackScope):Promise<FeedbackConnectionCheck>{return this.serial(async():Promise<FeedbackConnectionCheck>=>{
+    const data=await this.read();
+    if(!data.config||!data.connection)return {code:this.flow&&data.flowId===this.flow.id&&this.now()<this.flow.expiresAt?'GITHUB_AUTH_PENDING':'GITHUB_NOT_CONNECTED'};
+    const repository={owner:data.config.owner,repo:data.config.repo};
+    if(scope&&(scope.connectionId!==data.connection.id||scope.repositoryId!==data.connection.repositoryId||scope.owner!==repository.owner||scope.repo!==repository.repo))return {code:'GITHUB_CONNECTION_CHANGED',repository};
+    if(data.connection.expiresAt&&this.now()>=data.connection.expiresAt)return {code:'GITHUB_EXPIRED',repository};
+    if(!this.cipher?.available())return {code:'GITHUB_SECRET_STORAGE',repository};
+    return {code:'GITHUB_CONNECTED',repository};
+  }).catch(()=>({code:'GITHUB_SETTINGS' as const}))}
   /** 开始新的明确授权；不接收客户端令牌。先可靠保存公开设置，才向固定 GitHub 地址请求设备码。 */
   begin(input:unknown){const requested=this.generation;return this.serial(async()=>{
     if(requested!==this.generation)fail('GITHUB_CANCELLED','GitHub 授权已取消');

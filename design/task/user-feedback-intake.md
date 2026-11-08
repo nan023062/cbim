@@ -1,6 +1,6 @@
 # CBIM 反馈／许愿 Skill 与软件更新日志
 
-日期：2026-11-08。状态：两项菜单及格式引导已完成[前一步验证](../verification/feedback-skills-20261108.md)；GitHub Device Flow、直接提交、去重与只读核实已完成[本地与打包验证](../verification/github-feedback-20261108.md)。OAuth App `CBIM Feedback` 已注册，真实账号连接和线上发单正在验收，实际结果见[线上记录](../verification/github-feedback-online-20261108.md)；更新日志展示仍待实施。属于 [Cindy + Git 开发管线](../cindy-development-pipeline.md)的用户侧入口，内部开发仍止于 PR 就绪，人工决定合并与发布。
+日期：2026-11-09。状态：两项菜单及格式引导已完成[前一步验证](../verification/feedback-skills-20261108.md)；GitHub Device Flow、直接提交、去重与只读核实已完成[本地与打包验证](../verification/github-feedback-20261108.md)。OAuth App `CBIM Feedback` 已注册，正式 0.1.0 的真实连接与唯一发单已验收，见[线上记录](../verification/github-feedback-online-20261108.md)；版本日志和手动更新已接入，见[桌面验收](../verification/desktop-release-20261108.md)。已修正缺工具的错误登录提示并完成诊断验证：本机授权未落盘时可复现缺失，保存连接后继续原会话装配正常；NAN-LI 尚未进行正式包复验，新增诊断尚未发布，见[可复现结论](../verification/feedback-tool-availability-20261109.md)。属于 [Cindy + Git 开发管线](../cindy-development-pipeline.md)的用户侧入口，内部开发仍止于 PR 就绪，人工决定合并与发布。
 
 ## 1. 已确定的范围
 
@@ -24,6 +24,8 @@
 ### GitHub 直连提交
 
 收集完成后，Skill 直接调用 `cbim_feedback_submit` 创建 Issue；不增加草稿确认或逐条工具批准，不使用自有反馈服务器或网页填单。模型只提供严格格式字段，后端确定性生成标题与正文，目标来自设置页的明确连接。[GitHub Issue API](https://docs.github.com/en/rest/issues/issues#create-an-issue)
+
+提交／核实工具在每个主运行开始时成对捕获，不随活动运行中途登录即时替换。缺项先查实际提供的 `cbim_feedback_status`，区分未连接、本机仍待授权回包、需开启新一轮与装配／设置故障；不能用只覆盖知识族的工具目录证明全局缺失，也不能一律提示重新登录。诊断入口也缺失时明确原因尚未核实，保留用户已填写上下文。成功静默和未知只核实的规则不变。
 
 设置 → GitHub 反馈采用公开 Client ID 的 Device Flow；用户点击“连接并允许反馈自动提交”，在固定官方页面输入设备授权码。首次及登录失效时仍需授权，后续有效连接内由 Skill 自动提交。桌面绑定账号、仓库和不可变 repositoryId；read 会话仍拒写，ask/execute 仅在该窄许可下免逐条确认。公开仓库使用 public_repo，显式选择私有仓库才请求 repo。系统安全存储不可用时拒绝连接，不明文回退，也不内置维护者公用 token。[GitHub Device Flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow)
 

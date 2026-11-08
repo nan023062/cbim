@@ -95,6 +95,11 @@
 | 授权页要求登录／二次验证 | 账号本人在 GitHub 页面完成；不在聊天中提交密码或私人验证码 |
 | `GITHUB_EXPIRED` / `GITHUB_FLOW` / `GITHUB_AUTH` | 授权短码或登录失效；结束当前授权，重新连接并使用新的短码。若已有连接，先断开本机连接 |
 | 浏览器已授权，CBIM 仍等待 | 返回并保持 CBIM 设置页打开，等待合法轮询间隔；程序已退出时重新连接，不能复用旧流程 |
+| 两项反馈工具缺失，但网页已授权 | 网页授权不能证明本机已接收连接或本轮已装配工具。先核对设置页实际“已连接”状态和本轮清单，不凭缺工具反复登录；旧版没有诊断入口时保留上下文并核对版本／日志 |
+| `GITHUB_AUTH_PENDING` | 本机仍在等待授权回包，回到 GitHub 反馈设置页并保持打开；不要求重复网页授权 |
+| `FEEDBACK_NEW_TURN_REQUIRED` | 本机已连接，但当前运行未装配提交／核实工具；发送新消息开启新一轮并沿用已填内容，仍缺失时检查实际工具清单 |
+| `FEEDBACK_TOOL_NOT_LOADED` / `TOOL_CATALOG_MISMATCH` | 反馈诊断服务未装配或宿主期望工具与 Pi 活动清单不一致；查看版本及原运行日志，不解释为账号未连接 |
+| `GITHUB_SETTINGS` | 本机连接设置无法核实；检查设置页错误和本机文件状态，不把读取失败当成未登录，也不分享凭据文件 |
 | `GITHUB_BINDING` | 核对账号可访问目标、仓库可见性与设置一致、Issues 开启、未归档，以及本机安全存储可用；不要为通过验收擅自改变仓库可见性 |
 | `GITHUB_CONNECTION_CHANGED` | 账号／目标或连接代际改变，先检查原提交记录，再重新发起；不把新连接当成旧提交证据 |
 | 提交超时或 `GITHUB_SUBMISSION_UNKNOWN` | 由 Skill 只调用一次 `cbim_feedback_receipt` 核实原提交；未找到不等于未创建，不再 POST |
@@ -104,3 +109,5 @@
 | 「我的浏览器」显示扩展未连接 | 在选择的同一个 Chrome 个人资料中安装／启用 [Cindy 官方商店扩展](https://chromewebstore.google.com/detail/cindy/dmbhhhdijpeaibfeocdcjhfefkgpkeef)，保持 Chrome 和 Cindy 运行；再由工具检查连接。浏览器个人资料不能代替 GitHub 账号核验 |
 
 当前实现没有自动刷新 Token、GitHub Enterprise、自动附件上传、反馈进度查询或本机未知记录强制清除入口；这些限制不以一次线上成功为由抹去。
+
+2026-11-09 新增的 `cbim_feedback_status` 与工具清单诊断目前仅在工作区代码中验证，尚未进入已发布的 0.1.0。NAN-LI 的原故障、已确认错误提示与本机复现分别记入[缺陷与验证报告](../verification/feedback-tool-availability-20261109.md)。连接状态查询不证明原 Issue 结果；已有未知提交保持未知，不重发。

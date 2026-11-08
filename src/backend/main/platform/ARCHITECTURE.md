@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-本机路径、系统锁、凭据加密、终端与工具访问检查。固定根有界读取并核前后句柄/路径，拒绝链接、越界和Windows备用数据流；JSON验证由同一Buffer计算指纹和结构结论，正文不出端口。原生历史不完整拒绝恢复，不承诺外部原子隔离。 ArtifactFileService 只观察明确原调用的有界文件，独立返回缺失、不可信和当前字节；路径与链接检查不宣称操作系统隔离。 独立 utility 持有 Win32 目录与文件句柄，执行单次有界替换、flush 与读回；私有 blob 保留真实 before，进程退出不表示内容回滚。
+本机路径、系统锁、凭据加密、终端与工具访问检查。固定根有界读取并核前后句柄/路径，拒绝链接、越界和Windows备用数据流；JSON验证由同一Buffer计算指纹和结构结论，正文不出端口。原生历史不完整拒绝恢复，不承诺外部原子隔离。 ArtifactFileService 只观察明确原调用的有界文件，独立返回缺失、不可信和当前字节；路径与链接检查不宣称操作系统隔离。 独立 utility 持有 Win32 目录与文件句柄，执行单次有界替换、flush 与读回；私有 blob 保留真实 before，进程退出不表示内容回滚。另有独立 LPAC/Job Node 平台端口，私有快照与输出分权、真实进程树收束；尚未装配为模型命令或任务授权。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -16,6 +16,9 @@
 | [controlled-file-protocol.ts](controlled-file-protocol.ts) | Main 与专用文件 utility 子进程之间的严格私有消息及不透明会话端口。 |
 | [controlled-file-transport.ts](controlled-file-transport.ts) | Electron 主进程为每次受控内容替换或删除/移动创建专用 utility 子进程，并返回不透明会话。 |
 | [controlled-file-win32.ts](controlled-file-win32.ts) | 专用 utility 子进程的同步 Win32 单文件实现；全程拥有文件及目录句柄。 |
+| [isolated-node-protocol.ts](isolated-node-protocol.ts) | 声明平台隔离执行器的有界输入与返回事实，供可信装配和独立平台验收使用。 |
+| [isolated-node-win32.ts](isolated-node-win32.ts) | 以 Win32 LPAC Token、显式 ACL 和 Job Object 启动并收束真实程序，属于 Main 平台边界。 |
+| [isolated-node.ts](isolated-node.ts) | 把可信调用方给出的字节快照和本机执行器复制到私有目录，执行有界 LPAC 程序并返回真实平台事实。 |
 | [locking.ts](locking.ts) | KernelLock：使用 Windows mutex 或 POSIX flock，防止跨进程并发持有。 |
 | [native-session-files.ts](native-session-files.ts) | 在本工作区受管 Pi 会话目录内核实已关闭的原生上下文，供成员检查点与续执行使用。 |
 | [output-manifest-files.ts](output-manifest-files.ts) | 在固定工作区内枚举声明范围的全部目录和普通文件，生成完整产物观察并按原集合复核。 |
@@ -302,6 +305,129 @@ N_src_backend_main_platform_controlled_file_win32_ts ..> N_src_backend_main_plat
 
 直接依赖：[controlled-file-protocol.ts](controlled-file-protocol.ts)。
 
+### isolated-node-protocol.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_isolated_node_protocol_ts["isolated-node-protocol.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_isolated_node_protocol_ts_IsolatedNodeRequest["IsolatedNodeRequest"] {
+  <<type>>
+
+}
+N_src_backend_main_platform_isolated_node_protocol_ts ..> N_src_backend_main_platform_isolated_node_protocol_ts_IsolatedNodeRequest : 声明
+class N_src_backend_main_platform_isolated_node_protocol_ts_IsolatedNodeResult["IsolatedNodeResult"] {
+  <<interface>>
+  +executionId
+  +pid
+  +isolation
+  +status
+  +exitCode
+  +stdio
+  +runtime
+  +inputs
+  +outputs
+  +resources
+  +allProcessesExited
+  +cleanup
+}
+N_src_backend_main_platform_isolated_node_protocol_ts ..> N_src_backend_main_platform_isolated_node_protocol_ts_IsolatedNodeResult : 声明
+```
+
+
+### isolated-node-win32.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_isolated_node_win32_ts["isolated-node-win32.ts"] {
+  <<module>>
+  +quoteWindowsArgument()
+}
+```
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_isolated_node_win32_ts["isolated-node-win32.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_isolated_node_win32_ts_Win32IsolatedNode["Win32IsolatedNode"] {
+  +profileName
+  +capabilityName
+  +ownerSid
+  +packageSid
+  +grant()
+  +start()
+  +read()
+  +state()
+  +terminate()
+  +close()
+  -k
+  -api
+  -sid
+  -capability
+  -allocated
+  -handles
+}
+N_src_backend_main_platform_isolated_node_win32_ts ..> N_src_backend_main_platform_isolated_node_win32_ts_Win32IsolatedNode : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_isolated_node_win32_ts["isolated-node-win32.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_isolated_node_win32_ts_Win32IsolatedNode["Win32IsolatedNode"] {
+  -attributes
+  -job
+  -process
+  -thread
+  -pipe
+  -writePipe
+  -profileCreated
+  -used
+  -pins
+  -check()
+  -keep()
+  -release()
+  -stringSid()
+  -token()
+  -attribute()
+}
+N_src_backend_main_platform_isolated_node_win32_ts ..> N_src_backend_main_platform_isolated_node_win32_ts_Win32IsolatedNode : 声明
+```
+
+
+### isolated-node.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_isolated_node_ts["isolated-node.ts"] {
+  <<module>>
+  +runIsolatedNode()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_isolated_node_ts["isolated-node.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_isolated_node_ts_IsolatedNodeOptions["IsolatedNodeOptions"] {
+  <<interface>>
+  +executable
+  +koffiPath
+  +onStarted
+}
+N_src_backend_main_platform_isolated_node_ts ..> N_src_backend_main_platform_isolated_node_ts_IsolatedNodeOptions : 声明
+```
+
+直接依赖：[isolated-node-win32.ts](isolated-node-win32.ts)、[isolated-node-protocol.ts](isolated-node-protocol.ts)。
+
 ### locking.ts
 
 ```mermaid
@@ -494,6 +620,15 @@ class N_src_backend_main_platform_controlled_file_win32_ts["controlled-file-win3
 class N_src_backend_main_platform_controlled_file_protocol_ts["controlled-file-protocol.ts"] {
   <<module>>
 }
+class N_src_backend_main_platform_isolated_node_ts["isolated-node.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_isolated_node_win32_ts["isolated-node-win32.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_isolated_node_protocol_ts["isolated-node-protocol.ts"] {
+  <<module>>
+}
 class N_src_backend_main_platform_output_manifest_files_ts["output-manifest-files.ts"] {
   <<module>>
 }
@@ -501,6 +636,8 @@ class N_src_backend_main_platform_artifact_files_ts["artifact-files.ts"] {
   <<module>>
 }
 N_src_backend_main_platform_controlled_file_win32_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts : 导入依赖
+N_src_backend_main_platform_isolated_node_ts ..> N_src_backend_main_platform_isolated_node_win32_ts : 导入依赖
+N_src_backend_main_platform_isolated_node_ts ..> N_src_backend_main_platform_isolated_node_protocol_ts : 导入依赖
 N_src_backend_main_platform_output_manifest_files_ts ..> N_src_backend_main_platform_artifact_files_ts : 导入依赖
 ```
 
@@ -516,6 +653,20 @@ N_src_backend_main_platform_output_manifest_files_ts ..> N_src_backend_main_plat
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+## Windows 隔离 Node 平台端口（R12-A）
+
+`runIsolatedNode` 是可信宿主的平台端口，尚未成为模型工具或冻结任务授权。它不从业务请求取得宿主路径或环境变量：最多64份、总8 MiB的明确字节快照复制到本次 input；当前宿主可执行器及 Electron 必需数据复制到 runtime 并记录实际哈希；程序只向私有 output 写入，不修改原工程 ACL 或自动回写。
+
+Windows x64 使用唯一临时 AppContainer profile、LPAC opt-out 和固定 `registryRead` capability。该能力用于 Node 的实际系统初始化；没有任何网络 capability、COM授权或宿主凭证。ACL只对新建的自有目录设置：input/runtime读执行，output修改；保留Windows自身授予LPAC及registryRead的系统对象权限，不能声称绝对不可访问所有外部对象。原生旧工具仍仅有既有门禁，不因新增端口而自动隔离。
+
+`CreateProcessW` 带挂起及 Job List 属性，线程恢复前核 AppContainer、精确Package SID、唯一能力与原Job成员。Job不允许breakaway，最多1–8进程、128–1024 MiB提交内存及累计用户态CPU期限；宿主按单调时钟最多30秒终止，取消、主进程退出仍有后代及输出超限均收束原Job。只有原主进程已退出且Job活动数为0才读取输出；宿主崩溃由不继承的Job最后句柄关闭触发后代终止。没有磁盘硬配额，内核peakMemory计量可能包含失败的提交尝试，不等于RSS或成功分配量。
+
+仅继承NUL输入和宿主输出管道的显式句柄清单，不继承任意可继承句柄。清理环境只保留AppContainer启动所需的用户／系统位置及私有TEMP，不传PATH、NODE_OPTIONS或密钥。Windows参数逐项编码，不经过shell；保留Node symlink标志避免普通模块解析要求读取未授权父目录，不扩大文件权限。
+
+stdio最多64 KiB；声明输出最多32项、单项1 MiB、总4 MiB，进程树结束后逐层核非链接目录及同一普通单链接文件句柄。状态、实际退出码、输入／执行器／输出哈希和内核计量分开返回；`exited`仅表示进程结束，非零退出不能当成功，任何输出自述不证明业务验收。Profile删除或句柄／Job排空失败拒绝交付；原进程退出后映像仍被系统短暂占用时，只对同一自有目录的清理作有界重试，不重跑脚本；owner最后删除，持续失败保留依据。孤儿owner记录只供核实原资源，不授权重放。异常宿主退出后的自动孤儿清理及任务级接线留给R12-B。
+
+官方依据：[LPAC启动](https://learn.microsoft.com/en-us/windows/win32/secauthz/implementing-an-appcontainer)、[进程属性](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-updateprocthreadattribute)、[Job限制](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_basic_limit_information)、[Job实际计量](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-jobobject_basic_accounting_information)。其他平台、不支持API或资源缺失明确失败，不降级普通命令执行。
 
 ### 有界业务文件观察
 

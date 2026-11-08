@@ -1,8 +1,8 @@
 # CBIM 核心概念与领域设计
 
-版本：1.4｜author：linan
+版本：1.5｜author：linan
 
-本文保存核心概念、领域关系与设计依据。当前实施进度统一见[开发路线图](../design/tool-architecture-roadmap.md)，不在概念说明中重复维护。
+本文保存核心概念、领域关系与设计依据。当前实施进度统一见[开发路线图](../design/tool-architecture-roadmap.md)，不在概念说明中重复维护。2026-11-07 明确工作区岗位适配及模块负责人索引，以下相关内容是目标设计；当前运行协议的迁移与验收见[负责人索引设计](module-owner-index.md)。
 
 ## 定位
 
@@ -23,8 +23,9 @@ CBIM 通过独立的能力抽象与业务抽象组织专业方法和工作对象
 ```mermaid
 flowchart TD
     T[任务：目标、范围、验收与授权]
-    T --> A[选择 Agent]
     T --> B[定位 Module]
+    B --> O[查询负责人成员]
+    O --> A[解析 Agent 能力与岗位适配]
     A --> C[领域、工作原则、skills]
     B --> D[压缩索引、overview 知识、workflow 操作流程]
     C --> E[结合业务上下文开展工作]
@@ -36,16 +37,16 @@ flowchart TD
 
 ## 任务中的组合
 
-[Task 单一任务抽象](../design/task/README.md) 封装一个 Agent 与一个或多个由它维护的模块、目标和执行上下文。design/task/ 保存抽象，具体任务实例由 CBIM 内部调度与持久化服务管理；Skill 提供分析和协作方法，不能替代实际派发回执。
+[Task 单一任务抽象](../design/task/README.md) 封装一个工作区责任成员与一个或多个由它负责的模块、目标和执行上下文。成员引用可复用的 Agent 能力定义，任务冻结本次责任与配置版本。design/task/ 保存抽象，具体任务实例由 CBIM 内部调度与持久化服务管理；Skill 提供分析和协作方法，不能替代实际派发回执。
 
-[Task Loop](../design/task/task-loop.md) 是 CBIM AI 助理共用的任务构建与结果反馈循环，CBIM AI 助理 Skills 在各自业务或治理判断下使用它。它按模块与 authors 路由匹配 Agent，分析依赖后打包 Task，组织顺序或并行执行，再用结果驱动下一轮；不属于AI 成员 的能力属性。
+[Task Loop](../design/task/task-loop.md) 是 CBIM AI 助理共用的任务构建与结果反馈循环，CBIM AI 助理 Skills 在各自业务或治理判断下使用它。目标路由是先定位模块，再查询负责人成员，解析其能力与岗位适配，分析依赖后打包 Task，再用结果驱动下一轮；不属于 AI 成员的能力属性。现有 Task Loop 运行规范尚需随负责人索引实施切换，不能把目标入口当成已实现工具。
 
 - CBIM AI 助理内置三类默认流程，落地为四个 Skill：[知识查询](../design/skills/knowledge-query/SKILL.md) 定位权威资料并回答，[需求实现](../design/skills/business-execution/SKILL.md) 组织新功能、修复与整体交付，治理分为 [知识检查与维护](../design/skills/knowledge-governance/SKILL.md) 和 [架构治理](../design/skills/architecture-governance/SKILL.md)。前者检查事实、格式、引用与索引，按已有授权修正；后者组织模式观察、架构评估、渐进演进与复查。主入口根据用户目标选择流程，上述流程统一复用 Task Loop，不互相调用，也不登记到专业 AI 成员 的本地 skills 列表。
 - 新增操作方法由入口分别路由到 [新建 Workflow](../design/skills/create-workflow/SKILL.md) 与 [新建 Agent Skill](../design/skills/create-agent-skill/SKILL.md)。前者维护模块 workflows，后者维护已有 Agent 的 skills，均附确定性创建脚本；这两个 core Skill 不登记到专业成员的 skills 清单。
 - CBIM AI 助理是用户对接的唯一入口，负责理解需求、依据模块图谱拆出任务列表，并为每个业务任务组合一个AI 成员 与一个或多个由它维护的模块。CBIM AI 助理分析任务依赖、共享物理源与写入冲突，安排顺序或并行执行，跟踪结果、协调冲突、核实整体目标并统一交付；AI 成员 在派发时已确定的模块与工作区内，按任务上下文、工作原则及内部大脑循环完成任务并回报。此处描述目标协作方式，具体实现状态以开发路线图为准；实际委派受已实现能力与授权约束。
-- Agent 与 Module 是多对多关系：同一能力可以处理不同模块，同一模块可以由不同专业能力处理，双方不永久绑定。
-- 根据模块 authors 在真人花名册中的共同组归属确定默认候选团队，再按任务内容、Agent 名称与摘要匹配执行者。作者未知时按内容检索团队；跨专业任务可扩大候选范围。
-- 命中后核实能力描述、工作原则与所需方法。团队归属只提供候选范围，不扩大执行授权。
+- 抽象 Agent 与 Module 保持独立，可多对多组合；进入具体工作区后，成员有岗位适配和长期模块责任。第一版每模块一个当前主责成员，一个成员可负责多个模块，其他专业参与不自动取得主责。
+- 主 Agent 日常按模块负责人索引派发。能力匹配及 authors 团队线索用于加入成员、首次指派、责任调整和协作建议；缺少负责人时明确补齐关系，不静默回退到临时选人。
+- 找到负责人后仍核实能力描述、工作原则、有效 Skill、模型配置和成员状态。责任关系不扩大执行授权，变更时保存前后版本并区分新派发与存量交接。
 - 任务明确本次目标、对象范围、所选能力、必要知识、验收条件与授权，并保留所用定义的版本依据。
 - CBIM AI 助理的 Skills 组织需求分析、任务拆分、调度、验收和治理；Skill 提供具体专业操作方法；Module 的 Workflow 定义该对象的操作步骤、条件与出口，DNA 提供知识与契约。
 - `skills` 列出 Agent 自身目录下的可用方法；Module 通过 `workflows` 清单引用 `workflows/<工作流名>/workflow.md`，每个流程独立成目录，与 Agent Skill 对偶。任务按需要选择流程，并为相关步骤匹配适用方法；能力方法与业务流程不要求一一对应。
@@ -66,7 +67,9 @@ M 只保存临时的本地线索和工作笔记，不承担长期知识保存责
 
 ## 定义格式
 
-Agent 使用 agent.json，Module 使用 module.json，作为结构化字段与引用的唯一来源。Module 的 id、summary、sources 与直属 children 属于压缩索引；完整知识放同级 module.md，操作流程放 workflows/<工作流名>/workflow.md，不复制正文。Markdown 只承载被引用的工作原则、类图、知识与流程正文。Agent 注册表按组组织，Agent 和模块索引条目均只保存目录 id 与 summary，通过目录内约定文件读取完整对象；两侧各自的 JSON Schema 定义字段与类型。
+Agent 使用 agent.json，Module 使用 module.json，作为各自能力与业务定义的唯一来源。Module 的 id、summary、sources 与直属 children 属于压缩索引；完整知识放同级 module.md，操作流程放 workflows/<工作流名>/workflow.md，不复制正文。Markdown 只承载被引用的工作原则、类图、知识与流程正文。Agent 注册表按组组织，Agent 和模块静态索引条目均只保存目录 id 与 summary，通过目录内约定文件读取完整对象；两侧各自的 JSON Schema 定义字段与类型。
+
+工作区成员与模块责任属于项目适配登记，独立于上述可复用定义。按[负责人索引设计](module-owner-index.md)，它们由工作区派发存储保存唯一权威，模块详情以 `ownership.ownerMemberId` 关联展示，正反索引由此派生；不在 module.json 或成员模块清单中双写。成员使用稳定 memberId，任务/运行冻结它与责任版本，不以临时 AgentInstance ID 充当岗位身份。
 
 ## 单向依赖约束
 

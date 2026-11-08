@@ -15,6 +15,7 @@
 
 - [架构、存储与生命周期](assistant-architecture.md) · [源码目录说明](source-layout.md) · [源码类图](../src/ARCHITECTURE.md)
 - [Team 与 Workspace 树](shared-skills-workflows.md)：Skill 沿父链继承；Workflow 仅属于当前 Module。
+- [工作区成员与模块负责人索引](module-owner-index.md)：能力加入项目后的岗位适配、按负责人派发及换人交接；设计方案，尚待实施。
 - [大脑与 Loop Engine](loop-engine.md) · [任务派发契约](agent-dispatch-contract.md)
 - [主 Agent 的目标调度循环](main-agent-orchestration-loop.md)：图谱驱动的外层循环、结果评估与目标完成条件；明确现有派工回注基础与待实现门禁。
 - [成员执行与结果回传](member-execution.md) · [全局运行监管](global-runtime-management.md)

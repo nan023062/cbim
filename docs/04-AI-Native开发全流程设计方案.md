@@ -93,7 +93,7 @@ CBIM 由内部大脑与调度引擎承载执行，Lead/Worker 表达任务中的
 
 ### 2.3 Agent Skill 与业务 Workflow
 
-team/ 保存 C 的 Agent 定义、Skill 与真人花名册；workspace/ 保存 B 的 Module 定义、DNA 与 Workflow。执行 AI 按 core 规则在任务中组合两侧，按需将 Workflow 步骤匹配到适用 Skill，不在模块注册表中固化唯一AI 成员。core 是共享规则，不是独立运行的调度服务。节点对偶的完整定义见 [CBIM 设计理论](02-CBIM架构设计理论.md)。
+team/ 保存 C 的 Agent 定义、Skill 与真人花名册；workspace/ 保存 B 的 Module 定义、DNA 与 Workflow。Agent 加入具体工作区后形成有岗位适配的长期成员；模块通过工作区责任登记标记负责人成员，主 Agent 按模块索引派发，再按需将 Workflow 步骤匹配到适用 Skill。责任登记不反向耦合通用能力定义，静态模块注册表也不重复保存另一份负责人。core 是共享规则，不是独立运行的调度服务。节点对偶见 [CBIM 设计理论](02-CBIM架构设计理论.md)，待实施协议见[模块负责人索引](module-owner-index.md)。
 
 | 维度 | Agent Skill | 业务 Workflow |
 |---|---|---|
@@ -138,7 +138,7 @@ Lead 先判断任务属于具体业务交付还是结构演进，再根据产物
 
 同一人可以兼任角色，但任务中必须明确每项责任由谁承担。审批绑定具体方案版本和范围，不能用笼统“同意继续”覆盖后续所有变化。
 
-本节的 Owner、Reviewer 等表示任务中的责任角色，不是 Agent 或模块的持久字段。对象仅以 authors 登记真人作者，不增加 owner 字段。作者用于追溯及默认团队检索，不自动取得审批权；多位作者必须引用花名册中同组人员。
+本节涉及的真人 Owner、Reviewer 与审批责任，不能和 AI 模块负责人混为一谈。authors 记录真人作者，maintenance 记录显式真人维护声明；工作区另以 ModuleOwnership 持久记录模块的 AI 主责成员，模块领域视图显示 ownerMemberId。该关系不在 module.json 重复保存，按[负责人索引设计](module-owner-index.md)派生展示并用于调度。作者只提供追溯及岗位配置线索，不自动取得执行或审批权；多位作者仍须引用花名册中同组人员。负责人索引是新设计，实施状态以路线图为准。
 
 ---
 
@@ -474,9 +474,9 @@ core 保存通用设计、Schema、CBIM AI 助理的任务流程与维护脚本�
 
 一级模块为 client、server、devops、art-assets、design、qa；一级节点本身也有 module.json 和 module.md。现有模块已按此布局整理；知识与操作步骤分别保留唯一正文。同一模块可索引多个物理源，同一物理源只保留一个维护模块，其他模块通过引用使用；Client_debug 与 clinet-debug 镜像不参与。
 
-agent.json 与 module.json 是结构化定义的唯一来源，Markdown 保存原则、知识和流程正文。对象目录路径即 id，统一相对项目根解析。Module 在 module.json 显式维护 id 与直属 children，并校验它们与实际目录一致；overview 不重复索引字段，workflow 不重复知识正文。Agent 索引按组组织，Agent 和模块索引条目均只含 id、summary，不重复保存源路径、作者或完整契约。
+agent.json 与 module.json 是能力与业务静态定义的唯一来源，Markdown 保存原则、知识和流程正文。对象目录路径即 id，统一相对项目根解析。Module 在 module.json 显式维护 id 与直属 children，并校验它们与实际目录一致；overview 不重复索引字段，workflow 不重复知识正文。Agent 索引按组组织，Agent 和模块静态索引条目均只含 id、summary，不重复保存源路径、作者或完整契约。项目成员与负责人关系另由工作区登记保存，模块页面关联展示，不混入可复用定义包。
 
-执行时先按摘要定位模块，读取 sources 确认物理工作范围；再由 authors 查询 people.json 的共同组归属，匹配组内 Agent 的名称、摘要和能力。作者未知或任务跨专业时按内容扩大候选范围。作者不等于自动获授权的执行者或审批人。
+目标执行路径是先按摘要定位模块，读取 sources 确认物理工作范围，再按负责人索引查询工作区成员并解析其能力、模型、Skill 与岗位适配。未分配或关系失效时明确补齐分工，不临时绕过负责人。authors 与 people.json 的组归属可以辅助首次配置和调整岗位；跨专业工作通过明确协作或拆分任务组织。作者不等于自动获授权的执行者或审批人。此路径须随负责人索引协议实施接通，不把本文示例当作当前接口。
 
 注册表脚本同步索引并校验 Schema、引用、摘要、作者人员引用与同组约束；不自动证明业务知识或运行效果。新增、移动和修改定义后按维护说明执行 --write 和 --check。
 

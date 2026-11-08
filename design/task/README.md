@@ -6,5 +6,6 @@
 - [BaseTask 与执行接口](base-task.md)：结构图、派发与执行边界。
 - [Task Loop](task-loop.md)：CBIM AI 助理的任务构建与结果反馈。
 - [知识基线与恢复](task-baseline.md)：版本绑定与恢复证据。
+- [模块负责人索引实施计划](module-owner-index.md)：工作区成员、责任查询、按负责人派发与更换交接的开发切片；不是运行时 Skill，功能待实施。
 
 本目录保存抽象，具体任务由 CBIM 内部调度与持久化服务承载；可靠入队不代表成员已自动执行。

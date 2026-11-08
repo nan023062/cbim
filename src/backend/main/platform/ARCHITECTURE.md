@@ -14,7 +14,7 @@
 | [controlled-file-blobs.ts](controlled-file-blobs.ts) | 保存受控写入的私有 before/intended-after 字节，公开回执只引用 UUID 与哈希。 |
 | [controlled-file-child.ts](controlled-file-child.ts) | 独立 Electron utility 文件工人入口，只接收固定私有消息，不启动 Application 或模型。 |
 | [controlled-file-protocol.ts](controlled-file-protocol.ts) | Main 与专用文件 utility 子进程之间的严格私有消息及不透明会话端口。 |
-| [controlled-file-transport.ts](controlled-file-transport.ts) | Electron 主进程为每个受控单文件操作创建专用 utility 子进程，并返回不透明会话。 |
+| [controlled-file-transport.ts](controlled-file-transport.ts) | Electron 主进程为每次受控内容替换或删除/移动创建专用 utility 子进程，并返回不透明会话。 |
 | [controlled-file-win32.ts](controlled-file-win32.ts) | 专用 utility 子进程的同步 Win32 单文件实现；全程拥有文件及目录句柄。 |
 | [locking.ts](locking.ts) | KernelLock：使用 Windows mutex 或 POSIX flock，防止跨进程并发持有。 |
 | [native-session-files.ts](native-session-files.ts) | 在本工作区受管 Pi 会话目录内核实已关闭的原生上下文，供成员检查点与续执行使用。 |
@@ -94,6 +94,11 @@ classDiagram
 class N_src_backend_main_platform_controlled_file_protocol_ts["controlled-file-protocol.ts"] {
   <<module>>
 }
+class N_src_backend_main_platform_controlled_file_protocol_ts_ControlledNamespaceChange["ControlledNamespaceChange"] {
+  <<type>>
+
+}
+N_src_backend_main_platform_controlled_file_protocol_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts_ControlledNamespaceChange : 声明
 class N_src_backend_main_platform_controlled_file_protocol_ts_ControlledChildRequest["ControlledChildRequest"] {
   <<type>>
 
@@ -109,11 +114,6 @@ class N_src_backend_main_platform_controlled_file_protocol_ts_ControlledContentF
 
 }
 N_src_backend_main_platform_controlled_file_protocol_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts_ControlledContentFact : 声明
-class N_src_backend_main_platform_controlled_file_protocol_ts_ControlledChildReply["ControlledChildReply"] {
-  <<type>>
-
-}
-N_src_backend_main_platform_controlled_file_protocol_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts_ControlledChildReply : 声明
 ```
 
 ```mermaid
@@ -121,6 +121,11 @@ classDiagram
 class N_src_backend_main_platform_controlled_file_protocol_ts["controlled-file-protocol.ts"] {
   <<module>>
 }
+class N_src_backend_main_platform_controlled_file_protocol_ts_ControlledChildReply["ControlledChildReply"] {
+  <<type>>
+
+}
+N_src_backend_main_platform_controlled_file_protocol_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts_ControlledChildReply : 声明
 class N_src_backend_main_platform_controlled_file_protocol_ts_ExclusiveControlledFile["ExclusiveControlledFile"] {
   <<interface>>
   +readBefore()
@@ -129,9 +134,18 @@ class N_src_backend_main_platform_controlled_file_protocol_ts_ExclusiveControlle
   +writeIssued
 }
 N_src_backend_main_platform_controlled_file_protocol_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts_ExclusiveControlledFile : 声明
+class N_src_backend_main_platform_controlled_file_protocol_ts_ExclusiveControlledTransition["ExclusiveControlledTransition"] {
+  <<interface>>
+  +readBefore()
+  +recheckIdentity()
+  +transitionAndVerify()
+  +writeIssued
+}
+N_src_backend_main_platform_controlled_file_protocol_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts_ExclusiveControlledTransition : 声明
 class N_src_backend_main_platform_controlled_file_protocol_ts_ControlledFileTransport["ControlledFileTransport"] {
   <<interface>>
   +withExclusiveExisting()
+  +withExclusiveTransition()
   +drain()
   +close()
 }
@@ -163,12 +177,14 @@ class N_src_backend_main_platform_controlled_file_transport_ts_Request["Request"
 N_src_backend_main_platform_controlled_file_transport_ts ..> N_src_backend_main_platform_controlled_file_transport_ts_Request : 声明
 class N_src_backend_main_platform_controlled_file_transport_ts_UtilityControlledFiles["UtilityControlledFiles"] {
   +withExclusiveExisting()
+  +withExclusiveTransition()
   +drain()
   +close()
   -entryPath
   -koffiPath
   -sessions
   -closing
+  -withSession()
 }
 N_src_backend_main_platform_controlled_file_transport_ts ..> N_src_backend_main_platform_controlled_file_transport_ts_UtilityControlledFiles : 声明
 class N_src_backend_main_platform_controlled_file_transport_ts_external_ControlledFileTransport["ControlledFileTransport (外部契约)"] {
@@ -182,6 +198,7 @@ class N_src_backend_main_platform_controlled_file_transport_ts_UtilityFileSessio
   +readBefore()
   +recheckIdentity()
   +replaceAndFlush()
+  +transitionAndVerify()
   +close()
   -child
   -signal
@@ -191,13 +208,16 @@ class N_src_backend_main_platform_controlled_file_transport_ts_UtilityFileSessio
   -closing
   -pending
   -before
-  -issued
 }
 N_src_backend_main_platform_controlled_file_transport_ts ..> N_src_backend_main_platform_controlled_file_transport_ts_UtilityFileSession : 声明
 class N_src_backend_main_platform_controlled_file_transport_ts_external_ExclusiveControlledFile["ExclusiveControlledFile (外部契约)"] {
   <<external>>
 }
 N_src_backend_main_platform_controlled_file_transport_ts_external_ExclusiveControlledFile <|.. N_src_backend_main_platform_controlled_file_transport_ts_UtilityFileSession
+class N_src_backend_main_platform_controlled_file_transport_ts_external_ExclusiveControlledTransition["ExclusiveControlledTransition (外部契约)"] {
+  <<external>>
+}
+N_src_backend_main_platform_controlled_file_transport_ts_external_ExclusiveControlledTransition <|.. N_src_backend_main_platform_controlled_file_transport_ts_UtilityFileSession
 ```
 
 成员 2/2（同名节点为同一声明，跨图合并阅读）。
@@ -208,6 +228,7 @@ class N_src_backend_main_platform_controlled_file_transport_ts["controlled-file-
   <<module>>
 }
 class N_src_backend_main_platform_controlled_file_transport_ts_UtilityFileSession["UtilityFileSession"] {
+  -issued
   -resolveExit
   -abort
   -reject()
@@ -218,6 +239,10 @@ class N_src_backend_main_platform_controlled_file_transport_ts_external_Exclusiv
   <<external>>
 }
 N_src_backend_main_platform_controlled_file_transport_ts_external_ExclusiveControlledFile <|.. N_src_backend_main_platform_controlled_file_transport_ts_UtilityFileSession
+class N_src_backend_main_platform_controlled_file_transport_ts_external_ExclusiveControlledTransition["ExclusiveControlledTransition (外部契约)"] {
+  <<external>>
+}
+N_src_backend_main_platform_controlled_file_transport_ts_external_ExclusiveControlledTransition <|.. N_src_backend_main_platform_controlled_file_transport_ts_UtilityFileSession
 ```
 
 直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[controlled-file-protocol.ts](controlled-file-protocol.ts)。
@@ -235,9 +260,11 @@ class N_src_backend_main_platform_controlled_file_win32_ts_Win32ControlledFile["
   +writeIssued
   +read()
   +replace()
+  +transition()
   +close()
   -root
   -relativePath
+  -namespaceChange
   -koffi
   -api
   -handles
@@ -246,8 +273,6 @@ class N_src_backend_main_platform_controlled_file_win32_ts_Win32ControlledFile["
   -original
   -bool()
   -openHandle()
-  -final()
-  -info()
 }
 N_src_backend_main_platform_controlled_file_win32_ts ..> N_src_backend_main_platform_controlled_file_win32_ts_Win32ControlledFile : 声明
 ```
@@ -260,8 +285,14 @@ class N_src_backend_main_platform_controlled_file_win32_ts["controlled-file-win3
   <<module>>
 }
 class N_src_backend_main_platform_controlled_file_win32_ts_Win32ControlledFile["Win32ControlledFile"] {
+  -final()
+  -info()
+  -target()
+  -lockParents()
+  -missing()
   -open()
   -checkedIdentity()
+  -defaultStreamOnly()
 }
 N_src_backend_main_platform_controlled_file_win32_ts ..> N_src_backend_main_platform_controlled_file_win32_ts_Win32ControlledFile : 声明
 ```
@@ -477,3 +508,9 @@ Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，
 ## 完整目录清单读取（R07-A）
 
 `OutputManifestFiles` 从冻结范围完整枚举文件与目录，缺失根明确记录；两次完整扫描共用15秒期限，摘要一致才返回。每次最多512条、32层、单文件8 MiB及总计32 MiB，无忽略或分页截断。文件复用真实句柄指纹，目录前后核身份和元信息；链接、硬链接、特殊对象、范围外路径或不稳定读取失败，不返回局部清单。显式复核重新枚举整个范围，新增条目也使旧依据失效。外部竞争仅尽力检测，不宣称操作系统隔离或原子快照。
+
+## 受控文件命名空间操作（R07-B2 平台端口）
+
+`withExclusiveTransition` 在 open 时固定删除或不覆盖移动，和内容替换共享真实 utility 退出屏障，但不能在同一会话互换操作。当前限 Windows x64 / NTFS、已有普通 UTF-8 文件和已存在父目录；单文件 1 MiB，拒绝链接、硬链接及默认流外的其它数据流。移动两端父目录均持句柄，不创建目标父目录，不覆盖目标；平台事实含原文件身份/字节与源已缺失。
+
+删除使用 `SetFileInformationByHandle(FileDispositionInfo)`，关闭原文件句柄后核缺失；移动使用 `FileRenameInfo` 且不设替换标志，同句柄核目标身份/字节及源缺失。发出请求即记录 writeIssued，取消/断桥/回包丢失不等于未操作。调用方仍须先可靠保存执行意图，并等进程退出后核完整集合；平台成功自身不签发业务验收或重试许可。官方结构依据：[SetFileInformationByHandle](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfileinformationbyhandle)、[FILE_RENAME_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_rename_info)、[FILE_STREAM_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_stream_info)。

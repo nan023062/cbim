@@ -1,5 +1,5 @@
 /**
- * 受控文件边界：引擎只取得严格 list/call，不取得平台原端口或授权签发能力。
+ * 受控文件边界：写入及冻结删除/移动均只向引擎提供严格 list/call，不暴露平台原端口、阶段保存或授权签发能力。
  * 作用定位：大脑 执行层：与具体引擎无关的任务、事件、工具策略和执行摘要契约。
  * 设计原因：任务身份与原生上下文分开；选定文件、完整集合观察、JSON 验证与逐段检查点由独立可信端口记录，不由引擎自报。续执行准备复核原冻结证明，历史读取不猜测恢复。
  */
@@ -16,7 +16,7 @@ export type {ToolCall,ToolDecision} from '../tools/types';
 export type RunStatus = 'running' | 'completed' | 'cancelled' | 'failed' | 'interrupted';
 export interface EngineEvent {
   type: 'run.started' | 'session.bound' | 'message' | 'message.delta' | 'tool.started' | 'tool.finished' |
-     'tool.proposed' | 'tool.allowed' | 'tool.denied' | 'tool.updated' | 'task.updated' | 'task.help_requested' | 'task.checkpoint_requested' | 'artifact.baseline_captured' | 'artifact.manifest_captured' | 'validation.checked' | 'engine.status' | 'run.stop_requested' | 'run.settled' | 'run.interrupted';
+     'tool.proposed' | 'tool.allowed' | 'tool.denied' | 'tool.updated' | 'task.updated' | 'task.help_requested' | 'task.checkpoint_requested' | 'artifact.baseline_captured' | 'artifact.manifest_captured' | 'artifact.transition_prepared' | 'artifact.transition_executing' | 'artifact.transition_applied' | 'validation.checked' | 'engine.status' | 'run.stop_requested' | 'run.settled' | 'run.interrupted';
   data: Record<string, unknown>;
 }
 /** 事件落盘后的身份与顺序信息；观察者只能收到成功持久化的记录。 */
@@ -60,6 +60,8 @@ export interface EngineContext {
   memberCheckpointTools?:Pick<import('../tasks/member-checkpoint-tools').MemberCheckpointTools,'list'|'call'>;
   /** 仅实际受控平台端口支持的正式成员装配；引擎不能取得备份、补偿或权限签发能力。 */
   controlledFileTools?:Pick<import('./run-controlled-file').RunControlledFile,'list'|'call'>;
+  /** 仅冻结了删除/移动要求且已装配真实平台的正式成员拥有，不能继承为任意 shell 权限。 */
+  artifactTransitionTools?:import('../tasks/artifact-transition').ArtifactTransitionToolPort;
   /** 仅有冻结 JSON 验证要求的正式成员装配；路径、Schema 和结论来自可信端口。 */
   validationTools?:Pick<import('../tasks/validation-tools').ValidationTools,'list'|'call'>;
   /** 可信续执行的完整冻结证明复核，Pi 在载入前及载入后配置前调用；同时核实文件、知识、日志和原生指纹。 */

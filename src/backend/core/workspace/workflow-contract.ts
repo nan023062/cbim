@@ -1,7 +1,7 @@
 /**
  * 作用定位：定义模块 Workflow 正文中可选执行条件的严格协议，供知识治理、资源包与执行准备共同解析。
  * 设计原因：自然语言方法仍由模型运用，只有显式声明的少量稳定条件才交程序检查；坏声明不能静默退回无约束流程。
- * 职责边界：纯解析，JSON要求固定产物及受限Schema；artifactScope仅声明观察范围，delivery.requireCompleteManifest才要求同一完整集合贯通出口。不读取工程或签发权限。
+ * 职责边界：纯解析，JSON要求固定产物及受限Schema；普通artifactScope只声明观察，删除/移动约定须启用requireCompleteManifest并核原操作。不读取工程或签发权限。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
@@ -28,6 +28,7 @@ export const workflowContractSchema=z.object({
 }).strict().superRefine((value,context)=>{
   if(!value.beforeEffects&&!value.delivery&&!value.artifactScope)context.addIssue({code:z.ZodIssueCode.custom,message:'至少声明一项执行条件或产物观察范围'});
   if(value.delivery?.requireCompleteManifest&&!value.artifactScope)context.addIssue({code:z.ZodIssueCode.custom,message:'完整交付要求必须同时声明本模块 artifactScope'});
+  if(value.artifactScope?.transitions&&!value.delivery?.requireCompleteManifest)context.addIssue({code:z.ZodIssueCode.custom,message:'删除/移动要求必须显式启用完整清单验收'});
   const ids=[...value.delivery?.requiredToolEvidence??[],...value.delivery?.requiredValidations??[]].map(item=>item.id);
   if(new Set(ids).size!==ids.length)context.addIssue({code:z.ZodIssueCode.custom,path:['delivery','requiredToolEvidence'],message:'证据要求 ID 不能重复'});
 });

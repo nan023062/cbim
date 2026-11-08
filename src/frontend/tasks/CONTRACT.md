@@ -389,3 +389,7 @@ MemberOutputManifest 与旧文件面板并列，只在明确成员 run 下显示
 ## R07-B1 完整集合共同验收
 
 HumanDecisionController保留显式manifests选择并随原请求持久冻结；身份、选择或目标变化使旧预览失效，重开仅查未知命令。HumanDecisionPanel完整模式只显示原交付清单、全部固定根/后代范围和条目数量，不提供文件子集或自动最新选择。接受仅凭后端当前allowedDecisions，变化后的负面观察和历史意见仍可阅读。MemberValidationPanel显示其原完整清单身份，不把当时结构符合称为当前业务验收。
+
+## R07-B2 原删除与移动证明
+
+ArtifactTransitionProofs 为成员清单和人工候选/历史共用纯展示，显示源、目标、原字节摘要、写前清单及真实阶段序号。无重放或恢复按钮；当前集合状态仍取外层显式核实。缺失观察说明保留，不能仅凭今天缺失声称原删除成功。

@@ -1,10 +1,11 @@
 /**
- * 完整候选仅显示原交付清单、固定根及全部条目数量，选择与核实分开；历史显示原清单身份和当时观察。
+ * 完整候选显示原交付清单、固定根、条目数量和原删除/移动证明，选择与核实分开；历史保留原身份及当时观察。
  * 作用定位：呈现人工验收项的候选、文件观察和三种明确决定，并展示不可变本机记录。
  * 设计原因：普通对话及模型审阅不能代替真人选择；界面解释所选范围与未知限制，保存只记意见，不能暗示已启动或完成目标。
  */
 import type {HumanDecisionKind,HumanDecisionPreview} from '../../bridge/contracts/human-decisions';
 import type {HumanDecisionsView} from './useHumanDecisions';
+import {ArtifactTransitionProofs} from './ArtifactTransitionProofs';
 import './human-decisions.css';
 
 export const humanDecisionLabels:Record<HumanDecisionKind,string>={accept:'接受',reject:'拒绝',request_evidence:'要求补证'};
@@ -13,7 +14,7 @@ const fileLabels={matches:'内容一致',changed:'文件已变化',missing:'文�
 const manifestLabels={matches:'完整集合一致',changed:'完整集合已变化',unverifiable:'完整集合无法核实'};
 /** 同时展示目录范围与条目数量；不把旧文件子集的观察包装成完整核实。 */
 function ManifestSummary({manifest}:{manifest:NonNullable<HumanDecisionPreview['candidates'][number]['manifest']>}){
-  return <div data-testid="human-manifest-scope"><p>完整范围：{manifest.entryCount} 个条目，含 {manifest.fileCount} 个文件。目录包含全部后代。</p><ul>{manifest.scopes.flatMap(binding=>binding.scope.roots.map(root=><li key={binding.moduleId+':'+root.path}><code>{root.path}</code> · {root.kind==='directory'?'完整目录':'文件'}</li>))}</ul><details><summary>原清单身份</summary><p>采集于 {new Date(manifest.capturedAt).toLocaleString()}</p><p>清单 <code>{manifest.manifestId}</code></p><p>集合指纹 <code>{manifest.manifestHash}</code></p></details></div>;
+  return <div data-testid="human-manifest-scope"><p>完整范围：{manifest.entryCount} 个条目，含 {manifest.fileCount} 个文件。目录包含全部后代。</p><ul>{manifest.scopes.flatMap(binding=>binding.scope.roots.map(root=><li key={binding.moduleId+':'+root.path}><code>{root.path}</code> · {root.kind==='directory'?'完整目录':'文件'}</li>))}</ul><ArtifactTransitionProofs operations={manifest.operations}/><details><summary>原清单身份</summary><p>采集于 {new Date(manifest.capturedAt).toLocaleString()}</p><p>清单 <code>{manifest.manifestId}</code></p><p>集合指纹 <code>{manifest.manifestHash}</code></p></details></div>;
 }
 /** 两处卡片只接收同一个 Hook 视图；点击操作不会通过组件自身创建命令。 */
 export function HumanDecisionPanel({state}:{state:HumanDecisionsView}){

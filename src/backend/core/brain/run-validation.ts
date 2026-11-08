@@ -1,6 +1,6 @@
 /**
  * 作用定位：正式成员的 JSON 验证短门闩，连接冻结要求、原文件或完整集合身份及平台同字节读取。
- * 设计原因：模型不能指定路径、Schema 或结论；完整模式在JSON读取两侧重核全集合，共用15秒期限；知识、进度与代次须稳定，暂存须有真实成功回执。
+ * 设计原因：模型不能指定路径、Schema 或结论；完整模式保留原删除/移动阶段以重建清单证明，在JSON读取两侧重核全集合，共用15秒期限；知识、进度与代次须稳定，暂存须有真实成功回执。
  * 职责边界：rejected只表示实际检查不符合；交付另重核同一完整集合，旧模式复核选定文件，不执行命令或授予恢复权限。
  */
 import {randomUUID} from 'node:crypto';
@@ -59,7 +59,7 @@ export class RunValidation {
   }
   /** 只接收已经落盘的事件；当前代次由运行时持有，不从模型传来的 progressVersion 推断。 */
   observed(event:StoredEvent){
-    if(event.type==='run.started'||event.type.startsWith('tool.')||['task.updated','artifact.baseline_captured','artifact.manifest_captured','validation.checked','run.stop_requested','run.interrupted'].includes(event.type))this.events.push(event);
+    if(event.type==='run.started'||event.type.startsWith('tool.')||event.type.startsWith('artifact.transition_')||['task.updated','artifact.baseline_captured','artifact.manifest_captured','validation.checked','run.stop_requested','run.interrupted'].includes(event.type))this.events.push(event);
     if(event.type==='validation.checked'){
       const value=event.data.validation as ValidationResult|undefined;if(value)this.generations.set(value.toolCallId,this.context.generation());
     }

@@ -1,6 +1,6 @@
 /**
  * 检查点剩余额度只接可信成员服务；主会话和公开运行选项不能补造或覆盖额度。
- * 受控文件边界：正式成员和实际平台端口共同决定注册能力，主调度和 Node 缺省工厂无旁路，业务写始终受原权限约束。
+ * 受控文件边界：正式成员和实际平台端口共同决定写入及删除/移动能力；后者以 v1 严格选择冻结要求，主调度和 Node 缺省工厂无旁路，业务写始终受原权限约束。
  * 作用定位：调度引擎：将工作区内部知识服务、内核锁与前置策略注入独立 LoopRuntime。
  * 设计原因：工具纯分类只做一次，交给成员 Workflow 计划门禁和既有授权共用；主调度业务写入/命令仍始终拒绝。选定文件、完整清单、检查点与 JSON 验证仅向正式成员注入，完整清单及验证还须冻结声明和真实端口，单任务入口不能绕过。
  * 仓库边界：仅主会话使用已捕获只读端口；发现、分类、调用各走独立适配器，资料不是指令，成员不因装配参数获得外部读取能力。
@@ -34,6 +34,8 @@ import type {OutputManifestCapturePort} from '../../core/brain/output-manifest-c
 import {outputManifestTool} from '../../core/tasks/output-manifest-tools';
 import type {ControlledFileRunPort} from '../../core/brain/run-controlled-file';
 import {controlledFileWriteToolName,controlledFileWriteInputSchema} from '../../core/tasks/controlled-file-operation';
+import type {ArtifactTransitionRunPort} from '../../core/brain/run-artifact-transition';
+import {artifactTransitionToolName,artifactTransitionInputSchema} from '../../core/tasks/artifact-transition';
 import type {ValidationFilePort} from '../../core/brain/run-validation';
 import {validationTool} from '../../core/tasks/validation-tools';
 import {memberCheckpointTool} from '../../core/tasks/member-checkpoint-tools';
@@ -94,6 +96,8 @@ export interface ExecutionServices {
   validations?:ValidationFilePort;
   /** 仅实际成员装配；Node 无平台端口时不注册。 */
   controlledFiles?:ControlledFileRunPort;
+  /** 仅 Main 按实际 utility 能力注入；路径和种类继续取自成员冻结约定。 */
+  artifactTransitions?:ArtifactTransitionRunPort;
   /** 仅已领取的成员续执行装配原日志/业务文件/知识/原生历史复核；不向主会话或模型公开。 */
   assertMemberResume?():Promise<void>;
   /** 可信成员工厂根据原任务检查点历史计算；不是模型或 IPC 可覆盖的选项。 */
@@ -153,6 +157,7 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
   const describeTool=(call:ToolCall):RunToolDescriptor=>{
     owner.assert();
     if(call.name===controlledFileWriteToolName){if(!services.member||!services.controlledFiles)fail('CONTROLLED_PLATFORM_UNSUPPORTED','本轮未装配受控写入');controlledFileWriteInputSchema.parse(call.input);return {effects:['business-write'],native:false,scope:{kind:'workspace',workspaceId:workspace.id}}}
+    if(call.name===artifactTransitionToolName){if(!services.member||!services.artifactTransitions)fail('ARTIFACT_TRANSITION_UNAVAILABLE','本轮未装配真实删除/移动');artifactTransitionInputSchema.parse(call.input);return {effects:['business-write'],native:false,scope:{kind:'workspace',workspaceId:workspace.id},contractVersion:1}}
     const progress=progressTool(call.name,call.input);if(progress)return progress;
     const validation=validationTool(call.name,call.input);if(validation){if(!services.member||!services.artifacts||!services.validations||!services.member.workflowContracts?.some(binding=>binding.contract.delivery?.requiredValidations?.length))throw Error('本轮未提供冻结 JSON 产物验证能力');return validation}
     const artifact=artifactTool(call.name,call.input);if(artifact){if(!services.member||!services.artifacts)throw Error('本轮未提供成员文件基线采集能力');return artifact}
@@ -173,6 +178,7 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
     manifests:services.member?services.manifests:undefined,
     validations:services.member?services.validations:undefined,
     controlledFiles:services.member?services.controlledFiles:undefined,
+    artifactTransitions:services.member?services.artifactTransitions:undefined,
     memberCheckpointAllowance:services.member?services.memberCheckpointAllowance:undefined,
     assertMemberResume:services.member?services.assertMemberResume:undefined,
     assertMemberResumeInputs:services.member?services.assertMemberResumeInputs:undefined,

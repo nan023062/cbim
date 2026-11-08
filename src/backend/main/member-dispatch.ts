@@ -2,7 +2,7 @@
  * 同一OutputManifestFiles装配成员结算、主目标与人工接受/继续，沿用原工作区身份和只读占用，不另建文件执行通道。
  * 工厂按已提交历史计算剩余额度，恢复闭包持有全链快照以保护早期未再触及文件。
  * 持久成员等待另复用当前文件/native只读端口与短读占用，重启登记不调用恢复工厂。
- * 受控写边界：实际领取成员固定 scope/run/岗位来源并沿用成员写租约；桌面补偿独立取得写租约，不继承模型批准。
+ * 受控文件边界：实际领取成员固定 scope/run/岗位来源并沿用成员写租约；删除/移动复用同一实际 utility transport，桌面补偿独立取得写租约，不继承模型批准。
  * 作用定位：为已运行工作区装配成员派发、大脑执行、目标审阅、岗位及模块负责人服务；复用工作区恢复前创建的唯一 DispatchStore，来源、责任、岗位与执行保持独立审计投影。
  * 设计原因：知识→模型设置→Store 锁序固定岗位配置，预算和租约通过后才解密；成员不继承主模型。Workflow 能力按实际端口预检，密钥只留工厂闭包，锁释放后创建引擎；历史报告不启动成员。
  * 交接处置只复用原 canonical 读取与路径规范化，既存检查点证明不因今日 native/知识/模型变化被刷新；恢复执行仍走全部当前基线核验。
@@ -38,6 +38,7 @@ import type {ResolvedLlm} from '../core/brain/llm/ports';
 import type {MemberStartOptions} from '../core/tasks/member-commands';
 import {workspaceMemberModelHash} from '../core/team/workspace-member-rules';
 import {ControlledFiles} from './workspace/controlled-files';
+import {createArtifactTransitionPort} from './workspace/artifact-transitions';
 import type {ControlledFileTransport} from './platform/controlled-file-protocol';
 import {observeKnowledgeTransaction} from './workspace/knowledge-effect-reader';
 import {observePersistentWrite} from './workspace/persistent-effect-reader';
@@ -97,6 +98,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
           manifests:{knowledgeRevision:run.prepared.knowledgeRevision,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},capture:(scopes,signal)=>manifestFiles.capture(scopes,signal)},
           validations:{validateFile:(file,schema,signal)=>artifactFiles.validateFile(file,schema,signal),checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal)},
           controlledFiles:task.scopeId?controlledFiles.forRun(run,task.scopeId):undefined,
+          artifactTransitions:createArtifactTransitionPort(workspace,controlledTransport,()=>admission?.isCurrent()??true),
           // 领取后到 Pi 发出首条 prompt 前仍有异步准备；每个准备边界复核原证明，不只核原生文件而遗漏外部业务文件变化。
           assertMemberResume:previous?async()=>{await verifyMemberCheckpointProof(workspace,task,previous,checkpointPorts,()=>workspace.assert(),previous.checkpointProof,checkpointState.runs)}:undefined,
           assertMemberResumeInputs:previous?()=>verifyMemberCheckpointInputs(workspace,task,previous,checkpointPorts,()=>workspace.assert(),previous.checkpointProof!,checkpointState.runs):undefined,

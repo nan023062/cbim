@@ -287,3 +287,7 @@ output-manifest.ts 只公开严格清单 DTO；Node 哈希、日志核实及平�
 ## R07-B1 完整集合共同验收
 
 人工DTO可选完整清单选择和原采集证明，公开JSON记录只增加manifestId/scopeHash/manifestHash三字段身份，不透传原始snapshot、Schema或正文。Node哈希和日志重建仍在后端，旧DTO不补字段。
+
+## R07-B2 原删除与移动证明
+
+完整清单引用可携带严格原删除/移动证明；Bridge 只重导出 DTO，不公开句柄、Win32 或日志验证实现。旧清单无 operations 不补造；完整候选的 proof 才要求覆盖全部冻结操作。

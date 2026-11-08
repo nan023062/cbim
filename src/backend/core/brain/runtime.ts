@@ -1,7 +1,8 @@
 /**
  * 完整出口将原清单选择/重核端口注入任务与JSON工具；实际交付授权必须唯一，门闩覆盖候选保存和回包之间。
+ * 删除/移动只交给冻结约定的专用端口；原阶段由可信 append 保存，失败屏障与实际进程排空同样参与终态。
  * 每个正式成员运行最多暂存一次检查点，可信剩余额度允许后续运行再次停泊，零额度仍保留正常交付。
- * 受控写边界：自身 beforeTool 可靠保存 allowed 才签发一次许可；未确认写入后整轮限制为读取/求助并按 interrupted 封存，原失败回执不改写。停止等待文件 child 退出，失败保留原占用。
+ * 受控文件边界：自身 beforeTool 可靠保存 allowed 才签发一次许可；写入及冻结删除/移动未确认后整轮限制为读取/求助并按 interrupted 封存，原失败回执不改写。停止等待文件 child 退出，失败保留原占用。
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
  * 设计原因：工具先分类与计划门禁再审批；每轮进度绑定真实 workspace/task/run，成员专属工具另绑定完整实例。完整集合观察、JSON 验证及交付复核各持短锁，异步读取前后核知识、计划与停止；坏回包保留事实，求助/检查点不解锁，采集/验证只随真实结束释放。
  * 插入边界：核对原 run、可信周期令牌和发送前停止信号；原生接受后返回真实日志序号，适配器不能伪造该令牌。终态等待在途记录排空，接受后的保存失败仍属未知，不自动重放。
@@ -23,12 +24,14 @@ import {hash,json} from '../foundation/serialization';
 import {isDeepStrictEqual} from 'node:util';
 import {RunArtifactCapture,type ArtifactCapturePort} from './artifact-capture';
 import {RunOutputManifestCapture,type OutputManifestCapturePort} from './output-manifest-capture';
-import {preparedArtifactScopes} from '../workspace/artifact-scope';
+import {preparedArtifactScopes,preparedArtifactTransitions} from '../workspace/artifact-scope';
 import {outputManifestToolName,outputManifestInspectToolName} from '../tasks/output-manifest';
 import {completeOutputRequired} from '../tasks/complete-output-evidence';
 import {RunValidation,type ValidationFilePort} from './run-validation';
 import {RunControlledFile,type ControlledFileRunPort} from './run-controlled-file';
 import {controlledFileWriteToolName} from '../tasks/controlled-file-operation';
+import {RunArtifactTransition,type ArtifactTransitionRunPort} from './run-artifact-transition';
+import {artifactTransitionToolName} from '../tasks/artifact-transition';
 import {validationToolName} from '../tasks/validation';
 import {jsonValidationLimits} from '../workspace/json-validation-schema';
 import {checkedMemberRunLaunch,type MemberRunLaunch} from './member-run';
@@ -58,6 +61,8 @@ export interface RuntimeOptions {
   validations?:ValidationFilePort;
   /** 仅已领取成员的实际桌面写入端口；缺省绝不注册工具。 */
   controlledFiles?:ControlledFileRunPort;
+  /** 仅为原冻结删除/移动要求提供实际平台操作，不接受模型任意路径或恢复请求。 */
+  artifactTransitions?:ArtifactTransitionRunPort;
   /** 仅正式成员的冻结模块约定；没有约定的旧运行保持原策略，存在约定必须装配可信分类端口。 */
   workflowContracts?:WorkflowContractBinding[];
   /** 纯分类与参数解析，不询问批准或运行工具；同一个描述继续交给授权端，避免两套 effects 判断。 */
@@ -146,6 +151,7 @@ export class LoopRuntime {
     if(validationRequired&&(!member||!this.options.artifacts||!this.options.validations))fail('VALIDATION_UNAVAILABLE','冻结的 JSON 验证要求缺少正式成员文件验证端口');
     const manifestScopes=preparedArtifactScopes(workflows);
     if(manifestScopes.length&&(!member||!this.options.manifests))fail('MANIFEST_UNAVAILABLE','声明的完整产物范围缺少正式成员枚举端口');
+    if(preparedArtifactTransitions(manifestScopes).length&&(!member||!this.options.artifactTransitions))fail('ARTIFACT_TRANSITION_UNAVAILABLE','冻结的删除/移动要求缺少真实受控平台端口');
     const conversationBinding=this.options.conversationBinding===undefined?undefined:checkedConversationAgentBinding(this.options.conversationBinding,task);
     if(fresh&&(task.mode!=='chat'||task.agentId!=='cbim:main'||!conversationBinding||resume||member||source))throw Error('新上下文仅限已经登记的主对话实例');
     if(source){source=checkedRunInputSource(source);if(task.mode!=='chat'||!resume||member)throw Error('可信接续只能用于已有主对话');}
@@ -208,20 +214,21 @@ export class LoopRuntime {
       const calls=new Map<string,{call:ToolCall;decision:ToolDecision;generation:number;overlappedEffect?:boolean;effect?:boolean}>();
       // 仅声明 Workflow 的运行启用：重叠读取仍记录真实回执，但不能证明副作用结束后的产物。
       const effectsInFlight=new Set<string>();
-      const assertDeliveryReady=()=>{controlledFile?.assertVerified();if(effectsInFlight.size)fail('WORKFLOW_EFFECT_PENDING','仍有未结束的副作用，不能准备交付；结束后须重新读取并验证')};
+      const assertDeliveryReady=()=>{controlledFile?.assertVerified();artifactTransition?.assertVerified();if(effectsInFlight.size)fail('WORKFLOW_EFFECT_PENDING','仍有未结束的副作用，不能准备交付；结束后须重新读取并验证')};
       const identity={workspaceId:task.workspaceId,taskId:task.taskId,runId};
       let artifactCapture:RunArtifactCapture|undefined;
       let manifestCapture:RunOutputManifestCapture|undefined;
       let checkpointTools:RunMemberCheckpoint|undefined;
       let validation:RunValidation|undefined;
       let controlledFile:RunControlledFile|undefined;
+      let artifactTransition:RunArtifactTransition|undefined;
       const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{identity,assertDeliveryReady,artifacts:()=>artifactCapture?.refs()??[],...(completeOutputRequired(workflows)?{manifests:{select:(id,version)=>{if(!manifestCapture)fail('MANIFEST_UNAVAILABLE','本轮完整产物端口尚未就绪');return manifestCapture.select(id,version)},verifyCurrent:async record=>{if(!manifestCapture)fail('MANIFEST_UNAVAILABLE','本轮完整产物端口尚未就绪');await manifestCapture.verifyCurrent(record,'cbim_delivery_prepare')}}}:{}),...(validationRequired?{validations:{records:()=>validation?.records()??[],verifyCurrent:async records=>{if(!validation)fail('VALIDATION_UNAVAILABLE','本轮验证端口尚未就绪');await validation.verifyCurrent(records)}}}:{}),...(workflows.length?{workflow:{bindings:workflows,task:{goal:task.goal,acceptance:task.acceptance},identity}}:{})});
       const emit=async(event:EngineEvent,trustedArtifact=false)=>{
         // 契约版本来自真实描述和授权；模型/引擎事件不能给旧调用补造新协议来源。
         if(!trustedArtifact&&event.data.contractVersion!==undefined){const {contractVersion:_,...data}=event.data;event={...event,data}}
-        if(event.type==='tool.allowed'&&event.data.name===controlledFileWriteToolName&&!trustedArtifact)fail('CONTROLLED_FILE_AUTHORIZATION','受控写授权只能由本轮策略可靠保存');
+        if(event.type==='tool.allowed'&&[controlledFileWriteToolName,artifactTransitionToolName].includes(String(event.data.name))&&!trustedArtifact)fail('CONTROLLED_FILE_AUTHORIZATION','受控文件授权只能由本轮策略可靠保存');
         if(event.type==='engine.status'&&event.data.activeInput!==undefined&&!trustedArtifact)throw Error('目标补充身份只能由可信插入端口保存');
-        if(['artifact.baseline_captured','artifact.manifest_captured','task.checkpoint_requested','validation.checked'].includes(event.type)&&!trustedArtifact)throw Error('产物、JSON 验证与检查点只能由本轮可信端口保存');
+        if((['artifact.baseline_captured','artifact.manifest_captured','task.checkpoint_requested','validation.checked'].includes(event.type)||event.type.startsWith('artifact.transition_'))&&!trustedArtifact)throw Error('产物、原操作、JSON 验证与检查点只能由本轮可信端口保存');
         if(event.type==='tool.finished'){
           const known=calls.get(String(event.data.id));
           const {receipt:_untrustedReceipt,...data}=event.data;
@@ -237,6 +244,7 @@ export class LoopRuntime {
         checkpointTools?.observed(saved);
         validation?.observed(saved);
         controlledFile?.observed(saved.type,saved.data.id,saved.data.isError===true);
+        artifactTransition?.observed(saved);
         if(event.type==='session.bound'&&typeof event.data.sessionFile==='string')boundSessionFile=event.data.sessionFile;
         if(event.type==='tool.finished'&&event.data.receipt){
           const known=calls.get(String(event.data.id))!;
@@ -273,7 +281,7 @@ export class LoopRuntime {
         },
         assertReadingReady:name=>{
           const ids=[...activeCalls];if(stopping||ids.length!==1||pendingTools.size!==1||!pendingTools.has(ids[0])||calls.get(ids[0])?.decision.allow!==true||calls.get(ids[0])?.call.name!==name)fail('MANIFEST_CALL','完整产物复核已停止、未获准或仍有其它在途工具');
-          controlledFile?.assertVerified();
+          controlledFile?.assertVerified();artifactTransition?.assertVerified();
         },
         save:async manifest=>{await emit({type:'artifact.manifest_captured',data:{manifest}},true)},
       });
@@ -294,6 +302,11 @@ export class LoopRuntime {
       let finishing=false;
       if(member&&this.options.controlledFiles)controlledFile=new RunControlledFile(member.binding,this.options.controlledFiles,id=>{
         if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))fail('CONTROLLED_FILE_CALL','受控写已停止、未获准或有其他在途工具');
+      });
+      if(member&&preparedArtifactTransitions(manifestScopes).length&&this.options.manifests&&this.options.artifactTransitions)artifactTransition=new RunArtifactTransition(member.binding,manifestScopes,this.options.manifests,this.options.artifactTransitions,{
+        version:()=>taskTools.current()?.version,
+        assertReady:id=>{if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))fail('ARTIFACT_TRANSITION_CALL','删除/移动已停止、未获准或仍有其它调用');controlledFile?.assertVerified()},
+        save:event=>emit(event,true),
       });
       const injection={runId,pending:new Set<Promise<ScopeActiveInputSendReceipt|undefined>>(),send:async(message:string,images:import('./types').InputImage[],signal:AbortSignal,activeInput?:RunSteerControl['activeInput'])=>{
         const assertReady=()=>{
@@ -323,7 +336,7 @@ export class LoopRuntime {
       await emit({type:'run.started',data:{task,message,engine:engine.kind,resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[],...(workflows.length?{workflowContracts:workflows}:{}),...(memberResume?{memberResume:{checkpointId:memberResume.checkpointId,runId:memberResume.runId}}:{}),...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),...(member?{memberBinding:member.binding,nativeSessionId:member.session.nativeSessionId}:{}),...(fresh?{freshMain:{nativeSessionId,excludedRunIds}}:{})}});
       await taskTools.invalidate('新一轮执行需要重新核实产物与证据');
       const stop=async()=>{
-        if(stopping)return;stopping=true;artifactCapture?.stop();manifestCapture?.stop();checkpointTools?.stop();validation?.stop();controlledFile?.stop();
+        if(stopping)return;stopping=true;artifactCapture?.stop();manifestCapture?.stop();checkpointTools?.stop();validation?.stop();controlledFile?.stop();artifactTransition?.stop();
         try{await emit({type:'run.stop_requested',data:{}})}catch(error){stopFailure=error}
         // 记录失败不能阻止实际 abort；失败事实在收尾按 interrupted 保留，不把无日志停止写成正常求助。
         try{await engine.stop()}catch(error){stopFailure??=error}
@@ -336,11 +349,12 @@ export class LoopRuntime {
         let failure:unknown;
         try{
           if(control?.signal.aborted)await stop();
-          if(!stopping)await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,manifestTools:manifestCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,controlledFileTools:controlledFile,assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
+          if(!stopping)await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,manifestTools:manifestCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,controlledFileTools:controlledFile,artifactTransitionTools:artifactTransition,assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
             call=structuredClone(call);
             if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
             // 验证、采集与停泊先同步预占，再进入策略；短读锁不会绕过求助/检查点的本轮结束门闩。
-            const controlledReason=controlledFile?.guard(call.name,call.id,call.input,[...activeCalls])??(!controlledFile&&call.name===controlledFileWriteToolName?'本轮未提供受控文件工具':undefined);
+            const transitionReason=artifactTransition?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactTransition&&call.name===artifactTransitionToolName?'本轮未提供冻结删除/移动能力':undefined);
+            const controlledReason=transitionReason??controlledFile?.guard(call.name,call.id,call.input,[...activeCalls])??(!controlledFile&&call.name===controlledFileWriteToolName?'本轮未提供受控文件工具':undefined);
             const validationReason=controlledReason??validation?.guard(call.name,call.id,call.input,[...activeCalls])??(!validation&&call.name===validationToolName?'本轮未提供冻结要求的 JSON 产物验证工具':undefined);
             const checkpointReason=validationReason??checkpointTools?.guard(call.name,call.id,call.input,[...activeCalls])??(!checkpointTools&&call.name===memberCheckpointToolName?'本轮没有剩余检查点额度或未装配可信检查点能力':undefined);
             const artifactReason=checkpointReason??artifactCapture?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactCapture&&call.name===artifactCaptureToolName?'本轮未提供成员文件基线采集能力':undefined);
@@ -377,6 +391,7 @@ export class LoopRuntime {
               await emit({type:'tool.denied',data:{...call,...decision,receipt:toolReceipt(identity,call,decision,'denied')}});
             }
             if(decision.allow)controlledFile?.authorize(call.id,authorization.seq);
+            if(decision.allow)artifactTransition?.authorize(call.id,authorization.seq);
             if(!decision.allow)memberHelpTools?.denied(call.id);
             return decision;
           }});
@@ -393,17 +408,18 @@ export class LoopRuntime {
           artifactCapture?.stop();
           manifestCapture?.stop();
           checkpointTools?.stop();
-          validation?.stop();controlledFile?.stop();
+          validation?.stop();controlledFile?.stop();artifactTransition?.stop();
           try{await engine.close()}catch(error){failure??=error}
           // 只重试原收尾屏障，不重试文件写。首次退出未确认保留 active；再次 close 可确认原 child 后完成日志收尾。
           let draining:Promise<void>|undefined;
           const drain=()=>draining??=(async()=>{
             await controlledFile?.drain();
+            await artifactTransition?.drain();
             await Promise.allSettled([...injection.pending]);
             failure??=stopFailure;
             try{
-            const unverifiedControlledCalls=controlledFile?.unverifiedCallIds??[];
-            if(failure||pendingTools.size||unverifiedControlledCalls.length)await emit({type:'run.interrupted',data:{error:failure instanceof Error?failure.message:String(failure||(unverifiedControlledCalls.length?'CONTROLLED_FILE_REVIEW_REQUIRED: 原受控写结果待核实，本轮不能安全交接':'工具结果未确认')),unresolvedTools:[...pendingTools],...(unverifiedControlledCalls.length?{unverifiedControlledCalls}:{}),receipts:[...pendingTools].map(id=>{const item=calls.get(id)!;return toolReceipt(identity,item.call,item.decision,'unknown')})}});
+            const unverifiedControlledCalls=[...controlledFile?.unverifiedCallIds??[],...artifactTransition?.unverifiedCallIds??[]];
+            if(failure||pendingTools.size||unverifiedControlledCalls.length)await emit({type:'run.interrupted',data:{error:failure instanceof Error?failure.message:String(failure||(unverifiedControlledCalls.length?'CONTROLLED_FILE_REVIEW_REQUIRED: 原受控文件操作结果待核实，本轮不能安全交接':'工具结果未确认')),unresolvedTools:[...pendingTools],...(unverifiedControlledCalls.length?{unverifiedControlledCalls}:{}),receipts:[...pendingTools].map(id=>{const item=calls.get(id)!;return toolReceipt(identity,item.call,item.decision,'unknown')})}});
             // close 仍属于本轮生命周期：在排空引擎期间收到停止，不能把已暂存的 completed 写成正常交接。
             else await emit({type:'run.settled',data:{...(stopping&&result?.status==='completed'?{status:'cancelled' as const}:result),acceptance:'not_evaluated'}});
             await journal.flush();

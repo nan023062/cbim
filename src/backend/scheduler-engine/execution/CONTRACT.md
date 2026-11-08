@@ -638,3 +638,7 @@ OutputManifestReportService 独立核任务/成员/原生绑定、冻结 Workflo
 memberWorkflowEvidence从可信冻结约定、完整成员/native/canonical身份和原成功采集重建交付证明。validateMemberWorkflow即使没有JSON条件也复核完整集合；结算、主目标审阅/完成共用该入口。
 
 人工预览无选择只列原候选，完整模式只提供交付时的清单。提交重新复核相同basis；集合变化允许拒绝/补证，禁止接受。已消费接受在继续、目标审阅及最终完成重建相同canonical来源并重读全范围；历史意见不变，不能自动重绑新清单。多候选共用15秒和有界总读取预算。
+
+## R07-B2 原删除与移动证明
+
+loop-engine 仅向真实成员注入 artifactTransitions；cbim_artifact_transition 按严格模块/序号/写前清单参数描述为 v1 business-write，沿已有 read/ask/execute 和计划前置。主会话及缺端口工厂无此能力，不从冻结声明本身推导授权。

@@ -350,3 +350,7 @@ LoopRuntime 仅向正式成员且冻结 artifactScope 的运行装配 RunOutputM
 ## R07-B1 完整集合共同验收
 
 RunOutputManifestCapture同步预占完整交付至真实finished/denied，覆盖审批、JSON复核、全集合读取、候选保存及wire返回。选择只取本轮可信成功清单；停止、知识/进度变化、缺失根、失效证明及错误端口均拒绝，不自动采集或换绑。RunValidation在同字节JSON校验前后复核整个范围，共用15秒期限；交付再核原集合。完整清单工具继续不作步骤证据或安全检查点来源。
+
+## R07-B2 原删除与移动证明
+
+RunArtifactTransition 在审批前预占原有效 before 清单；可靠 allowed 后重核当前全集合，取得平台独占源句柄，先可靠保存 prepared/executing 再发操作，实际工人退出后核精确 after 并保存 applied。真实工具成功结束且 wire 与原结果一致才解除门闩。失败、提前结束、停止和保存未知保持本轮只读/求助及 interrupted，不换调用重发；运行关闭须 drain 实际工人。RunOutputManifestCapture 与 RunValidation 保留原阶段供同一验证器重建，完整 JSON、交付、目标及人工决定继续沿同一清单身份。

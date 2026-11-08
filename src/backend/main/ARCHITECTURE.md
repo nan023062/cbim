@@ -319,3 +319,7 @@ Application 每工作区装配一个请求预算服务，主工厂固定已解�
 ## R07-B1 完整集合共同验收
 
 固定工作区的同一OutputManifestFiles.check注入成员结算、目标服务及人工服务。人工选择/继续沿既有read租约和当前工作区校验，不调用模型、不改日志，也不复用旧native执行；真实执行仍由独立显式继续入口负责。
+
+## R07-B2 原删除与移动证明
+
+成员实际工厂仅在 controlledTransport 支持 withExclusiveTransition 时装配删除/移动端口，沿原成员租约及工作区身份。普通 Node 缺省宿主不能执行，声明缺实际能力时启动失败。原阶段只追加到该成员 canonical；重开和只读报告不启动工人或重发操作。

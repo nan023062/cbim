@@ -367,3 +367,7 @@ Pi 仅发现正式成员实际装配的受控写工具，桥保留原 toolCallId
 ## R07-A 完整产物清单运行与复核
 
 Pi 只从 EngineContext.manifestTools 注册完整采集及本轮查询，与旧选定文件工具独立；真实 toolCallId 透传，仍经过逐请求预算及 beforeTool。主会话、无冻结范围或缺真实端口不获得清单工具。
+
+## R07-B2 原删除与移动证明
+
+EngineContext.artifactTransitionTools 只在冻结要求和真实端口齐备时注册。Pi 沿现有 gate/call 将原 toolCallId、参数和取消信号转入可信运行；不发 shell 替代，不把原生 write/edit 或模型正文升级为操作证明。工具失败后允许范围由 Runtime 屏障控制。

@@ -2,11 +2,12 @@
  * 完整出口的三字段身份与原成功采集证明是可选新字段；旧观察/基线不补造完整验收资格。
  * 作用定位：声明范围完整清单、可信采集事件和独立复核的公开序列化契约。
  * 设计原因：目录条目和缺失根与文件指纹共同形成集合身份，新增文件或空目录不能在旧文件哈希相同的情况下被遗漏。
- * 职责边界：不保存文件正文，不声称操作因果、原子快照、业务验收或恢复资格；旧选定文件基线保持独立。
+ * 职责边界：普通缺失不说明操作原因；可选操作证明必须另核原日志，不保存正文，不声称原子快照、业务验收或恢复资格。
  */
 import {z} from 'zod';
-import {artifactScopeBindingsSchema,artifactScopeLimits,artifactScopePathSchema} from '../workspace/artifact-scope';
+import {artifactScopeBindingsSchema,artifactScopeLimits,artifactScopePathSchema,preparedArtifactTransitions} from '../workspace/artifact-scope';
 import {artifactBaselineStagedSchema,artifactReportInputSchema} from './artifact-baseline';
+import {artifactTransitionProofSchema} from './artifact-transition';
 
 const id=z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/),digest=z.string().regex(/^[a-f0-9]{64}$/),seq=z.number().int().nonnegative().safe();
 const callId=z.string().min(1).max(128).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
@@ -39,14 +40,17 @@ export const outputManifestSnapshotSchema=z.object({scopes:artifactScopeBindings
   if(value.entries.reduce((sum,entry)=>sum+(entry.kind==='file'?entry.byteLength:0),0)>artifactScopeLimits.totalBytes)issue('清单总文件字节超过32 MiB');
 });
 export type OutputManifestSnapshot=z.infer<typeof outputManifestSnapshotSchema>;
-/** 唯一采集引用只公开范围、数量与摘要；完整条目留在原 canonical，显式报告才读取。 */
-export const outputManifestRefSchema=z.object({manifestId:id,captureToolCallId:callId,scopeHash:digest,manifestHash:digest,knowledgeRevision:z.string().min(1).max(512),progressVersion:seq.min(1),capturedAt:z.string().datetime(),lastEffectSeq:seq,entryCount:seq.max(artifactScopeLimits.entries),fileCount:seq.max(artifactScopeLimits.entries),byteLength:seq.max(artifactScopeLimits.totalBytes),scopes:artifactScopeBindingsSchema}).strict();
+/** 唯一采集引用公开范围、数量、摘要及可选原操作证明；完整条目留在原 canonical，显式报告才读取。 */
+export const outputManifestRefSchema=z.object({manifestId:id,captureToolCallId:callId,scopeHash:digest,manifestHash:digest,knowledgeRevision:z.string().min(1).max(512),progressVersion:seq.min(1),capturedAt:z.string().datetime(),lastEffectSeq:seq,entryCount:seq.max(artifactScopeLimits.entries),fileCount:seq.max(artifactScopeLimits.entries),byteLength:seq.max(artifactScopeLimits.totalBytes),scopes:artifactScopeBindingsSchema,operations:z.array(artifactTransitionProofSchema).min(1).max(artifactScopeLimits.transitions).optional()}).strict();
 export type OutputManifestRef=z.infer<typeof outputManifestRefSchema>;
 /** 验证与接受使用同一集合身份；不能只匹配文件摘要而忽略目录集合或冻结范围。 */
 export const outputManifestIdentitySchema=outputManifestRefSchema.pick({manifestId:true,scopeHash:true,manifestHash:true});
 export type OutputManifestIdentity=z.infer<typeof outputManifestIdentitySchema>;
 /** 交付固定原成功采集的引用和日志顺序；不复制正文或全部条目到每一份人工意见。 */
-export const outputManifestProofSchema=outputManifestRefSchema.extend({capturedSeq:seq.min(1),finishedSeq:seq.min(1)}).strict().refine(value=>value.capturedSeq<value.finishedSeq);
+export const outputManifestProofSchema=outputManifestRefSchema.extend({capturedSeq:seq.min(1),finishedSeq:seq.min(1)}).strict().refine(value=>value.capturedSeq<value.finishedSeq).superRefine((value,context)=>{
+  const expected=preparedArtifactTransitions(value.scopes),operations=value.operations??[];
+  if(operations.length!==expected.length||expected.some(item=>operations.filter(op=>op.moduleId===item.moduleId&&op.operationIndex===item.operationIndex&&JSON.stringify(op.operation)===JSON.stringify(item.operation)).length!==1)||operations.some(op=>op.scopeHash!==value.scopeHash||op.knowledgeRevision!==value.knowledgeRevision||op.finishedSeq>=value.capturedSeq)||operations.length&&operations.at(-1)!.afterManifestHash!==value.manifestHash)context.addIssue({code:'custom',message:'完整交付必须覆盖全部冻结删除/移动要求，且原操作早于所选清单并保持同一最终集合'});
+});
 export type OutputManifestProof=z.infer<typeof outputManifestProofSchema>;
 export const outputManifestInspectSchema=z.object({binding:artifactBaselineStagedSchema.innerType().shape.binding,scopes:artifactScopeBindingsSchema,manifests:z.array(outputManifestRefSchema.extend({invalidated:z.boolean()}).strict()).max(artifactScopeLimits.captures),issues:z.array(z.object({code:z.string().min(1).max(128),message:z.string().min(1).max(512)}).strict()).max(32)}).strict();
 export const outputManifestStagedSchema=outputManifestRefSchema.extend({version:z.literal(1),binding:artifactBaselineStagedSchema.innerType().shape.binding,snapshot:outputManifestSnapshotSchema}).strict();

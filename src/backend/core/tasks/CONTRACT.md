@@ -723,3 +723,7 @@ OutputManifestTools 只接计划版本，范围、运行和知识由构造冻结
 complete-output-evidence统一选择原完整清单、重算证明、比较当前全集合及多候选读取预算。cbim_delivery_prepare明确manifestId，JSON输入baselineId/manifestId互斥；完整模式只接受与交付相同manifestId/scopeHash/manifestHash，所有必需根存在。交付proof保留原引用与采集/结束序号，canonical重算核原真实调用、知识、范围、版本及早于交付的时序。旧协议不回填新字段。
 
 人工请求可选manifests；完整候选不能改用其它清单或文件子集。记录保存原证明与matches/changed/unverifiable观察，不复制完整条目。basis覆盖明确选择和观察，菜单/读取时钟不参与。旧baselines及历史命令保持兼容；多候选共同上限16根、512条目、32MiB，旧选定文件另仍限16文件。
+
+## R07-B2 原删除与移动证明
+
+artifact-transition 是纯严格协议；artifact-transition-evidence 从原有效清单、真实 allowed v1、prepared/executing/applied 和唯一成功 wire 重建因果证明。阶段顺序、原字节、身份、知识、进度及精确完整集合增减均须一致；普通副作用、重规划或集合变化不能沿用旧操作。output-manifest-identity 抽成单向摘要基础，验证器仍独立核 canonical。交付 proof 必须完整覆盖冻结操作；仅证明对应源根可缺失，唯一文件删除可交付空集合，普通缺失继续拒绝。公开证明不保存文件正文或私有对象身份，也不是恢复备份。

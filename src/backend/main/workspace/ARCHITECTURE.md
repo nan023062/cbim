@@ -11,6 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [architecture-service.ts](architecture-service.ts) | 将团队/业务架构表单接到受控知识事务，作为可信桌面的预览与手动提交入口。 |
+| [artifact-transitions.ts](artifact-transitions.ts) | 把已打开工作区的真实文件 utility 能力装配为成员删除/移动端口，不暴露平台句柄到 Core。 |
 | [catalog.ts](catalog.ts) | Catalog：维护本机工作区清单、显示名称、路径身份、并发更新和重新定位。 |
 | [controlled-files.ts](controlled-files.ts) | 已打开工作区的受控写入与桌面补偿服务，连接运行许可、私有备份、独占子进程和唯一 DispatchStore。 |
 | [knowledge-effect-reader.ts](knowledge-effect-reader.ts) | 在已打开工作区内只读核实原知识工具请求和事务，向调度影响观察提供有界摘要。 |
@@ -40,6 +41,18 @@ N_src_backend_main_workspace_architecture_service_ts ..> N_src_backend_main_work
 ```
 
 直接依赖：[../../core/knowledge/object-crud.ts](../../core/knowledge/object-crud.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../../bridge/contracts/architecture.ts](../../../bridge/contracts/architecture.ts)。
+
+### artifact-transitions.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_workspace_artifact_transitions_ts["artifact-transitions.ts"] {
+  <<module>>
+  +createArtifactTransitionPort()
+}
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/brain/run-artifact-transition.ts](../../core/brain/run-artifact-transition.ts)、[../platform/controlled-file-protocol.ts](../platform/controlled-file-protocol.ts)、[workspace.ts](workspace.ts)。
 
 ### catalog.ts
 
@@ -454,10 +467,13 @@ N_src_backend_main_workspace_workspace_ts_external_KnowledgeWorkspace <|.. N_src
 
 ```mermaid
 classDiagram
-class N_src_backend_main_workspace_controlled_files_ts["controlled-files.ts"] {
+class N_src_backend_main_workspace_artifact_transitions_ts["artifact-transitions.ts"] {
   <<module>>
 }
 class N_src_backend_main_workspace_workspace_ts["workspace.ts"] {
+  <<module>>
+}
+class N_src_backend_main_workspace_controlled_files_ts["controlled-files.ts"] {
   <<module>>
 }
 class N_src_backend_main_workspace_main_module_ownership_tools_ts["main-module-ownership-tools.ts"] {
@@ -469,26 +485,27 @@ class N_src_backend_main_workspace_module_ownerships_ts["module-ownerships.ts"] 
 class N_src_backend_main_workspace_workspace_members_ts["workspace-members.ts"] {
   <<module>>
 }
-class N_src_backend_main_workspace_knowledge_sources_ts["knowledge-sources.ts"] {
-  <<module>>
-}
+N_src_backend_main_workspace_artifact_transitions_ts ..> N_src_backend_main_workspace_workspace_ts : 导入依赖
 N_src_backend_main_workspace_controlled_files_ts ..> N_src_backend_main_workspace_workspace_ts : 导入依赖
 N_src_backend_main_workspace_main_module_ownership_tools_ts ..> N_src_backend_main_workspace_module_ownerships_ts : 导入依赖
 N_src_backend_main_workspace_main_module_ownership_tools_ts ..> N_src_backend_main_workspace_workspace_members_ts : 导入依赖
-N_src_backend_main_workspace_module_ownerships_ts ..> N_src_backend_main_workspace_knowledge_sources_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_main_workspace_workspace_members_ts["workspace-members.ts"] {
+class N_src_backend_main_workspace_module_ownerships_ts["module-ownerships.ts"] {
   <<module>>
 }
 class N_src_backend_main_workspace_knowledge_sources_ts["knowledge-sources.ts"] {
+  <<module>>
+}
+class N_src_backend_main_workspace_workspace_members_ts["workspace-members.ts"] {
   <<module>>
 }
 class N_src_backend_main_workspace_workspace_ts["workspace.ts"] {
   <<module>>
 }
+N_src_backend_main_workspace_module_ownerships_ts ..> N_src_backend_main_workspace_knowledge_sources_ts : 导入依赖
 N_src_backend_main_workspace_workspace_members_ts ..> N_src_backend_main_workspace_knowledge_sources_ts : 导入依赖
 N_src_backend_main_workspace_workspace_ts ..> N_src_backend_main_workspace_knowledge_sources_ts : 导入依赖
 ```
@@ -608,3 +625,7 @@ knowledge-effect-reader.ts 在已打开工作区复用 governed 串行队列的 
 ## 原治理与责任保存核实（Step39）
 
 `persistent-effect-reader.ts` 只读已打开且验证通过的治理账本、唯一 DispatchStore 的责任审计与原回执。治理查询借用同一知识串行屏障，责任查询严格核完整事件、原输入、actor、指纹及派生回执；原实例来自匹配的持久请求，不换成当前实例。治理账本的整链完整性由原 init/append 校验，本查询不重读磁盘或初始化 Store。记录或端口未知均保留不可核实，不通过预览、当前保护/负责人、提交或模型来猜测。
+
+## R07-B2 原删除与移动证明
+
+artifact-transitions 将冻结定义适配为同一 production ControlledFileTransport.withExclusiveTransition；每个真实读取/操作前复核原工作区实例和当前运行，用户根与安装根仍受保护。平台身份及原字节回执严格对照固定操作，withExclusive 返回前必须确认 utility 已退出；不复制正文、不自建任务存储、不自动补偿。

@@ -1,11 +1,12 @@
 /**
- * 作用定位：成员指定轮次的声明范围完整清单面板，明确显示根、缺失及集合变化。
+ * 作用定位：成员指定轮次的声明范围完整清单面板，明确显示根、缺失、集合变化及原删除/移动证明。
  * 设计原因：与旧选定文件面板分开，加载列表不扫描；用户选择后再读全部范围，避免默认最新或误认业务验收。
  */
 import {useEffect,useMemo,useRef,useSyncExternalStore} from 'react';
 import type {GraphCursor,ScopeSummary,TaskNode} from '../../bridge/contracts/dispatch';
 import type {OutputManifestSnapshot} from '../../bridge/contracts/output-manifest';
 import {ManifestReportController,manifestSelectionKey,type ManifestReportState,type ManifestSelection} from './output-manifest-state';
+import {ArtifactTransitionProofs} from './ArtifactTransitionProofs';
 import './artifact-report.css';
 
 export interface ManifestPanelState extends ManifestReportState {stale:boolean;list():Promise<void>;inspect():Promise<void>;select(id:string):void}
@@ -31,6 +32,7 @@ export function ManifestReportPanel({state,taskId,runId}:{state:ManifestPanelSta
       {!!report.manifests.length&&<><label>选择本轮完整清单<select data-testid="output-manifest-select" value={selectedId} onChange={event=>state.select(event.target.value)}><option value="">请选择，不自动使用最新记录</option>{report.manifests.map(item=><option key={item.manifestId} value={item.manifestId}>{new Date(item.capturedAt).toLocaleTimeString()} · {item.entryCount} 条目 / {item.fileCount} 文件{item.invalidated?' · 后续有操作':''}</option>)}</select></label>
         <button data-testid="output-manifest-inspect" disabled={loading||!selected} onClick={()=>void state.inspect()}>{verification?'重新复核完整范围':'复核所选完整范围'}</button>
         {selected?.invalidated&&<p className="member-warning">此清单之后有副作用或重规划，历史记录不能直接作为当前交付依据。</p>}
+        <ArtifactTransitionProofs operations={selected?.operations}/>
       </>}
       {verification&&verification.manifestId===selectedId&&<div data-testid="output-manifest-report" data-state={verification.state}>
         <p className="artifact-report-result">{verification.state==='matches'?'声明范围内的集合与内容一致':verification.state==='changed'?'声明范围内的集合或内容已变化':'当前完整范围无法核实'}</p>{verification.reason&&<p>{verification.reason}</p>}

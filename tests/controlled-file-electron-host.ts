@@ -8,6 +8,7 @@ import {Paths} from '../src/backend/main/platform/paths';
 import {createControlledFileTransport} from '../src/backend/main/platform/controlled-file-transport';
 import type {ControlledFileTransport,ExclusiveControlledFile} from '../src/backend/main/platform/controlled-file-protocol';
 import {seedControlledFile} from './controlled-file-seed';
+import {seedCompleteOutput} from './complete-output-pi-fixture';
 import type {ControlledHostConfig,ControlledHostTrace} from './controlled-file-electron-fixture';
 
 // 仅由 tests/controlled-file-electron-fixture 创建的独立 Electron 进程启动，不导入产品 main.ts 或创建窗口。
@@ -21,6 +22,13 @@ const faultState={beforeWriteReached:false,signalAborted:false,appliedWriteCalls
 
 function observedTransport(real:ControlledFileTransport):ControlledFileTransport{
   return {
+    withExclusiveTransition:async(root,relativePath,transition,protectedRoots,signal,use)=>{
+      assert.ok(real.withExclusiveTransition);traces.push({kind:'transition-open-request'});
+      return real.withExclusiveTransition(root,relativePath,transition,protectedRoots,signal,async session=>{
+        const internal=session as typeof session&{child?:{pid?:number};exited?:Promise<void>};assert.ok(internal.child?.pid);assert.ok(internal.exited);const pid=internal.child.pid;traces.push({kind:'transition-opened',pid});void internal.exited.then(()=>traces.push({kind:'transition-exited',pid}));
+        return use({readBefore:()=>session.readBefore(),recheckIdentity:()=>session.recheckIdentity(),get writeIssued(){return session.writeIssued},transitionAndVerify:async()=>{traces.push({kind:'transition-enter',pid});const value=await session.transitionAndVerify();traces.push({kind:'transition-confirmed',pid,byteLength:value.fact.byteLength,sha256:value.fact.sha256});return value}});
+      });
+    },
     withExclusiveExisting:async(root,relativePath,protectedRoots,signal,use)=>{
       traces.push({kind:'open-request'});
       return real.withExclusiveExisting(root,relativePath,protectedRoots,signal,async session=>{
@@ -45,6 +53,7 @@ function observedTransport(real:ControlledFileTransport):ControlledFileTransport
 async function handle(op:string,args:any){
   assert.ok(application);
   if(op==='seed')return seedControlledFile(application,config.project,args.providerUrl);
+  if(op==='seed-transition')return seedCompleteOutput(application,config.project,{url:args.providerUrl,bind:()=>{}},true);
   if(op==='dispatch')return application.dispatch(args.action,args.args);
   if(op==='trace')return traces;
   if(op==='fault-status')return faultState;

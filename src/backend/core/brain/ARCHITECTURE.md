@@ -18,6 +18,7 @@
 | [member-run.ts](member-run.ts) | 定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。 |
 | [model-errors.ts](model-errors.ts) | 把模型结束原因转换为用户可理解的执行错误，供实时引擎和历史回放共用。 |
 | [output-manifest-capture.ts](output-manifest-capture.ts) | 成员本轮完整产物采集的短期门闩，冻结 Workflow 范围并将真实观察可靠写入 canonical。 |
+| [run-artifact-transition.ts](run-artifact-transition.ts) | 正式成员删除/移动工具的唯一授权、写前核实和可靠阶段记录，平台副作用只通过此运行端口。 |
 | [run-controlled-file.ts](run-controlled-file.ts) | 正式成员受控文件工具的单次授权与短门闩，平台写入只经过此可信运行端口。 |
 | [run-validation.ts](run-validation.ts) | 正式成员的 JSON 验证短门闩，连接冻结要求、原文件或完整集合身份及平台同字节读取。 |
 | [runtime.ts](runtime.ts) | 大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。 |
@@ -69,19 +70,23 @@ class N_src_backend_core_brain_model_errors_ts["model-errors.ts"] {
 class N_src_backend_core_brain_output_manifest_capture_ts["output-manifest-capture.ts"] {
   <<module>>
 }
-class N_src_backend_core_brain_run_controlled_file_ts["run-controlled-file.ts"] {
+class N_src_backend_core_brain_run_artifact_transition_ts["run-artifact-transition.ts"] {
   <<module>>
 }
-class N_src_backend_core_brain_run_validation_ts["run-validation.ts"] {
+class N_src_backend_core_brain_run_controlled_file_ts["run-controlled-file.ts"] {
   <<module>>
 }
 N_src_backend_core_brain_member_checkpoint_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
 N_src_backend_core_brain_output_manifest_capture_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
-N_src_backend_core_brain_run_validation_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
+N_src_backend_core_brain_run_artifact_transition_ts ..> N_src_backend_core_brain_output_manifest_capture_ts : 导入依赖
+N_src_backend_core_brain_run_artifact_transition_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_brain_run_validation_ts["run-validation.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_runtime_ts["runtime.ts"] {
   <<module>>
 }
@@ -97,7 +102,9 @@ class N_src_backend_core_brain_types_ts["types.ts"] {
 class N_src_backend_core_brain_usage_ts["usage.ts"] {
   <<module>>
 }
+N_src_backend_core_brain_run_validation_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_storage_ts : 导入依赖
+N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_validation_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_scope_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_storage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
@@ -124,6 +131,9 @@ N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入
 - `pi` → `input-source.ts`：导入。
 - `pi` → `llm`：导入。
 - `pi` → `model-errors.ts`：导入。
+- `run-artifact-transition.ts` → `output-manifest-capture.ts`：导入。
+- `run-artifact-transition.ts` → `member-run.ts`：导入。
+- `run-artifact-transition.ts` → `types.ts`：导入。
 - `run-validation.ts` → `artifact-capture.ts`：导入。
 - `run-validation.ts` → `member-run.ts`：导入。
 - `run-validation.ts` → `types.ts`：导入。
@@ -133,6 +143,7 @@ N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入
 - `runtime.ts` → `output-manifest-capture.ts`：导入。
 - `runtime.ts` → `run-validation.ts`：导入。
 - `runtime.ts` → `run-controlled-file.ts`：导入。
+- `runtime.ts` → `run-artifact-transition.ts`：导入。
 - `runtime.ts` → `member-run.ts`：导入。
 - `runtime.ts` → `input-source.ts`：导入。
 - `runtime.ts` → `conversation-binding.ts`：导入。
@@ -583,3 +594,7 @@ LoopRuntime 仅向正式成员且冻结 artifactScope 的运行装配 RunOutputM
 ## R07-B1 完整集合共同验收
 
 RunOutputManifestCapture同步预占完整交付至真实finished/denied，覆盖审批、JSON复核、全集合读取、候选保存及wire返回。选择只取本轮可信成功清单；停止、知识/进度变化、缺失根、失效证明及错误端口均拒绝，不自动采集或换绑。RunValidation在同字节JSON校验前后复核整个范围，共用15秒期限；交付再核原集合。完整清单工具继续不作步骤证据或安全检查点来源。
+
+## R07-B2 原删除与移动证明
+
+RunArtifactTransition 在审批前预占原有效 before 清单；可靠 allowed 后重核当前全集合，取得平台独占源句柄，先可靠保存 prepared/executing 再发操作，实际工人退出后核精确 after 并保存 applied。真实工具成功结束且 wire 与原结果一致才解除门闩。失败、提前结束、停止和保存未知保持本轮只读/求助及 interrupted，不换调用重发；运行关闭须 drain 实际工人。RunOutputManifestCapture 与 RunValidation 保留原阶段供同一验证器重建，完整 JSON、交付、目标及人工决定继续沿同一清单身份。

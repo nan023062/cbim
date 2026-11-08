@@ -30,7 +30,9 @@
 classDiagram
 class N_src_backend_core_workspace_artifact_scope_ts["artifact-scope.ts"] {
   <<module>>
+  +artifactTransitionPaths()
   +artifactRootsDisjoint()
+  +preparedArtifactTransitions()
   +preparedArtifactScopes()
 }
 ```
@@ -45,6 +47,11 @@ class N_src_backend_core_workspace_artifact_scope_ts_ArtifactScopeRoot["Artifact
 
 }
 N_src_backend_core_workspace_artifact_scope_ts ..> N_src_backend_core_workspace_artifact_scope_ts_ArtifactScopeRoot : 声明
+class N_src_backend_core_workspace_artifact_scope_ts_ArtifactTransitionDefinition["ArtifactTransitionDefinition"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_artifact_scope_ts ..> N_src_backend_core_workspace_artifact_scope_ts_ArtifactTransitionDefinition : 声明
 class N_src_backend_core_workspace_artifact_scope_ts_ArtifactScope["ArtifactScope"] {
   <<type>>
 
@@ -821,3 +828,7 @@ artifactScope 是 Workflow 顶层可选观察声明，不是交付条件。准�
 ## R07-B1 完整集合共同验收
 
 Workflow的delivery.requireCompleteManifest:true必须同时有本模块artifactScope；范围观察与交付要求独立。任一模块要求完整出口，本轮全部已声明范围进入同一清单，不剔除其它模块范围。无要求的旧记录及观察模式仍用原出口。
+
+## R07-B2 原删除与移动证明
+
+artifactScope.transitions 可明确声明 delete(path) 或 move(from,to)，全轮最多4项，源/目标须在所属模块根内且互不重叠；大小写别名、知识目录及 .git 拒绝。必须同时 requireCompleteManifest:true；原声明随 Workflow 和范围指纹冻结，工具仅选模块/序号，不接任意路径。旧无声明记录不回填。

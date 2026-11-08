@@ -162,3 +162,7 @@ cbim_dispatch_revise_dependencies 仅在主实例 reviseDependencies 真实端�
 #### 已放弃检查点的单条替换
 
 cbim_dispatch_replace_dependency 的原严格输入/wire/维护契约不变，来源资格扩展为已经通过 abandon_checkpoint 明确放弃的可靠检查点；普通取消、未放弃、已续执行或未知来源不具资格。实际工具描述明确原日志、证明及信封完整、新候选和当前后继绑定。回包损坏仍只核原命令，不重新放弃或换边。
+
+## 审阅的成员等待清单
+
+cbim_goal_review 的严格输入增加可选 memberPause；仅 awaiting_user 接受，逐项记录 checkpoint/unstarted、task及plan版本、原检查点ID和图游标。工具描述解释全量保留与用户明确继续；原 wire 输出核完整清单与原请求一致，省略、替换或损坏回包拒绝，不重做已提交审阅。其余工具名、调用键和维护效果不变，原命令报告继续按完整原请求核实。

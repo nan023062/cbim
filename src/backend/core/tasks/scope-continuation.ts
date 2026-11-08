@@ -1,15 +1,17 @@
 /**
+ * 成员等待清单随原 wait 冻结和归档；用户补充只消费等待，实际恢复须重核原证明并由主调度另行预约。
  * 作用定位：定义安全等待检查点、用户显式补充原目标的请求和一次性启动意图。
  * 设计原因：补充保留原等待、原文、附件 ID 与版本化快照清单；v1 文件与 v2 多来源资料均冻结为原回执，不能重导重放或把资料/“同意”当作人工验收。
  */
 import {z} from 'zod';
 import {continuationAttachmentIdsSchema,continuationAttachmentManifestSchema,assertContinuationAttachmentManifest} from './scope-continuation-attachments';
+import {memberPauseSchema} from './member-pause';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
 const revision=z.number().int().min(1).max(65);
 const unique=(values:string[])=>new Set(values).size===values.length;
 /** 可信协调器冻结已观察主轮；跨等待累计，不因显式补充或重启重置。 */
-export const dispatchScopeWaitSchema=z.object({waitId:id,reason:z.string().trim().min(1).max(16000),createdAt:z.string().datetime(),runId:id,goalRevision:revision,graphCursor:z.object({streamId:id,seq:z.number().int().min(1).max(Number.MAX_SAFE_INTEGER)}).strict(),knowledgeRevision:id,mainRunIds:z.array(id).min(1).max(32).refine(unique)}).strict().refine(value=>value.mainRunIds.includes(value.runId),'等待检查点必须包含当前主运行');
+export const dispatchScopeWaitSchema=z.object({waitId:id,reason:z.string().trim().min(1).max(16000),createdAt:z.string().datetime(),runId:id,goalRevision:revision,graphCursor:z.object({streamId:id,seq:z.number().int().min(1).max(Number.MAX_SAFE_INTEGER)}).strict(),knowledgeRevision:id,mainRunIds:z.array(id).min(1).max(32).refine(unique),memberPause:memberPauseSchema.optional()}).strict().refine(value=>value.mainRunIds.includes(value.runId),'等待检查点必须包含当前主运行');
 export type DispatchScopeWait=z.infer<typeof dispatchScopeWaitSchema>;
 /** 同一事务会保存完整周期快照；限制补充总量，避免反复追加放大日志，超限拒绝而非截断原文。 */
 export const scopeContinuationTextLimit=64_000;

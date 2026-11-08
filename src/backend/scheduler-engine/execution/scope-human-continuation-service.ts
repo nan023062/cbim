@@ -1,4 +1,5 @@
 /**
+ * 含成员保留清单的等待须走独立补充并继续，人工决定接续不能跳过成员 native、文件及权限重核。
  * 作用定位：将当前等待中的最新人工决定全集转换成一次可信主运行接续意图。
  * 设计原因：保存意见和恢复运行分开；先在任务事务外核证，再按知识快照→任务短事务消费等待、提高输入版本，避免来源提交与证据读取形成逆序锁；预算拒绝保持检查点。
  * 职责边界：不创建模型、不修改旧候选、不伪造自由输入；相同命令只返回原意图，跨等待不继承接受。
@@ -33,6 +34,7 @@ export class ScopeHumanContinuationService {
   private async proof(state:DispatchState,input:HumanContinuationRequest){
     const scope=this.scope(state,input),goal=scope.goal,wait=scope.wait,history=scope.humanDecisions;
     check(scope.status==='waiting'&&wait&&goal?.plan&&goal.review?.decision==='awaiting_user'&&!goal.blocked,'HUMAN_CONTINUATION_NOT_WAITING','当前目标没有可消费的安全等待');
+    check(!wait.memberPause,'GOAL_MEMBER_PAUSE_EXPLICIT','当前等待保留了成员任务，请使用“补充并继续”重新核实；人工决定不能替代成员恢复');
     check(wait.waitId===input.waitId&&goal.revision===input.expectedGoalRevision&&goalInputRevision(goal)===input.expectedInputRevision&&history?.revision===input.expectedDecisionRevision,'HUMAN_CONTINUATION_STALE','等待、目标或人工决定版本已变化，请重新读取');
     check(!scope.recovery||input.options.permission==='read','RECOVERY_READONLY','只读核实周期不能通过人工接续提升权限');
     check(wait.mainRunIds.length<32&&goalInputRevision(goal)<32,'GOAL_CYCLE_LIMIT','当前目标已达到主运行或输入次数上限');check(goal.revision+3<=scopeGoalDecisionLimit+1,'GOAL_DECISION_LIMIT','目标剩余版本不足以接续并重新规划审阅');

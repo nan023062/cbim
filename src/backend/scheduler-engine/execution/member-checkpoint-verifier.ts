@@ -1,4 +1,5 @@
 /**
+ * 当前证明核实只要求执行知识的只读端口，也供持久等待显式继续使用；历史读取不扩大为恢复许可。
  * 作用定位：核实检查点的 canonical 和私有原生历史，分别支持续执行许可与明确放弃旧待办的历史真实性检查。
  * 设计原因：续执行仍须当前知识及全部文件匹配；放弃只核原冻结证明，不能因来源或模型变化阻止结束旧待办，也不能据历史真实性获得新执行许可。
  */
@@ -12,7 +13,7 @@ import type {TaskNode} from '../../core/tasks/graph-types';
 import type {ArtifactFileFact,ArtifactFileCheck} from '../../core/tasks/artifact-baseline';
 import {memberCheckpointProofSchema,type MemberCheckpointProof} from '../../core/tasks/member-checkpoint';
 import {verifyMemberCheckpoint,validateCheckpointEligibility} from '../../core/tasks/member-checkpoint-evidence';
-import {recheckDispatchExecutionContext} from '../context/execution-context';
+import {recheckDispatchExecutionContext,type DispatchKnowledgeWorkspace} from '../context/execution-context';
 import {memberPublicTask} from './member-events';
 
 /** 平台端口只接受已登记运行与纯相对文件事实，不能注入模型返回的路径或哈希。 */
@@ -30,14 +31,14 @@ export async function verifyMemberCheckpointHistory(owner:Pick<KnowledgeWorkspac
   await verify(owner,task,run,ports,assertCurrent,memberCheckpointProofSchema.parse(run.checkpointProof),false);
 }
 /** 只读核验，调用者已持有实际业务占用；expected存在时只接受原冻结证明，不能就地刷新过期指纹。 */
-export async function verifyMemberCheckpointProof(owner:KnowledgeWorkspace,task:TaskNode,run:DispatchRun,ports:MemberCheckpointVerificationPorts,assertCurrent:()=>void,expected?:MemberCheckpointProof):Promise<MemberCheckpointProof>{
+export async function verifyMemberCheckpointProof(owner:DispatchKnowledgeWorkspace,task:TaskNode,run:DispatchRun,ports:MemberCheckpointVerificationPorts,assertCurrent:()=>void,expected?:MemberCheckpointProof):Promise<MemberCheckpointProof>{
   return verify(owner,task,run,ports,assertCurrent,expected,true,{owner,ports});
 }
 /** 原生已加载并应用本轮配置后，只复核尚不能改变的日志/知识/业务文件；不把合法 native 追加伪称仍等于旧指纹。 */
-export async function verifyMemberCheckpointInputs(owner:KnowledgeWorkspace,task:TaskNode,run:DispatchRun,ports:MemberCheckpointVerificationPorts,assertCurrent:()=>void,expected:MemberCheckpointProof):Promise<void>{
+export async function verifyMemberCheckpointInputs(owner:DispatchKnowledgeWorkspace,task:TaskNode,run:DispatchRun,ports:MemberCheckpointVerificationPorts,assertCurrent:()=>void,expected:MemberCheckpointProof):Promise<void>{
   await verify(owner,task,run,ports,assertCurrent,expected,false,{owner,ports});
 }
-async function verify(owner:Pick<KnowledgeWorkspace,'entry'|'assert'>,task:TaskNode,run:DispatchRun,ports:MemberCheckpointHistoryPorts,assertCurrent:()=>void,expected:MemberCheckpointProof|undefined,includeNative:boolean,current?:{owner:KnowledgeWorkspace;ports:MemberCheckpointVerificationPorts}):Promise<MemberCheckpointProof>{
+async function verify(owner:Pick<KnowledgeWorkspace,'entry'|'assert'>,task:TaskNode,run:DispatchRun,ports:MemberCheckpointHistoryPorts,assertCurrent:()=>void,expected:MemberCheckpointProof|undefined,includeNative:boolean,current?:{owner:DispatchKnowledgeWorkspace;ports:MemberCheckpointVerificationPorts}):Promise<MemberCheckpointProof>{
   const check=()=>{owner.assert();assertCurrent()};check();
   if(current){await recheckDispatchExecutionContext(current.owner,run.prepared);check()}
   const summary=await ports.inspect(run);check();

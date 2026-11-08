@@ -31,6 +31,7 @@
 | [member-events.ts](member-events.ts) | 将成员运行日志投影为可公开的连续事件流，并按 run 缓存首次恢复及后续已落盘增量。 |
 | [member-execution.ts](member-execution.ts) | 让已派发任务在独立成员会话中执行，提交领取、启动、结果、中断及一次安全停泊/续执行事实。 |
 | [member-help-state.ts](member-help-state.ts) | 从成员 canonical 运行日志核实一次结构化求助的安全交接候选。 |
+| [member-pause-service.ts](member-pause-service.ts) | 核实持久等待的成员原记录，并在用户明确继续时重新检查岗位、知识、native 与文件。 |
 | [member-resume-service.ts](member-resume-service.ts) | 当前主调度为本周期安全检查点预约一次原任务续执行，提交独立待领取信封。 |
 | [member-state.ts](member-state.ts) | 成员执行事务的图增量、占用和交付候选投影，并提供独立求助验证入口。 |
 | [member-workflow.ts](member-workflow.ts) | 在成员交付结算与主目标审阅时重算冻结 Workflow，并复核被验证文件的当前字节。 |
@@ -363,11 +364,11 @@ class N_src_backend_scheduler_engine_execution_dispatch_service_ts_WorkspaceDisp
   +humanContinuations
   +usage
   +budgets
+  +memberPauses
   +ownerInspect()
   +commandReport()
   +cancelQueued()
   +replaceQueuedDependency()
-  +addQueuedDependency()
 }
 N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
@@ -380,6 +381,7 @@ class N_src_backend_scheduler_engine_execution_dispatch_service_ts["dispatch-ser
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_dispatch_service_ts_WorkspaceDispatchService["WorkspaceDispatchService"] {
+  +addQueuedDependency()
   +reviseQueuedDependencies()
   +abandonCheckpoint()
   +checkpointAbandonmentReceipt()
@@ -395,7 +397,6 @@ class N_src_backend_scheduler_engine_execution_dispatch_service_ts_WorkspaceDisp
   +createMember()
   +dispatchTask()
   +snapshot()
-  +delta()
 }
 N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
@@ -408,6 +409,7 @@ class N_src_backend_scheduler_engine_execution_dispatch_service_ts["dispatch-ser
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_dispatch_service_ts_WorkspaceDispatchService["WorkspaceDispatchService"] {
+  +delta()
   +sessionRead()
   +close()
   -owner
@@ -423,7 +425,6 @@ class N_src_backend_scheduler_engine_execution_dispatch_service_ts_WorkspaceDisp
   -parse()
   -graph()
   -command()
-  -batch()
 }
 N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
@@ -436,13 +437,14 @@ class N_src_backend_scheduler_engine_execution_dispatch_service_ts["dispatch-ser
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_dispatch_service_ts_WorkspaceDispatchService["WorkspaceDispatchService"] {
+  -batch()
   -cursor()
   -recheck()
 }
 N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[main-command-request.ts](main-command-request.ts)、[command-verification-service.ts](command-verification-service.ts)、[effect-observation-service.ts](effect-observation-service.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/brain/conversation-binding.ts](../../core/brain/conversation-binding.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/tasks/types.ts](../../core/tasks/types.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[scope-goal-service.ts](scope-goal-service.ts)、[scope-continuation-service.ts](scope-continuation-service.ts)、[scope-active-input-service.ts](scope-active-input-service.ts)、[scope-recovery-service.ts](scope-recovery-service.ts)、[scope-replan-service.ts](scope-replan-service.ts)、[scope-human-decision-service.ts](scope-human-decision-service.ts)、[scope-human-continuation-service.ts](scope-human-continuation-service.ts)、[queued-task-cancel-service.ts](queued-task-cancel-service.ts)、[queued-dependency-replacement-service.ts](queued-dependency-replacement-service.ts)、[queued-dependency-addition-service.ts](queued-dependency-addition-service.ts)、[queued-dependency-revision-service.ts](queued-dependency-revision-service.ts)、[../../core/tasks/queued-dependency-revision.ts](../../core/tasks/queued-dependency-revision.ts)、[checkpoint-abandonment-service.ts](checkpoint-abandonment-service.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)、[../../core/tasks/checkpoint-handoff.ts](../../core/tasks/checkpoint-handoff.ts)、[../../core/tasks/queued-dependency-addition.ts](../../core/tasks/queued-dependency-addition.ts)、[../../core/tasks/queued-dependency-replacement.ts](../../core/tasks/queued-dependency-replacement.ts)、[../../core/tasks/member-checkpoint.ts](../../core/tasks/member-checkpoint.ts)、[scope-usage-service.ts](scope-usage-service.ts)、[scope-budget-service.ts](scope-budget-service.ts)、[../../core/tasks/scope-budget.ts](../../core/tasks/scope-budget.ts)、[../../core/tasks/queued-task-cancel.ts](../../core/tasks/queued-task-cancel.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../context/dispatch-context.ts](../context/dispatch-context.ts)、[agent-manager.ts](agent-manager.ts)、[../../core/tasks/scope-view.ts](../../core/tasks/scope-view.ts)、[../../core/tasks/scope-run-tracking.ts](../../core/tasks/scope-run-tracking.ts)、[../../core/workspace/module-ownership-tool-policy.ts](../../core/workspace/module-ownership-tool-policy.ts)、[owner-execution-service.ts](owner-execution-service.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[main-command-request.ts](main-command-request.ts)、[command-verification-service.ts](command-verification-service.ts)、[effect-observation-service.ts](effect-observation-service.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/brain/conversation-binding.ts](../../core/brain/conversation-binding.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/tasks/types.ts](../../core/tasks/types.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[scope-goal-service.ts](scope-goal-service.ts)、[scope-continuation-service.ts](scope-continuation-service.ts)、[scope-active-input-service.ts](scope-active-input-service.ts)、[scope-recovery-service.ts](scope-recovery-service.ts)、[scope-replan-service.ts](scope-replan-service.ts)、[scope-human-decision-service.ts](scope-human-decision-service.ts)、[scope-human-continuation-service.ts](scope-human-continuation-service.ts)、[queued-task-cancel-service.ts](queued-task-cancel-service.ts)、[queued-dependency-replacement-service.ts](queued-dependency-replacement-service.ts)、[queued-dependency-addition-service.ts](queued-dependency-addition-service.ts)、[queued-dependency-revision-service.ts](queued-dependency-revision-service.ts)、[../../core/tasks/queued-dependency-revision.ts](../../core/tasks/queued-dependency-revision.ts)、[checkpoint-abandonment-service.ts](checkpoint-abandonment-service.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)、[member-pause-service.ts](member-pause-service.ts)、[../../core/tasks/checkpoint-handoff.ts](../../core/tasks/checkpoint-handoff.ts)、[../../core/tasks/queued-dependency-addition.ts](../../core/tasks/queued-dependency-addition.ts)、[../../core/tasks/queued-dependency-replacement.ts](../../core/tasks/queued-dependency-replacement.ts)、[../../core/tasks/member-checkpoint.ts](../../core/tasks/member-checkpoint.ts)、[scope-usage-service.ts](scope-usage-service.ts)、[scope-budget-service.ts](scope-budget-service.ts)、[../../core/tasks/scope-budget.ts](../../core/tasks/scope-budget.ts)、[../../core/tasks/queued-task-cancel.ts](../../core/tasks/queued-task-cancel.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../context/dispatch-context.ts](../context/dispatch-context.ts)、[agent-manager.ts](agent-manager.ts)、[../../core/tasks/scope-view.ts](../../core/tasks/scope-view.ts)、[../../core/tasks/scope-run-tracking.ts](../../core/tasks/scope-run-tracking.ts)、[../../core/workspace/module-ownership-tool-policy.ts](../../core/workspace/module-ownership-tool-policy.ts)、[owner-execution-service.ts](owner-execution-service.ts)。
 
 ### effect-controlled-file.ts
 
@@ -1110,6 +1112,40 @@ class N_src_backend_scheduler_engine_execution_member_help_state_ts["member-help
 
 直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/tasks/dispatch-execution.ts](../../core/tasks/dispatch-execution.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/member-help.ts](../../core/tasks/member-help.ts)、[execution-report-facts.ts](execution-report-facts.ts)。
 
+### member-pause-service.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_execution_member_pause_service_ts["member-pause-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_member_pause_service_ts_MemberPausePorts["MemberPausePorts"] {
+  <<interface>>
+  +acquireRead()
+  +assertCurrent()
+}
+N_src_backend_scheduler_engine_execution_member_pause_service_ts ..> N_src_backend_scheduler_engine_execution_member_pause_service_ts_MemberPausePorts : 声明
+class N_src_backend_scheduler_engine_execution_member_pause_service_ts_external_MemberCheckpointVerificationPorts["MemberCheckpointVerificationPorts (外部契约)"] {
+  <<external>>
+}
+N_src_backend_scheduler_engine_execution_member_pause_service_ts_external_MemberCheckpointVerificationPorts <|-- N_src_backend_scheduler_engine_execution_member_pause_service_ts_MemberPausePorts
+class N_src_backend_scheduler_engine_execution_member_pause_service_ts_MemberPauseService["MemberPauseService"] {
+  +verifyWaiting()
+  +withContext()
+  +validateCurrent()
+  +preflight()
+  -owner
+  -store
+  -owners
+  -ports
+  -available()
+  -scope()
+}
+N_src_backend_scheduler_engine_execution_member_pause_service_ts ..> N_src_backend_scheduler_engine_execution_member_pause_service_ts_MemberPauseService : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../context/execution-context.ts](../context/execution-context.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/scope-continuation.ts](../../core/tasks/scope-continuation.ts)、[../../core/tasks/member-pause.ts](../../core/tasks/member-pause.ts)、[../../core/tasks/member-pause-rules.ts](../../core/tasks/member-pause-rules.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)、[owner-execution-service.ts](owner-execution-service.ts)。
+
 ### member-resume-service.ts
 
 ```mermaid
@@ -1424,13 +1460,14 @@ class N_src_backend_scheduler_engine_execution_scope_continuation_service_ts_Sco
   -owner
   -store
   -budgets
+  -memberPauses
   -parse()
   -scope()
 }
 N_src_backend_scheduler_engine_execution_scope_continuation_service_ts ..> N_src_backend_scheduler_engine_execution_scope_continuation_service_ts_ScopeContinuationService : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/identity.ts](../../core/foundation/identity.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/scope-run-tracking.ts](../../core/tasks/scope-run-tracking.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/tasks/scope-continuation-attachments.ts](../../core/tasks/scope-continuation-attachments.ts)、[../../core/tasks/scope-continuation.ts](../../core/tasks/scope-continuation.ts)、[scope-budget-service.ts](scope-budget-service.ts)、[../../core/tasks/scope-continuation-record.ts](../../core/tasks/scope-continuation-record.ts)、[../../core/tasks/scope-active-input.ts](../../core/tasks/scope-active-input.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/identity.ts](../../core/foundation/identity.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/scope-run-tracking.ts](../../core/tasks/scope-run-tracking.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/tasks/scope-continuation-attachments.ts](../../core/tasks/scope-continuation-attachments.ts)、[../../core/tasks/scope-continuation.ts](../../core/tasks/scope-continuation.ts)、[scope-budget-service.ts](scope-budget-service.ts)、[../../core/tasks/scope-continuation-record.ts](../../core/tasks/scope-continuation-record.ts)、[../../core/tasks/scope-active-input.ts](../../core/tasks/scope-active-input.ts)、[member-pause-service.ts](member-pause-service.ts)、[owner-execution-service.ts](owner-execution-service.ts)。
 
 ### scope-goal-service.ts
 
@@ -1486,6 +1523,7 @@ class N_src_backend_scheduler_engine_execution_scope_goal_service_ts_ScopeGoalSe
   -ports
   -humanPorts
   -owners
+  -memberPauses
   -parse()
   -scope()
   -graph()
@@ -1502,7 +1540,7 @@ class N_src_backend_scheduler_engine_execution_scope_goal_service_ts_ScopeGoalSe
 N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts_ScopeGoalService : 声明
 ```
 
-直接依赖：[../../core/tools/questions.ts](../../core/tools/questions.ts)、[../../core/tasks/scope-active-input.ts](../../core/tasks/scope-active-input.ts)、[scope-active-input-evidence.ts](scope-active-input-evidence.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[main-command-request.ts](main-command-request.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/tools/types.ts](../../core/tools/types.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-execution.ts](../../core/tasks/dispatch-execution.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../context/dispatch-context.ts](../context/dispatch-context.ts)、[execution-report-facts.ts](execution-report-facts.ts)、[member-help-state.ts](member-help-state.ts)、[member-events.ts](member-events.ts)、[human-decision-evidence.ts](human-decision-evidence.ts)、[../../core/tasks/human-decisions.ts](../../core/tasks/human-decisions.ts)、[../../core/tasks/human-continuation-rules.ts](../../core/tasks/human-continuation-rules.ts)、[member-workflow.ts](member-workflow.ts)、[../../core/tasks/artifact-baseline.ts](../../core/tasks/artifact-baseline.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[../../core/team/member-execution-binding.ts](../../core/team/member-execution-binding.ts)、[owner-execution-service.ts](owner-execution-service.ts)、[../../core/tasks/checkpoint-handoff-rules.ts](../../core/tasks/checkpoint-handoff-rules.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)。
+直接依赖：[../../core/tools/questions.ts](../../core/tools/questions.ts)、[../../core/tasks/scope-active-input.ts](../../core/tasks/scope-active-input.ts)、[scope-active-input-evidence.ts](scope-active-input-evidence.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[main-command-request.ts](main-command-request.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/tools/types.ts](../../core/tools/types.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-execution.ts](../../core/tasks/dispatch-execution.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../context/dispatch-context.ts](../context/dispatch-context.ts)、[execution-report-facts.ts](execution-report-facts.ts)、[member-help-state.ts](member-help-state.ts)、[member-events.ts](member-events.ts)、[human-decision-evidence.ts](human-decision-evidence.ts)、[../../core/tasks/human-decisions.ts](../../core/tasks/human-decisions.ts)、[../../core/tasks/human-continuation-rules.ts](../../core/tasks/human-continuation-rules.ts)、[member-workflow.ts](member-workflow.ts)、[../../core/tasks/artifact-baseline.ts](../../core/tasks/artifact-baseline.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[../../core/team/member-execution-binding.ts](../../core/team/member-execution-binding.ts)、[owner-execution-service.ts](owner-execution-service.ts)、[../../core/tasks/checkpoint-handoff-rules.ts](../../core/tasks/checkpoint-handoff-rules.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)、[member-pause-service.ts](member-pause-service.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)。
 
 ### scope-human-continuation-service.ts
 
@@ -1923,18 +1961,21 @@ class N_src_backend_scheduler_engine_execution_checkpoint_abandonment_service_ts
 class N_src_backend_scheduler_engine_execution_member_checkpoint_verifier_ts["member-checkpoint-verifier.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_scope_usage_service_ts["scope-usage-service.ts"] {
+class N_src_backend_scheduler_engine_execution_member_pause_service_ts["member-pause-service.ts"] {
   <<module>>
 }
 N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_queued_dependency_revision_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_checkpoint_abandonment_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_member_checkpoint_verifier_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_scope_usage_service_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_member_pause_service_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_scheduler_engine_execution_dispatch_service_ts["dispatch-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_scope_usage_service_ts["scope-usage-service.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_scope_budget_service_ts["scope-budget-service.ts"] {
@@ -1946,21 +1987,18 @@ class N_src_backend_scheduler_engine_execution_agent_manager_ts["agent-manager.t
 class N_src_backend_scheduler_engine_execution_owner_execution_service_ts["owner-execution-service.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_effect_observation_service_ts["effect-observation-service.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_execution_command_verification_service_ts["command-verification-service.ts"] {
-  <<module>>
-}
+N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_scope_usage_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_scope_budget_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_agent_manager_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_dispatch_service_ts ..> N_src_backend_scheduler_engine_execution_owner_execution_service_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_effect_observation_service_ts ..> N_src_backend_scheduler_engine_execution_command_verification_service_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_scheduler_engine_execution_effect_observation_service_ts["effect-observation-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_command_verification_service_ts["command-verification-service.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_effect_source_ts["effect-source.ts"] {
@@ -1972,18 +2010,18 @@ class N_src_backend_scheduler_engine_execution_effect_controlled_file_ts["effect
 class N_src_backend_scheduler_engine_execution_member_events_ts["member-events.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_execution_report_facts_ts["execution-report-facts.ts"] {
-  <<module>>
-}
+N_src_backend_scheduler_engine_execution_effect_observation_service_ts ..> N_src_backend_scheduler_engine_execution_command_verification_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_effect_observation_service_ts ..> N_src_backend_scheduler_engine_execution_effect_source_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_effect_observation_service_ts ..> N_src_backend_scheduler_engine_execution_effect_controlled_file_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_effect_source_ts ..> N_src_backend_scheduler_engine_execution_member_events_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_effect_source_ts ..> N_src_backend_scheduler_engine_execution_execution_report_facts_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_scheduler_engine_execution_effect_source_ts["effect-source.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_execution_report_facts_ts["execution-report-facts.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_command_verification_service_ts["command-verification-service.ts"] {
@@ -1998,20 +2036,20 @@ class N_src_backend_scheduler_engine_execution_loop_engine_ts["loop-engine.ts"] 
 class N_src_backend_scheduler_engine_execution_admission_wait_ts["admission-wait.ts"] {
   <<module>>
 }
+N_src_backend_scheduler_engine_execution_effect_source_ts ..> N_src_backend_scheduler_engine_execution_execution_report_facts_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_effect_source_ts ..> N_src_backend_scheduler_engine_execution_command_verification_service_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_execution_manager_ts ..> N_src_backend_scheduler_engine_execution_loop_engine_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_execution_manager_ts ..> N_src_backend_scheduler_engine_execution_admission_wait_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_backend_scheduler_engine_execution_execution_report_service_ts["execution-report-service.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_execution_report_facts_ts["execution-report-facts.ts"] {
   <<module>>
 }
-N_src_backend_scheduler_engine_execution_effect_source_ts ..> N_src_backend_scheduler_engine_execution_command_verification_service_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_execution_manager_ts ..> N_src_backend_scheduler_engine_execution_loop_engine_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_execution_manager_ts ..> N_src_backend_scheduler_engine_execution_admission_wait_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_execution_report_service_ts ..> N_src_backend_scheduler_engine_execution_execution_report_facts_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_backend_scheduler_engine_execution_human_decision_evidence_ts["human-decision-evidence.ts"] {
   <<module>>
 }
@@ -2027,21 +2065,18 @@ class N_src_backend_scheduler_engine_execution_member_events_ts["member-events.t
 class N_src_backend_scheduler_engine_execution_public_run_events_ts["public-run-events.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_member_execution_ts["member-execution.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_execution_member_state_ts["member-state.ts"] {
-  <<module>>
-}
+N_src_backend_scheduler_engine_execution_execution_report_service_ts ..> N_src_backend_scheduler_engine_execution_execution_report_facts_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_human_decision_evidence_ts ..> N_src_backend_scheduler_engine_execution_member_workflow_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_member_checkpoint_verifier_ts ..> N_src_backend_scheduler_engine_execution_member_events_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_member_events_ts ..> N_src_backend_scheduler_engine_execution_public_run_events_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_member_state_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_scheduler_engine_execution_member_execution_ts["member-execution.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_member_state_ts["member-state.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_member_events_ts["member-events.ts"] {
@@ -2053,18 +2088,18 @@ class N_src_backend_scheduler_engine_execution_execution_report_service_ts["exec
 class N_src_backend_scheduler_engine_execution_artifact_report_service_ts["artifact-report-service.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_admission_wait_ts["admission-wait.ts"] {
-  <<module>>
-}
+N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_member_state_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_member_events_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_execution_report_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_artifact_report_service_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_admission_wait_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_scheduler_engine_execution_member_execution_ts["member-execution.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_admission_wait_ts["admission-wait.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_scope_budget_service_ts["scope-budget-service.ts"] {
@@ -2076,18 +2111,18 @@ class N_src_backend_scheduler_engine_execution_member_checkpoint_verifier_ts["me
 class N_src_backend_scheduler_engine_execution_member_resume_service_ts["member-resume-service.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_member_workflow_ts["member-workflow.ts"] {
-  <<module>>
-}
+N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_admission_wait_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_scope_budget_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_member_checkpoint_verifier_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_member_resume_service_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_member_workflow_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_scheduler_engine_execution_member_execution_ts["member-execution.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_member_workflow_ts["member-workflow.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_owner_execution_service_ts["owner-execution-service.ts"] {
@@ -2099,6 +2134,26 @@ class N_src_backend_scheduler_engine_execution_member_help_state_ts["member-help
 class N_src_backend_scheduler_engine_execution_execution_report_facts_ts["execution-report-facts.ts"] {
   <<module>>
 }
+class N_src_backend_scheduler_engine_execution_member_pause_service_ts["member-pause-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_member_checkpoint_verifier_ts["member-checkpoint-verifier.ts"] {
+  <<module>>
+}
+N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_member_workflow_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_owner_execution_service_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_member_help_state_ts ..> N_src_backend_scheduler_engine_execution_execution_report_facts_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_member_pause_service_ts ..> N_src_backend_scheduler_engine_execution_member_checkpoint_verifier_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_execution_member_pause_service_ts["member-pause-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_owner_execution_service_ts["owner-execution-service.ts"] {
+  <<module>>
+}
 class N_src_backend_scheduler_engine_execution_member_resume_service_ts["member-resume-service.ts"] {
   <<module>>
 }
@@ -2108,18 +2163,18 @@ class N_src_backend_scheduler_engine_execution_main_command_request_ts["main-com
 class N_src_backend_scheduler_engine_execution_member_state_ts["member-state.ts"] {
   <<module>>
 }
-N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_owner_execution_service_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_member_help_state_ts ..> N_src_backend_scheduler_engine_execution_execution_report_facts_ts : 导入依赖
+class N_src_backend_scheduler_engine_execution_member_checkpoint_verifier_ts["member-checkpoint-verifier.ts"] {
+  <<module>>
+}
+N_src_backend_scheduler_engine_execution_member_pause_service_ts ..> N_src_backend_scheduler_engine_execution_owner_execution_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_member_resume_service_ts ..> N_src_backend_scheduler_engine_execution_main_command_request_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_member_resume_service_ts ..> N_src_backend_scheduler_engine_execution_member_state_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_member_resume_service_ts ..> N_src_backend_scheduler_engine_execution_member_checkpoint_verifier_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_scheduler_engine_execution_member_resume_service_ts["member-resume-service.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_execution_member_checkpoint_verifier_ts["member-checkpoint-verifier.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_owner_execution_service_ts["owner-execution-service.ts"] {
@@ -2137,10 +2192,16 @@ class N_src_backend_scheduler_engine_execution_member_workflow_ts["member-workfl
 class N_src_backend_scheduler_engine_execution_member_events_ts["member-events.ts"] {
   <<module>>
 }
-N_src_backend_scheduler_engine_execution_member_resume_service_ts ..> N_src_backend_scheduler_engine_execution_member_checkpoint_verifier_ts : 导入依赖
+class N_src_backend_scheduler_engine_execution_queued_dependency_addition_service_ts["queued-dependency-addition-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_main_command_request_ts["main-command-request.ts"] {
+  <<module>>
+}
 N_src_backend_scheduler_engine_execution_member_resume_service_ts ..> N_src_backend_scheduler_engine_execution_owner_execution_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_member_state_ts ..> N_src_backend_scheduler_engine_execution_member_help_state_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_member_workflow_ts ..> N_src_backend_scheduler_engine_execution_member_events_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_queued_dependency_addition_service_ts ..> N_src_backend_scheduler_engine_execution_main_command_request_ts : 导入依赖
 ```
 
 ```mermaid
@@ -2148,9 +2209,6 @@ classDiagram
 class N_src_backend_scheduler_engine_execution_queued_dependency_addition_service_ts["queued-dependency-addition-service.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_main_command_request_ts["main-command-request.ts"] {
-  <<module>>
-}
 class N_src_backend_scheduler_engine_execution_member_state_ts["member-state.ts"] {
   <<module>>
 }
@@ -2160,10 +2218,16 @@ class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal
 class N_src_backend_scheduler_engine_execution_owner_execution_service_ts["owner-execution-service.ts"] {
   <<module>>
 }
-N_src_backend_scheduler_engine_execution_queued_dependency_addition_service_ts ..> N_src_backend_scheduler_engine_execution_main_command_request_ts : 导入依赖
+class N_src_backend_scheduler_engine_execution_queued_dependency_replacement_service_ts["queued-dependency-replacement-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_main_command_request_ts["main-command-request.ts"] {
+  <<module>>
+}
 N_src_backend_scheduler_engine_execution_queued_dependency_addition_service_ts ..> N_src_backend_scheduler_engine_execution_member_state_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_queued_dependency_addition_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_queued_dependency_addition_service_ts ..> N_src_backend_scheduler_engine_execution_owner_execution_service_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_queued_dependency_replacement_service_ts ..> N_src_backend_scheduler_engine_execution_main_command_request_ts : 导入依赖
 ```
 
 ```mermaid
@@ -2171,9 +2235,6 @@ classDiagram
 class N_src_backend_scheduler_engine_execution_queued_dependency_replacement_service_ts["queued-dependency-replacement-service.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_main_command_request_ts["main-command-request.ts"] {
-  <<module>>
-}
 class N_src_backend_scheduler_engine_execution_member_state_ts["member-state.ts"] {
   <<module>>
 }
@@ -2183,10 +2244,16 @@ class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal
 class N_src_backend_scheduler_engine_execution_owner_execution_service_ts["owner-execution-service.ts"] {
   <<module>>
 }
-N_src_backend_scheduler_engine_execution_queued_dependency_replacement_service_ts ..> N_src_backend_scheduler_engine_execution_main_command_request_ts : 导入依赖
+class N_src_backend_scheduler_engine_execution_queued_dependency_revision_service_ts["queued-dependency-revision-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_main_command_request_ts["main-command-request.ts"] {
+  <<module>>
+}
 N_src_backend_scheduler_engine_execution_queued_dependency_replacement_service_ts ..> N_src_backend_scheduler_engine_execution_member_state_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_queued_dependency_replacement_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_queued_dependency_replacement_service_ts ..> N_src_backend_scheduler_engine_execution_owner_execution_service_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_queued_dependency_revision_service_ts ..> N_src_backend_scheduler_engine_execution_main_command_request_ts : 导入依赖
 ```
 
 ```mermaid
@@ -2194,9 +2261,6 @@ classDiagram
 class N_src_backend_scheduler_engine_execution_queued_dependency_revision_service_ts["queued-dependency-revision-service.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_main_command_request_ts["main-command-request.ts"] {
-  <<module>>
-}
 class N_src_backend_scheduler_engine_execution_member_state_ts["member-state.ts"] {
   <<module>>
 }
@@ -2206,20 +2270,20 @@ class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal
 class N_src_backend_scheduler_engine_execution_owner_execution_service_ts["owner-execution-service.ts"] {
   <<module>>
 }
-N_src_backend_scheduler_engine_execution_queued_dependency_revision_service_ts ..> N_src_backend_scheduler_engine_execution_main_command_request_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_queued_dependency_revision_service_ts ..> N_src_backend_scheduler_engine_execution_member_state_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_queued_dependency_revision_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_queued_dependency_revision_service_ts ..> N_src_backend_scheduler_engine_execution_owner_execution_service_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_backend_scheduler_engine_execution_queued_task_cancel_service_ts["queued-task-cancel-service.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_main_command_request_ts["main-command-request.ts"] {
   <<module>>
 }
+N_src_backend_scheduler_engine_execution_queued_dependency_revision_service_ts ..> N_src_backend_scheduler_engine_execution_member_state_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_queued_dependency_revision_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_queued_dependency_revision_service_ts ..> N_src_backend_scheduler_engine_execution_owner_execution_service_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_queued_task_cancel_service_ts ..> N_src_backend_scheduler_engine_execution_main_command_request_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_backend_scheduler_engine_execution_scope_budget_service_ts["scope-budget-service.ts"] {
   <<module>>
 }
@@ -2229,21 +2293,24 @@ class N_src_backend_scheduler_engine_execution_scope_usage_service_ts["scope-usa
 class N_src_backend_scheduler_engine_execution_scope_continuation_service_ts["scope-continuation-service.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal-service.ts"] {
+class N_src_backend_scheduler_engine_execution_member_pause_service_ts["member-pause-service.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_scope_active_input_evidence_ts["scope-active-input-evidence.ts"] {
+class N_src_backend_scheduler_engine_execution_owner_execution_service_ts["owner-execution-service.ts"] {
   <<module>>
 }
-N_src_backend_scheduler_engine_execution_queued_task_cancel_service_ts ..> N_src_backend_scheduler_engine_execution_main_command_request_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_budget_service_ts ..> N_src_backend_scheduler_engine_execution_scope_usage_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_continuation_service_ts ..> N_src_backend_scheduler_engine_execution_scope_budget_service_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_scope_active_input_evidence_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_scope_continuation_service_ts ..> N_src_backend_scheduler_engine_execution_member_pause_service_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_scope_continuation_service_ts ..> N_src_backend_scheduler_engine_execution_owner_execution_service_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_scope_active_input_evidence_ts["scope-active-input-evidence.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_main_command_request_ts["main-command-request.ts"] {
@@ -2255,18 +2322,18 @@ class N_src_backend_scheduler_engine_execution_execution_report_facts_ts["execut
 class N_src_backend_scheduler_engine_execution_member_help_state_ts["member-help-state.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_member_events_ts["member-events.ts"] {
-  <<module>>
-}
+N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_scope_active_input_evidence_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_main_command_request_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_execution_report_facts_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_member_help_state_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_member_events_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_member_events_ts["member-events.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_human_decision_evidence_ts["human-decision-evidence.ts"] {
@@ -2278,24 +2345,38 @@ class N_src_backend_scheduler_engine_execution_member_workflow_ts["member-workfl
 class N_src_backend_scheduler_engine_execution_owner_execution_service_ts["owner-execution-service.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_member_checkpoint_verifier_ts["member-checkpoint-verifier.ts"] {
-  <<module>>
-}
+N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_member_events_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_human_decision_evidence_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_member_workflow_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_owner_execution_service_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_member_checkpoint_verifier_ts["member-checkpoint-verifier.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_member_pause_service_ts["member-pause-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_scope_human_continuation_service_ts["scope-human-continuation-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_human_decision_evidence_ts["human-decision-evidence.ts"] {
+  <<module>>
+}
 N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_member_checkpoint_verifier_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_scope_goal_service_ts ..> N_src_backend_scheduler_engine_execution_member_pause_service_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_scope_human_continuation_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_scope_human_continuation_service_ts ..> N_src_backend_scheduler_engine_execution_human_decision_evidence_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_scheduler_engine_execution_scope_human_continuation_service_ts["scope-human-continuation-service.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal-service.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_execution_human_decision_evidence_ts["human-decision-evidence.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_scope_budget_service_ts["scope-budget-service.ts"] {
@@ -2304,14 +2385,6 @@ class N_src_backend_scheduler_engine_execution_scope_budget_service_ts["scope-bu
 class N_src_backend_scheduler_engine_execution_human_evidence_state_ts["human-evidence-state.ts"] {
   <<module>>
 }
-N_src_backend_scheduler_engine_execution_scope_human_continuation_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_scope_human_continuation_service_ts ..> N_src_backend_scheduler_engine_execution_human_decision_evidence_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_scope_human_continuation_service_ts ..> N_src_backend_scheduler_engine_execution_scope_budget_service_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_scope_human_continuation_service_ts ..> N_src_backend_scheduler_engine_execution_human_evidence_state_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_backend_scheduler_engine_execution_scope_human_decision_service_ts["scope-human-decision-service.ts"] {
   <<module>>
 }
@@ -2321,6 +2394,17 @@ class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal
 class N_src_backend_scheduler_engine_execution_human_decision_evidence_ts["human-decision-evidence.ts"] {
   <<module>>
 }
+N_src_backend_scheduler_engine_execution_scope_human_continuation_service_ts ..> N_src_backend_scheduler_engine_execution_scope_budget_service_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_scope_human_continuation_service_ts ..> N_src_backend_scheduler_engine_execution_human_evidence_state_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_scope_human_decision_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_scope_human_decision_service_ts ..> N_src_backend_scheduler_engine_execution_human_decision_evidence_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_execution_scope_human_decision_service_ts["scope-human-decision-service.ts"] {
+  <<module>>
+}
 class N_src_backend_scheduler_engine_execution_human_evidence_state_ts["human-evidence-state.ts"] {
   <<module>>
 }
@@ -2330,21 +2414,21 @@ class N_src_backend_scheduler_engine_execution_scope_recovery_service_ts["scope-
 class N_src_backend_scheduler_engine_execution_execution_report_service_ts["execution-report-service.ts"] {
   <<module>>
 }
-N_src_backend_scheduler_engine_execution_scope_human_decision_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_scope_human_decision_service_ts ..> N_src_backend_scheduler_engine_execution_human_decision_evidence_ts : 导入依赖
+class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_effect_observation_service_ts["effect-observation-service.ts"] {
+  <<module>>
+}
 N_src_backend_scheduler_engine_execution_scope_human_decision_service_ts ..> N_src_backend_scheduler_engine_execution_human_evidence_state_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_recovery_service_ts ..> N_src_backend_scheduler_engine_execution_execution_report_service_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_scope_recovery_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_scope_recovery_service_ts ..> N_src_backend_scheduler_engine_execution_effect_observation_service_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_scheduler_engine_execution_scope_recovery_service_ts["scope-recovery-service.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal-service.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_execution_effect_observation_service_ts["effect-observation-service.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_effect_source_ts["effect-source.ts"] {
@@ -2353,14 +2437,6 @@ class N_src_backend_scheduler_engine_execution_effect_source_ts["effect-source.t
 class N_src_backend_scheduler_engine_execution_scope_budget_service_ts["scope-budget-service.ts"] {
   <<module>>
 }
-N_src_backend_scheduler_engine_execution_scope_recovery_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_scope_recovery_service_ts ..> N_src_backend_scheduler_engine_execution_effect_observation_service_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_scope_recovery_service_ts ..> N_src_backend_scheduler_engine_execution_effect_source_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_scope_recovery_service_ts ..> N_src_backend_scheduler_engine_execution_scope_budget_service_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_backend_scheduler_engine_execution_scope_replan_service_ts["scope-replan-service.ts"] {
   <<module>>
 }
@@ -2370,21 +2446,21 @@ class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal
 class N_src_backend_scheduler_engine_execution_execution_report_service_ts["execution-report-service.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_execution_effect_observation_service_ts["effect-observation-service.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_execution_effect_source_ts["effect-source.ts"] {
-  <<module>>
-}
+N_src_backend_scheduler_engine_execution_scope_recovery_service_ts ..> N_src_backend_scheduler_engine_execution_effect_source_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_scope_recovery_service_ts ..> N_src_backend_scheduler_engine_execution_scope_budget_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_replan_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_replan_service_ts ..> N_src_backend_scheduler_engine_execution_execution_report_service_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_scope_replan_service_ts ..> N_src_backend_scheduler_engine_execution_effect_observation_service_ts : 导入依赖
-N_src_backend_scheduler_engine_execution_scope_replan_service_ts ..> N_src_backend_scheduler_engine_execution_effect_source_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_scheduler_engine_execution_scope_replan_service_ts["scope-replan-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_effect_observation_service_ts["effect-observation-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_execution_effect_source_ts["effect-source.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_scope_budget_service_ts["scope-budget-service.ts"] {
@@ -2396,6 +2472,8 @@ class N_src_backend_scheduler_engine_execution_scope_usage_service_ts["scope-usa
 class N_src_backend_scheduler_engine_execution_scope_goal_service_ts["scope-goal-service.ts"] {
   <<module>>
 }
+N_src_backend_scheduler_engine_execution_scope_replan_service_ts ..> N_src_backend_scheduler_engine_execution_effect_observation_service_ts : 导入依赖
+N_src_backend_scheduler_engine_execution_scope_replan_service_ts ..> N_src_backend_scheduler_engine_execution_effect_source_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_replan_service_ts ..> N_src_backend_scheduler_engine_execution_scope_budget_service_ts : 导入依赖
 N_src_backend_scheduler_engine_execution_scope_usage_service_ts ..> N_src_backend_scheduler_engine_execution_scope_goal_service_ts : 导入依赖
 ```
@@ -2562,7 +2640,7 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 ### 安全持久等待检查点
 
-`WorkspaceDispatchService.parkScope(identity, scopeId, summary, mainRunIds)` 仅供可信协调器在主运行实际收尾并释放资源后调用。它在派发串行事务内调用 `ScopeGoalService.validateWaiting`：当前 awaiting_user 审阅属于同一主运行，主运行的传入摘要与 canonical 日志均为 completed 且无未决/未知工具；图游标、知识版本、副作用界限未变；本周期任务与成员均已结算，同主会话不存在 starting/running，包括旧无 scope 的运行。所有本周期成员运行再读 canonical 日志核验身份和工具终态；明确 failed/cancelled 可等待，interrupted 或未知副作用拒绝。已有证据仍按原审阅规则复核，不将等待或用户排队文字当成人工验收。
+`WorkspaceDispatchService.parkScope(identity, scopeId, summary, mainRunIds)` 仅供可信协调器在主运行实际收尾并释放资源后调用。它在派发串行事务内调用 `ScopeGoalService.validateWaiting`：当前 awaiting_user 审阅属于同一主运行，主运行的传入摘要与 canonical 日志均为 completed 且无未决/未知工具；图游标、知识版本、副作用界限未变；本周期成员运行均已结算，待办仅可按显式 memberPause 完整保留可靠检查点及未领取后继；同主会话不存在 starting/running，包括旧无 scope 的运行。所有本周期成员运行再读 canonical 日志核验身份和工具终态；明确 failed/cancelled 可等待，interrupted 或未知副作用拒绝。已有证据仍按原审阅规则复核，不将等待或用户排队文字当成人工验收。
 
 成功后只在现有事务日志写 status=waiting 与 `DispatchScopeWait`，原目标和审阅不改写、graph cursor 不推进，也不新增存储。可信主轮清单立即复制，1–32 个唯一 runId 且包含当前主运行；用于保留已消耗预算，不自动恢复任何运行。等待幂等键包含周期和真实主 runId，同周期后续再等待创建独立检查点；事务后再次核实当前状态，旧成功回执不能掩盖已取消。waiting 占据该根唯一未关闭槽，拒绝新周期、计划、审阅、派工或成员启动；close(cancelled/failed/interrupted) 保留检查点并释放执行实例，close(completed) 拒绝。`recoverScopes` 只收束遗留 active；`waitingScopes` 内部只读枚举 waiting，无 IPC 自动恢复能力。
 
@@ -3024,3 +3102,11 @@ Auto 为原命令生成独立 auto-revise-dependencies 键，将操作纳入在�
 ### 已放弃检查点来源换边
 
 ScopeGoalService.validateDependencySource 对明确放弃的 cancelled 来源先使用 abandonedCheckpointSource 核原状态，再经 verifyMemberCheckpointHistory 两次只读 canonical 并比原冻结检查点/logHash。需要真实 normalizeValidationPath 端口；不读取今日旧 native 或更新旧文件基线，不签发恢复许可。QueuedDependencyReplacementService 沿原 Knowledge→模型→Store 顺序核当前后继岗位和新候选，任何停止、坏日志、知识或领取变化均不保存半条边。原任务、原运行和已处置预约不变；Auto 只重新跟踪原未启动闭包，完成仍须真实候选及 superseded 审阅。
+
+## 成员持久等待与显式继续
+
+MemberPauseService 为 ScopeGoalService 的审阅与停泊核原 canonical 检查点证明；重启 waitingScopes/recoverScopes 不调用该 IO、不读取 native、不重放待办。用户明确补充才以业务只读占用→知识→模型→Store 核完整原清单、岗位配置、知识、文件和原 native 指纹；预检无持久副作用，最终受理事务再次核实，失败不消费等待。原权限必须被本次用户选择允许；成员领取仍保持原权限，不继承新的批准。
+
+ScopeContinuationService 先查原意图；同命令在外层锁竞争期间已受理时返回原不可变事实且 fresh=false，不创建第二主轮。成功归档 memberPause、提升输入版本，由 Auto 建立当前 Cycle；模型重规划后明确 cbim_dispatch_resume，原待办闭包由既有预约回执加入新批次，主轮结算后按新候选实际领取。预检成功不代替预约/领取核验。人工决定接续不能消费包含 memberPause 的等待，需使用补充入口；正常人工流程保持原边界。
+
+停止 waiting 原子封存检查点与未领取后继，保留原完成段及证明并释放成员；停止与受理竞争只保留真实已提交意图。未消费的已预约检查点、多段续执行和异常 native 不在本片支持域。

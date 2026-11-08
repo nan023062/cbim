@@ -1,4 +1,5 @@
 /**
+ * 等待审阅的可选 memberPause 也必须与原请求逐项一致，不能省略清单后把已保存等待解释为另一种结果。
  * 作用定位：主调度工具的公开业务输出契约与可信调用归属校验，前置修订严格对应原增删请求。
  * 设计原因：JSON 可解析不代表目标、图或回执属于本次调用；唯一 wire 核对身份、Workflow 与负责人原始选择，不将解析后补值当作原请求事实。
  * 职责边界：排队、追加/替换前置及续执行预约均不是执行完成；检查点放弃只取消原待办，输出失败不撤销已提交事务，也不授权自动重试。
@@ -81,7 +82,7 @@ function validateMainToolOutput(name:MainToolName,value:unknown,expected:MainToo
       const {expectedRevision:_,...requested}=proposed;if(!sameGoalValue(actual,requested))issue('保存计划与请求正文不一致');
     }else{
       const review=goal.review;if(!review||review.runId!==binding.runId||review.revision!==goal.revision||goalInputRevision(review)!==goalInputRevision(goal)){issue('审阅未绑定本次主运行');return}
-      const actual={decision:review.decision,checks:review.checks,superseded:review.superseded,gaps:review.gaps,reason:review.reason};
+      const actual={decision:review.decision,checks:review.checks,superseded:review.superseded,gaps:review.gaps,reason:review.reason,...(review.memberPause===undefined?{}:{memberPause:review.memberPause})};
       const {expectedRevision:_,...requested}=draft as GoalReviewInput;if(!sameGoalValue(actual,requested))issue('保存审阅与请求事实不一致');
     }return;
   }

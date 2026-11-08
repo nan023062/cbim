@@ -1,4 +1,5 @@
 /**
+ * 成员等待仅在 awaiting_user 明确保留完整清单；普通审阅、完成和人工决定不授予成员恢复许可。
  * 作用定位：定义调度周期目标的原始输入、版本化计划、审阅证据和持久化转换规则。
  * 设计原因：计划与模型回合分离，原始需求不可改写；业务分配保留负责人选择及可信绑定、可选 Workflow，显式补充使旧计划过期，历史缺省不伪造新身份。
  * 职责边界：主角色可管理模块知识但不能声明执行 Workflow；人工满足项须引用真实决定及显式接续，运行、知识、文件和批准归属仍由调度服务重核，complete 仅是申请。
@@ -7,6 +8,7 @@ import {z} from 'zod';
 import {workflowSelectionsSchema,validateWorkflowSelections,type WorkflowSelection} from './workflow-selection';
 import {fail} from '../foundation/errors';
 import {ownerExecutionSelectionSchema,ownerExecutionBindingSchema,ownerExecutionSelectionMatches} from '../team/member-execution-binding';
+import {memberPauseSchema} from './member-pause';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
 const text=z.string().trim().min(1).max(16000);
@@ -33,7 +35,8 @@ const humanEvidence=humanDecisionReference.extend({kind:z.literal('human-decisio
 const evidence=z.discriminatedUnion('kind',[memberEvidence,knowledgeEvidence,humanEvidence]);
 const check=z.object({criterionId:id,outcome:z.enum(['satisfied','unmet','needs_human']),reason:text,evidence:z.array(evidence).max(100)}).strict();
 const superseded=z.object({taskId:id,replacementTaskIds:z.array(id).min(1).max(100).refine(unique),reason:text,humanDecision:humanDecisionReference.optional()}).strict();
-export const goalReviewInputSchema=z.object({expectedRevision:revision,decision:z.enum(['complete','replan','blocked','awaiting_user']),checks:z.array(check).max(50),superseded:z.array(superseded).max(100),gaps:z.array(text).max(100),reason:text}).strict();
+/** memberPause 仅用于 awaiting_user：明确保留可靠检查点和未领取后继，不授权恢复或签署验收。 */
+export const goalReviewInputSchema=z.object({expectedRevision:revision,decision:z.enum(['complete','replan','blocked','awaiting_user']),checks:z.array(check).max(50),superseded:z.array(superseded).max(100),gaps:z.array(text).max(100),reason:text,memberPause:memberPauseSchema.optional()}).strict();
 export type GoalPlanInput=z.infer<typeof goalPlanInputSchema>;
 export type GoalReviewInput=z.infer<typeof goalReviewInputSchema>;
 export type GoalEvidence=z.infer<typeof evidence>;
@@ -61,6 +64,7 @@ export const dispatchScopeGoalSchema=z.object({revision,inputRevision:inputRevis
   const currentInput=goal.inputRevision??1,plannedInput=goal.plan.inputRevision??1;
   if(plannedInput>currentInput)issue('计划输入版本超前');
   if(!goal.review){if(plannedInput===currentInput&&goal.plan.revision!==goal.revision)issue('未审阅时最新版本必须是计划');if(plannedInput<currentInput&&goal.plan.revision>=goal.revision)issue('过期计划不能占据补充后的最新版本');return}
+  if(goal.review.memberPause&&goal.review.decision!=='awaiting_user')issue('成员持久等待清单只能用于等待用户审阅');
   if(plannedInput!==currentInput||(goal.review.inputRevision??1)!==currentInput)issue('审阅必须对应最新输入版本的计划');
   if(goal.review.revision!==goal.revision||goal.review.planRevision!==goal.plan.revision||goal.review.revision<=goal.plan.revision)issue('审阅与目标计划版本不一致');
   if(goal.review.lastEffectSeq>goal.review.observedSeq)issue('副作用序号不能超过已观察日志');

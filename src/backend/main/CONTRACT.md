@@ -116,3 +116,7 @@ member-dispatch 的影响端口另装配原知识事务只读适配，借已打�
 ## 受控文件统一影响观察（Step40）
 
 影响观察的 `observeControlled` 复用同一已装配 ControlledFiles.report，读取前后核停止；原报告沿唯一 Store/canonical 验证，不产生 utility、租约、业务文件 IO 或补偿命令。原来源读取和实际写/补偿入口仍分离。
+
+## 持久成员等待的只读装配
+
+member-dispatch 将同一 canonical、ArtifactFiles 和 NativeFiles 只读指纹端口装配给 MemberPauseService，显式继续时取得工作区读占用；关闭/停止代次经 assertCurrent 检查。历史停泊只读原日志，当前核验不创建引擎或解密模型运行凭据，等待重启本身不调用这些端口。沿已有 goalContinue/goalContinuation IPC 受理与查询，不新增桌面自动恢复路径或独立存储。

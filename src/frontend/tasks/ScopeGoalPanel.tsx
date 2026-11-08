@@ -1,7 +1,7 @@
 /**
  * 作用定位：复用展示本轮真实目标、冻结岗位分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。
  * 设计原因：周期状态、冻结软限额与模型声明分开呈现；替代关系只定位本周期真实节点，不生成派发边或迁移旧成果。岗位、模型和显式流程只读原计划，人工意见与继续各自独立。
- * 接续附件：历史只展示后端已受理清单；运行内补充另列接收状态与实际输入快照，不重读原文件或把原生接收当作验收。
+ * 接续历史：展示已受理资料与明确保留的成员清单；等待没有模型占用，继续仍须后台重核，不把保留或接收当作验收。
  */
 import type {ScopeGoalState} from './scope-state';
 import {Icon} from '../components/Icon';
@@ -57,12 +57,12 @@ export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel',co
       {continuation&&continuation.scopeId===selectedScopeId&&<ScopeContinuationForm state={continuation}/>}
       {replan&&replan.inspectionScopeId===selectedScopeId&&<ScopeReplanForm state={replan}/>}
       {humanDecisions&&humanDecisions.scopeId===selectedScopeId&&<HumanDecisionPanel state={humanDecisions}/>}
-      {humanContinuation&&humanContinuation.scopeId===selectedScopeId&&<HumanContinuationForm state={humanContinuation}/>}
+      {humanContinuation&&humanContinuation.scopeId===selectedScopeId&&!scope?.wait?.memberPause&&<HumanContinuationForm state={humanContinuation}/>}
       {summary.blockedReason&&<p role="status" className="scope-goal-blocked" data-testid="scope-goal-blocked">未完成原因：{summary.blockedReason}</p>}
       {summary.status==='closed'&&summary.outcome!=='completed'&&!summary.blockedReason&&<p className="scope-goal-muted">本周期已结束，不能将本轮输出视为目标完成。</p>}
       {!summary.hasGoal?<p className="scope-goal-muted">旧记录没有持久化原始输入或目标计划；这里不根据会话标题推断。</p>:<details className="scope-goal-details" key={selectedScopeId} open={!compact} data-testid="scope-goal-details"><summary>查看目标计划与审阅<span>{summary.goalRevision===undefined?'':` · 第 ${summary.goalRevision} 版`}</span></summary>
         {detailLoading||!scope?<p role="status" className="scope-goal-muted">正在同步目标详情…</p>:<>
-          {scope.wait&&<div className="scope-goal-section" data-testid="scope-goal-wait-detail"><h4>{scope.status==='waiting'?'等待补充原因':'等待记录'}</h4><p className="scope-goal-wait-reason">{scope.wait.reason}</p><p className="scope-goal-muted">记录于 {new Date(scope.wait.createdAt).toLocaleString()} · 目标第 {scope.wait.goalRevision} 版</p></div>}
+          {scope.wait&&<div className="scope-goal-section" data-testid="scope-goal-wait-detail"><h4>{scope.status==='waiting'?'等待补充原因':'等待记录'}</h4><p className="scope-goal-wait-reason">{scope.wait.reason}</p><p className="scope-goal-muted">记录于 {new Date(scope.wait.createdAt).toLocaleString()} · 目标第 {scope.wait.goalRevision} 版</p>{scope.wait.memberPause&&<div data-testid="scope-member-pause"><h5>{scope.status==='waiting'?'已保留的成员任务':'本次等待曾保留的成员任务'}</h5><p className="scope-goal-muted">{scope.status==='waiting'?'重启后仍保持等待，不占用模型。点击“补充并继续”后，重新核实岗位、知识、原会话和文件；主调度再明确安排原任务。':'等待已经结束；原检查点与后继记录保持，不能从历史重新启动。'}</p><ul>{scope.wait.memberPause.tasks.map(ref=><li key={ref.taskId}>{ref.kind==='checkpoint'?'可靠检查点':'未启动后继'} · <GoalTaskReference state={state} taskId={ref.taskId} onSelectTask={onSelectTask}/></li>)}</ul></div>}</div>}
           {goal?.blocked&&<div className="scope-goal-section" data-testid="scope-goal-blocked-detail"><h4>完整受阻原因</h4><p className="scope-goal-blocked">{goal.blocked.reason}</p></div>}
           <div className="scope-goal-section"><h4>本轮原始输入</h4><div className="scope-goal-input" data-testid="scope-goal-input">{goal!.input.message}</div>{goal!.input.attachmentIds.length>0&&<p className="scope-goal-muted">{goal!.input.attachmentIds.length} 份附件快照</p>}</div>
           {scope.activeInputs&&<ScopeActiveInputs items={scope.activeInputs}/>}

@@ -1,4 +1,5 @@
 /**
+ * 持久成员等待沿原 wait 冻结清单；重启不恢复执行，用户继续须通过 memberPauses 的当前资格核验。
  * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
  * 设计原因：新派发按知识→模型→Store 锁序核当前岗位、能力及责任，保存原 Workflow 选择与不可变执行绑定，同命令不能改选。周期冻结输入及软限额，关闭封存待办；旧回执不能重开周期。
  * 职责边界：负责可靠入队、未启动撤销及受审计的前置追加/替换/多边修订，由独立 MemberExecutionManager 执行；调度维护不停止活动运行或复活旧实例。
@@ -36,6 +37,7 @@ import {QueuedDependencyRevisionService} from './queued-dependency-revision-serv
 import type {ReviseQueuedDependenciesInput,ReviseQueuedDependenciesReceipt} from '../../core/tasks/queued-dependency-revision';
 import {CheckpointAbandonmentService} from './checkpoint-abandonment-service';
 import type {MemberCheckpointHistoryPorts} from './member-checkpoint-verifier';
+import {MemberPauseService,type MemberPausePorts} from './member-pause-service';
 import type {AbandonCheckpointInput,AbandonCheckpointReceipt} from '../../core/tasks/checkpoint-handoff';
 import type {AddQueuedDependencyInput,AddQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-addition';
 import type {ReplaceQueuedDependencyInput,ReplaceQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-replacement';
@@ -88,12 +90,15 @@ export class WorkspaceDispatchService {
   private readonly queuedDependencyRevision:QueuedDependencyRevisionService;
   private readonly checkpointAbandonment:CheckpointAbandonmentService;
   private readonly commandVerification:CommandVerificationService;
-  constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts,budgetPolicy?:()=>ScopeBudgetPolicy,humanPorts?:HumanDecisionPorts,modelPorts?:OwnerExecutionModelPorts,checkpointHistory?:MemberCheckpointHistoryPorts,effectPorts?:EffectObservationPorts){
+  /** 重启只恢复等待占位；本服务仅在显式审阅或用户继续时核实原成员。 */
+  readonly memberPauses:MemberPauseService;
+  constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts,budgetPolicy?:()=>ScopeBudgetPolicy,humanPorts?:HumanDecisionPorts,modelPorts?:OwnerExecutionModelPorts,checkpointHistory?:MemberCheckpointHistoryPorts,effectPorts?:EffectObservationPorts,memberPausePorts?:MemberPausePorts){
     this.owners=new OwnerExecutionService(owner,store,modelPorts);
-    this.goals=new ScopeGoalService(owner,store,goalPorts,humanPorts,this.owners);
+    this.memberPauses=new MemberPauseService(owner,store,this.owners,memberPausePorts);
+    this.goals=new ScopeGoalService(owner,store,goalPorts,humanPorts,this.owners,this.memberPauses);
     this.usage=new ScopeUsageService(owner,store,goalPorts);
     this.budgets=new ScopeBudgetService(this.usage,budgetPolicy);
-    this.continuations=new ScopeContinuationService(owner,store,this.budgets);
+    this.continuations=new ScopeContinuationService(owner,store,this.budgets,this.memberPauses);
     this.activeInputs=new ScopeActiveInputService(owner,store);
     this.commandVerification=new CommandVerificationService(owner,store,goalPorts?.inspectMain?{inspectMain:goalPorts.inspectMain}:undefined);
     this.effects=new EffectObservationService(owner,store,this.commandVerification,effectPorts);
@@ -238,7 +243,7 @@ export class WorkspaceDispatchService {
       if(scope.status!=='active')fail(scope.status==='waiting'?'DISPATCH_SCOPE_WAITING':'DISPATCH_SCOPE_CLOSED','当前周期不能建立新的等待检查点');
       await this.goals.validateWaiting(state,scope,summary,mainRunIds);
       const review=scope.goal!.review!;
-      const parked:DispatchScope={...scope,status:'waiting',wait:{waitId:randomUUID(),reason:review.reason,createdAt:new Date().toISOString(),runId:summary.runId,goalRevision:scope.goal!.revision,graphCursor:{...review.graphCursor},knowledgeRevision:review.knowledgeRevision,mainRunIds:[...mainRunIds]}};
+      const parked:DispatchScope={...scope,status:'waiting',wait:{waitId:randomUUID(),reason:review.reason,createdAt:new Date().toISOString(),runId:summary.runId,goalRevision:scope.goal!.revision,graphCursor:{...review.graphCursor},knowledgeRevision:review.knowledgeRevision,mainRunIds:[...mainRunIds],...(review.memberPause?{memberPause:structuredClone(review.memberPause)}:{})}};
       return {scopes:[parked],receipt:parked};
     });
     // 去重回执可能早于后续停止；不把旧 waiting 快照作为已关闭周期的当前状态返回。

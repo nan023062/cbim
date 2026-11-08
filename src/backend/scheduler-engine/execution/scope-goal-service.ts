@@ -1,4 +1,5 @@
 /**
+ * 持久成员等待通过独立只读核验精确保留原检查点和后继，主轮安全结算才停泊；未知和在途仍拒绝。
  * 问答边界：当前与历史候选共用真实业务回执校验，普通回答及取消不能替代目标完成或人工验收依据。
  * 作用定位：保存本轮目标计划与审阅，为门禁、依赖修订和人工决定核验真实候选；已放弃检查点换边仍核原冻结日志，不复活旧任务。
  * 设计原因：业务计划重核岗位、来源和模型后冻结绑定；候选按原岗位及 Workflow 比较，不用当前登记覆盖历史。模型只能申请完成或等待，结算再核证据、任务压力与副作用；明确返工不把旧文件再次放行。
@@ -36,6 +37,7 @@ import {sameOwnerExecutionForModules,type OwnerExecutionBinding} from '../../cor
 import type {OwnerExecutionService} from './owner-execution-service';
 import {abandonedCheckpointSource} from '../../core/tasks/checkpoint-handoff-rules';
 import {verifyMemberCheckpointHistory} from './member-checkpoint-verifier';
+import type {MemberPauseService} from './member-pause-service';
 
 /** 端口只按可信已登记身份读取 canonical 日志；不能接受模型提供路径或摘要。 */
 export interface ScopeGoalPorts {
@@ -54,7 +56,7 @@ function check(condition:unknown,code:string,message:string):asserts condition{i
 function lastEffect(summary:RunSummary){return summary.events.reduce((latest,event)=>event.type==='tool.allowed'&&(Array.isArray(event.data.effects)&&event.data.effects.some(effect=>effects.has(String(effect)))||['write','edit','bash'].includes(String(event.data.name)))?Math.max(latest,event.seq):latest,0)}
 
 export class ScopeGoalService {
-  constructor(private readonly owner:Owner,private readonly store:DispatchStore,private readonly ports?:ScopeGoalPorts,private readonly humanPorts?:HumanDecisionPorts,private readonly owners?:OwnerExecutionService){}
+  constructor(private readonly owner:Owner,private readonly store:DispatchStore,private readonly ports?:ScopeGoalPorts,private readonly humanPorts?:HumanDecisionPorts,private readonly owners?:OwnerExecutionService,private readonly memberPauses?:MemberPauseService){}
   private parse<S extends z.ZodTypeAny>(schema:S,value:unknown):z.output<S>{const result=schema.safeParse(value);if(!result.success)fail('GOAL_INPUT_INVALID',result.error.issues.map(issue=>issue.message).join('；'));return result.data}
   private scope(state:DispatchState,identity:GraphIdentity,scopeId:string){
     this.parse(identitySchema,{...identity,scopeId});this.owner.assert();
@@ -351,6 +353,7 @@ export class ScopeGoalService {
       const scope=this.scope(state,identity,scopeId),goal=this.editable(scope,draft.expectedRevision),graph=this.graph(state,scope);
       check(goal.plan,'GOAL_PLAN_REQUIRED','审阅前必须建立本轮目标计划');
       check(!goalNeedsReplan(goal),'GOAL_REPLAN_REQUIRED','用户已补充目标，必须按最新输入重新规划再审阅');
+      if(draft.memberPause){check(draft.decision==='awaiting_user'&&this.memberPauses,'GOAL_MEMBER_PAUSE_INVALID','成员等待清单只用于已装配的等待用户分支');await this.memberPauses.verifyWaiting(state,scope,draft.memberPause)}
       const main=await this.logs().inspectMain(scope.rootSessionId,runId);this.main(state,main,scope,graph,runId);
       check(!main.logIntegrity?.partialTail,'GOAL_EVIDENCE_INVALID','主运行日志尾行不完整，不能据此前缀审阅');
       await this.validateActiveInputs(scope,main);
@@ -426,7 +429,7 @@ export class ScopeGoalService {
   }
   /**
    * 在 parkScope 的事务内核实无活动执行的等待边界，不重入存储、不启动模型。
-   * 等待只接受当前 awaiting_user 审阅；已失败但明确结束的成员可保留，未知工具、在途租约和未开始任务均拒绝。
+   * 等待只接受当前 awaiting_user 审阅；显式 memberPause 可保留可靠检查点及未领取后继，未知工具和在途租约始终拒绝。
    */
   async validateWaiting(state:DispatchState,scope:DispatchScope,summary:RunSummary,mainRunIds:string[]):Promise<void>{
     await this.validateActiveInputs(scope,summary);
@@ -442,8 +445,10 @@ export class ScopeGoalService {
     check(sameGoalValue(review.graphCursor,cursor(graph)),'GOAL_GRAPH_CHANGED','等待申请后任务图已变化，请重新审阅');
     check(lastEffect(main)===review.lastEffectSeq&&!main.events.some(event=>event.seq>review.observedSeq&&event.type==='tool.allowed'&&Array.isArray(event.data.effects)&&event.data.effects.some(effect=>effects.has(String(effect)))),'GOAL_EFFECT_CHANGED','等待申请后又发生可能改变产物的操作');
     const tasks=graph.tasks.filter(task=>task.scopeId===scope.scopeId),ids=new Set(tasks.map(task=>task.taskId));
-    check(!tasks.some(task=>task.activeRunId||['planned','queued','running','waiting','checkpointed'].includes(task.status))&&!state.runs?.some(run=>run.binding.rootSessionId===scope.rootSessionId&&['starting','running'].includes(run.status)),'GOAL_WORK_PENDING','本周期仍有待执行任务、检查点或活动运行，不能进入等待');
-    check(!state.members.some(member=>member.executionScopeId===scope.scopeId&&(member.activeRunId||member.activeTaskId||member.activity!=='idle'||member.waitingTaskIds.length||member.communicatingMessageIds.length)),'GOAL_WORK_PENDING','执行成员仍有活动占用或待通信操作');
+    if(review.memberPause){check(this.memberPauses,'GOAL_MEMBER_PAUSE_UNAVAILABLE','未装配成员等待核实能力');await this.memberPauses.verifyWaiting(state,scope,review.memberPause)}
+    const retained=new Set(review.memberPause?.tasks.map(ref=>ref.taskId));
+    check(!tasks.some(task=>task.activeRunId||!retained.has(task.taskId)&&['planned','queued','running','waiting','checkpointed'].includes(task.status))&&!state.runs?.some(run=>run.binding.rootSessionId===scope.rootSessionId&&['starting','running'].includes(run.status)),'GOAL_WORK_PENDING','本周期仍有未列入可靠等待的待办或活动运行');
+    check(!state.members.some(member=>member.executionScopeId===scope.scopeId&&(member.activeRunId||member.activeTaskId||member.communicatingMessageIds.length||!retained.has(member.executionTaskId!)&&(member.activity!=='idle'||member.waitingTaskIds.length))),'GOAL_WORK_PENDING','执行成员仍有活动占用或待通信操作');
     for(const run of state.runs??[])if(ids.has(run.binding.taskId)){
       const task=tasks.find(item=>item.taskId===run.binding.taskId)!;
       check(['completed','failed','cancelled'].includes(run.status),'GOAL_WAIT_UNCERTAIN','成员执行尚未得到明确终态，不能安全等待');

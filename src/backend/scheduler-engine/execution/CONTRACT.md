@@ -147,7 +147,7 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 ### 安全持久等待检查点
 
-`WorkspaceDispatchService.parkScope(identity, scopeId, summary, mainRunIds)` 仅供可信协调器在主运行实际收尾并释放资源后调用。它在派发串行事务内调用 `ScopeGoalService.validateWaiting`：当前 awaiting_user 审阅属于同一主运行，主运行的传入摘要与 canonical 日志均为 completed 且无未决/未知工具；图游标、知识版本、副作用界限未变；本周期任务与成员均已结算，同主会话不存在 starting/running，包括旧无 scope 的运行。所有本周期成员运行再读 canonical 日志核验身份和工具终态；明确 failed/cancelled 可等待，interrupted 或未知副作用拒绝。已有证据仍按原审阅规则复核，不将等待或用户排队文字当成人工验收。
+`WorkspaceDispatchService.parkScope(identity, scopeId, summary, mainRunIds)` 仅供可信协调器在主运行实际收尾并释放资源后调用。它在派发串行事务内调用 `ScopeGoalService.validateWaiting`：当前 awaiting_user 审阅属于同一主运行，主运行的传入摘要与 canonical 日志均为 completed 且无未决/未知工具；图游标、知识版本、副作用界限未变；本周期成员运行均已结算，待办仅可按显式 memberPause 完整保留可靠检查点及未领取后继；同主会话不存在 starting/running，包括旧无 scope 的运行。所有本周期成员运行再读 canonical 日志核验身份和工具终态；明确 failed/cancelled 可等待，interrupted 或未知副作用拒绝。已有证据仍按原审阅规则复核，不将等待或用户排队文字当成人工验收。
 
 成功后只在现有事务日志写 status=waiting 与 `DispatchScopeWait`，原目标和审阅不改写、graph cursor 不推进，也不新增存储。可信主轮清单立即复制，1–32 个唯一 runId 且包含当前主运行；用于保留已消耗预算，不自动恢复任何运行。等待幂等键包含周期和真实主 runId，同周期后续再等待创建独立检查点；事务后再次核实当前状态，旧成功回执不能掩盖已取消。waiting 占据该根唯一未关闭槽，拒绝新周期、计划、审阅、派工或成员启动；close(cancelled/failed/interrupted) 保留检查点并释放执行实例，close(completed) 拒绝。`recoverScopes` 只收束遗留 active；`waitingScopes` 内部只读枚举 waiting，无 IPC 自动恢复能力。
 
@@ -609,3 +609,11 @@ Auto 为原命令生成独立 auto-revise-dependencies 键，将操作纳入在�
 ### 已放弃检查点来源换边
 
 ScopeGoalService.validateDependencySource 对明确放弃的 cancelled 来源先使用 abandonedCheckpointSource 核原状态，再经 verifyMemberCheckpointHistory 两次只读 canonical 并比原冻结检查点/logHash。需要真实 normalizeValidationPath 端口；不读取今日旧 native 或更新旧文件基线，不签发恢复许可。QueuedDependencyReplacementService 沿原 Knowledge→模型→Store 顺序核当前后继岗位和新候选，任何停止、坏日志、知识或领取变化均不保存半条边。原任务、原运行和已处置预约不变；Auto 只重新跟踪原未启动闭包，完成仍须真实候选及 superseded 审阅。
+
+## 成员持久等待与显式继续
+
+MemberPauseService 为 ScopeGoalService 的审阅与停泊核原 canonical 检查点证明；重启 waitingScopes/recoverScopes 不调用该 IO、不读取 native、不重放待办。用户明确补充才以业务只读占用→知识→模型→Store 核完整原清单、岗位配置、知识、文件和原 native 指纹；预检无持久副作用，最终受理事务再次核实，失败不消费等待。原权限必须被本次用户选择允许；成员领取仍保持原权限，不继承新的批准。
+
+ScopeContinuationService 先查原意图；同命令在外层锁竞争期间已受理时返回原不可变事实且 fresh=false，不创建第二主轮。成功归档 memberPause、提升输入版本，由 Auto 建立当前 Cycle；模型重规划后明确 cbim_dispatch_resume，原待办闭包由既有预约回执加入新批次，主轮结算后按新候选实际领取。预检成功不代替预约/领取核验。人工决定接续不能消费包含 memberPause 的等待，需使用补充入口；正常人工流程保持原边界。
+
+停止 waiting 原子封存检查点与未领取后继，保留原完成段及证明并释放成员；停止与受理竞争只保留真实已提交意图。未消费的已预约检查点、多段续执行和异常 native 不在本片支持域。

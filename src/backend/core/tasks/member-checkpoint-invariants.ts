@@ -1,4 +1,5 @@
 /**
+ * 持久等待仅允许原 wait 明确列出的未预约检查点；原证明不变，实际消费仍限原活动周期的唯一预约。
  * 作用定位：检查成员检查点、续执行预约和唯一消费在图/运行/邮箱联合事务中的一致性。
  * 设计原因：不能只在工具入口防重；存储重放和普通事务须保留原负责人及流程选择，活动周期取消检查点只接受完整交接放弃校验产生的窄许可。
  */
@@ -66,7 +67,8 @@ export function validateMemberCheckpoints(previous:DispatchState,next:DispatchSt
     }else{
       valid(!task.activeRunId&&!task.result&&!task.help,'尚未续执行的检查点不能产生占用或交付');
       // 许可只由完整放弃事务/不可变历史核验产生，不能以字段存在或 cancelled 状态自报。
-      valid(abandoned.has(JSON.stringify([task.identity.rootSessionId,task.taskId]))?task.status==='cancelled':scope.status==='active'?task.status==='checkpointed'&&!request||task.status==='queued'&&!!request:scope.status==='closed'&&['cancelled','interrupted'].includes(task.status),'未消费检查点只能等待主调度、经明确交接放弃或随关闭封存');
+      const parked=scope.status==='waiting'&&scope.wait?.memberPause?.tasks.some(ref=>ref.kind==='checkpoint'&&ref.taskId===task.taskId&&ref.checkpointId===record.checkpointId);
+      valid(abandoned.has(JSON.stringify([task.identity.rootSessionId,task.taskId]))?task.status==='cancelled':scope.status==='active'?task.status==='checkpointed'&&!request||task.status==='queued'&&!!request:parked?task.status==='checkpointed'&&!request:scope.status==='closed'&&['cancelled','interrupted'].includes(task.status),'未消费检查点只能显式保留等待、经明确交接放弃或随关闭封存');
       valid(member.activity==='idle'&&!member.activeRunId&&!member.activeTaskId&&!member.waitingTaskIds.length&&!member.communicatingMessageIds.length,'未消费检查点不能占用成员或保留通信工作');
     }
   }

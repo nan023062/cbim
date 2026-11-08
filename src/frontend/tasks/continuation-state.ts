@@ -2,6 +2,7 @@
  * 作用定位：管理显式目标补充的本地草稿、冻结请求与回执，不直接依赖 React 或桌面全局对象。
  * 设计原因：请求连同有序附件身份先保存再发送；首次明确预受理拒绝可编辑，通信未知仍冻结。两处目标卡共享草稿和选择器锁，迟到导入不得污染新等待，普通聊天草稿独立。
  * 回执边界：首次受理后仅周期状态可更新；矛盾运行或附件清单保留旧回执并显示查询错误。
+ * 成员等待：已核实的检查点/岗位/权限预受理拒绝保留可编辑草稿；曾通信未知的原请求仍冻结。
  */
 import {goalContinuationRequestSchema,goalContinuationReceiptSchema} from '../../bridge/contracts/dispatch';
 import type {GoalContinuationRequest,GoalContinuationReceipt} from '../../bridge/contracts/dispatch';
@@ -39,8 +40,10 @@ export interface ContinuationPorts {
 }
 const equal=(a:unknown,b:unknown):boolean=>{const order=(value:unknown):unknown=>Array.isArray(value)?value.map(order):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,order(v)])):value;return JSON.stringify(order(a))===JSON.stringify(order(b))};
 const textError=(error:unknown)=>error instanceof Error?error.message:String(error);
+/** 成员核验仅在消费等待之前抛出这些确定拒绝；显式枚举，不把未来未知错误默认视为未提交。 */
+const memberPauseRejections=new Set(['GOAL_MEMBER_PAUSE_INVALID','GOAL_MEMBER_PAUSE_PERMISSION','GOAL_MEMBER_PAUSE_UNAVAILABLE','GOAL_KNOWLEDGE_CHANGED','MEMBER_CHECKPOINT_ARTIFACT_CHANGED','MEMBER_CHECKPOINT_NATIVE_CHANGED','MEMBER_CHECKPOINT_INVALID','MEMBER_CHECKPOINT_PROGRESS','MEMBER_CHECKPOINT_MISSING','MEMBER_CHECKPOINT_CHANGED','OWNER_MEMBER_UNAVAILABLE','OWNER_MODEL_CHANGED','OWNER_CAPABILITY_CHANGED','OWNER_BINDING_REQUIRED','OWNER_BINDING_STALE','OWNER_KNOWLEDGE_CHANGED']);
 /** 仅列出协议保证尚未接受意图的错误。未知代码（含通用 IO/运行失败）必须保留冻结请求。 */
-export function continuationRejected(error:unknown){return /^(?:CAPACITY_BUSY|SCOPE_BUDGET_EXCEEDED|SCOPE_BUDGET_UNVERIFIABLE|SCOPE_BUDGET_WAITING|GOAL_ATTACHMENT_[A-Z_]+|GOAL_CONTINUATION_INPUT|GOAL_IDENTITY|GOAL_NOT_WAITING|GOAL_CONTINUATION_UNAVAILABLE|GOAL_WAIT_CONFLICT|GOAL_REVISION_CONFLICT|GOAL_CYCLE_LIMIT|GOAL_DECISION_LIMIT|GOAL_RUN_CONFLICT|GOAL_INPUT_LIMIT|GOAL_WORK_PENDING|IDENTITY|CONTINUATION_NOT_READY):/.test(textError(error))}
+export function continuationRejected(error:unknown){const message=textError(error),code=/^([A-Z_]+):/.exec(message)?.[1];return !!code&&memberPauseRejections.has(code)||/^(?:CAPACITY_BUSY|SCOPE_BUDGET_EXCEEDED|SCOPE_BUDGET_UNVERIFIABLE|SCOPE_BUDGET_WAITING|GOAL_ATTACHMENT_[A-Z_]+|GOAL_CONTINUATION_INPUT|GOAL_IDENTITY|GOAL_NOT_WAITING|GOAL_CONTINUATION_UNAVAILABLE|GOAL_WAIT_CONFLICT|GOAL_REVISION_CONFLICT|GOAL_CYCLE_LIMIT|GOAL_DECISION_LIMIT|GOAL_RUN_CONFLICT|GOAL_INPUT_LIMIT|GOAL_WORK_PENDING|IDENTITY|CONTINUATION_NOT_READY):/.test(message)}
 
 /** 回执还需核对冻结内容，不能只凭“成功”或某个 runId 确认另一目标的请求。 */
 export function checkedContinuationReceipt(raw:unknown,request:GoalContinuationRequest,previous?:GoalContinuationReceipt):GoalContinuationReceipt{

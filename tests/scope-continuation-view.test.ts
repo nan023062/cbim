@@ -64,6 +64,17 @@ it.each(['SCOPE_BUDGET_EXCEEDED','SCOPE_BUDGET_UNVERIFIABLE','SCOPE_BUDGET_WAITI
   expect(continuationRejected(Error('SCOPE_BUDGET_RUN_CONFLICT: 非预受理错误'))).toBe(false);
 });
 
+it('成员文件或原权限的首次核验拒绝可修正，通信未知后同样的错误仍不能更换请求',async()=>{
+  for(const code of ['MEMBER_CHECKPOINT_ARTIFACT_CHANGED','GOAL_MEMBER_PAUSE_PERMISSION','OWNER_MODEL_CHANGED']){
+    const f=fixture(async()=>{throw Error(code+': 原成员尚未恢复')});f.controller.edit(target,'保留原补充');await f.controller.submit(target,options);
+    expect(f.controller.record('scope','wait')?.attempt).toMatchObject({phase:'rejected',uncertain:false});const reopened=new ScopeContinuationController(target.workspaceId,target.rootSessionId,f.ports);reopened.edit(target,'核实后明确修正');expect(reopened.record('scope','wait')?.text).toBe('核实后明确修正');
+    f.send.mockImplementation(async request=>receipt(request));await reopened.submit(target,options);expect(reopened.record('scope','wait')?.attempt?.phase).toBe('accepted');
+    const uncertain=fixture(async()=>{throw Error('IPC_TIMEOUT')});uncertain.controller.edit(target,'冻结正文');await uncertain.controller.submit(target,options);const request=uncertain.send.mock.calls[0][0];uncertain.send.mockImplementation(async()=>{throw Error(code+': 后续核验失败')});await uncertain.controller.retry('scope','wait');uncertain.controller.edit(target,'不能改写');
+    expect(uncertain.controller.record('scope','wait')?.attempt).toMatchObject({phase:'unknown',uncertain:true,request});expect(uncertain.controller.record('scope','wait')?.text).toBe('冻结正文');
+  }
+  expect(continuationRejected(Error('MEMBER_CHECKPOINT_UNKNOWN: 无可靠结论'))).toBe(false);expect(continuationRejected(Error('GOAL_MEMBER_PAUSE_COMMIT_UNKNOWN: 不推测未来代码'))).toBe(false);
+});
+
 it('本地保存失败不发请求且可恢复保存，损坏记录不能默默丢弃未知请求',async()=>{
   const f=fixture();f.controller.edit(target,'保留草稿');const real=f.ports.storage.setItem;f.ports.storage.setItem=()=>{throw Error('QuotaExceededError')};await f.controller.submit(target,options);expect(f.send).not.toHaveBeenCalled();expect(f.controller.snapshot.error).toContain('未能保存');expect(f.controller.record('scope','wait')?.text).toBe('保留草稿');
   f.ports.storage.setItem=real;await f.controller.submit(target,options);expect(f.send).toHaveBeenCalledTimes(1);

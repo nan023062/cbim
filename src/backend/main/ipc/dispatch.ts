@@ -1,5 +1,6 @@
 /**
  * 受控补偿边界：四项桌面入口只查原操作、预览和显式提交新补偿；模型无补偿入口，原 unknown 和原日志不改写。
+ * 请求预算仅路由完整身份的只读摘要；设置改变只影响新目标，IPC 没有清除预留或签发发送许可的入口。
  * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
  * 设计原因：通过 ApplicationServices 隔离实现；人工保存不启动模型，humanContinue 只消费已保存决定。资料导入/取消独立于等待受理，IPC 不接收来源 proof 或仓库凭据。
  * 资源连接：桌面显式登记、授权与核验分别路由；只读原回执和未受理证明不重放知识提交，不接受客户端地址或令牌。
@@ -76,6 +77,7 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'dispatch.graphDelta':return app.memberDispatch(args.identity?.workspaceId).delta(args.identity,args.cursor,args.limit);
     case 'dispatch.sessionRead':return app.memberDispatch(args.identity?.workspaceId).sessionRead(args);
     case 'dispatch.scopeUsage':return app.memberDispatch(args.workspaceId).usage.read(args);
+    case 'dispatch.requestBudget':return app.requestBudgets(args.workspaceId).report(args);
     case 'dispatch.executionStart':return app.memberExecution(args.workspaceId).start(args);
     case 'dispatch.executionStop':return app.memberExecution(args.workspaceId).stop(args);
     case 'dispatch.executionInspect':return app.memberExecution(args.workspaceId).inspect(args);

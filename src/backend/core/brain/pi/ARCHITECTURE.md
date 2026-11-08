@@ -12,6 +12,9 @@ Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取�
 | --- | --- |
 | [bridge.ts](bridge.ts) | 大脑 执行层：内部知识 Schema/调用的本机临时桥及 Pi 扩展，工具授权先落盘再放行。 |
 | [engine.ts](engine.ts) | Pi 引擎适配器，负责隔离配置、主对话与成员原生会话校验、工具桥与公开执行事件转换。 |
+| [request-budget-bootstrap.ts](request-budget-bootstrap.ts) | 生成早于 Pi 及其 undici 初始化执行的请求转发入口。 |
+| [request-budget-transport.ts](request-budget-transport.ts) | 每运行创建只接受随机令牌的本机供应商代理，逐 HTTP 尝试预留并结算预算。 |
+| [request-budget-usage.ts](request-budget-usage.ts) | 严格读取三种受支持 SSE 协议的请求用量，并暂存终态帧供可靠结算后交付。 |
 | [rpc.ts](rpc.ts) | 大脑 执行层：PiRpc：JSONL 拆包、命令关联、超时与进程结束处理。 |
 | [runtime-config.ts](runtime-config.ts) | 将模型容量和工作预算转换为 Pi 原生运行设置，供每轮隔离进程使用。 |
 
@@ -71,6 +74,7 @@ class N_src_backend_core_brain_pi_engine_ts_PiOptions["PiOptions"] {
   +turnTimeoutMs
   +llm
   +images
+  +requestBudget()
 }
 N_src_backend_core_brain_pi_engine_ts ..> N_src_backend_core_brain_pi_engine_ts_PiOptions : 声明
 class N_src_backend_core_brain_pi_engine_ts_PiEngine["PiEngine"] {
@@ -84,12 +88,12 @@ class N_src_backend_core_brain_pi_engine_ts_PiEngine["PiEngine"] {
   -context
   -rpc
   -bridge
+  -budgetTransport
   -events
   -settlement
   -assistantError
   -generationStarted
   -activity
-  -requestLimit
 }
 N_src_backend_core_brain_pi_engine_ts ..> N_src_backend_core_brain_pi_engine_ts_PiEngine : 声明
 class N_src_backend_core_brain_pi_engine_ts_external_AgentEngine["AgentEngine (外部契约)"] {
@@ -106,6 +110,7 @@ class N_src_backend_core_brain_pi_engine_ts["engine.ts"] {
   <<module>>
 }
 class N_src_backend_core_brain_pi_engine_ts_PiEngine["PiEngine"] {
+  -requestLimit
   -usageBaseline
   -closing
   -stopped
@@ -120,7 +125,59 @@ class N_src_backend_core_brain_pi_engine_ts_external_AgentEngine["AgentEngine (�
 N_src_backend_core_brain_pi_engine_ts_external_AgentEngine <|.. N_src_backend_core_brain_pi_engine_ts_PiEngine
 ```
 
-直接依赖：[../types.ts](../types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../llm/ports.ts](../llm/ports.ts)、[../model-errors.ts](../model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../tools/native-tools.ts](../../tools/native-tools.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)。
+直接依赖：[../types.ts](../types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../llm/ports.ts](../llm/ports.ts)、[../model-errors.ts](../model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../tools/native-tools.ts](../../tools/native-tools.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../llm/request-budget.ts](../llm/request-budget.ts)、[request-budget-transport.ts](request-budget-transport.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)。
+
+### request-budget-bootstrap.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_brain_pi_request_budget_bootstrap_ts["request-budget-bootstrap.ts"] {
+  <<module>>
+  +requestBudgetBootstrap()
+}
+```
+
+
+### request-budget-transport.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_brain_pi_request_budget_transport_ts["request-budget-transport.ts"] {
+  <<module>>
+  +requestBudgetEndpoint()
+  +openRequestBudgetTransport()
+}
+```
+
+直接依赖：[../llm/ports.ts](../llm/ports.ts)、[../llm/request-budget.ts](../llm/request-budget.ts)、[request-budget-usage.ts](request-budget-usage.ts)、[../../tasks/model-request-budget-rules.ts](../../tasks/model-request-budget-rules.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../../team/workspace-member-rules.ts](../../team/workspace-member-rules.ts)。
+
+### request-budget-usage.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_brain_pi_request_budget_usage_ts["request-budget-usage.ts"] {
+  <<module>>
+}
+class N_src_backend_core_brain_pi_request_budget_usage_ts_RequestBudgetUsageStream["RequestBudgetUsageStream"] {
+  +responseBytes
+  +frameBytes
+  +push()
+  +finish()
+  -api
+  -decoder
+  -pending
+  -bytes
+  -result
+  -terminal
+  -started
+  -ended
+  -finishSeen
+  -accept()
+}
+N_src_backend_core_brain_pi_request_budget_usage_ts ..> N_src_backend_core_brain_pi_request_budget_usage_ts_RequestBudgetUsageStream : 声明
+```
+
+直接依赖：[../../tasks/model-request-budget.ts](../../tasks/model-request-budget.ts)。
 
 ### rpc.ts
 
@@ -184,9 +241,31 @@ class N_src_backend_core_brain_pi_bridge_ts["bridge.ts"] {
 class N_src_backend_core_brain_pi_runtime_config_ts["runtime-config.ts"] {
   <<module>>
 }
+class N_src_backend_core_brain_pi_request_budget_transport_ts["request-budget-transport.ts"] {
+  <<module>>
+}
 N_src_backend_core_brain_pi_engine_ts ..> N_src_backend_core_brain_pi_rpc_ts : 导入依赖
 N_src_backend_core_brain_pi_engine_ts ..> N_src_backend_core_brain_pi_bridge_ts : 导入依赖
 N_src_backend_core_brain_pi_engine_ts ..> N_src_backend_core_brain_pi_runtime_config_ts : 导入依赖
+N_src_backend_core_brain_pi_engine_ts ..> N_src_backend_core_brain_pi_request_budget_transport_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_brain_pi_engine_ts["engine.ts"] {
+  <<module>>
+}
+class N_src_backend_core_brain_pi_request_budget_bootstrap_ts["request-budget-bootstrap.ts"] {
+  <<module>>
+}
+class N_src_backend_core_brain_pi_request_budget_transport_ts["request-budget-transport.ts"] {
+  <<module>>
+}
+class N_src_backend_core_brain_pi_request_budget_usage_ts["request-budget-usage.ts"] {
+  <<module>>
+}
+N_src_backend_core_brain_pi_engine_ts ..> N_src_backend_core_brain_pi_request_budget_bootstrap_ts : 导入依赖
+N_src_backend_core_brain_pi_request_budget_transport_ts ..> N_src_backend_core_brain_pi_request_budget_usage_ts : 导入依赖
 ```
 
 
@@ -279,3 +358,7 @@ Workflow 计划与交付门禁位于共享 Runtime 和任务工具，Pi 仍经�
 Pi 仅发现正式成员实际装配的受控写工具，桥保留原 toolCallId 和取消 signal 进入 Runtime helper；不提供补偿工具，不替换原 native write/edit。只有已可靠落盘 applied 的严格唯一 wire 可返回成功。桥关闭不等于文件工人已退出，Runtime 另行 drain 实际平台会话。
 
 检查点提示以实际注册工具为准：本运行有剩余额度时可申请一个，正常关闭后由调度核实并保存；续执行仍可在剩余额度内保存下一段，Pi 不自建预约、不选择历史段恢复。
+
+## 逐请求预算（R06）
+
+显式逐请求模式在 Pi 启动前安装 fetch 转发，保留原供应商 URL 的兼容判断，父进程固定目标路径及模型并持有真实 API key。undici 初始化不能覆盖访问器；握手未完成则不发 prompt。三种 SSE 的完整 usage 严格解析，终态直到结算保存后才交付；断流/取消/错误不推断免费，失败屏障阻止下一请求和工具。close 先取消实际 IO 并排空账本结算，再结束进程与工具桥。这是固定 Pi 供应商出口，不是 OS 网络沙箱或供应商最终账单。

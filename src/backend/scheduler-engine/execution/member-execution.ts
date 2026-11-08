@@ -1,5 +1,6 @@
 /**
  * 成员续段结算追加检查点并核累计文件，领取只消费最新段；历史完整前缀不能替代本轮真实证据。
+ * 逐请求模式在领取前按原岗位模型预检保守容量，拒绝不消费检查点；每个实际请求仍独立预留并可靠结算。
  * 文件退出边界：child 未确认退出时保留原成员占用；再次关闭只排空原进程及结算原日志，不重发工具或创建新运行。
  * 作用定位：让已派发任务在独立成员会话中执行，提交领取、启动、结果、中断及一次安全停泊/续执行事实。
  * 设计原因：全局准入及本地租约先同步领取，容量等待不创建 run 或 claim；按任务原 Workflow 选择核实际能力，续执行不得借新计划改选。候选结算重读 canonical 并复核当前文件，占用持续到终态事务完成。
@@ -190,7 +191,7 @@ export class MemberExecutionManager {
         if(!scope?.goal?.plan||scope.goal.review||scope.goal.blocked||!scope.goal.plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&task.modules.every(module=>assignment.moduleIds.includes(module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))&&sameOwnerExecutionForModules(assignment.ownerBinding,task.ownerBinding,task.modules.map(module=>module.moduleId))))fail('OWNER_PLAN_STALE','当前计划不再保留原任务岗位、模块或 Workflow，请重新规划派发');
         if(resuming&&(!scope?.goal||scope.goal.revision!==resumeRequest!.goalRevision||scope.goal.review||scope.goal.blocked||goalNeedsReplan(scope.goal)))fail('MEMBER_RESUME_STALE','预约后的目标计划已变化，不能消费原续执行请求');
         if(resuming&&(!scope?.goal?.plan||scope.goal.plan.knowledgeRevision!==previous!.prepared.knowledgeRevision||!scope.goal.plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&task.modules.every(module=>assignment.moduleIds.includes(module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))&&sameOwnerExecutionForModules(assignment.ownerBinding,task.ownerBinding,task.modules.map(module=>module.moduleId)))))fail('MEMBER_RESUME_STALE','当前计划不再保留原岗位、模块、Workflow 选择或知识基线');
-        const admitted=scope?await this.ports.budgets?.admit(state,scope,{kind:'member',taskId:task.taskId,runId}):undefined;
+        const admitted=scope?await this.ports.budgets?.admit(state,scope,{kind:'member',taskId:task.taskId,runId,model:locked.model}):undefined;
         assertCurrent();
         if(admitted?.rejected)return {scopes:[admitted.scope],receipt:admitted.rejected};
         const options:MemberStartOptions=resuming?{profileId:previous!.model.id,model:previous!.model.model,permission:previous!.permission,turnTimeoutMs:previous!.turnTimeoutMs}:input.options;

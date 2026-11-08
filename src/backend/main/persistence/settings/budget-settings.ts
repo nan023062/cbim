@@ -1,5 +1,5 @@
 /**
- * 作用定位：可靠保存应用的新目标软限额默认值，供调度器在创建周期时冻结。
+ * 作用定位：可靠保存新目标的额度及显式逐请求模式，供调度器创建周期时冻结，缺省模式保留原软限额语义。
  * 设计原因：默认关闭且仅接受用户显式设置；版本化原子写盘避免多个窗口覆盖，运行中的周期不随设置改变，失败保留原策略。
  */
 import fs from 'node:fs/promises';
@@ -32,7 +32,7 @@ export class BudgetSettings {
     const parsed=scopeBudgetPolicySchema.safeParse(raw);if(!parsed.success)fail('BUDGET_SETTINGS_INPUT','软限额配置无效：启用时须填写正整数 Token 或正数美元额度');
     const current=this.read(),input=parsed.data;
     if(input.revision!==current.revision)fail('BUDGET_SETTINGS_CONFLICT','目标软限额设置已在其它窗口更新，请刷新后再保存');
-    if(input.enabled===current.enabled&&input.limits.tokens===current.limits.tokens&&input.limits.estimatedCostUsd===current.limits.estimatedCostUsd)return current;
+    if(input.enabled===current.enabled&&input.enforcement===current.enforcement&&input.limits.tokens===current.limits.tokens&&input.limits.estimatedCostUsd===current.limits.estimatedCostUsd)return current;
     if(current.revision>=Number.MAX_SAFE_INTEGER)fail('BUDGET_SETTINGS_LIMIT','目标软限额设置版本已达到上限');
     const next={...input,revision:current.revision+1};
     try{await this.storage.write(this.filename,JSON.stringify({version:1,policy:next},null,2))}

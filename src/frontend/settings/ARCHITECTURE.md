@@ -11,7 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [AdmissionSettings.tsx](AdmissionSettings.tsx) | 配置应用级 Agent 并发上限，展示真实准入占用与等待数量。 |
-| [budget-settings-state.ts](budget-settings-state.ts) | 管理软限额设置草稿、显式读取和版本化保存，隔离页面卸载后的异步响应。 |
+| [budget-settings-state.ts](budget-settings-state.ts) | 管理额度及显式逐请求模式草稿、版本化保存，隔离页面卸载后的异步响应；缺省仍是运行间软限额。 |
 | [budget-settings.css](budget-settings.css) | 对应界面的布局与视觉样式。 |
 | [BudgetSettings.tsx](BudgetSettings.tsx) | 展示用户显式配置的新目标 Token/费用软限额，与全局并发设置相邻但独立保存。 |
 | [models.css](models.css) | 供应商列表和模型表单布局。 |
@@ -52,6 +52,7 @@ class N_src_frontend_settings_budget_settings_state_ts_BudgetSettingsDraft["Budg
   +enabled
   +tokens
   +estimatedCostUsd
+  +enforcement
 }
 N_src_frontend_settings_budget_settings_state_ts ..> N_src_frontend_settings_budget_settings_state_ts_BudgetSettingsDraft : 声明
 class N_src_frontend_settings_budget_settings_state_ts_BudgetSettingsState["BudgetSettingsState"] {
@@ -205,3 +206,7 @@ N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_BudgetSetti
 `BudgetSettings` 默认关闭，用户至少明确一项 Token / 美元额度才可启用。`budget-settings-state` 保留草稿和期望版本，显式读取/保存、不轮询、不重复提交；读取未成功时禁用表单，保存失败保留输入，未知结果先刷新核实。禁用提交清除额度；重新启用须重新明确。设置只冻结到之后创建的周期，既有目标和 waiting 不受全局改配影响。
 
 界面明确“运行间软限额”：单轮中的多个请求、重试或自动摘要可能超额；在途须先结算，用量未知不能按零放行，同周期启用后串行结算。设置页不领取运行、不解除审批、不消费 waiting 或恢复历史；真正启动仍由调度事务、知识基线、成员及工作区租约检查。
+
+## 逐请求预算（R06）
+
+用户可显式勾选逐请求预留；缺省仍为旧软限额。草稿和版本保存模式，说明保守模型容量预留、未知保持占用及本地估价。读取失败不显示为关闭，设置不自动保存，也不改变旧目标。

@@ -1,15 +1,15 @@
 /**
- * 作用定位：定义周期冻结的运行间软限额、可信计量观察和启动证明，并提供无副作用的准入判定。
- * 设计原因：额度只约束下一次运行；在途等待、未知消耗和达到额度分别表达，不能把统计界面的零或缓存当成执行许可。
- * 职责边界：本模块不读取日志、不启动或停止模型；观察须由调度层在提交屏障内核实，单轮内部仍可能超过额度。
+ * 作用定位：定义周期冻结额度、可信计量观察和启动证明；显式 request 模式另由请求账本控制每次发送。
+ * 设计原因：缺省保留旧运行间软限额，不能迁移旧周期的保证；在途、未知和达到额度分开表达，不把展示零值当许可。
+ * 职责边界：这里不读取日志、不发模型请求。旧模式只约束下一轮；request 模式的原子预留与可靠结算由独立附录负责。
  */
 import {z} from 'zod';
 
 const id=z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 const integer=z.number().int().nonnegative().safe();
 const ids=z.array(id).max(532).refine(values=>new Set(values).size===values.length,'运行身份不能重复');
-/** 美元额度是估算费用阈值；关闭时可保留用户填写值，但不应用限制。 */
-export const scopeBudgetPolicySchema=z.object({revision:integer.min(1),enabled:z.boolean(),limits:z.object({tokens:integer.min(1).optional(),estimatedCostUsd:z.number().finite().positive().max(Number.MAX_SAFE_INTEGER).optional()}).strict()}).strict().refine(policy=>!policy.enabled||policy.limits.tokens!==undefined||policy.limits.estimatedCostUsd!==undefined,'启用时至少明确一个正数额度');
+/** enforcement 缺省是旧运行间检查，request 才启用逐请求预留；美元额度始终是本地估算，不是供应商账单。 */
+export const scopeBudgetPolicySchema=z.object({revision:integer.min(1),enabled:z.boolean(),enforcement:z.literal('request').optional(),limits:z.object({tokens:integer.min(1).optional(),estimatedCostUsd:z.number().finite().positive().max(Number.MAX_SAFE_INTEGER).optional()}).strict()}).strict().refine(policy=>!policy.enabled||policy.limits.tokens!==undefined||policy.limits.estimatedCostUsd!==undefined,'启用时至少明确一个正数额度');
 export type ScopeBudgetPolicy=z.infer<typeof scopeBudgetPolicySchema>;
 export const defaultScopeBudgetPolicy:ScopeBudgetPolicy={revision:1,enabled:false,limits:{}};
 

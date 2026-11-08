@@ -2,6 +2,7 @@
  * 作用定位：定义工作区长期岗位、模块责任、来源/文件操作审计以及执行实例、会话和任务派发的原子持久化端口。
  * 设计原因：调度层只表达领域变化，main 负责落盘；任务、领取意图、消息和成员占用一起提交，界面在同一屏障读取图与独立周期投影，观察端口只接收已提交事实。
  * 职责边界：独立审计不能夹带执行变化；受控文件事件不含字节正文、不实施 IO，持久化意图、文件 applied 与业务验收分开。
+ * 请求预算附录只保存实际运行绑定、预留与结算；不含请求正文或凭据，不发网，不给重启遗留补未发送证明。
  */
 import type {AgentInstance, AgentSessionBinding} from '../team/agent-types';
 import type {AgentRef, GraphIdentity, GraphEventBatch, GraphSnapshot, GraphCursor, GraphDelta} from './graph-types';
@@ -14,6 +15,7 @@ import type {ModuleOwnership,ModuleOwnershipChange,ModuleOwnershipCursor} from '
 import type {KnowledgeSourceGeneration,KnowledgeSourceTransition,KnowledgeSourceChange,KnowledgeSourceCursor} from '../workspace/knowledge-source';
 import type {EffectDispositionRecord} from './effect-observation';
 import type {ControlledFileChange} from './controlled-file-event';
+import type {ModelRequestBudgetChange} from './model-request-budget';
 
 /** 信封身份固定；claim 记录领取时的 run 与租约代际，消费后保留用于审计。 */
 export interface DispatchMessageBase {
@@ -65,6 +67,8 @@ export interface DispatchState {
   effectDispositions?:EffectDispositionRecord[];
   /** 私有受控文件阶段附录；旧缺省不补数组，公共读取只返回安全摘要。 */
   controlledFileChanges?:ControlledFileChange[];
+  /** 逐请求预算独立阶段附录；旧周期缺省，无记录不补造为已报告零消耗。 */
+  modelRequestBudgetChanges?:ModelRequestBudgetChange[];
 }
 
 /** 幂等键由可信入口产生；fingerprint 是包括调用者在内的规范化输入摘要。 */
@@ -89,6 +93,8 @@ export interface DispatchCommandEvidence {
 
 /** 一个命令的完整提交单元；可选数组按对象 ID 写入完整新记录，省略不改变集合，重复 ID 须拒绝。 */
 export interface DispatchMutation<T = unknown> {
+  /** 一次只保存一条预留/发送/结算事实，不与业务、权限或周期变更混写。 */
+  modelRequestBudgetChanges?:ModelRequestBudgetChange[];
   /** 一次一阶段，不能与任何执行、知识或登记变更混写。 */
   controlledFileChanges?:ControlledFileChange[];
   /** 一次只追加一个本机处置及回执，不与任何执行或其它领域事务混写。 */

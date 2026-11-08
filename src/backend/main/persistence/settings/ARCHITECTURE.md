@@ -11,7 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [admission-settings.ts](admission-settings.ts) | 持久化应用级并发上限，并在工作区装配前恢复准入策略。 |
-| [budget-settings.ts](budget-settings.ts) | 可靠保存应用的新目标软限额默认值，供调度器在创建周期时冻结。 |
+| [budget-settings.ts](budget-settings.ts) | 可靠保存新目标的额度及显式逐请求模式，供调度器创建周期时冻结，缺省模式保留原软限额语义。 |
 | [llm-profiles.ts](llm-profiles.ts) | 本机供应商配置持久化、默认模型选择和连接检测。 |
 
 ## 架构类图
@@ -184,3 +184,7 @@ N_src_backend_main_persistence_settings_llm_profiles_ts ..> N_src_backend_main_p
 `BudgetSettings` 独立保存新周期默认软限额 `version:1 + policy:{revision,enabled,limits}`。默认关闭，启用须明确正整数 Token 或正数估算美元；应用装配前恢复，只有缺文件可默认关闭。损坏配置明确失败；串行版本校验和原子写入通过后才更新内存，读取返回深拷贝。新周期冻结策略，已有周期不跟随设置改变，设置本身不保存或更改用量。
 
 此目录不保存等待票据或执行许可。票据只属于当前进程的可信启动安排；重启不能通过设置文件自动恢复任务。并发数与周期软限额不同，后者仅在真实运行之间核实，不保证一次 Pi 内多个请求、重试和摘要的硬账单上限。
+
+## 逐请求预算（R06）
+
+额度策略新增显式 `enforcement: request`；字段缺省继续表示运行间软限额，相同配置判断包含模式。设置版本可靠原子保存，旧目标冻结策略不随全局修改。

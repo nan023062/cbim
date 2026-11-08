@@ -5,6 +5,7 @@
  * 治理边界：四个观察/提案端口在真实 run 创建时绑定主身份，不共享给成员，不包含桌面批准或实施。
  * 责任边界：负责人四工具在 beforeRun 后从真实主周期捕获身份，查询提供实际岗位选择，提交加入周期在途屏障；主模型选型不覆盖执行成员岗位配置。
  * 附件边界：目标补充直接使用一次准备的图片，模型配置视觉预检在意图前；不重读附件或把图片放入后续协作配置。
+ * 请求预算：每个真实主 run 在 beforeRun 后取得冻结账本端口，凭据仅由父进程代理使用。
  */
 import path from 'node:path';
 import {FileRunStorage} from './persistence/tasks/run-storage';
@@ -26,6 +27,7 @@ import {mainGovernanceTools} from './governance/main-governance-tools';
 import {mainModuleOwnershipTools} from './workspace/main-module-ownership-tools';
 import type {ModuleOwnerships} from './workspace/module-ownerships';
 import type {WorkspaceMembers} from './workspace/workspace-members';
+import type {ModelRequestBudgetService} from '../scheduler-engine/execution/model-request-budget-service';
 
 /**
  * 每个工作区实例装配独立管理器；锁键和访问策略固定绑定本实例身份。
@@ -33,12 +35,13 @@ import type {WorkspaceMembers} from './workspace/workspace-members';
  * 独立 CLI/测试未装配 dispatch 时保留旧只按会话执行的边界，不编造已登记的成员身份。
  * repositories 是可选可信服务，不接受运行选项提供地址或授权；每次工厂调用固定自己的连接代际。
  */
-export function createExecutionManager(workspace:Workspace,models:LlmProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers}){
+export function createExecutionManager(workspace:Workspace,models:LlmProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService){
   const storage=new FileRunStorage();
   return new WorkspaceExecutionManager(workspace,storage,async(options,task,launch)=>{
     const llm=options.profileId?await models.resolve(options.profileId,options.model):undefined;
     if(llm&&(options.provider!=='cbim-'+llm.profile.id||options.model!==llm.profile.model))throw Error('模型配置已变化，请重新启动任务');
     launch.signal.throwIfAborted();
+    await requestBudgets?.preflight(task.taskId,launch.scopeId,llm);
     const images=launch.preparedInputImages===undefined?await new ChatInputs(workspace).images(options.attachmentIds):launch.preparedInputImages.map(image=>({...image}));
     launch.signal.throwIfAborted();
     if(images.length&&(!llm||!llm.profile.vision)){
@@ -49,6 +52,7 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles,le
     const repositoryTools=task.mode==='chat'?await repositories?.prepareTools({workspaceId:workspace.entry.id,instanceId:workspace.instanceId}):undefined;
     return createWorkspaceLoop(workspace.paths,workspace,{...options,llm,images},{
     storage,
+    requestBudget:requestBudgets?({task,runId})=>requestBudgets.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId,kind:'main'},llm):undefined,
     conversationBinding,
     repositoryTools,
     governanceTools:conversationBinding?({task,runId})=>mainGovernanceTools(workspace,task,runId,conversationBinding):undefined,

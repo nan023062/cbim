@@ -122,3 +122,7 @@ member-dispatch 的影响端口另装配原知识事务只读适配，借已打�
 member-dispatch 将同一 canonical、ArtifactFiles 和 NativeFiles 只读指纹端口装配给 MemberPauseService，显式继续时取得工作区读占用；关闭/停止代次经 assertCurrent 检查。历史停泊只读原日志，当前核验不创建引擎或解密模型运行凭据，等待重启本身不调用这些端口。沿已有 goalContinue/goalContinuation IPC 受理与查询，不新增桌面自动恢复路径或独立存储。
 
 成员工厂从已提交任务计算 `memberCheckpointLimit - checkpoints.length`，只经内部 ExecutionServices 注入 Runtime；公开模型或 IPC 不可设置。恢复验证闭包持有同一 Store 快照的全部原运行，避免在 Store 事务内反向读取。
+
+## 逐请求预算（R06）
+
+Application 每工作区装配一个请求预算服务，主工厂固定已解析模型，成员工厂固定原岗位模型；前者在等待受理前预检，后者领取前预检。引擎关闭和请求结算先于共享 Store 与工作区锁释放，重开不重发任何未决请求。

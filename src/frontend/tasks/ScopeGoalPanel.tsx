@@ -2,6 +2,7 @@
  * 作用定位：复用展示本轮真实目标、冻结岗位分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。
  * 设计原因：周期状态、冻结软限额与模型声明分开呈现；替代关系只定位本周期真实节点，不生成派发边或迁移旧成果。岗位、模型和显式流程只读原计划，人工意见与继续各自独立。
  * 接续历史：展示已受理资料与明确保留的成员清单；等待没有模型占用，继续仍须后台重核，不把保留或接收当作验收。
+ * 逐请求摘要固定绑定所选周期和当前图身份，只在用户刷新时读取，历史目标不借全局设置补新模式。
  */
 import type {ScopeGoalState} from './scope-state';
 import {Icon} from '../components/Icon';
@@ -51,7 +52,7 @@ export function ScopeGoalPanel({state,compact=false,testId='scope-goal-panel',co
     {error&&<p className="scope-goal-alert" role="alert">{error}；保留上次已确认的目标记录。</p>}
     {!summary?<p className="scope-goal-muted">{loading?'正在同步本轮目标…':'当前会话还没有保存目标周期。普通聊天不会被补造成业务任务。'}</p>:<>
       <p className="scope-goal-title" title={title}>{title}</p>
-      <ScopeBudgetPanel budget={summary.budget} waiting={summary.status==='waiting'}/>
+      <ScopeBudgetPanel budget={summary.budget} waiting={summary.status==='waiting'} query={state.graph?{...state.graph.identity,scopeId:summary.scopeId}:undefined}/>
       {summary.activeInputStatus&&<p className="scope-goal-blocked" role="status" data-testid="scope-active-input-notice">{summary.activeInputStatus==='unknown'?'运行内补充的接收结果待核实，不能沿旧审阅完成或自动重发。':summary.status==='closed'?'本周期已结束，仍有补充未确认接收；重开不会自动发送。':'正在确认运行内补充，旧目标的完成与派工暂时停用。'}</p>}
       {summary.status==='waiting'&&<div className="scope-goal-waiting" data-testid="scope-goal-waiting"><p>{summary.wait?.reason}</p><p className="scope-goal-muted">在本目标卡片补充说明后继续。普通排队消息不会恢复本目标或代替人工验收。</p></div>}
       {continuation&&continuation.scopeId===selectedScopeId&&<ScopeContinuationForm state={continuation}/>}

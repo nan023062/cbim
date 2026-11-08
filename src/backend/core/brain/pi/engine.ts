@@ -6,6 +6,7 @@
  * 职责边界：不保存私有推理正文；记录实际用量与生成耗时，未知计价保持未知。明确停止后的标准取消文本才归为取消，其他错误及未知工具副作用交由运行时保留。
  * 插入边界：原生状态查询后再次核停止；只有 queued 回复表示已接收，发送后的失败不推断未执行或自动重发。
  * 主角色指引：内置执行角色也需明确岗位、模块负责人及独立采纳模型，提示不能把默认角色误写为绕过责任绑定的入口。
+ * 请求预算：可信端口启用时，启动前安装父进程代理；终态与工具授权都受可靠结算屏障约束，停止先结束实际请求。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -17,6 +18,10 @@ import {modelStopError} from '../model-errors';
 import {buildPiRuntimeSettings,requestedThinkingLevel} from './runtime-config';
 import {nativeToolNames} from '../../tools/native-tools';
 import {fail} from '../../foundation/errors';
+import {pathToFileURL} from 'node:url';
+import type {RequestBudgetPort} from '../llm/request-budget';
+import {openRequestBudgetTransport} from './request-budget-transport';
+import {requestBudgetBootstrap} from './request-budget-bootstrap';
 
 /** 单次 Pi 适配器配置；agentHome 只属于 CBIM 工作区，turnTimeoutMs 为回合等待上限毫秒。 */
 export interface PiOptions {
@@ -33,6 +38,8 @@ export interface PiOptions {
   llm?:ResolvedLlm;
   /** 本轮用户明确附加的图片快照；经主进程读取，不作为系统指令。 */
   images?:{type:'image';data:string;mimeType:string}[];
+  /** 在 beforeRun 登记后读取冻结策略；仅可信装配工厂提供，不能作为模型或 IPC 参数。 */
+  requestBudget?():Promise<RequestBudgetPort|undefined>;
 }
 /** 一次运行使用一个实例；启动失败也必须 close，以释放已创建的桥和子进程。 */
 export class PiEngine implements AgentEngine {
@@ -40,6 +47,7 @@ export class PiEngine implements AgentEngine {
   private context?:EngineContext;
   private rpc?:PiRpc;
   private bridge?:Awaited<ReturnType<typeof openBridge>>;
+  private budgetTransport?:Awaited<ReturnType<typeof openRequestBudgetTransport>>;
   private events:Promise<void>=Promise.resolve();
   private settlement?:{resolve:(value:{status:'completed'|'cancelled'|'failed';error?:string})=>void;reject:(error:Error)=>void};
   private assistantError?:string;
@@ -56,6 +64,8 @@ export class PiEngine implements AgentEngine {
   /** 准备配置并核对原生会话，等待 session.bound 落盘后返回；不在此发送本轮提示。 */
   async start(context:EngineContext){
     this.context=context;
+    const requestBudget=await this.options.requestBudget?.();
+    if(requestBudget){if(!this.options.llm)throw Error('逐请求预算缺少可信模型');this.budgetTransport=await openRequestBudgetTransport(this.options.llm,requestBudget)}
     await fs.mkdir(this.options.agentHome,{recursive:true});
     const sessionDir=path.join(this.options.agentHome,'sessions');await fs.mkdir(sessionDir,{recursive:true});
     if(context.sessionFile){
@@ -70,8 +80,8 @@ export class PiEngine implements AgentEngine {
     const checkpointNames=new Set((await context.memberCheckpointTools?.list()??[]).map(t=>t.name));
     const controlledNames=new Set<string>((await context.controlledFileTools?.list()??[]).map(t=>t.name));
     const validationNames=new Set((await context.validationTools?.list()??[]).map(t=>t.name));
-    const tools:KnowledgeBridge={list:async()=>[...await this.options.knowledge.list(),...await context.taskTools?.list()??[],...await context.memberHelpTools?.list()??[],...await context.artifactTools?.list()??[],...await context.memberCheckpointTools?.list()??[],...await context.validationTools?.list()??[],...await context.controlledFileTools?.list()??[]],call:(name,args,signal,toolCallId)=>controlledNames.has(name)?context.controlledFileTools!.call(name,args,toolCallId,signal):validationNames.has(name)?context.validationTools!.call(name,args,toolCallId):checkpointNames.has(name)?context.memberCheckpointTools!.call(name,args,toolCallId):artifactNames.has(name)?context.artifactTools!.call(name,args,toolCallId):helpNames.has(name)?context.memberHelpTools!.call(name,args,toolCallId):taskNames.has(name)?context.taskTools!.call(name,args):this.options.knowledge.call(name,args,signal,toolCallId)};
-    this.bridge=await openBridge(tools,context.beforeTool,async usage=>{
+    const tools:KnowledgeBridge={list:async()=>[...await this.options.knowledge.list(),...await context.taskTools?.list()??[],...await context.memberHelpTools?.list()??[],...await context.artifactTools?.list()??[],...await context.memberCheckpointTools?.list()??[],...await context.validationTools?.list()??[],...await context.controlledFileTools?.list()??[]],call:(name,args,signal,toolCallId)=>{const budgetError=this.budgetTransport?.error();if(budgetError)throw Error(budgetError);return controlledNames.has(name)?context.controlledFileTools!.call(name,args,toolCallId,signal):validationNames.has(name)?context.validationTools!.call(name,args,toolCallId):checkpointNames.has(name)?context.memberCheckpointTools!.call(name,args,toolCallId):artifactNames.has(name)?context.artifactTools!.call(name,args,toolCallId):helpNames.has(name)?context.memberHelpTools!.call(name,args,toolCallId):taskNames.has(name)?context.taskTools!.call(name,args):this.options.knowledge.call(name,args,signal,toolCallId)}};
+    this.bridge=await openBridge(tools,call=>this.budgetTransport?.error()?Promise.resolve({allow:false,reason:this.budgetTransport.error()}):context.beforeTool(call),async usage=>{
       this.events=this.events.then(()=>context.emit({type:'engine.status',data:{label:'上下文用量已更新',metric:'context',...usage}}));await this.events;
     },async limit=>{this.requestLimit=limit;this.events=this.events.then(()=>context.emit({type:'engine.status',data:{label:'模型请求额度',metric:'request-limit',maxTokens:limit}}));await this.events});
     const extension=path.join(context.directory,'cbim-extension.mjs'),prompt=path.join(context.directory,'instructions.md');
@@ -93,7 +103,7 @@ export class PiEngine implements AgentEngine {
       const {profile,apiKey}=this.options.llm;
       // 每次运行独立配置，切换设置不会覆盖其他正在执行的模型；会话仍在工作区目录。
       await fs.writeFile(path.join(configHome,'models.json'),JSON.stringify({providers:{[this.options.provider]:{baseUrl:profile.baseUrl,api:profile.api,apiKey:'$CBIM_LLM_API_KEY',authHeader:profile.auth==='api-key',models:[{id:profile.model,reasoning:profile.reasoning,input:profile.vision?['text','image']:['text'],contextWindow:profile.contextWindow,maxTokens:profile.maxTokens,cost:profile.pricing??{input:0,output:0,cacheRead:0,cacheWrite:0}}]}}}),{mode:0o600});
-      modelEnv.CBIM_LLM_API_KEY=apiKey;
+      modelEnv.CBIM_LLM_API_KEY=this.budgetTransport?'cbim-parent-request-gate':apiKey;
     }
     await context.assertMemberResume?.();
     this.rpc=new PiRpc(event=>{
@@ -102,13 +112,20 @@ export class PiEngine implements AgentEngine {
     },error=>{if(!this.closing){this.fatal=error;this.settlement?.reject(error)}},message=>this.redact(message));
     const allowed=[...nativeToolNames(!!this.options.allowNativeExecution),'cbim_*'].join(',');
     // 禁止 Pi 自动加载用户机器上的外部连接；内部工具只由本次受控扩展注册。
-    this.rpc.start(this.options.process,context.task.root,[
+    let command=this.options.process;
+    if(this.budgetTransport){
+      const bootstrap=path.join(context.directory,'cbim-request-budget.mjs');
+      await fs.writeFile(bootstrap,requestBudgetBootstrap({endpoint:this.budgetTransport.endpoint,proxy:this.budgetTransport.url,token:this.budgetTransport.token,bridge:this.bridge.url}),{mode:0o600});
+      command={...command,args:['--import',pathToFileURL(bootstrap).href,...command.args],env:{...command.env,CBIM_LLM_API_KEY:modelEnv.CBIM_LLM_API_KEY}};
+    }
+    this.rpc.start(command,context.task.root,[
       '--mode','rpc','--provider',this.options.provider,'--model',this.options.model,
       '--no-extensions','--no-skills','--no-prompt-templates','--no-themes','--no-mcp',
       '--extension',extension,'--append-system-prompt',prompt,'--tools',allowed,
       '--session-dir',sessionDir,...(context.sessionFile?['--session',context.sessionFile]:['--session-id',context.nativeSessionId??context.task.taskId]),
     ],{...process.env,...modelEnv,PI_CODING_AGENT_DIR:configHome,CBIM_LOOP_BRIDGE_URL:this.bridge.url,CBIM_LOOP_BRIDGE_TOKEN:this.bridge.token});
     const initial=await this.rpc.request('get_state');
+    this.budgetTransport?.assertReady();
     if(context.nativeSessionId&&initial.sessionId!==context.nativeSessionId)throw Error(context.memberBinding?'Pi 原生会话身份与当前成员通道不一致':'Pi 原生会话身份与原对话记录不一致');
     if(initial.isStreaming||initial.pendingMessageCount)throw Error('Pi 会话已有未完成执行，拒绝覆盖');
     // 载入不得悄悄修复或改写检查点历史；在本轮配置和输入写入前再次核实受管字节。
@@ -190,7 +207,7 @@ export class PiEngine implements AgentEngine {
       case 'tool_execution_start':await emit({type:'tool.started',data:{id:event.toolCallId,name:event.toolName}});return;
       case 'tool_execution_end':await emit({type:'tool.finished',data:{id:event.toolCallId,name:event.toolName,isError:event.isError,result:event.result}});return;
       case 'agent_settled':
-        this.settlement?.resolve(this.assistantError?{status:'failed',error:this.assistantError}:{status:this.stopped||event.aborted?'cancelled':'completed'});return;
+        {const error=this.budgetTransport?.error()??this.assistantError;this.settlement?.resolve(error?{status:'failed',error}:{status:this.stopped||event.aborted?'cancelled':'completed'});return;}
       case 'extension_error':
         // custom 启动由扩展异步触发，失败必须结束等待，不能把 handled 当成模型已完成。
         if(this.context?.source){this.fatal=Error(this.redact(String(event.error||'成员结果接续扩展失败')));this.settlement?.reject(this.fatal)}return;
@@ -218,11 +235,11 @@ export class PiEngine implements AgentEngine {
     }catch{fail('QUEUE_INSERT_UNKNOWN','插入结果未确认，队列将保持暂停，请先核实原运行记录，勿重复发送')}
   }
   /** 先保留停止意图，再请求原生 abort；请求失败则关闭进程，最终结算由 LoopRuntime 完成。 */
-  async stop(){this.stopped=true;if(this.rpc)try{await this.rpc.request('abort',{},10000)}catch{await this.rpc.close()}}
+  async stop(){this.stopped=true;await this.budgetTransport?.close();if(this.rpc)try{await this.rpc.request('abort',{},10000)}catch{await this.rpc.close()}}
   /** 关闭进程并排空已收到的事件；即使事件持久化失败也会关闭工具桥。 */
   async close(){
     this.closing=true;
-    try{await this.rpc?.close();await this.events}
+    try{await this.budgetTransport?.close();await this.rpc?.close();await this.events}
     finally{await this.bridge?.close()}
   }
 }

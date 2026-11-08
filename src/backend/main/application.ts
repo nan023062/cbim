@@ -1,5 +1,6 @@
 /**
  * 受控文件边界：Electron 显式注入 utility 传输，普通 Node 不直接写；关闭先确认原文件 child 退出，随后才关闭共享 Store 和工作区锁。
+ * 请求预算在工作区实例内共用唯一账本服务；先关闭主/成员代理并结算，再释放 Store，查询本身不会启动或恢复请求。
  * 作用定位：单次运行授权、版本化队列增量和结构化问题按工作区路由；排队时冻结附件内容与模型身份。Application：登记及重命名工作区、装配模型供应商与服务，并统一派发主 Agent 对话、附件快照、工具审批和历史操作。
  * 设计原因：主会话绑定独立主实例；应用共享并发准入，软限额设置在新周期创建时冻结。工作区代际隔离等待票据；关闭先撤票再停运行和排空历史，不通过删除观察记录假释放名额。
  * 资源连接：独立本机授权先恢复但不启动共享；主工具及桌面显式资料导入复用真实只读连接。工作区退役先取消导入和读取，退出排空后关闭 HTTP 服务。
@@ -8,6 +9,7 @@
  */
 import path from 'node:path';
 import type {ControlledFileTransport} from './platform/controlled-file-protocol';
+import type {ModelRequestBudgetService} from '../scheduler-engine/execution/model-request-budget-service';
 import type {ControlledFiles} from './workspace/controlled-files';
 import {dispatchApplication} from './ipc/dispatch';
 import type {ApplicationServices} from './ipc/services';
@@ -94,6 +96,9 @@ export class Application implements ApplicationServices {
   execution(id:string){this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();const manager=this.executions.get(id);if(!manager)fail('SERVICE_NOT_READY','工作区执行服务尚未就绪');return manager}
   /** 明确工作区的只读角色历史；没有执行、审批或恢复模型的副作用。 */
   agentHistory(id:string){this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();const history=this.histories.get(id);if(!history)fail('SERVICE_NOT_READY','工作区 Agent 历史尚未就绪');return history}
+  /** 请求账本随工作区实例装配；关闭引擎结算后丢弃端口，不对历史预留做恢复写入。 */
+  private requestBudgetServices=new Map<string,ModelRequestBudgetService>();
+  requestBudgets(id:string){this.assertServiceAvailable(id);this.workspace(id).assert();const service=this.requestBudgetServices.get(id);if(!service)fail('SERVICE_NOT_READY','请求预算服务尚未就绪');return service}
   private controlledFileServices=new Map<string,ControlledFiles>();
   /** 原报告不隐式打开工作区；平台缺省只禁新写入，不影响已保存历史查询。 */
   controlledFiles(id:string){this.assertServiceAvailable(id);this.workspace(id).assert();const service=this.controlledFileServices.get(id);if(!service)fail('SERVICE_NOT_READY','受控文件服务尚未就绪');return service}
@@ -115,7 +120,7 @@ export class Application implements ApplicationServices {
         this.retireAdmission(id);
         await this.collaborations.get(id)?.close();this.collaborations.delete(id);
         await this.executions.get(id)?.close();this.executions.delete(id);
-        await this.memberExecutions.get(id)?.close();this.memberExecutions.delete(id);await this.controlledFileServices.get(id)?.close();this.controlledFileServices.delete(id);
+        await this.memberExecutions.get(id)?.close();this.memberExecutions.delete(id);await this.controlledFileServices.get(id)?.close();this.controlledFileServices.delete(id);this.requestBudgetServices.delete(id);
         await ws?.prepareClose();await this.dispatchers.get(id)?.close();this.dispatchers.delete(id);this.memberRegistries.delete(id);this.ownershipRegistries.delete(id);
         this.monitors.get(id)?.close();await this.histories.get(id)?.close();this.histories.delete(id);await ws?.close();
         ws=new Workspace(entry,this.paths,this.rules);this.running.set(id,ws);
@@ -124,8 +129,8 @@ export class Application implements ApplicationServices {
         try{
           ws.attachDispatchStore(new FileDispatchStore(path.join(this.paths.project(id),'dispatch'),id,monitor.dispatchObserver));
           await ws.open({beforeDispatchLoad:()=>monitor.initializeHistory()});
-          const lease=new WorkspaceExecutionLease(),admission=this.bindAdmission(ws,lease),{dispatch:service,members,workspaceMembers,moduleOwnerships,controlledFiles}=createMemberServices(ws,this.models,lease,monitor.dispatchObserver,admission,()=>this.budgetSettings.read(),this.platform.controlledFiles),execution=createExecutionManager(ws,this.models,lease,()=>this.collaborations.get(id),service,admission,this.repositoryConnections,{service:moduleOwnerships,members:workspaceMembers});
-          this.dispatchers.set(id,service);this.executions.set(id,execution);this.memberExecutions.set(id,members);this.memberRegistries.set(id,workspaceMembers);this.ownershipRegistries.set(id,moduleOwnerships);this.controlledFileServices.set(id,controlledFiles);
+          const lease=new WorkspaceExecutionLease(),admission=this.bindAdmission(ws,lease),{dispatch:service,members,workspaceMembers,moduleOwnerships,controlledFiles,requestBudgets}=createMemberServices(ws,this.models,lease,monitor.dispatchObserver,admission,()=>this.budgetSettings.read(),this.platform.controlledFiles),execution=createExecutionManager(ws,this.models,lease,()=>this.collaborations.get(id),service,admission,this.repositoryConnections,{service:moduleOwnerships,members:workspaceMembers},requestBudgets);
+          this.dispatchers.set(id,service);this.executions.set(id,execution);this.memberExecutions.set(id,members);this.memberRegistries.set(id,workspaceMembers);this.ownershipRegistries.set(id,moduleOwnerships);this.controlledFileServices.set(id,controlledFiles);this.requestBudgetServices.set(id,requestBudgets);
           await monitor.initialize(ws,service,execution,members);
           const collaboration=new AutoCollaboration(ws,service,members,execution,lease,(root,error)=>monitor.collaborationIssue(root,error));
           this.collaborations.set(id,collaboration);await collaboration.initialize();
@@ -137,7 +142,7 @@ export class Application implements ApplicationServices {
       await this.catalog.update(d=>{const item=d.entries.find(e=>e.id===id);if(item)item.lastOpened=new Date().toISOString();d.recent=[id,...d.recent.filter(x=>x!==id)].slice(0,30)});return ws})();this.opening.set(id,pending);try{return await pending}finally{this.opening.delete(id)}
   }
   /** 内部生命周期入口；先禁用自动协作，再依次关闭主执行、成员、派发、监控和工作区，页面关闭不会调用它。 */
-  async stop(id:string){const release=this.retire(id);this.chatMaterials.retireWorkspace(id);this.repositoryConnections.retireWorkspace(id);this.retireAdmission(id);try{await this.opening.get(id)?.catch(()=>{});this.retireAdmission(id);await this.collaborations.get(id)?.close();this.collaborations.delete(id);await this.executions.get(id)?.close();this.executions.delete(id);await this.memberExecutions.get(id)?.close();this.memberExecutions.delete(id);await this.controlledFileServices.get(id)?.close();this.controlledFileServices.delete(id);await this.running.get(id)?.prepareClose();await this.dispatchers.get(id)?.close();this.dispatchers.delete(id);this.memberRegistries.delete(id);this.ownershipRegistries.delete(id);this.monitors.get(id)?.close();await this.histories.get(id)?.close();this.histories.delete(id);this.monitors.delete(id);const ws=this.running.get(id);await ws?.close();this.running.delete(id)}finally{release()}}
+  async stop(id:string){const release=this.retire(id);this.chatMaterials.retireWorkspace(id);this.repositoryConnections.retireWorkspace(id);this.retireAdmission(id);try{await this.opening.get(id)?.catch(()=>{});this.retireAdmission(id);await this.collaborations.get(id)?.close();this.collaborations.delete(id);await this.executions.get(id)?.close();this.executions.delete(id);await this.memberExecutions.get(id)?.close();this.memberExecutions.delete(id);await this.controlledFileServices.get(id)?.close();this.controlledFileServices.delete(id);this.requestBudgetServices.delete(id);await this.running.get(id)?.prepareClose();await this.dispatchers.get(id)?.close();this.dispatchers.delete(id);this.memberRegistries.delete(id);this.ownershipRegistries.delete(id);this.monitors.get(id)?.close();await this.histories.get(id)?.close();this.histories.delete(id);this.monitors.delete(id);const ws=this.running.get(id);await ws?.close();this.running.delete(id)}finally{release()}}
   async remove(id:string){await this.stop(id);await this.catalog.remove(id);this.runtime.forget(id)}
   async restore(){const d=await this.catalog.read();for(const entry of d.entries){try{await this.open(entry.id)}catch{/* failed workspace remains visible; continue the other services */}}}
   /** 幂等关闭应用，等待正在打开的工作区及提交完成，再释放服务和共享仓库。 */

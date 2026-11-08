@@ -285,7 +285,7 @@ N_src_backend_core_brain_pi_request_budget_transport_ts ..> N_src_backend_core_b
 
 Pi 主角色提示与上层真实工具保持一致：查询模块负责岗位、保存匹配目标计划再派发。内置 `cbim:executor` 是可登记静态角色，也须项目岗位、模块责任及独立采纳模型；没有主模型回退或缺省派发。提示只说明边界，实际资格仍由任务服务判定，不将提示文字视为执行授权。
 
-### 冻结 JSON/CSV 验证工具接入
+### 冻结 JSON/CSV/PNG 验证工具接入
 
 `cbim_validation_run` 仅在本轮实际 `EngineContext.validationTools` 存在时注册，经同一 `/gate` 与一次性 `/call` 传递真实调用 ID。主运行、无验证要求或缺平台能力的运行不会得到此工具；不存在按名字临时创建能力的分支。提示明确路径和 Schema 来自冻结要求，`rejected` 与工具调用失败不同，工具成功也不等于结构通过，更不构成业务或人工验收。
 
@@ -373,3 +373,5 @@ Pi 只从 EngineContext.manifestTools 注册完整采集及本轮查询，与旧
 EngineContext.artifactTransitionTools 只在冻结要求和真实端口齐备时注册。Pi 沿现有 gate/call 将原 toolCallId、参数和取消信号转入可信运行；不发 shell 替代，不把原生 write/edit 或模型正文升级为操作证明。工具失败后允许范围由 Runtime 屏障控制。
 
 引擎提示同一工具可检查 JSON 结构或 CSV 表头、类型、行数与唯一键，实际种类取自冻结要求。模型只明确选择 baselineId 或 manifestId，不传表格正文、列规则或通过结论；CSV 复用原 gate/call 身份与取消边界。
+
+PNG继续复用cbim_validation_run及同一gate/call身份。提示明确实际完整解码、尺寸/通道条件与不受支持格式；模型不能自行传路径、图片规则或passed，普通read/bash成功不能替代指定验证。

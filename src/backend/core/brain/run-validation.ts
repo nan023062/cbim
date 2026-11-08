@@ -1,5 +1,5 @@
 /**
- * 作用定位：正式成员的 JSON/CSV 验证短门闩，连接冻结要求、原文件或完整集合身份及平台同字节读取。
+ * 作用定位：正式成员的 JSON/CSV/PNG 验证短门闩，连接冻结要求、原文件或完整集合身份及平台同字节读取。
  * 设计原因：模型不能指定路径、规则或结论；完整模式保留原操作证明，在专业检查两侧重核全集合，共用15秒期限；知识、进度与代次须稳定，暂存须有真实成功回执。
  * 职责边界：rejected只表示实际检查不符合；交付另重核同一完整集合，旧模式复核选定文件，不执行命令或授予恢复权限。
  */
@@ -8,6 +8,7 @@ import {isDeepStrictEqual} from 'node:util';
 import {fail} from '../foundation/errors';
 import {jsonValidationLimits,type BoundedJsonSchema,type JsonValidationOutcome} from '../workspace/json-validation-schema';
 import type {CsvTableSchema,CsvValidationOutcome} from '../workspace/csv-validation-schema';
+import type {PngImageSchema,PngValidationOutcome} from '../workspace/png-validation-schema';
 import type {ArtifactFileFact,ArtifactFileCheck} from '../tasks/artifact-baseline';
 import {verifyArtifactBaselines} from '../tasks/artifact-evidence';
 import {verifyOutputManifests} from '../tasks/output-manifest-evidence';
@@ -23,11 +24,13 @@ import type {ArtifactCapturePort} from './artifact-capture';
 import type {MemberRunBinding} from './member-run';
 import type {StoredEvent} from './types';
 
-/** 仅可信平台实现；JSON/CSV 各端口的指纹与判定须来自同一次安全读取，正文不得返回模型。 */
+/** 仅可信平台实现；JSON/CSV/PNG 各端口的指纹与判定须来自同一次安全读取，正文不得返回模型。 */
 export interface ValidationFilePort {
   validateFile(expected:ArtifactFileFact,schema:BoundedJsonSchema,signal:AbortSignal):Promise<JsonValidationOutcome&{artifact:ArtifactFileFact}>;
   /** 旧JSON端口可不实现；声明CSV时必须在启动前具备真实实现，不能退回JSON或只读哈希。 */
   validateTable?(expected:ArtifactFileFact,schema:CsvTableSchema,signal:AbortSignal):Promise<CsvValidationOutcome&{artifact:ArtifactFileFact}>;
+  /** 声明PNG时须具备真实完整解码端口；不能退回签名、元数据或显示成功。 */
+  validateImage?(expected:ArtifactFileFact,schema:PngImageSchema,signal:AbortSignal):Promise<PngValidationOutcome&{artifact:ArtifactFileFact}>;
   checkFiles(files:readonly ArtifactFileFact[],signal:AbortSignal):Promise<ArtifactFileCheck[]>;
 }
 /** 一轮一实例；真实 validation 调用结束释放其锁，交付复核拥有独立 finally 生命周期。 */
@@ -53,11 +56,11 @@ export class RunValidation {
   }
   /** 在任何策略 await 之前预占；交付复核期间同样拒绝新工具，避免审批或写入越过读取窗口。 */
   guard(name:string,id:string,input:unknown,activeIds:readonly string[]):string|undefined{
-    if(this.reserved||this.deliveryReading)return '正在核实 JSON/CSV 产物，请等待本次核实结束后再调用工具';
+    if(this.reserved||this.deliveryReading)return '正在核实 JSON/CSV/PNG 产物，请等待本次核实结束后再调用工具';
     if(name!==validationToolName)return;
-    if(this.controller.signal.aborted)return '运行已停止，不能验证 JSON/CSV 产物';
-    const parsed=validationInputSchema.safeParse(input);if(!parsed.success)return 'JSON/CSV 产物验证参数不符合结构约定';
-    if(activeIds.length)return '仍有工具或审批未结束，不能验证 JSON/CSV 产物';
+    if(this.controller.signal.aborted)return '运行已停止，不能验证 JSON/CSV/PNG 产物';
+    const parsed=validationInputSchema.safeParse(input);if(!parsed.success)return 'JSON/CSV/PNG 产物验证参数不符合结构约定';
+    if(activeIds.length)return '仍有工具或审批未结束，不能验证 JSON/CSV/PNG 产物';
     this.reserved={id,input:parsed.data,consumed:false};
   }
   /** 只接收已经落盘的事件；当前代次由运行时持有，不从模型传来的 progressVersion 推断。 */
@@ -68,7 +71,7 @@ export class RunValidation {
     }
     if((event.type==='tool.finished'||event.type==='tool.denied')&&event.data.id===this.reserved?.id)this.reserved=undefined;
   }
-  stop(){this.controller.abort(Error('运行已停止，JSON/CSV 产物验证取消'))}
+  stop(){this.controller.abort(Error('运行已停止，JSON/CSV/PNG 产物验证取消'))}
   /** 返回当前计划/副作用代次的可信记录；步骤版本增加不使同一代次的验证失效。 */
   records():ValidationRecord[]{return verifyValidationRecords(this.events,this.binding,this.artifacts.knowledgeRevision,this.bindings,this.artifacts.normalizePath).filter(record=>this.generations.get(record.result.toolCallId)===this.context.generation())}
   private lastEffectSeq(){return this.events.filter(event=>event.type==='tool.allowed'&&Array.isArray(event.data.effects)&&event.data.effects.some(effect=>['business-write','knowledge-write','command'].includes(String(effect)))).at(-1)?.seq??0}
@@ -101,7 +104,8 @@ export class RunValidation {
     if(manifest){await this.context.verifyManifest!(manifest,signal);check()}
     const requirement=selected.requirement;
     if(requirement.validator==='csv-table-v1'&&!this.files.validateTable)fail('VALIDATION_UNAVAILABLE','CSV要求缺少本轮真实表格验证端口');
-    const outcome=await (requirement.validator==='csv-table-v1'?this.files.validateTable!(structuredClone(file),structuredClone(requirement.schema),signal):this.files.validateFile(structuredClone(file),structuredClone(requirement.schema),signal));check();
+    if(requirement.validator==='png-raster-v1'&&!this.files.validateImage)fail('VALIDATION_UNAVAILABLE','PNG要求缺少本轮真实图片解码端口');
+    const outcome=await (requirement.validator==='png-raster-v1'?this.files.validateImage!(structuredClone(file),structuredClone(requirement.schema),signal):requirement.validator==='csv-table-v1'?this.files.validateTable!(structuredClone(file),structuredClone(requirement.schema),signal):this.files.validateFile(structuredClone(file),structuredClone(requirement.schema),signal));check();
     if(!isDeepStrictEqual(outcome.artifact,file))fail('VALIDATION_BASELINE_CHANGED','验证文件与选中基线不一致，请重新采集');
     if(manifest){await this.context.verifyManifest!(manifest,signal);check()}
     await this.artifacts.assertCurrentKnowledge();check();

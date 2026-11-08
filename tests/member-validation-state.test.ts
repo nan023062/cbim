@@ -53,3 +53,8 @@ test('CSV公开投影和界面保留原验证器、位置与历史结论，不�
   const html=renderToStaticMarkup(createElement(MemberValidationPanel,{run}));expect(html).toContain('CSV 表格检查');expect(html).toContain('CSV 字段约束不符合');expect(html).toContain('CSV 唯一键重复');expect(html).toContain('/rows/1/1');expect(html).toContain('原结论：');expect(html).not.toContain('agentInstanceId');
   const wrong={...csv,validator:'json-schema-v1'};expect(projectRunEvent(event('validation.checked',3,{validation:wrong}),identity,task).type).toBe('engine.status');
 });
+
+test('PNG公开投影显示实际图片条件，不把失败改成其他验证器记录',()=>{
+  const png:ValidationResult={...result,validator:'png-raster-v1',artifact:{...result.artifact,relativePath:'status-icon.png'},outcome:'rejected',issues:[{code:'png_dimensions',instancePath:'/IHDR',keyword:'dimensions'}]},shown=projectRunEvent(event('validation.checked',3,{validation:png}),identity,task),run=summary([shown,finished()]);
+  expect(memberValidationViews(run)[0]).toMatchObject({state:'rejected',result:{validator:'png-raster-v1'}});const html=renderToStaticMarkup(createElement(MemberValidationPanel,{run}));expect(html).toContain('PNG 图片检查');expect(html).toContain('PNG 像素尺寸不符合');expect(html).not.toContain('pixels');expect(projectRunEvent(event('validation.checked',3,{validation:{...png,validator:'csv-table-v1'}}),identity,task).type).toBe('engine.status');
+});

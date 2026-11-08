@@ -150,6 +150,7 @@ export class LoopRuntime {
     if(validationCount>jsonValidationLimits.records)fail('WORKFLOW_VALIDATION_LIMIT','冻结的产物验证要求超过本轮 16 条记录上限，不能启动执行');
     if(validationRequired&&(!member||!this.options.artifacts||!this.options.validations))fail('VALIDATION_UNAVAILABLE','冻结的产物验证要求缺少正式成员文件验证端口');
     if(workflows.some(item=>item.contract.delivery?.requiredValidations?.some(rule=>rule.validator==='csv-table-v1'))&&!this.options.validations?.validateTable)fail('VALIDATION_UNAVAILABLE','冻结的CSV要求缺少真实表格验证端口，不能启动执行');
+    if(workflows.some(item=>item.contract.delivery?.requiredValidations?.some(rule=>rule.validator==='png-raster-v1'))&&!this.options.validations?.validateImage)fail('VALIDATION_UNAVAILABLE','冻结的PNG要求缺少真实图片解码端口，不能启动执行');
     const manifestScopes=preparedArtifactScopes(workflows);
     if(manifestScopes.length&&(!member||!this.options.manifests))fail('MANIFEST_UNAVAILABLE','声明的完整产物范围缺少正式成员枚举端口');
     if(preparedArtifactTransitions(manifestScopes).length&&(!member||!this.options.artifactTransitions))fail('ARTIFACT_TRANSITION_UNAVAILABLE','冻结的删除/移动要求缺少真实受控平台端口');
@@ -356,7 +357,7 @@ export class LoopRuntime {
             // 验证、采集与停泊先同步预占，再进入策略；短读锁不会绕过求助/检查点的本轮结束门闩。
             const transitionReason=artifactTransition?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactTransition&&call.name===artifactTransitionToolName?'本轮未提供冻结删除/移动能力':undefined);
             const controlledReason=transitionReason??controlledFile?.guard(call.name,call.id,call.input,[...activeCalls])??(!controlledFile&&call.name===controlledFileWriteToolName?'本轮未提供受控文件工具':undefined);
-            const validationReason=controlledReason??validation?.guard(call.name,call.id,call.input,[...activeCalls])??(!validation&&call.name===validationToolName?'本轮未提供冻结要求的 JSON/CSV 产物验证工具':undefined);
+            const validationReason=controlledReason??validation?.guard(call.name,call.id,call.input,[...activeCalls])??(!validation&&call.name===validationToolName?'本轮未提供冻结要求的 JSON/CSV/PNG 产物验证工具':undefined);
             const checkpointReason=validationReason??checkpointTools?.guard(call.name,call.id,call.input,[...activeCalls])??(!checkpointTools&&call.name===memberCheckpointToolName?'本轮没有剩余检查点额度或未装配可信检查点能力':undefined);
             const artifactReason=checkpointReason??artifactCapture?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactCapture&&call.name===artifactCaptureToolName?'本轮未提供成员文件基线采集能力':undefined);
             const manifestReason=artifactReason??manifestCapture?.guard(call.name,call.id,call.input,[...activeCalls])??(!manifestCapture&&[outputManifestToolName,outputManifestInspectToolName].includes(call.name)?'本轮未提供冻结完整范围的枚举能力':undefined);

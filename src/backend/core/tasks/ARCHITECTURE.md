@@ -108,9 +108,9 @@
 | [scope-usage.ts](scope-usage.ts) | 定义指定调度周期的只读运行计量报告，供调度服务、Bridge 和任务视图共用。 |
 | [scope-view.ts](scope-view.ts) | 定义主会话调度周期的公开摘要、选中详情和独立增量投影，供存储与界面共享。 |
 | [types.ts](types.ts) | 业务目标和冻结上下文的任务定义。 |
-| [validation-evidence.ts](validation-evidence.ts) | 从可信冻结 Workflow 与本轮日志核实 JSON/CSV 验证事实，供 Runtime、交付和主目标复核共同使用。 |
-| [validation-tools.ts](validation-tools.ts) | 为已装配 JSON/CSV 验证要求的正式成员提供严格输入、唯一 wire 输出及真实能力说明。 |
-| [validation.ts](validation.ts) | JSON/CSV 产物验证工具、不可变检查事实及 Workflow 精确出口的叶子契约。 |
+| [validation-evidence.ts](validation-evidence.ts) | 从可信冻结 Workflow 与本轮日志核实 JSON/CSV/PNG 验证事实，供 Runtime、交付和主目标复核共同使用。 |
+| [validation-tools.ts](validation-tools.ts) | 为已装配 JSON/CSV/PNG 验证要求的正式成员提供严格输入、唯一 wire 输出及真实能力说明。 |
+| [validation.ts](validation.ts) | JSON/CSV/PNG 产物验证工具、不可变检查事实及 Workflow 精确出口的叶子契约。 |
 | [workflow-evidence.ts](workflow-evidence.ts) | 核实可选 Workflow 的计划前置、工具回执及精确 必验文件结构出口，供运行时与调度结算共用。 |
 | [workflow-selection.ts](workflow-selection.ts) | 目标分配、派发和任务历史共用的 Workflow 选择叶子协议，不依赖知识或调度实现。 |
 | [workspace-member-invariants.ts](workspace-member-invariants.ts) | 将岗位登记的单条审计规则接到工作区 DispatchStore 的提交与重放边界。 |
@@ -6611,13 +6611,13 @@ accept 必须覆盖此人工项当前审阅的全部真实成员候选，为每�
 
 三项成员工具保持已有暂存结构和工具调用身份。捕获核对明确来源集合、进度及可信知识版本；求助和检查点核对原输入及独立冻结的暂存事实，不能把 staged 变为 completed。开始保存后失败可能已有记录：artifact 的短门闩只在真实 finished/denied 后释放；help/checkpoint 的交接门闩不因坏回包解锁，模型须结束当前轮，由主调度或界面核实原记录，不能继续查询或自动重复暂存。
 
-### 指定 JSON/CSV 产物的精确结构出口
+### 指定 JSON/CSV/PNG 产物的精确结构出口
 
-`validation.ts` 保留严格的要求引用输入、完整成员绑定结果与 canonical 记录。`cbim_validation_run` 仅在有冻结 JSON/CSV 要求的正式成员中装配；输入只有 moduleId/requirementId、互斥的 baselineId/manifestId 与 expectedTaskProgressVersion，真实路径、Schema、知识和结论不能来自模型。`validation-tools.ts` 独立冻结完整绑定、要求及输入后调用端口一次，输出按原唯一 wire 核验；错误不删除检查事件或自动重试。
+`validation.ts` 保留严格的要求引用输入、完整成员绑定结果与 canonical 记录。`cbim_validation_run` 仅在有冻结 JSON/CSV/PNG 要求的正式成员中装配；输入只有 moduleId/requirementId、互斥的 baselineId/manifestId 与 expectedTaskProgressVersion，真实路径、Schema、知识和结论不能来自模型。`validation-tools.ts` 独立冻结完整绑定、要求及输入后调用端口一次，输出按原唯一 wire 核验；错误不删除检查事件或自动重试。
 
 `validation-evidence.ts` 复用成功工具链与文件基线核验：要求是唯一冻结模块声明，文件路径与指纹须精确匹配所选本轮有效基线；检查当时进度、知识、最后副作用序号和调用窗口一致。基线进度可早于后来步骤版本，但计划修订或业务/知识副作用后失效。`validation.checked` 只有匹配的实际成功结束回执才派生 `ValidationRecord`；失败/未结束暂存不会变成证明，成功却没有事件、坏身份/哈希/正文/重复记录均拒绝。运行缓存可省略无关事件，外层仍须核完整 canonical 顺序、头、原生会话与终态。
 
-工具成功和结构通过分别表达。rejected 保留真实已执行事实，也可被步骤引用；`selectWorkflowValidations` 只接受步骤明确引用、属于该条件的唯一 passed 记录。`WorkflowEvidenceProof.validationChecks` 固定验证/调用/Schema/基线/文件身份，每个模块条件独立匹配；一次成员最多16项 JSON/CSV 条件，旧无此声明不补空字段。`TaskProgressTools` 的可选验证端口提供当前代次记录，并在保存交付之前异步复核实际选定 passed 文件；旧 rejected 或未选记录不会被偷偷当作出口，普通步骤更新不清同代证据。
+工具成功和结构通过分别表达。rejected 保留真实已执行事实，也可被步骤引用；`selectWorkflowValidations` 只接受步骤明确引用、属于该条件的唯一 passed 记录。`WorkflowEvidenceProof.validationChecks` 固定验证/调用/Schema/基线/文件身份，每个模块条件独立匹配；一次成员最多16项 JSON/CSV/PNG 条件，旧无此声明不补空字段。`TaskProgressTools` 的可选验证端口提供当前代次记录，并在保存交付之前异步复核实际选定 passed 文件；旧 rejected 或未选记录不会被偷偷当作出口，普通步骤更新不清同代证据。
 
 Progress 保存前独立冻结验证记录，原 wire 证明必须能由这些事实重算；成员结算、主目标审阅和最终完成还须通过可信平台再次核实当前文件字节，不能仅信历史 passed。文件变化不重写旧检查结论，取消不表示回滚；该能力不扩大 checkpoint 工具白名单、主 Agent 业务执行权限、整个工作区覆盖或人工验收语义。
 
@@ -6883,4 +6883,8 @@ HumanReconsiderationModule ..> HumanReconsideration : 返回证据对照
 
 ### CSV 结果与要求身份
 
-`artifactValidatorSchema` 明确列出 JSON/CSV；结果诊断必须属于同一验证器。CSV 的 schemaHash 同时覆盖验证器类型与规范化参数，旧 JSON 哈希保持不变。`validation-evidence`、输出 wire 与 `selectWorkflowValidations` 均逐项匹配实际 validator、冻结要求、文件和原基线/清单；不能将 JSON 通过记录改名作为 CSV。公开结果只提供原位置诊断。计划、步骤和交付不因新增 CSV 分支改变真实成功回执及当前字节复核要求。
+`artifactValidatorSchema` 明确列出 JSON/CSV/PNG；结果诊断必须属于同一验证器。CSV 的 schemaHash 同时覆盖验证器类型与规范化参数，旧 JSON 哈希保持不变。`validation-evidence`、输出 wire 与 `selectWorkflowValidations` 均逐项匹配实际 validator、冻结要求、文件和原基线/清单；不能将 JSON 通过记录改名作为 CSV。公开结果只提供原位置诊断。计划、步骤和交付不因新增 CSV 分支改变真实成功回执及当前字节复核要求。
+
+### PNG 原验证身份
+
+artifactValidatorSchema增加png-raster-v1及固定PNG诊断（损坏、不支持、尺寸、通道）。结果和诊断种类须一致，原要求、唯一wire、canonical及指定出口均核PNG类型与规则指纹；不以原JSON/CSV通过改名替代。PNG的文件身份、基线/完整清单、成功终态及后续写入失效沿原共同协议，不附带像素或元数据正文。

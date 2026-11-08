@@ -6,7 +6,7 @@
 
 每轮单独跟踪在途插入，结束时先关闭引擎，再排空接受/失败日志，最后写本轮终态并释放租约。通信或接受日志失败保留未知，不重发。上层队列持久化和停止的归属由调度管理器处理；运行时不创建新的目标意图或恢复旧周期。
 
-### 冻结 JSON/CSV 产物验证与交付复核
+### 冻结 JSON/CSV/PNG 产物验证与交付复核
 
 `RuntimeOptions.validations` 只向具有 `requiredValidations` 的正式成员提供。`RunValidation` 依据冻结模块要求与本轮已确认、未失效的文件基线选取路径和 Schema；模型只传模块、要求、基线和进度版本。知识、进度版本、证据代次及停止在每次异步读取前后复核，平台在同一次读取的字节上计算指纹和结构判定，不从模型声明取得验证结论。
 
@@ -349,12 +349,16 @@ LoopRuntime 仅向正式成员且冻结 artifactScope 的运行装配 RunOutputM
 
 ## R07-B1 完整集合共同验收
 
-RunOutputManifestCapture同步预占完整交付至真实finished/denied，覆盖审批、专业条件复核、全集合读取、候选保存及wire返回。选择只取本轮可信成功清单；停止、知识/进度变化、缺失根、失效证明及错误端口均拒绝，不自动采集或换绑。RunValidation在同字节JSON/CSV校验前后复核整个范围，共用15秒期限；交付再核原集合。完整清单工具继续不作步骤证据或安全检查点来源。
+RunOutputManifestCapture同步预占完整交付至真实finished/denied，覆盖审批、专业条件复核、全集合读取、候选保存及wire返回。选择只取本轮可信成功清单；停止、知识/进度变化、缺失根、失效证明及错误端口均拒绝，不自动采集或换绑。RunValidation在同字节JSON/CSV/PNG校验前后复核整个范围，共用15秒期限；交付再核原集合。完整清单工具继续不作步骤证据或安全检查点来源。
 
 ## R07-B2 原删除与移动证明
 
-RunArtifactTransition 在审批前预占原有效 before 清单；可靠 allowed 后重核当前全集合，取得平台独占源句柄，先可靠保存 prepared/executing 再发操作，实际工人退出后核精确 after 并保存 applied。真实工具成功结束且 wire 与原结果一致才解除门闩。失败、提前结束、停止和保存未知保持本轮只读/求助及 interrupted，不换调用重发；运行关闭须 drain 实际工人。RunOutputManifestCapture 与 RunValidation 保留原阶段供同一验证器重建，完整 JSON/CSV、交付、目标及人工决定继续沿同一清单身份。
+RunArtifactTransition 在审批前预占原有效 before 清单；可靠 allowed 后重核当前全集合，取得平台独占源句柄，先可靠保存 prepared/executing 再发操作，实际工人退出后核精确 after 并保存 applied。真实工具成功结束且 wire 与原结果一致才解除门闩。失败、提前结束、停止和保存未知保持本轮只读/求助及 interrupted，不换调用重发；运行关闭须 drain 实际工人。RunOutputManifestCapture 与 RunValidation 保留原阶段供同一验证器重建，完整 JSON/CSV/PNG、交付、目标及人工决定继续沿同一清单身份。
 
 ### CSV 实际能力与生命周期
 
 `ValidationFilePort.validateTable` 是可信 CSV 同字节读取端口；旧 JSON 单独端口仍可使用。声明 CSV 却缺 validateTable 时在模型启动及日志创建前拒绝，不能以 JSON 解释器或仅哈希读取代替。RunValidation 从唯一冻结要求选取正确端口，保存实际验证器；共用预占、停止信号、读取预算、知识和代次屏障。完整模式在 CSV 检查两侧重核原全集合，目录新增即使 CSV 未变也阻止出口；旧文件模式保持原边界。
+
+### PNG 实际解码端口
+
+ValidationFilePort.validateImage须在具有PNG冻结要求的成员启动前实际存在；缺失时不创建模型或日志。RunValidation按原validator选择平台方法，在完整集合复核、停止、知识/进度代次与同一读取时限内取得真实解码判定。完整目录其它文件变化也拒绝，不能用有效PNG头或仅哈希实现冒充该端口。

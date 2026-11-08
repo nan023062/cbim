@@ -1,6 +1,6 @@
 /**
  * 完整模式从验证调用之前的原canonical清单派生文件事实与集合身份；旧baseline与完整manifest互斥，任何模式降级均拒绝。
- * 作用定位：从可信冻结 Workflow 与本轮日志核实 JSON/CSV 验证事实，供 Runtime、交付和主目标复核共同使用。
+ * 作用定位：从可信冻结 Workflow 与本轮日志核实 JSON/CSV/PNG 验证事实，供 Runtime、交付和主目标复核共同使用。
  * 设计原因：结果正文和 succeeded 回执都不能单独声明通过；要求、基线、真实调用、文件字节指纹及事件顺序必须一致。
  * 职责边界：不读文件，不判断当前字节；外层完整 canonical 身份/终态与异步文件重核仍不可省略。
  */
@@ -19,7 +19,7 @@ function valid(value:unknown,message:string):asserts value{if(!value)fail('VALID
 const ordered=(value:unknown):unknown=>Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([key,item])=>[key,ordered(item)])):value;
 const same=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 const effect=(event:ArtifactEvidenceEvent)=>event.type==='tool.allowed'&&Array.isArray(event.data.effects)&&event.data.effects.some(value=>['business-write','knowledge-write','command'].includes(String(value)));
-/** 模型只引用 module/condition ID；旧 JSON 哈希不变，CSV 将类型与参数共同签入，避免跨验证器解释旧证明。 */
+/** 模型只引用 module/condition ID；旧 JSON 哈希不变，CSV/PNG 将类型与参数共同签入，避免跨验证器解释旧证明。 */
 export function validationRequirement(bindings:readonly ValidationWorkflowBinding[],moduleId:string,requirementId:string){
   const matches=bindings.filter(value=>value.moduleId===moduleId);valid(matches.length===1&&workflowContractSchema.safeParse(matches[0].contract).success,'不存在唯一有效的冻结验证模块');
   const binding=matches[0],requirements=binding.contract.delivery?.requiredValidations?.filter(value=>value.id===requirementId)??[];

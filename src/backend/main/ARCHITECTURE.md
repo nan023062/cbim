@@ -214,7 +214,7 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 
 `member-dispatch.prepare` 从与 Pi 实际注册相同的 `core/tools/native-tools` 清单，按本轮 permission 返回 availableTools；密钥和实际模型留在可信工厂。执行服务在 claim/run 之前预检冻结的模块约定。创建 Runtime 时注入全部 `preparedWorkflowContracts(run.prepared)`，普通主聊天不接此业务执行门禁，也不因此获得业务写入或命令权限。
 
-同一工厂通过 `availableValidators:['json-schema-v1','csv-table-v1']` 声明实际平台验证能力，不在无约定时冒称已注册验证工具。成员 Runtime 分别注入 `ArtifactFiles.validateFile/validateTable`，路径与 Schema 来自冻结要求；目标审阅另注入 `normalizeValidationPath/checkValidationFiles`，成员结算复用已有 artifacts 端口。所有者代际与停止覆盖读取，判断使用当前字节，不通过报告服务重入派发事务或创建新运行。
+同一工厂通过 `availableValidators:['json-schema-v1','csv-table-v1','png-raster-v1']` 声明实际平台验证能力，不在无约定时冒称已注册验证工具。成员 Runtime 分别注入 `ArtifactFiles.validateFile/validateTable/validateImage`，路径与 Schema 来自冻结要求；目标审阅另注入 `normalizeValidationPath/checkValidationFiles`，成员结算复用已有 artifacts 端口。所有者代际与停止覆盖读取，判断使用当前字节，不通过报告服务重入派发事务或创建新运行。
 
 ## 本机显式人工决定
 
@@ -325,3 +325,5 @@ Application 每工作区装配一个请求预算服务，主工厂固定已解�
 成员实际工厂仅在 controlledTransport 支持 withExclusiveTransition 时装配删除/移动端口，沿原成员租约及工作区身份。普通 Node 缺省宿主不能执行，声明缺实际能力时启动失败。原阶段只追加到该成员 canonical；重开和只读报告不启动工人或重发操作。
 
 CSV 能力由同一成员工厂的真实平台实现公开；知识声明、岗位准备与领取继续核对可用验证器，CSV 不复用 JSON 参数或绕过原工作区有效性与停止检查。
+
+成员工厂公开png-raster-v1并注入ArtifactFiles.validateImage，准备/领取按真实可用验证器核要求。图片与JSON/CSV共用当前知识、工作区代际、停止和原文件证明；目标及人工出口不另开绕过复核的路径。

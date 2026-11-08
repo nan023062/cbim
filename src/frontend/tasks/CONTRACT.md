@@ -405,3 +405,7 @@ ArtifactTransitionProofs 为成员清单和人工候选/历史共用纯展示，
 ### CSV 验证记录显示
 
 MemberValidationPanel 显式显示 CSV 表格检查或 JSON 结构检查；CSV 诊断按表头/列数/字段约束/唯一键/行数/编码语法区分，并只显示原位置与规则名称。后续写入使旧依据过期时仍保留原 rejected，实际 passed 只表示当时符合条件；不返回单元格正文，不以当前页面状态替代后端复核。
+
+### PNG 验证显示
+
+MemberValidationPanel显式显示PNG图片检查与损坏/不支持/像素尺寸/通道诊断；同一公开事件只保留文件和规则指纹，不渲染或返回像素正文。暂存、rejected、passed和后续失效仍分开，程序符合不显示为人工视觉验收。

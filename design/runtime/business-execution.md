@@ -30,9 +30,9 @@ description: 主 Agent 调度业务并管理团队和业务知识；执行 Agent
 
 成员各自的上下文和模型推理用于完成工作，不要求输出私有思维；报告可核查的结论、依据、公开进度与工具证据。候选回传、前置结果消费和结构化求助已经接通。执行成员可用 cbim_task_help 交回缺口，正常关闭且程序核实后才完成交接；求助不是交付，原求助任务不恢复，由主 Agent 重新安排。
 
-若本模块冻结的 Workflow 声明 JSON/CSV 条件验证要求，执行成员先取得真实业务文件证据；旧文件模式用 cbim_task_artifact_capture 采集基线，完整模式按下述规则采集清单。随后调用实际注册的 cbim_validation_run，明确 moduleId、requirementId、互斥的 baselineId/manifestId 和当前任务进度版本。路径与 Schema 由冻结要求提供，不能自己传入或宣称 passed。rejected 表示检查已完成但结构不符合，不能满足交付条件；修正文件后须重新读取、采集、验证，并在步骤中引用本轮通过调用。工具成功、结构符合、主调度候选与人工验收各不相同；文件后续变化会使交付或审阅复核拒绝旧证明。验证失败或坏回包先核实原记录，不重做已保存调用来猜结果。此验证工具不在安全检查点恢复白名单内，不能据此假称可安全停泊。
+若本模块冻结的 Workflow 声明 JSON/CSV/PNG 条件验证要求，执行成员先取得真实业务文件证据；旧文件模式用 cbim_task_artifact_capture 采集基线，完整模式按下述规则采集清单。随后调用实际注册的 cbim_validation_run，明确 moduleId、requirementId、互斥的 baselineId/manifestId 和当前任务进度版本。路径与 Schema 由冻结要求提供，不能自己传入或宣称 passed。rejected 表示检查已完成但结构不符合，不能满足交付条件；修正文件后须重新读取、采集、验证，并在步骤中引用本轮通过调用。工具成功、结构符合、主调度候选与人工验收各不相同；文件后续变化会使交付或审阅复核拒绝旧证明。验证失败或坏回包先核实原记录，不重做已保存调用来猜结果。此验证工具不在安全检查点恢复白名单内，不能据此假称可安全停泊。
 
-模块冻结的 Workflow 若声明顶层 artifactScope，实际成员可用 cbim_task_manifest_capture 完整观察全部声明根；只传当前计划版本，不能自行指定路径、哈希或省略条目。无其它在途工具时采集，两次完整枚举须稳定；不支持的链接、特殊文件或超限不会被跳过。一运行最多8份记录，含失败暂存；保存后回包异常先用 cbim_task_manifest_inspect 查原记录，不自动重采。artifactScope本身只声明观察；若delivery.requireCompleteManifest为true，JSON/CSV验证须明确manifestId，交付cbim_delivery_prepare引用同一manifestId，并由程序复核所有根与后代。不能改选较新清单或未变文件子集，缺失必需根不能满足正常交付。仅旧模式使用baselineId；两者互斥。目录新增、减少、类型或字节变化均须重新读取、采集、验证，旧人工接受不能跨集合继续。清单采集不是业务步骤证据，也不在安全检查点恢复白名单内。
+模块冻结的 Workflow 若声明顶层 artifactScope，实际成员可用 cbim_task_manifest_capture 完整观察全部声明根；只传当前计划版本，不能自行指定路径、哈希或省略条目。无其它在途工具时采集，两次完整枚举须稳定；不支持的链接、特殊文件或超限不会被跳过。一运行最多8份记录，含失败暂存；保存后回包异常先用 cbim_task_manifest_inspect 查原记录，不自动重采。artifactScope本身只声明观察；若delivery.requireCompleteManifest为true，JSON/CSV/PNG验证须明确manifestId，交付cbim_delivery_prepare引用同一manifestId，并由程序复核所有根与后代。不能改选较新清单或未变文件子集，缺失必需根不能满足正常交付。仅旧模式使用baselineId；两者互斥。目录新增、减少、类型或字节变化均须重新读取、采集、验证，旧人工接受不能跨集合继续。清单采集不是业务步骤证据，也不在安全检查点恢复白名单内。
 
 仅有界文件任务支持同任务最多16个检查点；每段最多预约并消费一次，只有最新未消费段可继续：成员本轮只有成功 read/write/edit 与明确任务维护调用，先用 cbim_task_artifact_capture 采集覆盖全部触达文件的最新基线，再用 cbim_task_checkpoint 提供当前进度版本、基线 ID 和原因，随即正常结束，禁止继续工具。命令、动态目录集合、运行中额外知识查询、未知或失败副作用不满足此资格；不能为了检查点省略必要的业务调查或验证，无法满足时继续正常执行或求助。
 
@@ -40,6 +40,8 @@ description: 主 Agent 调度业务并管理团队和业务知识；执行 Agent
 
 ## 冻结的删除与移动
 
-Workflow 若声明 artifactScope.transitions，必须以 cbim_artifact_transition 选择冻结模块及 operationIndex，显式引用当前计划下原有效 beforeManifestId。工具先重核完整集合并可靠记录原阶段，再通过独占文件对象执行一次删除或不覆盖移动；仅支持本机 Windows x64 / NTFS、既存父目录中的普通 UTF-8 文件，单文件最多1 MiB、全轮最多4项。每次成功后重新采集完整清单，下一项引用该清单；全部操作完成后以同一最终 manifestId 做 JSON/CSV 验证和交付。不得用 shell 删除后的缺失、同内容复制或原生写入自称受控证明。普通副作用、重规划、源重新出现、目标或其它集合变化均使旧操作不能沿用。失败、停止或坏回包保留原事实，本轮只读取/求助，不换调用重发、交付或停泊；没有自动恢复、回滚或未知结果补偿。
+Workflow 若声明 artifactScope.transitions，必须以 cbim_artifact_transition 选择冻结模块及 operationIndex，显式引用当前计划下原有效 beforeManifestId。工具先重核完整集合并可靠记录原阶段，再通过独占文件对象执行一次删除或不覆盖移动；仅支持本机 Windows x64 / NTFS、既存父目录中的普通 UTF-8 文件，单文件最多1 MiB、全轮最多4项。每次成功后重新采集完整清单，下一项引用该清单；全部操作完成后以同一最终 manifestId 做 JSON/CSV/PNG 验证和交付。不得用 shell 删除后的缺失、同内容复制或原生写入自称受控证明。普通副作用、重规划、源重新出现、目标或其它集合变化均使旧操作不能沿用。失败、停止或坏回包保留原事实，本轮只读取/求助，不换调用重发、交付或停泊；没有自动恢复、回滚或未知结果补偿。
 
 CSV 要求只由冻结的 `csv-table-v1` 约定选择表头、字段类型、取值范围、数据行数与唯一键。实际工具读取同一份有界 UTF-8 文件计算指纹和检查；不得用模型自报、重命名 JSON 通过记录或执行单元格公式替代。rejected 后修改文件必须重新读取、采集并验证，旧记录保留为历史；表格符合条件仍不代表人工业务验收。
+
+PNG要求由冻结的 `png-raster-v1` 明确精确宽高和RGB/RGBA采样通道。平台核所有块CRC、完整有界解压并还原像素后再判条件；首版仅支持8位非交错静态图片及IHDR/IDAT/IEND、受约束的sRGB/gAMA/pHYs块，其它扩展和编码明确拒绝。文件最多1 MiB、宽高各4096、总像素1048576；不能只用扩展名、文件头或图像显示成功替代。编码/尺寸符合不代表视觉和业务验收，图片修改仍需新读取/采集/验证。

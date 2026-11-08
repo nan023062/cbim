@@ -21,6 +21,7 @@
 | [module-ownership-tool-policy.ts](module-ownership-tool-policy.ts) | 模块责任控制面四项工具的纯名称、效果及业务工作分类，供授权与周期收口共用。 |
 | [module-ownership-tools.ts](module-ownership-tools.ts) | 主运行负责人四工具的严格输入、业务输出和可信端口协议。 |
 | [module-ownership.ts](module-ownership.ts) | 单模块负责人控制面的严格公开协议，供岗位、责任服务、持久化及桌面共用。 |
+| [png-validation-schema.ts](png-validation-schema.ts) | 冻结静态 PNG 的精确尺寸、通道要求和资源上限，供知识声明、运行端口与公开结果共用。 |
 | [workflow-contract.ts](workflow-contract.ts) | 定义模块 Workflow 正文中可选执行条件的严格协议，供知识治理、资源包与执行准备共同解析。 |
 
 ## 架构类图
@@ -665,6 +666,32 @@ N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspac
 
 直接依赖：[knowledge-source.ts](knowledge-source.ts)、[../team/workspace-member.ts](../team/workspace-member.ts)。
 
+### png-validation-schema.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_png_validation_schema_ts["png-validation-schema.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_png_validation_schema_ts_PngImageSchema["PngImageSchema"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_png_validation_schema_ts ..> N_src_backend_core_workspace_png_validation_schema_ts_PngImageSchema : 声明
+class N_src_backend_core_workspace_png_validation_schema_ts_PngValidationIssueCode["PngValidationIssueCode"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_png_validation_schema_ts ..> N_src_backend_core_workspace_png_validation_schema_ts_PngValidationIssueCode : 声明
+class N_src_backend_core_workspace_png_validation_schema_ts_PngValidationOutcome["PngValidationOutcome"] {
+  <<interface>>
+  +outcome
+  +issues
+}
+N_src_backend_core_workspace_png_validation_schema_ts ..> N_src_backend_core_workspace_png_validation_schema_ts_PngValidationOutcome : 声明
+```
+
+
 ### workflow-contract.ts
 
 ```mermaid
@@ -702,7 +729,7 @@ class N_src_backend_core_workspace_workflow_contract_ts_WorkflowContract["Workfl
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_workflow_contract_ts_WorkflowContract : 声明
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/json.ts](../foundation/json.ts)、[json-validation-schema.ts](json-validation-schema.ts)、[csv-validation-schema.ts](csv-validation-schema.ts)、[artifact-scope.ts](artifact-scope.ts)。
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/json.ts](../foundation/json.ts)、[json-validation-schema.ts](json-validation-schema.ts)、[csv-validation-schema.ts](csv-validation-schema.ts)、[png-validation-schema.ts](png-validation-schema.ts)、[artifact-scope.ts](artifact-scope.ts)。
 
 ### 本目录调用边界
 
@@ -746,12 +773,23 @@ class N_src_backend_core_workspace_json_validation_schema_ts["json-validation-sc
 class N_src_backend_core_workspace_csv_validation_schema_ts["csv-validation-schema.ts"] {
   <<module>>
 }
-class N_src_backend_core_workspace_artifact_scope_ts["artifact-scope.ts"] {
+class N_src_backend_core_workspace_png_validation_schema_ts["png-validation-schema.ts"] {
   <<module>>
 }
 N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_json_validation_schema_ts : 导入依赖
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_csv_validation_schema_ts : 导入依赖
+N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_png_validation_schema_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_workflow_contract_ts["workflow-contract.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_artifact_scope_ts["artifact-scope.ts"] {
+  <<module>>
+}
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_artifact_scope_ts : 导入依赖
 ```
 
@@ -774,7 +812,7 @@ N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspa
 
 版本 1 至少声明一项：`beforeEffects:{requirePlan:true}` 或 `delivery` 的非空 `requiredToolEvidence` / `requiredValidations`。两类要求各最多 16 项，ID 是 1–80 位字母、数字、下划线或连字符且在模块内不能跨类重复；条件块最多 64 KiB UTF-8。原生工具名仍限 `read/write/edit/grep/find/ls/bash`，不接知识写入、调度、任意表达式或模型提供的 path/hash/pass。
 
-`requiredValidations` 每项固定 `{id,validator,artifactPath,schema}`，通过验证器判别联合分别约束 JSON 与 CSV 参数；已支持 `json-schema-v1` 和 `csv-table-v1`。路径为明确工作区业务文件；运行时仍拒绝链接、越界和受保护知识路径。`json-validation-schema.ts` 仅解释有界 JSON Schema 子集：每节点显式 type，标量 enum/const，对象 properties/required/布尔 additionalProperties，数组 items/长度，以及字符串长度和数值上下界。对象/数组 enum/const、引用、组合、pattern、format、自定义代码和未知关键字均不支持；不会编译用户脚本、转换类型、补默认值或删字段。未知或超界声明在知识提交、资源模板和执行准备中同样拒绝。
+`requiredValidations` 每项固定 `{id,validator,artifactPath,schema}`，通过验证器判别联合分别约束 JSON 与 CSV 参数；已支持 `json-schema-v1`、`csv-table-v1` 和 `png-raster-v1`。路径为明确工作区业务文件；运行时仍拒绝链接、越界和受保护知识路径。`json-validation-schema.ts` 仅解释有界 JSON Schema 子集：每节点显式 type，标量 enum/const，对象 properties/required/布尔 additionalProperties，数组 items/长度，以及字符串长度和数值上下界。对象/数组 enum/const、引用、组合、pattern、format、自定义代码和未知关键字均不支持；不会编译用户脚本、转换类型、补默认值或删字段。未知或超界声明在知识提交、资源模板和执行准备中同样拒绝。
 
 单 Schema ≤32 KiB、深度≤16、节点≤512、单层属性≤64、标量枚举≤64；文件≤1 MiB，JSON 嵌套≤64、节点≤100000，诊断最多32条且不包含原值。纯校验器从可信平台同一次读取的 Uint8Array 严格解析 UTF-8 与无重复字段的 JSON，返回 passed 或 rejected；无效 JSON 也是实际检查事实。结构通过只证明该份字节符合该项声明，不是专业语义全验收。模块声明缺省仍保持原 Workflow 行为和旧 proof 形状。
 
@@ -883,3 +921,7 @@ artifactScope.transitions 可明确声明 delete(path) 或 move(from,to)，全�
 `csv-validation-schema.ts` 解释 `csv-table-v1`：精确有序表头，string/integer/number 列，字符串码点长度与枚举、有限数值范围、数据行数和按原字符串组合的唯一键。整数须为安全十进制整数；不修剪空白、补值、转换坏值或执行公式。逗号分隔、双引号及双写转义、CRLF/LF 和引号内换行；UTF-8 可有 BOM，裸 CR、NUL、无效 UTF-8 与坏引号拒绝。空行不跳过。
 
 单声明≤32 KiB，文件≤1 MiB、数据行≤10000、列≤32、字段≤4096 Unicode 码点；预算超限抛错，不截断作证。诊断最多16项，只含行/列位置和规则，不返回单元格或唯一键正文。未达到声明条件返回真实 rejected；相同文件字节不能替代冻结规则身份。JSON 的既有语义和哈希保持兼容。
+
+### PNG 冻结条件
+
+png-validation-schema.ts只定义png-raster-v1的精确像素宽高、rgb/rgba原始采样通道及上限；声明判别联合不能混用JSON/CSV参数。8位非交错子集，宽高各4096、总像素1048576、文件1 MiB、1024块；Node解压留在平台层。PNG类型及参数按现有非JSON算法共同进入schemaHash，旧JSON/CSV不重写。

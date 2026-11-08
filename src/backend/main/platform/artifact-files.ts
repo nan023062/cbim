@@ -1,5 +1,5 @@
 /**
- * 作用定位：在固定工作区根内安全读取业务文件，供指纹采集、复核、无基线观察及冻结 JSON/CSV 验证共用。
+ * 作用定位：在固定工作区根内安全读取业务文件，供指纹采集、复核、无基线观察及冻结 JSON/CSV/PNG 验证共用。
  * 设计原因：哈希与专业验证必须使用同一次句柄读取的字节；路径逐级拒绝链接/越界，句柄与路径前后核对，超限不截断作证。
  * 职责边界：不运行命令、不读取目录或知识库、不返回文件正文；外部并发修改仅尽力检测，不构成操作系统沙箱或原子快照。
  */
@@ -11,6 +11,8 @@ import {fail} from '../../core/foundation/errors';
 import {artifactLimits,type ArtifactFileFact,type ArtifactFileCheck} from '../../core/tasks/artifact-baseline';
 import {jsonValidationLimits,validateJsonArtifact,type BoundedJsonSchema} from '../../core/workspace/json-validation-schema';
 import {csvValidationLimits,validateCsvArtifact,type CsvTableSchema} from '../../core/workspace/csv-validation-schema';
+import {pngValidationLimits,type PngImageSchema} from '../../core/workspace/png-validation-schema';
+import {validatePngArtifact} from './png-validator';
 import type {EffectFileObservation} from '../../core/tasks/effect-observation';
 
 export const artifactFileLimits={files:artifactLimits.files,bytesPerFile:artifactLimits.fileBytes,totalBytes:artifactLimits.totalBytes} as const;
@@ -74,6 +76,12 @@ export class ArtifactFiles {
     if(fact.relativePath!==normalizeArtifactPath(this.root,expected.relativePath)||fact.byteLength!==expected.byteLength||fact.sha256!==expected.sha256)fail('VALIDATION_BASELINE_CHANGED','CSV 文件已偏离明确基线，请重新读取与采集');
     const result=validateCsvArtifact(schema,bytes!);this.assert();signal.throwIfAborted();
     return {artifact:fact,...result};
+  }
+  /** PNG指纹与有界解码共用完整读取；像素不出平台，解码结束再次核停止与工作区有效性。 */
+  async validateImage(expected:ArtifactFileFact,schema:PngImageSchema,signal:AbortSignal){
+    const {fact,bytes}=await this.readFile(expected.relativePath,signal,{readBytes:0},pngValidationLimits.fileBytes,true);
+    if(fact.relativePath!==normalizeArtifactPath(this.root,expected.relativePath)||fact.byteLength!==expected.byteLength||fact.sha256!==expected.sha256)fail('VALIDATION_BASELINE_CHANGED','PNG文件已偏离明确基线，请重新读取与采集');
+    const result=validatePngArtifact(schema,bytes!);this.assert();signal.throwIfAborted();return {artifact:fact,...result};
   }
   /** 一份明确基线的逐文件只读结果；失败不抹去其它文件观察，所有读取共用总字节上限。 */
   async checkFiles(files:readonly ArtifactFileFact[],signal:AbortSignal):Promise<ArtifactFileCheck[]>{

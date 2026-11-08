@@ -15,9 +15,10 @@ type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]}
 function gate(){let release=()=>{};const promise=new Promise<void>(resolve=>{release=resolve});return {promise,release}}
 
 /** Real product write/read/capture/validator calls; only localhost model responses and explicit pauses are scripted. */
-export async function jsonValidationProvider(mode:JsonValidationMode='complete',scenario:Omit<typeof jsonValidationFixture,'schema'>=jsonValidationFixture){
+export async function jsonValidationProvider(mode:JsonValidationMode='complete',scenario:Omit<typeof jsonValidationFixture,'schema'>&{binary?:'base64'}=jsonValidationFixture){
   const d=scenario,main:Request[]=[],member:Request[]=[],errors:string[]=[],repair=gate(),review=gate();let agentId='',moduleId='',workflowId:string|undefined,ownerSelection:OwnerExecutionSelection|undefined;
   const state:{badProgress?:any;badCapture?:any;rejected?:any;badStep?:any;deniedDelivery?:any;freshProgress?:any;freshCapture?:any;passed?:any;freshStep?:any;delivery?:any;readyForReview?:boolean;reviewInput?:any;reviewError?:any}={};
+  const write=(tool:(id:string,name:string,args:unknown)=>void,id:string,content:string)=>{if(d.binary){assert.match(d.file,/^[a-zA-Z0-9_-]+\.png$/);assert.match(content,/^[A-Za-z0-9+/]+={0,2}$/);tool(id,'bash',{command:'node -e '+JSON.stringify("require('fs').writeFileSync('"+d.file+"',Buffer.from('"+content+"','base64'))")})}else tool(id,'write',{path:d.file,content})};
   const selection=()=>{assert.ok(ownerSelection,'测试必须先通过真实登记/责任查询准备岗位选择');return {ownerSelection,...(workflowId?{workflowSelections:[{moduleId,workflowId}]}:{})}};
   const goalPlan=(expectedRevision=1)=>{const original=goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],acceptance:d.acceptance},expectedRevision),plan={...original,assignments:original.assignments.map(item=>({...item,...selection()}))};return mode==='human-negative'?{...plan,criteria:[...plan.criteria,{id:d.humanId,text:d.humanCriterion,kind:'human'}],assignments:plan.assignments.map(item=>({...item,criterionIds:[...item.criterionIds,d.humanId]}))}:plan};
   const server=http.createServer(async(req,res)=>{try{
@@ -44,14 +45,14 @@ export async function jsonValidationProvider(mode:JsonValidationMode='complete',
     }else{
       assert.ok(body.tools?.some(item=>item.function.name==='cbim_validation_run'),'真实冻结要求必须装配验证工具');
       if(turn===0)tool('json-member-plan','cbim_task_plan',{expectedVersion:0,goal:d.memberGoal,acceptance:d.acceptance,reason:'严格按冻结Schema验证当前文件，不以工具调用成功替代结构通过',steps:[{id:'verify',title:'验证真实产物结构及当前字节',owner:'开发者'}]});
-      else if(turn===1)tool('json-bad-write','write',{path:d.file,content:d.bad});
+      else if(turn===1)write(tool,'json-bad-write',d.bad);
       else if(turn===2)tool('json-bad-read','read',{path:d.file});
       else if(turn===3)tool('json-bad-inspect','cbim_task_inspect',{});
       else if(turn===4){state.badProgress=mainToolValue(body,'json-bad-inspect');assert.ok(Number.isInteger(state.badProgress.plan?.version));tool('json-bad-capture','cbim_task_artifact_capture',{expectedTaskProgressVersion:state.badProgress.plan.version,sourceToolCallIds:['json-bad-read']})}
       else if(turn===5){state.badCapture=mainToolValue(body,'json-bad-capture');assert.equal(state.badCapture.state,'captured');tool('json-bad-validation','cbim_validation_run',{moduleId,requirementId:d.requirementId,baselineId:state.badCapture.baseline.baselineId,expectedTaskProgressVersion:state.badProgress.plan.version})}
       else if(turn===6){state.rejected=mainToolValue(body,'json-bad-validation');assert.equal(state.rejected.state,'checked');assert.equal(state.rejected.validation.outcome,'rejected');assert.ok(state.rejected.validation.issues.length>0);tool('json-bad-step','cbim_task_step',{expectedVersion:state.badProgress.plan.version,id:'verify',state:'reported_done',evidenceIds:['json-bad-read','json-bad-validation']})}
       else if(turn===7){state.badStep=mainToolValue(body,'json-bad-step');assert.equal(state.badStep.steps?.[0].state,'reported_done');tool('json-bad-delivery','cbim_delivery_prepare',{expectedVersion:state.badStep.version,summary:'真实结构验证已执行，但结果rejected，不能当通过',limitations:[]})}
-      else if(turn===8){state.deniedDelivery=mainToolValue(body,'json-bad-delivery');assert.match(String(state.deniedDelivery.error),/WORKFLOW_VALIDATION_REQUIRED/);emit({role:'assistant',content:'产物结构不合格，交付已被拒绝；准备修复并重新读取采集验证。'});await repair.promise;tool('json-good-write','write',{path:d.file,content:d.good})}
+      else if(turn===8){state.deniedDelivery=mainToolValue(body,'json-bad-delivery');assert.match(String(state.deniedDelivery.error),/WORKFLOW_VALIDATION_REQUIRED/);emit({role:'assistant',content:'产物结构不合格，交付已被拒绝；准备修复并重新读取采集验证。'});await repair.promise;write(tool,'json-good-write',d.good)}
       else if(turn===9)tool('json-good-read','read',{path:d.file});
       else if(turn===10)tool('json-fresh-inspect','cbim_task_inspect',{});
       else if(turn===11){state.freshProgress=mainToolValue(body,'json-fresh-inspect');assert.ok(state.freshProgress.plan.version>state.badStep.version);assert.ok(state.freshProgress.plan.steps.every((step:{evidence:string[]})=>step.evidence.length===0));assert.ok(state.freshProgress.evidence.every((item:{toolCallId:string})=>!item.toolCallId.startsWith('json-bad-')));tool('json-good-capture','cbim_task_artifact_capture',{expectedTaskProgressVersion:state.freshProgress.plan.version,sourceToolCallIds:['json-good-read']})}

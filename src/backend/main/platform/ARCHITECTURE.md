@@ -10,7 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [artifact-files.ts](artifact-files.ts) | 在固定工作区根内安全读取业务文件，供指纹采集、复核、无基线观察及冻结 JSON/CSV 验证共用。 |
+| [artifact-files.ts](artifact-files.ts) | 在固定工作区根内安全读取业务文件，供指纹采集、复核、无基线观察及冻结 JSON/CSV/PNG 验证共用。 |
 | [controlled-file-blobs.ts](controlled-file-blobs.ts) | 保存受控写入的私有 before/intended-after 字节，公开回执只引用 UUID 与哈希。 |
 | [controlled-file-child.ts](controlled-file-child.ts) | 独立 Electron utility 文件工人入口，只接收固定私有消息，不启动 Application 或模型。 |
 | [controlled-file-protocol.ts](controlled-file-protocol.ts) | Main 与专用文件 utility 子进程之间的严格私有消息及不透明会话端口。 |
@@ -20,6 +20,7 @@
 | [native-session-files.ts](native-session-files.ts) | 在本工作区受管 Pi 会话目录内核实已关闭的原生上下文，供成员检查点与续执行使用。 |
 | [output-manifest-files.ts](output-manifest-files.ts) | 在固定工作区内枚举声明范围的全部目录和普通文件，生成完整产物观察并按原集合复核。 |
 | [paths.ts](paths.ts) | 本机应用目录、工程身份和知识路径的实际解析。 |
+| [png-validator.ts](png-validator.ts) | 安全文件端口后的有界静态 PNG 解码器，核全部块及压缩数据并还原实际像素。 |
 | [secrets.ts](secrets.ts) | 用 Electron 系统加密能力保护 LLM 凭据。 |
 | [terminal.ts](terminal.ts) | 桌面扩展区的命令模式终端，按工作区/页签隔离手动命令与输出。 |
 | [tool-guard.ts](tool-guard.ts) | 对显式知识库访问和部分路径别名做前置拒绝；属于防误操作策略而非 OS 沙箱。 |
@@ -46,6 +47,7 @@ class N_src_backend_main_platform_artifact_files_ts_ArtifactFiles["ArtifactFiles
   +observeFiles()
   +validateFile()
   +validateTable()
+  +validateImage()
   +checkFiles()
   -root
   -assert
@@ -56,7 +58,7 @@ class N_src_backend_main_platform_artifact_files_ts_ArtifactFiles["ArtifactFiles
 N_src_backend_main_platform_artifact_files_ts ..> N_src_backend_main_platform_artifact_files_ts_ArtifactFiles : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/artifact-baseline.ts](../../core/tasks/artifact-baseline.ts)、[../../core/workspace/json-validation-schema.ts](../../core/workspace/json-validation-schema.ts)、[../../core/workspace/csv-validation-schema.ts](../../core/workspace/csv-validation-schema.ts)、[../../core/tasks/effect-observation.ts](../../core/tasks/effect-observation.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/artifact-baseline.ts](../../core/tasks/artifact-baseline.ts)、[../../core/workspace/json-validation-schema.ts](../../core/workspace/json-validation-schema.ts)、[../../core/workspace/csv-validation-schema.ts](../../core/workspace/csv-validation-schema.ts)、[../../core/workspace/png-validation-schema.ts](../../core/workspace/png-validation-schema.ts)、[png-validator.ts](png-validator.ts)、[../../core/tasks/effect-observation.ts](../../core/tasks/effect-observation.ts)。
 
 ### controlled-file-blobs.ts
 
@@ -387,6 +389,36 @@ N_src_backend_main_platform_paths_ts_external_StoragePaths <|.. N_src_backend_ma
 
 直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/paths.ts](../../core/foundation/paths.ts)。
 
+### png-validator.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_png_validator_ts["png-validator.ts"] {
+  <<module>>
+  +decodePngRaster()
+  +validatePngArtifact()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_png_validator_ts["png-validator.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_png_validator_ts_Issue["Issue"] {
+  <<type>>
+
+}
+N_src_backend_main_platform_png_validator_ts ..> N_src_backend_main_platform_png_validator_ts_Issue : 声明
+class N_src_backend_main_platform_png_validator_ts_PngRasterResult["PngRasterResult"] {
+  <<type>>
+
+}
+N_src_backend_main_platform_png_validator_ts ..> N_src_backend_main_platform_png_validator_ts_PngRasterResult : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/workspace/png-validation-schema.ts](../../core/workspace/png-validation-schema.ts)。
+
 ### secrets.ts
 
 ```mermaid
@@ -430,6 +462,12 @@ class N_src_backend_main_platform_tool_guard_ts["tool-guard.ts"] {
 
 ```mermaid
 classDiagram
+class N_src_backend_main_platform_artifact_files_ts["artifact-files.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_png_validator_ts["png-validator.ts"] {
+  <<module>>
+}
 class N_src_backend_main_platform_controlled_file_child_ts["controlled-file-child.ts"] {
   <<module>>
 }
@@ -442,20 +480,27 @@ class N_src_backend_main_platform_controlled_file_win32_ts["controlled-file-win3
 class N_src_backend_main_platform_controlled_file_transport_ts["controlled-file-transport.ts"] {
   <<module>>
 }
+N_src_backend_main_platform_artifact_files_ts ..> N_src_backend_main_platform_png_validator_ts : 导入依赖
 N_src_backend_main_platform_controlled_file_child_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts : 导入依赖
 N_src_backend_main_platform_controlled_file_child_ts ..> N_src_backend_main_platform_controlled_file_win32_ts : 导入依赖
 N_src_backend_main_platform_controlled_file_transport_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts : 导入依赖
-N_src_backend_main_platform_controlled_file_win32_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_main_platform_controlled_file_win32_ts["controlled-file-win32.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_controlled_file_protocol_ts["controlled-file-protocol.ts"] {
+  <<module>>
+}
 class N_src_backend_main_platform_output_manifest_files_ts["output-manifest-files.ts"] {
   <<module>>
 }
 class N_src_backend_main_platform_artifact_files_ts["artifact-files.ts"] {
   <<module>>
 }
+N_src_backend_main_platform_controlled_file_win32_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts : 导入依赖
 N_src_backend_main_platform_output_manifest_files_ts ..> N_src_backend_main_platform_artifact_files_ts : 导入依赖
 ```
 
@@ -480,7 +525,7 @@ N_src_backend_main_platform_output_manifest_files_ts ..> N_src_backend_main_plat
 
 AbortSignal、工作区退役与文件变化在异步读取期间持续核对，句柄在 finally 释放。读占用阻止本应用的业务写入竞争，文件系统外部竞争只能尽力发现；这不是操作系统沙箱、全工作区扫描或原子产物快照。
 
-### 同字节 JSON/CSV 验证
+### 同字节 JSON/CSV/PNG 验证
 
 `ArtifactFiles.validateFile` 复用安全打开与读取循环，但单文件上限收紧为 1 MiB。同一次句柄读取的字节同时产生 SHA-256 和受限解释器输入；先与明确基线的路径、长度和哈希一致，再严格解析 UTF-8/JSON 与冻结 Schema。无二次打开、命令、网络引用或脚本编译，返回指纹及有界判定，不返回原文或对象值。
 
@@ -516,4 +561,10 @@ Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，
 
 删除使用 `SetFileInformationByHandle(FileDispositionInfo)`，关闭原文件句柄后核缺失；移动使用 `FileRenameInfo` 且不设替换标志，同句柄核目标身份/字节及源缺失。发出请求即记录 writeIssued，取消/断桥/回包丢失不等于未操作。调用方仍须先可靠保存执行意图，并等进程退出后核完整集合；平台成功自身不签发业务验收或重试许可。官方结构依据：[SetFileInformationByHandle](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfileinformationbyhandle)、[FILE_RENAME_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_rename_info)、[FILE_STREAM_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_stream_info)。
 
-`ArtifactFiles.validateTable` 复用同一安全打开、句柄读取及路径前后核对，把同一次 ≤1 MiB 读取同时用于 SHA-256 和 CSV 解释器。原基线不匹配、链接/硬链接/越界、读取中变化、停止或工作区失效均拒绝；单元格值只在本次内存解析中存在，不进入验证诊断。JSON/CSV 方法各用自己的冻结参数，无回退解释。
+`ArtifactFiles.validateTable` 复用同一安全打开、句柄读取及路径前后核对，把同一次 ≤1 MiB 读取同时用于 SHA-256 和 CSV 解释器。原基线不匹配、链接/硬链接/越界、读取中变化、停止或工作区失效均拒绝；单元格值只在本次内存解析中存在，不进入验证诊断。JSON/CSV/PNG 方法各用自己的冻结参数，无回退解释。
+
+### 有界 PNG 像素解码
+
+ArtifactFiles.validateImage将同一安全句柄得到的≤1 MiB文件字节同时用于原基线指纹和png-validator。后者逐块核签名、长度、ASCII类型/保留位、CRC和顺序；仅支持IHDR、连续IDAT、末尾IEND及前置唯一sRGB/gAMA/pHYs，元数据长度、整数范围及sRGB/gAMA一致性也核验。其它块、APNG、调色板、灰度、16位或交错明确拒绝。
+
+完整IDAT合并后用Node inflateSync的maxOutputLength与info核准确解压长度及已消耗输入，拒绝截断、压缩尾随数据或膨胀超限；五种行过滤器按实际邻接像素还原，每行过滤值须有效。宽高各≤4096、总像素≤1048576、块数≤1024，像素仅留本次平台内存，验证回包只含原条件诊断。解码完成后再核停止与所有者；不承诺色彩转换、视觉正确或OS隔离。

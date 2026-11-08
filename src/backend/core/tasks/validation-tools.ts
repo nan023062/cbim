@@ -1,5 +1,5 @@
 /**
- * 作用定位：为已装配 JSON/CSV 验证要求的正式成员提供严格输入、唯一 wire 输出及真实能力说明。
+ * 作用定位：为已装配 JSON/CSV/PNG 验证要求的正式成员提供严格输入、唯一 wire 输出及真实能力说明。
  * 设计原因：模型只选择已有要求与产物身份；完整模式在调用前固定可信范围/内容摘要，坏回包不重试，也不把 rejected 修复成通过。
  */
 import {zodToJsonSchema} from 'zod-to-json-schema';
@@ -17,7 +17,7 @@ export class ValidationTools {
   private readonly knowledgeRevision:string;
   private readonly bindings:readonly ValidationWorkflowBinding[];
   constructor(private readonly binding:ValidationBinding,private readonly port:{knowledgeRevision:string;bindings:readonly ValidationWorkflowBinding[];manifestIdentity?(input:ValidationInput):OutputManifestIdentity|undefined;run(input:ValidationInput,toolCallId:string):Promise<ValidationResult>}){this.binding=Object.freeze(structuredClone(binding));this.knowledgeRevision=port.knowledgeRevision;this.bindings=structuredClone(port.bindings)}
-  async list(){return [{name:validationToolName,version:1,effects:['read'] as const,description:'按当前模块冻结的验证器检查 JSON 结构或 CSV 表格。CSV明确核对表头、字段类型/约束、行数和唯一键，不执行公式。完整交付模式必须明确 manifestId 并复核整个声明集合；旧模式明确 baselineId，两者互斥。模型不能传路径、Schema 或通过结论。rejected 表示实际校验不符合，工具成功不代表通过；只有当前字节匹配的 passed 可满足 Workflow 出口。',inputSchema:zodToJsonSchema(validationInputSchema),outputSchema:zodToJsonSchema(validationOutputSchema),cancellation:{mode:'preflight_only',description:'读取与保存前检查停止；保存之后取消不删除已有检查事实，不承诺回滚。'},recovery:{mode:'inspect_before_retry',queryTool:'cbim_task_inspect',description:'先核实本轮原验证记录和产物身份，不自动重做已保存检查。'}}]}
+  async list(){return [{name:validationToolName,version:1,effects:['read'] as const,description:'按当前模块冻结的验证器检查 JSON、CSV 或 PNG。CSV核表头、类型/约束、行数和唯一键，不执行公式；PNG逐块校验并实际有界解码，再核冻结尺寸/通道，不以扩展名或文件头代替。完整交付模式必须明确 manifestId 并复核整个声明集合；旧模式明确 baselineId，两者互斥。模型不能传路径、Schema 或通过结论。rejected 表示实际校验不符合，工具成功不代表通过；只有当前字节匹配的 passed 可满足 Workflow 出口。',inputSchema:zodToJsonSchema(validationInputSchema),outputSchema:zodToJsonSchema(validationOutputSchema),cancellation:{mode:'preflight_only',description:'读取与保存前检查停止；保存之后取消不删除已有检查事实，不承诺回滚。'},recovery:{mode:'inspect_before_retry',queryTool:'cbim_task_inspect',description:'先核实本轮原验证记录和产物身份，不自动重做已保存检查。'}}]}
   /** 返回坏正文仍保留原检查事件；唯一 wire 核实之前不 parse 端口结果或重编码。 */
   async call(name:string,input:unknown,toolCallId?:string){
     if(name!==validationToolName||!toolCallId||toolCallId.length>128||toolCallId.trim()!==toolCallId||/[\x00-\x1f]/.test(toolCallId))throw Error('验证必须由本轮真实调用发起');

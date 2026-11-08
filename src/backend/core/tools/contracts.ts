@@ -1,12 +1,12 @@
 /**
  * during_execution表示宿主可终止实际执行并等待收束；与仅前置取消或等待交互分别声明，不承诺回滚。
  * 作用定位：工具取消、恢复说明及按需契约发现的纯协议，不导入具体领域或执行服务。
- * 设计原因：真实能力必须可查询且有边界；Schema 与恢复说明只描述实现，不签发权限、不自动重试或承诺回滚。
+ * 设计原因：真实能力必须可查询且有边界；external-write 区分外部提交，Schema 与恢复说明不签发权限、不自动重试或承诺回滚。
  */
 import {z} from 'zod';
 
 const text=z.string().min(1),name=z.string().regex(/^cbim_[A-Za-z0-9_]+$/);
-export const toolEffectsSchema=z.array(z.enum(['read','preview','maintenance','business-write','knowledge-write','command'])).min(1).refine(values=>new Set(values).size===values.length);
+export const toolEffectsSchema=z.array(z.enum(['read','preview','maintenance','business-write','knowledge-write','external-write','command'])).min(1).refine(values=>new Set(values).size===values.length);
 /** preflight_only 不承诺中断已开始事务；during_wait 仅表示未完成的用户交互可以取消，已消费答案不回滚。 */
 export const toolCancellationSchema=z.object({mode:z.enum(['preflight_only','during_wait','during_execution']),description:text}).strict();
 /** 恢复类别是操作说明而非调度策略；同 ID 重试仍必须符合原领域版本、身份与幂等规则。 */

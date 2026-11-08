@@ -1,3 +1,13 @@
+### 产品反馈与需求许愿
+
+主 Agent 将两项菜单请求分别路由到 `cbim_skill_bug_feedback` 与 `cbim_skill_feature_wish`：先读流程，再按格式收集上下文。信息齐备后调用已装配的 `cbim_feedback_submit`，不增草稿确认；submitted 后结束，不追加成功消息、链接、编号或进度。缺连接、只读拒绝或明确错误时简短说明；未知只核实原提交，不能重发。GitHub 连接须由桌面设置明确建立，不把 BUG 报告解释成修复授权，不把愿望解释成已采纳开发任务。
+
+```mermaid
+classDiagram
+class mainAgentInstructions { <<module>> }
+note for mainAgentInstructions "BUG 反馈先读 cbim_skill_bug_feedback；需求许愿先读 cbim_skill_feature_wish。工具名是注册别名，不是本模块方法。普通反馈不建立业务目标或派工。"
+```
+
 ### 先创建待办再追加前置
 
 主提示区分未领取任务的追加与可靠失败/求助或已放弃检查点来源的替换。可以先创建 B/C，再创建 A，通过真实 `cbim_dispatch_add_dependency` 明确加 A→B；两端和各自全部启用后继都须未领取，且符合当前目标、知识和 Workflow。不能删除其他边或改变原任务/成员/权限，不用规划文字冒称已经建边。成功后结束主轮，等待真实 A 结果和原预算准入；未知时核对原审计，不换调用重加。该维护回执不替代业务证据或人工验收。

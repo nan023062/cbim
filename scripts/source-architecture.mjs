@@ -6,7 +6,8 @@ import ts from 'typescript';
 
 const scope={
  'src':'应用按前端视图层 frontend 与本机后端逻辑层 backend 分组，bridge 是连接两层的通信边界，不是第三个业务层。目录聚合中的 backend 与 bridge 双向箭头分别来自 main 消费契约、契约重导出 Core 公开类型，不代表文件循环。',
- 'src/backend':'本机后端逻辑层：main 装配平台与服务，scheduler-engine 协调执行，core 提供领域与大脑能力。调度单向依赖 Core；后端不导入前端界面。',
+ 'src/backend':'本机后端逻辑层：main 装配平台与服务，scheduler-engine 协调执行，core 提供领域与大脑能力。updater 是独立更新子系统，不依赖运行时、调度或反馈服务；主程序只调用它。后端不导入前端界面。',
+ 'src/backend/updater':'独立桌面更新子系统：公开 Release 读取、稳定版本筛选、手动更新状态机和 NSIS 安装适配均在此目录。只依赖公开更新契约及系统/第三方库，不导入 main、scheduler-engine 或 core/runtime；通过关闭回调等待主程序排空。安装包缓存独立于运行数据。',
  'src/bridge':'前后端通信边界：contracts 声明公开数据，preload 提供 Electron 安全桥。契约可重导出 Core 公开类型和纯函数，不暴露后端服务、凭据和存储实现。',
  'src/backend/core':'核心领域与通用执行契约。大脑、团队、业务模块、知识和工具各自维护语义；不导入 main、调度、IPC 或界面。brain/tasks、knowledge/team/workspace 的目录双向箭头来自不同契约文件，不代表文件级循环。',
  'src/backend/core/foundation':'少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。',
@@ -14,7 +15,7 @@ const scope={
  'src/backend/core/brain':'引擎无关的执行循环、事件与计量；运行内补充只由可信入口写绑定scope/run/queue的接收日志，返回真实序号；queued后日志失败保持未知。插入绑定原run和停止信号，原生确认与未知分别记录，结算先排空插入日志。正式成员按冻结Workflow验证JSON指定字节，验证与交付复核各持短锁，前后核版本/知识/停止；checked暂存不等于passed有效证明。求助/检查点保存后结束本轮，文件采集随真实工具结束释放短锁；续执行不借旧证据。',
  'src/backend/core/brain/llm':'公开模型参数、能力元数据及运行快照端口。实际配置文件和加密凭据由 main/persistence/settings 持有。',
  'src/backend/core/brain/pi':'Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取消，发送后只凭queued回复确认，不自动重试。工具经一次性gate授权并校验结果；结构验证仅在正式成员有冻结要求及真实端口时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为custom数据，不冒充用户授权。',
- 'src/backend/core/connectors':'链接器定义、查询与唯一身份检查；当前不执行外部插件。',
+ 'src/backend/core/connectors':'链接器定义、查询与唯一身份检查；另定义 GitHub 反馈字段、公开登录状态与可信端口，纯协议不发网络请求或授予权限。',
  'src/backend/core/knowledge':'知识快照、校验、领域查询、对象变更和可移植静态包规划。私有v2计划冻结有序操作与整包替换范围，公共变更不能提供来源证明；物理事务与缓存经端口注入。团队能力可独立复用，业务模板必须完整，不携带动态成员或任务。',
  'src/backend/core/policy':'内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；不声称操作系统隔离。',
  'src/backend/core/tasks':"任务计划、派发图、目标与等待。资料清单保留旧文件v1，新增严格v2来源并核同序与字节；快照不等于当前来源或业务验收。依赖追加核实两端及后继未领取、当前计划与真实图，完整审计验证后才放行精确新边；保留原任务/实例，领取时绑定真实结果。运行内补充以pending/accepted/rejected/unknown分开，接受与waiting共享连续输入版本，未知阻止完成。流程选择共用叶子契约，缺省与显式分开匹配，已派发选择不可改写；严格输出区分保存与交付，历史不补造授权或证据。",
@@ -51,7 +52,7 @@ const scope={
  'src/frontend/knowledge':'知识问题、预览提交、静态表单与共用来源说明。展示当前、退役、待采纳及待核实状态，不从路径或正文相同猜来源连续；来源组件无提交副作用。固定编辑基线，模块维护人同事务确认，业务架构展示位于workspace。',
  'src/frontend/governance':'静态业务模块的知识治理面板。展示真实来源、精确差异、补证/异议与回应评价。审阅绑定来源版本，未评价不补造理解，人工决定与实施分开；原命令先保存再发送，未知只查询。',
  'src/frontend/resources':'统一资源仓库的查看、编辑、静态包发布与下载应用。人才按团队/Agent/Skill复用，业务按整套架构应用；工作区身份及预览版本固定。设置通过统一入口打开。',
- 'src/frontend/settings':'模型、仓库、并发及新目标软限额配置。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。凭据只提交主进程，账户仍为占位。',
+ 'src/frontend/settings':'模型、资源仓库、GitHub 反馈连接、并发及新目标软限额配置。GitHub 采用 Device Flow，页面仅持公开 Client ID 与短期授权码；资源服务器账号仍为占位。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。',
  'src/frontend/shell':'工作区侧栏、会话选择、用户栏与右侧扩展页签；会话区与项目级视图区分开。向会话传递活动页签状态，隐藏页签保留草稿/节点选择并降低成员与任务图同步频率。',
  'src/frontend/tasks':"主会话任务图、目标与准入状态；依赖追加/替换只读历史核对身份和节点修订，摘要按实际版本选择最新，图沿真实启用边排列，不补造结果。运行内补充按真实接收记录显示，未知优先旧审阅，同版摘要/详情核对后增量呈现。根停止使用独立在途标记，插入等待不锁住停止按钮。等待补充共享多来源草稿与导入锁，原等待选择代次阻止迟到导入；明确目录/链接/网页/授权仓库来源，普通聊天草稿独立。流程、验证、检查点、基线、人工决定与用量保留各自冻结身份和证据，不把历史当当前验收。",
  'src/frontend/team':'工作区唯一的静态Team/组/Agent图、继承与人才复用，节点按Session查看只读履历。岗位面板独立登记、明确采纳和暂停退休；改名和模型更新保留原能力来源。来源屏障首次拒绝可重新编辑，未知仍查原命令；反查责任委托workspace，不启动模型。',
@@ -61,6 +62,13 @@ scope["src/backend/main/platform"]+=" 范围模式用Win32读取/枚举句柄与
 scope["src/backend/core/workspace"]+=" executionScope只收窄原权限，全模块一致冻结，预算合并取小。";
 scope["src/backend/core/brain/pi"]+=" 范围模式只注册cbim工具，转发受限读取与隔离Node的原调用身份。";
 scope["src/backend/core/brain"]+=" 冻结范围工具由Runtime一次授权，原生文件/命令禁用，结算等实际资源退出。";
+scope['src/frontend/conversation']+=' 加号菜单分别请求 BUG 反馈和需求许愿 Skill，按原会话发送或排队，保留已有草稿及附件。';
+scope['src/backend/main']+=' 正式安装版调用独立updater，主Frame固定IPC与正常排空后显式安装；启动前恢复更新重启的用户目录，开发和便携包不自动联网。';
+scope['src/bridge/contracts']+=' 桌面更新只公开版本、日志、阶段和进度，不传安装路径或任意命令。';
+scope['src/frontend/settings']+=' 正式版展示当前及新版日志，分别点击检查、下载与重启安装；反馈预置公开产品连接。';
+scope['src/frontend/shell']+=' 软件内新版提醒只打开设置，沿用编辑离页检查，不隐式下载或重启。';
+scope['src/backend/core/knowledge']+=' 产品反馈 Skill 只读发布两套上下文格式，不包含 GitHub 创建接口。';
+scope['src/backend/scheduler-engine/conversation']+=' 两项反馈入口先读取对应内置 Skill 再引导填写；收集反馈不启动业务派工。';
 // 负责人进入实际执行后，各层增加的职责仍分别归属原边界；不把登记回执描述成运行许可。
 const ownerExecutionScopes={
  'src/backend/core/brain':'成员的公开任务和原生运行共用冻结岗位绑定，历史缺省可读但不授权应用新领取。',
@@ -150,6 +158,17 @@ const controlledFileScopes={
  'src/frontend/conversation':'当前工作区实例传入成员详情用于补偿预览时效，主聊天草稿不受补偿控制器影响，挂载不触发文件读取或写入。',
 };
 for(const [directory,description] of Object.entries(controlledFileScopes))scope[directory]+=' '+description;
+const githubFeedbackScopes={
+ 'src/backend/core/brain':'外部写也进入未知影响屏障和验证副作用时序；不能借 GitHub 提交绕过运行内写入限制或沿用旧验证。',
+ 'src/backend/main/resources':'GitHub 反馈采用独立直连服务，设备授权和原提交账本由本机管理；固定目标、跨会话去重、未知只核实，成功不回传 Issue 链接或开发进度。',
+ 'src/backend/core/policy':'GitHub external-write 仅在本机明确自动提交许可与精确本轮目标相等时免逐条 ask；read 仍拒绝，未知外部写无通行权。',
+ 'src/backend/core/tools':'GitHub 反馈使用独立 scope 和 external-write 效果；不把外部提交回执当作业务文件或知识成果。',
+ 'src/backend/core/tasks':'保守产物时序包含外部写，GitHub 回执不能充当文件基线来源。',
+ 'src/backend/scheduler-engine/tools':'FeedbackTools 只在桌面主会话实际连接后注册；严格解析反馈字段，未知只核实原提交，不能让模型改投目标或提供凭据。',
+ 'src/backend/scheduler-engine/execution':'桌面捕获固定 GitHub 端口和授权交统一策略；成员不继承，公开投影无正文或凭据。',
+ 'src/frontend/conversation':'可信 GitHub submitted 工具回执之后隐藏追加结果文字；失败、未知及后续普通用户输入仍正常显示。',
+};
+for(const [directory,description] of Object.entries(githubFeedbackScopes))scope[directory]+=' '+description;
 const norm=p=>p.replaceAll('\\','/');
 const walk=p=>fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(p+'/'+e.name):[p+'/'+e.name]);
 const files=walk('src').filter(f=>/\.(tsx?|jsx?|mjs|cjs|css)$/.test(f));

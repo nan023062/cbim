@@ -2,6 +2,7 @@
  * 作用定位：正式成员的 JSON/CSV/PNG 验证短门闩，连接冻结要求、原文件或完整集合身份及平台同字节读取。
  * 设计原因：模型不能指定路径、规则或结论；完整模式保留原操作证明，在专业检查两侧重核全集合，共用15秒期限；知识、进度与代次须稳定，暂存须有真实成功回执。
  * 职责边界：rejected只表示实际检查不符合；交付另重核同一完整集合，旧模式复核选定文件，不执行命令或授予恢复权限。
+ * 写入时序包含 external-write，验证不能跨过新的外部副作用继续沿用旧边界。
  */
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
@@ -74,7 +75,7 @@ export class RunValidation {
   stop(){this.controller.abort(Error('运行已停止，JSON/CSV/PNG 产物验证取消'))}
   /** 返回当前计划/副作用代次的可信记录；步骤版本增加不使同一代次的验证失效。 */
   records():ValidationRecord[]{return verifyValidationRecords(this.events,this.binding,this.artifacts.knowledgeRevision,this.bindings,this.artifacts.normalizePath).filter(record=>this.generations.get(record.result.toolCallId)===this.context.generation())}
-  private lastEffectSeq(){return this.events.filter(event=>event.type==='tool.allowed'&&Array.isArray(event.data.effects)&&event.data.effects.some(effect=>['business-write','knowledge-write','command'].includes(String(effect)))).at(-1)?.seq??0}
+  private lastEffectSeq(){return this.events.filter(event=>event.type==='tool.allowed'&&Array.isArray(event.data.effects)&&event.data.effects.some(effect=>['business-write','knowledge-write','external-write','command'].includes(String(effect)))).at(-1)?.seq??0}
   private selected(input:ValidationInput){
     const selected=validationRequirement(this.bindings,input.moduleId,input.requirementId);
     if(completeOutputRequired(this.bindings)){

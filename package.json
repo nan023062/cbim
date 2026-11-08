@@ -19,6 +19,7 @@
     "test": "vitest run",
     "package": "electron-forge package",
     "make": "electron-forge make",
+    "make:desktop": "node scripts/make-desktop.mjs",
     "test:desktop": "node scripts/workspace-ui-smoke.mjs",
     "test:portable": "node scripts/portable-smoke.mjs",
     "test:loop": "node scripts/loop-smoke.mjs",
@@ -31,6 +32,7 @@
   "dependencies": {
     "@earendil-works/pi-coding-agent": "1.5.0",
     "ajv": "^8.17.1",
+    "electron-updater": "6.8.11",
     "ignore": "^7.0.5",
     "jsonc-parser": "^3.3.1",
     "koffi": "^2.14.1",
@@ -52,6 +54,7 @@
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^40.0.0",
+    "electron-builder": "26.18.0",
     "playwright-core": "^1.58.0",
     "tsx": "^4.23.15",
     "typescript": "^5.7.0",

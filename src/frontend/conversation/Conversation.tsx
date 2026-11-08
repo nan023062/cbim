@@ -6,6 +6,7 @@
  * 异常边界：unknown 不凭勾选调用标识续接旧 native；显式影响核实和新周期共用真实主会话上下文。
  * 插入边界：两处操作在点击时冻结主 runId；先入队成功再清草稿，插入失败只刷新真实队列，不跨轮重发或误删消息。
  * 资料边界：切到其他会话时本组件可能只被隐藏；必须把 active 传给补充控制器，撤销未完成的资料导入并隔离迟到回包。
+ * Skill 入口：加号菜单发送独立的格式引导请求，沿用当前模型、权限和排队规则；不发送或清空已有草稿与附件。
  */
 import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
@@ -31,7 +32,7 @@ import {Icon} from '../components/Icon';
 import './conversation.css';
 import {ComposerCard,COMPOSER_CONTENT_CLASS} from './ComposerCard';
 import {SendButton} from './SendButton';
-import {AttachmentMenu} from './AttachmentMenu';
+import {AttachmentMenu,type FeedbackSkillTitle} from './AttachmentMenu';
 import {ComposerPicker} from './ComposerPicker';
 import {ComposerAttachments} from './ComposerAttachments';
 import type {ChatAttachment,ChatApproval,ChatPermission} from '../../bridge/contracts/chat';
@@ -130,16 +131,18 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
     renderStop(value=>value+1);setError('');
     try{await api.call('loop.stop',{id:token.id,taskId:token.taskId})}catch(e:any){if(current())setError(e.message)}finally{stopGate.current.finish(token);if(alive.current)renderStop(value=>value+1);if(current()){invalidateQueue();void refreshQueue();graph.refresh()}}
   }
-  async function send(insert=false){const message=(tab.draft||'').trim()||(attachments.length?'请查看附加的资料。':'');if(!message)return;
+  /** Skill 点击只发送明确的流程调用；正文和附件仍留在草稿中，由用户随后按格式发送。 */
+  async function send(insert=false,skill?:FeedbackSkillTitle){const message=skill?`请调用「${skill}」Skill，先提供对应的填写格式，引导我补充上下文。`:(tab.draft||'').trim()||(attachments.length?'请查看附加的资料。':'');if(!message)return;
+    const sentAttachments=skill?[]:attachments;
     if(tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId}))return;
     const insertion=insert?captureQueueInsertTarget(workspace.id,tab.taskId,currentRun,canInsert):undefined;
     if(insert&&!insertion)return;
     await operate(async()=>{const [profileId,model]=selection?JSON.parse(selection):[];const options={...(profileId?{profileId,model}:{}),permission};
       if(tab.taskId&&!shouldQueue&&!resumeRunId)throw Error('当前执行记录不可安全续接，请先核实任务记录。');
       // 即使离开页面，旧回调也只更新原工作区页签；历史可找回已启动任务。
-      const accepted=(result:{taskId:string})=>{onBind(result.taskId);onDraft('');onAttachments([])};
+      const accepted=(result:{taskId:string})=>{onBind(result.taskId);if(!skill){onDraft('');onAttachments([])}};
       const queued=!!tab.taskId&&shouldQueue;
-      const result=queued?await enqueueConversationMessage({enqueue:()=>api.call('loop.enqueue',{id:workspace.id,taskId:tab.taskId,message,attachments:attachments.map(a=>a.id),options}),accepted,insert:request=>api.call('loop.queueInsert',request)},insertion):tab.taskId?await api.call('loop.resume',{id:workspace.id,taskId:tab.taskId,runId:resumeRunId,message,attachments:attachments.map(a=>a.id),options}):await api.call('loop.chat',{id:workspace.id,message,attachments:attachments.map(a=>a.id),options});
+      const result=queued?await enqueueConversationMessage({enqueue:()=>api.call('loop.enqueue',{id:workspace.id,taskId:tab.taskId,message,attachments:sentAttachments.map(a=>a.id),options}),accepted,insert:request=>api.call('loop.queueInsert',request)},insertion):tab.taskId?await api.call('loop.resume',{id:workspace.id,taskId:tab.taskId,runId:resumeRunId,message,attachments:sentAttachments.map(a=>a.id),options}):await api.call('loop.chat',{id:workspace.id,message,attachments:sentAttachments.map(a=>a.id),options});
       if(!queued)accepted(result);
       if(alive.current){const view:ConversationThreadView=await api.call('loop.threadView',{id:workspace.id,taskId:result.taskId});if(alive.current){setRuns(view.runs);setThreadIssues(view.issues);setResumeRunId(view.resumeRunId);setLoaded(true);follow.current=true}}
     });
@@ -160,7 +163,8 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
   const humanDecisions=useHumanDecisions(workspace.id,tab.taskId,graph,graph.refresh);
   // 初次周期读取尚未完成时不能凭运行日志猜测 resume；等待信息就绪后再决定发送或排队。
   const resumeRun=currentRun;
-  const canSend=loaded&&!pollError&&!graph.loading&&!busy&&!stopping&&!attachmentBusy&&modelAvailable&&(!!tab.draft?.trim()||attachments.length>0)&&(tab.taskId?taskOpen||!!resumeRun?.sessionFile&&resumeRun.unresolvedTools.length===0:true);
+  const canSendRequest=active&&loaded&&!pollError&&!graph.loading&&!busy&&!stopping&&!attachmentBusy&&modelAvailable&&(tab.taskId?taskOpen||!!resumeRun?.sessionFile&&resumeRun.unresolvedTools.length===0:true);
+  const canSend=canSendRequest&&(!!tab.draft?.trim()||attachments.length>0);
   // 标题只展示用户首行目标，避免把附加参考资料和内部标记放进导航。
   const taskHistory=[...new Map(history.filter(h=>h.task).map(h=>[h.task!.taskId,h])).values()];
   const queueOperation=async(action:string,args:Record<string,unknown>)=>{const stopPending=!!tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId});const insertion=action==='loop.queueInsert'?captureQueueInsertTarget(workspace.id,tab.taskId,currentRun,canInsert&&!stopPending):undefined;if(action==='loop.queueInsert'&&!insertion)return false;let saved=false;await operate(async()=>{if(insertion)await insertQueuedMessage(insertion,args.queueId as string,request=>api.call('loop.queueInsert',request));else await api.call(action,{id:workspace.id,taskId:tab.taskId,...args});saved=true});return saved};
@@ -212,7 +216,7 @@ export function Conversation({tab,workspace,onDraft,openView,onBind,openSettings
         {attachmentBusy&&<div className="composer-upload-state" role="status"><span className="work-spinner"/>正在准备附件…</div>}
         <ComposerAttachments items={attachments} workspaceId={workspace.id} disabled={busy||attachmentBusy} onRemove={id=>onAttachments(attachments.filter(a=>a.id!==id))}/>
         <textarea ref={input} aria-label="对话草稿" disabled={busy} value={tab.draft||''} onChange={e=>onDraft(e.target.value)} placeholder="继续聊一聊…" title="Enter 发送或排队，Shift+Enter 换行；Ctrl+Enter 插入正在运行的主 Agent，沿用当前模型与权限" onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){if(canSend){e.preventDefault();void send(canInsert&&(e.ctrlKey||e.metaKey))}else if(canInsert&&!busy&&(e.ctrlKey||e.metaKey)&&queued[0]){e.preventDefault();void queueOperation('loop.queueInsert',{queueId:queued[0].id})}}}}/>
-        <div className="chat-controls"><div className="chat-controls-left"><AttachmentMenu workspaceId={workspace.id} disabled={busy||attachmentBusy||attachments.length>=12} onBusy={setAttachmentBusy} onAdd={addAttachments}/><ComposerPicker label="执行权限" value={permission} onChange={v=>{setPermission(v as ChatPermission);if(taskOpen)setNextTip(Date.now())}} disabled={busy} warning={permission==='execute'} options={[
+        <div className="chat-controls"><div className="chat-controls-left"><AttachmentMenu workspaceId={workspace.id} disabled={busy||attachmentBusy} attachmentsFull={attachments.length>=12} skillsDisabled={!canSendRequest} onBusy={setAttachmentBusy} onAdd={addAttachments} onSkill={skill=>{if(canSendRequest)void send(false,skill)}}/><ComposerPicker label="执行权限" value={permission} onChange={v=>{setPermission(v as ChatPermission);if(taskOpen)setNextTip(Date.now())}} disabled={busy} warning={permission==='execute'} options={[
           {value:'read',label:'只读访问',icon:'knowledge',description:'只查看、分析和预览，不修改业务文件或正式知识，不执行命令'},
           {value:'ask',label:'默认权限',icon:'hand',description:'修改业务文件、提交知识和运行命令前逐次确认'},
           {value:'execute',label:'完全访问',icon:'warning',description:'自动执行业务文件、知识提交和命令操作；仍检查工作区边界及知识版本'},

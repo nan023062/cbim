@@ -1,3 +1,7 @@
+### GitHub 外部写与可信范围
+
+`external-write` 区分已连接 GitHub 目标的 Issue 写入，不是 business-write 或 knowledge-write。`githubFeedbackScopeSchema` 严格保存工作区、连接代际、不可变仓库 ID 和 owner/repo，不含 URL、正文或令牌。统一工具效果与回执 Schema 兼容旧日志，并保留新效果；外部回执不能充当业务文件或知识提交证明。
+
 ### 结构化提问的纯契约
 
 `questions.ts` 统一 `questionToolName`、严格嵌套问题输入、桌面答案输入与排他的 answers/cancelled 输出。模型不能夹带身份、批准或范围字段；桌面只提交原选项索引或其它文字。`questionResultForInput` 独立保存已解析原题，核对回答数量、顺序、原题文字及补充的选项关系，不裁剪、填默认值或修剪输出 wire。

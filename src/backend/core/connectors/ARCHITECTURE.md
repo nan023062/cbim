@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-链接器定义、查询与唯一身份检查；当前不执行外部插件。
+链接器定义、查询与唯一身份检查；另定义 GitHub 反馈字段、公开登录状态与可信端口，纯协议不发网络请求或授予权限。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -11,6 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [definition.ts](definition.ts) | 链接器静态定义的纯协议，供知识校验、桌面连接管理与注册查询共用。 |
+| [github-feedback.ts](github-feedback.ts) | CBIM 反馈 Skill、可信 GitHub 端口和桌面登录共用的纯协议。 |
 | [registry.ts](registry.ts) | 链接器领域封装，管理插件或资源仓库的静态身份、查询与重复校验。 |
 | [repository-connection.ts](repository-connection.ts) | 桌面资源仓库链接器的输入、静态登记、独立只读授权与 HTTP 核验回执协议。 |
 | [repository-tools.ts](repository-tools.ts) | 主 Loop 资源仓库只读工具的严格分页、正文分块协议和可信捕获端口。 |
@@ -49,6 +50,67 @@ class N_src_backend_core_connectors_definition_ts_ConnectorDefinition["Connector
 N_src_backend_core_connectors_definition_ts ..> N_src_backend_core_connectors_definition_ts_ConnectorDefinition : 声明
 ```
 
+
+### github-feedback.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_connectors_github_feedback_ts["github-feedback.ts"] {
+  <<module>>
+  +feedbackIssue()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_connectors_github_feedback_ts["github-feedback.ts"] {
+  <<module>>
+}
+class N_src_backend_core_connectors_github_feedback_ts_FeedbackInput["FeedbackInput"] {
+  <<type>>
+
+}
+N_src_backend_core_connectors_github_feedback_ts ..> N_src_backend_core_connectors_github_feedback_ts_FeedbackInput : 声明
+class N_src_backend_core_connectors_github_feedback_ts_FeedbackScope["FeedbackScope"] {
+  <<type>>
+
+}
+N_src_backend_core_connectors_github_feedback_ts ..> N_src_backend_core_connectors_github_feedback_ts_FeedbackScope : 声明
+class N_src_backend_core_connectors_github_feedback_ts_FeedbackResult["FeedbackResult"] {
+  <<type>>
+
+}
+N_src_backend_core_connectors_github_feedback_ts ..> N_src_backend_core_connectors_github_feedback_ts_FeedbackResult : 声明
+class N_src_backend_core_connectors_github_feedback_ts_FeedbackToolsPort["FeedbackToolsPort"] {
+  <<interface>>
+  +scope
+  +submit()
+  +receipt()
+}
+N_src_backend_core_connectors_github_feedback_ts ..> N_src_backend_core_connectors_github_feedback_ts_FeedbackToolsPort : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_connectors_github_feedback_ts["github-feedback.ts"] {
+  <<module>>
+}
+class N_src_backend_core_connectors_github_feedback_ts_GitHubFeedbackConfig["GitHubFeedbackConfig"] {
+  <<type>>
+
+}
+N_src_backend_core_connectors_github_feedback_ts ..> N_src_backend_core_connectors_github_feedback_ts_GitHubFeedbackConfig : 声明
+class N_src_backend_core_connectors_github_feedback_ts_GitHubFeedbackStatus["GitHubFeedbackStatus"] {
+  <<interface>>
+  +secureStorage
+  +config
+  +connected
+  +flow
+}
+N_src_backend_core_connectors_github_feedback_ts ..> N_src_backend_core_connectors_github_feedback_ts_GitHubFeedbackStatus : 声明
+```
+
+直接依赖：[../tools/scope-schema.ts](../tools/scope-schema.ts)。
 
 ### registry.ts
 
@@ -276,6 +338,10 @@ N_src_backend_core_connectors_repository_tools_ts ..> N_src_backend_core_connect
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### GitHub 反馈纯协议
+
+`github-feedback.ts` 定义 BUG／需求的严格字段、最小 submitted 回执、已绑定目标端口及公开设置类型。`feedbackIssue` 只排版本次用户字段，保留标记不接受模型指定；不从本层发 HTTP、读凭据或授予权限。实际外部写由主进程实现，GitHub 工具不混入静态链接器注册或知识目录。
 
 ### 静态定义与提供方身份
 

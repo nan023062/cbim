@@ -1,3 +1,11 @@
+### 桌面软件更新
+
+`desktop.updates.status/check/download/install` 仅在 Electron 主 Frame 可信边界下处理，不接受 URL、路径、版本或命令参数，也不进入模型工具表。status 只读，check 联网只读，download 由用户点击，install 必须处于校验完成状态并先正常排空应用；安装期间拒绝其它业务入口。正式包标记、平台、实际版本及 NSIS 卸载程序共同决定启用，开发或便携包不启用安装更新。
+
+### GitHub 反馈登录协议
+
+`github.feedback.status/begin/poll/cancel/disconnect` 仅管理本机明确授权；`begin` 必须带公开配置和 autoSubmit:true。设备授权、凭据和目标核验由服务负责；`openLogin` 在 Electron 主 Frame 边界后只打开固定官方设备页。IPC 没有提交 Issue 或覆盖原回执的入口；实际创建须经主会话注册工具与运行权限。公开结果无 token、device_code、Issue 链接或提交正文。
+
 ### 工作区岗位登记
 
 `workspace.members.list/get/preview/commit/receipt` 仅为桌面提供岗位摘要、实时差异、预览、明确提交与原命令查询。前四项绑定当前 workspaceId/instanceId；receipt 只带 workspaceId/commandId，允许读旧实例回执。提交的 actor 由可信主 Frame 路由固定为 local_desktop/explicit_submit，请求不能自报模型快照、能力正文或签署者。

@@ -1,5 +1,19 @@
 # 资源仓库与工作区架构传输
 
+桌面更新独立位于 [updater](../../updater/ARCHITECTURE.md)，不复用本目录的反馈 HTTP、授权或运行时资源服务。
+
+反馈默认预置公开 Client ID `Ov23liSMDZneBd3gSyTo` 与 `nan023062/cbim`；没有内置用户令牌，用户仍须亲自完成 Device Flow。已有保存配置优先于默认值。
+
+## GitHub 反馈直连
+
+`GitHubFeedbackAuth` 使用公开 OAuth Client ID 和 Device Flow，固定连接 github.com / api.github.com；桌面按钮明确授予选定仓库的自动反馈提交。公开仓库请求 public_repo，私有仓库只有明确选择后才请求 repo；不内置公用 token。用户与不可变 repositoryId 经真实 GET 核验，令牌只经 `SecretCipher` 加密保存。设备码与 token 不进入模型／IPC，授权状态只返回短期 userCode。interval、slow_down、过期及 flowId 代际由后端检查；内核锁和队列防止其它窗口将旧登录换投新目标。取消、断开和关闭不自动创建 Issue。
+
+`GitHubFeedback` 向桌面主会话捕获固定目标端口，每次提交复验账号、仓库、工作区存活和当前连接。模型只填严格 BUG／需求字段；正文由纯函数排版，不遍历会话、工程或附件。先可靠保存 sending 意图再 POST；同工作区相同账号／仓库／规范化正文跨会话复用原 submitted，不因新调用 ID 重发。账本保留原 rootSessionId、内容指纹和 Issue 编号，不存正文或凭据；最多 1000 条，不静默丢弃旧记录。
+
+明确 HTTP 4xx 拒绝记 rejected；传输中断、5xx、坏 201 或回执落盘失败保持 sending。整个工作区的新提交受未知屏障约束，不同正文返回 GITHUB_PENDING_OTHER，不能用其它原回执宣称本条成功。只读核实最多读取原作者最近 500 条 Issue，严格比较原账号、不可变仓库、标记、标题／正文哈希及官方 URL；未找到、已改写或越界仍保持未知，不提供自动重发／清除。硬中断后可用新主会话核实原未知，不复活旧运行。
+
+`github-api.ts` 固定 HTTPS 主机、拒绝重定向，单请求 20 秒、回包 2 MiB，无自动重试。成功工具只返回 submitted 和私有操作 UUID，不返回 Issue 链接或开发进度。连接授权失效需重新连接；不实现后台轮询、反馈历史页、附件上传、开发结果回访或 token 自动刷新。
+
 链接器、人才市场和业务模板共用 `ResourceRepositories` 的当前仓库。未登录使用本机目录；已连接服务器仓库沿用现有账号会话抽象。界面尚未实现的账户服务不会被本模块冒充为云上传。仓库快照绑定 `repositoryId` 与 `revision`，资源整体 JSON 最多 8 MiB、单项正文最多 2 MiB。
 
 `WorkspacePackages` 只处理静态架构定义。`publish` 从工作区校验快照构建完整包，在用户明确发布操作后保存到当前仓库；源工作区、仓库身份或版本改变则拒绝。相同类型、名称、摘要和完整正文已存在时返回原资源，避免丢失回执后重复发布；不会按名称覆盖其他定义。

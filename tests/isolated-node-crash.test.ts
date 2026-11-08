@@ -12,7 +12,8 @@ test('真实宿主被强制终止后Job仍收束整个进程树；孤儿只保�
   const owner=JSON.parse(await fs.readFile(path.join(record.root,'owner.json'),'utf8'));expect(owner.profileName).toBe(record.profileName);expect(owner.pid).toBe(child.pid);expect(record.profileName).toMatch(/^CBIM\.Isolated\.[a-f0-9-]{36}$/);
  }finally{
   if(child.exitCode===null){child.kill();await exit}
-  if(record){expect(alive(record.pid)).toBe(false);if(descendant)expect(alive(descendant)).toBe(false);expect(path.dirname(record.root)).toBe(await fs.realpath(os.tmpdir()));expect(path.basename(record.root)).toMatch(/^cbim-isolated-[A-Za-z0-9]+$/);const owner=JSON.parse(await fs.readFile(path.join(record.root,'owner.json'),'utf8'));expect(owner.profileName).toBe(record.profileName);const remove=koffi.load('userenv.dll').func('int32 __stdcall DeleteAppContainerProfile(str16)');expect(remove(record.profileName)).toBe(0);await fs.rm(record.root,{recursive:true,force:true})}
+  // 已先核实整棵进程树退出与临时目录身份；Windows 仍可能短暂锁住 EXE，清理只做有界重试，不放宽退出断言。
+  if(record){expect(alive(record.pid)).toBe(false);if(descendant)expect(alive(descendant)).toBe(false);expect(path.dirname(record.root)).toBe(await fs.realpath(os.tmpdir()));expect(path.basename(record.root)).toMatch(/^cbim-isolated-[A-Za-z0-9]+$/);const owner=JSON.parse(await fs.readFile(path.join(record.root,'owner.json'),'utf8'));expect(owner.profileName).toBe(record.profileName);const remove=koffi.load('userenv.dll').func('int32 __stdcall DeleteAppContainerProfile(str16)');expect(remove(record.profileName)).toBe(0);await fs.rm(record.root,{recursive:true,force:true,maxRetries:10,retryDelay:100})}
   if(path.dirname(fixture)!==os.tmpdir()||!path.basename(fixture).startsWith('cbim-isolation-crash-'))throw Error('cleanup');await fs.rm(fixture,{recursive:true,force:true});
  }
 });

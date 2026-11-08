@@ -8,6 +8,7 @@
  * 职责边界：人工项仅引用当前实际消费的接受；审阅和完成均复核原业务主体、精确候选与选定字节，负面意见只能明确安排新任务返工。不关闭周期或签署，外部文件核实不构成原子快照。
  * 证据边界：治理待办与模块负责人查询、变更都不能被主知识引用或成员候选包装成业务完成证据；负责人提交仍属于真实知识写时序，旧业务审阅不能跨过它。
  * 输入边界：运行中补充按真实接收提升输入版本；未决记录阻止推进，审阅、完成和安全等待还双向核对可信插入日志，不能沿旧审阅遗漏新增要求。
+ * GitHub 外部提交计入副作用时序，但不充当主知识提交或业务验收证据。
  */
 import {z} from 'zod';
 import {questionToolName} from '../../core/tools/questions';
@@ -52,7 +53,7 @@ export interface ScopeGoalPorts {
   checkManifest?(expected:OutputManifestSnapshot,signal:AbortSignal):Promise<OutputManifestCheck>;
 }
 type Owner=Pick<KnowledgeWorkspace,'entry'|'instanceId'|'assert'|'snapshot'|'read'>;
-const effects=new Set(['business-write','knowledge-write','command']);
+const effects=new Set(['business-write','knowledge-write','external-write','command']);
 const sameSet=(a:string[],b:string[])=>a.length===b.length&&new Set(a).size===a.length&&a.every(item=>b.includes(item));
 const cursor=(graph:GraphSnapshot)=>({streamId:graph.cursor.streamId,seq:graph.cursor.seq});
 const identitySchema=z.object({workspaceId:z.string().min(1).max(512),rootSessionId:z.string().min(1).max(512),scopeId:z.string().min(1).max(512)}).strict();

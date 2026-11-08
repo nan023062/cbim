@@ -1,5 +1,5 @@
 /**
- * 作用定位：用 Electron 系统加密能力保护 LLM 凭据。
+ * 作用定位：用 Electron 系统加密能力保护 LLM 与 GitHub 反馈凭据。
  * 设计原因：平台实现留在 main，Core 只依赖 SecretCipher；禁止不安全的明文回退。
  */
 import {safeStorage} from 'electron';

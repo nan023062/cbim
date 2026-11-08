@@ -53,7 +53,7 @@ src/
 
 源码以外由 `docs/` 保存概念设计与配套说明，`design/` 组织开发路线图和逐步实施记录；已有内置运行规则与 Schema 仍保留在 `design/` 原路径，由程序显式加载。另有 `tests/`、`scripts/`、`build/` 和 `test-results/`。不把目标项目 `.cbim/` 或用户运行数据搬入源码。
 
-前端与后端是两个职责层，后端默认运行在本机，并非远端服务器。`bridge/` 只承载公开契约和安全通信：前端通过 preload 调用后端，后端通过契约返回数据。后端内部保持 main → scheduler-engine → core 的依赖方向，main 也可以直接装配 Core。
+前端与后端是两个职责层，后端默认运行在本机，并非远端服务器。`bridge/` 只承载公开契约和安全通信：前端通过 preload 调用后端，后端通过契约返回数据。后端内部保持 main → scheduler-engine → core 的依赖方向，main 也可以直接装配 Core。2026-11-08 按用户要求将更新程序独立到 `src/backend/updater/`；main 只装配并调用，updater 只依赖自身、公开更新契约和系统库，不依赖业务运行时或反馈服务。下载缓存也使用独立的 `cbim-desktop-updater` 目录。
 
 本次目录映射：`src/renderer/` → `src/frontend/`；`src/main/`、`src/core/`、`src/scheduler-engine/` 分别进入 `src/backend/`；`src/contracts/` 与 `src/preload/` 分别进入 `src/bridge/`。下表记录此前职责拆分；其中 main/core/scheduler-engine 的相对路径均以 backend 为基准，contracts 以 bridge 为基准，renderer 的现归属为 frontend。
 

@@ -3,6 +3,7 @@
  * 作用定位：从本轮已提交事件核实文件采集来源与不可变基线，供运行时和只读报告共用。
  * 设计原因：工具成功、采集暂存事件及文件字节不能互相代替；参数与结果哈希、调用顺序、固定身份全部匹配后才发布引用，避免两套较宽松证据规则。
  * 职责边界：不读取文件、不授权恢复；事件可省略无关消息，但顺序必须递增，完整日志连续性和磁盘完整性由 canonical 读取方核实。
+ * 外部写按保守副作用时序使旧基线失效；GitHub 回执仍不能充当文件采集来源。
  */
 import {z} from 'zod';
 import {scopedReadInputSchema} from './scoped-execution';
@@ -15,13 +16,13 @@ import {artifactCaptureInputSchema,artifactBaselineStagedSchema,artifactBaseline
 export interface ArtifactEvidenceEvent {type:string;seq:number;workspaceId:string;taskId:string;runId:string;data:Record<string,unknown>}
 type Binding=ArtifactBaselineStaged['binding'];
 type Issue={code:string;message:string};
-const effects=z.array(z.enum(['read','preview','maintenance','business-write','knowledge-write','command']));
+const effects=z.array(z.enum(['read','preview','maintenance','business-write','knowledge-write','external-write','command']));
 const authorization=z.object({id:z.string().min(1).max(128),name:z.string().min(1).max(512),effects,scope:toolScopeSchema}).passthrough();
 const receipt=z.object({version:z.literal(1),toolCallId:z.string().min(1).max(128),toolName:z.string().min(1).max(512),workspaceId:z.string(),taskId:z.string(),runId:z.string(),outcome:z.enum(['succeeded','failed','denied','unknown']),inputHash:z.string().regex(/^[a-f0-9]{64}$/),resultHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),effects,scope:toolScopeSchema,recordedAt:z.string().datetime()}).strict();
 const nativeInput={read:z.object({path:z.string().min(1).max(32768),offset:z.number().int().positive().optional(),limit:z.number().int().positive().optional()}).strict(),write:z.object({path:z.string().min(1).max(32768),content:z.string()}).strict(),edit:z.object({path:z.string().min(1).max(32768),oldText:z.string(),newText:z.string()}).strict()};
 const captureName='cbim_task_artifact_capture';
 /** 文件基线与完整清单共用保守失效边界；命令是否实际写文件不能只靠模型声明判断。 */
-export const artifactEventChangesFiles=(event:ArtifactEvidenceEvent)=>event.type==='tool.allowed'&&(Array.isArray(event.data.effects)&&event.data.effects.some(effect=>['business-write','knowledge-write','command'].includes(String(effect)))||['write','edit','bash'].includes(String(event.data.name)));
+export const artifactEventChangesFiles=(event:ArtifactEvidenceEvent)=>event.type==='tool.allowed'&&(Array.isArray(event.data.effects)&&event.data.effects.some(effect=>['business-write','knowledge-write','external-write','command'].includes(String(effect)))||['write','edit','bash'].includes(String(event.data.name)));
 const altered=artifactEventChangesFiles;
 function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,ordered(v)])):value}
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));

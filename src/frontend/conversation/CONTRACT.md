@@ -1,5 +1,29 @@
 # 会话执行与持久等待交互
 
+## GitHub 成功提交的静默显示
+
+`transcript` 只在真实 `tool.finished` 的固定反馈工具、成功回执和 `github-feedback` 范围同时成立后，隐藏后续追加的结果文字及其流式片段。工具证据保留；失败、未知、拒绝或缺少可信回执时正常显示说明。新的用户插入或工具调用恢复普通投影，之后再次成功提交才重新静默。这里不把模型自述当成提交事实，也不影响私有运行日志。
+
+## 加号菜单的产品反馈 Skill
+
+`AttachmentMenu` 的「BUG 反馈」「需求许愿」经 `onSkill` 向 `Conversation` 发送明确的流程调用请求。主 Agent 分别读取 `cbim_skill_bug_feedback`、`cbim_skill_feature_wish` 并展示上下文格式。首次点击不提交现有草稿或附件，不打开网页，也不创建 GitHub Issue。
+
+调用沿用当前会话的模型、权限、发送／排队和安全续接条件。菜单关闭后按正常消息显示调用请求；已有任务开放时仅排队，不插入或恢复等待中的目标。受理成功、失败及刷新历史均不清空本次未发送的草稿与附件。附件已达 12 项仍可调用 Skill；模型缺失、加载中、停止中或操作在途时禁用。保留原共享请求锁，双击不能并发发送。
+
+```mermaid
+classDiagram
+class AttachmentMenu { <<component>>
+  +onSkill(FeedbackSkillTitle)
+}
+class Conversation { <<component>>
+  +send(insert, skill)
+}
+class ChatLoop { <<backend boundary>> }
+AttachmentMenu --> Conversation : 明确选择两项 Skill 之一
+Conversation --> ChatLoop : 独立调用消息，空附件
+note for Conversation "已有草稿与附件保留；开放任务只排队"
+```
+
 原主工具轨道为八项已接入的调度写命令提供“核实原命令”。`MainCommandVerification` 通过唯一 `dispatch.commandReport` 入口传原 workspace/root/run/call 身份；主实例绑定必须与日志一致，成员轨道与无可信主绑定旧日志不猜测入口。工具失败与原事务已保存分别展示，查询不修改原日志、未确认项、验收、恢复资格或普通草稿。
 
 `CommandVerificationController` 仅显式点击读取，同身份在途点击合并；轮询、挂载和展开不查询。严格核对报告 Schema、四重身份和原工具名，切换/卸载忽略迟到响应；失败保留旧报告并标明时效。`throughSeq` 早于当前日志仅提示有更新，不撤回已保存事实或自动刷新。界面只展示有界公共结果、序号和摘要，不导入后端命令算法，不显示 Prepared/native/私有事务。查无回执仍然未知，不能据此重新执行；本卡不提供重试或恢复按钮。

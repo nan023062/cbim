@@ -12,6 +12,7 @@ import type {Paths} from '../platform/paths';
 import type {LlmProfiles} from '../persistence/settings/llm-profiles';
 import type {ResourceRepositories} from '../resources/resource-repository';
 import type {RepositoryConnections} from '../resources/repository-connections';
+import type {GitHubFeedback} from '../resources/github-feedback';
 import type {ModuleGovernanceService} from '../governance/module-governance';
 import type {WorkspaceExecutionManager} from '../../scheduler-engine/execution/execution-manager';
 import type {WorkspaceDispatchService} from '../../scheduler-engine/execution/dispatch-service';
@@ -37,6 +38,8 @@ export interface ApplicationServices {
   readonly resources: ResourceRepositories;
   /** 桌面显式登记、授权和真实只读核验；没有模型入口或任意 URL/凭据参数。 */
   readonly repositoryConnections:RepositoryConnections;
+  /** 桌面只管理明确的 GitHub 连接；实际 Issue 创建只由主会话受控端口执行。 */
+  readonly githubFeedback:GitHubFeedback;
   /** 仅桌面显式导入及取消；不授予仓库权限，不启动执行。 */
   readonly chatMaterials:ChatMaterialImports;
   /** 真正执行准入独立于监管索引；只暴露游标读取和可靠设置，不把领取能力交给页面。 */

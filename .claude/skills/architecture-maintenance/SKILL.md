@@ -20,7 +20,8 @@ description: "维护 CBIM 的源码架构、单向依赖、代码注释和目录
 
 - backend/core → backend/core。
 - backend/scheduler-engine → 自身、backend/core。
-- backend/main → 自身、backend/scheduler-engine、backend/core、bridge/contracts。
+- backend/main → 自身、backend/scheduler-engine、backend/core、backend/updater、bridge/contracts。
+- backend/updater → 自身、bridge/contracts；更新程序不得反向依赖 Main、调度或业务运行时。
 - bridge/contracts → 自身、backend/core 的公开契约和纯函数。
 - frontend → 自身、bridge/contracts。
 - bridge/preload → 自身、bridge/contracts。

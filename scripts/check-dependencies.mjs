@@ -13,7 +13,8 @@ const key = value => process.platform === 'win32' ? slash(path.resolve(value)).t
 const layers = {
   'backend/core':['backend/core'],
   'backend/scheduler-engine':['backend/scheduler-engine','backend/core'],
-  'backend/main':['backend/main','backend/scheduler-engine','backend/core','bridge/contracts'],
+  'backend/main':['backend/main','backend/scheduler-engine','backend/core','backend/updater','bridge/contracts'],
+  'backend/updater':['backend/updater','bridge/contracts'],
   'bridge/contracts':['bridge/contracts','backend/core'],
   'bridge/preload':['bridge/preload','bridge/contracts'],
   frontend:['frontend','bridge/contracts'],

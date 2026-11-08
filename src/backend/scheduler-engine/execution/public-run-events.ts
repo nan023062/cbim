@@ -3,13 +3,14 @@
  * 设计原因：任务详情与静态 Agent 历史使用同一字段白名单，排除原生会话路径、冻结知识、工具输入正文及私有推理；公开正文限长，但不声称识别正文中的全部敏感信息。
  * 职责边界：这里只做纯投影，读取方须先核验完整归属；人工决定的系统转交仅公开来源种类和固定摘要，不当用户原话或透传意见正文，不把运行结束当作验收。
  * 仓库范围：保留真实链接器、仓库、共享代际与操作，正文/地址/凭据不经公开投影透传。
+ * GitHub 范围只公开可信目标和连接代际；反馈正文、原 Issue 地址及凭据不经运行投影公开。
  * 验证范围：只公开核验当时的要求、文件指纹、可选完整集合三字段身份及无原值诊断；暂存须结合工具终态，不代表当前文件持续有效。
  */
 import path from 'node:path';
 import type {StoredEvent,TaskSpec} from '../../core/brain/types';
 import type {TaskProgress} from '../../core/tasks/progress';
 import type {ToolReceipt} from '../../core/tools/types';
-import {repositoryToolScopeSchema} from '../../core/tools/scope-schema';
+import {repositoryToolScopeSchema,githubFeedbackScopeSchema} from '../../core/tools/scope-schema';
 import {validationResultSchema} from '../../core/tasks/validation';
 
 /** 已核实的运行身份；成员、主对话和旧日志都不能通过投影改变其归属。 */
@@ -22,6 +23,10 @@ const texts=(value:unknown,max=16000)=>Array.isArray(value)?value.filter((item):
 /** 仓库范围保留完整捕获身份，但不公开 URL、令牌、授权版本或任意附加字段。 */
 function publicScope(value:unknown,binding:PublicRunIdentity):ToolReceipt['scope']{
   const scope=record(value);
+  if(scope.kind==='github-feedback'){
+    const parsed=githubFeedbackScopeSchema.safeParse({kind:scope.kind,workspaceId:scope.workspaceId,connectionId:scope.connectionId,repositoryId:scope.repositoryId,owner:scope.owner,repo:scope.repo});
+    return parsed.success&&parsed.data.workspaceId===binding.workspaceId?parsed.data:{kind:'unknown',workspaceId:binding.workspaceId};
+  }
   if(scope.kind==='repository'){
     const parsed=repositoryToolScopeSchema.safeParse({kind:scope.kind,workspaceId:scope.workspaceId,connectorId:scope.connectorId,repositoryId:scope.repositoryId,connectionId:scope.connectionId,operation:scope.operation});
     if(parsed.success&&parsed.data.workspaceId===binding.workspaceId)return parsed.data;
@@ -39,7 +44,7 @@ function progress(value:unknown):TaskProgress|undefined{
 function receipt(value:unknown,binding:PublicRunIdentity):ToolReceipt|undefined{
   const data=record(value);
   if(data.version!==1||data.workspaceId!==binding.workspaceId||data.taskId!==binding.taskId||data.runId!==binding.runId||!['succeeded','failed','denied','unknown'].includes(String(data.outcome)))return;
-  return {version:1,toolCallId:text(data.toolCallId,128)??'',toolName:text(data.toolName,128)??'',workspaceId:binding.workspaceId,taskId:binding.taskId,runId:binding.runId,outcome:data.outcome as ToolReceipt['outcome'],inputHash:text(data.inputHash,64)??'',...(typeof data.resultHash==='string'?{resultHash:data.resultHash.slice(0,64)}:{}),effects:texts(data.effects,40).filter((effect):effect is ToolReceipt['effects'][number]=>['read','preview','maintenance','business-write','knowledge-write','command'].includes(effect)),scope:publicScope(data.scope,binding),recordedAt:text(data.recordedAt,40)??''};
+  return {version:1,toolCallId:text(data.toolCallId,128)??'',toolName:text(data.toolName,128)??'',workspaceId:binding.workspaceId,taskId:binding.taskId,runId:binding.runId,outcome:data.outcome as ToolReceipt['outcome'],inputHash:text(data.inputHash,64)??'',...(typeof data.resultHash==='string'?{resultHash:data.resultHash.slice(0,64)}:{}),effects:texts(data.effects,40).filter((effect):effect is ToolReceipt['effects'][number]=>['read','preview','maintenance','business-write','knowledge-write','external-write','command'].includes(effect)),scope:publicScope(data.scope,binding),recordedAt:text(data.recordedAt,40)??''};
 }
 /** 只保留工作区内业务文件的定位；不返回 .cbim、外部路径、命令参数或写入正文。 */
 function businessPath(value:unknown,root:string){
@@ -66,7 +71,7 @@ export function projectRunEvent(event:StoredEvent,identity:PublicRunIdentity,tas
     case 'tool.proposed':case 'tool.allowed':case 'tool.denied':case 'tool.started':case 'tool.updated':case 'tool.finished':{
       const safeReceipt=receipt(source.receipt,identity),locator=businessPath(record(source.input).path,task.root);
       data={id:text(source.id,128)??'',name:text(source.name,128)??safeReceipt?.toolName??'',...(locator?{input:{path:locator}}:{}),...(safeReceipt?{receipt:safeReceipt}:{})};
-      if(type==='tool.allowed'){data.allow=true;const scope=publicScope(source.scope,identity);if(scope.kind==='repository')data.scope=scope}
+      if(type==='tool.allowed'){data.allow=true;const scope=publicScope(source.scope,identity);if(scope.kind==='repository'||scope.kind==='github-feedback')data.scope=scope}
       if(type==='tool.denied'){data.allow=false;data.reason='操作未获授权；详细策略信息保留在本机运行记录'}
       if(type==='tool.finished'||type==='tool.updated'){
         data.isError=source.isError===true;data.result={content:[{type:'text',text:type==='tool.updated'?'工具执行中；进度正文未公开':source.isError?'工具执行失败；详细错误正文未公开':'工具已完成；详细正文未公开'}]};

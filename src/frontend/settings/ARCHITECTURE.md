@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-模型、仓库、并发及新目标软限额配置。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。凭据只提交主进程，账户仍为占位。
+模型、资源仓库、GitHub 反馈连接、并发及新目标软限额配置。GitHub 采用 Device Flow，页面仅持公开 Client ID 与短期授权码；资源服务器账号仍为占位。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。 正式版展示当前及新版日志，分别点击检查、下载与重启安装；反馈预置公开产品连接。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -14,9 +14,12 @@
 | [budget-settings-state.ts](budget-settings-state.ts) | 管理额度及显式逐请求模式草稿、版本化保存，隔离页面卸载后的异步响应；缺省仍是运行间软限额。 |
 | [budget-settings.css](budget-settings.css) | 对应界面的布局与视觉样式。 |
 | [BudgetSettings.tsx](BudgetSettings.tsx) | 展示用户显式配置的新目标 Token/费用软限额，与全局并发设置相邻但独立保存。 |
+| [GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx) | 设置页的 GitHub 反馈连接入口，展示设备授权码及固定目标仓库。 |
 | [models.css](models.css) | 供应商列表和模型表单布局。 |
 | [ModelSettings.tsx](ModelSettings.tsx) | 设置页的自定义供应商、连接表单与模型目录编辑器。 |
-| [SettingsView.tsx](SettingsView.tsx) | 模型供应商、运行并发、新目标软限额、仓库与共享服务设置。 |
+| [SettingsView.tsx](SettingsView.tsx) | 软件版本与手动更新、模型供应商、运行并发、新目标软限额、GitHub 反馈连接、仓库与共享服务设置。 |
+| [software-updates.css](software-updates.css) | 对应界面的布局与视觉样式。 |
+| [SoftwareUpdates.tsx](SoftwareUpdates.tsx) | 设置页的版本／日志／手动更新入口，以及外壳中的新版提醒。 |
 
 ## 架构类图
 
@@ -108,6 +111,18 @@ class N_src_frontend_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
 
 直接依赖：[budget-settings-state.ts](budget-settings-state.ts)、[budget-settings.css](budget-settings.css)。
 
+### GitHubFeedbackSettings.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_settings_GitHubFeedbackSettings_tsx["GitHubFeedbackSettings.tsx"] {
+  <<component>>
+  +GitHubFeedbackSettings()
+}
+```
+
+直接依赖：[../../bridge/contracts/github-feedback.ts](../../bridge/contracts/github-feedback.ts)。
+
 ### models.css
 
 ```mermaid
@@ -139,7 +154,29 @@ class N_src_frontend_settings_SettingsView_tsx["SettingsView.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[ModelSettings.tsx](ModelSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)。
+直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[ModelSettings.tsx](ModelSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx)、[SoftwareUpdates.tsx](SoftwareUpdates.tsx)。
+
+### software-updates.css
+
+```mermaid
+classDiagram
+class N_src_frontend_settings_software_updates_css["software-updates.css"] {
+  <<stylesheet>>
+}
+```
+
+### SoftwareUpdates.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_settings_SoftwareUpdates_tsx["SoftwareUpdates.tsx"] {
+  <<component>>
+  +SoftwareUpdates()
+  +SoftwareUpdateNotice()
+}
+```
+
+直接依赖：[../../bridge/contracts/desktop-updates.ts](../../bridge/contracts/desktop-updates.ts)、[software-updates.css](software-updates.css)。
 
 ### 本目录调用边界
 
@@ -180,8 +217,27 @@ class N_src_frontend_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
 class N_src_frontend_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
   <<component>>
 }
+class N_src_frontend_settings_GitHubFeedbackSettings_tsx["GitHubFeedbackSettings.tsx"] {
+  <<component>>
+}
+class N_src_frontend_settings_SoftwareUpdates_tsx["SoftwareUpdates.tsx"] {
+  <<component>>
+}
 N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_AdmissionSettings_tsx : 导入依赖
 N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_BudgetSettings_tsx : 导入依赖
+N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_GitHubFeedbackSettings_tsx : 导入依赖
+N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_SoftwareUpdates_tsx : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_settings_SoftwareUpdates_tsx["SoftwareUpdates.tsx"] {
+  <<component>>
+}
+class N_src_frontend_settings_software_updates_css["software-updates.css"] {
+  <<stylesheet>>
+}
+N_src_frontend_settings_SoftwareUpdates_tsx ..> N_src_frontend_settings_software_updates_css : 导入依赖
 ```
 
 
@@ -198,6 +254,12 @@ N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_BudgetSetti
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 设置界面
+
+`SoftwareUpdates` 展示实际当前版本、离线本版日志与公开新版日志。页面只轮询本机状态，检查／下载／重启安装分别由用户点击；日志为纯文本。下载完成后按钮明确提示停止任务与重启，常规退出不安装缓存。`SoftwareUpdateNotice` 只打开设置，遵循原有未提交编辑离页检查。
+
+GitHub 连接已预置公开产品配置；普通用户直接连接，高级字段保留在折叠区，不要求复制 Client ID。
+
+`GitHubFeedbackSettings` 独立装配反馈连接；公开 Client ID、owner/repo、可见性和“连接并允许反馈自动提交”组成明确授权。后端返回短期 userCode 后，用户点击才打开固定 GitHub 登录页，页面按 nextPollAt 轮询；离开页面停止轮询，不取消已保存连接。取消／断开、错误与不可用安全存储有明确状态，失败保留配置输入。UI 不接收 token 或 device_code，也没有创建 Issue、查看逐条反馈或开发进度的 IPC。
 
 `SettingsView` 独立装配模型、执行并发、新目标软限额和资源仓库设置，仓库服务失败不阻止配置运行策略。运行设置表单始终保留在同一渲染位置，仓库异步加载只改变仓库区域，不重挂载已可交互的表单或清除草稿。
 

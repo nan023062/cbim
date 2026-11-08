@@ -8,6 +8,7 @@
  * 设计原因：工具先分类与计划门禁再审批；每轮进度绑定真实 workspace/task/run，成员专属工具另绑定完整实例。完整集合观察、产物验证及交付复核各持短锁，异步读取前后核知识、计划与停止；坏回包保留事实，求助/检查点不解锁，采集/验证只随真实结束释放。
  * 插入边界：核对原 run、可信周期令牌和发送前停止信号；原生接受后返回真实日志序号，适配器不能伪造该令牌。终态等待在途记录排空，接受后的保存失败仍属未知，不自动重放。
  * 核实边界：历史 reconciledToolIds 仅保留可读；新请求不能据裸调用 ID 续接 unknown。授权记录中的契约版本只取可信工具描述，旧记录不补造版本。
+ * 外部写同样受原未知文件影响屏障约束，不因写入 GitHub 而绕过运行内写入禁令。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -394,7 +395,7 @@ export class LoopRuntime {
             }catch(error){const code=(error as {code?:string})?.code;decision={allow:false,reason:(code?.startsWith('WORKFLOW_')?code+': ':'')+(error instanceof Error?error.message:String(error)),...(descriptor?{effects:descriptor.effects}:{})}}
             if(stopping)decision={...decision,allow:false,reason:'任务正在停止'};
             // Workflow 首片仅约束业务副作用；知识提交仍沿用原来的证据失效规则，不能因分类拆分保留旧证据。
-            if(decision.allow&&((descriptor?.effects??decision.effects)?.some(effect=>['business-write','knowledge-write','command'].includes(effect))||(!descriptor&&['write','edit','bash'].includes(call.name)))){
+            if(decision.allow&&((descriptor?.effects??decision.effects)?.some(effect=>['business-write','knowledge-write','external-write','command'].includes(effect))||(!descriptor&&['write','edit','bash'].includes(call.name)))){
               if(workflows.length){
                 effectsInFlight.add(call.id);calls.get(call.id)!.effect=true;
                 for(const [id,known] of calls)if(id!==call.id&&activeCalls.has(id)&&!known.effect)known.overlappedEffect=true;

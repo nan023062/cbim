@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-可序列化 IPC 与展示契约；多来源附件只传选择身份，公开旧v1/新v2清单与真实仓库目录，不暴露凭据。图增量公开前置追加/替换审计而非执行许可，目标摘要公开运行内补充计数与未核实状态，详情保留已接收快照，纯协议不携IO。排队插入必须传用户点击时的原主run，缺失不推测当前轮次。检查点私有恢复证明留在后端；结构验证公开当时文件/规则指纹及无原值诊断，人工决定与文件观察保留真实依据。岗位IPC只传明确选择与公开采纳/回执，类型不带凭据或后端哈希IO。 owner-execution 公开原岗位绑定与显式当前观察；按任务修订核对身份，不公开解密配置。 公开检查点放弃审计和请求/回执纯契约，不向渲染进程授予主调度处置身份。 command-verification 只导出严格公共报告和八工具支持矩阵，隐藏原事务和执行准备信息。 effect-observation 只公开来源联合及严格公共 DTO，恢复／重规划保留旧协议并显式绑定新处置，不暴露正文备份或原生上下文。 controlled-files 仅导出公开纯协议与限制，隐藏 blob、原生文件身份、句柄和后端规则。
+可序列化 IPC 与展示契约；多来源附件只传选择身份，公开旧v1/新v2清单与真实仓库目录，不暴露凭据。图增量公开前置追加/替换审计而非执行许可，目标摘要公开运行内补充计数与未核实状态，详情保留已接收快照，纯协议不携IO。排队插入必须传用户点击时的原主run，缺失不推测当前轮次。检查点私有恢复证明留在后端；结构验证公开当时文件/规则指纹及无原值诊断，人工决定与文件观察保留真实依据。岗位IPC只传明确选择与公开采纳/回执，类型不带凭据或后端哈希IO。 桌面更新只公开版本、日志、阶段和进度，不传安装路径或任意命令。 owner-execution 公开原岗位绑定与显式当前观察；按任务修订核对身份，不公开解密配置。 公开检查点放弃审计和请求/回执纯契约，不向渲染进程授予主调度处置身份。 command-verification 只导出严格公共报告和八工具支持矩阵，隐藏原事务和执行准备信息。 effect-observation 只公开来源联合及严格公共 DTO，恢复／重规划保留旧协议并显式绑定新处置，不暴露正文备份或原生上下文。 controlled-files 仅导出公开纯协议与限制，隐藏 blob、原生文件身份、句柄和后端规则。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -16,9 +16,11 @@
 | [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
 | [command-verification.ts](command-verification.ts) | 向桌面视图导出原主命令的只读核实协议和固定支持矩阵。 |
 | [controlled-files.ts](controlled-files.ts) | 向桌面公开受控文件原操作查询和显式补偿的纯协议。 |
+| [desktop-updates.ts](desktop-updates.ts) | 正式桌面版本、更新日志与手动更新状态的公开 IPC 数据。 |
 | [dispatch.ts](dispatch.ts) | 向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。 |
 | [effect-observation.ts](effect-observation.ts) | 向桌面公开原调用影响观察、明确处置与后续周期关系的纯契约。 |
 | [execution.ts](execution.ts) | 对话、运行和排队在 IPC 中传递的可序列化类型。 |
+| [github-feedback.ts](github-feedback.ts) | 设置界面的 GitHub 公开连接协议。 |
 | [governance.ts](governance.ts) | 向业务架构界面公开模块知识治理的纯数据与严格校验协议。 |
 | [human-continue.ts](human-continue.ts) | 公开按已保存人工决定继续原目标的严格请求与回执，连接桌面和调度入口。 |
 | [human-decisions.ts](human-decisions.ts) | 向桌面公开人工决定的序列化请求、依据预览与不可变记录。 |
@@ -156,6 +158,36 @@ class N_src_bridge_contracts_controlled_files_ts["controlled-files.ts"] {
 ```
 直接依赖：[../../backend/core/tasks/controlled-file-operation.ts](../../backend/core/tasks/controlled-file-operation.ts)。
 
+### desktop-updates.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_desktop_updates_ts["desktop-updates.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_desktop_updates_ts_DesktopRelease["DesktopRelease"] {
+  <<interface>>
+  +version
+  +tag
+  +notes
+  +publishedAt
+}
+N_src_bridge_contracts_desktop_updates_ts ..> N_src_bridge_contracts_desktop_updates_ts_DesktopRelease : 声明
+class N_src_bridge_contracts_desktop_updates_ts_DesktopUpdateStatus["DesktopUpdateStatus"] {
+  <<interface>>
+  +currentVersion
+  +currentNotes
+  +enabled
+  +phase
+  +release
+  +progress
+  +checkedAt
+  +error
+}
+N_src_bridge_contracts_desktop_updates_ts ..> N_src_bridge_contracts_desktop_updates_ts_DesktopUpdateStatus : 声明
+```
+
+
 ### dispatch.ts
 
 ```mermaid
@@ -199,6 +231,16 @@ N_src_bridge_contracts_execution_ts ..> N_src_bridge_contracts_execution_ts_Publ
 ```
 
 直接依赖：[../../backend/core/brain/types.ts](../../backend/core/brain/types.ts)、[../../backend/core/tasks/types.ts](../../backend/core/tasks/types.ts)、[../../backend/core/tasks/queue.ts](../../backend/core/tasks/queue.ts)、[../../backend/core/tools/questions.ts](../../backend/core/tools/questions.ts)、[../../backend/core/tools/scope-schema.ts](../../backend/core/tools/scope-schema.ts)、[../../backend/core/tasks/validation.ts](../../backend/core/tasks/validation.ts)。
+
+### github-feedback.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_github_feedback_ts["github-feedback.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../backend/core/connectors/github-feedback.ts](../../backend/core/connectors/github-feedback.ts)。
 
 ### governance.ts
 

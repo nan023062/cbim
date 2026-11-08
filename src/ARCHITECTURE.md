@@ -36,7 +36,7 @@ N_src_frontend ..> N_src_bridge : 导入依赖
 
 ## 子目录导航
 
-- [backend/](backend/ARCHITECTURE.md)：本机后端逻辑层：main 装配平台与服务，scheduler-engine 协调执行，core 提供领域与大脑能力。调度单向依赖 Core；后端不导入前端界面。
+- [backend/](backend/ARCHITECTURE.md)：本机后端逻辑层：main 装配平台与服务，scheduler-engine 协调执行，core 提供领域与大脑能力。updater 是独立更新子系统，不依赖运行时、调度或反馈服务；主程序只调用它。后端不导入前端界面。
 - [bridge/](bridge/ARCHITECTURE.md)：前后端通信边界：contracts 声明公开数据，preload 提供 Electron 安全桥。契约可重导出 Core 公开类型和纯函数，不暴露后端服务、凭据和存储实现。
 - [frontend/](frontend/ARCHITECTURE.md)：React 桌面界面。只消费 contracts 和自身组件，不导入调度或主进程实现。
 

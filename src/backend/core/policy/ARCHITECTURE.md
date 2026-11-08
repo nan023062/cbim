@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；不声称操作系统隔离。 受控文件工具必须是本轮实际内部注册、唯一 business-write 效果及固定工作区范围；只读拒写，本轮免询不绕过平台检查。
+内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；不声称操作系统隔离。 受控文件工具必须是本轮实际内部注册、唯一 business-write 效果及固定工作区范围；只读拒写，本轮免询不绕过平台检查。 GitHub external-write 仅在本机明确自动提交许可与精确本轮目标相等时免逐条 ask；read 仍拒绝，未知外部写无通行权。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -44,11 +44,12 @@ class N_src_backend_core_policy_tool_policy_ts_RunPolicyContext["RunPolicyContex
   +permission
   +guard()
   +approve()
+  +feedbackGrant
 }
 N_src_backend_core_policy_tool_policy_ts ..> N_src_backend_core_policy_tool_policy_ts_RunPolicyContext : 声明
 ```
 
-直接依赖：[types.ts](types.ts)、[../tools/types.ts](../tools/types.ts)、[../tools/scope-schema.ts](../tools/scope-schema.ts)、[../governance/module-governance-tools.ts](../governance/module-governance-tools.ts)、[../workspace/module-ownership-tool-policy.ts](../workspace/module-ownership-tool-policy.ts)。
+直接依赖：[types.ts](types.ts)、[../tools/types.ts](../tools/types.ts)、[../tools/scope-schema.ts](../tools/scope-schema.ts)、[../governance/module-governance-tools.ts](../governance/module-governance-tools.ts)、[../workspace/module-ownership-tool-policy.ts](../workspace/module-ownership-tool-policy.ts)、[../connectors/github-feedback.ts](../connectors/github-feedback.ts)。
 
 ### types.ts
 
@@ -99,6 +100,10 @@ N_src_backend_core_policy_tool_policy_ts ..> N_src_backend_core_policy_types_ts 
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 固定 GitHub 自动提交许可
+
+只有本轮可信 `feedbackGrant`、完整相等的 `github-feedback` 范围、版本 1、非原生和精确工具效果同时成立时，`cbim_feedback_submit` 才能以 external-write 执行。read 始终拒绝；ask/execute 采用桌面连接时明确授予的该仓库自动提交许可，不再逐 Issue 弹审批。`cbim_feedback_receipt` 只读原提交。其它名字、伪效果、未知 external-write、变更连接或目标都拒绝，不能把该窄授权用于命令、业务写或知识写。
 
 ### 可信工具范围与逐次权限评估
 

@@ -55,6 +55,13 @@ test('cross layer type imports fail even without a cycle',()=>{
   const result=audit({'src/backend/core/a.ts':"import type {T} from '../main/b';",'src/backend/main/b.ts':'export type T=string;'});
   expect(result.violations).toHaveLength(1);expect(result.ok).toBe(false);
 });
+test('updater stays independent of application runtime and business services',()=>{
+  for(const target of ['main','scheduler-engine','core']){
+    const result=audit({'src/backend/updater/a.ts':`import type {T} from '../${target}/b';`,[`src/backend/${target}/b.ts`]:'export type T=string;'});
+    expect(result.violations).toHaveLength(1);
+  }
+  expect(audit({'src/backend/main/a.ts':"import type {T} from '../updater/b';",'src/backend/updater/b.ts':"export type {T} from '../../bridge/contracts/c';",'src/bridge/contracts/c.ts':'export type T=string;'}).ok).toBe(true);
+});
 test('frontend and backend can only meet through the public bridge contracts',()=>{
   const fixtures:Record<string,string>[]=[
     {'src/frontend/a.ts':"import type {T} from '../backend/core/b';",'src/backend/core/b.ts':'export type T=string;'},

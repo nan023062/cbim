@@ -16,6 +16,10 @@
 
 ## 运行
 
+Windows x64 正式桌面版使用 [desktop-v0.1.0 安装包](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.0)。安装后在「设置 → 软件更新」查看版本日志、检查并手动下载新版，再点击重启安装。首版未配置代码签名，下载时核对发布页的 `SHA256SUMS.txt`；旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
+
+BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill，按格式填写即可直连 GitHub Issue。首次在设置连接自己的 GitHub；成功后不追加结果消息。详见 [OAuth 与反馈指南](design/task/github-feedback-setup.md)。更新程序独立位于 `src/backend/updater/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](design/task/desktop-release.md)。
+
 构建目录按北京时间命名：`build/YYYYMMDD-HHmmss/`。Windows 便携程序在其中的 `CBIM Assistant-win32-x64/CBIM.exe`，请保留完整目录。分发包为 `make/zip/win32/x64/CBIM-Assistant-YYYYMMDD-HHmmss-win32-x64-版本.zip`，可按名称排序查找最新构建。
 
 最近成功构建的实际路径记录于 `build/latest-build.json`。`pnpm test:desktop` 与 `pnpm test:portable` 默认验证该程序；仍可通过 `CBIM_TEST_EXE` 指定其他构建。

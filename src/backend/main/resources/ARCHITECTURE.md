@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-链接器、人才和完整业务模板共用的本地/远端资源仓库。静态资料单次HTTP捕获前后核授权与共享代际，正文快照不安装执行。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。
+链接器、人才和完整业务模板共用的本地/远端资源仓库。静态资料单次HTTP捕获前后核授权与共享代际，正文快照不安装执行。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。 GitHub 反馈采用独立直连服务，设备授权和原提交账本由本机管理；固定目标、跨会话去重、未知只核实，成功不回传 Issue 链接或开发进度。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,6 +10,9 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [github-api.ts](github-api.ts) | 主进程直连 GitHub 的有界 JSON 传输，供设备授权和反馈提交共用。 |
+| [github-feedback-auth.ts](github-feedback-auth.ts) | 桌面 GitHub Device Flow、账号／仓库绑定和本机加密凭据管理。 |
+| [github-feedback.ts](github-feedback.ts) | 将本机会话的结构化反馈直接写入已连接 GitHub 仓库，保存私有原提交凭证。 |
 | [repository-connection-store.ts](repository-connection-store.ts) | 在应用用户目录保存工作区资源仓库只读授权及原命令回执。 |
 | [repository-connections.ts](repository-connections.ts) | 桌面资源仓库连接的知识预览/登记、独立本机授权和显式 HTTP 只读核验。 |
 | [resource-http.ts](resource-http.ts) | RemoteRepository 与 serveRepository：HTTP 客户端和本机仓库共享服务。 |
@@ -18,6 +21,167 @@
 | [workspace-packages.ts](workspace-packages.ts) | 把当前工作区的静态团队/业务架构发布到统一资源仓库，并提供持久化导入预览与显式提交。 |
 
 ## 架构类图
+
+### github-api.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_resources_github_api_ts["github-api.ts"] {
+  <<module>>
+  +githubRequest()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_resources_github_api_ts["github-api.ts"] {
+  <<module>>
+}
+class N_src_backend_main_resources_github_api_ts_GitHubReply["GitHubReply"] {
+  <<interface>>
+  +status
+  +data
+}
+N_src_backend_main_resources_github_api_ts ..> N_src_backend_main_resources_github_api_ts_GitHubReply : 声明
+class N_src_backend_main_resources_github_api_ts_GitHubRequest["GitHubRequest"] {
+  <<type>>
+
+}
+N_src_backend_main_resources_github_api_ts ..> N_src_backend_main_resources_github_api_ts_GitHubRequest : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
+
+### github-feedback-auth.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_resources_github_feedback_auth_ts["github-feedback-auth.ts"] {
+  <<module>>
+}
+class N_src_backend_main_resources_github_feedback_auth_ts_Disk["Disk"] {
+  <<type>>
+
+}
+N_src_backend_main_resources_github_feedback_auth_ts ..> N_src_backend_main_resources_github_feedback_auth_ts_Disk : 声明
+class N_src_backend_main_resources_github_feedback_auth_ts_Connection["Connection"] {
+  <<type>>
+
+}
+N_src_backend_main_resources_github_feedback_auth_ts ..> N_src_backend_main_resources_github_feedback_auth_ts_Connection : 声明
+class N_src_backend_main_resources_github_feedback_auth_ts_Flow["Flow"] {
+  <<interface>>
+  +id
+  +controller
+  +deviceCode
+  +userCode
+  +expiresAt
+  +nextPollAt
+  +interval
+}
+N_src_backend_main_resources_github_feedback_auth_ts ..> N_src_backend_main_resources_github_feedback_auth_ts_Flow : 声明
+class N_src_backend_main_resources_github_feedback_auth_ts_GitHubFeedbackIdentity["GitHubFeedbackIdentity"] {
+  <<interface>>
+  +connection
+  +config
+  +token
+}
+N_src_backend_main_resources_github_feedback_auth_ts ..> N_src_backend_main_resources_github_feedback_auth_ts_GitHubFeedbackIdentity : 声明
+```
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_resources_github_feedback_auth_ts["github-feedback-auth.ts"] {
+  <<module>>
+}
+class N_src_backend_main_resources_github_feedback_auth_ts_GitHubFeedbackAuth["GitHubFeedbackAuth"] {
+  +status()
+  +begin()
+  +poll()
+  +verifyIdentity()
+  +capture()
+  +withConnection()
+  +disconnect()
+  +cancel()
+  +close()
+  -filename
+  -cipher
+  -request
+  -now
+  -queue
+  -flow
+  -closed
+}
+N_src_backend_main_resources_github_feedback_auth_ts ..> N_src_backend_main_resources_github_feedback_auth_ts_GitHubFeedbackAuth : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_resources_github_feedback_auth_ts["github-feedback-auth.ts"] {
+  <<module>>
+}
+class N_src_backend_main_resources_github_feedback_auth_ts_GitHubFeedbackAuth["GitHubFeedbackAuth"] {
+  -lifetime
+  -generation
+  -serial()
+  -read()
+  -secure()
+  -view()
+  -cancelFlow()
+}
+N_src_backend_main_resources_github_feedback_auth_ts ..> N_src_backend_main_resources_github_feedback_auth_ts_GitHubFeedbackAuth : 声明
+```
+
+直接依赖：[../../core/foundation/files.ts](../../core/foundation/files.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../platform/locking.ts](../platform/locking.ts)、[../../core/brain/llm/ports.ts](../../core/brain/llm/ports.ts)、[../../core/connectors/github-feedback.ts](../../core/connectors/github-feedback.ts)、[github-api.ts](github-api.ts)。
+
+### github-feedback.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_resources_github_feedback_ts["github-feedback.ts"] {
+  <<module>>
+}
+class N_src_backend_main_resources_github_feedback_ts_Entry["Entry"] {
+  <<type>>
+
+}
+N_src_backend_main_resources_github_feedback_ts ..> N_src_backend_main_resources_github_feedback_ts_Entry : 声明
+class N_src_backend_main_resources_github_feedback_ts_Binding["Binding"] {
+  <<type>>
+  +workspaceId
+  +rootSessionId
+}
+N_src_backend_main_resources_github_feedback_ts ..> N_src_backend_main_resources_github_feedback_ts_Binding : 声明
+class N_src_backend_main_resources_github_feedback_ts_Ledger["Ledger"] {
+  <<type>>
+
+}
+N_src_backend_main_resources_github_feedback_ts ..> N_src_backend_main_resources_github_feedback_ts_Ledger : 声明
+class N_src_backend_main_resources_github_feedback_ts_GitHubFeedback["GitHubFeedback"] {
+  +auth
+  +prepare()
+  +close()
+  -directory
+  -request
+  -queue
+  -serial()
+  -filename()
+  -read()
+  -save()
+  -result()
+  -verify()
+  -submit()
+  -issueNumber()
+  -receipt()
+}
+N_src_backend_main_resources_github_feedback_ts ..> N_src_backend_main_resources_github_feedback_ts_GitHubFeedback : 声明
+```
+
+直接依赖：[../../core/foundation/files.ts](../../core/foundation/files.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/brain/llm/ports.ts](../../core/brain/llm/ports.ts)、[../../core/connectors/github-feedback.ts](../../core/connectors/github-feedback.ts)、[../platform/locking.ts](../platform/locking.ts)、[github-feedback-auth.ts](github-feedback-auth.ts)、[github-api.ts](github-api.ts)。
 
 ### repository-connection-store.ts
 
@@ -325,10 +489,30 @@ N_src_backend_main_resources_workspace_packages_ts ..> N_src_backend_main_resour
 
 ```mermaid
 classDiagram
+class N_src_backend_main_resources_github_feedback_auth_ts["github-feedback-auth.ts"] {
+  <<module>>
+}
+class N_src_backend_main_resources_github_api_ts["github-api.ts"] {
+  <<module>>
+}
+class N_src_backend_main_resources_github_feedback_ts["github-feedback.ts"] {
+  <<module>>
+}
 class N_src_backend_main_resources_repository_connections_ts["repository-connections.ts"] {
   <<module>>
 }
 class N_src_backend_main_resources_repository_connection_store_ts["repository-connection-store.ts"] {
+  <<module>>
+}
+N_src_backend_main_resources_github_feedback_auth_ts ..> N_src_backend_main_resources_github_api_ts : 导入依赖
+N_src_backend_main_resources_github_feedback_ts ..> N_src_backend_main_resources_github_feedback_auth_ts : 导入依赖
+N_src_backend_main_resources_github_feedback_ts ..> N_src_backend_main_resources_github_api_ts : 导入依赖
+N_src_backend_main_resources_repository_connections_ts ..> N_src_backend_main_resources_repository_connection_store_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_resources_repository_connections_ts["repository-connections.ts"] {
   <<module>>
 }
 class N_src_backend_main_resources_resource_repository_ts["resource-repository.ts"] {
@@ -340,24 +524,20 @@ class N_src_backend_main_resources_resource_http_ts["resource-http.ts"] {
 class N_src_backend_main_resources_resource_store_ts["resource-store.ts"] {
   <<module>>
 }
-N_src_backend_main_resources_repository_connections_ts ..> N_src_backend_main_resources_repository_connection_store_ts : 导入依赖
 N_src_backend_main_resources_repository_connections_ts ..> N_src_backend_main_resources_resource_repository_ts : 导入依赖
 N_src_backend_main_resources_resource_http_ts ..> N_src_backend_main_resources_resource_store_ts : 导入依赖
 N_src_backend_main_resources_resource_repository_ts ..> N_src_backend_main_resources_resource_store_ts : 导入依赖
+N_src_backend_main_resources_resource_repository_ts ..> N_src_backend_main_resources_resource_http_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_main_resources_resource_repository_ts["resource-repository.ts"] {
-  <<module>>
-}
-class N_src_backend_main_resources_resource_http_ts["resource-http.ts"] {
-  <<module>>
-}
 class N_src_backend_main_resources_workspace_packages_ts["workspace-packages.ts"] {
   <<module>>
 }
-N_src_backend_main_resources_resource_repository_ts ..> N_src_backend_main_resources_resource_http_ts : 导入依赖
+class N_src_backend_main_resources_resource_repository_ts["resource-repository.ts"] {
+  <<module>>
+}
 N_src_backend_main_resources_workspace_packages_ts ..> N_src_backend_main_resources_resource_repository_ts : 导入依赖
 ```
 
@@ -375,6 +555,20 @@ N_src_backend_main_resources_workspace_packages_ts ..> N_src_backend_main_resour
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 资源仓库与工作区架构传输
+
+桌面更新独立位于 [updater](../../updater/ARCHITECTURE.md)，不复用本目录的反馈 HTTP、授权或运行时资源服务。
+
+反馈默认预置公开 Client ID `Ov23liSMDZneBd3gSyTo` 与 `nan023062/cbim`；没有内置用户令牌，用户仍须亲自完成 Device Flow。已有保存配置优先于默认值。
+
+## GitHub 反馈直连
+
+`GitHubFeedbackAuth` 使用公开 OAuth Client ID 和 Device Flow，固定连接 github.com / api.github.com；桌面按钮明确授予选定仓库的自动反馈提交。公开仓库请求 public_repo，私有仓库只有明确选择后才请求 repo；不内置公用 token。用户与不可变 repositoryId 经真实 GET 核验，令牌只经 `SecretCipher` 加密保存。设备码与 token 不进入模型／IPC，授权状态只返回短期 userCode。interval、slow_down、过期及 flowId 代际由后端检查；内核锁和队列防止其它窗口将旧登录换投新目标。取消、断开和关闭不自动创建 Issue。
+
+`GitHubFeedback` 向桌面主会话捕获固定目标端口，每次提交复验账号、仓库、工作区存活和当前连接。模型只填严格 BUG／需求字段；正文由纯函数排版，不遍历会话、工程或附件。先可靠保存 sending 意图再 POST；同工作区相同账号／仓库／规范化正文跨会话复用原 submitted，不因新调用 ID 重发。账本保留原 rootSessionId、内容指纹和 Issue 编号，不存正文或凭据；最多 1000 条，不静默丢弃旧记录。
+
+明确 HTTP 4xx 拒绝记 rejected；传输中断、5xx、坏 201 或回执落盘失败保持 sending。整个工作区的新提交受未知屏障约束，不同正文返回 GITHUB_PENDING_OTHER，不能用其它原回执宣称本条成功。只读核实最多读取原作者最近 500 条 Issue，严格比较原账号、不可变仓库、标记、标题／正文哈希及官方 URL；未找到、已改写或越界仍保持未知，不提供自动重发／清除。硬中断后可用新主会话核实原未知，不复活旧运行。
+
+`github-api.ts` 固定 HTTPS 主机、拒绝重定向，单请求 20 秒、回包 2 MiB，无自动重试。成功工具只返回 submitted 和私有操作 UUID，不返回 Issue 链接或开发进度。连接授权失效需重新连接；不实现后台轮询、反馈历史页、附件上传、开发结果回访或 token 自动刷新。
 
 链接器、人才市场和业务模板共用 `ResourceRepositories` 的当前仓库。未登录使用本机目录；已连接服务器仓库沿用现有账号会话抽象。界面尚未实现的账户服务不会被本模块冒充为云上传。仓库快照绑定 `repositoryId` 与 `revision`，资源整体 JSON 最多 8 MiB、单项正文最多 2 MiB。
 

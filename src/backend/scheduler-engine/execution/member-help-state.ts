@@ -1,6 +1,7 @@
 /**
  * 作用定位：从成员 canonical 运行日志核实一次结构化求助的安全交接候选。
  * 设计原因：模型调用成功不等于可交接；必须正常结束、没有未决工具且求助后没有新工作，才允许主调度另派新任务。
+ * 外部写也算求助后的新工作；当前成员未装配反馈工具，历史核验仍按真实效果防守。
  */
 import {fail} from '../../core/foundation/errors';
 import {json} from '../../core/foundation/serialization';
@@ -45,7 +46,7 @@ export function memberHelpCandidate(task:TaskNode,run:DispatchRun,summary:RunSum
     // 求助前已经放行的调用必须先结束；后续只允许只读任务查询。失败/拒绝回执不会抹掉先前副作用。
     if(item.allowedSeq!==undefined){
       valid(end!==undefined&&(item.allowedSeq<requested.seq?end<requested.seq:item.toolName==='cbim_task_inspect'));
-      if(item.effects.some(effect=>['business-write','knowledge-write','command'].includes(effect))||['write','edit','bash'].includes(item.toolName))lastEffectSeq=Math.max(lastEffectSeq,item.allowedSeq,end);
+      if(item.effects.some(effect=>['business-write','knowledge-write','external-write','command'].includes(effect))||['write','edit','bash'].includes(item.toolName))lastEffectSeq=Math.max(lastEffectSeq,item.allowedSeq,end);
     }
   }
   for(const id of help.input.attemptedToolCallIds){

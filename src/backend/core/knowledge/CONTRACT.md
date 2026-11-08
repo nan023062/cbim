@@ -1,3 +1,16 @@
+### 产品反馈内置流程
+
+`builtinSkills` 发布 `bug-feedback` 与 `feature-wish`，正文来自应用打包资源 `design/runtime/`，通过只读别名及 `Builtins.read` 返回内容哈希和解析引用。两套正文定义格式与直接提交流程；读取正文不产生 Issue，实际提交由桌面已授权的独立 `FeedbackTools` 执行，不创建业务任务或修改知识。
+
+```mermaid
+classDiagram
+class Builtins {
+  +catalog()
+  +read(id, expectedVersion)
+}
+note for Builtins "只读反馈流程与版本；GitHub 实际写入属于独立主会话工具"
+```
+
 ### 链接器静态定义校验
 
 `Rules` 读取更新后的链接器 Schema，按稳定链接器标识及带提供方种类的目标身份检查重复；兼容旧 Cindy 映射和资源仓库身份。模块/角色的链接器引用继续只指向静态声明，知识校验通过、知识事务提交或资源包导入都不会授予网络访问权限。重复提示使用“提供方身份”，不再把所有来源称为插件。

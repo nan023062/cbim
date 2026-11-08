@@ -11,6 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [artifact-scope.ts](artifact-scope.ts) | Workflow 可选完整产物观察范围的叶子契约，供知识冻结、运行采集和公开报告共用。 |
+| [csv-validation-schema.ts](csv-validation-schema.ts) | 定义冻结 CSV 表格要求并直接检查有界 UTF-8 字节，供知识声明与可信文件端口共用。 |
 | [json-validation-schema.ts](json-validation-schema.ts) | JSON 产物验证的有界声明和纯结构校验，供冻结 Workflow、运行时及知识入口共用。 |
 | [knowledge-source-rules.ts](knowledge-source-rules.ts) | 来源代次日志的纯投影、游标、依据和幂等命令规则，供知识协调器与 DispatchStore 共同使用。 |
 | [knowledge-source.ts](knowledge-source.ts) | 受控知识来源代次、读取状态和原日志握手的纯协议，供岗位、责任、Store 与桌面共用。 |
@@ -64,6 +65,41 @@ class N_src_backend_core_workspace_artifact_scope_ts_ArtifactScopeBinding["Artif
 N_src_backend_core_workspace_artifact_scope_ts ..> N_src_backend_core_workspace_artifact_scope_ts_ArtifactScopeBinding : 声明
 ```
 
+
+### csv-validation-schema.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_csv_validation_schema_ts["csv-validation-schema.ts"] {
+  <<module>>
+  +validateCsvArtifact()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_csv_validation_schema_ts["csv-validation-schema.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_csv_validation_schema_ts_CsvTableSchema["CsvTableSchema"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_csv_validation_schema_ts ..> N_src_backend_core_workspace_csv_validation_schema_ts_CsvTableSchema : 声明
+class N_src_backend_core_workspace_csv_validation_schema_ts_CsvValidationIssueCode["CsvValidationIssueCode"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_csv_validation_schema_ts ..> N_src_backend_core_workspace_csv_validation_schema_ts_CsvValidationIssueCode : 声明
+class N_src_backend_core_workspace_csv_validation_schema_ts_CsvValidationOutcome["CsvValidationOutcome"] {
+  <<interface>>
+  +outcome
+  +issues
+}
+N_src_backend_core_workspace_csv_validation_schema_ts ..> N_src_backend_core_workspace_csv_validation_schema_ts_CsvValidationOutcome : 声明
+```
+
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)。
 
 ### json-validation-schema.ts
 
@@ -654,6 +690,11 @@ class N_src_backend_core_workspace_workflow_contract_ts_JsonValidationRequiremen
 
 }
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_workflow_contract_ts_JsonValidationRequirement : 声明
+class N_src_backend_core_workspace_workflow_contract_ts_ArtifactValidationRequirement["ArtifactValidationRequirement"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_workflow_contract_ts_ArtifactValidationRequirement : 声明
 class N_src_backend_core_workspace_workflow_contract_ts_WorkflowContract["WorkflowContract"] {
   <<type>>
 
@@ -661,7 +702,7 @@ class N_src_backend_core_workspace_workflow_contract_ts_WorkflowContract["Workfl
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_workflow_contract_ts_WorkflowContract : 声明
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/json.ts](../foundation/json.ts)、[json-validation-schema.ts](json-validation-schema.ts)、[artifact-scope.ts](artifact-scope.ts)。
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/json.ts](../foundation/json.ts)、[json-validation-schema.ts](json-validation-schema.ts)、[csv-validation-schema.ts](csv-validation-schema.ts)、[artifact-scope.ts](artifact-scope.ts)。
 
 ### 本目录调用边界
 
@@ -702,11 +743,15 @@ class N_src_backend_core_workspace_workflow_contract_ts["workflow-contract.ts"] 
 class N_src_backend_core_workspace_json_validation_schema_ts["json-validation-schema.ts"] {
   <<module>>
 }
+class N_src_backend_core_workspace_csv_validation_schema_ts["csv-validation-schema.ts"] {
+  <<module>>
+}
 class N_src_backend_core_workspace_artifact_scope_ts["artifact-scope.ts"] {
   <<module>>
 }
 N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_json_validation_schema_ts : 导入依赖
+N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_csv_validation_schema_ts : 导入依赖
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_artifact_scope_ts : 导入依赖
 ```
 
@@ -729,7 +774,7 @@ N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspa
 
 版本 1 至少声明一项：`beforeEffects:{requirePlan:true}` 或 `delivery` 的非空 `requiredToolEvidence` / `requiredValidations`。两类要求各最多 16 项，ID 是 1–80 位字母、数字、下划线或连字符且在模块内不能跨类重复；条件块最多 64 KiB UTF-8。原生工具名仍限 `read/write/edit/grep/find/ls/bash`，不接知识写入、调度、任意表达式或模型提供的 path/hash/pass。
 
-`requiredValidations` 每项固定 `{id,validator:'json-schema-v1',artifactPath,schema}`。路径为明确工作区业务文件；运行时仍拒绝链接、越界和受保护知识路径。`json-validation-schema.ts` 仅解释有界 JSON Schema 子集：每节点显式 type，标量 enum/const，对象 properties/required/布尔 additionalProperties，数组 items/长度，以及字符串长度和数值上下界。对象/数组 enum/const、引用、组合、pattern、format、自定义代码和未知关键字均不支持；不会编译用户脚本、转换类型、补默认值或删字段。未知或超界声明在知识提交、资源模板和执行准备中同样拒绝。
+`requiredValidations` 每项固定 `{id,validator,artifactPath,schema}`，通过验证器判别联合分别约束 JSON 与 CSV 参数；已支持 `json-schema-v1` 和 `csv-table-v1`。路径为明确工作区业务文件；运行时仍拒绝链接、越界和受保护知识路径。`json-validation-schema.ts` 仅解释有界 JSON Schema 子集：每节点显式 type，标量 enum/const，对象 properties/required/布尔 additionalProperties，数组 items/长度，以及字符串长度和数值上下界。对象/数组 enum/const、引用、组合、pattern、format、自定义代码和未知关键字均不支持；不会编译用户脚本、转换类型、补默认值或删字段。未知或超界声明在知识提交、资源模板和执行准备中同样拒绝。
 
 单 Schema ≤32 KiB、深度≤16、节点≤512、单层属性≤64、标量枚举≤64；文件≤1 MiB，JSON 嵌套≤64、节点≤100000，诊断最多32条且不包含原值。纯校验器从可信平台同一次读取的 Uint8Array 严格解析 UTF-8 与无重复字段的 JSON，返回 passed 或 rejected；无效 JSON 也是实际检查事实。结构通过只证明该份字节符合该项声明，不是专业语义全验收。模块声明缺省仍保持原 Workflow 行为和旧 proof 形状。
 
@@ -832,3 +877,9 @@ Workflow的delivery.requireCompleteManifest:true必须同时有本模块artifact
 ## R07-B2 原删除与移动证明
 
 artifactScope.transitions 可明确声明 delete(path) 或 move(from,to)，全轮最多4项，源/目标须在所属模块根内且互不重叠；大小写别名、知识目录及 .git 拒绝。必须同时 requireCompleteManifest:true；原声明随 Workflow 和范围指纹冻结，工具仅选模块/序号，不接任意路径。旧无声明记录不回填。
+
+### CSV 表格验证声明
+
+`csv-validation-schema.ts` 解释 `csv-table-v1`：精确有序表头，string/integer/number 列，字符串码点长度与枚举、有限数值范围、数据行数和按原字符串组合的唯一键。整数须为安全十进制整数；不修剪空白、补值、转换坏值或执行公式。逗号分隔、双引号及双写转义、CRLF/LF 和引号内换行；UTF-8 可有 BOM，裸 CR、NUL、无效 UTF-8 与坏引号拒绝。空行不跳过。
+
+单声明≤32 KiB，文件≤1 MiB、数据行≤10000、列≤32、字段≤4096 Unicode 码点；预算超限抛错，不截断作证。诊断最多16项，只含行/列位置和规则，不返回单元格或唯一键正文。未达到声明条件返回真实 rejected；相同文件字节不能替代冻结规则身份。JSON 的既有语义和哈希保持兼容。

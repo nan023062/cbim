@@ -1,6 +1,6 @@
 /**
  * 完整模式从验证调用之前的原canonical清单派生文件事实与集合身份；旧baseline与完整manifest互斥，任何模式降级均拒绝。
- * 作用定位：从可信冻结 Workflow 与本轮日志核实 JSON 验证事实，供 Runtime、交付和主目标复核共同使用。
+ * 作用定位：从可信冻结 Workflow 与本轮日志核实 JSON/CSV 验证事实，供 Runtime、交付和主目标复核共同使用。
  * 设计原因：结果正文和 succeeded 回执都不能单独声明通过；要求、基线、真实调用、文件字节指纹及事件顺序必须一致。
  * 职责边界：不读文件，不判断当前字节；外层完整 canonical 身份/终态与异步文件重核仍不可省略。
  */
@@ -19,12 +19,12 @@ function valid(value:unknown,message:string):asserts value{if(!value)fail('VALID
 const ordered=(value:unknown):unknown=>Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([key,item])=>[key,ordered(item)])):value;
 const same=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 const effect=(event:ArtifactEvidenceEvent)=>event.type==='tool.allowed'&&Array.isArray(event.data.effects)&&event.data.effects.some(value=>['business-write','knowledge-write','command'].includes(String(value)));
-/** 模型只引用 module/condition ID；实际要求和 Schema 哈希从唯一冻结绑定取出。 */
+/** 模型只引用 module/condition ID；旧 JSON 哈希不变，CSV 将类型与参数共同签入，避免跨验证器解释旧证明。 */
 export function validationRequirement(bindings:readonly ValidationWorkflowBinding[],moduleId:string,requirementId:string){
   const matches=bindings.filter(value=>value.moduleId===moduleId);valid(matches.length===1&&workflowContractSchema.safeParse(matches[0].contract).success,'不存在唯一有效的冻结验证模块');
   const binding=matches[0],requirements=binding.contract.delivery?.requiredValidations?.filter(value=>value.id===requirementId)??[];
-  valid(requirements.length===1,'不存在唯一的冻结 JSON 验证要求');const requirement=requirements[0];
-  return {binding,requirement,schemaHash:hash(JSON.stringify(ordered(requirement.schema)))};
+  valid(requirements.length===1,'不存在唯一的冻结产物验证要求');const requirement=requirements[0];
+  return {binding,requirement,schemaHash:hash(JSON.stringify(ordered(requirement.validator==='json-schema-v1'?requirement.schema:{validator:requirement.validator,schema:requirement.schema})))};
 }
 /** 运行中可省略无关消息，但顺序/身份仍严格；未结束或明确失败的暂存不成为记录，成功却缺事件则拒绝。 */
 export function verifyValidationRecords(events:readonly ArtifactEvidenceEvent[],binding:ValidationBinding,knowledgeRevision:string,bindings:readonly ValidationWorkflowBinding[],normalizePath:(raw:string)=>string):ValidationRecord[]{
@@ -42,7 +42,7 @@ export function verifyValidationRecords(events:readonly ArtifactEvidenceEvent[],
     let body:unknown;try{body=JSON.parse(block.text)}catch{valid(false,'验证正文不是有效 JSON')}
     const output=validationOutputSchema.safeParse(body);valid(output.success&&same(output.data,body)&&same(output.data.validation,result),'验证事件与原回包不一致');
     const selected=validationRequirement(bindings,input.data.moduleId,input.data.requirementId);
-    valid(same(result.binding,binding)&&result.knowledgeRevision===knowledgeRevision&&same(result.requirement,{moduleId:selected.binding.moduleId,workflowId:selected.binding.workflowId,workflowVersion:selected.binding.workflowVersion,requirementId:selected.requirement.id,schemaHash:selected.schemaHash})&&result.baselineId===input.data.baselineId&&result.manifest?.manifestId===input.data.manifestId&&result.taskProgressVersion===input.data.expectedTaskProgressVersion,'验证记录与原请求、知识或冻结要求不一致');
+    valid(result.validator===selected.requirement.validator&&same(result.binding,binding)&&result.knowledgeRevision===knowledgeRevision&&same(result.requirement,{moduleId:selected.binding.moduleId,workflowId:selected.binding.workflowId,workflowVersion:selected.binding.workflowVersion,requirementId:selected.requirement.id,schemaHash:selected.schemaHash})&&result.baselineId===input.data.baselineId&&result.manifest?.manifestId===input.data.manifestId&&result.taskProgressVersion===input.data.expectedTaskProgressVersion,'验证记录与原请求、知识或冻结要求不一致');
     const before=events.filter(value=>value.seq<own.allowed.seq);let sourceFiles:ArtifactFileFact[];
     if(completeOutputRequired(bindings)){
       valid(input.data.manifestId&&result.manifest&&!result.baselineId,'完整验证不能回退为选定文件基线');

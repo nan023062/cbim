@@ -4,7 +4,7 @@
  * 每个正式成员运行最多暂存一次检查点，可信剩余额度允许后续运行再次停泊，零额度仍保留正常交付。
  * 受控文件边界：自身 beforeTool 可靠保存 allowed 才签发一次许可；写入及冻结删除/移动未确认后整轮限制为读取/求助并按 interrupted 封存，原失败回执不改写。停止等待文件 child 退出，失败保留原占用。
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
- * 设计原因：工具先分类与计划门禁再审批；每轮进度绑定真实 workspace/task/run，成员专属工具另绑定完整实例。完整集合观察、JSON 验证及交付复核各持短锁，异步读取前后核知识、计划与停止；坏回包保留事实，求助/检查点不解锁，采集/验证只随真实结束释放。
+ * 设计原因：工具先分类与计划门禁再审批；每轮进度绑定真实 workspace/task/run，成员专属工具另绑定完整实例。完整集合观察、产物验证及交付复核各持短锁，异步读取前后核知识、计划与停止；坏回包保留事实，求助/检查点不解锁，采集/验证只随真实结束释放。
  * 插入边界：核对原 run、可信周期令牌和发送前停止信号；原生接受后返回真实日志序号，适配器不能伪造该令牌。终态等待在途记录排空，接受后的保存失败仍属未知，不自动重放。
  * 核实边界：历史 reconciledToolIds 仅保留可读；新请求不能据裸调用 ID 续接 unknown。授权记录中的契约版本只取可信工具描述，旧记录不补造版本。
  */
@@ -147,8 +147,9 @@ export class LoopRuntime {
     const workflows=structuredClone(this.options.workflowContracts??[]);
     if(workflows.length&&(!member||!this.options.describeTool))fail('WORKFLOW_GATE_UNAVAILABLE','带执行约定的 Workflow 必须通过正式成员及可信工具分类门禁');
     const validationCount=workflows.reduce((count,item)=>count+(item.contract.delivery?.requiredValidations?.length??0),0),validationRequired=validationCount>0;
-    if(validationCount>jsonValidationLimits.records)fail('WORKFLOW_VALIDATION_LIMIT','冻结的 JSON 验证要求超过本轮 16 条记录上限，不能启动执行');
-    if(validationRequired&&(!member||!this.options.artifacts||!this.options.validations))fail('VALIDATION_UNAVAILABLE','冻结的 JSON 验证要求缺少正式成员文件验证端口');
+    if(validationCount>jsonValidationLimits.records)fail('WORKFLOW_VALIDATION_LIMIT','冻结的产物验证要求超过本轮 16 条记录上限，不能启动执行');
+    if(validationRequired&&(!member||!this.options.artifacts||!this.options.validations))fail('VALIDATION_UNAVAILABLE','冻结的产物验证要求缺少正式成员文件验证端口');
+    if(workflows.some(item=>item.contract.delivery?.requiredValidations?.some(rule=>rule.validator==='csv-table-v1'))&&!this.options.validations?.validateTable)fail('VALIDATION_UNAVAILABLE','冻结的CSV要求缺少真实表格验证端口，不能启动执行');
     const manifestScopes=preparedArtifactScopes(workflows);
     if(manifestScopes.length&&(!member||!this.options.manifests))fail('MANIFEST_UNAVAILABLE','声明的完整产物范围缺少正式成员枚举端口');
     if(preparedArtifactTransitions(manifestScopes).length&&(!member||!this.options.artifactTransitions))fail('ARTIFACT_TRANSITION_UNAVAILABLE','冻结的删除/移动要求缺少真实受控平台端口');
@@ -228,7 +229,7 @@ export class LoopRuntime {
         if(!trustedArtifact&&event.data.contractVersion!==undefined){const {contractVersion:_,...data}=event.data;event={...event,data}}
         if(event.type==='tool.allowed'&&[controlledFileWriteToolName,artifactTransitionToolName].includes(String(event.data.name))&&!trustedArtifact)fail('CONTROLLED_FILE_AUTHORIZATION','受控文件授权只能由本轮策略可靠保存');
         if(event.type==='engine.status'&&event.data.activeInput!==undefined&&!trustedArtifact)throw Error('目标补充身份只能由可信插入端口保存');
-        if((['artifact.baseline_captured','artifact.manifest_captured','task.checkpoint_requested','validation.checked'].includes(event.type)||event.type.startsWith('artifact.transition_'))&&!trustedArtifact)throw Error('产物、原操作、JSON 验证与检查点只能由本轮可信端口保存');
+        if((['artifact.baseline_captured','artifact.manifest_captured','task.checkpoint_requested','validation.checked'].includes(event.type)||event.type.startsWith('artifact.transition_'))&&!trustedArtifact)throw Error('产物、原操作、产物验证与检查点只能由本轮可信端口保存');
         if(event.type==='tool.finished'){
           const known=calls.get(String(event.data.id));
           const {receipt:_untrustedReceipt,...data}=event.data;
@@ -294,7 +295,7 @@ export class LoopRuntime {
       });
       if(member&&validationRequired&&this.options.artifacts&&this.options.validations)validation=new RunValidation(member.binding,workflows,this.options.artifacts,this.options.validations,{
         current:()=>taskTools.current(),generation:()=>taskTools.generation,
-        assertReady:id=>{if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))fail('VALIDATION_CALL','JSON 验证已停止、未获准或仍有其他在途操作')},
+        assertReady:id=>{if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))fail('VALIDATION_CALL','产物验证已停止、未获准或仍有其他在途操作')},
         assertDeliveryReady:()=>{if(stopping||[...activeCalls].some(id=>calls.get(id)?.call.name!=='cbim_delivery_prepare')||[...pendingTools].some(id=>calls.get(id)?.call.name!=='cbim_delivery_prepare')||activeCalls.size>1)fail('VALIDATION_BUSY','仍有其他工具或审批未结束，不能读取 JSON 交付证据');assertDeliveryReady()},
         verifyManifest:async(record,signal)=>{if(!manifestCapture)fail('MANIFEST_UNAVAILABLE','本轮完整产物端口尚未就绪');await manifestCapture.verifyCurrent(record,'cbim_validation_run',signal)},
         save:async value=>{await emit({type:'validation.checked',data:{validation:value}},true)},
@@ -355,7 +356,7 @@ export class LoopRuntime {
             // 验证、采集与停泊先同步预占，再进入策略；短读锁不会绕过求助/检查点的本轮结束门闩。
             const transitionReason=artifactTransition?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactTransition&&call.name===artifactTransitionToolName?'本轮未提供冻结删除/移动能力':undefined);
             const controlledReason=transitionReason??controlledFile?.guard(call.name,call.id,call.input,[...activeCalls])??(!controlledFile&&call.name===controlledFileWriteToolName?'本轮未提供受控文件工具':undefined);
-            const validationReason=controlledReason??validation?.guard(call.name,call.id,call.input,[...activeCalls])??(!validation&&call.name===validationToolName?'本轮未提供冻结要求的 JSON 产物验证工具':undefined);
+            const validationReason=controlledReason??validation?.guard(call.name,call.id,call.input,[...activeCalls])??(!validation&&call.name===validationToolName?'本轮未提供冻结要求的 JSON/CSV 产物验证工具':undefined);
             const checkpointReason=validationReason??checkpointTools?.guard(call.name,call.id,call.input,[...activeCalls])??(!checkpointTools&&call.name===memberCheckpointToolName?'本轮没有剩余检查点额度或未装配可信检查点能力':undefined);
             const artifactReason=checkpointReason??artifactCapture?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactCapture&&call.name===artifactCaptureToolName?'本轮未提供成员文件基线采集能力':undefined);
             const manifestReason=artifactReason??manifestCapture?.guard(call.name,call.id,call.input,[...activeCalls])??(!manifestCapture&&[outputManifestToolName,outputManifestInspectToolName].includes(call.name)?'本轮未提供冻结完整范围的枚举能力':undefined);

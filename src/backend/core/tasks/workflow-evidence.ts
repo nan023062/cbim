@@ -1,9 +1,9 @@
 /**
  * 完整模式核显式原清单、全部冻结范围与同身份JSON记录；历史重算还核采集结束早于交付授权，不退回文件子集。
  * 证据边界：交付只核步骤实际引用的业务证据，提问、取消、原命令报告及模块负责人控制面不能作证；未引用的查询不使整轮失效，真实知识写仍参与副作用时序。
- * 作用定位：核实可选 Workflow 的计划前置、工具回执及精确 JSON 文件结构出口，供运行时与调度结算共用。
+ * 作用定位：核实可选 Workflow 的计划前置、工具回执及精确 必验文件结构出口，供运行时与调度结算共用。
  * 设计原因：工具调用事实必须与固定模块约定、当前运行及最后副作用的真实结束边界一致；并发早读不能替代写入后的验证，不能相信模型自报 pass 或只检查内存状态。
- * 职责边界：仅作确定性记录校验；选定 JSON 文件的当前字节另由平台端口复核，不执行脚本、不签发权限或宣称覆盖整个模块。
+ * 职责边界：仅作确定性记录校验；选定 必验文件的当前字节另由平台端口复核，不执行脚本、不签发权限或宣称覆盖整个模块。
  */
 import {fail} from '../foundation/errors';
 import {hash} from '../foundation/serialization';
@@ -36,7 +36,7 @@ export function workflowHasEffects(effects:readonly ToolEffect[]){return effects
 function checkedBindings(bindings:readonly WorkflowContractBinding[]){
   valid(bindings.length<=100&&new Set(bindings.map(item=>item.moduleId)).size===bindings.length,'WORKFLOW_CONTEXT_INVALID','Workflow 模块约定数量或归属重复');
   for(const item of bindings)valid(item.moduleId&&item.workflowId&&item.workflowVersion&&workflowContractSchema.safeParse(item.contract).success,'WORKFLOW_CONTEXT_INVALID','冻结的 Workflow 约定无效');
-  valid(bindings.reduce((count,item)=>count+(item.contract.delivery?.requiredValidations?.length??0),0)<=jsonValidationLimits.records,'WORKFLOW_CONTEXT_INVALID','一次成员执行最多包含 16 项 JSON 验证要求');
+  valid(bindings.reduce((count,item)=>count+(item.contract.delivery?.requiredValidations?.length??0),0)<=jsonValidationLimits.records,'WORKFLOW_CONTEXT_INVALID','一次成员执行最多包含 16 项 产物验证要求');
   return [...bindings].sort((a,b)=>a.moduleId<b.moduleId?-1:a.moduleId>b.moduleId?1:0);
 }
 /** 执行业务副作用前核对当前计划；没有声明 requirePlan 时不新增该门禁。 */
@@ -63,7 +63,7 @@ export function evaluateWorkflowDelivery(bindings:readonly WorkflowContractBindi
   const selected=selectWorkflowValidations(values,receipts,identity,validations),validationChecks:WorkflowValidationCheck[]=selected.map(({result})=>({...result.requirement,validator:result.validator,validationId:result.validationId,toolCallId:result.toolCallId,...(result.manifest?{manifest:structuredClone(result.manifest)}:{baselineId:result.baselineId!}),artifact:structuredClone(result.artifact)}));
   if(completeOutputRequired(values)){
     valid(manifest&&outputManifestProofSchema.safeParse(manifest).success&&same(manifest.scopes,preparedArtifactScopes(values))&&manifest.scopeHash===outputManifestScopeHash(manifest.scopes),'MANIFEST_REQUIRED','完整交付缺少原冻结范围的唯一清单证明');
-    valid(selected.every(record=>same(record.result.manifest,outputManifestIdentity(manifest))),'MANIFEST_VALIDATION_MISMATCH','JSON验证与交付必须引用同一完整清单，不能混用旧文件基线或其它集合');
+    valid(selected.every(record=>same(record.result.manifest,outputManifestIdentity(manifest))),'MANIFEST_VALIDATION_MISMATCH','产物验证与交付必须引用同一完整清单，不能混用旧文件基线或其它集合');
   }else valid(!manifest&&selected.every(record=>!record.result.manifest),'MANIFEST_UNDECLARED','本轮未声明完整交付要求，不能补造完整出口证明');
   return {version:1,bindingsHash:hash(JSON.stringify(ordered(values))),checks,...(validationChecks.length?{validationChecks}:{}),...(manifest?{manifest:structuredClone(manifest)}:{})};
 }
@@ -72,9 +72,9 @@ export function selectWorkflowValidations(bindings:readonly WorkflowContractBind
   const selected:ValidationRecord[]=[];
   for(const binding of checkedBindings(bindings))for(const requirement of binding.contract.delivery?.requiredValidations??[]){
     const expected=validationRequirement(bindings,binding.moduleId,requirement.id),matches=records.filter(record=>record.result.requirement.moduleId===binding.moduleId&&record.result.requirement.requirementId===requirement.id&&record.result.outcome==='passed'&&receipts.some(receipt=>receipt.toolCallId===record.result.toolCallId));
-    valid(matches.length===1,'WORKFLOW_VALIDATION_REQUIRED',`模块 ${binding.moduleId} 的 JSON 条件 ${requirement.id} 缺少唯一、明确引用的通过记录`);
+    valid(matches.length===1,'WORKFLOW_VALIDATION_REQUIRED',`模块 ${binding.moduleId} 的产物条件 ${requirement.id} 缺少唯一、明确引用的通过记录`);
     const record=matches[0],r=record.result,receipt=receipts.find(value=>value.toolCallId===r.toolCallId)!;
-    valid(validationRecordSchema.safeParse(record).success&&same(receipt,record.receipt)&&receipt.toolName===validationToolName&&receipt.outcome==='succeeded'&&same(receipt.effects,['read'])&&receipt.scope.kind==='workspace'&&receipt.scope.workspaceId===identity.workspaceId&&receipt.workspaceId===identity.workspaceId&&receipt.taskId===identity.taskId&&receipt.runId===identity.runId&&r.binding.workspaceId===identity.workspaceId&&r.binding.taskId===identity.taskId&&r.binding.runId===identity.runId&&same(r.requirement,{moduleId:binding.moduleId,workflowId:binding.workflowId,workflowVersion:binding.workflowVersion,requirementId:requirement.id,schemaHash:expected.schemaHash})&&r.artifact.relativePath===requirement.artifactPath,'WORKFLOW_VALIDATION_INVALID','JSON 验证记录、调用归属、冻结要求或文件不一致');
+    valid(r.validator===requirement.validator&&validationRecordSchema.safeParse(record).success&&same(receipt,record.receipt)&&receipt.toolName===validationToolName&&receipt.outcome==='succeeded'&&same(receipt.effects,['read'])&&receipt.scope.kind==='workspace'&&receipt.scope.workspaceId===identity.workspaceId&&receipt.workspaceId===identity.workspaceId&&receipt.taskId===identity.taskId&&receipt.runId===identity.runId&&r.binding.workspaceId===identity.workspaceId&&r.binding.taskId===identity.taskId&&r.binding.runId===identity.runId&&same(r.requirement,{moduleId:binding.moduleId,workflowId:binding.workflowId,workflowVersion:binding.workflowVersion,requirementId:requirement.id,schemaHash:expected.schemaHash})&&r.artifact.relativePath===requirement.artifactPath,'WORKFLOW_VALIDATION_INVALID','验证器、调用归属、冻结要求或文件不一致');
     selected.push(record);
   }
   return selected;

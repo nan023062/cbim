@@ -16,10 +16,10 @@ import {progressToolInputSchemas,type ProgressPlanInput,type ProgressStepInput,t
 import {isProgressEvidence,memberToolContract,memberToolOutputSchema,progressToolIdentitySchema,type MemberToolName,type ProgressToolIdentity,type ProgressOutputBasis} from './member-tool-output';
 
 const definitions={
-  cbim_task_inspect:{description:'读取本会话执行计划、本轮可引用的成功工具回执及已装配的 JSON 验证事实。rejected 是检查已执行但不符合要求，不能满足交付出口。普通问答无需创建计划。',schema:progressToolInputSchemas.cbim_task_inspect},
+  cbim_task_inspect:{description:'读取本会话执行计划、本轮可引用的成功工具回执及已装配的产物验证事实。rejected 是检查已执行但不符合要求，不能满足交付出口。普通问答无需创建计划。',schema:progressToolInputSchemas.cbim_task_inspect},
   cbim_task_plan:{description:'创建或修订执行计划。expectedVersion 初次为 0；修订清除旧证据并保留历史。责任是描述，不会派发其他 Agent。',schema:progressToolInputSchemas.cbim_task_plan},
   cbim_task_step:{description:'更新步骤；reported_done 必须引用 cbim_task_inspect 返回的本轮有效 evidenceIds。完成声明仍需人工判断。',schema:progressToolInputSchemas.cbim_task_step},
-  cbim_delivery_prepare:{description:'准备交付候选。全部步骤须有有效回执；Workflow 若要求 requireCompleteManifest，须明确原 manifestId，JSON验证须引用同一清单，程序重核全部声明根及后代。仅观察声明和旧模式不传 manifestId。这里只标记待审阅，不能表示人工业务验收通过。',schema:progressToolInputSchemas.cbim_delivery_prepare},
+  cbim_delivery_prepare:{description:'准备交付候选。全部步骤须有有效回执；Workflow 若要求 requireCompleteManifest，须明确原 manifestId，产物验证须引用同一清单，程序重核全部声明根及后代。仅观察声明和旧模式不传 manifestId。这里只标记待审阅，不能表示人工业务验收通过。',schema:progressToolInputSchemas.cbim_delivery_prepare},
 };
 /** 工具只维护执行记录，不修改项目或知识；参数校验可在授权前独立调用。 */
 export function progressTool(name:string,input:unknown){

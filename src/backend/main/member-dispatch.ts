@@ -7,6 +7,7 @@
  * 设计原因：知识→模型设置→Store 锁序固定岗位配置，预算和租约通过后才解密；成员不继承主模型。Workflow 能力按实际端口预检，密钥只留工厂闭包，锁释放后创建引擎；历史报告不启动成员。
  * 交接处置只复用原 canonical 读取与路径规范化，既存检查点证明不因今日 native/知识/模型变化被刷新；恢复执行仍走全部当前基线核验。
  * 请求预算共用唯一 Store，真实成员工厂绑定原岗位模型；供应商重试与摘要也由本轮请求端口核实。
+ * 专业验证按真实装配公开JSON/CSV能力，表格与JSON共用安全文件读取及完整清单复核，不把工具成功当作检查通过。
  * 影响观察另提供安全文件读取、短只读占用、原知识/治理/责任及受控阶段查询；端口复用唯一存储及已有受控报告，不启动模型、文件子进程或旧提交，明确处置、新只读核实与业务修复各走独立门禁。
  */
 import path from 'node:path';
@@ -82,7 +83,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
   }},budgetPolicy,{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),checkManifest:(snapshot,signal)=>manifestFiles.check(snapshot,signal),acquireRead:()=>{workspace.assert();return lease.acquire('human-decision:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('HUMAN_UNAVAILABLE','工作区正在停止，未保存新的人工决定')}},models,{inspect:inspectMember,normalizePath:normalizeArtifact},{inspectMember,observeKnowledge:(reference,signal)=>observeKnowledgeTransaction(workspace,reference,signal),observePersistent:(reference,signal)=>observePersistentWrite(workspace,reference,signal),observeControlled:async(input,signal)=>{signal?.throwIfAborted();const value=await controlledFiles.report(input);signal?.throwIfAborted();return value},normalizePath:normalizeArtifact,observeFiles:(paths,signal)=>artifactFiles.observeFiles(paths,signal),acquireRead:()=>{workspace.assert();return lease.acquire('effect-observation:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('EFFECT_UNAVAILABLE','工作区正在停止，未保存新的处置')}},{...checkpointPorts,acquireRead:()=>{workspace.assert();return lease.acquire('member-pause:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('GOAL_MEMBER_PAUSE_UNAVAILABLE','工作区正在停止，原成员等待未消费')}});
   const requestBudgets=new ModelRequestBudgetService(workspace,store,dispatch.budgets);
   const prepareEngine=(llm:ResolvedLlm,options:MemberStartOptions):PreparedEngine=>{
-      return {model:structuredClone(llm.profile),availableTools:nativeToolNames(options.permission!=='read'),availableValidators:['json-schema-v1'],create:async(run,task,hooks)=>{
+      return {model:structuredClone(llm.profile),availableTools:nativeToolNames(options.permission!=='read'),availableValidators:['json-schema-v1','csv-table-v1'],create:async(run,task,hooks)=>{
         workspace.assert();
         if(run.binding.workspaceId!==workspace.entry.id||task.identity.workspaceId!==workspace.entry.id)throw Error('成员运行与工作区身份不匹配');
         if(JSON.stringify(run.model)!==JSON.stringify(llm.profile))throw Error('成员运行模型快照与启动配置不一致');
@@ -96,7 +97,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
           storage,member:{directory:runsDirectory,prompt:memberExecutionPrompt(run.prepared,task,run.prerequisites),workflowContracts:preparedWorkflowContracts(run.prepared)},onEngineReady:hooks.onEngineReady,
           artifacts:{knowledgeRevision:run.prepared.knowledgeRevision,normalizePath:normalizeArtifact,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},captureFiles:(paths,signal)=>artifactFiles.captureFiles(paths,signal)},
           manifests:{knowledgeRevision:run.prepared.knowledgeRevision,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},capture:(scopes,signal)=>manifestFiles.capture(scopes,signal)},
-          validations:{validateFile:(file,schema,signal)=>artifactFiles.validateFile(file,schema,signal),checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal)},
+          validations:{validateFile:(file,schema,signal)=>artifactFiles.validateFile(file,schema,signal),validateTable:(file,schema,signal)=>artifactFiles.validateTable(file,schema,signal),checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal)},
           controlledFiles:task.scopeId?controlledFiles.forRun(run,task.scopeId):undefined,
           artifactTransitions:createArtifactTransitionPort(workspace,controlledTransport,()=>admission?.isCurrent()??true),
           // 领取后到 Pi 发出首条 prompt 前仍有异步准备；每个准备边界复核原证明，不只核原生文件而遗漏外部业务文件变化。

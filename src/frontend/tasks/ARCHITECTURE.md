@@ -62,7 +62,7 @@
 | [MemberOutputManifest.tsx](MemberOutputManifest.tsx) | 成员指定轮次的声明范围完整清单面板，明确显示根、缺失、集合变化及原删除/移动证明。 |
 | [MemberRunTranscript.tsx](MemberRunTranscript.tsx) | 以成员身份显示公开消息和工具过程，供主会话成员卡片及任务详情共用。 |
 | [MemberTaskDetail.tsx](MemberTaskDetail.tsx) | 展示任务图选中成员的公开正文、工具、计划与候选；独立报告核实执行事实，独立表单显式创建新的只读核实周期。 |
-| [MemberValidationPanel.tsx](MemberValidationPanel.tsx) | 成员任务详情中的只读 JSON 结构验证记录，列出明确条件、文件与当时结论。 |
+| [MemberValidationPanel.tsx](MemberValidationPanel.tsx) | 成员任务详情中的只读 JSON/CSV 验证记录，列出验证器、明确条件、文件与当时结论。 |
 | [output-manifest-state.ts](output-manifest-state.ts) | 完整产物清单的显式列表、选择和复核状态；仅消费 Bridge 公开 DTO。 |
 | [owner-execution-state.ts](owner-execution-state.ts) | 将任务内冻结的负责人绑定投影为只读展示状态，供对话卡片、任务节点与详情共用。 |
 | [owner-execution.css](owner-execution.css) | 任务与目标计划中原岗位绑定的紧凑排版。 |
@@ -4104,3 +4104,7 @@ HumanDecisionController保留显式manifests选择并随原请求持久冻结；
 ## R07-B2 原删除与移动证明
 
 ArtifactTransitionProofs 为成员清单和人工候选/历史共用纯展示，显示源、目标、原字节摘要、写前清单及真实阶段序号。无重放或恢复按钮；当前集合状态仍取外层显式核实。缺失观察说明保留，不能仅凭今天缺失声称原删除成功。
+
+### CSV 验证记录显示
+
+MemberValidationPanel 显式显示 CSV 表格检查或 JSON 结构检查；CSV 诊断按表头/列数/字段约束/唯一键/行数/编码语法区分，并只显示原位置与规则名称。后续写入使旧依据过期时仍保留原 rejected，实际 passed 只表示当时符合条件；不返回单元格正文，不以当前页面状态替代后端复核。

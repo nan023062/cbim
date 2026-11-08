@@ -1,12 +1,13 @@
 /**
  * 作用定位：定义模块 Workflow 正文中可选执行条件的严格协议，供知识治理、资源包与执行准备共同解析。
  * 设计原因：自然语言方法仍由模型运用，只有显式声明的少量稳定条件才交程序检查；坏声明不能静默退回无约束流程。
- * 职责边界：纯解析，JSON要求固定产物及受限Schema；普通artifactScope只声明观察，删除/移动约定须启用requireCompleteManifest并核原操作。不读取工程或签发权限。
+ * 职责边界：纯解析，JSON/CSV要求固定产物与受限结构；普通artifactScope只声明观察，删除/移动约定须启用requireCompleteManifest并核原操作。不读取工程或签发权限。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
 import {parseJson} from '../foundation/json';
 import {boundedJsonSchemaSchema} from './json-validation-schema';
+import {csvTableSchema} from './csv-validation-schema';
 import {artifactScopeSchema} from './artifact-scope';
 
 /** 限制单份条件的规模；正文其它自然语言仍沿原知识文件大小规则。 */
@@ -18,13 +19,17 @@ const requirement=z.object({id:z.string().regex(/^[A-Za-z0-9_-]{1,80}$/),toolNam
 const artifactPath=z.string().min(1).max(2048).refine(value=>!/[\\:\x00-\x1f]/.test(value)&&!value.startsWith('/')&&value.split('/').every(part=>!!part&&part!=='.'&&part!=='..'&&part.toLowerCase()!=='.cbim'));
 export const jsonValidationRequirementSchema=z.object({id:z.string().regex(/^[A-Za-z0-9_-]{1,80}$/),validator:z.literal('json-schema-v1'),artifactPath,schema:boundedJsonSchemaSchema}).strict();
 export type JsonValidationRequirement=z.infer<typeof jsonValidationRequirementSchema>;
+/** 验证器与参数共同冻结；同名要求不能把 JSON 证明解释成 CSV 检查，模型不可覆盖路径或规则。 */
+export const csvValidationRequirementSchema=z.object({id:z.string().regex(/^[A-Za-z0-9_-]{1,80}$/),validator:z.literal('csv-table-v1'),artifactPath,schema:csvTableSchema}).strict();
+export const artifactValidationRequirementSchema=z.discriminatedUnion('validator',[jsonValidationRequirementSchema,csvValidationRequirementSchema]);
+export type ArtifactValidationRequirement=z.infer<typeof artifactValidationRequirementSchema>;
 /** 至少一项显式执行条件或产物观察范围；范围本身不构成交付条件，不做隐式默认。 */
 export const workflowContractSchema=z.object({
   version:z.literal(1),
   /** 完整枚举的范围随知识冻结；不把观察声明冒充交付条件。 */
   artifactScope:artifactScopeSchema.optional(),
   beforeEffects:z.object({requirePlan:z.literal(true)}).strict().optional(),
-  delivery:z.object({requiredToolEvidence:z.array(requirement).min(1).max(workflowContractLimits.requirements).optional(),requiredValidations:z.array(jsonValidationRequirementSchema).min(1).max(workflowContractLimits.requirements).optional(),requireCompleteManifest:z.literal(true).optional()}).strict().refine(value=>!!value.requiredToolEvidence||!!value.requiredValidations||value.requireCompleteManifest===true,'交付至少声明一种非空条件').optional(),
+  delivery:z.object({requiredToolEvidence:z.array(requirement).min(1).max(workflowContractLimits.requirements).optional(),requiredValidations:z.array(artifactValidationRequirementSchema).min(1).max(workflowContractLimits.requirements).optional(),requireCompleteManifest:z.literal(true).optional()}).strict().refine(value=>!!value.requiredToolEvidence||!!value.requiredValidations||value.requireCompleteManifest===true,'交付至少声明一种非空条件').optional(),
 }).strict().superRefine((value,context)=>{
   if(!value.beforeEffects&&!value.delivery&&!value.artifactScope)context.addIssue({code:z.ZodIssueCode.custom,message:'至少声明一项执行条件或产物观察范围'});
   if(value.delivery?.requireCompleteManifest&&!value.artifactScope)context.addIssue({code:z.ZodIssueCode.custom,message:'完整交付要求必须同时声明本模块 artifactScope'});

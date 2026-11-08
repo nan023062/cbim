@@ -1,6 +1,6 @@
 /**
- * 作用定位：在固定工作区根内安全读取业务文件，供指纹采集、复核、无基线当前观察及冻结 JSON 结构验证共用。
- * 设计原因：哈希与 JSON 验证必须使用同一次句柄读取的字节；路径逐级拒绝链接/越界，句柄与路径前后核对，超限不截断作证。
+ * 作用定位：在固定工作区根内安全读取业务文件，供指纹采集、复核、无基线观察及冻结 JSON/CSV 验证共用。
+ * 设计原因：哈希与专业验证必须使用同一次句柄读取的字节；路径逐级拒绝链接/越界，句柄与路径前后核对，超限不截断作证。
  * 职责边界：不运行命令、不读取目录或知识库、不返回文件正文；外部并发修改仅尽力检测，不构成操作系统沙箱或原子快照。
  */
 import fs from 'node:fs/promises';
@@ -10,6 +10,7 @@ import {createHash} from 'node:crypto';
 import {fail} from '../../core/foundation/errors';
 import {artifactLimits,type ArtifactFileFact,type ArtifactFileCheck} from '../../core/tasks/artifact-baseline';
 import {jsonValidationLimits,validateJsonArtifact,type BoundedJsonSchema} from '../../core/workspace/json-validation-schema';
+import {csvValidationLimits,validateCsvArtifact,type CsvTableSchema} from '../../core/workspace/csv-validation-schema';
 import type {EffectFileObservation} from '../../core/tasks/effect-observation';
 
 export const artifactFileLimits={files:artifactLimits.files,bytesPerFile:artifactLimits.fileBytes,totalBytes:artifactLimits.totalBytes} as const;
@@ -67,6 +68,13 @@ export class ArtifactFiles {
     const result=validateJsonArtifact(schema,bytes!);this.assert();signal.throwIfAborted();
     return {artifact:fact,...result};
   }
+  /** CSV 使用同一安全句柄取得指纹与全部表格字节；解析不执行公式，错误不返回单元格正文。 */
+  async validateTable(expected:ArtifactFileFact,schema:CsvTableSchema,signal:AbortSignal){
+    const {fact,bytes}=await this.readFile(expected.relativePath,signal,{readBytes:0},csvValidationLimits.fileBytes,true);
+    if(fact.relativePath!==normalizeArtifactPath(this.root,expected.relativePath)||fact.byteLength!==expected.byteLength||fact.sha256!==expected.sha256)fail('VALIDATION_BASELINE_CHANGED','CSV 文件已偏离明确基线，请重新读取与采集');
+    const result=validateCsvArtifact(schema,bytes!);this.assert();signal.throwIfAborted();
+    return {artifact:fact,...result};
+  }
   /** 一份明确基线的逐文件只读结果；失败不抹去其它文件观察，所有读取共用总字节上限。 */
   async checkFiles(files:readonly ArtifactFileFact[],signal:AbortSignal):Promise<ArtifactFileCheck[]>{
     if(!files.length||files.length>artifactFileLimits.files)fail('ARTIFACT_LIMIT','一次最多核实 16 个文件');
@@ -90,7 +98,7 @@ export class ArtifactFiles {
   private async readFile(raw:string,signal:AbortSignal,budget:{readBytes:number},maxBytes:number,retainBytes:boolean){
       const target=await this.resolve(raw,signal),before=await fs.lstat(target.file);
       if(!before.isFile()||before.isSymbolicLink()||before.nlink!==1)fail('ARTIFACT_PATH','只核实未链接的普通业务文件');
-      if(before.size>maxBytes||budget.readBytes+before.size>artifactFileLimits.totalBytes)fail(retainBytes?'VALIDATION_LIMIT':'ARTIFACT_LIMIT',retainBytes?'JSON 产物超过单文件 1 MiB 的验证上限':'文件超过单文件 8 MiB 或总计 32 MiB 的核实上限');
+      if(before.size>maxBytes||budget.readBytes+before.size>artifactFileLimits.totalBytes)fail(retainBytes?'VALIDATION_LIMIT':'ARTIFACT_LIMIT',retainBytes?'产物超过单文件 1 MiB 的验证上限':'文件超过单文件 8 MiB 或总计 32 MiB 的核实上限');
       const flags=constants.O_RDONLY|(process.platform==='win32'?0:constants.O_NOFOLLOW|constants.O_NONBLOCK),handle=await fs.open(target.file,flags);
       try{
         const opened=await handle.stat();signal.throwIfAborted();

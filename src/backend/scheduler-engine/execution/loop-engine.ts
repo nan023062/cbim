@@ -2,7 +2,7 @@
  * 检查点剩余额度只接可信成员服务；主会话和公开运行选项不能补造或覆盖额度。
  * 受控文件边界：正式成员和实际平台端口共同决定写入及删除/移动能力；后者以 v1 严格选择冻结要求，主调度和 Node 缺省工厂无旁路，业务写始终受原权限约束。
  * 作用定位：调度引擎：将工作区内部知识服务、内核锁与前置策略注入独立 LoopRuntime。
- * 设计原因：工具纯分类只做一次，交给成员 Workflow 计划门禁和既有授权共用；主调度业务写入/命令仍始终拒绝。选定文件、完整清单、检查点与 JSON 验证仅向正式成员注入，完整清单及验证还须冻结声明和真实端口，单任务入口不能绕过。
+ * 设计原因：工具纯分类只做一次，交给成员 Workflow 计划门禁和既有授权共用；主调度业务写入/命令仍始终拒绝。选定文件、完整清单、检查点与 产物验证仅向正式成员注入，完整清单及验证还须冻结声明和真实端口，单任务入口不能绕过。
  * 仓库边界：仅主会话使用已捕获只读端口；发现、分类、调用各走独立适配器，资料不是指令，成员不因装配参数获得外部读取能力。
  * 治理边界：只有真实主绑定和独立 per-run 工厂可注册四项治理工具；私有待办不扩大知识写或业务执行权。
  * 责任边界：负责人四工具独立于知识目录，只在真实主周期装配；提交按 knowledge-write 逐次授权，不向成员或未装配入口开放。
@@ -159,7 +159,7 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
     if(call.name===controlledFileWriteToolName){if(!services.member||!services.controlledFiles)fail('CONTROLLED_PLATFORM_UNSUPPORTED','本轮未装配受控写入');controlledFileWriteInputSchema.parse(call.input);return {effects:['business-write'],native:false,scope:{kind:'workspace',workspaceId:workspace.id}}}
     if(call.name===artifactTransitionToolName){if(!services.member||!services.artifactTransitions)fail('ARTIFACT_TRANSITION_UNAVAILABLE','本轮未装配真实删除/移动');artifactTransitionInputSchema.parse(call.input);return {effects:['business-write'],native:false,scope:{kind:'workspace',workspaceId:workspace.id},contractVersion:1}}
     const progress=progressTool(call.name,call.input);if(progress)return progress;
-    const validation=validationTool(call.name,call.input);if(validation){if(!services.member||!services.artifacts||!services.validations||!services.member.workflowContracts?.some(binding=>binding.contract.delivery?.requiredValidations?.length))throw Error('本轮未提供冻结 JSON 产物验证能力');return validation}
+    const validation=validationTool(call.name,call.input);if(validation){if(!services.member||!services.artifacts||!services.validations||!services.member.workflowContracts?.some(binding=>binding.contract.delivery?.requiredValidations?.length))throw Error('本轮未提供冻结 JSON/CSV 产物验证能力');return validation}
     const artifact=artifactTool(call.name,call.input);if(artifact){if(!services.member||!services.artifacts)throw Error('本轮未提供成员文件基线采集能力');return artifact}
     const manifest=outputManifestTool(call.name,call.input);if(manifest){if(!services.member||!services.manifests||!services.member.workflowContracts?.some(binding=>binding.contract.artifactScope))throw Error('本轮未提供冻结完整产物范围的枚举能力');return manifest}
     const checkpoint=memberCheckpointTool(call.name,call.input);if(checkpoint){if(!services.member||!services.artifacts)throw Error('本轮未提供成员检查点能力');return checkpoint}

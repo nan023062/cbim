@@ -10,7 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [artifact-files.ts](artifact-files.ts) | 在固定工作区根内安全读取业务文件，供指纹采集、复核、无基线当前观察及冻结 JSON 结构验证共用。 |
+| [artifact-files.ts](artifact-files.ts) | 在固定工作区根内安全读取业务文件，供指纹采集、复核、无基线观察及冻结 JSON/CSV 验证共用。 |
 | [controlled-file-blobs.ts](controlled-file-blobs.ts) | 保存受控写入的私有 before/intended-after 字节，公开回执只引用 UUID 与哈希。 |
 | [controlled-file-child.ts](controlled-file-child.ts) | 独立 Electron utility 文件工人入口，只接收固定私有消息，不启动 Application 或模型。 |
 | [controlled-file-protocol.ts](controlled-file-protocol.ts) | Main 与专用文件 utility 子进程之间的严格私有消息及不透明会话端口。 |
@@ -45,6 +45,7 @@ class N_src_backend_main_platform_artifact_files_ts_ArtifactFiles["ArtifactFiles
   +captureFiles()
   +observeFiles()
   +validateFile()
+  +validateTable()
   +checkFiles()
   -root
   -assert
@@ -55,7 +56,7 @@ class N_src_backend_main_platform_artifact_files_ts_ArtifactFiles["ArtifactFiles
 N_src_backend_main_platform_artifact_files_ts ..> N_src_backend_main_platform_artifact_files_ts_ArtifactFiles : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/artifact-baseline.ts](../../core/tasks/artifact-baseline.ts)、[../../core/workspace/json-validation-schema.ts](../../core/workspace/json-validation-schema.ts)、[../../core/tasks/effect-observation.ts](../../core/tasks/effect-observation.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/artifact-baseline.ts](../../core/tasks/artifact-baseline.ts)、[../../core/workspace/json-validation-schema.ts](../../core/workspace/json-validation-schema.ts)、[../../core/workspace/csv-validation-schema.ts](../../core/workspace/csv-validation-schema.ts)、[../../core/tasks/effect-observation.ts](../../core/tasks/effect-observation.ts)。
 
 ### controlled-file-blobs.ts
 
@@ -479,7 +480,7 @@ N_src_backend_main_platform_output_manifest_files_ts ..> N_src_backend_main_plat
 
 AbortSignal、工作区退役与文件变化在异步读取期间持续核对，句柄在 finally 释放。读占用阻止本应用的业务写入竞争，文件系统外部竞争只能尽力发现；这不是操作系统沙箱、全工作区扫描或原子产物快照。
 
-### 同字节 JSON 结构验证
+### 同字节 JSON/CSV 验证
 
 `ArtifactFiles.validateFile` 复用安全打开与读取循环，但单文件上限收紧为 1 MiB。同一次句柄读取的字节同时产生 SHA-256 和受限解释器输入；先与明确基线的路径、长度和哈希一致，再严格解析 UTF-8/JSON 与冻结 Schema。无二次打开、命令、网络引用或脚本编译，返回指纹及有界判定，不返回原文或对象值。
 
@@ -514,3 +515,5 @@ Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，
 `withExclusiveTransition` 在 open 时固定删除或不覆盖移动，和内容替换共享真实 utility 退出屏障，但不能在同一会话互换操作。当前限 Windows x64 / NTFS、已有普通 UTF-8 文件和已存在父目录；单文件 1 MiB，拒绝链接、硬链接及默认流外的其它数据流。移动两端父目录均持句柄，不创建目标父目录，不覆盖目标；平台事实含原文件身份/字节与源已缺失。
 
 删除使用 `SetFileInformationByHandle(FileDispositionInfo)`，关闭原文件句柄后核缺失；移动使用 `FileRenameInfo` 且不设替换标志，同句柄核目标身份/字节及源缺失。发出请求即记录 writeIssued，取消/断桥/回包丢失不等于未操作。调用方仍须先可靠保存执行意图，并等进程退出后核完整集合；平台成功自身不签发业务验收或重试许可。官方结构依据：[SetFileInformationByHandle](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfileinformationbyhandle)、[FILE_RENAME_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_rename_info)、[FILE_STREAM_INFO](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_stream_info)。
+
+`ArtifactFiles.validateTable` 复用同一安全打开、句柄读取及路径前后核对，把同一次 ≤1 MiB 读取同时用于 SHA-256 和 CSV 解释器。原基线不匹配、链接/硬链接/越界、读取中变化、停止或工作区失效均拒绝；单元格值只在本次内存解析中存在，不进入验证诊断。JSON/CSV 方法各用自己的冻结参数，无回退解释。

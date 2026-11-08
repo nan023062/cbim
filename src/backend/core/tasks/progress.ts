@@ -14,13 +14,13 @@ export interface TaskStep {
   /** 仅允许引用本轮、最近一次副作用之后的成功工具回执。 */
   evidence:string[];
 }
-/** 程序按真实回执产生的 Workflow 条件结果；JSON 条件另绑定准确文件字节，二者都不代表人工验收。 */
+/** 程序按真实回执产生的 Workflow 条件结果；产物条件另绑定准确文件字节，二者都不代表人工验收。 */
 export interface WorkflowEvidenceProof {
   version:1;
   /** 当前所有模块约定的稳定指纹，禁止借另一流程的命中结果交付。 */
   bindingsHash:string;
   checks:Array<{moduleId:string;workflowId:string;workflowVersion:string;requirementId:string;toolName:string;toolCallIds:string[]}>;
-  /** 仅声明了 JSON 验证时存在；旧流程不补空数组。 */
+  /** 仅声明了 产物验证时存在；旧流程不补空数组。 */
   validationChecks?:WorkflowValidationCheck[];
   /** 仅明确要求完整出口时存在；固定原完整集合，不能由下游重选未变子集。 */
   manifest?:OutputManifestProof;

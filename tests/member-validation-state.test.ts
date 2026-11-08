@@ -1,4 +1,7 @@
 import {expect,test} from 'vitest';
+import {createElement} from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {MemberValidationPanel} from '../src/frontend/tasks/MemberValidationPanel';
 import {memberValidationViews} from '../src/frontend/tasks/member-validation-state';
 import {projectRunEvent} from '../src/backend/scheduler-engine/execution/public-run-events';
 import type {RunSummary,StoredEvent} from '../src/backend/core/brain/types';
@@ -41,4 +44,12 @@ test('complete validation projection preserves only the exact original collectio
   const {baselineId:_,...rest}=result,manifest={manifestId:'complete-one',scopeHash:digest,manifestHash:'b'.repeat(64)},shown=projectRunEvent(event('validation.checked',3,{validation:{...rest,manifest}}),identity,task);
   expect((shown.data.validation as any).manifest).toEqual(manifest);expect(memberValidationViews(summary([shown,finished()]))[0].result.manifest).toEqual(manifest);expect(JSON.stringify(shown)).not.toContain('knowledgeRevision');expect(JSON.stringify(shown)).not.toContain('binding');
   expect(projectRunEvent(event('validation.checked',3,{validation:{...result,manifest}}),identity,task).type).toBe('engine.status');
+});
+
+test('CSV公开投影和界面保留原验证器、位置与历史结论，不泄露原字段内容',()=>{
+  const csv:ValidationResult={...result,validator:'csv-table-v1',artifact:{...result.artifact,relativePath:'inventory.csv'},outcome:'rejected',issues:[{code:'csv_value',instancePath:'/rows/1/1',keyword:'integer'},{code:'csv_duplicate',instancePath:'/rows/2',keyword:'uniqueBy'}]};
+  const shown=projectRunEvent(event('validation.checked',3,{validation:csv}),identity,task),run=summary([shown,finished(),event('tool.allowed',5,{name:'write',id:'later'})]);
+  expect(memberValidationViews(run)[0]).toMatchObject({state:'stale',result:{validator:'csv-table-v1',outcome:'rejected',issues:csv.issues}});
+  const html=renderToStaticMarkup(createElement(MemberValidationPanel,{run}));expect(html).toContain('CSV 表格检查');expect(html).toContain('CSV 字段约束不符合');expect(html).toContain('CSV 唯一键重复');expect(html).toContain('/rows/1/1');expect(html).toContain('原结论：');expect(html).not.toContain('agentInstanceId');
+  const wrong={...csv,validator:'json-schema-v1'};expect(projectRunEvent(event('validation.checked',3,{validation:wrong}),identity,task).type).toBe('engine.status');
 });

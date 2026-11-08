@@ -1,7 +1,7 @@
 /**
  * 完整接受去重原运行清单，在同一15秒与16根/512条目/32MiB预算内重核；变化拒绝继续/完成而保留历史意见。
  * 作用定位：复核已消费人工接受的精确候选和选定文件，供显式接续、目标审阅及最终完成共用。
- * 设计原因：人的历史意见不等于当前产物未变；独立端口避免目标服务与人工服务相互引用，全部接受项的选定基线及冻结 JSON 验证文件共享一次有界读取。
+ * 设计原因：人的历史意见不等于当前产物未变；独立端口避免目标服务与人工服务相互引用，全部接受项的选定基线及冻结产物验证文件共享一次有界读取。
  * 职责边界：只读可信 canonical 与业务字节，不消费等待、不复制签署身份，也不恢复未知操作。
  */
 import {fail} from '../../core/foundation/errors';
@@ -48,7 +48,7 @@ export function assertHumanSubject(scope:DispatchScope,continuation:ScopeHumanCo
 }
 /**
  * 所有接受项合并文件后一次核实；前后读取 canonical 和知识，外部文件变化不承诺跨存储原子隔离。
- * validateCandidate 只验证历史完整任务/原生绑定/交付证据；本模块复核全部当前 JSON 文件，不能只选未变的基线绕过。
+ * validateCandidate 只验证历史完整任务/原生绑定/交付证据；本模块复核全部当前 必验文件，不能只选未变的基线绕过。
  */
 export async function validateHumanAcceptances(owner:Pick<KnowledgeWorkspace,'entry'|'assert'|'read'>,state:DispatchState,scope:DispatchScope,records:readonly HumanDecisionRecord[],logs:HumanEvidenceLogs|undefined,ports:HumanDecisionPorts|undefined,validateCandidate:HumanCandidateValidator):Promise<void>{
   if(!records.length)return;check(logs&&ports,'HUMAN_CONTINUATION_UNAVAILABLE','尚未接入人工接受所需的可信日志及文件核实');

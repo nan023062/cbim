@@ -108,7 +108,7 @@ N_src_backend_core_policy_tool_policy_ts ..> N_src_backend_core_policy_types_ts 
 
 `RunToolDescriptor.scope` 为可选的可信装配范围。repository 范围必须匹配本轮 workspaceId、实际 cbim_repository_list/get 名称、connectorId 和操作；仅允许非原生且恰好 read 的工具。缺少捕获范围、跨工作区、混合副作用或模型伪造目标均拒绝。旧工具没有新范围时保持原分类行为；策略只核形状和绑定，真实仓库授权与共享代际仍由主进程端口在网络前后复核。
 
-JSON 验证仅允许准确的 `cbim_validation_run` 名称、非原生且单一 `read` 效果，不因验证取得命令或知识写入权。真实注册仍须由正式成员的冻结要求及平台能力决定；策略不按模型提供的路径或 Schema 授权，不将成功回执当作验证通过。
+JSON/CSV 验证仅允许准确的 `cbim_validation_run` 名称、非原生且单一 `read` 效果，不因验证取得命令或知识写入权。真实注册仍须由正式成员的冻结要求及平台能力决定；策略不按模型提供的路径或 Schema 授权，不将成功回执当作验证通过。
 
 每次调用独立产生决定；策略不存储凭据、不缓存业务批准、不复制外部资源，也不把只读回执转成任务验收。
 
@@ -123,3 +123,5 @@ JSON 验证仅允许准确的 `cbim_validation_run` 名称、非原生且单一 
 ### 刷新原事务与契约版本
 
 RunToolDescriptor.contractVersion 是实际注册表的可选元数据，供 Runtime 原授权记录；不参与权限授予，缺省表示未声明，不从 input 补齐。已有 read/ask/execute、守卫与审批顺序保持。
+
+CSV 表格条件不增加工具权限：仍为一次受控只读检查；公式文本不执行，验证器声明不授予命令能力或访问外部服务。

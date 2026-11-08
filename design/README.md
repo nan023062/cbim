@@ -9,7 +9,7 @@
 | [开发路线图](tool-architecture-roadmap.md) | 全局目标、五阶段状态、上一步成果、当前步骤、下一步与剩余项；当前进度的唯一维护位置 |
 | [开发记录](development-log.md) | 每个已实施步骤的完成事实、验证证据、限制和后续交接；不另建一份实时待办表 |
 | [本轮开发收尾总结（2026-11-08）](development-closeout-20261108.md) | 截至 Step55 的已交付能力、交付包缺口、验证边界与最终成品；收尾快照，不代替路线图 |
-| [Cindy + Git 岗位开发管线](cindy-development-pipeline.md) | 产品反馈 Skill、GitHub Issue、开发岗位与工单交接、CI、人工合并及软件更新日志；反馈直连代码与本地验证完成，线上启用待验收，其余待实施 |
+| [Cindy + Git 岗位开发管线](cindy-development-pipeline.md) | 产品反馈 Skill、GitHub Issue、开发岗位与工单交接、CI、人工合并及软件更新日志；反馈／正式发布／手动升级已验收，内部开发管线待实施 |
 | [GitHub OAuth 配置与线上验收](task/github-feedback-setup.md) | OAuth App 注册字段、Device Flow 登录、固定仓库及一条真实 Issue 验收步骤；实际结果另记验证报告 |
 | [正式桌面发布与手动更新](task/desktop-release.md) | 独立 updater 子系统、Windows 安装包、桌面 Release 通道与真实升级验收 |
 | `verification/` | 随实施步骤保存的验证报告；由开发记录链接，不代替 roadmap 的实时状态 |

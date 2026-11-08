@@ -30,7 +30,7 @@
 
 ## 2. 在 CBIM 配置并完成 Device Flow
 
-从桌面通道 [desktop-v0.1.0](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.0) 下载 `CBIM-Setup-0.1.0-x64.exe`，核对同页 `SHA256SUMS.txt` 后安装。构建阶段、本页所指 Release 尚未发布时，只使用维护者提供的候选安装包，不把链接当成发布已完成的证据。旧 Python 内核 `v1.x` 不是桌面安装包。日常 CBIM 若仍有运行任务，应正常结束任务再切换程序；测试专用用户目录的连接不会自动成为日常目录的连接。
+从桌面通道 [desktop-v0.1.0](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.0) 下载 `CBIM-Setup-0.1.0-x64.exe`，核对同页 `SHA256SUMS.txt` 后安装。该 Release 已于 2026-11-08 23:02 CST 公开，安装包与校验文件已核对。旧 Python 内核 `v1.x` 不是桌面安装包。日常 CBIM 若仍有运行任务，应正常结束任务再切换程序；测试专用用户目录的连接不会自动成为日常目录的连接。
 
 1. 打开 CBIM，点击 **用户菜单 → 设置 → GitHub 反馈**。
 2. 核对默认目标 `nan023062/cbim`。普通用户无须填写配置；维护者需要检查或更改连接时展开 **高级连接设置**：

@@ -42,7 +42,12 @@
 
 ## 公开发布及线上验收
 
-当前为发布前证据：尚未公开桌面 Release，尚未执行公开下载升级或创建真实 Issue。发布后在本节追加实际 URL、提交与资产摘要、0.0.9 验收基线到 0.1.0 的下载／重启／数据保留结果，以及唯一测试 Issue 的证据；不预写成功。
+- 2026/11/8 23:02:37 CST：[desktop-v0.1.0](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.0) 已公开为稳定发布，发布账号 nan023062；标签固定源码提交 `4d3bc1921ac061744ec3605cda8779dbefc8ecbe`。EXE、blockmap、latest.yml、SHA256SUMS.txt 的大小与 GitHub 端 SHA-256 全部匹配本地。旧内核 latest 仍为 v1.0.2。证据：`test-results/desktop-live/publish-report.json`。
+- 2026/11/8 23:10:56 CST：从未发布的 0.0.9 验收基线，实际发现公开 0.1.0，点击下载并校验后正常退出仍为旧版；重新打开，再明确点击重启安装后实际运行 0.1.0。原自动重启进程及其 renderer 使用原用户目录，GitHub 连接、localStorage 与测试文件保留。下载文件摘要与已发布 EXE 一致。证据：`upgrade-report.json`、`upgrade-downloaded.png`、`upgraded-settings.png`（均在 test-results/desktop-live）。
+- 2026/11/8 23:11:33 CST：正式已安装 APP 的主会话实际读取 BUG Skill 并调用一次 cbim_feedback_submit，创建唯一 [Issue #8](https://github.com/nan023062/cbim/issues/8)，作者 nan023062，仓库 ID 1240750134。原操作 `0ad43d96-77ee-4046-82e5-19a7ad2796e4` 为 submitted，工具回执 succeeded；GitHub 正文 SHA-256 与原账本完全一致。成功静默及重开后静默通过，未创建第二张需求工单。
+- 线上测试使用本机确定性模型响应，但安装器、Pi、系统加密、GitHub 登录与 Issue API 均真实。Issue 未由 gh／网页或手写 POST 代发；gh 仅在匿名查询限流后只读核验原 Issue。完整反馈证据见[线上验收](github-feedback-online-20261108.md)。
+
+线上验收脚本的修正也保留：首次错误假设缓存名为 update.exe，实际库按版本文件名保存；只修正验收脚本并复用已下载缓存。安装时 Playwright 的 90 秒 close 事件等待超时，实际安装与自动重启已经完成，随后只读核对原新进程／版本，没有重复安装。反馈 POST 成功后匿名 GET 返回 403，rate_limit 核实公共配额 60/60 已耗尽；通过已登录账号 GET 与原账本核对，没有重复提交。重开页面最初的文本定位匹配 3 处，收窄到实际聊天消息后验证通过，产品代码与发布制品未变。
 
 ## 限制及同步维护
 

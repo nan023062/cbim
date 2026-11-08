@@ -59,7 +59,7 @@
 
 ## 5. 落地项与验收
 
-本步范围已扩展为[正式桌面发布与手动更新](desktop-release.md)。OAuth App 和 Device Flow 真实登录已完成，版本日志、更新入口及独立更新模块已接入；发布、完整升级和唯一线上 Issue 的最终结果以验证报告为准。`cbim-triage` 与 `cbim-ready` 岗位规则仍待实施。
+本步范围已扩展为[正式桌面发布与手动更新](desktop-release.md)。OAuth App 和 Device Flow 真实登录已完成，版本日志、更新入口及独立更新模块已接入；正式 desktop-v0.1.0 已发布，完整升级及唯一线上 Issue #8 已验证，见[桌面验收](../verification/desktop-release-20261108.md)。`cbim-triage` 与 `cbim-ready` 岗位规则仍待实施。
 
 首轮验收：
 

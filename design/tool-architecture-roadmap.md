@@ -24,7 +24,7 @@
 
 **新规划（2026-11-08）：** 用户选择以现有 CBIM 工程试点 [Cindy + Git 岗位 Skill 开发管线](cindy-development-pipeline.md)。用户侧通过对话窗“+”菜单的「BUG 反馈」「需求许愿」调用对应产品内置 Skill，按格式补充上下文；目标是直接提交 GitHub Issue，后续变更统一进入软件更新日志，不建设反馈服务器、不回传逐条处理结果。内部开发推进至 PR 就绪，由人合并及发布。详见[入口与更新日志方案](task/user-feedback-intake.md)。
 
-**当前独立步骤（正式桌面发布与手动更新，发布前验收完成）：** Windows x64 候选 0.1.0 已完成真实安装及自动重启，保留原 GitHub 登录与用户目录。按用户要求将更新程序独立到 `src/backend/updater/`，安装模板与下载缓存也独立；主程序只保留调用入口。最终构建 20261108-224822，相关 75/75、类型及架构／依赖检查通过；全仓 2396 通过、1 项测试清理 EBUSY、2 跳过，清理夹具最小修正后单独复验通过，不称全仓全绿。真实 Device Flow 已通过，尚未创建 Issue。下一步公开 `desktop-v0.1.0`，从未发布的 0.0.9 验收基线实测在线升级，再由正式 APP 创建唯一反馈测试 Issue。详见[发布验收](verification/desktop-release-20261108.md)；不恢复旧开发计划或实施内部岗位自动化。
+**当前独立步骤（正式桌面发布与手动更新，已完成）：** [Windows x64 正式版 0.1.0](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.0) 已发布，源码标签提交 4d3bc19；更新程序独立在 `src/backend/updater/`，构建模板、安装包和下载缓存独立保存，主程序只保留调用入口。真实 NSIS 安装、自动重启及 0.0.9 验收基线到公开 0.1.0 的在线下载升级通过，原用户目录／GitHub 登录／测试数据保留，普通退出不自动安装。正式 APP 的 BUG Skill 已创建唯一 [测试 Issue #8](https://github.com/nan023062/cbim/issues/8)，提交成功与重开后均静默，无重复发单。最终相关 75/75、类型及架构检查通过；全仓 2396 通过、1 清理失败、2 跳过，清理夹具修正后单独复验通过，不称全仓全绿。完整证据见[桌面报告](verification/desktop-release-20261108.md)与[线上反馈报告](verification/github-feedback-online-20261108.md)。本步结束，不恢复旧开发计划或实施内部岗位自动化；后续仅在新需求授权后推进。
 
 - **上一步功能成果：** Step55 / R12-B2：原可靠授权、宿主创建身份及目录绑定，桌面显式核实/清理，未知收尾保持占用，原业务结果不改。见[报告](verification/isolated-execution-recovery-20261108.md)。
 - **此前成果：** Step14a 有界文件基线、Step14b 同周期一次成员检查点续执行均已完成；后者保留 task/实例/通道、新 run 与证据，停止和重启封存。见[检查点验证](verification/member-checkpoint-20261107.md)。

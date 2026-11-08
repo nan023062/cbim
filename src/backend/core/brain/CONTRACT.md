@@ -341,3 +341,8 @@ Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，
 ### 刷新原事务与契约版本
 
 可信 describeTool 可声明 contractVersion。Runtime 仅在自身授权事件记录正整数版本，不从模型参数/调用顶层或引擎 emit 读取；不可信事件中的同名字段被剔除。原日志无版本保持缺失，不回填，不影响旧回执形状或权限。该来源用于区分 v1/v2 刷新，不能被工具成功结果替代。
+
+
+## R07-A 完整产物清单运行与复核
+
+LoopRuntime 仅向正式成员且冻结 artifactScope 的运行装配 RunOutputManifestCapture；缺真实平台端口拒绝启动。同步门闩先于异步审批，完整读取及可靠保存前后核停止、知识、进度和在途工具。artifact.manifest_captured 只能由可信端口保存，原成功回执生效；坏回包不重采，失败暂存仍占8份历史容量。

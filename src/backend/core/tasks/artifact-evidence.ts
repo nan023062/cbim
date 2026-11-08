@@ -18,7 +18,9 @@ const authorization=z.object({id:z.string().min(1).max(128),name:z.string().min(
 const receipt=z.object({version:z.literal(1),toolCallId:z.string().min(1).max(128),toolName:z.string().min(1).max(512),workspaceId:z.string(),taskId:z.string(),runId:z.string(),outcome:z.enum(['succeeded','failed','denied','unknown']),inputHash:z.string().regex(/^[a-f0-9]{64}$/),resultHash:z.string().regex(/^[a-f0-9]{64}$/).optional(),effects,scope:toolScopeSchema,recordedAt:z.string().datetime()}).strict();
 const nativeInput={read:z.object({path:z.string().min(1).max(32768),offset:z.number().int().positive().optional(),limit:z.number().int().positive().optional()}).strict(),write:z.object({path:z.string().min(1).max(32768),content:z.string()}).strict(),edit:z.object({path:z.string().min(1).max(32768),oldText:z.string(),newText:z.string()}).strict()};
 const captureName='cbim_task_artifact_capture';
-const altered=(event:ArtifactEvidenceEvent)=>event.type==='tool.allowed'&&(Array.isArray(event.data.effects)&&event.data.effects.some(effect=>['business-write','knowledge-write','command'].includes(String(effect)))||['write','edit','bash'].includes(String(event.data.name)));
+/** 文件基线与完整清单共用保守失效边界；命令是否实际写文件不能只靠模型声明判断。 */
+export const artifactEventChangesFiles=(event:ArtifactEvidenceEvent)=>event.type==='tool.allowed'&&(Array.isArray(event.data.effects)&&event.data.effects.some(effect=>['business-write','knowledge-write','command'].includes(String(effect)))||['write','edit','bash'].includes(String(event.data.name)));
+const altered=artifactEventChangesFiles;
 function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,ordered(v)])):value}
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 function valid(value:unknown,message:string):asserts value{if(!value)fail('ARTIFACT_EVIDENCE_INVALID',message)}

@@ -204,3 +204,8 @@ Electron 接入仍核对本窗口与主 Frame；`humanDecide` 在可信闭包注
 ## 逐请求预算（R06）
 
 `dispatch.requestBudget` 只读已打开工作区的 workspace/root/scope 摘要，不启动模型、不释放未决、不修改策略；预留与结算没有 IPC 写入路由。`budget.configure` 只改变未来周期的默认模式与额度。
+
+
+## R07-A 完整产物清单运行与复核
+
+dispatch.manifestReport 必须明确 workspace/root/task/run；省略 manifestId 只列原 canonical 引用，明确选定才重新枚举完整冻结范围。无隐式最新、补采、恢复或验收；错误和变化保留原历史。

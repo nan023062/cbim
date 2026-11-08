@@ -10,6 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [artifact-scope.ts](artifact-scope.ts) | Workflow 可选完整产物观察范围的叶子契约，供知识冻结、运行采集和公开报告共用。 |
 | [json-validation-schema.ts](json-validation-schema.ts) | JSON 产物验证的有界声明和纯结构校验，供冻结 Workflow、运行时及知识入口共用。 |
 | [knowledge-source-rules.ts](knowledge-source-rules.ts) | 来源代次日志的纯投影、游标、依据和幂等命令规则，供知识协调器与 DispatchStore 共同使用。 |
 | [knowledge-source.ts](knowledge-source.ts) | 受控知识来源代次、读取状态和原日志握手的纯协议，供岗位、责任、Store 与桌面共用。 |
@@ -22,6 +23,40 @@
 | [workflow-contract.ts](workflow-contract.ts) | 定义模块 Workflow 正文中可选执行条件的严格协议，供知识治理、资源包与执行准备共同解析。 |
 
 ## 架构类图
+
+### artifact-scope.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_artifact_scope_ts["artifact-scope.ts"] {
+  <<module>>
+  +artifactRootsDisjoint()
+  +preparedArtifactScopes()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_artifact_scope_ts["artifact-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_artifact_scope_ts_ArtifactScopeRoot["ArtifactScopeRoot"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_artifact_scope_ts ..> N_src_backend_core_workspace_artifact_scope_ts_ArtifactScopeRoot : 声明
+class N_src_backend_core_workspace_artifact_scope_ts_ArtifactScope["ArtifactScope"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_artifact_scope_ts ..> N_src_backend_core_workspace_artifact_scope_ts_ArtifactScope : 声明
+class N_src_backend_core_workspace_artifact_scope_ts_ArtifactScopeBinding["ArtifactScopeBinding"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_artifact_scope_ts ..> N_src_backend_core_workspace_artifact_scope_ts_ArtifactScopeBinding : 声明
+```
+
 
 ### json-validation-schema.ts
 
@@ -619,7 +654,7 @@ class N_src_backend_core_workspace_workflow_contract_ts_WorkflowContract["Workfl
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_workflow_contract_ts_WorkflowContract : 声明
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/json.ts](../foundation/json.ts)、[json-validation-schema.ts](json-validation-schema.ts)。
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/json.ts](../foundation/json.ts)、[json-validation-schema.ts](json-validation-schema.ts)、[artifact-scope.ts](artifact-scope.ts)。
 
 ### 本目录调用边界
 
@@ -660,8 +695,12 @@ class N_src_backend_core_workspace_workflow_contract_ts["workflow-contract.ts"] 
 class N_src_backend_core_workspace_json_validation_schema_ts["json-validation-schema.ts"] {
   <<module>>
 }
+class N_src_backend_core_workspace_artifact_scope_ts["artifact-scope.ts"] {
+  <<module>>
+}
 N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_json_validation_schema_ts : 导入依赖
+N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_artifact_scope_ts : 导入依赖
 ```
 
 
@@ -769,3 +808,12 @@ ModuleBinding ..> ModuleMaintenanceBinding : 固定关系及知识版本
 ## 原治理与责任保存核实（Step39）
 
 影响观察的负责人分支核实原不可变责任事件及精确原命令回执，完整 request/actor 与原调用匹配；当前关系头、岗位名称或今日 owner 不参与原成功推断。旧实例可只读原命令，不改任务、成员或责任头，也不签发存量交接资格。
+
+## 完整产物观察范围（R07-A）
+
+Workflow 顶层可选 `artifactScope` 只声明有界完整观察范围，沿原正文与知识指纹冻结；不是已接通的交付出口条件。没有声明的旧任务不补字段。全部模块合计最多16个不重叠根，目录包含全部后代；大小写别名、通配符、路径跳转、设备名称和 `.cbim` 拒绝，模型不能在采集参数中缩小范围。
+
+
+## R07-A 完整产物清单运行与复核
+
+artifactScope 是 Workflow 顶层可选观察声明，不是交付条件。准备执行知识时核合并范围不重叠、无大小写别名及上限；声明与原正文共同进入冻结指纹，不能在采集参数中替换或裁剪。

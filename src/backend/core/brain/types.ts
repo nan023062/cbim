@@ -1,7 +1,7 @@
 /**
  * 受控文件边界：引擎只取得严格 list/call，不取得平台原端口或授权签发能力。
  * 作用定位：大脑 执行层：与具体引擎无关的任务、事件、工具策略和执行摘要契约。
- * 设计原因：任务身份与原生上下文分开；成员基线、JSON 验证与逐段检查点由独立可信端口记录，不由引擎自报。续执行准备复核原冻结证明，历史读取不猜测恢复。
+ * 设计原因：任务身份与原生上下文分开；选定文件、完整集合观察、JSON 验证与逐段检查点由独立可信端口记录，不由引擎自报。续执行准备复核原冻结证明，历史读取不猜测恢复。
  */
 import type {TaskSpec} from '../tasks/types';
 import type {ToolCall,ToolDecision} from '../tools/types';
@@ -16,7 +16,7 @@ export type {ToolCall,ToolDecision} from '../tools/types';
 export type RunStatus = 'running' | 'completed' | 'cancelled' | 'failed' | 'interrupted';
 export interface EngineEvent {
   type: 'run.started' | 'session.bound' | 'message' | 'message.delta' | 'tool.started' | 'tool.finished' |
-    'tool.proposed' | 'tool.allowed' | 'tool.denied' | 'tool.updated' | 'task.updated' | 'task.help_requested' | 'task.checkpoint_requested' | 'artifact.baseline_captured' | 'validation.checked' | 'engine.status' | 'run.stop_requested' | 'run.settled' | 'run.interrupted';
+     'tool.proposed' | 'tool.allowed' | 'tool.denied' | 'tool.updated' | 'task.updated' | 'task.help_requested' | 'task.checkpoint_requested' | 'artifact.baseline_captured' | 'artifact.manifest_captured' | 'validation.checked' | 'engine.status' | 'run.stop_requested' | 'run.settled' | 'run.interrupted';
   data: Record<string, unknown>;
 }
 /** 事件落盘后的身份与顺序信息；观察者只能收到成功持久化的记录。 */
@@ -54,6 +54,8 @@ export interface EngineContext {
   memberHelpTools?:Pick<import('../tasks/member-help-tools').MemberHelpTools,'list'|'call'>;
   /** 仅注入可信文件端口的成员具备；采集由运行时核对真实工具来源，不接受模型路径。 */
   artifactTools?:Pick<import('../tasks/artifact-tools').ArtifactTools,'list'|'call'>;
+  /** 仅冻结 artifactScope 且有真实枚举端口的成员具备；完整范围由运行时提供，模型不能裁剪。 */
+  manifestTools?:Pick<import('../tasks/output-manifest-tools').OutputManifestTools,'list'|'call'>;
   /** 剩余额度允许的成员运行可合作式停泊一次；额度由可信工厂按完整历史计算，成功暂存后须正常结束。 */
   memberCheckpointTools?:Pick<import('../tasks/member-checkpoint-tools').MemberCheckpointTools,'list'|'call'>;
   /** 仅实际受控平台端口支持的正式成员装配；引擎不能取得备份、补偿或权限签发能力。 */

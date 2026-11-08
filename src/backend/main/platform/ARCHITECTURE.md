@@ -18,6 +18,7 @@
 | [controlled-file-win32.ts](controlled-file-win32.ts) | 专用 utility 子进程的同步 Win32 单文件实现；全程拥有文件及目录句柄。 |
 | [locking.ts](locking.ts) | KernelLock：使用 Windows mutex 或 POSIX flock，防止跨进程并发持有。 |
 | [native-session-files.ts](native-session-files.ts) | 在本工作区受管 Pi 会话目录内核实已关闭的原生上下文，供成员检查点与续执行使用。 |
+| [output-manifest-files.ts](output-manifest-files.ts) | 在固定工作区内枚举声明范围的全部目录和普通文件，生成完整产物观察并按原集合复核。 |
 | [paths.ts](paths.ts) | 本机应用目录、工程身份和知识路径的实际解析。 |
 | [secrets.ts](secrets.ts) | 用 Electron 系统加密能力保护 LLM 凭据。 |
 | [terminal.ts](terminal.ts) | 桌面扩展区的命令模式终端，按工作区/页签隔离手动命令与输出。 |
@@ -308,6 +309,28 @@ N_src_backend_main_platform_native_session_files_ts ..> N_src_backend_main_platf
 
 直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
 
+### output-manifest-files.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_output_manifest_files_ts["output-manifest-files.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_output_manifest_files_ts_OutputManifestFiles["OutputManifestFiles"] {
+  +capture()
+  +check()
+  -root
+  -assert
+  -files
+  -current()
+  -locate()
+  -scan()
+}
+N_src_backend_main_platform_output_manifest_files_ts ..> N_src_backend_main_platform_output_manifest_files_ts_OutputManifestFiles : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/workspace/artifact-scope.ts](../../core/workspace/artifact-scope.ts)、[../../core/tasks/output-manifest.ts](../../core/tasks/output-manifest.ts)、[../../core/tasks/output-manifest-evidence.ts](../../core/tasks/output-manifest-evidence.ts)、[artifact-files.ts](artifact-files.ts)。
+
 ### paths.ts
 
 ```mermaid
@@ -393,6 +416,17 @@ N_src_backend_main_platform_controlled_file_transport_ts ..> N_src_backend_main_
 N_src_backend_main_platform_controlled_file_win32_ts ..> N_src_backend_main_platform_controlled_file_protocol_ts : 导入依赖
 ```
 
+```mermaid
+classDiagram
+class N_src_backend_main_platform_output_manifest_files_ts["output-manifest-files.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_artifact_files_ts["artifact-files.ts"] {
+  <<module>>
+}
+N_src_backend_main_platform_output_manifest_files_ts ..> N_src_backend_main_platform_artifact_files_ts : 导入依赖
+```
+
 
 ## 子目录导航
 
@@ -439,3 +473,7 @@ utility entry 允许在 app.asar 中，进程 cwd 必须通过 original-fs 解�
 Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，短门闩排除其它工具/审批；模型与 emit 事件不能签发许可。Main 在 Store 外取得文件句柄和可靠 before/intended-after 私有备份，单条 prepared→executing→terminal 附录由唯一 Store 保存。只有可靠 applied 返回成功；进入 executing 后的 IO/截断/进程退出均可能部分写入，不自动回滚或重发。
 
 停止先中断原进程，排空实际文件操作并确认 child 退出后才释放工作区占用。退出码不证明写成功。补偿是桌面明确提交的新命令，仅原 applied、原周期已关闭、当前同一文件仍等于原 after 才可恢复保存的 before。原日志、unknown 和原操作不改写；原命令查询先于今日配置，任何保存未知只查原记录。
+
+## 完整目录清单读取（R07-A）
+
+`OutputManifestFiles` 从冻结范围完整枚举文件与目录，缺失根明确记录；两次完整扫描共用15秒期限，摘要一致才返回。每次最多512条、32层、单文件8 MiB及总计32 MiB，无忽略或分页截断。文件复用真实句柄指纹，目录前后核身份和元信息；链接、硬链接、特殊对象、范围外路径或不稳定读取失败，不返回局部清单。显式复核重新枚举整个范围，新增条目也使旧依据失效。外部竞争仅尽力检测，不宣称操作系统隔离或原子快照。

@@ -25,6 +25,7 @@
 | [knowledge-source.ts](knowledge-source.ts) | 向桌面公开知识来源身份、采纳预览和当前核实状态的纯数据协议。 |
 | [models.ts](models.ts) | 模型配置界面消费的公开模型信息与停止原因格式化。 |
 | [module-ownership.ts](module-ownership.ts) | 公开模块负责人控制面的纯数据协议，供业务架构、项目岗位与 Main IPC 使用。 |
+| [output-manifest.ts](output-manifest.ts) | 桌面完整产物面板使用的纯 DTO 与严格结构校验，不导出后端文件或日志读取实现。 |
 | [owner-execution.ts](owner-execution.ts) | 公开岗位执行的选择、冻结绑定及纯身份校验，供任务和目标视图核对历史归属。 |
 | [repository-connections.ts](repository-connections.ts) | 向桌面公开工作区资源仓库链接器的登记、授权和真实 HTTP 核验协议。 |
 | [resources.ts](resources.ts) | 资源种类、仓库快照、登录占位及仓库状态的共享类型。 |
@@ -257,6 +258,16 @@ class N_src_bridge_contracts_module_ownership_ts["module-ownership.ts"] {
 }
 ```
 直接依赖：[../../backend/core/workspace/module-ownership.ts](../../backend/core/workspace/module-ownership.ts)。
+
+### output-manifest.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_output_manifest_ts["output-manifest.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../backend/core/tasks/output-manifest.ts](../../backend/core/tasks/output-manifest.ts)。
 
 ### owner-execution.ts
 
@@ -802,3 +813,8 @@ dispatch.ts 重导纯 DependencyRevision 与严格 Schema；TaskNode 可选历�
 ## 逐请求预算（R06）
 
 scope-budget 额外公开只读请求摘要/query schema，供设置与目标卡片复用；不跨桥导出请求账本服务、凭据、网络正文或预留写端口。
+
+
+## R07-A 完整产物清单运行与复核
+
+output-manifest.ts 只公开严格清单 DTO；Node 哈希、日志核实及平台读取不进入前端依赖。完整清单保持 declared_scope_complete，旧基线继续 selected_files_only，不将两者混为同一覆盖。

@@ -83,6 +83,8 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'dispatch.executionInspect':return app.memberExecution(args.workspaceId).inspect(args);
     case 'dispatch.executionReport':return app.memberExecution(args.workspaceId).report(args);
     case 'dispatch.artifactReport':return app.memberExecution(args.workspaceId).artifactReport(args);
+    // 显式选择清单才读当前声明范围；不启动模型、补采、接受或恢复旧任务。
+    case 'dispatch.manifestReport':return app.memberExecution(args.workspaceId).manifestReport(args);
     case 'dispatch.replans.preview':return app.memberDispatch(args.workspaceId).replans.preview(args);
     case 'dispatch.humanPreview':return app.memberDispatch(args.workspaceId).humanDecisions.preview(args);
     case 'dispatch.humanReceipt':return app.memberDispatch(args.workspaceId).humanDecisions.inspect(args);

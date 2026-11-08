@@ -29,6 +29,8 @@ import {memberEventsInput,type MemberEventsRead} from '../../core/tasks/member-e
 import {MemberEventStreams,memberPublicTask} from './member-events';
 import {ExecutionReportService} from './execution-report-service';
 import {ArtifactReportService,type ArtifactReportPorts} from './artifact-report-service';
+import {OutputManifestReportService,type OutputManifestReportPorts} from './output-manifest-report-service';
+import type {OutputManifestReport} from '../../core/tasks/output-manifest';
 import type {ArtifactReport} from '../../core/tasks/artifact-baseline';
 import type {ExecutionReport} from '../../core/tasks/execution-report';
 import type {ExecutionAdmissionWait} from './admission-wait';
@@ -56,6 +58,8 @@ export interface MemberExecutionPorts {
   withEngineConfiguration?<T>(model:OwnerExecutionBinding['model'],options:MemberStartOptions,use:(locked:{model:ResolvedLlm['profile'];prepare():PreparedEngine})=>Promise<T>):Promise<T>;
   /** 独立只读文件复核能力，不隐式采集旧日志或运行模型。 */
   artifacts?:Omit<ArtifactReportPorts,'inspect'>;
+  /** 完整范围的只读复核与旧选定文件查询独立，不隐式迁移历史。 */
+  manifests?:Omit<OutputManifestReportPorts,'inspect'>;
   /** 真实关闭后读取受管原生文件；只供逐段检查点结算与本段一次续执行，不向模型提供任意路径端口。 */
   checkpoints?:Pick<MemberCheckpointVerificationPorts,'nativeFingerprint'>;
   /** 同一派发事务内读取 canonical 用量；拒绝事实先保存，绝不借查询接口发放许可。 */
@@ -103,6 +107,8 @@ export class MemberExecutionManager {
   async report(raw:unknown):Promise<ExecutionReport>{this.owner.assert();return new ExecutionReportService(this.owner,this.store,run=>this.ports.inspect(run)).read(raw)}
   /** 必须明确指定运行；不传 baselineId 时只列举，不能猜测最近一份或启动采集。 */
   async artifactReport(raw:unknown):Promise<ArtifactReport>{this.owner.assert();if(!this.ports.artifacts)fail('ARTIFACT_UNAVAILABLE','文件基线复核服务未装配');return new ArtifactReportService(this.owner,this.store,{...this.ports.artifacts,inspect:run=>this.ports.inspect(run)}).read(raw)}
+  /** 列举不读业务文件，明确 manifestId 后才重新枚举原声明的全部范围。 */
+  async manifestReport(raw:unknown):Promise<OutputManifestReport>{this.owner.assert();if(!this.ports.manifests)fail('MANIFEST_UNAVAILABLE','完整产物复核服务未装配');return new OutputManifestReportService(this.owner,this.store,{...this.ports.manifests,inspect:run=>this.ports.inspect(run)}).read(raw)}
   private checkpointPorts():MemberCheckpointVerificationPorts{if(!this.ports.artifacts||!this.ports.checkpoints)fail('MEMBER_CHECKPOINT_UNAVAILABLE','本工作区未装配成员检查点核实能力');return {...this.ports.artifacts,...this.ports.checkpoints,inspect:run=>this.ports.inspect(run)}}
   /** 当前主轮只预约，真正领取须在主轮结束后；不直接创建引擎或消费检查点。 */
   requestResume(identity:{workspaceId:string;rootSessionId:string},scopeId:string,mainRunId:string,commandId:string,input:ResumeMemberInput,assertCurrent:()=>void):Promise<ResumeMemberReceipt>{return new MemberResumeService(this.owner,this.store,this.checkpointPorts(),this.ports.owners).request(identity,scopeId,mainRunId,commandId,input,()=>{this.check(identity.workspaceId);assertCurrent()})}

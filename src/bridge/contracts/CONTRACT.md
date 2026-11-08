@@ -278,3 +278,8 @@ dispatch.ts 重导纯 DependencyRevision 与严格 Schema；TaskNode 可选历�
 ## 逐请求预算（R06）
 
 scope-budget 额外公开只读请求摘要/query schema，供设置与目标卡片复用；不跨桥导出请求账本服务、凭据、网络正文或预留写端口。
+
+
+## R07-A 完整产物清单运行与复核
+
+output-manifest.ts 只公开严格清单 DTO；Node 哈希、日志核实及平台读取不进入前端依赖。完整清单保持 declared_scope_complete，旧基线继续 selected_files_only，不将两者混为同一覆盖。

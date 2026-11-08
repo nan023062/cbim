@@ -10,6 +10,7 @@ import type {ExecutionReportState} from './execution-report-state';
 import {useExecutionRecovery,type ExecutionRecoveryContext} from './useExecutionRecovery';
 import {ExecutionRecoveryForm} from './ExecutionRecoveryForm';
 import {MemberArtifactReport} from './MemberArtifactReport';
+import {MemberOutputManifest} from './MemberOutputManifest';
 import {MemberEffectObservation} from './EffectObservationPanel';
 import {MemberControlledFiles} from './ControlledFilePanel';
 import {effectObservationAnchor} from './effect-recovery-state';
@@ -64,5 +65,5 @@ export function ExecutionReportPanel({state,taskId,runId}:{state:ExecutionReport
 export function MemberExecutionReport({workspaceId,workspaceInstanceId,rootSessionId,task,runId,graphCursor,scope,recovery}:{workspaceId:string;workspaceInstanceId?:string;rootSessionId:string;task:TaskNode;runId?:string;graphCursor?:GraphCursor;scope?:ScopeSummary;recovery?:ExecutionRecoveryContext}){
   const state=useExecutionReport({workspaceId,rootSessionId,taskId:task.taskId,scopeId:task.scopeId,runId},task,graphCursor,scope);
   const creation=useExecutionRecovery(workspaceId,rootSessionId,task,runId,state.report,state.stale||state.loading||!!state.error,recovery,state.invalidate);
-  return <><ExecutionReportPanel state={state} taskId={task.taskId} runId={runId}/>{runId&&<MemberArtifactReport identity={{workspaceId,rootSessionId,taskId:task.taskId,runId}} task={task} graphCursor={graphCursor} scope={scope}/>}<ExecutionRecoveryForm state={creation}/>{state.report&&<MemberControlledFiles report={state.report} instanceId={workspaceInstanceId} anchor={effectObservationAnchor(recovery?.state)}/>}{state.report&&<MemberEffectObservation key={runId} report={state.report} anchor={effectObservationAnchor(recovery?.state)} context={recovery}/>}</>;
+  return <><ExecutionReportPanel state={state} taskId={task.taskId} runId={runId}/>{runId&&<><MemberArtifactReport identity={{workspaceId,rootSessionId,taskId:task.taskId,runId}} task={task} graphCursor={graphCursor} scope={scope}/><MemberOutputManifest identity={{workspaceId,rootSessionId,taskId:task.taskId,runId}} task={task} graphCursor={graphCursor} scope={scope}/></>}<ExecutionRecoveryForm state={creation}/>{state.report&&<MemberControlledFiles report={state.report} instanceId={workspaceInstanceId} anchor={effectObservationAnchor(recovery?.state)}/>}{state.report&&<MemberEffectObservation key={runId} report={state.report} anchor={effectObservationAnchor(recovery?.state)} context={recovery}/>}</>;
 }

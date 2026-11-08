@@ -2,7 +2,7 @@
  * 检查点剩余额度只接可信成员服务；主会话和公开运行选项不能补造或覆盖额度。
  * 受控文件边界：正式成员和实际平台端口共同决定注册能力，主调度和 Node 缺省工厂无旁路，业务写始终受原权限约束。
  * 作用定位：调度引擎：将工作区内部知识服务、内核锁与前置策略注入独立 LoopRuntime。
- * 设计原因：工具纯分类只做一次，交给成员 Workflow 计划门禁和既有授权共用；主调度业务写入/命令仍始终拒绝。文件采集、检查点与 JSON 验证仅向正式成员注入，验证还须冻结要求和真实平台端口，旧声明约定的单任务入口不能绕过。
+ * 设计原因：工具纯分类只做一次，交给成员 Workflow 计划门禁和既有授权共用；主调度业务写入/命令仍始终拒绝。选定文件、完整清单、检查点与 JSON 验证仅向正式成员注入，完整清单及验证还须冻结声明和真实端口，单任务入口不能绕过。
  * 仓库边界：仅主会话使用已捕获只读端口；发现、分类、调用各走独立适配器，资料不是指令，成员不因装配参数获得外部读取能力。
  * 治理边界：只有真实主绑定和独立 per-run 工厂可注册四项治理工具；私有待办不扩大知识写或业务执行权。
  * 责任边界：负责人四工具独立于知识目录，只在真实主周期装配；提交按 knowledge-write 逐次授权，不向成员或未装配入口开放。
@@ -30,6 +30,8 @@ import {progressTool} from '../../core/tasks/progress-tools';
 import {memberHelpTool} from '../../core/tasks/member-help-tools';
 import {artifactTool} from '../../core/tasks/artifact-tools';
 import type {ArtifactCapturePort} from '../../core/brain/artifact-capture';
+import type {OutputManifestCapturePort} from '../../core/brain/output-manifest-capture';
+import {outputManifestTool} from '../../core/tasks/output-manifest-tools';
 import type {ControlledFileRunPort} from '../../core/brain/run-controlled-file';
 import {controlledFileWriteToolName,controlledFileWriteInputSchema} from '../../core/tasks/controlled-file-operation';
 import type {ValidationFilePort} from '../../core/brain/run-validation';
@@ -86,6 +88,8 @@ export interface ExecutionServices {
   member?:{prompt:string;directory:string;workflowContracts?:WorkflowContractBinding[]};
   /** 仅成员装配提供文件读取与当前知识复核；不存在时模型无法发现或调用采集工具。 */
   artifacts?:ArtifactCapturePort;
+  /** 冻结 artifactScope 的全范围枚举；主运行和未声明运行不注册。 */
+  manifests?:OutputManifestCapturePort;
   /** 冻结 JSON 约定的成员专用同字节验证；主运行不会获得此端口或工具。 */
   validations?:ValidationFilePort;
   /** 仅实际成员装配；Node 无平台端口时不注册。 */
@@ -152,6 +156,7 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
     const progress=progressTool(call.name,call.input);if(progress)return progress;
     const validation=validationTool(call.name,call.input);if(validation){if(!services.member||!services.artifacts||!services.validations||!services.member.workflowContracts?.some(binding=>binding.contract.delivery?.requiredValidations?.length))throw Error('本轮未提供冻结 JSON 产物验证能力');return validation}
     const artifact=artifactTool(call.name,call.input);if(artifact){if(!services.member||!services.artifacts)throw Error('本轮未提供成员文件基线采集能力');return artifact}
+    const manifest=outputManifestTool(call.name,call.input);if(manifest){if(!services.member||!services.manifests||!services.member.workflowContracts?.some(binding=>binding.contract.artifactScope))throw Error('本轮未提供冻结完整产物范围的枚举能力');return manifest}
     const checkpoint=memberCheckpointTool(call.name,call.input);if(checkpoint){if(!services.member||!services.artifacts)throw Error('本轮未提供成员检查点能力');return checkpoint}
     const help=memberHelpTool(call.name,call.input);if(help){if(!services.member)throw Error('主 Agent 负责处理成员求助，不能以成员身份提交求助');return help}
     if(dispatch?.has(call.name))return dispatch.describe(call.name,call.input);
@@ -165,6 +170,7 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
   const runtime=new LoopRuntime({
     conversationBinding:services.conversationBinding,
     artifacts:services.member?services.artifacts:undefined,
+    manifests:services.member?services.manifests:undefined,
     validations:services.member?services.validations:undefined,
     controlledFiles:services.member?services.controlledFiles:undefined,
     memberCheckpointAllowance:services.member?services.memberCheckpointAllowance:undefined,

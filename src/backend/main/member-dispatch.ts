@@ -18,6 +18,7 @@ import {MemberExecutionManager,type PreparedEngine} from '../scheduler-engine/ex
 import {createWorkspaceLoop} from '../scheduler-engine/execution/loop-engine';
 import {memberExecutionPrompt,recheckDispatchExecutionContext} from '../scheduler-engine/context/execution-context';
 import {ArtifactFiles,normalizeArtifactPath} from './platform/artifact-files';
+import {OutputManifestFiles} from './platform/output-manifest-files';
 import {NativeSessionFiles} from './platform/native-session-files';
 import {memberCheckpointLimit} from '../core/tasks/member-checkpoint';
 import {verifyMemberCheckpointProof,verifyMemberCheckpointInputs} from '../scheduler-engine/execution/member-checkpoint-verifier';
@@ -58,6 +59,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
   const store=workspace.dispatchStore,storage=new FileRunStorage();
   const runsDirectory=path.join(directory,'runs');
   const artifactFiles=new ArtifactFiles(workspace.entry.path,()=>workspace.assert());
+  const manifestFiles=new OutputManifestFiles(workspace.entry.path,()=>workspace.assert());
   const nativeFiles=new NativeSessionFiles(path.join(runsDirectory,'pi','sessions'),()=>workspace.assert());
   const normalizeArtifact=(raw:string)=>normalizeArtifactPath(workspace.entry.path,raw);
   /** 主/成员的权威运行日志只在后端读取；不能以公开摘要或模型传来的“成功”替代。 */
@@ -91,6 +93,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
           requestBudget:()=>requestBudgets.forRun({rootSessionId:run.binding.rootSessionId,taskId:task.taskId,runId:run.binding.runId,scopeId:task.scopeId,kind:'member'},llm),
           storage,member:{directory:runsDirectory,prompt:memberExecutionPrompt(run.prepared,task,run.prerequisites),workflowContracts:preparedWorkflowContracts(run.prepared)},onEngineReady:hooks.onEngineReady,
           artifacts:{knowledgeRevision:run.prepared.knowledgeRevision,normalizePath:normalizeArtifact,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},captureFiles:(paths,signal)=>artifactFiles.captureFiles(paths,signal)},
+          manifests:{knowledgeRevision:run.prepared.knowledgeRevision,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},capture:(scopes,signal)=>manifestFiles.capture(scopes,signal)},
           validations:{validateFile:(file,schema,signal)=>artifactFiles.validateFile(file,schema,signal),checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal)},
           controlledFiles:task.scopeId?controlledFiles.forRun(run,task.scopeId):undefined,
           // 领取后到 Pi 发出首条 prompt 前仍有异步准备；每个准备边界复核原证明，不只核原生文件而遗漏外部业务文件变化。
@@ -105,6 +108,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
   };
   const members=new MemberExecutionManager(workspace,store,{
     artifacts:{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),acquireRead:()=>{workspace.assert();return lease.acquire('artifact-report:'+randomUUID(),'read')}},
+    manifests:{check:(snapshot,signal)=>manifestFiles.check(snapshot,signal),acquireRead:()=>{workspace.assert();return lease.acquire('manifest-report:'+randomUUID(),'read')}},
     checkpoints:{nativeFingerprint:(session,signal)=>nativeFiles.read(session,signal)},
     budgets:dispatch.budgets,
     isCurrent:()=>admission?.isCurrent()??true,

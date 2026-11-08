@@ -17,6 +17,7 @@
 | [member-checkpoint.ts](member-checkpoint.ts) | 成员单次合作式停泊的运行时门闩，沿真实工具授权保存非终结检查点请求。 |
 | [member-run.ts](member-run.ts) | 定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。 |
 | [model-errors.ts](model-errors.ts) | 把模型结束原因转换为用户可理解的执行错误，供实时引擎和历史回放共用。 |
+| [output-manifest-capture.ts](output-manifest-capture.ts) | 成员本轮完整产物采集的短期门闩，冻结 Workflow 范围并将真实观察可靠写入 canonical。 |
 | [run-controlled-file.ts](run-controlled-file.ts) | 正式成员受控文件工具的单次授权与短门闩，平台写入只经过此可信运行端口。 |
 | [run-validation.ts](run-validation.ts) | 正式成员的 JSON 产物验证短门闩，连接冻结 Workflow、真实基线与平台同字节读取。 |
 | [runtime.ts](runtime.ts) | 大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。 |
@@ -65,25 +66,25 @@ class N_src_backend_core_brain_member_run_ts["member-run.ts"] {
 class N_src_backend_core_brain_model_errors_ts["model-errors.ts"] {
   <<module>>
 }
+class N_src_backend_core_brain_output_manifest_capture_ts["output-manifest-capture.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_run_controlled_file_ts["run-controlled-file.ts"] {
   <<module>>
 }
 class N_src_backend_core_brain_run_validation_ts["run-validation.ts"] {
   <<module>>
 }
-class N_src_backend_core_brain_runtime_ts["runtime.ts"] {
-  <<module>>
-}
 N_src_backend_core_brain_member_checkpoint_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
+N_src_backend_core_brain_output_manifest_capture_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
 N_src_backend_core_brain_run_validation_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
-N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_member_checkpoint_ts : 导入依赖
-N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_validation_ts : 导入依赖
-N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_controlled_file_ts : 导入依赖
-N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_brain_runtime_ts["runtime.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_scope_usage_ts["scope-usage.ts"] {
   <<module>>
 }
@@ -96,6 +97,8 @@ class N_src_backend_core_brain_types_ts["types.ts"] {
 class N_src_backend_core_brain_usage_ts["usage.ts"] {
   <<module>>
 }
+N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_storage_ts : 导入依赖
+N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_scope_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_storage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
@@ -115,6 +118,8 @@ N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入
 - `member-checkpoint.ts` → `member-run.ts`：导入。
 - `member-checkpoint.ts` → `types.ts`：导入。
 - `member-checkpoint.ts` → `artifact-capture.ts`：导入。
+- `output-manifest-capture.ts` → `member-run.ts`：导入。
+- `output-manifest-capture.ts` → `types.ts`：导入。
 - `pi` → `types.ts`：导入。
 - `pi` → `input-source.ts`：导入。
 - `pi` → `llm`：导入。
@@ -125,6 +130,7 @@ N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入
 - `runtime.ts` → `storage.ts`：导入。
 - `runtime.ts` → `member-checkpoint.ts`：导入。
 - `runtime.ts` → `artifact-capture.ts`：导入。
+- `runtime.ts` → `output-manifest-capture.ts`：导入。
 - `runtime.ts` → `run-validation.ts`：导入。
 - `runtime.ts` → `run-controlled-file.ts`：导入。
 - `runtime.ts` → `member-run.ts`：导入。
@@ -568,3 +574,8 @@ Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，
 ### 刷新原事务与契约版本
 
 可信 describeTool 可声明 contractVersion。Runtime 仅在自身授权事件记录正整数版本，不从模型参数/调用顶层或引擎 emit 读取；不可信事件中的同名字段被剔除。原日志无版本保持缺失，不回填，不影响旧回执形状或权限。该来源用于区分 v1/v2 刷新，不能被工具成功结果替代。
+
+
+## R07-A 完整产物清单运行与复核
+
+LoopRuntime 仅向正式成员且冻结 artifactScope 的运行装配 RunOutputManifestCapture；缺真实平台端口拒绝启动。同步门闩先于异步审批，完整读取及可靠保存前后核停止、知识、进度和在途工具。artifact.manifest_captured 只能由可信端口保存，原成功回执生效；坏回包不重采，失败暂存仍占8份历史容量。

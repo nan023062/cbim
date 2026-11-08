@@ -73,8 +73,8 @@ N_src_backend_core_workspace ..> N_src_backend_core_tools : 导入依赖
 - `brain` → `foundation`：导入。
 - `brain` → `tasks`：导入。
 - `brain` → `team`：导入。
-- `brain` → `tools`：导入。
 - `brain` → `workspace`：导入。
+- `brain` → `tools`：导入。
 - `brain` → `policy`：导入。
 - `connectors` → `tools`：导入。
 - `governance` → `foundation`：导入。

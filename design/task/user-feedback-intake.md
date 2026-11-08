@@ -1,6 +1,6 @@
 # CBIM 反馈／许愿 Skill 与软件更新日志
 
-日期：2026-11-09。状态：两项菜单及格式引导已完成[前一步验证](../verification/feedback-skills-20261108.md)；GitHub Device Flow、直接提交、去重与只读核实已完成[本地与打包验证](../verification/github-feedback-20261108.md)。OAuth App `CBIM Feedback` 已注册，正式 0.1.0 的真实连接与唯一发单已验收，见[线上记录](../verification/github-feedback-online-20261108.md)；版本日志和手动更新已接入，见[桌面验收](../verification/desktop-release-20261108.md)。已修正缺工具的错误登录提示并完成诊断验证：本机授权未落盘时可复现缺失，保存连接后继续原会话装配正常；NAN-LI 尚未进行正式包复验，新增诊断尚未发布，见[可复现结论](../verification/feedback-tool-availability-20261109.md)。属于 [Cindy + Git 开发管线](../cindy-development-pipeline.md)的用户侧入口，内部开发仍止于 PR 就绪，人工决定合并与发布。
+日期：2026-11-09。状态：两项菜单及格式引导已完成[前一步验证](../verification/feedback-skills-20261108.md)；GitHub Device Flow、直接提交、去重与只读核实已完成[本地与打包验证](../verification/github-feedback-20261108.md)。OAuth App `CBIM Feedback` 已注册，正式 0.1.0 的真实连接与唯一发单已验收，见[线上记录](../verification/github-feedback-online-20261108.md)；版本日志和手动更新已接入，见[桌面验收](../verification/desktop-release-20261108.md)。已修正缺工具的错误登录提示并完成诊断验证：本机授权未落盘时可复现缺失，保存连接后继续原会话装配正常；新增诊断与账号菜单更新已随 [0.1.1 正式版](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.1) 发布，实际安装与在线升级见[本次验收](../verification/desktop-release-0.1.1-20261109.md)；NAN-LI 尚未进行正式包复验，见[可复现结论](../verification/feedback-tool-availability-20261109.md)。属于 [Cindy + Git 开发管线](../cindy-development-pipeline.md)的用户侧入口，内部开发仍止于 PR 就绪，人工决定合并与发布。
 
 ## 1. 已确定的范围
 

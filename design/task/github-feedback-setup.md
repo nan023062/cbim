@@ -110,4 +110,4 @@
 
 当前实现没有自动刷新 Token、GitHub Enterprise、自动附件上传、反馈进度查询或本机未知记录强制清除入口；这些限制不以一次线上成功为由抹去。
 
-2026-11-09 新增的 `cbim_feedback_status` 与工具清单诊断目前仅在工作区代码中验证，尚未进入已发布的 0.1.0。NAN-LI 的原故障、已确认错误提示与本机复现分别记入[缺陷与验证报告](../verification/feedback-tool-availability-20261109.md)。连接状态查询不证明原 Issue 结果；已有未知提交保持未知，不重发。
+2026-11-09 新增的 `cbim_feedback_status` 与工具清单诊断已随 [0.1.1 正式版](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.1) 交付，原 0.1.0 不含这些诊断。真实安装及在线升级见[发布验收](../verification/desktop-release-0.1.1-20261109.md)；NAN-LI 的原故障、已确认错误提示与本机复现分别记入[缺陷与验证报告](../verification/feedback-tool-availability-20261109.md)，该设备尚未复验。连接状态查询不证明原 Issue 结果；已有未知提交保持未知，不重发。

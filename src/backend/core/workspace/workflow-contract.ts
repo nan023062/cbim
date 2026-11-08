@@ -1,4 +1,5 @@
 /**
+ * 可选executionScope冻结文件/目录边界与固定Node预算，产物/验证须在本模块范围内；全任务混合模式另由执行知识校验拒绝。
  * 作用定位：定义模块 Workflow 正文中可选执行条件的严格协议，供知识治理、资源包与执行准备共同解析。
  * 设计原因：自然语言方法仍由模型运用，只有显式声明的少量稳定条件才交程序检查；坏声明不能静默退回无约束流程。
  * 职责边界：纯解析，JSON/CSV/PNG要求固定产物与受限结构；普通artifactScope只声明观察，删除/移动约定须启用requireCompleteManifest并核原操作。不读取工程或签发权限。
@@ -10,11 +11,12 @@ import {boundedJsonSchemaSchema} from './json-validation-schema';
 import {csvTableSchema} from './csv-validation-schema';
 import {pngImageSchema} from './png-validation-schema';
 import {artifactScopeSchema} from './artifact-scope';
+import {executionScopeSchema,preparedExecutionScope} from './execution-scope';
 
 /** 限制单份条件的规模；正文其它自然语言仍沿原知识文件大小规则。 */
 export const workflowContractLimits={requirements:16,blockBytes:64*1024} as const;
-/** 首版只匹配已实现原生业务工具；知识写入、调度或记录工具不能作为此类出口。 */
-export const workflowToolNameSchema=z.enum(['read','write','edit','grep','find','ls','bash']);
+/** 仅匹配已实现原生或受限业务工具；知识写入、调度或记录工具不能作为此类出口。 */
+export const workflowToolNameSchema=z.enum(['read','write','edit','grep','find','ls','bash','cbim_scoped_read','cbim_scoped_node','cbim_file_write_controlled']);
 export type WorkflowToolName=z.infer<typeof workflowToolNameSchema>;
 const requirement=z.object({id:z.string().regex(/^[A-Za-z0-9_-]{1,80}$/),toolName:workflowToolNameSchema}).strict();
 const artifactPath=z.string().min(1).max(2048).refine(value=>!/[\\:\x00-\x1f]/.test(value)&&!value.startsWith('/')&&value.split('/').every(part=>!!part&&part!=='.'&&part!=='..'&&part.toLowerCase()!=='.cbim'));
@@ -31,10 +33,13 @@ export const workflowContractSchema=z.object({
   version:z.literal(1),
   /** 完整枚举的范围随知识冻结；不把观察声明冒充交付条件。 */
   artifactScope:artifactScopeSchema.optional(),
+  /** 原任务权限之内的显式限制；旧 Workflow 缺省不升级为隔离模式。 */
+  executionScope:executionScopeSchema.optional(),
   beforeEffects:z.object({requirePlan:z.literal(true)}).strict().optional(),
   delivery:z.object({requiredToolEvidence:z.array(requirement).min(1).max(workflowContractLimits.requirements).optional(),requiredValidations:z.array(artifactValidationRequirementSchema).min(1).max(workflowContractLimits.requirements).optional(),requireCompleteManifest:z.literal(true).optional()}).strict().refine(value=>!!value.requiredToolEvidence||!!value.requiredValidations||value.requireCompleteManifest===true,'交付至少声明一种非空条件').optional(),
 }).strict().superRefine((value,context)=>{
-  if(!value.beforeEffects&&!value.delivery&&!value.artifactScope)context.addIssue({code:z.ZodIssueCode.custom,message:'至少声明一项执行条件或产物观察范围'});
+  if(!value.beforeEffects&&!value.delivery&&!value.artifactScope&&!value.executionScope)context.addIssue({code:z.ZodIssueCode.custom,message:'至少声明一项执行条件或产物观察范围'});
+  try{preparedExecutionScope([{contract:value}])}catch(error){context.addIssue({code:'custom',message:String(error)})}
   if(value.delivery?.requireCompleteManifest&&!value.artifactScope)context.addIssue({code:z.ZodIssueCode.custom,message:'完整交付要求必须同时声明本模块 artifactScope'});
   if(value.artifactScope?.transitions&&!value.delivery?.requireCompleteManifest)context.addIssue({code:z.ZodIssueCode.custom,message:'删除/移动要求必须显式启用完整清单验收'});
   const ids=[...value.delivery?.requiredToolEvidence??[],...value.delivery?.requiredValidations??[]].map(item=>item.id);

@@ -1,4 +1,5 @@
 /**
+ * 范围读取和固定Node须精确匹配注册效果及版本；Node继续按command执行read拒绝/ask批准，不因LPAC隔离获得额外权限。
  * 受控文件边界：精确内部 business-write/workspace 能力沿同一批准策略；平台独立再次核实完整路径，不借 native:false 绕过权限。
  * 作用定位：内部 Loop 的统一工具授权策略，同时处理业务文件与正式知识写入。
  * 设计原因：权限来自可信运行配置，副作用、契约版本和仓库范围来自已注册工具的捕获描述；模型参数不能提高权限或把外部资料冒充项目文件。
@@ -28,6 +29,7 @@ export async function authorizeRunTool(call:ToolCall,tool:RunToolDescriptor,cont
   const governance=call.name.startsWith('cbim_governance_'),ownership=call.name.startsWith(moduleOwnershipToolPrefix);
   let scope:ToolScope={kind:governance||ownership||tool.effects.includes('command')?'unknown':tool.effects.includes('knowledge-write')?'knowledge':'workspace',workspaceId:context.workspaceId};
   const decision=(allow:boolean,reason?:string):ToolDecision=>({allow,reason,effects:tool.effects,scope});
+  if(call.name.startsWith('cbim_scoped_')&&(!['cbim_scoped_read','cbim_scoped_node'].includes(call.name)||tool.native||tool.effects.length!==1||tool.effects[0]!== (call.name==='cbim_scoped_read'?'read':'command')||tool.contractVersion!==1))return decision(false,'范围工具缺少本轮真实注册或副作用分类不一致');
   // 内部受控写不经过 native guard，必须由实际成员工厂分类且平台独立检查完整路径。
   if(call.name.startsWith('cbim_file_')&&(call.name!=='cbim_file_write_controlled'||tool.native||tool.effects.length!==1||tool.effects[0]!=='business-write'||tool.scope?.kind!=='workspace'))return decision(false,'受控文件写缺少本轮真实注册或业务写作用域');
   // 验证只读固定文件，注册与参数由正式成员装配核对；不得借此名称要求命令或知识写入。

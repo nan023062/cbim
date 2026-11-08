@@ -143,3 +143,7 @@ Application 每工作区装配一个请求预算服务，主工厂固定已解�
 CSV 能力由同一成员工厂的真实平台实现公开；知识声明、岗位准备与领取继续核对可用验证器，CSV 不复用 JSON 参数或绕过原工作区有效性与停止检查。
 
 成员工厂公开png-raster-v1并注入ArtifactFiles.validateImage，准备/领取按真实可用验证器核要求。图片与JSON/CSV共用当前知识、工作区代际、停止和原文件证明；目标及人工出口不另开绕过复核的路径。
+
+## 冻结范围成员执行
+
+成员工厂只对已冻结executionScope装配ScopedExecutionFiles、受限ArtifactFiles/OutputManifestFiles；原文件受控写和删除移动逐次再次核范围。能力预检独立scopedTools；主会话不获得范围业务执行工具。历史桌面核实仍是独立可信只读流程，不借模型扩大范围。

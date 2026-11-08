@@ -381,3 +381,7 @@ PiBridge ..> ResultsModule : 进入会话前校验
 进度工具在此结构之上要求真实 workspaceId/taskId/runId、相同作用域工作区、明确 succeeded、非空工具名与实际 resultHash。内部维护、目标调度、治理和 repository 资料不作为业务交付证据。Schema 通过仅说明返回协议合法，不授予执行、验收或重试权。
 
 `checkedJsonToolResult` 也供主调度八工具与成员七工具使用。保存后输出异常不会回滚领域记录；工具包装必须在调用端口前独立冻结请求、绑定和必要前态，不能将端口可能改动的原对象同时作为核验依据。
+
+## 冻结范围成员执行
+
+取消元数据新增during_execution，表示可信宿主能终止当前实际执行并等退出；不改变preflight_only、during_wait及恢复的原语义，也不声称副作用回滚。

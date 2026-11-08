@@ -1,4 +1,5 @@
 /**
+ * 仅新增cbim_scoped_read作为受限单文件来源；执行过隔离命令或受控写的运行仍不自动扩大既有检查点白名单。
  * 作用定位：运行时和结算端共用成员检查点的纯证据门禁，核实文件来源全集、暂存/结束回执和正常终态。
  * 设计原因：选中文件哈希不能消除命令、动态目录集合或未知工具影响；首次只支持完整成功的单文件操作及本机任务维护工具。
  * 职责边界：本模块不读文件或原生会话，调用方仍须复核当前字节、知识、受管原生历史及磁盘完整性。
@@ -54,9 +55,9 @@ export function validateCheckpointEligibility(events:readonly ArtifactEvidenceEv
     const call=artifactSucceededCall(events,binding,id),tool=call.receipt.toolName;
     // 仓库正文即使字面看似文件或维护回执，也不能纳入同实例续执行的本地文件闭包。
     check(call.receipt.scope.kind!=='repository'&&!tool.startsWith('cbim_repository_'),'外部仓库读取不属于可恢复成员的文件检查点来源');
-    if(['read','write','edit'].includes(tool)){
+    if(['read','write','edit','cbim_scoped_read'].includes(tool)){
       const source=artifactSources(events,binding,[id]).sources[0];paths.add(normalizePath(source.path));
-      check(call.receipt.effects.every(effect=>effect===(tool==='read'?'read':'business-write')),'文件来源包含未支持的额外副作用');
+      check(call.receipt.effects.every(effect=>effect===(tool==='read'||tool==='cbim_scoped_read'?'read':'business-write')),'文件来源包含未支持的额外副作用');
     }else check(maintenance.has(tool)&&call.receipt.scope.kind==='workspace'&&call.receipt.effects.length===1&&call.receipt.effects[0]==='maintenance','本轮含命令、目录扫描、外部来源或非白名单工具，不能安全续执行');
   }
   const files=new Set(baseline.baseline.files.map(file=>normalizePath(file.relativePath)));

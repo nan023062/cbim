@@ -1,4 +1,5 @@
 /**
+ * 范围模式的cbim_scoped_read可在原写待核实时只读观察；隔离命令仍被未知写屏障阻断。
  * 作用定位：正式成员受控文件工具的单次授权与短门闩，平台写入只经过此可信运行端口。
  * 设计原因：授权来自 Runtime 自身可靠 allowed 追加返回值，不信任引擎 emit；调用失败后整轮只保留读取与求助，只有可信未写证明才能解除屏障。停止须排空实际文件进程。
  */
@@ -27,7 +28,7 @@ export class RunControlledFile {
   /** 在审批 await 之前预占；执行与工具终态都完成后才释放，伪早到 finished 不能解除实际 IO 占位。 */
   guard(name:string,id:string,input:unknown,active:readonly string[]):string|undefined{
     if(this.reserved)return '受控文件操作尚未结束，请先等待原操作核实';
-    if(this.unverified.size&&!['read','grep','find','ls','cbim_task_inspect','cbim_task_help'].includes(name))return 'CONTROLLED_FILE_REVIEW_REQUIRED: 原受控写结果待核实，本轮仅可读取、查看计划或记录求助，不能再次写入、交付或停泊';
+    if(this.unverified.size&&!['read','grep','find','ls','cbim_scoped_read','cbim_task_inspect','cbim_task_help'].includes(name))return 'CONTROLLED_FILE_REVIEW_REQUIRED: 原受控写结果待核实，本轮仅可读取、查看计划或记录求助，不能再次写入、交付或停泊';
     if(name!==controlledFileWriteToolName)return;
     if(this.controller.signal.aborted)return '运行已停止，不能开始受控写入';
     const parsed=controlledFileWriteInputSchema.safeParse(input);if(!parsed.success)return '受控文件参数不符合严格单文件协议';

@@ -1,9 +1,11 @@
 /**
+ * 范围读取仅接受严格path输入及原成功授权链，来源身份进入基线，隔离命令本身不充当文件读取来源。
  * 作用定位：从本轮已提交事件核实文件采集来源与不可变基线，供运行时和只读报告共用。
  * 设计原因：工具成功、采集暂存事件及文件字节不能互相代替；参数与结果哈希、调用顺序、固定身份全部匹配后才发布引用，避免两套较宽松证据规则。
  * 职责边界：不读取文件、不授权恢复；事件可省略无关消息，但顺序必须递增，完整日志连续性和磁盘完整性由 canonical 读取方核实。
  */
 import {z} from 'zod';
+import {scopedReadInputSchema} from './scoped-execution';
 import {fail} from '../foundation/errors';
 import {hash} from '../foundation/serialization';
 import {toolScopeSchema} from '../tools/scope-schema';
@@ -41,9 +43,9 @@ export function artifactSucceededCall(events:readonly ArtifactEvidenceEvent[],bi
 export function artifactSources(events:readonly ArtifactEvidenceEvent[],binding:Binding,ids:readonly string[]):{sources:Array<ArtifactSourceCall&{path:string}>;lastEffectSeq:number}{
   bound(events,binding);valid(ids.length>0&&ids.length<=artifactLimits.sources&&new Set(ids).size===ids.length,'采集来源数量无效或重复');
   const sources=ids.map<ArtifactSourceCall&{path:string}>(id=>{
-    const item=artifactSucceededCall(events,binding,id),name=item.receipt.toolName;valid(name==='read'||name==='write'||name==='edit','仅支持真实 read/write/edit 单文件来源，不解析命令或目录');
-    const input=nativeInput[name].safeParse(item.allowed.data.input);valid(input.success,'文件工具参数不符合已支持的单文件协议');
-    valid(item.receipt.scope.kind==='workspace'&&item.receipt.effects.includes(name==='read'?'read':'business-write'),'来源授权不属于工作区文件操作');
+    const item=artifactSucceededCall(events,binding,id),name=item.receipt.toolName;valid(name==='read'||name==='write'||name==='edit'||name==='cbim_scoped_read','仅支持真实 read/write/edit 单文件来源，不解析命令或目录');
+    const input=(name==='cbim_scoped_read'?scopedReadInputSchema:nativeInput[name]).safeParse(item.allowed.data.input);valid(input.success,'文件工具参数不符合已支持的单文件协议');
+    valid(item.receipt.scope.kind==='workspace'&&item.receipt.effects.includes(name==='read'||name==='cbim_scoped_read'?'read':'business-write'),'来源授权不属于工作区文件操作');
     return {toolCallId:id,toolName:name,allowedSeq:item.allowed.seq,finishedSeq:item.finished.seq,inputHash:item.receipt.inputHash,resultHash:item.receipt.resultHash!,path:input.data.path};
   });
   return {sources,lastEffectSeq:events.reduce((value,event)=>altered(event)?event.seq:value,0)};

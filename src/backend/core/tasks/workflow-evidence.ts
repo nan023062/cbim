@@ -1,4 +1,5 @@
 /**
+ * 范围读取、固定Node和受控写按各自实际read/command/business-write效果核证，不把命令事实等同专业验收。
  * 完整模式核显式原清单、全部冻结范围与同身份JSON记录；历史重算还核采集结束早于交付授权，不退回文件子集。
  * 证据边界：交付只核步骤实际引用的业务证据，提问、取消、原命令报告及模块负责人控制面不能作证；未引用的查询不使整轮失效，真实知识写仍参与副作用时序。
  * 作用定位：核实可选 Workflow 的计划前置、工具回执及精确 必验文件结构出口，供运行时与调度结算共用。
@@ -56,7 +57,7 @@ export function evaluateWorkflowDelivery(bindings:readonly WorkflowContractBindi
   }
   const checks:WorkflowEvidenceProof['checks']=[];
   for(const binding of values)for(const requirement of binding.contract.delivery?.requiredToolEvidence??[]){
-    const ids=[...unique.values()].filter(receipt=>receipt.toolName===requirement.toolName&&receipt.scope.kind===(requirement.toolName==='bash'?'unknown':'workspace')&&receipt.effects.includes(requirement.toolName==='bash'?'command':['write','edit'].includes(requirement.toolName)?'business-write':'read')).map(receipt=>receipt.toolCallId).sort();
+    const ids=[...unique.values()].filter(receipt=>receipt.toolName===requirement.toolName&&receipt.scope.kind===(['bash','cbim_scoped_node'].includes(requirement.toolName)?'unknown':'workspace')&&receipt.effects.includes(['bash','cbim_scoped_node'].includes(requirement.toolName)?'command':['write','edit','cbim_file_write_controlled'].includes(requirement.toolName)?'business-write':'read')).map(receipt=>receipt.toolCallId).sort();
     valid(ids.length,'WORKFLOW_EVIDENCE_REQUIRED',`模块 ${binding.moduleId} 的 Workflow 条件 ${requirement.id} 缺少当前步骤引用的 ${requirement.toolName} 成功回执`);
     checks.push({moduleId:binding.moduleId,workflowId:binding.workflowId,workflowVersion:binding.workflowVersion,requirementId:requirement.id,toolName:requirement.toolName,toolCallIds:ids});
   }

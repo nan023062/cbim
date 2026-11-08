@@ -63,3 +63,7 @@ Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，
 ArtifactFiles.validateImage将同一安全句柄得到的≤1 MiB文件字节同时用于原基线指纹和png-validator。后者逐块核签名、长度、ASCII类型/保留位、CRC和顺序；仅支持IHDR、连续IDAT、末尾IEND及前置唯一sRGB/gAMA/pHYs，元数据长度、整数范围及sRGB/gAMA一致性也核验。其它块、APNG、调色板、灰度、16位或交错明确拒绝。
 
 完整IDAT合并后用Node inflateSync的maxOutputLength与info核准确解压长度及已消耗输入，拒绝截断、压缩尾随数据或膨胀超限；五种行过滤器按实际邻接像素还原，每行过滤值须有效。宽高各≤4096、总像素≤1048576、块数≤1024，像素仅留本次平台内存，验证回包只含原条件诊断。解码完成后再核停止与所有者；不承诺色彩转换、视觉正确或OS隔离。
+
+## 冻结范围成员执行
+
+ScopedExecutionFiles固定原root/范围/生命周期断言，真实Win32仅读句柄持全部祖先防替换，普通单链接文件最多1MiB，输入合计8MiB；目录枚举持实际目标及祖先句柄。Node只接受这些快照，预算来自冻结声明；输出仅在原Job全部退出后读取，不自动写回。开发Electron从项目依赖解析koffi，打包使用resources/koffi。平台失败仅在原资源确认收束后通知onSettled；未知保持任务占用。

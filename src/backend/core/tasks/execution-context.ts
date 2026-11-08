@@ -1,4 +1,5 @@
 /**
+ * 显式executionScope的全模块一致性在准备与恢复共用校验；约定只限制原权限，不能扩大权限或自动升级旧快照。
  * 作用定位：成员业务执行所需的可持久化知识快照，以及存储与调度共用的完整性校验。
  * 设计原因：实际运行须冻结岗位适配及角色/Skill、模块和流程正文；能力 hash 必须对应原采纳岗位，避免重算上下文指纹掩盖未采纳内容，Core 不反向依赖调度实现。
  * 职责边界：这是执行知识而非权限快照，不含模型凭据；指纹只能证明内容一致，不能代替知识来源、权限和产物基线复核。
@@ -10,6 +11,7 @@ import type {AgentConfigurationSnapshot} from '../team/agent-types';
 import type {ModuleBinding} from './graph-types';
 import {parseWorkflowContract,workflowContractSchema,type WorkflowContract} from '../workspace/workflow-contract';
 import {preparedArtifactScopes} from '../workspace/artifact-scope';
+import {preparedExecutionScope} from '../workspace/execution-scope';
 import {ownerExecutionBindingSchema,ownerExecutionBindingMatches,type OwnerExecutionBinding} from '../team/member-execution-binding';
 import {workspaceMemberAdaptationSchema,type WorkspaceMemberAdaptation} from '../team/workspace-member';
 import {workspaceMemberCapabilityHash} from '../team/workspace-member-rules';
@@ -84,6 +86,7 @@ export function validatePreparedDispatchKnowledge(value:unknown):asserts value i
   invalid(new Set(prepared.modules.map(module=>module.binding.moduleId)).size!==prepared.modules.length,'执行模块不能重复');
   // 各模块声明单独有效仍可能重叠或合计超限；准备时核完整集合，不能领取后再裁剪范围。
   try{preparedArtifactScopes(preparedWorkflowContracts(prepared))}catch{fail('EXECUTION_CONTEXT_INVALID','冻结模块的完整产物范围重叠、数量超限或无效')}
+  try{preparedExecutionScope(prepared.modules.map(module=>({contract:module.workflowContract})))}catch{fail('EXECUTION_CONTEXT_INVALID','冻结模块的执行范围混合、冲突或超限')}
   invalid(new Set(prepared.standards.map(standard=>standard.id)).size!==prepared.standards.length,'内置规范不能重复');
   invalid(new Set(prepared.agent.effectiveSkills.map(skill=>skill.skillId)).size!==prepared.agent.effectiveSkills.length,'角色有效 Skill 不能重复');
   invalid(prepared.agentDefinition.name!==prepared.agent.name,'冻结角色定义与角色名称不一致');

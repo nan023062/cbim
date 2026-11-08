@@ -57,6 +57,10 @@ const scope={
  'src/frontend/team':'工作区唯一的静态Team/组/Agent图、继承与人才复用，节点按Session查看只读履历。岗位面板独立登记、明确采纳和暂停退休；改名和模型更新保留原能力来源。来源屏障首次拒绝可重新编辑，未知仍查原命令；反查责任委托workspace，不启动模型。',
  'src/frontend/workspace':'工作区唯一的工程/模块图及自身Workflow。负责人面板展示来源和有界历史，支持同负责人明确采纳当前来源；原回执必须匹配同一关系、版本及owner，未知不换命令。知识编辑和整架构复用委托knowledge/resources；登记不移交旧任务。',
 };
+scope["src/backend/main/platform"]+=" 范围模式用Win32读取/枚举句柄与LPAC私有快照，原工程不扩ACL。";
+scope["src/backend/core/workspace"]+=" executionScope只收窄原权限，全模块一致冻结，预算合并取小。";
+scope["src/backend/core/brain/pi"]+=" 范围模式只注册cbim工具，转发受限读取与隔离Node的原调用身份。";
+scope["src/backend/core/brain"]+=" 冻结范围工具由Runtime一次授权，原生文件/命令禁用，结算等实际资源退出。";
 // 负责人进入实际执行后，各层增加的职责仍分别归属原边界；不把登记回执描述成运行许可。
 const ownerExecutionScopes={
  'src/backend/core/brain':'成员的公开任务和原生运行共用冻结岗位绑定，历史缺省可读但不授权应用新领取。',

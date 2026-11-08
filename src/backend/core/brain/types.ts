@@ -1,4 +1,5 @@
 /**
+ * 范围工具端口仅由正式成员Runtime注入；Pi据此移除全部原生文件与命令，不能由模型消息声明获得。
  * 受控文件边界：写入及冻结删除/移动均只向引擎提供严格 list/call，不暴露平台原端口、阶段保存或授权签发能力。
  * 作用定位：大脑 执行层：与具体引擎无关的任务、事件、工具策略和执行摘要契约。
  * 设计原因：任务身份与原生上下文分开；选定文件、完整集合观察、产物验证与逐段检查点由独立可信端口记录，不由引擎自报。续执行准备复核原冻结证明，历史读取不猜测恢复。
@@ -60,6 +61,8 @@ export interface EngineContext {
   memberCheckpointTools?:Pick<import('../tasks/member-checkpoint-tools').MemberCheckpointTools,'list'|'call'>;
   /** 仅实际受控平台端口支持的正式成员装配；引擎不能取得备份、补偿或权限签发能力。 */
   controlledFileTools?:Pick<import('./run-controlled-file').RunControlledFile,'list'|'call'>;
+  /** 原任务冻结范围的实际工具；存在时 Pi 关闭全部原生文件与命令注册。 */
+  scopedExecutionTools?:Pick<import('./run-scoped-execution').RunScopedExecution,'list'|'call'>;
   /** 仅冻结了删除/移动要求且已装配真实平台的正式成员拥有，不能继承为任意 shell 权限。 */
   artifactTransitionTools?:import('../tasks/artifact-transition').ArtifactTransitionToolPort;
   /** 仅有冻结产物验证要求的正式成员装配；路径、Schema 和结论来自可信端口。 */

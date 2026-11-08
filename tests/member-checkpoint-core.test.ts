@@ -18,9 +18,9 @@ function finish(events:ArtifactEvidenceEvent[],allowed:ArtifactEvidenceEvent,res
   const call=allowed.data,receipt:ToolReceipt={version:1,toolCallId:String(call.id),toolName:String(call.name),workspaceId:binding.workspaceId,taskId:binding.taskId,runId:binding.runId,inputHash:hash(JSON.stringify(call.input)),resultHash:hash(JSON.stringify(result)),scope:call.scope as ToolReceipt['scope'],effects:call.effects as ToolReceipt['effects'],outcome,recordedAt:stamp};
   return append(events,'tool.finished',{id:call.id,name:call.name,result,isError:outcome==='failed',receipt});
 }
-function fixture(beforeCapture?:(events:ArtifactEvidenceEvent[])=>void){
+function fixture(beforeCapture?:(events:ArtifactEvidenceEvent[])=>void,sourceTool='read'){
   const events:ArtifactEvidenceEvent[]=[];append(events,'run.started',{memberBinding:binding,task:{workspaceId:binding.workspaceId,taskId:binding.taskId,agentId:binding.agentId,goal:'原目标'}});append(events,'task.updated',{progress:{version:1,state:'executing',goal:'原目标',acceptance:['验证'],steps:[{id:'s',title:'工作',state:'pending',evidence:[]}]}});
-  const read=start(events,'read-source','read',{path:'/workspace/file.txt'},['read']);finish(events,read,jsonToolResult('read',{text:'bytes'}));beforeCapture?.(events);
+  const read=start(events,'read-source',sourceTool,{path:sourceTool==='read'?'/workspace/file.txt':'file.txt'},['read']);finish(events,read,jsonToolResult('read',{text:'bytes'}));beforeCapture?.(events);
   const captureInput={expectedTaskProgressVersion:1,sourceToolCallIds:['read-source']},capture=start(events,'capture','cbim_task_artifact_capture',captureInput),sources=artifactSources(events,binding,['read-source']);
   const baseline:ArtifactBaselineStaged={version:1,baselineId:'baseline',captureToolCallId:'capture',binding,knowledgeRevision:'knowledge',progressVersion:1,capturedAt:stamp,lastEffectSeq:sources.lastEffectSeq,sourceCalls:sources.sources.map(({path:_,...source})=>source),files:[{relativePath:'file.txt',byteLength:5,sha256:hash('bytes'),sourceToolCallIds:['read-source']}]};
   append(events,'artifact.baseline_captured',{baseline});finish(events,capture,jsonToolResult('cbim_task_artifact_capture',{state:'captured',baseline}));return {events,baseline};
@@ -77,4 +77,9 @@ it('工具参数及返回严格；未知字段与伪造身份不能被包装成�
 it('共享待办门禁区分检查点/预约与已经消费后的历史，不能误放行scope等待',()=>{
   const {events}=fixture();checkpoint(events);const record=verify(events)!.checkpoint;
   expect(isMemberCheckpointPending({status:'checkpointed',checkpoints:[record],runIds:['first-run']})).toBe(true);expect(isMemberCheckpointPending({status:'queued',checkpoints:[record],runIds:['first-run']})).toBe(true);expect(isMemberCheckpointPending({status:'result_ready',checkpoints:[record],runIds:['first-run','second-run']})).toBe(false);expect(isMemberCheckpointPending({status:'cancelled',checkpoints:[record],runIds:['first-run']})).toBe(false);
+});
+
+it('范围只读来源保留真实名称并进入原文件检查点，不能借此放行隔离命令',()=>{
+ const {events}=fixture(undefined,'cbim_scoped_read');checkpoint(events);expect(verify(events)?.checkpoint.checkpointId).toBe('checkpoint-one');
+ const next=fixture(undefined,'cbim_scoped_read');const allowed=start(next.events,'node','cbim_scoped_node',{entry:'file.txt',files:['file.txt'],args:[],outputs:[]},['command']);finish(next.events,allowed,{status:'exited',exitCode:0});expect(()=>validateCheckpointEligibility(next.events,binding,'knowledge',normalize,input)).toThrow();
 });

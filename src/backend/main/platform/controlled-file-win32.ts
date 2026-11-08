@@ -1,4 +1,5 @@
 /**
+ * 范围读取只请求GENERIC_READ并仅分享READ；目录枚举持不分享DELETE的整条祖先句柄。只读对象无法调用replace/transition。
  * 作用定位：专用 utility 子进程的同步 Win32 单文件实现；全程拥有文件及目录句柄。
  * 设计原因：同线程立即捕获 GetLastError，避免同步磁盘 IO 堵塞 Main；独占共享规则不被描述为命名空间沙箱。
  * 写入边界：同句柄内容替换、删除标记或不覆盖移动均只发一次；命名空间操作另拒绝备用流，失败绝不自行恢复 before。
@@ -20,7 +21,7 @@ export class Win32ControlledFile {
   private readonly api:Record<string,(...args:any[])=>any>;
   private handles:any[]=[];private file:any;private applied=false;private original?:ControlledFileIdentity;
   writeIssued=false;
-  constructor(private readonly root:string,private relativePath:string,protectedRoots:readonly string[],koffiPath:string,private readonly namespaceChange?:ControlledNamespaceChange){
+  constructor(private readonly root:string,private relativePath:string,protectedRoots:readonly string[],koffiPath:string,private readonly namespaceChange?:ControlledNamespaceChange,private readonly readOnly=false,private readonly directoryOnly=false){
     this.namespaceChange=namespaceChange?structuredClone(namespaceChange):undefined;
     if(process.platform!=='win32')error('CONTROLLED_PLATFORM_UNSUPPORTED');
     this.koffi=requireNative(koffiPath);
@@ -54,13 +55,15 @@ export class Win32ControlledFile {
     if(!/^[A-Za-z]:\\/.test(this.root)||normal(fs.realpathSync(this.root))!==normal(path.resolve(this.root)))error('CONTROLLED_PATH');
     const file=this.target(this.relativePath,protectedRoots),drive=path.parse(this.root).root;
     if(this.api.drive(drive)!==3||this.namespaceChange&&process.arch!=='x64')error('CONTROLLED_PLATFORM_UNSUPPORTED');
+    if(this.directoryOnly){if(!this.readOnly||this.namespaceChange)error('CONTROLLED_SESSION_USED');this.lockParents(path.join(file,'_'));return}
     // 从卷根到目标父目录持不分享 DELETE 的目录句柄；每一级拒绝 reparse，核实际对象路径。
     this.lockParents(file);
     if(this.namespaceChange?.kind==='move'){
       const target=this.target(this.namespaceChange.targetRelativePath,protectedRoots);if(normal(file)===normal(target))error('CONTROLLED_PATH');
       this.lockParents(target);this.missing(target);
     }
-    this.file=this.openHandle(file,this.namespaceChange?0x80010000:0xc0000000,0,0x200080);
+    // 受限读取只请求 GENERIC_READ 并仅分享 READ；拒绝同时写入/替换，不要求文件本身可写。
+    this.file=this.openHandle(file,this.readOnly?0x80000000:this.namespaceChange?0x80010000:0xc0000000,this.readOnly?1:0,0x200080);
     const volume=Buffer.alloc(512);this.bool(this.api.volume(this.file,null,0,null,null,null,volume,256));
     if(volume.toString('utf16le').split('\0')[0]!=='NTFS'||this.api.type(this.file)!==1)error('CONTROLLED_PLATFORM_UNSUPPORTED');
     this.original=this.checkedIdentity();
@@ -69,20 +72,23 @@ export class Win32ControlledFile {
   private checkedIdentity():ControlledFileIdentity{
     if(!this.file)error('CONTROLLED_SESSION_CLOSED');
     const info=this.info(this.file);
-    if(info.links!==1||info.attributes&(0x1|0x10|0x400|0x1000|0x40000|0x400000)||info.size>controlledPlatformBytes||normal(this.final(this.file))!==normal(path.join(this.root,...this.relativePath.split('/'))))error('CONTROLLED_FILE_CHANGED');
+    // READONLY 属性仅限制写操作，读取仍拒绝目录、重解析与离线文件。
+    if(info.links!==1||info.attributes&((this.readOnly?0:0x1)|0x10|0x400|0x1000|0x40000|0x400000)||info.size>controlledPlatformBytes||normal(this.final(this.file))!==normal(path.join(this.root,...this.relativePath.split('/'))))error('CONTROLLED_FILE_CHANGED');
     const value:ControlledFileIdentity={kind:'windows_file',volumeId:info.volumeId,fileId:info.fileId,links:1};
     if(this.original&&JSON.stringify(this.original)!==JSON.stringify(value))error('CONTROLLED_FILE_CHANGED');return value;
   }
-  read(){
+  /** binary 只供只读快照使用；业务替换与命名空间操作继续严格 UTF-8。 */
+  read(binary=false){
+    if(binary&&!this.readOnly)error('CONTROLLED_SESSION_USED');
     const identity=this.checkedIdentity(),before=this.info(this.file);this.bool(this.api.seek(this.file,0,null,0));
     const bytes=Buffer.alloc(before.size),count=Buffer.alloc(4);let offset=0;
     while(offset<bytes.length){this.bool(this.api.read(this.file,bytes.subarray(offset),Math.min(65536,bytes.length-offset),count,null));const n=count.readUInt32LE();if(!n)error('CONTROLLED_FILE_CHANGED');offset+=n}
-    new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
+    if(!binary)new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
     if(this.info(this.file).size!==before.size)error('CONTROLLED_FILE_CHANGED');this.checkedIdentity();
     return {identity,bytes,fact:{byteLength:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')} satisfies ControlledContentFact};
   }
   replace(bytes:Uint8Array){
-    if(this.namespaceChange||this.applied||bytes.byteLength>controlledPlatformBytes)error('CONTROLLED_SESSION_USED');this.applied=true;this.checkedIdentity();
+    if(this.readOnly||this.namespaceChange||this.applied||bytes.byteLength>controlledPlatformBytes)error('CONTROLLED_SESSION_USED');this.applied=true;this.checkedIdentity();
     new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);this.bool(this.api.seek(this.file,0,null,0));
     const count=Buffer.alloc(4);this.writeIssued=true;
     // 即使空正文也进入实际修改阶段；SetEndOfFile 失败可能已发生前缀写，绝不回滚。
@@ -98,7 +104,7 @@ export class Win32ControlledFile {
   }
   /** 使用打开时冻结的操作和同一文件句柄；源不存在或移动后同身份读回成功才报告平台事实。 */
   transition(){
-    const transition=this.namespaceChange;if(!transition||this.applied)return error('CONTROLLED_SESSION_USED');this.applied=true;const before=this.read(),source=path.join(this.root,...this.relativePath.split('/'));this.defaultStreamOnly();
+    const transition=this.namespaceChange;if(this.readOnly||!transition||this.applied)return error('CONTROLLED_SESSION_USED');this.applied=true;const before=this.read(),source=path.join(this.root,...this.relativePath.split('/'));this.defaultStreamOnly();
     if(transition.kind==='delete'){
       this.writeIssued=true;this.bool(this.api.setInfo(this.file,4,Buffer.from([1]),1));
       // 删除标记直到句柄关闭才生效；只释放源文件，父目录句柄仍保护原路径层级。

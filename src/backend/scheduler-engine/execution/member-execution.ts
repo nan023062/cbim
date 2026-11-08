@@ -1,4 +1,5 @@
 /**
+ * 领取前按真实scopedTools单独核验范围模式能力；缺端口不回退native，续执行仍复核原知识与权限。
  * 完整出口结算从原canonical重建清单并经真实全集合端口重核；只有JSON文件未变不足以保存候选。
  * 成员续段结算追加检查点并核累计文件，领取只消费最新段；历史完整前缀不能替代本轮真实证据。
  * 逐请求模式在领取前按原岗位模型预检保守容量，拒绝不消费检查点；每个实际请求仍独立预留并可靠结算。
@@ -20,6 +21,7 @@ import type {RunSummary,StoredEvent,ToolCall,ToolDecision,ChatPermission} from '
 import type {DispatchRun} from '../../core/tasks/dispatch-execution';
 import type {DispatchStore,DispatchState,DispatchMessage} from '../../core/tasks/dispatch-storage';
 import type {TaskNode} from '../../core/tasks/graph-types';
+import {preparedExecutionScope} from '../../core/workspace/execution-scope';
 import {memberStartInput,memberTaskInput,memberMessageInput,memberAcknowledgeInput,type MemberStartOptions,type MemberStartReceipt,type MemberExecutionView} from '../../core/tasks/member-commands';
 import {prepareDispatchExecutionContext,recheckDispatchExecutionContext} from '../context/execution-context';
 import {ApprovalQueue} from '../conversation/approvals';
@@ -76,6 +78,8 @@ export interface MemberExecutionPorts {
     model:ResolvedLlm['profile'];
     /** 与本轮实际引擎注册参数一致的工具清单；仅能力预检，不能替代权限或批准。 */
     availableTools?:readonly string[];
+    /** 范围模式独立能力清单；缺省不能让冻结任务回退原生工具。 */
+    scopedTools?:readonly string[];
     /** 工厂实际提供的受限验证器；仅有名称不能替代冻结要求、文件端口或授权。 */
     availableValidators?:readonly string[];
     create(run:DispatchRun,task:TaskNode,hooks:{onEvent(event:StoredEvent):void;onEngineReady(input:{taskId:string;runId:string;sessionFile?:string}):Promise<void>;requestApproval(call:ToolCall):Promise<ToolDecision>;requestQuestion(args:unknown,signal:AbortSignal):Promise<unknown>}):Promise<LoopRuntime>;
@@ -206,10 +210,12 @@ export class MemberExecutionManager {
         // 取得名额不代表后续 await 期间仍获准启动；停止不能等到 claim 后才生效。
         const prepared=await prepareDispatchExecutionContext(this.owner,task,snapshot,state.workspaceMembers!.find(member=>member.memberId===task.ownerBinding!.memberId));assertCurrent();
         const engine=locked.prepare();assertCurrent();
-        const workflows=preparedWorkflowContracts(prepared);
+        const workflows=preparedWorkflowContracts(prepared),executionScope=preparedExecutionScope(prepared.modules.map(module=>({contract:module.workflowContract})));
+        const availableTools=executionScope?engine.scopedTools:engine.availableTools;
+        if(executionScope&&!availableTools)fail('EXECUTION_SCOPE_UNAVAILABLE','本机引擎没有实际范围执行能力');
         if(workflows.length){
-          if(!engine.availableTools)fail('WORKFLOW_CAPABILITIES_UNAVAILABLE','本次引擎未提供可信工具能力清单，不能执行带约定的 Workflow');
-          const missing=[...new Set(workflows.flatMap(binding=>binding.contract.delivery?.requiredToolEvidence?.map(item=>item.toolName)??[]))].filter(name=>!engine.availableTools!.includes(name));
+          if(!availableTools)fail('WORKFLOW_CAPABILITIES_UNAVAILABLE','本次引擎未提供可信工具能力清单，不能执行带约定的 Workflow');
+          const missing=[...new Set(workflows.flatMap(binding=>binding.contract.delivery?.requiredToolEvidence?.map(item=>item.toolName)??[]))].filter(name=>!availableTools!.includes(name));
           if(missing.length)fail('WORKFLOW_TOOL_UNAVAILABLE','当前权限或引擎未提供 Workflow 必需工具：'+missing.join('、'));
           const validationRequirements=workflows.flatMap(binding=>binding.contract.delivery?.requiredValidations??[]);
           if(validationRequirements.length>jsonValidationLimits.records)fail('WORKFLOW_VALIDATION_LIMIT','本任务的结构验证要求超过单轮记录上限，请拆分明确模块任务');

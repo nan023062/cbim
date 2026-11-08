@@ -1,7 +1,8 @@
 /**
+ * 可信onSettled仅在原资源确已收束并清理后通知任务端口；异常清理不明确时不签发完成。
  * 作用定位：把可信调用方给出的字节快照和本机执行器复制到私有目录，执行有界 LPAC 程序并返回真实平台事实。
  * 设计原因：原工程不授予沙箱权限；输出只在全部进程退出后读取，异常不重试，清理不明确时不能交付成功。
- * 职责边界：尚不装配为模型工具或任务权限；允许系统 LPAC 资源及 registryRead，不宣称完全隔绝所有 Windows 对象或磁盘硬配额。
+ * 职责边界：本文件不签发模型工具或任务权限；允许系统 LPAC 资源及 registryRead，不宣称完全隔绝所有 Windows 对象或磁盘硬配额。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -17,7 +18,7 @@ const pause=()=>new Promise<void>(resolve=>setTimeout(resolve,10));
 const fail=(code:string):never=>{throw Object.assign(new Error('隔离执行未完成：'+code),{code:'ISOLATION_'+code})};
 
 /** 装配参数是宿主私有配置，不能来自 renderer 或模型；onStarted 只报告平台身份供监管与验证。 */
-export interface IsolatedNodeOptions {executable?:string;koffiPath?:string;onStarted?:(value:{pid:number;root:string;profileName:string})=>void}
+export interface IsolatedNodeOptions {executable?:string;koffiPath?:string;onStarted?:(value:{pid:number;root:string;profileName:string})=>void;/** 仅在本调用资源已确认退出并完成清理后通知；业务失败不等于资源未知。 */onSettled?:()=>void}
 
 /** 单次调用独占一份输入／输出／profile；signal 只终止本次 Job，没有自动重放或向原工程写回。 */
 export async function runIsolatedNode(raw:IsolatedNodeRequest,signal:AbortSignal,options:IsolatedNodeOptions={}):Promise<IsolatedNodeResult>{
@@ -62,7 +63,8 @@ export async function runIsolatedNode(raw:IsolatedNodeRequest,signal:AbortSignal
     return {executionId,pid,isolation:'windows-lpac-registry-read-v1',status,exitCode:state!.exitCode,stdio:Buffer.concat(chunks).toString('utf8'),runtime:runtimeFacts,inputs:snapshots.map(file=>({path:file.path,sha256:hash(file.bytes),byteLength:file.bytes.length})),outputs,resources:{totalProcesses:state!.totalProcesses,limitTerminations:state!.limitTerminations,peakMemoryBytes:state!.peakMemoryBytes},allProcessesExited:true,cleanup:'complete'};
   }finally{
     if(native){native.terminate();const deadline=performance.now()+10000;while(native.state().active!==0){if(performance.now()>deadline)fail('DRAIN_PENDING');await pause()}native.close()}
-    if(!cleaned&&!retainOwner)await removeOwnedRoot(root,temp);
+    if(!cleaned&&!retainOwner){await removeOwnedRoot(root,temp);cleaned=true}
+    if(cleaned)options.onSettled?.();
   }
 }
 /** 只清理本调用 mkdtemp 的目录；OS/防病毒短暂持映像时仅重试删除，不重跑程序。owner最后删除，持续失败保留核实依据。 */

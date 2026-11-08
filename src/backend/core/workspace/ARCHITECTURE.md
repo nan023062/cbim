@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-领域工程、Module、Workflow与稳定岗位责任协议。来源代次和写前屏障由纯规则投影；内容指纹、来源身份、负责人关系分别核实。同负责人明确采纳递增关系版本，不迁移任务；旧缺省记录不补造来源。Workflow验证不自行读文件或签发业务验收。 主调度的负责人发现按所选模块真实分组，缺口不推测继承或默认负责者。
+领域工程、Module、Workflow与稳定岗位责任协议。来源代次和写前屏障由纯规则投影；内容指纹、来源身份、负责人关系分别核实。同负责人明确采纳递增关系版本，不迁移任务；旧缺省记录不补造来源。Workflow验证不自行读文件或签发业务验收。 executionScope只收窄原权限，全模块一致冻结，预算合并取小。 主调度的负责人发现按所选模块真实分组，缺口不推测继承或默认负责者。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -12,6 +12,7 @@
 | --- | --- |
 | [artifact-scope.ts](artifact-scope.ts) | Workflow 可选完整产物观察范围的叶子契约，供知识冻结、运行采集和公开报告共用。 |
 | [csv-validation-schema.ts](csv-validation-schema.ts) | 定义冻结 CSV 表格要求并直接检查有界 UTF-8 字节，供知识声明与可信文件端口共用。 |
+| [execution-scope.ts](execution-scope.ts) | 模块 Workflow 的可冻结执行范围及任务合并规则，供知识准备、运行门禁与平台装配共用。 |
 | [json-validation-schema.ts](json-validation-schema.ts) | JSON 产物验证的有界声明和纯结构校验，供冻结 Workflow、运行时及知识入口共用。 |
 | [knowledge-source-rules.ts](knowledge-source-rules.ts) | 来源代次日志的纯投影、游标、依据和幂等命令规则，供知识协调器与 DispatchStore 共同使用。 |
 | [knowledge-source.ts](knowledge-source.ts) | 受控知识来源代次、读取状态和原日志握手的纯协议，供岗位、责任、Store 与桌面共用。 |
@@ -101,6 +102,38 @@ N_src_backend_core_workspace_csv_validation_schema_ts ..> N_src_backend_core_wor
 ```
 
 直接依赖：[../foundation/errors.ts](../foundation/errors.ts)。
+
+### execution-scope.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_execution_scope_ts["execution-scope.ts"] {
+  <<module>>
+  +executionScopeCovers()
+  +preparedExecutionScope()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_execution_scope_ts["execution-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_execution_scope_ts_ExecutionScope["ExecutionScope"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_execution_scope_ts ..> N_src_backend_core_workspace_execution_scope_ts_ExecutionScope : 声明
+class N_src_backend_core_workspace_execution_scope_ts_Contract["Contract"] {
+  <<type>>
+  +executionScope
+  +artifactScope
+  +delivery
+}
+N_src_backend_core_workspace_execution_scope_ts ..> N_src_backend_core_workspace_execution_scope_ts_Contract : 声明
+```
+
+直接依赖：[artifact-scope.ts](artifact-scope.ts)。
 
 ### json-validation-schema.ts
 
@@ -729,12 +762,18 @@ class N_src_backend_core_workspace_workflow_contract_ts_WorkflowContract["Workfl
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_workflow_contract_ts_WorkflowContract : 声明
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/json.ts](../foundation/json.ts)、[json-validation-schema.ts](json-validation-schema.ts)、[csv-validation-schema.ts](csv-validation-schema.ts)、[png-validation-schema.ts](png-validation-schema.ts)、[artifact-scope.ts](artifact-scope.ts)。
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/json.ts](../foundation/json.ts)、[json-validation-schema.ts](json-validation-schema.ts)、[csv-validation-schema.ts](csv-validation-schema.ts)、[png-validation-schema.ts](png-validation-schema.ts)、[artifact-scope.ts](artifact-scope.ts)、[execution-scope.ts](execution-scope.ts)。
 
 ### 本目录调用边界
 
 ```mermaid
 classDiagram
+class N_src_backend_core_workspace_execution_scope_ts["execution-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_artifact_scope_ts["artifact-scope.ts"] {
+  <<module>>
+}
 class N_src_backend_core_workspace_knowledge_source_rules_ts["knowledge-source-rules.ts"] {
   <<module>>
 }
@@ -747,17 +786,17 @@ class N_src_backend_core_workspace_module_ownership_rules_ts["module-ownership-r
 class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
   <<module>>
 }
-class N_src_backend_core_workspace_module_ownership_tools_ts["module-ownership-tools.ts"] {
-  <<module>>
-}
+N_src_backend_core_workspace_execution_scope_ts ..> N_src_backend_core_workspace_artifact_scope_ts : 导入依赖
 N_src_backend_core_workspace_knowledge_source_rules_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
 N_src_backend_core_workspace_module_ownership_rules_ts ..> N_src_backend_core_workspace_module_ownership_ts : 导入依赖
 N_src_backend_core_workspace_module_ownership_rules_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
-N_src_backend_core_workspace_module_ownership_tools_ts ..> N_src_backend_core_workspace_module_ownership_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_workspace_module_ownership_tools_ts["module-ownership-tools.ts"] {
+  <<module>>
+}
 class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
   <<module>>
 }
@@ -773,13 +812,10 @@ class N_src_backend_core_workspace_json_validation_schema_ts["json-validation-sc
 class N_src_backend_core_workspace_csv_validation_schema_ts["csv-validation-schema.ts"] {
   <<module>>
 }
-class N_src_backend_core_workspace_png_validation_schema_ts["png-validation-schema.ts"] {
-  <<module>>
-}
+N_src_backend_core_workspace_module_ownership_tools_ts ..> N_src_backend_core_workspace_module_ownership_ts : 导入依赖
 N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_json_validation_schema_ts : 导入依赖
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_csv_validation_schema_ts : 导入依赖
-N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_png_validation_schema_ts : 导入依赖
 ```
 
 ```mermaid
@@ -787,10 +823,18 @@ classDiagram
 class N_src_backend_core_workspace_workflow_contract_ts["workflow-contract.ts"] {
   <<module>>
 }
+class N_src_backend_core_workspace_png_validation_schema_ts["png-validation-schema.ts"] {
+  <<module>>
+}
 class N_src_backend_core_workspace_artifact_scope_ts["artifact-scope.ts"] {
   <<module>>
 }
+class N_src_backend_core_workspace_execution_scope_ts["execution-scope.ts"] {
+  <<module>>
+}
+N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_png_validation_schema_ts : 导入依赖
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_artifact_scope_ts : 导入依赖
+N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_execution_scope_ts : 导入依赖
 ```
 
 
@@ -810,7 +854,7 @@ N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspa
 
 `workflow-contract.ts` 是不依赖知识实现的纯协议模块。`parseWorkflowContract(markdown)` 读取正文中最多一个顶层 `cbim-workflow` 围栏块；支持标准反引号或波浪线围栏、0–3 空格缩进、CRLF。普通代码块中的示例、引用块及缩进代码不激活条件。无声明返回 `undefined`，现有自然语言方法保持不变；已声明但重复、未闭合、附加标记、JSON 重复字段、未知版本或字段均抛出 `WORKFLOW_CONTRACT_INVALID`，不得降级成无约束。
 
-版本 1 至少声明一项：`beforeEffects:{requirePlan:true}` 或 `delivery` 的非空 `requiredToolEvidence` / `requiredValidations`。两类要求各最多 16 项，ID 是 1–80 位字母、数字、下划线或连字符且在模块内不能跨类重复；条件块最多 64 KiB UTF-8。原生工具名仍限 `read/write/edit/grep/find/ls/bash`，不接知识写入、调度、任意表达式或模型提供的 path/hash/pass。
+版本 1 至少声明一项：`beforeEffects:{requirePlan:true}` 或 `delivery` 的非空 `requiredToolEvidence` / `requiredValidations`。两类要求各最多 16 项，ID 是 1–80 位字母、数字、下划线或连字符且在模块内不能跨类重复；条件块最多 64 KiB UTF-8。原生工具名限 `read/write/edit/grep/find/ls/bash`；另支持 `cbim_scoped_read/cbim_scoped_node/cbim_file_write_controlled`，不接知识写入、调度、任意表达式或模型提供的 path/hash/pass。
 
 `requiredValidations` 每项固定 `{id,validator,artifactPath,schema}`，通过验证器判别联合分别约束 JSON 与 CSV 参数；已支持 `json-schema-v1`、`csv-table-v1` 和 `png-raster-v1`。路径为明确工作区业务文件；运行时仍拒绝链接、越界和受保护知识路径。`json-validation-schema.ts` 仅解释有界 JSON Schema 子集：每节点显式 type，标量 enum/const，对象 properties/required/布尔 additionalProperties，数组 items/长度，以及字符串长度和数值上下界。对象/数组 enum/const、引用、组合、pattern、format、自定义代码和未知关键字均不支持；不会编译用户脚本、转换类型、补默认值或删字段。未知或超界声明在知识提交、资源模板和执行准备中同样拒绝。
 
@@ -925,3 +969,7 @@ artifactScope.transitions 可明确声明 delete(path) 或 move(from,to)，全�
 ### PNG 冻结条件
 
 png-validation-schema.ts只定义png-raster-v1的精确像素宽高、rgb/rgba原始采样通道及上限；声明判别联合不能混用JSON/CSV参数。8位非交错子集，宽高各4096、总像素1048576、文件1 MiB、1024块；Node解压留在平台层。PNG类型及参数按现有非JSON算法共同进入schemaHash，旧JSON/CSV不重写。
+
+## 冻结范围成员执行
+
+executionScope v1/windows-lpac-node-v1 显式固定最多32个读/写根；写根必须由读根包含，路径最多512字符、无通配符/别名/私有目录。可选node固定100–30000ms、128–1024MiB和1–8进程。全部实际模块必须共同声明；合并显式根、预算取最小值，任一模块不允许Node则任务无Node能力。产物根/验证读及删除移动两端写须属于本模块范围。隔离模式不能要求native证据；旧缺省保持历史语义。

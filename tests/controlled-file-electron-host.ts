@@ -8,6 +8,7 @@ import {Paths} from '../src/backend/main/platform/paths';
 import {createControlledFileTransport} from '../src/backend/main/platform/controlled-file-transport';
 import type {ControlledFileTransport,ExclusiveControlledFile} from '../src/backend/main/platform/controlled-file-protocol';
 import {seedControlledFile} from './controlled-file-seed';
+import {seedScopedExecution} from './scoped-execution-fixture';
 import {seedCompleteOutput} from './complete-output-pi-fixture';
 import type {ControlledHostConfig,ControlledHostTrace} from './controlled-file-electron-fixture';
 
@@ -53,6 +54,7 @@ function observedTransport(real:ControlledFileTransport):ControlledFileTransport
 async function handle(op:string,args:any){
   assert.ok(application);
   if(op==='seed')return seedControlledFile(application,config.project,args.providerUrl);
+  if(op==='seed-scoped')return seedScopedExecution(application,config.project,args.providerUrl,args.mode);
   if(op==='seed-transition')return seedCompleteOutput(application,config.project,{url:args.providerUrl,bind:()=>{}},true);
   if(op==='dispatch')return application.dispatch(args.action,args.args);
   if(op==='trace')return traces;

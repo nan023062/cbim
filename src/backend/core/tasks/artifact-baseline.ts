@@ -1,4 +1,5 @@
 /**
+ * cbim_scoped_read与原单文件来源分别保留真实工具名，不把范围读取伪装成native read。
  * 作用定位：显式文件基线、工具输入及独立只读核实报告的序列化契约。
  * 设计原因：模型只选择真实工具调用，文件字节与日志身份由可信端口采集；基线只覆盖所列文件，不签发业务验收或成员恢复。
  * 职责边界：保持叶子依赖，不引用引擎摘要、图或报告服务；路径为工作区相对标识，不能携带正文、凭据或原生会话路径。
@@ -20,7 +21,7 @@ export const artifactFileFactSchema=z.object({relativePath:artifactRelativePathS
 export type ArtifactFileFact=z.infer<typeof artifactFileFactSchema>;
 export const artifactCapturedFileSchema=artifactFileFactSchema.extend({sourceToolCallIds:z.array(callId).min(1).max(artifactLimits.sources).refine(unique)}).strict();
 export type ArtifactCapturedFile=z.infer<typeof artifactCapturedFileSchema>;
-export const artifactSourceCallSchema=z.object({toolCallId:callId,toolName:z.enum(['read','write','edit']),allowedSeq:positive,finishedSeq:positive,inputHash:digest,resultHash:digest}).strict().refine(value=>value.allowedSeq<value.finishedSeq);
+export const artifactSourceCallSchema=z.object({toolCallId:callId,toolName:z.enum(['read','write','edit','cbim_scoped_read']),allowedSeq:positive,finishedSeq:positive,inputHash:digest,resultHash:digest}).strict().refine(value=>value.allowedSeq<value.finishedSeq);
 export type ArtifactSourceCall=z.infer<typeof artifactSourceCallSchema>;
 /** 暂存事件不预造自己的日志序号；只有真实成功结束回执匹配后才成为可引用记录。 */
 export const artifactBaselineStagedSchema=z.object({version:z.literal(1),baselineId:id,captureToolCallId:callId,binding,knowledgeRevision:logical,progressVersion:positive,capturedAt:time,lastEffectSeq:seq,sourceCalls:z.array(artifactSourceCallSchema).min(1).max(artifactLimits.sources),files:z.array(artifactCapturedFileSchema).min(1).max(artifactLimits.files)}).strict().superRefine((value,context)=>{

@@ -92,3 +92,7 @@ EngineContext.artifactTransitionTools 只在冻结要求和真实端口齐备时
 引擎提示同一工具可检查 JSON 结构或 CSV 表头、类型、行数与唯一键，实际种类取自冻结要求。模型只明确选择 baselineId 或 manifestId，不传表格正文、列规则或通过结论；CSV 复用原 gate/call 身份与取消边界。
 
 PNG继续复用cbim_validation_run及同一gate/call身份。提示明确实际完整解码、尺寸/通道条件与不受支持格式；模型不能自行传路径、图片规则或passed，普通read/bash成功不能替代指定验证。
+
+## 冻结范围成员执行
+
+EngineContext.scopedExecutionTools 存在时 --tools 仅含 cbim_*，全部原生文件与命令未注册；即使伪造名称也不能通过Runtime。范围工具携原callId与AbortSignal，不通过自定义shell执行。

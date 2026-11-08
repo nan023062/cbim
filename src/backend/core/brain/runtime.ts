@@ -1,4 +1,5 @@
 /**
+ * 冻结executionScope必须有真实端口；范围工具只消费自身可靠allowed，一切原生文件/命令被拒绝，物理资源未收束不释放租约。
  * 完整出口将原清单选择/重核端口注入任务与JSON工具；实际交付授权必须唯一，门闩覆盖候选保存和回包之间。
  * 删除/移动只交给冻结约定的专用端口；原阶段由可信 append 保存，失败屏障与实际进程排空同样参与终态。
  * 每个正式成员运行最多暂存一次检查点，可信剩余额度允许后续运行再次停泊，零额度仍保留正常交付。
@@ -28,6 +29,10 @@ import {preparedArtifactScopes,preparedArtifactTransitions} from '../workspace/a
 import {outputManifestToolName,outputManifestInspectToolName} from '../tasks/output-manifest';
 import {completeOutputRequired} from '../tasks/complete-output-evidence';
 import {RunValidation,type ValidationFilePort} from './run-validation';
+import {RunScopedExecution,type ScopedExecutionPort} from './run-scoped-execution';
+import {preparedExecutionScope} from '../workspace/execution-scope';
+import {scopedReadToolName,scopedNodeToolName} from '../tasks/scoped-execution';
+import {nativeToolDescriptor} from '../tools/native-tools';
 import {RunControlledFile,type ControlledFileRunPort} from './run-controlled-file';
 import {controlledFileWriteToolName} from '../tasks/controlled-file-operation';
 import {RunArtifactTransition,type ArtifactTransitionRunPort} from './run-artifact-transition';
@@ -61,6 +66,8 @@ export interface RuntimeOptions {
   validations?:ValidationFilePort;
   /** 仅已领取成员的实际桌面写入端口；缺省绝不注册工具。 */
   controlledFiles?:ControlledFileRunPort;
+  /** 正式成员固定范围端口；缺失能力拒绝启动，不能回退原生工具。 */
+  scopedExecution?:ScopedExecutionPort;
   /** 仅为原冻结删除/移动要求提供实际平台操作，不接受模型任意路径或恢复请求。 */
   artifactTransitions?:ArtifactTransitionRunPort;
   /** 仅正式成员的冻结模块约定；没有约定的旧运行保持原策略，存在约定必须装配可信分类端口。 */
@@ -151,6 +158,8 @@ export class LoopRuntime {
     if(validationRequired&&(!member||!this.options.artifacts||!this.options.validations))fail('VALIDATION_UNAVAILABLE','冻结的产物验证要求缺少正式成员文件验证端口');
     if(workflows.some(item=>item.contract.delivery?.requiredValidations?.some(rule=>rule.validator==='csv-table-v1'))&&!this.options.validations?.validateTable)fail('VALIDATION_UNAVAILABLE','冻结的CSV要求缺少真实表格验证端口，不能启动执行');
     if(workflows.some(item=>item.contract.delivery?.requiredValidations?.some(rule=>rule.validator==='png-raster-v1'))&&!this.options.validations?.validateImage)fail('VALIDATION_UNAVAILABLE','冻结的PNG要求缺少真实图片解码端口，不能启动执行');
+    const executionScope=preparedExecutionScope(workflows);
+    if(executionScope&&(!member||!this.options.scopedExecution||task.moduleIds.some(id=>!workflows.some(binding=>binding.moduleId===id))))fail('EXECUTION_SCOPE_UNAVAILABLE','范围任务缺少完整模块声明或实际平台端口');
     const manifestScopes=preparedArtifactScopes(workflows);
     if(manifestScopes.length&&(!member||!this.options.manifests))fail('MANIFEST_UNAVAILABLE','声明的完整产物范围缺少正式成员枚举端口');
     if(preparedArtifactTransitions(manifestScopes).length&&(!member||!this.options.artifactTransitions))fail('ARTIFACT_TRANSITION_UNAVAILABLE','冻结的删除/移动要求缺少真实受控平台端口');
@@ -224,11 +233,12 @@ export class LoopRuntime {
       let validation:RunValidation|undefined;
       let controlledFile:RunControlledFile|undefined;
       let artifactTransition:RunArtifactTransition|undefined;
+      let scopedExecution:RunScopedExecution|undefined;
       const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{identity,assertDeliveryReady,artifacts:()=>artifactCapture?.refs()??[],...(completeOutputRequired(workflows)?{manifests:{select:(id,version)=>{if(!manifestCapture)fail('MANIFEST_UNAVAILABLE','本轮完整产物端口尚未就绪');return manifestCapture.select(id,version)},verifyCurrent:async record=>{if(!manifestCapture)fail('MANIFEST_UNAVAILABLE','本轮完整产物端口尚未就绪');await manifestCapture.verifyCurrent(record,'cbim_delivery_prepare')}}}:{}),...(validationRequired?{validations:{records:()=>validation?.records()??[],verifyCurrent:async records=>{if(!validation)fail('VALIDATION_UNAVAILABLE','本轮验证端口尚未就绪');await validation.verifyCurrent(records)}}}:{}),...(workflows.length?{workflow:{bindings:workflows,task:{goal:task.goal,acceptance:task.acceptance},identity}}:{})});
       const emit=async(event:EngineEvent,trustedArtifact=false)=>{
         // 契约版本来自真实描述和授权；模型/引擎事件不能给旧调用补造新协议来源。
         if(!trustedArtifact&&event.data.contractVersion!==undefined){const {contractVersion:_,...data}=event.data;event={...event,data}}
-        if(event.type==='tool.allowed'&&[controlledFileWriteToolName,artifactTransitionToolName].includes(String(event.data.name))&&!trustedArtifact)fail('CONTROLLED_FILE_AUTHORIZATION','受控文件授权只能由本轮策略可靠保存');
+        if(event.type==='tool.allowed'&&[controlledFileWriteToolName,artifactTransitionToolName,scopedReadToolName,scopedNodeToolName].includes(String(event.data.name))&&!trustedArtifact)fail('CONTROLLED_FILE_AUTHORIZATION','受控文件授权只能由本轮策略可靠保存');
         if(event.type==='engine.status'&&event.data.activeInput!==undefined&&!trustedArtifact)throw Error('目标补充身份只能由可信插入端口保存');
         if((['artifact.baseline_captured','artifact.manifest_captured','task.checkpoint_requested','validation.checked'].includes(event.type)||event.type.startsWith('artifact.transition_'))&&!trustedArtifact)throw Error('产物、原操作、产物验证与检查点只能由本轮可信端口保存');
         if(event.type==='tool.finished'){
@@ -247,6 +257,7 @@ export class LoopRuntime {
         validation?.observed(saved);
         controlledFile?.observed(saved.type,saved.data.id,saved.data.isError===true);
         artifactTransition?.observed(saved);
+        scopedExecution?.observed(saved.type,saved.data.id);
         if(event.type==='session.bound'&&typeof event.data.sessionFile==='string')boundSessionFile=event.data.sessionFile;
         if(event.type==='tool.finished'&&event.data.receipt){
           const known=calls.get(String(event.data.id))!;
@@ -301,6 +312,9 @@ export class LoopRuntime {
         verifyManifest:async(record,signal)=>{if(!manifestCapture)fail('MANIFEST_UNAVAILABLE','本轮完整产物端口尚未就绪');await manifestCapture.verifyCurrent(record,'cbim_validation_run',signal)},
         save:async value=>{await emit({type:'validation.checked',data:{validation:value}},true)},
       });
+      if(executionScope&&this.options.scopedExecution)scopedExecution=new RunScopedExecution(executionScope,this.options.scopedExecution,id=>{
+        if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))fail('EXECUTION_SCOPE_CALL','范围调用已停止、未获准或仍有其它工具');
+      });
       let finishing=false;
       if(member&&this.options.controlledFiles)controlledFile=new RunControlledFile(member.binding,this.options.controlledFiles,id=>{
         if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))fail('CONTROLLED_FILE_CALL','受控写已停止、未获准或有其他在途工具');
@@ -338,7 +352,7 @@ export class LoopRuntime {
       await emit({type:'run.started',data:{task,message,engine:engine.kind,resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[],...(workflows.length?{workflowContracts:workflows}:{}),...(memberResume?{memberResume:{checkpointId:memberResume.checkpointId,runId:memberResume.runId}}:{}),...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),...(member?{memberBinding:member.binding,nativeSessionId:member.session.nativeSessionId}:{}),...(fresh?{freshMain:{nativeSessionId,excludedRunIds}}:{})}});
       await taskTools.invalidate('新一轮执行需要重新核实产物与证据');
       const stop=async()=>{
-        if(stopping)return;stopping=true;artifactCapture?.stop();manifestCapture?.stop();checkpointTools?.stop();validation?.stop();controlledFile?.stop();artifactTransition?.stop();
+        if(stopping)return;stopping=true;artifactCapture?.stop();manifestCapture?.stop();checkpointTools?.stop();validation?.stop();controlledFile?.stop();artifactTransition?.stop();scopedExecution?.stop();
         try{await emit({type:'run.stop_requested',data:{}})}catch(error){stopFailure=error}
         // 记录失败不能阻止实际 abort；失败事实在收尾按 interrupted 保留，不把无日志停止写成正常求助。
         try{await engine.stop()}catch(error){stopFailure??=error}
@@ -351,11 +365,12 @@ export class LoopRuntime {
         let failure:unknown;
         try{
           if(control?.signal.aborted)await stop();
-          if(!stopping)await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,manifestTools:manifestCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,controlledFileTools:controlledFile,artifactTransitionTools:artifactTransition,assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
+          if(!stopping)await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,manifestTools:manifestCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,controlledFileTools:controlledFile,artifactTransitionTools:artifactTransition,scopedExecutionTools:scopedExecution,assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
             call=structuredClone(call);
             if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
             // 验证、采集与停泊先同步预占，再进入策略；短读锁不会绕过求助/检查点的本轮结束门闩。
-            const transitionReason=artifactTransition?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactTransition&&call.name===artifactTransitionToolName?'本轮未提供冻结删除/移动能力':undefined);
+            const scopedReason=executionScope&&nativeToolDescriptor(call.name)?'EXECUTION_SCOPE_NATIVE: 冻结范围任务禁止原生文件与命令工具':scopedExecution?.guard(call.name,call.id,call.input,[...activeCalls])??(!scopedExecution&&call.name.startsWith('cbim_scoped_')?'本轮未提供范围执行能力':undefined);
+            const transitionReason=scopedReason??artifactTransition?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactTransition&&call.name===artifactTransitionToolName?'本轮未提供冻结删除/移动能力':undefined);
             const controlledReason=transitionReason??controlledFile?.guard(call.name,call.id,call.input,[...activeCalls])??(!controlledFile&&call.name===controlledFileWriteToolName?'本轮未提供受控文件工具':undefined);
             const validationReason=controlledReason??validation?.guard(call.name,call.id,call.input,[...activeCalls])??(!validation&&call.name===validationToolName?'本轮未提供冻结要求的 JSON/CSV/PNG 产物验证工具':undefined);
             const checkpointReason=validationReason??checkpointTools?.guard(call.name,call.id,call.input,[...activeCalls])??(!checkpointTools&&call.name===memberCheckpointToolName?'本轮没有剩余检查点额度或未装配可信检查点能力':undefined);
@@ -392,6 +407,7 @@ export class LoopRuntime {
               decision={...decision,allow:false,reason:'任务正在停止'};calls.set(call.id,{...calls.get(call.id)!,call,decision,generation:taskTools.generation});
               await emit({type:'tool.denied',data:{...call,...decision,receipt:toolReceipt(identity,call,decision,'denied')}});
             }
+            if(decision.allow)scopedExecution?.authorize(call.id,authorization.seq);
             if(decision.allow)controlledFile?.authorize(call.id,authorization.seq);
             if(decision.allow)artifactTransition?.authorize(call.id,authorization.seq);
             if(!decision.allow)memberHelpTools?.denied(call.id);
@@ -410,11 +426,12 @@ export class LoopRuntime {
           artifactCapture?.stop();
           manifestCapture?.stop();
           checkpointTools?.stop();
-          validation?.stop();controlledFile?.stop();artifactTransition?.stop();
+          validation?.stop();controlledFile?.stop();artifactTransition?.stop();scopedExecution?.stop();
           try{await engine.close()}catch(error){failure??=error}
           // 只重试原收尾屏障，不重试文件写。首次退出未确认保留 active；再次 close 可确认原 child 后完成日志收尾。
           let draining:Promise<void>|undefined;
           const drain=()=>draining??=(async()=>{
+            await scopedExecution?.drain();
             await controlledFile?.drain();
             await artifactTransition?.drain();
             await Promise.allSettled([...injection.pending]);

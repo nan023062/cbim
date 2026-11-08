@@ -362,3 +362,7 @@ RunArtifactTransition 在审批前预占原有效 before 清单；可靠 allowed
 ### PNG 实际解码端口
 
 ValidationFilePort.validateImage须在具有PNG冻结要求的成员启动前实际存在；缺失时不创建模型或日志。RunValidation按原validator选择平台方法，在完整集合复核、停止、知识/进度代次与同一读取时限内取得真实解码判定。完整目录其它文件变化也拒绝，不能用有效PNG头或仅哈希实现冒充该端口。
+
+## 冻结范围成员执行
+
+范围执行由 RunScopedExecution 在审批前预占，Runtime 可靠 allowed 才签发一次许可，精确绑定原调用ID/参数hash。原生文件/命令始终拒绝；未知受控写/删除移动只保留范围读取。停止与结算等待实际平台 drain，失败保持 active/租约。端口结果校验唯一JSON快照，非零/超时/取消标记工具失败，不自行重放。

@@ -1,4 +1,5 @@
 /**
+ * 范围成员使用独立Win32读取/枚举和LPAC端口；原受控写、删除/移动两端再核冻结写范围，恢复文件复核复用同一受限读取。
  * 同一OutputManifestFiles装配成员结算、主目标与人工接受/继续，沿用原工作区身份和只读占用，不另建文件执行通道。
  * 工厂按已提交历史计算剩余额度，恢复闭包持有全链快照以保护早期未再触及文件。
  * 持久成员等待另复用当前文件/native只读端口与短读占用，重启登记不调用恢复工厂。
@@ -27,6 +28,9 @@ import {verifyMemberCheckpointProof,verifyMemberCheckpointInputs} from '../sched
 import {randomUUID} from 'node:crypto';
 import {FileRunStorage} from './persistence/tasks/run-storage';
 import {guard} from './platform/tool-guard';
+import {ScopedExecutionFiles} from './platform/scoped-execution-files';
+import {preparedExecutionScope,executionScopeCovers} from '../core/workspace/execution-scope';
+import {artifactTransitionPaths} from '../core/workspace/artifact-scope';
 import {safeId} from '../core/foundation/identity';
 import {fail} from '../core/foundation/errors';
 import {admissionRequestId,acquireExecutionLease,type WorkspaceAdmission} from './execution-admission';
@@ -83,26 +87,35 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
   }},budgetPolicy,{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),checkManifest:(snapshot,signal)=>manifestFiles.check(snapshot,signal),acquireRead:()=>{workspace.assert();return lease.acquire('human-decision:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('HUMAN_UNAVAILABLE','工作区正在停止，未保存新的人工决定')}},models,{inspect:inspectMember,normalizePath:normalizeArtifact},{inspectMember,observeKnowledge:(reference,signal)=>observeKnowledgeTransaction(workspace,reference,signal),observePersistent:(reference,signal)=>observePersistentWrite(workspace,reference,signal),observeControlled:async(input,signal)=>{signal?.throwIfAborted();const value=await controlledFiles.report(input);signal?.throwIfAborted();return value},normalizePath:normalizeArtifact,observeFiles:(paths,signal)=>artifactFiles.observeFiles(paths,signal),acquireRead:()=>{workspace.assert();return lease.acquire('effect-observation:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('EFFECT_UNAVAILABLE','工作区正在停止，未保存新的处置')}},{...checkpointPorts,acquireRead:()=>{workspace.assert();return lease.acquire('member-pause:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('GOAL_MEMBER_PAUSE_UNAVAILABLE','工作区正在停止，原成员等待未消费')}});
   const requestBudgets=new ModelRequestBudgetService(workspace,store,dispatch.budgets);
   const prepareEngine=(llm:ResolvedLlm,options:MemberStartOptions):PreparedEngine=>{
-      return {model:structuredClone(llm.profile),availableTools:nativeToolNames(options.permission!=='read'),availableValidators:['json-schema-v1','csv-table-v1','png-raster-v1'],create:async(run,task,hooks)=>{
+      return {model:structuredClone(llm.profile),availableTools:nativeToolNames(options.permission!=='read'),scopedTools:process.platform==='win32'&&process.arch==='x64'?['cbim_scoped_read',...(options.permission!=='read'?['cbim_scoped_node',...(controlledTransport?['cbim_file_write_controlled']:[])]:[])]:undefined,availableValidators:['json-schema-v1','csv-table-v1','png-raster-v1'],create:async(run,task,hooks)=>{
         workspace.assert();
         if(run.binding.workspaceId!==workspace.entry.id||task.identity.workspaceId!==workspace.entry.id)throw Error('成员运行与工作区身份不匹配');
         if(JSON.stringify(run.model)!==JSON.stringify(llm.profile))throw Error('成员运行模型快照与启动配置不一致');
         const checkpointState=await store.read(),previous=run.resumeFrom?checkpointState.runs?.find(old=>old.binding.runId===run.resumeFrom!.runId):undefined;
         if(run.resumeFrom&&(!previous?.checkpointProof||previous.checkpointProof.checkpoint.checkpointId!==run.resumeFrom.checkpointId))fail('MEMBER_CHECKPOINT_INVALID','续执行缺少原检查点证明');
+        const executionScope=preparedExecutionScope(run.prepared.modules.map(module=>({contract:module.workflowContract})));
+        const scopedExecution=executionScope?new ScopedExecutionFiles(workspace.entry.path,executionScope,()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('EXECUTION_SCOPE_STOPPED','工作区正在停止')},[workspace.paths.userRoot,workspace.paths.installRoot]):undefined;
+        const runFiles=scopedExecution?new ArtifactFiles(workspace.entry.path,()=>workspace.assert(),(file,signal)=>scopedExecution.snapshot(file,signal)):artifactFiles;
+        const runManifests=scopedExecution?new OutputManifestFiles(workspace.entry.path,()=>workspace.assert(),{files:runFiles,lockDirectory:file=>scopedExecution.lockDirectory(file)}):manifestFiles;
+        const controlled=task.scopeId?controlledFiles.forRun(run,task.scopeId):undefined;
+        const transitions=createArtifactTransitionPort(workspace,controlledTransport,()=>admission?.isCurrent()??true);
+        const scopeWrite=(paths:string[])=>{if(executionScope&&paths.some(file=>!executionScopeCovers(executionScope.write,file)))fail('EXECUTION_SCOPE_DENIED','写入超出原任务冻结范围')};
+        const runCheckpointPorts={...checkpointPorts,checkFiles:runFiles.checkFiles.bind(runFiles)};
         const loop=await createWorkspaceLoop(workspace.paths,workspace,{provider:'cbim-'+llm.profile.id,model:llm.profile.model,profileId:llm.profile.id,llm,
           permission:run.permission,turnTimeoutMs:run.turnTimeoutMs,onEvent:hooks.onEvent,requestApproval:hooks.requestApproval,requestQuestion:hooks.requestQuestion,
         },{
           memberCheckpointAllowance:memberCheckpointLimit-(task.checkpoints?.length??0),
           requestBudget:()=>requestBudgets.forRun({rootSessionId:run.binding.rootSessionId,taskId:task.taskId,runId:run.binding.runId,scopeId:task.scopeId,kind:'member'},llm),
           storage,member:{directory:runsDirectory,prompt:memberExecutionPrompt(run.prepared,task,run.prerequisites),workflowContracts:preparedWorkflowContracts(run.prepared)},onEngineReady:hooks.onEngineReady,
-          artifacts:{knowledgeRevision:run.prepared.knowledgeRevision,normalizePath:normalizeArtifact,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},captureFiles:(paths,signal)=>artifactFiles.captureFiles(paths,signal)},
-          manifests:{knowledgeRevision:run.prepared.knowledgeRevision,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},capture:(scopes,signal)=>manifestFiles.capture(scopes,signal)},
-          validations:{validateFile:(file,schema,signal)=>artifactFiles.validateFile(file,schema,signal),validateTable:(file,schema,signal)=>artifactFiles.validateTable(file,schema,signal),validateImage:(file,schema,signal)=>artifactFiles.validateImage(file,schema,signal),checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal)},
-          controlledFiles:task.scopeId?controlledFiles.forRun(run,task.scopeId):undefined,
-          artifactTransitions:createArtifactTransitionPort(workspace,controlledTransport,()=>admission?.isCurrent()??true),
+          artifacts:{knowledgeRevision:run.prepared.knowledgeRevision,normalizePath:normalizeArtifact,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},captureFiles:(paths,signal)=>runFiles.captureFiles(paths,signal)},
+          manifests:{knowledgeRevision:run.prepared.knowledgeRevision,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},capture:(scopes,signal)=>runManifests.capture(scopes,signal)},
+          validations:{validateFile:(file,schema,signal)=>runFiles.validateFile(file,schema,signal),validateTable:(file,schema,signal)=>runFiles.validateTable(file,schema,signal),validateImage:(file,schema,signal)=>runFiles.validateImage(file,schema,signal),checkFiles:(files,signal)=>runFiles.checkFiles(files,signal)},
+          scopedExecution,
+          controlledFiles:controlled?{scopeId:controlled.scopeId,write:(input,authorization,signal,assertCurrent)=>{scopeWrite([input.path]);return controlled.write(input,authorization,signal,assertCurrent)},confirmNotApplied:controlled.confirmNotApplied?.bind(controlled),drain:controlled.drain.bind(controlled)}:undefined,
+          artifactTransitions:transitions?{withExclusive:(operation,signal,use)=>{scopeWrite(artifactTransitionPaths(operation));return transitions.withExclusive(operation,signal,use)},drain:transitions.drain.bind(transitions)}:undefined,
           // 领取后到 Pi 发出首条 prompt 前仍有异步准备；每个准备边界复核原证明，不只核原生文件而遗漏外部业务文件变化。
-          assertMemberResume:previous?async()=>{await verifyMemberCheckpointProof(workspace,task,previous,checkpointPorts,()=>workspace.assert(),previous.checkpointProof,checkpointState.runs)}:undefined,
-          assertMemberResumeInputs:previous?()=>verifyMemberCheckpointInputs(workspace,task,previous,checkpointPorts,()=>workspace.assert(),previous.checkpointProof!,checkpointState.runs):undefined,
+          assertMemberResume:previous?async()=>{await verifyMemberCheckpointProof(workspace,task,previous,runCheckpointPorts,()=>workspace.assert(),previous.checkpointProof,checkpointState.runs)}:undefined,
+          assertMemberResumeInputs:previous?()=>verifyMemberCheckpointInputs(workspace,task,previous,runCheckpointPorts,()=>workspace.assert(),previous.checkpointProof!,checkpointState.runs):undefined,
           // 成员管理器已在领取事务前取得共享占用，并持有到结算完成；大脑不能提前释放或再次领取。
           acquireLease:async input=>{workspace.assert();if(input.workspaceId!==workspace.entry.id||input.root!==workspace.entry.path||input.taskId!==task.taskId)throw Error('成员任务与工作区身份不匹配');return ()=>{}},
           authorizeNative:async call=>{workspace.assert();const reason=guard({name:call.name==='find'?'Glob':call.name,input:call.input},workspace.entry.path);return {allow:!reason,reason}},

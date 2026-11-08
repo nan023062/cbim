@@ -1,4 +1,5 @@
 /**
+ * 范围模式注入真实Win32目录/文件锁定读取；旧模式仍是前后尽力检测，两种能力不混称。
  * 作用定位：在固定工作区根内安全读取业务文件，供指纹采集、复核、无基线观察及冻结 JSON/CSV/PNG 验证共用。
  * 设计原因：哈希与专业验证必须使用同一次句柄读取的字节；路径逐级拒绝链接/越界，句柄与路径前后核对，超限不截断作证。
  * 职责边界：不运行命令、不读取目录或知识库、不返回文件正文；外部并发修改仅尽力检测，不构成操作系统沙箱或原子快照。
@@ -31,7 +32,7 @@ export function normalizeArtifactPath(root:string,raw:string):string{
 }
 /** 工作区所有者固定 root 和 assert；调用中的 paths 仍须全部通过平台检查，不能按来源回执跳过。 */
 export class ArtifactFiles {
-  constructor(private readonly root:string,private readonly assert:()=>void){}
+  constructor(private readonly root:string,private readonly assert:()=>void,private readonly secureRead?:(path:string,signal:AbortSignal)=>{bytes:Buffer;fact:{byteLength:number;sha256:string}}){}
   private async resolve(raw:string,signal:AbortSignal){
     this.assert();signal.throwIfAborted();
     const relativePath=normalizeArtifactPath(this.root,raw),root=await fs.realpath(this.root),file=path.resolve(root,raw);
@@ -104,6 +105,8 @@ export class ArtifactFiles {
   }
   /** 哈希与可选的验证字节共用一个有界读取循环；原采集接口仍不保留或返回正文。 */
   private async readFile(raw:string,signal:AbortSignal,budget:{readBytes:number},maxBytes:number,retainBytes:boolean){
+      // 范围模式由宿主注入实际 Win32 锁定读取；旧任务保留原来的尽力检测语义。
+      if(this.secureRead){this.assert();signal.throwIfAborted();const relativePath=normalizeArtifactPath(this.root,raw),value=this.secureRead(relativePath,signal);budget.readBytes+=value.bytes.length;if(value.bytes.length>maxBytes||budget.readBytes>artifactFileLimits.totalBytes)fail('ARTIFACT_LIMIT','文件超过本次读取上限');return {fact:{relativePath,...value.fact},...(retainBytes?{bytes:value.bytes}:{})}}
       const target=await this.resolve(raw,signal),before=await fs.lstat(target.file);
       if(!before.isFile()||before.isSymbolicLink()||before.nlink!==1)fail('ARTIFACT_PATH','只核实未链接的普通业务文件');
       if(before.size>maxBytes||budget.readBytes+before.size>artifactFileLimits.totalBytes)fail(retainBytes?'VALIDATION_LIMIT':'ARTIFACT_LIMIT',retainBytes?'产物超过单文件 1 MiB 的验证上限':'文件超过单文件 8 MiB 或总计 32 MiB 的核实上限');

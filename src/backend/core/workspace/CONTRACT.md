@@ -2,7 +2,7 @@
 
 `workflow-contract.ts` 是不依赖知识实现的纯协议模块。`parseWorkflowContract(markdown)` 读取正文中最多一个顶层 `cbim-workflow` 围栏块；支持标准反引号或波浪线围栏、0–3 空格缩进、CRLF。普通代码块中的示例、引用块及缩进代码不激活条件。无声明返回 `undefined`，现有自然语言方法保持不变；已声明但重复、未闭合、附加标记、JSON 重复字段、未知版本或字段均抛出 `WORKFLOW_CONTRACT_INVALID`，不得降级成无约束。
 
-版本 1 至少声明一项：`beforeEffects:{requirePlan:true}` 或 `delivery` 的非空 `requiredToolEvidence` / `requiredValidations`。两类要求各最多 16 项，ID 是 1–80 位字母、数字、下划线或连字符且在模块内不能跨类重复；条件块最多 64 KiB UTF-8。原生工具名仍限 `read/write/edit/grep/find/ls/bash`，不接知识写入、调度、任意表达式或模型提供的 path/hash/pass。
+版本 1 至少声明一项：`beforeEffects:{requirePlan:true}` 或 `delivery` 的非空 `requiredToolEvidence` / `requiredValidations`。两类要求各最多 16 项，ID 是 1–80 位字母、数字、下划线或连字符且在模块内不能跨类重复；条件块最多 64 KiB UTF-8。原生工具名限 `read/write/edit/grep/find/ls/bash`；另支持 `cbim_scoped_read/cbim_scoped_node/cbim_file_write_controlled`，不接知识写入、调度、任意表达式或模型提供的 path/hash/pass。
 
 `requiredValidations` 每项固定 `{id,validator,artifactPath,schema}`，通过验证器判别联合分别约束 JSON 与 CSV 参数；已支持 `json-schema-v1`、`csv-table-v1` 和 `png-raster-v1`。路径为明确工作区业务文件；运行时仍拒绝链接、越界和受保护知识路径。`json-validation-schema.ts` 仅解释有界 JSON Schema 子集：每节点显式 type，标量 enum/const，对象 properties/required/布尔 additionalProperties，数组 items/长度，以及字符串长度和数值上下界。对象/数组 enum/const、引用、组合、pattern、format、自定义代码和未知关键字均不支持；不会编译用户脚本、转换类型、补默认值或删字段。未知或超界声明在知识提交、资源模板和执行准备中同样拒绝。
 
@@ -117,3 +117,7 @@ artifactScope.transitions 可明确声明 delete(path) 或 move(from,to)，全�
 ### PNG 冻结条件
 
 png-validation-schema.ts只定义png-raster-v1的精确像素宽高、rgb/rgba原始采样通道及上限；声明判别联合不能混用JSON/CSV参数。8位非交错子集，宽高各4096、总像素1048576、文件1 MiB、1024块；Node解压留在平台层。PNG类型及参数按现有非JSON算法共同进入schemaHash，旧JSON/CSV不重写。
+
+## 冻结范围成员执行
+
+executionScope v1/windows-lpac-node-v1 显式固定最多32个读/写根；写根必须由读根包含，路径最多512字符、无通配符/别名/私有目录。可选node固定100–30000ms、128–1024MiB和1–8进程。全部实际模块必须共同声明；合并显式根、预算取最小值，任一模块不允许Node则任务无Node能力。产物根/验证读及删除移动两端写须属于本模块范围。隔离模式不能要求native证据；旧缺省保持历史语义。

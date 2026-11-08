@@ -1,4 +1,5 @@
 /**
+ * 范围模式注册须具备冻结声明和实际端口；旧native被拒绝，原文件写在审批前核范围，所有操作仍沿原read/ask/execute。
  * 检查点剩余额度只接可信成员服务；主会话和公开运行选项不能补造或覆盖额度。
  * 受控文件边界：正式成员和实际平台端口共同决定写入及删除/移动能力；后者以 v1 严格选择冻结要求，主调度和 Node 缺省工厂无旁路，业务写始终受原权限约束。
  * 作用定位：调度引擎：将工作区内部知识服务、内核锁与前置策略注入独立 LoopRuntime。
@@ -40,6 +41,9 @@ import type {ValidationFilePort} from '../../core/brain/run-validation';
 import {validationTool} from '../../core/tasks/validation-tools';
 import {memberCheckpointTool} from '../../core/tasks/member-checkpoint-tools';
 import type {DispatchTools} from '../tools/dispatch-tools';
+import type {ScopedExecutionPort} from '../../core/brain/run-scoped-execution';
+import {scopedReadToolName,scopedNodeToolName,scopedReadInputSchema,scopedNodeInputSchema} from '../../core/tasks/scoped-execution';
+import {preparedExecutionScope,executionScopeCovers} from '../../core/workspace/execution-scope';
 import {nativeToolDescriptor} from '../../core/tools/native-tools';
 import type {WorkflowContractBinding} from '../../core/tasks/execution-context';
 import type {RepositoryToolsPort} from '../../core/connectors/repository-tools';
@@ -96,6 +100,8 @@ export interface ExecutionServices {
   validations?:ValidationFilePort;
   /** 仅实际成员装配；Node 无平台端口时不注册。 */
   controlledFiles?:ControlledFileRunPort;
+  /** 仅正式范围成员捕获真实平台端口，不能由公开运行选项注入。 */
+  scopedExecution?:ScopedExecutionPort;
   /** 仅 Main 按实际 utility 能力注入；路径和种类继续取自成员冻结约定。 */
   artifactTransitions?:ArtifactTransitionRunPort;
   /** 仅已领取的成员续执行装配原日志/业务文件/知识/原生历史复核；不向主会话或模型公开。 */
@@ -138,6 +144,7 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
   const directory=services.member?.directory??path.join(paths.project(workspace.id),'loop-engine');await fs.mkdir(directory,{recursive:true});
   const agentHome=path.join(directory,'pi');
   const command=options.process??{command:process.execPath,args:[await bundledPiEntry()],env:{ELECTRON_RUN_AS_NODE:'1'}};
+  const executionScope=preparedExecutionScope(services.member?.workflowContracts??[]);
   const permission=options.permission??(options.allowNativeExecution?'execute':'read');
   // 主调度可管理内部知识；业务执行边界独立于用户权限，不能用 execute 绕过。
   const coordinator=!services.member&&options.mode==='chat';
@@ -156,7 +163,9 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
   /** 分类与参数解析只执行一次，既供 Workflow 审批前检查，也供原授权策略使用。 */
   const describeTool=(call:ToolCall):RunToolDescriptor=>{
     owner.assert();
-    if(call.name===controlledFileWriteToolName){if(!services.member||!services.controlledFiles)fail('CONTROLLED_PLATFORM_UNSUPPORTED','本轮未装配受控写入');controlledFileWriteInputSchema.parse(call.input);return {effects:['business-write'],native:false,scope:{kind:'workspace',workspaceId:workspace.id}}}
+    if(call.name.startsWith('cbim_scoped_')){if(!services.member||!executionScope||!services.scopedExecution)fail('EXECUTION_SCOPE_UNAVAILABLE','本轮未装配范围工具');if(call.name===scopedReadToolName){const input=scopedReadInputSchema.parse(call.input);if(!executionScopeCovers(executionScope.read,input.path))fail('EXECUTION_SCOPE_DENIED','读取超出冻结范围');return {effects:['read'],native:false,contractVersion:1}}if(call.name===scopedNodeToolName){const input=scopedNodeInputSchema.parse(call.input);if(!executionScope.node||input.files.some(file=>!executionScopeCovers(executionScope.read,file)))fail('EXECUTION_SCOPE_DENIED','执行超出冻结范围');return {effects:['command'],native:false,contractVersion:1}}fail('EXECUTION_SCOPE_UNAVAILABLE','未注册的范围工具')}
+    if(executionScope&&nativeToolDescriptor(call.name))fail('EXECUTION_SCOPE_NATIVE','范围模式禁止原生文件与命令工具');
+    if(call.name===controlledFileWriteToolName){if(!services.member||!services.controlledFiles)fail('CONTROLLED_PLATFORM_UNSUPPORTED','本轮未装配受控写入');const input=controlledFileWriteInputSchema.parse(call.input);if(executionScope&&!executionScopeCovers(executionScope.write,input.path))fail('EXECUTION_SCOPE_DENIED','写入超出冻结范围');return {effects:['business-write'],native:false,scope:{kind:'workspace',workspaceId:workspace.id}}}
     if(call.name===artifactTransitionToolName){if(!services.member||!services.artifactTransitions)fail('ARTIFACT_TRANSITION_UNAVAILABLE','本轮未装配真实删除/移动');artifactTransitionInputSchema.parse(call.input);return {effects:['business-write'],native:false,scope:{kind:'workspace',workspaceId:workspace.id},contractVersion:1}}
     const progress=progressTool(call.name,call.input);if(progress)return progress;
     const validation=validationTool(call.name,call.input);if(validation){if(!services.member||!services.artifacts||!services.validations||!services.member.workflowContracts?.some(binding=>binding.contract.delivery?.requiredValidations?.length))throw Error('本轮未提供冻结 JSON/CSV/PNG 产物验证能力');return validation}
@@ -178,6 +187,7 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
     manifests:services.member?services.manifests:undefined,
     validations:services.member?services.validations:undefined,
     controlledFiles:services.member?services.controlledFiles:undefined,
+    scopedExecution:services.member?services.scopedExecution:undefined,
     artifactTransitions:services.member?services.artifactTransitions:undefined,
     memberCheckpointAllowance:services.member?services.memberCheckpointAllowance:undefined,
     assertMemberResume:services.member?services.assertMemberResume:undefined,

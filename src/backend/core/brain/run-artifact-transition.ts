@@ -1,4 +1,5 @@
 /**
+ * 范围模式只读核实仍可通过cbim_scoped_read；未知删除/移动继续阻止命令、写入和交付。
  * 作用定位：正式成员删除/移动工具的唯一授权、写前核实和可靠阶段记录，平台副作用只通过此运行端口。
  * 设计原因：模型只选冻结要求和原清单；先保存 prepared/executing 再操作，未知结果保持本轮读/求助屏障。
  * 职责边界：不自动回滚或重发，保存成功仍须真实工具结束后才能形成证明；停止排空实际文件工人。
@@ -38,7 +39,7 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort {
   /** 同步预占先于任何审批与进度失效；此时保留原有效写前清单，不从已发生副作用之后倒推 before。 */
   guard(name:string,id:string,raw:unknown,active:readonly string[]):string|undefined{
     if(this.reserved)return '原删除/移动尚未结束，请等待实际操作和回执';
-    if(this.unverified.size&&!['read','grep','find','ls','cbim_task_inspect','cbim_task_help'].includes(name))return 'ARTIFACT_TRANSITION_REVIEW_REQUIRED: 原删除/移动待核实，本轮仅可读取或求助，不能重试、交付或停泊';
+    if(this.unverified.size&&!['read','grep','find','ls','cbim_scoped_read','cbim_task_inspect','cbim_task_help'].includes(name))return 'ARTIFACT_TRANSITION_REVIEW_REQUIRED: 原删除/移动待核实，本轮仅可读取或求助，不能重试、交付或停泊';
     if(name!==artifactTransitionToolName)return;
     if(this.controller.signal.aborted)return '运行已停止删除/移动';
     const parsed=artifactTransitionInputSchema.safeParse(raw);if(!parsed.success)return '删除/移动参数不符合冻结操作选择协议';

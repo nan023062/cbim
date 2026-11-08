@@ -127,3 +127,7 @@ RunToolDescriptor.contractVersion 是实际注册表的可选元数据，供 Run
 CSV 表格条件不增加工具权限：仍为一次受控只读检查；公式文本不执行，验证器声明不授予命令能力或访问外部服务。
 
 PNG验证仍只允许同一非原生read工具；解压器只在平台处理已安全读取的字节，没有用户命令、网络或图像程序调用权限。生成图片本身仍由执行成员使用原任务授权，不因验证能力获得额外写入或命令权。
+
+## 冻结范围成员执行
+
+cbim_scoped_read 固定read、cbim_scoped_node固定command，两者要求内部注册及contractVersion=1。command沿read拒绝/ask逐次批准；隔离配置不扩大原权限。

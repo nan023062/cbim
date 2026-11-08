@@ -1,4 +1,5 @@
 /**
+ * 范围模式由装配注入Win32文件读取与逐目录锁；枚举前持真实目录链，关闭后不缓存权限，旧模式保持原尽力检测。
  * 作用定位：在固定工作区内枚举声明范围的全部目录和普通文件，生成完整产物观察并按原集合复核。
  * 设计原因：单独复读旧文件发现不了新增条目；两次有界完整枚举与文件句柄哈希共同核稳定性，空目录和缺失根也进入摘要。
  * 职责边界：不忽略、不分页截断、不读取正文给模型；拒绝链接和特殊对象。前后检查尽力识别外部竞争，不是操作系统沙箱或原子快照。
@@ -17,7 +18,7 @@ const same=(a:Stats,b:Stats)=>a.dev===b.dev&&a.ino===b.ino&&a.size===b.size&&a.m
 /** 生命周期和工作区根由主进程冻结；调用者不能以工具参数更换根或略过条目。 */
 export class OutputManifestFiles {
   private readonly files:ArtifactFiles;
-  constructor(private readonly root:string,private readonly assert:()=>void){this.root=path.resolve(root);this.files=new ArtifactFiles(this.root,assert)}
+  constructor(private readonly root:string,private readonly assert:()=>void,private readonly guarded?:{files:ArtifactFiles;lockDirectory(path:string):()=>void}){this.root=path.resolve(root);this.files=guarded?.files??new ArtifactFiles(this.root,assert)}
   private current(signal:AbortSignal){this.assert();signal.throwIfAborted()}
   /** 逐级核路径；只有明确 ENOENT 才表示缺失，错误、链接或非目录祖先不能伪装成空集合。 */
   private async locate(raw:string,signal:AbortSignal):Promise<{file:string;stat:Stats}|undefined>{
@@ -52,9 +53,11 @@ export class OutputManifestFiles {
       }else{
         entries.push({relativePath,kind:'directory'});
         // opendir 逐条读取，数量超限立即退出并关闭句柄，不先把任意大目录装入数组。
-        const directory=await fs.opendir(file);
-        for await(const child of directory){this.current(signal);await visit(relativePath+'/'+child.name)}
-        const after=await this.locate(relativePath,signal);if(!after||!same(stat,after.stat))fail('MANIFEST_CHANGED','目录或条目集合在读取期间变化');
+        const release=this.guarded?.lockDirectory(relativePath);
+        try{const directory=await fs.opendir(file);
+          for await(const child of directory){this.current(signal);await visit(relativePath+'/'+child.name)}
+          const after=await this.locate(relativePath,signal);if(!after||!same(stat,after.stat))fail('MANIFEST_CHANGED','目录或条目集合在读取期间变化');
+        }finally{release?.()}
       }
     };
     const declared=scopes.flatMap(value=>value.scope.roots).sort((a,b)=>a.path<b.path?-1:a.path>b.path?1:0);

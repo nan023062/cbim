@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-引擎无关的执行循环、事件与计量；运行内补充只由可信入口写绑定scope/run/queue的接收日志，返回真实序号；queued后日志失败保持未知。插入绑定原run和停止信号，原生确认与未知分别记录，结算先排空插入日志。正式成员按冻结Workflow验证JSON指定字节，验证与交付复核各持短锁，前后核版本/知识/停止；checked暂存不等于passed有效证明。求助/检查点保存后结束本轮，文件采集随真实工具结束释放短锁；续执行不借旧证据。 成员的公开任务和原生运行共用冻结岗位绑定，历史缺省可读但不授权应用新领取。 新的未知工具不能仅凭 reconciledToolIds 恢复旧原生上下文，保留历史字段可读；正常无未决工具的续聊不受影响。 正式成员受控文件工具使用 Runtime 单次授权；未知写入后整轮只准读取/求助，新ID不能绕过，交付独立复核并以interrupted封存；停止和结算等待实际文件进程退出。
+引擎无关的执行循环、事件与计量；运行内补充只由可信入口写绑定scope/run/queue的接收日志，返回真实序号；queued后日志失败保持未知。插入绑定原run和停止信号，原生确认与未知分别记录，结算先排空插入日志。正式成员按冻结Workflow验证JSON指定字节，验证与交付复核各持短锁，前后核版本/知识/停止；checked暂存不等于passed有效证明。求助/检查点保存后结束本轮，文件采集随真实工具结束释放短锁；续执行不借旧证据。 冻结范围工具由Runtime一次授权，原生文件/命令禁用，结算等实际资源退出。 成员的公开任务和原生运行共用冻结岗位绑定，历史缺省可读但不授权应用新领取。 新的未知工具不能仅凭 reconciledToolIds 恢复旧原生上下文，保留历史字段可读；正常无未决工具的续聊不受影响。 正式成员受控文件工具使用 Runtime 单次授权；未知写入后整轮只准读取/求助，新ID不能绕过，交付独立复核并以interrupted封存；停止和结算等待实际文件进程退出。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -20,6 +20,7 @@
 | [output-manifest-capture.ts](output-manifest-capture.ts) | 成员本轮完整产物采集的短期门闩，冻结 Workflow 范围并将真实观察可靠写入 canonical。 |
 | [run-artifact-transition.ts](run-artifact-transition.ts) | 正式成员删除/移动工具的唯一授权、写前核实和可靠阶段记录，平台副作用只通过此运行端口。 |
 | [run-controlled-file.ts](run-controlled-file.ts) | 正式成员受控文件工具的单次授权与短门闩，平台写入只经过此可信运行端口。 |
+| [run-scoped-execution.ts](run-scoped-execution.ts) | 冻结范围工具的 Runtime 一次授权、短门闩和实际退出屏障。 |
 | [run-validation.ts](run-validation.ts) | 正式成员的 JSON/CSV/PNG 验证短门闩，连接冻结要求、原文件或完整集合身份及平台同字节读取。 |
 | [runtime.ts](runtime.ts) | 大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。 |
 | [scope-usage.ts](scope-usage.ts) | 从单轮 canonical 摘要提取保守的已报告消耗，并汇总指定周期的主/成员计量。 |
@@ -84,6 +85,9 @@ N_src_backend_core_brain_run_artifact_transition_ts ..> N_src_backend_core_brain
 
 ```mermaid
 classDiagram
+class N_src_backend_core_brain_run_scoped_execution_ts["run-scoped-execution.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_run_validation_ts["run-validation.ts"] {
   <<module>>
 }
@@ -99,16 +103,21 @@ class N_src_backend_core_brain_storage_ts["storage.ts"] {
 class N_src_backend_core_brain_types_ts["types.ts"] {
   <<module>>
 }
-class N_src_backend_core_brain_usage_ts["usage.ts"] {
-  <<module>>
-}
 N_src_backend_core_brain_run_validation_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_storage_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_validation_ts : 导入依赖
+N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_scoped_execution_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_scope_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_storage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
-N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
+N_src_backend_core_brain_types_ts ..> N_src_backend_core_brain_run_scoped_execution_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_brain_usage_ts["usage.ts"] {
+  <<module>>
+}
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
@@ -142,6 +151,7 @@ N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入
 - `runtime.ts` → `artifact-capture.ts`：导入。
 - `runtime.ts` → `output-manifest-capture.ts`：导入。
 - `runtime.ts` → `run-validation.ts`：导入。
+- `runtime.ts` → `run-scoped-execution.ts`：导入。
 - `runtime.ts` → `run-controlled-file.ts`：导入。
 - `runtime.ts` → `run-artifact-transition.ts`：导入。
 - `runtime.ts` → `member-run.ts`：导入。
@@ -154,6 +164,7 @@ N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入
 - `types.ts` → `input-source.ts`：导入。
 - `types.ts` → `conversation-binding.ts`：导入。
 - `types.ts` → `run-controlled-file.ts`：导入。
+- `types.ts` → `run-scoped-execution.ts`：导入。
 - `usage.ts` → `types.ts`：导入。
 
 ### conversation-binding.ts 公开入口
@@ -232,7 +243,7 @@ class N_src_backend_core_brain_usage_ts["usage.ts"] {
 ## 子目录导航
 
 - [llm/](llm/ARCHITECTURE.md)：公开模型参数、能力元数据及运行快照端口。实际配置文件和加密凭据由 main/persistence/settings 持有。
-- [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取消，发送后只凭queued回复确认，不自动重试。工具经一次性gate授权并校验结果；结构验证仅在正式成员有冻结要求及真实端口时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为custom数据，不冒充用户授权。 主角色提示同样要求内置执行角色先登记岗位、模块责任及独立模型，不以缺省角色绕过真实派发门禁。 受控文件工具仅在真实端口存在时安装，维持桥接容量及调用授权，工具结果和实际文件操作终态分别校验。
+- [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取消，发送后只凭queued回复确认，不自动重试。工具经一次性gate授权并校验结果；结构验证仅在正式成员有冻结要求及真实端口时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为custom数据，不冒充用户授权。 范围模式只注册cbim工具，转发受限读取与隔离Node的原调用身份。 主角色提示同样要求内置执行角色先登记岗位、模块责任及独立模型，不以缺省角色绕过真实派发门禁。 受控文件工具仅在真实端口存在时安装，维持桥接容量及调用授权，工具结果和实际文件操作终态分别校验。
 
 [返回上层](../ARCHITECTURE.md)。
 
@@ -606,3 +617,7 @@ RunArtifactTransition 在审批前预占原有效 before 清单；可靠 allowed
 ### PNG 实际解码端口
 
 ValidationFilePort.validateImage须在具有PNG冻结要求的成员启动前实际存在；缺失时不创建模型或日志。RunValidation按原validator选择平台方法，在完整集合复核、停止、知识/进度代次与同一读取时限内取得真实解码判定。完整目录其它文件变化也拒绝，不能用有效PNG头或仅哈希实现冒充该端口。
+
+## 冻结范围成员执行
+
+范围执行由 RunScopedExecution 在审批前预占，Runtime 可靠 allowed 才签发一次许可，精确绑定原调用ID/参数hash。原生文件/命令始终拒绝；未知受控写/删除移动只保留范围读取。停止与结算等待实际平台 drain，失败保持 active/租约。端口结果校验唯一JSON快照，非零/超时/取消标记工具失败，不自行重放。

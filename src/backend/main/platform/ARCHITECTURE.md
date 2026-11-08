@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-本机路径、系统锁、凭据加密、终端与工具访问检查。固定根有界读取并核前后句柄/路径，拒绝链接、越界和Windows备用数据流；JSON验证由同一Buffer计算指纹和结构结论，正文不出端口。原生历史不完整拒绝恢复，不承诺外部原子隔离。 ArtifactFileService 只观察明确原调用的有界文件，独立返回缺失、不可信和当前字节；路径与链接检查不宣称操作系统隔离。 独立 utility 持有 Win32 目录与文件句柄，执行单次有界替换、flush 与读回；私有 blob 保留真实 before，进程退出不表示内容回滚。另有独立 LPAC/Job Node 平台端口，私有快照与输出分权、真实进程树收束；尚未装配为模型命令或任务授权。
+本机路径、系统锁、凭据加密、终端与工具访问检查。固定根有界读取并核前后句柄/路径，拒绝链接、越界和Windows备用数据流；JSON验证由同一Buffer计算指纹和结构结论，正文不出端口。原生历史不完整拒绝恢复，不承诺外部原子隔离。 范围模式用Win32读取/枚举句柄与LPAC私有快照，原工程不扩ACL。 ArtifactFileService 只观察明确原调用的有界文件，独立返回缺失、不可信和当前字节；路径与链接检查不宣称操作系统隔离。 独立 utility 持有 Win32 目录与文件句柄，执行单次有界替换、flush 与读回；私有 blob 保留真实 before，进程退出不表示内容回滚。另有独立 LPAC/Job Node 平台端口，私有快照与输出分权、真实进程树收束；尚未装配为模型命令或任务授权。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -24,6 +24,7 @@
 | [output-manifest-files.ts](output-manifest-files.ts) | 在固定工作区内枚举声明范围的全部目录和普通文件，生成完整产物观察并按原集合复核。 |
 | [paths.ts](paths.ts) | 本机应用目录、工程身份和知识路径的实际解析。 |
 | [png-validator.ts](png-validator.ts) | 安全文件端口后的有界静态 PNG 解码器，核全部块及压缩数据并还原实际像素。 |
+| [scoped-execution-files.ts](scoped-execution-files.ts) | 正式成员冻结范围的实际 Win32 文件读取与 LPAC 执行端口。 |
 | [secrets.ts](secrets.ts) | 用 Electron 系统加密能力保护 LLM 凭据。 |
 | [terminal.ts](terminal.ts) | 桌面扩展区的命令模式终端，按工作区/页签隔离手动命令与输出。 |
 | [tool-guard.ts](tool-guard.ts) | 对显式知识库访问和部分路径别名做前置拒绝；属于防误操作策略而非 OS 沙箱。 |
@@ -54,6 +55,7 @@ class N_src_backend_main_platform_artifact_files_ts_ArtifactFiles["ArtifactFiles
   +checkFiles()
   -root
   -assert
+  -secureRead
   -resolve()
   -readFiles()
   -readFile()
@@ -271,14 +273,14 @@ class N_src_backend_main_platform_controlled_file_win32_ts_Win32ControlledFile["
   -root
   -relativePath
   -namespaceChange
+  -readOnly
+  -directoryOnly
   -koffi
   -api
   -handles
   -file
   -applied
   -original
-  -bool()
-  -openHandle()
 }
 N_src_backend_main_platform_controlled_file_win32_ts ..> N_src_backend_main_platform_controlled_file_win32_ts_Win32ControlledFile : 声明
 ```
@@ -291,6 +293,8 @@ class N_src_backend_main_platform_controlled_file_win32_ts["controlled-file-win3
   <<module>>
 }
 class N_src_backend_main_platform_controlled_file_win32_ts_Win32ControlledFile["Win32ControlledFile"] {
+  -bool()
+  -openHandle()
   -final()
   -info()
   -target()
@@ -422,6 +426,7 @@ class N_src_backend_main_platform_isolated_node_ts_IsolatedNodeOptions["Isolated
   +executable
   +koffiPath
   +onStarted
+  +onSettled
 }
 N_src_backend_main_platform_isolated_node_ts ..> N_src_backend_main_platform_isolated_node_ts_IsolatedNodeOptions : 声明
 ```
@@ -481,6 +486,7 @@ class N_src_backend_main_platform_output_manifest_files_ts_OutputManifestFiles["
   +check()
   -root
   -assert
+  -guarded
   -files
   -current()
   -locate()
@@ -544,6 +550,35 @@ N_src_backend_main_platform_png_validator_ts ..> N_src_backend_main_platform_png
 ```
 
 直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/workspace/png-validation-schema.ts](../../core/workspace/png-validation-schema.ts)。
+
+### scoped-execution-files.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_scoped_execution_files_ts["scoped-execution-files.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_scoped_execution_files_ts_ScopedExecutionFiles["ScopedExecutionFiles"] {
+  +scope
+  +snapshot()
+  +lockDirectory()
+  +read()
+  +node()
+  +drain()
+  -root
+  -assertCurrent
+  -protectedRoots
+  -unsettled
+  -koffiPath
+}
+N_src_backend_main_platform_scoped_execution_files_ts ..> N_src_backend_main_platform_scoped_execution_files_ts_ScopedExecutionFiles : 声明
+class N_src_backend_main_platform_scoped_execution_files_ts_external_ScopedExecutionPort["ScopedExecutionPort (外部契约)"] {
+  <<external>>
+}
+N_src_backend_main_platform_scoped_execution_files_ts_external_ScopedExecutionPort <|.. N_src_backend_main_platform_scoped_execution_files_ts_ScopedExecutionFiles
+```
+
+直接依赖：[../../core/workspace/execution-scope.ts](../../core/workspace/execution-scope.ts)、[../../core/tasks/scoped-execution.ts](../../core/tasks/scoped-execution.ts)、[../../core/brain/run-scoped-execution.ts](../../core/brain/run-scoped-execution.ts)、[controlled-file-win32.ts](controlled-file-win32.ts)、[isolated-node.ts](isolated-node.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
 
 ### secrets.ts
 
@@ -641,6 +676,21 @@ N_src_backend_main_platform_isolated_node_ts ..> N_src_backend_main_platform_iso
 N_src_backend_main_platform_output_manifest_files_ts ..> N_src_backend_main_platform_artifact_files_ts : 导入依赖
 ```
 
+```mermaid
+classDiagram
+class N_src_backend_main_platform_scoped_execution_files_ts["scoped-execution-files.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_controlled_file_win32_ts["controlled-file-win32.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_isolated_node_ts["isolated-node.ts"] {
+  <<module>>
+}
+N_src_backend_main_platform_scoped_execution_files_ts ..> N_src_backend_main_platform_controlled_file_win32_ts : 导入依赖
+N_src_backend_main_platform_scoped_execution_files_ts ..> N_src_backend_main_platform_isolated_node_ts : 导入依赖
+```
+
 
 ## 子目录导航
 
@@ -719,3 +769,7 @@ Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，
 ArtifactFiles.validateImage将同一安全句柄得到的≤1 MiB文件字节同时用于原基线指纹和png-validator。后者逐块核签名、长度、ASCII类型/保留位、CRC和顺序；仅支持IHDR、连续IDAT、末尾IEND及前置唯一sRGB/gAMA/pHYs，元数据长度、整数范围及sRGB/gAMA一致性也核验。其它块、APNG、调色板、灰度、16位或交错明确拒绝。
 
 完整IDAT合并后用Node inflateSync的maxOutputLength与info核准确解压长度及已消耗输入，拒绝截断、压缩尾随数据或膨胀超限；五种行过滤器按实际邻接像素还原，每行过滤值须有效。宽高各≤4096、总像素≤1048576、块数≤1024，像素仅留本次平台内存，验证回包只含原条件诊断。解码完成后再核停止与所有者；不承诺色彩转换、视觉正确或OS隔离。
+
+## 冻结范围成员执行
+
+ScopedExecutionFiles固定原root/范围/生命周期断言，真实Win32仅读句柄持全部祖先防替换，普通单链接文件最多1MiB，输入合计8MiB；目录枚举持实际目标及祖先句柄。Node只接受这些快照，预算来自冻结声明；输出仅在原Job全部退出后读取，不自动写回。开发Electron从项目依赖解析koffi，打包使用resources/koffi。平台失败仅在原资源确认收束后通知onSettled；未知保持任务占用。

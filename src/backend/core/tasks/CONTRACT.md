@@ -717,3 +717,9 @@ DispatchScopeWait *-- MemberPause : 冻结原清单
 ## R07-A 完整产物清单运行与复核
 
 OutputManifestTools 只接计划版本，范围、运行和知识由构造冻结。完整清单引用须重算范围/内容/数量，并关联唯一 proposed/allowed v1/staged/finished 成功链；采集中插入进度变化同样拒绝证明，后续副作用或重规划获准即使旧清单失效。记录不作业务步骤证据或检查点许可；公开 DTO 不含正文。
+
+## R07-B1 完整集合共同验收
+
+complete-output-evidence统一选择原完整清单、重算证明、比较当前全集合及多候选读取预算。cbim_delivery_prepare明确manifestId，JSON输入baselineId/manifestId互斥；完整模式只接受与交付相同manifestId/scopeHash/manifestHash，所有必需根存在。交付proof保留原引用与采集/结束序号，canonical重算核原真实调用、知识、范围、版本及早于交付的时序。旧协议不回填新字段。
+
+人工请求可选manifests；完整候选不能改用其它清单或文件子集。记录保存原证明与matches/changed/unverifiable观察，不复制完整条目。basis覆盖明确选择和观察，菜单/读取时钟不参与。旧baselines及历史命令保持兼容；多候选共同上限16根、512条目、32MiB，旧选定文件另仍限16文件。

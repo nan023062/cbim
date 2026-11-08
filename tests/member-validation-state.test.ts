@@ -37,3 +37,8 @@ test('projection hides private fields and rejects cross-run or malformed proof r
   for(const value of bad){const hidden=projectRunEvent(event('validation.checked',3,{validation:value}),identity,task);expect(hidden.type).toBe('engine.status');expect(JSON.stringify(hidden)).not.toContain('PRIVATE')}
   const other={...checked(),runId:'other'};expect(memberValidationViews(summary([other,finished()]))).toEqual([]);
 });
+test('complete validation projection preserves only the exact original collection identity',()=>{
+  const {baselineId:_,...rest}=result,manifest={manifestId:'complete-one',scopeHash:digest,manifestHash:'b'.repeat(64)},shown=projectRunEvent(event('validation.checked',3,{validation:{...rest,manifest}}),identity,task);
+  expect((shown.data.validation as any).manifest).toEqual(manifest);expect(memberValidationViews(summary([shown,finished()]))[0].result.manifest).toEqual(manifest);expect(JSON.stringify(shown)).not.toContain('knowledgeRevision');expect(JSON.stringify(shown)).not.toContain('binding');
+  expect(projectRunEvent(event('validation.checked',3,{validation:{...result,manifest}}),identity,task).type).toBe('engine.status');
+});

@@ -817,3 +817,7 @@ Workflow 顶层可选 `artifactScope` 只声明有界完整观察范围，沿原
 ## R07-A 完整产物清单运行与复核
 
 artifactScope 是 Workflow 顶层可选观察声明，不是交付条件。准备执行知识时核合并范围不重叠、无大小写别名及上限；声明与原正文共同进入冻结指纹，不能在采集参数中替换或裁剪。
+
+## R07-B1 完整集合共同验收
+
+Workflow的delivery.requireCompleteManifest:true必须同时有本模块artifactScope；范围观察与交付要求独立。任一模块要求完整出口，本轮全部已声明范围进入同一清单，不剔除其它模块范围。无要求的旧记录及观察模式仍用原出口。

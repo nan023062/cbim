@@ -1,7 +1,7 @@
 /**
- * 作用定位：正式成员的 JSON 产物验证短门闩，连接冻结 Workflow、真实基线与平台同字节读取。
- * 设计原因：模型只选择已有要求和基线，不能指定路径、Schema 或结论；读前后核知识、进度与代次，暂存须有真实成功回执才成为可引用事实。
- * 职责边界：rejected 仍是验证已经执行的事实，不能通过工具成功冒充 passed；交付时再次核实选定文件，不执行命令或授予恢复权限。
+ * 作用定位：正式成员的 JSON 验证短门闩，连接冻结要求、原文件或完整集合身份及平台同字节读取。
+ * 设计原因：模型不能指定路径、Schema 或结论；完整模式在JSON读取两侧重核全集合，共用15秒期限；知识、进度与代次须稳定，暂存须有真实成功回执。
+ * 职责边界：rejected只表示实际检查不符合；交付另重核同一完整集合，旧模式复核选定文件，不执行命令或授予恢复权限。
  */
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
@@ -9,6 +9,10 @@ import {fail} from '../foundation/errors';
 import {jsonValidationLimits,type BoundedJsonSchema,type JsonValidationOutcome} from '../workspace/json-validation-schema';
 import type {ArtifactFileFact,ArtifactFileCheck} from '../tasks/artifact-baseline';
 import {verifyArtifactBaselines} from '../tasks/artifact-evidence';
+import {verifyOutputManifests} from '../tasks/output-manifest-evidence';
+import type {OutputManifestRecord} from '../tasks/output-manifest';
+import {completeOutputRequired,selectCompleteOutput,outputManifestIdentity} from '../tasks/complete-output-evidence';
+import {preparedArtifactScopes,artifactScopeLimits} from '../workspace/artifact-scope';
 import {validationInputSchema,validationResultSchema,validationToolName,type ValidationInput,type ValidationResult,type ValidationRecord} from '../tasks/validation';
 import {ValidationTools} from '../tasks/validation-tools';
 import {validationRequirement,verifyValidationRecords} from '../tasks/validation-evidence';
@@ -37,10 +41,12 @@ export class RunValidation {
     assertReady(toolCallId:string):void;
     /** 交付自身已获准，其余调用（包括未完成审批）不得与文件复核重叠。 */
     assertDeliveryReady():void;
+    /** 完整模式下在同字节 JSON 校验两侧重读全部范围，共用一次读取时限。 */
+    verifyManifest?(record:OutputManifestRecord,signal:AbortSignal):Promise<void>;
     save(value:ValidationResult):Promise<void>;
   }){
     this.binding=Object.freeze(structuredClone(binding));this.bindings=structuredClone(bindings);
-    this.tools=new ValidationTools(this.binding,{knowledgeRevision:artifacts.knowledgeRevision,bindings:this.bindings,run:(input,id)=>this.run(input,id)});
+    this.tools=new ValidationTools(this.binding,{knowledgeRevision:artifacts.knowledgeRevision,bindings:this.bindings,manifestIdentity:input=>{const manifest=this.selected(input).manifest;return manifest?outputManifestIdentity(manifest.manifest):undefined},run:(input,id)=>this.run(input,id)});
   }
   /** 在任何策略 await 之前预占；交付复核期间同样拒绝新工具，避免审批或写入越过读取窗口。 */
   guard(name:string,id:string,input:unknown,activeIds:readonly string[]):string|undefined{
@@ -53,7 +59,7 @@ export class RunValidation {
   }
   /** 只接收已经落盘的事件；当前代次由运行时持有，不从模型传来的 progressVersion 推断。 */
   observed(event:StoredEvent){
-    if(event.type==='run.started'||event.type.startsWith('tool.')||['task.updated','artifact.baseline_captured','validation.checked','run.stop_requested'].includes(event.type))this.events.push(event);
+    if(event.type==='run.started'||event.type.startsWith('tool.')||['task.updated','artifact.baseline_captured','artifact.manifest_captured','validation.checked','run.stop_requested','run.interrupted'].includes(event.type))this.events.push(event);
     if(event.type==='validation.checked'){
       const value=event.data.validation as ValidationResult|undefined;if(value)this.generations.set(value.toolCallId,this.context.generation());
     }
@@ -64,7 +70,17 @@ export class RunValidation {
   records():ValidationRecord[]{return verifyValidationRecords(this.events,this.binding,this.artifacts.knowledgeRevision,this.bindings,this.artifacts.normalizePath).filter(record=>this.generations.get(record.result.toolCallId)===this.context.generation())}
   private lastEffectSeq(){return this.events.filter(event=>event.type==='tool.allowed'&&Array.isArray(event.data.effects)&&event.data.effects.some(effect=>['business-write','knowledge-write','command'].includes(String(effect)))).at(-1)?.seq??0}
   private selected(input:ValidationInput){
-    const selected=validationRequirement(this.bindings,input.moduleId,input.requirementId),verified=verifyArtifactBaselines(this.events,this.binding,this.artifacts.knowledgeRevision,this.artifacts.normalizePath,input.baselineId);
+    const selected=validationRequirement(this.bindings,input.moduleId,input.requirementId);
+    if(completeOutputRequired(this.bindings)){
+      if(!input.manifestId||!this.context.verifyManifest)fail('MANIFEST_REQUIRED','完整模式的 JSON 验证须明确选择清单并提供真实全集合复核');
+      const evidence=verifyOutputManifests(this.events,this.binding,this.artifacts.knowledgeRevision,preparedArtifactScopes(this.bindings));
+      const manifest=selectCompleteOutput(evidence,this.bindings,input.manifestId,{...this.binding,knowledgeRevision:this.artifacts.knowledgeRevision,progressVersion:input.expectedTaskProgressVersion});
+      const file=manifest.manifest.snapshot.entries.find(entry=>entry.kind==='file'&&this.artifacts.normalizePath(entry.relativePath)===this.artifacts.normalizePath(selected.requirement.artifactPath));
+      if(!file||file.kind!=='file')fail('VALIDATION_BASELINE','完整清单没有覆盖 Workflow 指定的 JSON 文件');
+      return {selected,file:{relativePath:file.relativePath,byteLength:file.byteLength,sha256:file.sha256},manifest};
+    }
+    if(!input.baselineId)fail('MANIFEST_UNDECLARED','未声明完整交付的运行须选择原文件基线');
+    const verified=verifyArtifactBaselines(this.events,this.binding,this.artifacts.knowledgeRevision,this.artifacts.normalizePath,input.baselineId);
     const record=verified.records.find(item=>item.baseline.baselineId===input.baselineId),ref=verified.refs.find(item=>item.baselineId===input.baselineId);
     if(!record||!ref||ref.invalidated||record.baseline.progressVersion>input.expectedTaskProgressVersion)fail('VALIDATION_BASELINE','需要当前运行中已确认且未失效的明确文件基线');
     const file=record.baseline.files.find(item=>this.artifacts.normalizePath(item.relativePath)===this.artifacts.normalizePath(selected.requirement.artifactPath));
@@ -74,16 +90,18 @@ export class RunValidation {
   private async run(input:ValidationInput,id:string):Promise<ValidationResult>{
     const reserved=this.reserved;
     if(!reserved||reserved.id!==id||reserved.consumed||!isDeepStrictEqual(reserved.input,input))fail('VALIDATION_CALL','JSON 验证必须来自本轮已授权的一次性调用');reserved.consumed=true;
-    const generation=this.context.generation(),lastEffectSeq=this.lastEffectSeq();
-    const check=()=>{this.controller.signal.throwIfAborted();this.context.assertReady(id);if(this.context.current()?.version!==input.expectedTaskProgressVersion||this.context.generation()!==generation||this.lastEffectSeq()!==lastEffectSeq)fail('VALIDATION_PROGRESS_CHANGED','验证期间计划或产物代次已经变化，请重新核实')};
+    const generation=this.context.generation(),lastEffectSeq=this.lastEffectSeq(),signal=AbortSignal.any([this.controller.signal,AbortSignal.timeout(artifactScopeLimits.readMs)]);
+    const check=()=>{signal.throwIfAborted();this.context.assertReady(id);if(this.context.current()?.version!==input.expectedTaskProgressVersion||this.context.generation()!==generation||this.lastEffectSeq()!==lastEffectSeq)fail('VALIDATION_PROGRESS_CHANGED','验证期间计划或产物代次已经变化，请重新核实')};
     check();if(this.events.filter(event=>event.type==='validation.checked').length>=jsonValidationLimits.records)fail('VALIDATION_LIMIT','本轮 JSON 验证记录已达到上限');
-    const {selected,file}=this.selected(input);
+    const {selected,file,manifest}=this.selected(input);
     await this.artifacts.assertCurrentKnowledge();check();
-    const outcome=await this.files.validateFile(structuredClone(file),structuredClone(selected.requirement.schema),this.controller.signal);check();
+    if(manifest){await this.context.verifyManifest!(manifest,signal);check()}
+    const outcome=await this.files.validateFile(structuredClone(file),structuredClone(selected.requirement.schema),signal);check();
     if(!isDeepStrictEqual(outcome.artifact,file))fail('VALIDATION_BASELINE_CHANGED','验证文件与选中基线不一致，请重新采集');
+    if(manifest){await this.context.verifyManifest!(manifest,signal);check()}
     await this.artifacts.assertCurrentKnowledge();check();
-    if(!isDeepStrictEqual(this.selected(input).file,file))fail('VALIDATION_BASELINE_CHANGED','验证期间文件基线已经变化');
-    const result=validationResultSchema.parse({version:1,validationId:randomUUID(),toolCallId:id,binding:this.binding,validator:'json-schema-v1',requirement:{moduleId:selected.binding.moduleId,workflowId:selected.binding.workflowId,workflowVersion:selected.binding.workflowVersion,requirementId:selected.requirement.id,schemaHash:selected.schemaHash},knowledgeRevision:this.artifacts.knowledgeRevision,taskProgressVersion:input.expectedTaskProgressVersion,baselineId:input.baselineId,artifact:file,lastEffectSeq,checkedAt:new Date().toISOString(),outcome:outcome.outcome,issues:outcome.issues});
+    if(!isDeepStrictEqual(this.selected(input),{selected,file,...(manifest?{manifest}:{})}))fail('VALIDATION_BASELINE_CHANGED','验证期间原产物依据已经变化');
+    const result=validationResultSchema.parse({version:1,validationId:randomUUID(),toolCallId:id,binding:this.binding,validator:'json-schema-v1',requirement:{moduleId:selected.binding.moduleId,workflowId:selected.binding.workflowId,workflowVersion:selected.binding.workflowVersion,requirementId:selected.requirement.id,schemaHash:selected.schemaHash},knowledgeRevision:this.artifacts.knowledgeRevision,taskProgressVersion:input.expectedTaskProgressVersion,...(manifest?{manifest:outputManifestIdentity(manifest.manifest)}:{baselineId:input.baselineId}),artifact:file,lastEffectSeq,checkedAt:new Date().toISOString(),outcome:outcome.outcome,issues:outcome.issues});
     await this.context.save(result);check();return result;
   }
   /** 保存交付前只读复核；锁与真正 validation 调用分离，finally 不得释放另一调用的占位。 */

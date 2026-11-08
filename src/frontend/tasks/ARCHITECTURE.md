@@ -1133,6 +1133,7 @@ class N_src_frontend_tasks_human_decision_state_ts_HumanDecisionDraft["HumanDeci
   +scopeId
   +criterionId
   +baselines
+  +manifests
   +decision
   +comment
   +attempt
@@ -2625,7 +2626,7 @@ class N_src_frontend_tasks_useHumanDecisions_ts_HumanDecisionsView["HumanDecisio
   +error
   +select
   +chooseBaseline
-  +chooseDecision
+  +chooseManifest
 }
 N_src_frontend_tasks_useHumanDecisions_ts ..> N_src_frontend_tasks_useHumanDecisions_ts_HumanDecisionsView : 声明
 ```
@@ -2639,6 +2640,7 @@ class N_src_frontend_tasks_useHumanDecisions_ts["useHumanDecisions.ts"] {
 }
 class N_src_frontend_tasks_useHumanDecisions_ts_HumanDecisionsView["HumanDecisionsView"] {
   <<interface>>
+  +chooseDecision
   +comment
   +inspect
   +clearBaselines
@@ -4077,3 +4079,7 @@ continuationRejected 明确枚举成员文件、原生证明、岗位与权限�
 ## R07-A 完整产物清单运行与复核
 
 MemberOutputManifest 与旧文件面板并列，只在明确成员 run 下显示。首次不查询、列表不读文件、不自动选最新；选择后显式复核全部根，显示目录/空目录/缺失及完整条目。控制器核身份、范围、数量和结论，双击合并，换选择/卸载隔离迟到响应；图变化只标过期，不轮询。错误保留旧观察且显示失败，匹配不签署验收。
+
+## R07-B1 完整集合共同验收
+
+HumanDecisionController保留显式manifests选择并随原请求持久冻结；身份、选择或目标变化使旧预览失效，重开仅查未知命令。HumanDecisionPanel完整模式只显示原交付清单、全部固定根/后代范围和条目数量，不提供文件子集或自动最新选择。接受仅凭后端当前allowedDecisions，变化后的负面观察和历史意见仍可阅读。MemberValidationPanel显示其原完整清单身份，不把当时结构符合称为当前业务验收。

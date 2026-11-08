@@ -1,4 +1,5 @@
 /**
+ * 完整出口结算从原canonical重建清单并经真实全集合端口重核；只有JSON文件未变不足以保存候选。
  * 成员续段结算追加检查点并核累计文件，领取只消费最新段；历史完整前缀不能替代本轮真实证据。
  * 逐请求模式在领取前按原岗位模型预检保守容量，拒绝不消费检查点；每个实际请求仍独立预留并可靠结算。
  * 文件退出边界：child 未确认退出时保留原成员占用；再次关闭只排空原进程及结算原日志，不重发工具或创建新运行。
@@ -321,7 +322,7 @@ export class MemberExecutionManager {
       const run=this.currentRun(state,original),{graph,task,member,session}=memberTask(state,run.binding.rootSessionId,run.binding.taskId);
       if(summary&&(json(summary.memberBinding)!==json(run.binding)||summary.task.taskId!==task.taskId||summary.runId!==run.binding.runId))fail('MEMBER_RUN_MISMATCH','执行摘要身份不一致');
       let result=status==='completed'&&summary?memberCandidate(task,summary):undefined,help:MemberHelpRecord|undefined,checkpoint:MemberCheckpointRecord|undefined,checkpointProof:MemberCheckpointProof|undefined;
-      if(result&&preparedWorkflowContracts(run.prepared).length)try{const canonical=await this.ports.inspect(run);await validateMemberWorkflow(task,run,canonical,this.owner.entry.path,this.ports.artifacts?{...this.ports.artifacts,signal:this.ports.signal}:undefined);result=memberCandidate(task,canonical)}catch(problem){result=undefined;error='Workflow 交付条件未通过可信运行核实：'+(problem instanceof Error?problem.message:String(problem))}
+      if(result&&preparedWorkflowContracts(run.prepared).length)try{const canonical=await this.ports.inspect(run);await validateMemberWorkflow(task,run,canonical,this.owner.entry.path,this.ports.artifacts?{...this.ports.artifacts,checkManifest:this.ports.manifests?.check,signal:this.ports.signal}:undefined);result=memberCandidate(task,canonical)}catch(problem){result=undefined;error='Workflow 交付条件未通过可信运行核实：'+(problem instanceof Error?problem.message:String(problem))}
       if(!recovery&&status==='completed'&&summary?.events.some(event=>event.type==='task.checkpoint_requested')){
         result=undefined;
         try{

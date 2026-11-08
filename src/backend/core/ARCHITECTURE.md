@@ -60,8 +60,8 @@ class N_src_backend_core_workspace["workspace/"] {
 N_src_backend_core_runtime ..> N_src_backend_core_tasks : 导入依赖
 N_src_backend_core_runtime ..> N_src_backend_core_team : 导入依赖
 N_src_backend_core_tasks ..> N_src_backend_core_tools : 导入依赖
-N_src_backend_core_tasks ..> N_src_backend_core_team : 导入依赖
 N_src_backend_core_tasks ..> N_src_backend_core_workspace : 导入依赖
+N_src_backend_core_tasks ..> N_src_backend_core_team : 导入依赖
 N_src_backend_core_team ..> N_src_backend_core_workspace : 导入依赖
 N_src_backend_core_team ..> N_src_backend_core_tasks : 导入依赖
 N_src_backend_core_workspace ..> N_src_backend_core_team : 导入依赖
@@ -90,10 +90,10 @@ N_src_backend_core_workspace ..> N_src_backend_core_tools : 导入依赖
 - `runtime` → `team`：导入。
 - `tasks` → `foundation`：导入。
 - `tasks` → `tools`：导入。
+- `tasks` → `workspace`：导入。
 - `tasks` → `team`：导入。
 - `tasks` → `brain`：导入。
 - `tasks` → `policy`：导入。
-- `tasks` → `workspace`：导入。
 - `tasks` → `knowledge`：导入。
 - `tasks` → `governance`：导入。
 - `team` → `workspace`：导入。

@@ -1,4 +1,5 @@
 /**
+ * 新决定必须保持原运行完整/选定文件模式及冻结范围，旧意见不可补字段或换绑；文件与日志真实性仍由服务核验。
  * 作用定位：保护人工决定在周期联合事务及重放中的追加历史、当前依据和无执行副作用边界。
  * 设计原因：不能只依赖桌面按钮；普通事务不得补造批准、跨流程借候选、修改目标或借提交决定启动模型。
  * 职责边界：校验持久关系及证明内容指纹，真实日志与文件须由可信服务复核；actor 只表示本机提交来源。
@@ -9,6 +10,10 @@ import {scopeHumanDecisionsSchema,type HumanDecisionRecord} from './human-decisi
 import {humanDecisionBasis} from './human-decision-proof';
 import {goalInputRevision,sameGoalValue,goalNeedsReplan} from './scope-goal';
 import {sameWorkflowSelectionsForModules} from './workflow-selection';
+import {completeOutputRequired} from './complete-output-evidence';
+import {preparedWorkflowContracts} from './execution-context';
+import {preparedArtifactScopes} from '../workspace/artifact-scope';
+import {outputManifestScopeHash} from './output-manifest-evidence';
 
 function valid(value:unknown,message:string):asserts value{if(!value)fail('GRAPH_INPUT_INVALID',message)}
 const equal=sameGoalValue;
@@ -50,6 +55,9 @@ export function validateHumanDecisions(previous:DispatchState,next:DispatchState
       valid(reference&&candidate.runId===reference.runId&&candidate.resultId===reference.resultId&&candidate.planRevision===reference.planRevision&&candidate.evidenceToolCallIds.length===reference.toolCallIds.size&&candidate.evidenceToolCallIds.every(id=>reference.toolCallIds.has(id)),'人工决定候选或工具引用不属于当前验收项');
       valid(task&&task.scopeId===scope.scopeId&&task.status==='result_ready'&&!task.activeRunId&&task.revision===candidate.taskRevision&&task.planRevision===candidate.planRevision&&result?.resultId===candidate.resultId&&result.runId===candidate.runId&&result.planRevision===candidate.planRevision&&candidate.evidenceToolCallIds.every(id=>result.evidenceRefs.includes(id)),'人工决定必须绑定本周期当前真实候选');
       valid(run?.status==='completed'&&run.binding.workspaceId===scope.workspaceId&&run.binding.rootSessionId===scope.rootSessionId&&run.binding.taskId===task.taskId&&run.binding.agentId===task.assignee.agentId&&run.binding.agentInstanceId===task.assignee.agentInstanceId&&run.binding.agentSessionId===task.assignee.agentSessionId&&run.binding.planRevision===task.planRevision&&task.runIds.includes(run.binding.runId)&&run.prepared.knowledgeRevision===source.knowledgeRevision,'人工决定候选运行或知识绑定无效');
+      const bindings=preparedWorkflowContracts(run.prepared),complete=completeOutputRequired(bindings);
+      valid(complete?!candidate.selected:!candidate.selectedManifest,'人工决定不能更换原运行的完整或选定文件模式');
+      if(candidate.selectedManifest){const proof=candidate.selectedManifest.manifest;valid(equal(proof.scopes,preparedArtifactScopes(bindings))&&proof.scopeHash===outputManifestScopeHash(proof.scopes)&&proof.knowledgeRevision===source.knowledgeRevision,'人工决定完整范围必须属于原运行的冻结约定')}
       valid(plan.assignments.some(item=>item.agentId===task.assignee.agentId&&item.moduleIds.length===task.modules.length&&task.modules.every(module=>item.moduleIds.includes(module.moduleId)&&module.knowledgeRevision===source.knowledgeRevision)&&sameWorkflowSelectionsForModules(item.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))&&item.criterionIds.includes(record.criterionId)),'人工决定不能跨责任、模块或 Workflow 选择引用候选');
     }
   }

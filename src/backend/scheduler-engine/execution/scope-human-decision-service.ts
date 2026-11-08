@@ -1,4 +1,5 @@
 /**
+ * 完整候选菜单只含原交付清单；明确选择才读取全范围，变化仍可负面决定，提交重新核basis；不允许换较新清单或文件子集。
  * 作用定位：核实安全等待中的人工验收项和明确选定文件，保存本机显式决定及不可变依据。
  * 设计原因：历史候选真实性与当前接受许可分开；提交在事务外重建文件及日志依据，再按知识快照→任务短事务核版本，避免知识来源写入与验收形成逆向等待。
  * 职责边界：这里只保存决定，不修改 goal、wait、图或运行许可；共享文件端口供另一专用接续服务重新核实，保存本身不启动模型。哈希只描述有界观察。
@@ -12,6 +13,8 @@ import type {DispatchScope} from '../../core/tasks/dispatch-scope';
 import {goalInputRevision,sameGoalValue} from '../../core/tasks/scope-goal';
 import {artifactLimits,artifactFileCheckSchema,type ArtifactFileFact,type ArtifactFileCheck} from '../../core/tasks/artifact-baseline';
 import {verifyArtifactBaselines} from '../../core/tasks/artifact-evidence';
+import {completeOutputProof,completeOutputObservation,assertCompleteOutputBudget} from '../../core/tasks/complete-output-evidence';
+import type {OutputManifestRecord} from '../../core/tasks/output-manifest';
 import {humanDecisionPreviewInputSchema,humanDecisionRequestSchema,humanDecisionLookupSchema,humanDecisionHistoryInputSchema,humanDecisionActorSchema,humanDecisionPreviewSchema,humanDecisionRecordSchema,humanDecisionCoverageLimitation,humanDecisionLimit,type HumanDecisionPreviewInput,type HumanDecisionRequest,type HumanDecisionLookup,type HumanDecisionHistoryInput,type HumanDecisionPreview,type HumanDecisionReceipt,type HumanDecisionHistory,type HumanDecisionActor,type HumanDecisionCandidate,type HumanDecisionKind} from '../../core/tasks/human-decisions';
 import {humanDecisionBasis,humanDecisionProof} from '../../core/tasks/human-decision-proof';
 import {ScopeGoalService,type ScopeGoalPorts} from './scope-goal-service';
@@ -50,16 +53,26 @@ export class ScopeHumanDecisionService {
     const goal=scope.goal!,review=goal.review!,ports=this.ports,candidates:HumanDecisionCandidate[]=[],limitations=[humanDecisionCoverageLimitation],issues:Array<{code:string;message:string}>=[];
     const addLimitation=(message:string)=>{if(!limitations.includes(message)&&limitations.length<32)limitations.push(message)};
     const addIssue=(code:string,message:string)=>{if(issues.length<32&&!issues.some(item=>item.code===code&&item.message===message))issues.push({code,message})};
-    check(input.baselines.every(selection=>value.candidates.some(candidate=>candidate.task.taskId===selection.taskId&&candidate.run.binding.runId===selection.runId)),'HUMAN_SOURCE_INVALID','所选文件基线不属于此验收项的当前成员候选');
-    const expectedFiles=new Map<string,ArtifactFileFact>();
+    check([...input.baselines,...input.manifests??[]].every(selection=>value.candidates.some(candidate=>candidate.task.taskId===selection.taskId&&candidate.run.binding.runId===selection.runId)),'HUMAN_SOURCE_INVALID','所选产物依据不属于此验收项的当前成员候选');
+    const expectedFiles=new Map<string,ArtifactFileFact>(),manifests=new Map<string,OutputManifestRecord>();
     for(const candidate of value.candidates){
       const {task,run,summary,evidenceToolCallIds}=candidate,result=task.result!,selection=input.baselines.find(item=>item.taskId===task.taskId);
+      const manifestSelection=input.manifests?.find(item=>item.taskId===task.taskId);
+      const projected:HumanDecisionCandidate={taskId:task.taskId,taskRevision:task.revision,runId:result.runId,resultId:result.resultId,planRevision:task.planRevision,logHash:hash(json(summary.events)),evidenceToolCallIds:[...evidenceToolCallIds].sort(compare),agentName:task.assignee.name.slice(0,240),summary:result.summary.slice(0,240),baselines:[]};
+      if(candidate.manifest){
+        const proof=completeOutputProof(candidate.manifest);
+        check(!selection&&(!manifestSelection||manifestSelection.manifestId===proof.manifestId),'HUMAN_SOURCE_INVALID','完整候选只能明确选择原交付清单，不能替换较新清单或文件子集');
+        projected.manifest=proof;
+        if(manifestSelection){projected.selectedManifest={manifest:proof,state:'unverifiable'};manifests.set(task.taskId,candidate.manifest)}
+        candidates.push(projected);continue;
+      }
+      check(!manifestSelection,'HUMAN_SOURCE_INVALID','旧候选没有完整交付清单，不能补造覆盖范围');
       const artifacts=verifyArtifactBaselines(summary.events,run.binding,value.knowledgeRevision,ports.normalizePath,selection?.baselineId);
       const record=selection?artifacts.records.find(item=>item.baseline.baselineId===selection.baselineId):undefined,ref=selection?artifacts.refs.find(item=>item.baselineId===selection.baselineId):undefined;
       check(!selection||record&&ref,'HUMAN_SOURCE_INVALID','所选文件基线缺少同轮完整采集事件和成功回执');
       if(artifacts.issues.length){addIssue('HUMAN_ARTIFACT_LIMITATION','部分文件基线记录不可核实；只有完整匹配的所选记录参与本次观察');addLimitation('部分采集记录不可核实，本次只引用有完整来源与成功回执的所选文件基线。')}
       if(artifacts.impact==='unknown')addLimitation('已登记操作的影响范围不能由所选文件完整枚举；本次决定不核实未列出的文件、命令外部影响或其它副作用。');
-      const projected:HumanDecisionCandidate={taskId:task.taskId,taskRevision:task.revision,runId:result.runId,resultId:result.resultId,planRevision:task.planRevision,logHash:hash(json(summary.events)),evidenceToolCallIds:[...evidenceToolCallIds].sort(compare),agentName:task.assignee.name.slice(0,240),summary:result.summary.slice(0,240),baselines:artifacts.refs.map(item=>({baselineId:item.baselineId,capturedAt:item.capturedAt,fileCount:item.fileCount}))};
+      projected.baselines=artifacts.refs.map(item=>({baselineId:item.baselineId,capturedAt:item.capturedAt,fileCount:item.fileCount}));
       if(record&&ref){
         const baseline=record.baseline;
         projected.selected={baselineId:baseline.baselineId,captureToolCallId:baseline.captureToolCallId,capturedSeq:record.capturedSeq,finishedSeq:record.finishedSeq,knowledgeRevision:baseline.knowledgeRevision,progressVersion:baseline.progressVersion,invalidated:ref.invalidated,files:baseline.files.map(file=>({relativePath:file.relativePath,state:'unverifiable',expected:{byteLength:file.byteLength,sha256:file.sha256}}))};
@@ -69,7 +82,8 @@ export class ScopeHumanDecisionService {
     }
     const inBudget=(files:Map<string,ArtifactFileFact>)=>files.size<=artifactLimits.files&&[...files.values()].reduce((total,file)=>total+file.byteLength,0)<=artifactLimits.totalBytes;
     check(inBudget(expectedFiles),'HUMAN_LIMIT','本次人工决定的文件超过 16 个或总计 32 MiB 上限');
-    const workflowFiles=value.candidates.flatMap(candidate=>candidate.workflowFiles),selectedComplete=candidates.every(candidate=>candidate.selected&&!candidate.selected.invalidated&&candidate.selected.knowledgeRevision===value.knowledgeRevision&&candidate.selected.files.length);
+    const selectedReady=(candidate:HumanDecisionCandidate)=>candidate.selectedManifest?candidate.selectedManifest.manifest.knowledgeRevision===value.knowledgeRevision:!!candidate.selected&&!candidate.selected.invalidated&&candidate.selected.knowledgeRevision===value.knowledgeRevision&&!!candidate.selected.files.length;
+    const workflowFiles=value.candidates.flatMap(candidate=>candidate.manifest?[]:candidate.workflowFiles),selectedComplete=candidates.every(selectedReady);
     let workflowCurrent=workflowFiles.length===0,checkWorkflow=false;
     // 没有完整显式选择时仍仅列历史，不隐式读文件。可能接受时，所有程序验证文件也进入同一有界读取。
     if(selectedComplete&&workflowFiles.length){
@@ -78,8 +92,9 @@ export class ScopeHumanDecisionService {
       if(inBudget(combined)){for(const [key,file] of combined)expectedFiles.set(key,file);checkWorkflow=true}
       else addIssue('HUMAN_WORKFLOW_UNAVAILABLE','全部程序验证文件与所选基线超过本次核实上限；仍可拒绝或要求补证，不能接受');
     }
+    assertCompleteOutputBudget([...manifests.values()],[...expectedFiles.values()]);const signal=AbortSignal.timeout(15000);
     if(expectedFiles.size){
-      const expected=[...expectedFiles.values()].sort((a,b)=>compare(a.relativePath,b.relativePath)),signal=AbortSignal.timeout(15000),observations=await ports.checkFiles(expected,signal);this.current();signal.throwIfAborted();
+      const expected=[...expectedFiles.values()].sort((a,b)=>compare(a.relativePath,b.relativePath)),observations=await ports.checkFiles(expected,signal);this.current();signal.throwIfAborted();
       check(observations.length===expected.length,'HUMAN_EVIDENCE_INVALID','文件核实结果与请求范围不一致');
       for(let index=0;index<expected.length;index++){const parsed=artifactFileCheckSchema.safeParse(observations[index]),file=expected[index];check(parsed.success&&parsed.data.relativePath===file.relativePath&&sameGoalValue(parsed.data.expected,{byteLength:file.byteLength,sha256:file.sha256}),'HUMAN_EVIDENCE_INVALID','文件端口返回了错误路径或期望指纹')}
       if(checkWorkflow){
@@ -93,12 +108,17 @@ export class ScopeHumanDecisionService {
         return {...observation,state,expected:file.expected};
       });
     }
+    for(const candidate of candidates)if(candidate.selectedManifest){
+      if(!ports.checkManifest){addIssue('HUMAN_MANIFEST_UNAVAILABLE','当前缺少完整集合复核能力，不能接受');continue}
+      const manifest=manifests.get(candidate.taskId)!,observed=await ports.checkManifest(manifest.manifest.snapshot,signal);this.current();signal.throwIfAborted();
+      candidate.selectedManifest={manifest:candidate.selectedManifest.manifest,...completeOutputObservation(manifest.manifest.snapshot,observed)};
+    }
     // 业务读占用不能锁住知识事务或外部进程；复读同一 canonical 集合与知识，拒绝拼接跨版本观察。
     for(const candidate of value.candidates){const again=await this.logs.inspectMember(candidate.run);this.current();check(sameGoalValue(again,candidate.summary),'HUMAN_STALE','成员日志在人工核实期间变化，请重新核实')}
     const main=await this.logs.inspectMain(scope.rootSessionId,review.runId);this.current();check(sameGoalValue(main,value.main),'HUMAN_STALE','主审阅日志在人工核实期间变化，请重新核实');
     check((await this.owner.read()).revision===value.knowledgeRevision,'HUMAN_KNOWLEDGE_CHANGED','知识在人工核实期间变化，请重新安排核实');this.current();
-    const complete=workflowCurrent&&candidates.every(candidate=>candidate.selected&&!candidate.selected.invalidated&&candidate.selected.knowledgeRevision===value.knowledgeRevision&&candidate.selected.files.length&&candidate.selected.files.every(file=>file.state==='matches'));
-    if(!complete)addIssue('HUMAN_ACCEPT_UNAVAILABLE','接受需要为全部候选明确选择当前有效基线，并且所选文件全部匹配');
+    const complete=workflowCurrent&&candidates.every(candidate=>selectedReady(candidate)&&(candidate.selectedManifest?candidate.selectedManifest.state==='matches':candidate.selected!.files.every(file=>file.state==='matches')));
+    if(!complete)addIssue('HUMAN_ACCEPT_UNAVAILABLE','接受需要为全部候选明确选择原产物依据，并且选定文件或声明的完整集合全部匹配');
     const allowedDecisions:HumanDecisionKind[]=complete?['accept','reject','request_evidence']:['reject','request_evidence'];
     const preview:HumanDecisionPreview={identity:{workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,scopeId:scope.scopeId,criterionId:input.criterionId},checkedAt:new Date().toISOString(),decisionRevision:scope.humanDecisions?.revision??0,source:{waitId:scope.wait!.waitId,goalRevision:goal.revision,inputRevision:goalInputRevision(goal),planRevision:goal.plan!.revision,reviewRevision:review.revision,reviewRunId:review.runId,reviewLogHash:hash(json(value.main.events)),knowledgeRevision:value.knowledgeRevision,graphCursor:{streamId:value.graph.cursor.streamId,seq:value.graph.cursor.seq},criterion:value.criterion},candidates,allowedDecisions,limitations,issues};
     preview.basis=humanDecisionBasis(humanDecisionProof(preview));
@@ -117,7 +137,7 @@ export class ScopeHumanDecisionService {
   /** 无基线选择时只列可信候选及基线菜单；显式选择才读取文件，预览不会留下决定。 */
   async preview(raw:HumanDecisionPreviewInput):Promise<HumanDecisionPreview>{
     const input=this.parse(humanDecisionPreviewInputSchema,raw),before=await this.store.read(),scope=this.scope(before,input),stamp=this.stateStamp(before,input);
-    try{return await this.reading(!!input.baselines.length,async()=>{const value=await this.collect(before,input),after=await this.store.read();check(stamp===this.stateStamp(after,input),'HUMAN_STALE','人工核实期间调度状态发生变化');const latest=this.scope(after,input);value.decisionRevision=latest.humanDecisions?.revision??0;value.latestDecisionId=latest.humanDecisions?.records.filter(record=>record.criterionId===input.criterionId&&record.basis===value.basis).at(-1)?.decisionId;return value})}
+    try{return await this.reading(!!input.baselines.length||!!input.manifests?.length,async()=>{const value=await this.collect(before,input),after=await this.store.read();check(stamp===this.stateStamp(after,input),'HUMAN_STALE','人工核实期间调度状态发生变化');const latest=this.scope(after,input);value.decisionRevision=latest.humanDecisions?.revision??0;value.latestDecisionId=latest.humanDecisions?.records.filter(record=>record.criterionId===input.criterionId&&record.basis===value.basis).at(-1)?.decisionId;return value})}
     catch(error){return this.unavailable(input,scope,error)}
   }
   /**
@@ -131,8 +151,8 @@ export class ScopeHumanDecisionService {
     if(old){check(old.fingerprint===command.fingerprint,'COMMAND_ID_CONFLICT','相同命令 ID 已用于不同请求');return old.receipt as HumanDecisionReceipt}
     this.current();const before=await this.store.read(),stamp=this.stateStamp(before,input);
     check(this.owner.withSourceSnapshot,'HUMAN_UNAVAILABLE','人工决定缺少可信知识快照提交入口');
-    try{return await this.reading(!!input.baselines.length,async()=>{
-      let preview:HumanDecisionPreview;try{preview=await this.collect(before,{workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,scopeId:input.scopeId,criterionId:input.criterionId,baselines:input.baselines})}catch(error){const code=(error as {code?:string})?.code;if(code?.startsWith('HUMAN_'))throw error;fail('HUMAN_EVIDENCE_INVALID','当前日志、知识或文件依据无法核实，未保存人工决定')}
+    try{return await this.reading(!!input.baselines.length||!!input.manifests?.length,async()=>{
+      let preview:HumanDecisionPreview;try{preview=await this.collect(before,{workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,scopeId:input.scopeId,criterionId:input.criterionId,baselines:input.baselines,...(input.manifests?{manifests:input.manifests}:{})})}catch(error){const code=(error as {code?:string})?.code;if(code?.startsWith('HUMAN_'))throw error;fail('HUMAN_EVIDENCE_INVALID','当前日志、知识或文件依据无法核实，未保存人工决定')}
       return this.owner.withSourceSnapshot!(snapshot=>this.store.transact(command,async state=>{
       const scope=this.scope(state,input),revision=scope.humanDecisions?.revision??0;
       check(revision===input.expectedDecisionRevision,'HUMAN_REVISION_CONFLICT','人工决定记录已更新，请重新核实后提交');
@@ -142,7 +162,7 @@ export class ScopeHumanDecisionService {
       check(preview.basis===input.expectedBasis,'HUMAN_STALE','人工决定依据已经变化，请重新核实后提交');
       check(preview.allowedDecisions.includes(input.decision),'HUMAN_DECISION_UNAVAILABLE','所选决定尚不满足当前候选与文件核实要求');this.current();
       const records=scope.humanDecisions?.records??[],supersedes=records.filter(record=>record.criterionId===input.criterionId&&record.basis===input.expectedBasis).at(-1);
-      const record=humanDecisionRecordSchema.parse({decisionId:input.commandId,revision:revision+1,recordedAt:new Date().toISOString(),actor,criterionId:input.criterionId,decision:input.decision,comment:input.comment,basis:input.expectedBasis,baselines:input.baselines,proof:humanDecisionProof(preview),...(supersedes?{supersedesDecisionId:supersedes.decisionId}:{})}),next={...scope,humanDecisions:{revision:revision+1,records:[...records,record]}};
+      const record=humanDecisionRecordSchema.parse({decisionId:input.commandId,revision:revision+1,recordedAt:new Date().toISOString(),actor,criterionId:input.criterionId,decision:input.decision,comment:input.comment,basis:input.expectedBasis,baselines:input.baselines,...(input.manifests?{manifests:input.manifests}:{}),proof:humanDecisionProof(preview),...(supersedes?{supersedesDecisionId:supersedes.decisionId}:{})}),next={...scope,humanDecisions:{revision:revision+1,records:[...records,record]}};
       return {scopes:[next],receipt:this.receipt(next,input.commandId)!};
       }));
     })}catch(error){

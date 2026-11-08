@@ -1,4 +1,5 @@
 /**
+ * 完整出口的三字段身份与原成功采集证明是可选新字段；旧观察/基线不补造完整验收资格。
  * 作用定位：声明范围完整清单、可信采集事件和独立复核的公开序列化契约。
  * 设计原因：目录条目和缺失根与文件指纹共同形成集合身份，新增文件或空目录不能在旧文件哈希相同的情况下被遗漏。
  * 职责边界：不保存文件正文，不声称操作因果、原子快照、业务验收或恢复资格；旧选定文件基线保持独立。
@@ -41,12 +42,20 @@ export type OutputManifestSnapshot=z.infer<typeof outputManifestSnapshotSchema>;
 /** 唯一采集引用只公开范围、数量与摘要；完整条目留在原 canonical，显式报告才读取。 */
 export const outputManifestRefSchema=z.object({manifestId:id,captureToolCallId:callId,scopeHash:digest,manifestHash:digest,knowledgeRevision:z.string().min(1).max(512),progressVersion:seq.min(1),capturedAt:z.string().datetime(),lastEffectSeq:seq,entryCount:seq.max(artifactScopeLimits.entries),fileCount:seq.max(artifactScopeLimits.entries),byteLength:seq.max(artifactScopeLimits.totalBytes),scopes:artifactScopeBindingsSchema}).strict();
 export type OutputManifestRef=z.infer<typeof outputManifestRefSchema>;
+/** 验证与接受使用同一集合身份；不能只匹配文件摘要而忽略目录集合或冻结范围。 */
+export const outputManifestIdentitySchema=outputManifestRefSchema.pick({manifestId:true,scopeHash:true,manifestHash:true});
+export type OutputManifestIdentity=z.infer<typeof outputManifestIdentitySchema>;
+/** 交付固定原成功采集的引用和日志顺序；不复制正文或全部条目到每一份人工意见。 */
+export const outputManifestProofSchema=outputManifestRefSchema.extend({capturedSeq:seq.min(1),finishedSeq:seq.min(1)}).strict().refine(value=>value.capturedSeq<value.finishedSeq);
+export type OutputManifestProof=z.infer<typeof outputManifestProofSchema>;
 export const outputManifestInspectSchema=z.object({binding:artifactBaselineStagedSchema.innerType().shape.binding,scopes:artifactScopeBindingsSchema,manifests:z.array(outputManifestRefSchema.extend({invalidated:z.boolean()}).strict()).max(artifactScopeLimits.captures),issues:z.array(z.object({code:z.string().min(1).max(128),message:z.string().min(1).max(512)}).strict()).max(32)}).strict();
 export const outputManifestStagedSchema=outputManifestRefSchema.extend({version:z.literal(1),binding:artifactBaselineStagedSchema.innerType().shape.binding,snapshot:outputManifestSnapshotSchema}).strict();
 export type OutputManifestStaged=z.infer<typeof outputManifestStagedSchema>;
 export const outputManifestResultSchema=z.object({state:z.literal('captured'),binding:artifactBaselineStagedSchema.innerType().shape.binding,manifest:outputManifestRefSchema}).strict();
 export const outputManifestRecordSchema=z.object({manifest:outputManifestStagedSchema,capturedSeq:seq.min(1),finishedSeq:seq.min(1)}).strict();
 export type OutputManifestRecord=z.infer<typeof outputManifestRecordSchema>;
+/** 只有当前运行可信采集实例提供；选择不读文件，verifyCurrent 完整复核后才允许保存交付。 */
+export interface ProgressManifestPort {select(manifestId:string,progressVersion:number):OutputManifestRecord;verifyCurrent(record:OutputManifestRecord):Promise<void>}
 export const outputManifestQuerySchema=artifactReportInputSchema.omit({baselineId:true}).extend({manifestId:id.optional()}).strict();
 export type OutputManifestQuery=z.infer<typeof outputManifestQuerySchema>;
 export const outputManifestCheckSchema=z.object({state:z.enum(['matches','changed','unverifiable']),expectedHash:digest,observed:outputManifestSnapshotSchema.optional(),observedHash:digest.optional(),reason:z.string().min(1).max(512).optional()}).strict();

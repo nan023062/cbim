@@ -19,7 +19,7 @@
 | [model-errors.ts](model-errors.ts) | 把模型结束原因转换为用户可理解的执行错误，供实时引擎和历史回放共用。 |
 | [output-manifest-capture.ts](output-manifest-capture.ts) | 成员本轮完整产物采集的短期门闩，冻结 Workflow 范围并将真实观察可靠写入 canonical。 |
 | [run-controlled-file.ts](run-controlled-file.ts) | 正式成员受控文件工具的单次授权与短门闩，平台写入只经过此可信运行端口。 |
-| [run-validation.ts](run-validation.ts) | 正式成员的 JSON 产物验证短门闩，连接冻结 Workflow、真实基线与平台同字节读取。 |
+| [run-validation.ts](run-validation.ts) | 正式成员的 JSON 验证短门闩，连接冻结要求、原文件或完整集合身份及平台同字节读取。 |
 | [runtime.ts](runtime.ts) | 大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。 |
 | [scope-usage.ts](scope-usage.ts) | 从单轮 canonical 摘要提取保守的已报告消耗，并汇总指定周期的主/成员计量。 |
 | [storage.ts](storage.ts) | 执行循环使用的日志和任务目录存储端口。 |
@@ -579,3 +579,7 @@ Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，
 ## R07-A 完整产物清单运行与复核
 
 LoopRuntime 仅向正式成员且冻结 artifactScope 的运行装配 RunOutputManifestCapture；缺真实平台端口拒绝启动。同步门闩先于异步审批，完整读取及可靠保存前后核停止、知识、进度和在途工具。artifact.manifest_captured 只能由可信端口保存，原成功回执生效；坏回包不重采，失败暂存仍占8份历史容量。
+
+## R07-B1 完整集合共同验收
+
+RunOutputManifestCapture同步预占完整交付至真实finished/denied，覆盖审批、JSON复核、全集合读取、候选保存及wire返回。选择只取本轮可信成功清单；停止、知识/进度变化、缺失根、失效证明及错误端口均拒绝，不自动采集或换绑。RunValidation在同字节JSON校验前后复核整个范围，共用15秒期限；交付再核原集合。完整清单工具继续不作步骤证据或安全检查点来源。

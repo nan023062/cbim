@@ -346,3 +346,7 @@ Runtime 在自己的 beforeTool 可靠保存 allowed 后签发一次性授权，
 ## R07-A 完整产物清单运行与复核
 
 LoopRuntime 仅向正式成员且冻结 artifactScope 的运行装配 RunOutputManifestCapture；缺真实平台端口拒绝启动。同步门闩先于异步审批，完整读取及可靠保存前后核停止、知识、进度和在途工具。artifact.manifest_captured 只能由可信端口保存，原成功回执生效；坏回包不重采，失败暂存仍占8份历史容量。
+
+## R07-B1 完整集合共同验收
+
+RunOutputManifestCapture同步预占完整交付至真实finished/denied，覆盖审批、JSON复核、全集合读取、候选保存及wire返回。选择只取本轮可信成功清单；停止、知识/进度变化、缺失根、失效证明及错误端口均拒绝，不自动采集或换绑。RunValidation在同字节JSON校验前后复核整个范围，共用15秒期限；交付再核原集合。完整清单工具继续不作步骤证据或安全检查点来源。

@@ -818,3 +818,7 @@ scope-budget 额外公开只读请求摘要/query schema，供设置与目标卡
 ## R07-A 完整产物清单运行与复核
 
 output-manifest.ts 只公开严格清单 DTO；Node 哈希、日志核实及平台读取不进入前端依赖。完整清单保持 declared_scope_complete，旧基线继续 selected_files_only，不将两者混为同一覆盖。
+
+## R07-B1 完整集合共同验收
+
+人工DTO可选完整清单选择和原采集证明，公开JSON记录只增加manifestId/scopeHash/manifestHash三字段身份，不透传原始snapshot、Schema或正文。Node哈希和日志重建仍在后端，旧DTO不补字段。

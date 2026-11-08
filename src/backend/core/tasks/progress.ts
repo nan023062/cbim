@@ -1,8 +1,10 @@
 /**
+ * 完整出口另固定原成功清单的范围、内容和事件顺序，候选下游须重建并核当前全集合。
  * 作用定位：单 Agent 执行计划及交付候选的领域状态，独立于 Pi、磁盘和界面。
  * 设计原因：目标与步骤修订必须留痕；JSON 结构出口另存精确文件证明，工具成功或结构通过都不能由模型解释为人工验收。
  */
 import type {WorkflowValidationCheck} from './validation';
+import type {OutputManifestProof} from './output-manifest';
 export interface TaskStep {
   id:string;
   title:string;
@@ -20,6 +22,8 @@ export interface WorkflowEvidenceProof {
   checks:Array<{moduleId:string;workflowId:string;workflowVersion:string;requirementId:string;toolName:string;toolCallIds:string[]}>;
   /** 仅声明了 JSON 验证时存在；旧流程不补空数组。 */
   validationChecks?:WorkflowValidationCheck[];
+  /** 仅明确要求完整出口时存在；固定原完整集合，不能由下游重选未变子集。 */
+  manifest?:OutputManifestProof;
 }
 export interface TaskProgress {
   /** 每次修改递增，工具必须携带期望版本，拒绝覆盖过期计划。 */

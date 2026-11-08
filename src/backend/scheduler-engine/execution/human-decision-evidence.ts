@@ -1,4 +1,5 @@
 /**
+ * 完整接受去重原运行清单，在同一15秒与16根/512条目/32MiB预算内重核；变化拒绝继续/完成而保留历史意见。
  * 作用定位：复核已消费人工接受的精确候选和选定文件，供显式接续、目标审阅及最终完成共用。
  * 设计原因：人的历史意见不等于当前产物未变；独立端口避免目标服务与人工服务相互引用，全部接受项的选定基线及冻结 JSON 验证文件共享一次有界读取。
  * 职责边界：只读可信 canonical 与业务字节，不消费等待、不复制签署身份，也不恢复未知操作。
@@ -17,12 +18,15 @@ import {currentHumanContinuation,referencedHumanDecision} from '../../core/tasks
 import {sameGoalValue} from '../../core/tasks/scope-goal';
 import {artifactLimits,artifactFileCheckSchema,type ArtifactFileFact,type ArtifactFileCheck} from '../../core/tasks/artifact-baseline';
 import {verifyArtifactBaselines} from '../../core/tasks/artifact-evidence';
-import {memberWorkflowFiles} from './member-workflow';
+import {memberWorkflowEvidence} from './member-workflow';
+import type {OutputManifestSnapshot,OutputManifestCheck,OutputManifestRecord} from '../../core/tasks/output-manifest';
+import {completeOutputProof,assertCompleteOutputCurrent,assertCompleteOutputBudget} from '../../core/tasks/complete-output-evidence';
 
 /** 固定工作区文件端口；只读占用不领取模型名额，关闭/退役检查覆盖异步读取。 */
 export interface HumanDecisionPorts {
   normalizePath(raw:string):string;
   checkFiles(files:readonly ArtifactFileFact[],signal:AbortSignal):Promise<ArtifactFileCheck[]>;
+  checkManifest?(expected:OutputManifestSnapshot,signal:AbortSignal):Promise<OutputManifestCheck>;
   acquireRead():()=>void;
   assertCurrent?():void;
 }
@@ -51,20 +55,25 @@ export async function validateHumanAcceptances(owner:Pick<KnowledgeWorkspace,'en
   const current=()=>{owner.assert();ports.assertCurrent?.()},graph=state.graphs.find(item=>item.identity.workspaceId===scope.workspaceId&&item.identity.rootSessionId===scope.rootSessionId);check(graph,'HUMAN_CONTINUATION_IDENTITY','人工接受缺少对应主会话图');current();
   const release=ports.acquireRead();
   try{
-    const knowledge=await owner.read();current();const observed=new Map<string,{run:DispatchRun;summary:RunSummary}>(),mains=new Map<string,RunSummary>(),files=new Map<string,ArtifactFileFact>();
+    const knowledge=await owner.read();current();const observed=new Map<string,{run:DispatchRun;summary:RunSummary;manifest?:OutputManifestRecord}>(),mains=new Map<string,RunSummary>(),files=new Map<string,ArtifactFileFact>();
     for(const record of records){
       check(record.decision==='accept'&&record.proof.identity.workspaceId===scope.workspaceId&&record.proof.identity.rootSessionId===scope.rootSessionId&&record.proof.identity.scopeId===scope.scopeId&&record.proof.source.knowledgeRevision===knowledge.revision,'HUMAN_CONTINUATION_STALE','接受的身份或知识基线已变化，请重新核实');
       if(!mains.has(record.proof.source.reviewRunId)){const main=await logs.inspectMain(scope.rootSessionId,record.proof.source.reviewRunId);current();mains.set(record.proof.source.reviewRunId,main)}
       const main=mains.get(record.proof.source.reviewRunId)!;check(main.logIntegrity?.partialTail===false&&main.status==='completed'&&!main.unresolvedTools.length&&hash(json(main.events))===record.proof.source.reviewLogHash,'HUMAN_CONTINUATION_STALE','原人工审阅日志已变化或无法完整核实');
       for(const candidate of record.proof.candidates){
         const task=graph.tasks.find(item=>item.taskId===candidate.taskId),selected=candidate.selected;
-        check(task&&task.scopeId===scope.scopeId&&task.revision===candidate.taskRevision&&task.planRevision===candidate.planRevision&&task.result?.resultId===candidate.resultId&&task.result.runId===candidate.runId&&selected&&!selected.invalidated&&selected.files.length&&selected.files.every(file=>file.state==='matches'),'HUMAN_CONTINUATION_STALE','接受的成员候选或选定文件基线已经变化');
+        check(task&&task.scopeId===scope.scopeId&&task.revision===candidate.taskRevision&&task.planRevision===candidate.planRevision&&task.result?.resultId===candidate.resultId&&task.result.runId===candidate.runId,'HUMAN_CONTINUATION_STALE','接受的成员候选已经变化');
         let log=observed.get(candidate.runId);
         if(!log){
-          const summary=await validateCandidate(state,scope,graph,task,knowledge.revision);current();const run=state.runs?.find(item=>item.binding.taskId===task.taskId&&item.binding.runId===candidate.runId);check(run,'HUMAN_CONTINUATION_STALE','接受的运行登记已经变化');log={run,summary};observed.set(candidate.runId,log);
-          for(const file of memberWorkflowFiles(task,run,summary,owner.entry.path,ports.normalizePath)){const existing=files.get(file.relativePath);check(!existing||sameGoalValue(existing,file),'HUMAN_CONTINUATION_STALE','人工接受之间的程序验证文件指纹不一致');files.set(file.relativePath,file)}
+          const summary=await validateCandidate(state,scope,graph,task,knowledge.revision);current();const run=state.runs?.find(item=>item.binding.taskId===task.taskId&&item.binding.runId===candidate.runId);check(run,'HUMAN_CONTINUATION_STALE','接受的运行登记已经变化');
+          const evidence=memberWorkflowEvidence(task,run,summary,owner.entry.path,ports.normalizePath);log={run,summary,manifest:evidence.manifest};observed.set(candidate.runId,log);
+          if(!evidence.manifest)for(const file of evidence.files){const existing=files.get(file.relativePath);check(!existing||sameGoalValue(existing,file),'HUMAN_CONTINUATION_STALE','人工接受之间的程序验证文件指纹不一致');files.set(file.relativePath,file)}
         }
         check(hash(json(log.summary.events))===candidate.logHash&&candidate.evidenceToolCallIds.every(id=>task.result!.evidenceRefs.includes(id)),'HUMAN_CONTINUATION_STALE','接受的日志或证据引用已经变化');
+        if(log.manifest){
+          check(!selected&&candidate.selectedManifest?.state==='matches'&&sameGoalValue(candidate.selectedManifest.manifest,completeOutputProof(log.manifest))&&candidate.selectedManifest.observedHash===log.manifest.manifest.manifestHash,'HUMAN_CONTINUATION_STALE','人工接受与原交付完整清单身份不一致');continue;
+        }
+        check(!candidate.selectedManifest&&selected&&!selected.invalidated&&selected.files.length&&selected.files.every(file=>file.state==='matches'),'HUMAN_CONTINUATION_STALE','接受的选定文件基线已经变化');
         const artifacts=verifyArtifactBaselines(log.summary.events,log.run.binding,knowledge.revision,ports.normalizePath,selected.baselineId),baseline=artifacts.records.find(item=>item.baseline.baselineId===selected.baselineId),ref=artifacts.refs.find(item=>item.baselineId===selected.baselineId);
         check(baseline&&ref&&!ref.invalidated&&baseline.capturedSeq===selected.capturedSeq&&baseline.finishedSeq===selected.finishedSeq&&baseline.baseline.captureToolCallId===selected.captureToolCallId&&baseline.baseline.knowledgeRevision===selected.knowledgeRevision&&baseline.baseline.progressVersion===selected.progressVersion&&baseline.baseline.files.length===selected.files.length,'HUMAN_CONTINUATION_STALE','接受的采集事件、成功回执或基线版本不再有效');
         for(const captured of baseline.baseline.files){
@@ -73,9 +82,12 @@ export async function validateHumanAcceptances(owner:Pick<KnowledgeWorkspace,'en
         }
       }
     }
-    check(files.size>0&&files.size<=artifactLimits.files&&[...files.values()].reduce((total,file)=>total+file.byteLength,0)<=artifactLimits.totalBytes,'HUMAN_CONTINUATION_LIMIT','本次人工接受复核超过 16 文件或 32 MiB 上限');
-    const expected=[...files.values()].sort((a,b)=>a.relativePath<b.relativePath?-1:1),signal=AbortSignal.timeout(15000),checked=await ports.checkFiles(expected,signal);current();signal.throwIfAborted();
+    const manifests=[...observed.values()].flatMap(log=>log.manifest?[log.manifest]:[]);
+    check((files.size>0||manifests.length>0)&&files.size<=artifactLimits.files&&[...files.values()].reduce((total,file)=>total+file.byteLength,0)<=artifactLimits.totalBytes,'HUMAN_CONTINUATION_LIMIT','本次人工接受的选定文件复核超过 16 文件或 32 MiB 上限');
+    assertCompleteOutputBudget(manifests,[...files.values()]);
+    const expected=[...files.values()].sort((a,b)=>a.relativePath<b.relativePath?-1:1),signal=AbortSignal.timeout(15000),checked=expected.length?await ports.checkFiles(expected,signal):[];current();signal.throwIfAborted();
     check(checked.length===expected.length&&checked.every((file,index)=>artifactFileCheckSchema.safeParse(file).success&&file.relativePath===expected[index].relativePath&&file.state==='matches'&&sameGoalValue(file.expected,{byteLength:expected[index].byteLength,sha256:expected[index].sha256})&&sameGoalValue(file.observed,file.expected)),'HUMAN_CONTINUATION_STALE','接受依据的文件已经变化、缺失或无法核实');
+    for(const manifest of manifests){check(ports.checkManifest,'HUMAN_CONTINUATION_UNAVAILABLE','完整接受缺少真实全集合复核端口');const checked=await ports.checkManifest(manifest.manifest.snapshot,signal);current();signal.throwIfAborted();try{assertCompleteOutputCurrent(manifest.manifest.snapshot,checked)}catch{fail('HUMAN_CONTINUATION_STALE','已接受的完整产物集合已变化或无法核实；原意见保留，请重新安排验证')}}
     for(const {run,summary} of observed.values()){const again=await logs.inspectMember(run);current();check(sameGoalValue(summary,again),'HUMAN_CONTINUATION_STALE','人工接受复核期间成员日志变化')}
     for(const [runId,summary] of mains){const again=await logs.inspectMain(scope.rootSessionId,runId);current();check(sameGoalValue(summary,again),'HUMAN_CONTINUATION_STALE','人工接受复核期间主审阅日志变化')}
     check((await owner.read()).revision===knowledge.revision,'HUMAN_CONTINUATION_STALE','人工接受复核期间知识变化');current();

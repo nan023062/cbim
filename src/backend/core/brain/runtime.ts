@@ -1,4 +1,5 @@
 /**
+ * 完整出口将原清单选择/重核端口注入任务与JSON工具；实际交付授权必须唯一，门闩覆盖候选保存和回包之间。
  * 每个正式成员运行最多暂存一次检查点，可信剩余额度允许后续运行再次停泊，零额度仍保留正常交付。
  * 受控写边界：自身 beforeTool 可靠保存 allowed 才签发一次许可；未确认写入后整轮限制为读取/求助并按 interrupted 封存，原失败回执不改写。停止等待文件 child 退出，失败保留原占用。
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
@@ -24,6 +25,7 @@ import {RunArtifactCapture,type ArtifactCapturePort} from './artifact-capture';
 import {RunOutputManifestCapture,type OutputManifestCapturePort} from './output-manifest-capture';
 import {preparedArtifactScopes} from '../workspace/artifact-scope';
 import {outputManifestToolName,outputManifestInspectToolName} from '../tasks/output-manifest';
+import {completeOutputRequired} from '../tasks/complete-output-evidence';
 import {RunValidation,type ValidationFilePort} from './run-validation';
 import {RunControlledFile,type ControlledFileRunPort} from './run-controlled-file';
 import {controlledFileWriteToolName} from '../tasks/controlled-file-operation';
@@ -213,7 +215,7 @@ export class LoopRuntime {
       let checkpointTools:RunMemberCheckpoint|undefined;
       let validation:RunValidation|undefined;
       let controlledFile:RunControlledFile|undefined;
-      const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{identity,assertDeliveryReady,artifacts:()=>artifactCapture?.refs()??[],...(validationRequired?{validations:{records:()=>validation?.records()??[],verifyCurrent:async records=>{if(!validation)fail('VALIDATION_UNAVAILABLE','本轮验证端口尚未就绪');await validation.verifyCurrent(records)}}}:{}),...(workflows.length?{workflow:{bindings:workflows,task:{goal:task.goal,acceptance:task.acceptance},identity}}:{})});
+      const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{identity,assertDeliveryReady,artifacts:()=>artifactCapture?.refs()??[],...(completeOutputRequired(workflows)?{manifests:{select:(id,version)=>{if(!manifestCapture)fail('MANIFEST_UNAVAILABLE','本轮完整产物端口尚未就绪');return manifestCapture.select(id,version)},verifyCurrent:async record=>{if(!manifestCapture)fail('MANIFEST_UNAVAILABLE','本轮完整产物端口尚未就绪');await manifestCapture.verifyCurrent(record,'cbim_delivery_prepare')}}}:{}),...(validationRequired?{validations:{records:()=>validation?.records()??[],verifyCurrent:async records=>{if(!validation)fail('VALIDATION_UNAVAILABLE','本轮验证端口尚未就绪');await validation.verifyCurrent(records)}}}:{}),...(workflows.length?{workflow:{bindings:workflows,task:{goal:task.goal,acceptance:task.acceptance},identity}}:{})});
       const emit=async(event:EngineEvent,trustedArtifact=false)=>{
         // 契约版本来自真实描述和授权；模型/引擎事件不能给旧调用补造新协议来源。
         if(!trustedArtifact&&event.data.contractVersion!==undefined){const {contractVersion:_,...data}=event.data;event={...event,data}}
@@ -264,9 +266,14 @@ export class LoopRuntime {
         save:async baseline=>{await emit({type:'artifact.baseline_captured',data:{baseline}},true)},
       });
       if(member&&manifestScopes.length&&this.options.manifests)manifestCapture=new RunOutputManifestCapture(member.binding,manifestScopes,this.options.manifests,{
+        bindings:workflows,
         current:()=>taskTools.current(),
         assertReady:id=>{
           if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))fail('MANIFEST_CALL','完整产物采集已停止、未获准或仍有其它在途工具');
+        },
+        assertReadingReady:name=>{
+          const ids=[...activeCalls];if(stopping||ids.length!==1||pendingTools.size!==1||!pendingTools.has(ids[0])||calls.get(ids[0])?.decision.allow!==true||calls.get(ids[0])?.call.name!==name)fail('MANIFEST_CALL','完整产物复核已停止、未获准或仍有其它在途工具');
+          controlledFile?.assertVerified();
         },
         save:async manifest=>{await emit({type:'artifact.manifest_captured',data:{manifest}},true)},
       });
@@ -281,6 +288,7 @@ export class LoopRuntime {
         current:()=>taskTools.current(),generation:()=>taskTools.generation,
         assertReady:id=>{if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))fail('VALIDATION_CALL','JSON 验证已停止、未获准或仍有其他在途操作')},
         assertDeliveryReady:()=>{if(stopping||[...activeCalls].some(id=>calls.get(id)?.call.name!=='cbim_delivery_prepare')||[...pendingTools].some(id=>calls.get(id)?.call.name!=='cbim_delivery_prepare')||activeCalls.size>1)fail('VALIDATION_BUSY','仍有其他工具或审批未结束，不能读取 JSON 交付证据');assertDeliveryReady()},
+        verifyManifest:async(record,signal)=>{if(!manifestCapture)fail('MANIFEST_UNAVAILABLE','本轮完整产物端口尚未就绪');await manifestCapture.verifyCurrent(record,'cbim_validation_run',signal)},
         save:async value=>{await emit({type:'validation.checked',data:{validation:value}},true)},
       });
       let finishing=false;

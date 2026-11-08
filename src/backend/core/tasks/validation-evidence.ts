@@ -1,4 +1,5 @@
 /**
+ * 完整模式从验证调用之前的原canonical清单派生文件事实与集合身份；旧baseline与完整manifest互斥，任何模式降级均拒绝。
  * 作用定位：从可信冻结 Workflow 与本轮日志核实 JSON 验证事实，供 Runtime、交付和主目标复核共同使用。
  * 设计原因：结果正文和 succeeded 回执都不能单独声明通过；要求、基线、真实调用、文件字节指纹及事件顺序必须一致。
  * 职责边界：不读文件，不判断当前字节；外层完整 canonical 身份/终态与异步文件重核仍不可省略。
@@ -8,6 +9,10 @@ import {hash} from '../foundation/serialization';
 import {workflowContractSchema,type WorkflowContract} from '../workspace/workflow-contract';
 import {jsonValidationLimits} from '../workspace/json-validation-schema';
 import {artifactSucceededCall,verifyArtifactBaselines,type ArtifactEvidenceEvent} from './artifact-evidence';
+import {preparedArtifactScopes} from '../workspace/artifact-scope';
+import {verifyOutputManifests} from './output-manifest-evidence';
+import {completeOutputRequired,selectCompleteOutput,outputManifestIdentity} from './complete-output-evidence';
+import type {ArtifactFileFact} from './artifact-baseline';
 import {validationInputSchema,validationOutputSchema,validationResultSchema,validationRecordSchema,validationToolName,type ValidationBinding,type ValidationRecord} from './validation';
 export interface ValidationWorkflowBinding {moduleId:string;workflowId:string;workflowVersion:string;contract:WorkflowContract}
 function valid(value:unknown,message:string):asserts value{if(!value)fail('VALIDATION_EVIDENCE_INVALID',message)}
@@ -37,10 +42,19 @@ export function verifyValidationRecords(events:readonly ArtifactEvidenceEvent[],
     let body:unknown;try{body=JSON.parse(block.text)}catch{valid(false,'验证正文不是有效 JSON')}
     const output=validationOutputSchema.safeParse(body);valid(output.success&&same(output.data,body)&&same(output.data.validation,result),'验证事件与原回包不一致');
     const selected=validationRequirement(bindings,input.data.moduleId,input.data.requirementId);
-    valid(same(result.binding,binding)&&result.knowledgeRevision===knowledgeRevision&&same(result.requirement,{moduleId:selected.binding.moduleId,workflowId:selected.binding.workflowId,workflowVersion:selected.binding.workflowVersion,requirementId:selected.requirement.id,schemaHash:selected.schemaHash})&&result.baselineId===input.data.baselineId&&result.taskProgressVersion===input.data.expectedTaskProgressVersion,'验证记录与原请求、知识或冻结要求不一致');
-    const before=events.filter(value=>value.seq<own.allowed.seq),baselines=verifyArtifactBaselines(before,binding,knowledgeRevision,normalizePath),base=baselines.records.find(value=>value.baseline.baselineId===result.baselineId),ref=baselines.refs.find(value=>value.baselineId===result.baselineId);
-    valid(base&&ref&&!ref.invalidated&&base.baseline.progressVersion<=result.taskProgressVersion,'验证没有当前有效的同轮文件基线');
-    const files=base.baseline.files.filter(file=>normalizePath(file.relativePath)===normalizePath(selected.requirement.artifactPath));
+    valid(same(result.binding,binding)&&result.knowledgeRevision===knowledgeRevision&&same(result.requirement,{moduleId:selected.binding.moduleId,workflowId:selected.binding.workflowId,workflowVersion:selected.binding.workflowVersion,requirementId:selected.requirement.id,schemaHash:selected.schemaHash})&&result.baselineId===input.data.baselineId&&result.manifest?.manifestId===input.data.manifestId&&result.taskProgressVersion===input.data.expectedTaskProgressVersion,'验证记录与原请求、知识或冻结要求不一致');
+    const before=events.filter(value=>value.seq<own.allowed.seq);let sourceFiles:ArtifactFileFact[];
+    if(completeOutputRequired(bindings)){
+      valid(input.data.manifestId&&result.manifest&&!result.baselineId,'完整验证不能回退为选定文件基线');
+      const manifest=selectCompleteOutput(verifyOutputManifests(before,binding,knowledgeRevision,preparedArtifactScopes(bindings)),bindings,input.data.manifestId,{...binding,knowledgeRevision,progressVersion:result.taskProgressVersion});
+      valid(same(result.manifest,outputManifestIdentity(manifest.manifest)),'验证引用与原完整清单身份不一致');
+      sourceFiles=manifest.manifest.snapshot.entries.flatMap(file=>file.kind==='file'?[{relativePath:file.relativePath,byteLength:file.byteLength,sha256:file.sha256}]:[]);
+    }else{
+      valid(input.data.baselineId&&!result.manifest,'旧文件验证不能补造完整出口');
+      const baselines=verifyArtifactBaselines(before,binding,knowledgeRevision,normalizePath),base=baselines.records.find(value=>value.baseline.baselineId===result.baselineId),ref=baselines.refs.find(value=>value.baselineId===result.baselineId);
+      valid(base&&ref&&!ref.invalidated&&base.baseline.progressVersion<=result.taskProgressVersion,'验证没有当前有效的同轮文件基线');sourceFiles=base.baseline.files;
+    }
+    const files=sourceFiles.filter(file=>normalizePath(file.relativePath)===normalizePath(selected.requirement.artifactPath));
     valid(files.length===1&&normalizePath(result.artifact.relativePath)===normalizePath(selected.requirement.artifactPath)&&same(result.artifact,{relativePath:files[0].relativePath,byteLength:files[0].byteLength,sha256:files[0].sha256}),'验证文件与要求和真实基线字节不一致');
     const progress=before.filter(value=>value.type==='task.updated').at(-1)?.data.progress as {version?:unknown}|undefined;
     valid(progress?.version===result.taskProgressVersion&&result.lastEffectSeq===(before.filter(effect).at(-1)?.seq??0),'验证进度或副作用界限不一致');

@@ -1,9 +1,10 @@
 /**
+ * 完整清单与旧文件选择在同一候选互斥，选择不调用后端；两处卡片继续共享同一草稿及冻结请求。
  * 作用定位：为当前主会话装配唯一人工决定控制器，将同一草稿和冻结请求传给对话及任务根。
  * 设计原因：只依据已同步的 waiting 详情开放提交，历史可查看而不能冒充当前目标；文件核实及返工后的清除旧选择均由明确点击触发，不追加轮询或自动批准。
  */
 import {useEffect,useMemo,useRef,useState} from 'react';
-import type {HumanDecisionBaselineSelection,HumanDecisionKind,HumanDecisionRecord} from '../../bridge/contracts/human-decisions';
+import type {HumanDecisionBaselineSelection,HumanDecisionManifestSelection,HumanDecisionKind,HumanDecisionRecord} from '../../bridge/contracts/human-decisions';
 import type {ScopeGoalState} from './scope-state';
 import {HumanDecisionPool,type HumanDecisionTarget,type HumanDecisionDraft,type HumanDecisionPreviewState} from './human-decision-state';
 
@@ -13,6 +14,7 @@ export interface HumanDecisionsView {
   record?:HumanDecisionDraft;history:HumanDecisionRecord[];preview?:HumanDecisionPreviewState;
   eligible:boolean;editable:boolean;pending:boolean;previewCurrent:boolean;canSubmit:boolean;canRetry:boolean;error:string;
   select:(criterionId:string)=>void;chooseBaseline:(taskId:string,runId:string,baselineId:string)=>void;
+  chooseManifest:(taskId:string,runId:string,manifestId:string)=>void;
   chooseDecision:(decision:HumanDecisionKind)=>void;comment:(text:string)=>void;
   inspect:()=>Promise<void>;clearBaselines:()=>Promise<void>;submit:()=>Promise<void>;query:()=>Promise<void>;retry:()=>Promise<void>;
 }
@@ -35,11 +37,12 @@ export function useHumanDecisions(workspaceId:string,rootSessionId:string|undefi
   const preview=target?controller?.previewState(target):undefined,current=target?controller?.currentPreview(target):undefined;
   const editable=!!target&&!!controller?.available&&!controller.locked(record);
   const after=async(action:()=>Promise<void>)=>{await action();if(identityRef.current===identity)refreshRef.current()};
-  const edit=(change:Partial<Pick<HumanDecisionDraft,'baselines'|'decision'|'comment'>>)=>{if(target&&editable)controller?.edit(target,change)};
+  const edit=(change:Partial<Pick<HumanDecisionDraft,'baselines'|'manifests'|'decision'|'comment'>>)=>{if(target&&editable)controller?.edit(target,change)};
   return {scopeId:scope?.scopeId,criterionId,criteria,record,preview,history:scope?.humanDecisions?.records??[],eligible:!!target,editable,pending,previewCurrent:!!current,
     canSubmit:editable&&record?.attempt?.phase!=='accepted'&&!!record?.decision&&!!current?.basis&&current.allowedDecisions.includes(record.decision)&&(record.decision==='accept'||!!record.comment.trim()),
     canRetry:!!controller?.available&&!pending&&record?.attempt?.phase==='unknown',error:controller?.snapshot.error??'',select,
-    chooseBaseline:(taskId,runId,baselineId)=>{const baselines:HumanDecisionBaselineSelection[]=(record?.baselines??[]).filter(value=>value.taskId!==taskId);if(baselineId)baselines.push({taskId,runId,baselineId});edit({baselines})},
+    chooseBaseline:(taskId,runId,baselineId)=>{const baselines:HumanDecisionBaselineSelection[]=(record?.baselines??[]).filter(value=>value.taskId!==taskId);if(baselineId)baselines.push({taskId,runId,baselineId});edit({baselines,...(record?.manifests?{manifests:record.manifests.filter(value=>value.taskId!==taskId)}:{})})},
+    chooseManifest:(taskId,runId,manifestId)=>{const manifests:HumanDecisionManifestSelection[]=(record?.manifests??[]).filter(value=>value.taskId!==taskId);if(manifestId)manifests.push({taskId,runId,manifestId});edit({manifests,baselines:(record?.baselines??[]).filter(value=>value.taskId!==taskId)})},
     chooseDecision:decision=>edit({decision}),comment:text=>edit({comment:text}),
     inspect:async()=>{if(target)await controller?.preview(target)},clearBaselines:async()=>{if(target&&editable&&controller?.resetBaselines(target))await controller.preview(target)},submit:async()=>{if(target&&controller)await after(()=>controller.submit(target))},
     query:async()=>{if(scope&&controller)await after(()=>controller.query(scope.scopeId,criterionId))},retry:async()=>{if(scope&&controller)await after(()=>controller.retry(scope.scopeId,criterionId))},

@@ -1,4 +1,5 @@
 /**
+ * 成员/最终目标复核与人工候选共用原完整身份；历史入口只重建事实，当前接受入口必须另核完整范围。
  * 已放弃的多段检查点作为换边来源时核全部原日志，不只信任最新段的摘要。
  * 持久成员等待通过独立只读核验精确保留原检查点和后继，主轮安全结算才停泊；未知和在途仍拒绝。
  * 问答边界：当前与历史候选共用真实业务回执校验，普通回答及取消不能替代目标完成或人工验收依据。
@@ -31,7 +32,8 @@ import {memberPublicTask} from './member-events';
 import {consumedHumanDecision,assertHumanSubject,validateHumanAcceptances,type HumanDecisionPorts} from './human-decision-evidence';
 import type {HumanDecisionRecord} from '../../core/tasks/human-decisions';
 import {currentHumanContinuation} from '../../core/tasks/human-continuation-rules';
-import {validateMemberWorkflow,memberWorkflowFiles} from './member-workflow';
+import {validateMemberWorkflow,memberWorkflowFiles,memberWorkflowEvidence} from './member-workflow';
+import type {OutputManifestRecord,OutputManifestSnapshot,OutputManifestCheck} from '../../core/tasks/output-manifest';
 import type {ArtifactFileFact,ArtifactFileCheck} from '../../core/tasks/artifact-baseline';
 import {sameWorkflowSelectionsForModules,validateWorkflowSelections} from '../../core/tasks/workflow-selection';
 import {sameOwnerExecutionForModules,type OwnerExecutionBinding} from '../../core/team/member-execution-binding';
@@ -47,6 +49,7 @@ export interface ScopeGoalPorts {
   /** 与执行端同一纯路径规则及只读文件能力；不得通过报告服务重入当前派发事务。 */
   normalizeValidationPath?(raw:string):string;
   checkValidationFiles?(files:readonly ArtifactFileFact[],signal:AbortSignal):Promise<ArtifactFileCheck[]>;
+  checkManifest?(expected:OutputManifestSnapshot,signal:AbortSignal):Promise<OutputManifestCheck>;
 }
 type Owner=Pick<KnowledgeWorkspace,'entry'|'instanceId'|'assert'|'snapshot'|'read'>;
 const effects=new Set(['business-write','knowledge-write','command']);
@@ -178,7 +181,7 @@ export class ScopeGoalService {
     for(const id of result.evidenceRefs)this.receipt(summary,id);
     try{
       if(historical)memberWorkflowFiles(task,run,summary,this.owner.entry.path,this.ports?.normalizeValidationPath);
-      else await validateMemberWorkflow(task,run,summary,this.owner.entry.path,this.ports?.checkValidationFiles&&this.ports.normalizeValidationPath?{normalizePath:this.ports.normalizeValidationPath,checkFiles:this.ports.checkValidationFiles}:undefined);
+      else await validateMemberWorkflow(task,run,summary,this.owner.entry.path,this.ports?.checkValidationFiles&&this.ports.normalizeValidationPath?{normalizePath:this.ports.normalizeValidationPath,checkFiles:this.ports.checkValidationFiles,checkManifest:this.ports.checkManifest}:undefined);
     }catch(error){fail('GOAL_WORKFLOW_UNMET',error instanceof Error?error.message:'成员 Workflow 程序条件无法核实')}
     return summary;
   }
@@ -208,7 +211,7 @@ export class ScopeGoalService {
     const head=main.events[0],tail=main.events.at(-1),bounds=main.events.filter(event=>event.type==='session.bound'),facts=executionToolFacts(main,{binding:{workspaceId:scope.workspaceId,taskId:scope.rootSessionId,runId:review.runId}});
     check(main.status==='completed'&&main.logIntegrity?.partialTail===false&&!main.unresolvedTools.length&&head?.type==='run.started'&&sameGoalValue(head.data.task,main.task)&&sameGoalValue(head.data.conversationBinding,main.conversationBinding)&&!head.data.memberBinding&&tail?.type==='run.settled'&&tail.data.status==='completed'&&main.events.every((event,index)=>event.seq===index+1&&event.workspaceId===scope.workspaceId&&event.taskId===scope.rootSessionId&&event.runId===review.runId)&&!!main.sessionFile&&bounds.length&&bounds.every(event=>event.data.sessionFile===main.sessionFile&&typeof event.data.sessionId==='string'&&!!event.data.sessionId&&event.data.sessionId===bounds[0].data.sessionId)&&!facts.invalid&&!facts.counts.unknown&&!facts.counts.not_authorized,'HUMAN_EVIDENCE_INVALID','主审阅日志或原生通道登记不完整，不能据此保存人工决定');
     check(sameGoalValue(wait.graphCursor,review.graphCursor)&&sameGoalValue(review.graphCursor,cursor(graph))&&lastEffect(main)===review.lastEffectSeq&&review.observedSeq<tail.seq,'HUMAN_STALE','等待后的任务图、主审阅或副作用依据发生变化');
-    const selected=new Map<string,{task:TaskNode;run:DispatchRun;summary:RunSummary;evidenceToolCallIds:string[];workflowFiles:ArtifactFileFact[]}>();
+    const selected=new Map<string,{task:TaskNode;run:DispatchRun;summary:RunSummary;evidenceToolCallIds:string[];workflowFiles:ArtifactFileFact[];manifest?:OutputManifestRecord}>();
     for(const reference of item.evidence){
       check(reference.kind==='member-result','HUMAN_SOURCE_INVALID','人工验收只支持成员结果');
       const task=graph.tasks.find(task=>task.taskId===reference.taskId),result=task?.result;
@@ -216,8 +219,8 @@ export class ScopeGoalService {
       let candidate=selected.get(task.taskId);
       if(!candidate){
         const summary=await this.validateHistoricalMemberCandidate(state,scope,graph,task,snapshot.revision),run=state.runs!.find(run=>run.binding.runId===result.runId&&run.binding.taskId===task.taskId)!;
-        const workflowFiles=memberWorkflowFiles(task,run,summary,this.owner.entry.path,this.ports?.normalizeValidationPath);
-        candidate={task,run,summary,evidenceToolCallIds:[],workflowFiles};selected.set(task.taskId,candidate);
+        const {files:workflowFiles,manifest}=memberWorkflowEvidence(task,run,summary,this.owner.entry.path,this.ports?.normalizeValidationPath);
+        candidate={task,run,summary,evidenceToolCallIds:[],workflowFiles,...(manifest?{manifest}:{})};selected.set(task.taskId,candidate);
       }
       for(const id of reference.toolCallIds){this.receipt(candidate.summary,id);if(!candidate.evidenceToolCallIds.includes(id))candidate.evidenceToolCallIds.push(id)}
     }

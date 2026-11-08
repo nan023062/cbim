@@ -1,10 +1,13 @@
 /**
+ * 完整候选只显式选择原交付清单；意见保存原证明及全集合观察摘要，完整条目仍在canonical，多候选共用有界预算。
  * 作用定位：定义本机显式人工决定的请求、精确依据和只读历史，供调度与桌面共同校验。
  * 设计原因：人工选择与模型审阅、运行许可分离；记录只声明所述验收项及所选成果，不能把成功命令的范围未知当成工具结果未知。
  * 职责边界：保持纯序列化叶子契约；不读取文件、不认证账号、不批准运行或将目标标为完成。
  */
 import {z} from 'zod';
 import {artifactFileCheckSchema,artifactLimits} from './artifact-baseline';
+import {outputManifestProofSchema} from './output-manifest';
+import {artifactScopeLimits} from '../workspace/artifact-scope';
 
 const id=z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 const logical=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
@@ -20,8 +23,11 @@ export const humanDecisionIdentitySchema=z.object({workspaceId:id,rootSessionId:
 const criterion=z.object({id:logical,text:z.string().min(1).max(16000),kind:z.literal('human')}).strict();
 export const humanDecisionBaselineSelectionSchema=z.object({taskId:id,runId:id,baselineId:id}).strict();
 export type HumanDecisionBaselineSelection=z.infer<typeof humanDecisionBaselineSelectionSchema>;
+export const humanDecisionManifestSelectionSchema=z.object({taskId:id,runId:id,manifestId:id}).strict();
+export type HumanDecisionManifestSelection=z.infer<typeof humanDecisionManifestSelectionSchema>;
 const selections=z.array(humanDecisionBaselineSelectionSchema).max(16).refine(values=>unique(values.map(item=>item.taskId+':'+item.runId)),'每个候选最多明确选择一份基线');
-export const humanDecisionPreviewInputSchema=humanDecisionIdentitySchema.extend({criterionId:logical,baselines:selections}).strict();
+const manifestSelections=z.array(humanDecisionManifestSelectionSchema).max(16).refine(values=>unique(values.map(item=>item.taskId+':'+item.runId)),'每个候选最多明确选择一份完整清单');
+export const humanDecisionPreviewInputSchema=humanDecisionIdentitySchema.extend({criterionId:logical,baselines:selections,manifests:manifestSelections.optional()}).strict();
 export type HumanDecisionPreviewInput=z.infer<typeof humanDecisionPreviewInputSchema>;
 /** actor、文件观察和证明不属于请求；它们由可信桌面入口与核实服务生成。 */
 export const humanDecisionRequestSchema=humanDecisionPreviewInputSchema.extend({commandId:z.string().uuid(),expectedDecisionRevision:seq.max(humanDecisionLimit),expectedBasis:digest,decision:humanDecisionKindSchema,comment:z.string().trim().max(4000)}).strict().refine(value=>value.decision==='accept'||value.comment.length>0,'拒绝或补证须写明意见');
@@ -43,35 +49,45 @@ export const humanDecisionArtifactObservationSchema=z.object({baselineId:id,capt
   }
 });
 export type HumanDecisionArtifactObservation=z.infer<typeof humanDecisionArtifactObservationSchema>;
+/** 只存原清单证明与本次全集合观察结论；完整条目保留于 canonical，避免每条意见重复复制。 */
+export const humanDecisionManifestObservationSchema=z.object({manifest:outputManifestProofSchema,state:z.enum(['matches','changed','unverifiable']),observedHash:digest.optional()}).strict().superRefine((value,context)=>{
+  if(value.state==='matches'&&value.observedHash!==value.manifest.manifestHash||value.state==='changed'&&(!value.observedHash||value.observedHash===value.manifest.manifestHash)||value.state==='unverifiable'&&value.observedHash)context.addIssue({code:'custom',message:'完整集合观察与原清单指纹矛盾'});
+});
 /** 不复制正文或原生路径；日志指纹与精确候选/回执身份绑定当时事实。 */
-export const humanDecisionCandidateProofSchema=z.object({taskId:id,taskRevision:positive,runId:id,resultId:id,planRevision:positive,logHash:digest,evidenceToolCallIds:z.array(callId).min(1).max(100).refine(unique),selected:humanDecisionArtifactObservationSchema.optional()}).strict();
+export const humanDecisionCandidateProofSchema=z.object({taskId:id,taskRevision:positive,runId:id,resultId:id,planRevision:positive,logHash:digest,evidenceToolCallIds:z.array(callId).min(1).max(100).refine(unique),selected:humanDecisionArtifactObservationSchema.optional(),selectedManifest:humanDecisionManifestObservationSchema.optional()}).strict();
 export type HumanDecisionCandidateProof=z.infer<typeof humanDecisionCandidateProofSchema>;
-export const humanDecisionCandidateSchema=humanDecisionCandidateProofSchema.extend({agentName:z.string().min(1).max(240),summary:z.string().max(240),baselines:z.array(z.object({baselineId:id,capturedAt:time,fileCount:positive.max(artifactLimits.files)}).strict()).max(artifactLimits.baselines)}).strict();
+export const humanDecisionCandidateSchema=humanDecisionCandidateProofSchema.extend({agentName:z.string().min(1).max(240),summary:z.string().max(240),baselines:z.array(z.object({baselineId:id,capturedAt:time,fileCount:positive.max(artifactLimits.files)}).strict()).max(artifactLimits.baselines),manifest:outputManifestProofSchema.optional()}).strict();
 export type HumanDecisionCandidate=z.infer<typeof humanDecisionCandidateSchema>;
 const candidates=z.array(humanDecisionCandidateProofSchema).min(1).max(16).refine(values=>unique(values.map(item=>item.taskId)),'候选任务不能重复');
 const limitations=z.array(z.string().min(1).max(1000)).min(1).max(32).refine(values=>values.includes(humanDecisionCoverageLimitation),'人工决定必须保留选定成果的范围限制');
 const allowed=z.array(humanDecisionKindSchema).max(3);
 const issue=z.object({code:id,message:z.string().min(1).max(512)}).strict();
-export const humanDecisionPreviewSchema=z.object({identity:humanDecisionPreviewInputSchema.omit({baselines:true}),checkedAt:time,decisionRevision:seq.max(humanDecisionLimit),basis:digest.optional(),source:humanDecisionSourceSchema.optional(),candidates:z.array(humanDecisionCandidateSchema).max(16),allowedDecisions:allowed.refine(unique),limitations,issues:z.array(issue).max(32),latestDecisionId:z.string().uuid().optional()}).strict().superRefine((value,context)=>{
+export const humanDecisionPreviewSchema=z.object({identity:humanDecisionPreviewInputSchema.omit({baselines:true,manifests:true}),checkedAt:time,decisionRevision:seq.max(humanDecisionLimit),basis:digest.optional(),source:humanDecisionSourceSchema.optional(),candidates:z.array(humanDecisionCandidateSchema).max(16),allowedDecisions:allowed.refine(unique),limitations,issues:z.array(issue).max(32),latestDecisionId:z.string().uuid().optional()}).strict().superRefine((value,context)=>{
   if(value.allowedDecisions.length&&(!value.basis||!value.source||!value.candidates.length))context.addIssue({code:'custom',message:'可提交决定必须具备当前完整依据'});
   if(value.source&&value.source.criterion.id!==value.identity.criterionId)context.addIssue({code:'custom',message:'预览人工项与身份不一致'});
   if(!unique(value.candidates.map(item=>item.taskId)))context.addIssue({code:'custom',message:'候选任务重复'});
+  for(const candidate of value.candidates)if(candidate.selected&&candidate.selectedManifest||candidate.manifest&&(candidate.selected||candidate.baselines.length)||candidate.selectedManifest&&JSON.stringify(candidate.selectedManifest.manifest)!==JSON.stringify(candidate.manifest))context.addIssue({code:'custom',message:'完整候选不能退回文件子集或替换原交付清单'});
 });
 export type HumanDecisionPreview=z.infer<typeof humanDecisionPreviewSchema>;
 /** basis 仅覆盖事实与可提交范围，排除读取时间、独立决定序列和候选基线菜单。 */
 export const humanDecisionProofSchema=z.object({identity:humanDecisionIdentitySchema,source:humanDecisionSourceSchema,candidates,limitations,allowedDecisions:allowed.min(1).refine(unique)}).strict();
 export type HumanDecisionProof=z.infer<typeof humanDecisionProofSchema>;
-export const humanDecisionRecordSchema=z.object({decisionId:z.string().uuid(),revision:positive.max(humanDecisionLimit),recordedAt:time,actor:humanDecisionActorSchema,criterionId:logical,decision:humanDecisionKindSchema,comment:z.string().trim().max(4000),basis:digest,baselines:selections,proof:humanDecisionProofSchema,supersedesDecisionId:z.string().uuid().optional()}).strict().superRefine((value,context)=>{
+export const humanDecisionRecordSchema=z.object({decisionId:z.string().uuid(),revision:positive.max(humanDecisionLimit),recordedAt:time,actor:humanDecisionActorSchema,criterionId:logical,decision:humanDecisionKindSchema,comment:z.string().trim().max(4000),basis:digest,baselines:selections,manifests:manifestSelections.optional(),proof:humanDecisionProofSchema,supersedesDecisionId:z.string().uuid().optional()}).strict().superRefine((value,context)=>{
   const issue=(message:string)=>context.addIssue({code:'custom',message});
   if(value.criterionId!==value.proof.source.criterion.id||!value.proof.allowedDecisions.includes(value.decision))issue('人工项或决定不属于核实依据');
   if(value.decision!=='accept'&&!value.comment)issue('拒绝或补证须保留意见');
   const selected=value.proof.candidates.filter(item=>item.selected);
   if(value.baselines.length!==selected.length||!value.baselines.every(selection=>selected.some(item=>item.taskId===selection.taskId&&item.runId===selection.runId&&item.selected!.baselineId===selection.baselineId)))issue('选择与已核实文件依据不一致');
-  if(value.decision==='accept'&&value.proof.candidates.some(item=>!item.selected||item.selected.invalidated||!item.selected.files.length||item.selected.files.some(file=>file.state!=='matches')||item.selected.knowledgeRevision!==value.proof.source.knowledgeRevision))issue('接受必须明确选择全部候选的当前有效且完全匹配的基线');
+  const manifests=value.proof.candidates.filter(item=>item.selectedManifest);
+  if((value.manifests?.length??0)!==manifests.length||!value.manifests?.every(selection=>manifests.some(item=>item.taskId===selection.taskId&&item.runId===selection.runId&&item.selectedManifest!.manifest.manifestId===selection.manifestId))&&manifests.length)issue('完整选择与已核实的原交付清单不一致');
+  if(value.proof.candidates.some(item=>item.selected&&item.selectedManifest))issue('同一候选不能同时引用文件子集与完整清单');
+  if(value.decision==='accept'&&value.proof.candidates.some(item=>item.selectedManifest?item.selectedManifest.state!=='matches'||item.selectedManifest.manifest.knowledgeRevision!==value.proof.source.knowledgeRevision:!item.selected||item.selected.invalidated||!item.selected.files.length||item.selected.files.some(file=>file.state!=='matches')||item.selected.knowledgeRevision!==value.proof.source.knowledgeRevision))issue('接受必须明确选择全部候选的当前有效且完全匹配的产物依据');
   const files=new Map<string,{byteLength:number;sha256:string}>();
   // 拒绝/补证可保留冲突观察；相同路径仍按最大期望大小计量，不能用后来较小的版本降低读取上限。
   for(const item of selected)for(const file of item.selected!.files){const existing=files.get(file.relativePath);if(existing&&(existing.byteLength!==file.expected.byteLength||existing.sha256!==file.expected.sha256)&&value.decision==='accept')issue('候选对同一文件的期望不一致');if(!existing||existing.byteLength<file.expected.byteLength)files.set(file.relativePath,file.expected)}
   if(files.size>artifactLimits.files||[...files.values()].reduce((total,file)=>total+file.byteLength,0)>artifactLimits.totalBytes)issue('人工决定的文件核实范围超过上限');
+  const proofs=manifests.map(item=>item.selectedManifest!.manifest);
+  if(proofs.reduce((sum,item)=>sum+item.scopes.reduce((n,scope)=>n+scope.scope.roots.length,0),0)>artifactScopeLimits.roots||files.size+proofs.reduce((sum,item)=>sum+item.entryCount,0)>artifactScopeLimits.entries||[...files.values()].reduce((sum,file)=>sum+file.byteLength,0)+proofs.reduce((sum,item)=>sum+item.byteLength,0)>artifactScopeLimits.totalBytes)issue('人工决定的完整集合合并预算超过上限');
 });
 export type HumanDecisionRecord=z.infer<typeof humanDecisionRecordSchema>;
 export const scopeHumanDecisionsSchema=z.object({revision:positive.max(humanDecisionLimit),records:z.array(humanDecisionRecordSchema).min(1).max(humanDecisionLimit)}).strict().superRefine((value,context)=>{

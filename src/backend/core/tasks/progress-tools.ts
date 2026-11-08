@@ -1,6 +1,6 @@
 /**
  * 作用定位：内部 Loop 的任务计划、步骤证据和交付工具，状态通过注入的持久化回调保存。
- * 设计原因：普通问答不创建计划；真实身份和代次限定证据。JSON 验证 rejected 仍可记录步骤事实，交付必须选择 passed 并复核文件；保存前冻结依据，输出错误不回滚版本。
+ * 设计原因：普通问答不创建计划；真实身份和代次限定证据。完整出口固定模型明确选择的原清单，并要求JSON同身份；交付前重核全集合，保存前冻结依据，坏输出不回滚版本。
  */
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import type {TaskProgress} from './progress';
@@ -10,6 +10,8 @@ import {checkedJsonToolResult} from '../tools/results';
 import {fail} from '../foundation/errors';
 import {assertWorkflowPlan,evaluateWorkflowDelivery,selectWorkflowValidations,type WorkflowProgressContext} from './workflow-evidence';
 import type {ProgressValidationPort} from './validation';
+import type {ProgressManifestPort} from './output-manifest';
+import {completeOutputRequired,completeOutputProof} from './complete-output-evidence';
 import {progressToolInputSchemas,type ProgressPlanInput,type ProgressStepInput,type ProgressDeliveryInput} from './progress-schema';
 import {isProgressEvidence,memberToolContract,memberToolOutputSchema,progressToolIdentitySchema,type MemberToolName,type ProgressToolIdentity,type ProgressOutputBasis} from './member-tool-output';
 
@@ -17,7 +19,7 @@ const definitions={
   cbim_task_inspect:{description:'读取本会话执行计划、本轮可引用的成功工具回执及已装配的 JSON 验证事实。rejected 是检查已执行但不符合要求，不能满足交付出口。普通问答无需创建计划。',schema:progressToolInputSchemas.cbim_task_inspect},
   cbim_task_plan:{description:'创建或修订执行计划。expectedVersion 初次为 0；修订清除旧证据并保留历史。责任是描述，不会派发其他 Agent。',schema:progressToolInputSchemas.cbim_task_plan},
   cbim_task_step:{description:'更新步骤；reported_done 必须引用 cbim_task_inspect 返回的本轮有效 evidenceIds。完成声明仍需人工判断。',schema:progressToolInputSchemas.cbim_task_step},
-  cbim_delivery_prepare:{description:'准备交付候选。全部步骤须有有效回执证据；只标记待审阅，不能表示业务验收通过。',schema:progressToolInputSchemas.cbim_delivery_prepare},
+  cbim_delivery_prepare:{description:'准备交付候选。全部步骤须有有效回执；Workflow 若要求 requireCompleteManifest，须明确原 manifestId，JSON验证须引用同一清单，程序重核全部声明根及后代。仅观察声明和旧模式不传 manifestId。这里只标记待审阅，不能表示人工业务验收通过。',schema:progressToolInputSchemas.cbim_delivery_prepare},
 };
 /** 工具只维护执行记录，不修改项目或知识；参数校验可在授权前独立调用。 */
 export function progressTool(name:string,input:unknown){
@@ -43,7 +45,7 @@ export class TaskProgressTools {
   private readonly workflow?:WorkflowProgressContext;
   private readonly identity:ProgressToolIdentity;
   /** save 成功才替换内存状态；恢复保留计划，但不沿用上轮尚未重新核实的证据。 */
-  constructor(previous:TaskProgress|undefined,private save:(state:TaskProgress)=>Promise<void>,private readonly ports:{identity:ProgressToolIdentity;artifacts?():ArtifactBaselineRef[];workflow?:WorkflowProgressContext;validations?:ProgressValidationPort;
+  constructor(previous:TaskProgress|undefined,private save:(state:TaskProgress)=>Promise<void>,private readonly ports:{identity:ProgressToolIdentity;artifacts?():ArtifactBaselineRef[];workflow?:WorkflowProgressContext;validations?:ProgressValidationPort;manifests?:ProgressManifestPort;
     /** 真正执行交付时再同步核在途副作用，防止已获 gate 后才出现写入；不请求权限或执行 I/O。 */
     assertDeliveryReady?():void;
   }){this.state=previous?structuredClone(previous):undefined;this.workflow=ports.workflow?structuredClone(ports.workflow):undefined;this.identity=structuredClone(ports.identity);if(!progressToolIdentitySchema.safeParse(this.identity).success)fail('TASK_PROGRESS_IDENTITY','执行进度必须绑定真实工作区、任务与运行')}
@@ -100,12 +102,19 @@ export class TaskProgressTools {
           this.ports?.assertDeliveryReady?.();
           if(next.steps.some(s=>s.state!=='reported_done'||!s.evidence.length||s.evidence.some(id=>!this.evidence.has(id))))throw Error('仍有未完成步骤或缺失有效证据');
           const draft=args as ProgressDeliveryInput;next.state='awaiting_review';next.delivery={summary:draft.summary,limitations:draft.limitations};
+          if(draft.manifestId&&!completeOutputRequired(this.workflow?.bindings??[]))fail('MANIFEST_UNDECLARED','本轮未声明完整交付要求，不能把观察引用作为出口');
           if(this.workflow?.bindings.length){
             if(!this.planEstablished||next.goal!==this.workflow.task.goal||JSON.stringify(next.acceptance)!==JSON.stringify(this.workflow.task.acceptance))fail('WORKFLOW_PLAN_REQUIRED','Workflow 交付要求本轮保存与原任务一致的计划');
             const selected=[...new Set(next.steps.flatMap(step=>step.evidence))].map(id=>this.evidence.get(id)!);
             const validations=selectWorkflowValidations(this.workflow.bindings,selected,this.workflow.identity,basis.validations??[]);
+            const complete=completeOutputRequired(this.workflow.bindings);
+            if(complete&&(!draft.manifestId||!this.ports.manifests))fail('MANIFEST_REQUIRED','完整交付必须明确选择原清单并装配真实复核端口');
+            const manifest=complete?this.ports.manifests!.select(draft.manifestId!,draft.expectedVersion):undefined;
+            if(manifest)basis.manifest=completeOutputProof(manifest);
+            // 先核所有引用是否同一集合，再做文件读取；不能验证后自动换绑另一清单。
+            next.delivery.workflow=evaluateWorkflowDelivery(this.workflow.bindings,selected,this.workflow.identity,basis.validations,basis.manifest);
             if(validations.length){if(!this.ports.validations)fail('WORKFLOW_VALIDATION_UNAVAILABLE','本轮没有可信文件验证端口');await this.ports.validations.verifyCurrent(validations);this.ports.assertDeliveryReady?.()}
-            next.delivery.workflow=evaluateWorkflowDelivery(this.workflow.bindings,selected,this.workflow.identity,basis.validations);
+            if(manifest){await this.ports.manifests!.verifyCurrent(manifest);this.ports.assertDeliveryReady?.()}
           }
         }
         basis.expected=structuredClone(next);result=await this.persist(next);

@@ -522,11 +522,11 @@ LoopRuntime ..> AgentEngine : 通过既有契约驱动
 
 #### 一次成员检查点与原通道续执行
 
-`RunMemberCheckpoint` 仅为具备可信文件端口的成员首轮装配 `cbim_task_checkpoint`。策略 await 之前同步预占门闩，拒绝未结束工具或审批；完整白名单文件来源、当前进度和知识、全部文件字节核实后保存 `task.checkpoint_requested`。成功只表示暂存，随后所有工具被封住，模型须正常结束。停止、超时、关闭失败或未决工具不能成为安全检查点；Core verifier 与外层调度才负责结算。
+`RunMemberCheckpoint` 仅为具备可信文件端口及正数 memberCheckpointAllowance 的成员运行装配 `cbim_task_checkpoint`。策略 await 之前同步预占门闩，拒绝未结束工具或审批；完整白名单文件来源、当前进度和知识、全部文件字节核实后保存 `task.checkpoint_requested`。成功只表示暂存，随后所有工具被封住，模型须正常结束。停止、超时、关闭失败或未决工具不能成为安全检查点；Core verifier 与外层调度才负责结算。
 
 `resumeMember` 是可信调度专用入口，要求原 canonical 完整正常终态、冻结 logHash、原 TaskSpec/成员/通道相同及 `leaseEpoch = old + 1`，仅 runId 改变。它不放宽普通 start/resume，不能沿 help/失败/取消日志继续。原进度复制后立即失效旧证据和 delivery；续轮不再提供检查点工具，必须用新运行的实际证据交付。
 
-`assertMemberResume` 由后端注入，核实原日志、知识、全覆盖文件基线及私有原生指纹，覆盖 Runtime 与 Pi 准备窗口。原生配置完成、onEngineReady 返回后，`assertMemberResumeInputs` 在真正发 prompt 前再核原日志、知识和业务文件；原 native 指纹已在载入前后核实，此时允许本轮受控配置合法追加。端口没有公开路径参数，不签发任意恢复能力；每任务只支持一个检查点和一次续执行，且不承诺跨应用重启。
+`assertMemberResume` 由后端注入，核实原日志、知识、全覆盖文件基线及私有原生指纹，覆盖 Runtime 与 Pi 准备窗口。原生配置完成、onEngineReady 返回后，`assertMemberResumeInputs` 在真正发 prompt 前再核原日志、知识和业务文件；原 native 指纹已在载入前后核实，此时允许本轮受控配置合法追加。端口没有公开路径参数，不签发任意恢复能力；每任务最多16个检查点，每段只消费一次；持久等待经明确清单和用户继续后可跨应用重启，运行时本身不自动唤醒。
 
 `RunSummary.logIntegrity` 为可选的磁盘读取诊断，当前 `RunJournal.read` 总会提供 `partialTail`。完整前缀仍可供展示；尾行未写完不解析、不截断，也不能据前缀的 settled 证明完整日志。`LoopRuntime` 在创建新引擎或调用启动意图前拒绝续接已知不完整的原日志，并释放预检租约；即使传入工具核实 ID 也不能跳过。内存摘要或旧端口未提供该字段时不补造磁盘诊断。读取本身不授权重放。
 

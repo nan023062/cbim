@@ -272,3 +272,5 @@ dispatch.ts 扩展recovery来源联合及纯身份helper，旧无kind字段保�
 ## 前置修订公开审计
 
 dispatch.ts 重导纯 DependencyRevision 与严格 Schema；TaskNode 可选历史缺省不补值，不暴露 Store 或写入端口。一个原目标的增删请求及来源审计供只读展示，不能据其创建新执行、复活退役边或改当前责任。原命令报告的九类写入矩阵包含前置增删摘要，旧分支保持原形。
+
+派发边界导出检查点链的纯结构校验及预约选择；公开 resumeHistory 为最新预约之前的不可变顺序历史。文件/native核实和完整 Store 联合校验仍只在后端，不经 Bridge 输出私有证明。

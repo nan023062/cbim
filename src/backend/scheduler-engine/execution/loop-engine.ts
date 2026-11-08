@@ -1,4 +1,5 @@
 /**
+ * 检查点剩余额度只接可信成员服务；主会话和公开运行选项不能补造或覆盖额度。
  * 受控文件边界：正式成员和实际平台端口共同决定注册能力，主调度和 Node 缺省工厂无旁路，业务写始终受原权限约束。
  * 作用定位：调度引擎：将工作区内部知识服务、内核锁与前置策略注入独立 LoopRuntime。
  * 设计原因：工具纯分类只做一次，交给成员 Workflow 计划门禁和既有授权共用；主调度业务写入/命令仍始终拒绝。文件采集、检查点与 JSON 验证仅向正式成员注入，验证还须冻结要求和真实平台端口，旧声明约定的单任务入口不能绕过。
@@ -87,6 +88,8 @@ export interface ExecutionServices {
   controlledFiles?:ControlledFileRunPort;
   /** 仅已领取的成员续执行装配原日志/业务文件/知识/原生历史复核；不向主会话或模型公开。 */
   assertMemberResume?():Promise<void>;
+  /** 可信成员工厂根据原任务检查点历史计算；不是模型或 IPC 可覆盖的选项。 */
+  memberCheckpointAllowance?:number;
   /** 原生已配置后、模型 prompt 前核业务文件/知识/canonical；原 native 指纹在载入前后另行核实。 */
   assertMemberResumeInputs?():Promise<void>;
   /** 真正开始生成前提交成员的 running 事实；失败不得继续调用模型。 */
@@ -160,6 +163,7 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
     artifacts:services.member?services.artifacts:undefined,
     validations:services.member?services.validations:undefined,
     controlledFiles:services.member?services.controlledFiles:undefined,
+    memberCheckpointAllowance:services.member?services.memberCheckpointAllowance:undefined,
     assertMemberResume:services.member?services.assertMemberResume:undefined,
     assertMemberResumeInputs:services.member?services.assertMemberResumeInputs:undefined,
     workflowContracts:services.member?.workflowContracts,

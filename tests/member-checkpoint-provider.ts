@@ -26,11 +26,11 @@ function toolValue(request:Request,id:string):any{
 }
 
 /** File writes/reads, resume sessions and scheduler are real; only local model output is scripted. */
-export async function memberCheckpointProvider(mode:CheckpointFixtureMode='complete'){
+export async function memberCheckpointProvider(mode:CheckpointFixtureMode='complete',extraCheckpoint=false){
   const d=memberCheckpointFixture,main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[];
   let agentId='',moduleId='',releaseCheckpoint=()=>{},releaseResume=()=>{};
   const checkpointGate=new Promise<void>(resolve=>{releaseCheckpoint=resolve}),resumeGate=new Promise<void>(resolve=>{releaseResume=resolve});
-  const state:{baseline?:any;checkpoint?:unknown;checkpointRejected?:unknown;parked?:GraphSnapshot;resume?:any;resumeProgressVersion?:number;initialProgressVersion?:number}={};
+  const state:{baseline?:any;checkpoint?:unknown;checkpointRejected?:unknown;parked?:GraphSnapshot;resume?:any;resumeProgressVersion?:number;initialProgressVersion?:number;thirdContext?:Request}={};
   let ownerSelection:OwnerExecutionSelection|undefined;
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
@@ -75,12 +75,19 @@ export async function memberCheckpointProvider(mode:CheckpointFixtureMode='compl
       if(mode==='command-rejected'){assert.notEqual(value.state,'staged');assert.match(JSON.stringify(value),/未知影响|命令/);state.checkpointRejected=value;emit({role:'assistant',content:'范围不明命令不满足文件限定检查点，不能声称安全停泊。'});emit({},'length')}
       else{state.checkpoint=memberCheckpointResultSchema.parse(value);reply('请求已暂存，本轮正常结束，后续由主调度决定。')}
     }else if(turn===7){assert.ok(JSON.stringify(body.messages).includes(d.reason),'续轮必须有原生历史');tool('checkpoint-resumed-inspect','cbim_task_inspect',{})}
-    else if(turn===8){const inspected=toolValue(body,'checkpoint-resumed-inspect');assert.ok(Number.isSafeInteger(inspected.plan?.version));assert.ok(inspected.plan.version>state.initialProgressVersion!);assert.deepEqual(inspected.evidence,[]);assert.ok(inspected.plan.steps.every((step:{evidence:string[]})=>step.evidence.length===0));state.resumeProgressVersion=inspected.plan.version;tool('checkpoint-resumed-read','read',{path:d.files[0]})}
-    else if(turn===9)tool('checkpoint-resumed-step','cbim_task_step',{expectedVersion:state.resumeProgressVersion,id:'verify',state:'reported_done',evidenceIds:['checkpoint-resumed-read']});
-    else if(turn===10)tool('checkpoint-resumed-delivery','cbim_delivery_prepare',{expectedVersion:state.resumeProgressVersion!+1,summary:'沿原成员会话重新读取验证，原写入不重复',limitations:['检查点和文件字节不代替人工业务验收']});
-    else if(turn===11)reply('A续轮已提交新读取候选。');
-    else if(turn>=12&&turn<=21){
-      const index=turn<17?1:2,stage=(turn-(index===1?12:17)),prefix='checkpoint-'+(index===1?'b':'c');
+    else if(turn===8){const inspected=toolValue(body,'checkpoint-resumed-inspect');assert.ok(Number.isSafeInteger(inspected.plan?.version));assert.ok(inspected.plan.version>state.initialProgressVersion!);assert.deepEqual(inspected.evidence,[]);assert.ok(inspected.plan.steps.every((step:{evidence:string[]})=>step.evidence.length===0));state.resumeProgressVersion=inspected.plan.version;tool('checkpoint-resumed-read','read',{path:d.files[extraCheckpoint?1:0]})}
+    else if(turn===9){if(extraCheckpoint)tool('checkpoint-second-artifact','cbim_task_artifact_capture',{expectedTaskProgressVersion:state.resumeProgressVersion,sourceToolCallIds:['checkpoint-resumed-read']});else tool('checkpoint-resumed-step','cbim_task_step',{expectedVersion:state.resumeProgressVersion,id:'verify',state:'reported_done',evidenceIds:['checkpoint-resumed-read']})}
+    else if(turn===10){if(extraCheckpoint){const captured=toolValue(body,'checkpoint-second-artifact');assert.equal(captured.state,'captured');tool('checkpoint-second-request','cbim_task_checkpoint',{expectedTaskProgressVersion:state.resumeProgressVersion,baselineId:captured.baseline.baselineId,reason:'第二段只读取另一文件，保存检查点等待用户再次明确继续。'})}else tool('checkpoint-resumed-delivery','cbim_delivery_prepare',{expectedVersion:state.resumeProgressVersion!+1,summary:'沿原成员会话重新读取验证，原写入不重复',limitations:['检查点和文件字节不代替人工业务验收']})}
+    else if(turn===11){if(extraCheckpoint){memberCheckpointResultSchema.parse(toolValue(body,'checkpoint-second-request'));reply('第二段请求已暂存，等待主调度。')}else reply('A续轮已提交新读取候选。')}
+    else if(extraCheckpoint&&turn>=12&&turn<=16){
+      if(turn===12){state.thirdContext=body;assert.ok(JSON.stringify(body.messages).includes('第二段只读取另一文件'));tool('checkpoint-third-inspect','cbim_task_inspect',{})}
+      else if(turn===13){const progress=toolValue(body,'checkpoint-third-inspect');assert.deepEqual(progress.evidence,[]);assert.ok(progress.plan.version>state.resumeProgressVersion!);state.resumeProgressVersion=progress.plan.version;tool('checkpoint-third-read','read',{path:d.files[0]})}
+      else if(turn===14)tool('checkpoint-third-step','cbim_task_step',{expectedVersion:state.resumeProgressVersion,id:'verify',state:'reported_done',evidenceIds:['checkpoint-third-read']});
+      else if(turn===15)tool('checkpoint-third-delivery','cbim_delivery_prepare',{expectedVersion:state.resumeProgressVersion!+1,summary:'第三段重新读取原文件，全部旧日志保留',limitations:[]});
+      else reply('A第三段以本轮新证据交付。');
+    }
+    else if(turn>=(extraCheckpoint?17:12)&&turn<=(extraCheckpoint?26:21)){
+      const relative=turn-(extraCheckpoint?5:0),index=relative<17?1:2,stage=(relative-(index===1?12:17)),prefix='checkpoint-'+(index===1?'b':'c');
       if(stage===0)tool(prefix+'-plan','cbim_task_plan',{expectedVersion:0,goal:d.goals[index],acceptance:d.acceptance,reason:'等待真实前置结果后首次执行',steps:[{id:'verify',title:'读取独立材料',owner:'开发者'}]});
       else if(stage===1)tool(prefix+'-read','read',{path:d.files[index]});
       else if(stage===2)tool(prefix+'-step','cbim_task_step',{expectedVersion:1,id:'verify',state:'reported_done',evidenceIds:[prefix+'-read']});

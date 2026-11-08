@@ -1,4 +1,5 @@
 /**
+ * 每个正式成员运行最多暂存一次检查点，可信剩余额度允许后续运行再次停泊，零额度仍保留正常交付。
  * 受控写边界：自身 beforeTool 可靠保存 allowed 才签发一次许可；未确认写入后整轮限制为读取/求助并按 interrupted 封存，原失败回执不改写。停止等待文件 child 退出，失败保留原占用。
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
  * 设计原因：工具先分类与计划门禁再审批；每轮进度绑定真实 workspace/task/run，成员专属工具另绑定完整实例。JSON 验证及交付复核各持短锁，异步读取前后核知识、计划与停止；坏回包保留事实，求助/检查点不解锁，采集/验证只随真实结束释放。
@@ -15,6 +16,7 @@ import {MemberHelpTools} from '../tasks/member-help-tools';
 import {artifactCaptureToolName} from '../tasks/artifact-tools';
 import {memberCheckpointToolName} from '../tasks/member-checkpoint-tools';
 import {RunMemberCheckpoint} from './member-checkpoint';
+import {memberCheckpointLimit} from '../tasks/member-checkpoint';
 import {verifyMemberCheckpoint} from '../tasks/member-checkpoint-evidence';
 import {hash,json} from '../foundation/serialization';
 import {isDeepStrictEqual} from 'node:util';
@@ -55,6 +57,8 @@ export interface RuntimeOptions {
   describeTool?(call:ToolCall):RunToolDescriptor;
   /** 仅已领取续执行注入；复核原日志、文件、知识和原生指纹，覆盖 Runtime 与 Pi 准备窗口，不接受公开路径。 */
   assertMemberResume?():Promise<void>;
+  /** 可信工厂根据已提交检查点数给出的剩余额度；每个运行仍只暂存一次，零表示只能继续交付。缺省沿用旧首段许可。 */
+  memberCheckpointAllowance?:number;
   /** 原生加载后最后发送前核原日志/知识/业务文件；不重复要求已合法追加配置的 native 字节仍等于旧指纹。 */
   assertMemberResumeInputs?():Promise<void>;
   /** 返回覆盖完整运行生命周期的跨进程任务租约释放函数；拒绝时不创建运行日志或引擎。 */
@@ -250,7 +254,9 @@ export class LoopRuntime {
         },
         save:async baseline=>{await emit({type:'artifact.baseline_captured',data:{baseline}},true)},
       });
-      if(member&&this.options.artifacts&&!memberResume)checkpointTools=new RunMemberCheckpoint(member.binding,this.options.artifacts,{
+      const checkpointAllowance=this.options.memberCheckpointAllowance??(memberResume?0:1);
+      if(!Number.isInteger(checkpointAllowance)||checkpointAllowance<0||checkpointAllowance>memberCheckpointLimit)throw Error('成员检查点剩余额度无效');
+      if(member&&this.options.artifacts&&checkpointAllowance>0)checkpointTools=new RunMemberCheckpoint(member.binding,this.options.artifacts,{
         current:()=>taskTools.current(),assertReady:id=>{
           if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))throw Error('检查点调用已停止、未获准或仍有其他在途操作');
         },save:async checkpoint=>{await emit({type:'task.checkpoint_requested',data:{checkpoint}},true)},
@@ -312,7 +318,7 @@ export class LoopRuntime {
             // 验证、采集与停泊先同步预占，再进入策略；短读锁不会绕过求助/检查点的本轮结束门闩。
             const controlledReason=controlledFile?.guard(call.name,call.id,call.input,[...activeCalls])??(!controlledFile&&call.name===controlledFileWriteToolName?'本轮未提供受控文件工具':undefined);
             const validationReason=controlledReason??validation?.guard(call.name,call.id,call.input,[...activeCalls])??(!validation&&call.name===validationToolName?'本轮未提供冻结要求的 JSON 产物验证工具':undefined);
-            const checkpointReason=validationReason??checkpointTools?.guard(call.name,call.id,call.input,[...activeCalls])??(!checkpointTools&&call.name===memberCheckpointToolName?'本任务最多一次检查点和一次续执行，本轮不能再申请停泊':undefined);
+            const checkpointReason=validationReason??checkpointTools?.guard(call.name,call.id,call.input,[...activeCalls])??(!checkpointTools&&call.name===memberCheckpointToolName?'本轮没有剩余检查点额度或未装配可信检查点能力':undefined);
             const artifactReason=checkpointReason??artifactCapture?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactCapture&&call.name===artifactCaptureToolName?'本轮未提供成员文件基线采集能力':undefined);
             const helpReason=artifactReason??memberHelpTools?.guard(call.name,call.id,call.input,[...activeCalls])??(!memberHelpTools&&call.name==='cbim_task_help'?'仅正式执行成员可提交求助':undefined);
             // 门闩明确拒绝的调用只记录拒绝事实，绝无执行机会，不能反过来阻塞已经获准的求助。

@@ -1,4 +1,5 @@
 /**
+ * 恢复请求只指向最新未消费检查点，历史逐段只读；每段独立一次性预约并不等于已经执行。
  * 作用定位：把主调度的派发、查询、未启动撤销、依赖修订及检查点预约/明确放弃转换为内部工具，并组合目标工具。
  * 设计原因：模型明确提交发现所得 ownerSelection、角色、模块和 Workflow；不自动填默认角色。可靠失败/求助和已放弃检查点换边共用原协议；可信闭包固定身份，严格输入拒绝夹带授权，输出核同一份 wire，失败不回滚或重做已入队事实。
  * 职责边界：派发只是入队，续执行只是预约，撤销和依赖修订只记录调度事实，不算验收。本模块不装配成员递归派发、活动任务中止或手工结果工具。
@@ -43,7 +44,7 @@ const definitions={
     schema:addQueuedDependencyInputSchema,effects:['maintenance'] as const,
   },
   cbim_dispatch_resume:{
-    description:'为当前活动周期中已安全停泊的原成员任务预约一次续执行。先读取当前图与目标；传 expectedGraphCursor、expectedGoalRevision、taskId、expectedRevision、checkpointId、reason。每任务最多一个检查点和一次续执行，原目标/模块/角色/权限/模型/知识/前置候选不得改变；旧求助、失败、取消、中断或已关闭实例不可恢复。成功只登记新待领取信封，结束本主轮后再核实文件和原生上下文、预算及名额，等待不消费检查点；不是已经运行或验收。',
+    description:'为当前活动周期中已安全停泊的原成员任务预约一次续执行。先读取当前图与目标；传 expectedGraphCursor、expectedGoalRevision、taskId、expectedRevision、checkpointId、reason。每任务最多16个检查点，每段只允许一次续执行，只有最新未消费段可预约，原目标/模块/角色/权限/模型/知识/前置候选不得改变；旧求助、失败、取消、中断或已关闭实例不可恢复。成功只登记新待领取信封，结束本主轮后再核实文件和原生上下文、预算及名额，等待不消费检查点；不是已经运行或验收。',
     schema:resumeMemberInputSchema,effects:['maintenance'] as const,
   },
   cbim_dispatch_task:{

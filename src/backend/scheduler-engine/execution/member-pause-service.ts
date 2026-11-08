@@ -1,4 +1,5 @@
 /**
+ * 持久等待可保留多段任务的最新检查点；继续重核全链日志和累计文件，历史段不自动重放。
  * 作用定位：核实持久等待的成员原记录，并在用户明确继续时重新检查岗位、知识、native 与文件。
  * 设计原因：重启只读登记等待，不触碰原生会话；继续先取业务读占用，再按知识→模型→Store 的顺序核实，失败不消费等待。预检结果不缓存为执行许可，预约及领取仍各自重核。
  */
@@ -25,7 +26,7 @@ export class MemberPauseService {
   /** 审阅/停泊事务内只核历史日志；不反向取得锁、不重新生成原 proof。 */
   async verifyWaiting(state:DispatchState,scope:DispatchScope,pause:MemberPause):Promise<void>{
     const ports=this.available(),selected=memberPauseSelection(state,scope,pause);
-    for(const {task,run}of selected.checkpoints)await verifyMemberCheckpointHistory(this.owner,task,run,ports,()=>ports.assertCurrent());
+    for(const {task,run}of selected.checkpoints)await verifyMemberCheckpointHistory(this.owner,task,run,ports,()=>ports.assertCurrent(),state.runs);
   }
   /** 外层短占用包住知识与模型快照；use 可以读 Store 或提交事务，不能将返回值保留为后续启动许可。 */
   async withContext<T>(request:GoalContinuationRequest,alive:()=>void,use:(context:OwnerExecutionContext)=>Promise<T>):Promise<T>{
@@ -38,7 +39,7 @@ export class MemberPauseService {
     assertMemberPausePermission(selected.checkpoints,request.options.permission);
     if(context.snapshot.revision!==scope.wait!.knowledgeRevision||scope.goal?.plan?.knowledgeRevision!==context.snapshot.revision)fail('GOAL_KNOWLEDGE_CHANGED','等待期间知识发生变化，原成员不能沿旧计划继续');
     for(const task of selected.tasks){await this.owners.verifyTask(state,context,task);assert()}
-    for(const {task,run}of selected.checkpoints){await verifyMemberCheckpointProof(this.owner,task,run,ports,assert,run.checkpointProof);assert()}
+    for(const {task,run}of selected.checkpoints){await verifyMemberCheckpointProof(this.owner,task,run,ports,assert,run.checkpointProof,state.runs);assert()}
     await this.owners.recheck(context.snapshot,assert);
   }
   /** 用户明确继续才调用；失败保留原等待，成功也不消费或启动。最终受理事务再次核实同一清单。 */

@@ -420,19 +420,19 @@ Token 使用安全整数严格比较；估算金额比较只容忍同量级约�
 
 独立 `artifactReportInputSchema` 固定 workspace/root/task/run，省略 baselineId 只列引用，不选择最新或读取业务文件；明确选择后才有界复核。报告返回独立 basis、一致性、日志状态及逐文件 matches/changed/missing/unverifiable，不修改既有执行报告分页或恢复证明。旧日志不补造基线，读取不修改任务或原记录，也不启动模型、批准人工验收或恢复旧成员。
 
-### 同周期一次成员检查点与续执行
+### 同任务逐段检查点与一次消费
 
 `member-checkpoint.ts` 区分模型输入、暂存请求、公开已核实记录与后端私有证明。`cbim_task_checkpoint` 仅接收当前进度版本、已有 baselineId 和原因；运行身份、checkpointId、toolCallId 及时间由可信运行时提供。工具包装 `MemberCheckpointTools` 只校验输入和返回，不自行放行、停止或读取业务文件。暂存 `task.checkpoint_requested` 不等于已停泊，必须正常完成工具、正常 completed、成功关闭引擎、无停止/未知调用后才提交 task.checkpointed。
 
 `member-checkpoint-evidence.ts` 共用真实 artifact 来源链核实所有本轮工具。首片只允许成功的单文件 read/write/edit 与明确的任务 plan/step/inspect/artifact_capture 维护操作；bash、目录/搜索集合、外部工具及额外知识查询不具备检查点资格。所选当前基线必须覆盖全部输入及输出路径，进度版本和最后副作用保持不变；相同路径较后的成功读取可覆盖此前成功写入，但不追认此前测试验证了采集后的字节。孤立或未决调用、损坏否决回执、放行失败及未知副作用不能被文件哈希洗白。明确未放行的后续工具保留可信否决事实，不当成已执行操作。
 
-公开 `TaskNode.checkpoints` 最多一条，保存固定绑定、原因、基线引用及实际请求/结束/终态序号；不包含原生路径或日志指纹。私有 `DispatchRun.checkpointProof` 保存相同记录、完整 canonical 哈希以及关闭后的原生文件字节数/哈希，原生文件上限 64 MiB。磁盘完整性、TaskSpec、原生结构及当前文件字节仍由可信运行和调度端核实，纯函数不把模型声明当成证明。检查点不是 result/help，旧 completed 源运行只描述已封存执行段，不要求后来的任务始终停在 checkpointed。
+公开 `TaskNode.checkpoints` 最多16条且只追加，保存固定绑定、原因、基线引用及实际请求/结束/终态序号；不包含原生路径或日志指纹。私有 `DispatchRun.checkpointProof` 保存相同记录、完整 canonical 哈希以及关闭后的原生文件字节数/哈希，原生文件上限 64 MiB。磁盘完整性、TaskSpec、原生结构及当前文件字节仍由可信运行和调度端核实，纯函数不把模型声明当成证明。检查点不是 result/help，旧 completed 源运行只描述已封存执行段，不要求后来的任务始终停在 checkpointed。
 
 `queued-member-resume.ts` 定义 `cbim_dispatch_resume` 的严格图游标、目标版本、任务版本、checkpointId 和原因。`memberResumeSelection` 要求同一 active scope、已登记主 run、当前有效目标计划保留原角色/模块/知识、原实例空闲，并完整追踪目标的所有未启动依赖后继。预约只原子更新原任务为 queued、追加不可变 resumeRequest 和一个 pending assignment，不修改实例、通道、边、周期或运行。回执 trackedTaskIds 表示主调度必须继续追踪的集合，不表示已消费检查点或已开始模型。
 
-真正领取时在新 `DispatchRun.resumeFrom` 和 assignment claim 中一次消费原 checkpoint，原 task/实例/逻辑通道/原生通道保留，runId 更新、leaseEpoch 恰好加一。领取事务再次要求当前目标版本等于预约版本、尚无审阅/阻塞/重规划要求，且当前计划仍保留原角色、模块和知识；不能用预约之前的核实绕过主轮后续改动。旧目标、验收、模块、planRevision、知识快照、模型、权限、超时和已消费前置候选全部冻结；每 task 最多两个 run，第二轮不能再建立检查点。续执行使用新运行的真实业务证据，旧工具回执不能移植为本轮交付。
+真正领取时在新 `DispatchRun.resumeFrom` 和 assignment claim 中一次消费原 checkpoint，原 task/实例/逻辑通道/原生通道保留，runId 更新、leaseEpoch 恰好加一。领取事务再次要求当前目标版本等于预约版本、尚无审阅/阻塞/重规划要求，且当前计划仍保留原角色、模块和知识；不能用预约之前的核实绕过主轮后续改动。旧目标、验收、模块、planRevision、知识快照、模型、权限、超时和已消费前置候选全部冻结；每 task 最多16个检查点和17个 run；每轮只保存一个检查点，每段只消费一次，达到上限后不再注册检查点工具但可正常交付。续执行使用新运行的真实业务证据，旧工具回执不能移植为本轮交付。
 
-`member-checkpoint-invariants.ts` 与 graph reducer、运行和周期校验共同保护提交及重放：新检查点必须与原正常结算、释放占用及唯一 CheckpointMessage 同事务；预约与消费分开，历史记录和私有证明永久冻结。goal 完成不能跳过未消费检查点和 pending 续执行；用户等待仅可通过显式 memberPause 保留未预约的可靠检查点，停止/关闭须将其封存为 cancelled/interrupted 并处理信封。closed/released、失败、求助或已消费历史不能复活；安全 waiting 可跨重启并经用户明确继续重核，第二次检查点和任意工作区状态恢复仍不支持。
+`member-checkpoint-invariants.ts` 与 graph reducer、运行和周期校验共同保护提交及重放：新检查点必须与原正常结算、释放占用及唯一 CheckpointMessage 同事务；预约与消费分开，历史记录和私有证明永久冻结。goal 完成不能跳过未消费检查点和 pending 续执行；用户等待仅可通过显式 memberPause 保留未预约的可靠检查点，停止/关闭须将其封存为 cancelled/interrupted 并处理信封。closed/released、失败、求助或已消费历史不能复活；安全 waiting 可逐段跨重启并经用户明确继续重核，任意工作区状态或未知操作恢复仍不支持。
 
 ### 独立持久化的本机人工决定
 
@@ -698,3 +698,7 @@ class DispatchScopeWait {
 ScopeGoalReview *-- MemberPause : 显式保留申请
 DispatchScopeWait *-- MemberPause : 冻结原清单
 ```
+
+## 多段检查点的原事务链
+
+`member-checkpoint-chain` 只读取形状，`member-checkpoint-ledger` 核同快照全部完成段、原领取及交接信封。checkpoints 只追加，resumeHistory 不含最新 resumeRequest，第二次预约才出现；旧单段记录不自动补字段。每次预约将原最新项原样转入历史。联合不变量重放全部前缀，原身份、目标、岗位、模型、权限、知识、前置和原生通道不变，租约逐段加一。只有最新且 runIds 数等于 checkpoints 数的段可等待、预约或放弃；历史已消费预约不能被当作最新待办。

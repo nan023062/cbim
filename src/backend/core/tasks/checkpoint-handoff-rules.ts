@@ -6,35 +6,31 @@ import {fail} from '../foundation/errors';
 import type {DispatchState} from './dispatch-storage';
 import type {GraphIdentity,TaskNode} from './graph-types';
 import {abandonCheckpointInputSchema,checkpointAbandonmentSchema,type AbandonCheckpointInput} from './checkpoint-handoff';
-import {memberCheckpointProofSchema} from './member-checkpoint';
+import {completedCheckpointLedger} from './member-checkpoint-ledger';
+import {currentMemberResumeRequest} from './member-checkpoint-chain';
 import {sameGoalValue} from './scope-goal';
 import {scopeHasUnresolvedActiveInput} from './scope-active-input';
 
 function check(value:unknown,code:string,message:string):asserts value{if(!value)fail(code,message)}
 /**
  * 已保存的放弃可成为换边来源，但不能仅凭 cancelled 或一个审计字段放行。
- * 只读同一快照的原身份、证明及信封；返回唯一完成段供服务核 canonical，绝不消费恢复预约。
+ * 只读同一快照的原身份、证明及信封；核完整运行链并返回最新完成段供服务核 canonical，绝不消费恢复预约。
  */
 export function abandonedCheckpointSource(state:DispatchState,identity:GraphIdentity,scopeId:string,task:TaskNode){
-  const code='DEPENDENCY_SOURCE_INVALID',record=task.checkpointAbandonment,checkpoint=task.checkpoints?.[0];
+  const code='DEPENDENCY_SOURCE_INVALID',record=task.checkpointAbandonment,checkpoint=task.checkpoints?.at(-1);
   const graph=state.graphs.find(g=>g.identity.workspaceId===identity.workspaceId&&g.identity.rootSessionId===identity.rootSessionId);
   const scope=state.scopes?.find(s=>s.scopeId===scopeId&&s.workspaceId===identity.workspaceId&&s.rootSessionId===identity.rootSessionId);
   check(state.workspaceId===identity.workspaceId&&graph&&scope?.status==='active'&&task.identity.workspaceId===identity.workspaceId&&task.identity.rootSessionId===identity.rootSessionId&&task.scopeId===scopeId&&sameGoalValue(graph.tasks.find(t=>t.taskId===task.taskId),task),code,'已放弃检查点不属于当前活动周期');
-  check(task.status==='cancelled'&&!task.activeRunId&&!task.result&&!task.help&&!task.cancelledBeforeStart&&!task.awaitedChildren.length&&task.checkpoints?.length===1&&checkpoint&&record&&checkpointAbandonmentSchema.safeParse(record).success,code,'原来源必须具有明确的检查点放弃记录，普通取消不能替代');
-  check(record.scopeId===scopeId&&record.planRevision===task.planRevision&&record.previousTaskRevision+1===task.revision&&record.abandonedAt===task.updatedAt&&record.reason===task.waitReason&&record.checkpointId===checkpoint.checkpointId&&record.sourceRunId===checkpoint.binding.runId&&record.previousLeaseEpoch===checkpoint.binding.leaseEpoch&&(task.resumeRequest?.requestId??null)===record.resumeRequestId&&record.graphCursor.streamId===graph.cursor.streamId&&record.graphCursor.seq<graph.cursor.seq&&scope.runTracking?.mainRunIds.includes(record.mainRunId)&&!state.runs?.some(r=>r.binding.runId===record.mainRunId),code,'检查点放弃与原版本、租约或主运行不一致');
-  const runs=(state.runs??[]).filter(r=>r.binding.taskId===task.taskId&&r.binding.rootSessionId===identity.rootSessionId),run=runs[0];
-  check(runs.length===1&&task.runIds.length===1&&task.runIds[0]===record.sourceRunId&&run.binding.runId===record.sourceRunId&&run.status==='completed'&&!run.resumeFrom&&memberCheckpointProofSchema.safeParse(run.checkpointProof).success&&sameGoalValue(run.checkpointProof!.checkpoint,checkpoint)&&sameGoalValue(run.binding,checkpoint.binding),code,'已放弃来源缺少唯一且未恢复的原检查点完成段');
+  check(task.status==='cancelled'&&!task.activeRunId&&!task.result&&!task.help&&!task.cancelledBeforeStart&&!task.awaitedChildren.length&&checkpoint&&record&&checkpointAbandonmentSchema.safeParse(record).success,code,'原来源必须具有明确的检查点放弃记录，普通取消不能替代');
+  check(record.scopeId===scopeId&&record.planRevision===task.planRevision&&record.previousTaskRevision+1===task.revision&&record.abandonedAt===task.updatedAt&&record.reason===task.waitReason&&record.checkpointId===checkpoint.checkpointId&&record.sourceRunId===checkpoint.binding.runId&&record.previousLeaseEpoch===checkpoint.binding.leaseEpoch&&(currentMemberResumeRequest(task)?.requestId??null)===record.resumeRequestId&&record.graphCursor.streamId===graph.cursor.streamId&&record.graphCursor.seq<graph.cursor.seq&&scope.runTracking?.mainRunIds.includes(record.mainRunId)&&!state.runs?.some(r=>r.binding.runId===record.mainRunId),code,'检查点放弃与原版本、租约或主运行不一致');
+  const {run,currentRequest,resumeAssignment}=completedCheckpointLedger(state,task,code);
+  check(run.binding.runId===record.sourceRunId,code,'放弃必须引用最新未消费完成段');
   const binding=run.binding;
   check(binding.workspaceId===identity.workspaceId&&binding.rootSessionId===identity.rootSessionId&&binding.taskId===task.taskId&&binding.planRevision===task.planRevision&&binding.agentId===task.assignee.agentId&&binding.agentInstanceId===task.assignee.agentInstanceId&&binding.agentSessionId===task.assignee.agentSessionId&&checkpoint.knowledgeRevision===run.prepared.knowledgeRevision,code,'原检查点证明与任务身份或冻结基线不一致');
   const member=state.members.find(m=>m.agentInstanceId===binding.agentInstanceId),session=state.sessions.find(s=>s.agentSessionId===binding.agentSessionId);
   check(member&&member.lifecycle==='active'&&member.workspaceId===identity.workspaceId&&member.executionScopeId===scopeId&&member.executionTaskId===task.taskId&&member.agentId===binding.agentId&&member.teamId===binding.teamId&&member.leaseEpoch===record.nextLeaseEpoch&&member.activity==='idle'&&!member.activeRunId&&!member.activeTaskId&&!member.waitingTaskIds.length&&!member.communicatingMessageIds.length,code,'已放弃来源的原成员仍被占用或租约不一致');
   check(session&&session.workspaceId===identity.workspaceId&&session.rootSessionId===identity.rootSessionId&&session.agentInstanceId===member.agentInstanceId&&session.agentId===binding.agentId&&member.agentSessionIds.includes(session.agentSessionId)&&session.lastRunId===binding.runId&&session.lastTaskId===task.taskId&&session.nativeSessionId===run.session.nativeSessionId&&!!run.session.sessionFile,code,'原检查点通道与完成段不一致');
-  const assignments=state.outbox.filter(m=>m.kind==='assignment'&&m.identity.rootSessionId===identity.rootSessionId&&m.taskId===task.taskId),original=assignments.find(m=>m.messageId===run.assignmentMessageId),resume=assignments.find(m=>m.kind==='assignment'&&m.resumeFrom);
-  check(assignments.length===(task.resumeRequest?2:1)&&original?.delivery==='processed'&&original.claim?.runId===binding.runId&&original.claim.leaseEpoch===binding.leaseEpoch,code,'已放弃来源的原领取信封不完整');
-  if(task.resumeRequest)check(resume?.kind==='assignment'&&resume.messageId===record.resumeRequestId&&resume.delivery==='processed'&&!resume.claim&&sameGoalValue(resume.resumeFrom,{checkpointId:checkpoint.checkpointId,runId:binding.runId}),code,'已放弃的恢复预约必须已处置且从未领取');
-  else check(!resume,code,'未预约检查点不能补造恢复信封');
-  const messages=state.outbox.filter(m=>m.kind==='checkpoint'&&m.identity.rootSessionId===identity.rootSessionId&&m.taskId===task.taskId);
-  check(messages.length===1&&messages[0].kind==='checkpoint'&&messages[0].checkpointId===checkpoint.checkpointId&&messages[0].runId===binding.runId&&messages[0].replyTo===run.assignmentMessageId,code,'原检查点交接信封缺失或错配');
+  if(currentRequest)check(resumeAssignment?.kind==='assignment'&&resumeAssignment.messageId===record.resumeRequestId&&resumeAssignment.delivery==='processed'&&!resumeAssignment.claim,code,'已放弃的最新恢复预约必须已处置且从未领取');
   return run;
 }
 
@@ -48,20 +44,14 @@ export function checkpointAbandonmentSelection(state:DispatchState,identity:Grap
   check(scope.runTracking?.mainRunIds.at(-1)===mainRunId&&!(state.runs??[]).some(run=>run.binding.runId===mainRunId),'CHECKPOINT_HANDOFF_MAIN_INVALID','处置必须来自本周期当前登记的主运行');
   check(!scopeHasUnresolvedActiveInput(scope),'CHECKPOINT_HANDOFF_UNRESOLVED','运行内补充尚未确认，不能处置旧待办');
   check(scope.goal?.revision===input.expectedGoalRevision&&graph.cursor.streamId===input.expectedGraphCursor.streamId&&graph.cursor.seq===input.expectedGraphCursor.seq,'CHECKPOINT_HANDOFF_STALE','图或目标依据已变化，请重新核实处置请求');
-  const task=graph.tasks.find(value=>value.taskId===input.taskId),checkpoint=task?.checkpoints?.[0];
-  check(task?.scopeId===scopeId&&checkpoint&&!task.checkpointAbandonment&&!task.cancelledBeforeStart&&!task.activeRunId&&!task.result&&!task.help&&!task.awaitedChildren.length&&task.runIds.length===1&&task.runIds[0]===checkpoint.binding.runId,'CHECKPOINT_HANDOFF_NOT_ALLOWED','原任务没有唯一且尚未消费的可靠检查点');
-  check(task.revision===input.expectedRevision&&task.planRevision===input.expectedPlanRevision&&checkpoint.checkpointId===input.checkpointId&&(task.resumeRequest?.requestId??null)===input.expectedResumeRequestId,'CHECKPOINT_HANDOFF_STALE','任务、计划、检查点或恢复预约已变化');
-  check(task.resumeRequest?task.status==='queued':task.status==='checkpointed','CHECKPOINT_HANDOFF_NOT_ALLOWED','原检查点不再等待主调度或已进入领取');
-  const runs=(state.runs??[]).filter(value=>value.binding.taskId===task.taskId&&value.binding.rootSessionId===identity.rootSessionId),run=runs[0];
-  check(runs.length===1&&run.status==='completed'&&!run.resumeFrom&&memberCheckpointProofSchema.safeParse(run.checkpointProof).success&&sameGoalValue(run.checkpointProof!.checkpoint,checkpoint)&&sameGoalValue(run.binding,checkpoint.binding)&&run.binding.workspaceId===identity.workspaceId&&run.binding.taskId===task.taskId&&run.binding.rootSessionId===identity.rootSessionId&&run.binding.planRevision===task.planRevision,'CHECKPOINT_HANDOFF_PROOF_INVALID','原运行缺少对应的完整检查点证明');
+  const task=graph.tasks.find(value=>value.taskId===input.taskId),checkpoint=task?.checkpoints?.at(-1);
+  check(task?.scopeId===scopeId&&checkpoint&&!task.checkpointAbandonment&&!task.cancelledBeforeStart&&!task.activeRunId&&!task.result&&!task.help&&!task.awaitedChildren.length&&task.runIds.at(-1)===checkpoint.binding.runId,'CHECKPOINT_HANDOFF_NOT_ALLOWED','原任务没有最新且尚未消费的可靠检查点');
+  check(task.revision===input.expectedRevision&&task.planRevision===input.expectedPlanRevision&&checkpoint.checkpointId===input.checkpointId&&(currentMemberResumeRequest(task)?.requestId??null)===input.expectedResumeRequestId,'CHECKPOINT_HANDOFF_STALE','任务、计划、检查点或恢复预约已变化');
+  check(currentMemberResumeRequest(task)?task.status==='queued':task.status==='checkpointed','CHECKPOINT_HANDOFF_NOT_ALLOWED','原检查点不再等待主调度或已进入领取');
+  const {runs,run,currentRequest,resumeAssignment}=completedCheckpointLedger(state,task,'CHECKPOINT_HANDOFF_PROOF_INVALID');
   const member=state.members.find(value=>value.agentInstanceId===task.assignee.agentInstanceId),session=state.sessions.find(value=>value.agentSessionId===task.assignee.agentSessionId);
   check(member&&session&&member.lifecycle==='active'&&member.executionScopeId===scopeId&&member.executionTaskId===task.taskId&&member.workspaceId===identity.workspaceId&&member.agentId===run.binding.agentId&&member.teamId===run.binding.teamId&&member.leaseEpoch===run.binding.leaseEpoch&&member.activity==='idle'&&!member.activeTaskId&&!member.activeRunId&&!member.waitingTaskIds.length&&!member.communicatingMessageIds.length,'CHECKPOINT_HANDOFF_NOT_ALLOWED','原成员已领取、占用、释放或租约已变化');
   check(session.workspaceId===identity.workspaceId&&session.rootSessionId===identity.rootSessionId&&session.agentInstanceId===member.agentInstanceId&&session.agentId===run.binding.agentId&&session.agentSessionId===run.binding.agentSessionId&&member.agentSessionIds.includes(session.agentSessionId)&&session.lastRunId===run.binding.runId&&session.lastTaskId===task.taskId&&session.nativeSessionId===run.session.nativeSessionId&&!!run.session.sessionFile,'CHECKPOINT_HANDOFF_PROOF_INVALID','原成员通道与检查点运行不一致');
-  const assignments=state.outbox.filter(value=>value.kind==='assignment'&&value.identity.rootSessionId===identity.rootSessionId&&value.taskId===task.taskId),original=assignments.find(value=>value.messageId===run.assignmentMessageId),resumeAssignment=assignments.find(value=>value.kind==='assignment'&&value.resumeFrom);
-  check(original?.delivery==='processed'&&original.claim?.runId===run.binding.runId&&original.claim.leaseEpoch===run.binding.leaseEpoch&&assignments.length===(task.resumeRequest?2:1),'CHECKPOINT_HANDOFF_PROOF_INVALID','原运行或恢复信封不完整');
-  if(task.resumeRequest)check(resumeAssignment?.kind==='assignment'&&resumeAssignment.messageId===task.resumeRequest.requestId&&resumeAssignment.delivery==='pending'&&!resumeAssignment.claim&&sameGoalValue(resumeAssignment.resumeFrom,{checkpointId:checkpoint.checkpointId,runId:run.binding.runId}),'CHECKPOINT_HANDOFF_NOT_ALLOWED','恢复预约已领取或不再是原待投递信封');
-  else check(!resumeAssignment,'CHECKPOINT_HANDOFF_NOT_ALLOWED','未预约检查点不能存在恢复信封');
-  const messages=state.outbox.filter(value=>value.kind==='checkpoint'&&value.taskId===task.taskId&&value.identity.rootSessionId===identity.rootSessionId);
-  check(messages.length===1&&messages[0].kind==='checkpoint'&&messages[0].checkpointId===checkpoint.checkpointId&&messages[0].runId===run.binding.runId&&messages[0].replyTo===run.assignmentMessageId,'CHECKPOINT_HANDOFF_PROOF_INVALID','原检查点交接信封缺失或错配');
-  return {graph,scope,task,member,session,run,checkpoint,resumeAssignment};
+  if(currentRequest)check(resumeAssignment?.kind==='assignment'&&resumeAssignment.messageId===currentRequest.requestId&&resumeAssignment.delivery==='pending'&&!resumeAssignment.claim,'CHECKPOINT_HANDOFF_NOT_ALLOWED','最新恢复预约已领取或不再是原待投递信封');
+  return {graph,scope,task,member,session,runs,run,checkpoint,currentRequest,resumeAssignment};
 }

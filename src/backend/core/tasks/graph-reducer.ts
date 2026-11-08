@@ -1,11 +1,12 @@
 /**
  * 作用定位：把已提交的图事件原子转换为内存投影，并按游标输出增量读取结果。
- * 设计原因：节点、边和成员状态必须一起可见；依赖修订只追加审计且保留原计划与负责人，退役边和终止检查点不可复活。
+ * 设计原因：节点、边和成员状态必须一起可见；检查点及预约按不可变前缀逐段追加，依赖审计保留原计划与负责人，终止记录不可复活。
  * 职责边界：不落盘、不分配事件序号、不启动任务；调用方必须先可靠提交再发布结果。
  */
 import {fail} from '../foundation/errors';
 import {assertGraphIdentity,validateGraph,validateGraphBatch,validateGraphCursor} from './graph-rules';
 import type {GraphEventBatch,GraphSnapshot,GraphCursor,GraphDelta,GraphChange,TaskNode} from './graph-types';
+import {memberResumeRequests} from './member-checkpoint-chain';
 
 type SeenBatch={fingerprint:string;eventId:string;commandId:string};
 // 跟随不可变投影保留已核验的重放证明，不序列化进公开 Snapshot；从日志重建时自然恢复。
@@ -32,8 +33,9 @@ function taskRevision(previous:TaskNode,next:TaskNode){
   if(next.planRevision!==previous.planRevision+(changed?1:0))fail('GRAPH_REVISION_CONFLICT','任务计划版本与范围修订不一致');
   if(previous.runIds.some((id,index)=>next.runIds[index]!==id))fail('GRAPH_INPUT_INVALID','历史执行轮次不能删除或改写');
   if(previous.help&&stable(previous.help)!==stable(next.help))fail('GRAPH_INPUT_INVALID','已经交接的成员求助不能删除或改写');
-  if(previous.checkpoints&&stable(previous.checkpoints)!==stable(next.checkpoints))fail('GRAPH_INPUT_INVALID','已经交接的成员检查点不能删除或改写');
-  if(previous.resumeRequest&&stable(previous.resumeRequest)!==stable(next.resumeRequest))fail('GRAPH_INPUT_INVALID','成员续执行预约不能删除或改写');
+  const beforeCheckpoints=previous.checkpoints??[],checkpoints=next.checkpoints??[],beforeRequests=memberResumeRequests(previous),requests=memberResumeRequests(next);
+  if(checkpoints.length<beforeCheckpoints.length||checkpoints.length>beforeCheckpoints.length+1||beforeCheckpoints.some((value,index)=>stable(value)!==stable(checkpoints[index])))fail('GRAPH_INPUT_INVALID','检查点只能逐段追加，已交接历史不能删除或改写');
+  if(requests.length<beforeRequests.length||requests.length>beforeRequests.length+1||beforeRequests.some((value,index)=>stable(value)!==stable(requests[index])))fail('GRAPH_INPUT_INVALID','续执行预约只能逐段追加，原历史不能删除或改写');
   if((previous.checkpoints||next.checkpoints)&&changed)fail('GRAPH_INPUT_INVALID','检查点及续执行不能修改原任务目标、模块、责任或验收');
   const oldHistory=previous.dependencyReplacements??[],history=next.dependencyReplacements??[];
   if(history.length<oldHistory.length||history.length>oldHistory.length+1||oldHistory.some((record,index)=>stable(record)!==stable(history[index])))fail('GRAPH_INPUT_INVALID','前置替换审计只能逐次追加，不能改删历史');
@@ -79,7 +81,7 @@ export function applyGraphBatch(previous:GraphSnapshot|undefined,event:GraphEven
       case 'task.upserted':{
         const old=tasks.get(change.task.taskId);nextRevision(old,change.task);
         if(old)taskRevision(old,change.task);
-        else if(change.task.planRevision!==1||!['planned','queued','waiting'].includes(change.task.status)||change.task.runIds.length||change.task.result||change.task.help||change.task.cancelledBeforeStart||change.task.dependencyReplacements||change.task.dependencyAdditions||change.task.dependencyRevisions||change.task.checkpoints||change.task.resumeRequest||change.task.checkpointAbandonment)fail('GRAPH_INPUT_INVALID','新任务必须从尚未执行的计划版本 1 创建');
+        else if(change.task.planRevision!==1||!['planned','queued','waiting'].includes(change.task.status)||change.task.runIds.length||change.task.result||change.task.help||change.task.cancelledBeforeStart||change.task.dependencyReplacements||change.task.dependencyAdditions||change.task.dependencyRevisions||change.task.checkpoints||change.task.resumeRequest||change.task.resumeHistory||change.task.checkpointAbandonment)fail('GRAPH_INPUT_INVALID','新任务必须从尚未执行的计划版本 1 创建');
         tasks.set(change.task.taskId,structuredClone(change.task));break;
       }
       case 'edge.upserted':{

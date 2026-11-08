@@ -27,12 +27,12 @@
 | [human-evidence-state.ts](human-evidence-state.ts) | 为人工验收和按意见继续提供同一主周期的证据状态指纹。 |
 | [loop-engine.ts](loop-engine.ts) | 调度引擎：将工作区内部知识服务、内核锁与前置策略注入独立 LoopRuntime。 |
 | [main-command-request.ts](main-command-request.ts) | 共享主调度原命令的指纹构造，从已核实 canonical 参数复原历史请求，包含原子前置增删。 |
-| [member-checkpoint-verifier.ts](member-checkpoint-verifier.ts) | 核实检查点的 canonical 和私有原生历史，分别支持续执行许可与明确放弃旧待办的历史真实性检查。 |
+| [member-checkpoint-verifier.ts](member-checkpoint-verifier.ts) | 核实逐段检查点的完整 canonical、累计文件与最新私有原生历史，分别支持续执行许可与明确放弃旧待办的历史真实性检查。 |
 | [member-events.ts](member-events.ts) | 将成员运行日志投影为可公开的连续事件流，并按 run 缓存首次恢复及后续已落盘增量。 |
 | [member-execution.ts](member-execution.ts) | 让已派发任务在独立成员会话中执行，提交领取、启动、结果、中断及一次安全停泊/续执行事实。 |
 | [member-help-state.ts](member-help-state.ts) | 从成员 canonical 运行日志核实一次结构化求助的安全交接候选。 |
 | [member-pause-service.ts](member-pause-service.ts) | 核实持久等待的成员原记录，并在用户明确继续时重新检查岗位、知识、native 与文件。 |
-| [member-resume-service.ts](member-resume-service.ts) | 当前主调度为本周期安全检查点预约一次原任务续执行，提交独立待领取信封。 |
+| [member-resume-service.ts](member-resume-service.ts) | 当前主调度为本周期最新安全检查点预约一次原任务续执行，逐段保留原预约和独立待领取信封。 |
 | [member-state.ts](member-state.ts) | 成员执行事务的图增量、占用和交付候选投影，并提供独立求助验证入口。 |
 | [member-workflow.ts](member-workflow.ts) | 在成员交付结算与主目标审阅时重算冻结 Workflow，并复核被验证文件的当前字节。 |
 | [owner-execution-service.ts](owner-execution-service.ts) | 在既有知识、模型和派发存储之间核实岗位执行绑定，为计划、派发、领取和依赖维护提供同一入口。 |
@@ -260,7 +260,7 @@ class N_src_backend_scheduler_engine_execution_auto_collaboration_ts_AutoCollabo
 N_src_backend_scheduler_engine_execution_auto_collaboration_ts ..> N_src_backend_scheduler_engine_execution_auto_collaboration_ts_AutoCollaboration : 声明
 ```
 
-直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/scope-continuation.ts](../../core/tasks/scope-continuation.ts)、[../../core/tasks/scope-continuation-attachments.ts](../../core/tasks/scope-continuation-attachments.ts)、[../../core/tasks/scope-active-input.ts](../../core/tasks/scope-active-input.ts)、[../../core/tasks/human-continue.ts](../../core/tasks/human-continue.ts)、[../../core/tasks/scope-recovery.ts](../../core/tasks/scope-recovery.ts)、[../../core/tasks/scope-replan.ts](../../core/tasks/scope-replan.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../tools/dispatch-tools.ts](../tools/dispatch-tools.ts)、[../tools/goal-tools.ts](../tools/goal-tools.ts)、[../tools/main-tool-contracts.ts](../tools/main-tool-contracts.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[dispatch-service.ts](dispatch-service.ts)、[member-execution.ts](member-execution.ts)、[execution-manager.ts](execution-manager.ts)、[loop-engine.ts](loop-engine.ts)、[workspace-lease.ts](workspace-lease.ts)、[admission-wait.ts](admission-wait.ts)、[../../core/workspace/module-ownership-tool-policy.ts](../../core/workspace/module-ownership-tool-policy.ts)、[../../core/tasks/checkpoint-handoff.ts](../../core/tasks/checkpoint-handoff.ts)。
+直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/tasks/member-checkpoint-chain.ts](../../core/tasks/member-checkpoint-chain.ts)、[../../core/tasks/member-checkpoint.ts](../../core/tasks/member-checkpoint.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/scope-continuation.ts](../../core/tasks/scope-continuation.ts)、[../../core/tasks/scope-continuation-attachments.ts](../../core/tasks/scope-continuation-attachments.ts)、[../../core/tasks/scope-active-input.ts](../../core/tasks/scope-active-input.ts)、[../../core/tasks/human-continue.ts](../../core/tasks/human-continue.ts)、[../../core/tasks/scope-recovery.ts](../../core/tasks/scope-recovery.ts)、[../../core/tasks/scope-replan.ts](../../core/tasks/scope-replan.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../tools/dispatch-tools.ts](../tools/dispatch-tools.ts)、[../tools/goal-tools.ts](../tools/goal-tools.ts)、[../tools/main-tool-contracts.ts](../tools/main-tool-contracts.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[dispatch-service.ts](dispatch-service.ts)、[member-execution.ts](member-execution.ts)、[execution-manager.ts](execution-manager.ts)、[loop-engine.ts](loop-engine.ts)、[workspace-lease.ts](workspace-lease.ts)、[admission-wait.ts](admission-wait.ts)、[../../core/workspace/module-ownership-tool-policy.ts](../../core/workspace/module-ownership-tool-policy.ts)、[../../core/tasks/checkpoint-handoff.ts](../../core/tasks/checkpoint-handoff.ts)。
 
 ### checkpoint-abandonment-service.ts
 
@@ -868,6 +868,7 @@ class N_src_backend_scheduler_engine_execution_loop_engine_ts_ExecutionServices[
   +validations
   +controlledFiles
   +assertMemberResume()
+  +memberCheckpointAllowance
   +assertMemberResumeInputs()
   +onEngineReady()
   +storage
@@ -1097,7 +1098,7 @@ class N_src_backend_scheduler_engine_execution_member_execution_ts_MemberExecuti
 N_src_backend_scheduler_engine_execution_member_execution_ts ..> N_src_backend_scheduler_engine_execution_member_execution_ts_MemberExecutionManager : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/brain/runtime.ts](../../core/brain/runtime.ts)、[../../core/brain/llm/ports.ts](../../core/brain/llm/ports.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/tasks/dispatch-execution.ts](../../core/tasks/dispatch-execution.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/member-commands.ts](../../core/tasks/member-commands.ts)、[../context/execution-context.ts](../context/execution-context.ts)、[../conversation/approvals.ts](../conversation/approvals.ts)、[../conversation/questions.ts](../conversation/questions.ts)、[member-state.ts](member-state.ts)、[../../core/tasks/member-help.ts](../../core/tasks/member-help.ts)、[../../core/tasks/member-events.ts](../../core/tasks/member-events.ts)、[member-events.ts](member-events.ts)、[execution-report-service.ts](execution-report-service.ts)、[artifact-report-service.ts](artifact-report-service.ts)、[../../core/tasks/artifact-baseline.ts](../../core/tasks/artifact-baseline.ts)、[../../core/tasks/execution-report.ts](../../core/tasks/execution-report.ts)、[admission-wait.ts](admission-wait.ts)、[scope-budget-service.ts](scope-budget-service.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)、[../../core/tasks/member-checkpoint.ts](../../core/tasks/member-checkpoint.ts)、[member-resume-service.ts](member-resume-service.ts)、[../../core/tasks/queued-member-resume.ts](../../core/tasks/queued-member-resume.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/tasks/scope-active-input.ts](../../core/tasks/scope-active-input.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[member-workflow.ts](member-workflow.ts)、[../../core/workspace/json-validation-schema.ts](../../core/workspace/json-validation-schema.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[../../core/team/member-execution-binding.ts](../../core/team/member-execution-binding.ts)、[owner-execution-service.ts](owner-execution-service.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/brain/runtime.ts](../../core/brain/runtime.ts)、[../../core/brain/llm/ports.ts](../../core/brain/llm/ports.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/tasks/dispatch-execution.ts](../../core/tasks/dispatch-execution.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/member-commands.ts](../../core/tasks/member-commands.ts)、[../context/execution-context.ts](../context/execution-context.ts)、[../conversation/approvals.ts](../conversation/approvals.ts)、[../conversation/questions.ts](../conversation/questions.ts)、[member-state.ts](member-state.ts)、[../../core/tasks/member-help.ts](../../core/tasks/member-help.ts)、[../../core/tasks/member-events.ts](../../core/tasks/member-events.ts)、[member-events.ts](member-events.ts)、[execution-report-service.ts](execution-report-service.ts)、[artifact-report-service.ts](artifact-report-service.ts)、[../../core/tasks/artifact-baseline.ts](../../core/tasks/artifact-baseline.ts)、[../../core/tasks/execution-report.ts](../../core/tasks/execution-report.ts)、[admission-wait.ts](admission-wait.ts)、[scope-budget-service.ts](scope-budget-service.ts)、[../../core/tasks/member-checkpoint.ts](../../core/tasks/member-checkpoint.ts)、[../../core/tasks/member-checkpoint-chain.ts](../../core/tasks/member-checkpoint-chain.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)、[member-resume-service.ts](member-resume-service.ts)、[../../core/tasks/queued-member-resume.ts](../../core/tasks/queued-member-resume.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/tasks/scope-active-input.ts](../../core/tasks/scope-active-input.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[member-workflow.ts](member-workflow.ts)、[../../core/workspace/json-validation-schema.ts](../../core/workspace/json-validation-schema.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[../../core/team/member-execution-binding.ts](../../core/team/member-execution-binding.ts)、[owner-execution-service.ts](owner-execution-service.ts)。
 
 ### member-help-state.ts
 
@@ -1163,7 +1164,7 @@ class N_src_backend_scheduler_engine_execution_member_resume_service_ts_MemberRe
 N_src_backend_scheduler_engine_execution_member_resume_service_ts ..> N_src_backend_scheduler_engine_execution_member_resume_service_ts_MemberResumeService : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[main-command-request.ts](main-command-request.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/queued-member-resume.ts](../../core/tasks/queued-member-resume.ts)、[../../core/tasks/queued-member-resume-rules.ts](../../core/tasks/queued-member-resume-rules.ts)、[../../core/tasks/scope-active-input.ts](../../core/tasks/scope-active-input.ts)、[member-state.ts](member-state.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)、[owner-execution-service.ts](owner-execution-service.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[main-command-request.ts](main-command-request.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/queued-member-resume.ts](../../core/tasks/queued-member-resume.ts)、[../../core/tasks/queued-member-resume-rules.ts](../../core/tasks/queued-member-resume-rules.ts)、[../../core/tasks/scope-active-input.ts](../../core/tasks/scope-active-input.ts)、[member-state.ts](member-state.ts)、[member-checkpoint-verifier.ts](member-checkpoint-verifier.ts)、[owner-execution-service.ts](owner-execution-service.ts)、[../../core/tasks/member-checkpoint-chain.ts](../../core/tasks/member-checkpoint-chain.ts)。
 
 ### member-state.ts
 
@@ -2977,13 +2978,13 @@ AutoCollaboration 只在成功撤销回执后，从当前派发批次的待启�
 
 `MemberExecutionManager` 只在成员引擎实际关闭后核实暂存检查点。`verifyMemberCheckpointProof` 共用于结算、主预约、实际领取及引擎准备：完整 canonical 身份/原 TaskSpec/原目标和验收/成功白名单工具/终态、当前知识与 Workflow、全路径文件基线、受管 native 指纹均须匹配。私有 logHash/native 摘要留在 DispatchRun，任务图只公开检查点记录。匹配只证明当前受限文件与已冻结上下文，不能证明业务验收或未知命令影响。
 
-通过结算的首轮保留 completed，但 task 为 checkpointed、无 candidate/help；新 checkpoint 信封回主调度。实例仍保留原身份，真实运行、工作区租约及全局名额在终态事务后释放。异常终态、停止、软件退出、已关闭 scope 和 released 实例不能变成可续执行检查点。
+通过结算的每段保留 completed，但 task 为 checkpointed、无 candidate/help；新 checkpoint 信封回主调度。实例仍保留原身份，真实运行、工作区租约及全局名额在终态事务后释放。异常终态、停止、软件退出、已关闭 scope 和 released 实例不能变成可续执行检查点。
 
 `MemberResumeService.request` 在同 active scope、同计划和图 CAS 下复核原证明，幂等提交 `TaskNode.resumeRequest` 以及独立 pending assignment。工具回执只表示预约，既不创建新 run，也不消费旧 processed 信封。`AutoCollaboration` 将返回的 task 与未启动后继加入当前批次；当前主轮 settled 后才调用专用 `members.resume`，不会由读取或重启唤醒。
 
 真正领取仍先核预算、准入和当前批次，等待不消费检查点。当前 goal 版本须仍等于预约版本，且无审阅、blocked 或待重规划；预约后主轮改计划也不能沿旧请求领取。取得占用后重查原知识、配置、权限、前置候选、文件和 native，再原子追加唯一新 run/resumeFrom、领取新信封并递增 leaseEpoch 一代。模型公开快照按实际 JSON 持久语义比较可选缺省项，不能借此改变任何已配置字段；运行使用原权限，原批准不继承。引擎准备前后继续核冻结证明，prompt 前最后复核业务文件、知识及 canonical，合法 native 配置追加不误判为旧指纹一致。续轮清空旧 TaskProgress 证据，候选仅认新 run。
 
-每 task 最多一个检查点、一次续执行；旧任务目标/模块/实例/逻辑与原生通道保持不变。checkpointed 与待领续请求均阻止目标完成或 waiting；关闭周期将其封存为 cancelled、处理 pending 信封并释放成员，保留原记录。完整性失败不自动当 failed 或 superseded 继续，须明确收束周期再走新周期核实。
+每 task 最多16个检查点，每段一次续执行；旧任务目标/模块/实例/逻辑与原生通道保持不变。checkpointed 与待领续请求均阻止目标完成；只有完整 memberPause 清单中的未预约最新段和未启动后继可以进入 waiting；关闭周期将其封存为 cancelled、处理 pending 信封并释放成员，保留原记录。完整性失败不自动当 failed 或 superseded 继续，须明确收束周期再走新周期核实。
 
 `ScopeBudgetService` 在新普通周期、只读核实周期、业务重规划周期创建时冻结应用策略。默认关闭，旧无 budget 的周期不补造。启用时，首轮证明与主清单同事务写入；结果回注、用户显式补充与成员领取都先在当前派发事务中重读精确 canonical 日志，再将 `budget.lastAdmission` 与本次新增主运行或 DispatchRun 一起提交。策略改变仅影响下个周期，不能抹去当前已报告用量、复活旧执行实例或提升权限。
 
@@ -3110,3 +3111,9 @@ MemberPauseService 为 ScopeGoalService 的审阅与停泊核原 canonical 检�
 ScopeContinuationService 先查原意图；同命令在外层锁竞争期间已受理时返回原不可变事实且 fresh=false，不创建第二主轮。成功归档 memberPause、提升输入版本，由 Auto 建立当前 Cycle；模型重规划后明确 cbim_dispatch_resume，原待办闭包由既有预约回执加入新批次，主轮结算后按新候选实际领取。预检成功不代替预约/领取核验。人工决定接续不能消费包含 memberPause 的等待，需使用补充入口；正常人工流程保持原边界。
 
 停止 waiting 原子封存检查点与未领取后继，保留原完成段及证明并释放成员；停止与受理竞争只保留真实已提交意图。未消费的已预约检查点、多段续执行和异常 native 不在本片支持域。
+
+## 全链证据与累计文件复核
+
+检查点结算、用户继续、主预约、实际领取及模型发送前均使用同一可信运行快照核全部原 canonical。各段完成日志必须逐一匹配冻结证明；文件按路径的最后已核实触及合并，后段未触及的早期文件保留。只核最新 native 指纹，不要求此前 native 字节保持旧值。放弃只核原全链历史，不要求今日文件匹配。任何核实失败不刷新旧 proof 或自动重放。
+
+累计文件最多来自16个原基线（至多256个唯一文件、512MiB原总量）；按平台每批16文件/32MiB边界顺序复核，共用15秒截止。后段已验证同路径事实覆盖旧字节，没有再次触及的路径不得省略；超时或不可信批次均不能继续。

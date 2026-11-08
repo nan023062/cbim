@@ -1308,6 +1308,9 @@ class N_src_frontend_tasks_member_checkpoint_state_ts_MemberCheckpointView["Memb
   +phase
   +abandonment
   +resumedRunId
+  +request
+  +segment
+  +total
 }
 N_src_frontend_tasks_member_checkpoint_state_ts ..> N_src_frontend_tasks_member_checkpoint_state_ts_MemberCheckpointView : 声明
 ```
@@ -3645,7 +3648,7 @@ N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts 
 
 #### 同周期成员检查点
 
-`memberCheckpointView` 只投影 TaskNode 已提交的单个 checkpoints 记录及不可变 resumeRequest。核对工作区/root/task/实例/会话/计划、源运行、记录序号和预约引用；工具 staged 文本不能生成停泊事实，损坏明确提示。没有预约的第二轮、第三轮及外来运行不得借用检查点。公开投影不包含原生文件/指纹，不签发恢复许可。
+`memberCheckpointView` 核完整 TaskNode 检查点链后投影所选段及其原预约（resumeHistory + 最新 resumeRequest）。核对工作区/root/task/实例/会话/计划、源运行、记录序号和预约引用；工具 staged 文本不能生成停泊事实，损坏明确提示。没有逐段预约或完整前缀的运行不得借用检查点；默认最新段，选中有自己检查点的运行展示本段，否则展示其来源段，历史段始终只读。公开投影不包含原生文件/指纹，不签发恢复许可。
 
 `MemberCheckpointNotice` 在主对话卡与任务详情共用，区分已保存、等待续执行、已登记新轮次和已封存。源运行及唯一后继均可查看同一历史；切换其他轮次不展示，候选仍只属于其真实 run。预约不代表消费或启动；停止/失败/重启封存仍显示历史，明确不能沿此恢复。没有新增执行按钮、轮询或文件查询，实际续执行只由主调度工具提出并经后端门禁。
 
@@ -3879,3 +3882,5 @@ MemberDependencyNotice 的原边提示覆盖失败、求助和明确检查点放
 ScopeGoalPanel 在等待详情显示后端冻结的可靠检查点与未启动后继，可定位原任务，说明重启不占模型、明确继续后重核。取消后的历史仅显示曾保留清单与封存边界；不提供历史启动。复用 ScopeContinuationForm 的共享草稿、冻结请求、同命令查询和显式提交；普通聊天草稿不受影响。含 memberPause 的等待隐藏人工决定接续表单，防止该入口被误认为成员恢复。
 
 continuationRejected 明确枚举成员文件、原生证明、岗位与权限的预受理拒绝：首次拒绝显示“补充未受理”并保留可编辑草稿。未知代码、通用 IO 和曾经发生通信未知的原请求仍冻结，只能查询或重发原请求；后续核验拒绝不能证明先前意图未提交。
+
+多段检查点详情显示当前段号/总段数及本段预约原因。早期已消费段保持 resumed 历史，最新段可分别显示停泊、排队、续执行、封存或明确放弃；不把最新预约原因、放弃记录或候选借给早期段。全链形状或任一身份不匹配时只报告记录异常。

@@ -277,3 +277,5 @@ Workflow 计划与交付门禁位于共享 Runtime 和任务工具，Pi 仍经�
 ## 受控文件桥
 
 Pi 仅发现正式成员实际装配的受控写工具，桥保留原 toolCallId 和取消 signal 进入 Runtime helper；不提供补偿工具，不替换原 native write/edit。只有已可靠落盘 applied 的严格唯一 wire 可返回成功。桥关闭不等于文件工人已退出，Runtime 另行 drain 实际平台会话。
+
+检查点提示以实际注册工具为准：本运行有剩余额度时可申请一个，正常关闭后由调度核实并保存；续执行仍可在剩余额度内保存下一段，Pi 不自建预约、不选择历史段恢复。

@@ -1,8 +1,10 @@
 /**
+ * 成员停泊计数按最新段是否消费确定，旧已消费预约不把正在运行的后段计入停泊。
  * 作用定位：将负责人控制面接到同一派发事务，重算关联任务影响并核实真实主运行来源。
  * 设计原因：单条审计仅可附预先核验的对应来源捕获，不能夹带执行变化；重放使用当时前缀，旧任务不猜岗位身份。
  */
 import {fail} from '../foundation/errors';
+import {isMemberCheckpointPending} from './member-checkpoint';
 import {hash} from '../foundation/serialization';
 import {applyModuleOwnershipChange,moduleOwnershipCanonical,moduleOwnershipCommand,moduleOwnershipReceipt} from '../workspace/module-ownership-rules';
 import {moduleOwnershipActorSchema,type ModuleOwnership,type ModuleOwnershipActor,type ModuleOwnershipChange,type ModuleOwnershipCursor,type ModuleOwnershipImpact} from '../workspace/module-ownership';
@@ -28,7 +30,7 @@ export function moduleOwnershipImpact(state:DispatchState,moduleId:string):Modul
     const runs=(state.runs??[]).filter(run=>run.binding.rootSessionId===graph.identity.rootSessionId&&run.binding.taskId===task.taskId).map(run=>({binding:run.binding,status:run.status,assignmentMessageId:run.assignmentMessageId,createdAt:run.createdAt,startedAt:run.startedAt,settledAt:run.settledAt}));
     const assignments=state.outbox.filter(message=>message.kind==='assignment'&&message.identity.rootSessionId===graph.identity.rootSessionId&&message.taskId===task.taskId).map(message=>({messageId:message.messageId,delivery:message.delivery,claim:message.claim}));
     if(task.activeRunId||runs.some(run=>run.status==='starting'||run.status==='running'))counts.inFlight++;
-    else if(task.status==='checkpointed'||task.resumeRequest&&task.runIds.length===1&&task.status==='queued')counts.checkpointed++;
+    else if(isMemberCheckpointPending(task))counts.checkpointed++;
     else if(['planned','queued','waiting'].includes(task.status)&&!task.runIds.length&&!assignments.some(item=>item.claim))counts.unclaimed++;
     else if(['result_ready','failed','cancelled','interrupted'].includes(task.status))counts.terminal++;
     else counts.other++;

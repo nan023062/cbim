@@ -1,4 +1,5 @@
 /**
+ * 已放弃的多段检查点作为换边来源时核全部原日志，不只信任最新段的摘要。
  * 持久成员等待通过独立只读核验精确保留原检查点和后继，主轮安全结算才停泊；未知和在途仍拒绝。
  * 问答边界：当前与历史候选共用真实业务回执校验，普通回答及取消不能替代目标完成或人工验收依据。
  * 作用定位：保存本轮目标计划与审阅，为门禁、依赖修订和人工决定核验真实候选；已放弃检查点换边仍核原冻结日志，不复活旧任务。
@@ -241,7 +242,7 @@ export class ScopeGoalService {
     if(task.status==='cancelled'&&task.checkpointAbandonment){
       const run=abandonedCheckpointSource(state,{workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId},scope.scopeId,task),ports=this.logs();
       check(ports.normalizeValidationPath,'GOAL_EVIDENCE_INVALID','未装配原检查点路径核验，不能替换已放弃来源');
-      await verifyMemberCheckpointHistory(this.owner,task,run,{inspect:r=>ports.inspectMember(r),normalizePath:raw=>ports.normalizeValidationPath!(raw)},()=>this.owner.assert());
+      await verifyMemberCheckpointHistory(this.owner,task,run,{inspect:r=>ports.inspectMember(r),normalizePath:raw=>ports.normalizeValidationPath!(raw)},()=>this.owner.assert(),state.runs);
       return;
     }
     check(task.scopeId===scope.scopeId&&!task.activeRunId&&!task.result&&(task.status==='failed'||task.status==='blocked'&&task.help),'GOAL_EVIDENCE_INVALID','原前置没有可安全替换的失败或求助记录');

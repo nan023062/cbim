@@ -1,4 +1,5 @@
 /**
+ * 工厂按已提交历史计算剩余额度，恢复闭包持有全链快照以保护早期未再触及文件。
  * 持久成员等待另复用当前文件/native只读端口与短读占用，重启登记不调用恢复工厂。
  * 受控写边界：实际领取成员固定 scope/run/岗位来源并沿用成员写租约；桌面补偿独立取得写租约，不继承模型批准。
  * 作用定位：为已运行工作区装配成员派发、大脑执行、目标审阅、岗位及模块负责人服务；复用工作区恢复前创建的唯一 DispatchStore，来源、责任、岗位与执行保持独立审计投影。
@@ -17,6 +18,7 @@ import {createWorkspaceLoop} from '../scheduler-engine/execution/loop-engine';
 import {memberExecutionPrompt,recheckDispatchExecutionContext} from '../scheduler-engine/context/execution-context';
 import {ArtifactFiles,normalizeArtifactPath} from './platform/artifact-files';
 import {NativeSessionFiles} from './platform/native-session-files';
+import {memberCheckpointLimit} from '../core/tasks/member-checkpoint';
 import {verifyMemberCheckpointProof,verifyMemberCheckpointInputs} from '../scheduler-engine/execution/member-checkpoint-verifier';
 import {randomUUID} from 'node:crypto';
 import {FileRunStorage} from './persistence/tasks/run-storage';
@@ -77,18 +79,19 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
         workspace.assert();
         if(run.binding.workspaceId!==workspace.entry.id||task.identity.workspaceId!==workspace.entry.id)throw Error('成员运行与工作区身份不匹配');
         if(JSON.stringify(run.model)!==JSON.stringify(llm.profile))throw Error('成员运行模型快照与启动配置不一致');
-        const previous=run.resumeFrom?(await store.read()).runs?.find(old=>old.binding.runId===run.resumeFrom!.runId):undefined;
+        const checkpointState=await store.read(),previous=run.resumeFrom?checkpointState.runs?.find(old=>old.binding.runId===run.resumeFrom!.runId):undefined;
         if(run.resumeFrom&&(!previous?.checkpointProof||previous.checkpointProof.checkpoint.checkpointId!==run.resumeFrom.checkpointId))fail('MEMBER_CHECKPOINT_INVALID','续执行缺少原检查点证明');
         const loop=await createWorkspaceLoop(workspace.paths,workspace,{provider:'cbim-'+llm.profile.id,model:llm.profile.model,profileId:llm.profile.id,llm,
           permission:run.permission,turnTimeoutMs:run.turnTimeoutMs,onEvent:hooks.onEvent,requestApproval:hooks.requestApproval,requestQuestion:hooks.requestQuestion,
         },{
+          memberCheckpointAllowance:memberCheckpointLimit-(task.checkpoints?.length??0),
           storage,member:{directory:runsDirectory,prompt:memberExecutionPrompt(run.prepared,task,run.prerequisites),workflowContracts:preparedWorkflowContracts(run.prepared)},onEngineReady:hooks.onEngineReady,
           artifacts:{knowledgeRevision:run.prepared.knowledgeRevision,normalizePath:normalizeArtifact,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},captureFiles:(paths,signal)=>artifactFiles.captureFiles(paths,signal)},
           validations:{validateFile:(file,schema,signal)=>artifactFiles.validateFile(file,schema,signal),checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal)},
           controlledFiles:task.scopeId?controlledFiles.forRun(run,task.scopeId):undefined,
           // 领取后到 Pi 发出首条 prompt 前仍有异步准备；每个准备边界复核原证明，不只核原生文件而遗漏外部业务文件变化。
-          assertMemberResume:previous?async()=>{await verifyMemberCheckpointProof(workspace,task,previous,checkpointPorts,()=>workspace.assert(),previous.checkpointProof)}:undefined,
-          assertMemberResumeInputs:previous?()=>verifyMemberCheckpointInputs(workspace,task,previous,checkpointPorts,()=>workspace.assert(),previous.checkpointProof!):undefined,
+          assertMemberResume:previous?async()=>{await verifyMemberCheckpointProof(workspace,task,previous,checkpointPorts,()=>workspace.assert(),previous.checkpointProof,checkpointState.runs)}:undefined,
+          assertMemberResumeInputs:previous?()=>verifyMemberCheckpointInputs(workspace,task,previous,checkpointPorts,()=>workspace.assert(),previous.checkpointProof!,checkpointState.runs):undefined,
           // 成员管理器已在领取事务前取得共享占用，并持有到结算完成；大脑不能提前释放或再次领取。
           acquireLease:async input=>{workspace.assert();if(input.workspaceId!==workspace.entry.id||input.root!==workspace.entry.path||input.taskId!==task.taskId)throw Error('成员任务与工作区身份不匹配');return ()=>{}},
           authorizeNative:async call=>{workspace.assert();const reason=guard({name:call.name==='find'?'Glob':call.name,input:call.input},workspace.entry.path);return {allow:!reason,reason}},

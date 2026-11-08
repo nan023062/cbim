@@ -15,7 +15,7 @@ export type DispatchRunStatus='starting'|'running'|'completed'|'failed'|'cancell
 
 /**
  * 单次成员运行的固定输入与事实，由内部调度事务写入。
- * 首次运行之后只允许可信检查点带来一次续执行；session.nativeSessionId 归 agentSessionId，不能按最近运行猜测。
+ * 首次运行之后每个可信检查点只允许一次续执行；session.nativeSessionId 归 agentSessionId，不能按最近运行猜测。
  */
 export interface DispatchRun {
   binding:MemberRunBinding;

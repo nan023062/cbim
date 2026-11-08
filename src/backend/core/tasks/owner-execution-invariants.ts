@@ -1,4 +1,5 @@
 /**
+ * 首次新增及后续段预约均重核当前岗位；首次出现即触发检查，不依靠其它结构校验补出请求 ID。
  * 作用定位：校验负责人协议下的新计划、任务、前置增删闭包、预约和领取，以及历史冻结身份。
  * 设计原因：Store 的新旧日志协议决定新增许可；不能以旧缺省、新 cause 或通用 mutation 绕过负责人，也不能用今日换人否定旧运行结算。
  * 职责边界：不读取知识或模型队列；外部内容时效由服务持锁复验，此处核同一登记前缀及全部跨对象引用。
@@ -58,7 +59,7 @@ export function validateOwnerExecutionMutation(previous:DispatchState,next:Dispa
   for(const graph of next.graphs)for(const task of graph.tasks){
     const old=taskAt(previous,task);
     if(!old)currentTask(previous,task,true);
-    else if(task.resumeRequest&&!old.resumeRequest)currentTask(previous,task);
+    else if(task.resumeRequest&&(!old.resumeRequest||task.resumeRequest.requestId!==old.resumeRequest.requestId))currentTask(previous,task);
     for(const ids of [...(task.dependencyAdditions??[]).slice(old?.dependencyAdditions?.length??0).map(record=>record.trackedTaskIds),...(task.dependencyReplacements??[]).slice(old?.dependencyReplacements?.length??0).map(record=>record.trackedTaskIds),...(task.dependencyRevisions??[]).slice(old?.dependencyRevisions?.length??0).map(record=>record.trackedTaskIds)])for(const id of ids){const pending=graph.tasks.find(value=>value.taskId===id);check(pending,'依赖变更的待办闭包缺失');currentTask(previous,pending);}
   }
   for(const run of mutation.runs??[])if(!previous.runs?.some(value=>value.binding.runId===run.binding.runId)){

@@ -1,5 +1,5 @@
 /**
- * 作用定位：当前主调度为本周期安全检查点预约一次原任务续执行，提交独立待领取信封。
+ * 作用定位：当前主调度为本周期最新安全检查点预约一次原任务续执行，逐段保留原预约和独立待领取信封。
  * 设计原因：主轮仍占执行资源时不能立刻启动成员；预约和真正领取分开，并各自在 Knowledge→模型→Store 顺序核原岗位。旧回执不重新解析来源，未确认补充阻止新预约，停止或重启不会自动重放。
  */
 import {randomUUID} from 'node:crypto';
@@ -15,6 +15,7 @@ import {scopeHasUnresolvedActiveInput} from '../../core/tasks/scope-active-input
 import {memberBatch} from './member-state';
 import {verifyMemberCheckpointProof,type MemberCheckpointVerificationPorts} from './member-checkpoint-verifier';
 import type {OwnerExecutionService} from './owner-execution-service';
+import {memberResumeRequests} from '../../core/tasks/member-checkpoint-chain';
 
 export class MemberResumeService {
   constructor(private readonly owner:KnowledgeWorkspace,private readonly store:DispatchStore,private readonly ports:MemberCheckpointVerificationPorts,private readonly owners?:OwnerExecutionService){}
@@ -29,10 +30,10 @@ export class MemberResumeService {
       check();const selected=memberResumeSelection(state,identity,scopeId,mainRunId,input),{graph,scope,task,run,checkpoint,trackedTaskIds}=selected;
       if(scopeHasUnresolvedActiveInput(scope))fail('GOAL_ACTIVE_INPUT_UNRESOLVED','运行中补充尚未核实，不能预约成员续执行');
       await this.owners!.verifyTask(state,context,task);check();
-      await verifyMemberCheckpointProof(this.owner,task,run,this.ports,check,run.checkpointProof);check();
+      await verifyMemberCheckpointProof(this.owner,task,run,this.ports,check,run.checkpointProof,state.runs);check();
       const requestId=randomUUID(),now=new Date().toISOString(),resumeFrom={checkpointId:checkpoint.checkpointId,runId:run.binding.runId};
       const resumeRequest={requestId,commandId,scopeId,mainRunId,...resumeFrom,requestedAt:now,reason:input.reason,graphCursor:{streamId:graph.cursor.streamId,seq:graph.cursor.seq},goalRevision:scope.goal!.revision,previousTaskRevision:task.revision,trackedTaskIds};
-      const updated={...task,status:'queued' as const,revision:task.revision+1,updatedAt:now,waitReason:input.reason,resumeRequest};
+      const history=memberResumeRequests(task),updated={...task,status:'queued' as const,revision:task.revision+1,updatedAt:now,waitReason:input.reason,...(history.length?{resumeHistory:[...history]}:{}),resumeRequest};
       const batch=memberBatch(graph,commandId,'task.resume_requested',[{type:'task.upserted',task:updated}]);
       check();return {batch,messages:[{kind:'assignment' as const,messageId:requestId,commandId,identity:graph.identity,from:task.requester,to:task.assignee,taskId:task.taskId,planRevision:task.planRevision,createdAt:now,delivery:'pending' as const,resumeFrom}],receipt:{taskId:task.taskId,checkpointId:checkpoint.checkpointId,requestId,trackedTaskIds,cursor:{...identity,streamId:batch.streamId,seq:batch.seq}}};
     }),check);

@@ -1,4 +1,5 @@
 /**
+ * 放弃核原完整运行链，只处置最新尚未领取的预约，不消耗历史已领取信封。
  * 作用定位：主调度明确放弃本周期尚未消费的检查点及可选恢复预约，保留旧执行与证明。
  * 设计原因：先查原回执，再在事务外核历史日志，最后仅作 Store CAS；处置不依赖当前知识、模型或文件仍可执行，避免反向锁和旧待办无法终止。
  * 职责边界：只取消原任务、递增租约并处理原恢复信封，不迁移负责人、不启动或回滚执行，也不确认业务完成。
@@ -40,13 +41,13 @@ export class CheckpointAbandonmentService {
     const check=()=>{this.owner.assert();assertCurrent();if(fixed.workspaceId!==this.owner.entry.id)fail('GRAPH_IDENTITY_MISMATCH','检查点不属于当前工作区')};check();
     if(!this.ports)fail('CHECKPOINT_HANDOFF_UNAVAILABLE','未装配检查点历史核实端口');
     const observed=structuredClone(checkpointAbandonmentSelection(await this.store.read(),identity,scopeId,mainRunId,input));check();
-    await verifyMemberCheckpointHistory(this.owner,observed.task,observed.run,this.ports,check);check();
+    await verifyMemberCheckpointHistory(this.owner,observed.task,observed.run,this.ports,check,observed.runs);check();
     return this.store.transact(command,async state=>{
       check();const selected=checkpointAbandonmentSelection(state,identity,scopeId,mainRunId,input);
       // selector 不含原 checkpoint 结果信封，迟到的纯 ACK 不会冒充任务/运行变化，也不需要由本操作确认。
       if(!isDeepStrictEqual(selected,observed))fail('CHECKPOINT_HANDOFF_STALE','历史核实期间目标、任务、证明或原实例状态已经变化');
       const {graph,scope,task,member,run,checkpoint,resumeAssignment}=selected,now=new Date().toISOString();
-      const abandonment:CheckpointAbandonment={kind:'abandoned_by_handoff',commandId,scopeId,mainRunId,graphCursor:{...input.expectedGraphCursor},goalRevision:scope.goal!.revision,previousTaskRevision:task.revision,planRevision:task.planRevision,checkpointId:checkpoint.checkpointId,sourceRunId:run.binding.runId,resumeRequestId:task.resumeRequest?.requestId??null,previousLeaseEpoch:member.leaseEpoch,nextLeaseEpoch:member.leaseEpoch+1,reason:input.reason,abandonedAt:now};
+      const abandonment:CheckpointAbandonment={kind:'abandoned_by_handoff',commandId,scopeId,mainRunId,graphCursor:{...input.expectedGraphCursor},goalRevision:scope.goal!.revision,previousTaskRevision:task.revision,planRevision:task.planRevision,checkpointId:checkpoint.checkpointId,sourceRunId:run.binding.runId,resumeRequestId:observed.currentRequest?.requestId??null,previousLeaseEpoch:member.leaseEpoch,nextLeaseEpoch:member.leaseEpoch+1,reason:input.reason,abandonedAt:now};
       const updated:TaskNode={...task,status:'cancelled',revision:task.revision+1,updatedAt:now,waitReason:input.reason,checkpointAbandonment:abandonment};
       const view=graph.agents.find(value=>value.agentInstanceId===member.agentInstanceId)!;
       const graphCursor={streamId:graph.cursor.streamId,seq:graph.cursor.seq+1};

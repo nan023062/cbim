@@ -1,8 +1,10 @@
 /**
  * 作用定位：定义成员有界文件任务的合作式检查点请求、可信交接记录和后端原生历史证明。
- * 设计原因：模型请求不等于安全停泊；仅正常关闭并核实全部来源后交接，同任务最多一个检查点及一次续执行，不复活异常或求助记录。
+ * 设计原因：模型请求不等于安全停泊；仅正常关闭并核实全部来源后交接，同任务有界追加逐段检查点，每段只消费一次，不复活异常或求助记录。
  */
 import {z} from 'zod';
+/** 每任务最多16个检查点及17段运行；与主周期次数限额分别核实，不授予额外预算。 */
+export const memberCheckpointLimit=16;
 const id=z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/),logical=z.string().min(1).max(512),seq=z.number().int().nonnegative().safe(),digest=z.string().regex(/^[a-f0-9]{64}$/);
 /** 模型只能引用本轮已确认的文件基线，不能指定路径、原生会话或恢复权限。 */
 export const memberCheckpointInputSchema=z.object({expectedTaskProgressVersion:seq.min(1),baselineId:id,reason:z.string().trim().min(1).max(4000)}).strict();
@@ -22,4 +24,4 @@ export type MemberCheckpointProof=z.infer<typeof memberCheckpointProofSchema>;
 export const memberResumeFromSchema=z.object({checkpointId:id,runId:id}).strict();
 export type MemberResumeFrom=z.infer<typeof memberResumeFromSchema>;
 /** 共享生命周期门禁：不能让新增状态从旧枚举检查中漏过。 */
-export function isMemberCheckpointPending(task:{status:string;checkpoints?:readonly MemberCheckpointRecord[];runIds:readonly string[];activeRunId?:string}):boolean{return task.status==='checkpointed'||!!task.checkpoints?.length&&task.runIds.length===1&&['queued','waiting'].includes(task.status)}
+export function isMemberCheckpointPending(task:{status:string;checkpoints?:readonly MemberCheckpointRecord[];runIds:readonly string[];activeRunId?:string}):boolean{return task.status==='checkpointed'||!!task.checkpoints?.length&&task.runIds.at(-1)===task.checkpoints.at(-1)!.binding.runId&&['queued','waiting'].includes(task.status)}

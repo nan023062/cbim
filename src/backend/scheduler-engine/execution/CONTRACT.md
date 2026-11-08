@@ -484,13 +484,13 @@ AutoCollaboration 只在成功撤销回执后，从当前派发批次的待启�
 
 `MemberExecutionManager` 只在成员引擎实际关闭后核实暂存检查点。`verifyMemberCheckpointProof` 共用于结算、主预约、实际领取及引擎准备：完整 canonical 身份/原 TaskSpec/原目标和验收/成功白名单工具/终态、当前知识与 Workflow、全路径文件基线、受管 native 指纹均须匹配。私有 logHash/native 摘要留在 DispatchRun，任务图只公开检查点记录。匹配只证明当前受限文件与已冻结上下文，不能证明业务验收或未知命令影响。
 
-通过结算的首轮保留 completed，但 task 为 checkpointed、无 candidate/help；新 checkpoint 信封回主调度。实例仍保留原身份，真实运行、工作区租约及全局名额在终态事务后释放。异常终态、停止、软件退出、已关闭 scope 和 released 实例不能变成可续执行检查点。
+通过结算的每段保留 completed，但 task 为 checkpointed、无 candidate/help；新 checkpoint 信封回主调度。实例仍保留原身份，真实运行、工作区租约及全局名额在终态事务后释放。异常终态、停止、软件退出、已关闭 scope 和 released 实例不能变成可续执行检查点。
 
 `MemberResumeService.request` 在同 active scope、同计划和图 CAS 下复核原证明，幂等提交 `TaskNode.resumeRequest` 以及独立 pending assignment。工具回执只表示预约，既不创建新 run，也不消费旧 processed 信封。`AutoCollaboration` 将返回的 task 与未启动后继加入当前批次；当前主轮 settled 后才调用专用 `members.resume`，不会由读取或重启唤醒。
 
 真正领取仍先核预算、准入和当前批次，等待不消费检查点。当前 goal 版本须仍等于预约版本，且无审阅、blocked 或待重规划；预约后主轮改计划也不能沿旧请求领取。取得占用后重查原知识、配置、权限、前置候选、文件和 native，再原子追加唯一新 run/resumeFrom、领取新信封并递增 leaseEpoch 一代。模型公开快照按实际 JSON 持久语义比较可选缺省项，不能借此改变任何已配置字段；运行使用原权限，原批准不继承。引擎准备前后继续核冻结证明，prompt 前最后复核业务文件、知识及 canonical，合法 native 配置追加不误判为旧指纹一致。续轮清空旧 TaskProgress 证据，候选仅认新 run。
 
-每 task 最多一个检查点、一次续执行；旧任务目标/模块/实例/逻辑与原生通道保持不变。checkpointed 与待领续请求均阻止目标完成或 waiting；关闭周期将其封存为 cancelled、处理 pending 信封并释放成员，保留原记录。完整性失败不自动当 failed 或 superseded 继续，须明确收束周期再走新周期核实。
+每 task 最多16个检查点，每段一次续执行；旧任务目标/模块/实例/逻辑与原生通道保持不变。checkpointed 与待领续请求均阻止目标完成；只有完整 memberPause 清单中的未预约最新段和未启动后继可以进入 waiting；关闭周期将其封存为 cancelled、处理 pending 信封并释放成员，保留原记录。完整性失败不自动当 failed 或 superseded 继续，须明确收束周期再走新周期核实。
 
 `ScopeBudgetService` 在新普通周期、只读核实周期、业务重规划周期创建时冻结应用策略。默认关闭，旧无 budget 的周期不补造。启用时，首轮证明与主清单同事务写入；结果回注、用户显式补充与成员领取都先在当前派发事务中重读精确 canonical 日志，再将 `budget.lastAdmission` 与本次新增主运行或 DispatchRun 一起提交。策略改变仅影响下个周期，不能抹去当前已报告用量、复活旧执行实例或提升权限。
 
@@ -617,3 +617,9 @@ MemberPauseService 为 ScopeGoalService 的审阅与停泊核原 canonical 检�
 ScopeContinuationService 先查原意图；同命令在外层锁竞争期间已受理时返回原不可变事实且 fresh=false，不创建第二主轮。成功归档 memberPause、提升输入版本，由 Auto 建立当前 Cycle；模型重规划后明确 cbim_dispatch_resume，原待办闭包由既有预约回执加入新批次，主轮结算后按新候选实际领取。预检成功不代替预约/领取核验。人工决定接续不能消费包含 memberPause 的等待，需使用补充入口；正常人工流程保持原边界。
 
 停止 waiting 原子封存检查点与未领取后继，保留原完成段及证明并释放成员；停止与受理竞争只保留真实已提交意图。未消费的已预约检查点、多段续执行和异常 native 不在本片支持域。
+
+## 全链证据与累计文件复核
+
+检查点结算、用户继续、主预约、实际领取及模型发送前均使用同一可信运行快照核全部原 canonical。各段完成日志必须逐一匹配冻结证明；文件按路径的最后已核实触及合并，后段未触及的早期文件保留。只核最新 native 指纹，不要求此前 native 字节保持旧值。放弃只核原全链历史，不要求今日文件匹配。任何核实失败不刷新旧 proof 或自动重放。
+
+累计文件最多来自16个原基线（至多256个唯一文件、512MiB原总量）；按平台每批16文件/32MiB边界顺序复核，共用15秒截止。后段已验证同路径事实覆盖旧字节，没有再次触及的路径不得省略；超时或不可信批次均不能继续。

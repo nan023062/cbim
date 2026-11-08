@@ -1,4 +1,5 @@
 /**
+ * 多段放弃仅封存最新未消费段，所有已消费检查点与预约保持原样。
  * 作用定位：核实检查点放弃的不可变历史和精确联合事务，返回仅供检查点状态机使用的任务许可。
  * 设计原因：事件名、取消状态或自报审计均不授权处置；原运行/原生通道及 checkpoint 信封不变，后续纯 ACK 和周期释放仍须合法。
  */
@@ -8,6 +9,7 @@ import type {TaskNode} from './graph-types';
 import {checkpointAbandonmentSchema,abandonCheckpointReceiptSchema,type CheckpointAbandonment} from './checkpoint-handoff';
 import {checkpointAbandonmentSelection} from './checkpoint-handoff-rules';
 import {sameGoalValue} from './scope-goal';
+import {currentMemberResumeRequest} from './member-checkpoint-chain';
 
 function valid(value:unknown,message:string):asserts value{if(!value)fail('GRAPH_INPUT_INVALID',message)}
 /** 新增处置完整通过才返回许可；已核实的历史处置也保留取消许可，但其整个任务必须不变。 */
@@ -18,9 +20,9 @@ export function validateCheckpointAbandonment(previous:DispatchState,next:Dispat
     if(old?.checkpointAbandonment)valid(sameGoalValue(old,task),'已为交接放弃的任务不可改写或恢复');
     if(!record)continue;
     valid(checkpointAbandonmentSchema.safeParse(record).success&&!commands.has(record.commandId),'交接放弃审计无效或命令重复');commands.add(record.commandId);
-    const scope=next.scopes?.find(value=>value.scopeId===task.scopeId&&value.workspaceId===task.identity.workspaceId&&value.rootSessionId===task.identity.rootSessionId),checkpoint=task.checkpoints?.[0],run=next.runs?.find(value=>value.binding.runId===record.sourceRunId),member=next.members.find(value=>value.agentInstanceId===task.assignee.agentInstanceId);
+    const scope=next.scopes?.find(value=>value.scopeId===task.scopeId&&value.workspaceId===task.identity.workspaceId&&value.rootSessionId===task.identity.rootSessionId),checkpoint=task.checkpoints?.at(-1),run=next.runs?.find(value=>value.binding.runId===record.sourceRunId),member=next.members.find(value=>value.agentInstanceId===task.assignee.agentInstanceId);
     valid(scope&&record.scopeId===scope.scopeId&&scope.runTracking?.mainRunIds.includes(record.mainRunId)&&!next.runs?.some(value=>value.binding.runId===record.mainRunId),'交接处置缺少本周期真实主运行');
-    valid(task.status==='cancelled'&&!task.activeRunId&&!task.result&&!task.help&&!task.cancelledBeforeStart&&task.runIds.length===1&&task.runIds[0]===record.sourceRunId&&checkpoint?.checkpointId===record.checkpointId&&checkpoint.binding.runId===record.sourceRunId&&(task.resumeRequest?.requestId??null)===record.resumeRequestId,'交接放弃没有保留原任务与检查点终态');
+    valid(task.status==='cancelled'&&!task.activeRunId&&!task.result&&!task.help&&!task.cancelledBeforeStart&&task.runIds.length===task.checkpoints?.length&&task.runIds.at(-1)===record.sourceRunId&&checkpoint?.checkpointId===record.checkpointId&&checkpoint.binding.runId===record.sourceRunId&&(currentMemberResumeRequest(task)?.requestId??null)===record.resumeRequestId,'交接放弃没有保留原任务与检查点终态');
     valid(record.planRevision===task.planRevision&&record.previousTaskRevision+1===task.revision&&record.abandonedAt===task.updatedAt&&record.reason===task.waitReason&&record.graphCursor.streamId===graph.cursor.streamId&&record.graphCursor.seq<graph.cursor.seq,'交接放弃与任务版本或图基线不一致');
     valid(run?.status==='completed'&&sameGoalValue(run.checkpointProof?.checkpoint,checkpoint)&&member&&member.leaseEpoch>=record.nextLeaseEpoch,'交接放弃缺少原完成段或已递增租约');
     const resume=record.resumeRequestId?next.outbox.find(value=>value.messageId===record.resumeRequestId):undefined;

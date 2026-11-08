@@ -1,4 +1,5 @@
 /**
+ * 成员续段结算追加检查点并核累计文件，领取只消费最新段；历史完整前缀不能替代本轮真实证据。
  * 文件退出边界：child 未确认退出时保留原成员占用；再次关闭只排空原进程及结算原日志，不重发工具或创建新运行。
  * 作用定位：让已派发任务在独立成员会话中执行，提交领取、启动、结果、中断及一次安全停泊/续执行事实。
  * 设计原因：全局准入及本地租约先同步领取，容量等待不创建 run 或 claim；按任务原 Workflow 选择核实际能力，续执行不得借新计划改选。候选结算重读 canonical 并复核当前文件，占用持续到终态事务完成。
@@ -31,6 +32,8 @@ import type {ArtifactReport} from '../../core/tasks/artifact-baseline';
 import type {ExecutionReport} from '../../core/tasks/execution-report';
 import type {ExecutionAdmissionWait} from './admission-wait';
 import {rejectBudget,type ScopeBudgetService,type ScopeBudgetRejected} from './scope-budget-service';
+import {memberCheckpointLimit} from '../../core/tasks/member-checkpoint';
+import {currentMemberResumeRequest,validMemberCheckpointChain} from '../../core/tasks/member-checkpoint-chain';
 import {verifyMemberCheckpointProof,type MemberCheckpointVerificationPorts} from './member-checkpoint-verifier';
 import type {MemberCheckpointProof,MemberCheckpointRecord} from '../../core/tasks/member-checkpoint';
 import {MemberResumeService} from './member-resume-service';
@@ -52,7 +55,7 @@ export interface MemberExecutionPorts {
   withEngineConfiguration?<T>(model:OwnerExecutionBinding['model'],options:MemberStartOptions,use:(locked:{model:ResolvedLlm['profile'];prepare():PreparedEngine})=>Promise<T>):Promise<T>;
   /** 独立只读文件复核能力，不隐式采集旧日志或运行模型。 */
   artifacts?:Omit<ArtifactReportPorts,'inspect'>;
-  /** 真实关闭后读取受管原生文件；只供检查点结算与一次续执行，不向模型提供任意路径端口。 */
+  /** 真实关闭后读取受管原生文件；只供逐段检查点结算与本段一次续执行，不向模型提供任意路径端口。 */
   checkpoints?:Pick<MemberCheckpointVerificationPorts,'nativeFingerprint'>;
   /** 同一派发事务内读取 canonical 用量；拒绝事实先保存，绝不借查询接口发放许可。 */
   budgets?:ScopeBudgetService;
@@ -149,7 +152,7 @@ export class MemberExecutionManager {
         const hinted=memberTask(hint,input.rootSessionId,input.taskId).task;if(!hinted.ownerBinding)fail('OWNER_BINDING_REQUIRED','旧任务没有负责岗位绑定');
         const model=hinted.ownerBinding.model;
         if(input.options.profileId&&input.options.profileId!==model.profileId||input.options.model&&input.options.model!==model.modelId)fail('OWNER_MODEL_MISMATCH','成员模型只能来自原岗位绑定，不能由主会话选型覆盖');
-        const prior=resuming?hint.runs?.find(run=>run.binding.runId===hinted.resumeRequest?.runId):undefined;
+        const prior=resuming?hint.runs?.find(run=>run.binding.runId===currentMemberResumeRequest(hinted)?.runId):undefined;
         if(resuming&&!prior)fail('MEMBER_RESUME_NOT_ALLOWED','续执行原运行不存在');
         // 续执行沿原权限和超时准备工具能力；调用方不能用新 options 改变已冻结的运行约束。
         const engineOptions:MemberStartOptions=resuming?{profileId:model.profileId,model:model.modelId,permission:prior!.permission,turnTimeoutMs:prior!.turnTimeoutMs}:input.options;
@@ -164,14 +167,15 @@ export class MemberExecutionManager {
         if(state.scopes?.some(scope=>scope.scopeId===task.scopeId&&scope.recovery)&&input.options.permission!=='read')fail('RECOVERY_READONLY','只读核实周期的成员不能提升权限执行业务写入、知识写入或命令');
         if(task.revision!==input.expectedRevision)fail('GRAPH_REVISION_CONFLICT','任务版本已变化，请刷新后启动');
         if(task.activeRunId||!['queued','waiting'].includes(task.status)||(!resuming&&task.runIds.length))fail('TASK_NOT_STARTABLE','当前任务不能重新执行，请核实已有运行后重新派发');
-        if(resuming&&(!task.resumeRequest||task.runIds.length!==1||task.checkpoints?.length!==1||task.help||task.result))fail('MEMBER_RESUME_NOT_ALLOWED','当前任务没有唯一尚未消费的续执行预约');
+        const resumeRequest=currentMemberResumeRequest(task);
+        if(resuming&&(!resumeRequest||!validMemberCheckpointChain(task)||task.runIds.length!==task.checkpoints?.length||task.help||task.result))fail('MEMBER_RESUME_NOT_ALLOWED','当前任务没有唯一尚未消费的续执行预约');
         if(!dependenciesReady(graph,task))fail('TASK_DEPENDENCY_PENDING','前置任务尚未提供当前版本的交付候选');
         if(member.activeRunId)fail('MEMBER_BUSY','该成员正在处理另一项任务');
         const assignment=state.outbox.find(m=>m.kind==='assignment'&&m.taskId===task.taskId&&m.identity.rootSessionId===input.rootSessionId&&m.delivery==='pending'&&!!m.resumeFrom===resuming);
         if(!assignment)fail('ASSIGNMENT_UNAVAILABLE','任务缺少可领取的派发信封');
         const context={snapshot,profiles:[locked.model]};await this.ports.owners!.verifyTask(state,context,task);assertCurrent();
         const previous=(state.runs??[]).filter(r=>r.binding.agentSessionId===session.agentSessionId).at(-1);
-        if(resuming&&(!previous||!previous.checkpointProof||assignment.kind!=='assignment'||assignment.resumeFrom?.runId!==previous.binding.runId||assignment.resumeFrom.checkpointId!==previous.checkpointProof.checkpoint.checkpointId||assignment.messageId!==task.resumeRequest!.requestId||session.lastRunId!==previous.binding.runId))fail('MEMBER_RESUME_NOT_ALLOWED','续执行预约、检查点或原生通道已经失效');
+        if(resuming&&(!previous||!previous.checkpointProof||assignment.kind!=='assignment'||assignment.resumeFrom?.runId!==previous.binding.runId||assignment.resumeFrom.checkpointId!==previous.checkpointProof.checkpoint.checkpointId||assignment.messageId!==resumeRequest!.requestId||session.lastRunId!==previous.binding.runId))fail('MEMBER_RESUME_NOT_ALLOWED','续执行预约、检查点或原生通道已经失效');
         if(previous){
           if(previous.status!=='completed')fail('MEMBER_SESSION_REVIEW_REQUIRED','该成员通道上次运行未安全结束，请先核实；本阶段不自动续接异常通道');
           const summary=await this.ports.inspect(previous);
@@ -184,7 +188,7 @@ export class MemberExecutionManager {
         if(scope&&scopeHasUnresolvedActiveInput(scope))fail('GOAL_ACTIVE_INPUT_UNRESOLVED','运行中补充尚未核实，不能领取旧计划成员任务');
         if(scope?.goal&&goalNeedsReplan(scope.goal))fail('GOAL_REPLAN_REQUIRED','新输入尚未重新规划，不能领取旧计划成员任务');
         if(!scope?.goal?.plan||scope.goal.review||scope.goal.blocked||!scope.goal.plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&task.modules.every(module=>assignment.moduleIds.includes(module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))&&sameOwnerExecutionForModules(assignment.ownerBinding,task.ownerBinding,task.modules.map(module=>module.moduleId))))fail('OWNER_PLAN_STALE','当前计划不再保留原任务岗位、模块或 Workflow，请重新规划派发');
-        if(resuming&&(!scope?.goal||scope.goal.revision!==task.resumeRequest!.goalRevision||scope.goal.review||scope.goal.blocked||goalNeedsReplan(scope.goal)))fail('MEMBER_RESUME_STALE','预约后的目标计划已变化，不能消费原续执行请求');
+        if(resuming&&(!scope?.goal||scope.goal.revision!==resumeRequest!.goalRevision||scope.goal.review||scope.goal.blocked||goalNeedsReplan(scope.goal)))fail('MEMBER_RESUME_STALE','预约后的目标计划已变化，不能消费原续执行请求');
         if(resuming&&(!scope?.goal?.plan||scope.goal.plan.knowledgeRevision!==previous!.prepared.knowledgeRevision||!scope.goal.plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&task.modules.every(module=>assignment.moduleIds.includes(module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))&&sameOwnerExecutionForModules(assignment.ownerBinding,task.ownerBinding,task.modules.map(module=>module.moduleId)))))fail('MEMBER_RESUME_STALE','当前计划不再保留原岗位、模块、Workflow 选择或知识基线');
         const admitted=scope?await this.ports.budgets?.admit(state,scope,{kind:'member',taskId:task.taskId,runId}):undefined;
         assertCurrent();
@@ -214,10 +218,10 @@ export class MemberExecutionManager {
           if(!isDeepStrictEqual(JSON.parse(json(engine.model)),previous!.model))fail('MEMBER_RESUME_CHANGED','原模型配置已经变化，不能沿旧上下文续执行');
           if(!isDeepStrictEqual(prepared,previous!.prepared))fail('MEMBER_RESUME_CHANGED','原知识工作流已经变化，不能沿旧上下文续执行');
           if(!isDeepStrictEqual(prerequisites,previous!.prerequisites??[]))fail('MEMBER_RESUME_CHANGED','原前置候选已经变化，不能沿旧上下文续执行');
-          await verifyMemberCheckpointProof(this.owner,task,previous!,this.checkpointPorts(),assertCurrent,previous!.checkpointProof);assertCurrent();
+          await verifyMemberCheckpointProof(this.owner,task,previous!,this.checkpointPorts(),assertCurrent,previous!.checkpointProof,state.runs);assertCurrent();
         }
         const leaseEpoch=member.leaseEpoch+(resuming?1:0);
-        const run:DispatchRun={binding:{workspaceId:input.workspaceId,teamId:member.teamId,agentId:member.agentId,agentInstanceId:member.agentInstanceId,agentSessionId:session.agentSessionId,rootSessionId:input.rootSessionId,taskId:task.taskId,runId,leaseEpoch,planRevision:task.planRevision},assignmentMessageId:assignment.messageId,status:'starting',prepared:resuming?structuredClone(previous!.prepared):prepared,prerequisites,model:engine.model,permission:options.permission,turnTimeoutMs:options.turnTimeoutMs,session:{nativeSessionId:session.nativeSessionId??session.agentSessionId,...(previous?{sessionFile:previous.session.sessionFile}:{})},createdAt:new Date().toISOString(),...(resuming?{resumeFrom:{checkpointId:task.checkpoints![0].checkpointId,runId:previous!.binding.runId}}:{})};
+        const run:DispatchRun={binding:{workspaceId:input.workspaceId,teamId:member.teamId,agentId:member.agentId,agentInstanceId:member.agentInstanceId,agentSessionId:session.agentSessionId,rootSessionId:input.rootSessionId,taskId:task.taskId,runId,leaseEpoch,planRevision:task.planRevision},assignmentMessageId:assignment.messageId,status:'starting',prepared:resuming?structuredClone(previous!.prepared):prepared,prerequisites,model:engine.model,permission:options.permission,turnTimeoutMs:options.turnTimeoutMs,session:{nativeSessionId:session.nativeSessionId??session.agentSessionId,...(previous?{sessionFile:previous.session.sessionFile}:{})},createdAt:new Date().toISOString(),...(resuming?{resumeFrom:{checkpointId:task.checkpoints!.at(-1)!.checkpointId,runId:previous!.binding.runId}}:{})};
         const updated={...task,status:'queued' as const,waitReason:undefined,revision:task.revision+1,activeRunId:runId,runIds:[...task.runIds,runId],updatedAt:run.createdAt};
         const occupied={...member,leaseEpoch,activity:'communicating' as const,activeTaskId:task.taskId,activeRunId:runId,waitingTaskIds:member.waitingTaskIds.filter(id=>id!==task.taskId),communicatingMessageIds:[assignment.messageId]};
         const dependencies=(resuming?[]:graph.edges.filter(edge=>edge.enabled&&edge.kind==='dependency'&&edge.toNodeId===task.nodeId)).map(edge=>{
@@ -314,8 +318,8 @@ export class MemberExecutionManager {
       if(!recovery&&status==='completed'&&summary?.events.some(event=>event.type==='task.checkpoint_requested')){
         result=undefined;
         try{
-          if(task.checkpoints?.length||run.resumeFrom||!task.scopeId||!state.scopes?.some(scope=>scope.scopeId===task.scopeId&&scope.status==='active'))fail('MEMBER_CHECKPOINT_LIMIT','每任务仅支持一次检查点与一次续执行');
-          checkpointProof=await verifyMemberCheckpointProof(this.owner,task,run,this.checkpointPorts(),()=>{if(this.handles.get(task.taskId)?.stopping||this.ports.isCurrent?.()===false||this.ports.signal?.aborted)fail('COLLABORATION_STOPPED','检查点交接已停止')});
+          if((task.checkpoints?.length??0)>=memberCheckpointLimit||task.runIds.at(-1)!==run.binding.runId||!task.scopeId||!state.scopes?.some(scope=>scope.scopeId===task.scopeId&&scope.status==='active'))fail('MEMBER_CHECKPOINT_LIMIT','任务已达到检查点上限或本段不属于当前活动周期');
+          checkpointProof=await verifyMemberCheckpointProof(this.owner,task,run,this.checkpointPorts(),()=>{if(this.handles.get(task.taskId)?.stopping||this.ports.isCurrent?.()===false||this.ports.signal?.aborted)fail('COLLABORATION_STOPPED','检查点交接已停止')},undefined,state.runs);
           checkpoint=checkpointProof.checkpoint;
         }catch{error='成员检查点未通过完整日志、文件、知识或原生上下文核实，不能续执行'}
       }
@@ -327,7 +331,7 @@ export class MemberExecutionManager {
       // canonical 重读期间用户仍可能停止；在没有进一步 await 的提交准备末端再次核对，不能发布迟到安全交接。
       if((result||help||checkpoint)&&(this.handles.get(task.taskId)?.stopping||this.ports.signal?.aborted||this.ports.isCurrent?.()===false)){result=undefined;help=undefined;checkpoint=undefined;checkpointProof=undefined;status='cancelled';error='用户停止了本次运行'}
       const now=new Date().toISOString(),taskStatus=checkpoint?'checkpointed' as const:result?'result_ready' as const:status==='completed'?'blocked' as const:status;
-      const updated:TaskNode={...task,revision:task.revision+1,status:taskStatus,activeRunId:undefined,result,help,...(checkpoint?{checkpoints:[checkpoint]}:{}),updatedAt:now,waitReason:checkpoint?'成员已安全停泊，等待主调度决定是否沿原任务续执行一次':result?undefined:help?'本轮执行结束，待主调度新安排：'+help.input.reason:error??(status==='completed'?'本轮未提交与派发目标一致的有效计划和交付证据':status==='cancelled'?'用户停止了本次运行':'执行未正常结束，请核实产物')};
+      const updated:TaskNode={...task,revision:task.revision+1,status:taskStatus,activeRunId:undefined,result,help,...(checkpoint?{checkpoints:[...(task.checkpoints??[]),checkpoint]}:{}),updatedAt:now,waitReason:checkpoint?'成员已安全停泊，等待主调度决定是否从最新检查点沿原任务继续':result?undefined:help?'本轮执行结束，待主调度新安排：'+help.input.reason:error??(status==='completed'?'本轮未提交与派发目标一致的有效计划和交付证据':status==='cancelled'?'用户停止了本次运行':'执行未正常结束，请核实产物')};
       const waitingTaskIds=member.waitingTaskIds.filter(id=>id!==task.taskId);
       const released={...member,leaseEpoch:member.leaseEpoch+(recovery?1:0),activity:waitingTaskIds.length?'waiting' as const:'idle' as const,activeTaskId:undefined,activeRunId:undefined,waitingTaskIds,communicatingMessageIds:[]};
       const assignment=state.outbox.find(m=>m.messageId===run.assignmentMessageId)!;

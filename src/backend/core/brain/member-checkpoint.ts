@@ -13,7 +13,7 @@ import type {StoredEvent} from './types';
 import type {ArtifactCapturePort} from './artifact-capture';
 import type {TaskProgress} from '../tasks/progress';
 
-/** 每 task 首轮提供一次；续执行轮不再装配，历史失败请求不能伪装新检查点。 */
+/** 每个获可信剩余额度的运行只提供一次；续执行可保存下一段，历史失败请求不能伪装新检查点。 */
 export class RunMemberCheckpoint {
   readonly tools:MemberCheckpointTools;
   private events:StoredEvent[]=[];

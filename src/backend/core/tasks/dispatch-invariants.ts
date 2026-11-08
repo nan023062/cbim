@@ -1,4 +1,5 @@
 /**
+ * 每个私有检查点证明和交接信封都绑定自己的原运行，逐段记录不能借用第一段证明。
  * 作用定位：在派发事务提交和日志恢复时校验成员执行、任务图和邮箱的联合约束。
  * 设计原因：仅验证每条记录形状不能防止半次领取、重复占用或旧 run 回调；把跨对象约束集中在 Core，磁盘适配器只负责可靠提交。
  * 职责边界：不启动模型、不访问文件、不签发权限；依赖追加与检查点放弃须完整核验后才给通用门禁精确许可，人工保存与显式接续不能冒充完成或自行消费等待。
@@ -106,7 +107,7 @@ function validateRun(previous:DispatchRun|undefined,run:DispatchRun,state:Dispat
     valid(run.settledAt&&Date.parse(run.settledAt)>=Date.parse(run.startedAt??run.createdAt),'终态缺少有效结算时间');
     valid(member.leaseEpoch>=binding.leaseEpoch&&member.activeRunId!==binding.runId&&task.activeRunId!==binding.runId&&assignment.delivery==='processed','终态必须释放成员、任务和信封');
     // 旧检查点轮次可靠结束后保留原状；当前节点可处于续执行或封存，不能反向改写该历史轮次。
-    if(run.checkpointProof)valid(run.status==='completed'&&task.checkpoints?.[0]?.binding.runId===binding.runId,'检查点证明只能属于原已完成轮次');
+    if(run.checkpointProof)valid(run.status==='completed'&&task.checkpoints?.some(cp=>cp.binding.runId===binding.runId),'检查点证明只能属于原已完成轮次');
     else{
       const expected=run.status==='completed'?['result_ready','blocked']:[run.status];
       valid(expected.includes(task.status),'运行终态与任务事实不一致');
@@ -147,7 +148,7 @@ function validateMessage(previous:DispatchMessage|undefined,message:DispatchMess
     valid(assignment?.kind==='assignment'&&sameGraph(assignment.identity,message.identity)&&assignment.taskId===message.taskId&&sameAgent(assignment.from,message.to)&&sameAgent(assignment.to,message.from),'结果必须返回同一图中原始发送方');
     valid(run&&run.assignmentMessageId===message.replyTo&&run.status==='completed'&&run.binding.planRevision===message.planRevision,'结果消息缺少对应的完成运行');
     if(message.kind==='help')valid(task.help?.helpId===message.helpId&&task.status==='blocked'&&task.help.binding.runId===message.runId&&task.planRevision===message.planRevision,'求助信封只能引用自己的冻结求助记录');
-    if(message.kind==='checkpoint')valid(task.checkpoints?.[0]?.checkpointId===message.checkpointId&&task.checkpoints[0].binding.runId===message.runId&&task.planRevision===message.planRevision,'检查点信封只能引用本任务冻结的可靠交接');
+    if(message.kind==='checkpoint')valid(task.checkpoints?.some(cp=>cp.checkpointId===message.checkpointId&&cp.binding.runId===message.runId)&&task.planRevision===message.planRevision,'检查点信封只能引用本任务冻结的可靠交接');
     if(!previous){
       valid(changedTask(mutation,message.identity,message.taskId)&&mutation.runs?.some(item=>item.binding.runId===message.runId&&item.status==='completed'),'交接信封须与正常完成运行原子提交');
       if(message.kind==='result')valid(task.status==='result_ready'&&task.result?.resultId===message.resultId&&task.result.runId===message.runId&&task.result.planRevision===message.planRevision,'结果信封须与候选结果原子提交');

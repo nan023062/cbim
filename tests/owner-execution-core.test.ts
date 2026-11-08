@@ -98,6 +98,11 @@ it('当前不变量阻止旧任务领取/预约和过期输入计划，旧已领
   expect(()=>validateOwnerExecutionMutation(paused,paused,{runs:[{...paused.runs![0],status:'cancelled'}],receipt:null},'module_owner_v1')).not.toThrow();
   const stale=structuredClone(previous);stale.scopes![0].goal!.inputRevision=2;stale.scopes![0].goal!.revision=3;expect(()=>validateOwnerExecutionMutation(stale,{...stale,runs:claim.runs},claim,'module_owner_v1')).toThrow(/当前/);
   const request=structuredClone(previous);request.graphs[0].tasks[0].resumeRequest={} as NonNullable<ReturnType<typeof task>['resumeRequest']>;expect(()=>validateOwnerExecutionMutation({...paused,runs:[]},{...request,workspaceMembers:paused.workspaceMembers,workspaceMemberChanges:paused.workspaceMemberChanges},{receipt:null},'module_owner_v1')).toThrow(/暂停/);
+  // 已有消费历史不能豁免下一段的新预约；单纯保留历史也不能反过来使旧结算失效。
+  const history=structuredClone(paused);history.graphs[0].tasks[0].resumeRequest={requestId:'consumed-reservation'} as NonNullable<ReturnType<typeof task>['resumeRequest']>;
+  expect(()=>validateOwnerExecutionMutation(history,history,{receipt:null},'module_owner_v1')).not.toThrow();
+  const nextReservation=structuredClone(history);nextReservation.graphs[0].tasks[0].resumeRequest!.requestId='next-reservation';
+  expect(()=>validateOwnerExecutionMutation(history,nextReservation,{receipt:null},'module_owner_v1')).toThrow(/暂停/);
 });
 
 it('新计划缺选择不能借兼容schema保存，历史原计划不变仍能读取',()=>{

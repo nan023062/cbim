@@ -68,7 +68,7 @@ export function validateCheckpointEligibility(events:readonly ArtifactEvidenceEv
 /** 只读取完整 canonical 事件；没有请求时不产生检查点，有损坏请求时拒绝而非当普通交付。 */
 export function verifyMemberCheckpoint(events:readonly ArtifactEvidenceEvent[],binding:Binding,knowledgeRevision:string,normalizePath:(path:string)=>string):{checkpoint:MemberCheckpointRecord;logHash:string}|undefined{
   const requests=events.filter(event=>event.type===eventName);if(!requests.length)return;
-  check(requests.length===1,'同一成员任务只允许一次检查点请求');
+  check(requests.length===1,'同一成员运行只允许一次检查点请求');
   check(events.length>0&&events[0].type==='run.started'&&events.filter(event=>event.type==='run.started').length===1&&events.filter(event=>event.type==='run.settled').length===1&&events.every((event,index)=>event.seq===index+1&&event.workspaceId===binding.workspaceId&&event.taskId===binding.taskId&&event.runId===binding.runId),'检查点必须使用本轮完整连续日志');
   const terminal=events.at(-1)!;check(terminal.type==='run.settled'&&terminal.data.status==='completed'&&!events.some(event=>['run.stop_requested','run.interrupted','task.help_requested'].includes(event.type)),'只有无停止和异常的正常关闭可交接检查点');
   closedTools(events,binding);

@@ -1,4 +1,5 @@
 /**
+ * 主对话直接展示原目标／图的关键节点，成员公开计划独立刷新；折叠和历史选择不产生执行副作用。
  * 新对话默认 Auto，旧无模式偏好的历史对话保持 Team；当前目标期间禁用模式切换，下一目标仍可在同一对话改选。
  * 历史菜单与侧栏共用本机条目和运行观察，改名／移除由外壳负责，不改原任务目标或日志。
  * 文件补偿：向成员详情传递当前工作区实例，历史运行身份不替代新操作的当前实例校验。
@@ -19,6 +20,7 @@ import {runtimeTaskSelection,type RuntimeNavigationRequest} from '../shell/runti
 import {transcript} from './transcript';
 import {MarkdownMessage} from './MarkdownMessage';
 import {WorkStatus} from './WorkStatus';
+import {ConversationProgress} from './ConversationProgress';
 import {SessionTaskView} from '../tasks/SessionTaskView';
 import {useSessionGraph} from '../tasks/useSessionGraph';
 import {MemberActivity} from '../tasks/MemberActivity';
@@ -195,7 +197,8 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
         <WorkStatus run={run} now={now} recovery={recovery}/>
         {items.slice(1).filter(i=>i.kind==='assistant'||i.kind==='error'||i.kind==='user').map(item=><MessageCard key={item.id} speaker={item.kind==='user'?'user':item.kind==='assistant'?'assistant':'error'} text={item.text} time={run.events.at(-1)?.time}>{item.kind==='user'?<div className="chat-text">{item.text}</div>:<MarkdownMessage text={item.text} streaming={item.pending} workspaceId={workspace.id}/>}</MessageCard>)}
       </section>})}
-      <div ref={memberContent}>{tab.taskId&&graph.graph?.tasks.length?<MemberActivity workspaceId={workspace.id} rootSessionId={tab.taskId} tasks={graph.graph.tasks} active={active&&section==='chat'} onSelectTask={viewMember} onViewAll={()=>setSection('tasks')}/>:null}</div>
+      <div ref={memberContent}>{tab.taskId&&<ConversationProgress identity={{workspaceId:workspace.id,rootSessionId:tab.taskId}} graph={graph.graph} summary={graph.scopes.find(s=>s.scopeId===graph.selectedScopeId)} scope={graph.selectedScope} historical={!!graph.historyScopeId} onSelectTask={viewMember}/>}
+      {tab.taskId&&graph.graph?.tasks.length?<MemberActivity workspaceId={workspace.id} rootSessionId={tab.taskId} tasks={graph.graph.tasks} active={active&&section==='chat'} onSelectTask={viewMember} onViewAll={()=>setSection('tasks')}/>:null}</div>
       {graph.error&&<p role="alert">{graph.error} <button onClick={graph.refresh}>重新同步成员动态</button></p>}
       {questions.map(q=><QuestionCard key={q.id} request={q} onAnswer={async answers=>{await api.call('loop.answerQuestion',{id:workspace.id,taskId:q.taskId,questionId:q.id,answers})}}/>)}
       {currentRun&&!mainRunning&&currentRun.unresolvedTools.length>0&&<div className="chat-reconcile" data-testid="unresolved-tools-notice"><h3>原操作结果尚未确认</h3><p>展开原工具记录，明确核实当前影响并保存处置。需要继续调查时创建独立只读核实任务；原记录保留，勾选调用标识不能恢复原运行。</p><ul>{currentRun.unresolvedTools.map(id=><li key={id}><code>{id}</code></li>)}</ul></div>}

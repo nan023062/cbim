@@ -1,5 +1,11 @@
 # CBIM 开发记录
 
+## 2026-11-10：发布 CI 的对象预览版本断言对齐
+
+- 统一工具权限测试的 v2 清单遗漏本轮已升级的 cbim_object_preview；仅补齐明确版本预期，保留逐调用知识授权、身份/版本拒绝、真实 Pi 路由和回执检查。
+- `pnpm exec vitest run tests/unified-tool-policy.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-0.1.4-tool-policy.json`：6 项通过。此次只改测试断言和外部记录，无 src、接口或导入变化，不重复类型/架构检查。
+- 候选安装原始报告已核对：真实 0.1.3 → 0.1.4、全新安装、isPackaged=true、NotSigned，六项数据保留、模型请求一次、页面错误零。来源和责任消费者修正分别独立提交；等待首轮其余片结束并以最终 head 重跑完整 CI，候选保持冻结源码身份。
+
 ## 2026-11-10：发布 CI 的独立派工缺口消费者对齐
 
 - 责任主工具与 Application 的旧断言只允许 OWNER_UNASSIGNED，与本轮一次列出缺口的行为不符；现在同时要求 OWNER_MODEL_UNRESOLVED，保留无能力正文/凭据泄露、无模型执行、责任绑定及独立岗位配置的原断言。

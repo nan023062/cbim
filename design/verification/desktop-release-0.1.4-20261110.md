@@ -28,3 +28,5 @@
 - [PR #25](https://github.com/nan023062/cbim/pull/25) 初始 base `5fe52e74f57f0363299381fd050e799d637723c9`、head 为上述源码。[首轮 CI 42694782113](https://github.com/nan023062/cbim/actions/runs/42694782113) 第三片两项失败源于来源测试夹具还提交 peopleUpserts/maintenance，第二片工具断言遗漏新增 OWNER_MODEL_UNRESOLVED。原失败日志和 run 保留，完整结论待回填。
 - 来源夹具当前输入与历史 EXE 输入显式分开，移除无差异的维护字段清理事务，保留真实来源代次/采纳/恢复断言；定向 8 通过、2 历史 EXE 缺失跳过，类型通过。仅测试和开发文档变化，不影响既有制品；完整新 head CI 仍需通过。
 - 责任主工具和 Application 同时断言未绑定及模型待核实缺口，分别 9/2 项通过。第一片还发现统一工具权限测试遗漏 object preview v2，另行修正；不通过回退产品契约来迁就旧断言。候选安装 run 已成功，完整安装报告仍需核对。
+- 统一工具权限版本断言补齐 cbim_object_preview v2，6 项真实权限/路由测试通过。上述三类修正分别提交，只涉及测试和外部记录；未改制品输入。
+- 候选报告 `test-results/desktop-0.1.4-candidate-42695642991/report.json` 已核对：2026-11-09T20:47:57.952Z 完成，全新安装和实际 0.1.3 覆盖升级通过，native.version=0.1.4、isPackaged=true、NotSigned；工作区、模型、同一 completed task/run、localStorage、文件标记及无重放六项保留，modelRequests=1、pageErrors=[]。此时尚未公开，线上发现/下载/普通退出/自动重启仍待独立验收。

@@ -1,5 +1,11 @@
 # 主进程运行装配契约
 
+## 用户发起的自动更新流程
+
+Main 为 `DesktopUpdates` 注入唯一的业务关闭回调，停止终端、等待 `Application.shutdown` 后才标记安装退出。固定 `desktop.updates.download` 负责整段下载/校验/安装，不接受地址或命令；install 仅作失败后的显式重试。installing 期间拒绝普通业务 IPC 与拖入附件；状态查询仍可用来展示进度。
+
+普通 before-quit 先 close 更新服务再排空，避免用户主动退出时迟到的下载或两秒提示继续触发安装。安装器触发的退出已由成功排空设置 quitting，走原正常退出路径。安装失败没有升级成功保证，必须在新进程核实版本；不更改应用身份、用户目录或 NSIS 校验规则。
+
 ## 产品标识与原生窗口
 
 `main.ts` 只装配窗口品牌资源：开发态从工程 `branding/cbim.png` 读取，打包态从固定 `resources/branding/cbim.png` 读取。Forge 的应用图标及独立安装器均使用同一矢量源生成的 ICO；运行时不生成或下载品牌资源。显示名称为 CBIM Assistant，原应用 ID、可执行文件名称、卸载器探测与用户数据目录保持兼容。

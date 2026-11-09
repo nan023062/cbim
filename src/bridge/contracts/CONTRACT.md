@@ -1,3 +1,7 @@
+### 桌面更新状态
+
+`DesktopUpdateStatus.checkedAt` 是最近完成的检查时间，包括失败尝试；`error` 区分离线或失败，不能把有时间误作已是最新版。`installing` 包含可见重启提示与业务排空；`ready` 表示已经校验但安装未完成，等待明确重试。只有新进程的 currentVersion 证明升级。公开协议不包含安装路径、命令、凭据或可修改的更新源。
+
 ### 项目根显示契约
 
 `workspace.ts` 重导出纯 `projectRootModuleId` 与 `projectRootModule`，让业务架构与只读知识查询使用同一内置身份。没有新增 IPC 或写入能力，不把项目根转成真实知识文件或可分配岗位。

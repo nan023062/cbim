@@ -89,7 +89,7 @@ pnpm make:desktop --unsigned
 
 再次核实验收脚本支持本次旧版／模式，用独立 runner 派发相同输入且 `mode=online`，关联正确 workflow SHA 和 run ID。
 
-要求观察真实旧安装版：无 GitHub 凭据自动发现准确新版本 → 实际 UI 点击下载 → 下载缓存摘要匹配 → 普通退出并重开仍是旧版 → 从缓存准备更新 → 用户点击重启安装 → 真实更新进程完成并启动新版。IPC 状态可以辅助观察，不能用模拟下载或直接调用安装器代替本轮 UI 链。
+要求观察真实旧安装版：无 GitHub 凭据自动发现准确新版本 → 实际 UI 点击下载 → 下载缓存摘要匹配 → 按该旧版本真实交互完成安装重启。0.1.2 及更早的两步客户端还需明确点击重启；采用 #19 的后续客户端一次下载后自动校验、展示进度、排空并安装。普通退出取消另开独立场景，不能把等待自动安装当作退出取消验证。IPC 状态可以辅助观察，不能用模拟下载或直接调用安装器代替本轮 UI 链。当前安装验收脚本的在线路径仍固定 0.1.1 和两步操作；更换旧版时必须同步适配，不能跳过旧版身份或数据保留断言。
 
 核对新进程启动参数携带原测试用户目录（包括实际 `--updated`／`--cbim-user-data-root` 路径），等待窗口和用户菜单就绪再关闭；环境变量不一定跨 NSIS 重启继承。核对工作区、模型、同一个 completed task/run、localStorage、文件标记及无重放；页面错误为零，最后检查当前版本／更新状态和准确说明。保存失败状态／截图和原 run，不用后续成功覆盖它。
 
@@ -104,4 +104,4 @@ pnpm make:desktop --unsigned
 - `pnpm check:brand`、`pnpm build:website`，再用 [website-smoke.mjs](../../../../scripts/website-smoke.mjs) 验证 320／390／1280 px、深浅色和独立离线两页（当前共 14 场景）、无溢出／页面错误、正确链接和摘要。脚本固定输出 `test-results/branding-website`；先保留已有报告，或在隔离检出运行，避免覆盖。只使用独立无头浏览器，不连接用户浏览器资料。
 - 官网及收尾变更经 develop → master PR 检查、正常合并；[website.yml](../../../../.github/workflows/website.yml) 在 master 部署到既有 Pages。默认 develop 不改变部署分支，不放宽环境保护。核实 Actions 实际 head、目标 URL 与成功回执，再匿名逐文件对照 `index.html`、`download.html`、`404.html`、`robots.txt`、`sitemap.xml`、`cbim.png` 和本地构建字节／摘要。CDN 尚未更新时先只读复核。
 - 将 master 的合并结果以 fast-forward 同步回 develop，核实本地／远端 SHA、默认 develop、远端仅 master／develop 和干净工作树。存在分叉或额外分支时先查差异与授权，不硬重置、不强推或自动删除未知工作；双分支收尾不是新的批量删除许可。
-- 回填 [roadmap](../../../../design/tool-architecture-roadmap.md)、[开发记录](../../../../design/development-log.md)、版本报告及 PR；报告 [证据清单](evidence.md) 中的最终事实。普通安装版约启动 10 秒后及每 30 分钟检查，关闭／离线用户不会即时收到；下载和重启仍需用户操作。
+- 回填 [roadmap](../../../../design/tool-architecture-roadmap.md)、[开发记录](../../../../design/development-log.md)、版本报告及 PR；报告 [证据清单](evidence.md) 中的最终事实。必须按实际安装版本报告更新节奏：公开 0.1.2 是启动约 10 秒后及每 30 分钟检查、下载后再点击重启；#19 源码是每分钟检查、点击下载后自动安装重启，尚未发布时不能宣传现有用户已具备。关闭／离线用户不会即时收到，仍需用户主动开始下载。

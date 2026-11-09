@@ -78,8 +78,10 @@ async function waitPhase(page, phase) {
 }
 async function notes(page) {
   await page.getByRole('button', {name: '用户菜单', exact: true}).click();
-  await page.getByRole('menuitem', {name: '最近一次更新', exact: true}).click();
-  const dialog = page.getByRole('dialog', {name: '最近一次更新', exact: true}); await dialog.waitFor();
+  const combined = page.getByRole('menuitem', {name: '版本与更新', exact: true});
+  const title = await combined.count() ? '版本与更新' : '最近一次更新';
+  await page.getByRole('menuitem', {name: title, exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: title, exact: true}); await dialog.waitFor();
   assert.ok((await dialog.innerText()).includes(`当前版本 ${version}`)); assert.match(await dialog.innerText(), /未签名/);
   await page.screenshot({path: path.join(root, `${mode}-notes.png`)}); await page.keyboard.press('Escape');
 }

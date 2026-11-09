@@ -379,6 +379,8 @@ N_src_backend_scheduler_engine_tools_knowledge_tools_ts ..> N_src_backend_schedu
 
 `FeedbackTools` 只包装实际装配的可信端口。submit 输入按 BUG／需求分支严格解析，不接受仓库、地址、凭据或授权字段；receipt 无参数，只核实原提交。单次端口调用后校验唯一 JSON 快照，成功只含 submitted 与 operationId，坏输出不重发。目标和授权经 loop-engine 交统一策略；缺连接时不注册，成员／CLI 不继承，不混入知识工具目录。
 
+模型公开 JSON Schema 与运行时均仅要求 `kind/summary`，补充字段可省略或空白；缺失主栏目的占位由 Core 统一生成。工具错误提示只指出真实格式/长度问题，不引导补齐所有栏目。此向后兼容的输入放宽保留 v1 的外部写身份、固定授权及原提交核实。
+
 `FeedbackStatusTool` 独立提供主会话的 `cbim_feedback_status`；没有提交端口时仍可诊断。两项操作工具的装配事实来自实际 `FeedbackTools` 实例，本机连接事实来自注入的只读端口；没有诊断服务时明确报告组件未装配，端口异常不转换成未连接。输入只接受空对象，输出严格区分未连接、等待本机接收授权、已连接但本轮需更新、代际变化及故障。不刷新冻结目标，不读提交历史，不调用写端口。
 
 诊断文案和反馈可用性判断独立于稳定的提交／去重机制；需要调整用户下一步提示时修改本工具及产品 Skill，不修改 GitHub 写入账本或 Pi 通用桥。变化频率目前来自本次缺陷和交互需求，未以提交次数证明长期稳定性。

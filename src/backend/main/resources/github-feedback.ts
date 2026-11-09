@@ -2,6 +2,7 @@
  * 作用定位：将本机会话的结构化反馈直接写入已连接 GitHub 仓库，保存私有原提交凭证。
  * 设计原因：先 fsync 意图再 POST；连接、账号、仓库和正文指纹在同工作区跨会话防重。保留原主会话归属，丢失回包只查原标记，硬中断后可在新会话核实。
  * 职责边界：只创建 Issue，不读开发进度、不回传链接、不上传整个工程；内容不入本地账本，账本只保留指纹与必要归属。
+ * 简化反馈：只要求用户简述，缺项在纯正文协议中规范化后计算指纹；省略、空白和未提供占位不产生不同主栏目。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -51,7 +52,7 @@ export class GitHubFeedback {
   }
   /** 串行、单次 POST；sending 是持久写屏障，任何不同调用 ID／正文都不能绕过未知结果。 */
   private submit(binding:Binding,scope:FeedbackScope,raw:FeedbackInput,signal:AbortSignal,assertCurrent:()=>void){return this.serial(()=>this.auth.withConnection(scope,signal,async(identity,bounded)=>{
-    assertCurrent();bounded.throwIfAborted();const parsed=feedbackInputSchema.safeParse(raw);if(!parsed.success)fail('GITHUB_FEEDBACK_INPUT','反馈格式不完整，请按 Skill 补充必填上下文');
+    assertCurrent();bounded.throwIfAborted();const parsed=feedbackInputSchema.safeParse(raw);if(!parsed.success)fail('GITHUB_FEEDBACK_INPUT','请提供反馈类型和非空简述；补充字段可省略，内容需符合长度限制且不能包含保留标记或额外参数');
     const issue=feedbackIssue(parsed.data);if(Buffer.byteLength(issue.body,'utf8')>48000)fail('GITHUB_FEEDBACK_SIZE','反馈正文过长，请缩短上下文后提交');
     const ledger=await this.read(binding),fingerprint=hash(JSON.stringify(issue));
     const pending=ledger.entries.find(entry=>entry.status==='sending');

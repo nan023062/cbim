@@ -97,6 +97,29 @@ describe('GitHub device authorization',()=>{
 });
 
 describe('direct issue submission',()=>{
+  it.each(['bug','wish'] as const)('submits minimal %s once and deduplicates omitted, blank and placeholder fields after restart',async kind=>{
+    const f=await fixture();await f.login();const port=(await f.service.prepare(binding,()=>{}))!;
+    const input:FeedbackInput={kind,summary:kind==='bug'?'安装后的桌面图标与启动后窗口图标不一致':'希望支持批量导出'},result=await port.submit(input,signal());
+    const body=String(f.posts()[0].body!.body);expect(body).toContain(input.summary);expect(body.match(/用户未提供/g)).toHaveLength(4);expect(body).not.toContain('补充上下文');
+    const details=kind==='bug'?{steps:'',actual:' \n ',expected:'用户未提供',environment:'用户未提供'}:{scenario:'',problem:' \n ',expected:'用户未提供',example:'用户未提供'};
+    expect(await port.submit({...input,...details,extra:''},signal())).toEqual(result);
+    await f.service.close();const next=f.create(),nextPort=(await next.prepare({...binding,rootSessionId:'new-minimal-conversation'},()=>{}))!;
+    expect(await nextPort.submit(input,signal())).toEqual(result);expect(f.posts()).toHaveLength(1);
+  });
+  it('keeps supplied partial facts and the exact historical complete-body format',async()=>{
+    const f=await fixture();await f.login();const port=(await f.service.prepare(binding,()=>{}))!;
+    await port.submit({kind:'bug',summary:'只有已知现象',actual:'窗口图标不一致',environment:'不清楚',extra:'用户自愿分享的说明'},signal());
+    const body=String(f.posts()[0].body!.body);expect(body).toContain('## 实际结果\n\n窗口图标不一致');expect(body).toContain('## 环境\n\n不清楚');expect(body).toContain('## 补充上下文\n\n用户自愿分享的说明');expect(body.match(/用户未提供/g)).toHaveLength(2);
+    expect(feedbackIssue(bug)).toEqual({title:'[BUG] 无法打开项目',body:'## 问题\n\n无法打开项目\n\n## 复现步骤\n\n点击打开\n\n## 实际结果\n\n出现错误\n\n## 预期结果\n\n打开项目\n\n## 环境\n\nWindows 11'});
+    expect(feedbackIssue(wish)).toEqual({title:'[需求] 批量导出',body:'## 需求\n\n批量导出\n\n## 使用场景\n\n交付时\n\n## 当前困难\n\n逐个导出很慢\n\n## 期望能力\n\n选择多个文件导出\n\n## 使用例子\n\n导出三个模型'});
+  });
+  it('retains unknown for a minimal report and only reconciles the original once',async()=>{
+    const f=await fixture();await f.login();const port=(await f.service.prepare(binding,()=>{}))!,input:FeedbackInput={kind:'bug',summary:'单句反馈丢失回包'};f.lose();
+    await expect(port.submit(input,signal())).rejects.toMatchObject({code:'GITHUB_SUBMISSION_UNKNOWN'});
+    await expect(port.submit({...input,steps:''},signal())).rejects.toMatchObject({code:'GITHUB_SUBMISSION_UNKNOWN'});
+    await expect(port.submit({...input,actual:'新增事实'},signal())).rejects.toMatchObject({code:'GITHUB_PENDING_OTHER'});
+    expect((await port.receipt(signal())).status).toBe('submitted');expect(f.posts()).toHaveLength(1);
+  });
   it.each([bug,wish])('creates $kind from formatted user fields and saves intent before a single POST',async input=>{
     const f=await fixture();await f.login();const port=(await f.service.prepare(binding,()=>{}))!;
     f.inspect(async()=>{const names=await fs.readdir(path.join(f.directory,'submissions'));const disk=JSON.parse(await fs.readFile(path.join(f.directory,'submissions',names[0]),'utf8'));expect(disk.entries[0].status).toBe('sending');expect(JSON.stringify(disk)).not.toContain(input.summary)});

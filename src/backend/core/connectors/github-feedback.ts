@@ -1,16 +1,18 @@
 /**
  * 作用定位：CBIM 反馈 Skill、可信 GitHub 端口和桌面登录共用的纯协议。
  * 设计原因：模型只填写用户提供的业务上下文；账号、仓库和自动提交授权由本机设置绑定，凭据不进入工具或公开设置。只读诊断将连接事实与本轮工具装配分开，不授予提交权限。
+ * 内容边界：仅简述必填，补充字段允许缺省或空白；确定性正文标记“用户未提供”，不编造事实，已填写完整的旧正文保持不变。
  */
 import {z} from 'zod';
 import {githubFeedbackScopeSchema} from '../tools/scope-schema';
 
 const field=z.string().min(1).max(6000).refine(value=>value.trim().length>0&&!value.includes('<!-- cbim-feedback:'),'内容为空或包含保留标记');
-const common={summary:field.refine(value=>value.length<=180,'标题过长'),extra:field.optional()};
-/** 必填项缺失时由 Skill 继续收集，不由网络层编造默认事实。 */
+const optionalField=z.string().max(6000).refine(value=>!value.includes('<!-- cbim-feedback:'),'内容包含保留标记').optional().describe('可选，仅填写用户愿意提供的内容；省略或空白显示用户未提供，不为缺项追问');
+const common={summary:field.refine(value=>value.length<=180,'标题过长').describe('用户愿意提交的问题或愿望简述，不能为空'),extra:optionalField};
+/** 只有类型与简述必需；保留严格字段、长度和保留标记限制，缺项不形成补全门槛。 */
 export const feedbackInputSchema=z.discriminatedUnion('kind',[
-  z.object({kind:z.literal('bug'),...common,steps:field,actual:field,expected:field,environment:field}).strict(),
-  z.object({kind:z.literal('wish'),...common,scenario:field,problem:field,expected:field,example:field}).strict(),
+  z.object({kind:z.literal('bug'),...common,steps:optionalField,actual:optionalField,expected:optionalField,environment:optionalField}).strict(),
+  z.object({kind:z.literal('wish'),...common,scenario:optionalField,problem:optionalField,expected:optionalField,example:optionalField}).strict(),
 ]);
 export type FeedbackInput=z.infer<typeof feedbackInputSchema>;
 export type FeedbackScope=z.infer<typeof githubFeedbackScopeSchema>;
@@ -55,11 +57,11 @@ export interface GitHubFeedbackStatus {
   connected?:{login:string;owner:string;repo:string};
   flow?:{id:string;userCode:string;verificationUri:'https://github.com/login/device';expiresAt:number;nextPollAt:number};
 }
-/** 确定性正文仅包含本次格式字段；不遍历工程、会话、环境变量或附件目录。 */
+/** 缺省/空白的主栏目统一标记未提供，保证等价输入防重；完整旧输入输出不变。不读取额外资料。 */
 export function feedbackIssue(input:FeedbackInput){
-  const fields: [string,string][] = input.kind==='bug'
+  const fields: [string,string|undefined][] = input.kind==='bug'
     ?[['问题',input.summary],['复现步骤',input.steps],['实际结果',input.actual],['预期结果',input.expected],['环境',input.environment]]
     :[['需求',input.summary],['使用场景',input.scenario],['当前困难',input.problem],['期望能力',input.expected],['使用例子',input.example]];
-  if(input.extra)fields.push(['补充上下文',input.extra]);
-  return {title:`[${input.kind==='bug'?'BUG':'需求'}] ${input.summary.replace(/\s+/g,' ').trim()}`,body:fields.map(([label,value])=>`## ${label}\n\n${value.trim()}`).join('\n\n')};
+  if(input.extra?.trim())fields.push(['补充上下文',input.extra]);
+  return {title:`[${input.kind==='bug'?'BUG':'需求'}] ${input.summary.replace(/\s+/g,' ').trim()}`,body:fields.map(([label,value])=>`## ${label}\n\n${value?.trim()||'用户未提供'}`).join('\n\n')};
 }

@@ -6,7 +6,7 @@
 
 ## 加号菜单的产品反馈 Skill
 
-`AttachmentMenu` 的「BUG 反馈」「需求许愿」经 `onSkill` 向 `Conversation` 发送明确的流程调用请求。主 Agent 分别读取 `cbim_skill_bug_feedback`、`cbim_skill_feature_wish` 并展示上下文格式。首次点击不提交现有草稿或附件，不打开网页，也不创建 GitHub Issue。
+`AttachmentMenu` 的「BUG 反馈」「需求许愿」经 `onSkill` 向 `Conversation` 发送明确的流程调用请求，提示一句描述即可、其余自愿。主 Agent 分别读取 `cbim_skill_bug_feedback`、`cbim_skill_feature_wish`；仅在用户需要时提供可选格式，不为缺项追问。首次点击不提交现有草稿或附件，不打开网页，也不创建 GitHub Issue。
 
 调用沿用当前会话的模型、权限、发送／排队和安全续接条件。菜单关闭后按正常消息显示调用请求；已有任务开放时仅排队，不插入或恢复等待中的目标。受理成功、失败及刷新历史均不清空本次未发送的草稿与附件。附件已达 12 项仍可调用 Skill；模型缺失、加载中、停止中或操作在途时禁用。保留原共享请求锁，双击不能并发发送。
 

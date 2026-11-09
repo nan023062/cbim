@@ -26,7 +26,7 @@ Windows x64 当前公开桌面版为 [desktop-v0.1.2](https://github.com/nan0230
 
 开发分支的 #19 已将入口合并为「版本与更新」：每分钟检查，新版高亮菜单并显示用户栏绿点；点击下载后自动校验、停止任务、安装并重启，失败保留显式重试。此流程尚未随新版发布，当前公开 0.1.2 仍使用上面的两步升级操作。
 
-BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill，按格式填写即可直连 GitHub Issue。首次在设置连接自己的 GitHub；成功后不追加结果消息。详见 [OAuth 与反馈指南](design/task/github-feedback-setup.md)。更新程序独立位于 `src/backend/updater/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](design/task/desktop-release.md)。
+BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill。当前开发版一句问题或愿望即可提交，其余信息自愿，缺项标“用户未提供”；已发布旧版仍使用原格式。首次在设置连接自己的 GitHub；成功后不追加结果消息。详见 [OAuth 与反馈指南](design/task/github-feedback-setup.md)。更新程序独立位于 `src/backend/updater/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](design/task/desktop-release.md)。
 
 构建目录按北京时间命名：`build/YYYYMMDD-HHmmss/`。Windows 便携程序在其中的 `CBIM Assistant-win32-x64/CBIM.exe`，请保留完整目录。分发包为 `make/zip/win32/x64/CBIM-Assistant-YYYYMMDD-HHmmss-win32-x64-版本.zip`，可按名称排序查找最新构建。
 

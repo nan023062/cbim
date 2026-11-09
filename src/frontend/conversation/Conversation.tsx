@@ -9,7 +9,7 @@
  * 异常边界：unknown 不凭勾选调用标识续接旧 native；显式影响核实和新周期共用真实主会话上下文。
  * 插入边界：两处操作在点击时冻结主 runId；先入队成功再清草稿，插入失败只刷新真实队列，不跨轮重发或误删消息。
  * 资料边界：切到其他会话时本组件可能只被隐藏；必须把 active 传给补充控制器，撤销未完成的资料导入并隔离迟到回包。
- * Skill 入口：加号菜单发送独立的格式引导请求，沿用当前模型、权限和排队规则；不发送或清空已有草稿与附件。
+ * Skill 入口：加号菜单发送只需一句描述、补充自愿的独立引导请求，沿用当前模型、权限和排队规则；不发送或清空已有草稿与附件。
  * 输入边界：草稿仍即时上交外壳；历史轮次按运行、恢复上下文及实际计时变化更新，键入不重复解析未变正文。
  */
 import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
@@ -137,8 +137,8 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
     renderStop(value=>value+1);setError('');
     try{await api.call('loop.stop',{id:token.id,taskId:token.taskId})}catch(e:any){if(current())setError(e.message)}finally{stopGate.current.finish(token);if(alive.current)renderStop(value=>value+1);if(current()){invalidateQueue();void refreshQueue();graph.refresh()}}
   }
-  /** Skill 点击只发送明确的流程调用；正文和附件仍留在草稿中，由用户随后按格式发送。 */
-  async function send(insert=false,skill?:FeedbackSkillTitle){const message=skill?`请调用「${skill}」Skill，先提供对应的填写格式，引导我补充上下文。`:(tab.draft||'').trim()||(attachments.length?'请查看附加的资料。':'');if(!message)return;
+  /** Skill 点击只发送明确的流程调用；正文和附件留在草稿中，由用户随后自愿描述，不强制补齐格式。 */
+  async function send(insert=false,skill?:FeedbackSkillTitle){const message=skill?`请调用「${skill}」Skill，提示我用一句话描述问题或愿望即可，其余信息自愿补充，不强制追问。`:(tab.draft||'').trim()||(attachments.length?'请查看附加的资料。':'');if(!message)return;
     const sentAttachments=skill?[]:attachments;
     if(tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId}))return;
     const insertion=insert?captureQueueInsertTarget(workspace.id,tab.taskId,currentRun,canInsert):undefined;

@@ -10,7 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [builtins.ts](builtins.ts) | Builtins：白名单发布内置 Skill、规范和 Schema，包括 BUG 反馈与需求许愿的上下文收集流程。 |
+| [builtins.ts](builtins.ts) | Builtins：白名单发布内置 Skill、规范和 Schema，包括只需简述、补充自愿的 BUG 反馈与需求许愿流程。 |
 | [knowledge-queries.ts](knowledge-queries.ts) | 核心知识查询门面，装配团队与业务工作区领域视图并刷新索引。 |
 | [knowledge-write-input.ts](knowledge-write-input.ts) | 知识提交工具与后端原事务核实共用的输入解析和原引用构造。 |
 | [knowledge-write-observation.ts](knowledge-write-observation.ts) | 原知识事务的有界公开观察协议，供后端与界面共同校验，只有纯 Schema 依赖。 |
@@ -783,7 +783,7 @@ N_src_backend_core_knowledge_tool_output_transactions_ts ..> N_src_backend_core_
 
 ### 产品反馈内置流程
 
-`builtinSkills` 发布 `bug-feedback` 与 `feature-wish`，正文来自应用打包资源 `design/runtime/`，通过只读别名及 `Builtins.read` 返回内容哈希和解析引用。两套正文定义格式与直接提交流程；读取正文不产生 Issue，实际提交由桌面已授权的独立 `FeedbackTools` 执行，不创建业务任务或修改知识。
+`builtinSkills` 发布 `bug-feedback` 与 `feature-wish`，正文来自应用打包资源 `design/runtime/`，通过只读别名及 `Builtins.read` 返回内容哈希和解析引用。两套正文只要求一句简述，参考格式的其余内容均自愿，缺项不追问；读取正文不产生 Issue，实际提交由桌面已授权的独立 `FeedbackTools` 执行，不创建业务任务或修改知识。
 
 ```mermaid
 classDiagram

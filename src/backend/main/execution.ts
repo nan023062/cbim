@@ -1,6 +1,6 @@
 /**
  * 作用定位：主进程执行装配，将工作区、已解析模型、原生锁与平台访问策略注入调度引擎。
- * 设计原因：主会话与图根共享实例，在创建 run 前取得全局名额及按真实权限确定的业务文件占用；知识治理仍由独立知识事务与用户权限保护。等待回调来自可信启动上下文，不混入可序列化模型设置。
+ * 设计原因：主会话与图根共享实例，在创建 run 前取得全局名额；Team 的业务文件占用为只读，Auto 按真实权限独占。恢复优先读取原周期冻结模式，知识治理仍由独立事务和用户权限保护。
  * 仓库边界：仅桌面主运行工厂捕获已有授权连接，不在准备时联网；CLI/成员和未就绪连接不装配仓库工具。
  * 治理边界：四个观察/提案端口在真实 run 创建时绑定主身份，不共享给成员，不包含桌面批准或实施。
  * 责任边界：负责人四工具在 beforeRun 后从真实主周期捕获身份，查询提供实际岗位选择，提交加入周期在途屏障；主模型选型不覆盖执行成员岗位配置。
@@ -65,8 +65,12 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles,le
     acquireLease:async task=>{
       workspace.assert();
       if(task.workspaceId!==workspace.entry.id||task.root!==workspace.entry.path)throw Error('任务与工作区身份不匹配');
-      // Auto 主会话可能直接写业务文件；恢复前尚未登记周期，也按本轮权限保守独占，不能先持读锁再获得写工具。Team 的知识事务仍独立核验。
-      const release=acquireExecutionLease(lease,'conversation:'+task.taskId,{workspaceId:workspace.entry.id,rootSessionId:task.taskId,taskId:task.taskId,scopeId:launch.scopeId,requestId:admissionRequestId('main',launch.requestId),agentInstanceId:conversationBinding?.agentInstanceId,source:launch.wait?'main-result':'direct',workspacePermission:options.permission??(options.allowNativeExecution?'execute':'read')},admission,launch.wait);
+      // Team 主轮不持业务写工具，其恢复事务还需短读占用。Auto 的 ask/execute 仍独占，不能为修复恢复冲突降成读锁。
+      // 恢复参数可能不携带模式；原周期的冻结策略优先，历史缺省为 Team，与实际工具装配保持一致。
+      const scope=launch.scopeId?(await workspace.dispatchStore.read()).scopes?.find(value=>value.scopeId===launch.scopeId&&value.rootSessionId===task.taskId&&value.workspaceId===task.workspaceId):undefined;
+      const mode=scope?(scope.executionPolicy?.mode??'team'):(options.collaborationMode??'team');
+      const workspacePermission=task.mode==='chat'&&mode==='team'?'read':options.permission??(options.allowNativeExecution?'execute':'read');
+      const release=acquireExecutionLease(lease,'conversation:'+task.taskId,{workspaceId:workspace.entry.id,rootSessionId:task.taskId,taskId:task.taskId,scopeId:launch.scopeId,requestId:admissionRequestId('main',launch.requestId),agentInstanceId:conversationBinding?.agentInstanceId,source:launch.wait?'main-result':'direct',workspacePermission},admission,launch.wait);
       const directory=path.join(workspace.paths.project(workspace.entry.id),'loop-engine');
       try{const lock=new KernelLock(directory,hash(workspace.entry.id+':'+task.taskId),'loop');return ()=>{try{lock.close()}finally{release()}}}
       catch(error){release();throw error}

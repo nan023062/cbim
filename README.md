@@ -22,11 +22,11 @@
 
 ## 运行
 
-Windows x64 当前公开桌面版为 [desktop-v0.1.3](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.3)，包含 #14、#17–#22 的直接执行、模块负责人、图内操作、内联对话、输入响应和单句反馈改进，以及团队恢复占用修复。安装后从左下角「版本与更新」查看版本、日志与新版提醒。此包尚未签名，Windows 可能显示未知发布者或安全提示；核对发布页的 `SHA256SUMS.txt` 不能替代可信签名。后续取得证书后将通过更高版本切换到签名发行。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
+Windows x64 当前公开桌面版为 [desktop-v0.1.4](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.4)，废弃真人花名册与额外维护确认，保留岗位和模块负责人；修复对象字段、模块模板、责任冲突与实例恢复提示。安装后从左下角「版本与更新」查看版本、日志与新版提醒。此包尚未签名，Windows 可能显示未知发布者或安全提示；核对发布页的 `SHA256SUMS.txt` 不能替代可信签名。后续取得证书后将通过更高版本切换到签名发行。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
 
-0.1.3 每分钟检查，新版高亮菜单并显示用户栏绿点；点击下载后自动校验、停止任务、安装并重启，失败保留显式重试。从 0.1.2 升级到本版仍按旧界面下载后再次确认重启。真实旧版线上升级及工作区、模型、对话保留已验证，见 [发布验收](design/verification/desktop-release-0.1.3-20261109.md)。关闭或离线的客户端需启动并联网后检查更新。
+当前版本每分钟检查，新版高亮菜单并显示用户栏绿点；点击下载后自动校验、停止任务、安装并重启，失败保留显式重试。真实 0.1.3 → 0.1.4 自动升级、安装前普通退出取消及工作区/模型/对话保留已验证，见 [发布验收](design/verification/desktop-release-0.1.4-20261110.md)。0.1.2 及更早版本仍按旧界面下载后再次确认重启；关闭或离线的客户端需启动并联网后检查更新。
 
-BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill。0.1.3 一句问题或愿望即可提交，其余信息自愿，缺项标“用户未提供”。首次在设置连接自己的 GitHub；成功后不追加结果消息。详见 [OAuth 与反馈指南](design/task/github-feedback-setup.md)。更新程序独立位于 `src/backend/updater/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](design/task/desktop-release.md)。
+BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill。一句问题或愿望即可提交，其余信息自愿，缺项标“用户未提供”。首次在设置连接自己的 GitHub；成功后不追加结果消息。详见 [OAuth 与反馈指南](design/task/github-feedback-setup.md)。更新程序独立位于 `src/backend/updater/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](design/task/desktop-release.md)。
 
 构建目录按北京时间命名：`build/YYYYMMDD-HHmmss/`。Windows 便携程序在其中的 `CBIM Assistant-win32-x64/CBIM.exe`，请保留完整目录。分发包为 `make/zip/win32/x64/CBIM-Assistant-YYYYMMDD-HHmmss-win32-x64-版本.zip`，可按名称排序查找最新构建。
 

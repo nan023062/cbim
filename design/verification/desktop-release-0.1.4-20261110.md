@@ -25,7 +25,11 @@
 - 显式指定本候选主 EXE 运行 `pnpm exec tsx scripts/isolated-node-smoke.mts`，文件边界、禁网、超时、取消、非零退出、输出限制六项通过，自有资源回收完成；报告 `test-results/desktop-0.1.4-isolation-6ba2d64f.json`。
 - [最终完整 Windows CI 42697531710](https://github.com/nan023062/cbim/actions/runs/42697531710)，head `5c378437effb64c8734054499375b58f179b6c68`，四片全部成功；364 文件/2530 项，2528 通过、0 失败、2 跳过。类型、架构/依赖、品牌、官网构建均通过；四片报告 `test-results/desktop-0.1.4-ci-final-42697531710/`。
 - 两项原有跳过：owner-execution-legacy.test.ts 的 pre-owner 日志迁移、knowledge-source-lifecycle-application.test.ts 的 pre-source EXE 迁移；真实固定历史 EXE 不存在。未用新版或替身冒充旧版迁移。
-- PR #25 于 2026-11-09T21:06:41Z 正常合并到 master，合并提交 `d96244bdef77909aea9ecc4fee9aa934d13252ab`，保留独立提交；合并树与完整验证 head 树一致，冻结源码为其祖先，所有产品/构建输入未变。没有 squash、强推或管理员绕过。
+- PR #25 于 2026-11-09T21:06:41Z 正常合并到 master，合并提交 `d96244bdef77909aea9ecc4fee9aa934d13252ab`，保留独立提交；合并树与完整验证 head 树一致，冻结源码为其祖先，运行代码、白名单规范、依赖、品牌、内置版本日志和构建配置保持一致。没有 squash、强推或管理员绕过。
+
+### 附带维护记录的边界
+
+Forge 的 extraResource 会复制整份 design/docs，因此不能笼统说候选与后续提交的全部打包输入或全部资源字节相同。候选内的 development-log、roadmap 与 verification 仍是冻结源码 6ba2d64f 的维护记录快照；后续回填不修改已公开附件。它们不在产品 Builtins 白名单内，src 也未引用这些入口。使用当前 Builtins 实际读取候选与仓库的 22 项目录，正文内容身份和目录 revision 完全一致（00d8aa8cc3f562d6da9bcb3eac0951bf2b751c74e09dcfab469768414a4467ad）；证据 test-results/desktop-0.1.4-runtime-catalog.json。源码、运行规范、依赖、品牌、版本日志和构建配置的无变化结论保持，外部维护副本差异单独列明。
 
 ## 安装、公开与真实线上升级
 

@@ -666,3 +666,8 @@ PNG解码结果沿同一冻结要求、原文件/完整集合和真实工具结�
 ## 原隔离执行核实与清理
 
 MemberExecutionManager同时识别CONTROLLED_FILE_DRAIN_PENDING与EXECUTION_SCOPE_DRAIN_PENDING，保留句柄/工作区占用，后续close只执行finishDrain封存原运行，不释放占用给新业务执行。
+
+
+### 自动与团队协作模式
+
+主运行 starting 将 collaborationMode 与明确模型交给 openScope 冻结；Cycle/Batch 从原周期继承。OwnerExecutionService 统一持知识→模型→Store 锁，selection/resolveExecution 分别核真实岗位或无负责人兜底。已登记但停用／来源失效／配置过期不可自动降级。plan、dispatch、claim、依赖维护和 checkpoint 复用该入口，原命令先查回执。新目标才可换模式；已有任务、模型、证据及权限不改写。

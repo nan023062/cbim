@@ -1,4 +1,5 @@
 /**
+ * 公开任务摘要保留独立兜底身份，供大脑日志、主回注和界面同源解释。
  * 作用定位：将成员运行日志投影为可公开的连续事件流，并按 run 缓存首次恢复及后续已落盘增量。
  * 设计原因：节点详情高频轮询不能反复扫描日志；首次恢复失败可重试，成功后与实时事件合并去重。仅可信新运行尚未启动的空日志窗口可等待实时首条事件，已开始或损坏日志不能冒充空记录；公开投影排除原生绑定、冻结知识及工具正文。
  * 职责边界：不签发图状态、不启动或恢复执行；工具只公开身份、状态、工作区内业务路径与可信回执。公开对话和计划文本仅限长，不保证识别其中的敏感内容。
@@ -12,7 +13,7 @@ import type {MemberEventCursor,MemberEventsRead,MemberRunView} from '../../core/
 import {projectRunEvent} from './public-run-events';
 
 /** 业务目标和岗位执行绑定来自原节点；同时用于 Runtime 头与公开核验，不传播能力正文或原生会话绑定。 */
-export function memberPublicTask(task:TaskNode,root:string):TaskSpec{return {taskId:task.taskId,workspaceId:task.identity.workspaceId,root,goal:task.goal,moduleIds:task.modules.map(module=>module.moduleId),agentId:task.assignee.agentId,acceptance:task.acceptance.map(item=>item.text),...(task.ownerBinding?{ownerBinding:structuredClone(task.ownerBinding)}:{})}}
+export function memberPublicTask(task:TaskNode,root:string):TaskSpec{return {taskId:task.taskId,workspaceId:task.identity.workspaceId,root,goal:task.goal,moduleIds:task.modules.map(module=>module.moduleId),agentId:task.assignee.agentId,acceptance:task.acceptance.map(item=>item.text),...(task.fallbackBinding?{fallbackBinding:structuredClone(task.fallbackBinding)}:{}),...(task.ownerBinding?{ownerBinding:structuredClone(task.ownerBinding)}:{})}}
 
 interface Stream {
   /** 首次登记时固定的身份与任务；read 使用传入的最新 DispatchRun 生成公开运行状态。 */

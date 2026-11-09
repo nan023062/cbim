@@ -1,8 +1,10 @@
 /**
+ * 公开自动分配须与 auto 周期、工作区和模块对应，团队模式不可携带兜底分配。
  * 作用定位：主调度工具读取周期的公开白名单投影，保留规划、审阅和显式接续实际需要的事实。
  * 设计原因：持久 DispatchScope 还包含原生会话及旧运行隔离清单；工具输出不能直接序列化整个存储对象。公开运行补充仍须绑定本周期主运行和连续输入版本，pending/unknown 不能被省略成可完成状态。
  * 职责边界：只投影既有字段，负责人绑定严格属于本周期工作区与分配模块，不补造旧目标、不签发恢复许可；完整完成门禁仍由调度服务核实。
  */
+import {automaticExecutionBindingMatches} from '../team/automatic-execution';
 import {z} from 'zod';
 import {hash,json} from '../foundation/serialization';
 import {goalNeedsReplan,sameGoalValue} from './scope-goal';
@@ -15,6 +17,7 @@ export {projectMainScope} from './scope-public';
 export const mainToolScopeSchema=publicDispatchScopeSchema.superRefine((scope,context)=>{
   const issue=(message:string)=>context.addIssue({code:'custom',message});
   for(const assignment of scope.goal?.plan?.assignments??[])if(assignment.ownerBinding&&!ownerExecutionBindingMatches(assignment.ownerBinding,scope.workspaceId,assignment.agentId,assignment.moduleIds))issue('目标负责岗位不属于返回周期的工作区、角色或模块');
+  for(const a of scope.goal?.plan?.assignments??[])if(a.fallbackBinding&&(!automaticExecutionBindingMatches(a.fallbackBinding,scope.workspaceId,scope.scopeId,a.agentId,a.moduleIds)||scope.executionPolicy?.mode!=='auto'))issue('自动兜底不属于本周期或模式');
   if(scope.status==='closed'?(!scope.closedAt||!scope.outcome):(scope.closedAt!==undefined||scope.outcome!==undefined))issue('周期状态与关闭事实不一致');
   if(scope.status==='waiting'&&(!scope.wait||!scope.goal||scope.goal.blocked||scope.goal.review?.decision!=='awaiting_user'||scope.wait.goalRevision!==scope.goal.revision||scope.wait.runId!==scope.goal.review.runId||scope.wait.knowledgeRevision!==scope.goal.review.knowledgeRevision||!sameGoalValue(scope.wait.graphCursor,scope.goal.review.graphCursor)))issue('等待必须有当前审阅的真实检查点');
   if(scope.status==='active'&&scope.wait)issue('活动周期不能仍持有未消费等待');

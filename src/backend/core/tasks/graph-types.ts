@@ -1,9 +1,11 @@
 /**
+ * fallbackBinding 与 ownerBinding 表达不同执行来源；前者不产生长期岗位、模块责任或维护人。
  * 任务检查点按段只追加，旧预约进入独立历史，当前预约仍保留原字段以兼容单段记录。
  * 作用定位：任务派发图的可序列化领域契约，供调度、持久化和 Bridge 共同引用。
  * 设计原因：把登记岗位、执行实例、任务与轮次分开；前置增删永久保留原请求和审计，不改变原计划、负责人或执行事实。
  * 职责边界：这里只声明事实形状；权限、知识核实、磁盘提交和模型执行由各自服务负责。
  */
+import {type AutomaticExecutionBinding} from '../team/automatic-execution';
 import type {MemberHelpRecord} from './member-help';
 import type {QueuedTaskCancellation} from './queued-task-cancel';
 import type {DependencyReplacement} from './queued-dependency-replacement';
@@ -22,7 +24,7 @@ export type AgentRef = {
 };
 export type ModuleBinding = {
   moduleId:string;name:string;knowledgeRevision:string;
-  /** 指向显式维护关系；不能从作者列表推断。 */
+  /** 真实模块指向显式维护关系；仅自动隐式模块使用 cbim:implicit-project 和空清单，不表示人工确认。 */
   maintenanceBindingId:string;maintainerPersonIds:string[];
   workflow:{kind:'module';id:string;version:string}
     |{kind:'general';id:string;version:string;reason:string};
@@ -44,6 +46,8 @@ export type TaskNode = {
   workflowSelections?:WorkflowSelection[];
   /** 真实派发时冻结的岗位与责任；旧记录缺省不补造，创建后不得换人或更新配置。 */
   ownerBinding?:OwnerExecutionBinding;
+  /** 自动模式独立兜底身份，不是登记岗位或人工确认。 */
+  fallbackBinding?:AutomaticExecutionBinding;
   goal:string;acceptance:{id:string;text:string}[];
   /** revision 跟踪所有节点变化，planRevision 仅跟踪目标、范围、责任和验收变化。 */
   revision:number;planRevision:number;status:TaskStatus;

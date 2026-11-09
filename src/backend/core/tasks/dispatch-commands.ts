@@ -1,7 +1,9 @@
 /**
+ * 请求不接收模式或兜底证明；成功回执可携带可信服务生成的 fallbackBinding，明确本次原因与模型。
  * 作用定位：第一阶段成员注册与主会话派发的命令及回执契约。
  * 设计原因：跨进程只传角色、模块、目标及负责人/流程预期，不接收伪造实例、岗位正文或来源证明；旧请求形状仅保留原命令查询兼容，新许可另由可信服务和 Store 强制。
  */
+import {type AutomaticExecutionBinding} from '../team/automatic-execution';
 import {z} from 'zod';
 import type {AgentInstance, AgentSessionBinding} from '../team/agent-types';
 import type {AgentRef, GraphCursor} from './graph-types';
@@ -40,4 +42,6 @@ export interface CreateMemberReceipt extends OpenGraphReceipt {member:AgentInsta
 export interface DispatchReceipt {
   commandId:string;taskId:string;messageId:string;cursor:GraphCursor;
   disposition:'queued'|'waiting';
+  /** 明确标记本次自动兜底与原因，不表示已执行或已验收。 */
+  fallbackBinding?:AutomaticExecutionBinding;
 }

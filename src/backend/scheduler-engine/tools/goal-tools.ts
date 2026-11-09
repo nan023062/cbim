@@ -1,7 +1,8 @@
 /**
+ * Auto 工具允许省略无人负责模块的岗位选择；具体兜底证明只能由可信计划服务生成。
  * memberPause 只接受 waiting 申请的全量清单；公开回包仍核实际原请求，不把保留任务解释为完成。
  * 作用定位：将主 Agent 当前用户目标、真实补充历史的读取及规划审阅端口注册为内部 Loop 工具。
- * 设计原因：新业务输入必须包含发现所得 ownerSelection 并保留 Workflow 选择；输出只序列化一次核 Schema 与本轮身份，坏回包不重做已发生决策。旧请求的兼容仅在服务原命令查询，不放宽新工具输入。
+ * 设计原因：岗位分工必须包含发现所得 ownerSelection，Auto 无负责人分工由服务生成兜底身份；两者均保留 Workflow 选择。输出只序列化一次核 Schema 与本轮身份，坏回包不重做已发生决策。旧请求兼容只在服务原命令查询。
  * 职责边界：complete 只申请主轮次结算后的复核；人工项只能引用用户已保存且经专用入口消费的接受，模型不能签署或继续等待。工具层不执行成员或重造证据。
  */
 import {z} from 'zod';
@@ -39,6 +40,8 @@ export interface GoalToolInvocation {toolCallId:string;signal:AbortSignal}
 export interface GoalToolsPort {
   /** 可信主运行固定身份，不能取自模型输入或服务返回；构造时复制，避免运行中换绑。 */
   readonly binding:MainToolOutputBinding;
+  /** 可信周期模式，不能由工具输入或返回值决定。 */
+  readonly collaborationMode?:'auto'|'team';
   inspect():Promise<unknown>;
   plan(input:z.infer<typeof goalPlanInputSchema>,invocation:GoalToolInvocation):Promise<unknown>;
   review(input:z.infer<typeof goalReviewInputSchema>,invocation:GoalToolInvocation):Promise<unknown>;
@@ -49,12 +52,13 @@ export class GoalTools {
   private readonly binding:MainToolOutputBinding;
   constructor(private readonly port:GoalToolsPort){this.binding=Object.freeze(structuredClone(port.binding))}
   /** 工具表只公布已绑定端口，不包含未来人工确认或完成按钮的占位。 */
-  list(){return Object.entries(definitions).map(([name,d])=>({name,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>,...mainToolContract(name as GoalToolName)}))}
+  list(){return Object.entries(definitions).map(([name,definition])=>{const d=this.definition(name as GoalToolName);return ({name,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>,...mainToolContract(name as GoalToolName)})})}
   /** 精确匹配已实现名称，不按 cbim_goal_ 前缀放行未知操作。 */
   has(name:string):name is GoalToolName{return Object.hasOwn(definitions,name)}
+  private definition(name:GoalToolName){const d=definitions[name];return name==='cbim_goal_plan'&&this.port.collaborationMode==='auto'?{...d,schema:goalPlanInputSchema,description:'自动模式：有负责人时提供真实 ownerSelection；模块未分配负责人时使用 cbim:executor 并省略 ownerSelection。项目完全无模块时使用 moduleIds:["cbim:project"] 作为隐式全项目范围。服务核实并返回 fallbackBinding 及原因，不创建正式模块或岗位，不提升权限。已配置但失效的岗位不可兜底；计划、派发与 Workflow 必须一致。'+d.description.replace('业务 assignments 必须使用','已配置负责人的业务 assignments 必须使用')}:d}
   private parse(name:string,input:unknown){
     if(!this.has(name))fail('TOOL_NOT_FOUND','当前运行没有此目标规划工具');
-    const definition=definitions[name],parsed=definition.schema.safeParse(input);
+    const definition=this.definition(name),parsed=definition.schema.safeParse(input);
     if(!parsed.success)fail('GOAL_TOOL_INPUT_INVALID','目标工具参数无效：'+parsed.error.issues.map(issue=>issue.path.join('.')+': '+issue.message).join('；'));
     return {name,args:parsed.data,effects:definition.effects};
   }

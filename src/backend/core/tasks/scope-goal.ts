@@ -1,9 +1,11 @@
 /**
+ * 解析后的业务分配可以持有独立 fallbackBinding；输入不能直接提供兜底证明，且与 ownerSelection/ownerBinding 互斥。
  * 成员等待仅在 awaiting_user 明确保留完整清单；普通审阅、完成和人工决定不授予成员恢复许可。
  * 作用定位：定义调度周期目标的原始输入、版本化计划、审阅证据和持久化转换规则。
  * 设计原因：计划与模型回合分离，原始需求不可改写；业务分配保留负责人选择及可信绑定、可选 Workflow，显式补充使旧计划过期，历史缺省不伪造新身份。
  * 职责边界：主角色可管理模块知识但不能声明执行 Workflow；人工满足项须引用真实决定及显式接续，运行、知识、文件和批准归属仍由调度服务重核，complete 仅是申请。
  */
+import {automaticExecutionBindingSchema,automaticExecutionBindingMatches} from '../team/automatic-execution';
 import {z} from 'zod';
 import {workflowSelectionsSchema,validateWorkflowSelections,type WorkflowSelection} from './workflow-selection';
 import {fail} from '../foundation/errors';
@@ -44,8 +46,9 @@ const cursor=z.object({streamId:id,seq:z.number().int().nonnegative()}).strict()
 const inputRevision=z.number().int().min(1).max(32);
 const stamp={revision,inputRevision:inputRevision.optional(),runId:id,recordedAt:z.string().datetime(),knowledgeRevision:id,graphCursor:cursor};
 /** 已解析角色及模块的知识基线；显式流程选择保留输入，缺省不补值，不复制 Skill 正文或密钥。 */
-const resolvedAssignment=assignmentFields.extend({agentName:text,teamId:id,moduleNames:z.array(text).max(50),ownerBinding:ownerExecutionBindingSchema.optional()}).strict().superRefine((value,context)=>{
+const resolvedAssignment=assignmentFields.extend({agentName:text,teamId:id,moduleNames:z.array(text).max(50),ownerBinding:ownerExecutionBindingSchema.optional(),fallbackBinding:automaticExecutionBindingSchema.optional()}).strict().superRefine((value,context)=>{
   assignmentSelection(value,context);
+  if(value.fallbackBinding&&(value.ownerSelection||value.ownerBinding||!automaticExecutionBindingMatches(value.fallbackBinding,value.fallbackBinding.workspaceId,value.fallbackBinding.scopeId,value.agentId,value.moduleIds)||value.teamId!==value.fallbackBinding.teamId))context.addIssue({code:'custom',message:'自动兜底不得混入登记岗位，身份和模块必须一致'});
   if(value.agentId==='cbim:main'?(value.ownerSelection!==undefined||value.ownerBinding!==undefined):value.ownerSelection!==undefined||value.ownerBinding!==undefined){
     if(value.agentId==='cbim:main'||!value.ownerSelection||!value.ownerBinding||!ownerExecutionSelectionMatches(value.ownerSelection,value.ownerBinding)||value.ownerBinding.capability.agentId!==value.agentId||value.ownerBinding.capability.teamId!==value.teamId||value.ownerBinding.owners.length!==value.moduleIds.length||!value.moduleIds.every(id=>value.ownerBinding!.owners.some(owner=>owner.moduleId===id)))context.addIssue({code:'custom',message:'目标分配的可信负责人绑定与原选择不一致'});
   }

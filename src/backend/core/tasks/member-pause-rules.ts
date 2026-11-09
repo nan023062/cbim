@@ -1,4 +1,5 @@
 /**
+ * 自动任务可按原冻结兜底身份持久等待；保留身份不授予续执行或业务验收资格。
  * 作用定位：在同一派发快照中选择可持久等待的原检查点与未领取后继，供服务和 Store 重放独立裁决。
  * 设计原因：完整清单、原信封、成员代际和任务版本共同防止遗漏待办或复活旧终态；跨重启读取本规则不启动执行或刷新证明。
  */
@@ -31,7 +32,7 @@ export function memberPauseSelection(state:DispatchState,scope:DispatchScope,pau
   for(const task of tasks){
     const ref=pause.tasks.find(r=>r.taskId===task.taskId)!,member=state.members.find(m=>m.agentInstanceId===task.assignee.agentInstanceId),session=state.sessions.find(s=>s.agentSessionId===task.assignee.agentSessionId);
     check(task.revision===ref.expectedRevision&&task.planRevision===ref.expectedPlanRevision&&!task.activeRunId&&!task.result&&!task.help&&!task.cancelledBeforeStart&&!task.checkpointAbandonment&&!currentMemberResumeRequest(task)&&!task.awaitedChildren.length,'等待任务已领取、预约、结束或版本变化');
-    check(task.modules.every(m=>m.knowledgeRevision===plan.knowledgeRevision)&&task.ownerBinding,'等待任务没有当前知识及原岗位绑定');
+    check(task.modules.every(m=>m.knowledgeRevision===plan.knowledgeRevision)&&(task.ownerBinding||task.fallbackBinding),'等待任务没有当前知识及原岗位绑定');
     check(member&&session&&member.lifecycle==='active'&&!member.releasedAt&&member.executionScopeId===scope.scopeId&&member.executionTaskId===task.taskId&&member.workspaceId===scope.workspaceId&&member.agentId===task.assignee.agentId&&member.configurationRevision===plan.knowledgeRevision&&!member.activeRunId&&!member.activeTaskId&&!member.communicatingMessageIds.length&&['idle','waiting'].includes(member.activity)&&member.waitingTaskIds.every(id=>id===task.taskId),'等待成员被占用、释放或配置过期');
     check(session.workspaceId===scope.workspaceId&&session.rootSessionId===scope.rootSessionId&&session.agentInstanceId===member.agentInstanceId&&session.agentId===member.agentId&&member.agentSessionIds.length===1&&member.agentSessionIds[0]===session.agentSessionId,'等待成员通道身份不一致');
     const runs=(state.runs??[]).filter(r=>r.binding.rootSessionId===scope.rootSessionId&&r.binding.taskId===task.taskId),assignments=state.outbox.filter(m=>m.kind==='assignment'&&m.identity.rootSessionId===scope.rootSessionId&&m.taskId===task.taskId),assignment=assignments[0];

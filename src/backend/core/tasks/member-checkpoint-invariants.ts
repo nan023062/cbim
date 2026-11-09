@@ -1,4 +1,5 @@
 /**
+ * 自动兜底绑定属于检查点固定任务身份，续段不得换成新岗位或另一次兜底。
  * 持久等待仅允许原 wait 明确列出的未预约检查点；原证明不变，实际消费仍限原活动周期的唯一预约。
  * 作用定位：检查成员逐段检查点、不可变预约历史和每段唯一消费在图/运行/邮箱联合事务中的一致性。
  * 设计原因：不能只在工具入口防重；存储重放和普通事务须保留原负责人及流程选择，活动周期取消检查点只接受完整交接放弃校验产生的窄许可。
@@ -15,7 +16,7 @@ import {sameWorkflowSelectionsForModules} from './workflow-selection';
 function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,ordered(v)])):value}
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 function valid(value:unknown,message:string):asserts value{if(!value)fail('GRAPH_INPUT_INVALID',message)}
-const fixed=(task:TaskNode)=>({goal:task.goal,acceptance:task.acceptance,modules:task.modules,workflowSelections:task.workflowSelections,ownerBinding:task.ownerBinding,assignee:task.assignee,requester:task.requester,scopeId:task.scopeId,planRevision:task.planRevision});
+const fixed=(task:TaskNode)=>({goal:task.goal,acceptance:task.acceptance,modules:task.modules,workflowSelections:task.workflowSelections,ownerBinding:task.ownerBinding,fallbackBinding:task.fallbackBinding,assignee:task.assignee,requester:task.requester,scopeId:task.scopeId,planRevision:task.planRevision});
 /** 验证真实联合状态，不访问磁盘；abandoned 只接完整放弃校验按 [rootSessionId,taskId] 编码的许可。恢复仍需当前文件/原生证明，终止不授予恢复资格。 */
 export function validateMemberCheckpoints(previous:DispatchState,next:DispatchState,mutation:DispatchMutation,command:DispatchCommand,abandoned:ReadonlySet<string>=new Set()):void{
   const checkpointIds=new Set<string>(),consumed=new Set<string>();

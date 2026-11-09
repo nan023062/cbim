@@ -370,3 +370,8 @@ ValidationFilePort.validateImage须在具有PNG冻结要求的成员启动前实
 ## 原隔离执行核实与清理
 
 RunScopedExecution把原toolCallId/inputHash/allowedSeq作为可信授权传给平台。原Node物理收尾未知后，本轮仅允许cbim_scoped_read；drain统一EXECUTION_SCOPE_DRAIN_PENDING，保留运行占用，再次关闭只重试原清理。
+
+
+### 自动与团队协作模式
+
+checkedMemberRunBinding 同时核独立 fallbackBinding 的工作区、角色及模块；自动任务不生成长期岗位，权限门禁和真实执行证据不变。

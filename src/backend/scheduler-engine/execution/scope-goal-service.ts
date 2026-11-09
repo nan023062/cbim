@@ -1,4 +1,5 @@
 /**
+ * Auto 分配与 Team 岗位分配分别冻结；审阅证据必须匹配同一执行来源，人工验收规则共用且不降低。
  * 成员/最终目标复核与人工候选共用原完整身份；历史入口只重建事实，当前接受入口必须另核完整范围。
  * 已放弃的多段检查点作为换边来源时核全部原日志，不只信任最新段的摘要。
  * 持久成员等待通过独立只读核验精确保留原检查点和后继，主轮安全结算才停泊；未知和在途仍拒绝。
@@ -10,6 +11,8 @@
  * 输入边界：运行中补充按真实接收提升输入版本；未决记录阻止推进，审阅、完成和安全等待还双向核对可信插入日志，不能沿旧审阅遗漏新增要求。
  * GitHub 外部提交计入副作用时序，但不充当主知识提交或业务验收证据。
  */
+import {resolveExecutionModules} from '../context/automatic-context';
+import {sameAutomaticExecutionForModules,type AutomaticExecutionBinding} from '../../core/team/automatic-execution';
 import {z} from 'zod';
 import {questionToolName} from '../../core/tools/questions';
 import {scopeHasUnresolvedActiveInput} from '../../core/tasks/scope-active-input';
@@ -118,20 +121,20 @@ export class ScopeGoalService {
         validateWorkflowSelections(assignment.moduleIds,assignment.workflowSelections);
         const agent=assignment.agentId==='cbim:main'?resolveConversationAgent(snapshot):await resolveDispatchAgent(snapshot,assignment.agentId);
         check(assignment.agentId==='cbim:main'||assignment.moduleIds.length,'GOAL_PLAN_INVALID','业务执行角色必须明确目标模块');
-        const modules=assignment.moduleIds.length?await resolveDispatchModules(snapshot,assignment.moduleIds,assignment.workflowSelections):[];
-        const ownerBinding=assignment.agentId==='cbim:main'?undefined:await this.owners!.resolve(state,context,assignment.ownerSelection!,assignment.moduleIds,assignment.agentId);
+        const {ownerBinding,fallbackBinding}=assignment.agentId==='cbim:main'?{}:await this.owners!.resolveExecution(state,context,scopeId,assignment.ownerSelection,assignment.moduleIds,assignment.agentId);
+        const modules=assignment.moduleIds.length?await resolveExecutionModules(snapshot,assignment.moduleIds,assignment.workflowSelections,fallbackBinding):[];
         const member=ownerBinding?state.workspaceMembers!.find(member=>member.memberId===ownerBinding.memberId):undefined;
-        assignments.push({...assignment,...(ownerBinding?{ownerBinding}:{}),agentName:member?.name??agent.name,teamId:agent.teamId,moduleNames:modules.map(module=>module.name)});
+        assignments.push({...assignment,...(ownerBinding?{ownerBinding}:{}),...(fallbackBinding?{fallbackBinding}:{}),agentName:member?.name??agent.name,teamId:agent.teamId,moduleNames:modules.map(module=>module.name)});
       }
       check((await this.owner.read()).revision===snapshot.revision,'GOAL_KNOWLEDGE_CHANGED','规划期间知识已变化，请重新读取');
       const {expectedRevision:_,...body}=draft,newGoal:DispatchScopeGoal={revision:goal.revision+1,...(goal.inputRevision===undefined?{}:{inputRevision:goal.inputRevision}),input:goal.input,plan:{...body,assignments,revision:goal.revision+1,inputRevision:goalInputRevision(goal),runId,recordedAt:new Date().toISOString(),knowledgeRevision:snapshot.revision,graphCursor:cursor(graph)}};
       const next={...scope,goal:newGoal};alive();return {scopes:[next],receipt:next};
     });
-    return business.length?this.owners!.withContext(()=>business.map(assignment=>{if(!assignment.ownerSelection)fail('OWNER_SELECTION_REQUIRED','业务计划必须明确负责岗位');return assignment.ownerSelection}),save,alive):save({snapshot:await this.owner.snapshot(),profiles:[]});
+    return business.length?this.owners!.withContext(state=>business.map(assignment=>this.owners!.selection(state,scopeId,assignment.ownerSelection)),save,alive):save({snapshot:await this.owner.snapshot(),profiles:[]});
   }
 
   /** 正式派发必须匹配当前计划的角色、模块集合及选择模式；缺省不是任意 Workflow，完成申请后须先重规划。 */
-  validateDispatch(state:DispatchState,scope:DispatchScope,input:DispatchTaskInput['task'],knowledgeRevision:string,ownerBinding?:OwnerExecutionBinding):void{
+  validateDispatch(state:DispatchState,scope:DispatchScope,input:DispatchTaskInput['task'],knowledgeRevision:string,ownerBinding?:OwnerExecutionBinding,fallbackBinding?:AutomaticExecutionBinding):void{
     check(!scopeHasUnresolvedActiveInput(scope),'GOAL_ACTIVE_INPUT_UNRESOLVED','运行中补充尚未核实，不能派发新任务');
     this.scope(state,{workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId},scope.scopeId);
     // 旧无 goal 周期保持读取/运行兼容，不给历史记录补造计划。
@@ -142,7 +145,7 @@ export class ScopeGoalService {
     check(!goalNeedsReplan(scope.goal),'GOAL_REPLAN_REQUIRED','用户已补充目标，必须按最新输入重新规划再派发');
     check(!scope.goal.review,'GOAL_REPLAN_REQUIRED','已有目标审阅，请显式重规划后再派发');
     check(plan.knowledgeRevision===knowledgeRevision,'GOAL_KNOWLEDGE_CHANGED','计划知识基线已变化，请重新规划');
-    check(plan.assignments.some(item=>item.agentId===input.assigneeAgentId&&sameSet(item.moduleIds,input.moduleIds)&&sameWorkflowSelectionsForModules(item.workflowSelections,input.workflowSelections,input.moduleIds)&&sameOwnerExecutionForModules(item.ownerBinding,ownerBinding,input.moduleIds)),'GOAL_ASSIGNMENT_MISMATCH','派发岗位、角色、模块集合或 Workflow 选择不在当前目标计划中');
+    check(plan.assignments.some(item=>item.agentId===input.assigneeAgentId&&sameSet(item.moduleIds,input.moduleIds)&&sameWorkflowSelectionsForModules(item.workflowSelections,input.workflowSelections,input.moduleIds)&&sameAutomaticExecutionForModules(item.fallbackBinding,fallbackBinding,input.moduleIds)&&sameOwnerExecutionForModules(item.ownerBinding,ownerBinding,input.moduleIds)),'GOAL_ASSIGNMENT_MISMATCH','派发岗位、角色、模块集合或 Workflow 选择不在当前目标计划中');
   }
 
   /** 普通聊天与业务完成共用；只读原日志，不重入派发 store，也不补造缺失接收记录。 */
@@ -176,7 +179,7 @@ export class ScopeGoalService {
     check(run&&run.status==='completed'&&run.binding.workspaceId===scope.workspaceId&&run.binding.rootSessionId===scope.rootSessionId&&run.binding.agentId===task.assignee.agentId&&run.binding.agentInstanceId===task.assignee.agentInstanceId&&run.binding.agentSessionId===task.assignee.agentSessionId&&run.binding.planRevision===task.planRevision,'GOAL_EVIDENCE_IDENTITY','成员运行与任务候选身份不一致');
     check(run.prepared.knowledgeRevision===knowledgeRevision&&task.modules.every(module=>module.knowledgeRevision===knowledgeRevision),'GOAL_EVIDENCE_STALE','成员候选属于旧知识基线，需要重新执行验证');
     const summary=await this.logs().inspectMember(run);
-    check(summary.runId===run.binding.runId&&summary.task.taskId===task.taskId&&summary.task.workspaceId===scope.workspaceId&&summary.task.agentId===task.assignee.agentId&&sameGoalValue(summary.task.ownerBinding,task.ownerBinding)&&sameGoalValue(run.prepared.memberContext?.binding,task.ownerBinding)&&sameGoalValue(summary.memberBinding,run.binding)&&summary.status==='completed'&&!summary.logIntegrity?.partialTail&&!summary.unresolvedTools.length,'GOAL_EVIDENCE_INVALID','成员日志尚未完整结束或绑定不一致');
+    check(summary.runId===run.binding.runId&&summary.task.taskId===task.taskId&&summary.task.workspaceId===scope.workspaceId&&summary.task.agentId===task.assignee.agentId&&sameGoalValue(summary.task.fallbackBinding,task.fallbackBinding)&&sameGoalValue(run.prepared.fallbackBinding,task.fallbackBinding)&&sameGoalValue(summary.task.ownerBinding,task.ownerBinding)&&sameGoalValue(run.prepared.memberContext?.binding,task.ownerBinding)&&sameGoalValue(summary.memberBinding,run.binding)&&summary.status==='completed'&&!summary.logIntegrity?.partialTail&&!summary.unresolvedTools.length,'GOAL_EVIDENCE_INVALID','成员日志尚未完整结束或绑定不一致');
     const progress=summary.taskProgress;
     check(progress?.state==='awaiting_review'&&progress.delivery&&progress.goal===task.goal&&sameGoalValue(progress.acceptance,task.acceptance.map(item=>item.text))&&progress.delivery.summary===result.summary&&sameGoalValue(progress.delivery.limitations,result.limitations)&&progress.steps.length&&progress.steps.every(step=>step.state==='reported_done'&&step.evidence.length)&&sameSet([...new Set(progress.steps.flatMap(step=>step.evidence))],result.evidenceRefs),'GOAL_EVIDENCE_INVALID','候选内容与运行的真实交付记录不一致');
     for(const id of result.evidenceRefs)this.receipt(summary,id);
@@ -216,7 +219,7 @@ export class ScopeGoalService {
     for(const reference of item.evidence){
       check(reference.kind==='member-result','HUMAN_SOURCE_INVALID','人工验收只支持成员结果');
       const task=graph.tasks.find(task=>task.taskId===reference.taskId),result=task?.result;
-      check(task&&result&&result.runId===reference.runId&&result.resultId===reference.resultId&&result.planRevision===reference.planRevision&&reference.toolCallIds.length&&reference.toolCallIds.every(id=>result.evidenceRefs.includes(id))&&plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&sameSet(assignment.moduleIds,task.modules.map(module=>module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))&&sameOwnerExecutionForModules(assignment.ownerBinding,task.ownerBinding,task.modules.map(module=>module.moduleId))&&assignment.criterionIds.includes(criterionId)),'HUMAN_SOURCE_INVALID','候选、证据、模块或 Workflow 分工不属于此人工验收项');
+      check(task&&result&&result.runId===reference.runId&&result.resultId===reference.resultId&&result.planRevision===reference.planRevision&&reference.toolCallIds.length&&reference.toolCallIds.every(id=>result.evidenceRefs.includes(id))&&plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&sameSet(assignment.moduleIds,task.modules.map(module=>module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))&&sameAutomaticExecutionForModules(assignment.fallbackBinding,task.fallbackBinding,task.modules.map(module=>module.moduleId))&&sameOwnerExecutionForModules(assignment.ownerBinding,task.ownerBinding,task.modules.map(module=>module.moduleId))&&assignment.criterionIds.includes(criterionId)),'HUMAN_SOURCE_INVALID','候选、证据、模块或 Workflow 分工不属于此人工验收项');
       let candidate=selected.get(task.taskId);
       if(!candidate){
         const summary=await this.validateHistoricalMemberCandidate(state,scope,graph,task,snapshot.revision),run=state.runs!.find(run=>run.binding.runId===result.runId&&run.binding.taskId===task.taskId)!;
@@ -282,7 +285,7 @@ export class ScopeGoalService {
         if(reference.kind==='member-result'){
           const task=graph.tasks.find(value=>value.taskId===reference.taskId),result=task?.result;
           check(task&&result&&result.runId===reference.runId&&result.resultId===reference.resultId&&result.planRevision===reference.planRevision&&reference.toolCallIds.every(id=>result.evidenceRefs.includes(id)),'GOAL_EVIDENCE_INVALID','成员证据不是当前结果候选');
-          check(plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&sameSet(assignment.moduleIds,task.modules.map(module=>module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))&&sameOwnerExecutionForModules(assignment.ownerBinding,task.ownerBinding,task.modules.map(module=>module.moduleId))&&assignment.criterionIds.includes(item.criterionId)),'GOAL_EVIDENCE_IDENTITY','成员结果不属于此验收项的角色、模块或 Workflow 分配');
+          check(plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&sameSet(assignment.moduleIds,task.modules.map(module=>module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))&&sameAutomaticExecutionForModules(assignment.fallbackBinding,task.fallbackBinding,task.modules.map(module=>module.moduleId))&&sameOwnerExecutionForModules(assignment.ownerBinding,task.ownerBinding,task.modules.map(module=>module.moduleId))&&assignment.criterionIds.includes(item.criterionId)),'GOAL_EVIDENCE_IDENTITY','成员结果不属于此验收项的角色、模块或 Workflow 分配');
           if(!members.has(task.taskId))members.set(task.taskId,this.member(state,scope,graph,task,knowledgeRevision));
           const summary=await members.get(task.taskId)!;for(const id of reference.toolCallIds)this.receipt(summary,id);
         }else if(reference.kind==='human-decision'){
@@ -422,7 +425,7 @@ export class ScopeGoalService {
       const task=tasks.find(task=>task.taskId===run.binding.taskId)!;
       check(['completed','failed','cancelled'].includes(run.status)&&run.permission==='read'&&run.binding.workspaceId===scope.workspaceId&&run.binding.rootSessionId===scope.rootSessionId&&run.binding.agentInstanceId===task.assignee.agentInstanceId,'REPLAN_PROOF_INVALID','核实成员运行状态、权限或绑定无效');
       const summary=await logs.inspectMember(run);
-      check(summary.runId===run.binding.runId&&summary.task.taskId===task.taskId&&summary.task.workspaceId===scope.workspaceId&&summary.task.agentId===task.assignee.agentId&&sameGoalValue(summary.task.ownerBinding,task.ownerBinding)&&sameGoalValue(run.prepared.memberContext?.binding,task.ownerBinding)&&summary.status===run.status&&sameGoalValue(summary.memberBinding,run.binding),'REPLAN_PROOF_INVALID','核实成员日志身份不一致');audit(summary);recorded.push({summary,run});
+      check(summary.runId===run.binding.runId&&summary.task.taskId===task.taskId&&summary.task.workspaceId===scope.workspaceId&&summary.task.agentId===task.assignee.agentId&&sameGoalValue(summary.task.fallbackBinding,task.fallbackBinding)&&sameGoalValue(run.prepared.fallbackBinding,task.fallbackBinding)&&sameGoalValue(summary.task.ownerBinding,task.ownerBinding)&&sameGoalValue(run.prepared.memberContext?.binding,task.ownerBinding)&&summary.status===run.status&&sameGoalValue(summary.memberBinding,run.binding),'REPLAN_PROOF_INVALID','核实成员日志身份不一致');audit(summary);recorded.push({summary,run});
     }
     check(tasks.every(task=>task.runIds.every(id=>runs.some(run=>run.binding.runId===id))),'REPLAN_PROOF_INVALID','核实任务存在未登记的运行记录');
     await this.evidence(state,scope,graph,{...review,expectedRevision:goal.revision},main!,knowledge.revision);
@@ -458,7 +461,7 @@ export class ScopeGoalService {
       const task=tasks.find(item=>item.taskId===run.binding.taskId)!;
       check(['completed','failed','cancelled'].includes(run.status),'GOAL_WAIT_UNCERTAIN','成员执行尚未得到明确终态，不能安全等待');
       const member=await logs.inspectMember(run);
-      check(member.runId===run.binding.runId&&member.task.workspaceId===scope.workspaceId&&member.task.taskId===task.taskId&&member.task.agentId===task.assignee.agentId&&sameGoalValue(member.task.ownerBinding,task.ownerBinding)&&sameGoalValue(run.prepared.memberContext?.binding,task.ownerBinding)&&sameGoalValue(member.memberBinding,run.binding)&&member.status===run.status&&!member.logIntegrity?.partialTail&&!member.unresolvedTools.length&&!member.toolReceipts?.some(receipt=>receipt.outcome==='unknown'),'GOAL_WAIT_UNCERTAIN','成员日志存在未知工具结果或运行身份不一致');
+      check(member.runId===run.binding.runId&&member.task.workspaceId===scope.workspaceId&&member.task.taskId===task.taskId&&member.task.agentId===task.assignee.agentId&&sameGoalValue(member.task.fallbackBinding,task.fallbackBinding)&&sameGoalValue(run.prepared.fallbackBinding,task.fallbackBinding)&&sameGoalValue(member.task.ownerBinding,task.ownerBinding)&&sameGoalValue(run.prepared.memberContext?.binding,task.ownerBinding)&&sameGoalValue(member.memberBinding,run.binding)&&member.status===run.status&&!member.logIntegrity?.partialTail&&!member.unresolvedTools.length&&!member.toolReceipts?.some(receipt=>receipt.outcome==='unknown'),'GOAL_WAIT_UNCERTAIN','成员日志存在未知工具结果或运行身份不一致');
     }
     const snapshot=await this.owner.read();check(snapshot.revision===review.knowledgeRevision,'GOAL_KNOWLEDGE_CHANGED','等待申请后知识版本已变化');
     await this.evidence(state,scope,graph,{...review,expectedRevision:goal.revision},main,snapshot.revision);

@@ -1,9 +1,11 @@
 /**
+ * 自动兜底单独冻结 fallbackBinding；仅无模块分支容许 cbim:project 的空维护清单，不伪造人工确认。
  * 显式executionScope的全模块一致性在准备与恢复共用校验；约定只限制原权限，不能扩大权限或自动升级旧快照。
  * 作用定位：成员业务执行所需的可持久化知识快照，以及存储与调度共用的完整性校验。
  * 设计原因：实际运行须冻结岗位适配及角色/Skill、模块和流程正文；能力 hash 必须对应原采纳岗位，避免重算上下文指纹掩盖未采纳内容，Core 不反向依赖调度实现。
  * 职责边界：这是执行知识而非权限快照，不含模型凭据；指纹只能证明内容一致，不能代替知识来源、权限和产物基线复核。
  */
+import {automaticExecutionBindingSchema,automaticExecutionBindingMatches,implicitProjectModuleId,type AutomaticExecutionBinding} from '../team/automatic-execution';
 import {z} from 'zod';
 import {hash} from '../foundation/serialization';
 import {fail} from '../foundation/errors';
@@ -42,6 +44,8 @@ export interface PreparedDispatchKnowledge {
   /** 岗位适配只加入这次冻结上下文，不改通用 Agent；旧执行缺省保留原状。 */
   memberContext?:{binding:OwnerExecutionBinding;name:string;position:string;adaptation:WorkspaceMemberAdaptation};
   /** 除本字段外所有冻结内容的稳定 JSON SHA-256；没有授权含义。 */
+  /** 自动兜底不制造岗位适配；完整保留原模型、范围和原因。 */
+  fallbackBinding?:AutomaticExecutionBinding;
   fingerprint:string;
 }
 
@@ -49,7 +53,7 @@ const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-
 const text=z.string().min(1).max(2*1024*1024).refine(value=>!!value.trim());
 const jsonValue:z.ZodType<unknown>=z.lazy(()=>z.union([z.null(),z.string(),z.number().finite(),z.boolean(),z.array(jsonValue),z.record(jsonValue)]));
 const definition=z.record(jsonValue);
-const moduleBinding=z.object({moduleId:id,name:text,knowledgeRevision:id,maintenanceBindingId:id,maintainerPersonIds:z.array(id).min(1),workflow:z.discriminatedUnion('kind',[
+const moduleBinding=z.object({moduleId:id,name:text,knowledgeRevision:id,maintenanceBindingId:id,maintainerPersonIds:z.array(id),workflow:z.discriminatedUnion('kind',[
   z.object({kind:z.literal('module'),id,version:id}).strict(),
   z.object({kind:z.literal('general'),id,version:id,reason:text}).strict(),
 ])}).strict();
@@ -58,7 +62,7 @@ const shape=z.object({version:z.literal(1),workspaceId:id,knowledgeRevision:id,
     effectiveSkills:z.array(z.object({skillId:id,ownerId:id,inherited:z.boolean(),content:text}).strict()),
   }).strict(),agentDefinition:definition,
   modules:z.array(z.object({binding:moduleBinding,definition,overview:text,workflowText:text,workflowContract:workflowContractSchema.optional()}).strict()).min(1).max(100),
-  standards:z.array(z.object({id,version:id,text}).strict()).min(1),memberContext:z.object({binding:ownerExecutionBindingSchema,name:z.string().min(1).max(100),position:z.string().min(1).max(500),adaptation:workspaceMemberAdaptationSchema}).strict().optional(),fingerprint:z.string().regex(/^[a-f0-9]{64}$/),
+  standards:z.array(z.object({id,version:id,text}).strict()).min(1),memberContext:z.object({binding:ownerExecutionBindingSchema,name:z.string().min(1).max(100),position:z.string().min(1).max(500),adaptation:workspaceMemberAdaptationSchema}).strict().optional(),fallbackBinding:automaticExecutionBindingSchema.optional(),fingerprint:z.string().regex(/^[a-f0-9]{64}$/),
 }).strict();
 
 /** 为序列化字段排序，数组顺序仍有业务含义；调用者须先保证输入为可序列化快照。 */
@@ -82,6 +86,7 @@ export function validatePreparedDispatchKnowledge(value:unknown):asserts value i
   const prepared=value as PreparedDispatchKnowledge;
   const invalid=(condition:boolean,reason:string)=>{if(condition)fail('EXECUTION_CONTEXT_INVALID',reason)};
   invalid(prepared.agent.workspaceId!==prepared.workspaceId||prepared.agent.knowledgeRevision!==prepared.knowledgeRevision,'成员与执行知识基线不一致');
+  if(prepared.fallbackBinding){const b=prepared.fallbackBinding;invalid(!!prepared.memberContext||!automaticExecutionBindingMatches(b,prepared.workspaceId,b.scopeId,prepared.agent.agentId,prepared.modules.map(m=>m.binding.moduleId))||b.knowledgeRevision!==prepared.knowledgeRevision||b.teamId!==prepared.agent.teamId||b.capabilityHash!==workspaceMemberCapabilityHash(prepared.agent),'自动兜底身份或冻结能力不一致');}
   if(prepared.memberContext){const binding=prepared.memberContext.binding;invalid(!ownerExecutionBindingMatches(binding,prepared.workspaceId,prepared.agent.agentId,prepared.modules.map(module=>module.binding.moduleId))||binding.capability.teamId!==prepared.agent.teamId||workspaceMemberCapabilityHash(prepared.agent)!==binding.capability.capabilityHash,'岗位冻结身份、能力正文或模块与执行知识不一致');}
   invalid(new Set(prepared.modules.map(module=>module.binding.moduleId)).size!==prepared.modules.length,'执行模块不能重复');
   // 各模块声明单独有效仍可能重叠或合计超限；准备时核完整集合，不能领取后再裁剪范围。
@@ -95,6 +100,7 @@ export function validatePreparedDispatchKnowledge(value:unknown):asserts value i
   for(const module of prepared.modules){
     invalid(JSON.stringify(ordered(parseWorkflowContract(module.workflowText)))!==JSON.stringify(ordered(module.workflowContract)),'冻结 Workflow 执行约定与正文不一致');
     invalid(module.binding.knowledgeRevision!==prepared.knowledgeRevision||module.definition.id!==module.binding.moduleId,'模块定义与执行知识基线不一致');
+    invalid(!module.binding.maintainerPersonIds.length&&!(prepared.fallbackBinding?.reason==='no_modules'&&module.binding.moduleId===implicitProjectModuleId&&module.binding.maintenanceBindingId==='cbim:implicit-project'),'真实模块不能缺少维护人');
     invalid(new Set(module.binding.maintainerPersonIds).size!==module.binding.maintainerPersonIds.length,'模块维护人不能重复');
     if(module.binding.workflow.kind==='module')invalid(hash(module.workflowText)!==module.binding.workflow.version,'模块 Workflow 正文与冻结版本不一致');
     else {

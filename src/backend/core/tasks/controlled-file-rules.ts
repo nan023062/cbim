@@ -1,7 +1,9 @@
 /**
+ * ownerBindingHash 为兼容已有审计保留字段名；哈希输入可为严格解析的岗位绑定或独立 automatic 绑定，不能二者混用。
  * 作用定位：统一受控写与补偿的稳定身份、指纹、阶段回执及公共摘要投影。
  * 设计原因：Main 与 Store 共用唯一算法；新协议 Schema 固定字段顺序，旧领域命令算法不受影响。
  */
+import {automaticExecutionBindingSchema,type AutomaticExecutionBinding} from '../team/automatic-execution';
 import {hash,json} from '../foundation/serialization';
 import {fail} from '../foundation/errors';
 import {ownerExecutionBindingSchema,type OwnerExecutionBinding} from '../team/member-execution-binding';
@@ -10,7 +12,7 @@ import {controlledFileOriginSchema,controlledWriteRequestSchema,controlledFileIn
 type State={controlledFileChanges?:readonly ControlledFileChange[]};
 /** 运行/调用而非正文决定原操作身份；同调用不能换命令再次写。 */
 export function controlledFileOperationId(binding:ControlledFileBinding,toolCallId:string):string{const b=controlledFileBindingSchema.parse(binding);return hash(json(['controlled-file-write-v1',b.workspaceId,b.rootSessionId,b.taskId,b.runId,toolCallId]))}
-export function controlledFileOwnerBindingHash(binding:OwnerExecutionBinding):string{return hash(json(ownerExecutionBindingSchema.parse(binding)))}
+export function controlledFileOwnerBindingHash(binding:OwnerExecutionBinding|AutomaticExecutionBinding):string{return hash(json('kind' in binding?automaticExecutionBindingSchema.parse(binding):ownerExecutionBindingSchema.parse(binding)))}
 export function controlledFileRequestFingerprint(origin:ControlledFileOrigin,request:ControlledWriteRequest):string{return hash(json({version:1,origin:controlledFileOriginSchema.parse(origin),request:controlledWriteRequestSchema.parse(request)}))}
 export function controlledFileIntentHash(intent:ControlledFileIntent):string{return hash(json(controlledFileIntentSchema.parse(intent)))}
 export function controlledFileChangeHash(change:ControlledFileChange):string{return hash(json(controlledFileChangeSchema.parse(change)))}

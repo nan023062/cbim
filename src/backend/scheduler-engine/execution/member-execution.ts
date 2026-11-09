@@ -1,4 +1,5 @@
 /**
+ * 自动兜底从原周期模型准备执行；领取与续段重新核模块、配置及是否已有负责人，权限仍来自原运行策略。
  * 隔离执行与受控文件共用未收尾占用规则；再次close只等待原资源并把原运行封存为interrupted，不重启成员。
  * 领取前按真实scopedTools单独核验范围模式能力；缺端口不回退native，续执行仍复核原知识与权限。
  * 完整出口结算从原canonical重建清单并经真实全集合端口重核；只有JSON文件未变不足以保存候选。
@@ -10,6 +11,7 @@
  * 职责边界：本成员 Loop 不递归派发或继承批准；求助在关闭后单向交接。检查点须完整关闭及复核后释放占用；主调度预约一次原任务新轮，失败、停止和重启不复活旧实例。只读报告不触发续执行，候选及匹配哈希不等于验收。
  * 领取边界：运行中用户补充未确认或旧计划尚未按新输入重规划时，保留原待办而不创建成员运行；已在执行的成员仍可结算真实事实。
  */
+import {sameAutomaticExecutionForModules} from '../../core/team/automatic-execution';
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {z} from 'zod';
@@ -159,11 +161,11 @@ export class MemberExecutionManager {
       if(!this.ports.owners||!this.ports.withEngineConfiguration)fail('OWNER_EXECUTION_UNAVAILABLE','未装配受控岗位领取端口');
       // 在等待知识/模型短锁前登记停止屏障；并发请求不能覆盖原 token。
       const initial=memberTask(await this.store.read(),input.rootSessionId,input.taskId).task;
-      if(!initial.ownerBinding)fail('OWNER_BINDING_REQUIRED','旧任务没有负责岗位绑定，请重新规划派发');
+      if(!initial.ownerBinding&&!initial.fallbackBinding)fail('OWNER_BINDING_REQUIRED','旧任务没有负责岗位绑定，请重新规划派发');
       if(this.pendingStarts.has(input.taskId))fail('MEMBER_BUSY','该成员任务正在准备领取');this.pendingStarts.set(input.taskId,pending);assertCurrent();
       const receipt=await this.ports.owners.withSnapshot(async(snapshot,hint)=>{
-        const hinted=memberTask(hint,input.rootSessionId,input.taskId).task;if(!hinted.ownerBinding)fail('OWNER_BINDING_REQUIRED','旧任务没有负责岗位绑定');
-        const model=hinted.ownerBinding.model;
+        const hinted=memberTask(hint,input.rootSessionId,input.taskId).task;if(!hinted.ownerBinding&&!hinted.fallbackBinding)fail('OWNER_BINDING_REQUIRED','旧任务没有负责岗位绑定');
+        const model=(hinted.ownerBinding??hinted.fallbackBinding)!.model;
         if(input.options.profileId&&input.options.profileId!==model.profileId||input.options.model&&input.options.model!==model.modelId)fail('OWNER_MODEL_MISMATCH','成员模型只能来自原岗位绑定，不能由主会话选型覆盖');
         const prior=resuming?hint.runs?.find(run=>run.binding.runId===currentMemberResumeRequest(hinted)?.runId):undefined;
         if(resuming&&!prior)fail('MEMBER_RESUME_NOT_ALLOWED','续执行原运行不存在');
@@ -192,7 +194,7 @@ export class MemberExecutionManager {
         if(previous){
           if(previous.status!=='completed')fail('MEMBER_SESSION_REVIEW_REQUIRED','该成员通道上次运行未安全结束，请先核实；本阶段不自动续接异常通道');
           const summary=await this.ports.inspect(previous);
-          if(summary.status!=='completed'||summary.unresolvedTools.length||!summary.sessionFile||json(summary.memberBinding)!==json(previous.binding)||!isDeepStrictEqual(summary.task.ownerBinding,previous.prepared.memberContext?.binding)||summary.task.workspaceId!==input.workspaceId||summary.task.root!==this.owner.entry.path||summary.task.taskId!==previous.binding.taskId||summary.task.agentId!==previous.binding.agentId||summary.runId!==previous.binding.runId||summary.sessionFile!==previous.session.sessionFile)fail('MEMBER_SESSION_REVIEW_REQUIRED','成员通道历史未通过核实，不能自动续接');
+          if(summary.status!=='completed'||summary.unresolvedTools.length||!summary.sessionFile||json(summary.memberBinding)!==json(previous.binding)||!isDeepStrictEqual(summary.task.fallbackBinding,previous.prepared.fallbackBinding)||!isDeepStrictEqual(summary.task.ownerBinding,previous.prepared.memberContext?.binding)||summary.task.workspaceId!==input.workspaceId||summary.task.root!==this.owner.entry.path||summary.task.taskId!==previous.binding.taskId||summary.task.agentId!==previous.binding.agentId||summary.runId!==previous.binding.runId||summary.sessionFile!==previous.session.sessionFile)fail('MEMBER_SESSION_REVIEW_REQUIRED','成员通道历史未通过核实，不能自动续接');
         }
         // 等待只由仍活动的自动协作批次授权；公开手动启动缺少该回调，容量不足明确拒绝而不假排队。
         assertCurrent();
@@ -200,16 +202,16 @@ export class MemberExecutionManager {
         const runId=randomUUID(),scope=state.scopes?.find(value=>value.scopeId===task.scopeId);
         if(scope&&scopeHasUnresolvedActiveInput(scope))fail('GOAL_ACTIVE_INPUT_UNRESOLVED','运行中补充尚未核实，不能领取旧计划成员任务');
         if(scope?.goal&&goalNeedsReplan(scope.goal))fail('GOAL_REPLAN_REQUIRED','新输入尚未重新规划，不能领取旧计划成员任务');
-        if(!scope?.goal?.plan||scope.goal.review||scope.goal.blocked||!scope.goal.plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&task.modules.every(module=>assignment.moduleIds.includes(module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))&&sameOwnerExecutionForModules(assignment.ownerBinding,task.ownerBinding,task.modules.map(module=>module.moduleId))))fail('OWNER_PLAN_STALE','当前计划不再保留原任务岗位、模块或 Workflow，请重新规划派发');
+        if(!scope?.goal?.plan||scope.goal.review||scope.goal.blocked||!scope.goal.plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&task.modules.every(module=>assignment.moduleIds.includes(module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))&&sameAutomaticExecutionForModules(assignment.fallbackBinding,task.fallbackBinding,task.modules.map(module=>module.moduleId))&&sameOwnerExecutionForModules(assignment.ownerBinding,task.ownerBinding,task.modules.map(module=>module.moduleId))))fail('OWNER_PLAN_STALE','当前计划不再保留原任务岗位、模块或 Workflow，请重新规划派发');
         if(resuming&&(!scope?.goal||scope.goal.revision!==resumeRequest!.goalRevision||scope.goal.review||scope.goal.blocked||goalNeedsReplan(scope.goal)))fail('MEMBER_RESUME_STALE','预约后的目标计划已变化，不能消费原续执行请求');
-        if(resuming&&(!scope?.goal?.plan||scope.goal.plan.knowledgeRevision!==previous!.prepared.knowledgeRevision||!scope.goal.plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&task.modules.every(module=>assignment.moduleIds.includes(module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))&&sameOwnerExecutionForModules(assignment.ownerBinding,task.ownerBinding,task.modules.map(module=>module.moduleId)))))fail('MEMBER_RESUME_STALE','当前计划不再保留原岗位、模块、Workflow 选择或知识基线');
+        if(resuming&&(!scope?.goal?.plan||scope.goal.plan.knowledgeRevision!==previous!.prepared.knowledgeRevision||!scope.goal.plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&task.modules.every(module=>assignment.moduleIds.includes(module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))&&sameAutomaticExecutionForModules(assignment.fallbackBinding,task.fallbackBinding,task.modules.map(module=>module.moduleId))&&sameOwnerExecutionForModules(assignment.ownerBinding,task.ownerBinding,task.modules.map(module=>module.moduleId)))))fail('MEMBER_RESUME_STALE','当前计划不再保留原岗位、模块、Workflow 选择或知识基线');
         const admitted=scope?await this.ports.budgets?.admit(state,scope,{kind:'member',taskId:task.taskId,runId,model:locked.model}):undefined;
         assertCurrent();
         if(admitted?.rejected)return {scopes:[admitted.scope],receipt:admitted.rejected};
         const options:MemberStartOptions=resuming?{profileId:previous!.model.id,model:previous!.model.model,permission:previous!.permission,turnTimeoutMs:previous!.turnTimeoutMs}:input.options;
         release=this.ports.acquire(runId,options.permission,member.agentInstanceId,{task,commandId:input.commandId,wait});
         // 取得名额不代表后续 await 期间仍获准启动；停止不能等到 claim 后才生效。
-        const prepared=await prepareDispatchExecutionContext(this.owner,task,snapshot,state.workspaceMembers!.find(member=>member.memberId===task.ownerBinding!.memberId));assertCurrent();
+        const prepared=await prepareDispatchExecutionContext(this.owner,task,snapshot,task.ownerBinding?state.workspaceMembers!.find(member=>member.memberId===task.ownerBinding!.memberId):undefined);assertCurrent();
         const engine=locked.prepare();assertCurrent();
         const workflows=preparedWorkflowContracts(prepared),executionScope=preparedExecutionScope(prepared.modules.map(module=>({contract:module.workflowContract})));
         const availableTools=executionScope?engine.scopedTools:engine.availableTools;

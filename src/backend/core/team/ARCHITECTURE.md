@@ -11,6 +11,7 @@ Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履
 | 文件 | 当前职责 |
 | --- | --- |
 | [agent-types.ts](agent-types.ts) | 虚拟成员的角色配置、持久化实例及独立会话身份，供调度和存储共同使用。 |
+| [automatic-execution.ts](automatic-execution.ts) | 定义用户选择的协作模式和自动兜底的冻结身份，供计划、任务与运行共用。 |
 | [member-execution-binding.ts](member-execution-binding.ts) | 岗位负责人派发的纯选择与冻结身份契约，供目标、任务、运行和公开视图共用。 |
 | [member-execution-rules.ts](member-execution-rules.ts) | 从同一岗位、责任与来源登记快照核实执行选择，供调度和存储共用。 |
 | [model.ts](model.ts) | 团队：Team/小组/Agent、真人花名册与 Agent 自身和祖先 Skill的核心封装。 |
@@ -92,6 +93,40 @@ class N_src_backend_core_team_agent_types_ts_AgentIdentity["AgentIdentity"] {
   <<interface>>
 }
 N_src_backend_core_team_agent_types_ts_AgentIdentity <|-- N_src_backend_core_team_agent_types_ts_AgentSessionBinding
+```
+
+
+### automatic-execution.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_automatic_execution_ts["automatic-execution.ts"] {
+  <<module>>
+  +sameAutomaticExecutionForModules()
+  +automaticExecutionBindingMatches()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_automatic_execution_ts["automatic-execution.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_automatic_execution_ts_CollaborationMode["CollaborationMode"] {
+  <<type>>
+
+}
+N_src_backend_core_team_automatic_execution_ts ..> N_src_backend_core_team_automatic_execution_ts_CollaborationMode : 声明
+class N_src_backend_core_team_automatic_execution_ts_CollaborationPolicy["CollaborationPolicy"] {
+  <<type>>
+
+}
+N_src_backend_core_team_automatic_execution_ts ..> N_src_backend_core_team_automatic_execution_ts_CollaborationPolicy : 声明
+class N_src_backend_core_team_automatic_execution_ts_AutomaticExecutionBinding["AutomaticExecutionBinding"] {
+  <<type>>
+
+}
+N_src_backend_core_team_automatic_execution_ts ..> N_src_backend_core_team_automatic_execution_ts_AutomaticExecutionBinding : 声明
 ```
 
 
@@ -822,3 +857,8 @@ MemberScheduler ..> BrainPort : 绑定成员通道并执行
 `WorkspaceMemberAdoption.sourceRef` 可选保存受控 workspace Agent 代次或真实 builtin 内容引用。旧采纳缺省保持缺省；改名、岗位说明、状态和模型采纳原样保留原 sourceRef，不能暗补或删除。register/capability adopt 才可通过可信 sourceSelection 采纳当前来源；相同能力字节但来源代次变化仍构成实质变更。captureId 始终只是该次能力采纳 ID，不被重解释为代次。
 
 预览 sourceSelection 的 workspace、逻辑源、expectedRef、definitionHash 和 visible 纳入原 basis，新捕获随机 generationId 与观察的全库 knowledgeRevision 不进入依据；仅无关知识编辑不作废同能力预览，来源删除重建或定义变化仍使原依据失效。实际事件保存完整观察 revision，提交仍在同知识锁下核当前快照。实际 next、完整 sourceRef 和能力正文进入原 memberHash。builtin 内容 hash 必须等于真实能力规范 hash，不能伪造工作区 generation。sourceStatus 在详情中与本岗位 workspace/agent/已采纳引用严格绑定；读取不自动采纳，旧回执不补新字段。
+
+
+### 自动与团队协作模式
+
+automatic-execution.ts 定义独立 AutomaticExecutionBinding 与 CollaborationPolicy。它们不扩展或伪造 WorkspaceMember：兜底没有 memberId/sourceRef/责任审计，模型引用和能力指纹来自可信周期及实际快照。岗位契约保持原义；缺省模式为 Team。

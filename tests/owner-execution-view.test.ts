@@ -22,6 +22,13 @@ function task():TaskNode {
 }
 const notice=(value:TaskNode)=>renderToStaticMarkup(createElement(MemberOwnerNotice,{task:value}));
 
+it('自动兜底显示原因与冻结模型，不冒充旧岗位缺失或人工责任',()=>{
+  const value=task();delete value.ownerBinding;value.assignee.agentId='cbim:executor';
+  value.fallbackBinding={version:1,kind:'automatic',scopeId:value.scopeId!,workspaceId:identity.workspaceId,agentId:'cbim:executor',teamId,capabilityHash:hash,knowledgeRevision:hash,model:{profileId:randomUUID(),modelId:'auto-model',configurationHash:hash},reason:'unassigned_owner',moduleIds:[moduleId]};
+  const html=notice(value);expect(html).toContain('内置执行员兜底');expect(html).toContain('尚未分配负责人');expect(html).toContain('auto-model');expect(html).not.toContain('owner-binding-legacy');
+  expect(notice({...value,scopeId:'other-scope'})).toContain('自动执行记录与当前任务身份不一致');
+});
+
 it('原岗位与模型按派发绑定显示，同Agent另一岗位不覆盖原名字和配置',()=>{
   const a=task(),b=task();b.assignee={...b.assignee,name:'另一项目岗位'};b.ownerBinding!.model.modelId='member-model-beta';
   const before=JSON.stringify(a),html=notice(a);

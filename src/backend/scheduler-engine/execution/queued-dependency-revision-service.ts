@@ -1,4 +1,5 @@
 /**
+ * 原子修订依赖复核原自动任务范围和兜底模型，不把图调整当作重新选型。
  * 作用定位：在同一可靠事务中退役和新增未领取目标的多条前置，保存原请求与完整闭包审计。
  * 设计原因：知识→模型→Store 固定锁序核全部受影响岗位，增删后的图一次生效；不改原计划、实例或信封。
  * 职责边界：不启动成员，不回滚已执行来源；同命令返回原回执，回包未知须查询而不能换键重做。
@@ -33,9 +34,9 @@ export class QueuedDependencyRevisionService {
       if((await this.owner.read()).revision!==knowledgeRevision)fail('DEPENDENCY_KNOWLEDGE_STALE','知识基线已变化，不能修订旧待办');alive();
       let latest:Awaited<ReturnType<typeof prepareDispatchExecutionContext>>|undefined;
       for(const task of tasks){
-        const binding=await this.owners.verifyTask(state,context,task);alive();
-        this.goals.validateDispatch(state,scope,{assigneeAgentId:task.assignee.agentId,ownerSelection:ownerExecutionSelectionFor(binding),moduleIds:task.modules.map(m=>m.moduleId),...(task.workflowSelections?{workflowSelections:task.workflowSelections}:{}),goal:task.goal,acceptance:task.acceptance,prerequisites:[]},knowledgeRevision,binding);
-        latest=await prepareDispatchExecutionContext(this.owner,task,context.snapshot,state.workspaceMembers!.find(m=>m.memberId===binding.memberId));alive();
+        await this.owners.verifyTask(state,context,task);alive();const binding=task.ownerBinding;
+        this.goals.validateDispatch(state,scope,{assigneeAgentId:task.assignee.agentId,...(binding?{ownerSelection:ownerExecutionSelectionFor(binding)}:{}),moduleIds:task.modules.map(m=>m.moduleId),...(task.workflowSelections?{workflowSelections:task.workflowSelections}:{}),goal:task.goal,acceptance:task.acceptance,prerequisites:[]},knowledgeRevision,binding,task.fallbackBinding);
+        latest=await prepareDispatchExecutionContext(this.owner,task,context.snapshot,binding?state.workspaceMembers!.find(member=>member.memberId===binding.memberId):undefined);alive();
         if(latest.knowledgeRevision!==knowledgeRevision||latest.agent.teamId!==members.find(m=>m.agentInstanceId===task.assignee.agentInstanceId)!.teamId)fail('DEPENDENCY_KNOWLEDGE_STALE','待办角色、模块或 Workflow 已变化');
       }
       if(!latest)fail('DEPENDENCY_INPUT_INVALID','修订缺少完整待办范围');

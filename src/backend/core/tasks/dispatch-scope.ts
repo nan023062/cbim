@@ -1,7 +1,9 @@
 /**
+ * executionPolicy 保存首轮真实协作选择；后续回注和等待延续原规则，不能通过模型请求改变。
  * 作用定位：定义一次用户任务的调度周期，与长期主会话和单次模型运行区分。
  * 设计原因：一次目标可以经历多轮调度、执行和结果回注；冻结原始输入与软限额。运行中补充先记录发送尝试，仅真实接收后与 waiting 续接共用输入版本；人工决定保存不自动续接，旧损坏链不复活。
  */
+import {type CollaborationPolicy} from '../team/automatic-execution';
 import type {DispatchScopeGoal} from './scope-goal';
 import type {DispatchScopeWait} from './scope-continuation';
 import type {ScopeContinuationRecord} from './scope-continuation-record';
@@ -26,6 +28,8 @@ export interface DispatchScope {
   createdAt:string;
   /** 原始输入冻结，计划/审阅逐版追加；缺省仅表示旧记录，不从首轮任务或历史正文猜测补造。 */
   goal?:DispatchScopeGoal;
+  /** 首轮真实用户选择，整个周期不可改写；缺省沿历史团队模式。 */
+  executionPolicy?:CollaborationPolicy;
   /** 新周期自创建起登记的主运行启动意图；旧周期缺省，不以日志时间或计划内容补造归属。 */
   runTracking?:ScopeRunTracking;
   /** 创建时冻结运行间软限额；legacy 缺省不补造，拒绝记录不替代目标阻塞或人工验收。 */

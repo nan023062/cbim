@@ -774,3 +774,8 @@ scoped-execution.ts 严格限定入口/文件/参数/输出，无模型可填预
 ## 原隔离执行核实与清理
 
 isolated-execution-recovery只公开原运行、执行ID、报告basis、资源状态与原清理commandId/basis；不公开路径、PID或profile。清理回执只代表原资源回收，不代表业务完成。
+
+
+### 自动与团队协作模式
+
+DispatchScope.executionPolicy 自创建后不可变；goal assignment、TaskNode、PreparedDispatchKnowledge、TaskSpec 单独保存 fallbackBinding。automatic-execution-rules 核原周期与当前无人负责状态；owner-execution-invariants 在新增计划／派发／领取门禁选真实岗位或兜底分支。回执、日志、Workflow、检查点、依赖及人工接受主体都保留相同执行来源。仅匹配 no_modules 的 cbim:project 可以没有维护人，真实模块不获豁免。受控写沿用 ownerBindingHash 字段名以兼容旧审计，其值取实际绑定严格规范化后的指纹。

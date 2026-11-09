@@ -1,4 +1,5 @@
 /**
+ * 自动任务显示领取时的重核说明，不调用长期岗位对照接口冒充已登记成员。
  * 作用定位：在选中任务详情中显式核实当前负责人、能力和模型与原派发是否一致。
  * 设计原因：查询不随流式事件轮询，不消费检查点或改变执行；控制器按完整任务版本隔离迟到响应，历史与当前观察分别呈现。
  */
@@ -16,6 +17,7 @@ export function OwnerExecutionInspection({task}:{task:TaskNode}){
   useEffect(()=>{controller.observe(task)},[controller,key]);
   useEffect(()=>()=>controller.dispose(),[controller]);
   const shown=state.key===key?state:undefined;
+  if(task.fallbackBinding)return <p className="owner-execution-muted">自动兜底的模块、模型和负责人状态会在实际领取时重新核实；后续登记的负责人不会覆盖这份历史。</p>;
   if(ownerTaskView(task).kind==='invalid')return null;
   return <section className="owner-execution-current" aria-label="当前负责人核实" data-testid="owner-current-inspection">
     <button disabled={!!shown?.loading} onClick={()=>{controller.observe(task);void controller.inspect()}} data-testid="owner-inspect-current">{shown?.loading?'正在核实…':'核实当前负责人配置'}</button>

@@ -1,4 +1,5 @@
 /**
+ * 受控业务写同时核对岗位或自动兜底的原冻结身份；自动模式不放宽运行租约、权限、一次性授权或补偿核验。
  * 作用定位：唯一派发 Store 在提交及重放时校验受控文件附录的身份、阶段、回执和容量。
  * 设计原因：每次仅保存一条不可变阶段，不与任务图混写；文件 IO 在 Store 外，终态必须保留已执行事实而不能被停止或今日配置变化抹掉。
  */
@@ -19,9 +20,9 @@ function liveMember(state:DispatchState,intent:ControlledWritePrepared):void{
   const graph=state.graphs.find(g=>g.identity.workspaceId===b.workspaceId&&g.identity.rootSessionId===b.rootSessionId),task=graph?.tasks.find(t=>t.taskId===b.taskId),run=state.runs?.find(r=>r.binding.runId===b.runId);
   const member=state.members.find(m=>m.agentInstanceId===b.agentInstanceId),session=state.sessions.find(s=>s.agentSessionId===b.agentSessionId);
   check(scope?.status==='active'&&!scope.recovery,'业务写必须属于当前非只读周期');
-  check(task&&task.scopeId===scope.scopeId&&task.ownerBinding&&task.activeRunId===b.runId&&task.planRevision===b.planRevision&&task.runIds.includes(b.runId)&&task.assignee.agentId===b.agentId&&task.assignee.agentInstanceId===b.agentInstanceId&&task.assignee.agentSessionId===b.agentSessionId,'业务写缺少原任务及岗位绑定');
-  check(run?.status==='running'&&equal(run.binding,b)&&run.prepared.memberContext&&equal(run.prepared.memberContext.binding,task.ownerBinding),'业务写缺少可靠在途成员领取');
-  check(origin.permission===run.permission&&origin.knowledgeRevision===run.prepared.knowledgeRevision&&origin.ownerBindingHash===controlledFileOwnerBindingHash(task.ownerBinding),'业务写权限、知识或岗位指纹不符');
+  check(task&&task.scopeId===scope.scopeId&&(task.ownerBinding||task.fallbackBinding)&&task.activeRunId===b.runId&&task.planRevision===b.planRevision&&task.runIds.includes(b.runId)&&task.assignee.agentId===b.agentId&&task.assignee.agentInstanceId===b.agentInstanceId&&task.assignee.agentSessionId===b.agentSessionId,'业务写缺少原任务及岗位绑定');
+  check(run?.status==='running'&&equal(run.binding,b)&&equal(run.prepared.memberContext?.binding,task.ownerBinding)&&equal(run.prepared.fallbackBinding,task.fallbackBinding),'业务写缺少可靠在途成员领取');
+  check(origin.permission===run.permission&&origin.knowledgeRevision===run.prepared.knowledgeRevision&&origin.ownerBindingHash===controlledFileOwnerBindingHash((task.ownerBinding??task.fallbackBinding)!),'业务写权限、知识或岗位指纹不符');
   check(member?.workspaceId===b.workspaceId&&member.agentId===b.agentId&&member.teamId===b.teamId&&member.activeRunId===b.runId&&member.activeTaskId===b.taskId&&member.leaseEpoch===b.leaseEpoch&&member.lifecycle==='active'&&member.executionScopeId===scope.scopeId&&member.executionTaskId===b.taskId,'业务写成员租约已失效');
   check(session?.workspaceId===b.workspaceId&&session.rootSessionId===b.rootSessionId&&session.agentInstanceId===b.agentInstanceId&&session.agentId===b.agentId&&session.teamId===b.teamId&&(session.purpose??'task')==='task'&&b.agentId!=='cbim:main','业务写通道或主成员边界不符');
 }

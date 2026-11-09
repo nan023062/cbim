@@ -1,8 +1,10 @@
 /**
+ * 自动执行也须核对独立 fallbackBinding 的角色与模块，不能以没有长期岗位跳过运行归属。
  * 作用定位：定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。
  * 设计原因：稳定岗位、执行实例、业务 taskId、一次 runId 与逻辑通道分开；新任务保存负责人绑定，检查点沿原任务通道续轮，旧对话仍使用原 start/resume 协议。
  * 职责边界：这里只校验身份，不签发租约、权限或恢复许可；sessionFile 属于后端私有启动数据，不进入公开任务图。
  */
+import {automaticExecutionBindingMatches} from '../team/automatic-execution';
 import {safeId} from '../foundation/identity';
 import {fail} from '../foundation/errors';
 import type {TaskSpec} from '../tasks/types';
@@ -57,6 +59,7 @@ export function checkedMemberRunBinding(value:unknown,task:TaskSpec,runId?:strin
   if(!Number.isSafeInteger(binding.leaseEpoch)||(binding.leaseEpoch as number)<0||!Number.isSafeInteger(binding.planRevision)||(binding.planRevision as number)<1)fail('MEMBER_RUN_IDENTITY','成员租约或计划版本无效');
   if(binding.workspaceId!==task.workspaceId||binding.taskId!==task.taskId||binding.agentId!==task.agentId||runId!==undefined&&binding.runId!==runId)fail('MEMBER_RUN_IDENTITY','成员运行绑定与任务或轮次不一致');
   if(task.mode==='chat'||!task.moduleIds.length)fail('MEMBER_RUN_IDENTITY','成员业务运行需要明确的模块任务，不能借用普通对话身份');
+  if(task.fallbackBinding&&(task.ownerBinding||!automaticExecutionBindingMatches(task.fallbackBinding,task.workspaceId,task.fallbackBinding.scopeId,binding.agentId as string,task.moduleIds)||task.fallbackBinding.teamId!==binding.teamId))fail('MEMBER_RUN_IDENTITY','自动执行绑定与本轮角色或模块不一致');
   if(task.ownerBinding&&(!ownerExecutionBindingMatches(task.ownerBinding,task.workspaceId,binding.agentId as string,task.moduleIds)||task.ownerBinding.capability.teamId!==binding.teamId))fail('MEMBER_RUN_IDENTITY','成员任务的岗位绑定与本轮角色、模块不一致');
   return structuredClone(value) as MemberRunBinding;
 }

@@ -1,7 +1,9 @@
 /**
+ * 自动任务的续段也须与当前计划保持同一兜底模型、原因和知识，不以缺少 ownerBinding 作为通配。
  * 作用定位：在已提交状态中选择唯一可预约的成员检查点与尚未启动的依赖后继。
  * 设计原因：预约不消费运行；当前计划须仍保留原岗位和流程选择，文件/知识/原生字节及当前岗位资格仍须在预约和真正领取时重新核实。
  */
+import {sameAutomaticExecutionForModules} from '../team/automatic-execution';
 import {fail} from '../foundation/errors';
 import {completedCheckpointLedger} from './member-checkpoint-ledger';
 import type {DispatchState} from './dispatch-storage';
@@ -28,7 +30,7 @@ export function memberResumeSelection(state:DispatchState,identity:GraphIdentity
   const {run}=completedCheckpointLedger(state,task,'MEMBER_RESUME_NOT_ALLOWED');
   check(member&&session&&member.lifecycle==='active'&&member.executionScopeId===scopeId&&member.executionTaskId===task.taskId&&member.workspaceId===identity.workspaceId&&member.agentId===run.binding.agentId&&member.teamId===run.binding.teamId&&member.leaseEpoch===run.binding.leaseEpoch&&member.activity==='idle'&&!member.activeRunId&&!member.activeTaskId&&!member.waitingTaskIds.length&&!member.communicatingMessageIds.length,'MEMBER_RESUME_NOT_ALLOWED','原成员实例已占用、释放或待通信');
   check(run?.status==='completed'&&run.checkpointProof?.checkpoint.checkpointId===checkpoint.checkpointId&&session.workspaceId===identity.workspaceId&&session.rootSessionId===identity.rootSessionId&&session.agentInstanceId===member.agentInstanceId&&session.agentId===member.agentId&&member.agentSessionIds.includes(session.agentSessionId)&&session.lastRunId===run.binding.runId&&session.lastTaskId===task.taskId&&session.nativeSessionId===run.session.nativeSessionId&&!!run.session.sessionFile,'MEMBER_RESUME_NOT_ALLOWED','原成员运行或原生通道没有可靠检查点证明');
-  check(scope.goal.plan.knowledgeRevision===run.prepared.knowledgeRevision&&scope.goal.plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&task.modules.every(module=>assignment.moduleIds.includes(module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))&&sameOwnerExecutionForModules(assignment.ownerBinding,task.ownerBinding,task.modules.map(module=>module.moduleId))),'MEMBER_RESUME_STALE','当前计划不再保留原岗位、成员、模块流程或知识基线');
+  check(scope.goal.plan.knowledgeRevision===run.prepared.knowledgeRevision&&scope.goal.plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&task.modules.every(module=>assignment.moduleIds.includes(module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))&&sameAutomaticExecutionForModules(assignment.fallbackBinding,task.fallbackBinding,task.modules.map(module=>module.moduleId))&&sameOwnerExecutionForModules(assignment.ownerBinding,task.ownerBinding,task.modules.map(module=>module.moduleId))),'MEMBER_RESUME_STALE','当前计划不再保留原岗位、成员、模块流程或知识基线');
   check(!state.outbox.some(message=>message.kind==='assignment'&&message.taskId===task.taskId&&message.identity.rootSessionId===identity.rootSessionId&&message.resumeFrom?.checkpointId===checkpoint.checkpointId),'MEMBER_RESUME_NOT_ALLOWED','本段检查点已预约，不能创建第二个续执行信封');
   const trackedTaskIds=[task.taskId],byNode=new Map(graph.tasks.map(task=>[task.nodeId,task])),visited=new Set([task.nodeId]),queue=[task.nodeId];
   for(let index=0;index<queue.length;index++)for(const edge of graph.edges){

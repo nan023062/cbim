@@ -1,4 +1,5 @@
 /**
+ * Workflow 证据核对原 fallbackBinding；相同模块但不同兜底配置的日志不能互相借用。
  * 范围读取、固定Node和受控写按各自实际read/command/business-write效果核证，不把命令事实等同专业验收。
  * 完整模式核显式原清单、全部冻结范围与同身份JSON记录；历史重算还核采集结束早于交付授权，不退回文件子集。
  * 证据边界：交付只核步骤实际引用的业务证据，提问、取消、原命令报告及模块负责人控制面不能作证；未引用的查询不使整轮失效，真实知识写仍参与副作用时序。
@@ -99,12 +100,12 @@ function effectFinished(events:readonly ArtifactEvidenceEvent[],identity:Workflo
  * 在成员结算和主目标核验时重算完整 canonical，而非信任 taskProgress 的命中字段。
  * 有约定的新运行必须保留自己的计划和成功交付调用；续执行也须建立本轮计划，旧轮次回执不会继承。
  */
-export function validateWorkflowEvidence(events:readonly ArtifactEvidenceEvent[],task:Pick<TaskSpec,'workspaceId'|'taskId'|'goal'|'acceptance'|'ownerBinding'>,bindings:readonly WorkflowContractBinding[],validations:readonly ValidationRecord[]=[],manifest?:OutputManifestProof):WorkflowEvidenceProof|undefined{
+export function validateWorkflowEvidence(events:readonly ArtifactEvidenceEvent[],task:Pick<TaskSpec,'workspaceId'|'taskId'|'goal'|'acceptance'|'ownerBinding'|'fallbackBinding'>,bindings:readonly WorkflowContractBinding[],validations:readonly ValidationRecord[]=[],manifest?:OutputManifestProof):WorkflowEvidenceProof|undefined{
   if(!bindings.length)return;checkedBindings(bindings);
   const first=events[0],last=events.at(-1),identity={workspaceId:task.workspaceId,taskId:task.taskId,runId:first?.runId};
   valid(first?.type==='run.started'&&first.runId&&same(first.data.workflowContracts,bindings)&&last?.type==='run.settled'&&last.data.status==='completed','WORKFLOW_LOG_INVALID','Workflow 运行缺少完整来源、冻结约定或正常终态');
   valid(events.every((event,index)=>event.seq===index+1&&event.workspaceId===identity.workspaceId&&event.taskId===identity.taskId&&event.runId===identity.runId),'WORKFLOW_LOG_INVALID','Workflow 日志身份或连续顺序不完整');
-  const taskData=first.data.task as Partial<TaskSpec>|undefined;valid(taskData?.workspaceId===task.workspaceId&&taskData.taskId===task.taskId&&taskData.goal===task.goal&&same(taskData.acceptance,task.acceptance)&&same(taskData.ownerBinding,task.ownerBinding),'WORKFLOW_LOG_INVALID','Workflow 运行来源与真实任务及冻结岗位不一致');
+  const taskData=first.data.task as Partial<TaskSpec>|undefined;valid(taskData?.workspaceId===task.workspaceId&&taskData.taskId===task.taskId&&taskData.goal===task.goal&&same(taskData.acceptance,task.acceptance)&&same(taskData.fallbackBinding,task.fallbackBinding)&&same(taskData.ownerBinding,task.ownerBinding),'WORKFLOW_LOG_INVALID','Workflow 运行来源与真实任务及冻结岗位不一致');
   const candidateEvent=events.filter(event=>event.type==='task.updated').at(-1),candidate=candidateEvent?.data.progress as TaskProgress|undefined;
   valid(candidateEvent&&candidate?.state==='awaiting_review'&&candidate.delivery&&candidate.steps.length&&candidate.goal===task.goal&&same(candidate.acceptance,task.acceptance),'WORKFLOW_LOG_INVALID','Workflow 缺少当前任务的待审阅交付记录');
   const deliveries=events.filter(event=>event.type==='tool.finished'&&event.data.name==='cbim_delivery_prepare'&&event.seq>candidateEvent.seq&&(event.data.receipt as ToolReceipt|undefined)?.outcome==='succeeded'&&same(progressResult(event),candidate));

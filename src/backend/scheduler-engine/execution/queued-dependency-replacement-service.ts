@@ -1,4 +1,5 @@
 /**
+ * 替换失败前置仍核原任务的自动兜底及模型，候选替代不改变任务执行来源。
  * 作用定位：主调度在同一事务核实旧前置、安全替代候选与未启动后继，并原子提交单条依赖替换。
  * 设计原因：图上的 result_ready 不足以授权后续执行；失败/求助或已放弃检查点及新候选按原日志核实，未领取闭包在 Knowledge→模型→Store 锁序中核当前岗位；旧边与原执行保持。
  * 职责边界：不运行成员、不改变目标、Workflow 选择、权限或实例身份；按原选择复核待办，回执仅供当前主轮重新跟踪，停止或重开不能自动消费。
@@ -39,9 +40,9 @@ export class QueuedDependencyReplacementService {
       await this.goals.validateMemberCandidate(state,scope,graph,replacement,knowledgeRevision);alive();
       const candidateRun=state.runs!.find(run=>run.binding.runId===replacement.result!.runId&&run.binding.taskId===replacement.taskId)!;
       for(const task of tasks){
-        const binding=await this.owners!.verifyTask(state,context,task);alive();
-        this.goals.validateDispatch(state,scope,{assigneeAgentId:task.assignee.agentId,ownerSelection:ownerExecutionSelectionFor(binding),moduleIds:task.modules.map(module=>module.moduleId),...(task.workflowSelections?{workflowSelections:task.workflowSelections}:{}),goal:task.goal,acceptance:task.acceptance,prerequisites:[]},knowledgeRevision,binding);
-        const prepared=await prepareDispatchExecutionContext(this.owner,task,context.snapshot,state.workspaceMembers!.find(member=>member.memberId===binding.memberId));alive();
+        await this.owners!.verifyTask(state,context,task);alive();const binding=task.ownerBinding;
+        this.goals.validateDispatch(state,scope,{assigneeAgentId:task.assignee.agentId,...(binding?{ownerSelection:ownerExecutionSelectionFor(binding)}:{}),moduleIds:task.modules.map(module=>module.moduleId),...(task.workflowSelections?{workflowSelections:task.workflowSelections}:{}),goal:task.goal,acceptance:task.acceptance,prerequisites:[]},knowledgeRevision,binding,task.fallbackBinding);
+        const prepared=await prepareDispatchExecutionContext(this.owner,task,context.snapshot,binding?state.workspaceMembers!.find(member=>member.memberId===binding.memberId):undefined);alive();
         if(prepared.knowledgeRevision!==knowledgeRevision||prepared.agent.teamId!==members.find(member=>member.agentInstanceId===task.assignee.agentInstanceId)!.teamId)fail('DEPENDENCY_KNOWLEDGE_STALE','待办角色或模块基线已经过期');
       }
       await recheckDispatchExecutionContext(this.owner,candidateRun.prepared);alive();

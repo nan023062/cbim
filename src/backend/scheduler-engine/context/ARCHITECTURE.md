@@ -10,12 +10,25 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [automatic-context.ts](automatic-context.ts) | 解析自动模式的隐式全项目范围，复用真实模块既有的维护与 Workflow 规则。 |
 | [default-executor.ts](default-executor.ts) | 提供 CBIM 内置默认执行角色的静态定义及当前 Team 根 Skill 的只读装配。 |
 | [dispatch-context.ts](dispatch-context.ts) | 解析主会话内置身份，以及正式派发所需的角色知识与多模块绑定。 |
 | [execution-context.ts](execution-context.ts) | 为已派发成员任务冻结完整执行知识和各模块可选 Workflow 程序约定，并在启动、恢复或未启动依赖替换前复核基线。 |
 | [team-workflow.ts](team-workflow.ts) | 调度引擎：将明确选择的模块、叶子 Agent 和本模块 Workflow 装配为执行任务。 |
 
 ## 架构类图
+
+### automatic-context.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_context_automatic_context_ts["automatic-context.ts"] {
+  <<module>>
+  +resolveExecutionModules()
+}
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/team/automatic-execution.ts](../../core/team/automatic-execution.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[dispatch-context.ts](dispatch-context.ts)。
 
 ### default-executor.ts
 
@@ -67,7 +80,7 @@ class N_src_backend_scheduler_engine_context_execution_context_ts_DispatchKnowle
 N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_scheduler_engine_context_execution_context_ts_DispatchKnowledgeWorkspace : 声明
 ```
 
-直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/snapshot.ts](../../core/knowledge/snapshot.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[dispatch-context.ts](dispatch-context.ts)、[default-executor.ts](default-executor.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)。
+直接依赖：[automatic-context.ts](automatic-context.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/snapshot.ts](../../core/knowledge/snapshot.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[dispatch-context.ts](dispatch-context.ts)、[default-executor.ts](default-executor.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)。
 
 ### team-workflow.ts
 
@@ -98,6 +111,9 @@ N_src_backend_scheduler_engine_context_team_workflow_ts ..> N_src_backend_schedu
 
 ```mermaid
 classDiagram
+class N_src_backend_scheduler_engine_context_automatic_context_ts["automatic-context.ts"] {
+  <<module>>
+}
 class N_src_backend_scheduler_engine_context_dispatch_context_ts["dispatch-context.ts"] {
   <<module>>
 }
@@ -107,8 +123,20 @@ class N_src_backend_scheduler_engine_context_default_executor_ts["default-execut
 class N_src_backend_scheduler_engine_context_execution_context_ts["execution-context.ts"] {
   <<module>>
 }
+N_src_backend_scheduler_engine_context_automatic_context_ts ..> N_src_backend_scheduler_engine_context_dispatch_context_ts : 导入依赖
 N_src_backend_scheduler_engine_context_dispatch_context_ts ..> N_src_backend_scheduler_engine_context_default_executor_ts : 导入依赖
+N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_scheduler_engine_context_automatic_context_ts : 导入依赖
 N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_scheduler_engine_context_dispatch_context_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_context_execution_context_ts["execution-context.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_context_default_executor_ts["default-executor.ts"] {
+  <<module>>
+}
 N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_scheduler_engine_context_default_executor_ts : 导入依赖
 ```
 
@@ -222,3 +250,8 @@ ExecutionContext ..> PreparedDispatchKnowledge : 返回可恢复快照
 本目录不写磁盘、不发送消息、不自行启动成员；通过只读知识端口返回结果，供 execution 准备运行。测试覆盖角色继承、多模块独立 Workflow、主角色来源、绑定篡改、读取期间知识变化、内置规范更新、缺失正文和快照损坏；实际权限、通道日志及交付证据复核由运行入口测试，不能据此宣称已比对产物文件基线。
 
 正式岗位执行从外层已锁定的同一知识 Snapshot 装配，不在 DispatchStore 回调中再次进入知识队列。memberContext 固定岗位绑定、名称、职责与项目适配，能力原则和有效 Skill 复用原解析器；适配引用只代表保存的资料引用，不声称自动读取或授权。旧快照读取不补字段，实际执行继续按原知识与 Workflow 完整复核。
+
+
+### 自动与团队协作模式
+
+automatic-context.ts 是隐式全项目范围的唯一解析位置，仅完整知识树没有模块且绑定原因为 no_modules 时生成 cbim:project。既有模块仍走 resolveDispatchModules 的维护与 Workflow 检查；execution-context 为隐式范围冻结内存说明和通用规范，不写 .cbim、不登记维护人。

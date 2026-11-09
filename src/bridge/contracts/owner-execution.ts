@@ -6,3 +6,7 @@ export {ownerExecutionBindingSchema,ownerExecutionSelectionSchema,ownerExecution
 export type {OwnerExecutionBinding,OwnerExecutionSelection,ExpectedModuleOwner} from '../../backend/core/team/member-execution-binding';
 export {taskOwnerInspectInputSchema,taskOwnerInspectOutputSchema,ownerExecutionDiscoverySchema} from '../../backend/core/team/owner-execution-discovery';
 export type {TaskOwnerInspectInput,TaskOwnerInspectOutput,OwnerExecutionDiscovery} from '../../backend/core/team/owner-execution-discovery';
+
+/** 自动兜底是独立执行身份，不是长期岗位，也不代表权限批准。 */
+export {automaticExecutionBindingMatches} from '../../backend/core/team/automatic-execution';
+export type {AutomaticExecutionBinding} from '../../backend/core/team/automatic-execution';

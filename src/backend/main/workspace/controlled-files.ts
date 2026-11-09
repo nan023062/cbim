@@ -1,4 +1,5 @@
 /**
+ * 自动兜底运行使用自身冻结身份计算受控写指纹，仍经原授权、文件事务与审计端口。
  * 作用定位：已打开工作区的受控写入与桌面补偿服务，连接运行许可、私有备份、独占子进程和唯一 DispatchStore。
  * 设计原因：文件 IO 永不进入 Store 回调；prepared/executing 的可靠保存先于写入，保存未知不重做。运行解除待核实屏障只接受原 not_applied 与进程退出，不凭错误码或查无推断。
  */
@@ -36,7 +37,7 @@ export class ControlledFiles {
   private tracked<T>(signal:AbortSignal|undefined,use:(signal:AbortSignal)=>Promise<T>):Promise<T>{const controller=new AbortController();this.controllers.add(controller);const combined=signal?AbortSignal.any([signal,controller.signal]):controller.signal;const result=use(combined);this.operations.add(result);void result.finally(()=>{this.operations.delete(result);this.controllers.delete(controller)}).catch(()=>{});return result}
   /** 工厂冻结真实已领取上下文；以后岗位变化不替换原运行配置，写前仍核原 run/lease 和停止。 */
   forRun(run:DispatchRun,scopeId:string):ControlledFileRunPort|undefined{
-    if(!this.transport)return;const saved=structuredClone(run);if(!saved.prepared.memberContext)return;
+    if(!this.transport)return;const saved=structuredClone(run);if(!saved.prepared.memberContext&&!saved.prepared.fallbackBinding)return;
     return {scopeId,write:(input,authorization,signal,assertCurrent)=>this.write(saved,scopeId,input,authorization,signal,assertCurrent),confirmNotApplied:async authorization=>{
       await this.platform().drain(this.owner.entry.path);
       const head=controlledFileOperation(await this.store.read(),controlledFileOperationId(saved.binding,authorization.toolCallId));
@@ -47,7 +48,7 @@ export class ControlledFiles {
   }
   /** Runtime 的一次性授权是唯一入口；重复 operation 先查询原记录，不再读取或改写业务文件。 */
   write(run:DispatchRun,scopeId:string,input:ControlledFileWriteInput,authorization:{toolCallId:string;inputHash:string;allowedSeq:number},signal:AbortSignal,assertCurrent:()=>void){
-    const frozen=controlledFileWriteInputSchema.parse(structuredClone(input)),origin=controlledFileOriginSchema.parse({kind:'member_tool',workspaceInstanceId:this.owner.instanceId,scopeId,binding:run.binding,ownerBindingHash:controlledFileOwnerBindingHash(run.prepared.memberContext!.binding),knowledgeRevision:run.prepared.knowledgeRevision,toolName:controlledFileWriteToolName,...authorization,permission:run.permission});
+    const frozen=controlledFileWriteInputSchema.parse(structuredClone(input)),origin=controlledFileOriginSchema.parse({kind:'member_tool',workspaceInstanceId:this.owner.instanceId,scopeId,binding:run.binding,ownerBindingHash:controlledFileOwnerBindingHash((run.prepared.memberContext?.binding??run.prepared.fallbackBinding)!),knowledgeRevision:run.prepared.knowledgeRevision,toolName:controlledFileWriteToolName,...authorization,permission:run.permission});
     return this.tracked(signal,async active=>{
       const operationId=controlledFileOperationId(origin.binding,origin.toolCallId),request={relativePath:frozen.path,expectedBefore:frozen.expectedBefore,after:fact(Buffer.from(frozen.content,'utf8'))},fingerprint=controlledFileRequestFingerprint(origin,request),prior=controlledFileOperation(await this.store.read(),operationId);
       if(prior){if(prior.intent.kind!=='member_write'||prior.intent.requestFingerprint!==fingerprint)fail('CONTROLLED_COMMAND_CONFLICT','原调用已经绑定不同请求');return controlledFileWriteApplied(prior)}

@@ -1,4 +1,5 @@
 /**
+ * 追加依赖时核各原任务的岗位或兜底身份，不为未领取任务刷新执行配置。
  * 作用定位：在同一派发事务核实未领取任务及两端后继，为原目标追加一条结果前置。
  * 设计原因：后创建的任务也能成为先前待办的前置；在 Knowledge→模型→Store 锁序内重核全部待办岗位、角色和 Workflow，审计和等待状态一起保存，不能靠事件名称绕过门禁。
  * 职责边界：不创建运行、不改原信封或任务计划；成功只登记依赖，当前主轮结束后仍沿原权限、预算和结果领取规则执行。
@@ -36,9 +37,9 @@ export class QueuedDependencyAdditionService {
       if((await this.owner.read()).revision!==knowledgeRevision)fail('DEPENDENCY_KNOWLEDGE_STALE','知识基线已变化，不能给旧待办追加前置');alive();
       let latest:Awaited<ReturnType<typeof prepareDispatchExecutionContext>>|undefined;
       for(const task of tasks){
-        const binding=await this.owners!.verifyTask(state,context,task);alive();
-        this.goals.validateDispatch(state,scope,{assigneeAgentId:task.assignee.agentId,ownerSelection:ownerExecutionSelectionFor(binding),moduleIds:task.modules.map(module=>module.moduleId),...(task.workflowSelections?{workflowSelections:task.workflowSelections}:{}),goal:task.goal,acceptance:task.acceptance,prerequisites:[]},knowledgeRevision,binding);
-        latest=await prepareDispatchExecutionContext(this.owner,task,context.snapshot,state.workspaceMembers!.find(member=>member.memberId===binding.memberId));alive();
+        await this.owners!.verifyTask(state,context,task);alive();const binding=task.ownerBinding;
+        this.goals.validateDispatch(state,scope,{assigneeAgentId:task.assignee.agentId,...(binding?{ownerSelection:ownerExecutionSelectionFor(binding)}:{}),moduleIds:task.modules.map(module=>module.moduleId),...(task.workflowSelections?{workflowSelections:task.workflowSelections}:{}),goal:task.goal,acceptance:task.acceptance,prerequisites:[]},knowledgeRevision,binding,task.fallbackBinding);
+        latest=await prepareDispatchExecutionContext(this.owner,task,context.snapshot,binding?state.workspaceMembers!.find(member=>member.memberId===binding.memberId):undefined);alive();
         if(latest.knowledgeRevision!==knowledgeRevision||latest.agent.teamId!==members.find(member=>member.agentInstanceId===task.assignee.agentInstanceId)!.teamId)fail('DEPENDENCY_KNOWLEDGE_STALE','待办角色、模块或 Workflow 已经变化');
       }
       if(!latest)fail('DEPENDENCY_INPUT_INVALID','前置追加缺少完整待办范围');

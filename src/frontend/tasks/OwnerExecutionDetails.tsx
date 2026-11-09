@@ -1,9 +1,10 @@
 /**
+ * 自动分配显示真实兜底原因与原对话模型，不标作旧岗位缺失，不生成登记或批准入口。
  * 作用定位：在目标责任分配和成员任务中呈现冻结的岗位、模型、来源与责任版本。
  * 设计原因：历史显示不依赖当前岗位查询；先核本地身份对应再显示，不把同名角色、配置一致或旧候选解释为可直接执行。
  */
 import type {TaskNode} from '../../bridge/contracts/dispatch';
-import {ownerExecutionBindingMatches,type OwnerExecutionBinding} from '../../bridge/contracts/owner-execution';
+import {automaticExecutionBindingMatches,type AutomaticExecutionBinding,ownerExecutionBindingMatches,type OwnerExecutionBinding} from '../../bridge/contracts/owner-execution';
 import {ownerTaskView} from './owner-execution-state';
 import './owner-execution.css';
 
@@ -25,8 +26,15 @@ export function OwnerExecutionDetails({binding,workspaceId,agentId,moduleIds,com
 
 /** 缺省与损坏分开；旧在途和历史结果不因没有新协议字段而被改显示为执行失败。 */
 export function MemberOwnerNotice({task,compact=false}:{task:TaskNode;compact?:boolean}){
+  if(task.fallbackBinding)return <AutomaticExecutionDetails binding={task.fallbackBinding} workspaceId={task.identity.workspaceId} scopeId={task.scopeId} agentId={task.assignee.agentId} moduleIds={task.modules.map(m=>m.moduleId)}/>;
   const view=ownerTaskView(task);
   if(view.kind==='invalid')return <p className="owner-execution-warning" role="alert" data-testid="owner-binding-invalid">岗位绑定与原任务身份不一致，请重新同步核实。</p>;
   if(view.kind==='bound')return <OwnerExecutionDetails binding={view.binding} workspaceId={task.identity.workspaceId} agentId={task.assignee.agentId} moduleIds={task.modules.map(module=>module.moduleId)} compact={compact}/>;
   return <p className={view.needsReplan?'owner-execution-warning':'owner-execution-muted'} data-testid="owner-binding-legacy" data-needs-replan={view.needsReplan}>{view.needsReplan?'旧任务尚无可信岗位绑定，不能新领取或续执行；请由主 Agent 按当前负责人重新规划。':'旧执行记录未保存项目岗位绑定；保留当时的角色与结果，不自动补配当前负责人。'}</p>;
+}
+
+/** 直接展示原兜底事实及原因；不把自动身份显示为旧岗位缺失或人工责任确认。 */
+export function AutomaticExecutionDetails({binding,workspaceId,scopeId,agentId,moduleIds}:{binding:AutomaticExecutionBinding;workspaceId:string;scopeId?:string;agentId:string;moduleIds:string[]}){
+  if(!automaticExecutionBindingMatches(binding,workspaceId,scopeId,agentId,moduleIds))return <p role="alert" className="owner-execution-warning">自动执行记录与当前任务身份不一致，请重新同步核实。</p>;
+  return <section className="owner-execution" aria-label="自动执行依据" data-testid="automatic-execution-binding"><p>自动模式 · 内置执行员兜底</p><p>{binding.reason==='no_modules'?'项目尚无业务模块，临时以全项目为范围。':'所选模块尚未分配负责人。'}</p><p>原对话模型：{binding.model.modelId}</p><p className="owner-execution-muted">未登记长期负责岗位；执行仍遵守原权限与人工验收要求。</p></section>;
 }

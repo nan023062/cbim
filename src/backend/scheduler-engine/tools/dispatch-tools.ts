@@ -1,4 +1,5 @@
 /**
+ * 工具 Schema 根据可信周期开放自动兜底缺省选择；模式不在模型参数中，服务和 Store 仍独立复验。
  * 恢复请求只指向最新未消费检查点，历史逐段只读；每段独立一次性预约并不等于已经执行。
  * 作用定位：把主调度的派发、查询、未启动撤销、依赖修订及检查点预约/明确放弃转换为内部工具，并组合目标工具。
  * 设计原因：模型明确提交发现所得 ownerSelection、角色、模块和 Workflow；不自动填默认角色。可靠失败/求助和已放弃检查点换边共用原协议；可信闭包固定身份，严格输入拒绝夹带授权，输出核同一份 wire，失败不回滚或重做已入队事实。
@@ -24,7 +25,8 @@ import {abandonCheckpointInputSchema,type AbandonCheckpointInput,type AbandonChe
 
 const {assigneeAgentId,...taskFields}=dispatchTaskFields.shape;
 // 角色只核对岗位能力，不再作为默认路由；实际岗位预期来自模块负责人发现。
-const taskInput=z.object({agentId:assigneeAgentId.refine(id=>id!=='cbim:main','主 Agent 只能调度，不能承担执行任务'),...taskFields}).strict().superRefine((value,context)=>{if(!value.ownerSelection)context.addIssue({code:'custom',message:'必须提供模块负责岗位的 ownerSelection'});try{validateWorkflowSelections(value.moduleIds,value.workflowSelections)}catch{context.addIssue({code:'custom',message:'Workflow 选择必须属于本次任务模块'})}});
+const taskInputFor=(automatic:boolean)=>z.object({agentId:assigneeAgentId.refine(id=>id!=='cbim:main','主 Agent 只能调度，不能承担执行任务'),...taskFields}).strict().superRefine((value,context)=>{if(!automatic&&!value.ownerSelection)context.addIssue({code:'custom',message:'必须提供模块负责岗位的 ownerSelection'});try{validateWorkflowSelections(value.moduleIds,value.workflowSelections)}catch{context.addIssue({code:'custom',message:'Workflow 选择必须属于本次任务模块'})}});
+const taskInput=taskInputFor(false);
 const inspectInput=z.object({taskId:z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/).optional()}).strict();
 const definitions={
   cbim_dispatch_revise_dependencies:{
@@ -75,6 +77,8 @@ export interface DispatchToolInvocation {toolCallId:string;signal:AbortSignal}
 export interface DispatchToolsPort {
   /** 本次主运行的可信身份；可选能力仍由真实端口存在决定，不从模型或输出猜测。 */
   readonly binding:MainToolOutputBinding;
+  /** 只从当前可信周期复制；缺省为团队模式。 */
+  readonly collaborationMode?:'auto'|'team';
   dispatch(task:DispatchTaskInput['task'],invocation:DispatchToolInvocation):Promise<DispatchReceipt>;
   inspect(taskId?:string):Promise<unknown>;
   /** 仅本主 root 的原调用；无写命令、无调度工作意图，停止只取消本次查询。 */
@@ -98,13 +102,15 @@ export class DispatchTools {
   private readonly binding:MainToolOutputBinding;
   constructor(private readonly port:DispatchToolsPort,private readonly goals?:GoalTools){this.binding=Object.freeze(structuredClone(port.binding))}
   /** 只有装配了真实端口才构造本对象；返回值不包含未来工具占位。 */
+  get collaborationMode(){return this.port.collaborationMode??'team'}
+  private definition(name:DispatchToolName){const d=definitions[name];return name==='cbim_dispatch_task'&&this.collaborationMode==='auto'?{...d,schema:taskInputFor(true),description:'自动模式按已保存计划派工：已有负责人须传真实 ownerSelection；没有负责人时只可选 cbim:executor 并省略 ownerSelection。项目无模块时 moduleIds:["cbim:project"]。实际兜底身份与原因由服务回执 fallbackBinding 标记；不能忽略已有但失效的岗位配置，不能提升权限或跳过人工验收。成功仅排队，结束主轮由调度执行；不要重复派发。'}:d}
   private available(name:string){return (name!=='cbim_dispatch_command_report'||!!this.port.commandReport)&&(name!=='cbim_dispatch_cancel'||!!this.port.cancel)&&(name!=='cbim_dispatch_replace_dependency'||!!this.port.replaceDependency)&&(name!=='cbim_dispatch_add_dependency'||!!this.port.addDependency)&&(name!=='cbim_dispatch_revise_dependencies'||!!this.port.reviseDependencies)&&(name!=='cbim_dispatch_resume'||!!this.port.resume)&&(name!=='cbim_dispatch_abandon_checkpoint'||!!this.port.abandonCheckpoint)}
-  list(){return [...Object.entries(definitions).filter(([name])=>this.available(name)).map(([name,d])=>({name,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>,...(name==='cbim_dispatch_command_report'?commandReportContract():mainToolContract(name as Exclude<DispatchToolName,'cbim_dispatch_command_report'>))})),...(this.goals?.list()??[])]}
+  list(){return [...Object.entries(definitions).filter(([name])=>this.available(name)).map(([name])=>{const d=this.definition(name as DispatchToolName);return ({name,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>,...(name==='cbim_dispatch_command_report'?commandReportContract():mainToolContract(name as Exclude<DispatchToolName,'cbim_dispatch_command_report'>))})}),...(this.goals?.list()??[])]}
   /** 名称检测不执行操作，供 Loop 在知识工具之前选择本适配器。 */
   has(name:string):boolean{return (Object.hasOwn(definitions,name)&&this.available(name))||!!this.goals?.has(name)}
   private parse(name:string,input:unknown){
     if(!Object.hasOwn(definitions,name)||!this.available(name))fail('TOOL_NOT_FOUND','当前运行没有此成员派发工具');
-    const definition=definitions[name as DispatchToolName],parsed=definition.schema.safeParse(input);
+    const definition=this.definition(name as DispatchToolName),parsed=definition.schema.safeParse(input);
     if(!parsed.success)fail('DISPATCH_TOOL_INPUT_INVALID','成员工具参数无效：'+parsed.error.issues.map(issue=>issue.path.join('.')+': '+issue.message).join('；'));
     return {name:name as DispatchToolName,args:parsed.data,effects:definition.effects};
   }

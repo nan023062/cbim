@@ -35,6 +35,9 @@ try{
  const sidebar=()=>page.locator('.workspace-conversations'),active=()=>page.locator('.workspace-panel:not([hidden])');
  await sidebar().getByRole('button',{name:'会话 one',exact:true}).waitFor();
  await sidebar().getByRole('button',{name:'会话 one',exact:true}).click();
+ assert.equal(await active().getByRole('combobox',{name:'协作模式',exact:true}).locator('span').first().innerText(),'团队模式');
+ await active().getByRole('combobox',{name:'协作模式',exact:true}).click();await active().getByRole('option',{name:/^自动模式/}).click();
+ assert.equal(await active().getByRole('combobox',{name:'执行权限',exact:true}).locator('span').first().innerText(),'默认权限');
  await page.waitForFunction(()=>document.querySelectorAll('.workspace-conversations .conversation-entry-icon.running').length===1);
  const more=page.getByRole('button',{name:'更多操作 project',exact:true}),newChat=page.getByRole('button',{name:'新对话 project',exact:true});
  assert.equal(await more.locator('svg circle').count(),3);assert.equal(await newChat.locator('svg path').count(),2);
@@ -48,10 +51,14 @@ try{
  await page.waitForFunction(()=>!document.querySelector('.workspace-conversations')?.textContent.includes('会话 two'));
  await page.reload();await page.getByRole('button',{name:'project · 运行中',exact:true}).click();await sidebar().getByRole('button',{name:'我的新标题',exact:true}).waitFor();
  assert.equal(await sidebar().getByRole('button',{name:'会话 two',exact:true}).count(),0);checks.push('history-rename-and-delete-share-sidebar','rename-and-tombstone-persist-after-reload');
+ assert.equal(await active().getByRole('combobox',{name:'协作模式',exact:true}).locator('span').first().innerText(),'自动模式');checks.push('collaboration-mode-persists-without-changing-permission');
  await page.evaluate(()=>window.fixture.running=false);await page.waitForFunction(()=>document.querySelectorAll('.workspace-conversations .conversation-entry-icon.running').length===0);checks.push('running-indicator-clears-when-settled');
  await sidebar().getByRole('button',{name:'我的新标题',exact:true}).click();await active().getByRole('textbox',{name:'对话草稿',exact:true}).fill('保留草稿');
  await active().getByLabel('对话菜单',{exact:true}).click();await active().getByRole('region',{name:'对话历史'}).getByRole('button',{name:'删除对话 我的新标题',exact:true}).click();
  await sidebar().getByRole('button',{name:'新对话',exact:true}).waitFor();assert.equal(await sidebar().locator('.conversation-entry-select').count(),1);checks.push('remove-last-active-entry-opens-empty-conversation');
+ assert.equal(await active().getByRole('combobox',{name:'协作模式',exact:true}).locator('span').first().innerText(),'自动模式');
+ await active().getByRole('combobox',{name:'协作模式',exact:true}).click();await active().getByRole('option',{name:/^团队模式/}).click();
+ assert.equal(await active().getByRole('combobox',{name:'协作模式',exact:true}).locator('span').first().innerText(),'团队模式');checks.push('new-conversation-auto-and-explicit-team-selection');
  for(const theme of ['light','dark']){await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);await more.click();await menu.waitFor();await page.screenshot({path:path.join(out,'issue11-'+theme+'.png')});await page.keyboard.press('Escape')}
  await page.setViewportSize({width:320,height:760});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await more.focus();await page.keyboard.press('Enter');await menu.waitFor();const narrow=await menu.boundingBox();assert.ok(narrow.x>=0&&narrow.x+narrow.width<=320);await page.keyboard.press('Escape');checks.push('theme-and-narrow-menu-containment');
  assert.deepEqual(errors,[]);assert.deepEqual(await page.evaluate(()=>window.fixture.unexpected),[]);

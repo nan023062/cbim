@@ -1,8 +1,10 @@
 /**
+ * 无模块自动执行只生成内存中的隐式全项目知识；正式模块及岗位登记均保持原样。
  * 作用定位：为已派发成员任务冻结完整执行知识和各模块可选 Workflow 程序约定，并在启动、恢复或未启动依赖替换前复核基线。
  * 设计原因：任务图引用不足以恢复执行知识；从同一快照按原 Workflow 与岗位绑定冻结原则、有效 Skill、岗位职责和适应内容，不能改选或刷新旧任务。引用文字不自动读取，权限和模型由可信领取入口处理。
  * 职责边界：只读知识与应用内置规范，不运行成员、不写任务图；维护关系和指引正文都不能扩大工具权限。
  */
+import {resolveExecutionModules} from './automatic-context';
 import {hash} from '../../core/foundation/serialization';
 import {fail} from '../../core/foundation/errors';
 import {data} from '../../core/knowledge/snapshot';
@@ -48,12 +50,13 @@ export async function prepareDispatchExecutionContext(workspace:DispatchKnowledg
   if(!task.modules.length||task.modules.some(module=>module.knowledgeRevision!==snapshot.revision))fail('KNOWLEDGE_CHANGED','派发后的知识版本已经变化，请核实后重新准备任务');
   const agent=await resolveDispatchAgent(snapshot,task.assignee.agentId);
   validateTaskWorkflowSelections(task.workflowSelections,task.modules);
-  const bindings=await resolveDispatchModules(snapshot,task.modules.map(module=>module.moduleId),task.workflowSelections);
+  const bindings=await resolveExecutionModules(snapshot,task.modules.map(module=>module.moduleId),task.workflowSelections,task.fallbackBinding);
   if(canonical(bindings)!==canonical(task.modules))fail('DISPATCH_CONTEXT_CHANGED','已派发的模块维护关系或 Workflow 绑定不一致');
   const builtin=new Builtins(workspace.rules.designRoot);
   const standards=await Promise.all(standardIds.map(async id=>{const doc=await builtin.read(id);return {id,version:doc.version,text:doc.text}}));
   const business=new BusinessWorkspace(snapshot);
   const modules=await Promise.all(bindings.map(async binding=>{
+    if(task.fallbackBinding?.reason==='no_modules')return {binding,definition:{id:binding.moduleId,name:binding.name,implicit:true},overview:'自动模式临时以当前项目为范围，未创建正式业务模块或维护确认。遵守当前工作区边界、权限及用户验收要求。',workflowText:standards.find(s=>s.id==='business-execution')!.text};
     const module=await business.module(binding.moduleId),overview=body(module.overview,'模块');
     let workflowText:string;
     if(binding.workflow.kind==='module'){
@@ -67,7 +70,7 @@ export async function prepareDispatchExecutionContext(workspace:DispatchKnowledg
   }));
   const agentDefinition=agent.source==='workspace'?data(snapshot,agent.agentId+'/agent.json'):{...defaultExecutorDefinition};
   if(task.ownerBinding&&(!member||member.memberId!==task.ownerBinding.memberId||member.revision!==task.ownerBinding.memberRevision))fail('OWNER_BINDING_STALE','准备执行知识缺少原岗位的精确登记');
-  const content={version:1 as const,workspaceId:workspace.entry.id,knowledgeRevision:snapshot.revision,agent,agentDefinition,modules,standards,
+  const content={version:1 as const,workspaceId:workspace.entry.id,knowledgeRevision:snapshot.revision,agent,agentDefinition,modules,standards,...(task.fallbackBinding?{fallbackBinding:structuredClone(task.fallbackBinding)}:{}),
     ...(task.ownerBinding&&member?{memberContext:{binding:structuredClone(task.ownerBinding),name:member.name,position:member.position,adaptation:structuredClone(member.adaptation)}}:{})};
   const prepared:PreparedDispatchKnowledge=structuredClone({...content,fingerprint:dispatchKnowledgeFingerprint(content)});
   await recheckDispatchExecutionContext(workspace,prepared);

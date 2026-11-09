@@ -1,8 +1,10 @@
 /**
+ * 全项目隐式模块只允许与匹配的 no_modules 兜底绑定并存；真实模块仍要求维护关系。
  * 作用定位：任务图的纯领域校验，完整图与单项公开查询共用节点状态规则，并检查身份、派发父关系及依赖/等待无环。
  * 设计原因：存储重放与新提交共用局部结构规则；多段检查点和预约按原运行顺序核对，依赖增删保留原版本与退役边，不以创建顺序代替防环。
  * 职责边界：结构通过不等于知识维护人已认证或任务已获授权，调度层仍需核实来源。
  */
+import {automaticExecutionBindingSchema,automaticExecutionBindingMatches,implicitProjectModuleId} from '../team/automatic-execution';
 import {z} from 'zod';
 import {queuedTaskCancellationSchema} from './queued-task-cancel';
 import {fail} from '../foundation/errors';
@@ -26,13 +28,13 @@ const time=z.string().datetime();
 const identity=z.object({workspaceId:id,rootSessionId:id}).strict();
 const agent=z.object({agentId:id,agentInstanceId:id,agentSessionId:id,name:text}).strict();
 const moduleBinding=z.object({moduleId:id,name:text,knowledgeRevision:id,maintenanceBindingId:id,
-  maintainerPersonIds:z.array(id).min(1),workflow:z.discriminatedUnion('kind',[
+  maintainerPersonIds:z.array(id),workflow:z.discriminatedUnion('kind',[
     z.object({kind:z.literal('module'),id,version:id}).strict(),
     z.object({kind:z.literal('general'),id,version:id,reason:text}).strict(),
   ])}).strict();
 const root=z.object({kind:z.literal('session-root'),nodeId:id,identity,agent,revision,createdAt:time}).strict();
 const task=z.object({kind:z.literal('task'),nodeId:id,taskId:id,identity,scopeId:id.optional(),parentTaskId:id.optional(),requester:agent,assignee:agent,
-  modules:z.array(moduleBinding).min(1),workflowSelections:workflowSelectionsSchema.optional(),ownerBinding:ownerExecutionBindingSchema.optional(),goal:text,acceptance:z.array(z.object({id,text}).strict()).min(1),
+  modules:z.array(moduleBinding).min(1),workflowSelections:workflowSelectionsSchema.optional(),ownerBinding:ownerExecutionBindingSchema.optional(),fallbackBinding:automaticExecutionBindingSchema.optional(),goal:text,acceptance:z.array(z.object({id,text}).strict()).min(1),
   revision,planRevision:revision,status:z.enum(['planned','queued','running','waiting','result_ready','blocked','failed','cancelled','interrupted','checkpointed']),
   awaitedChildren:z.array(z.object({taskId:id,planRevision:revision}).strict()),waitReason:text.optional(),runIds:z.array(id),activeRunId:id.optional(),
   result:z.object({resultId:id,runId:id,planRevision:revision,summary:text,evidenceRefs:z.array(id),limitations:z.array(text),acceptance:z.literal('not_evaluated')}).strict().optional(),
@@ -102,6 +104,8 @@ export function validateTaskNode(t:TaskNode):void {
   unique(t.modules.map(m=>m.moduleId),'任务模块');unique(t.acceptance.map(a=>a.id),'验收要求');unique(t.runIds,'执行轮次');unique(t.awaitedChildren.map(c=>c.taskId),'等待子任务');
   validateTaskWorkflowSelections(t.workflowSelections,t.modules);
   if(t.ownerBinding&&!ownerExecutionBindingMatches(t.ownerBinding,t.identity.workspaceId,t.assignee.agentId,t.modules.map(module=>module.moduleId)))fail('GRAPH_INPUT_INVALID','任务的冻结负责人不属于其工作区、角色或模块');
+  if(t.fallbackBinding&&(t.ownerBinding||!automaticExecutionBindingMatches(t.fallbackBinding,t.identity.workspaceId,t.scopeId,t.assignee.agentId,t.modules.map(m=>m.moduleId))))fail('GRAPH_INPUT_INVALID','自动执行任务身份或模块不一致');
+  if(t.modules.some(m=>!m.maintainerPersonIds.length&&!(t.fallbackBinding?.reason==='no_modules'&&m.moduleId===implicitProjectModuleId&&m.maintenanceBindingId==='cbim:implicit-project')))fail('GRAPH_INPUT_INVALID','真实模块必须保留维护关系');
   for(const m of t.modules)unique(m.maintainerPersonIds,'模块维护人');
   if(t.activeRunId&&!t.runIds.includes(t.activeRunId))fail('GRAPH_INPUT_INVALID','活动轮次不属于该任务');
   if(t.result&&(t.result.planRevision!==t.planRevision||!t.runIds.includes(t.result.runId)||t.status!=='result_ready'))fail('GRAPH_INPUT_INVALID','任务候选结果已失效或不属于该执行');

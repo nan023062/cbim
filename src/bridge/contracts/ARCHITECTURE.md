@@ -330,7 +330,7 @@ class N_src_bridge_contracts_owner_execution_ts["owner-execution.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/team/member-execution-binding.ts](../../backend/core/team/member-execution-binding.ts)、[../../backend/core/team/owner-execution-discovery.ts](../../backend/core/team/owner-execution-discovery.ts)。
+直接依赖：[../../backend/core/team/member-execution-binding.ts](../../backend/core/team/member-execution-binding.ts)、[../../backend/core/team/owner-execution-discovery.ts](../../backend/core/team/owner-execution-discovery.ts)、[../../backend/core/team/automatic-execution.ts](../../backend/core/team/automatic-execution.ts)。
 
 ### repository-connections.ts
 
@@ -887,3 +887,8 @@ output-manifest.ts 只公开严格清单 DTO；Node 哈希、日志核实及平�
 ## 原隔离执行核实与清理
 
 isolated-executions只重导出Core的公开核实和清理协议，不引用Main对象或私有资源字段。
+
+
+### 自动与团队协作模式
+
+owner-execution 导出纯自动绑定类型及匹配函数，供界面核历史归属；没有配置写入、文件或大脑运行实现依赖。

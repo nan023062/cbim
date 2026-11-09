@@ -176,3 +176,8 @@ cbim_dispatch_replace_dependency 的原严格输入/wire/维护契约不变，�
 cbim_goal_review 的严格输入增加可选 memberPause；仅 awaiting_user 接受，逐项记录 checkpoint/unstarted、task及plan版本、原检查点ID和图游标。工具描述解释全量保留与用户明确继续；原 wire 输出核完整清单与原请求一致，省略、替换或损坏回包拒绝，不重做已提交审阅。其余工具名、调用键和维护效果不变，原命令报告继续按完整原请求核实。
 
 cbim_dispatch_resume 只预约同任务最新未消费检查点；每任务最多16段，每段一个信封。输入仍为当前图/目标/任务版本和真实 checkpointId，不新增由模型指定的运行、原生路径或额度字段。
+
+
+### 自动与团队协作模式
+
+GoalTools / DispatchTools 的 collaborationMode 来自可信 Cycle，默认 Team；仅 Auto 的计划及派发 Schema 容许缺 ownerSelection，服务与 Store 仍校验资格。模型输入没有模式、兜底证明或模型配置字段。自动回执保持 fallbackBinding 与原 scope/agent/module 对应，未知结果不重新执行。

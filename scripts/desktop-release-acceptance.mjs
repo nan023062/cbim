@@ -19,7 +19,8 @@ const repo = 'nan023062/cbim', root = path.resolve('test-results/desktop-accepta
 const install = path.join(root, 'app'), exe = path.join(install, 'CBIM Desktop.exe'), userRoot = path.join(root, 'user');
 await fs.mkdir(root, {recursive: true});
 const run = (command, args) => execFileSync(command, args, {encoding: 'utf8', windowsHide: true, timeout: 180_000, maxBuffer: 8 * 1024 * 1024}).trim();
-const ps = script => run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script]);
+// runner 的父 shell 是 PowerShell 7；使用同一版本，避免继承的 PSModulePath 让 5.1 错载安全模块。
+const ps = script => run('pwsh.exe', ['-NoProfile', '-NonInteractive', '-Command', script]);
 const gh = args => run('gh', args);
 const sha = async file => createHash('sha256').update(await fs.readFile(file)).digest('hex');
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));

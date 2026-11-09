@@ -29,6 +29,9 @@ jobs:
   acceptance:
     runs-on: windows-latest
     timeout-minutes: 20
+    # GitHub 仅向有推送权限的身份提供草稿 Release；脚本仍只读取附件，不调用发布接口。
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4

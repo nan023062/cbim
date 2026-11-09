@@ -25,7 +25,7 @@ const sha = async file => createHash('sha256').update(await fs.readFile(file)).d
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const save = (name, data) => fs.writeFile(path.join(root, name + '.json'), JSON.stringify(data, null, 2) + '\n');
 assert.equal(ps("@(Get-Process -Name 'CBIM Desktop' -ErrorAction SilentlyContinue).Count"), '0');
-assert.equal(ps("@(Get-ChildItem 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall' | Get-ItemProperty | Where-Object DisplayName -Like '*CBIM*').Count"), '0', 'Existing installation must not be replaced by acceptance');
+assert.equal(ps("$key='HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall'; if (Test-Path -LiteralPath $key) { @(Get-ChildItem -LiteralPath $key -ErrorAction Stop | Get-ItemProperty -ErrorAction Stop | Where-Object DisplayName -Like '*CBIM*').Count } else { 0 }"), '0', 'Existing installation must not be replaced by acceptance');
 const env = {...process.env, CBIM_USER_DATA_ROOT: userRoot};
 for (const name of ['GH_TOKEN', 'GITHUB_TOKEN', 'ELECTRON_RUN_AS_NODE', 'CBIM_GITHUB_CLIENT_ID']) delete env[name];
 async function download(target) {

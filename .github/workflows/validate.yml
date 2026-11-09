@@ -4,6 +4,13 @@ on:
   pull_request:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      scope:
+        description: Full validation or focused Windows runtime diagnosis
+        required: true
+        default: full
+        type: choice
+        options: [full, runtime-diagnostic]
 
 permissions:
   contents: read
@@ -14,13 +21,14 @@ concurrency:
 
 jobs:
   windows:
-    name: Windows validation (${{ matrix.shard }}/4)
+    name: ${{ inputs.scope == 'runtime-diagnostic' && 'Windows runtime diagnosis' || format('Windows validation ({0}/4)', matrix.shard) }}
     runs-on: windows-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        # PR 必须执行完整四片；手动诊断使用独立名称，不能冒充合并检查。
+        shard: ${{ fromJSON(inputs.scope == 'runtime-diagnostic' && '[1]' || '[1,2,3,4]') }}
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
@@ -57,14 +65,24 @@ jobs:
           CBIM_WEBSITE_URL: https://nan023062.github.io/cbim/
         run: pnpm build:website
       - name: Run full test suite
+        if: inputs.scope != 'runtime-diagnostic'
         env:
           TEMP: ${{ runner.temp }}
           TMP: ${{ runner.temp }}
         run: pnpm exec vitest run --shard=${{ matrix.shard }}/4 --reporter=default --reporter=json --outputFile=test-results/pr-full-suite.json
+      - name: Diagnose Windows runtime without changing assertions
+        if: inputs.scope == 'runtime-diagnostic'
+        env:
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+        run: pnpm exec vitest run tests/scoped-execution-pi.test.ts tests/terminal.test.ts --reporter=default --reporter=json --outputFile=test-results/runtime-diagnostic.json
       - name: Preserve test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: windows-validation-${{ matrix.shard }}
-          path: test-results/pr-full-suite.json
+          path: |
+            test-results/pr-full-suite.json
+            test-results/runtime-diagnostic.json
+            test-results/isolation-recovery-pi-failure.json
           if-no-files-found: ignore

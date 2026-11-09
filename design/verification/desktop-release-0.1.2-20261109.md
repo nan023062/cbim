@@ -1,6 +1,6 @@
 # CBIM Desktop 0.1.2 发布准备
 
-日期：2026-11-09；设备：LINAN-XDT，Windows x64。用户已授权发布最新版并投放现有更新通道。本记录当前只证明发布准备与检查，**尚未生成本版安装包、创建标签或公开 Release**。
+日期：2026-11-09；设备：LINAN-XDT，Windows x64。用户已授权发布最新版并投放现有更新通道。`5ebe82a` 已生成未签名候选并上传唯一草稿 `438932418`，**尚未公开 Release 或投放更新**。真实安装与升级已通过，全仓检查仍在定位云端运行程序校验失败；详见下方候选验收记录。
 
 ## 候选范围
 
@@ -23,6 +23,15 @@
 已有集成证据另见 PR #13 与 [Windows CI](https://github.com/nan023062/cbim/actions/runs/42583657826)：358 文件、2465 项，2463 通过、2 项需要历史 EXE 的原有跳过；真实打包 EXE 的 6 个隔离执行场景通过。这些是本轮之前的验证，没有冒充本轮重新运行全仓测试。
 
 ## 签名事实与发布边界
+
+### 候选验收与尚未完成的检查
+
+- 安装包 `CBIM-Setup-0.1.2-x64.exe` 为 136079477 字节，SHA-256 `ae0b18cad81114e1dc9c8b03644bbec940a537699829ecb4bcb923d75548f675`；草稿四个附件已核对远端摘要。构建回执位于 `build/desktop-release/0.1.2/unsigned-20261109-171427-d973710b/build-receipt.json`，发布操作日志同目录 `acceptance-publication.jsonl`。
+- [隔离 runner 验收 42594569712](https://github.com/nan023062/cbim/actions/runs/42594569712) 通过全新安装、0.1.1 升级、六项用户数据保留、唯一模型请求和未签名事实；页面错误为零，报告 `test-results/desktop-0.1.2-candidate/report.json`。验收机没有真实用户安装，未在开发者电脑卸载或覆盖现有客户端。
+- 候选 EXE 的六项隔离场景通过，报告 `test-results/desktop-0.1.2-isolation-packaged.json`。本机针对云端两项失败的原样复核及新增诊断复核均为 2/2 通过，报告 `desktop-0.1.2-ci-diagnostic.json`、`desktop-0.1.2-runtime-facts-local.json`。
+- 全仓 `42594576718` 与 `42597751602` 均未通过：后者终端测试原样通过，隔离运行程序 `RUNTIME` 仍复现；正在核实可执行文件属性，未放宽校验、跳过测试或将定向诊断冒充全仓。PR #15、公开投放和线上更新验收尚未完成。
+
+### 签名选择
 
 - `CurrentUser\My`、`LocalMachine\My` 的代码签名证书均为 0，签名选择器未配置，仓库签名 Secrets／Variables 为空；用户也确认当前没有签名。
 - Windows SDK 10.0.26100.0 的 x64 SignTool 已安装；缺少的是可用签名身份，不是签名工具。

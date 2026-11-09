@@ -110,9 +110,9 @@ class N_src_frontend_main_tsx["main.tsx"] {
 - `team` → `resources`：导入。
 - `team` → `workspace`：导入。
 - `updates` → `components`：导入。
-- `workspace` → `knowledge`：导入。
 - `workspace` → `team`：导入。
 - `workspace` → `components`：导入。
+- `workspace` → `knowledge`：导入。
 - `workspace` → `resources`：导入。
 - `workspace` → `governance`：导入。
 

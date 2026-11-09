@@ -1,6 +1,6 @@
 /**
  * 作用定位：项目岗位页面的严格回包核对与持久提交控制器；跨同工作区页面共享未决命令。
- * 设计原因：岗位登记不应因超时重复创建。来源只随明确能力采纳改变；先保存完整原请求再发送，未知只查询或明确重送。
+ * 设计原因：完整岗位页与模块卡片共用同一命令池，登记不因超时重复创建。来源只随明确能力采纳改变；先保存完整原请求再发送，未知只查询或明确重送。
  */
 import {workspaceMemberCommitInputSchema,workspaceMemberPreviewSchema,workspaceMemberReceiptSchema,workspaceMemberListSchema,workspaceMemberDetailSchema} from '../../bridge/contracts/workspace-members';
 import type {WorkspaceMemberIdentity,WorkspaceMemberPreviewInput,WorkspaceMemberPreview,WorkspaceMemberCommitInput,WorkspaceMemberReceipt,WorkspaceMemberListInput,WorkspaceMemberList,WorkspaceMemberGetInput,WorkspaceMemberDetail,WorkspaceMemberLookup} from '../../bridge/contracts/workspace-members';
@@ -78,11 +78,12 @@ export class WorkspaceMemberCommands {
     try{if(this.corrupt||records.length>128)throw Error('本机记录不可写或达到 128 条上限');const raw=JSON.stringify({version:1,workspaceId:this.workspaceId,records});if(new TextEncoder().encode(raw).length>2*1024*1024)throw Error('本机记录超过 2 MiB');this.ports.storage.setItem(this.storageKey,raw);this.unavailable=false;this.emit();return true}
     catch(error){this.unavailable=true;this.value={records,error:'本机保存失败，保留原命令并停止新提交：'+message(error)};this.emit();return false}
   }
-  /** 调用方仅在当前预览仍对应表单时显式调用；实际版本和来源由服务再次核实。 */
+  /** 显式选择/提交后发送当前预览；返回本次原命令记录，避免组合调用错取其它页面的最后一条记录。 */
   async submit(input:WorkspaceMemberPreviewInput,preview:WorkspaceMemberPreview){
     if(this.blocked||input.workspaceId!==this.workspaceId)return;let request:WorkspaceMemberCommitInput;
     try{const checked=checkedWorkspaceMemberPreview(preview,input);request=workspaceMemberCommitInputSchema.parse({...input,commandId:this.ports.uuid(),expectedRegistryCursor:checked.registryCursor,expectedBasis:checked.basis})}catch(error){this.value={...this.value,error:message(error)};this.emit();return}
     const record:WorkspaceMemberAttempt={request,phase:'submitting',uncertain:false};if(this.save(record))await this.send(record);
+    return this.value.records.find(item=>item.request.commandId===request.commandId);
   }
   private async send(record:WorkspaceMemberAttempt){
     const request=record.request;if(this.pending.has(request.commandId))return;this.pending.add(request.commandId);this.emit();
@@ -106,3 +107,5 @@ export class WorkspaceMemberCommandPool {
   private values=new Map<string,WorkspaceMemberCommands>();
   get(workspaceId:string,ports:WorkspaceMemberCommandPorts){const value=this.values.get(workspaceId)??new WorkspaceMemberCommands(workspaceId,ports);this.values.delete(workspaceId);this.values.set(workspaceId,value);for(const [key,item] of this.values){if(this.values.size<=16)break;if(key!==workspaceId&&item.canRelease)this.values.delete(key)}return value}
 }
+/** 同工作区全部桌面入口共享未决登记；不在模块初始化时访问浏览器存储。 */
+export const workspaceMemberCommands=new WorkspaceMemberCommandPool();

@@ -7,14 +7,13 @@ import type {WorkspaceView} from '../../bridge/contracts/workspace';
 import type {LlmSettings} from '../../bridge/contracts/models';
 import {workspaceMemberPreviewInputSchema} from '../../bridge/contracts/workspace-members';
 import type {WorkspaceMemberChangeInput,WorkspaceMemberDetail,WorkspaceMemberList,WorkspaceMemberPreview,WorkspaceMemberPreviewInput} from '../../bridge/contracts/workspace-members';
-import {WorkspaceMemberCommandPool,checkedWorkspaceMemberDetail,checkedWorkspaceMemberList,checkedWorkspaceMemberPreview} from './workspace-member-state';
+import {workspaceMemberCommands as commands,checkedWorkspaceMemberDetail,checkedWorkspaceMemberList,checkedWorkspaceMemberPreview} from './workspace-member-state';
 import {WorkspaceMemberForm} from './WorkspaceMemberForm';
 import {WorkspaceMemberDetailView} from './WorkspaceMemberDetail';
 import {ModuleOwnershipPanel} from '../workspace/ModuleOwnershipPanel';
 import {KnowledgeSourceSelection} from '../knowledge/KnowledgeSourceDetails';
 import './workspace-members.css';
 
-const commands=new WorkspaceMemberCommandPool();
 const failure=(error:unknown)=>error instanceof Error?error.message:String(error);
 export interface WorkspaceMemberAgentOption {id:string;name:string}
 /** 当前定义只用于明确选择；已登记岗位的正文和版本一律从后端详情读取，不用静态列表补造。 */

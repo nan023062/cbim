@@ -1,6 +1,6 @@
 /**
  * 作用定位：无业务状态的 SVG 图标组件。
- * 设计原因：各视图复用一致的图标语言，避免依赖桌面外壳；对话条目用编辑笔、工作区菜单用垂直三点，权限使用手掌和警告。
+ * 设计原因：各视图复用一致的图标语言，避免依赖桌面外壳；编辑笔、删除桶及新增用于架构卡片，权限使用手掌和警告。可访问名称由操作按钮提供。
  */
 import React from 'react';
 type IconName='hand'|'warning'|'sparkles'|'chat'|'flow'|'team'|'knowledge'|'plus'|'folder'|'clock'|'plug'|'search'|'close'|'chevron'|'menu'|'sun'|'moon'|'arrow'|'check'|'settings';
@@ -8,6 +8,7 @@ export function Icon({name,size=18}:{name:IconName|string;size?:number}){
   const paths:Record<string,React.ReactNode>={
     more:<><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></>,
     edit:<><path d="m4 15 11-11 5 5L9 20H4v-5ZM13 6l5 5"/></>,
+    trash:<><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></>,
     hand:<><path d="M8 13V6a2 2 0 0 1 4 0v6-8a2 2 0 0 1 4 0v8-6a2 2 0 0 1 4 0v9c0 5-3 7-7 7-3 0-5-2-7-5l-3-4a2 2 0 0 1 3-2l2 2Z"/></>,
     warning:<><path d="M10.3 4a2 2 0 0 1 3.4 0l8 14a2 2 0 0 1-1.7 3H4a2 2 0 0 1-1.7-3Z"/><path d="M12 9v5M12 17h.01"/></>,
     sparkles:<><path d="m10 3 2.5 6.5L19 12l-6.5 2.5L10 21l-2.5-6.5L1 12l6.5-2.5Z"/><path d="m19 1 1 3 3 1-3 1-1 3-1-3-3-1 3-1Z"/></>,

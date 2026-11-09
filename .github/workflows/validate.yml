@@ -29,7 +29,16 @@ jobs:
           node-version: '22.19.0'
           cache: pnpm
       - name: Install locked dependencies
-        run: pnpm install --frozen-lockfile
+        # 官方二进制下载偶发 504；有限重试安装，持续失败仍阻止后续验收。
+        run: |
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            pnpm install --frozen-lockfile
+            $installCode = $LASTEXITCODE
+            if ($installCode -eq 0) { exit 0 }
+            if ($attempt -eq 3) { exit $installCode }
+            Write-Warning "Dependency installation failed ($installCode); retry $attempt/2."
+            Start-Sleep -Seconds (10 * $attempt)
+          }
       - name: Check canonical test temporary directory
         # runner 上下文在步骤级使用；默认用户 TEMP 可能是 8.3 别名。
         env:

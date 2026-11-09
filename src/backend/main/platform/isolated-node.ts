@@ -1,7 +1,7 @@
 /**
  * 正式调用在profile分配前保存来源、在挂起线程恢复前保存原进程身份；收尾未知仅暴露原资源清理闭包。
  * 可信onSettled仅在原资源确已收束并清理后通知任务端口；异常清理不明确时不签发完成。
- * 作用定位：把可信调用方给出的字节快照和本机执行器复制到私有目录，执行有界 LPAC 程序并返回真实平台事实。
+ * 作用定位：复制可信字节快照与本机执行器到私有目录，用宿主预置标准流执行有界 LPAC 程序并返回真实平台事实。
  * 设计原因：原工程不授予沙箱权限；输出只在全部进程退出后读取，异常不重试，清理不明确时不能交付成功。
  * 职责边界：本文件不签发模型工具或任务权限；允许系统 LPAC 资源及 registryRead，不宣称完全隔绝所有 Windows 对象或磁盘硬配额。
  */
@@ -54,7 +54,10 @@ export async function runIsolatedNode(raw:IsolatedNodeRequest,signal:AbortSignal
     const sourceStat=await fs.lstat(source);if(!sourceStat.isFile()||sourceStat.nlink!==1||sourceStat.size>256*1024*1024)fail('RUNTIME');await fs.copyFile(source,executable);const runtimeFacts:{sha256:string;assets:{name:string;sha256:string}[]}={sha256:hash(await fs.readFile(executable)),assets:[]};
     for(const name of ['icudtl.dat','v8_context_snapshot.bin','snapshot_blob.bin']){const original=path.join(path.dirname(source),name);try{const stat=await fs.lstat(original);if(!stat.isFile()||stat.isSymbolicLink()||stat.nlink!==1||stat.size>32*1024*1024)fail('RUNTIME_ASSET');await fs.copyFile(original,path.join(runtime,name));runtimeFacts.assets.push({name,sha256:hash(await fs.readFile(path.join(runtime,name)))})}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}}
     for(const file of snapshots){signal.throwIfAborted();const target=path.join(input,...file.path.split('/'));await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,file.bytes,{flag:'wx'})}
-    signal.throwIfAborted();const pid=native.start(executable,['--preserve-symlinks','--preserve-symlinks-main',path.join(input,...request.entry.split('/')),...request.args],output,request,!!options.lifecycle);
+    // Electron 的 Node 入口会额外以读写方式打开 NUL；部分 Windows LPAC 环境拒绝该权限。
+    // 只对当前 Electron 执行器跳过重复初始化，继续使用 start 显式继承的只读输入与输出管道；不放宽 ACL 或 capability。
+    const runtimeArgs=process.versions.electron&&source===await fs.realpath(process.execPath)?['--no-stdio-init']:[];
+    signal.throwIfAborted();const pid=native.start(executable,[...runtimeArgs,'--preserve-symlinks','--preserve-symlinks-main',path.join(input,...request.entry.split('/')),...request.args],output,request,!!options.lifecycle);
     if(options.lifecycle){await options.lifecycle.started(inspector!.processIdentity(pid));signal.throwIfAborted();native.resume()}
     let status:IsolatedNodeResult['status']='exited',terminating=false;const chunks:Buffer[]=[];let received=0;const deadline=performance.now()+request.timeoutMs;let drainDeadline=0;
     const terminate=()=>{if(!terminating){native!.terminate();terminating=true;drainDeadline=performance.now()+10000}};

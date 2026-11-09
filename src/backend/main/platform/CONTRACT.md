@@ -1,12 +1,14 @@
 ## Windows 隔离 Node 平台端口（R12-A）
 
-`runIsolatedNode` 是可信宿主的平台端口，尚未成为模型工具或冻结任务授权。它不从业务请求取得宿主路径或环境变量：最多64份、总8 MiB的明确字节快照复制到本次 input；当前宿主可执行器及 Electron 必需数据复制到 runtime 并记录实际哈希；程序只向私有 output 写入，不修改原工程 ACL 或自动回写。
+`runIsolatedNode` 是可信宿主的平台端口，正式成员经冻结范围与可靠生命周期装配后调用。它不从业务请求取得宿主路径或环境变量：最多64份、总8 MiB的明确字节快照复制到本次 input；当前宿主可执行器及 Electron 必需数据复制到 runtime 并记录实际哈希；程序只向私有 output 写入，不修改原工程 ACL 或自动回写。
 
 Windows x64 使用唯一临时 AppContainer profile、LPAC opt-out 和固定 `registryRead` capability。该能力用于 Node 的实际系统初始化；没有任何网络 capability、COM授权或宿主凭证。ACL只对新建的自有目录设置：input/runtime读执行，output修改；保留Windows自身授予LPAC及registryRead的系统对象权限，不能声称绝对不可访问所有外部对象。原生旧工具仍仅有既有门禁，不因新增端口而自动隔离。
 
 `CreateProcessW` 带挂起及 Job List 属性，线程恢复前核 AppContainer、精确Package SID、唯一能力与原Job成员。Job不允许breakaway，最多1–8进程、128–1024 MiB提交内存及累计用户态CPU期限；宿主按单调时钟最多30秒终止，取消、主进程退出仍有后代及输出超限均收束原Job。只有原主进程已退出且Job活动数为0才读取输出；宿主崩溃由不继承的Job最后句柄关闭触发后代终止。没有磁盘硬配额，内核peakMemory计量可能包含失败的提交尝试，不等于RSS或成功分配量。
 
 仅继承NUL输入和宿主输出管道的显式句柄清单，不继承任意可继承句柄。清理环境只保留AppContainer启动所需的用户／系统位置及私有TEMP，不传PATH、NODE_OPTIONS或密钥。Windows参数逐项编码，不经过shell；保留Node symlink标志避免普通模块解析要求读取未授权父目录，不扩大文件权限。
+
+当前宿主是 Electron 且实际执行器为同一二进制时，使用 `--no-stdio-init` 复用宿主预置的标准流，避免 Electron 额外以读写方式打开 NUL 而在部分 Windows LPAC 环境启动失败；普通 Node 不接受该参数，不添加它。脚本自行派生后代时仍受同一 Job 和系统权限约束；验收后代使用 `stdio:inherit`，Electron 后代明确带该参数，不依赖 `stdio:ignore` 重新打开设备，也不新增系统对象授权。[Electron 对应实现](https://github.com/electron/electron/blob/v40.10.6/shell/app/node_main.cc)。
 
 stdio最多64 KiB；声明输出最多32项、单项1 MiB、总4 MiB，进程树结束后逐层核非链接目录及同一普通单链接文件句柄。状态、实际退出码、输入／执行器／输出哈希和内核计量分开返回；`exited`仅表示进程结束，非零退出不能当成功，任何输出自述不证明业务验收。Profile删除或句柄／Job排空失败拒绝交付；原进程退出后映像仍被系统短暂占用时，只对同一自有目录的清理作有界重试，不重跑脚本；owner最后删除，持续失败保留依据。孤儿owner记录只供核实原资源，不授权重放。异常宿主退出后的自动孤儿清理及任务级接线留给R12-B。
 

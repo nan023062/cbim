@@ -6,3 +6,7 @@ branding/*.ico binary
 website/*.html text eol=lf
 website/*.css text eol=lf
 website/*.json text eol=lf
+
+# 架构生成器固定输出 LF；契约附录同样保持 LF，确保干净检出后的逐字检查一致。
+src/**/ARCHITECTURE.md text eol=lf
+src/**/CONTRACT.md text eol=lf

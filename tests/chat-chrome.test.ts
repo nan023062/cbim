@@ -13,9 +13,11 @@ test('user bubble and assistant bare surface keep copy and real timestamp access
 test('work header distinguishes awaiting authorization, running, failed and stopped from durable events',()=>{
   const run={status:'running',events:[{type:'run.started',time:'2026-11-06T00:00:00Z',data:{}},{type:'tool.proposed',data:{id:'write1',name:'write',input:{path:'game.html'}}}]} as RunSummary;
   const render=()=>renderToStaticMarkup(createElement(WorkStatus,{run,now:Date.parse('2026-11-06T00:00:12Z')}));
-  expect(render()).toContain('等待授权 · write');expect(render()).toContain('work-spinner');
+  expect(render()).toContain('等待授权 · 写入文件');expect(render()).toContain('work-spinner');
   run.events.push({version:1,seq:3,taskId:'t',runId:'r',workspaceId:'w',type:'tool.finished',time:'2026-11-06T00:00:13Z',data:{id:'write1',name:'write',isError:true,result:'disk full'}});run.status='failed';
-  expect(render()).toContain('执行失败');expect(render()).toContain('disk full');expect(render()).not.toContain('work-live-preview');
+  const failed=render();expect(failed).toContain('执行失败');expect(failed).toContain('disk full');
+  // 失败动作在折叠轨道之外保持可见，但不再显示运行中的呼吸点。
+  expect(failed.split('</details>').at(-1)).toContain('执行失败 · 写入文件');expect(failed).not.toContain('work-live-dot');
   run.status='cancelled';expect(render()).toContain('已停止');
   run.status='completed';expect(render()).toContain('本轮结束');expect(render()).not.toContain('本轮完成');
 });

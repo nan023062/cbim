@@ -292,7 +292,8 @@ it('主轮委派只入队，释放占用后成员才能运行；结果确认失�
     f.settleParent();await vi.waitFor(()=>expect(f.members.start).toHaveBeenCalledTimes(1));expect(f.graph.tasks[0].status).toBe('queued');
     release();await vi.waitFor(()=>expect(f.graph.tasks[0].status).toBe('running'));
     expect(f.dispatch.openScope).toHaveBeenCalledTimes(1);expect(f.dispatch.closeScope).not.toHaveBeenCalled();
-    expect(f.dispatch.openScope).toHaveBeenCalledWith(f.graph.identity,expect.any(String),{message:'本轮实际输入',attachmentIds:undefined},'parent-run');
+    // 目标周期冻结主入口选项；下方仍核对成员执行不继承主模型，使用独立岗位配置。
+    expect(f.dispatch.openScope).toHaveBeenCalledWith(f.graph.identity,expect.any(String),{message:'本轮实际输入',attachmentIds:undefined},'parent-run',f.options);
     expect(f.members.start.mock.calls.at(-1)![0].options).toMatchObject({permission:'ask'});
     expect(f.members.start.mock.calls.at(-1)![0].options).not.toHaveProperty('model');
     expect(f.members.start.mock.calls.at(-1)![0].options).not.toHaveProperty('profileId');

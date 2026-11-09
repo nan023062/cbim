@@ -129,6 +129,7 @@ class N_src_backend_core_team_automatic_execution_ts_AutomaticExecutionBinding["
 N_src_backend_core_team_automatic_execution_ts ..> N_src_backend_core_team_automatic_execution_ts_AutomaticExecutionBinding : 声明
 ```
 
+直接依赖：[../workspace/project-root.ts](../workspace/project-root.ts)。
 
 ### member-execution-binding.ts
 
@@ -699,6 +700,10 @@ N_src_backend_core_team_workspace_member_rules_ts ..> N_src_backend_core_team_wo
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 根标识与正式兜底
+
+`automatic-execution.ts` 复用 workspace 的 `projectRootModuleId` 作为历史 `implicitProjectModuleId`。根始终可查询，但正式 no_modules 兜底仍只适用于真实模块为空的项目；有模块时不以根绕过负责人、维护关系或 Workflow。Auto 主会话直接工作与成员兜底是不同执行路径，不制造岗位或成员绑定。
 
 ### 负责人执行选择
 

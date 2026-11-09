@@ -1,3 +1,7 @@
+### 根标识与正式兜底
+
+`automatic-execution.ts` 复用 workspace 的 `projectRootModuleId` 作为历史 `implicitProjectModuleId`。根始终可查询，但正式 no_modules 兜底仍只适用于真实模块为空的项目；有模块时不以根绕过负责人、维护关系或 Workflow。Auto 主会话直接工作与成员兜底是不同执行路径，不制造岗位或成员绑定。
+
 ### 负责人执行选择
 
 `member-execution-binding.ts` 提供纯选择和冻结绑定，`member-execution-rules.ts` 从同一岗位、责任和来源登记核实新许可。请求不提交正文或来源证明；实际绑定保存岗位版本、原成员内容 hash、采纳来源、公开模型指纹和逐模块责任。静态 Agent 相同不能合并不同 memberId、执行实例、模型或适配。

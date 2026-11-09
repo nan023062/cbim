@@ -65,7 +65,7 @@ test('real Pi executor routes knowledge commit through read, ask and execute mod
   }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}
 },60000);
 
-test('real Pi main agent governs knowledge with read, ask and execute authorization but cannot write business files or run commands',async()=>{
+test.each(['team','auto'] as const)('real Pi %s main governs knowledge with actual authorization and mode-specific completion',async mode=>{
   const f=await fixture();let turn=0,args:Record<string,unknown>={};
   const advertisedTools:string[][]=[],transportErrors:unknown[]=[];
   const server=http.createServer(async(req,res)=>{
@@ -87,7 +87,8 @@ test('real Pi main agent governs knowledge with read, ask and execute authorizat
       turn=0;
       const snap=await ws.snapshot(),file=snap.files.find(item=>item.path==='.cbim/README.md')!,marker='本次知识治理验证：'+permission;
       args={workspaceId:entry.id,instanceId:ws.instanceId,revision:snap.revision,requestId:randomUUID(),changes:[{path:file.path,text:file.text+'\n'+marker+'\n'}]};
-      const run=await f.app.dispatch('loop.chat',{id:entry.id,message:'更新团队知识说明并核实结果',options:{permission,turnTimeoutMs:20000}}) as {taskId:string;runId:string};
+      const requestStart=advertisedTools.length;
+      const run=await f.app.dispatch('loop.chat',{id:entry.id,message:'更新团队知识说明并核实结果',options:{permission,collaborationMode:mode,turnTimeoutMs:20000}}) as {taskId:string;runId:string};
       if(permission==='ask'){
         await expect.poll(()=>manager.pendingApprovals(run.taskId).length,{timeout:10000}).toBe(1);
         const approval=manager.pendingApprovals(run.taskId)[0];expect(approval.name).toBe('cbim_knowledge_commit');
@@ -102,11 +103,13 @@ test('real Pi main agent governs knowledge with read, ask and execute authorizat
       expect((await ws.snapshot()).files.find(item=>item.path===file.path)!.text.includes(marker)).toBe(permission!=='read');
       expect(manager.pendingApprovals(run.taskId)).toEqual([]);
       expect((await f.app.memberDispatch(entry.id).snapshot({workspaceId:entry.id,rootSessionId:run.taskId})).tasks).toEqual([]);
+      await expect.poll(async()=>(await ws.dispatchStore.read()).scopes?.find(scope=>scope.rootSessionId===run.taskId)?.outcome,{timeout:5000}).toBe(mode==='auto'?'completed':'failed');
+      for(const names of advertisedTools.slice(requestStart))expect(names.includes('write')).toBe(mode==='auto'&&permission!=='read');
     }
     expect(advertisedTools.length).toBeGreaterThanOrEqual(6);
     for(const names of advertisedTools){
       expect(names).toEqual(expect.arrayContaining(['cbim_knowledge_commit','cbim_object_preview','cbim_object_commit','cbim_dispatch_task']));
-      expect(names.filter(name=>['write','edit','bash'].includes(name))).toEqual([]);
+      if(mode==='team')expect(names.filter(name=>['write','edit','bash'].includes(name))).toEqual([]);
     }
     expect(transportErrors).toEqual([]);
   }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}
@@ -130,6 +133,6 @@ test('internal per-call knowledge permission cannot skip identity or revision an
     const value=await tools.callFromRun('cbim_knowledge_commit',args,true);
     expect(JSON.parse(value.content[0].text)).toMatchObject({state:'committed',workspaceId:entry.id});
     await expect(tools.callFromRun('cbim_knowledge_commit',args,false)).rejects.toThrow('知识写入权限');
-    for(const tool of tools.list()){expect(tool.version).toBe(tool.name==='cbim_knowledge_refresh'?2:1);expect(tool.effects?.length).toBeGreaterThan(0)}
+    for(const tool of tools.list()){expect(tool.version).toBe(['cbim_knowledge_refresh','cbim_module_registry','cbim_module_get'].includes(tool.name)?2:1);expect(tool.effects?.length).toBeGreaterThan(0)}
   }finally{await f.cleanup()}
 });

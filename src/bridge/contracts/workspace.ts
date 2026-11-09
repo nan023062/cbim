@@ -1,9 +1,10 @@
 /**
  * 作用定位：跨进程工作区、知识事务与 IPC 数据契约。
- * 设计原因：集中定义可序列化视图数据，避免界面引用具有文件访问能力的服务实现。
+ * 设计原因：集中定义可序列化视图数据及只读项目根身份，避免界面引用具有文件访问能力的服务实现。
  */
 import type {TaskView} from '../../backend/core/knowledge/types';
 export type {TaskView,KnowledgeFile,Change,ChangeRequest,Issue,Validation,ModuleNode,Snapshot,Preview} from '../../backend/core/knowledge/types';
+export {projectRootModuleId,projectRootModule} from '../../backend/core/workspace/project-root';
 /** 工作区登记身份；path 为规范化实际路径，previousIds 仅关联旧身份历史，不合并数据。 */
 export interface WorkspaceEntry { id:string; path:string; name:string; lastOpened?:string; previousIds?:string[] }
 /** 本机登记清单；内部工作区运行时的启动集合直接取 entries。 */

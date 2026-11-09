@@ -558,7 +558,7 @@ class N_src_bridge_contracts_workspace_ts_Bridge["Bridge"] {
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_workspace_ts_Bridge : 声明
 ```
 
-直接依赖：[../../backend/core/knowledge/types.ts](../../backend/core/knowledge/types.ts)、[chat.ts](chat.ts)。
+直接依赖：[../../backend/core/knowledge/types.ts](../../backend/core/knowledge/types.ts)、[../../backend/core/workspace/project-root.ts](../../backend/core/workspace/project-root.ts)、[chat.ts](chat.ts)。
 
 ### 本目录调用边界
 
@@ -585,6 +585,10 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 项目根显示契约
+
+`workspace.ts` 重导出纯 `projectRootModuleId` 与 `projectRootModule`，让业务架构与只读知识查询使用同一内置身份。没有新增 IPC 或写入能力，不把项目根转成真实知识文件或可分配岗位。
 
 ### 检查点交接放弃
 

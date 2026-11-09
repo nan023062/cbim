@@ -1,3 +1,7 @@
+### 项目根显示契约
+
+`workspace.ts` 重导出纯 `projectRootModuleId` 与 `projectRootModule`，让业务架构与只读知识查询使用同一内置身份。没有新增 IPC 或写入能力，不把项目根转成真实知识文件或可分配岗位。
+
 ### 检查点交接放弃
 
 `dispatch` 重导出 Core 的严格 `AbandonCheckpointInput`、`CheckpointAbandonment` 和 `AbandonCheckpointReceipt` 及对应 Schema。任务公开原处置审计，不公开 native、canonical 路径或历史证明私有内容。这里只提供序列化契约；没有新增让渲染进程冒主身份发起处置的 IPC，模型工具仍由可信主运行闭包注入身份。回执只证明原待办取消，不证明新任务启动、成果通过或副作用回滚。

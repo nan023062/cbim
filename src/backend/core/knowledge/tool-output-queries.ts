@@ -1,6 +1,6 @@
 /**
  * 作用定位：团队、模块、人员注册表与详情的纯业务输出协议。
- * 设计原因：内置角色与项目角色、实际正文与缺失引用具有不同形状；只严格约束服务字段，保留知识定义和原始人员条目的诊断内容。
+ * 设计原因：内置项目根与角色没有磁盘文件，必须与正式定义区分；模块查询 v2 明确根范围，不伪造文件，保留知识定义与人员诊断内容。
  * 职责边界：这些静态查询不表示已创建成员实例、已授权执行或已完成人工维护确认。
  */
 import {z} from 'zod';
@@ -16,9 +16,13 @@ const inlineContent=z.object({available:z.literal(true),text:z.string()}).strict
 const context=knowledgeContextSchema.shape;
 const registryEntry=z.object({id:knowledgeOutputIdSchema,summary:z.string()}).strict();
 
-export const moduleRegistryOutputSchema=z.object({...context,workspaceRootId:z.literal('.cbim/workspace'),modules:z.array(registryEntry),roots:z.array(z.string()),indexSource:z.literal('current-definitions'),persistedIndexMatches:z.boolean()}).strict();
+const projectRoot=z.object({id:z.literal('cbim:project'),name:z.string(),source:z.literal('builtin'),summary:z.string(),children:z.array(z.string())}).strict();
+/** 内置根范围独立于磁盘派生索引；它不会伪造正式 Module 文件或维护确认。 */
+export const moduleRegistryOutputSchema=z.object({...context,workspaceRootId:z.literal('.cbim/workspace'),projectRoot,modules:z.array(registryEntry),roots:z.array(z.string()),indexSource:z.literal('current-definitions'),persistedIndexMatches:z.boolean()}).strict();
 const workflow=z.object({name:z.string(),reference:z.string(),id:knowledgeOutputIdSchema,owner:knowledgeOutputIdSchema,inherited:z.literal(false),content:knowledgeContentOutputSchema}).strict();
-export const moduleGetOutputSchema=z.object({...context,id:knowledgeOutputIdSchema,definition:knowledgeJsonObjectSchema,definitionFile:knowledgeFileSchema,overview:knowledgeContentOutputSchema,workflows:z.array(workflow),workflowScope:z.literal('own-only')}).strict();
+const storedModule=z.object({...context,id:knowledgeOutputIdSchema,definition:knowledgeJsonObjectSchema,definitionFile:knowledgeFileSchema,overview:knowledgeContentOutputSchema,workflows:z.array(workflow),workflowScope:z.literal('own-only')}).strict();
+const rootModule=z.object({...context,id:z.literal('cbim:project'),source:z.literal('builtin'),definition:projectRoot.extend({workflows:z.array(z.never())}).strict(),overview:inlineContent,workflows:z.array(z.never()),workflowScope:z.literal('own-only')}).strict();
+export const moduleGetOutputSchema=z.union([storedModule,rootModule]);
 
 /** 内置默认角色公开静态能力说明，不含原生文件位置或动态运行身份。 */
 const builtinAgentDefinition=z.object({id:z.literal('cbim:executor'),name:z.string(),source:z.literal('builtin'),summary:z.string(),capabilities:z.array(z.string()),limitations:z.array(z.string()),connectors:z.array(z.string()),authors:z.array(z.string())}).strict();

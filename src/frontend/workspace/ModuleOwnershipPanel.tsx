@@ -1,6 +1,6 @@
 /**
- * 作用定位：业务架构和项目岗位共用的模块责任控制面，提供查询、预览、明确提交、关联任务统计和原命令核实。
- * 设计原因：同一模块的唯一岗位关系属于工作区；明确区分更换负责人和采纳当前模块来源，二者都先预览，不改旧任务身份。
+ * 作用定位：业务架构和项目岗位共用的模块责任控制面，提供岗位选择、登记入口、预览、明确提交和原命令核实。
+ * 设计原因：新项目可从静态 Agent 进入独立岗位登记；返回后只选用重新核实的 active memberId，静态定义不冒充岗位，负责人保存与来源采纳仍各自预览。
  */
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {ModuleOwnershipIdentity,ModuleOwnershipPage,ModuleOwnershipDetail,ModuleOwnershipPreview,ModuleOwnershipChangeInput,ModuleOwnershipPreviewInput} from '../../bridge/contracts/module-ownership';
@@ -14,15 +14,15 @@ import './module-ownership.css';
 
 const commands=new ModuleOwnershipCommandPool();
 const failure=(error:unknown)=>error instanceof Error?error.message:String(error);
-/** memberId 只限制反查列表，提交仍按所选真实模块及版本核实；切换身份须由调用方换 key。 */
-export interface ModuleOwnershipPanelProps {identity:ModuleOwnershipIdentity;initialModuleId?:string;memberId?:string;onClose:()=>void}
-export function ModuleOwnershipPanel({identity,initialModuleId,memberId,onClose}:ModuleOwnershipPanelProps){
+/** memberId 只限制反查；initialMemberId 仅在首次打开原模块时尝试选择真实启用岗位，不能授权提交。切换身份须换 key。 */
+export interface ModuleOwnershipPanelProps {identity:ModuleOwnershipIdentity;initialModuleId?:string;initialMemberId?:string;memberId?:string;onClose:()=>void;/** 上层组合岗位登记，避免责任面板反向依赖岗位管理组件。 */registration?:{agents:Array<{id:string;name:string}>;onSelect:(moduleId:string,agentId:string)=>void}}
+export function ModuleOwnershipPanel({identity,initialModuleId,initialMemberId,memberId,onClose,registration}:ModuleOwnershipPanelProps){
   const controller=useMemo(()=>commands.get(identity.workspaceId,{storage:window.localStorage,uuid:()=>crypto.randomUUID(),commit:input=>window.cbim.call('workspace.ownerships.commit',input),lookup:input=>window.cbim.call('workspace.ownerships.receipt',input)}),[identity.workspaceId]);
   const [,setTick]=useState(0),[page,setPage]=useState<ModuleOwnershipPage>(),[detail,setDetail]=useState<ModuleOwnershipDetail>(),[members,setMembers]=useState<WorkspaceMemberList['items']>([]);
-  const [nextId,setNextId]=useState(''),[reason,setReason]=useState(''),[preview,setPreview]=useState<ModuleOwnershipPreview>(),[error,setError]=useState(''),[loading,setLoading]=useState(false);
+  const [nextId,setNextId]=useState(''),[reason,setReason]=useState(''),[preview,setPreview]=useState<ModuleOwnershipPreview>(),[error,setError]=useState(''),[loading,setLoading]=useState(false),[membersLoaded,setMembersLoaded]=useState(false);
   const alive=useRef(false),generation=useRef(0),lock=useRef(false),selection=useRef(0);
   const state=controller.snapshot,blocked=controller.blocked;
-  useEffect(()=>{alive.current=true;const unsubscribe=controller.subscribe(()=>setTick(value=>value+1));void controller.restore().then(async()=>{if(!alive.current)return;await list();if(alive.current&&initialModuleId)await select(initialModuleId)});return()=>{alive.current=false;generation.current++;selection.current++;unsubscribe()}},[controller,identity.instanceId,memberId]);
+  useEffect(()=>{alive.current=true;const unsubscribe=controller.subscribe(()=>setTick(value=>value+1));void controller.restore().then(async()=>{if(!alive.current)return;await list();if(alive.current&&initialModuleId)await select(initialModuleId,initialMemberId)});return()=>{alive.current=false;generation.current++;selection.current++;unsubscribe()}},[controller,identity.instanceId,memberId]);
   async function list(offset=0){
     if(lock.current)return;lock.current=true;const token=++generation.current;setLoading(true);setError('');
     try{const input={...identity,...(memberId?{memberId}:{}),offset,limit:20,...(offset&&page?{expectedReadBasis:page.basis}:{})};const value=checkedModuleOwnershipPage(await window.cbim.call(memberId?'workspace.ownerships.byMember':'workspace.ownerships.list',input),input);if(alive.current&&generation.current===token)setPage(value)}
@@ -34,9 +34,9 @@ export function ModuleOwnershipPanel({identity,initialModuleId,memberId,onClose}
     do{const input={...identity,offset,limit:100,...(offset&&cursor?{expectedRegistryCursor:cursor}:{})};const value=checkedWorkspaceMemberList(await window.cbim.call('workspace.members.list',input),input);result.push(...value.items);cursor=value.registryCursor;if(value.nextOffset===undefined)return result;if(value.nextOffset<=offset||result.length>256)throw Error('岗位分页没有前进或超过范围');offset=value.nextOffset}while(alive.current);
     throw Error('已离开当前视图');
   }
-  async function select(moduleId:string){
-    if(lock.current)return;lock.current=true;const token=++generation.current;selection.current++;setLoading(true);setError('');setPreview(undefined);setDetail(undefined);setMembers([]);setReason('');setNextId('');
-    try{const input={...identity,moduleId};const value=checkedModuleOwnershipDetail(await window.cbim.call('workspace.ownerships.get',input),input);if(!alive.current||generation.current!==token)return;setDetail(value);setNextId(value.view.binding?.ownerMemberId??'');try{const choices=await currentMembers();if(alive.current&&generation.current===token)setMembers(choices)}catch(cause){if(alive.current&&generation.current===token)setError('岗位列表无法核实；仍可明确解除现有关系：'+failure(cause))}}
+  async function select(moduleId:string,preferredMemberId?:string){
+    if(lock.current)return;lock.current=true;const token=++generation.current;selection.current++;setLoading(true);setError('');setPreview(undefined);setDetail(undefined);setMembers([]);setMembersLoaded(false);setReason('');setNextId('');
+    try{const input={...identity,moduleId};const value=checkedModuleOwnershipDetail(await window.cbim.call('workspace.ownerships.get',input),input);if(!alive.current||generation.current!==token)return;setDetail(value);setNextId(value.view.binding?.ownerMemberId??'');try{const choices=await currentMembers();if(alive.current&&generation.current===token){setMembers(choices);setMembersLoaded(true);if(preferredMemberId){if(choices.some(item=>item.memberId===preferredMemberId&&item.state==='active'))setNextId(preferredMemberId);else setError('新登记岗位当前不可选，请重新核实岗位状态。')}}}catch(cause){if(alive.current&&generation.current===token)setError('岗位列表无法核实；仍可明确解除现有关系：'+failure(cause))}}
     catch(cause){if(alive.current&&generation.current===token)setError('模块责任读取失败：'+failure(cause))}
     finally{lock.current=false;if(alive.current&&generation.current===token)setLoading(false)}
   }
@@ -71,7 +71,8 @@ export function ModuleOwnershipPanel({identity,initialModuleId,memberId,onClose}
     </aside><div className="module-ownership-body">
       {detail&&<><ModuleOwnershipDetailView detail={detail}/><button disabled={loading} onClick={()=>void select(detail.view.moduleId)}>重新核实模块与岗位</button>
         <form className="module-ownership-form" onSubmit={event=>{event.preventDefault();void prepare()}}><fieldset disabled={blocked||loading}>
-          <label>负责人岗位<select aria-label="负责人岗位" value={nextId} onChange={event=>{setNextId(event.target.value);invalidate()}}><option value="">不设置负责人 / 解除</option>{members.map(member=><option key={member.memberId} value={member.memberId} disabled={member.state!=='active'}>{member.name} · 第 {member.revision} 版{member.state!=='active'?' · '+(member.state==='suspended'?'已暂停':'已退休'):''}</option>)}{nextId&&!members.some(member=>member.memberId===nextId)&&<option value={nextId} disabled>原负责人暂不可选</option>}</select></label>
+          <label>负责人岗位<select aria-label="负责人岗位" value={nextId} onChange={event=>{const value=event.target.value;invalidate();if(value.startsWith('agent:')){registration?.onSelect(detail.view.moduleId,value.slice(6));return}setNextId(value)}}><option value="">不设置负责人 / 解除</option>{members.map(member=><option key={member.memberId} value={member.memberId} disabled={member.state!=='active'}>{member.name} · 第 {member.revision} 版{member.state!=='active'?' · '+(member.state==='suspended'?'已暂停':'已退休'):''}</option>)}{nextId&&!members.some(member=>member.memberId===nextId)&&<option value={nextId} disabled>原负责人暂不可选</option>}{membersLoaded&&registration&&<optgroup label="从 Agent 登记新岗位">{registration.agents.map(agent=><option key={agent.id} value={'agent:'+agent.id}>{agent.name} · 登记项目岗位…</option>)}</optgroup>}</select></label>
+          {membersLoaded&&!members.some(member=>member.state==='active')&&<p data-testid="module-ownership-no-members" role="status">{members.length?'当前没有已启用的项目岗位。':'当前项目尚未登记岗位。'}{registration?.agents.length?'请在上方选择 Agent，明确岗位与模型并保存；返回后再确认模块负责人。':'请先在团队架构的“项目岗位”中登记或启用岗位，再重新核实列表。'}</p>}
           <label>变更原因<textarea aria-label="负责人变更原因" required maxLength={2000} value={reason} onChange={event=>{setReason(event.target.value);invalidate()}}/></label>
           <button data-testid="module-ownership-preview" type="submit" disabled={sameOwner||!reason.trim()}>预览负责人变更</button>
           {binding?.ownerMemberId&&<button data-testid="module-ownership-adopt-source" type="button" disabled={!sameOwner||!reason.trim()} onClick={()=>void prepare(true)}>预览采纳当前来源</button>}

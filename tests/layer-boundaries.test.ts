@@ -20,7 +20,9 @@ it('所有跨层依赖（含重导出和 import 类型）遵循单向边界',()=
         const imported=ts.isImportDeclaration(parent)||ts.isExportDeclaration(parent)||(ts.isLiteralTypeNode(parent)&&ts.isImportTypeNode(parent.parent))||(ts.isCallExpression(parent)&&parent.expression.kind===ts.SyntaxKind.ImportKeyword);
         if(imported){
           const target=path.resolve(path.dirname(file),node.text),targetLayer=layerOf(target);
-          if(allowed[layer])expect(allowed[layer],`${path.relative(root,file)} → ${node.text}`).toContain(targetLayer);
+          // 与依赖检查器一致：已存在的 SVG/CSS 等非代码资源没有代码层归属；无扩展名模块仍须检查。
+          const asset=fs.existsSync(target)&&fs.statSync(target).isFile()&&!/\.[cm]?[jt]sx?$/.test(target);
+          if(!asset&&allowed[layer])expect(allowed[layer],`${path.relative(root,file)} → ${node.text}`).toContain(targetLayer);
         }
       }
       ts.forEachChild(node,visit);

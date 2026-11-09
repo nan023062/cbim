@@ -1,9 +1,9 @@
 /**
- * 作用定位：工作区唯一的静态业务架构，维护模块和 Workflow、复用完整业务模板，并进入独立模块负责人控制面。
- * 设计原因：知识变更通过语义预览事务提交；已登记模块的治理决定与实施分开，仍由统一知识事务保护。架构复用以整个 workspace 为边界，多个会话共享定义但保持各自执行快照。
+ * 作用定位：工作区唯一的静态业务架构，维护模块和 Workflow，并串联负责人选择与现有项目岗位登记。
+ * 设计原因：新项目的静态 Agent 尚无岗位身份；视图只保留原模块并在登记成功后重新读取真实岗位，不将 Agent ID 写成负责人，也不代选模型或自动保存责任。
  */
-import React,{useState,useEffect,useCallback} from 'react';
-import type {Snapshot} from '../../bridge/contracts/workspace';
+import React,{useState,useEffect,useCallback,useMemo} from 'react';
+import type {Snapshot,WorkspaceView} from '../../bridge/contracts/workspace';
 import {Icon} from '../components/Icon';
 import {Empty} from '../components/Empty';
 import {KnowledgeTools} from '../knowledge/KnowledgeTools';
@@ -11,20 +11,27 @@ import {ArchitectureEditor,type EditableKind} from '../knowledge/ArchitectureEdi
 import {WorkspaceResourceTransfer} from '../resources/WorkspaceResourceTransfer';
 import {ModuleGovernancePanel} from '../governance/ModuleGovernancePanel';
 import {ModuleOwnershipPanel} from './ModuleOwnershipPanel';
+import {WorkspaceMembers} from '../team/WorkspaceMembers';
+import {buildTeamModel} from '../team/team-model';
 import './workspace-view.css';
-export function BusinessArchitecture({id,tabId,dirty,snapshot,refresh}:{id:string;tabId:string;dirty:React.RefObject<Set<string>>;snapshot?:Snapshot;refresh?:()=>Promise<void>}){
+/** workspace 提供真实运行状态；登记与责任各走原预览/提交，取消登记仍返回原模块。 */
+export function BusinessArchitecture({workspace,tabId,dirty,snapshot,refresh}:{workspace:WorkspaceView;tabId:string;dirty:React.RefObject<Set<string>>;snapshot?:Snapshot;refresh?:()=>Promise<void>}){
+  const id=workspace.id;
   const [manage,setManage]=useState(false),[query,setQuery]=useState(''),[collapsed,setCollapsed]=useState<Set<string>>(new Set()),[virtual,setVirtual]=useState(true),[chosen,setChosen]=useState(''),[zoom,setZoom]=useState(14);
   const tree=snapshot?.validation?.tree,node=tree?.nodes[chosen];
   const [editor,setEditor]=useState<{kind:EditableKind;id?:string;parentId?:string;mode?:'edit'|'delete'}>(),[transfer,setTransfer]=useState<'publish'|'import'>(),[message,setMessage]=useState(''),[error,setError]=useState('');
   const parse=(path:string)=>{try{return JSON.parse(snapshot?.files.find(file=>file.path===path)?.text??'{}')}catch{return {}}};
   const definition=node?parse(node.id+'/module.json'):undefined;
   const [governance,setGovernance]=useState<string>();
-  const [ownership,setOwnership]=useState<{moduleId?:string}>();
+  const [ownership,setOwnership]=useState<{moduleId?:string;memberId?:string}>();
+  const [registration,setRegistration]=useState<{moduleId:string;agentId:string}>();
+  const agents=useMemo(()=>Object.values(buildTeamModel(snapshot?.workspaceId===id?snapshot:undefined,workspace.name).nodes).filter(item=>item.kind==='agent'||item.id==='cbim:executor').map(item=>({id:item.id,name:item.name})),[snapshot,id,workspace.name]);
   const people=parse('.cbim/team/people.json').people??[];
   async function saved(objects:string[]){setEditor(undefined);setMessage('静态业务定义已更新。已有会话的任务记录保持独立。');if(objects[0]&&!objects[0].includes('/workflows/'))setChosen(objects[0]);try{await refresh?.()}catch(cause){setError(cause instanceof Error?cause.message:String(cause))}}
   const onDirtyChange=useCallback((value:boolean)=>{value?dirty.current.add(tabId):dirty.current.delete(tabId)},[dirty,tabId]);
   useEffect(()=>()=>{dirty.current.delete(tabId)},[dirty,tabId]);
-  if(snapshot&&ownership)return <ModuleOwnershipPanel key={id+snapshot.instanceId} identity={{workspaceId:id,instanceId:snapshot.instanceId}} initialModuleId={ownership.moduleId} onClose={()=>setOwnership(undefined)}/>;
+  if(snapshot&&registration)return <WorkspaceMembers key={id+snapshot.instanceId} workspace={workspace} agents={agents} initialRegistration={{agentId:registration.agentId}} returnLabel="返回模块负责人" onRegistered={memberId=>{setOwnership({moduleId:registration.moduleId,memberId});setRegistration(undefined)}} onClose={()=>{setOwnership({moduleId:registration.moduleId});setRegistration(undefined)}}/>;
+  if(snapshot&&ownership)return <ModuleOwnershipPanel key={id+snapshot.instanceId} identity={{workspaceId:id,instanceId:snapshot.instanceId}} initialModuleId={ownership.moduleId} initialMemberId={ownership.memberId} registration={{agents,onSelect:(moduleId,agentId)=>setRegistration({moduleId,agentId})}} onClose={()=>setOwnership(undefined)}/>;
   function branch(moduleId:string,seen=new Set<string>()):React.ReactNode{const n=tree?.nodes[moduleId];if(!n||seen.has(moduleId))return null;const next=new Set([...seen,moduleId]);return <div className="module-branch" key={moduleId}><div className={'module-card '+(chosen===moduleId?'chosen':'')+(query&&!`${n.name} ${n.summary}`.includes(query)?' dimmed':'')}><button className="module-collapse" aria-label={'展开或折叠 '+n.name} aria-expanded={!collapsed.has(moduleId)} onClick={()=>setCollapsed(old=>{const s=new Set(old);s.has(moduleId)?s.delete(moduleId):s.add(moduleId);return s})}>{collapsed.has(moduleId)?'+':'−'}</button><button className="module-card-content" onClick={()=>setChosen(moduleId)}><Icon name="knowledge"/><span><b>{n.name}</b><small>{n.summary}</small><em>{n.children.length} 个子模块 · {n.sources.length} 个源目录</em></span></button></div>{(!collapsed.has(moduleId)||query)&&<div className="module-children">{virtual&&n.sources.length>0&&<button className="virtual-card" onClick={()=>setChosen(moduleId)}><Icon name="folder" size={15}/><span>直属内容 <small>虚拟节点 · 不独立注册</small></span></button>}{n.children.map(child=>branch(child,next))}</div>}</div>}
   return <div className="knowledge-tools business-management"><div className="view-heading"><div className="knowledge-heading"><p className="overline">工作区 / 静态业务架构</p><h1>业务架构</h1><p>Workspace → 领域工程 → 模块；每个模块使用自己的 Workflow。</p></div><button onClick={()=>setManage(x=>!x)}>{manage?'返回架构图':'高级知识管理'}</button></div>
     {message&&<p role="status">{message}</p>}{error&&<p role="alert" className="error-text">{error}</p>}

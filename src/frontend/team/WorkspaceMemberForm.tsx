@@ -1,6 +1,6 @@
 /**
  * 作用定位：项目岗位登记、元信息编辑、明确采纳及状态变更的表单。
- * 设计原因：模型必须明确选择；编辑名称不顺带采纳能力或重写模型，所有选择先交 Main 预览，界面不拼造采纳正文和操作者。
+ * 设计原因：业务架构入口只预选仍可见的 Agent，模型必须明确选择；编辑名称不顺带采纳能力或重写模型，所有选择先交 Main 预览，界面不拼造采纳正文和操作者。
  */
 import {useState} from 'react';
 import type {LlmSettings} from '../../bridge/contracts/models';
@@ -8,11 +8,11 @@ import {workspaceMemberChangeInputSchema} from '../../bridge/contracts/workspace
 import type {WorkspaceMember,WorkspaceMemberChangeInput} from '../../bridge/contracts/workspace-members';
 
 /** onPreview 只表达人工选择，成员 revision 固定为打开表单时读到的版本。 */
-export interface WorkspaceMemberFormProps {kind:WorkspaceMemberChangeInput['kind'];member?:WorkspaceMember;agents:Array<{id:string;name:string}>;models?:LlmSettings;target?:'capability'|'model';nextState?:'active'|'suspended'|'retired';disabled:boolean;onEdit:()=>void;onPreview:(change:WorkspaceMemberChangeInput)=>Promise<void>;onClose:()=>void}
-export function WorkspaceMemberForm({kind,member,agents,models,target,nextState,disabled,onEdit,onPreview,onClose}:WorkspaceMemberFormProps){
+export interface WorkspaceMemberFormProps {kind:WorkspaceMemberChangeInput['kind'];member?:WorkspaceMember;agents:Array<{id:string;name:string}>;/** 外部入口的能力选择提示；不在当前列表中则保持未选，不回退其他 Agent。 */initialAgentId?:string;models?:LlmSettings;target?:'capability'|'model';nextState?:'active'|'suspended'|'retired';disabled:boolean;onEdit:()=>void;onPreview:(change:WorkspaceMemberChangeInput)=>Promise<void>;onClose:()=>void}
+export function WorkspaceMemberForm({kind,member,agents,initialAgentId,models,target,nextState,disabled,onEdit,onPreview,onClose}:WorkspaceMemberFormProps){
   const register=kind==='register',editable=register||kind==='update';
   const [name,setName]=useState(register?'':member?.name??''),[position,setPosition]=useState(register?'':member?.position??''),[instructions,setInstructions]=useState(register?'':member?.adaptation.instructions??'');
-  const [references,setReferences]=useState(register?'':member?.adaptation.references.join('\n')??''),[agent,setAgent]=useState(''),[model,setModel]=useState(''),[reason,setReason]=useState(''),[error,setError]=useState('');
+  const [references,setReferences]=useState(register?'':member?.adaptation.references.join('\n')??''),[agent,setAgent]=useState(()=>register&&agents.some(item=>item.id===initialAgentId)?initialAgentId!:''),[model,setModel]=useState(''),[reason,setReason]=useState(''),[error,setError]=useState('');
   const change=(fn:()=>void)=>{onEdit();setError('');fn()};
   async function prepare(){try{
     const runtimePolicy=model?(()=>{const [profileId,modelId]=JSON.parse(model);return {profileId,modelId}})():undefined;

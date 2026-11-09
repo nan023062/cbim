@@ -21,7 +21,7 @@
 | [workspace-members.css](workspace-members.css) | 对应界面的布局与视觉样式。 |
 | [WorkspaceMemberDetail.tsx](WorkspaceMemberDetail.tsx) | 只读展示项目岗位的稳定身份、采纳内容与本次核实的外部差异。 |
 | [WorkspaceMemberForm.tsx](WorkspaceMemberForm.tsx) | 项目岗位登记、元信息编辑、明确采纳及状态变更的表单。 |
-| [WorkspaceMembers.tsx](WorkspaceMembers.tsx) | 团队页面的项目岗位登记面板，浏览采纳差异、显式变更，并反查该岗位当前负责的模块。 |
+| [WorkspaceMembers.tsx](WorkspaceMembers.tsx) | 团队与业务架构共用的项目岗位登记面板，浏览采纳差异、显式变更，并反查负责的模块。 |
 
 ## 架构类图
 
@@ -353,6 +353,7 @@ class N_src_frontend_team_WorkspaceMemberForm_tsx_WorkspaceMemberFormProps["Work
   +kind
   +member
   +agents
+  +initialAgentId
   +models
   +target
   +nextState
@@ -392,6 +393,9 @@ class N_src_frontend_team_WorkspaceMembers_tsx_WorkspaceMembersProps["WorkspaceM
   +workspace
   +agents
   +onClose
+  +initialRegistration
+  +onRegistered
+  +returnLabel
 }
 N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_WorkspaceMembers_tsx_WorkspaceMembersProps : 声明
 ```
@@ -488,6 +492,8 @@ N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_workspace_membe
 # 静态团队架构契约
 
 ## 项目岗位登记
+
+业务架构也可复用 `WorkspaceMembers`，以 `initialRegistration` 打开表单并预选仍在当前列表中的 Agent；缺失来源保持未选，不回退到另一能力，模型始终不预选。本次登记取得真实 accepted 回执后才通过 `onRegistered(memberId)` 返回调用方；预览、未知结果、重开恢复或查询旧命令均不触发该回调。团队原入口、同工作区共享命令记录和未知防重规则保持一致；调用方负责原模块选择与单独的负责人保存。
 
 能力详情通过 `KnowledgeSourceDetails` 分开显示内容差异和受控来源身份；登记及“采纳当前能力”的原预览中显示 `sourceSelection`。旧记录未采纳来源时明确提示，不因读取、改名、暂停或模型采纳自动补齐。来源替换即使内容相同，也须明确采纳；此页面不启动岗位执行。
 

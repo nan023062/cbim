@@ -338,6 +338,8 @@ N_src_frontend_shell_WorkspaceList_tsx ..> N_src_frontend_shell_workspace_list_c
 
 # 工作区外壳与原会话定位
 
+`ExtensionArea` 向业务架构传递完整的 `WorkspaceView` 与共享快照，使负责人入口复用项目岗位登记时仍核实真实运行状态和实例。登记、返回原模块及选择状态由业务视图持有；外壳不生成岗位或执行责任写入。
+
 `App` 保存工作区页签、草稿与附件，界面选择不代表后端运行。全局“运行管理”挂载独立只读 `RuntimeOverview`；离开该页卸载其读取，不创建或恢复任务。
 
 侧栏使用大写简称 CBIM 和 `components/BrandMark`，欢迎页展示完整名称 CBIM Assistant。BrandMark 直接引用品牌 SVG，外壳样式只约束尺寸和排版；用户头像与产品标识保持各自语义，不改变账号或工作区状态。

@@ -90,3 +90,19 @@ it('岗位表单明确模型选择、采纳/退休语义，历史原则作为文
   const html=renderToStaticMarkup(createElement(WorkspaceMemberForm,{kind:'register',agents:[{id:'cbim:executor',name:'默认执行者'}],disabled:false,onEdit:()=>{},onPreview:async()=>{},onClose:()=>{}}));expect(html).toContain('请选择明确的供应商与模型');expect(html).toContain('变更原因');expect(html).toContain('静态 Agent');
   const data=detail(),view=renderToStaticMarkup(createElement(WorkspaceMemberDetailView,{detail:data}));expect(view).toContain('与已采纳一致');expect(view).toContain('不验证密钥或网络');expect(view).toContain('&lt;script&gt;');expect(view).not.toContain('<script>');
 });
+
+it.each(['cbim:executor','.cbim/team/agents/developer'])('从模块负责人选择 %s 后只预选能力，不隐式采纳模型或提交',agentId=>{
+  const onPreview=vi.fn(),agents=[{id:'cbim:executor',name:'默认执行者'},{id:'.cbim/team/agents/developer',name:'开发 Agent'}];
+  const html=renderToStaticMarkup(createElement(WorkspaceMemberForm,{kind:'register',agents,initialAgentId:agentId,disabled:false,onEdit:()=>{},onPreview,onClose:()=>{}}));
+  const agentSelect=html.match(/<select aria-label="静态 Agent"[^>]*>(.*?)<\/select>/)![1];
+  expect(agentSelect).toContain(`<option value="${agentId}" selected="">`);
+  expect(html.match(/<select aria-label="岗位模型"[^>]*>(.*?)<\/select>/)![1]).toContain('<option value="" selected="">请选择明确的供应商与模型');
+  expect(onPreview).not.toHaveBeenCalled();
+});
+
+it('来源 Agent 已不在可见列表时保持未选，不回退到内置执行者',()=>{
+  const html=renderToStaticMarkup(createElement(WorkspaceMemberForm,{kind:'register',agents:[{id:'cbim:executor',name:'默认执行者'}],initialAgentId:'.cbim/team/agents/removed',disabled:false,onEdit:()=>{},onPreview:async()=>{},onClose:()=>{}}));
+  const select=html.match(/<select aria-label="静态 Agent"[^>]*>(.*?)<\/select>/)![1];
+  expect(select).toContain('<option value="" selected="">请选择专业能力');
+  expect(select).not.toContain('value="cbim:executor" selected=');
+});

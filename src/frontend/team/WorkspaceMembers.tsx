@@ -1,6 +1,6 @@
 /**
- * 作用定位：团队页面的项目岗位登记面板，浏览采纳差异、显式变更，并反查该岗位当前负责的模块。
- * 设计原因：静态能力树与临时运行实例各有归属；登记与能力采纳明确展示来源选择，岗位模型供正式派发核实，改名或启用不暗中更新旧任务或启动执行。
+ * 作用定位：团队与业务架构共用的项目岗位登记面板，浏览采纳差异、显式变更，并反查负责的模块。
+ * 设计原因：登记始终复用同一命令记录与预览校验；业务架构可预选 Agent，只有真实登记受理后才返回 memberId，模型与责任仍分别明确选择和保存。
  */
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
@@ -18,11 +18,11 @@ const commands=new WorkspaceMemberCommandPool();
 const failure=(error:unknown)=>error instanceof Error?error.message:String(error);
 export interface WorkspaceMemberAgentOption {id:string;name:string}
 /** 当前定义只用于明确选择；已登记岗位的正文和版本一律从后端详情读取，不用静态列表补造。 */
-export interface WorkspaceMembersProps {workspace:WorkspaceView;agents:WorkspaceMemberAgentOption[];onClose:()=>void}
-export function WorkspaceMembers({workspace,agents,onClose}:WorkspaceMembersProps){
+export interface WorkspaceMembersProps {workspace:WorkspaceView;agents:WorkspaceMemberAgentOption[];onClose:()=>void;/** 仅预选能力来源，不自动选模型、预览或提交。 */initialRegistration?:{agentId:string};/** 只通知本次已受理的登记，不把预览、未知或旧命令查询当作新岗位。 */onRegistered?:(memberId:string)=>void;returnLabel?:string}
+export function WorkspaceMembers({workspace,agents,onClose,initialRegistration,onRegistered,returnLabel='返回团队定义'}:WorkspaceMembersProps){
   const controller=useMemo(()=>commands.get(workspace.id,{storage:window.localStorage,uuid:()=>crypto.randomUUID(),commit:input=>window.cbim.call('workspace.members.commit',input),lookup:input=>window.cbim.call('workspace.members.receipt',input)}),[workspace.id]);
   const [tick,setTick]=useState(0),[page,setPage]=useState<WorkspaceMemberList>(),[detail,setDetail]=useState<WorkspaceMemberDetail>(),[models,setModels]=useState<LlmSettings>();
-  const [editing,setEditing]=useState<WorkspaceMemberChangeInput['kind']>(),[special,setSpecial]=useState<{target?:'capability'|'model';nextState?:'active'|'suspended'|'retired'}>({});
+  const [editing,setEditing]=useState<WorkspaceMemberChangeInput['kind']|undefined>(initialRegistration?'register':undefined),[special,setSpecial]=useState<{target?:'capability'|'model';nextState?:'active'|'suspended'|'retired'}>({});
   const [preview,setPreview]=useState<WorkspaceMemberPreview>(),[error,setError]=useState(''),[loading,setLoading]=useState(false);
   const [ownershipMember,setOwnershipMember]=useState<string>();
   const alive=useRef(false),epoch=useRef(0),lock=useRef(false),selection=useRef(0);
@@ -53,12 +53,12 @@ export function WorkspaceMembers({workspace,agents,onClose}:WorkspaceMembersProp
   async function commit(){
     if(!preview||blocked||lock.current)return;lock.current=true;setLoading(true);const input:WorkspaceMemberPreviewInput={...identity,change:preview.change};
     await controller.submit(input,preview);lock.current=false;if(!alive.current)return;setLoading(false);setPreview(undefined);
-    const record=controller.snapshot.records.at(-1);if(record?.phase==='accepted'){setEditing(undefined);await list();if(alive.current)await select(record.receipt!.memberId)}else if(record?.error)setError(record.error);
+    const record=controller.snapshot.records.at(-1);if(record?.phase==='accepted'){setEditing(undefined);if(record.request.change.kind==='register'&&onRegistered){onRegistered(record.receipt!.memberId);return}await list();if(alive.current)await select(record.receipt!.memberId)}else if(record?.error)setError(record.error);
   }
   async function query(commandId:string,retry=false){if(retry)await controller.retry(commandId);else await controller.query(commandId);if(alive.current)await list()}
   if(ownershipMember)return <ModuleOwnershipPanel key={workspace.id+workspace.instanceId+ownershipMember} identity={identity} memberId={ownershipMember} onClose={()=>{setOwnershipMember(undefined);void select(ownershipMember)}}/>;
   return <section className="workspace-members" data-testid="workspace-members" aria-label="项目岗位成员">
-    <header><div><p className="overline">工作区 / 稳定岗位</p><h2>项目岗位</h2></div><button onClick={onClose}>返回团队定义</button></header>
+    <header><div><p className="overline">工作区 / 稳定岗位</p><h2>项目岗位</h2></div><button onClick={onClose}>{returnLabel}</button></header>
     <p className="workspace-member-note">静态 Agent 提供专业能力，岗位保存本项目采纳的能力和模型。新业务由主 Agent 按模块负责人派发；岗位启用本身不代表正在运行，能力来源、模型和责任版本仍须通过领取核实。</p>
     <div className="team-definition-actions"><button data-testid="workspace-member-register" disabled={!available||blocked||loading} onClick={()=>start('register')}>登记项目岗位</button><button disabled={loading} onClick={()=>void list()}>刷新岗位列表</button></div>
     {(error||state.error)&&<p role="alert">{error||state.error}</p>}
@@ -75,7 +75,7 @@ export function WorkspaceMembers({workspace,agents,onClose}:WorkspaceMembersProp
         <button data-testid={detail.member.state==='active'?'workspace-member-suspend':'workspace-member-activate'} disabled={blocked||loading} onClick={()=>start('state',{nextState:detail.member.state==='active'?'suspended':'active'})}>{detail.member.state==='active'?'暂停岗位':'启用岗位'}</button>
         <button data-testid="workspace-member-retire" disabled={blocked||loading} onClick={()=>start('state',{nextState:'retired'})}>退休岗位</button>
       </>}</div></>}
-      {editing&&<WorkspaceMemberForm key={JSON.stringify([editing,special,detail?.member.memberId,detail?.member.revision])} kind={editing} member={detail?.member} agents={agents} models={models} {...special} disabled={blocked||loading} onEdit={invalidate} onPreview={prepare} onClose={()=>{invalidate();setEditing(undefined)}}/>}
+      {editing&&<WorkspaceMemberForm key={JSON.stringify([editing,special,detail?.member.memberId,detail?.member.revision])} kind={editing} member={detail?.member} agents={agents} initialAgentId={initialRegistration?.agentId} models={models} {...special} disabled={blocked||loading} onEdit={invalidate} onPreview={prepare} onClose={()=>{invalidate();setEditing(undefined)}}/>}
       {!detail&&!editing&&!loading&&<p>选择岗位查看已采纳配置和当前差异，或登记新的岗位。</p>}
       {preview&&<section className="workspace-member-preview" data-testid="workspace-member-preview-result"><h3>提交预览</h3><p>变更：{preview.changedFields.join('、')}；原第 {preview.previousRevision} 版 → 第 {preview.previousRevision+1} 版。</p><p>{preview.proposed.name} · {preview.proposed.position} · {stateLabel(preview.proposed.state)}</p><p>能力：{preview.proposed.capability.configuration.name}；{preview.proposed.capability.configuration.effectiveSkills.length} 项 Skill</p><p>模型：{preview.proposed.runtimePolicy.snapshot.name} / {preview.proposed.runtimePolicy.modelId}</p><KnowledgeSourceSelection selection={preview.sourceSelection}/><details><summary>查看实际采纳内容与差异</summary><pre>{JSON.stringify({before:preview.previousMember,after:preview.proposed},null,2)}</pre></details><p>只保存岗位登记与审计，不启动模型或任务。</p><button data-testid="workspace-member-commit" disabled={blocked||loading} onClick={()=>void commit()}>确认保存岗位</button></section>}
     </div></div>

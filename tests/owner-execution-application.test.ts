@@ -29,7 +29,7 @@ it('explicitly configures two positions of the same Agent with distinct models/a
     const discovery=ownerExecutionDiscoverySchema.parse(await f.app.memberDispatch(seeded.entry.id).owners.discover([...seeded.modules,seeded.extraModule,seeded.team.child]));
     expect(discovery.groups).toHaveLength(3);
     expect(discovery.groups.find(group=>group.memberId===a.memberId)?.selection?.expectedOwners.map(owner=>owner.moduleId)).toEqual([seeded.modules[0],seeded.extraModule]);
-    expect(discovery.groups.find(group=>group.moduleIds.includes(seeded.team.child))).toMatchObject({moduleIds:[seeded.team.child],issues:[{code:'OWNER_UNASSIGNED'}]});
+    expect(discovery.groups.find(group=>group.moduleIds.includes(seeded.team.child))).toMatchObject({moduleIds:[seeded.team.child],issues:[{code:'OWNER_UNASSIGNED'},{code:'OWNER_MODEL_UNRESOLVED'}]});
     const runtime=await workspaceMemberRuntimeEvidence(f.app,[seeded.entry.id]);
     expect(runtime[0].runs).toEqual([]);expect(runtime[0].scopes).toEqual([]);expect(runtime[0].mainSessions).toEqual([]);
     expect(probe.requests).toEqual([]);

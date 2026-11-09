@@ -27,3 +27,4 @@
 - 唯一草稿 Release `439619815`，四附件摘要/大小与本地一致；创建后首次列表未及时返回，按同一 ID 核实后继续，没有重建。`staged-publish-journal.jsonl` 保存意图与回执。[候选安装 42695642991](https://github.com/nan023062/cbim/actions/runs/42695642991) 使用同一 workflow SHA、source SHA 和实际上一版 0.1.3。
 - [PR #25](https://github.com/nan023062/cbim/pull/25) 初始 base `5fe52e74f57f0363299381fd050e799d637723c9`、head 为上述源码。[首轮 CI 42694782113](https://github.com/nan023062/cbim/actions/runs/42694782113) 第三片两项失败源于来源测试夹具还提交 peopleUpserts/maintenance，第二片工具断言遗漏新增 OWNER_MODEL_UNRESOLVED。原失败日志和 run 保留，完整结论待回填。
 - 来源夹具当前输入与历史 EXE 输入显式分开，移除无差异的维护字段清理事务，保留真实来源代次/采纳/恢复断言；定向 8 通过、2 历史 EXE 缺失跳过，类型通过。仅测试和开发文档变化，不影响既有制品；完整新 head CI 仍需通过。
+- 责任主工具和 Application 同时断言未绑定及模型待核实缺口，分别 9/2 项通过。第一片还发现统一工具权限测试遗漏 object preview v2，另行修正；不通过回退产品契约来迁就旧断言。候选安装 run 已成功，完整安装报告仍需核对。

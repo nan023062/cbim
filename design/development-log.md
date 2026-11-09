@@ -1,5 +1,11 @@
 # CBIM 开发记录
 
+## 2026-11-10：发布 CI 的独立派工缺口消费者对齐
+
+- 责任主工具与 Application 的旧断言只允许 OWNER_UNASSIGNED，与本轮一次列出缺口的行为不符；现在同时要求 OWNER_MODEL_UNRESOLVED，保留无能力正文/凭据泄露、无模型执行、责任绑定及独立岗位配置的原断言。
+- 依据失败用例及同一 discover 消费者，分别执行 `pnpm exec vitest run tests/module-ownership-tools.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-0.1.4-owner-tools.json`（9 通过）与 `pnpm exec vitest run tests/owner-execution-application.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-0.1.4-owner-discovery-application.json`（2 通过）。没有产品、类型接口或依赖变化，不重跑已通过的检查。
+- 候选安装 run 42695642991 已成功，报告待下载核对；完整 CI 第一片还发现 cbim_object_preview v2 的旧版本断言，下一步单独修正并重新检查 PR。尚未合并或公开。
+
 ## 2026-11-10：发布 CI 的知识来源夹具适配
 
 - PR #25 首轮完整 CI 第三片暴露两个来源生命周期用例仍向当前架构接口提交已退役的 peopleUpserts/maintenance。当前夹具改用无真人维护字段的真实公开契约；两个固定历史 EXE 入口显式保留旧输入，不按失败自动重放或降级。

@@ -10,7 +10,7 @@ import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/executi
 import {LoopRuntime} from '../src/backend/core/brain';
 
 it('空工作区普通对话默认主 Agent，知识变化后仍可继续，保留每轮消息',async()=>{
-  const f=await fixture(false);let manager:WorkspaceExecutionManager|undefined;
+  const f=await fixture();let manager:WorkspaceExecutionManager|undefined;
   try{
     const e=await f.app.dispatch('add',{path:f.a}),w=f.app.workspace(e.id);const modes:unknown[]=[];
     manager=new WorkspaceExecutionManager(w,new FileRunStorage(),async options=>{
@@ -31,10 +31,10 @@ it('空工作区普通对话默认主 Agent，知识变化后仍可继续，保�
   }finally{await manager?.close();await f.cleanup()}
 });
 
-it('无 MCP 的内部知识服务保留身份、写授权与 Schema 校验，团队准备冻结继承和本模块流程',async()=>{
-  const f=await fixture(false);try{
+it('内部知识服务保留身份、写授权与 Schema 校验，团队准备冻结继承和本模块流程',async()=>{
+  const f=await fixture();try{
     const e=await f.app.dispatch('add',{path:f.a}),w=f.app.workspace(e.id),service=knowledgeTools(w);
-    await expect(fs.access(f.app.paths.discovery(e.id))).rejects.toThrow();
+    await expect(fs.access(path.join(f.app.paths.project(e.id),'discovery.json'))).rejects.toThrow();
     const seeded=await seedTeam(w),task=await f.app.dispatch('loop.prepare',{id:e.id,task:seeded.input});
     expect(task.workflowContext.agent.skills.map((x:any)=>x.id)).toEqual([seeded.own,seeded.shared]);
     expect(task.workflowContext.workflow.owner).toBe(seeded.input.moduleId);
@@ -45,36 +45,37 @@ it('无 MCP 的内部知识服务保留身份、写授权与 Schema 校验，团
     expect(choices.agents.some((a:any)=>a.id===seeded.input.agentId)).toBe(true);
     await expect(prepareTeamTask(w,{...seeded.input,moduleId:seeded.child})).rejects.toMatchObject({code:'WORKFLOW_SCOPE'});
     await expect(prepareTeamTask(w,{...seeded.input,responsiblePerson:'unknown'})).rejects.toMatchObject({code:'PERSON_NOT_FOUND'});
-    await expect(service.call('cbim_agent_get',{workspaceId:e.id,instanceId:'stale',id:seeded.input.agentId})).rejects.toMatchObject({code:'STALE_INSTANCE'});
+    await expect(service.callFromRun('cbim_agent_get',{workspaceId:e.id,instanceId:'stale',id:seeded.input.agentId},false)).rejects.toMatchObject({code:'STALE_INSTANCE'});
     await expect(seeded.call('cbim_knowledge_commit',{revision:task.workflowContext.revision,requestId:'no-permission',changes:[]})).rejects.toMatchObject({code:'FORBIDDEN'});
-    await expect(service.call('cbim_agent_get',{})).rejects.toThrow();
+    await expect(service.callFromRun('cbim_agent_get',{},false)).rejects.toThrow();
     expect(service.list().every(t=>t.inputSchema.type==='object')).toBe(true);
   }finally{await f.cleanup()}
 });
 
-it('执行管理持久化业务上下文、隔离历史、停止与关闭排空，恢复拒绝知识变化',async()=>{
-  const f=await fixture(false);let manager:WorkspaceExecutionManager|undefined;
+it('旧直接业务新启动和续轮明确拒绝；实际运行日志仍可读且不改写或借机创建模型',async()=>{
+  const f=await fixture();let manager:WorkspaceExecutionManager|undefined,legacy:LoopRuntime|undefined;
   try{
     const e=await f.app.dispatch('add',{path:f.a}),w=f.app.workspace(e.id),seeded=await seedTeam(w);
-    let finish:()=>void=()=>{};let emitted=0;
-    manager=new WorkspaceExecutionManager(w,new FileRunStorage(),async options=>{
-      const runtime=new LoopRuntime({storage:new FileRunStorage(),directory:path.join(f.app.paths.project(e.id),'loop-engine','tasks'),acquireLease:async()=>()=>{},toolPolicy:async()=>({allow:true}),onEvent:options.onEvent,createEngine:()=>({kind:'test',start:async context=>{await context.emit({type:'session.bound',data:{sessionFile:'test-session'}})},run:async()=>{await new Promise<void>(resolve=>{finish=resolve});return {status:'cancelled'}},stop:async()=>finish(),close:async()=>{}})});
-      return {runtime,workspace:await f.app.paths.identity(f.a),agentHome:'test',newTask:()=>{throw Error('not used')}};
-    });
-    manager.subscribe(()=>{emitted++});
+    let factoryCalls=0;
+    manager=new WorkspaceExecutionManager(w,new FileRunStorage(),async()=>{factoryCalls++;throw Error('旧业务不能进入工厂')});
     const options={provider:'test',model:'test',allowNativeExecution:false};
-    const run=await manager.start(seeded.input,options);
-    while(!(await manager.inspect(run.taskId,run.runId)).sessionFile)await new Promise(r=>setTimeout(r,5));
-    expect((await manager.inspect(run.taskId,run.runId)).task.workflowContext?.workflowId).toBe(seeded.input.workflowId);
-    await manager.stop(run.taskId);await manager.close();
-    expect((await manager.list())[0].status).toBe('cancelled');expect(emitted).toBeGreaterThan(1);
-    const thread=await f.app.dispatch('loop.thread',{id:e.id,taskId:run.taskId});
+    await expect(manager.start(seeded.input,options)).rejects.toMatchObject({code:'OWNER_DISPATCH_REQUIRED'});
+    await expect(f.app.dispatch('loop.start',{id:e.id,task:seeded.input,options})).rejects.toMatchObject({code:'OWNER_DISPATCH_REQUIRED'});
+    expect(factoryCalls).toBe(0);expect(await manager.list()).toEqual([]);
+    // 此处用通用 Core runtime 产生旧形状日志以测读取/拒绝接续，不通过应用入口写入假 owner；真实旧 EXE 另有兼容冒烟。
+    const prepared=await prepareTeamTask(w,seeded.input),directory=path.join(f.app.paths.project(e.id),'loop-engine','tasks');
+    legacy=new LoopRuntime({storage:new FileRunStorage(),directory,acquireLease:async()=>()=>{},toolPolicy:async()=>({allow:true}),createEngine:()=>({kind:'test',start:async context=>{await context.emit({type:'session.bound',data:{sessionFile:'test-session'}})},run:async()=>({status:'completed'}),stop:async()=>{},close:async()=>{}})});
+    const run=await legacy.start(prepared);await run.done;await legacy.close();
+    const runDirectory=path.join(directory,prepared.taskId,run.runId),bytes=async()=>{const files=await fs.readdir(runDirectory,{withFileTypes:true});return Promise.all(files.filter(file=>file.isFile()).map(async file=>[file.name,(await fs.readFile(path.join(runDirectory,file.name))).toString('base64')]))};
+    const before=await bytes(),state=await manager.inspect(prepared.taskId,run.runId);
+    expect(state.task.workflowContext?.workflowId).toBe(seeded.input.workflowId);expect(state.task.ownerBinding).toBeUndefined();expect(state.status).toBe('completed');
+    const thread=await f.app.dispatch('loop.thread',{id:e.id,taskId:prepared.taskId});
     expect(thread[0].events[0].data.message).toBe(seeded.input.goal);
-    const fresh=f.app.execution(e.id);
     await fs.appendFile(path.join(f.a,'.cbim/README.md'),'\nChanged');
-    await expect(fresh.resume(run.taskId,run.runId,'继续',options)).rejects.toMatchObject({code:'CONFLICT'});
+    await expect(manager.resume(prepared.taskId,run.runId,'继续',options)).rejects.toMatchObject({code:'OWNER_DISPATCH_REQUIRED'});
+    await expect(f.app.execution(e.id).resume(prepared.taskId,run.runId,'继续',options)).rejects.toMatchObject({code:'OWNER_DISPATCH_REQUIRED'});
+    expect(factoryCalls).toBe(0);expect(await bytes()).toEqual(before);expect(await fs.readdir(path.join(directory,prepared.taskId))).toEqual([run.runId]);
     const other=await f.app.dispatch('add',{path:f.b});
-    await expect(f.app.execution(other.id).inspect(run.taskId,run.runId)).rejects.toThrow();
-    await expect(manager.start(seeded.input,options)).rejects.toThrow('关闭');
-  }finally{await manager?.close();await f.cleanup()}
+    await expect(f.app.execution(other.id).inspect(prepared.taskId,run.runId)).rejects.toThrow();
+  }finally{await legacy?.close();await manager?.close();await f.cleanup()}
 });

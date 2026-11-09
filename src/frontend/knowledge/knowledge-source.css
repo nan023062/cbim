@@ -1,0 +1,5 @@
+.knowledge-source-details{border-left:2px solid var(--border);padding:0 0 0 12px;margin:16px 0;font-size:12px;line-height:1.7}
+.knowledge-source-details p{margin:6px 0}
+.knowledge-source-details h4{margin:10px 0 4px}
+.knowledge-source-details code{overflow-wrap:anywhere;white-space:normal}
+.knowledge-source-details small{display:block;color:var(--muted);margin-top:8px}

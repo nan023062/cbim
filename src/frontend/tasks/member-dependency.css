@@ -1,0 +1,15 @@
+/**
+ * 作用定位：排版成员前置追加和替换的只读历史，供主对话摘要与任务详情共用。
+ * 设计原因：采用现有主题和纵向布局，长身份可换行；完整审计留在详情，不挤占固定尺寸任务节点。
+ */
+.member-dependency-notice{border-left:2px solid var(--line);padding:10px 14px;margin:12px 0;color:var(--text);font-size:12px;line-height:1.6;min-width:0}
+.member-dependency-notice details{margin-top:8px;min-width:0}
+.member-dependency-notice summary{cursor:pointer;white-space:pre-wrap;overflow-wrap:anywhere}
+.member-dependency-notice dl{margin:10px 0;display:grid;gap:6px}
+.member-dependency-notice dl>div{min-width:0}
+.member-dependency-notice dt,.member-dependency-notice time,.member-dependency-notice small{color:var(--muted)}
+.member-dependency-notice dd{margin:0;min-width:0}
+.member-dependency-notice code{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px}
+.member-dependency-notice p{margin:8px 0;color:var(--muted)}
+.member-dependency-notice.compact summary{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.member-dependency-notice.compact details[open] summary{display:list-item;-webkit-line-clamp:unset;overflow:visible}

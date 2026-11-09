@@ -7,6 +7,5 @@ export interface StoragePaths {
  identity(input:string):Promise<{id:string;path:string}>;
  project(id:string):string;
  local(id:string,kind:'memory'|'task-records'|'logs'|'cache'|'transactions'):string;
- discovery(id:string):string;
  knowledge(root:string,relative:string):Promise<string>;
 }

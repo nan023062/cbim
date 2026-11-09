@@ -1,0 +1,70 @@
+name: Validate CBIM
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cbim-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows validation (${{ matrix.shard }}/4)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.19.0'
+          cache: pnpm
+      - name: Install locked dependencies
+        # 官方二进制下载偶发 504；有限重试安装，持续失败仍阻止后续验收。
+        run: |
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            pnpm install --frozen-lockfile
+            $installCode = $LASTEXITCODE
+            if ($installCode -eq 0) { exit 0 }
+            if ($attempt -eq 3) { exit $installCode }
+            Write-Warning "Dependency installation failed ($installCode); retry $attempt/2."
+            Start-Sleep -Seconds (10 * $attempt)
+          }
+      - name: Check canonical test temporary directory
+        # runner 上下文在步骤级使用；默认用户 TEMP 可能是 8.3 别名。
+        env:
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+        run: |
+          node -e "const fs=require('node:fs'),os=require('node:os'); const temp=os.tmpdir(); if(temp!==fs.realpathSync(temp)) throw Error('Test temporary directory is not canonical'); fs.mkdirSync('test-results',{recursive:true}); console.log('Canonical test temporary directory: '+temp);"
+      - name: Check TypeScript
+        run: pnpm typecheck
+      - name: Check architecture and dependencies
+        run: pnpm check:architecture
+      - name: Verify brand assets
+        run: pnpm check:brand
+      - name: Build public website
+        env:
+          CBIM_WEBSITE_URL: https://nan023062.github.io/cbim/
+        run: pnpm build:website
+      - name: Run full test suite
+        env:
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+        run: pnpm exec vitest run --shard=${{ matrix.shard }}/4 --reporter=default --reporter=json --outputFile=test-results/pr-full-suite.json
+      - name: Preserve test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-validation-${{ matrix.shard }}
+          path: test-results/pr-full-suite.json
+          if-no-files-found: ignore

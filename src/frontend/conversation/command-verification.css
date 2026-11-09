@@ -1,0 +1,15 @@
+/*
+ * 作用定位：原命令核实卡的主题排版与独立状态颜色。
+ * 设计原因：原工具失败色不能覆盖核实结果；保存/未知分别着色，长身份在窄布局换行。
+ */
+.command-verification{margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:8px;min-width:0;font-size:12px;line-height:1.6;color:var(--text)}
+.command-verification header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.command-verification p{margin:8px 0}
+.command-verification code,.command-verification dd{overflow-wrap:anywhere;white-space:normal}
+.command-verification dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:4px 12px;margin:8px 0}
+.command-verification dd{margin:0}
+.command-verification small{display:block;opacity:.7;overflow-wrap:anywhere}
+.command-verification-state.saved{color:var(--green)}
+.command-verification-state.uncertain,.command-verification-warning{color:var(--warning)}
+.command-verification-error,.command-verification-danger{color:var(--danger)}
+@media(max-width:600px){.command-verification{padding:10px}.command-verification dl{grid-template-columns:minmax(0,1fr);gap:2px}.command-verification dd{margin-bottom:6px}}

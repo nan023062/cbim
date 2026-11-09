@@ -1,120 +1,19 @@
-import { _electron as electron } from 'playwright-core';
 import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
-import assert from 'node:assert/strict';
+import {spawn} from 'node:child_process';
 import {latestExecutable} from './build-artifact.mjs';
-const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-ui-test-'));
-const roots=[path.join(temp,'alpha'),path.join(temp,'beta')];for(const root of roots)await fs.mkdir(root);
-const exe=await latestExecutable();
-const user=path.join(temp,'user');let app,hostApp;const errors=[];
-await fs.mkdir('test-results',{recursive:true});
-async function launch(){app=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});const page=await app.firstWindow({timeout:30000});page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));return page}
-async function addTab(page,name){await page.getByRole('button',{name:'添加页签',exact:true}).click();await page.locator('.tab-menu').getByRole('button',{name,exact:false}).click()}
-const json=x=>JSON.stringify(x,null,2);
-async function seed(root){
-  const write=async(p,text)=>{const target=path.join(root,p);await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,text)};
-  const summary='负责团队项目中的资源组织、生命周期与业务协作，清晰划分模块维护范围，并提供可追溯的知识与架构约束。支持团队在实现需求、治理结构和维护公共能力时查询上下文、识别变化影响并开展人工评审，保证业务知识持续更新且来源明确。';
-  for(const name of ['project','project/resources']){
-    const id='.cbim/workspace/'+name;
-    await write(id+'/module.json',json({id,name:name.split('/').at(-1),summary,authors:[],sources:[],connectors:[],children:name==='project'?['.cbim/workspace/project/resources']:[],overview:'module.md',workflows:[]}));
-    await write(id+'/module.md','# '+name.split('/').at(-1)+'\n\n## 定位\n管理项目资源。\n\n## 子模块与 source 节点\n无。\n\n## 结构关系图（类图凭据）\n```mermaid\nclassDiagram\nclass Project\n```\n正式架构。\n\n## 模块级公共约定\n保持职责清晰。\n\n## 观察模式-待观察\n暂无。\n');
-  }
-  await write('.cbim/team/engineering/skills.json',json({skills:[]}));
-  await write('.cbim/team/engineering/architect/agent.json',json({name:'架构师',summary,authors:[],capabilities:['架构治理','知识维护'],limitations:['业务决策需要团队确认'],work_principles:'principles.md',skills:[],connectors:[]}));
-  await write('.cbim/team/engineering/architect/principles.md','# 工作原则\n明确边界，保持知识可追溯。');
-  await write('.cbim/connectors/registry.json',json({connectors:[{id:'.cbim/connectors/docs',name:'团队文档',summary:'团队正式文档服务',plugin:{ghost_id:'team-docs',namespace:null}}]}));
-}
-try{
-  let page=await launch();await page.getByRole('button',{name:'新建工作区',exact:true}).first().waitFor();
-  const result=await page.evaluate(async roots=>{const a=await window.cbim.call('add',{path:roots[0]}),b=await window.cbim.call('add',{path:roots[1]});await window.cbim.call('open',{id:a.id});await window.cbim.call('open',{id:b.id});return {a,b}},roots);
-  const resize=page.getByRole('separator',{name:'调整侧边栏宽度'});await resize.focus();await page.keyboard.press('ArrowRight');assert.equal(await resize.getAttribute('aria-valuenow'),'270');
-  const box=await resize.boundingBox();await page.mouse.move(box.x+2,box.y+100);await page.mouse.down();await page.mouse.move(300,box.y+100);await page.mouse.up();assert.equal(await resize.getAttribute('aria-valuenow'),'300');
-  await resize.dblclick();assert.equal(await resize.getAttribute('aria-valuenow'),'260');
-  assert.equal(await page.locator('.primary-nav>button').first().evaluate(el=>Math.round(el.getBoundingClientRect().height)),32);
-  await page.getByRole('button',{name:'收起侧栏',exact:true}).click();await page.getByRole('button',{name:'展开侧栏',exact:true}).click();
-  await seed(roots[0]);
-  for(const [i,root] of roots.entries()){const folder=path.join(root,'.cbim/workspace/automation_demo/workflows/review');await fs.mkdir(folder,{recursive:true});await fs.writeFile(path.join(folder,'workflow.md'),`# ${i===0?'Alpha 团队评审':'Beta 资源检查'}\n当前工作区的工作流定义。`)}
-  assert.equal(await page.locator('.primary-nav').getByRole('button',{name:'自动化',exact:true}).count(),0);
-  assert.equal(await page.getByRole('button',{name:'自动化',exact:true}).count(),0);
-  await page.getByRole('button',{name:'alpha · 运行中',exact:true}).click();await page.getByRole('tab',{name:'对话',exact:true}).waitFor();
-  await page.getByRole('textbox',{name:'对话草稿'}).fill('梳理团队能力与项目知识。');
-  await addTab(page,'团队组织架构');await page.locator('.agent-node').filter({hasText:'架构师'}).waitFor();await page.locator('.agent-node').filter({hasText:'架构师'}).click();await page.locator('.inspector h2').filter({hasText:'架构师'}).waitFor();
-  await addTab(page,'团队知识图');await page.locator('.module-card').filter({hasText:'project'}).first().waitFor();await page.getByRole('button',{name:'全部折叠',exact:true}).click();assert.equal(await page.locator('.module-card:visible').count(),1);await page.getByRole('button',{name:'全部展开',exact:true}).click();assert.equal(await page.locator('.module-card:visible').count(),2);
-  await page.getByRole('button',{name:'知识管理',exact:true}).click();await page.getByRole('button',{name:'知识编辑',exact:true}).click();assert.equal(await page.locator('.file-list').getByRole('button',{name:'entry.md',exact:true}).count(),0);await page.locator('.file-list').getByRole('button',{name:'README.md',exact:true}).click();await page.locator('.editor textarea').fill('# 未提交的知识编辑');
-  assert.equal(await page.locator('.knowledge-manager aside,.knowledge-manager .restore,.knowledge-manager .app').count(),0);
-  await page.locator('.editor .primary').click();await page.locator('.knowledge-manager .modal').waitFor();
-  assert.equal(await page.locator('.knowledge-manager .modal-backdrop').evaluate(el=>getComputedStyle(el).position),'fixed');
-  await page.screenshot({path:'test-results/knowledge-preview-dark.png'});
-  await page.locator('.knowledge-manager .modal').getByRole('button',{name:'关闭',exact:true}).click();
-  page.once('dialog',dialog=>dialog.dismiss());await page.getByRole('button',{name:'beta · 运行中',exact:true}).click();assert.equal(await page.locator('.workspace-topbar strong').innerText(),'alpha');assert.equal(await page.locator('.editor textarea').inputValue(),'# 未提交的知识编辑');await page.getByRole('button',{name:'返回架构图',exact:true}).click();
-  await addTab(page,'任务流程');await page.getByRole('button',{name:'检查工作区知识',exact:true}).click();await page.getByText('执行完成',{exact:true}).waitFor();
-  await page.locator('.tab-wrapper').filter({has:page.getByRole('tab',{name:'任务流程',exact:true})}).dragTo(page.locator('.tab-wrapper').filter({has:page.getByRole('tab',{name:'对话',exact:true})}));assert.equal(await page.getByRole('tab').first().innerText(),'任务流程');
-  await page.getByRole('tab',{name:'团队组织架构',exact:true}).focus();await page.keyboard.press('Alt+ArrowLeft');const order=await page.getByRole('tab').allTextContents();assert.deepEqual(order,['任务流程','团队组织架构','对话','团队知识图']);
-  page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'beta · 运行中',exact:true}).click();assert.deepEqual(await page.getByRole('tab').allTextContents(),['对话']);await page.getByRole('textbox',{name:'对话草稿'}).fill('仅属于 beta 的草稿');
-  await page.getByRole('button',{name:'alpha · 运行中',exact:true}).click();assert.deepEqual(await page.getByRole('tab').allTextContents(),order);await page.getByRole('tab',{name:'对话',exact:true}).click();assert.equal(await page.getByRole('textbox',{name:'对话草稿'}).inputValue(),'梳理团队能力与项目知识。');
-  await addTab(page,'对话');assert.equal(await page.getByRole('tab',{name:'对话',exact:true}).count(),2);await page.getByRole('button',{name:'关闭页签 对话',exact:true}).last().click();assert.equal(await page.getByRole('tab',{name:'对话',exact:true}).count(),1);
-  await page.getByRole('button',{name:'工作区设置',exact:true}).click();await page.locator('.workspace-settings').getByRole('button',{name:'自动化',exact:true}).click();await page.getByRole('heading',{name:'自动化',exact:true}).waitFor();await page.getByRole('heading',{name:'Alpha 团队评审',exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'Beta 资源检查',exact:true}).count(),0);assert.equal(await page.locator('.workspace-automation').getAttribute('data-workspace-id'),result.a.id);
-  await page.getByRole('button',{name:'协作视图',exact:true}).click();await page.getByRole('tab',{name:'对话',exact:true}).click();assert.equal(await page.getByRole('textbox',{name:'对话草稿'}).inputValue(),'梳理团队能力与项目知识。');
-  await page.getByRole('button',{name:'beta · 运行中',exact:true}).click();await page.getByRole('button',{name:'工作区设置',exact:true}).click();await page.locator('.workspace-settings').getByRole('button',{name:'自动化',exact:true}).click();await page.getByRole('heading',{name:'Beta 资源检查',exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'Alpha 团队评审',exact:true}).count(),0);assert.equal(await page.locator('.workspace-automation').getAttribute('data-workspace-id'),result.b.id);
-  assert.equal(await page.locator('.primary-nav').getByText('设置',{exact:true}).count(),0);
-  await page.getByRole('button',{name:'用户菜单',exact:true}).click();await page.getByRole('menu',{name:'用户菜单',exact:true}).waitFor();
-  assert.equal(await page.getByRole('menuitem',{name:'退出登录',exact:true}).isDisabled(),true);
-  await page.keyboard.press('End');assert.equal(await page.evaluate(()=>document.activeElement?.textContent),'切换浅色模式');
-  const geometry=await page.evaluate(()=>{const trigger=document.querySelector('.user-profile-trigger').getBoundingClientRect(),menu=document.querySelector('.user-menu').getBoundingClientRect(),footer=document.querySelector('.sidebar-footer').getBoundingClientRect();return {gap:trigger.top-menu.bottom,left:menu.left-trigger.left,height:footer.height,padding:getComputedStyle(document.querySelector('.user-menu')).paddingTop}});
-  assert.ok(Math.abs(geometry.gap-8)<1);assert.ok(Math.abs(geometry.left)<1);assert.equal(geometry.height,40);assert.equal(geometry.padding,'4px');
-  await page.screenshot({path:'test-results/user-menu.png'});
-  await page.keyboard.press('Escape');assert.equal(await page.getByRole('menu').count(),0);
-  const localRepo=path.join(temp,'local-repo'),hostRepo=path.join(temp,'host-repo');await fs.mkdir(localRepo);await fs.mkdir(hostRepo);
-  await page.getByRole('button',{name:'用户菜单',exact:true}).click();await page.getByRole('menuitem',{name:'设置',exact:true}).click();await page.getByRole('textbox',{name:'本地仓库文件夹',exact:true}).fill(localRepo);await page.getByRole('button',{name:'保存本地目录',exact:true}).click();await page.getByRole('status').filter({hasText:'已更新'}).waitFor();await page.getByRole('button',{name:'人才市场',exact:true}).click();await page.getByRole('heading',{name:'仓库中还没有此类资源',exact:true}).waitFor();
-  const resources=[['链接器 工具桥梁','connector','文档桥梁'],['人才市场','agent','专项架构师'],['人才市场','skill','架构评审方法'],['业务模版','architecture','项目架构模版'],['业务模版','module','资源模块模版'],['业务模版','workflow','评审流程模版']];
-  for(const [category,kind,name] of resources){await page.getByRole('button',{name:category,exact:true}).click();assert.equal(await page.getByRole('textbox',{name:'本地仓库文件夹',exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'仓库设置',exact:true}).count(),0);await page.getByRole('button',{name:'新建自定义资源',exact:true}).click();await page.getByRole('combobox',{name:'资源类型'}).selectOption(kind);await page.getByRole('textbox',{name:'资源名称'}).fill(name);await page.getByRole('textbox',{name:'资源定义'}).fill('# '+name+'\n团队资源定义');await page.getByRole('button',{name:'保存定义',exact:true}).click();await page.getByRole('heading',{name,exact:true}).waitFor()}
-  const disk=JSON.parse(await fs.readFile(path.join(localRepo,'cbim-resources.json'),'utf8'));assert.equal(disk.items.length,6);await assert.rejects(fs.access(path.join(user,'resource-library.json')));
-  await page.getByRole('button',{name:'用户菜单',exact:true}).click();await page.getByRole('menuitem',{name:'设置',exact:true}).click();
-  await page.getByRole('heading',{name:'服务器仓库',exact:true}).waitFor();
-  assert.equal(await page.getByRole('textbox',{name:'服务器地址',exact:true}).count(),0);
-  assert.equal(await page.getByRole('textbox',{name:'连接令牌',exact:true}).count(),0);
-  assert.equal(await page.getByRole('radio').count(),0);
-  assert.equal(await page.getByRole('button',{name:'账号登录待接入',exact:true}).isDisabled(),true);
-  await assert.rejects(page.evaluate(()=>window.cbim.call('resources.configure',{mode:'remote',location:'http://127.0.0.1:1',token:'invalid-token-for-test'})),/SESSION_REQUIRED/);
-  assert.equal((await page.evaluate(()=>window.cbim.call('resources.status'))).source,'local');
-  await page.getByRole('button',{name:'启动仓库共享',exact:true}).click();
-  await page.getByRole('button',{name:'停止共享',exact:true}).waitFor();
-  await page.getByRole('button',{name:'显示连接信息',exact:true}).click();
-  await page.getByRole('textbox',{name:'本机服务地址',exact:true}).waitFor();
-  assert.ok(await page.getByRole('textbox',{name:'共享令牌',exact:true}).inputValue());
-  await page.screenshot({path:'test-results/settings.png'});
-  await page.getByRole('button',{name:'停止共享',exact:true}).click();
-  await page.getByRole('button',{name:'启动仓库共享',exact:true}).waitFor();
-  await page.getByRole('button',{name:'业务模版',exact:true}).click();await page.getByRole('heading',{name:'项目架构模版',exact:true}).waitFor();await page.screenshot({path:'test-results/resource-repository.png'});
-  await page.getByRole('button',{name:'alpha · 运行中',exact:true}).click();await page.getByRole('tab',{name:'团队知识图',exact:true}).click();await page.locator('.module-card-content').first().click();await fs.mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/knowledge-dark.png'});
-  await page.getByRole('button',{name:'切换浅色模式'}).click();await page.screenshot({path:'test-results/knowledge-light.png'});await page.getByRole('button',{name:'切换深色模式'}).click();await page.getByRole('tab',{name:'对话',exact:true}).click();await page.screenshot({path:'test-results/desktop.png'});
-  await page.setViewportSize({width:800,height:640});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:'test-results/desktop-compact.png'});await page.setViewportSize({width:1320,height:860});
-  await app.close();app=undefined;page=await launch();await page.getByRole('button',{name:'人才市场',exact:true}).click();await page.getByRole('heading',{name:'专项架构师',exact:true}).waitFor();await page.getByRole('button',{name:'alpha · 运行中',exact:true}).click();assert.deepEqual(await page.getByRole('tab').allTextContents(),order);await page.getByRole('tab',{name:'对话',exact:true}).click();await page.getByRole('textbox',{name:'对话草稿'}).waitFor();assert.equal(await page.getByRole('textbox',{name:'对话草稿'}).inputValue(),'梳理团队能力与项目知识。');
-  await page.getByRole('button',{name:'beta · 运行中',exact:true}).click();await page.getByRole('textbox',{name:'对话草稿'}).waitFor();assert.equal(await page.getByRole('textbox',{name:'对话草稿'}).inputValue(),'仅属于 beta 的草稿');
-  await page.getByRole('button',{name:'alpha · 运行中',exact:true}).click();await page.getByRole('button',{name:'工作区设置',exact:true}).click();await page.getByRole('button',{name:'关闭工作区页面',exact:true}).click();await page.getByRole('button',{name:'alpha · 运行中',exact:true}).waitFor();
-  await page.getByRole('button',{name:'alpha · 运行中',exact:true}).click();await page.getByRole('button',{name:'alpha · 运行中',exact:true}).waitFor();const identity=await page.evaluate(id=>window.cbim.call('snapshot',{id}),result.a.id);await page.getByRole('button',{name:'alpha · 运行中',exact:true}).dblclick();assert.equal((await page.evaluate(id=>window.cbim.call('snapshot',{id}),result.a.id)).instanceId,identity.instanceId);
-  const missing=path.join(temp,'missing');await fs.mkdir(missing);await page.evaluate(p=>window.cbim.call('add',{path:p}),missing);await app.close();app=undefined;await fs.rename(missing,missing+'-moved');page=await launch();await page.getByRole('button',{name:/missing/}).click();await page.getByRole('heading',{name:'工作区打开失败',exact:true}).waitFor();await assert.rejects(fs.access(missing));
-  await page.getByRole('button',{name:'alpha · 运行中',exact:true}).click();
-  await page.getByRole('button',{name:'工作区设置',exact:true}).click();
-  const mcpPanel=page.getByRole('region',{name:'alpha 的 MCP 服务'});
-  await mcpPanel.getByText('连接详情',{exact:false}).click();
-  const beforeRestart=await page.evaluate(id=>window.cbim.call('snapshot',{id}),result.a.id),peerBefore=await page.evaluate(id=>window.cbim.call('snapshot',{id}),result.b.id);
-  const discovery=JSON.parse(await fs.readFile(path.join(user,result.a.id,'discovery.json'),'utf8')),credentials=JSON.parse(await fs.readFile(path.join(user,result.a.id,'credentials.json'),'utf8'));
-  const response=await fetch(discovery.url,{method:'POST',headers:{Authorization:'Bearer '+credentials.readToken,'Content-Type':'application/json',Accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-03-26',capabilities:{},clientInfo:{name:'desktop-test',version:'1'}}})});assert.equal(response.status,200);await response.text();
-  await mcpPanel.getByText('累计请求：1 · 错误：0',{exact:true}).waitFor();
-  assert.equal(await page.locator('.workspace-list .mcp-summary').count(),3);
-  await page.screenshot({path:'test-results/mcp-status.png'});
-  await mcpPanel.locator('.knowledge-issues summary').click();assert.ok(await mcpPanel.locator('.knowledge-issue').count()>0);await mcpPanel.locator('.knowledge-issues summary').click();
-  await mcpPanel.getByText('MCP 调用日志',{exact:true}).click();await mcpPanel.locator('.mcp-log-row b').filter({hasText:'initialize'}).waitFor();
-  const failed=await fetch(discovery.url,{method:'POST',headers:{Authorization:'Bearer '+credentials.readToken,'Content-Type':'application/json',Accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'cbim_knowledge_snapshot',arguments:{workspaceId:result.a.id,instanceId:'stale'}}})});await failed.text();
-  await mcpPanel.getByLabel('只看错误',{exact:true}).check();const errorRow=mcpPanel.locator('.mcp-log-row').filter({hasText:'STALE_INSTANCE'});await errorRow.waitFor();await errorRow.locator('summary').click();assert.ok((await errorRow.innerText()).includes('cbim_knowledge_snapshot'));await page.screenshot({path:'test-results/mcp-logs.png'});
 
-  await mcpPanel.getByRole('button',{name:'重启 MCP',exact:true}).click();
-  await page.waitForFunction(async ({id,instanceId})=>{try{return (await window.cbim.call('snapshot',{id})).instanceId!==instanceId}catch{return false}},{id:result.a.id,instanceId:beforeRestart.instanceId});
-  await mcpPanel.getByRole('button',{name:'重启 MCP',exact:true}).waitFor();
-  assert.equal((await page.evaluate(id=>window.cbim.call('snapshot',{id}),result.b.id)).instanceId,peerBefore.instanceId);
-  await mcpPanel.getByText('累计请求：0 · 错误：0',{exact:true}).waitFor();
-  const state=await page.evaluate(()=>window.cbim.call('list'));assert.equal(state.entries.find(x=>x.id===result.b.id).state,'running');assert.deepEqual(errors,[]);
-  const evidence={selectOpensWorkspace:true,repeatedSelectionKeepsInstance:true,missingPathNotCreated:true,localRepositoryCrud:true,signedOutLocalOnly:true,serverRepositoryPlaceholder:true,manualRemoteBlocked:true,repositoryRestartPersistence:true,packagedExe:exe,workspaces:2,switching:true,closeIsolation:true,backgroundStartup:true,closePageKeepsService:true,mcpStatus:true,mcpTraffic:true,mcpCallLogs:true,knowledgeIssuesVisible:true,mcpRestartIsolation:true,deprecatedEntryAbsent:true,customTabs:true,dragReorder:true,keyboardReorder:true,workspaceTabIsolation:true,restartPersistence:true,draftIsolation:true,unsavedKnowledgeGuard:true,compactWindow:true,realTeamGraph:true,realModuleGraph:true,realTaskState:true,lightAndDark:true,rendererErrors:errors};await fs.writeFile('test-results/desktop.json',json(evidence));console.log(json(evidence));
-}finally{if(app)await app.close();if(hostApp)await hostApp.close();await fs.rm(temp,{recursive:true,force:true,maxRetries:10,retryDelay:300})}
+// 组合当前对话区、侧栏、扩展区和运行时的真实桌面测试，避免沿用已删除的顶部页签和外部服务 UI。
+const executable=await latestExecutable(),startedAt=new Date().toISOString(),results=[];
+await fs.mkdir('test-results',{recursive:true});
+try{
+  for(const script of ['sidebar-smoke.mjs','extensions-smoke.mjs','runtime-smoke.mjs','loop-smoke.mjs']){
+    const result=await new Promise((resolve,reject)=>{
+      const child=spawn(process.execPath,['scripts/'+script],{env:{...process.env,CBIM_TEST_EXE:executable},windowsHide:true,stdio:'inherit'});
+      child.on('error',reject);child.on('exit',code=>resolve({script,code,passed:code===0}));
+    });
+    results.push(result);if(!result.passed)throw Error('桌面验证失败：'+script+'（退出码 '+result.code+'）');
+  }
+  console.log(JSON.stringify({packagedExecutable:executable,passed:true,results}));
+}finally{
+  await fs.writeFile('test-results/desktop.json',JSON.stringify({packagedExecutable:executable,startedAt,completedAt:new Date().toISOString(),passed:results.length===4&&results.every(result=>result.passed),results},null,2));
+}

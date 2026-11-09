@@ -1,6 +1,6 @@
 # Python → TypeScript 规则迁移
 
-按用户要求，新应用不复用 Python 进程。`src/backend/core/knowledge/knowledge.ts` 与现有 Schema 是新运行权威，旧 Python 与旧 Skill 脚本暂留作历史对照，不由 UI、CLI、MCP 调用，日后废弃。
+按用户要求，新应用不复用 Python 进程。`src/backend/core/knowledge/knowledge.ts` 与现有 Schema 是新运行权威，旧 Python 与旧 Skill 脚本暂留作历史对照，不由桌面或内部 Loop 调用，日后废弃。
 
 | 原实现/规范 | 新实现 |
 |---|---|

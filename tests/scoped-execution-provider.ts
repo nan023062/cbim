@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';import http from 'node:http';
+import {goalPlanArguments,goalInspection,goalCompleteArguments,type GoalFixtureRequest} from './goal-provider-fixture';
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+export const scopedData={model:'scoped-execution-fixture',goal:'SCOPED_MAIN: 在冻结范围内执行并交付',memberGoal:'SCOPED_MEMBER: 使用受控读取、隔离Node及受控写入',acceptance:['最终文件是隔离执行的实际输出，并有本轮读取基线'],file:'result.txt',before:'before',after:'computed-in-lpac',draft:'保持范围验收的普通草稿'};
+type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]};
+export function scopedResult(body:Request,id:string):any{const message=body.messages.find(m=>m.role==='tool'&&m.tool_call_id===id);assert.ok(message,'缺实际回包 '+id);const raw=typeof message.content==='string'?message.content:JSON.stringify(message.content);let value;try{value=JSON.parse(raw)}catch{return {error:raw}}if(Array.isArray(value.content)){const text=value.content.filter((x:any)=>x.type==='text').map((x:any)=>x.text).join('');try{return JSON.parse(text)}catch{return {error:text}}}return value}
+/** 本机确定性模型，只选择实际工具；执行与权限、冻结知识、真实文件均由产品处理。 */
+export async function scopedProvider(mode:'complete'|'stop'='complete'){
+ const main:Request[]=[],member:Request[]=[],errors:string[]=[],state:any={};let agentId='',moduleId='',selection:OwnerExecutionSelection|undefined;
+ const server=http.createServer(async(req,res)=>{try{let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw)as Request;assert.equal(body.model,scopedData.model);const isMain=body.tools?.some(t=>t.function.name==='cbim_dispatch_task'),turn=(isMain?main:member).length;(isMain?main:member).push(body);
+  res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'scope-'+main.length+'-'+member.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=()=>{emit({role:'assistant',content:'原冻结范围执行结果已记录。'});emit({},'stop')};
+  if(isMain){if(turn===0){assert.ok(selection);tool('goal-plan','cbim_goal_plan',goalPlanArguments({objective:scopedData.goal,agentId,moduleIds:[moduleId],acceptance:scopedData.acceptance,ownerSelection:selection}))}else if(turn===1)tool('dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection:selection,goal:scopedData.memberGoal,acceptance:scopedData.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});else if(turn===2)reply();else if(turn===3)tool('goal-inspect','cbim_goal_inspect',{});else if(turn===4)tool('goal-review','cbim_goal_review',goalCompleteArguments(body,'goal-inspect'));else if(turn===5)reply();else throw Error('unexpected main replay '+turn)}
+  else{assert.ok(body.tools?.every(t=>!['read','write','edit','bash','grep','find','ls'].includes(t.function.name)),'范围模式不得注册native');
+   if(turn===0)tool('plan','cbim_task_plan',{expectedVersion:0,goal:scopedData.memberGoal,acceptance:scopedData.acceptance,reason:'执行固定范围验证',steps:[{id:'verify',title:'验证实际输出',owner:'当前成员'}]});
+   else if(turn===1)tool('outside-read','cbim_scoped_read',{path:'private.txt'});
+   else if(turn===2){assert.ok(scopedResult(body,'outside-read').error);tool('forged-native','bash',{command:'echo UNSAFE > private.txt'})}
+   else if(turn===3)tool('read-entry','cbim_scoped_read',{path:'src/main.cjs'});
+   else if(turn===4){assert.ok(scopedResult(body,'read-entry').file.sha256);state.nodeRequested=true;tool('node','cbim_scoped_node',{entry:'src/main.cjs',files:['src/main.cjs','src/data.txt'],args:[],outputs:['out.txt']})}
+   else if(turn===5){assert.equal(mode,'complete');state.node=scopedResult(body,'node');assert.equal(state.node.exitCode,0,JSON.stringify(state.node));assert.equal(Buffer.from(state.node.outputs[0].base64,'base64').toString(),scopedData.after);tool('read-before','cbim_scoped_read',{path:scopedData.file})}
+   else if(turn===6){state.before=scopedResult(body,'read-before');assert.equal(state.before.content,scopedData.before);tool('outside-write','cbim_file_write_controlled',{path:'private.txt',expectedBefore:{byteLength:state.before.file.byteLength,sha256:state.before.file.sha256},content:'UNSAFE'})}
+   else if(turn===7){assert.ok(scopedResult(body,'outside-write').error);tool('write-result','cbim_file_write_controlled',{path:scopedData.file,expectedBefore:{byteLength:state.before.file.byteLength,sha256:state.before.file.sha256},content:Buffer.from(state.node.outputs[0].base64,'base64').toString()})}
+   else if(turn===8){assert.equal(scopedResult(body,'write-result').state,'applied');tool('read-result','cbim_scoped_read',{path:scopedData.file})}
+   else if(turn===9){assert.equal(scopedResult(body,'read-result').content,scopedData.after);tool('inspect','cbim_task_inspect',{})}
+   else if(turn===10){state.progress=scopedResult(body,'inspect').plan;tool('capture','cbim_task_artifact_capture',{expectedTaskProgressVersion:state.progress.version,sourceToolCallIds:['read-result']})}
+   else if(turn===11){state.capture=scopedResult(body,'capture');assert.equal(state.capture.state,'captured');tool('step','cbim_task_step',{expectedVersion:state.progress.version,id:'verify',state:'reported_done',evidenceIds:['read-result']})}
+   else if(turn===12)tool('delivery','cbim_delivery_prepare',{expectedVersion:scopedResult(body,'step').version,summary:'实际隔离输出已通过独立受控写入与读取核实',limitations:['命令退出零与实际字节不等于专业语义验收']});
+   else if(turn===13){state.delivery=scopedResult(body,'delivery');assert.equal(state.delivery.state,'awaiting_review');reply()}
+   else throw Error('unexpected member replay '+turn);
+  }res.end('data: [DONE]\n\n');
+ }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('local scoped fixture failed')}});
+ await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,state,bind:(a:string,m:string,s:OwnerExecutionSelection)=>{agentId=a;moduleId=m;selection=structuredClone(s)},close:async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+}

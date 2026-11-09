@@ -35,27 +35,41 @@ it('durably records gates before execution; engine completion never means busine
     const call={id:'call-1',name:'read',input:{path:'src/test.ts'}};
     expect((await this.context.beforeTool(call)).allow).toBe(true);
     const recorded=await RunJournal.read(this.context.directory);expect(recorded.events.at(-1)?.type).toBe('tool.allowed');
-    await this.context.emit({type:'tool.finished',data:{id:call.id,isError:false,result:'verified'}});directory=this.context.directory;
+    await this.context.emit({type:'tool.finished',data:{id:call.id,isError:false,result:'verified',receipt:{workspaceId:'forged',outcome:'accepted'}}});directory=this.context.directory;
     return {status:'completed' as const};
   }}
   const f=await setup(()=>new Engine());try{
     const run=await f.runtime.start(f.task),result=await run.done;
     expect(result.status).toBe('completed');expect(result.acceptance).toBe('not_evaluated');expect(result.unresolvedTools).toEqual([]);
+    expect(result.toolReceipts).toMatchObject([{toolCallId:'call-1',outcome:'succeeded',workspaceId:f.task.workspaceId,taskId:f.task.taskId,runId:run.runId}]);
+    expect(result.toolReceipts![0].inputHash).toHaveLength(64);
     expect((await RunJournal.read(directory)).events.map(e=>e.seq)).toEqual([1,2,3,4,5,6]);
     await expect(f.runtime.start(f.task)).rejects.toMatchObject({code:'EEXIST'});
   }finally{await f.cleanup()}
 });
 
-it('crashed tool operations require explicit reconciliation, and recovery keeps task identity',async()=>{
+it('unknown tools cannot resume their native context through bare reconciliation IDs',async()=>{
   let count=0;
   class Crash extends StubEngine{async run():Promise<{status:'completed'}>{await this.context.beforeTool({id:'uncertain-write',name:'write',input:{path:'src/result'}});throw Error('process lost')}}
   const f=await setup(()=>count++===0?new Crash():new StubEngine());try{
     const first=await f.runtime.start(f.task),result=await first.done;expect(result.status).toBe('interrupted');expect(result.unresolvedTools).toEqual(['uncertain-write']);
-    await expect(f.runtime.start(f.task,'continue',{runId:first.runId})).rejects.toThrow('先核实');
+    expect(result.toolReceipts).toMatchObject([{toolCallId:'uncertain-write',outcome:'unknown'}]);
+    await expect(f.runtime.start(f.task,'continue',{runId:first.runId})).rejects.toMatchObject({code:'RECOVERY_INSPECTION_REQUIRED'});
     await expect(f.runtime.start({...f.task,root:'wrong'},'continue',{runId:first.runId})).rejects.toThrow('原任务');
-    const next=await f.runtime.start(f.task,'verified file; continue',{runId:first.runId,reconciledToolIds:['uncertain-write']});
-    expect((await next.done).status).toBe('completed');expect(next.runId).not.toBe(first.runId);
+    const before=await fs.readFile(path.join(f.directory,f.task.taskId,first.runId,'events.jsonl'));
+    await expect(f.runtime.start(f.task,'verified file; continue',{runId:first.runId,reconciledToolIds:['uncertain-write']})).rejects.toMatchObject({code:'RECOVERY_INSPECTION_REQUIRED'});
+    expect(count).toBe(1);expect(await fs.readFile(path.join(f.directory,f.task.taskId,first.runId,'events.jsonl'))).toEqual(before);
+    expect((await f.runtime.inspect(f.task.taskId,first.runId)).unresolvedTools).toEqual(['uncertain-write']);
   }finally{await f.cleanup()}
+});
+
+it('stopping during approval cannot release a late allow decision',async()=>{
+  let approve!:(decision:{allow:boolean})=>void,entered!:()=>void;
+  const gate=new Promise<void>(resolve=>{entered=resolve});
+  class Engine extends StubEngine{async run(){const decision=await this.context.beforeTool({id:'late',name:'write',input:{}});expect(decision.allow).toBe(false);return {status:'completed' as const}}}
+  const f=await setup(()=>new Engine());
+  (f.runtime as any).options.toolPolicy=async()=>{entered();return new Promise(resolve=>{approve=resolve})};
+  try{const run=await f.runtime.start(f.task);await gate;await f.runtime.stop(f.task.taskId);approve({allow:true});const result=await run.done;expect(result.toolReceipts).toMatchObject([{toolCallId:'late',outcome:'denied'}]);expect(result.unresolvedTools).toEqual([])}finally{await f.cleanup()}
 });
 
 it('journal failure blocks a tool; observers do not control durable execution',async()=>{
@@ -74,5 +88,29 @@ it('a truncated journal tail is never interpreted as completed',async()=>{
     const file=path.join(f.directory,f.task.taskId,run.runId,'events.jsonl');const text=await fs.readFile(file,'utf8');
     const lines=text.trimEnd().split('\n');lines.pop();await fs.writeFile(file,lines.join('\n')+'\n{"type":"run.settled"');
     expect((await f.runtime.inspect(f.task.taskId,run.runId)).status).toBe('interrupted');
+  }finally{await f.cleanup()}
+});
+
+it('task revisions survive logs and resume with stale evidence cleared, never auto-accepted',async()=>{
+  let turn=0;
+  class Engine extends StubEngine{async run(){
+    const tools=this.context.taskTools!;
+    if(turn++===0){
+      await tools.call('cbim_task_plan',{expectedVersion:0,goal:'交付功能',reason:'用户目标',acceptance:['检查结果'],steps:[{id:'one',title:'验证功能',owner:'主 Agent'}]});
+      await this.context.beforeTool({id:'proof',name:'read',input:{path:'proof.txt'}});
+      await this.context.emit({type:'tool.finished',data:{id:'proof',name:'read',result:'actual result'}});
+      await tools.call('cbim_task_step',{expectedVersion:1,id:'one',state:'reported_done',evidenceIds:['proof']});
+      await tools.call('cbim_delivery_prepare',{expectedVersion:2,summary:'待核验结果',limitations:[]});
+    }else{
+      const state=JSON.parse((await tools.call('cbim_task_inspect',{})).content[0].text);
+      expect(state.plan).toMatchObject({version:4,state:'executing',steps:[{state:'pending',evidence:[]}]});expect(state.evidence).toEqual([]);
+    }
+    return {status:'completed' as const};
+  }}
+  const f=await setup(()=>new Engine());try{
+    const first=await f.runtime.start(f.task),result=await first.done;
+    expect(result.taskProgress?.state).toBe('awaiting_review');expect(result.acceptance).toBe('not_evaluated');
+    expect((await RunJournal.read(path.join(f.directory,f.task.taskId,first.runId))).taskProgress).toEqual(result.taskProgress);
+    const second=await f.runtime.start(f.task,'继续修改',{runId:first.runId});await second.done;
   }finally{await f.cleanup()}
 });

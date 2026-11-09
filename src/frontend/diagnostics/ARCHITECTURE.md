@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-MCP 健康、流量与调用日志的诊断展示，不把服务在线视为知识校验通过。
+只读展示工作区运行状态和知识校验问题，不把工作区就绪视为知识校验通过。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,63 +10,57 @@ MCP 健康、流量与调用日志的诊断展示，不把服务在线视为知�
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [format.ts](format.ts) | 资料文件；不直接执行应用逻辑。 |
-| [McpLogs.tsx](McpLogs.tsx) | 查询和筛选当前工作区的 MCP 调用日志。 |
-| [McpStatus.tsx](McpStatus.tsx) | 工作区 MCP 状态摘要、流量、问题详情和重启入口。 |
+| [diagnostics.css](diagnostics.css) | 工作区运行状态与知识校验详情的扩展面板样式。 |
+| [WorkspaceDiagnostics.tsx](WorkspaceDiagnostics.tsx) | 只读展示工作区内部运行状态和知识校验问题。 |
 
 ## 架构类图
 
-### format.ts
+### diagnostics.css
 
 ```mermaid
 classDiagram
-class N_src_frontend_diagnostics_format_ts["format.ts"] {
-  <<module>>
-  +formatBytes()
+class N_src_frontend_diagnostics_diagnostics_css["diagnostics.css"] {
+  <<stylesheet>>
 }
 ```
 
-### McpLogs.tsx
+### WorkspaceDiagnostics.tsx
 
 ```mermaid
 classDiagram
-class N_src_frontend_diagnostics_McpLogs_tsx["McpLogs.tsx"] {
+class N_src_frontend_diagnostics_WorkspaceDiagnostics_tsx["WorkspaceDiagnostics.tsx"] {
   <<component>>
-  +McpLogs()
+  +WorkspaceDiagnostics()
 }
 ```
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[format.ts](format.ts)。
-
-### McpStatus.tsx
 
 ```mermaid
 classDiagram
-class N_src_frontend_diagnostics_McpStatus_tsx["McpStatus.tsx"] {
+class N_src_frontend_diagnostics_WorkspaceDiagnostics_tsx["WorkspaceDiagnostics.tsx"] {
   <<component>>
-  +state()
-  +ago()
-  +McpSummary()
-  +McpPanel()
 }
+class N_src_frontend_diagnostics_WorkspaceDiagnostics_tsx_WorkspaceDiagnosticsProps["WorkspaceDiagnosticsProps"] {
+  <<interface>>
+  +workspace
+  +snapshot
+  +refreshKnowledge
+}
+N_src_frontend_diagnostics_WorkspaceDiagnostics_tsx ..> N_src_frontend_diagnostics_WorkspaceDiagnostics_tsx_WorkspaceDiagnosticsProps : 声明
 ```
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[McpLogs.tsx](McpLogs.tsx)、[format.ts](format.ts)。
+
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[diagnostics.css](diagnostics.css)。
 
 ### 本目录调用边界
 
 ```mermaid
 classDiagram
-class N_src_frontend_diagnostics_McpLogs_tsx["McpLogs.tsx"] {
+class N_src_frontend_diagnostics_WorkspaceDiagnostics_tsx["WorkspaceDiagnostics.tsx"] {
   <<component>>
 }
-class N_src_frontend_diagnostics_format_ts["format.ts"] {
-  <<module>>
+class N_src_frontend_diagnostics_diagnostics_css["diagnostics.css"] {
+  <<stylesheet>>
 }
-class N_src_frontend_diagnostics_McpStatus_tsx["McpStatus.tsx"] {
-  <<component>>
-}
-N_src_frontend_diagnostics_McpLogs_tsx ..> N_src_frontend_diagnostics_format_ts : 导入依赖
-N_src_frontend_diagnostics_McpStatus_tsx ..> N_src_frontend_diagnostics_McpLogs_tsx : 导入依赖
-N_src_frontend_diagnostics_McpStatus_tsx ..> N_src_frontend_diagnostics_format_ts : 导入依赖
+N_src_frontend_diagnostics_WorkspaceDiagnostics_tsx ..> N_src_frontend_diagnostics_diagnostics_css : 导入依赖
 ```
 
 

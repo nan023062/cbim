@@ -3,7 +3,7 @@ import {test,expect} from 'vitest';
 import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/execution/execution-manager';
 import {fixture} from './helpers';
 test('approve all skips later confirmations only for the current run; next run asks again',async()=>{
- const f=await fixture(false);let manager:WorkspaceExecutionManager|undefined;try{
+ const f=await fixture();let manager:WorkspaceExecutionManager|undefined;try{
  const entry=await f.app.dispatch('add',{path:f.a});const callbacks:any[]=[];const completions:((v:any)=>void)[]=[];
  manager=new WorkspaceExecutionManager(f.app.workspace(entry.id),new FileRunStorage(),async options=>{callbacks.push(options);return {runtime:{start:async()=>({runId:'test-run',done:new Promise(resolve=>completions.push(resolve))}),close:async()=>{},stop:async()=>{}}} as any});
  const options={provider:'test',model:'test',permission:'ask' as const,allowNativeExecution:true};

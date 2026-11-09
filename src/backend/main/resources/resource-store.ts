@@ -1,6 +1,6 @@
 /**
  * 作用定位：RepositoryStore 与 LocalRepository：本地资源仓库校验、版本检查及原子更新。
- * 设计原因：用统一接口隔离本地和远端仓库，写入要求仓库身份与版本一致。
+ * 设计原因：用统一接口隔离本地和远端仓库，写入要求仓库身份与版本一致；允许完整静态架构包，仍统一限制单项和仓库总字节数。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -13,7 +13,7 @@ import {hash,json} from '../../core/foundation/serialization';
 import type {ResourceLibrarySnapshot} from '../../../bridge/contracts/resources';
 
 export const MAX_BYTES=8*1024*1024;
-export const resourceFields=z.object({kind:z.enum(['connector','agent','skill','architecture','module','workflow']),name:z.string().trim().min(1).max(100),summary:z.string().trim().max(1000),content:z.string().min(1).max(200000)}).strict();
+export const resourceFields=z.object({kind:z.enum(['connector','team','agent','skill','architecture','module','workflow']),name:z.string().trim().min(1).max(100),summary:z.string().trim().max(1000),content:z.string().min(1).max(2*1024*1024).refine(value=>Buffer.byteLength(value)<=2*1024*1024,'单项资源正文不能超过 2 MiB')}).strict();
 export const itemSchema=resourceFields.extend({id:z.string().uuid(),updatedAt:z.string().datetime()});
 export const snapshotSchema=z.object({repositoryId:z.string().uuid(),revision:z.string(),items:z.array(itemSchema).max(2000)});
 const diskSchema=z.object({version:z.literal(1),repositoryId:z.string().uuid(),items:z.array(itemSchema).max(2000)}).strict();

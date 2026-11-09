@@ -1,0 +1,39 @@
+/* 静态团队知识编辑界面：使用宿主主题；显式填满 flex 侧栏，避免 inline-size containment 与 auto margin 将固有宽度收缩为零。 */
+.team-management{container-type:inline-size;width:100%;box-sizing:border-box;flex-shrink:0}
+.team-toolbar,.team-definition-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.team-toolbar{margin-bottom:20px}
+.team-toolbar button{display:inline-flex;align-items:center;gap:5px}
+.team-toolbar .inline-search{flex:1;min-width:150px}
+.team-toolbar .inline-search input{width:100%;min-width:0}
+.team-view-controls{position:relative}
+.team-view-controls summary{cursor:pointer;font-size:12px;padding:8px}
+.team-view-controls>div{position:absolute;right:0;top:100%;z-index:4;display:grid;gap:6px;padding:8px;min-width:120px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.team-management-layout{display:grid;grid-template-columns:minmax(200px,.8fr) minmax(260px,1.2fr);gap:20px;align-items:start}
+.team-definition-tree{min-width:0}
+.team-tree-row{display:flex;align-items:center;border-radius:8px;min-width:0}
+.team-tree-row.selected,.team-skill-list>button.selected{background:var(--hover)}
+.team-tree-row:hover{background:var(--hover)}
+.team-fold,.team-fold-space{width:26px;min-width:26px;text-align:center}
+.team-fold{padding:5px;border:0;background:transparent}
+.team-node-select{display:flex;align-items:center;gap:8px;text-align:left;border:0;background:transparent;min-width:0;flex:1;padding:10px 6px;font-size:inherit}
+.team-node-select>svg{flex-shrink:0}
+.team-node-select>span{min-width:0}
+.team-node-select b,.team-node-select small{display:block;overflow-wrap:anywhere}
+.team-node-select small{font-size:11px;color:var(--muted);margin-top:3px}
+.team-tree-children{margin-left:18px;padding-left:7px;border-left:1px solid var(--line)}
+.team-definition-detail{min-width:0;border-left:1px solid var(--line);padding-left:20px;font-size:13px;line-height:1.65}
+.team-definition-detail h2{margin:6px 0;font-size:19px;overflow-wrap:anywhere}
+.team-definition-detail h3{margin:22px 0 8px;font-size:14px}
+.team-definition-detail h3 small{font-weight:400;color:var(--muted);font-size:11px}
+.team-definition-detail code{font-size:11px;overflow-wrap:anywhere}
+.team-definition-detail p,.team-definition-detail li{overflow-wrap:anywhere}
+.team-definition-actions{margin:12px 0}
+.team-definition-actions button{font-size:12px;padding:6px 9px}
+.team-skill-list{display:grid;gap:6px}
+.team-skill-list>button{display:grid;gap:4px;text-align:left;min-width:0;white-space:normal;padding:10px;border:1px solid var(--line);border-radius:8px;background:transparent}
+.team-skill-list small{color:var(--muted);font-size:11px}
+.team-skill-list span{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.team-skill-detail{margin-top:16px;padding-top:4px;border-top:1px solid var(--line)}
+.team-definition-detail .chat-markdown{font-size:13px;line-height:1.7}
+.team-issues{margin-bottom:15px;color:var(--muted);font-size:12px}
+@container (max-width:650px){.team-management-layout{grid-template-columns:minmax(0,1fr)}.team-definition-detail{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:16px}.team-definition-tree{max-height:360px;overflow:auto}.team-tree-children{margin-left:11px}.team-toolbar{gap:6px}}

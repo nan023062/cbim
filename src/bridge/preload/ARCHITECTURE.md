@@ -20,7 +20,6 @@
 classDiagram
 class N_src_bridge_preload_preload_ts["preload.ts"] {
   <<module>>
-  +importFiles()
 }
 ```
 

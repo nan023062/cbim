@@ -5,6 +5,9 @@
 import type {StoragePaths as Paths} from '../foundation/paths';
 import type {ChangeRequest,Preview,Snapshot,TaskView} from './types';
 
+/** 可信知识串行域；调用方须在其内再取得模型与派发锁，不得从派发事务反向进入。 */
+export interface SourceSnapshotReader {withSourceSnapshot<T>(use:(snapshot:Snapshot)=>Promise<T>):Promise<T>}
+
 /** 提交完成的持久化回执；结构校验通过不等于业务验收通过。 */
 export interface KnowledgeCommit {
   state:string;workspaceId:string;instanceId:string;requestId:string;revision:string;changed:string[];
@@ -19,14 +22,17 @@ export interface KnowledgeWorkspace {
   readonly rules:{designRoot:string};
   readonly tasks:Map<string,TaskView>;
   state:string;
-  /** 当前实例的知识写入授权；不能由工具参数自行授予。 */
-  writable:boolean;
   assert(identity?:{workspaceId:string;instanceId:string}):void;
   read():Promise<Snapshot>;
   snapshot():Promise<Snapshot>;
   preview(request:ChangeRequest):Promise<Preview>;
   commit(request:ChangeRequest):Promise<KnowledgeCommit>;
+  /** 只读核原完整请求的成功 journal；缓存回执不能替代权威成功证明。 */
+  committedReceipt(request:ChangeRequest):Promise<KnowledgeCommit|undefined>;
+  /** 内部计划提交只接固定类型与标识；实现重新读取完整私有计划，不能接调用者自报替换意图。 */
+  commitPlanned(reference:import('./planned-commit').KnowledgePlanRef):Promise<KnowledgeCommit>;
   planMove(snapshot:Snapshot,from:string,to:string|null):Promise<ChangeRequest>;
   startTask(name:'validate'|'reindex'):TaskView;
-  cancelTask(id:string):TaskView|undefined;
+  /** 仅接受本实例的维护任务 ID；未运行或未知任务须抛错，返回当前真实状态而非承诺已停止。终态重复请求保持原结果。 */
+  cancelTask(id:string):TaskView;
 }

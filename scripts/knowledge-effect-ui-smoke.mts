@@ -1,0 +1,58 @@
+import {knowledgeRefreshProvider} from '../tests/knowledge-refresh-provider';
+import {_electron as electron,type ElectronApplication,type Page,type Locator} from 'playwright-core';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import {Application} from '../src/backend/main/application';
+import {Paths} from '../src/backend/main/platform/paths';
+import {hash} from '../src/backend/core/foundation/serialization';
+import {effectObservationReportSchema,effectDispositionReceiptSchema} from '../src/backend/core/tasks/effect-observation';
+import type {RunSummary} from '../src/backend/core/brain/types';
+import {knowledgeContractProvider,knowledgeContractFixture as data} from '../tests/knowledge-contract-provider';
+import {knowledgeEffectObjectProvider} from '../tests/knowledge-effect-object-provider';
+import {seedKnowledgeContract,knowledgeContractRecords,knowledgeContractLogBytes} from '../tests/knowledge-contract-fixture';
+import {moduleFiles,request} from '../tests/helpers';
+import {latestExecutable} from './build-artifact.mjs';
+
+// 只在隔离源码 Application 中破坏一次实际提交后的返回；最终 EXE 通过真实点击查询/处置，产品没有测试入口。
+const mode=process.argv.includes('--refresh')?'refresh':process.argv.includes('--object')?'object':'direct',artifact='knowledge-effect-'+mode,exe=await latestExecutable();
+const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-knowledge-effect-ui-')),user=path.join(temp,'user'),project=path.join(temp,'knowledge-effect-project');await fs.mkdir(project);
+const provider=mode==='direct'?await knowledgeContractProvider('malformed-after-commit'):mode==='refresh'?await knowledgeRefreshProvider():await knowledgeEffectObjectProvider(),callId=mode==='direct'?'contract-commit':mode==='refresh'?'refresh-commit':'object-commit',expectedRequests=mode==='direct'?11:8;
+const pageErrors:string[]=[],transportErrors:string[]=[],screenshots:string[]=[];let setup:Application|undefined,desktop:ElectronApplication|undefined,page!:Page,keep=false,report:Record<string,unknown>|undefined;
+const cleanup={desktopClosed:false,providerClosed:false,tempRemoved:false};
+try{
+ setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();const {entry}=await seedKnowledgeContract(setup,project,provider),workspace=setup.workspace(entry.id);
+ if(mode==='object')await workspace.commit(request(await workspace.snapshot(),moduleFiles()));if(mode==='refresh')for(const file of moduleFiles()){const target=path.join(project,file.path);await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,file.text)}
+ let writes=0;const actual=workspace.commit.bind(workspace),planned=workspace.commitPlanned.bind(workspace);
+ if(mode!=='object')workspace.commit=async input=>{const value=await actual(input);writes++;return {...value,changed:'PRIVATE_INVALID_OUTPUT_SENTINEL'} as unknown as typeof value};
+ else workspace.commitPlanned=async input=>{const value=await planned(input);writes++;return {...value,changed:'PRIVATE_INVALID_OUTPUT_SENTINEL'} as unknown as typeof value};
+ const started=await setup.dispatch('loop.chat',{id:entry.id,message:data.goal,options:{permission:'execute',turnTimeoutMs:60000}}),identity={workspaceId:entry.id,rootSessionId:started.taskId};
+ const until=async(check:()=>Promise<boolean>,label:string)=>{const end=Date.now()+90000;while(Date.now()<end){assert.deepEqual(provider.errors,[]);if(await check())return;await new Promise(resolve=>setTimeout(resolve,35))}throw Error('Knowledge effect UI timeout: '+label)};
+ await until(async()=>{const records=await knowledgeContractRecords(user,entry.id);return records.scopes[0]?.status==='closed'&&setup!.runtime.snapshot().pressure.activeRuns===0},'original scope closed');
+ const summary=await setup.dispatch('loop.inspect',{id:entry.id,taskId:started.taskId,runId:started.runId}) as RunSummary;assert.equal(summary.toolReceipts?.find(r=>r.toolCallId===callId)?.outcome,'failed');assert.equal(writes,1);assert.equal(provider.requests.length,expectedRequests);
+ const requestId='requestId'in provider?provider.requestId:provider.state.planId!;assert.ok(requestId);
+ const selection={...identity,subject:{kind:'main_run',runId:started.runId,toolCallIds:[callId]}},originalRecords=await knowledgeContractRecords(user,entry.id),originalLogs=await knowledgeContractLogBytes(user,entry.id),native=await fs.readFile(summary.sessionFile!),journalFile=path.join(user,entry.id,'transactions',requestId+'.json'),journalBytes=await fs.readFile(journalFile),knowledgeRevision=(await workspace.snapshot()).revision;
+ const archive='test-results/'+artifact+'-ui-original';await fs.mkdir(archive,{recursive:true});await fs.writeFile(path.join(archive,'knowledge-journal.json'),journalBytes);await fs.writeFile(path.join(archive,'native.jsonl'),native);await fs.writeFile(path.join(archive,'canonical-native-logs.json'),JSON.stringify(originalLogs,null,2));
+ await setup.shutdown();setup=undefined;
+ const launch=async()=>{desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',e=>pageErrors.push(e.message));page.on('requestfailed',r=>transportErrors.push(r.url()+': '+r.failure()?.errorText))};
+ const active=()=>page.locator('.workspace-panel:not([hidden])'),draft=()=>active().getByRole('textbox',{name:'对话草稿',exact:true});
+ const call=(action:string,args:unknown={})=>page.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args});
+ const shot=async(label:string,target:Locator)=>{await target.scrollIntoViewIfNeeded();const name='test-results/'+artifact+'-'+label+'.png';await page.screenshot({path:name});screenshots.push(name)};
+ const choose=async()=>{await page.getByRole('button',{name:'knowledge-effect-project · 运行中',exact:true}).click();await page.locator('[aria-label="knowledge-effect-project 的对话"] button').filter({hasText:'KNOWLEDGE_CONTRACT_MAIN:'}).first().click();await active().getByRole('tab',{name:'对话',exact:true}).click()};
+ const panel=async()=>{const selector=`details.chat-tool[data-tool-call-id="${callId}"]`,work=active().locator('details.chat-work').filter({has:page.locator(selector)}).first(),tool=active().locator(selector).first();if(await work.getAttribute('open')===null)await work.locator('summary').first().click();if(await tool.getAttribute('open')===null)await tool.locator('summary').first().click();assert.ok((await tool.locator('summary').first().innerText()).includes('执行失败'));return tool.getByTestId('effect-observation-panel')};
+ const observe=async(target:Locator)=>{await target.getByTestId('effect-observe').click();await target.getByTestId('effect-knowledge-transaction').waitFor();await until(async()=>await target.getByTestId('effect-observe').isEnabled(),'observation settled');return effectObservationReportSchema.parse(await call('dispatch.effectObserve',selection))};
+ await launch();await choose();await draft().fill(data.draft);let target=await panel();assert.equal(await target.locator('.effect-call').count(),0);const first=await observe(target);assert.equal(await target.getByTestId('effect-knowledge-transaction').getAttribute('data-state'),'committed');assert.equal(first.calls[0].outcome,'failed');assert.equal(first.calls[0].knowledge?.identity.requestId,requestId);assert.equal(first.calls[0].knowledge?.revision,knowledgeRevision);assert.ok(!(await target.innerText()).includes(data.marker));if(mode==='object')assert.ok((await target.innerText()).includes('空目录修剪'));await shot('original-transaction',target);
+ await target.getByTestId('effect-decision').selectOption('inspect_more');await target.getByTestId('effect-reason').fill('原知识事务已保存，原工具失败保留；新核实应另外建立目标。');await target.getByTestId('effect-save').click();await until(async()=>await target.getByTestId('effect-disposition-form').getAttribute('data-phase')==='accepted','explicit disposition saved');
+ const commandId=(await target.getByTestId('effect-selected-disposition').locator('code').innerText()).trim(),saved=effectDispositionReceiptSchema.parse(await call('dispatch.effectDispositionReceipt',{...identity,commandId}));assert.equal(saved.record.observation.calls[0].knowledge?.state,'committed');await target.getByTestId('effect-query').click();await until(async()=>await target.getByTestId('effect-query').isEnabled(),'original disposition queried');await shot('explicit-disposition',target);
+ const finalRecords=await knowledgeContractRecords(user,entry.id);assert.deepEqual(finalRecords.scopes,originalRecords.scopes);assert.deepEqual(finalRecords.runs,originalRecords.runs);assert.deepEqual(await knowledgeContractLogBytes(user,entry.id),originalLogs);assert.deepEqual(await fs.readFile(journalFile),journalBytes);assert.deepEqual(await fs.readFile(summary.sessionFile!),native);assert.equal(provider.requests.length,expectedRequests);assert.equal(await draft().inputValue(),data.draft);
+ const dispatchBytes=await fs.readFile(path.join(user,entry.id,'dispatch','dispatch.jsonl'));await desktop!.close();desktop=undefined;await launch();await choose();assert.equal(await draft().inputValue(),data.draft);target=await panel();assert.equal(await target.locator('.effect-call').count(),0);await target.getByTestId('effect-history-load').click();await target.locator(`[data-disposition-id="${commandId}"]`).click();await target.getByTestId('effect-selected-disposition').waitFor();const reopened=await observe(target);assert.deepEqual(reopened.calls,first.calls);assert.equal(reopened.basis,first.basis);assert.equal(await target.getByTestId('effect-knowledge-transaction').getAttribute('data-state'),'committed');await shot('restored-original',target);
+ assert.deepEqual(await call('dispatch.effectDispositionReceipt',{...identity,commandId}),saved);assert.deepEqual(await knowledgeContractRecords(user,entry.id),finalRecords);assert.deepEqual(await fs.readFile(path.join(user,entry.id,'dispatch','dispatch.jsonl')),dispatchBytes);assert.deepEqual(await fs.readFile(journalFile),journalBytes);assert.deepEqual(await knowledgeContractLogBytes(user,entry.id),originalLogs);assert.deepEqual(await fs.readFile(summary.sessionFile!),native);assert.equal(provider.requests.length,expectedRequests);assert.deepEqual(pageErrors,[]);assert.deepEqual(transportErrors,[]);
+ report={mode,exe,identity,runId:started.runId,requestId,requests:provider.requests.length,actualOriginalWrites:writes,finalObservation:first,reopened,receipt:saved,originalJournalBytes:journalBytes.length,originalJournalHash:hash(journalBytes),originalNativeHash:hash(native),originalCanonicalUnchanged:true,reopenAddedRequests:0,pageErrors,transportErrors,providerErrors:provider.errors,screenshots,cleanup};
+}catch(error){keep=true;await fs.mkdir('test-results',{recursive:true});if(page)await page.screenshot({path:'test-results/'+artifact+'-failure.png'}).catch(()=>{});await fs.writeFile('test-results/'+artifact+'-failure.json',JSON.stringify({mode,exe,temp,error:String(error),providerErrors:provider.errors,pageErrors,transportErrors},null,2));throw error}
+finally{
+ await setup?.shutdown();if(desktop)await desktop.close();cleanup.desktopClosed=true;await provider.close();cleanup.providerClosed=true;
+ if(!keep){const target=path.resolve(temp);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-knowledge-effect-ui-'))throw Error('Refusing unexpected test cleanup');await fs.rm(target,{recursive:true,force:true});cleanup.tempRemoved=true}
+ if(report)await fs.writeFile('test-results/'+artifact+'-ui-smoke.json',JSON.stringify(report,null,2));
+}
+console.log(JSON.stringify(report));

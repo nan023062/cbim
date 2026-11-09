@@ -1,6 +1,6 @@
 ---
 name: create-workflow
-description: 为已有 Module 创建独立 Workflow，经 MCP 维护清单并验证。
+description: 为已有 Module 创建独立 Workflow，经内部知识工具维护清单并验证。
 ---
 # 创建模块 Workflow
 

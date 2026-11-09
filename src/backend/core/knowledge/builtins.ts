@@ -1,16 +1,19 @@
 /**
- * 作用定位：Builtins：白名单发布内置 Skill、规范和 Schema，返回正文、版本与解析引用。
- * 设计原因：只允许白名单资料 ID，避免把安装目录暴露为任意文件读取接口。
+ * 作用定位：Builtins：白名单发布内置 Skill、规范和 Schema，包括 BUG 反馈与需求许愿的上下文收集流程。
+ * 设计原因：只允许白名单资料 ID，返回正文、版本和引用；读取反馈 Skill 不会创建 GitHub Issue，也不扩大文件或网络权限。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fail} from '../foundation/errors';
 import {hash} from '../foundation/serialization';
 
+/** 产品内置流程清单；知识工具为每项注册只读 cbim_skill_* 别名，正文随应用资源打包。 */
 export const builtinSkills=[
+  {id:'bug-feedback',title:'BUG 反馈',description:'按问题、复现步骤、实际与预期结果、环境格式收集 CBIM 缺陷上下文'},
+  {id:'feature-wish',title:'需求许愿',description:'按使用场景、当前困难、期望能力和使用例子收集 CBIM 需求上下文'},
   {id:'knowledge-query',title:'知识查询',description:'定位权威知识、核实证据并回答，默认只读'},
   {id:'business-execution',title:'需求实现',description:'定位模块和 Agent，组织实现、验证与交付'},
-  {id:'knowledge-governance',title:'知识治理',description:'检查事实、结构和引用，在授权内通过 MCP 预览、提交和复核'},
+  {id:'knowledge-governance',title:'知识治理',description:'检查事实、结构和引用，在授权内通过内部知识工具预览、提交和复核'},
   {id:'architecture-governance',title:'架构治理',description:'模式观察、架构评估、人工决定与渐进演进'},
   {id:'create-agent-skill',title:'创建 Agent/Team Skill',description:'为已有组织节点创建专业 Skill，维护清单并检查继承'},
   {id:'create-workflow',title:'创建模块 Workflow',description:'为已有模块创建独立流程并维护本模块清单'},
@@ -19,7 +22,7 @@ export const builtinSkills=[
 const entries=[
   ...builtinSkills.filter(s=>s.id!=='knowledge-governance').map(s=>[s.id,'skill',s.title,`design/runtime/${s.id}.md`]),
   ['knowledge-governance','skill','知识治理','design/runtime/knowledge-governance.md'],
-  ['common-rules','standard','MCP 执行与治理通用规范','design/runtime/common-rules.md'],
+  ['common-rules','standard','CBIM 内部执行与治理通用规范','design/runtime/common-rules.md'],
   ['module-spec','standard','Module 定义与维护规范','design/business/module-spec.md'],
   ['agent-spec','standard','Agent 定义与维护规范','design/capability/agent-spec.md'],
   ['architecture-spec','standard','架构评估与认知交付规范','design/task/architecture-spec.md'],
@@ -34,22 +37,24 @@ const entries=[
   ['people-schema','schema','人员 Schema','design/capability/people.schema.json'],
   ['connector-schema','schema','连接器 Schema','design/connector/registry.schema.json'],
 ].map(([id,kind,title,source])=>({id,kind,title,source}));
-const contract='内置资料只读，版本由内容 SHA-256 标识。查询以 MCP 当前返回值为准；宿主禁止直接读写 .cbim；全部知识 CRUD 由 MCP 执行，使用 cbim_object_preview/cbim_object_commit 或受控知识事务接口。宿主启动指引与派生注册表由 CBIM 维护。旧 Python 规则工具不是入口。Skill 工具返回流程，不会替宿主执行任务；结构校验不能替代语义与人工判断。';
+const contract='内置资料只读，版本由内容 SHA-256 标识。查询以内部知识服务当前返回值为准；Agent 的原生工具禁止直接读写 .cbim；全部知识 CRUD 由受授权的内部工具执行，使用 cbim_object_preview/cbim_object_commit 或受控知识事务接口。派生注册表由 CBIM 维护。旧 Python 规则工具不是入口。Skill 工具返回流程，不会替 Agent 执行任务；结构校验不能替代语义与人工判断。';
 
 export class Builtins {
   constructor(private designRoot:string){}
   private async document(entry:typeof entries[number]){
-    // Only server-owned manifest entries can select a file, never caller paths.
+    // Only application-owned manifest entries can select a file, never caller paths.
     const root=path.resolve(this.designRoot,'..'),file=path.resolve(root,entry.source);
     const real=await fs.realpath(file),relative=path.relative(await fs.realpath(root),real);
     if(relative.startsWith('..')||path.isAbsolute(relative))fail('BUILTIN_PATH','内置资料越出安装目录');
     if((await fs.stat(real)).size>2*1024*1024)fail('BUILTIN_SIZE','内置资料超过大小限制');
     const text=await fs.readFile(real,'utf8');return {...entry,version:hash(text),text,readOnly:true};
   }
+  /** 返回允许读取的全部内置资源及内容身份，不安装 Skill 或启动其流程。 */
   async catalog(){
     const items=await Promise.all(entries.map(async entry=>{const {text,...metadata}=await this.document(entry);return metadata}));
     return {entryId:'knowledge-governance',contract,revision:hash(JSON.stringify(items)),items};
   }
+  /** 只读白名单正文；可核对原版本，不把读取成功解释成反馈提交或业务执行成功。 */
   async read(id:string,expectedVersion?:string){
     const entry=entries.find(e=>e.id===id);if(!entry)fail('BUILTIN_NOT_FOUND','未知内置资料 ID，请先调用 cbim_builtin_catalog');
     const result=await this.document(entry);

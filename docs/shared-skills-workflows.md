@@ -68,13 +68,13 @@ workspace 根不承载全局 Workflow，不新增 workspace/workflows.json，也
 
 初始化七个基础文件：project.json、README.md、team/registry.json、team/people.json、team/skills.json、workspace/registry.json、connectors/registry.json。
 
-宿主启动指引内嵌 CBIM 工作提示词，要求 Agent 按“受理目标 → 分类与定位 → 组装能力和模块上下文 → 制定步骤 → 执行 → 验证 → 交付与治理反馈”开展 AI Native 工作流。它规定 Skill 父链解析、当前 Module 专属 Workflow 和权限边界；由宿主实际工具执行，不依赖 CBIM 桌面内置模型。宿主 Agent 与 team/ 下的专业 Agent 定义须区分，读取定义不等于启动独立进程。
+内部 Agent 按“受理目标 → 分类与定位 → 组装能力和模块上下文 → 制定步骤 → 执行 → 验证 → 交付与治理反馈”开展工作。调度引擎准备指引、知识版本和运行权限；大脑使用配置的模型与内部工具执行。主 Agent 和定制成员共用大脑内核，静态 Agent 定义与动态 AgentInstance 分离，读取定义不等于启动成员执行。
 
-模板由 `src/backend/main/host/host-prompt.ts` 提供，不包含安装路径或凭据。CBIM 将正文和内置 Skill 声明直接嵌入 AGENTS.md、CLAUDE.md 及已有 AGENTS.override.md，保留无关规则，变更前备份。已运行会话可能需重启或重新加载指引。`.cbim/entry.md` 已废弃，不再生成、同步或作为知识返回；已有文件原样保留。
+初始化模板由 `src/backend/main/persistence/knowledge/knowledge-store.ts` 维护。内置 Skill 与通用规范由知识工具按 ID 返回，不复制进每个工作区。初始化只创建知识骨架，不改写项目的 AI 工具启动文件、忽略规则或 Hook 配置。
 
-所有 CBIM 流程必须先查询目标工作区的 CBIM MCP，包含只读咨询和任务恢复。入口自身在连接前读取；索引、定义、Skill/Workflow 正文与版本均通过 MCP 查询。服务不可用时暂停，不用直接文件读取、旧脚本或缓存作为替代。业务产物可用宿主工具操作，但须遵守查询后确定的范围和授权。
+索引、定义、Skill/Workflow 正文与版本通过当前运行的内部知识工具查询。知识不可用时报告实际问题，不用直接文件读取、旧脚本或过期缓存冒充服务结果。业务产物使用运行的原生工具，受当前作用域与 read/ask/execute 权限约束。
 
-以上继承、定位与加载规则由 CBIM MCP 实现，宿主不执行父链遍历、清单合并或引用加载。知识增删改查同样由接口处理；宿主使用服务返回的对象标识、内容、版本和操作结果。完整任务上下文接口仍需实现，当前基础快照接口不等于已完成全部知识加载抽象。
+以上继承、定位与加载规则由内部知识服务实现，模型不执行父链遍历、清单合并或引用加载。知识增删改查同样由工具处理；Agent 使用服务返回的对象标识、内容、版本和操作结果。显式团队任务已支持模块、成员、有效 Skill 与选定 Workflow 的上下文装配，跨成员任务的自动执行仍需继续实现。
 
 - team/skills.json 初始为 `{"skills": []}`；首次初始化预建空 team/skills/。已有工作区无定义时允许目录不存在，不依赖 Git 保存空目录。
 - workspace/registry.json 初始为 `{"modules": []}`，后续登记确认的领域工程和模块。
@@ -82,4 +82,4 @@ workspace 根不承载全局 Workflow，不新增 workspace/workflows.json，也
 - 后续创建小组或 Agent 时登记自身 Skill；创建工程或模块时登记自身 Workflow。
 - 不自动导入能力、流程或业务模板；启动配置仍待审核。
 
-先前提出的“最近共同父模块存放共享 Workflow，后代继承”方案撤销。模块专属 Workflow 规则继续沿用。首次打开缺少 .cbim 的工作区时，在临时目录创建全部骨架后同盘重命名，随后启动知识服务和 MCP；已有 .cbim 不覆盖。层级命名、领域工程节点校验和交互式初始化引导仍需后续单独实现。
+模块专属 Workflow 不采用父链继承。首次打开缺少 .cbim 的工作区时，在临时目录创建全部骨架后同盘重命名，随后加载本地知识服务；已有 .cbim 不覆盖。层级命名、领域工程节点校验和交互式初始化引导仍需后续单独实现。

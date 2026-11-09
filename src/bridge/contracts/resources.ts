@@ -4,13 +4,14 @@
  */
 export const resourceKinds={
   connector:{label:'链接器',category:'connectors',description:'与外部工具打通的可定制桥梁'},
+  team:{label:'团队架构',category:'talent',description:'可复用的完整团队、成员与共享能力定义'},
   agent:{label:'专项 Agent',category:'talent',description:'定义专业职责、能力与工作原则'},
   skill:{label:'能力 Skill',category:'talent',description:'可复用、可定制的专业方法'},
-  architecture:{label:'业务架构',category:'templates',description:'可复用的多模块业务架构'},
+  architecture:{label:'业务架构',category:'templates',description:'整体发布和使用的完整业务架构与流程'},
   module:{label:'单一业务模块',category:'templates',description:'独立模块的职责、边界与知识'},
   workflow:{label:'Workflow',category:'templates',description:'围绕业务目标定制的工作流程'},
 } as const;
-export const resourceCategories={connectors:{label:'链接器',description:'连接外部工具与服务，为团队构建可定制的协作桥梁。'},talent:{label:'人才市场',description:'为复合多工种团队准备专项 Agent 与可复用的能力 Skill。'},templates:{label:'业务模版',description:'复用业务架构、单一业务模块与定制 Workflow。'}} as const;
+export const resourceCategories={connectors:{label:'链接器',description:'连接外部工具与服务，为团队构建可定制的协作桥梁。'},talent:{label:'人才市场',description:'复用完整团队、专项 Agent 与能力 Skill。'},templates:{label:'业务模版',description:'整体复用业务架构及其模块与 Workflow；旧单模块资源仅供浏览。'}} as const;
 export type ResourceKind=keyof typeof resourceKinds;
 export type ResourceCategory=keyof typeof resourceCategories;
 /** 可复用资源的定义，不表示已安装或已应用到任何工作区；updatedAt 为 ISO 时间。 */
@@ -23,3 +24,11 @@ export type RepositoryConfig={mode:'local';location:string;repositoryId:string}|
 export type RepositorySession={state:'signedOut'}|{state:'signedIn';accountId:string};
 /** 面向界面的仓库状态；config 为空表示尚无可用来源，sharing 仅在本机共享期间存在。 */
 export interface RepositoryStatus{session:RepositorySession;source:'local'|'server';config:RepositoryConfig|null;error?:string;sharing?:{url:string;host:string;port:number};}
+
+/** 资源包只运输静态知识；不包含目标工程人员、授权、成员实例、任务或会话。 */
+export type {WorkspacePackage,WorkspacePackageKind,WorkspacePackageMode} from '../../backend/core/knowledge/portable-package';
+export interface PublishWorkspaceInput {workspaceId:string;instanceId:string;revision:string;repositoryId:string;repositoryRevision:string;kind:'team'|'agent'|'skill'|'architecture';objectId?:string;name:string;summary:string}
+export interface ImportWorkspacePreviewInput {workspaceId:string;instanceId:string;revision:string;repositoryId:string;repositoryRevision:string;resourceId:string;mode?:'add'|'replace';targetParentId?:string;slug?:string}
+export interface ImportWorkspaceCommitInput {workspaceId:string;instanceId:string;planId:string}
+export interface PublishWorkspaceResult {repository:ResourceLibrarySnapshot;resourceId:string;warnings:string[];removedBindings:string[]}
+export type ImportWorkspacePreview=import('../../backend/core/knowledge/types').Preview&{planId:string;kind:'team'|'agent'|'skill'|'architecture';mode:'add'|'replace';targetRoot:string;files:Array<{path:string;action:'create'|'update'|'delete'}>;warnings:string[];removedBindings:string[]};

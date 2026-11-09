@@ -1,0 +1,29 @@
+import {it,expect,vi} from 'vitest';
+import {createElement} from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {ManifestReportController,checkedManifestReport} from '../src/frontend/tasks/output-manifest-state';
+import {ManifestReportPanel} from '../src/frontend/tasks/MemberOutputManifest';
+import type {OutputManifestReport,OutputManifestQuery} from '../src/bridge/contracts/output-manifest';
+
+const identity={workspaceId:'workspace',rootSessionId:'root',taskId:'task',runId:'run'},stamp='2026-11-08T00:00:00.000Z';
+const scopes=[{moduleId:'module',workflowId:'workflow',workflowVersion:'v1',scope:{version:1 as const,roots:[{path:'output',kind:'directory' as const}]}}];
+const snapshot={scopes,roots:[{relativePath:'output',state:'directory' as const}],entries:[{relativePath:'output',kind:'directory' as const},{relativePath:'output/a.txt',kind:'file' as const,byteLength:3,sha256:'a'.repeat(64)}]};
+function report(selected=false):OutputManifestReport{return {identity,checkedAt:stamp,basis:'d'.repeat(64),consistency:'stable',log:'verified',coverage:'declared_scope_complete',scopes,manifests:[{manifestId:'manifest',captureToolCallId:'capture',scopeHash:'b'.repeat(64),manifestHash:'c'.repeat(64),knowledgeRevision:'knowledge',progressVersion:1,capturedAt:stamp,lastEffectSeq:0,entryCount:2,fileCount:1,byteLength:3,scopes,invalidated:false}],issues:[],...(selected?{verification:{manifestId:'manifest',state:'matches' as const,expectedHash:'c'.repeat(64),observedHash:'c'.repeat(64),expected:structuredClone(snapshot),observed:structuredClone(snapshot)}}:{})}}
+it('列表和选择无隐式扫描，明确复核才传所选ID',async()=>{const read=vi.fn(async(input:OutputManifestQuery)=>report(!!input.manifestId)),controller=new ManifestReportController(identity,read);expect(read).not.toHaveBeenCalled();await controller.inspect();expect(read).not.toHaveBeenCalled();await controller.list();expect(read).toHaveBeenLastCalledWith(identity);expect(controller.snapshot.selectedId).toBe('');controller.select('manifest');expect(read).toHaveBeenCalledTimes(1);await controller.inspect();expect(read).toHaveBeenLastCalledWith({...identity,manifestId:'manifest'});expect(controller.snapshot.report?.verification?.state).toBe('matches');await controller.list();expect(controller.snapshot.report?.verification).toBeUndefined();expect(controller.snapshot.selectedId).toBe('manifest')});
+it('双击去重，换选择或卸载隔离迟到响应，版本变化仅显示旧依据',async()=>{
+  let resolve!:(value:OutputManifestReport)=>void,version='one';const read=vi.fn(async()=>report()),controller=new ManifestReportController(identity,read,()=>version);await controller.list();controller.select('manifest');
+  read.mockImplementationOnce(()=>new Promise(finish=>{resolve=finish}));const pending=controller.inspect();await controller.inspect();expect(read).toHaveBeenCalledTimes(2);controller.select('');resolve(report(true));await pending;expect(controller.snapshot.report?.verification).toBeUndefined();
+  read.mockImplementationOnce(()=>new Promise(finish=>{resolve=finish}));const next=controller.list();version='two';resolve(report());await next;expect(controller.snapshot.sourceVersion).toBe('one');
+  read.mockImplementationOnce(()=>new Promise(finish=>{resolve=finish}));const last=controller.list();controller.cancel();resolve(report());await last;expect(controller.snapshot.sourceVersion).toBe('one');expect(controller.snapshot.loading).toBe(false);
+});
+it('身份、范围、条目或状态矛盾不可作为完整观察',()=>{
+  const selected={...identity,manifestId:'manifest'};for(const field of ['workspaceId','rootSessionId','taskId','runId'])expect(()=>checkedManifestReport({...report(),identity:{...identity,[field]:'other'}},identity)).toThrow('不属于');
+  expect(()=>checkedManifestReport(report(true),identity)).toThrow('选择');expect(()=>checkedManifestReport(report(),selected)).toThrow('选择');
+  const variants:Array<(r:OutputManifestReport)=>void>=[r=>{r.manifests.push(r.manifests[0])},r=>{r.log='unavailable'},r=>{r.manifests[0].entryCount++},r=>{r.verification!.observed!.entries.pop()},r=>{r.verification!.observedHash='e'.repeat(64)},r=>{r.verification!.state='changed'},r=>{r.consistency='changed_during_read'},r=>{r.verification!.state='unverifiable'},r=>{r.verification!.observed!.scopes[0].workflowVersion='foreign'}];
+  for(const mutate of variants){const r=structuredClone(report(true));mutate(r);expect(()=>checkedManifestReport(r,selected)).toThrow()}
+});
+it('接口失败保留上次观察和明确错误，错误不替换原选择',async()=>{const read=vi.fn(async(input:OutputManifestQuery)=>report(!!input.manifestId)),controller=new ManifestReportController(identity,read);await controller.list();controller.select('manifest');await controller.inspect();const before=controller.snapshot.report;read.mockRejectedValueOnce(Error('读取失败'));await controller.inspect();expect(controller.snapshot.report).toBe(before);expect(controller.snapshot.selectedId).toBe('manifest');expect(controller.snapshot.error).toBe('读取失败')});
+it('展示完整根和条目、变化/未知与覆盖边界，旧记录不补采',()=>{
+  for(const state of ['matches','changed','unverifiable'] as const){const r=report(true);r.verification!.state=state;const html=renderToStaticMarkup(createElement(ManifestReportPanel,{taskId:'task',runId:'run',state:{report:r,selectedId:'manifest',loading:false,error:'',stale:true,list:async()=>{},inspect:async()=>{},select:()=>{}}}));expect(html).toContain('声明范围内完整产物清单');expect(html).toContain('完整目录树');expect(html).toContain('output/a.txt');expect(html).toContain('不是原子快照');expect(html).toContain('output-manifest-stale');expect(html).not.toContain('接受交付')}
+  const r=report();r.manifests=[];const html=renderToStaticMarkup(createElement(ManifestReportPanel,{taskId:'task',runId:'run',state:{report:r,selectedId:'',loading:false,error:'',stale:false,list:async()=>{},inspect:async()=>{},select:()=>{}}}));expect(html).toContain('不会将旧文件基线转换或自动补采');expect(html).not.toContain('output-manifest-inspect');
+});

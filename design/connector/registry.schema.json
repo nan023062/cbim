@@ -8,49 +8,94 @@
     "connectors": {
       "type": "array",
       "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "name",
-          "summary",
-          "plugin"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^\\.cbim/connectors/[A-Za-z0-9_-]+$"
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1
-          },
-          "summary": {
-            "type": "string",
-            "minLength": 1
-          },
-          "plugin": {
+        "oneOf": [
+          {
             "type": "object",
             "additionalProperties": false,
             "required": [
-              "ghost_id",
-              "namespace"
+              "id",
+              "name",
+              "summary",
+              "plugin"
             ],
             "properties": {
-              "ghost_id": {
+              "id": {
+                "type": "string",
+                "pattern": "^\\.cbim/connectors/[A-Za-z0-9_-]+$"
+              },
+              "name": {
                 "type": "string",
                 "minLength": 1
               },
-              "namespace": {
-                "type": [
-                  "string",
-                  "null"
-                ],
+              "summary": {
+                "type": "string",
                 "minLength": 1
+              },
+              "plugin": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "ghost_id",
+                  "namespace"
+                ],
+                "properties": {
+                  "ghost_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "namespace": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "name",
+              "summary",
+              "provider",
+              "repository"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^\\.cbim/connectors/[A-Za-z0-9_-]+$"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "summary": {
+                "type": "string",
+                "minLength": 1
+              },
+              "provider": {
+                "const": "resource_repository_v1"
+              },
+              "repository": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "repositoryId"
+                ],
+                "properties": {
+                  "repositoryId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                  }
+                }
               }
             }
           }
-        }
+        ]
       }
     }
   },

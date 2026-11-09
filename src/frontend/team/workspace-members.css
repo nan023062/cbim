@@ -1,0 +1,13 @@
+/* 项目岗位独立于静态树：采用主题布局、可折叠采纳正文与窄侧栏单列，避免正文和长身份撑开页面。 */
+.workspace-members{width:100%;min-width:0;container-type:inline-size;font-size:13px;line-height:1.65}
+.workspace-members>header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.workspace-members h2{margin:3px 0}.workspace-member-note{color:var(--muted)}
+.workspace-member-layout{display:grid;grid-template-columns:minmax(160px,.65fr) minmax(240px,1.35fr);gap:20px;align-items:start}
+.workspace-member-layout>aside{display:grid;gap:7px;min-width:0}.workspace-member-layout>aside>button{display:grid;gap:3px;text-align:left;white-space:normal;border:1px solid var(--line);padding:10px;border-radius:8px;background:transparent;overflow-wrap:anywhere}
+.workspace-member-layout>aside>button[aria-pressed=true]{background:var(--hover)}.workspace-member-layout small{color:var(--muted)}
+.workspace-member-body{min-width:0;overflow-wrap:anywhere}.workspace-member-body code,.workspace-member-commands code{font-size:11px;overflow-wrap:anywhere}
+.workspace-member-body pre{max-height:280px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;border:1px solid var(--line);padding:10px;border-radius:6px}
+.workspace-member-body details{margin:10px 0}.workspace-member-body summary{cursor:pointer}.workspace-member-diff{border-left:2px solid var(--line);padding-left:12px}
+.workspace-member-form fieldset{border:0;margin:0;padding:0;display:grid;gap:12px;min-width:0}.workspace-member-form label{display:grid;gap:4px;min-width:0}.workspace-member-form input,.workspace-member-form textarea,.workspace-member-form select{box-sizing:border-box;max-width:100%;width:100%;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px}.workspace-member-form textarea{min-height:68px;resize:vertical}.workspace-member-form p{color:var(--muted);margin:0}.workspace-member-form>button{margin-top:10px}
+.workspace-member-preview{border:1px solid var(--line);padding:14px;margin-top:18px;border-radius:8px}.workspace-member-commands{margin-top:24px;border-top:1px solid var(--line);padding-top:12px}.workspace-member-commands>div{padding:12px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.workspace-member-commands code{display:block}.workspace-member-commands button{margin:5px 8px 0 0}.workspace-member-paging{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+@container (max-width:580px){.workspace-member-layout{grid-template-columns:1fr}}

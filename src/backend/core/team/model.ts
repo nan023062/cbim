@@ -1,6 +1,6 @@
 /**
  * 作用定位：团队：Team/小组/Agent、真人花名册与 Agent 自身和祖先 Skill的核心封装。
- * 设计原因：在同一校验快照上提供领域语义，不依赖工作区进程、桌面页面或 MCP。
+ * 设计原因：在同一校验快照上提供领域语义，不依赖工作区进程或桌面页面。
  */
 import path from 'node:path';
 import {context,data,content} from '../knowledge/snapshot';

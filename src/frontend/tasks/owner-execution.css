@@ -1,0 +1,5 @@
+/**
+ * 作用定位：任务与目标计划中原岗位绑定的紧凑排版。
+ * 设计原因：长身份和指纹在窄详情栏换行；历史事实与当前差异分开，展开不影响运行或聊天草稿。
+ */
+.owner-execution{min-width:0;margin:10px 0;overflow-wrap:anywhere;font-size:12px;line-height:1.6}.owner-execution-summary{margin:6px 0;color:var(--muted)}.owner-execution summary{cursor:pointer}.owner-execution dl{display:grid;gap:8px;margin:12px 0}.owner-execution dl>div{min-width:0}.owner-execution dt{color:var(--muted);font-size:11px}.owner-execution dd{margin:2px 0}.owner-execution code{white-space:normal;font-size:11px;overflow-wrap:anywhere}.owner-execution ul{padding-left:16px}.owner-execution li{margin:10px 0;overflow-wrap:anywhere}.owner-execution li>span,.owner-execution li>code,.owner-execution li>small{display:block}.owner-execution.compact p{margin:4px 0;color:var(--muted)}.owner-execution-muted{color:var(--muted);font-size:12px;line-height:1.6;overflow-wrap:anywhere}.owner-execution-warning{color:var(--warning);font-size:12px;line-height:1.6;overflow-wrap:anywhere}.owner-execution-current{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}.owner-execution-current button{font-size:12px}.owner-execution-current p{margin:6px 0}

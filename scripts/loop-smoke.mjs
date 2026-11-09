@@ -38,6 +38,7 @@ const server=http.createServer(async(req,res)=>{
     const approvalCall=requests===5||requests===7;
     if(requests===1){const text=JSON.stringify(body.messages);for(const expected of ['FILE_ATTACHMENT_EVIDENCE','WEB_ATTACHMENT_EVIDENCE','示例链接器'])assert.ok(text.includes(expected),expected)}
     const delta=approvalCall?{role:'assistant',tool_calls:[{index:0,id:'approval-'+requests,type:'function',function:{name:'write',arguments:JSON.stringify({path:path.join(root,requests===5?'approved.txt':'denied.txt'),content:'APPROVED'})}}]}:requests===1?{role:'assistant',tool_calls:[{index:0,id:'packaged-identity',type:'function',function:{name:'cbim_workspace_identity',arguments:'{}'}}]}:{role:'assistant',content:'已通过内部工具核实工作区。'};
+    if(requests===1)delta.tool_calls.push({index:1,id:'packaged-plan',type:'function',function:{name:'cbim_task_plan',arguments:JSON.stringify({expectedVersion:0,goal:'核实工作区并记录计划',reason:'桌面计划验证',acceptance:['核对实际工作区'],steps:[{id:'verify',title:'读取并核实',owner:'主 Agent'}]})}});
     for(const [value,finish] of [[delta,null],[{},requests===1||approvalCall?'tool_calls':'stop']])res.write('data: '+JSON.stringify({id:'smoke-'+requests,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta:value,finish_reason:finish}]})+'\n\n');
     res.write('data: '+JSON.stringify({id:'usage-'+requests,object:'chat.completion.chunk',created:1,model:body.model,choices:[],usage:{prompt_tokens:1000,completion_tokens:100,total_tokens:1100}})+'\n\n');res.end('data: [DONE]\n\n');
   }catch(error){modelError=error;res.writeHead(500).end(String(error))}
@@ -99,6 +100,13 @@ try{
   do{result=await call('loop.inspect',{id:entry.id,taskId:run.taskId,runId:run.runId});if(result.status!=='running')break;await new Promise(resolve=>setTimeout(resolve,100))}while(Date.now()<deadline);
   assert.equal(modelError,undefined);assert.equal(result.status,'completed',JSON.stringify(result.events.at(-1)));
   assert.ok(result.events.some(e=>e.type==='tool.finished'&&e.data.id==='packaged-identity'));
+  assert.equal(result.taskProgress?.goal,'核实工作区并记录计划');
+  await page.getByRole('tab',{name:'任务视图',exact:true}).click();
+  await page.getByTestId('dispatch-root-node').click();
+  await page.getByRole('article',{name:'执行计划',exact:true}).getByText('读取并核实',{exact:true}).waitFor();
+  assert.ok((await page.getByRole('article',{name:'执行计划',exact:true}).innerText()).includes('尚未业务验收'));
+  await page.screenshot({path:'test-results/task-progress.png'});
+  await page.getByRole('tab',{name:'对话',exact:true}).click();
   assert.equal(result.acceptance,'not_evaluated');assert.equal(result.task.mode,'chat');assert.equal(result.task.agentId,'cbim:main');assert.deepEqual(result.task.moduleIds,[]);assert.equal(result.task.workflowContext,undefined);
   assert.ok(!JSON.stringify(result).includes('packaged-test-secret'));
   const modelFile=await fs.readFile(path.join(user,entry.id,'loop-engine','tasks',run.taskId,run.runId,'provider','models.json'),'utf8');
@@ -107,7 +115,7 @@ try{
   await page.getByRole('textbox',{name:'对话草稿',exact:true}).fill('继续核实');
   await page.getByRole('button',{name:'发送消息',exact:true}).click();
   await page.getByText('继续核实',{exact:true}).waitFor();
-  await page.waitForFunction(()=>document.querySelectorAll('.chat-turn').length===2&&[...document.querySelectorAll('.chat-run-status')].every(x=>x.textContent.includes('本轮完成')));
+  await page.waitForFunction(()=>document.querySelectorAll('.chat-turn').length===2&&[...document.querySelectorAll('.chat-run-status')].every(x=>x.textContent.includes('本轮结束')));
   await page.reload();await page.getByRole('button',{name:'project · 运行中',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('[aria-label="对话模型"]')?.textContent.includes('test-model'));
   await page.getByText('继续核实',{exact:true}).waitFor();
@@ -123,13 +131,13 @@ try{
   for(const [message,answer,file] of [['请写入文件','本次任务全部通过','approved.txt'],['再次写入文件','拒绝','denied.txt']]){
     await page.getByRole('textbox',{name:'对话草稿',exact:true}).fill(message);await page.getByRole('button',{name:'发送消息',exact:true}).click();await page.getByRole('button',{name:answer,exact:true}).waitFor();
     assert.equal(await fs.access(path.join(root,file)).then(()=>true,()=>false),false);
-    await page.getByRole('button',{name:answer,exact:true}).click();await page.waitForFunction(()=>[...document.querySelectorAll('.chat-run-status')].at(-1)?.textContent.includes('本轮完成'));
+    await page.getByRole('button',{name:answer,exact:true}).click();await page.waitForFunction(()=>[...document.querySelectorAll('.chat-run-status')].at(-1)?.textContent.includes('本轮结束'));
     assert.equal(await fs.access(path.join(root,file)).then(()=>true,()=>false),answer!=='拒绝');
   }
   await page.getByRole('combobox',{name:'执行权限',exact:true}).click();await page.getByRole('option').filter({hasText:'完全访问'}).click();
   await page.getByRole('textbox',{name:'对话草稿',exact:true}).fill('创建一个网页游戏并执行验证');await page.getByRole('button',{name:'发送消息',exact:true}).click();
   await page.getByRole('heading',{name:'已创建游戏',exact:true}).waitFor({timeout:60000});
-  await page.waitForFunction(()=>[...document.querySelectorAll('.chat-run-status')].at(-1)?.textContent.includes('本轮完成'));
+  await page.waitForFunction(()=>[...document.querySelectorAll('.chat-run-status')].at(-1)?.textContent.includes('本轮结束'));
   const gameThread=await call('loop.thread',{id:entry.id,taskId:run.taskId});const gameRun=gameThread.at(-1);
   for(const name of ['ls','write','bash'])assert.ok(gameRun.events.some(e=>e.type==='tool.finished'&&e.data.name===name&&!e.data.isError),JSON.stringify(gameRun.events));
   assert.ok(JSON.stringify(gameRun.events).includes('GAME_VERIFIED'));
@@ -165,7 +173,7 @@ try{
   await question.getByRole('textbox',{name:'其它补充 1'}).fill('优先触屏操作');
   await question.scrollIntoViewIfNeeded();await page.screenshot({path:'test-results/question-card.png'});
   await question.getByRole('button',{name:'提交并继续',exact:true}).click();
-  await page.waitForFunction(()=>!document.querySelector('.question-card')&&[...document.querySelectorAll('.chat-run-status')].at(-1)?.textContent.includes('本轮完成'));
+  await page.waitForFunction(()=>!document.querySelector('.question-card')&&[...document.querySelectorAll('.chat-run-status')].at(-1)?.textContent.includes('本轮结束'));
   assert.equal(modelError,undefined);assert.equal(requests,14);
   await page.getByRole('textbox',{name:'对话草稿',exact:true}).fill('等待队列测试');await page.getByRole('button',{name:'发送消息',exact:true}).click();
   await page.getByRole('button',{name:'停止执行',exact:true}).waitFor();await page.waitForTimeout(1500);
@@ -174,18 +182,18 @@ try{
   await page.getByRole('combobox',{name:'对话模型',exact:true}).click();await page.getByRole('option').filter({hasText:'second-model'}).click();
   await page.getByRole('combobox',{name:'执行权限',exact:true}).click();await page.getByRole('option').filter({hasText:'只读访问'}).click();
   await page.getByRole('textbox',{name:'对话草稿',exact:true}).fill('优先执行队列B');await page.getByRole('button',{name:'加入队列',exact:true}).click();
-  const queueB=page.locator('.queued-message').filter({hasText:'优先执行队列B'});await queueB.waitFor();await queueB.getByRole('button',{name:'设为下一条',exact:true}).click();
-  await page.waitForFunction(()=>document.querySelector('.queued-message p')?.textContent==='优先执行队列B');
+  const queueB=page.locator('.queued-message').filter({hasText:'优先执行队列B'});await queueB.waitFor();await queueB.locator('.queue-grip').press('Alt+ArrowUp');
+  await page.waitForFunction(()=>document.querySelector('.queued-message .queue-text')?.textContent==='优先执行队列B');
   await page.screenshot({path:'test-results/message-queue.png'});
   await page.getByRole('button',{name:'停止执行',exact:true}).click();await page.getByRole('button',{name:'继续队列',exact:true}).waitFor();
   await page.waitForFunction(()=>[...document.querySelectorAll('.chat-run-status')].at(-1)?.textContent.includes('已停止'));
   await page.getByRole('button',{name:'继续队列',exact:true}).click();
-  await page.waitForFunction(()=>!document.querySelector('.message-queue')&&[...document.querySelectorAll('.chat-turn')].at(-1)?.textContent.includes('随后执行队列A')&&[...document.querySelectorAll('.chat-run-status')].at(-1)?.textContent.includes('本轮完成'),null,{timeout:60000});
+  await page.waitForFunction(()=>!document.querySelector('.message-queue')&&[...document.querySelectorAll('.chat-turn')].at(-1)?.textContent.includes('随后执行队列A')&&[...document.querySelectorAll('.chat-run-status')].at(-1)?.textContent.includes('本轮结束'),null,{timeout:60000});
   assert.equal(modelError,undefined);assert.equal(requests,17);
   const otherTask=await call('loop.chat',{id:entry.id,message:'OTHER_SESSION_SENTINEL',options:{permission:'read'}});
   const otherDeadline=Date.now()+45000;while(Date.now()<otherDeadline){const r=await call('loop.inspect',{id:entry.id,taskId:otherTask.taskId,runId:otherTask.runId});if(r.status!=='running')break;await page.waitForTimeout(100)}
   await page.getByRole('textbox',{name:'对话草稿',exact:true}).fill('任务页签草稿');await page.getByRole('tab',{name:'任务视图',exact:true}).click();
-  await page.getByRole('heading',{name:'任务视图',exact:true}).waitFor();assert.ok((await page.locator('.session-task-view').innerText()).includes('随后执行队列A'));assert.ok(!(await page.locator('.session-task-view').innerText()).includes('OTHER_SESSION_SENTINEL'));
+  await page.getByRole('heading',{name:'任务流程',exact:true}).waitFor();await page.getByTestId('dispatch-root-node').click();assert.ok((await page.locator('.session-task-view').innerText()).includes('随后执行队列A'));assert.ok(!(await page.locator('.session-task-view').innerText()).includes('OTHER_SESSION_SENTINEL'));
   await page.screenshot({path:'test-results/session-task-view.png'});await page.getByRole('tab',{name:'对话',exact:true}).click();assert.equal(await page.getByRole('textbox',{name:'对话草稿',exact:true}).inputValue(),'任务页签草稿');
   assert.equal(await page.getByRole('tab',{name:'对话',exact:true}).count(),1);
   await page.getByRole('button',{name:'新对话 project',exact:true}).click();await page.getByRole('heading',{name:'有什么可以帮你？',exact:true}).waitFor();

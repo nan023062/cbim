@@ -1,0 +1,17 @@
+/**
+ * 作用定位：更新弹窗与提醒；原生 dialog 的顶层显示不受侧栏或工作区裁切。
+ * 设计原因：沿用应用主题，限制弹窗宽高并让长日志换行，适应窄窗口与键盘导航。
+ */
+.software-updates-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 32px));max-height:calc(100dvh - 32px);margin:auto;padding:24px;border:1px solid var(--line);border-radius:16px;background:var(--surface);color:inherit;overflow:auto}
+.software-updates-dialog::backdrop{background:#0008}
+.software-updates-dialog>header,.software-update-heading,.software-latest-notes>header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.software-updates-dialog h2{font-size:22px;margin:4px 0}.software-updates-dialog h3{font-size:15px;margin:0}.software-updates-dialog p{line-height:1.6}.software-updates-dialog button{flex-shrink:0}
+.software-current-version,.software-update-time,.software-latest-notes>header>span{color:var(--muted);font-size:12px}
+.software-update-actions,.software-latest-notes{margin-top:20px;padding-top:20px;border-top:1px solid var(--line)}
+.software-update-heading{align-items:center}.software-update-heading p{font-size:12px;color:var(--muted);margin:8px 0}
+.software-release-notes{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;line-height:1.8;margin:16px 0;max-height:none}
+.software-updates-dialog details{border-top:1px solid var(--line);padding-top:16px;margin-top:20px}.software-updates-dialog summary{cursor:pointer;font-size:12px}
+.software-update-error{border-top:1px solid var(--line);margin-top:16px;padding-top:8px}.software-update-error p{color:var(--danger)}
+.software-update-notice{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.software-update-notice span{flex:1}
+@media(max-width:480px){.software-updates-dialog{padding:18px}.software-update-heading{align-items:flex-start;flex-direction:column;gap:8px}.software-updates-dialog h2{font-size:20px}}

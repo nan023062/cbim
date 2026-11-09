@@ -21,4 +21,7 @@ try{
  assert.equal(await pane.getByRole('button',{name:'打开任务调度视图'}).count(),0);await page.screenshot({path:'test-results/extensions.png'});
  assert.equal(await page.getByRole('textbox',{name:'对话草稿',exact:true}).inputValue(),'中央草稿保持不变');
  console.log(JSON.stringify({legacyTaskPanelRemoved:true,emptyByDefault:true,fourChoices:true,browser:true,terminal:true,independentChat:true,collapseRetainsTabs:true,geometry}));
-}finally{await app?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));await fs.rm(temp,{recursive:true,force:true})}
+}finally{await app?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
+ const resolved=path.resolve(temp);if(path.dirname(resolved)!==path.resolve(os.tmpdir())||!path.basename(resolved).startsWith('cbim-extensions-'))throw Error('拒绝清理非本次扩展测试目录');
+ await fs.rm(resolved,{recursive:true,force:true});
+}

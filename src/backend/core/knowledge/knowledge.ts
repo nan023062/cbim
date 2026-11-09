@@ -1,6 +1,6 @@
 /**
- * 作用定位：Core 知识规则：解析 JSON、校验三个领域的结构与引用并派生索引。
- * 设计原因：调度引擎、桌面和外部适配器共用领域规则；结构校验不替代架构语义判断。
+ * 作用定位：Core 知识规则：校验领域结构、人员与显式模块维护关系，并派生注册索引。
+ * 设计原因：调度、桌面和外部适配共用规则；模块 Workflow 的显式程序条件不能绕过完整事务校验。Ajv 使用不改变字段值的兼容副本，原严格 JSON 解析仍保留危险键和重复键拒绝。作者不自动升级为维护人，结构校验也不签发执行或架构批准。
  */
 import fs from 'node:fs/promises';
 import {ConnectorRegistry} from '../connectors/registry';
@@ -9,6 +9,7 @@ import Ajv2020 from 'ajv/dist/2020';
 import ignore from 'ignore';
 import {hash,json} from '../foundation/serialization';
 import {exists} from '../foundation/files';
+import {parseWorkflowContract} from '../workspace/workflow-contract';
 import type {KnowledgeFile,Validation,Issue,ModuleNode} from './types';
 import {parseJson} from '../foundation/json';
 export {parseJson} from '../foundation/json';
@@ -34,24 +35,38 @@ export class Rules {
     const add=(p:string,code:string,message:string,severity:'error'|'warning'='error')=>issues.push({path:p,code,message,severity});
     const data=(p:string)=>parsed.get(p);
     for(const file of files)if(file.path.endsWith('.json'))try{parsed.set(file.path,parseJson(file.text))}catch(e:any){add(file.path,'json',e.message)}
-    const schema=(p:string,key:string)=>{const value=data(p);if(value===undefined){add(p,'missing','缺少有效知识定义');return false}const validator=this.validators.get(key)!;if(!validator(value)){for(const error of validator.errors||[])add(p,'schema',`${error.instancePath} ${error.message}`);return false}return true};
+    for(const file of files)if(file.path.startsWith('.cbim/workspace/')&&file.path.endsWith('/workflow.md'))try{parseWorkflowContract(file.text)}catch{add(file.path,'workflow_contract','Workflow 执行约定无效：请核对唯一的 cbim-workflow 块及版本、条件、工具和证据 ID')}
+    const schema=(p:string,key:string)=>{const value=data(p);if(value===undefined){add(p,'missing','缺少有效知识定义');return false}const validator=this.validators.get(key)!;
+      // 严格解析产出无原型对象；Ajv 的 uniqueItems 比较依赖 Object.prototype。
+      // clone 仅给校验器恢复普通对象原型，不删除 own key、不经 JSON 再编码改变数值，也不修改查询使用的原事实。
+      // 畸形 own valueOf/toString/constructor 仍须拒绝；第三方比较器不能把这类输入变成未处理异常。
+      try{if(!validator(structuredClone(value))){for(const error of validator.errors||[])add(p,'schema',`${error.instancePath} ${error.message}`);return false}}
+      catch{add(p,'schema','知识定义包含校验器无法处理的无效结构');return false}return true};
     const ref=(owner:string,reference:string)=>{const target=pp.normalize(pp.join(owner,reference.split('#')[0]));if(!target.startsWith('.cbim/')||!texts.has(target))add(owner,'reference',`引用不存在或越界：${reference}`);return target};
     const summary=(p:string,s:string)=>{const length=Array.from(s.replace(/\s/g,'')).length;if(s!==s.trim()||/[\r\n]/.test(s)||length<100||length>250)add(p,'summary','摘要须为 100–250 个非空白字符的单行文本')};
     const modules=new Map<string,any>(),agents=new Map<string,any>();const groups=new Set<string>();const sourceRows:{module:string;key:string;scope:string;location:string}[]=[];
     let connectorIds=new Set<string>();
     if(schema('.cbim/connectors/registry.json','connectors')){
       const registry=new ConnectorRegistry(data('.cbim/connectors/registry.json').connectors);
-      connectorIds=registry.ids();for(const _id of registry.duplicates())add('.cbim/connectors/registry.json','duplicate','连接器标识或插件身份重复');
+      connectorIds=registry.ids();for(const _id of registry.duplicates())add('.cbim/connectors/registry.json','duplicate','链接器标识或提供方身份重复');
     }
     const people=new Map<string,any>();if(schema('.cbim/team/people.json','people'))for(const p of data('.cbim/team/people.json').people){if(people.has(p.id))add('.cbim/team/people.json','duplicate',`人员重复：${p.id}`);people.set(p.id,p)}
     let ignores=ignore({ignorecase:true});try{ignores=ignores.add(texts.get('.cbim/.cbimignore')||'')}catch(e:any){add('.cbim/.cbimignore','ignore',e.message)}
-    const idSeen=new Set<string>();
+    const idSeen=new Set<string>(),maintenanceIds=new Set<string>();
     for(const f of files){const kind=f.path.endsWith('/module.json')&&f.path.startsWith('.cbim/workspace/')?'module':f.path.endsWith('/agent.json')&&f.path.startsWith('.cbim/team/')?'agent':undefined;if(!kind)continue;
       if(!schema(f.path,kind))continue;const d=data(f.path),id=pp.dirname(f.path);const folded=id.toLowerCase();if(idSeen.has(folded))add(f.path,'duplicate','标识不区分大小写时重复');idSeen.add(folded);summary(f.path,d.summary);
       const authorTeams=new Set<string>();for(const author of d.authors){const p=people.get(author);if(!p?.team)add(f.path,'author',`作者未知或未归组：${author}`);else authorTeams.add(p.team)}if(authorTeams.size>1)add(f.path,'author','作者必须来自同一已知 Team');
       for(const c of d.connectors)if(!connectorIds.has(c.toLowerCase()))add(f.path,'connector',`未登记连接器：${c}`);
       if(kind==='agent'){agents.set(id,d);ref(id,d.work_principles);continue}
       modules.set(id,d);if(d.id!==id)add(f.path,'identity','id 必须与模块目录一致');if(!/^(?:[0-9]+_)?[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(d.name)||pp.basename(id)!==d.name)add(f.path,'name','模块目录和名称须一致并使用小写 snake_case');
+      // 旧模块可没有维护声明；一旦声明，其人员引用和确认时间必须真实可解析，不能借作者字段补齐。
+      if(d.maintenance){
+        const m=d.maintenance;
+        if(maintenanceIds.has(m.bindingId))add(f.path,'maintenance','维护关系标识已被其他模块使用');maintenanceIds.add(m.bindingId);
+        for(const personId of m.maintainerPersonIds)if(!people.has(personId))add(f.path,'maintenance',`维护人未登记在真人花名册：${personId}`);
+        const timestamp=Date.parse(m.confirmation.confirmedAt);
+        if(!Number.isFinite(timestamp)||new Date(timestamp).toISOString()!==m.confirmation.confirmedAt)add(f.path,'maintenance','维护关系确认时间必须是有效 UTC ISO 8601 时间');
+      }
       ref(id,d.overview);this.body(id,d,texts.get(id+'/module.md')||'',add);
       const actual=files.filter(x=>x.path.startsWith(id+'/workflows/')&&x.path.endsWith('/workflow.md')).map(x=>x.path);
       this.inventory(id,d.workflows,actual,ref,add,'workflow');

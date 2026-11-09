@@ -1,0 +1,15 @@
+/**
+ * 作用定位：工作区运行状态与知识校验详情的扩展面板样式。
+ * 设计原因：问题路径允许完整换行，窄扩展区也能定位错误；状态和知识结果保持独立层次。
+ */
+.workspace-diagnostics{padding:20px;font-size:13px;line-height:1.6}
+.workspace-diagnostics h2{margin:0;font-size:17px}
+.workspace-diagnostics p{color:var(--muted);overflow-wrap:anywhere}
+.workspace-diagnostics [role=alert],.knowledge-issue.error>b{color:var(--danger)}
+.knowledge-diagnostics{margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+.knowledge-diagnostics h3{margin:0;font-size:14px}
+.knowledge-issue{padding:12px 0;border-top:1px solid var(--line)}
+.knowledge-issue b{font-weight:500;overflow-wrap:anywhere}
+.knowledge-issue.warning>b{color:var(--warning)}
+.knowledge-issue p{margin:4px 0}
+.knowledge-issue-path{font-family:monospace;font-size:12px}

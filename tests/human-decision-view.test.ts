@@ -1,0 +1,154 @@
+import {expect,it,vi} from 'vitest';
+import {createElement} from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {HumanDecisionController,HumanDecisionPool,checkedHumanDecisionPreview,checkedHumanDecisionReceipt,humanDecisionRejected,type HumanDecisionTarget,type HumanDecisionPorts} from '../src/frontend/tasks/human-decision-state';
+import {humanDecisionTarget,type HumanDecisionsView} from '../src/frontend/tasks/useHumanDecisions';
+import {HumanDecisionPanel} from '../src/frontend/tasks/HumanDecisionPanel';
+import {humanDecisionCoverageLimitation,humanDecisionPreviewSchema,humanDecisionReceiptSchema,type HumanDecisionPreviewInput,type HumanDecisionPreview,type HumanDecisionRequest,type HumanDecisionReceipt} from '../src/bridge/contracts/human-decisions';
+import type {DispatchScope,ScopeSummary} from '../src/bridge/contracts/dispatch';
+import type {ScopeGoalState} from '../src/frontend/tasks/scope-state';
+import {humanDecisionProof} from '../src/backend/core/tasks/human-decision-proof';
+import {compareHumanReconsideration} from '../src/backend/core/tasks/human-reconsideration';
+
+const time='2026-11-07T00:00:00.000Z',hash='a'.repeat(64),target:HumanDecisionTarget={workspaceId:'workspace',rootSessionId:'root',scopeId:'scope',criterionId:'human',anchor:'anchor-1'};
+const selection={taskId:'task',runId:'member-run',baselineId:'baseline'},criterion={id:'human',text:'请人工判断成果是否满足目标',kind:'human' as const};
+const identity={workspaceId:target.workspaceId,rootSessionId:target.rootSessionId,scopeId:target.scopeId};
+function preview(input:HumanDecisionPreviewInput,revision=0):HumanDecisionPreview{
+  return humanDecisionPreviewSchema.parse({identity:{...identity,criterionId:input.criterionId},checkedAt:time,decisionRevision:revision,basis:hash,
+    source:{waitId:'wait',goalRevision:3,inputRevision:1,planRevision:2,reviewRevision:3,reviewRunId:'main-run',reviewLogHash:hash,knowledgeRevision:'knowledge',graphCursor:{streamId:'graph',seq:8},criterion:{...criterion,id:input.criterionId}},
+    candidates:[{taskId:'task',taskRevision:5,runId:'member-run',resultId:'result',planRevision:1,logHash:hash,evidenceToolCallIds:['read-1'],agentName:'执行者',summary:'真实候选',baselines:[{baselineId:'baseline',capturedAt:time,fileCount:1},{baselineId:'baseline-two',capturedAt:time,fileCount:1}],
+      ...(input.baselines.length?{selected:{baselineId:input.baselines[0].baselineId,captureToolCallId:'capture',capturedSeq:4,finishedSeq:5,knowledgeRevision:'knowledge',progressVersion:2,invalidated:false,files:[{relativePath:'result.txt',expected:{byteLength:4,sha256:hash},observed:{byteLength:4,sha256:hash},state:'matches'}]}}:{})}],
+    allowedDecisions:input.baselines.length?['accept','reject','request_evidence']:['reject','request_evidence'],limitations:[humanDecisionCoverageLimitation],issues:[]});
+}
+function receipt(request:HumanDecisionRequest):HumanDecisionReceipt{
+  const p=preview(request,request.expectedDecisionRevision),candidate=p.candidates[0],{agentName:_name,summary:_summary,baselines:_menu,...proofCandidate}=candidate;
+  return humanDecisionReceiptSchema.parse({...identity,scopeStatus:'waiting',decisionRevision:request.expectedDecisionRevision+1,record:{decisionId:request.commandId,revision:request.expectedDecisionRevision+1,recordedAt:time,actor:{kind:'local_desktop',interaction:'explicit_submit'},criterionId:request.criterionId,decision:request.decision,comment:request.comment,basis:request.expectedBasis,baselines:request.baselines,proof:{identity,source:p.source,candidates:[proofCandidate],limitations:p.limitations,allowedDecisions:p.allowedDecisions}}});
+}
+function fixture(submit:HumanDecisionPorts['submit']=async request=>receipt(request),lookup:HumanDecisionPorts['lookup']=async()=>undefined){
+  let number=0;const saved=new Map<string,string>(),read=vi.fn(async(input:HumanDecisionPreviewInput)=>preview(input)),send=vi.fn(submit),query=vi.fn(lookup),storage={getItem:(key:string)=>saved.get(key)??null,setItem:(key:string,value:string)=>{saved.set(key,value)}},ports:HumanDecisionPorts={storage,preview:read,submit:send,lookup:query,uuid:()=>`22222222-2222-4222-8222-${String(++number).padStart(12,'0')}`};
+  const controller=new HumanDecisionController('workspace','root',ports);return {controller,saved,ports,send,query,read};
+}
+async function ready(f:ReturnType<typeof fixture>,controller=f.controller){controller.edit(target,{baselines:[selection],decision:'accept',comment:'明确意见'});await controller.preview(target)}
+
+const fullSelection={taskId:'task',runId:'member-run',manifestId:'manifest-one'};
+function fullPreview(input:HumanDecisionPreviewInput):HumanDecisionPreview{
+  const value=preview({...input,baselines:[]}),manifest={manifestId:'manifest-one',captureToolCallId:'capture-complete',scopeHash:hash,manifestHash:hash,knowledgeRevision:'knowledge',progressVersion:2,capturedAt:time,lastEffectSeq:0,entryCount:2,fileCount:1,byteLength:4,scopes:[{moduleId:'module',workflowId:'workflow',workflowVersion:'version',scope:{version:1 as const,roots:[{path:'outputs',kind:'directory' as const}]}}],capturedSeq:4,finishedSeq:5};
+  value.candidates[0]={...value.candidates[0],baselines:[],manifest,...(input.manifests?.length?{selectedManifest:{manifest,state:'matches',observedHash:hash}}:{})};value.allowedDecisions=input.manifests?.length?['accept','reject','request_evidence']:['reject','request_evidence'];return humanDecisionPreviewSchema.parse(value);
+}
+function fullReceipt(request:HumanDecisionRequest):HumanDecisionReceipt{const p=fullPreview(request);return humanDecisionReceiptSchema.parse({...identity,scopeStatus:'waiting',decisionRevision:request.expectedDecisionRevision+1,record:{decisionId:request.commandId,revision:request.expectedDecisionRevision+1,recordedAt:time,actor:{kind:'local_desktop',interaction:'explicit_submit'},criterionId:request.criterionId,decision:request.decision,comment:request.comment,basis:request.expectedBasis,baselines:request.baselines,manifests:request.manifests,proof:humanDecisionProof(p)}})}
+
+it('完整清单选择不自动读取或提交，迟到/跨目标观察失效，未知请求重开保留同一清单',async()=>{
+  const f=fixture(async()=>{throw Error('IPC_TIMEOUT')});f.read.mockImplementation(async input=>fullPreview(input));await f.controller.preview(target);expect(f.controller.currentPreview(target)?.candidates[0].selectedManifest).toBeUndefined();
+  f.controller.edit(target,{manifests:[fullSelection],decision:'accept',comment:'完整范围'});await f.controller.submit(target);expect(f.send).not.toHaveBeenCalled();expect(f.read).toHaveBeenCalledTimes(1);
+  await f.controller.preview(target);let finish!:(value:HumanDecisionPreview)=>void;f.read.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve}));const pending=f.controller.preview(target);f.controller.edit(target,{manifests:[]});finish(fullPreview({...identity,criterionId:'human',baselines:[],manifests:[fullSelection]}));await pending;expect(f.controller.currentPreview(target)).toBeUndefined();
+  f.controller.edit(target,{manifests:[fullSelection]});await f.controller.preview(target);expect(f.controller.currentPreview({...target,anchor:'changed'})).toBeUndefined();await f.controller.submit(target);const original=f.send.mock.calls[0][0];expect(original.manifests).toEqual([fullSelection]);
+  const reopened=new HumanDecisionController('workspace','root',f.ports),reads=f.read.mock.calls.length;await reopened.restore();expect(f.read).toHaveBeenCalledTimes(reads);expect(reopened.record('scope','human')?.manifests).toEqual([fullSelection]);expect(reopened.resetBaselines(target)).toBe(false);f.send.mockImplementation(async input=>fullReceipt(input));await reopened.retry('scope','human');expect(f.send.mock.calls[1][0]).toEqual(original);expect(reopened.record('scope','human')?.attempt?.phase).toBe('accepted');
+});
+it('完整预览不能换绑文件基线、其它清单或矛盾哈希，界面显示固定根与完整数量',()=>{
+  const input={...identity,criterionId:'human',baselines:[],manifests:[fullSelection]},p=fullPreview(input);expect(()=>checkedHumanDecisionPreview(p,{...input,manifests:[]})).toThrow('不一致');
+  const bad=structuredClone(p);bad.candidates[0].selectedManifest!.manifest.manifestId='other';expect(()=>checkedHumanDecisionPreview(bad,input)).toThrow();
+  const mixed=structuredClone(p);mixed.candidates[0].selected=preview({...input,baselines:[selection]}).candidates[0].selected;expect(()=>checkedHumanDecisionPreview(mixed,input)).toThrow();
+  const markup=renderToStaticMarkup(createElement(HumanDecisionPanel,{state:{...view(),record:{scopeId:'scope',criterionId:'human',baselines:[],manifests:[fullSelection],comment:''},preview:{anchor:target.anchor,input,loading:false,error:'',result:p},previewCurrent:true}}));expect(markup).toContain('human-manifest-select');expect(markup).toContain('outputs');expect(markup).toContain('2 个条目');expect(markup).toContain('完整集合一致');expect(markup).not.toContain('human-baseline-select');
+});
+
+it('不自动核实或选择基线，选择改变后必须重新预览才能提交',async()=>{
+  const f=fixture();expect(f.read).not.toHaveBeenCalled();await f.controller.preview(target);expect(f.controller.record('scope','human')).toBeUndefined();expect(f.controller.currentPreview(target)?.candidates[0].selected).toBeUndefined();
+  f.controller.edit(target,{baselines:[selection],decision:'accept',comment:'意见'});expect(f.controller.currentPreview(target)).toBeUndefined();await f.controller.submit(target);expect(f.send).not.toHaveBeenCalled();
+  await f.controller.preview(target);await f.controller.submit(target);expect(f.read).toHaveBeenCalledTimes(2);expect(f.send).toHaveBeenCalledTimes(1);
+});
+
+it('旧选择和旧目标的迟到预览不能覆盖新选择或成为新目标的依据',async()=>{
+  const f=fixture();let old!:(value:HumanDecisionPreview)=>void;f.read.mockImplementationOnce(input=>new Promise(resolve=>{old=resolve}));const pending=f.controller.preview(target);
+  f.controller.edit(target,{baselines:[selection]});await f.controller.preview(target);const current=f.controller.currentPreview(target);expect(current?.candidates[0].selected?.baselineId).toBe('baseline');old(preview({...identity,criterionId:'human',baselines:[]}));await pending;expect(f.controller.currentPreview(target)).toBe(current);
+  expect(f.controller.currentPreview({...target,anchor:'anchor-2'})).toBeUndefined();await f.controller.submit({...target,anchor:'anchor-2'});expect(f.send).not.toHaveBeenCalled();
+  expect(f.controller.currentPreview({...target,criterionId:'other'})).toBeUndefined();
+});
+
+it('双卡共享草稿及在途请求，先持久化冻结请求再发送，双击只有一个命令',async()=>{
+  let finish!:(value:HumanDecisionReceipt)=>void;const f=fixture(request=>{expect(JSON.parse(f.saved.get(f.controller.storageKey)!).records[0].attempt.request).toEqual(request);return new Promise(resolve=>{finish=resolve})}),pool=new HumanDecisionPool();
+  const first=pool.get('workspace','root',f.ports),second=pool.get('workspace','root',f.ports);expect(second).toBe(first);await ready(f,first);expect(second.record('scope','human')?.comment).toBe('明确意见');
+  const sending=first.submit(target);await second.submit(target);second.edit(target,{comment:'在途不能替换'});expect(f.send).toHaveBeenCalledTimes(1);expect(first.record('scope','human')?.comment).toBe('明确意见');
+  finish(receipt(f.send.mock.calls[0][0]));await sending;expect(second.record('scope','human')?.attempt?.phase).toBe('accepted');
+});
+
+it('未知提交重开只查询，查无结果保留原命令且显式重试不改正文或选择',async()=>{
+  const f=fixture(async()=>{throw Error('IPC_TIMEOUT')});await ready(f);await f.controller.submit(target);const request=f.send.mock.calls[0][0],reopened=new HumanDecisionController('workspace','root',f.ports);await reopened.restore();expect(f.query).toHaveBeenCalledTimes(1);expect(f.send).toHaveBeenCalledTimes(1);expect(f.read).toHaveBeenCalledTimes(1);
+  reopened.edit(target,{comment:'不能替换',baselines:[]});await reopened.submit(target);expect(reopened.record('scope','human')?.attempt?.request).toEqual(request);f.send.mockImplementation(async value=>receipt(value));await reopened.retry('scope','human');expect(f.send.mock.calls[1][0]).toEqual(request);expect(reopened.record('scope','human')?.attempt?.phase).toBe('accepted');
+});
+
+it('服务已保存但响应丢失，重开查询原记录而不再次提交',async()=>{
+  let accepted:HumanDecisionReceipt|undefined;const f=fixture(async request=>{accepted=receipt(request);throw Error('响应中断')},async()=>accepted);await ready(f);await f.controller.submit(target);const reopened=new HumanDecisionController('workspace','root',f.ports);await reopened.restore();expect(reopened.record('scope','human')?.attempt?.receipt).toEqual(accepted);expect(f.send).toHaveBeenCalledTimes(1);await reopened.retry('scope','human');expect(f.send).toHaveBeenCalledTimes(1);
+});
+
+it('首次HUMAN_STALE拒绝后必须重新核实；未知后同样拒绝仍不能解冻',async()=>{
+  const f=fixture(async()=>{throw Error('HUMAN_STALE: 文件变化')});await ready(f);await f.controller.submit(target);expect(f.controller.record('scope','human')?.attempt?.phase).toBe('rejected');expect(f.controller.currentPreview(target)).toBeUndefined();f.controller.edit(target,{comment:'保留新意见'});await f.controller.submit(target);expect(f.send).toHaveBeenCalledTimes(1);f.send.mockImplementation(async request=>receipt(request));await f.controller.preview(target);await f.controller.submit(target);expect(f.send).toHaveBeenCalledTimes(2);
+  const unknown=fixture(async()=>{throw Error('IPC_TIMEOUT')});await ready(unknown);await unknown.controller.submit(target);const request=unknown.send.mock.calls[0][0];unknown.send.mockImplementation(async()=>{throw Error('HUMAN_STALE: 后续拒绝')});await unknown.controller.retry('scope','human');expect(unknown.controller.record('scope','human')?.attempt).toMatchObject({phase:'unknown',uncertain:true,request});unknown.controller.edit(target,{comment:'不能换ID'});expect(unknown.controller.record('scope','human')?.comment).toBe('明确意见');
+  expect(humanDecisionRejected(Error('COMMAND_ID_CONFLICT: 原命令内容不一致'))).toBe(false);expect(humanDecisionRejected(Error('IO: 写入失败'))).toBe(false);
+});
+
+it('预览与回执核验外层及proof身份，错误依据不能确认提交',async()=>{
+  const f=fixture();await ready(f);const input={...identity,criterionId:'human',baselines:[selection]},p=preview(input);expect(()=>checkedHumanDecisionPreview({...p,identity:{...p.identity,rootSessionId:'other'}},input)).toThrow('不一致');expect(()=>checkedHumanDecisionPreview(p,{...input,baselines:[]})).toThrow('不一致');
+  f.send.mockImplementation(async request=>{const r=receipt(request);return {...r,record:{...r.record,proof:{...r.record.proof,identity:{...identity,rootSessionId:'other'}}}}});await f.controller.submit(target);expect(f.controller.record('scope','human')?.attempt?.phase).toBe('unknown');const request=f.send.mock.calls[0][0],good=receipt(request);
+  expect(()=>checkedHumanDecisionReceipt({...good,workspaceId:'other'},request)).toThrow();expect(()=>checkedHumanDecisionReceipt({...good,record:{...good.record,comment:'错误正文'}},request)).toThrow('不一致');expect(()=>checkedHumanDecisionReceipt({...good,record:{...good.record,recordedAt:'2026-11-08T00:00:00.000Z'}},request,good)).toThrow('不一致');
+});
+
+it('本地持久化失败或损坏数据不发送，也不覆盖未知请求',async()=>{
+  const f=fixture();await ready(f);f.ports.storage.setItem=()=>{throw Error('QuotaExceededError')};await f.controller.submit(target);expect(f.send).not.toHaveBeenCalled();expect(f.controller.available).toBe(false);expect(f.controller.snapshot.error).toContain('本地保存失败');expect(f.controller.record('scope','human')?.comment).toBe('明确意见');
+  const broken=fixture();broken.saved.set(broken.controller.storageKey,'{broken');const controller=new HumanDecisionController('workspace','root',broken.ports);controller.edit(target,{comment:'不能覆盖'});await controller.preview(target);await controller.submit(target);expect(controller.available).toBe(false);expect(broken.saved.get(controller.storageKey)).toBe('{broken');expect(broken.send).not.toHaveBeenCalled();expect(broken.read).not.toHaveBeenCalled();
+});
+
+it('已记录决定不能重复提交，新编辑才准备新意见而不篡改旧回执',async()=>{
+  const f=fixture();await ready(f);await f.controller.submit(target);const first=structuredClone(f.controller.record('scope','human')!.attempt!);await f.controller.submit(target);expect(f.send).toHaveBeenCalledTimes(1);f.controller.edit(target,{decision:'reject',comment:'重新考虑'});expect(f.controller.record('scope','human')?.attempt).toBeUndefined();f.read.mockImplementation(async input=>preview(input,1));await f.controller.preview(target);await f.controller.submit(target);expect(f.send).toHaveBeenCalledTimes(2);expect(f.send.mock.calls[1][0].commandId).not.toBe(first.request.commandId);expect(f.send.mock.calls[1][0].expectedDecisionRevision).toBe(1);expect(first.receipt?.record.decision).toBe('accept');
+});
+it('返工新等待显式清除旧基线后才能列出新成果，历史回执不改且未知请求不能清除',async()=>{
+  const f=fixture();await ready(f);await f.controller.submit(target);const original=structuredClone(f.controller.record('scope','human')!.attempt!.receipt),next={...target,anchor:'new-wait-new-candidate'};
+  f.read.mockImplementation(async input=>{if(input.baselines.length)throw Error('HUMAN_SOURCE_INVALID: 旧基线不属于当前成果');const listed=preview(input,1);return {...listed,source:{...listed.source!,waitId:'new-wait'},candidates:listed.candidates.map(value=>({...value,taskId:'new-task',runId:'new-run',resultId:'new-result'}))}});
+  await f.controller.preview(next);expect(f.controller.previewState(next)?.error).toContain('HUMAN_SOURCE_INVALID');const before=f.read.mock.calls.length;expect(f.controller.resetBaselines(next)).toBe(true);expect(f.read).toHaveBeenCalledTimes(before);expect(f.controller.record('scope','human')).toMatchObject({baselines:[],comment:'明确意见'});expect(f.controller.record('scope','human')?.decision).toBeUndefined();expect(f.controller.currentPreview(next)).toBeUndefined();expect(f.controller.record('scope','human')?.attempt).toBeUndefined();
+  await f.controller.preview(next);expect(f.read.mock.lastCall?.[0].baselines).toEqual([]);expect(f.controller.currentPreview(next)?.source?.waitId).toBe('new-wait');expect(original?.record.baselines).toEqual([selection]);expect(f.send).toHaveBeenCalledTimes(1);
+  const unknown=fixture(async()=>{throw Error('IPC_TIMEOUT')});await ready(unknown);await unknown.controller.submit(target);const request=structuredClone(unknown.controller.record('scope','human'));expect(unknown.controller.resetBaselines(next)).toBe(false);expect(unknown.controller.record('scope','human')).toEqual(request);expect(unknown.read).toHaveBeenCalledTimes(1);
+});
+it('清除基线会隔离旧选择的迟到预览，重新读取不继承旧文件观察',async()=>{
+  const f=fixture();await ready(f);let finish!:(value:HumanDecisionPreview)=>void;f.read.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve}));const pending=f.controller.preview(target);
+  expect(f.controller.resetBaselines(target)).toBe(true);await f.controller.preview(target);expect(f.controller.currentPreview(target)?.candidates[0].selected).toBeUndefined();finish(preview({...identity,criterionId:'human',baselines:[selection]}));await pending;expect(f.controller.currentPreview(target)?.candidates[0].selected).toBeUndefined();expect(f.controller.record('scope','human')?.baselines).toEqual([]);expect(f.send).not.toHaveBeenCalled();
+});
+
+function scopeState():ScopeGoalState{
+  const source=preview({...identity,criterionId:'human',baselines:[]}).source!,stamp={revision:2,inputRevision:1,runId:'main-first',recordedAt:time,knowledgeRevision:'knowledge',graphCursor:source.graphCursor};
+  const selected:DispatchScope={...identity,status:'waiting',createdAt:time,goal:{revision:3,inputRevision:1,input:{message:'原目标',attachmentIds:[]},plan:{...stamp,objective:'原目标',constraints:[],criteria:[criterion],assignments:[{agentId:'agent',agentName:'执行者',teamId:'team',moduleIds:['module'],moduleNames:['模块'],criterionIds:['human'],reason:'职责'}],reason:'保存目标'},review:{...stamp,revision:3,runId:'main-run',planRevision:2,decision:'awaiting_user',checks:[{criterionId:'human',outcome:'needs_human',reason:'等待人工',evidence:[]}],superseded:[],gaps:['等待人工'],reason:'等待人工',observedSeq:8,lastEffectSeq:0}},wait:{waitId:'wait',reason:'等待人工',createdAt:time,runId:'main-run',goalRevision:3,graphCursor:source.graphCursor,knowledgeRevision:'knowledge',mainRunIds:['main-first','main-run']}};
+  const summary:ScopeSummary={scopeId:'scope',status:'waiting',createdAt:time,hasGoal:true,hasPlan:true,goalRevision:3,inputRevision:1,reviewDecision:'awaiting_user',wait:{waitId:'wait',reason:'等待人工',createdAt:time,goalRevision:3},stamp:{scopeId:'scope',streamId:'scopes:graph',seq:1}};
+  const goalView={phase:'waiting',label:'等待补充',tone:'warning' as const};return {scopes:[summary],openScope:summary,waitingScope:summary,selectedScopeId:'scope',selectedScope:selected,selectedGoalView:goalView,currentGoalView:goalView,loading:false,detailLoading:false,error:'',selectScope:()=>{}};
+}
+it('只有当前waiting人工项可写，历史、未追齐详情与错误身份不会得到提交目标',()=>{
+  const state=scopeState(),actual=humanDecisionTarget('workspace','root',state,'human');expect(actual).toMatchObject(identity);expect(actual?.criterionId).toBe('human');expect(humanDecisionTarget('workspace','root',{...state,selectedScopeId:'history'},'human')).toBeUndefined();expect(humanDecisionTarget('workspace','root',{...state,detailLoading:true},'human')).toBeUndefined();expect(humanDecisionTarget('workspace','root',{...state,error:'同步失败'},'human')).toBeUndefined();expect(humanDecisionTarget('workspace','other',state,'human')).toBeUndefined();expect(humanDecisionTarget('workspace','root',state,'non-human')).toBeUndefined();expect(humanDecisionTarget('workspace','root',{...state,selectedScope:{...state.selectedScope!,wait:{...state.selectedScope!.wait!,waitId:'obsolete'}}},'human')).toBeUndefined();
+  const changed={...state,waitingScope:{...state.waitingScope!,stamp:{...state.waitingScope!.stamp,seq:2}}};expect(humanDecisionTarget('workspace','root',changed,'human')?.anchor).not.toBe(actual?.anchor);
+});
+function view():HumanDecisionsView{return {scopeId:'scope',criterionId:'human',criteria:[criterion],history:[],eligible:true,editable:true,pending:false,previewCurrent:false,canSubmit:false,canRetry:false,error:'',select:()=>{},chooseBaseline:()=>{},chooseManifest:()=>{},chooseDecision:()=>{},comment:()=>{},clearBaselines:async()=>{},inspect:async()=>{},submit:async()=>{},query:async()=>{},retry:async()=>{},reconsider:async()=>{}}}
+
+const priorOpinion=()=>receipt({...identity,criterionId:'human',baselines:[selection],commandId:'11111111-1111-4111-8111-111111111111',expectedBasis:hash,expectedDecisionRevision:0,decision:'accept',comment:'原意见'}).record;
+function reconsiderPreview(input:HumanDecisionPreviewInput){const p=preview(input,1);p.source!.waitId='new-wait';if(input.reconsidersDecisionId){p.reconsideration=compareHumanReconsideration([priorOpinion()],input as typeof input&{reconsidersDecisionId:string},p,true);if(!p.reconsideration.canReconsider){p.allowedDecisions=[];delete p.basis}}return p}
+function reconsiderReceipt(request:HumanDecisionRequest):HumanDecisionReceipt{const p=reconsiderPreview(request);return humanDecisionReceiptSchema.parse({...identity,scopeStatus:'waiting',decisionRevision:request.expectedDecisionRevision+1,record:{decisionId:request.commandId,revision:request.expectedDecisionRevision+1,recordedAt:time,actor:{kind:'local_desktop',interaction:'explicit_submit'},criterionId:request.criterionId,decision:request.decision,comment:request.comment,basis:request.expectedBasis,baselines:request.baselines,...(request.reconsidersDecisionId?{reconsidersDecisionId:request.reconsidersDecisionId}:{}),proof:humanDecisionProof(p)}})}
+
+it('明确跨等待对照清空原选择和接受，初次仅列菜单；不能串用另一个原意见的回包',async()=>{
+  const f=fixture();f.read.mockImplementation(async input=>reconsiderPreview(input));await ready(f);await f.controller.reconsider(target,priorOpinion().decisionId);
+  expect(f.controller.record('scope','human')).toMatchObject({baselines:[],comment:'',reconsidersDecisionId:priorOpinion().decisionId});expect(f.controller.record('scope','human')?.decision).toBeUndefined();expect(f.send).not.toHaveBeenCalled();expect(f.controller.currentPreview(target)?.allowedDecisions).not.toContain('accept');
+  const original=f.read.mock.calls.at(-1)![0],p=reconsiderPreview(original);expect(()=>checkedHumanDecisionPreview(p,{...original,reconsidersDecisionId:'33333333-3333-4333-8333-333333333333'})).toThrow('不一致');expect(()=>checkedHumanDecisionPreview(p,{...original,reconsidersDecisionId:undefined})).toThrow('不一致');
+  let finish!:(value:HumanDecisionPreview)=>void;f.read.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve}));const pending=f.controller.preview(target);await f.controller.reconsider(target);finish(p);await pending;expect(f.controller.currentPreview(target)?.reconsideration).toBeUndefined();expect(f.controller.record('scope','human')?.reconsidersDecisionId).toBeUndefined();
+});
+
+it('跨等待未知提交冻结原意见和请求，重开只查询；可靠保存后编辑新意见不会沿用已消费的关联',async()=>{
+  const f=fixture(async()=>{throw Error('IPC_TIMEOUT')});f.read.mockImplementation(async input=>reconsiderPreview(input));await f.controller.reconsider(target,priorOpinion().decisionId);await ready(f);await f.controller.submit(target);const original=f.send.mock.calls[0][0];expect(original.reconsidersDecisionId).toBe(priorOpinion().decisionId);
+  await f.controller.reconsider(target);expect(f.controller.record('scope','human')?.attempt?.request).toEqual(original);const reads=f.read.mock.calls.length,reopened=new HumanDecisionController('workspace','root',f.ports);await reopened.restore();expect(f.read).toHaveBeenCalledTimes(reads);expect(f.send).toHaveBeenCalledTimes(1);
+  const bad=reconsiderReceipt(original);delete bad.record.reconsidersDecisionId;expect(()=>checkedHumanDecisionReceipt(bad,original)).toThrow('不一致');
+  f.send.mockImplementation(async request=>reconsiderReceipt(request));await reopened.retry('scope','human');expect(f.send.mock.calls[1][0]).toEqual(original);expect(reopened.record('scope','human')?.attempt?.phase).toBe('accepted');reopened.edit(target,{comment:'独立的新意见'});expect(reopened.record('scope','human')?.reconsidersDecisionId).toBeUndefined();expect(reopened.currentPreview(target)).toBeUndefined();expect(humanDecisionRejected(Error('HUMAN_RECONSIDERATION_INVALID: 原意见已变'))).toBe(true);
+});
+
+it('界面仅在新等待提供对照入口，报告说明证据一致仍需新决定，历史展示关联',()=>{
+  const prior=priorOpinion(),input={...identity,criterionId:'human',baselines:[selection],reconsidersDecisionId:prior.decisionId},p=reconsiderPreview(input),state={...view(),waitId:'new-wait',history:[prior],previewCurrent:true,preview:{anchor:'anchor-1',input,loading:false,error:'',result:p}};
+  const markup=renderToStaticMarkup(createElement(HumanDecisionPanel,{state}));expect(markup).toContain('human-reconsider');expect(markup).toContain('所比较证据一致，仍须重新决定');expect(markup).toContain('旧接受不自动沿用');expect(markup).not.toContain('aria-pressed="true"');
+  const same=renderToStaticMarkup(createElement(HumanDecisionPanel,{state:{...state,waitId:'wait',preview:undefined}}));expect(same).not.toContain('data-testid="human-reconsider"');
+  const saved=reconsiderReceipt({...input,commandId:'22222222-2222-4222-8222-222222222222',expectedBasis:hash,expectedDecisionRevision:1,decision:'accept',comment:'新意见'}),history=renderToStaticMarkup(createElement(HumanDecisionPanel,{state:{...view(),eligible:false,editable:false,history:[prior,saved.record]}}));expect(history).toContain('human-reconsidered-record');expect(history).toContain(prior.decisionId);expect(history).not.toContain('<button');
+});
+it('视图不默认选择文件，三种意见明确显示，历史仅展示且不提供继续执行',async()=>{
+  const f=fixture();await f.controller.preview(target);const markup=renderToStaticMarkup(createElement(HumanDecisionPanel,{state:{...view(),preview:f.controller.previewState(target),previewCurrent:true}}));expect(markup).toContain('<option value="" selected="">未选择');expect(markup).toContain('human-decision-accept');expect(markup).toContain('human-decision-reject');expect(markup).toContain('human-decision-request_evidence');expect(markup).toContain('不启动模型');expect(markup).not.toContain('window.confirm');
+  await ready(f);await f.controller.submit(target);const record=f.controller.record('scope','human')!,historical=renderToStaticMarkup(createElement(HumanDecisionPanel,{state:{...view(),eligible:false,editable:false,record,history:[record.attempt!.receipt!.record]}}));expect(historical).toContain('human-history');expect(historical).toContain('尚非整体目标完成');expect(historical).not.toContain('data-testid="human-submit"');expect(historical).not.toContain('data-testid="human-preview"');expect(historical).not.toContain('<button');expect(historical).toContain('保存本身不启动模型');expect(f.send).toHaveBeenCalledTimes(1);
+});

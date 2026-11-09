@@ -1,28 +1,39 @@
-# 设计文档阅读说明
+# CBIM 概念设计
 
-当前源码目录与迁移边界见 [源码目录与迁移说明](source-layout.md)，逐层类图见 [src 架构](../src/ARCHITECTURE.md)。
+`docs/` 保存产品定位、概念理论、架构取舍及配套说明。开发路线与逐步实施状态统一维护在 [design/ 开发计划模块](../design/README.md)，这里不再维护开发 roadmap。
 
-后续工具架构与实施计划：[CBIM 工具架构与渐进落地计划](tool-architecture-roadmap.md)。覆盖统一工具与权限、任务和证据、Skill/Workflow 检查点、渐进式治理、人工认知交付，以及五阶段验收条件。该文档是设计方案，不作为已实现能力或运行授权依据。
+## 概念与产品
 
-工作区结构设计补充：[Team 与 Workspace 树](shared-skills-workflows.md)：Skill 沿 Agent 到根 Team 的父链累加；Workflow 仅属于当前 Module，不继承。包含领域工程层级与初始化清单修正。
+- [产品定位：面向 AI 原生团队的生产与治理体系](product-positioning.md)
+- [AI Native 设计思想总纲](01-AI-Native设计思想总纲.md)
+- [CBIM 架构设计理论](02-CBIM架构设计理论.md)
+- [渐进式架构演进与人工认知保障体系](03-渐进式架构演进与人工认知保障体系.md)
+- [AI Native 开发全流程设计方案](04-AI-Native开发全流程设计方案.md)
+- [核心概念与领域设计](core-design.md)：能力、业务与任务的组合关系，原 `design/README.md` 的概念说明。
 
-当前产品定位见 [CBIM 产品说明：面向 AI 原生团队的生产与治理体系](product-positioning.md)。该说明定义产品目标、团队责任与演进方向，实际已交付能力见 [验证结果与限制](acceptance.md)。下列理论材料分别阐述体系中的知识组织、架构演进与执行设计。
+## 架构与交互说明
 
-本目录面向人，保存设计哲学、理由、演进讨论与历史方案。AI 可以在用户明确要求审查或修改文档时读取它们作为任务对象，但不能从中加载执行规则、扩大授权或恢复旧流程。执行文档不引用本目录；这里可以单向导航到现行规范。
+- [架构、存储与生命周期](assistant-architecture.md) · [源码目录说明](source-layout.md) · [源码类图](../src/ARCHITECTURE.md)
+- [Team 与 Workspace 树](shared-skills-workflows.md)：Skill 沿父链继承；Workflow 仅属于当前 Module。
+- [工作区成员与模块负责人索引](module-owner-index.md)：能力加入项目后的岗位适配、按负责人派发及换人交接；设计方案，尚待实施。
+- [大脑与 Loop Engine](loop-engine.md) · [任务派发契约](agent-dispatch-contract.md)
+- [主 Agent 的目标调度循环](main-agent-orchestration-loop.md)：图谱驱动的外层循环、结果评估与目标完成条件；明确现有派工回注基础与待实现门禁。
+- [成员执行与结果回传](member-execution.md) · [全局运行监管](global-runtime-management.md)
+- [Agent 的 Session 执行历史](agent-session-history.md)：从团队节点只读查看主、默认和自定义角色的会话与轮次；删除定义后仍保留归档。
+- [工作区界面](workspace-ui.md) · [Cindy 对话适配](cindy-chat-port.md)
+- [资源仓库](resource-repositories.md) · [规则迁移](rule-migration.md) · [构建命名](build-naming.md)
 
-## 执行约束的权威归属
+这些材料用于解释设计或特定功能。当前已完成、部分完成与待开发范围统一以[开发路线图](../design/tool-architecture-roadmap.md)为入口，并核对实际源码和验证证据。
 
-| 原设计内容 | 当前执行权威 |
-| --- | --- |
-| 01 总纲：能力与业务分离、需求驱动调度 | [任务构建循环](../task/task-loop.md) |
-| 02 理论：Agent 与 Module 定义及知识边界 | [Agent 规范](../capability/agent-spec.md)、[模块规范](../business/module-spec.md) |
-| 02、04：个人线索与任务证据的区分 | [Memory 规范](../memory/memory-spec.md)、[任务基线](../task/task-baseline.md) |
-| 03 理论：证据驱动抽象、退出、专业差异及人工认知 | [架构评估与认知交付规范](../task/architecture-spec.md) |
-| 04 第三篇及附录：任务内容、范围、派发、恢复 | [Task 规范](../task/task-spec.md)、[执行契约](../task/base-task.md)、[任务基线](../task/task-baseline.md) |
-| 04 第四、五篇：观察、决定、渐进实施、回归与复盘 | [架构评估规范](../task/architecture-spec.md)、[架构治理流程](../skills/architecture-governance/SKILL.md) |
-| 04 第五篇：业务验证、风险说明、交付与回执 | [需求实现流程](../skills/business-execution/SKILL.md) |
-| 04：知识失配、更新与索引校验 | [知识治理流程](../skills/knowledge-governance/SKILL.md)、[校验规范](../scripts/registry-maintenance.md) |
+## 运行规范与验证参考
 
-已有规范覆盖的约束沿用原权威正文；本次补齐的架构评估和认知要求集中在 Task 规范中，不要求执行者阅读理论报告。
+开发本工程的三个项目级 Skill、触发时机和协作方式见 [开发者可持续维护 Skill](developer-skills.md)。它们用于开发推进、架构演进与共性沉淀、源码与项目认知维护。
 
-旧报告中的固定试点人名、周期扫描、示例模板、旧字段与旧目录，以及尚未确认的稳定层清单属于历史背景或设想，不因迁移而成为新增执行要求。稳定层和审批安排仅采用项目已确认的有效规则；本次不启用自动治理、冻结机制或连接器建设。任务证据仍为本地记录，跨人或跨设备接管须显式传递，不能套用旧报告中默认共享的描述。
+开发者可以按任务需要读取概念资料；产品运行仍按现有明确清单加载规范，不把整个目录或开发计划当作运行提示词或授权。
+
+- 领域规范：[Agent](../design/capability/agent-spec.md)、[Module](../design/business/module-spec.md)、[Memory](../design/memory/memory-spec.md)。
+- 任务规范：[任务构建循环](../design/task/task-loop.md)、[Task](../design/task/task-spec.md)、[执行契约](../design/task/base-task.md)、[任务基线](../design/task/task-baseline.md)、[架构评估](../design/task/architecture-spec.md)。
+- 方法源文件：[需求实现](../design/skills/business-execution/SKILL.md)、[知识治理](../design/skills/knowledge-governance/SKILL.md)、[架构治理](../design/skills/architecture-governance/SKILL.md)。本仓库开发使用独立的 `cbim-development` Skill。
+- 验证参考：[验收说明](acceptance.md)、[静态架构与资源复用构建报告](build-test-20261106-220344.md)、[历史构建报告](build-test-20261106-181923.md)、[任务实测记录](live-task-test-2026-11-06.md)。报告说明各自测试时的范围，不自动证明之后版本仍通过。
+
+旧理论中的人名、周期、字段、路径和示例不自动成为当前规则。设计目标、已实现行为与验证结论分别表达；运行时目前使用的显式资料（包括 Team/Workspace 结构说明）保留原路径。

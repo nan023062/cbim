@@ -1,0 +1,27 @@
+/**
+ * 作用定位：对话摘要与任务根详情共用的目标计划卡片、历史选择、证据及任务替代引用排版。
+ * 设计原因：默认收起长正文和运行内补充快照；资料表单与普通输入框分离，沿用主题变量并支持窄视口换行，保留来源与验收层级。
+ */
+.scope-goal-panel{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 14px;min-width:0;background:var(--surface);color:var(--text);font-size:12px;line-height:1.65}
+.scope-goal-panel>header{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.scope-goal-status{display:flex;align-items:center;gap:6px;min-width:0;color:var(--muted)}
+.scope-goal-status.running{color:var(--warning)}.scope-goal-status.warning{color:var(--warning)}.scope-goal-status.success{color:var(--green)}
+.scope-goal-history{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);min-width:0;max-width:100%}
+.scope-goal-history select{font-size:11px;max-width:220px;min-width:0;width:100%;padding:4px 7px;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:6px}
+.scope-goal-history>span{white-space:nowrap}.scope-goal-title{margin:8px 0 5px;font-weight:600;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.scope-goal-muted,.scope-goal-metadata{color:var(--muted)}.scope-goal-panel p{margin:6px 0;overflow-wrap:anywhere}
+.scope-goal-panel .scope-goal-blocked{border-left:2px solid var(--warning);padding:6px 10px;color:var(--warning);white-space:pre-wrap}
+.scope-goal-waiting{border-left:2px solid var(--warning);padding:2px 10px;margin:8px 0}.scope-goal-wait-reason{white-space:pre-wrap}
+.scope-continuation{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}.scope-continuation textarea{width:100%;min-height:90px;max-height:260px;resize:vertical;border:1px solid var(--line);border-radius:7px;padding:9px 11px;background:var(--bg);color:var(--text);font:inherit;line-height:1.6}.scope-continuation textarea[readonly]{color:var(--muted)}.scope-continuation-actions{display:flex;gap:8px;flex-wrap:wrap;margin:9px 0}.scope-continuation [role=alert]{color:var(--danger)}.scope-continuation details{font-size:10px;color:var(--muted)}
+.scope-goal-alert{color:var(--danger)}.scope-goal-details{margin-top:8px}.scope-goal-details>summary{cursor:pointer;color:var(--muted);font-size:11px}
+.continuation-sources{margin-top:8px;min-width:0}.continuation-sources label{display:flex;flex-direction:column;gap:5px;margin:9px 0}.continuation-sources input,.continuation-sources select{width:100%;min-width:0;max-width:100%;padding:7px;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:6px}.continuation-sources button[aria-pressed=true]{border-color:var(--muted)}.continuation-repository-picker{border-left:1px solid var(--line);padding-left:10px}
+.scope-goal-section{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}.scope-goal-panel h4{margin:0 0 7px;font-size:12px}.scope-goal-panel h5{font-size:11px;margin:12px 0 5px}
+.scope-goal-panel small{font-size:10px;color:var(--muted);font-weight:400}.scope-goal-panel ul,.scope-goal-panel ol{padding-left:20px;margin:5px 0}.scope-goal-panel li{overflow-wrap:anywhere;margin:7px 0}
+.scope-goal-input{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;line-height:1.75}
+.scope-goal-kind{display:inline-block;margin-left:8px;font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px;font-weight:400}
+.scope-goal-evidence{margin:10px 0}.scope-goal-evidence>summary{cursor:pointer;color:var(--muted)}.scope-goal-evidence>div{border-left:1px solid var(--line);padding-left:10px;margin-top:10px}
+.scope-goal-panel .scope-task-reference{display:inline-block;margin:2px 5px 2px 0;padding:2px 6px;max-width:100%;font:inherit;text-align:left;white-space:normal;overflow-wrap:anywhere;border:1px solid var(--line);border-radius:4px;color:var(--text);background:transparent;cursor:pointer}.scope-goal-panel .scope-task-reference:focus-visible{outline:2px solid var(--muted);outline-offset:2px}
+.scope-active-input{border-left:1px solid var(--line);padding-left:10px;margin:10px 0}.scope-active-input>summary{cursor:pointer;overflow-wrap:anywhere}.scope-active-input[data-input-status=unknown]>summary{color:var(--warning)}.scope-active-input .scope-goal-input{margin-top:8px}
+.scope-goal-panel code{font-size:10px;overflow-wrap:anywhere}.scope-goal-panel .scope-goal-metadata{font-size:10px;margin-top:15px}
+.scope-goal-panel.compact{margin:0 auto 16px;width:100%;max-width:850px;background:transparent}
+@media(max-width:600px){.scope-goal-panel{padding:10px}.scope-goal-history{width:100%}.scope-goal-history select{max-width:none}.scope-goal-kind{margin-left:4px}.scope-goal-panel.compact{margin-bottom:12px}}

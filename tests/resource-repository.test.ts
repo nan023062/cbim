@@ -17,7 +17,7 @@ it('三类资源共用一个本地仓库和远端服务，切换统一生效',as
       local=await host.app.dispatch('resources.save',{repositoryId:local.repositoryId,revision:local.revision,item:{kind,name:kind,summary:'',content:'# '+kind}});
     }
     const stored=JSON.parse(await fs.readFile(path.join(location,'cbim-resources.json'),'utf8'));
-    expect(stored.items).toHaveLength(6);
+    expect(stored.items).toHaveLength(Object.keys(resourceKinds).length);
     await host.app.resources.startSharing({lan:false,port:0});
     const connection=host.app.resources.connection();
     await client.app.resources.setAccountSession({accountId:'test-account',server:{location:connection.url,token:connection.token}});

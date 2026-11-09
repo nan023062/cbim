@@ -25,7 +25,7 @@ CBIM 面向复合、多工种的大型团队。责任按能力与承担的工作
 
 | 环节 | 架构要求 | 当前实现边界 |
 |---|---|---|
-| 创作与实现 | 围绕业务目标组合 Agent、Skill、业务模块和 Workflow，明确成果负责人和执行范围 | 已有知识与资源定义；自主 AI 调度和完整实现流程尚未接入 |
+| 创作与实现 | 围绕业务目标组合 Agent、Skill、业务模块和 Workflow，明确成果负责人和执行范围 | 主 Agent 工具派发后，当前批次可在主轮释放占用时自动执行并回注原会话；只有主 Agent 派工，执行者求助与通用邮箱调度仍待完善 |
 | 验证与反馈 | 将可确定的规则交给程序检查，保留成果证据和需要专业判断的问题 | 已有 TypeScript 规则校验和工具任务记录；不能据此认定业务语义正确 |
 | 发现系统问题 | 基于任务反馈与项目证据识别重复实现、职责冲突及依赖恶化 | 现有结构检查和图谱提供基础信息，尚无完整自动架构问题识别能力 |
 | 核心治理 | 将规则覆盖不到的例外与高影响决定交由具备相应责任的人处理 | 不将现有人工 review 阶段视为完整治理审批或责任路由系统 |
@@ -44,8 +44,8 @@ Team 树的根是 Team，中间非叶子节点是小组，叶子才是 Agent；�
 | 资源入口 | 对生产与治理的支撑 |
 |---|---|
 | 链接器 | 提供可定制的外部工具连接桥梁 |
-| 人才市场 | 提供可定制的专项 Agent 和能力 Skill，沉淀可复用的专业能力 |
-| 业务模板 | 提供可复用的业务架构、单一业务模块与 Workflow，沉淀业务结构和生产方法 |
+| 人才市场 | 提供完整 Team、单 Agent 和单 Skill 的静态资源包，能力与业务项目解耦 |
+| 业务模板 | 整体发布、下载和应用完整业务架构，包括模块与 Workflow；不单独应用局部模块 |
 
 仓库来源跟随账号状态：未登录时使用本地目录，登录后由主进程账号服务提供服务器仓库并自动切换。渲染进程不能提交登录标记、手动远端地址或令牌；已登录时不能改用本地目录。账号服务器连接失败或尚未提供时保持服务器不可用状态，不回退本地；退出后恢复原本地目录，不合并或搬迁数据。
 
@@ -53,11 +53,11 @@ Team 树的根是 Team，中间非叶子节点是小组，叶子才是 Agent；�
 
 ## 当前实现与技术
 
-CBIM 是面向 AI 原生团队的生产与治理体系，CBIM Assistant 是承载这一体系的桌面产品入口。核心定位、团队责任与产品方向见 [产品说明](product-positioning.md)。使用 Electron、React、TypeScript、Vite、Electron Forge、pnpm，MCP 使用官方 SDK，自动化测试使用 Vitest 和 Playwright。
+CBIM 是面向 AI 原生团队的生产与治理体系，CBIM Assistant 是承载这一体系的桌面产品入口。核心定位、团队责任与产品方向见 [产品说明](product-positioning.md)。使用 Electron、React、TypeScript、Vite、Electron Forge、pnpm，内部执行引擎为 Pi，自动化测试使用 Vitest 和 Playwright。
 
-React → sandbox preload → Application.dispatch → Workspace。CLI → 正式 MCP Client → 工作区 MCP → 相同 Workspace。Paths、Catalog、Rules、KernelLock 分别负责路径、登记、规则和工程互斥。
+React → sandbox preload → Application.dispatch → 工作区与调度服务。调度引擎为大脑准备上下文和权限，大脑通过内部工具网关调用知识服务与原生执行工具。开发用 `pnpm loop` 也由 Application 装配相同服务。Paths、Catalog、Rules、KernelLock 分别负责路径、登记、规则和工程互斥。
 
-单个 Electron 主进程管理多个独立 Workspace，共享 Schema，减少进程和分发开销。各工作区独立封装运行状态、队列、令牌、HTTP 服务、文件轮询与任务。普通工作区错误不会停止其他服务；主进程崩溃会停止所有工作区，需要用户重新启动。CPU 密集校验仍占主进程，后续可迁入 Worker。
+单个 Electron 主进程管理多个独立 Workspace，共享 Schema，减少进程和分发开销。各工作区独立封装运行状态、知识事务、执行记录、队列和文件变化检测。普通工作区错误不会停止其他工作区；主进程崩溃会停止所有工作区，需要用户重新启动。CPU 密集校验仍占主进程，后续可迁入 Worker。
 
 渲染层禁用 Node，开启 contextIsolation 与 sandbox。IPC 只接受主窗口主 frame；禁止导航和新窗口。正文按文本显示，不执行知识中的 HTML。
 
@@ -71,28 +71,32 @@ React → sandbox preload → Application.dispatch → Workspace。CLI → 正�
 | 正式知识 | `<项目根>/.cbim/`，权威文件 |
 | 登记、近期、设置 | `<用户主目录>/.cbim/workspaces.json` |
 | 路径身份映射 | `<用户主目录>/.cbim/<id>/identity.json` |
-| 发现与凭据 | 同上 `discovery.json`、`credentials.json` |
 | 事务证据 | 同上 `transactions/` |
 | 本地任务、记忆、日志 | 同上 `task-records/`、`memory/`、`logs/` |
+| 静态 Agent 的 Session 履历索引 | 同上 `agent-history/<角色哈希>/sessions/<通道哈希>/`，每次运行独立摘要 |
+| 主会话/旧运行正文 | 同上 `loop-engine/tasks/<taskId>/<runId>/events.jsonl` |
+| 派发成员运行正文 | 同上 `dispatch/runs/tasks/<taskId>/<runId>/events.jsonl` |
 | Electron 配置与缓存 | `<用户主目录>/.cbim/desktop/` |
 
 所有应用路径来自 Paths。测试显式传隔离根，桌面测试用 CBIM_USER_DATA_ROOT。生产默认操作系统用户主目录。
 
+团队节点的[执行历史](agent-session-history.md)按静态 Agent → 独立 Session → 运行轮次组织，保留原始主会话、执行实例与配置版本。履历索引消费已提交的派发和运行事实，正文保持原日志位置；实例释放或定义删除不清除记录，静态人才包不携带履历。打开工作区时复用运行监管已有扫描回补索引，页面列表不扫描正文，详情按需恢复后增量读取。查询不启动模型、审批或确认结果。
+
 id = SHA-256(真实绝对路径)。Windows realpath 后转 `/` 并小写；其他平台保留大小写。相对路径和链接别名收敛；同名不同路径隔离。重新定位使用新 id，旧历史原地保留并通过 previousIds 关联，不自动合并。哈希不能证明新目录业务内容是原工程，因此需要用户确认。
 
-用户根 Windows 使用仅当前身份继承的 DACL，POSIX 为 0700，凭据文件 0600。发现不含令牌；凭据明文保存在当前用户保护目录，供同用户 Agent 使用。这不防御同用户恶意进程，也不声称具备同用户进程级隔离。
+用户根 Windows 使用仅当前身份继承的 DACL，POSIX 为 0700。模型密钥由平台加密存储，公开 IPC 不返回明文。当前用户目录权限和原生工具路径检查不构成对同用户恶意进程的操作系统级沙箱。
 
 ## 生命周期与隔离
 
 登记、选中、运行分别管理。状态含 registered、opening、running、closing、closed、failed、recovery_required，失效路径显示 missing。
 
-应用启动时遍历全部已登记工作区并启动各自 MCP，不再读取旧 settings.restore 开关或 lastRunning 集合作为启动条件。登记新工作区立即启动；单个路径失效、锁冲突或初始化失败不阻止其他工作区。点击工作区选择视图并检查宿主配置；并发打开请求合并，不更换已运行实例。关闭工作区页面不停止服务；移除登记、重新定位旧实例或退出应用才释放相应服务。Agent/CLI/MCP 仍不能自行登记或启动工作区。
+应用启动时遍历全部已登记工作区并加载各自知识与运行上下文。登记新工作区立即启动；单个路径失效、锁冲突或初始化失败不阻止其他工作区。点击工作区直接选择视图；并发打开请求合并，不更换已运行实例。关闭工作区页面不停止运行；移除登记、重新定位旧实例或退出应用才释放相应资源。工作区登记由应用入口管理，模型工具不能自行改变注册集合。
 
 Windows 用 Koffi 调用 Global 命名 Mutex，名包含路径哈希，覆盖初始化至关闭的整个生命周期。崩溃后内核释放所有权，下次可接管 abandoned mutex。不同登录会话使用相同名称；另一用户无权访问已有锁时安全拒绝，不退化为用户私有锁。跨用户账户实测尚未完成。POSIX 使用工程目录 fd 的 flock，当前验证只覆盖 Windows。
 
 Catalog 使用独立用户根内核锁，更新前重读最新内容，再原子替换。缓存损坏保留副本，仍可手动添加。失效路径不会创建，删除近期记录不等于移除登记。
 
-每个请求显式携带 workspaceId、instanceId，写入还携带 revision、requestId，无全局“当前工作区”服务目标。所有写入串行排队。停止服务先拒绝新请求、取消未提交工具任务，再等正在提交的事务结束。移除取消登记并停止对应服务，不删除项目知识、宿主配置和历史。应用退出等待全部工作区关闭。
+知识调用绑定 workspaceId、instanceId，写入还核对 revision、requestId，无全局“当前工作区”服务目标。模型调用的身份与授权来自可信运行绑定，不由模型参数授予。所有知识写入串行排队。停止工作区先排空执行、拒绝新请求、取消未提交维护任务，再等正在提交的事务结束。移除取消登记并停止对应运行，不删除项目知识和历史。应用退出等待全部工作区关闭。
 
 ## 事务与恢复
 
@@ -106,17 +110,17 @@ Catalog 使用独立用户根内核锁，更新前重读最新内容，再原子
 
 移动重算 JSON 结构化引用和 Markdown 内联链接；删除仍被引用的对象会拒绝。自由文本、HTML 或复杂链接不保证全自动更新，应 review 预览。移动只处理受管知识，不删除非知识附件。
 
-文件变化采用 1.2 秒哈希轮询，自身提交更新版本，避免循环。只加载指定目录内 JSON/Markdown、项目入口和忽略配置，单文件上限 2 MiB、总数上限 20000。
+知识文件变化采用哈希轮询，自身提交更新版本，避免循环。读取只覆盖受管知识范围，单文件上限 2 MiB、总数上限 20000；不为加载知识扫描整个业务项目。
 
 ## 初始化与兼容
 
-宿主与知识服务的职责边界：宿主负责目标理解、业务判断、执行和结果反馈；CBIM MCP 负责全部知识加载与增删改查，包括对象定位、父链解析、Skill 合并、Module Workflow 范围、引用和索引维护、版本及落盘。宿主只提交接口参数并使用返回结果，不实现知识加载算法。当前 cbim_knowledge_snapshot/cbim_knowledge_search 等基础接口仍偏文件快照，完整面向任务的上下文查询及对象级 CRUD 接口尚需补齐；遇到缺失接口先查 CBIM MCP 能力清单，仍无则记录缺口并继续可用流程，不由宿主绕过服务补做。记录接口也缺失时，先在宿主任务记录或对话中保留清单，明确尚未写入 CBIM。
+内部 Agent 负责目标理解、业务判断、执行和结果反馈；知识服务负责对象定位、父链解析、Skill 合并、Module Workflow 范围、引用和索引维护、版本及落盘。Agent 通过 `cbim_` 内部工具获得清单、正文与预览提交结果，不自行实现知识加载算法。当前已提供对象 CRUD、模块和成员查询、内置 Skill 及规范读取。缺少能力时核对当前工具清单，记录影响并继续独立的可用步骤，不通过原生工具直接读写 `.cbim/`。
 
-宿主启动指引直接嵌入 CBIM 工作提示词，不依赖独立入口文件。所有 CBIM 流程，包括只读咨询和恢复任务，都必须先查询 CBIM MCP：核实工作区身份，取得当前知识与版本，再定位模块、组装能力、执行、验证及交付。入口自身是连接前的启动提示词；其他 CBIM 知识通过 MCP 获取。服务不可用时暂停依赖连接的流程；单个接口缺失时先查能力清单，仍无则记录缺口并继续不依赖该接口的可用流程，不以直接读写 .cbim、旧脚本或缓存替代。业务产物仍使用宿主实际工具操作，但以 MCP 查询确认的模块范围和授权为前提。该要求属于宿主提示词契约，不代表应用能从操作系统层阻止宿主直接访问文件。
+主 Agent 指引和显式团队任务上下文由调度引擎注入大脑，知识按任务需要通过内部工具读取。业务写入、知识提交和命令使用同一运行权限策略：read 拒绝写入，ask 请求批准，execute 在授权范围内执行。“本次任务全部通过”仅当前运行有效。初始化不改写项目的 AGENTS.md、CLAUDE.md、忽略规则或 Hook 配置；这些文件不是 CBIM 的自动连接入口。
 
 空模板在项目根临时目录内完成后同盘重命名为 `.cbim/`。不覆盖已有团队知识。formatVersion/rulesVersion 不兼容时拒绝启动并要求备份后评审迁移。无 manifest 的现行旧目录可按 Schema 检查加载；错误可在界面修复，提交必须全部结构检查通过。
 
-新骨架包含 workspace/、team/、team/skills/、connectors/ 四个目录，以及 project.json、README.md、team/registry.json、team/people.json、team/skills.json、workspace/registry.json、connectors/registry.json 七个文件。清单均为空；README 说明结构与 MCP 访问方式。不创建根级 Workflow、示例节点或 startup.json。Application 打开工作区时合并宿主 MCP 配置，并在项目根 AGENTS.md、CLAUDE.md 和已有 AGENTS.override.md 中维护完整启动指引与 Skill 声明。独立 entry.md 已废弃，旧文件不加载、不同步，原样留存。
+新骨架包含 workspace/、team/、team/skills/、connectors/ 四个目录，以及 project.json、README.md、team/registry.json、team/people.json、team/skills.json、workspace/registry.json、connectors/registry.json 七个文件。清单均为空；README 说明结构与内部知识服务职责。不创建根级 Workflow、示例组织或自动执行配置。
 
 检测到 `.cbim.local/` 只提示，不读取为正式知识、不移动或删除。建议先关闭旧工具、备份、核实真实项目 id，再经授权复制到用户级项目历史的独立 legacy 目录，核对哈希和内部路径，最后由人工决定清理源副本。首版没有自动历史迁移工具。
 
@@ -127,7 +131,15 @@ Catalog 使用独立用户根内核锁，更新前重读最新内容，再原子
 当前运行能力与验证结果以 [验收说明](acceptance.md) 为准。本文新增的责任划分和闭环要求属于架构方向，不新增已交付能力声明。
 # 执行运行时补充
 
-新增 [Loop Engine（Pi 首版）](loop-engine.md)，代码位于 `src/backend/core/brain/`。核心层不依赖 Electron、MCP 或界面，通过引擎适配接口、持久化事件与前置工具策略管理执行；`src/backend/scheduler-engine/` 注入工作区身份、内核锁和内部知识服务。首版只接 Pi，开发 CLI 可运行，已接入桌面对话，尚未实现业务自动验收或多 Agent 调度。
+内部 [Loop Engine](loop-engine.md) 位于 `src/backend/core/brain/`。核心层不依赖 Electron 或界面，通过引擎适配接口、持久化事件与前置工具策略管理执行；`src/backend/scheduler-engine/` 注入工作区身份、内核锁和内部知识服务。当前只接 Pi，开发 CLI 与桌面对话均可运行；业务自动验收尚未实现。
+
+Agent 静态定义与动态 AgentInstance 分离；主 Agent 与定制成员共享大脑内核，成员拥有独立逻辑会话。当前可创建成员实例、核实模块维护关系、可靠派发并增量读取任务图；主聊天工具产生的委派由 `AutoCollaboration` 在主轮安全完成、释放工作区占用后启动。成员结算并释放占用后，候选或真实失败状态以带持久化来源的 Pi custom 数据进入原主会话，主 Agent 再处理原目标。显式桌面派发接口继续保留，通用邮箱不被自动扫描执行。详见 [成员执行与结果回传](member-execution.md) 和 [派发契约](agent-dispatch-contract.md)。
+
+每个新主 session 默认创建一个主实例，对话与图根共享身份。主 Agent 是具备工程思维、架构思维和结构化思维的团队与技术管理者：核实现状、目标和约束，维护模块职责、依赖和责任，将任务组织为执行者、模块列表、目标与验收要求，审阅证据并安排后续工作。它直接通过受控知识服务增删改查 `.cbim/`、治理团队和业务架构，按证据渐进演进；业务文件实现、命令和业务验证交给执行 Agent。知识写入仍受 read/ask/execute、版本与事务控制，重要人工决定不由模型伪造。用户任务周期跨主模型调用、成员执行和结果回注；执行者按任务创建，无合适角色时用 `cbim:executor`。周期关闭释放执行实例并保留主实例、图和证据。重启不重放未知副作用；求助恢复、公平调度与预算、正式业务验收仍待实现。
+
+应用级运行管理器聚合成员活动、任务压力和实际用量，提供后端与 IPC 查询，尚无全局监控界面；详见 [全局运行管理](global-runtime-management.md)。本步自动协作已通过真实 Application/Pi 集成验证，包括读写、ask 审批隔离、排队和停止；构建 `20261106-234421` 的桌面链路也已通过，见[验证报告](../design/verification/auto-collaboration-20261106.md)。模型响应均来自本机可控服务，不据此宣称实际供应商自主协作质量。
+
+目标架构明确区分两层循环：主 Agent 的外层调度循环基于业务图谱和团队图谱组织工作、审阅整体目标与证据；执行 Agent 的内层大脑循环处理所分配模块内的探索、实现和运行验证。主 Agent 可调用同一 LLM 内核进行多轮决策，但外层生命周期由可靠调度状态驱动。现有 `AutoCollaboration` 在主轮 completed、无未决工具且没有新增派工时关闭周期，仅能证明协调收尾，不能证明目标已达成。后续须按每个 `scopeId` 保存本轮目标、完成条件、评估/重规划与等待状态，并用证据约束成功关闭；详见[主 Agent 目标调度循环](main-agent-orchestration-loop.md)。
 
 
 ## Core 领域边界

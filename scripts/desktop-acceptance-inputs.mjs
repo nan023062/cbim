@@ -5,11 +5,12 @@ export function acceptanceInputs(env) {
   const version = env.CBIM_ACCEPTANCE_VERSION, previousVersion = env.CBIM_ACCEPTANCE_PREVIOUS_VERSION;
   const commit = env.CBIM_ACCEPTANCE_COMMIT, expected = env.CBIM_ACCEPTANCE_SHA256, mode = env.CBIM_ACCEPTANCE_MODE;
   assert.match(version, /^0\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
-  // 这两版使用下载后显式重启的界面。后续自动安装旧版需要另行实现并验证交互，不能静默套用。
-  assert.ok(['0.1.1', '0.1.2'].includes(previousVersion), 'Unsupported previous desktop version for two-step upgrade acceptance');
+  // 已核实的旧界面显式枚举；不能把任意未来版本猜成已覆盖的更新交互。
+  assert.ok(['0.1.1', '0.1.2', '0.1.3'].includes(previousVersion), 'Unsupported previous desktop version for upgrade acceptance');
+  const previousUpdateFlow = previousVersion === '0.1.3' ? 'automatic' : 'two-step';
   const target = version.split('.').map(Number), previous = previousVersion.split('.').map(Number);
   assert.ok(target[1] > previous[1] || (target[1] === previous[1] && target[2] > previous[2]), 'Target version must be newer than previous version');
   assert.match(commit, /^[a-f0-9]{40}$/); assert.match(expected, /^[a-f0-9]{64}$/);
   assert.ok(['candidate', 'online'].includes(mode));
-  return {version, previousVersion, commit, expected, mode};
+  return {version, previousVersion, previousUpdateFlow, commit, expected, mode};
 }

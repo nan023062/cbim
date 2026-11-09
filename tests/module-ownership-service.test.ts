@@ -21,6 +21,16 @@ async function setup(){
 }
 function deferred(){let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}}
 
+it('已有同岗位、已有其他岗位与真正旧版本分别指向下一步，诊断不增加责任历史',async()=>{
+  const f=await setup();await f.commit(f.command(await f.preview()));
+  const before=await f.service.get({...f.identity,moduleId:f.moduleId}),binding=before.view.binding!;
+  await expect(f.preview()).rejects.toMatchObject({code:'OWNERSHIP_NO_CHANGE',message:expect.stringContaining('无需重复设置')});
+  await expect(f.preview(f.change(f.second.receipt.memberId))).rejects.toMatchObject({code:'OWNERSHIP_ALREADY_EXISTS',message:expect.stringContaining('不要继续传 null')});
+  const expectedBinding={bindingId:binding.bindingId,revision:binding.revision+1,ownerMemberId:binding.ownerMemberId};
+  await expect(f.preview({...f.change(f.second.receipt.memberId),expectedBinding})).rejects.toMatchObject({code:'OWNERSHIP_BINDING_STALE',message:expect.stringContaining('不要原样重试')});
+  const after=await f.service.get({...f.identity,moduleId:f.moduleId});expect(after.view.binding).toEqual(binding);expect(after.history).toEqual(before.history);
+});
+
 it('two explicit commits from one preview append only one ownership change',async()=>{
   const f=await setup(),p=await f.preview(),a=f.command(p),b=f.command(p),results=await Promise.allSettled([f.commit(a),f.commit(b)]);
   expect(results.filter(value=>value.status==='fulfilled')).toHaveLength(1);expect(results.find(value=>value.status==='rejected')).toMatchObject({reason:{code:'OWNERSHIP_REGISTRY_STALE'}});

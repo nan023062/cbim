@@ -20,7 +20,7 @@ import {
   type ModuleOwnershipPreview,type ModuleOwnershipPreviewInput,type ModuleOwnershipReadBasis,type ModuleOwnershipReceipt,
   type ModuleOwnershipView,type ObservedModule,
 } from '../../core/workspace/module-ownership';
-import {moduleOwnershipBasis,moduleOwnershipCommand,moduleOwnershipHash,moduleOwnershipReceipt} from '../../core/workspace/module-ownership-rules';
+import {assertModuleOwnershipExpectedBinding,moduleOwnershipBasis,moduleOwnershipCommand,moduleOwnershipHash,moduleOwnershipReceipt} from '../../core/workspace/module-ownership-rules';
 import {checkModuleOwnershipActor,moduleOwnershipImpact} from '../../core/tasks/module-ownership-invariants';
 import type {KnowledgeSourceWorkspace} from './knowledge-sources';
 import {knowledgeSourcePending} from '../../core/workspace/knowledge-source-rules';
@@ -115,8 +115,7 @@ export class ModuleOwnerships {
   }
   private async prepare(state:DispatchState,request:ModuleOwnershipPreviewInput,assertCurrent?:()=>void,fixed?:Snapshot){
     this.assert(request);assertCurrent?.();const change=request.change,previous=state.moduleOwnerships?.find(item=>item.moduleId===change.moduleId)??null;
-    const actual=previous?{bindingId:previous.bindingId,revision:previous.revision,ownerMemberId:previous.ownerMemberId}:null;
-    if(!isDeepStrictEqual(change.expectedBinding,actual))fail('OWNERSHIP_BINDING_STALE','模块责任版本已变化，请重新预览');
+    assertModuleOwnershipExpectedBinding(change,previous);
     const previousOwner=previous?.ownerMemberId?state.workspaceMembers?.find(item=>item.memberId===previous.ownerMemberId):undefined;
     const adopting=isModuleOwnershipSourceAdoption(change),requiresSource=adopting||!!change.nextOwner;
     if(requiresSource&&knowledgeSourcePending(state))fail('OWNERSHIP_SOURCE_PENDING','来源事务待核实，尚未保存新的责任采纳');

@@ -86,3 +86,7 @@ executionScope v1/windows-lpac-node-v1 显式固定最多32个读/写根；写�
 ### 模块正文结构
 
 module-outline.ts 提供 moduleSections 与 moduleBodyTemplate，作为知识规则及桌面编辑的纯结构契约。模板中的说明须按事实填写；有 sources 时包含既定虚拟节点，不推导真实代码依赖或签署验收。
+
+### 责任预期错误分类
+
+assertModuleOwnershipExpectedBinding 由预览和事务共同使用：首次预期 null 遇到同岗位返回 OWNERSHIP_NO_CHANGE，遇到已有其它责任头返回 OWNERSHIP_ALREADY_EXISTS，并给出 inspect/expectedBinding 指引；非空预期过期仍返回 OWNERSHIP_BINDING_STALE。不自动覆盖预期或生成新关系，原命令回执查询优先。

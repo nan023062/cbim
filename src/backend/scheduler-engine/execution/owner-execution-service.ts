@@ -104,7 +104,7 @@ export class OwnerExecutionService {
   }
   selections(tasks:readonly TaskNode[]):ExecutionSelection[]{return tasks.map(task=>{if(task.fallbackBinding)return {automaticScopeId:task.fallbackBinding.scopeId};if(!task.ownerBinding)fail('OWNER_BINDING_REQUIRED','旧任务未绑定负责岗位，请重新规划派发');return ownerExecutionSelectionFor(task.ownerBinding)})}
   async recheck(snapshot:Snapshot,alive:()=>void=()=>{}){this.owner.assert();alive();const current=await this.owner.read();if(current.revision!==snapshot.revision)fail('OWNER_KNOWLEDGE_CHANGED','准备期间知识发生变化，请重新查询');alive()}
-  /** 发现逐组真实缺口，不做采纳或联网；缺口只返回稳定错误说明，不回显配置或秘密。 */
+  /** 一次发现各组当前可核实的模块、岗位/来源、能力、模型缺口；前提缺失明确待核实，不冒称通过或回退默认模型。相同错误码合并，不回显配置或秘密。 */
   async discover(moduleIds:readonly string[]):Promise<OwnerExecutionDiscovery>{
     if(!moduleIds.length||moduleIds.length>50||new Set(moduleIds).size!==moduleIds.length)fail('OWNER_MODULES_INVALID','请明确选择不重复的模块');
     return this.withSnapshot(async(snapshot,state)=>{
@@ -113,13 +113,25 @@ export class OwnerExecutionService {
         let group=owner?.ownerMemberId?groups.find(item=>item.memberId===owner.ownerMemberId):undefined;
         if(!group){group={moduleIds:[],...(owner?.ownerMemberId?{memberId:owner.ownerMemberId}:{}),...(member?{memberName:member.name,agentId:member.adoption.configuration.agentId}:{}),issues:[]};groups.push(group)}group.moduleIds.push(moduleId);
       }
-      for(const group of groups)try{
-        const member=state.workspaceMembers?.find(item=>item.memberId===group.memberId);if(!member)fail('OWNER_UNASSIGNED','模块尚未设置有效的负责岗位');
+      for(const group of groups){
+        // 独立核实可观察门禁，避免模型/能力失败遮住模块问题；最终选择仍走原完整 resolve，不由诊断授予许可。
+        const add=(code:string,message:string)=>{if(!group.issues.some(issue=>issue.code===code))group.issues.push({code,message})};
+        const check=async(action:()=>unknown)=>{try{await action()}catch(error){add(error instanceof Fault?error.code:'OWNER_CONFIGURATION_UNAVAILABLE',error instanceof Fault?error.message:'当前岗位配置暂时无法核实，请检查知识与模型设置')}};
+        const member=state.workspaceMembers?.find(item=>item.memberId===group.memberId);
+        if(!member){
+          add('OWNER_UNASSIGNED','模块尚未设置有效的负责岗位。请在业务架构中设置负责人；有现成岗位时直接选择。');
+          if(!state.workspaceMembers?.some(item=>item.state==='active'))add('OWNER_MEMBER_REQUIRED','尚无启用岗位。请在桌面“团队架构 → 项目岗位 → 登记项目岗位”选择能力和岗位模型后登记。当前工具不提供岗位创建。');
+          add('OWNER_MODEL_UNRESOLVED','尚无负责岗位，无法核实本组能力和模型；选定岗位后核对已采纳配置，不会回退主会话模型。');
+        }
+        for(const moduleId of group.moduleIds)await check(()=>resolveDispatchModules(snapshot,[moduleId]));
+        if(!member)continue;
         const selection:OwnerExecutionSelection={version:1,memberId:member.memberId,expectedMemberRevision:member.revision,expectedCapabilityHash:member.adoption.capabilityHash,expectedConfigurationHash:member.runtimePolicy.configurationHash,expectedOwners:group.moduleIds.map(moduleId=>{const owner=state.moduleOwnerships!.find(item=>item.moduleId===moduleId)!;return {moduleId,bindingId:owner.bindingId,revision:owner.revision,ownerMemberId:member.memberId}})};
-        if(!this.models)fail('OWNER_EXECUTION_UNAVAILABLE','未装配岗位模型配置端口');
-        const profile=await this.models.configuration(member.runtimePolicy.profileId,member.runtimePolicy.modelId);
-        await this.resolve(state,{snapshot,profiles:[profile]},selection,group.moduleIds,group.agentId);group.selection=selection;
-      }catch(error){group.issues.push({code:error instanceof Fault?error.code:'OWNER_CONFIGURATION_UNAVAILABLE',message:error instanceof Fault?error.message:'当前岗位配置暂时无法核实，请检查知识与模型设置'})}
+        await check(()=>resolveOwnerExecutionSelection(state,selection,group.moduleIds));
+        await check(async()=>{const agent=await resolveDispatchAgent(snapshot,member.adoption.configuration.agentId);if(workspaceMemberCapabilityHash(agent)!==member.adoption.capabilityHash)fail('OWNER_CAPABILITY_CHANGED','负责岗位的原则或有效 Skill 已变化，请在项目岗位明确采纳后重新规划')});
+        let profile:WorkspaceMemberModelSnapshot|undefined;
+        await check(async()=>{if(!this.models)fail('OWNER_EXECUTION_UNAVAILABLE','未装配岗位模型配置端口');profile=await this.models.configuration(member.runtimePolicy.profileId,member.runtimePolicy.modelId);if(workspaceMemberModelHash(profile)!==member.runtimePolicy.configurationHash)fail('OWNER_MODEL_CHANGED','负责岗位模型配置已变化，请在项目岗位明确采纳当前模型配置后重新规划')});
+        if(!group.issues.length&&profile)await check(async()=>{await this.resolve(state,{snapshot,profiles:[profile!]},selection,group.moduleIds,group.agentId);group.selection=selection});
+      }
       await this.recheck(snapshot);const latest=await this.store.read();
       if(!isDeepStrictEqual([state.registryCursor,state.ownershipCursor,state.sourceCursor],[latest.registryCursor,latest.ownershipCursor,latest.sourceCursor]))fail('OWNER_READ_STALE','岗位、责任或来源在查询期间变化，请重新查询');
       return ownerExecutionDiscoverySchema.parse({workspaceId:this.owner.entry.id,instanceId:this.owner.instanceId,readOnly:true,checkedAt:new Date().toISOString(),knowledgeRevision:snapshot.revision,registryCursor:state.registryCursor??null,ownershipCursor:state.ownershipCursor??null,sourceCursor:state.sourceCursor??null,moduleIds:[...moduleIds],groups});

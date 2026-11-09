@@ -3300,3 +3300,7 @@ MemberExecutionManager同时识别CONTROLLED_FILE_DRAIN_PENDING与EXECUTION_SCOP
 ### 自动与团队协作模式
 
 主运行 starting 将 collaborationMode 与明确模型交给 openScope 冻结；Cycle/Batch 从原周期继承。OwnerExecutionService 统一持知识→模型→Store 锁，selection/resolveExecution 分别核真实岗位或无负责人兜底。已登记但停用／来源失效／配置过期不可自动降级。plan、dispatch、claim、依赖维护和 checkpoint 复用该入口，原命令先查回执。新目标才可换模式；已有任务、模型、证据及权限不改写。
+
+### 一次性岗位执行缺口
+
+OwnerExecutionService.discover 独立核对每组模块/Workflow、岗位责任/来源、能力和模型，合并相同错误码。缺少岗位时返回桌面“团队架构 → 项目岗位 → 登记项目岗位”入口，能力/模型明确为尚无法核实；废弃的真人维护不列为门禁。只有无缺口并通过原 resolve 才返回 selection，读取后仍核知识和登记游标，不授予未来执行许可。

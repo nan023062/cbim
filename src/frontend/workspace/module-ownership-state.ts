@@ -52,7 +52,7 @@ export interface ModuleOwnershipAttempt {request:ModuleOwnershipCommitInput;phas
 export interface ModuleOwnershipCommandState {records:readonly ModuleOwnershipAttempt[];error:string}
 export interface ModuleOwnershipCommandPorts {storage:Pick<Storage,'getItem'|'setItem'>;commit:(input:ModuleOwnershipCommitInput)=>Promise<unknown>;lookup:(input:ModuleOwnershipLookup)=>Promise<unknown>;uuid:()=>string}
 /** 精确列举首次受理前拒绝；未知、IO 与命令冲突不能被解释为可换 ID 的拒绝。 */
-export function moduleOwnershipPreRejected(error:unknown){return /^OWNERSHIP_(?:INPUT|IDENTITY|NOT_FOUND|REGISTRY_STALE|BINDING_STALE|MEMBER_CHANGED|MEMBER_UNAVAILABLE|SOURCE_INVALID|SOURCE_CHANGED|SOURCE_PENDING|BASIS_STALE|NO_CHANGE|LIMIT):/.test(message(error))}
+export function moduleOwnershipPreRejected(error:unknown){return /^OWNERSHIP_(?:INPUT|IDENTITY|NOT_FOUND|REGISTRY_STALE|BINDING_STALE|ALREADY_EXISTS|MEMBER_CHANGED|MEMBER_UNAVAILABLE|SOURCE_INVALID|SOURCE_CHANGED|SOURCE_PENDING|BASIS_STALE|NO_CHANGE|LIMIT):/.test(message(error))}
 
 /** 每工作区共享的本机命令日志；卸载视图不取消已经送达的登记，也不删除未决记录。 */
 export class ModuleOwnershipCommands {

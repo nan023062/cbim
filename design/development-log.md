@@ -1,5 +1,13 @@
 # CBIM 开发记录
 
+## 2026-11-10：责任重复绑定提示与独立派工缺口
+
+- 预览与事务共用责任预期诊断：同岗位无需重设、已有记录需 inspect、非空旧版本是真实冲突，不再统一提示原样重试。前端将新增 OWNERSHIP_ALREADY_EXISTS 归为明确未受理；原回执优先和并发检查保留。
+- discover 独立检查模块/Workflow、岗位责任/来源、能力和模型，缺少岗位时说明桌面“团队架构 → 项目岗位 → 登记项目岗位”入口及未核实项。无缺口才调用原完整 resolve 产生 selection，不通过诊断放宽派发。
+- 选择责任 Core/服务/前端状态及岗位执行 Core/服务：`pnpm exec vitest run tests/module-ownership-service.test.ts tests/module-ownership-core.test.ts tests/module-ownership-view.test.ts tests/owner-execution-service.test.ts tests/owner-execution-core.test.ts --reporter=default --reporter=json --outputFile=test-results/ownership-discovery-20261110.json`，首轮 53 项中 51 通过。新增夹具的空解除与同岗位变更先被输入 Schema 拒绝，能力元数据变化也不等于已采纳执行原则变化；修正夹具为合法换岗请求与真实原则正文变化，未放宽产品校验。
+- 两失败文件复测报告 `test-results/ownership-discovery-20261110-fixed.json` 中执行服务全部通过；最终仅复跑责任诊断失败用例：`pnpm exec vitest run tests/module-ownership-service.test.ts -t 已有同岗位 --reporter=default --reporter=json --outputFile=test-results/ownership-diagnostics-20261110-final.json` 通过，其余 8 项按选择器未重跑。累计 5 文件/53 项通过。
+- 类型与架构检查通过，1159 文件、6006 依赖、0 环。四处注释/CONTRACT/ARCHITECTURE 同步；未跑全量、打包或发布。接续：实例失效提示及反馈/选择卡的当前实现核实。
+
 ## 2026-11-10：空项目对象 Schema 与正文模板诊断
 
 - cbim_object_preview 升为 v2，data 以 kind 判别；实际字段与公开 Schema 共用 objectDataSchemas。模块 name 来自 slug，中文名明确写正文 H1；Agent 不再公开 purpose。

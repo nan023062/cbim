@@ -28,3 +28,11 @@ pnpm preview:website
 发布工作树不必改动 package.json；可用 `node scripts/build-website.mjs` 构建、`node scripts/preview-website.mjs` 本地预览。品牌原生资源重新生成需要桌面开发工作区的 Electron／Playwright 依赖。每次发布保留上一轮 deployment ID 与源码 SHA，便于回滚。
 
 应用更新依然走独立桌面更新程序。官网只提供真实下载入口与已发布的日志，不管理用户账户、不新建反馈服务器。
+
+## Google Search Console
+
+管理的资源为网址前缀 `https://nan023062.github.io/cbim/`，使用首页 `<head>` 中的 `google-site-verification` 元标记验证所有权。该值由 Search Console 提供，是需要公开发布的验证标记，不是登录凭据；验证后也必须保留，后续改版不得删除或覆盖其他所有者的标记。它不引入 Analytics、账号登录或数据采集。
+
+部署后先匿名检查首页实际返回的标记，再到对应 Google 账号的 Search Console 完成验证。提交站点地图的完整地址为 `https://nan023062.github.io/cbim/sitemap.xml`；分别检查首页与 `download.html` 的索引结果，必要时进行实际网址测试及申请编入索引。以 Search Console 的实际结果为准：验证成功、站点地图已读取、实际测试可访问与已经编入索引是不同状态。
+
+GitHub Pages 项目站点部署在 `/cbim/`，生成目录里的 `robots.txt` 因此位于子路径，并非 Google 读取的域名根目录 `/robots.txt`。不要依赖其中的 Sitemap 声明进行发现；本项目通过 Search Console 直接提交 sitemap。根目录 robots 返回 404 不构成禁止抓取。无需为了验证本项目申请整个 `github.io` 域名的 DNS 权限。

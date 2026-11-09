@@ -1,5 +1,11 @@
 # CBIM 开发记录
 
+## 2026-11-10：发布 CI 的旧任务真人说明兼容断言
+
+- 首轮完整四片最终为 364 文件/2530 项：2516 通过、12 失败、2 原有历史 EXE 跳过。第四片最后一项旧断言仍要求不存在的真人标识触发 PERSON_NOT_FOUND，与用户要求退役花名册冲突；改为确认该字段只保留历史说明，知识版本不变、不生成 people.json，正式岗位派发拒绝仍由相邻用例验证。
+- `pnpm exec vitest run tests/team-workflow.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-0.1.4-team-workflow.json`：3 项通过。全部已发现失败对应的定向测试累计 28 通过、2 原有历史 EXE 跳过；无产品代码/构建输入变化。
+- 首轮完整报告保存在 `test-results/desktop-0.1.4-ci-initial-42694782113/`，不覆盖原失败。中间 head f7ed56fe 的 run 42697185690 由最终推送触发的同 PR 完整检查替代，不能作为合并证据；新 head 的四片必须完整通过。
+
 ## 2026-11-10：发布 CI 的对象预览版本断言对齐
 
 - 统一工具权限测试的 v2 清单遗漏本轮已升级的 cbim_object_preview；仅补齐明确版本预期，保留逐调用知识授权、身份/版本拒绝、真实 Pi 路由和回执检查。

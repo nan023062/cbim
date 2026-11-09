@@ -30,3 +30,4 @@
 - 责任主工具和 Application 同时断言未绑定及模型待核实缺口，分别 9/2 项通过。第一片还发现统一工具权限测试遗漏 object preview v2，另行修正；不通过回退产品契约来迁就旧断言。候选安装 run 已成功，完整安装报告仍需核对。
 - 统一工具权限版本断言补齐 cbim_object_preview v2，6 项真实权限/路由测试通过。上述三类修正分别提交，只涉及测试和外部记录；未改制品输入。
 - 候选报告 `test-results/desktop-0.1.4-candidate-42695642991/report.json` 已核对：2026-11-09T20:47:57.952Z 完成，全新安装和实际 0.1.3 覆盖升级通过，native.version=0.1.4、isPackaged=true、NotSigned；工作区、模型、同一 completed task/run、localStorage、文件标记及无重放六项保留，modelRequests=1、pageErrors=[]。此时尚未公开，线上发现/下载/普通退出/自动重启仍待独立验收。
+- 首轮最终 364 文件/2530 项：2516 通过、12 失败、2 原有历史 EXE 跳过，全部四片报告保存在 `test-results/desktop-0.1.4-ci-initial-42694782113/`。第四片还暴露旧任务准备的 PERSON_NOT_FOUND 断言；现确认旧真人字段只作历史说明、不生成花名册，团队用例 3 通过。累计定向 28 通过、2 原有跳过。中间 run 42697185690 不作为最终合并证据，新 head 需完整四片重新通过。

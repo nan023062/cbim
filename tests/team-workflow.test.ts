@@ -44,7 +44,9 @@ it('内部知识服务保留身份、写授权与 Schema 校验，团队准备�
     expect(choices.modules.find((m:any)=>m.id===seeded.child).workflows).toEqual([]);
     expect(choices.agents.some((a:any)=>a.id===seeded.input.agentId)).toBe(true);
     await expect(prepareTeamTask(w,{...seeded.input,moduleId:seeded.child})).rejects.toMatchObject({code:'WORKFLOW_SCOPE'});
-    await expect(prepareTeamTask(w,{...seeded.input,responsiblePerson:'unknown'})).rejects.toMatchObject({code:'PERSON_NOT_FOUND'});
+    // 已退役的真人标识仅保留为旧任务说明，不查花名册、不代替正式岗位派发门禁。
+    await expect(prepareTeamTask(w,{...seeded.input,responsiblePerson:'unknown'})).resolves.toMatchObject({responsiblePerson:'unknown',workflowContext:{revision:task.workflowContext.revision}});
+    await expect(fs.access(path.join(f.a,'.cbim/team/people.json'))).rejects.toThrow();
     await expect(service.callFromRun('cbim_agent_get',{workspaceId:e.id,instanceId:'stale',id:seeded.input.agentId},false)).rejects.toMatchObject({code:'STALE_INSTANCE'});
     await expect(seeded.call('cbim_knowledge_commit',{revision:task.workflowContext.revision,requestId:'no-permission',changes:[]})).rejects.toMatchObject({code:'FORBIDDEN'});
     await expect(service.callFromRun('cbim_agent_get',{},false)).rejects.toThrow();

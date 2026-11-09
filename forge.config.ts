@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import {readFileSync} from 'node:fs';
 import path from 'node:path';
 import {packagePiRuntime} from './scripts/package-pi-runtime.mjs';
+import {signingConfig, updaterConfigYaml} from './scripts/desktop-signing/config.cjs';
 
 // Keep one timestamp across Forge's package/make phases and any child processes.
 const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
@@ -15,6 +16,7 @@ process.env.CBIM_BUILD_STAMP=buildStamp;
 const buildOut=path.resolve(process.env.CBIM_BUILD_OUT||path.join('build',buildStamp));
 const metadataPath=path.join(buildOut,'build-info.json');
 const desktopRelease=process.env.CBIM_DESKTOP_RELEASE==='1';
+const signing=desktopRelease?signingConfig():undefined;
 const desktopVersion=process.env.CBIM_DESKTOP_VERSION||JSON.parse(readFileSync('package.json','utf8')).version;
 if(desktopRelease&&!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(desktopVersion))throw Error('桌面版本格式无效');
 const executableName=desktopRelease?'CBIM Desktop':'CBIM';
@@ -28,7 +30,7 @@ const config: ForgeConfig = {
   packagerConfig: { asar: true, executableName, ...(desktopRelease?{appVersion:desktopVersion,buildVersion:desktopVersion}:{}),extraResource: ['design','docs','node_modules/koffi',path.join(buildOut,'pi-runtime'),...(desktopRelease?[path.join(buildOut,'desktop-release.json'),path.join(buildOut,'app-update.yml')]:[])] },
   makers: [new MakerZIP({}, ['win32'])],
   hooks:{
-    generateAssets:async()=>{await packagePiRuntime(path.join(buildOut,'pi-runtime'));if(desktopRelease){const notes=await fs.readFile(process.env.CBIM_DESKTOP_NOTES||`design/releases/desktop-v${desktopVersion}.md`,'utf8');await fs.writeFile(path.join(buildOut,'desktop-release.json'),JSON.stringify({channel:'desktop-stable',version:desktopVersion,notes}));await fs.writeFile(path.join(buildOut,'app-update.yml'),`provider: generic\nurl: https://github.com/nan023062/cbim/releases/download/desktop-v${desktopVersion}/\nupdaterCacheDirName: cbim-desktop-updater\n`)}},
+    generateAssets:async()=>{await packagePiRuntime(path.join(buildOut,'pi-runtime'));if(desktopRelease){const notes=await fs.readFile(process.env.CBIM_DESKTOP_NOTES||`design/releases/desktop-v${desktopVersion}.md`,'utf8');await fs.writeFile(path.join(buildOut,'desktop-release.json'),JSON.stringify({channel:'desktop-stable',version:desktopVersion,notes}));await fs.writeFile(path.join(buildOut,'app-update.yml'),updaterConfigYaml(desktopVersion,signing!.publisherName))}},
     readPackageJson:async(_config,pkg)=>desktopRelease?{...pkg,version:desktopVersion}:pkg,
     postPackage:async(_config,result)=>{
       await saveBuildInfo({buildStamp,timeZone:'Asia/Shanghai',stage:'package',completedAt:new Date().toISOString(),outputDirectory:buildOut,platform:result.platform,arch:result.arch,executable:result.platform==='win32'?path.join(result.outputPaths[0],executableName+'.exe'):null,packageDirectories:result.outputPaths,artifacts:[]});

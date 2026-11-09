@@ -52,13 +52,13 @@ export class RuntimeNavigationResolver {
   }
 }
 
-/** 只切换已绑定原会话的页签；不存在时新增历史绑定，不修改任何原草稿、附件或其他工作区。 */
+/** 只切换已绑定原会话的页签；不存在时显式恢复该历史条目并解除其本机隐藏，不修改原草稿、附件或其他工作区。 */
 export function bindRuntimeConversation(layout:TabLayout|undefined,verified:VerifiedRuntimeNavigation):TabLayout{
   const base=layout??{tabs:[],active:''};
   const existing=base.tabs.find(tab=>tab.kind==='chat'&&tab.taskId===verified.conversation.taskId);
   if(existing)return base.active===existing.id?base:{...base,active:existing.id};
   const tab={...newTab('chat'),taskId:verified.conversation.taskId,title:verified.conversation.goal.split('\n')[0].slice(0,60)||'历史对话'};
-  return {tabs:[...base.tabs,tab],active:tab.id};
+  return {...base,tabs:[...base.tabs,tab],active:tab.id,...(base.hiddenTaskIds?{hiddenTaskIds:base.hiddenTaskIds.filter(id=>id!==verified.conversation.taskId)}:{})};
 }
 
 /** 对已同步的原图进行一次定位；不存在的周期或节点明确拒绝，不猜最新周期、不改变执行中的目标。 */

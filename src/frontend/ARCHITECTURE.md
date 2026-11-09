@@ -93,8 +93,8 @@ class N_src_frontend_main_tsx["main.tsx"] {
 - `shell` → `resources`：导入。
 - `shell` → `settings`：导入。
 - `shell` → `updates`：导入。
-- `shell` → `components`：导入。
 - `shell` → `conversation`：导入。
+- `shell` → `components`：导入。
 - `shell` → `runtime`：导入。
 - `shell` → `team`：导入。
 - `shell` → `workspace`：导入。

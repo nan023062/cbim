@@ -19,8 +19,8 @@
 | [tabs.ts](tabs.ts) | 页签种类、默认布局、排序与本机布局恢复。 |
 | [UserMenu.tsx](UserMenu.tsx) | 本地账号菜单、主题与设置入口，以及当前版本、检查更新和最近一次更新入口。 |
 | [useSidebarWidth.ts](useSidebarWidth.ts) | 管理侧边栏宽度、拖动与键盘调整，并在本地保留布局。 |
-| [workspace-list.css](workspace-list.css) | 工作区树、项目行操作与内嵌编辑菜单的布局。 |
-| [WorkspaceList.tsx](WorkspaceList.tsx) | 左侧工作区树及其对话列表，承载新对话、项目重命名和移除入口。 |
+| [workspace-list.css](workspace-list.css) | 工作区树、名称旁的折叠按钮及点击位置浮动菜单。 |
+| [WorkspaceList.tsx](WorkspaceList.tsx) | 工作区树、对话条目管理与工作区浮动操作菜单。 |
 
 ## 架构类图
 
@@ -34,7 +34,7 @@ class N_src_frontend_shell_App_tsx["App.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[../updates/SoftwareUpdates.tsx](../updates/SoftwareUpdates.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[WorkspaceList.tsx](WorkspaceList.tsx)、[ExtensionArea.tsx](ExtensionArea.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[UserMenu.tsx](UserMenu.tsx)、[useSidebarWidth.ts](useSidebarWidth.ts)、[state-labels.ts](state-labels.ts)、[../runtime/RuntimeOverview.tsx](../runtime/RuntimeOverview.tsx)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[runtime-navigation.ts](runtime-navigation.ts)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[../updates/SoftwareUpdates.tsx](../updates/SoftwareUpdates.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[../conversation/conversation-activity.ts](../conversation/conversation-activity.ts)、[WorkspaceList.tsx](WorkspaceList.tsx)、[ExtensionArea.tsx](ExtensionArea.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[UserMenu.tsx](UserMenu.tsx)、[useSidebarWidth.ts](useSidebarWidth.ts)、[state-labels.ts](state-labels.ts)、[../runtime/RuntimeOverview.tsx](../runtime/RuntimeOverview.tsx)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[runtime-navigation.ts](runtime-navigation.ts)。
 
 ### ExtensionArea.tsx
 
@@ -167,6 +167,8 @@ class N_src_frontend_shell_tabs_ts["tabs.ts"] {
   +moveTab()
   +readLayouts()
   +mergeConversations()
+  +renameConversation()
+  +removeConversation()
 }
 ```
 
@@ -185,6 +187,7 @@ class N_src_frontend_shell_tabs_ts_ViewTab["ViewTab"] {
   +id
   +kind
   +title
+  +customTitle
   +draft
   +taskId
   +attachments
@@ -194,6 +197,7 @@ class N_src_frontend_shell_tabs_ts_TabLayout["TabLayout"] {
   <<interface>>
   +tabs
   +active
+  +hiddenTaskIds
 }
 N_src_frontend_shell_tabs_ts ..> N_src_frontend_shell_tabs_ts_TabLayout : 声明
 class N_src_frontend_shell_tabs_ts_Layouts["Layouts"] {
@@ -247,7 +251,7 @@ class N_src_frontend_shell_WorkspaceList_tsx["WorkspaceList.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[state-labels.ts](state-labels.ts)、[workspace-list.css](workspace-list.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../conversation/ConversationEntries.tsx](../conversation/ConversationEntries.tsx)、[state-labels.ts](state-labels.ts)、[workspace-list.css](workspace-list.css)。
 
 ### 本目录调用边界
 
@@ -337,6 +341,8 @@ N_src_frontend_shell_WorkspaceList_tsx ..> N_src_frontend_shell_workspace_list_c
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 工作区外壳与原会话定位
+
+对话列表与会话历史菜单共用 `ConversationEntries` 和本机 `TabLayout`：自定义标题不覆盖原任务目标，移除条目保存工作区隔离的 `hiddenTaskIds`，轮询和重开不复活；删除最后一项创建空对话，不停止后台运行或删除日志。运行总览的显式定位可以恢复被移除条目。红色运行灯取 `runtime.snapshot` 的 ready 工作区及实际主／成员 running 记录，排队、历史状态和持久等待不点亮，读取失败清除观察。工作区菜单使用 portal 以点击坐标锚定左上角，视口边缘避让，支持键盘与焦点返回；折叠按钮紧邻项目名。
 
 `ExtensionArea` 向业务架构传递完整的 `WorkspaceView` 与共享快照，使负责人入口复用项目岗位登记时仍核实真实运行状态和实例。登记、返回原模块及选择状态由业务视图持有；外壳不生成岗位或执行责任写入。
 

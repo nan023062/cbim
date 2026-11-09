@@ -65,6 +65,8 @@ pnpm make
 
 开发流程 `cbim-development` 提供 [Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md) 和 [通用项目](.agents/skills/cbim-development/SKILL.md) 三个同步入口；仅服务本工程开发，不是产品内置业务 Skill。
 
+桌面发版使用 `cbim-release`：[通用项目](.agents/skills/cbim-release/SKILL.md)、[Claude Code](.claude/skills/cbim-release/SKILL.md)、[Codex](.codex/skills/cbim-release/SKILL.md)。流程覆盖签名／明确选择的未签名发行、CI、草稿恢复、隔离安装与线上升级、官网及双分支收尾；具体分工见 [开发者 Skill 说明](docs/developer-skills.md)。
+
 架构维护流程提供两个入口：
 
 - [Claude Code：architecture-maintenance](.claude/skills/architecture-maintenance/SKILL.md)

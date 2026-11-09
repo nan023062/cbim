@@ -21,8 +21,9 @@
 - [architecture-evolution](.agents/skills/architecture-evolution/SKILL.md)：统一评估全局分层、职责与共性，依据业务变化点、语义和真实消费者选择封装、组合、继承与多态，通过渐进重构沉淀稳定能力。
 - [architecture-maintenance](.agents/skills/architecture-maintenance/SKILL.md)：同步源码注释、类图和依赖说明，交付职责、关键调用链、设计取舍及下一次修改入口，保障维护者可以理解、审阅和接手。
 - [cbim-development](.agents/skills/cbim-development/SKILL.md)：回顾全局与上一步成果，推进已授权步骤、验证结果并维护开发接续。
+- [cbim-release](.agents/skills/cbim-release/SKILL.md)：发布或恢复桌面版本，核实签名模式、冻结制品、CI 与真实升级证据，完成官网及双分支收尾。
 
-源码实现继续遵循 `architecture-maintenance`；重要职责、公共抽象或状态流变化同时说明维护者需要更新的认知。只要求评估不自动重构，已经授权的实施不逐步重复请求批准。三种项目 Skill 的 `.agents/skills/`、`.claude/skills/`、`.codex/skills/` 入口保持同名同内容。使用例子见 [开发者 Skill 说明](docs/developer-skills.md)。
+源码实现继续遵循 `architecture-maintenance`；重要职责、公共抽象或状态流变化同时说明维护者需要更新的认知。只要求评估不自动重构，已经授权的实施不逐步重复请求批准。各项目 Skill 的 `.agents/skills/`、`.claude/skills/`、`.codex/skills/` 入口及配套引用保持同名同内容。使用例子见 [开发者 Skill 说明](docs/developer-skills.md)。
 
 ## 源码维护范围
 

@@ -22,7 +22,7 @@
 
 ## 运行
 
-Windows x64 当前公开桌面版为 [desktop-v0.1.1](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.1)。安装后在左下角账号菜单查看当前版本、最近一次更新，检查并手动下载新版，再确认重启安装。此包尚未签名，Windows 可能显示未知发布者或安全提示；核对发布页的 `SHA256SUMS.txt` 不能替代可信签名。新版品牌图标已在源码接入，尚未进入该公开安装包；签名版待可信证书。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
+Windows x64 当前公开桌面版为 [desktop-v0.1.2](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.2)，已包含本轮四项 Issue 修复、自动／团队模式、对话进展与统一品牌。安装后在左下角账号菜单查看当前版本、最近一次更新，检查并手动下载新版，再确认重启安装。此包尚未签名，Windows 可能显示未知发布者或安全提示；核对发布页的 `SHA256SUMS.txt` 不能替代可信签名。后续取得证书后将通过更高版本切换到签名发行。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
 
 BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill，按格式填写即可直连 GitHub Issue。首次在设置连接自己的 GitHub；成功后不追加结果消息。详见 [OAuth 与反馈指南](design/task/github-feedback-setup.md)。更新程序独立位于 `src/backend/updater/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](design/task/desktop-release.md)。
 

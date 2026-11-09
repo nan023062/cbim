@@ -109,7 +109,8 @@ try {
     const available = await waitPhase(page, 'available'); assert.equal(available.release.version, version);
     const download = async () => {
       await page.getByRole('button', {name: '查看更新', exact: true}).click();
-      await page.getByRole('region', {name: '软件更新', exact: true}).getByRole('button', {name: '下载更新', exact: true}).click();
+      // 0.1.1 起使用“版本与更新”原生弹窗；“软件更新”只是内部标题，不是区域名称。
+      await page.getByRole('dialog', {name: '版本与更新', exact: true}).getByRole('button', {name: '下载更新', exact: true}).click();
       await waitPhase(page, 'ready');
     };
     await download();
@@ -145,5 +146,9 @@ try {
   await close();
   await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: '0.1.1', freshInstall: mode === 'candidate', onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, noReplay: true}, modelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
   console.log(JSON.stringify({success: true, mode, version, sha256: expected, retained: true}));
-} catch (error) { await save('failure', {error: String(error), stack: error.stack, phases, requests, pageErrors: errors}); throw error; }
+} catch (error) {
+  let updateState;
+  if (app) { try { const page = await app.firstWindow(); updateState = await status(page); await page.screenshot({path: path.join(root, 'failure.png')}); } catch { /* 保留原失败，诊断不能替代业务结果。 */ } }
+  await save('failure', {error: String(error), stack: error.stack, phases, requests, pageErrors: errors, updateState}); throw error;
+}
 finally { await close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }

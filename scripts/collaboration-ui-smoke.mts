@@ -9,6 +9,8 @@ import {Application} from '../src/backend/main/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import {seedTeam} from '../tests/team-fixture';
+import {registerExplicitFixtureOwner} from '../tests/explicit-owner-fixture';
+import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import {goalCompleteArguments,goalPlanArguments} from '../tests/goal-provider-fixture';
 import {request} from '../tests/helpers';
 import {latestExecutable} from './build-artifact.mjs';
@@ -21,9 +23,11 @@ import {latestExecutable} from './build-artifact.mjs';
 const defaultExecutor=process.argv.includes('--default-executor');
 const verifyHistory=process.argv.includes('--history');
 const verifyScopeGoals=process.argv.includes('--scope-goals');
+const verifyInline=process.argv.includes('--inline-conversation');
 assert.ok(!(verifyHistory&&verifyScopeGoals),'--history 与 --scope-goals 分别运行，避免两种验收互相改写记录数量');
-const artifact=(defaultExecutor?'main-instance':'collaboration')+(verifyHistory?'-history':verifyScopeGoals?'-scope-goals':'');
+const artifact=(verifyInline?'issue22-':'')+(defaultExecutor?'main-instance':'collaboration')+(verifyHistory?'-history':verifyScopeGoals?'-scope-goals':'');
 const exe=await latestExecutable();
+assert.ok(path.resolve(exe).startsWith(path.resolve('build')+path.sep),'只允许仓库 build 中的隔离便携副本');
 const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-collaboration-ui-'));
 const project=path.join(temp,'project'),user=path.join(temp,'user');
 await fs.mkdir(project);
@@ -45,6 +49,7 @@ await fs.writeFile(path.join(project,'input.txt'),fact);
 type ProviderRequest={model:string;messages:{role:string;content:unknown}[];tools?:{function:{name:string}}[]};
 const mainRequests:ProviderRequest[]=[],memberRequests:ProviderRequest[]=[],transportErrors:string[]=[];
 let agentId='',moduleId='',releaseMember=()=>{},releaseResumed=()=>{};
+let ownerSelection:OwnerExecutionSelection;
 const memberGate=new Promise<void>(resolve=>{releaseMember=resolve});
 const resumedGate=new Promise<void>(resolve=>{releaseResumed=resolve});
 const server=http.createServer(async(req,res)=>{
@@ -61,8 +66,8 @@ const server=http.createServer(async(req,res)=>{
     if(isMain){
       assert.ok(!body.tools?.some(tool=>['write','edit','bash','cbim_dispatch_self'].includes(tool.function.name)),'主调度不应获得业务文件和命令执行工具');
       assert.ok(body.tools?.some(tool=>tool.function.name==='cbim_object_commit'),'主 Agent 必须保留受控知识治理工具');
-      if(turn===0)tool('main-goal-plan','cbim_goal_plan',goalPlanArguments({objective:mainGoal,agentId:defaultExecutor?'cbim:executor':agentId,moduleIds:[moduleId],acceptance}));
-      else if(turn===1)tool('main-dispatch','cbim_dispatch_task',{...(!defaultExecutor?{agentId}:{}),moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
+      if(turn===0)tool('main-goal-plan','cbim_goal_plan',goalPlanArguments({objective:mainGoal,agentId:defaultExecutor?'cbim:executor':agentId,moduleIds:[moduleId],acceptance,ownerSelection}));
+      else if(turn===1){emit({role:'assistant',content:'先派发文件核实任务。'});tool('main-dispatch','cbim_dispatch_task',{agentId:defaultExecutor?'cbim:executor':agentId,moduleIds:[moduleId],ownerSelection,goal:memberGoal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]})}
       else if(turn===2)reply('已派发成员任务，等待成员回传后继续处理。');
       else if(turn===3)tool('main-goal-inspect','cbim_goal_inspect',{});
       else if(turn===4)tool('main-goal-review','cbim_goal_review',goalCompleteArguments(body,'main-goal-inspect'));
@@ -91,7 +96,7 @@ let desktop:ElectronApplication|undefined,setup:Application|undefined;
 const pageErrors:string[]=[];
 try{
   setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();
-  await setup.models.save({profile:{name:'Local collaboration UI',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'collaboration-ui',models:[{id:'collaboration-ui',name:'Collaboration UI',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+  const modelSettings=await setup.models.save({profile:{name:'Local collaboration UI',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'collaboration-ui',models:[{id:'collaboration-ui',name:'Collaboration UI',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
   const entry=await setup.dispatch('add',{path:project}),workspace=setup.workspace(entry.id),team=await seedTeam(workspace);
   const scopes=async()=>{
     // A second FileDispatchStore could truncate a live writer's partial tail during recovery. This reader never writes.
@@ -118,18 +123,30 @@ try{
   const definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'collaboration-ui-owner',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'collaboration-ui-review',source:'local_user',confirmedAt:new Date().toISOString()}};
   await workspace.commit(request(snapshot,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
+  const profile=modelSettings.profiles.find(p=>p.name==='Local collaboration UI');assert.ok(profile);
+  ownerSelection=(await registerExplicitFixtureOwner(setup,entry.id,{agentId:defaultExecutor?'cbim:executor':agentId,moduleIds:[moduleId],profileId:profile.id,modelId:'collaboration-ui'})).selection;
   await setup.shutdown();setup=undefined;
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});
+  assert.equal(path.resolve(await desktop.evaluate(({app})=>app.getPath('userData'))),path.join(user,'desktop'));
   let page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));
   const call=(action:string,args:unknown={})=>page.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args});
   await page.getByRole('button',{name:'project · 运行中',exact:true}).click();
   const active=page.locator('.workspace-panel:not([hidden])');
+  await active.getByRole('combobox',{name:'协作模式',exact:true}).click();
+  await active.getByRole('option',{name:/团队模式/}).click();
   await active.getByRole('textbox',{name:'对话草稿',exact:true}).fill(mainGoal);
   await active.getByRole('button',{name:'发送消息',exact:true}).click();
 
   // Holding the model stream proves this is a live member card, not replayed final output.
-  const card=active.locator('.member-activity-card').filter({hasText:memberGoal});
+  const card=active.locator('.inline-member').filter({hasText:memberGoal});
+  await card.getByRole('button',{name:'展开成员过程',exact:true}).click();
   await card.getByText(liveText,{exact:false}).waitFor();
+  await active.getByText('已派发成员任务，等待成员回传后继续处理。',{exact:true}).waitFor();
+  assert.equal(await active.locator('.conversation-progress').count(),0);
+  const mainOrder=await active.locator('.chat-turn').first().evaluate(node=>[...node.children].map(item=>item.querySelector('[data-tool-call-id]')?.getAttribute('data-tool-call-id')||item.querySelector('.chat-markdown')?.textContent||''));
+  assert.ok(mainOrder.indexOf('先派发文件核实任务。')<mainOrder.indexOf('main-dispatch'));
+  assert.ok(mainOrder.indexOf('main-dispatch')<mainOrder.indexOf('已派发成员任务，等待成员回传后继续处理。'));
+  assert.equal(await active.locator('.chat-tool[data-tool-call-id="main-dispatch"]').count(),1);
   const records=await call('loop.list',{id:entry.id});
   const rootSessionId=records.find((record:any)=>record.task?.goal===mainGoal)?.task.taskId;
   assert.equal(typeof rootSessionId,'string');
@@ -139,6 +156,7 @@ try{
   assert.equal(runningGraph.tasks[0].status,'running');
   const firstThread=await call('loop.thread',{id:entry.id,taskId:rootSessionId});
   assert.equal(firstThread.length,1);assert.equal(firstThread[0].status,'completed');
+  assert.deepEqual(firstThread[0].events.find((event:any)=>event.type==='message'&&event.data.text==='先派发文件核实任务。')?.data.toolCallIds,['main-dispatch']);
   const mainInstanceId=runningGraph.root.agent.agentInstanceId;
   assert.equal(firstThread[0].conversationBinding.agentInstanceId,mainInstanceId);
   assert.equal(firstThread[0].conversationBinding.rootSessionId,rootSessionId);
@@ -162,7 +180,7 @@ try{
   await fs.mkdir('test-results',{recursive:true});
   await page.screenshot({path:`test-results/${artifact}-live-chat.png`});
 
-  await active.getByRole('tab',{name:'任务视图',exact:true}).click();
+  await card.getByRole('button',{name:'查看任务详情',exact:true}).click();
   await active.getByTestId('dispatch-graph').waitFor();
   assert.equal(await active.getByTestId('dispatch-root-node').count(),1);
   assert.equal(await active.getByTestId('dispatch-task-node').count(),1);
@@ -184,6 +202,7 @@ try{
 
   await active.getByRole('tab',{name:'对话',exact:true}).click();
   await active.getByText(mainFinal,{exact:true}).waitFor();
+  await active.locator('.inline-handoff>summary').click();
   await active.locator('.chat-model-notice').filter({hasText:sourceNotice}).waitFor();
   assert.equal(await active.locator('.chat-turn').count(),2);
   assert.equal(await active.locator('.chat-message.user').count(),1,'成员系统回传不能变成第二条用户气泡');
@@ -221,6 +240,7 @@ try{
   await page.reload();await page.getByRole('button',{name:'project · 运行中',exact:true}).click();
   await page.locator('.workspace-conversations button').filter({hasText:mainGoal}).first().click();
   await active.getByText(mainFinal,{exact:true}).waitFor();
+  await active.locator('.inline-handoff>summary').click();
   await active.locator('.chat-model-notice').filter({hasText:sourceNotice}).waitFor();
   assert.equal(await active.locator('.chat-message.user').count(),1);
   assert.equal((await call('loop.thread',{id:entry.id,taskId:rootSessionId})).length,2);

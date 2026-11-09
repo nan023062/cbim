@@ -1,11 +1,11 @@
 /**
  * 自动派发回执须与当前 scope 及原 agentId/moduleIds 对应，不能借可解析的兜底字段更换请求。
  * 等待审阅的可选 memberPause 也必须与原请求逐项一致，不能省略清单后把已保存等待解释为另一种结果。
- * 作用定位：主调度工具的公开业务输出契约与可信调用归属校验，前置修订严格对应原增删请求。
+ * 作用定位：主调度工具的公开业务输出契约与可信调用归属校验，前置修订严格对应原增删请求；派发的纯回执结构由 dispatch-receipt 共用，业务核实仍留在此处。
  * 设计原因：JSON 可解析不代表目标、图或回执属于本次调用；唯一 wire 核对身份、Workflow 与负责人原始选择，不将解析后补值当作原请求事实。
  * 职责边界：排队、追加/替换前置及续执行预约均不是执行完成；检查点放弃只取消原待办，输出失败不撤销已提交事务，也不授权自动重试。
  */
-import {automaticExecutionBindingSchema,automaticExecutionBindingMatches} from '../team/automatic-execution';
+import {automaticExecutionBindingMatches} from '../team/automatic-execution';
 import {z} from 'zod';
 import {graphCursorSchema,graphSnapshotSchema,taskNodeSchema,validateGraph} from './graph-rules';
 import type {GraphSnapshot,TaskNode} from './graph-types';
@@ -17,6 +17,8 @@ import {reviseQueuedDependenciesReceiptSchema,type ReviseQueuedDependenciesInput
 import type {CancelQueuedTasksInput} from './queued-task-cancel';
 import type {ResumeMemberInput} from './queued-member-resume';
 import {abandonCheckpointReceiptSchema,type AbandonCheckpointInput} from './checkpoint-handoff';
+import {dispatchTaskOutputSchema} from './dispatch-receipt';
+export {dispatchTaskOutputSchema} from './dispatch-receipt';
 export {projectMainScope,mainToolScopeSchema} from './main-tool-scope';
 export type {MainToolScope} from './main-tool-scope';
 
@@ -27,8 +29,6 @@ const ids=z.array(id).min(1).max(500).refine(values=>new Set(values).size===valu
 const receiptIdentity={workspaceId:id,rootSessionId:id,scopeId:id,mainRunId:id,commandId:id};
 const graphOutputSchema=graphSnapshotSchema.superRefine((value,context)=>{try{validateGraph(value as GraphSnapshot)}catch{context.addIssue({code:'custom',message:'任务图领域关系无效'})}});
 
-/** 派发回执只证明待办信封提交，没有 scope/run 字段，不能凭空声称这些身份已写入回执。 */
-export const dispatchTaskOutputSchema=z.object({commandId:id,taskId:id,messageId:id,cursor:graphCursorSchema,disposition:z.enum(['queued','waiting']),fallbackBinding:automaticExecutionBindingSchema.optional()}).strict();
 export const cancelQueuedTasksOutputSchema=z.object({...receiptIdentity,cancelledTaskIds:z.array(id).min(1).max(100).refine(values=>new Set(values).size===values.length),graphCursor:shortCursor}).strict();
 export const replaceQueuedDependencyOutputSchema=z.object({...receiptIdentity,taskId:id,status:z.enum(['queued','waiting']),trackedTaskIds:ids,replacement:dependencyReplacementSchema,graphCursor:shortCursor}).strict();
 export const addQueuedDependencyOutputSchema=z.object({...receiptIdentity,taskId:id,status:z.literal('waiting'),trackedTaskIds:ids.refine(values=>values.length>=2),addition:dependencyAdditionSchema,graphCursor:shortCursor}).strict();

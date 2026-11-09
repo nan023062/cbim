@@ -1,0 +1,10 @@
+/* 原工具与对应成员状态共用对话列；系统交接采用相同几何但明确标注来源，不伪造调用。 */
+.conversation-tool-call{margin:12px 0;padding:2px 0;border-left:2px solid var(--line);min-width:0}
+.conversation-tool-call>.chat-activity{margin:0}.inline-member{padding:3px 12px;font-size:12px;line-height:1.6;min-width:0}
+.inline-member-heading{display:flex;align-items:baseline;gap:4px;flex-wrap:wrap}.inline-member-heading .member-state{margin:0}.inline-member-heading button{margin-left:auto}
+.inline-member button,.inline-handoff button{font-size:11px;padding:2px 6px;border:0;background:transparent;color:var(--muted)}
+.inline-member-goal{margin:3px 0;overflow-wrap:anywhere}.inline-member-note,.inline-dependency{margin:4px 0;color:var(--muted);font-size:12px;overflow-wrap:anywhere}.inline-dependency{padding:0 12px}
+.inline-member-body{margin:8px 0;min-width:0}.inline-member-body .member-card-stream{max-height:440px;overflow:auto}.inline-member-body .member-card-stream.expanded{max-height:none}
+.inline-member-toggle{margin-top:4px}.inline-handoff{margin:16px 0;border-left:2px solid var(--line);padding:6px 12px}.inline-handoff p{overflow-wrap:anywhere}.inline-handoff p button{margin-left:8px}
+.chat-inline-status{display:flex;flex-wrap:wrap;align-items:center;color:var(--muted);margin-top:12px;font-size:12px}.chat-inline-status .work-outcome{margin-left:0}.inline-activity-label{font-size:11px;overflow-wrap:anywhere}
+@media(max-width:600px){.conversation-tool-call .chat-tool>summary,.inline-handoff>summary{flex-wrap:wrap}.conversation-tool-call .tool-target{max-width:100%}.inline-member-heading button{margin-left:0}.inline-handoff>summary b{white-space:normal;overflow-wrap:anywhere;flex-shrink:1}}

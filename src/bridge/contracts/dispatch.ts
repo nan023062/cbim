@@ -19,6 +19,9 @@ export {abandonCheckpointInputSchema,checkpointAbandonmentSchema,abandonCheckpoi
 export type {MemberResumeRequest} from '../../backend/core/tasks/queued-member-resume';
 export {memberResumeRequestSchema} from '../../backend/core/tasks/queued-member-resume';
 export type {OpenGraphInput,CreateMemberInput,DispatchTaskInput,OpenGraphReceipt,CreateMemberReceipt,DispatchReceipt} from '../../backend/core/tasks/dispatch-commands';
+/** 主对话关联原派发时复用纯输出契约；结构通过不替代运行归属和图游标核对。 */
+export {dispatchTaskOutputSchema} from '../../backend/core/tasks/dispatch-receipt';
+export {toolReceiptSchema} from '../../backend/core/tools/receipt-schema';
 export type {MemberStartOptions,MemberStartReceipt,MemberExecutionView} from '../../backend/core/tasks/member-commands';
 export type {MemberEventsInput,MemberEventCursor,MemberRunView,MemberEventsRead} from '../../backend/core/tasks/member-events';
 export {applyGraphBatch} from '../../backend/core/tasks/graph-reducer';

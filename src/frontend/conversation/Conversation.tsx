@@ -1,5 +1,5 @@
 /**
- * 主对话直接展示原目标／图的关键节点，成员公开计划独立刷新；折叠和历史选择不产生执行副作用。
+ * 主对话按事件顺序展示文字与工具，成员状态关联原派发，展开才观察公开过程；目标控制和完整图保留原入口。
  * 新对话默认 Auto，旧无模式偏好的历史对话保持 Team；当前目标期间禁用模式切换，下一目标仍可在同一对话改选。
  * 历史菜单与侧栏共用本机条目和运行观察，改名／移除由外壳负责，不改原任务目标或日志。
  * 文件补偿：向成员详情传递当前工作区实例，历史运行身份不替代新操作的当前实例校验。
@@ -12,17 +12,15 @@
  * Skill 入口：加号菜单发送只需一句描述、补充自愿的独立引导请求，沿用当前模型、权限和排队规则；不发送或清空已有草稿与附件。
  * 输入边界：草稿仍即时上交外壳；历史轮次按运行、恢复上下文及实际计时变化更新，键入不重复解析未变正文。
  */
-import {useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
+import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
 import type {RunSummary,ConversationThreadView} from '../../bridge/contracts/execution';
 import type {LlmSettings} from '../../bridge/contracts/models';
 import type {ViewTab,TabKind} from '../shell/tabs';
 import {runtimeTaskSelection,type RuntimeNavigationRequest} from '../shell/runtime-navigation';
 import {ConversationTurn} from './ConversationTurn';
-import {ConversationProgress} from './ConversationProgress';
 import {SessionTaskView} from '../tasks/SessionTaskView';
 import {useSessionGraph} from '../tasks/useSessionGraph';
-import {MemberActivity} from '../tasks/MemberActivity';
 import {ScopeGoalPanel} from '../tasks/ScopeGoalPanel';
 import './session-tabs.css';
 import {MessageQueue} from './MessageQueue';
@@ -66,7 +64,9 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   function selectSection(value:'chat'|'tasks'){consumeNavigation();setSection(value)}
   function selectTask(id?:string){consumeNavigation();setSelectedTaskId(id)}
   useEffect(()=>{setSelectedTaskId(undefined)},[workspace.id,tab.taskId]);
-  function viewMember(taskId:string){selectTask(taskId);setSection('tasks')}
+  // 历史条目使用稳定导航回调，点击时再读取当前定位请求，避免逐键草稿使所有轮次失效。
+  const navigationRef=useRef({navigation,onNavigationHandled});navigationRef.current={navigation,onNavigationHandled};
+  const viewMember=useCallback((taskId:string)=>{const current=navigationRef.current;if(current.navigation){handledNavigation.current=current.navigation.requestId;current.onNavigationHandled?.(current.navigation.requestId)}setSelectedTaskId(taskId);setSection('tasks')},[]);
   useEffect(()=>{
     if(!active||!navigation||handledNavigation.current===navigation.requestId)return;
     setSection('tasks');setNavigationError('');
@@ -103,7 +103,7 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   function addAttachments(items:ChatAttachment[]){const combined=[...attachmentRef.current];for(const item of items)if(!combined.some(a=>a.kind===item.kind&&a.source===item.source))combined.push(item);if(combined.length>12){setError('最多可添加 12 项附件，请移除部分附件后重试');return}onAttachments(combined);if(taskOpen)setNextTip(Date.now())}
   async function importFiles(files:File[]){if(importing.current||attachmentBusy||busy)return;if(files.length+attachmentRef.current.length>12){setError('最多可添加 12 项附件');return}importing.current=true;setAttachmentBusy(true);setError('');try{addAttachments(await api.importFiles(workspace.id,files))}catch(e:any){setError(e.message)}finally{importing.current=false;setAttachmentBusy(false)}}
   const input=useRef<HTMLTextAreaElement>(null);
-  const lock=useRef(false),alive=useRef(true),scroll=useRef<HTMLDivElement>(null),follow=useRef(true),memberContent=useRef<HTMLDivElement>(null);
+  const lock=useRef(false),alive=useRef(true),scroll=useRef<HTMLDivElement>(null),follow=useRef(true),historyContent=useRef<HTMLDivElement>(null);
   const stopGate=useRef(new ConversationStopGate()),[,renderStop]=useState(0);
   stopGate.current.observe(tab.taskId?{id:workspace.id,taskId:tab.taskId}:undefined);
   const stopping=!!tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId});
@@ -126,7 +126,7 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   // 正文排版后、浏览器绘制前跟随末尾，避免 Markdown 高度变化误判为用户向上滚动。
   useLayoutEffect(()=>{if(section==='chat'&&follow.current&&scroll.current)scroll.current.scrollTop=scroll.current.scrollHeight},[runs,questions,section]);
   // 成员输出在自己的 Hook 中更新；只在用户仍跟随底部时跟随高度，避免抢走查看旧消息的位置。
-  useEffect(()=>{const node=memberContent.current;if(!node||typeof ResizeObserver==='undefined')return;const observer=new ResizeObserver(()=>{if(section==='chat'&&follow.current&&scroll.current)scroll.current.scrollTop=scroll.current.scrollHeight});observer.observe(node);return()=>observer.disconnect()},[section,tab.taskId]);
+  useEffect(()=>{const node=historyContent.current;if(!node||typeof ResizeObserver==='undefined')return;const observer=new ResizeObserver(()=>{if(section==='chat'&&follow.current&&scroll.current)scroll.current.scrollTop=scroll.current.scrollHeight});observer.observe(node);return()=>observer.disconnect()},[section,tab.taskId]);
   // 跟随文字增高，输入区达到上限后内部滚动，消息列与输入框保持同宽。
   useEffect(()=>{const node=input.current;if(node){node.style.height='auto';node.style.height=Math.min(186,Math.max(32,node.scrollHeight))+'px'}},[tab.draft]);
   async function operate(work:()=>Promise<void>){if(lock.current)return;lock.current=true;invalidateQueue();setBusy(true);setError('');try{await work()}catch(e:any){if(alive.current)setError(e.message)}finally{await refreshQueue();graph.refresh();lock.current=false;if(alive.current)setBusy(false)}}
@@ -190,9 +190,7 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
       <ThreadHistoryNotice issues={threadIssues}/>
       {tab.taskId&&<ScopeGoalPanel state={graph} compact testId="conversation-goal-summary" onSelectTask={viewMember} continuation={continuation} replan={replan} humanDecisions={humanDecisions} humanContinuation={humanContinuation}/>}
       {latest?.task.workflowContext&&<details className="chat-context"><summary>任务上下文 · {latest.task.goal.slice(0,80)}</summary><p>模块：{latest.task.moduleIds.join('、')}<br/>Agent：{latest.task.agentId}<br/>Workflow：{latest.task.workflowContext?.workflowId}<br/>责任人：{latest.task.responsiblePerson||'未指定'}</p><ul>{latest.task.acceptance.map((a,i)=><li key={i}>{a}</li>)}</ul></details>}
-      {runs.map(run=><ConversationTurn key={run.runId} run={run} workspaceId={workspace.id} now={run.status==='running'?now:0} recovery={recovery}/>)}
-      <div ref={memberContent}>{tab.taskId&&<ConversationProgress identity={{workspaceId:workspace.id,rootSessionId:tab.taskId}} graph={graph.graph} summary={graph.scopes.find(s=>s.scopeId===graph.selectedScopeId)} scope={graph.selectedScope} historical={!!graph.historyScopeId} onSelectTask={viewMember}/>}
-      {tab.taskId&&graph.graph?.tasks.length?<MemberActivity workspaceId={workspace.id} rootSessionId={tab.taskId} tasks={graph.graph.tasks} active={active&&section==='chat'} onSelectTask={viewMember} onViewAll={()=>setSection('tasks')}/>:null}</div>
+      <div ref={historyContent}>{runs.map(run=><ConversationTurn key={run.runId} run={run} workspaceId={workspace.id} now={run.status==='running'?now:0} recovery={recovery} active={active&&section==='chat'} onSelectTask={viewMember}/>)}</div>
       {graph.error&&<p role="alert">{graph.error} <button onClick={graph.refresh}>重新同步成员动态</button></p>}
       {questions.map(q=><QuestionCard key={q.id} request={q} onAnswer={async answers=>{await api.call('loop.answerQuestion',{id:workspace.id,taskId:q.taskId,questionId:q.id,answers})}}/>)}
       {currentRun&&!mainRunning&&currentRun.unresolvedTools.length>0&&<div className="chat-reconcile" data-testid="unresolved-tools-notice"><h3>原操作结果尚未确认</h3><p>展开原工具记录，明确核实当前影响并保存处置。需要继续调查时创建独立只读核实任务；原记录保留，勾选调用标识不能恢复原运行。</p><ul>{currentRun.unresolvedTools.map(id=><li key={id}><code>{id}</code></li>)}</ul></div>}

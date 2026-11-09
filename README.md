@@ -1,5 +1,11 @@
 # CBIM Assistant
 
+<img src="branding/cbim-mark.svg" width="64" height="64" alt="CBIM Assistant 图标">
+
+面向 AI 原生团队的桌面工作空间。完整产品名为 **CBIM Assistant**，简称 **CBIM**。品牌资源与生成方式见 [品牌规范](branding/README.md)；官网构建与维护见 [网站说明](website/README.md)。
+
+[产品官网](https://nan023062.github.io/cbim/) · [Windows 下载与更新日志](https://nan023062.github.io/cbim/download.html)
+
 [Loop Engine（Pi）](docs/loop-engine.md)：`src/backend/core/brain/` 通过注入的存储端口管理执行事件、中断与显式恢复，桌面主对话经调度引擎派发正式业务任务。执行结束不等于业务验收通过。开发运行要求 Node.js 22.19+。
 
 界面采用工作区侧栏与主会话区：中间切换对话和任务视图，右侧扩展区承载团队架构、业务架构、浏览器与终端。详见 [工作区界面](docs/workspace-ui.md)。
@@ -16,7 +22,7 @@
 
 ## 运行
 
-Windows x64 正式桌面版使用 [desktop-v0.1.0 安装包](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.0)。安装后在「设置 → 软件更新」查看版本日志、检查并手动下载新版，再点击重启安装。首版未配置代码签名，下载时核对发布页的 `SHA256SUMS.txt`；旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
+Windows x64 当前公开桌面版为 [desktop-v0.1.1](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.1)。安装后在左下角账号菜单查看当前版本、最近一次更新，检查并手动下载新版，再确认重启安装。此包尚未签名，Windows 可能显示未知发布者或安全提示；核对发布页的 `SHA256SUMS.txt` 不能替代可信签名。新版品牌图标已在源码接入，尚未进入该公开安装包；签名版待可信证书。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
 
 BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill，按格式填写即可直连 GitHub Issue。首次在设置连接自己的 GitHub；成功后不追加结果消息。详见 [OAuth 与反馈指南](design/task/github-feedback-setup.md)。更新程序独立位于 `src/backend/updater/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](design/task/desktop-release.md)。
 

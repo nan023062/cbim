@@ -10,12 +10,24 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [BrandMark.tsx](BrandMark.tsx) | 无业务状态的 CBIM 产品标识，供外壳与欢迎页复用。 |
 | [Empty.tsx](Empty.tsx) | 各页面复用的空状态布局。 |
 | [Icon.tsx](Icon.tsx) | 无业务状态的 SVG 图标组件。 |
 | [repository-scope.css](repository-scope.css) | 对应界面的布局与视觉样式。 |
 | [RepositoryScopeDetails.tsx](RepositoryScopeDetails.tsx) | 在主对话工具详情与执行核实报告中展示可信回执的资源仓库范围。 |
 
 ## 架构类图
+
+### BrandMark.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_components_BrandMark_tsx["BrandMark.tsx"] {
+  <<component>>
+  +BrandMark()
+}
+```
+
 
 ### Empty.tsx
 

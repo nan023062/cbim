@@ -5,6 +5,7 @@
  * 附件边界：原生多选超过12项时在任何快照导入前拒绝；安全等待的 importId 贯穿选择器，取消后迟到路径不读取、不返回给另一目标。
  * GitHub 登录只在桌面点击后打开固定官方 Device Flow 页面，不接收重定向地址或令牌。
  * 桌面更新只装配在正式 NSIS 包中；检查不下载、下载不退出。显式安装先拒绝新请求并等待正常业务排空。
+ * 窗口图标从固定品牌资源读取，Forge 同源写入 EXE；保留原应用身份与卸载器名称以兼容更新。
  */
 import {app,BrowserWindow,ipcMain,dialog,shell} from 'electron';
 import {createControlledFileTransport} from './platform/controlled-file-transport';
@@ -38,7 +39,7 @@ app.whenReady().then(async()=>{
   if(installed&&!app.requestSingleInstanceLock()){app.quit();return}
   updates=new DesktopUpdates(app.getVersion(),typeof release.notes==='string'?release.notes:'',installed,latestDesktopRelease,new NsisUpdateInstaller());
   application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install),path.join(install,'design'),systemSecretCipher,{controlledFiles:createControlledFileTransport()});await application.init();
-  window=new BrowserWindow({width:1320,height:860,minWidth:760,minHeight:520,title:'CBIM Assistant',webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  window=new BrowserWindow({width:1320,height:860,minWidth:760,minHeight:520,title:'CBIM Assistant',icon:path.join(install,'branding','cbim.png'),webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   window.webContents.setWindowOpenHandler(()=>({action:'deny'}));window.webContents.on('will-navigate',(event)=>event.preventDefault());
   app.on('second-instance',()=>{if(window.isMinimized())window.restore();window.focus()});
   // 拖放走独立 IPC；与原生选择器共用快照和 .cbim 边界检查。

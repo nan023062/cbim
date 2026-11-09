@@ -1,0 +1,17 @@
+{
+  "source": "cbim-mark.svg",
+  "sizes": [
+    16,
+    24,
+    32,
+    48,
+    64,
+    128,
+    256
+  ],
+  "sha256": {
+    "cbim-mark.svg": "b72d113e9ff9dfbb5be190db9ef708ee743b1d9696b9c2d7dacb164bee4c354f",
+    "cbim.png": "afb23c3ad63393c556f64838114a26d0091e2d509eee93074bd2f9a422edd67d",
+    "cbim.ico": "2431b58090129fbbbdb1cea2f616830d4f8b684ed6ae31d66959f5f12e2dfef5"
+  }
+}

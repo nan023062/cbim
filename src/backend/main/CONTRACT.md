@@ -1,5 +1,17 @@
 # 主进程运行装配契约
 
+## 产品标识与原生窗口
+
+`main.ts` 只装配窗口品牌资源：开发态从工程 `branding/cbim.png` 读取，打包态从固定 `resources/branding/cbim.png` 读取。Forge 的应用图标及独立安装器均使用同一矢量源生成的 ICO；运行时不生成或下载品牌资源。显示名称为 CBIM Assistant，原应用 ID、可执行文件名称、卸载器探测与用户数据目录保持兼容。
+
+```mermaid
+classDiagram
+class main_brand["main.ts"] { <<module>> }
+class brand_assets["branding/（工程外部资源边界）"] { <<resource>> }
+main_brand ..> brand_assets : 固定资源路径装配窗口图标
+note for main_brand "名称与图标只属于桌面呈现，不参与运行身份、更新版本或账户状态。"
+```
+
 ## 反馈连接诊断与提交端口
 
 `createExecutionManager` 只在桌面 chat 主运行注入反馈服务：`feedbackTools` 捕获固定连接，`feedbackStatus` 独立调用 `GitHubFeedbackAuth.checkConnection` 并检查工作区仍有效。未连接时只读诊断仍可用，运行中连接变化不替换原提交范围。认证状态及保存仍归 resources，工具命名／提示归调度层，更新程序不参与。

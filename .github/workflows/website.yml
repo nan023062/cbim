@@ -1,0 +1,55 @@
+name: Publish CBIM website
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'website/**'
+      - 'branding/**'
+      - 'scripts/build-website.mjs'
+      - 'scripts/build-brand-assets.mjs'
+      - '.github/workflows/website.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cbim-github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Read existing Pages configuration
+        id: pages
+        uses: actions/configure-pages@v5
+      - name: Build self-contained pages and verify brand assets
+        env:
+          CBIM_WEBSITE_URL: ${{ steps.pages.outputs.base_url }}/
+        run: node scripts/build-website.mjs
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/website
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish website
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -6,6 +6,7 @@ import {readFileSync} from 'node:fs';
 import path from 'node:path';
 import {packagePiRuntime} from './scripts/package-pi-runtime.mjs';
 import {signingConfig, updaterConfigYaml} from './scripts/desktop-signing/config.cjs';
+import {verifyBrandAssets} from './scripts/build-brand-assets.mjs';
 
 // Keep one timestamp across Forge's package/make phases and any child processes.
 const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
@@ -27,10 +28,10 @@ async function saveBuildInfo(info:unknown){
 }
 const config: ForgeConfig = {
   outDir: buildOut,
-  packagerConfig: { asar: true, executableName, ...(desktopRelease?{appVersion:desktopVersion,buildVersion:desktopVersion}:{}),extraResource: ['design','docs','node_modules/koffi',path.join(buildOut,'pi-runtime'),...(desktopRelease?[path.join(buildOut,'desktop-release.json'),path.join(buildOut,'app-update.yml')]:[])] },
+  packagerConfig: { asar: true, executableName, icon:path.resolve('branding/cbim.ico'), ...(desktopRelease?{appVersion:desktopVersion,buildVersion:desktopVersion}:{}),extraResource: ['branding','design','docs','node_modules/koffi',path.join(buildOut,'pi-runtime'),...(desktopRelease?[path.join(buildOut,'desktop-release.json'),path.join(buildOut,'app-update.yml')]:[])] },
   makers: [new MakerZIP({}, ['win32'])],
   hooks:{
-    generateAssets:async()=>{await packagePiRuntime(path.join(buildOut,'pi-runtime'));if(desktopRelease){const notes=await fs.readFile(process.env.CBIM_DESKTOP_NOTES||`design/releases/desktop-v${desktopVersion}.md`,'utf8');await fs.writeFile(path.join(buildOut,'desktop-release.json'),JSON.stringify({channel:'desktop-stable',version:desktopVersion,notes}));await fs.writeFile(path.join(buildOut,'app-update.yml'),updaterConfigYaml(desktopVersion,signing!.publisherName))}},
+    generateAssets:async()=>{await verifyBrandAssets();await packagePiRuntime(path.join(buildOut,'pi-runtime'));if(desktopRelease){const notes=await fs.readFile(process.env.CBIM_DESKTOP_NOTES||`design/releases/desktop-v${desktopVersion}.md`,'utf8');await fs.writeFile(path.join(buildOut,'desktop-release.json'),JSON.stringify({channel:'desktop-stable',version:desktopVersion,notes}));await fs.writeFile(path.join(buildOut,'app-update.yml'),updaterConfigYaml(desktopVersion,signing!.publisherName))}},
     readPackageJson:async(_config,pkg)=>desktopRelease?{...pkg,version:desktopVersion}:pkg,
     postPackage:async(_config,result)=>{
       await saveBuildInfo({buildStamp,timeZone:'Asia/Shanghai',stage:'package',completedAt:new Date().toISOString(),outputDirectory:buildOut,platform:result.platform,arch:result.arch,executable:result.platform==='win32'?path.join(result.outputPaths[0],executableName+'.exe'):null,packageDirectories:result.outputPaths,artifacts:[]});

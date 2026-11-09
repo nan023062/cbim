@@ -1,0 +1,8 @@
+# 品牌源摘要必须跨 Windows/Linux 一致；原生图片按二进制保存。
+branding/*.svg text eol=lf
+branding/*.json text eol=lf
+branding/*.png binary
+branding/*.ico binary
+website/*.html text eol=lf
+website/*.css text eol=lf
+website/*.json text eol=lf

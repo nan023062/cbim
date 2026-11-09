@@ -1,0 +1,51 @@
+name: Validate CBIM
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cbim-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows validation (${{ matrix.shard }}/4)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.19.0'
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check TypeScript
+        run: pnpm typecheck
+      - name: Check architecture and dependencies
+        run: pnpm check:architecture
+      - name: Verify brand assets
+        run: pnpm check:brand
+      - name: Build public website
+        env:
+          CBIM_WEBSITE_URL: https://nan023062.github.io/cbim/
+        run: pnpm build:website
+      - name: Run full test suite
+        run: pnpm exec vitest run --shard=${{ matrix.shard }}/4 --reporter=default --reporter=json --outputFile=test-results/pr-full-suite.json
+      - name: Preserve test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-validation-${{ matrix.shard }}
+          path: test-results/pr-full-suite.json
+          if-no-files-found: ignore

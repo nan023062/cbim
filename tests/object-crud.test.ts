@@ -2,7 +2,34 @@ import {randomUUID} from 'node:crypto';
 import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import Ajv from 'ajv';
+import {objectOperation} from '../src/backend/core/knowledge/object-crud';
 import {fixture,summary,moduleFiles,internalKnowledge} from './helpers';
+
+it('实际发现的对象 Schema 按 kind 限制字段，和运行时接受的字段一致',async()=>{
+  const f=await fixture();try{
+    const e=await f.app.dispatch('add',{path:f.a}),w=f.app.workspace(e.id),{call,identity}=internalKnowledge(w),snapshot=await w.snapshot();
+    const described=await call('cbim_knowledge_tool_describe',{name:'cbim_object_preview'});
+    expect(described.tool.version).toBe(2);
+    const validate=new Ajv({strict:false}).compile(described.tool.inputSchema);
+    for(const [kind,data,valid] of [
+      ['module',{name:'中国象棋'},false],['agent',{purpose:'写代码'},false],
+      ['module',{summary},true],['agent',{name:'开发',summary,capabilities:['实现']},true],
+      ['skill',{name:'检查',purpose:'验证'},true],['workflow',{name:'开发流程'},true],
+    ] as const){
+      const operation={kind,action:'create',parentId:kind==='module'?'.cbim/workspace':'.cbim/team',slug:'chess',data,body:kind==='module'?moduleFiles('chess')[1].text:'# 业务正文'};
+      expect(objectOperation.safeParse(operation).success).toBe(valid);
+      const input={...identity,revision:snapshot.revision,operations:[operation]};
+      expect(validate(input),JSON.stringify(validate.errors)).toBe(valid);
+      if(!valid)await expect(call('cbim_object_preview',input)).rejects.toThrow();
+      else if(kind==='agent'||kind==='module'){
+        const preview=await call('cbim_object_preview',input);expect(preview.validation.structural).toBe(true);
+        if(kind==='module')expect(JSON.parse(preview.changes.find((c:any)=>c.path.endsWith('/module.json')).text).name).toBe('chess');
+      }
+    }
+    expect((await w.snapshot()).revision).toBe(snapshot.revision);
+  }finally{await f.cleanup()}
+});
 
 it('内部知识服务真实对象 CRUD、父子模块、Skill 继承与仅本模块 Workflow，重复提交幂等',async()=>{
   const f=await fixture();

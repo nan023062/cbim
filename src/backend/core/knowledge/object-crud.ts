@@ -16,7 +16,19 @@ import {parseWorkflowContract} from '../workspace/workflow-contract';
 import {knowledgePlanHash,type ResolvedObjectOperation} from './planned-commit';
 
 const fields={name:z.string().min(1).optional(),summary:z.string().optional(),authors:z.array(z.string()).optional(),capabilities:z.array(z.string()).optional(),limitations:z.array(z.string()).optional(),connectors:z.array(z.string()).optional(),sources:z.array(z.object({location:z.string(),scope:z.string()}).strict()).optional(),purpose:z.string().optional()};
-export const objectOperation=z.object({kind:z.enum(['agent','module','skill','workflow']),action:z.enum(['create','update','delete']),id:z.string().optional(),parentId:z.string().optional(),slug:z.string().optional(),data:z.object(fields).strict().optional(),body:z.string().max(2*1024*1024).optional(),cascade:z.boolean().optional()}).strict();
+/** Schema 与实际写字段共用定义；模块 name 来自目录 slug，中文显示名写在正文 H1。 */
+export const objectDataSchemas={
+  agent:z.object({name:fields.name,summary:fields.summary,authors:fields.authors,capabilities:fields.capabilities,limitations:fields.limitations,connectors:fields.connectors}).strict(),
+  module:z.object({summary:fields.summary,authors:fields.authors,sources:fields.sources,connectors:fields.connectors}).strict().describe('name 固定为目录 slug，不可在 data 修改；中文模块名写在 body 的一级标题（# 中文名称）。'),
+  skill:z.object({name:fields.name,purpose:fields.purpose}).strict(),workflow:z.object({name:fields.name}).strict(),
+};
+const operationFields={action:z.enum(['create','update','delete']),id:z.string().optional(),parentId:z.string().optional(),slug:z.string().optional(),body:z.string().max(2*1024*1024).optional(),cascade:z.boolean().optional()};
+export const objectOperation=z.discriminatedUnion('kind',[
+  z.object({...operationFields,kind:z.literal('agent'),data:objectDataSchemas.agent.optional()}).strict(),
+  z.object({...operationFields,kind:z.literal('module'),data:objectDataSchemas.module.optional()}).strict(),
+  z.object({...operationFields,kind:z.literal('skill'),data:objectDataSchemas.skill.optional()}).strict(),
+  z.object({...operationFields,kind:z.literal('workflow'),data:objectDataSchemas.workflow.optional()}).strict(),
+]);
 /** 对象操作只描述静态知识；不接受已废弃的真人登记或维护确认字段。 */
 export type ObjectOperation=z.infer<typeof objectOperation>;
 /** 完整事务预览及可提交标识；objects 与输入操作按顺序对应。 */
@@ -36,7 +48,7 @@ export class ObjectCrud {
     for(const op of operations){
       if(op.kind==='workflow'&&op.action!=='delete'&&op.body!==undefined)parseWorkflowContract(op.body);
       let id=op.id||'',owner='',definitionPath='';const data=op.data||{};
-      const allowed=op.kind==='agent'?['name','summary','authors','capabilities','limitations','connectors']:op.kind==='module'?['summary','authors','sources','connectors']:op.kind==='skill'?['name','purpose']:['name'];
+      const allowed=Object.keys(objectDataSchemas[op.kind].shape);
       for(const key of Object.keys(data))if(!allowed.includes(key))fail('FIELD',`${op.kind} 不支持修改字段 ${key}；目录与清单由 CBIM 维护`);
       if(op.action==='create'){
         if(op.id||!op.parentId||!op.slug||!/^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$/.test(op.slug)||['skills','workflows','references','scripts','assets','archive','node_modules'].includes(op.slug))fail('OBJECT_ID','创建需有效 parentId 和 slug，不接受自定 id');
@@ -65,7 +77,7 @@ export class ObjectCrud {
         const ref=pp.relative(owner,id)+(op.kind==='skill'?'/SKILL.md':'/workflow.md');
         const position=items!.findIndex((i:any)=>i.reference===ref);
         if(op.action!=='create'&&position<0)fail('OBJECT_NOT_FOUND','方法未登记在所属对象');
-        if(op.action==='create')items!.push({name:data.name||op.slug,...(op.kind==='skill'?{purpose:data.purpose||''}:{}),reference:ref});
+        if(op.action==='create')items!.push({name:('name' in data&&data.name)||op.slug,...(op.kind==='skill'?{purpose:('purpose' in data&&data.purpose)||''}:{}),reference:ref});
         else if(op.action==='update')items![position]={...items![position],...data};
         else items!.splice(position,1);
         set(definitionPath,inventory);

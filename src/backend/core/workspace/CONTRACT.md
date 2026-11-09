@@ -82,3 +82,7 @@ png-validation-schema.ts只定义png-raster-v1的精确像素宽高、rgb/rgba�
 ## 冻结范围成员执行
 
 executionScope v1/windows-lpac-node-v1 显式固定最多32个读/写根；写根必须由读根包含，路径最多512字符、无通配符/别名/私有目录。可选node固定100–30000ms、128–1024MiB和1–8进程。全部实际模块必须共同声明；合并显式根、预算取最小值，任一模块不允许Node则任务无Node能力。产物根/验证读及删除移动两端写须属于本模块范围。隔离模式不能要求native证据；旧缺省保持历史语义。
+
+### 模块正文结构
+
+module-outline.ts 提供 moduleSections 与 moduleBodyTemplate，作为知识规则及桌面编辑的纯结构契约。模板中的说明须按事实填写；有 sources 时包含既定虚拟节点，不推导真实代码依赖或签署验收。

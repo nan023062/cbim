@@ -10,6 +10,7 @@ import ignore from 'ignore';
 import {hash,json} from '../foundation/serialization';
 import {exists} from '../foundation/files';
 import {parseWorkflowContract} from '../workspace/workflow-contract';
+import {moduleSections,moduleBodyTemplate} from '../workspace/module-outline';
 import type {KnowledgeFile,Validation,Issue,ModuleNode} from './types';
 import {parseJson} from '../foundation/json';
 export {parseJson} from '../foundation/json';
@@ -100,7 +101,7 @@ export class Rules {
     for(const p of actual)if(!paths.has(p))add(p,'inventory','方法入口未登记');for(const p of paths)if(!actual.includes(p))add(p,'inventory','清单不是有效方法入口');
   }
   private body(id:string,d:any,text:string,add:(p:string,c:string,m:string)=>void){
-    const p=id+'/module.md';const sections=['定位','子模块和 source 节点','结构关系图与抽象设计决策','雷区与排障','观察模式-待抽象'];const seen:string[]=[];const content=new Map<string,string[]>();let section='',fence='',language='',block:string[]=[];const diagrams:{section:string;text:string}[]=[];let titles=0;
+    const p=id+'/module.md';const sections=moduleSections;const seen:string[]=[];const content=new Map<string,string[]>();let section='',fence='',language='',block:string[]=[];const diagrams:{section:string;text:string}[]=[];let titles=0;
     for(const line of text.split(/\r?\n/)){
       if(fence){if(new RegExp('^\\s*'+fence[0]+'{'+fence.length+',}\\s*$').test(line)){if(language==='mermaid')diagrams.push({section,text:block.join('\n')});fence='';block=[]}else block.push(line);continue}
       const opening=line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);if(opening){fence=opening[1];language=opening[2].trim().toLowerCase();continue}
@@ -109,8 +110,14 @@ export class Rules {
       if(/^#{3,6}\s/.test(line)){const label=line.replace(/^#{3,6}\s+/,'').trim().replaceAll('`','');if(section!==sections[1]||!['子模块','Source 路径与维护说明',...d.sources.map((s:any)=>s.location)].includes(label))add(p,'sections',`不允许额外章节：${label}`)}
       if(line.trim()&&section)content.get(section)?.push(line);
     }
-    if(fence)add(p,'fence','代码块未闭合');if(JSON.stringify(seen)!==JSON.stringify(sections))add(p,'sections','正文须严格包含规定的五个二级章节');for(const s of sections)if(!content.get(s)?.length)add(p,'empty',`章节不能为空：${s}`);
-    if(diagrams.length!==1||diagrams[0]?.section!==sections[2]||!/^\s*classDiagram\s+\S/.test(diagrams[0]?.text||''))add(p,'diagram','第三节须包含唯一非空 Mermaid classDiagram');
+    if(fence)add(p,'fence','代码块未闭合');
+    const wrongSections=JSON.stringify(seen)!==JSON.stringify(sections);
+    const empty=sections.filter(s=>!content.get(s)?.length);
+    const wrongDiagram=diagrams.length!==1||diagrams[0]?.section!==sections[2]||!/^\s*classDiagram\s+\S/.test(diagrams[0]?.text||'');
+    if(wrongSections)add(p,'sections','二级标题必须按顺序逐字匹配，不加序号：\n'+sections.map(s=>'## '+s).join('\n'));
+    for(const s of empty)add(p,'empty',`章节不能为空：## ${s}`);
+    if(wrongDiagram)add(p,'diagram',`“## ${sections[2]}”须包含唯一非空 Mermaid classDiagram`);
+    if(wrongSections||empty.length||wrongDiagram)add(p,'module_template','可复制的结构模板（须按实际业务填写后重新预览）：\n'+moduleBodyTemplate(d.sources.map((s:any)=>s.location)));
     if(/^\s*(?:#{1,6}\s+|[-*]\s+)?(?:id|sources|children|summary)\s*[:：=]/im.test(text))add(p,'duplicate_fields','正文不得重复维护索引字段');
     if(d.sources.length){const diagram=diagrams[0]?.text||'';if(!diagram.includes('class CbimDirectContent["直属内容（虚拟子模块）"]')||!diagram.includes('<<virtual>> CbimDirectContent'))add(p,'virtual','有直属内容时应使用规定的虚拟子模块节点')}
   }

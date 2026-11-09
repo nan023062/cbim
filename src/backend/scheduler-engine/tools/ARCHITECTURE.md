@@ -564,3 +564,7 @@ GoalTools / DispatchTools 的 collaborationMode 来自可信 Cycle，默认 Team
 ### 真人花名册退役
 
 KnowledgeTools 与知识协议目录同步移除 cbim_people_list，不再公开 people-schema。角色查询保留 authorPeople 空数组兼容旧响应；能力、岗位负责人和模型的查询及授权保持独立。
+
+### 对象预览 v2
+
+cbim_object_preview 的 data 按 kind 判别，模块中文名必须写在 body 的 H1，结构化 name 来自 slug。工具发现与实际入口使用同一 Schema，既有实例、版本、事务和逐次写权限不变。

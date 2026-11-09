@@ -316,3 +316,5 @@ owner-execution 导出纯自动绑定类型及匹配函数，供界面核历史�
 ### 内联派发回执
 
 dispatch 只导出 Core dispatch-receipt 的纯结构与 toolReceiptSchema，不导入主工具业务核实或哈希依赖。前端仍须核对原运行、调用、主实例与图游标；Schema 通过不授予执行权。
+
+architecture.ts 另重导纯 moduleBodyTemplate，供编辑器复用模块协议；它不引用 Node、平台或知识服务实现。

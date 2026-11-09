@@ -1,5 +1,12 @@
 # CBIM 开发记录
 
+## 2026-11-10：空项目对象 Schema 与正文模板诊断
+
+- cbim_object_preview 升为 v2，data 以 kind 判别；实际字段与公开 Schema 共用 objectDataSchemas。模块 name 来自 slug，中文名明确写正文 H1；Agent 不再公开 purpose。
+- 新增纯 module-outline 契约，规则诊断与桌面编辑复用精确章节/模板，有源模板包含直属内容虚拟节点。规范示例明确无序号的标题原文。模板须按事实填写，不自动编造业务内容。
+- 按字段协议、规则、桌面消费者与真实工具发现选择：`pnpm exec vitest run tests/object-crud.test.ts tests/rules.test.ts tests/architecture-service.test.ts tests/knowledge-tool-contracts.test.ts tests/knowledge-contract-pi.test.ts --reporter=default --reporter=json --outputFile=test-results/object-schema-template-20261110.json`，5 文件/18 项通过；包含公开 JSON Schema 与实际入参一致、空/有源模板复验、预览无写入、真实 Pi 提交和取消。
+- `pnpm typecheck`、`pnpm check:architecture` 通过（1159 文件、6006 依赖、0 环），源码注释及五处 CONTRACT/ARCHITECTURE 同步。未跑全量、打包或发布。接续：负责人绑定提示、一次性缺口与工具发现。
+
 ## 2026-11-10：废弃真人花名册与独立维护门禁
 
 - 新项目不生成花名册，对象/桌面不再登记真人，移除人员查询工具与内置 Schema；旧文件和任务字段仅兼容历史，不阻断岗位负责人派发。岗位、模型、权限、Workflow 及知识版本保护保持。

@@ -5,6 +5,7 @@
 import {useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import type {Snapshot,Preview} from '../../bridge/contracts/workspace';
+import {moduleBodyTemplate} from '../../bridge/contracts/architecture';
 import {teamGroupIds} from './static-owners';
 import './architecture-editor.css';
 
@@ -24,7 +25,8 @@ export function editableObject(snapshot:Snapshot,kind:EditableKind,id?:string){
   const reference=id.slice(owner.length+1)+(kind==='skill'?'/SKILL.md':'/workflow.md');
   return {data:(inventory[kind==='skill'?'skills':'workflows']??[]).find((item:any)=>item.reference===reference)??{},body:snapshot.files.find(file=>file.path===owner+'/'+reference)?.text??''};
 }
-const moduleScaffold='# 模块\n\n## 定位\n请填写本模块负责的业务目标与边界。\n\n## 子模块和 source 节点\n当前尚未配置子模块与源目录。\n\n## 结构关系图与抽象设计决策\n```mermaid\nclassDiagram\nclass Module\n```\n请说明结构选择与约束。\n\n## 雷区与排障\n请记录已知限制与验证方法。\n\n## 观察模式-待抽象\n当前尚无经过核实的观察记录。\n';
+// 与后端诊断共用结构；占位内容须由用户按实际业务填写。
+const moduleScaffold=moduleBodyTemplate();
 export interface ArchitectureEditorProps {workspaceId:string;snapshot:Snapshot;kind:EditableKind;id?:string;parentId?:string;mode?:'edit'|'delete';onClose:()=>void;onSaved:(objects:string[])=>void}
 /** 删除始终先预览，级联必须单独勾选；不再登记真人或签署旧维护声明，岗位负责人通过独立入口配置。 */
 export function ArchitectureEditor({workspaceId,snapshot,kind,id,parentId,mode='edit',onClose,onSaved}:ArchitectureEditorProps){

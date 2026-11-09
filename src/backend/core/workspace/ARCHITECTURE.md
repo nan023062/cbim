@@ -18,6 +18,7 @@
 | [knowledge-source.ts](knowledge-source.ts) | 受控知识来源代次、读取状态和原日志握手的纯协议，供岗位、责任、Store 与桌面共用。 |
 | [maintenance.ts](maintenance.ts) | 旧版模块真人维护声明的兼容类型，保留历史解码所需字段。 |
 | [model.ts](model.ts) | 业务工作区：领域工程与模块注册表、模块知识和仅本模块 Workflow的核心封装。 |
+| [module-outline.ts](module-outline.ts) | 模块正文的固定章节和可复制模板，供知识校验与桌面编辑共同使用。 |
 | [module-ownership-rules.ts](module-ownership-rules.ts) | 负责人登记的规范依据、命令指纹、不可变审计与关系头投影，供 Main 与 Store 重放共同调用。 |
 | [module-ownership-tool-policy.ts](module-ownership-tool-policy.ts) | 模块责任控制面四项工具的纯名称、效果及业务工作分类，供授权与周期收口共用。 |
 | [module-ownership-tools.ts](module-ownership-tools.ts) | 主运行负责人四工具的严格输入、业务输出和可信端口协议。 |
@@ -396,6 +397,17 @@ N_src_backend_core_workspace_model_ts ..> N_src_backend_core_workspace_model_ts_
 ```
 
 直接依赖：[../knowledge/snapshot.ts](../knowledge/snapshot.ts)、[../foundation/json.ts](../foundation/json.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../knowledge/types.ts](../knowledge/types.ts)、[project-root.ts](project-root.ts)。
+
+### module-outline.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_module_outline_ts["module-outline.ts"] {
+  <<module>>
+  +moduleBodyTemplate()
+}
+```
+
 
 ### module-ownership-rules.ts
 
@@ -954,3 +966,7 @@ png-validation-schema.ts只定义png-raster-v1的精确像素宽高、rgb/rgba�
 ## 冻结范围成员执行
 
 executionScope v1/windows-lpac-node-v1 显式固定最多32个读/写根；写根必须由读根包含，路径最多512字符、无通配符/别名/私有目录。可选node固定100–30000ms、128–1024MiB和1–8进程。全部实际模块必须共同声明；合并显式根、预算取最小值，任一模块不允许Node则任务无Node能力。产物根/验证读及删除移动两端写须属于本模块范围。隔离模式不能要求native证据；旧缺省保持历史语义。
+
+### 模块正文结构
+
+module-outline.ts 提供 moduleSections 与 moduleBodyTemplate，作为知识规则及桌面编辑的纯结构契约。模板中的说明须按事实填写；有 sources 时包含既定虚拟节点，不推导真实代码依赖或签署验收。

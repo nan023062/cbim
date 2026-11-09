@@ -29,7 +29,7 @@
 - 安装包 `CBIM-Setup-0.1.2-x64.exe` 为 136079477 字节，SHA-256 `ae0b18cad81114e1dc9c8b03644bbec940a537699829ecb4bcb923d75548f675`；草稿四个附件已核对远端摘要。构建回执位于 `build/desktop-release/0.1.2/unsigned-20261109-171427-d973710b/build-receipt.json`，发布操作日志同目录 `acceptance-publication.jsonl`。
 - [隔离 runner 验收 42594569712](https://github.com/nan023062/cbim/actions/runs/42594569712) 通过全新安装、0.1.1 升级、六项用户数据保留、唯一模型请求和未签名事实；页面错误为零，报告 `test-results/desktop-0.1.2-candidate/report.json`。验收机没有真实用户安装，未在开发者电脑卸载或覆盖现有客户端。
 - 候选 EXE 的六项隔离场景通过，报告 `test-results/desktop-0.1.2-isolation-packaged.json`。本机针对云端两项失败的原样复核及新增诊断复核均为 2/2 通过，报告 `desktop-0.1.2-ci-diagnostic.json`、`desktop-0.1.2-runtime-facts-local.json`。
-- 全仓 `42594576718` 与 `42597751602` 均未通过：后者终端测试原样通过，隔离运行程序 `RUNTIME` 仍复现；正在核实可执行文件属性，未放宽校验、跳过测试或将定向诊断冒充全仓。PR #15、公开投放和线上更新验收尚未完成。
+- 全仓 `42594576718` 与 `42597751602` 均未通过：后者终端测试原样通过，隔离运行程序 `RUNTIME` 仍复现。独立诊断 [42599879043](https://github.com/nan023062/cbim/actions/runs/42599879043) 确认缓存恢复后的 Electron 为普通文件、213976576 字节、`nlink=2`，测试前后相同；本地及候选均为单链接。CI 依照 [pnpm 10 导入方式](https://pnpm.io/10.x/settings#packageimportmethod) 改为复制导入，并预检 Electron 文件身份，未修改产品保护或测试断言。更改后的完整检查、PR #15 合并、公开投放和线上更新验收尚未完成。
 
 ### 签名选择
 

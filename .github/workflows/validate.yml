@@ -38,15 +38,28 @@ jobs:
           cache: pnpm
       - name: Install locked dependencies
         # 官方二进制下载偶发 504；有限重试安装，持续失败仍阻止后续验收。
+        # 缓存的 Electron 安装产物默认硬链接到 store；复制导入使真实隔离测试满足单链接身份检查。
         run: |
           for ($attempt = 1; $attempt -le 3; $attempt++) {
-            pnpm install --frozen-lockfile
+            pnpm install --frozen-lockfile --package-import-method=copy
             $installCode = $LASTEXITCODE
             if ($installCode -eq 0) { exit 0 }
             if ($attempt -eq 3) { exit $installCode }
             Write-Warning "Dependency installation failed ($installCode); retry $attempt/2."
             Start-Sleep -Seconds (10 * $attempt)
           }
+      - name: Check installed Electron file identities
+        run: |
+          @'
+          const fs = require('node:fs'), path = require('node:path');
+          const executable = fs.realpathSync(require('electron'));
+          const files = [executable, ...['icudtl.dat', 'v8_context_snapshot.bin', 'snapshot_blob.bin'].map(name => path.join(path.dirname(executable), name)).filter(file => fs.existsSync(file))];
+          for (const file of files) {
+            const stat = fs.lstatSync(file);
+            console.log(JSON.stringify({file, isFile: stat.isFile(), nlink: stat.nlink, size: stat.size}));
+            if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1) throw Error('Electron test runtime must use independent regular files');
+          }
+          '@ | node
       - name: Check canonical test temporary directory
         # runner 上下文在步骤级使用；默认用户 TEMP 可能是 8.3 别名。
         env:

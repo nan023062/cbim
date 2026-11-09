@@ -24,7 +24,9 @@
 
 Windows x64 当前公开桌面版为 [desktop-v0.1.2](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.2)，已包含本轮四项 Issue 修复、自动／团队模式、对话进展与统一品牌。安装后在左下角账号菜单查看当前版本、最近一次更新，检查并手动下载新版，再确认重启安装。此包尚未签名，Windows 可能显示未知发布者或安全提示；核对发布页的 `SHA256SUMS.txt` 不能替代可信签名。后续取得证书后将通过更高版本切换到签名发行。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
 
-BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill，按格式填写即可直连 GitHub Issue。首次在设置连接自己的 GitHub；成功后不追加结果消息。详见 [OAuth 与反馈指南](design/task/github-feedback-setup.md)。更新程序独立位于 `src/backend/updater/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](design/task/desktop-release.md)。
+开发分支的 #19 已将入口合并为「版本与更新」：每分钟检查，新版高亮菜单并显示用户栏绿点；点击下载后自动校验、停止任务、安装并重启，失败保留显式重试。此流程尚未随新版发布，当前公开 0.1.2 仍使用上面的两步升级操作。
+
+BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill。当前开发版一句问题或愿望即可提交，其余信息自愿，缺项标“用户未提供”；已发布旧版仍使用原格式。首次在设置连接自己的 GitHub；成功后不追加结果消息。详见 [OAuth 与反馈指南](design/task/github-feedback-setup.md)。更新程序独立位于 `src/backend/updater/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](design/task/desktop-release.md)。
 
 构建目录按北京时间命名：`build/YYYYMMDD-HHmmss/`。Windows 便携程序在其中的 `CBIM Assistant-win32-x64/CBIM.exe`，请保留完整目录。分发包为 `make/zip/win32/x64/CBIM-Assistant-YYYYMMDD-HHmmss-win32-x64-版本.zip`，可按名称排序查找最新构建。
 
@@ -37,12 +39,9 @@ CBIM 启动时加载全部已登记工作区，各自持有知识库、执行上
 ```powershell
 pnpm install --frozen-lockfile
 pnpm start
-pnpm typecheck
-pnpm test
-pnpm package
-pnpm test:desktop
-pnpm make
 ```
+
+日常开发只运行受影响单元的测试：使用 `pnpm exec vitest run` 后跟明确的相关测试文件，必要时用 `-t` 选择用例；类型、依赖和架构检查按实际变化选择。通过后即可记录并提交，不默认执行全量 `pnpm test`、打包或整套桌面测试，详见 [日常验证范围](AGENTS.md#日常验证范围)。面向 `master` 的 PR 由现有 CI 自动执行全量回归；`pnpm package`、`pnpm make` 和 `pnpm test:desktop` 等制品验证留在后续集成／发布阶段按需执行。
 
 正式业务执行使用桌面主对话。`pnpm loop` 保留受限开发兼容接口，旧直接业务启动已拒绝；参数、模型配置和具体限制见 [Loop Engine](docs/loop-engine.md#开发调用)。
 
@@ -55,7 +54,7 @@ pnpm make
 | `develop` | 默认开发分支，用于日常功能开发和缺陷修复 |
 | `master` | 稳定主分支，接收通过检查的开发成果 |
 
-日常改动提交到 `develop`；每个 Issue 单独开发、测试和提交，记录验证结果以便追溯。完成验证后，通过 `develop` → `master` 的 PR 合入主分支，并保留各 Issue 的独立提交。
+日常改动提交到 `develop`；每个 Issue 单独开发、验证受影响单元并提交，记录测试范围、选择依据及结果以便追溯。通过 `develop` → `master` 的 PR 执行全量自动化检查，检查通过后合入主分支，并保留各 Issue 的独立提交。
 
 ## 开发协作与架构维护
 
@@ -64,6 +63,8 @@ pnpm make
 `docs/` 是[概念设计](docs/README.md)，`design/` 是[开发计划模块](design/README.md)。继续开发从 [roadmap](design/tool-architecture-roadmap.md) 和 [上一步开发记录](design/development-log.md) 开始：回顾全局与已有成果，确定下一步及验收，每完成一步立即更新计划状态。
 
 开发流程 `cbim-development` 提供 [Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md) 和 [通用项目](.agents/skills/cbim-development/SKILL.md) 三个同步入口；仅服务本工程开发，不是产品内置业务 Skill。
+
+桌面发版使用 `cbim-release`：[通用项目](.agents/skills/cbim-release/SKILL.md)、[Claude Code](.claude/skills/cbim-release/SKILL.md)、[Codex](.codex/skills/cbim-release/SKILL.md)。流程覆盖签名／明确选择的未签名发行、CI、草稿恢复、隔离安装与线上升级、官网及双分支收尾；具体分工见 [开发者 Skill 说明](docs/developer-skills.md)。
 
 架构维护流程提供两个入口：
 

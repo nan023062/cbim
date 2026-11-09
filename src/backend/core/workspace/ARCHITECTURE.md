@@ -23,6 +23,7 @@
 | [module-ownership-tools.ts](module-ownership-tools.ts) | 主运行负责人四工具的严格输入、业务输出和可信端口协议。 |
 | [module-ownership.ts](module-ownership.ts) | 单模块负责人控制面的严格公开协议，供岗位、责任服务、持久化及桌面共用。 |
 | [png-validation-schema.ts](png-validation-schema.ts) | 冻结静态 PNG 的精确尺寸、通道要求和资源上限，供知识声明、运行端口与公开结果共用。 |
+| [project-root.ts](project-root.ts) | 提供所有项目共有的内置根模块身份和只读说明，供知识查询与视图共用。 |
 | [workflow-contract.ts](workflow-contract.ts) | 定义模块 Workflow 正文中可选执行条件的严格协议，供知识治理、资源包与执行准备共同解析。 |
 
 ## 架构类图
@@ -394,7 +395,7 @@ class N_src_backend_core_workspace_model_ts_BusinessWorkspace["BusinessWorkspace
 N_src_backend_core_workspace_model_ts ..> N_src_backend_core_workspace_model_ts_BusinessWorkspace : 声明
 ```
 
-直接依赖：[../knowledge/snapshot.ts](../knowledge/snapshot.ts)、[../foundation/json.ts](../foundation/json.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../knowledge/types.ts](../knowledge/types.ts)。
+直接依赖：[../knowledge/snapshot.ts](../knowledge/snapshot.ts)、[../foundation/json.ts](../foundation/json.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../knowledge/types.ts](../knowledge/types.ts)、[project-root.ts](project-root.ts)。
 
 ### module-ownership-rules.ts
 
@@ -725,6 +726,15 @@ N_src_backend_core_workspace_png_validation_schema_ts ..> N_src_backend_core_wor
 ```
 
 
+### project-root.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_project_root_ts["project-root.ts"] {
+  <<module>>
+}
+```
+
 ### workflow-contract.ts
 
 ```mermaid
@@ -780,6 +790,12 @@ class N_src_backend_core_workspace_knowledge_source_rules_ts["knowledge-source-r
 class N_src_backend_core_workspace_knowledge_source_ts["knowledge-source.ts"] {
   <<module>>
 }
+class N_src_backend_core_workspace_model_ts["model.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_project_root_ts["project-root.ts"] {
+  <<module>>
+}
 class N_src_backend_core_workspace_module_ownership_rules_ts["module-ownership-rules.ts"] {
   <<module>>
 }
@@ -788,19 +804,22 @@ class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
 }
 N_src_backend_core_workspace_execution_scope_ts ..> N_src_backend_core_workspace_artifact_scope_ts : 导入依赖
 N_src_backend_core_workspace_knowledge_source_rules_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
+N_src_backend_core_workspace_model_ts ..> N_src_backend_core_workspace_project_root_ts : 导入依赖
 N_src_backend_core_workspace_module_ownership_rules_ts ..> N_src_backend_core_workspace_module_ownership_ts : 导入依赖
-N_src_backend_core_workspace_module_ownership_rules_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_workspace_module_ownership_rules_ts["module-ownership-rules.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_knowledge_source_ts["knowledge-source.ts"] {
+  <<module>>
+}
 class N_src_backend_core_workspace_module_ownership_tools_ts["module-ownership-tools.ts"] {
   <<module>>
 }
 class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
-  <<module>>
-}
-class N_src_backend_core_workspace_knowledge_source_ts["knowledge-source.ts"] {
   <<module>>
 }
 class N_src_backend_core_workspace_workflow_contract_ts["workflow-contract.ts"] {
@@ -809,18 +828,18 @@ class N_src_backend_core_workspace_workflow_contract_ts["workflow-contract.ts"] 
 class N_src_backend_core_workspace_json_validation_schema_ts["json-validation-schema.ts"] {
   <<module>>
 }
-class N_src_backend_core_workspace_csv_validation_schema_ts["csv-validation-schema.ts"] {
-  <<module>>
-}
+N_src_backend_core_workspace_module_ownership_rules_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
 N_src_backend_core_workspace_module_ownership_tools_ts ..> N_src_backend_core_workspace_module_ownership_ts : 导入依赖
 N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_json_validation_schema_ts : 导入依赖
-N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_csv_validation_schema_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_workspace_workflow_contract_ts["workflow-contract.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_csv_validation_schema_ts["csv-validation-schema.ts"] {
   <<module>>
 }
 class N_src_backend_core_workspace_png_validation_schema_ts["png-validation-schema.ts"] {
@@ -832,6 +851,7 @@ class N_src_backend_core_workspace_artifact_scope_ts["artifact-scope.ts"] {
 class N_src_backend_core_workspace_execution_scope_ts["execution-scope.ts"] {
   <<module>>
 }
+N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_csv_validation_schema_ts : 导入依赖
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_png_validation_schema_ts : 导入依赖
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_artifact_scope_ts : 导入依赖
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_execution_scope_ts : 导入依赖
@@ -849,6 +869,10 @@ N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspa
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 始终存在的项目根范围
+
+`project-root.ts` 提供只读内置 `cbim:project`；`BusinessWorkspace.modules()` 返回独立 projectRoot（children 为真实根模块），保留原 modules/roots/index 语义。即使搜索无匹配或已有子模块，根仍可查询。`module()` 返回 builtin 定义、内联说明及空 Workflow，不伪造文件、维护关系、版本或正式责任。这里只描述范围，不修改知识和派发资格。
 
 ### Workflow 的可选程序条件
 

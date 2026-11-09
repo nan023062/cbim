@@ -4,11 +4,12 @@
  * 职责边界：纯数据契约，不授予工具权限；是否可兜底还须核实可信周期、当前模块与实际模型。
  */
 import {z} from 'zod';
+import {projectRootModuleId} from '../workspace/project-root';
 
 const id=z.string().min(1).max(512),digest=z.string().regex(/^[a-f0-9]{64}$/);
 const model=z.object({profileId:z.string().uuid(),modelId:z.string().min(1).max(160),configurationHash:digest}).strict();
-/** 仅无任何业务模块时使用的周期内范围，不对应文件、维护人或正式模块登记。 */
-export const implicitProjectModuleId='cbim:project';
+/** 与始终可查询的项目根共用身份；旧自动委派契约仍仅在无任何正式模块时接受该范围。 */
+export const implicitProjectModuleId=projectRootModuleId;
 export const collaborationModeSchema=z.enum(['auto','team']);
 export type CollaborationMode=z.infer<typeof collaborationModeSchema>;
 /** 由桌面运行入口冻结；旧周期缺省按 team 解释，不追溯取得自动兜底资格。 */

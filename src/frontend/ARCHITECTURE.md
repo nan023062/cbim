@@ -84,8 +84,8 @@ class N_src_frontend_main_tsx["main.tsx"] {
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
 - `conversation` → `components`：导入。
-- `conversation` → `tasks`：导入。
 - `conversation` → `shell`：导入。
+- `conversation` → `tasks`：导入。
 - `main.tsx` → `shell`：导入。
 - `resources` → `knowledge`：导入。
 - `runtime` → `tasks`：导入。
@@ -110,9 +110,9 @@ class N_src_frontend_main_tsx["main.tsx"] {
 - `team` → `resources`：导入。
 - `team` → `workspace`：导入。
 - `updates` → `components`：导入。
-- `workspace` → `knowledge`：导入。
 - `workspace` → `team`：导入。
 - `workspace` → `components`：导入。
+- `workspace` → `knowledge`：导入。
 - `workspace` → `resources`：导入。
 - `workspace` → `governance`：导入。
 

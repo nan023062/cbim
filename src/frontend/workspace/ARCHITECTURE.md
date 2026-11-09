@@ -10,14 +10,102 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [inline-module-ownership.ts](inline-module-ownership.ts) | 模块卡片一级 Agent 选择的操作编排，复用岗位与责任的严格预览、提交和持久原命令。 |
+| [InlineModuleOwner.tsx](InlineModuleOwner.tsx) | 业务架构共享一次岗位/责任读取，每张模块卡片只呈现一级选择器。 |
 | [module-ownership-state.ts](module-ownership-state.ts) | 模块负责人面板的回包核对和持久原命令状态，跨业务架构与项目岗位视图共享。 |
 | [module-ownership.css](module-ownership.css) | 对应界面的布局与视觉样式。 |
 | [ModuleOwnershipDetail.tsx](ModuleOwnershipDetail.tsx) | 显示模块当前负责人、来源观察与有界审计，供责任面板单独审阅。 |
 | [ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx) | 业务架构和项目岗位共用的模块责任控制面，提供岗位选择、登记入口、预览、明确提交和原命令核实。 |
 | [workspace-view.css](workspace-view.css) | 对应界面的布局与视觉样式。 |
-| [WorkspaceView.tsx](WorkspaceView.tsx) | 工作区唯一的静态业务架构，维护模块和 Workflow，并串联负责人选择与现有项目岗位登记。 |
+| [WorkspaceView.tsx](WorkspaceView.tsx) | 工作区唯一的静态业务架构，维护模块和 Workflow，模块卡片一级选择 Agent，复用真实岗位与责任提交；局部图标控制位于图内，避免重复全局入口。 |
 
 ## 架构类图
+
+### inline-module-ownership.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_workspace_inline_module_ownership_ts["inline-module-ownership.ts"] {
+  <<module>>
+  +readInlineMembers()
+  +readInlineOwners()
+  +inlineOwnerChoices()
+  +assignInlineOwner()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_workspace_inline_module_ownership_ts["inline-module-ownership.ts"] {
+  <<module>>
+}
+class N_src_frontend_workspace_inline_module_ownership_ts_InlineOwnerCall["InlineOwnerCall"] {
+  <<type>>
+
+}
+N_src_frontend_workspace_inline_module_ownership_ts ..> N_src_frontend_workspace_inline_module_ownership_ts_InlineOwnerCall : 声明
+class N_src_frontend_workspace_inline_module_ownership_ts_InlineOwnerAgent["InlineOwnerAgent"] {
+  <<interface>>
+  +id
+  +name
+}
+N_src_frontend_workspace_inline_module_ownership_ts ..> N_src_frontend_workspace_inline_module_ownership_ts_InlineOwnerAgent : 声明
+class N_src_frontend_workspace_inline_module_ownership_ts_InlineOwnerChoice["InlineOwnerChoice"] {
+  <<interface>>
+  +value
+  +label
+  +disabled
+}
+N_src_frontend_workspace_inline_module_ownership_ts ..> N_src_frontend_workspace_inline_module_ownership_ts_InlineOwnerChoice : 声明
+class N_src_frontend_workspace_inline_module_ownership_ts_InlineOwnerData["InlineOwnerData"] {
+  <<interface>>
+  +members
+  +views
+}
+N_src_frontend_workspace_inline_module_ownership_ts ..> N_src_frontend_workspace_inline_module_ownership_ts_InlineOwnerData : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_workspace_inline_module_ownership_ts["inline-module-ownership.ts"] {
+  <<module>>
+}
+class N_src_frontend_workspace_inline_module_ownership_ts_InlineOwnerPorts["InlineOwnerPorts"] {
+  <<interface>>
+  +call
+  +members
+  +ownerships
+  +isCurrent
+}
+N_src_frontend_workspace_inline_module_ownership_ts ..> N_src_frontend_workspace_inline_module_ownership_ts_InlineOwnerPorts : 声明
+```
+
+直接依赖：[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[module-ownership-state.ts](module-ownership-state.ts)。
+
+### InlineModuleOwner.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_workspace_InlineModuleOwner_tsx["InlineModuleOwner.tsx"] {
+  <<component>>
+  +useInlineModuleOwners()
+  +InlineModuleOwner()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_workspace_InlineModuleOwner_tsx["InlineModuleOwner.tsx"] {
+  <<component>>
+}
+class N_src_frontend_workspace_InlineModuleOwner_tsx_InlineModuleOwners["InlineModuleOwners"] {
+  <<type>>
+
+}
+N_src_frontend_workspace_InlineModuleOwner_tsx ..> N_src_frontend_workspace_InlineModuleOwner_tsx_InlineModuleOwners : 声明
+```
+
+直接依赖：[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[module-ownership-state.ts](module-ownership-state.ts)、[inline-module-ownership.ts](inline-module-ownership.ts)、[../components/Icon.tsx](../components/Icon.tsx)。
 
 ### module-ownership-state.ts
 
@@ -184,17 +272,34 @@ class N_src_frontend_workspace_WorkspaceView_tsx["WorkspaceView.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../knowledge/KnowledgeTools.tsx](../knowledge/KnowledgeTools.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[../governance/ModuleGovernancePanel.tsx](../governance/ModuleGovernancePanel.tsx)、[ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx)、[../team/WorkspaceMembers.tsx](../team/WorkspaceMembers.tsx)、[../team/team-model.ts](../team/team-model.ts)、[workspace-view.css](workspace-view.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/GraphViewControls.tsx](../components/GraphViewControls.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../knowledge/KnowledgeTools.tsx](../knowledge/KnowledgeTools.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[../governance/ModuleGovernancePanel.tsx](../governance/ModuleGovernancePanel.tsx)、[ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx)、[../team/WorkspaceMembers.tsx](../team/WorkspaceMembers.tsx)、[../team/team-model.ts](../team/team-model.ts)、[InlineModuleOwner.tsx](InlineModuleOwner.tsx)、[workspace-view.css](workspace-view.css)。
 
 ### 本目录调用边界
 
 ```mermaid
 classDiagram
-class N_src_frontend_workspace_ModuleOwnershipPanel_tsx["ModuleOwnershipPanel.tsx"] {
-  <<component>>
+class N_src_frontend_workspace_inline_module_ownership_ts["inline-module-ownership.ts"] {
+  <<module>>
 }
 class N_src_frontend_workspace_module_ownership_state_ts["module-ownership-state.ts"] {
   <<module>>
+}
+class N_src_frontend_workspace_InlineModuleOwner_tsx["InlineModuleOwner.tsx"] {
+  <<component>>
+}
+class N_src_frontend_workspace_ModuleOwnershipPanel_tsx["ModuleOwnershipPanel.tsx"] {
+  <<component>>
+}
+N_src_frontend_workspace_inline_module_ownership_ts ..> N_src_frontend_workspace_module_ownership_state_ts : 导入依赖
+N_src_frontend_workspace_InlineModuleOwner_tsx ..> N_src_frontend_workspace_module_ownership_state_ts : 导入依赖
+N_src_frontend_workspace_InlineModuleOwner_tsx ..> N_src_frontend_workspace_inline_module_ownership_ts : 导入依赖
+N_src_frontend_workspace_ModuleOwnershipPanel_tsx ..> N_src_frontend_workspace_module_ownership_state_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_workspace_ModuleOwnershipPanel_tsx["ModuleOwnershipPanel.tsx"] {
+  <<component>>
 }
 class N_src_frontend_workspace_ModuleOwnershipDetail_tsx["ModuleOwnershipDetail.tsx"] {
   <<component>>
@@ -205,10 +310,13 @@ class N_src_frontend_workspace_module_ownership_css["module-ownership.css"] {
 class N_src_frontend_workspace_WorkspaceView_tsx["WorkspaceView.tsx"] {
   <<component>>
 }
-N_src_frontend_workspace_ModuleOwnershipPanel_tsx ..> N_src_frontend_workspace_module_ownership_state_ts : 导入依赖
+class N_src_frontend_workspace_InlineModuleOwner_tsx["InlineModuleOwner.tsx"] {
+  <<component>>
+}
 N_src_frontend_workspace_ModuleOwnershipPanel_tsx ..> N_src_frontend_workspace_ModuleOwnershipDetail_tsx : 导入依赖
 N_src_frontend_workspace_ModuleOwnershipPanel_tsx ..> N_src_frontend_workspace_module_ownership_css : 导入依赖
 N_src_frontend_workspace_WorkspaceView_tsx ..> N_src_frontend_workspace_ModuleOwnershipPanel_tsx : 导入依赖
+N_src_frontend_workspace_WorkspaceView_tsx ..> N_src_frontend_workspace_InlineModuleOwner_tsx : 导入依赖
 ```
 
 ```mermaid
@@ -235,6 +343,24 @@ N_src_frontend_workspace_WorkspaceView_tsx ..> N_src_frontend_workspace_workspac
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 简化后的图内入口
+
+上半区不再重复放置新建工程模块与模块负责人文字菜单；项目根 + 打开原工程模块编辑器，时钟图标打开工作区责任历史，不给内置根建立责任。卡片保持一级负责人选择。四个展开/折叠/字号图标在图内右上角，使用共享 `GraphViewControls`，仅更新本地视图。资源传输、管理及模块详情操作采用图标与辅助文字，不改变确认、来源采纳或知识事务。
+
+### 窄面板的卡片操作
+
+业务图按扩展栏实际宽度布局。小于 400px 时缩小树缩进，负责人选择与三个图标分行；选择器保留可用宽度，图内不以横向滚动掩盖零宽控件。
+
+### 模块卡片一级负责人选择
+
+`InlineModuleOwner` 在原模块卡片上选择即保存；列表由静态自定义 Agent、内置执行者与真实岗位组成，不含主 Agent。同一 Agent 多岗位在同一级区分，不猜选模型。已有岗位保留原配置；无岗位时使用模型设置中已选默认供应商/模型，自动生成登记说明，经原预览与提交登记后以真实 memberId 绑定。不填写额外描述，不进入二级页面；默认模型缺失明确报错，不伪造配置。
+
+`inline-module-ownership.ts` 只编排既有命令，不提供新后端写通道。岗位与责任分别保存原请求和回执；任一步未知则停止后续，原地核实或重开只查询，不重放或自动继续绑定。读取失败不假报空列表；停用/退休岗位不隐式重建；源/实例变化仍由原门禁拒绝。可能部分成功的岗位保留，用户再次明确选择后可复用。模块卡片 +、编辑笔和删除桶打开原知识编辑器，删除仍经过影响预览与确认，不直接删文件。
+
+### 项目根与渐进架构
+
+业务架构始终显示当前工作区的项目根卡片，真实工程模块显示在它之下。空项目可以直接开发，创建模块是按需入口；根不打开真实模块编辑/删除或负责人表单，不生成虚假维护人。主会话 Auto/Team 的实际能力由后端决定，页面文案不授予执行权限。
+
 # 工作区静态业务图
 
 ## 责任来源的明确采纳
@@ -251,11 +377,11 @@ N_src_frontend_workspace_WorkspaceView_tsx ..> N_src_frontend_workspace_workspac
 
 ## 单模块负责人控制面
 
-新项目的岗位列表为空时，下拉框展示“从 Agent 登记新岗位”：选项取同工作区的静态团队快照，包含自定义 Agent 与内置执行者，不包含主 Agent。`BusinessArchitecture` 组合现有 `WorkspaceMembers`，传递真实工作区运行状态与所选 Agent；岗位与模型仍由用户明确填写、预览并保存。登记受理后返回原模块，重新读取岗位列表，只有新 memberId 仍存在且 active 才预选；不使用 Agent ID 代替岗位，不自动保存责任。取消返回原模块且不登记；登记结果未知时保留原命令核实界面，不自动返回或创建另一岗位。
+旧完整责任面板的岗位列表为空时，下拉框展示“从 Agent 登记新岗位”：选项取同工作区的静态团队快照，包含自定义 Agent 与内置执行者，不包含主 Agent。`BusinessArchitecture` 组合现有 `WorkspaceMembers`，传递真实工作区运行状态与所选 Agent；岗位与模型仍由用户明确填写、预览并保存。登记受理后返回原模块，重新读取岗位列表，只有新 memberId 仍存在且 active 才预选；不使用 Agent ID 代替岗位，不自动保存责任。取消返回原模块且不登记；登记结果未知时保留原命令核实界面，不自动返回或创建另一岗位。
 
 空列表与读取失败分开呈现：只有完整列表成功读完才提示尚无／没有启用岗位，并开放 Agent 登记选项；读取失败保留核实错误与重试入口。再次选择模块或刷新不重复套用初始新岗位选择。负责人面板只调用上层注入的登记回调，不反向导入岗位管理视图；责任与岗位写入继续使用各自原控制器及后端版本门禁。
 
-`ModuleOwnershipPanel` 由业务架构工具栏/模块详情进入，也供项目岗位反查当前负责的模块。负责人使用稳定 memberId，与真人维护人分开；一个模块只有一个关系头，解除保留关系和历史，重新设置沿原 bindingId 升版。正式派发和领取由调度系统核实，此界面不移交旧任务或创建执行。预览的关联任务统计包含该模块的真实新旧节点，不再笼统称为旧协议任务；它是影响范围而不是可以移交的资格。来源通过独立明确采纳更新，active 岗位不等于可执行。
+`ModuleOwnershipPanel` 由项目根的记录图标或所选模块的负责人记录进入，也供项目岗位反查当前负责的模块。负责人使用稳定 memberId，与真人维护人分开；一个模块只有一个关系头，解除保留关系和历史，重新设置沿原 bindingId 升版。正式派发和领取由调度系统核实，此界面不移交旧任务或创建执行。预览的关联任务统计包含该模块的真实新旧节点，不再笼统称为旧协议任务；它是影响范围而不是可以移交的资格。来源通过独立明确采纳更新，active 岗位不等于可执行。
 
 列表按 ownershipCursor、岗位 registryCursor、knowledgeRevision 三项依据分页；来源无法读取不假报空架构。详情展示当前岗位、真实来源观察和近20条明确有界历史；main_agent 与 local_desktop 来源分开，不把主工具审批伪造成人工责任决定。元信息、当前来源差异每次显式核实，不周期回读。
 

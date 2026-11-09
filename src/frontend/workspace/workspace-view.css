@@ -1,4 +1,21 @@
-/* 静态业务图使用扩展面板的实际宽度切换布局；与窗口宽度无关，避免大窗口内窄侧栏挤压节点和详情。 */
-.business-management{container-type:inline-size;width:100%;min-width:0;box-sizing:border-box}
+/* 静态业务图按扩展栏实际宽度布局；图标操作在节点旁与图内右上角，窄栏不挤压负责人和详情。 */
+.business-management{container-type:inline-size;width:100%;min-width:0;box-sizing:border-box;padding:28px clamp(12px,4%,38px)}
 .business-management .module-canvas{min-width:0}
+.business-management .graph-toolbar{flex-wrap:wrap}
+.business-management .graph-toolbar .inline-search{flex:1;min-width:120px}
+.business-management .graph-toolbar input{min-width:0;width:100%}
+.business-management .view-heading>button,.business-transfer-actions button,.business-management .inspector>button,.business-management .architecture-actions button{display:inline-flex;align-items:center;gap:6px}
+.business-management button>svg{flex-shrink:0}
+.project-root-actions{padding:10px 8px 0 0}
+.module-collapse.expanded svg{transform:rotate(90deg)}
+.business-management .module-card{flex-wrap:wrap;min-width:0}
+.module-card-tools{display:flex;align-items:center;gap:6px;flex-basis:100%;min-width:0;padding:0 10px 10px 30px}
+.module-owner-inline{display:flex;align-items:center;gap:6px;flex:1;min-width:0}
+.module-owner-inline select{min-width:0;width:100%;max-width:100%;padding:6px}
+.module-icon-actions{display:flex;flex-shrink:0;gap:3px}
+.module-icon-actions button{display:inline-flex;align-items:center;justify-content:center;padding:6px;min-width:28px;min-height:28px}
+.inline-owner-status{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px}
+.inline-owner-status p{margin:0;overflow-wrap:anywhere}
+/* 窄扩展栏将选择和操作分行，避免 select 在 flex 收缩后只剩零宽；缩进不挤占真实操作区域。 */
+@container(max-width:400px){.business-management .module-canvas{padding:10px}.business-management .module-children{margin-left:5px;padding-left:9px}.business-management .module-children>.module-branch>.module-card:before{left:-10px;width:9px}.business-management .module-card-content{gap:6px;padding-right:8px}.business-management .module-card-content>span{min-width:0;overflow-wrap:anywhere}.business-management .module-card-content>svg{flex-shrink:0}.module-card-tools{flex-wrap:wrap;padding:0 8px 8px}.module-owner-inline{flex-basis:100%}.module-icon-actions{margin-left:auto}}
 @container(max-width:650px){.business-management .org-layout{flex-direction:column}.business-management .inspector{width:100%;min-width:0;border-left:0;border-top:1px solid var(--line);padding:20px 0}.business-management .view-heading{flex-wrap:wrap}}

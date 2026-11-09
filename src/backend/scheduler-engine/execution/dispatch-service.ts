@@ -4,7 +4,7 @@
  * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
  * 设计原因：新派发按知识→模型→Store 锁序核当前岗位、能力及责任，保存原 Workflow 选择与不可变执行绑定，同命令不能改选。周期冻结输入及软限额，关闭封存待办；旧回执不能重开周期。
  * 职责边界：负责可靠入队、未启动撤销及受审计的前置追加/替换/多边修订，由独立 MemberExecutionManager 执行；调度维护不停止活动运行或复活旧实例。
- * 关闭边界：普通无计划聊天与纯负责人控制面不强造业务计划，但仍核活动输入和真实工具终态；已有业务计划或派发必须审阅，未知输入只可失败或取消封存。
+ * 关闭边界：Auto 无计划的直接工作与知识治理、普通聊天和纯负责人控制面不强造团队计划；仍核活动输入和真实工具终态。已有计划或派发必须审阅，未知输入只可失败或取消封存。
  * 交接边界：检查点放弃独立核原历史，IO 后短事务取消旧待办，不要求今日岗位仍可执行，也不改原运行或恢复证明。
  * 查询边界：原主命令报告只读本工作区已初始化 Store 与 canonical；不借查询进入事务、打开工作区或重新判断旧命令的当前执行资格。
  * 影响边界：主/成员原调用观察、明确处置附录及后续核实/修复引用共用唯一 Store；观察端口不包含模型或 native 恢复能力。
@@ -207,8 +207,8 @@ export class WorkspaceDispatchService {
       const tasks=graph.tasks.filter(task=>task.scopeId===scopeId),taskIds=new Set(tasks.map(task=>task.taskId));
       // 普通问答只关闭生命周期；一旦规划或派工，必须引用同周期主轮结束事实及显式审阅。
       // 在同一派发事务内复核，避免工具中申请完成后又出现新任务，提前释放成员。
-      // 责任登记不是业务派发；只排除精确控制面写入的单独工作意图，已有计划和全部副作用时序仍须验收。
-      const recordedWork=mainSummary?.toolReceipts?.some(receipt=>receipt.effects.includes('knowledge-write')&&!isModuleOwnershipControlReceipt(receipt,input.workspaceId)||['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task'].includes(receipt.toolName));
+      // Auto 的独立知识沉淀和精确责任登记不强造团队计划；模式只读持久周期，已有计划、派发和全部副作用时序仍须验收。
+      const recordedWork=mainSummary?.toolReceipts?.some(receipt=>(scope.executionPolicy?.mode!=='auto'&&receipt.effects.includes('knowledge-write')&&!isModuleOwnershipControlReceipt(receipt,input.workspaceId))||['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task'].includes(receipt.toolName));
       if(outcome==='completed'&&scope.goal&&(scope.goal.plan||tasks.length||recordedWork)){
         if(!mainSummary)fail('GOAL_REVIEW_REQUIRED','业务任务需要主调度的结构化目标审阅，不能直接标为完成');
         await this.goals.validateCompletion(state,scope,mainSummary);

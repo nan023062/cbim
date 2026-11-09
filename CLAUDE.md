@@ -12,6 +12,18 @@
 
 先回顾全局 roadmap 和上一步成果，再明确本步范围与验收；每完成一步及时同步路线图状态及开发记录。三个入口内容一致；修改源码时同时执行下方架构维护流程。
 
+日常验证按 [AGENTS.md 的验证范围](AGENTS.md#日常验证范围)：只测受影响单元及直接相关契约，通过后记录并提交；静态检查按实际变化选择，全量回归留给后续 PR 自动化，制品验收留给集成／发布阶段。纯文档与 Skill 修改只核对资料一致性。
+
+## 桌面发布 Skill
+
+发布新版、投放更新通道、签名迁移或恢复中断发布时，使用 `cbim-release`；纯方案讨论不执行外部写入。
+
+- [Claude Code 入口](.claude/skills/cbim-release/SKILL.md)
+- [Codex 入口](.codex/skills/cbim-release/SKILL.md)
+- [通用项目入口](.agents/skills/cbim-release/SKILL.md)
+
+三个入口及引用资料同步维护。复用现有构建和校验工具，先核实冻结制品与草稿状态，再完成隔离安装、完整 CI、公开升级、官网及分支收尾；具体操作与恢复门槛见 Skill。
+
 ## 架构维护 Skill
 
 - [Claude Code 入口](.claude/skills/architecture-maintenance/SKILL.md)

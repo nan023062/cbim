@@ -7,6 +7,10 @@ on:
         description: Desktop version
         required: true
         type: string
+      previous_version:
+        description: Actual previous public desktop version (two-step updater)
+        required: true
+        type: string
       source_commit:
         description: Frozen build commit
         required: true
@@ -45,6 +49,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           CBIM_ACCEPTANCE_VERSION: ${{ inputs.version }}
+          CBIM_ACCEPTANCE_PREVIOUS_VERSION: ${{ inputs.previous_version }}
           CBIM_ACCEPTANCE_COMMIT: ${{ inputs.source_commit }}
           CBIM_ACCEPTANCE_SHA256: ${{ inputs.installer_sha256 }}
           CBIM_ACCEPTANCE_MODE: ${{ inputs.mode }}

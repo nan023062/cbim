@@ -1,5 +1,5 @@
 /**
- * 作用定位：Builtins：白名单发布内置 Skill、规范和 Schema，包括 BUG 反馈与需求许愿的上下文收集流程。
+ * 作用定位：Builtins：白名单发布内置 Skill、规范和 Schema，包括只需简述、补充自愿的 BUG 反馈与需求许愿流程。
  * 设计原因：只允许白名单资料 ID，返回正文、版本和引用；读取反馈 Skill 不会创建 GitHub Issue，也不扩大文件或网络权限。
  */
 import fs from 'node:fs/promises';
@@ -9,8 +9,8 @@ import {hash} from '../foundation/serialization';
 
 /** 产品内置流程清单；知识工具为每项注册只读 cbim_skill_* 别名，正文随应用资源打包。 */
 export const builtinSkills=[
-  {id:'bug-feedback',title:'BUG 反馈',description:'按问题、复现步骤、实际与预期结果、环境格式收集 CBIM 缺陷上下文'},
-  {id:'feature-wish',title:'需求许愿',description:'按使用场景、当前困难、期望能力和使用例子收集 CBIM 需求上下文'},
+  {id:'bug-feedback',title:'BUG 反馈',description:'一句问题即可反馈 CBIM 缺陷，复现步骤、结果和环境自愿补充，不强制追问'},
+  {id:'feature-wish',title:'需求许愿',description:'一句愿望即可提交 CBIM 需求，使用场景、困难和例子自愿补充，不强制追问'},
   {id:'knowledge-query',title:'知识查询',description:'定位权威知识、核实证据并回答，默认只读'},
   {id:'business-execution',title:'需求实现',description:'定位模块和 Agent，组织实现、验证与交付'},
   {id:'knowledge-governance',title:'知识治理',description:'检查事实、结构和引用，在授权内通过内部知识工具预览、提交和复核'},

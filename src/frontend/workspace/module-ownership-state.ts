@@ -1,6 +1,6 @@
 /**
  * 作用定位：模块负责人面板的回包核对和持久原命令状态，跨业务架构与项目岗位视图共享。
- * 设计原因：更换负责人和同负责人采纳来源分别核对；回复未知不代表未保存，重开只查询原命令，不改请求或补造来源。
+ * 设计原因：模块卡片与完整责任页共用命令池，更换负责人和同负责人采纳来源分别核对；未知不代表未保存，重开只查原命令，不补造来源。
  */
 import {moduleOwnershipCommitInputSchema,moduleOwnershipPreviewSchema,moduleOwnershipReceiptSchema,moduleOwnershipPageSchema,moduleOwnershipDetailSchema,isModuleOwnershipSourceAdoption} from '../../bridge/contracts/module-ownership';
 import {sourceReadStateMatches} from '../../bridge/contracts/knowledge-source';
@@ -76,11 +76,12 @@ export class ModuleOwnershipCommands {
     try{if(this.corrupt||records.length>128)throw Error('本机记录不可写或达到 128 条上限');const raw=JSON.stringify({version:1,workspaceId:this.workspaceId,records});if(new TextEncoder().encode(raw).length>2*1024*1024)throw Error('本机记录超过 2 MiB');this.ports.storage.setItem(this.storageKey,raw);this.unavailable=false;this.emit();return true}
     catch(error){this.unavailable=true;this.value={records,error:'本机保存失败，保留原命令并停止新提交：'+message(error)};this.emit();return false}
   }
-  /** 调用方仅在当前预览仍对应表单时显式调用；实际版本和来源由服务再次核实。 */
+  /** 当前明确选择对应预览才提交；返回本次命令记录，不能从共享池最后一条推测调用结果。 */
   async submit(input:ModuleOwnershipPreviewInput,preview:ModuleOwnershipPreview){
     if(this.blocked||input.workspaceId!==this.workspaceId)return;let request:ModuleOwnershipCommitInput;
     try{const checked=checkedModuleOwnershipPreview(preview,input);request=moduleOwnershipCommitInputSchema.parse({...input,commandId:this.ports.uuid(),expectedOwnershipCursor:checked.ownershipCursor,expectedBasis:checked.basis})}catch(error){this.value={...this.value,error:message(error)};this.emit();return}
     const record:ModuleOwnershipAttempt={request,phase:'submitting',uncertain:false};if(this.save(record))await this.send(record);
+    return this.value.records.find(item=>item.request.commandId===request.commandId);
   }
   private async send(record:ModuleOwnershipAttempt){
     const request=record.request;if(this.pending.has(request.commandId))return;this.pending.add(request.commandId);this.emit();
@@ -104,3 +105,5 @@ export class ModuleOwnershipCommandPool {
   private values=new Map<string,ModuleOwnershipCommands>();
   get(workspaceId:string,ports:ModuleOwnershipCommandPorts){const value=this.values.get(workspaceId)??new ModuleOwnershipCommands(workspaceId,ports);this.values.delete(workspaceId);this.values.set(workspaceId,value);for(const [key,item] of this.values){if(this.values.size<=16)break;if(key!==workspaceId&&item.canRelease)this.values.delete(key)}return value}
 }
+/** 业务卡片、完整责任页与岗位反查入口共享未决写入。 */
+export const moduleOwnershipCommands=new ModuleOwnershipCommandPool();

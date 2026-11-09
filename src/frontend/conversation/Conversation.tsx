@@ -1,5 +1,5 @@
 /**
- * 主对话直接展示原目标／图的关键节点，成员公开计划独立刷新；折叠和历史选择不产生执行副作用。
+ * 主对话按事件顺序展示文字与工具，成员状态关联原派发，展开才观察公开过程；目标控制和完整图保留原入口。
  * 新对话默认 Auto，旧无模式偏好的历史对话保持 Team；当前目标期间禁用模式切换，下一目标仍可在同一对话改选。
  * 历史菜单与侧栏共用本机条目和运行观察，改名／移除由外壳负责，不改原任务目标或日志。
  * 文件补偿：向成员详情传递当前工作区实例，历史运行身份不替代新操作的当前实例校验。
@@ -9,21 +9,18 @@
  * 异常边界：unknown 不凭勾选调用标识续接旧 native；显式影响核实和新周期共用真实主会话上下文。
  * 插入边界：两处操作在点击时冻结主 runId；先入队成功再清草稿，插入失败只刷新真实队列，不跨轮重发或误删消息。
  * 资料边界：切到其他会话时本组件可能只被隐藏；必须把 active 传给补充控制器，撤销未完成的资料导入并隔离迟到回包。
- * Skill 入口：加号菜单发送独立的格式引导请求，沿用当前模型、权限和排队规则；不发送或清空已有草稿与附件。
+ * Skill 入口：加号菜单发送只需一句描述、补充自愿的独立引导请求，沿用当前模型、权限和排队规则；不发送或清空已有草稿与附件。
+ * 输入边界：草稿仍即时上交外壳；历史轮次按运行、恢复上下文及实际计时变化更新，键入不重复解析未变正文。
  */
-import {useEffect,useLayoutEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
 import type {RunSummary,ConversationThreadView} from '../../bridge/contracts/execution';
 import type {LlmSettings} from '../../bridge/contracts/models';
 import type {ViewTab,TabKind} from '../shell/tabs';
 import {runtimeTaskSelection,type RuntimeNavigationRequest} from '../shell/runtime-navigation';
-import {transcript} from './transcript';
-import {MarkdownMessage} from './MarkdownMessage';
-import {WorkStatus} from './WorkStatus';
-import {ConversationProgress} from './ConversationProgress';
+import {ConversationTurn} from './ConversationTurn';
 import {SessionTaskView} from '../tasks/SessionTaskView';
 import {useSessionGraph} from '../tasks/useSessionGraph';
-import {MemberActivity} from '../tasks/MemberActivity';
 import {ScopeGoalPanel} from '../tasks/ScopeGoalPanel';
 import './session-tabs.css';
 import {MessageQueue} from './MessageQueue';
@@ -31,7 +28,6 @@ import {useMessageQueue} from './useMessageQueue';
 import {QuestionCard} from './QuestionCard';
 import type {PendingQuestion} from '../../bridge/contracts/execution';
 import {UsageStatus} from './UsageStatus';
-import {MessageCard} from './MessageCard';
 import {Icon} from '../components/Icon';
 import './conversation.css';
 import {ConversationEntries} from './ConversationEntries';
@@ -68,7 +64,9 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   function selectSection(value:'chat'|'tasks'){consumeNavigation();setSection(value)}
   function selectTask(id?:string){consumeNavigation();setSelectedTaskId(id)}
   useEffect(()=>{setSelectedTaskId(undefined)},[workspace.id,tab.taskId]);
-  function viewMember(taskId:string){selectTask(taskId);setSection('tasks')}
+  // 历史条目使用稳定导航回调，点击时再读取当前定位请求，避免逐键草稿使所有轮次失效。
+  const navigationRef=useRef({navigation,onNavigationHandled});navigationRef.current={navigation,onNavigationHandled};
+  const viewMember=useCallback((taskId:string)=>{const current=navigationRef.current;if(current.navigation){handledNavigation.current=current.navigation.requestId;current.onNavigationHandled?.(current.navigation.requestId)}setSelectedTaskId(taskId);setSection('tasks')},[]);
   useEffect(()=>{
     if(!active||!navigation||handledNavigation.current===navigation.requestId)return;
     setSection('tasks');setNavigationError('');
@@ -105,7 +103,7 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   function addAttachments(items:ChatAttachment[]){const combined=[...attachmentRef.current];for(const item of items)if(!combined.some(a=>a.kind===item.kind&&a.source===item.source))combined.push(item);if(combined.length>12){setError('最多可添加 12 项附件，请移除部分附件后重试');return}onAttachments(combined);if(taskOpen)setNextTip(Date.now())}
   async function importFiles(files:File[]){if(importing.current||attachmentBusy||busy)return;if(files.length+attachmentRef.current.length>12){setError('最多可添加 12 项附件');return}importing.current=true;setAttachmentBusy(true);setError('');try{addAttachments(await api.importFiles(workspace.id,files))}catch(e:any){setError(e.message)}finally{importing.current=false;setAttachmentBusy(false)}}
   const input=useRef<HTMLTextAreaElement>(null);
-  const lock=useRef(false),alive=useRef(true),scroll=useRef<HTMLDivElement>(null),follow=useRef(true),memberContent=useRef<HTMLDivElement>(null);
+  const lock=useRef(false),alive=useRef(true),scroll=useRef<HTMLDivElement>(null),follow=useRef(true),historyContent=useRef<HTMLDivElement>(null);
   const stopGate=useRef(new ConversationStopGate()),[,renderStop]=useState(0);
   stopGate.current.observe(tab.taskId?{id:workspace.id,taskId:tab.taskId}:undefined);
   const stopping=!!tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId});
@@ -128,7 +126,7 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   // 正文排版后、浏览器绘制前跟随末尾，避免 Markdown 高度变化误判为用户向上滚动。
   useLayoutEffect(()=>{if(section==='chat'&&follow.current&&scroll.current)scroll.current.scrollTop=scroll.current.scrollHeight},[runs,questions,section]);
   // 成员输出在自己的 Hook 中更新；只在用户仍跟随底部时跟随高度，避免抢走查看旧消息的位置。
-  useEffect(()=>{const node=memberContent.current;if(!node||typeof ResizeObserver==='undefined')return;const observer=new ResizeObserver(()=>{if(section==='chat'&&follow.current&&scroll.current)scroll.current.scrollTop=scroll.current.scrollHeight});observer.observe(node);return()=>observer.disconnect()},[section,tab.taskId]);
+  useEffect(()=>{const node=historyContent.current;if(!node||typeof ResizeObserver==='undefined')return;const observer=new ResizeObserver(()=>{if(section==='chat'&&follow.current&&scroll.current)scroll.current.scrollTop=scroll.current.scrollHeight});observer.observe(node);return()=>observer.disconnect()},[section,tab.taskId]);
   // 跟随文字增高，输入区达到上限后内部滚动，消息列与输入框保持同宽。
   useEffect(()=>{const node=input.current;if(node){node.style.height='auto';node.style.height=Math.min(186,Math.max(32,node.scrollHeight))+'px'}},[tab.draft]);
   async function operate(work:()=>Promise<void>){if(lock.current)return;lock.current=true;invalidateQueue();setBusy(true);setError('');try{await work()}catch(e:any){if(alive.current)setError(e.message)}finally{await refreshQueue();graph.refresh();lock.current=false;if(alive.current)setBusy(false)}}
@@ -139,8 +137,8 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
     renderStop(value=>value+1);setError('');
     try{await api.call('loop.stop',{id:token.id,taskId:token.taskId})}catch(e:any){if(current())setError(e.message)}finally{stopGate.current.finish(token);if(alive.current)renderStop(value=>value+1);if(current()){invalidateQueue();void refreshQueue();graph.refresh()}}
   }
-  /** Skill 点击只发送明确的流程调用；正文和附件仍留在草稿中，由用户随后按格式发送。 */
-  async function send(insert=false,skill?:FeedbackSkillTitle){const message=skill?`请调用「${skill}」Skill，先提供对应的填写格式，引导我补充上下文。`:(tab.draft||'').trim()||(attachments.length?'请查看附加的资料。':'');if(!message)return;
+  /** Skill 点击只发送明确的流程调用；正文和附件留在草稿中，由用户随后自愿描述，不强制补齐格式。 */
+  async function send(insert=false,skill?:FeedbackSkillTitle){const message=skill?`请调用「${skill}」Skill，提示我用一句话描述问题或愿望即可，其余信息自愿补充，不强制追问。`:(tab.draft||'').trim()||(attachments.length?'请查看附加的资料。':'');if(!message)return;
     const sentAttachments=skill?[]:attachments;
     if(tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId}))return;
     const insertion=insert?captureQueueInsertTarget(workspace.id,tab.taskId,currentRun,canInsert):undefined;
@@ -166,7 +164,8 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   // 业务重规划仅共享实际模型身份，权限在独立表单默认 ask 并由用户明确选择；两处卡片共用一份请求。
   const replan=useScopeReplan(workspace.id,tab.taskId,graph,modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,graph.refresh,id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')});
   // 影响核实共用实际会话状态和模型，仅显式新建核实任务时使用模型；不触碰聊天草稿。
-  const recovery:ExecutionRecoveryContext={state:graph,refresh:graph.refresh,model:modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,showScope:id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}};
+  // 保留全部恢复依赖；当前模型、图或历史选择一旦变化，旧工具卡也必须获得新上下文。
+  const recovery=useMemo<ExecutionRecoveryContext>(()=>({state:graph,refresh:graph.refresh,model:modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,showScope:id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}}),[graph,modelAvailable,selectedProfile,selectedModel]);
   // 人工决定只有一份本机会话控制器，保存不改普通草稿、权限或当前等待状态。
   const humanDecisions=useHumanDecisions(workspace.id,tab.taskId,graph,graph.refresh);
   // 初次周期读取尚未完成时不能凭运行日志猜测 resume；等待信息就绪后再决定发送或排队。
@@ -191,14 +190,7 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
       <ThreadHistoryNotice issues={threadIssues}/>
       {tab.taskId&&<ScopeGoalPanel state={graph} compact testId="conversation-goal-summary" onSelectTask={viewMember} continuation={continuation} replan={replan} humanDecisions={humanDecisions} humanContinuation={humanContinuation}/>}
       {latest?.task.workflowContext&&<details className="chat-context"><summary>任务上下文 · {latest.task.goal.slice(0,80)}</summary><p>模块：{latest.task.moduleIds.join('、')}<br/>Agent：{latest.task.agentId}<br/>Workflow：{latest.task.workflowContext?.workflowId}<br/>责任人：{latest.task.responsiblePerson||'未指定'}</p><ul>{latest.task.acceptance.map((a,i)=><li key={i}>{a}</li>)}</ul></details>}
-      {runs.map(run=>{const items=transcript(run);return <section key={run.runId} className="chat-turn" aria-label="对话轮次">
-        {items[0]?.kind==='system'&&<p className="chat-model-notice" role="status">{items[0].text}</p>}
-        {items.filter((i,index)=>index===0&&i.kind==='user').map(item=><MessageCard key={item.id} speaker="user" text={item.text} time={run.events[0]?.time}><div className="chat-text">{item.text}</div>{item.attachments&&<div className="chat-attachments">{item.attachments.map((a,i)=><span key={i} title={a.source}><Icon name="knowledge" size={13}/>{a.name}</span>)}</div>}</MessageCard>)}
-        <WorkStatus run={run} now={now} recovery={recovery}/>
-        {items.slice(1).filter(i=>i.kind==='assistant'||i.kind==='error'||i.kind==='user').map(item=><MessageCard key={item.id} speaker={item.kind==='user'?'user':item.kind==='assistant'?'assistant':'error'} text={item.text} time={run.events.at(-1)?.time}>{item.kind==='user'?<div className="chat-text">{item.text}</div>:<MarkdownMessage text={item.text} streaming={item.pending} workspaceId={workspace.id}/>}</MessageCard>)}
-      </section>})}
-      <div ref={memberContent}>{tab.taskId&&<ConversationProgress identity={{workspaceId:workspace.id,rootSessionId:tab.taskId}} graph={graph.graph} summary={graph.scopes.find(s=>s.scopeId===graph.selectedScopeId)} scope={graph.selectedScope} historical={!!graph.historyScopeId} onSelectTask={viewMember}/>}
-      {tab.taskId&&graph.graph?.tasks.length?<MemberActivity workspaceId={workspace.id} rootSessionId={tab.taskId} tasks={graph.graph.tasks} active={active&&section==='chat'} onSelectTask={viewMember} onViewAll={()=>setSection('tasks')}/>:null}</div>
+      <div ref={historyContent}>{runs.map(run=><ConversationTurn key={run.runId} run={run} workspaceId={workspace.id} now={run.status==='running'?now:0} recovery={recovery} active={active&&section==='chat'} onSelectTask={viewMember}/>)}</div>
       {graph.error&&<p role="alert">{graph.error} <button onClick={graph.refresh}>重新同步成员动态</button></p>}
       {questions.map(q=><QuestionCard key={q.id} request={q} onAnswer={async answers=>{await api.call('loop.answerQuestion',{id:workspace.id,taskId:q.taskId,questionId:q.id,answers})}}/>)}
       {currentRun&&!mainRunning&&currentRun.unresolvedTools.length>0&&<div className="chat-reconcile" data-testid="unresolved-tools-notice"><h3>原操作结果尚未确认</h3><p>展开原工具记录，明确核实当前影响并保存处置。需要继续调查时创建独立只读核实任务；原记录保留，勾选调用标识不能恢复原运行。</p><ul>{currentRun.unresolvedTools.map(id=><li key={id}><code>{id}</code></li>)}</ul></div>}

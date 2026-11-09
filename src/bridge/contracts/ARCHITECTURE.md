@@ -16,7 +16,7 @@
 | [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
 | [command-verification.ts](command-verification.ts) | 向桌面视图导出原主命令的只读核实协议和固定支持矩阵。 |
 | [controlled-files.ts](controlled-files.ts) | 向桌面公开受控文件原操作查询和显式补偿的纯协议。 |
-| [desktop-updates.ts](desktop-updates.ts) | 正式桌面版本、更新日志与手动更新状态的公开 IPC 数据。 |
+| [desktop-updates.ts](desktop-updates.ts) | 正式桌面版本、更新日志与用户启动的自动安装流程的公开 IPC 数据。 |
 | [dispatch.ts](dispatch.ts) | 向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。 |
 | [effect-observation.ts](effect-observation.ts) | 向桌面公开原调用影响观察、明确处置与后续周期关系的纯契约。 |
 | [execution.ts](execution.ts) | 对话、运行和排队在 IPC 中传递的可序列化类型。 |
@@ -196,7 +196,7 @@ class N_src_bridge_contracts_dispatch_ts["dispatch.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/tasks/graph-types.ts](../../backend/core/tasks/graph-types.ts)、[../../backend/core/tasks/queued-dependency-replacement.ts](../../backend/core/tasks/queued-dependency-replacement.ts)、[../../backend/core/tasks/queued-dependency-addition.ts](../../backend/core/tasks/queued-dependency-addition.ts)、[../../backend/core/tasks/queued-dependency-revision.ts](../../backend/core/tasks/queued-dependency-revision.ts)、[../../backend/core/tasks/member-checkpoint.ts](../../backend/core/tasks/member-checkpoint.ts)、[../../backend/core/tasks/member-checkpoint-chain.ts](../../backend/core/tasks/member-checkpoint-chain.ts)、[../../backend/core/tasks/checkpoint-handoff.ts](../../backend/core/tasks/checkpoint-handoff.ts)、[../../backend/core/tasks/queued-member-resume.ts](../../backend/core/tasks/queued-member-resume.ts)、[../../backend/core/tasks/dispatch-commands.ts](../../backend/core/tasks/dispatch-commands.ts)、[../../backend/core/tasks/member-commands.ts](../../backend/core/tasks/member-commands.ts)、[../../backend/core/tasks/member-events.ts](../../backend/core/tasks/member-events.ts)、[../../backend/core/tasks/graph-reducer.ts](../../backend/core/tasks/graph-reducer.ts)、[../../backend/core/tasks/graph-rules.ts](../../backend/core/tasks/graph-rules.ts)、[../../backend/core/tasks/dispatch-scope.ts](../../backend/core/tasks/dispatch-scope.ts)、[../../backend/core/tasks/scope-public.ts](../../backend/core/tasks/scope-public.ts)、[../../backend/core/tasks/scope-view.ts](../../backend/core/tasks/scope-view.ts)、[../../backend/core/tasks/scope-continuation.ts](../../backend/core/tasks/scope-continuation.ts)、[../../backend/core/tasks/execution-report.ts](../../backend/core/tasks/execution-report.ts)、[../../backend/core/tasks/artifact-baseline.ts](../../backend/core/tasks/artifact-baseline.ts)、[../../backend/core/tasks/scope-recovery.ts](../../backend/core/tasks/scope-recovery.ts)、[../../backend/core/tasks/scope-replan.ts](../../backend/core/tasks/scope-replan.ts)、[../../backend/core/tasks/scope-active-input.ts](../../backend/core/tasks/scope-active-input.ts)、[../../backend/core/tasks/scope-continuation-attachments.ts](../../backend/core/tasks/scope-continuation-attachments.ts)。
+直接依赖：[../../backend/core/tasks/graph-types.ts](../../backend/core/tasks/graph-types.ts)、[../../backend/core/tasks/queued-dependency-replacement.ts](../../backend/core/tasks/queued-dependency-replacement.ts)、[../../backend/core/tasks/queued-dependency-addition.ts](../../backend/core/tasks/queued-dependency-addition.ts)、[../../backend/core/tasks/queued-dependency-revision.ts](../../backend/core/tasks/queued-dependency-revision.ts)、[../../backend/core/tasks/member-checkpoint.ts](../../backend/core/tasks/member-checkpoint.ts)、[../../backend/core/tasks/member-checkpoint-chain.ts](../../backend/core/tasks/member-checkpoint-chain.ts)、[../../backend/core/tasks/checkpoint-handoff.ts](../../backend/core/tasks/checkpoint-handoff.ts)、[../../backend/core/tasks/queued-member-resume.ts](../../backend/core/tasks/queued-member-resume.ts)、[../../backend/core/tasks/dispatch-commands.ts](../../backend/core/tasks/dispatch-commands.ts)、[../../backend/core/tasks/dispatch-receipt.ts](../../backend/core/tasks/dispatch-receipt.ts)、[../../backend/core/tools/receipt-schema.ts](../../backend/core/tools/receipt-schema.ts)、[../../backend/core/tasks/member-commands.ts](../../backend/core/tasks/member-commands.ts)、[../../backend/core/tasks/member-events.ts](../../backend/core/tasks/member-events.ts)、[../../backend/core/tasks/graph-reducer.ts](../../backend/core/tasks/graph-reducer.ts)、[../../backend/core/tasks/graph-rules.ts](../../backend/core/tasks/graph-rules.ts)、[../../backend/core/tasks/dispatch-scope.ts](../../backend/core/tasks/dispatch-scope.ts)、[../../backend/core/tasks/scope-public.ts](../../backend/core/tasks/scope-public.ts)、[../../backend/core/tasks/scope-view.ts](../../backend/core/tasks/scope-view.ts)、[../../backend/core/tasks/scope-continuation.ts](../../backend/core/tasks/scope-continuation.ts)、[../../backend/core/tasks/execution-report.ts](../../backend/core/tasks/execution-report.ts)、[../../backend/core/tasks/artifact-baseline.ts](../../backend/core/tasks/artifact-baseline.ts)、[../../backend/core/tasks/scope-recovery.ts](../../backend/core/tasks/scope-recovery.ts)、[../../backend/core/tasks/scope-replan.ts](../../backend/core/tasks/scope-replan.ts)、[../../backend/core/tasks/scope-active-input.ts](../../backend/core/tasks/scope-active-input.ts)、[../../backend/core/tasks/scope-continuation-attachments.ts](../../backend/core/tasks/scope-continuation-attachments.ts)。
 
 ### effect-observation.ts
 
@@ -558,7 +558,7 @@ class N_src_bridge_contracts_workspace_ts_Bridge["Bridge"] {
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_workspace_ts_Bridge : 声明
 ```
 
-直接依赖：[../../backend/core/knowledge/types.ts](../../backend/core/knowledge/types.ts)、[chat.ts](chat.ts)。
+直接依赖：[../../backend/core/knowledge/types.ts](../../backend/core/knowledge/types.ts)、[../../backend/core/workspace/project-root.ts](../../backend/core/workspace/project-root.ts)、[chat.ts](chat.ts)。
 
 ### 本目录调用边界
 
@@ -585,6 +585,14 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 桌面更新状态
+
+`DesktopUpdateStatus.checkedAt` 是最近完成的检查时间，包括失败尝试；`error` 区分离线或失败，不能把有时间误作已是最新版。`installing` 包含可见重启提示与业务排空；`ready` 表示已经校验但安装未完成，等待明确重试。只有新进程的 currentVersion 证明升级。公开协议不包含安装路径、命令、凭据或可修改的更新源。
+
+### 项目根显示契约
+
+`workspace.ts` 重导出纯 `projectRootModuleId` 与 `projectRootModule`，让业务架构与只读知识查询使用同一内置身份。没有新增 IPC 或写入能力，不把项目根转成真实知识文件或可分配岗位。
 
 ### 检查点交接放弃
 
@@ -892,3 +900,7 @@ isolated-executions只重导出Core的公开核实和清理协议，不引用Mai
 ### 自动与团队协作模式
 
 owner-execution 导出纯自动绑定类型及匹配函数，供界面核历史归属；没有配置写入、文件或大脑运行实现依赖。
+
+### 内联派发回执
+
+dispatch 只导出 Core dispatch-receipt 的纯结构与 toolReceiptSchema，不导入主工具业务核实或哈希依赖。前端仍须核对原运行、调用、主实例与图游标；Schema 通过不授予执行权。

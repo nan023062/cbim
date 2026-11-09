@@ -186,6 +186,12 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 
 # 主进程运行装配契约
 
+## 用户发起的自动更新流程
+
+Main 为 `DesktopUpdates` 注入唯一的业务关闭回调，停止终端、等待 `Application.shutdown` 后才标记安装退出。固定 `desktop.updates.download` 负责整段下载/校验/安装，不接受地址或命令；install 仅作失败后的显式重试。installing 期间拒绝普通业务 IPC 与拖入附件；状态查询仍可用来展示进度。
+
+普通 before-quit 先 close 更新服务再排空，避免用户主动退出时迟到的下载或两秒提示继续触发安装。安装器触发的退出已由成功排空设置 quitting，走原正常退出路径。安装失败没有升级成功保证，必须在新进程核实版本；不更改应用身份、用户目录或 NSIS 校验规则。
+
 ## 产品标识与原生窗口
 
 `main.ts` 只装配窗口品牌资源：开发态从工程 `branding/cbim.png` 读取，打包态从固定 `resources/branding/cbim.png` 读取。Forge 的应用图标及独立安装器均使用同一矢量源生成的 ICO；运行时不生成或下载品牌资源。显示名称为 CBIM Assistant，原应用 ID、可执行文件名称、卸载器探测与用户数据目录保持兼容。
@@ -234,11 +240,11 @@ note for execution "主 chat 分别注入 feedbackTools 与 feedbackStatus；新
 
 `Application.repositoryConnections` 是应用唯一的桌面连接服务，使用 `ResourceRepositories` 当前真实共享闭包和工作区知识事务端口；用户目录保存授权与命令回执，知识目录只保存可移植的链接器定义。初始化读取授权但不自动共享或联网，工作区关闭/重开先取消该工作区在途核验；应用退出先拒绝新连接操作、排空读写，再关闭共享服务。原回执查询不创建运行、调用模型或恢复旧工作区实例。
 
-`createExecutionManager` 仅为 chat 主运行调用 `prepareTools`，把本轮固定的已授权只读端口注入 `ExecutionServices.repositoryTools`。能力捕获不访问 HTTP；实际模型调用才读取，执行成员、未装配的 CLI 和没有就绪连接的主轮不注册两项仓库工具。端口不从 ChatOptions 或模型参数取得授权，不改变主角色业务写入/命令禁令。
+`createExecutionManager` 仅为 chat 主运行调用 `prepareTools`，把本轮固定的已授权只读端口注入 `ExecutionServices.repositoryTools`。能力捕获不访问 HTTP；实际模型调用才读取，执行成员、未装配的 CLI 和没有就绪连接的主轮不注册两项仓库工具。端口不从 ChatOptions 或模型参数取得授权，不改变原周期模式与本轮权限决定的业务工具能力。
 
 ## 正式成员的 Workflow 能力装配
 
-`member-dispatch.prepare` 从与 Pi 实际注册相同的 `core/tools/native-tools` 清单，按本轮 permission 返回 availableTools；密钥和实际模型留在可信工厂。执行服务在 claim/run 之前预检冻结的模块约定。创建 Runtime 时注入全部 `preparedWorkflowContracts(run.prepared)`，普通主聊天不接此业务执行门禁，也不因此获得业务写入或命令权限。
+`member-dispatch.prepare` 从与 Pi 实际注册相同的 `core/tools/native-tools` 清单，按本轮 permission 返回 availableTools；密钥和实际模型留在可信工厂。执行服务在 claim/run 之前预检冻结的模块约定。创建 Runtime 时注入全部 `preparedWorkflowContracts(run.prepared)`，普通主聊天不接正式成员 Workflow 门禁；Auto 的原生业务能力由周期模式与权限独立决定，不因注入成员契约而获得。
 
 同一工厂通过 `availableValidators:['json-schema-v1','csv-table-v1','png-raster-v1']` 声明实际平台验证能力，不在无约定时冒称已注册验证工具。成员 Runtime 分别注入 `ArtifactFiles.validateFile/validateTable/validateImage`，路径与 Schema 来自冻结要求；目标审阅另注入 `normalizeValidationPath/checkValidationFiles`，成员结算复用已有 artifacts 端口。所有者代际与停止覆盖读取，判断使用当前字节，不通过报告服务重入派发事务或创建新运行。
 
@@ -262,7 +268,7 @@ note for execution "主 chat 分别注入 feedbackTools 与 feedbackStatus；新
 
 `execution-admission.ts` 将全局资格与 `WorkspaceExecutionLease` 同步组合。请求键由主/成员来源加稳定命令 SHA-256 摘要组成，满足身份长度与字符约束；撤票只传 `AdmissionIdentity`，不夹带请求权限和来源字段。所有桌面主轮与成员轮使用同一服务，测试或独立装配未传服务时仍沿用已有工作区租约。
 
-主普通聊天在 `LoopRuntime.acquireLease` 成功之后才调用 `beforeRun` 打开目标周期，额度不足不会创建 scope、运行日志或模型请求。主轮始终只领取业务只读租约；知识写仍经过内部知识服务事务与用户权限。成员在派发存储事务内、领取信封和记录 run 之前取得全局及本地资格；准备、原生锁或持久化失败释放已取得资源。成员的未知终态仍保留原有占用规则，不能为了展示空闲而假释放。
+主普通聊天在 `LoopRuntime.acquireLease` 成功之后才调用 `beforeRun` 打开目标周期，额度不足不会创建 scope、运行日志或模型请求。主轮按实际权限领取租约：read 可共享，ask/execute 保守独占，防止 beforeRun 恢复 Auto 后超出已取得的占用。Team 的保守占用不提供业务写工具；知识写仍经过知识服务事务和用户权限。成员在派发存储事务内、领取信封和记录 run 之前取得全局及本地资格；准备、原生锁或持久化失败释放已取得资源。成员的未知终态仍保留原有占用规则，不能为了展示空闲而假释放。
 
 成员准备知识、解析模型和最终重查基线后都重新核对批次及工作区代际。装配 `isCurrent` 在工作区退役时立即失效，手动成员启动同样受约束；不依赖稍后才执行的 manager.close。若停止发生在已经开始的持久提交期间，保留真实启动意图并结算取消，但不创建模型。代际同时发出 AbortSignal，成员启动信号贯穿尚未登记 active 的原生准备阶段；异常启动继续按 interrupted 留证，不伪装为未执行。
 
@@ -345,6 +351,8 @@ Application 每工作区装配一个请求预算服务，主工厂固定已解�
 ## R07-B1 完整集合共同验收
 
 固定工作区的同一OutputManifestFiles.check注入成员结算、目标服务及人工服务。人工选择/继续沿既有read租约和当前工作区校验，不调用模型、不改日志，也不复用旧native执行；真实执行仍由独立显式继续入口负责。
+
+主轮业务占用与工具模式一致：Team 没有业务写工具，使用只读占用，使 beforeRun 内的人工／成员核验仍能取得短读占用；Auto 的 ask／execute 使用独占，审批等待也不能与其他运行并发。恢复及成员回注优先读取原周期冻结模式，历史缺省 Team，不用缺失的运行参数覆盖已保存的 Auto 策略；知识写仍由独立事务和权限保护。
 
 ## R07-B2 原删除与移动证明
 

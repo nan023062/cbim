@@ -1,8 +1,9 @@
 /**
  * 作用定位：Cindy 风格的输入框上方时间/速度与底部任务价值、上下文占用显示。
  * 设计原因：主行保持轻量，点击展开计量明细；主状态与上下文使用可信运行头，旧坏历史只贡献已知消耗，等待不延长工作时间。未知计量明确标记，不用累计 token 替代速度。
+ * 计算边界：历史计量只随日志、有效计时时刻或可信运行头重算；草稿和弹层状态不重新扫描全部事件。
  */
-import {useEffect,useRef,useState,type ReactNode} from 'react';
+import {useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import type {RunSummary} from '../../bridge/contracts/execution';
 import {brainStatus} from './brain-status';
 import {Icon} from '../components/Icon';
@@ -19,7 +20,8 @@ export interface ConversationActivity {label:string;active:boolean;tone:'running
 /** currentRun=null 明确无安全运行头，不能按旧历史猜脑状态；historyIncomplete 使累计费用明确标为已知部分。 */
 export function UsageStatus({runs,now,placement,capacity,waitingApproval=false,activity,currentRun,historyIncomplete=false}:{runs:RunSummary[];now:number;placement:'above'|'footer';capacity?:number;waitingApproval?:boolean;activity?:ConversationActivity;currentRun?:RunSummary|null;historyIncomplete?:boolean}){
  const waitingAt=activity?.waitingSince?Date.parse(activity.waitingSince):NaN,waiting=Number.isFinite(waitingAt);
- const data=conversationUsage(runs,waiting?Math.min(now,waitingAt):now,currentRun),latest=currentRun===undefined?runs.at(-1):currentRun??undefined,running=latest?.status==='running'&&!waiting;
+ const measuredAt=waiting?Math.min(now,waitingAt):now;
+ const data=useMemo(()=>conversationUsage(runs,measuredAt,currentRun),[runs,measuredAt,currentRun]),latest=currentRun===undefined?runs.at(-1):currentRun??undefined,running=latest?.status==='running'&&!waiting;
  const limit=data.capacity??capacity,percent=limit&&data.used!==undefined?data.used/limit*100:undefined;
  const active=!waiting&&(running||activity?.active),label=running?brainStatus(latest,waitingApproval):activity?.label??brainStatus(latest);
  if(placement==='above')return <div className="usage-above"><span role="status" data-testid="conversation-activity" className={running?'usage-running':activity?`usage-state-${activity.tone}`:''}>{active&&<span className={waitingApproval?'':'usage-sparkle'}><Icon name={waitingApproval?'hand':'sparkles'} size={15}/></span>}{label}</span><Metric title="任务时间与平均生成速度" label={<>{durationText(data.durationMs)} · {data.rate!==undefined?`${data.rate.toFixed(1)} tok/s${data.ratePartial?'*':''}`:'— tok/s'}</>}><dl><dt>累计工作时间</dt><dd>{durationText(data.durationMs)}</dd><dt>平均输出速度</dt><dd>{data.rate!==undefined?`${data.rate.toFixed(1)} tok/s`:'暂无可靠计时'}</dd><dt>生成耗时</dt><dd>{durationText(data.generationMs)}</dd><dt>输入 / 输出</dt><dd>{tokenCount(data.input)} / {tokenCount(data.output)}</dd><dt>缓存读取 / 写入</dt><dd>{tokenCount(data.cacheRead)} / {tokenCount(data.cacheWrite)}</dd><dt>输出中的推理</dt><dd>{tokenCount(data.reasoning)}</dd><dt>累计已报告 token</dt><dd>{tokenCount(data.total)}</dd></dl><p>任务时间不含轮次间空闲。速度仅用已完成模型请求的生成时间，排除工具和审批等待；* 表示仅统计有可靠计时的请求，旧记录不计入速度；token 在请求结束后更新，推理不重复计数。</p></Metric></div>;

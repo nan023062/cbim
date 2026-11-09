@@ -6,6 +6,7 @@
  * 设计原因：每轮冻结模型、权限和上下文；原生注册与能力预检共用 Core 工具表。成员求助/基线/检查点及按冻结要求提供的产物验证沿真实调用 ID 入日志，结构拒绝不冒称通过；成员回传与人工决定用系统 custom 接续，结束只认 agent_settled。
  * 职责边界：不保存私有推理正文；记录实际用量与生成耗时，未知计价保持未知。工具清单日志区分宿主准备与 Pi 实际活动清单，只保存名称和缺失项。明确停止后的标准取消文本才归为取消，其他错误及未知工具副作用交由运行时保留。
  * 插入边界：原生状态查询后再次核停止；只有 queued 回复表示已接收，发送后的失败不推断未执行或自动重发。
+ * 展示顺序：完整公开回复只附带本消息内的 toolCallIds，供 UI 处理工具 HTTP 门禁与 stdout 文字的到达竞态，不重写日志顺序或授予执行权。
  * 主角色指引：内置执行角色也需明确岗位、模块负责人及独立采纳模型，提示不能把默认角色误写为绕过责任绑定的入口。
  * 请求预算：可信端口启用时，启动前安装父进程代理；终态与工具授权都受可靠结算屏障约束，停止先结束实际请求。
  */
@@ -195,8 +196,9 @@ export class PiEngine implements AgentEngine {
           const cancelledMessage=this.stopped&&message.stopReason==='error'&&/^(?:AbortError:\s*)?(?:This operation was aborted|The operation was aborted|Request aborted|Aborted)\.?$/i.test(String(message.errorMessage??'').trim());
           const failure=cancelledMessage?undefined:modelStopError(message,this.options.llm?.profile.maxTokens,this.requestLimit);
           this.assistantError=failure?this.redact(failure):undefined;
-          // Do not persist private reasoning. Authoritative final text replaces streaming deltas.
-          await emit({type:'message',data:{role:'assistant',text:(message.content||[]).filter((x:any)=>x.type==='text').map((x:any)=>x.text).join(''),stopReason:cancelledMessage?'aborted':message.stopReason,usage:message.usage,generationDurationMs,pricingKnown:this.options.llm?!!this.options.llm.profile.pricing:undefined}});
+          // HTTP 工具门禁可能先于已排队的 stdout 文字落盘；只保留本回复的调用 ID，供界面还原因果顺序，不保存思维或工具参数。
+          const toolCallIds=(message.content||[]).filter((x:any)=>x.type==='toolCall'&&typeof x.id==='string').map((x:any)=>x.id);
+          await emit({type:'message',data:{role:'assistant',text:(message.content||[]).filter((x:any)=>x.type==='text').map((x:any)=>x.text).join(''),...(toolCallIds.length?{toolCallIds}:{}),stopReason:cancelledMessage?'aborted':message.stopReason,usage:message.usage,generationDurationMs,pricingKnown:this.options.llm?!!this.options.llm.profile.pricing:undefined}});
         }return;
       // 与 Cindy Pi 适配一致：工具进度、重试、压缩都不是终态，只有 settled 收口。
       case 'tool_execution_update':await emit({type:'tool.updated',data:{id:event.toolCallId,name:event.toolName,result:event.partialResult}});return;

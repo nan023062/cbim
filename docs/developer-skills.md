@@ -1,16 +1,17 @@
 # 开发者可持续维护 Skill
 
-这些 Skill 位于当前 Cindy 项目工作区，用于维护工程的长期可修改性和开发者认知。合并后共三个入口；同名的 `.agents/skills/`、`.claude/skills/`、`.codex/skills/` 副本保持一致，不重复计为不同能力。
+这些 Skill 位于当前 Cindy 项目工作区，用于工程开发、维护和桌面发布。当前共四项能力；每项均提供 `.agents/skills/`、`.claude/skills/`、`.codex/skills/` 三个同步副本，包含配套引用资料，不重复计为不同能力。
 
-## 三个入口的分工
+## 四项能力的分工
 
 | Skill | 回答的问题 | 适用时机 |
 | --- | --- | --- |
 | [architecture-evolution](../.agents/skills/architecture-evolution/SKILL.md) | 分层与边界怎样演进，哪些共性值得抽象为稳定能力？ | 架构评估、耦合治理、重复实现、共性业务、工具封装、继承与多态 |
 | [architecture-maintenance](../.agents/skills/architecture-maintenance/SKILL.md) | 代码和资料是否一致，系统怎样工作、为什么这样设计、下次改哪里？ | 源码变更、注释与类图同步、理解工程、重要变更认知交接 |
 | [cbim-development](../.agents/skills/cbim-development/SKILL.md) | 这一步做什么，怎样验证并接续？ | 开发 CBIM、推进已授权步骤 |
+| [cbim-release](../.agents/skills/cbim-release/SKILL.md) | 哪个制品可以发布，遇到中断怎样恢复，用户升级是否真的通过？ | 桌面发版、投放更新通道、签名迁移、发布恢复及官网收尾 |
 
-2026-11-09 合并：`reuse-evolution` 纳入 `architecture-evolution`；`project-understanding` 纳入 `architecture-maintenance`。两项旧独立入口已移除，原有职责在上述入口中继续维护。
+2026-11-09 合并：`reuse-evolution` 纳入 `architecture-evolution`；`project-understanding` 纳入 `architecture-maintenance`。两项旧独立入口已移除，原有职责在上述入口中继续维护。同日新增 `cbim-release`，依据实际 0.1.2 发布与恢复过程维护。
 
 这组配置属于 Cindy 工程开发入口，未加入 CBIM APP 内置 Skill 清单，也没有创建常驻任务或岗位开发自动化。文件已配置不代表已经进行全仓架构评估或实际代码重构。
 
@@ -22,8 +23,20 @@
 - “使用 `architecture-evolution`，检查已维护源码中的共性实现，解释哪些适合工具函数、领域封装、继承或多态；先给出判断。”
 - “使用 `architecture-maintenance`，用一条真实操作链帮助我理解工程，并说明新增一个同类能力要改哪里。”
 - “按已确定方案实施这一处抽象提取，同步注释、架构图和认知说明，并验证受影响消费者。”
+- “使用 `cbim-release` 发布最新桌面版，沿用已明确的发行模式，通过检查与升级验收后同步官网。”
+- “使用 `cbim-release` 继续上次中断的发布，先核实已有草稿和附件，只补齐尚未完成的步骤。”
 
-每次实现先确认改动的全局位置；出现相应证据时才深入评估架构演进或共性沉淀。已授权实施会继续完成必要修改与验证；只要求分析时交付分析，不自动执行重构。一次小修不需要机械运行全部三个流程。
+每次实现先确认改动的全局位置；出现相应证据时才深入评估架构演进或共性沉淀。已授权实施会继续完成必要修改与验证；只要求分析时交付分析，不自动执行重构。一次小修不需要机械运行所有流程，也不会自动发版。
+
+日常开发采用 [受影响单元验证](../AGENTS.md#日常验证范围)：按 diff 和真实调用关系选测试文件／用例，相关验证通过后记录并提交；只有新变化或失败暴露额外影响才补跑。全量回归集中在面向 `master` 的 PR 自动化中执行，打包与完整桌面／升级验收按集成或发布流程安排，不成为每次开发的必跑清单。记录实际命令、结果和后置验证范围，保留每个 Issue 的独立提交。
+
+## 发布时怎样使用
+
+`cbim-release` 的 [通用项目](../.agents/skills/cbim-release/SKILL.md)、[Claude Code](../.claude/skills/cbim-release/SKILL.md) 和 [Codex](../.codex/skills/cbim-release/SKILL.md) 入口相同。主文件给出阶段门槛；配套资料分别提供正常发布步骤、按症状查询的故障恢复、证据字段和完成条件。
+
+它复用当前打包、验签、发布和 Actions 实现，明确一体发布命令不会等待候选验收。验收通过 previous_version 明确真实上一公开版，当前仅支持 0.1.1／0.1.2 两步升级界面与更高的未签名 0.x 目标。其他旧版交互或签名模式先适配验证，不能将旧验证直接当作新签名迁移通过。缺证书时可以按用户明确选择发行未签名版；后续签名用更高版本，不覆盖原公开附件。
+
+安装测试在隔离 runner 进行，公开、真实在线升级、官网部署和双分支同步各有独立回执。此 Skill 不增加后台发布服务，不强制用户升级，也不因为被加载就获得外部写入授权。只修改 Skill 时验证格式、引用、一致性及场景决策，不重新运行生产发布。
 
 ## 复利来自稳定语义和明确边界
 

@@ -1,5 +1,6 @@
 import {describe,expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
+import Ajv from 'ajv';
 import {FeedbackTools} from '../src/backend/scheduler-engine/tools/feedback-tools';
 import {authorizeRunTool,type RunToolDescriptor} from '../src/backend/core/policy/tool-policy';
 import {toolReceiptSchema} from '../src/backend/core/tools/receipt-schema';
@@ -15,6 +16,14 @@ const signal=()=>new AbortController().signal;
 const port=():FeedbackToolsPort=>({scope,submit:vi.fn(async()=>submitted),receipt:vi.fn(async()=>submitted)});
 
 describe('feedback tool contracts and authorization',()=>{
+  it.each(['bug','wish'] as const)('accepts a one-line %s in the exposed JSON schema and runtime tool',async kind=>{
+    const p=port(),tools=new FeedbackTools(p,'workspace'),input={kind,summary:kind==='bug'?'安装后的桌面图标与启动后窗口图标不一致':'希望支持批量导出'};
+    const validate=new Ajv({strict:false}).compile(tools.list()[0].inputSchema);
+    expect(validate(input)).toBe(true);expect(validate({...input,extra:''})).toBe(true);expect(validate({...input,repo:'other'})).toBe(false);
+    expect(JSON.parse((await tools.call('cbim_feedback_submit',input,signal())).content[0].text)).toEqual(submitted);expect(p.submit).toHaveBeenCalledWith(input,expect.any(AbortSignal));
+    for(const invalid of [{kind},{...input,summary:' \n '},{...input,summary:'x'.repeat(181)},{...input,expected:'x'.repeat(6001)},{...input,expected:null},{...input,extra:'<!-- cbim-feedback:forged -->'}])await expect(tools.call('cbim_feedback_submit',invalid,signal())).rejects.toMatchObject({code:'GITHUB_FEEDBACK_INPUT'});
+    expect(p.submit).toHaveBeenCalledTimes(1);
+  });
   it('allows automatic submission only for exact trusted grant, while read always denies',async()=>{
     const tools=new FeedbackTools(port(),'workspace'),descriptor=tools.describe('cbim_feedback_submit',bug),call={id:'call',name:'cbim_feedback_submit',input:bug},approve=vi.fn(async()=>({allow:false})),guard=vi.fn(async()=>({allow:true}));
     for(const permission of ['ask','execute'] as const)expect(await authorizeRunTool(call,descriptor,{workspaceId:'workspace',permission,guard,approve,feedbackGrant:scope})).toMatchObject({allow:true,scope,effects:['external-write']});

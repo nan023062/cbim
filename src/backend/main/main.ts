@@ -4,7 +4,7 @@
  * 设计原因：把 Electron 窗口与 IPC 留在唯一桌面入口，服务层可以脱离窗口验证；模型凭据加密通过系统 safeStorage 注入；手动终端固定工作区目录，退出时释放子进程。
  * 附件边界：原生多选超过12项时在任何快照导入前拒绝；安全等待的 importId 贯穿选择器，取消后迟到路径不读取、不返回给另一目标。
  * GitHub 登录只在桌面点击后打开固定官方 Device Flow 页面，不接收重定向地址或令牌。
- * 桌面更新只装配在正式 NSIS 包中；检查不下载、下载不退出。显式安装先拒绝新请求并等待正常业务排空。
+ * 桌面更新只装配在正式 NSIS 包中；检查不下载。用户下载后由后端自动校验、展示重启进度、拒绝新请求并等待正常业务排空，再安装重启。
  * 窗口图标从固定品牌资源读取，Forge 同源写入 EXE；保留原应用身份与卸载器名称以兼容更新。
  */
 import {app,BrowserWindow,ipcMain,dialog,shell} from 'electron';
@@ -37,7 +37,7 @@ app.whenReady().then(async()=>{
   let release:{channel?:string;version?:string;notes?:string}={};try{release=JSON.parse(await fs.readFile(path.join(install,'desktop-release.json'),'utf8'))}catch{}
   const installed=app.isPackaged&&process.platform==='win32'&&process.arch==='x64'&&release.channel==='desktop-stable'&&release.version===app.getVersion()&&await fs.access(path.join(path.dirname(app.getPath('exe')),'Uninstall CBIM Desktop.exe')).then(()=>true,()=>false);
   if(installed&&!app.requestSingleInstanceLock()){app.quit();return}
-  updates=new DesktopUpdates(app.getVersion(),typeof release.notes==='string'?release.notes:'',installed,latestDesktopRelease,new NsisUpdateInstaller());
+  updates=new DesktopUpdates(app.getVersion(),typeof release.notes==='string'?release.notes:'',installed,latestDesktopRelease,new NsisUpdateInstaller(),async()=>{terminals.closeAll();await application.shutdown();quitting=true});
   application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install),path.join(install,'design'),systemSecretCipher,{controlledFiles:createControlledFileTransport()});await application.init();
   window=new BrowserWindow({width:1320,height:860,minWidth:760,minHeight:520,title:'CBIM Assistant',icon:path.join(install,'branding','cbim.png'),webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   window.webContents.setWindowOpenHandler(()=>({action:'deny'}));window.webContents.on('will-navigate',(event)=>event.preventDefault());
@@ -45,6 +45,7 @@ app.whenReady().then(async()=>{
   // 拖放走独立 IPC；与原生选择器共用快照和 .cbim 边界检查。
   ipcMain.handle('cbim:drop',async(event,request:{id:string;paths:string[]})=>{
     if(event.sender!==window.webContents||event.senderFrame!==window.webContents.mainFrame)throw Error('UNAUTHORIZED');
+    if(updates?.status().phase==='installing')return {ok:false,error:{code:'UPDATING',message:'正在关闭任务并安装更新，请稍后重新打开。'}};
     try{if(!request||!Array.isArray(request.paths)||!request.paths.length||request.paths.length>12||request.paths.some(p=>typeof p!=='string'))throw Error('无效文件列表');
       const inputs=new ChatInputs(application.workspace(request.id));const items=[];
       for(const file of request.paths){const stat=await fs.stat(file);items.push(await inputs.path(stat.isDirectory()?'folder':'file',file))}return {ok:true,value:items};
@@ -53,7 +54,7 @@ app.whenReady().then(async()=>{
   ipcMain.handle('cbim:call',async(event,action:string,args:unknown)=>{if(event.sender!==window.webContents||event.senderFrame!==window.webContents.mainFrame)throw Error('UNAUTHORIZED');
     if(action.startsWith('desktop.updates.'))try{
       if(args!==undefined&&args!==null&&(!(typeof args==='object')||Array.isArray(args)||Object.keys(args).length))throw Error('更新操作不接受地址、路径或命令');
-      const value=action==='desktop.updates.status'?updates!.status():action==='desktop.updates.check'?await updates!.check():action==='desktop.updates.download'?await updates!.download():action==='desktop.updates.install'?await updates!.install(async()=>{terminals.closeAll();await application.shutdown();quitting=true}):(()=>{throw Error('未知更新操作')})();
+      const value=action==='desktop.updates.status'?updates!.status():action==='desktop.updates.check'?await updates!.check():action==='desktop.updates.download'?await updates!.download():action==='desktop.updates.install'?await updates!.install():(()=>{throw Error('未知更新操作')})();
       return {ok:true,value};
     }catch{return {ok:false,error:{code:'DESKTOP_UPDATE',message:'更新操作未能完成，请检查当前状态后重试。'}}}
     if(updates?.status().phase==='installing')return {ok:false,error:{code:'UPDATING',message:'正在关闭任务并安装更新，请稍后重新打开。'}};
@@ -107,6 +108,7 @@ app.whenReady().then(async()=>{
     await application.shutdown();app.quit();
   }
 }).catch(e=>{dialog.showErrorBox('CBIM Assistant 启动失败',e.message+'\n请检查用户数据目录权限及程序资源。');app.exit(1)});
-app.on('before-quit',event=>{if(!quitting&&application){event.preventDefault();quitting=true;terminals.closeAll();void application.shutdown().then(()=>app.quit()).catch(e=>{quitting=false;dialog.showErrorBox('工作区关闭失败',e.message+'\n请保留运行窗口并重试。')})}});
+// 普通退出先取消更新流程，不能等排空完成后的 will-quit，避免排空期间自动安装继续推进。
+app.on('before-quit',event=>{if(!quitting&&application){event.preventDefault();quitting=true;updates?.close();terminals.closeAll();void application.shutdown().then(()=>app.quit()).catch(e=>{quitting=false;dialog.showErrorBox('工作区关闭失败',e.message+'\n请保留运行窗口并重试。')})}});
 app.on('window-all-closed',()=>app.quit());
 app.on('will-quit',()=>updates?.close());

@@ -3,7 +3,7 @@ import {mainAgentId,mainAgentInstructions} from '../src/backend/scheduler-engine
 import {defaultExecutorId,defaultExecutorInstructions} from '../src/backend/scheduler-engine/context/default-executor';
 import {loopInstructions} from '../src/backend/scheduler-engine/context/team-workflow';
 
-test('主会话不执行业务，缺少自定义执行者时使用内置角色而不自行实现',()=>{
+test('Team 及旧无模式主会话不直接执行业务，独立派发保留角色边界',()=>{
   expect(mainAgentId).toBe('cbim:main');
   for(const required of ['当前主会话的唯一调度 Agent','对于业务生产，主 Agent 永远只调度','真实业务模块','Team 成员','cbim:executor','cbim_dispatch_task','cbim_dispatch_inspect','结束本轮让调度引擎继续执行','核实真实回执','可靠调度及运行/工具事件'])expect(mainAgentInstructions).toContain(required);
   expect(mainAgentInstructions).not.toContain('cbim_dispatch_self');

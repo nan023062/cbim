@@ -1,6 +1,10 @@
+### 项目根查询协议
+
+模块 registry/get 的工具协议升为 v2：registry 必须提供 `projectRoot`；详情为真实文件模块与 builtin 根的严格判别联合。内置根没有 definitionFile，以内联正文表达来源；原真实模块字段保持。输出校验不授予写入或正式委派资格。
+
 ### 产品反馈内置流程
 
-`builtinSkills` 发布 `bug-feedback` 与 `feature-wish`，正文来自应用打包资源 `design/runtime/`，通过只读别名及 `Builtins.read` 返回内容哈希和解析引用。两套正文定义格式与直接提交流程；读取正文不产生 Issue，实际提交由桌面已授权的独立 `FeedbackTools` 执行，不创建业务任务或修改知识。
+`builtinSkills` 发布 `bug-feedback` 与 `feature-wish`，正文来自应用打包资源 `design/runtime/`，通过只读别名及 `Builtins.read` 返回内容哈希和解析引用。两套正文只要求一句简述，参考格式的其余内容均自愿，缺项不追问；读取正文不产生 Issue，实际提交由桌面已授权的独立 `FeedbackTools` 执行，不创建业务任务或修改知识。
 
 ```mermaid
 classDiagram

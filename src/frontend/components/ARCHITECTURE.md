@@ -12,6 +12,8 @@
 | --- | --- |
 | [BrandMark.tsx](BrandMark.tsx) | 无业务状态的 CBIM 产品标识，供外壳与欢迎页复用。 |
 | [Empty.tsx](Empty.tsx) | 各页面复用的空状态布局。 |
+| [graph-view-controls.css](graph-view-controls.css) | 对应界面的布局与视觉样式。 |
+| [GraphViewControls.tsx](GraphViewControls.tsx) | 业务图与团队树共用的局部展开、折叠和字号图标操作。 |
 | [Icon.tsx](Icon.tsx) | 无业务状态的 SVG 图标组件。 |
 | [repository-scope.css](repository-scope.css) | 对应界面的布局与视觉样式。 |
 | [RepositoryScopeDetails.tsx](RepositoryScopeDetails.tsx) | 在主对话工具详情与执行核实报告中展示可信回执的资源仓库范围。 |
@@ -40,6 +42,27 @@ class N_src_frontend_components_Empty_tsx["Empty.tsx"] {
 ```
 
 直接依赖：[Icon.tsx](Icon.tsx)。
+
+### graph-view-controls.css
+
+```mermaid
+classDiagram
+class N_src_frontend_components_graph_view_controls_css["graph-view-controls.css"] {
+  <<stylesheet>>
+}
+```
+
+### GraphViewControls.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_components_GraphViewControls_tsx["GraphViewControls.tsx"] {
+  <<component>>
+  +GraphViewControls()
+}
+```
+
+直接依赖：[Icon.tsx](Icon.tsx)、[graph-view-controls.css](graph-view-controls.css)。
 
 ### Icon.tsx
 
@@ -95,6 +118,12 @@ class N_src_frontend_components_Empty_tsx["Empty.tsx"] {
 class N_src_frontend_components_Icon_tsx["Icon.tsx"] {
   <<component>>
 }
+class N_src_frontend_components_GraphViewControls_tsx["GraphViewControls.tsx"] {
+  <<component>>
+}
+class N_src_frontend_components_graph_view_controls_css["graph-view-controls.css"] {
+  <<stylesheet>>
+}
 class N_src_frontend_components_RepositoryScopeDetails_tsx["RepositoryScopeDetails.tsx"] {
   <<component>>
 }
@@ -102,6 +131,8 @@ class N_src_frontend_components_repository_scope_css["repository-scope.css"] {
   <<stylesheet>>
 }
 N_src_frontend_components_Empty_tsx ..> N_src_frontend_components_Icon_tsx : 导入依赖
+N_src_frontend_components_GraphViewControls_tsx ..> N_src_frontend_components_Icon_tsx : 导入依赖
+N_src_frontend_components_GraphViewControls_tsx ..> N_src_frontend_components_graph_view_controls_css : 导入依赖
 N_src_frontend_components_RepositoryScopeDetails_tsx ..> N_src_frontend_components_repository_scope_css : 导入依赖
 ```
 
@@ -120,8 +151,10 @@ N_src_frontend_components_RepositoryScopeDetails_tsx ..> N_src_frontend_componen
 
 # 通用展示组件
 
-`Icon` 的垂直三点与编辑笔是无状态矢量标识，工作区菜单和两处对话条目共用，不引入外壳或运行依赖。
+`Icon` 的垂直三点、编辑笔与删除桶是无状态矢量标识，工作区菜单和两处对话条目共用，不引入外壳或运行依赖。架构卡片图标按钮自带 title 与 aria-label，图标本身对辅助技术隐藏。
 
 `RepositoryScopeDetails` 仅消费 Bridge 的严格公开仓库范围。主对话从运行授权/真实回执提供 scope，执行报告从后端已核实的工具条目提供同一协议；组件不读取模型参数中的 scope，也不访问服务。非法范围或旧日志缺范围时不补造仓库身份。
 
 显示仓库、链接器、连接实例和操作，但不显示地址/令牌、不提供授权按钮。范围是该次调用的历史记录，不证明当前连接仍可用；资源资料不等于业务文件或验收证据。
+
+`GraphViewControls` 是业务图与团队树共用的纯展示组件，负责 12–20px 字号边界及四个有名称的图标按钮，状态与回调由调用方持有；不访问 IPC、知识或运行时。图内标题使用流式布局，窄栏换行后仍靠右，不覆盖内容。

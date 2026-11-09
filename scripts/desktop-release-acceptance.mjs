@@ -7,14 +7,12 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {spawn, execFileSync} from 'node:child_process';
 import {_electron as electron} from 'playwright-core';
+import {acceptanceInputs} from './desktop-acceptance-inputs.mjs';
 
 assert.equal(process.platform, 'win32');
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Only run on an isolated GitHub Actions runner');
 assert.equal(process.env.GITHUB_REPOSITORY, 'nan023062/cbim');
-const version = process.env.CBIM_ACCEPTANCE_VERSION, commit = process.env.CBIM_ACCEPTANCE_COMMIT;
-const expected = process.env.CBIM_ACCEPTANCE_SHA256, mode = process.env.CBIM_ACCEPTANCE_MODE;
-assert.match(version, /^0\.\d+\.\d+$/); assert.notEqual(version, '0.1.1');
-assert.match(commit, /^[a-f0-9]{40}$/); assert.match(expected, /^[a-f0-9]{64}$/); assert.ok(['candidate', 'online'].includes(mode));
+const {version, previousVersion, commit, expected, mode} = acceptanceInputs(process.env);
 const repo = 'nan023062/cbim', root = path.resolve('test-results/desktop-acceptance');
 const install = path.join(root, 'app'), exe = path.join(install, 'CBIM Desktop.exe'), userRoot = path.join(root, 'user');
 await fs.mkdir(root, {recursive: true});
@@ -44,7 +42,7 @@ async function download(target) {
   await save(`release-${target}`, {id: release.id, tag: release.tag_name, draft: release.draft, asset: {name, size: asset.size, digest: asset.digest}});
   return file;
 }
-const candidate = await download(version), old = await download('0.1.1');
+const candidate = await download(version), old = await download(previousVersion);
 async function setup(file, target) {
   await save(`install-intent-${target}`, {file, install, sha256: await sha(file), at: new Date().toISOString()});
   await new Promise((resolve, reject) => {
@@ -78,8 +76,10 @@ async function waitPhase(page, phase) {
 }
 async function notes(page) {
   await page.getByRole('button', {name: '用户菜单', exact: true}).click();
-  await page.getByRole('menuitem', {name: '最近一次更新', exact: true}).click();
-  const dialog = page.getByRole('dialog', {name: '最近一次更新', exact: true}); await dialog.waitFor();
+  const combined = page.getByRole('menuitem', {name: '版本与更新', exact: true});
+  const title = await combined.count() ? '版本与更新' : '最近一次更新';
+  await page.getByRole('menuitem', {name: title, exact: true}).click();
+  const dialog = page.getByRole('dialog', {name: title, exact: true}); await dialog.waitFor();
   assert.ok((await dialog.innerText()).includes(`当前版本 ${version}`)); assert.match(await dialog.innerText(), /未签名/);
   await page.screenshot({path: path.join(root, `${mode}-notes.png`)}); await page.keyboard.press('Escape');
 }
@@ -88,7 +88,7 @@ try {
     await setup(candidate, version); let page = await launch(path.join(root, 'fresh-user'));
     assert.equal((await status(page)).currentVersion, version); assert.equal((await status(page)).enabled, true); await notes(page); await close();
   }
-  await setup(old, '0.1.1'); let page = await launch(); assert.equal((await status(page)).currentVersion, '0.1.1');
+  await setup(old, previousVersion); let page = await launch(); assert.equal((await status(page)).currentVersion, previousVersion);
   const profile = {name: 'Release acceptance', api: 'openai-completions', baseUrl: `http://127.0.0.1:${server.address().port}/v1`, auth: 'none', defaultModel: 'acceptance', models: [{id: 'acceptance', name: 'Acceptance', enabled: true, contextWindow: 32768, maxTokens: 1024, reasoning: false, pricing: {input: 0, output: 0, cacheRead: 0, cacheWrite: 0}}]};
   await page.evaluate(profile => window.cbim.call('models.save', {profile}), profile);
   const workspace = path.join(root, 'project'); await fs.mkdir(workspace);
@@ -100,7 +100,7 @@ try {
     if (summary.status === 'completed') break; if (['failed', 'interrupted', 'cancelled'].includes(summary.status)) throw Error(JSON.stringify(summary)); await pause(500);
   }
   assert.equal(summary.status, 'completed'); assert.equal(requests, 1);
-  const marker = `from-0.1.1-to-${version}`;
+  const marker = `from-${previousVersion}-to-${version}`;
   await page.evaluate(marker => localStorage.setItem('cbim.release-retention', marker), marker);
   await fs.writeFile(path.join(userRoot, 'acceptance-marker.txt'), marker);
   let restarted;
@@ -115,9 +115,9 @@ try {
     };
     await download();
     const cache = path.join(process.env.LOCALAPPDATA, 'cbim-desktop-updater/pending', path.basename(candidate)); assert.equal(await sha(cache), expected);
-    await close(); await pause(1000); page = await launch(); assert.equal((await status(page)).currentVersion, '0.1.1');
+    await close(); await pause(1000); page = await launch(); assert.equal((await status(page)).currentVersion, previousVersion);
     await waitPhase(page, 'available'); await download();
-    await save('online-install-intent', {from: '0.1.1', to: version, sha256: expected, install, userRoot});
+    await save('online-install-intent', {from: previousVersion, to: version, sha256: expected, install, userRoot});
     await page.getByRole('button', {name: '停止任务并重启安装', exact: true}).click(); app = undefined;
     const quoted = exe.replaceAll("'", "''");
     for (let n = 0; n < 120; n++) {
@@ -144,7 +144,7 @@ try {
   assert.equal((await status(page)).enabled, true);
   if (mode === 'online') { const current = await page.evaluate(() => window.cbim.call('desktop.updates.check')); assert.equal(current.phase, 'current'); }
   await close();
-  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: '0.1.1', freshInstall: mode === 'candidate', onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, noReplay: true}, modelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
+  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, freshInstall: mode === 'candidate', onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, noReplay: true}, modelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
   console.log(JSON.stringify({success: true, mode, version, sha256: expected, retained: true}));
 } catch (error) {
   let updateState;

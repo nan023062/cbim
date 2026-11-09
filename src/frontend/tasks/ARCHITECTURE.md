@@ -53,7 +53,7 @@
 | [member-help-state.ts](member-help-state.ts) | 为成员动态、任务节点和详情提供同一份求助交接投影与中文分类。 |
 | [member-validation-state.ts](member-validation-state.ts) | 从当前成员公开事件推导结构验证展示状态，保留当时不符合与后续通过的各次事实。 |
 | [member-validation.css](member-validation.css) | 对应界面的布局与视觉样式。 |
-| [MemberActivity.tsx](MemberActivity.tsx) | 在主对话中展示最近的成员任务与公开执行动态，并链接到对应任务节点详情。 |
+| [MemberActivity.tsx](MemberActivity.tsx) | 展示成员任务与公开执行动态，并提供派发工具旁的紧凑内联形式及原任务详情入口。 |
 | [MemberArtifactReport.tsx](MemberArtifactReport.tsx) | 成员节点详情中的独立文件基线面板，手动列出记录并复核明确选择的一份。 |
 | [MemberCancellationNotice.tsx](MemberCancellationNotice.tsx) | 在主对话成员卡和任务详情中显示主调度已经提交的未启动撤销事实。 |
 | [MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx) | 在主对话和任务详情展示检查点、续执行预约、显式放弃与新旧轮次关系。 |
@@ -1511,6 +1511,7 @@ classDiagram
 class N_src_frontend_tasks_MemberActivity_tsx["MemberActivity.tsx"] {
   <<component>>
   +memberTaskLabel()
+  +MemberActivityCard()
   +MemberActivity()
 }
 ```
@@ -3883,7 +3884,7 @@ N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts 
 
 #### 成员求助交接
 
-`member-help-state` 只投影后端安全结算后保存的 `TaskNode.help`：节点必须 blocked、没有活动运行和交付候选，求助的 workspace/root/task/agent/instance/session/plan 必须匹配节点，run 必须已登记。普通受阻、取消、失败、结果未知或工具返回的 staged 文字不会被补造成求助交接。主对话 `MemberActivity` 和任务节点 `DispatchGraph` 共用该投影，显示“需要主调度协助”；图仍是原任务节点与既有派发连线，不添加结果反向边或假候选。
+`member-help-state` 只投影后端安全结算后保存的 `TaskNode.help`：节点必须 blocked、没有活动运行和交付候选，求助的 workspace/root/task/agent/instance/session/plan 必须匹配节点，run 必须已登记。普通受阻、取消、失败、结果未知或工具返回的 staged 文字不会被补造成求助交接。主对话的内联 `MemberActivityCard` 和任务节点 `DispatchGraph` 共用该投影，显示“需要主调度协助”；图仍是原任务节点与既有派发连线，不添加结果反向边或假候选。
 
 `MemberHelpNotice` 同时服务成员动态与 `MemberTaskDetail`，只读显示求助种类、原因、待主调度处理的问题、已尝试工具引用及记录时间。明确本轮成员执行已结束、求助已交接，后续由主调度重新安排；这是交接记录，不推断当前仍在等待、原成员已恢复、问题已解决或得到人工批准。工具引用不等于执行成功或验收证据。详情只展示所选 run 对应的求助，不能从另一轮借用；组件独立于成员正文读取，日志加载失败不会隐藏已提交交接。此组件没有执行、恢复旧成员、改变权限或批准按钮，也不新增轮询和后端请求。
 
@@ -4178,6 +4179,12 @@ IsolatedExecutionPanel位于原成员运行的独立核实区域；挂载、切�
 
 `MemberRunTranscript` 直接组合 `MemberProgressSummary`，消费原公开 `RunSummary.taskProgress` 展示当前步骤、证据引用数量与候选限制。紧凑卡优先显示正在执行的步骤，其余可展开；`reported_done` 只标“已报告”，不解释成已验收。运行正文、私有推理筛选、增量读取及结算后停止轮询仍由原服务与 Hook 负责；组件不发新请求，不更改目标或执行状态。
 
+`useSessionGraph` 按读取状态、作用域和历史选择缓存公开投影，重复的空图/同一读取错误不替换状态。草稿键入不导致整段历史工具卡重绘；实际图、周期、选中详情、加载或错误变化仍发布新投影，原完整读取屏障、迟到隔离与刷新回调不变。消费者不得原地改写投影或通过忽略恢复上下文来复用过期权限/模型。
+
 ### 自动与团队协作模式
 
 AutomaticExecutionDetails 供目标责任分配及任务详情共用，显示兜底原因与原模型，并按工作区／scope／模块核归属。自动记录不显示 legacy 岗位缺失，不调用长期岗位比较接口；所有验收和续执行入口继续依据后端真实状态。
+
+### 内联成员观察
+
+MemberActivityCard 的 inline 形式默认只显示图上的状态、任务和候选摘要，展开才启用 useMemberRun；折叠清理在途观察并忽略迟到回包，不停止任务。原帮助、负责人、撤销、依赖修订和检查点通知共用同一正文；旧列表形式保留供独立消费者使用，主对话不再另挂列表。

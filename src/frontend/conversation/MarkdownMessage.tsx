@@ -2,9 +2,10 @@
  * 作用定位：将 Agent 消息渲染成排版后的正文、列表、表格与可复制代码块。
  * 设计原因：沿用 Cindy 的 react-markdown/GFM/高亮流水线及流式语法修复；
  * CBIM 通过受控 IPC 打开链接，不执行模型返回的 HTML 或脚本。
+ * 更新边界：原文、流式标记或工作区身份变化才重排正文；组件自身复制与链接错误状态仍可独立更新。
  * 来源：Cindy MarkdownRenderer.tsx（Apache-2.0），仅移植渲染核心；许可见 docs/legal。
  */
-import {Children,isValidElement,useState,type ReactNode} from 'react';
+import {Children,isValidElement,memo,useState,type ReactNode} from 'react';
 import ReactMarkdown,{defaultUrlTransform} from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -18,7 +19,7 @@ function CodeBlock({children}:{children?:ReactNode}){
   return <div className="chat-code-block"><div className="chat-code-header"><span>{language||'代码'}</span><button onClick={()=>void navigator.clipboard.writeText(plainText(children)).then(()=>setStatus('已复制')).catch(()=>setStatus('复制失败'))}>{status||'复制代码'}</button></div><pre>{children}</pre></div>;
 }
 /** 流式修复仅影响显示；持久化记录和复制消息始终保留原文。 */
-export function MarkdownMessage({text,streaming=false,workspaceId}:{text:string;streaming?:boolean;workspaceId:string}){
+export const MarkdownMessage=memo(function MarkdownMessage({text,streaming=false,workspaceId}:{text:string;streaming?:boolean;workspaceId:string}){
   const [error,setError]=useState('');
   return <div className="chat-markdown"><ReactMarkdown urlTransform={url=>/^[a-z]:[\\/]/i.test(url)?url:defaultUrlTransform(url)} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} skipHtml components={{
     pre:({children})=><CodeBlock>{children}</CodeBlock>,
@@ -26,4 +27,4 @@ export function MarkdownMessage({text,streaming=false,workspaceId}:{text:string;
     img:({alt,src})=><a href={src} onClick={e=>{e.preventDefault();if(src)void window.cbim.call('chat.openLink',{id:workspaceId,target:src}).catch((e:Error)=>setError(e.message))}}>{alt||'查看图片'}</a>,
     table:({children})=><div className="chat-table-scroll"><table>{children}</table></div>,
   }}>{streaming?repairStreamingMarkdown(text):text}</ReactMarkdown>{error&&<p role="alert">{error}</p>}</div>;
-}
+});

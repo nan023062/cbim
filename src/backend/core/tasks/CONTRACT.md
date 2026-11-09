@@ -779,3 +779,7 @@ isolated-execution-recovery只公开原运行、执行ID、报告basis、资源�
 ### 自动与团队协作模式
 
 DispatchScope.executionPolicy 自创建后不可变；goal assignment、TaskNode、PreparedDispatchKnowledge、TaskSpec 单独保存 fallbackBinding。automatic-execution-rules 核原周期与当前无人负责状态；owner-execution-invariants 在新增计划／派发／领取门禁选真实岗位或兜底分支。回执、日志、Workflow、检查点、依赖及人工接受主体都保留相同执行来源。仅匹配 no_modules 的 cbim:project 可以没有维护人，真实模块不获豁免。受控写沿用 ownerBindingHash 字段名以兼容旧审计，其值取实际绑定严格规范化后的指纹。
+
+### 派发回执的纯结构
+
+dispatch-receipt 承载主工具和界面共用的严格派发输出结构；main-tool-output 保持原导出并继续核对 canonical 命令、原请求及业务归属。将纯 DTO 校验与含哈希的业务校验分开，使界面无需后端实现；queued/waiting 仍只表示待办提交。

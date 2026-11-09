@@ -1,3 +1,7 @@
+### 公开文字与工具的因果关联
+
+`message_end` 的 assistant 正文仅保存公开 text、原计量和该原生消息内的 `toolCallIds`，不保存 thinking 或参数。HTTP `/gate` 与 stdout 事件是独立到达通道，门禁可能先于已生成文字写入 canonical；日志继续保留真实收到的顺序，界面用明确 ID 还原本段正文与调用的关系。旧日志不补造关联；这份元数据不改变工具批准、执行或回执核实。
+
 ### 宿主工具装配与实际活动清单
 
 `PiEngine` 启动桥后记录 `engine.status` / `metric:tool-catalog` / `stage:prepared` 的期望内部工具名；受控扩展在 `before_agent_start` 从 `pi.getActiveTools()` 取真实活动名称，经随机令牌保护的 `/tools` 上报。桥比较当前内部注册项，记录 active／expected／missing，缺项返回 `TOOL_CATALOG_MISMATCH`，由扩展错误和运行日志保留。该核对不是模型文字推断，也不使用只覆盖知识族的 catalog。

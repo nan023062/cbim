@@ -1,3 +1,11 @@
+### 桌面更新状态
+
+`DesktopUpdateStatus.checkedAt` 是最近完成的检查时间，包括失败尝试；`error` 区分离线或失败，不能把有时间误作已是最新版。`installing` 包含可见重启提示与业务排空；`ready` 表示已经校验但安装未完成，等待明确重试。只有新进程的 currentVersion 证明升级。公开协议不包含安装路径、命令、凭据或可修改的更新源。
+
+### 项目根显示契约
+
+`workspace.ts` 重导出纯 `projectRootModuleId` 与 `projectRootModule`，让业务架构与只读知识查询使用同一内置身份。没有新增 IPC 或写入能力，不把项目根转成真实知识文件或可分配岗位。
+
 ### 检查点交接放弃
 
 `dispatch` 重导出 Core 的严格 `AbandonCheckpointInput`、`CheckpointAbandonment` 和 `AbandonCheckpointReceipt` 及对应 Schema。任务公开原处置审计，不公开 native、canonical 路径或历史证明私有内容。这里只提供序列化契约；没有新增让渲染进程冒主身份发起处置的 IPC，模型工具仍由可信主运行闭包注入身份。回执只证明原待办取消，不证明新任务启动、成果通过或副作用回滚。
@@ -304,3 +312,7 @@ isolated-executions只重导出Core的公开核实和清理协议，不引用Mai
 ### 自动与团队协作模式
 
 owner-execution 导出纯自动绑定类型及匹配函数，供界面核历史归属；没有配置写入、文件或大脑运行实现依赖。
+
+### 内联派发回执
+
+dispatch 只导出 Core dispatch-receipt 的纯结构与 toolReceiptSchema，不导入主工具业务核实或哈希依赖。前端仍须核对原运行、调用、主实例与图游标；Schema 通过不授予执行权。

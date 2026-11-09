@@ -7,12 +7,11 @@ import type {ModuleOwnershipIdentity,ModuleOwnershipPage,ModuleOwnershipDetail,M
 import {isModuleOwnershipSourceAdoption} from '../../bridge/contracts/module-ownership';
 import type {WorkspaceMemberList} from '../../bridge/contracts/workspace-members';
 import {checkedWorkspaceMemberList} from '../team/workspace-member-state';
-import {ModuleOwnershipCommandPool,checkedModuleOwnershipPage,checkedModuleOwnershipDetail,checkedModuleOwnershipPreview} from './module-ownership-state';
+import {moduleOwnershipCommands as commands,checkedModuleOwnershipPage,checkedModuleOwnershipDetail,checkedModuleOwnershipPreview} from './module-ownership-state';
 import {ModuleOwnershipDetailView,ownershipStatus} from './ModuleOwnershipDetail';
 import {KnowledgeSourceSelection} from '../knowledge/KnowledgeSourceDetails';
 import './module-ownership.css';
 
-const commands=new ModuleOwnershipCommandPool();
 const failure=(error:unknown)=>error instanceof Error?error.message:String(error);
 /** memberId 只限制反查；initialMemberId 仅在首次打开原模块时尝试选择真实启用岗位，不能授权提交。切换身份须换 key。 */
 export interface ModuleOwnershipPanelProps {identity:ModuleOwnershipIdentity;initialModuleId?:string;initialMemberId?:string;memberId?:string;onClose:()=>void;/** 上层组合岗位登记，避免责任面板反向依赖岗位管理组件。 */registration?:{agents:Array<{id:string;name:string}>;onSelect:(moduleId:string,agentId:string)=>void}}

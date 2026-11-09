@@ -1,6 +1,6 @@
 ### 根标识与正式兜底
 
-`automatic-execution.ts` 复用 workspace 的 `projectRootModuleId` 作为历史 `implicitProjectModuleId`。根始终可查询，但正式 no_modules 兜底仍只适用于真实模块为空的项目；有模块时不以根绕过负责人、维护关系或 Workflow。Auto 主会话直接工作与成员兜底是不同执行路径，不制造岗位或成员绑定。
+`automatic-execution.ts` 复用 workspace 的 `projectRootModuleId` 作为历史 `implicitProjectModuleId`。根始终可查询，但正式 no_modules 兜底仍只适用于真实模块为空的项目；有模块时不以根绕过负责人或 Workflow。Auto 主会话直接工作与成员兜底是不同执行路径，不制造岗位或成员绑定。
 
 ### 负责人执行选择
 
@@ -18,7 +18,7 @@
 
 静态 Agent 与动态 AgentInstance 分开：应用级索引由 `scheduler-engine/runtime/GlobalRuntimeManager` 统一观察，Team 不反向引用它。成员权威登记仍来自工作区派发事务。全局监管 epoch 仅隔离观察回调，不替代未来执行租约的 leaseEpoch；恢复出的历史活动不代表当前执行活跃。
 
-- `Team.agents()`、`Team.agent()` 和 `Team.people()` 继续提供组织、角色定义、有效 Skill 与真人责任信息；角色定义不包含运行进程或可变会话状态。
+- Team.agents() 和 Team.agent() 提供组织、角色定义及有效 Skill；Team.people() 与 cbim_people_list 已删除，authorPeople 固定为空数组以兼容旧响应。角色不包含运行进程或可变会话状态。
 - Team 根与小组是组织节点，只有叶子是 Agent。成员继承自身与所有祖先的 Skill，角色解析仍服从现有冲突校验。
 - 默认主 Agent 是内置角色 `cbim:main`，与自定义成员使用同一大脑、工具策略和执行内核。主 Agent 的调度职责只在其主会话开放，不享有隐含的业务工具权限提升，也不是其它成员的父执行进程。
 - 主 Agent 负责调度与团队/业务知识管理，可经受控知识服务 CRUD；不能承接正式业务执行。内置静态 `cbim:executor` 可以显式登记成岗位并分配模块责任后执行，不是缺少负责人时的自动回退。执行者保留自己的状态、Session、模型思考与环境探索，按目标模块工作并返回证据或缺口，不获得派发权。
@@ -118,8 +118,8 @@ interface AgentSessionBinding extends AgentIdentity {
 
 #### 对调度层的约束
 
-1. 所有入口统一经过成员解析与任务分析，包括用户对话、其它 Agent 的任务消息和结果回复。普通寒暄不强制制造业务派发，但需要执行的任务必须先定位业务模块及维护责任。
-2. 一项执行任务固定一个接收成员、多个模块绑定与任务目标；真实人类责任、角色成员与维护模块的身份分别保存。角色名不能替代真人责任人标识。
+1. 所有入口统一经过成员解析与任务分析，包括用户对话、其它 Agent 的任务消息和结果回复。普通寒暄不强制制造业务派发，但需要执行的任务必须先定位业务模块及岗位负责人。
+2. 一项执行任务固定一个接收成员、多个模块绑定与任务目标；岗位、静态角色与执行实例各自表达身份，不要求真人维护声明。
 3. 新任务按当前知识版本准备角色配置；已有运行继续使用其固定配置。知识改变不应静默改写运行中的身份、Skill 或权限。
 4. 接收派发、接受结果与最终业务验收是不同事实。接收方返回结果只说明结果已交付，不能直接把发送方任务或整张图标为验收通过。
 5. 重复 `messageId` 不重复入队，重复 `commandId` 返回已提交结果。同一任务重试保留 `taskId`，新的执行尝试使用新的 `runId`。

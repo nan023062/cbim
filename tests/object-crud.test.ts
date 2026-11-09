@@ -21,7 +21,7 @@ it('内部知识服务真实对象 CRUD、父子模块、Skill 继承与仅本�
     await mutate([{kind:'module',action:'delete',id:child},{kind:'workflow',action:'delete',id:flow},{kind:'skill',action:'delete',id:own}]);
     expect((await call('cbim_module_get',{id:module})).definition.children).toEqual([]);
     await mutate([{kind:'agent',action:'delete',id:agent},{kind:'module',action:'delete',id:module},{kind:'skill',action:'delete',id:shared}]);
-    expect((await call('cbim_module_registry')).modules).toEqual([]);expect((await call('cbim_people_list')).people).toEqual([]);
+    expect((await call('cbim_module_registry')).modules).toEqual([]);await expect(call('cbim_people_list')).rejects.toThrow();
     await expect(call('cbim_agent_get',{id:agent})).rejects.toMatchObject({code:'OBJECT_NOT_FOUND'});
   }finally{await f.cleanup()}
 });

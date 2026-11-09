@@ -95,7 +95,7 @@ scope 示例（仅示意写法，须按实际内容填写）：“插件集成�
 | id | 相对项目根的模块目录路径，统一使用 / |
 | name、summary | 名称与 100～250 个非空白字符的单行检索摘要 |
 | children | 直属子模块 id 数组，无子模块时为 []；完整、无重复且与目录结构一致 |
-| authors | 真人作者 id 数组；无重复，同一已知组；未知为 [] |
+| authors | 作者来源字符串数组；无重复，不关联真人花名册或组；未知为 [] |
 | overview | 固定为 module.md，引用唯一知识正文 |
 | workflows | name、reference 对象数组；reference 固定为 workflows/<工作流名>/workflow.md；无流程时为 [] |
 | sources | location、scope 对象数组；location 仅引用文件夹，scope 限定本模块直接维护的范围 |

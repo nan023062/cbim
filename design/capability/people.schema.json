@@ -38,5 +38,7 @@
         "additionalProperties": false
       }
     }
-  }
+  },
+  "deprecated": true,
+  "description": "仅供理解旧版文件；当前运行时和维护脚本不加载、生成或校验真人花名册。"
 }

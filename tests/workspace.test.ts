@@ -14,11 +14,11 @@ describe('真实工作区与内部知识服务',()=>{
     const entry=await f.app.catalog.add(f.a);expect(await exists(path.join(f.a,'.cbim'))).toBe(false);
     const w=await f.app.open(entry.id),root=path.join(f.a,'.cbim');
     expect((await fs.readdir(root)).sort()).toEqual(['README.md','connectors','project.json','team','workspace']);
-    expect((await fs.readdir(path.join(root,'team'))).sort()).toEqual(['people.json','registry.json','skills','skills.json']);
+    expect((await fs.readdir(path.join(root,'team'))).sort()).toEqual(['registry.json','skills','skills.json']);
     expect(await fs.readdir(path.join(root,'team/skills'))).toEqual([]);
     expect(await fs.readdir(path.join(root,'workspace'))).toEqual(['registry.json']);
     expect(await fs.readdir(path.join(root,'connectors'))).toEqual(['registry.json']);
-    for(const [file,value] of Object.entries({'project.json':{formatVersion:1,rulesVersion:1},'team/registry.json':{groups:[]},'team/people.json':{people:[]},'team/skills.json':{skills:[]},'workspace/registry.json':{modules:[]},'connectors/registry.json':{connectors:[]}}))expect(await readJson(path.join(root,file))).toEqual(value);
+    for(const [file,value] of Object.entries({'project.json':{formatVersion:1,rulesVersion:1},'team/registry.json':{groups:[]},'team/skills.json':{skills:[]},'workspace/registry.json':{modules:[]},'connectors/registry.json':{connectors:[]}}))expect(await readJson(path.join(root,file))).toEqual(value);
     expect((await w.snapshot()).validation?.structural).toBe(true);
     expect(await exists(path.join(root,'entry.md'))).toBe(false);
     expect((await w.read()).files.some(f=>f.path==='.cbim/entry.md')).toBe(false);

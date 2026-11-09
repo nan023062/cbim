@@ -7,7 +7,7 @@ description: 通过 CBIM 内部知识工具定位权威知识、核实证据并�
 遵循[通用规范](builtin:common-rules)。调用本 Skill 只取得流程，不代表已完成调查。
 
 1. 明确问题、范围和需要回答的决定；核对 cbim_workspace_identity。恢复任务先核实当前版本与已有结论。
-2. 业务问题先 cbim_module_registry 查询候选模块，再用返回 ID 调用 cbim_module_get，取得知识正文与本模块 Workflow。能力问题先 cbim_agent_registry、cbim_people_list，再 cbim_agent_get 获取专业定义、原则及继承 Skill。作者团队是定位线索，不等于授权。
+2. 业务问题先 cbim_module_registry 查询候选模块，再用返回 ID 调用 cbim_module_get，取得知识正文与本模块 Workflow。能力问题先 cbim_agent_registry，再 cbim_agent_get 获取专业定义、原则及继承 Skill。authors 只保存来源说明，不要求登记真人，也不等于授权。
 3. cbim_knowledge_search 用于补查相关正文；需要全量校验和版本时 cbim_knowledge_snapshot。不得用旧注册表或缓存冒充当前结果。
 4. 区分正式知识、实际业务产物、观察和推断。必要时在授权范围用当前运行的原生工具核查源码或资产；知识正文是依据，不自动证明业务行为。
 5. 检查答案是否覆盖问题、来源是否一致、关键引用是否可用。Agent 的继承冲突不能静默选择一个版本；模块流程不能从祖先推导继承。

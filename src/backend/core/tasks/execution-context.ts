@@ -4,8 +4,9 @@
  * 作用定位：成员业务执行所需的可持久化知识快照，以及存储与调度共用的完整性校验。
  * 设计原因：实际运行须冻结岗位适配及角色/Skill、模块和流程正文；能力 hash 必须对应原采纳岗位，避免重算上下文指纹掩盖未采纳内容，Core 不反向依赖调度实现。
  * 职责边界：这是执行知识而非权限快照，不含模型凭据；指纹只能证明内容一致，不能代替知识来源、权限和产物基线复核。
+ * 历史维护字段仅兼容原记录；新执行资格不再依赖真人，岗位责任和冻结身份校验继续生效。
  */
-import {automaticExecutionBindingSchema,automaticExecutionBindingMatches,implicitProjectModuleId,type AutomaticExecutionBinding} from '../team/automatic-execution';
+import {automaticExecutionBindingSchema,automaticExecutionBindingMatches,type AutomaticExecutionBinding} from '../team/automatic-execution';
 import {z} from 'zod';
 import {hash} from '../foundation/serialization';
 import {fail} from '../foundation/errors';
@@ -53,7 +54,7 @@ const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-
 const text=z.string().min(1).max(2*1024*1024).refine(value=>!!value.trim());
 const jsonValue:z.ZodType<unknown>=z.lazy(()=>z.union([z.null(),z.string(),z.number().finite(),z.boolean(),z.array(jsonValue),z.record(jsonValue)]));
 const definition=z.record(jsonValue);
-const moduleBinding=z.object({moduleId:id,name:text,knowledgeRevision:id,maintenanceBindingId:id,maintainerPersonIds:z.array(id),workflow:z.discriminatedUnion('kind',[
+const moduleBinding=z.object({moduleId:id,name:text,knowledgeRevision:id,maintenanceBindingId:id.optional(),maintainerPersonIds:z.array(id).optional(),workflow:z.discriminatedUnion('kind',[
   z.object({kind:z.literal('module'),id,version:id}).strict(),
   z.object({kind:z.literal('general'),id,version:id,reason:text}).strict(),
 ])}).strict();
@@ -100,8 +101,6 @@ export function validatePreparedDispatchKnowledge(value:unknown):asserts value i
   for(const module of prepared.modules){
     invalid(JSON.stringify(ordered(parseWorkflowContract(module.workflowText)))!==JSON.stringify(ordered(module.workflowContract)),'冻结 Workflow 执行约定与正文不一致');
     invalid(module.binding.knowledgeRevision!==prepared.knowledgeRevision||module.definition.id!==module.binding.moduleId,'模块定义与执行知识基线不一致');
-    invalid(!module.binding.maintainerPersonIds.length&&!(prepared.fallbackBinding?.reason==='no_modules'&&module.binding.moduleId===implicitProjectModuleId&&module.binding.maintenanceBindingId==='cbim:implicit-project'),'真实模块不能缺少维护人');
-    invalid(new Set(module.binding.maintainerPersonIds).size!==module.binding.maintainerPersonIds.length,'模块维护人不能重复');
     if(module.binding.workflow.kind==='module')invalid(hash(module.workflowText)!==module.binding.workflow.version,'模块 Workflow 正文与冻结版本不一致');
     else {
       invalid(module.binding.workflow.id!=='cbim:general'||module.binding.workflow.version!=='1','不支持的通用任务流程');

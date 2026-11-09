@@ -76,7 +76,7 @@ export class KnowledgeStore {
     // Build a complete template alongside the target, then rename on the same volume.
     const staging=path.join(this.owner.entry.path,`.cbim-init-${this.owner.instanceId}`);await fs.mkdir(staging);
     try{for(const folder of ['workspace','team','team/skills','connectors'])await fs.mkdir(path.join(staging,folder));
-      const initial:Record<string,unknown>={'project.json':{formatVersion:1,rulesVersion:1},'team/registry.json':{groups:[]},'team/people.json':{people:[]},'team/skills.json':{skills:[]},'workspace/registry.json':{modules:[]},'connectors/registry.json':{connectors:[]}};
+      const initial:Record<string,unknown>={'project.json':{formatVersion:1,rulesVersion:1},'team/registry.json':{groups:[]},'team/skills.json':{skills:[]},'workspace/registry.json':{modules:[]},'connectors/registry.json':{connectors:[]}};
       for(const [p,value]of Object.entries(initial))await atomic(path.join(staging,p),json(value));
       await atomic(path.join(staging,'README.md'),`# CBIM 生产与治理体系
 
@@ -100,7 +100,7 @@ workspace 根不创建共享 Workflow 清单或流程目录。
 
 ## 初始内容
 
-项目版本保存在 project.json；team/registry.json、team/people.json、team/skills.json、workspace/registry.json 和 connectors/registry.json 初始均为空清单。
+项目版本保存在 project.json；team/registry.json、team/skills.json、workspace/registry.json 和 connectors/registry.json 初始均为空清单。不再生成真人花名册；已有 people.json 保留在原处，不参与执行资格校验。
 team/skills/ 预留根 Team 的 Skill 正文。领域工程、小组、Agent、模块及流程由团队后续定义，不自动创建示例或导入资源仓库内容。
 skills/、workflows/ 及其资料目录不属于组织或模块节点。
 

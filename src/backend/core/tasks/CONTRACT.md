@@ -99,8 +99,8 @@ type AgentRef = {
 type ModuleBinding = {
   moduleId: string; name: string;
   knowledgeRevision: string;
-  maintenanceBindingId: string; // 已核实维护关系；不能从作者字段自动推断
-  maintainerPersonIds: string[]; // 非空，来自真人花名册；不等于已认证登录人
+  maintenanceBindingId?: string; // 仅兼容旧记录，新任务不生成、不作为资格
+  maintainerPersonIds?: string[]; // 旧历史来源，允许空，不再关联花名册
   workflow: { kind: 'module'; id: string; version: string }
           | { kind: 'general'; id: string; version: string; reason: string };
 };
@@ -145,7 +145,7 @@ type GraphEdge = {
 );
 ```
 
-`nodeId` 区分根锚点与任务：根为 `session:<rootSessionId>`，任务为 `task:<taskId>`。同一静态 Agent 可有多个任务实例；只有明确保存且尚未消费的检查点允许原 task/实例追加一次 run，其余失败、取消、求助或关闭历史不能直接重启。AgentRef 由调度器从真实成员绑定填入，不允许模型冒充 requester。模块无维护关系时拒绝正式派发，返回缺口；普通对话与定位过程仍可继续。
+`nodeId` 区分根锚点与任务：根为 `session:<rootSessionId>`，任务为 `task:<taskId>`。同一静态 Agent 可有多个任务实例；只有明确保存且尚未消费的检查点允许原 task/实例追加一次 run，其余失败、取消、求助或关闭历史不能直接重启。AgentRef 由调度器从真实成员绑定填入，不允许模型冒充 requester。Team 模块无岗位负责人或岗位不可执行时拒绝正式派发，返回缺口；旧维护字段不再构成门禁；普通对话与定位过程仍可继续。
 
 派发边创建后不移动父节点、不删除历史。依赖边可在任务未运行时用带版本的修订禁用；旧边保留 `enabled:false`。失效结果须清除为当前有效结果，旧结果仍在事件历史中，不可因存在旧 result 字段就满足依赖。
 
@@ -154,7 +154,7 @@ type GraphEdge = {
 - 每图恰好一个 SessionRootNode，根必须绑定主 Agent；根不是业务任务，也不计入任务完成率。
 - 建图以 seq=1 的 graph.created 批次原子提交根和主成员投影；seq=0 只是内部空前缀，公开 Snapshot 始终有根。读取未建图返回 GRAPH_NOT_FOUND。
 - 每个任务恰好一条入向 dispatch 边，父节点必须已存在且在同图；边的 parentTaskId 必须与节点字段一致。
-- 每个模块的维护关系、Agent 身份及版本在派发前核实；未定位到模块不能伪造节点。Workflow 属于模块，不继承其他模块的流程。
+- 每个模块的岗位负责人、Agent 身份及版本在派发前核实；未定位到模块不能伪造节点。Workflow 属于模块，不继承其他模块的流程。
 - 启用的 dispatch 与 dependency 边合并检查有向无环；拒绝自环、缺失端点、跨工作区/跨图依赖。dependency 的两端必须是任务，方向为前置 → 后续。
 - dependency.condition 固定前置计划版本；允许放行前须固定实际 resultId。v1 只支持有效交付候选作为前置，不宣称该候选已通过业务验收；结果修订使引用失效时必须复核消费方基线。
 - 子任务返回通过消息解除 `awaitedChildren`；结果必须匹配所等的 taskId 与 planRevision，修订后的同 ID 结果不能静默唤醒旧计划。父子等待不添加反向 dependency 边，消息也不自动让父任务完成。
@@ -778,7 +778,7 @@ isolated-execution-recovery只公开原运行、执行ID、报告basis、资源�
 
 ### 自动与团队协作模式
 
-DispatchScope.executionPolicy 自创建后不可变；goal assignment、TaskNode、PreparedDispatchKnowledge、TaskSpec 单独保存 fallbackBinding。automatic-execution-rules 核原周期与当前无人负责状态；owner-execution-invariants 在新增计划／派发／领取门禁选真实岗位或兜底分支。回执、日志、Workflow、检查点、依赖及人工接受主体都保留相同执行来源。仅匹配 no_modules 的 cbim:project 可以没有维护人，真实模块不获豁免。受控写沿用 ownerBindingHash 字段名以兼容旧审计，其值取实际绑定严格规范化后的指纹。
+DispatchScope.executionPolicy 自创建后不可变；goal assignment、TaskNode、PreparedDispatchKnowledge、TaskSpec 单独保存 fallbackBinding。automatic-execution-rules 核原周期与当前无人负责状态；owner-execution-invariants 在新增计划／派发／领取门禁选真实岗位或兜底分支。回执、日志、Workflow、检查点、依赖及人工接受主体都保留相同执行来源。所有模块均不要求真人维护人；no_modules 根的范围限制及其它岗位/兜底边界保持。受控写沿用 ownerBindingHash 字段名以兼容旧审计，其值取实际绑定严格规范化后的指纹。
 
 ### 派发回执的纯结构
 

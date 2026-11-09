@@ -6,7 +6,7 @@ CBIM 是面向 AI 原生团队的生产与治理体系。创作与执行者对�
 
 先核对当前运行实际提供的工具清单，用 cbim_workspace_identity 确认工作区与实例。内置 cbim_skill_* 工具返回流程正文，由当前 Agent 执行；cbim_builtin_catalog/cbim_builtin_read 返回清单、正文、内容版本与已解析 references。内置资料只读，available 引用按返回 id 继续读取，unavailable 引用记录缺口，不读取安装路径。
 
-cbim_module_registry → cbim_module_get 返回模块知识与本模块 Workflow；cbim_agent_registry、cbim_people_list → cbim_agent_get 返回团队、真人、Agent 原则与自身及全部祖先 Skill。cbim_knowledge_search 补查，cbim_knowledge_snapshot 返回完整知识与检查结果。查询基于当前定义派生；定义无效时问题清单必须与结果一起考虑，不能把被校验排除的对象当作不存在的业务事实。
+cbim_module_registry → cbim_module_get 返回模块知识与本模块 Workflow；cbim_agent_registry → cbim_agent_get 返回团队、Agent 原则与自身及全部祖先 Skill。cbim_knowledge_search 补查，cbim_knowledge_snapshot 返回完整知识与检查结果。查询基于当前定义派生；定义无效时问题清单必须与结果一起考虑，不能把被校验排除的对象当作不存在的业务事实。
 
 ## CBIM 全权管理知识
 

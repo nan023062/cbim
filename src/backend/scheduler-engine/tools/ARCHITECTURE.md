@@ -560,3 +560,7 @@ cbim_dispatch_resume 只预约同任务最新未消费检查点；每任务最�
 ### 自动与团队协作模式
 
 GoalTools / DispatchTools 的 collaborationMode 来自可信 Cycle，默认 Team；仅 Auto 的计划及派发 Schema 容许缺 ownerSelection，服务与 Store 仍校验资格。模型输入没有模式、兜底证明或模型配置字段。自动回执保持 fallbackBinding 与原 scope/agent/module 对应，未知结果不重新执行。
+
+### 真人花名册退役
+
+KnowledgeTools 与知识协议目录同步移除 cbim_people_list，不再公开 people-schema。角色查询保留 authorPeople 空数组兼容旧响应；能力、岗位负责人和模型的查询及授权保持独立。

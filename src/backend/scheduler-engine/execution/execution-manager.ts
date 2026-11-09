@@ -203,12 +203,12 @@ export class WorkspaceExecutionManager {
     const next=this.pending.then(()=>{this.workspace.assert();return work()});this.pending=next.catch(()=>{});return next;
   }
   prepare(input:TeamTaskInput){return this.serial(()=>prepareTeamTask(this.workspace,input))}
-  /** 对话选择器只返回标识和摘要；完整知识在启动时由准备流程重新校验并冻结。 */
+  /** 对话选择器只返回模块和角色；people 固定为空兼容旧消费者，正式上下文仍在启动时校验并冻结。 */
   async choices(){
     const snapshot=await this.workspace.snapshot(),business=new BusinessWorkspace(snapshot),team=new Team(snapshot);
-    const registry=await business.modules(),agents=await team.agents(),people=await team.people();
+    const registry=await business.modules(),agents=await team.agents();
     const modules=await Promise.all(registry.modules.map(async(m:any)=>{const detail=await business.module(m.id);return {id:m.id,name:detail.definition.name,workflows:detail.workflows.map((w:any)=>({id:w.id,name:w.name}))}}));
-    return {modules,agents:agents.groups.flatMap((g:any)=>g.agents.map((a:any)=>({id:a.id,name:a.name}))),people:people.people.map((p:any)=>({id:p.id,name:p.name||p.id})),structural:snapshot.validation?.structural};
+    return {modules,agents:agents.groups.flatMap((g:any)=>g.agents.map((a:any)=>({id:a.id,name:a.name}))),people:[],structural:snapshot.validation?.structural};
   }
   /** 执行预检只读取当前上下文；旧运行仅可由可靠新周期明确排除，当前坏日志与缺失初始运行仍阻断。 */
   async thread(taskId:string){

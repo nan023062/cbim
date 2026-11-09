@@ -47,7 +47,7 @@ it('真实应用入口完成成员创建、可靠派发和增量；重开保持�
     expect(delta.batches).toHaveLength(1);
     expect(delta.batches[0].changes.map(c=>c.type)).toEqual(['task.upserted','edge.upserted','agent.upserted']);
     const graph=await f.app.dispatch('dispatch.graphSnapshot',{identity:f.identity}) as GraphSnapshot;
-    expect(graph.tasks).toHaveLength(1);expect(graph.tasks[0]).toMatchObject({taskId:receipt.taskId,status:'queued',runIds:[],modules:[{moduleId:f.team.input.moduleId,maintainerPersonIds:['owner']},{moduleId:f.team.child}]});
+    expect(graph.tasks).toHaveLength(1);expect(graph.tasks[0]).toMatchObject({taskId:receipt.taskId,status:'queued',runIds:[],modules:[{moduleId:f.team.input.moduleId},{moduleId:f.team.child}]});
     expect(graph.tasks[0].assignee.agentId).toBe(member.agent.agentId);expect(graph.tasks[0].assignee.agentInstanceId).not.toBe(member.agent.agentInstanceId);expect(graph.tasks[0].assignee.agentSessionId).not.toBe(member.agent.agentSessionId);expect(graph.tasks[0].ownerBinding?.memberId).toBe(f.task.ownerSelection.memberId);
     expect(await f.app.dispatch('dispatch.graphDelta',{identity:f.identity,cursor:receipt.cursor})).toEqual({mode:'noop',cursor:receipt.cursor});
     const file=path.join(f.user,f.entry.id,'dispatch','dispatch.jsonl');
@@ -99,7 +99,7 @@ it('并发派发串行提交；不同主会话复用成员但隔离Session与图
   }finally{await f.cleanup()}
 });
 
-it('缺维护关系、伪造身份、命令重用与跨图依赖失败时没有半次派发',async()=>{
+it('伪造身份、命令重用与跨图依赖失败时没有半次派发',async()=>{
   const f=await setup();
   try{
     await f.app.dispatch('dispatch.open',{...f.identity,commandId:'open'});
@@ -111,10 +111,6 @@ it('缺维护关系、伪造身份、命令重用与跨图依赖失败时没有�
     await expect(f.app.dispatch('dispatch.task',{...command,commandId:'fake',requester:'someone-else'})).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
     await expect(f.app.dispatch('dispatch.task',{...command,commandId:'old',expectedParentRevision:999})).rejects.toMatchObject({code:'GRAPH_REVISION_CONFLICT'});
     await expect(f.app.dispatch('dispatch.task',{...command,commandId:'foreign',task:{...f.task,prerequisites:[{taskId:'other-task',expectedPlanRevision:1}]}})).rejects.toMatchObject({code:'GRAPH_REFERENCE_INVALID'});
-    const snap=await f.w.snapshot(),file=f.team.input.moduleId+'/module.json';
-    const definition=JSON.parse(snap.files.find(x=>x.path===file)!.text);delete definition.maintenance;
-    await f.w.commit(request(snap,[{path:file,text:json(definition)}]));
-    await expect(f.app.dispatch('dispatch.task',{...command,commandId:'missing-maintainer'})).rejects.toMatchObject({code:'MAINTAINER_UNCONFIRMED'});
     expect(await f.app.dispatch('dispatch.task',command)).toEqual(receipt); // 已提交命令不因后来知识变化而重复执行
     expect(await f.app.dispatch('dispatch.graphSnapshot',{identity:f.identity})).toEqual(before);
     const service=f.app.memberDispatch(f.entry.id);await f.app.stop(f.entry.id);

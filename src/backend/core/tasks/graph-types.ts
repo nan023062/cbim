@@ -24,8 +24,8 @@ export type AgentRef = {
 };
 export type ModuleBinding = {
   moduleId:string;name:string;knowledgeRevision:string;
-  /** 真实模块指向显式维护关系；仅自动隐式模块使用 cbim:implicit-project 和空清单，不表示人工确认。 */
-  maintenanceBindingId:string;maintainerPersonIds:string[];
+  /** @deprecated 仅兼容读取历史任务，原字节保留；新派发不生成，不参与岗位、权限或执行资格。 */
+  maintenanceBindingId?:string;maintainerPersonIds?:string[];
   workflow:{kind:'module';id:string;version:string}
     |{kind:'general';id:string;version:string;reason:string};
 };

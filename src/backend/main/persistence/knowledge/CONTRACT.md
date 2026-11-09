@@ -19,3 +19,7 @@ Journal 的可选 governance 绑定保留 intent/protection/proposal/decision ID
 prepared 保存或 Store prepare 异常时，只有严格核实原 Store 屏障才能继续提供只读诊断；否则实例进入 recovery_required，防止后来事务覆盖未核实的 before。重开遇 prepared 且无 Store 受理，只能在全部文件仍等 before 时标 rolled_back，绝不把外部恰等 after 的内容写回；冲突零文件写并保留证据。旧无来源 journal 保留原恢复协议，不自动升级或补造来源。
 
 `withSourceSnapshot` 为明确岗位/责任采纳固定知识快照，再进入唯一 Store；关闭先 drain 该队列与来源结算，再关闭 Store 和释放工作区锁。
+
+### 历史人员文件兼容
+
+初始化只生成六份基础知识文件，不生成 team/people.json；现存文件不迁移、不删除，读取仍保留原字节，Rules 不再解析或校验其人员和组引用。知识版本仍由实际文件快照决定，废弃业务语义不等于绕过事务版本检查。

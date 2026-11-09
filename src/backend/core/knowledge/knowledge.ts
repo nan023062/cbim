@@ -1,6 +1,6 @@
 /**
- * 作用定位：Core 知识规则：校验领域结构、人员与显式模块维护关系，并派生注册索引。
- * 设计原因：调度、桌面和外部适配共用规则；模块 Workflow 的显式程序条件不能绕过完整事务校验。Ajv 使用不改变字段值的兼容副本，原严格 JSON 解析仍保留危险键和重复键拒绝。作者不自动升级为维护人，结构校验也不签发执行或架构批准。
+ * 作用定位：Core 知识规则：校验领域结构、专业正文和引用，并派生注册索引。
+ * 设计原因：调度、桌面和外部适配共用规则；模块 Workflow 的显式程序条件不能绕过完整事务校验。Ajv 使用不改变字段值的兼容副本，原严格 JSON 解析仍保留危险键和重复键拒绝。历史作者和维护声明不再关联真人花名册；结构校验不签发执行或架构批准。
  */
 import fs from 'node:fs/promises';
 import {ConnectorRegistry} from '../connectors/registry';
@@ -28,13 +28,14 @@ export function isKnowledge(relative:string){
 export class Rules {
   private validators=new Map<string,ReturnType<Ajv2020['compile']>>();
   constructor(readonly designRoot:string){}
-  async init(){const ajv=new Ajv2020({allErrors:true,strict:false});for(const [key,file] of Object.entries({module:'business/module.schema.json',agent:'capability/agent.schema.json',skills:'capability/team-skills.schema.json',people:'capability/people.schema.json',connectors:'connector/registry.schema.json'}))this.validators.set(key,ajv.compile(parseJson(await fs.readFile(path.join(this.designRoot,file),'utf8'))))}
+  async init(){const ajv=new Ajv2020({allErrors:true,strict:false});for(const [key,file] of Object.entries({module:'business/module.schema.json',agent:'capability/agent.schema.json',skills:'capability/team-skills.schema.json',connectors:'connector/registry.schema.json'}))this.validators.set(key,ajv.compile(parseJson(await fs.readFile(path.join(this.designRoot,file),'utf8'))))}
   /** 对传入的完整候选知识校验并派生索引；读取 source 存在性但不修改业务工程。 */
   async validate(root:string,files:KnowledgeFile[]):Promise<Validation>{
     const texts=new Map(files.map(f=>[f.path,f.text]));const parsed=new Map<string,any>();const issues:Issue[]=[];
     const add=(p:string,code:string,message:string,severity:'error'|'warning'='error')=>issues.push({path:p,code,message,severity});
     const data=(p:string)=>parsed.get(p);
-    for(const file of files)if(file.path.endsWith('.json'))try{parsed.set(file.path,parseJson(file.text))}catch(e:any){add(file.path,'json',e.message)}
+    // 废弃花名册只保留原始字节，不解析其内容或据此阻断旧项目；其他 JSON 仍严格校验。
+    for(const file of files)if(file.path.endsWith('.json')&&file.path!=='.cbim/team/people.json')try{parsed.set(file.path,parseJson(file.text))}catch(e:any){add(file.path,'json',e.message)}
     for(const file of files)if(file.path.startsWith('.cbim/workspace/')&&file.path.endsWith('/workflow.md'))try{parseWorkflowContract(file.text)}catch{add(file.path,'workflow_contract','Workflow 执行约定无效：请核对唯一的 cbim-workflow 块及版本、条件、工具和证据 ID')}
     const schema=(p:string,key:string)=>{const value=data(p);if(value===undefined){add(p,'missing','缺少有效知识定义');return false}const validator=this.validators.get(key)!;
       // 严格解析产出无原型对象；Ajv 的 uniqueItems 比较依赖 Object.prototype。
@@ -50,23 +51,14 @@ export class Rules {
       const registry=new ConnectorRegistry(data('.cbim/connectors/registry.json').connectors);
       connectorIds=registry.ids();for(const _id of registry.duplicates())add('.cbim/connectors/registry.json','duplicate','链接器标识或提供方身份重复');
     }
-    const people=new Map<string,any>();if(schema('.cbim/team/people.json','people'))for(const p of data('.cbim/team/people.json').people){if(people.has(p.id))add('.cbim/team/people.json','duplicate',`人员重复：${p.id}`);people.set(p.id,p)}
     let ignores=ignore({ignorecase:true});try{ignores=ignores.add(texts.get('.cbim/.cbimignore')||'')}catch(e:any){add('.cbim/.cbimignore','ignore',e.message)}
-    const idSeen=new Set<string>(),maintenanceIds=new Set<string>();
+    const idSeen=new Set<string>();
     for(const f of files){const kind=f.path.endsWith('/module.json')&&f.path.startsWith('.cbim/workspace/')?'module':f.path.endsWith('/agent.json')&&f.path.startsWith('.cbim/team/')?'agent':undefined;if(!kind)continue;
       if(!schema(f.path,kind))continue;const d=data(f.path),id=pp.dirname(f.path);const folded=id.toLowerCase();if(idSeen.has(folded))add(f.path,'duplicate','标识不区分大小写时重复');idSeen.add(folded);summary(f.path,d.summary);
-      const authorTeams=new Set<string>();for(const author of d.authors){const p=people.get(author);if(!p?.team)add(f.path,'author',`作者未知或未归组：${author}`);else authorTeams.add(p.team)}if(authorTeams.size>1)add(f.path,'author','作者必须来自同一已知 Team');
       for(const c of d.connectors)if(!connectorIds.has(c.toLowerCase()))add(f.path,'connector',`未登记连接器：${c}`);
       if(kind==='agent'){agents.set(id,d);ref(id,d.work_principles);continue}
       modules.set(id,d);if(d.id!==id)add(f.path,'identity','id 必须与模块目录一致');if(!/^(?:[0-9]+_)?[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(d.name)||pp.basename(id)!==d.name)add(f.path,'name','模块目录和名称须一致并使用小写 snake_case');
-      // 旧模块可没有维护声明；一旦声明，其人员引用和确认时间必须真实可解析，不能借作者字段补齐。
-      if(d.maintenance){
-        const m=d.maintenance;
-        if(maintenanceIds.has(m.bindingId))add(f.path,'maintenance','维护关系标识已被其他模块使用');maintenanceIds.add(m.bindingId);
-        for(const personId of m.maintainerPersonIds)if(!people.has(personId))add(f.path,'maintenance',`维护人未登记在真人花名册：${personId}`);
-        const timestamp=Date.parse(m.confirmation.confirmedAt);
-        if(!Number.isFinite(timestamp)||new Date(timestamp).toISOString()!==m.confirmation.confirmedAt)add(f.path,'maintenance','维护关系确认时间必须是有效 UTC ISO 8601 时间');
-      }
+      // 旧 maintenance 仅保留为历史描述，不再生成关系、核实真人或作为执行门禁。
       ref(id,d.overview);this.body(id,d,texts.get(id+'/module.md')||'',add);
       const actual=files.filter(x=>x.path.startsWith(id+'/workflows/')&&x.path.endsWith('/workflow.md')).map(x=>x.path);
       this.inventory(id,d.workflows,actual,ref,add,'workflow');
@@ -82,7 +74,6 @@ export class Rules {
     // Also discover empty Teams when validating the live project; empty groups remain indexed.
     const walkTeams=async(folder:string)=>{try{for(const d of await fs.readdir(path.join(root,folder),{withFileTypes:true})){if(!d.isDirectory()||d.name.startsWith('.')||excluded.has(d.name)||['skills','references','assets','scripts'].includes(d.name))continue;const id=folder+'/'+d.name;if(!agents.has(id)){if(await exists(path.join(root,id,'agent.json')))continue;groups.add(id);await walkTeams(id)}}}catch{}};await walkTeams('.cbim/team');
     for(const [id] of agents){for(const other of agents.keys())if(other!==id&&other.startsWith(id+'/'))add(other+'/agent.json','team_leaf','Agent 必须是叶子，不能包含其他 Agent');if(id==='.cbim/team')add(id+'/agent.json','team_root','Team 根不能是 Agent')}
-    for(const p of people.values())if(p.team!==null&&!groups.has(p.team))add('.cbim/team/people.json','team',`人员引用不存在的 Team：${p.team}`);
     const inventories=new Map<string,any[]>();
     for(const owner of new Set([...groups,...agents.keys()])){
       const own=agents.get(owner);const p=owner+(own?'/agent.json':'/skills.json');let list:any[]=own?.skills||[];

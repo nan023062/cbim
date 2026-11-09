@@ -39,7 +39,6 @@ workspace 根不承载全局 Workflow，不新增 workspace/workflows.json，也
 ├── README.md
 ├── team/                              # 根 Team
 │   ├── registry.json
-│   ├── people.json
 │   ├── skills.json                    # 根自身 Skill
 │   ├── skills/<slug>/SKILL.md
 │   └── production/                    # 小组，非叶子
@@ -66,7 +65,7 @@ workspace 根不承载全局 Workflow，不新增 workspace/workflows.json，也
 
 ## 初始化清单修正
 
-初始化七个基础文件：project.json、README.md、team/registry.json、team/people.json、team/skills.json、workspace/registry.json、connectors/registry.json。
+初始化六个基础文件：project.json、README.md、team/registry.json、team/skills.json、workspace/registry.json、connectors/registry.json。真人花名册已废弃；旧文件保留，不作为模块创建或派工前置。
 
 内部 Agent 按“受理目标 → 分类与定位 → 组装能力和模块上下文 → 制定步骤 → 执行 → 验证 → 交付与治理反馈”开展工作。调度引擎准备指引、知识版本和运行权限；大脑使用配置的模型与内部工具执行。主 Agent 和定制成员共用大脑内核，静态 Agent 定义与动态 AgentInstance 分离，读取定义不等于启动成员执行。
 

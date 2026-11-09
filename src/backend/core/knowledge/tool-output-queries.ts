@@ -1,6 +1,6 @@
 /**
- * 作用定位：团队、模块、人员注册表与详情的纯业务输出协议。
- * 设计原因：内置项目根与角色没有磁盘文件，必须与正式定义区分；模块查询 v2 明确根范围，不伪造文件，保留知识定义与人员诊断内容。
+ * 作用定位：团队、模块注册表与详情的纯业务输出协议。
+ * 设计原因：内置项目根与角色没有磁盘文件，必须与正式定义区分；模块查询 v2 明确根范围，不伪造文件，保留知识定义，兼容旧 authorPeople 空字段。
  * 职责边界：这些静态查询不表示已创建成员实例、已授权执行或已完成人工维护确认。
  */
 import {z} from 'zod';
@@ -33,8 +33,6 @@ const effectiveSkill=z.object({name:z.string(),purpose:z.string(),reference:z.st
 const customAgent=z.object({...context,id:knowledgeOutputIdSchema,definition:knowledgeJsonObjectSchema,definitionFile:knowledgeFileSchema,principles:knowledgeContentOutputSchema,skillChain:z.array(z.string()),skillConflicts:z.array(knowledgeIssueSchema),skills:z.array(effectiveSkill),skillSelectionValid:z.boolean()}).strict();
 const builtinAgent=z.object({...context,id:z.literal('cbim:executor'),source:z.literal('builtin'),definition:builtinAgentDefinition,principles:inlineContent,skillChain:z.array(z.string()),skillConflicts:z.array(knowledgeIssueSchema),skills:z.array(z.object({id:knowledgeOutputIdSchema,owner:z.string(),inherited:z.literal(true),content:inlineContent}).strict()),skillSelectionValid:z.boolean()}).strict();
 export const agentGetOutputSchema=z.union([customAgent,builtinAgent]);
-/** Team.people 会原样返回结构不合格的条目；诊断输出不能再次套用有效人员定义并裁剪原事实。 */
-export const peopleListOutputSchema=z.object({...context,people:z.array(jsonValueSchema)}).strict();
 
 export type ModuleGetOutput=z.infer<typeof moduleGetOutputSchema>;
 export type AgentGetOutput=z.infer<typeof agentGetOutputSchema>;

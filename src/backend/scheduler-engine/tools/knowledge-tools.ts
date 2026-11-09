@@ -37,7 +37,6 @@ export class KnowledgeTools {
     register('cbim_module_registry',{version:2,description:'查询当前模块注册表与始终可用的 projectRoot（cbim:project）；关键词仅筛选已定义模块，不改写磁盘。',inputSchema:{...identity,query:z.string().max(200).optional()}},wrap(args=>queries.modules(args.query)));
     register('cbim_module_get',{version:2,description:'按 ID 返回 Module 定义、正文及本模块 Workflow；cbim:project 返回内置项目根范围，不伪造文件或继承流程。',inputSchema:{...identity,id:z.string()}},wrap(args=>queries.module(args.id)));
     register('cbim_agent_registry',{description:'查询团队分组与 Agent 注册表；builtinAgents 包含只读内置默认执行角色 cbim:executor，无合适自定义执行角色时可派发给它。Team 主 Agent 仅调度，Auto 主 Agent 可直接工作。',inputSchema:{...identity,query:z.string().max(200).optional()}},wrap(async args=>{const result=await queries.agents(args.query),query=String(args.query??'').toLowerCase();return {...result,builtinAgents:!query||`${defaultExecutorId} ${defaultExecutorDefinition.name} ${defaultExecutorDefinition.summary}`.toLowerCase().includes(query)?[{...defaultExecutorDefinition}]:[]}}));
-    register('cbim_people_list',{description:'查询真人花名册与团队归属，用于人员责任与候选 Agent 定位，不授予维护权限。',inputSchema:{...identity,query:z.string().max(200).optional()}},wrap(args=>queries.people(args.query)));
     register('cbim_agent_get',{description:'按 Agent ID 返回定义、原则和有效 Skill；cbim:executor 返回应用内置默认执行角色与 Team 根继承 Skill，不创建 .cbim 文件。其他角色继承冲突显式返回。',inputSchema:{...identity,id:z.string()}},wrap(async args=>{
       if(args.id!==defaultExecutorId)return queries.agent(args.id);
       const snapshot=await workspace.snapshot(),agent=defaultExecutorConfiguration(snapshot);

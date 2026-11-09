@@ -1,8 +1,8 @@
 /**
- * 作用定位：模块长期维护责任的知识契约，区别于 Task 的执行 Agent 与历史作者。
- * 设计原因：业务派发必须核实模块有人维护；维护关系随知识版本保存，不绑定临时成员进程。
+ * 作用定位：旧版模块真人维护声明的兼容类型，保留历史解码所需字段。
+ * 设计原因：真人花名册机制已废弃；历史字段不生成、不回填，也不能作为当前岗位、权限或派发资格。
  */
-/** module.json 中的显式维护关系；身份从所属快照和模块路径补齐。 */
+/** @deprecated 旧 module.json 的历史数据形状；新对象和派发不再建立此关系。 */
 export interface ModuleMaintenanceDefinition {
   bindingId:string;
   maintainerPersonIds:[string,...string[]];

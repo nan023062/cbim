@@ -11,7 +11,7 @@ description: 主 Agent 调度业务并管理团队和业务知识；执行 Agent
 先识别本次运行职责：主 Agent 负责 [Task Loop](builtin:task-loop) 的总体分析、调度及团队业务知识管理，可在授权范围内经 cbim_ 知识服务增删改查 `.cbim/`，但不亲自修改业务文件或执行命令。执行 Agent 独立分析、探索和验证自己的业务任务，不创建或派发子任务。无合适自定义角色时使用内置默认执行 Agent `cbim:executor`，其动态实例独立于主 Agent。发现需要其他人、额外模块或目标调整时向主 Agent 返回事实、证据、影响和所需帮助；由主 Agent 决定后续任务。没有求助消息接口时把这些内容列入本次返回和限制，不声称已发消息、正在等待同事或已创建新节点。
 
 1. 明确用户目标、已有进展、范围、负责人、授权与验收方式。仅分析请求不默认授权实现。
-2. cbim_module_registry → cbim_module_get 定位业务模块和自己的 Workflow；cbim_agent_registry、cbim_people_list → cbim_agent_get 匹配能力。作者仅提供候选线索，专业适配与权限仍需核实。缺少模块边界时先提出定义方案，不虚构已登记模块。
+2. cbim_module_registry → cbim_module_get 定位业务模块和自己的 Workflow；cbim_agent_registry → cbim_agent_get 匹配能力。作者仅提供候选线索，专业适配与权限仍需核实。缺少模块边界时先提出定义方案，不虚构已登记模块。
 3. 整理必要的模块知识、专业原则、可用 Skill、Workflow、工具与产物基线。Skill 从自身到祖先继承，Workflow 只使用本模块的。以服务返回的冲突与缺失信息为准。
 
 正式目标分配和派发支持 `workflowSelections: [{moduleId, workflowId}]`：先通过模块详情确认挂载清单，再在目标分配与任务中为对应模块保存相同选择。只传已登记的逻辑 ID，不传正文、哈希或任意文件路径；未显式覆盖的模块保持默认首项，空挂载才采用通用流程。显式选择失效时不得回退首项。已派发任务、检查点续跑和前置替换保持原选择；更换流程需重新规划并创建任务，不能借用原流程的候选或人工接受。

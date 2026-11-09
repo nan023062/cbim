@@ -34,7 +34,6 @@ const entries=[
   ['module-schema','schema','Module Schema','design/business/module.schema.json'],
   ['agent-schema','schema','Agent Schema','design/capability/agent.schema.json'],
   ['team-skills-schema','schema','Team Skill Schema','design/capability/team-skills.schema.json'],
-  ['people-schema','schema','人员 Schema','design/capability/people.schema.json'],
   ['connector-schema','schema','连接器 Schema','design/connector/registry.schema.json'],
 ].map(([id,kind,title,source])=>({id,kind,title,source}));
 const contract='内置资料只读，版本由内容 SHA-256 标识。查询以内部知识服务当前返回值为准；Agent 的原生工具禁止直接读写 .cbim；全部知识 CRUD 由受授权的内部工具执行，使用 cbim_object_preview/cbim_object_commit 或受控知识事务接口。派生注册表由 CBIM 维护。旧 Python 规则工具不是入口。Skill 工具返回流程，不会替 Agent 执行任务；结构校验不能替代语义与人工判断。';

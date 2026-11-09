@@ -39,12 +39,9 @@ CBIM 启动时加载全部已登记工作区，各自持有知识库、执行上
 ```powershell
 pnpm install --frozen-lockfile
 pnpm start
-pnpm typecheck
-pnpm test
-pnpm package
-pnpm test:desktop
-pnpm make
 ```
+
+日常开发只运行受影响单元的测试：使用 `pnpm exec vitest run` 后跟明确的相关测试文件，必要时用 `-t` 选择用例；类型、依赖和架构检查按实际变化选择。通过后即可记录并提交，不默认执行全量 `pnpm test`、打包或整套桌面测试，详见 [日常验证范围](AGENTS.md#日常验证范围)。面向 `master` 的 PR 由现有 CI 自动执行全量回归；`pnpm package`、`pnpm make` 和 `pnpm test:desktop` 等制品验证留在后续集成／发布阶段按需执行。
 
 正式业务执行使用桌面主对话。`pnpm loop` 保留受限开发兼容接口，旧直接业务启动已拒绝；参数、模型配置和具体限制见 [Loop Engine](docs/loop-engine.md#开发调用)。
 
@@ -57,7 +54,7 @@ pnpm make
 | `develop` | 默认开发分支，用于日常功能开发和缺陷修复 |
 | `master` | 稳定主分支，接收通过检查的开发成果 |
 
-日常改动提交到 `develop`；每个 Issue 单独开发、测试和提交，记录验证结果以便追溯。完成验证后，通过 `develop` → `master` 的 PR 合入主分支，并保留各 Issue 的独立提交。
+日常改动提交到 `develop`；每个 Issue 单独开发、验证受影响单元并提交，记录测试范围、选择依据及结果以便追溯。通过 `develop` → `master` 的 PR 执行全量自动化检查，检查通过后合入主分支，并保留各 Issue 的独立提交。
 
 ## 开发协作与架构维护
 

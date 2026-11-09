@@ -1,6 +1,6 @@
 /**
  * 作用定位：从工作区知识快照构建静态 Team、分组、Agent 与 Skill 视图模型。
- * 设计原因：树与详情共用同一归属/继承规则，避免组件各自解析；只读快照，不访问文件、不推断执行权限或运行状态。
+ * 设计原因：树与详情共用归属/继承规则；展示可隐藏内置角色，完整模型仍供岗位选项和父链查询使用，不修改能力或执行权限。
  */
 import type {Snapshot} from '../../bridge/contracts/workspace';
 import {teamGroupIds} from '../knowledge/static-owners';
@@ -82,10 +82,11 @@ export function availableTeamSkills(model:TeamModel,nodeId:string):Array<TeamSki
   }
   return result;
 }
-/** 搜索保留命中节点的祖先路径，避免结果脱离所属团队；空查询返回全树。 */
-export function visibleTeamNodes(model:TeamModel,query:string):Set<string> {
+/** 搜索保留祖先路径；组织树可排除内置角色，完整模型及 Skill 父链保持不变。 */
+export function visibleTeamNodes(model:TeamModel,query:string,includeBuiltins=true):Set<string> {
   const needle=query.trim().toLocaleLowerCase(),visible=new Set<string>();
   for(const node of Object.values(model.nodes)){
+    if(!includeBuiltins&&node.kind==='builtin')continue;
     const haystack=[node.id,node.name,node.summary,...node.capabilities,...node.limitations,...model.skills.filter(skill=>skill.ownerId===node.id).flatMap(skill=>[skill.name,skill.purpose])].join(' ').toLocaleLowerCase();
     if(needle&&!haystack.includes(needle))continue;
     let current:TeamNodeView|undefined=node;

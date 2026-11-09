@@ -190,7 +190,7 @@ class N_src_frontend_team_TeamView_tsx_Transfer["Transfer"] {
 N_src_frontend_team_TeamView_tsx ..> N_src_frontend_team_TeamView_tsx_Transfer : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../conversation/MarkdownMessage.tsx](../conversation/MarkdownMessage.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[AgentSessionHistory.tsx](AgentSessionHistory.tsx)、[WorkspaceMembers.tsx](WorkspaceMembers.tsx)、[team-model.ts](team-model.ts)、[team-view.css](team-view.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/GraphViewControls.tsx](../components/GraphViewControls.tsx)、[../conversation/MarkdownMessage.tsx](../conversation/MarkdownMessage.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[AgentSessionHistory.tsx](AgentSessionHistory.tsx)、[WorkspaceMembers.tsx](WorkspaceMembers.tsx)、[team-model.ts](team-model.ts)、[team-view.css](team-view.css)。
 
 ### useAgentHistory.ts
 
@@ -491,6 +491,10 @@ N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_workspace_membe
 
 # 静态团队架构契约
 
+## 项目组织树与图内控制
+
+组织树只显示项目 Team、真实分组与自定义 Agent；节点图标优先、统一左对齐并逐层缩进。隐藏内置角色不删定义、不改父链、不修改可调度能力；空项目保留 Team 根及新建提示。展开/折叠/字号操作复用 `GraphViewControls`，放在图内右上角，键盘和可访问名称完整，字号范围 12–20px；显示变化不写知识或发起运行。
+
 ## 项目岗位登记
 
 业务架构也可复用 `WorkspaceMembers`，以 `initialRegistration` 打开表单并预选仍在当前列表中的 Agent；缺失来源保持未选，不回退到另一能力，模型始终不预选。本次登记取得真实 accepted 回执后才通过 `onRegistered(memberId)` 返回调用方；预览、未知结果、重开恢复或查询旧命令均不触发该回调。团队原入口、同工作区共享命令记录和未知防重规则保持一致；调用方负责原模块选择与单独的负责人保存。
@@ -512,7 +516,7 @@ N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_workspace_membe
 岗位详情的“负责的模块”进入同一个 `ModuleOwnershipPanel`，按稳定 memberId 反查当前非空关系；返回后重新读取岗位，不能按静态 Agent 名字猜责任。暂停保留关系；有当前模块责任时后端拒绝退休，首次明确 `MEMBER_OWNERSHIP_ACTIVE` 可回到编辑，若原提交已经未知则仍保留未知，不能换命令重试。责任控制面和岗位登记共用工作区权威 Store，但前端原命令记录分别保存。
 
 - `TeamView` 的组织树仅展示工作区正式 Team、分组、Agent 和 Skill 定义，不把 AgentInstance、在线状态、执行活动或任务图混入树。动态派工仍属于当前会话任务视图；静态 Agent 详情可单独打开只读执行履历。
-- `team-model.ts` 只读同一 `Snapshot`，节点身份从知识路径派生，不能被 `agent.json` 内额外的 `id` 覆盖。空 Team 根与 `cbim:main`、`cbim:executor` 两个只读内置角色始终可见；解析失败单独提示。
+- `team-model.ts` 只读同一 `Snapshot`，节点身份从知识路径派生，不能被 `agent.json` 内额外的 `id` 覆盖。完整模型保留空 Team 根与 `cbim:main`、`cbim:executor`，组织树通过 `visibleTeamNodes(..., false)` 过滤内置角色，搜索也不显示内置命中。项目岗位选项、历史角色与 Skill 父链仍使用完整模型；解析失败单独提示。
 - 自定义 Agent 可创建、读取、编辑、删除；Team 根和两个内置角色不可删除或编辑。内置角色使用应用配置，与其他成员同核，但不在正式知识中伪造可编辑定义。默认执行角色显示 Team 根共享 Skill；静态能力展示不能声称已加载进某次模型上下文。
 - 每个组织节点维护自己的 Skill。Agent/分组可用 Skill 由自身至 Team 根逐级合并，界面明确显示所属节点。继承 Skill 只允许跳转原 owner 维护，不能在当前节点上误删继承内容。
 - 所有知识修改交给 `ArchitectureEditor`：基于打开时的快照先校验/预览，再显式提交。Agent 新建需填写归属、目录标识、名称、100–250 非空白字符单行摘要、能力、限制和工作原则正文。

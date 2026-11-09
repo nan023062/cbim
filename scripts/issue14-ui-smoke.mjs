@@ -30,7 +30,7 @@ try{
   assert.deepEqual(initial.validation.tree.roots,[]);assert.equal(await view().getByTestId('project-root-module').count(),1);
   assert.match(await view().getByTestId('project-root-module').innerText(),/可直接开始开发/);
   assert.equal((await call('snapshot',{id:entry.id})).revision,initial.revision);checks.push('empty-project-root-visible-without-knowledge-write');
-  await view().getByRole('button',{name:'按需创建第一个工程模块',exact:true}).click();
+  await view().getByTestId('project-root-module').getByRole('button',{name:'新建工程模块',exact:true}).click();
   const dialog=page.getByRole('dialog',{name:'新建模块',exact:true});
   await dialog.getByRole('textbox',{name:'目录标识',exact:true}).fill('game');
   await dialog.getByRole('textbox',{name:'职责摘要',exact:true}).fill('管理团队客户端资源加载、卸载与缓存，提供加载器和实例生命周期接口。包含异步请求取消、对象池复用、回调有效性检查与过期资源清理，支持定位加载失败、实例释放和重复请求问题。底层资源传输由相关系统提供，本模块负责运行期调用与生命周期管理。');
@@ -43,7 +43,7 @@ try{
   await dialog.getByRole('button',{name:'确认提交到工作区',exact:true}).click();await dialog.waitFor({state:'hidden'});
   await view().locator('.module-card-content').filter({hasText:'game'}).waitFor();
   assert.equal(await view().getByTestId('project-root-module').count(),1);
-  await view().getByTestId('project-root-module').getByRole('button').click();assert.equal(await view().locator('.inspector').count(),0);
+  await view().getByTestId('project-root-module').locator('.module-card-content').click();assert.equal(await view().locator('.inspector').count(),0);
   const saved=await call('snapshot',{id:entry.id});assert.deepEqual(saved.validation.tree.roots,['.cbim/workspace/game']);
   assert.ok(!saved.files.some(file=>file.path.includes('cbim:project')));checks.push('real-module-created-under-persistent-readonly-root');
   for(const theme of ['light','dark']){await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);await page.screenshot({path:'test-results/issue14-'+theme+'.png'})}

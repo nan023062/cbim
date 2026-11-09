@@ -49,11 +49,18 @@ test('malformed definitions and escaping references are reported without loading
 test('team root cannot be edited or deleted and a different workspace snapshot is never displayed',()=>{
   const workspace={id:'w',path:'project',name:'Project',state:'running',tasks:[]};
   const html=renderToStaticMarkup(createElement(TeamView,{workspace,snapshot:fixture()}));
-  expect(html).toContain('静态团队架构');expect(html).toContain('CBIM 主 Agent');expect(html).toContain('发布整个团队');
-  expect(html).toContain('CBIM 默认执行 Agent');expect(html).toContain('历史角色');expect(html).toContain('data-agent-id="cbim:main"');expect(html).toContain('data-agent-id="cbim:executor"');
+  expect(html).toContain('静态团队架构');expect(html).toContain('发布整个团队');expect(html).toContain('历史角色');
+  expect(html).not.toContain('CBIM 主 Agent');expect(html).not.toContain('CBIM 默认执行 Agent');expect(html).not.toContain('data-agent-id="cbim:main"');expect(html).not.toContain('data-agent-id="cbim:executor"');
   expect(html).not.toContain('删除 Agent');expect(html).not.toContain('编辑 Agent');
   const isolated=renderToStaticMarkup(createElement(TeamView,{workspace:{...workspace,id:'other'},snapshot:fixture()}));
   expect(isolated).not.toContain('玩法设计师');expect(isolated).toContain('正在读取团队知识');
+});
+test('project tree hides builtins without changing the complete role model or inherited skills',()=>{
+  const model=buildTeamModel(fixture(),'Project'),before=structuredClone(model);
+  const visible=visibleTeamNodes(model,'',false);expect(visible.has(MAIN_AGENT)).toBe(false);expect(visible.has(DEFAULT_EXECUTOR)).toBe(false);expect(visible.has(agentId)).toBe(true);expect(visible.has(TEAM_ROOT+'/design')).toBe(true);
+  expect(visibleTeamNodes(model,'cbim:executor',false).size).toBe(0);
+  expect([...visibleTeamNodes(model,'playtest',false)]).toEqual([agentId,TEAM_ROOT+'/design',TEAM_ROOT]);
+  expect(availableTeamSkills(model,DEFAULT_EXECUTOR).map(item=>item.name)).toEqual(['shared']);expect(model).toEqual(before);
 });
 test('team tree includes empty and reference-only groups confirmed by the same snapshot registry',()=>{
   const data=fixture();data.validation={indexes:{[TEAM_ROOT+'/registry.json']:JSON.stringify({groups:[{id:TEAM_ROOT+'/empty'},{id:TEAM_ROOT+'/research/notes'}]})},issues:[],tree:{nodes:{},roots:[]},structural:true,architecture:'review-required',business:'not-run'};

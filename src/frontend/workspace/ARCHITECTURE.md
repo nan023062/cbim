@@ -17,7 +17,7 @@
 | [ModuleOwnershipDetail.tsx](ModuleOwnershipDetail.tsx) | 显示模块当前负责人、来源观察与有界审计，供责任面板单独审阅。 |
 | [ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx) | 业务架构和项目岗位共用的模块责任控制面，提供岗位选择、登记入口、预览、明确提交和原命令核实。 |
 | [workspace-view.css](workspace-view.css) | 对应界面的布局与视觉样式。 |
-| [WorkspaceView.tsx](WorkspaceView.tsx) | 工作区唯一的静态业务架构，维护模块和 Workflow，模块卡片一级选择 Agent，复用真实岗位与责任提交。 |
+| [WorkspaceView.tsx](WorkspaceView.tsx) | 工作区唯一的静态业务架构，维护模块和 Workflow，模块卡片一级选择 Agent，复用真实岗位与责任提交；局部图标控制位于图内，避免重复全局入口。 |
 
 ## 架构类图
 
@@ -272,7 +272,7 @@ class N_src_frontend_workspace_WorkspaceView_tsx["WorkspaceView.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../knowledge/KnowledgeTools.tsx](../knowledge/KnowledgeTools.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[../governance/ModuleGovernancePanel.tsx](../governance/ModuleGovernancePanel.tsx)、[ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx)、[../team/WorkspaceMembers.tsx](../team/WorkspaceMembers.tsx)、[../team/team-model.ts](../team/team-model.ts)、[InlineModuleOwner.tsx](InlineModuleOwner.tsx)、[workspace-view.css](workspace-view.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/GraphViewControls.tsx](../components/GraphViewControls.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../knowledge/KnowledgeTools.tsx](../knowledge/KnowledgeTools.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[../governance/ModuleGovernancePanel.tsx](../governance/ModuleGovernancePanel.tsx)、[ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx)、[../team/WorkspaceMembers.tsx](../team/WorkspaceMembers.tsx)、[../team/team-model.ts](../team/team-model.ts)、[InlineModuleOwner.tsx](InlineModuleOwner.tsx)、[workspace-view.css](workspace-view.css)。
 
 ### 本目录调用边界
 
@@ -343,6 +343,10 @@ N_src_frontend_workspace_WorkspaceView_tsx ..> N_src_frontend_workspace_workspac
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 简化后的图内入口
+
+上半区不再重复放置新建工程模块与模块负责人文字菜单；项目根 + 打开原工程模块编辑器，时钟图标打开工作区责任历史，不给内置根建立责任。卡片保持一级负责人选择。四个展开/折叠/字号图标在图内右上角，使用共享 `GraphViewControls`，仅更新本地视图。资源传输、管理及模块详情操作采用图标与辅助文字，不改变确认、来源采纳或知识事务。
+
 ### 窄面板的卡片操作
 
 业务图按扩展栏实际宽度布局。小于 400px 时缩小树缩进，负责人选择与三个图标分行；选择器保留可用宽度，图内不以横向滚动掩盖零宽控件。
@@ -377,7 +381,7 @@ N_src_frontend_workspace_WorkspaceView_tsx ..> N_src_frontend_workspace_workspac
 
 空列表与读取失败分开呈现：只有完整列表成功读完才提示尚无／没有启用岗位，并开放 Agent 登记选项；读取失败保留核实错误与重试入口。再次选择模块或刷新不重复套用初始新岗位选择。负责人面板只调用上层注入的登记回调，不反向导入岗位管理视图；责任与岗位写入继续使用各自原控制器及后端版本门禁。
 
-`ModuleOwnershipPanel` 由业务架构工具栏进入，也供项目岗位反查当前负责的模块。负责人使用稳定 memberId，与真人维护人分开；一个模块只有一个关系头，解除保留关系和历史，重新设置沿原 bindingId 升版。正式派发和领取由调度系统核实，此界面不移交旧任务或创建执行。预览的关联任务统计包含该模块的真实新旧节点，不再笼统称为旧协议任务；它是影响范围而不是可以移交的资格。来源通过独立明确采纳更新，active 岗位不等于可执行。
+`ModuleOwnershipPanel` 由项目根的记录图标或所选模块的负责人记录进入，也供项目岗位反查当前负责的模块。负责人使用稳定 memberId，与真人维护人分开；一个模块只有一个关系头，解除保留关系和历史，重新设置沿原 bindingId 升版。正式派发和领取由调度系统核实，此界面不移交旧任务或创建执行。预览的关联任务统计包含该模块的真实新旧节点，不再笼统称为旧协议任务；它是影响范围而不是可以移交的资格。来源通过独立明确采纳更新，active 岗位不等于可执行。
 
 列表按 ownershipCursor、岗位 registryCursor、knowledgeRevision 三项依据分页；来源无法读取不假报空架构。详情展示当前岗位、真实来源观察和近20条明确有界历史；main_agent 与 local_desktop 来源分开，不把主工具审批伪造成人工责任决定。元信息、当前来源差异每次显式核实，不周期回读。
 

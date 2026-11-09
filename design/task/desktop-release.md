@@ -4,6 +4,8 @@
 
 2026-11-09：账号菜单的版本更新与最近一次更新已随 [0.1.1 正式版](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.1) 发布，见[界面验证](../verification/account-updates-20261109.md)与[发布／升级验收](../verification/desktop-release-0.1.1-20261109.md)。0.1.0 用户从原设置页检查并手动升级；升级后使用左下角账号菜单。
 
+2026-11-09：[0.1.2](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.2) 已按用户选择未签名发行，包含四项 Issue 修复和统一品牌；全新安装、0.1.1 线上发现／下载／显式重启升级及数据保留已验证，见[本版发布验收](../verification/desktop-release-0.1.2-20261109.md)。后续签名以更高版本交付。
+
 ## 交付与发布通道
 
 - 首个平台为当前工程已验证的 Windows x64。现有 Forge/Vite 和 Pi 打包继续使用，新增 NSIS 每用户安装包，安装目录与 `~/.cbim` 用户数据分离。

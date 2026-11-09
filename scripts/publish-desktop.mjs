@@ -8,11 +8,12 @@ import {digest} from './desktop-signing/payload.mjs';
 import {publishCandidate} from './desktop-signing/publication.mjs';
 
 const args = process.argv.slice(2);
-if (!args[0] || args.length > 2 || (args[1] && args[1] !== '--replace')) throw Error('用法：pnpm publish:desktop <签名候选目录> [--replace]');
-const directory = path.resolve(args[0]), config = signingConfig();
-const signer = createWindowsSigner(config), repo = 'nan023062/cbim';
-const verify = () => verifyCandidate(directory, config, signer);
-// This gate runs before even reading the GitHub account, including for accidental unsigned publish attempts.
+if (!args[0] || args[0].startsWith('--') || args.length > 2 || (args[1] && !['--replace', '--unsigned'].includes(args[1]))) throw Error('用法：pnpm publish:desktop <候选目录> [--unsigned | --replace]');
+const unsigned = args[1] === '--unsigned', replace = args[1] === '--replace';
+const directory = path.resolve(args[0]), config = unsigned ? undefined : signingConfig();
+const signer = unsigned ? undefined : createWindowsSigner(config), repo = 'nan023062/cbim';
+const verify = () => verifyCandidate(directory, config, signer, {unsigned});
+// 先核对本次显式发行模式和实际制品，再访问 GitHub；不从未签名回执自动推断发布许可。
 await verify();
 const gh = args => runCommand('gh', args, {timeout: 20 * 60_000});
 const api = endpoint => JSON.parse(gh(['api', endpoint]));
@@ -57,7 +58,7 @@ const remote = {
     return patchRelease(release.id, {draft: true});
   },
   async create(tag, commit) {
-    gh(['release', 'create', tag, '--repo', repo, '--target', commit, '--draft', '--latest=false', '--title', `CBIM Assistant ${tag.slice(9)}`, '--notes', '签名候选验收中']);
+    gh(['release', 'create', tag, '--repo', repo, '--target', commit, '--draft', '--latest=false', '--title', `CBIM Assistant ${tag.slice(9)}`, '--notes', `${unsigned ? '未签名' : '签名'}候选验收中`]);
     return remote.find(tag);
   },
   async upload(tag, file, replace) { gh(['release', 'upload', tag, file, '--repo', repo, ...(replace ? ['--clobber'] : [])]); },
@@ -70,9 +71,10 @@ const remote = {
   },
   async publish(release, receipt, originalTagCommit) {
     const metadata = JSON.parse(await fs.readFile(path.join(receipt.packagedDirectory, 'resources/desktop-release.json'), 'utf8'));
-    const body = metadata.notes + `\n\n签名发布者：${config.publisherName}。应用、NSIS 安装器与卸载器已通过 Windows Authenticode 和时间戳校验。\n\n构建提交：${receipt.sourceCommit}；标签提交：${originalTagCommit}。\n` + (args[1] ? '\n本次为同版本签名重发；已安装同版本的用户需手动重装，自动更新仅提示更高版本。\n' : '');
+    const signatureNotice = unsigned ? '本版为未签名的个人开发发行版，Windows 可能提示未知发布者或阻止运行。请核实下载来源；SHA-256 校验仅证明文件一致性，不代表发布者签名。' : `签名发布者：${config.publisherName}。应用、NSIS 安装器与卸载器已通过 Windows Authenticode 和时间戳校验。`;
+    const body = metadata.notes + `\n\n${signatureNotice}\n\n构建提交：${receipt.sourceCommit}；标签提交：${originalTagCommit}。\n` + (replace ? '\n本次为同版本签名重发；已安装同版本的用户需手动重装，自动更新仅提示更高版本。\n' : '');
     return patchRelease(release.id, {draft: false, prerelease: false, make_latest: 'false', body});
   },
 };
-const result = await publishCandidate({directory, replace: args[1] === '--replace', verify, remote, record});
+const result = await publishCandidate({directory, replace, verify, remote, record});
 console.log(JSON.stringify({repo, actor, id: result.id, url: result.html_url, published: true}));

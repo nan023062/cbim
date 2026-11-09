@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {parse, stringify} from 'yaml';
-import {signingConfig, updaterConfigYaml} from '../scripts/desktop-signing/config.cjs';
+import {signingConfig, desktopSigningMode, updaterConfigYaml} from '../scripts/desktop-signing/config.cjs';
 import {createWindowsSigner} from '../scripts/desktop-signing/windows.mjs';
 import {digest, signPayload, windowsPayloads} from '../scripts/desktop-signing/payload.mjs';
 import {artifactHashes, releaseNames, verifyCandidate, verifyUpdateManifest} from '../scripts/desktop-signing/artifacts.mjs';
@@ -23,6 +23,19 @@ const env = {CBIM_SIGN_CERT_SHA1: config.thumbprint, CBIM_SIGN_PUBLISHER: config
 const pe = () => { const bytes = Buffer.alloc(72); bytes.write('MZ'); bytes.writeUInt32LE(64, 60); bytes.write('PE\0\0', 64); return bytes; };
 
 describe('signing policy and Windows adapter', () => {
+  it('requires an explicit unsigned mode and refuses ambiguous identities', () => {
+    expect(desktopSigningMode({})).toBe('signed');
+    expect(desktopSigningMode({CBIM_DESKTOP_SIGNING_MODE: 'unsigned'})).toBe('unsigned');
+    expect(() => desktopSigningMode({CBIM_DESKTOP_SIGNING_MODE: 'typo'})).toThrow('RELEASE_SIGNING_MODE_INVALID');
+    expect(() => desktopSigningMode({...env, CBIM_DESKTOP_SIGNING_MODE: 'unsigned'})).toThrow('RELEASE_SIGNING_MODE_CONFLICT');
+    expect(() => desktopSigningMode({CSC_LINK: 'certificate.pfx', CBIM_DESKTOP_SIGNING_MODE: 'unsigned'})).toThrow('RELEASE_SIGNING_MODE_CONFLICT');
+  });
+  it('omits publisher pinning only for explicitly unsigned releases', () => {
+    const update = parse(updaterConfigYaml('0.1.2', undefined, 'unsigned'));
+    expect(update).toEqual({provider: 'generic', url: 'https://github.com/nan023062/cbim/releases/download/desktop-v0.1.2/', updaterCacheDirName: 'cbim-desktop-updater'});
+    expect(() => updaterConfigYaml('0.1.2')).toThrow('SIGNING_UPDATE_CONFIG_INVALID');
+    expect(() => updaterConfigYaml('0.1.2', config.publisherName, 'unsigned')).toThrow('SIGNING_UPDATE_CONFIG_INVALID');
+  });
   it('rejects missing, ambiguous, and secret-based configuration before building', () => {
     expect(() => signingConfig({})).toThrow('SIGNING_NOT_CONFIGURED');
     expect(() => signingConfig({...env, CBIM_SIGN_CERT_SHA1: 'A'})).toThrow('SIGNING_NOT_CONFIGURED');
@@ -63,12 +76,12 @@ describe('signing policy and Windows adapter', () => {
   });
 });
 
-async function candidate() {
+async function candidate(unsigned = false) {
   const root = await temp(), packagedDirectory = path.join(root, 'app'), directory = path.join(root, 'candidate');
   await fs.mkdir(path.join(packagedDirectory, 'resources'), {recursive: true}); await fs.mkdir(directory);
   const exe = path.join(packagedDirectory, 'CBIM Desktop.exe'); await fs.writeFile(exe, pe());
   const signer = {sign: vi.fn(async file => { await fs.appendFile(file, 'fake signature for unit test'); return goodSignature; }), verify: vi.fn(() => goodSignature)};
-  const payload = await signPayload(packagedDirectory, signer);
+  const payload = unsigned ? [{file: 'CBIM Desktop.exe', sha256: await digest(exe)}] : await signPayload(packagedDirectory, signer);
   const version = '0.1.1', [name] = releaseNames(version), installer = path.join(directory, name);
   await fs.writeFile(installer, pe()); await fs.writeFile(path.join(directory, name + '.blockmap'), 'test blockmap');
   await fs.writeFile(path.join(directory, 'signed-uninstaller.exe'), pe());
@@ -77,17 +90,38 @@ async function candidate() {
   const artifacts = await artifactHashes(directory, version);
   await fs.writeFile(path.join(directory, 'SHA256SUMS.txt'), artifacts.map(a => `${a.sha256}  ${a.name}`).join('\n') + '\n');
   await fs.writeFile(path.join(packagedDirectory, 'resources/app.asar'), 'unit-test package');
-  await fs.writeFile(path.join(packagedDirectory, 'resources/desktop-release.json'), JSON.stringify({version, channel: 'desktop-stable', notes: 'unit-test notes'}));
-  await fs.writeFile(path.join(packagedDirectory, 'resources/app-update.yml'), updaterConfigYaml(version, config.publisherName));
+  await fs.writeFile(path.join(packagedDirectory, 'resources/desktop-release.json'), JSON.stringify({version, channel: 'desktop-stable', notes: 'unit-test notes', ...(unsigned ? {signingMode: 'unsigned'} : {})}));
+  await fs.writeFile(path.join(packagedDirectory, 'resources/app-update.yml'), updaterConfigYaml(version, unsigned ? undefined : config.publisherName, unsigned ? 'unsigned' : 'signed'));
   const resources = {};
   for (const name of ['app.asar', 'desktop-release.json', 'app-update.yml']) resources[name] = await digest(path.join(packagedDirectory, 'resources', name));
-  const receipt = {schema: 1, version, sourceCommit: 'D'.repeat(40).toLowerCase(), signing: config, packagedDirectory, payload, resources, artifacts};
+  const receipt = {schema: 1, version, sourceCommit: 'D'.repeat(40).toLowerCase(), signing: unsigned ? {mode: 'unsigned'} : config, packagedDirectory, payload, resources, artifacts};
   const save = () => fs.writeFile(path.join(directory, 'build-receipt.json'), JSON.stringify(receipt)); await save();
   await fs.writeFile(path.join(directory, 'installer-signatures.jsonl'), [{name, sha256: await digest(installer)}, {name: name.replace(/exe$/, '__uninstaller.exe'), sha256: await digest(path.join(directory, 'signed-uninstaller.exe'))}].map(item => JSON.stringify(item)).join('\n') + '\n');
-  return {directory, packagedDirectory, installer, signer, receipt, save, verify: () => verifyCandidate(directory, config, signer)};
+  return {directory, packagedDirectory, installer, signer, receipt, save, verify: () => verifyCandidate(directory, unsigned ? undefined : config, unsigned ? undefined : signer, {unsigned})};
 }
 
 describe('payload and release artifact gates', () => {
+  it('verifies an unsigned candidate without inventing signature evidence', async () => {
+    const c = await candidate(true); expect(await c.verify()).toEqual(c.receipt);
+    expect(c.signer.sign).not.toHaveBeenCalled(); expect(c.signer.verify).not.toHaveBeenCalled();
+    await expect(verifyCandidate(c.directory, config, c.signer)).rejects.toThrow('RELEASE_RECEIPT_INVALID');
+  });
+  it('does not let an unsigned invocation downgrade a signed candidate', async () => {
+    const c = await candidate();
+    await expect(verifyCandidate(c.directory, undefined, undefined, {unsigned: true})).rejects.toThrow('RELEASE_RECEIPT_INVALID');
+  });
+  it('retains manifest and executable integrity checks for unsigned candidates', async () => {
+    const c = await candidate(true); await fs.appendFile(c.installer, 'tamper');
+    await expect(c.verify()).rejects.toThrow('RELEASE_MANIFEST_INVALID');
+    const other = await candidate(true); await fs.appendFile(path.join(other.packagedDirectory, 'CBIM Desktop.exe'), 'tamper');
+    await expect(other.verify()).rejects.toThrow('RELEASE_PAYLOAD_CHANGED');
+  });
+  it('refuses unsigned metadata that claims a signed identity despite refreshed hashes', async () => {
+    const c = await candidate(true), name = 'desktop-release.json', file = path.join(c.packagedDirectory, 'resources', name);
+    await fs.writeFile(file, JSON.stringify({version: '0.1.1', channel: 'desktop-stable', notes: 'test', signingMode: 'signed'}));
+    c.receipt.resources[name] = await digest(file); await c.save();
+    await expect(c.verify()).rejects.toThrow('RELEASE_SIGNING_MODE_MISMATCH');
+  });
   it('finds Windows binaries in nested runtimes and hashes after signing', async () => {
     const root = await temp(); await fs.mkdir(path.join(root, 'runtime'));
     for (const name of ['CBIM Desktop.exe', 'runtime/addon.node', 'runtime/lib.dll']) await fs.writeFile(path.join(root, name), pe());
@@ -131,8 +165,8 @@ describe('payload and release artifact gates', () => {
 });
 
 describe('publication workflow (fake GitHub; no external writes)', () => {
-  async function publication(existing = true) {
-    const c = await candidate(), events = [], tag = 'desktop-v0.1.1', release = {id: 42, tag_name: tag, draft: false, prerelease: false};
+  async function publication(existing = true, unsigned = false) {
+    const c = await candidate(unsigned), events = [], tag = 'desktop-v0.1.1', release = {id: 42, tag_name: tag, draft: false, prerelease: false};
     const remote = {
       find: async () => existing ? release : undefined, latest: async () => 5, source: async () => c.receipt.sourceCommit,
       backup: async () => { events.push('backup'); },
@@ -169,6 +203,12 @@ describe('publication workflow (fake GitHub; no external writes)', () => {
   });
   it('creates a draft for a new version', async () => {
     const p = await publication(false); await publishCandidate(p.options); expect(p.events[0]).toBe('create'); expect(p.events).toContain('published');
+  });
+  it('publishes an explicitly unsigned candidate only after remote integrity verification', async () => {
+    const p = await publication(false, true); await publishCandidate(p.options);
+    expect(p.events.indexOf('remote-verified')).toBeLessThan(p.events.indexOf('published'));
+    expect(p.events.filter(event => event.startsWith('upload:'))).toHaveLength(4);
+    expect(p.c.signer.verify).not.toHaveBeenCalled();
   });
   it('refuses immutable releases without withdrawing them', async () => {
     const p = await publication(); p.remote.find = async () => ({immutable: true});

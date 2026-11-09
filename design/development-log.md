@@ -1,5 +1,12 @@
 # CBIM 开发记录
 
+## 2026-11-10：发布 CI 的知识来源夹具适配
+
+- PR #25 首轮完整 CI 第三片暴露两个来源生命周期用例仍向当前架构接口提交已退役的 peopleUpserts/maintenance。当前夹具改用无真人维护字段的真实公开契约；两个固定历史 EXE 入口显式保留旧输入，不按失败自动重放或降级。
+- 架构包替换用例直接核实新模块没有 maintenance，保留同字节目标、真实兄弟变化、来源换代、明确采纳和回执幂等断言，移除不再有差异的清理事务。
+- 按共享夹具的实际消费者选择 application/fault/process 与 legacy：`pnpm exec vitest run tests/knowledge-source-lifecycle-application.test.ts tests/knowledge-source-lifecycle-fault.test.ts tests/knowledge-source-lifecycle-process.test.ts tests/owner-execution-legacy.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-0.1.4-source-fixtures.json`，8 项通过，2 项因真实历史 EXE 缺失维持原有跳过；类型检查通过。
+- 仅测试与外部开发记录变化，无产品/依赖/内置日志/构建变化；保留冻结 6ba2d64f 的已验证候选。完整 CI 原失败保留，下一步修正另一个工具消费者旧断言后重新运行 PR 完整检查；没有合并或公开。
+
 ## 2026-11-10：0.1.4 发布准备及自动安装旧版验收
 
 - 用户授权合并、发布本轮四个修复，沿用未签名发行；上一桌面版为 0.1.3，旧 Python latest 保持 v1.0.2。版本与内置日志更新为 0.1.4，官网在公开前仍保持 0.1.3。

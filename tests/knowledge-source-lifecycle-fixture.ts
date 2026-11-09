@@ -23,7 +23,7 @@ export const knowledgeSourceFixture={
 } as const;
 
 /** The same public IPC setup can run against the fixed pre-source EXE or the current actual Application. It never manufactures registry or knowledge journals. */
-export async function seedKnowledgeSource(call:KnowledgeSourceCall,temp:string,baseUrl:string){
+export async function seedKnowledgeSource(call:KnowledgeSourceCall,temp:string,baseUrl:string,legacyMaintenance=false){
   const project=path.join(temp,'source-lifecycle-alpha'),otherProject=path.join(temp,'source-lifecycle-beta');
   await fs.mkdir(project,{recursive:true});await fs.mkdir(otherProject,{recursive:true});
   const entry=await call('add',{path:project}),other=await call('add',{path:otherProject});
@@ -32,18 +32,18 @@ export async function seedKnowledgeSource(call:KnowledgeSourceCall,temp:string,b
   const initial=await knowledgeSourceObjectChange(call,entry.id,[
     {kind:'agent',action:'create',parentId:'.cbim/team',slug:'source_worker',data:{name:knowledgeSourceFixture.agentName,summary,capabilities:['核实']},body:knowledgeSourceFixture.principles},
     {kind:'module',action:'create',parentId:'.cbim/workspace',slug:'source_module',data:{summary},body:moduleFiles('source_module')[1].text},
-  ]);
-  await knowledgeSourceObjectChange(call,entry.id,[{kind:'module',action:'create',parentId:'.cbim/workspace',slug:'source_sibling',data:{summary},body:moduleFiles('source_sibling')[1].text}]);
+  ],legacyMaintenance);
+  await knowledgeSourceObjectChange(call,entry.id,[{kind:'module',action:'create',parentId:'.cbim/workspace',slug:'source_sibling',data:{summary},body:moduleFiles('source_sibling')[1].text}],legacyMaintenance);
   const registered=await knowledgeSourceMemberChange(call,entry.id,{kind:'register',agentId:knowledgeSourceFixture.agentId,name:knowledgeSourceFixture.memberName,position:'核实受控来源采纳；本轮不启动业务任务。',adaptation:{instructions:'对象换代必须明确采纳，不按路径或同字节推断连续。',references:[knowledgeSourceFixture.moduleId]},runtimePolicy:{profileId:profile.id,modelId:knowledgeSourceFixture.model},reason:knowledgeSourceFixture.reason});
   const assigned=await knowledgeSourceOwnershipChange(call,entry.id,{moduleId:knowledgeSourceFixture.moduleId,expectedBinding:null,nextOwner:{memberId:registered.receipt.memberId,expectedRevision:registered.receipt.memberRevision},reason:knowledgeSourceFixture.reason});
   return {entry,other,project,otherProject,profileId:profile.id,definition,initial,registered,assigned};
 }
 
-/** Actual desktop architecture preview/commit, including a real explicit maintainer declaration for module edits. */
-export async function knowledgeSourceObjectChange(call:KnowledgeSourceCall,id:string,operations:ObjectOperation[]){
+/** 当前应用使用退役花名册后的契约；只有固定历史 EXE 的调用方显式选择旧维护字段，不按失败自动降级。 */
+export async function knowledgeSourceObjectChange(call:KnowledgeSourceCall,id:string,operations:ObjectOperation[],legacyMaintenance=false){
   const snapshot=await call('snapshot',{id}) as Snapshot,modules=operations.filter(operation=>operation.kind==='module'&&operation.action!=='delete');
   assert.ok(modules.length<=1);
-  const extra=modules.length?{peopleUpserts:[{id:'source_owner',name:'隔离测试维护人',team:'.cbim/team'}],maintenance:{maintainerPersonIds:['source_owner'],confirmed:true}}:{};
+  const extra=legacyMaintenance&&modules.length?{peopleUpserts:[{id:'source_owner',name:'隔离测试维护人',team:'.cbim/team'}],maintenance:{maintainerPersonIds:['source_owner'],confirmed:true}}:{};
   const input={workspaceId:id,instanceId:snapshot.instanceId,revision:snapshot.revision,operations,...extra},preview=await call('architecture.preview',input);
   assert.equal(preview.validation.structural,true,JSON.stringify(preview.validation.issues));
   const commitInput={workspaceId:id,instanceId:snapshot.instanceId,planId:preview.planId},receipt=await call('architecture.commit',commitInput);

@@ -98,4 +98,5 @@ jobs:
             test-results/pr-full-suite.json
             test-results/runtime-diagnostic.json
             test-results/isolation-recovery-pi-failure.json
+            test-results/terminal-state.json
           if-no-files-found: ignore

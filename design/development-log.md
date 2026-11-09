@@ -1,5 +1,66 @@
 # CBIM 开发记录
 
+## 2026-11-10：发布 CI 的旧任务真人说明兼容断言
+
+- 首轮完整四片最终为 364 文件/2530 项：2516 通过、12 失败、2 原有历史 EXE 跳过。第四片最后一项旧断言仍要求不存在的真人标识触发 PERSON_NOT_FOUND，与用户要求退役花名册冲突；改为确认该字段只保留历史说明，知识版本不变、不生成 people.json，正式岗位派发拒绝仍由相邻用例验证。
+- `pnpm exec vitest run tests/team-workflow.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-0.1.4-team-workflow.json`：3 项通过。全部已发现失败对应的定向测试累计 28 通过、2 原有历史 EXE 跳过；无产品代码/构建输入变化。
+- 首轮完整报告保存在 `test-results/desktop-0.1.4-ci-initial-42694782113/`，不覆盖原失败。中间 head f7ed56fe 的 run 42697185690 由最终推送触发的同 PR 完整检查替代，不能作为合并证据；新 head 的四片必须完整通过。
+
+## 2026-11-10：发布 CI 的对象预览版本断言对齐
+
+- 统一工具权限测试的 v2 清单遗漏本轮已升级的 cbim_object_preview；仅补齐明确版本预期，保留逐调用知识授权、身份/版本拒绝、真实 Pi 路由和回执检查。
+- `pnpm exec vitest run tests/unified-tool-policy.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-0.1.4-tool-policy.json`：6 项通过。此次只改测试断言和外部记录，无 src、接口或导入变化，不重复类型/架构检查。
+- 候选安装原始报告已核对：真实 0.1.3 → 0.1.4、全新安装、isPackaged=true、NotSigned，六项数据保留、模型请求一次、页面错误零。来源和责任消费者修正分别独立提交；等待首轮其余片结束并以最终 head 重跑完整 CI，候选保持冻结源码身份。
+
+## 2026-11-10：发布 CI 的独立派工缺口消费者对齐
+
+- 责任主工具与 Application 的旧断言只允许 OWNER_UNASSIGNED，与本轮一次列出缺口的行为不符；现在同时要求 OWNER_MODEL_UNRESOLVED，保留无能力正文/凭据泄露、无模型执行、责任绑定及独立岗位配置的原断言。
+- 依据失败用例及同一 discover 消费者，分别执行 `pnpm exec vitest run tests/module-ownership-tools.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-0.1.4-owner-tools.json`（9 通过）与 `pnpm exec vitest run tests/owner-execution-application.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-0.1.4-owner-discovery-application.json`（2 通过）。没有产品、类型接口或依赖变化，不重跑已通过的检查。
+- 候选安装 run 42695642991 已成功，报告待下载核对；完整 CI 第一片还发现 cbim_object_preview v2 的旧版本断言，下一步单独修正并重新检查 PR。尚未合并或公开。
+
+## 2026-11-10：发布 CI 的知识来源夹具适配
+
+- PR #25 首轮完整 CI 第三片暴露两个来源生命周期用例仍向当前架构接口提交已退役的 peopleUpserts/maintenance。当前夹具改用无真人维护字段的真实公开契约；两个固定历史 EXE 入口显式保留旧输入，不按失败自动重放或降级。
+- 架构包替换用例直接核实新模块没有 maintenance，保留同字节目标、真实兄弟变化、来源换代、明确采纳和回执幂等断言，移除不再有差异的清理事务。
+- 按共享夹具的实际消费者选择 application/fault/process 与 legacy：`pnpm exec vitest run tests/knowledge-source-lifecycle-application.test.ts tests/knowledge-source-lifecycle-fault.test.ts tests/knowledge-source-lifecycle-process.test.ts tests/owner-execution-legacy.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-0.1.4-source-fixtures.json`，8 项通过，2 项因真实历史 EXE 缺失维持原有跳过；类型检查通过。
+- 仅测试与外部开发记录变化，无产品/依赖/内置日志/构建变化；保留冻结 6ba2d64f 的已验证候选。完整 CI 原失败保留，下一步修正另一个工具消费者旧断言后重新运行 PR 完整检查；没有合并或公开。
+
+## 2026-11-10：0.1.4 发布准备及自动安装旧版验收
+
+- 用户授权合并、发布本轮四个修复，沿用未签名发行；上一桌面版为 0.1.3，旧 Python latest 保持 v1.0.2。版本与内置日志更新为 0.1.4，官网在公开前仍保持 0.1.3。
+- 发布验收按明确旧版选择 0.1.1/0.1.2 两步或 0.1.3 自动安装，独立验证普通退出取消与真实线上重启；未知旧版仍拒绝。同步工作流和三宿主发布资料。
+- 19 项受影响输入测试、脚本语法、类型、架构/依赖（1159 文件、6006 依赖、0 环）、品牌和官网构建通过。仅 scripts/配置/文档变化，无 src 类图变更。命令与后续证据见[发布记录](verification/desktop-release-0.1.4-20261110.md)。
+- 冻结后创建 develop → master PR 跑完整 CI，构建唯一候选；安装、公开与线上升级仍待实际回执。
+
+## 2026-11-10：实例恢复指引与反馈/提问现状核实
+
+- Workspace.assert 保留原身份与运行状态门禁，分别说明工程选错和实例变化，给出当前 instanceId、cbim_workspace_identity 及重新读取/预览指引；未知提交先核原回执。源码注释及 main/workspace CONTRACT/ARCHITECTURE 同步。
+- 定向 `pnpm exec vitest run tests/workspace.test.ts tests/github-feedback-status.test.ts tests/github-feedback-lifecycle-pi.test.ts tests/question-tools.test.ts tests/question-tool-contract-pi.test.ts --reporter=default --reporter=json --outputFile=test-results/instance-feedback-question-20261110.json`：5 文件/39 项通过，覆盖真实重开旧身份拒绝、空项目反馈连接后新轮装配、选择卡答案/取消/坏回包/停止。
+- 原现场反馈三工具缺失、fetch failed 和实例重启原因尚无版本/日志，未复现，不宣称已修复；当前主会话的只读反馈诊断和授权后的双工具行为通过。没有创建线上测试反馈。
+- 架构同步及 diff 检查通过；最后一步没有类型或依赖变化，不重复静态检查。未跑全量、完整桌面、打包/发布。参见[本轮总记录](verification/empty-project-feedback-20261110.md)。四项保持独立提交到 develop，公开版本不变。
+
+## 2026-11-10：责任重复绑定提示与独立派工缺口
+
+- 预览与事务共用责任预期诊断：同岗位无需重设、已有记录需 inspect、非空旧版本是真实冲突，不再统一提示原样重试。前端将新增 OWNERSHIP_ALREADY_EXISTS 归为明确未受理；原回执优先和并发检查保留。
+- discover 独立检查模块/Workflow、岗位责任/来源、能力和模型，缺少岗位时说明桌面“团队架构 → 项目岗位 → 登记项目岗位”入口及未核实项。无缺口才调用原完整 resolve 产生 selection，不通过诊断放宽派发。
+- 选择责任 Core/服务/前端状态及岗位执行 Core/服务：`pnpm exec vitest run tests/module-ownership-service.test.ts tests/module-ownership-core.test.ts tests/module-ownership-view.test.ts tests/owner-execution-service.test.ts tests/owner-execution-core.test.ts --reporter=default --reporter=json --outputFile=test-results/ownership-discovery-20261110.json`，首轮 53 项中 51 通过。新增夹具的空解除与同岗位变更先被输入 Schema 拒绝，能力元数据变化也不等于已采纳执行原则变化；修正夹具为合法换岗请求与真实原则正文变化，未放宽产品校验。
+- 两失败文件复测报告 `test-results/ownership-discovery-20261110-fixed.json` 中执行服务全部通过；最终仅复跑责任诊断失败用例：`pnpm exec vitest run tests/module-ownership-service.test.ts -t 已有同岗位 --reporter=default --reporter=json --outputFile=test-results/ownership-diagnostics-20261110-final.json` 通过，其余 8 项按选择器未重跑。累计 5 文件/53 项通过。
+- 类型与架构检查通过，1159 文件、6006 依赖、0 环。四处注释/CONTRACT/ARCHITECTURE 同步；未跑全量、打包或发布。接续：实例失效提示及反馈/选择卡的当前实现核实。
+
+## 2026-11-10：空项目对象 Schema 与正文模板诊断
+
+- cbim_object_preview 升为 v2，data 以 kind 判别；实际字段与公开 Schema 共用 objectDataSchemas。模块 name 来自 slug，中文名明确写正文 H1；Agent 不再公开 purpose。
+- 新增纯 module-outline 契约，规则诊断与桌面编辑复用精确章节/模板，有源模板包含直属内容虚拟节点。规范示例明确无序号的标题原文。模板须按事实填写，不自动编造业务内容。
+- 按字段协议、规则、桌面消费者与真实工具发现选择：`pnpm exec vitest run tests/object-crud.test.ts tests/rules.test.ts tests/architecture-service.test.ts tests/knowledge-tool-contracts.test.ts tests/knowledge-contract-pi.test.ts --reporter=default --reporter=json --outputFile=test-results/object-schema-template-20261110.json`，5 文件/18 项通过；包含公开 JSON Schema 与实际入参一致、空/有源模板复验、预览无写入、真实 Pi 提交和取消。
+- `pnpm typecheck`、`pnpm check:architecture` 通过（1159 文件、6006 依赖、0 环），源码注释及五处 CONTRACT/ARCHITECTURE 同步。未跑全量、打包或发布。接续：负责人绑定提示、一次性缺口与工具发现。
+
+## 2026-11-10：废弃真人花名册与独立维护门禁
+
+- 新项目不生成花名册，对象/桌面不再登记真人，移除人员查询工具与内置 Schema；旧文件和任务字段仅兼容历史，不阻断岗位负责人派发。岗位、模型、权限、Workflow 及知识版本保护保持。
+- 清理运行指引、资源导入和 Python 维护脚本的旧要求，源码注释与受影响 CONTRACT/ARCHITECTURE 已同步。
+- 受影响 TypeScript 16 文件/97 项、Python 26 项通过；类型、架构/依赖无环检查通过。原 4 项失败、工具夹具中止和 Python 导入错误及修正均记入[验证记录](verification/retired-human-roster-20261110.md)。未跑全仓、完整桌面或发布验收，未改变公开 0.1.3。
+- 本项独立提交；继续处理本轮空项目反馈中的 Schema、正文模板、责任提示、派工缺口和工具发现。
+
 ## 2026-11-09：PR #23 合并，0.1.3 公开与真实线上升级完成
 
 - 初轮 CI 最终 19 项失败、2 项跳过，保留完整证据；Team 主轮读占用与知识契约夹具修复后，冻结 `11c2a76` 完整四片 364 文件／2521 项，2519 通过、0 失败、2 项原有真实历史 EXE 跳过。PR #23 正常合并为 `952dff7`，11 个提交完整保留。

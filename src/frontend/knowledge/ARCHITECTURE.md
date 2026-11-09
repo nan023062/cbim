@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-知识问题、预览提交、静态表单与共用来源说明。展示当前、退役、待采纳及待核实状态，不从路径或正文相同猜来源连续；来源组件无提交副作用。固定编辑基线，模块维护人同事务确认，业务架构展示位于workspace。
+知识问题、预览提交、静态表单与共用来源说明。展示当前、退役、待采纳及待核实状态，不从路径或正文相同猜来源连续；来源组件无提交副作用。固定编辑基线，不要求真人维护声明，业务架构展示位于workspace。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -64,7 +64,7 @@ class N_src_frontend_knowledge_ArchitectureEditor_tsx_ArchitectureEditorProps["A
 N_src_frontend_knowledge_ArchitectureEditor_tsx ..> N_src_frontend_knowledge_ArchitectureEditor_tsx_ArchitectureEditorProps : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[static-owners.ts](static-owners.ts)、[architecture-editor.css](architecture-editor.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/architecture.ts](../../bridge/contracts/architecture.ts)、[static-owners.ts](static-owners.ts)、[architecture-editor.css](architecture-editor.css)。
 
 ### knowledge-source.css
 
@@ -169,7 +169,7 @@ N_src_frontend_knowledge_KnowledgeTools_tsx ..> N_src_frontend_knowledge_style_c
 
 `ArchitectureEditor` 从打开时的知识快照填入 Agent、Module、Skill 或 Workflow 表单。草稿固定 `workspaceId / instanceId / revision`；后台刷新不能改写正在编辑的字段。每次修改使旧预览失效，提交只发送后端返回的 `planId`。知识校验和事务边界由后端维护。
 
-新增/编辑模块时一并选择真人维护人并明确确认；必要时新增花名册条目，与模块同事务保存。确认维护责任不授予任何执行权限。删除先展示引用和文件差异，含下级对象时要求明确选择级联；业务源码不在删除范围。
+新增/编辑模块只维护静态定义和正文，不显示真人花名册或维护确认表单；岗位与负责人由独立入口配置。删除先展示引用和文件差异，含下级对象时要求明确选择级联；业务源码不在删除范围。
 
 `static-owners` 从静态定义路径计算 Team 和分组候选，保留没有自己 Skill 清单的祖先组，排除 Agent 叶子。团队与业务定义是工作区共享知识，不读取或创建成员实例与主会话任务图。
 
@@ -178,3 +178,5 @@ N_src_frontend_knowledge_KnowledgeTools_tsx ..> N_src_frontend_knowledge_style_c
 `KnowledgeSourceDetails` 共用展示岗位与模块责任的已采纳来源和当前核实状态：未追踪、已绑定、待采纳、退役、未决和不可核实分别呈现。旧记录缺省不从路径或内容指纹补造身份；内置执行者显示实际内容引用，不生成项目代次。资料只按文本呈现。
 
 `KnowledgeSourceSelection` 在原提交预览中展示本次明确采纳的来源。未追踪对象在真正保存前不显示伪造 UUID；绑定来源不代表已按负责人派发或获得执行资格。两组件不查询、不提交，原界面命令控制器继续负责未知结果、原命令查询和工作区身份隔离。
+
+ArchitectureEditor 的模块模板从 Bridge 的纯正文契约读取，与后端诊断保持同一标题及结构；模板不代填真实专业判断。

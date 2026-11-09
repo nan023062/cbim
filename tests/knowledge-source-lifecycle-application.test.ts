@@ -48,9 +48,9 @@ it('actual architecture replace resets a same-byte target generation while a cha
   const f=await fixture(),probe=await knowledgeSourceHttpProbe();
   try{
     const app=f.app,call=(action:string,input?:unknown)=>app.dispatch(action,input),seeded=await seedKnowledgeSource(call,f.temp,probe.url),id=seeded.entry.id;
-    // Portable architecture intentionally omits maintenance. Normalize those ordinary fields through a real transaction before publishing, so target bytes genuinely match the package.
-    const initial=await app.workspace(id).snapshot(),changes=initial.files.filter(file=>[data.moduleId+'/module.json',data.siblingId+'/module.json'].includes(file.path)).map(file=>{const value=JSON.parse(file.text);delete value.maintenance;return {path:file.path,text:JSON.stringify(value,null,2)+'\n'}});
-    await app.workspace(id).commit(request(initial,changes));
+    // 当前应用不再创建真人维护字段，模块定义可以直接发布；仍以真实兄弟正文变化触发替换事务。
+    const initial=await app.workspace(id).snapshot();
+    for(const file of initial.files.filter(file=>[data.moduleId+'/module.json',data.siblingId+'/module.json'].includes(file.path)))expect(JSON.parse(file.text)).not.toHaveProperty('maintenance');
     const pack=await knowledgeSourceArchitecturePackage(app,id,path.join(f.temp,'source-package-repository')),before=await app.workspace(id).snapshot();
     const old=await ownership(app,id),oldRef=knowledgeSourceRefSchema.parse(old.view.binding!.sourceRef),oldMember=await member(app,id,seeded.registered.receipt.memberId);
     const sibling=before.files.find(file=>file.path===data.siblingId+'/module.md')!;await app.workspace(id).commit(request(before,[{path:sibling.path,text:sibling.text+'\n\n仅兄弟正文形成实际替换差异。\n'}]));

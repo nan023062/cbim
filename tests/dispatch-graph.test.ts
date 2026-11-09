@@ -43,11 +43,24 @@ test('graph rejects missing dispatch endpoints, empty module ownership and forge
   expect(errorCode(()=>applyGraphBatch(first,batch(2,[{type:'task.upserted',task:task('a')}])))).toBe('GRAPH_INPUT_INVALID');
   for(const mutation of [
     (t:TaskNode)=>{t.modules=[]},
-    (t:TaskNode)=>{t.modules[0].maintainerPersonIds=[]},
+    (t:TaskNode)=>{t.modules[0].moduleId=''},
     (t:TaskNode)=>{t.requester={...agent,agentSessionId:'someone-else'}},
     (t:TaskNode)=>{t.modules[0].workflow={kind:'general',id:'basic',version:'1',reason:''}},
   ]){const changes=dispatch('a');if(changes[0].type==='task.upserted')mutation(changes[0].task);expect(errorCode(()=>applyGraphBatch(first,batch(2,changes)))).toBe('GRAPH_INPUT_INVALID')}
   expect(first.cursor.seq).toBe(1);
+});
+test('new tasks omit human maintenance and historical empty declarations remain readable',()=>{
+  for(const legacy of [false,true]){
+    const changes=dispatch('retired');
+    if(changes[0].type==='task.upserted'){
+      const binding=changes[0].task.modules[0];
+      if(legacy)binding.maintainerPersonIds=[];
+      else{delete binding.maintenanceBindingId;delete binding.maintainerPersonIds}
+    }
+    const graph=applyGraphBatch(initial(),batch(2,changes));
+    expect(()=>validateGraph(JSON.parse(JSON.stringify(graph)))).not.toThrow();
+    expect(graph.tasks[0].modules[0]).toMatchObject({moduleId:'game',workflow:{kind:'general'}});
+  }
 });
 test('dispatch and prerequisite edges are checked together and retained projections remain intact on rejection',()=>{
   const first=initial(),next=applyGraphBatch(first,batch(2,[...dispatch('a'),...dispatch('b','a')]));

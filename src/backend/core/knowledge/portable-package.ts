@@ -159,6 +159,7 @@ export function planWorkspacePackage(snapshot:Snapshot,pack:WorkspacePackage,pla
     targetRoot=parent+(pack.kind==='skill'?'/skills/':'/')+slug;
     check(![...original.keys()].some(id=>id.toLowerCase()===targetRoot.toLowerCase()||id.toLowerCase().startsWith(targetRoot.toLowerCase()+'/')),'目标名称或目录已存在，不能覆盖');createdRoots.push(targetRoot);
   }
+  // 废弃花名册仍属用户历史文件，整组替换不删除它，也不再核实旧人员的团队引用。
   const protectedFile=(id:string)=>INDEXES.includes(id)||id==='.cbim/team/people.json';
   if(placement.mode==='replace'){
     deletedRoots.push(targetRoot);for(const id of target.keys())if(id.startsWith(targetRoot+'/')&&!protectedFile(id))target.delete(id);
@@ -172,13 +173,7 @@ export function planWorkspacePackage(snapshot:Snapshot,pack:WorkspacePackage,pla
     const ownerFile=original.has(parent+'/agent.json')?parent+'/agent.json':parent+'/skills.json',data=target.has(ownerFile)?parseJson(target.get(ownerFile)!):{skills:[]};
     check(!data.skills.some((item:any)=>item.name.toLowerCase()===pack.skill!.name.toLowerCase()),'目标已登记同名 Skill');data.skills.push({...pack.skill,reference:'skills/'+slug+'/SKILL.md'});target.set(ownerFile,json(data));
   }
-  if(pack.kind==='team'&&placement.mode==='replace'){
-    // Rules 的 live 目录发现会暂时看见待删除的空小组；这里按最终静态定义校验，避免预览放行后才发现花名册悬空。
-    const groups=new Set(['.cbim/team']);
-    for(const id of target.keys())if(id.startsWith('.cbim/team/')&&(id.endsWith('/skills.json')||id.endsWith('/agent.json'))){let owner=pp.dirname(id);if(id.endsWith('/agent.json'))owner=pp.dirname(owner);while(owner.startsWith('.cbim/team')){groups.add(owner);if(owner==='.cbim/team')break;owner=pp.dirname(owner)}}
-    const people=target.get('.cbim/team/people.json');if(people)for(const person of parseJson(people).people)check(person.team===null||groups.has(person.team),'目标花名册仍引用将被替换的小组；请先在目标项目重新确认人员归属，再整体替换团队');
-  }
   const changes=[...new Set([...original.keys(),...target.keys()])].filter(id=>!protectedFile(id)&&original.get(id)!==target.get(id)).map(id=>({path:id,text:target.get(id)??null}));
   check(changes.length>0,'资源包与目标定义相同，没有需要提交的变更');
-  return {changes,targetRoot,createdRoots,deletedRoots,removedBindings:[...removed],warnings:['只更新当前工作区静态架构，不迁移成员实例、任务或主会话。','源项目人员/维护授权与连接器绑定不会继承；模块维护人需在目标项目重新确认。',...(placement.mode==='replace'?['整体替换会删除预览清单中的旧静态定义；业务源码和资源不在删除范围。']:[])]};
+  return {changes,targetRoot,createdRoots,deletedRoots,removedBindings:[...removed],warnings:['只更新当前工作区静态架构，不迁移成员实例、任务或主会话。','源项目的历史人员／维护字段和连接器绑定不会继承；执行岗位及模块负责人仍由目标项目明确配置。',...(placement.mode==='replace'?['整体替换会删除预览清单中的旧静态定义；业务源码和资源不在删除范围。']:[])]};
 }

@@ -442,7 +442,7 @@ FileDispatchStore 在自身 transaction body 写入 `executionProtocol:module_ow
 
 主会话接续时，`RunJournal` 从 `run.started.source` 恢复经过校验的 `RunInputSource`：批次 ID、结果消息集合和任务集合必须符合 Core 契约，来源只能存在于带 resumeFrom 的普通 chat 运行中，不能与成员运行绑定混用。日志保留回注尝试，供调度按 continuationId / messageIds 去重；读取本身不确认信封、不启动模型，也不把来源字段视为业务验收。旧用户日志 source 仍为空，不由文本猜测补造。
 
-本目录负责图提交的可靠落盘、幂等检查、快照、增量读取与恢复。Core 定义节点、边及状态约束；调度层核验成员、模块维护关系、权限、依赖与状态迁移。本目录不替模型分析目标，不自行决定派给哪个成员。
+本目录负责图提交的可靠落盘、幂等检查、快照、增量读取与恢复。Core 定义节点、边及状态约束；调度层核验成员、模块岗位责任、权限、依赖与状态迁移。本目录不替模型分析目标，不自行决定派给哪个成员。
 
 ### 图身份与存储端口
 

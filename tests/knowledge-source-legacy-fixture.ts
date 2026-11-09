@@ -17,7 +17,7 @@ export async function createKnowledgeSourceLegacyFixture(){
     desktop=await electron.launch({executablePath:executable,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});
     const page=await desktop.firstWindow();page.on('pageerror',error=>errors.push(error.message));await page.waitForFunction(()=>!!(window as any).cbim);
     const call=(action:string,input:unknown={})=>page.evaluate(({action,input})=>(window as any).cbim.call(action,input),{action,input});
-    const seeded=await seedKnowledgeSource(call,temp,probe.url),snapshot=await call('snapshot',{id:seeded.entry.id});
+    const seeded=await seedKnowledgeSource(call,temp,probe.url,true),snapshot=await call('snapshot',{id:seeded.entry.id});
     const member=await call('workspace.members.get',{workspaceId:seeded.entry.id,instanceId:snapshot.instanceId,memberId:seeded.registered.receipt.memberId});
     const ownership=await call('workspace.ownerships.get',{workspaceId:seeded.entry.id,instanceId:snapshot.instanceId,moduleId:seeded.assigned.receipt.moduleId});
     assert.ok(member.member.adoption);assert.equal(member.member.adoption.sourceRef,undefined);assert.equal(ownership.view.binding.sourceRef,undefined);

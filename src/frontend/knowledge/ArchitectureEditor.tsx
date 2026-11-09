@@ -5,6 +5,7 @@
 import {useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import type {Snapshot,Preview} from '../../bridge/contracts/workspace';
+import {moduleBodyTemplate} from '../../bridge/contracts/architecture';
 import {teamGroupIds} from './static-owners';
 import './architecture-editor.css';
 
@@ -24,9 +25,10 @@ export function editableObject(snapshot:Snapshot,kind:EditableKind,id?:string){
   const reference=id.slice(owner.length+1)+(kind==='skill'?'/SKILL.md':'/workflow.md');
   return {data:(inventory[kind==='skill'?'skills':'workflows']??[]).find((item:any)=>item.reference===reference)??{},body:snapshot.files.find(file=>file.path===owner+'/'+reference)?.text??''};
 }
-const moduleScaffold='# 模块\n\n## 定位\n请填写本模块负责的业务目标与边界。\n\n## 子模块和 source 节点\n当前尚未配置子模块与源目录。\n\n## 结构关系图与抽象设计决策\n```mermaid\nclassDiagram\nclass Module\n```\n请说明结构选择与约束。\n\n## 雷区与排障\n请记录已知限制与验证方法。\n\n## 观察模式-待抽象\n当前尚无经过核实的观察记录。\n';
+// 与后端诊断共用结构；占位内容须由用户按实际业务填写。
+const moduleScaffold=moduleBodyTemplate();
 export interface ArchitectureEditorProps {workspaceId:string;snapshot:Snapshot;kind:EditableKind;id?:string;parentId?:string;mode?:'edit'|'delete';onClose:()=>void;onSaved:(objects:string[])=>void}
-/** 删除始终先预览，级联必须单独勾选；维护责任确认是人工声明，不授予 Agent 工具执行权限。 */
+/** 删除始终先预览，级联必须单独勾选；不再登记真人或签署旧维护声明，岗位负责人通过独立入口配置。 */
 export function ArchitectureEditor({workspaceId,snapshot,kind,id,parentId,mode='edit',onClose,onSaved}:ArchitectureEditorProps){
   const base=useRef(snapshot).current,initial=useRef(editableObject(base,kind,id)).current,removing=mode==='delete';
   const [owner,setOwner]=useState(parentId??(kind==='agent'?'.cbim/team':kind==='module'?'.cbim/workspace':''));
@@ -34,8 +36,6 @@ export function ArchitectureEditor({workspaceId,snapshot,kind,id,parentId,mode='
   const [body,setBody]=useState(initial.body||(kind==='module'?moduleScaffold:'')),[purpose,setPurpose]=useState(initial.data.purpose??'');
   const [capabilities,setCapabilities]=useState((initial.data.capabilities??[]).join('\n')),[limitations,setLimitations]=useState((initial.data.limitations??[]).join('\n'));
   const [sources,setSources]=useState<{location:string;scope:string}[]>(initial.data.sources??[]);
-  const people: {id:string;name:string;team:string}[]=read(base,'.cbim/team/people.json').people??[];
-  const [maintainers,setMaintainers]=useState<string[]>(initial.data.maintenance?.maintainerPersonIds??[]),[newPersonId,setNewPersonId]=useState(''),[newPersonName,setNewPersonName]=useState(''),[confirmed,setConfirmed]=useState(false);
   const [cascade,setCascade]=useState(false),[changed,setChanged]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [preview,setPreview]=useState<(Preview&{planId:string;objects:string[]})>();
   const lock=useRef(false),length=Array.from(summary.replace(/\s/g,'')).length;
@@ -51,10 +51,7 @@ export function ArchitectureEditor({workspaceId,snapshot,kind,id,parentId,mode='
       if(!removing&&(kind==='agent'||kind==='module')&&(length<100||length>250))throw Error('摘要需要 100～250 个非空白字符，请具体描述职责、边界和适用场景');
       const data=kind==='agent'?{name,summary,capabilities:lines(capabilities),limitations:lines(limitations)}:kind==='module'?{summary,sources}:kind==='skill'?{name,purpose}:{name};
       const operation=removing?{kind,action:'delete',id,cascade}:{kind,action:id?'update':'create',...(id?{id}:{parentId:owner,slug}),data,body};
-      const personIds=[...new Set([...maintainers,...(newPersonId.trim()?[newPersonId.trim()]:[])])];
-      if(!removing&&kind==='module'&&(!personIds.length||!confirmed))throw Error('请指定维护人并确认维护责任，供后续任务派发核实');
-      if(!removing&&kind==='module'&&newPersonId.trim()&&!newPersonName.trim())throw Error('请填写新增维护人的姓名');
-      const request={workspaceId,instanceId:base.instanceId,revision:base.revision,operations:[operation],...(!removing&&kind==='module'?{maintenance:{maintainerPersonIds:personIds,confirmed:true},...(newPersonId.trim()?{peopleUpserts:[{id:newPersonId.trim(),name:newPersonName.trim(),team:'.cbim/team'}]}:{})}:{})};
+      const request={workspaceId,instanceId:base.instanceId,revision:base.revision,operations:[operation]};
       setPreview(await window.cbim.call('architecture.preview',request));
     }catch(cause){setError(cause instanceof Error?cause.message:String(cause))}finally{lock.current=false;setBusy(false)}
   }
@@ -73,7 +70,7 @@ export function ArchitectureEditor({workspaceId,snapshot,kind,id,parentId,mode='
       {kind==='agent'&&<><label>专业能力（每行一项）<textarea aria-label="专业能力" required rows={3} value={capabilities} onChange={event=>edit(()=>setCapabilities(event.target.value))}/></label><label>能力限制（每行一项）<textarea aria-label="能力限制" rows={2} value={limitations} onChange={event=>edit(()=>setLimitations(event.target.value))}/></label></>}
       {kind==='skill'&&<label>适用目的<input aria-label="适用目的" required value={purpose} onChange={event=>edit(()=>setPurpose(event.target.value))}/></label>}
       {kind==='module'&&<><div className="architecture-sources"><b>业务源目录</b><small>可留空；目录应真实存在且位于项目内。</small>{sources.map((source,index)=><div className="architecture-source" key={index}><input aria-label={'源目录 '+(index+1)} placeholder="如 src/game" value={source.location} onChange={event=>edit(()=>setSources(old=>old.map((item,i)=>i===index?{...item,location:event.target.value}:item)))}/><input aria-label={'目录职责 '+(index+1)} placeholder="该目录的职责范围" value={source.scope} onChange={event=>edit(()=>setSources(old=>old.map((item,i)=>i===index?{...item,scope:event.target.value}:item)))}/><button type="button" aria-label={'移除源目录 '+(index+1)} onClick={()=>edit(()=>setSources(old=>old.filter((_,i)=>i!==index)))}>移除</button></div>)}<button type="button" onClick={()=>edit(()=>setSources(old=>[...old,{location:'',scope:''}]))}>添加源目录</button></div>
-      <div className="architecture-maintainers"><b>模块维护人</b><p>任务执行 Agent 与长期维护人不同。这里登记真人维护责任，不授予执行权限。</p>{people.map(person=><label className="architecture-checkbox" key={person.id}><input type="checkbox" checked={maintainers.includes(person.id)} onChange={event=>edit(()=>setMaintainers(old=>event.target.checked?[...old,person.id]:old.filter(value=>value!==person.id)))}/>{person.name} · {person.id}</label>)}<details open={!people.length}><summary>新增真人维护人</summary><label>维护人 ID<input aria-label="维护人 ID" placeholder="如 project_owner" value={newPersonId} onChange={event=>edit(()=>setNewPersonId(event.target.value))}/></label><label>维护人姓名<input aria-label="维护人姓名" value={newPersonName} onChange={event=>edit(()=>setNewPersonName(event.target.value))}/></label></details><label className="architecture-checkbox"><input type="checkbox" aria-label="确认维护责任" checked={confirmed} onChange={event=>edit(()=>setConfirmed(event.target.checked))}/>我确认上述人员承担此模块的维护责任</label></div></>}
+      </>}
       <label>{kind==='agent'?'工作原则':kind==='skill'?'Skill 正文':kind==='workflow'?'Workflow 正文':'模块知识正文'}<textarea className="architecture-body" aria-label="知识正文" required spellCheck={false} value={body} onChange={event=>edit(()=>setBody(event.target.value))}/></label>
       {kind==='module'&&!id&&<small>正文提供章节框架，请在提交前填写实际业务内容；结构校验不代替架构 review。</small>}
     </fieldset>}

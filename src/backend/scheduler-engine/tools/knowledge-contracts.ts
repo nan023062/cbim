@@ -6,7 +6,7 @@ import type {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
 import {builtinSkills} from '../../core/knowledge/builtins';
 import {workspaceIdentityOutputSchema,knowledgeSnapshotOutputSchema,knowledgeSearchOutputSchema} from '../../core/knowledge/tool-output-base';
-import {moduleRegistryOutputSchema,moduleGetOutputSchema,agentRegistryOutputSchema,agentGetOutputSchema,peopleListOutputSchema} from '../../core/knowledge/tool-output-queries';
+import {moduleRegistryOutputSchema,moduleGetOutputSchema,agentRegistryOutputSchema,agentGetOutputSchema} from '../../core/knowledge/tool-output-queries';
 import {builtinCatalogOutputSchema,builtinReadOutputSchema} from '../../core/knowledge/tool-output-builtins';
 import {knowledgeRefreshOutputSchema,knowledgePreviewOutputSchema,knowledgeCommitOutputSchema,objectPreviewOutputSchema,objectCommitOutputSchema,maintenanceTaskOutputSchema,maintenanceTaskStatusOutputSchema} from '../../core/knowledge/tool-output-transactions';
 import {knowledgeToolCatalogOutputSchema,knowledgeToolDescribeOutputSchema,type ToolCancellation,type ToolRecovery} from '../../core/tools/contracts';
@@ -16,7 +16,7 @@ const read:ToolRecovery={mode:'read_again',description:'可显式重新读取；
 const outputs:Record<string,z.ZodTypeAny>={
   cbim_workspace_identity:workspaceIdentityOutputSchema,cbim_knowledge_snapshot:knowledgeSnapshotOutputSchema,cbim_knowledge_search:knowledgeSearchOutputSchema,
   cbim_builtin_catalog:builtinCatalogOutputSchema,cbim_builtin_read:builtinReadOutputSchema,
-  cbim_module_registry:moduleRegistryOutputSchema,cbim_module_get:moduleGetOutputSchema,cbim_agent_registry:agentRegistryOutputSchema,cbim_agent_get:agentGetOutputSchema,cbim_people_list:peopleListOutputSchema,
+  cbim_module_registry:moduleRegistryOutputSchema,cbim_module_get:moduleGetOutputSchema,cbim_agent_registry:agentRegistryOutputSchema,cbim_agent_get:agentGetOutputSchema,
   cbim_knowledge_refresh:knowledgeRefreshOutputSchema,cbim_object_preview:objectPreviewOutputSchema,cbim_object_commit:objectCommitOutputSchema,
   cbim_knowledge_preview:knowledgePreviewOutputSchema,cbim_knowledge_commit:knowledgeCommitOutputSchema,cbim_knowledge_move_preview:knowledgePreviewOutputSchema,
   cbim_rules_validate:maintenanceTaskOutputSchema,cbim_task_status:maintenanceTaskStatusOutputSchema,cbim_task_cancel:maintenanceTaskOutputSchema,

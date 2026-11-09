@@ -1,5 +1,5 @@
 /**
- * 作用定位：团队：Team/小组/Agent、真人花名册与 Agent 自身和祖先 Skill的核心封装。
+ * 作用定位：团队：Team/小组/Agent 与 Agent 自身和祖先 Skill的核心封装。
  * 设计原因：在同一校验快照上提供领域语义，不依赖工作区进程或桌面页面。
  */
 import path from 'node:path';
@@ -10,15 +10,10 @@ import type {Snapshot} from '../knowledge/types';
 /** 实例固定绑定一个快照；刷新知识后由调用方创建新的领域视图。 */
 export class Team {
   constructor(private snapshot:Snapshot){}
+  /** authors 仅作历史来源说明；authorPeople 固定为空以兼容旧查询响应，不再读取或关联真人。 */
   async agents(query=''){
     const s=this.snapshot,index=parseJson(s.validation!.indexes['.cbim/team/registry.json']);
-    const people=data(s,'.cbim/team/people.json').people;
-    return {...context(s),teamRootId:'.cbim/team',groups:index.groups.map((g:any)=>({...g,agents:g.agents.filter((a:any)=>!query||`${a.id} ${a.summary}`.toLowerCase().includes(query.toLowerCase())).map((a:any)=>{const d=data(s,a.id+'/agent.json');return {...a,name:d.name,authors:d.authors,authorPeople:people.filter((p:any)=>d.authors.includes(p.id))}})})),indexSource:'current-definitions',persistedIndexMatches:s.files.find(f=>f.path==='.cbim/team/registry.json')?.text===s.validation!.indexes['.cbim/team/registry.json']};
-  }
-  async people(query=''){
-    const s=this.snapshot,people=data(s,'.cbim/team/people.json').people;
-    if(!Array.isArray(people))fail('INVALID_DEFINITION','人员花名册格式错误');
-    return {...context(s),people:people.filter((p:any)=>!query||JSON.stringify(p).toLowerCase().includes(query.toLowerCase()))};
+    return {...context(s),teamRootId:'.cbim/team',groups:index.groups.map((g:any)=>({...g,agents:g.agents.filter((a:any)=>!query||`${a.id} ${a.summary}`.toLowerCase().includes(query.toLowerCase())).map((a:any)=>{const d=data(s,a.id+'/agent.json');return {...a,name:d.name,authors:d.authors,authorPeople:[]}})})),indexSource:'current-definitions',persistedIndexMatches:s.files.find(f=>f.path==='.cbim/team/registry.json')?.text===s.validation!.indexes['.cbim/team/registry.json']};
   }
   async agent(id:string){
     const s=this.snapshot;

@@ -113,11 +113,10 @@ it('提交后回执保存中断可恢复原知识事务，并且未知资源阻�
   }finally{await f.cleanup()}
 });
 
-it('替换前拒绝保留花名册悬空；主提交后清理失败明确报告已应用并允许同计划续办',async()=>{
+it('替换保留旧花名册且忽略其团队引用；清理失败仍明确报告已应用并允许同计划续办',async()=>{
   const f=await setup();try{
     await fs.mkdir(path.join(f.b,'.cbim/team/legacy_group'));const snap=await f.target.snapshot();await f.target.commit(request(snap,[{path:'.cbim/team/people.json',text:json({people:[{id:'target_owner',name:'保留人员',team:'.cbim/team/legacy_group'}]})}]));
-    const published=await f.publish('team');await expect(f.preview(published.resourceId,{mode:'replace'})).rejects.toMatchObject({code:'RESOURCE_PACKAGE',message:expect.stringContaining('花名册')});
-    const current=await f.target.snapshot();await f.target.commit(request(current,[{path:'.cbim/team/people.json',text:json({people:[{id:'target_owner',name:'保留人员',team:'.cbim/team'}]})}]));
+    const published=await f.publish('team');
     const plan=await f.preview(published.resourceId,{mode:'replace'}),prune=vi.spyOn(f.target.objects,'pruneEmpty').mockRejectedValueOnce(new Error('目录临时占用'));
     await expect(f.commit(plan.planId)).rejects.toMatchObject({code:'RESOURCE_IMPORT_APPLIED',message:expect.stringContaining('重试同一计划')});prune.mockRestore();
     expect((await f.target.read()).files.some(file=>file.path==='.cbim/team/dev/agent.json')).toBe(true);

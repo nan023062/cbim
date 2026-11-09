@@ -23,7 +23,7 @@ agent.json 通过名称与摘要表达职业和技术定位，具体技术能力
 | 字段 | 类型与含义 |
 |---|---|
 | name、summary | 名称与 100～250 字检索摘要 |
-| authors | 真人作者 id 数组，引用人员花名册；不得重复，所有作者必须归属同一个已知组；未知作者为 [] |
+| authors | 作者来源字符串数组，不得重复；不关联花名册或组，也不表示授权；未知为 [] |
 | capabilities、limitations | 专业能力与局限的字符串数组；未知局限不凭空补写 |
 | work_principles | 工作原则 Markdown 路径，读取后执行其中的判断与质量要求 |
 | skills | name、purpose、reference 对象数组，完整引用自身 skills/ 下的 SKILL.md |
@@ -116,4 +116,4 @@ summary 采用 100～250 字的检索摘要，覆盖核心能力、适用任务�
 
 connectors 是无重复的注册表逻辑 id 数组，无引用时为 []。按 [插件声明规范](../connector/connector-spec.md) 引用 Cindy 插件，不指向本地实现目录。所属任务将唯一 AI 成员与全部作业模块的声明合并，作为任务连接器需求集合；不表示独占或操作授权。实际外部工具接入仍需适配器；当前声明不证明工具已可调用。
 
-成员索引遵循 [注册表 Schema](registry.schema.json)。真人花名册保持独立，遵循 [人员 Schema](people.schema.json)，不嵌入成员索引。静态成员身份由本地定义目录确定，动态成员使用独立 AgentInstance 与逻辑会话；内部调度绑定定义版本、原则和有效 Skill，再由大脑执行。当前成员收件箱自动执行尚未接通，不能把定义读取或可靠入队说成成员已执行。
+成员索引遵循 [注册表 Schema](registry.schema.json)。真人花名册已废弃；旧 people.json 只保留历史内容，不参加校验或派工。静态角色由本地定义目录确定，岗位使用稳定 memberId，执行实例使用独立 AgentInstance 与逻辑会话；调度冻结能力、模型、模块负责人及 Workflow，再由大脑执行。查询中的 authorPeople 仅为旧客户端保留空数组。

@@ -17,6 +17,16 @@ const equal=(a:unknown,b:unknown)=>moduleOwnershipCanonical(a)===moduleOwnership
 function check(condition:unknown,code:string,message:string):asserts condition{if(!condition)fail(code,message)}
 export const moduleOwnershipHash=(value:ModuleOwnership)=>hash(moduleOwnershipCanonical(value));
 
+/** 区分误当首次设置与真正并发版本冲突；只诊断，不自动认领现有关系或改写调用方的预期。 */
+export function assertModuleOwnershipExpectedBinding(change:ModuleOwnershipChange['request']['change'],previous:ModuleOwnership|null){
+  if(change.expectedBinding===null&&previous){
+    if(change.nextOwner?.memberId===previous.ownerMemberId)fail('OWNERSHIP_NO_CHANGE','模块已绑定该岗位，无需重复设置。请调用 cbim_module_owner_inspect 查询 execution.groups；若来源变化，请明确采纳当前来源。');
+    fail('OWNERSHIP_ALREADY_EXISTS','模块已有责任记录。请调用 cbim_module_owner_inspect 读取 binding，将 bindingId、revision、ownerMemberId 作为 expectedBinding 后再预览更换或解除；不要继续传 null。');
+  }
+  const actual=previous?{bindingId:previous.bindingId,revision:previous.revision,ownerMemberId:previous.ownerMemberId}:null;
+  check(equal(change.expectedBinding,actual),'OWNERSHIP_BINDING_STALE','模块责任已被修改，原 expectedBinding 已过期。请重新 inspect 读取当前 binding 并核对变更意图，再预览；不要原样重试。');
+}
+
 /** 只取可信运行闭包；同一次调用的稳定命令不含可变化的工作区实例、时钟或随机重试 ID。 */
 export function moduleOwnershipMainCommandId(workspaceId:string,actor:ModuleOwnershipMainActor):string{
   const source=moduleOwnershipMainActorSchema.parse(actor);
@@ -60,8 +70,8 @@ export function applyModuleOwnershipChange(state:ModuleOwnershipRegistry,raw:Mod
   check(new Set(heads.map(item=>item.moduleId)).size===heads.length&&new Set(heads.map(item=>item.bindingId)).size===heads.length,'OWNERSHIP_AUDIT','责任头重复');
   check(!history.some(item=>item.changeId===event.changeId||item.request.commandId===request.commandId),'OWNERSHIP_AUDIT','责任变更或命令身份重复');
   if(event.actor.kind==='main_agent')check(request.commandId===moduleOwnershipMainCommandId(state.workspaceId,event.actor),'OWNERSHIP_ACTOR','主工具原命令与真实来源不一致');
-  const previous=heads.find(item=>item.moduleId===input.moduleId)??null,expected=input.expectedBinding;
-  check(previous?expected&&expected.bindingId===previous.bindingId&&expected.revision===previous.revision&&expected.ownerMemberId===previous.ownerMemberId:expected===null,'OWNERSHIP_BINDING_STALE','原负责人关系已变化');
+  const previous=heads.find(item=>item.moduleId===input.moduleId)??null;
+  assertModuleOwnershipExpectedBinding(input,previous);
   check(event.previousRevision===(previous?.revision??0)&&event.previousBindingHash===(previous?moduleOwnershipHash(previous):null),'OWNERSHIP_AUDIT','责任原版本或指纹不一致');
   check(previous?next.bindingId===previous.bindingId&&next.createdAt===previous.createdAt&&Date.parse(next.updatedAt)>=Date.parse(previous.updatedAt):next.createdAt===event.committedAt&&!heads.some(item=>item.bindingId===next.bindingId),'OWNERSHIP_AUDIT','责任身份、创建时间或历史被改写');
   const adopting=isModuleOwnershipSourceAdoption(input),previousOwner=previous?.ownerMemberId?members.find(member=>member.memberId===previous.ownerMemberId):undefined,nextOwner=adopting?previousOwner:input.nextOwner?members.find(member=>member.memberId===input.nextOwner!.memberId):undefined;

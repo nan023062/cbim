@@ -37,7 +37,12 @@ export class Workspace implements KnowledgeWorkspace {
   // Fault injection is an explicit dependency used only by isolated tests.
   constructor(readonly entry:WorkspaceEntry,readonly paths:Paths,readonly rules:Rules,readonly fault?:(step:number)=>void){this.objects=new FileObjectStorage(this);this.governance=new ModuleGovernanceService(this,path.join(paths.project(entry.id),'governance','module-ledger.json'));this.knowledge=new KnowledgeStore(this,(event,details)=>this.log(event,details),this.governance)}
   view():WorkspaceView{return {...this.entry,state:this.state,error:this.error,tasks:[...this.tasks.values()],revision:this.lastRevision,changed:this.changed,instanceId:this.instanceId,knowledgeErrors:this.knowledgeErrors}}
-  assert(identity?:{workspaceId:string;instanceId:string}){if(this.state!=='running')fail('NOT_RUNNING',`工作区当前状态：${this.state}`);if(identity&&(identity.workspaceId!==this.entry.id||identity.instanceId!==this.instanceId))fail('STALE_INSTANCE','工程或运行实例身份不匹配，请刷新工作区状态')}
+  /** 区分工程选错与运行实例变化；只提示刷新身份，不重绑定旧计划或重放未知写入。 */
+  assert(identity?:{workspaceId:string;instanceId:string}){
+    if(this.state!=='running')fail('NOT_RUNNING',`工作区当前状态：${this.state}`);
+    if(identity&&identity.workspaceId!==this.entry.id)fail('STALE_INSTANCE','工程身份不匹配。请用 cbim_workspace_identity 核对当前 workspaceId，再选择正确工程；不能把其他工程的请求改绑到这里。');
+    if(identity&&identity.instanceId!==this.instanceId)fail('STALE_INSTANCE',`运行实例已变化，可能已重启。请调用 cbim_workspace_identity，使用新 instanceId（当前为 ${this.instanceId}）重新读取与预览。未知提交先核实原回执，不自动重放。`);
+  }
   /** Application 可在 open 前注入带监控器的唯一 Store；此时不读取磁盘。 */
   attachDispatchStore(store:FileDispatchStore){if(this.sharedDispatch&&this.sharedDispatch!==store)fail('SOURCE_UNAVAILABLE','工作区已有派发存储');if(store.workspaceId!==this.entry.id)fail('SOURCE_UNAVAILABLE','派发存储工作区不匹配');this.sharedDispatch=store;this.sources??=new KnowledgeSources(this.entry.id,store);this.knowledge.attachSources(this.sources)}
   get dispatchStore(){if(!this.sharedDispatch)fail('SOURCE_UNAVAILABLE','工作区来源存储尚未打开');return this.sharedDispatch}

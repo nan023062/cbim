@@ -1,6 +1,7 @@
 /**
  * 作用定位：调度引擎：将明确选择的模块、叶子 Agent 和本模块 Workflow 装配为执行任务。
  * 设计原因：只通过 Core 契约准备版本一致的 Skill 与 Workflow；旧单模块入口及续聊遇程序约定明确拒绝，避免绕过正式成员门禁。无约定旧任务保留计划与证据行为，知识正文不赋予无限改写权。
+ * 旧 responsiblePerson 仅作历史说明，不查询花名册、不承担授权或派发门禁。
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
@@ -28,10 +29,8 @@ export async function prepareTeamTask(workspace:KnowledgeWorkspace,input:TeamTas
   const workflow=module.workflows.find((w:any)=>w.id===selection.workflowId);
   if(!workflow||!workflow.content.available)fail('WORKFLOW_SCOPE','只能选择当前模块登记且正文可用的 Workflow');
   if(parseWorkflowContract(workflow.content.text))fail('WORKFLOW_MEMBER_REQUIRED','声明了程序执行约定的 Workflow 必须通过主调度派发正式成员；旧单任务入口不提供该门禁');
-  const people=await queries.people();
-  if(selection.responsiblePerson&&!people.people.some((p:any)=>p.id===selection.responsiblePerson))fail('PERSON_NOT_FOUND','责任人不在真人花名册中');
   const current=await workspace.read();
-  if([agent.revision,people.revision,current.revision].some(r=>r!==module.revision))fail('CONFLICT','任务准备期间知识变化，请重新准备');
+  if([agent.revision,current.revision].some(r=>r!==module.revision))fail('CONFLICT','任务准备期间知识变化，请重新准备');
   const builtins=new Builtins(workspace.rules.designRoot);
   const standards=await Promise.all(['business-execution','common-rules'].map(id=>builtins.read(id)));
   return {taskId:randomUUID(),workspaceId:workspace.entry.id,root:workspace.entry.path,goal:selection.goal,moduleIds:[module.id],agentId:agent.id,responsiblePerson:selection.responsiblePerson,acceptance:selection.acceptance,

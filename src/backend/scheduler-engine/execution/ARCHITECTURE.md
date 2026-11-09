@@ -2919,7 +2919,7 @@ MemberExecutionManager ..> MemberEventStreams : 公开执行增量
 
 #### 职责和端口
 
-调度器接收主 Agent 分析后的任务请求，核验岗位、来源、多模块维护关系、依赖与权限，再持久化派发。主 Agent 模型提出分工，也可按本轮权限通过内部知识服务维护团队和业务定义，程序负责边界与事实；执行 Agent 自主探索真实团队与目标模块、选择实现和验证方法，再返回事实或缺口。组织的父子关系不授予派发权；主实例不直接执行业务，没有可用岗位时明确登记和分配责任，不能默认创建执行者绕过岗位模型与来源门禁。
+调度器接收主 Agent 分析后的任务请求，核验岗位、来源、多模块岗位责任、依赖与权限，再持久化派发。主 Agent 模型提出分工，也可按本轮权限通过内部知识服务维护团队和业务定义，程序负责边界与事实；执行 Agent 自主探索真实团队与目标模块、选择实现和验证方法，再返回事实或缺口。组织的父子关系不授予派发权；主实例不直接执行业务，没有可用岗位时明确登记和分配责任，不能默认创建执行者绕过岗位模型与来源门禁。
 
 `dispatch-service.ts` 负责建图、注册、派发及读取；`agent-manager.ts` 分配身份；`member-execution.ts` 管理领取、执行、结果和恢复，`member-state.ts` 核实交付并组装图事实，`workspace-lease.ts` 管理跨运行占用。存储端口在 Core `dispatch-storage.ts`。下面 `AgentDispatchService` 是后续模型命令契约，不是当前同名实现。
 
@@ -2972,7 +2972,7 @@ interface AgentDispatchService {
 }
 ```
 
-`caller` 完全由可信运行绑定注入，不作为模型参数。只有主 Agent 调度阶段可调用派发，当前派发使用根节点 revision；未来的 parentTaskId 仅表达主调度追加任务的前序关系，不授予执行成员派发权。派发时解析接收实例及正确 agentSessionId，冻结 `ModuleBinding[]`，不接收模型伪造的维护关系或版本。一个请求创建一个节点；并行工作拆成多次请求。
+`caller` 完全由可信运行绑定注入，不作为模型参数。只有主 Agent 调度阶段可调用派发，当前派发使用根节点 revision；未来的 parentTaskId 仅表达主调度追加任务的前序关系，不授予执行成员派发权。派发时解析接收实例及正确 agentSessionId，冻结 `ModuleBinding[]`，不接收模型伪造的模块绑定或版本。一个请求创建一个节点；并行工作拆成多次请求。
 
 同 `commandId` 的同参重试返回原回执；异参返回冲突。重试去重先于乐观版本检查；新请求版本过期须重读，不能自动覆盖。工具调用层用可信调用 ID 关联 commandId，网络重发与模型再次主动派工不是同一回事。读取/投递确认不替代 `result_ready`。
 
@@ -2981,7 +2981,7 @@ interface AgentDispatchService {
 #### 一次派发的顺序
 
 1. 核对工作区、根会话、主调度实例/租约、当前运行和授权；执行 Agent 不能调用派发入口。
-2. 通过 Context 查询成员及全部模块，冻结角色配置、维护关系、Workflow 和权限基线。定位不完整时返回可处理的缺口，不伪造正式任务节点。
+2. 通过 Context 查询成员及全部模块，冻结角色配置、模块、Workflow 和权限基线。定位不完整时返回可处理的缺口，不伪造正式任务节点。
 3. 在同一提交版本中校验父关系、前置版本及全部启用边的 DAG；持久化新任务、派发边/依赖边、outbox 消息、命令回执与图事件。
 4. 持久化成功后才发布图批次并投递邮箱；接收方持久化 inbox 后确认。派发方不持有接收方 Session 的写权限。
 5. 依赖未满足则节点为 waiting；可执行时 queued。取得成员执行槽、会话租约及写冲突资源后，先记录 runId 和执行意图，再启动大脑，实际启动事实推进 running。
@@ -3300,3 +3300,7 @@ MemberExecutionManager同时识别CONTROLLED_FILE_DRAIN_PENDING与EXECUTION_SCOP
 ### 自动与团队协作模式
 
 主运行 starting 将 collaborationMode 与明确模型交给 openScope 冻结；Cycle/Batch 从原周期继承。OwnerExecutionService 统一持知识→模型→Store 锁，selection/resolveExecution 分别核真实岗位或无负责人兜底。已登记但停用／来源失效／配置过期不可自动降级。plan、dispatch、claim、依赖维护和 checkpoint 复用该入口，原命令先查回执。新目标才可换模式；已有任务、模型、证据及权限不改写。
+
+### 一次性岗位执行缺口
+
+OwnerExecutionService.discover 独立核对每组模块/Workflow、岗位责任/来源、能力和模型，合并相同错误码。缺少岗位时返回桌面“团队架构 → 项目岗位 → 登记项目岗位”入口，能力/模型明确为尚无法核实；废弃的真人维护不列为门禁。只有无缺口并通过原 resolve 才返回 selection，读取后仍核知识和登记游标，不授予未来执行许可。

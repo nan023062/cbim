@@ -13,7 +13,6 @@ export class KnowledgeQueries {
   async modules(query=''){return new BusinessWorkspace(await this.workspace.snapshot()).modules(query)}
   async module(id:string){return new BusinessWorkspace(await this.workspace.snapshot()).module(id)}
   async agents(query=''){return new Team(await this.workspace.snapshot()).agents(query)}
-  async people(query=''){return new Team(await this.workspace.snapshot()).people(query)}
   async agent(id:string){return new Team(await this.workspace.snapshot()).agent(id)}
   /** 先查询完整原请求的成功 journal；重复请求不再写，返回的校验仍是当前知识，不冒充原时刻快照。 */
   async refresh(input:KnowledgeRefreshInput){

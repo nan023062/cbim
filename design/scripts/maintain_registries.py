@@ -326,56 +326,13 @@ def build_plan(root, allow_legacy=False, migration_counts=None, discovery_ignore
         else:
             registries[root / output] = {kind: sorted(entries, key=lambda e: e['id'])}
     registries[root / '.cbim/connectors/registry.json'] = read_connector_registry(root)
-    people = validate_people_teams(root, registries[root / '.cbim/team/registry.json'])
+    # 旧 people.json 是历史文件；不读取、重建或用于作者与执行资格校验。
     connector_ids = {item['id'] for item in registries[root / '.cbim/connectors/registry.json']['connectors']}
     for path, data in definitions:
-        validate_authors(data['authors'], people, path)
         for connector_id in data.get('connectors', []):
             if connector_id not in connector_ids:
                 raise RegistryError(f'{path}: connectors 引用不存在的连接器 id：{connector_id}')
     return registries
-
-
-def validate_people_teams(root, team_registry):
-    path = root / '.cbim/team/people.json'
-    if not path.exists():
-        raise RegistryError(f'{path}: 缺少真人花名册')
-    data = read_json(path)
-    if not isinstance(data, dict) or set(data) != {'people'} or not isinstance(data['people'], list):
-        raise RegistryError(f'{path}: 顶层只能包含 people 数组')
-    schema = read_json(Path(__file__).resolve().parents[1] / 'capability/people.schema.json')
-    errors = list(Draft202012Validator(schema).iter_errors(data))
-    if errors:
-        raise RegistryError(f'{path}: {errors[0].message}')
-    people = data['people']
-    for person in people:
-        if (not isinstance(person, dict) or set(person) != {'id', 'name', 'team'}
-                or not isinstance(person['id'], str) or not person['id'].strip()
-                or person['id'] != person['id'].strip()
-                or (person['name'] is not None and not isinstance(person['name'], str))):
-            raise RegistryError(f'{path}: 人员须包含有效 id、name 和 team')
-    ids = [p['id'] for p in people]
-    if len(ids) != len(set(ids)):
-        raise RegistryError('人员花名册存在重复 id')
-    groups = {g['id'] for g in team_registry['groups']} | {'.cbim/team'}
-    for person in people:
-        group = person['team']
-        if group is not None and (not isinstance(group, str) or group not in groups):
-            raise RegistryError(f'{path}: {person["id"]} 的组不存在；未知归属请填 null')
-    return {person['id']: person for person in people}
-
-
-def validate_authors(authors, people, source):
-    teams = set()
-    for author in authors:
-        if author not in people:
-            raise RegistryError(f'{source}: 作者 {author} 不在真人花名册中')
-        team = people[author]['team']
-        if team is None:
-            raise RegistryError(f'{source}: 作者 {author} 的组归属未知，无法确认作者同组')
-        teams.add(team)
-    if len(teams) > 1:
-        raise RegistryError(f'{source}: authors 中所有作者必须属于同一个组')
 
 
 def check_registry(path, expected):

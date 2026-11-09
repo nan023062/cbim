@@ -1,7 +1,7 @@
 /**
  * 作用定位：Core 对象治理：规划 Agent/Module/Skill/Workflow 变更，按计划提交受控事务。
  * 设计原因：领域语义归 Core，事务通过 KnowledgeWorkspace 契约执行，维护路径、清单及父子引用；Workflow 显式条件在预览前严格解析，提交仍重新走完整知识校验。
- * 桌面显式确认可将真人花名册和模块维护关系合入同一预览；内部工具仍只接受原对象操作，不借此获得用户确认或写授权。
+ * 模块、岗位和执行权限分别治理；对象预览不再登记真人或生成旧维护确认，已有历史字段只随原对象保留。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -12,21 +12,25 @@ import {json} from '../foundation/serialization';
 import {INDEXES} from './knowledge';
 import {parseJson} from '../foundation/json';
 import type {ChangeRequest,Preview} from './types';
-import type {ModuleMaintenanceDefinition} from '../workspace/maintenance';
 import {parseWorkflowContract} from '../workspace/workflow-contract';
 import {knowledgePlanHash,type ResolvedObjectOperation} from './planned-commit';
 
 const fields={name:z.string().min(1).optional(),summary:z.string().optional(),authors:z.array(z.string()).optional(),capabilities:z.array(z.string()).optional(),limitations:z.array(z.string()).optional(),connectors:z.array(z.string()).optional(),sources:z.array(z.object({location:z.string(),scope:z.string()}).strict()).optional(),purpose:z.string().optional()};
-export const objectOperation=z.object({kind:z.enum(['agent','module','skill','workflow']),action:z.enum(['create','update','delete']),id:z.string().optional(),parentId:z.string().optional(),slug:z.string().optional(),data:z.object(fields).strict().optional(),body:z.string().max(2*1024*1024).optional(),cascade:z.boolean().optional()}).strict();
-/** 对象字段不包含维护确认记录；工具调用不能声称自己代表本机用户签署维护关系。 */
+/** Schema 与实际写字段共用定义；模块 name 来自目录 slug，中文显示名写在正文 H1。 */
+export const objectDataSchemas={
+  agent:z.object({name:fields.name,summary:fields.summary,authors:fields.authors,capabilities:fields.capabilities,limitations:fields.limitations,connectors:fields.connectors}).strict(),
+  module:z.object({summary:fields.summary,authors:fields.authors,sources:fields.sources,connectors:fields.connectors}).strict().describe('name 固定为目录 slug，不可在 data 修改；中文模块名写在 body 的一级标题（# 中文名称）。'),
+  skill:z.object({name:fields.name,purpose:fields.purpose}).strict(),workflow:z.object({name:fields.name}).strict(),
+};
+const operationFields={action:z.enum(['create','update','delete']),id:z.string().optional(),parentId:z.string().optional(),slug:z.string().optional(),body:z.string().max(2*1024*1024).optional(),cascade:z.boolean().optional()};
+export const objectOperation=z.discriminatedUnion('kind',[
+  z.object({...operationFields,kind:z.literal('agent'),data:objectDataSchemas.agent.optional()}).strict(),
+  z.object({...operationFields,kind:z.literal('module'),data:objectDataSchemas.module.optional()}).strict(),
+  z.object({...operationFields,kind:z.literal('skill'),data:objectDataSchemas.skill.optional()}).strict(),
+  z.object({...operationFields,kind:z.literal('workflow'),data:objectDataSchemas.workflow.optional()}).strict(),
+]);
+/** 对象操作只描述静态知识；不接受已废弃的真人登记或维护确认字段。 */
 export type ObjectOperation=z.infer<typeof objectOperation>;
-/** 桌面输入的实名册条目；team 必须引用已有 Team/小组，由完整知识校验再次核实。 */
-export interface PersonUpsert {id:string;name:string;team:string}
-/** 仅供可信桌面边界传入的显式确认；记录 ID、时间和版本由后端产生。 */
-export interface ObjectPreviewOptions {
-  peopleUpserts?:PersonUpsert[];
-  maintenance?:{moduleId:string;maintainerPersonIds:[string,...string[]];confirmed:true};
-}
 /** 完整事务预览及可提交标识；objects 与输入操作按顺序对应。 */
 export interface ObjectPreview extends Preview {planId:string;objects:string[];notice:string}
 /** 知识事务回执；空目录清理警告不改变已提交的知识结果。 */
@@ -34,27 +38,17 @@ export interface ObjectCommit extends KnowledgeCommit {cleanupWarnings:string[]}
 const pp=path.posix;
 export class ObjectCrud {
   constructor(private w:KnowledgeWorkspace){}
-  /** 根据语义操作生成完整事务并持久化预览计划；不会自动编造原则或模块正文。options 仅由桌面显式确认入口提供，不能作为运行权限。 */
-  async preview(revision:string,operations:ObjectOperation[],options:ObjectPreviewOptions={}):Promise<ObjectPreview>{
+  /** 根据语义操作生成完整事务并持久化预览计划；不会自动编造原则或模块正文。提交仍由调用边界检查当前写授权。 */
+  async preview(revision:string,operations:ObjectOperation[]):Promise<ObjectPreview>{
     const s=await this.w.snapshot();if(s.revision!==revision)fail('CONFLICT','知识版本已变化，请重新查询');
     const map=new Map(s.files.map(f=>[f.path,f.text])),objects:string[]=[],deletedRoots:string[]=[],resolvedOperations:ResolvedObjectOperation[]=[];
     const get=(p:string)=>{const text=map.get(p);if(text===undefined)fail('OBJECT_NOT_FOUND',`对象不存在：${p}`);return parseJson(text)};
     const set=(p:string,d:any)=>map.set(p,json(d));
-    if(options.peopleUpserts?.length){
-      const roster=get('.cbim/team/people.json');if(!Array.isArray(roster.people))fail('PEOPLE','真人花名册格式错误，请先修复');
-      const seen=new Set<string>();
-      for(const person of options.peopleUpserts){
-        if(seen.has(person.id))fail('PEOPLE','同一预览不能重复修改同一个真人');seen.add(person.id);
-        const index=roster.people.findIndex((item:any)=>item.id===person.id);
-        if(index<0)roster.people.push({...person});else roster.people[index]={...person};
-      }
-      set('.cbim/team/people.json',roster);
-    }
     const group=(id:string)=>id==='.cbim/team'||s.validation!.indexes['.cbim/team/registry.json']&&parseJson(s.validation!.indexes['.cbim/team/registry.json']).groups.some((g:any)=>g.id===id);
     for(const op of operations){
       if(op.kind==='workflow'&&op.action!=='delete'&&op.body!==undefined)parseWorkflowContract(op.body);
       let id=op.id||'',owner='',definitionPath='';const data=op.data||{};
-      const allowed=op.kind==='agent'?['name','summary','authors','capabilities','limitations','connectors']:op.kind==='module'?['summary','authors','sources','connectors']:op.kind==='skill'?['name','purpose']:['name'];
+      const allowed=Object.keys(objectDataSchemas[op.kind].shape);
       for(const key of Object.keys(data))if(!allowed.includes(key))fail('FIELD',`${op.kind} 不支持修改字段 ${key}；目录与清单由 CBIM 维护`);
       if(op.action==='create'){
         if(op.id||!op.parentId||!op.slug||!/^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$/.test(op.slug)||['skills','workflows','references','scripts','assets','archive','node_modules'].includes(op.slug))fail('OBJECT_ID','创建需有效 parentId 和 slug，不接受自定 id');
@@ -83,7 +77,7 @@ export class ObjectCrud {
         const ref=pp.relative(owner,id)+(op.kind==='skill'?'/SKILL.md':'/workflow.md');
         const position=items!.findIndex((i:any)=>i.reference===ref);
         if(op.action!=='create'&&position<0)fail('OBJECT_NOT_FOUND','方法未登记在所属对象');
-        if(op.action==='create')items!.push({name:data.name||op.slug,...(op.kind==='skill'?{purpose:data.purpose||''}:{}),reference:ref});
+        if(op.action==='create')items!.push({name:('name' in data&&data.name)||op.slug,...(op.kind==='skill'?{purpose:('purpose' in data&&data.purpose)||''}:{}),reference:ref});
         else if(op.action==='update')items![position]={...items![position],...data};
         else items!.splice(position,1);
         set(definitionPath,inventory);
@@ -108,16 +102,6 @@ export class ObjectCrud {
       }
       objects.push(id);
       resolvedOperations.push({kind:op.kind,action:op.action,id,...(op.cascade!==undefined?{cascade:op.cascade}:{})});
-    }
-    if(options.maintenance){
-      const {moduleId,maintainerPersonIds,confirmed}=options.maintenance;
-      if(confirmed!==true)fail('MAINTENANCE_CONFIRMATION','维护关系必须由本机用户显式确认');
-      if(!operations.some((op,index)=>op.kind==='module'&&op.action!=='delete'&&objects[index]===moduleId))fail('MAINTENANCE','维护确认必须对应本次新增或编辑的模块');
-      const definition=get(moduleId+'/module.json'),previous:ModuleMaintenanceDefinition|undefined=definition.maintenance;
-      if(previous&&(!Number.isSafeInteger(previous.revision)||previous.revision<1||previous.revision===Number.MAX_SAFE_INTEGER))fail('MAINTENANCE','现有维护版本无效或已耗尽，请先治理');
-      // 不接受前端传入 binding/confirmation；稳定关系 ID 保留，任何重新确认都增加版本，旧派发可据此识别知识变化。
-      definition.maintenance={bindingId:previous?.bindingId||randomUUID(),maintainerPersonIds:[...maintainerPersonIds],revision:previous?previous.revision+1:1,state:'active',confirmation:{recordId:randomUUID(),source:'local_user',confirmedAt:new Date().toISOString()}} satisfies ModuleMaintenanceDefinition;
-      set(moduleId+'/module.json',definition);
     }
     const changes=[...new Set([...s.files.map(f=>f.path),...map.keys()])].filter(p=>!INDEXES.includes(p)&&s.files.find(f=>f.path===p)?.text!==map.get(p)).map(p=>({path:p,text:map.get(p)??null}));
     const request:ChangeRequest={workspaceId:s.workspaceId,instanceId:s.instanceId,revision,requestId:randomUUID(),changes};

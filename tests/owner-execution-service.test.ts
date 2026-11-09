@@ -1,5 +1,5 @@
 import {expect,test,vi} from 'vitest';
-import {fixture} from './helpers';
+import {fixture,request} from './helpers';
 import {seedOwnerExecution} from './owner-execution-fixture';
 import type {GoalPlanInput} from '../src/backend/core/tasks/scope-goal';
 import {ownerExecutionSelectionFor} from '../src/backend/core/team/member-execution-binding';
@@ -14,6 +14,22 @@ async function setup(){
   const request={...identity,commandId:'owner-service-dispatch',expectedParentRevision:1,task:{assigneeAgentId:seed.team.input.agentId,moduleIds:[seed.modules[0]],ownerSelection:selection,goal:'读取模块材料',acceptance:[{id:'c1',text:'真实读取'}]}};
   return {...f,seed,workspace,service,store,identity,scopeId,runId,selection,input,request};
 }
+
+test('发现同时给出能力与模型变化，空项目同时说明岗位入口及未核实项且不产生选择',async()=>{
+  const f=await setup();try{
+    const snapshot=await f.workspace.snapshot(),file=f.seed.team.input.agentId+'/principles.md';
+    const original=snapshot.files.find(item=>item.path===file)!.text;
+    await f.workspace.commit(request(snapshot,[{path:file,text:original+'\n新增执行原则，须明确重新采纳。\n'}]));
+    const profile=f.seed.profiles[1];await f.app.models.save({id:profile.id,profile:{...profile.definition,name:'变化模型配置'}});
+    const before=await f.store.read(),result=await f.service.owners.discover([f.seed.modules[0]]),group=result.groups[0];
+    expect(group.issues.map(issue=>issue.code)).toEqual(expect.arrayContaining(['OWNER_CAPABILITY_CHANGED','OWNER_MODEL_CHANGED']));expect(group.selection).toBeUndefined();expect(await f.store.read()).toEqual(before);
+    const other=await f.app.dispatch('add',{path:f.b}),empty=f.app.memberDispatch(other.id);
+    const missing=await empty.owners.discover(['.cbim/workspace/chess']);
+    const codes=missing.groups[0].issues.map(issue=>issue.code);expect(codes).toEqual(expect.arrayContaining(['OWNER_UNASSIGNED','OWNER_MEMBER_REQUIRED','OWNER_MODEL_UNRESOLVED']));
+    expect(missing.groups[0].issues.some(issue=>issue.message.includes('团队架构 → 项目岗位 → 登记项目岗位'))).toBe(true);
+    expect(missing.groups[0].issues.length).toBeGreaterThan(3);expect(missing.groups[0].selection).toBeUndefined();expect(JSON.stringify(missing)).not.toContain('MAINTAINER_UNCONFIRMED');
+  }finally{await f.cleanup()}
+});
 
 test('同静态Agent的岗位分组不合并，原任务只读对照保持原绑定和岗位名',async()=>{
   const f=await setup();try{

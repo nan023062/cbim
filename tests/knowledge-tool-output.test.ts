@@ -11,7 +11,7 @@ import {
   jsonValueSchema,knowledgeSnapshotOutputSchema,knowledgeSearchOutputSchema,workspaceIdentityOutputSchema,
 } from '../src/backend/core/knowledge/tool-output-base';
 import {
-  moduleRegistryOutputSchema,moduleGetOutputSchema,agentRegistryOutputSchema,agentGetOutputSchema,peopleListOutputSchema,knowledgeContentOutputSchema,
+  moduleRegistryOutputSchema,moduleGetOutputSchema,agentRegistryOutputSchema,agentGetOutputSchema,knowledgeContentOutputSchema,
 } from '../src/backend/core/knowledge/tool-output-queries';
 import {builtinCatalogOutputSchema,builtinReadOutputSchema} from '../src/backend/core/knowledge/tool-output-builtins';
 import {
@@ -36,7 +36,7 @@ it('真实知识查询、内置资料及所有Skill别名保留原输出，内�
     const registry=accepts(agentRegistryOutputSchema,await call('cbim_agent_registry'));expect(registry.builtinAgents[0].id).toBe('cbim:executor');
     const own=accepts(agentGetOutputSchema,await call('cbim_agent_get',{id:seeded.input.agentId}));expect(own.definitionFile.path).toContain('/agent.json');expect(own.skills.some((skill:any)=>skill.inherited)).toBe(true);
     const builtin=accepts(agentGetOutputSchema,await call('cbim_agent_get',{id:'cbim:executor'}));expect(builtin.definitionFile).toBeUndefined();expect(builtin.skills[0].content).toEqual({available:true,text:'# 团队校验规则'});
-    accepts(peopleListOutputSchema,await call('cbim_people_list'));
+    await expect(call('cbim_people_list')).rejects.toThrow();
     const catalog=accepts(builtinCatalogOutputSchema,await call('cbim_builtin_catalog'));
     for(const item of catalog.items)accepts(builtinReadOutputSchema,await call('cbim_builtin_read',{id:item.id,expectedVersion:item.version}));
     for(const skill of builtinSkills)accepts(builtinReadOutputSchema,await call('cbim_skill_'+skill.id.replaceAll('-','_')));
@@ -47,7 +47,7 @@ it('真实知识查询、内置资料及所有Skill别名保留原输出，内�
   }finally{await f.cleanup()}
 });
 
-it('结构不合格的原始人员、作者事实和定义语义仍可诊断，不裁剪额外JSON字段',async()=>{
+it('旧花名册不再提供查询或作者映射，其他无效知识仍能完整诊断',async()=>{
   const f=await fixture();try{
     const entry=await f.app.dispatch('add',{path:f.a}),ws=f.app.workspace(entry.id),seeded=await seedTeam(ws),{call}=internalKnowledge(ws);
     const people=[{id:'raw-person',name:42,team:null,unexpected:{retain:[true,null,'fact']}}];
@@ -55,13 +55,12 @@ it('结构不合格的原始人员、作者事实和定义语义仍可诊断，�
     const agentPath=path.join(f.a,seeded.input.agentId,'agent.json'),agent=JSON.parse(await fs.readFile(agentPath,'utf8'));agent.authors=['raw-person'];await fs.writeFile(agentPath,JSON.stringify(agent));
     const modulePath=path.join(f.a,seeded.input.moduleId,'module.json'),module=JSON.parse(await fs.readFile(modulePath,'utf8'));module.summary=summary.repeat(3);await fs.writeFile(modulePath,JSON.stringify(module));
     const snapshot=accepts(knowledgeSnapshotOutputSchema,await call('cbim_knowledge_snapshot'));expect(snapshot.validation.structural).toBe(false);
-    const list=accepts(peopleListOutputSchema,await call('cbim_people_list'));expect(list.structural).toBe(false);expect(list.people).toEqual(people);
-    const registry=accepts(agentRegistryOutputSchema,await call('cbim_agent_registry'));expect(registry.groups.flatMap((group:any)=>group.agents)[0].authorPeople).toEqual(people);
+    const registry=accepts(agentRegistryOutputSchema,await call('cbim_agent_registry'));expect(registry.groups.flatMap((group:any)=>group.agents)[0].authorPeople).toEqual([]);
     const detail=accepts(moduleGetOutputSchema,await call('cbim_module_get',{id:seeded.input.moduleId}));expect(detail.structural).toBe(false);expect(detail.definition.summary).toBe(summary.repeat(3));
-    // people() 的真实行为允许数组中的非对象诊断条目，不能让 outputSchema 悄悄抹去它们。
-    const raw=[null,17,'invalid person',{other:['kept']}];await fs.writeFile(path.join(f.a,'.cbim/team/people.json'),JSON.stringify({people:raw}));
-    expect(accepts(peopleListOutputSchema,await call('cbim_people_list')).people).toEqual(raw);
-    expect(peopleListOutputSchema.safeParse({...list,people:'not an array'}).success).toBe(false);
+    await fs.writeFile(path.join(f.a,'.cbim/team/people.json'),'不再解析的历史内容');
+    const legacy=await ws.snapshot();expect(legacy.validation!.issues.some(issue=>issue.path==='.cbim/team/people.json')).toBe(false);
+    expect(legacy.files.find(file=>file.path==='.cbim/team/people.json')!.text).toBe('不再解析的历史内容');
+    await expect(call('cbim_people_list')).rejects.toThrow();
   }finally{await f.cleanup()}
 });
 

@@ -45,8 +45,8 @@ it('the original receipt wins over retired instance and unavailable source witho
 
 it('unrelated knowledge changes keep the same preview basis while new registration records the actual capture revision',async()=>{
   const f=await setup(),p=await f.preview(f.register()),command=f.command(p),snapshot=await f.workspace.snapshot();
-  const people=snapshot.files.find(file=>file.path==='.cbim/team/people.json')!;
-  await f.workspace.commit(request(snapshot,[{path:people.path,text:people.text+'\n'}]));
+  const unrelated=snapshot.files.find(file=>file.path==='.cbim/README.md')!;
+  await f.workspace.commit(request(snapshot,[{path:unrelated.path,text:unrelated.text+'\n'}]));
   const next=await f.preview(f.register());expect(next.basis).toBe(p.basis);
   expect(next.proposed.capability.configuration.knowledgeRevision).not.toBe(p.proposed.capability.configuration.knowledgeRevision);
   const receipt=await f.commit(command),detail=await f.service.get({...f.identity,memberId:receipt.memberId});

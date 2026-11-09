@@ -14,7 +14,7 @@
 | [knowledge-queries.ts](knowledge-queries.ts) | 核心知识查询门面，装配团队与业务工作区领域视图并刷新索引。 |
 | [knowledge-write-input.ts](knowledge-write-input.ts) | 知识提交工具与后端原事务核实共用的输入解析和原引用构造。 |
 | [knowledge-write-observation.ts](knowledge-write-observation.ts) | 原知识事务的有界公开观察协议，供后端与界面共同校验，只有纯 Schema 依赖。 |
-| [knowledge.ts](knowledge.ts) | Core 知识规则：校验领域结构、人员与显式模块维护关系，并派生注册索引。 |
+| [knowledge.ts](knowledge.ts) | Core 知识规则：校验领域结构、专业正文和引用，并派生注册索引。 |
 | [object-crud.ts](object-crud.ts) | Core 对象治理：规划 Agent/Module/Skill/Workflow 变更，按计划提交受控事务。 |
 | [object-storage.ts](object-storage.ts) | 对象 CRUD 所需的目录检查、预览计划存储和空目录清理端口。 |
 | [planned-commit.ts](planned-commit.ts) | 对象与资源包私有提交计划的不可变协议，供领域规划和本机固定目录加载共用。 |
@@ -23,7 +23,7 @@
 | [snapshot.ts](snapshot.ts) | 已校验知识快照的版本信息、定义读取和受限正文引用解析。 |
 | [tool-output-base.ts](tool-output-base.ts) | 知识工具的身份、文件、校验与快照输出协议，供注册边界及具体查询协议复用。 |
 | [tool-output-builtins.ts](tool-output-builtins.ts) | 内置资料目录、正文以及 Skill 别名工具共享的业务输出协议。 |
-| [tool-output-queries.ts](tool-output-queries.ts) | 团队、模块、人员注册表与详情的纯业务输出协议。 |
+| [tool-output-queries.ts](tool-output-queries.ts) | 团队、模块注册表与详情的纯业务输出协议。 |
 | [tool-output-transactions.ts](tool-output-transactions.ts) | 知识预览、提交、刷新及实例内维护任务的业务输出协议。 |
 | [types.ts](types.ts) | 知识快照、校验与事务的数据契约，维护任务与业务任务分开。 |
 
@@ -58,7 +58,6 @@ class N_src_backend_core_knowledge_knowledge_queries_ts_KnowledgeQueries["Knowle
   +modules()
   +module()
   +agents()
-  +people()
   +agent()
   +refresh()
   -workspace
@@ -141,7 +140,7 @@ class N_src_backend_core_knowledge_knowledge_ts_Rules["Rules"] {
 N_src_backend_core_knowledge_knowledge_ts ..> N_src_backend_core_knowledge_knowledge_ts_Rules : 声明
 ```
 
-直接依赖：[../connectors/registry.ts](../connectors/registry.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/files.ts](../foundation/files.ts)、[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[types.ts](types.ts)、[../foundation/json.ts](../foundation/json.ts)。
+直接依赖：[../connectors/registry.ts](../connectors/registry.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/files.ts](../foundation/files.ts)、[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[../workspace/module-outline.ts](../workspace/module-outline.ts)、[types.ts](types.ts)、[../foundation/json.ts](../foundation/json.ts)。
 
 ### object-crud.ts
 
@@ -155,19 +154,6 @@ class N_src_backend_core_knowledge_object_crud_ts_ObjectOperation["ObjectOperati
 
 }
 N_src_backend_core_knowledge_object_crud_ts ..> N_src_backend_core_knowledge_object_crud_ts_ObjectOperation : 声明
-class N_src_backend_core_knowledge_object_crud_ts_PersonUpsert["PersonUpsert"] {
-  <<interface>>
-  +id
-  +name
-  +team
-}
-N_src_backend_core_knowledge_object_crud_ts ..> N_src_backend_core_knowledge_object_crud_ts_PersonUpsert : 声明
-class N_src_backend_core_knowledge_object_crud_ts_ObjectPreviewOptions["ObjectPreviewOptions"] {
-  <<interface>>
-  +peopleUpserts
-  +maintenance
-}
-N_src_backend_core_knowledge_object_crud_ts ..> N_src_backend_core_knowledge_object_crud_ts_ObjectPreviewOptions : 声明
 class N_src_backend_core_knowledge_object_crud_ts_ObjectPreview["ObjectPreview"] {
   <<interface>>
   +planId
@@ -179,13 +165,6 @@ class N_src_backend_core_knowledge_object_crud_ts_external_Preview["Preview (外
   <<external>>
 }
 N_src_backend_core_knowledge_object_crud_ts_external_Preview <|-- N_src_backend_core_knowledge_object_crud_ts_ObjectPreview
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_knowledge_object_crud_ts["object-crud.ts"] {
-  <<module>>
-}
 class N_src_backend_core_knowledge_object_crud_ts_ObjectCommit["ObjectCommit"] {
   <<interface>>
   +cleanupWarnings
@@ -203,7 +182,7 @@ class N_src_backend_core_knowledge_object_crud_ts_ObjectCrud["ObjectCrud"] {
 N_src_backend_core_knowledge_object_crud_ts ..> N_src_backend_core_knowledge_object_crud_ts_ObjectCrud : 声明
 ```
 
-直接依赖：[ports.ts](ports.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[knowledge.ts](knowledge.ts)、[../foundation/json.ts](../foundation/json.ts)、[types.ts](types.ts)、[../workspace/maintenance.ts](../workspace/maintenance.ts)、[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[planned-commit.ts](planned-commit.ts)。
+直接依赖：[ports.ts](ports.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[knowledge.ts](knowledge.ts)、[../foundation/json.ts](../foundation/json.ts)、[types.ts](types.ts)、[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[planned-commit.ts](planned-commit.ts)。
 
 ### object-storage.ts
 
@@ -800,21 +779,21 @@ note for Builtins "只读反馈流程与版本；GitHub 实际写入属于独立
 
 ### 知识工具业务输出协议
 
-`tool-output-base.ts` 定义身份、知识文件、问题、派生校验及快照协议；`tool-output-queries.ts` 定义模块、团队、人员注册表与详情；`tool-output-builtins.ts` 定义内置目录、正文与 Skill 别名返回；`tool-output-transactions.ts` 定义知识/对象预览、提交、刷新及维护任务状态。四份协议只依赖 Zod 和本目录纯协议，不依赖 Team/Workspace 查询实现、Scheduler、IPC 或运行权限。
+`tool-output-base.ts` 定义身份、知识文件、问题、派生校验及快照协议；`tool-output-queries.ts` 定义模块、团队注册表与详情；`tool-output-builtins.ts` 定义内置目录、正文与 Skill 别名返回；`tool-output-transactions.ts` 定义知识/对象预览、提交、刷新及维护任务状态。四份协议只依赖 Zod 和本目录纯协议，不依赖 Team/Workspace 查询实现、Scheduler、IPC 或运行权限。
 
-服务生成对象使用严格字段结构，不以默认值、类型转换或裁剪字段修补返回。原始知识定义保留为 JSON 对象，人员条目、作者条目及不可用正文的原引用保留 JSON 值；这些位置允许结构无效的知识事实，不再次套用有效知识定义 Schema。原始值使用无转换谓词检查，避免 Zod record 删除合法 JSON 自有 `__proto__` 键；按需 JSON Schema 中它们是带说明的开放 JSON 事实槽，不能把它们解释为执行参数或知识有效性证明。
+服务生成对象使用严格字段结构，不以默认值、类型转换或裁剪字段修补返回。原始知识定义保留为 JSON 对象，作者来源及不可用正文的原引用保留 JSON 值；这些位置允许结构无效的知识事实，不再次套用有效知识定义 Schema。原始值使用无转换谓词检查，避免 Zod record 删除合法 JSON 自有 `__proto__` 键；按需 JSON Schema 中它们是带说明的开放 JSON 事实槽，不能把它们解释为执行参数或知识有效性证明。
 
-完整快照包含 Validation；搜索仅筛选 files，版本仍属于完整读取，不从子集补造校验或重新计算版本。`structural:false`、空正文、缺失引用、继承冲突和原人员定义错误均为合法诊断。自定义 Agent 与内置 `cbim:executor` 使用独立形状，后者没有项目定义文件或正文文件哈希，不伪造项目来源。内置资料保持只读、版本和引用状态，读取 Skill 资料不表示已执行流程。
+完整快照包含 Validation；搜索仅筛选 files，版本仍属于完整读取，不从子集补造校验或重新计算版本。`structural:false`、空正文、缺失引用、继承冲突均为合法诊断；旧 people.json 不再解析或产生结构诊断。自定义 Agent 与内置 `cbim:executor` 使用独立形状，后者没有项目定义文件或正文文件哈希，不伪造项目来源。内置资料保持只读、版本和引用状态，读取 Skill 资料不表示已执行流程。
 
 Preview 的实际 changes 可以包含请求之外的派生索引；空正文、删除和空提交保持领域语义。已提交结果只能声明 `committed`，对象空目录清理警告不等于回滚。Refresh 区分未提交的 invalid 与已更新索引后观察到的 refreshed/invalid，不能把索引更新当作结构或业务验收。维护任务只包含 validate/reindex，运行中取消仍可返回 running；完成结果分别为 Validation/Commit，失败或取消保留错误，只有查询允许独立 not_found 分支。
 
 这些 Schema 校验的是执行后唯一 JSON 传输快照，标准文本封装、协议错误和原样发送由 Core tools 与 Scheduler 边界负责。校验通过不签署业务验收，校验失败不表示事务已回滚；原幂等请求、预览版本、实例隔离和取消边界不由输出协议改写。原生工具、派发及人工决定的输出不因此宣称已迁入本协议。
 
-### 对象治理与桌面维护声明
+### 对象治理与历史兼容
 
-`ObjectCrud.preview(revision, operations, options?)` 从同一个知识快照规划 Agent、Module、Skill、Workflow 的增删改，维护所属清单、模块父子关系及受控正文。`ObjectOperation` 不接受自定义知识路径或模块 `maintenance`，创建必须提供正文，原内部工具 schema 与逐次写授权保持不变。
+`ObjectCrud.preview(revision, operations)` 从同一个知识快照规划 Agent、Module、Skill、Workflow 的增删改，维护所属清单、模块父子关系及受控正文。`ObjectOperation` 不接受自定义知识路径或模块 `maintenance`，创建必须提供正文，原内部工具 schema 与逐次写授权保持不变。
 
-可信桌面可单独传入 `ObjectPreviewOptions.peopleUpserts` 与明确确认的 `maintenance`。真人花名册与模块文件先合入候选快照，再运行完整 Schema/引用/正文校验；预览只存计划，正式知识到 `commit(planId)` 才由原串行事务一次性提交。后端生成维护绑定 ID、确认记录 ID 和 UTC 时间；编辑保留关系 ID、递增版本并重新确认。`local_user` 表示本机用户声明，不是已认证身份、执行授权或业务验收。
+桌面与工具使用相同对象操作，不接受 peopleUpserts 或真人维护确认。旧 people.json 不解析、不重建；authors 仅校验字符串数组与唯一性，不做人员或组关联。新模块不要求 maintenance，原历史对象保留。预览只存计划，正式知识到 commit(planId) 才由串行事务提交；岗位与负责人仍通过各自受控服务配置。
 
 模块删除含子模块/方法时必须显式 `cascade`；有非知识资源则拒绝删除。提交只删除计划中的知识文件，后续目录清理仅处理空目录，不删除业务源码。旧实例、旧知识版本、结构校验失败或计划被改动均不能提交；同计划成功提交保持原幂等回执。
 
@@ -830,7 +809,7 @@ Workflow 可在原 `workflow.md` 中声明一个严格的 `cbim-workflow` JSON �
 
 完整业务包原样携带 Workflow 正文中的可选程序条件。构建后复验、外部包解析与导入差异规划均走同一条件解析器；即使重算包指纹，无效声明仍以 `RESOURCE_PACKAGE` 拒绝，不能借旧源的 structural 标记绕过。条件不被复制进其他模块，也不把自然语言中的代码示例转换为生效条件。
 
-导出清除人员、作者、连接器、模块维护确认和源码定位绑定；不携带账号、连接器配置、会话、动态成员实例或任务图。每个工作区各有一张静态团队图和静态业务图；多个主会话各自的调度图不属于包。目标项目的真人花名册保持原样，维护责任必须在目标重新确认，导入能力不产生任何执行授权。
+导出清除人员、作者、连接器、模块维护确认和源码定位绑定；不携带账号、连接器配置、会话、动态成员实例或任务图。每个工作区各有一张静态团队图和静态业务图；多个主会话各自的调度图不属于包。目标项目的旧 people.json 保持原样，但不再校验其组引用；岗位及模块负责人须通过目标工作区服务明确配置，导入能力不产生任何执行授权。
 
 能力新增要求显式父节点和未占用 slug；完整 Team 可显式整体替换。完整业务架构可用于空目标，非空目标必须显式 `replace`。替换差异不修改索引、项目版本、人员目录或业务源码；派生索引由知识事务维护。引用或目标结构冲突以 `KnowledgeWorkspace.preview/commit` 的实际完整校验为准，不静默改名或修复目标。
 
@@ -848,3 +827,7 @@ knowledge-write-input.ts 让真实知识工具与后端历史观察复用同一�
 ### 刷新原事务与契约版本
 
 knowledgeRefreshInputSchema 要求 workspace/instance、revision 和 requestId，knowledgeRefreshRequest 固定顺序构造空 changes。KnowledgeQueries.refresh 先查精确原成功 journal，再按原版本校验/提交；重复不再写，但返回校验来自当前快照。原 v1 不从今日状态推断请求。originalKnowledgeWrite 仅在可信 contractVersion=2 时适配 refresh，查询不初始化或推进事务。
+
+### 对象输入与模块正文诊断
+
+ObjectOperation 使用 kind 判别的严格 data Schema，objectDataSchemas 同时提供运行时可写字段，不再给 Agent 暴露 purpose 或给模块暴露 name。模块标识名从 slug 派生，中文名属于正文 H1。Rules 使用 workspace/module-outline 的同一固定章节；章节、空正文或图错误返回精确标题和一份可复制模板，不自动写入专业内容。

@@ -44,7 +44,7 @@ it('同一基线冻结角色、继承 Skill、多模块完整正文和各自 Wor
     expect(()=>validatePreparedDispatchKnowledge(recovered)).not.toThrow();
     await expect(recheckDispatchExecutionContext(f.w,recovered)).resolves.toBeUndefined();
     const prompt=memberExecutionPrompt(recovered,f.task);
-    expect(prompt).toContain('所有成员使用同一大脑内核');expect(prompt).toContain('cbim_task_plan');expect(prompt).toContain('cbim_task_step');expect(prompt).toContain('cbim_delivery_prepare');expect(prompt).toContain('未提供递归派发');expect(prompt).toContain('维护人是长期维护责任声明，不代表工具授权');
+    expect(prompt).toContain('所有成员使用同一大脑内核');expect(prompt).toContain('cbim_task_plan');expect(prompt).toContain('cbim_task_step');expect(prompt).toContain('cbim_delivery_prepare');expect(prompt).toContain('未提供递归派发');expect(prompt).toContain('旧真人维护字段仅为历史说明，不再参与资格检查');
     expect(prompt).toContain('拥有独立会话、运行状态和模型思考能力的执行 Agent');expect(prompt).toContain('探索真实 Team 环境');expect(prompt).toContain('主 Agent 对业务只调度，不实现或验证业务产物');expect(prompt).toContain('同时可通过受控知识服务直接治理团队与业务架构');expect(prompt).toContain('read/ask/execute 门禁、审批、版本检查与事务');expect(prompt).toContain('不能覆盖本轮执行者职责');expect(prompt).toContain('报告给主调度 Agent');expect(prompt).toContain('不能通过正文自称修改状态');
     const prerequisites=[{taskId:'prior-task',planRevision:2,result:{resultId:'prior-result',runId:'prior-run',planRevision:2,summary:'已生成接口适配',evidenceRefs:['verified-call'],limitations:['尚未连真实服务器'],acceptance:'not_evaluated' as const}}];
     const withResult=memberExecutionPrompt(recovered,f.task,prerequisites);
@@ -66,10 +66,10 @@ it('同一基线冻结角色、继承 Skill、多模块完整正文和各自 Wor
   }finally{await f.cleanup()}
 });
 
-it('派发后知识变化、维护绑定被替换或跨工作区时拒绝执行，不静默刷新任务',async()=>{
+it('派发后知识变化、Workflow 绑定被替换或跨工作区时拒绝执行，不静默刷新任务',async()=>{
   const f=await setup();
   try{
-    const wrong=structuredClone(f.task);wrong.modules[0].maintenanceBindingId='someone-else';
+    const wrong=structuredClone(f.task);wrong.modules[0].workflow.version='different-workflow-version';
     await expect(prepareDispatchExecutionContext(f.w,wrong)).rejects.toMatchObject({code:'DISPATCH_CONTEXT_CHANGED'});
     await expect(prepareDispatchExecutionContext(f.w,{...f.task,identity:{...f.task.identity,workspaceId:'other'}})).rejects.toMatchObject({code:'GRAPH_IDENTITY_MISMATCH'});
     const prepared=await prepareDispatchExecutionContext(f.w,f.task),snapshot=await f.w.snapshot(),file=f.team.input.moduleId+'/module.md';
@@ -125,5 +125,19 @@ it('模块自己的可选执行约定同正文冻结，移除或篡改解析结�
     const legacy={taskId:'legacy',workspaceId:f.entry.id,root:f.entry.path,goal:task.goal,moduleIds:[f.team.input.moduleId],acceptance:[],workflowContext:{revision:prepared.knowledgeRevision,workflowId:f.team.input.workflowId,module:{},agent:{},workflow:{content:{text}},standards:[]}};
     expect(()=>assertLegacyWorkflowCompatible(legacy)).toThrow(expect.objectContaining({code:'WORKFLOW_MEMBER_REQUIRED'}));
     expect(()=>assertLegacyWorkflowCompatible({...legacy,workflowContext:{...legacy.workflowContext,workflow:{content:{text:'# 原普通工作流'}}}})).not.toThrow();
+  }finally{await f.cleanup()}
+});
+
+it('旧维护绑定只兼容读取，冻结时原样保留且新任务不自动生成',async()=>{
+  const f=await setup();
+  try{
+    expect(f.task.modules.every(m=>m.maintenanceBindingId===undefined&&m.maintainerPersonIds===undefined)).toBe(true);
+    const historical=structuredClone(f.task);
+    historical.modules[0].maintenanceBindingId='legacy-binding';historical.modules[0].maintainerPersonIds=[];
+    const original=structuredClone(historical),prepared=await prepareDispatchExecutionContext(f.w,historical);
+    expect(prepared.modules.map(m=>m.binding)).toEqual(original.modules);
+    expect(historical).toEqual(original);
+    expect(()=>validatePreparedDispatchKnowledge(JSON.parse(JSON.stringify(prepared)))).not.toThrow();
+    await expect(recheckDispatchExecutionContext(f.w,prepared)).resolves.toBeUndefined();
   }finally{await f.cleanup()}
 });

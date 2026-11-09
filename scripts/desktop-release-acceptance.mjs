@@ -12,7 +12,7 @@ import {acceptanceInputs} from './desktop-acceptance-inputs.mjs';
 assert.equal(process.platform, 'win32');
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Only run on an isolated GitHub Actions runner');
 assert.equal(process.env.GITHUB_REPOSITORY, 'nan023062/cbim');
-const {version, previousVersion, commit, expected, mode} = acceptanceInputs(process.env);
+const {version, previousVersion, previousUpdateFlow, commit, expected, mode} = acceptanceInputs(process.env);
 const repo = 'nan023062/cbim', root = path.resolve('test-results/desktop-acceptance');
 const install = path.join(root, 'app'), exe = path.join(install, 'CBIM Desktop.exe'), userRoot = path.join(root, 'user');
 await fs.mkdir(root, {recursive: true});
@@ -68,10 +68,11 @@ async function launch(profile = userRoot) {
   await page.getByRole('button', {name: '用户菜单', exact: true}).waitFor(); return page;
 }
 async function close() { await app?.close(); app = undefined; }
-async function waitPhase(page, phase) {
-  for (let n = 0; n < 300; n++) {
+async function waitPhase(page, phase, interval = 1000) {
+  const deadline = Date.now() + 300_000;
+  while (Date.now() < deadline) {
     const value = await status(page); phases.push({version: value.currentVersion, phase: value.phase});
-    if (value.error) throw Error(value.error); if (value.phase === phase) return value; await pause(1000);
+    if (value.error) throw Error(value.error); if (value.phase === phase) return value; await pause(interval);
   } throw Error(`Update timeout: ${phase}`);
 }
 async function notes(page) {
@@ -111,14 +112,22 @@ try {
       await page.getByRole('button', {name: '查看更新', exact: true}).click();
       // 0.1.1 起使用“版本与更新”原生弹窗；“软件更新”只是内部标题，不是区域名称。
       await page.getByRole('dialog', {name: '版本与更新', exact: true}).getByRole('button', {name: '下载更新', exact: true}).click();
-      await waitPhase(page, 'ready');
+      // 0.1.3 的 ready 立即进入 installing；观察真实自动安装进度，不寻找已移除的第二次点击。
+      await waitPhase(page, previousUpdateFlow === 'automatic' ? 'installing' : 'ready', 100);
     };
     await download();
+    // 独立取消场景：自动安装的两秒窗口内正常退出，不能先等待安装或改变产品计时器。
+    await close(); await pause(3000);
     const cache = path.join(process.env.LOCALAPPDATA, 'cbim-desktop-updater/pending', path.basename(candidate)); assert.equal(await sha(cache), expected);
-    await close(); await pause(1000); page = await launch(); assert.equal((await status(page)).currentVersion, previousVersion);
-    await waitPhase(page, 'available'); await download();
-    await save('online-install-intent', {from: previousVersion, to: version, sha256: expected, install, userRoot});
-    await page.getByRole('button', {name: '停止任务并重启安装', exact: true}).click(); app = undefined;
+    assert.equal(JSON.parse(await fs.readFile(path.join(install, 'resources/desktop-release.json'), 'utf8')).version, previousVersion);
+    await save('normal-quit-cancelled', {previousVersion, previousUpdateFlow, cachedSha256: expected, at: new Date().toISOString()});
+    page = await launch(); assert.equal((await status(page)).currentVersion, previousVersion);
+    await waitPhase(page, 'available');
+    await save('online-install-intent', {from: previousVersion, to: version, previousUpdateFlow, sha256: expected, install, userRoot});
+    await download();
+    assert.equal(await sha(cache), expected);
+    if (previousUpdateFlow === 'two-step') await page.getByRole('button', {name: '停止任务并重启安装', exact: true}).click();
+    app = undefined;
     const quoted = exe.replaceAll("'", "''");
     for (let n = 0; n < 120; n++) {
       const text = ps(`Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq '${quoted}' -and $_.CommandLine -like '*--updated*' -and $_.CommandLine -notlike '*--type=*' } | Select-Object ProcessId,ExecutablePath,CommandLine | ConvertTo-Json -Compress`);
@@ -144,7 +153,7 @@ try {
   assert.equal((await status(page)).enabled, true);
   if (mode === 'online') { const current = await page.evaluate(() => window.cbim.call('desktop.updates.check')); assert.equal(current.phase, 'current'); }
   await close();
-  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, freshInstall: mode === 'candidate', onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, noReplay: true}, modelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
+  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, freshInstall: mode === 'candidate', onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, noReplay: true}, modelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
   console.log(JSON.stringify({success: true, mode, version, sha256: expected, retained: true}));
 } catch (error) {
   let updateState;

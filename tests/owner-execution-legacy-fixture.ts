@@ -23,7 +23,7 @@ export async function createOwnerExecutionLegacyFixture(){
     desktop=await electron.launch({executablePath:executable,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});const page=await desktop.firstWindow();page.on('pageerror',error=>pageErrors.push(error.message));await page.waitForFunction(()=>!!(window as any).cbim);
     const call=(action:string,args:unknown={})=>page.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args});
     const until=async(check:()=>Promise<boolean>,label:string)=>{const end=Date.now()+90000;while(Date.now()<end){assert.deepEqual(checkpoint.errors,[]);assert.deepEqual(running.errors,[]);if(await check())return;await new Promise(resolve=>setTimeout(resolve,40))}throw Error('Old executable fixture timeout: '+label)};
-    const seeded=await seedKnowledgeSource(call,temp,probe.url),id=seeded.entry.id,agentId=knowledgeSourceFixture.agentId,moduleId=knowledgeSourceFixture.moduleId;
+    const seeded=await seedKnowledgeSource(call,temp,probe.url,true),id=seeded.entry.id,agentId=knowledgeSourceFixture.agentId,moduleId=knowledgeSourceFixture.moduleId;
     checkpoint.bind(agentId,moduleId);running.bind(agentId,moduleId);
     for(let index=1;index<memberCheckpointFixture.files.length;index++)await fs.writeFile(path.join(seeded.project,memberCheckpointFixture.files[index]),memberCheckpointFixture.facts[index]);
     await fs.writeFile(path.join(seeded.project,scopeUsageFixture.file),scopeUsageFixture.fact);

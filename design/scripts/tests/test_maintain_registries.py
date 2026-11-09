@@ -99,14 +99,11 @@ class RegistryTests(unittest.TestCase):
         with self.assertRaises(registry.RegistryError):
             registry.maintain(self.root, allow_legacy=True)
 
-    def test_missing_people_blocks_write(self):
+    def test_missing_people_does_not_block_or_recreate_roster(self):
+        people = self.root/'.cbim/team/people.json'
+        people.unlink()
         registry.maintain(self.root, True, allow_legacy=True)
-        index = self.root/'.cbim/team/registry.json'
-        before = index.read_bytes()
-        (self.root/'.cbim/team/people.json').unlink()
-        with self.assertRaises(registry.RegistryError):
-            registry.maintain(self.root, True, allow_legacy=True)
-        self.assertEqual(before, index.read_bytes())
+        self.assertFalse(people.exists())
 
     def test_json_sync_and_idempotency(self):
         self.assertEqual(registry.maintain(self.root, True, allow_legacy=True), dict(agents=1, modules=1, connectors=0, legacy_modules=1,
@@ -187,52 +184,19 @@ class RegistryTests(unittest.TestCase):
             with self.subTest(change=change), self.assertRaises(registry.RegistryError):
                 registry.maintain(self.root, allow_legacy=True)
 
-    def test_authors_membership_and_team_consistency(self):
-        (self.root/'.cbim/team/artists').mkdir()
-        roster = {'people': [
-            {'id': 'linan1', 'name': None, 'team': '.cbim/team/programmers'},
-            {'id': 'dev2', 'name': None, 'team': '.cbim/team/programmers'},
-            {'id': 'artist', 'name': None, 'team': '.cbim/team/artists'},
-            {'id': 'unknown_team', 'name': None, 'team': None}]}
-        people_path = self.root/'.cbim/team/people.json'
-        self.save(people_path, roster)
-        for path, original in [(self.agent, self.agent_data), (self.module, self.module_data)]:
-            self.save(path, dict(original, authors=['linan1', 'dev2']))
-            registry.maintain(self.root, True, allow_legacy=True)
-            snapshots = {p: p.read_bytes() for p in [self.root/'.cbim/team/registry.json',
-                                                    self.root/'.cbim/workspace/registry.json']}
-            for authors in [['missing'], ['LINAN1'], ['unknown_team'], ['linan1', 'artist']]:
-                self.save(path, dict(original, authors=authors))
-                with self.subTest(authors=authors), self.assertRaises(registry.RegistryError):
-                    registry.maintain(self.root, True, allow_legacy=True)
-                for p, content in snapshots.items(): self.assertEqual(p.read_bytes(), content)
-            self.save(path, dict(original, author=None))
-            with self.assertRaises(registry.RegistryError): registry.maintain(self.root, True, allow_legacy=True)
-            self.save(path, dict(original, authors=['linan1', 'dev2']))
-            roster['people'][1]['team'] = '.cbim/team/artists'
-            self.save(people_path, roster)
-            with self.assertRaises(registry.RegistryError): registry.maintain(self.root, allow_legacy=True)
-            roster['people'][1]['team'] = '.cbim/team/programmers'
-            self.save(people_path, roster)
-            self.save(path, original)
+    def test_authors_are_provenance_without_roster_membership(self):
+        (self.root/'.cbim/team/people.json').unlink()
+        for path in [self.agent, self.module]:
+            original = registry.read_json(path)
+            self.save(path, dict(original, authors=['historical-author', 'other-team']))
+        registry.maintain(self.root, True, allow_legacy=True)
 
-    def test_people_team_validation(self):
-        registry.maintain(self.root, True, allow_legacy=True)
+    def test_legacy_roster_bytes_are_preserved_without_parsing(self):
         path = self.root/'.cbim/team/people.json'
-        before = (self.root/'.cbim/team/registry.json').read_bytes()
-        person = {'id': 'linan1', 'name': '李南', 'team': None}
-        for data in ({}, {'people': {}}, {'people': [{'id': 'linan1', 'name': None}]},
-                     {'people': [person, person]},
-                     *({'people': [dict(person, team=value)]}
-                       for value in ('.cbim/team/absent', ['.cbim/team/programmers'], 123)),
-                     {'people': [dict(person, identity_status='unverified')]},
-                     {'people': [dict(person, name=123)]}):
-            self.save(path, data)
-            with self.subTest(data=data), self.assertRaises(registry.RegistryError):
-                registry.maintain(self.root, True, allow_legacy=True)
-            self.assertEqual(before, (self.root/'.cbim/team/registry.json').read_bytes())
-        self.save(path, {'people': [person]})
+        path.write_text('not a valid roster JSON', encoding='utf-8')
+        before = path.read_bytes()
         registry.maintain(self.root, True, allow_legacy=True)
+        self.assertEqual(path.read_bytes(), before)
 
     def test_new_definition_requires_sync(self):
         registry.maintain(self.root, True, allow_legacy=True)

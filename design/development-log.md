@@ -1,5 +1,12 @@
 # CBIM 开发记录
 
+## 2026-11-10：实例恢复指引与反馈/提问现状核实
+
+- Workspace.assert 保留原身份与运行状态门禁，分别说明工程选错和实例变化，给出当前 instanceId、cbim_workspace_identity 及重新读取/预览指引；未知提交先核原回执。源码注释及 main/workspace CONTRACT/ARCHITECTURE 同步。
+- 定向 `pnpm exec vitest run tests/workspace.test.ts tests/github-feedback-status.test.ts tests/github-feedback-lifecycle-pi.test.ts tests/question-tools.test.ts tests/question-tool-contract-pi.test.ts --reporter=default --reporter=json --outputFile=test-results/instance-feedback-question-20261110.json`：5 文件/39 项通过，覆盖真实重开旧身份拒绝、空项目反馈连接后新轮装配、选择卡答案/取消/坏回包/停止。
+- 原现场反馈三工具缺失、fetch failed 和实例重启原因尚无版本/日志，未复现，不宣称已修复；当前主会话的只读反馈诊断和授权后的双工具行为通过。没有创建线上测试反馈。
+- 架构同步及 diff 检查通过；最后一步没有类型或依赖变化，不重复静态检查。未跑全量、完整桌面、打包/发布。参见[本轮总记录](verification/empty-project-feedback-20261110.md)。四项保持独立提交到 develop，公开版本不变。
+
 ## 2026-11-10：责任重复绑定提示与独立派工缺口
 
 - 预览与事务共用责任预期诊断：同岗位无需重设、已有记录需 inspect、非空旧版本是真实冲突，不再统一提示原样重试。前端将新增 OWNERSHIP_ALREADY_EXISTS 归为明确未受理；原回执优先和并发检查保留。

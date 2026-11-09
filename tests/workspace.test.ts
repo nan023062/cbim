@@ -25,6 +25,11 @@ describe('真实工作区与内部知识服务',()=>{
     expect((await fs.readdir(f.a)).some(x=>x.startsWith('.cbim-init-'))).toBe(false);
     const original=await w.read();await f.app.stop(entry.id);const reopened=await f.app.open(entry.id);
     expect((await reopened.read()).revision).toBe(original.revision);
+    expect(reopened.instanceId).not.toBe(w.instanceId);
+    const {call}=internalKnowledge(reopened);
+    await expect(call('cbim_knowledge_snapshot',{instanceId:w.instanceId})).rejects.toMatchObject({code:'STALE_INSTANCE',message:expect.stringContaining(reopened.instanceId)});
+    const identity=await call('cbim_workspace_identity');expect(identity.instanceId).toBe(reopened.instanceId);
+    expect((await call('cbim_knowledge_snapshot',{instanceId:identity.instanceId})).revision).toBe(original.revision);
   }finally{await f.cleanup()}});
   it('空初始化、去重、同名隔离、多工作区请求、关闭与移除',async()=>{const f=await fixture();try{
     const a=await f.app.catalog.add(f.a),b=await f.app.catalog.add(f.b);expect(a.id).not.toBe(b.id);expect((await f.app.catalog.add(path.join(f.a,'.'))).id).toBe(a.id);
@@ -55,7 +60,8 @@ describe('真实工作区与内部知识服务',()=>{
   it('内部知识工具校验实例、逐调用读写授权和关闭后的访问',async()=>{const f=await fixture();try{
     const e=await f.app.catalog.add(f.a),w=await f.app.open(e.id),{call}=internalKnowledge(w);
     expect((await call('cbim_workspace_identity')).workspaceId).toBe(e.id);
-    await expect(call('cbim_knowledge_snapshot',{instanceId:'stale'})).rejects.toMatchObject({code:'STALE_INSTANCE'});
+    await expect(call('cbim_knowledge_snapshot',{instanceId:'stale'})).rejects.toMatchObject({code:'STALE_INSTANCE',message:expect.stringContaining('使用新 instanceId')});
+    await expect(call('cbim_knowledge_snapshot',{workspaceId:'other'})).rejects.toMatchObject({code:'STALE_INSTANCE',message:expect.stringContaining('工程身份不匹配')});
     const snap=await w.read(),change=request(snap,[{path:'.cbim/README.md',text:'# written'}]);
     await expect(call('cbim_knowledge_commit',change)).rejects.toMatchObject({code:'FORBIDDEN'});
     expect((await call('cbim_knowledge_commit',change,true)).state).toBe('committed');

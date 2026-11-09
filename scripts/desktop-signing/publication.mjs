@@ -4,7 +4,7 @@ import {releaseNames} from './artifacts.mjs';
 
 /** GitHub 没有附件事务。同版本替换先完整备份，再暂时转为草稿，最后公开完整一致的附件集合。 */
 export async function publishCandidate({directory, replace = false, verify, remote, record}) {
-  const receipt = await verify(); // No GitHub mutation before actual Authenticode verification.
+  const receipt = await verify(); // 先通过对应发行模式的真实制品检查，签名模式还必须重新验签。
   const tag = `desktop-v${receipt.version}`;
   const previous = await remote.find(tag);
   if (previous && !replace) throw Error('RELEASE_EXISTS：同版本替换必须明确使用 --replace');
@@ -40,6 +40,6 @@ export async function publishCandidate({directory, replace = false, verify, remo
   if (published.draft || published.prerelease || published.tag_name !== tag || published.id !== release.id) throw Error('RELEASE_PUBLISH_RESULT_INVALID');
   await remote.verifyAssets(release.id, directory, names);
   if (await remote.latest() !== latest) throw Error('RELEASE_LATEST_CHANGED：需核实旧通道 latest，禁止自动重放发布');
-  await record('published', {releaseId: release.id, url: published.html_url, sourceCommit: receipt.sourceCommit, publisherName: receipt.signing.publisherName});
+  await record('published', {releaseId: release.id, url: published.html_url, sourceCommit: receipt.sourceCommit, signingMode: receipt.signing.mode || 'signed', publisherName: receipt.signing.publisherName});
   return published;
 }

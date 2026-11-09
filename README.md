@@ -46,6 +46,17 @@ pnpm make
 
 正式业务执行使用桌面主对话。`pnpm loop` 保留受限开发兼容接口，旧直接业务启动已拒绝；参数、模型配置和具体限制见 [Loop Engine](docs/loop-engine.md#开发调用)。
 
+## 分支约定
+
+仓库只保留两个分支，GitHub 默认分支为 `develop`：
+
+| 分支 | 用途 |
+| --- | --- |
+| `develop` | 默认开发分支，用于日常功能开发和缺陷修复 |
+| `master` | 稳定主分支，接收通过检查的开发成果 |
+
+日常改动提交到 `develop`；每个 Issue 单独开发、测试和提交，记录验证结果以便追溯。完成验证后，通过 `develop` → `master` 的 PR 合入主分支，并保留各 Issue 的独立提交。
+
 ## 开发协作与架构维护
 
 新人先阅读 [项目协作规范（AGENTS.md）](AGENTS.md)；Claude Code 的项目入口见 [CLAUDE.md](CLAUDE.md)。

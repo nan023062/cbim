@@ -4,6 +4,13 @@ on:
   pull_request:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      scope:
+        description: Full validation or focused Windows runtime diagnosis
+        required: true
+        default: full
+        type: choice
+        options: [full, runtime-diagnostic]
 
 permissions:
   contents: read
@@ -14,13 +21,14 @@ concurrency:
 
 jobs:
   windows:
-    name: Windows validation (${{ matrix.shard }}/4)
+    name: ${{ inputs.scope == 'runtime-diagnostic' && 'Windows runtime diagnosis' || format('Windows validation ({0}/4)', matrix.shard) }}
     runs-on: windows-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        # PR 必须执行完整四片；手动诊断使用独立名称，不能冒充合并检查。
+        shard: ${{ fromJSON(inputs.scope == 'runtime-diagnostic' && '[1]' || '[1,2,3,4]') }}
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
@@ -30,15 +38,28 @@ jobs:
           cache: pnpm
       - name: Install locked dependencies
         # 官方二进制下载偶发 504；有限重试安装，持续失败仍阻止后续验收。
+        # 缓存的 Electron 安装产物默认硬链接到 store；复制导入使真实隔离测试满足单链接身份检查。
         run: |
           for ($attempt = 1; $attempt -le 3; $attempt++) {
-            pnpm install --frozen-lockfile
+            pnpm install --frozen-lockfile --package-import-method=copy
             $installCode = $LASTEXITCODE
             if ($installCode -eq 0) { exit 0 }
             if ($attempt -eq 3) { exit $installCode }
             Write-Warning "Dependency installation failed ($installCode); retry $attempt/2."
             Start-Sleep -Seconds (10 * $attempt)
           }
+      - name: Check installed Electron file identities
+        run: |
+          @'
+          const fs = require('node:fs'), path = require('node:path');
+          const executable = fs.realpathSync(require('electron'));
+          const files = [executable, ...['icudtl.dat', 'v8_context_snapshot.bin', 'snapshot_blob.bin'].map(name => path.join(path.dirname(executable), name)).filter(file => fs.existsSync(file))];
+          for (const file of files) {
+            const stat = fs.lstatSync(file);
+            console.log(JSON.stringify({file, isFile: stat.isFile(), nlink: stat.nlink, size: stat.size}));
+            if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1) throw Error('Electron test runtime must use independent regular files');
+          }
+          '@ | node
       - name: Check canonical test temporary directory
         # runner 上下文在步骤级使用；默认用户 TEMP 可能是 8.3 别名。
         env:
@@ -57,14 +78,25 @@ jobs:
           CBIM_WEBSITE_URL: https://nan023062.github.io/cbim/
         run: pnpm build:website
       - name: Run full test suite
+        if: inputs.scope != 'runtime-diagnostic'
         env:
           TEMP: ${{ runner.temp }}
           TMP: ${{ runner.temp }}
         run: pnpm exec vitest run --shard=${{ matrix.shard }}/4 --reporter=default --reporter=json --outputFile=test-results/pr-full-suite.json
+      - name: Diagnose Windows runtime without changing assertions
+        if: inputs.scope == 'runtime-diagnostic'
+        env:
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+        run: pnpm exec vitest run tests/scoped-execution-pi.test.ts tests/terminal.test.ts --reporter=default --reporter=json --outputFile=test-results/runtime-diagnostic.json
       - name: Preserve test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: windows-validation-${{ matrix.shard }}
-          path: test-results/pr-full-suite.json
+          path: |
+            test-results/pr-full-suite.json
+            test-results/runtime-diagnostic.json
+            test-results/isolation-recovery-pi-failure.json
+            test-results/terminal-state.json
           if-no-files-found: ignore

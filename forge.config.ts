@@ -5,7 +5,7 @@ import fs from 'node:fs/promises';
 import {readFileSync} from 'node:fs';
 import path from 'node:path';
 import {packagePiRuntime} from './scripts/package-pi-runtime.mjs';
-import {signingConfig, updaterConfigYaml} from './scripts/desktop-signing/config.cjs';
+import {signingConfig, desktopSigningMode, updaterConfigYaml} from './scripts/desktop-signing/config.cjs';
 import {verifyBrandAssets} from './scripts/build-brand-assets.mjs';
 
 // Keep one timestamp across Forge's package/make phases and any child processes.
@@ -17,7 +17,8 @@ process.env.CBIM_BUILD_STAMP=buildStamp;
 const buildOut=path.resolve(process.env.CBIM_BUILD_OUT||path.join('build',buildStamp));
 const metadataPath=path.join(buildOut,'build-info.json');
 const desktopRelease=process.env.CBIM_DESKTOP_RELEASE==='1';
-const signing=desktopRelease?signingConfig():undefined;
+const signingMode=desktopRelease?desktopSigningMode():'signed';
+const signing=desktopRelease&&signingMode==='signed'?signingConfig():undefined;
 const desktopVersion=process.env.CBIM_DESKTOP_VERSION||JSON.parse(readFileSync('package.json','utf8')).version;
 if(desktopRelease&&!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(desktopVersion))throw Error('桌面版本格式无效');
 const executableName=desktopRelease?'CBIM Desktop':'CBIM';
@@ -31,7 +32,7 @@ const config: ForgeConfig = {
   packagerConfig: { asar: true, executableName, icon:path.resolve('branding/cbim.ico'), ...(desktopRelease?{appVersion:desktopVersion,buildVersion:desktopVersion}:{}),extraResource: ['branding','design','docs','node_modules/koffi',path.join(buildOut,'pi-runtime'),...(desktopRelease?[path.join(buildOut,'desktop-release.json'),path.join(buildOut,'app-update.yml')]:[])] },
   makers: [new MakerZIP({}, ['win32'])],
   hooks:{
-    generateAssets:async()=>{await verifyBrandAssets();await packagePiRuntime(path.join(buildOut,'pi-runtime'));if(desktopRelease){const notes=await fs.readFile(process.env.CBIM_DESKTOP_NOTES||`design/releases/desktop-v${desktopVersion}.md`,'utf8');await fs.writeFile(path.join(buildOut,'desktop-release.json'),JSON.stringify({channel:'desktop-stable',version:desktopVersion,notes}));await fs.writeFile(path.join(buildOut,'app-update.yml'),updaterConfigYaml(desktopVersion,signing!.publisherName))}},
+    generateAssets:async()=>{await verifyBrandAssets();await packagePiRuntime(path.join(buildOut,'pi-runtime'));if(desktopRelease){const notes=await fs.readFile(process.env.CBIM_DESKTOP_NOTES||`design/releases/desktop-v${desktopVersion}.md`,'utf8');await fs.writeFile(path.join(buildOut,'desktop-release.json'),JSON.stringify({channel:'desktop-stable',version:desktopVersion,notes,signingMode}));await fs.writeFile(path.join(buildOut,'app-update.yml'),updaterConfigYaml(desktopVersion,signing?.publisherName,signingMode))}},
     readPackageJson:async(_config,pkg)=>desktopRelease?{...pkg,version:desktopVersion}:pkg,
     postPackage:async(_config,result)=>{
       await saveBuildInfo({buildStamp,timeZone:'Asia/Shanghai',stage:'package',completedAt:new Date().toISOString(),outputDirectory:buildOut,platform:result.platform,arch:result.arch,executable:result.platform==='win32'?path.join(result.outputPaths[0],executableName+'.exe'):null,packageDirectories:result.outputPaths,artifacts:[]});

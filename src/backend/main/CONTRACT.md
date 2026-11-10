@@ -8,7 +8,7 @@ Main 为 `DesktopUpdates` 注入唯一的业务关闭回调，停止终端、等
 
 ## 产品标识与原生窗口
 
-`main.ts` 只装配窗口品牌资源：开发态从工程 `branding/cbim.png` 读取，打包态从固定 `resources/branding/cbim.png` 读取。Forge 的应用图标及独立安装器均使用同一矢量源生成的 ICO；运行时不生成或下载品牌资源。显示名称为 CBIM Assistant，原应用 ID、可执行文件名称、卸载器探测与用户数据目录保持兼容。
+`main.ts` 只装配窗口品牌资源：开发态从工程 `branding/cbim.png` 读取，打包态从固定 `resources/branding/cbim.png` 读取。Forge 的应用图标及独立安装器均使用同一矢量源生成的 ICO；运行时不生成或下载品牌资源。窗口标题为 CBIM，原应用 ID、可执行文件名称、卸载器探测与用户数据目录保持兼容。
 
 ```mermaid
 classDiagram
@@ -193,3 +193,9 @@ Application 发送时固定公开 engine，执行工厂核对它与所选供应�
 ### 主 Agent 配置
 
 Application 装配唯一 MainAgentSettings；对话栏与团队页面通过 agent.mainSettings / agent.configureMain 读写同一工作区角色配置，均不启动模型。chatOptions 未收到显式运行选型时读取该配置，然后调用模型协议校验并冻结。本机默认供应商不再拥有执行引擎；显式旧运行和队列继续使用原选型。
+
+## 工作区自动化装配
+
+Application 在协作服务就绪后创建唯一 WorkspaceAutomations；关闭先停调度再关闭协作和存储。私有 automations.json 位于用户工作区目录，不进入 .cbim。Main 每次启动解析当前主配置；成员必须通过真实岗位的能力/模型门禁，显式或最近父级负责人冲突不会改派。无负责人时用户所选岗位生成当前知识版本的临时选择，不写模块责任。
+
+主周期建立后 MainStartup 先持久绑定实际 taskId/runId，再调用可信首任务准备。默认主 Agent 直接执行；选择岗位的任务先建立正式计划/派发，再由原协作批次在主轮结算后领取。Skill 正文和模块说明只作为当前用户选定上下文，不能扩大权限。历史状态来自原 scope，执行结束不代替验收。

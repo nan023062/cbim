@@ -1,8 +1,10 @@
 /**
+ * 自动化请求与返回使用独立强类型重载，不复用旧宽泛返回。
  * 作用定位：渲染进程固定操作目录及已迁移 action 的请求/返回映射。
  * 设计原因：新增操作必须显式登记，已迁移模型调用不能落入无类型重载；旧入口按真实清单渐进迁移。
  * 职责边界：LegacyAction 仅记录已有操作，旧返回形状仍由各领域运行时校验；不代表这些操作已全部类型化。
  */
+import type {AutomationAction,AutomationActionInput,AutomationActionResults} from './automation';
 import type {ModelAction,ModelActionInput,ModelActionResults} from './model-actions';
 
 /** 尚未迁移的固定旧操作，不允许任意字符串、新模型操作或新增业务借用此入口。 */
@@ -164,8 +166,9 @@ export type LegacyAction=
   | 'workspace.ownerships.list'
   | 'workspace.ownerships.preview'
   | 'workspace.ownerships.receipt';
-export type IpcAction=ModelAction|LegacyAction;
+export type IpcAction=ModelAction|AutomationAction|LegacyAction;
 export interface IpcCall {
+  <K extends AutomationAction>(action:K,input:AutomationActionInput<K>):Promise<AutomationActionResults[K]>;
   <K extends ModelAction>(action:K,...args:undefined extends ModelActionInput<K>?[input?:ModelActionInput<K>]:[input:ModelActionInput<K>]):Promise<ModelActionResults[K]>;
   /** 仅为已登记旧路由保留兼容返回；新增能力须加入具体请求/返回映射。 */
   (action:LegacyAction,input?:unknown):Promise<any>;

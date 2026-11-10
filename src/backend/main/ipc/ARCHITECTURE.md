@@ -10,11 +10,36 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [automation-actions.ts](automation-actions.ts) | 将自动化桌面请求路由到当前工作区唯一调度器。 |
 | [dispatch.ts](dispatch.ts) | 将经过主进程接入的 action 路由到明确的工作区和应用服务；主 Agent 两处设置入口共用同一配置服务。 |
 | [model-actions.ts](model-actions.ts) | 实现模型及主 Agent 配置的有类型桌面路由，委托已有配置服务处理状态与持久化。 |
 | [services.ts](services.ts) | 定义 IPC 路由需要的执行审批、静态角色履历、岗位与模块责任、全局监管、配额、桌面资源导入、模块治理和工作区生命周期入口。 |
 
 ## 架构类图
+
+### automation-actions.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_automation_actions_ts["automation-actions.ts"] {
+  <<module>>
+  +dispatchAutomationAction()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_automation_actions_ts["automation-actions.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_automation_actions_ts_Handlers["Handlers"] {
+  <<type>>
+
+}
+N_src_backend_main_ipc_automation_actions_ts ..> N_src_backend_main_ipc_automation_actions_ts_Handlers : 声明
+```
+
+直接依赖：[../../../bridge/contracts/automation.ts](../../../bridge/contracts/automation.ts)、[services.ts](services.ts)。
 
 ### dispatch.ts
 
@@ -26,7 +51,7 @@ class N_src_backend_main_ipc_dispatch_ts["dispatch.ts"] {
 }
 ```
 
-直接依赖：[../../../bridge/contracts/model-actions.ts](../../../bridge/contracts/model-actions.ts)、[model-actions.ts](model-actions.ts)、[services.ts](services.ts)、[../persistence/tasks/chat-inputs.ts](../persistence/tasks/chat-inputs.ts)、[../workspace/architecture-service.ts](../workspace/architecture-service.ts)、[../resources/workspace-packages.ts](../resources/workspace-packages.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
+直接依赖：[../../../bridge/contracts/automation.ts](../../../bridge/contracts/automation.ts)、[automation-actions.ts](automation-actions.ts)、[../../../bridge/contracts/model-actions.ts](../../../bridge/contracts/model-actions.ts)、[model-actions.ts](model-actions.ts)、[services.ts](services.ts)、[../persistence/tasks/chat-inputs.ts](../persistence/tasks/chat-inputs.ts)、[../workspace/architecture-service.ts](../workspace/architecture-service.ts)、[../resources/workspace-packages.ts](../resources/workspace-packages.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
 
 ### model-actions.ts
 
@@ -99,6 +124,7 @@ class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationService
   +isolatedExecutions()
   +requestBudgets()
   +execution()
+  +automations()
   +memberDispatch()
   +memberExecution()
   +agentHistory()
@@ -111,23 +137,38 @@ class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationService
 N_src_backend_main_ipc_services_ts ..> N_src_backend_main_ipc_services_ts_ApplicationServices : 声明
 ```
 
-直接依赖：[../workspace/catalog.ts](../workspace/catalog.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../platform/paths.ts](../platform/paths.ts)、[../persistence/settings/main-agent-settings.ts](../persistence/settings/main-agent-settings.ts)、[../persistence/settings/llm-profiles.ts](../persistence/settings/llm-profiles.ts)、[../resources/resource-repository.ts](../resources/resource-repository.ts)、[../resources/repository-connections.ts](../resources/repository-connections.ts)、[../resources/github-feedback.ts](../resources/github-feedback.ts)、[../governance/module-governance.ts](../governance/module-governance.ts)、[../../scheduler-engine/execution/execution-manager.ts](../../scheduler-engine/execution/execution-manager.ts)、[../../scheduler-engine/execution/dispatch-service.ts](../../scheduler-engine/execution/dispatch-service.ts)、[../../scheduler-engine/execution/member-execution.ts](../../scheduler-engine/execution/member-execution.ts)、[../../scheduler-engine/runtime/agent-history.ts](../../scheduler-engine/runtime/agent-history.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)、[../persistence/settings/admission-settings.ts](../persistence/settings/admission-settings.ts)、[../persistence/settings/budget-settings.ts](../persistence/settings/budget-settings.ts)、[../workspace/workspace-members.ts](../workspace/workspace-members.ts)、[../workspace/module-ownerships.ts](../workspace/module-ownerships.ts)、[../workspace/controlled-files.ts](../workspace/controlled-files.ts)、[../workspace/isolated-executions.ts](../workspace/isolated-executions.ts)、[../persistence/tasks/chat-material-imports.ts](../persistence/tasks/chat-material-imports.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)、[../../scheduler-engine/execution/model-request-budget-service.ts](../../scheduler-engine/execution/model-request-budget-service.ts)。
+直接依赖：[../automation.ts](../automation.ts)、[../workspace/catalog.ts](../workspace/catalog.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../platform/paths.ts](../platform/paths.ts)、[../persistence/settings/main-agent-settings.ts](../persistence/settings/main-agent-settings.ts)、[../persistence/settings/llm-profiles.ts](../persistence/settings/llm-profiles.ts)、[../resources/resource-repository.ts](../resources/resource-repository.ts)、[../resources/repository-connections.ts](../resources/repository-connections.ts)、[../resources/github-feedback.ts](../resources/github-feedback.ts)、[../governance/module-governance.ts](../governance/module-governance.ts)、[../../scheduler-engine/execution/execution-manager.ts](../../scheduler-engine/execution/execution-manager.ts)、[../../scheduler-engine/execution/dispatch-service.ts](../../scheduler-engine/execution/dispatch-service.ts)、[../../scheduler-engine/execution/member-execution.ts](../../scheduler-engine/execution/member-execution.ts)、[../../scheduler-engine/runtime/agent-history.ts](../../scheduler-engine/runtime/agent-history.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)、[../persistence/settings/admission-settings.ts](../persistence/settings/admission-settings.ts)、[../persistence/settings/budget-settings.ts](../persistence/settings/budget-settings.ts)、[../workspace/workspace-members.ts](../workspace/workspace-members.ts)、[../workspace/module-ownerships.ts](../workspace/module-ownerships.ts)、[../workspace/controlled-files.ts](../workspace/controlled-files.ts)、[../workspace/isolated-executions.ts](../workspace/isolated-executions.ts)、[../persistence/tasks/chat-material-imports.ts](../persistence/tasks/chat-material-imports.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)、[../../scheduler-engine/execution/model-request-budget-service.ts](../../scheduler-engine/execution/model-request-budget-service.ts)。
 
 ### 本目录调用边界
 
 ```mermaid
 classDiagram
+class N_src_backend_main_ipc_automation_actions_ts["automation-actions.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_services_ts["services.ts"] {
+  <<module>>
+}
 class N_src_backend_main_ipc_dispatch_ts["dispatch.ts"] {
   <<module>>
 }
 class N_src_backend_main_ipc_model_actions_ts["model-actions.ts"] {
   <<module>>
 }
+N_src_backend_main_ipc_automation_actions_ts ..> N_src_backend_main_ipc_services_ts : 导入依赖
+N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_automation_actions_ts : 导入依赖
+N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_model_actions_ts : 导入依赖
+N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_services_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_model_actions_ts["model-actions.ts"] {
+  <<module>>
+}
 class N_src_backend_main_ipc_services_ts["services.ts"] {
   <<module>>
 }
-N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_model_actions_ts : 导入依赖
-N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_services_ts : 导入依赖
 N_src_backend_main_ipc_model_actions_ts ..> N_src_backend_main_ipc_services_ts : 导入依赖
 ```
 
@@ -262,3 +303,7 @@ agent.mainSettings 与 agent.configureMain 接受当前工作区和实例，后�
 ### 模型动作的独立路由
 
 model-actions.ts 按公开请求 Schema 解析原始输入，有类型 handler 表约束结果，委托唯一模型存储及主 Agent 设置服务。通用 dispatcher 只识别这一组精确动作；停止、主 Frame、工作区实例、revision 和配置兼容校验保留。旧动作继续原路由，不新增执行或凭据读取入口。
+
+## 自动化固定协议
+
+六项 automation 动作独立类型映射，Main 先严格 Schema、当前 workspaceId/instanceId，再检查定义 revision。list/catalog 只读，save 仅保存未来配置，run 显式运行；toggle/remove 停未来计划及当前执行。请求不接任务身份、路径、凭据或内部启动回调；应用停止/实例退役不接受新请求。

@@ -14,6 +14,9 @@
 
 ```mermaid
 classDiagram
+class N_src_backend_core_automation["automation/"] {
+  <<directory>>
+}
 class N_src_backend_core_brain["brain/"] {
   <<directory>>
 }
@@ -29,21 +32,18 @@ class N_src_backend_core_governance["governance/"] {
 class N_src_backend_core_knowledge["knowledge/"] {
   <<directory>>
 }
-class N_src_backend_core_policy["policy/"] {
-  <<directory>>
-}
 N_src_backend_core_brain ..> N_src_backend_core_foundation : 导入依赖
-N_src_backend_core_brain ..> N_src_backend_core_policy : 导入依赖
 N_src_backend_core_governance ..> N_src_backend_core_foundation : 导入依赖
 N_src_backend_core_knowledge ..> N_src_backend_core_foundation : 导入依赖
 N_src_backend_core_knowledge ..> N_src_backend_core_connectors : 导入依赖
 N_src_backend_core_knowledge ..> N_src_backend_core_brain : 导入依赖
-N_src_backend_core_policy ..> N_src_backend_core_governance : 导入依赖
-N_src_backend_core_policy ..> N_src_backend_core_connectors : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_policy["policy/"] {
+  <<directory>>
+}
 class N_src_backend_core_runtime["runtime/"] {
   <<directory>>
 }
@@ -59,13 +59,17 @@ class N_src_backend_core_tools["tools/"] {
 class N_src_backend_core_workspace["workspace/"] {
   <<directory>>
 }
+N_src_backend_core_policy ..> N_src_backend_core_tools : 导入依赖
+N_src_backend_core_policy ..> N_src_backend_core_workspace : 导入依赖
 N_src_backend_core_runtime ..> N_src_backend_core_tasks : 导入依赖
 N_src_backend_core_runtime ..> N_src_backend_core_team : 导入依赖
 N_src_backend_core_tasks ..> N_src_backend_core_tools : 导入依赖
 N_src_backend_core_tasks ..> N_src_backend_core_workspace : 导入依赖
 N_src_backend_core_tasks ..> N_src_backend_core_team : 导入依赖
+N_src_backend_core_tasks ..> N_src_backend_core_policy : 导入依赖
 N_src_backend_core_team ..> N_src_backend_core_workspace : 导入依赖
 N_src_backend_core_team ..> N_src_backend_core_tasks : 导入依赖
+N_src_backend_core_tools ..> N_src_backend_core_policy : 导入依赖
 N_src_backend_core_workspace ..> N_src_backend_core_team : 导入依赖
 N_src_backend_core_workspace ..> N_src_backend_core_tools : 导入依赖
 ```
@@ -115,6 +119,7 @@ N_src_backend_core_workspace ..> N_src_backend_core_tools : 导入依赖
 
 ## 子目录导航
 
+- [automation/](automation/ARCHITECTURE.md)：自动化定义、运行与执行/存储端口及纯时区日程计算，不依赖调度和桌面实现。
 - [brain/](brain/ARCHITECTURE.md)：引擎无关的执行循环、事件与计量；运行内补充只由可信入口写绑定scope/run/queue的接收日志，返回真实序号；queued后日志失败保持未知。插入绑定原run和停止信号，原生确认与未知分别记录，结算先排空插入日志。正式成员按冻结Workflow验证JSON指定字节，验证与交付复核各持短锁，前后核版本/知识/停止；checked暂存不等于passed有效证明。求助/检查点保存后结束本轮，文件采集随真实工具结束释放短锁；续执行不借旧证据。 engine-tools 与 engine-instructions 共用业务路由/指引；engine-session 按已核日志选择目标引擎原生 ID/文件并转交公开资料；native-tools 复用固定 Pi SDK 独立操作供宿主动态工具。 冻结范围工具由Runtime一次授权，原生文件/命令禁用，结算等实际资源退出。 成员的公开任务和原生运行共用冻结岗位绑定，历史缺省可读但不授权应用新领取。 新的未知工具不能仅凭 reconciledToolIds 恢复旧原生上下文，保留历史字段可读；正常无未决工具的续聊不受影响。 正式成员受控文件工具使用 Runtime 单次授权；未知写入后整轮只准读取/求助，新ID不能绕过，交付独立复核并以interrupted封存；停止和结算等待实际文件进程退出。 外部写也进入未知影响屏障和验证副作用时序；不能借 GitHub 提交绕过运行内写入限制或沿用旧验证。
 - [connectors/](connectors/ARCHITECTURE.md)：链接器定义、查询与唯一身份检查；另定义 GitHub 反馈字段、公开登录状态与可信端口，纯协议不发网络请求或授予权限。
 - [foundation/](foundation/ARCHITECTURE.md)：少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。

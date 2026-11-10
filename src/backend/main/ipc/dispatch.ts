@@ -1,4 +1,5 @@
 /**
+ * 自动化六项动作先经独立类型协议与实例校验，再进入唯一工作区调度器。
  * 隔离资源核实只读；清理接受原运行/执行/报告版本和当前实例，无法通过IPC指定路径或PID。
  * 受控补偿边界：四项桌面入口只查原操作、预览和显式提交新补偿；模型无补偿入口，原 unknown 和原日志不改写。
  * 请求预算仅路由完整身份的只读摘要；设置改变只影响新目标，IPC 没有清除预留或签发发送许可的入口。
@@ -13,6 +14,8 @@
  * 原命令报告：客户端只选择 workspace/root/run/call；已有服务核原 canonical 与 Store，不隐式打开工作区或补充提交证明。
  * 影响处置：五个桌面入口共用只读观察和不可变附录；只有明确保存注入本机 actor，当前文件事实不清除原 unknown。
  */
+import {isAutomationAction} from '../../../bridge/contracts/automation';
+import {dispatchAutomationAction} from './automation-actions';
 import {isModelAction} from '../../../bridge/contracts/model-actions';
 import {dispatchModelAction} from './model-actions';
 import type {ApplicationServices} from './services';
@@ -21,7 +24,7 @@ import {ArchitectureService} from '../workspace/architecture-service';
 import {WorkspacePackages} from '../resources/workspace-packages';
 import {fail} from '../../core/foundation/errors';
   /** 桌面 IPC 的操作路由；请求必须显式携带目标身份，不读取界面选中项。 */
-export async function dispatchApplication(app:ApplicationServices,action:string,args:any={}){if(isModelAction(action))return dispatchModelAction(app,action,args);switch(action){
+export async function dispatchApplication(app:ApplicationServices,action:string,args:any={}){if(isModelAction(action))return dispatchModelAction(app,action,args);if(isAutomationAction(action))return dispatchAutomationAction(app,action,args);switch(action){
     case 'dispatch.isolatedExecutionReport':return app.isolatedExecutions(args.workspaceId).report(args);
     case 'dispatch.isolatedExecutionCleanup':return app.isolatedExecutions(args.workspaceId).cleanup(args);
     case 'dispatch.controlledFileReport':return app.controlledFiles(args.workspaceId).report(args);

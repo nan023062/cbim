@@ -193,3 +193,7 @@ FileIsolationRecords是独立私有fsync追加链，绑定原run/call、完整�
 ### 请求预算适配
 
 `model-request-budget-store.ts` 借用已有 DispatchStore，提供 Core 的预算专用端口。读取和事务回调只接收 scopes/modelRequestBudgetChanges 的隔离副本；提交只构造 modelRequestBudgetChanges 与从同条变更派生的回执。准入判断与提交仍处于一次原串行事务内，幂等命令不会重跑回调；不创建新账本，不拥有原 Store 关闭权。
+
+## 自动化私有记录
+
+FileAutomations 在当前工作区独占锁下由唯一调度器串行使用；完整状态校验工作区、UUID、版本与有界记录，32 MiB 上限。只有 ENOENT 初始化空状态，损坏或跨工作区文件报错并保留，不覆盖修复。写入通过既有原子替换后才允许发起模型。

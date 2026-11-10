@@ -11,6 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [agent-history.ts](agent-history.ts) | 把静态 Agent 的 Session 归档索引保存到应用用户目录，仅负责索引文件读写与完整性校验。 |
+| [automations.ts](automations.ts) | 在工作区私有用户目录保存自动化定义与有界运行历史。 |
 | [chat-inputs.ts](chat-inputs.ts) | 将用户明确添加的文件、文件夹、链接、网页与链接器定义保存为本机对话输入快照。 |
 | [chat-material-imports.ts](chat-material-imports.ts) | 应用内显式资料导入的取消、工作区归属及真实资源仓库读取入口。 |
 | [chat-source-readers.ts](chat-source-readers.ts) | 桌面明确导入目录、URL 指针和网页时，生成有界文本及真实来源事实。 |
@@ -46,6 +47,28 @@ N_src_backend_main_persistence_tasks_agent_history_ts_external_AgentHistoryStore
 ```
 
 直接依赖：[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/files.ts](../../../core/foundation/files.ts)、[../../../core/team/session-history-storage.ts](../../../core/team/session-history-storage.ts)。
+
+### automations.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_persistence_tasks_automations_ts["automations.ts"] {
+  <<module>>
+}
+class N_src_backend_main_persistence_tasks_automations_ts_FileAutomations["FileAutomations"] {
+  +read()
+  +write()
+  -file
+  -workspaceId
+}
+N_src_backend_main_persistence_tasks_automations_ts ..> N_src_backend_main_persistence_tasks_automations_ts_FileAutomations : 声明
+class N_src_backend_main_persistence_tasks_automations_ts_external_AutomationStorage["AutomationStorage (外部契约)"] {
+  <<external>>
+}
+N_src_backend_main_persistence_tasks_automations_ts_external_AutomationStorage <|.. N_src_backend_main_persistence_tasks_automations_ts_FileAutomations
+```
+
+直接依赖：[../../../core/foundation/files.ts](../../../core/foundation/files.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/automation/contracts.ts](../../../core/automation/contracts.ts)。
 
 ### chat-inputs.ts
 
@@ -593,3 +616,7 @@ FileIsolationRecords是独立私有fsync追加链，绑定原run/call、完整�
 ### 请求预算适配
 
 `model-request-budget-store.ts` 借用已有 DispatchStore，提供 Core 的预算专用端口。读取和事务回调只接收 scopes/modelRequestBudgetChanges 的隔离副本；提交只构造 modelRequestBudgetChanges 与从同条变更派生的回执。准入判断与提交仍处于一次原串行事务内，幂等命令不会重跑回调；不创建新账本，不拥有原 Store 关闭权。
+
+## 自动化私有记录
+
+FileAutomations 在当前工作区独占锁下由唯一调度器串行使用；完整状态校验工作区、UUID、版本与有界记录，32 MiB 上限。只有 ENOENT 初始化空状态，损坏或跨工作区文件报错并保留，不覆盖修复。写入通过既有原子替换后才允许发起模型。

@@ -13,6 +13,7 @@
 | [admission.ts](admission.ts) | 向界面公开全局并发策略、当前占用及准入等待的可序列化契约。 |
 | [agent-history.ts](agent-history.ts) | 向团队静态节点公开只读的角色 Session 历史协议。 |
 | [architecture.ts](architecture.ts) | 团队/业务架构编辑的桌面 IPC 契约，只公开对象操作、预览差异和提交回执。 |
+| [automation.ts](automation.ts) | 自动化桌面的固定请求、运行时校验与公开返回映射。 |
 | [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
 | [command-verification.ts](command-verification.ts) | 向桌面视图导出原主命令的只读核实协议和固定支持矩阵。 |
 | [controlled-files.ts](controlled-files.ts) | 向桌面公开受控文件原操作查询和显式补偿的纯协议。 |
@@ -99,6 +100,45 @@ N_src_bridge_contracts_architecture_ts ..> N_src_bridge_contracts_architecture_t
 ```
 
 直接依赖：[../../backend/core/knowledge/object-crud.ts](../../backend/core/knowledge/object-crud.ts)、[../../backend/core/workspace/module-outline.ts](../../backend/core/workspace/module-outline.ts)。
+
+### automation.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_automation_ts["automation.ts"] {
+  <<module>>
+  +isAutomationAction()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_automation_ts["automation.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_automation_ts_AutomationAction["AutomationAction"] {
+  <<type>>
+
+}
+N_src_bridge_contracts_automation_ts ..> N_src_bridge_contracts_automation_ts_AutomationAction : 声明
+class N_src_bridge_contracts_automation_ts_AutomationActionInput["AutomationActionInput"] {
+  <<type>>
+
+}
+N_src_bridge_contracts_automation_ts ..> N_src_bridge_contracts_automation_ts_AutomationActionInput : 声明
+class N_src_bridge_contracts_automation_ts_AutomationActionResults["AutomationActionResults"] {
+  <<interface>>
+  +'automation.list'
+  +'automation.catalog'
+  +'automation.save'
+  +'automation.run'
+  +'automation.toggle'
+  +'automation.remove'
+}
+N_src_bridge_contracts_automation_ts ..> N_src_bridge_contracts_automation_ts_AutomationActionResults : 声明
+```
+
+直接依赖：[../../backend/core/automation/contracts.ts](../../backend/core/automation/contracts.ts)。
 
 ### chat.ts
 
@@ -283,7 +323,7 @@ class N_src_bridge_contracts_ipc_actions_ts_IpcCall["IpcCall"] {
 N_src_bridge_contracts_ipc_actions_ts ..> N_src_bridge_contracts_ipc_actions_ts_IpcCall : 声明
 ```
 
-直接依赖：[model-actions.ts](model-actions.ts)。
+直接依赖：[automation.ts](automation.ts)、[model-actions.ts](model-actions.ts)。
 
 ### isolated-executions.ts
 
@@ -632,6 +672,9 @@ classDiagram
 class N_src_bridge_contracts_ipc_actions_ts["ipc-actions.ts"] {
   <<module>>
 }
+class N_src_bridge_contracts_automation_ts["automation.ts"] {
+  <<module>>
+}
 class N_src_bridge_contracts_model_actions_ts["model-actions.ts"] {
   <<module>>
 }
@@ -641,12 +684,20 @@ class N_src_bridge_contracts_models_ts["models.ts"] {
 class N_src_bridge_contracts_workspace_ts["workspace.ts"] {
   <<module>>
 }
-class N_src_bridge_contracts_chat_ts["chat.ts"] {
-  <<module>>
-}
+N_src_bridge_contracts_ipc_actions_ts ..> N_src_bridge_contracts_automation_ts : 导入依赖
 N_src_bridge_contracts_ipc_actions_ts ..> N_src_bridge_contracts_model_actions_ts : 导入依赖
 N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_models_ts : 导入依赖
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_ipc_actions_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_workspace_ts["workspace.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_chat_ts["chat.ts"] {
+  <<module>>
+}
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入依赖
 ```
 
@@ -997,3 +1048,7 @@ models 仅重导出 engineApi/engineSupportsApi 等纯规则，用于 Agent 选�
 ipc-actions.ts 的 IpcCall 将主 Agent 配置和模型的九个动作映射到具体请求/返回值；缺参数、错误字段或未知动作在编译时拒绝，不能回落旧重载。model-actions.ts 同时公开原始请求的严格校验，Main 再按 action 解析 unknown。旧动作显式保留在 LegacyAction 清单中，返回仍兼容旧协议，未宣称全部 IPC 已类型化；新增动作必须显式登记具体契约。凭据只允许在已有明确配置请求中输入，读取返回 LlmSettings 不含密钥。
 
 knowledge-transactions 仅公开知识预览与提交的纯返回 Schema，供只读展示核对原输出，不导入知识事务服务。
+
+## 自动化动作映射
+
+automation.ts 公开六个精确请求及返回，IpcCall 使用独立泛型重载，不能落入 LegacyAction。Core 纯定义/日程契约供前端类型和 Main 运行时共同校验；不引用执行/存储实现。

@@ -35,6 +35,7 @@ class N_src_frontend_governance["governance/"] {
   <<directory>>
 }
 N_src_frontend_conversation ..> N_src_frontend_components : 导入依赖
+N_src_frontend_conversation ..> N_src_frontend_automation : 导入依赖
 N_src_frontend_conversation ..> N_src_frontend_execution_view : 导入依赖
 N_src_frontend_execution_view ..> N_src_frontend_components : 导入依赖
 ```
@@ -89,6 +90,7 @@ N_src_frontend_workspace ..> N_src_frontend_team : 导入依赖
 
 - `conversation` → `components`：导入。
 - `conversation` → `shell`：导入。
+- `conversation` → `automation`：导入。
 - `conversation` → `tasks`：导入。
 - `conversation` → `execution-view`：导入。
 - `conversation` → `team`：导入。
@@ -126,7 +128,7 @@ N_src_frontend_workspace ..> N_src_frontend_team : 导入依赖
 
 ## 子目录导航
 
-- [automation/](automation/ARCHITECTURE.md)：工作区内部自动化展示；定时触发尚未实现。
+- [automation/](automation/ARCHITECTURE.md)：当前工作区自动化列表、配置和运行历史；固定页签不接自选工作目录，真实运行通过原会话定位。
 - [components/](components/ARCHITECTURE.md)：通用展示组件，不持有领域服务与运行状态。 EngineModelPicker 固定三引擎目录，按协议筛选统一模型，空目录仍可选择引擎。
 - [conversation/](conversation/ARCHITECTURE.md)：中央主对话、目标摘要、输入、附件及队列；附件区明确显示目录清单、URL指针、网页摘录与仓库静态资料。两处插入口冻结原run，入队成功保留事实，停止锁独立于插入等待。进程准入等待与持久用户等待分别展示，纯等待不累计工作时长；未受理保留草稿。核实与重规划权限分离，可续聊头由后端核实。 双视图共享人工决定控制器，保存意见不清除聊天草稿或消费等待。 主对话栏读写工作区主 Agent 的统一执行配置，与团队配置页双向同步；模型按协议映射，Claude Code/Codex 只保留排队。 加号菜单分别请求 BUG 反馈和需求许愿 Skill，按原会话发送或排队，保留已有草稿及附件。 目标摘要可跳转本周期原任务或替代成果，沿已有任务详情导航，不改草稿、附件或执行状态。 原工具记录显式核实保存事实，保留原失败；控制器按四重身份隔离迟到响应，轮询不重复读取，失败保留旧报告并提示时效。 主调用提供显式影响观察；未知不再凭勾选调用 ID 直接续跑，进入独立只读核实，普通草稿不受影响。 当前工作区实例传入成员详情用于补偿预览时效，主聊天草稿不受补偿控制器影响，挂载不触发文件读取或写入。 可信 GitHub submitted 工具回执之后隐藏追加结果文字；失败、未知及后续普通用户输入仍正常显示。
 - [diagnostics/](diagnostics/ARCHITECTURE.md)：只读展示工作区运行状态和知识校验问题，不把工作区就绪视为知识校验通过。

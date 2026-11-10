@@ -141,3 +141,7 @@ unknown 提示不再提供勾选ID解锁旧native的入口。普通无未决工�
 消息、Markdown、问答、队列、附件和工作状态来自 execution-view。ConversationToolCall 组合 tasks/ToolActivity 的核实入口和成员活动；ConversationTurn 的行尾状态只传运行事实，不把恢复控制器下传共享视图。团队及任务页可独立复用共享展示，不能反向导入主对话页。
 
 队列操作只组合固定 queueChange/queueInsert/queueEdit/queueMove 动作；原 run 捕获、停止锁与输入快照保持。
+
+## 固定自动化页签
+
+对话、任务视图之外提供当前工作区自动化固定页签；隐藏对话保留输入和运行状态，自动化隐藏时停止轮询。按 workspaceId/instanceId 重建自动化视图，打开运行经外壳原任务定位，不将草稿改绑为自动化运行。

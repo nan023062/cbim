@@ -1,3 +1,12 @@
+## 2026-11-11：#29 当前工作区自动化与窗口标题
+
+- Issue：https://github.com/nan023062/cbim/issues/29。对话新增固定自动化页签，任务列表、设置与运行历史参考 [Cindy scheduler](https://github.com/makecindy/cindy/blob/main/apps/desktop/help-knowledge/scheduler.md) 和 [运行生命周期](https://github.com/makecindy/cindy/blob/main/packages/maker-scheduler/src/engine/attemptLifecycle.ts)，独立实现当前工作区绑定，不提供自选路径。支持默认主 Agent/已采纳启用岗位、模块、自身 Workflow、有效 Skill、提示、权限及手动/间隔/每天/一次日程。窗口标题为 CBIM，EXE、应用 ID、用户数据和更新通道未改变。
+- 分层：Core automation 只含纯协议/日程；Scheduler 只依赖存储/执行端口；Main 装配私有原子记录、当前知识/模型和真实协作；六项 IPC 强类型映射，前端无后端实现依赖。默认主 Agent 直接执行，岗位首任务经真实 scope/plan/dispatch 后由原协作批次领取，未绕过权限/预算/岗位门禁。临时岗位选择不写模块责任，显式/继承责任冲突拒绝。
+- 生命周期：意图先保存，模型前 bind 真实 taskId/runId；同项不重叠，未知不重放。暂停/删除先冻结未来并取消准备，再停原任务；历史保留。重开跳过过去时刻并只观察原任务，关闭取消准备后排空。运行冻结定义，编辑只影响未来；执行完成与业务验收区分，历史经外壳打开原会话并保留原草稿。
+- 影响测试依据：新日程/版本/持久化/取消、实际 Application 的实例拒绝及重开、真实 Pi 主与岗位配置；受影响消费者为原主运行/协作及对话入口。新增两文件 9 用例最终全部通过（分次验证）。初次真实 Pi 失败因未选 Workflow 传空数组违反原非空显式选择契约，改为缺省后通过；同时保留启动错误，不被后续无说明状态覆盖。失败证据 issue-29-new/start-diagnostic/start-error.json，修复证据 test-results/issue-29-workflow-fix.json（真实 Pi 1 用例通过，选择器排除已通过的存储用例）。
+- 回归命令：pnpm exec vitest run tests/automation-scheduler.test.ts tests/auto-collaboration.test.ts tests/application-runtime.test.ts tests/application-collaboration-pi.test.ts tests/conversation.test.ts tests/chat-chrome.test.ts tests/main-agent-settings.test.ts --reporter=default --reporter=json --outputFile.json=test-results/issue-29-related.json：7 文件 63 用例通过，20.54s。加新增 Application 两用例，共 8 文件 65 个独立用例通过。真实进程使用本地确定性 HTTP 响应，仅证明路由、生命周期和模型身份，不代表在线业务质量。
+- pnpm check:architecture 通过：58 目录/630 代码样式、1227 文件/6278 含类型依赖，0 循环、0 文档差异。源码注释、相关 CONTRACT 与 13 份类图同步。pnpm typecheck 通过（先修正测试诊断中的 DispatchState 字段引用）。全仓四片 CI、实际桌面交互和安装升级留在本次后续集成/发布阶段。
+
 ## 2026-11-11：主 Agent 与模型设置 IPC 契约试点（架构审计 A07）
 
 - 公开 model-actions 定义九个动作的请求 Schema 与返回值，Main 独立 handler 表委托原服务；Bridge/preload 共用 IpcCall。已迁移动作不落回旧重载，错误请求和未知新动作均有编译期反例；未知字节仍在 Main 校验，未把类型当授权。

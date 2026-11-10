@@ -1274,7 +1274,7 @@ class N_src_backend_scheduler_engine_execution_model_request_budget_service_ts_M
 N_src_backend_scheduler_engine_execution_model_request_budget_service_ts ..> N_src_backend_scheduler_engine_execution_model_request_budget_service_ts_ModelRequestBudgetService : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/model-request-budget.ts](../../core/tasks/model-request-budget.ts)、[../../core/tasks/model-request-budget-rules.ts](../../core/tasks/model-request-budget-rules.ts)、[../../core/brain/llm/ports.ts](../../core/brain/llm/ports.ts)、[../../core/brain/llm/request-budget.ts](../../core/brain/llm/request-budget.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)、[scope-budget-service.ts](scope-budget-service.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/model-request-budget-storage.ts](../../core/tasks/model-request-budget-storage.ts)、[../../core/tasks/model-request-budget.ts](../../core/tasks/model-request-budget.ts)、[../../core/tasks/model-request-budget-rules.ts](../../core/tasks/model-request-budget-rules.ts)、[../../core/brain/llm/ports.ts](../../core/brain/llm/ports.ts)、[../../core/brain/llm/request-budget.ts](../../core/brain/llm/request-budget.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)、[scope-budget-service.ts](scope-budget-service.ts)。
 
 ### output-manifest-report-service.ts
 
@@ -1548,7 +1548,7 @@ class N_src_backend_scheduler_engine_execution_scope_budget_service_ts_ScopeBudg
 N_src_backend_scheduler_engine_execution_scope_budget_service_ts ..> N_src_backend_scheduler_engine_execution_scope_budget_service_ts_ScopeBudgetService : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/brain/scope-usage.ts](../../core/brain/scope-usage.ts)、[../../core/tasks/scope-budget.ts](../../core/tasks/scope-budget.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[scope-usage-service.ts](scope-usage-service.ts)、[../../core/tasks/model-request-budget-rules.ts](../../core/tasks/model-request-budget-rules.ts)、[../../core/tasks/model-request-budget.ts](../../core/tasks/model-request-budget.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/brain/scope-usage.ts](../../core/brain/scope-usage.ts)、[../../core/tasks/scope-budget.ts](../../core/tasks/scope-budget.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/model-request-budget-storage.ts](../../core/tasks/model-request-budget-storage.ts)、[scope-usage-service.ts](scope-usage-service.ts)、[../../core/tasks/model-request-budget-rules.ts](../../core/tasks/model-request-budget-rules.ts)、[../../core/tasks/model-request-budget.ts](../../core/tasks/model-request-budget.ts)。
 
 ### scope-continuation-service.ts
 
@@ -3325,3 +3325,7 @@ WorkspaceExecutionLease.acquireReadWithin 只由装配端为已核实主会话�
 ### 同一模型的多引擎岗位
 
 OwnerExecutionService 在模型锁内按各岗位采纳的 engine 读取公开参数，以 profileId、modelId 和完整 configurationHash 匹配配置，不能只取同模型的第一项。MemberExecutionManager 从可信登记 hint 取得引擎，随后仍在 Store 事务中核全部 binding 与指纹；旧 ownerBinding 不加字段，原生恢复身份不变化。主 Agent 配置只为新发送提供选型，运行/已受理队列保持冻结配置。
+
+### 请求预算服务的状态边界
+
+`ModelRequestBudgetService` 通过 ModelRequestBudgetStore 读取周期与预算记录，原子提交单条阶段，不依赖整库 DispatchState/DispatchStore。`ScopeBudgetService.preflightRequest` 只需预算附录；运行级准入仍使用现有任务/运行事实。实际 Main 装配保留唯一 Store，因此并发预留、原命令重放、未知消耗封锁及发送前核实语义不变。

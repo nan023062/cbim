@@ -9,6 +9,7 @@ import {summarizeScopeUsage} from '../../core/brain/scope-usage';
 import {evaluateScopeBudget,scopeBudgetPolicySchema,type ScopeBudgetPolicy,type ScopeBudgetObservation} from '../../core/tasks/scope-budget';
 import type {DispatchScope} from '../../core/tasks/dispatch-scope';
 import type {DispatchState} from '../../core/tasks/dispatch-storage';
+import type {ModelRequestBudgetLedger} from '../../core/tasks/model-request-budget-storage';
 import type {ScopeUsageService} from './scope-usage-service';
 import {requestBudgetRecords,requestBudgetReport,requestBudgetReservation,requestBudgetDecision} from '../../core/tasks/model-request-budget-rules';
 import type {RequestBudgetModel} from '../../core/tasks/model-request-budget';
@@ -51,7 +52,7 @@ export class ScopeBudgetService {
     return {scope:{...scope,budget:{...budget,lastAdmission:{...identity,policyRevision:budget.policy.revision,observation}}}};
   }
   /** 等待补充或成员领取前先核保守容量，拒绝时不消费检查点；这是预检，不代替发送前的原子预留。 */
-  preflightRequest(state:DispatchState,scope:DispatchScope,model:Pick<RequestBudgetModel,'contextWindow'|'maxTokens'|'pricing'>):void{
+  preflightRequest(state:ModelRequestBudgetLedger,scope:DispatchScope,model:Pick<RequestBudgetModel,'contextWindow'|'maxTokens'|'pricing'>):void{
     const policy=scope.budget?.policy;if(!policy?.enabled||policy.enforcement!=='request')return;
     const records=requestBudgetRecords(state.modelRequestBudgetChanges??[]),report=requestBudgetReport(records,{workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,scopeId:scope.scopeId,policyRevision:policy.revision},'no_live_run'),reservation=requestBudgetReservation(model,model.maxTokens),reason=requestBudgetDecision(policy,report,reservation,records);
     if(reason)fail('MODEL_REQUEST_PREFLIGHT',reason==='token_reserve'?`下一请求需预留 ${reservation.tokens} Token，剩余 ${Math.max(0,(policy.limits.tokens??0)-report.tokens-report.reservedTokens)} Token；原等待或待领取任务保留`:reason==='cost_reserve'?`下一请求需预留约 $${reservation.estimatedCostUsd}，剩余约 $${Math.max(0,(policy.limits.estimatedCostUsd??0)-report.estimatedCostUsd-report.reservedCostUsd)}；原等待或待领取任务保留`:'下一请求预算无法可靠核实；原等待或待领取任务保留');

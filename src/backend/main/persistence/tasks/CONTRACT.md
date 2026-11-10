@@ -189,3 +189,7 @@ FileDispatchStore 在原 journal 的完整校验与 durable publish 中投影 ef
 ## 原隔离执行核实与清理
 
 FileIsolationRecords是独立私有fsync追加链，绑定原run/call、完整运行身份、原scope/input摘要和平台资源；只追加合法prepared/started/settled/cleaned或cleanup_requested/cleanup_complete阶段。读取不建目录、不修尾、不重放；每条链256KiB/32帧，每run256调用；损坏拒绝，写入未知封闭实例。目录受工作区独占锁及当前本地用户信任边界保护，不防同用户恶意重写整个私有数据库。
+
+### 请求预算适配
+
+`model-request-budget-store.ts` 借用已有 DispatchStore，提供 Core 的预算专用端口。读取和事务回调只接收 scopes/modelRequestBudgetChanges 的隔离副本；提交只构造 modelRequestBudgetChanges 与从同条变更派生的回执。准入判断与提交仍处于一次原串行事务内，幂等命令不会重跑回调；不创建新账本，不拥有原 Store 关闭权。

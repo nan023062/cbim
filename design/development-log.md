@@ -1,3 +1,10 @@
+## 2026-11-11：预算业务改用专用事务端口（架构审计 A05）
+
+- ModelRequestBudgetService 不再依赖 DispatchStore/DispatchState；Core 新增 ModelRequestBudgetStore/视图/阶段回执契约，Main 适配器显式投影隔离副本，只能写单条预算变化。ScopeBudgetService 的请求预检仅接预算附录；运行级准入的原职责保留。
+- 同一原 Store 的事务中读取余额、决定并保存预留/拒绝，不拆事务、不建第二个账本、不迁移旧日志。原命令指纹、重放、未知消耗、发送前核实和关停所有权保持。其他业务仍待按真实变化点迁移，不宣称整库已完全拆分。
+- 验证依据：预算服务和阶段适配、运行级准入、实际 Main/Pi 请求与成员共享额度、新逻辑边界。执行 pnpm exec vitest run tests/model-request-budget.test.ts tests/scope-budget-service.test.ts tests/model-request-budget-pi.test.ts tests/dependencies.test.ts -t '^(?!all maintained code)' --reporter=default --reporter=json --outputFile=test-results/budget-port.json：4 文件、38 用例通过（29.65s）；重复全仓静态用例由架构检查覆盖。实际 Pi 使用本地确定性供应商，不代表在线模型质量。
+- pnpm typecheck、pnpm check:architecture 通过：55 目录/608 代码及样式、1199 文件/6154 含类型依赖，0 循环、0 文档差异。同步新增端口及适配器文件头、三个目录契约、四份类图。未运行全量回归、全套桌面或发布验收。
+
 ## 2026-11-11：历史索引存储与工作区装配分离（架构审计 A09）
 
 - 范围：FileAgentHistoryStore 只依赖 Core 存储契约和 Foundation；createAgentHistory 移入 workspace，通过窄 AgentHistoryOwner 组合运行日志与调度查询服务。Application 为唯一生产装配入口，持锁启动、只读身份检查、观察与排空顺序均保持。

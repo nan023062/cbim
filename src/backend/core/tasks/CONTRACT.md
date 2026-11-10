@@ -791,3 +791,7 @@ dispatch-receipt 承载主工具和界面共用的严格派发输出结构；mai
 ### Codex 首次原生身份
 
 成员启动意图仍以逻辑 agentSessionId 占位；仅 Codex 首次 starting→running 且没有原生文件/检查点恢复时允许采纳真实线程 ID，与 session 记录同事务提交。新 ID 不得已属于其他成员通道；之后固定输入和原文件不可改绑。fresh-context 的 nativeSessionId 是新链启动意图，Codex 实际身份由独立 session.bound 回执确认，不能将意图当作已存在原生文件。
+
+### 请求预算的独立持久化端口
+
+`ModelRequestBudgetStore` 仅公开周期与请求账本视图，以及单条预算阶段提交。Main 的 modelRequestBudgetStore 适配器在唯一 DispatchStore 串行事务内投影隔离副本、执行准入决定并构造白名单 mutation；原命令幂等、整库不变量、可靠落盘及关闭生命周期仍归 DispatchStore。预算服务不再取得任务图、成员、邮箱或任意 mutation 权限。旧记录不迁移，未知请求不补结算。

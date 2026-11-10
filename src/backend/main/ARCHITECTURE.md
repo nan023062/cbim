@@ -117,8 +117,8 @@ class N_src_backend_main_runtime_monitor_ts["runtime-monitor.ts"] {
 - `main.ts` → `platform`：导入。
 - `main.ts` → `application.ts`：导入。
 - `main.ts` → `persistence`：导入。
-- `member-dispatch.ts` → `workspace`：导入。
 - `member-dispatch.ts` → `persistence`：导入。
+- `member-dispatch.ts` → `workspace`：导入。
 - `member-dispatch.ts` → `platform`：导入。
 - `member-dispatch.ts` → `execution-admission.ts`：导入。
 - `persistence` → `resources`：导入。

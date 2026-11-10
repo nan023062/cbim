@@ -67,6 +67,8 @@ test('snapshot contracts and domain views reject reverse or private dependencies
     [team,port],[query,port],['src/backend/core/foundation/json.ts',contracts],
     ['tests/knowledge-data.ts','tests/helpers.ts'],
     ['tests/knowledge-fixture.ts','src/backend/main/application.ts'],
+    ['src/backend/core/tasks/model-request-budget-storage.ts','src/backend/core/tasks/dispatch-storage.ts'],
+    ['src/backend/scheduler-engine/execution/model-request-budget-service.ts','src/backend/core/tasks/dispatch-storage.ts'],
   ];
   for(const [from,to] of denied){
     const relative=path.posix.relative(path.posix.dirname(from),to);

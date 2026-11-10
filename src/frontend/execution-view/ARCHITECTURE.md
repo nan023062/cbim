@@ -11,6 +11,8 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [ComposerAttachments.tsx](ComposerAttachments.tsx) | 按 Cindy ThumbnailStrip 的 56px 卡片、类型标识和角落移除按钮展示草稿附件。 |
+| [knowledge-tool-view.css](knowledge-tool-view.css) | 对应界面的布局与视觉样式。 |
+| [knowledge-tool-view.ts](knowledge-tool-view.ts) | 从已结束的原知识调用中提取预览诊断或已提交回执，供工具轨道和工作摘要展示。 |
 | [MarkdownMessage.tsx](MarkdownMessage.tsx) | 将 Agent 消息渲染成排版后的正文、列表、表格与可复制代码块。 |
 | [message-queue.css](message-queue.css) | 与输入框一体的紧凑队列，匹配参考图的单行消息、拖柄及悬停圆形操作。 |
 | [MessageQueue.tsx](MessageQueue.tsx) | 展示主进程持久化的待执行消息，提供插队、排序、移除及继续操作。 |
@@ -35,6 +37,27 @@ class N_src_frontend_execution_view_ComposerAttachments_tsx["ComposerAttachments
 ```
 
 直接依赖：[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../components/Icon.tsx](../components/Icon.tsx)。
+
+### knowledge-tool-view.css
+
+```mermaid
+classDiagram
+class N_src_frontend_execution_view_knowledge_tool_view_css["knowledge-tool-view.css"] {
+  <<stylesheet>>
+}
+```
+
+### knowledge-tool-view.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_execution_view_knowledge_tool_view_ts["knowledge-tool-view.ts"] {
+  <<module>>
+  +knowledgeToolView()
+}
+```
+
+直接依赖：[../../bridge/contracts/knowledge-transactions.ts](../../bridge/contracts/knowledge-transactions.ts)。
 
 ### MarkdownMessage.tsx
 
@@ -120,7 +143,7 @@ class N_src_frontend_execution_view_ToolTimeline_tsx["ToolTimeline.tsx"] {
 }
 ```
 
-直接依赖：[tool-labels.ts](tool-labels.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../components/RepositoryScopeDetails.tsx](../components/RepositoryScopeDetails.tsx)。
+直接依赖：[tool-labels.ts](tool-labels.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../components/RepositoryScopeDetails.tsx](../components/RepositoryScopeDetails.tsx)、[knowledge-tool-view.ts](knowledge-tool-view.ts)、[knowledge-tool-view.css](knowledge-tool-view.css)。
 
 ### transcript.ts
 
@@ -200,15 +223,23 @@ N_src_frontend_execution_view_ToolTimeline_tsx ..> N_src_frontend_execution_view
 
 ```mermaid
 classDiagram
+class N_src_frontend_execution_view_ToolTimeline_tsx["ToolTimeline.tsx"] {
+  <<component>>
+}
+class N_src_frontend_execution_view_knowledge_tool_view_ts["knowledge-tool-view.ts"] {
+  <<module>>
+}
+class N_src_frontend_execution_view_knowledge_tool_view_css["knowledge-tool-view.css"] {
+  <<stylesheet>>
+}
 class N_src_frontend_execution_view_WorkStatus_tsx["WorkStatus.tsx"] {
   <<component>>
 }
 class N_src_frontend_execution_view_tool_labels_ts["tool-labels.ts"] {
   <<module>>
 }
-class N_src_frontend_execution_view_ToolTimeline_tsx["ToolTimeline.tsx"] {
-  <<component>>
-}
+N_src_frontend_execution_view_ToolTimeline_tsx ..> N_src_frontend_execution_view_knowledge_tool_view_ts : 导入依赖
+N_src_frontend_execution_view_ToolTimeline_tsx ..> N_src_frontend_execution_view_knowledge_tool_view_css : 导入依赖
 N_src_frontend_execution_view_WorkStatus_tsx ..> N_src_frontend_execution_view_tool_labels_ts : 导入依赖
 N_src_frontend_execution_view_WorkStatus_tsx ..> N_src_frontend_execution_view_ToolTimeline_tsx : 导入依赖
 ```
@@ -233,3 +264,7 @@ N_src_frontend_execution_view_WorkStatus_tsx ..> N_src_frontend_execution_view_T
 WorkStatus 接收可选 activityDetails，ToolTimeline 接收按原调用 ID 的 renderControls。任务领域在 tasks/ToolActivity 组合命令核实、影响观察及恢复上下文；共享层不导入任务状态或页面，不查询或启动恢复。主对话负责组合任务域控制，成员履历默认只读轨道，无伪造主来源的核实入口。
 
 QuestionCard、ComposerAttachments 和 MessageQueue 只保持已有展示和显式交互：本地选择不提交，附件预览仅显式读取已保存快照，排队操作由调用方回调执行。原 CSS 类名、事件顺序、身份核对、错误展示和原始回执保留。
+
+## 知识操作状态
+
+knowledge-tool-view 仅接受原 finished 调用的完整、同工作区知识输出。预览的 structural:false 展示为警告，并逐项保留 validation.issues；提交的 committed 回执展示事务与知识版本，不能推导业务验收。缺失、异常、跨工作区和混杂文本均不推断成功。ToolTimeline 给控制插槽提供 attention；失败、中断或返回丢失突出核实入口，成功操作默认折叠。

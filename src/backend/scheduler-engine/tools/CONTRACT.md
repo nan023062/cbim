@@ -199,3 +199,5 @@ KnowledgeTools 与知识协议目录同步移除 cbim_people_list，不再公开
 ### 对象预览 v2
 
 cbim_object_preview 的 data 按 kind 判别，模块中文名必须写在 body 的 H1，结构化 name 来自 slug。工具发现与实际入口使用同一 Schema，既有实例、版本、事务和逐次写权限不变。
+
+对象预览的工具描述和字段 Schema 共同公开根 ID、顺序父子创建及正文约束；structural:false 返回全部校验问题，不冒充执行异常。知识提交回执与业务目标验收分别解释。

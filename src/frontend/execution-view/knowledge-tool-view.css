@@ -1,0 +1,5 @@
+/* 知识校验属于可修正的诊断，提交回执只表达知识事务完成。 */
+.chat-tool.validation-warning>summary,.knowledge-validation{color:var(--warning)}
+.knowledge-validation ul{padding-left:20px}.knowledge-validation li{margin:8px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.knowledge-commit{font-size:12px;overflow-wrap:anywhere}.knowledge-commit strong{color:var(--success)}
+.tool-observation-controls>summary{color:var(--muted)}

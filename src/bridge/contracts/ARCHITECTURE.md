@@ -27,6 +27,7 @@
 | [ipc-actions.ts](ipc-actions.ts) | 渲染进程固定操作目录及已迁移 action 的请求/返回映射。 |
 | [isolated-executions.ts](isolated-executions.ts) | 向桌面导出原隔离执行核实与清理的公开 DTO。 |
 | [knowledge-source.ts](knowledge-source.ts) | 向桌面公开知识来源身份、采纳预览和当前核实状态的纯数据协议。 |
+| [knowledge-transactions.ts](knowledge-transactions.ts) | 向只读执行视图公开知识预览和提交的严格返回协议。 |
 | [model-actions.ts](model-actions.ts) | 声明主 Agent 选型和供应商设置的桌面请求、运行时校验及返回值映射。 |
 | [models.ts](models.ts) | 模型配置界面消费的公开模型信息与停止原因格式化。 |
 | [module-ownership.ts](module-ownership.ts) | 公开模块负责人控制面的纯数据协议，供业务架构、项目岗位与 Main IPC 使用。 |
@@ -303,6 +304,16 @@ class N_src_bridge_contracts_knowledge_source_ts["knowledge-source.ts"] {
 }
 ```
 直接依赖：[../../backend/core/workspace/knowledge-source.ts](../../backend/core/workspace/knowledge-source.ts)。
+
+### knowledge-transactions.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_knowledge_transactions_ts["knowledge-transactions.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../backend/core/knowledge/tool-output-transactions.ts](../../backend/core/knowledge/tool-output-transactions.ts)。
 
 ### model-actions.ts
 
@@ -984,3 +995,5 @@ models 仅重导出 engineApi/engineSupportsApi 等纯规则，用于 Agent 选�
 ### 固定操作目录及模型请求映射
 
 ipc-actions.ts 的 IpcCall 将主 Agent 配置和模型的九个动作映射到具体请求/返回值；缺参数、错误字段或未知动作在编译时拒绝，不能回落旧重载。model-actions.ts 同时公开原始请求的严格校验，Main 再按 action 解析 unknown。旧动作显式保留在 LegacyAction 清单中，返回仍兼容旧协议，未宣称全部 IPC 已类型化；新增动作必须显式登记具体契约。凭据只允许在已有明确配置请求中输入，读取返回 LlmSettings 不含密钥。
+
+knowledge-transactions 仅公开知识预览与提交的纯返回 Schema，供只读展示核对原输出，不导入知识事务服务。

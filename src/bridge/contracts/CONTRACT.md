@@ -330,3 +330,5 @@ models 仅重导出 engineApi/engineSupportsApi 等纯规则，用于 Agent 选�
 ### 固定操作目录及模型请求映射
 
 ipc-actions.ts 的 IpcCall 将主 Agent 配置和模型的九个动作映射到具体请求/返回值；缺参数、错误字段或未知动作在编译时拒绝，不能回落旧重载。model-actions.ts 同时公开原始请求的严格校验，Main 再按 action 解析 unknown。旧动作显式保留在 LegacyAction 清单中，返回仍兼容旧协议，未宣称全部 IPC 已类型化；新增动作必须显式登记具体契约。凭据只允许在已有明确配置请求中输入，读取返回 LlmSettings 不含密钥。
+
+knowledge-transactions 仅公开知识预览与提交的纯返回 Schema，供只读展示核对原输出，不导入知识事务服务。

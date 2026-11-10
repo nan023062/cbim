@@ -1,5 +1,12 @@
 # CBIM 开发记录
 
+## 2026-11-10：0.1.5 发布准备
+
+- 用户授权完成全部需求后提交 PR、合并、发布。功能提交 a4472ecb，源码注释、契约和架构文档随功能交付；本步准备版本 0.1.5 和内置日志。
+- 真实上一公开版为 0.1.4，保持其自动安装 UI，验收输入新增明确支持；候选/线上模式均检查实际旧版本与同版拒绝，未知未来旧版仍拒绝。三个发布入口与运行说明同步。
+- 实际命令 pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs --reporter=default --reporter=json --outputFile=test-results/desktop-0.1.5-20261110/acceptance-inputs.json：21 项通过。pnpm check:brand、正式域名 pnpm build:website 通过，官网保持上一公开版。
+- 本步选取 tests/desktop-acceptance-inputs.test.mjs，因改动仅影响安装前版本与流程选择；已有功能类型/架构及定向测试可复用，完整回归交给本次 PR 四片 CI。后续真实制品与安装不以单元测试替代，结果见[本次记录](verification/desktop-release-0.1.5-20261110.md)。
+
 ## 2026-11-10：Codex 第三引擎
 
 - 完成范围：参考 Cindy 的 App Server 接法接入固定 Codex 原生进程；模型供应商、静态 Agent、岗位和主对话共用用户配置的引擎/模型菜单，Codex 锁定 OpenAI Responses。旧 Pi 配置、Claude 配置和岗位冻结规则保留。

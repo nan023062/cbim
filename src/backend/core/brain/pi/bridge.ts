@@ -1,6 +1,7 @@
 /**
  * 作用定位：大脑 执行层：内部知识 Schema/调用的本机临时桥及 Pi 扩展，工具授权先落盘再放行。
  * 设计原因：把工具 Schema、一次性授权和可信来源交给受控扩展；成员数据和人工决定系统转交分别写成 custom，真实文本补充仍是用户消息。工具调用 ID 透传且结果再次校验，随机凭据保护单轮调用。模型启动前回报真实活动工具名并核对注册清单，不记录参数或凭据。
+ * 工具目录及调用端口契约来自上层 engine-tools；此文件只维护 Pi 的 HTTP/扩展适配与一次性许可。
  */
 import http from 'node:http';
 import {randomBytes,timingSafeEqual} from 'node:crypto';
@@ -9,14 +10,8 @@ import {validateToolResult} from '../../tools/results';
 import {Fault,fail} from '../../foundation/errors';
 import {checkedRunInputSource,type RunInputSource} from '../input-source';
 
-/** 从注入知识服务清单返回的工具 Schema，禁止仅凭名称伪造参数。 */
-export interface KnowledgeToolSchema {name:string;description?:string;inputSchema:Record<string,unknown>}
-/** 注入的工作区知识连接能力；call 原样传递身份与版本，不修复或重放写入。 */
-export interface KnowledgeBridge {
-  list():Promise<KnowledgeToolSchema[]>;
-  /** toolCallId 来自已经通过 gate 的原生调用，不接受输入正文冒充；供调度构造稳定命令键。 */
-  call(name:string,args:Record<string,unknown>,signal:AbortSignal,toolCallId?:string):Promise<unknown>;
-}
+import type {EngineToolsPort as KnowledgeBridge} from '../engine-tools';
+export type {EngineToolSchema as KnowledgeToolSchema,EngineToolsPort as KnowledgeBridge} from '../engine-tools';
 /** 临时桥只接受本次实例令牌；工具授权绑定调用 ID、名称和原始参数。 */
 export async function openBridge(knowledge:KnowledgeBridge,beforeTool:(call:ToolCall)=>Promise<ToolDecision>,onContext?:(usage:{tokens:number|null;contextWindow:number})=>Promise<void>,onRequestLimit?:(limit:number)=>Promise<void>,onTools?:(catalog:{expected:string[];active:string[];missing:string[]})=>Promise<void>){
   const tools=await knowledge.list();

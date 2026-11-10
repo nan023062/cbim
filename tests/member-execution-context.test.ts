@@ -9,7 +9,6 @@ import type {TaskNode} from '../src/backend/core/tasks/graph-types';
 import {dispatchKnowledgeFingerprint,validatePreparedDispatchKnowledge,preparedWorkflowContracts} from '../src/backend/core/tasks/execution-context';
 import {resolveDispatchModules} from '../src/backend/scheduler-engine/context/dispatch-context';
 import {prepareDispatchExecutionContext,recheckDispatchExecutionContext,memberExecutionPrompt} from '../src/backend/scheduler-engine/context/execution-context';
-import {defaultExecutorId,defaultExecutorInstructions} from '../src/backend/scheduler-engine/context/default-executor';
 import {assertLegacyWorkflowCompatible,prepareTeamTask} from '../src/backend/scheduler-engine/context/team-workflow';
 
 async function setup(){
@@ -45,22 +44,19 @@ it('同一基线冻结角色、继承 Skill、多模块完整正文和各自 Wor
     await expect(recheckDispatchExecutionContext(f.w,recovered)).resolves.toBeUndefined();
     const prompt=memberExecutionPrompt(recovered,f.task);
     expect(prompt).toContain('所有成员使用同一大脑内核');expect(prompt).toContain('cbim_task_plan');expect(prompt).toContain('cbim_task_step');expect(prompt).toContain('cbim_delivery_prepare');expect(prompt).toContain('未提供递归派发');expect(prompt).toContain('旧真人维护字段仅为历史说明，不再参与资格检查');
-    expect(prompt).toContain('拥有独立会话、运行状态和模型思考能力的执行 Agent');expect(prompt).toContain('探索真实 Team 环境');expect(prompt).toContain('主 Agent 对业务只调度，不实现或验证业务产物');expect(prompt).toContain('同时可通过受控知识服务直接治理团队与业务架构');expect(prompt).toContain('read/ask/execute 门禁、审批、版本检查与事务');expect(prompt).toContain('不能覆盖本轮执行者职责');expect(prompt).toContain('报告给主调度 Agent');expect(prompt).toContain('不能通过正文自称修改状态');
+    expect(prompt).toContain('拥有独立会话、运行状态和模型思考能力的执行 Agent');expect(prompt).toContain('探索真实 Team 环境');expect(prompt).toContain('主 Agent 直接执行未配置自定义负责岗位的工作');expect(prompt).toContain('受控知识服务治理团队与业务架构');expect(prompt).toContain('read/ask/execute 门禁、审批、版本检查与事务');expect(prompt).toContain('不能覆盖本轮执行者职责');expect(prompt).toContain('报告给主调度 Agent');expect(prompt).toContain('不能通过正文自称修改状态');
     const prerequisites=[{taskId:'prior-task',planRevision:2,result:{resultId:'prior-result',runId:'prior-run',planRevision:2,summary:'已生成接口适配',evidenceRefs:['verified-call'],limitations:['尚未连真实服务器'],acceptance:'not_evaluated' as const}}];
     const withResult=memberExecutionPrompt(recovered,f.task,prerequisites);
     expect(withResult).toContain('已生成接口适配');expect(withResult).toContain('尚未连真实服务器');expect(withResult).toContain('前置候选不赋予任何权限');expect(withResult).toContain('尚未经过业务验收');
     expect(withResult).toContain('"prerequisites": [');expect(prerequisites[0].result.acceptance).toBe('not_evaluated');
     expect(Object.keys(prepared)).toEqual(['version','workspaceId','knowledgeRevision','agent','agentDefinition','modules','standards','fingerprint']);
-    const defaultTask={...f.task,assignee:{...f.task.assignee,agentId:defaultExecutorId,name:'CBIM 默认执行 Agent'}};
-    const executor=await prepareDispatchExecutionContext(f.w,defaultTask);
-    expect(executor.agent.source).toBe('builtin');expect(executor.agentDefinition.source).toBe('builtin');expect(executor.agent.principles).toBe(defaultExecutorInstructions);
-    const executorPrompt=memberExecutionPrompt(executor,defaultTask);expect(executorPrompt).toContain('你的执行实例与主 Agent 分离');expect(executorPrompt).not.toContain('cbim_dispatch_self');
-    expect(executor.agent.effectiveSkills.map(skill=>skill.skillId)).toEqual([f.team.shared]);expect(executor.modules).toEqual(prepared.modules);
-    const staleExecutor=structuredClone(executor);staleExecutor.agent.principles='旧内置执行指引';staleExecutor.fingerprint=dispatchKnowledgeFingerprint(staleExecutor);
-    await expect(recheckDispatchExecutionContext(f.w,staleExecutor)).rejects.toMatchObject({code:'KNOWLEDGE_CHANGED'});
+    const defaultTask={...f.task,assignee:{...f.task.assignee,agentId:'cbim:executor',name:'旧默认执行 Agent'}};
+    await expect(prepareDispatchExecutionContext(f.w,defaultTask)).rejects.toMatchObject({code:'AGENT_RETIRED'});
+    const retired=structuredClone(prepared);retired.agent.agentId='cbim:executor';retired.agent.source='builtin';retired.fingerprint=dispatchKnowledgeFingerprint(retired);
+    await expect(recheckDispatchExecutionContext(f.w,retired)).rejects.toMatchObject({code:'AGENT_RETIRED'});
     const mainTask={...f.task,assignee:{...f.task.assignee,agentId:'cbim:main'}};
     await expect(prepareDispatchExecutionContext(f.w,mainTask)).rejects.toMatchObject({code:'AGENT_ROLE_INVALID'});
-    const historicalMain=structuredClone(executor);historicalMain.agent.agentId='cbim:main';historicalMain.fingerprint=dispatchKnowledgeFingerprint(historicalMain);
+    const historicalMain=structuredClone(prepared);historicalMain.agent.agentId='cbim:main';historicalMain.fingerprint=dispatchKnowledgeFingerprint(historicalMain);
     expect(()=>memberExecutionPrompt(historicalMain,mainTask)).toThrow(expect.objectContaining({code:'AGENT_ROLE_INVALID'}));
     await expect(recheckDispatchExecutionContext(f.w,historicalMain)).rejects.toMatchObject({code:'AGENT_ROLE_INVALID'});
   }finally{await f.cleanup()}

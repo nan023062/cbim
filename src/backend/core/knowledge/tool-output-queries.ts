@@ -24,15 +24,13 @@ const storedModule=z.object({...context,id:knowledgeOutputIdSchema,definition:kn
 const rootModule=z.object({...context,id:z.literal('cbim:project'),source:z.literal('builtin'),definition:projectRoot.extend({workflows:z.array(z.never())}).strict(),overview:inlineContent,workflows:z.array(z.never()),workflowScope:z.literal('own-only')}).strict();
 export const moduleGetOutputSchema=z.union([storedModule,rootModule]);
 
-/** 内置默认角色公开静态能力说明，不含原生文件位置或动态运行身份。 */
-const builtinAgentDefinition=z.object({id:z.literal('cbim:executor'),name:z.string(),source:z.literal('builtin'),summary:z.string(),capabilities:z.array(z.string()),limitations:z.array(z.string()),connectors:z.array(z.string()),authors:z.array(z.string())}).strict();
+/** 仅公开自定义能力；默认主角色隐式存在，退役默认执行者不再属于可查询的静态角色。 */
 const registeredAgent=registryEntry.extend({name:z.string(),authors:z.array(z.string()),authorPeople:z.array(jsonValueSchema)}).strict();
-export const agentRegistryOutputSchema=z.object({...context,teamRootId:z.literal('.cbim/team'),groups:z.array(z.object({id:knowledgeOutputIdSchema,agents:z.array(registeredAgent)}).strict()),indexSource:z.literal('current-definitions'),persistedIndexMatches:z.boolean(),builtinAgents:z.array(builtinAgentDefinition)}).strict();
+export const agentRegistryOutputSchema=z.object({...context,teamRootId:z.literal('.cbim/team'),groups:z.array(z.object({id:knowledgeOutputIdSchema,agents:z.array(registeredAgent)}).strict()),indexSource:z.literal('current-definitions'),persistedIndexMatches:z.boolean(),builtinAgents:z.array(z.never())}).strict();
 
 const effectiveSkill=z.object({name:z.string(),purpose:z.string(),reference:z.string(),owner:z.string(),scope:z.enum(['agent','team']),id:knowledgeOutputIdSchema,inherited:z.boolean(),content:knowledgeContentOutputSchema}).strict();
 const customAgent=z.object({...context,id:knowledgeOutputIdSchema,definition:knowledgeJsonObjectSchema,definitionFile:knowledgeFileSchema,principles:knowledgeContentOutputSchema,skillChain:z.array(z.string()),skillConflicts:z.array(knowledgeIssueSchema),skills:z.array(effectiveSkill),skillSelectionValid:z.boolean()}).strict();
-const builtinAgent=z.object({...context,id:z.literal('cbim:executor'),source:z.literal('builtin'),definition:builtinAgentDefinition,principles:inlineContent,skillChain:z.array(z.string()),skillConflicts:z.array(knowledgeIssueSchema),skills:z.array(z.object({id:knowledgeOutputIdSchema,owner:z.string(),inherited:z.literal(true),content:inlineContent}).strict()),skillSelectionValid:z.boolean()}).strict();
-export const agentGetOutputSchema=z.union([customAgent,builtinAgent]);
+export const agentGetOutputSchema=customAgent;
 
 export type ModuleGetOutput=z.infer<typeof moduleGetOutputSchema>;
 export type AgentGetOutput=z.infer<typeof agentGetOutputSchema>;

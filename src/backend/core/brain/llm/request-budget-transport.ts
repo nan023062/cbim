@@ -1,30 +1,30 @@
 /**
  * 作用定位：每运行创建只接受随机令牌的本机供应商代理，逐 HTTP 尝试预留并结算预算。
  * 设计原因：真实供应商凭据仅在父进程，路径/模型/输出上限固定；终态先落盘再交付，断流与退出不靠猜测释放额度。
- * 职责边界：网络 IO 不在 Store 事务内；close 先取消实际请求并等待结算，失败屏障同时阻止后续请求和工具。
+ * 职责边界：网络 IO 不在 Store 事务内；流式提前调用工具须等待 assertSettled，close 取消实际请求并等待结算。
  */
 import http from 'node:http';
 import {randomBytes,timingSafeEqual,createHash} from 'node:crypto';
-import type {ResolvedLlm} from '../llm/ports';
-import type {RequestBudgetPort,RequestBudgetTicket,RequestUnknownReason} from '../llm/request-budget';
+import type {ResolvedLlm} from './ports';
+import type {RequestBudgetPort,RequestBudgetTicket,RequestUnknownReason} from './request-budget';
 import {RequestBudgetUsageStream} from './request-budget-usage';
 import {requestBudgetReservation,requestBudgetCost} from '../../tasks/model-request-budget-rules';
 import {Fault} from '../../foundation/errors';
 import {workspaceMemberModelHash} from '../../team/workspace-member-rules';
 
-/** 固定 Pi 1.5 的三种实际 API 路径；不接受子进程指定目标或 HTTP 重定向。 */
+/** 所有引擎共用的实际 API 路径；不接受子进程指定目标或 HTTP 重定向。 */
 export function requestBudgetEndpoint(llm:ResolvedLlm):string{
   const base=new URL(llm.profile.baseUrl);if(base.username||base.password||base.search||base.hash||!(base.protocol==='https:'||base.protocol==='http:'&&['localhost','127.0.0.1','[::1]'].includes(base.hostname)))throw Error('模型请求地址不受支持');
-  const suffix=llm.profile.api==='openai-completions'?'/chat/completions':llm.profile.api==='openai-responses'?'/responses':'/v1/messages?beta=true';
+  const suffix=llm.profile.api==='openai-completions'?'/chat/completions':llm.profile.api==='openai-responses'?'/responses':base.pathname.replace(/\/+$/,'').endsWith('/v1')?'/messages?beta=true':'/v1/messages?beta=true';
   return base.href.replace(/\/+$/,'')+suffix;
 }
 /** 返回值只给当前引擎；任何失败一旦阻断，不能通过新调用 ID 或再次握手解除。 */
-export async function openRequestBudgetTransport(llm:ResolvedLlm,port:RequestBudgetPort){
+export async function openRequestBudgetTransport(llm:ResolvedLlm,port:RequestBudgetPort,options:{anthropicClient?:boolean}={}){
   llm=structuredClone(llm);const model=structuredClone(port.model);
   if(model.configurationHash!==workspaceMemberModelHash(llm.profile))throw Error('模型传输与原预算快照不一致，未启动门禁');
   if(llm.apiKey.includes('sk-ant-oat'))throw Error('逐请求预算当前仅支持配置的 API key，不支持 OAuth 凭据');
   const endpoint=requestBudgetEndpoint(llm),token=randomBytes(32).toString('hex');
-  let closing=false,ready=false,blocked:string|undefined,closingPromise:Promise<void>|undefined;
+  let closing=false,ready=options.anthropicClient===true,blocked:string|undefined,closingPromise:Promise<void>|undefined;
   const active=new Map<Promise<void>,AbortController>();
   const block=(message:string)=>{blocked??=message};
   const failure=(res:http.ServerResponse)=>{if(res.destroyed)return;if(res.headersSent)res.destroy();else res.writeHead(409,{'content-type':'application/json'}).end(JSON.stringify({error:{message:blocked??'模型请求已停止',type:'cbim_budget_denied'}}))};
@@ -32,10 +32,10 @@ export async function openRequestBudgetTransport(llm:ResolvedLlm,port:RequestBud
     let ticket:RequestBudgetTicket|undefined,issued=false,sent=false,terminal=false,unknownReason:RequestUnknownReason='transport_failed';
     const abort=()=>{if(!res.writableEnded)controller.abort()};res.on('close',abort);req.on('aborted',abort);
     try{
-      const auth=Buffer.from(req.headers.authorization??''),expected=Buffer.from('Bearer '+token);
+      const auth=Buffer.from(req.headers.authorization??(options.anthropicClient&&typeof req.headers['x-api-key']==='string'?'Bearer '+req.headers['x-api-key']:'')),expected=Buffer.from('Bearer '+token);
       if(req.headers.origin||auth.length!==expected.length||!timingSafeEqual(auth,expected)){res.writeHead(403).end();return}
       if(req.method==='POST'&&req.url==='/ready'&&!ready&&!closing){ready=true;res.writeHead(200).end('{}');return}
-      if(req.method!=='POST'||req.url!=='/request'){res.writeHead(404).end();return}
+      if(req.method!=='POST'||!(req.url==='/request'||options.anthropicClient&&req.url?.split('?')[0]==='/v1/messages')){res.writeHead(404).end();return}
       if(!ready||closing||blocked){failure(res);return}
       const parts:Buffer[]=[];let size=0;for await(const raw of req){const part=Buffer.from(raw);size+=part.length;if(size>32*1024*1024)throw Error('模型请求正文超过受管上限');parts.push(part)}
       const body=Buffer.concat(parts),value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(body));
@@ -77,6 +77,11 @@ export async function openRequestBudgetTransport(llm:ResolvedLlm,port:RequestBud
   return {endpoint,token,url:'http://127.0.0.1:'+(server.address() as import('node:net').AddressInfo).port,
     assertReady(){if(!ready||closing)throw Error('逐请求预算门禁未完成启动核验')},
     error(){return blocked},
+    /** 原生引擎可能在 SSE 完成前调用工具；先等实际请求全部结算，失败或停止不得进入工具授权。 */
+    async assertSettled(){
+      while(active.size)await Promise.all([...active.keys()]);
+      if(closing||blocked)throw Error(blocked??'模型请求已停止');
+    },
     /** 原生停止先取消实际 IO，保留已经可靠结算的用量；等待全部未决阶段落盘后才关闭资源。 */
     close(){return closingPromise??=(async()=>{closing=true;for(const controller of active.values())controller.abort();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await Promise.allSettled([...active.keys()])})()},
   };

@@ -1,8 +1,8 @@
 /**
- * Auto 工具允许省略无人负责模块的岗位选择；具体兜底证明只能由可信计划服务生成。
+ * 未配置自定义 Agent 的模块分配给主 Agent；不再生成默认执行者兜底绑定。
  * memberPause 只接受 waiting 申请的全量清单；公开回包仍核实际原请求，不把保留任务解释为完成。
  * 作用定位：将主 Agent 当前用户目标、真实补充历史的读取及规划审阅端口注册为内部 Loop 工具。
- * 设计原因：岗位分工必须包含发现所得 ownerSelection，Auto 无负责人分工由服务生成兜底身份；两者均保留 Workflow 选择。输出只序列化一次核 Schema 与本轮身份，坏回包不重做已发生决策。旧请求兼容只在服务原命令查询。
+ * 设计原因：岗位分工必须包含发现所得 ownerSelection，主会话直接执行以独立证据类型审阅；两者均保留 Workflow 选择。输出只序列化一次核 Schema 与本轮身份，坏回包不重做已发生决策。旧请求兼容只在服务原命令查询。
  * 职责边界：complete 只申请主轮次结算后的复核；人工项只能引用用户已保存且经专用入口消费的接受，模型不能签署或继续等待。工具层不执行成员或重造证据。
  */
 import {z} from 'zod';
@@ -21,11 +21,11 @@ const definitions={
     schema:inspectInput,effects:['read'] as const,
   },
   cbim_goal_plan:{
-    description:'按 expectedRevision 保存目标、约束、验收项与模块分工。业务 assignments 必须使用 cbim_module_owner_inspect 的 execution.groups 中真实 ownerSelection，并明确对应 agentId；不同岗位拆分。workflowSelections 仅选本模块实际挂载流程。cbim:main 只治理知识，不填 ownerSelection 或业务 Workflow。计划和派发保持同一岗位/流程，变化须重新规划新任务；旧成果按原岗位解释，保存计划不派发或授予权限。',
+    description:'按 expectedRevision 保存目标、约束、验收项与模块分工。业务 assignments 必须使用 cbim_module_owner_inspect 的 execution.groups 中真实 ownerSelection，并明确对应 agentId；不同岗位拆分。workflowSelections 仅选本模块实际挂载流程。未指定自定义 Agent 的模块分配给 cbim:main 在当前会话直接执行，不填 ownerSelection 或成员专属 Workflow，不派发给自己。计划和派发保持同一岗位/流程，变化须重新规划新任务；旧成果按原岗位解释，保存计划不派发或授予权限。',
     schema:ownerPlanInput,effects:['maintenance'] as const,
   },
   cbim_goal_review:{
-    description:'按 expectedRevision 审阅当前目标和真实执行证据。引用实际成员交付或本轮知识工具回执，不能把文字、派发或审阅回执当作证据。awaiting_user 可带 memberPause:{version:1,expectedGraphCursor,tasks} 精确保留全部未完成工作：每项含 taskId/expectedRevision/expectedPlanRevision，kind=checkpoint 另含原 checkpointId，kind=unstarted 只能是这些检查点的未领取后继。至少一个可靠且未预约检查点；主轮安全结束后才持久等待，重启不启动，用户明确继续并重核后才可重规划和预约。human 项 satisfied 仅引用本输入实际消费的 {kind:human-decision,decisionId,continuationId}，模型不能签署或自动继续。拒绝/补证通过 superseded.humanDecision 引用，替代须是接续后新任务的真实候选。complete 仅申请结算后复核，不立即结束任务。',
+    description:'按 expectedRevision 审阅当前目标和真实执行证据。引用实际成员交付、本轮知识工具回执，或 {kind:main-execution,toolCallIds:[实际调用ID]} 引用主 Agent 本轮直接执行后的真实业务文件/命令回执，不能把文字、派发或审阅回执当作证据。awaiting_user 可带 memberPause:{version:1,expectedGraphCursor,tasks} 精确保留全部未完成工作：每项含 taskId/expectedRevision/expectedPlanRevision，kind=checkpoint 另含原 checkpointId，kind=unstarted 只能是这些检查点的未领取后继。至少一个可靠且未预约检查点；主轮安全结束后才持久等待，重启不启动，用户明确继续并重核后才可重规划和预约。human 项 satisfied 仅引用本输入实际消费的 {kind:human-decision,decisionId,continuationId}，模型不能签署或自动继续。拒绝/补证通过 superseded.humanDecision 引用，替代须是接续后新任务的真实候选。complete 仅申请结算后复核，不立即结束任务。',
     schema:reviewInput,effects:['maintenance'] as const,
   },
 };
@@ -55,7 +55,7 @@ export class GoalTools {
   list(){return Object.entries(definitions).map(([name,definition])=>{const d=this.definition(name as GoalToolName);return ({name,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>,...mainToolContract(name as GoalToolName)})})}
   /** 精确匹配已实现名称，不按 cbim_goal_ 前缀放行未知操作。 */
   has(name:string):name is GoalToolName{return Object.hasOwn(definitions,name)}
-  private definition(name:GoalToolName){const d=definitions[name];return name==='cbim_goal_plan'&&this.port.collaborationMode==='auto'?{...d,schema:goalPlanInputSchema,description:'自动模式：有负责人时提供真实 ownerSelection；模块未分配负责人时使用 cbim:executor 并省略 ownerSelection。项目完全无模块时使用 moduleIds:["cbim:project"] 作为隐式全项目范围。服务核实并返回 fallbackBinding 及原因，不创建正式模块或岗位，不提升权限。已配置但失效的岗位不可兜底；计划、派发与 Workflow 必须一致。'+d.description.replace('业务 assignments 必须使用','已配置负责人的业务 assignments 必须使用')}:d}
+  private definition(name:GoalToolName){return definitions[name]}
   private parse(name:string,input:unknown){
     if(!this.has(name))fail('TOOL_NOT_FOUND','当前运行没有此目标规划工具');
     const definition=this.definition(name),parsed=definition.schema.safeParse(input);

@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {RequestBudgetUsageStream} from '../src/backend/core/brain/pi/request-budget-usage';
+import {RequestBudgetUsageStream} from '../src/backend/core/brain/llm/request-budget-usage';
 const frame=(value:unknown,event?:string)=>(event?'event: '+event+'\n':'')+'data: '+(typeof value==='string'?value:JSON.stringify(value))+'\n\n';
 const completion=(usage:unknown)=>frame({choices:[{index:0,delta:{},finish_reason:'stop'}],usage});
 const parse=(api:ConstructorParameters<typeof RequestBudgetUsageStream>[0],text:string)=>{const parser=new RequestBudgetUsageStream(api);const forward=parser.push(Buffer.from(text));return {...parser.finish(),forward}};

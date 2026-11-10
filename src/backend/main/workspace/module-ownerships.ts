@@ -121,6 +121,8 @@ export class ModuleOwnerships {
     if(requiresSource&&knowledgeSourcePending(state))fail('OWNERSHIP_SOURCE_PENDING','来源事务待核实，尚未保存新的责任采纳');
     const nextOwner=adopting?previousOwner:change.nextOwner?state.workspaceMembers?.find(item=>item.memberId===change.nextOwner!.memberId):undefined;
     if(requiresSource&&(!nextOwner||nextOwner.state!=='active'))fail('OWNERSHIP_MEMBER_UNAVAILABLE','负责人必须是本工作区启用的岗位');
+    // 退役内置岗位只保留历史；解除它可恢复主 Agent 默认执行，不允许新增或继续采纳该关系。
+    if(requiresSource&&nextOwner?.adoption.configuration.source==='builtin')fail('AGENT_RETIRED','内置默认执行 Agent 已退役；请解除旧负责人以恢复主 Agent 默认执行，或选择自定义岗位');
     if(change.nextOwner&&nextOwner&&nextOwner.revision!==change.nextOwner.expectedRevision)fail('OWNERSHIP_MEMBER_CHANGED','岗位版本已变化，请重新预览');
     // 解除不读取已失效来源；原 observedModule 由关系头保留，不制造新的观察时间。
     const knowledge:Knowledge=requiresSource?await this.knowledge(fixed):{visible:new Map()};this.assert(request);assertCurrent?.();

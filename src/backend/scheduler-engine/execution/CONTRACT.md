@@ -124,11 +124,11 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 ### 成员派发与执行调度契约
 
-已实现可信桌面入口和主会话模型工具的成员执行闭环：`prepareMember` 注册稳定成员/独立逻辑通道，`WorkspaceDispatchService` 核实成员、多模块关系并原子派发，`MemberExecutionManager` 领取信封后使用同一 `LoopRuntime + PiEngine` 执行、提交候选和返回结果信封。`AutoCollaboration` 在主轮结束并释放占用后推进本轮派发，再把可靠结果回注原主会话。支持 Snapshot/Delta、命令幂等与持久化记录恢复；执行者可恢复求助/等待和重启自动续跑仍未开放。节点规则见 [core/tasks](../../core/tasks/CONTRACT.md)，成员身份见 [core/team](../../core/team/CONTRACT.md)。
+已实现可信桌面入口和主会话模型工具的成员执行闭环：`prepareMember` 注册稳定成员/独立逻辑通道，`WorkspaceDispatchService` 核实成员、多模块关系并原子派发，`MemberExecutionManager` 领取信封后使用同一 LoopRuntime 与岗位选择的 PiEngine/ClaudeCodeEngine/CodexEngine 执行、提交候选和返回结果信封。`AutoCollaboration` 在主轮结束并释放占用后推进本轮派发，再把可靠结果回注原主会话。支持 Snapshot/Delta、命令幂等与持久化记录恢复；执行者可恢复求助/等待和重启自动续跑仍未开放。节点规则见 [core/tasks](../../core/tasks/CONTRACT.md)，成员身份见 [core/team](../../core/team/CONTRACT.md)。
 
 ### 当前成员执行边界
 
-主 session 默认通过 `conversationBinding(task)` 可靠登记图根和主实例，`mainRootSessionId` 将新主实例固定到所属根；主实例负责对话、调度与知识管理，Auto 可以在主会话直接实现，但不能被派发为独立成员任务。`conversation` 承载普通聊天，图根原通道承载结果邮箱；正式业务任务使用独立执行实例。没有自定义角色时可显式登记采用内置静态 `cbim:executor` 的岗位，仍须负责模块并采纳独立模型后派发；Team 禁止默认回退，两种模式都不能把 `cbim:main` 派为执行者；Auto 明确委派可按冻结策略走真实缺口兜底。旧共享根保留历史引用，新根不复用遗留共享实例。知识结构错误不阻断内置主对话身份登记，但不放宽正式任务的配置/模块/维护关系校验。
+主 session 默认通过 `conversationBinding(task)` 可靠登记图根和主实例，`mainRootSessionId` 将新主实例固定到所属根；主实例负责对话、直接执行未配置模块、调度与知识管理，但不能被派发为独立成员任务。`conversation` 承载普通聊天，图根原通道承载结果邮箱；正式自定义岗位任务使用独立执行实例。没有自定义负责岗位时不登记 `cbim:executor`。两种模式都不能把 `cbim:main` 派为执行者；已配置但失效的自定义岗位按真实缺口拒绝，不降级。旧共享根保留历史引用，新根不复用遗留共享实例。知识结构错误不阻断内置主对话身份登记，但不放宽正式任务的配置/模块/维护关系校验。
 
 `createWorkspaceLoop` 为主 Agent 保留内部知识查询、预览、对象 CRUD 与知识提交工具，以及派发工具。知识写入走同一日志门禁和用户 `read / ask / execute` 权限：read 拒绝；ask 等待本轮批准；execute 允许进入知识服务的实例、版本和事务校验。`knowledge-write` 不等于业务执行权，主 Agent 的任何 `business-write / command` 描述在审批前独立拒绝，包括未来内部工具；原生 `write / edit / bash` 不注册，即使收到幻觉调用或用户选择完全访问也不放行。知识服务只在 gate 通过后接收运行装配提供的写入能力，不接受模型自行授予权限；`.cbim` 内容仍禁止经原生文件工具直接修改。
 
@@ -421,7 +421,7 @@ AgentManager ..> AgentRunPort : 执行独立通道
 MemberMailbox ..> DispatchGraphStore : 去重和投递事实
 ```
 
-后续调度验收至少覆盖：主调度派给多个执行者并按返回结果追加后续任务、默认执行者可用、Team 主实例不直接执行业务、Auto 主实例按权限直接实现、执行者不得派工、周期结束释放执行实例、跨图拒绝、依赖成环、重复派发和迟到回调、实例串行/上下文隔离、权限不扩张、写冲突和未知结果不重放。现有任务图渲染只展示实际已接通行为。
+后续调度验收至少覆盖：主调度把未配置模块留在主会话执行、把多个自定义岗位派给对应执行者并按返回结果追加后续任务、两种模式的主实例都可按权限直接实现、执行者不得派工、不能新派已退役默认执行者、周期结束释放执行实例、跨图拒绝、依赖成环、重复派发和迟到回调、实例串行/上下文隔离、权限不扩张、写冲突和未知结果不重放。现有任务图渲染只展示实际已接通行为。
 
 ### 主会话目标的只读展示端口
 
@@ -564,7 +564,7 @@ queued 与接受日志确认后才移除队列项，迟到停止不撤销接受�
 
 原 TaskSpec、Prepared.memberContext 和 canonical 运行头必须具有相同岗位绑定；Workflow、目标审阅、人工来源与执行核实报告按原绑定比较，旧两边均无绑定仍只读兼容。检查点实际恢复按原权限/超时准备能力清单，不采用调用方的新权限；历史结算不查询当前负责人。领取后的来源变化不回溯取消本段，但文件采集、交付候选与最终验收保留原知识基线核验。
 
-普通聊天与主知识治理沿原入口，旧非 chat 的直接启动及新续轮明确拒绝。旧日志、已提交回执和已领取运行的结算保持原事实；旧无绑定待办不能新领取，不能按 agentId 补造岗位或回退默认执行者。
+普通聊天与主知识治理沿原入口，旧非 chat 的直接启动及新续轮明确拒绝。旧日志、已提交回执和已领取运行的结算保持原事实；旧无绑定待办不能新领取，不能按 agentId 补造岗位或回退已退役默认执行者；未配置自定义岗位的新工作由主 Agent 在当前会话执行。
 
 ## 检查点交接处置
 
@@ -679,3 +679,7 @@ MemberExecutionManager同时识别CONTROLLED_FILE_DRAIN_PENDING与EXECUTION_SCOP
 ### 一次性岗位执行缺口
 
 OwnerExecutionService.discover 独立核对每组模块/Workflow、岗位责任/来源、能力和模型，合并相同错误码。缺少岗位时返回桌面“团队架构 → 项目岗位 → 登记项目岗位”入口，能力/模型明确为尚无法核实；废弃的真人维护不列为门禁。只有无缺口并通过原 resolve 才返回 selection，读取后仍核知识和登记游标，不授予未来执行许可。
+
+### 引擎选择与首轮绑定
+
+createWorkspaceLoop 按冻结模型创建 PiEngine/ClaudeCodeEngine/CodexEngine，工具策略及 KnowledgeService 保持唯一装配。自动接续保留本周期主引擎，成员独立选型。Claude Code/Codex 新成员首轮允许 ready 尚无 sessionFile，因为实际文件可由原生首轮生成；Codex 首次 starting→running 同事务采纳服务端线程 ID，已绑定后不能再改。结算在同一事务前核对 session.bound 身份并保存路径。检查点/续执行仍必须使用已核实原生文件，不放宽 Pi 或成员恢复条件。

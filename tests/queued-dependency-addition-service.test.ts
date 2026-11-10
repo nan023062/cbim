@@ -18,13 +18,13 @@ async function setup(){
   const snapshot=await workspace.snapshot(),moduleId=team.input.moduleId,file=moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(value=>value.path===file)!.text);
   definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
   await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:file,text:json(definition)}]));
-  await registerServiceOwner(f.app,workspace,'cbim:executor',[moduleId]);
+  await registerServiceOwner(f.app,workspace,'.cbim/team/dev',[moduleId]);
   const store=workspace.dispatchStore,directory=store.directory,service=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.models),identity={workspaceId:entry.id,rootSessionId:'addition-root'},scopeId='addition-scope',mainRunId='main-run';
   await service.openScope(identity,scopeId,{message:'为先创建的任务补充真实前置'},mainRunId);
   const ownerSelection=(await service.owners.discover([moduleId])).groups[0].selection!;
   const workflowSelections=[{moduleId,workflowId:team.input.workflowId}];
-  await service.goals.plan(identity,scopeId,mainRunId,'plan-one',{expectedRevision:1,objective:'核实业务',constraints:[],criteria:[{id:'c1',kind:'evidence',text:'可追溯结果'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,workflowSelections,criterionIds:['c1'],reason:'按模块执行'}],reason:'计划'});
-  const assign=async(commandId:string,prerequisites:{taskId:string;expectedPlanRevision:number}[]=[])=>service.dispatchTask({...identity,commandId,expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,workflowSelections,goal:commandId,acceptance:[{id:'c1',text:'真实证据'}],prerequisites}},scopeId);
+  await service.goals.plan(identity,scopeId,mainRunId,'plan-one',{expectedRevision:1,objective:'核实业务',constraints:[],criteria:[{id:'c1',kind:'evidence',text:'可追溯结果'}],assignments:[{agentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,workflowSelections,criterionIds:['c1'],reason:'按模块执行'}],reason:'计划'});
+  const assign=async(commandId:string,prerequisites:{taskId:string;expectedPlanRevision:number}[]=[])=>service.dispatchTask({...identity,commandId,expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,workflowSelections,goal:commandId,acceptance:[{id:'c1',text:'真实证据'}],prerequisites}},scopeId);
   const b=await assign('B'),c=await assign('C',[{taskId:b.taskId,expectedPlanRevision:1}]),a=await assign('A'),d=await assign('D',[{taskId:a.taskId,expectedPlanRevision:1}]);
   const graph=await service.snapshot(identity),source=graph.tasks.find(task=>task.taskId===a.taskId)!,target=graph.tasks.find(task=>task.taskId===b.taskId)!;
   const input:AddQueuedDependencyInput={expectedGraphCursor:{streamId:graph.cursor.streamId,seq:graph.cursor.seq},expectedGoalRevision:2,source:{taskId:source.taskId,expectedRevision:source.revision,expectedPlanRevision:source.planRevision},target:{taskId:target.taskId,expectedRevision:target.revision,expectedPlanRevision:target.planRevision},reason:'先完成新发现的前置 A'};

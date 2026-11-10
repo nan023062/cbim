@@ -39,9 +39,9 @@ async function business(f:Awaited<ReturnType<typeof setup>>,scopeId=f.scope.scop
   definition.maintenance={bindingId:'active-input-owner',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'active-input-review',source:'local_user',confirmedAt:new Date().toISOString()}};
   await f.workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:JSON.stringify(definition)}]));
   const saved=await f.app.models.save({profile:{name:'运行补充业务测试',api:'openai-completions',baseUrl:'https://example.test/v1',auth:'none',defaultModel:'test-model',models:[{id:'test-model',name:'测试',enabled:true,contextWindow:65536,maxTokens:1000,reasoning:false}]}}),profileId=saved.profiles.find(item=>item.name==='运行补充业务测试')!.id;
-  const {selection:ownerSelection}=await registerExplicitFixtureOwner(f.app,f.entry.id,{agentId:'cbim:executor',moduleIds:[moduleId],profileId,modelId:'test-model'});
-  await f.service.goals.plan(f.identity,scopeId,runId,'business-plan-'+scopeId,{expectedRevision:1,objective:'核实业务产物',constraints:[],criteria:[{id:'verified',text:'真实文件证据',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,criterionIds:['verified'],reason:'独立执行'}],reason:'新周期计划'});
-  return {...f.identity,commandId:'business-dispatch-'+scopeId,expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,goal:'核实业务产物',acceptance:[{id:'verified',text:'真实文件证据'}],prerequisites:[]}};
+  const {selection:ownerSelection}=await registerExplicitFixtureOwner(f.app,f.entry.id,{agentId:'.cbim/team/dev',moduleIds:[moduleId],profileId,modelId:'test-model'});
+  await f.service.goals.plan(f.identity,scopeId,runId,'business-plan-'+scopeId,{expectedRevision:1,objective:'核实业务产物',constraints:[],criteria:[{id:'verified',text:'真实文件证据',kind:'evidence'}],assignments:[{agentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,criterionIds:['verified'],reason:'独立执行'}],reason:'新周期计划'});
+  return {...f.identity,commandId:'business-dispatch-'+scopeId,expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,goal:'核实业务产物',acceptance:[{id:'verified',text:'真实文件证据'}],prerequisites:[]}};
 }
 
 it('真实旧完成审阅后接收补充，只增版一次并清审阅，必须重新规划审阅才能完成',async()=>{

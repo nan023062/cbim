@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-本机路径、系统锁、凭据加密、终端与工具访问检查。固定根有界读取并核前后句柄/路径，拒绝链接、越界和Windows备用数据流；JSON验证由同一Buffer计算指纹和结构结论，正文不出端口。原生历史不完整拒绝恢复，不承诺外部原子隔离。 范围模式用Win32读取/枚举句柄与LPAC私有快照，原工程不扩ACL。 ArtifactFileService 只观察明确原调用的有界文件，独立返回缺失、不可信和当前字节；路径与链接检查不宣称操作系统隔离。 独立 utility 持有 Win32 目录与文件句柄，执行单次有界替换、flush 与读回；私有 blob 保留真实 before，进程退出不表示内容回滚。另有独立 LPAC/Job Node 平台端口，私有快照与输出分权、真实进程树收束；尚未装配为模型命令或任务授权。
+本机路径、系统锁、凭据加密、终端与工具访问检查。固定根有界读取并核前后句柄/路径，拒绝链接、越界和Windows备用数据流；JSON验证由同一Buffer计算指纹和结构结论，正文不出端口。原生历史不完整拒绝恢复，不承诺外部原子隔离。 原生指纹固定 Pi/Claude/Codex 格式及受管目录，Codex 另核 metadata 和 rollout 文件名。 范围模式用Win32读取/枚举句柄与LPAC私有快照，原工程不扩ACL。 ArtifactFileService 只观察明确原调用的有界文件，独立返回缺失、不可信和当前字节；路径与链接检查不宣称操作系统隔离。 独立 utility 持有 Win32 目录与文件句柄，执行单次有界替换、flush 与读回；私有 blob 保留真实 before，进程退出不表示内容回滚。另有独立 LPAC/Job Node 平台端口，私有快照与输出分权、真实进程树收束；尚未装配为模型命令或任务授权。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -22,7 +22,7 @@
 | [isolation-record.ts](isolation-record.ts) | Main 私有的隔离资源身份和生命周期协议，连接执行器、可靠记录与核实平台。 |
 | [isolation-recovery-win32.ts](isolation-recovery-win32.ts) | 核实原宿主创建身份、命名 Job 和自有目录，并以固定 Win32 句柄回收残留。 |
 | [locking.ts](locking.ts) | KernelLock：使用 Windows mutex 或 POSIX flock，防止跨进程并发持有。 |
-| [native-session-files.ts](native-session-files.ts) | 在本工作区受管 Pi 会话目录内核实已关闭的原生上下文，供成员检查点与续执行使用。 |
+| [native-session-files.ts](native-session-files.ts) | 在本工作区受管 Pi/Claude Code/Codex 会话目录内核实已关闭的原生上下文，供成员检查点与续执行使用。 |
 | [output-manifest-files.ts](output-manifest-files.ts) | 在固定工作区内枚举声明范围的全部目录和普通文件，生成完整产物观察并按原集合复核。 |
 | [paths.ts](paths.ts) | 本机应用目录、工程身份和知识路径的实际解析。 |
 | [png-validator.ts](png-validator.ts) | 安全文件端口后的有界静态 PNG 解码器，核全部块及压缩数据并还原实际像素。 |
@@ -583,11 +583,12 @@ class N_src_backend_main_platform_native_session_files_ts_NativeSessionFiles["Na
   +read()
   -root
   -assert
+  -engine
 }
 N_src_backend_main_platform_native_session_files_ts ..> N_src_backend_main_platform_native_session_files_ts_NativeSessionFiles : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/brain/llm/engine.ts](../../core/brain/llm/engine.ts)。
 
 ### output-manifest-files.ts
 
@@ -927,3 +928,7 @@ ScopedExecutionFiles固定原root/范围/生命周期断言，真实Win32仅读�
 IsolationLifecycle在创建profile前保存私有来源，在恢复挂起线程前保存真实进程创建时间；失败不执行脚本。Win32IsolatedNode使用当前登录会话唯一命名Job，重名拒绝且不终止已有Job。Win32IsolationRecovery核FILETIME/session，只有原宿主退出后才查询Job，避免提前持句柄影响KILL_ON_JOB_CLOSE。暂存目录核volume/fileId、owner随机值与真实临时父目录，扫描并持有全部原对象句柄后才删；链接/硬链接/替换/超限拒绝，最多4096对象和64层。清理不按PID终止、不创建profile或重跑程序。原运行异常收尾通过闭包重试同一资源；没有分配资源的前置失败释放等待标记。
 
 桌面 NSIS 更新已独立到 [updater](../../updater/ARCHITECTURE.md)，本目录不承载检查、下载或安装逻辑。
+
+### Claude 原生会话指纹
+
+NativeSessionFiles 由工厂固定 Pi、Claude Code 或 Codex 格式及受管根。通用的链接、完整字节、尾行、容量和读取竞争检查不变；Claude 另核实文件名等于 nativeSessionId.jsonl，所有带 sessionId 的记录同属该身份。Codex 另核 session_meta.payload.id、rollout 文件名与唯一 metadata；原生长路径由适配器归一后保存。只返回长度/摘要，不公开私有路径或正文。

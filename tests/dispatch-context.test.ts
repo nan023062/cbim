@@ -10,16 +10,15 @@ const maintenance=(bindingId:string):ModuleMaintenanceDefinition=>({
   confirmation:{recordId:'local-review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'},
 });
 
-it('默认执行和自定义角色从同一真实知识版本解析，默认角色只继承 Team 根 Skill',async()=>{
+it('默认执行员拒绝重新解析，自定义角色从真实知识版本继承 Skill',async()=>{
   const f=await fixture();
   try{
     const e=await f.app.dispatch('add',{path:f.a}),w=f.app.workspace(e.id);
-    const empty=await resolveDispatchAgent(await w.snapshot(),'cbim:executor');
-    expect(empty).toMatchObject({agentId:'cbim:executor',workspaceId:e.id,source:'builtin',effectiveSkills:[]});
+    await expect(resolveDispatchAgent(await w.snapshot(),'cbim:executor')).rejects.toMatchObject({code:'AGENT_RETIRED'});
     const seeded=await seedTeam(w),snapshot=await w.snapshot();
-    const executor=await resolveDispatchAgent(snapshot,'cbim:executor'),custom=await resolveDispatchAgent(snapshot,seeded.input.agentId);
-    expect(executor.effectiveSkills.map(s=>s.skillId)).toEqual([seeded.shared]);
-    expect(executor.effectiveSkills[0]).toMatchObject({ownerId:'.cbim/team',inherited:true,content:'# 团队校验规则'});
+    const custom=await resolveDispatchAgent(snapshot,seeded.input.agentId);
+    await expect(resolveDispatchAgent(snapshot,'cbim:executor')).rejects.toMatchObject({code:'AGENT_RETIRED'});
+    expect(custom.effectiveSkills.find(skill=>skill.inherited)).toMatchObject({ownerId:'.cbim/team',inherited:true,content:'# 团队校验规则'});
     await expect(resolveDispatchAgent(snapshot,'cbim:main')).rejects.toMatchObject({code:'AGENT_ROLE_INVALID'});
     expect(custom.effectiveSkills.map(s=>[s.skillId,s.inherited])).toEqual([[seeded.own,false],[seeded.shared,true]]);
     expect(custom.principles).toContain('验证实际结果');

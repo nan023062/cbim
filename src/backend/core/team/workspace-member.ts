@@ -2,8 +2,10 @@
  * 作用定位：定义工作区长期岗位、采纳快照、版本化登记命令与公开查询协议，供 Main、Store 和桌面共用。
  * 设计原因：memberId 与执行实例分离；captureId 只记录采纳，来源连续性另经可选 sourceRef 明确绑定，旧缺省不补造。
  * 职责边界：纯 schema 不读知识或凭据、不派工；active 仅是岗位登记状态，不证明配置可执行或业务已验收。
+ * 模型快照可包含 engine 并参与配置哈希；历史未声明引擎的快照保持原字节，不隐式迁移。
  */
 import {z} from 'zod';
+import {loopEngineSchema,engineApi,engineLabel} from '../brain/llm/engine';
 import {capabilitySourceRefSchema,sourceSelectionSchema,knowledgeSourceReadStateSchema,sourceRefMatches,sourceSelectionMatches,sourceReadStateMatches} from '../workspace/knowledge-source';
 
 /** 累计容量包括退休岗位和全部审计；超限拒绝新写入，不删除历史或截断采纳正文。 */
@@ -25,8 +27,9 @@ export const workspaceMemberAdaptationSchema=z.object({instructions:z.string().m
 export type WorkspaceMemberAdaptation=z.infer<typeof workspaceMemberAdaptationSchema>;
 export const workspaceMemberModelRefSchema=z.object({profileId:uuid,modelId:text(160)}).strict();
 export type WorkspaceMemberModelRef=z.infer<typeof workspaceMemberModelRefSchema>;
-/** 字段对应实际解析后的公开 profile；不依赖 brain 类型，也不接受密钥、hasKey、默认选择或 enabled 伪运行事实。 */
-export const workspaceMemberModelSnapshotSchema=z.object({id:uuid,name:text(80),api:z.enum(['openai-completions','openai-responses','anthropic-messages']),baseUrl:endpoint,auth:z.enum(['api-key','none']),model:text(160),contextWindow:z.number().int().min(1024).max(2000000),maxTokens:z.number().int().min(64).max(2000000),reasoning:z.boolean(),vision:z.boolean().optional(),outputLimit:z.number().int().min(1).max(2000000).optional(),thinkingLevel:z.enum(['off','minimal','low','medium','high','xhigh']).optional(),workingContextWindow:z.number().int().min(1024).max(2000000).optional(),compactionPercent:z.number().int().min(10).max(95).optional(),pricing:z.object({input:z.number().finite().min(0),output:z.number().finite().min(0),cacheRead:z.number().finite().min(0),cacheWrite:z.number().finite().min(0)}).strict().optional()}).strict().superRefine((value,context)=>{
+/** 字段对应实际解析后的公开 profile；仅依赖公开引擎标识，不接受密钥、hasKey、默认选择或 enabled 伪运行事实。 */
+export const workspaceMemberModelSnapshotSchema=z.object({engine:loopEngineSchema.optional(),id:uuid,name:text(80),api:z.enum(['openai-completions','openai-responses','anthropic-messages']),baseUrl:endpoint,auth:z.enum(['api-key','none']),model:text(160),contextWindow:z.number().int().min(1024).max(2000000),maxTokens:z.number().int().min(64).max(2000000),reasoning:z.boolean(),vision:z.boolean().optional(),outputLimit:z.number().int().min(1).max(2000000).optional(),thinkingLevel:z.enum(['off','minimal','low','medium','high','xhigh']).optional(),workingContextWindow:z.number().int().min(1024).max(2000000).optional(),compactionPercent:z.number().int().min(10).max(95).optional(),pricing:z.object({input:z.number().finite().min(0),output:z.number().finite().min(0),cacheRead:z.number().finite().min(0),cacheWrite:z.number().finite().min(0)}).strict().optional()}).strict().superRefine((value,context)=>{
+  const api=engineApi(value.engine??'pi');if(api&&value.api!==api)context.addIssue({code:'custom',message:engineLabel(value.engine!)+' 需要 '+api+' 接口'});
   if(value.maxTokens>value.contextWindow||value.outputLimit!==undefined&&value.maxTokens>value.outputLimit||value.workingContextWindow!==undefined&&value.workingContextWindow>value.contextWindow)context.addIssue({code:'custom',message:'模型预算超过公开能力上限'});
 });
 export type WorkspaceMemberModelSnapshot=z.infer<typeof workspaceMemberModelSnapshotSchema>;

@@ -375,3 +375,9 @@ RunScopedExecution把原toolCallId/inputHash/allowedSeq作为可信授权传给�
 ### 自动与团队协作模式
 
 checkedMemberRunBinding 同时核独立 fallbackBinding 的工作区、角色及模块；自动任务不生成长期岗位，权限门禁和真实执行证据不变。
+
+### 多引擎的稳定边界
+
+LoopRuntime 保留唯一权限、任务进度、证据与日志生命周期。engine-tools.ts 捕获真实工具目录和路由，engine-instructions.ts 统一角色及冻结上下文；Pi、Claude Code 与 Codex 只负责原生协议适配，各引擎不各自实现一套调度、知识事务或验收。native-tools.ts 复用固定 Pi SDK 的文件/命令实现供 Codex 宿主动态工具调用，不创建 Pi Loop 或共享账号。
+
+主会话切换时，engine-session.ts 沿 run.started.resumeFrom 最多核实 512 段同任务历史；恢复目标引擎最近一次原生文件及其实际 session.bound ID，并将其后另一引擎的公开消息/工具结果作为资料转交。首次使用目标引擎建立独立原生文件。资料最多 1 MiB，损坏、未决工具或循环链明确拒绝，不截断、不重放工具。成员检查点仍固定原岗位引擎，不做跨引擎移植。Claude Code/Codex 没有实现可靠的运行内插入确认，保留排队及下一轮发送。

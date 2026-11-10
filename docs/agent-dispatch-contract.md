@@ -16,7 +16,7 @@ CBIM Agent 是 Team 中的静态虚拟角色定义，AgentInstance 是动态成�
 | 主 Agent（`cbim:main`） | 与用户交流、管理团队与业务知识、组织任务与依赖、核实结果并决定后续工作 | 当前主会话唯一的调度者；可通过知识服务管理 `.cbim/`，Team 不直接执行业务；Auto 按本轮权限直接实现和验证 |
 | 执行 Agent | 独立理解已派发目标，按需探索 Team 环境、专业知识和相关依赖，在目标模块范围内实现、验证并返回证据与限制 | 不创建或派发其他成员任务；发现新工作、越界需求或需要帮助时向主 Agent 返回，由主 Agent 决定后续节点 |
 
-“独立”包括各自的运行状态、模型推理过程和上下文，不表示拥有调度权限。私有思维过程不作为任务图或实时详情的公开内容；界面展示状态、公开回复、工具过程、证据与结果。没有合适自定义角色时，主 Agent 派给内置静态默认执行角色 `cbim:executor`；它创建独立执行实例，不能以主实例替代。
+“独立”包括各自的运行状态、模型推理过程和上下文，不表示拥有调度权限。私有思维过程不作为任务图或实时详情的公开内容；界面展示状态、公开回复、工具过程、证据与结果。没有配置自定义负责岗位时，主 Agent 在当前会话自己执行，不创建内置默认执行实例，也不能把主实例派成独立成员。
 
 普通问答、定位分析与受控知识治理不强制生成业务 Task。主 Agent 可经 `cbim_` 内部知识接口查询、增删改团队角色、Skill、模块、Workflow 和架构说明；写入仍按 read/ask/execute 权限及事务校验处理，不能直接读写 `.cbim/` 文件。Team 的业务修改与验证必须派发；Auto 主会话按权限提供原生 write/edit/bash。正式执行任务明确责任 Agent、实际模块、维护责任、目标及验收要求；执行者不可扩大目标、模块或授权。
 
@@ -34,7 +34,7 @@ CBIM Agent 是 Team 中的静态虚拟角色定义，AgentInstance 是动态成�
 
 `dispatch.task.task` 字段为 `assigneeAgentId、moduleIds、goal、acceptance:[{id,text}]、prerequisites:[{taskId,expectedPlanRevision}]`。parentRevision 使用根节点实际 revision，不用 graph seq 代替。同键同参返回已提交结果，同键异参拒绝。
 
-主对话 Loop 提供 `cbim_dispatch_task` 和 `cbim_dispatch_inspect`。执行角色可指定，缺省为 `cbim:executor`；`cbim:main` 派发和新启动均被拒绝。模型只提交角色、目标、模块和验收；实例、根会话、周期、调用幂等键及权限来自可信运行入口。派发成功只表示入队。主轮结束并释放占用后，自动协调器启动本轮关联任务，读取真实结果，再以内部数据消息续接原主会话。执行 Agent 的 Loop 不装配派发工具；由主 Agent 接收结果后追加后续任务，不建设执行成员递归派发能力。
+主对话 Loop 提供 `cbim_dispatch_task` 和 `cbim_dispatch_inspect`。只有已配置的自定义负责岗位才会派发；未配置时由主 Agent 自己执行。`cbim:main` 与已退役的 `cbim:executor` 都不能作为新的独立成员启动。模型只提交角色、目标、模块和验收；实例、根会话、周期、调用幂等键及权限来自可信运行入口。派发成功只表示入队。主轮结束并释放占用后，自动协调器启动本轮关联任务，读取真实结果，再以内部数据消息续接原主会话。执行 Agent 的 Loop 不装配派发工具；由主 Agent 接收结果后追加后续任务，不建设执行成员递归派发能力。
 
 一次用户任务对应一个调度周期 `DispatchScope`，经历多次主 LLM 回合、成员执行和结果回传；单次 LLM 回合结束不关闭周期。每个派发 Task 创建一个新的执行实例，同一静态角色也不跨任务共享实例。整轮完成、失败或停止后，先结算在途运行，再原子关闭周期、取消尚未执行的任务并释放全部执行实例。主会话和主实例、图节点、运行和证据保留。当前每周期最多 500 个派发节点，保证关闭事实能在一个图事务中提交。
 
@@ -46,7 +46,7 @@ CBIM Agent 是 Team 中的静态虚拟角色定义，AgentInstance 是动态成�
 | --- | --- |
 | workspaceId | 工作区边界，由应用解析真实路径产生 |
 | teamId | 当前工作区 Team 根身份 |
-| agentId | 静态角色；内置主调度为 `cbim:main`，默认执行为 `cbim:executor` |
+| agentId | 静态角色；主会话为 `cbim:main`。未配置自定义岗位时不另造执行角色 |
 | agentInstanceId | 动态成员身份；主实例长期保留，执行实例按周期任务创建 |
 | mainRootSessionId | 主实例所属主会话；不同主会话各有主实例 |
 | scopeId / executionScopeId | 用户任务周期及执行实例所属周期，可信入口生成 |
@@ -81,10 +81,10 @@ CBIM Agent 是 Team 中的静态虚拟角色定义，AgentInstance 是动态成�
 ```mermaid
 flowchart TD
   R[主 Agent 当前会话根]
-  T1[任务 1：默认执行 Agent\n模块 A · 确认接口]
+  T1[任务 1：主 Agent 直接执行\n模块 A · 确认接口]
   T2[任务 2：开发 Agent\n模块 A、B · 实现功能]
   T3[任务 3：验证 Agent\n模块 A、B · 核验交付]
-  R -->|派给默认执行者| T1
+  R -->|未配置岗位时自己执行| T1
   R -->|主 Agent 派发| T2
   R -->|主 Agent 追加| T3
   T1 -.->|接口结果前置| T2

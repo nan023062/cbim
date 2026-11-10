@@ -1,6 +1,6 @@
 /**
  * 作用定位：岗位执行选择的有界只读发现协议，供主工具和任务详情共用。
- * 设计原因：当前可形成选择不等于未来领取许可；原任务绑定和本次观察分开，不返回能力正文、模型地址或凭据。
+ * 设计原因：未配置自定义岗位时明确返回主会话执行，不能伪造 ownerSelection；当前观察不是未来成员领取许可，不返回能力正文或凭据。
  */
 import {z} from 'zod';
 import {ownerExecutionBindingSchema,ownerExecutionSelectionSchema} from './member-execution-binding';
@@ -12,10 +12,10 @@ const issue=z.object({code:z.string().min(1).max(100),message:z.string().min(1).
 export const ownerExecutionDiscoverySchema=z.object({workspaceId:id,instanceId:id,readOnly:z.literal(true),checkedAt:z.string().datetime(),knowledgeRevision:id,
   registryCursor:workspaceRegistryCursorSchema.nullable(),ownershipCursor:moduleOwnershipCursorSchema.nullable(),sourceCursor:knowledgeSourceCursorSchema.nullable(),moduleIds:modules,
   groups:z.array(z.object({moduleIds:modules,memberId:z.string().uuid().optional(),memberName:z.string().min(1).max(100).optional(),agentId:id.optional(),
-    selection:ownerExecutionSelectionSchema.optional(),issues:z.array(issue).max(20)}).strict()).min(1).max(50),
+    execution:z.enum(['main','member']).optional(),selection:ownerExecutionSelectionSchema.optional(),issues:z.array(issue).max(20)}).strict()).min(1).max(50),
 }).strict().superRefine((value,context)=>{
   const all=value.groups.flatMap(group=>group.moduleIds);
-  if(all.length!==value.moduleIds.length||new Set(all).size!==all.length||all.some(id=>!value.moduleIds.includes(id))||value.groups.some(group=>group.selection?!group.memberName||!group.agentId||group.issues.length>0||group.memberId!==group.selection.memberId||group.selection.expectedOwners.length!==group.moduleIds.length||group.moduleIds.some(id=>!group.selection!.expectedOwners.some(owner=>owner.moduleId===id)):!group.issues.length))context.addIssue({code:'custom',message:'岗位发现的模块、预期或缺口不一致'});
+  if(all.length!==value.moduleIds.length||new Set(all).size!==all.length||all.some(id=>!value.moduleIds.includes(id))||value.groups.some(group=>group.execution==='main'?group.agentId!=='cbim:main'||!!group.selection||!!group.memberId:group.selection?!group.memberName||!group.agentId||group.issues.length>0||group.memberId!==group.selection.memberId||group.selection.expectedOwners.length!==group.moduleIds.length||group.moduleIds.some(id=>!group.selection!.expectedOwners.some(owner=>owner.moduleId===id)):!group.issues.length))context.addIssue({code:'custom',message:'岗位发现的模块、预期或缺口不一致'});
   if([value.registryCursor,value.ownershipCursor,value.sourceCursor].some(cursor=>cursor&&cursor.workspaceId!==value.workspaceId))context.addIssue({code:'custom',message:'岗位发现游标不属于当前工作区'});
 });
 export type OwnerExecutionDiscovery=z.infer<typeof ownerExecutionDiscoverySchema>;

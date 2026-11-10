@@ -1,5 +1,5 @@
 /**
- * 作用定位：定义 Pi 传输与工作区请求账本之间的可信窄端口。
+ * 作用定位：定义各引擎共用传输与工作区请求账本之间的可信窄端口。
  * 设计原因：引擎只负责实际 IO 和协议用量；请求身份、冻结价格和可靠事务由装配方持有，不向模型暴露修改入口。
  */
 import type {RequestBudgetModel,RequestBudgetUsage,ModelRequestBudgetChange} from '../../tasks/model-request-budget';

@@ -25,3 +25,7 @@ note for GitHubFeedbackSettings "GitHubFeedbackSettings.tsx：等待授权时说
 ## 逐请求预算（R06）
 
 用户可显式勾选逐请求预留；缺省仍为旧软限额。草稿和版本保存模式，说明保守模型容量预留、未知保持占用及本地估价。读取失败不显示为关闭，设置不自动保存，也不改变旧目标。
+
+### 配置 Loop 引擎
+
+供应商表单保存所属 Pi/Claude Code/Codex，后两者分别锁定 Anthropic Messages/OpenAI Responses。同一服务供多个引擎使用时分别保存配置。运行中任务不热替换；旧未声明引擎的配置继续显示 Pi。

@@ -3,10 +3,12 @@
  * 作用定位：在派发事务提交和日志恢复时校验成员执行、任务图和邮箱的联合约束。
  * 设计原因：仅验证每条记录形状不能防止半次领取、重复占用或旧 run 回调；把跨对象约束集中在 Core，磁盘适配器只负责可靠提交。
  * 职责边界：不启动模型、不访问文件、不签发权限；依赖追加与检查点放弃须完整核验后才给通用门禁精确许可，人工保存与显式接续不能冒充完成或自行消费等待。
+ * 执行模型允许可选 engine，并核对 Claude Code/Codex 的协议要求；缺省字段不回写旧记录。
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
 import {connectionSchema,modelSchema} from '../brain/llm/config';
+import {loopEngineSchema} from '../brain/llm/engine';
 import {validatePreparedDispatchKnowledge} from './execution-context';
 import type {DispatchCommand,DispatchMutation,DispatchState,DispatchMessage} from './dispatch-storage';
 import type {DispatchRun} from './dispatch-execution';
@@ -53,8 +55,12 @@ function changedTask(mutation:DispatchMutation,ref:GraphIdentity,taskId:string){
 
 /** 使用模型现有规则校验可持久化参数，显式拒绝 apiKey 及其他非公开字段。 */
 function validateModel(model:DispatchRun['model']){
-  valid(Object.keys(model).every(key=>['id','model','name','api','baseUrl','auth','contextWindow','maxTokens','reasoning','vision','outputLimit','thinkingLevel','workingContextWindow','compactionPercent','pricing'].includes(key)),'执行模型参数包含非公开字段');
-  const {name,api,baseUrl,auth,id:profileId,model:modelId,...options}=model;
+  valid(Object.keys(model).every(key=>['engine','id','model','name','api','baseUrl','auth','contextWindow','maxTokens','reasoning','vision','outputLimit','thinkingLevel','workingContextWindow','compactionPercent','pricing'].includes(key)),'执行模型参数包含非公开字段');
+  // 缺省 Pi 保留旧日志；明确引擎只能选支持的实现，并与协议能力一致。
+  valid(model.engine===undefined||loopEngineSchema.safeParse(model.engine).success,'执行引擎无效');
+  valid(model.engine!=='claude-code'||model.api==='anthropic-messages','Claude Code 模型协议无效');
+  valid(model.engine!=='codex'||model.api==='openai-responses','Codex 模型协议无效');
+  const {engine:_engine,name,api,baseUrl,auth,id:profileId,model:modelId,...options}=model;
   valid(typeof profileId==='string'&&profileId.trim()&&typeof modelId==='string'&&modelId.trim(),'执行模型缺少供应商或模型身份');
   valid(connectionSchema.strict().safeParse({name,api,baseUrl,auth}).success&&modelSchema.safeParse({id:modelId,name:modelId,enabled:true,...options}).success,'执行模型参数无效或包含非公开字段');
 }
@@ -77,8 +83,10 @@ function validateRun(previous:DispatchRun|undefined,run:DispatchRun,state:Dispat
   valid(assignment.claim?.runId===binding.runId&&assignment.claim.leaseEpoch===binding.leaseEpoch,'信封领取与运行租约不一致');
   valid(session.nativeSessionId===undefined||session.nativeSessionId===run.session.nativeSessionId,'原生会话身份与成员通道不一致');
   if(previous){
+    const firstCodexBinding=previous.model.engine==='codex'&&previous.status==='starting'&&run.status==='running'&&!previous.resumeFrom&&!previous.session.sessionFile&&previous.session.nativeSessionId===binding.agentSessionId;
+    if(firstCodexBinding)valid(!state.runs?.some(other=>other.binding.agentSessionId!==binding.agentSessionId&&other.session.nativeSessionId===run.session.nativeSessionId),'Codex 原生身份已属于另一成员通道');
     const fixed=(item:DispatchRun)=>{const {status:_,startedAt:__,settledAt:___,error:____,session:sessionValue,checkpointProof:_proof,...rest}=item;return {...rest,session:{nativeSessionId:sessionValue.nativeSessionId}}};
-    valid(equal(fixed(previous),fixed(run)),'不能修改运行的固定输入或身份');
+    valid(equal(fixed(firstCodexBinding?{...previous,session:{...previous.session,nativeSessionId:run.session.nativeSessionId}}:previous),fixed(run)),'不能修改运行的固定输入或身份');
     valid(!previous.session.sessionFile||previous.session.sessionFile===run.session.sessionFile,'不能改绑已知的原生会话文件');
     valid(!previous.startedAt||previous.startedAt===run.startedAt,'不能改写实际启动时间');
     if(!active(previous))valid(equal(previous,run),'已结算运行不能由迟到回调修改');

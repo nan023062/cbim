@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-工作区唯一的静态Team/组/Agent图、继承与人才复用，节点按Session查看只读履历。岗位面板独立登记、明确采纳和暂停退休；改名和模型更新保留原能力来源。来源屏障首次拒绝可重新编辑，未知仍查原命令；反查责任委托workspace，不启动模型。 当前岗位启用不是运行许可，真正执行还核模块责任和原计划；编辑不会搬运历史。
+工作区唯一的静态Team/组/Agent图、继承与人才复用，节点按Session查看只读履历。岗位面板独立登记、明确采纳和暂停退休；改名和模型更新保留原能力来源。来源屏障首次拒绝可重新编辑，未知仍查原命令；反查责任委托workspace，不启动模型。 岗位登记支持默认或明确引擎/模型，详情展示冻结引擎。 当前岗位启用不是运行许可，真正执行还核模块责任和原计划；编辑不会搬运历史。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -119,6 +119,7 @@ class N_src_frontend_team_team_model_ts_TeamNodeView["TeamNodeView"] {
   +kind
   +name
   +summary
+  +runtime
   +capabilities
   +limitations
   +body
@@ -146,7 +147,7 @@ class N_src_frontend_team_team_model_ts_TeamModel["TeamModel"] {
 N_src_frontend_team_team_model_ts ..> N_src_frontend_team_team_model_ts_TeamModel : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../knowledge/static-owners.ts](../knowledge/static-owners.ts)。
+直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../knowledge/static-owners.ts](../knowledge/static-owners.ts)。
 
 ### team-view.css
 
@@ -331,7 +332,7 @@ class N_src_frontend_team_WorkspaceMemberDetail_tsx["WorkspaceMemberDetail.tsx"]
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)。
+直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)。
 
 ### WorkspaceMemberForm.tsx
 
@@ -365,7 +366,7 @@ class N_src_frontend_team_WorkspaceMemberForm_tsx_WorkspaceMemberFormProps["Work
 N_src_frontend_team_WorkspaceMemberForm_tsx ..> N_src_frontend_team_WorkspaceMemberForm_tsx_WorkspaceMemberFormProps : 声明
 ```
 
-直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)。
+直接依赖：[../components/EngineModelPicker.tsx](../components/EngineModelPicker.tsx)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)。
 
 ### WorkspaceMembers.tsx
 
@@ -386,6 +387,7 @@ class N_src_frontend_team_WorkspaceMembers_tsx_WorkspaceMemberAgentOption["Works
   <<interface>>
   +id
   +name
+  +runtime
 }
 N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_WorkspaceMembers_tsx_WorkspaceMemberAgentOption : 声明
 class N_src_frontend_team_WorkspaceMembers_tsx_WorkspaceMembersProps["WorkspaceMembersProps"] {
@@ -400,7 +402,7 @@ class N_src_frontend_team_WorkspaceMembers_tsx_WorkspaceMembersProps["WorkspaceM
 N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_WorkspaceMembers_tsx_WorkspaceMembersProps : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[workspace-member-state.ts](workspace-member-state.ts)、[WorkspaceMemberForm.tsx](WorkspaceMemberForm.tsx)、[WorkspaceMemberDetail.tsx](WorkspaceMemberDetail.tsx)、[../workspace/ModuleOwnershipPanel.tsx](../workspace/ModuleOwnershipPanel.tsx)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)、[workspace-members.css](workspace-members.css)。
+直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[workspace-member-state.ts](workspace-member-state.ts)、[WorkspaceMemberForm.tsx](WorkspaceMemberForm.tsx)、[WorkspaceMemberDetail.tsx](WorkspaceMemberDetail.tsx)、[../workspace/ModuleOwnershipPanel.tsx](../workspace/ModuleOwnershipPanel.tsx)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)、[workspace-members.css](workspace-members.css)。
 
 ### 本目录调用边界
 
@@ -516,8 +518,8 @@ N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_workspace_membe
 岗位详情的“负责的模块”进入同一个 `ModuleOwnershipPanel`，按稳定 memberId 反查当前非空关系；返回后重新读取岗位，不能按静态 Agent 名字猜责任。暂停保留关系；有当前模块责任时后端拒绝退休，首次明确 `MEMBER_OWNERSHIP_ACTIVE` 可回到编辑，若原提交已经未知则仍保留未知，不能换命令重试。责任控制面和岗位登记共用工作区权威 Store，但前端原命令记录分别保存。
 
 - `TeamView` 的组织树仅展示工作区正式 Team、分组、Agent 和 Skill 定义，不把 AgentInstance、在线状态、执行活动或任务图混入树。动态派工仍属于当前会话任务视图；静态 Agent 详情可单独打开只读执行履历。
-- `team-model.ts` 只读同一 `Snapshot`，节点身份从知识路径派生，不能被 `agent.json` 内额外的 `id` 覆盖。完整模型保留空 Team 根与 `cbim:main`、`cbim:executor`，组织树通过 `visibleTeamNodes(..., false)` 过滤内置角色，搜索也不显示内置命中。项目岗位选项、历史角色与 Skill 父链仍使用完整模型；解析失败单独提示。
-- 自定义 Agent 可创建、读取、编辑、删除；Team 根和两个内置角色不可删除或编辑。内置角色使用应用配置，与其他成员同核，但不在正式知识中伪造可编辑定义。默认执行角色显示 Team 根共享 Skill；静态能力展示不能声称已加载进某次模型上下文。
+- `team-model.ts` 只读同一 `Snapshot`，节点身份从知识路径派生，不能被 `agent.json` 内额外的 `id` 覆盖。完整模型保留空 Team 根与 `cbim:main`，不再包含已退役的 `cbim:executor`。组织树通过 `visibleTeamNodes(..., false)` 过滤内置主角色，搜索也不显示内置命中。项目岗位选项、历史角色与 Skill 父链仍使用完整模型；解析失败单独提示。
+- 自定义 Agent 可创建、读取、编辑、删除；Team 根和内置主角色不可删除或编辑。主角色由应用维护，不在正式知识中伪造可编辑定义，团队树也不展示“未配置岗位时由主 Agent 执行”这一隐式默认关系。静态能力展示不能声称已加载进某次模型上下文。
 - 每个组织节点维护自己的 Skill。Agent/分组可用 Skill 由自身至 Team 根逐级合并，界面明确显示所属节点。继承 Skill 只允许跳转原 owner 维护，不能在当前节点上误删继承内容。
 - 所有知识修改交给 `ArchitectureEditor`：基于打开时的快照先校验/预览，再显式提交。Agent 新建需填写归属、目录标识、名称、100–250 非空白字符单行摘要、能力、限制和工作原则正文。
 - 发布整个团队从 Team 根发起，单 Agent 和自有 Skill 可分别发布。`WorkspaceResourceTransfer` 仅传输静态知识，使用共享人才仓库；导入由弹窗绑定目标 owner，预览后提交，不加载运行实例、会话或权限。
@@ -534,3 +536,7 @@ N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_workspace_membe
 - `HistoryRunContent` 展示经后端筛选的公开输入、回复、工具状态、计划步骤与证据引用。主用户输入与成员回注来源区分；交付候选始终标为尚未验收。`MemberRunTranscript` 仅复用显示，不带审批、停止、恢复、启动或发送消息的能力。
 - 当前模型私有推理、冻结知识全文、密钥、`sessionFile` 和原生会话存储不属于此页面协议。脱敏由后端公开投影负责，前端不能以拿到原始日志后隐藏字段替代该边界。
 - 角色、Session、运行读取失败与后端 `diagnostics` 单独展示，不能用“暂无历史”掩盖故障；切换工作区关闭旧历史视图，返回团队定义保留静态节点选择。
+
+### 静态默认与岗位采纳
+
+team-model 解析 Agent runtime 并随图节点交给登记表单；新登记可预选，编辑旧岗位默认保留原采纳。EngineModelPicker 管理两级菜单，切换 Agent 重置旧选择；预览及详情展示实际快照的引擎和模型。

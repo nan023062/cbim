@@ -86,7 +86,8 @@ export class ScopeContinuationService {
     // 先查幂等历史，再取得知识→模型→Store；绝不能从上述事务内部反向取得岗位快照。
     if(observed.wait?.memberPause&&!this.memberPauses)fail('GOAL_MEMBER_PAUSE_UNAVAILABLE','当前工作区未装配成员等待核实能力');
     let receipt:GoalContinuationReceipt|ScopeBudgetRejected;
-    try{receipt=observed.wait?.memberPause?await this.memberPauses!.withContext(input,alive,context=>save(context)):await save()}
+    // accept 仅在运行时取得主租约后的 beforeRun 调用；预检仍独立取得短读锁，两处均重核原等待基线。
+    try{receipt=observed.wait?.memberPause?await this.memberPauses!.withContext(input,alive,context=>save(context),true):await save()}
     catch(error){
       // 同命令并发可能在取得外层锁前已消费等待；只返回其不可变原事实，不重做核实、换 run 或伪造 fresh。
       const saved=replay(this.scope(await this.store.read(),input));if(saved)return saved;throw error;

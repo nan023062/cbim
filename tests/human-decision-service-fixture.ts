@@ -33,7 +33,7 @@ export async function humanServiceFixture(options:{candidates?:number;command?:b
   // 当前执行协议必须由显式登记的岗位负责；使用工作区唯一账本，让登记、派发和验收共享同一来源历史。
   const savedModel=await f.app.models.save({profile:{name:'人工验收测试岗位',api:'openai-completions',baseUrl:'https://example.test/v1',auth:'none',defaultModel:'fixture',models:[{id:'fixture',name:'fixture',enabled:true,contextWindow:200000,maxTokens:1000,reasoning:false,vision:false}]}});
   const profileId=savedModel.profiles.find(item=>item.name==='人工验收测试岗位')!.id;
-  await registerFixtureOwner(f.app,entry.id,{agentId:'cbim:executor',moduleIds:[moduleId],profileId,modelId:'fixture',name:'验收执行岗位',adaptation:{instructions:'读取本模块材料并提交验收证据。',references:[]}});
+  await registerFixtureOwner(f.app,entry.id,{agentId:'.cbim/team/dev',moduleIds:[moduleId],profileId,modelId:'fixture',name:'验收执行岗位',adaptation:{instructions:'读取本模块材料并提交验收证据。',references:[]}});
   const store=workspace.dispatchStore,directory=store.directory,memberLogs=path.join(f.user,'human-member-logs'),storage=new FileRunStorage(),files=new ArtifactFiles(f.a,()=>workspace.assert()),lease=new WorkspaceExecutionLease();
   const read=(run:DispatchRun)=>storage.read(path.join(memberLogs,run.binding.taskId,run.binding.runId)),inspect=vi.fn(read),checkFiles=vi.fn(files.checkFiles.bind(files));let retired=false,starts=0;
   const manifestFiles=new OutputManifestFiles(f.a,()=>workspace.assert()),checkManifest=vi.fn(manifestFiles.check.bind(manifestFiles));
@@ -44,7 +44,7 @@ export async function humanServiceFixture(options:{candidates?:number;command?:b
   await journal.init();await journal.append({type:'run.started',data:{task,message:task.goal,conversationBinding:binding}});await journal.append({type:'session.bound',data:{sessionId:'human-main-native',sessionFile:path.join(f.user,'human-native.jsonl')}});
   await service.openScope(identity,scopeId,{message:task.goal},mainRunId);
   const ownerSelection=(await service.owners.discover([moduleId])).groups[0].selection!;
-  await service.goals.plan(identity,scopeId,mainRunId,'human-plan',{expectedRevision:1,objective:'核实成果',constraints:[],criteria:[{id:'c1',text:'请人确认所选成果',kind:'human'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],criterionIds:['c1'],ownerSelection,reason:'执行后由人确认'}],reason:'明确人工项'});
+  await service.goals.plan(identity,scopeId,mainRunId,'human-plan',{expectedRevision:1,objective:'核实成果',constraints:[],criteria:[{id:'c1',text:'请人确认所选成果',kind:'human'}],assignments:[{agentId:'.cbim/team/dev',moduleIds:[moduleId],criterionIds:['c1'],ownerSelection,reason:'执行后由人确认'}],reason:'明确人工项'});
   const model=await f.app.models.configuration(profileId,'fixture');
   const prepare=():PreparedEngine=>({model,availableTools:['read'],availableValidators:['json-schema-v1'],create:async(run,_task,hooks)=>{
     let context!:EngineContext;const engine:AgentEngine={kind:'human-service-fixture',start:async c=>{starts++;context=c;await c.emit({type:'session.bound',data:{sessionId:c.nativeSessionId,sessionFile:path.join(memberLogs,'native-'+c.nativeSessionId+'.jsonl')}})},stop:async()=>{},close:async()=>{},run:async()=>{
@@ -63,7 +63,7 @@ export async function humanServiceFixture(options:{candidates?:number;command?:b
   for(let index=0;index<(options.candidates??1);index++){
     if(options.completeManifest){await fs.mkdir(path.join(f.a,'human-output','empty'),{recursive:true});await fs.writeFile(path.join(f.a,'human-output','result.txt'),'complete result')}
     const filename='human-'+index+'.txt';await fs.writeFile(path.join(f.a,filename),options.jsonValidation?'{"count":1}':'original '+index);if(options.jsonValidation){await fs.writeFile(path.join(f.a,'human-note.txt'),'review notes');for(const file of validationPaths.slice(1))await fs.writeFile(path.join(f.a,file),'{"count":1}')}
-    const assigned=await service.dispatchTask({...identity,commandId:'assign-'+index,expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,goal:filename,acceptance:[{id:'c1',text:'有真实读取'}]}},scopeId);
+    const assigned=await service.dispatchTask({...identity,commandId:'assign-'+index,expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,goal:filename,acceptance:[{id:'c1',text:'有真实读取'}]}},scopeId);
     await members.start({...identity,taskId:assigned.taskId,commandId:'start-'+index,expectedRevision:1,options:{permission:'execute'}});await members.waitForSettlement({...identity,taskId:assigned.taskId});
   }
   const graph=await service.snapshot(identity);expect(graph.tasks.every(task=>task.status==='result_ready'),JSON.stringify({tasks:graph.tasks,runs:(await store.read()).runs})).toBe(true);

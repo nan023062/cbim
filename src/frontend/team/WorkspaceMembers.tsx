@@ -1,7 +1,9 @@
 /**
  * 作用定位：团队与业务架构共用的项目岗位登记面板，浏览采纳差异、显式变更，并反查负责的模块。
  * 设计原因：登记始终复用同一命令记录与预览校验；业务架构可预选 Agent，只有真实登记受理后才返回 memberId，模型与责任仍分别明确选择和保存。
+ * 登记预览展示实际采纳的引擎及模型，候选 Agent 的本机默认选型只传入新登记表单。
  */
+import {engineLabel} from '../../bridge/contracts/models';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
 import type {LlmSettings} from '../../bridge/contracts/models';
@@ -15,7 +17,7 @@ import {KnowledgeSourceSelection} from '../knowledge/KnowledgeSourceDetails';
 import './workspace-members.css';
 
 const failure=(error:unknown)=>error instanceof Error?error.message:String(error);
-export interface WorkspaceMemberAgentOption {id:string;name:string}
+export interface WorkspaceMemberAgentOption {id:string;name:string;runtime?:import('../../bridge/contracts/models').AgentModelSelection}
 /** 当前定义只用于明确选择；已登记岗位的正文和版本一律从后端详情读取，不用静态列表补造。 */
 export interface WorkspaceMembersProps {workspace:WorkspaceView;agents:WorkspaceMemberAgentOption[];onClose:()=>void;/** 仅预选能力来源，不自动选模型、预览或提交。 */initialRegistration?:{agentId:string};/** 只通知本次已受理的登记，不把预览、未知或旧命令查询当作新岗位。 */onRegistered?:(memberId:string)=>void;returnLabel?:string}
 export function WorkspaceMembers({workspace,agents,onClose,initialRegistration,onRegistered,returnLabel='返回团队定义'}:WorkspaceMembersProps){
@@ -76,7 +78,7 @@ export function WorkspaceMembers({workspace,agents,onClose,initialRegistration,o
       </>}</div></>}
       {editing&&<WorkspaceMemberForm key={JSON.stringify([editing,special,detail?.member.memberId,detail?.member.revision])} kind={editing} member={detail?.member} agents={agents} initialAgentId={initialRegistration?.agentId} models={models} {...special} disabled={blocked||loading} onEdit={invalidate} onPreview={prepare} onClose={()=>{invalidate();setEditing(undefined)}}/>}
       {!detail&&!editing&&!loading&&<p>选择岗位查看已采纳配置和当前差异，或登记新的岗位。</p>}
-      {preview&&<section className="workspace-member-preview" data-testid="workspace-member-preview-result"><h3>提交预览</h3><p>变更：{preview.changedFields.join('、')}；原第 {preview.previousRevision} 版 → 第 {preview.previousRevision+1} 版。</p><p>{preview.proposed.name} · {preview.proposed.position} · {stateLabel(preview.proposed.state)}</p><p>能力：{preview.proposed.capability.configuration.name}；{preview.proposed.capability.configuration.effectiveSkills.length} 项 Skill</p><p>模型：{preview.proposed.runtimePolicy.snapshot.name} / {preview.proposed.runtimePolicy.modelId}</p><KnowledgeSourceSelection selection={preview.sourceSelection}/><details><summary>查看实际采纳内容与差异</summary><pre>{JSON.stringify({before:preview.previousMember,after:preview.proposed},null,2)}</pre></details><p>只保存岗位登记与审计，不启动模型或任务。</p><button data-testid="workspace-member-commit" disabled={blocked||loading} onClick={()=>void commit()}>确认保存岗位</button></section>}
+      {preview&&<section className="workspace-member-preview" data-testid="workspace-member-preview-result"><h3>提交预览</h3><p>变更：{preview.changedFields.join('、')}；原第 {preview.previousRevision} 版 → 第 {preview.previousRevision+1} 版。</p><p>{preview.proposed.name} · {preview.proposed.position} · {stateLabel(preview.proposed.state)}</p><p>能力：{preview.proposed.capability.configuration.name}；{preview.proposed.capability.configuration.effectiveSkills.length} 项 Skill</p><p>模型：{engineLabel(preview.proposed.runtimePolicy.snapshot.engine??'pi')} · {preview.proposed.runtimePolicy.snapshot.name} / {preview.proposed.runtimePolicy.modelId}</p><KnowledgeSourceSelection selection={preview.sourceSelection}/><details><summary>查看实际采纳内容与差异</summary><pre>{JSON.stringify({before:preview.previousMember,after:preview.proposed},null,2)}</pre></details><p>只保存岗位登记与审计，不启动模型或任务。</p><button data-testid="workspace-member-commit" disabled={blocked||loading} onClick={()=>void commit()}>确认保存岗位</button></section>}
     </div></div>
     {!!state.records.length&&<details className="workspace-member-commands" open={blocked}><summary>本机提交记录 · {state.records.length}</summary>{[...state.records].reverse().map(record=><div key={record.request.commandId} data-command-id={record.request.commandId}><strong>{{submitting:'正在提交',unknown:'结果未确认',accepted:'已受理',rejected:'未受理'}[record.phase]}</strong><code>{record.request.commandId}</code>{record.error&&<p role="alert">{record.error}</p>}{record.receipt&&<p>岗位 {record.receipt.memberId} · 第 {record.receipt.memberRevision} 版</p>}{record.phase!=='rejected'&&<button data-testid="workspace-member-receipt-query" disabled={controller.isPending(record.request.commandId)} onClick={()=>void query(record.request.commandId)}>查询原命令</button>}{record.phase==='unknown'&&<button disabled={controller.isPending(record.request.commandId)} onClick={()=>void query(record.request.commandId,true)}>重送同一请求</button>}{record.receipt&&<button disabled={loading} onClick={()=>void select(record.receipt!.memberId)}>查看岗位</button>}</div>)}</details>}
   </section>;

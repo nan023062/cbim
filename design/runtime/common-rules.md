@@ -8,6 +8,8 @@ CBIM 是面向 AI 原生团队的生产与治理体系。创作与执行者对�
 
 cbim_module_registry → cbim_module_get 返回模块知识与本模块 Workflow；cbim_agent_registry → cbim_agent_get 返回团队、Agent 原则与自身及全部祖先 Skill。cbim_knowledge_search 补查，cbim_knowledge_snapshot 返回完整知识与检查结果。查询基于当前定义派生；定义无效时问题清单必须与结果一起考虑，不能把被校验排除的对象当作不存在的业务事实。
 
+每个模块创建后隐式由主 Agent 负责，不要求先登记岗位。模块查询的 execution.groups 中，execution=main 表示在当前主会话执行；execution=member 且 selection 有效才向自定义负责岗位派发。旧 cbim:executor 已退役，既不提供新建入口也不参与新派发；历史绑定保留但按主 Agent 默认处理。自定义岗位配置失效须报告具体缺口，不能当成未配置绕过。Auto 与 Team 的直接执行均受 read/ask/execute、工作区占用及知识目录保护约束。
+
 ## CBIM 全权管理知识
 
 Agent 禁止通过原生读写、扫描、shell 或脚本直接访问 .cbim/。执行上下文由调度引擎准备，知识加载、继承解析与增删改查统一调用内部知识工具；业务产物才使用当前运行提供的原生工具。当前工作区和运行身份由程序绑定，不得通过参数冒充其他实例。

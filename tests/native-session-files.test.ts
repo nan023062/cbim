@@ -6,6 +6,21 @@ import {createHash} from 'node:crypto';
 import {NativeSessionFiles,nativeSessionByteLimit} from '../src/backend/main/platform/native-session-files';
 
 const temporary:string[]=[];
+it('Codex 原生历史核对 metadata、文件名及单一线程身份',async()=>{
+  const f=await fixture(),port=new NativeSessionFiles(f.root,()=>{},'codex'),file=path.join(f.root,'rollout-native.jsonl'),session={...f.session,sessionFile:file};
+  const text=JSON.stringify({type:'session_meta',payload:{id:'native',cwd:f.directory}})+'\n'+JSON.stringify({type:'response_item',payload:{type:'message'}})+'\n';
+  await fs.writeFile(file,text);expect((await port.read(session,f.controller.signal)).byteLength).toBe(Buffer.byteLength(text));
+  await expect(port.read({...session,nativeSessionId:'other'},f.controller.signal)).rejects.toThrow();
+  await fs.appendFile(file,JSON.stringify({type:'session_meta',payload:{id:'other'}})+'\n');await expect(port.read(session,f.controller.signal)).rejects.toThrow();
+  await fs.writeFile(f.file,text);await expect(port.read(f.session,f.controller.signal)).rejects.toThrow();
+});
+it('Claude 原生历史核实完整 JSONL、文件身份，不能混入其他会话',async()=>{
+  const f=await fixture(),port=new NativeSessionFiles(f.root,()=>{},'claude-code'),text=JSON.stringify({type:'user',sessionId:'native',message:{role:'user',content:'hello'}})+'\n';
+  await fs.writeFile(f.file,text);expect((await port.read(f.session,f.controller.signal)).byteLength).toBe(Buffer.byteLength(text));
+  await expect(f.port.read(f.session,f.controller.signal)).rejects.toThrow();
+  await fs.appendFile(f.file,JSON.stringify({type:'assistant',sessionId:'different'})+'\n');await expect(port.read(f.session,f.controller.signal)).rejects.toThrow();
+  await fs.writeFile(f.file,text.trimEnd());await expect(port.read(f.session,f.controller.signal)).rejects.toThrow();
+});
 afterEach(async()=>{vi.restoreAllMocks();for(const directory of temporary.splice(0)){const relative=path.relative(path.resolve(os.tmpdir()),path.resolve(directory));if(!relative.startsWith('cbim-native-checkpoint-')||relative.includes(path.sep)||path.isAbsolute(relative))throw Error('Unexpected fixture cleanup path');await fs.rm(directory,{recursive:true,force:true})}});
 async function fixture(){const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-native-checkpoint-'));temporary.push(directory);const root=path.join(directory,'sessions');await fs.mkdir(root);const file=path.join(root,'native.jsonl'),text=JSON.stringify({type:'session',id:'native',version:3})+'\n'+JSON.stringify({type:'message',id:'m',message:{role:'assistant',content:[{type:'text',text:'真实会话正文'}]}})+'\n';await fs.writeFile(file,text);const controller=new AbortController(),port=new NativeSessionFiles(root,()=>{}),session={nativeSessionId:'native',sessionFile:file};return {directory,root,file,text,controller,port,session}}
 

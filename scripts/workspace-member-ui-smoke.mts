@@ -65,6 +65,7 @@ try{
     await panel().getByTestId('workspace-member-register').click();await panel().getByRole('combobox',{name:'静态 Agent',exact:true}).selectOption(seeded.team.input.agentId);
     assert.equal(await panel().getByRole('combobox',{name:'岗位模型',exact:true}).inputValue(),'');
     await panel().getByRole('textbox',{name:'岗位名称',exact:true}).fill(name);await panel().getByRole('textbox',{name:'岗位职责',exact:true}).fill(data.position);await panel().getByRole('textbox',{name:'岗位适配说明',exact:true}).fill(data.instructions);await panel().getByRole('textbox',{name:'参考知识 ID',exact:true}).fill(seeded.team.input.moduleId+'\n'+seeded.team.shared);
+    await panel().getByRole('combobox',{name:'Agent Loop 引擎',exact:true}).selectOption('pi');
     await panel().getByRole('combobox',{name:'岗位模型',exact:true}).selectOption(JSON.stringify([seeded.profileId,seeded.modelId]));await prepareAndCommit(data.reason,expectedTotal);
   };
   await fs.mkdir('test-results',{recursive:true});await launch();await selectWorkspace('a');await draft().fill(data.draft);await selectWorkspace('b');await draft().fill(data.otherDraft);await selectWorkspace('a');await openMembers();

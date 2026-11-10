@@ -1,6 +1,6 @@
 # CBIM 内部 Loop Engine
 
-唯一引擎为固定版本 `@earendil-works/pi-coding-agent@1.5.0`。CBIM 在应用内部管理工作区执行实例、模型配置、运行权限和工具调用。
+引擎支持固定版本 Pi（`@earendil-works/pi-coding-agent@1.5.0`）、Claude Code（`@anthropic-ai/claude-agent-sdk@0.3.322`）与 Codex（`@openai/codex@0.167.0`）。CBIM 在应用内部管理工作区执行实例、模型配置、运行权限和工具调用。
 
 源码分层：`src/backend/core/brain/` 是通用执行层（大脑），`src/backend/scheduler-engine/` 是管理工作区、知识和团队流程的调度引擎。既有 `loop-engine/` 数据目录保留；接口名称仍存在不代表旧业务启动路径继续开放，当前限制见下文。
 
@@ -13,7 +13,7 @@ Application / 桌面主对话
   → WorkspaceExecutionManager
     → loop.chat / 普通对话 loop.resume
     → LoopRuntime：任务锁、持久化事件、主会话执行
-      → PiEngine：真实 Pi 子进程、工具策略、原生会话
+      → PiEngine / ClaudeCodeEngine / CodexEngine：真实原生进程、共享工具策略、各自会话
         → 临时能力桥 → KnowledgeService → 工作区查询与事务
 
 Application / 可信桌面 IPC
@@ -21,7 +21,7 @@ Application / 可信桌面 IPC
   → 冻结 ownerBinding：岗位、能力来源、模块责任、岗位模型配置
   → MemberExecutionManager：领取前复核、冻结知识与前置结果、岗位模型/权限、终态事务
     → 同一个 LoopRuntime.startMember：固定成员与通道绑定、持久化事件
-      → 独立 PiEngine：成员专属原生会话、同一工具门禁与内部知识服务
+      → 岗位所选 PiEngine / ClaudeCodeEngine / CodexEngine：成员专属会话、同一门禁与知识服务
 
 当前主聊天运行
   → cbim_module_owner_inspect：查询模块当前负责岗位及可用选择
@@ -29,7 +29,7 @@ Application / 可信桌面 IPC
   → 主轮安全完成并释放占用
     → AutoCollaboration → MemberExecutionManager → 独立成员执行
     → 成员终态持久化且释放占用
-      → continueFromResults → 原主会话 Pi custom 数据 → 主 Agent 继续处理
+      → continueFromResults → 原主引擎的数据接续消息 → 主 Agent 继续处理
 ```
 
 KnowledgeService 提供领域查询与事务能力，KnowledgeTools 维护内部工具定义和参数 Schema。工具使用 `cbim_` 名称，通过可信运行绑定核验工作区身份、读取版本、幂等请求和本轮授权。
@@ -46,7 +46,7 @@ KnowledgeService 提供领域查询与事务能力，KnowledgeTools 维护内部
 
 知识结构错误、正文缺失、Skill 冲突、错误流程归属、未知责任人或准备期间知识变化会阻止上下文准备。旧直接团队运行中的 `TaskSpec.workflowContext` 只保留历史事实，不能据此绕过当前岗位派发门禁创建新轮次。
 
-正式成员任务使用 `prepareDispatchExecutionContext`，必须由当前活动 scope 的目标计划派发。先为业务模块登记负责岗位，并明确采纳能力、来源和模型配置；`ownerSelection` 是预期版本，服务重新解析后冻结 `ownerBinding`。`cbim:executor` 仍可作为明确登记岗位的内置能力，但不再因省略角色或负责人而自动回退；`cbim:main` 不能执行成员业务。
+正式成员任务使用 `prepareDispatchExecutionContext`，必须由当前活动 scope 的目标计划派发。已配置自定义负责岗位时，明确采纳能力、来源和模型配置；`ownerSelection` 是预期版本，服务重新解析后冻结 `ownerBinding`。未配置自定义岗位的模块由主 Agent 在当前会话执行。已退役的 `cbim:executor` 不能再登记，`cbim:main` 也不能被派成独立成员。
 
 多个模块必须属于同一所选岗位；不同负责岗位拆分任务。模块各自保留维护关系和自身 Workflow，角色原则、有效 Skill、岗位名称与适配、模块正文及内置规范完整冻结。未显式选择 Workflow 时沿用本模块默认流程，不继承父模块或兄弟流程。成员使用岗位采纳的模型，不继承主会话模型。计划、派发及领取按 Knowledge → 模型配置短锁 → DispatchStore 顺序复核；新领取还冻结已满足前置任务的候选摘要、证据及限制。
 
@@ -66,7 +66,7 @@ KnowledgeService 提供领域查询与事务能力，KnowledgeTools 维护内部
 | `loop.list` | `id` | 从日志恢复历史，明确报告损坏记录 |
 | `loop.resume` | `id, taskId, runId, message, options, reconciledToolIds?` | 仅普通主对话可续聊；旧非 chat 业务任务拒绝，未核实操作仍阻止继续 |
 
-`loop.prepare` 的旧 `task` 包含 `goal, moduleId, agentId, workflowId, acceptance` 和可选 `responsiblePerson`，与正式派发输入不同。主对话 `options` 可选择 `profileId/model` 和权限模式；保留的兼容字段不构成成员模型选择入口。IPC 不接收任意子进程命令或环境变量。
+`loop.prepare` 的旧 `task` 包含 `goal, moduleId, agentId, workflowId, acceptance` 和可选 `responsiblePerson`，与正式派发输入不同。主对话 `options` 可选择 `engine/profileId/model` 和权限模式；保留的兼容字段不构成成员模型选择入口。IPC 不接收任意子进程命令或环境变量。
 
 主进程通过 `Application.execution(id).subscribe()` 订阅落盘事件。页面关闭不停止执行；工作区替换、移除和应用退出先排空 loop，再关闭知识服务。桌面对话已接入发送、公开文本增量展示、工具证据、停止与继续；默认供应商由 Application 解析后传给大脑。
 
@@ -76,7 +76,7 @@ KnowledgeService 提供领域查询与事务能力，KnowledgeTools 维护内部
 
 主对话成员卡片与图节点详情通过 `dispatch.executionEvents` 读取公开增量，详情可操作审批、选项和停止；`Application.memberExecution(id).subscribe()` 提供已落盘事件。长期岗位 memberId 与任务执行实例、通道和 run 不同；同岗位的新任务仍创建独立执行实例。已有任务仅在真实安全检查点及一次续执行预约通过后可沿原身份继续，预约和领取都复核原岗位/模型/知识；失败、取消、中断或缺少 ownerBinding 的旧任务不能直接复活。旧日志继续可读，已运行段的历史结算不因后来换负责人而改写。
 
-自动回注只在原主轮安全完成且没有未决工具时续接同一原生 Session。`RunInputSource` 保存 continuationId、结果 messageIds 与 taskIds，允许没有候选信封的失败或受阻任务回报。Pi 用 custom 消息保存成员任务数据，不伪造用户消息或授权；日志先记录回注尝试，再确认结果收件。按批次和消息 ID 去重不等于业务验收，也不提供失败自动重放。用户队列保留原正文和配置，在协作期间暂缓，主续跑安全结束后继续。
+自动回注只在原主轮安全完成且没有未决工具时续接同一原生 Session。`RunInputSource` 保存 continuationId、结果 messageIds 与 taskIds，允许没有候选信封的失败或受阻任务回报。Pi 用 custom 消息、Claude Code 用明确标记的 synthetic 数据、Codex 用明确标记的系统转交资料保存成员任务结果，不将资料当作新授权；日志先记录回注尝试，再确认结果收件。按批次和消息 ID 去重不等于业务验收，也不提供失败自动重放。用户队列保留原正文和配置，在协作期间暂缓，主续跑安全结束后继续。
 
 ## 权限与持久化
 
@@ -86,7 +86,7 @@ KnowledgeService 提供领域查询与事务能力，KnowledgeTools 维护内部
 
 运行摘要新增 toolReceipts，记录 workspaceId、taskId、runId、toolCallId、输入/结果哈希、副作用、范围与 succeeded/failed/denied/unknown。结果随事件落盘后返回，模型自带 receipt 不作为权威记录。旧日志不补造回执；Pi 在 Schema 阶段直接拒绝且未到达 gate 的调用仍保留原工具错误事件。命令范围为 unknown，不声称已完成系统级隔离；回执不是业务验收结果。
 
-工具放行前记录提议、授权决定并 fsync，写失败拒绝执行。未收到结果的获准操作需要核实，不自动重放。`agent_settled` 才结束运行；`completed` 只表示引擎结束，验收仍为 `not_evaluated`。
+工具放行前记录提议、授权决定并 fsync，写失败拒绝执行。未收到结果的获准操作需要核实，不自动重放。Pi 仅认 `agent_settled`，Claude Code 仅认 SDK `result`，Codex 核对当前 thread/turn 的 `turn/completed`，`completed` 只表示引擎结束，验收仍为 `not_evaluated`。
 
 主调度另有 `cbim_dispatch_command_report({runId, toolCallId})` 只读工具，桌面原工具记录的“核实原命令”通过 `dispatch.commandReport` 调用同一服务。当前支持目标计划/审阅、派发、未领取撤销、前置追加/替换、检查点续执行预约和显式放弃八类原写命令。服务核对原主实例、独立对话通道、周期归属、canonical 输入与原账本指纹；派发隐藏父版本取原事务前态，不用当前图推测。已关闭周期仍可明确查询，同名 Agent 的其它主会话不能借用记录。
 
@@ -96,9 +96,9 @@ KnowledgeService 提供领域查询与事务能力，KnowledgeTools 维护内部
 
 本机明确处置分为继续核实、新业务修复及保留未解决，先保存稳定命令再发送；失去回包只查询原请求。记录在同一 DispatchStore 不可变追加，观察和保存都不启动模型。具备资格时分别创建新的只读核实周期和正式业务修复周期，处置引用随新意图冻结，关联展示真实任务及结果；新修复完成不更正原失败。主来源没有原可信业务计划时只能先做只读核实，不能据此凭空创建业务计划。没有 before 正文的文件仍不能回滚，受控补偿另属下一片。
 
-记录位于 `<CBIM 用户目录>/<workspaceId>/loop-engine/tasks/<taskId>/<runId>/events.jsonl`。Pi 会话位于同工作区的 `loop-engine/pi/sessions/`。使用设置页配置时，每次运行在自己的 `provider/models.json` 生成非敏感配置，密钥仅由环境变量注入。记录可能含业务正文，不自动共享，不保存私有推理。知识目录防误操作检查不是操作系统沙箱。
+记录位于 `<CBIM 用户目录>/<workspaceId>/loop-engine/tasks/<taskId>/<runId>/events.jsonl`。Pi 会话位于同工作区的 `loop-engine/pi/sessions/`，Claude Code 位于 `loop-engine/claude/projects/`，Codex 位于 `loop-engine/codex/sessions/`。Pi 每次运行在自己的 `provider/models.json` 生成非敏感配置，Claude 使用独立配置目录及冻结环境；启用请求预算时，真实凭据仅保留在父进程代理。记录可能含业务正文，不自动共享，CBIM 公开事件不转发私有推理，原生私有文件由各引擎保存。知识目录防误操作检查不是操作系统沙箱。
 
-成员派发与领取事务位于同工作区 `dispatch/dispatch.jsonl`；成员运行日志位于 `dispatch/runs/tasks/<taskId>/<runId>/events.jsonl`，原生会话位于 `dispatch/runs/pi/sessions/`。`starting` 意图先落盘，实际引擎就绪后才提交 running，工具不能先于启动确认执行。重启将未完成领取标为 interrupted，不重放模型或工具，也不恢复内存中的自动协作批次。主会话与成员共用工作区写入占用，每个运行的审批队列及“本次全部通过”互相隔离。停止主任务还会阻止后续自动启动、请求关联成员停止，并暂停用户队列；迟到事件不能重新拉起任务。
+成员派发与领取事务位于同工作区 `dispatch/dispatch.jsonl`；成员运行日志位于 `dispatch/runs/tasks/<taskId>/<runId>/events.jsonl`，原生会话分别位于 `dispatch/runs/pi/sessions/` 或 `dispatch/runs/claude/projects/`。Claude 首轮在真实结果时绑定实际生成文件，成员结算核对同一身份后保存路径。`starting` 意图先落盘，实际引擎就绪后才提交 running，工具不能先于启动确认执行。重启将未完成领取标为 interrupted，不重放模型或工具，也不恢复内存中的自动协作批次。主会话与成员共用工作区写入占用，每个运行的审批队列及“本次全部通过”互相隔离。停止主任务还会阻止后续自动启动、请求关联成员停止，并暂停用户队列；迟到事件不能重新拉起任务。
 
 ## 开发调用
 
@@ -114,11 +114,11 @@ KnowledgeService 提供领域查询与事务能力，KnowledgeTools 维护内部
 
 本步 `tests/application-collaboration-pi.test.ts` 已用真实 Application/Pi 验证主工具派发、成员读写及候选回注，并检查 ask 批准隔离、用户消息排队、停止和重开不重放；`tests/member-continuation-pi.test.ts` 验证 custom 回注与 user 续聊的原生历史。以上模型响应来自本机可控服务，不代表本步新增链路已经经过打包 UI 或真实供应商验证。
 
-`pnpm package` 将 Pi 及安装时解析的生产依赖复制到 `resources/pi-runtime/`，附带版本清单。`pnpm test:loop` 仍指向 [loop-smoke.mjs](../scripts/loop-smoke.mjs)，该历史脚本实际从对话页发送消息，且仍含主 Agent 直接 write/bash 的旧断言，不是当前岗位派发的可执行示例或验收依据；本次文档更新没有运行或迁移它。岗位模型与派发门禁的实际验证以对应阶段的验证记录为准，不能从旧脚本存在推断当前链路已验收。
+`pnpm package` 分别将 Pi、Claude SDK、Codex CLI 及其生产运行依赖复制到 `resources/pi-runtime/`、`resources/claude-runtime/`、`resources/codex-runtime/`，附带版本清单；后两者包含本平台二进制，Codex 平台包保留 npm 安装别名。`pnpm test:loop` 仍指向 [loop-smoke.mjs](../scripts/loop-smoke.mjs)，该历史脚本实际从对话页发送消息，且仍含主 Agent 直接 write/bash 的旧断言，不是当前岗位派发的可执行示例或验收依据；本次文档更新没有运行或迁移它。岗位模型与派发门禁的实际验证以对应阶段的验证记录为准，不能从旧脚本存在推断当前链路已验收。
 
 ## 自定义模型供应商
 
-参考 Cindy 的供应商连接与模型目录配置方式（[连接表单源码](https://github.com/makecindy/cindy/blob/main/apps/desktop/src/frontend/components/settings/ProviderConnectionDialog.tsx)），在左下角用户栏 → 设置 → 模型供应商添加。填写名称、API 根地址、接口协议和鉴权；获取模型 ID 或手动添加，设置上下文、最大输出、推理能力、启用状态及默认模型，保存后测试连接。
+参考 Cindy 的供应商连接与模型目录配置方式（[连接表单源码](https://github.com/makecindy/cindy/blob/main/apps/desktop/src/frontend/components/settings/ProviderConnectionDialog.tsx)），在左下角用户栏 → 设置 → 模型供应商添加。填写名称、Loop 引擎、API 根地址、接口协议和鉴权；获取模型 ID 或手动添加，设置上下文、最大输出、推理能力、启用状态及默认模型，保存后测试连接。
 
 支持 OpenAI Chat Completions、OpenAI Responses、Anthropic Messages；鉴权为 API Key 或无鉴权。模型目录请求 /models（Anthropic 根地址补 /v1），失败可手动填写。发现不推断容量或工具支持。订阅/OAuth 登录、自动协议探测、自定义请求头与价格覆盖尚未实现。
 
@@ -148,7 +148,7 @@ loop.chat 创建 mode=chat、agentId=cbim:main 的普通对话；loop.choices �
 
 工具绑定当前真实运行，经相同 gate 调用，但只修改执行记录，不改项目与正式知识，故只读模式也可以规划和记录读取证据。业务写、知识写及命令放行前使旧证据失效；恢复和修改计划也要求重新核实，未知结果须核实实际影响并建立独立处置，不凭裸调用 ID 续跑，也不自动重放。命令可能改变产物，因此即便是测试命令也保守失效旧证据；应完成修改与验证后再关联本轮有效回执。
 
-新主会话的 `run.started.conversationBinding` 记录与图根一致的真实主实例；同会话续跑不换实例，不同主会话不合并。主 Agent 只能向明确的模块负责岗位派发；内置 `cbim:executor` 也须真实岗位登记和模型采纳，省略 agentId 或 ownerSelection 不能自动产生默认执行者。用户任务启动一个调度周期，跨主模型调用、成员执行及结果回注；目标通过完成门禁，或失败、停止后收口并释放执行实例，保留主实例、图和证据。普通问答保留根而无业务节点，旧日志不按角色名补造岗位绑定。
+新主会话的 `run.started.conversationBinding` 记录与图根一致的真实主实例；同会话续跑不换实例，不同主会话不合并。主 Agent 只向已配置的自定义负责岗位派发；未配置时在当前会话自己执行。已退役的 `cbim:executor` 不能再登记，省略 agentId 或 ownerSelection 也不会产生默认执行者。用户任务启动一个调度周期，跨主模型调用、成员执行及结果回注；目标通过完成门禁，或失败、停止后收口并释放执行实例，保留主实例、图和证据。普通问答保留根而无业务节点，旧日志不按角色名补造岗位绑定。
 
 计划责任文本本身不代表已派发。正式任务须经当前 scope/goal/ownerSelection 门禁创建；运行仅在目标、验收和冻结岗位与派发任务一致、存在有效结构化候选且知识版本仍一致时产生 result_ready 和结果信封。检查点和显式产物验证只覆盖其声明的范围，不保证所有外部产物变化或验收语义都已自动识别。主会话自动回注和收件确认不签发验收，工具真实接入也不保证任意模型都会按指引调用，应核对计划与回执。
 
@@ -165,3 +165,8 @@ loop.chat 创建 mode=chat、agentId=cbim:main 的普通对话；loop.choices �
 验证包含真实 Pi + 本机确定性接口；不使用用户的供应商凭据，不代表真实供应商推理质量或各档位效果。
 
 模型能力发现现已读取 /models 的 context_window、max_output_tokens（兼容 camelCase）；已有模型由“同步已有模型容量”更新草稿，缺失字段不覆盖已有值。未知新模型不再默认为 32k。运行诊断另记录实际请求输出额度，解释 Pi 按容量、上下文估计及安全余量对输出进行裁剪的行为。
+
+
+## 引擎与 Agent 选型
+
+主对话增加 Loop 引擎菜单；静态 Agent 编辑和项目岗位登记/编辑共用引擎与模型级联菜单。选项只来自本机已保存且启用的模型目录。旧配置缺省保持 Pi；Claude Code 必须配置 Anthropic Messages，Codex 必须配置 OpenAI Responses。静态 Agent runtime 是新岗位的默认值，已有岗位仍使用原采纳快照。主会话换引擎时保留公开上下文，但不把另一种引擎的原生文件交给它解析。详细使用方法、维护入口与验证边界见 [Claude Code 配置](claude-code-engine.md)和 [Codex 配置](codex-engine.md)。

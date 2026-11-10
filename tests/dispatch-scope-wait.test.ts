@@ -32,7 +32,7 @@ async function setup(){
     definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
     await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护者',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:json(definition)}]));
     const settings=await f.app.models.save({profile:{name:'Wait service fixture',api:'openai-completions',auth:'none',baseUrl:'https://example.test/v1',defaultModel:'fixture',models:[{id:'fixture',name:'fixture',enabled:true,contextWindow:200000,maxTokens:1000,reasoning:false}]}}),profile=settings.profiles.find(item=>item.name==='Wait service fixture')!;
-    const registered=await registerExplicitFixtureOwner(f.app,entry.id,{agentId:'cbim:executor',moduleIds:[moduleId],profileId:profile.id,modelId:'fixture'}),ownerSelection=registered.selection,model=await f.app.models.configuration(profile.id,'fixture');
+    const registered=await registerExplicitFixtureOwner(f.app,entry.id,{agentId:'.cbim/team/dev',moduleIds:[moduleId],profileId:profile.id,modelId:'fixture'}),ownerSelection=registered.selection,model=await f.app.models.configuration(profile.id,'fixture');
     const storage=new FileRunStorage();
     const prepare=():Awaited<ReturnType<MemberExecutionPorts['prepare']>>=>({model,create:async(_run,_task,hooks)=>{
       let context:EngineContext;
@@ -40,9 +40,9 @@ async function setup(){
       return new LoopRuntime({storage,directory:memberDirectory,createEngine:()=>engine,acquireLease:async()=>()=>{},onEngineReady:hooks.onEngineReady,onEvent:hooks.onEvent,toolPolicy:async()=>({allow:false})});
     }});
     members=new MemberExecutionManager(workspace,store,{acquire:()=>{leases++;return()=>{leases--}},inspect:run=>storage.read(path.join(memberDirectory,run.binding.taskId,run.binding.runId)),prepare:async()=>prepare(),owners:service.owners,withEngineConfiguration:(reference,_options,use)=>f.app.models.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare}))});await members.initialize();
-    const draft={...plan,assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,criterionIds:['choice'],reason:'验证后交由用户判断'}]};
+    const draft={...plan,assignments:[{agentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,criterionIds:['choice'],reason:'验证后交由用户判断'}]};
     await service.goals.plan(identity,scope.scopeId,runId,'plan',draft);
-    const input={...identity,commandId:'dispatch',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,goal:'核实目标模块',acceptance:[{id:'choice',text:'核实并说明结果'}],prerequisites:[]}};
+    const input={...identity,commandId:'dispatch',expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,goal:'核实目标模块',acceptance:[{id:'choice',text:'核实并说明结果'}],prerequisites:[]}};
     const receipt=await service.dispatchTask(input,scope.scopeId);
     return {input,receipt,members,run:async()=>{await members!.start({...identity,taskId:receipt.taskId,commandId:'start',expectedRevision:1,options:{permission:'read'}});await members!.waitForSettlement({...identity,taskId:receipt.taskId})}};
   };

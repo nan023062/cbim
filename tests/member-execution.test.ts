@@ -25,7 +25,7 @@ async function setup(useBuiltin=false){
   definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
   await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:json(definition)}]));
   // 登记、责任、派发与领取共用真实工作区账本；受控引擎只隔离执行，不补造岗位许可。
-  const agentId=useBuiltin?'cbim:executor':team.input.agentId,{model}=await registerServiceOwner(f.app,workspace,agentId,[moduleId]);
+  const agentId=team.input.agentId,{model}=await registerServiceOwner(f.app,workspace,agentId,[moduleId]);
   const store=workspace.dispatchStore,directory=store.directory,storage=new FileRunStorage(),lease=new WorkspaceExecutionLease();
   const dispatch=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.models),identity={workspaceId:entry.id,rootSessionId:'session-1'},scopeId='member-scope';
   await dispatch.openScope(identity,scopeId,{message:'核实派发产物'},'main-one');
@@ -173,7 +173,7 @@ it.each(['stop','owner'] as const)('已领取但原生尚未登记active时%s中
   }finally{unblock();await f.cleanup()}
 });
 
-it('主实例禁止执行业务，已登记默认执行者岗位按任务独立创建并在周期结束后释放',async()=>{
+it('主实例不创建独立成员，已登记自定义执行岗位按任务独立创建并在周期结束后释放',async()=>{
   const f=await setup(true);try{
     await expect(f.assign('cbim:main')).rejects.toMatchObject({code:'AGENT_NOT_EXECUTABLE'});
     const root=(await f.dispatch.snapshot(f.identity)).root.agent,first=await f.assign(),second=await f.assign();

@@ -8,7 +8,7 @@ import type {Application} from '../src/backend/main/application';
 
 async function registerExecutor(app:Application,workspaceId:string,moduleId:string){
   const settings=await app.models.save({profile:{name:'Conversation identity fixture',api:'openai-completions',auth:'none',baseUrl:'https://example.test/v1',defaultModel:'fixture',models:[{id:'fixture',name:'fixture',enabled:true,contextWindow:200000,maxTokens:1000,reasoning:false}]}}),profile=settings.profiles.find(item=>item.name==='Conversation identity fixture')!;
-  return registerExplicitFixtureOwner(app,workspaceId,{agentId:'cbim:executor',moduleIds:[moduleId],profileId:profile.id,modelId:'fixture'});
+  return registerExplicitFixtureOwner(app,workspaceId,{agentId:'.cbim/team/dev',moduleIds:[moduleId],profileId:profile.id,modelId:'fixture'});
 }
 import {json} from '../src/backend/core/foundation/serialization';
 import type {TaskSpec} from '../src/backend/core/tasks/types';
@@ -54,12 +54,12 @@ it('主实例只调度，显式登记的执行岗位与图根实例分离；关�
     const service=f.app.memberDispatch(entry.id),binding=await service.conversationBinding(task),identity={workspaceId:entry.id,rootSessionId:task.taskId};
     const registered=await registerExecutor(f.app,entry.id,team.input.moduleId),ownerSelection=registered.selection;
     const scope=await service.openScope(identity,'user-cycle-1',{message:'Inspect module behavior'},'conversation-probe-main');
-    await service.goals.plan(identity,scope.scopeId,'conversation-probe-main','conversation-probe-plan',{expectedRevision:1,objective:'Inspect module behavior',constraints:[],criteria:[{id:'verified',text:'Actual evidence',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[team.input.moduleId],ownerSelection,criterionIds:['verified'],reason:'Explicit executor position'}],reason:'Keep main and executor identities separate'});
-    const input={...identity,commandId:'executor-task',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[team.input.moduleId],ownerSelection,goal:'验证模块行为',acceptance:[{id:'verified',text:'提供验证证据'}],prerequisites:[]}};
+    await service.goals.plan(identity,scope.scopeId,'conversation-probe-main','conversation-probe-plan',{expectedRevision:1,objective:'Inspect module behavior',constraints:[],criteria:[{id:'verified',text:'Actual evidence',kind:'evidence'}],assignments:[{agentId:'.cbim/team/dev',moduleIds:[team.input.moduleId],ownerSelection,criterionIds:['verified'],reason:'Explicit executor position'}],reason:'Keep main and executor identities separate'});
+    const input={...identity,commandId:'executor-task',expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[team.input.moduleId],ownerSelection,goal:'验证模块行为',acceptance:[{id:'verified',text:'提供验证证据'}],prerequisites:[]}};
     await expect(service.dispatchTask({...input,commandId:'invalid-self',task:{...input.task,assigneeAgentId:'cbim:main'}},scope.scopeId)).rejects.toMatchObject({code:'AGENT_NOT_EXECUTABLE'});
     const receipt=await service.dispatchTask(input,scope.scopeId);
     const graph=await service.snapshot(identity),executed=graph.tasks.find(item=>item.taskId===receipt.taskId)!;
-    expect(executed.scopeId).toBe(scope.scopeId);expect(executed.assignee.agentId).toBe('cbim:executor');
+    expect(executed.scopeId).toBe(scope.scopeId);expect(executed.assignee.agentId).toBe('.cbim/team/dev');
     expect(executed.assignee.agentInstanceId).not.toBe(binding.agentInstanceId);
     expect(executed.assignee.agentSessionId).not.toBe(binding.agentSessionId);
     expect(graph.edges).toMatchObject([{fromNodeId:graph.root.nodeId,toNodeId:executed.nodeId,kind:'dispatch'}]);
@@ -88,7 +88,7 @@ it('知识结构异常仍可登记主实例进行诊断，正式执行角色注�
     await workspace.commit(request(initial,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'Maintainer',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:json(definition)}]));
     const registered=await registerExecutor(f.app,entry.id,moduleId),ownerSelection=registered.selection,service=f.app.memberDispatch(entry.id),identity={workspaceId:entry.id,rootSessionId:'diagnosis'};
     const scope=await service.openScope(identity,'diagnosis-scope',{message:'Diagnose invalid knowledge'},'diagnosis-main');
-    await service.goals.plan(identity,scope.scopeId,'diagnosis-main','diagnosis-plan',{expectedRevision:1,objective:'Diagnose invalid knowledge',constraints:[],criteria:[{id:'verified',text:'Evidence',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,criterionIds:['verified'],reason:'Registered position'}],reason:'Freeze valid intent before injecting knowledge corruption'});
+    await service.goals.plan(identity,scope.scopeId,'diagnosis-main','diagnosis-plan',{expectedRevision:1,objective:'Diagnose invalid knowledge',constraints:[],criteria:[{id:'verified',text:'Evidence',kind:'evidence'}],assignments:[{agentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,criterionIds:['verified'],reason:'Registered position'}],reason:'Freeze valid intent before injecting knowledge corruption'});
     const snapshot=await workspace.snapshot();
     const invalid={...snapshot,validation:{...snapshot.validation!,structural:false}};
     // 先建立合法岗位和计划，再在真实知识读取锁中注入损坏；避免被更早的缺 scope/岗位门禁遮蔽。
@@ -97,8 +97,8 @@ it('知识结构异常仍可登记主实例进行诊断，正式执行角色注�
     try{
       const binding=await service.conversationBinding({mode:'chat',taskId:identity.rootSessionId,workspaceId:entry.id,root:workspace.entry.path,goal:'诊断知识异常',agentId:'cbim:main',moduleIds:[],acceptance:[]});
       expect((await service.snapshot(identity)).root.agent.agentInstanceId).toBe(binding.agentInstanceId);
-      await expect(service.createMember({...identity,commandId:'formal-member',agentId:'cbim:executor'})).rejects.toMatchObject({code:'KNOWLEDGE_INVALID'});
-      await expect(service.dispatchTask({...identity,commandId:'formal-task',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,goal:'执行模块任务',acceptance:[{id:'verified',text:'验证结果'}],prerequisites:[]}},scope.scopeId)).rejects.toMatchObject({code:'KNOWLEDGE_INVALID'});
+      await expect(service.createMember({...identity,commandId:'formal-member',agentId:'.cbim/team/dev'})).rejects.toMatchObject({code:'KNOWLEDGE_INVALID'});
+      await expect(service.dispatchTask({...identity,commandId:'formal-task',expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,goal:'执行模块任务',acceptance:[{id:'verified',text:'验证结果'}],prerequisites:[]}},scope.scopeId)).rejects.toMatchObject({code:'KNOWLEDGE_INVALID'});
       expect((await service.snapshot(identity)).tasks).toEqual([]);
     }finally{spy.mockRestore();sourceSpy.mockRestore()}
   }finally{await f.cleanup()}

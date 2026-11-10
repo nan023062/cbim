@@ -1,6 +1,6 @@
 /**
  * 作用定位：严格读取三种受支持 SSE 协议的请求用量，并暂存终态帧供可靠结算后交付。
- * 设计原因：Pi 的展示统计会为缺字段补零，不能用作预算依据；缓存输入与推理输出按协议计一次，断流和冲突保持未知。
+ * 设计原因：引擎展示统计可能为缺字段补零，不能用作预算依据；缓存输入与推理输出按协议计一次，断流和冲突保持未知。
  */
 import {requestBudgetUsageSchema,type RequestBudgetUsage,type RequestBudgetModel} from '../../tasks/model-request-budget';
 

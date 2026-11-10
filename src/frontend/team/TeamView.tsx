@@ -1,6 +1,7 @@
 /**
  * 作用定位：静态团队架构、知识编辑与人才市场入口；独立打开角色 Session 履历和项目岗位登记。
  * 设计原因：项目组织树隐藏内置角色，完整能力模型与 Skill 父链保留；长期岗位、运行实例与静态能力不能混成一棵树；岗位仅登记采纳与状态，编辑和导入交给预览事务，浏览与登记不授权执行。
+ * 传递静态 Agent 的默认引擎/模型到岗位登记入口，图谱展示不启动运行或改写历史岗位。
  */
 import React,{useEffect,useMemo,useState,type ReactNode} from 'react';
 import type {Snapshot,WorkspaceView} from '../../bridge/contracts/workspace';
@@ -48,7 +49,7 @@ export function TeamView({snapshot,workspace,refresh}:{snapshot?:Snapshot;worksp
       {isGroup&&expanded&&<div className="team-tree-children">{item.children.map(branch)}</div>}
     </div>;
   }
-  if(members)return <div className="view-page team-management"><WorkspaceMembers key={JSON.stringify([workspace.id,workspace.instanceId])} workspace={workspace} agents={Object.values(model.nodes).filter(item=>item.kind==='agent'||item.id==='cbim:executor').map(item=>({id:item.id,name:item.name}))} onClose={()=>setMembers(false)}/></div>;
+  if(members)return <div className="view-page team-management"><WorkspaceMembers key={JSON.stringify([workspace.id,workspace.instanceId])} workspace={workspace} agents={Object.values(model.nodes).filter(item=>item.kind==='agent').map(item=>({id:item.id,name:item.name,runtime:item.runtime}))} onClose={()=>setMembers(false)}/></div>;
   return <div className="view-page team-management">
     <div className="view-heading"><div><p className="overline">团队 / 静态能力架构</p><h1>团队组织架构</h1><p>展示项目自定义成员与共享 Skill，按团队层级排列。内置角色仍可调度，历史在独立入口查看。</p></div><span className="subtle-badge">{agents.length} 位自定义成员</span></div>
     <div className="team-toolbar">

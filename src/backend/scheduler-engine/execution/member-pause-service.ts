@@ -28,9 +28,9 @@ export class MemberPauseService {
     const ports=this.available(),selected=memberPauseSelection(state,scope,pause);
     for(const {task,run}of selected.checkpoints)await verifyMemberCheckpointHistory(this.owner,task,run,ports,()=>ports.assertCurrent(),state.runs);
   }
-  /** 外层短占用包住知识与模型快照；use 可以读 Store 或提交事务，不能将返回值保留为后续启动许可。 */
-  async withContext<T>(request:GoalContinuationRequest,alive:()=>void,use:(context:OwnerExecutionContext)=>Promise<T>):Promise<T>{
-    const ports=this.available(),assert=()=>{this.owner.assert();ports.assertCurrent();alive()};assert();const release=ports.acquireRead();
+  /** 预检取得短读占用；可信 beforeRun 已持主运行占用，不能再次领取与自身写租约冲突的读锁。该标记不是工具输入。 */
+  async withContext<T>(request:GoalContinuationRequest,alive:()=>void,use:(context:OwnerExecutionContext)=>Promise<T>,mainLeaseHeld=false):Promise<T>{
+    const ports=this.available(),assert=()=>{this.owner.assert();ports.assertCurrent();alive()};assert();const release=mainLeaseHeld?()=>{}:ports.acquireRead();
     try{return await this.owners.withContext(state=>{const scope=this.scope(state,request);return this.owners.selections(memberPauseSelection(state,scope,scope.wait!.memberPause!).tasks)},use,assert)}finally{release()}
   }
   /** 在已持有外层快照的最终状态中核验；不升级成员权限、不刷新旧 native 或文件指纹。 */

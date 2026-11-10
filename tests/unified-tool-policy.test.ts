@@ -39,14 +39,14 @@ test('real Pi executor routes knowledge commit through read, ask and execute mod
     const definition=JSON.parse(initial.files.find(file=>file.path===modulePath)!.text);
     definition.maintenance={bindingId:'policy-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'policy-review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
     await ws.commit(request(initial,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
-    const profile=models.profiles.find(item=>item.name==='Policy executor fixture')!,registered=await registerExplicitFixtureOwner(f.app,entry.id,{agentId:'cbim:executor',moduleIds:[team.input.moduleId],profileId:profile.id,modelId:'policy-model'}),ownerSelection=registered.selection;
+    const profile=models.profiles.find(item=>item.name==='Policy executor fixture')!,registered=await registerExplicitFixtureOwner(f.app,entry.id,{agentId:'.cbim/team/dev',moduleIds:[team.input.moduleId],profileId:profile.id,modelId:'policy-model'}),ownerSelection=registered.selection;
     const dispatch=f.app.memberDispatch(entry.id),manager=f.app.memberExecution(entry.id),identity={workspaceId:entry.id,rootSessionId:'policy-root'};
     for(const permission of ['read','ask','execute'] as const){
       turn=0;
       const snap=await ws.snapshot();args={workspaceId:entry.id,instanceId:ws.instanceId,revision:snap.revision,requestId:randomUUID(),changes:[]};
       const scope=await dispatch.openScope(identity,'policy-'+permission,{message:'Inspect authorization receipts'},'policy-main-'+permission);
-      await dispatch.goals.plan(identity,scope.scopeId,'policy-main-'+permission,'policy-plan-'+permission,{expectedRevision:1,objective:'Inspect authorization receipts',constraints:[],criteria:[{id:'receipt',text:'Actual tool authorization receipt',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[team.input.moduleId],ownerSelection,criterionIds:['receipt'],reason:'Registered executor'}],reason:'Explicit authorization probe'});
-      const assigned=await dispatch.dispatchTask({...identity,commandId:'assign-'+permission,expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[team.input.moduleId],ownerSelection,goal:'验证统一知识写入权限',acceptance:[{id:'receipt',text:'记录真实工具授权回执'}],prerequisites:[]}},scope.scopeId);
+      await dispatch.goals.plan(identity,scope.scopeId,'policy-main-'+permission,'policy-plan-'+permission,{expectedRevision:1,objective:'Inspect authorization receipts',constraints:[],criteria:[{id:'receipt',text:'Actual tool authorization receipt',kind:'evidence'}],assignments:[{agentId:'.cbim/team/dev',moduleIds:[team.input.moduleId],ownerSelection,criterionIds:['receipt'],reason:'Registered executor'}],reason:'Explicit authorization probe'});
+      const assigned=await dispatch.dispatchTask({...identity,commandId:'assign-'+permission,expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[team.input.moduleId],ownerSelection,goal:'验证统一知识写入权限',acceptance:[{id:'receipt',text:'记录真实工具授权回执'}],prerequisites:[]}},scope.scopeId);
       const taskIdentity={...identity,taskId:assigned.taskId};
       const run=await manager.start({...taskIdentity,commandId:'start-'+permission,expectedRevision:1,options:{permission,turnTimeoutMs:20000}});
       if(permission==='ask'){
@@ -56,7 +56,7 @@ test('real Pi executor routes knowledge commit through read, ask and execute mod
       await manager.waitForSettlement(taskIdentity);
       const result=await new FileRunStorage().read(path.join(f.user,entry.id,'dispatch','runs','tasks',assigned.taskId,run.runId));
       expect(result.status,JSON.stringify(result.events.at(-1))).toBe('completed');
-      expect(result.memberBinding).toMatchObject({...taskIdentity,agentId:'cbim:executor',runId:run.runId});
+      expect(result.memberBinding).toMatchObject({...taskIdentity,agentId:'.cbim/team/dev',runId:run.runId});
       expect(result.toolReceipts,JSON.stringify(result.events.filter(e=>e.type.startsWith('tool.')))).toMatchObject([{toolCallId:'knowledge-write',outcome:permission==='read'?'denied':'succeeded',workspaceId:entry.id,runId:run.runId,effects:['knowledge-write']}]);
       expect((await manager.inspect(taskIdentity)).task.assignee.agentInstanceId).not.toBe((await dispatch.snapshot(identity)).root.agent.agentInstanceId);
       await dispatch.closeScope(identity,scope.scopeId,'cancelled');
@@ -65,7 +65,7 @@ test('real Pi executor routes knowledge commit through read, ask and execute mod
   }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}
 },60000);
 
-test.each(['team','auto'] as const)('real Pi %s main governs knowledge with actual authorization and mode-specific completion',async mode=>{
+test.each(['team','auto'] as const)('real Pi %s main governs knowledge with actual authorization and completes in the main session',async mode=>{
   const f=await fixture();let turn=0,args:Record<string,unknown>={};
   const advertisedTools:string[][]=[],transportErrors:unknown[]=[];
   const server=http.createServer(async(req,res)=>{
@@ -103,13 +103,12 @@ test.each(['team','auto'] as const)('real Pi %s main governs knowledge with actu
       expect((await ws.snapshot()).files.find(item=>item.path===file.path)!.text.includes(marker)).toBe(permission!=='read');
       expect(manager.pendingApprovals(run.taskId)).toEqual([]);
       expect((await f.app.memberDispatch(entry.id).snapshot({workspaceId:entry.id,rootSessionId:run.taskId})).tasks).toEqual([]);
-      await expect.poll(async()=>(await ws.dispatchStore.read()).scopes?.find(scope=>scope.rootSessionId===run.taskId)?.outcome,{timeout:5000}).toBe(mode==='auto'?'completed':'failed');
-      for(const names of advertisedTools.slice(requestStart))expect(names.includes('write')).toBe(mode==='auto'&&permission!=='read');
+      await expect.poll(async()=>(await ws.dispatchStore.read()).scopes?.find(scope=>scope.rootSessionId===run.taskId)?.outcome,{timeout:5000}).toBe('completed');
+      for(const names of advertisedTools.slice(requestStart))expect(names.includes('write')).toBe(permission!=='read');
     }
     expect(advertisedTools.length).toBeGreaterThanOrEqual(6);
     for(const names of advertisedTools){
       expect(names).toEqual(expect.arrayContaining(['cbim_knowledge_commit','cbim_object_preview','cbim_object_commit','cbim_dispatch_task']));
-      if(mode==='team')expect(names.filter(name=>['write','edit','bash'].includes(name))).toEqual([]);
     }
     expect(transportErrors).toEqual([]);
   }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}

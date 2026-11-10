@@ -15,14 +15,14 @@ async function setup(){
   const definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
   await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
-  await registerServiceOwner(f.app,workspace,'cbim:executor',[team.input.moduleId]);
+  await registerServiceOwner(f.app,workspace,'.cbim/team/dev',[team.input.moduleId]);
   const store=workspace.dispatchStore,directory=store.directory,service=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.models);
   const identity={workspaceId:entry.id,rootSessionId:'root-one'};
   const ownerSelection=(await service.owners.discover([team.input.moduleId])).groups[0].selection!;
-  const input=(commandId:string,agentId='cbim:executor',rootSessionId=identity.rootSessionId)=>({...identity,rootSessionId,commandId,expectedParentRevision:1,task:{assigneeAgentId:agentId,moduleIds:[team.input.moduleId],ownerSelection,goal:'验证模块行为',acceptance:[{id:'evidence',text:'提交验证证据'}],prerequisites:[]}});
+  const input=(commandId:string,agentId='.cbim/team/dev',rootSessionId=identity.rootSessionId)=>({...identity,rootSessionId,commandId,expectedParentRevision:1,task:{assigneeAgentId:agentId,moduleIds:[team.input.moduleId],ownerSelection,goal:'验证模块行为',acceptance:[{id:'evidence',text:'提交验证证据'}],prerequisites:[]}});
   const openPlanned=async(scopeId:string)=>{
     const runId='main-'+scopeId;await service.openScope(identity,scopeId,{message:'验证模块行为'},runId);
-    return service.goals.plan(identity,scopeId,runId,'plan-'+scopeId,{expectedRevision:1,objective:'验证模块行为',constraints:[],criteria:[{id:'evidence',text:'提交验证证据',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[team.input.moduleId],ownerSelection,criterionIds:['evidence'],reason:'由当前负责岗位执行'}],reason:'保留真实目标计划后派发'});
+    return service.goals.plan(identity,scopeId,runId,'plan-'+scopeId,{expectedRevision:1,objective:'验证模块行为',constraints:[],criteria:[{id:'evidence',text:'提交验证证据',kind:'evidence'}],assignments:[{agentId:'.cbim/team/dev',moduleIds:[team.input.moduleId],ownerSelection,criterionIds:['evidence'],reason:'由当前负责岗位执行'}],reason:'保留真实目标计划后派发'});
   };
   return {...f,entry,workspace,team,directory,store,service,identity,input,openPlanned,cleanup:async()=>{await store.close();await f.cleanup()}};
 }
@@ -50,7 +50,7 @@ it('同一用户周期幂等复用，主会话周期互斥；不同主会话隔�
     const other={...f.identity,rootSessionId:'root-two'};
     await f.service.openScope(other,'scope-two');
     expect((await f.service.snapshot(other)).root.agent.agentInstanceId).not.toBe(root.agent.agentInstanceId);
-    await expect(f.service.dispatchTask(f.input('wrong-root','cbim:executor','root-two'),'scope-one')).rejects.toMatchObject({code:'DISPATCH_SCOPE_IDENTITY'});
+    await expect(f.service.dispatchTask(f.input('wrong-root','.cbim/team/dev','root-two'),'scope-one')).rejects.toMatchObject({code:'DISPATCH_SCOPE_IDENTITY'});
     const closed=await f.service.closeScope(f.identity,'scope-one','completed');
     expect(await f.service.closeScope(f.identity,'scope-one','cancelled')).toEqual(closed);
     await expect(f.service.openScope(f.identity,'scope-one')).rejects.toMatchObject({code:'DISPATCH_SCOPE_CLOSED'});

@@ -51,7 +51,7 @@ it('main tools discover real member summaries and module ownership without retur
   const next=decoded(await f.tools.call('cbim_module_owner_inspect',{members:true,offset:1,limit:1,expectedRegistryCursor:page.registryCursor},signal()));expect(next.memberPage.items[0].memberId).toBe(f.second.receipt.memberId);
   const modules=decoded(await f.tools.call('cbim_module_owner_inspect',{moduleIds:[f.moduleId]},signal()));expect(modules.page.items[0].binding).toBeNull();
   // 未绑定时同时报告责任缺口和待核实的模型，工具层仍不得返回能力正文或凭据。
-  expect(modules.execution.groups).toEqual([{moduleIds:[f.moduleId],issues:[{code:'OWNER_UNASSIGNED',message:expect.any(String)},{code:'OWNER_MODEL_UNRESOLVED',message:expect.stringContaining('尚无负责岗位')}]}]);
+  expect(modules.execution.groups).toEqual([{moduleIds:[f.moduleId],execution:'main',agentId:'cbim:main',issues:[]}]);
   for(const privateField of ['effectiveSkills','apiKey','baseUrl','principles'])expect(JSON.stringify(modules)).not.toContain(privateField);
   const metadata=f.tools.list();expect(metadata).toHaveLength(4);for(const tool of metadata){expect(tool.version).toBe(1);expect(tool.outputSchema).toBeDefined();expect(tool.cancellation.mode).toBe('preflight_only')}
 });

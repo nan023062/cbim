@@ -75,6 +75,7 @@ try{
     await members().getByRole('textbox',{name:'岗位名称',exact:true}).fill(name);
     await members().getByRole('textbox',{name:'岗位职责',exact:true}).fill('维护所选模块的实现与验证。');
     await members().getByRole('textbox',{name:'变更原因',exact:true}).fill('Issue #9：从模块负责人入口明确登记。');
+    await members().getByRole('combobox',{name:'Agent Loop 引擎',exact:true}).selectOption('pi');
     await members().getByRole('combobox',{name:'岗位模型',exact:true}).selectOption(JSON.stringify([seeded.profileId,seeded.modelId]));
     await members().getByTestId('workspace-member-preview').click();await members().getByTestId('workspace-member-commit').waitFor();
     assert.equal((await list()).total,expectedTotal-1);const previousOwner=(await detail()).view.binding?.ownerMemberId;
@@ -108,7 +109,7 @@ try{
   await ownerSelect().selectOption('agent:cbim:executor');await members().getByTestId('workspace-member-preview').waitFor();
   await until(()=>members().getByTestId('workspace-member-preview').isEnabled(),'取消场景表单就绪');
   await members().getByTestId('workspace-member-preview').click();
-  await until(async()=>(await members().innerText()).includes('请明确选择岗位模型'),'未选模型明确提示');
+  assert.equal(await members().getByRole('combobox',{name:'Agent Loop 引擎',exact:true}).evaluate(node=>(node as HTMLSelectElement).validity.valueMissing),true);
   assert.equal(await commits('workspace.members.preview'),0);assert.equal(await commits('workspace.members.commit'),0);
   await members().getByRole('button',{name:'返回模块负责人',exact:true}).click();
   await until(()=>ownerSelect().isEnabled(),'取消返回原模块');assert.equal((await list()).total,0);assert.equal((await detail()).view.binding,null);

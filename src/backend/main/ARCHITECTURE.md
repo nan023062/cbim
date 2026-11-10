@@ -172,7 +172,7 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 - [governance/](governance/ARCHITECTURE.md)：工作区模块知识治理服务、可信桌面操作与独立主运行端口。登记保护、决定及实施只属桌面；模型仅可读取、观察、提案和核查回执；反馈来源在批准与实施前串行复核，未知不重放。
 - [ipc/](ipc/ARCHITECTURE.md)：应用 action 路由；等待资料独立导入/目录/取消入口不启动模型，受理只读保存快照。队列插入传递原expectedRunId，由调度拒绝缺失、过期及停止。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。 dispatch.ownerInspect 只读核原任务并返回当前观察；正式派发必须显式绑定主周期。 dispatch.commandReport 固定原工作区、主根、运行和调用，桌面与模型共用同一只读服务。 五项影响观察／处置／原回执／历史／关联入口相互分开，查询不启动新任务；保存只接受本机显式决定。 四个文件报告/补偿入口固定原调用或原命令；actor 由桌面入口注入，查询不启动文件操作，补偿不得改变目标路径或内容。
 - [persistence/](persistence/ARCHITECTURE.md)：本机持久化适配：知识事务、运行日志、对话附件、模型配置。保留原数据路径与格式，目录调整不迁移用户数据。
-- [platform/](platform/ARCHITECTURE.md)：本机路径、系统锁、凭据加密、终端与工具访问检查。固定根有界读取并核前后句柄/路径，拒绝链接、越界和Windows备用数据流；JSON验证由同一Buffer计算指纹和结构结论，正文不出端口。原生历史不完整拒绝恢复，不承诺外部原子隔离。 范围模式用Win32读取/枚举句柄与LPAC私有快照，原工程不扩ACL。 ArtifactFileService 只观察明确原调用的有界文件，独立返回缺失、不可信和当前字节；路径与链接检查不宣称操作系统隔离。 独立 utility 持有 Win32 目录与文件句柄，执行单次有界替换、flush 与读回；私有 blob 保留真实 before，进程退出不表示内容回滚。另有独立 LPAC/Job Node 平台端口，私有快照与输出分权、真实进程树收束；尚未装配为模型命令或任务授权。
+- [platform/](platform/ARCHITECTURE.md)：本机路径、系统锁、凭据加密、终端与工具访问检查。固定根有界读取并核前后句柄/路径，拒绝链接、越界和Windows备用数据流；JSON验证由同一Buffer计算指纹和结构结论，正文不出端口。原生历史不完整拒绝恢复，不承诺外部原子隔离。 原生指纹固定 Pi/Claude/Codex 格式及受管目录，Codex 另核 metadata 和 rollout 文件名。 范围模式用Win32读取/枚举句柄与LPAC私有快照，原工程不扩ACL。 ArtifactFileService 只观察明确原调用的有界文件，独立返回缺失、不可信和当前字节；路径与链接检查不宣称操作系统隔离。 独立 utility 持有 Win32 目录与文件句柄，执行单次有界替换、flush 与读回；私有 blob 保留真实 before，进程退出不表示内容回滚。另有独立 LPAC/Job Node 平台端口，私有快照与输出分权、真实进程树收束；尚未装配为模型命令或任务授权。
 - [resources/](resources/ARCHITECTURE.md)：链接器、人才和完整业务模板共用的本地/远端资源仓库。静态资料单次HTTP捕获前后核授权与共享代际，正文快照不安装执行。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。 GitHub 反馈采用独立直连服务，设备授权和原提交账本由本机管理；固定目标、跨会话去重、未知只核实，成功不回传 Issue 链接或开发进度。
 - [workspace/](workspace/ARCHITECTURE.md)：本机工作区、静态编辑与受控来源协调。获取工作区锁后在唯一DispatchStore核身份、恢复知识和来源，再发布服务。岗位和负责人以同知识快照明确采纳；首次真实观察与消费者同事务保存。来源、能力、模型分别展示，不以登记回执启动实例或改写旧任务。 负责岗位和模块责任只读发现供实际主工具调用；当前配置观察与历史执行事实分开。 原知识事务适配复用现有串行 journal 核验，固定计划与旧实例只读；不提交、刷新、恢复或修剪目录。 ControlledFiles 连接原成员授权、唯一 Store、文件平台与私有备份；原not_applied与真实退出才解除运行屏障，显式补偿重新核文件身份/摘要/关闭周期，未知不重试。
 
@@ -291,7 +291,7 @@ note for execution "主 chat 分别注入 feedbackTools 与 feedbackStatus；新
 
 `createMemberServices` 在同一 DispatchStore 上构造岗位及 `ModuleOwnerships`，Application 按工作区生命周期注册和移除服务。六个桌面入口与主工具复用同一责任事务，不创建第二份责任文件，不改知识或实际派发。主运行工厂在 Runtime.beforeRun 已登记周期后，经 AutoCollaboration 的实际主工具上下文取得 scope/run 与停止屏障，再构造四工具端口；成员、CLI 和缺少真实绑定的运行不注册这些工具。
 
-桌面提交来源由 IPC 注入 local_desktop/explicit_submit；主提交来源由当前主实例、会话、周期和 toolCallId 生成。原命令优先只读恢复，未知结果不能自动换命令重做。岗位 active 状态及责任关系仍需实际能力、来源和模型核验；新业务缺负责人时拒绝，不回退默认执行者。
+桌面提交来源由 IPC 注入 local_desktop/explicit_submit；主提交来源由当前主实例、会话、周期和 toolCallId 生成。原命令优先只读恢复，未知结果不能自动换命令重做。已配置自定义岗位时，active 状态及责任关系仍需实际能力、来源和模型核验。未指定自定义岗位的新业务由主 Agent 在当前会话执行，不回退已退役的默认执行者。
 
 ## 岗位模型与正式领取
 
@@ -369,3 +369,7 @@ CSV 能力由同一成员工厂的真实平台实现公开；知识声明、岗�
 ## 原隔离执行核实与清理
 
 Application按当前工作区装配唯一IsolatedExecutions，共享DispatchStore、inspectMember和WorkspaceExecutionLease。关闭先排空成员、再等待隔离清理账本、最后释放工作区锁；未知物理退出保持占用并允许再次原关闭。
+
+### 多引擎装配
+
+Application 发送时固定公开 engine，执行工厂核对它与所选供应商一致；配置被改到另一引擎时拒绝旧排队请求。成员使用自己采纳的模型及引擎，主选型不覆盖。member-dispatch 按真实引擎提供能力预检，并按受管目录把原生指纹读取交给对应格式适配。

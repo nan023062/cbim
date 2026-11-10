@@ -33,9 +33,9 @@ it('真实知识查询、内置资料及所有Skill别名保留原输出，内�
     expect(found.revision).toBe(snapshot.revision);expect(found.files.length).toBeLessThan(snapshot.files.length);expect(found.validation).toBeUndefined();
     accepts(moduleRegistryOutputSchema,await call('cbim_module_registry'));
     const module=accepts(moduleGetOutputSchema,await call('cbim_module_get',{id:seeded.input.moduleId}));expect(module.workflows[0].inherited).toBe(false);
-    const registry=accepts(agentRegistryOutputSchema,await call('cbim_agent_registry'));expect(registry.builtinAgents[0].id).toBe('cbim:executor');
+    const registry=accepts(agentRegistryOutputSchema,await call('cbim_agent_registry'));expect(registry.builtinAgents).toEqual([]);
     const own=accepts(agentGetOutputSchema,await call('cbim_agent_get',{id:seeded.input.agentId}));expect(own.definitionFile.path).toContain('/agent.json');expect(own.skills.some((skill:any)=>skill.inherited)).toBe(true);
-    const builtin=accepts(agentGetOutputSchema,await call('cbim_agent_get',{id:'cbim:executor'}));expect(builtin.definitionFile).toBeUndefined();expect(builtin.skills[0].content).toEqual({available:true,text:'# 团队校验规则'});
+    await expect(call('cbim_agent_get',{id:'cbim:executor'})).rejects.toMatchObject({code:'AGENT_RETIRED'});
     await expect(call('cbim_people_list')).rejects.toThrow();
     const catalog=accepts(builtinCatalogOutputSchema,await call('cbim_builtin_catalog'));
     for(const item of catalog.items)accepts(builtinReadOutputSchema,await call('cbim_builtin_read',{id:item.id,expectedVersion:item.version}));

@@ -1,12 +1,13 @@
 /**
  * 作用定位：主进程执行装配，将工作区、已解析模型、原生锁与平台访问策略注入调度引擎。
- * 设计原因：主会话与图根共享实例，在创建 run 前取得全局名额；Team 的业务文件占用为只读，Auto 按真实权限独占。恢复优先读取原周期冻结模式，知识治理仍由独立事务和用户权限保护。
+ * 设计原因：主会话与图根共享实例，在创建 run 前取得全局名额；主会话在两种模式下均按真实权限占用；ask/execute 独占工作区，知识治理仍由独立事务和用户权限保护。
  * 仓库边界：仅桌面主运行工厂捕获已有授权连接，不在准备时联网；CLI/成员和未就绪连接不装配仓库工具。
  * 治理边界：四个观察/提案端口在真实 run 创建时绑定主身份，不共享给成员，不包含桌面批准或实施。
  * 责任边界：负责人四工具在 beforeRun 后从真实主周期捕获身份，查询提供实际岗位选择，提交加入周期在途屏障；主模型选型不覆盖执行成员岗位配置。
  * 附件边界：目标补充直接使用一次准备的图片，模型配置视觉预检在意图前；不重读附件或把图片放入后续协作配置。
  * 请求预算：每个真实主 run 在 beforeRun 后取得冻结账本端口，凭据仅由父进程代理使用。
  * GitHub 反馈：仅桌面主会话捕获已连接目标；端口绑定原 task，会话继续仍核实同一提交账本，成员不继承。连接诊断独立于提交端口，未登录时仍能核实缺失原因。
+ * 运行工厂复核冻结 engine 与当前供应商配置，设置变化不能把排队运行静默改投另一引擎；ready 透传实际原生身份，不以任务 ID 代替。
  */
 import path from 'node:path';
 import {FileRunStorage} from './persistence/tasks/run-storage';
@@ -41,6 +42,7 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles,le
   const storage=new FileRunStorage();
   return new WorkspaceExecutionManager(workspace,storage,async(options,task,launch)=>{
     const llm=options.profileId?await models.resolve(options.profileId,options.model):undefined;
+    if(llm&&options.engine&&options.engine!==(llm.profile.engine??'pi'))throw Error('引擎与所选模型配置不一致，请重新选择');
     if(llm&&(options.provider!=='cbim-'+llm.profile.id||options.model!==llm.profile.model))throw Error('模型配置已变化，请重新启动任务');
     launch.signal.throwIfAborted();
     await requestBudgets?.preflight(task.taskId,launch.scopeId,llm);
@@ -65,11 +67,8 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles,le
     acquireLease:async task=>{
       workspace.assert();
       if(task.workspaceId!==workspace.entry.id||task.root!==workspace.entry.path)throw Error('任务与工作区身份不匹配');
-      // Team 主轮不持业务写工具，其恢复事务还需短读占用。Auto 的 ask/execute 仍独占，不能为修复恢复冲突降成读锁。
-      // 恢复参数可能不携带模式；原周期的冻结策略优先，历史缺省为 Team，与实际工具装配保持一致。
-      const scope=launch.scopeId?(await workspace.dispatchStore.read()).scopes?.find(value=>value.scopeId===launch.scopeId&&value.rootSessionId===task.taskId&&value.workspaceId===task.workspaceId):undefined;
-      const mode=scope?(scope.executionPolicy?.mode??'team'):(options.collaborationMode??'team');
-      const workspacePermission=task.mode==='chat'&&mode==='team'?'read':options.permission??(options.allowNativeExecution?'execute':'read');
+      // 两种协作模式的主轮都能执行；ask/execute 同样独占，等待审批期间也不能放行冲突运行。
+      const workspacePermission=options.permission??(options.allowNativeExecution?'execute':'read');
       const release=acquireExecutionLease(lease,'conversation:'+task.taskId,{workspaceId:workspace.entry.id,rootSessionId:task.taskId,taskId:task.taskId,scopeId:launch.scopeId,requestId:admissionRequestId('main',launch.requestId),agentInstanceId:conversationBinding?.agentInstanceId,source:launch.wait?'main-result':'direct',workspacePermission},admission,launch.wait);
       const directory=path.join(workspace.paths.project(workspace.entry.id),'loop-engine');
       try{const lock=new KernelLock(directory,hash(workspace.entry.id+':'+task.taskId),'loop');return ()=>{try{lock.close()}finally{release()}}}

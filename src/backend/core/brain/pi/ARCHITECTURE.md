@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取消，发送后只凭queued回复确认，不自动重试。工具经一次性gate授权并校验结果；结构验证仅在正式成员有冻结要求及真实端口时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为custom数据，不冒充用户授权。 范围模式只注册cbim工具，转发受限读取与隔离Node的原调用身份。 主角色提示同样要求内置执行角色先登记岗位、模块责任及独立模型，不以缺省角色绕过真实派发门禁。 受控文件工具仅在真实端口存在时安装，维持桥接容量及调用授权，工具结果和实际文件操作终态分别校验。
+Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取消，发送后只凭queued回复确认，不自动重试。工具经一次性gate授权并校验结果；结构验证仅在正式成员有冻结要求及真实端口时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为custom数据，不冒充用户授权。 范围模式只注册cbim工具，转发受限读取与隔离Node的原调用身份。 主角色提示要求未配置自定义岗位时自己执行；内置默认执行角色已退役，不能登记后绕过主会话。 受控文件工具仅在真实端口存在时安装，维持桥接容量及调用授权，工具结果和实际文件操作终态分别校验。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -13,8 +13,6 @@ Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取�
 | [bridge.ts](bridge.ts) | 大脑 执行层：内部知识 Schema/调用的本机临时桥及 Pi 扩展，工具授权先落盘再放行。 |
 | [engine.ts](engine.ts) | Pi 引擎适配器，负责隔离配置、主对话与成员原生会话校验、工具桥与公开执行事件转换。 |
 | [request-budget-bootstrap.ts](request-budget-bootstrap.ts) | 生成早于 Pi 及其 undici 初始化执行的请求转发入口。 |
-| [request-budget-transport.ts](request-budget-transport.ts) | 每运行创建只接受随机令牌的本机供应商代理，逐 HTTP 尝试预留并结算预算。 |
-| [request-budget-usage.ts](request-budget-usage.ts) | 严格读取三种受支持 SSE 协议的请求用量，并暂存终态帧供可靠结算后交付。 |
 | [rpc.ts](rpc.ts) | 大脑 执行层：PiRpc：JSONL 拆包、命令关联、超时与进程结束处理。 |
 | [runtime-config.ts](runtime-config.ts) | 将模型容量和工作预算转换为 Pi 原生运行设置，供每轮隔离进程使用。 |
 
@@ -31,27 +29,7 @@ class N_src_backend_core_brain_pi_bridge_ts["bridge.ts"] {
 }
 ```
 
-```mermaid
-classDiagram
-class N_src_backend_core_brain_pi_bridge_ts["bridge.ts"] {
-  <<module>>
-}
-class N_src_backend_core_brain_pi_bridge_ts_KnowledgeToolSchema["KnowledgeToolSchema"] {
-  <<interface>>
-  +name
-  +description
-  +inputSchema
-}
-N_src_backend_core_brain_pi_bridge_ts ..> N_src_backend_core_brain_pi_bridge_ts_KnowledgeToolSchema : 声明
-class N_src_backend_core_brain_pi_bridge_ts_KnowledgeBridge["KnowledgeBridge"] {
-  <<interface>>
-  +list()
-  +call()
-}
-N_src_backend_core_brain_pi_bridge_ts ..> N_src_backend_core_brain_pi_bridge_ts_KnowledgeBridge : 声明
-```
-
-直接依赖：[../types.ts](../types.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../input-source.ts](../input-source.ts)。
+直接依赖：[../types.ts](../types.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../input-source.ts](../input-source.ts)、[../engine-tools.ts](../engine-tools.ts)。
 
 ### engine.ts
 
@@ -125,7 +103,7 @@ class N_src_backend_core_brain_pi_engine_ts_external_AgentEngine["AgentEngine (�
 N_src_backend_core_brain_pi_engine_ts_external_AgentEngine <|.. N_src_backend_core_brain_pi_engine_ts_PiEngine
 ```
 
-直接依赖：[../types.ts](../types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../llm/ports.ts](../llm/ports.ts)、[../model-errors.ts](../model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../tools/native-tools.ts](../../tools/native-tools.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../llm/request-budget.ts](../llm/request-budget.ts)、[request-budget-transport.ts](request-budget-transport.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)。
+直接依赖：[../engine-tools.ts](../engine-tools.ts)、[../engine-instructions.ts](../engine-instructions.ts)、[../types.ts](../types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../llm/ports.ts](../llm/ports.ts)、[../model-errors.ts](../model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../tools/native-tools.ts](../../tools/native-tools.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../llm/request-budget.ts](../llm/request-budget.ts)、[../llm/request-budget-transport.ts](../llm/request-budget-transport.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)。
 
 ### request-budget-bootstrap.ts
 
@@ -137,47 +115,6 @@ class N_src_backend_core_brain_pi_request_budget_bootstrap_ts["request-budget-bo
 }
 ```
 
-
-### request-budget-transport.ts
-
-```mermaid
-classDiagram
-class N_src_backend_core_brain_pi_request_budget_transport_ts["request-budget-transport.ts"] {
-  <<module>>
-  +requestBudgetEndpoint()
-  +openRequestBudgetTransport()
-}
-```
-
-直接依赖：[../llm/ports.ts](../llm/ports.ts)、[../llm/request-budget.ts](../llm/request-budget.ts)、[request-budget-usage.ts](request-budget-usage.ts)、[../../tasks/model-request-budget-rules.ts](../../tasks/model-request-budget-rules.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../../team/workspace-member-rules.ts](../../team/workspace-member-rules.ts)。
-
-### request-budget-usage.ts
-
-```mermaid
-classDiagram
-class N_src_backend_core_brain_pi_request_budget_usage_ts["request-budget-usage.ts"] {
-  <<module>>
-}
-class N_src_backend_core_brain_pi_request_budget_usage_ts_RequestBudgetUsageStream["RequestBudgetUsageStream"] {
-  +responseBytes
-  +frameBytes
-  +push()
-  +finish()
-  -api
-  -decoder
-  -pending
-  -bytes
-  -result
-  -terminal
-  -started
-  -ended
-  -finishSeen
-  -accept()
-}
-N_src_backend_core_brain_pi_request_budget_usage_ts ..> N_src_backend_core_brain_pi_request_budget_usage_ts_RequestBudgetUsageStream : 声明
-```
-
-直接依赖：[../../tasks/model-request-budget.ts](../../tasks/model-request-budget.ts)。
 
 ### rpc.ts
 
@@ -241,31 +178,13 @@ class N_src_backend_core_brain_pi_bridge_ts["bridge.ts"] {
 class N_src_backend_core_brain_pi_runtime_config_ts["runtime-config.ts"] {
   <<module>>
 }
-class N_src_backend_core_brain_pi_request_budget_transport_ts["request-budget-transport.ts"] {
+class N_src_backend_core_brain_pi_request_budget_bootstrap_ts["request-budget-bootstrap.ts"] {
   <<module>>
 }
 N_src_backend_core_brain_pi_engine_ts ..> N_src_backend_core_brain_pi_rpc_ts : 导入依赖
 N_src_backend_core_brain_pi_engine_ts ..> N_src_backend_core_brain_pi_bridge_ts : 导入依赖
 N_src_backend_core_brain_pi_engine_ts ..> N_src_backend_core_brain_pi_runtime_config_ts : 导入依赖
-N_src_backend_core_brain_pi_engine_ts ..> N_src_backend_core_brain_pi_request_budget_transport_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_brain_pi_engine_ts["engine.ts"] {
-  <<module>>
-}
-class N_src_backend_core_brain_pi_request_budget_bootstrap_ts["request-budget-bootstrap.ts"] {
-  <<module>>
-}
-class N_src_backend_core_brain_pi_request_budget_transport_ts["request-budget-transport.ts"] {
-  <<module>>
-}
-class N_src_backend_core_brain_pi_request_budget_usage_ts["request-budget-usage.ts"] {
-  <<module>>
-}
 N_src_backend_core_brain_pi_engine_ts ..> N_src_backend_core_brain_pi_request_budget_bootstrap_ts : 导入依赖
-N_src_backend_core_brain_pi_request_budget_transport_ts ..> N_src_backend_core_brain_pi_request_budget_usage_ts : 导入依赖
 ```
 
 
@@ -305,7 +224,7 @@ note for bootstrap "只转发原桥的固定路由；不因工具清单上报扩
 
 ### 主调度提示与负责人门禁
 
-Pi 主角色提示与上层真实工具保持一致：查询模块负责岗位、保存匹配目标计划再派发。内置 `cbim:executor` 是可登记静态角色，也须项目岗位、模块责任及独立采纳模型；没有主模型回退或缺省派发。提示只说明边界，实际资格仍由任务服务判定，不将提示文字视为执行授权。
+Pi 主角色提示与上层真实工具保持一致：未配置自定义负责岗位的模块由主 Agent 在当前会话直接实现；只有明确配置的自定义岗位才查询选择并派发。内置 `cbim:executor` 已退役，不能登记为岗位或作为缺省派发。提示只说明边界，实际资格仍由任务服务判定，不将提示文字视为执行授权。
 
 ### 冻结 JSON/CSV/PNG 验证工具接入
 
@@ -401,3 +320,7 @@ PNG继续复用cbim_validation_run及同一gate/call身份。提示明确实际�
 ## 冻结范围成员执行
 
 EngineContext.scopedExecutionTools 存在时 --tools 仅含 cbim_*，全部原生文件与命令未注册；即使伪造名称也不能通过Runtime。范围工具携原callId与AbortSignal，不通过自定义shell执行。
+
+### 共享业务能力
+
+工具路由与业务提示分别由上层 engine-tools.ts、engine-instructions.ts 提供。KnowledgeBridge/KnowledgeToolSchema 仅保留兼容别名；Pi 的 RPC、HTTP 一次性许可和 bootstrap 仍留在本目录。请求预算代理及 SSE 用量解析归 ../llm/，另一引擎不依赖 Pi 实现。

@@ -9,8 +9,10 @@
  * 插入边界：核对原 run、可信周期令牌和发送前停止信号；原生接受后返回真实日志序号，适配器不能伪造该令牌。终态等待在途记录排空，接受后的保存失败仍属未知，不自动重放。
  * 核实边界：历史 reconciledToolIds 仅保留可读；新请求不能据裸调用 ID 续接 unknown。授权记录中的契约版本只取可信工具描述，旧记录不补造版本。
  * 外部写同样受原未知文件影响屏障约束，不因写入 GitHub 而绕过运行内写入禁令。
+ * 引擎切换：主会话沿可靠日志链选择目标引擎自己的原生文件，其他引擎期间的公开记录仅作为资料转交；原生 ID 取目标引擎绑定回执，成员恢复保持冻结引擎。
  */
 import path from 'node:path';
+import {selectEngineSession,type EngineSessionSelection} from './engine-session';
 import {randomUUID} from 'node:crypto';
 import {safeId} from '../foundation/identity';
 import type {RunStorage} from './storage';
@@ -87,8 +89,8 @@ export interface RuntimeOptions {
   createEngine(context:{task:TaskSpec;runId:string}):AgentEngine;
   /** 复用此前纯分类结果授权或审批；没有约定的旧装配可缺 descriptor，不能在此重新解释已给分类。 */
   toolPolicy(call:ToolCall,descriptor?:RunToolDescriptor):Promise<ToolDecision>;
-  /** 引擎成功准备、模型生成前必须完成的可靠启动确认；失败中断本轮，不能由只读观察者代替。 */
-  onEngineReady?(input:{taskId:string;runId:string;sessionFile?:string}):Promise<void>;
+  /** 引擎成功准备后、模型生成前确认启动；nativeSessionId 取已落盘 session.bound，允许 Codex 首次绑定服务端分配的 ID。失败中断本轮。 */
+  onEngineReady?(input:{taskId:string;runId:string;sessionFile?:string;nativeSessionId?:string}):Promise<void>;
   /** 接收已落盘事件；异常被隔离，不能借此回调阻断运行或替代可靠提交。 */
   onEvent?(event:StoredEvent):void;
 }
@@ -218,8 +220,9 @@ export class LoopRuntime {
       control?.signal.throwIfAborted();
       // 先创建尚未启动的适配器，工具装配失败不留下空运行日志。init 成功后必须写入头和真实取消终态，不能直接抛取消而破坏整条会话读取。
       const engine=preparedEngine=this.options.createEngine({task:structuredClone(task),runId});
+      const engineSession:EngineSessionSelection=previous&&!member?await selectEngineSession(engine.kind,previous,id=>this.inspect(task.taskId,id)):{sessionFile:member?.session.sessionFile};
       const journal=this.options.storage.createJournal(directory,task,runId);await journal.init();
-      let boundSessionFile:string|undefined;
+      let boundSessionFile:string|undefined,boundNativeSessionId:string|undefined;
       const pendingTools=new Set<string>();
       // 包含尚在等待策略/人工审批的调用；只看 tool.allowed 会遗漏尚未获得授权的并发写入。
       const activeCalls=new Set<string>();
@@ -259,7 +262,10 @@ export class LoopRuntime {
         controlledFile?.observed(saved.type,saved.data.id,saved.data.isError===true);
         artifactTransition?.observed(saved);
         scopedExecution?.observed(saved.type,saved.data.id);
-        if(event.type==='session.bound'&&typeof event.data.sessionFile==='string')boundSessionFile=event.data.sessionFile;
+        if(event.type==='session.bound'){
+          if(typeof event.data.sessionFile==='string')boundSessionFile=event.data.sessionFile;
+          if(typeof event.data.sessionId==='string')boundNativeSessionId=event.data.sessionId;
+        }
         if(event.type==='tool.finished'&&event.data.receipt){
           const known=calls.get(String(event.data.id))!;
           if(!workflows.length||known.effect||!known.overlappedEffect&&!effectsInFlight.size)taskTools.record(event.data.receipt as import('../tools/types').ToolReceipt,known.generation);
@@ -366,7 +372,7 @@ export class LoopRuntime {
         let failure:unknown;
         try{
           if(control?.signal.aborted)await stop();
-          if(!stopping)await engine.start({task,runId,directory,sessionFile:member?.session.sessionFile??previous?.sessionFile,nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,manifestTools:manifestCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,controlledFileTools:controlledFile,artifactTransitionTools:artifactTransition,scopedExecutionTools:scopedExecution,assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
+          if(!stopping)await engine.start({task,runId,directory,sessionFile:engineSession.sessionFile,engineHandoff:engineSession.handoff,nativeSessionId:previous&&!member?engineSession.nativeSessionId:nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,manifestTools:manifestCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,controlledFileTools:controlledFile,artifactTransitionTools:artifactTransition,scopedExecutionTools:scopedExecution,assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
             call=structuredClone(call);
             if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
             // 验证、采集与停泊先同步预占，再进入策略；短读锁不会绕过求助/检查点的本轮结束门闩。
@@ -415,7 +421,7 @@ export class LoopRuntime {
             return decision;
           }});
           if(control?.signal.aborted)await stop();
-          if(!stopping)await this.options.onEngineReady?.({taskId:task.taskId,runId,sessionFile:boundSessionFile});
+          if(!stopping)await this.options.onEngineReady?.({taskId:task.taskId,runId,sessionFile:boundSessionFile,...(boundNativeSessionId?{nativeSessionId:boundNativeSessionId}:{})});
           if(!stopping&&memberResume)await this.options.assertMemberResumeInputs!();
           if(control?.signal.aborted)await stop();
           result=stopping?{status:'cancelled' as const}:await engine.run(message);

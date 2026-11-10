@@ -17,13 +17,13 @@ import type {MainToolOutputBinding} from '../src/backend/core/tasks/main-tool-ou
 import type {AbandonCheckpointInput,AbandonCheckpointReceipt} from '../src/backend/core/tasks/checkpoint-handoff';
 
 function deferred<T>(){let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>{resolve=r});return {promise,resolve}}
-async function setup(admission?:GlobalRunAdmission){
+async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'codex'){
   const task:TaskSpec={taskId:'conversation-1',workspaceId:'workspace-1',root:'C:/project',mode:'chat',goal:'原任务',agentId:'cbim:main',moduleIds:[],acceptance:[]};
   const identity={workspaceId:task.workspaceId,rootSessionId:task.taskId};
   const agent={agentId:'member',agentInstanceId:'instance',agentSessionId:'session',name:'成员'};
   const graph:GraphSnapshot={version:1,identity,cursor:{...identity,streamId:'stream',seq:1},root:{kind:'session-root',identity,nodeId:'root',agent:{...agent,agentId:'cbim:main',agentSessionId:'root-channel'},revision:1,createdAt:'2026-11-06'},tasks:[],edges:[],agents:[]};
   const lease=new WorkspaceExecutionLease(),done=deferred<void>();let release=()=>{},hooks!:ExecutionCollaboration;
-  const options={provider:'provider',model:'model',profileId:'00000000-0000-4000-8000-000000000001',permission:'ask' as const,allowNativeExecution:true};
+  const options={...(engine?{engine}:{}),provider:'provider',model:'model',profileId:'00000000-0000-4000-8000-000000000001',permission:'ask' as const,allowNativeExecution:true};
   const dispatch={
     abandonCheckpoint:vi.fn<(...args:unknown[])=>Promise<AbandonCheckpointReceipt>>(),
     checkpointAbandonmentReceipt:vi.fn<(...args:unknown[])=>Promise<AbandonCheckpointReceipt|undefined>>(async()=>undefined),
@@ -353,10 +353,27 @@ it('成功关闭门禁失败时保存阻塞原因并关闭失败周期，不能�
   }finally{await f.coordinator.close()}
 });
 
-it.each(['cbim_object_commit','cbim_goal_plan','cbim_goal_review','cbim_dispatch_cancel','cbim_dispatch_replace_dependency','cbim_dispatch_add_dependency','cbim_dispatch_abandon_checkpoint'])('未建计划的%s调用不能绕过为普通聊天成功',async toolName=>{
+it('独立知识治理不强造团队计划，真实总结仍交目标服务核实收尾',async()=>{
   const f=await setup();try{
     f.dispatch.goals.inspect.mockResolvedValue({goal:{}} as any);
-    f.hooks().settled(f.task,f.options,{task:f.task,runId:'parent-run',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[],toolReceipts:[{toolName,effects:toolName==='cbim_object_commit'?['knowledge-write']:['maintenance']} as any]});
+    const summary:RunSummary={task:f.task,runId:'parent-run',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[],toolReceipts:[{toolName:'cbim_object_commit',effects:['knowledge-write']} as any]};
+    f.hooks().settled(f.task,f.options,summary);await vi.waitFor(()=>expect(f.hooks().busy(f.task.taskId)).toBe(false));
+    expect(f.dispatch.goals.block).not.toHaveBeenCalled();expect(f.dispatch.closeScope).toHaveBeenCalledWith(f.graph.identity,expect.any(String),'completed',summary);
+  }finally{await f.coordinator.close()}
+});
+
+it('Codex 主周期的成员回注保持原引擎及模型选型',async()=>{
+  const f=await setup(undefined,'codex');try{
+    await f.assign();f.settleParent();await vi.waitFor(()=>expect(f.graph.tasks[0].status).toBe('running'));f.finishMember(false);
+    await vi.waitFor(()=>expect(f.execution.continueFromResults).toHaveBeenCalledTimes(1));
+    expect(f.execution.continueFromResults.mock.calls[0][2]).toMatchObject({engine:'codex',provider:f.options.provider,model:f.options.model,profileId:f.options.profileId});
+  }finally{await f.coordinator.close()}
+});
+
+it.each(['cbim_goal_plan','cbim_goal_review','cbim_dispatch_cancel','cbim_dispatch_replace_dependency','cbim_dispatch_add_dependency','cbim_dispatch_abandon_checkpoint'])('未建计划的%s调用不能绕过为普通聊天成功',async toolName=>{
+  const f=await setup();try{
+    f.dispatch.goals.inspect.mockResolvedValue({goal:{}} as any);
+    f.hooks().settled(f.task,f.options,{task:f.task,runId:'parent-run',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[],toolReceipts:[{toolName,effects:['maintenance']} as any]});
     await vi.waitFor(()=>expect(f.hooks().busy(f.task.taskId)).toBe(false));
     expect(f.dispatch.goals.block).toHaveBeenCalled();
     expect(f.dispatch.closeScope).toHaveBeenLastCalledWith(f.graph.identity,expect.any(String),'failed');

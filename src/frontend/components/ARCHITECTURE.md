@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-通用展示组件，不持有领域服务与运行状态。
+通用展示组件，不持有领域服务与运行状态。 EngineModelPicker 从用户配置级联引擎/模型，失效选型保留提示而不隐式替换。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -12,6 +12,7 @@
 | --- | --- |
 | [BrandMark.tsx](BrandMark.tsx) | 无业务状态的 CBIM 产品标识，供外壳与欢迎页复用。 |
 | [Empty.tsx](Empty.tsx) | 各页面复用的空状态布局。 |
+| [EngineModelPicker.tsx](EngineModelPicker.tsx) | Agent 编辑和岗位登记共用的引擎/模型级联下拉菜单。 |
 | [graph-view-controls.css](graph-view-controls.css) | 对应界面的布局与视觉样式。 |
 | [GraphViewControls.tsx](GraphViewControls.tsx) | 业务图与团队树共用的局部展开、折叠和字号图标操作。 |
 | [Icon.tsx](Icon.tsx) | 无业务状态的 SVG 图标组件。 |
@@ -42,6 +43,18 @@ class N_src_frontend_components_Empty_tsx["Empty.tsx"] {
 ```
 
 直接依赖：[Icon.tsx](Icon.tsx)。
+
+### EngineModelPicker.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_components_EngineModelPicker_tsx["EngineModelPicker.tsx"] {
+  <<component>>
+  +EngineModelPicker()
+}
+```
+
+直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)。
 
 ### graph-view-controls.css
 
@@ -158,3 +171,7 @@ N_src_frontend_components_RepositoryScopeDetails_tsx ..> N_src_frontend_componen
 显示仓库、链接器、连接实例和操作，但不显示地址/令牌、不提供授权按钮。范围是该次调用的历史记录，不证明当前连接仍可用；资源资料不等于业务文件或验收证据。
 
 `GraphViewControls` 是业务图与团队树共用的纯展示组件，负责 12–20px 字号边界及四个有名称的图标按钮，状态与回调由调用方持有；不访问 IPC、知识或运行时。图内标题使用流式布局，窄栏换行后仍靠右，不覆盖内容。
+
+### 引擎与模型级联
+
+EngineModelPicker 供 Agent 编辑与岗位登记复用。引擎项只来自含启用模型的用户配置，模型项按选定引擎过滤。引擎改变清除旧模型，原选型失效保留提示；选择不会自动提交，父表单仍负责预览和写入。

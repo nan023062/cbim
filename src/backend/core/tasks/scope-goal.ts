@@ -3,7 +3,7 @@
  * 成员等待仅在 awaiting_user 明确保留完整清单；普通审阅、完成和人工决定不授予成员恢复许可。
  * 作用定位：定义调度周期目标的原始输入、版本化计划、审阅证据和持久化转换规则。
  * 设计原因：计划与模型回合分离，原始需求不可改写；业务分配保留负责人选择及可信绑定、可选 Workflow，显式补充使旧计划过期，历史缺省不伪造新身份。
- * 职责边界：主角色可管理模块知识但不能声明执行 Workflow；人工满足项须引用真实决定及显式接续，运行、知识、文件和批准归属仍由调度服务重核，complete 仅是申请。
+ * 职责边界：主角色可直接执行并引用本轮业务工具证据，成员专属 Workflow 仍只绑定成员任务；人工满足项须引用真实决定及显式接续，complete 仅是申请。
  */
 import {automaticExecutionBindingSchema,automaticExecutionBindingMatches} from '../team/automatic-execution';
 import {z} from 'zod';
@@ -24,17 +24,19 @@ export interface DispatchScopeInput {message:string;attachmentIds?:string[]}
 export const dispatchScopeInputSchema=z.object({message,attachmentIds:attachments.optional()}).strict();
 const criterion=z.object({id,text,kind:z.enum(['evidence','human'])}).strict();
 const assignmentFields=z.object({agentId:id,moduleIds:z.array(id).max(50).refine(unique),workflowSelections:workflowSelectionsSchema.optional(),ownerSelection:ownerExecutionSelectionSchema.optional(),criterionIds:z.array(id).min(1).max(50).refine(unique),reason:text}).strict();
-const assignmentSelection=(value:{agentId:string;moduleIds:string[];workflowSelections?:WorkflowSelection[]},context:z.RefinementCtx)=>{try{validateWorkflowSelections(value.moduleIds,value.workflowSelections)}catch{context.addIssue({code:'custom',message:'Workflow 选择不属于目标分配的模块'})}if(value.agentId==='cbim:main'&&value.workflowSelections!==undefined)context.addIssue({code:'custom',message:'主调度知识治理不能声明执行业务 Workflow'})};
+const assignmentSelection=(value:{agentId:string;moduleIds:string[];workflowSelections?:WorkflowSelection[]},context:z.RefinementCtx)=>{try{validateWorkflowSelections(value.moduleIds,value.workflowSelections)}catch{context.addIssue({code:'custom',message:'Workflow 选择不属于目标分配的模块'})}if(value.agentId==='cbim:main'&&value.workflowSelections!==undefined)context.addIssue({code:'custom',message:'主会话直接工作不绑定成员专属 Workflow 执行契约'})};
 // 旧原命令仍可按相同输入查回执；新业务计划的必需选择由工具、服务和 Store 新协议共同限制。
 const assignment=assignmentFields.superRefine((value,context)=>{assignmentSelection(value,context);if(value.agentId==='cbim:main'?value.ownerSelection!==undefined:value.ownerSelection&&(value.ownerSelection.expectedOwners.length!==value.moduleIds.length||!value.moduleIds.every(id=>value.ownerSelection!.expectedOwners.some(owner=>owner.moduleId===id))))context.addIssue({code:'custom',message:'业务分配的负责人选择必须精确覆盖模块，主治理不得携带业务选择'})});
 /** 工具不能指定周期、运行身份或知识版本；这些字段由可信调用入口和知识服务注入。 */
 export const goalPlanInputSchema=z.object({expectedRevision:revision,objective:text,constraints:z.array(text).max(50),criteria:z.array(criterion).min(1).max(50),assignments:z.array(assignment).min(1).max(100),reason:text}).strict();
 const memberEvidence=z.object({kind:z.literal('member-result'),taskId:id,runId:id,resultId:id,planRevision:z.number().int().positive(),toolCallIds:z.array(id).min(1).max(100).refine(unique)}).strict();
 const knowledgeEvidence=z.object({kind:z.literal('main-knowledge'),toolCallIds:z.array(id).min(1).max(100).refine(unique)}).strict();
+/** 主会话业务证据与知识提交分开；只引用本轮真实原生工具，不能冒充成员候选或人工接受。 */
+const mainExecutionEvidence=z.object({kind:z.literal('main-execution'),toolCallIds:z.array(id).min(1).max(100).refine(unique)}).strict();
 const humanDecisionReference=z.object({decisionId:z.string().uuid(),continuationId:z.string().uuid()}).strict();
 /** 仅引用真实记录和已受理接续；Schema 不把 ID 当作批准，可信服务仍须重核当前主体及成果。 */
 const humanEvidence=humanDecisionReference.extend({kind:z.literal('human-decision')}).strict();
-const evidence=z.discriminatedUnion('kind',[memberEvidence,knowledgeEvidence,humanEvidence]);
+const evidence=z.discriminatedUnion('kind',[memberEvidence,knowledgeEvidence,mainExecutionEvidence,humanEvidence]);
 const check=z.object({criterionId:id,outcome:z.enum(['satisfied','unmet','needs_human']),reason:text,evidence:z.array(evidence).max(100)}).strict();
 const superseded=z.object({taskId:id,replacementTaskIds:z.array(id).min(1).max(100).refine(unique),reason:text,humanDecision:humanDecisionReference.optional()}).strict();
 /** memberPause 仅用于 awaiting_user：明确保留可靠检查点和未领取后继，不授权恢复或签署验收。 */
@@ -75,7 +77,7 @@ export const dispatchScopeGoalSchema=z.object({revision,inputRevision:inputRevis
   for(const item of goal.review.checks){
     const human=goal.plan.criteria.find(value=>value.id===item.criterionId)?.kind==='human',refs=item.evidence.filter(value=>value.kind==='human-decision');
     if(item.outcome==='satisfied'&&(!item.evidence.length||human&&refs.length!==1))issue('满足项必须有证据，人工项须引用一次明确人工接续');
-    if(refs.length&&(!human||item.outcome!=='satisfied'||item.evidence.some(value=>value.kind==='main-knowledge')))issue('人工决定仅可用于对应人工项的满足申请，不能代替业务工具或未满足项证据');
+    if(refs.length&&(!human||item.outcome!=='satisfied'||item.evidence.some(value=>value.kind==='main-knowledge'||value.kind==='main-execution')))issue('人工决定仅可用于对应人工项的满足申请，不能代替业务工具或未满足项证据');
   }
   if(goal.review.decision==='complete'&&(goal.review.gaps.length||goal.review.checks.length!==criteria.length||goal.review.checks.some(item=>item.outcome!=='satisfied')))issue('完成申请仍有未满足验收项');
 });

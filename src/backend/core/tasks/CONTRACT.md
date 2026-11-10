@@ -46,7 +46,7 @@ Store 自己标记新事务协议并按历史前缀选择校验，控制面与�
 
 `complete` 只表示模型提交了结构化完成申请。调度服务在主运行实际结束后复核日志和全周期状态，再决定是否允许 completed 关闭；原有成员候选仍保持 `acceptance:not_evaluated`。可信协调器可以单独写入 blocked 理由，保留最后计划和版本，之后不允许继续决策。旧快照保存在同一派发事务日志中，不另复制历史数组。
 
-`DispatchState.scopes` 与 `DispatchMutation.scopes` 是 v1 日志的可选扩展；缺省为旧历史，不伪造迁移。`TaskNode.scopeId` 来自可信主调度入口，模型请求不允许填写。每个新周期任务固定一个非主执行实例；同一个静态角色对应多个任务时实例也不同。无合适自定义角色使用 `cbim:executor`，`cbim:main` 只作为图根调度，不接受新正式执行。
+`DispatchState.scopes` 与 `DispatchMutation.scopes` 是 v1 日志的可选扩展；缺省为旧历史，不伪造迁移。`TaskNode.scopeId` 来自可信主调度入口，模型请求不允许填写。每个新的自定义岗位任务固定一个非主执行实例；同一个静态角色对应多个任务时实例也不同。未配置自定义岗位的工作由主 Agent 在原会话执行，不接受把 `cbim:main` 或已退役的 `cbim:executor` 派成新的正式成员任务。
 
 `dispatch-scope-invariants.ts` 在提交和恢复时验证：每主会话最多一个未关闭周期（active 或 waiting）；主根长期保留；执行实例固定周期和任务；关闭前没有 starting/running；未执行任务和派发信封原子取消，执行实例同批 released 并递增租约。已关闭周期及其任务不再修改，已释放实例和通道不能复活；候选、图节点、会话与证据历史仍保留，结果信封可在之后确认收件。每周期最多 500 个任务，以确保关闭所需的任务取消和实例状态变更不超过现有单批 1000 变更限制。
 
@@ -783,3 +783,11 @@ DispatchScope.executionPolicy 自创建后不可变；goal assignment、TaskNode
 ### 派发回执的纯结构
 
 dispatch-receipt 承载主工具和界面共用的严格派发输出结构；main-tool-output 保持原导出并继续核对 canonical 命令、原请求及业务归属。将纯 DTO 校验与含哈希的业务校验分开，使界面无需后端实现；queued/waiting 仍只表示待办提交。
+
+### 引擎选型的持久化
+
+队列及 scopeContinuationOptions 保留可选 engine；明确发送后不从当前菜单重选。DispatchRun.model 的公开字段白名单允许 engine，并校验 Claude Code 与 Anthropic 协议一致；旧日志不补默认字段、不改变原指纹。
+
+### Codex 首次原生身份
+
+成员启动意图仍以逻辑 agentSessionId 占位；仅 Codex 首次 starting→running 且没有原生文件/检查点恢复时允许采纳真实线程 ID，与 session 记录同事务提交。新 ID 不得已属于其他成员通道；之后固定输入和原文件不可改绑。fresh-context 的 nativeSessionId 是新链启动意图，Codex 实际身份由独立 session.bound 回执确认，不能将意图当作已存在原生文件。

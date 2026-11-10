@@ -21,6 +21,21 @@ async function setup(){
   }catch(error){await f.cleanup();throw error}
 }
 
+it('Team 和 Agent 导出移除本机引擎/模型引用，源定义与专业原则保持原样',async()=>{
+  const f=await setup();try{
+    const snapshot=await f.source.snapshot(),file=snapshot.files.find(item=>item.path===f.team.input.agentId+'/agent.json')!,data=JSON.parse(file.text);
+    data.runtime={engine:'claude-code',profileId:'12345678-1234-1234-1234-123456789012',modelId:'private-local-model'};
+    await f.source.commit(request(snapshot,[{path:file.path,text:json(data)}]));const source=await f.source.snapshot();
+    for(const kind of ['team','agent'] as const){
+      const pack=buildWorkspacePackage(source,{kind,...(kind==='agent'?{objectId:f.team.input.agentId}:{}),name:'portable',summary:''}).package;
+      expect(parseWorkspacePackage(JSON.stringify(pack)).kind).toBe(kind);
+      expect(JSON.stringify(pack)).not.toContain(data.runtime.profileId);expect(JSON.stringify(pack)).not.toContain(data.runtime.modelId);
+      expect(pack.files.filter(item=>item.path.endsWith('/agent.json')).every(item=>!Object.hasOwn(JSON.parse(item.text),'runtime'))).toBe(true);
+    }
+    expect((await f.source.snapshot()).files).toEqual(source.files);
+  }finally{await f.cleanup()}
+});
+
 it('重开后旧已提交包只查原 journal 和索引回执，不复活旧实例未提交计划',async()=>{
   const f=await setup();let reopened:Application|undefined;try{
     const published=await f.publish('team'),done=await f.preview(published.resourceId,{slug:'complete'}),pending=await f.preview(published.resourceId,{slug:'unaccepted'}),receipt=await f.commit(done.planId);

@@ -8,6 +8,7 @@
  * GitHub 反馈：应用独占本机授权与提交服务；主会话只持有固定目标端口，退出先取消网络再排空原提交，未知结果不会自动重放。
  * 模块治理：仅已就绪 Workspace 提供桌面保护与人工决定服务；实际知识实施仍排入原事务队列，重开不执行保存的意图。
  * 岗位责任：恢复前注入唯一派发存储；持锁核实路径后先初始化历史索引，再加载该存储并恢复来源事务。来源、岗位与模块负责人共用原命令查询；关闭先排空知识结算再关闭该存储。登记与来源采纳不创建运行实例，不改变任务派发或模型策略。
+ * 发送入口同时固定引擎与模型引用，拒绝与用户模型目录不一致的引擎选项。
  */
 import path from 'node:path';
 import type {ControlledFileTransport} from './platform/controlled-file-protocol';
@@ -159,7 +160,8 @@ export class Application implements ApplicationServices {
   async modelOptions(input:any={}){
     if(input?.provider&&input?.model&&!input.profileId)return input;
     const {profile}=await this.models.resolve(input?.profileId,input?.model);
-    return {...input,provider:'cbim-'+profile.id,model:profile.model,profileId:profile.id};
+    if(input.engine&&input.engine!==(profile.engine??'pi'))throw Error('引擎与所选模型配置不一致，请重新选择');
+    return {...input,engine:profile.engine??'pi',provider:'cbim-'+profile.id,model:profile.model,profileId:profile.id};
   }
   /** 发送前验证图片能力；队列只保存工作区快照 ID，启动时再检查当前模型。 */
   async chatOptions(id:string,input:any,attachments:unknown){

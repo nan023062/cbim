@@ -105,7 +105,7 @@ note for execution "主 chat 分别注入 feedbackTools 与 feedbackStatus；新
 
 `createMemberServices` 在同一 DispatchStore 上构造岗位及 `ModuleOwnerships`，Application 按工作区生命周期注册和移除服务。六个桌面入口与主工具复用同一责任事务，不创建第二份责任文件，不改知识或实际派发。主运行工厂在 Runtime.beforeRun 已登记周期后，经 AutoCollaboration 的实际主工具上下文取得 scope/run 与停止屏障，再构造四工具端口；成员、CLI 和缺少真实绑定的运行不注册这些工具。
 
-桌面提交来源由 IPC 注入 local_desktop/explicit_submit；主提交来源由当前主实例、会话、周期和 toolCallId 生成。原命令优先只读恢复，未知结果不能自动换命令重做。岗位 active 状态及责任关系仍需实际能力、来源和模型核验；新业务缺负责人时拒绝，不回退默认执行者。
+桌面提交来源由 IPC 注入 local_desktop/explicit_submit；主提交来源由当前主实例、会话、周期和 toolCallId 生成。原命令优先只读恢复，未知结果不能自动换命令重做。已配置自定义岗位时，active 状态及责任关系仍需实际能力、来源和模型核验。未指定自定义岗位的新业务由主 Agent 在当前会话执行，不回退已退役的默认执行者。
 
 ## 岗位模型与正式领取
 
@@ -183,3 +183,7 @@ CSV 能力由同一成员工厂的真实平台实现公开；知识声明、岗�
 ## 原隔离执行核实与清理
 
 Application按当前工作区装配唯一IsolatedExecutions，共享DispatchStore、inspectMember和WorkspaceExecutionLease。关闭先排空成员、再等待隔离清理账本、最后释放工作区锁；未知物理退出保持占用并允许再次原关闭。
+
+### 多引擎装配
+
+Application 发送时固定公开 engine，执行工厂核对它与所选供应商一致；配置被改到另一引擎时拒绝旧排队请求。成员使用自己采纳的模型及引擎，主选型不覆盖。member-dispatch 按真实引擎提供能力预检，并按受管目录把原生指纹读取交给对应格式适配。

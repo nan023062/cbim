@@ -1,8 +1,9 @@
 /**
- * 范围工具端口仅由正式成员Runtime注入；Pi据此移除全部原生文件与命令，不能由模型消息声明获得。
+ * 范围工具端口仅由正式成员Runtime注入；各引擎据此移除全部原生文件与命令，不能由模型消息声明获得。
  * 受控文件边界：写入及冻结删除/移动均只向引擎提供严格 list/call，不暴露平台原端口、阶段保存或授权签发能力。
  * 作用定位：大脑 执行层：与具体引擎无关的任务、事件、工具策略和执行摘要契约。
  * 设计原因：任务身份与原生上下文分开；选定文件、完整集合观察、产物验证与逐段检查点由独立可信端口记录，不由引擎自报。续执行准备复核原冻结证明，历史读取不猜测恢复。
+ * 各引擎共享生命周期与工具门禁；engineHandoff 只携带公开上下文，不改变原调用身份或授权。
  */
 import type {TaskSpec} from '../tasks/types';
 import type {ToolCall,ToolDecision} from '../tools/types';
@@ -41,8 +42,10 @@ export interface EngineContext {
   directory: string;
   /** 待续接的后端私有会话文件；适配器必须核实归属，缺省表示新建。 */
   sessionFile?: string;
-  /** 成员通道或原日志的期望原生身份；与逻辑通道不同。新对话缺省以 taskId 新建，Pi 恢复必须提供。 */
+  /** 恢复时为目标引擎实际绑定的原生身份；Pi/Claude 新建可指定，Codex 新建由 App Server 分配并经 session.bound 回报。 */
   nativeSessionId?:string;
+  /** 主对话跨引擎切换时转交的公开日志资料；不是用户的新指令，不用于恢复成员。 */
+  engineHandoff?:string;
   /** 可信成员执行身份；适配器不能自行改变任务、成员或租约绑定。 */
   memberBinding?:MemberRunBinding;
   /** 可信主对话登记身份；聊天通道与正式任务通道不混用，原生历史仍由 sessionFile 校验。 */
@@ -61,7 +64,7 @@ export interface EngineContext {
   memberCheckpointTools?:Pick<import('../tasks/member-checkpoint-tools').MemberCheckpointTools,'list'|'call'>;
   /** 仅实际受控平台端口支持的正式成员装配；引擎不能取得备份、补偿或权限签发能力。 */
   controlledFileTools?:Pick<import('./run-controlled-file').RunControlledFile,'list'|'call'>;
-  /** 原任务冻结范围的实际工具；存在时 Pi 关闭全部原生文件与命令注册。 */
+  /** 原任务冻结范围的实际工具；存在时各引擎关闭全部原生文件与命令注册。 */
   scopedExecutionTools?:Pick<import('./run-scoped-execution').RunScopedExecution,'list'|'call'>;
   /** 仅冻结了删除/移动要求且已装配真实平台的正式成员拥有，不能继承为任意 shell 权限。 */
   artifactTransitionTools?:import('../tasks/artifact-transition').ArtifactTransitionToolPort;

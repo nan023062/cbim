@@ -1,7 +1,8 @@
 /**
  * 作用定位：工作区唯一的静态业务架构，维护模块和 Workflow，模块卡片一级选择 Agent，复用真实岗位与责任提交；局部图标控制位于图内，避免重复全局入口。
- * 设计原因：项目根始终展示，正式子模块随开发渐进维护；新项目的静态 Agent 尚无岗位身份，通过默认模型登记后读取真实岗位，不将 Agent ID 写成负责人；未知只核原命令。
+ * 设计原因：项目根始终展示，正式子模块随开发渐进维护；未配置自定义 Agent 的模块隐式由主 Agent 执行，自定义 Agent 通过默认模型登记后读取真实岗位，不将 Agent ID 写成负责人；未知只核原命令。
  * 责任展示以岗位负责人为准，不再读取或要求真人维护关系；历史知识文件保持原样。
+ * 模块负责人选择传递 Agent 的 runtime 默认选型；已登记岗位继续引用自身采纳配置。
  */
 import React,{useState,useEffect,useCallback,useMemo} from 'react';
 import type {Snapshot,WorkspaceView} from '../../bridge/contracts/workspace';
@@ -29,7 +30,7 @@ export function BusinessArchitecture({workspace,tabId,dirty,snapshot,refresh}:{w
   const [governance,setGovernance]=useState<string>();
   const [ownership,setOwnership]=useState<{moduleId?:string;memberId?:string}>();
   const [registration,setRegistration]=useState<{moduleId:string;agentId:string}>();
-  const agents=useMemo(()=>Object.values(buildTeamModel(snapshot?.workspaceId===id?snapshot:undefined,workspace.name).nodes).filter(item=>item.kind==='agent'||item.id==='cbim:executor').map(item=>({id:item.id,name:item.name})),[snapshot,id,workspace.name]);
+  const agents=useMemo(()=>Object.values(buildTeamModel(snapshot?.workspaceId===id?snapshot:undefined,workspace.name).nodes).filter(item=>item.kind==='agent').map(item=>({id:item.id,name:item.name,runtime:item.runtime})),[snapshot,id,workspace.name]);
   const owners=useInlineModuleOwners(snapshot?{workspaceId:id,instanceId:snapshot.instanceId}:undefined,agents,snapshot?.revision);
   async function saved(objects:string[]){setEditor(undefined);setMessage('静态业务定义已更新。已有会话的任务记录保持独立。');if(objects[0]&&!objects[0].includes('/workflows/'))setChosen(objects[0]);try{await refresh?.()}catch(cause){setError(cause instanceof Error?cause.message:String(cause))}}
   const onDirtyChange=useCallback((value:boolean)=>{value?dirty.current.add(tabId):dirty.current.delete(tabId)},[dirty,tabId]);

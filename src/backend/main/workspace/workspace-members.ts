@@ -173,8 +173,12 @@ export class WorkspaceMembers {
     if(prepared.model){const current=await this.selectedPolicy(prepared.model);this.assert(identity);if(current.configurationHash!==prepared.model.configurationHash)fail('MEMBER_SOURCE_CHANGED','读取期间模型配置发生变化，请重新预览')}
     this.assert(identity);
   }
-  private async selectedCapability(agentId:string,snapshot?:Snapshot){try{return await this.capability(agentId,snapshot)}catch{fail('MEMBER_SOURCE_INVALID','无法采纳当前角色能力，请检查角色、原则、有效 Skill 与知识结构')}}
-  private async builtinStatus(member:WorkspaceMember,snapshot:Snapshot):Promise<KnowledgeSourceReadState>{const configuration=await this.capability('cbim:executor',snapshot),ref={kind:'builtin' as const,id:'cbim:executor' as const,contentHash:workspaceMemberCapabilityHash(configuration)};return isDeepStrictEqual(member.adoption.sourceRef,ref)?{status:'current',ref}:{status:'needs_adoption',currentRef:ref}}
+  private async selectedCapability(agentId:string,snapshot?:Snapshot){
+    if(agentId==='cbim:executor')fail('AGENT_RETIRED','内置默认执行 Agent 已退役；主 Agent 默认执行，无需登记岗位');
+    try{return await this.capability(agentId,snapshot)}catch{fail('MEMBER_SOURCE_INVALID','无法采纳当前角色能力，请检查角色、原则、有效 Skill 与知识结构')}
+  }
+  /** 旧采纳快照与账本保持可读，不再读取或重建已退役的内置能力。 */
+  private async builtinStatus(_member:WorkspaceMember,_snapshot:Snapshot):Promise<KnowledgeSourceReadState>{return {status:'invalid',issue:'内置默认执行 Agent 已退役，历史岗位保留；未配置自定义 Agent 的模块由主 Agent 直接执行'}}
   private async selectedPolicy(ref:WorkspaceMemberModelRef){try{return await this.policy(ref)}catch{fail('MEMBER_MODEL_INVALID','无法读取明确选定的公开模型配置，请检查供应商与已启用模型')}}
   private async diff(member:WorkspaceMember):Promise<WorkspaceMemberCurrentDiff>{
     let capability:WorkspaceMemberCurrentDiff['capability'],model:WorkspaceMemberCurrentDiff['model'];

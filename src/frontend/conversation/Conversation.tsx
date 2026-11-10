@@ -11,10 +11,12 @@
  * 资料边界：切到其他会话时本组件可能只被隐藏；必须把 active 传给补充控制器，撤销未完成的资料导入并隔离迟到回包。
  * Skill 入口：加号菜单发送只需一句描述、补充自愿的独立引导请求，沿用当前模型、权限和排队规则；不发送或清空已有草稿与附件。
  * 输入边界：草稿仍即时上交外壳；历史轮次按运行、恢复上下文及实际计时变化更新，键入不重复解析未变正文。
+ * 引擎菜单来自已配置模型，模型菜单按引擎过滤；修改只影响下一轮，Claude Code/Codex 运行期间只支持排队而不承诺原轮插入。
  */
 import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
 import type {RunSummary,ConversationThreadView} from '../../bridge/contracts/execution';
+import {configuredEngines,engineLabel} from '../../bridge/contracts/models';
 import type {LlmSettings} from '../../bridge/contracts/models';
 import type {ViewTab,TabKind} from '../shell/tabs';
 import {runtimeTaskSelection,type RuntimeNavigationRequest} from '../shell/runtime-navigation';
@@ -108,9 +110,10 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   stopGate.current.observe(tab.taskId?{id:workspace.id,taskId:tab.taskId}:undefined);
   const stopping=!!tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId});
   // 当前开放目标和正在执行分开；持久等待不能通过旧 running 日志或历史选择恢复插入/队列。
-  const currentRun=threadResumeRun(runs,resumeRunId),latest=currentRun??runs.at(-1),{mainRunning,executing,taskOpen,waiting,canInsert,canContinueQueue,shouldQueue}=conversationExecutionState(currentRun,graph.openScope,queued.length);
+  const currentRun=threadResumeRun(runs,resumeRunId),latest=currentRun??runs.at(-1),{mainRunning,executing,taskOpen,waiting,canInsert:insertionAvailable,canContinueQueue,shouldQueue}=conversationExecutionState(currentRun,graph.openScope,queued.length);
   useEffect(()=>{if(!executing||admissionState.waitingOnly)return;const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer)},[executing,admissionState.waitingOnly]);
   useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
+  const canInsert=insertionAvailable&&(currentRun?.events[0]?.data.engine??'pi')==='pi';
   useEffect(()=>{let cancelled=false;void api.call('models.list').then(x=>{if(!cancelled)setModels(x)}).catch((e:Error)=>{if(!cancelled)setError(e.message)});return()=>{cancelled=true}},[workspace.id]);
   // 历史/审批串行轮询，队列由独立增量 Hook 同步，不再等待日志读取。
   useEffect(()=>{let cancelled=false,timer:ReturnType<typeof setTimeout>;setRuns([]);setThreadIssues([]);setResumeRunId(undefined);setLoaded(false);
@@ -158,14 +161,14 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   const selectedModel=selectedProfile?.models.find(m=>m.id===(selectedPair[1]||selectedProfile.defaultModel));
   const modelAvailable=!!models?.profiles.length&&(!selection||models.profiles.some(p=>p.models.some(m=>m.enabled&&JSON.stringify([p.id,m.id])===selection)));
   // 两处目标卡共享同一控制器。明确冻结实际模型与权限，补充不引用、不清空聊天草稿和附件。
-  const continuationConfig=modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id,permission},label:(selectedModel.name||selectedModel.id)+' · '+{read:'只读访问',ask:'默认权限',execute:'完全访问'}[permission]}:undefined;
+  const continuationConfig=modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:selectedProfile.engine??'pi',provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id,permission},label:(selectedModel.name||selectedModel.id)+' · '+{read:'只读访问',ask:'默认权限',execute:'完全访问'}[permission]}:undefined;
   const continuation=useScopeContinuation(workspace.id,tab.taskId,graph,continuationConfig,graph.refresh,active);
   const humanContinuation=useHumanContinuation(workspace.id,tab.taskId,graph,continuationConfig,graph.refresh);
   // 业务重规划仅共享实际模型身份，权限在独立表单默认 ask 并由用户明确选择；两处卡片共用一份请求。
-  const replan=useScopeReplan(workspace.id,tab.taskId,graph,modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,graph.refresh,id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')});
+  const replan=useScopeReplan(workspace.id,tab.taskId,graph,modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:selectedProfile.engine??'pi',provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,graph.refresh,id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')});
   // 影响核实共用实际会话状态和模型，仅显式新建核实任务时使用模型；不触碰聊天草稿。
   // 保留全部恢复依赖；当前模型、图或历史选择一旦变化，旧工具卡也必须获得新上下文。
-  const recovery=useMemo<ExecutionRecoveryContext>(()=>({state:graph,refresh:graph.refresh,model:modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,showScope:id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}}),[graph,modelAvailable,selectedProfile,selectedModel]);
+  const recovery=useMemo<ExecutionRecoveryContext>(()=>({state:graph,refresh:graph.refresh,model:modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:selectedProfile.engine??'pi',provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,showScope:id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}}),[graph,modelAvailable,selectedProfile,selectedModel]);
   // 人工决定只有一份本机会话控制器，保存不改普通草稿、权限或当前等待状态。
   const humanDecisions=useHumanDecisions(workspace.id,tab.taskId,graph,graph.refresh);
   // 初次周期读取尚未完成时不能凭运行日志猜测 resume；等待信息就绪后再决定发送或排队。
@@ -197,7 +200,7 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
       {tab.taskId&&loaded&&!taskOpen&&!resumeRunId&&<p role="alert" data-testid="thread-resume-unavailable">当前会话没有可安全续接的执行记录；请先在任务视图核实，或新建对话。原记录已保留。</p>}
     </div>
     <div className="chat-composer">
-      {taskOpen&&!!nextTip&&<p className="composer-next-tip" role="status">附件随下次发送；模型和权限修改在下一轮执行生效。{canInsert?'插入当前任务仍沿用当前运行设置。':''}</p>}
+      {taskOpen&&!!nextTip&&<p className="composer-next-tip" role="status">附件随下次发送；引擎、模型和权限修改在下一轮执行生效。{canInsert?'插入当前任务仍沿用当前运行设置。':''}</p>}
       {waiting&&<p className="composer-next-tip" role="status" data-testid="conversation-waiting">当前目标等待补充；新消息会排队为下个任务。</p>}
       {approvals.map(a=><div className="chat-approval" key={a.id}><b>允许本次 {a.name} 操作？</b><pre>{JSON.stringify(a.input,null,2)}</pre><button disabled={busy} onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:tab.taskId,approvalId:a.id,allow:true})})}>允许一次</button><button disabled={busy} title="仅允许当前这次执行中的后续操作；结束或停止后自动恢复确认，知识库保护不变" onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:tab.taskId,approvalId:a.id,allow:true,allowAll:true})})}>本次任务全部通过</button><button disabled={busy} onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:tab.taskId,approvalId:a.id,allow:false})})}>拒绝</button></div>)}
 
@@ -225,9 +228,9 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
           {value:'ask',label:'默认权限',icon:'hand',description:'修改业务文件、提交知识和运行命令前逐次确认'},
           {value:'execute',label:'完全访问',icon:'warning',description:'自动执行业务文件、知识提交和命令操作；仍检查工作区边界及知识版本'},
         ]}/></div>
-        <div className="chat-controls-right"><ComposerPicker label="对话模型" value={selection} onChange={value=>{setSelection(value);if(taskOpen)setNextTip(Date.now())}} disabled={busy||!models} fallbackLabel={models?'所选模型不可用':'正在加载模型…'} searchable align="right" options={[
-          {value:'',label:models?.profiles.find(p=>p.id===models.selectedId)?.defaultModel||'选择模型',description:'使用设置中的默认供应商和模型',group:'默认'},
-          ...(models?.profiles.flatMap(p=>p.models.filter(m=>m.enabled).map(m=>({value:JSON.stringify([p.id,m.id]),label:m.name||m.id,description:p.name+' / '+m.id,group:p.name})))||[]),
+        <div className="chat-controls-right"><ComposerPicker label="Loop 引擎" value={selectedProfile?.engine??'pi'} disabled={busy||!models} fallbackLabel="选择引擎" onChange={engine=>{const profile=models?.profiles.find(p=>(p.engine??'pi')===engine&&p.models.some(m=>m.enabled));const model=profile?.models.find(m=>m.enabled&&m.id===profile.defaultModel)??profile?.models.find(m=>m.enabled);if(profile&&model){setSelection(JSON.stringify([profile.id,model.id]));if(taskOpen)setNextTip(Date.now())}}} options={configuredEngines(models?.profiles??[]).map(engine=>({value:engine,label:engineLabel(engine)}))}/><ComposerPicker label="对话模型" value={selection} onChange={value=>{setSelection(value);if(taskOpen)setNextTip(Date.now())}} disabled={busy||!models} fallbackLabel={models?'所选模型不可用':'正在加载模型…'} searchable align="right" options={[
+          ...((models?.profiles.find(p=>p.id===models.selectedId)?.engine??'pi')===(selectedProfile?.engine??'pi')?[{value:'',label:models?.profiles.find(p=>p.id===models.selectedId)?.defaultModel||'选择模型',description:'使用设置中的默认供应商和模型',group:'默认'}]:[]),
+          ...(models?.profiles.filter(p=>(p.engine??'pi')===(selectedProfile?.engine??'pi')).flatMap(p=>p.models.filter(m=>m.enabled).map(m=>({value:JSON.stringify([p.id,m.id]),label:m.name||m.id,description:p.name+' / '+m.id,group:p.name})))||[]),
         ]}/>{taskOpen&&<SendButton disabled={stopping} isStreaming stopLabel={waiting?'取消当前任务':undefined} onClick={()=>void stopCurrent()}/>} {(!taskOpen||!!tab.draft?.trim()||attachments.length>0)&&<SendButton disabled={!canSend} queued={shouldQueue} onClick={()=>void send()}/>}</div></div>
       </ComposerCard>
       <div className="chat-footer"><span><Icon name="folder" size={13}/>{workspace.name}</span><UsageStatus runs={runs} currentRun={currentRun??null} historyIncomplete={threadIssues.length>0} now={now} placement="footer" capacity={selectedModel?.contextWindow}/></div>

@@ -19,9 +19,11 @@ it.each(['complete','bad-output','prepare-stop','submitted-stop']as const)('真�
   if(mode==='prepare-stop'){await arrived;expect(provider.member).toHaveLength(0);const stopping=app.dispatch('loop.stop',{id:entry.id,taskId:start.taskId});await new Promise(r=>setTimeout(r,30));release();await stopping;provider.releaseMain()}
   else{
    await revisionWait(async()=>provider.main.length===provider.heldTurn+1&&!!receipt,'修订已保存且主轮保持');expect(provider.errors).toEqual([]);expect(provider.member).toHaveLength(0);
+   // HTTP 已收到下一请求不等于其 stdout 增量已落盘；等真实保持文本后再核原命令，避免读取横跨日志追加。
+   await revisionWait(async()=>{const run=await app.execution(entry.id).inspect(start.taskId,start.runId);return run.events.filter(event=>event.type==='message.delta').map(event=>event.data.text??'').join('').includes(data.held)},'主轮保持文本已写入 canonical');
    const saved=await graph(),before=provider.state.before!,heldRecords=await records();assertDependencyRevision(saved,before,receipt!,false);expect(heldRecords.runs).toEqual([]);expect(heldRecords.messages).toEqual(originalMessages);
    restore();restore=()=>{};expect(await service.reviseQueuedDependencies(...originalArgs!)).toEqual(receipt);expect(await graph()).toEqual(saved);
-   const originalReport=await service.commandReport({...identity,runId:start.runId,toolCallId:'revision-exact'});expect(originalReport.command).toMatchObject({state:'committed',result:{toolName:'cbim_dispatch_revise_dependencies',removedCount:1,addedCount:2}});expect(originalReport.source.outcome).toBe(mode==='bad-output'?'failed':'succeeded');expect(await records()).toEqual(heldRecords);
+   const originalReport=await service.commandReport({...identity,runId:start.runId,toolCallId:'revision-exact'});expect(originalReport.command,JSON.stringify(originalReport)).toMatchObject({state:'committed',result:{toolName:'cbim_dispatch_revise_dependencies',removedCount:1,addedCount:2}});expect(originalReport.source.outcome).toBe(mode==='bad-output'?'failed':'succeeded');expect(await records()).toEqual(heldRecords);
    if(mode==='submitted-stop')await app.dispatch('loop.stop',{id:entry.id,taskId:start.taskId});provider.releaseMain();
   }
   await revisionWait(async()=>(await records()).scopes[0].status==='closed'&&app.runtime.snapshot().pressure.activeRuns===0,'原周期已结算');restore();restore=()=>{};

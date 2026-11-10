@@ -1,3 +1,4 @@
+import {runtimeTools} from './runtime-tools-fixture';
 import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -22,14 +23,14 @@ async function fixture(work:(context:EngineContext)=>Promise<void>,policy:(name:
 }
 async function help(c:EngineContext,id='help-one',value=input){
   const decision=await c.beforeTool({id,name:'cbim_task_help',input:value});expect(decision.allow).toBe(true);
-  const result=await c.memberHelpTools!.call('cbim_task_help',value,id);
+  const result=await runtimeTools(c).memberHelpTools!.call('cbim_task_help',value,id);
   await c.emit({type:'tool.finished',data:{id,name:'cbim_task_help',result,isError:false}});
   return JSON.parse((result.content[0] as {text:string}).text);
 }
 
 it('stages one identity-bound help before its successful receipt and prevents further business or progress tools',async()=>{
   let staged:any;const f=await fixture(async c=>{
-    expect((await c.memberHelpTools!.list()).map(t=>t.name)).toEqual(['cbim_task_help']);
+    expect((await runtimeTools(c).memberHelpTools!.list()).map(t=>t.name)).toEqual(['cbim_task_help']);
     staged=await help(c);
     for(const [id,name] of [['write-after','write'],['delivery-after','cbim_delivery_prepare'],['help-after','cbim_task_help']])expect((await c.beforeTool({id,name,input})).allow).toBe(false);
   });try{
@@ -59,13 +60,13 @@ it('reserves the help fence before awaiting its policy, so concurrent commands c
     const awaiting=c.beforeTool({id:'help-one',name:'cbim_task_help',input});await entered.promise;
     expect((await c.beforeTool({id:'racing-command',name:'bash',input:{command:'do something'}})).allow).toBe(false);
     release.resolve();expect((await awaiting).allow).toBe(true);
-    const result=await c.memberHelpTools!.call('cbim_task_help',input,'help-one');await c.emit({type:'tool.finished',data:{id:'help-one',name:'cbim_task_help',result}});
+    const result=await runtimeTools(c).memberHelpTools!.call('cbim_task_help',input,'help-one');await c.emit({type:'tool.finished',data:{id:'help-one',name:'cbim_task_help',result}});
   },async name=>{if(name==='cbim_task_help'){entered.resolve();await release.promise}else commandPolicies++;return {allow:true,effects:['maintenance']}});
   try{const run=await f.runtime.startMember(f.task,'处理',f.launch);expect((await run.done).status).toBe('completed');expect(commandPolicies).toBe(0)}finally{release.resolve();await f.cleanup()}
 });
 
 it('does not expose or authorize member help for an ordinary main run',async()=>{
-  const f=await fixture(async c=>{expect(c.memberHelpTools).toBeUndefined();expect((await c.beforeTool({id:'fake-help',name:'cbim_task_help',input})).allow).toBe(false)});
+  const f=await fixture(async c=>{expect(runtimeTools(c).memberHelpTools).toBeUndefined();expect((await c.beforeTool({id:'fake-help',name:'cbim_task_help',input})).allow).toBe(false)});
   try{const run=await f.runtime.start({...f.task,mode:'chat',agentId:'cbim:main'});expect((await run.done).events.some(e=>e.type==='task.help_requested')).toBe(false)}finally{await f.cleanup()}
 });
 
@@ -73,7 +74,7 @@ it('logging a concurrently rejected tool does not poison the already authorized 
   const entered=gate(),release=gate();const f=await fixture(async c=>{
     expect((await c.beforeTool({id:'help-one',name:'cbim_task_help',input})).allow).toBe(true);
     const rejected=c.beforeTool({id:'rejected-write',name:'write',input:{path:'file',content:'never'}});await entered.promise;
-    const result=await c.memberHelpTools!.call('cbim_task_help',input,'help-one');
+    const result=await runtimeTools(c).memberHelpTools!.call('cbim_task_help',input,'help-one');
     release.resolve();expect((await rejected).allow).toBe(false);
     await c.emit({type:'tool.finished',data:{id:'help-one',name:'cbim_task_help',result,isError:false}});
   },undefined,async event=>{if(event.type==='tool.proposed'&&event.data.id==='rejected-write'){entered.resolve();await release.promise}});
@@ -83,7 +84,7 @@ it('logging a concurrently rejected tool does not poison the already authorized 
 it('rechecks cancellation before committing an already authorized help',async()=>{
   const entered=gate(),release=gate();const f=await fixture(async c=>{
     expect((await c.beforeTool({id:'help-one',name:'cbim_task_help',input})).allow).toBe(true);entered.resolve();await release.promise;
-    await expect(c.memberHelpTools!.call('cbim_task_help',input,'help-one')).rejects.toThrow('停止');
+    await expect(runtimeTools(c).memberHelpTools!.call('cbim_task_help',input,'help-one')).rejects.toThrow('停止');
     await c.emit({type:'tool.finished',data:{id:'help-one',name:'cbim_task_help',result:{content:[{type:'text',text:'stopped'}]},isError:true}});
   });try{const run=await f.runtime.startMember(f.task,'处理',f.launch);await entered.promise;await f.runtime.stop(f.task.taskId);release.resolve();expect((await run.done).events.some(e=>e.type==='task.help_requested')).toBe(false)}finally{release.resolve();await f.cleanup()}
 });
@@ -91,7 +92,7 @@ it('rechecks cancellation before committing an already authorized help',async()=
 it('rejects invented attempted tool IDs and permits corrected help only with a new authorized call',async()=>{
   const f=await fixture(async c=>{
     const forged={...input,attemptedToolCallIds:['foreign-call']};expect((await c.beforeTool({id:'help-one',name:'cbim_task_help',input:forged})).allow).toBe(true);
-    await expect(c.memberHelpTools!.call('cbim_task_help',forged,'help-one')).rejects.toThrow('不存在');
+    await expect(runtimeTools(c).memberHelpTools!.call('cbim_task_help',forged,'help-one')).rejects.toThrow('不存在');
     await c.emit({type:'tool.finished',data:{id:'help-one',name:'cbim_task_help',result:{content:[{type:'text',text:'invalid'}]},isError:true}});
     await help(c,'corrected-help');
   });try{const run=await f.runtime.startMember(f.task,'处理',f.launch);const events=(await run.done).events.filter(e=>e.type==='task.help_requested');expect(events).toHaveLength(1);expect((events[0].data.help as any).toolCallId).toBe('corrected-help')}finally{await f.cleanup()}

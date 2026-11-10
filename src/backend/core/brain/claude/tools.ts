@@ -32,7 +32,7 @@ export function claudeToolCall(name:string,input:Record<string,unknown>){
 /** 一个实例只服务一个 run；stop 取消未完成端口，已执行但未落盘的结果保持未知。 */
 export async function claudeTools(context:EngineContext,port:EngineToolsPort,allowExecution:boolean,blocked:()=>string|undefined,settle:()=>Promise<void>=async()=>{}){
   const catalog=await port.list(),names=new Set(catalog.map(t=>t.name)),controller=new AbortController();
-  const native=context.scopedExecutionTools?[]:allowExecution?Object.keys(nativeNames):['Read','Glob','Grep'];
+  const native=context.nativeTools==='disabled'?[]:allowExecution?Object.keys(nativeNames):['Read','Glob','Grep'];
   const active=new Map<string,{name:string;input:Record<string,unknown>;original:Record<string,unknown>;internal:boolean}>();
   const grants=new Set<string>();
   const server=new McpServer({name:'cbim',version:'1.0.0'},{capabilities:{tools:{}}});

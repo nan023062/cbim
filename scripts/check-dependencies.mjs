@@ -40,6 +40,9 @@ const moduleBoundaries=[
   // 文件索引只实现稳定存储契约；工作区身份、服务和日志读取由 workspace 装配。
   {sources:['src/backend/main/persistence/tasks/agent-history.ts'],allow:[foundation,'src/backend/core/team/session-history-storage.ts']},
   {sources:['src/backend/core/tasks/model-request-budget-storage.ts'],allow:['src/backend/core/tasks/dispatch-scope.ts','src/backend/core/tasks/model-request-budget.ts']},
+  {sources:['src/backend/core/brain/engine-tool-port.ts'],allow:[]},
+  {sources:['src/backend/core/brain/engine-tools.ts'],allow:['src/backend/core/brain/types.ts','src/backend/core/brain/engine-tool-port.ts']},
+  {sources:['src/backend/core/brain/index.ts'],allow:['src/backend/core/brain/types.ts','src/backend/core/brain/storage.ts','src/backend/core/brain/runtime.ts','src/backend/core/brain/member-run.ts','src/backend/core/brain/input-source.ts','src/backend/core/brain/conversation-binding.ts']},
   {sources:['src/backend/scheduler-engine/execution/model-request-budget-service.ts'],allow:[foundation,'src/backend/core/tasks/model-request-budget-storage.ts','src/backend/core/tasks/model-request-budget.ts','src/backend/core/tasks/model-request-budget-rules.ts','src/backend/core/brain/llm/ports.ts','src/backend/core/brain/llm/request-budget.ts','src/backend/core/team/workspace-member-rules.ts','src/backend/scheduler-engine/execution/scope-budget-service.ts']},
   // 领域样本不能通过 helpers 或其他中间文件重新加载完整应用。
   {sources:['tests/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},

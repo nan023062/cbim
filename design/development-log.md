@@ -1,3 +1,11 @@
+## 2026-11-11：三个引擎改用通用运行工具目录（架构审计 A06 / G06）
+
+- EngineContext 的九个具体业务类槽位改为 RuntimeToolsPort 目录；独立稳定文件定义目录/调用契约，引擎只枚举并路由。真实 toolCallId、停止信号、重名/非法名拒绝、未知工具拒绝保留。nativeTools=disabled 独立禁用全部原生文件/命令；求助、停泊和产物验证指引由业务装配产生。
+- brain/index 不再重导出 PiEngine，生产装配及真正使用 Pi 的测试直接导入适配器；新增静态约束防止公共入口和目录重回具体工具依赖。未移动三家 SDK 实现或更改原门闩/日志/停止排空顺序。Runtime 的成员生命周期仍为下一步治理边界，此片只完成引擎能力输入与公共入口解耦。
+- 既有运行回归通过仅测试用窄视图访问真实装配对象，保留坏回包注入、并发和停止断言。测试选择覆盖所有修改的业务工具消费者、主/成员调度和真实 Pi 受限执行，未重复跑无关业务或发布测试。
+- 实际命令：pnpm exec vitest run tests/artifact-runtime.test.ts tests/artifact-transition-runtime.test.ts tests/complete-output-runtime.test.ts tests/controlled-file-runtime.test.ts tests/csv-validation-runtime.test.ts tests/dependencies.test.ts tests/engine-tools.test.ts tests/human-decision-service.test.ts tests/json-validation-runtime.test.ts tests/loop-engine.test.ts tests/member-checkpoint-runtime.test.ts tests/member-checkpoint-service.test.ts tests/member-execution.test.ts tests/member-help-runtime.test.ts tests/member-help.test.ts tests/output-manifest-runtime.test.ts tests/pi-loop.test.ts tests/png-validation-runtime.test.ts tests/queued-dependency-replacement-service.test.ts tests/scope-goal.test.ts tests/scope-replan.test.ts tests/scoped-execution-pi.test.ts tests/scoped-execution-runtime.test.ts tests/workflow-runtime.test.ts -t '^(?!all maintained code)' --reporter=default --reporter=json --outputFile=test-results/engine-capabilities.json。24 文件、208 用例通过（114.58s），重复全仓静态用例由架构检查覆盖。真实 Electron/Pi 使用本地确定性供应商；Claude/Codex 本片验证目录禁用，不代表真实在线服务验收。
+- 初次类型检查仅新增测试的联合数组推断失败，显式标注目录类型后 pnpm typecheck 通过；生产类型无错误。pnpm check:architecture 通过：55 目录/610 代码及样式、1203 文件/6191 含类型依赖，0 循环、0 文档差异。同步能力/运行装配注释、四份契约和五份类图；未运行全仓产品回归或发布验收。
+
 ## 2026-11-11：预算业务改用专用事务端口（架构审计 A05）
 
 - ModelRequestBudgetService 不再依赖 DispatchStore/DispatchState；Core 新增 ModelRequestBudgetStore/视图/阶段回执契约，Main 适配器显式投影隔离副本，只能写单条预算变化。ScopeBudgetService 的请求预检仅接预算附录；运行级准入的原职责保留。

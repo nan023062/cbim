@@ -105,7 +105,7 @@ export class PiEngine implements AgentEngine {
       this.events=this.events.then(()=>this.consume(event));
       void this.events.catch(error=>{this.fatal=error;this.settlement?.reject(error);void this.rpc?.close()});
     },error=>{if(!this.closing){this.fatal=error;this.settlement?.reject(error)}},message=>this.redact(message));
-    const allowed=[...(context.scopedExecutionTools?[]:nativeToolNames(!!this.options.allowNativeExecution)),'cbim_*'].join(',');
+    const allowed=[...(context.nativeTools==='disabled'?[]:nativeToolNames(!!this.options.allowNativeExecution)),'cbim_*'].join(',');
     // 禁止 Pi 自动加载用户机器上的外部连接；内部工具只由本次受控扩展注册。
     let command=this.options.process;
     if(this.budgetTransport){

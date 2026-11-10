@@ -1,3 +1,4 @@
+import {runtimeTools} from './runtime-tools-fixture';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -44,7 +45,7 @@ async function setup(useBuiltin=false){
         const invoke=async(name:string,input:Record<string,unknown>)=>{
           const id='tool-'+(++count),decision=await context.beforeTool({id,name,input});
           if(!decision.allow)throw Error('unexpected denial');
-          const result=name==='read'?{content:[{type:'text',text:'verified artifact'}]}:await context.taskTools!.call(name,input);
+          const result=name==='read'?{content:[{type:'text',text:'verified artifact'}]}:await runtimeTools(context).taskTools!.call(name,input);
           await context.emit({type:'tool.finished',data:{id,name,result,isError:false}});return id;
         };
         await invoke('cbim_task_plan',{expectedVersion:0,goal:behavior==='rewrite'?'different scope':context.task.goal,reason:'执行已派发任务',acceptance:context.task.acceptance,steps:[{id:'verify',title:'验证产物',owner:'当前成员'}]});

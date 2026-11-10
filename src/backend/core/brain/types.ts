@@ -52,24 +52,12 @@ export interface EngineContext {
   conversationBinding?:ConversationAgentBinding;
   /** 仅可信接续入口存在；成员结果是资料，显式用户补充保持用户消息，不混淆授权。 */
   source?:RunInputSource;
-  /** 绑定本轮日志的任务记录工具；不能签发业务验收。 */
-  taskTools?:Pick<import('../tasks/progress-tools').TaskProgressTools,'list'|'call'>;
-  /** 仅正式成员运行具备；求助是待安全结算的记录，必须传递桥提供的真实 toolCallId。 */
-  memberHelpTools?:Pick<import('../tasks/member-help-tools').MemberHelpTools,'list'|'call'>;
-  /** 仅注入可信文件端口的成员具备；采集由运行时核对真实工具来源，不接受模型路径。 */
-  artifactTools?:Pick<import('../tasks/artifact-tools').ArtifactTools,'list'|'call'>;
-  /** 仅冻结 artifactScope 且有真实枚举端口的成员具备；完整范围由运行时提供，模型不能裁剪。 */
-  manifestTools?:Pick<import('../tasks/output-manifest-tools').OutputManifestTools,'list'|'call'>;
-  /** 剩余额度允许的成员运行可合作式停泊一次；额度由可信工厂按完整历史计算，成功暂存后须正常结束。 */
-  memberCheckpointTools?:Pick<import('../tasks/member-checkpoint-tools').MemberCheckpointTools,'list'|'call'>;
-  /** 仅实际受控平台端口支持的正式成员装配；引擎不能取得备份、补偿或权限签发能力。 */
-  controlledFileTools?:Pick<import('./run-controlled-file').RunControlledFile,'list'|'call'>;
-  /** 原任务冻结范围的实际工具；存在时各引擎关闭全部原生文件与命令注册。 */
-  scopedExecutionTools?:Pick<import('./run-scoped-execution').RunScopedExecution,'list'|'call'>;
-  /** 仅冻结了删除/移动要求且已装配真实平台的正式成员拥有，不能继承为任意 shell 权限。 */
-  artifactTransitionTools?:import('../tasks/artifact-transition').ArtifactTransitionToolPort;
-  /** 仅有冻结产物验证要求的正式成员装配；路径、Schema 和结论来自可信端口。 */
-  validationTools?:Pick<import('../tasks/validation-tools').ValidationTools,'list'|'call'>;
+  /** 由可信运行时装配的能力目录；键只供装配定位，适配器统一枚举 list/call，不认识具体业务类。 */
+  tools?:Readonly<Record<string,import('./engine-tool-port').RuntimeToolsPort>>;
+  /** 冻结范围执行禁用全部原生文件/命令工具；不能因未注册某个业务工具而回退放行。 */
+  nativeTools?:'disabled';
+  /** 已装配能力的可信使用说明；正文不授予权限，调用仍经 beforeTool 与原日志。 */
+  capabilityInstructions?:readonly string[];
   /** 可信续执行的完整冻结证明复核，Pi 在载入前及载入后配置前调用；同时核实文件、知识、日志和原生指纹。 */
   assertMemberResume?():Promise<void>;
   /** 返回前完成持久化；失败必须停止依赖这份证据的操作。 */

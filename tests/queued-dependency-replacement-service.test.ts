@@ -1,3 +1,4 @@
+import {runtimeTools} from './runtime-tools-fixture';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -38,7 +39,7 @@ async function setup(explicitWorkflow=false){
         let sequence=0;
         const invoke=async(name:string,input:Record<string,unknown>)=>{
           const id='tool-'+(++sequence),decision=await context.beforeTool({id,name,input});expect(decision.allow).toBe(true);
-          const result=name==='read'?jsonToolResult('read',{verified:true}):await context.taskTools!.call(name,input);
+          const result=name==='read'?jsonToolResult('read',{verified:true}):await runtimeTools(context).taskTools!.call(name,input);
           await context.emit({type:'tool.finished',data:{id,name,result,isError:false}});return id;
         };
         await invoke('cbim_task_plan',{expectedVersion:0,goal:context.task.goal,acceptance:context.task.acceptance,reason:'核验目标',steps:[{id:'verify',title:'验证',owner:'当前成员'}]});

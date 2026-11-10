@@ -1,3 +1,4 @@
+import {runtimeTools} from './runtime-tools-fixture';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {expect,vi} from 'vitest';
@@ -37,14 +38,14 @@ export async function checkpointServiceFixture(options:{checkpointCount?:number;
   const prepare=vi.fn<()=>Awaited<ReturnType<MemberExecutionPorts['prepare']>>>(()=>({model,create:async(run,_task,hooks)=>{
     await beforeCreate();const checkpointState=await store.read(),previous=run.resumeFrom?checkpointState.runs!.find(old=>old.binding.runId===run.resumeFrom!.runId):undefined;
     let context!:EngineContext;const engine:AgentEngine={kind:'checkpoint-fixture',start:async c=>{starts++;context=c;await c.emit({type:'session.bound',data:{sessionId:c.nativeSessionId,sessionFile:c.sessionFile??path.join(logs,'native-'+c.nativeSessionId+'.jsonl')}})},stop:async()=>{},close:async()=>{},run:async()=>{
-      let seq=0;const invoke=async(name:string,input:Record<string,unknown>)=>{const id='call-'+(++seq),decision=await context.beforeTool({name,id,input});expect(decision.allow).toBe(true);const result=name==='read'?jsonToolResult(name,{text:await fs.readFile(path.join(f.a,String(input.path)),'utf8')}):name==='write'?jsonToolResult(name,{written:await fs.writeFile(path.join(f.a,String(input.path)),String(input.content)).then(()=>true)}):name==='cbim_task_artifact_capture'?await context.artifactTools!.call(name,input,id):name==='cbim_task_checkpoint'?await context.memberCheckpointTools!.call(name,input,id):await context.taskTools!.call(name,input);await context.emit({type:'tool.finished',data:{name,id,result,isError:false}});return {id,body:JSON.parse(result.content[0].text)}};
+      let seq=0;const invoke=async(name:string,input:Record<string,unknown>)=>{const id='call-'+(++seq),decision=await context.beforeTool({name,id,input});expect(decision.allow).toBe(true);const result=name==='read'?jsonToolResult(name,{text:await fs.readFile(path.join(f.a,String(input.path)),'utf8')}):name==='write'?jsonToolResult(name,{written:await fs.writeFile(path.join(f.a,String(input.path)),String(input.content)).then(()=>true)}):name==='cbim_task_artifact_capture'?await runtimeTools(context).artifactTools!.call(name,input,id):name==='cbim_task_checkpoint'?await runtimeTools(context).memberCheckpointTools!.call(name,input,id):await runtimeTools(context).taskTools!.call(name,input);await context.emit({type:'tool.finished',data:{name,id,result,isError:false}});return {id,body:JSON.parse(result.content[0].text)}};
       const index=_task.runIds.length-1,paths=[options.paths?.[index]??'checkpoint.txt'].flat(),file=paths[0];let version=1;
       if(!run.resumeFrom)await invoke('cbim_task_plan',{expectedVersion:0,goal:context.task.goal,acceptance:context.task.acceptance,reason:'执行',steps:[{id:'check',title:'核实',owner:'当前成员'}]});
       else{const progress=(await invoke('cbim_task_inspect',{})).body;expect(progress.evidence).toEqual([]);version=progress.plan.version}
       const sources:string[]=[];if(options.writeOnRun===index)sources.push((await invoke('write',{path:file,content:'legitimate new bytes'})).id);
       const reads=[];for(const name of paths){const read=await invoke('read',{path:name});sources.push(read.id);reads.push(read)}const read=reads.at(-1)!;
       if(options.writeOnRun===index)version=(await invoke('cbim_task_inspect',{})).body.plan.version;
-      if(index>=memberCheckpointLimit)expect(context.memberCheckpointTools).toBeUndefined();
+      if(index>=memberCheckpointLimit)expect(runtimeTools(context).memberCheckpointTools).toBeUndefined();
       if(checkpointNewRuns&&index<(options.checkpointCount??1)){const baseline=await invoke('cbim_task_artifact_capture',{expectedTaskProgressVersion:version,sourceToolCallIds:sources});await invoke('cbim_task_checkpoint',{expectedTaskProgressVersion:version,baselineId:baseline.body.baseline.baselineId,reason:'保存第 '+(index+1)+' 段等待主调度'})}
       else{await invoke('cbim_task_step',{expectedVersion:version,id:'check',state:'reported_done',evidenceIds:[read.id]});await invoke('cbim_delivery_prepare',{expectedVersion:version+1,summary:'新轮实际核实',limitations:[]})}return {status:'completed'};
     }};

@@ -328,3 +328,7 @@ EngineContext.scopedExecutionTools 存在时 --tools 仅含 cbim_*，全部原�
 ### 共享业务能力
 
 工具路由与业务提示分别由上层 engine-tools.ts、engine-instructions.ts 提供。KnowledgeBridge/KnowledgeToolSchema 仅保留兼容别名；Pi 的 RPC、HTTP 一次性许可和 bootstrap 仍留在本目录。请求预算代理及 SSE 用量解析归 ../llm/，另一引擎不依赖 Pi 实现。
+
+### 通用能力注入
+
+工具从 EngineContext.tools 的通用目录注册；nativeTools=disabled 时关闭全部原生文件和命令，不依赖某个业务工具槽位。业务指引作为可信装配说明传入，授权、原调用身份、结果保存与停止顺序保持原协议。

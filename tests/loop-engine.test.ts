@@ -1,3 +1,4 @@
+import {runtimeTools} from './runtime-tools-fixture';
 import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
 import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
 import {it,expect} from 'vitest';
@@ -94,7 +95,7 @@ it('a truncated journal tail is never interpreted as completed',async()=>{
 it('task revisions survive logs and resume with stale evidence cleared, never auto-accepted',async()=>{
   let turn=0;
   class Engine extends StubEngine{async run(){
-    const tools=this.context.taskTools!;
+    const tools=runtimeTools(this.context).taskTools!;
     if(turn++===0){
       await tools.call('cbim_task_plan',{expectedVersion:0,goal:'交付功能',reason:'用户目标',acceptance:['检查结果'],steps:[{id:'one',title:'验证功能',owner:'主 Agent'}]});
       await this.context.beforeTool({id:'proof',name:'read',input:{path:'proof.txt'}});

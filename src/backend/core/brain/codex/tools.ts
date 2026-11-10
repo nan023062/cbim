@@ -11,7 +11,7 @@ export interface CodexToolSpec {type:'function';name:string;description:string;i
 /** 一个 run 只持有自己的调用身份及取消信号；重复 callId 不执行第二次。 */
 export async function codexTools(context:EngineContext,port:EngineToolsPort,native:EngineToolsPort,allowExecution:boolean,settle:()=>Promise<void>){
   const controller=new AbortController(),seen=new Set<string>(),active=new Set<Promise<unknown>>();
-  const internal=await port.list(),nativeCatalog=context.scopedExecutionTools?[]:await native.list();
+  const internal=await port.list(),nativeCatalog=context.nativeTools==='disabled'?[]:await native.list();
   const mapping=new Map<string,{name:string;port:EngineToolsPort;schema:EngineToolSchema}>();
   for(const schema of internal)mapping.set(schema.name,{name:schema.name,port,schema});
   for(const schema of nativeCatalog)mapping.set('cbim_native_'+schema.name,{name:schema.name,port:native,schema});

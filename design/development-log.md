@@ -1,5 +1,12 @@
 # CBIM 开发记录
 
+## 2026-11-11：统一主会话直接执行与独立成员边界（审计 A03）
+
+- 用户授权继续完成全部，本片先消除审计确认的运行指引冲突。集成分支基于 `2af774c5`，已保留原作者移植文档清理提交 `a5938170` 为 `d5af4cd4`；冲突仅涉及历史记录、旧 roadmap 和已退役 docs，保留新旧验证事实，docs 回到四份概念设计。主工作区未提交规范仍保留，不随本片擅自提交。
+- Team/Auto 指引统一为主会话可按权限直接执行，`cbim:main` 不能作为独立成员 assignee；主目标可用 main-execution 引用真实业务回执，知识、成员 Workflow 和人工验收保持独立。同步 README、Team 与 Conversation 契约和主指引文件头；没有修改运行权限、目标审阅实现或旧历史。
+- 选择提示组装、默认执行者、目标工具、统一工具权限四文件验证声明的边界；同时因移植提交改变内置资源路径，运行 builtins、knowledge-tool-output、knowledge-tool-contracts。命令：`pnpm exec vitest run tests/agent-role-instructions.test.ts tests/default-executor.test.ts tests/goal-tools.test.ts tests/unified-tool-policy.test.ts tests/builtins.test.ts tests/knowledge-tool-output.test.ts tests/knowledge-tool-contracts.test.ts --reporter=default --reporter=json --outputFile=test-results/main-role-and-resources.json`；7 文件、35 项通过，18.69 秒。真实 Pi 测试使用确定性本机响应，不声称在线模型质量验收。
+- 原权限、实例身份、版本与独立成员拒绝是稳定边界，变动只在当前指引和现行说明；以后职责提示从 main-agent.ts 与两个最终模式入口修改。未新增通用规则候选，尚未人工接受；未运行全仓回归、类型检查、打包或安装升级。已同步 Team、Conversation 两份类图；pnpm check:architecture 和 git diff --check 通过，55 目录/605 代码及样式、1196 文件/6145 含类型边、0 循环及文档差异。
+
 ## 2026-11-11：知识查询单向边界与局部测试隔离
 
 - 来源为用户直接指定的架构优先开发。查询 `nan023062/cbim` 开放 Issues 得 #27、#28、#29 共 3 项；本片是知识/团队/工作区查询边界的前置治理，没有新建架构工单，也不把这三个业务需求标为完成。

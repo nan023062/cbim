@@ -31,4 +31,4 @@
 - pnpm exec vitest run tests/claude-application.test.ts tests/codex-application.test.ts
 - pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs：新增 0.1.5 真实旧版路径后 23 项通过。
 - pnpm exec tsx scripts/agent-settings-ui-smoke.mts：9 场景通过，页面错误 0。
-- pnpm typecheck；pnpm check:architecture；pnpm check:brand；pnpm build:website 通过。官网仍显示已公开的 0.1.5，待 0.1.6 公开回执后更新。
+- pnpm typecheck；pnpm check:architecture；pnpm check:brand；pnpm build:website 通过。此处是开发冻结前的验证，官网当时显示已公开的 0.1.5；后续 0.1.6 制品、安装升级、官网与合并结果见[发布验收](desktop-release-0.1.6-20261110.md)。

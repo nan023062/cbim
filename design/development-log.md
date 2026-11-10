@@ -1,3 +1,10 @@
+## 2026-11-11：0.1.7 完整 CI 的测试前置修正
+
+- 原四片 run 42880217010 保留：384 文件、2633 用例，2626 通过、5 失败、2 原有历史 EXE 跳过。四个失败共享 knowledge-contract-provider 的旧目录数量 29；#28 增加两个治理 Skill 后实际为 31，现断言准确数量及两个真实名称，原版本、副作用、审批、幂等和坏输出检查均保留。
+- 剩余 abandoned-checkpoint-dependency-pi 的 bad-output 本机复现：真实请求 system 明确为 context summarization assistant，64K 模型在完整检查点/回执长链后触发原生摘要，确定性测试供应商误归类为额外成员。仅本用例组配置 128K，并保留错误堆栈；共享 seed 默认 64K，产品摘要开关、重试、预算、超时和调度均未修改。真实摘要另由 pi-runtime-config/model-request-budget-pi 覆盖。
+- 依据失败范围执行 pnpm exec vitest run tests/knowledge-contract-pi.test.ts tests/knowledge-effect-pi.test.ts tests/abandoned-checkpoint-dependency-pi.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-017-ci-diagnosis.json：知识两文件六用例通过，长链坏输出仍失败；进一步诊断报告 desktop-017-bad-output-diagnosis.json 保留。修正后 pnpm exec vitest run tests/abandoned-checkpoint-dependency-pi.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-017-bad-output-fixed.json：四用例通过（36.92s）。pnpm typecheck 通过。无源码/导入变更，不重复架构检查；完整新 head CI 继续由 PR 执行。
+- 候选 source f18c2fe9b2a189c1dc31f63d60de83a7b6d6833f 不变：打包 EXE UI 与六项隔离通过；candidate 安装 run 42881228441 成功，全新安装及真实 0.1.6→0.1.7、六项数据保留/一次模型请求/零页面错误。此次仅测试与维护记录变化；包内 design/development-log 保留冻结副本，运行白名单资料、源码、依赖和构建配置未变。草稿 Release 440782281 尚未公开。
+
 ## 2026-11-11：0.1.7 发布准备（#27 / #28 / #29 与架构切片）
 
 - 当前公开桌面版 0.1.6；默认 develop 与 master 同为 7fad631e8692ff2b5845e899ed49915c72d0faa4，仓库 nan023062/cbim、发布账号 nan023062；旧 Python latest ID 327801733/tag v1.0.2 保持独立。用户已授权完成、PR、合并和发布，沿用先未签名、日后更高版本切换签名的个人开发决定。

@@ -8,7 +8,16 @@ import {capabilitySourceRefSchema,knowledgeSourceRefSchema,sourceRefMatches} fro
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
 const uuid=z.string().uuid(),revision=z.number().int().positive().safe(),digest=z.string().regex(/^[a-f0-9]{64}$/);
-export const expectedModuleOwnerSchema=z.object({moduleId:id,bindingId:uuid,revision,ownerMemberId:uuid}).strict();
+const expectedOwnerFields=z.object({moduleId:id,bindingId:uuid.optional(),revision:revision.optional(),ownerMemberId:uuid,
+  /** 仅继承时存在，指向实际责任记录；moduleId 始终是本次执行范围。 */
+  inheritedFrom:id.optional(),
+  /** 由当前主模型阅读模块与岗位能力后选择，不写责任表；版本和来源防止跨知识复用。 */
+  match:z.object({reason:z.string().trim().min(1).max(2000),knowledgeRevision:digest,sourceRef:knowledgeSourceRefSchema}).strict().optional(),
+}).strict();
+function checkOwnerChoice(value:z.infer<typeof expectedOwnerFields>,context:z.RefinementCtx){
+  if(value.match?value.bindingId!==undefined||value.revision!==undefined||value.inheritedFrom!==undefined||value.match.sourceRef.source.kind!=='module'||value.match.sourceRef.source.sourceId!==value.moduleId:!value.bindingId||!value.revision||value.inheritedFrom!==undefined&&!value.moduleId.startsWith(value.inheritedFrom+'/'))context.addIssue({code:'custom',message:'显式、父级继承或模型匹配的执行依据不一致'});
+}
+export const expectedModuleOwnerSchema=expectedOwnerFields.superRefine(checkOwnerChoice);
 export type ExpectedModuleOwner=z.infer<typeof expectedModuleOwnerSchema>;
 /** 完整对应本次模块的预期；不接受角色正文、source proof、模型配置或密钥。 */
 export const ownerExecutionSelectionSchema=z.object({version:z.literal(1),memberId:uuid,expectedMemberRevision:revision,expectedCapabilityHash:digest,expectedConfigurationHash:digest,expectedOwners:z.array(expectedModuleOwnerSchema).min(1).max(50)}).strict().superRefine((value,context)=>{
@@ -19,7 +28,7 @@ export type OwnerExecutionSelection=z.infer<typeof ownerExecutionSelectionSchema
 export const ownerExecutionBindingSchema=z.object({version:z.literal(1),workspaceId:id,memberId:uuid,memberRevision:revision,memberHash:digest,
   capability:z.object({agentId:id,teamId:id,captureId:uuid,capabilityHash:digest,sourceRef:capabilitySourceRefSchema}).strict(),
   model:z.object({profileId:uuid,modelId:z.string().min(1).max(160),configurationHash:digest}).strict(),
-  owners:z.array(expectedModuleOwnerSchema.extend({sourceRef:knowledgeSourceRefSchema}).strict()).min(1).max(50),
+  owners:z.array(expectedOwnerFields.extend({sourceRef:knowledgeSourceRefSchema}).strict().superRefine(checkOwnerChoice)).min(1).max(50),
 }).strict().superRefine((value,context)=>{
   const capability=value.capability;
   if(capability.agentId==='cbim:main'||!sourceRefMatches(capability.sourceRef,value.workspaceId,capability.agentId==='cbim:executor'?'cbim:executor':{kind:'agent',sourceId:capability.agentId})||new Set(value.owners.map(owner=>owner.moduleId)).size!==value.owners.length||value.owners.some(owner=>owner.ownerMemberId!==value.memberId||!sourceRefMatches(owner.sourceRef,value.workspaceId,{kind:'module',sourceId:owner.moduleId})))context.addIssue({code:'custom',message:'执行绑定的岗位、角色或模块来源不一致'});

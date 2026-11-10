@@ -16,6 +16,7 @@ import type {TaskNode} from './graph-types';
 import {goalNeedsReplan} from './scope-goal';
 import {sameWorkflowSelectionsForModules} from './workflow-selection';
 import {scopeHasUnresolvedActiveInput} from './scope-active-input';
+import {knowledgeSourceRef} from '../workspace/knowledge-source-rules';
 
 /** 仅 Store 从自己的日志信封给出；不接收客户端、mutation 或知识来源游标推测的版本。 */
 export type DispatchExecutionProtocol='legacy'|'module_owner_v1';
@@ -26,7 +27,13 @@ const taskAt=(state:DispatchState,task:Pick<TaskNode,'identity'|'taskId'>)=>stat
 function historical(state:DispatchState,binding:OwnerExecutionBinding){
   const member=state.workspaceMemberChanges?.find(change=>change.next.memberId===binding.memberId&&change.next.revision===binding.memberRevision)?.next;
   check(member&&member.workspaceId===binding.workspaceId&&workspaceMemberHash(member)===binding.memberHash&&member.adoption.captureId===binding.capability.captureId&&member.adoption.configuration.agentId===binding.capability.agentId&&member.adoption.configuration.teamId===binding.capability.teamId&&member.adoption.capabilityHash===binding.capability.capabilityHash&&equal(member.adoption.sourceRef,binding.capability.sourceRef)&&member.runtimePolicy.profileId===binding.model.profileId&&member.runtimePolicy.modelId===binding.model.modelId&&member.runtimePolicy.configurationHash===binding.model.configurationHash,'执行岗位绑定没有对应的原采纳审计');
-  for(const owner of binding.owners){const record=state.ownershipChanges?.find(change=>change.next.bindingId===owner.bindingId&&change.next.revision===owner.revision)?.next;check(record&&record.workspaceId===binding.workspaceId&&record.moduleId===owner.moduleId&&record.ownerMemberId===binding.memberId&&equal(record.sourceRef,owner.sourceRef),'执行模块绑定没有对应的原责任审计');}
+  for(const owner of binding.owners){
+    // 隐式选择不伪造责任审计；核对其原模块来源代次，退役后仍可阅读原任务。
+    if(owner.match||owner.inheritedFrom)check(state.knowledgeSourceGenerations?.some(generation=>equal(knowledgeSourceRef(generation),owner.sourceRef)),'执行模块缺少原知识来源审计');
+    if(owner.match){check(equal(owner.match.sourceRef,owner.sourceRef),'模型匹配与原模块来源不一致');continue}
+    const record=state.ownershipChanges?.find(change=>change.next.bindingId===owner.bindingId&&change.next.revision===owner.revision)?.next;
+    check(record&&record.workspaceId===binding.workspaceId&&record.moduleId===(owner.inheritedFrom??owner.moduleId)&&record.ownerMemberId===binding.memberId&&(owner.inheritedFrom||equal(record.sourceRef,owner.sourceRef)),'执行模块绑定没有对应的原责任审计');
+  }
   return member;
 }
 /** 当前业务资格：新派发必须覆盖所选分配的完整模块；旧任务领取/恢复沿既有模块投影核验，不能默默升级绑定。 */
@@ -44,7 +51,7 @@ export function validateOwnerExecutionMutation(previous:DispatchState,next:Dispa
   check(!Object.hasOwn(mutation,'executionProtocol'),'调用者不能指定存储执行协议');
   for(const scope of next.scopes??[])for(const assignment of scope.goal?.plan?.assignments??[]){
     if(assignment.fallbackBinding)assertAutomaticExecution(next,assignment.fallbackBinding,scope.rootSessionId);
-    if(assignment.ownerBinding){check(assignment.ownerSelection&&ownerExecutionSelectionMatches(assignment.ownerSelection,assignment.ownerBinding)&&ownerExecutionBindingMatches(assignment.ownerBinding,scope.workspaceId,assignment.agentId,assignment.moduleIds),'目标负责人绑定与原选择不一致');const member=historical(next,assignment.ownerBinding);check(assignment.agentName===member.name,'目标负责人名称必须保留原登记岗位名称');}
+    if(assignment.ownerBinding){check(assignment.ownerSelection&&ownerExecutionSelectionMatches(assignment.ownerSelection,assignment.ownerBinding)&&ownerExecutionBindingMatches(assignment.ownerBinding,scope.workspaceId,assignment.agentId,assignment.moduleIds),'目标负责人绑定与原选择不一致');check(assignment.ownerBinding.owners.every(owner=>!owner.match||owner.match.knowledgeRevision===scope.goal!.plan!.knowledgeRevision),'模型匹配必须属于原计划知识版本');const member=historical(next,assignment.ownerBinding);check(assignment.agentName===member.name,'目标负责人名称必须保留原登记岗位名称');}
   }
   for(const graph of next.graphs)for(const task of graph.tasks){
     const old=taskAt(previous,task);check(!old||equal(old.ownerBinding,task.ownerBinding)&&equal(old.fallbackBinding,task.fallbackBinding),'任务负责人不能被补造、移除或更换');

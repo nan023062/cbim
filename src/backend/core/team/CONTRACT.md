@@ -180,3 +180,7 @@ workspaceMemberModelSnapshotSchema 接受可选 engine，明确值参与 configu
 ## Agent 执行配置归属
 
 主 Agent 对话栏和团队配置页共享 agent-runtime.ts 契约，配置属于工作区 cbim:main。岗位 modelRef 新增可选 engine；新 UI 始终显式提交，schema 校验其与快照一致。workspaceMemberEngine 读取新引用或旧 snapshot.engine，不补写缺省字段。只改引擎属于选型编辑；同引擎同模型的参数刷新仍需明确采纳。旧审计、binding 及 hash 形状不改写。
+
+## 隐式模块执行者
+
+implicitModuleOwner 按本模块、最近祖先的非空责任记录解析；空责任不创建新登记。失效的显式/祖先关系仍由门禁报告，不自动匹配其他人。ExpectedModuleOwner 向后兼容原直接关系，并允许 inheritedFrom 或 match 两种互斥依据：继承冻结实际父关系和子模块来源；匹配冻结主模型理由、知识版本和来源，无伪造 bindingId。岗位、能力采纳和模型门禁保持一致；matches:null 回到主会话，不创建内置执行员。

@@ -1,6 +1,6 @@
 /**
  * 作用定位：岗位执行选择的有界只读发现协议，供主工具和任务详情共用。
- * 设计原因：未配置自定义岗位时明确返回主会话执行，不能伪造 ownerSelection；当前观察不是未来成员领取许可，不返回能力正文或凭据。
+ * 设计原因：显式/父级关系优先；无关系时可接受主模型依据当前知识的岗位匹配，无匹配返回主会话执行，不伪造责任登记；当前观察不是未来成员领取许可，不返回能力正文或凭据。
  */
 import {z} from 'zod';
 import {ownerExecutionBindingSchema,ownerExecutionSelectionSchema} from './member-execution-binding';
@@ -9,6 +9,9 @@ import {moduleOwnershipCursorSchema} from '../workspace/module-ownership';
 import {knowledgeSourceCursorSchema} from '../workspace/knowledge-source';
 const id=z.string().min(1).max(1024),modules=z.array(id).min(1).max(50).refine(items=>new Set(items).size===items.length);
 const issue=z.object({code:z.string().min(1).max(100),message:z.string().min(1).max(1000)}).strict();
+/** 当前主模型依据模块正文和已启用岗位能力作一次选择；null 明确表示无匹配，既有责任优先。 */
+export const moduleOwnerMatchesSchema=z.object({knowledgeRevision:z.string().regex(/^[a-f0-9]{64}$/),choices:z.array(z.object({moduleId:id,memberId:z.string().uuid().nullable(),reason:z.string().trim().min(1).max(2000)}).strict()).min(1).max(50)}).strict().refine(value=>new Set(value.choices.map(item=>item.moduleId)).size===value.choices.length,'模块匹配不得重复');
+export type ModuleOwnerMatches=z.infer<typeof moduleOwnerMatchesSchema>;
 export const ownerExecutionDiscoverySchema=z.object({workspaceId:id,instanceId:id,readOnly:z.literal(true),checkedAt:z.string().datetime(),knowledgeRevision:id,
   registryCursor:workspaceRegistryCursorSchema.nullable(),ownershipCursor:moduleOwnershipCursorSchema.nullable(),sourceCursor:knowledgeSourceCursorSchema.nullable(),moduleIds:modules,
   groups:z.array(z.object({moduleIds:modules,memberId:z.string().uuid().optional(),memberName:z.string().min(1).max(100).optional(),agentId:id.optional(),

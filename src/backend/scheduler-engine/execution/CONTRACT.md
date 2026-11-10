@@ -697,3 +697,5 @@ OwnerExecutionService 在模型锁内按各岗位采纳的 engine 读取公开�
 ### 请求预算服务的状态边界
 
 `ModelRequestBudgetService` 通过 ModelRequestBudgetStore 读取周期与预算记录，原子提交单条阶段，不依赖整库 DispatchState/DispatchStore。`ScopeBudgetService.preflightRequest` 只需预算附录；运行级准入仍使用现有任务/运行事实。实际 Main 装配保留唯一 Store，因此并发预留、原命令重放、未知消耗封锁及发送前核实语义不变。
+
+OwnerExecutionService.discover 依次采用显式关系、最近祖先、主模型的当前知识匹配、主 Agent。匹配由现有主模型读取模块与候选能力后给出，服务不额外调用模型。无跨版本缓存；每次发现重新核登记、能力、来源和模型，resolve 核匹配知识版本。变化阻止新领取，不改写旧绑定；未经登记/采纳的静态 Agent 不伪装成岗位。

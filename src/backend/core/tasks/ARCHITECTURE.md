@@ -2698,7 +2698,7 @@ class N_src_backend_core_tasks_owner_execution_invariants_ts_DispatchExecutionPr
 N_src_backend_core_tasks_owner_execution_invariants_ts ..> N_src_backend_core_tasks_owner_execution_invariants_ts_DispatchExecutionProtocol : 声明
 ```
 
-直接依赖：[automatic-execution-rules.ts](automatic-execution-rules.ts)、[../team/automatic-execution.ts](../team/automatic-execution.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../team/member-execution-binding.ts](../team/member-execution-binding.ts)、[../team/member-execution-rules.ts](../team/member-execution-rules.ts)、[../team/workspace-member-rules.ts](../team/workspace-member-rules.ts)、[dispatch-storage.ts](dispatch-storage.ts)、[graph-types.ts](graph-types.ts)、[scope-goal.ts](scope-goal.ts)、[workflow-selection.ts](workflow-selection.ts)、[scope-active-input.ts](scope-active-input.ts)。
+直接依赖：[automatic-execution-rules.ts](automatic-execution-rules.ts)、[../team/automatic-execution.ts](../team/automatic-execution.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../team/member-execution-binding.ts](../team/member-execution-binding.ts)、[../team/member-execution-rules.ts](../team/member-execution-rules.ts)、[../team/workspace-member-rules.ts](../team/workspace-member-rules.ts)、[dispatch-storage.ts](dispatch-storage.ts)、[graph-types.ts](graph-types.ts)、[scope-goal.ts](scope-goal.ts)、[workflow-selection.ts](workflow-selection.ts)、[scope-active-input.ts](scope-active-input.ts)、[../workspace/knowledge-source-rules.ts](../workspace/knowledge-source-rules.ts)。
 
 ### persistent-write-input.ts
 
@@ -7104,3 +7104,5 @@ dispatch-receipt 承载主工具和界面共用的严格派发输出结构；mai
 ### 请求预算的独立持久化端口
 
 `ModelRequestBudgetStore` 仅公开周期与请求账本视图，以及单条预算阶段提交。Main 的 modelRequestBudgetStore 适配器在唯一 DispatchStore 串行事务内投影隔离副本、执行准入决定并构造白名单 mutation；原命令幂等、整库不变量、可靠落盘及关闭生命周期仍归 DispatchStore。预算服务不再取得任务图、成员、邮箱或任意 mutation 权限。旧记录不迁移，未知请求不补结算。
+
+隐式执行绑定沿用原岗位审计。历史继承核父责任审计和原子模块来源代次；历史模型匹配核原知识来源，且匹配版本必须属于原计划。新计划/派发/领取仍核当前关系；旧任务身份与结算不可因当前变化改写。

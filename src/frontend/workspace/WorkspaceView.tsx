@@ -1,16 +1,15 @@
 /**
- * 作用定位：工作区唯一的静态业务架构，维护模块和 Workflow，模块卡片一级选择 Agent，复用真实岗位与责任提交；局部图标控制位于图内，避免重复全局入口。
- * 设计原因：项目根始终展示，正式子模块随开发渐进维护；未配置自定义 Agent 的模块隐式由主 Agent 执行，自定义 Agent 通过默认模型登记后读取真实岗位，不将 Agent ID 写成负责人；未知只核原命令。
- * 责任展示以岗位负责人为准，不再读取或要求真人维护关系；历史知识文件保持原样。
- * 模块负责人选择传递 Agent 的 runtime 默认选型；已登记岗位继续引用自身采纳配置。
+ * 作用定位：业务模块和真实知识文件的目录树、预览编辑与治理入口。
+ * 设计原因：模块选择展示业务职责，文件选择复用知识事务；负责人默认隐式解析，显式设置留在详情。旧岗位、责任及会话证据不随目录浏览改变。
  */
 import React,{useState,useEffect,useCallback,useMemo} from 'react';
 import type {Snapshot,WorkspaceView} from '../../bridge/contracts/workspace';
-import {projectRootModule,projectRootModuleId} from '../../bridge/contracts/workspace';
+import {projectRootModuleId} from '../../bridge/contracts/workspace';
 import {Icon} from '../components/Icon';
-import {GraphViewControls} from '../components/GraphViewControls';
 import {Empty} from '../components/Empty';
-import {KnowledgeTools} from '../knowledge/KnowledgeTools';
+import {KnowledgeFileTree} from '../knowledge/KnowledgeFileTree';
+import {KnowledgeFilePreview} from '../knowledge/KnowledgeFilePreview';
+import {GovernanceLaunch} from '../knowledge/GovernanceLaunch';
 import {ArchitectureEditor,type EditableKind} from '../knowledge/ArchitectureEditor';
 import {WorkspaceResourceTransfer} from '../resources/WorkspaceResourceTransfer';
 import {ModuleGovernancePanel} from '../governance/ModuleGovernancePanel';
@@ -19,38 +18,37 @@ import {WorkspaceMembers} from '../team/WorkspaceMembers';
 import {buildTeamModel} from '../team/team-model';
 import {InlineModuleOwner,useInlineModuleOwners} from './InlineModuleOwner';
 import './workspace-view.css';
-/** 卡片选择走真实岗位与责任服务；项目根的记录图标只打开历史维护，不给内置根分配负责人。 */
-export function BusinessArchitecture({workspace,tabId,dirty,snapshot,refresh}:{workspace:WorkspaceView;tabId:string;dirty:React.RefObject<Set<string>>;snapshot?:Snapshot;refresh?:()=>Promise<void>}){
-  const id=workspace.id;
-  const [manage,setManage]=useState(false),[query,setQuery]=useState(''),[collapsed,setCollapsed]=useState<Set<string>>(new Set()),[virtual,setVirtual]=useState(true),[chosen,setChosen]=useState<string>(projectRootModuleId),[zoom,setZoom]=useState(14);
-  const tree=snapshot?.validation?.tree,node=tree?.nodes[chosen];
-  const [editor,setEditor]=useState<{kind:EditableKind;id?:string;parentId?:string;mode?:'edit'|'delete'}>(),[transfer,setTransfer]=useState<'publish'|'import'>(),[message,setMessage]=useState(''),[error,setError]=useState('');
-  const parse=(path:string)=>{try{return JSON.parse(snapshot?.files.find(file=>file.path===path)?.text??'{}')}catch{return {}}};
-  const definition=node?parse(node.id+'/module.json'):undefined;
-  const [governance,setGovernance]=useState<string>();
-  const [ownership,setOwnership]=useState<{moduleId?:string;memberId?:string}>();
-  const [registration,setRegistration]=useState<{moduleId:string;agentId:string}>();
-  const agents=useMemo(()=>Object.values(buildTeamModel(snapshot?.workspaceId===id?snapshot:undefined,workspace.name).nodes).filter(item=>item.kind==='agent').map(item=>({id:item.id,name:item.name,runtime:item.runtime})),[snapshot,id,workspace.name]);
-  const owners=useInlineModuleOwners(snapshot?{workspaceId:id,instanceId:snapshot.instanceId}:undefined,agents,snapshot?.revision);
-  async function saved(objects:string[]){setEditor(undefined);setMessage('静态业务定义已更新。已有会话的任务记录保持独立。');if(objects[0]&&!objects[0].includes('/workflows/'))setChosen(objects[0]);try{await refresh?.()}catch(cause){setError(cause instanceof Error?cause.message:String(cause))}}
-  const onDirtyChange=useCallback((value:boolean)=>{value?dirty.current.add(tabId):dirty.current.delete(tabId)},[dirty,tabId]);
-  useEffect(()=>()=>{dirty.current.delete(tabId)},[dirty,tabId]);
-  if(snapshot&&registration)return <WorkspaceMembers key={id+snapshot.instanceId} workspace={workspace} agents={agents} initialRegistration={{agentId:registration.agentId}} returnLabel="返回模块负责人" onRegistered={memberId=>{setOwnership({moduleId:registration.moduleId,memberId});setRegistration(undefined)}} onClose={()=>{setOwnership({moduleId:registration.moduleId});setRegistration(undefined)}}/>;
-  if(snapshot&&ownership)return <ModuleOwnershipPanel key={id+snapshot.instanceId} identity={{workspaceId:id,instanceId:snapshot.instanceId}} initialModuleId={ownership.moduleId} initialMemberId={ownership.memberId} registration={{agents,onSelect:(moduleId,agentId)=>setRegistration({moduleId,agentId})}} onClose={()=>setOwnership(undefined)}/>;
-  function branch(moduleId:string,seen=new Set<string>()):React.ReactNode{const n=tree?.nodes[moduleId];if(!n||seen.has(moduleId))return null;const next=new Set([...seen,moduleId]);return <div className="module-branch" key={moduleId}><div className={'module-card '+(chosen===moduleId?'chosen':'')+(query&&!`${n.name} ${n.summary}`.includes(query)?' dimmed':'')}><button className={"module-collapse "+(collapsed.has(moduleId)?"":"expanded")} aria-label={'展开或折叠 '+n.name} aria-expanded={!collapsed.has(moduleId)} onClick={()=>setCollapsed(old=>{const s=new Set(old);s.has(moduleId)?s.delete(moduleId):s.add(moduleId);return s})}><Icon name="chevron" size={14}/></button><button className="module-card-content" onClick={()=>setChosen(moduleId)}><Icon name="knowledge"/><span><b>{n.name}</b><small>{n.summary}</small><em>{n.children.length} 个子模块 · {n.sources.length} 个源目录</em></span></button><div className="module-card-tools"><InlineModuleOwner moduleId={moduleId} name={n.name} owners={owners}/><div className="module-icon-actions"><button aria-label={'新建子模块 '+n.name} title="新建子模块" onClick={()=>setEditor({kind:'module',parentId:moduleId})}><Icon name="plus" size={16}/></button><button aria-label={'编辑模块 '+n.name} title="编辑模块" onClick={()=>setEditor({kind:'module',id:moduleId})}><Icon name="edit" size={16}/></button><button aria-label={'删除模块 '+n.name} title="删除模块" onClick={()=>setEditor({kind:'module',id:moduleId,mode:'delete'})}><Icon name="trash" size={16}/></button></div></div></div>{(!collapsed.has(moduleId)||query)&&<div className="module-children">{virtual&&n.sources.length>0&&<button className="virtual-card" onClick={()=>setChosen(moduleId)}><Icon name="folder" size={15}/><span>直属内容 <small>虚拟节点 · 不独立注册</small></span></button>}{n.children.map(child=>branch(child,next))}</div>}</div>}
-  return <div className="knowledge-tools business-management"><div className="view-heading"><div className="knowledge-heading"><p className="overline">工作区 / 静态业务架构</p><h1>业务架构</h1><p>项目根模块始终可用；按实际开发成果逐步划分领域工程与模块。</p></div><button onClick={()=>setManage(x=>!x)}><Icon name={manage?'flow':'settings'} size={16}/><span>{manage?'返回架构图':'高级知识管理'}</span></button></div>
-    {message&&<p role="status">{message}</p>}{error&&<p role="alert" className="error-text">{error}</p>}
-    <div className="architecture-actions business-transfer-actions"><button aria-label="发布完整业务架构" disabled={!snapshot||!tree?.roots.length} onClick={()=>setTransfer('publish')}><Icon name="upload" size={16}/><span>发布架构</span></button><button aria-label="使用业务模板" disabled={!snapshot} onClick={()=>setTransfer('import')}><Icon name="download" size={16}/><span>使用模板</span></button></div>
-    <div hidden={!manage}><KnowledgeTools workspaceId={id} onDirtyChange={onDirtyChange}/></div><div hidden={manage}><div className="inline-owner-status">{owners.message&&<p role="status">{owners.message}</p>}{owners.error&&<p role="alert">{owners.error}</p>}{owners.blocked&&<p>存在未核实的保存结果。</p>}{(owners.error||owners.blocked)&&<button disabled={owners.loading} onClick={()=>void owners.refresh()}>核实原操作并刷新</button>}</div><div className="graph-toolbar"><div className="inline-search"><Icon name="search" size={16}/><input aria-label="搜索项目模块" placeholder="定位模块或职责…" value={query} onChange={e=>setQuery(e.target.value)}/></div><label><input type="checkbox" checked={virtual} onChange={e=>setVirtual(e.target.checked)}/>直属内容</label></div>
-    {!snapshot?<Empty icon="knowledge" title="正在读取项目知识"/>:<div className="org-layout"><div className="module-canvas" style={{fontSize:zoom}}><div className="graph-canvas-heading"><p className="overline">项目与业务模块</p><GraphViewControls label="业务架构图视图操作" smallerLabel="缩小知识图文字" largerLabel="放大知识图文字" zoom={zoom} onZoom={setZoom} onExpand={()=>setCollapsed(new Set())} onCollapse={()=>setCollapsed(new Set(Object.keys(tree?.nodes||{})))}/></div><div className={"module-card project-root-card "+(chosen===projectRootModuleId?"chosen":"")} data-testid="project-root-module"><button className="module-card-content" onClick={()=>setChosen(projectRootModuleId)}><Icon name="folder"/><span><b>{workspace.name} · {projectRootModule.name}</b><small>可直接开始开发，团队与业务模块随后逐步沉淀。</small></span></button><div className="module-icon-actions project-root-actions"><button aria-label="查看负责人记录" title="查看负责人记录" data-testid="open-module-ownerships" onClick={()=>setOwnership({})}><Icon name="clock" size={17}/></button><button aria-label="新建工程模块" title="新建工程模块" onClick={()=>setEditor({kind:'module',parentId:'.cbim/workspace'})}><Icon name="plus" size={17}/></button></div></div><div className="module-children">{tree?.roots.map(root=>branch(root))}</div></div>{node&&<section className="inspector"><p className="overline">{tree.roots.includes(node.id)?'领域工程':'模块'} · 静态定义</p><h2>{node.name}</h2><small className="architecture-object-id">{node.id}</small><p>{node.summary}</p>
-      <button data-testid="open-module-governance" onClick={()=>setGovernance(node.id)}><Icon name="knowledge" size={16}/><span>知识治理</span></button>
-      <button data-testid="open-module-ownership" onClick={()=>setOwnership({moduleId:node.id})}><Icon name="clock" size={16}/><span>负责人记录</span></button>
-      <h3>源目录与 scope</h3>{node.sources.map(source=><div className="skill-item" key={source.location}><b>{source.location}</b><p>{source.scope}</p></div>)}{!node.sources.length&&<p>没有声明源目录。</p>}<details className="module-body architecture-method"><summary>查看模块正文</summary><pre>{snapshot.files.find(file=>file.path===node.id+'/'+(definition?.overview??'module.md'))?.text||'没有模块正文。'}</pre></details>
-      <h3>本模块 Workflow</h3><p>不继承父级或兄弟模块的流程。</p><button onClick={()=>setEditor({kind:'workflow',parentId:node.id})}><Icon name="plus" size={16}/><span>新建 Workflow</span></button>{(definition?.workflows??[]).map((workflow:any)=>{const workflowId=node.id+'/'+String(workflow.reference).replace(/\/workflow\.md$/,'');return <article className="architecture-method" key={workflowId}><b>{workflow.name}</b><details><summary>查看流程正文</summary><pre>{snapshot.files.find(file=>file.path===node.id+'/'+workflow.reference)?.text}</pre></details><div className="architecture-actions"><button onClick={()=>setEditor({kind:'workflow',id:workflowId})}><Icon name="edit" size={16}/><span>编辑 Workflow</span></button><button onClick={()=>setEditor({kind:'workflow',id:workflowId,mode:'delete'})}><Icon name="trash" size={16}/><span>删除 Workflow</span></button></div></article>})}
-    </section>}</div>}
-    <p className="view-footnote">工作区内所有主会话共用此静态架构。连线表示包含关系；各会话的动态任务节点图位于会话任务视图。架构语义仍需团队 review。</p></div>
-    {snapshot&&editor&&<ArchitectureEditor key={JSON.stringify(editor)} workspaceId={id} snapshot={snapshot} {...editor} onClose={()=>setEditor(undefined)} onSaved={objects=>void saved(objects)}/>}
-    {snapshot&&transfer&&<WorkspaceResourceTransfer workspaceId={id} snapshot={snapshot} mode={transfer} kind="architecture" category="templates" onClose={()=>setTransfer(undefined)} onApplied={()=>void saved([])}/>}
-    {snapshot&&governance&&<ModuleGovernancePanel key={snapshot.instanceId+governance} identity={{workspaceId:id,instanceId:snapshot.instanceId}} moduleId={governance} onClose={()=>setGovernance(undefined)} onApplied={refresh}/>}
-  </div>
+/** 浏览不保存负责人；文件提交后刷新同一工作区快照，草稿由扩展页签统一保护。 */
+export function BusinessArchitecture({workspace,tabId,dirty,snapshot,refresh,onStarted}:{workspace:WorkspaceView;tabId:string;dirty:React.RefObject<Set<string>>;snapshot?:Snapshot;refresh?:()=>Promise<void>;onStarted?:(taskId:string,title:string)=>void}){
+ const id=workspace.id,[query,setQuery]=useState(''),[chosen,setChosen]=useState(projectRootModuleId),[file,setFile]=useState('');
+ const current=snapshot?.workspaceId===id?snapshot:undefined,tree=current?.validation?.tree,node=tree?.nodes[chosen];
+ const [editor,setEditor]=useState<{kind:EditableKind;id?:string;parentId?:string;mode?:'edit'|'delete'}>(),[transfer,setTransfer]=useState<'publish'|'import'>(),[message,setMessage]=useState(''),[error,setError]=useState('');
+ const [governance,setGovernance]=useState<string>(),[ownership,setOwnership]=useState<{moduleId?:string;memberId?:string}>(),[registration,setRegistration]=useState<{moduleId:string;agentId:string}>();
+ const agents=useMemo(()=>Object.values(buildTeamModel(current,workspace.name).nodes).filter(item=>item.kind==='agent').map(item=>({id:item.id,name:item.name,runtime:item.runtime})),[current,workspace.name]);
+ const owners=useInlineModuleOwners(current?{workspaceId:id,instanceId:current.instanceId}:undefined,agents,current?.revision);
+ const onDirtyChange=useCallback((value:boolean)=>{value?dirty.current.add(tabId):dirty.current.delete(tabId)},[dirty,tabId]);
+ useEffect(()=>()=>{dirty.current.delete(tabId)},[dirty,tabId]);
+ function select(path:string,kind:'folder'|'file'){if(dirty.current.has(tabId)&&!confirm('丢弃未提交的知识草稿并切换？'))return;setFile(kind==='file'?path:'');const owner=Object.keys(tree?.nodes??{}).filter(id=>path===id||path.startsWith(id+'/')).sort((a,b)=>b.length-a.length)[0];setChosen(owner??projectRootModuleId)}
+ async function saved(objects:string[]){setEditor(undefined);setMessage('知识已更新，已有任务记录保持不变。');if(objects[0])select(objects[0],'folder');try{await refresh?.()}catch(cause){setError(cause instanceof Error?cause.message:String(cause))}}
+ const definition=(()=>{try{return JSON.parse(current?.files.find(item=>item.path===node?.id+'/module.json')?.text??'{}')}catch{return {}}})();
+ if(current&&registration)return <WorkspaceMembers key={id+current.instanceId} workspace={workspace} agents={agents} initialRegistration={{agentId:registration.agentId}} returnLabel="返回模块负责人" onRegistered={memberId=>{setOwnership({moduleId:registration.moduleId,memberId});setRegistration(undefined)}} onClose={()=>{setOwnership({moduleId:registration.moduleId});setRegistration(undefined)}}/>;
+ if(current&&ownership)return <ModuleOwnershipPanel key={id+current.instanceId} identity={{workspaceId:id,instanceId:current.instanceId}} initialModuleId={ownership.moduleId} initialMemberId={ownership.memberId} registration={{agents,onSelect:(moduleId,agentId)=>setRegistration({moduleId,agentId})}} onClose={()=>setOwnership(undefined)}/>;
+ return <div className="knowledge-tools business-management"><div className="view-heading"><div><p className="overline">工作区 / 业务架构</p><h1>业务架构</h1><p>按文件夹浏览模块，选择知识文件即可预览、编辑和校验。</p></div><GovernanceLaunch workspaceId={id} kind="business" disabled={!current} onStarted={onStarted}/></div>
+  {message&&<p role="status">{message}</p>}{error&&<p role="alert">{error}</p>}
+  <div className="architecture-actions"><button disabled={!current} onClick={()=>setEditor({kind:'module',parentId:'.cbim/workspace'})}><Icon name="plus"/>新建工程模块</button><button data-testid="open-module-ownerships" onClick={()=>setOwnership({})}>负责人记录</button><button disabled={!current||!tree?.roots.length} onClick={()=>setTransfer('publish')}>发布架构</button><button disabled={!current} onClick={()=>setTransfer('import')}>使用模板</button></div>
+  <div className="inline-search"><Icon name="search"/><input aria-label="搜索项目模块" placeholder="搜索模块或知识文件…" value={query} onChange={e=>setQuery(e.target.value)}/></div>
+  {!current?<Empty icon="knowledge" title="正在读取项目知识"/>:<div className="org-layout"><div className="module-canvas"><button data-testid="project-root-module" onClick={()=>select('.cbim/workspace','folder')}>{workspace.name} · 项目根</button><KnowledgeFileTree snapshot={current} root=".cbim/workspace" label="业务模块" selected={file||chosen} query={query} onSelect={select} labels={Object.fromEntries(Object.values(tree?.nodes??{}).map(item=>[item.id,item.name]))}/></div>
+   <section className="inspector">{file?<KnowledgeFilePreview key={file} snapshot={current} path={file} onSaved={refresh} onDirtyChange={onDirtyChange}/>:node?<>
+    <h2>{node.name}</h2><code>{node.id}</code><p>{node.summary}</p><p>执行时依次采用显式负责人、最近父级负责人、模型匹配团队岗位；无匹配由主 Agent 执行。</p>
+    <InlineModuleOwner moduleId={node.id} name={node.name} owners={owners}/>{owners.error&&<p role="alert">{owners.error}</p>}{owners.message&&<p role="status">{owners.message}</p>}{(owners.error||owners.blocked)&&<button onClick={()=>void owners.refresh()}>核实原操作并刷新</button>}
+    <div className="architecture-actions"><button onClick={()=>setEditor({kind:'module',parentId:node.id})}>新建子模块</button><button onClick={()=>setEditor({kind:'module',id:node.id})}>编辑模块</button><button onClick={()=>setEditor({kind:'module',id:node.id,mode:'delete'})}>删除模块</button><button data-testid="open-module-governance" onClick={()=>setGovernance(node.id)}>知识治理记录</button><button data-testid="open-module-ownership" onClick={()=>setOwnership({moduleId:node.id})}>负责人记录</button></div>
+    <KnowledgeFilePreview key={node.id} snapshot={current} path={node.id+'/'+(definition.overview??'module.md')} onSaved={refresh} onDirtyChange={onDirtyChange}/>
+    <h3>源目录</h3>{node.sources.map(source=><p key={source.location}><code>{source.location}</code> · {source.scope}</p>)}
+    <h3>本模块 Workflow</h3><button onClick={()=>setEditor({kind:'workflow',parentId:node.id})}>新建 Workflow</button>{(definition.workflows??[]).map((flow:{name:string;reference:string})=><p key={flow.reference}><button onClick={()=>select(node.id+'/'+flow.reference,'file')}>{flow.name}</button><button onClick={()=>setEditor({kind:'workflow',id:node.id+'/'+flow.reference.replace(/\/workflow\.md$/,'')})}>编辑 Workflow</button></p>)}
+   </>:<><h2>{workspace.name}</h2><p>项目根可直接开始工作，无需先指定模块负责人。选择模块或知识文件查看详情。</p></>}</section>
+  </div>}
+  {current&&editor&&<ArchitectureEditor key={JSON.stringify(editor)} workspaceId={id} snapshot={current} {...editor} onClose={()=>setEditor(undefined)} onSaved={objects=>void saved(objects)}/>}
+  {current&&transfer&&<WorkspaceResourceTransfer workspaceId={id} snapshot={current} mode={transfer} kind="architecture" category="templates" onClose={()=>setTransfer(undefined)} onApplied={()=>void saved([])}/>}
+  {current&&governance&&<ModuleGovernancePanel key={current.instanceId+governance} identity={{workspaceId:id,instanceId:current.instanceId}} moduleId={governance} onClose={()=>setGovernance(undefined)} onApplied={refresh}/>}
+ </div>;
 }

@@ -10,7 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [builtins.ts](builtins.ts) | Builtins：白名单发布内置 Skill、规范和 Schema，包括只需简述、补充自愿的 BUG 反馈与需求许愿流程。 |
+| [builtins.ts](builtins.ts) | Builtins：白名单发布内置 Skill、规范和 Schema，包括团队/业务架构治理及只需简述、补充自愿的反馈流程。 |
 | [knowledge-refresh.ts](knowledge-refresh.ts) | 知识领域的派生索引刷新用例，按原请求查询提交回执并核对版本。 |
 | [knowledge-write-input.ts](knowledge-write-input.ts) | 知识提交工具与后端原事务核实共用的输入解析和原引用构造。 |
 | [knowledge-write-observation.ts](knowledge-write-observation.ts) | 原知识事务的有界公开观察协议，供后端与界面共同校验，只有纯 Schema 依赖。 |
@@ -863,3 +863,5 @@ ObjectOperation 使用 kind 判别的严格 data Schema，objectDataSchemas 同�
 ## 对象预览的调用约束
 
 objectOperation 的发现 Schema 说明摘要 100–250 非空白字符、保留 slug、Module 五章原文、直属内容虚拟节点和 parentId 根语义。约束说明不替代 Rules 的完整候选校验。ObjectCrud 按序应用 operations 到同一候选 Map，后序子对象可引用前序新父对象；预览只保存计划，完整结构诊断保留在 validation.issues。
+
+Builtins 增加 team-architecture-governance 和 business-architecture-governance 两个产品工作流，仍是白名单只读 Skill；读取不执行，实际执行由明确启动的主会话完成。正文随 design/runtime 打包。

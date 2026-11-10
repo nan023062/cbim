@@ -21,7 +21,7 @@ import {
 const inputs={cbim_module_owner_inspect:moduleOwnerInspectInputSchema,cbim_module_owner_change_preview:moduleOwnerPreviewInputSchema,cbim_module_owner_change_commit:moduleOwnerCommitInputSchema,cbim_module_owner_receipt:moduleOwnerReceiptInputSchema};
 const outputs={cbim_module_owner_inspect:moduleOwnerInspectOutputSchema,cbim_module_owner_change_preview:moduleOwnerPreviewOutputSchema,cbim_module_owner_change_commit:moduleOwnerRecordedOutputSchema,cbim_module_owner_receipt:moduleOwnerReceiptOutputSchema};
 const descriptions={
-  cbim_module_owner_inspect:'用members:true分页发现岗位摘要；用moduleIds查询真实责任与execution.groups中的岗位执行选择或具体缺口；不同负责人须拆任务。selection是当前预期，业务goal和dispatch必须原样引用，实际领取仍重核。用memberId可反查责任；不发能力正文/凭据，不保证供应商可用。',
+  cbim_module_owner_inspect:'用members:true分页发现岗位摘要；用moduleIds查询真实责任与execution.groups中的岗位执行选择或具体缺口；不同负责人须拆任务。自动解析显式和最近父级责任；都未配置时，主模型读取模块内容和团队能力后可传 matches:{knowledgeRevision,choices:[{moduleId,memberId,reason}]}，无匹配 memberId:null。匹配只影响新计划，不写责任登记；无跨版本缓存。selection是当前预期，业务goal和dispatch必须原样引用，实际领取仍重核。用memberId可反查责任；不发能力正文/凭据，不保证供应商可用。',
   cbim_module_owner_change_preview:'只读预览单模块设置、换人、解除责任或用 kind=adopt_source 明确采纳当前来源代次。adopt_source 保留原负责人且不传 nextOwner；先查询实际模块与岗位。预览不提交或改派旧任务，正式执行另经计划、岗位和领取门禁。',
   cbim_module_owner_change_commit:'按原 change 和预览依据提交一次责任变更，使用本轮知识写权限及真实审批。仅登记负责人，不改知识正文、不切换派发或执行模型；结果未知只查错误中的原 commandId，不能再次提交。',
   cbim_module_owner_receipt:'只读查询同一根会话主工具原 commandId 的不可变回执。可查旧周期；unknown不表示未受理，不由当前关系相同推断原命令成功，不重放提交。',

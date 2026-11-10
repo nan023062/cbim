@@ -94,6 +94,7 @@ N_src_frontend_workspace ..> N_src_frontend_team : 导入依赖
 - `conversation` → `team`：导入。
 - `execution-view` → `components`：导入。
 - `knowledge` → `components`：导入。
+- `knowledge` → `execution-view`：导入。
 - `main.tsx` → `shell`：导入。
 - `resources` → `knowledge`：导入。
 - `runtime` → `tasks`：导入。

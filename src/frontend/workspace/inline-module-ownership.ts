@@ -58,7 +58,7 @@ export async function assignInlineOwner(identity:ModuleOwnershipIdentity,moduleI
   }
   if(value&&(!member||member.state!=='active'||!agents.some(agent=>agent.id===member!.agentId&&agent.id!=='cbim:main')))throw Error('所选 Agent 或岗位当前不可用，请刷新后重新选择。');
   if((previous?.ownerMemberId??null)===(member?.memberId??null))return;
-  const input={...identity,change:{moduleId,expectedBinding:previous?{bindingId:previous.bindingId,revision:previous.revision,ownerMemberId:previous.ownerMemberId}:null,nextOwner:member?{memberId:member.memberId,expectedRevision:member.revision}:null,reason:member?'用户在模块卡片选择负责人：'+member.name:'用户在模块卡片恢复主 Agent 默认执行'}};
+  const input={...identity,change:{moduleId,expectedBinding:previous?{bindingId:previous.bindingId,revision:previous.revision,ownerMemberId:previous.ownerMemberId}:null,nextOwner:member?{memberId:member.memberId,expectedRevision:member.revision}:null,reason:member?'用户在模块卡片选择负责人：'+member.name:'用户解除显式负责人，恢复父级继承、模型匹配与主 Agent 兜底'}};
   const preview=checkedModuleOwnershipPreview(await ports.call('workspace.ownerships.preview',input),input);current();
   const record=await ports.ownerships.submit(input,preview);
   if(record?.phase!=='accepted')throw Error('负责人保存尚未确认，请核实原操作。'+(record?.error??ports.ownerships.snapshot.error));

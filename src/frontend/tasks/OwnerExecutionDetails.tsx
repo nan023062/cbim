@@ -17,7 +17,7 @@ export function OwnerExecutionDetails({binding,workspaceId,agentId,moduleIds,com
       <p className="owner-execution-summary">{summary}</p>
       <details><summary>查看原负责人和执行依据</summary>
         <dl><div><dt>项目岗位</dt><dd><code>{binding.memberId}</code></dd></div><div><dt>静态 Agent</dt><dd><code>{binding.capability.agentId}</code></dd></div><div><dt>模型供应商配置</dt><dd><code>{binding.model.profileId}</code></dd></div><div><dt>模型指纹</dt><dd><code>{binding.model.configurationHash}</code></dd></div><div><dt>能力采纳</dt><dd><code>{binding.capability.captureId}</code></dd></div><div><dt>能力来源</dt><dd><code>{'generationId' in binding.capability.sourceRef?binding.capability.sourceRef.generationId:'系统内置执行能力'}</code></dd></div></dl>
-        <ul>{binding.owners.map(owner=><li key={owner.moduleId} data-module-id={owner.moduleId}><strong>{owner.moduleId}</strong><span>责任第 {owner.revision} 版</span><code>{owner.bindingId}</code><small>模块来源：{owner.sourceRef.generationId}</small></li>)}</ul>
+        <ul>{binding.owners.map(owner=><li key={owner.moduleId} data-module-id={owner.moduleId}><strong>{owner.moduleId}</strong><span>{owner.match?'模型匹配 · '+owner.match.reason:owner.inheritedFrom?'继承 '+owner.inheritedFrom+' · 责任第 '+owner.revision+' 版':'显式责任第 '+owner.revision+' 版'}</span><code>{owner.bindingId}</code><small>模块来源：{owner.sourceRef.generationId}</small></li>)}</ul>
         <p className="owner-execution-muted">以上是原派发记录。后续改名、换人或配置修改不会覆盖历史；新领取仍须由调度系统重新核实。</p>
       </details>
     </>}

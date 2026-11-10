@@ -1,3 +1,10 @@
+## 2026-11-11：0.1.7 发布准备（#27 / #28 / #29 与架构切片）
+
+- 当前公开桌面版 0.1.6；默认 develop 与 master 同为 7fad631e8692ff2b5845e899ed49915c72d0faa4，仓库 nan023062/cbim、发布账号 nan023062；旧 Python latest ID 327801733/tag v1.0.2 保持独立。用户已授权完成、PR、合并和发布，沿用先未签名、日后更高版本切换签名的个人开发决定。
+- 独立工单提交：#27 21d46da2、#28 db961c97、#29 642dd350；架构切片保留原独立提交。此前三个引擎与主 Agent 共用设置已在 0.1.6 发布，本次保持其行为。未把架构试点写成全部宽接口/运行时职责已经治理完毕。
+- package 0.1.7 与内置说明已准备，官网仍指向公开 0.1.6。比较 desktop-v0.1.5..desktop-v0.1.6 的 updater 与更新界面无差异，验收输入新增实际旧版 0.1.6 automatic 流程，25 用例通过（test-results/desktop-017-inputs.json）；未来未知旧版仍拒绝。三宿主发布入口/引用同步。
+- 类型检查、品牌摘要、官网构建通过；本次实际产品代码的架构检查复用 #29 已通过结果。新增 automation-ui-smoke.mts，计划在准确候选 EXE 和独立用户目录核实三引擎、固定自动化表单/实际运行、文件树与自动校验；尚未执行，不将脚本存在当作验收证据。候选构建、完整 PR 四片、隔离安装/在线升级与公开待本次后续流程。
+
 ## 2026-11-11：#29 当前工作区自动化与窗口标题
 
 - Issue：https://github.com/nan023062/cbim/issues/29。对话新增固定自动化页签，任务列表、设置与运行历史参考 [Cindy scheduler](https://github.com/makecindy/cindy/blob/main/apps/desktop/help-knowledge/scheduler.md) 和 [运行生命周期](https://github.com/makecindy/cindy/blob/main/packages/maker-scheduler/src/engine/attemptLifecycle.ts)，独立实现当前工作区绑定，不提供自选路径。支持默认主 Agent/已采纳启用岗位、模块、自身 Workflow、有效 Skill、提示、权限及手动/间隔/每天/一次日程。窗口标题为 CBIM，EXE、应用 ID、用户数据和更新通道未改变。

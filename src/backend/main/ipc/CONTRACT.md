@@ -108,3 +108,7 @@ dispatch.manifestReport 必须明确 workspace/root/task/run；省略 manifestId
 ## 原隔离执行核实与清理
 
 dispatch.isolatedExecutionReport显式读取原运行，dispatch.isolatedExecutionCleanup显式提交当前instanceId及原执行/basis/commandId；不允许renderer传入路径、PID、profile或运行脚本。
+
+### 主 Agent 设置入口
+
+agent.mainSettings 与 agent.configureMain 接受当前工作区和实例，后者携带已读 revision 与完整 AgentModelSelection。配置保存只改变工作区 cbim:main 的后续选型，不启动运行、派发岗位或修改已受理队列；服务拒绝失效身份、旧版本及不兼容模型。

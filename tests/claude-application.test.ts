@@ -10,11 +10,11 @@ import {budgetScopes} from './scope-budget-fixture';
 import {requestBudgetReportSchema} from '../src/backend/core/tasks/model-request-budget';
 import {NativeSessionFiles} from '../src/backend/main/platform/native-session-files';
 
-const profile=(baseUrl:string,engine:'pi'|'claude-code')=>({name:'Application '+engine,engine,api:'anthropic-messages' as const,baseUrl,auth:'none' as const,defaultModel:'request-budget-model',models:[{id:'request-budget-model',name:'Test',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false,pricing:{input:1,output:2,cacheRead:0.5,cacheWrite:1.5}}]});
+const profile=(baseUrl:string,engine:'pi'|'claude-code')=>({name:'Shared Anthropic',api:'anthropic-messages' as const,baseUrl,auth:'none' as const,defaultModel:'request-budget-model',models:[{id:'request-budget-model',name:'Test',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false,pricing:{input:1,output:2,cacheRead:0.5,cacheWrite:1.5}}]});
 test('真实主会话切换 Pi → Claude → Pi，各用原生文件并经请求账本结算',async()=>{
   const f=await fixture(),provider=await modelRequestBudgetProvider('anthropic-messages');
   try{
-    const ids:Record<string,string>={};for(const engine of ['pi','claude-code'] as const){const settings=await f.app.models.save({profile:profile(provider.url,engine)});ids[engine]=settings.profiles.find(p=>p.engine===engine)!.id}
+    const settings=await f.app.models.save({profile:profile(provider.url,'pi')}),ids={pi:settings.selectedId!,'claude-code':settings.selectedId!};
     const entry=await f.app.dispatch('add',{path:f.a});await f.app.dispatch('budget.configure',{revision:1,enabled:true,enforcement:'request',limits:{tokens:1000000}});
     let prior:any;const summaries:any[]=[];
     for(const [index,engine] of (['pi','claude-code','pi'] as const).entries()){
@@ -36,7 +36,7 @@ test('真实成员使用岗位 Claude 配置，首轮结束核实原生绑定并
   try{
     const settings=await f.app.models.save({profile:profile(provider.url,'claude-code')}),profileId=settings.selectedId!;
     const entry=await f.app.dispatch('add',{path:f.a}),ws=f.app.workspace(entry.id),team=await seedTeam(ws),moduleId=team.input.moduleId,agentId=team.input.agentId;
-    await registerFixtureOwner(f.app,entry.id,{agentId,moduleIds:[moduleId],profileId,modelId:'request-budget-model',name:'Claude 岗位',adaptation:{instructions:'仅核实本模块',references:[]}});
+    await registerFixtureOwner(f.app,entry.id,{agentId,moduleIds:[moduleId],profileId,modelId:'request-budget-model',engine:'claude-code',name:'Claude 岗位',adaptation:{instructions:'仅核实本模块',references:[]}});
     const service=f.app.memberDispatch(entry.id),members=f.app.memberExecution(entry.id),identity={workspaceId:entry.id,rootSessionId:randomUUID()},scopeId=randomUUID(),mainRunId=randomUUID();
     await service.openScope(identity,scopeId,{message:'验证岗位引擎'},mainRunId);const release=service.budgets.holdMain(mainRunId);
     try{

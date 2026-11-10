@@ -7,7 +7,7 @@
  * 附件边界：目标补充直接使用一次准备的图片，模型配置视觉预检在意图前；不重读附件或把图片放入后续协作配置。
  * 请求预算：每个真实主 run 在 beforeRun 后取得冻结账本端口，凭据仅由父进程代理使用。
  * GitHub 反馈：仅桌面主会话捕获已连接目标；端口绑定原 task，会话继续仍核实同一提交账本，成员不继承。连接诊断独立于提交端口，未登录时仍能核实缺失原因。
- * 运行工厂复核冻结 engine 与当前供应商配置，设置变化不能把排队运行静默改投另一引擎；ready 透传实际原生身份，不以任务 ID 代替。
+ * 运行工厂用冻结 engine 独立解析当前模型并复核协议，供应商不再拥有引擎，排队运行不会静默改投另一引擎；ready 透传实际原生身份，不以任务 ID 代替。
  */
 import path from 'node:path';
 import {FileRunStorage} from './persistence/tasks/run-storage';
@@ -41,8 +41,8 @@ import type {ModelRequestBudgetService} from '../scheduler-engine/execution/mode
 export function createExecutionManager(workspace:Workspace,models:LlmProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService,feedback?:GitHubFeedback){
   const storage=new FileRunStorage();
   return new WorkspaceExecutionManager(workspace,storage,async(options,task,launch)=>{
-    const llm=options.profileId?await models.resolve(options.profileId,options.model):undefined;
-    if(llm&&options.engine&&options.engine!==(llm.profile.engine??'pi'))throw Error('引擎与所选模型配置不一致，请重新选择');
+    const llm=options.profileId?await models.resolve(options.profileId,options.model,options.engine):undefined;
+
     if(llm&&(options.provider!=='cbim-'+llm.profile.id||options.model!==llm.profile.model))throw Error('模型配置已变化，请重新启动任务');
     launch.signal.throwIfAborted();
     await requestBudgets?.preflight(task.taskId,launch.scopeId,llm);

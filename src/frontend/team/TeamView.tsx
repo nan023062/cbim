@@ -1,7 +1,7 @@
 /**
  * 作用定位：静态团队架构、知识编辑与人才市场入口；独立打开角色 Session 履历和项目岗位登记。
  * 设计原因：项目组织树隐藏内置角色，完整能力模型与 Skill 父链保留；长期岗位、运行实例与静态能力不能混成一棵树；岗位仅登记采纳与状态，编辑和导入交给预览事务，浏览与登记不授权执行。
- * 传递静态 Agent 的默认引擎/模型到岗位登记入口，图谱展示不启动运行或改写历史岗位。
+ * 主 Agent 配置入口与对话栏读写同一设置；传递自定义 Agent 的默认引擎/模型到岗位登记入口，图谱展示不启动运行或改写历史岗位。
  */
 import React,{useEffect,useMemo,useState,type ReactNode} from 'react';
 import type {Snapshot,WorkspaceView} from '../../bridge/contracts/workspace';
@@ -11,6 +11,7 @@ import {MarkdownMessage} from '../conversation/MarkdownMessage';
 import {ArchitectureEditor} from '../knowledge/ArchitectureEditor';
 import {WorkspaceResourceTransfer} from '../resources/WorkspaceResourceTransfer';
 import {AgentSessionHistory} from './AgentSessionHistory';
+import {MainAgentEditor} from './MainAgentEditor';
 import {WorkspaceMembers} from './WorkspaceMembers';
 import {availableTeamSkills,buildTeamModel,TEAM_ROOT,visibleTeamNodes} from './team-model';
 import './team-view.css';
@@ -25,8 +26,8 @@ export function TeamView({snapshot,workspace,refresh}:{snapshot?:Snapshot;worksp
   const [collapsed,setCollapsed]=useState<Set<string>>(new Set()),[zoom,setZoom]=useState(14);
   const [editor,setEditor]=useState<Editor>(),[transfer,setTransfer]=useState<Transfer>(),[error,setError]=useState('');
   const [history,setHistory]=useState<{workspaceId:string;agentId?:string}>();
-  const [members,setMembers]=useState(false);
-  useEffect(()=>{setChosen(TEAM_ROOT);setSkillId('');setQuery('');setEditor(undefined);setTransfer(undefined);setHistory(undefined);setMembers(false);setError('')},[workspace.id]);
+  const [members,setMembers]=useState(false),[mainSettings,setMainSettings]=useState(false);
+  useEffect(()=>{setChosen(TEAM_ROOT);setSkillId('');setQuery('');setEditor(undefined);setTransfer(undefined);setHistory(undefined);setMembers(false);setMainSettings(false);setError('')},[workspace.id]);
   const node=model.nodes[chosen]??model.nodes[TEAM_ROOT];
   const skills=availableTeamSkills(model,node.id),skill=skills.find(item=>item.id===skillId);
   const visible=visibleTeamNodes(model,query,false),agents=Object.values(model.nodes).filter(item=>item.kind==='agent');
@@ -56,6 +57,7 @@ export function TeamView({snapshot,workspace,refresh}:{snapshot?:Snapshot;worksp
       <div className="inline-search"><Icon name="search" size={16}/><input aria-label="搜索团队成员或 Skill" placeholder="搜索成员、能力或 Skill…" value={query} onChange={event=>setQuery(event.target.value)}/></div>
       <button disabled={!canEdit} onClick={()=>setEditor({kind:'agent',parentId:newAgentParent})}><Icon name="plus" size={15}/> 新建 Agent</button>
       <button disabled={!canEdit} onClick={()=>setTransfer({mode:'import',kind:node.kind==='agent'?'skill':undefined,targetParentId:owner})}><Icon name="download" size={16}/><span>从人才市场下载</span></button>
+      <button data-testid="team-main-agent-settings" disabled={!canEdit} onClick={()=>setMainSettings(true)}><Icon name="settings" size={16}/><span>主 Agent 配置</span></button>
       <button data-testid="team-history-roles" onClick={()=>setHistory({workspaceId:workspace.id})}><Icon name="clock" size={16}/><span>历史角色</span></button>
       <button data-testid="team-workspace-members" disabled={workspace.state!=='running'||!workspace.instanceId} onClick={()=>setMembers(true)}><Icon name="team" size={16}/><span>项目岗位</span></button>
     </div>
@@ -81,6 +83,7 @@ export function TeamView({snapshot,workspace,refresh}:{snapshot?:Snapshot;worksp
       </section>
     </div>}
     <p className="view-footnote">组织树仅展示静态定义，历史单独只读查询。编辑与导入先预览再提交；能力归属、Skill 继承与历史浏览不授予执行权限。</p>
+    {mainSettings&&<MainAgentEditor key={workspace.instanceId} workspace={workspace} onClose={()=>setMainSettings(false)}/>}
     {current&&editor&&<ArchitectureEditor workspaceId={workspace.id} snapshot={current} {...editor} onClose={()=>setEditor(undefined)} onSaved={objects=>{const saved=editor;setEditor(undefined);if(saved.mode==='delete')select(saved.parentId??TEAM_ROOT);else if(saved.kind==='agent'&&objects[0])select(objects[0]);else if(saved.kind==='skill'&&objects[0]){if(saved.parentId)setChosen(saved.parentId);setSkillId(objects[0])}void reload()}}/>}
     {current&&transfer&&<WorkspaceResourceTransfer workspaceId={workspace.id} snapshot={current} {...transfer} category="talent" onClose={()=>setTransfer(undefined)} onApplied={()=>void reload()}/>}
   </div>;

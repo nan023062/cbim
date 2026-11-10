@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-通用展示组件，不持有领域服务与运行状态。 EngineModelPicker 从用户配置级联引擎/模型，失效选型保留提示而不隐式替换。
+通用展示组件，不持有领域服务与运行状态。 EngineModelPicker 固定三引擎目录，按协议筛选统一模型，空目录仍可选择引擎。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -174,4 +174,4 @@ N_src_frontend_components_RepositoryScopeDetails_tsx ..> N_src_frontend_componen
 
 ### 引擎与模型级联
 
-EngineModelPicker 供 Agent 编辑与岗位登记复用。引擎项只来自含启用模型的用户配置，模型项按选定引擎过滤。引擎改变清除旧模型，原选型失效保留提示；选择不会自动提交，父表单仍负责预览和写入。
+EngineModelPicker 供主 Agent、自定义 Agent 编辑及岗位登记复用。引擎项固定为三个内置引擎，空模型目录也可选择；模型按 engineSupportsApi 与 enabled 筛选，同一模型可出现在多个引擎下。切换引擎清除未提交模型，缺兼容模型或旧引用失效时明确提示；父表单负责完整选型的校验与保存。

@@ -13,10 +13,12 @@
 | [agent-history-state.ts](agent-history-state.ts) | 校验并合并角色执行历史的会话/轮次分页，生成完整身份观察键。 |
 | [agent-history.css](agent-history.css) | 对应界面的布局与视觉样式。 |
 | [AgentSessionHistory.tsx](AgentSessionHistory.tsx) | 在静态 Agent 下浏览长期 Session 履历，按独立会话和运行展示公开消息、工具过程与计划证据。 |
+| [MainAgentEditor.tsx](MainAgentEditor.tsx) | 团队页面的主 Agent 引擎/模型配置入口。 |
 | [team-model.ts](team-model.ts) | 从工作区知识快照构建静态 Team、分组、Agent 与 Skill 视图模型。 |
 | [team-view.css](team-view.css) | 对应界面的布局与视觉样式。 |
 | [TeamView.tsx](TeamView.tsx) | 静态团队架构、知识编辑与人才市场入口；独立打开角色 Session 履历和项目岗位登记。 |
 | [useAgentHistory.ts](useAgentHistory.ts) | 为只读角色历史面板提供按需分页与单轮公开事件读取。 |
+| [useMainAgentSettings.ts](useMainAgentSettings.ts) | 对话栏与主 Agent 配置页共用的配置读取、保存和同步 Hook。 |
 | [workspace-member-state.ts](workspace-member-state.ts) | 项目岗位页面的严格回包核对与持久提交控制器；跨同工作区页面共享未决命令。 |
 | [workspace-members.css](workspace-members.css) | 对应界面的布局与视觉样式。 |
 | [WorkspaceMemberDetail.tsx](WorkspaceMemberDetail.tsx) | 只读展示项目岗位的稳定身份、采纳内容与本次核实的外部差异。 |
@@ -94,6 +96,18 @@ N_src_frontend_team_AgentSessionHistory_tsx ..> N_src_frontend_team_AgentSession
 ```
 
 直接依赖：[../../bridge/contracts/agent-history.ts](../../bridge/contracts/agent-history.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../tasks/MemberRunTranscript.tsx](../tasks/MemberRunTranscript.tsx)、[../conversation/transcript.ts](../conversation/transcript.ts)、[../conversation/MarkdownMessage.tsx](../conversation/MarkdownMessage.tsx)、[agent-history-state.ts](agent-history-state.ts)、[useAgentHistory.ts](useAgentHistory.ts)、[agent-history.css](agent-history.css)、[../tasks/member-activity.css](../tasks/member-activity.css)。
+
+### MainAgentEditor.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_team_MainAgentEditor_tsx["MainAgentEditor.tsx"] {
+  <<component>>
+  +MainAgentEditor()
+}
+```
+
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../components/EngineModelPicker.tsx](../components/EngineModelPicker.tsx)、[useMainAgentSettings.ts](useMainAgentSettings.ts)。
 
 ### team-model.ts
 
@@ -191,7 +205,7 @@ class N_src_frontend_team_TeamView_tsx_Transfer["Transfer"] {
 N_src_frontend_team_TeamView_tsx ..> N_src_frontend_team_TeamView_tsx_Transfer : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/GraphViewControls.tsx](../components/GraphViewControls.tsx)、[../conversation/MarkdownMessage.tsx](../conversation/MarkdownMessage.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[AgentSessionHistory.tsx](AgentSessionHistory.tsx)、[WorkspaceMembers.tsx](WorkspaceMembers.tsx)、[team-model.ts](team-model.ts)、[team-view.css](team-view.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/GraphViewControls.tsx](../components/GraphViewControls.tsx)、[../conversation/MarkdownMessage.tsx](../conversation/MarkdownMessage.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[AgentSessionHistory.tsx](AgentSessionHistory.tsx)、[MainAgentEditor.tsx](MainAgentEditor.tsx)、[WorkspaceMembers.tsx](WorkspaceMembers.tsx)、[team-model.ts](team-model.ts)、[team-view.css](team-view.css)。
 
 ### useAgentHistory.ts
 
@@ -217,6 +231,18 @@ N_src_frontend_team_useAgentHistory_ts ..> N_src_frontend_team_useAgentHistory_t
 ```
 
 直接依赖：[../../bridge/contracts/agent-history.ts](../../bridge/contracts/agent-history.ts)、[../tasks/member-event-state.ts](../tasks/member-event-state.ts)、[agent-history-state.ts](agent-history-state.ts)。
+
+### useMainAgentSettings.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_team_useMainAgentSettings_ts["useMainAgentSettings.ts"] {
+  <<module>>
+  +useMainAgentSettings()
+}
+```
+
+直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)。
 
 ### workspace-member-state.ts
 
@@ -420,13 +446,16 @@ class N_src_frontend_team_useAgentHistory_ts["useAgentHistory.ts"] {
 class N_src_frontend_team_agent_history_css["agent-history.css"] {
   <<stylesheet>>
 }
-class N_src_frontend_team_TeamView_tsx["TeamView.tsx"] {
+class N_src_frontend_team_MainAgentEditor_tsx["MainAgentEditor.tsx"] {
   <<component>>
+}
+class N_src_frontend_team_useMainAgentSettings_ts["useMainAgentSettings.ts"] {
+  <<module>>
 }
 N_src_frontend_team_AgentSessionHistory_tsx ..> N_src_frontend_team_agent_history_state_ts : 导入依赖
 N_src_frontend_team_AgentSessionHistory_tsx ..> N_src_frontend_team_useAgentHistory_ts : 导入依赖
 N_src_frontend_team_AgentSessionHistory_tsx ..> N_src_frontend_team_agent_history_css : 导入依赖
-N_src_frontend_team_TeamView_tsx ..> N_src_frontend_team_AgentSessionHistory_tsx : 导入依赖
+N_src_frontend_team_MainAgentEditor_tsx ..> N_src_frontend_team_useMainAgentSettings_ts : 导入依赖
 ```
 
 ```mermaid
@@ -434,11 +463,28 @@ classDiagram
 class N_src_frontend_team_TeamView_tsx["TeamView.tsx"] {
   <<component>>
 }
+class N_src_frontend_team_AgentSessionHistory_tsx["AgentSessionHistory.tsx"] {
+  <<component>>
+}
+class N_src_frontend_team_MainAgentEditor_tsx["MainAgentEditor.tsx"] {
+  <<component>>
+}
 class N_src_frontend_team_WorkspaceMembers_tsx["WorkspaceMembers.tsx"] {
   <<component>>
 }
 class N_src_frontend_team_team_model_ts["team-model.ts"] {
   <<module>>
+}
+N_src_frontend_team_TeamView_tsx ..> N_src_frontend_team_AgentSessionHistory_tsx : 导入依赖
+N_src_frontend_team_TeamView_tsx ..> N_src_frontend_team_MainAgentEditor_tsx : 导入依赖
+N_src_frontend_team_TeamView_tsx ..> N_src_frontend_team_WorkspaceMembers_tsx : 导入依赖
+N_src_frontend_team_TeamView_tsx ..> N_src_frontend_team_team_model_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_team_TeamView_tsx["TeamView.tsx"] {
+  <<component>>
 }
 class N_src_frontend_team_team_view_css["team-view.css"] {
   <<stylesheet>>
@@ -449,14 +495,6 @@ class N_src_frontend_team_useAgentHistory_ts["useAgentHistory.ts"] {
 class N_src_frontend_team_agent_history_state_ts["agent-history-state.ts"] {
   <<module>>
 }
-N_src_frontend_team_TeamView_tsx ..> N_src_frontend_team_WorkspaceMembers_tsx : 导入依赖
-N_src_frontend_team_TeamView_tsx ..> N_src_frontend_team_team_model_ts : 导入依赖
-N_src_frontend_team_TeamView_tsx ..> N_src_frontend_team_team_view_css : 导入依赖
-N_src_frontend_team_useAgentHistory_ts ..> N_src_frontend_team_agent_history_state_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_frontend_team_WorkspaceMembers_tsx["WorkspaceMembers.tsx"] {
   <<component>>
 }
@@ -466,14 +504,23 @@ class N_src_frontend_team_workspace_member_state_ts["workspace-member-state.ts"]
 class N_src_frontend_team_WorkspaceMemberForm_tsx["WorkspaceMemberForm.tsx"] {
   <<component>>
 }
+N_src_frontend_team_TeamView_tsx ..> N_src_frontend_team_team_view_css : 导入依赖
+N_src_frontend_team_useAgentHistory_ts ..> N_src_frontend_team_agent_history_state_ts : 导入依赖
+N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_workspace_member_state_ts : 导入依赖
+N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_WorkspaceMemberForm_tsx : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_team_WorkspaceMembers_tsx["WorkspaceMembers.tsx"] {
+  <<component>>
+}
 class N_src_frontend_team_WorkspaceMemberDetail_tsx["WorkspaceMemberDetail.tsx"] {
   <<component>>
 }
 class N_src_frontend_team_workspace_members_css["workspace-members.css"] {
   <<stylesheet>>
 }
-N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_workspace_member_state_ts : 导入依赖
-N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_WorkspaceMemberForm_tsx : 导入依赖
 N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_WorkspaceMemberDetail_tsx : 导入依赖
 N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_workspace_members_css : 导入依赖
 ```
@@ -540,3 +587,7 @@ N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_workspace_membe
 ### 静态默认与岗位采纳
 
 team-model 解析 Agent runtime 并随图节点交给登记表单；新登记可预选，编辑旧岗位默认保留原采纳。EngineModelPicker 管理两级菜单，切换 Agent 重置旧选择；预览及详情展示实际快照的引擎和模型。
+
+### 对话栏与主 Agent 配置等效
+
+TeamView 工具栏提供 MainAgentEditor，复用 EngineModelPicker 与 useMainAgentSettings。主 Agent 配置和对话栏读写后端同一份角色设置，所有主会话同步；表单固定打开时 revision，不能自动覆盖另一入口的更改。内置能力仍只读。自定义 Agent 仍经原知识预览提交保存 runtime，新岗位明确采纳引擎与模型；历史运行保持原快照。

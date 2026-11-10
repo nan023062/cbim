@@ -2,7 +2,7 @@
  * 隔离资源核实只读；清理接受原运行/执行/报告版本和当前实例，无法通过IPC指定路径或PID。
  * 受控补偿边界：四项桌面入口只查原操作、预览和显式提交新补偿；模型无补偿入口，原 unknown 和原日志不改写。
  * 请求预算仅路由完整身份的只读摘要；设置改变只影响新目标，IPC 没有清除预留或签发发送许可的入口。
- * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务。
+ * 作用定位：将经过主进程接入的 action 路由到明确的工作区和应用服务；主 Agent 两处设置入口共用同一配置服务。
  * GitHub 边界：仅暴露登录、轮询和断开，不提供绕过运行权限的 Issue 写入 IPC，不返回任何凭据。
  * 设计原因：通过 ApplicationServices 隔离实现；人工保存不启动模型，humanContinue 只消费已保存决定。资料导入/取消独立于等待受理，IPC 不接收来源 proof 或仓库凭据。
  * 资源连接：桌面显式登记、授权与核验分别路由；只读原回执和未受理证明不重放知识提交，不接受客户端地址或令牌。
@@ -58,6 +58,8 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'agentHistory.sessions':return app.agentHistory(args.workspaceId).sessions(args);
     case 'agentHistory.runs':return app.agentHistory(args.workspaceId).runs(args);
     case 'agentHistory.events':return app.agentHistory(args.workspaceId).events(args);
+    case 'agent.mainSettings':return app.mainAgentSettings.read(args);
+    case 'agent.configureMain':if(app.isStopping)fail('SHUTTING_DOWN','CBIM 正在退出');return app.mainAgentSettings.configure(args);
     case 'models.list':return app.models.list();
     case 'github.feedback.status':return app.githubFeedback.auth.status();
     case 'github.feedback.begin':if(app.isStopping)fail('SHUTTING_DOWN','CBIM 正在退出');return app.githubFeedback.auth.begin(args);

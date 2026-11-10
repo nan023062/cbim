@@ -2,7 +2,7 @@
  * 作用定位：定义工作区长期岗位、采纳快照、版本化登记命令与公开查询协议，供 Main、Store 和桌面共用。
  * 设计原因：memberId 与执行实例分离；captureId 只记录采纳，来源连续性另经可选 sourceRef 明确绑定，旧缺省不补造。
  * 职责边界：纯 schema 不读知识或凭据、不派工；active 仅是岗位登记状态，不证明配置可执行或业务已验收。
- * 模型快照可包含 engine 并参与配置哈希；历史未声明引擎的快照保持原字节，不隐式迁移。
+ * 岗位独立保存 engine 并参与运行快照哈希；历史缺省字段保持原字节，读取时沿已采纳快照取引擎，不跟随供应商变化。
  */
 import {z} from 'zod';
 import {loopEngineSchema,engineApi,engineLabel} from '../brain/llm/engine';
@@ -25,7 +25,7 @@ export const workspaceMemberStateSchema=z.enum(['active','suspended','retired'])
 export type WorkspaceMemberState=z.infer<typeof workspaceMemberStateSchema>;
 export const workspaceMemberAdaptationSchema=z.object({instructions:z.string().max(8000),references:z.array(id).max(32).refine(values=>new Set(values).size===values.length)}).strict();
 export type WorkspaceMemberAdaptation=z.infer<typeof workspaceMemberAdaptationSchema>;
-export const workspaceMemberModelRefSchema=z.object({profileId:uuid,modelId:text(160)}).strict();
+export const workspaceMemberModelRefSchema=z.object({profileId:uuid,modelId:text(160),engine:loopEngineSchema.optional()}).strict();
 export type WorkspaceMemberModelRef=z.infer<typeof workspaceMemberModelRefSchema>;
 /** 字段对应实际解析后的公开 profile；仅依赖公开引擎标识，不接受密钥、hasKey、默认选择或 enabled 伪运行事实。 */
 export const workspaceMemberModelSnapshotSchema=z.object({engine:loopEngineSchema.optional(),id:uuid,name:text(80),api:z.enum(['openai-completions','openai-responses','anthropic-messages']),baseUrl:endpoint,auth:z.enum(['api-key','none']),model:text(160),contextWindow:z.number().int().min(1024).max(2000000),maxTokens:z.number().int().min(64).max(2000000),reasoning:z.boolean(),vision:z.boolean().optional(),outputLimit:z.number().int().min(1).max(2000000).optional(),thinkingLevel:z.enum(['off','minimal','low','medium','high','xhigh']).optional(),workingContextWindow:z.number().int().min(1024).max(2000000).optional(),compactionPercent:z.number().int().min(10).max(95).optional(),pricing:z.object({input:z.number().finite().min(0),output:z.number().finite().min(0),cacheRead:z.number().finite().min(0),cacheWrite:z.number().finite().min(0)}).strict().optional()}).strict().superRefine((value,context)=>{
@@ -33,8 +33,10 @@ export const workspaceMemberModelSnapshotSchema=z.object({engine:loopEngineSchem
   if(value.maxTokens>value.contextWindow||value.outputLimit!==undefined&&value.maxTokens>value.outputLimit||value.workingContextWindow!==undefined&&value.workingContextWindow>value.contextWindow)context.addIssue({code:'custom',message:'模型预算超过公开能力上限'});
 });
 export type WorkspaceMemberModelSnapshot=z.infer<typeof workspaceMemberModelSnapshotSchema>;
-export const workspaceMemberRuntimePolicySchema=workspaceMemberModelRefSchema.extend({configurationHash:digest,snapshot:workspaceMemberModelSnapshotSchema}).strict().refine(value=>value.profileId===value.snapshot.id&&value.modelId===value.snapshot.model,'模型引用与快照不一致');
+export const workspaceMemberRuntimePolicySchema=workspaceMemberModelRefSchema.extend({configurationHash:digest,snapshot:workspaceMemberModelSnapshotSchema}).strict().refine(value=>value.profileId===value.snapshot.id&&value.modelId===value.snapshot.model&&(value.engine===undefined||value.engine===(value.snapshot.engine??'pi')),'模型引用与快照不一致');
 export type WorkspaceMemberRuntimePolicy=z.infer<typeof workspaceMemberRuntimePolicySchema>;
+/** 新岗位从引用读独立引擎；旧岗位从采纳快照读，缺省 Pi 不补字段，保持历史指纹。 */
+export function workspaceMemberEngine(ref:WorkspaceMemberModelRef & {snapshot?:WorkspaceMemberModelSnapshot}){return ref.engine??ref.snapshot?.engine}
 /** 保存真实原则与有效继承 Skill；整库知识 revision 是采集出处，不是能力内容的独立代次。 */
 export const workspaceMemberCapabilitySchema=z.object({workspaceId:id,teamId:id,agentId:id,name:text(512),knowledgeRevision:id,source:z.enum(['builtin','workspace']),principles:z.string(),effectiveSkills:z.array(z.object({skillId:id,ownerId:id,inherited:z.boolean(),content:z.string()}).strict()).max(workspaceMemberLimits.skills)}).strict().superRefine((value,context)=>{
   if(value.agentId==='cbim:main'||value.source==='builtin'&&value.agentId!=='cbim:executor'||value.source==='workspace'&&!value.agentId.startsWith('.cbim/team/')||new Set(value.effectiveSkills.map(item=>item.skillId)).size!==value.effectiveSkills.length||byteLength(value)>workspaceMemberLimits.capabilityBytes)context.addIssue({code:'custom',message:'岗位能力身份、有效 Skill 或容量无效'});

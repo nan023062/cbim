@@ -395,3 +395,7 @@ N_src_frontend_workspace_WorkspaceView_tsx ..> N_src_frontend_workspace_workspac
 ### 负责人快速登记选型
 
 WorkspaceView 传递 Agent 本机 runtime。inline-module-ownership 新登记优先采用明确 Agent 引擎/模型，失效时拒绝；未设置才读取本机默认。复用已有 memberId 不重新采纳模型，不迁移原任务。
+
+### 模块新岗位的引擎引用
+
+inline-module-ownership 在新登记时同时传递 Agent runtime 的 engine、profileId、modelId，并按协议核兼容性；未指定 runtime 时采用 Pi 与默认模型。已有岗位保留原采纳，不跟随静态 Agent 或主 Agent 的设置变更。

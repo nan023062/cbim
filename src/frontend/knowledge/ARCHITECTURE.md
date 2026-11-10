@@ -184,3 +184,7 @@ ArchitectureEditor 的模块模板从 Bridge 的纯正文契约读取，与后�
 ### Agent 默认选型
 
 ArchitectureEditor 读取 models.list 提供引擎/模型选择，提交预览前核查仍可用。runtime 只用于新登记默认值，已有岗位独立配置；删除 Agent 不依赖其模型配置继续存在。
+
+### Agent 引擎与模型
+
+ArchitectureEditor 使用与主 Agent 相同的 AgentModelSelection 和 engineSupportsApi，三引擎固定存在，模型来自统一启用目录。兼容性不再比较供应商 engine；自定义 Agent 的能力与 runtime 仍一次知识事务提交。

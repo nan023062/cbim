@@ -20,6 +20,36 @@ async function setup(){
 }
 function deferred(){let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}}
 
+it('同一供应商模型可只改岗位引擎，保存与重开保持选型；模型参数刷新仍须明确采纳',async()=>{
+  const f=await setup();
+  await f.app.models.save({id:f.profileId,profile:{...f.definition,api:'anthropic-messages'}});
+  const change=f.register();if(change.kind!=='register')throw Error('fixture');change.runtimePolicy.engine='pi';
+  const registered=await f.commit(f.command(await f.preview(change))),memberId=registered.memberId;
+  const first=await f.service.get({...f.identity,memberId});
+  const edited=await f.commit(f.command(await f.preview({kind:'update',memberId,expectedRevision:1,patch:{runtimePolicy:{engine:'claude-code',profileId:f.profileId,modelId:f.modelId}},reason:'同模型切换执行引擎'})));
+  const second=await f.service.get({...f.identity,memberId});
+  expect(second.member.runtimePolicy.snapshot.engine).toBe('claude-code');expect(second.member.runtimePolicy.engine).toBe('claude-code');
+  expect(second.member.runtimePolicy.configurationHash).not.toBe(first.member.runtimePolicy.configurationHash);expect(second.currentDiff.model.status).toBe('same');
+  await expect(f.preview({kind:'update',memberId,expectedRevision:edited.memberRevision,patch:{runtimePolicy:{engine:'claude-code',profileId:f.profileId,modelId:f.modelId}},reason:'同配置不可重复刷新'})).rejects.toMatchObject({code:'MEMBER_NO_CHANGE'});
+  await f.app.open(f.entry.id,true);
+  const reopened=await f.app.workspaceMembers(f.entry.id).get({workspaceId:f.entry.id,instanceId:f.app.workspace(f.entry.id).instanceId,memberId});
+  expect(reopened.member).toEqual(second.member);expect(reopened.currentDiff.model.status).toBe('same');
+});
+
+it('0.1.5 只有 snapshot.engine 的岗位不补写引用字段，移除旧供应商 engine 后仍沿原采纳读取',async()=>{
+  const f=await setup();
+  await f.app.models.save({id:f.profileId,profile:{...f.definition,api:'anthropic-messages',engine:'claude-code'}});
+  const original=f.app.models.configuration.bind(f.app.models);
+  const legacy=vi.spyOn(f.app.models,'configuration').mockImplementation((id,model)=>original(id,model,'claude-code'));
+  const registered=await f.commit(f.command(await f.preview(f.register()))),memberId=registered.memberId;
+  legacy.mockRestore();
+  const before=await f.service.get({...f.identity,memberId});expect(before.member.runtimePolicy.engine).toBeUndefined();expect(before.member.runtimePolicy.snapshot.engine).toBe('claude-code');
+  await f.app.models.save({id:f.profileId,profile:{...f.definition,api:'anthropic-messages'}});
+  await f.app.open(f.entry.id,true);
+  const after=await f.app.workspaceMembers(f.entry.id).get({workspaceId:f.entry.id,instanceId:f.app.workspace(f.entry.id).instanceId,memberId});
+  expect(after.member).toEqual(before.member);expect(after.currentDiff.model.status).toBe('same');
+});
+
 it('concurrent fresh commands from one preview commit exactly one registry revision',async()=>{
   const f=await setup(),p=await f.preview(f.register()),a=f.command(p),b=f.command(p);
   const results=await Promise.allSettled([f.commit(a),f.commit(b)]);

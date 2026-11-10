@@ -694,3 +694,7 @@ ModuleOwnerships 复用 Core 责任预期诊断，区分无需重设、已有记
 ### 实例变化的恢复指引
 
 Workspace.assert 保留 STALE_INSTANCE 协议，分别指出工程选错与运行实例变化。后者返回当前 instanceId 并要求 cbim_workspace_identity 后重新读取/预览；未知写入须先核原回执，不自动跨实例重放或改绑。运行状态和身份仍先于知识读写检查。
+
+### 岗位独立引擎
+
+WorkspaceMembers 按岗位引用及已采纳快照解析 engine，同一供应商/模型可只改引擎。明确采纳、差异观察与复核均沿岗位原选型读取，不从供应商恢复引擎；旧字段缺省不回写，历史审计继续严格重放。

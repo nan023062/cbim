@@ -172,3 +172,7 @@ workspaceMemberModelSnapshotSchema 接受可选 engine，明确值参与 configu
 ### 引擎协议校验
 
 岗位快照与供应商共用 engineApi：Codex 必须使用 OpenAI Responses，Claude Code 必须使用 Anthropic Messages；原 Pi 缺省和既有快照字节不变。下拉选型不能绕过保存及领取时的协议核对。
+
+## Agent 执行配置归属
+
+主 Agent 对话栏和团队配置页共享 agent-runtime.ts 契约，配置属于工作区 cbim:main。岗位 modelRef 新增可选 engine；新 UI 始终显式提交，schema 校验其与快照一致。workspaceMemberEngine 读取新引用或旧 snapshot.engine，不补写缺省字段。只改引擎属于选型编辑；同引擎同模型的参数刷新仍需明确采纳。旧审计、binding 及 hash 形状不改写。

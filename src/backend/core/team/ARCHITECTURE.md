@@ -10,6 +10,7 @@ Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [agent-runtime.ts](agent-runtime.ts) | 主 Agent 执行配置的公开读写契约，供对话栏与团队配置入口共用。 |
 | [agent-types.ts](agent-types.ts) | 虚拟成员的角色配置、持久化实例及独立会话身份，供调度和存储共同使用。 |
 | [automatic-execution.ts](automatic-execution.ts) | 定义用户选择的协作模式和自动兜底的冻结身份，供计划、任务与运行共用。 |
 | [member-execution-binding.ts](member-execution-binding.ts) | 岗位负责人派发的纯选择与冻结身份契约，供目标、任务、运行和公开视图共用。 |
@@ -22,6 +23,22 @@ Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履
 | [workspace-member.ts](workspace-member.ts) | 定义工作区长期岗位、采纳快照、版本化登记命令与公开查询协议，供 Main、Store 和桌面共用。 |
 
 ## 架构类图
+
+### agent-runtime.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_agent_runtime_ts["agent-runtime.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_agent_runtime_ts_MainAgentSettingsView["MainAgentSettingsView"] {
+  <<type>>
+
+}
+N_src_backend_core_team_agent_runtime_ts ..> N_src_backend_core_team_agent_runtime_ts_MainAgentSettingsView : 声明
+```
+
+直接依赖：[../brain/llm/engine.ts](../brain/llm/engine.ts)。
 
 ### agent-types.ts
 
@@ -129,7 +146,7 @@ class N_src_backend_core_team_automatic_execution_ts_AutomaticExecutionBinding["
 N_src_backend_core_team_automatic_execution_ts ..> N_src_backend_core_team_automatic_execution_ts_AutomaticExecutionBinding : 声明
 ```
 
-直接依赖：[../workspace/project-root.ts](../workspace/project-root.ts)。
+直接依赖：[../brain/llm/engine.ts](../brain/llm/engine.ts)、[../workspace/project-root.ts](../workspace/project-root.ts)。
 
 ### member-execution-binding.ts
 
@@ -460,6 +477,7 @@ N_src_backend_core_team_workspace_member_rules_ts ..> N_src_backend_core_team_wo
 classDiagram
 class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
   <<module>>
+  +workspaceMemberEngine()
   +summarizeWorkspaceMember()
 }
 ```
@@ -874,3 +892,7 @@ workspaceMemberModelSnapshotSchema 接受可选 engine，明确值参与 configu
 ### 引擎协议校验
 
 岗位快照与供应商共用 engineApi：Codex 必须使用 OpenAI Responses，Claude Code 必须使用 Anthropic Messages；原 Pi 缺省和既有快照字节不变。下拉选型不能绕过保存及领取时的协议核对。
+
+## Agent 执行配置归属
+
+主 Agent 对话栏和团队配置页共享 agent-runtime.ts 契约，配置属于工作区 cbim:main。岗位 modelRef 新增可选 engine；新 UI 始终显式提交，schema 校验其与快照一致。workspaceMemberEngine 读取新引用或旧 snapshot.engine，不补写缺省字段。只改引擎属于选型编辑；同引擎同模型的参数刷新仍需明确采纳。旧审计、binding 及 hash 形状不改写。

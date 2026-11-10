@@ -11,7 +11,7 @@
  * 资料边界：切到其他会话时本组件可能只被隐藏；必须把 active 传给补充控制器，撤销未完成的资料导入并隔离迟到回包。
  * Skill 入口：加号菜单发送只需一句描述、补充自愿的独立引导请求，沿用当前模型、权限和排队规则；不发送或清空已有草稿与附件。
  * 输入边界：草稿仍即时上交外壳；历史轮次按运行、恢复上下文及实际计时变化更新，键入不重复解析未变正文。
- * 引擎菜单来自已配置模型，模型菜单按引擎过滤；修改只影响下一轮，Claude Code/Codex 运行期间只支持排队而不承诺原轮插入。
+ * 引擎菜单来自已配置模型，模型菜单按引擎过滤；修改只影响下一轮，Claude Code/Codex 运行期间只支持排队而不承诺原轮插入。协作提示与主 Agent 默认执行规则保持一致。
  */
 import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
@@ -221,8 +221,8 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
         <ComposerAttachments items={attachments} workspaceId={workspace.id} disabled={busy||attachmentBusy} onRemove={id=>onAttachments(attachments.filter(a=>a.id!==id))}/>
         <textarea ref={input} aria-label="对话草稿" disabled={busy} value={tab.draft||''} onChange={e=>onDraft(e.target.value)} placeholder="继续聊一聊…" title="Enter 发送或排队，Shift+Enter 换行；Ctrl+Enter 插入正在运行的主 Agent，沿用当前模型与权限" onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){if(canSend){e.preventDefault();void send(canInsert&&(e.ctrlKey||e.metaKey))}else if(canInsert&&!busy&&(e.ctrlKey||e.metaKey)&&queued[0]){e.preventDefault();void queueOperation('loop.queueInsert',{queueId:queued[0].id})}}}}/>
         <div className="chat-controls"><div className="chat-controls-left"><AttachmentMenu workspaceId={workspace.id} disabled={busy||attachmentBusy} attachmentsFull={attachments.length>=12} skillsDisabled={!canSendRequest} onBusy={setAttachmentBusy} onAdd={addAttachments} onSkill={skill=>{if(canSendRequest)void send(false,skill)}}/><ComposerPicker label="协作模式" value={collaborationMode} onChange={v=>setCollaborationMode(v as 'auto'|'team')} disabled={busy||taskOpen} options={[
-          {value:'auto',label:'自动模式',icon:'sparkles',description:'无负责人时由内置执行员执行；无模块时以全项目为范围，权限和人工验收保持原要求'},
-          {value:'team',label:'团队模式',icon:'team',description:'按已登记负责人派发；缺少模块或负责人时等待人工确认'},
+          {value:'auto',label:'自动模式',icon:'sparkles',description:'主 Agent 按目标直接执行，必要时交给已登记的负责岗位；权限和人工验收保持原要求'},
+          {value:'team',label:'团队模式',icon:'team',description:'优先按自定义负责岗位分工；未配置负责 Agent 的模块由主 Agent 在原会话执行'},
         ]}/><ComposerPicker label="执行权限" value={permission} onChange={v=>{setPermission(v as ChatPermission);if(taskOpen)setNextTip(Date.now())}} disabled={busy} warning={permission==='execute'} options={[
           {value:'read',label:'只读访问',icon:'knowledge',description:'只查看、分析和预览，不修改业务文件或正式知识，不执行命令'},
           {value:'ask',label:'默认权限',icon:'hand',description:'修改业务文件、提交知识和运行命令前逐次确认'},

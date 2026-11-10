@@ -1,7 +1,7 @@
 /**
  * 作用定位：Cindy 风格的权限和模型 chip，向上展开可搜索、键盘可操作的选择面板。
  * 设计原因：保留 PermissionSelector 的 30px 无边框触发器与说明行；所有选项映射真实 CBIM 能力。
- * 参考：Cindy PermissionSelector / ModelSelector，Apache-2.0，许可见 docs/legal。
+ * 参考：Cindy PermissionSelector / ModelSelector，Apache-2.0，许可见 legal。
  */
 import {useEffect,useId,useRef,useState} from 'react';
 import {Icon} from '../components/Icon';

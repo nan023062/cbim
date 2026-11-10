@@ -19,7 +19,10 @@ it('内部知识工具发现并读取治理流程、规范及解析引用，校�
     }
     const skill=await call('cbim_builtin_read',{id:catalog.entryId});expect(skill.text).toContain('cbim_knowledge_preview');
     expect(skill.references.every((r:any)=>r.status==='available')).toBe(true);
-    const refs=await call('cbim_builtin_read',{id:'agent-spec'});expect(refs.references.some((r:any)=>r.id==='shared-skills-workflows')).toBe(true);
+    for(const id of ['agent-spec','module-spec']){
+      const refs=await call('cbim_builtin_read',{id});
+      expect(refs.references).toEqual(expect.arrayContaining([expect.objectContaining({id:'shared-skills-workflows',status:'available'})]));
+    }
     await expect(call('cbim_builtin_read',{id:'knowledge-governance',expectedVersion:'old'})).rejects.toMatchObject({code:'BUILTIN_VERSION_CHANGED'});
     for(const id of ['../../credentials.json','C:/secret','unknown'])await expect(call('cbim_builtin_read',{id})).rejects.toMatchObject({code:'BUILTIN_NOT_FOUND'});
     await expect(call('cbim_builtin_catalog',{instanceId:'stale'})).rejects.toMatchObject({code:'STALE_INSTANCE'});

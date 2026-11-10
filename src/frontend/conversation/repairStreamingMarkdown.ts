@@ -2,7 +2,7 @@
  * 作用定位：显示正在流入的 Markdown 时临时补齐未闭合语法。
  * 设计原因：直接移植 Cindy 的纯函数，避免流式半截标记使消息反复跳动；不修改持久化原文。
  * Copyright 2026 XD Inc. Apache-2.0，来源 commit 56b6e9a914a66fe37b0652405d160623a8ab6184。
- * 许可见 docs/legal/cindy-LICENSE。
+ * 许可见 legal/cindy-LICENSE。
  */
 /**
  * repairStreamingMarkdown — 流式中对**尚未闭合的 markdown 语法**做临时修复,

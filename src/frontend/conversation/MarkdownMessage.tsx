@@ -3,7 +3,7 @@
  * 设计原因：沿用 Cindy 的 react-markdown/GFM/高亮流水线及流式语法修复；
  * CBIM 通过受控 IPC 打开链接，不执行模型返回的 HTML 或脚本。
  * 更新边界：原文、流式标记或工作区身份变化才重排正文；组件自身复制与链接错误状态仍可独立更新。
- * 来源：Cindy MarkdownRenderer.tsx（Apache-2.0），仅移植渲染核心；许可见 docs/legal。
+ * 来源：Cindy MarkdownRenderer.tsx（Apache-2.0），仅移植渲染核心；许可见 legal。
  */
 import {Children,isValidElement,memo,useState,type ReactNode} from 'react';
 import ReactMarkdown,{defaultUrlTransform} from 'react-markdown';

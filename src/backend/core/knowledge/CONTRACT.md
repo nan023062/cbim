@@ -2,7 +2,9 @@
 
 模块 registry/get 的工具协议升为 v2：registry 必须提供 `projectRoot`；详情为真实文件模块与 builtin 根的严格判别联合。内置根没有 definitionFile，以内联正文表达来源；原真实模块字段保持。输出校验不授予写入或正式委派资格。
 
-### 产品反馈内置流程
+### 内置资料与产品反馈流程
+
+内置标准 `shared-skills-workflows` 从随应用打包的 `design/runtime/shared-skills-workflows.md` 读取，Agent 与 Module 规范通过相对链接解析到同一白名单 ID。迁移只改变资源位置，资料 ID 与只读边界保持；正文版本仍按实际内容计算，目录版本包含来源路径。`docs/` 中的四份概念设计不参与内置资料加载。
 
 `builtinSkills` 发布 `bug-feedback` 与 `feature-wish`，正文来自应用打包资源 `design/runtime/`，通过只读别名及 `Builtins.read` 返回内容哈希和解析引用。两套正文只要求一句简述，参考格式的其余内容均自愿，缺项不追问；读取正文不产生 Issue，实际提交由桌面已授权的独立 `FeedbackTools` 执行，不创建业务任务或修改知识。
 
@@ -12,7 +14,7 @@ class Builtins {
   +catalog()
   +read(id, expectedVersion)
 }
-note for Builtins "只读反馈流程与版本；GitHub 实际写入属于独立主会话工具"
+note for Builtins "从 design 白名单读取规范与流程、版本和引用；GitHub 写入属于独立主会话工具"
 ```
 
 ### 链接器静态定义校验

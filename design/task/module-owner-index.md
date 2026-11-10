@@ -1,6 +1,6 @@
 # 模块负责人索引：实施切片与验收
 
-日期：2026-11-07。状态：设计已整理，功能待实施。本文件是开发计划，不是产品运行 Skill；不启动模型、不修改真实项目岗位。概念与协议的唯一设计入口是[工作区成员与模块负责人索引](../../docs/module-owner-index.md)，实时开发状态只维护在[路线图](../tool-architecture-roadmap.md)。
+日期：2026-11-07。以下状态与方案是当时的设计快照，不代表当前待办或实施授权。实际协议见 [任务契约](../../src/backend/core/tasks/CONTRACT.md)，当前开发清单与进度从 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取。本文件不是产品运行 Skill，不启动模型、不修改真实项目岗位。
 
 ## 目标与前置
 

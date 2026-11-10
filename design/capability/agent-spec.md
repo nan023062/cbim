@@ -39,7 +39,7 @@ agent.json 通过名称与摘要表达职业和技术定位，具体技术能力
 
 ### Skill 列表与 Team 树
 
-能力侧是一棵树：根节点是 Team，中间非叶子节点是小组，只有叶子节点是 Agent。小组可继续包含小组或直属 Agent，Agent 不包含小组或其他 Agent。目录表达唯一父子关系，小组不限定层数，不新增 Leader 调度职责。现有规范及文件格式中 Team 可泛指组织节点；产品层级明确区分根 Team 与小组。Team、小组、Agent 都有自己的 Skill，Agent 可用 Skill 是自身与沿父链递归到根 Team 的全部祖先节点 Skill。空团队初始化时根仍为 Team，不能按空目录推断 Agent；详见 [结构设计](../../docs/shared-skills-workflows.md)。
+能力侧是一棵树：根节点是 Team，中间非叶子节点是小组，只有叶子节点是 Agent。小组可继续包含小组或直属 Agent，Agent 不包含小组或其他 Agent。目录表达唯一父子关系，小组不限定层数，不新增 Leader 调度职责。现有规范及文件格式中 Team 可泛指组织节点；产品层级明确区分根 Team 与小组。Team、小组、Agent 都有自己的 Skill，Agent 可用 Skill 是自身与沿父链递归到根 Team 的全部祖先节点 Skill。空团队初始化时根仍为 Team，不能按空目录推断 Agent；详见 [结构设计](../runtime/shared-skills-workflows.md)。
 
 Agent 的 `agent.json.skills` 只登记专属方法，入口为自身 `skills/<skill-name>/SKILL.md`。共享方法归属于能覆盖实际使用者的最近共同 Team，存入该 Team 的 `skills/`，由同级 `skills.json` 登记 name、purpose、reference；结构遵循 [Team Skill Schema](team-skills.schema.json)。全团队通用的方法放在 team 根。没有共享方法可不创建 skills.json；显式空清单写 `{"skills": []}`。不得将共享方法复制或重复登记到每个 Agent。
 

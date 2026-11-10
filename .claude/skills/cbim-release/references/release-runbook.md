@@ -74,7 +74,7 @@ pnpm make:desktop --unsigned
 
 如果候选与最新验证／合并 SHA 不同，逐文件核对差异。只有 CI、验收脚本、外部文档等不进入产品和构建的变化可保留原候选，记录依据；产品代码、依赖／lockfile、打包脚本、配置、品牌和内置版本日志变化必须重新构建／核验。不能只凭“src tree 相同”判定制品不变。合并引入新变化时重验受影响部分。
 
-核对资源归属时同时读取 Forge 的 extraResource。当前配置会复制整份 design/docs，不能仅凭“开发文档”路径就宣称它未进入安装包；列明冻结副本与仓库后续回填的差异，单独核实 Builtins 白名单实际正文和运行入口。不得将“运行资料一致”写成“所有资源字节一致”，也不得修改已公开包来追补维护记录。
+核对资源归属时同时读取 Forge 的 extraResource。当前配置会复制整个 `design/`、`docs/` 和 `legal/`，不能仅凭“开发文档”路径就宣称它未进入安装包；列明冻结副本与仓库后续回填的差异，单独核实 Builtins 白名单实际正文和运行入口。不得将“运行资料一致”写成“所有资源字节一致”，也不得修改已公开包来追补维护记录。
 
 公开前：
 
@@ -106,4 +106,4 @@ pnpm make:desktop --unsigned
 - `pnpm check:brand`、`pnpm build:website`，再用 [website-smoke.mjs](../../../../scripts/website-smoke.mjs) 验证 320／390／1280 px、深浅色和独立离线两页（当前共 14 场景）、无溢出／页面错误、正确链接和摘要。脚本固定输出 `test-results/branding-website`；先保留已有报告，或在隔离检出运行，避免覆盖。只使用独立无头浏览器，不连接用户浏览器资料。
 - 官网及收尾变更经 develop → master PR 检查、正常合并；[website.yml](../../../../.github/workflows/website.yml) 在 master 部署到既有 Pages。默认 develop 不改变部署分支，不放宽环境保护。核实 Actions 实际 head、目标 URL 与成功回执，再匿名逐文件对照 `index.html`、`download.html`、`404.html`、`robots.txt`、`sitemap.xml`、`cbim.png` 和本地构建字节／摘要。CDN 尚未更新时先只读复核。
 - 将 master 的合并结果以 fast-forward 同步回 develop，核实本地／远端 SHA、默认 develop、远端仅 master／develop 和干净工作树。存在分叉或额外分支时先查差异与授权，不硬重置、不强推或自动删除未知工作；双分支收尾不是新的批量删除许可。
-- 回填 [roadmap](../../../../design/tool-architecture-roadmap.md)、[开发记录](../../../../design/development-log.md)、版本报告及 PR；报告 [证据清单](evidence.md) 中的最终事实。必须按实际安装版本报告更新节奏：0.1.2 是启动约 10 秒后及每 30 分钟检查、下载后再点击重启；从 0.1.3 开始采用每分钟检查、点击下载后自动安装重启。新源码行为必须已有对应公开版本，不能套在尚未升级的旧客户端上。关闭／离线用户不会即时收到，仍需用户主动开始下载。
+- 按已有授权回填本次关联 Issues／PR，并更新 [开发记录](../../../../design/development-log.md) 与版本报告；报告 [证据清单](evidence.md) 中的最终事实及尚未同步的外部记录，不再维护 roadmap。必须按实际安装版本报告更新节奏：0.1.2 是启动约 10 秒后及每 30 分钟检查、下载后再点击重启；从 0.1.3 开始采用每分钟检查、点击下载后自动安装重启。新源码行为必须已有对应公开版本，不能套在尚未升级的旧客户端上。关闭／离线用户不会即时收到，仍需用户主动开始下载。

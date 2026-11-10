@@ -17,7 +17,7 @@
 - 可信运行模式进入 AutoCollaboration、GoalTools、DispatchTools；模型不能在工具参数中自授模式或兜底证明。
 - 对话只保存用户选择；目标卡及任务详情显示真实兜底原因。后端拥有可信模式及冻结执行身份。
 
-统一说明见[成员执行](../../docs/member-execution.md#自动与团队模式)。同步 core/team、tasks、brain，main/workspace，scheduler-engine/context、conversation、execution、tools，bridge/contracts，frontend/conversation、tasks 的源码注释、CONTRACT 与 11 份目录架构。变化点是执行来源选择，权限、事务、预算、租约和人工验收继续共用；未新增一套宽松的自动执行后端。
+统一说明见成员执行（历史文档：`docs/member-execution.md`，已清理）。同步 core/team、tasks、brain，main/workspace，scheduler-engine/context、conversation、execution、tools，bridge/contracts，frontend/conversation、tasks 的源码注释、CONTRACT 与 11 份目录架构。变化点是执行来源选择，权限、事务、预算、租约和人工验收继续共用；未新增一套宽松的自动执行后端。
 
 ## 验证记录
 

@@ -1,6 +1,6 @@
 # 项目协作与注释规范
 
-开发 CBIM 工程时使用 `cbim-development`：先回顾 [开发路线图](design/tool-architecture-roadmap.md) 和 [上一步开发记录](design/development-log.md)，结合实际代码梳理下一步及验收；每完成一步立即更新 roadmap 的阶段状态、剩余项与开发接续，并追加实际验证记录。`docs/` 保存概念设计，`design/` 是开发计划模块，已有运行规范资产保留原路径。此开发流程适用于本仓库开发，不替代产品内置业务 Skill。
+开发 CBIM 工程时使用 `cbim-development`：从当前仓库 [GitHub Issues](https://github.com/nan023062/cbim/issues) 拉取开发清单，读取选定 Issue 及 [相关开发记录](design/development-log.md)，结合实际代码明确范围、依赖与验收；每个 Issue 独立开发、验证和提交，在已有授权内同步 Issue 进度并追加实际验证记录。Issues 是开发清单与实时进度的唯一来源，历史计划和记录不自动成为下一步任务。`docs/` 只保留 01、02、03、04 四份概念设计；`design/` 保存关联方案、运行规范和验证记录，不另建实时待办。当前实现说明维护在 `src/` 的契约和架构文档中。此开发流程适用于本仓库开发，不替代产品内置业务 Skill。
 
 开发 Skill 入口：[通用项目](.agents/skills/cbim-development/SKILL.md)、[Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md)，三份内容同步维护。只读分析或计划讨论不自动触发代码实施。
 
@@ -29,10 +29,10 @@
 
 - [architecture-evolution](.agents/skills/architecture-evolution/SKILL.md)：统一评估全局分层、职责与共性，依据业务变化点、语义和真实消费者选择封装、组合、继承与多态，通过渐进重构沉淀稳定能力。
 - [architecture-maintenance](.agents/skills/architecture-maintenance/SKILL.md)：同步源码注释、类图和依赖说明，交付职责、关键调用链、设计取舍及下一次修改入口，保障维护者可以理解、审阅和接手。
-- [cbim-development](.agents/skills/cbim-development/SKILL.md)：回顾全局与上一步成果，推进已授权步骤、验证结果并维护开发接续。
+- [cbim-development](.agents/skills/cbim-development/SKILL.md)：从 Issues 获取清单，核实业务语义与已有成果，推进已授权工单、验证结果并交付代码 review 入口。
 - [cbim-release](.agents/skills/cbim-release/SKILL.md)：发布或恢复桌面版本，核实签名模式、冻结制品、CI 与真实升级证据，完成官网及双分支收尾。
 
-源码实现继续遵循 `architecture-maintenance`；重要职责、公共抽象或状态流变化同时说明维护者需要更新的认知。只要求评估不自动重构，已经授权的实施不逐步重复请求批准。各项目 Skill 的 `.agents/skills/`、`.claude/skills/`、`.codex/skills/` 入口及配套引用保持同名同内容。使用例子见 [开发者 Skill 说明](docs/developer-skills.md)。
+源码实现继续遵循 `architecture-maintenance`；重要职责、公共抽象或状态流变化同时说明维护者需要更新的认知。只要求评估不自动重构，已经授权的实施不逐步重复请求批准。各项目 Skill 的 `.agents/skills/`、`.claude/skills/`、`.codex/skills/` 入口及配套引用保持同名同内容。角色分工与入口见 [开发入口](design/README.md#开发入口)。
 
 ## 源码维护范围
 

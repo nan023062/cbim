@@ -2,13 +2,13 @@
 
 首次配置：2026-11-08；原则补充与入口合并：2026-11-09。范围：当前 Cindy 项目工作区的本地开发 Skill 与协作说明；未修改产品源码、产品内置 Skill、测试、构建或安装包。
 
-**当前状态：已合并为 3 种 Skill、9 个宿主入口。** 下文首次配置及原则补充中的 5 种／15 个入口是当时的历史事实；合并证据见本文最后一节，当前职责见[开发者说明](../../docs/developer-skills.md)。
+本文保存当时的 Skill 配置与合并证据，文中的种类和入口数量是历史事实；当前职责与入口见 [开发入口](../README.md#开发入口)。
 
 ## 首次配置交付
 
 - 新增 `architecture-evolution`、`reuse-evolution`、`project-understanding`，负责全局边界演进、稳定共性沉淀和维护者认知交接。
 - 同步 `.agents/skills/`、`.claude/skills/`、`.codex/skills/` 入口；与已有两个 Skill 合计 5 种、15 个入口文件。已有 architecture-maintenance 的 `.agents` 目录联接保留，核对实际读取字节与其余入口一致。
-- 更新 AGENTS、两个既有 Skill 的协作指引和[使用说明](../../docs/developer-skills.md)，保留原源码注释、类图、依赖检查和开发记录要求。
+- 更新 AGENTS、两个既有 Skill 的协作指引和使用说明（历史文档：`docs/developer-skills.md`，已清理），保留原源码注释、类图、依赖检查和开发记录要求。
 
 ## 首次配置实际检查
 

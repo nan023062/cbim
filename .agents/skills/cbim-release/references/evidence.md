@@ -22,7 +22,7 @@
 | 发布 | 唯一 Release ID、tag 及 peeled SHA、published_at、公开／稳定状态、日志、四附件复核、旧 latest 保持、匿名更新读取 |
 | 在线升级 | 旧版身份/交互模式；自动发现；用户下载和缓存摘要；两步或下载后自动重启的实际链；独立普通退出取消场景；实际新进程、原用户目录、新版及最后状态 |
 | 官网 | 公开回执对应的 release.json、文案／签名状态、14 场景结果；master 部署 head／run／URL、六个匿名文件摘要对照 |
-| 分支与交付 | PR head／base／merge 回执，本地／远端 SHA、仅 master/develop、默认 develop、工作树；报告／日志／roadmap 链接 |
+| 分支与交付 | PR head／base／merge 回执，本地／远端 SHA、仅 master/develop、默认 develop、工作树；关联 Issue／PR、报告与日志链接及回填结果 |
 | 失败与恢复 | 每次原失败 ID／现场、发生在哪一阶段、已完成副作用、根因已证实或未知、修正及独立新证据、未完成项／恢复条件 |
 
 ## 阶段交接检查

@@ -29,7 +29,7 @@ async function saveBuildInfo(info:unknown){
 }
 const config: ForgeConfig = {
   outDir: buildOut,
-  packagerConfig: { asar: true, executableName, icon:path.resolve('branding/cbim.ico'), ...(desktopRelease?{appVersion:desktopVersion,buildVersion:desktopVersion}:{}),extraResource: ['branding','design','docs','node_modules/koffi',path.join(buildOut,'pi-runtime'),path.join(buildOut,'claude-runtime'),path.join(buildOut,'codex-runtime'),...(desktopRelease?[path.join(buildOut,'desktop-release.json'),path.join(buildOut,'app-update.yml')]:[])] },
+  packagerConfig: { asar: true, executableName, icon:path.resolve('branding/cbim.ico'), ...(desktopRelease?{appVersion:desktopVersion,buildVersion:desktopVersion}:{}),extraResource: ['branding','design','docs','legal','node_modules/koffi',path.join(buildOut,'pi-runtime'),path.join(buildOut,'claude-runtime'),path.join(buildOut,'codex-runtime'),...(desktopRelease?[path.join(buildOut,'desktop-release.json'),path.join(buildOut,'app-update.yml')]:[])] },
   makers: [new MakerZIP({}, ['win32'])],
   hooks:{
     generateAssets:async()=>{await verifyBrandAssets();await packagePiRuntime(path.join(buildOut,'pi-runtime'));await packageClaudeRuntime(path.join(buildOut,'claude-runtime'));await packageCodexRuntime(path.join(buildOut,'codex-runtime'));if(desktopRelease){const notes=await fs.readFile(process.env.CBIM_DESKTOP_NOTES||`design/releases/desktop-v${desktopVersion}.md`,'utf8');await fs.writeFile(path.join(buildOut,'desktop-release.json'),JSON.stringify({channel:'desktop-stable',version:desktopVersion,notes,signingMode}));await fs.writeFile(path.join(buildOut,'app-update.yml'),updaterConfigYaml(desktopVersion,signing?.publisherName,signingMode))}},

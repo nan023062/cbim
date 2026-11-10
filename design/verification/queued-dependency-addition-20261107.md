@@ -53,7 +53,7 @@
 
 ## 最终冻结源码检查
 
-`pnpm typecheck`、`pnpm check:architecture` 均退出 0；51 个目录、396 个源码/样式文件，726 个维护文件、3504 条含类型依赖、0 循环。本片同步 10 份目录类图、Core tasks／调度 execution/tools/conversation／前端 tasks 共 5 份 CONTRACT，以及相关文件头、接口注释与[成员执行说明](../../docs/member-execution.md)。
+`pnpm typecheck`、`pnpm check:architecture` 均退出 0；51 个目录、396 个源码/样式文件，726 个维护文件、3504 条含类型依赖、0 循环。本片同步 10 份目录类图、Core tasks／调度 execution/tools/conversation／前端 tasks 共 5 份 CONTRACT，以及相关文件头、接口注释与成员执行说明（历史文档：`docs/member-execution.md`，已清理）。
 
 最终组合 `test-results/dependency-addition-combined-final.json` **29 文件、243/243**；架构边界 `dependency-addition-boundaries-final.json` **2 文件、13/13**。覆盖增强后的四条新 Pi、旧前置替换 Pi、Step27 运行内补充 Pi、图/实际 Store、成员执行、主工具、前端历史及增量回归。本片未重复全仓；前述初轮夹具和断言失败原记录保留。
 

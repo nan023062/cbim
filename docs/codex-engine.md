@@ -32,4 +32,4 @@ Codex 自行分配原生线程 ID；CBIM 先记录实际回执，再开始生成
 - Codex 支持排队，不提供运行内插入确认。上下文预算/压缩阈值映射到原生配置；专用远端 `/responses/compact` 未接入，不伪装成已支持。
 - 原生恢复会保留最初注册的工具。新版本增加工具名称后若原线程未注册，会提示新建对话；权限和参数仍按本轮配置核对。
 - 原生历史位于 `loop-engine/codex/sessions/` 或成员的 `dispatch/runs/codex/sessions/`。这些私有文件由 Codex 保存；CBIM 的公开日志不转发私有推理。
-- 本机真实进程已验证文本流、工具允许/拒绝、预算结算、停止、恢复、岗位启动及 Pi → Codex → Claude → Codex → Pi 往返；资源复制验证独立平台包可启动。完整桌面交互、线上供应商和安装升级留待后续集成。实际命令见[专项验证](../design/verification/codex-engine-20261110.md)。
+- 本机真实进程已验证文本流、工具允许/拒绝、预算结算、停止、恢复、岗位启动及 Pi → Codex → Claude → Codex → Pi 往返；资源复制验证独立平台包可启动。0.1.5 同一真实安装包的三引擎桌面切换、独立岗位配置、全新安装及真实 0.1.4 在线升级已通过，见[发布验收](../design/verification/desktop-release-0.1.5-20261110.md)。验证使用可控模型响应，线上供应商兼容性和模型质量仍需实际服务验证。开发命令见[专项验证](../design/verification/codex-engine-20261110.md)。

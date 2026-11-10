@@ -1,5 +1,12 @@
 # CBIM 开发记录
 
+## 2026-11-10：0.1.5 公开与真实在线升级，官网收尾
+
+- 主 Agent 默认执行与 Pi / Claude Code / Codex 三引擎随 0.1.5 公开。PR #30 正常合并，准确 head 完整四片 375 文件/2587 项：2585 通过、0 失败、2 原有真实历史 EXE 前置缺失跳过；独立失败/修正及冻结制品证据保留。
+- Release 439994358 / desktop-v0.1.5 公开，保持未签名与旧 Python latest；候选全新安装 42764972516、真实 0.1.4 在线升级 42768158030 通过，普通退出取消、下载摘要、自动重启与六项保留均核实，模型请求 1、页面错误 0。使用确定性模型响应，不等于在线模型质量验证。
+- 官网版本快照来自公开回执，同步三引擎、独立岗位配置和主 Agent 执行说明；README、引擎维护说明、发布指南与路线图同步实际交付状态。按用户明确选择一并合入 812bec16 开发规范文档，保留其作者和提交。
+- 实际 pnpm check:brand、正式域名 pnpm build:website、node scripts/website-smoke.mjs 均通过：14 个手机/桌面/深浅色/离线场景，页面错误 0；11 份 Markdown 的 404 个本地链接、围栏与 Skill 三入口一致性通过，四附件匿名下载摘要一致。没有源码变化，不重复本机产品单元、类型/架构或安装构建。收尾 PR 仍经完整 Windows 四片，master 部署与匿名六文件回执随后附于 PR。完整证据、源码导读和维护清单见[发布验收](verification/desktop-release-0.1.5-20261110.md)。
+
 ## 2026-11-10：开发 Skill 增加语义建模与代码 review 交付
 
 - 范围：同步 `.agents/skills/cbim-development/SKILL.md`、`.claude/skills/cbim-development/SKILL.md`、`.codex/skills/cbim-development/SKILL.md`，并更新[开发者说明](../docs/developer-skills.md)与路线图；没有修改产品源码或实施此前架构分析中的重构候选。

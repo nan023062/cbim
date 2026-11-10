@@ -15,7 +15,7 @@ export async function memberToolContractProvider(mode:MemberToolFault){
     res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'member-contract-'+(main.length+member.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n'),tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     if(isMain){
       assert.ok(ownerSelection,'Fixture must bind an actual registered owner before business planning');
-      assert.ok(body.tools?.every(item=>!['cbim_task_help','cbim_task_artifact_capture','cbim_task_checkpoint','write','edit','bash'].includes(item.function.name)));
+      assert.ok(body.tools?.every(item=>!['cbim_task_help','cbim_task_artifact_capture','cbim_task_checkpoint'].includes(item.function.name)));
       if(turn===0)tool('member-contract-goal-plan','cbim_goal_plan',goalPlanArguments({objective:data.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:data.acceptance}));
       else if(turn===1)tool('member-contract-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:data.memberGoal,acceptance:data.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
       else if(turn===2)reply('唯一任务已交给执行成员。');

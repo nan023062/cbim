@@ -25,7 +25,7 @@ export async function jsonValidationProvider(mode:JsonValidationMode='complete',
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw)as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(item=>item.function.name==='cbim_dispatch_task')===true,list=isMain?main:member,turn=list.length;list.push(body);
     res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'json-validation-'+(main.length+member.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n'),tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     if(isMain){
-      assert.ok(body.tools?.every(item=>!['cbim_validation_run','write','edit','bash'].includes(item.function.name)));
+      assert.ok(body.tools?.every(item=>!['cbim_validation_run'].includes(item.function.name)));
       if(turn===0)tool('json-goal-plan','cbim_goal_plan',goalPlan());
       else if(turn===1)tool('json-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],...selection(),goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
       else if(turn===2)reply('已交给独立成员按冻结产物结构要求验证。');

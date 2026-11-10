@@ -41,7 +41,7 @@ export async function checkpointHandoffProvider(mode:CheckpointHandoffMode='comp
     const tool=(id:string,name:string,input:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(input)}}]});emit({},'tool_calls')},reply=(text:string)=>{emit({role:'assistant',content:text});emit({},'stop')};
     const assign=(prefix:string,index:number,selection:OwnerExecutionSelection,prior?:string)=>tool(prefix,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection:selection,goal:(prefix.startsWith('handoff-old-')?d.oldGoals:d.newGoals)[index],acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:prior?[{taskId:prior,expectedPlanRevision:1}]:[]});
     if(role==='main'){
-      assert.ok(body.tools?.some(item=>item.function.name==='cbim_dispatch_abandon_checkpoint'));assert.ok(body.tools?.every(item=>!['write','edit','bash'].includes(item.function.name)));
+      assert.ok(body.tools?.some(item=>item.function.name==='cbim_dispatch_abandon_checkpoint'));assert.ok(body.tools?.every(item=>!['cbim_task_help','cbim_task_checkpoint'].includes(item.function.name)));
       if(turn===0)tool('handoff-discover-a','cbim_module_owner_inspect',{moduleIds:[moduleId]});
       else if(turn===1)tool('handoff-plan-a','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection:discovery(body,'handoff-discover-a'),acceptance:[...d.acceptance]}));
       else if(turn===2)assign('handoff-old-a',0,discovery(body,'handoff-discover-a'));

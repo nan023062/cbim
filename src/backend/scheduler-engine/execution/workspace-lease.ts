@@ -1,6 +1,6 @@
 /**
  * 作用定位：同一已打开工作区内，主会话与独立成员共享的执行占用协调器。
- * 设计原因：主调度与执行成员是独立实例，各实例串行；不同实例只读可并行，写入或可能获批写入的运行独占工作区。纯资格检查供全局准入排序，等待不先持锁；跨进程排他由工作区内核锁负责。
+ * 设计原因：主调度与执行成员是独立实例，各实例串行；不同实例只读可并行，写入或可能获批写入的运行独占工作区。同一主运行内部的证据核实可派生读占用，不能误与自身独占冲突；跨进程排他由工作区内核锁负责。
  */
 import {fail} from '../../core/foundation/errors';
 import type {ChatPermission} from '../../core/policy/types';
@@ -23,6 +23,18 @@ export class WorkspaceExecutionLease {
     const reason=this.canAcquire(runKey,permission,agentInstanceId);
     if(reason==='agent_busy')fail('MEMBER_BUSY','该成员实例正在执行其他任务，请等待当前运行结束');
     if(reason==='workspace_conflict')fail('WORKSPACE_EXECUTION_BUSY','工作区有冲突运行，请等待结束后启动；不同实例的只读任务可以并行');
+    return this.hold(runKey,permission,agentInstanceId);
+  }
+  /**
+   * 仅供装配方确认属于 ownerKey 的运行内只读核证。没有原占用时按普通读申请，不能借其他运行跳过排他。
+   * 派生占用独立释放；即使原运行先结束，尚未结束的读取仍阻止后续写入。此方法不授予工具权限。
+   */
+  acquireReadWithin(runKey:string,ownerKey:string):()=>void {
+    if(!this.leases.has(ownerKey))return this.acquire(runKey,'read');
+    if(this.leases.has(runKey)||[...this.leases].some(([key,lease])=>key!==ownerKey&&lease.permission!=='read'))fail('WORKSPACE_EXECUTION_BUSY','证据核实与其他工作区运行冲突');
+    return this.hold(runKey,'read');
+  }
+  private hold(runKey:string,permission:ChatPermission,agentInstanceId?:string):()=>void {
     this.leases.set(runKey,{permission,agentInstanceId});let released=false;
     return ()=>{if(!released){released=true;this.leases.delete(runKey);for(const listener of this.listeners)try{listener()}catch{/* 已释放的占用不受观察者影响 */}}};
   }

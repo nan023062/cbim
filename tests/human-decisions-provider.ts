@@ -36,7 +36,7 @@ export async function humanDecisionProvider(){
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     if(isMain){
-      assert.ok(body.tools?.every(tool=>!['write','edit','bash','cbim_task_artifact_capture'].includes(tool.function.name)));
+      assert.ok(body.tools?.every(tool=>!['cbim_task_artifact_capture'].includes(tool.function.name)));
       if(turn===0){const plan=goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance});tool('human-goal-plan','cbim_goal_plan',{...plan,criteria:[...plan.criteria,{id:d.humanId,text:d.humanCriterion,kind:'human'}],assignments:plan.assignments.map(item=>({...item,criterionIds:[...item.criterionIds,d.humanId]}))})}
       else if(turn===1)tool('human-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
       else if(turn===2)reply('已派发独立执行者，等待真实文件成果。');

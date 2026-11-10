@@ -63,12 +63,23 @@ async function fixture(name='write',input:unknown={path:'current.txt',content:'p
   const receipts=new Map<string,{fingerprint:string;receipt:unknown}>();
   const transact=vi.fn(async(command:DispatchCommand,prepare:(state:typeof f.state)=>Promise<DispatchMutation>)=>{const old=receipts.get(command.commandId);if(old){if(old.fingerprint!==command.fingerprint)throw Error('command conflict');return structuredClone(old.receipt)}const mutation=await prepare(structuredClone(f.state));Object.assign(f.state,projectEffectDispositionMutation(f.state,mutation,command));receipts.set(command.commandId,{fingerprint:command.fingerprint,receipt:structuredClone(mutation.receipt)});return structuredClone(mutation.receipt)});
   const store={read:f.read,commandReceipt:vi.fn(async(id:string)=>structuredClone(receipts.get(id))),commandEvidence:f.commandEvidence,transact} as unknown as DispatchStore;
-  const files=new ArtifactFiles(directory,()=>{}),observeFiles=vi.fn((paths:readonly string[],signal:AbortSignal)=>files.observeFiles(paths,signal)),release=vi.fn(),acquireRead=vi.fn(()=>release);
-  const service=new EffectObservationService(f.owner,store,f.service,{inspectMember:async()=>{throw Error('not a member fixture')},normalizePath:raw=>normalizeArtifactPath(directory,raw),observeFiles,acquireRead});
+  const files=new ArtifactFiles(directory,()=>{}),observeFiles=vi.fn((paths:readonly string[],signal:AbortSignal)=>files.observeFiles(paths,signal)),release=vi.fn(),acquireRead=vi.fn(()=>release),acquireMainRead=vi.fn((_rootSessionId:string)=>release);
+  const service=new EffectObservationService(f.owner,store,f.service,{inspectMember:async()=>{throw Error('not a member fixture')},normalizePath:raw=>normalizeArtifactPath(directory,raw),observeFiles,acquireRead,acquireMainRead});
   const selection={workspaceId:reportIdentity.workspaceId,rootSessionId:reportIdentity.rootSessionId,subject:{kind:'main_run' as const,runId:reportIdentity.runId,toolCallIds:[reportIdentity.toolCallId]}};
   const request=async(decision:EffectDispositionInput['decision']='inspect_more'):Promise<EffectDispositionInput>=>{const report=await service.observe(selection);return {...selection,commandId:randomUUID(),expectedBasis:report.basis,expectedRevision:report.dispositionRevision,decision,reason:'明确检查原影响'}};
-  return {...f,directory,files,observeFiles,release,acquireRead,service,selection,request,store,transact,cleanup:async()=>{await fs.rm(directory,{recursive:true,force:true})}};
+  return {...f,directory,files,observeFiles,release,acquireRead,acquireMainRead,service,selection,request,store,transact,cleanup:async()=>{await fs.rm(directory,{recursive:true,force:true})}};
 }
+
+it('公开影响观察不能借用主占用，可信主内部核证保持同一文件依据且独立释放',async()=>{
+  const f=await fixture();try{
+    const before=await f.service.observe(f.selection);expect(f.acquireMainRead).not.toHaveBeenCalled();
+    f.acquireRead.mockImplementation(()=>{throw Error('workspace writer active')});
+    const blocked=await f.service.observe(f.selection);expect(blocked.calls[0].coverage).toBe('unsupported');expect(f.acquireMainRead).not.toHaveBeenCalled();
+    const internal=await f.service.observeFromMain(f.selection);
+    expect(internal.basis).toBe(before.basis);expect(internal.calls[0].coverage).toBe('selected_files_now');
+    expect(f.acquireMainRead).toHaveBeenCalledWith(f.selection.rootSessionId);expect(f.release).toHaveBeenCalledTimes(2);expect(f.transact).not.toHaveBeenCalled();
+  }finally{await f.cleanup()}
+});
 
 it('未知原文件调用可观察当前字节但无成功基线，保存/原命令重复不清原 unknown',async()=>{
   const f=await fixture();try{

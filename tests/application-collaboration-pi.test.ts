@@ -195,14 +195,19 @@ it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input 
       return [...found.values()];
     };
     let taskId='';
+    // 主 Agent 也具备业务工具，但 ask 必须先处理自己的审批，不能借用后续成员批准。
+    let mainApprovals:ChatApproval[]=[];
+    await vi.waitFor(async()=>{mainApprovals=await f.app.dispatch('loop.approvals',{id:entry.id,taskId:started.taskId});expect(mainApprovals).toHaveLength(1)},{timeout:15000,interval:30});
+    expect(mainApprovals[0].name).toBe('write');
+    await f.app.dispatch('loop.approve',{id:entry.id,taskId:started.taskId,approvalId:mainApprovals[0].id,allow:false});
     await vi.waitFor(async()=>{const value=await graph();expect(value.tasks).toHaveLength(1);taskId=value.tasks[0].taskId;expect(value.tasks[0].status).toBe('running')},{timeout:15000,interval:30});
     const memberIdentity={...identity,taskId};
     let memberApprovals:ChatApproval[]=[];
     await vi.waitFor(async()=>{memberApprovals=await f.app.dispatch('dispatch.approvals',memberIdentity);expect(memberApprovals).toHaveLength(1)},{timeout:15000,interval:30});
     expect(memberApprovals[0].name).toBe('write');
-    // The coordinator cannot write even if the model invents that tool; only the executor can ask for business permission.
+    // 拒绝主运行写入不影响成员独立提出审批；两者的权限不能互相继承。
     await expect(fs.readFile(path.join(f.a,'ask-main-note.txt'),'utf8')).rejects.toMatchObject({code:'ENOENT'});
-    expect(mainRequests.every(body=>body.tools?.every(tool=>!['write','edit','bash'].includes(tool.function.name)))).toBe(true);
+    expect(mainRequests.every(body=>['write','edit','bash'].every(name=>body.tools?.some(tool=>tool.function.name===name)))).toBe(true);
     const beforeQueue=await thread();expect(beforeQueue).toHaveLength(1);expect(beforeQueue[0].status).toBe('completed');
     expect((await f.app.dispatch('dispatch.executionInspect',memberIdentity) as MemberExecutionView).runs[0]).toMatchObject({permission:'ask',status:'running'});
     await expect(fs.readFile(path.join(f.a,'ask-member-output.txt'),'utf8')).rejects.toMatchObject({code:'ENOENT'});

@@ -116,3 +116,17 @@ it('同一实例聊天与任务即使只读也互斥，其他实例只读可并�
   other();self();expect(released).toHaveBeenCalledTimes(3);
   const write=lease.acquire('member:write','execute','writer');write();
 });
+
+it('主运行内核证独立持有读占用，外部读取与错误会话不能借用独占，父释放不提前解锁',()=>{
+  const lease=new WorkspaceExecutionLease(),main=lease.acquire('conversation:main','execute','main');
+  expect(()=>lease.acquire('desktop-preview','read')).toThrowError(expect.objectContaining({code:'WORKSPACE_EXECUTION_BUSY'}));
+  expect(()=>lease.acquireReadWithin('wrong-proof','conversation:other')).toThrowError(expect.objectContaining({code:'WORKSPACE_EXECUTION_BUSY'}));
+  expect(()=>lease.acquireReadWithin('conversation:main','conversation:main')).toThrowError(expect.objectContaining({code:'WORKSPACE_EXECUTION_BUSY'}));
+  const proof=lease.acquireReadWithin('human-proof','conversation:main');
+  main();expect(()=>lease.acquire('member:writer','ask')).toThrowError(expect.objectContaining({code:'WORKSPACE_EXECUTION_BUSY'}));
+  const parallel=lease.acquire('parallel-reader','read');parallel();proof();proof();
+  const next=lease.acquire('member:writer','execute');next();
+  const fallback=lease.acquireReadWithin('after-main','conversation:main');
+  expect(()=>lease.acquire('new-writer','execute')).toThrowError(expect.objectContaining({code:'WORKSPACE_EXECUTION_BUSY'}));fallback();
+  const final=lease.acquire('new-writer','execute');final();
+});

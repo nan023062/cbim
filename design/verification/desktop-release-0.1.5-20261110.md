@@ -12,7 +12,7 @@
 
 - 更新版本为 0.1.5，新增内置版本日志。0.1.4 延续 0.1.3 自动更新交互，验收输入新增明确枚举并保留未知版本拒绝；候选和公开升级均指定 previous_version=0.1.4。
 - 新增定向验收输入回归，检查 0.1.4 → 0.1.5、同版拒绝和未知旧版拒绝。`pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs --reporter=default --reporter=json --outputFile=test-results/desktop-0.1.5-20261110/acceptance-inputs.json`：21 项通过；`pnpm check:brand` 与正式域名 `pnpm build:website` 通过（公开数据仍保持 0.1.4）。
-- PR #30 的首轮完整 Windows 四片正在执行；候选安装、公开升级与官网分发尚未完成。
+- PR #30 首轮完整 Windows 四片 42760689921 已失败：2505 通过、78 失败、2 项原有历史 EXE 前置缺失跳过。原始四片报告完整保留，当前修复并定向复验；候选安装、公开升级与官网分发尚未完成。
 
 ## 当前接续
 
@@ -25,3 +25,13 @@
 - 新增 scripts/multi-engine-ui-smoke.mts，显式指定同一真实 EXE 和独立用户目录。前两次失败为验收观察断言错误（Electron evaluate 参数、空草稿发送按钮禁用）；第三次为 Playwright 主进程观察 Promise 被回收，导致验收关闭取消了刚启动的 Codex。保留 initial/corrected/third 失败报告，未将取消冒充引擎失败或成功。
 - 改用公开只读 IPC 查询真实运行后，engine-ui-public-read/report.json 通过：Pi → Claude Code → Codex → Pi → Codex → Codex，共 6 轮；各自原生文件复用、公开上下文接续、Team 主 Agent 实际写入、Agent 默认 Claude 与岗位独立 Codex、切换清空旧模型、禁用模型不出现、重启不重放。请求 Pi 2 / Claude 1 / Codex 4，页面错误 0。已审阅两张实际截图。
 - 这是首轮包的功能证据；带提示修正的新冻结包仍须重新核验，并执行同包桌面/隔离平台冒烟和 NSIS 验收。本机确定性响应不证明在线模型质量。
+
+## 第二轮候选与完整 CI 回归
+
+- af3ce53a6d30a20ae6f7c4ab286478c0ac993d14 构建 unsigned-20261110-132352-071768b5；47 个 PE payload，独立 verify 通过。真实同包六项进程隔离和三引擎 6 轮桌面验收均通过，报告 isolation-final.json、engine-ui-final/report.json。因随后 CI 发现产品租约回归，该包也不上传；修复后重新冻结制品。
+- 首轮 CI 失败分布 15/15/20/28。旧夹具错误禁止 Team 主运行的 write/edit/bash；当前主 Agent 应按 read/ask/execute 获取工具，成员专属工具仍隔离。另有 onEngineReady 回执现包含真实 nativeSessionId 的断言更新。审批测试增加先明确拒绝主写入、再独立批准成员的真实链。
+- 产品回归为人工接受接续/目标审阅在已有主 ask/execute 独占内再申请独立读，触发 WORKSPACE_EXECUTION_BUSY。采用可信主身份内部派生读占用，父子分别释放；桌面预览、决定及接续预检保持独立占用，其他写运行不得共享。占用单元增加错误身份、重复键、父先释放仍阻止写入、缺少父占用回退等验证。
+- 受影响范围为首轮失败的 24 个测试文件，加 conversation-identity、human-continuation-service、complete-output-human，共 27 文件；明确选择保存在 ci-regression-selection.json。实际执行 pnpm exec vitest run <27 个明确文件> --reporter=default --reporter=json --outputFile=test-results/desktop-0.1.5-20261110/regression-targeted.json。该批 118 通过、2 失败；原失败未覆盖。影响重规划路径同样须复用可信主占用，修复后追加 5 文件/44 项通过（effects-targeted.json）；长人工重审的本地提供器误将真实 Pi 无工具摘要当成员请求，按已有摘要协议适配后，3 文件/7 项通过（reconsideration-targeted.json）。最终去重 30 文件/156 项全部通过。
+- pnpm typecheck、pnpm check:architecture 已通过：55 目录、600 源码/样式、1186 文件/6107 条含类型依赖、0 循环。同步主装配与执行目录的源码注释、CONTRACT 及 ARCHITECTURE。
+
+追加命令：`pnpm exec vitest run tests/effect-observation-service.test.ts tests/effect-observation-pi.test.ts tests/scope-replan.test.ts tests/replan-start-race.test.ts tests/business-replan-pi.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-0.1.5-20261110/effects-targeted.json`；`pnpm exec vitest run tests/human-reconsideration-pi.test.ts tests/complete-output-pi.test.ts tests/artifact-transition-pi.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-0.1.5-20261110/reconsideration-targeted.json`。追加范围只覆盖新暴露的原影响核证及共享完整交付提供器消费者。再次类型及架构检查通过；原生摘要仍由 Pi 执行，没有关闭自动摘要绕过验证。

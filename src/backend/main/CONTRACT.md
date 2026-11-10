@@ -82,7 +82,7 @@ note for execution "主 chat 分别注入 feedbackTools 与 feedbackStatus；新
 
 `execution-admission.ts` 将全局资格与 `WorkspaceExecutionLease` 同步组合。请求键由主/成员来源加稳定命令 SHA-256 摘要组成，满足身份长度与字符约束；撤票只传 `AdmissionIdentity`，不夹带请求权限和来源字段。所有桌面主轮与成员轮使用同一服务，测试或独立装配未传服务时仍沿用已有工作区租约。
 
-主普通聊天在 `LoopRuntime.acquireLease` 成功之后才调用 `beforeRun` 打开目标周期，额度不足不会创建 scope、运行日志或模型请求。主轮按实际权限领取租约：read 可共享，ask/execute 保守独占，防止 beforeRun 恢复 Auto 后超出已取得的占用。Team 的保守占用不提供业务写工具；知识写仍经过知识服务事务和用户权限。成员在派发存储事务内、领取信封和记录 run 之前取得全局及本地资格；准备、原生锁或持久化失败释放已取得资源。成员的未知终态仍保留原有占用规则，不能为了展示空闲而假释放。
+主普通聊天在 `LoopRuntime.acquireLease` 成功之后才调用 `beforeRun` 打开目标周期，额度不足不会创建 scope、运行日志或模型请求。主轮按实际权限领取租约：read 可共享，ask/execute 保守独占，防止 beforeRun 恢复 Auto 后超出已取得的占用。Team 与 Auto 均按本轮权限提供业务工具；知识写仍经过知识服务事务和用户权限。成员在派发存储事务内、领取信封和记录 run 之前取得全局及本地资格；准备、原生锁或持久化失败释放已取得资源。成员的未知终态仍保留原有占用规则，不能为了展示空闲而假释放。
 
 成员准备知识、解析模型和最终重查基线后都重新核对批次及工作区代际。装配 `isCurrent` 在工作区退役时立即失效，手动成员启动同样受约束；不依赖稍后才执行的 manager.close。若停止发生在已经开始的持久提交期间，保留真实启动意图并结算取消，但不创建模型。代际同时发出 AbortSignal，成员启动信号贯穿尚未登记 active 的原生准备阶段；异常启动继续按 interrupted 留证，不伪装为未执行。
 
@@ -166,7 +166,7 @@ Application 每工作区装配一个请求预算服务，主工厂固定已解�
 
 固定工作区的同一OutputManifestFiles.check注入成员结算、目标服务及人工服务。人工选择/继续沿既有read租约和当前工作区校验，不调用模型、不改日志，也不复用旧native执行；真实执行仍由独立显式继续入口负责。
 
-主轮业务占用与工具模式一致：Team 没有业务写工具，使用只读占用，使 beforeRun 内的人工／成员核验仍能取得短读占用；Auto 的 ask／execute 使用独占，审批等待也不能与其他运行并发。恢复及成员回注优先读取原周期冻结模式，历史缺省 Team，不用缺失的运行参数覆盖已保存的 Auto 策略；知识写仍由独立事务和权限保护。
+主轮业务占用与工具权限一致：Team 与 Auto 的 read 使用只读占用，ask／execute 使用独占，审批等待也不能与其他运行并发。人工接续 accept 与主运行目标审阅的文件核证通过 acquireMainRead 按已验证的 rootSessionId 派生读占用；原占用不存在时退回普通读申请。桌面预览、决定与接续预检仍走独立 acquireRead，不能复用正在运行的写占用。恢复及成员回注优先读取原周期冻结模式，历史缺省 Team，不用缺失的运行参数覆盖已保存的 Auto 策略；知识写仍由独立事务和权限保护。
 
 ## R07-B2 原删除与移动证明
 
@@ -187,3 +187,5 @@ Application按当前工作区装配唯一IsolatedExecutions，共享DispatchStor
 ### 多引擎装配
 
 Application 发送时固定公开 engine，执行工厂核对它与所选供应商一致；配置被改到另一引擎时拒绝旧排队请求。成员使用自己采纳的模型及引擎，主选型不覆盖。member-dispatch 按真实引擎提供能力预检，并按受管目录把原生指纹读取交给对应格式适配。
+
+业务重规划 accept 的原影响核证也按已核主身份调用 EffectObservationService.observeFromMain，派生本运行读占用，避免把自身占用冲突误记为文件不可观察而改变 basis。预览、preflight、公开 observe 和人工处置仍使用独立读占用；不改变原失败回执、证据指纹和权限。

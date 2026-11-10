@@ -31,7 +31,7 @@ it.each(['ask','read','unconnected'] as const)('real Pi main invokes feedback Sk
   });
   const server=http.createServer(async(req,res)=>{try{
     let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw),turn=requests.length;requests.push(body);
-    const names=body.tools.map((tool:any)=>tool.function.name);assert.ok(names.includes('cbim_skill_bug_feedback'));assert.equal(names.includes('cbim_feedback_submit'),mode!=='unconnected');assert.ok(!names.includes('bash')&&!names.includes('write'));
+    const names=body.tools.map((tool:any)=>tool.function.name);assert.ok(names.includes('cbim_skill_bug_feedback'));assert.equal(names.includes('cbim_feedback_submit'),mode!=='unconnected');assert.ok(['bash','write'].every(name=>names.includes(name)===(mode!=='read')));
     assert.ok(!raw.includes(token));
     res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'feedback-'+turn,object:'chat.completion.chunk',created:1,model:'feedback-fixture',choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};

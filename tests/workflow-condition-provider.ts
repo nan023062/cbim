@@ -18,7 +18,7 @@ export async function workflowConditionProvider(mode:WorkflowConditionMode='comp
     res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'workflow-condition-'+sequence.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const batch=(calls:Array<{id:string;name:string;args:unknown}>)=>{emit({role:'assistant',tool_calls:calls.map((call,index)=>({index,id:call.id,type:'function',function:{name:call.name,arguments:JSON.stringify(call.args)}}))});emit({},'tool_calls')},tool=(id:string,name:string,args:unknown)=>batch([{id,name,args}]),reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     if(isMain){
-      assert.ok(body.tools?.every(value=>!['write','edit','bash'].includes(value.function.name)));
+      assert.ok(body.tools?.every(value=>!['cbim_task_help','cbim_task_checkpoint'].includes(value.function.name)));
       if(turn===0){assert.ok(ownerSelection,'测试必须先通过真实登记/责任查询准备岗位选择');tool('workflow-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],acceptance:d.acceptance,ownerSelection}))}
       else if(turn===1)tool('workflow-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
       else if(turn===2)reply('已按真实模块Workflow派发执行任务。');

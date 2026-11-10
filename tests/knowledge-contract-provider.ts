@@ -22,7 +22,7 @@ export async function knowledgeContractProvider(mode:KnowledgeContractMode='comp
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
     const body=JSON.parse(raw) as Request,turn=requests.length;requests.push(body);assert.equal(body.model,knowledgeContractFixture.model);
-    const names=body.tools?.map(value=>value.function.name)??[];assert.ok(names.includes('cbim_dispatch_task'));assert.ok(names.every(name=>!['write','edit','bash'].includes(name)),'主调度知识能力不能扩大业务执行权限');
+    const names=body.tools?.map(value=>value.function.name)??[];assert.ok(names.includes('cbim_dispatch_task'));assert.ok(['write','edit','bash'].every(name=>names.includes(name)),'ask 主运行有执行工具，实际写入仍经审批');
     res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'knowledge-contract-'+turn,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     if(turn===0)tool('contract-identity','cbim_workspace_identity',{});

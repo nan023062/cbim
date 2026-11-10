@@ -36,7 +36,7 @@ export async function effectObservationProvider(options:{unsupported?:boolean;ed
     const dispatch=(id:string,goal:string)=>{assert.ok(selection);tool(id,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection:selection,goal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]})};
     if(auxiliary){assert.equal(turn,0);reply('独立会话没有执行原来源的操作。')}
     else if(isMain){
-      assert.ok(body.tools?.every(item=>!['write','edit','bash'].includes(item.function.name)));
+      assert.ok(body.tools?.every(item=>!['cbim_task_help','cbim_task_checkpoint'].includes(item.function.name)));
       if(turn===0)plan('effect-old-plan',d.oldGoal);
       else if(turn===1)dispatch('effect-old-dispatch',d.oldMemberGoal);
       else if(turn===2)reply('原独立成员已派发，等待实际执行事实。');

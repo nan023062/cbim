@@ -492,6 +492,7 @@ class N_src_backend_scheduler_engine_execution_effect_observation_service_ts_Eff
   +normalizePath()
   +observeFiles()
   +acquireRead()
+  +acquireMainRead()
   +observeKnowledge()
   +observePersistent()
   +observeControlled()
@@ -509,6 +510,7 @@ class N_src_backend_scheduler_engine_execution_effect_observation_service_ts_Own
 N_src_backend_scheduler_engine_execution_effect_observation_service_ts ..> N_src_backend_scheduler_engine_execution_effect_observation_service_ts_Owner : 声明
 class N_src_backend_scheduler_engine_execution_effect_observation_service_ts_EffectObservationService["EffectObservationService"] {
   +observe()
+  +observeFromMain()
   +list()
   +receipt()
   +record()
@@ -523,7 +525,6 @@ class N_src_backend_scheduler_engine_execution_effect_observation_service_ts_Eff
   -prepare()
   -knowledge()
   -persistent()
-  -baselines()
 }
 N_src_backend_scheduler_engine_execution_effect_observation_service_ts ..> N_src_backend_scheduler_engine_execution_effect_observation_service_ts_EffectObservationService : 声明
 ```
@@ -536,6 +537,7 @@ class N_src_backend_scheduler_engine_execution_effect_observation_service_ts["ef
   <<module>>
 }
 class N_src_backend_scheduler_engine_execution_effect_observation_service_ts_EffectObservationService["EffectObservationService"] {
+  -baselines()
   -recordReady()
 }
 N_src_backend_scheduler_engine_execution_effect_observation_service_ts ..> N_src_backend_scheduler_engine_execution_effect_observation_service_ts_EffectObservationService : 声明
@@ -799,6 +801,7 @@ class N_src_backend_scheduler_engine_execution_human_decision_evidence_ts_HumanD
   +checkFiles()
   +checkManifest()
   +acquireRead()
+  +acquireMainRead()
   +assertCurrent()
 }
 N_src_backend_scheduler_engine_execution_human_decision_evidence_ts ..> N_src_backend_scheduler_engine_execution_human_decision_evidence_ts_HumanDecisionPorts : 声明
@@ -1905,8 +1908,10 @@ class N_src_backend_scheduler_engine_execution_workspace_lease_ts_WorkspaceExecu
   +observeRelease()
   +canAcquire()
   +acquire()
+  +acquireReadWithin()
   -listeners
   -leases
+  -hold()
 }
 N_src_backend_scheduler_engine_execution_workspace_lease_ts ..> N_src_backend_scheduler_engine_execution_workspace_lease_ts_WorkspaceExecutionLease : 声明
 ```
@@ -3310,3 +3315,9 @@ OwnerExecutionService.discover 独立核对每组模块/Workflow、岗位责任/
 ### 引擎选择与首轮绑定
 
 createWorkspaceLoop 按冻结模型创建 PiEngine/ClaudeCodeEngine/CodexEngine，工具策略及 KnowledgeService 保持唯一装配。自动接续保留本周期主引擎，成员独立选型。Claude Code/Codex 新成员首轮允许 ready 尚无 sessionFile，因为实际文件可由原生首轮生成；Codex 首次 starting→running 同事务采纳服务端线程 ID，已绑定后不能再改。结算在同一事务前核对 session.bound 身份并保存路径。检查点/续执行仍必须使用已核实原生文件，不放宽 Pi 或成员恢复条件。
+
+### 主运行内人工证据读占用
+
+WorkspaceExecutionLease.acquireReadWithin 只由装配端为已核实主会话身份的内部核证调用；不是客户端可选的权限。人工接续 accept 在 beforeRun 已持有主执行占用时、目标审阅/完成核证时可派生独立读占用，父占用先释放仍由子读阻止其他写入。原主占用不存在则按普通读规则领取；其他运行的独占仍拒绝。桌面人工预览、决定、preflight 不使用派生入口，未知身份不能绕过占用。
+
+业务重规划 accept 的原影响核证也按已核主身份调用 EffectObservationService.observeFromMain，派生本运行读占用，避免把自身占用冲突误记为文件不可观察而改变 basis。预览、preflight、公开 observe 和人工处置仍使用独立读占用；不改变原失败回执、证据指纹和权限。

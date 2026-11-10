@@ -38,7 +38,7 @@ export async function controlledFileProvider(mode:ControlledFileMode='complete',
     const denied=(id:string)=>assert.match(JSON.stringify(mainToolValue(body,id)),/CONTROLLED_FILE_REVIEW_REQUIRED/);
     if(auxiliary){assert.equal(turn,0);reply('独立主会话没有读取、恢复或重放原文件操作。')}
     else if(isMain){
-      assert.ok(body.tools?.every(item=>!['write','edit','bash','cbim_file_write_controlled'].includes(item.function.name)));
+      assert.ok(body.tools?.every(item=>!['cbim_file_write_controlled'].includes(item.function.name)));
       assert.ok(ownerSelection);
       if(turn===0)tool('controlled-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance}));
       else if(turn===1)tool('controlled-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});

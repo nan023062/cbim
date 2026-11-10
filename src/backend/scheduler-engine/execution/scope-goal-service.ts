@@ -317,7 +317,8 @@ export class ScopeGoalService {
         check(item.evidence.every(reference=>reference.kind==='human-decision'||reference.kind==='member-result'&&record.proof.candidates.some(candidate=>candidate.taskId===reference.taskId&&candidate.runId===reference.runId&&candidate.resultId===reference.resultId&&candidate.planRevision===reference.planRevision&&reference.toolCallIds.every(id=>candidate.evidenceToolCallIds.includes(id)))),'GOAL_HUMAN_CANDIDATE','人工满足不能混入此次接受以外的新候选或证据');
       }
     }
-    try{await validateHumanAcceptances(this.owner,state,scope,[...acceptedHumans.values()],this.ports,this.humanPorts,this.validateHistoricalMemberCandidate.bind(this))}catch(error){
+    // 审阅属于已核身份的主运行；终态复核若原占用已释放，装配端退回普通只读申请。
+    try{await validateHumanAcceptances(this.owner,state,scope,[...acceptedHumans.values()],this.ports,this.humanPorts,this.validateHistoricalMemberCandidate.bind(this),true)}catch(error){
       // 完成门禁保留 GOAL 命名空间，让协调器记录阻塞并收束；接受依据失效不能留下悬挂的活动周期。
       fail('GOAL_HUMAN_STALE',error instanceof Error?error.message:'人工接受的当前依据无法核实');
     }

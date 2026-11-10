@@ -37,7 +37,7 @@ export class ScopeReplanService {
   private sameRequest(scope:DispatchScope,input:ReplanRequest){const saved=scope.replan!;check(saved.dispositionId===input.dispositionId&&saved.source.inspectionScopeId===input.source.inspectionScopeId&&saved.source.expectedBasis===input.source.expectedBasis&&sameGoalValue(saved.input,input.input)&&sameGoalValue(saved.options,input.options),'REPLAN_COMMAND_CONFLICT','同一业务重规划命令已绑定不同目标、证据或配置')}
   /** 查询只返回受理事实，不重新核实旧证明或启动模型。 */
   async inspect(raw:ReplanLookup):Promise<ReplanReceipt|undefined>{const input=this.parse(replanLookupSchema,raw),scope=this.found(await this.store.read(),input);return scope?this.receipt(scope):undefined}
-  private async proof(state:DispatchState,input:ReplanPreviewInput){
+  private async proof(state:DispatchState,input:ReplanPreviewInput,withinMainRun=false){
     const graph=this.identity(state,input),inspection=state.scopes?.find(item=>item.scopeId===input.inspectionScopeId&&item.rootSessionId===input.rootSessionId&&item.workspaceId===input.workspaceId);
     check(inspection?.recovery&&inspection.status==='closed'&&inspection.outcome==='completed','REPLAN_SOURCE_INVALID','请选择已经完成的只读核实周期');
     check(!state.scopes?.some(item=>item.rootSessionId===input.rootSessionId&&item.status!=='closed')&&!state.runs?.some(item=>item.binding.rootSessionId===input.rootSessionId&&['starting','running'].includes(item.status)),'REPLAN_BUSY','主会话仍有未结束周期或运行');
@@ -58,10 +58,11 @@ export class ScopeReplanService {
     if('kind' in original){
       check(this.effects,'REPLAN_PROOF_INVALID','未装配原影响观察');
       const subject=original.kind==='main_run'?{kind:'main_run' as const,runId:original.runId,toolCallIds:original.toolCallIds}:{kind:'member_run' as const,taskId:original.taskId,runId:original.runId,toolCallIds:original.toolCallIds};
-      const selection={workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,subject},report=await this.effects.observe(selection);
+      // accept 已持有主运行占用；预览和预检仍走公开的独立读取，不借用其他执行。
+      const selection={workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,subject},observe=()=>withinMainRun?this.effects!.observeFromMain(selection):this.effects!.observe(selection),report=await observe();
       check(report.consistency==='stable'&&report.source.execution!=='in_flight'&&report.source.scopeId===source.scopeId,'REPLAN_STALE','原影响依据不再稳定');
       proof=original.kind==='main_run'?{...common,kind:'main_run',sourceRunId:original.runId,sourceToolCallIds:original.toolCallIds,sourceGoalRevision:source.goal.revision,sourceInputRevision:goalInputRevision(source.goal),sourcePlanRevision:source.goal.plan.revision,sourceReportBasis:report.basis}:{...common,kind:'member_run',sourceTaskId:original.taskId,sourceRunId:original.runId,sourceToolCallIds:original.toolCallIds,sourceReportBasis:report.basis};
-      check((await this.effects.observe(selection)).basis===report.basis,'REPLAN_STALE','原影响在取证期间变化');
+      check((await observe()).basis===report.basis,'REPLAN_STALE','原影响在取证期间变化');
     }else{
       const reports=new ExecutionReportService(this.owner,{read:async()=>structuredClone(state)},run=>this.logs!.inspectMember(run)),selection={workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,taskId:task!.taskId,runId:original.runId},report=await reports.read(selection);
       check(report.consistency==='stable'&&report.execution!=='in_flight','REPLAN_STALE','来源执行报告正在变化，请重新核实');
@@ -83,7 +84,7 @@ export class ScopeReplanService {
     const input=this.parse(replanRequestSchema,raw),context=this.parse(freshContextSchema,{initialRunId:trusted.runId,nativeSessionId:trusted.nativeSessionId,excludedRunIds:trusted.excludedRunIds});let fresh=false;
     const command={commandId:'scope-replan-'+input.commandId,fingerprint:hash(json({operation:'scope.replan',input}))},priorReceipt=await this.store.commandReceipt(command.commandId);
     if(priorReceipt){check(priorReceipt.fingerprint===command.fingerprint,'COMMAND_ID_CONFLICT','原命令已绑定其它请求');const scope=this.found(await this.store.read(),input);check(scope?.replan,'REPLAN_UNKNOWN','原回执缺少业务意图');this.sameRequest(scope,input);return {scope,replan:scope.replan,fresh:false}}
-    trusted.signal?.throwIfAborted();const before=await this.store.read(),value=await this.proof(before,{workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,inspectionScopeId:input.source.inspectionScopeId});check(value.basis===input.source.expectedBasis,'REPLAN_STALE','业务重规划依据已变化，请重新预览');
+    trusted.signal?.throwIfAborted();const before=await this.store.read(),value=await this.proof(before,{workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,inspectionScopeId:input.source.inspectionScopeId},true);check(value.basis===input.source.expectedBasis,'REPLAN_STALE','业务重规划依据已变化，请重新预览');
     if(input.dispositionId){const record=before.effectDispositions?.find(r=>r.dispositionId===input.dispositionId),proof=value.proof;check('kind' in proof,'REPLAN_DISPOSITION_INVALID','旧来源不能补造处置关联');const subject=proof.kind==='main_run'?{kind:'main_run' as const,runId:proof.sourceRunId,toolCallIds:proof.sourceToolCallIds}:{kind:'member_run' as const,taskId:proof.sourceTaskId,runId:proof.sourceRunId,toolCallIds:proof.sourceToolCallIds};check(record&&record.request.workspaceId===input.workspaceId&&record.request.rootSessionId===input.rootSessionId&&record.request.decision==='repair_in_new_cycle'&&sameEffectSubject(record.request.subject,subject)&&record.observation.basis===proof.sourceReportBasis,'REPLAN_DISPOSITION_INVALID','修复处置与本次原来源或观察不匹配')}
     const stamp=effectStateStamp(before,input),commit=()=>this.store.transact(command,async state=>{
       this.owner.assert();trusted.signal?.throwIfAborted();

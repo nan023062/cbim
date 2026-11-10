@@ -13,7 +13,7 @@ import {seedModuleOwnership,moduleOwnershipFixture} from './module-ownership-fix
 export type PersistentEffectMode='observe'|'propose'|'ownership';
 /** Source-only lost response follows a real durable write; final packaged UI uses no injection or replacement IPC. */
 export async function preparePersistentEffect(app:Application,user:string,project:string,temp:string,mode:PersistentEffectMode){
- const ownership=mode==='ownership',provider=ownership?await moduleOwnershipProvider('bad-wire'):await moduleGovernanceToolsProvider(mode==='observe'?'lost-observation':'lost-reply');
+ const ownership=mode==='ownership',provider=ownership?await moduleOwnershipProvider('bad-wire'):await moduleGovernanceToolsProvider(mode==='observe'?'lost-observation':'lost-reply',false,'execute');
  let restore=()=>{},writes=0;
  try{
   const seeded=ownership?await seedModuleOwnership(app,temp,provider.url):await seedModuleGovernanceTools(app,project,provider),id=seeded.entry.id,workspace=app.workspace(id),instanceId=workspace.instanceId;

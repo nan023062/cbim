@@ -28,6 +28,8 @@ export interface HumanDecisionPorts {
   checkFiles(files:readonly ArtifactFileFact[],signal:AbortSignal):Promise<ArtifactFileCheck[]>;
   checkManifest?(expected:OutputManifestSnapshot,signal:AbortSignal):Promise<OutputManifestCheck>;
   acquireRead():()=>void;
+  /** 可信主运行内核证：复用指定主会话的占用；桌面预览及预检必须仍走独立 acquireRead。 */
+  acquireMainRead?(rootSessionId:string):()=>void;
   assertCurrent?():void;
 }
 /** 只接已登记的运行身份；平台自行解析 canonical 路径，模型或客户端不能指定日志文件。 */
@@ -49,11 +51,12 @@ export function assertHumanSubject(scope:DispatchScope,continuation:ScopeHumanCo
 /**
  * 所有接受项合并文件后一次核实；前后读取 canonical 和知识，外部文件变化不承诺跨存储原子隔离。
  * validateCandidate 只验证历史完整任务/原生绑定/交付证据；本模块复核全部当前 必验文件，不能只选未变的基线绕过。
+ * withinMainRun 只能由已核实主运行身份的内部调用方提供，不从客户端请求或模型参数读取。
  */
-export async function validateHumanAcceptances(owner:Pick<KnowledgeWorkspace,'entry'|'assert'|'read'>,state:DispatchState,scope:DispatchScope,records:readonly HumanDecisionRecord[],logs:HumanEvidenceLogs|undefined,ports:HumanDecisionPorts|undefined,validateCandidate:HumanCandidateValidator):Promise<void>{
+export async function validateHumanAcceptances(owner:Pick<KnowledgeWorkspace,'entry'|'assert'|'read'>,state:DispatchState,scope:DispatchScope,records:readonly HumanDecisionRecord[],logs:HumanEvidenceLogs|undefined,ports:HumanDecisionPorts|undefined,validateCandidate:HumanCandidateValidator,withinMainRun=false):Promise<void>{
   if(!records.length)return;check(logs&&ports,'HUMAN_CONTINUATION_UNAVAILABLE','尚未接入人工接受所需的可信日志及文件核实');
   const current=()=>{owner.assert();ports.assertCurrent?.()},graph=state.graphs.find(item=>item.identity.workspaceId===scope.workspaceId&&item.identity.rootSessionId===scope.rootSessionId);check(graph,'HUMAN_CONTINUATION_IDENTITY','人工接受缺少对应主会话图');current();
-  const release=ports.acquireRead();
+  const release=withinMainRun&&ports.acquireMainRead?ports.acquireMainRead(scope.rootSessionId):ports.acquireRead();
   try{
     const knowledge=await owner.read();current();const observed=new Map<string,{run:DispatchRun;summary:RunSummary;manifest?:OutputManifestRecord}>(),mains=new Map<string,RunSummary>(),files=new Map<string,ArtifactFileFact>();
     for(const record of records){

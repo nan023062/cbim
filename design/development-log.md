@@ -1,3 +1,10 @@
+## 2026-11-11：历史索引存储与工作区装配分离（架构审计 A09）
+
+- 范围：FileAgentHistoryStore 只依赖 Core 存储契约和 Foundation；createAgentHistory 移入 workspace，通过窄 AgentHistoryOwner 组合运行日志与调度查询服务。Application 为唯一生产装配入口，持锁启动、只读身份检查、观察与排空顺序均保持。
+- 保护稳定能力：索引文件布局、原子写入、损坏诊断、原日志身份和符号链接防护不变；之后调整工作区装配不再修改文件存储模块。新增静态边界拒绝存储反向引用 Workspace 或调度服务（含类型）。
+- 验证选择：历史服务、文件存储、持锁启动三个直接消费者和修改的依赖检查器。实际运行 pnpm exec vitest run tests/agent-history-store.test.ts tests/agent-history.test.ts tests/workspace-history-startup.test.ts tests/dependencies.test.ts -t '^(?!all maintained code)' --reporter=default --reporter=json --outputFile=test-results/history-boundary.json：4 文件、27 用例通过（12.24s），重复全仓静态用例跳过，由 check:architecture 覆盖。
+- pnpm typecheck、pnpm check:architecture 通过：55 目录/606 代码及样式，1197 文件/6145 含类型边，0 循环、0 文档差异。同步 main、persistence/tasks、workspace 三份类图与相关文件头、契约。未运行全量产品回归、桌面构建和发布验收，留待最终集成。
+
 # CBIM 开发记录
 
 ## 2026-11-11：统一主会话直接执行与独立成员边界（审计 A03）

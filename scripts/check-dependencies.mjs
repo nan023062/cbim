@@ -37,6 +37,8 @@ const moduleBoundaries=[
   {sources:[projectRoot],allow:[]},
   {sources:[businessView],allow:[knowledgeTypes,knowledgeSnapshot,projectRoot,foundation]},
   {sources:['src/backend/scheduler-engine/context/knowledge-queries.ts'],allow:[knowledgeSnapshot,teamView,businessView]},
+  // 文件索引只实现稳定存储契约；工作区身份、服务和日志读取由 workspace 装配。
+  {sources:['src/backend/main/persistence/tasks/agent-history.ts'],allow:[foundation,'src/backend/core/team/session-history-storage.ts']},
   // 领域样本不能通过 helpers 或其他中间文件重新加载完整应用。
   {sources:['tests/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
   {sources:['tests/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/backend/core/knowledge/knowledge.ts','tests/knowledge-data.ts']},

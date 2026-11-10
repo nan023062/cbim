@@ -35,7 +35,7 @@ import type {WorkspaceAdmission} from './execution-admission';
 import {WorkspaceRuntimeMonitor} from './runtime-monitor';
 import {ChatInputs} from './persistence/tasks/chat-inputs';
 import {ChatMaterialImports} from './persistence/tasks/chat-material-imports';
-import {createAgentHistory} from './persistence/tasks/agent-history';
+import {createAgentHistory} from './workspace/agent-history';
 import type {AgentHistoryService} from '../scheduler-engine/runtime/agent-history';
 import type {WorkspaceExecutionManager} from '../scheduler-engine/execution/execution-manager';
 import {Catalog} from './workspace/catalog';

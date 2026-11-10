@@ -83,6 +83,16 @@ test('snapshot contracts and domain views reject reverse or private dependencies
     [query]:"import type {T} from '../../core/knowledge/snapshot'; import '../../core/team/model'; import '../../core/workspace/model';",
   }).ok).toBe(true);
 });
+test('history persistence rejects workspace and runtime assembly even through type dependencies',()=>{
+  const from='src/backend/main/persistence/tasks/agent-history.ts';
+  for(const to of ['src/backend/main/workspace/workspace.ts','src/backend/main/workspace/agent-history.ts','src/backend/scheduler-engine/runtime/agent-history.ts']){
+    const relative=path.posix.relative(path.posix.dirname(from),to);
+    const result=audit({[from]:`export type {T} from '${relative}';`,[to]:'export type T=string;'});
+    expect(result.cycles).toEqual([]);expect(result.violations).toHaveLength(1);expect(result.ok).toBe(false);
+  }
+  expect(audit({[from]:"import type {T} from '../../../core/team/session-history-storage';",'src/backend/core/team/session-history-storage.ts':'export type T=string;'}).ok).toBe(true);
+});
+
 test('updater stays independent of application runtime and business services',()=>{
   for(const target of ['main','scheduler-engine','core']){
     const result=audit({'src/backend/updater/a.ts':`import type {T} from '../${target}/b';`,[`src/backend/${target}/b.ts`]:'export type T=string;'});

@@ -1,16 +1,12 @@
 /**
- * 作用定位：把静态 Agent 的 Session 归档索引保存到应用用户目录，并为只读详情定位原运行日志。
+ * 作用定位：把静态 Agent 的 Session 归档索引保存到应用用户目录，仅负责索引文件读写与完整性校验。
  * 设计原因：每个角色/会话/轮次独立原子写入摘要，执行实例释放与知识定义删除不影响履历；不移动正文，不把聊天记录写入可共享的 .cbim 知识。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {hash} from '../../../core/foundation/serialization';
 import {atomic} from '../../../core/foundation/files';
-import {safeId} from '../../../core/foundation/identity';
 import {checkedAgentHistoryRecord,type AgentHistoryRecord,type AgentHistoryStore} from '../../../core/team/session-history-storage';
-import {AgentHistoryService} from '../../../scheduler-engine/runtime/agent-history';
-import type {Workspace} from '../../workspace/workspace';
-import {FileRunStorage} from './run-storage';
 
 /** 文件只包含派生摘要；canonical 日志才是执行事实来源，损坏条目单独报告并等待回补。 */
 export class FileAgentHistoryStore implements AgentHistoryStore {
@@ -52,23 +48,4 @@ export class FileAgentHistoryStore implements AgentHistoryStore {
     }
     return {records,diagnostics};
   }
-}
-
-/** 构造不读盘；工作区持锁并核实路径后、Store 观察器接收投影前初始化索引。详情定位只能由固定 source/task/run 决定，服务关闭前不释放工作区。 */
-export function createAgentHistory(workspace:Workspace,diagnostic?:(message:string)=>void){
-  const project=workspace.paths.project(workspace.entry.id),storage=new FileRunStorage();
-  return new AgentHistoryService(workspace.entry.id,workspace.entry.path,{
-    store:new FileAgentHistoryStore(path.join(project,'agent-history'),workspace.entry.id,workspace.entry.path),diagnostic,
-    read:async record=>{
-      workspace.assert();
-      const root=record.journal==='member'?path.join(project,'dispatch','runs','tasks'):path.join(project,'loop-engine','tasks');
-      const task=path.join(root,safeId(record.view.taskId)),directory=path.join(task,safeId(record.view.runId));
-      for(const target of [root,task,directory,path.join(directory,'events.jsonl')])if((await fs.lstat(target)).isSymbolicLink())throw Error('运行日志不能经符号链接定位');
-      const relative=path.relative(await fs.realpath(project),await fs.realpath(directory));
-      if(!relative||relative==='..'||relative.startsWith('..'+path.sep)||path.isAbsolute(relative))throw Error('运行日志不在本工作区应用目录');
-      const summary=await storage.read(directory);
-      if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path||summary.task.taskId!==record.view.taskId||summary.runId!==record.view.runId)throw Error('运行日志身份不一致');
-      return summary;
-    },
-  });
 }

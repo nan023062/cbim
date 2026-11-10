@@ -121,14 +121,13 @@ class N_src_backend_main_runtime_monitor_ts["runtime-monitor.ts"] {
 - `member-dispatch.ts` → `persistence`：导入。
 - `member-dispatch.ts` → `platform`：导入。
 - `member-dispatch.ts` → `execution-admission.ts`：导入。
-- `persistence` → `workspace`：导入。
 - `persistence` → `resources`：导入。
 - `persistence` → `platform`：导入。
 - `resources` → `platform`：导入。
 - `runtime-monitor.ts` → `workspace`：导入。
 - `runtime-monitor.ts` → `persistence`：导入。
-- `workspace` → `platform`：导入。
 - `workspace` → `persistence`：导入。
+- `workspace` → `platform`：导入。
 - `workspace` → `governance`：导入。
 
 ### execution-admission.ts 公开入口

@@ -883,6 +883,10 @@ N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspa
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 静态模块视图的单向边界
+
+`model.ts` 中的 BusinessWorkspace 只依赖知识快照公开类型、只读解析辅助、Foundation 与 `project-root.ts`，不依赖 Team 视图、知识写入端口或调度编排。跨域组合在 Scheduler，固定快照视图不缓存后续版本，也不取得实际工程的生命周期。依赖矩阵和状态归属见 [知识契约](../knowledge/CONTRACT.md#快照契约领域视图与查询编排)；Workflow 协议、责任与来源登记各有原领域契约，不因目录同名合并职责。
+
 ### 始终存在的项目根范围
 
 `project-root.ts` 提供只读内置 `cbim:project`；`BusinessWorkspace.modules()` 返回独立 projectRoot（children 为真实根模块），保留原 modules/roots/index 语义。即使搜索无匹配或已有子模块，根仍可查询。`module()` 返回 builtin 定义、内联说明及空 Workflow，不伪造文件、维护关系、版本或正式责任。这里只描述范围，不修改知识和派发资格。

@@ -1,13 +1,14 @@
 /**
  * 作用定位：向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。
- * 设计原因：先声明实际能力和契约版本再消费运行授权；模块 v2 查询同时公开内置项目根。领域执行一次，业务输出按唯一 JSON 快照校验，不因返回异常重放事务。
+ * 设计原因：先声明实际能力和契约版本再消费运行授权；查询编排与知识索引写入分别装配。模块 v2 查询同时公开内置项目根。领域执行一次，业务输出按唯一 JSON 快照校验，不因返回异常重放事务。
  */
 import {z} from 'zod';
 import {ToolRegistry,type ToolDefinition} from '../../core/tools/registry';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import {fail} from '../../core/foundation/errors';
 import {Builtins,builtinSkills} from '../../core/knowledge/builtins';
-import {KnowledgeQueries} from '../../core/knowledge/knowledge-queries';
+import {KnowledgeQueries} from '../context/knowledge-queries';
+import {refreshKnowledgeIndexes} from '../../core/knowledge/knowledge-refresh';
 import {ObjectCrud,objectOperation} from '../../core/knowledge/object-crud';
 import type {ToolEffect} from '../../core/tools/types';
 import {knowledgeToolContract} from './knowledge-contracts';
@@ -39,7 +40,7 @@ export class KnowledgeTools {
       if(args.id==='cbim:executor')fail('AGENT_RETIRED','内置默认执行 Agent 已退役；未配置自定义 Agent 的模块由主 Agent 直接执行');
       return queries.agent(args.id);
     }));
-    register('cbim_knowledge_refresh',{version:2,effects:['knowledge-write'],description:'按已读取的 revision 和明确 requestId 校验知识并刷新派生索引，不修改正文。需本轮知识写入授权；同ID只查询/复用完全相同原请求，结果未知不得换ID重试。结构无效返回问题清单，修正后重新读取。',inputSchema:knowledgeRefreshInputSchema.shape},wrap(args=>queries.refresh(args)));
+    register('cbim_knowledge_refresh',{version:2,effects:['knowledge-write'],description:'按已读取的 revision 和明确 requestId 校验知识并刷新派生索引，不修改正文。需本轮知识写入授权；同ID只查询/复用完全相同原请求，结果未知不得换ID重试。结构无效返回问题清单，修正后重新读取。',inputSchema:knowledgeRefreshInputSchema.shape},wrap(args=>refreshKnowledgeIndexes(workspace,args)));
     register('cbim_object_preview',{version:2,effects:['preview'],description:'预览 Agent/Module/Skill/Workflow 的创建、更新或删除。data 严格按 kind 区分：agent 不支持 purpose，module 不支持 name（name 固定为 slug，中文名写 body 的 H1）。创建传 parentId、slug、data、body；更新传 id 与需修改字段；删除传 id，包含子对象时需 cascade。服务规划路径、清单和父子引用，不写正式知识。返回 planId、变更及校验。',inputSchema:{...identity,revision:z.string(),operations:z.array(objectOperation).min(1).max(100)}},wrap(args=>objects.preview(args.revision,args.operations)));
     register('cbim_object_commit',{effects:['knowledge-write'],description:'提交 cbim_object_preview 返回的 planId。须取得本次运行的知识写入授权；核对原版本，事务写入知识及索引，同一计划幂等。',inputSchema:knowledgeObjectCommitInputSchema.shape},wrap((args,write)=>{if(!write)fail('FORBIDDEN','当前调用未获得知识写入权限');return objects.commit(args.planId)}));
     const changeSchema=knowledgeCommitInputSchema.shape;

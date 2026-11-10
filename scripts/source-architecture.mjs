@@ -9,7 +9,7 @@ const scope={
  'src/backend':'本机后端逻辑层：main 装配平台与服务，scheduler-engine 协调执行，core 提供领域与大脑能力。updater 是独立更新子系统，不依赖运行时、调度或反馈服务；主程序只调用它。后端不导入前端界面。',
  'src/backend/updater':'独立桌面更新子系统：公开 Release 读取、稳定版本筛选、每分钟检查及用户发起的下载/自动安装状态机和 NSIS 适配均在此目录。只依赖公开更新契约及系统/第三方库，不导入 main、scheduler-engine 或 core/runtime；通过关闭回调等待主程序排空。安装包缓存独立于运行数据。',
  'src/bridge':'前后端通信边界：contracts 声明公开数据，preload 提供 Electron 安全桥。契约可重导出 Core 公开类型和纯函数，不暴露后端服务、凭据和存储实现。',
- 'src/backend/core':'核心领域与通用执行契约。大脑、团队、业务模块、知识和工具各自维护语义；不导入 main、调度、IPC 或界面。brain/tasks、knowledge/team/workspace 的目录双向箭头来自不同契约文件，不代表文件级循环。',
+ 'src/backend/core':'核心领域与通用执行契约。大脑、团队、业务模块、知识和工具各自维护语义；不导入 main、调度、IPC 或界面。知识快照与固定领域视图保持单向依赖，跨域知识查询编排归 scheduler-engine/context；其他目录聚合双向箭头仍须按真实契约区分，不代表文件级循环或全模块已解耦。',
  'src/backend/core/foundation':'少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。',
  'src/backend/core/governance':'模块知识治理的纯协议、保护规则与有界主工具投影。可信来源、冻结意见引用与本机评价独立于正式实施，旧意见替代不改历史，不把治理记录当业务验收。',
  'src/backend/core/brain':'引擎无关的执行循环、事件与计量；运行内补充只由可信入口写绑定scope/run/queue的接收日志，返回真实序号；queued后日志失败保持未知。插入绑定原run和停止信号，原生确认与未知分别记录，结算先排空插入日志。正式成员按冻结Workflow验证JSON指定字节，验证与交付复核各持短锁，前后核版本/知识/停止；checked暂存不等于passed有效证明。求助/检查点保存后结束本轮，文件采集随真实工具结束释放短锁；续执行不借旧证据。',
@@ -80,6 +80,8 @@ scope['src/bridge/contracts']+=' 桌面更新只公开版本、日志、阶段�
 scope['src/frontend/settings']+=' 反馈预置公开产品连接；版本更新迁到账号菜单的独立弹窗，设置表单不因查看日志而卸载。';
 scope['src/frontend/shell']+=' 账号菜单和新版提醒打开独立更新弹窗，当前页面及草稿保持挂载，不隐式下载或重启。';
 scope['src/backend/core/knowledge']+=' 产品反馈 Skill 只读发布两套上下文格式，不包含 GitHub 创建接口。';
+scope['src/backend/core/knowledge']+=' 快照数据与只读访问是独立公共边界；索引刷新通过收窄端口调用原知识事务，不导入团队或模块查询视图。';
+scope['src/backend/scheduler-engine/context']+=' KnowledgeQueries 只取快照读取端口，组合 Team/BusinessWorkspace；跨查询一致性由准备用例核版本，索引写入留在知识领域。';
 scope['src/backend/scheduler-engine/conversation']+=' 两项反馈入口先读取对应内置 Skill 再引导填写；收集反馈不启动业务派工。';
 // 负责人进入实际执行后，各层增加的职责仍分别归属原边界；不把登记回执描述成运行许可。
 const ownerExecutionScopes={

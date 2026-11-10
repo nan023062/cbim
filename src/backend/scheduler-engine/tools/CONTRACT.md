@@ -1,3 +1,7 @@
+### 知识查询与刷新分别装配
+
+`KnowledgeTools` 将只读注册表/详情交给 Context 的 `KnowledgeQueries`，将索引刷新交给 Core 的 `refreshKnowledgeIndexes`。查询门面不再拥有刷新能力；调用前的 Schema、实例身份、写授权、取消检查及调用后的唯一输出快照校验保持在原工具边界。公开工具名称、版本与恢复协议不变，不因为重构重放提交。具体依赖与事务所有者见 [知识契约](../../core/knowledge/CONTRACT.md#快照契约领域视图与查询编排)。
+
 ### 项目根模块查询 v2
 
 `cbim_module_registry` v2 始终返回独立的 `projectRoot`，搜索只筛选真实模块；`cbim_module_get` v2 可读取 `cbim:project` 的 builtin 定义及内联说明，不伪造 definitionFile。创建子模块不会令根范围消失；工具身份/版本、严格输出核验和知识路径保护不变。根查询不是正式委派资格，仍由派发服务核真实配置。

@@ -21,6 +21,28 @@ const layers = {
 };
 const layerOf = file => file.startsWith('src/frontend/') ? 'frontend' : file.split('/').slice(1,3).join('/');
 
+// 已迁移的查询边界按真实职责约束，而非把整个 core 的同层引用视为自由访问。
+// 精确文件是公开入口；以 / 结尾的路径表示已核实的完整边界（Foundation 不认识业务）。
+const foundation='src/backend/core/foundation/';
+const knowledgeTypes='src/backend/core/knowledge/types.ts';
+const knowledgeSnapshot='src/backend/core/knowledge/snapshot.ts';
+const teamView='src/backend/core/team/model.ts';
+const businessView='src/backend/core/workspace/model.ts';
+const projectRoot='src/backend/core/workspace/project-root.ts';
+const moduleBoundaries=[
+  {sources:[foundation],allow:[foundation]},
+  {sources:[knowledgeTypes],allow:[]},
+  {sources:[knowledgeSnapshot],allow:[knowledgeTypes,foundation]},
+  {sources:[teamView],allow:[knowledgeTypes,knowledgeSnapshot,foundation]},
+  {sources:[projectRoot],allow:[]},
+  {sources:[businessView],allow:[knowledgeTypes,knowledgeSnapshot,projectRoot,foundation]},
+  {sources:['src/backend/scheduler-engine/context/knowledge-queries.ts'],allow:[knowledgeSnapshot,teamView,businessView]},
+  // 领域样本不能通过 helpers 或其他中间文件重新加载完整应用。
+  {sources:['tests/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
+  {sources:['tests/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/backend/core/knowledge/knowledge.ts','tests/knowledge-data.ts']},
+];
+const matchesBoundary=(file,entry)=>file===entry||(entry.endsWith('/')&&file.startsWith(entry));
+
 // 非字面量加载不能静态证明目标，只允许逐项核实的外部依赖；表达式变化必须重新审核。
 export const externalLoads = [
   {file:'src/backend/core/brain/native-tools.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从固定 pi-runtime 或开发依赖加载 1.5.0 的独立文件/命令操作，不接受模型或工作区给定的模块路径'},
@@ -131,9 +153,12 @@ export function auditDependencies(root = process.cwd(), options = {}) {
     }
   }
   const violations = edges.filter(e => {
-    if (!e.from.startsWith('src/') || !e.to.startsWith('src/')) return false;
-    const a = layerOf(e.from), b = layerOf(e.to);
-    return !layers[a] || !layers[a].includes(b);
+    if(e.from.startsWith('src/')&&e.to.startsWith('src/')){
+      const a=layerOf(e.from),b=layerOf(e.to);
+      if(!layers[a]||!layers[a].includes(b))return true;
+    }
+    const boundary=moduleBoundaries.find(rule=>rule.sources.some(source=>matchesBoundary(e.from,source)));
+    return !!boundary&&!boundary.allow.some(target=>matchesBoundary(e.to,target));
   });
   const circular = cycles([...known.values()],edges);
   return {ok:!circular.length && !unresolved.length && !dynamic.length && !violations.length, files:unique.length, edges, cycles:circular, unresolved, dynamic, external, violations};

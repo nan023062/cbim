@@ -1,11 +1,11 @@
 /**
  * 作用定位：调度引擎：将明确选择的模块、叶子 Agent 和本模块 Workflow 装配为执行任务。
- * 设计原因：只通过 Core 契约准备版本一致的 Skill 与 Workflow；旧单模块入口及续聊遇程序约定明确拒绝，避免绕过正式成员门禁。无约定旧任务保留计划与证据行为，知识正文不赋予无限改写权。
+ * 设计原因：通过本层只读查询编排和 Core 契约准备版本一致的 Skill 与 Workflow；旧单模块入口及续聊遇程序约定明确拒绝，避免绕过正式成员门禁。无约定旧任务保留计划与证据行为，知识正文不赋予无限改写权。
  * 旧 responsiblePerson 仅作历史说明，不查询花名册、不承担授权或派发门禁。
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {KnowledgeQueries} from '../../core/knowledge/knowledge-queries';
+import {KnowledgeQueries} from './knowledge-queries';
 import {Builtins} from '../../core/knowledge/builtins';
 import {fail} from '../../core/foundation/errors';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';

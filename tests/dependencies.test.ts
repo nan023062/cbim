@@ -55,6 +55,34 @@ test('cross layer type imports fail even without a cycle',()=>{
   const result=audit({'src/backend/core/a.ts':"import type {T} from '../main/b';",'src/backend/main/b.ts':'export type T=string;'});
   expect(result.violations).toHaveLength(1);expect(result.ok).toBe(false);
 });
+test('snapshot contracts and domain views reject reverse or private dependencies without a file cycle',()=>{
+  const contracts='src/backend/core/knowledge/types.ts';
+  const snapshot='src/backend/core/knowledge/snapshot.ts';
+  const team='src/backend/core/team/model.ts';
+  const workspace='src/backend/core/workspace/model.ts';
+  const port='src/backend/core/knowledge/ports.ts';
+  const query='src/backend/scheduler-engine/context/knowledge-queries.ts';
+  const denied=[
+    [contracts,snapshot],[snapshot,team],[team,workspace],[workspace,team],
+    [team,port],[query,port],['src/backend/core/foundation/json.ts',contracts],
+    ['tests/knowledge-data.ts','tests/helpers.ts'],
+    ['tests/knowledge-fixture.ts','src/backend/main/application.ts'],
+  ];
+  for(const [from,to] of denied){
+    const relative=path.posix.relative(path.posix.dirname(from),to);
+    const result=audit({[from]:`export type {T} from '${relative.startsWith('.')?relative:'./'+relative}';`,[to]:'export type T=string;'});
+    expect(result.cycles).toEqual([]);
+    expect(result.violations,`${from} -> ${to}`).toHaveLength(1);
+    expect(result.ok).toBe(false);
+  }
+  expect(audit({
+    [contracts]:'export type T=string;',
+    [snapshot]:"export type {T} from './types';",
+    [team]:"export type {T} from '../knowledge/types';",
+    [workspace]:"export type {T} from '../knowledge/snapshot';",
+    [query]:"import type {T} from '../../core/knowledge/snapshot'; import '../../core/team/model'; import '../../core/workspace/model';",
+  }).ok).toBe(true);
+});
 test('updater stays independent of application runtime and business services',()=>{
   for(const target of ['main','scheduler-engine','core']){
     const result=audit({'src/backend/updater/a.ts':`import type {T} from '../${target}/b';`,[`src/backend/${target}/b.ts`]:'export type T=string;'});

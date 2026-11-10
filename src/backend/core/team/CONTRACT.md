@@ -1,3 +1,7 @@
+### 静态知识视图的单向边界
+
+`model.ts` 中的 Team 只依赖知识快照公开类型、只读解析辅助和 Foundation，不依赖 BusinessWorkspace、知识写入端口或调度编排。跨域查询由 `scheduler-engine/context/knowledge-queries.ts` 组合；每个 Team 绑定一个固定快照，刷新后创建新视图。依赖检查器覆盖类型和重导出，具体矩阵见 [知识契约](../knowledge/CONTRACT.md#快照契约领域视图与查询编排)。此约束不把其他岗位、成员和执行绑定文件误称为同一只读模型。
+
 ### 根标识与正式兜底
 
 `automatic-execution.ts` 复用 workspace 的 `projectRootModuleId` 作为历史 `implicitProjectModuleId`。根始终可查询，但正式 no_modules 兜底仍只适用于真实模块为空的项目；有模块时不以根绕过负责人或 Workflow。Auto 主会话直接工作与成员兜底是不同执行路径，不制造岗位或成员绑定。

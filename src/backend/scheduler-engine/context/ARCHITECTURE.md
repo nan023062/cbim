@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/岗位责任、Workflow与规范。显式流程只从本模块挂载清单解析，准备按任务原选择重核，不回退默认或刷新旧绑定；前置替换保留原实例和流程；两种模式的主会话都可直接执行未配置自定义岗位的模块，不把主 Agent 派成独立成员。 执行上下文同时冻结负责岗位、项目适配、采纳能力与模型身份，主模型不会替换成员配置。
+内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/岗位责任、Workflow与规范。显式流程只从本模块挂载清单解析，准备按任务原选择重核，不回退默认或刷新旧绑定；前置替换保留原实例和流程；两种模式的主会话都可直接执行未配置自定义岗位的模块，不把主 Agent 派成独立成员。 KnowledgeQueries 只取快照读取端口，组合 Team/BusinessWorkspace；跨查询一致性由准备用例核版本，索引写入留在知识领域。 执行上下文同时冻结负责岗位、项目适配、采纳能力与模型身份，主模型不会替换成员配置。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -13,6 +13,7 @@
 | [automatic-context.ts](automatic-context.ts) | 解析自动模式的隐式全项目范围，复用真实模块的 Workflow 与知识边界。 |
 | [dispatch-context.ts](dispatch-context.ts) | 解析主会话内置身份，以及正式派发所需的角色知识与多模块绑定。 |
 | [execution-context.ts](execution-context.ts) | 为已派发成员任务冻结完整执行知识和各模块可选 Workflow 程序约定，并在启动、恢复或未启动依赖替换前复核基线。 |
+| [knowledge-queries.ts](knowledge-queries.ts) | 调度层知识查询编排，为内部工具与任务准备组合团队和业务工作区领域视图。 |
 | [team-workflow.ts](team-workflow.ts) | 调度引擎：将明确选择的模块、叶子 Agent 和本模块 Workflow 装配为执行任务。 |
 
 ## 架构类图
@@ -69,6 +70,25 @@ N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_sc
 
 直接依赖：[automatic-context.ts](automatic-context.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/snapshot.ts](../../core/knowledge/snapshot.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[dispatch-context.ts](dispatch-context.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)。
 
+### knowledge-queries.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_context_knowledge_queries_ts["knowledge-queries.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_context_knowledge_queries_ts_KnowledgeQueries["KnowledgeQueries"] {
+  +modules()
+  +module()
+  +agents()
+  +agent()
+  -workspace
+}
+N_src_backend_scheduler_engine_context_knowledge_queries_ts ..> N_src_backend_scheduler_engine_context_knowledge_queries_ts_KnowledgeQueries : 声明
+```
+
+直接依赖：[../../core/knowledge/snapshot.ts](../../core/knowledge/snapshot.ts)、[../../core/team/model.ts](../../core/team/model.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)。
+
 ### team-workflow.ts
 
 ```mermaid
@@ -92,7 +112,7 @@ class N_src_backend_scheduler_engine_context_team_workflow_ts_TeamTaskInput["Tea
 N_src_backend_scheduler_engine_context_team_workflow_ts ..> N_src_backend_scheduler_engine_context_team_workflow_ts_TeamTaskInput : 声明
 ```
 
-直接依赖：[../../core/knowledge/knowledge-queries.ts](../../core/knowledge/knowledge-queries.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/brain/index.ts](../../core/brain/index.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)。
+直接依赖：[knowledge-queries.ts](knowledge-queries.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/brain/index.ts](../../core/brain/index.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)。
 
 ### 本目录调用边界
 
@@ -107,9 +127,16 @@ class N_src_backend_scheduler_engine_context_dispatch_context_ts["dispatch-conte
 class N_src_backend_scheduler_engine_context_execution_context_ts["execution-context.ts"] {
   <<module>>
 }
+class N_src_backend_scheduler_engine_context_team_workflow_ts["team-workflow.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_context_knowledge_queries_ts["knowledge-queries.ts"] {
+  <<module>>
+}
 N_src_backend_scheduler_engine_context_automatic_context_ts ..> N_src_backend_scheduler_engine_context_dispatch_context_ts : 导入依赖
 N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_scheduler_engine_context_automatic_context_ts : 导入依赖
 N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_scheduler_engine_context_dispatch_context_ts : 导入依赖
+N_src_backend_scheduler_engine_context_team_workflow_ts ..> N_src_backend_scheduler_engine_context_knowledge_queries_ts : 导入依赖
 ```
 
 
@@ -124,6 +151,12 @@ N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_sc
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 只读知识查询编排
+
+`knowledge-queries.ts` 组合 Core 的 Team 与 BusinessWorkspace 视图，只接收 `KnowledgeSnapshotReader`，不持有完整工作区或写入端口。内部知识工具和 `prepareTeamTask` 使用同一个编排入口。每次方法调用读取一个完整快照；跨查询可能版本变化，`prepareTeamTask` 继续在返回前比较模块、Agent 和当前 revision，冲突时拒绝，不自动重试或换成最新正文。
+
+索引刷新由 Core 的 `refreshKnowledgeIndexes` 单独处理，工具注册层装配读/写两条路径；旧查询类的 refresh 方法已退出。职责、状态归属和允许依赖见 [知识契约](../../core/knowledge/CONTRACT.md#快照契约领域视图与查询编排)。新增查询通常修改所属领域视图与本层组合，不要求修改刷新事务或运行引擎。
 
 ### 多成员、多模块任务上下文契约
 

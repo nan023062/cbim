@@ -22,9 +22,9 @@
 
 ## 运行
 
-Windows x64 当前公开桌面版为 [desktop-v0.1.4](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.4)，废弃真人花名册与额外维护确认，保留岗位和模块负责人；修复对象字段、模块模板、责任冲突与实例恢复提示。安装后从左下角「版本与更新」查看版本、日志与新版提醒。此包尚未签名，Windows 可能显示未知发布者或安全提示；核对发布页的 `SHA256SUMS.txt` 不能替代可信签名。后续取得证书后将通过更高版本切换到签名发行。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
+Windows x64 当前公开桌面版为 [desktop-v0.1.5](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.5)，提供 Pi、Claude Code、Codex 三种 Loop 引擎；主对话、Agent 和项目岗位可从用户启用配置中选择引擎和模型。未指定自定义 Agent 的模块由主 Agent 直接执行，历史默认执行者记录保留。安装后从左下角「版本与更新」查看版本、日志与新版提醒。此包尚未签名，Windows 可能显示未知发布者或安全提示；核对发布页的 `SHA256SUMS.txt` 不能替代可信签名。后续取得证书后将通过更高版本切换到签名发行。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
 
-当前版本每分钟检查，新版高亮菜单并显示用户栏绿点；点击下载后自动校验、停止任务、安装并重启，失败保留显式重试。真实 0.1.3 → 0.1.4 自动升级、安装前普通退出取消及工作区/模型/对话保留已验证，见 [发布验收](design/verification/desktop-release-0.1.4-20261110.md)。0.1.2 及更早版本仍按旧界面下载后再次确认重启；关闭或离线的客户端需启动并联网后检查更新。
+当前版本每分钟检查，新版高亮菜单并显示用户栏绿点；点击下载后自动校验、停止任务、安装并重启，失败保留显式重试。真实 0.1.4 → 0.1.5 自动升级、安装前普通退出取消及工作区/模型/对话保留已验证，见 [发布验收](design/verification/desktop-release-0.1.5-20261110.md)。0.1.2 及更早版本仍按旧界面下载后再次确认重启；关闭或离线的客户端需启动并联网后检查更新。
 
 BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill。一句问题或愿望即可提交，其余信息自愿，缺项标“用户未提供”。首次在设置连接自己的 GitHub；成功后不追加结果消息。详见 [OAuth 与反馈指南](design/task/github-feedback-setup.md)。更新程序独立位于 `src/backend/updater/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](design/task/desktop-release.md)。
 
@@ -81,9 +81,9 @@ pnpm start
 
 | 位置 | 内容 |
 |---|---|
-| `src/backend/core/brain/` | 大脑 执行层：引擎无关生命周期、存储端口与 Pi 适配器 |
+| `src/backend/core/brain/` | 大脑执行层：引擎无关生命周期、存储端口与 Pi / Claude Code / Codex 适配器 |
 | `src/backend/core/connectors/` | 链接器定义、身份与插件映射 |
-| `src/backend/core/team/` | Team、Agent、真人与 Skill 领域视图 |
+| `src/backend/core/team/` | Team、Agent、项目岗位与 Skill 领域视图 |
 | `src/backend/core/workspace/` | 业务 Workspace、Module 与 Workflow 领域视图 |
 | `src/backend/core/knowledge/` | 核心规则、查询、对象治理及事务契约 |
 | `src/backend/scheduler-engine/` | 调度引擎：团队工作流准备、内部知识接入与执行管理 |

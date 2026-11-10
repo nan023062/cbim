@@ -10,6 +10,8 @@
 
 2026-11-10：[0.1.4](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.4) 已公开，PR #25 完整四片 CI 通过后正常合并；真人花名册退役与空项目链路修复随版交付。真实 0.1.3 线上发现、UI 下载、独立普通退出取消及自动安装重启验收通过，工作区/模型/原对话保留，见[本版验收](../verification/desktop-release-0.1.4-20261110.md)。下次发布先适配届时上一公开版 0.1.4 的验收输入，再验证真实升级。
 
+2026-11-10：[0.1.5](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.5) 已公开，PR #30 经完整四片 CI 正常合并；主 Agent 默认执行及 Pi / Claude Code / Codex 三引擎随版交付。全新安装、真实 0.1.4 UI 发现／下载、独立普通退出取消、自动安装重启及六项数据保留通过，见[本版验收](../verification/desktop-release-0.1.5-20261110.md)。后续发行前需将验收输入适配为届时的实际上一版；当前脚本未接受 0.1.5 作为 previous_version。
+
 ## 交付与发布通道
 
 - 首个平台为当前工程已验证的 Windows x64。现有 Forge/Vite 和 Pi 打包继续使用，新增 NSIS 每用户安装包，安装目录与 `~/.cbim` 用户数据分离。

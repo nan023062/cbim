@@ -1,6 +1,7 @@
 /**
  * 作用定位：Builtins：白名单发布内置 Skill、规范和 Schema，包括只需简述、补充自愿的 BUG 反馈与需求许愿流程。
  * 设计原因：只允许白名单资料 ID，返回正文、版本和引用；读取反馈 Skill 不会创建 GitHub Issue，也不扩大文件或网络权限。
+ * 资源边界：运行规范随 design/ 打包；docs/ 只保留概念设计，不再作为内置资料的读取来源。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -30,7 +31,7 @@ const entries=[
   ['task-spec','standard','Task 定义','design/task/task-spec.md'],
   ['task-loop','standard','Task Loop','design/task/task-loop.md'],
   ['base-task','standard','Task 基础抽象','design/task/base-task.md'],
-  ['shared-skills-workflows','standard','团队 Skill 与模块 Workflow 结构','docs/shared-skills-workflows.md'],
+  ['shared-skills-workflows','standard','团队 Skill 与模块 Workflow 结构','design/runtime/shared-skills-workflows.md'],
   ['module-schema','schema','Module Schema','design/business/module.schema.json'],
   ['agent-schema','schema','Agent Schema','design/capability/agent.schema.json'],
   ['team-skills-schema','schema','Team Skill Schema','design/capability/team-skills.schema.json'],

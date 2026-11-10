@@ -12,7 +12,7 @@
 
 候选始终标为尚未验收，步骤 `reported_done` 显示“已报告”；“完成申请待复核”和“目标已完成”继续由原 `scopeGoalView` 的可靠关闭条件区分。依赖接收取实际边中固定的 resultId，不从“来源任务看似完成”推断已消费。
 
-同步了变更源码注释、conversation／tasks 的 CONTRACT 和目录架构、frontend 上层导航，以及[成员执行说明](../../docs/member-execution.md#主对话与任务流程图)。常规展示调整集中在前端纯投影和组件，后端权限、事务、事件及验收继续稳定复用。
+同步了变更源码注释、conversation／tasks 的 CONTRACT 和目录架构、frontend 上层导航，以及成员执行说明（历史文档：`docs/member-execution.md`，已清理）。常规展示调整集中在前端纯投影和组件，后端权限、事务、事件及验收继续稳定复用。
 
 ## 实际验证
 

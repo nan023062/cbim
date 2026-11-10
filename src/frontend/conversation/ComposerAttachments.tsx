@@ -1,7 +1,7 @@
 /**
  * 作用定位：按 Cindy ThumbnailStrip 的 56px 卡片、类型标识和角落移除按钮展示草稿附件。
  * 设计原因：点击读取当前工作区已保存的附件快照，避免预览与实际送入模型的文本不一致。
- * 来源参考：Cindy ComposerAttachments.tsx，Apache-2.0，许可见 docs/legal。
+ * 来源参考：Cindy ComposerAttachments.tsx，Apache-2.0，许可见 legal。
  */
 import {useEffect,useRef,useState} from 'react';
 import type {ChatAttachment} from '../../bridge/contracts/chat';

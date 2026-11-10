@@ -1,7 +1,7 @@
 /**
  * 作用定位：移植 Cindy WorkGroupBlock 的用时和结果；主对话只显示行尾状态，成员详情仍可折叠查看执行轨道。
  * 设计原因：真实动作名称与工具轨道共用，失败／拒绝在折叠外可见；本轮结束不表示整体目标完成。异常影响核实沿真实主会话上下文传递，折叠不查询、不停止任务，也不重放旧调用。
- * 来源：Cindy WorkGroupBlock.tsx，Apache-2.0；许可见 docs/legal。
+ * 来源：Cindy WorkGroupBlock.tsx，Apache-2.0；许可见 legal。
  */
 import type {RunSummary} from '../../bridge/contracts/execution';
 import {Icon} from '../components/Icon';

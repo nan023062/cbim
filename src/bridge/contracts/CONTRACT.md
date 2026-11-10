@@ -326,3 +326,7 @@ models 公开重导出 LoopEngine、AgentModelSelection、engineLabel、loopEngi
 ### 引擎协议选型
 
 models 仅重导出 engineApi/engineSupportsApi 等纯规则，用于 Agent 选型与运行前兼容校验，供应商不持有执行引擎。mainAgentSettingsSchema 公开工作区、实例、角色、revision 与 selection，两个主 Agent 设置入口共用该契约；不会把原生二进制、账号目录、凭据或进程参数作为公开 IPC。
+
+### 固定操作目录及模型请求映射
+
+ipc-actions.ts 的 IpcCall 将主 Agent 配置和模型的九个动作映射到具体请求/返回值；缺参数、错误字段或未知动作在编译时拒绝，不能回落旧重载。model-actions.ts 同时公开原始请求的严格校验，Main 再按 action 解析 unknown。旧动作显式保留在 LegacyAction 清单中，返回仍兼容旧协议，未宣称全部 IPC 已类型化；新增动作必须显式登记具体契约。凭据只允许在已有明确配置请求中输入，读取返回 LlmSettings 不含密钥。

@@ -6,7 +6,7 @@ import {useEffect,useMemo,useRef,useState} from 'react';
 import type {ModuleOwnershipIdentity} from '../../bridge/contracts/module-ownership';
 import {workspaceMemberCommands} from '../team/workspace-member-state';
 import {moduleOwnershipCommands} from './module-ownership-state';
-import {assignInlineOwner,inlineOwnerChoices,readInlineOwners,type InlineOwnerAgent,type InlineOwnerData} from './inline-module-ownership';
+import {assignInlineOwner,inlineOwnerChoices,readInlineOwners,type InlineOwnerAgent,type InlineOwnerData,type InlineOwnerCall} from './inline-module-ownership';
 import {Icon} from '../components/Icon';
 
 /** 一张架构视图共享控制器；知识版本或实例切换使旧异步后续失效，已发送写入仍由原命令追踪。 */
@@ -17,7 +17,7 @@ export function useInlineModuleOwners(identity:ModuleOwnershipIdentity|undefined
     members:workspaceMemberCommands.get(identity.workspaceId,{storage:window.localStorage,uuid:()=>crypto.randomUUID(),commit:input=>window.cbim.call('workspace.members.commit',input),lookup:input=>window.cbim.call('workspace.members.receipt',input)}),
     ownerships:moduleOwnershipCommands.get(identity.workspaceId,{storage:window.localStorage,uuid:()=>crypto.randomUUID(),commit:input=>window.cbim.call('workspace.ownerships.commit',input),lookup:input=>window.cbim.call('workspace.ownerships.receipt',input)}),
   }:undefined,[identity?.workspaceId]);
-  const call=(action:string,args?:unknown)=>window.cbim.call(action,args);
+  const call:InlineOwnerCall=(action,args)=>action==='models.list'?window.cbim.call(action):window.cbim.call(action,args);
   async function load(token:number){if(!identity)return;try{const value=await readInlineOwners(identity,call);if(epoch.current===token)setData(value)}catch(cause){if(epoch.current===token){setData(undefined);setError(String(cause))}}}
   useEffect(()=>{
     const token=++epoch.current;setData(undefined);setError('');setMessage('');

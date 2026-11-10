@@ -53,3 +53,5 @@ WorkspaceView 传递 Agent 本机 runtime。inline-module-ownership 新登记优
 ### 模块新岗位的引擎引用
 
 inline-module-ownership 在新登记时同时传递 Agent runtime 的 engine、profileId、modelId，并按协议核兼容性；未指定 runtime 时采用 Pi 与默认模型。已有岗位保留原采纳，不跟随静态 Agent 或主 Agent 的设置变更。
+
+模块卡片岗位编排的 IPC action 限定为真实使用的模型列表及岗位/责任读取、预览和原命令操作；models.list 不转发任意参数，原两阶段提交和未知回执处理不变。

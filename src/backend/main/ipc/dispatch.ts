@@ -13,13 +13,15 @@
  * 原命令报告：客户端只选择 workspace/root/run/call；已有服务核原 canonical 与 Store，不隐式打开工作区或补充提交证明。
  * 影响处置：五个桌面入口共用只读观察和不可变附录；只有明确保存注入本机 actor，当前文件事实不清除原 unknown。
  */
+import {isModelAction} from '../../../bridge/contracts/model-actions';
+import {dispatchModelAction} from './model-actions';
 import type {ApplicationServices} from './services';
 import {ChatInputs} from '../persistence/tasks/chat-inputs';
 import {ArchitectureService} from '../workspace/architecture-service';
 import {WorkspacePackages} from '../resources/workspace-packages';
 import {fail} from '../../core/foundation/errors';
   /** 桌面 IPC 的操作路由；请求必须显式携带目标身份，不读取界面选中项。 */
-export async function dispatchApplication(app:ApplicationServices,action:string,args:any={}){switch(action){
+export async function dispatchApplication(app:ApplicationServices,action:string,args:any={}){if(isModelAction(action))return dispatchModelAction(app,action,args);switch(action){
     case 'dispatch.isolatedExecutionReport':return app.isolatedExecutions(args.workspaceId).report(args);
     case 'dispatch.isolatedExecutionCleanup':return app.isolatedExecutions(args.workspaceId).cleanup(args);
     case 'dispatch.controlledFileReport':return app.controlledFiles(args.workspaceId).report(args);
@@ -58,20 +60,11 @@ export async function dispatchApplication(app:ApplicationServices,action:string,
     case 'agentHistory.sessions':return app.agentHistory(args.workspaceId).sessions(args);
     case 'agentHistory.runs':return app.agentHistory(args.workspaceId).runs(args);
     case 'agentHistory.events':return app.agentHistory(args.workspaceId).events(args);
-    case 'agent.mainSettings':return app.mainAgentSettings.read(args);
-    case 'agent.configureMain':if(app.isStopping)fail('SHUTTING_DOWN','CBIM 正在退出');return app.mainAgentSettings.configure(args);
-    case 'models.list':return app.models.list();
     case 'github.feedback.status':return app.githubFeedback.auth.status();
     case 'github.feedback.begin':if(app.isStopping)fail('SHUTTING_DOWN','CBIM 正在退出');return app.githubFeedback.auth.begin(args);
     case 'github.feedback.poll':return app.githubFeedback.auth.poll(args);
     case 'github.feedback.cancel':return app.githubFeedback.auth.cancel();
     case 'github.feedback.disconnect':return app.githubFeedback.auth.disconnect();
-    case 'models.save':return app.models.save(args);
-    case 'models.select':return app.models.select(args.id);
-    case 'models.remove':return app.models.remove(args.id);
-    case 'models.test':return app.models.test(args.id,args.modelId);
-    case 'models.discover':return app.models.discover(args);
-    case 'models.discoverDetails':return app.models.discoverDetails(args);
     case 'dispatch.open':return app.memberDispatch(args.workspaceId).openGraph(args);
     case 'dispatch.memberCreate':return app.memberDispatch(args.workspaceId).createMember(args);
     case 'dispatch.task':{const {scopeId,...request}=args;return app.memberDispatch(args.workspaceId).dispatchTask(request,scopeId)}

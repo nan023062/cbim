@@ -1,3 +1,11 @@
+## 2026-11-11：主 Agent 与模型设置 IPC 契约试点（架构审计 A07）
+
+- 公开 model-actions 定义九个动作的请求 Schema 与返回值，Main 独立 handler 表委托原服务；Bridge/preload 共用 IpcCall。已迁移动作不落回旧重载，错误请求和未知新动作均有编译期反例；未知字节仍在 Main 校验，未把类型当授权。
+- LegacyAction 枚举当前真实旧操作，禁止任意字符串；旧返回保留兼容形状，尚未完成其余 IPC 类型迁移，不宣称全部路由已消除 any。主 Frame、退出、工作区实例、主配置 revision、引擎兼容和凭据存储归属不变。
+- 类型检查发现通用操作字符串与轮询闭包未固定的 instanceId，改为对应能力的动作联合、模板字面量和固定身份；InlineOwnerCall 同时包含测试装配复用的真实提交/回执动作。最终 pnpm typecheck 通过，新增 @ts-expect-error 反例全部生效。
+- 验证依据：实际 Application 请求拒绝、主设置共享/重开、模型保存、岗位调用消费者及资料适配。命令 pnpm exec vitest run tests/model-actions.test.ts tests/main-agent-settings.test.ts tests/llm.test.ts tests/inline-module-ownership.test.ts tests/continuation-source-view.test.ts --reporter=default --reporter=json --outputFile=test-results/model-ipc-contract.json：5 文件、27 用例通过（12.87s）。
+- pnpm check:architecture 通过：56 目录/614 代码及样式、1208 文件/6207 含类型边，0 循环、0 文档差异。同步 bridge/contracts、preload、main/ipc 和相关前端目录契约、注释及十份类图；全仓集成和发布检查未运行。
+
 ## 2026-11-11：共享执行展示与页面控制单向依赖（架构审计 A08）
 
 - 建立 execution-view：公开消息投影、Markdown、工具轨道/状态、提问、附件和队列由真实主对话、成员任务、团队履历消费者共享；任务域保留原命令核实、影响观察和恢复控制器。WorkStatus/ToolTimeline 只接运行投影及可选展示插槽，不接 ExecutionRecoveryContext。

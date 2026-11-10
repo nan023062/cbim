@@ -82,7 +82,7 @@ export function RepositoryConnections({onSettings}:{onSettings:()=>void}){
     await perform(async token=>{
       const existed=store.read(request.input.workspaceId);store.save(request);setChecks({});setPending(request);setNotice('');
       let receipt:unknown;
-      try{receipt=await window.cbim.call('resources.connection.'+request.action,request.input)}
+      try{receipt=await window.cbim.call(`resources.connection.${request.action}` as const,request.input)}
       catch(cause){if(!existed&&isRepositoryConnectionPreflightRejection(request.action,cause)){store.remove(request);if(current(token)){setPending(undefined);if(request.action==='commit')setPreview(undefined)}}throw cause}
       await accepted(receipt,request,token);
     });

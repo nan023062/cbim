@@ -432,3 +432,5 @@ MemberActivityCard 的 inline 形式默认只显示图上的状态、任务和�
 ### 共享执行展示与领域控制分离
 
 本目录单向消费 execution-view，不再导入 conversation 页面组件。ToolActivity 在共享 ToolTimeline 的插槽装配原主命令核实及影响处置；SessionTaskView 将该轨道传给 WorkStatus，MemberRunTranscript 仅显示共享只读轨道。CommandVerificationPanel/状态机归任务域，仍仅通过明确点击查询原命令，不随渲染自动重试。恢复上下文和本地草稿所有权保持 useExecutionRecovery。
+
+成员操作及资料准备适配器只接受自身真实使用的固定 IPC 动作；页面继续传原任务、导入和取消身份，不借任意 action 字符串扩展调用范围。

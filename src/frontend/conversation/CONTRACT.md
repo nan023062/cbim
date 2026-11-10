@@ -139,3 +139,5 @@ unknown 提示不再提供勾选ID解锁旧native的入口。普通无未决工�
 ### 对话的共享展示依赖
 
 消息、Markdown、问答、队列、附件和工作状态来自 execution-view。ConversationToolCall 组合 tasks/ToolActivity 的核实入口和成员活动；ConversationTurn 的行尾状态只传运行事实，不把恢复控制器下传共享视图。团队及任务页可独立复用共享展示，不能反向导入主对话页。
+
+队列操作只组合固定 queueChange/queueInsert/queueEdit/queueMove 动作；原 run 捕获、停止锁与输入快照保持。

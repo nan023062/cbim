@@ -112,3 +112,7 @@ dispatch.isolatedExecutionReport显式读取原运行，dispatch.isolatedExecuti
 ### 主 Agent 设置入口
 
 agent.mainSettings 与 agent.configureMain 接受当前工作区和实例，后者携带已读 revision 与完整 AgentModelSelection。配置保存只改变工作区 cbim:main 的后续选型，不启动运行、派发岗位或修改已受理队列；服务拒绝失效身份、旧版本及不兼容模型。
+
+### 模型动作的独立路由
+
+model-actions.ts 按公开请求 Schema 解析原始输入，有类型 handler 表约束结果，委托唯一模型存储及主 Agent 设置服务。通用 dispatcher 只识别这一组精确动作；停止、主 Frame、工作区实例、revision 和配置兼容校验保留。旧动作继续原路由，不新增执行或凭据读取入口。

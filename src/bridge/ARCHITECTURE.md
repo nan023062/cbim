@@ -20,11 +20,12 @@ class N_src_bridge_contracts["contracts/"] {
 class N_src_bridge_preload["preload/"] {
   <<directory>>
 }
+N_src_bridge_preload ..> N_src_bridge_contracts : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-本层无目录间直接导入关系。
+- `preload` → `contracts`：导入。
 
 ## 子目录导航
 

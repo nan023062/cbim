@@ -10,7 +10,7 @@ import {engineSupportsApi,type LlmSettings,type AgentModelSelection} from '../..
 import {checkedWorkspaceMemberList,checkedWorkspaceMemberPreview,type WorkspaceMemberCommands} from '../team/workspace-member-state';
 import {checkedModuleOwnershipPage,checkedModuleOwnershipDetail,checkedModuleOwnershipPreview,type ModuleOwnershipCommands} from './module-ownership-state';
 
-export type InlineOwnerCall=(action:string,args?:unknown)=>Promise<any>;
+export type InlineOwnerCall=(action:'models.list'|'workspace.members.list'|'workspace.members.preview'|'workspace.members.commit'|'workspace.members.receipt'|'workspace.ownerships.list'|'workspace.ownerships.get'|'workspace.ownerships.preview'|'workspace.ownerships.commit'|'workspace.ownerships.receipt',args?:unknown)=>Promise<any>;
 export interface InlineOwnerAgent {id:string;name:string;runtime?:AgentModelSelection}
 export interface InlineOwnerChoice {value:string;label:string;disabled?:boolean}
 export interface InlineOwnerData {members:WorkspaceMemberList['items'];views:ModuleOwnershipView[]}

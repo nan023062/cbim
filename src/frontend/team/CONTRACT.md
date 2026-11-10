@@ -55,3 +55,5 @@ TeamView 工具栏提供 MainAgentEditor，复用 EngineModelPicker 与 useMainA
 ### 团队履历展示边界
 
 AgentSessionHistory 与 TeamView 直接复用 execution-view 的公开日志投影和 Markdown；不加载 conversation 页面或任务恢复控制器。履历仍只读，不产生新运行或更改历史归属。
+
+主 Agent 配置轮询在进入异步闭包前固定已验证的 workspaceId/instanceId，按公开模型动作请求调用；轮询、版本同步和迟到响应隔离语义保持。

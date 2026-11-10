@@ -38,7 +38,7 @@ it.each(['bug','wish'] as const)('refreshes both feedback tools after login when
     assert.ok(names.includes('cbim_feedback_status'));
     assert.equal(names.includes('cbim_feedback_submit'),phase==='connected');
     assert.equal(names.includes('cbim_feedback_receipt'),phase==='connected');
-    assert.ok(!names.includes('bash')&&!names.includes('write'));assert.ok(!raw.includes(token));
+    assert.ok(names.includes('bash')&&names.includes('write'));assert.ok(!raw.includes(token));
     res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'lifecycle-'+requests.length,object:'chat.completion.chunk',created:1,model:'feedback-lifecycle',choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};

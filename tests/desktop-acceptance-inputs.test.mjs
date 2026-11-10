@@ -11,7 +11,11 @@ describe('desktop upgrade acceptance inputs', () => {
   });
   it('preserves the earlier two-step flow and rejects unsupported future previous versions', () => {
     expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.1'}).previousUpdateFlow).toBe('two-step');
-    expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.5',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.4'})).toThrow();
+    expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.6',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.5'})).toThrow();
+  });
+  it.each(['candidate', 'online'])('uses the unchanged automatic updater from the actual 0.1.4 release in %s mode', mode => {
+    expect(acceptanceInputs({...env, CBIM_ACCEPTANCE_VERSION:'0.1.5', CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.4', CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({version:'0.1.5',previousVersion:'0.1.4',previousUpdateFlow:'automatic',mode});
+    expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.4',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.4'})).toThrow();
   });
   it.each([undefined, '', '0.1.0', '0.1.3', '0.1.2-beta'])('rejects an absent, unsupported or same-version previous UI: %s', previous => {
     expect(() => acceptanceInputs({...env, CBIM_ACCEPTANCE_PREVIOUS_VERSION: previous})).toThrow();

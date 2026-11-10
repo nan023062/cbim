@@ -1,5 +1,5 @@
 /**
- * Auto 分配与 Team 岗位分配分别冻结；审阅证据必须匹配同一执行来源，人工验收规则共用且不降低。
+ * 主会话直接工作与自定义岗位分配分别核实；main-execution 只接受本轮真实业务工具，人工验收规则不降低。
  * 成员/最终目标复核与人工候选共用原完整身份；历史入口只重建事实，当前接受入口必须另核完整范围。
  * 已放弃的多段检查点作为换边来源时核全部原日志，不只信任最新段的摘要。
  * 持久成员等待通过独立只读核验精确保留原检查点和后继，主轮安全结算才停泊；未知和在途仍拒绝。
@@ -95,7 +95,7 @@ export class ScopeGoalService {
     return {scope,graph:this.graph(state,scope)};
   }
 
-  /** 核实角色、维护模块和知识后追加计划；主角色可定位治理模块，但业务 Workflow 选择只属于执行角色。 */
+  /** 核实角色、模块和知识后追加计划；主角色可直接完成业务或知识工作，成员专属 Workflow 契约仍只绑定自定义岗位。 */
   async plan(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,raw:GoalPlanInput,assertCurrent?:()=>void):Promise<DispatchScope>{
     const draft=this.parse(goalPlanInputSchema,raw),command=this.command('goal.plan',identity,scopeId,runId,commandId,draft);
     const old=await this.store.commandReceipt(command.commandId);if(old){if(old.fingerprint!==command.fingerprint)fail('COMMAND_ID_CONFLICT','相同命令 ID 已用于不同请求');return old.receipt as DispatchScope}
@@ -117,14 +117,16 @@ export class ScopeGoalService {
       check(draft.assignments.every(item=>item.criterionIds.every(id=>criterionIds.includes(id)))&&criterionIds.every(id=>draft.assignments.some(item=>item.criterionIds.includes(id))),'GOAL_PLAN_INVALID','每个验收项必须有负责角色，分配不能引用不存在的验收项');
       const assignments=[];
       for(const assignment of draft.assignments){
-        check(assignment.agentId!=='cbim:main'||assignment.workflowSelections===undefined,'GOAL_PLAN_INVALID','主 Agent 只治理知识或调度，不能声明业务 Workflow 执行选择');
+        check(assignment.agentId!=='cbim:main'||assignment.workflowSelections===undefined,'GOAL_PLAN_INVALID','主会话直接工作不绑定成员专属 Workflow 执行契约');
         validateWorkflowSelections(assignment.moduleIds,assignment.workflowSelections);
         const agent=assignment.agentId==='cbim:main'?resolveConversationAgent(snapshot):await resolveDispatchAgent(snapshot,assignment.agentId);
         check(assignment.agentId==='cbim:main'||assignment.moduleIds.length,'GOAL_PLAN_INVALID','业务执行角色必须明确目标模块');
         const {ownerBinding,fallbackBinding}=assignment.agentId==='cbim:main'?{}:await this.owners!.resolveExecution(state,context,scopeId,assignment.ownerSelection,assignment.moduleIds,assignment.agentId);
-        const modules=assignment.moduleIds.length?await resolveExecutionModules(snapshot,assignment.moduleIds,assignment.workflowSelections,fallbackBinding):[];
+        const root=assignment.agentId==='cbim:main'&&assignment.moduleIds.includes('cbim:project');
+        const ids=root?assignment.moduleIds.filter(id=>id!=='cbim:project'):assignment.moduleIds;
+        const modules=[...(ids.length?await resolveExecutionModules(snapshot,ids,assignment.workflowSelections,fallbackBinding):[]),...(root?[{moduleId:'cbim:project',name:'项目根模块'}]:[])];
         const member=ownerBinding?state.workspaceMembers!.find(member=>member.memberId===ownerBinding.memberId):undefined;
-        assignments.push({...assignment,...(ownerBinding?{ownerBinding}:{}),...(fallbackBinding?{fallbackBinding}:{}),agentName:member?.name??agent.name,teamId:agent.teamId,moduleNames:modules.map(module=>module.name)});
+        assignments.push({...assignment,...(ownerBinding?{ownerBinding}:{}),...(fallbackBinding?{fallbackBinding}:{}),agentName:member?.name??agent.name,teamId:agent.teamId,moduleNames:assignment.moduleIds.map(id=>modules.find(module=>module.moduleId===id)!.name)});
       }
       check((await this.owner.read()).revision===snapshot.revision,'GOAL_KNOWLEDGE_CHANGED','规划期间知识已变化，请重新读取');
       const {expectedRevision:_,...body}=draft,newGoal:DispatchScopeGoal={revision:goal.revision+1,...(goal.inputRevision===undefined?{}:{inputRevision:goal.inputRevision}),input:goal.input,plan:{...body,assignments,revision:goal.revision+1,inputRevision:goalInputRevision(goal),runId,recordedAt:new Date().toISOString(),knowledgeRevision:snapshot.revision,graphCursor:cursor(graph)}};
@@ -292,6 +294,13 @@ export class ScopeGoalService {
           check(criterion.kind==='human','GOAL_HUMAN_SOURCE','人工决定不能替代普通证据项');
           const {continuation,record}=consumedHumanDecision(scope,reference,item.criterionId);
           check(item.outcome==='satisfied'&&record.decision==='accept','GOAL_HUMAN_REQUIRED','人工证据只用于引用已接受的满足项；拒绝或补证应通过替代关系引用');assertHumanSubject(scope,continuation);acceptedHumans.set(record.decisionId,record);
+        }else if(reference.kind==='main-execution'){
+          check(plan.assignments.some(assignment=>assignment.agentId==='cbim:main'&&assignment.criterionIds.includes(item.criterionId)),'GOAL_EVIDENCE_IDENTITY','此验收项未分配给主 Agent');
+          check(criterion.kind!=='human','GOAL_HUMAN_REQUIRED','主会话工具执行不能代替人工验收');
+          for(const id of reference.toolCallIds){
+            const {receipt}=this.receipt(main,id);
+            check(['read','write','edit','bash','grep','find','ls'].includes(receipt.toolName)&&receipt.scope.kind!=='knowledge'&&!receipt.effects.some(effect=>effect==='knowledge-write'||effect==='external-write'),'GOAL_EVIDENCE_INVALID','主执行证据须为本轮成功的原生业务文件或命令回执');
+          }
         }else{
           check(plan.assignments.some(assignment=>assignment.agentId==='cbim:main'&&assignment.criterionIds.includes(item.criterionId)),'GOAL_EVIDENCE_IDENTITY','此验收项未分配给主角色治理');
           for(const id of reference.toolCallIds){
@@ -308,7 +317,8 @@ export class ScopeGoalService {
         check(item.evidence.every(reference=>reference.kind==='human-decision'||reference.kind==='member-result'&&record.proof.candidates.some(candidate=>candidate.taskId===reference.taskId&&candidate.runId===reference.runId&&candidate.resultId===reference.resultId&&candidate.planRevision===reference.planRevision&&reference.toolCallIds.every(id=>candidate.evidenceToolCallIds.includes(id)))),'GOAL_HUMAN_CANDIDATE','人工满足不能混入此次接受以外的新候选或证据');
       }
     }
-    try{await validateHumanAcceptances(this.owner,state,scope,[...acceptedHumans.values()],this.ports,this.humanPorts,this.validateHistoricalMemberCandidate.bind(this))}catch(error){
+    // 审阅属于已核身份的主运行；终态复核若原占用已释放，装配端退回普通只读申请。
+    try{await validateHumanAcceptances(this.owner,state,scope,[...acceptedHumans.values()],this.ports,this.humanPorts,this.validateHistoricalMemberCandidate.bind(this),true)}catch(error){
       // 完成门禁保留 GOAL 命名空间，让协调器记录阻塞并收束；接受依据失效不能留下悬挂的活动周期。
       fail('GOAL_HUMAN_STALE',error instanceof Error?error.message:'人工接受的当前依据无法核实');
     }

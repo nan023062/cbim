@@ -48,6 +48,7 @@ class N_src_frontend_workspace_inline_module_ownership_ts_InlineOwnerAgent["Inli
   <<interface>>
   +id
   +name
+  +runtime
 }
 N_src_frontend_workspace_inline_module_ownership_ts ..> N_src_frontend_workspace_inline_module_ownership_ts_InlineOwnerAgent : 声明
 class N_src_frontend_workspace_inline_module_ownership_ts_InlineOwnerChoice["InlineOwnerChoice"] {
@@ -390,3 +391,7 @@ N_src_frontend_workspace_WorkspaceView_tsx ..> N_src_frontend_workspace_workspac
 业务架构选择与岗位反查均固定工作区实例；异步代次隔离迟到列表/详情，表单编辑立即废弃旧预览。缺失模块仍可解除已有关系。关系修改与岗位退休的冲突由同一个后端 Store 裁决，前端不主动解除或替用户退休。
 
 负责人表单将 OWNERSHIP_ALREADY_EXISTS 视为明确未受理，和 NO_CHANGE、BINDING_STALE 保持可恢复区分；其他未知错误仍保留原命令核实入口。
+
+### 负责人快速登记选型
+
+WorkspaceView 传递 Agent 本机 runtime。inline-module-ownership 新登记优先采用明确 Agent 引擎/模型，失效时拒绝；未设置才读取本机默认。复用已有 memberId 不重新采纳模型，不迁移原任务。

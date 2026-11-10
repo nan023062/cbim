@@ -44,7 +44,7 @@
 
 取消说明统一为 `preflight_only`：调用开始前检查信号，领域调用开始后不承诺打断或回滚。恢复说明按真实接口区分：普通查询 `read_again`；知识/移动/对象预览 `new_preview`（移动可能产生新 requestId，对象预览产生实例内 planId）；知识提交 `same_request` 且原 requestId/输入一致；对象提交 `same_plan`，不承诺后续清理警告逐字不变；知识刷新 `inspect_before_retry`；维护启动/取消 `query_task`。这些说明不是自动重试指令，返回丢失时不能换新 ID 代替未知提交，也不能把同 ID 当作跨实例授权。
 
-`cbim_agent_registry` 的 `builtinAgents` 公开应用静态默认执行角色 `cbim:executor`，与项目注册的 `groups` 分开，关键词同时过滤两者；`cbim_agent_get` 接受该 ID，返回静态定义、执行原则和当前 Team 根继承的 Skill。正文装配与正式派发共用 `defaultExecutorConfiguration`，不创建或修改 `.cbim/` 文件，也不把该静态角色当作已经存在的动态执行实例。默认角色同样需要真实模块、维护关系和本模块 Workflow。
+`cbim_agent_registry` 的 `builtinAgents` 固定为空数组，不再公开内置默认执行角色。`cbim_agent_get` 查询 `cbim:executor` 返回 `AGENT_RETIRED`。未配置自定义负责 Agent 的模块由主 Agent 在当前会话执行，不创建 `.cbim/` 默认角色文件。
 
 `cbim_rules_validate` 创建知识规则维护任务；`cbim_task_status/cbim_task_cancel` 只接受本工作区维护接口返回的 ID。对话任务、执行计划和团队派发任务不在其范围内，取消未知 ID 返回 `TASK_NOT_FOUND`。运行中的合法任务只是请求取消，已结束任务返回真实终态；这些工具不用于召唤成员或终止当前大脑。
 
@@ -54,7 +54,7 @@
 
 `cbim_goal_plan` 的主角色分工仍可绑定治理 moduleIds，但不得带 `workflowSelections`；工具在实际端口前拒绝，避免将未执行的业务流程包装为知识治理完成。执行角色选择规则不变。
 
-当前适配器已实现 `cbim_dispatch_task`、`cbim_dispatch_inspect`、`cbim_dispatch_cancel`、`cbim_dispatch_replace_dependency`、`cbim_dispatch_add_dependency`、`cbim_dispatch_revise_dependencies`、`cbim_dispatch_resume` 和 `cbim_dispatch_abandon_checkpoint`。撤销、各类依赖变更、预约与放弃分别只有对应真实端口存在时注册；兼容装配不广告或接受不存在的能力。主 Agent 永远不能成为执行者；业务派发必须显式提供当前岗位的 `ownerSelection` 与对应 `agentId`，不默认回退 `cbim:executor`。执行成员没有派发、撤销、依赖修订、续执行预约或检查点放弃权，其他未实现名称不进入活动清单。
+当前适配器已实现 `cbim_dispatch_task`、`cbim_dispatch_inspect`、`cbim_dispatch_cancel`、`cbim_dispatch_replace_dependency`、`cbim_dispatch_add_dependency`、`cbim_dispatch_revise_dependencies`、`cbim_dispatch_resume` 和 `cbim_dispatch_abandon_checkpoint`。撤销、各类依赖变更、预约与放弃分别只有对应真实端口存在时注册；兼容装配不广告或接受不存在的能力。主 Agent 不能被派成独立成员；未配置自定义岗位的模块由主 Agent 在当前会话执行。派发给自定义岗位时必须显式提供当前 `ownerSelection` 与对应 `agentId`，失效配置不回退。执行成员没有派发、撤销、依赖修订、续执行预约或检查点放弃权，其他未实现名称不进入活动清单。
 
 `DispatchTools` 可以通过第二个构造参数组合真实 `GoalTools`。缺省不注册任何目标工具，已有派发端口保持不变；组合后 list、has、describe、call 都按实际名称转交目标适配器，不因 `cbim_goal_` 前缀接受未知操作。
 
@@ -62,7 +62,7 @@
 
 | 工具与状态 | 模型提交内容 | 服务返回内容 |
 | --- | --- | --- |
-| `cbim_dispatch_task`（当前） | 自定义执行角色或默认 cbim:executor、moduleIds、可选 workflowSelections、goal、acceptance、前置版本；拒绝 cbim:main | taskId、messageId、图游标；本周期创建独立执行实例，不是执行结果 |
+| `cbim_dispatch_task`（当前） | 自定义负责岗位、moduleIds、ownerSelection、可选 workflowSelections、goal、acceptance、前置版本；拒绝 cbim:main 与已退役的 cbim:executor | taskId、messageId、图游标；本周期创建独立执行实例，不是执行结果 |
 | `cbim_dispatch_inspect`（当前） | 可选本图 taskId，缺省查本图 | 经授权的任务/依赖/有效结果，不含其他成员私有上下文；当前不接收模型图游标 |
 | `cbim_dispatch_cancel`（当前，未启动任务） | expectedGraphCursor 的 streamId/seq、targets 的 taskId/expectedRevision、reason | 当前周期明确集合的原子撤销回执；不自动扩展后继，不停止活动运行，不造候选或执行日志 |
 | `cbim_dispatch_wait`（待实现） | 当前任务的 children（taskId + planRevision）与 reason | staged 等待提交；大脑安全让出执行槽后才切换 waiting |
@@ -151,7 +151,7 @@ raw 输入在任何领域调用前严格校验；发送端口的对象与原期�
 
 责任工具的原严格 change 协议增加 `kind:adopt_source`，只带原绑定、模块和理由，不接 nextOwner/来源证明；由真实主工厂复用服务采纳当前来源。唯一输出 wire 核 action=adopt_source、原负责人和原 bindingId，不能把缺省 nextOwner 误判为解除。权限仍为原 knowledge-write，回执仍排除业务验收，未知后只查原 commandId。
 
-岗位进入执行后，明确模块 inspect 另返回按真实岗位分组的执行选择与缺口，选择不保证未来领取、凭据或供应商可用。业务 goal/dispatch 输入必须明确 ownerSelection；服务重建 ownerBinding，不能靠模型声明身份、主模型选型或默认执行者补齐。工具仍在唯一 wire 校验实际输入/绑定，保存后坏回包不得重新派工。
+岗位进入执行后，明确模块 inspect 另返回按真实岗位分组的执行选择与缺口，选择不保证未来领取、凭据或供应商可用。未指定自定义岗位或旧内置执行者归 execution=main，不伪造 ownerSelection。自定义岗位必须携带精确 selection；服务重建 ownerBinding，不能靠模型声明身份或主模型选型补齐。工具仍在唯一 wire 校验实际输入/绑定，保存后坏回包不得重新派工。
 
 ### 检查点交接放弃
 

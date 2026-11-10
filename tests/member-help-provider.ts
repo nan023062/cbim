@@ -38,7 +38,7 @@ export async function memberHelpProvider(options:{waiting?:boolean;holdHelp?:boo
     const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     const dispatch=(id:string,goal:string)=>tool(id,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
     if(isMain){
-      assert.ok(body.tools?.every(item=>!['write','edit','bash','cbim_task_help'].includes(item.function.name)),'主调度不执行成员工具');
+      assert.ok(body.tools?.every(item=>!['cbim_task_help'].includes(item.function.name)),'主调度不执行成员工具');
       if(turn===0)tool('help-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.mainGoal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance}));
       else if(turn===1)dispatch('help-dispatch',d.memberGoal);
       else if(turn===2)reply('独立成员已派发，等待真实执行结果。');

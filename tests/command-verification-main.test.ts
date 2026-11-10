@@ -19,7 +19,7 @@ test('实际Application三种已提交命令经原canonical只读查询；cancel
     const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),service=f.app.memberDispatch(entry.id),team=await seedTeam(workspace),snapshot=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
     definition.maintenance={bindingId:'report-maintenance',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'report-confirm',source:'local_user',confirmedAt:'2026-11-08T00:00:00.000Z'}};
     await workspace.commit(request(snapshot,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
-    await registerServiceOwner(f.app,workspace,'cbim:executor',[team.input.moduleId]);const selection=(await service.owners.discover([team.input.moduleId])).groups[0].selection!;
+    await registerServiceOwner(f.app,workspace,'.cbim/team/dev',[team.input.moduleId]);const selection=(await service.owners.discover([team.input.moduleId])).groups[0].selection!;
     const identity={workspaceId:entry.id,rootSessionId:'command-report-root'},binding={...identity,scopeId:'command-report-scope',runId:'command-report-run'};
     const task:TaskSpec={workspaceId:entry.id,taskId:identity.rootSessionId,mode:'chat',root:workspace.entry.path,agentId:'cbim:main',moduleIds:[],goal:'原用户输入',acceptance:[]},conversationBinding=await service.conversationBinding(task);
     await service.openScope(identity,binding.scopeId,{message:'原用户输入'},binding.runId);
@@ -31,9 +31,9 @@ test('实际Application三种已提交命令经原canonical只读查询；cancel
       const result=await execute(commandId);if(!unfinished){const output=jsonToolResult(name,{error:'TOOL_OUTPUT_INVALID'}),receipt=toolReceipt({workspaceId:entry.id,taskId:task.taskId,runId:binding.runId},call,decision,'failed',output);await journal.append({type:'tool.finished',data:{...call,isError:true,result:output,receipt}})}
       originals.push({name,callId,commandId});return result;
     }
-    const plan:GoalPlanInput={expectedRevision:1,objective:'明确任务',constraints:[],criteria:[{id:'c',text:'真实读取',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[team.input.moduleId],ownerSelection:selection,criterionIds:['c'],reason:'负责岗位'}],reason:'原规划'};
+    const plan:GoalPlanInput={expectedRevision:1,objective:'明确任务',constraints:[],criteria:[{id:'c',text:'真实读取',kind:'evidence'}],assignments:[{agentId:'.cbim/team/dev',moduleIds:[team.input.moduleId],ownerSelection:selection,criterionIds:['c'],reason:'负责岗位'}],reason:'原规划'};
     await write('cbim_goal_plan',plan,'plan-call',command=>service.goals.plan(identity,binding.scopeId,binding.runId,command,plan));
-    const modelTask={agentId:'cbim:executor',moduleIds:[team.input.moduleId],ownerSelection:selection,goal:'实际工作',acceptance:[{id:'c',text:'真实读取'}]},graph=await service.snapshot(identity);
+    const modelTask={agentId:'.cbim/team/dev',moduleIds:[team.input.moduleId],ownerSelection:selection,goal:'实际工作',acceptance:[{id:'c',text:'真实读取'}]},graph=await service.snapshot(identity);
     const dispatched=await write('cbim_dispatch_task',modelTask,'dispatch-call',command=>{const {agentId,...body}=modelTask;return service.dispatchTask({...identity,commandId:command,expectedParentRevision:graph.root.revision,task:{...body,assigneeAgentId:agentId}},binding.scopeId)});
     const next=await service.snapshot(identity),target=next.tasks.find(item=>item.taskId===dispatched.taskId)!,cancel={expectedGraphCursor:{streamId:next.cursor.streamId,seq:next.cursor.seq},targets:[{taskId:target.taskId,expectedRevision:target.revision}],reason:'明确取消未执行任务'};
     await write('cbim_dispatch_cancel',cancel,'cancel-call',command=>service.cancelQueued(identity,binding.scopeId,binding.runId,command,cancel),true);

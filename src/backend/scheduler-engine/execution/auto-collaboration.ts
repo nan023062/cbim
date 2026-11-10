@@ -6,10 +6,11 @@
  * 活动输入：准备、原生发送和结果确认立即纳入周期在途集合；停止先撤销引擎，再等输入记录收口后封存，不重入管理器串行锁或回滚已接受事实。
  * 作用定位：管理一次用户任务的调度周期，串接主 Agent 调度、执行成员和结果回传，周期结束后释放执行实例。
  * 设计原因：周期冻结输入、主运行归属及软限额；主工具由本轮身份和原调用生成命令，公开回包去除私有上下文并严格核验。回注先核额度和登记再启模型，容量等待或预算拒绝不重放未知运行。
- * 职责边界：Auto 可直接实现并渐进治理，不为单独知识更新强造团队目标；显式规划/派发和 Team 仍遵守审阅。成员待办须等主轮结算才领取，迟到回执不启动已停周期。
+ * 职责边界：两种模式均可直接实现并渐进治理，不为单独知识更新强造团队目标；已有显式规划/派发仍遵守审阅。成员待办须等主轮结算才领取，迟到回执不启动已停周期。
  * 责任控制面：提交绑定当前主周期并纳入在途屏障；精确负责人回执不单独发起业务验收，已有目标和派发仍保留原审阅门禁。
  * 检查点交接：放弃操作在开始前即纳入停止屏障；成功撤销旧恢复的调度与准入票据，周期历史和原检查点收件仍保留，坏回包不重做。
  * 新核实/修复：启动信号透传受理服务，事务外 IO 后停止不得保存新意图；已受理意图仍按原命令查询，不清原 unknown。
+ * 自动接续保留本周期的引擎选型，不从当前设置重新选择主引擎；成员仍使用各自冻结配置。
  */
 import {hash,json} from '../../core/foundation/serialization';
 import {randomUUID} from 'node:crypto';
@@ -37,7 +38,6 @@ import type {WorkspaceExecutionManager} from './execution-manager';
 import type {WorkspaceLoopOptions} from './loop-engine';
 import type {WorkspaceExecutionLease} from './workspace-lease';
 import type {ExecutionAdmissionWait} from './admission-wait';
-import {isModuleOwnershipControlReceipt} from '../../core/workspace/module-ownership-tool-policy';
 import {abandonCheckpointReceiptSchema} from '../../core/tasks/checkpoint-handoff';
 
 /** 本轮控制面工具的窄生命周期端口；只捕获已登记批次，不创建周期或授予写权。 */
@@ -48,7 +48,7 @@ export interface MainToolContext {
 }
 
 /** 只保存主轮选择的公开运行选项；不保存密钥、附件字节或本轮 allowAll。 */
-type Options={collaborationMode?:'auto'|'team';provider:string;model:string;profileId:string;permission:'read'|'ask'|'execute';allowNativeExecution:boolean;turnTimeoutMs?:number};
+type Options={engine?:import('../../core/brain/llm/engine').LoopEngine;collaborationMode?:'auto'|'team';provider:string;model:string;profileId:string;permission:'read'|'ask'|'execute';allowNativeExecution:boolean;turnTimeoutMs?:number};
 /** 一个用户任务跨主轮和成员回注共享 scope；tasks 保留已回注的成员，供最终收束与释放。 */
 type Cycle={collaborationMode?:'auto'|'team';task:TaskSpec;scopeId:string;tasks:Set<string>;operations:Set<Promise<unknown>>;mainRuns:Set<string>;workRequested:boolean;stopped:boolean;readOnly?:boolean;cancelRequested?:boolean;ending?:DispatchScopeOutcome;closing?:Promise<void>;completionSummary?:RunSummary};
 type Batch={cycle:Cycle;task:TaskSpec;runId:string;options:Options;tasks:string[];calls:Set<string>;settled?:RunSummary;stopped:boolean;failures:Map<string,string>;watched:Set<string>;admissions:Map<string,{taskId?:string;withdraw:()=>void}>};
@@ -173,13 +173,14 @@ export class AutoCollaboration {
   }
 
   /** 只允许当前等待目标准备新运行；模型前的事务仍会复核，读取不授予重复启动权。 */
-  private async continuationCheckpoint(request:GoalContinuationRequest){
+  private async continuationCheckpoint(request:GoalContinuationRequest,mainLeaseHeld=false){
     if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭');
     const parked=this.waitingSlots.get(request.rootSessionId);
     if(!parked||parked.scopeId!==request.scopeId)fail('GOAL_WAIT_CONFLICT','当前会话没有匹配的等待目标');
     const scope=await this.dispatch.goals.inspect({workspaceId:request.workspaceId,rootSessionId:request.rootSessionId},request.scopeId);
     if(scope.status!=='waiting'||!scope.wait||scope.wait.waitId!==request.waitId||scope.goal?.revision!==request.expectedGoalRevision||(scope.goal?.inputRevision??1)!==request.expectedInputRevision)fail('GOAL_WAIT_CONFLICT','等待目标或输入版本已变化，请刷新后核实');
-    if(scope.wait.memberPause)await this.dispatch.memberPauses.preflight(request,()=>{if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭')});
+    // beforeRun 已持有主运行租约；成员原记录由 accept 的同一快照和最终事务重新核验。
+    if(scope.wait.memberPause&&!mainLeaseHeld)await this.dispatch.memberPauses.preflight(request,()=>{if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭')});
     return structuredClone(scope.wait);
   }
 
@@ -190,7 +191,7 @@ export class AutoCollaboration {
     if(this.closed||this.resuming.has(task.taskId))return Promise.reject(Object.assign(Error('目标恢复正在关闭或已有提交'),{code:'COLLABORATION_STOPPED'}));
     const pending=(async()=>{
       trusted.signal?.throwIfAborted();
-      await this.continuationCheckpoint(request);
+      await this.continuationCheckpoint(request,true);
       trusted.signal?.throwIfAborted();
       if(task.mode!=='chat'||task.agentId!=='cbim:main'||task.taskId!==request.rootSessionId||task.workspaceId!==request.workspaceId)fail('COLLABORATION_IDENTITY','补充目标与主会话身份不一致');
       const graph=await this.dispatch.snapshot({workspaceId:request.workspaceId,rootSessionId:request.rootSessionId});
@@ -274,7 +275,7 @@ export class AutoCollaboration {
     // 按实际创建的主 run 计数，暂时占用导致的启动重试不扣额度；模型不能调大限制。
     if(!cycle.mainRuns.has(runId)&&cycle.mainRuns.size>=32)fail('GOAL_CYCLE_LIMIT','本次目标已达到 32 次主调度运行，已停止自动续跑');
     cycle.mainRuns.add(runId);
-    const batch:Batch={cycle,task:structuredClone(task),runId,options:{collaborationMode:cycle.collaborationMode,provider:options.provider,model:options.model,profileId:options.profileId,permission,allowNativeExecution:permission!=='read',turnTimeoutMs:options.turnTimeoutMs},tasks:[],calls:new Set(),stopped:false,failures:new Map(),watched:new Set(),admissions:new Map()};
+    const batch:Batch={cycle,task:structuredClone(task),runId,options:{engine:options.engine,collaborationMode:cycle.collaborationMode,provider:options.provider,model:options.model,profileId:options.profileId,permission,allowNativeExecution:permission!=='read',turnTimeoutMs:options.turnTimeoutMs},tasks:[],calls:new Set(),stopped:false,failures:new Map(),watched:new Set(),admissions:new Map()};
     this.batches.set(runId,batch);
     const binding=this.toolBinding(batch);
     const goals=new GoalTools({binding,collaborationMode:cycle.collaborationMode,
@@ -387,7 +388,7 @@ export class AutoCollaboration {
     if(!summary){const cycle=this.cycles.get(task.taskId);if(cycle)cycle.ending='interrupted';this.reportIssue(task.taskId,Error('主轮没有可核实的终态'));this.schedule();return}
     const batch=this.batches.get(summary.runId);if(!batch)return;
     // Schema/权限拒绝可能发生在端口调用前；正式规划/派发仍补记意图。Auto 的独立知识治理不强造团队目标，既有计划和未知工具仍走原收尾门禁。
-    if(summary.toolReceipts?.some(receipt=>(batch.cycle.collaborationMode!=='auto'&&receipt.effects.includes('knowledge-write')&&!isModuleOwnershipControlReceipt(receipt,this.owner.entry.id))||['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task','cbim_dispatch_cancel','cbim_dispatch_replace_dependency','cbim_dispatch_add_dependency','cbim_dispatch_revise_dependencies','cbim_dispatch_resume','cbim_dispatch_abandon_checkpoint'].includes(receipt.toolName)))batch.cycle.workRequested=true;
+    if(summary.toolReceipts?.some(receipt=>['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task','cbim_dispatch_cancel','cbim_dispatch_replace_dependency','cbim_dispatch_add_dependency','cbim_dispatch_revise_dependencies','cbim_dispatch_resume','cbim_dispatch_abandon_checkpoint'].includes(receipt.toolName)))batch.cycle.workRequested=true;
     batch.settled=summary;
     if(summary.status!=='completed'||summary.unresolvedTools.length||!batch.tasks.length){this.retireBatch(batch);batch.cycle.completionSummary=summary;batch.cycle.ending=summary.status==='completed'&&!summary.unresolvedTools.length?'completed':summary.status==='failed'?'failed':summary.status==='cancelled'?'cancelled':'interrupted'}
     this.schedule();

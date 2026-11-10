@@ -188,3 +188,7 @@ N_src_backend_main_persistence_settings_llm_profiles_ts ..> N_src_backend_main_p
 ## 逐请求预算（R06）
 
 额度策略新增显式 `enforcement: request`；字段缺省继续表示运行间软限额，相同配置判断包含模式。设置版本可靠原子保存，旧目标冻结策略不随全局修改。
+
+### 模型供应商所属引擎
+
+LlmProfiles 读取/保存 engine，配置快照只复制显式字段。缺省 Pi 不回写旧文件，因此已登记岗位可继续核对旧哈希。所有模型引用从同一用户目录解析；无效或禁用选择不回落到其他模型。

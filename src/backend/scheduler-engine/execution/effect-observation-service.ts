@@ -28,6 +28,8 @@ export interface EffectObservationPorts extends EffectSourcePorts {
   normalizePath(raw:string):string;
   observeFiles(paths:readonly string[],signal:AbortSignal):Promise<EffectFileObservation[]>;
   acquireRead():()=>void;
+  /** 仅可信主运行受理阶段复用自身占用，公开观察和人工处置仍独立领取读占用。 */
+  acquireMainRead?(rootSessionId:string):()=>void;
   /** 仅核原请求或固定计划的 journal；不提交、刷新、恢复或修剪文件。旧实例只可查询。 */
   observeKnowledge?(reference:KnowledgeWriteReference,signal?:AbortSignal):Promise<KnowledgeTransactionObservation>;
   /** 原治理账本或责任审计的保存证明；不读取当前关系替代原命令，不实施或批准。 */
@@ -57,7 +59,9 @@ export class EffectObservationService {
   private alive(workspaceId:string,signal?:AbortSignal){signal?.throwIfAborted();this.owner.assert();this.ports?.assertCurrent?.();check(workspaceId===this.owner.entry.id,'EFFECT_IDENTITY','请求不属于当前工作区')}
   /** 仅读当前原事实；所有路径只由已经核对的 proposed/allowed 推导，不能接受客户端路径。 */
   async observe(raw:unknown,signal?:AbortSignal):Promise<EffectObservationReport>{return (await this.prepare(this.parse(effectObservationInputSchema,raw),signal)).report}
-  private async prepare(input:EffectObservationInput,signal?:AbortSignal){
+  /** 仅已核实身份的主运行内部核证使用；不暴露为 IPC，防止公开观察借用正在写入的运行。 */
+  async observeFromMain(raw:EffectObservationInput,signal?:AbortSignal):Promise<EffectObservationReport>{return (await this.prepare(this.parse(effectObservationInputSchema,raw),signal,true)).report}
+  private async prepare(input:EffectObservationInput,signal?:AbortSignal,withinMainRun=false){
     this.alive(input.workspaceId,signal);const before=await this.store.read();check(before.workspaceId===input.workspaceId,'EFFECT_IDENTITY','存储不属于当前工作区');
     const first=await readEffectSource(before,input,this.owner.entry.path,this.ports,this.commands);this.alive(input.workspaceId,signal);
     const report:EffectObservationReport={version:1,identity:input,checkedAt:new Date().toISOString(),basis:'0'.repeat(64),dispositionRevision:effectDispositionRevision(before,input.rootSessionId),consistency:'stable',source:first.source,calls:[],limitations:['本报告仅覆盖明确选择的调用和文件；当前观察不证明原操作完整效果，也不代表业务验收。'],readOnly:true,acceptance:'not_evaluated'};
@@ -111,7 +115,7 @@ export class EffectObservationService {
     if(unique.length){
       let release:(()=>void)|undefined;
       try{
-        this.alive(input.workspaceId,signal);release=this.ports!.acquireRead();
+        this.alive(input.workspaceId,signal);release=withinMainRun&&this.ports!.acquireMainRead?this.ports!.acquireMainRead(input.rootSessionId):this.ports!.acquireRead();
         const timeout=AbortSignal.timeout(15_000),readSignal=signal?AbortSignal.any([signal,timeout]):timeout;
         const files=(await this.ports!.observeFiles(unique,readSignal)).map(value=>effectFileObservationSchema.parse(value));
         check(files.length===unique.length&&files.every((file,i)=>file.relativePath===unique[i]),'EFFECT_PORT_INVALID','文件观察返回值不属于原选择');

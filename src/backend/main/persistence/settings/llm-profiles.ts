@@ -1,6 +1,7 @@
 /**
  * 作用定位：本机供应商配置持久化、默认模型选择和连接检测。
  * 设计原因：运行与岗位登记共用实际模型选型；岗位领取在同一配置队列中固定公开参数并延迟解密，与设置修改形成明确先后，凭据不进入登记或任务日志。
+ * 明确的引擎参与公开模型快照；旧缺省 Pi 不补字段，保证已采纳配置哈希仍可核实。
  */
 import fs from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
@@ -25,6 +26,8 @@ function selectConfiguration(data:ModelFile,id?:string,modelId?:string){
   const model=definition.models.find(item=>item.id===(modelId??definition.defaultModel)&&item.enabled);if(!model)fail('LLM_MODEL','模型不存在或已禁用');
   const profile:ResolvedLlm['profile']={id:definition.id,name:definition.name,api:definition.api,baseUrl:definition.baseUrl,auth:definition.auth,model:model.id,contextWindow:model.contextWindow,maxTokens:model.maxTokens,reasoning:model.reasoning,
     ...(model.vision===undefined?{}:{vision:model.vision}),...(model.outputLimit===undefined?{}:{outputLimit:model.outputLimit}),...(model.thinkingLevel===undefined?{}:{thinkingLevel:model.thinkingLevel}),...(model.workingContextWindow===undefined?{}:{workingContextWindow:model.workingContextWindow}),...(model.compactionPercent===undefined?{}:{compactionPercent:model.compactionPercent}),...(model.pricing===undefined?{}:{pricing:structuredClone(model.pricing)})};
+  // 缺省 Pi 保持旧快照字节；明确的引擎选择参与岗位配置指纹。
+  if(definition.engine)profile.engine=definition.engine;
   return {definition,profile};
 }
 export class LlmProfiles {

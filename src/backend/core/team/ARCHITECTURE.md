@@ -638,7 +638,7 @@ class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberDetail["Workspa
 N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberDetail : 声明
 ```
 
-直接依赖：[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)。
+直接依赖：[../brain/llm/engine.ts](../brain/llm/engine.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)。
 
 ### 本目录调用边界
 
@@ -866,3 +866,11 @@ MemberScheduler ..> BrainPort : 绑定成员通道并执行
 ### 自动与团队协作模式
 
 automatic-execution.ts 定义独立 AutomaticExecutionBinding 与 CollaborationPolicy。它们不扩展或伪造 WorkspaceMember：兜底没有 memberId/sourceRef/责任审计，模型引用和能力指纹来自可信周期及实际快照。岗位契约保持原义；缺省模式为 Team。
+
+### 岗位的独立引擎
+
+workspaceMemberModelSnapshotSchema 接受可选 engine，明确值参与 configurationHash。旧缺省按 Pi 解释，保持序列化与历史哈希。采纳当前配置仍需显式操作；静态 Agent runtime、主会话选择及已登记岗位快照各有归属。
+
+### 引擎协议校验
+
+岗位快照与供应商共用 engineApi：Codex 必须使用 OpenAI Responses，Claude Code 必须使用 Anthropic Messages；原 Pi 缺省和既有快照字节不变。下拉选型不能绕过保存及领取时的协议核对。

@@ -11,8 +11,6 @@ import {KnowledgeQueries} from '../../core/knowledge/knowledge-queries';
 import {ObjectCrud,objectOperation} from '../../core/knowledge/object-crud';
 import type {ToolEffect} from '../../core/tools/types';
 import {knowledgeToolContract} from './knowledge-contracts';
-import {context as snapshotContext} from '../../core/knowledge/snapshot';
-import {defaultExecutorId,defaultExecutorDefinition,defaultExecutorConfiguration} from '../context/default-executor';
 import {knowledgeCommitInputSchema,knowledgeObjectCommitInputSchema,knowledgeRefreshInputSchema} from '../../core/knowledge/knowledge-write-input';
 const identity={workspaceId:z.string(),instanceId:z.string()};
 export class KnowledgeTools {
@@ -36,11 +34,10 @@ export class KnowledgeTools {
     for(const skill of builtinSkills){const name='cbim_skill_'+skill.id.replaceAll('-','_');register(name,{description:`读取内置「${skill.title}」流程：${skill.description}。返回正文、版本及引用，由调用方执行；调用本工具不会启动业务或修改文件。`,inputSchema:identity},wrap(()=>builtins.read(skill.id)))}
     register('cbim_module_registry',{version:2,description:'查询当前模块注册表与始终可用的 projectRoot（cbim:project）；关键词仅筛选已定义模块，不改写磁盘。',inputSchema:{...identity,query:z.string().max(200).optional()}},wrap(args=>queries.modules(args.query)));
     register('cbim_module_get',{version:2,description:'按 ID 返回 Module 定义、正文及本模块 Workflow；cbim:project 返回内置项目根范围，不伪造文件或继承流程。',inputSchema:{...identity,id:z.string()}},wrap(args=>queries.module(args.id)));
-    register('cbim_agent_registry',{description:'查询团队分组与 Agent 注册表；builtinAgents 包含只读内置默认执行角色 cbim:executor，无合适自定义执行角色时可派发给它。Team 主 Agent 仅调度，Auto 主 Agent 可直接工作。',inputSchema:{...identity,query:z.string().max(200).optional()}},wrap(async args=>{const result=await queries.agents(args.query),query=String(args.query??'').toLowerCase();return {...result,builtinAgents:!query||`${defaultExecutorId} ${defaultExecutorDefinition.name} ${defaultExecutorDefinition.summary}`.toLowerCase().includes(query)?[{...defaultExecutorDefinition}]:[]}}));
-    register('cbim_agent_get',{description:'按 Agent ID 返回定义、原则和有效 Skill；cbim:executor 返回应用内置默认执行角色与 Team 根继承 Skill，不创建 .cbim 文件。其他角色继承冲突显式返回。',inputSchema:{...identity,id:z.string()}},wrap(async args=>{
-      if(args.id!==defaultExecutorId)return queries.agent(args.id);
-      const snapshot=await workspace.snapshot(),agent=defaultExecutorConfiguration(snapshot);
-      return {...snapshotContext(snapshot),id:defaultExecutorId,source:'builtin',definition:{...defaultExecutorDefinition},principles:{available:true,text:agent.principles},skillChain:[agent.teamId],skillConflicts:[],skillSelectionValid:true,skills:agent.effectiveSkills.map(skill=>({id:skill.skillId,owner:skill.ownerId,inherited:true,content:{available:true,text:skill.content}}))};
+    register('cbim_agent_registry',{description:'查询团队分组与自定义 Agent 注册表。未配置自定义负责 Agent 的模块由主 Agent 在当前会话直接执行；builtinAgents 保留空数组，不再提供默认执行员。',inputSchema:{...identity,query:z.string().max(200).optional()}},wrap(async args=>({...await queries.agents(args.query),builtinAgents:[]})));
+    register('cbim_agent_get',{description:'按自定义 Agent ID 返回定义、原则和有效 Skill；继承冲突显式返回。主 Agent 是隐式默认执行者，无需登记；旧 cbim:executor 已退役。',inputSchema:{...identity,id:z.string()}},wrap(args=>{
+      if(args.id==='cbim:executor')fail('AGENT_RETIRED','内置默认执行 Agent 已退役；未配置自定义 Agent 的模块由主 Agent 直接执行');
+      return queries.agent(args.id);
     }));
     register('cbim_knowledge_refresh',{version:2,effects:['knowledge-write'],description:'按已读取的 revision 和明确 requestId 校验知识并刷新派生索引，不修改正文。需本轮知识写入授权；同ID只查询/复用完全相同原请求，结果未知不得换ID重试。结构无效返回问题清单，修正后重新读取。',inputSchema:knowledgeRefreshInputSchema.shape},wrap(args=>queries.refresh(args)));
     register('cbim_object_preview',{version:2,effects:['preview'],description:'预览 Agent/Module/Skill/Workflow 的创建、更新或删除。data 严格按 kind 区分：agent 不支持 purpose，module 不支持 name（name 固定为 slug，中文名写 body 的 H1）。创建传 parentId、slug、data、body；更新传 id 与需修改字段；删除传 id，包含子对象时需 cascade。服务规划路径、清单和父子引用，不写正式知识。返回 planId、变更及校验。',inputSchema:{...identity,revision:z.string(),operations:z.array(objectOperation).min(1).max(100)}},wrap(args=>objects.preview(args.revision,args.operations)));

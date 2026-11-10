@@ -77,7 +77,7 @@ it('waits for durable engine-ready acknowledgement before model generation',asyn
   try{
     const run=await f.runtime.startMember(f.task,'assignment',f.launch);await enteredGate;
     expect(f.engines[0].ran).toBe(false);expect(f.leases).toBe(1);
-    expect(notices).toEqual([{taskId:f.task.taskId,runId:f.launch.binding.runId,sessionFile:path.join(f.directory,f.task.taskId,f.launch.binding.runId,'native.jsonl')}]);
+    expect(notices).toEqual([{taskId:f.task.taskId,runId:f.launch.binding.runId,sessionFile:path.join(f.directory,f.task.taskId,f.launch.binding.runId,'native.jsonl'),nativeSessionId:'native-one'}]);
     release();expect((await run.done).status).toBe('completed');expect(f.engines[0].ran).toBe(true);
   }finally{release();await f.cleanup()}
 });

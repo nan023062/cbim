@@ -55,7 +55,6 @@ import {resolveConversationAgent,resolveDispatchAgent,resolveDispatchModules} fr
 import {prepareMember} from './agent-manager';
 import {dispatchSessionReadInput} from '../../core/tasks/scope-view';
 import {createScopeRunTracking,appendScopeMainRun} from '../../core/tasks/scope-run-tracking';
-import {isModuleOwnershipControlReceipt} from '../../core/workspace/module-ownership-tool-policy';
 import {OwnerExecutionService,type OwnerExecutionModelPorts,type OwnerExecutionWorkspace} from './owner-execution-service';
 
 /** 只需工作区状态与知识快照，不依赖桌面或具体文件存储。 */
@@ -208,7 +207,7 @@ export class WorkspaceDispatchService {
       // 普通问答只关闭生命周期；一旦规划或派工，必须引用同周期主轮结束事实及显式审阅。
       // 在同一派发事务内复核，避免工具中申请完成后又出现新任务，提前释放成员。
       // Auto 的独立知识沉淀和精确责任登记不强造团队计划；模式只读持久周期，已有计划、派发和全部副作用时序仍须验收。
-      const recordedWork=mainSummary?.toolReceipts?.some(receipt=>(scope.executionPolicy?.mode!=='auto'&&receipt.effects.includes('knowledge-write')&&!isModuleOwnershipControlReceipt(receipt,input.workspaceId))||['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task'].includes(receipt.toolName));
+      const recordedWork=mainSummary?.toolReceipts?.some(receipt=>['cbim_goal_plan','cbim_goal_review','cbim_dispatch_task'].includes(receipt.toolName));
       if(outcome==='completed'&&scope.goal&&(scope.goal.plan||tasks.length||recordedWork)){
         if(!mainSummary)fail('GOAL_REVIEW_REQUIRED','业务任务需要主调度的结构化目标审阅，不能直接标为完成');
         await this.goals.validateCompletion(state,scope,mainSummary);
@@ -358,7 +357,7 @@ export class WorkspaceDispatchService {
     const old=await this.owners.replay<DispatchReceipt>(command);if(old)return old.receipt;this.check(input.workspaceId);
     const alive=()=>{this.check(input.workspaceId);assertCurrent?.()};alive();
     if(!trustedScopeId)fail('DISPATCH_SCOPE_REQUIRED','新业务派发必须属于已有主调度周期，请重新规划后派发');
-    if(input.task.assigneeAgentId==='cbim:main')fail('AGENT_NOT_EXECUTABLE','主 Agent 不直接执行业务，请指定执行 Agent 或默认执行角色');
+    if(input.task.assigneeAgentId==='cbim:main')fail('AGENT_NOT_EXECUTABLE','主 Agent 请在当前会话直接执行，不创建独立成员任务');
     if(new Set(input.task.moduleIds).size!==input.task.moduleIds.length||new Set(input.task.acceptance.map(a=>a.id)).size!==input.task.acceptance.length||new Set(input.task.prerequisites.map(p=>p.taskId)).size!==input.task.prerequisites.length)fail('GRAPH_INPUT_INVALID','模块、验收条目和前置任务不能重复');
     return this.owners.withContext(state=>[this.owners.selection(state,trustedScopeId,input.task.ownerSelection)],context=>this.store.transact(command,async state=>{
       alive();

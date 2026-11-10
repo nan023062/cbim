@@ -11,7 +11,10 @@ const cases=[
   {mode:'auto',permission:'ask',modules:false},
   {mode:'auto',permission:'execute',modules:false},
   {mode:'auto',permission:'execute',modules:true},
+  {mode:'team',permission:'read',modules:false},
+  {mode:'team',permission:'ask',modules:false},
   {mode:'team',permission:'execute',modules:false},
+  {mode:'team',permission:'execute',modules:true},
 ] as const;
 
 /** 真实 Application / Pi / 原生文件与命令；仅模型回复为确定性本地 SSE。 */
@@ -48,7 +51,7 @@ it.each(cases)('main direct work keeps permission and knowledge boundaries ($mod
     const approved=new Set<string>();let result:RunSummary;
     await vi.waitFor(async()=>{
       for(const approval of await manager.pendingApprovals(started.taskId)){
-        expect(permission).toBe('ask');expect(mode).toBe('auto');expect(['write','bash']).toContain(approval.name);
+        expect(permission).toBe('ask');expect(['write','bash']).toContain(approval.name);
         expect(JSON.stringify(approval)).not.toContain('forbidden knowledge overwrite');
         if(!approved.has(approval.id)){
           if(approved.size===0){
@@ -60,7 +63,7 @@ it.each(cases)('main direct work keeps permission and knowledge boundaries ($mod
       }
       result=await manager.inspect(started.taskId,started.runId);expect(result.status).toBe('completed');
     },{timeout:45000,interval:60});
-    const canWrite=mode==='auto'&&permission!=='read';
+    const canWrite=permission!=='read';
     if(canWrite){
       const command=result!.events.find(event=>event.type==='tool.finished'&&event.data.id==='direct-call-5');
       expect(command?.data).toMatchObject({isError:false,receipt:{outcome:'succeeded'}});
@@ -72,7 +75,7 @@ it.each(cases)('main direct work keeps permission and knowledge boundaries ($mod
     expect(requests).toHaveLength(7);expect(errors).toEqual([]);
     expect(approved.size).toBe(permission==='ask'?2:0);
     const advertised=requests[0].tools.map((tool:any)=>tool.function.name);
-    expect(advertised.includes('write')).toBe(canWrite);expect(advertised.includes('bash')).toBe(canWrite);
+    expect(advertised.includes('write')).toBe(canWrite);expect(JSON.stringify(requests[0].messages)).not.toContain('主 Agent 不提供业务写入或命令执行');expect(advertised.includes('bash')).toBe(canWrite);
     expect(JSON.stringify(requests[2].messages)).toContain('项目根模块');
     expect(JSON.stringify(requests[5].messages)).toContain('ISSUE14_INPUT');
     if(canWrite)expect(JSON.stringify(requests[6].messages)).toContain('ISSUE14_NATIVE_COMMAND');

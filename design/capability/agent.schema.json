@@ -67,6 +67,41 @@
         "type": "string",
         "pattern": "^\\.cbim/connectors/[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*$"
       }
+    },
+    "runtime": {
+      "description": "本机默认引擎与模型引用；岗位登记时独立采纳，null 表示采用本机默认配置。",
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "engine",
+            "profileId",
+            "modelId"
+          ],
+          "properties": {
+            "engine": {
+              "enum": [
+                "pi",
+                "claude-code",
+                "codex"
+              ]
+            },
+            "profileId": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+            },
+            "modelId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            }
+          }
+        }
+      ]
     }
   },
   "$defs": {

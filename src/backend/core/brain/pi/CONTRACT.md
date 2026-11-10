@@ -22,7 +22,7 @@ note for bootstrap "只转发原桥的固定路由；不因工具清单上报扩
 
 ### 主调度提示与负责人门禁
 
-Pi 主角色提示与上层真实工具保持一致：查询模块负责岗位、保存匹配目标计划再派发。内置 `cbim:executor` 是可登记静态角色，也须项目岗位、模块责任及独立采纳模型；没有主模型回退或缺省派发。提示只说明边界，实际资格仍由任务服务判定，不将提示文字视为执行授权。
+Pi 主角色提示与上层真实工具保持一致：未配置自定义负责岗位的模块由主 Agent 在当前会话直接实现；只有明确配置的自定义岗位才查询选择并派发。内置 `cbim:executor` 已退役，不能登记为岗位或作为缺省派发。提示只说明边界，实际资格仍由任务服务判定，不将提示文字视为执行授权。
 
 ### 冻结 JSON/CSV/PNG 验证工具接入
 
@@ -118,3 +118,7 @@ PNG继续复用cbim_validation_run及同一gate/call身份。提示明确实际�
 ## 冻结范围成员执行
 
 EngineContext.scopedExecutionTools 存在时 --tools 仅含 cbim_*，全部原生文件与命令未注册；即使伪造名称也不能通过Runtime。范围工具携原callId与AbortSignal，不通过自定义shell执行。
+
+### 共享业务能力
+
+工具路由与业务提示分别由上层 engine-tools.ts、engine-instructions.ts 提供。KnowledgeBridge/KnowledgeToolSchema 仅保留兼容别名；Pi 的 RPC、HTTP 一次性许可和 bootstrap 仍留在本目录。请求预算代理及 SSE 用量解析归 ../llm/，另一引擎不依赖 Pi 实现。

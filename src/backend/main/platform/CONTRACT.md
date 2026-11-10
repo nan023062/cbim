@@ -75,3 +75,7 @@ ScopedExecutionFiles固定原root/范围/生命周期断言，真实Win32仅读�
 IsolationLifecycle在创建profile前保存私有来源，在恢复挂起线程前保存真实进程创建时间；失败不执行脚本。Win32IsolatedNode使用当前登录会话唯一命名Job，重名拒绝且不终止已有Job。Win32IsolationRecovery核FILETIME/session，只有原宿主退出后才查询Job，避免提前持句柄影响KILL_ON_JOB_CLOSE。暂存目录核volume/fileId、owner随机值与真实临时父目录，扫描并持有全部原对象句柄后才删；链接/硬链接/替换/超限拒绝，最多4096对象和64层。清理不按PID终止、不创建profile或重跑程序。原运行异常收尾通过闭包重试同一资源；没有分配资源的前置失败释放等待标记。
 
 桌面 NSIS 更新已独立到 [updater](../../updater/ARCHITECTURE.md)，本目录不承载检查、下载或安装逻辑。
+
+### Claude 原生会话指纹
+
+NativeSessionFiles 由工厂固定 Pi、Claude Code 或 Codex 格式及受管根。通用的链接、完整字节、尾行、容量和读取竞争检查不变；Claude 另核实文件名等于 nativeSessionId.jsonl，所有带 sessionId 的记录同属该身份。Codex 另核 session_meta.payload.id、rollout 文件名与唯一 metadata；原生长路径由适配器归一后保存。只返回长度/摘要，不公开私有路径或正文。

@@ -117,3 +117,10 @@ summary 采用 100～250 字的检索摘要，覆盖核心能力、适用任务�
 connectors 是无重复的注册表逻辑 id 数组，无引用时为 []。按 [插件声明规范](../connector/connector-spec.md) 引用 Cindy 插件，不指向本地实现目录。所属任务将唯一 AI 成员与全部作业模块的声明合并，作为任务连接器需求集合；不表示独占或操作授权。实际外部工具接入仍需适配器；当前声明不证明工具已可调用。
 
 成员索引遵循 [注册表 Schema](registry.schema.json)。真人花名册已废弃；旧 people.json 只保留历史内容，不参加校验或派工。静态角色由本地定义目录确定，岗位使用稳定 memberId，执行实例使用独立 AgentInstance 与逻辑会话；调度冻结能力、模型、模块负责人及 Workflow，再由大脑执行。查询中的 authorPeople 仅为旧客户端保留空数组。
+
+
+## 本机默认引擎与模型
+
+agent.json 可选 runtime 为 null 或 {engine, profileId, modelId}。engine 取 pi / claude-code / codex，两个 ID 只引用 CBIM 本机用户模型配置。桌面以级联下拉选择，不填写密钥、地址或任意启动命令。没有选型时，新登记可使用本机默认；明确引用失效必须重新选择，不能暗中回落。
+
+该字段不改变专业能力和 Skill 继承，也不覆盖已登记岗位的采纳快照。已登记岗位在岗位配置中明确改选或采纳。Team/Agent 资源导出会移除此本机引用，导入方自行选型。

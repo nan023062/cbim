@@ -12,11 +12,18 @@ type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]}
 const gate=()=>{let release=()=>{};const promise=new Promise<void>(resolve=>{release=resolve});return {promise,release}};
 /** 仅模型响应确定；真实 Pi 写入、全集合枚举、JSON、候选和人工接续均由产品执行。 */
 export async function completeOutputProvider(mode:CompleteOutputMode='automatic',transitions=false,reconsider=false){
-  const d=completeOutputData,main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[],review=gate(),continuation=gate(),state:{manifest?:any;validation?:any;delivery?:any;readyForReview?:boolean;review?:any;continuation?:any}={};let agentId='',moduleId='',ownerSelection:OwnerExecutionSelection|undefined;
+  const d=completeOutputData,main:Request[]=[],member:Request[]=[],compactions:Request[]=[],errors:string[]=[],sequence:string[]=[],review=gate(),continuation=gate(),state:{manifest?:any;validation?:any;delivery?:any;readyForReview?:boolean;review?:any;continuation?:any}={};let agentId='',moduleId='',ownerSelection:OwnerExecutionSelection|undefined;
   const plan=(revision=1)=>{const p=goalPlanArguments({objective:d.goal,agentId,ownerSelection,moduleIds:[moduleId],acceptance:d.acceptance},revision);return mode==='human'?{...p,criteria:[...p.criteria,{id:d.humanId,text:d.humanCriterion,kind:'human'}],assignments:p.assignments.map(a=>({...a,criterionIds:[...a.criterionIds,d.humanId]}))}:p};
   const evidence=(task:any)=>{assert.equal(task.status,'result_ready');return {kind:'member-result',taskId:task.taskId,runId:task.result.runId,resultId:task.result.resultId,planRevision:task.result.planRevision,toolCallIds:task.result.evidenceRefs}};
   const server=http.createServer(async(req,res)=>{try{
-    assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw)as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(t=>t.function.name==='cbim_dispatch_task')===true,requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push((isMain?'main:':'member:')+turn);
+    assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw)as Request;assert.equal(body.model,d.model);
+    // 原生 Pi 在较长人工重审链上会独立请求摘要；它没有工具，不是新的成员回合。
+    if(!body.tools?.length&&typeof body.messages[0]?.content==='string'&&body.messages[0].content.includes('context summarization assistant')){
+      compactions.push(body);sequence.push('compaction:'+compactions.length);res.writeHead(200,{'Content-Type':'text/event-stream'});
+      const summary='完整产物已交付并固定原清单。当前主会话需要处理用户明确保存的新人工决定，先 cbim_goal_inspect 核对当前等待、输入和决定版本，再按原候选复核；不得重放成员业务或继承上一等待的接受。';
+      for(const [delta,finish_reason]of [[{role:'assistant',content:summary},null],[{},'stop']])res.write('data: '+JSON.stringify({id:'full-compaction-'+compactions.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');res.end('data: [DONE]\n\n');return;
+    }
+    const isMain=body.tools?.some(t=>t.function.name==='cbim_dispatch_task')===true,requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push((isMain?'main:':'member:')+turn);
     res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'full-'+sequence.length,object:'chat.completion.chunk',created:1,model:d.model,choices:[{index:0,delta,finish_reason}]})+'\n\n'),tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     if(isMain){
       if(turn===0)tool('full-plan','cbim_goal_plan',plan());
@@ -68,5 +75,5 @@ export async function completeOutputProvider(mode:CompleteOutputMode='automatic'
     }res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Complete output fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');const releaseAll=()=>{review.release();continuation.release()};
-  return {url:'http://127.0.0.1:'+address.port+'/v1',main,member,errors,sequence,state,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=structuredClone(selection)},releaseReview:review.release,releaseContinuation:continuation.release,releaseAll,close:async()=>{releaseAll();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:'http://127.0.0.1:'+address.port+'/v1',main,member,compactions,errors,sequence,state,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=structuredClone(selection)},releaseReview:review.release,releaseContinuation:continuation.release,releaseAll,close:async()=>{releaseAll();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

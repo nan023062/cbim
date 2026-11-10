@@ -20,19 +20,17 @@ test('dispatch exposes only implemented main-session tools and uses trusted invo
   expect(JSON.parse(result.content[0].text)).toMatchObject({taskId:'task',disposition:'queued'});
   expect(f.tools.list()[0].inputSchema).toMatchObject({additionalProperties:false});
 });
-test('missing role or owner is rejected; builtin executor needs an explicit owner and main never executes',async()=>{
+test('missing role or owner is rejected; retired builtin and direct main never create independent member tasks',async()=>{
   const f=fixture(),signal=new AbortController().signal,{agentId,...fallback}=task;
   await expect(f.tools.call('cbim_dispatch_task',fallback,signal,'no-role')).rejects.toThrow('参数无效');
   await expect(f.tools.call('cbim_dispatch_task',{...task,ownerSelection:undefined},signal,'no-owner')).rejects.toThrow('参数无效');
-  const result=await f.tools.call('cbim_dispatch_task',{...fallback,agentId:'cbim:executor'},signal,'default-call');
-  expect(f.dispatch).toHaveBeenCalledWith({...fallback,prerequisites:[],assigneeAgentId:'cbim:executor'},{toolCallId:'default-call',signal});
-  expect(JSON.parse(result.content[0].text)).toMatchObject({disposition:'queued'});
+  await expect(f.tools.call('cbim_dispatch_task',{...fallback,agentId:'cbim:executor'},signal,'default-call')).rejects.toThrow('参数无效');
   for(const field of ['assigneeAgentId','agentInstanceId','rootSessionId','permission']){
     await expect(f.tools.call('cbim_dispatch_task',{...fallback,[field]:'forged'},signal,'invalid')).rejects.toThrow('参数无效');
   }
-  await expect(f.tools.call('cbim_dispatch_task',{...fallback,agentId:'cbim:main'},signal,'invalid')).rejects.toThrow('主 Agent 只能调度');
+  await expect(f.tools.call('cbim_dispatch_task',{...fallback,agentId:'cbim:main'},signal,'invalid')).rejects.toThrow('主 Agent 在当前会话执行');
   await expect(f.tools.call('cbim_dispatch_task',{...fallback,moduleIds:[]},signal,'invalid')).rejects.toThrow('参数无效');
-  expect(f.dispatch).toHaveBeenCalledTimes(1);
+  expect(f.dispatch).not.toHaveBeenCalled();
 });
 test('model cannot inject identity, authorization, commands or invalid domain inputs',async()=>{
   const f=fixture(),signal=new AbortController().signal;

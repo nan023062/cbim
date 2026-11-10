@@ -25,7 +25,7 @@ const scope={
  'src/backend/core/workspace':'领域工程、Module、Workflow与稳定岗位责任协议。来源代次和写前屏障由纯规则投影；内容指纹、来源身份、负责人关系分别核实。同负责人明确采纳递增关系版本，不迁移任务；旧缺省记录不补造来源。Workflow验证不自行读文件或签发业务验收。',
  'src/bridge/contracts':'可序列化 IPC 与展示契约；多来源附件只传选择身份，公开旧v1/新v2清单与真实仓库目录，不暴露凭据。图增量公开前置追加/替换审计而非执行许可，目标摘要公开运行内补充计数与未核实状态，详情保留已接收快照，纯协议不携IO。排队插入必须传用户点击时的原主run，缺失不推测当前轮次。检查点私有恢复证明留在后端；结构验证公开当时文件/规则指纹及无原值诊断，人工决定与文件观察保留真实依据。岗位IPC只传明确选择与公开采纳/回执，类型不带凭据或后端哈希IO。',
  'src/backend/scheduler-engine':'工作区调度。装配团队上下文与模型工具，协调会话、运行、用户问题和队列；只依赖自身及 Core。',
- 'src/backend/scheduler-engine/context':"内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/岗位责任、Workflow与规范。显式流程只从本模块挂载清单解析，准备按任务原选择重核，不回退默认或刷新旧绑定；前置替换保留原实例和流程；Auto 主会话直接工作不冒充独立执行成员。",
+ 'src/backend/scheduler-engine/context':"内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/岗位责任、Workflow与规范。显式流程只从本模块挂载清单解析，准备按任务原选择重核，不回退默认或刷新旧绑定；前置替换保留原实例和流程；两种模式的主会话都可直接执行未配置自定义岗位的模块，不把主 Agent 派成独立成员。",
  'src/backend/scheduler-engine/conversation':'主 Agent 的规划、审阅与团队管理指引，以及提问、审批和队列。原题与选项独立保存，公开待答列表返回副本，答案与取消只有一次消费；坏回包不重弹。主调度可安排求助补做、替换未启动前置或撤销待办；旧失败不改写，问答不替代人工决定或恢复。',
  'src/backend/scheduler-engine/execution':"主实例与图根共享身份；依赖追加在同事务重验两端及后继的知识/流程/停止状态，成功后重纳当前周期跟踪，仍待主轮结束并按原领取链执行。补充发送前预留、ACK后登记新输入，与cycle在途操作一起结算；停止先作用引擎，旧计划不再领取，最终门禁核对接收日志。目标分工、派发及人工来源核对原流程选择；交付/审阅从canonical复核真实证据与当前文件。检查点与前置调整不改选；额度/准入等待不消费，停止和重启封存不重放。",
  'src/backend/scheduler-engine/runtime':'监管、履历与全局并发准入职责分离。可靠提交同步周期白名单，scope-only 更新独立游标，未变投影不重复发布；检查点计待办而不占活动名额，报告用量不授予额度或恢复权。',
@@ -59,6 +59,17 @@ const scope={
  'src/frontend/team':'工作区唯一的静态Team/组/Agent图、继承与人才复用，节点按Session查看只读履历。岗位面板独立登记、明确采纳和暂停退休；改名和模型更新保留原能力来源。来源屏障首次拒绝可重新编辑，未知仍查原命令；反查责任委托workspace，不启动模型。',
  'src/frontend/workspace':'工作区唯一的工程/模块图及自身Workflow。负责人面板展示来源和有界历史，支持同负责人明确采纳当前来源；原回执必须匹配同一关系、版本及owner，未知不换命令。知识编辑和整架构复用委托knowledge/resources；登记不移交旧任务。',
 };
+scope['src/backend/core/brain/claude']='Claude Agent SDK 适配、内部工具门禁与真实原生会话生命周期；环境和账号归 CBIM，工具复用上层契约，不提供对外 MCP。';
+scope['src/backend/core/brain/codex']='Codex App Server 的受管进程、双向 RPC、真实 thread/turn、Responses 代理与动态工具；固定 CLI 和私有账号目录，内置执行关闭，工具经宿主授权、预算结算及同一回执。';
+scope["src/backend/core/brain"]+=" engine-tools 与 engine-instructions 共用业务路由/指引；engine-session 按已核日志选择目标引擎原生 ID/文件并转交公开资料；native-tools 复用固定 Pi SDK 独立操作供宿主动态工具。";
+scope["src/backend/core/brain/llm"]+=" engine 定义公开引擎/选型；共享 request-budget-transport 和 SSE 用量解析服务 Pi、Claude Code 与 Codex。";
+scope["src/backend/core/tools"]+=" 原生能力按 Pi/Claude Code/Codex 提供真实预检清单，Codex 由宿主执行既有文件操作，Claude 不宣称独立 ls。";
+scope["src/frontend/components"]+=" EngineModelPicker 从用户配置级联引擎/模型，失效选型保留提示而不隐式替换。";
+scope["src/frontend/conversation"]+=" 主会话模型栏按用户配置选择 Loop 引擎，Claude Code/Codex 只保留排队。";
+scope["src/frontend/knowledge"]+=" Agent 编辑可保存本机默认引擎/模型，已有岗位不自动采纳。";
+scope["src/frontend/team"]+=" 岗位登记支持默认或明确引擎/模型，详情展示冻结引擎。";
+scope["src/backend/scheduler-engine/execution"]+=" 可信工厂选择 PiEngine/ClaudeCodeEngine/CodexEngine；Claude/Codex 新成员首轮可延迟绑定原生文件，Codex 在启动确认时原子采纳实际线程 ID。";
+scope["src/backend/main/platform"]+=" 原生指纹固定 Pi/Claude/Codex 格式及受管目录，Codex 另核 metadata 和 rollout 文件名。";
 scope["src/backend/main/platform"]+=" 范围模式用Win32读取/枚举句柄与LPAC私有快照，原工程不扩ACL。";
 scope["src/backend/core/workspace"]+=" executionScope只收窄原权限，全模块一致冻结，预算合并取小。";
 scope["src/backend/core/brain/pi"]+=" 范围模式只注册cbim工具，转发受限读取与隔离Node的原调用身份。";
@@ -79,7 +90,7 @@ const ownerExecutionScopes={
  'src/backend/core/workspace':'主调度的负责人发现按所选模块真实分组，缺口不推测继承或默认负责者。',
  'src/bridge/contracts':'owner-execution 公开原岗位绑定与显式当前观察；按任务修订核对身份，不公开解密配置。',
  'src/backend/scheduler-engine/context':'执行上下文同时冻结负责岗位、项目适配、采纳能力与模型身份，主模型不会替换成员配置。',
- 'src/backend/scheduler-engine/conversation':'主提示按可信模式区分 Auto 直接实现与 Team 调度；正式派发仍查询真实岗位，完成里程碑后按事实沉淀团队与业务架构。',
+ 'src/backend/scheduler-engine/conversation':'主提示在两种模式下都直接实现未配置模块，并只把已配置自定义岗位派发出去；完成里程碑后按事实沉淀团队与业务架构。',
  'src/backend/scheduler-engine/execution':'OwnerExecutionService 按知识→模型→任务事务核新派发及实际领取；原命令先查，锁释放后才启动。人工证据外部观察与最终知识快照/CAS 分离，避免反向串行等待。',
  'src/backend/scheduler-engine/tools':'负责人发现和计划/派发选择共享严格协议，固定主运行身份，历史回执不签发新领取许可。',
  'src/backend/main':'工作区唯一账本装配岗位模型端口；明确拒绝旧直接业务启动，原聊天和知识治理保持独立。',
@@ -94,7 +105,7 @@ const ownerExecutionScopes={
 for(const [directory,description] of Object.entries(ownerExecutionScopes))scope[directory]+=' '+description;
 // 显式交接只终止旧待办；历史核验、严格联合事务与只读展示各自留在既有层次。
 const checkpointHandoffScopes={
- 'src/backend/core/brain/pi':'主角色提示同样要求内置执行角色先登记岗位、模块责任及独立模型，不以缺省角色绕过真实派发门禁。',
+ 'src/backend/core/brain/pi':'主角色提示要求未配置自定义岗位时自己执行；内置默认执行角色已退役，不能登记后绕过主会话。',
  'src/backend/core/tasks':'检查点显式放弃有独立严格协议与精确联合变更校验；原任务和检查点证据不可重写，纯 ACK 与后续周期释放保持可用。',
  'src/backend/scheduler-engine/execution':'CheckpointAbandonmentService 先读原命令，再核历史 canonical 与冻结证明，最后短事务裁决；不重读当前 native 或恢复旧模型，Auto 同步撤销旧恢复准入并等待处置收口。',
  'src/backend/scheduler-engine/tools':'主工具显式放弃原检查点/预约，绑定原 run/call 命令，坏回包只核实原事实，不取得业务完成资格。',
@@ -153,7 +164,7 @@ const controlledFileScopes={
  'src/backend/main/platform':'独立 utility 持有 Win32 目录与文件句柄，执行单次有界替换、flush 与读回；私有 blob 保留真实 before，进程退出不表示内容回滚。另有独立 LPAC/Job Node 平台端口，私有快照与输出分权、真实进程树收束；尚未装配为模型命令或任务授权。',
  'src/backend/main/persistence/tasks':'受控文件附录在同一账本单条追加，prepared/executing/终态各有回执与空间预留，旧日志缺省不补造，重放不继续文件 IO。',
  'src/backend/main/workspace':'ControlledFiles 连接原成员授权、唯一 Store、文件平台与私有备份；原not_applied与真实退出才解除运行屏障，显式补偿重新核文件身份/摘要/关闭周期，未知不重试。',
- 'src/backend/scheduler-engine/execution':'实际成员注入固定运行的受控文件端口；Auto 主会话按权限使用原生工具，不取得成员专属端口，租约保持到物理操作排空。',
+ 'src/backend/scheduler-engine/execution':'实际成员注入固定运行的受控文件端口；两种模式的主会话都按权限使用原生工具，不取得成员专属端口，租约保持到物理操作排空。',
  'src/bridge/contracts':'controlled-files 仅导出公开纯协议与限制，隐藏 blob、原生文件身份、句柄和后端规则。',
  'src/frontend/tasks':'原调用卡分别显示工具/文件操作/补偿结果；显式预览读取当前文件，提交前保存固定本机请求，丢回复只查原命令；查询错误保留已知拒绝/终态，预览过期不能提交。',
  'src/frontend/conversation':'当前工作区实例传入成员详情用于补偿预览时效，主聊天草稿不受补偿控制器影响，挂载不触发文件读取或写入。',

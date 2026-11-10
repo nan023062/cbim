@@ -1,8 +1,11 @@
 /**
  * 作用定位：团队与业务架构共用的语义对象编辑器，负责表单、删除影响预览和显式事务提交。
  * 设计原因：界面填写领域字段，不让用户手工拼目录/索引；固定打开时的知识版本，后端校验并保存计划，避免后台刷新覆盖草稿或跨版本误提交。
+ * Agent 编辑读取本机目录选择引擎/模型，失效选型不能提交；删除不依赖模型配置仍然存在。
  */
-import {useRef,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
+import {EngineModelPicker} from '../components/EngineModelPicker';
+import type {LlmSettings,AgentModelSelection} from '../../bridge/contracts/models';
 import {createPortal} from 'react-dom';
 import type {Snapshot,Preview} from '../../bridge/contracts/workspace';
 import {moduleBodyTemplate} from '../../bridge/contracts/architecture';
@@ -36,6 +39,8 @@ export function ArchitectureEditor({workspaceId,snapshot,kind,id,parentId,mode='
   const [body,setBody]=useState(initial.body||(kind==='module'?moduleScaffold:'')),[purpose,setPurpose]=useState(initial.data.purpose??'');
   const [capabilities,setCapabilities]=useState((initial.data.capabilities??[]).join('\n')),[limitations,setLimitations]=useState((initial.data.limitations??[]).join('\n'));
   const [sources,setSources]=useState<{location:string;scope:string}[]>(initial.data.sources??[]);
+  const [models,setModels]=useState<LlmSettings>(),[runtime,setRuntime]=useState<AgentModelSelection|null>(initial.data.runtime??null);
+  useEffect(()=>{if(kind!=='agent'||removing)return;let cancelled=false;void window.cbim.call('models.list').then(value=>{if(!cancelled)setModels(value)}).catch(cause=>{if(!cancelled)setError(cause.message)});return()=>{cancelled=true}},[kind,removing]);
   const [cascade,setCascade]=useState(false),[changed,setChanged]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const [preview,setPreview]=useState<(Preview&{planId:string;objects:string[]})>();
   const lock=useRef(false),length=Array.from(summary.replace(/\s/g,'')).length;
@@ -49,7 +54,8 @@ export function ArchitectureEditor({workspaceId,snapshot,kind,id,parentId,mode='
     try{
       if(base.workspaceId!==workspaceId)throw Error('工作区身份已改变，请关闭后重新打开编辑器');
       if(!removing&&(kind==='agent'||kind==='module')&&(length<100||length>250))throw Error('摘要需要 100～250 个非空白字符，请具体描述职责、边界和适用场景');
-      const data=kind==='agent'?{name,summary,capabilities:lines(capabilities),limitations:lines(limitations)}:kind==='module'?{summary,sources}:kind==='skill'?{name,purpose}:{name};
+      if(!removing&&kind==='agent'&&runtime&&!models?.profiles.some(p=>p.id===runtime.profileId&&(p.engine??'pi')===runtime.engine&&p.models.some(m=>m.id===runtime.modelId&&m.enabled)))throw Error('所选引擎或模型不可用，请重新选择');
+      const data=kind==='agent'?{name,summary,capabilities:lines(capabilities),limitations:lines(limitations),runtime}:kind==='module'?{summary,sources}:kind==='skill'?{name,purpose}:{name};
       const operation=removing?{kind,action:'delete',id,cascade}:{kind,action:id?'update':'create',...(id?{id}:{parentId:owner,slug}),data,body};
       const request={workspaceId,instanceId:base.instanceId,revision:base.revision,operations:[operation]};
       setPreview(await window.cbim.call('architecture.preview',request));
@@ -68,6 +74,7 @@ export function ArchitectureEditor({workspaceId,snapshot,kind,id,parentId,mode='
       {kind!=='module'&&<label>名称<input aria-label="对象名称" required value={name} onChange={event=>edit(()=>setName(event.target.value))}/></label>}
       {(kind==='agent'||kind==='module')&&<label>职责摘要<textarea aria-label="职责摘要" rows={3} required value={summary} onChange={event=>edit(()=>setSummary(event.target.value.replace(/[\r\n]/g,' ')))}/><small>{length} / 100～250 个非空白字符；描述职责、边界和适用场景。</small></label>}
       {kind==='agent'&&<><label>专业能力（每行一项）<textarea aria-label="专业能力" required rows={3} value={capabilities} onChange={event=>edit(()=>setCapabilities(event.target.value))}/></label><label>能力限制（每行一项）<textarea aria-label="能力限制" rows={2} value={limitations} onChange={event=>edit(()=>setLimitations(event.target.value))}/></label></>}
+      {kind==='agent'&&<><EngineModelPicker models={models} value={runtime} onChange={value=>edit(()=>setRuntime(value))}/><small>新登记岗位采用此选型；已有岗位在岗位配置中独立修改或采纳。模型目录在设置中管理。</small></>}
       {kind==='skill'&&<label>适用目的<input aria-label="适用目的" required value={purpose} onChange={event=>edit(()=>setPurpose(event.target.value))}/></label>}
       {kind==='module'&&<><div className="architecture-sources"><b>业务源目录</b><small>可留空；目录应真实存在且位于项目内。</small>{sources.map((source,index)=><div className="architecture-source" key={index}><input aria-label={'源目录 '+(index+1)} placeholder="如 src/game" value={source.location} onChange={event=>edit(()=>setSources(old=>old.map((item,i)=>i===index?{...item,location:event.target.value}:item)))}/><input aria-label={'目录职责 '+(index+1)} placeholder="该目录的职责范围" value={source.scope} onChange={event=>edit(()=>setSources(old=>old.map((item,i)=>i===index?{...item,scope:event.target.value}:item)))}/><button type="button" aria-label={'移除源目录 '+(index+1)} onClick={()=>edit(()=>setSources(old=>old.filter((_,i)=>i!==index)))}>移除</button></div>)}<button type="button" onClick={()=>edit(()=>setSources(old=>[...old,{location:'',scope:''}]))}>添加源目录</button></div>
       </>}

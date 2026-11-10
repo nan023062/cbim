@@ -21,7 +21,7 @@ async function setup(withRun=true){
   const moduleId=team.input.moduleId,definition=JSON.parse(snapshot.files.find(x=>x.path===moduleId+'/module.json')!.text);
   definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
   await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:json(definition)}]));
-  const {model}=await registerServiceOwner(f.app,workspace,'cbim:executor',[moduleId]);
+  const {model}=await registerServiceOwner(f.app,workspace,'.cbim/team/dev',[moduleId]);
   const store=workspace.dispatchStore,directory=store.directory,storage=new FileRunStorage(),lease=new WorkspaceExecutionLease(),identity={workspaceId:entry.id,rootSessionId:'main-root'};
   const mainJournals=new Map<string,RunJournal>(),inspect=vi.fn(async(run:Parameters<MemberExecutionPorts['inspect']>[0])=>storage.read(path.join(directory,'runs',run.binding.taskId,run.binding.runId)));
   const service=new WorkspaceDispatchService(workspace,store,{inspectMain:async(_root,id)=>RunJournal.read(mainJournals.get(id)!.directory),inspectMember:inspect},undefined,undefined,f.app.models);
@@ -33,8 +33,8 @@ async function setup(withRun=true){
   }}));
   const members=new MemberExecutionManager(workspace,store,{prepare:async()=>prepare(),owners:service.owners,withEngineConfiguration:(reference,_options,use)=>f.app.models.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare})),inspect,acquire:(key,permission,agent)=>lease.acquire(key,permission,agent)});await members.initialize();
   let count=0;
-  const assign=(scopeId:string)=>service.dispatchTask({...identity,commandId:'dispatch-'+(++count),expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,goal:'读取实际状态并报告',acceptance:[{id:'fact',text:'核实当前状态'}],prerequisites:[]}},scopeId);
-  await service.goals.plan(identity,'source','old-main-run','source-plan',{expectedRevision:1,objective:'读取实际状态并报告',constraints:[],criteria:[{id:'fact',text:'核实当前状态',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,criterionIds:['fact'],reason:'明确负责岗位'}],reason:'保存实际业务来源计划'});
+  const assign=(scopeId:string)=>service.dispatchTask({...identity,commandId:'dispatch-'+(++count),expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,goal:'读取实际状态并报告',acceptance:[{id:'fact',text:'核实当前状态'}],prerequisites:[]}},scopeId);
+  await service.goals.plan(identity,'source','old-main-run','source-plan',{expectedRevision:1,objective:'读取实际状态并报告',constraints:[],criteria:[{id:'fact',text:'核实当前状态',kind:'evidence'}],assignments:[{agentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,criterionIds:['fact'],reason:'明确负责岗位'}],reason:'保存实际业务来源计划'});
   const assigned=await assign('source');let runId:string|undefined;
   const start=(taskId:string,permission:'read'|'ask'|'execute'='read')=>members.start({...identity,taskId,commandId:'start-'+randomUUID(),expectedRevision:1,options:{permission}});
   if(withRun){const run=await start(assigned.taskId);runId=run.runId;await members.waitForSettlement({...identity,taskId:assigned.taskId})}
@@ -42,7 +42,7 @@ async function setup(withRun=true){
   const report=await members.report({...identity,taskId:assigned.taskId,runId});
   const input={...identity,commandId:randomUUID(),source:{scopeId:'source',taskId:assigned.taskId,...(runId?{runId}:{}),reportBasis:report.basis.key},operation:'inspect_effects',observation:{text:'  已看到文件可能被修改\n请核实'},input:{message:'只读取当前产物，核实是否存在改动'},options:{profileId:randomUUID(),provider:'fixture',model:'fixture',permission:'read'}} satisfies RecoveryRequest;
   const launch=()=>({runId:randomUUID(),nativeSessionId:randomUUID(),excludedRunIds:['old-main-run']});
-  const plan=async(scopeId:string,runId:string)=>service.goals.plan(identity,scopeId,runId,'plan-'+randomUUID(),{expectedRevision:1,objective:'核实当前产物',constraints:['只读'],criteria:[{id:'fact',text:'核实当前状态',kind:'evidence'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,criterionIds:['fact'],reason:'读取产物'}],reason:'只读核实，不重放旧执行'});
+  const plan=async(scopeId:string,runId:string)=>service.goals.plan(identity,scopeId,runId,'plan-'+randomUUID(),{expectedRevision:1,objective:'核实当前产物',constraints:['只读'],criteria:[{id:'fact',text:'核实当前状态',kind:'evidence'}],assignments:[{agentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,criterionIds:['fact'],reason:'读取产物'}],reason:'只读核实，不重放旧执行'});
   return {...f,entry,workspace,identity,directory,store,storage,service,members,inspect,prepare,input,launch,report,assign,start,plan,mainJournals,cleanup:async()=>{await members.close();await service.close();await f.cleanup()}};
 }
 

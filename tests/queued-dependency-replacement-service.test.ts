@@ -21,7 +21,7 @@ async function setup(explicitWorkflow=false){
   const snapshot=await workspace.snapshot(),moduleId=team.input.moduleId,definition=JSON.parse(snapshot.files.find(file=>file.path===moduleId+'/module.json')!.text);
   definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
   await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:json(definition)}]));
-  const {model}=await registerServiceOwner(f.app,workspace,'cbim:executor',[moduleId]);
+  const {model}=await registerServiceOwner(f.app,workspace,'.cbim/team/dev',[moduleId]);
   const store=workspace.dispatchStore,directory=store.directory,logs=path.join(f.user,'member-logs'),storage=new FileRunStorage();
   const read=(run:DispatchRun)=>storage.read(path.join(logs,run.binding.taskId,run.binding.runId));
   const inspect=vi.fn(read),service=new WorkspaceDispatchService(workspace,store,{inspectMember:inspect,inspectMain:async()=>{throw Error('replacement must not read or run main')}},undefined,undefined,f.app.models);
@@ -29,7 +29,7 @@ async function setup(explicitWorkflow=false){
   await service.openScope(identity,scopeId,{message:'安全替换前置，保持下游身份'},mainRunId);
   const selected=explicitWorkflow?{workflowSelections:[{moduleId,workflowId:team.input.workflowId}]}:{};
   const ownerSelection=(await service.owners.discover([moduleId])).groups[0].selection!;
-  await service.goals.plan(identity,scopeId,mainRunId,'plan-one',{expectedRevision:1,objective:'核实业务',constraints:[],criteria:[{id:'c1',kind:'evidence',text:'可追溯的结果'}],assignments:[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,...selected,criterionIds:['c1'],reason:'独立执行'}],reason:'计划'});
+  await service.goals.plan(identity,scopeId,mainRunId,'plan-one',{expectedRevision:1,objective:'核实业务',constraints:[],criteria:[{id:'c1',kind:'evidence',text:'可追溯的结果'}],assignments:[{agentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,...selected,criterionIds:['c1'],reason:'独立执行'}],reason:'计划'});
   let failRun=true;
   const prepare=():PreparedEngine=>({model,create:async(_run,_task,hooks)=>{
       let context:EngineContext;
@@ -49,7 +49,7 @@ async function setup(explicitWorkflow=false){
       return new LoopRuntime({storage,directory:logs,createEngine:()=>engine,acquireLease:async()=>()=>{},onEngineReady:hooks.onEngineReady,onEvent:hooks.onEvent,toolPolicy:async call=>({allow:true,effects:[call.name==='read'?'read':'maintenance'],scope:{kind:'workspace',workspaceId:entry.id}})});
     }});
   const members=new MemberExecutionManager(workspace,store,{acquire:()=>()=>{},inspect:read,prepare:async()=>prepare(),owners:service.owners,withEngineConfiguration:(reference,_options,use)=>f.app.models.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare}))});await members.initialize();
-  const assign=async(commandId:string,prerequisites:{taskId:string;expectedPlanRevision:number}[]=[])=>service.dispatchTask({...identity,commandId,expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,...selected,goal:commandId,acceptance:[{id:'c1',text:'真实证据'}],prerequisites}},scopeId);
+  const assign=async(commandId:string,prerequisites:{taskId:string;expectedPlanRevision:number}[]=[])=>service.dispatchTask({...identity,commandId,expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,...selected,goal:commandId,acceptance:[{id:'c1',text:'真实证据'}],prerequisites}},scopeId);
   const execute=async(taskId:string)=>{await members.start({...identity,taskId,commandId:'start-'+taskId,expectedRevision:1,options:{permission:'read'}});await members.waitForSettlement({...identity,taskId})};
   const a=await assign('A'),b=await assign('B',[{taskId:a.taskId,expectedPlanRevision:1}]),c=await assign('C',[{taskId:b.taskId,expectedPlanRevision:1}]);
   await execute(a.taskId);failRun=false;const a2=await assign('A2');await execute(a2.taskId);

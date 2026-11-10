@@ -94,7 +94,7 @@ it('registers one real main instance per conversation root, keeps empty chats ta
   }finally{await f.cleanup();await local.close()}
 },90000);
 
-it('executes an explicitly registered builtin executor in a separate scoped instance, returns evidence to the original root and counts usage once',async()=>{
+it('executes an explicitly registered custom executor in a separate scoped instance, returns evidence to the original root and counts usage once',async()=>{
   const f=await fixture();
   const mainGoal='EXECUTOR_MAIN_REQUEST: 请核实业务模块文件并提交可验证结果';
   const executorGoal='EXECUTOR_BUSINESS_TASK: 读取 executor-input.txt 并记录事实';
@@ -106,8 +106,8 @@ it('executes an explicitly registered builtin executor in a separate scoped inst
     const isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true;
     const requests=isMain?mainRequests:taskRequests,turn=requests.length;requests.push(body);
     if(isMain){
-      if(turn===0)return {text:mainPrivate,tool:{id:'executor-goal-plan',name:'cbim_goal_plan',args:goalPlanArguments({objective:mainGoal,agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,acceptance})}};
-      if(turn===1)return {tool:{id:'dispatch-executor',name:'cbim_dispatch_task',args:{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,goal:executorGoal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]}}};
+      if(turn===0)return {text:mainPrivate,tool:{id:'executor-goal-plan',name:'cbim_goal_plan',args:goalPlanArguments({objective:mainGoal,agentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,acceptance})}};
+      if(turn===1)return {tool:{id:'dispatch-executor',name:'cbim_dispatch_task',args:{agentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,goal:executorGoal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]}}};
       if(turn===2)return {text:'已登记默认执行成员的正式业务任务，等待执行证据。'};
       if(turn===3)return {tool:{id:'executor-goal-inspect',name:'cbim_goal_inspect',args:{}}};
       if(turn===4)return {tool:{id:'executor-goal-review',name:'cbim_goal_review',args:goalCompleteArguments(body,'executor-goal-inspect')}};
@@ -122,14 +122,11 @@ it('executes an explicitly registered builtin executor in a separate scoped inst
   try{
     await configure(f,local.url);const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),team=await seedTeam(workspace);
     moduleId=team.input.moduleId;
-    const beforeDelete=await workspace.snapshot(),deletion=await team.call('cbim_object_preview',{revision:beforeDelete.revision,operations:[{kind:'agent',action:'delete',id:team.input.agentId,cascade:true}]});
-    await team.call('cbim_object_commit',{planId:deletion.planId},true);
-    expect((await workspace.snapshot()).files.some(file=>file.path.endsWith('/agent.json'))).toBe(false);
     const closeScope=vi.spyOn(f.app.memberDispatch(entry.id),'closeScope');
     const knowledge=await workspace.snapshot(),modulePath=moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);
     definition.maintenance={bindingId:'executor-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'executor-review',source:'local_user',confirmedAt:'2026-11-07T00:00:00.000Z'}};
     await workspace.commit(request(knowledge,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
-    ownerSelection=(await registerExplicitFixtureOwner(f.app,entry.id,{agentId:'cbim:executor',moduleIds:[moduleId],profileId:(await f.app.models.list()).selectedId!,modelId:'main-instance-fixture'})).selection;
+    ownerSelection=(await registerExplicitFixtureOwner(f.app,entry.id,{agentId:'.cbim/team/dev',moduleIds:[moduleId],profileId:(await f.app.models.list()).selectedId!,modelId:'main-instance-fixture'})).selection;
     await fs.writeFile(path.join(f.a,'executor-input.txt'),fact);
     const started=await f.app.dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'read',turnTimeoutMs:15000}}) as {taskId:string;runId:string};
     const history=await completedThread(f,entry.id,started.taskId,2),identity={workspaceId:entry.id,rootSessionId:started.taskId};
@@ -137,7 +134,7 @@ it('executes an explicitly registered builtin executor in a separate scoped inst
     const closed=await closeScope.mock.results[0].value;
     const graph=await f.app.dispatch('dispatch.graphSnapshot',{identity}) as GraphSnapshot;
     expect(graph.tasks).toHaveLength(1);const task=graph.tasks[0],binding=history[0].conversationBinding!;
-    expect(task).toMatchObject({goal:executorGoal,status:'result_ready',assignee:{agentId:'cbim:executor'},modules:[{moduleId}],result:{summary:candidate,evidenceRefs:['executor-read'],acceptance:'not_evaluated'}});
+    expect(task).toMatchObject({goal:executorGoal,status:'result_ready',assignee:{agentId:'.cbim/team/dev'},modules:[{moduleId}],result:{summary:candidate,evidenceRefs:['executor-read'],acceptance:'not_evaluated'}});
     expect(closed).toMatchObject({...identity,scopeId:task.scopeId,status:'closed',outcome:'completed',goal:{revision:3,review:{decision:'complete'}}});
     await expect(f.app.dispatch('dispatch.executionStart',{...identity,taskId:task.taskId,commandId:'cannot-revive-released-executor',expectedRevision:task.revision,options:{permission:'read'}})).rejects.toMatchObject({code:'MEMBER_RELEASED'});
     expect(binding.agentInstanceId).toBe(graph.root.agent.agentInstanceId);expect(task.assignee.agentInstanceId).not.toBe(graph.root.agent.agentInstanceId);expect(task.assignee.agentSessionId).not.toBe(graph.root.agent.agentSessionId);
@@ -147,7 +144,7 @@ it('executes an explicitly registered builtin executor in a separate scoped inst
     expect(history[1].source).toMatchObject({kind:'member-results',taskIds:[task.taskId]});
     expect(JSON.stringify(history[1].events.filter(event=>event.type==='message'))).toContain('主会话收到执行成员结果：'+fact);
     const member=await f.app.dispatch('dispatch.executionInspect',{...identity,taskId:task.taskId}) as MemberExecutionView;
-    expect(member.runs).toHaveLength(1);expect(member.runs[0]).toMatchObject({status:'completed',permission:'read',binding:{agentId:'cbim:executor',agentInstanceId:task.assignee.agentInstanceId,agentSessionId:task.assignee.agentSessionId,rootSessionId:started.taskId}});
+    expect(member.runs).toHaveLength(1);expect(member.runs[0]).toMatchObject({status:'completed',permission:'read',binding:{agentId:'.cbim/team/dev',agentInstanceId:task.assignee.agentInstanceId,agentSessionId:task.assignee.agentSessionId,rootSessionId:started.taskId}});
     const memberRun=await new FileRunStorage().read(path.join(f.user,entry.id,'dispatch','runs','tasks',task.taskId,member.runs[0].binding.runId));
     expect(memberRun.conversationBinding).toBeUndefined();expect(memberRun.memberBinding).toEqual(member.runs[0].binding);
     expect(memberRun.sessionFile).not.toBe(history[0].sessionFile);

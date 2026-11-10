@@ -26,10 +26,10 @@ it.each(['goal','dispatch'] as const)('真实 %s 事务提交后的坏回包只�
       const team=await seedTeam(workspace),snapshot=await workspace.snapshot(),file=team.input.moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(item=>item.path===file)!.text);
       definition.maintenance={bindingId:'contract-maintenance',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'contract-confirm',source:'local_user',confirmedAt:'2026-11-07T00:00:00.000Z'}};
       await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:file,text:json(definition)}]));modules=[team.input.moduleId];
-      await registerServiceOwner(f.app,workspace,'cbim:executor',modules);
+      await registerServiceOwner(f.app,workspace,'.cbim/team/dev',modules);
       ownerSelection=(await service.owners.discover(modules)).groups[0].selection!;
     }
-    const plan:GoalPlanInput={expectedRevision:1,objective:'核实产物',constraints:[],criteria:[{id:'c1',text:'提交可核实的事实',kind:'evidence'}],assignments:[{agentId:kind==='goal'?'cbim:main':'cbim:executor',moduleIds:modules,...(ownerSelection?{ownerSelection}:{}),criterionIds:['c1'],reason:'按真实职责安排'}],reason:'形成当前目标计划'};
+    const plan:GoalPlanInput={expectedRevision:1,objective:'核实产物',constraints:[],criteria:[{id:'c1',text:'提交可核实的事实',kind:'evidence'}],assignments:[{agentId:kind==='goal'?'cbim:main':'.cbim/team/dev',moduleIds:modules,...(ownerSelection?{ownerSelection}:{}),criterionIds:['c1'],reason:'按真实职责安排'}],reason:'形成当前目标计划'};
     const savePlan=vi.fn(async(input:GoalPlanInput,call:{toolCallId:string})=>{
       const saved=await service.goals.plan(identity,binding.scopeId,binding.runId,mainToolCommandId('cbim_goal_plan',binding,call.toolCallId)!,input);
       return {...projectMainScope(saved),scopeId:undefined};
@@ -43,7 +43,7 @@ it.each(['goal','dispatch'] as const)('真实 %s 事务提交后的坏回包只�
     if(kind==='goal')await expect(tools.call('cbim_goal_plan',plan,signal,'original-call')).rejects.toMatchObject({code:'TOOL_OUTPUT_INVALID'});
     else{
       await service.goals.plan(identity,binding.scopeId,binding.runId,'setup-plan',plan);
-      await expect(tools.call('cbim_dispatch_task',{agentId:'cbim:executor',ownerSelection,moduleIds:modules,goal:plan.objective,acceptance:[{id:'c1',text:'提交可核实的事实'}]},signal,'original-call')).rejects.toMatchObject({code:'TOOL_OUTPUT_INVALID'});
+      await expect(tools.call('cbim_dispatch_task',{agentId:'.cbim/team/dev',ownerSelection,moduleIds:modules,goal:plan.objective,acceptance:[{id:'c1',text:'提交可核实的事实'}]},signal,'original-call')).rejects.toMatchObject({code:'TOOL_OUTPUT_INVALID'});
     }
     const state=await store.read(),log=path.join(directory,'dispatch.jsonl'),bytes=await fs.readFile(log);
     expect(state.scopes![0].goal?.revision).toBe(2);expect(state.graphs[0].tasks).toHaveLength(kind==='dispatch'?1:0);expect(state.outbox).toHaveLength(kind==='dispatch'?1:0);expect(state.runs).toEqual([]);

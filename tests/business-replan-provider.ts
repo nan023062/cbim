@@ -37,7 +37,7 @@ export async function businessReplanProvider(options:{holdBusiness?:boolean;hold
     const dispatch=(id:string,goal:string)=>tool(id,'cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
     const plan=(id:string,goal:string)=>tool(id,'cbim_goal_plan',goalPlanArguments({objective:goal,agentId,ownerSelection,moduleIds:[moduleId],acceptance}));
     if(isMain){
-      assert.ok(body.tools?.every(item=>!['write','edit','bash'].includes(item.function.name)),'主Agent始终只调度，不直接执行业务');
+      assert.ok(body.tools?.every(item=>!['cbim_task_help','cbim_task_checkpoint'].includes(item.function.name)),'主 Agent 可按权限执行业务，但不能提交成员检查点或求助');
       if(turn===0)plan('old-plan',d.oldGoal);
       else if(turn===1)dispatch('old-dispatch',d.oldMemberGoal);
       else if(turn===2)reply('旧业务已派发。'+d.oldSecret);

@@ -15,7 +15,7 @@ async function setup(){
   return {...f,seed,workspace,service,store,identity,scopeId,runId,selection,input,request};
 }
 
-test('发现同时给出能力与模型变化，空项目同时说明岗位入口及未核实项且不产生选择',async()=>{
+test('发现同时给出能力与模型变化，未配置模块默认主执行且真实缺失模块仍报告',async()=>{
   const f=await setup();try{
     const snapshot=await f.workspace.snapshot(),file=f.seed.team.input.agentId+'/principles.md';
     const original=snapshot.files.find(item=>item.path===file)!.text;
@@ -25,16 +25,16 @@ test('发现同时给出能力与模型变化，空项目同时说明岗位入�
     expect(group.issues.map(issue=>issue.code)).toEqual(expect.arrayContaining(['OWNER_CAPABILITY_CHANGED','OWNER_MODEL_CHANGED']));expect(group.selection).toBeUndefined();expect(await f.store.read()).toEqual(before);
     const other=await f.app.dispatch('add',{path:f.b}),empty=f.app.memberDispatch(other.id);
     const missing=await empty.owners.discover(['.cbim/workspace/chess']);
-    const codes=missing.groups[0].issues.map(issue=>issue.code);expect(codes).toEqual(expect.arrayContaining(['OWNER_UNASSIGNED','OWNER_MEMBER_REQUIRED','OWNER_MODEL_UNRESOLVED']));
-    expect(missing.groups[0].issues.some(issue=>issue.message.includes('团队架构 → 项目岗位 → 登记项目岗位'))).toBe(true);
-    expect(missing.groups[0].issues.length).toBeGreaterThan(3);expect(missing.groups[0].selection).toBeUndefined();expect(JSON.stringify(missing)).not.toContain('MAINTAINER_UNCONFIRMED');
+    const codes=missing.groups[0].issues.map(issue=>issue.code);expect(codes).toEqual(['MODULE_MISSING']);expect(missing.groups[0]).toMatchObject({execution:'main',agentId:'cbim:main'});
+    expect(missing.groups[0].memberId).toBeUndefined();
+    expect(missing.groups[0].selection).toBeUndefined();expect(JSON.stringify(missing)).not.toContain('MAINTAINER_UNCONFIRMED');
   }finally{await f.cleanup()}
 });
 
 test('同静态Agent的岗位分组不合并，原任务只读对照保持原绑定和岗位名',async()=>{
   const f=await setup();try{
     const discovery=await f.service.owners.discover([...f.seed.modules,f.seed.extraModule,'.cbim/workspace']);
-    expect(discovery.groups.filter(group=>group.selection)).toHaveLength(2);expect(discovery.groups.find(group=>group.moduleIds.includes('.cbim/workspace'))?.issues[0].code).toBe('OWNER_UNASSIGNED');
+    expect(discovery.groups.filter(group=>group.selection)).toHaveLength(2);expect(discovery.groups.find(group=>group.moduleIds.includes('.cbim/workspace'))?.issues[0].code).toBe('MODULE_MISSING');
     expect(discovery.groups.find(group=>group.moduleIds.includes(f.seed.modules[0]))?.moduleIds).toEqual([f.seed.modules[0],f.seed.extraModule]);
     await f.service.goals.plan(f.identity,f.scopeId,f.runId,'plan',f.input);const receipt=await f.service.dispatchTask(f.request,f.scopeId),task=(await f.service.snapshot(f.identity)).tasks.find(item=>item.taskId===receipt.taskId)!;
     expect(task.assignee.name).toBe(f.seed.positions[0].member.name);expect(ownerExecutionSelectionFor(task.ownerBinding!)).toEqual(f.selection);

@@ -5,7 +5,7 @@ import http from 'node:http';
 import {randomUUID} from 'node:crypto';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {moduleOwnershipDetailSchema,moduleOwnershipPreviewSchema} from '../src/backend/core/workspace/module-ownership';
-import {fixture,request} from './helpers';
+import {fixture,request,summary} from './helpers';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
@@ -35,11 +35,12 @@ it('按静态角色聚合真实主会话和独立执行通道，释放及删除�
     const models=await f.app.models.save({profile:{name:'History fixture',api:'openai-completions',baseUrl:`http://127.0.0.1:${(server.address() as any).port}/v1`,auth:'none',defaultModel:'history-model',models:[{id:'history-model',name:'History',enabled:true,contextWindow:65536,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
     const profile=models.profiles.find(item=>item.name==='History fixture')!;
     const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),team=await seedTeam(workspace);
+    const created=await team.call('cbim_object_preview',{revision:(await workspace.snapshot()).revision,operations:[{kind:'agent',action:'create',parentId:'.cbim/team',slug:'history-helper',data:{name:'历史核验员',summary,capabilities:['核实']},body:'# 工作原则\n核实实际结果。'}]});await team.call('cbim_object_commit',{planId:created.planId},true);
     await fs.writeFile(path.join(f.a,'artifact.txt'),secretToolBody);
     const snapshot=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
     definition.maintenance={bindingId:'history-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'history-review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
     await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
-    await registerExplicitFixtureOwner(f.app,entry.id,{agentId:'cbim:executor',moduleIds:[team.input.moduleId],profileId:profile.id,modelId:'history-model'});
+    await registerExplicitFixtureOwner(f.app,entry.id,{agentId:'.cbim/team/history-helper',moduleIds:[team.input.moduleId],profileId:profile.id,modelId:'history-model'});
     const manager=f.app.execution(entry.id),dispatch=f.app.memberDispatch(entry.id),members=f.app.memberExecution(entry.id);
     const waitMain=async(run:{taskId:string;runId:string})=>{
       await expect.poll(async()=>(await manager.inspect(run.taskId,run.runId)).status,{timeout:15000}).toBe('completed');
@@ -49,7 +50,7 @@ it('按静态角色聚合真实主会话和独立执行通道，释放及删除�
     const second=await f.app.dispatch('loop.chat',{id:entry.id,message:'HISTORY_ROOT_B：独立核实项目',options:{permission:'read',turnTimeoutMs:15000}}) as {taskId:string;runId:string};await waitMain(second);
     const continued=await f.app.dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:first.runId,message:'HISTORY_ROOT_A_CONTINUED：继续核实',options:{permission:'read',turnTimeoutMs:15000}}) as {taskId:string;runId:string};await waitMain(continued);
     const assigned=[] as {agentId:string;taskId:string;runId:string;rootSessionId:string}[];
-    for(const [agentId,rootSessionId,suffix] of [['cbim:executor',first.taskId,'default'],[team.input.agentId,second.taskId,'custom'],[team.input.agentId,first.taskId,'custom-another-root']] as const){
+    for(const [agentId,rootSessionId,suffix] of [['.cbim/team/history-helper',first.taskId,'default'],[team.input.agentId,second.taskId,'custom'],[team.input.agentId,first.taskId,'custom-another-root']] as const){
       if(suffix==='custom'){
         const control={workspaceId:entry.id,instanceId:workspace.instanceId},current=moduleOwnershipDetailSchema.parse(await f.app.dispatch('workspace.ownerships.get',{...control,moduleId:team.input.moduleId})).view.binding!;
         const change={moduleId:team.input.moduleId,expectedBinding:{bindingId:current.bindingId,revision:current.revision,ownerMemberId:current.ownerMemberId},nextOwner:null,reason:'History fixture explicitly transfers responsibility to the custom position'};
@@ -82,7 +83,7 @@ it('按静态角色聚合真实主会话和独立执行通道，释放及删除�
     try{
       const roleList=await roles();expect(roleList.roles.filter(role=>role.agentId==='cbim:main')).toHaveLength(1);
       expect(roleList.roles.find(role=>role.agentId==='cbim:main')).toMatchObject({sessionCount:2,runCount:3});
-      expect(roleList.roles.find(role=>role.agentId==='cbim:executor')).toMatchObject({sessionCount:1,runCount:1});
+      expect(roleList.roles.find(role=>role.agentId==='.cbim/team/history-helper')).toMatchObject({sessionCount:1,runCount:1});
       expect(roleList.roles.find(role=>role.agentId===team.input.agentId)).toMatchObject({sessionCount:2,runCount:2});
       const firstPage=await sessions('cbim:main');expect(firstPage.items).toHaveLength(1);expect(firstPage.nextCursor).toBeTruthy();
       expect(await sessions('cbim:main')).toEqual(firstPage);
@@ -94,7 +95,7 @@ it('按静态角色聚合真实主会话和独立执行通道，释放及删除�
       const runPage=await runs('cbim:main',mainA.sessionId);expect(runPage.nextCursor).toBeTruthy();
       const nextRun=await runs('cbim:main',mainA.sessionId,runPage.nextCursor);
       expect(new Set([...runPage.items,...nextRun.items].map(item=>item.runId))).toEqual(new Set([first.runId,continued.runId]));expect(nextRun.nextCursor).toBeUndefined();
-      await expect(sessions('cbim:executor',firstPage.nextCursor)).rejects.toMatchObject({code:'AGENT_HISTORY_CURSOR'});
+      await expect(sessions('.cbim/team/history-helper',firstPage.nextCursor)).rejects.toMatchObject({code:'AGENT_HISTORY_CURSOR'});
       const customPage=await sessions(team.input.agentId),otherCustomPage=await sessions(team.input.agentId,customPage.nextCursor);
       const customSessions=[...customPage.items,...otherCustomPage.items];
       expect(new Set(customSessions.map(item=>item.sessionId)).size).toBe(2);

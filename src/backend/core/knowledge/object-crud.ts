@@ -2,10 +2,12 @@
  * 作用定位：Core 对象治理：规划 Agent/Module/Skill/Workflow 变更，按计划提交受控事务。
  * 设计原因：领域语义归 Core，事务通过 KnowledgeWorkspace 契约执行，维护路径、清单及父子引用；Workflow 显式条件在预览前严格解析，提交仍重新走完整知识校验。
  * 模块、岗位和执行权限分别治理；对象预览不再登记真人或生成旧维护确认，已有历史字段只随原对象保留。
+ * 静态 Agent 可保存本机默认 runtime 选型，模型身份来自设置；这不改变已登记岗位的采纳或运行权限。
  */
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
+import {agentModelSelectionSchema} from '../brain/llm/engine';
 import type {KnowledgeWorkspace,KnowledgeCommit} from './ports';
 import {fail} from '../foundation/errors';
 import {json} from '../foundation/serialization';
@@ -18,7 +20,7 @@ import {knowledgePlanHash,type ResolvedObjectOperation} from './planned-commit';
 const fields={name:z.string().min(1).optional(),summary:z.string().optional(),authors:z.array(z.string()).optional(),capabilities:z.array(z.string()).optional(),limitations:z.array(z.string()).optional(),connectors:z.array(z.string()).optional(),sources:z.array(z.object({location:z.string(),scope:z.string()}).strict()).optional(),purpose:z.string().optional()};
 /** Schema 与实际写字段共用定义；模块 name 来自目录 slug，中文显示名写在正文 H1。 */
 export const objectDataSchemas={
-  agent:z.object({name:fields.name,summary:fields.summary,authors:fields.authors,capabilities:fields.capabilities,limitations:fields.limitations,connectors:fields.connectors}).strict(),
+  agent:z.object({runtime:agentModelSelectionSchema.nullable().optional(),name:fields.name,summary:fields.summary,authors:fields.authors,capabilities:fields.capabilities,limitations:fields.limitations,connectors:fields.connectors}).strict(),
   module:z.object({summary:fields.summary,authors:fields.authors,sources:fields.sources,connectors:fields.connectors}).strict().describe('name 固定为目录 slug，不可在 data 修改；中文模块名写在 body 的一级标题（# 中文名称）。'),
   skill:z.object({name:fields.name,purpose:fields.purpose}).strict(),workflow:z.object({name:fields.name}).strict(),
 };

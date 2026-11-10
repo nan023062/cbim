@@ -1,6 +1,6 @@
 import {expect,test} from 'vitest';
 import type {Snapshot} from '../src/bridge/contracts/workspace';
-import {availableTeamSkills,buildTeamModel,MAIN_AGENT,DEFAULT_EXECUTOR,TEAM_ROOT,visibleTeamNodes} from '../src/frontend/team/team-model';
+import {availableTeamSkills,buildTeamModel,MAIN_AGENT,TEAM_ROOT,visibleTeamNodes} from '../src/frontend/team/team-model';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {TeamView} from '../src/frontend/team/TeamView';
@@ -18,7 +18,7 @@ function fixture(){return snapshot({
 test('empty team retains two static read-only builtin roles and no fake custom agents',()=>{
   const model=buildTeamModel(undefined,'Project');
   expect(model.nodes[TEAM_ROOT].kind).toBe('team');expect(model.nodes[TEAM_ROOT].name).toBe('Project');
-  expect(model.nodes[TEAM_ROOT].children).toEqual([MAIN_AGENT,DEFAULT_EXECUTOR]);expect(model.nodes[MAIN_AGENT].kind).toBe('builtin');expect(model.nodes[DEFAULT_EXECUTOR].kind).toBe('builtin');
+  expect(model.nodes[TEAM_ROOT].children).toEqual([MAIN_AGENT]);expect(model.nodes[MAIN_AGENT].kind).toBe('builtin');expect(model.nodes['cbim:executor']).toBeUndefined();
   expect(availableTeamSkills(model,MAIN_AGENT)).toEqual([]);
 });
 test('static snapshot preserves owner identities, principles and the complete Skill parent chain',()=>{
@@ -29,7 +29,7 @@ test('static snapshot preserves owner identities, principles and the complete Sk
     ['playtest',agentId,false,true],['design',TEAM_ROOT+'/design',true,true],['shared',TEAM_ROOT,true,true],
   ]);
   expect(availableTeamSkills(model,MAIN_AGENT).map(item=>[item.name,item.inherited])).toEqual([['shared',true]]);
-  expect(availableTeamSkills(model,DEFAULT_EXECUTOR).map(item=>[item.name,item.inherited])).toEqual([['shared',true]]);
+  expect(availableTeamSkills(model,MAIN_AGENT).map(item=>[item.name,item.inherited])).toEqual([['shared',true]]);
 });
 test('searching Skill or limitations retains ancestors but not unrelated groups',()=>{
   const model=buildTeamModel(fixture(),'Project');
@@ -57,10 +57,10 @@ test('team root cannot be edited or deleted and a different workspace snapshot i
 });
 test('project tree hides builtins without changing the complete role model or inherited skills',()=>{
   const model=buildTeamModel(fixture(),'Project'),before=structuredClone(model);
-  const visible=visibleTeamNodes(model,'',false);expect(visible.has(MAIN_AGENT)).toBe(false);expect(visible.has(DEFAULT_EXECUTOR)).toBe(false);expect(visible.has(agentId)).toBe(true);expect(visible.has(TEAM_ROOT+'/design')).toBe(true);
+  const visible=visibleTeamNodes(model,'',false);expect(visible.has(MAIN_AGENT)).toBe(false);expect(visible.has('cbim:executor')).toBe(false);expect(visible.has(agentId)).toBe(true);expect(visible.has(TEAM_ROOT+'/design')).toBe(true);
   expect(visibleTeamNodes(model,'cbim:executor',false).size).toBe(0);
   expect([...visibleTeamNodes(model,'playtest',false)]).toEqual([agentId,TEAM_ROOT+'/design',TEAM_ROOT]);
-  expect(availableTeamSkills(model,DEFAULT_EXECUTOR).map(item=>item.name)).toEqual(['shared']);expect(model).toEqual(before);
+  expect(availableTeamSkills(model,MAIN_AGENT).map(item=>item.name)).toEqual(['shared']);expect(model).toEqual(before);
 });
 test('team tree includes empty and reference-only groups confirmed by the same snapshot registry',()=>{
   const data=fixture();data.validation={indexes:{[TEAM_ROOT+'/registry.json']:JSON.stringify({groups:[{id:TEAM_ROOT+'/empty'},{id:TEAM_ROOT+'/research/notes'}]})},issues:[],tree:{nodes:{},roots:[]},structural:true,architecture:'review-required',business:'not-run'};

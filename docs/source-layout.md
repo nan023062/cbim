@@ -10,7 +10,7 @@ src/
     core/               核心领域、大脑和共享机制
       foundation/         错误、标识、JSON、哈希、路径端口及最小文件原语
       governance/         模块知识治理的纯协议、观察依据和保护规则
-      brain/              执行循环；llm/ 模型契约；pi/ 引擎适配
+      brain/              公共执行循环；llm/ 模型与请求预算；pi/、claude/、codex/ 原生适配
       connectors/         链接器定义
       knowledge/          知识类型、只读快照、规则、查询、CRUD 规划与存储端口
       policy/             当前权限与人工确认契约

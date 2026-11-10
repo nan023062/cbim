@@ -37,11 +37,11 @@ export function useInlineModuleOwners(identity:ModuleOwnershipIdentity|undefined
   return {data,choices:inlineOwnerChoices(agents,data?.members??[]),disabled:!data||loading||blocked,loading,blocked,error:error||controllers?.members.snapshot.error||controllers?.ownerships.snapshot.error,message,choose,refresh};
 }
 export type InlineModuleOwners=ReturnType<typeof useInlineModuleOwners>;
-/** 当前值只取已核实关系；提交中不乐观切换，历史缺失岗位仍显示原身份且可明确解除。 */
+/** 未配置自定义岗位时显示主 Agent 默认责任；提交中不乐观切换，旧内置岗位显示主 Agent 默认责任，其他历史缺失岗位仍显示原身份且可明确解除。 */
 export function InlineModuleOwner({moduleId,name,owners}:{moduleId:string;name:string;owners:InlineModuleOwners}){
-  const view=owners.data?.views.find(item=>item.moduleId===moduleId),value=view?.binding?.ownerMemberId?'member:'+view.binding.ownerMemberId:'';
-  return <label className="module-owner-inline"><Icon name="team" size={15}/><select aria-label={name+' 负责人'} value={value} disabled={owners.disabled} title="选择即保存；新岗位采用模型设置中的默认模型，已有岗位保留原配置。" onChange={event=>void owners.choose(moduleId,event.target.value)}>
-    <option value="">{owners.loading?'正在读取负责人…':'未设置负责人'}</option>
+  const view=owners.data?.views.find(item=>item.moduleId===moduleId),value=view?.binding?.ownerMemberId&&view.owner?.agentId!=='cbim:executor'?'member:'+view.binding.ownerMemberId:'';
+  return <label className="module-owner-inline"><Icon name="team" size={15}/><select aria-label={name+' 负责人'} value={value} disabled={owners.disabled} title="默认由主 Agent 执行；选择自定义 Agent 后保存分工，新岗位采用模型设置中的默认模型。" onChange={event=>void owners.choose(moduleId,event.target.value)}>
+    <option value="">{owners.loading?'正在读取负责人…':'主 Agent（默认）'}</option>
     {value&&!owners.choices.some(option=>option.value===value)&&<option value={value} disabled>{view?.owner?.name??'原负责人'}（当前不可用）</option>}
     {owners.choices.map(option=><option key={option.value} value={option.value} disabled={option.disabled}>{option.label}</option>)}
   </select></label>;

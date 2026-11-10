@@ -44,6 +44,33 @@ async function setup(){
   return {...f,entry,workspace,directory,memberDirectory,store,service,identity,scope,journal,task,runId,emitTool,commit,setSummary:(value:RunSummary)=>{summary=value},cleanup:async()=>{await store.close();await f.cleanup()}};
 }
 
+it('主 Agent 默认执行项目根，真实业务回执完成目标且不创建成员或岗位',async()=>{
+  const f=await setup();try{
+    const input=plan();input.assignments[0].moduleIds=['cbim:project'];
+    await f.service.goals.plan(f.identity,f.scope.scopeId,f.runId,'direct-plan',input);
+    await f.emitTool({id:'direct-read',name:'read',input:{path:'input.txt'}},{allow:true,effects:['read'],scope:{kind:'workspace',workspaceId:f.entry.id}},{content:[{type:'text',text:'actual verification'}]});
+    const draft=review();draft.checks[0].evidence=[{kind:'main-execution',toolCallIds:['direct-read']}];
+    await f.service.goals.review(f.identity,f.scope.scopeId,f.runId,'direct-review',draft);
+    await f.journal.append({type:'run.settled',data:{status:'completed'}});
+    await f.service.closeScope(f.identity,f.scope.scopeId,'completed',await RunJournal.read(f.journal.directory));
+    const state=await f.store.read();expect(state.graphs[0].tasks).toEqual([]);expect(state.workspaceMembers??[]).toEqual([]);expect(state.moduleOwnerships??[]).toEqual([]);
+    expect(state.scopes![0]).toMatchObject({status:'closed',outcome:'completed'});
+  }finally{await f.cleanup()}
+});
+
+it.each(['missing','knowledge','human','stale'])('主执行证据不能伪造、混入知识/人工或跨过后续副作用：%s',async mode=>{
+  const f=await setup();try{
+    const input=plan();if(mode==='human')input.criteria[0].kind='human';
+    await f.service.goals.plan(f.identity,f.scope.scopeId,f.runId,'direct-plan',input);
+    if(mode==='knowledge')await f.commit();
+    else if(mode!=='missing')await f.emitTool({id:'direct-read',name:'read',input:{path:'input.txt'}},{allow:true,effects:['read'],scope:{kind:'workspace',workspaceId:f.entry.id}},{content:[{type:'text',text:'actual verification'}]});
+    if(mode==='stale')await f.emitTool({id:'later-write',name:'write',input:{path:'input.txt',content:'changed'}},{allow:true,effects:['business-write'],scope:{kind:'workspace',workspaceId:f.entry.id}},{content:[{type:'text',text:'written'}]});
+    const draft=review();draft.checks[0].evidence=[{kind:'main-execution',toolCallIds:[mode==='knowledge'?'commit-one':'direct-read']}];
+    await expect(f.service.goals.review(f.identity,f.scope.scopeId,f.runId,'direct-review',draft)).rejects.toMatchObject({code:mode==='human'?'GOAL_HUMAN_REQUIRED':mode==='stale'?'GOAL_EVIDENCE_STALE':'GOAL_EVIDENCE_INVALID'});
+    expect((await f.service.goals.inspect(f.identity,f.scope.scopeId)).goal!.review).toBeUndefined();
+  }finally{await f.cleanup()}
+});
+
 it('主目标与任务图查询只读取一次权威派发快照，不拼接分开的周期和图版本',async()=>{
   const f=await setup();try{
     await f.service.goals.plan(f.identity,f.scope.scopeId,f.runId,'inspect-plan',plan());
@@ -76,13 +103,13 @@ it('计划校验真实执行角色和模块，派发必须匹配计划及当前�
     const team=await seedTeam(f.workspace),snapshot=await f.workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
     definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
     await f.workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
-    await registerServiceOwner(f.app,f.workspace,'cbim:executor',[team.input.moduleId]);const ownerSelection=(await f.service.owners.discover([team.input.moduleId])).groups[0].selection!;
-    const draft=plan(),input={...f.identity,commandId:'dispatch-good',expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[team.input.moduleId],ownerSelection,goal:'验证模块',acceptance:[{id:'c1',text:'真实证据'}],prerequisites:[]}};
+    await registerServiceOwner(f.app,f.workspace,'.cbim/team/dev',[team.input.moduleId]);const ownerSelection=(await f.service.owners.discover([team.input.moduleId])).groups[0].selection!;
+    const draft=plan(),input={...f.identity,commandId:'dispatch-good',expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[team.input.moduleId],ownerSelection,goal:'验证模块',acceptance:[{id:'c1',text:'真实证据'}],prerequisites:[]}};
     await expect(f.service.dispatchTask(input,f.scope.scopeId)).rejects.toMatchObject({code:'GOAL_PLAN_REQUIRED'});
     await expect(f.service.goals.plan(f.identity,f.scope.scopeId,f.runId,'missing-agent',{...draft,assignments:[{...draft.assignments[0],agentId:'unknown',moduleIds:[team.input.moduleId],ownerSelection}]})).rejects.toMatchObject({code:'AGENT_MISSING'});
-    draft.assignments=[{...draft.assignments[0],agentId:'cbim:executor',moduleIds:[team.input.moduleId],ownerSelection}];
+    draft.assignments=[{...draft.assignments[0],agentId:'.cbim/team/dev',moduleIds:[team.input.moduleId],ownerSelection}];
     const planned=await f.service.goals.plan(f.identity,f.scope.scopeId,f.runId,'plan-executor',draft);
-    await expect(f.service.dispatchTask({...input,commandId:'wrong-agent',task:{...input.task,assigneeAgentId:team.input.agentId}},f.scope.scopeId)).rejects.toMatchObject({code:'OWNER_AGENT_MISMATCH'});
+    await expect(f.service.dispatchTask({...input,commandId:'wrong-agent',task:{...input.task,assigneeAgentId:'different-agent'}},f.scope.scopeId)).rejects.toMatchObject({code:'OWNER_AGENT_MISMATCH'});
     await f.service.dispatchTask(input,f.scope.scopeId);
     expect((await f.service.goals.inspect(f.identity,f.scope.scopeId)).goal!.revision).toBe(2);
     await f.commit();
@@ -202,8 +229,8 @@ it('真实成员失败必须由后续成功候选替代，知识变更后旧候�
     const team=await seedTeam(f.workspace),snapshot=await f.workspace.snapshot(),moduleId=team.input.moduleId,definition=JSON.parse(snapshot.files.find(file=>file.path===moduleId+'/module.json')!.text);
     definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
     await f.workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:json(definition)}]));
-    const {model}=await registerServiceOwner(f.app,f.workspace,'cbim:executor',[moduleId]),ownerSelection=(await f.service.owners.discover([moduleId])).groups[0].selection!;
-    const draft=plan();draft.assignments=[{agentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,criterionIds:['c1'],reason:'真实执行验证'}];
+    const {model}=await registerServiceOwner(f.app,f.workspace,'.cbim/team/dev',[moduleId]),ownerSelection=(await f.service.owners.discover([moduleId])).groups[0].selection!;
+    const draft=plan();draft.assignments=[{agentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,criterionIds:['c1'],reason:'真实执行验证'}];
     await f.service.goals.plan(f.identity,f.scope.scopeId,f.runId,'member-plan',draft);
     let failRun=true;
     const storage=new FileRunStorage();
@@ -226,7 +253,7 @@ it('真实成员失败必须由后续成功候选替代，知识变更后旧候�
       }});
     members=new MemberExecutionManager(f.workspace,f.store,{acquire:()=>()=>{},inspect:run=>storage.read(path.join(f.memberDirectory,run.binding.taskId,run.binding.runId)),prepare:async()=>prepare(),owners:f.service.owners,withEngineConfiguration:(reference,_options,use)=>f.app.models.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare}))});await members.initialize();
     const execute=async(commandId:string)=>{
-      const receipt=await f.service.dispatchTask({...f.identity,commandId,expectedParentRevision:1,task:{assigneeAgentId:'cbim:executor',moduleIds:[moduleId],ownerSelection,goal:'验证业务实现',acceptance:[{id:'c1',text:'提供真实证据'}],prerequisites:[]}},f.scope.scopeId);
+      const receipt=await f.service.dispatchTask({...f.identity,commandId,expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,goal:'验证业务实现',acceptance:[{id:'c1',text:'提供真实证据'}],prerequisites:[]}},f.scope.scopeId);
       await members!.start({...f.identity,taskId:receipt.taskId,commandId:'start-'+commandId,expectedRevision:1,options:{permission:'read'}});
       await members!.waitForSettlement({...f.identity,taskId:receipt.taskId});return (await f.service.snapshot(f.identity)).tasks.find(task=>task.taskId===receipt.taskId)!;
     };

@@ -2,6 +2,7 @@
  * 作用定位：把工作区静态团队能力或完整业务架构转为可复用资源包，并纯计算目标知识变更。
  * 设计原因：包只携带定义与闭合正文引用，人员、维护授权、源码定位和连接器绑定必须在目标项目重新建立；运行实例与主会话任务图不属于可复用架构。
  * 职责边界：不读取磁盘、不写知识、不授予权限。Workflow 条件随原正文保留并独立严格解析；完整目标 Schema/目录与引用规则仍由 KnowledgeWorkspace.preview/commit 统一验证。
+ * 可复用 Team/Agent 包剔除本机 runtime 引用，避免把无效供应商身份带到另一台机器。
  */
 import path from 'node:path';
 import {z} from 'zod';
@@ -103,13 +104,13 @@ export function buildWorkspacePackage(snapshot:Snapshot,selection:PackageSelecti
     for(const group of [{id:'.cbim/team'},...groups])if(!source.has(group.id+'/skills.json'))source.set(group.id+'/skills.json',json({skills:[]}));
     for(const [from,text] of source)if(from.startsWith(scope+'/')&&(from.endsWith('/agent.json')||from.endsWith('/skills.json'))){
       const data=parseJson(text),owner=pp.dirname(from),to='team'+from.slice(scope.length);
-      if(from.endsWith('/agent.json')){data.authors=[];data.connectors=[];const target=localReference(owner,data.work_principles);check(target,'原则必须是静态正文');enqueue(target,'team'+target.slice(scope.length))}
+      if(from.endsWith('/agent.json')){delete data.runtime;data.authors=[];data.connectors=[];const target=localReference(owner,data.work_principles);check(target,'原则必须是静态正文');enqueue(target,'team'+target.slice(scope.length))}
       put(from,to,json(data));addInventory(owner,pp.dirname(to),data);
     }
   }else if(selection.kind==='agent'){
     const id=selection.objectId;check(id&&id.startsWith(scope+'/')&&cleanPath(id),'发布 Agent 必须指定当前团队的角色对象');const data=get(id+'/agent.json');
     const principles=localReference(id,data.work_principles);check(principles,'Agent 原则入口无效');enqueue(principles,'agent/principles.md');
-    data.authors=[];data.connectors=[];data.work_principles='principles.md';data.skills=[];
+    delete data.runtime;data.authors=[];data.connectors=[];data.work_principles='principles.md';data.skills=[];
     for(const item of snapshot.validation!.skills?.[id]?.entries??[]){const slug=pp.basename(pp.dirname(item.reference));const reference='skills/'+slug+'/SKILL.md';data.skills.push({name:item.name,purpose:item.purpose,reference});enqueue(item.reference,'agent/'+reference)}
     put(id+'/agent.json','agent/agent.json',json(data));
   }else if(selection.kind==='skill'){

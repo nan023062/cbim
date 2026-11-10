@@ -23,7 +23,7 @@ export async function humanContinuationProvider(mode:HumanContinuationMode='acce
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'human-continuation-'+sequence.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}],...(finish_reason?{usage:{prompt_tokens:7,completion_tokens:3,total_tokens:10}}:{})})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(text:string)=>{emit({role:'assistant',content:text});emit({},'stop')};
     if(isMain){
-      assert.ok(body.tools?.every(value=>!['write','edit','bash'].includes(value.function.name)));
+      assert.ok(body.tools?.every(value=>!['cbim_task_help','cbim_task_checkpoint'].includes(value.function.name)));
       if(turn===0)tool('human-continuation-plan','cbim_goal_plan',plan());
       else if(turn===1)tool('human-continuation-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
       else if(turn===2)reply('已派发真实成果任务。');

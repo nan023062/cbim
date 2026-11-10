@@ -1,7 +1,7 @@
 /**
  * 正式隔离Node装配可信生命周期：原canonical授权先核实，再记录宿主与目录身份；桌面服务与成员共用工作区租约。
  * 范围成员使用独立Win32读取/枚举和LPAC端口；原受控写、删除/移动两端再核冻结写范围，恢复文件复核复用同一受限读取。
- * 同一OutputManifestFiles装配成员结算、主目标与人工接受/继续，沿用原工作区身份和只读占用，不另建文件执行通道。
+ * 同一OutputManifestFiles装配成员结算、主目标与人工接受/继续；主运行内核证派生当前会话读占用，桌面预览与预检独立领取，不另建文件执行通道。
  * 工厂按已提交历史计算剩余额度，恢复闭包持有全链快照以保护早期未再触及文件。
  * 持久成员等待另复用当前文件/native只读端口与短读占用，重启登记不调用恢复工厂。
  * 受控文件边界：实际领取成员固定 scope/run/岗位来源并沿用成员写租约；删除/移动复用同一实际 utility transport，桌面补偿独立取得写租约，不继承模型批准。
@@ -11,6 +11,7 @@
  * 请求预算共用唯一 Store，真实成员工厂绑定原岗位模型；供应商重试与摘要也由本轮请求端口核实。
  * 专业验证按真实装配公开JSON/CSV/PNG能力，表格与JSON共用安全文件读取及完整清单复核，不把工具成功当作检查通过。
  * 影响观察另提供安全文件读取、短只读占用、原知识/治理/责任及受控阶段查询；端口复用唯一存储及已有受控报告，不启动模型、文件子进程或旧提交，明确处置、新只读核实与业务修复各走独立门禁。
+ * 岗位引擎来自采纳快照；原生能力预检与会话指纹按 Pi/Claude Code/Codex 分开装配，主模型不能覆盖它。
  */
 import path from 'node:path';
 import type {Workspace} from './workspace/workspace';
@@ -70,6 +71,12 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
   const artifactFiles=new ArtifactFiles(workspace.entry.path,()=>workspace.assert());
   const manifestFiles=new OutputManifestFiles(workspace.entry.path,()=>workspace.assert());
   const nativeFiles=new NativeSessionFiles(path.join(runsDirectory,'pi','sessions'),()=>workspace.assert());
+  const claudeRoot=path.join(runsDirectory,'claude','projects'),claudeFiles=new NativeSessionFiles(claudeRoot,()=>workspace.assert(),'claude-code');
+  const codexRoot=path.join(runsDirectory,'codex','sessions'),codexFiles=new NativeSessionFiles(codexRoot,()=>workspace.assert(),'codex');
+  const nativeFingerprint=(session:{nativeSessionId:string;sessionFile?:string},signal:AbortSignal)=>{
+    for(const [root,files] of [[claudeRoot,claudeFiles],[codexRoot,codexFiles]] as const){const relative=session.sessionFile?path.relative(root,session.sessionFile):'..';if(relative&&!relative.startsWith('..')&&!path.isAbsolute(relative))return files.read(session,signal)}
+    return nativeFiles.read(session,signal);
+  };
   const normalizeArtifact=(raw:string)=>normalizeArtifactPath(workspace.entry.path,raw);
   /** 主/成员的权威运行日志只在后端读取；不能以公开摘要或模型传来的“成功”替代。 */
   const inspectMember=async(run:import('../core/tasks/dispatch-execution').DispatchRun)=>{
@@ -79,7 +86,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
     if(JSON.stringify(summary.memberBinding)!==JSON.stringify(run.binding))fail('MEMBER_LOG_IDENTITY','成员运行日志与已保存的执行绑定不一致');
     return summary;
   };
-  const checkpointPorts={inspect:inspectMember,normalizePath:normalizeArtifact,checkFiles:artifactFiles.checkFiles.bind(artifactFiles),nativeFingerprint:nativeFiles.read.bind(nativeFiles)};
+  const checkpointPorts={inspect:inspectMember,normalizePath:normalizeArtifact,checkFiles:artifactFiles.checkFiles.bind(artifactFiles),nativeFingerprint};
   const controlledFiles=new ControlledFiles(workspace,store,lease,controlledTransport,inspectMember,()=>admission?.isCurrent()??true);
   const isolatedExecutions=new IsolatedExecutions(workspace,store,lease,inspectMember,()=>admission?.isCurrent()??true);
   const dispatch=new WorkspaceDispatchService(workspace,store,{inspectMember,normalizeValidationPath:normalizeArtifact,checkValidationFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),checkManifest:(snapshot,signal)=>manifestFiles.check(snapshot,signal),inspectMain:async(rootSessionId,runId)=>{
@@ -87,10 +94,10 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
     const summary=await storage.read(path.join(workspace.paths.project(workspace.entry.id),'loop-engine','tasks',safeId(rootSessionId),safeId(runId)));
     if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path||summary.task.taskId!==rootSessionId||summary.runId!==runId||summary.task.agentId!=='cbim:main')throw Error('主调度证据不属于当前会话或运行');
     return summary;
-  }},budgetPolicy,{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),checkManifest:(snapshot,signal)=>manifestFiles.check(snapshot,signal),acquireRead:()=>{workspace.assert();return lease.acquire('human-decision:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('HUMAN_UNAVAILABLE','工作区正在停止，未保存新的人工决定')}},models,{inspect:inspectMember,normalizePath:normalizeArtifact},{inspectMember,observeKnowledge:(reference,signal)=>observeKnowledgeTransaction(workspace,reference,signal),observePersistent:(reference,signal)=>observePersistentWrite(workspace,reference,signal),observeControlled:async(input,signal)=>{signal?.throwIfAborted();const value=await controlledFiles.report(input);signal?.throwIfAborted();return value},normalizePath:normalizeArtifact,observeFiles:(paths,signal)=>artifactFiles.observeFiles(paths,signal),acquireRead:()=>{workspace.assert();return lease.acquire('effect-observation:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('EFFECT_UNAVAILABLE','工作区正在停止，未保存新的处置')}},{...checkpointPorts,acquireRead:()=>{workspace.assert();return lease.acquire('member-pause:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('GOAL_MEMBER_PAUSE_UNAVAILABLE','工作区正在停止，原成员等待未消费')}});
+  }},budgetPolicy,{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),checkManifest:(snapshot,signal)=>manifestFiles.check(snapshot,signal),acquireRead:()=>{workspace.assert();return lease.acquire('human-decision:'+randomUUID(),'read')},acquireMainRead:rootSessionId=>{workspace.assert();return lease.acquireReadWithin('human-evidence:'+randomUUID(),'conversation:'+safeId(rootSessionId))},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('HUMAN_UNAVAILABLE','工作区正在停止，未保存新的人工决定')}},models,{inspect:inspectMember,normalizePath:normalizeArtifact},{inspectMember,observeKnowledge:(reference,signal)=>observeKnowledgeTransaction(workspace,reference,signal),observePersistent:(reference,signal)=>observePersistentWrite(workspace,reference,signal),observeControlled:async(input,signal)=>{signal?.throwIfAborted();const value=await controlledFiles.report(input);signal?.throwIfAborted();return value},normalizePath:normalizeArtifact,observeFiles:(paths,signal)=>artifactFiles.observeFiles(paths,signal),acquireRead:()=>{workspace.assert();return lease.acquire('effect-observation:'+randomUUID(),'read')},acquireMainRead:rootSessionId=>{workspace.assert();return lease.acquireReadWithin('effect-proof:'+randomUUID(),'conversation:'+safeId(rootSessionId))},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('EFFECT_UNAVAILABLE','工作区正在停止，未保存新的处置')}},{...checkpointPorts,acquireRead:()=>{workspace.assert();return lease.acquire('member-pause:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('GOAL_MEMBER_PAUSE_UNAVAILABLE','工作区正在停止，原成员等待未消费')}});
   const requestBudgets=new ModelRequestBudgetService(workspace,store,dispatch.budgets);
   const prepareEngine=(llm:ResolvedLlm,options:MemberStartOptions):PreparedEngine=>{
-      return {model:structuredClone(llm.profile),availableTools:nativeToolNames(options.permission!=='read'),scopedTools:process.platform==='win32'&&process.arch==='x64'?['cbim_scoped_read',...(options.permission!=='read'?['cbim_scoped_node',...(controlledTransport?['cbim_file_write_controlled']:[])]:[])]:undefined,availableValidators:['json-schema-v1','csv-table-v1','png-raster-v1'],create:async(run,task,hooks)=>{
+      return {model:structuredClone(llm.profile),availableTools:nativeToolNames(options.permission!=='read',llm.profile.engine),scopedTools:process.platform==='win32'&&process.arch==='x64'?['cbim_scoped_read',...(options.permission!=='read'?['cbim_scoped_node',...(controlledTransport?['cbim_file_write_controlled']:[])]:[])]:undefined,availableValidators:['json-schema-v1','csv-table-v1','png-raster-v1'],create:async(run,task,hooks)=>{
         workspace.assert();
         if(run.binding.workspaceId!==workspace.entry.id||task.identity.workspaceId!==workspace.entry.id)throw Error('成员运行与工作区身份不匹配');
         if(JSON.stringify(run.model)!==JSON.stringify(llm.profile))throw Error('成员运行模型快照与启动配置不一致');
@@ -129,7 +136,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
   const members=new MemberExecutionManager(workspace,store,{
     artifacts:{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),acquireRead:()=>{workspace.assert();return lease.acquire('artifact-report:'+randomUUID(),'read')}},
     manifests:{check:(snapshot,signal)=>manifestFiles.check(snapshot,signal),acquireRead:()=>{workspace.assert();return lease.acquire('manifest-report:'+randomUUID(),'read')}},
-    checkpoints:{nativeFingerprint:(session,signal)=>nativeFiles.read(session,signal)},
+    checkpoints:{nativeFingerprint},
     budgets:dispatch.budgets,
     isCurrent:()=>admission?.isCurrent()??true,
     signal:admission?.signal,

@@ -3,6 +3,7 @@
  * 作用定位：工作区主对话管理，负责普通 chat、目标周期接续、多轮历史和消息队列；旧直接团队业务入口拒绝新执行，业务成员统一经岗位派发领取。
  * 设计原因：原命令先查回执；等待补充的附件一次准备，图片仅留本轮。容量准入先于意图，beforeRun 核额度、停止与清单后登记运行；人工决定仍走独立系统来源，当前坏历史不能回退旧头。
  * 插入边界：先查原 scope/run/queue 回执再领取和读附件；绑定明确的原主 run，停止信号先于串行清理。周期输入接收落盘后才移除队列，未知结果同时阻止内存自动推进。
+ * 执行选项接受明确引擎并随本轮准备、排队与后续调用传递；具体适配器仍由可信工厂选择。
  */
 import {MessageQueue,type QueueCounts} from '../conversation/message-queue';
 import {ApprovalQueue} from '../conversation/approvals';
@@ -11,6 +12,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {mainAgentId} from '../conversation/main-agent';
 import {z} from 'zod';
+import {loopEngineSchema} from '../../core/brain/llm/engine';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import {fail,Fault} from '../../core/foundation/errors';
 import {safeId} from '../../core/foundation/identity';
@@ -36,7 +38,7 @@ import {replanRequestSchema,type ReplanRequest,type ReplanLookup,type ReplanRece
 import {humanContinuationRequestSchema,type HumanContinuationRequest,type HumanContinuationLookup,type HumanContinuationReceipt} from '../../core/tasks/human-continue';
 
 /** IPC 允许的模型运行配置；不接受任意子进程命令或环境变量。 */
-export const executionOptions=z.object({provider:z.string().trim().min(1),model:z.string().trim().min(1),profileId:z.string().uuid().optional(),attachmentIds:z.array(z.string().uuid()).max(12).optional(),allowNativeExecution:z.boolean().default(false),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),turnTimeoutMs:z.number().int().min(1000).max(3600000).optional()}).strict();
+export const executionOptions=z.object({engine:loopEngineSchema.optional(),provider:z.string().trim().min(1),model:z.string().trim().min(1),profileId:z.string().uuid().optional(),attachmentIds:z.array(z.string().uuid()).max(12).optional(),allowNativeExecution:z.boolean().default(false),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),turnTimeoutMs:z.number().int().min(1000).max(3600000).optional()}).strict();
 type Options=z.infer<typeof executionOptions>;
 /** 由可信工作区装配一次；回调只登记或唤醒协调器，不在 settled 内等待成员执行。 */
 export interface ExecutionCollaboration {
@@ -399,7 +401,7 @@ export class WorkspaceExecutionManager {
       if(this.active.has(request.rootSessionId)||hooks.busy(request.rootSessionId))fail('REPLAN_BUSY','当前会话仍有未结束的目标，请先处理当前目标');
       await hooks.replanPreflight(request);assertRequested();
       const task:TaskSpec={mode:'chat',taskId:request.rootSessionId,workspaceId:this.workspace.entry.id,root:this.workspace.entry.path,goal:request.input.message,agentId:mainAgentId,moduleIds:[],acceptance:[]};
-      const message=request.input.message+'\n\n本次明确创建新的业务重规划周期。先调用 cbim_goal_inspect 读取已核实模块范围与继承的人工验收约束，再匹配团队能力、保存新计划并派发新的执行任务。主 Agent 仅调度及受控知识治理，不亲自执行业务。旧核实是规划依据，不是新业务完成证据；不得复制旧工具操作、抹去旧未知结果或把权限选择当作人工验收。\n来源核实周期：'+request.source.inspectionScopeId;
+      const message=request.input.message+'\n\n本次明确创建新的业务重规划周期。先调用 cbim_goal_inspect 读取已核实模块范围与继承的人工验收约束，再匹配团队能力、保存新计划并派发新的执行任务。主 Agent 可直接执行未配置自定义负责岗位的模块；已配置岗位仍按真实绑定委派。旧核实是规划依据，不是新业务完成证据；不得复制旧工具操作、抹去旧未知结果或把权限选择当作人工验收。\n来源核实周期：'+request.source.inspectionScopeId;
       try{await this.launch(task,executionOptions.parse({...request.options,allowNativeExecution:true}),message,undefined,undefined,false,undefined,undefined,request)}
       catch(error){const saved=await lookup();if(saved)return saved;throw error}
       const saved=await lookup();if(!saved)fail('REPLAN_UNKNOWN','新业务周期提交结果尚未确认，请查询同一命令');return saved;

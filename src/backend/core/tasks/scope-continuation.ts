@@ -2,8 +2,10 @@
  * 成员等待清单随原 wait 冻结和归档；用户补充只消费等待，实际恢复须重核原证明并由主调度另行预约。
  * 作用定位：定义安全等待检查点、用户显式补充原目标的请求和一次性启动意图。
  * 设计原因：补充保留原等待、原文、附件 ID 与版本化快照清单；v1 文件与 v2 多来源资料均冻结为原回执，不能重导重放或把资料/“同意”当作人工验收。
+ * 接续模型选项保留可选引擎，旧记录缺省沿用 Pi；主轮选型不覆盖成员岗位。
  */
 import {z} from 'zod';
+import {loopEngineSchema} from '../brain/llm/engine';
 import {continuationAttachmentIdsSchema,continuationAttachmentManifestSchema,assertContinuationAttachmentManifest} from './scope-continuation-attachments';
 import {memberPauseSchema} from './member-pause';
 
@@ -17,7 +19,7 @@ export type DispatchScopeWait=z.infer<typeof dispatchScopeWaitSchema>;
 export const scopeContinuationTextLimit=64_000;
 export const scopeContinuationTotalTextLimit=256_000;
 const input=z.object({message:z.string().max(scopeContinuationTextLimit).refine(value=>value.trim().length>0,'补充正文不能为空'),attachmentIds:continuationAttachmentIdsSchema.optional()}).strict();
-export const scopeContinuationOptionsSchema=z.object({provider:id,model:id,profileId:z.string().uuid(),permission:z.enum(['read','ask','execute']),turnTimeoutMs:z.number().int().min(1000).max(3600000).optional()}).strict();
+export const scopeContinuationOptionsSchema=z.object({engine:loopEngineSchema.optional(),provider:id,model:id,profileId:z.string().uuid(),permission:z.enum(['read','ask','execute']),turnTimeoutMs:z.number().int().min(1000).max(3600000).optional()}).strict();
 export type ScopeContinuationOptions=z.infer<typeof scopeContinuationOptionsSchema>;
 /** 仅接收正文与本工作区附件 ID；不接收快照清单、路径、图片字节、权限批准或人工签署。 */
 export const goalContinuationRequestSchema=z.object({workspaceId:id,rootSessionId:id,scopeId:id,waitId:id,expectedGoalRevision:revision,expectedInputRevision:z.number().int().min(1).max(32),commandId:z.string().uuid(),input,options:scopeContinuationOptionsSchema}).strict();

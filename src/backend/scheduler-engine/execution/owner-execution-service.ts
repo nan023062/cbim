@@ -1,11 +1,9 @@
 /**
- * 统一调度入口选择登记岗位或独立自动兜底；不为已有但失效的岗位降级，锁顺序和原命令查询保持一致。
+ * 未指定自定义岗位时发现主 Agent 默认责任；独立派发仅接受自定义岗位，不为失效自定义配置降级，原命令查询保持一致。
  * 作用定位：在既有知识、模型和派发存储之间核实岗位执行绑定，为计划、派发、领取和依赖维护提供同一入口。
  * 设计原因：当前登记与真实能力/模型必须同时匹配；知识锁在外，模型短锁其次，Store 事务最后，不能在事务中反向读取排队服务。
  * 职责边界：只查询或核实，不采纳配置、不修改责任、不运行模型；历史结算不调用当前岗位门禁。
  */
-import {resolveExecutionModules} from '../context/automatic-context';
-import {assertAutomaticExecution} from '../../core/tasks/automatic-execution-rules';
 import {implicitProjectModuleId,type AutomaticExecutionBinding,type CollaborationPolicy} from '../../core/team/automatic-execution';
 import {isDeepStrictEqual} from 'node:util';
 import {fail,Fault} from '../../core/foundation/errors';
@@ -74,21 +72,12 @@ export class OwnerExecutionService {
   /** 模型不能指定自动模式；缺岗位选择只可引用已保存的可信周期。 */
   selection(state:DispatchState,scopeId:string,selection?:OwnerExecutionSelection):ExecutionSelection{
     if(selection)return selection;
-    if(state.scopes?.find(scope=>scope.scopeId===scopeId)?.executionPolicy?.mode!=='auto')fail('OWNER_SELECTION_REQUIRED','团队模式需要人工确认模块及负责岗位，请登记后重新规划');
-    return {automaticScopeId:scopeId};
+    return fail('MAIN_EXECUTION_REQUIRED','未指定自定义负责 Agent 时，请由主 Agent 在当前会话直接执行；独立派发需要真实 ownerSelection');
   }
-  /** 同事务重核兜底，不为已配置但过期、停用的岗位降级；不登记任何正式责任。 */
+  /** 新任务只绑定自定义岗位；旧兜底数据可读但不再授予启动或恢复许可。 */
   async resolveExecution(state:DispatchState,context:OwnerExecutionContext,scopeId:string,selection:OwnerExecutionSelection|undefined,moduleIds:readonly string[],agentId:string):Promise<{ownerBinding?:OwnerExecutionBinding;fallbackBinding?:AutomaticExecutionBinding}>{
     if(selection)return {ownerBinding:await this.resolve(state,context,selection,moduleIds,agentId)};
-    const scope=state.scopes?.find(scope=>scope.scopeId===scopeId),policy=scope?.executionPolicy;
-    if(policy?.mode!=='auto')fail('OWNER_SELECTION_REQUIRED','团队模式需要人工确认模块及负责岗位');
-    if(agentId!=='cbim:executor')fail('AUTO_AGENT_INVALID','无负责人时只能由内置执行员兜底');
-    const agent=await resolveDispatchAgent(context.snapshot,agentId),profile=context.profiles.find(p=>p.id===policy.model.profileId&&p.model===policy.model.modelId);
-    if(!profile||workspaceMemberModelHash(profile)!==policy.model.configurationHash)fail('OWNER_MODEL_CHANGED','自动执行模型配置已变化，请结束当前目标后重新发送');
-    const fallbackBinding:AutomaticExecutionBinding={version:1,kind:'automatic',scopeId,workspaceId:state.workspaceId,agentId:'cbim:executor',teamId:agent.teamId,capabilityHash:workspaceMemberCapabilityHash(agent),knowledgeRevision:context.snapshot.revision,model:structuredClone(policy.model),moduleIds:[...moduleIds],reason:moduleIds.includes(implicitProjectModuleId)?'no_modules':'unassigned_owner'};
-    assertAutomaticExecution(state,fallbackBinding,scope!.rootSessionId,true);
-    await resolveExecutionModules(context.snapshot,[...moduleIds],undefined,fallbackBinding);
-    return {fallbackBinding};
+    return fail('MAIN_EXECUTION_REQUIRED','内置默认执行 Agent 已退役；未指定自定义 Agent 的模块由主 Agent 在当前会话执行，不创建成员任务');
   }
   async verifyTask(state:DispatchState,context:OwnerExecutionContext,task:TaskNode):Promise<OwnerExecutionBinding|AutomaticExecutionBinding>{
     if(task.fallbackBinding){
@@ -110,13 +99,19 @@ export class OwnerExecutionService {
     return this.withSnapshot(async(snapshot,state)=>{
       const groups:OwnerExecutionDiscovery['groups']=[];
       for(const moduleId of moduleIds){const owner=state.moduleOwnerships?.find(item=>item.moduleId===moduleId),member=state.workspaceMembers?.find(item=>item.memberId===owner?.ownerMemberId);
-        let group=owner?.ownerMemberId?groups.find(item=>item.memberId===owner.ownerMemberId):undefined;
-        if(!group){group={moduleIds:[],...(owner?.ownerMemberId?{memberId:owner.ownerMemberId}:{}),...(member?{memberName:member.name,agentId:member.adoption.configuration.agentId}:{}),issues:[]};groups.push(group)}group.moduleIds.push(moduleId);
+        const main=!owner?.ownerMemberId||member?.adoption.configuration.agentId==='cbim:executor';
+        let group=main?groups.find(item=>item.execution==='main'):groups.find(item=>item.memberId===owner!.ownerMemberId);
+        if(!group){group={moduleIds:[],execution:main?'main':'member',...(main?{agentId:'cbim:main'}:{memberId:owner!.ownerMemberId!,...(member?{memberName:member.name,agentId:member.adoption.configuration.agentId}:{})}),issues:[]};groups.push(group)}group.moduleIds.push(moduleId);
       }
       for(const group of groups){
         // 独立核实可观察门禁，避免模型/能力失败遮住模块问题；最终选择仍走原完整 resolve，不由诊断授予许可。
         const add=(code:string,message:string)=>{if(!group.issues.some(issue=>issue.code===code))group.issues.push({code,message})};
         const check=async(action:()=>unknown)=>{try{await action()}catch(error){add(error instanceof Fault?error.code:'OWNER_CONFIGURATION_UNAVAILABLE',error instanceof Fault?error.message:'当前岗位配置暂时无法核实，请检查知识与模型设置')}};
+        // 未指派是合法的默认关系，旧内置执行者也不再创建新实例；损坏的自定义绑定仍报告真实缺口。
+        if(group.execution==='main'){
+          for(const moduleId of group.moduleIds)if(moduleId!==implicitProjectModuleId)await check(()=>resolveDispatchModules(snapshot,[moduleId]));
+          continue;
+        }
         const member=state.workspaceMembers?.find(item=>item.memberId===group.memberId);
         if(!member){
           add('OWNER_UNASSIGNED','模块尚未设置有效的负责岗位。请在业务架构中设置负责人；有现成岗位时直接选择。');

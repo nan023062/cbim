@@ -4,13 +4,13 @@
 
 `DispatchKnowledgeWorkspace` 明确只读的 `entry/assert/snapshot/read/rules` 能力。未启动依赖替换复用 `prepareDispatchExecutionContext` 逐个核对待办闭包的原角色、模块、Workflow 与当前规范，并用 `recheckDispatchExecutionContext` 最后核对替代候选的冻结知识。版本变化整体拒绝，不刷新旧任务或扩大权限；仍不声称锁定外部业务产物。
 
-已实现 `resolveDispatchAgent` 与 `resolveDispatchModules`：同快照解析自定义执行角色或静态内置默认执行角色 `cbim:executor`、继承 Skill、多个真实模块及各自 Workflow。`cbim:main` 不承担业务执行，正式执行解析、冻结恢复和执行提示构造均拒绝该角色；主会话直接治理受控知识不通过该业务任务入口。缺失关系抛出明确错误码；默认采用各模块 Workflow 清单首项，空清单明确标为 general，不继承父模块。`prepareDispatchExecutionContext` 在执行前冻结完整角色、模块与流程正文；`recheckDispatchExecutionContext` 在启动或恢复时核对知识和内置规范版本。旧 `prepareTeamTask` 继续处理原单模块执行。新任务模型见 [core/tasks](../../core/tasks/CONTRACT.md)。
+已实现 `resolveDispatchAgent` 与 `resolveDispatchModules`：同快照解析自定义执行角色、继承 Skill、多个真实模块及各自 Workflow。`cbim:main` 与已退役的 `cbim:executor` 不能作为独立成员准备或恢复；主会话直接工作不通过该业务任务入口。缺失关系抛出明确错误码；默认采用各模块 Workflow 清单首项，空清单明确标为 general，不继承父模块。`prepareDispatchExecutionContext` 在执行前冻结完整角色、模块与流程正文；`recheckDispatchExecutionContext` 在启动或恢复时核对知识和内置规范版本。旧 `prepareTeamTask` 继续处理原单模块执行。新任务模型见 [core/tasks](../../core/tasks/CONTRACT.md)。
 
 `resolveConversationAgent` 只用于主会话图根与普通对话实例登记：要求快照有工作区身份和版本，返回固定内置主角色、Team 和主指引，不加载业务 Skill。因此结构校验失败时用户仍能与主助手诊断知识问题；正式 `createMember`、`dispatchTask`、执行冻结仍使用严格解析入口，不能借普通对话身份绕过知识、岗位责任或完整 Skill 校验。
 
 #### 从分析到固定执行输入
 
-Team 主会话对业务只调度：先理解目标，通过内部知识服务定位业务模块、岗位负责人、团队成员、Skill 与 Workflow，再派发给独立执行 Agent，最后核实真实返回。它同时负责团队与业务知识管理，可在当前授权范围内通过受控服务治理架构、补齐有效模块及岗位责任，不必先派发业务任务。治理遵守 read/ask/execute、审批、版本和事务，不能原生读写 `.cbim/` 或借知识管理绕过业务权限。Auto 主会话可按本轮权限直接工作；此处正式成员上下文不改为主实例，也不以项目根存在放宽派发范围。没有合适自定义角色时使用 `cbim:executor`。被调度成员拥有自身会话、状态和模型思考能力，可自主探索真实 Team 环境，在目标模块内实现和验证。本目录确定性核验知识与装配输入，不把认知职责当作权限。普通问答、目标澄清及候选查找可继续，尚未定位模块时不产生假派发节点。
+主会话在 Auto 与 Team 中都可按本轮权限直接实现未配置自定义负责岗位的模块，同时通过受控知识服务治理架构。治理遵守 read/ask/execute、审批、版本和事务，不能原生读写 `.cbim/` 或借知识管理绕过业务权限。正式成员上下文不改为主实例，也不以项目根存在放宽派发范围。已配置自定义岗位时派给该岗位；没有自定义岗位时不创建 `cbim:executor`。被调度成员拥有自身会话、状态和模型思考能力，可自主探索真实 Team 环境，在目标模块内实现和验证。本目录确定性核验知识与装配输入，不把认知职责当作权限。普通问答、目标澄清及候选查找可继续，尚未定位模块时不产生假派发节点。
 
 实际冻结契约位于 `core/tasks/execution-context.ts`，由调度与存储共同引用。权限和模型配置由可信运行入口单独准备，不混入知识快照：
 
@@ -26,7 +26,7 @@ interface PreparedDispatchKnowledge {
 }
 ```
 
-所有正文从一个知识快照读取，任务中已有的模块、Workflow 与版本必须匹配；旧维护字段只从原任务复制进冻结快照，不用于比较当前资格，也不重写历史任务；缺失正文不静默降级。`default-executor.ts` 提供静态 `defaultExecutorDefinition`、`defaultExecutorInstructions` 和 `defaultExecutorConfiguration`，后者继承 Team 根 Skill，缺正文拒绝执行；不在 `.cbim/` 创建默认角色文件。自定义角色保存实际 agent.json，角色原则及有效 Skill 正文完整保留。主会话登记使用 `mainAgentInstructions`，与独立执行角色明确分离。通用 Workflow 冻结 `business-execution` 正文，同时冻结 `common-rules`；软件内置规范不属于工作区 revision，因此启动和恢复都另外复核其内容版本，并在规范读取前后核对工作区版本。
+所有正文从一个知识快照读取，任务中已有的模块、Workflow 与版本必须匹配；旧维护字段只从原任务复制进冻结快照，不用于比较当前资格，也不重写历史任务；缺失正文不静默降级。自定义角色保存实际 agent.json，角色原则及有效 Skill 正文完整保留。主会话登记使用 `mainAgentInstructions`，与独立执行角色明确分离。不再装配内置默认执行角色。通用 Workflow 冻结 `business-execution` 正文，同时冻结 `common-rules`；软件内置规范不属于工作区 revision，因此启动和恢复都另外复核其内容版本，并在规范读取前后核对工作区版本。
 
 `validatePreparedDispatchKnowledge` 校验结构、引用一致性与正文哈希；`dispatchKnowledgeFingerprint` 对字段排序后的 JSON 计算 SHA-256，保留数组顺序。每份模块 Workflow 的可选 `cbim-workflow` 约定从本模块实际正文解析并随正文冻结；保存字段必须与重新解析的内容相同，删除约定后重算指纹也不能通过。`preparedWorkflowContracts` 保留所有模块的独立出处和版本，不继承父模块、不用最新知识替代已冻结要求。无声明保持原自然语言流程。
 
@@ -34,13 +34,13 @@ interface PreparedDispatchKnowledge {
 
 旧 `prepareTeamTask` 入口遇到程序约定以 `WORKFLOW_MEMBER_REQUIRED` 拒绝，必须通过主调度派发正式成员。`assertLegacyWorkflowCompatible` 在实际运行租约前同样检查旧任务的冻结正文，防止续聊跳过准备入口；不从新知识给历史无声明任务补造条件。
 
-默认执行角色的定义与原则随应用发布，也不属于项目 revision。恢复时另行比较当前静态定义与已冻结原则，变化返回 `KNOWLEDGE_CHANGED`；旧主角色执行快照返回 `AGENT_ROLE_INVALID`，不自动改绑为默认执行者。
+已退役的内置执行角色不再随应用提供可恢复定义。恢复时 source 为 builtin 的执行快照返回 `AGENT_RETIRED`，不自动改绑为主 Agent 或重建旧默认执行者；旧主角色执行快照返回 `AGENT_ROLE_INVALID`。
 
 #### 核验规则
 
 | 对象 | 约束 |
 | --- | --- |
-| 角色 | `cbim:main` 在 Team 中调度、在 Auto 中可直接实现，并共用受控知识管理；`cbim:executor` 与自定义角色承担业务执行。共享大脑内核但不同实例，内置定义不写工作区文件 |
+| 角色 | `cbim:main` 在 Auto 与 Team 中都可直接实现未配置模块，并共用受控知识管理；只有自定义角色承担独立成员执行。主角色定义不写工作区文件，旧 `cbim:executor` 不再提供新实例 |
 | Team | 根是 Team，非叶子是组，叶子是 Agent；有效 Skill 来自自身及祖先 |
 | 模块 | workspace 下的领域工程及模块仍遵循业务知识结构；Task 绑定一个或多个实际 moduleId |
 | 执行归属 | 使用工作区岗位与模块负责人；不要求真人花名册或旧维护确认 |
@@ -76,16 +76,10 @@ class DispatchContext["dispatch-context.ts"] {
   +resolveDispatchModules(snapshot, moduleIds, workflowSelections)
 }
 class BusinessWorkspace { <<core boundary>> }
-class DefaultExecutor["default-executor.ts"] {
-  <<module>>
-  +defaultExecutorConfiguration(snapshot)
-}
 class KnowledgeWorkspace { <<core boundary>> }
 class Builtins { <<core boundary>> }
 class PreparedDispatchKnowledge { <<core contract>> }
 ExecutionContext ..> DispatchContext : 核对角色与已派发绑定
-ExecutionContext ..> DefaultExecutor : 内置执行角色定义
-DispatchContext ..> DefaultExecutor : 默认角色与根 Skill
 ExecutionContext ..> BusinessWorkspace : 同快照完整模块正文
 ExecutionContext ..> KnowledgeWorkspace : 读取及复核版本
 ExecutionContext ..> Builtins : 冻结与复核通用规范

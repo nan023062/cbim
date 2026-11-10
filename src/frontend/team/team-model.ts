@@ -1,16 +1,18 @@
 /**
  * 作用定位：从工作区知识快照构建静态 Team、分组、Agent 与 Skill 视图模型。
- * 设计原因：树与详情共用归属/继承规则；展示可隐藏内置角色，完整模型仍供岗位选项和父链查询使用，不修改能力或执行权限。
+ * 设计原因：树与详情共用归属/继承规则；主角色隐式承担未分配模块，不再提供默认执行者节点或岗位选项。
+ * 节点只解析可核实的本机 runtime 引用，供新岗位预选；能力正文与运行中的模型快照保持分离。
  */
+import {agentModelSelectionSchema,type AgentModelSelection} from '../../bridge/contracts/models';
 import type {Snapshot} from '../../bridge/contracts/workspace';
 import {teamGroupIds} from '../knowledge/static-owners';
 
 export const TEAM_ROOT='.cbim/team';
 export const MAIN_AGENT='cbim:main';
-export const DEFAULT_EXECUTOR='cbim:executor';
-/** id 始终来自快照文件路径；内置主/默认执行角色使用稳定应用身份，不对应可编辑文件。 */
+/** id 始终来自快照文件路径；内置主角色使用稳定应用身份，不对应可编辑文件。 */
 export interface TeamNodeView {
   id:string;parentId?:string;kind:'team'|'group'|'agent'|'builtin';name:string;summary:string;
+  runtime?:AgentModelSelection;
   capabilities:string[];limitations:string[];body:string;bodyAvailable:boolean;children:string[];
 }
 /** Skill 属于一个组织节点；可用性只表示快照中有正文，不代表授权执行。 */
@@ -44,7 +46,7 @@ export function buildTeamModel(snapshot:Snapshot|undefined,workspaceName:string)
       if(!text(data.name))throw new Error('missing name');
       definitions.set(id,data);
       const principles=referencePath(id,text(data.work_principles));
-      nodes[id]={id,parentId:parent(id),kind:'agent',name:text(data.name),summary:text(data.summary),capabilities:strings(data.capabilities),limitations:strings(data.limitations),body:principles?files.get(principles)??'':'',bodyAvailable:!!principles&&files.has(principles),children:[]};
+      nodes[id]={id,parentId:parent(id),kind:'agent',runtime:agentModelSelectionSchema.safeParse(data.runtime).success?agentModelSelectionSchema.parse(data.runtime):undefined,name:text(data.name),summary:text(data.summary),capabilities:strings(data.capabilities),limitations:strings(data.limitations),body:principles?files.get(principles)??'':'',bodyAvailable:!!principles&&files.has(principles),children:[]};
       group(parent(id));
     }catch{issues.push(`定义无法解析：${path}`)}
   }
@@ -64,10 +66,9 @@ export function buildTeamModel(snapshot:Snapshot|undefined,workspaceName:string)
       skills.push({id:path.slice(0,-'/SKILL.md'.length),ownerId:owner,name:text(entry.name)||reference.split('/')[1],purpose:text(entry.purpose),reference,body:files.get(path)??'',available:files.has(path)});
     }
   }
-  nodes[MAIN_AGENT]={id:MAIN_AGENT,parentId:TEAM_ROOT,kind:'builtin',name:'CBIM 主 Agent',summary:'内置团队与技术管理者，负责业务调度和受控知识治理；业务实现由独立执行角色承担。角色由应用维护。',capabilities:[],limitations:[],body:'',bodyAvailable:false,children:[]};
-  nodes[DEFAULT_EXECUTOR]={id:DEFAULT_EXECUTOR,parentId:TEAM_ROOT,kind:'builtin',name:'CBIM 默认执行 Agent',summary:'无合适自定义角色时使用的内置业务执行者，继承 Team 根共享 Skill；任务实例彼此独立，不派发其他成员。角色由应用维护。',capabilities:[],limitations:[],body:'',bodyAvailable:false,children:[]};
+  nodes[MAIN_AGENT]={id:MAIN_AGENT,parentId:TEAM_ROOT,kind:'builtin',name:'CBIM 主 Agent',summary:'负责直接实现、验证、团队调度和受控知识治理；模块未指定自定义 Agent 时由主 Agent 执行。角色由应用维护。',capabilities:[],limitations:[],body:'',bodyAvailable:false,children:[]};
   for(const node of Object.values(nodes)){if(node.parentId)nodes[node.parentId]?.children.push(node.id)}
-  const priority=(id:string)=>id===MAIN_AGENT?0:id===DEFAULT_EXECUTOR?1:2;
+  const priority=(id:string)=>id===MAIN_AGENT?0:1;
   for(const node of Object.values(nodes))node.children.sort((a,b)=>priority(a)-priority(b)||nodes[a].name.localeCompare(nodes[b].name));
   return {nodes,skills,issues};
 }

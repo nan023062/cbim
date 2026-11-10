@@ -40,7 +40,7 @@ export async function memberCheckpointProvider(mode:CheckpointFixtureMode='compl
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     if(isMain){
-      assert.ok(body.tools?.every(tool=>!['write','edit','bash','cbim_task_checkpoint'].includes(tool.function.name)));
+      assert.ok(body.tools?.every(tool=>!['cbim_task_checkpoint'].includes(tool.function.name)));
       if(turn===0)tool('checkpoint-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance}));
       else if(turn>=1&&turn<=3){const prerequisites=turn===1?[]:[{taskId:toolValue(body,'checkpoint-dispatch-'+(turn-1)).taskId,expectedPlanRevision:1}];tool('checkpoint-dispatch-'+turn,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:d.goals[turn-1],acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites})}
       else if(turn===4)reply('已依次登记A、B和C，等待A的真实运行结果。');

@@ -17,14 +17,14 @@ export function governanceToolsResult(body:GovernanceToolsRequest,id:string):any
 }
 
 /** Local responses choose calls only; every returned record must come from the real Pi/runtime/governance service. */
-export async function moduleGovernanceToolsProvider(mode:ModuleGovernanceToolsMode='complete',holdBeforeProposal=false){
+export async function moduleGovernanceToolsProvider(mode:ModuleGovernanceToolsMode='complete',holdBeforeProposal=false,permission:'read'|'ask'|'execute'=mode==='invalid'?'ask':'read'){
   const requests:GovernanceToolsRequest[]=[],errors:string[]=[],state:Record<string,any>={};let release!:()=>void;const held=new Promise<void>(resolve=>{release=resolve});
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
     const body=JSON.parse(raw) as GovernanceToolsRequest,turn=requests.length;requests.push(body);assert.equal(body.model,moduleGovernanceToolsFixture.model);
     const names=body.tools?.map(item=>item.function.name)??[];
     if(mode==='member'){assert.ok(moduleGovernanceToolNames.every(name=>!names.includes(name)));assert.ok(!names.includes('cbim_dispatch_task'))}
-    else{assert.ok(moduleGovernanceToolNames.every(name=>names.includes(name)));assert.ok(['write','edit','bash'].every(name=>!names.includes(name)));assert.ok(!names.some(name=>/^cbim_governance_(register|decide|apply)$/.test(name)))}
+    else{assert.ok(moduleGovernanceToolNames.every(name=>names.includes(name)));assert.equal(['write','edit','bash'].every(name=>names.includes(name)),permission!=='read');assert.ok(!names.some(name=>/^cbim_governance_(register|decide|apply)$/.test(name)))}
     res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'governance-tools-'+turn,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     if(mode==='member'){assert.equal(turn,0);emit({role:'assistant',content:'执行者没有主治理四工具。本轮只核实能力清单，不宣称业务交付。'});emit({},'stop')}

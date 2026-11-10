@@ -318,3 +318,11 @@ owner-execution 导出纯自动绑定类型及匹配函数，供界面核历史�
 dispatch 只导出 Core dispatch-receipt 的纯结构与 toolReceiptSchema，不导入主工具业务核实或哈希依赖。前端仍须核对原运行、调用、主实例与图游标；Schema 通过不授予执行权。
 
 architecture.ts 另重导纯 moduleBodyTemplate，供编辑器复用模块协议；它不引用 Node、平台或知识服务实现。
+
+### 引擎与模型菜单
+
+models 公开重导出 LoopEngine、AgentModelSelection、engineLabel、configuredEngines；只传公开模型身份。具体引擎、SDK、环境与凭据不进入渲染进程。
+
+### 引擎协议选型
+
+models 仅重导出 engineApi 等纯规则，设置页用它约束 Codex/Claude 的协议选择；不会把原生二进制、账号目录或进程参数作为公开 IPC。

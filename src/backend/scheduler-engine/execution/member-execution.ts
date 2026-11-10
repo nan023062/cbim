@@ -10,6 +10,7 @@
  * 设计原因：全局准入及本地租约先同步领取，容量等待不创建 run 或 claim；按任务原 Workflow 选择核实际能力，续执行不得借新计划改选。候选结算重读 canonical 并复核当前文件，占用持续到终态事务完成。
  * 职责边界：本成员 Loop 不递归派发或继承批准；求助在关闭后单向交接。检查点须完整关闭及复核后释放占用；主调度预约一次原任务新轮，失败、停止和重启不复活旧实例。只读报告不触发续执行，候选及匹配哈希不等于验收。
  * 领取边界：运行中用户补充未确认或旧计划尚未按新输入重规划时，保留原待办而不创建成员运行；已在执行的成员仍可结算真实事实。
+ * Claude/Codex 首轮允许延迟绑定真实原生文件；Codex 仅在 starting→running 时采纳 App Server 分配的线程 ID，之后身份与文件冻结。
  */
 import {sameAutomaticExecutionForModules} from '../../core/team/automatic-execution';
 import {randomUUID} from 'node:crypto';
@@ -85,7 +86,7 @@ export interface MemberExecutionPorts {
     scopedTools?:readonly string[];
     /** 工厂实际提供的受限验证器；仅有名称不能替代冻结要求、文件端口或授权。 */
     availableValidators?:readonly string[];
-    create(run:DispatchRun,task:TaskNode,hooks:{onEvent(event:StoredEvent):void;onEngineReady(input:{taskId:string;runId:string;sessionFile?:string}):Promise<void>;requestApproval(call:ToolCall):Promise<ToolDecision>;requestQuestion(args:unknown,signal:AbortSignal):Promise<unknown>}):Promise<LoopRuntime>;
+    create(run:DispatchRun,task:TaskNode,hooks:{onEvent(event:StoredEvent):void;onEngineReady(input:{taskId:string;runId:string;sessionFile?:string;nativeSessionId?:string}):Promise<void>;requestApproval(call:ToolCall):Promise<ToolDecision>;requestQuestion(args:unknown,signal:AbortSignal):Promise<unknown>}):Promise<LoopRuntime>;
   }>;
   /** 读取指定 run 的真实日志，校验通道安全续接；不得用最新运行或内存猜测替代。 */
   inspect(run:DispatchRun):Promise<RunSummary>;
@@ -276,7 +277,7 @@ export class MemberExecutionManager {
       this.owner.assert();
       if(handle.stopping||!handle.isCurrent()){handle.stopping=true;await this.settle(run,undefined,'cancelled');return}
       handle.runtime=await engine.create(run,task,{
-        onEvent:event=>{this.eventStreams.append(run,spec,event);this.emit(event)},onEngineReady:input=>this.ready(run,input.sessionFile),
+        onEvent:event=>{this.eventStreams.append(run,spec,event);this.emit(event)},onEngineReady:input=>this.ready(run,input.sessionFile,input.nativeSessionId),
         requestApproval:call=>this.approvals.request(task.taskId,call),requestQuestion:(args,signal)=>this.questions.ask(task.taskId,args,signal),
       });
       if(handle.stopping||!handle.isCurrent()){handle.stopping=true;await this.settle(run,undefined,'cancelled');return}
@@ -306,15 +307,18 @@ export class MemberExecutionManager {
       }
     }
   }
-  /** 引擎已建立原生会话，但尚未生成；提交失败向上传播，由大脑关闭引擎并保留中断证据。 */
-  private async ready(original:DispatchRun,sessionFile?:string){
-    if(!sessionFile)fail('MEMBER_SESSION_INVALID','引擎没有提供可核实的原生会话');
-    const command={commandId:'ready-'+original.binding.runId,fingerprint:hash(json({binding:original.binding,sessionFile}))};
+  /** 生成前保存真实启动；Codex 首次采用服务端 UUID，已有原生身份与恢复文件不得改绑。 */
+  private async ready(original:DispatchRun,sessionFile?:string,nativeSessionId?:string){
+    if(!sessionFile&&(!['claude-code','codex'].includes(original.model.engine??'pi')||original.resumeFrom||original.session.sessionFile))fail('MEMBER_SESSION_INVALID','引擎没有提供可核实的原生会话');
+    const initialCodex=original.model.engine==='codex'&&!original.session.sessionFile&&!original.resumeFrom&&original.session.nativeSessionId===original.binding.agentSessionId;
+    if(initialCodex&&!nativeSessionId||!initialCodex&&nativeSessionId&&nativeSessionId!==original.session.nativeSessionId)fail('MEMBER_SESSION_INVALID','引擎原生身份与已绑定通道不一致');
+    const native=initialCodex?nativeSessionId!:original.session.nativeSessionId;
+    const command={commandId:'ready-'+original.binding.runId,fingerprint:hash(json({binding:original.binding,sessionFile,nativeSessionId:native}))};
     await this.store.transact(command,async state=>{
       const run=this.currentRun(state,original),{graph,task,member,session}=memberTask(state,run.binding.rootSessionId,run.binding.taskId);
       this.owner.assert();
       const now=new Date().toISOString(),updated={...task,status:'running' as const,revision:task.revision+1,updatedAt:now},occupied={...member,activity:'working' as const,communicatingMessageIds:[]};
-      return {runs:[{...run,status:'running',startedAt:now,session:{...run.session,sessionFile}}],members:[occupied],sessions:[{...session,nativeSessionId:run.session.nativeSessionId,lastTaskId:task.taskId,lastRunId:run.binding.runId}],batch:memberBatch(graph,command.commandId,'task.started',[{type:'task.upserted',task:updated},{type:'agent.upserted',agent:memberView(graph,occupied,updated)}]),receipt:true};
+      return {runs:[{...run,status:'running',startedAt:now,session:{nativeSessionId:native,sessionFile}}],members:[occupied],sessions:[{...session,nativeSessionId:native,lastTaskId:task.taskId,lastRunId:run.binding.runId}],batch:memberBatch(graph,command.commandId,'task.started',[{type:'task.upserted',task:updated},{type:'agent.upserted',agent:memberView(graph,occupied,updated)}]),receipt:true};
     });
   }
   /** 运行与租约都必须匹配；旧进程的迟到完成不能覆盖新成员占用。 */
@@ -328,8 +332,14 @@ export class MemberExecutionManager {
   private async settle(original:DispatchRun,summary:RunSummary|undefined,status:Exclude<DispatchRun['status'],'starting'|'running'>,error?:string,recovery=false){
     const command={commandId:(recovery?'recover-':'settle-')+original.binding.runId,fingerprint:hash(json({binding:original.binding,status,recovery}))};
     await this.store.transact(command,async state=>{
-      const run=this.currentRun(state,original),{graph,task,member,session}=memberTask(state,run.binding.rootSessionId,run.binding.taskId);
+      let run=this.currentRun(state,original);const {graph,task,member,session}=memberTask(state,run.binding.rootSessionId,run.binding.taskId);
       if(summary&&(json(summary.memberBinding)!==json(run.binding)||summary.task.taskId!==task.taskId||summary.runId!==run.binding.runId))fail('MEMBER_RUN_MISMATCH','执行摘要身份不一致');
+      // Claude/Codex 首轮的文件由真实引擎终态发现，先核实同一原生身份，再参与交付及检查点验证。
+      if(['claude-code','codex'].includes(run.model.engine??'pi')&&!run.session.sessionFile&&summary?.sessionFile){
+        const bindings=summary.events.filter(event=>event.type==='session.bound');
+        if(!bindings.some(event=>event.data.sessionFile===summary.sessionFile)||bindings.some(event=>event.data.sessionId!==run.session.nativeSessionId||event.data.sessionFile!==undefined&&event.data.sessionFile!==summary.sessionFile))fail('MEMBER_SESSION_INVALID','原生绑定与成员身份不一致');
+        run={...run,session:{...run.session,sessionFile:summary.sessionFile}};
+      }
       let result=status==='completed'&&summary?memberCandidate(task,summary):undefined,help:MemberHelpRecord|undefined,checkpoint:MemberCheckpointRecord|undefined,checkpointProof:MemberCheckpointProof|undefined;
       if(result&&preparedWorkflowContracts(run.prepared).length)try{const canonical=await this.ports.inspect(run);await validateMemberWorkflow(task,run,canonical,this.owner.entry.path,this.ports.artifacts?{...this.ports.artifacts,checkManifest:this.ports.manifests?.check,signal:this.ports.signal}:undefined);result=memberCandidate(task,canonical)}catch(problem){result=undefined;error='Workflow 交付条件未通过可信运行核实：'+(problem instanceof Error?problem.message:String(problem))}
       if(!recovery&&status==='completed'&&summary?.events.some(event=>event.type==='task.checkpoint_requested')){

@@ -5,7 +5,7 @@
  */
 import {dispatchTaskOutputSchema,toolReceiptSchema,type GraphSnapshot,type TaskNode} from '../../bridge/contracts/dispatch';
 import type {RunSummary} from '../../bridge/contracts/execution';
-import {mainCommandSelection} from './command-verification-state';
+import {mainCommandSelection} from '../tasks/command-verification-state';
 
 function sameMainGraph(run:RunSummary,graph:GraphSnapshot|undefined):graph is GraphSnapshot{
   const task=run.task,binding=run.conversationBinding;

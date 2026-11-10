@@ -72,6 +72,9 @@ test('snapshot contracts and domain views reject reverse or private dependencies
     ['src/backend/core/brain/engine-tool-port.ts','src/backend/core/tasks/progress-tools.ts'],
     ['src/backend/core/brain/engine-tools.ts','src/backend/core/tasks/progress-tools.ts'],
     ['src/backend/core/brain/index.ts','src/backend/core/brain/pi/engine.ts'],
+    ['src/frontend/execution-view/WorkStatus.tsx','src/frontend/tasks/useExecutionRecovery.ts'],
+    ['src/frontend/execution-view/ToolTimeline.tsx','src/frontend/conversation/Conversation.tsx'],
+    ['src/frontend/tasks/MemberRunTranscript.tsx','src/frontend/conversation/ConversationTurn.tsx'],
   ];
   for(const [from,to] of denied){
     const relative=path.posix.relative(path.posix.dirname(from),to);

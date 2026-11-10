@@ -15,7 +15,6 @@
 | [extensions.css](extensions.css) | 中央对话与右侧扩展区的分栏、空页签及各扩展面板布局。 |
 | [runtime-navigation.ts](runtime-navigation.ts) | 把全局运行页的定位目标核对为现有主会话，并只更新本机页签与任务图选择。 |
 | [shell.css](shell.css) | 工作区外壳、侧栏、页签、菜单和主题布局样式。 |
-| [state-labels.ts](state-labels.ts) | 界面工作区与工具任务状态的中文标签。 |
 | [tabs.ts](tabs.ts) | 页签种类、默认布局、排序与本机布局恢复。 |
 | [UserMenu.tsx](UserMenu.tsx) | 本地账号菜单、主题与设置入口，以及合并的版本与更新入口、上次检查时间和新版绿点。 |
 | [useSidebarWidth.ts](useSidebarWidth.ts) | 管理侧边栏宽度、拖动与键盘调整，并在本地保留布局。 |
@@ -34,7 +33,7 @@ class N_src_frontend_shell_App_tsx["App.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[../updates/SoftwareUpdates.tsx](../updates/SoftwareUpdates.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[../conversation/conversation-activity.ts](../conversation/conversation-activity.ts)、[WorkspaceList.tsx](WorkspaceList.tsx)、[ExtensionArea.tsx](ExtensionArea.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[UserMenu.tsx](UserMenu.tsx)、[useSidebarWidth.ts](useSidebarWidth.ts)、[state-labels.ts](state-labels.ts)、[../runtime/RuntimeOverview.tsx](../runtime/RuntimeOverview.tsx)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[runtime-navigation.ts](runtime-navigation.ts)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[../updates/SoftwareUpdates.tsx](../updates/SoftwareUpdates.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[../conversation/conversation-activity.ts](../conversation/conversation-activity.ts)、[WorkspaceList.tsx](WorkspaceList.tsx)、[ExtensionArea.tsx](ExtensionArea.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[UserMenu.tsx](UserMenu.tsx)、[useSidebarWidth.ts](useSidebarWidth.ts)、[../components/state-labels.ts](../components/state-labels.ts)、[../runtime/RuntimeOverview.tsx](../runtime/RuntimeOverview.tsx)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[runtime-navigation.ts](runtime-navigation.ts)。
 
 ### ExtensionArea.tsx
 
@@ -147,15 +146,6 @@ class N_src_frontend_shell_shell_css["shell.css"] {
 }
 ```
 
-### state-labels.ts
-
-```mermaid
-classDiagram
-class N_src_frontend_shell_state_labels_ts["state-labels.ts"] {
-  <<module>>
-}
-```
-
 ### tabs.ts
 
 ```mermaid
@@ -251,7 +241,7 @@ class N_src_frontend_shell_WorkspaceList_tsx["WorkspaceList.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../conversation/ConversationEntries.tsx](../conversation/ConversationEntries.tsx)、[state-labels.ts](state-labels.ts)、[workspace-list.css](workspace-list.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../conversation/ConversationEntries.tsx](../conversation/ConversationEntries.tsx)、[../components/state-labels.ts](../components/state-labels.ts)、[workspace-list.css](workspace-list.css)。
 
 ### 本目录调用边界
 
@@ -286,9 +276,6 @@ class N_src_frontend_shell_App_tsx["App.tsx"] {
 class N_src_frontend_shell_useSidebarWidth_ts["useSidebarWidth.ts"] {
   <<module>>
 }
-class N_src_frontend_shell_state_labels_ts["state-labels.ts"] {
-  <<module>>
-}
 class N_src_frontend_shell_runtime_navigation_ts["runtime-navigation.ts"] {
   <<module>>
 }
@@ -298,32 +285,27 @@ class N_src_frontend_shell_ExtensionArea_tsx["ExtensionArea.tsx"] {
 class N_src_frontend_shell_extensions_css["extensions.css"] {
   <<stylesheet>>
 }
+class N_src_frontend_shell_tabs_ts["tabs.ts"] {
+  <<module>>
+}
 N_src_frontend_shell_App_tsx ..> N_src_frontend_shell_useSidebarWidth_ts : 导入依赖
-N_src_frontend_shell_App_tsx ..> N_src_frontend_shell_state_labels_ts : 导入依赖
 N_src_frontend_shell_App_tsx ..> N_src_frontend_shell_runtime_navigation_ts : 导入依赖
 N_src_frontend_shell_ExtensionArea_tsx ..> N_src_frontend_shell_extensions_css : 导入依赖
+N_src_frontend_shell_runtime_navigation_ts ..> N_src_frontend_shell_tabs_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_frontend_shell_runtime_navigation_ts["runtime-navigation.ts"] {
-  <<module>>
-}
-class N_src_frontend_shell_tabs_ts["tabs.ts"] {
-  <<module>>
-}
 class N_src_frontend_shell_WorkspaceList_tsx["WorkspaceList.tsx"] {
   <<component>>
 }
-class N_src_frontend_shell_state_labels_ts["state-labels.ts"] {
+class N_src_frontend_shell_tabs_ts["tabs.ts"] {
   <<module>>
 }
 class N_src_frontend_shell_workspace_list_css["workspace-list.css"] {
   <<stylesheet>>
 }
-N_src_frontend_shell_runtime_navigation_ts ..> N_src_frontend_shell_tabs_ts : 导入依赖
 N_src_frontend_shell_WorkspaceList_tsx ..> N_src_frontend_shell_tabs_ts : 导入依赖
-N_src_frontend_shell_WorkspaceList_tsx ..> N_src_frontend_shell_state_labels_ts : 导入依赖
 N_src_frontend_shell_WorkspaceList_tsx ..> N_src_frontend_shell_workspace_list_css : 导入依赖
 ```
 

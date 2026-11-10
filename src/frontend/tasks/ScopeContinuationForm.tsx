@@ -3,7 +3,7 @@
  * 设计原因：补充原目标独立于普通聊天队列；选择资料只保存草稿，点击“补充并继续”才受理，未知结果不能替换正文或附件，也不代表人工批准。
  */
 import type {ScopeContinuationView} from './useScopeContinuation';
-import {ComposerAttachments} from '../conversation/ComposerAttachments';
+import {ComposerAttachments} from '../execution-view/ComposerAttachments';
 import {ContinuationSourceMenu} from './ContinuationSourceMenu';
 
 /** 所有操作交给主会话唯一控制器；两处表单不会各自生成命令或保存独立草稿。 */

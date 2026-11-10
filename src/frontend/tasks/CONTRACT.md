@@ -428,3 +428,7 @@ AutomaticExecutionDetails 供目标责任分配及任务详情共用，显示兜
 ### 内联成员观察
 
 MemberActivityCard 的 inline 形式默认只显示图上的状态、任务和候选摘要，展开才启用 useMemberRun；折叠清理在途观察并忽略迟到回包，不停止任务。原帮助、负责人、撤销、依赖修订和检查点通知共用同一正文；旧列表形式保留供独立消费者使用，主对话不再另挂列表。
+
+### 共享执行展示与领域控制分离
+
+本目录单向消费 execution-view，不再导入 conversation 页面组件。ToolActivity 在共享 ToolTimeline 的插槽装配原主命令核实及影响处置；SessionTaskView 将该轨道传给 WorkStatus，MemberRunTranscript 仅显示共享只读轨道。CommandVerificationPanel/状态机归任务域，仍仅通过明确点击查询原命令，不随渲染自动重试。恢复上下文和本地草稿所有权保持 useExecutionRecovery。

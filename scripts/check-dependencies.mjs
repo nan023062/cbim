@@ -30,6 +30,8 @@ const teamView='src/backend/core/team/model.ts';
 const businessView='src/backend/core/workspace/model.ts';
 const projectRoot='src/backend/core/workspace/project-root.ts';
 const moduleBoundaries=[
+  {sources:['src/frontend/execution-view/'],allow:['src/frontend/execution-view/','src/frontend/components/','src/bridge/contracts/']},
+  {sources:['src/frontend/tasks/'],allow:['src/frontend/tasks/','src/frontend/execution-view/','src/frontend/components/','src/bridge/contracts/']},
   {sources:[foundation],allow:[foundation]},
   {sources:[knowledgeTypes],allow:[]},
   {sources:[knowledgeSnapshot],allow:[knowledgeTypes,foundation]},

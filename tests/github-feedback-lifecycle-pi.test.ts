@@ -6,7 +6,7 @@ import {fixture} from './helpers';
 import {Application} from '../src/backend/main/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {knowledgeContractResult} from './knowledge-contract-provider';
-import {transcript} from '../src/frontend/conversation/transcript';
+import {transcript} from '../src/frontend/execution-view/transcript';
 import type {RunSummary} from '../src/backend/core/brain/types';
 
 it.each(['bug','wish'] as const)('refreshes both feedback tools after login when resuming an empty-project conversation (%s)',async kind=>{

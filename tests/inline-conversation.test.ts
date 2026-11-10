@@ -1,11 +1,11 @@
 import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {transcript} from '../src/frontend/conversation/transcript';
+import {transcript} from '../src/frontend/execution-view/transcript';
 import {inlineDependencies,inlineDispatchedTask,inlineHandoffTasks} from '../src/frontend/conversation/inline-task-state';
-import {ToolActivity} from '../src/frontend/conversation/ToolActivity';
+import {ToolActivity} from '../src/frontend/tasks/ToolActivity';
 import {MemberActivityCard} from '../src/frontend/tasks/MemberActivity';
-import {WorkStatus} from '../src/frontend/conversation/WorkStatus';
+import {WorkStatus} from '../src/frontend/execution-view/WorkStatus';
 import {inlineMainRuns} from './inline-conversation-fixture';
 import {progressFixture} from './conversation-progress-fixture';
 

@@ -1,9 +1,9 @@
 import {expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {CommandVerificationController,applyCommandVerification,commandVerificationStale,mainCommandSelection,type CommandVerificationSelection} from '../src/frontend/conversation/command-verification-state';
-import {CommandVerificationPanel} from '../src/frontend/conversation/CommandVerificationPanel';
-import {ToolActivity} from '../src/frontend/conversation/ToolActivity';
+import {CommandVerificationController,applyCommandVerification,commandVerificationStale,mainCommandSelection,type CommandVerificationSelection} from '../src/frontend/tasks/command-verification-state';
+import {CommandVerificationPanel} from '../src/frontend/tasks/CommandVerificationPanel';
+import {ToolActivity} from '../src/frontend/tasks/ToolActivity';
 import {commandVerificationToolNames,type CommandVerificationReport,type CommandResultSummary} from '../src/bridge/contracts/command-verification';
 import type {RunSummary} from '../src/bridge/contracts/execution';
 

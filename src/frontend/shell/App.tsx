@@ -26,7 +26,7 @@ import {Conversation} from '../conversation/Conversation';
 
 import {UserMenu} from './UserMenu';
 import {useSidebarWidth} from './useSidebarWidth';
-import {stateLabels} from './state-labels';
+import {stateLabels} from '../components/state-labels';
 import {RuntimeOverview} from '../runtime/RuntimeOverview';
 import type {RuntimeNavigationTarget} from '../runtime/runtime-view-state';
 import {RuntimeNavigationResolver,bindRuntimeConversation,type RuntimeNavigationRequest} from './runtime-navigation';

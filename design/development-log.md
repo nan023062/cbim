@@ -1,3 +1,11 @@
+## 2026-11-11：共享执行展示与页面控制单向依赖（架构审计 A08）
+
+- 建立 execution-view：公开消息投影、Markdown、工具轨道/状态、提问、附件和队列由真实主对话、成员任务、团队履历消费者共享；任务域保留原命令核实、影响观察和恢复控制器。WorkStatus/ToolTimeline 只接运行投影及可选展示插槽，不接 ExecutionRecoveryContext。
+- tasks 不再依赖 conversation；team 的履历及 Markdown 不再加载主对话模块。静态规则阻止共享展示反向引用页面/任务状态，阻止任务模块反向导入主对话或外壳。首次检查发现 FlowView 经纯状态标签依赖 shell，已将标签移到 components 后通过，未放宽规则。
+- 保留原消息/回执顺序、失败提示、显式查询、复制/受控链接、附件快照和队列回调。成员默认轨道不装配主来源操作；主对话及任务历史通过 ToolActivity 插槽保留原查询入口。原恢复草稿和控制器归属不变。
+- 按共享渲染和直接界面消费者选择：pnpm exec vitest run tests/agent-history-view.test.ts tests/chat-chrome.test.ts tests/command-verification-view.test.ts tests/conversation-progress.test.ts tests/conversation-waiting.test.ts tests/conversation.test.ts tests/dependencies.test.ts tests/human-continuation-view.test.ts tests/inline-conversation.test.ts tests/markdown.test.ts tests/member-event-state.test.ts tests/repository-tools-view.test.ts -t '^(?!all maintained code)' --reporter=default --reporter=json --outputFile=test-results/shared-execution-view.json：12 文件、74 用例通过（6.46s）；重复静态用例由 check:architecture 覆盖。pnpm typecheck 通过。最终 pnpm check:architecture：56 目录/611 代码及样式、1204 文件/6193 含类型边，0 循环、0 文档差异。
+- 同步共享展示、任务、主对话、团队、公共组件契约及受影响类图和边界注释。未运行全量后端回归、桌面打包和发布验收；仅因改动导入路径的在线/引擎消费者由类型与依赖检查覆盖，最终 PR 集成再覆盖原完整用例。
+
 ## 2026-11-11：三个引擎改用通用运行工具目录（架构审计 A06 / G06）
 
 - EngineContext 的九个具体业务类槽位改为 RuntimeToolsPort 目录；独立稳定文件定义目录/调用契约，引擎只枚举并路由。真实 toolCallId、停止信号、重名/非法名拒绝、未知工具拒绝保留。nativeTools=disabled 独立禁用全部原生文件/命令；求助、停泊和产物验证指引由业务装配产生。

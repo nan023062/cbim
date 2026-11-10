@@ -6,7 +6,7 @@ import {useMemo} from 'react';
 import type {RunSummary} from '../../bridge/contracts/execution';
 import type {ExecutionRecoveryContext} from '../tasks/useExecutionRecovery';
 import {MemberActivityCard} from '../tasks/MemberActivity';
-import {ToolActivity} from './ToolActivity';
+import {ToolActivity} from '../tasks/ToolActivity';
 import {inlineDependencies,inlineDispatchedTask} from './inline-task-state';
 
 /** 只有原派发的真实成功回执才装配任务状态；核实入口继续使用原调用身份。 */

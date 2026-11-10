@@ -1,5 +1,13 @@
 # CBIM 开发记录
 
+## 2026-11-10：开发 Skill 增加语义建模与代码 review 交付
+
+- 范围：同步 `.agents/skills/cbim-development/SKILL.md`、`.claude/skills/cbim-development/SKILL.md`、`.codex/skills/cbim-development/SKILL.md`，并更新[开发者说明](../docs/developer-skills.md)与路线图；没有修改产品源码或实施此前架构分析中的重构候选。
+- 设计理由：原流程已有架构原则，但开发步骤缺少可直接核对的业务语义与代码认知入口。本次以业务对象、权威状态、真实调用链和变化点组织开发前分析，复用已核实上下文；共性判断保留权限、事务、未知结果、重试和资源生命周期差异，以实际同类扩展检查变化传播，不将共享存储直接等同于领域边界。
+- review 交付：补充完整 diff 的基准、范围、全部变更文件及职责、调用链阅读顺序和下一次修改入口；测试、功能验收与人工 review 分别陈述。保留用户已有审阅约定，不新增逐步批准，也不停止已授权连续开发。小修只核对相关边界，纯文档不触发产品测试。
+- 实际验证：以 `python -X utf8` 调用 `skill-creator/scripts/quick_validate.py`，分别检查三个入口目录，均返回 `Skill is valid!`；Node 内联检查三个 `SKILL.md` 逐字节一致、UTF-8 内容及 Skill／开发者说明中的 39 个本地链接目标，全部通过；`git diff --check` 通过。人工对照只读分析、小范围缺陷修复、同类能力扩展和纯 Skill 维护四种请求核对范围及流程，不将此文案审查记作独立 Agent 行为验证。
+- 阅读入口：先看[开发 Skill 第 2 节](../.claude/skills/cbim-development/SKILL.md#2-梳理业务语义与交付切片)的语义说明，再看第 3 节共性判断和第 4 节 review 交付。未运行产品单元／全量测试、类型检查、构建、桌面或发布验收；原发布接续不变，后续实际使用效果仍需由真实开发与人工 review 检验。
+
 ## 2026-11-10：发布 CI 原命令读取时序修正
 
 - 第二轮完整 CI 第三片新增 1 项队列依赖测试失败：HTTP 已收到下一轮并不证明流式 stdout 文本已写入 canonical，报告可能跨越日志追加而拒绝给出 committed。测试改为等待真实保持文本落盘，再核同一原命令；保留变化期间拒绝的产品行为。

@@ -100,11 +100,11 @@ N_src_backend_core_workspace ..> N_src_backend_core_tools : 导入依赖
 - `tasks` → `policy`：导入。
 - `tasks` → `knowledge`：导入。
 - `tasks` → `governance`：导入。
+- `team` → `brain`：导入。
 - `team` → `workspace`：导入。
 - `team` → `foundation`：导入。
 - `team` → `knowledge`：导入。
 - `team` → `tasks`：导入。
-- `team` → `brain`：导入。
 - `tools` → `policy`：导入。
 - `tools` → `brain`：导入。
 - `tools` → `foundation`：导入。

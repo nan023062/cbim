@@ -689,3 +689,7 @@ createWorkspaceLoop 按冻结模型创建 PiEngine/ClaudeCodeEngine/CodexEngine�
 WorkspaceExecutionLease.acquireReadWithin 只由装配端为已核实主会话身份的内部核证调用；不是客户端可选的权限。人工接续 accept 在 beforeRun 已持有主执行占用时、目标审阅/完成核证时可派生独立读占用，父占用先释放仍由子读阻止其他写入。原主占用不存在则按普通读规则领取；其他运行的独占仍拒绝。桌面人工预览、决定、preflight 不使用派生入口，未知身份不能绕过占用。
 
 业务重规划 accept 的原影响核证也按已核主身份调用 EffectObservationService.observeFromMain，派生本运行读占用，避免把自身占用冲突误记为文件不可观察而改变 basis。预览、preflight、公开 observe 和人工处置仍使用独立读占用；不改变原失败回执、证据指纹和权限。
+
+### 同一模型的多引擎岗位
+
+OwnerExecutionService 在模型锁内按各岗位采纳的 engine 读取公开参数，以 profileId、modelId 和完整 configurationHash 匹配配置，不能只取同模型的第一项。MemberExecutionManager 从可信登记 hint 取得引擎，随后仍在 Store 事务中核全部 binding 与指纹；旧 ownerBinding 不加字段，原生恢复身份不变化。主 Agent 配置只为新发送提供选型，运行/已受理队列保持冻结配置。

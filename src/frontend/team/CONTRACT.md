@@ -47,3 +47,7 @@
 ### 静态默认与岗位采纳
 
 team-model 解析 Agent runtime 并随图节点交给登记表单；新登记可预选，编辑旧岗位默认保留原采纳。EngineModelPicker 管理两级菜单，切换 Agent 重置旧选择；预览及详情展示实际快照的引擎和模型。
+
+### 对话栏与主 Agent 配置等效
+
+TeamView 工具栏提供 MainAgentEditor，复用 EngineModelPicker 与 useMainAgentSettings。主 Agent 配置和对话栏读写后端同一份角色设置，所有主会话同步；表单固定打开时 revision，不能自动覆盖另一入口的更改。内置能力仍只读。自定义 Agent 仍经原知识预览提交保存 runtime，新岗位明确采纳引擎与模型；历史运行保持原快照。

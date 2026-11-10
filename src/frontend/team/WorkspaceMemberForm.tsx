@@ -1,10 +1,10 @@
 /**
  * 作用定位：项目岗位登记、元信息编辑、明确采纳及状态变更的表单。
  * 设计原因：业务架构入口只预选仍可见的 Agent，模型必须明确选择；编辑名称不顺带采纳能力或重写模型，所有选择先交 Main 预览，界面不拼造采纳正文和操作者。
- * 登记时预选静态 Agent 的明确 runtime；引擎与模型级联，切换 Agent 清除旧选择，编辑岗位仅显式变更模型。
+ * 登记时预选静态 Agent 的明确 runtime；引擎独立保存，模型按协议兼容性级联，切换 Agent 清除旧选择，编辑岗位仅显式变更模型。
  */
 import {EngineModelPicker} from '../components/EngineModelPicker';
-import type {AgentModelSelection} from '../../bridge/contracts/models';
+import {engineSupportsApi,type AgentModelSelection} from '../../bridge/contracts/models';
 import {useState} from 'react';
 import type {LlmSettings} from '../../bridge/contracts/models';
 import {workspaceMemberChangeInputSchema} from '../../bridge/contracts/workspace-members';
@@ -18,8 +18,8 @@ export function WorkspaceMemberForm({kind,member,agents,initialAgentId,models,ta
   const [references,setReferences]=useState(register?'':member?.adaptation.references.join('\n')??''),[agent,setAgent]=useState(()=>register&&agents.some(item=>item.id===initialAgentId)?initialAgentId!:''),[model,setModel]=useState<AgentModelSelection|null>(()=>register?agents.find(item=>item.id===initialAgentId)?.runtime??null:null),[reason,setReason]=useState(''),[error,setError]=useState('');
   const change=(fn:()=>void)=>{onEdit();setError('');fn()};
   async function prepare(){try{
-    const runtimePolicy=model?{profileId:model.profileId,modelId:model.modelId}:undefined;
-    if(model&&!models?.profiles.some(p=>p.id===model.profileId&&(p.engine??'pi')===model.engine&&p.models.some(m=>m.enabled&&m.id===model.modelId)))throw Error('所选引擎或模型不可用，请重新选择');
+    const runtimePolicy=model?{engine:model.engine,profileId:model.profileId,modelId:model.modelId}:undefined;
+    if(model&&!models?.profiles.some(p=>p.id===model.profileId&&engineSupportsApi(model.engine,p.api)&&p.models.some(m=>m.enabled&&m.id===model.modelId)))throw Error('所选引擎或模型不可用，请重新选择');
     const adaptation={instructions,references:references.split('\n').map(line=>line.trim()).filter(Boolean)};
     let input:unknown;
     if(register){if(!runtimePolicy)throw Error('请明确选择岗位模型');input={kind,agentId:agent,name,position,adaptation,runtimePolicy,reason}}

@@ -321,8 +321,8 @@ architecture.ts 另重导纯 moduleBodyTemplate，供编辑器复用模块协议
 
 ### 引擎与模型菜单
 
-models 公开重导出 LoopEngine、AgentModelSelection、engineLabel、configuredEngines；只传公开模型身份。具体引擎、SDK、环境与凭据不进入渲染进程。
+models 公开重导出 LoopEngine、AgentModelSelection、engineLabel、loopEngineSchema、engineSupportsApi；只传公开模型身份。具体引擎、SDK、环境与凭据不进入渲染进程。
 
 ### 引擎协议选型
 
-models 仅重导出 engineApi 等纯规则，设置页用它约束 Codex/Claude 的协议选择；不会把原生二进制、账号目录或进程参数作为公开 IPC。
+models 仅重导出 engineApi/engineSupportsApi 等纯规则，用于 Agent 选型与运行前兼容校验，供应商不持有执行引擎。mainAgentSettingsSchema 公开工作区、实例、角色、revision 与 selection，两个主 Agent 设置入口共用该契约；不会把原生二进制、账号目录、凭据或进程参数作为公开 IPC。

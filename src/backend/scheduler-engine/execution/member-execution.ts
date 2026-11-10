@@ -1,5 +1,5 @@
 /**
- * 自动兜底从原周期模型准备执行；领取与续段重新核模块、配置及是否已有负责人，权限仍来自原运行策略。
+ * 引擎从岗位采纳快照准备执行，供应商不决定执行引擎；旧自动兜底记录仅保留读取；领取与续段重新核模块、配置及是否已有负责人，权限仍来自原运行策略。
  * 隔离执行与受控文件共用未收尾占用规则；再次close只等待原资源并把原运行封存为interrupted，不重启成员。
  * 领取前按真实scopedTools单独核验范围模式能力；缺端口不回退native，续执行仍复核原知识与权限。
  * 完整出口结算从原canonical重建清单并经真实全集合端口重核；只有JSON文件未变不足以保存候选。
@@ -12,6 +12,7 @@
  * 领取边界：运行中用户补充未确认或旧计划尚未按新输入重规划时，保留原待办而不创建成员运行；已在执行的成员仍可结算真实事实。
  * Claude/Codex 首轮允许延迟绑定真实原生文件；Codex 仅在 starting→running 时采纳 App Server 分配的线程 ID，之后身份与文件冻结。
  */
+import {workspaceMemberEngine,type WorkspaceMemberModelRef} from '../../core/team/workspace-member';
 import {sameAutomaticExecutionForModules} from '../../core/team/automatic-execution';
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
@@ -62,7 +63,7 @@ export interface MemberExecutionPorts {
   /** 同工作区岗位门禁；未装配时不能创建新业务领取，旧运行仍可结算。 */
   owners?:OwnerExecutionService;
   /** 模型短锁先提供公开配置；预算和占用通过后才调用 prepare，不在 Store 中重新排配置队列。 */
-  withEngineConfiguration?<T>(model:OwnerExecutionBinding['model'],options:MemberStartOptions,use:(locked:{model:ResolvedLlm['profile'];prepare():PreparedEngine})=>Promise<T>):Promise<T>;
+  withEngineConfiguration?<T>(model:OwnerExecutionBinding['model'] & Pick<WorkspaceMemberModelRef,'engine'>,options:MemberStartOptions,use:(locked:{model:ResolvedLlm['profile'];prepare():PreparedEngine})=>Promise<T>):Promise<T>;
   /** 独立只读文件复核能力，不隐式采集旧日志或运行模型。 */
   artifacts?:Omit<ArtifactReportPorts,'inspect'>;
   /** 完整范围的只读复核与旧选定文件查询独立，不隐式迁移历史。 */
@@ -166,7 +167,10 @@ export class MemberExecutionManager {
       if(this.pendingStarts.has(input.taskId))fail('MEMBER_BUSY','该成员任务正在准备领取');this.pendingStarts.set(input.taskId,pending);assertCurrent();
       const receipt=await this.ports.owners.withSnapshot(async(snapshot,hint)=>{
         const hinted=memberTask(hint,input.rootSessionId,input.taskId).task;if(!hinted.ownerBinding&&!hinted.fallbackBinding)fail('OWNER_BINDING_REQUIRED','旧任务没有负责岗位绑定');
-        const model=(hinted.ownerBinding??hinted.fallbackBinding)!.model;
+        const bindingModel=(hinted.ownerBinding??hinted.fallbackBinding)!.model;
+        const policy=hinted.ownerBinding?hint.workspaceMembers?.find(member=>member.memberId===hinted.ownerBinding!.memberId)?.runtimePolicy:undefined;
+        // 引擎从被冻结岗位的采纳事实恢复；事务内仍核全部 binding 与模型指纹，不修改旧绑定形状。
+        const model={...bindingModel,engine:policy?workspaceMemberEngine(policy):hinted.fallbackBinding?.model.engine};
         if(input.options.profileId&&input.options.profileId!==model.profileId||input.options.model&&input.options.model!==model.modelId)fail('OWNER_MODEL_MISMATCH','成员模型只能来自原岗位绑定，不能由主会话选型覆盖');
         const prior=resuming?hint.runs?.find(run=>run.binding.runId===currentMemberResumeRequest(hinted)?.runId):undefined;
         if(resuming&&!prior)fail('MEMBER_RESUME_NOT_ALLOWED','续执行原运行不存在');

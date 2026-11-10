@@ -9,6 +9,7 @@
 import type {Catalog} from '../workspace/catalog';
 import type {Workspace} from '../workspace/workspace';
 import type {Paths} from '../platform/paths';
+import type {MainAgentSettings} from '../persistence/settings/main-agent-settings';
 import type {LlmProfiles} from '../persistence/settings/llm-profiles';
 import type {ResourceRepositories} from '../resources/resource-repository';
 import type {RepositoryConnections} from '../resources/repository-connections';
@@ -35,6 +36,8 @@ export interface ApplicationServices {
   readonly catalog: Catalog;
   readonly paths: Paths;
   readonly models: LlmProfiles;
+  /** 对话栏和主 Agent 配置页共用角色选型，写入不启动模型。 */
+  readonly mainAgentSettings:MainAgentSettings;
   readonly resources: ResourceRepositories;
   /** 桌面显式登记、授权和真实只读核验；没有模型入口或任意 URL/凭据参数。 */
   readonly repositoryConnections:RepositoryConnections;

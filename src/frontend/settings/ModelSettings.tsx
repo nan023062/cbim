@@ -1,15 +1,15 @@
 /**
  * 作用定位：设置页的自定义供应商、连接表单与模型目录编辑器。
  * 设计原因：提供逐模型视觉能力开关和目录同步；沿用 Cindy 的供应商→连接→模型组织方式；模型获取、加密与测试交给主进程，读取供应商元数据并显式同步已有模型，缺失容量要求填写；界面区分真实容量、工作预算、思考意图和可选 USD 计价，仅保留编辑期间的凭据。
- * 供应商所属 Loop 引擎显式保存；Claude Code/Codex 分别锁定 Anthropic/Responses 协议，未声明的旧配置仍展示 Pi。
+ * 供应商只维护连接与统一模型目录；执行引擎在对话或 Agent 中独立选择，同一模型可供兼容引擎共用。
  */
 import {useEffect,useState} from 'react';
-import {engineLabel,engineApi} from '../../bridge/contracts/models';
+
 import type {LlmDefinition,LlmModel,LlmProfile,LlmSettings} from '../../bridge/contracts/models';
 import './models.css';
 import type {DiscoveredModel} from '../../bridge/contracts/models';
 const api=window.cbim;
-const empty=():LlmDefinition=>({name:'',engine:'pi',api:'openai-completions',baseUrl:'',auth:'api-key',models:[],defaultModel:''});
+const empty=():LlmDefinition=>({name:'',api:'openai-completions',baseUrl:'',auth:'api-key',models:[],defaultModel:''});
 const newModel=(id:string,info?:DiscoveredModel):LlmModel=>({id,name:info?.name||id,enabled:true,contextWindow:info?.contextWindow??0,maxTokens:Math.min(info?.maxOutputTokens??4096,16384,info?.contextWindow??16384),outputLimit:info?.maxOutputTokens,vision:info?.vision,reasoning:info?.reasoning??false});
 /** 草稿独立于已保存配置；取消清空凭据，测试连接明确使用已保存版本。 */
 export function ModelSettings(){
@@ -17,7 +17,7 @@ export function ModelSettings(){
   const [modelId,setModelId]=useState(''),[found,setFound]=useState<DiscoveredModel[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[removeId,setRemoveId]=useState<string>();
   useEffect(()=>{void api.call('models.list').then(setState).catch((e:Error)=>setError(e.message))},[]);
   async function perform(work:()=>Promise<void>){setBusy(true);setError('');setNotice('');try{await work()}catch(e:any){setError(e.message)}finally{setBusy(false)}}
-  function open(p?:LlmProfile){setId(p?.id);setDraft(p?{name:p.name,engine:p.engine,api:p.api,baseUrl:p.baseUrl,auth:p.auth,models:p.models.map(m=>({...m})),defaultModel:p.defaultModel}:empty());setKey('');setFound([]);setModelId('');setEditing(true);setError('');setNotice('')}
+  function open(p?:LlmProfile){setId(p?.id);setDraft(p?{name:p.name,api:p.api,baseUrl:p.baseUrl,auth:p.auth,models:p.models.map(m=>({...m})),defaultModel:p.defaultModel}:empty());setKey('');setFound([]);setModelId('');setEditing(true);setError('');setNotice('')}
   function add(value:string){setDraft(d=>({...d,models:[...d.models,newModel(value,found.find(m=>m.id===value))],defaultModel:d.defaultModel||value}));setModelId('')}
   function updateModel(index:number,patch:Partial<LlmModel>){setDraft(d=>({...d,models:d.models.map((m,i)=>i===index?{...m,...patch}:m)}))}
   function drop(index:number){setDraft(d=>{const models=d.models.filter((_,i)=>i!==index);return {...d,models,defaultModel:models.some(m=>m.id===d.defaultModel)?d.defaultModel:models.find(m=>m.enabled)?.id||''}})}
@@ -26,12 +26,12 @@ export function ModelSettings(){
     {error&&<p className="shell-alert" role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
     {!state&&!error&&<p role="status">正在读取模型配置…</p>}
     {state?.profiles.length===0&&!editing&&<p>尚未连接模型供应商。添加后，未指定模型的任务将使用默认模型。</p>}
-    {!editing&&state?.profiles.map(p=><div className="model-provider" key={p.id}><div><b>{p.name}</b>{state.selectedId===p.id&&<span className="model-badge">默认</span>}<small>{engineLabel(p.engine??'pi')} · {p.baseUrl}</small><small>{p.models.filter(m=>m.enabled).length} 个已启用模型 · 默认 {p.defaultModel}</small></div><div className="model-actions"><button disabled={busy} onClick={()=>open(p)}>编辑</button><button disabled={busy} onClick={()=>void perform(async()=>{const result=await api.call('models.test',{id:p.id});setNotice(`${p.name} · ${result.model} 连接成功 · ${result.latencyMs} ms（文本请求）`)})}>测试连接</button>{state.selectedId!==p.id&&<button disabled={busy} onClick={()=>void perform(async()=>{setState(await api.call('models.select',{id:p.id}))})}>设为默认</button>}<button disabled={busy} onClick={()=>setRemoveId(p.id)}>删除</button></div>{removeId===p.id&&<div className="model-delete">删除此供应商及凭据？正在运行的任务不受影响。<button disabled={busy} onClick={()=>void perform(async()=>{setState(await api.call('models.remove',{id:p.id}));setRemoveId(undefined)})}>确认删除</button><button disabled={busy} onClick={()=>setRemoveId(undefined)}>取消</button></div>}</div>)}
+    {!editing&&state?.profiles.map(p=><div className="model-provider" key={p.id}><div><b>{p.name}</b>{state.selectedId===p.id&&<span className="model-badge">默认</span>}<small>{p.baseUrl}</small><small>{p.models.filter(m=>m.enabled).length} 个已启用模型 · 默认 {p.defaultModel}</small></div><div className="model-actions"><button disabled={busy} onClick={()=>open(p)}>编辑</button><button disabled={busy} onClick={()=>void perform(async()=>{const result=await api.call('models.test',{id:p.id});setNotice(`${p.name} · ${result.model} 连接成功 · ${result.latencyMs} ms（文本请求）`)})}>测试连接</button>{state.selectedId!==p.id&&<button disabled={busy} onClick={()=>void perform(async()=>{setState(await api.call('models.select',{id:p.id}))})}>设为默认</button>}<button disabled={busy} onClick={()=>setRemoveId(p.id)}>删除</button></div>{removeId===p.id&&<div className="model-delete">删除此供应商及凭据？正在运行的任务不受影响。<button disabled={busy} onClick={()=>void perform(async()=>{setState(await api.call('models.remove',{id:p.id}));setRemoveId(undefined)})}>确认删除</button><button disabled={busy} onClick={()=>setRemoveId(undefined)}>取消</button></div>}</div>)}
     {editing&&<form onSubmit={e=>{e.preventDefault();void perform(async()=>{setState(await api.call('models.save',{id,profile:draft,apiKey:key||undefined}));setKey('');setEditing(false);setNotice('供应商已保存。新启动的任务使用新配置，可点击测试连接验证。')})}}>
       <fieldset disabled={busy} className="model-form"><legend>{id?'编辑供应商':'添加自定义供应商'}</legend>
         <label>名称<input required maxLength={80} value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="我的模型服务"/></label>
-        <label>Loop 引擎<select value={draft.engine??'pi'} onChange={e=>setDraft({...draft,engine:e.target.value as LlmDefinition['engine'],...(engineApi(e.target.value as NonNullable<LlmDefinition['engine']>)?{api:engineApi(e.target.value as NonNullable<LlmDefinition['engine']>)!}:{})})}><option value="pi">Pi</option><option value="claude-code">Claude Code</option><option value="codex">Codex</option></select></label>
-        <label>接口协议<select disabled={!!engineApi(draft.engine??'pi')} value={draft.api} onChange={e=>setDraft({...draft,api:e.target.value as LlmDefinition['api']})}><option value="openai-completions">OpenAI Chat Completions</option><option value="openai-responses">OpenAI Responses</option><option value="anthropic-messages">Anthropic Messages</option></select></label>
+
+        <label>接口协议<select value={draft.api} onChange={e=>setDraft({...draft,api:e.target.value as LlmDefinition['api']})}><option value="openai-completions">OpenAI Chat Completions</option><option value="openai-responses">OpenAI Responses</option><option value="anthropic-messages">Anthropic Messages</option></select></label>
         <label>API 地址<input required type="url" value={draft.baseUrl} onChange={e=>setDraft({...draft,baseUrl:e.target.value})} placeholder="https://api.example.com/v1"/></label><p className="inline-note">填写接口根地址，不包含 /chat/completions、/responses 或 /messages。仅支持 HTTPS 或本机 HTTP。</p>
         <label>鉴权方式<select value={draft.auth} onChange={e=>setDraft({...draft,auth:e.target.value as LlmDefinition['auth']})}><option value="api-key">API Key</option><option value="none">无需鉴权</option></select></label>
         {draft.auth==='api-key'&&<label>API Key<input type="password" autoComplete="new-password" value={key} onChange={e=>setKey(e.target.value)} placeholder={id?'留空保留已保存密钥':'输入 API Key'}/></label>}

@@ -12,12 +12,12 @@ import {requestBudgetReportSchema} from '../src/backend/core/tasks/model-request
 import {NativeSessionFiles} from '../src/backend/main/platform/native-session-files';
 import type {LoopEngine} from '../src/backend/core/brain/llm/engine';
 
-const profile=(baseUrl:string,engine:LoopEngine)=>({name:'Application '+engine,engine,api:engine==='codex'?'openai-responses' as const:'anthropic-messages' as const,baseUrl,auth:'none' as const,defaultModel:engine==='codex'?'codex-test-model':'request-budget-model',models:[{id:engine==='codex'?'codex-test-model':'request-budget-model',name:'Test',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false,pricing:{input:1,output:2,cacheRead:0.5,cacheWrite:1.5}}]});
+const profile=(baseUrl:string,engine:LoopEngine)=>({name:'Application '+engine,api:engine==='codex'?'openai-responses' as const:'anthropic-messages' as const,baseUrl,auth:'none' as const,defaultModel:engine==='codex'?'codex-test-model':'request-budget-model',models:[{id:engine==='codex'?'codex-test-model':'request-budget-model',name:'Test',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false,pricing:{input:1,output:2,cacheRead:0.5,cacheWrite:1.5}}]});
 
 test('真实主会话 Pi → Codex → Claude → Codex → Pi，保留各自原生身份并传递公开上下文',async()=>{
   const f=await fixture(),codex=await codexFixture(),anthropic=await modelRequestBudgetProvider('anthropic-messages');
   try{
-    const ids:Record<string,string>={};for(const engine of ['pi','claude-code','codex'] as const){const settings=await f.app.models.save({profile:profile(engine==='codex'?codex.llm.profile.baseUrl:anthropic.url,engine)});ids[engine]=settings.profiles.find(p=>p.engine===engine)!.id}
+    const ids:Record<string,string>={};for(const engine of ['pi','claude-code','codex'] as const){const settings=await f.app.models.save({profile:profile(engine==='codex'?codex.llm.profile.baseUrl:anthropic.url,engine)});ids[engine]=settings.profiles.find(p=>p.name==='Application '+engine)!.id}
     const entry=await f.app.dispatch('add',{path:f.a});await f.app.dispatch('budget.configure',{revision:1,enabled:true,enforcement:'request',limits:{tokens:2000000}});
     let prior:any;const summaries:any[]=[];
     for(const [index,engine] of (['pi','codex','claude-code','codex','pi'] as const).entries()){
@@ -42,7 +42,7 @@ test('真实成员采纳 Codex 首次线程 ID；原生文件可核实且没有�
   try{
     const settings=await f.app.models.save({profile:profile(provider.llm.profile.baseUrl,'codex')}),profileId=settings.selectedId!;
     const entry=await f.app.dispatch('add',{path:f.a}),ws=f.app.workspace(entry.id),team=await seedTeam(ws),moduleId=team.input.moduleId,agentId=team.input.agentId;
-    await registerFixtureOwner(f.app,entry.id,{agentId,moduleIds:[moduleId],profileId,modelId:'codex-test-model',name:'Codex 岗位',adaptation:{instructions:'仅核实本模块',references:[]}});
+    await registerFixtureOwner(f.app,entry.id,{agentId,moduleIds:[moduleId],profileId,modelId:'codex-test-model',engine:'codex',name:'Codex 岗位',adaptation:{instructions:'仅核实本模块',references:[]}});
     const service=f.app.memberDispatch(entry.id),members=f.app.memberExecution(entry.id),identity={workspaceId:entry.id,rootSessionId:randomUUID()},scopeId=randomUUID(),mainRunId=randomUUID();
     await service.openScope(identity,scopeId,{message:'验证岗位引擎'},mainRunId);const release=service.budgets.holdMain(mainRunId);
     try{

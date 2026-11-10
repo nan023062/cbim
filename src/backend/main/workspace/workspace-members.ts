@@ -16,7 +16,7 @@ import {
   type WorkspaceMember,type WorkspaceMemberCapability,type WorkspaceMemberChange,
   type WorkspaceMemberCurrentDiff,type WorkspaceMemberIdentity,
   type WorkspaceMemberModelRef,type WorkspaceMemberModelSnapshot,type WorkspaceMemberPreview,
-  type WorkspaceMemberPreviewInput,type WorkspaceMemberReceipt,type WorkspaceMemberRuntimePolicy,
+  workspaceMemberEngine,type WorkspaceMemberPreviewInput,type WorkspaceMemberReceipt,type WorkspaceMemberRuntimePolicy,
 } from '../../core/team/workspace-member';
 import {
   workspaceMemberCapabilityHash,workspaceMemberChangedFields,workspaceMemberCommand,
@@ -29,8 +29,8 @@ import {knowledgeSourcePending} from '../../core/workspace/knowledge-source-rule
 import type {SourceSelection,KnowledgeSourceReadState} from '../../core/workspace/knowledge-source';
 import type {KnowledgeSourceWorkspace} from './knowledge-sources';
 
-/** 只接收明确供应商和模型的公开参数；不得在实现中解密、网络探测或读取默认选择。 */
-export interface WorkspaceMemberModels {configuration(profileId:string,modelId:string):Promise<WorkspaceMemberModelSnapshot>}
+/** 只接收岗位独立选择的引擎、明确供应商和模型公开参数；不得在实现中解密、网络探测或读取默认选择。 */
+export interface WorkspaceMemberModels {configuration(profileId:string,modelId:string,engine?:WorkspaceMemberModelRef['engine']):Promise<WorkspaceMemberModelSnapshot>}
 interface PreparedMember {
   preview:WorkspaceMemberPreview;
   knowledgeRevision?:string;
@@ -127,9 +127,9 @@ export class WorkspaceMembers {
     const parsed=workspaceMemberCapabilitySchema.safeParse(configuration);if(!parsed.success)fail('MEMBER_SOURCE_INVALID','当前角色能力不符合岗位快照协议或超过容量');
     return parsed.data;
   }
-  private async policy(ref:WorkspaceMemberModelRef):Promise<WorkspaceMemberRuntimePolicy>{
-    const snapshot=workspaceMemberModelSnapshotSchema.parse(await this.models.configuration(ref.profileId,ref.modelId));
-    return {...ref,snapshot,configurationHash:workspaceMemberModelHash(snapshot)};
+  private async policy(ref:WorkspaceMemberModelRef & {snapshot?:WorkspaceMemberModelSnapshot}):Promise<WorkspaceMemberRuntimePolicy>{
+    const snapshot=workspaceMemberModelSnapshotSchema.parse(await this.models.configuration(ref.profileId,ref.modelId,workspaceMemberEngine(ref)));
+    return {profileId:ref.profileId,modelId:ref.modelId,...(ref.engine===undefined?{}:{engine:ref.engine}),snapshot,configurationHash:workspaceMemberModelHash(snapshot)};
   }
   private async prepare(state:DispatchState,request:WorkspaceMemberPreviewInput,fixed?:Snapshot):Promise<PreparedMember>{
     this.assert(request);const change=request.change,old=change.kind==='register'?undefined:this.member(state,change.memberId);
@@ -145,7 +145,7 @@ export class WorkspaceMembers {
     }else if(change.kind==='update'){
       const {runtimePolicy,...patch}=change.patch;proposed={...proposed!,...patch};
       if(runtimePolicy){
-        if(runtimePolicy.profileId===old!.runtimePolicy.profileId&&runtimePolicy.modelId===old!.runtimePolicy.modelId)fail('MEMBER_NO_CHANGE','相同模型的配置刷新请使用明确采纳操作');
+        if(runtimePolicy.profileId===old!.runtimePolicy.profileId&&runtimePolicy.modelId===old!.runtimePolicy.modelId&&(runtimePolicy.engine??'pi')===(workspaceMemberEngine(old!.runtimePolicy)??'pi'))fail('MEMBER_NO_CHANGE','相同模型的配置刷新请使用明确采纳操作');
         model=await this.selectedPolicy(runtimePolicy);this.assert(request);proposed.runtimePolicy=model;
       }
     }else if(change.kind==='adopt'){
@@ -154,7 +154,7 @@ export class WorkspaceMembers {
         const source=old!.adoption.configuration;
         if(configuration.workspaceId!==source.workspaceId||configuration.teamId!==source.teamId||configuration.agentId!==source.agentId||configuration.source!==source.source)fail('MEMBER_SOURCE_CHANGED','能力来源身份发生变化，不能作为原岗位的能力采纳');
         knowledgeRevision=configuration.knowledgeRevision;proposed!.capability={configuration,capabilityHash:workspaceMemberCapabilityHash(configuration)};
-      }else {model=await this.selectedPolicy({profileId:old!.runtimePolicy.profileId,modelId:old!.runtimePolicy.modelId});this.assert(request);proposed!.runtimePolicy=model}
+      }else {model=await this.selectedPolicy(old!.runtimePolicy);this.assert(request);proposed!.runtimePolicy=model}
     }else proposed!.state=change.nextState;
     if(adopting){
       const configuration=proposed!.capability.configuration;
@@ -179,7 +179,7 @@ export class WorkspaceMembers {
   }
   /** 旧采纳快照与账本保持可读，不再读取或重建已退役的内置能力。 */
   private async builtinStatus(_member:WorkspaceMember,_snapshot:Snapshot):Promise<KnowledgeSourceReadState>{return {status:'invalid',issue:'内置默认执行 Agent 已退役，历史岗位保留；未配置自定义 Agent 的模块由主 Agent 直接执行'}}
-  private async selectedPolicy(ref:WorkspaceMemberModelRef){try{return await this.policy(ref)}catch{fail('MEMBER_MODEL_INVALID','无法读取明确选定的公开模型配置，请检查供应商与已启用模型')}}
+  private async selectedPolicy(ref:WorkspaceMemberModelRef & {snapshot?:WorkspaceMemberModelSnapshot}){try{return await this.policy(ref)}catch{fail('MEMBER_MODEL_INVALID','无法读取明确选定的公开模型配置，请检查供应商与已启用模型')}}
   private async diff(member:WorkspaceMember):Promise<WorkspaceMemberCurrentDiff>{
     let capability:WorkspaceMemberCurrentDiff['capability'],model:WorkspaceMemberCurrentDiff['model'];
     try{

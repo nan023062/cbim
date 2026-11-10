@@ -2,11 +2,11 @@
  * 作用定位：模块卡片一级 Agent 选择的操作编排，复用岗位与责任的严格预览、提交和持久原命令。
  * 设计原因：静态 Agent 不能冒充 memberId；无岗位时按已选默认模型登记，已有岗位不改模型或采纳。两步分别有回执，部分成功不回滚或静默重放。
  * 生命周期：每次写入前检查原视图仍有效；未知结果只查询，重开不自动完成剩余绑定，不包含执行或模型启动端口。
- * 新登记优先采用静态 Agent 的明确选型，失效引用直接拒绝；只有未设置时使用本机默认模型。
+ * 新登记优先采用静态 Agent 的明确选型，失效引用直接拒绝；只有未设置时使用 Pi 和本机默认模型；供应商不决定执行引擎。
  */
 import type {ModuleOwnershipIdentity,ModuleOwnershipPage,ModuleOwnershipView} from '../../bridge/contracts/module-ownership';
 import type {WorkspaceMemberList,WorkspaceMemberPreviewInput} from '../../bridge/contracts/workspace-members';
-import type {LlmSettings,AgentModelSelection} from '../../bridge/contracts/models';
+import {engineSupportsApi,type LlmSettings,type AgentModelSelection} from '../../bridge/contracts/models';
 import {checkedWorkspaceMemberList,checkedWorkspaceMemberPreview,type WorkspaceMemberCommands} from '../team/workspace-member-state';
 import {checkedModuleOwnershipPage,checkedModuleOwnershipDetail,checkedModuleOwnershipPreview,type ModuleOwnershipCommands} from './module-ownership-state';
 
@@ -46,9 +46,9 @@ export async function assignInlineOwner(identity:ModuleOwnershipIdentity,moduleI
     if(matches.length)member=matches[0];
     else{
       const models:LlmSettings=await ports.call('models.list'),profile=models.profiles.find(item=>item.id===(agent.runtime?.profileId??models.selectedId)),model=profile?.models.find(item=>item.id===(agent.runtime?.modelId??profile.defaultModel)&&item.enabled);
-      if(agent.runtime&&(!profile||(profile.engine??'pi')!==agent.runtime.engine||!model))throw Error('Agent 配置的引擎或模型不可用，请先编辑该 Agent 的选型。');
+      if(agent.runtime&&(!profile||!engineSupportsApi(agent.runtime.engine,profile.api)||!model))throw Error('Agent 配置的引擎或模型不可用，请先编辑该 Agent 的选型。');
       if(!profile||!model)throw Error('尚未配置默认模型，请先在模型设置中选择默认模型，再选择负责人。');
-      const input:WorkspaceMemberPreviewInput={...identity,change:{kind:'register',agentId:agent.id,name:agent.name.slice(0,100),position:'承担所选 Agent 在本项目的模块责任',adaptation:{instructions:'',references:[]},runtimePolicy:{profileId:profile.id,modelId:model.id},reason:'用户在模块卡片直接选择 Agent：'+agent.name}};
+      const input:WorkspaceMemberPreviewInput={...identity,change:{kind:'register',agentId:agent.id,name:agent.name.slice(0,100),position:'承担所选 Agent 在本项目的模块责任',adaptation:{instructions:'',references:[]},runtimePolicy:{engine:agent.runtime?.engine??'pi',profileId:profile.id,modelId:model.id},reason:'用户在模块卡片直接选择 Agent：'+agent.name}};
       const preview=checkedWorkspaceMemberPreview(await ports.call('workspace.members.preview',input),input);current();
       const record=await ports.members.submit(input,preview);
       if(record?.phase!=='accepted')throw Error('岗位登记尚未确认，负责人未保存。'+(record?.error??ports.members.snapshot.error));

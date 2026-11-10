@@ -1,11 +1,12 @@
 /**
  * 作用定位：本机供应商配置持久化、默认模型选择和连接检测。
  * 设计原因：运行与岗位登记共用实际模型选型；岗位领取在同一配置队列中固定公开参数并延迟解密，与设置修改形成明确先后，凭据不进入登记或任务日志。
- * 明确的引擎参与公开模型快照；旧缺省 Pi 不补字段，保证已采纳配置哈希仍可核实。
+ * 运行引擎由调用方独立传入，忽略旧供应商 engine；未传引擎时不补字段，历史快照形状由已采纳选型保留。
  */
 import fs from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
+import {engineSupportsApi,engineLabel,loopEngineSchema,type LoopEngine} from '../../../core/brain/llm/engine';
 import {parseModelCatalog} from '../../../core/brain/llm/catalog';
 import {atomic} from '../../../core/foundation/files';
 import {fail} from '../../../core/foundation/errors';
@@ -16,18 +17,20 @@ export type {SecretCipher,ResolvedLlm} from '../../../core/brain/llm/ports';
 interface DiskProfile extends LlmDefinition {id:string;encryptedKey?:string}
 interface ModelFile {version:1;selectedId?:string;profiles:DiskProfile[]}
 /** 明确岗位选型，不允许默认模型或主会话设置参与解析。 */
-export interface ExplicitModelReference {profileId:string;modelId:string}
+export interface ExplicitModelReference {profileId:string;modelId:string;engine?:LoopEngine}
 /** 只在持锁回调存活期间解析捕获定义；调用方必须先通过预算与占用，返回后不得重新解析。 */
 export interface LockedModelConfiguration {profile:ResolvedLlm['profile'];resolve():ResolvedLlm}
 const fileSchema=z.object({version:z.literal(1),selectedId:z.string().uuid().optional(),profiles:z.array(z.object({id:z.string().uuid(),encryptedKey:z.string().optional()}).passthrough()).max(100)});
 /** 单一纯选型投影；只有运行 resolve 可在选定之后解密，登记调用必须显式给出两个 ID。 */
-function selectConfiguration(data:ModelFile,id?:string,modelId?:string){
+function selectConfiguration(data:ModelFile,id?:string,modelId?:string,engine?:LoopEngine){
   const definition=data.profiles.find(profile=>profile.id===(id??data.selectedId));if(!definition)fail('LLM_REQUIRED','请先在设置中配置默认大模型');
   const model=definition.models.find(item=>item.id===(modelId??definition.defaultModel)&&item.enabled);if(!model)fail('LLM_MODEL','模型不存在或已禁用');
   const profile:ResolvedLlm['profile']={id:definition.id,name:definition.name,api:definition.api,baseUrl:definition.baseUrl,auth:definition.auth,model:model.id,contextWindow:model.contextWindow,maxTokens:model.maxTokens,reasoning:model.reasoning,
     ...(model.vision===undefined?{}:{vision:model.vision}),...(model.outputLimit===undefined?{}:{outputLimit:model.outputLimit}),...(model.thinkingLevel===undefined?{}:{thinkingLevel:model.thinkingLevel}),...(model.workingContextWindow===undefined?{}:{workingContextWindow:model.workingContextWindow}),...(model.compactionPercent===undefined?{}:{compactionPercent:model.compactionPercent}),...(model.pricing===undefined?{}:{pricing:structuredClone(model.pricing)})};
-  // 缺省 Pi 保持旧快照字节；明确的引擎选择参与岗位配置指纹。
-  if(definition.engine)profile.engine=definition.engine;
+  // 独立选型先验证协议，再生成运行快照；不修改供应商或历史记录。
+  if(engine!==undefined)loopEngineSchema.parse(engine);
+  if(!engineSupportsApi(engine??'pi',profile.api))fail('LLM_ENGINE_API',engineLabel(engine??'pi')+' 不支持该模型接口协议，请选择兼容模型');
+  if(engine!==undefined)profile.engine=engine;
   return {definition,profile};
 }
 export class LlmProfiles {
@@ -64,19 +67,19 @@ export class LlmProfiles {
     try{return this.cipher.decrypt(p.encryptedKey)}catch{fail('SECRET_STORAGE','模型密钥无法解密，请重新保存 API Key')}
   }
   /** 将公开供应商配置展开为选定模型；禁用模型不得用于新运行。 */
-  async resolve(id?:string,modelId?:string):Promise<ResolvedLlm>{
-    const selected=selectConfiguration(await this.read(),id,modelId);return {profile:selected.profile,apiKey:this.decrypt(selected.definition)};
+  async resolve(id?:string,modelId?:string,engine?:LoopEngine):Promise<ResolvedLlm>{
+    const selected=selectConfiguration(await this.read(),id,modelId,engine);return {profile:selected.profile,apiKey:this.decrypt(selected.definition)};
   }
   /** 供岗位登记与当前差异读取；不使用默认选择、不解密、不探测接口，也不保证凭据可用或模型能运行。 */
-  async configuration(profileId:string,modelId:string):Promise<ResolvedLlm['profile']>{
+  async configuration(profileId:string,modelId:string,engine?:LoopEngine):Promise<ResolvedLlm['profile']>{
     if(!z.string().uuid().safeParse(profileId).success||typeof modelId!=='string'||!modelId.trim())fail('LLM_REQUIRED','岗位配置必须明确选择供应商与模型');
-    return selectConfiguration(await this.read(),profileId,modelId).profile;
+    return selectConfiguration(await this.read(),profileId,modelId,engine).profile;
   }
   /** 多岗位一次读取并持有设置队列，直到短事务结束；公开快照无凭据，不联网，不在回调中再次进入本队列。 */
   withConfigurations<T>(refs:readonly ExplicitModelReference[],use:(profiles:readonly ResolvedLlm['profile'][])=>Promise<T>):Promise<T>{
     const fixed=structuredClone(refs);return this.change(async()=>{
       const data=await this.read();
-      const profiles=fixed.map(ref=>{this.explicit(ref);return selectConfiguration(data,ref.profileId,ref.modelId).profile});
+      const profiles=fixed.map(ref=>{this.explicit(ref);return selectConfiguration(data,ref.profileId,ref.modelId,ref.engine).profile});
       return use(profiles);
     });
   }
@@ -86,7 +89,7 @@ export class LlmProfiles {
    */
   withRuntimeConfiguration<T>(ref:ExplicitModelReference,use:(configuration:LockedModelConfiguration)=>Promise<T>):Promise<T>{
     const fixed=structuredClone(ref);return this.change(async()=>{
-      this.explicit(fixed);const selected=selectConfiguration(await this.read(),fixed.profileId,fixed.modelId);
+      this.explicit(fixed);const selected=selectConfiguration(await this.read(),fixed.profileId,fixed.modelId,fixed.engine);
       let active=true,resolved:ResolvedLlm|undefined;
       try{return await use({profile:structuredClone(selected.profile),resolve:()=>{
         if(!active)fail('LLM_CONFIGURATION_EXPIRED','模型配置准备已结束，不能重新解析凭据');

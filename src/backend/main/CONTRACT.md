@@ -189,3 +189,7 @@ Application按当前工作区装配唯一IsolatedExecutions，共享DispatchStor
 Application 发送时固定公开 engine，执行工厂核对它与所选供应商一致；配置被改到另一引擎时拒绝旧排队请求。成员使用自己采纳的模型及引擎，主选型不覆盖。member-dispatch 按真实引擎提供能力预检，并按受管目录把原生指纹读取交给对应格式适配。
 
 业务重规划 accept 的原影响核证也按已核主身份调用 EffectObservationService.observeFromMain，派生本运行读占用，避免把自身占用冲突误记为文件不可观察而改变 basis。预览、preflight、公开 observe 和人工处置仍使用独立读占用；不改变原失败回执、证据指纹和权限。
+
+### 主 Agent 配置
+
+Application 装配唯一 MainAgentSettings；对话栏与团队页面通过 agent.mainSettings / agent.configureMain 读写同一工作区角色配置，均不启动模型。chatOptions 未收到显式运行选型时读取该配置，然后调用模型协议校验并冻结。本机默认供应商不再拥有执行引擎；显式旧运行和队列继续使用原选型。

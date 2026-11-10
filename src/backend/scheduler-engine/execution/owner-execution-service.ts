@@ -2,7 +2,7 @@
  * 未指定自定义岗位时发现主 Agent 默认责任；独立派发仅接受自定义岗位，不为失效自定义配置降级，原命令查询保持一致。
  * 作用定位：在既有知识、模型和派发存储之间核实岗位执行绑定，为计划、派发、领取和依赖维护提供同一入口。
  * 设计原因：当前登记与真实能力/模型必须同时匹配；知识锁在外，模型短锁其次，Store 事务最后，不能在事务中反向读取排队服务。
- * 职责边界：只查询或核实，不采纳配置、不修改责任、不运行模型；历史结算不调用当前岗位门禁。
+ * 职责边界：只查询或核实，不采纳配置、不修改责任、不运行模型；历史结算不调用当前岗位门禁。配置读取沿岗位采纳引擎，同一模型多引擎按完整配置哈希区分。
  */
 import {implicitProjectModuleId,type AutomaticExecutionBinding,type CollaborationPolicy} from '../../core/team/automatic-execution';
 import {isDeepStrictEqual} from 'node:util';
@@ -11,7 +11,7 @@ import type {KnowledgeWorkspace,SourceSnapshotReader} from '../../core/knowledge
 import type {Snapshot} from '../../core/knowledge/types';
 import type {DispatchState,DispatchStore} from '../../core/tasks/dispatch-storage';
 import type {TaskNode} from '../../core/tasks/graph-types';
-import type {WorkspaceMemberModelSnapshot} from '../../core/team/workspace-member';
+import {workspaceMemberEngine,type WorkspaceMemberModelRef,type WorkspaceMemberModelSnapshot} from '../../core/team/workspace-member';
 import {workspaceMemberCapabilityHash,workspaceMemberModelHash} from '../../core/team/workspace-member-rules';
 import {ownerExecutionSelectionFor,type OwnerExecutionBinding,type OwnerExecutionSelection} from '../../core/team/member-execution-binding';
 import {resolveOwnerExecutionSelection,assertCurrentOwnerExecutionBinding} from '../../core/team/member-execution-rules';
@@ -21,8 +21,8 @@ import {resolveDispatchAgent,resolveDispatchModules} from '../context/dispatch-c
 export type OwnerExecutionWorkspace=Pick<KnowledgeWorkspace,'entry'|'instanceId'|'assert'|'snapshot'|'read'|'rules'>&Partial<SourceSnapshotReader>;
 /** 公开模型配置端口不含解密、网络或默认选型；短锁回调不得反向取得知识锁。 */
 export interface OwnerExecutionModelPorts {
-  configuration(profileId:string,modelId:string):Promise<WorkspaceMemberModelSnapshot>;
-  withConfigurations<T>(refs:readonly {profileId:string;modelId:string}[],use:(profiles:readonly WorkspaceMemberModelSnapshot[])=>Promise<T>):Promise<T>;
+  configuration(profileId:string,modelId:string,engine?:WorkspaceMemberModelRef['engine']):Promise<WorkspaceMemberModelSnapshot>;
+  withConfigurations<T>(refs:readonly WorkspaceMemberModelRef[],use:(profiles:readonly WorkspaceMemberModelSnapshot[])=>Promise<T>):Promise<T>;
 }
 export type ExecutionSelection=OwnerExecutionSelection|{automaticScopeId:string};
 export interface OwnerExecutionContext {snapshot:Snapshot;profiles:readonly WorkspaceMemberModelSnapshot[]}
@@ -45,7 +45,7 @@ export class OwnerExecutionService {
       const selections=select(hint),refs=selections.map(selection=>{
         if('automaticScopeId' in selection){const policy=hint.scopes?.find(scope=>scope.scopeId===selection.automaticScopeId)?.executionPolicy;if(policy?.mode!=='auto')fail('OWNER_SELECTION_REQUIRED','团队模式需要人工确认模块及负责岗位');return policy.model}
         const member=hint.workspaceMembers?.find(item=>item.memberId===selection.memberId);if(!member)fail('OWNER_MEMBER_UNAVAILABLE','负责岗位不存在');
-        return {profileId:member.runtimePolicy.profileId,modelId:member.runtimePolicy.modelId};
+        return {profileId:member.runtimePolicy.profileId,modelId:member.runtimePolicy.modelId,engine:workspaceMemberEngine(member.runtimePolicy)};
       });
       return this.models!.withConfigurations(refs,async profiles=>{alive();return use({snapshot,profiles})});
     },alive);
@@ -57,17 +57,17 @@ export class OwnerExecutionService {
     if(context.snapshot.workspaceId!==state.workspaceId)fail('OWNER_IDENTITY','岗位执行知识不属于当前工作区');
     const agent=await resolveDispatchAgent(context.snapshot,binding.capability.agentId);
     if(workspaceMemberCapabilityHash(agent)!==binding.capability.capabilityHash)fail('OWNER_CAPABILITY_CHANGED','负责岗位的原则或有效 Skill 已变化，请明确采纳后重新规划');
-    const profile=context.profiles.find(item=>item.id===binding.model.profileId&&item.model===binding.model.modelId);
+    const profile=context.profiles.find(item=>item.id===binding.model.profileId&&item.model===binding.model.modelId&&workspaceMemberModelHash(item)===binding.model.configurationHash);
     if(!profile||workspaceMemberModelHash(profile)!==binding.model.configurationHash)fail('OWNER_MODEL_CHANGED','负责岗位模型配置已变化，请明确采纳后重新规划');
     await resolveDispatchModules(context.snapshot,[...moduleIds]);return binding;
   }
   /** 可信首轮使用明确模型配置冻结 auto；旧入口不传模式时保持团队规则。 */
-  async policy(options:{collaborationMode?:'auto'|'team';profileId?:string;model:string}):Promise<CollaborationPolicy>{
+  async policy(options:{collaborationMode?:'auto'|'team';profileId?:string;model:string;engine?:WorkspaceMemberModelRef['engine']}):Promise<CollaborationPolicy>{
     options={...options};
     if(options.collaborationMode!=='auto')return {mode:'team'};
     if(!options.profileId||!this.models)fail('AUTO_MODEL_REQUIRED','自动模式需要明确可用的对话模型');
-    const profile=await this.models.configuration(options.profileId,options.model);
-    return {mode:'auto',model:{profileId:options.profileId,modelId:options.model,configurationHash:workspaceMemberModelHash(profile)}};
+    const profile=await this.models.configuration(options.profileId,options.model,options.engine);
+    return {mode:'auto',model:{profileId:options.profileId,modelId:options.model,configurationHash:workspaceMemberModelHash(profile),...(options.engine===undefined?{}:{engine:options.engine})}};
   }
   /** 模型不能指定自动模式；缺岗位选择只可引用已保存的可信周期。 */
   selection(state:DispatchState,scopeId:string,selection?:OwnerExecutionSelection):ExecutionSelection{
@@ -124,7 +124,7 @@ export class OwnerExecutionService {
         await check(()=>resolveOwnerExecutionSelection(state,selection,group.moduleIds));
         await check(async()=>{const agent=await resolveDispatchAgent(snapshot,member.adoption.configuration.agentId);if(workspaceMemberCapabilityHash(agent)!==member.adoption.capabilityHash)fail('OWNER_CAPABILITY_CHANGED','负责岗位的原则或有效 Skill 已变化，请在项目岗位明确采纳后重新规划')});
         let profile:WorkspaceMemberModelSnapshot|undefined;
-        await check(async()=>{if(!this.models)fail('OWNER_EXECUTION_UNAVAILABLE','未装配岗位模型配置端口');profile=await this.models.configuration(member.runtimePolicy.profileId,member.runtimePolicy.modelId);if(workspaceMemberModelHash(profile)!==member.runtimePolicy.configurationHash)fail('OWNER_MODEL_CHANGED','负责岗位模型配置已变化，请在项目岗位明确采纳当前模型配置后重新规划')});
+        await check(async()=>{if(!this.models)fail('OWNER_EXECUTION_UNAVAILABLE','未装配岗位模型配置端口');profile=await this.models.configuration(member.runtimePolicy.profileId,member.runtimePolicy.modelId,workspaceMemberEngine(member.runtimePolicy));if(workspaceMemberModelHash(profile)!==member.runtimePolicy.configurationHash)fail('OWNER_MODEL_CHANGED','负责岗位模型配置已变化，请在项目岗位明确采纳当前模型配置后重新规划')});
         if(!group.issues.length&&profile)await check(async()=>{await this.resolve(state,{snapshot,profiles:[profile!]},selection,group.moduleIds,group.agentId);group.selection=selection});
       }
       await this.recheck(snapshot);const latest=await this.store.read();

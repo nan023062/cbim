@@ -47,7 +47,7 @@ async function openTeam(){const expand=page!.getByRole('button',{name:'展开右
 try{
   setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();entry=await setup.dispatch('add',{path:project});team=await seedTeam(setup.workspace(entry.id));
   for(const engine of ['pi','claude-code','codex'] as const){
-    const value=await setup.models.save({profile:{name:'Desktop '+engine,engine,api:engine==='pi'?'openai-completions':engine==='codex'?'openai-responses':'anthropic-messages',auth:'none',baseUrl:engine==='codex'?codexUrl:providers[engine].url,defaultModel:'request-budget-model',models:[{id:'request-budget-model',name:engine+' enabled',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false},{id:'disabled-model',name:'Must not appear',enabled:false,contextWindow:200000,maxTokens:4096,reasoning:false}]}});ids[engine]=value.profiles.find(p=>p.engine===engine)!.id;
+    const value=await setup.models.save({profile:{name:'Desktop '+engine,api:engine==='pi'?'openai-completions':engine==='codex'?'openai-responses':'anthropic-messages',auth:'none',baseUrl:engine==='codex'?codexUrl:providers[engine].url,defaultModel:'request-budget-model',models:[{id:'request-budget-model',name:engine+' enabled',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false},{id:'disabled-model',name:'Must not appear',enabled:false,contextWindow:200000,maxTokens:4096,reasoning:false}]}});ids[engine]=value.profiles.find(p=>p.name==='Desktop '+engine)!.id;
   }
   await setup.shutdown();setup=undefined;await launch();
   stage='main engine menu';await active().getByRole('combobox',{name:'Loop 引擎',exact:true}).click();assert.deepEqual(await page!.getByRole('listbox',{name:'Loop 引擎选项',exact:true}).getByRole('option').allTextContents(),['Pi','Claude Code','Codex']);await page!.keyboard.press('Escape');
@@ -56,6 +56,10 @@ try{
   for(const [index,engine] of engines.entries()){
     stage='main turn '+index+' '+engine;await picker('Loop 引擎',engine==='pi'?'Pi':engine==='codex'?'Codex':'Claude Code');
     await active().getByRole('combobox',{name:'对话模型',exact:true}).click();const list=page!.getByRole('listbox',{name:'对话模型选项',exact:true});assert.ok(!(await list.innerText()).includes('Must not appear'));assert.ok((await list.innerText()).includes(engine+' enabled'));await page!.keyboard.press('Escape');
+    const modelEngine=engine==='pi'?'claude-code':engine;
+    await picker('对话模型','Desktop '+modelEngine+' / request-budget-model');
+    const snapshot=await call('snapshot',{id:entry.id}),setting=await call('agent.mainSettings',{workspaceId:entry.id,instanceId:snapshot.instanceId});
+    assert.deepEqual(setting.selection,{engine,profileId:ids[modelEngine],modelId:'request-budget-model'});
     if(index===5){await picker('协作模式','团队模式');await picker('执行权限','完全访问')}
     await active().getByRole('textbox',{name:'对话草稿',exact:true}).fill(index===5?'write-smoke: 在当前模块写入验证文件。':'desktop-turn-'+index+' preserve prior context.');
     await active().getByRole('button',{name:'发送消息',exact:true}).click();
@@ -65,8 +69,24 @@ try{
     assert.equal(summary.events[0].data.engine,engine);assert.ok(summary.sessionFile);summaries.push({taskId:run.taskId,runId:run.runId,engine,status:summary.status,sessionFile:summary.sessionFile});
   }
   assert.equal(new Set(summaries.map(s=>s.taskId)).size,1);assert.equal(summaries[0].sessionFile,summaries[3].sessionFile);assert.equal(summaries[2].sessionFile,summaries[4].sessionFile);assert.equal(await fs.readFile(written,'utf8'),'CBIM main native write verified');
-  assert.ok(JSON.stringify(providers['claude-code'].requests[0].body).includes('desktop-turn-0'));assert.ok(JSON.stringify(requests[0]).includes('desktop-turn-1'));
+  assert.ok(JSON.stringify(providers['claude-code'].requests[1].body).includes('desktop-turn-0'));assert.ok(JSON.stringify(requests[0]).includes('desktop-turn-1'));
   await page!.screenshot({path:path.join(evidence,'main-three-engines.png')});
+  stage='shared main Agent settings';await openTeam();
+  await active().getByRole('textbox',{name:'对话草稿',exact:true}).fill('配置主 Agent 时保留草稿');
+  await view().getByTestId('team-main-agent-settings').click();
+  let mainDialog=page!.getByRole('dialog',{name:'主 Agent 配置',exact:true});
+  await until(async()=>await mainDialog.getByRole('combobox',{name:'Agent Loop 引擎',exact:true}).inputValue()==='codex','对话配置进入主 Agent 页面');
+  await mainDialog.getByRole('combobox',{name:'Agent Loop 引擎',exact:true}).selectOption('pi');
+  await mainDialog.getByRole('combobox',{name:'Agent 模型',exact:true}).selectOption(JSON.stringify([ids['claude-code'],'request-budget-model']));
+  await mainDialog.getByRole('button',{name:'保存主 Agent 配置',exact:true}).click();await mainDialog.waitFor({state:'hidden'});
+  await until(async()=>(await active().getByRole('combobox',{name:'Loop 引擎',exact:true}).innerText()).includes('Pi'),'主 Agent 页面同步到对话栏');
+  await picker('Loop 引擎','Claude Code');
+  await view().getByTestId('team-main-agent-settings').click();mainDialog=page!.getByRole('dialog',{name:'主 Agent 配置',exact:true});
+  await until(async()=>await mainDialog.getByRole('combobox',{name:'Agent Loop 引擎',exact:true}).inputValue()==='claude-code','对话栏同步到主 Agent 页面');
+  await mainDialog.getByRole('combobox',{name:'Agent Loop 引擎',exact:true}).selectOption('codex');
+  await mainDialog.getByRole('combobox',{name:'Agent 模型',exact:true}).selectOption(JSON.stringify([ids.codex,'request-budget-model']));
+  await mainDialog.getByRole('button',{name:'保存主 Agent 配置',exact:true}).click();await mainDialog.waitFor({state:'hidden'});
+  assert.equal(await active().getByRole('textbox',{name:'对话草稿',exact:true}).inputValue(),'配置主 Agent 时保留草稿');
   stage='Agent configuration';await openTeam();await view().locator('.team-node-select').filter({hasText:'开发者'}).click();await view().getByRole('button',{name:'编辑 Agent',exact:true}).click();
   const dialog=page!.getByRole('dialog',{name:'编辑Agent',exact:true});await dialog.getByRole('combobox',{name:'Agent Loop 引擎',exact:true}).selectOption('claude-code');await dialog.getByRole('combobox',{name:'Agent 模型',exact:true}).selectOption(JSON.stringify([ids['claude-code'],'request-budget-model']));
   await dialog.getByRole('button',{name:'校验并预览',exact:true}).click();await dialog.getByRole('region',{name:'知识变更预览',exact:true}).waitFor();await dialog.getByRole('button',{name:'确认提交到工作区',exact:true}).click();await dialog.waitFor({state:'hidden'});
@@ -80,8 +100,8 @@ try{
   const agent=JSON.parse(snap.files.find((f:any)=>f.path===team.input.agentId+'/agent.json').text);assert.equal(agent.runtime.engine,'claude-code');
   await page!.screenshot({path:path.join(evidence,'independent-role-engine.png')});
   stage='restart without replay';const before={pi:providers.pi.requests.length,claude:providers['claude-code'].requests.length,codex:requests.length};await desktop!.close();desktop=undefined;await launch();await new Promise(r=>setTimeout(r,1200));assert.deepEqual({pi:providers.pi.requests.length,claude:providers['claude-code'].requests.length,codex:requests.length},before);
-  const latestSnap=await call('snapshot',{id:entry.id});const retained=await call('workspace.members.get',{workspaceId:entry.id,instanceId:latestSnap.instanceId,memberId});assert.equal(retained.member.runtimePolicy.snapshot.engine,'codex');assert.deepEqual(pageErrors,[]);assert.deepEqual(errors,[]);assert.deepEqual(providers.pi.errors,[]);assert.deepEqual(providers['claude-code'].errors,[]);
-  await fs.writeFile(path.join(evidence,'report.json'),JSON.stringify({success:true,exe,sha256:createHash('sha256').update(await fs.readFile(exe)).digest('hex'),version:await desktop!.evaluate(({app})=>app.getVersion()),summaries,requests:before,mainTeamWrite:true,agentDefault:'claude-code',independentRole:'codex',restartNoReplay:true,pageErrors,limitations:['本机确定性模型响应不代表在线供应商质量。','此项使用打包 EXE，不替代隔离 NSIS 安装升级验收。'],completedAt:new Date().toISOString()},null,2),{flag:'wx'});
+  const latestSnap=await call('snapshot',{id:entry.id});const retained=await call('workspace.members.get',{workspaceId:entry.id,instanceId:latestSnap.instanceId,memberId});assert.equal(retained.member.runtimePolicy.snapshot.engine,'codex');assert.equal((await call('agent.mainSettings',{workspaceId:entry.id,instanceId:latestSnap.instanceId})).selection.engine,'codex');assert.deepEqual(pageErrors,[]);assert.deepEqual(errors,[]);assert.deepEqual(providers.pi.errors,[]);assert.deepEqual(providers['claude-code'].errors,[]);
+  await fs.writeFile(path.join(evidence,'report.json'),JSON.stringify({success:true,exe,sha256:createHash('sha256').update(await fs.readFile(exe)).digest('hex'),version:await desktop!.evaluate(({app})=>app.getVersion()),summaries,requests:before,mainTeamWrite:true,mainAgentShared:true,modelDirectoryUnified:true,agentDefault:'claude-code',independentRole:'codex',restartNoReplay:true,pageErrors,limitations:['本机确定性模型响应不代表在线供应商质量。','此项使用打包 EXE，不替代隔离 NSIS 安装升级验收。'],completedAt:new Date().toISOString()},null,2),{flag:'wx'});
   console.log(JSON.stringify({success:true,evidence,turns:summaries.length,mainTeamWrite:true}));
 }catch(error){if(page)await page.screenshot({path:path.join(evidence,'failure.png')}).catch(()=>{});await fs.writeFile(path.join(evidence,'failure.json'),JSON.stringify({stage,error:String(error),stack:(error as Error).stack,temp,pageErrors,errors,summaries},null,2),{flag:'wx'});throw error}
 finally{await desktop?.close();await setup?.shutdown();server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));await Promise.all([providers.pi.close(),providers['claude-code'].close()])}

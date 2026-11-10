@@ -6,7 +6,7 @@
 
 ## 引擎配置与共享请求传输
 
-engine.ts 定义 pi / claude-code / codex、显示名及静态 Agent 的本机模型引用；供应商 definition.engine 缺省等同 Pi，但不回写字段。明确引擎进入 ResolvedLlm.profile 和岗位快照哈希。Claude Code 只支持配置的 Anthropic Messages，Codex 只支持配置的 OpenAI Responses 接口；不使用外部客户端账号。
+engine.ts 定义始终存在的 Pi / Claude Code / Codex、显示名与 Agent 选型。供应商仅维护接口和模型目录；旧 definition.engine 只兼容解析，不再决定或限制运行。engineSupportsApi 是前后端共用的纯兼容规则：Pi 支持三种协议，Claude Code 支持 Anthropic Messages，Codex 支持 OpenAI Responses；不按模型名称猜测、不模拟跨协议转换，也不使用外部客户端账号。同一模型可被所有兼容引擎选中。运行显式传入的 engine 进入 ResolvedLlm.profile 与岗位快照哈希；历史缺省字段不补写。
 
 request-budget-transport.ts 与 request-budget-usage.ts 从 pi/ 移至本目录。Pi 仍需启动握手；Claude SDK 使用随机令牌的 Anthropic 路由。Codex 在冻结模型/输出上限代理后复用同一 /request 入口。所有入口固定同一供应商与模型，实际请求均先 reserve/issue，终态用量可靠保存后才交付；不接受任意转发地址。
 

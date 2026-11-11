@@ -51,7 +51,9 @@ test('team root cannot be edited or deleted and a different workspace snapshot i
   const html=renderToStaticMarkup(createElement(TeamView,{workspace,snapshot:fixture()}));
   expect(html).toContain('团队架构知识文件树');expect(html).toContain('发布整个团队');expect(html).toContain('历史角色');
   expect(html).not.toContain('CBIM 主 Agent');expect(html).not.toContain('CBIM 默认执行 Agent');expect(html).not.toContain('data-agent-id="cbim:main"');expect(html).not.toContain('data-agent-id="cbim:executor"');
-  expect(html).not.toContain('删除 Agent');expect(html).not.toContain('编辑 Agent');
+  const rootRow=html.slice(html.indexOf('data-knowledge-path=".cbim/team"'),html.indexOf('data-knowledge-path=".cbim/team/art"'));
+  expect(rootRow).not.toContain('data-tree-action="agent-delete"');expect(rootRow).not.toContain('data-tree-action="agent-edit"');
+  expect(html).toContain('data-tree-action="agent-delete"');expect(html).toContain('aria-label="玩法设计师的操作"');
   const isolated=renderToStaticMarkup(createElement(TeamView,{workspace:{...workspace,id:'other'},snapshot:fixture()}));
   expect(isolated).not.toContain('玩法设计师');expect(isolated).toContain('正在读取团队知识');
 });

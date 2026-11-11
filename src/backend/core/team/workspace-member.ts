@@ -3,6 +3,7 @@
  * 设计原因：memberId 与执行实例分离；captureId 只记录采纳，来源连续性另经可选 sourceRef 明确绑定，旧缺省不补造。
  * 职责边界：纯 schema 不读知识或凭据、不派工；active 仅是岗位登记状态，不证明配置可执行或业务已验收。
  * 岗位独立保存 engine 并参与运行快照哈希；历史缺省字段保持原字节，读取时沿已采纳快照取引擎，不跟随供应商变化。
+ * 审计兼容：保留旧桌面来源，主工具另保存原根会话、周期、实例和调用身份，不伪装为本机点击。
  */
 import {z} from 'zod';
 import {loopEngineSchema,engineApi,engineLabel} from '../brain/llm/engine';
@@ -76,7 +77,11 @@ export type WorkspaceMemberPreview=z.infer<typeof workspaceMemberPreviewSchema>;
 /** 原命令回执只引用提交结果；不再复制能力正文，后续修改不改变此事实。 */
 export const workspaceMemberReceiptSchema=z.object({identity:workspaceMemberIdentitySchema,commandId:uuid,action:z.enum(['register','update','adopt','state']),changeId:uuid,memberId:uuid,previousRevision:z.number().int().nonnegative().safe(),memberRevision:revision,registryCursor:workspaceRegistryCursorSchema,basis:digest,memberHash:digest,committedAt:time}).strict().refine(value=>value.memberRevision===value.previousRevision+1&&value.memberRevision<=value.registryCursor.seq&&value.registryCursor.workspaceId===value.identity.workspaceId&&(value.action==='register'?value.previousRevision===0:value.previousRevision>0),'登记回执版本或身份不一致');
 export type WorkspaceMemberReceipt=z.infer<typeof workspaceMemberReceiptSchema>;
-export const workspaceMemberChangeSchema=z.object({version:z.literal(1),request:workspaceMemberCommitInputSchema,changeId:uuid,registryCursor:workspaceRegistryCursorSchema,previousRevision:z.number().int().nonnegative().safe(),previousMemberHash:digest.nullable(),sourceSelection:sourceSelectionSchema.optional(),next:workspaceMemberSchema,actor:z.object({kind:z.literal('local_desktop'),interaction:z.literal('explicit_submit')}).strict(),committedAt:time}).strict().superRefine((value,context)=>{
+/** 桌面与主运行分别保留真实来源；主工具身份由可信闭包生成，不接受模型自报。 */
+export const workspaceMemberMainActorSchema=z.object({kind:z.literal('main_agent'),rootSessionId:id,scopeId:uuid,agentInstanceId:uuid,agentSessionId:uuid,runId:uuid,toolCallId:id,toolName:z.literal('cbim_member_change_commit')}).strict();
+export const workspaceMemberActorSchema=z.union([z.object({kind:z.literal('local_desktop'),interaction:z.literal('explicit_submit')}).strict(),workspaceMemberMainActorSchema]);
+export type WorkspaceMemberActor=z.infer<typeof workspaceMemberActorSchema>;
+export const workspaceMemberChangeSchema=z.object({version:z.literal(1),request:workspaceMemberCommitInputSchema,changeId:uuid,registryCursor:workspaceRegistryCursorSchema,previousRevision:z.number().int().nonnegative().safe(),previousMemberHash:digest.nullable(),sourceSelection:sourceSelectionSchema.optional(),next:workspaceMemberSchema,actor:workspaceMemberActorSchema,committedAt:time}).strict().superRefine((value,context)=>{
   if(value.request.workspaceId!==value.next.workspaceId||value.registryCursor.workspaceId!==value.next.workspaceId||value.next.revision!==value.previousRevision+1||value.next.updatedAt!==value.committedAt||(value.request.change.kind==='register'?value.previousRevision!==0||value.previousMemberHash!==null:value.request.change.memberId!==value.next.memberId||value.request.change.expectedRevision!==value.previousRevision||value.previousMemberHash===null)||byteLength(value)>workspaceMemberLimits.eventBytes)context.addIssue({code:'custom',message:'登记审计身份、版本或容量不一致'});
 });
 export type WorkspaceMemberChange=z.infer<typeof workspaceMemberChangeSchema>;

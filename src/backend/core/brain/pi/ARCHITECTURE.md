@@ -29,7 +29,7 @@ class N_src_backend_core_brain_pi_bridge_ts["bridge.ts"] {
 }
 ```
 
-直接依赖：[../types.ts](../types.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../input-source.ts](../input-source.ts)、[../engine-tools.ts](../engine-tools.ts)。
+直接依赖：[../../tools/outcome.ts](../../tools/outcome.ts)、[../types.ts](../types.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../input-source.ts](../input-source.ts)、[../engine-tools.ts](../engine-tools.ts)。
 
 ### engine.ts
 
@@ -332,3 +332,7 @@ PNG继续复用cbim_validation_run及同一gate/call身份。提示明确实际�
 ### 通用能力注入
 
 工具从 EngineContext.capabilities 的通用工具目录注册；可信能力 disableNativeTools=true 时关闭全部原生文件和命令，不依赖某个业务工具槽位。业务指引作为可信装配说明传入，授权、原调用身份、结果保存与停止顺序保持原协议。
+
+### 统一失败文本
+
+内部工具保持原领域文本及 details.outcome；异常由共同端口生成 JSON 错误正文。原生 tool_result 失败在扩展内按同一固定 outcome 模板包装，真实门禁拒绝与执行后未知分开。没有新增网络路由，不扩大逐请求预算的桥白名单；回包不调用原工具或自动查询。

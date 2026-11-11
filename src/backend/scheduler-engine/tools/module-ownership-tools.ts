@@ -1,9 +1,11 @@
 /**
+ * 未知提交附统一回执入口和可信 commandId，供模型只读核实，不换命令重做。
  * 作用定位：把本轮真实主运行的模块责任端口转换为发现、分类和执行一致的四工具。
  * 设计原因：先严格核原参数，再独立冻结核验依据；一次领域执行和一次 JSON wire，坏输出保留原命令，不自动重复提交。
  * 职责边界：责任是控制面登记，写入仍需知识治理权限；不是业务产物、派发或人工批准。
  */
 import {z} from 'zod';
+import {withToolReconciliation} from '../../core/tools/outcome';
 import {isDeepStrictEqual} from 'node:util';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {fail,Fault} from '../../core/foundation/errors';
@@ -67,6 +69,6 @@ export class ModuleOwnershipTools {
       }
       signal.throwIfAborted();const result=checkedJsonToolResult(name,output,schema);
       if(Buffer.byteLength(result.content[0].text,'utf8')>moduleOwnerToolOutputLimit)fail('TOOL_OUTPUT_INVALID','责任工具输出超过128KiB，未发送正文，请核实原记录');return result;
-    }catch(error){if(commandId)fail(error instanceof Fault?error.code:'OWNERSHIP_UNKNOWN',`责任提交结果未能交付；原 commandId=${commandId}。操作可能已经保存，请只查询原回执，不自动重试。`);throw error}
+    }catch(error){if(commandId)throw withToolReconciliation(new Fault(error instanceof Fault?error.code:'OWNERSHIP_UNKNOWN',`责任提交结果未能交付；原 commandId=${commandId}。操作可能已经保存，请只查询原回执，不自动重试。`),{tool:'cbim_receipt_inspect',args:{target:'owner',input:{commandId}}});throw error}
   }
 }

@@ -1,4 +1,5 @@
 /**
+ * 对象维护优先 object_preview/commit；底层 knowledge 文件事务标为兼容，保留无法由对象操作表达的维护场景。
  * 作用定位：向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。
  * 设计原因：查询只注入快照读取，刷新单独装配事务端口；先声明实际能力和契约版本再消费运行授权。领域执行一次，业务输出按唯一 JSON 快照校验，不因返回异常重放事务。
  */
@@ -45,8 +46,8 @@ export class KnowledgeTools {
     register('cbim_object_preview',{version:2,effects:['preview'],description:'预览 Agent/Module/Skill/Workflow 的创建、更新或删除。data 严格按 kind 区分：agent 不支持 purpose，module 不支持 name（name 固定为 slug，中文名写 body 的 H1）。创建传 parentId、slug、data、body；更新传 id 与需修改字段；删除传 id，包含子对象时需 cascade。服务规划路径、清单和父子引用，不写正式知识。返回 planId、变更及完整 validation.issues；structural:false 是校验未通过，不是执行异常，修正全部问题后重新预览。Module 根 parentId 为 .cbim/workspace（不是物理目录或 cbim:project）；同一 operations 可先建父再建子。summary 为 100–250 非空白字符单行，保留 slug、五章正文及直属内容虚拟节点约束见字段 Schema。',inputSchema:{...identity,revision:z.string(),operations:z.array(objectOperation).min(1).max(100)}},wrap(args=>objects.preview(args.revision,args.operations)));
     register('cbim_object_commit',{effects:['knowledge-write'],description:'提交 cbim_object_preview 返回的 planId。须取得本次运行的知识写入授权；核对原版本，事务写入知识及索引，同一计划幂等。',inputSchema:knowledgeObjectCommitInputSchema.shape},wrap((args,write)=>{if(!write)fail('FORBIDDEN','当前调用未获得知识写入权限');return objects.commit(args.planId)}));
     const changeSchema=knowledgeCommitInputSchema.shape;
-    register('cbim_knowledge_preview',{effects:['preview'],description:'校验修改并预览影响，不写入。',inputSchema:changeSchema},wrap(args=>workspace.preview(args)));
-    register('cbim_knowledge_commit',{effects:['knowledge-write'],description:'取得本次运行的知识写入授权后提交文件事务，核对读取版本与幂等请求标识。',inputSchema:changeSchema},wrap((args,write)=>{if(!write)fail('FORBIDDEN','当前调用未获得知识写入权限');return workspace.commit(args)}));
+    register('cbim_knowledge_preview',{effects:['preview'],description:'底层文件事务兼容入口；普通对象创建/更新/删除优先 cbim_object_preview/commit。仅在对象操作不能表达时使用。校验修改并预览影响，不写入。',inputSchema:changeSchema},wrap(args=>workspace.preview(args)));
+    register('cbim_knowledge_commit',{effects:['knowledge-write'],description:'底层文件事务兼容入口；普通对象维护优先 cbim_object_preview/commit。取得本次运行的知识写入授权后提交文件事务，核对读取版本与幂等请求标识。',inputSchema:changeSchema},wrap((args,write)=>{if(!write)fail('FORBIDDEN','当前调用未获得知识写入权限');return workspace.commit(args)}));
     register('cbim_knowledge_move_preview',{effects:['preview'],inputSchema:{...identity,from:z.string(),to:z.string().nullable()}},wrap(async args=>workspace.preview(await workspace.planMove(await workspace.read(),args.from,args.to))));
     register('cbim_rules_validate',{effects:['maintenance'],description:'启动本工作区知识规则检查，返回维护任务 ID。它不是对话任务或团队派发任务。',inputSchema:identity},wrap(()=>workspace.startTask('validate')));
     register('cbim_task_status',{description:'查询本工作区知识检查/索引维护任务，taskId 使用维护接口返回的 ID；不用于主对话、执行计划或成员派发任务。找不到返回 not_found。',inputSchema:{...identity,taskId:z.string()}},wrap(args=>workspace.tasks.get(args.taskId)||{state:'not_found'}));

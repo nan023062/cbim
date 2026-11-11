@@ -18,6 +18,7 @@
 | [models.css](models.css) | 供应商列表和模型表单布局。 |
 | [ModelSettings.tsx](ModelSettings.tsx) | 设置页的自定义供应商、连接表单与模型目录编辑器。 |
 | [SettingsView.tsx](SettingsView.tsx) | 模型供应商、运行并发、新目标软限额、GitHub 反馈连接、仓库与共享服务设置；版本与更新由账号菜单独立打开。 |
+| [WebSettings.tsx](WebSettings.tsx) | 桌面网页搜索配置，保存 Brave 开关与密钥。 |
 
 ## 架构类图
 
@@ -152,7 +153,19 @@ class N_src_frontend_settings_SettingsView_tsx["SettingsView.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[ModelSettings.tsx](ModelSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx)。
+直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[WebSettings.tsx](WebSettings.tsx)、[ModelSettings.tsx](ModelSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx)。
+
+### WebSettings.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_settings_WebSettings_tsx["WebSettings.tsx"] {
+  <<component>>
+  +WebSettings()
+}
+```
+
+直接依赖：[../../bridge/contracts/ipc-settings.ts](../../bridge/contracts/ipc-settings.ts)。
 
 ### 本目录调用边界
 
@@ -176,15 +189,21 @@ class N_src_frontend_settings_models_css["models.css"] {
 class N_src_frontend_settings_SettingsView_tsx["SettingsView.tsx"] {
   <<component>>
 }
+class N_src_frontend_settings_WebSettings_tsx["WebSettings.tsx"] {
+  <<component>>
+}
 N_src_frontend_settings_BudgetSettings_tsx ..> N_src_frontend_settings_budget_settings_state_ts : 导入依赖
 N_src_frontend_settings_BudgetSettings_tsx ..> N_src_frontend_settings_budget_settings_css : 导入依赖
 N_src_frontend_settings_ModelSettings_tsx ..> N_src_frontend_settings_models_css : 导入依赖
-N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_ModelSettings_tsx : 导入依赖
+N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_WebSettings_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_settings_SettingsView_tsx["SettingsView.tsx"] {
+  <<component>>
+}
+class N_src_frontend_settings_ModelSettings_tsx["ModelSettings.tsx"] {
   <<component>>
 }
 class N_src_frontend_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
@@ -196,6 +215,7 @@ class N_src_frontend_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
 class N_src_frontend_settings_GitHubFeedbackSettings_tsx["GitHubFeedbackSettings.tsx"] {
   <<component>>
 }
+N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_ModelSettings_tsx : 导入依赖
 N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_AdmissionSettings_tsx : 导入依赖
 N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_BudgetSettings_tsx : 导入依赖
 N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_GitHubFeedbackSettings_tsx : 导入依赖
@@ -213,6 +233,10 @@ N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_GitHubFeedb
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 网页与搜索
+
+WebSettings 显示 Brave Search API 开关与密码输入；明确查询词发送给供应商。保存成功清空输入，移除密钥同时关闭；无安全存储时禁填。版本冲突刷新摘要，保留未成功保存的输入；不提供密钥读取或测试搜索自动调用。
 
 # 设置界面
 

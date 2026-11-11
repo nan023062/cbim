@@ -72,3 +72,7 @@ PiBridge ..> ResultsModule : 进入会话前校验
 ### 原生能力预检
 
 nativeToolNames 按引擎提供真实规范名：Pi 保持既有清单，Codex 通过宿主工具提供同一规范名，Claude Code 排除不存在的独立 ls。该清单供岗位 Workflow 准备预检，不是逐调用许可；真实路径、效果、授权仍由运行时核实。
+
+### 统一调用结果
+
+`outcome.ts` 定义 status（returned/rejected/unknown）、retryable=false、terminal=true、reconcileTool/reconcileArgs 和 nextStep。terminal 表示本次请求已返回且不能自动重复，不表示业务目标终态。成功放在 ToolResult.details.outcome，保留原领域正文；异常同时用 JSON 文本交给模型。无可靠只读核实入口时两个 reconcile 字段明确 null，原生文件/命令须查原日志和实际副作用。只有可信适配器可附原命令地址，不从错误正文解析或补造身份。

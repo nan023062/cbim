@@ -1,4 +1,5 @@
 /**
+ * 闭包预览复用同一目标服务的只读快照，不设置 workRequested，不撤票或提交等待。
  * 可信首轮准备可登记明确岗位待办，按真实 run 交给首个批次，仍由原调度结算和权限门禁执行。
  * 首轮冻结用户协作模式，回注与等待恢复从原周期继承；自动兜底只改变路由，不改变成员权限和准入。
  * 续跑选择只看最新段预约和真实未消费状态，历史预约只回传作审计。
@@ -298,11 +299,12 @@ export class AutoCollaboration {
     this.preparedTasks.delete(runId);this.batches.set(runId,batch);
     const binding=this.toolBinding(batch);
     const goals=new GoalTools({binding,collaborationMode:cycle.collaborationMode,
+      previewPause:()=>this.dispatch.goals.previewClosure(this.identity(batch),cycle.scopeId),
       inspect:async()=>{const value=await this.dispatch.goals.inspectWithGraph(this.identity(batch),cycle.scopeId);if(!value||typeof value!=='object'||Array.isArray(value))return value;return {scope:projectMainScope(value.scope),graph:value.graph}},
       plan:(input,call)=>{this.assertLive(batch,call.signal);cycle.workRequested=true;return this.track(cycle,this.dispatch.goals.plan(this.identity(batch),cycle.scopeId,runId,mainToolCommandId('cbim_goal_plan',binding,call.toolCallId)!,input,()=>this.assertLive(batch,call.signal)).then(projectMainScope))},
       review:(input,call)=>{this.assertLive(batch,call.signal);cycle.workRequested=true;return this.track(cycle,this.dispatch.goals.review(this.identity(batch),cycle.scopeId,runId,mainToolCommandId('cbim_goal_review',binding,call.toolCallId)!,input).then(projectMainScope))},
     });
-    return new DispatchTools({binding,collaborationMode:cycle.collaborationMode,commandReport:(input,call)=>{
+    return new DispatchTools({binding,collaborationMode:cycle.collaborationMode,previewCancel:input=>this.dispatch.goals.previewClosure(this.identity(batch),cycle.scopeId,input),commandReport:(input,call)=>{
       this.assertLive(batch,call.signal);
       // 查询本身不置 workRequested，也不修复原未知；加入操作集合使停止等待本次只读收尾。
       return this.track(cycle,this.dispatch.commandReport({...this.identity(batch),...input},call.signal));

@@ -1,4 +1,5 @@
 /**
+ * 连续同工具同参数三次失败按提出顺序熔断；记录 blocked 原因并沿原停止/排空收束为失败，有未决副作用仍保持 interrupted，不重放。
  * 冻结executionScope必须有真实端口；范围工具只消费自身可靠allowed，一切原生文件/命令被拒绝，物理资源未收束不释放租约。
  * 完整出口将原清单选择/重核端口注入任务与JSON工具；实际交付授权必须唯一，门闩覆盖候选保存和回包之间。
  * 删除/移动只交给冻结约定的专用端口；原阶段由可信 append 保存，失败屏障与实际进程排空同样参与终态。
@@ -37,6 +38,8 @@ import {memberToolCapabilities} from './member-tool-capabilities';
 import {RunScopedExecution,type ScopedExecutionPort} from './run-scoped-execution';
 import {preparedExecutionScope} from '../workspace/execution-scope';
 import {scopedReadToolName,scopedNodeToolName} from '../tasks/scoped-execution';
+import {RepeatedToolFailures} from './repeated-tool-failures';
+import {toolFailureResult,toolOutcome} from '../tools/outcome';
 import {nativeToolDescriptor} from '../tools/native-tools';
 import {RunControlledFile,type ControlledFileRunPort} from './run-controlled-file';
 import {controlledFileWriteToolName} from '../tasks/controlled-file-operation';
@@ -221,6 +224,7 @@ export class LoopRuntime {
       const journal=this.options.storage.createJournal(directory,task,runId);await journal.init();
       let boundSessionFile:string|undefined,boundNativeSessionId:string|undefined;
       const pendingTools=new Set<string>();
+      const repeatedFailures=new RepeatedToolFailures();
       // 包含尚在等待策略/人工审批的调用；只看 tool.allowed 会遗漏尚未获得授权的并发写入。
       const activeCalls=new Set<string>();
       const calls=new Map<string,{call:ToolCall;decision:ToolDecision;generation:number;overlappedEffect?:boolean;effect?:boolean}>();
@@ -251,6 +255,10 @@ export class LoopRuntime {
             event={...event,data:{...data,receipt:toolReceipt(identity,known.call,known.decision,!known.decision.allow?'denied':data.isError?'failed':'succeeded',data.result)}};
           }else event={...event,data};
         }
+        if((event.type==='tool.finished'||event.type==='tool.denied')&&calls.has(String(event.data.id))){
+          const status=event.type==='tool.denied'?'rejected':event.data.isError?'unknown':'returned';
+          event={...event,data:{...event.data,outcome:toolOutcome(status)}};
+        }
         const saved=await journal.append(event);
         artifactCapture?.observed(saved);
         manifestCapture?.observed(saved);
@@ -269,6 +277,14 @@ export class LoopRuntime {
         }
         if(event.type==='tool.allowed')pendingTools.add(String(event.data.id));
         if(event.type==='tool.finished'||event.type==='tool.denied'){pendingTools.delete(String(event.data.id));activeCalls.delete(String(event.data.id));effectsInFlight.delete(String(event.data.id))}
+        if(event.type==='tool.finished'||event.type==='tool.denied'){
+          const blocked=repeatedFailures.settled(String(event.data.id),event.type==='tool.denied'||event.data.isError===true);
+          if(blocked){
+            await emit({type:'engine.status',data:{state:'blocked',...blocked,message:'同一工具同参数连续失败三次，已停止本轮；请核实原结果并修正原因。'}});
+            // 不在工具回调内等待引擎自身退出，避免自等待；收尾仍排空原在途工作。
+            void stop().catch(()=>{});
+          }
+        }
         try{void Promise.resolve(this.options.onEvent?.(saved)).catch(()=>{})}catch{/* observers cannot change durable execution */}
         return saved;
       };
@@ -372,6 +388,7 @@ export class LoopRuntime {
           if(!stopping)await engine.start({task,runId,directory,sessionFile:engineSession.sessionFile,engineHandoff:engineSession.handoff,nativeSessionId:previous&&!member?engineSession.nativeSessionId:nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,capabilities:memberToolCapabilities({taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,manifestTools:manifestCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,controlledFileTools:controlledFile,artifactTransitionTools:artifactTransition,scopedExecutionTools:scopedExecution}),assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
             call=structuredClone(call);
             if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
+            repeatedFailures.proposed(call);
             // 验证、采集与停泊先同步预占，再进入策略；短读锁不会绕过求助/检查点的本轮结束门闩。
             const scopedReason=executionScope&&nativeToolDescriptor(call.name)?'EXECUTION_SCOPE_NATIVE: 冻结范围任务禁止原生文件与命令工具':scopedExecution?.guard(call.name,call.id,call.input,[...activeCalls])??(!scopedExecution&&call.name.startsWith('cbim_scoped_')?'本轮未提供范围执行能力':undefined);
             const transitionReason=scopedReason??artifactTransition?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactTransition&&call.name===artifactTransitionToolName?'本轮未提供冻结删除/移动能力':undefined);
@@ -387,7 +404,8 @@ export class LoopRuntime {
             await emit({type:'tool.proposed',data:{...call}});
             let decision:ToolDecision,descriptor:RunToolDescriptor|undefined,planVersion:number|undefined;
             try{
-              if(stopping)decision={allow:false,reason:'任务正在停止'};
+              if(repeatedFailures.blocked)decision={allow:false,reason:'TOOL_REPEAT_BLOCKED: 同一工具同参数连续失败三次，请核实原结果并修正原因'};
+              else if(stopping)decision={allow:false,reason:'任务正在停止'};
               else if(helpReason)decision={allow:false,reason:helpReason};
               else{
                 if(workflows.length&&call.name==='cbim_delivery_prepare')assertDeliveryReady();
@@ -406,6 +424,7 @@ export class LoopRuntime {
               try{await taskTools.invalidate('即将执行可能改变产物的操作，需要重新验证',planVersion)}catch(error){const code=(error as {code?:string})?.code;decision={...decision,allow:false,reason:(code?.startsWith('WORKFLOW_')?code+': ':'')+(error instanceof Error?error.message:String(error))}}
             }
             calls.set(call.id,{...calls.get(call.id)!,call,decision,generation:taskTools.generation});
+            if(!decision.allow)decision={...decision,reason:(toolFailureResult(decision.reason??'未获授权',true).content[0] as {text:string}).text};
             const authorization=await emit({type:decision.allow?'tool.allowed':'tool.denied',data:{id:call.id,name:call.name,input:call.input,...decision,...(Number.isSafeInteger(descriptor?.contractVersion)&&descriptor!.contractVersion!>0?{contractVersion:descriptor!.contractVersion}:{}),...(!decision.allow?{receipt:toolReceipt(identity,call,decision,'denied')}: {})}},true);
             if(stopping&&decision.allow){
               decision={...decision,allow:false,reason:'任务正在停止'};calls.set(call.id,{...calls.get(call.id)!,call,decision,generation:taskTools.generation});
@@ -444,7 +463,7 @@ export class LoopRuntime {
             const unverifiedControlledCalls=[...controlledFile?.unverifiedCallIds??[],...artifactTransition?.unverifiedCallIds??[]];
             if(failure||pendingTools.size||unverifiedControlledCalls.length)await emit({type:'run.interrupted',data:{error:failure instanceof Error?failure.message:String(failure||(unverifiedControlledCalls.length?'CONTROLLED_FILE_REVIEW_REQUIRED: 原受控文件操作结果待核实，本轮不能安全交接':'工具结果未确认')),unresolvedTools:[...pendingTools],...(unverifiedControlledCalls.length?{unverifiedControlledCalls}:{}),receipts:[...pendingTools].map(id=>{const item=calls.get(id)!;return toolReceipt(identity,item.call,item.decision,'unknown')})}});
             // close 仍属于本轮生命周期：在排空引擎期间收到停止，不能把已暂存的 completed 写成正常交接。
-            else await emit({type:'run.settled',data:{...(stopping&&result?.status==='completed'?{status:'cancelled' as const}:result),acceptance:'not_evaluated'}});
+            else await emit({type:'run.settled',data:{...(repeatedFailures.blocked?{status:'failed' as const,blocked:repeatedFailures.blocked,error:'TOOL_REPEAT_BLOCKED: 同一工具同参数连续失败三次，请核实原结果并修正原因。'}:stopping&&result?.status==='completed'?{status:'cancelled' as const}:result),acceptance:'not_evaluated'}});
             await journal.flush();
             }finally{this.active.delete(task.taskId);this.injections.delete(task.taskId);release()}
           })().catch(error=>{draining=undefined;throw error});

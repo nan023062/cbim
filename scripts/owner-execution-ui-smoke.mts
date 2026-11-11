@@ -1,3 +1,4 @@
+import {clickKnowledgeTreeAction,clickArchitectureAction} from './knowledge-tree-actions.mjs';
 import {_electron as electron,type ElectronApplication,type Page} from 'playwright-core';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -43,7 +44,7 @@ try{
   if(stale){
     const expand=page.getByRole('button',{name:'展开右侧扩展',exact:true});if(await expand.isVisible())await expand.click();const tab=page.getByRole('tab',{name:'业务架构',exact:true}),view=()=>page.locator('.extension-area:not([hidden]) .extension-content:not([hidden])');
     if(await tab.count())await tab.click();else{await page.getByRole('button',{name:'新增扩展页签',exact:true}).click();await view().getByRole('button',{name:'打开业务架构',exact:true}).click()}
-    await view().getByTestId('open-module-ownerships').click();const panel=()=>view().getByTestId('module-ownership-panel');await panel().waitFor();
+    await clickKnowledgeTreeAction(view(),'.cbim/workspace','负责人记录');const panel=()=>view().getByTestId('module-ownership-panel');await panel().waitFor();
     const row=panel().locator(`[data-testid="module-ownership-row"][data-module-id="${seeded.modules[0]}"]`);await until(()=>row.isEnabled(),'责任列表加载');await row.click();
     for(const [revision,memberId] of [[2,seeded.positions[1].member.memberId],[3,seeded.positions[0].member.memberId]] as const){
       const selector=panel().getByRole('combobox',{name:'负责人岗位',exact:true});await until(()=>selector.isEnabled(),'负责人选择可用');await selector.selectOption(memberId);await panel().getByRole('textbox',{name:'负责人变更原因',exact:true}).fill('实际 UI 在原主轮结束前更换负责人；第 '+revision+' 版不能冒充原计划。');await panel().getByTestId('module-ownership-preview').click();await panel().getByTestId('module-ownership-preview-result').waitFor();await panel().getByTestId('module-ownership-commit').click();

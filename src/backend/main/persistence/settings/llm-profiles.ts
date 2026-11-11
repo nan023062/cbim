@@ -1,7 +1,7 @@
 /**
  * 作用定位：本机供应商配置持久化、默认模型选择和连接检测。
  * 设计原因：运行与岗位登记共用实际模型选型；岗位领取在同一配置队列中固定公开参数并延迟解密，与设置修改形成明确先后，凭据不进入登记或任务日志。
- * 运行引擎由调用方独立传入，忽略旧供应商 engine；未传引擎时不补字段，历史快照形状由已采纳选型保留。
+ * 运行引擎由调用方独立传入；连接错误保留安全端点与状态诊断，不泄露密钥、查询参数或供应商响应正文，不清空已保存模型目录。
  */
 import fs from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
@@ -112,14 +112,19 @@ export class LlmProfiles {
     return parseModelCatalog(body.data);
   }
   private headers(api:string,auth:string,key:string){const h:Record<string,string>={'Content-Type':'application/json'};if(api==='anthropic-messages'){h['anthropic-version']='2023-06-01';if(auth==='api-key')h['x-api-key']=key}else if(auth==='api-key')h.Authorization='Bearer '+key;return h}
-  /** 请求仅返回解析后的短响应；错误不带服务器正文、请求头或密钥。 */
+  /** 显式探测的诊断只保留 origin/path；不返回查询参数、服务器正文、请求头或密钥。 */
   private async request(url:string,init:RequestInit){
+    const endpoint=new URL(url);endpoint.username='';endpoint.password='';endpoint.search='';endpoint.hash='';
     try{
       const response=await fetch(url,{...init,redirect:'error',signal:AbortSignal.timeout(15000)});
-      if(!response.ok){await response.body?.cancel();fail('LLM_HTTP',`模型接口返回 HTTP ${response.status}，请检查地址、模型 ID、密钥和额度`)}
+      if(!response.ok){
+        await response.body?.cancel();
+        const reason=response.status===401?'鉴权失败，请重新保存该供应商的 API Key':response.status===403?'访问被拒绝，请检查密钥权限与供应商访问限制':response.status===404?'端点或模型不存在，请核对接口协议、地址和模型 ID':response.status===429?'请求受限，请检查额度或稍后重试':'请检查供应商服务与接口配置';
+        fail('LLM_HTTP',`模型端点 ${endpoint.href} 返回 HTTP ${response.status}：${reason}`);
+      }
       const reader=response.body?.getReader();let text='';if(reader){const decoder=new TextDecoder();while(true){const part=await reader.read();if(part.done)break;text+=decoder.decode(part.value,{stream:true});if(text.length>1024*1024){await reader.cancel();fail('LLM_RESPONSE','模型响应过大')}}text+=decoder.decode()}
       return JSON.parse(text);
-    }catch(e:any){if(['LLM_HTTP','LLM_RESPONSE'].includes(e.code))throw e;fail('LLM_CONNECTION','连接失败或超时，请检查网络与接口配置')}
+    }catch(e:any){if(['LLM_HTTP','LLM_RESPONSE'].includes(e.code))throw e;fail('LLM_CONNECTION',`模型端点 ${endpoint.href} 连接失败或超时，请检查网络与接口配置`)}
   }
   /** 显式测试已保存模型，发送最小文本请求；不发送项目知识，不代表工具调用能力已验证。 */
   async test(id:string,modelId?:string){

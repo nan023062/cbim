@@ -87,6 +87,8 @@ N_src_backend_main_persistence_tasks_chat_inputs_ts ..> N_src_backend_main_persi
 class N_src_backend_main_persistence_tasks_chat_inputs_ts_ChatInputs["ChatInputs"] {
   +saveSource()
   +path()
+  +pastedPaths()
+  +clipboardImage()
   +connectors()
   +preview()
   +images()
@@ -421,6 +423,12 @@ N_src_backend_main_persistence_tasks_run_storage_ts ..> N_src_backend_main_persi
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 剪贴板图片与路径快照
+
+ChatInputs.clipboardImage 只接受 PNG/JPEG/GIF/WebP、规范 base64、签名匹配且不超过5 MiB的原字节。source 保存唯一 clipboard URI 和原名称，note 保存采集时间；不伪造磁盘路径，文本不夹带base64。视觉输入、排队、等待补充共用已保存图片，仍受模型视觉能力和总20 MiB限制。
+
+pastedPaths 只接受显式的绝对本地路径/file URL，拒绝相对、UNC/设备与 .cbim；先校验全选路径存在和种类，文件/目录仍复用原快照及目录首层200项限制。source 保留真实路径，正文为导入时快照，后续源文件变化不静默进入发送。preview 只按当前工作区UUID有界读取私有快照，并验证图片；不接受预览磁盘路径。路径/图片导入不自动发消息，孤立快照不自动进入模型。
+
 ### 新旧负责人执行协议
 
 FileDispatchStore 在自身 transaction body 写入 `executionProtocol:module_owner_v1`，调用者 mutation 不可设置。旧完整日志前缀按旧执行规则回放，第一次新协议之后不得退回旧写法；未知协议或降级后缀即使哈希链一致也拒绝。不重写旧字节、回执或尚未绑定的历史。新 live 事务始终校验新业务绑定，旧已存在 run 的状态收束可以保留缺省字段。
@@ -433,7 +441,7 @@ FileDispatchStore 在自身 transaction body 写入 `executionProtocol:module_ow
 
 每次最多 12 项、私有快照单项 8 MiB、图片单项 5 MiB/合计 20 MiB、展开消息 512 KiB；超过总额度不截断后假装完整。清单仅保存 ID、名称、种类、字节数、哈希及新来源的紧凑 proof，不含原目录路径、正文或 base64。`snapshotHash` 绑定私有 JSON 原字节，`contentHash` 绑定这次送入模型的保存文本或解码图片；文件文本明确是可能截取的保存快照，不证明当前源文件全文。
 
-`ChatMaterialImports` 是应用唯一的显式导入/取消入口。`importId` 在本次应用内只执行一次，取消先到仍保留墓碑；目录、网页或仓库读取迟到后不能返回给新目标。工作区退役先 abort，应用关闭排空真实操作；原生选择器不能强制关闭，但取消立即结束导入，之后返回的路径不读取。已原子写入后取消不冒称磁盘回滚，未被表单接收的孤立快照不会自动进入任何模型输入。每次应用最多 4096 个导入/取消标识，不自动淘汰后重放旧 ID。
+`ChatMaterialImports` 是安全等待资料的显式导入/取消入口；普通聊天选择器/拖放和图片/路径粘贴另由 ChatInputs 保存快照。`importId` 在本次应用内只执行一次，取消先到仍保留墓碑；目录、网页或仓库读取迟到后不能返回给新目标。工作区退役先 abort，应用关闭排空真实操作；原生选择器不能强制关闭，但取消立即结束导入，之后返回的路径不读取。已原子写入后取消不冒称磁盘回滚，未被表单接收的孤立快照不会自动进入任何模型输入。每次应用最多 4096 个导入/取消标识，不自动淘汰后重放旧 ID。
 
 目录由原生选择器指定真实路径，拒绝 `.cbim`，有界枚举首层最多 200 项及溢出哨兵，不递归、不读取文件正文或链接目标；同时受 64 KiB UTF-8 保存上限，真实部分性写入 proof。URL 指针零 fetch。网页仅一次 HTTP(S) GET，不使用登录凭据、不跟随重定向或执行脚本；15 秒超时/显式取消贯穿正文，完整响应最多 1 MiB，支持 UTF-8 `text/*` 或 `application/json`。完整有界原字节 hash 与实际文本摘录 hash 分开，摘录最多 64 KiB UTF-8，不切断字符；不是浏览器渲染、登录页面读取或公网 IP 隔离。
 

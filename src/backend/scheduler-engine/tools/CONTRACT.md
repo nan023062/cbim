@@ -1,3 +1,7 @@
+### 网页读取端口
+
+WebTools 将可信主进程端口装为 cbim_web_fetch 与 cbim_web_search，分类为 read/workspace，严格解析输入并核对输出长度、查询与条数；单次调用无自动重试。仅桌面主会话装配，未配置 Brave 时搜索返回设置提示；读取网页不需要搜索密钥。资料不提升权限。
+
 ### 知识查询与刷新分别装配
 
 `KnowledgeTools` 将只读注册表/详情交给 Core 的 `KnowledgeQueries`，将索引刷新交给 独立的 `KnowledgeRefresh.refresh`。查询门面不再拥有刷新能力；调用前的 Schema、实例身份、写授权、取消检查及调用后的唯一输出快照校验保持在原工具边界。公开工具名称、版本与恢复协议不变，不因为重构重放提交。具体依赖与事务所有者见 [知识契约](../../core/knowledge/CONTRACT.md#固定快照读取的逻辑边界与公共入口)。
@@ -203,3 +207,14 @@ cbim_object_preview 的 data 按 kind 判别，模块中文名必须写在 body 
 对象预览的工具描述和字段 Schema 共同公开根 ID、顺序父子创建及正文约束；structural:false 返回全部校验问题，不冒充执行异常。知识提交回执与业务目标验收分别解释。
 
 模块负责人 inspect 公开四级优先级及 matches 输入：LLM 分析由当前主 Agent 完成，返回的选择才用于新目标和派发；静态 Agent、岗位与运行身份不互换。
+## 岗位治理工具
+
+WorkspaceMemberTools 注册 cbim_member_inspect/change_preview/change_commit/receipt，输入拒绝身份、凭据及模型选型，输出严格核对工作区、原选择、命令与预览依据，128 KiB 上限。提交错误携带原 commandId，回包丢失或停止不能自动重放；能力采纳与模块来源 adopt_source 不是同一操作。
+
+### 主运行规范入口与只读预览
+
+`CoordinationTools` 仅组合实际装配的只读工具：cbim_state_inspect 的 state 一次返回 scope/graph 和 versions（goalRevision、planRevision、graphCursor、所有任务 revision、当前周期候选证据）；task/owner/member/governance 分别委托原端口，不伪称跨知识、模型和 Store 的原子快照。cbim_receipt_inspect 按 dispatch/owner/member/governance 选择原回执，保留原身份约束和 unknown/absent。没有任意工具名路由；旧族目录标为兼容，不更改历史指纹。
+
+cbim_dispatch_cancel 增加 includeClosure:true；cbim_goal_review 的 {decision:awaiting_user,memberPause:{includeClosure:true}} 只读预览。两者返回需确认的完整清单和 issues，不提交/启动；去掉预览参数后按原完整写协议提交，版本竞争继续拒绝。只有真实端口装配才公开该 Schema 分支；预览输出核对本轮归属。
+
+调度/目标、岗位、责任、治理的未知写错误附统一回执地址与原命令/调用，供只读核实，不自动重做。普通对象维护规范入口为 object_preview/commit，底层 knowledge_preview/commit 标为文件事务兼容；goal_plan/review 是主周期目标，task_plan/step 是运行内步骤，不能互代。

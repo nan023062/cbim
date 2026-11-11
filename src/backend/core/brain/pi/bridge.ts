@@ -1,12 +1,14 @@
 /**
+ * 失败正文携带统一下一步；原生错误无领域账本，内部错误保留原命令核实地址。不增加外部请求或新的授权路由。
  * 作用定位：大脑 执行层：内部知识 Schema/调用的本机临时桥及 Pi 扩展，工具授权先落盘再放行。
  * 设计原因：把工具 Schema、一次性授权和可信来源交给受控扩展；成员数据和人工决定系统转交分别写成 custom，真实文本补充仍是用户消息。工具调用 ID 透传且结果再次校验，随机凭据保护单轮调用。模型启动前回报真实活动工具名并核对注册清单，不记录参数或凭据。
  * 工具目录及调用端口契约来自上层 engine-tools；此文件只维护 Pi 的 HTTP/扩展适配与一次性许可。
  */
 import http from 'node:http';
+import {toolOutcome,toolReturnedResult,toolFailureResult} from '../../tools/outcome';
 import {randomBytes,timingSafeEqual} from 'node:crypto';
 import type {ToolCall,ToolDecision} from '../types';
-import {validateToolResult} from '../../tools/results';
+import {validateToolResult,type ToolResult} from '../../tools/results';
 import {Fault,fail} from '../../foundation/errors';
 import {checkedRunInputSource,type RunInputSource} from '../input-source';
 
@@ -53,10 +55,10 @@ export async function openBridge(knowledge:KnowledgeBridge,beforeTool:(call:Tool
       }else{
         const grant=grants.get(call.id);grants.delete(call.id);
         if(!names.has(call.name)||!grant||grant.name!==call.name||grant.input!==JSON.stringify(call.input))throw Error('工具调用未获本次执行授权');
-        result=validateToolResult(call.name,await knowledge.call(call.name,call.input,controller.signal,call.id));
+        result=toolReturnedResult(validateToolResult(call.name,await knowledge.call(call.name,call.input,controller.signal,call.id)) as ToolResult);
       }
       res.setHeader('Content-Type','application/json');res.end(JSON.stringify(result));
-    }catch(error){res.writeHead(400,{'Content-Type':'application/json'}).end(JSON.stringify({code:error instanceof Fault?error.code:'TOOL_ERROR',error:error instanceof Error?error.message:String(error)}))}
+    }catch(error){res.writeHead(400,{'Content-Type':'application/json'}).end(JSON.stringify({...JSON.parse((toolFailureResult(error).content[0] as {text:string}).text),error:error instanceof Error?error.message:String(error)}))}
   });
   await new Promise<void>((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)});
   const port=(server.address() as import('node:net').AddressInfo).port;
@@ -70,7 +72,7 @@ export default async function(pi) {
   delete process.env.CBIM_LOOP_BRIDGE_URL; delete process.env.CBIM_LOOP_BRIDGE_TOKEN;
   async function request(route, body, signal) {
     const response=await fetch(url+route,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:signal||AbortSignal.timeout(30000)});
-    const value=await response.json();if(!response.ok)throw Error((value.code?value.code+': ':'')+(value.error||'CBIM bridge unavailable'));return value;
+    const value=await response.json();if(!response.ok)throw Error(JSON.stringify(value));return value;
   }
   if(trustedInputSource?.kind==='member-results'||trustedInputSource?.kind==='human_decisions'){
     let consumed=false;
@@ -92,9 +94,10 @@ export default async function(pi) {
     if(Number.isInteger(limit)&&limit>0)try{await request('/request-limit',{maxTokens:limit})}catch{}
   });
   pi.on('session_start',reportContext);pi.on('turn_end',reportContext);pi.on('agent_end',reportContext);pi.on('session_compact',reportContext);
+  const rejectedCalls=new Set();
   const tools=await request('/catalog');
   for(const tool of tools) pi.registerTool({name:tool.name,label:tool.name,description:tool.description||tool.name,parameters:tool.inputSchema,
-    async execute(id,input,signal){const result=await request('/call',{id,name:tool.name,input},signal);if(result.isError)throw Error(JSON.stringify(result.content));return {...result,details:{source:'cbim'}};}
+    async execute(id,input,signal){const result=await request('/call',{id,name:tool.name,input},signal);if(result.isError)throw Error(result.content.filter(block=>block.type==='text').map(block=>block.text).join('\\n'));return {...result,details:{...result.details,source:'cbim'}};}
   });
   // 恢复会话时以真实活动工具为准；这里只更新指引，不添加工具、不绕过 gate。
   pi.on('before_agent_start',async(event)=>{
@@ -104,9 +107,18 @@ export default async function(pi) {
     if(active.includes('write'))event.systemPromptOptions.promptGuidelines.push('本轮可调用 write 创建工作区业务文件（包括根目录下的 tetris.html），edit 修改文件；实际写入仍需通过 CBIM 授权。业务写入与知识提交共用本轮权限；知识必须通过 cbim_ 工具操作，不能用原生工具直接修改 .cbim/。用户要求实现时应调用工具落盘并验证，不用长篇源码回复代替执行；仅在真实拒绝或错误后报告对应阻塞。');
     else event.systemPromptOptions.promptGuidelines.push('本轮未启用 write，请遵守只读权限；需要落盘时提示用户选择逐次询问或允许执行。');
   });
+  pi.on('tool_result',async event=>{
+    if(event.toolName.startsWith('cbim_'))return;
+    if(event.isError){
+      const message=event.content.filter(block=>block.type==='text').map(block=>block.text).join('\\n');
+      const outcome=rejectedCalls.delete(event.toolCallId)?rejectedOutcome:unknownOutcome;
+      return {isError:true,content:[{type:'text',text:JSON.stringify({...outcome,code:'TOOL_ERROR',message})}],details:{...event.details,outcome}};
+    }
+    return {details:{...event.details,outcome:returnedOutcome}};
+  });
   pi.on('tool_call',async(event)=>{
     // 人工批准可能超过 30 秒；生命周期仍由本轮超时和停止控制，不自动放行。
-    try{const decision=await request('/gate',{id:event.toolCallId,name:event.toolName,input:event.input},AbortSignal.timeout(30*60*1000));if(!decision.allow)return {block:true,reason:decision.reason||'CBIM rejected tool'};}
+    try{const decision=await request('/gate',{id:event.toolCallId,name:event.toolName,input:event.input},AbortSignal.timeout(30*60*1000));if(!decision.allow){rejectedCalls.add(event.toolCallId);return {block:true,reason:decision.reason||'CBIM rejected tool'}};}
     catch(error){return {block:true,reason:String(error),terminate:true};}
   });
 }
@@ -114,7 +126,7 @@ export default async function(pi) {
 
 /** 为单轮生成扩展；来源经过结构校验并仅含标识，不携带凭据或依赖模型传入的可信字段。 */
 export function bridgeExtensionForSource(source?:RunInputSource){
-  return 'const trustedInputSource='+JSON.stringify(source?checkedRunInputSource(source):null)+';\n'+bridgeExtensionBody;
+  return 'const returnedOutcome='+JSON.stringify(toolOutcome('returned'))+';const rejectedOutcome='+JSON.stringify(toolOutcome('rejected'))+';const unknownOutcome='+JSON.stringify(toolOutcome('unknown'))+';\n'+'const trustedInputSource='+JSON.stringify(source?checkedRunInputSource(source):null)+';\n'+bridgeExtensionBody;
 }
 /** 普通用户对话保持原有扩展入口，不拦截输入。 */
 export const bridgeExtension=bridgeExtensionForSource();

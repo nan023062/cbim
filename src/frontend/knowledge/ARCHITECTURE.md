@@ -160,6 +160,22 @@ class N_src_frontend_knowledge_KnowledgeFileTree_tsx["KnowledgeFileTree.tsx"] {
 }
 ```
 
+```mermaid
+classDiagram
+class N_src_frontend_knowledge_KnowledgeFileTree_tsx["KnowledgeFileTree.tsx"] {
+  <<component>>
+}
+class N_src_frontend_knowledge_KnowledgeFileTree_tsx_KnowledgeTreeAction["KnowledgeTreeAction"] {
+  <<interface>>
+  +id
+  +label
+  +icon
+  +disabled
+  +onSelect()
+}
+N_src_frontend_knowledge_KnowledgeFileTree_tsx ..> N_src_frontend_knowledge_KnowledgeFileTree_tsx_KnowledgeTreeAction : 声明
+```
+
 直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[knowledge-file-tree.ts](knowledge-file-tree.ts)、[knowledge-files.css](knowledge-files.css)。
 
 ### KnowledgeSourceDetails.tsx
@@ -248,6 +264,14 @@ N_src_frontend_knowledge_KnowledgeSourceDetails_tsx ..> N_src_frontend_knowledge
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 单一树根与视图图标
+
+每棵树只保留业务模块/团队架构一个根，展开和折叠全部在树右上角用图标显示，title和aria-label提供提示。操作仅更新本地closed集合；根的行尾菜单持续可用，搜索时仍展开匹配祖先，不把折叠当知识修改。
+
+### 目录行尾操作
+
+KnowledgeFileTree 的名称按钮后紧跟展开箭头，右侧竖向更多菜单只显示宿主为真实目录节点声明的动作。文件不自动得到模块/团队操作；回调捕获本行路径，不依赖右侧当前选中节点。图标操作保留 title 与 aria-label，Escape 关闭后回到菜单入口，点击外部关闭；树不查询/写知识或授予权限。选择、展开、菜单分开，320px长名称省略但路径可悬停查看。
 
 # 静态架构编辑
 

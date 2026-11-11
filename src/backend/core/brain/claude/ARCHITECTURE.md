@@ -119,7 +119,7 @@ class N_src_backend_core_brain_claude_tools_ts["tools.ts"] {
 }
 ```
 
-直接依赖：[../types.ts](../types.ts)、[../engine-tools.ts](../engine-tools.ts)、[../../tools/results.ts](../../tools/results.ts)。
+直接依赖：[../../tools/outcome.ts](../../tools/outcome.ts)、[../types.ts](../types.ts)、[../engine-tools.ts](../engine-tools.ts)。
 
 ### 本目录调用边界
 
@@ -168,3 +168,7 @@ SDK 0.3.322 的实际 schema 运行依赖是 zod/v4 与 zod/v4/core。工程保�
 ### 通用能力注入
 
 工具从 EngineContext.capabilities 的通用工具目录注册；可信能力 disableNativeTools=true 时关闭全部原生文件和命令，不依赖某个业务工具槽位。业务指引作为可信装配说明传入，授权、原调用身份、结果保存与停止顺序保持原协议。
+
+### 失败后的核实
+
+内部调用沿共同端口返回统一错误结构；原生 PostToolUseFailure 保留错误并用相同 outcome 记录日志及 additionalContext。没有领域回执时明确 null，不把异常当回滚或授权重放。

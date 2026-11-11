@@ -40,6 +40,11 @@ async function setup(){
 it('B→C必须显式完整撤销，节点/信封/待办原子提交，幂等与重放不启动或改写历史',async()=>{
   const f=await setup();try{
     const before=await f.store.read(),bytes=await fs.readFile(path.join(f.directory,'dispatch.jsonl')),partial=await f.input([f.b.taskId]);
+    const preview=await f.service.goals.previewClosure(f.identity,f.scopeId,partial);
+    expect(preview).toMatchObject({readOnly:true,requiresConfirmation:true,issues:[],affectedTaskIds:[f.b.taskId,f.c.taskId],retainedTaskIds:[f.a.taskId]});
+    expect(preview.cancel).toEqual(await f.input());expect(await f.store.read()).toEqual(before);
+    const stale=await f.service.goals.previewClosure(f.identity,f.scopeId,{...partial,expectedGraphCursor:{...partial.expectedGraphCursor,seq:0}});
+    expect(stale.cancel).toBeUndefined();expect(stale.issues[0].code).toBe('CANCEL_GRAPH_STALE');
     await expect(f.cancel(partial)).rejects.toMatchObject({code:'CANCEL_DEPENDENTS_REQUIRED',message:expect.stringContaining(f.c.taskId)});expect(await fs.readFile(path.join(f.directory,'dispatch.jsonl'))).toEqual(bytes);
     const draft=await f.input(),receipt=await f.cancel(draft);expect(receipt.cancelledTaskIds).toEqual([f.b.taskId,f.c.taskId]);expect(receipt.graphCursor.seq).toBe(draft.expectedGraphCursor.seq+1);
     const state=await f.store.read(),tasks=state.graphs[0].tasks.filter(task=>receipt.cancelledTaskIds.includes(task.taskId));

@@ -394,3 +394,9 @@ LoopRuntime 保留唯一权限、任务进度、证据与日志生命周期。en
 Pi、Claude Code、Codex 共同消费 `disableNativeTools`，范围能力开启此策略时不注册原生文件或命令；元数据仅来自可信装配，模型正文不能修改。工具暴露不代替授权：每次调用仍先经 `beforeTool` 持久化决定，再执行并保存回执。未决副作用、停止、close/drain 和租约释放顺序仍归 Runtime 及具体能力负责。
 
 `prepareRunValidation` 在取得租约、创建日志和引擎之前检查要求数量、正式成员身份及 JSON/CSV/PNG 实际支持，并返回本轮工厂。`RunValidationContext` 只接收当前进度、代次、授权/在途校验、清单复核和可靠保存；具体规则与验证器选择在 run-validation 内。Runtime 仍协调各类业务证据，不宣称所有运行时职责都已独立；下一次扩展验证器从验证模块及平台接口进入，增加独立工具从 member-tool-capabilities 装配进入。
+
+### 同参失败熔断
+
+`RepeatedToolFailures` 以工具名及递归键排序的参数哈希判断连续失败，按 proposed 顺序收束并发结果，重复 finished/denied 只计一次，成功或不同参数重置计数。第三次失败持久保存 engine.status state=blocked，立即停止并排空；第四次调用不执行。安全收尾的 RunStatus 保持既有 failed，并带 TOOL_REPEAT_BLOCKED；未决副作用仍优先 interrupted。没有自动恢复或自动重试，不能把引擎 completed 覆盖为业务成功。
+
+内部能力目录仅注册和路由；各引擎传输适配层只调用原端口一次，输出/异常用统一 ToolOutcome 包装，原领域正文不改写；各引擎收到相同失败含义。门禁拒绝以 rejected 返回，结果异常保守为 unknown。界面展示原记录和下一步，不直接执行核实工具。

@@ -50,6 +50,7 @@ N_src_backend_main_ipc ..> N_src_backend_main_governance : 导入依赖
 N_src_backend_main_persistence ..> N_src_backend_main_resources : 导入依赖
 N_src_backend_main_persistence ..> N_src_backend_main_platform : 导入依赖
 N_src_backend_main_resources ..> N_src_backend_main_platform : 导入依赖
+N_src_backend_main_resources ..> N_src_backend_main_persistence : 导入依赖
 ```
 
 ```mermaid
@@ -98,12 +99,12 @@ class N_src_backend_main_runtime_monitor_ts["runtime-monitor.ts"] {
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
 - `agent-history.ts` → `persistence`：导入。
+- `application.ts` → `persistence`：导入。
+- `application.ts` → `resources`：导入。
 - `application.ts` → `automation.ts`：导入。
 - `application.ts` → `platform`：导入。
 - `application.ts` → `workspace`：导入。
 - `application.ts` → `ipc`：导入。
-- `application.ts` → `persistence`：导入。
-- `application.ts` → `resources`：导入。
 - `application.ts` → `execution.ts`：导入。
 - `application.ts` → `member-dispatch.ts`：导入。
 - `application.ts` → `execution-admission.ts`：导入。
@@ -137,6 +138,7 @@ class N_src_backend_main_runtime_monitor_ts["runtime-monitor.ts"] {
 - `persistence` → `resources`：导入。
 - `persistence` → `platform`：导入。
 - `resources` → `platform`：导入。
+- `resources` → `persistence`：导入。
 - `runtime-monitor.ts` → `workspace`：导入。
 - `runtime-monitor.ts` → `persistence`：导入。
 - `workspace` → `platform`：导入。
@@ -206,6 +208,10 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 网页服务装配
+
+Application 持有一份 WebSettings/WebService，启动恢复加密搜索配置；createExecutionManager 仅对桌面主会话绑定公开网页端口。缓存与每域限速为应用级，搜索每次读取当前配置；密钥不传入调度引擎。配置操作与网络执行分开。
 
 # 主进程运行装配契约
 
@@ -408,3 +414,6 @@ canonical 读取仅按可信索引 source/task/run 定位；safeId、逐层符�
 ## 全量 IPC 契约衔接
 
 应用内部 dispatch 对已知操作推导响应，对原始动态字符串只返回 unknown；所有原始请求交给 IPC 契约解析。Electron 入口在 Schema 前核实主 Frame 与安装期间门禁，原生操作成功值按操作配对，未知输入不触发系统副作用。
+## 主岗位控制面
+
+execution 装配工作区已有 WorkspaceMembers 与真实 MainToolContext；新增主工具只复用本机岗位服务和同一 Store，不管理第二份登记。静态 Agent 的模型引用由用户预先配置，主工具无凭据端口、无批准或安装能力。

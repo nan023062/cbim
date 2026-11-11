@@ -1,10 +1,12 @@
 /**
+ * 剪贴板图片保留独立来源和原字节；明确粘贴路径复用原快照，预览只读保存内容并验证图片签名。
  * 作用定位：将用户明确添加的文件、文件夹、链接、网页与链接器定义保存为本机对话输入快照。
  * 设计原因：来源导入留在主进程；安全等待只从本工作区保存的严格版本快照读取一次，同字节准备正文、图片和清单，不再次访问源文件或网络。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
+import {fileURLToPath} from 'node:url';
 import {z} from 'zod';
 import {atomic} from '../../../core/foundation/files';
 import {hash} from '../../../core/foundation/serialization';
@@ -12,7 +14,7 @@ import {fail} from '../../../core/foundation/errors';
 import {continuationAttachmentIdsSchema,continuationAttachmentManifestSchema,continuationAttachmentLimits,continuationSourceItemFromSnapshot,type ContinuationAttachmentManifest,type ContinuationAttachmentItem} from '../../../core/tasks/scope-continuation-attachments';
 import type {InputImage} from '../../../core/brain/types';
 import type {KnowledgeWorkspace} from '../../../core/knowledge/ports';
-import type {ChatAttachment} from '../../../../bridge/contracts/chat';
+import type {ChatAttachment,ChatAttachmentPreview} from '../../../../bridge/contracts/chat';
 import {continuationSourceSnapshotSchema} from '../../../core/tasks/continuation-source-snapshot';
 import {readDirectorySource,readUrlSource} from './chat-source-readers';
 /** 按文件签名识别视觉模型常用格式，不信任扩展名；其他二进制保留引用行为。 */
@@ -41,7 +43,7 @@ export class ChatInputs {
     await atomic(path.join(this.directory(),snapshot.id+'.json'),JSON.stringify(snapshot));signal.throwIfAborted();this.workspace.assert();
     const {id,kind,name,source,note}=snapshot;return {id,kind,name,source,...(note===undefined?{}:{note})} satisfies ChatAttachment;
   }
-  /** 只能由原生选择器的结果调用；拒绝真实路径中的知识库目录，文件夹不递归扫描。 */
+  /** 原生选择/拖入或明确粘贴路径共用快照；拒绝真实路径中的知识库目录，文件夹不递归扫描。 */
   async path(kind:'file'|'folder',value:string,signal=new AbortController().signal){
     this.workspace.assert();signal.throwIfAborted();
     const file=await fs.realpath(value);signal.throwIfAborted();if(file.split(/[\\/]/).some(x=>x.toLowerCase()==='.cbim'))throw Error('知识库请通过 CBIM 内部工具引用，不能直接附加 .cbim');
@@ -65,10 +67,36 @@ export class ChatInputs {
     let text='';try{if(buffer.includes(0))throw Error('binary');text=new TextDecoder('utf-8',{fatal:true}).decode(buffer)}catch{return this.save(kind,path.basename(file),file,`二进制文件引用：${file}。未解析正文；如需理解图片等内容，请使用支持该格式的工具读取，不得假装已读。`,'仅引用路径，尚未解析此格式',undefined,signal)}
     return this.save(kind,path.basename(file),file,text,stat.size>64000?'保存的文本快照，可能截取':undefined,undefined,signal);
   }
+  /** 明确粘贴的绝对本地路径；先核全部存在与种类，再保存，不允许 UNC/设备/相对路径隐式访问。 */
+  async pastedPaths(values:string[]){
+    this.workspace.assert();const selection=z.array(z.string().min(1).max(32768)).min(1).max(12).parse(values),entries=[];
+    for(const original of selection){
+      let file=original;
+      if(/^file:/i.test(file)){try{file=fileURLToPath(file)}catch{throw Error('粘贴的文件 URL 无效')}}
+      if(!path.isAbsolute(file)||/^\\\\|^\/\//.test(file)||file.includes('\0'))throw Error('仅支持绝对本地路径，不支持网络、设备或相对路径');
+      const resolved=await fs.realpath(file),stat=await fs.stat(resolved);this.workspace.assert();
+      if(!stat.isFile()&&!stat.isDirectory())throw Error('路径不是普通文件或目录');
+      if(resolved.split(/[\\/]/).some(part=>part.toLowerCase()==='.cbim'))throw Error('知识库请通过 CBIM 内部工具引用，不能直接附加 .cbim');
+      entries.push({file,kind:stat.isDirectory()?'folder' as const:'file' as const});
+    }
+    const items:ChatAttachment[]=[];for(const entry of entries)items.push(await this.path(entry.kind,entry.file));return items;
+  }
+  /** 剪贴板没有磁盘路径；保留独立来源 URI、原名称、采集时间与原图片字节，沿原视觉输入链发送。 */
+  async clipboardImage(input:{name:string;mimeType:string;data:string}){
+    this.workspace.assert();const name=z.string().min(1).max(255).parse(input.name),image=imageSchema.parse({type:'image',mimeType:input.mimeType,data:input.data}),bytes=Buffer.from(image.data,'base64');
+    if(!bytes.length||bytes.length>5*1024*1024||bytes.toString('base64')!==image.data||imageMime(bytes)!==image.mimeType)throw Error('剪贴板图片无效或超过 5 MiB，请缩小后重新粘贴');
+    const capturedAt=new Date().toISOString(),source=`clipboard://image/${randomUUID()}/${encodeURIComponent(name)}`;
+    return this.save('file',name,source,'图片内容通过独立视觉输入提供。',`剪贴板图片 · ${image.mimeType} · ${capturedAt}`,image);
+  }
   /** 仅公开登记项的显示字段；损坏注册表明确拒绝，不透传任意 JSON。 */
   async connectors(){const snapshot=await this.workspace.snapshot();const file=snapshot.files.find(f=>f.path==='.cbim/connectors/registry.json');const entries=file?z.object({connectors:z.array(z.object({id:z.string(),name:z.string(),summary:z.string()}))}).parse(JSON.parse(file.text)).connectors:[];return entries}
   /** 预览已登记快照，不接受 renderer 指定的任意磁盘路径。 */
-  async preview(id:unknown){this.workspace.assert();const key=z.string().uuid().parse(id);return z.object({name:z.string(),source:z.string(),note:z.string().optional(),text:z.string()}).parse(JSON.parse(await fs.readFile(path.join(this.directory(),key+'.json'),'utf8')))}
+  async preview(id:unknown):Promise<ChatAttachmentPreview>{
+    this.workspace.assert();const key=z.string().uuid().parse(id),bytes=await this.continuationSnapshot(key,new AbortController().signal);
+    const value=z.object({name:z.string(),source:z.string(),note:z.string().optional(),text:z.string(),image:imageSchema.optional()}).parse(JSON.parse(bytes.toString('utf8')));
+    if(value.image){const imageBytes=Buffer.from(value.image.data,'base64');if(imageBytes.length>5*1024*1024||imageBytes.toString('base64')!==value.image.data||imageMime(imageBytes)!==value.image.mimeType)throw Error('图片快照损坏，请重新添加')}
+    return {...value,image:value.image?{mimeType:value.image.mimeType,data:value.image.data}:undefined};
+  }
   /** 从当前工作区快照恢复图片，排队与续聊均不重读源文件；每条消息最多 20 MiB。 */
   async images(ids:unknown=[]){
     this.workspace.assert();const selection=z.array(z.string().uuid()).max(12).parse(ids),images:z.infer<typeof imageSchema>[]=[];let total=0;

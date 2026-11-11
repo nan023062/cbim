@@ -1,4 +1,5 @@
 /**
+ * 只读闭包预览与正式提交共用原规则；预览不验证外部日志/文件，提交与停泊仍独立复核。
  * 主会话直接工作与自定义岗位分配分别核实；main-execution 只接受本轮真实业务工具，人工验收规则不降低。
  * 成员/最终目标复核与人工候选共用原完整身份；历史入口只重建事实，当前接受入口必须另核完整范围。
  * 已放弃的多段检查点作为换边来源时核全部原日志，不只信任最新段的摘要。
@@ -45,6 +46,8 @@ import type {OwnerExecutionService} from './owner-execution-service';
 import {abandonedCheckpointSource} from '../../core/tasks/checkpoint-handoff-rules';
 import {verifyMemberCheckpointHistory} from './member-checkpoint-verifier';
 import type {MemberPauseService} from './member-pause-service';
+import {coordinationPreview} from '../../core/tasks/coordination-preview';
+import type {CancelQueuedTasksInput} from '../../core/tasks/queued-task-cancel';
 
 /** 端口只按可信已登记身份读取 canonical 日志；不能接受模型提供路径或摘要。 */
 export interface ScopeGoalPorts {
@@ -93,6 +96,12 @@ export class ScopeGoalService {
   async inspectWithGraph(identity:GraphIdentity,scopeId:string):Promise<{scope:DispatchScope;graph:GraphSnapshot}>{
     const state=await this.store.read(),scope=this.scope(state,identity,scopeId);
     return {scope,graph:this.graph(state,scope)};
+  }
+
+  /** 一次存储读取生成撤销或等待清单；不写入、不读取文件、不启动成员，正式提交再次核验。 */
+  async previewClosure(identity:GraphIdentity,scopeId:string,input?:CancelQueuedTasksInput){
+    const state=await this.store.read(),scope=this.scope(state,identity,scopeId);
+    return coordinationPreview(state,scope,this.graph(state,scope),input);
   }
 
   /** 核实角色、模块和知识后追加计划；主角色可直接完成业务或知识工作，成员专属 Workflow 契约仍只绑定自定义岗位。 */

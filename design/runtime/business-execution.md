@@ -45,3 +45,24 @@ Workflow 若声明 artifactScope.transitions，必须以 cbim_artifact_transitio
 CSV 要求只由冻结的 `csv-table-v1` 约定选择表头、字段类型、取值范围、数据行数与唯一键。实际工具读取同一份有界 UTF-8 文件计算指纹和检查；不得用模型自报、重命名 JSON 通过记录或执行单元格公式替代。rejected 后修改文件必须重新读取、采集并验证，旧记录保留为历史；表格符合条件仍不代表人工业务验收。
 
 PNG要求由冻结的 `png-raster-v1` 明确精确宽高和RGB/RGBA采样通道。平台核所有块CRC、完整有界解压并还原像素后再判条件；首版仅支持8位非交错静态图片及IHDR/IDAT/IEND、受约束的sRGB/gAMA/pHYs块，其它扩展和编码明确拒绝。文件最多1 MiB、宽高各4096、总像素1048576；不能只用扩展名、文件头或图像显示成功替代。编码/尺寸符合不代表视觉和业务验收，图片修改仍需新读取/采集/验证。
+
+
+## 工具实际可用条件与规范入口
+
+以本轮活动目录为准；流程文字不注册工具。下列条件未满足时不得反复调用不存在的工具、冒充已验证或换原生命令绕过约束，应说明缺口并由主 Agent 调整真实任务/Workflow。
+
+| 工具 | 实际装配条件 |
+| --- | --- |
+| cbim_task_artifact_capture | 正式成员运行且宿主提供真实产物读取端口；主会话不提供 |
+| cbim_validation_run | 正式成员、真实文件验证端口、冻结 Workflow 声明 requiredValidations；路径和规则来自冻结约定 |
+| cbim_task_manifest_capture / cbim_task_manifest_inspect | 正式成员、冻结 artifactScope、真实完整枚举端口 |
+| cbim_task_checkpoint | 正式成员、真实文件基线端口、尚有检查点额度；完整成功工具/文件/日志资格另经门禁核实 |
+| cbim_artifact_transition | 正式成员、冻结 transitions、受支持的平台独占操作端口与原 beforeManifestId |
+| cbim_task_help | 正式成员；提交后必须结束本轮，由程序核实安全交接 |
+| cbim_task_plan / cbim_task_step / cbim_delivery_prepare | 本运行的步骤与交付维护能力；不是主周期目标或业务验收，Workflow 要求存在时不能省略 |
+
+主 Agent 优先用 `cbim_state_inspect` target=state、input={} 取得同次目标/图版本和候选；task、owner、member、governance 分别读取对应事实。需要撤销时可先 includeClosure:true；需要保留成员等待时可先用 awaiting_user + memberPause.includeClosure:true。两者只返回预览与 issues，确认范围后用原完整参数提交；仍可能因后续版本或领取变化被拒绝。
+
+原写回包未知时用 `cbim_receipt_inspect` 按 dispatch/owner/member/governance 查询原身份。unknown/absent 不允许换 ID 重放；无领域账本的文件/命令应核实原日志及实际副作用。失败协议中的 retryable=false、terminal=true 指不能自动重复这次请求，不代表业务完成。运行时对同工具同参数连续三次失败记录 blocked 并停止本轮；修正原因后由明确的新动作推进。
+
+主周期规划统一使用 goal_plan/review；成员 task_plan/step 只细化已派发范围。对象知识维护统一优先 object_preview/commit；knowledge_preview/commit 仅保留为对象操作不能表达时的底层文件事务兼容接口。旧读取和回执族仍可用于历史兼容，避免更改既有命令和证据。

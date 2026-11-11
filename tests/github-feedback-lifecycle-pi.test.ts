@@ -48,7 +48,7 @@ it.each(['bug','wish'] as const)('refreshes both feedback tools after login when
     else if(step===1){assert.equal(knowledgeContractResult(body,'lifecycle-status-connected').code,'FEEDBACK_READY');tool('lifecycle-skill','cbim_skill_'+(kind==='bug'?'bug_feedback':'feature_wish'),{workspaceId:entry.id,instanceId:workspace.instanceId})}
     else if(step===2){assert.ok(knowledgeContractResult(body,'lifecycle-skill').text.includes('cbim_feedback_submit'));tool('lifecycle-submit','cbim_feedback_submit',input)}
     else if(step===3){assert.equal(knowledgeContractResult(body,'lifecycle-submit').status,'submitted');tool('lifecycle-receipt','cbim_feedback_receipt',{})}
-    else if(step===4){assert.equal(knowledgeContractResult(body,'lifecycle-receipt').status,'submitted');emit({role:'assistant',content:'SHOULD_BE_HIDDEN_LIFECYCLE_SUCCESS'});emit({},'stop')}
+    else if(step===4){assert.equal(knowledgeContractResult(body,'lifecycle-receipt').status,'submitted');emit({role:'assistant',content:'Feedback submitted once; the original receipt is available.'});emit({},'stop')}
     else throw Error('unexpected extra model turn');
     step++;res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('fixture error')}});
@@ -73,7 +73,7 @@ it.each(['bug','wish'] as const)('refreshes both feedback tools after login when
     expect(issues).toHaveLength(1);expect(submitted.toolReceipts?.filter(r=>r.toolName.startsWith('cbim_feedback_')).map(r=>r.outcome)).toEqual(['succeeded','succeeded','succeeded']);
     const manifest=submitted.events.find(event=>event.type==='engine.status'&&event.data.metric==='tool-catalog'&&event.data.stage==='active');
     expect(manifest?.data.missing).toEqual([]);expect(manifest?.data.active).toEqual(expect.arrayContaining(['cbim_feedback_status','cbim_feedback_submit','cbim_feedback_receipt']));
-    expect(transcript(submitted).some(item=>item.kind==='assistant'&&item.text.includes('SHOULD_BE_HIDDEN'))).toBe(false);
+    expect(transcript(submitted).some(item=>item.kind==='assistant'&&item.text==='Feedback submitted once; the original receipt is available.')).toBe(true);
     await app.dispatch('github.feedback.disconnect');phase='disconnected';step=0;
     const third=await app.dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:second.runId,message:'Check feedback availability after disconnecting.',options});await wait(third);
     expect(issues).toHaveLength(1);expect((await workspace.snapshot()).files).toEqual(before.files);

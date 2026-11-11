@@ -1,4 +1,5 @@
 /**
+ * 网页搜索设置只管理 Brave 开关和加密密钥摘要，不向页面提供任意抓取代理。
  * 作用定位：主进程 IPC 的运行时请求解析与受理前拒绝，保留旧队列插入的失效运行错误码。
  * 设计原因：统一 Schema 后仍保留关闭门禁和领域错误码，避免客户端把已拒绝请求误当成待核实事务。
  * 职责边界：只转换解析失败；绝不捕获服务调用后的异常，也不声称写入失败等于未受理。
@@ -19,6 +20,7 @@ const shutdownMessages:Partial<Record<ApplicationIpcAction,string>>={
   'resources.connection.revoke':'CBIM 正在退出，请重开后核实授权',
   'admission.configure':'CBIM 正在退出',
   'budget.configure':'CBIM 正在退出',
+  'web.configure':'CBIM 正在退出',
   'github.feedback.begin':'CBIM 正在退出',
   'add':'CBIM 正在退出',
 };

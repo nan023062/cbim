@@ -1,4 +1,5 @@
 /**
+ * 公开网页端口仅装配主会话，网络前后核实同一工作区实例；搜索每次使用当前已保存设置。
  * 作用定位：主进程执行装配，将工作区、已解析模型、原生锁与平台访问策略注入调度引擎。
  * 设计原因：主会话与图根共享实例，在创建 run 前取得全局名额；主会话在两种模式下均按真实权限占用；ask/execute 独占工作区，知识治理仍由独立事务和用户权限保护。
  * 仓库边界：仅桌面主运行工厂捕获已有授权连接，不在准备时联网；CLI/成员和未就绪连接不装配仓库工具。
@@ -11,6 +12,7 @@
  * 运行工厂用冻结 engine 独立解析当前模型并复核协议，供应商不再拥有引擎，排队运行不会静默改投另一引擎；ready 透传实际原生身份，不以任务 ID 代替。
  */
 import path from 'node:path';
+import type {WebToolsPort} from '../core/connectors/web-tools';
 import {FileRunStorage} from './persistence/tasks/run-storage';
 import {ChatInputs} from './persistence/tasks/chat-inputs';
 import type {LlmProfiles} from './persistence/settings/llm-profiles';
@@ -40,7 +42,7 @@ import type {ModelRequestBudgetService} from '../scheduler-engine/execution/mode
  * 独立 CLI/测试未装配 dispatch 时保留旧只按会话执行的边界，不编造已登记的成员身份。
  * repositories 是可选可信服务，不接受运行选项提供地址或授权；每次工厂调用固定自己的连接代际。
  */
-export function createExecutionManager(workspace:Workspace,models:LlmProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService,feedback?:GitHubFeedback){
+export function createExecutionManager(workspace:Workspace,models:LlmProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService,feedback?:GitHubFeedback,web?:WebToolsPort){
   const storage=new FileRunStorage();
   return new WorkspaceExecutionManager(workspace,storage,async(options,task,launch)=>{
     const llm=options.profileId?await models.resolve(options.profileId,options.model,options.engine):undefined;
@@ -61,6 +63,8 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles,le
     requestBudget:requestBudgets?({task,runId})=>requestBudgets.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId,kind:'main'},llm):undefined,
     conversationBinding,
     repositoryTools,
+    // 主会话使用同一实例的公开网页端口；每次网络前后核实工作区仍有效。
+    webTools:task.mode==='chat'&&web?{fetch:async(input,signal)=>{workspace.assert();const value=await web.fetch(input,signal);workspace.assert();return value},search:async(input,signal)=>{workspace.assert();const value=await web.search(input,signal);workspace.assert();return value}}:undefined,
     feedbackTools:task.mode==='chat'&&feedback?()=>feedback.prepare({workspaceId:workspace.entry.id,rootSessionId:task.taskId},()=>workspace.assert()):undefined,
     feedbackStatus:task.mode==='chat'&&feedback?scope=>{workspace.assert();return feedback.auth.checkConnection(scope)}:undefined,
     governanceTools:conversationBinding?({task,runId})=>mainGovernanceTools(workspace,task,runId,conversationBinding):undefined,

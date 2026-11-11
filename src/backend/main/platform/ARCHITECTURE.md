@@ -26,6 +26,7 @@
 | [output-manifest-files.ts](output-manifest-files.ts) | 在固定工作区内枚举声明范围的全部目录和普通文件，生成完整产物观察并按原集合复核。 |
 | [paths.ts](paths.ts) | 本机应用目录、工程身份和知识路径的实际解析。 |
 | [png-validator.ts](png-validator.ts) | 安全文件端口后的有界静态 PNG 解码器，核全部块及压缩数据并还原实际像素。 |
+| [public-http.ts](public-http.ts) | 仅公开 HTTP/HTTPS 的有界传输，供网页工具使用。 |
 | [scoped-execution-files.ts](scoped-execution-files.ts) | 正式成员冻结范围的实际 Win32 文件读取与 LPAC 执行端口。 |
 | [secrets.ts](secrets.ts) | 用 Electron 系统加密能力保护 LLM 与 GitHub 反馈凭据。 |
 | [terminal.ts](terminal.ts) | 桌面扩展区的命令模式终端，按工作区/页签隔离手动命令与输出。 |
@@ -667,6 +668,44 @@ N_src_backend_main_platform_png_validator_ts ..> N_src_backend_main_platform_png
 
 直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/workspace/png-validation-schema.ts](../../core/workspace/png-validation-schema.ts)。
 
+### public-http.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_public_http_ts["public-http.ts"] {
+  <<module>>
+  +publicAddress()
+  +publicUrl()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_public_http_ts["public-http.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_public_http_ts_PublicHttpResponse["PublicHttpResponse"] {
+  <<interface>>
+  +status
+  +headers
+  +body
+}
+N_src_backend_main_platform_public_http_ts ..> N_src_backend_main_platform_public_http_ts_PublicHttpResponse : 声明
+class N_src_backend_main_platform_public_http_ts_PublicHttpTransport["PublicHttpTransport"] {
+  <<interface>>
+  +lookup()
+  +request
+}
+N_src_backend_main_platform_public_http_ts ..> N_src_backend_main_platform_public_http_ts_PublicHttpTransport : 声明
+class N_src_backend_main_platform_public_http_ts_PublicHttp["PublicHttp"] {
+  +read()
+  -transport
+}
+N_src_backend_main_platform_public_http_ts ..> N_src_backend_main_platform_public_http_ts_PublicHttp : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
+
 ### scoped-execution-files.ts
 
 ```mermaid
@@ -850,6 +889,10 @@ N_src_backend_main_platform_scoped_execution_files_ts ..> N_src_backend_main_pla
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 公开 HTTP 传输
+
+`PublicHttp` 只允许公开 HTTP/HTTPS 常规80/443端口；解析全部 DNS 结果，任一非公开地址即拒绝，以固定 family/lookup 连接已核地址，防二次解析重绑定。禁止 URL 凭据、内网、本机、保留/元数据地址；无 Cookie、代理、自动跳转或重试。每次请求15秒、压缩前后1 MiB、UTF-8解码，取消销毁连接。调用者负责逐跳 robots 和域名节流。可信测试可注入解析/传输端口，模型和 IPC 没有绕过入口。
 
 ## 手动终端编码
 

@@ -14,6 +14,7 @@
 | [budget-settings.ts](budget-settings.ts) | 可靠保存新目标的额度及显式逐请求模式，供调度器创建周期时冻结，缺省模式保留原软限额语义。 |
 | [llm-profiles.ts](llm-profiles.ts) | 本机供应商配置持久化、默认模型选择和连接检测。 |
 | [main-agent-settings.ts](main-agent-settings.ts) | 保存工作区主 Agent 的引擎和模型，两处界面共用这一份配置。 |
+| [web-settings.ts](web-settings.ts) | 版本化保存 Brave 搜索开关及加密凭据，桌面只取得摘要。 |
 
 ## 架构类图
 
@@ -186,6 +187,28 @@ N_src_backend_main_persistence_settings_main_agent_settings_ts ..> N_src_backend
 
 直接依赖：[../../../core/foundation/files.ts](../../../core/foundation/files.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/brain/llm/engine.ts](../../../core/brain/llm/engine.ts)、[../../../core/team/agent-runtime.ts](../../../core/team/agent-runtime.ts)、[llm-profiles.ts](llm-profiles.ts)。
 
+### web-settings.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_persistence_settings_web_settings_ts["web-settings.ts"] {
+  <<module>>
+}
+class N_src_backend_main_persistence_settings_web_settings_ts_WebSettings["WebSettings"] {
+  +init()
+  +read()
+  +configure()
+  +resolve()
+  -filename
+  -cipher
+  -state
+  -pending
+}
+N_src_backend_main_persistence_settings_web_settings_ts ..> N_src_backend_main_persistence_settings_web_settings_ts_WebSettings : 声明
+```
+
+直接依赖：[../../../core/foundation/files.ts](../../../core/foundation/files.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/connectors/web-tools.ts](../../../core/connectors/web-tools.ts)、[../../../core/brain/llm/ports.ts](../../../core/brain/llm/ports.ts)。
+
 ### 本目录调用边界
 
 ```mermaid
@@ -211,6 +234,10 @@ N_src_backend_main_persistence_settings_main_agent_settings_ts ..> N_src_backend
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### Brave 搜索配置
+
+WebSettings 使用 revision 校验并串行原子保存开关与系统加密密钥；无安全加密端口时拒绝保存/使用密钥，不明文回退。移除密钥同时关闭搜索，读取只返回 hasKey。主进程网络适配器是 resolve 的唯一生产消费者；配置修改不触发搜索或模型请求。
 
 # 本机设置持久化边界
 

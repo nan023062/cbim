@@ -1,4 +1,11 @@
-## 2026-11-12：#41 对话最终反馈
+## 2026-11-12：#39 公开网页正文与可配置搜索
+
+- [Issue #39](https://github.com/nan023062/cbim/issues/39)，基线 `02ee67af`。C1/L2，读取 Main/IPC/配置/主 Loop 与已有聊天来源导入，保留原来源证据和引擎工具目录；新增 Core 小协议 → Scheduler 只读工具 → Main 网络与设置。Application 共用缓存/限速，密钥沿既有 SecretCipher，只在主进程固定 Brave API 请求使用。
+- 实现 `cbim_web_fetch` 和 `cbim_web_search`。抓取核全部 DNS、固定连接地址、逐跳公网与 robots，默认每域1秒并遵守 crawl-delay；5分钟同URL缓存，返回原采集时间、来源、Markdown、截断与不可信标记。请求15秒/1 MiB、抓取整体30秒/最多5跳；登录、挑战、4xx/5xx、网络、编码和限流分别报告。正文 parse5 不执行脚本，按段落/Unicode截断。Brave 固定 API 只返回标题/URL/摘要，设置页开关、加密密钥保存/移除和版本冲突已接通。不开浏览器，不绕过 robots/验证码，不跟随携密钥的 API 跳转。
+- S6 根据边界选择网络解析与传输、内容转换、设置持久化/真实IPC、真实Pi工具回包，最终去重3文件34项通过：`pnpm exec vitest run tests/web-service.test.ts tests/web-settings.test.ts tests/web-tools-pi.test.ts --reporter=json --outputFile=test-results/issue-batch-20261112/39-retest.json` 当时33项；新增crawl-delay/API跳转覆盖后 `pnpm exec vitest run tests/web-service.test.ts --reporter=json --outputFile=test-results/issue-batch-20261112/39-network-final.json` 31项通过。最初无Electron安全存储默认注入和HTTP类型选项失败已修正，旧失败证据保留39-tests.json。主Pi实际调用拒绝内网并返回未配置搜索提示；HTTP字节/取消用真实本地服务器，DNS固定用可信测试传输核验，未冒称外网搜索账号联调。
+- 新增公开 Core 配置契约须在 IPC 精确导入表登记（不放开目录或 Main），因此执行 `pnpm exec vitest run tests/dependencies.test.ts tests/layer-boundaries.test.ts --reporter=json --outputFile=test-results/issue-batch-20261112/39-boundaries.json` 24项通过。总计5文件58项；`pnpm typecheck`、`pnpm check:architecture` 通过，1291文件/6666边、0循环/违规。10处契约/类图及源码注释同步，锁文件仅新增三项直接依赖及对应解析依赖。
+- S7 四问：保护原运行授权与已有材料导入；公网读取策略停在 Main，后续供应商改适配器及配置契约；证据覆盖网络拒绝、真实调用、取消、密钥存储；下一次按 web-tools → WebTools → WebService/PublicHttp → WebSettings/WebSettings界面阅读。Q5候选：无。首个供应商仅Brave；UTF-8/公开静态页面支持，robots跳转保守拒绝。未进行真实付费搜索账号、整包界面/安装、全量CI、人审、合并或发布。
+- API依据：[Brave官方接口](https://api-dashboard.search.brave.com/app/documentation/web-search/get-started)，解析依赖：[parse5](https://parse5.js.org/)、[robots-parser](https://github.com/samclarke/robots-parser)、[ipaddr.js](https://github.com/whitequark/ipaddr.js)。同步纠正旧#41记录标题位置，历史事实保留。
 
 ## 2026-11-12：#40 统一状态读取、闭包预览与失败停止
 
@@ -22,6 +29,8 @@
 - S6 按调用链选择岗位纯规则、服务、Application、真实 Pi 和统一权限消费者。首次 31 项中原有 28 项及新协议 1 项通过，2 项真实 Pi 暴露工具权限范围分类遗漏；补齐固定分类后 `tests/workspace-member-tools-pi.test.ts tests/unified-tool-policy.test.ts` 共 10 项通过。新增 `tests/workspace-member-tools.test.ts` 2 项通过；加强回包身份/版本核对后再跑 Pi 3 项通过。去重共 6 文件 40 项通过。完整命令均为 `pnpm exec vitest run <上述明确文件> --reporter=default --reporter=json --outputFile=...`，对应证据 `test-results/issue-batch-20261112/36-{tests,tools-policy,wire-tests,final-pi}.json`；原失败另存 `36-initial-failure.json`。
 - 实际选择器依次为 `pnpm exec vitest run tests/workspace-member-service.test.ts tests/workspace-member-application.test.ts tests/workspace-member-core.test.ts tests/workspace-member-tools-pi.test.ts`、`pnpm exec vitest run tests/workspace-member-tools-pi.test.ts tests/unified-tool-policy.test.ts`、`pnpm exec vitest run tests/workspace-member-tools.test.ts`、`pnpm exec vitest run tests/workspace-member-tools-pi.test.ts`，均附前述 JSON reporter 参数。`pnpm typecheck` 与 `pnpm check:architecture` 通过，0 循环/违规；同步 Core team/tasks/policy、Main workspace/装配、Scheduler tools/execution 的注释、契约和类图，以及团队治理流程第 4 步。未运行全仓 CI、打包/安装或人工交互验收。
 - S7 四问：保护原岗位事务与权限规则；岗位能力变化限制在独立协议和适配器；验证覆盖真实消费者与未知恢复；下次从 workspace-member-tools → main-workspace-member-tools → WorkspaceMembers → workspace-member-invariants 阅读。Q5 候选：无。代码与证据可 review，尚未人工接受、合并或发布。
+
+## 2026-11-12：#41 对话最终反馈
 
 - [Issue #41](https://github.com/nan023062/cbim/issues/41)，修复空完整消息擦除流式正文，保留反馈提交后的真实最终答复。主提示与两项反馈流程同步为正文简短收尾，提交不等于开发完成，未知操作不重放。
 - ConversationTurn 通过共享纯投影读取本轮交付声明及限制；没有声明也没有最终正文时，在流中明确显示缺失事实、工具数量和核实建议。提示标为运行记录，不冒充 Agent 消息，不读旧轮继承交付，不修改持久日志、不额外调用模型；运行中不提前总结。

@@ -791,6 +791,8 @@ class N_src_bridge_contracts_ipc_settings_ts["ipc-settings.ts"] {
 }
 class N_src_bridge_contracts_ipc_settings_ts_SettingsIpcResponses["SettingsIpcResponses"] {
   <<interface>>
+  +'web.settings'
+  +'web.configure'
   +'runtime.snapshot'
   +'runtime.read'
   +'admission.read'
@@ -811,7 +813,7 @@ class N_src_bridge_contracts_ipc_settings_ts_external_ModelActionResults["ModelA
 N_src_bridge_contracts_ipc_settings_ts_external_ModelActionResults <|-- N_src_bridge_contracts_ipc_settings_ts_SettingsIpcResponses
 ```
 
-直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[../../backend/core/brain/llm/catalog.ts](../../backend/core/brain/llm/catalog.ts)、[../../backend/core/brain/llm/config.ts](../../backend/core/brain/llm/config.ts)、[../../backend/core/connectors/github-feedback.ts](../../backend/core/connectors/github-feedback.ts)、[../../backend/core/runtime/admission.ts](../../backend/core/runtime/admission.ts)、[../../backend/core/runtime/types.ts](../../backend/core/runtime/types.ts)、[../../backend/core/tasks/scope-budget.ts](../../backend/core/tasks/scope-budget.ts)、[model-actions.ts](model-actions.ts)。
+直接依赖：[../../backend/core/connectors/web-tools.ts](../../backend/core/connectors/web-tools.ts)、[ipc-shapes.ts](ipc-shapes.ts)、[../../backend/core/brain/llm/catalog.ts](../../backend/core/brain/llm/catalog.ts)、[../../backend/core/brain/llm/config.ts](../../backend/core/brain/llm/config.ts)、[../../backend/core/connectors/github-feedback.ts](../../backend/core/connectors/github-feedback.ts)、[../../backend/core/runtime/admission.ts](../../backend/core/runtime/admission.ts)、[../../backend/core/runtime/types.ts](../../backend/core/runtime/types.ts)、[../../backend/core/tasks/scope-budget.ts](../../backend/core/tasks/scope-budget.ts)、[model-actions.ts](model-actions.ts)。
 
 ### ipc-shapes.ts
 
@@ -1396,6 +1398,10 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 网页搜索设置
+
+ipc-settings 声明 web.settings/web.configure 的严格请求及 WebSettingsView 响应；只公开凭据是否存在，不返回密钥。网页执行端口不暴露给渲染进程。
 
 ### 桌面更新状态
 

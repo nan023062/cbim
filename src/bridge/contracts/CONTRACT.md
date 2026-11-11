@@ -1,3 +1,7 @@
+### 网页搜索设置
+
+ipc-settings 声明 web.settings/web.configure 的严格请求及 WebSettingsView 响应；只公开凭据是否存在，不返回密钥。网页执行端口不暴露给渲染进程。
+
 ### 桌面更新状态
 
 `DesktopUpdateStatus.checkedAt` 是最近完成的检查时间，包括失败尝试；`error` 区分离线或失败，不能把有时间误作已是最新版。`installing` 包含可见重启提示与业务排空；`ready` 表示已经校验但安装未完成，等待明确重试。只有新进程的 currentVersion 证明升级。公开协议不包含安装路径、命令、凭据或可修改的更新源。

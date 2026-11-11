@@ -1,3 +1,7 @@
+### 公开网页工具
+
+`web-tools.ts` 固定 cbim_web_fetch/url/maxChars 与 cbim_web_search/query/count，严格拒绝多余字段。正文上限 20000 Unicode 字符，默认12000；搜索默认5条、最多10条，只返回标题、URL、摘要。结果标记 untrusted；资料不是指令或验收证据。设置只公开版本、Brave、开关、是否有密钥与安全存储状态。
+
 ### GitHub 反馈纯协议
 
 `github-feedback.ts` 定义 BUG／需求的严格字段、最小 submitted 回执、已绑定目标端口及公开设置类型。`feedbackIssue` 只排版本次用户字段，保留标记不接受模型指定；不从本层发 HTTP、读凭据或授予权限。实际外部写由主进程实现，GitHub 工具不混入静态链接器注册或知识目录。

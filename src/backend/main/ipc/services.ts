@@ -7,6 +7,7 @@
  * 职责边界：这里只声明内部调用能力，不代表渲染进程可以直接访问这些服务。
  * 请求预算只公开只读摘要；预留和终态仅由真实运行装配端口持有。
  */
+import type {WebSettings} from '../persistence/settings/web-settings';
 import type {WorkspaceAutomations} from '../automation';
 import type {Catalog} from '../workspace/catalog';
 import type {Workspace} from '../workspace/workspace';
@@ -38,6 +39,8 @@ export interface ApplicationServices {
   readonly catalog: Catalog;
   readonly paths: Paths;
   readonly models: LlmProfiles;
+  /** 桌面只管理加密搜索设置；不提供任意网络请求 IPC。 */
+  readonly webSettings:WebSettings;
   /** 对话栏和主 Agent 配置页共用角色选型，写入不启动模型。 */
   readonly mainAgentSettings:MainAgentSettings;
   readonly resources: ResourceRepositories;

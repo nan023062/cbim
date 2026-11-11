@@ -1,4 +1,5 @@
 /**
+ * 网页搜索设置只管理 Brave 开关和加密密钥摘要，不向页面提供任意抓取代理。
  * 作用定位：模型、准入、预算与反馈账号设置的主进程处理器。
  * 设计原因：设置仅改变配置或未来周期默认值，不向页面暴露运行许可或保存凭据。请求已在总分派中解析。
  */
@@ -9,6 +10,8 @@ import type {SettingsIpcResponses} from '../../../bridge/contracts/ipc-settings'
 /** 仅装配本业务组；每项实际实现都受对应请求／响应约束。 */
 export function settingsIpcHandlers(app:ApplicationServices):IpcHandlers<keyof SettingsIpcResponses>{
   return {
+    'web.settings':()=>app.webSettings.read(),
+    'web.configure':args=>app.webSettings.configure(args),
     'agent.mainSettings':args=>app.mainAgentSettings.read(args),
     'agent.configureMain':args=>app.mainAgentSettings.configure(args),
     'runtime.snapshot':async args=>{return app.runtime.snapshot();},

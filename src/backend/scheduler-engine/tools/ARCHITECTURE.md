@@ -24,6 +24,7 @@
 | [module-ownership-tools.ts](module-ownership-tools.ts) | 把本轮真实主运行的模块责任端口转换为发现、分类和执行一致的四工具。 |
 | [question-tools.ts](question-tools.ts) | 为已装配用户交互端口的主/成员运行提供结构化提问工具及严格答案回包。 |
 | [repository-tools.ts](repository-tools.ts) | 把主进程捕获的资源仓库只读端口装配为主调度可调用的两个工具。 |
+| [web-tools.ts](web-tools.ts) | 将主进程公开网页读取端口注册为两个只读主 Agent 工具。 |
 | [workspace-member-tools.ts](workspace-member-tools.ts) | 将主运行岗位端口注册为查询、预览、提交与原回执四项工具。 |
 
 ## 架构类图
@@ -377,6 +378,26 @@ N_src_backend_scheduler_engine_tools_repository_tools_ts ..> N_src_backend_sched
 
 直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/connectors/repository-tools.ts](../../core/connectors/repository-tools.ts)。
 
+### web-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_tools_web_tools_ts["web-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_tools_web_tools_ts_WebTools["WebTools"] {
+  +has()
+  +list()
+  +describe()
+  +call()
+  -port
+  -workspaceId
+}
+N_src_backend_scheduler_engine_tools_web_tools_ts ..> N_src_backend_scheduler_engine_tools_web_tools_ts_WebTools : 声明
+```
+
+直接依赖：[../../core/connectors/web-tools.ts](../../core/connectors/web-tools.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)。
+
 ### workspace-member-tools.ts
 
 ```mermaid
@@ -456,6 +477,10 @@ N_src_backend_scheduler_engine_tools_knowledge_tools_ts ..> N_src_backend_schedu
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 网页读取端口
+
+WebTools 将可信主进程端口装为 cbim_web_fetch 与 cbim_web_search，分类为 read/workspace，严格解析输入并核对输出长度、查询与条数；单次调用无自动重试。仅桌面主会话装配，未配置 Brave 时搜索返回设置提示；读取网页不需要搜索密钥。资料不提升权限。
 
 ### 知识查询与刷新分别装配
 

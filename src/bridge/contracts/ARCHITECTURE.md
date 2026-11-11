@@ -200,6 +200,14 @@ N_src_bridge_contracts_automation_ts ..> N_src_bridge_contracts_automation_ts_Au
 classDiagram
 class N_src_bridge_contracts_chat_ts["chat.ts"] {
   <<module>>
+  +pastedLocalPaths()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_chat_ts["chat.ts"] {
+  <<module>>
 }
 class N_src_bridge_contracts_chat_ts_ChatAttachment["ChatAttachment"] {
   <<interface>>
@@ -210,6 +218,15 @@ class N_src_bridge_contracts_chat_ts_ChatAttachment["ChatAttachment"] {
   +note
 }
 N_src_bridge_contracts_chat_ts ..> N_src_bridge_contracts_chat_ts_ChatAttachment : 声明
+class N_src_bridge_contracts_chat_ts_ChatAttachmentPreview["ChatAttachmentPreview"] {
+  <<interface>>
+  +name
+  +source
+  +note
+  +text
+  +image
+}
+N_src_bridge_contracts_chat_ts ..> N_src_bridge_contracts_chat_ts_ChatAttachmentPreview : 声明
 class N_src_bridge_contracts_chat_ts_ChatMaterialImport["ChatMaterialImport"] {
   <<type>>
 
@@ -502,6 +519,8 @@ class N_src_bridge_contracts_ipc_chat_ts["ipc-chat.ts"] {
 }
 class N_src_bridge_contracts_ipc_chat_ts_ChatIpcResponses["ChatIpcResponses"] {
   <<interface>>
+  +'chat.paths'
+  +'chat.image'
   +'chat.attach'
   +'chat.materialTargets'
   +'chat.materialList'
@@ -791,6 +810,8 @@ class N_src_bridge_contracts_ipc_settings_ts["ipc-settings.ts"] {
 }
 class N_src_bridge_contracts_ipc_settings_ts_SettingsIpcResponses["SettingsIpcResponses"] {
   <<interface>>
+  +'web.settings'
+  +'web.configure'
   +'runtime.snapshot'
   +'runtime.read'
   +'admission.read'
@@ -811,7 +832,7 @@ class N_src_bridge_contracts_ipc_settings_ts_external_ModelActionResults["ModelA
 N_src_bridge_contracts_ipc_settings_ts_external_ModelActionResults <|-- N_src_bridge_contracts_ipc_settings_ts_SettingsIpcResponses
 ```
 
-直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[../../backend/core/brain/llm/catalog.ts](../../backend/core/brain/llm/catalog.ts)、[../../backend/core/brain/llm/config.ts](../../backend/core/brain/llm/config.ts)、[../../backend/core/connectors/github-feedback.ts](../../backend/core/connectors/github-feedback.ts)、[../../backend/core/runtime/admission.ts](../../backend/core/runtime/admission.ts)、[../../backend/core/runtime/types.ts](../../backend/core/runtime/types.ts)、[../../backend/core/tasks/scope-budget.ts](../../backend/core/tasks/scope-budget.ts)、[model-actions.ts](model-actions.ts)。
+直接依赖：[../../backend/core/connectors/web-tools.ts](../../backend/core/connectors/web-tools.ts)、[ipc-shapes.ts](ipc-shapes.ts)、[../../backend/core/brain/llm/catalog.ts](../../backend/core/brain/llm/catalog.ts)、[../../backend/core/brain/llm/config.ts](../../backend/core/brain/llm/config.ts)、[../../backend/core/connectors/github-feedback.ts](../../backend/core/connectors/github-feedback.ts)、[../../backend/core/runtime/admission.ts](../../backend/core/runtime/admission.ts)、[../../backend/core/runtime/types.ts](../../backend/core/runtime/types.ts)、[../../backend/core/tasks/scope-budget.ts](../../backend/core/tasks/scope-budget.ts)、[model-actions.ts](model-actions.ts)。
 
 ### ipc-shapes.ts
 
@@ -1396,6 +1417,14 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 图片与路径粘贴
+
+chat.paths/chat.image 是桌面明确粘贴的窄协议；路径不等于授予执行权限，图片上限5 MiB、单批最多12项。ChatAttachmentPreview 可带固定MIME图片字节，ChatAttachment 标签元数据仍无正文。pastedLocalPaths 只把整个剪贴板为绝对本地路径列表视为引用；普通句子、相对路径、网页URL保留文本。Main 再校验，前端识别不是授权。
+
+### 网页搜索设置
+
+ipc-settings 声明 web.settings/web.configure 的严格请求及 WebSettingsView 响应；只公开凭据是否存在，不返回密钥。网页执行端口不暴露给渲染进程。
 
 ### 桌面更新状态
 

@@ -1,3 +1,4 @@
+import {clickKnowledgeTreeAction,clickArchitectureAction} from './knowledge-tree-actions.mjs';
 import {_electron as electron,type ElectronApplication,type Page} from 'playwright-core';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -56,7 +57,7 @@ try{
     const expand=page.getByRole('button',{name:'展开右侧扩展',exact:true});if(await expand.isVisible())await expand.click();
     const tab=page.getByRole('tab',{name:'业务架构',exact:true});
     if(await tab.count())await tab.click();else{await page.getByRole('button',{name:'新增扩展页签',exact:true}).click();await view().getByRole('button',{name:'打开业务架构',exact:true}).click()}
-    await view().getByTestId('open-module-ownerships').click();
+    await clickKnowledgeTreeAction(view(),'.cbim/workspace','负责人记录');
     const row=owners().locator(`[data-testid="module-ownership-row"][data-module-id="${moduleId}"]`);
     await until(()=>row.isEnabled(),'模块列表就绪');await row.click();await until(()=>ownerSelect().isEnabled(),'负责人选项就绪');
   };

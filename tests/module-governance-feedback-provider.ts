@@ -9,6 +9,8 @@ export const governanceFeedbackFixture={model:'module-governance-feedback-fixtur
 export async function governanceFeedbackProvider(){
   const requests:GovernanceToolsRequest[]=[],errors:string[]=[],state:{phases:Array<Record<string,any>>}={phases:[{},{}]};
   const server=http.createServer(async(req,res)=>{try{
+    // 请求可在中文 UTF-8 字符中间分块；流解码保留跨块字节，避免伪造摘要长度差异。
+    req.setEncoding('utf8');
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw) as GovernanceToolsRequest,turn=requests.length;requests.push(body);assert.equal(body.model,governanceFeedbackFixture.model);
     const phase=Math.floor(turn/7),step=turn%7;assert.ok(phase<2,'反馈不能自动重复运行');const current=state.phases[phase],prefix='feedback-'+phase+'-',data=governanceFeedbackFixture,names=body.tools?.map(item=>item.function.name)??[];assert.ok(moduleGovernanceToolNames.every(name=>names.includes(name)));assert.ok(['write','edit','bash'].every(name=>!names.includes(name)));assert.ok(!names.some(name=>/^cbim_governance_(decide|apply|register)$/.test(name)));
     res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'governance-feedback-'+turn,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n'),tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id:prefix+id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},result=(id:string)=>governanceToolsResult(body,prefix+id);

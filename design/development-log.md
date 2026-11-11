@@ -1,3 +1,83 @@
+## 2026-11-12：#42 侧栏标题去除重复品牌
+
+- [Issue #42](https://github.com/nan023062/cbim/issues/42)，基线 `c002b57a`。展开侧栏只保留收起按钮与“团队空间”文字，移除其前的 CBIM/BrandMark 和无消费者的标题样式；窄宽度也不再隐藏标题。欢迎页品牌资源、侧栏伸缩与工作区导航保持原实现。C1/L0。
+- 这是可逆的局部展示修改，不新增镜像单元测试，也不跑无关产品测试。`node test-results/issue-batch-20261112/sidebar-title-check.mjs` 从实际 App 提取标题 JSX 并加载实际样式，在隔离Chrome的320px核对纯文字、无重复品牌、收起回调和无标题溢出；报告42-title-ui.json、截图42-sidebar-320.png。核对过程中清理样式时发现选择器残留，已按原规则精确删除并复查差异，导航样式未被误改。
+- `pnpm check:architecture` 通过，0循环/违规；最终样式修正后 `node scripts/source-architecture.mjs --check` 与 `git diff --check` 通过。外壳注释/契约/类图同步。类型/公共接口无变化，不重复类型检查；此为标题局部渲染核对，整包交互、安装、全量CI、人审、合并发布未执行。下次修改入口为 App.sidebar-top 与 shell.css.sidebar-title，Q5候选无。
+
+## 2026-11-12：#45 单一树根与右上角视图图标
+
+- [Issue #45](https://github.com/nan023062/cbim/issues/45)，基线 `ab1ce70e`。移除业务树上方重复的工作区“项目根”按钮，以“业务模块”为唯一树根；团队已有单一“团队架构”根，不额外改动层级。根行菜单保留新建/传输入口，内置projectRootModuleId语义不变。共用树右上角改为展开/折叠图标，title/aria-label和键盘可达保持；只修改本地查看状态。
+- 受影响树和团队消费者：`pnpm exec vitest run tests/knowledge-file-tree.test.ts tests/team-model.test.ts --reporter=json --outputFile=test-results/issue-batch-20261112/45-tests.json`，2文件10项通过。`node test-results/issue-batch-20261112/tree-ui-check.mjs 45` 在隔离Chrome的320px实际组件中验证右上角两个纯图标、展开折叠、菜单/键盘与无溢出，证据45-tree-ui.json/45-tree-320.png。
+- `pnpm check:architecture` 通过，0循环/违规；两处契约/类图、组件/样式注释同步。未改变类型/公共接口，不重复类型或全量检查；未打包安装、合并发布或人审。下次从 KnowledgeFileTree 的局部closed状态、knowledge-files.css与BusinessArchitecture根入口修改；稳定数据/事务保持，Q5候选无。
+
+## 2026-11-12：#37 业务/团队树行尾操作
+
+- [Issue #37](https://github.com/nan023062/cbim/issues/37)，基线 `ab4ffff7`。C1/L1，复用 KnowledgeFileTree，名称后紧跟独立展开箭头，目录行末竖向更多菜单。动作由业务/团队宿主按真实路径注入，模块/Agent/Skill 的编辑、删除、传输与历史仍调用原入口；普通文件不获得对象操作，内置角色不伪装节点。图标有 title/aria-label，Escape 关闭回焦点，点击外部关闭；未提交草稿先保护。
+- 主 Agent 配置/历史角色/项目岗位与 Skill/Workflow 详情操作统一图标。保留原负责人选择和知识预览/删除确认；树本身不写知识。同步6份受菜单移动影响的桌面脚本入口及共享 knowledge-tree-actions.mjs，脚本语法转换通过，未以语法通过代替整包验收。
+- 根据共用树、真实团队消费者及负责人入口选择 `pnpm exec vitest run tests/knowledge-file-tree.test.ts tests/team-model.test.ts tests/inline-module-ownership.test.ts --reporter=json --outputFile=test-results/issue-batch-20261112/37-tests.json`：3文件18项通过。更新旧“整个DOM没有Agent编辑”断言为根行没有编辑/删除，真实Agent行拥有动作，未放宽根保护。
+- `node test-results/issue-batch-20261112/tree-ui-check.mjs 37` 在隔离无头Chrome渲染实际组件/样式，320px验证箭头位置、行末菜单目标、不改变选择、Escape回焦点、折叠、无横向溢出；报告37-tree-ui.json和截图37-tree-320.png。此为组件交互验收，未冒称真实整包知识事务验收。
+- `pnpm typecheck`、`pnpm check:architecture` 通过，1294文件/6678边、0循环/违规。三处契约/类图和源码注释同步，删除已失效GraphViewControls说明。下一次按 KnowledgeFileTree/RowActions → TeamView/BusinessArchitecture → 原编辑器阅读；保护既有事务，视图变化限制在前端，Q5候选无。全量CI、打包安装与人工review未运行，未合并发布。
+
+## 2026-11-12：#43 剪贴板图片与本地路径附件
+
+- [Issue #43](https://github.com/nan023062/cbim/issues/43)，基线 `93bac767`。原 preload importFiles 只解析系统磁盘路径，截图因此失败；保留其拖放行为，新增输入框图片字节导入与严格路径入口。Core 视觉/等待契约不改，快照仍由 ChatInputs 拥有。C1/L1。
+- 纯绝对路径列表变为引用，Main 先核全选路径存在、文件/目录、禁止UNC/设备/.cbim，再保存原文本/首层目录快照；失败保留原粘贴文字。截图保存5 MiB内原字节与原名称、唯一clipboard来源、采集时间；12项与单批20 MiB限制，模型视觉预检保持。图片卡片自动显示快照缩略图，点击预览原图/来源，发送前可移除，不自动发消息或改源文件。预览在工作区切换/卸载后丢弃迟到回包。
+- 按受影响输入/快照/预览/等待消费者运行 `pnpm exec vitest run tests/chat-clipboard.test.ts tests/chat-inputs.test.ts tests/continuation-chat-inputs.test.ts tests/chat-chrome.test.ts --reporter=json --outputFile=test-results/issue-batch-20261112/43-tests.json`：4文件15项通过。涵盖真实图片File编码、真实Application IPC、原字节视觉与等待清单、文件源变化、跨工作区、全选存在性、坏格式/大小拒绝，以及预览/移除可访问入口。
+- `pnpm typecheck` 与 `pnpm check:architecture` 通过：1293文件/6672边，0循环/违规。五处源码契约/类图、输入组件/样式及协议注释同步。未执行系统剪贴板实际快捷键、完整桌面/安装、全量CI、合并或发布；不把SSR/IPC测试冒称整包交互验收。
+- 四问：保护原视觉输入和快照隔离；剪贴板字节适配在前端、路径/签名校验在Main；实际证据覆盖已保存字节的消费；下次从 Conversation/pasted-images → ipc-chat → ChatInputs → ComposerAttachments 阅读。Q5候选：无。完整diff按本Issue独立提交review，未宣称人审接受。
+
+## 2026-11-12：#39 公开网页正文与可配置搜索
+
+- [Issue #39](https://github.com/nan023062/cbim/issues/39)，基线 `02ee67af`。C1/L2，读取 Main/IPC/配置/主 Loop 与已有聊天来源导入，保留原来源证据和引擎工具目录；新增 Core 小协议 → Scheduler 只读工具 → Main 网络与设置。Application 共用缓存/限速，密钥沿既有 SecretCipher，只在主进程固定 Brave API 请求使用。
+- 实现 `cbim_web_fetch` 和 `cbim_web_search`。抓取核全部 DNS、固定连接地址、逐跳公网与 robots，默认每域1秒并遵守 crawl-delay；5分钟同URL缓存，返回原采集时间、来源、Markdown、截断与不可信标记。请求15秒/1 MiB、抓取整体30秒/最多5跳；登录、挑战、4xx/5xx、网络、编码和限流分别报告。正文 parse5 不执行脚本，按段落/Unicode截断。Brave 固定 API 只返回标题/URL/摘要，设置页开关、加密密钥保存/移除和版本冲突已接通。不开浏览器，不绕过 robots/验证码，不跟随携密钥的 API 跳转。
+- S6 根据边界选择网络解析与传输、内容转换、设置持久化/真实IPC、真实Pi工具回包，最终去重3文件34项通过：`pnpm exec vitest run tests/web-service.test.ts tests/web-settings.test.ts tests/web-tools-pi.test.ts --reporter=json --outputFile=test-results/issue-batch-20261112/39-retest.json` 当时33项；新增crawl-delay/API跳转覆盖后 `pnpm exec vitest run tests/web-service.test.ts --reporter=json --outputFile=test-results/issue-batch-20261112/39-network-final.json` 31项通过。最初无Electron安全存储默认注入和HTTP类型选项失败已修正，旧失败证据保留39-tests.json。主Pi实际调用拒绝内网并返回未配置搜索提示；HTTP字节/取消用真实本地服务器，DNS固定用可信测试传输核验，未冒称外网搜索账号联调。
+- 新增公开 Core 配置契约须在 IPC 精确导入表登记（不放开目录或 Main），因此执行 `pnpm exec vitest run tests/dependencies.test.ts tests/layer-boundaries.test.ts --reporter=json --outputFile=test-results/issue-batch-20261112/39-boundaries.json` 24项通过。总计5文件58项；`pnpm typecheck`、`pnpm check:architecture` 通过，1291文件/6666边、0循环/违规。10处契约/类图及源码注释同步，锁文件仅新增三项直接依赖及对应解析依赖。
+- S7 四问：保护原运行授权与已有材料导入；公网读取策略停在 Main，后续供应商改适配器及配置契约；证据覆盖网络拒绝、真实调用、取消、密钥存储；下一次按 web-tools → WebTools → WebService/PublicHttp → WebSettings/WebSettings界面阅读。Q5候选：无。首个供应商仅Brave；UTF-8/公开静态页面支持，robots跳转保守拒绝。未进行真实付费搜索账号、整包界面/安装、全量CI、人审、合并或发布。
+- API依据：[Brave官方接口](https://api-dashboard.search.brave.com/app/documentation/web-search/get-started)，解析依赖：[parse5](https://parse5.js.org/)、[robots-parser](https://github.com/samclarke/robots-parser)、[ipaddr.js](https://github.com/whitequark/ipaddr.js)。同步纠正旧#41记录标题位置，历史事实保留。
+
+## 2026-11-12：#40 统一状态读取、闭包预览与失败停止
+
+- [Issue #40](https://github.com/nan023062/cbim/issues/40)，基线 `8c92d7f9`。S1–S4 按真实主运行链核实目标/图已有同次 Store 读取、撤销/等待已有严格规则，缺口是可用投影和失败指引；C1/L2，保护原 Store、CAS、领域校验、引擎目录与停止排空。#36 的能力重新采纳直接复用。
+- S5 `cbim_state_inspect` 汇总 goalRevision/planRevision/graphCursor、全部任务版本和当前周期候选；其他 target 分别读任务/负责人/岗位/治理，未宣称跨知识存储原子性。`cbim_receipt_inspect` 路由四类原回执，旧族标兼容，不改历史命令。撤销 includeClosure、awaiting_user 的 memberPause.includeClosure 仅生成完整清单及 issues，确认后仍走原完整提交，版本和已领取任务继续拒绝。
+- 所有引擎的调用结果共用 outcome（status/retryable/terminal/reconcileTool/reconcileArgs/nextStep）；成功元数据在 details，原领域正文保持；错误 JSON 进入模型文本。unknown/FORBIDDEN 禁止相同请求盲重试，无领域账本明确 null。主写错误附可信原命令查询地址。按调用提出顺序对同工具同参数连续三次失败熔断，记录 state=blocked 并停止排空；安全收尾 RunStatus=failed，有未决副作用仍 interrupted，不覆盖 completed 为业务成功。界面显示核实建议与熔断原因。
+- 主周期规划与运行内步骤明确职责；对象知识优先 object_preview/commit，底层文件事务标兼容。产品业务执行正文列明六项条件能力及其它成员工具的实际注册前提；未注册不自动补权限或绕过。
+- S6 基于实际 diff 选择领域规则/Store、工具适配、三引擎真实调用和界面投影，去重 18 文件 92 项通过。各命令共同附 `--reporter=default --reporter=json --outputFile=test-results/issue-batch-20261112/40-<名称>.json`：
+  - `pnpm exec vitest run tests/coordination-tools.test.ts tests/queued-task-cancel.test.ts tests/queued-task-cancel-tools.test.ts tests/goal-tools.test.ts`：read-tests，25 项。
+  - `pnpm exec vitest run tests/tool-failure-control.test.ts tests/loop-engine.test.ts tests/engine-tools.test.ts tests/claude-tools.test.ts tests/codex-tools.test.ts tests/pi-loop.test.ts`：failure-tests，30 项。
+  - `pnpm exec vitest run tests/coordination-pi.test.ts tests/workspace-member-tools-pi.test.ts tests/inline-conversation.test.ts`：integration-tests，14 项。
+  - `pnpm exec vitest run tests/tool-failure-control.test.ts tests/module-ownership-tools.test.ts tests/main-governance-tools.test.ts tests/workspace-member-tools.test.ts`：recovery-tests，20 项。
+  - 依赖检查发现目录层不应依赖结果协议，未放宽规则，将包装归还引擎适配层后执行 `pnpm exec vitest run tests/coordination-pi.test.ts tests/tool-failure-control.test.ts tests/tool-results.test.ts tests/tool-result-pi.test.ts tests/claude-tools.test.ts`：boundary-retest，17 项。熔断通知改为实际事件分发后 `pnpm exec vitest run tests/loop-engine.test.ts`：event-retest，8 项。首次类型检查的测试文本联合缩窄已修正。
+- `pnpm typecheck`、`pnpm check:architecture` 最终通过：1281 文件/6636 依赖，0 循环/违规。相关注释、九处契约/类图及运行正文同步。未运行全仓 CI、打包/安装和人工交互验收，未合并发布。
+- S7 四问：保留原事务/停止机制；变化限制在纯预览、只读组合与传输适配；测试由实际调用链及失败证据选择；下次从 CoordinationTools → ScopeGoalService/coordination-preview，或 outcome → 三引擎 → RepeatedToolFailures/LoopRuntime 阅读。Q5 候选：无。材料可 review，不宣称人审接受。
+
+## 2026-11-12：#36 主 Agent 岗位治理与能力重新采纳
+
+- [Issue #36](https://github.com/nan023062/cbim/issues/36)，基线 `396acf5c`。S1–S4 核实原 WorkspaceMembers 已有登记事务，但主工具未接入；本片 C1/L2，新增窄工具协议和可信运行装配，保留唯一 DispatchStore、预览依据、版本门禁与桌面旧指纹。OWNER_CAPABILITY_CHANGED 通过岗位能力采纳修复，owner adopt_source 仍只负责模块来源。
+- S5 新增 inspect/preview/commit/receipt 四项岗位工具，支持登记、名称/职责/适配编辑、能力采纳、停用和退役。登记继承静态 Agent 已有模型，拒绝模型选择/模型采纳和自报 actor；主身份由运行闭包及原日志核实。读权限可预览，写权限沿统一知识门禁。提交一次，坏回包、取消或未知保留稳定命令，只读核实原回执；跨根会话拒绝，重启不重放。
+- S6 按调用链选择岗位纯规则、服务、Application、真实 Pi 和统一权限消费者。首次 31 项中原有 28 项及新协议 1 项通过，2 项真实 Pi 暴露工具权限范围分类遗漏；补齐固定分类后 `tests/workspace-member-tools-pi.test.ts tests/unified-tool-policy.test.ts` 共 10 项通过。新增 `tests/workspace-member-tools.test.ts` 2 项通过；加强回包身份/版本核对后再跑 Pi 3 项通过。去重共 6 文件 40 项通过。完整命令均为 `pnpm exec vitest run <上述明确文件> --reporter=default --reporter=json --outputFile=...`，对应证据 `test-results/issue-batch-20261112/36-{tests,tools-policy,wire-tests,final-pi}.json`；原失败另存 `36-initial-failure.json`。
+- 实际选择器依次为 `pnpm exec vitest run tests/workspace-member-service.test.ts tests/workspace-member-application.test.ts tests/workspace-member-core.test.ts tests/workspace-member-tools-pi.test.ts`、`pnpm exec vitest run tests/workspace-member-tools-pi.test.ts tests/unified-tool-policy.test.ts`、`pnpm exec vitest run tests/workspace-member-tools.test.ts`、`pnpm exec vitest run tests/workspace-member-tools-pi.test.ts`，均附前述 JSON reporter 参数。`pnpm typecheck` 与 `pnpm check:architecture` 通过，0 循环/违规；同步 Core team/tasks/policy、Main workspace/装配、Scheduler tools/execution 的注释、契约和类图，以及团队治理流程第 4 步。未运行全仓 CI、打包/安装或人工交互验收。
+- S7 四问：保护原岗位事务与权限规则；岗位能力变化限制在独立协议和适配器；验证覆盖真实消费者与未知恢复；下次从 workspace-member-tools → main-workspace-member-tools → WorkspaceMembers → workspace-member-invariants 阅读。Q5 候选：无。代码与证据可 review，尚未人工接受、合并或发布。
+
+## 2026-11-12：#41 对话最终反馈
+
+- [Issue #41](https://github.com/nan023062/cbim/issues/41)，修复空完整消息擦除流式正文，保留反馈提交后的真实最终答复。主提示与两项反馈流程同步为正文简短收尾，提交不等于开发完成，未知操作不重放。
+- ConversationTurn 通过共享纯投影读取本轮交付声明及限制；没有声明也没有最终正文时，在流中明确显示缺失事实、工具数量和核实建议。提示标为运行记录，不冒充 Agent 消息，不读旧轮继承交付，不修改持久日志、不额外调用模型；运行中不提前总结。
+- 因实际消费者涉及对话、反馈工具和主提示，执行 `pnpm exec vitest run tests/conversation.test.ts tests/inline-conversation.test.ts tests/github-feedback-tools.test.ts tests/github-feedback-pi.test.ts tests/agent-role-instructions.test.ts --reporter=default --reporter=json --outputFile=test-results/issue-batch-20261112/41-tests.json`：5 文件 36 项通过，含真实 Pi、本机确定性反馈服务及渲染验证。`pnpm typecheck`、`pnpm check:architecture` 通过，0 循环/违规。
+- 同步三处源码注释/契约/类图及两项产品运行文档。阅读入口：mainInstructions → transcript/completionFeedback → ConversationTurn；后续完整 CI 与打包界面验收未运行，未合并发布，未宣称人审通过。
+
+## 2026-11-12：#38 手动终端中文编码
+
+- [Issue #38](https://github.com/nan023062/cbim/issues/38)，仅修改 Main 平台终端适配器：子 PowerShell 的 Console 输入/输出与 OutputEncoding 统一 UTF-8，stdout/stderr 独立持续解码，保持工作区、页签和进程所有权。未改变机器全局编码或 Agent 执行策略。
+- 实际进程验证 `pnpm exec vitest run tests/terminal.test.ts --reporter=default --reporter=json --outputFile=test-results/issue-batch-20261112/38-tests.json`：3 项通过，涵盖中文命令、emoji、原生命令分块输出、stderr、非零退出和会话隔离。初次补测发现 EncodedCommand 会输出 CLIXML，已保留 -Command 文本错误语义，失败记录在同目录 `38-clixml-failure.json`。
+- `pnpm check:architecture` 通过，0 循环/违规；平台注释、契约与类图同步。公共接口/依赖未变，不扩大类型和全量测试。明确指定其他编码的旧程序需自行配置 UTF-8；尚未打包、安装或合并发布。
+
+## 2026-11-12：#44 Claude Code 模型选择与连接诊断
+
+- [Issue #44](https://github.com/nan023062/cbim/issues/44)，基线 `86e82164`。当前已按协议而非品牌筛选；补齐未配置/协议不兼容/未启用三类空态，明确非 Claude 模型可用但端点必须兼容 Anthropic Messages。
+- 模型设置显式探测返回安全端点、HTTP 状态及鉴权/权限/端点/限流建议，不回传供应商正文，不修改目录。状态仍归 LlmProfiles，选择器只消费公开配置，没有引入跨协议转换或自动联网。
+- 按配置→选择器→引擎消费者执行 `pnpm exec vitest run tests/engine-configuration.test.ts tests/llm.test.ts tests/claude-engine.test.ts --reporter=default --reporter=json --outputFile=test-results/issue-batch-20261112/44-tests.json`：3 文件 28 项通过。真实 Claude SDK 对本机确定性服务透传 `vendor/qwen-custom-2026`，会话恢复及取消通过；不代表第三方在线供应商已验证。
+- `pnpm typecheck`、`pnpm check:architecture` 通过，0 循环/违规；同步组件、设置存储注释/契约/类图。阅读顺序：EngineModelPicker → LlmProfiles.request → claude-engine 测试。全量 CI、打包与安装升级本步未运行，尚未合并或发布。
+
 ## 2026-11-12：0.1.8 公开发布与真实在线升级
 
 - 用户直接授权核对草稿并发布，沿用已确认的未签名模式；安装器/应用均实际 NotSigned、0.1.8，四附件重新核验一致。补齐准确 EXE 的六项进程隔离，零网络请求，自有资源全部回收。

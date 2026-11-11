@@ -96,7 +96,7 @@ try {
   const entry = await page.evaluate(path => window.cbim.call('add', {path}), workspace);
   // 0.1.7 的新增持久数据也必须沿真实旧版 IPC 创建；不能只证明旧聊天没有丢失。
   let priorMainSettings, priorAutomation;
-  if (previousVersion === '0.1.7') {
+  if (['0.1.7', '0.1.8'].includes(previousVersion)) {
     const opened = (await page.evaluate(() => window.cbim.call('list'))).entries.find(item => item.id === entry.id);
     assert.ok(opened?.instanceId);
     const identity = {workspaceId: entry.id, instanceId: opened.instanceId};
@@ -110,7 +110,7 @@ try {
     assert.deepEqual(persistedAutomation.runs, []);
     priorAutomation = persistedAutomation.jobs[0];
     assert.equal(priorAutomation.nextRunAt, undefined);
-    await save('baseline-017-features', {mainAgent: priorMainSettings, automation: persistedAutomation});
+    await save('baseline-persistent-features', {mainAgent: priorMainSettings, automation: persistedAutomation});
     assert.equal(requests, 0);
   }
   const priorKnowledge = await page.evaluate(id => window.cbim.call('snapshot', {id}), entry.id);

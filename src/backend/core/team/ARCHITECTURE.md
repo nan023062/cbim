@@ -21,6 +21,7 @@ Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履
 | [session-history-storage.ts](session-history-storage.ts) | 静态 Agent 会话历史的持久化索引契约，连接调度查询服务与本机磁盘适配。 |
 | [session-history.ts](session-history.ts) | 定义按静态 Agent 归档的独立 Session、任务轮次及公开事件查询协议。 |
 | [workspace-member-rules.ts](workspace-member-rules.ts) | 岗位登记的规范指纹、预览依据、不可变审计与单条事件投影；由可信服务与 Store 重放共同调用。 |
+| [workspace-member-tools.ts](workspace-member-tools.ts) | 主 Agent 岗位治理的窄输入、回执和装配端口，独立于 UI 与存储。 |
 | [workspace-member.ts](workspace-member.ts) | 定义工作区长期岗位、采纳快照、版本化登记命令与公开查询协议，供 Main、Store 和桌面共用。 |
 
 ## 架构类图
@@ -463,6 +464,7 @@ class N_src_backend_core_team_workspace_member_rules_ts["workspace-member-rules.
   +workspaceMemberCapabilityHash()
   +workspaceMemberHash()
   +workspaceMemberCommand()
+  +workspaceMemberMainCommandId()
   +workspaceMemberProposed()
   +workspaceMemberChangedFields()
   +workspaceMemberPreviewBasis()
@@ -488,6 +490,43 @@ N_src_backend_core_team_workspace_member_rules_ts ..> N_src_backend_core_team_wo
 ```
 
 直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)、[workspace-member.ts](workspace-member.ts)。
+
+### workspace-member-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_workspace_member_tools_ts["workspace-member-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_workspace_member_tools_ts_MemberToolName["MemberToolName"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_tools_ts ..> N_src_backend_core_team_workspace_member_tools_ts_MemberToolName : 声明
+class N_src_backend_core_team_workspace_member_tools_ts_MemberToolChange["MemberToolChange"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_tools_ts ..> N_src_backend_core_team_workspace_member_tools_ts_MemberToolChange : 声明
+class N_src_backend_core_team_workspace_member_tools_ts_MemberToolBinding["MemberToolBinding"] {
+  <<interface>>
+  +workspaceId
+  +instanceId
+  +rootSessionId
+  +scopeId
+  +agentInstanceId
+  +agentSessionId
+  +runId
+}
+N_src_backend_core_team_workspace_member_tools_ts ..> N_src_backend_core_team_workspace_member_tools_ts_MemberToolBinding : 声明
+class N_src_backend_core_team_workspace_member_tools_ts_WorkspaceMemberToolsPort["WorkspaceMemberToolsPort"] {
+  <<interface>>
+  +call()
+}
+N_src_backend_core_team_workspace_member_tools_ts ..> N_src_backend_core_team_workspace_member_tools_ts_WorkspaceMemberToolsPort : 声明
+```
+
+直接依赖：[workspace-member.ts](workspace-member.ts)。
 
 ### workspace-member.ts
 
@@ -623,16 +662,16 @@ class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberReceipt["Worksp
 
 }
 N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberReceipt : 声明
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberActor["WorkspaceMemberActor"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberActor : 声明
 class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberChange["WorkspaceMemberChange"] {
   <<type>>
 
 }
 N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberChange : 声明
-class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberSummary["WorkspaceMemberSummary"] {
-  <<type>>
-
-}
-N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberSummary : 声明
 ```
 
 ```mermaid
@@ -640,6 +679,11 @@ classDiagram
 class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
   <<module>>
 }
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberSummary["WorkspaceMemberSummary"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberSummary : 声明
 class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberListInput["WorkspaceMemberListInput"] {
   <<type>>
 
@@ -655,11 +699,6 @@ class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberGetInput["Works
 
 }
 N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberGetInput : 声明
-class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberCurrentDiff["WorkspaceMemberCurrentDiff"] {
-  <<type>>
-
-}
-N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberCurrentDiff : 声明
 ```
 
 ```mermaid
@@ -667,6 +706,11 @@ classDiagram
 class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
   <<module>>
 }
+class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberCurrentDiff["WorkspaceMemberCurrentDiff"] {
+  <<type>>
+
+}
+N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberCurrentDiff : 声明
 class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberDetail["WorkspaceMemberDetail"] {
   <<type>>
 
@@ -725,6 +769,17 @@ N_src_backend_core_team_owner_execution_discovery_ts ..> N_src_backend_core_team
 N_src_backend_core_team_owner_execution_discovery_ts ..> N_src_backend_core_team_workspace_member_ts : 导入依赖
 N_src_backend_core_team_session_history_storage_ts ..> N_src_backend_core_team_session_history_ts : 导入依赖
 N_src_backend_core_team_workspace_member_rules_ts ..> N_src_backend_core_team_workspace_member_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_workspace_member_tools_ts["workspace-member-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
+  <<module>>
+}
+N_src_backend_core_team_workspace_member_tools_ts ..> N_src_backend_core_team_workspace_member_ts : 导入依赖
 ```
 
 
@@ -926,3 +981,8 @@ workspaceMemberModelSnapshotSchema 接受可选 engine，明确值参与 configu
 ## 隐式模块执行者
 
 implicitModuleOwner 按本模块、最近祖先的非空责任记录解析；空责任不创建新登记。失效的显式/祖先关系仍由门禁报告，不自动匹配其他人。ExpectedModuleOwner 向后兼容原直接关系，并允许 inheritedFrom 或 match 两种互斥依据：继承冻结实际父关系和子模块来源；匹配冻结主模型理由、知识版本和来源，无伪造 bindingId。岗位、能力采纳和模型门禁保持一致；matches:null 回到主会话，不创建内置执行员。
+## 主 Agent 岗位治理
+
+workspace-member-tools 提供窄查询/预览/提交/原回执协议。主工具不接受 actor、工作区身份、命令或模型选型；登记继承静态 Agent 已配置模型，更新只能改元信息，adopt 仅采纳能力，模型参数采纳仍走桌面。查询差异即使失配也保留 current/adopted hash 和修复建议。
+
+workspaceMemberMainCommandId 从真实主调用稳定派生；主来源进入命令指纹和审计，旧桌面指纹保持原样。共用一个岗位头、来源捕获及版本事务，历史任务/运行快照不随新采纳改变。

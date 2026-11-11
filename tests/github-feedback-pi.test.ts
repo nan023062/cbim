@@ -39,7 +39,7 @@ it.each(['ask','read','unconnected'] as const)('real Pi main invokes feedback Sk
     if(turn===0)tool('skill','cbim_skill_bug_feedback',{workspaceId:entry.id,instanceId:workspace.instanceId});
     else if(turn===1){const skill=knowledgeContractResult(body,'skill').text;assert.ok(skill.includes('cbim_feedback_submit'));assert.ok(skill.includes('只填写第一项就可以提交'));assert.ok(skill.includes('不要为填满字段反复追问'));if(mode==='unconnected'){emit({role:'assistant',content:'尚未连接，请先到设置连接 GitHub'});emit({},'stop')}else tool('submit','cbim_feedback_submit',input)}
     else if(turn===2){const result=knowledgeContractResult(body,'submit');if(mode==='ask'){assert.equal(result.status,'submitted');tool('duplicate-new-id','cbim_feedback_submit',input)}else{assert.ok(result.error||result.code||result.isError);emit({role:'assistant',content:'当前只读，尚未提交'});emit({},'stop')}}
-    else if(turn===3&&mode==='ask'){assert.equal(knowledgeContractResult(body,'duplicate-new-id').status,'submitted');emit({role:'assistant',content:'SHOULD_BE_HIDDEN_EXTRA_SUCCESS'});emit({},'stop')}
+    else if(turn===3&&mode==='ask'){assert.equal(knowledgeContractResult(body,'duplicate-new-id').status,'submitted');emit({role:'assistant',content:'FEEDBACK_SUBMITTED_NOT_IMPLEMENTED'});emit({},'stop')}
     else throw Error('unexpected extra model turn');
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('fixture error')}});
@@ -59,7 +59,7 @@ it.each(['ask','read','unconnected'] as const)('real Pi main invokes feedback Sk
     if(mode==='ask'){
       expect(String((issues[0] as any).body).match(/用户未提供/g)).toHaveLength(4);expect(await app.dispatch('loop.questions',{id:entry.id,taskId:started.taskId})).toEqual([]);
       expect(receipts).toHaveLength(2);for(const receipt of receipts)expect(receipt).toMatchObject({outcome:'succeeded',effects:['external-write'],scope:{kind:'github-feedback',workspaceId:entry.id,owner:'owner',repo:'repo',repositoryId:2}});
-      expect(transcript(summary).some(item=>item.kind==='assistant'&&item.text.includes('SHOULD_BE_HIDDEN'))).toBe(false);
+      expect(transcript(summary).some(item=>item.kind==='assistant'&&item.text.includes('FEEDBACK_SUBMITTED_NOT_IMPLEMENTED'))).toBe(true);
     }else if(mode==='read'){expect(receipts[0].outcome).toBe('denied');expect(transcript(summary).some(item=>item.text==='当前只读，尚未提交')).toBe(true)}else expect(receipts).toEqual([]);
     expect((await workspace.snapshot()).files).toEqual(before.files);expect((await app.dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:started.taskId}})).tasks).toEqual([]);
   }finally{vi.restoreAllMocks();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await app.shutdown();await f.cleanup()}

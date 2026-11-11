@@ -168,7 +168,7 @@ class N_src_backend_main_ipc_resources_handlers_ts["resources-handlers.ts"] {
 
 ### services.ts
 
-成员 1/2（同名节点为同一声明，跨图合并阅读）。
+成员 1/3（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -180,6 +180,7 @@ class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationService
   +catalog
   +paths
   +models
+  +webSettings
   +mainAgentSettings
   +resources
   +repositoryConnections
@@ -192,12 +193,11 @@ class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationService
   +running
   +isStopping
   +list()
-  +workspace()
 }
 N_src_backend_main_ipc_services_ts ..> N_src_backend_main_ipc_services_ts_ApplicationServices : 声明
 ```
 
-成员 2/2（同名节点为同一声明，跨图合并阅读）。
+成员 2/3（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -206,6 +206,7 @@ class N_src_backend_main_ipc_services_ts["services.ts"] {
 }
 class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationServices"] {
   <<interface>>
+  +workspace()
   +governance()
   +workspaceMembers()
   +workspaceOwnerships()
@@ -221,12 +222,25 @@ class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationService
   +stop()
   +remove()
   +modelOptions()
+}
+N_src_backend_main_ipc_services_ts ..> N_src_backend_main_ipc_services_ts_ApplicationServices : 声明
+```
+
+成员 3/3（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_services_ts["services.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_services_ts_ApplicationServices["ApplicationServices"] {
+  <<interface>>
   +chatOptions()
 }
 N_src_backend_main_ipc_services_ts ..> N_src_backend_main_ipc_services_ts_ApplicationServices : 声明
 ```
 
-直接依赖：[../automation.ts](../automation.ts)、[../workspace/catalog.ts](../workspace/catalog.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../platform/paths.ts](../platform/paths.ts)、[../persistence/settings/main-agent-settings.ts](../persistence/settings/main-agent-settings.ts)、[../persistence/settings/llm-profiles.ts](../persistence/settings/llm-profiles.ts)、[../resources/resource-repository.ts](../resources/resource-repository.ts)、[../resources/repository-connections.ts](../resources/repository-connections.ts)、[../resources/github-feedback.ts](../resources/github-feedback.ts)、[../governance/module-governance.ts](../governance/module-governance.ts)、[../../scheduler-engine/execution/execution-manager.ts](../../scheduler-engine/execution/execution-manager.ts)、[../../scheduler-engine/execution/dispatch-service.ts](../../scheduler-engine/execution/dispatch-service.ts)、[../../scheduler-engine/execution/member-execution.ts](../../scheduler-engine/execution/member-execution.ts)、[../../scheduler-engine/runtime/agent-history.ts](../../scheduler-engine/runtime/agent-history.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)、[../persistence/settings/admission-settings.ts](../persistence/settings/admission-settings.ts)、[../persistence/settings/budget-settings.ts](../persistence/settings/budget-settings.ts)、[../workspace/workspace-members.ts](../workspace/workspace-members.ts)、[../workspace/module-ownerships.ts](../workspace/module-ownerships.ts)、[../workspace/controlled-files.ts](../workspace/controlled-files.ts)、[../workspace/isolated-executions.ts](../workspace/isolated-executions.ts)、[../persistence/tasks/chat-material-imports.ts](../persistence/tasks/chat-material-imports.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)、[../../scheduler-engine/execution/model-request-budget-service.ts](../../scheduler-engine/execution/model-request-budget-service.ts)。
+直接依赖：[../persistence/settings/web-settings.ts](../persistence/settings/web-settings.ts)、[../automation.ts](../automation.ts)、[../workspace/catalog.ts](../workspace/catalog.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../platform/paths.ts](../platform/paths.ts)、[../persistence/settings/main-agent-settings.ts](../persistence/settings/main-agent-settings.ts)、[../persistence/settings/llm-profiles.ts](../persistence/settings/llm-profiles.ts)、[../resources/resource-repository.ts](../resources/resource-repository.ts)、[../resources/repository-connections.ts](../resources/repository-connections.ts)、[../resources/github-feedback.ts](../resources/github-feedback.ts)、[../governance/module-governance.ts](../governance/module-governance.ts)、[../../scheduler-engine/execution/execution-manager.ts](../../scheduler-engine/execution/execution-manager.ts)、[../../scheduler-engine/execution/dispatch-service.ts](../../scheduler-engine/execution/dispatch-service.ts)、[../../scheduler-engine/execution/member-execution.ts](../../scheduler-engine/execution/member-execution.ts)、[../../scheduler-engine/runtime/agent-history.ts](../../scheduler-engine/runtime/agent-history.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)、[../persistence/settings/admission-settings.ts](../persistence/settings/admission-settings.ts)、[../persistence/settings/budget-settings.ts](../persistence/settings/budget-settings.ts)、[../workspace/workspace-members.ts](../workspace/workspace-members.ts)、[../workspace/module-ownerships.ts](../workspace/module-ownerships.ts)、[../workspace/controlled-files.ts](../workspace/controlled-files.ts)、[../workspace/isolated-executions.ts](../workspace/isolated-executions.ts)、[../persistence/tasks/chat-material-imports.ts](../persistence/tasks/chat-material-imports.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)、[../../scheduler-engine/execution/model-request-budget-service.ts](../../scheduler-engine/execution/model-request-budget-service.ts)。
 
 ### settings-handlers.ts
 
@@ -398,6 +412,14 @@ N_src_backend_main_ipc_workspace_handlers_ts ..> N_src_backend_main_ipc_services
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 粘贴入口
+
+chat.image 严格图片类型/名称/base64上限；chat.paths 为最多12个明确本地绝对路径，Main 核存在/类型/.cbim后保存快照。两者在退出期间拒绝，发送窗口/Main Frame仍沿桌面入口校验。chat.preview 可返回已验证图片字节；没有通过图片名任意写源文件或按预览字符串读磁盘的入口。
+
+### 搜索设置 IPC
+
+web.settings 返回无密钥摘要；web.configure 用 revision/开关/可选新密钥或 clearKey 显式保存，退出期间拒绝写。没有任意 URL 抓取 IPC，网络仅从可信主 Agent 工具端口进入。
 
 ### 桌面软件更新
 

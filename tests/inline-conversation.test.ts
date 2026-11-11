@@ -6,8 +6,19 @@ import {inlineDependencies,inlineDispatchedTask,inlineHandoffTasks} from '../src
 import {ToolActivity} from '../src/frontend/tasks/ToolActivity';
 import {MemberActivityCard} from '../src/frontend/tasks/MemberActivity';
 import {WorkStatus} from '../src/frontend/execution-view/WorkStatus';
+import {ConversationTurn} from '../src/frontend/conversation/ConversationTurn';
 import {inlineMainRuns} from './inline-conversation-fixture';
 import {progressFixture} from './conversation-progress-fixture';
+import {ToolTimeline} from '../src/frontend/execution-view/ToolTimeline';
+
+it('失败轨道显示核实建议，熔断提示不输出 undefined，也不提供重试动作',()=>{
+ const run=structuredClone(inlineMainRuns(2)[0]);
+ const tool=run.events.find(event=>event.type==='tool.finished')!;
+ tool.data.isError=true;tool.data.outcome={status:'unknown',nextStep:'先核实原结果，不自动重试。'};
+ run.events.push({...tool,seq:999,type:'engine.status',data:{state:'blocked',message:'同一工具连续失败三次，已停止本轮'}});
+ const html=renderToStaticMarkup(createElement(ToolTimeline,{run}));
+ expect(html).toContain('先核实原结果，不自动重试');expect(html).toContain('同一工具连续失败三次');expect(html).not.toContain('undefined');expect(html).not.toContain('button');
+});
 
 it('文字、单次工具生命周期和后续文字按首次出现顺序保留，重读幂等',()=>{
   const run=inlineMainRuns(2)[0],before=JSON.stringify(run),items=transcript(run);
@@ -69,4 +80,11 @@ it('单工具模式保留失败证据与原核实入口，状态尾行不重复�
   const run=inlineMainRuns(2)[0],html=renderToStaticMarkup(createElement(ToolActivity,{run,toolCallId:'dispatch-member-1'}));
   expect(html).toContain('data-tool-call-id="dispatch-member-1"');expect(html).not.toContain('data-tool-call-id="dispatch-member-2"');expect(html).toContain('原命令');
   const footer=renderToStaticMarkup(createElement(WorkStatus,{run,now:0,inline:true}));expect(footer).toContain('本轮结束');expect(footer).not.toContain('<details');expect(footer).not.toContain('data-tool-call-id');
+});
+
+it('没有最终正文的已结束主对话在流中显示记录反馈，运行中不提前展示',()=>{
+  const run=inlineMainRuns(0)[0];run.events=[run.events[0]];run.status='completed';
+  const render=()=>renderToStaticMarkup(createElement(ConversationTurn,{run,workspaceId:run.task.workspaceId,now:0,recovery:{state:{}} as any,active:false,onSelectTask:()=>{}}));
+  expect(render()).toContain('aria-label="本轮反馈（运行记录）"');expect(render()).toContain('未记录 Agent 的最终反馈');
+  run.status='running';expect(render()).not.toContain('aria-label="本轮反馈（运行记录）"');
 });

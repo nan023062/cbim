@@ -35,7 +35,7 @@ it.each(formats.flatMap(format=>(['complete','changed','stop']as JsonValidationM
       if(mode==='changed')await fs.writeFile(file,payload(data.changed));provider.releaseReview();
     }
     await until(async()=>{expect((await records()).scopes[0].status).toBe('closed');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)});const saved=await records(),finished=await graph();expect(saved.scopes[0].outcome).toBe(mode==='stop'?'cancelled':mode==='changed'?'failed':'completed');expect(finished.tasks).toHaveLength(1);expect(finished.tasks[0].taskId).toBe(task.taskId);expect(finished.tasks[0].runIds).toEqual(task.runIds);expect(provider.main).toHaveLength(mode==='stop'?3:mode==='changed'?7:6);expect(provider.member).toHaveLength(mode==='stop'?9:16);
-    if(mode==='changed'){expect(String(provider.state.reviewError.error)).toMatch(/GOAL_WORKFLOW_UNMET/);expect(saved.scopes[0].goal?.review?.decision).toBe('blocked')}else if(mode==='complete')expect(saved.scopes[0].goal?.review?.decision).toBe('complete');else expect(finished.tasks[0].result).toBeUndefined();
+    if(mode==='changed'){expect(provider.state.reviewError).toMatchObject({code:'GOAL_WORKFLOW_UNMET',retryable:false});expect(saved.scopes[0].goal?.review?.decision).toBe('blocked')}else if(mode==='complete')expect(saved.scopes[0].goal?.review?.decision).toBe('complete');else expect(finished.tasks[0].result).toBeUndefined();
     if(mode!=='stop'){
       // Reuse this actual completed Pi run. These file-port mutations are explicit unit-boundary
       // injections after the real scenario, never substituted into product execution or its logs.

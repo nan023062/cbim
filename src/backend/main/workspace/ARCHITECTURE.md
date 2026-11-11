@@ -18,6 +18,7 @@
 | [knowledge-effect-reader.ts](knowledge-effect-reader.ts) | 在已打开工作区内只读核实原知识工具请求和事务，向调度影响观察提供有界摘要。 |
 | [knowledge-sources.ts](knowledge-sources.ts) | 将原知识事务的来源屏障与岗位/责任的明确来源采纳接到唯一 DispatchStore。 |
 | [main-module-ownership-tools.ts](main-module-ownership-tools.ts) | 把工作区责任服务绑定真实主运行及当前协作周期，提供四项模型窄端口。 |
+| [main-workspace-member-tools.ts](main-workspace-member-tools.ts) | 把岗位服务装配到真实主运行；工作区、actor 和命令身份由闭包持有。 |
 | [module-ownerships.ts](module-ownerships.ts) | 桌面与真实主工具共用的模块负责人服务，关系和岗位在唯一 DispatchStore 内裁决。 |
 | [persistent-effect-reader.ts](persistent-effect-reader.ts) | 只读原治理命令与责任审计，向影响观察投影有界的“原记录已保存”证据。 |
 | [workspace-members.ts](workspace-members.ts) | 将桌面岗位登记、采纳与当前差异查询接到工作区唯一 DispatchStore，公开模型配置由 Main 注入。 |
@@ -266,6 +267,18 @@ class N_src_backend_main_workspace_main_module_ownership_tools_ts["main-module-o
 
 直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/brain/conversation-binding.ts](../../core/brain/conversation-binding.ts)、[../../core/tasks/types.ts](../../core/tasks/types.ts)、[../../core/workspace/module-ownership.ts](../../core/workspace/module-ownership.ts)、[../../core/workspace/module-ownership-rules.ts](../../core/workspace/module-ownership-rules.ts)、[../../core/workspace/module-ownership-tools.ts](../../core/workspace/module-ownership-tools.ts)、[../../scheduler-engine/execution/auto-collaboration.ts](../../scheduler-engine/execution/auto-collaboration.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[module-ownerships.ts](module-ownerships.ts)、[workspace-members.ts](workspace-members.ts)、[../../scheduler-engine/execution/owner-execution-service.ts](../../scheduler-engine/execution/owner-execution-service.ts)。
 
+### main-workspace-member-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_workspace_main_workspace_member_tools_ts["main-workspace-member-tools.ts"] {
+  <<module>>
+  +mainWorkspaceMemberTools()
+}
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/brain/conversation-binding.ts](../../core/brain/conversation-binding.ts)、[../../core/brain/llm/engine.ts](../../core/brain/llm/engine.ts)、[../../core/knowledge/read-models.ts](../../core/knowledge/read-models.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/types.ts](../../core/tasks/types.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/team/workspace-member-tools.ts](../../core/team/workspace-member-tools.ts)、[../../scheduler-engine/execution/auto-collaboration.ts](../../scheduler-engine/execution/auto-collaboration.ts)、[workspace-members.ts](workspace-members.ts)。
+
 ### module-ownerships.ts
 
 成员 1/2（同名节点为同一声明，跨图合并阅读）。
@@ -378,6 +391,7 @@ class N_src_backend_main_workspace_workspace_members_ts_WorkspaceMembers["Worksp
   +get()
   +preview()
   +receipt()
+  +mainReceipt()
   +commit()
   -owner
   -store
@@ -389,7 +403,6 @@ class N_src_backend_main_workspace_workspace_members_ts_WorkspaceMembers["Worksp
   -cursor()
   -member()
   -checkedReceipt()
-  -capability()
 }
 N_src_backend_main_workspace_workspace_members_ts ..> N_src_backend_main_workspace_workspace_members_ts_WorkspaceMembers : 声明
 ```
@@ -402,6 +415,7 @@ class N_src_backend_main_workspace_workspace_members_ts["workspace-members.ts"] 
   <<module>>
 }
 class N_src_backend_main_workspace_workspace_members_ts_WorkspaceMembers["WorkspaceMembers"] {
+  -capability()
   -policy()
   -prepare()
   -verifySources()
@@ -413,7 +427,7 @@ class N_src_backend_main_workspace_workspace_members_ts_WorkspaceMembers["Worksp
 N_src_backend_main_workspace_workspace_members_ts ..> N_src_backend_main_workspace_workspace_members_ts_WorkspaceMembers : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)、[../../scheduler-engine/context/dispatch-context.ts](../../scheduler-engine/context/dispatch-context.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/workspace/knowledge-source-rules.ts](../../core/workspace/knowledge-source-rules.ts)、[../../core/workspace/knowledge-source.ts](../../core/workspace/knowledge-source.ts)、[knowledge-sources.ts](knowledge-sources.ts)。
+直接依赖：[../../core/knowledge/read-models.ts](../../core/knowledge/read-models.ts)、[../../core/brain/llm/engine.ts](../../core/brain/llm/engine.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)、[../../scheduler-engine/context/dispatch-context.ts](../../scheduler-engine/context/dispatch-context.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/workspace/knowledge-source-rules.ts](../../core/workspace/knowledge-source-rules.ts)、[../../core/workspace/knowledge-source.ts](../../core/workspace/knowledge-source.ts)、[knowledge-sources.ts](knowledge-sources.ts)。
 
 ### workspace.ts
 
@@ -545,18 +559,29 @@ class N_src_backend_main_workspace_main_module_ownership_tools_ts["main-module-o
 class N_src_backend_main_workspace_workspace_members_ts["workspace-members.ts"] {
   <<module>>
 }
+class N_src_backend_main_workspace_main_workspace_member_tools_ts["main-workspace-member-tools.ts"] {
+  <<module>>
+}
 class N_src_backend_main_workspace_module_ownerships_ts["module-ownerships.ts"] {
   <<module>>
 }
 class N_src_backend_main_workspace_knowledge_sources_ts["knowledge-sources.ts"] {
   <<module>>
 }
+N_src_backend_main_workspace_main_module_ownership_tools_ts ..> N_src_backend_main_workspace_workspace_members_ts : 导入依赖
+N_src_backend_main_workspace_main_workspace_member_tools_ts ..> N_src_backend_main_workspace_workspace_members_ts : 导入依赖
+N_src_backend_main_workspace_module_ownerships_ts ..> N_src_backend_main_workspace_knowledge_sources_ts : 导入依赖
+N_src_backend_main_workspace_workspace_members_ts ..> N_src_backend_main_workspace_knowledge_sources_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_backend_main_workspace_workspace_ts["workspace.ts"] {
   <<module>>
 }
-N_src_backend_main_workspace_main_module_ownership_tools_ts ..> N_src_backend_main_workspace_workspace_members_ts : 导入依赖
-N_src_backend_main_workspace_module_ownerships_ts ..> N_src_backend_main_workspace_knowledge_sources_ts : 导入依赖
-N_src_backend_main_workspace_workspace_members_ts ..> N_src_backend_main_workspace_knowledge_sources_ts : 导入依赖
+class N_src_backend_main_workspace_knowledge_sources_ts["knowledge-sources.ts"] {
+  <<module>>
+}
 N_src_backend_main_workspace_workspace_ts ..> N_src_backend_main_workspace_knowledge_sources_ts : 导入依赖
 ```
 
@@ -704,3 +729,6 @@ WorkspaceMembers 按岗位引用及已采纳快照解析 engine，同一供应�
 `agent-history.ts` 的 `createAgentHistory` 通过 `AgentHistoryOwner` 只读取工作区身份、固定应用目录和运行态断言，装配 FileAgentHistoryStore、FileRunStorage 与 AgentHistoryService。构造不读盘，Application 仍在持锁且路径核验后初始化索引，并在排空索引后释放锁。详情保留逐级符号链接、真实路径及原 task/run/workspace 身份核验；不新增存储、不复制日志、不扩大写入能力。文件存储实现不得反向引用该装配或 Workspace。
 
 主模块负责人 inspect 端口传递本轮 matches 给执行发现，并继续复核责任页与执行发现的知识/登记/来源游标一致；匹配不调用责任写入接口。
+## 主工具岗位入口
+
+main-workspace-member-tools 绑定真实主周期，将窄操作交给 WorkspaceMembers 的既有预览/CAS/来源事务；写操作纳入 context.track，提交前及异步复核后检查停止，落盘后不伪装回滚。登记静态选型在事务中再次核对，模型输入不能改选。mainReceipt 只读同根会话原审计，unknown 不授权重试。

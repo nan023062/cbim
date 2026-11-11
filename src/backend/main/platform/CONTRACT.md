@@ -1,3 +1,11 @@
+### 公开 HTTP 传输
+
+`PublicHttp` 只允许公开 HTTP/HTTPS 常规80/443端口；解析全部 DNS 结果，任一非公开地址即拒绝，以固定 family/lookup 连接已核地址，防二次解析重绑定。禁止 URL 凭据、内网、本机、保留/元数据地址；无 Cookie、代理、自动跳转或重试。每次请求15秒、压缩前后1 MiB、UTF-8解码，取消销毁连接。调用者负责逐跳 robots 和域名节流。可信测试可注入解析/传输端口，模型和 IPC 没有绕过入口。
+
+## 手动终端编码
+
+TerminalSessions 在固定工作区执行单条命令，Windows 进程内 Console 输入/输出及 PowerShell OutputEncoding 统一 UTF-8；stdout/stderr 分别持续解码，分块不截断字符。保留 -Command 的文本错误流、页签隔离、输出上限与关闭终止进程行为；不改变机器全局代码页，不模拟 PTY。显式输出其他编码的旧原生程序仍需在命令中指定 UTF-8。
+
 ## Windows 隔离 Node 平台端口（R12-A）
 
 `runIsolatedNode` 是可信宿主的平台端口，正式成员经冻结范围与可靠生命周期装配后调用。它不从业务请求取得宿主路径或环境变量：最多64份、总8 MiB的明确字节快照复制到本次 input；当前宿主可执行器及 Electron 必需数据复制到 runtime 并记录实际哈希；程序只向私有 output 写入，不修改原工程 ACL 或自动回写。

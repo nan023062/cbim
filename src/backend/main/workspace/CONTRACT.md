@@ -129,3 +129,6 @@ WorkspaceMembers 按岗位引用及已采纳快照解析 engine，同一供应�
 `agent-history.ts` 的 `createAgentHistory` 通过 `AgentHistoryOwner` 只读取工作区身份、固定应用目录和运行态断言，装配 FileAgentHistoryStore、FileRunStorage 与 AgentHistoryService。构造不读盘，Application 仍在持锁且路径核验后初始化索引，并在排空索引后释放锁。详情保留逐级符号链接、真实路径及原 task/run/workspace 身份核验；不新增存储、不复制日志、不扩大写入能力。文件存储实现不得反向引用该装配或 Workspace。
 
 主模块负责人 inspect 端口传递本轮 matches 给执行发现，并继续复核责任页与执行发现的知识/登记/来源游标一致；匹配不调用责任写入接口。
+## 主工具岗位入口
+
+main-workspace-member-tools 绑定真实主周期，将窄操作交给 WorkspaceMembers 的既有预览/CAS/来源事务；写操作纳入 context.track，提交前及异步复核后检查停止，落盘后不伪装回滚。登记静态选型在事务中再次核对，模型输入不能改选。mainReceipt 只读同根会话原审计，unknown 不授权重试。

@@ -97,6 +97,7 @@ export const logicalBoundaries = [
       "src/backend/core/connectors/github-feedback.ts",
       "src/backend/core/connectors/repository-connection.ts",
       "src/backend/core/connectors/repository-tools.ts",
+      "src/backend/core/connectors/web-tools.ts",
       "src/backend/core/governance/module-governance.ts",
       "src/backend/core/knowledge/object-contract.ts",
       "src/backend/core/policy/types.ts",

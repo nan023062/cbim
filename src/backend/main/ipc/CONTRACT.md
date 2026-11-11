@@ -1,3 +1,11 @@
+### 粘贴入口
+
+chat.image 严格图片类型/名称/base64上限；chat.paths 为最多12个明确本地绝对路径，Main 核存在/类型/.cbim后保存快照。两者在退出期间拒绝，发送窗口/Main Frame仍沿桌面入口校验。chat.preview 可返回已验证图片字节；没有通过图片名任意写源文件或按预览字符串读磁盘的入口。
+
+### 搜索设置 IPC
+
+web.settings 返回无密钥摘要；web.configure 用 revision/开关/可选新密钥或 clearKey 显式保存，退出期间拒绝写。没有任意 URL 抓取 IPC，网络仅从可信主 Agent 工具端口进入。
+
 ### 桌面软件更新
 
 `desktop.updates.status/check/download/install` 仅在 Electron 主 Frame 可信边界下处理，不接受 URL、路径、版本或命令参数，也不进入模型工具表。status 只读，check 联网只读，download 由用户点击，install 必须处于校验完成状态并先正常排空应用；安装期间拒绝其它业务入口。正式包标记、平台、实际版本及 NSIS 卸载程序共同决定启用，开发或便携包不启用安装更新。

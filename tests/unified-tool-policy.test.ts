@@ -10,6 +10,18 @@ import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage'
 import path from 'node:path';
 import http from 'node:http';
 import {randomUUID} from 'node:crypto';
+import {memberToolEffects} from '../src/backend/core/team/workspace-member-tools';
+
+test('主岗位工具精确核知识范围，预览可读而提交保留 read/ask/execute 门禁',async()=>{
+ for(const [name,effect] of Object.entries(memberToolEffects)){
+  const call={id:'call',name,input:{}},descriptor={effects:[effect],native:false,scope:{kind:'knowledge' as const,workspaceId:'workspace'}};
+  for(const permission of ['read','ask','execute'] as const){
+   let approvals=0;const decision=await authorizeRunTool(call,descriptor,{workspaceId:'workspace',permission,guard:async()=>({allow:true}),approve:async()=>{approvals++;return {allow:false}}});
+   expect(decision.allow).toBe(effect!=='knowledge-write'||permission==='execute');expect(approvals).toBe(effect==='knowledge-write'&&permission==='ask'?1:0);
+  }
+  expect((await authorizeRunTool(call,{...descriptor,scope:{kind:'workspace',workspaceId:'workspace'}},{workspaceId:'workspace',permission:'execute',guard:async()=>({allow:true})})).allow).toBe(false);
+ }
+});
 
 test('read mode denies both write channels, including forged approvals and shell effects',async()=>{
   let approvals=0;

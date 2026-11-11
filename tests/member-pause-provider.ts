@@ -13,12 +13,18 @@ function value(request:Request,id:string){
 }
 /** Reuses the existing deterministic member dialogue; Pi, file effects, native sessions and all scheduler operations are real. */
 export async function memberPauseProvider(holdContinuation=false){
-  const members=await memberCheckpointProvider(),main:Request[]=[],errors:string[]=[],sequence:string[]=[],data=memberPauseData;
+  const members=await memberCheckpointProvider(),main:Request[]=[],compactions:Request[]=[],errors:string[]=[],sequence:string[]=[],data=memberPauseData;
   let agentId='',moduleId='',ownerSelection:OwnerExecutionSelection|undefined,release=()=>{};const gate=new Promise<void>(resolve=>{release=resolve});
   const state:{parked?:GraphSnapshot;reviewed?:DispatchScope;resume?:unknown;continued?:boolean}={};
   const server=http.createServer(async(req,res)=>{try{
     let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw) as Request,isMain=body.tools?.some(t=>t.function.name==='cbim_dispatch_task')===true;
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));assert.equal(body.model,data.model);
+    // 原生摘要没有业务工具；它不推进成员脚本，也不代表任务重放。
+    if(!body.tools?.length&&typeof body.messages[0]?.content==='string'&&body.messages[0].content.includes('context summarization assistant')){
+      compactions.push(body);sequence.push('compaction:'+compactions.length);res.writeHead(200,{'Content-Type':'text/event-stream'});
+      const summary='原A、B、C已登记。仅按 cbim_goal_inspect 的当前图和目标判断进展；用户明确继续才消费原等待。保留原检查点、身份、权限与文件证据，不重新执行已完成写入。';
+      for(const [delta,finish_reason]of [[{role:'assistant',content:summary},null],[{},'stop']])res.write('data: '+JSON.stringify({id:'pause-compaction-'+compactions.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');res.end('data: [DONE]\n\n');return;
+    }
     if(!isMain){sequence.push('member:'+members.member.length);const upstream=await fetch(members.url+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},body:raw});res.writeHead(upstream.status,{'Content-Type':'text/event-stream'});assert.ok(upstream.body);for await(const chunk of upstream.body)res.write(chunk);res.end();return}
     const turn=main.length;main.push(body);sequence.push('main:'+turn);res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'member-pause-'+turn,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
@@ -42,5 +48,5 @@ export async function memberPauseProvider(holdContinuation=false){
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Member pause fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,member:members.member,get errors(){return [...errors,...members.errors]},sequence,state,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=structuredClone(selection);members.bind(agent,module,selection)},releaseContinuation:()=>release(),close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await members.close()}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,main,compactions,member:members.member,get errors(){return [...errors,...members.errors]},sequence,state,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=structuredClone(selection);members.bind(agent,module,selection)},releaseContinuation:()=>release(),close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await members.close()}};
 }

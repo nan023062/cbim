@@ -49,7 +49,7 @@ class N_src_backend_core_policy_tool_policy_ts_RunPolicyContext["RunPolicyContex
 N_src_backend_core_policy_tool_policy_ts ..> N_src_backend_core_policy_tool_policy_ts_RunPolicyContext : 声明
 ```
 
-直接依赖：[types.ts](types.ts)、[../tools/types.ts](../tools/types.ts)、[../tools/scope-schema.ts](../tools/scope-schema.ts)、[../governance/module-governance-tools.ts](../governance/module-governance-tools.ts)、[../workspace/module-ownership-tool-policy.ts](../workspace/module-ownership-tool-policy.ts)、[../connectors/github-feedback.ts](../connectors/github-feedback.ts)。
+直接依赖：[types.ts](types.ts)、[../tools/types.ts](../tools/types.ts)、[../tools/scope-schema.ts](../tools/scope-schema.ts)、[../governance/module-governance-tools.ts](../governance/module-governance-tools.ts)、[../workspace/module-ownership-tool-policy.ts](../workspace/module-ownership-tool-policy.ts)、[../team/workspace-member-tools.ts](../team/workspace-member-tools.ts)、[../connectors/github-feedback.ts](../connectors/github-feedback.ts)。
 
 ### types.ts
 
@@ -144,3 +144,6 @@ PNG验证仍只允许同一非原生read工具；解压器只在平台处理已�
 ## 冻结范围成员执行
 
 cbim_scoped_read 固定read、cbim_scoped_node固定command，两者要求内部注册及contractVersion=1。command沿read拒绝/ask逐次批准；隔离配置不扩大原权限。
+## 主岗位权限
+
+四项 cbim_member 工具共用 Core 声明的固定效果：inspect/receipt 只读、change_preview 预览、change_commit 知识写。必须绑定本轮 knowledge 范围，不能以未知名称、workspace 范围或 native 标识绕过；read 拒绝提交，ask 仍经真实审批。

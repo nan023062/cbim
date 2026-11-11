@@ -1,9 +1,11 @@
 /**
+ * 原生失败以统一结果协议进入日志和失败 hook 的 additionalContext，不暗示未执行或可重试。
  * 作用定位：Claude 原生工具和内部 SDK 工具适配为 CBIM 授权与回执协议。
  * 能力边界：是否关闭原生工具由可信能力策略决定，不依赖具体业务工具名称。
  * 设计原因：PreToolUse 先等模型请求结算再持久化授权；内部调用用一次性原调用 ID 绑定精确参数，禁止依名称放行。
  * 职责边界：SDK MCP 仅为当前进程内传输，不监听端口或提供对外 MCP 服务。未注册工具一律拒绝。
  */
+import {toolFailureResult,runToolResult} from '../../tools/outcome';
 import {isDeepStrictEqual} from 'node:util';
 import {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import {ListToolsRequestSchema,CallToolRequestSchema} from '@modelcontextprotocol/sdk/types.js';
@@ -11,7 +13,6 @@ import type {HookCallback,McpSdkServerConfigWithInstance} from '@anthropic-ai/cl
 import type {EngineContext} from '../types';
 import {nativeToolsDisabled} from '../engine-tools';
 import type {EngineToolsPort} from '../engine-tools';
-import {validateToolResult,type ToolResult} from '../../tools/results';
 
 const nativeNames:Record<string,string>={Read:'read',Write:'write',Edit:'edit',Bash:'bash',Glob:'find',Grep:'grep'};
 const prefix='mcp__cbim__',identityField='__cbim_call_id';
@@ -46,7 +47,7 @@ export async function claudeTools(context:EngineContext,port:EngineToolsPort,all
     const call=active.get(id);
     if(!call||!call.internal||call.name!==request.params.name||!grants.delete(id)||!isDeepStrictEqual(call.original,args))throw Error('内部工具没有对应的一次性授权');
     controller.signal.throwIfAborted();const reason=blocked();if(reason)throw Error(reason);
-    const result=validateToolResult(call.name,await port.call(call.name,args,controller.signal,id)) as ToolResult;
+    const result=await runToolResult(call.name,()=>port.call(call.name,args,controller.signal,id));
     // 返回结果前先保存；保存失败不补写一份成功，也不重放端口。
     await context.emit({type:'tool.finished',data:{id,name:call.name,isError:result.isError===true,result}});active.delete(id);
     return {content:result.content,isError:result.isError};
@@ -74,9 +75,10 @@ export async function claudeTools(context:EngineContext,port:EngineToolsPort,all
     const call=active.get(input.tool_use_id);if(!call)return {};
     const failed=input.hook_event_name==='PostToolUseFailure';
     // 内部端口成功自行记录；异常保留真实失败，不能重建成功结果。
-    const result=failed?{content:[{type:'text',text:input.error}]}:input.tool_response;
+    const result=failed?toolFailureResult(input.error):input.tool_response;
     await context.emit({type:'tool.finished',data:{id:input.tool_use_id,name:call.name,isError:failed,result}});
-    active.delete(input.tool_use_id);grants.delete(input.tool_use_id);return {};
+    active.delete(input.tool_use_id);grants.delete(input.tool_use_id);
+    return failed?{hookSpecificOutput:{hookEventName:'PostToolUseFailure',additionalContext:JSON.stringify(result)}}:{};
   };
   return {native,expected:[...native,...catalog.map(tool=>prefix+tool.name)],config:{type:'sdk',name:'cbim',instance:server} as McpSdkServerConfigWithInstance,
     hooks:{PreToolUse:[{hooks:[before],onFailure:'block' as const}],PostToolUse:[{hooks:[after],onFailure:'block' as const}],PostToolUseFailure:[{hooks:[after],onFailure:'block' as const}]},

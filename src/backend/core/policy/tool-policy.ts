@@ -5,12 +5,14 @@
  * 设计原因：权限来自可信运行配置，副作用、契约版本和仓库范围来自已注册工具的捕获描述；模型参数不能提高权限或把外部资料冒充项目文件。
  * 职责边界：原生路径检查先于人工确认；模块负责人四工具须精确匹配知识范围与效果，提交沿 read/ask/execute 门禁。产物验证只接受准确名称和 read 效果；未知命令范围不被描述为沙箱隔离。
  * 反馈边界：只有桌面明确连接并允许自动提交的精确 GitHub 范围可免逐条 ask；read 仍拒绝外部写。独立状态查询严格限制为工作区只读，不需要也不产生连接授权。
+ * 岗位边界：只识别已声明的四项主岗位工具，知识范围与固定效果一致；预览不授予提交权限。
  */
 import type {ChatPermission} from './types';
 import type {ToolCall,ToolDecision,ToolEffect,ToolScope} from '../tools/types';
 import {toolScopeSchema} from '../tools/scope-schema';
 import {governanceToolEffects,isGovernanceToolName} from '../governance/module-governance-tools';
 import {isModuleOwnershipToolName,moduleOwnershipToolEffects,moduleOwnershipToolPrefix} from '../workspace/module-ownership-tool-policy';
+import {memberToolEffects,type MemberToolName} from '../team/workspace-member-tools';
 import {isDeepStrictEqual} from 'node:util';
 import type {FeedbackScope} from '../connectors/github-feedback';
 
@@ -31,8 +33,8 @@ export interface RunPolicyContext {
 }
 /** 每次调用独立评估；审批缓存由运行所有者清理，本策略不持久化授权。 */
 export async function authorizeRunTool(call:ToolCall,tool:RunToolDescriptor,context:RunPolicyContext):Promise<ToolDecision>{
-  const governance=call.name.startsWith('cbim_governance_'),ownership=call.name.startsWith(moduleOwnershipToolPrefix);
-  let scope:ToolScope={kind:governance||ownership||tool.effects.includes('command')?'unknown':tool.effects.includes('knowledge-write')?'knowledge':'workspace',workspaceId:context.workspaceId};
+  const governance=call.name.startsWith('cbim_governance_'),ownership=call.name.startsWith(moduleOwnershipToolPrefix),member=call.name.startsWith('cbim_member_change_')||['cbim_member_inspect','cbim_member_receipt'].includes(call.name);
+  let scope:ToolScope={kind:governance||ownership||member||tool.effects.includes('command')?'unknown':tool.effects.includes('knowledge-write')?'knowledge':'workspace',workspaceId:context.workspaceId};
   const decision=(allow:boolean,reason?:string):ToolDecision=>({allow,reason,effects:tool.effects,scope});
   if(call.name.startsWith('cbim_scoped_')&&(!['cbim_scoped_read','cbim_scoped_node'].includes(call.name)||tool.native||tool.effects.length!==1||tool.effects[0]!== (call.name==='cbim_scoped_read'?'read':'command')||tool.contractVersion!==1))return decision(false,'范围工具缺少本轮真实注册或副作用分类不一致');
   // 内部受控写不经过 native guard，必须由实际成员工厂分类且平台独立检查完整路径。
@@ -43,6 +45,7 @@ export async function authorizeRunTool(call:ToolCall,tool:RunToolDescriptor,cont
   if(governance&&(!isGovernanceToolName(call.name)||tool.native||tool.effects.length!==1||tool.effects[0]!==governanceToolEffects[call.name]||tool.scope?.kind!=='knowledge'))return decision(false,'治理工具缺少本轮真实注册的知识作用域或效果不一致');
   // 责任治理只允许实际主运行注册的固定效果；read/preview 不因知识范围自动获得写权。
   if(ownership&&(!isModuleOwnershipToolName(call.name)||tool.native||tool.effects.length!==1||tool.effects[0]!==moduleOwnershipToolEffects[call.name]||tool.scope?.kind!=='knowledge'))return decision(false,'模块责任工具缺少本轮真实知识范围或效果不一致');
+  if(member&&(!Object.hasOwn(memberToolEffects,call.name)||tool.native||tool.effects.length!==1||tool.effects[0]!==memberToolEffects[call.name as MemberToolName]||tool.scope?.kind!=='knowledge'))return decision(false,'岗位工具缺少本轮真实知识范围或效果不一致');
   if(call.name.startsWith('cbim_repository_')&&tool.scope?.kind!=='repository')return decision(false,'仓库工具缺少本轮可信捕获范围');
   const feedbackStatus=call.name==='cbim_feedback_status';
   if(feedbackStatus&&(tool.native||tool.contractVersion!==1||tool.effects.length!==1||tool.effects[0]!=='read'||tool.scope?.kind!=='workspace'))return decision(false,'反馈状态查询必须是本轮注册的工作区只读工具');
@@ -53,7 +56,7 @@ export async function authorizeRunTool(call:ToolCall,tool:RunToolDescriptor,cont
   if(tool.scope!==undefined){
     const captured=toolScopeSchema.safeParse(tool.scope);
     if(!captured.success||captured.data.workspaceId!==context.workspaceId)return decision(false,'工具捕获范围与本轮工作区不一致');
-    if(governance||ownership){
+    if(governance||ownership||member){
       if(captured.data.kind!=='knowledge')return decision(false,'治理工具必须使用本轮知识作用域');
       scope=captured.data;
     }else if(captured.data.kind==='github-feedback'){

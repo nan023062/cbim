@@ -1,4 +1,5 @@
 /**
+ * 图片附件以固定尺寸缩略显示，预览按视口缩放，不改变原图片字节。
  * 作用定位：对齐 Cindy 的消息列、工作记录折叠行及一体式底部输入框。
  * 设计原因：消息和输入框共用 850px 内容宽度，控件内嵌输入卡片，工具和诊断按需展开，兼容窄窗口与明暗主题。
  */
@@ -34,3 +35,6 @@
 
 .composer-chip,.composer-picker-panel{color:var(--text)}
 .thread-history-issues{margin:12px 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}.thread-history-issues details{margin-top:8px}.thread-history-issues summary{cursor:pointer}.thread-history-issues code{word-break:break-all;font-size:10px}
+
+/* 仅缩放已保存图片快照，不加载原来源。 */
+.attachment-thumbnail{width:40px;height:40px;object-fit:cover;border-radius:6px}.attachment-full-image{display:block;max-width:100%;max-height:50vh;object-fit:contain;margin:12px auto}

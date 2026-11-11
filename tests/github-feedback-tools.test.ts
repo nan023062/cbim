@@ -52,19 +52,19 @@ describe('feedback tool contracts and authorization',()=>{
 function summary(events:EngineEvent[]):RunSummary{return {task:{taskId:'task',workspaceId:'workspace',root:'root',goal:'feedback context',moduleIds:[],acceptance:[]},runId:'run',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:events.map((event,index)=>({...event,version:1,seq:index+1,taskId:'task',workspaceId:'workspace',runId:'run',time:'2026-11-08T00:00:00Z'}))}}
 const receipt={version:1,toolCallId:'call',toolName:'cbim_feedback_submit',workspaceId:'workspace',taskId:'task',runId:'run',outcome:'succeeded',inputHash:'a'.repeat(64),resultHash:'b'.repeat(64),effects:['external-write'],scope,recordedAt:'2026-11-08T00:00:00Z'};
 const finish:EngineEvent={type:'tool.finished',data:{id:'call',name:'cbim_feedback_submit',isError:false,receipt,result:{content:[{type:'text',text:JSON.stringify(submitted)}]}}};
-describe('silent feedback presentation',()=>{
-  it('retains trusted external receipt without leaking private body or URL, then hides extra success text',()=>{
+describe('feedback completion presentation',()=>{
+  it('retains trusted external receipt without leaking private body or URL and preserves final feedback',()=>{
     expect(toolReceiptSchema.safeParse(receipt).success).toBe(true);
     const raw=summary([{type:'run.started',data:{message:'my feedback'}},finish,{type:'message.delta',data:{text:'created'}},{type:'message',data:{role:'assistant',text:'created: issue link'}}]);
     const events=raw.events.map(event=>projectRunEvent({...event,data:event.type==='tool.finished'?{...event.data,input:{body:'PRIVATE'},result:{token:'PRIVATE_TOKEN',url:'PRIVATE_URL'}}:event.data},{workspaceId:'workspace',taskId:'task',runId:'run'},raw.task));
     expect(JSON.stringify(events)).not.toMatch(/PRIVATE|PRIVATE_TOKEN|PRIVATE_URL/);expect(events[1].data.receipt).toMatchObject({effects:['external-write'],scope});
-    expect(transcript({...raw,events}).filter(item=>item.kind==='assistant')).toEqual([]);expect(transcript({...raw,events}).some(item=>item.kind==='tool')).toBe(true);
+    expect(transcript({...raw,events}).filter(item=>item.kind==='assistant').map(item=>item.text)).toEqual(['created: issue link']);expect(transcript({...raw,events}).some(item=>item.kind==='tool')).toBe(true);
   });
   it.each(['failed','unknown','denied'])('preserves explanation when submission is %s',outcome=>{
     const result=transcript(summary([{...finish,data:{...finish.data,isError:true,receipt:{...receipt,outcome}}},{type:'message',data:{text:'请重新连接或核实原提交'}}]));expect(result.some(item=>item.text==='请重新连接或核实原提交')).toBe(true);
   });
   it('does not trust mere success prose or malformed scope, and resumes after a new user insertion',()=>{
     const untrusted=transcript(summary([{...finish,data:{...finish.data,receipt:undefined}},{type:'message',data:{text:'explain'}}]));expect(untrusted.some(item=>item.text==='explain')).toBe(true);
-    const result=transcript(summary([finish,{type:'message',data:{text:'hidden'}},{type:'engine.status',data:{metric:'insertion',state:'accepted',message:'next question'}},{type:'message',data:{text:'normal answer'}}]));expect(result.map(item=>item.text)).not.toContain('hidden');expect(result.map(item=>item.text)).toContain('normal answer');
+    const result=transcript(summary([finish,{type:'message',data:{text:'submission confirmed'}},{type:'engine.status',data:{metric:'insertion',state:'accepted',message:'next question'}},{type:'message',data:{text:'normal answer'}}]));expect(result.map(item=>item.text)).toContain('submission confirmed');expect(result.map(item=>item.text)).toContain('normal answer');
   });
 });

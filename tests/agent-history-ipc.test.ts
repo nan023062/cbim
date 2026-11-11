@@ -39,7 +39,7 @@ it('未知操作和原型属性不落入历史处理器，保留主分派未知�
   for(const action of ['agentHistory.unknown','toString','constructor','__proto__'])expect(isAgentHistoryAction(action)).toBe(false);
   await expect(dispatchApplication({} as Application,'agentHistory.unknown',{})).rejects.toMatchObject({code:'ACTION'});
 });
-it('172 项契约与实际应用处理器、桌面入口完整对应',()=>{
+it('全部契约与实际应用处理器、桌面入口双向完整对应',()=>{
   const names=new Set<string>();
   // 自动化沿用 0.1.7 的 actions 文件名，同样纳入真实处理器与共享契约的双向覆盖核对。
   for(const file of [...fs.readdirSync('src/backend/main/ipc').filter(name=>name.endsWith('-handlers.ts')||name==='agent-history.ts'||name==='automation-actions.ts').map(name=>'src/backend/main/ipc/'+name),'src/backend/main/main.ts']){
@@ -51,6 +51,6 @@ it('172 项契约与实际应用处理器、桌面入口完整对应',()=>{
     };visit(source);
   }
   expect([...names].sort()).toEqual(Object.keys(ipcRequests).sort());
-  expect(names.size).toBe(172);
+  expect([...names]).toEqual(expect.arrayContaining(['chat.image','chat.paths','web.settings','web.configure']));
   expect(Object.keys(agentHistoryRequests)).toHaveLength(4);
 });

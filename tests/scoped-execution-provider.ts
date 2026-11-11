@@ -13,12 +13,12 @@ export async function scopedProvider(mode:'complete'|'stop'='complete'){
   else{assert.ok(body.tools?.every(t=>!['read','write','edit','bash','grep','find','ls'].includes(t.function.name)),'范围模式不得注册native');
    if(turn===0)tool('plan','cbim_task_plan',{expectedVersion:0,goal:scopedData.memberGoal,acceptance:scopedData.acceptance,reason:'执行固定范围验证',steps:[{id:'verify',title:'验证实际输出',owner:'当前成员'}]});
    else if(turn===1)tool('outside-read','cbim_scoped_read',{path:'private.txt'});
-   else if(turn===2){assert.ok(scopedResult(body,'outside-read').error);tool('forged-native','bash',{command:'echo UNSAFE > private.txt'})}
+   else if(turn===2){assert.equal(scopedResult(body,'outside-read').retryable,false);assert.equal(typeof scopedResult(body,'outside-read').message,'string');tool('forged-native','bash',{command:'echo UNSAFE > private.txt'})}
    else if(turn===3)tool('read-entry','cbim_scoped_read',{path:'src/main.cjs'});
    else if(turn===4){assert.ok(scopedResult(body,'read-entry').file.sha256);state.nodeRequested=true;tool('node','cbim_scoped_node',{entry:'src/main.cjs',files:['src/main.cjs','src/data.txt'],args:[],outputs:['out.txt']})}
    else if(turn===5){assert.equal(mode,'complete');state.node=scopedResult(body,'node');assert.equal(state.node.exitCode,0,JSON.stringify(state.node));assert.equal(Buffer.from(state.node.outputs[0].base64,'base64').toString(),scopedData.after);tool('read-before','cbim_scoped_read',{path:scopedData.file})}
    else if(turn===6){state.before=scopedResult(body,'read-before');assert.equal(state.before.content,scopedData.before);tool('outside-write','cbim_file_write_controlled',{path:'private.txt',expectedBefore:{byteLength:state.before.file.byteLength,sha256:state.before.file.sha256},content:'UNSAFE'})}
-   else if(turn===7){assert.ok(scopedResult(body,'outside-write').error);tool('write-result','cbim_file_write_controlled',{path:scopedData.file,expectedBefore:{byteLength:state.before.file.byteLength,sha256:state.before.file.sha256},content:Buffer.from(state.node.outputs[0].base64,'base64').toString()})}
+   else if(turn===7){assert.equal(scopedResult(body,'outside-write').retryable,false);assert.equal(typeof scopedResult(body,'outside-write').message,'string');tool('write-result','cbim_file_write_controlled',{path:scopedData.file,expectedBefore:{byteLength:state.before.file.byteLength,sha256:state.before.file.sha256},content:Buffer.from(state.node.outputs[0].base64,'base64').toString()})}
    else if(turn===8){assert.equal(scopedResult(body,'write-result').state,'applied');tool('read-result','cbim_scoped_read',{path:scopedData.file})}
    else if(turn===9){assert.equal(scopedResult(body,'read-result').content,scopedData.after);tool('inspect','cbim_task_inspect',{})}
    else if(turn===10){state.progress=scopedResult(body,'inspect').plan;tool('capture','cbim_task_artifact_capture',{expectedTaskProgressVersion:state.progress.version,sourceToolCallIds:['read-result']})}

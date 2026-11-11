@@ -74,6 +74,19 @@ test.each(['claude-code','codex'] as const)('Agent 与已排队消息各自冻�
   expect(queuedMessageSchema.parse({id:randomUUID(),taskId:randomUUID(),message:'test',status:'pending',options:{engine,provider:'cbim-'+runtime.profileId,profileId:runtime.profileId,model:'test'}}).options.engine).toBe(engine);
 });
 
+test('Claude 模型选择诊断区分空目录、协议不匹配和已禁用；非 Claude 型号原样可选',async()=>{
+  const render=(profiles:LlmProfile[])=>renderToStaticMarkup(createElement(EngineModelPicker,{models:{secureStorage:false,profiles},initialEngine:'claude-code',onChange:()=>{}}));
+  const compatible:LlmProfile={...base,id:randomUUID(),hasKey:false};
+  expect(render([])).toContain('尚未配置供应商');
+  expect(render([{...compatible,api:'openai-completions'}])).toContain('仅有 OpenAI Chat/Responses 地址时不能直接切换协议');
+  expect(render([{...compatible,models:base.models.map(m=>({...m,enabled:false}))}])).toContain('添加或启用模型');
+  const f=await fixture();try{
+    const modelId='vendor/qwen-custom-2026',saved=await f.models.save({profile:{...base,defaultModel:modelId,models:[{...base.models[0],id:modelId,name:modelId}]}});
+    expect(render(saved.profiles)).toContain(modelId);
+    expect((await f.models.resolve(saved.selectedId,modelId,'claude-code')).profile.model).toBe(modelId);
+  }finally{await f.cleanup()}
+});
+
 test('同一 Responses 模型可供 Pi 与 Codex 使用；禁用模型不进入任何新执行',async()=>{
   const f=await fixture();try{
     const saved=await f.models.save({profile:{...base,api:'openai-responses'}}),id=saved.selectedId!;

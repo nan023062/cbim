@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {Application} from '../src/backend/main/application';
+import type {LoopEngine} from '../src/backend/core/brain/llm/engine';
 import type {LlmDefinition} from '../src/backend/core/brain/llm/config';
 import {workspaceMemberDetailSchema,type WorkspaceMemberAdaptation} from '../src/backend/core/team/workspace-member';
 import {seedTeam} from './team-fixture';
@@ -26,12 +27,12 @@ export const ownerExecutionData={
 } as const;
 
 /** Opt-in setup for real integration fixtures. No implicit registry writes are added to seedTeam or production paths. */
-export async function registerFixtureOwner(app:Application,workspaceId:string,input:{agentId:string;moduleIds:string[];profileId:string;modelId:string;name:string;adaptation:WorkspaceMemberAdaptation}){
+export async function registerFixtureOwner(app:Application,workspaceId:string,input:{agentId:string;moduleIds:string[];profileId:string;modelId:string;engine?:LoopEngine;name:string;adaptation:WorkspaceMemberAdaptation}){
   assert.ok(input.moduleIds.length);assert.equal(new Set(input.moduleIds).size,input.moduleIds.length);
   const registration=await commitWorkspaceMember(app,workspaceId,{
     kind:'register',agentId:input.agentId,name:input.name,
     position:'由主调度按当前模块责任派发，使用该岗位独立配置核实实际业务证据。',
-    adaptation:input.adaptation,runtimePolicy:{profileId:input.profileId,modelId:input.modelId},
+    adaptation:input.adaptation,runtimePolicy:{profileId:input.profileId,modelId:input.modelId,...(input.engine?{engine:input.engine}:{})},
     reason:'测试中明确登记岗位及运行配置，不从静态 Agent 或主模型推测岗位。',
   });
   const identity={workspaceId,instanceId:app.workspace(workspaceId).instanceId};

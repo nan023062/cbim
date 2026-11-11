@@ -1,13 +1,14 @@
 /**
  * 作用定位：定义用户选择的协作模式和自动兜底的冻结身份，供计划、任务与运行共用。
- * 设计原因：没有登记岗位时仍可明确派给内置执行员，但不能伪造 memberId、负责人关系或知识来源。
+ * 设计原因：协作周期冻结主会话独立引擎与模型；旧兜底记录仅保留可读，未登记岗位的业务由主 Agent 执行。
  * 职责边界：纯数据契约，不授予工具权限；是否可兜底还须核实可信周期、当前模块与实际模型。
  */
 import {z} from 'zod';
+import {loopEngineSchema} from '../brain/llm/engine';
 import {projectRootModuleId} from '../workspace/project-root';
 
 const id=z.string().min(1).max(512),digest=z.string().regex(/^[a-f0-9]{64}$/);
-const model=z.object({profileId:z.string().uuid(),modelId:z.string().min(1).max(160),configurationHash:digest}).strict();
+const model=z.object({profileId:z.string().uuid(),modelId:z.string().min(1).max(160),configurationHash:digest,engine:loopEngineSchema.optional()}).strict();
 /** 与始终可查询的项目根共用身份；旧自动委派契约仍仅在无任何正式模块时接受该范围。 */
 export const implicitProjectModuleId=projectRootModuleId;
 export const collaborationModeSchema=z.enum(['auto','team']);

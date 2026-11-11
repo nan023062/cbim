@@ -63,6 +63,8 @@ export const logicalBoundaries = [
       "src/bridge/contracts/ipc-shapes.ts",
       "src/bridge/contracts/ipc-workspace.ts",
       "src/bridge/contracts/agent-history-ipc.ts",
+      "src/bridge/contracts/model-actions.ts",
+      "src/bridge/contracts/automation.ts",
       "src/bridge/contracts/workspace-view.ts"
     ],
     "public": [
@@ -78,12 +80,17 @@ export const logicalBoundaries = [
       "src/bridge/contracts/ipc-shapes.ts",
       "src/bridge/contracts/ipc-workspace.ts",
       "src/bridge/contracts/agent-history-ipc.ts",
+      "src/bridge/contracts/model-actions.ts",
+      "src/bridge/contracts/automation.ts",
       "src/bridge/contracts/workspace-view.ts"
     ],
     "dependencies": [
       "knowledge-data"
     ],
     "imports": [
+      "src/backend/core/automation/contracts.ts",
+      "src/backend/core/team/agent-runtime.ts",
+      "src/bridge/contracts/models.ts",
       "src/backend/core/brain/llm/catalog.ts",
       "src/backend/core/brain/llm/config.ts",
       "src/backend/core/brain/types.ts",
@@ -138,9 +145,9 @@ export const logicalBoundaries = [
     imports:['src/backend/core/foundation/files.ts','src/backend/core/team/session-history-storage.ts'],external:['node:fs/promises','node:path'],
   },
   {
-    id:'run-view', prefix:'src/frontend/run-view/',
-    public:['src/frontend/run-view/WorkStatus.tsx','src/frontend/run-view/ToolActivity.tsx','src/frontend/run-view/MarkdownMessage.tsx','src/frontend/run-view/transcript.ts','src/frontend/run-view/tool-labels.ts','src/frontend/run-view/repairStreamingMarkdown.ts','src/frontend/run-view/contracts.ts'],
-    dependencies:[], imports:['src/bridge/contracts/execution.ts','src/bridge/contracts/models.ts','src/frontend/components/Icon.tsx','src/frontend/components/RepositoryScopeDetails.tsx'],
+    id:'execution-view', prefix:'src/frontend/execution-view/',
+    public:['src/frontend/execution-view/WorkStatus.tsx','src/frontend/execution-view/ToolTimeline.tsx','src/frontend/execution-view/MarkdownMessage.tsx','src/frontend/execution-view/transcript.ts','src/frontend/execution-view/tool-labels.ts','src/frontend/execution-view/repairStreamingMarkdown.ts','src/frontend/execution-view/MessageQueue.tsx','src/frontend/execution-view/QuestionCard.tsx','src/frontend/execution-view/ComposerAttachments.tsx','src/frontend/execution-view/knowledge-tool-view.ts'],
+    dependencies:[], imports:['src/bridge/contracts/execution.ts','src/bridge/contracts/models.ts','src/bridge/contracts/chat.ts','src/bridge/contracts/knowledge-transactions.ts','src/frontend/components/Icon.tsx','src/frontend/components/RepositoryScopeDetails.tsx'],
     external:['react','react-markdown','remark-gfm','rehype-highlight'],
   },
   {

@@ -16,7 +16,7 @@
 
 ## 当前接续
 
-冻结干净源码并构建唯一候选；通过完整 CI 与隔离安装后合并及公开，随后验证真实上一版 UI 升级，再同步既有 GitHub Pages 和双分支。
+0.1.5 已公开；准确候选的全新安装、完整 CI、PR #30 合并及真实 0.1.4 在线升级均已完成。官网内容、品牌构建与 14 场景验证已通过；官网收尾 PR、master 部署、匿名六文件与双分支的最终回执集中附于 PR #30，避免为补填最终 SHA 重复产生记录提交。下列候选/失败记录是过程历史，最终结果见文末。
 
 ## 首轮候选与桌面专项
 
@@ -45,3 +45,65 @@
 - 维护资料差异边界：Forge 复制整份 design/docs，候选附带的开发记录是冻结快照；后续回填不与候选全部资源逐字相同，发布前另核 Builtins 实际白名单与运行/依赖/品牌/构建输入，绝不覆盖公开附件。
 
 - 第二轮完整 CI 最终 375 文件/2587 项：2584 通过、1 失败、2 原有跳过；唯一失败为上述读取时序。安装 run 42764972516 已通过：实际 NotSigned、isPackaged、0.1.4 → 0.1.5、freshInstall=true，workspace/model/completedConversation/localStorage/marker/noReplay 六项均 true，模型请求 1、页面错误 0。本阶段直接安装草稿，不代表公开通道 UI 升级已经完成。
+
+## 公开、完整检查与真实在线升级
+
+- 冻结源码：`f9c2892dc71dec38c9c214308257fc4fca996970`；验证 head：`ca5128eccc5f87cb44ab3fd302caf8c1e7e62b89`，base：`fcb7774a9b7b91ae45ad0afa99e84233094b2ef4`。完整 Windows 四片 [42765924284](https://github.com/nan023062/cbim/actions/runs/42765924284) 通过：375 文件、2587 项，2585 通过、0 失败、2 跳过。跳过分别为 owner-execution-legacy 与 knowledge-source-lifecycle-application 的真实历史 EXE 前置未提供，均为原有缺口。
+- [PR #30](https://github.com/nan023062/cbim/pull/30) 正常合并为 `8f79fc5aaaf7c3cc2e45a9ae6f8b219e63ea1fd2`，2026-11-10T06:16:44Z；合并树与上述验证 head 一致，冻结源码是其祖先。源码到验证 head 仅一个测试文件及三个维护记录变化；22 项 Builtins 白名单正文一致，运行/依赖/品牌/构建输入不变。Forge 全量复制的 design/docs 维护快照确实有差异，不声称全部资源字节一致。
+- 唯一候选 `unsigned-20261110-134811-132982f4`；正式 EXE SHA-256 `3b7542ca7e05dd9d556c684ca8999b7ce1206f4096e8bf6c363f841f87232ee7`。公开前再次执行显式 `verify:desktop --unsigned` 成功，没有重新构建或替换附件。
+- [desktop-v0.1.5](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.5)，Release ID **439994358**，公开时间 **2026-11-10T06:18:22Z**，draft=false、prerelease=false、make_latest=false。注解标签对象 `f3525dd1f3a28838ea5e81fdd910a2c67d9360bb` peeled 到冻结源码；旧 Python latest 仍为 327801733 / v1.0.2。
+
+| 公开附件 | 字节数 | SHA-256 | asset ID |
+| --- | ---: | --- | --- |
+| CBIM-Setup-0.1.5-x64.exe | 391417341 | `1ac988afd1a017af9e960f27092e29a4e782dfc698c9188c9ee563ea4f824599` | 730290904 |
+| CBIM-Setup-0.1.5-x64.exe.blockmap | 407889 | `9ab6fcab06f015de4a98c34e049681698f2b873396cf299578899b0116fd311a` | 730292299 |
+| latest.yml | 345 | `4025ab4f577d89f2ece2894b09cc8f60f8e88f9f9c113258574219785c062f72` | 730292399 |
+| SHA256SUMS.txt | 268 | `db06ed44017983e3c96a63cf3ff72bca391d3fbfdc8a2c92a48da8403da6f7b2` | 730292482 |
+
+- 候选安装 [42764972516](https://github.com/nan023062/cbim/actions/runs/42764972516) 与在线升级 [42768158030](https://github.com/nan023062/cbim/actions/runs/42768158030) 均成功。两者 workflow/source SHA 均为冻结源码，输入 version=0.1.5、previous_version=0.1.4、installer_sha256 为上表安装包；前者 ref=develop/mode=candidate，后者 ref=desktop-v0.1.5/mode=online。候选全新安装与覆盖升级的证据、公开通道 UI 升级的证据分别保留。
+- 在线验收完成于 2026-11-10T06:27:50.317Z：真实 0.1.4 匿名发现新版，经 UI 下载且缓存摘要匹配；独立普通退出场景没有安装，重开后主动下载自动安装重启至 0.1.5。新进程带 --updated 和原 --cbim-user-data-root；workspace/model/completedConversation/localStorage/marker/noReplay 全部为 true，modelRequests=1、pageErrors=[]、isPackaged=true、NotSigned。已审阅新版更新页截图。整个安装验收仅在无用户安装的隔离 Windows runner 执行。
+- 原始证据分别保存在 test-results/desktop-0.1.5-20261110 下的 ci-third-shard1..4、candidate-42764972516、online-42768158030，发布写入意图及回执在唯一候选 publication-journal.jsonl。
+
+## 源码认知与完整 Review 入口
+
+[PR #30 全部文件](https://github.com/nan023062/cbim/pull/30/files) 对应上述 base 到 ca5128ec 的完整范围；功能 a4472ecb、界面 af3ce53a、可信核证租约 f9c2892d 和验证 ca5128ec 保留为独立提交。测试通过、本人代码自查、桌面验收与人工 review 是不同事实，本记录不宣称已获得维护者人工审阅接受。
+
+阅读顺序：先看 [引擎契约](../../src/backend/core/brain/CONTRACT.md) 与 [模型配置](../../src/backend/core/brain/llm/ARCHITECTURE.md)，再看 [Claude 适配](../../src/backend/core/brain/claude/ARCHITECTURE.md) / [Codex 适配](../../src/backend/core/brain/codex/ARCHITECTURE.md)（现行入口；原 docs 文档已按文档清理提交删除）；随后看 [执行装配](../../src/backend/scheduler-engine/execution/ARCHITECTURE.md)、[主会话装配](../../src/backend/main/ARCHITECTURE.md) 和 [共用下拉菜单](../../src/frontend/components/ARCHITECTURE.md)。引擎只负责原生协议和会话，任务/权限/知识事务/请求账本仍由原服务拥有；新增协议主要改适配器和装配，不复制业务规则。可信主核证通过原主占用派生独立释放的读占用，桌面预览/决定仍独立获取权限，不扩大外部入口。
+
+已同步变更源码的文件头、重要接口/字段说明；受影响 ARCHITECTURE 清单如下，各条链接给出实际职责和类图，不以目录统计代替源码审阅：
+
+- [src/backend/core/ARCHITECTURE.md](../../src/backend/core/ARCHITECTURE.md)
+- [src/backend/core/brain/ARCHITECTURE.md](../../src/backend/core/brain/ARCHITECTURE.md)
+- [src/backend/core/brain/claude/ARCHITECTURE.md](../../src/backend/core/brain/claude/ARCHITECTURE.md)
+- [src/backend/core/brain/codex/ARCHITECTURE.md](../../src/backend/core/brain/codex/ARCHITECTURE.md)
+- [src/backend/core/brain/llm/ARCHITECTURE.md](../../src/backend/core/brain/llm/ARCHITECTURE.md)
+- [src/backend/core/brain/pi/ARCHITECTURE.md](../../src/backend/core/brain/pi/ARCHITECTURE.md)
+- [src/backend/core/knowledge/ARCHITECTURE.md](../../src/backend/core/knowledge/ARCHITECTURE.md)
+- [src/backend/core/tasks/ARCHITECTURE.md](../../src/backend/core/tasks/ARCHITECTURE.md)
+- [src/backend/core/team/ARCHITECTURE.md](../../src/backend/core/team/ARCHITECTURE.md)
+- [src/backend/core/tools/ARCHITECTURE.md](../../src/backend/core/tools/ARCHITECTURE.md)
+- [src/backend/main/ARCHITECTURE.md](../../src/backend/main/ARCHITECTURE.md)
+- [src/backend/main/persistence/settings/ARCHITECTURE.md](../../src/backend/main/persistence/settings/ARCHITECTURE.md)
+- [src/backend/main/platform/ARCHITECTURE.md](../../src/backend/main/platform/ARCHITECTURE.md)
+- [src/backend/scheduler-engine/ARCHITECTURE.md](../../src/backend/scheduler-engine/ARCHITECTURE.md)
+- [src/backend/scheduler-engine/context/ARCHITECTURE.md](../../src/backend/scheduler-engine/context/ARCHITECTURE.md)
+- [src/backend/scheduler-engine/conversation/ARCHITECTURE.md](../../src/backend/scheduler-engine/conversation/ARCHITECTURE.md)
+- [src/backend/scheduler-engine/execution/ARCHITECTURE.md](../../src/backend/scheduler-engine/execution/ARCHITECTURE.md)
+- [src/backend/scheduler-engine/tools/ARCHITECTURE.md](../../src/backend/scheduler-engine/tools/ARCHITECTURE.md)
+- [src/bridge/contracts/ARCHITECTURE.md](../../src/bridge/contracts/ARCHITECTURE.md)
+- [src/frontend/ARCHITECTURE.md](../../src/frontend/ARCHITECTURE.md)
+- [src/frontend/components/ARCHITECTURE.md](../../src/frontend/components/ARCHITECTURE.md)
+- [src/frontend/conversation/ARCHITECTURE.md](../../src/frontend/conversation/ARCHITECTURE.md)
+- [src/frontend/knowledge/ARCHITECTURE.md](../../src/frontend/knowledge/ARCHITECTURE.md)
+- [src/frontend/settings/ARCHITECTURE.md](../../src/frontend/settings/ARCHITECTURE.md)
+- [src/frontend/team/ARCHITECTURE.md](../../src/frontend/team/ARCHITECTURE.md)
+- [src/frontend/workspace/ARCHITECTURE.md](../../src/frontend/workspace/ARCHITECTURE.md)
+
+同范围的 23 份 CONTRACT 与 12 份概念文档已同步，可在 PR 完整文件列表核对。官网收尾只修改外部发布页面、README、维护说明和开发 Skill；不修改已公开制品或产品源码。在线供应商兼容性、模型业务质量及缺少历史 EXE 的两项迁移仍是验证边界。
+
+## 匿名下载与官网收尾验证
+
+- 2026-11-10T06:34:05.042Z，curl.exe -q 无 Authorization/token 匿名下载四附件，实际字节数与上表 SHA-256 全部一致；latest.yml 的安装包 SHA-512、大小和 SHA256SUMS.txt 关系同时通过。首轮 Node fetch 超时、本机匿名 Release API 返回 403 的记录保留，没有把带凭据读取当匿名通过；后续公开附件读取与隔离旧客户端实际发现/下载均成功。
+- website/release.json 的所有发行字段来自同一公开 ID 与资产；同步首页、下载日志/FAQ、README 和引擎说明，保持未签名提示、Search Console 标记、canonical/robots/sitemap。按用户选择保留并合入开发规范提交 812bec168b0dca9723a78b3dc728eb04b1a77d41。
+- 在独立 worktree 执行 pnpm check:brand、CBIM_WEBSITE_URL=https://nan023062.github.io/cbim/ pnpm build:website、node scripts/preview-website.mjs 与 node scripts/website-smoke.mjs：品牌摘要一致，14 场景全部通过，320/390/1280 像素、深浅色与两页独立离线，无横向溢出或页面错误，下载链接/摘要正确；已查看手机下载页与桌面深色首页截图。
+- Node 检查收尾 diff 的 11 份 Markdown 中 404 个本地链接、代码围栏与三个 cbim-development 入口逐字节一致，git diff --check 通过。本步仅发布页面与外部维护文档，不重跑本机产品测试、类型/架构或安装构建。面向 master 的收尾 PR 仍执行既有完整四片；其准确 head/base/merge、部署 run、匿名六文件与分支 SHA 见 [PR #30 最终交付回执](https://github.com/nan023062/cbim/pull/30)。

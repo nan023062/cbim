@@ -10,7 +10,7 @@ import {useEffect,useRef,useState} from 'react';
 import type {GraphCursor,ScopeSummary,TaskNode} from '../../bridge/contracts/dispatch';
 import type {PendingQuestion} from '../../bridge/contracts/execution';
 import type {ChatApproval} from '../../bridge/contracts/chat';
-import {QuestionCard} from '../conversation/QuestionCard';
+import {QuestionCard} from '../execution-view/QuestionCard';
 import {useMemberRun} from './useMemberRun';
 import {MemberRunTranscript} from './MemberRunTranscript';
 import {MemberExecutionReport} from './MemberExecutionReport';

@@ -1,7 +1,7 @@
 {
   "name": "cbim-assistant",
   "productName": "CBIM Assistant",
-  "version": "0.1.5",
+  "version": "0.1.8",
   "private": true,
   "description": "AI Native workflow assistant for teams",
   "author": "CBIM",

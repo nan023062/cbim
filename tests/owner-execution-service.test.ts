@@ -4,6 +4,7 @@ import {request} from './data/knowledge';
 import {seedOwnerExecution} from './owner-execution-fixture';
 import type {GoalPlanInput} from '../src/backend/core/tasks/scope-goal';
 import {ownerExecutionSelectionFor} from '../src/backend/core/team/member-execution-binding';
+import {commitWorkspaceMember} from './workspace-member-fixture';
 
 const latch=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>resolve=done);return {promise,resolve}};
 async function setup(){
@@ -15,6 +16,23 @@ async function setup(){
   const request={...identity,commandId:'owner-service-dispatch',expectedParentRevision:1,task:{assigneeAgentId:seed.team.input.agentId,moduleIds:[seed.modules[0]],ownerSelection:selection,goal:'读取模块材料',acceptance:[{id:'c1',text:'真实读取'}]}};
   return {...f,seed,workspace,service,store,identity,scopeId,runId,selection,input,request};
 }
+
+test('两个岗位共用供应商和模型但选不同引擎，计划核验按配置指纹匹配各自快照',async()=>{
+  const f=await setup();try{
+    const profile=f.seed.profiles[1],first=f.seed.positions[0].member,second=f.seed.positions[1].member;
+    await f.app.models.save({id:profile.id,profile:{...profile.definition,api:'anthropic-messages'}});
+    await commitWorkspaceMember(f.app,f.seed.entry.id,{kind:'adopt',memberId:first.memberId,expectedRevision:first.revision,target:'model',reason:'采纳兼容协议'});
+    await commitWorkspaceMember(f.app,f.seed.entry.id,{kind:'update',memberId:second.memberId,expectedRevision:second.revision,patch:{runtimePolicy:{engine:'claude-code',profileId:profile.id,modelId:profile.definition.defaultModel}},reason:'同模型选择独立引擎'});
+    const groups=(await f.service.owners.discover(f.seed.modules)).groups.filter(group=>group.selection);
+    expect(groups).toHaveLength(2);
+    await f.service.owners.withContext(()=>groups.map(group=>group.selection!),async context=>{
+      expect(context.profiles.map(p=>p.engine??'pi').sort()).toEqual(['claude-code','pi']);
+      const state=await f.store.read();
+      for(const group of groups){const binding=await f.service.owners.resolve(state,context,group.selection!,group.moduleIds);expect(binding.model.profileId).toBe(profile.id)}
+    });
+    expect((await f.store.read()).runs??[]).toHaveLength(0);
+  }finally{await f.cleanup()}
+});
 
 test('发现同时给出能力与模型变化，未配置模块默认主执行且真实缺失模块仍报告',async()=>{
   const f=await setup();try{

@@ -2716,7 +2716,7 @@ class N_src_backend_core_tasks_owner_execution_invariants_ts_DispatchExecutionPr
 N_src_backend_core_tasks_owner_execution_invariants_ts ..> N_src_backend_core_tasks_owner_execution_invariants_ts_DispatchExecutionProtocol : 声明
 ```
 
-直接依赖：[automatic-execution-rules.ts](automatic-execution-rules.ts)、[../team/automatic-execution.ts](../team/automatic-execution.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../team/member-execution-binding.ts](../team/member-execution-binding.ts)、[../team/member-execution-rules.ts](../team/member-execution-rules.ts)、[../team/workspace-member-rules.ts](../team/workspace-member-rules.ts)、[dispatch-storage.ts](dispatch-storage.ts)、[graph-types.ts](graph-types.ts)、[scope-goal.ts](scope-goal.ts)、[workflow-selection.ts](workflow-selection.ts)、[scope-active-input.ts](scope-active-input.ts)。
+直接依赖：[automatic-execution-rules.ts](automatic-execution-rules.ts)、[../team/automatic-execution.ts](../team/automatic-execution.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../team/member-execution-binding.ts](../team/member-execution-binding.ts)、[../team/member-execution-rules.ts](../team/member-execution-rules.ts)、[../team/workspace-member-rules.ts](../team/workspace-member-rules.ts)、[dispatch-storage.ts](dispatch-storage.ts)、[graph-types.ts](graph-types.ts)、[scope-goal.ts](scope-goal.ts)、[workflow-selection.ts](workflow-selection.ts)、[scope-active-input.ts](scope-active-input.ts)、[../workspace/knowledge-source-rules.ts](../workspace/knowledge-source-rules.ts)。
 
 ### persistent-write-input.ts
 

@@ -12,11 +12,14 @@
 | --- | --- |
 | [architecture-editor.css](architecture-editor.css) | 架构语义表单与导入/提交预览的共用布局。设计原因：在窄扩展区仍以独立对话框展示明确的变更边界，沿用应用主题与键盘表单。 */ |
 | [ArchitectureEditor.tsx](ArchitectureEditor.tsx) | 团队与业务架构共用的语义对象编辑器，负责表单、删除影响预览和显式事务提交。 |
+| [GovernanceLaunch.tsx](GovernanceLaunch.tsx) | 业务/团队架构的显式一键治理入口，使用主 Agent 已保存的引擎模型启动真实会话。 |
+| [knowledge-file-tree.ts](knowledge-file-tree.ts) | 把快照中真实知识文件投影为相对目录树，供业务与团队界面共用。 |
+| [knowledge-files.css](knowledge-files.css) | 对应界面的布局与视觉样式。 |
 | [knowledge-source.css](knowledge-source.css) | 对应界面的布局与视觉样式。 |
+| [KnowledgeFilePreview.tsx](KnowledgeFilePreview.tsx) | 在业务和团队架构中预览实际知识文件，并通过原知识事务编辑。 |
+| [KnowledgeFileTree.tsx](KnowledgeFileTree.tsx) | 业务/团队共用的可展开知识目录与文件导航。 |
 | [KnowledgeSourceDetails.tsx](KnowledgeSourceDetails.tsx) | 为项目岗位和模块责任共用展示来源身份、未决状态与明确采纳预览。 |
-| [KnowledgeTools.tsx](KnowledgeTools.tsx) | 知识查询、校验、预览和提交界面，维护未提交修改提示。 |
 | [static-owners.ts](static-owners.ts) | 为静态架构编辑和资源导入提供可选的 Team/小组归属。 |
-| [style.css](style.css) | 知识管理组件的布局、编辑器、问题列表与事务预览样式。 |
 
 ## 架构类图
 
@@ -66,6 +69,66 @@ N_src_frontend_knowledge_ArchitectureEditor_tsx ..> N_src_frontend_knowledge_Arc
 
 直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../components/EngineModelPicker.tsx](../components/EngineModelPicker.tsx)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/architecture.ts](../../bridge/contracts/architecture.ts)、[static-owners.ts](static-owners.ts)、[architecture-editor.css](architecture-editor.css)。
 
+### GovernanceLaunch.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_knowledge_GovernanceLaunch_tsx["GovernanceLaunch.tsx"] {
+  <<component>>
+  +governanceWorkflow()
+  +GovernanceLaunch()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_knowledge_GovernanceLaunch_tsx["GovernanceLaunch.tsx"] {
+  <<component>>
+}
+class N_src_frontend_knowledge_GovernanceLaunch_tsx_GovernanceKind["GovernanceKind"] {
+  <<type>>
+
+}
+N_src_frontend_knowledge_GovernanceLaunch_tsx ..> N_src_frontend_knowledge_GovernanceLaunch_tsx_GovernanceKind : 声明
+```
+
+
+### knowledge-file-tree.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_knowledge_knowledge_file_tree_ts["knowledge-file-tree.ts"] {
+  <<module>>
+  +knowledgeFileTree()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_knowledge_knowledge_file_tree_ts["knowledge-file-tree.ts"] {
+  <<module>>
+}
+class N_src_frontend_knowledge_knowledge_file_tree_ts_KnowledgeTreeNode["KnowledgeTreeNode"] {
+  <<interface>>
+  +path
+  +name
+  +kind
+  +children
+}
+N_src_frontend_knowledge_knowledge_file_tree_ts ..> N_src_frontend_knowledge_knowledge_file_tree_ts_KnowledgeTreeNode : 声明
+```
+
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)。
+
+### knowledge-files.css
+
+```mermaid
+classDiagram
+class N_src_frontend_knowledge_knowledge_files_css["knowledge-files.css"] {
+  <<stylesheet>>
+}
+```
+
 ### knowledge-source.css
 
 ```mermaid
@@ -74,6 +137,30 @@ class N_src_frontend_knowledge_knowledge_source_css["knowledge-source.css"] {
   <<stylesheet>>
 }
 ```
+
+### KnowledgeFilePreview.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_knowledge_KnowledgeFilePreview_tsx["KnowledgeFilePreview.tsx"] {
+  <<component>>
+  +KnowledgeFilePreview()
+}
+```
+
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../execution-view/MarkdownMessage.tsx](../execution-view/MarkdownMessage.tsx)、[knowledge-files.css](knowledge-files.css)。
+
+### KnowledgeFileTree.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_knowledge_KnowledgeFileTree_tsx["KnowledgeFileTree.tsx"] {
+  <<component>>
+  +KnowledgeFileTree()
+}
+```
+
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[knowledge-file-tree.ts](knowledge-file-tree.ts)、[knowledge-files.css](knowledge-files.css)。
 
 ### KnowledgeSourceDetails.tsx
 
@@ -88,18 +175,6 @@ class N_src_frontend_knowledge_KnowledgeSourceDetails_tsx["KnowledgeSourceDetail
 
 直接依赖：[../../bridge/contracts/knowledge-source.ts](../../bridge/contracts/knowledge-source.ts)、[knowledge-source.css](knowledge-source.css)。
 
-### KnowledgeTools.tsx
-
-```mermaid
-classDiagram
-class N_src_frontend_knowledge_KnowledgeTools_tsx["KnowledgeTools.tsx"] {
-  <<component>>
-  +KnowledgeTools()
-}
-```
-
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[style.css](style.css)。
-
 ### static-owners.ts
 
 ```mermaid
@@ -111,15 +186,6 @@ class N_src_frontend_knowledge_static_owners_ts["static-owners.ts"] {
 ```
 
 直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)。
-
-### style.css
-
-```mermaid
-classDiagram
-class N_src_frontend_knowledge_style_css["style.css"] {
-  <<stylesheet>>
-}
-```
 
 ### 本目录调用边界
 
@@ -134,22 +200,40 @@ class N_src_frontend_knowledge_static_owners_ts["static-owners.ts"] {
 class N_src_frontend_knowledge_architecture_editor_css["architecture-editor.css"] {
   <<stylesheet>>
 }
+class N_src_frontend_knowledge_KnowledgeFilePreview_tsx["KnowledgeFilePreview.tsx"] {
+  <<component>>
+}
+class N_src_frontend_knowledge_knowledge_files_css["knowledge-files.css"] {
+  <<stylesheet>>
+}
+class N_src_frontend_knowledge_KnowledgeFileTree_tsx["KnowledgeFileTree.tsx"] {
+  <<component>>
+}
+class N_src_frontend_knowledge_knowledge_file_tree_ts["knowledge-file-tree.ts"] {
+  <<module>>
+}
+N_src_frontend_knowledge_ArchitectureEditor_tsx ..> N_src_frontend_knowledge_static_owners_ts : 导入依赖
+N_src_frontend_knowledge_ArchitectureEditor_tsx ..> N_src_frontend_knowledge_architecture_editor_css : 导入依赖
+N_src_frontend_knowledge_KnowledgeFilePreview_tsx ..> N_src_frontend_knowledge_knowledge_files_css : 导入依赖
+N_src_frontend_knowledge_KnowledgeFileTree_tsx ..> N_src_frontend_knowledge_knowledge_file_tree_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_knowledge_KnowledgeFileTree_tsx["KnowledgeFileTree.tsx"] {
+  <<component>>
+}
+class N_src_frontend_knowledge_knowledge_files_css["knowledge-files.css"] {
+  <<stylesheet>>
+}
 class N_src_frontend_knowledge_KnowledgeSourceDetails_tsx["KnowledgeSourceDetails.tsx"] {
   <<component>>
 }
 class N_src_frontend_knowledge_knowledge_source_css["knowledge-source.css"] {
   <<stylesheet>>
 }
-class N_src_frontend_knowledge_KnowledgeTools_tsx["KnowledgeTools.tsx"] {
-  <<component>>
-}
-class N_src_frontend_knowledge_style_css["style.css"] {
-  <<stylesheet>>
-}
-N_src_frontend_knowledge_ArchitectureEditor_tsx ..> N_src_frontend_knowledge_static_owners_ts : 导入依赖
-N_src_frontend_knowledge_ArchitectureEditor_tsx ..> N_src_frontend_knowledge_architecture_editor_css : 导入依赖
+N_src_frontend_knowledge_KnowledgeFileTree_tsx ..> N_src_frontend_knowledge_knowledge_files_css : 导入依赖
 N_src_frontend_knowledge_KnowledgeSourceDetails_tsx ..> N_src_frontend_knowledge_knowledge_source_css : 导入依赖
-N_src_frontend_knowledge_KnowledgeTools_tsx ..> N_src_frontend_knowledge_style_css : 导入依赖
 ```
 
 
@@ -184,3 +268,13 @@ ArchitectureEditor 的模块模板从 Bridge 的纯正文契约读取，与后�
 ### Agent 默认选型
 
 ArchitectureEditor 读取 models.list 提供引擎/模型选择，提交预览前核查仍可用。runtime 只用于新登记默认值，已有岗位独立配置；删除 Agent 不依赖其模型配置继续存在。
+
+### Agent 引擎与模型
+
+ArchitectureEditor 使用与主 Agent 相同的 AgentModelSelection 和 engineSupportsApi，三引擎固定存在，模型来自统一启用目录。兼容性不再比较供应商 engine；自定义 Agent 的能力与 runtime 仍一次知识事务提交。
+
+## 共用文件树与编辑
+
+KnowledgeFileTree 从当前工作区快照构建真实目录/文件树，折叠只影响查看。KnowledgeFilePreview 显示实际正文与快照格式诊断；编辑器固定打开版本，350ms 延迟完整事务预览，新输入立即作废旧预览，迟到响应丢弃，只有结构通过可提交。发送后的原请求锁定，未知结果不能换 ID 自动重发。派生 registry 只读。原高级 KnowledgeTools 页面已删除。
+
+GovernanceLaunch 明确点击后通过 loop.chat 启动对应团队/业务架构治理工作流，使用主 Agent 保存选型和 ask 权限；真实 taskId 回交 Shell，未知启动不自动重试。

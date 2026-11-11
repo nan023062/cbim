@@ -96,7 +96,7 @@ Conversation --> UsageStatus : 真实等待检查点与状态
 
 原工具轨道缺少完整任务身份时仍展示真实状态和错误，主核实入口明确缺省；不因为新增影响面板而读取缺失字段崩溃，也不根据角色名称补造身份。
 
-Conversation 经 ConversationTurn / ConversationToolCall / RunToolDetails 传递真实主会话的恢复上下文；共享 ToolActivity 只接收展示插槽。每项主调用可明确核实影响，九类主写命令仍保留独立原命令核实卡。不会以业务TaskNode冒充主来源；任务根与对话轨道使用同一真实run和本机处置控制器。展开、挂载与轮询不读取业务文件或自动启动核实。
+Conversation 经 ConversationTurn / ConversationToolCall / tasks/ToolActivity 传递真实主会话的恢复上下文；共享 ToolTimeline 只接收展示插槽。每项主调用可明确核实影响，九类主写命令仍保留独立原命令核实卡。不会以业务TaskNode冒充主来源；任务根与对话轨道使用同一真实run和本机处置控制器。展开、挂载与轮询不读取业务文件或自动启动核实。
 
 unknown 提示不再提供勾选ID解锁旧native的入口。普通无未决工具的对话仍可续聊，有unknown则沿明确观察/新只读核实处理；后端Runtime/Manager另行强制门禁。新核实、修复目标及处置不读写普通草稿、附件、队列或当前模型/权限选择。
 ### 文件补偿的当前工作区身份
@@ -112,7 +112,7 @@ unknown 提示不再提供勾选ID解锁旧native的入口。普通无未决工�
 
 ### 主对话中的内联执行过程
 
-`ConversationTurn` 按 `transcript` 的事件及明确调用关联排列文字与工具。同一 toolCallId 的申请、启动、更新和结束更新原位置，不把全部工具搬到正文前。Pi 的 HTTP 门禁可能先于 stdout 回复落盘；完整 message 的 toolCallIds 只将本段正文放回其原调用之前，不重排前一段、重写日志或猜测旧记录。交错工具事件不打断同一消息的增量替换。工具参数、原回执和失败由共享 `ToolActivity` 展示，显式核实由 `RunToolDetails` 组合；轮尾 `WorkStatus` 只显示用时与运行状态。原独立进展框和底部成员动态区已移除，目标补充/审阅控制与完整任务视图保留。
+`ConversationTurn` 按 `transcript` 的事件及明确调用关联排列文字与工具。同一 toolCallId 的申请、启动、更新和结束更新原位置，不把全部工具搬到正文前。Pi 的 HTTP 门禁可能先于 stdout 回复落盘；完整 message 的 toolCallIds 只将本段正文放回其原调用之前，不重排前一段、重写日志或猜测旧记录。交错工具事件不打断同一消息的增量替换。工具参数、原回执和失败由共享 `ToolTimeline` 展示，显式核实由 `tasks/ToolActivity` 组合；轮尾 `WorkStatus` 只显示用时与运行状态。原独立进展框和底部成员动态区已移除，目标补充/审阅控制与完整任务视图保留。
 
 `inline-task-state` 只关联真实主运行、成功运行回执和严格派发输出：workspace/root/run/call、主实例及图 stream/seq 必须匹配。原工具输出与图上的最新任务状态分开，旧缺证据日志只保留原工具记录；全部任务仍可从任务视图进入。前置“已接收”只取边上实际 resultId，候选仍未验收。成员过程展开才读取、折叠停止观察，不为每个历史任务常驻轮询。系统回注用工具式条目明确标记来源，不生成新的工具日志或用户消息。
 
@@ -138,7 +138,7 @@ unknown 提示不再提供勾选ID解锁旧native的入口。普通无未决工�
 
 ### 共享展示与业务装配
 
-公共运行展示迁入 `../run-view/`。ConversationToolCall 通过具名插槽组合本目录 RunToolDetails，再把真实恢复上下文交给原命令核实及影响观察；ToolActivity/WorkStatus 不再导入任务 Hook。队列包装函数只接受实际四种 queue 操作名，停止、插入、排队和原命令行为保持。
+公共运行展示迁入 `../execution-view/`。ConversationToolCall 通过 tasks/ToolActivity 的具名插槽组合业务控制，再把真实恢复上下文交给原命令核实及影响观察；ToolTimeline/WorkStatus 不导入任务 Hook。队列包装函数只接受实际四种 queue 操作名，停止、插入、排队和原命令行为保持。
 
 ## 全量 IPC 契约衔接
 

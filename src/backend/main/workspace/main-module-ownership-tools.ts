@@ -28,7 +28,7 @@ export function mainModuleOwnershipTools(owner:KnowledgeWorkspace,service:Module
       const page='moduleIds' in input?await service.inspectModules(identity,input.moduleIds):await service.byMember({...identity,...input});current(signal);
       if('moduleIds' in input){
         if(!execution)fail('OWNER_EXECUTION_UNAVAILABLE','本轮未装配岗位执行发现');
-        const discovered=await execution.discover(input.moduleIds);current(signal);
+        const discovered=await execution.discover(input.moduleIds,input.matches);current(signal);
         if(page.basis.knowledgeRevision!==discovered.knowledgeRevision||!isDeepStrictEqual(page.basis.memberRegistryCursor,discovered.registryCursor)||!isDeepStrictEqual(page.basis.ownershipCursor,discovered.ownershipCursor)||!isDeepStrictEqual(page.basis.sourceCursor,discovered.sourceCursor))fail('OWNER_READ_STALE','责任和执行选择在查询期间变化，请重新查询');
         return {identity:publicIdentity,readOnly:true,selection:input,page,execution:discovered};
       }

@@ -3,7 +3,7 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {conversationExecutionState} from '../src/frontend/conversation/conversation-state';
 import {UsageStatus} from '../src/frontend/conversation/UsageStatus';
-import {MessageQueue} from '../src/frontend/conversation/MessageQueue';
+import {MessageQueue} from '../src/frontend/execution-view/MessageQueue';
 import {SendButton} from '../src/frontend/conversation/SendButton';
 import type {ScopeSummary} from '../src/bridge/contracts/dispatch';
 import type {RunSummary,QueuedMessage} from '../src/bridge/contracts/execution';

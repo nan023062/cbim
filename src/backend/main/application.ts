@@ -1,4 +1,5 @@
 /**
+ * 自动化随当前工作区唯一装配；退役先取消调度准备，再排空协作/执行，持久定义不恢复历史模型。
  * 隔离资源服务随工作区实例创建；成员排空后等待原清理日志，未确认隔离退出时应用可再次尝试原关闭。
  * 受控文件边界：Electron 显式注入 utility 传输，普通 Node 不直接写；关闭先确认原文件 child 退出，随后才关闭共享 Store 和工作区锁。
  * 请求预算在工作区实例内共用唯一账本服务；先关闭主/成员代理并结算，再释放 Store，查询本身不会启动或恢复请求。
@@ -9,11 +10,12 @@
  * GitHub 反馈：应用独占本机授权与提交服务；主会话只持有固定目标端口，退出先取消网络再排空原提交，未知结果不会自动重放。
  * 模块治理：仅已就绪 Workspace 提供桌面保护与人工决定服务；实际知识实施仍排入原事务队列，重开不执行保存的意图。
  * 岗位责任：恢复前注入唯一派发存储；持锁核实路径后先初始化历史索引，再加载该存储并恢复来源事务。来源、岗位与模块负责人共用原命令查询；关闭先排空知识结算再关闭该存储。登记与来源采纳不创建运行实例，不改变任务派发或模型策略。
- * 发送入口同时固定引擎与模型引用，拒绝与用户模型目录不一致的引擎选项。
+ * 主 Agent 配置归工作区角色，两处界面共用；发送时读取并冻结引擎与模型引用，按接口协议校验，已受理的执行不会随设置热切换。
  * IPC 边界：已知操作返回关联响应，原始输入保持 unknown 至共享请求解析，应用不提供 any 通配响应。
  */
 import type {IpcAction,IpcResponse} from '../../bridge/contracts/ipc-call';
 import path from 'node:path';
+import {WorkspaceAutomations} from './automation';
 import type {ControlledFileTransport} from './platform/controlled-file-protocol';
 import type {ModelRequestBudgetService} from '../scheduler-engine/execution/model-request-budget-service';
 import type {ControlledFiles} from './workspace/controlled-files';
@@ -21,6 +23,7 @@ import type {IsolatedExecutions} from './workspace/isolated-executions';
 import {dispatchApplication} from './ipc/dispatch';
 import type {ApplicationServices} from './ipc/services';
 import {LlmProfiles,type SecretCipher} from './persistence/settings/llm-profiles';
+import {MainAgentSettings} from './persistence/settings/main-agent-settings';
 import {AdmissionSettings} from './persistence/settings/admission-settings';
 import {BudgetSettings} from './persistence/settings/budget-settings';
 import {GitHubFeedback} from './resources/github-feedback';
@@ -61,7 +64,11 @@ export class Application implements ApplicationServices {
   readonly chatMaterials:ChatMaterialImports;
   /** 全应用共享供应商目录；公开 IPC 不返回凭据，运行时才解密。 */
   readonly models:LlmProfiles;
+  readonly mainAgentSettings:MainAgentSettings;
   private executions=new Map<string,WorkspaceExecutionManager>();
+  private automationServices=new Map<string,WorkspaceAutomations>();
+  /** 自动化仅在当前打开实例调度，关闭先停止新触发，再排空主/成员运行。 */
+  automations(id:string){this.assertServiceAvailable(id);this.workspace(id).assert();const service=this.automationServices.get(id);if(!service)fail('SERVICE_NOT_READY','工作区自动化尚未就绪');return service}
   /** 本次真实主轮与安全等待占位共用入口；重开只恢复等待，绝不自动消费历史任务或结果。 */
   private collaborations=new Map<string,AutoCollaboration>();
   private dispatchers=new Map<string,WorkspaceDispatchService>();
@@ -117,7 +124,7 @@ export class Application implements ApplicationServices {
   private stopping=false;private shutdownPromise?:Promise<void>;
   /** IPC 新增工作区前检查关停状态；只暴露读取，不允许路由修改生命周期。 */
   get isStopping(){return this.stopping}
-  constructor(readonly paths:Paths,designRoot:string,secretCipher?:SecretCipher,private readonly platform:{controlledFiles?:ControlledFileTransport}={}) {this.models=new LlmProfiles(path.join(paths.userRoot,'llm.json'),secretCipher);this.githubFeedback=new GitHubFeedback(path.join(paths.userRoot,'github-feedback'),secretCipher);this.admissionSettings=new AdmissionSettings(path.join(paths.userRoot,'run-admission.json'),this.admission);this.budgetSettings=new BudgetSettings(path.join(paths.userRoot,'scope-budget.json'));this.catalog=new Catalog(paths);this.rules=new Rules(designRoot);this.resources=new ResourceRepositories(paths);this.repositoryConnections=new RepositoryConnections(path.join(paths.userRoot,'repository-connections.json'),this.resources,id=>{this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();return ws});this.chatMaterials=new ChatMaterialImports(id=>{this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();return ws},this.repositoryConnections)}
+  constructor(readonly paths:Paths,designRoot:string,secretCipher?:SecretCipher,private readonly platform:{controlledFiles?:ControlledFileTransport}={}) {this.models=new LlmProfiles(path.join(paths.userRoot,'llm.json'),secretCipher);this.mainAgentSettings=new MainAgentSettings(id=>path.join(paths.project(id),'main-agent.json'),identity=>{this.assertServiceAvailable(identity.workspaceId);this.workspace(identity.workspaceId).assert(identity)},this.models);this.githubFeedback=new GitHubFeedback(path.join(paths.userRoot,'github-feedback'),secretCipher);this.admissionSettings=new AdmissionSettings(path.join(paths.userRoot,'run-admission.json'),this.admission);this.budgetSettings=new BudgetSettings(path.join(paths.userRoot,'scope-budget.json'));this.catalog=new Catalog(paths);this.rules=new Rules(designRoot);this.resources=new ResourceRepositories(paths);this.repositoryConnections=new RepositoryConnections(path.join(paths.userRoot,'repository-connections.json'),this.resources,id=>{this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();return ws});this.chatMaterials=new ChatMaterialImports(id=>{this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();return ws},this.repositoryConnections)}
   async init(){await this.catalog.init();await this.rules.init();await this.resources.init();await this.repositoryConnections.init();await this.admissionSettings.init();await this.budgetSettings.init();await this.restore()}
   async list(){const data=await this.catalog.read();return {...data,warning:this.catalog.warning,entries:await Promise.all(data.entries.map(async e=>this.running.get(e.id)?.view()||{...e,state:await exists(e.path)?'registered':'missing',tasks:[]}))}}
   workspace(id:string){const ws=this.running.get(id);if(!ws)fail('NOT_RUNNING','工作区未运行，请由用户在桌面打开');return ws}
@@ -130,7 +137,7 @@ export class Application implements ApplicationServices {
         this.chatMaterials.retireWorkspace(id);
         this.repositoryConnections.retireWorkspace(id);
         this.retireAdmission(id);
-        await this.collaborations.get(id)?.close();this.collaborations.delete(id);
+        await this.automationServices.get(id)?.scheduler.close();this.automationServices.delete(id);await this.collaborations.get(id)?.close();this.collaborations.delete(id);
         await this.executions.get(id)?.close();this.executions.delete(id);
         await this.memberExecutions.get(id)?.close();this.memberExecutions.delete(id);await this.controlledFileServices.get(id)?.close();this.controlledFileServices.delete(id);await this.isolatedExecutionServices.get(id)?.close();this.isolatedExecutionServices.delete(id);this.requestBudgetServices.delete(id);
         await ws?.prepareClose();await this.dispatchers.get(id)?.close();this.dispatchers.delete(id);this.memberRegistries.delete(id);this.ownershipRegistries.delete(id);
@@ -146,6 +153,7 @@ export class Application implements ApplicationServices {
           await monitor.initialize(ws,service,execution,members);
           const collaboration=new AutoCollaboration(ws,service,members,execution,lease,(root,error)=>monitor.collaborationIssue(root,error));
           this.collaborations.set(id,collaboration);await collaboration.initialize();
+          const automations=new WorkspaceAutomations(ws,execution,service,collaboration,permission=>this.chatOptions(id,{permission,collaborationMode:'team'},[]));this.automationServices.set(id,automations);await automations.scheduler.initialize();
         }catch(error){
           // 知识库打开成功不代表内部服务已就绪。等待恢复若中途失败，阻止半就绪服务接受请求；下次 open 走统一关闭/重建路径。
           this.retireAdmission(id);monitor.unavailable(error);ws.error='工作区服务初始化失败：'+(error instanceof Error?error.message:String(error));ws.state='failed';throw error;
@@ -154,20 +162,24 @@ export class Application implements ApplicationServices {
       await this.catalog.update(d=>{const item=d.entries.find(e=>e.id===id);if(item)item.lastOpened=new Date().toISOString();d.recent=[id,...d.recent.filter(x=>x!==id)].slice(0,30)});return ws})();this.opening.set(id,pending);try{return await pending}finally{this.opening.delete(id)}
   }
   /** 内部生命周期入口；先禁用自动协作，再依次关闭主执行、成员、派发、监控和工作区，页面关闭不会调用它。 */
-  async stop(id:string){const release=this.retire(id);this.chatMaterials.retireWorkspace(id);this.repositoryConnections.retireWorkspace(id);this.retireAdmission(id);try{await this.opening.get(id)?.catch(()=>{});this.retireAdmission(id);await this.collaborations.get(id)?.close();this.collaborations.delete(id);await this.executions.get(id)?.close();this.executions.delete(id);await this.memberExecutions.get(id)?.close();this.memberExecutions.delete(id);await this.controlledFileServices.get(id)?.close();this.controlledFileServices.delete(id);await this.isolatedExecutionServices.get(id)?.close();this.isolatedExecutionServices.delete(id);this.requestBudgetServices.delete(id);await this.running.get(id)?.prepareClose();await this.dispatchers.get(id)?.close();this.dispatchers.delete(id);this.memberRegistries.delete(id);this.ownershipRegistries.delete(id);this.monitors.get(id)?.close();await this.histories.get(id)?.close();this.histories.delete(id);this.monitors.delete(id);const ws=this.running.get(id);await ws?.close();this.running.delete(id)}finally{release()}}
+  async stop(id:string){const release=this.retire(id);this.chatMaterials.retireWorkspace(id);this.repositoryConnections.retireWorkspace(id);this.retireAdmission(id);try{await this.opening.get(id)?.catch(()=>{});this.retireAdmission(id);await this.automationServices.get(id)?.scheduler.close();this.automationServices.delete(id);await this.collaborations.get(id)?.close();this.collaborations.delete(id);await this.executions.get(id)?.close();this.executions.delete(id);await this.memberExecutions.get(id)?.close();this.memberExecutions.delete(id);await this.controlledFileServices.get(id)?.close();this.controlledFileServices.delete(id);await this.isolatedExecutionServices.get(id)?.close();this.isolatedExecutionServices.delete(id);this.requestBudgetServices.delete(id);await this.running.get(id)?.prepareClose();await this.dispatchers.get(id)?.close();this.dispatchers.delete(id);this.memberRegistries.delete(id);this.ownershipRegistries.delete(id);this.monitors.get(id)?.close();await this.histories.get(id)?.close();this.histories.delete(id);this.monitors.delete(id);const ws=this.running.get(id);await ws?.close();this.running.delete(id)}finally{release()}}
   async remove(id:string){await this.stop(id);await this.catalog.remove(id);this.runtime.forget(id)}
   async restore(){const d=await this.catalog.read();for(const entry of d.entries){try{await this.open(entry.id)}catch{/* failed workspace remains visible; continue the other services */}}}
   /** 幂等关闭应用，等待正在打开的工作区及提交完成，再释放服务和共享仓库。 */
-  async shutdown(){if(this.shutdownPromise)return this.shutdownPromise;this.stopping=true;for(const id of this.admissionOwners.keys())this.retireAdmission(id);this.shutdownPromise=(async()=>{await this.githubFeedback.close();await this.chatMaterials.close();await this.repositoryConnections.close();await Promise.allSettled([...this.opening.values()]);for(const id of this.admissionOwners.keys())this.retireAdmission(id);await Promise.all([...this.collaborations.values()].map(x=>x.close()));this.collaborations.clear();await Promise.all([...this.executions.values(),...this.memberExecutions.values()].map(x=>x.close()));this.executions.clear();this.memberExecutions.clear();await Promise.all([...this.controlledFileServices.values()].map(x=>x.close()));this.controlledFileServices.clear();await Promise.all([...this.isolatedExecutionServices.values()].map(x=>x.close()));this.isolatedExecutionServices.clear();await this.platform.controlledFiles?.close();await Promise.all([...this.running.values()].map(w=>w.prepareClose()));await Promise.all([...this.dispatchers.values()].map(x=>x.close()));this.dispatchers.clear();this.memberRegistries.clear();this.ownershipRegistries.clear();for(const monitor of this.monitors.values())monitor.close();await Promise.all([...this.histories.values()].map(x=>x.close()));this.histories.clear();this.monitors.clear();const results=await Promise.allSettled([...this.running.values()].map(w=>w.close()));await this.resources.close();this.running.clear();const failed=results.find(r=>r.status==='rejected');if(failed?.status==='rejected')throw failed.reason})();void this.shutdownPromise.catch(error=>{if(['CONTROLLED_FILE_DRAIN_PENDING','EXECUTION_SCOPE_DRAIN_PENDING'].includes(error?.code))this.shutdownPromise=undefined});return this.shutdownPromise}
-  /** 默认选择转为明确模型身份，仅向调度层返回公开标识；工作区工厂随后取得运行快照，兼容 CLI 显式模型。 */
+  async shutdown(){if(this.shutdownPromise)return this.shutdownPromise;this.stopping=true;for(const id of this.admissionOwners.keys())this.retireAdmission(id);this.shutdownPromise=(async()=>{await this.githubFeedback.close();await this.chatMaterials.close();await this.repositoryConnections.close();await Promise.allSettled([...this.opening.values()]);for(const id of this.admissionOwners.keys())this.retireAdmission(id);await Promise.all([...this.automationServices.values()].map(x=>x.scheduler.close()));this.automationServices.clear();await Promise.all([...this.collaborations.values()].map(x=>x.close()));this.collaborations.clear();await Promise.all([...this.executions.values(),...this.memberExecutions.values()].map(x=>x.close()));this.executions.clear();this.memberExecutions.clear();await Promise.all([...this.controlledFileServices.values()].map(x=>x.close()));this.controlledFileServices.clear();await Promise.all([...this.isolatedExecutionServices.values()].map(x=>x.close()));this.isolatedExecutionServices.clear();await this.platform.controlledFiles?.close();await Promise.all([...this.running.values()].map(w=>w.prepareClose()));await Promise.all([...this.dispatchers.values()].map(x=>x.close()));this.dispatchers.clear();this.memberRegistries.clear();this.ownershipRegistries.clear();for(const monitor of this.monitors.values())monitor.close();await Promise.all([...this.histories.values()].map(x=>x.close()));this.histories.clear();this.monitors.clear();const results=await Promise.allSettled([...this.running.values()].map(w=>w.close()));await this.resources.close();this.running.clear();const failed=results.find(r=>r.status==='rejected');if(failed?.status==='rejected')throw failed.reason})();void this.shutdownPromise.catch(error=>{if(['CONTROLLED_FILE_DRAIN_PENDING','EXECUTION_SCOPE_DRAIN_PENDING'].includes(error?.code))this.shutdownPromise=undefined});return this.shutdownPromise}
+  /** 默认选择转为独立引擎及明确模型身份，校验协议后仅向调度层返回公开标识；工作区工厂随后取得运行快照，兼容 CLI 显式模型。 */
   async modelOptions(input:any={}){
     if(input?.provider&&input?.model&&!input.profileId)return input;
-    const {profile}=await this.models.resolve(input?.profileId,input?.model);
-    if(input.engine&&input.engine!==(profile.engine??'pi'))throw Error('引擎与所选模型配置不一致，请重新选择');
+    const {profile}=await this.models.resolve(input?.profileId,input?.model,input?.engine);
+
     return {...input,engine:profile.engine??'pi',provider:'cbim-'+profile.id,model:profile.model,profileId:profile.id};
   }
   /** 发送前验证图片能力；队列只保存工作区快照 ID，启动时再检查当前模型。 */
   async chatOptions(id:string,input:any,attachments:unknown){
+    if(!input?.profileId&&!input?.provider&&!input?.model&&!input?.engine){
+      const workspace=this.workspace(id),setting=await this.mainAgentSettings.read({workspaceId:id,instanceId:workspace.instanceId});
+      if(setting.selection)input={...input,engine:setting.selection.engine,profileId:setting.selection.profileId,model:setting.selection.modelId};
+    }
     const options=await this.modelOptions(input);
     const images=await new ChatInputs(this.workspace(id)).images(attachments);
     if(images.length&&options.profileId&&!(await this.models.resolve(options.profileId,options.model)).profile.vision)throw Error('当前模型未启用图片输入，请在设置中确认视觉能力，或切换支持图片的模型');

@@ -14,14 +14,17 @@ import {chatIpcRequests,type ChatIpcResponses} from './ipc-chat';
 import {resourcesIpcRequests,type ResourcesIpcResponses} from './ipc-resources';
 import {workspaceIpcRequests,type WorkspaceIpcResponses} from './ipc-workspace';
 import {desktopIpcRequests,type DesktopIpcResponses} from './ipc-desktop';
+import {automationActionSchemas,type AutomationActionResults} from './automation';
 
-export const ipcRequests={...agentHistoryRequests,...peopleIpcRequests,...governanceIpcRequests,...dispatchIpcRequests,...settingsIpcRequests,...loopIpcRequests,...chatIpcRequests,...resourcesIpcRequests,...workspaceIpcRequests,...desktopIpcRequests};
-export interface IpcResponses extends AgentHistoryResponses,PeopleIpcResponses,GovernanceIpcResponses,DispatchIpcResponses,SettingsIpcResponses,LoopIpcResponses,ChatIpcResponses,ResourcesIpcResponses,WorkspaceIpcResponses,DesktopIpcResponses {}
+export const ipcRequests={...agentHistoryRequests,...peopleIpcRequests,...governanceIpcRequests,...dispatchIpcRequests,...settingsIpcRequests,...loopIpcRequests,...chatIpcRequests,...resourcesIpcRequests,...workspaceIpcRequests,...desktopIpcRequests,...automationActionSchemas};
+export interface IpcResponses extends AgentHistoryResponses,PeopleIpcResponses,GovernanceIpcResponses,DispatchIpcResponses,SettingsIpcResponses,LoopIpcResponses,ChatIpcResponses,ResourcesIpcResponses,WorkspaceIpcResponses,DesktopIpcResponses,AutomationActionResults {}
 export type IpcAction=keyof IpcResponses;
 export type IpcRequest<A extends IpcAction>=z.input<(typeof ipcRequests)[A]>;
 export type IpcResponse<A extends IpcAction>=IpcResponses[A];
 export type IpcCall<A extends IpcAction=IpcAction>={[K in A]:undefined extends IpcRequest<K>?[action:K,args?:IpcRequest<K>]:[action:K,args:IpcRequest<K>]}[A];
-export interface IpcCaller {<C extends IpcCall>(...request:C):Promise<IpcResponse<C[0]>>}
+/** 泛型推导也拒绝额外顶层字段；不能因联合操作保留了返回类型就绕过请求字段边界。 */
+export type ExactIpcCall<C extends readonly unknown[]>=C extends [infer A extends IpcAction,infer P]?[A,P&Record<Exclude<keyof P,keyof NonNullable<IpcRequest<A>>>,never>]:C;
+export interface IpcCaller {<C extends IpcCall>(...request:C&ExactIpcCall<C>):Promise<IpcResponse<C[0]>>}
 export type IpcHandlers<A extends IpcAction=IpcAction>={[K in A]:(input:IpcRequest<K>)=>IpcResponse<K>|Promise<IpcResponse<K>>};
 export type DesktopIpcAction=keyof DesktopIpcResponses;
 export type ApplicationIpcAction=Exclude<IpcAction,DesktopIpcAction>;
@@ -38,4 +41,4 @@ export function ipcSuccess<A extends IpcAction>(_action:A,value:NoInfer<IpcRespo
 
 /** 动态表单先按已知操作解析，再形成相关元组；仅在这个已验证的配对处恢复 TS 无法表达的相关性。 */
 export function checkedIpcCall<A extends IpcAction>(action:A,input:unknown):IpcCall<A>{return [action,parseIpcRequest(action,input)] as IpcCall<A>}
-export type IpcCallerFor<A extends IpcAction>=<C extends IpcCall<A>>(...request:C)=>Promise<IpcResponse<C[0]>>;
+export type IpcCallerFor<A extends IpcAction>=<C extends IpcCall<A>>(...request:C&ExactIpcCall<C>)=>Promise<IpcResponse<C[0]>>;

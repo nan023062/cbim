@@ -15,7 +15,7 @@
 | [engine-instructions.ts](engine-instructions.ts) | 为主 Agent 和成员生成各引擎共用的运行职责、冻结身份与工具边界说明。 |
 | [engine-session.ts](engine-session.ts) | 主对话更换引擎时，沿已核实的日志链选择目标引擎历史并转交缺失的公开上下文。 |
 | [engine-tools.ts](engine-tools.ts) | 将可信装配注入的能力组装成引擎无关的目录与调用端口。 |
-| [index.ts](index.ts) | 大脑执行层：对外重导出 Loop 契约、主对话实例绑定、成员执行绑定、可信回注来源、存储端口、运行时与 Pi 适配器。 |
+| [index.ts](index.ts) | 大脑执行层：对外重导出 Loop 契约、主对话实例绑定、成员执行绑定、可信回注来源、存储端口与运行时。 |
 | [input-source.ts](input-source.ts) | 定义可信入口提交的成员结果、真实用户补充与人工决定系统转交来源。 |
 | [member-checkpoint.ts](member-checkpoint.ts) | 成员单次合作式停泊的运行时门闩，沿真实工具授权保存非终结检查点请求。 |
 | [member-run.ts](member-run.ts) | 定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。 |
@@ -168,7 +168,6 @@ N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入
 - `index.ts` → `member-run.ts`：导入。
 - `index.ts` → `input-source.ts`：导入。
 - `index.ts` → `conversation-binding.ts`：导入。
-- `index.ts` → `pi`：导入。
 - `member-checkpoint.ts` → `member-run.ts`：导入。
 - `member-checkpoint.ts` → `types.ts`：导入。
 - `member-checkpoint.ts` → `artifact-capture.ts`：导入。

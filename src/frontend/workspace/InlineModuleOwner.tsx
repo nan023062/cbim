@@ -9,7 +9,7 @@ import {useEffect,useMemo,useRef,useState} from 'react';
 import type {ModuleOwnershipIdentity} from '../../bridge/contracts/module-ownership';
 import {workspaceMemberCommands} from '../team/workspace-member-state';
 import {moduleOwnershipCommands} from './module-ownership-state';
-import {assignInlineOwner,inlineOwnerChoices,readInlineOwners,type InlineOwnerAgent,type InlineOwnerData} from './inline-module-ownership';
+import {assignInlineOwner,inlineOwnerChoices,readInlineOwners,type InlineOwnerAgent,type InlineOwnerData,type InlineOwnerCall} from './inline-module-ownership';
 import {Icon} from '../components/Icon';
 
 /** 一张架构视图共享控制器；知识版本或实例切换使旧异步后续失效，已发送写入仍由原命令追踪。 */
@@ -40,11 +40,11 @@ export function useInlineModuleOwners(identity:ModuleOwnershipIdentity|undefined
   return {data,choices:inlineOwnerChoices(agents,data?.members??[]),disabled:!data||loading||blocked,loading,blocked,error:error||controllers?.members.snapshot.error||controllers?.ownerships.snapshot.error,message,choose,refresh};
 }
 export type InlineModuleOwners=ReturnType<typeof useInlineModuleOwners>;
-/** 未配置自定义岗位时显示主 Agent 默认责任；提交中不乐观切换，旧内置岗位显示主 Agent 默认责任，其他历史缺失岗位仍显示原身份且可明确解除。 */
+/** 未显式配置时展示自动解析：父级、模型匹配与主 Agent 兜底；提交中不乐观切换，旧内置岗位也按自动解析展示，其他历史缺失岗位仍显示原身份且可明确解除。 */
 export function InlineModuleOwner({moduleId,name,owners}:{moduleId:string;name:string;owners:InlineModuleOwners}){
   const view=owners.data?.views.find(item=>item.moduleId===moduleId),value=view?.binding?.ownerMemberId&&view.owner?.agentId!=='cbim:executor'?'member:'+view.binding.ownerMemberId:'';
-  return <label className="module-owner-inline"><Icon name="team" size={15}/><select aria-label={name+' 负责人'} value={value} disabled={owners.disabled} title="默认由主 Agent 执行；选择自定义 Agent 后保存分工，新岗位采用模型设置中的默认模型。" onChange={event=>void owners.choose(moduleId,event.target.value)}>
-    <option value="">{owners.loading?'正在读取负责人…':'主 Agent（默认）'}</option>
+  return <label className="module-owner-inline"><Icon name="team" size={15}/><select aria-label={name+' 负责人'} value={value} disabled={owners.disabled} title="未显式设置时，先继承最近父级负责人，再由主模型匹配团队岗位，无匹配时由主 Agent 执行。选择自定义 Agent 会保存显式分工。" onChange={event=>void owners.choose(moduleId,event.target.value)}>
+    <option value="">{owners.loading?'正在读取负责人…':'自动解析（未显式设置）'}</option>
     {value&&!owners.choices.some(option=>option.value===value)&&<option value={value} disabled>{view?.owner?.name??'原负责人'}（当前不可用）</option>}
     {owners.choices.map(option=><option key={option.value} value={option.value} disabled={option.disabled}>{option.label}</option>)}
   </select></label>;

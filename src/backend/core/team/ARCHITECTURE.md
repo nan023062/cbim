@@ -10,8 +10,10 @@ Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [agent-runtime.ts](agent-runtime.ts) | 主 Agent 执行配置的公开读写契约，供对话栏与团队配置入口共用。 |
 | [agent-types.ts](agent-types.ts) | 虚拟成员的角色配置、持久化实例及独立会话身份，供调度和存储共同使用。 |
 | [automatic-execution.ts](automatic-execution.ts) | 定义用户选择的协作模式和自动兜底的冻结身份，供计划、任务与运行共用。 |
+| [implicit-module-owner.ts](implicit-module-owner.ts) | 从模块责任登记解析显式或最近祖先负责人，供发现、派发和 Store 不变量共同核对。 |
 | [member-execution-binding.ts](member-execution-binding.ts) | 岗位负责人派发的纯选择与冻结身份契约，供目标、任务、运行和公开视图共用。 |
 | [member-execution-rules.ts](member-execution-rules.ts) | 从同一岗位、责任与来源登记快照核实执行选择，供调度和存储共用。 |
 | [model.ts](model.ts) | 团队：Team/小组/Agent 与 Agent 自身和祖先 Skill的核心封装。 |
@@ -22,6 +24,22 @@ Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履
 | [workspace-member.ts](workspace-member.ts) | 定义工作区长期岗位、采纳快照、版本化登记命令与公开查询协议，供 Main、Store 和桌面共用。 |
 
 ## 架构类图
+
+### agent-runtime.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_agent_runtime_ts["agent-runtime.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_agent_runtime_ts_MainAgentSettingsView["MainAgentSettingsView"] {
+  <<type>>
+
+}
+N_src_backend_core_team_agent_runtime_ts ..> N_src_backend_core_team_agent_runtime_ts_MainAgentSettingsView : 声明
+```
+
+直接依赖：[../brain/llm/engine.ts](../brain/llm/engine.ts)。
 
 ### agent-types.ts
 
@@ -129,7 +147,19 @@ class N_src_backend_core_team_automatic_execution_ts_AutomaticExecutionBinding["
 N_src_backend_core_team_automatic_execution_ts ..> N_src_backend_core_team_automatic_execution_ts_AutomaticExecutionBinding : 声明
 ```
 
-直接依赖：[../workspace/project-root.ts](../workspace/project-root.ts)。
+直接依赖：[../brain/llm/engine.ts](../brain/llm/engine.ts)、[../workspace/project-root.ts](../workspace/project-root.ts)。
+
+### implicit-module-owner.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_team_implicit_module_owner_ts["implicit-module-owner.ts"] {
+  <<module>>
+  +implicitModuleOwner()
+}
+```
+
+直接依赖：[../workspace/module-ownership.ts](../workspace/module-ownership.ts)。
 
 ### member-execution-binding.ts
 
@@ -196,7 +226,7 @@ class N_src_backend_core_team_member_execution_rules_ts_external_KnowledgeSource
 N_src_backend_core_team_member_execution_rules_ts_external_KnowledgeSourceRegistry <|-- N_src_backend_core_team_member_execution_rules_ts_OwnerExecutionRegistry
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[workspace-member.ts](workspace-member.ts)、[workspace-member-rules.ts](workspace-member-rules.ts)、[../workspace/module-ownership.ts](../workspace/module-ownership.ts)、[../workspace/knowledge-source-rules.ts](../workspace/knowledge-source-rules.ts)、[member-execution-binding.ts](member-execution-binding.ts)。
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[workspace-member.ts](workspace-member.ts)、[workspace-member-rules.ts](workspace-member-rules.ts)、[../workspace/module-ownership.ts](../workspace/module-ownership.ts)、[../workspace/knowledge-source-rules.ts](../workspace/knowledge-source-rules.ts)、[member-execution-binding.ts](member-execution-binding.ts)、[implicit-module-owner.ts](implicit-module-owner.ts)。
 
 ### model.ts
 
@@ -222,6 +252,11 @@ classDiagram
 class N_src_backend_core_team_owner_execution_discovery_ts["owner-execution-discovery.ts"] {
   <<module>>
 }
+class N_src_backend_core_team_owner_execution_discovery_ts_ModuleOwnerMatches["ModuleOwnerMatches"] {
+  <<type>>
+
+}
+N_src_backend_core_team_owner_execution_discovery_ts ..> N_src_backend_core_team_owner_execution_discovery_ts_ModuleOwnerMatches : 声明
 class N_src_backend_core_team_owner_execution_discovery_ts_OwnerExecutionDiscovery["OwnerExecutionDiscovery"] {
   <<type>>
 
@@ -460,6 +495,7 @@ N_src_backend_core_team_workspace_member_rules_ts ..> N_src_backend_core_team_wo
 classDiagram
 class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
   <<module>>
+  +workspaceMemberEngine()
   +summarizeWorkspaceMember()
 }
 ```
@@ -656,18 +692,21 @@ class N_src_backend_core_team_workspace_member_rules_ts["workspace-member-rules.
 class N_src_backend_core_team_member_execution_binding_ts["member-execution-binding.ts"] {
   <<module>>
 }
-class N_src_backend_core_team_owner_execution_discovery_ts["owner-execution-discovery.ts"] {
+class N_src_backend_core_team_implicit_module_owner_ts["implicit-module-owner.ts"] {
   <<module>>
 }
 N_src_backend_core_team_member_execution_rules_ts ..> N_src_backend_core_team_workspace_member_ts : 导入依赖
 N_src_backend_core_team_member_execution_rules_ts ..> N_src_backend_core_team_workspace_member_rules_ts : 导入依赖
 N_src_backend_core_team_member_execution_rules_ts ..> N_src_backend_core_team_member_execution_binding_ts : 导入依赖
-N_src_backend_core_team_owner_execution_discovery_ts ..> N_src_backend_core_team_member_execution_binding_ts : 导入依赖
+N_src_backend_core_team_member_execution_rules_ts ..> N_src_backend_core_team_implicit_module_owner_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_team_owner_execution_discovery_ts["owner-execution-discovery.ts"] {
+  <<module>>
+}
+class N_src_backend_core_team_member_execution_binding_ts["member-execution-binding.ts"] {
   <<module>>
 }
 class N_src_backend_core_team_workspace_member_ts["workspace-member.ts"] {
@@ -682,6 +721,7 @@ class N_src_backend_core_team_session_history_ts["session-history.ts"] {
 class N_src_backend_core_team_workspace_member_rules_ts["workspace-member-rules.ts"] {
   <<module>>
 }
+N_src_backend_core_team_owner_execution_discovery_ts ..> N_src_backend_core_team_member_execution_binding_ts : 导入依赖
 N_src_backend_core_team_owner_execution_discovery_ts ..> N_src_backend_core_team_workspace_member_ts : 导入依赖
 N_src_backend_core_team_session_history_storage_ts ..> N_src_backend_core_team_session_history_ts : 导入依赖
 N_src_backend_core_team_workspace_member_rules_ts ..> N_src_backend_core_team_workspace_member_ts : 导入依赖
@@ -699,6 +739,10 @@ N_src_backend_core_team_workspace_member_rules_ts ..> N_src_backend_core_team_wo
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 静态知识视图的单向边界
+
+`model.ts` 中的 Team 只依赖知识快照公开类型、只读解析辅助和 Foundation，不依赖 BusinessWorkspace、知识写入端口或调度编排。跨域查询由 `scheduler-engine/context/knowledge-queries.ts` 组合；每个 Team 绑定一个固定快照，刷新后创建新视图。依赖检查器覆盖类型和重导出，具体矩阵见 [知识契约](../knowledge/CONTRACT.md#快照契约领域视图与查询编排)。此约束不把其他岗位、成员和执行绑定文件误称为同一只读模型。
 
 ### 根标识与正式兜底
 
@@ -874,3 +918,11 @@ workspaceMemberModelSnapshotSchema 接受可选 engine，明确值参与 configu
 ### 引擎协议校验
 
 岗位快照与供应商共用 engineApi：Codex 必须使用 OpenAI Responses，Claude Code 必须使用 Anthropic Messages；原 Pi 缺省和既有快照字节不变。下拉选型不能绕过保存及领取时的协议核对。
+
+## Agent 执行配置归属
+
+主 Agent 对话栏和团队配置页共享 agent-runtime.ts 契约，配置属于工作区 cbim:main。岗位 modelRef 新增可选 engine；新 UI 始终显式提交，schema 校验其与快照一致。workspaceMemberEngine 读取新引用或旧 snapshot.engine，不补写缺省字段。只改引擎属于选型编辑；同引擎同模型的参数刷新仍需明确采纳。旧审计、binding 及 hash 形状不改写。
+
+## 隐式模块执行者
+
+implicitModuleOwner 按本模块、最近祖先的非空责任记录解析；空责任不创建新登记。失效的显式/祖先关系仍由门禁报告，不自动匹配其他人。ExpectedModuleOwner 向后兼容原直接关系，并允许 inheritedFrom 或 match 两种互斥依据：继承冻结实际父关系和子模块来源；匹配冻结主模型理由、知识版本和来源，无伪造 bindingId。岗位、能力采纳和模型门禁保持一致；matches:null 回到主会话，不创建内置执行员。

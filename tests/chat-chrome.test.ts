@@ -2,7 +2,7 @@ import {test,expect} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {MessageCard} from '../src/frontend/conversation/MessageCard';
-import {WorkStatus} from '../src/frontend/run-view/WorkStatus';
+import {WorkStatus} from '../src/frontend/execution-view/WorkStatus';
 import {UsageStatus,type ConversationActivity} from '../src/frontend/conversation/UsageStatus';
 import type {RunSummary} from '../src/backend/core/brain/types';
 test('user bubble and assistant bare surface keep copy and real timestamp accessible',()=>{

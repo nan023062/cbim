@@ -4,7 +4,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
-import {LoopRuntime,PiEngine,type TaskSpec,type MemberRunLaunch} from '../src/backend/core/brain';
+import {LoopRuntime,type TaskSpec,type MemberRunLaunch} from '../src/backend/core/brain';
+import {PiEngine} from '../src/backend/core/brain/pi/engine';
 import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
 
 /** Real pinned Pi; the deterministic localhost provider proves native session behavior without external model calls. */

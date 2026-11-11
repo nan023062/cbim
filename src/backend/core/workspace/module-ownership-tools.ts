@@ -6,10 +6,10 @@
 import {z} from 'zod';
 import {moduleOwnershipChangeInputSchema,moduleOwnershipCursorSchema,moduleOwnershipPageSchema,moduleOwnershipPreviewSchema,moduleOwnershipReadBasisSchema,moduleOwnershipReceiptSchema} from './module-ownership';
 import {workspaceMemberListSchema,workspaceRegistryCursorSchema} from '../team/workspace-member';
-import {ownerExecutionDiscoverySchema} from '../team/owner-execution-discovery';
+import {ownerExecutionDiscoverySchema,moduleOwnerMatchesSchema} from '../team/owner-execution-discovery';
 
 const id=z.string().min(1).max(1024),uuid=z.string().uuid(),sha=z.string().regex(/^[a-f0-9]{64}$/);
-const modules=z.object({moduleIds:z.array(id).min(1).max(20).refine(ids=>new Set(ids).size===ids.length)}).strict();
+const modules=z.object({moduleIds:z.array(id).min(1).max(20).refine(ids=>new Set(ids).size===ids.length),matches:moduleOwnerMatchesSchema.optional()}).strict().refine(value=>!value.matches||value.matches.choices.every(item=>value.moduleIds.includes(item.moduleId)),'匹配必须属于本次模块');
 const byMember=z.object({memberId:uuid,offset:z.number().int().nonnegative().safe().optional(),limit:z.number().int().min(1).max(20).optional(),expectedReadBasis:moduleOwnershipReadBasisSchema.optional()}).strict().refine(value=>!value.offset||!!value.expectedReadBasis,'后续页必须固定查询依据');
 const members=z.object({members:z.literal(true),offset:z.number().int().nonnegative().safe().optional(),limit:z.number().int().min(1).max(20).optional(),expectedRegistryCursor:workspaceRegistryCursorSchema.optional()}).strict().refine(value=>!value.offset||!!value.expectedRegistryCursor,'后续页必须固定岗位游标');
 export const moduleOwnerInspectInputSchema=z.union([modules,byMember,members]);

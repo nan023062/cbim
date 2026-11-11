@@ -10,8 +10,10 @@ import {type GitHubFeedbackStatus,githubFeedbackConfigSchema} from '../../backen
 import {type AdmissionPolicy,type AdmissionRead,admissionConfigureSchema,admissionCursorSchema} from '../../backend/core/runtime/admission';
 import {type RuntimeRead,type RuntimeSnapshot} from '../../backend/core/runtime/types';
 import {type ScopeBudgetPolicy,scopeBudgetPolicySchema} from '../../backend/core/tasks/scope-budget';
+import {modelActionSchemas,type ModelActionResults} from './model-actions';
 
 export const settingsIpcRequests={
+  ...modelActionSchemas,
   'runtime.snapshot':noIpcArgs,
   'runtime.read':z.object({cursor:z.object({streamId:ipcId,revision:z.number().int().nonnegative()}).strict().optional()}).strict().optional(),
   'admission.read':z.object({cursor:admissionCursorSchema.optional()}).strict().optional(),
@@ -20,19 +22,13 @@ export const settingsIpcRequests={
   'budget.settings':noIpcArgs,
   'budget.configure':scopeBudgetPolicySchema,
   'models.list':noIpcArgs,
-  'models.save':z.object({id:z.string().uuid().optional(),profile:definition,apiKey:z.string().max(16000).optional()}).strict(),
-  'models.select':z.object({id:ipcId}).strict(),
-  'models.remove':z.object({id:ipcId}).strict(),
-  'models.test':z.object({id:ipcId,modelId:z.string().optional()}).strict(),
-  'models.discover':z.object({id:z.string().uuid().optional(),connection:connectionSchema.strict(),apiKey:z.string().max(16000).optional()}).strict(),
-  'models.discoverDetails':z.object({id:z.string().uuid().optional(),connection:connectionSchema.strict(),apiKey:z.string().max(16000).optional()}).strict(),
   'github.feedback.status':noIpcArgs,
   'github.feedback.cancel':noIpcArgs,
   'github.feedback.disconnect':noIpcArgs,
   'github.feedback.begin':githubFeedbackConfigSchema,
   'github.feedback.poll':z.object({flowId:z.string().uuid()}).strict(),
 };
-export interface SettingsIpcResponses {
+export interface SettingsIpcResponses extends ModelActionResults {
   'runtime.snapshot':RuntimeSnapshot;
   'runtime.read':RuntimeRead;
   'admission.read':AdmissionRead;
@@ -40,13 +36,6 @@ export interface SettingsIpcResponses {
   'admission.configure':AdmissionPolicy;
   'budget.settings':ScopeBudgetPolicy;
   'budget.configure':ScopeBudgetPolicy;
-  'models.list':LlmSettings;
-  'models.save':LlmSettings;
-  'models.select':LlmSettings;
-  'models.remove':LlmSettings;
-  'models.test':{ok:boolean;model:string;latencyMs:number};
-  'models.discover':string[];
-  'models.discoverDetails':DiscoveredModel[];
   'github.feedback.status':GitHubFeedbackStatus;
   'github.feedback.cancel':GitHubFeedbackStatus;
   'github.feedback.disconnect':GitHubFeedbackStatus;

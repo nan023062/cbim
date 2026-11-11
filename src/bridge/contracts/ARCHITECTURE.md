@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-可序列化 IPC 与展示契约；多来源附件只传选择身份，公开旧v1/新v2清单与真实仓库目录，不暴露凭据。图增量公开前置追加/替换审计而非执行许可，目标摘要公开运行内补充计数与未核实状态，详情保留已接收快照，纯协议不携IO。排队插入必须传用户点击时的原主run，缺失不推测当前轮次。检查点私有恢复证明留在后端；结构验证公开当时文件/规则指纹及无原值诊断，人工决定与文件观察保留真实依据。岗位IPC只传明确选择与公开采纳/回执，类型不带凭据或后端哈希IO。 桌面更新只公开版本、日志、阶段和进度，不传安装路径或任意命令。 ipc-call 用联合元组关联全部164项操作（含1项退役拒绝）；九个新增业务组共享请求Schema与响应，纯workspace-view避免类型循环。 owner-execution 公开原岗位绑定与显式当前观察；按任务修订核对身份，不公开解密配置。 公开检查点放弃审计和请求/回执纯契约，不向渲染进程授予主调度处置身份。 command-verification 只导出严格公共报告和八工具支持矩阵，隐藏原事务和执行准备信息。 effect-observation 只公开来源联合及严格公共 DTO，恢复／重规划保留旧协议并显式绑定新处置，不暴露正文备份或原生上下文。 controlled-files 仅导出公开纯协议与限制，隐藏 blob、原生文件身份、句柄和后端规则。
+可序列化 IPC 与展示契约；多来源附件只传选择身份，公开旧v1/新v2清单与真实仓库目录，不暴露凭据。图增量公开前置追加/替换审计而非执行许可，目标摘要公开运行内补充计数与未核实状态，详情保留已接收快照，纯协议不携IO。排队插入必须传用户点击时的原主run，缺失不推测当前轮次。检查点私有恢复证明留在后端；结构验证公开当时文件/规则指纹及无原值诊断，人工决定与文件观察保留真实依据。岗位IPC只传明确选择与公开采纳/回执，类型不带凭据或后端哈希IO。 桌面更新只公开版本、日志、阶段和进度，不传安装路径或任意命令。 ipc-call 用联合元组关联全部172项操作（含1项退役拒绝）；分组契约共享请求Schema与响应，纯workspace-view避免类型循环。 owner-execution 公开原岗位绑定与显式当前观察；按任务修订核对身份，不公开解密配置。 公开检查点放弃审计和请求/回执纯契约，不向渲染进程授予主调度处置身份。 command-verification 只导出严格公共报告和八工具支持矩阵，隐藏原事务和执行准备信息。 effect-observation 只公开来源联合及严格公共 DTO，恢复／重规划保留旧协议并显式绑定新处置，不暴露正文备份或原生上下文。 controlled-files 仅导出公开纯协议与限制，隐藏 blob、原生文件身份、句柄和后端规则。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -14,6 +14,7 @@
 | [agent-history-ipc.ts](agent-history-ipc.ts) | 关联角色历史四个只读 IPC 操作的请求、响应与运行时输入解析。 |
 | [agent-history.ts](agent-history.ts) | 向团队静态节点公开只读的角色 Session 历史协议。 |
 | [architecture.ts](architecture.ts) | 团队/业务架构编辑的桌面 IPC 契约，只公开对象操作、预览差异和提交回执。 |
+| [automation.ts](automation.ts) | 自动化桌面的固定请求、运行时校验与公开返回映射。 |
 | [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
 | [command-verification.ts](command-verification.ts) | 向桌面视图导出原主命令的只读核实协议和固定支持矩阵。 |
 | [controlled-files.ts](controlled-files.ts) | 向桌面公开受控文件原操作查询和显式补偿的纯协议。 |
@@ -38,6 +39,8 @@
 | [ipc-workspace.ts](ipc-workspace.ts) | 工作区生命周期与知识编辑的公开 IPC 请求与响应。 |
 | [isolated-executions.ts](isolated-executions.ts) | 向桌面导出原隔离执行核实与清理的公开 DTO。 |
 | [knowledge-source.ts](knowledge-source.ts) | 向桌面公开知识来源身份、采纳预览和当前核实状态的纯数据协议。 |
+| [knowledge-transactions.ts](knowledge-transactions.ts) | 向只读执行视图公开知识预览和提交的严格返回协议。 |
+| [model-actions.ts](model-actions.ts) | 声明主 Agent 选型和供应商设置的桌面请求、运行时校验及返回值映射。 |
 | [models.ts](models.ts) | 模型配置界面消费的公开模型信息与停止原因格式化。 |
 | [module-ownership.ts](module-ownership.ts) | 公开模块负责人控制面的纯数据协议，供业务架构、项目岗位与 Main IPC 使用。 |
 | [output-manifest.ts](output-manifest.ts) | 桌面完整产物面板使用的纯 DTO 与严格结构校验，不导出后端文件或日志读取实现。 |
@@ -151,6 +154,45 @@ N_src_bridge_contracts_architecture_ts ..> N_src_bridge_contracts_architecture_t
 ```
 
 直接依赖：[../../backend/core/knowledge/object-crud.ts](../../backend/core/knowledge/object-crud.ts)、[../../backend/core/workspace/module-outline.ts](../../backend/core/workspace/module-outline.ts)。
+
+### automation.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_automation_ts["automation.ts"] {
+  <<module>>
+  +isAutomationAction()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_automation_ts["automation.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_automation_ts_AutomationAction["AutomationAction"] {
+  <<type>>
+
+}
+N_src_bridge_contracts_automation_ts ..> N_src_bridge_contracts_automation_ts_AutomationAction : 声明
+class N_src_bridge_contracts_automation_ts_AutomationActionInput["AutomationActionInput"] {
+  <<type>>
+
+}
+N_src_bridge_contracts_automation_ts ..> N_src_bridge_contracts_automation_ts_AutomationActionInput : 声明
+class N_src_bridge_contracts_automation_ts_AutomationActionResults["AutomationActionResults"] {
+  <<interface>>
+  +'automation.list'
+  +'automation.catalog'
+  +'automation.save'
+  +'automation.run'
+  +'automation.toggle'
+  +'automation.remove'
+}
+N_src_bridge_contracts_automation_ts ..> N_src_bridge_contracts_automation_ts_AutomationActionResults : 声明
+```
+
+直接依赖：[../../backend/core/automation/contracts.ts](../../backend/core/automation/contracts.ts)。
 
 ### chat.ts
 
@@ -374,6 +416,10 @@ class N_src_bridge_contracts_ipc_call_ts_external_DesktopIpcResponses["DesktopIp
   <<external>>
 }
 N_src_bridge_contracts_ipc_call_ts_external_DesktopIpcResponses <|-- N_src_bridge_contracts_ipc_call_ts_IpcResponses
+class N_src_bridge_contracts_ipc_call_ts_external_AutomationActionResults["AutomationActionResults (外部契约)"] {
+  <<external>>
+}
+N_src_bridge_contracts_ipc_call_ts_external_AutomationActionResults <|-- N_src_bridge_contracts_ipc_call_ts_IpcResponses
 class N_src_bridge_contracts_ipc_call_ts_IpcAction["IpcAction"] {
   <<type>>
 
@@ -401,6 +447,11 @@ class N_src_bridge_contracts_ipc_call_ts_IpcCall["IpcCall"] {
 
 }
 N_src_bridge_contracts_ipc_call_ts ..> N_src_bridge_contracts_ipc_call_ts_IpcCall : 声明
+class N_src_bridge_contracts_ipc_call_ts_ExactIpcCall["ExactIpcCall"] {
+  <<type>>
+
+}
+N_src_bridge_contracts_ipc_call_ts ..> N_src_bridge_contracts_ipc_call_ts_ExactIpcCall : 声明
 class N_src_bridge_contracts_ipc_call_ts_IpcCaller["IpcCaller"] {
   <<interface>>
 
@@ -411,11 +462,6 @@ class N_src_bridge_contracts_ipc_call_ts_IpcHandlers["IpcHandlers"] {
 
 }
 N_src_bridge_contracts_ipc_call_ts ..> N_src_bridge_contracts_ipc_call_ts_IpcHandlers : 声明
-class N_src_bridge_contracts_ipc_call_ts_DesktopIpcAction["DesktopIpcAction"] {
-  <<type>>
-
-}
-N_src_bridge_contracts_ipc_call_ts ..> N_src_bridge_contracts_ipc_call_ts_DesktopIpcAction : 声明
 ```
 
 ```mermaid
@@ -423,6 +469,11 @@ classDiagram
 class N_src_bridge_contracts_ipc_call_ts["ipc-call.ts"] {
   <<module>>
 }
+class N_src_bridge_contracts_ipc_call_ts_DesktopIpcAction["DesktopIpcAction"] {
+  <<type>>
+
+}
+N_src_bridge_contracts_ipc_call_ts ..> N_src_bridge_contracts_ipc_call_ts_DesktopIpcAction : 声明
 class N_src_bridge_contracts_ipc_call_ts_ApplicationIpcAction["ApplicationIpcAction"] {
   <<type>>
 
@@ -440,7 +491,7 @@ class N_src_bridge_contracts_ipc_call_ts_IpcCallerFor["IpcCallerFor"] {
 N_src_bridge_contracts_ipc_call_ts ..> N_src_bridge_contracts_ipc_call_ts_IpcCallerFor : 声明
 ```
 
-直接依赖：[agent-history-ipc.ts](agent-history-ipc.ts)、[ipc-people.ts](ipc-people.ts)、[ipc-governance.ts](ipc-governance.ts)、[ipc-dispatch.ts](ipc-dispatch.ts)、[ipc-settings.ts](ipc-settings.ts)、[ipc-loop.ts](ipc-loop.ts)、[ipc-chat.ts](ipc-chat.ts)、[ipc-resources.ts](ipc-resources.ts)、[ipc-workspace.ts](ipc-workspace.ts)、[ipc-desktop.ts](ipc-desktop.ts)。
+直接依赖：[agent-history-ipc.ts](agent-history-ipc.ts)、[ipc-people.ts](ipc-people.ts)、[ipc-governance.ts](ipc-governance.ts)、[ipc-dispatch.ts](ipc-dispatch.ts)、[ipc-settings.ts](ipc-settings.ts)、[ipc-loop.ts](ipc-loop.ts)、[ipc-chat.ts](ipc-chat.ts)、[ipc-resources.ts](ipc-resources.ts)、[ipc-workspace.ts](ipc-workspace.ts)、[ipc-desktop.ts](ipc-desktop.ts)、[automation.ts](automation.ts)。
 
 ### ipc-chat.ts
 
@@ -733,8 +784,6 @@ N_src_bridge_contracts_ipc_resources_ts ..> N_src_bridge_contracts_ipc_resources
 
 ### ipc-settings.ts
 
-成员 1/2（同名节点为同一声明，跨图合并阅读）。
-
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_ipc_settings_ts["ipc-settings.ts"] {
@@ -749,36 +798,20 @@ class N_src_bridge_contracts_ipc_settings_ts_SettingsIpcResponses["SettingsIpcRe
   +'admission.configure'
   +'budget.settings'
   +'budget.configure'
-  +'models.list'
-  +'models.save'
-  +'models.select'
-  +'models.remove'
-  +'models.test'
-  +'models.discover'
-  +'models.discoverDetails'
   +'github.feedback.status'
   +'github.feedback.cancel'
-}
-N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_ipc_settings_ts_SettingsIpcResponses : 声明
-```
-
-成员 2/2（同名节点为同一声明，跨图合并阅读）。
-
-```mermaid
-classDiagram
-class N_src_bridge_contracts_ipc_settings_ts["ipc-settings.ts"] {
-  <<module>>
-}
-class N_src_bridge_contracts_ipc_settings_ts_SettingsIpcResponses["SettingsIpcResponses"] {
-  <<interface>>
   +'github.feedback.disconnect'
   +'github.feedback.begin'
   +'github.feedback.poll'
 }
 N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_ipc_settings_ts_SettingsIpcResponses : 声明
+class N_src_bridge_contracts_ipc_settings_ts_external_ModelActionResults["ModelActionResults (外部契约)"] {
+  <<external>>
+}
+N_src_bridge_contracts_ipc_settings_ts_external_ModelActionResults <|-- N_src_bridge_contracts_ipc_settings_ts_SettingsIpcResponses
 ```
 
-直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[../../backend/core/brain/llm/catalog.ts](../../backend/core/brain/llm/catalog.ts)、[../../backend/core/brain/llm/config.ts](../../backend/core/brain/llm/config.ts)、[../../backend/core/connectors/github-feedback.ts](../../backend/core/connectors/github-feedback.ts)、[../../backend/core/runtime/admission.ts](../../backend/core/runtime/admission.ts)、[../../backend/core/runtime/types.ts](../../backend/core/runtime/types.ts)、[../../backend/core/tasks/scope-budget.ts](../../backend/core/tasks/scope-budget.ts)。
+直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[../../backend/core/brain/llm/catalog.ts](../../backend/core/brain/llm/catalog.ts)、[../../backend/core/brain/llm/config.ts](../../backend/core/brain/llm/config.ts)、[../../backend/core/connectors/github-feedback.ts](../../backend/core/connectors/github-feedback.ts)、[../../backend/core/runtime/admission.ts](../../backend/core/runtime/admission.ts)、[../../backend/core/runtime/types.ts](../../backend/core/runtime/types.ts)、[../../backend/core/tasks/scope-budget.ts](../../backend/core/tasks/scope-budget.ts)、[model-actions.ts](model-actions.ts)。
 
 ### ipc-shapes.ts
 
@@ -840,6 +873,58 @@ class N_src_bridge_contracts_knowledge_source_ts["knowledge-source.ts"] {
 ```
 直接依赖：[../../backend/core/workspace/knowledge-source.ts](../../backend/core/workspace/knowledge-source.ts)。
 
+### knowledge-transactions.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_knowledge_transactions_ts["knowledge-transactions.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../backend/core/knowledge/tool-output-transactions.ts](../../backend/core/knowledge/tool-output-transactions.ts)。
+
+### model-actions.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_model_actions_ts["model-actions.ts"] {
+  <<module>>
+  +isModelAction()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_model_actions_ts["model-actions.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_model_actions_ts_ModelAction["ModelAction"] {
+  <<type>>
+
+}
+N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_model_actions_ts_ModelAction : 声明
+class N_src_bridge_contracts_model_actions_ts_ModelActionInput["ModelActionInput"] {
+  <<type>>
+
+}
+N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_model_actions_ts_ModelActionInput : 声明
+class N_src_bridge_contracts_model_actions_ts_ModelActionResults["ModelActionResults"] {
+  <<interface>>
+  +'agent.mainSettings'
+  +'agent.configureMain'
+  +'models.list'
+  +'models.save'
+  +'models.select'
+  +'models.remove'
+  +'models.test'
+  +'models.discover'
+  +'models.discoverDetails'
+}
+N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_model_actions_ts_ModelActionResults : 声明
+```
+
+直接依赖：[../../backend/core/brain/llm/config.ts](../../backend/core/brain/llm/config.ts)、[../../backend/core/team/agent-runtime.ts](../../backend/core/team/agent-runtime.ts)、[models.ts](models.ts)。
+
 ### models.ts
 
 ```mermaid
@@ -848,7 +933,7 @@ class N_src_bridge_contracts_models_ts["models.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/brain/llm/config.ts](../../backend/core/brain/llm/config.ts)、[../../backend/core/brain/llm/catalog.ts](../../backend/core/brain/llm/catalog.ts)、[../../backend/core/brain/model-errors.ts](../../backend/core/brain/model-errors.ts)、[../../backend/core/brain/llm/engine.ts](../../backend/core/brain/llm/engine.ts)。
+直接依赖：[../../backend/core/brain/llm/config.ts](../../backend/core/brain/llm/config.ts)、[../../backend/core/team/agent-runtime.ts](../../backend/core/team/agent-runtime.ts)、[../../backend/core/brain/llm/catalog.ts](../../backend/core/brain/llm/catalog.ts)、[../../backend/core/brain/model-errors.ts](../../backend/core/brain/model-errors.ts)、[../../backend/core/brain/llm/engine.ts](../../backend/core/brain/llm/engine.ts)。
 
 ### module-ownership.ts
 
@@ -1181,21 +1266,21 @@ class N_src_bridge_contracts_ipc_workspace_ts["ipc-workspace.ts"] {
 class N_src_bridge_contracts_ipc_desktop_ts["ipc-desktop.ts"] {
   <<module>>
 }
-class N_src_bridge_contracts_ipc_chat_ts["ipc-chat.ts"] {
-  <<module>>
-}
-class N_src_bridge_contracts_ipc_shapes_ts["ipc-shapes.ts"] {
+class N_src_bridge_contracts_automation_ts["automation.ts"] {
   <<module>>
 }
 N_src_bridge_contracts_ipc_call_ts ..> N_src_bridge_contracts_ipc_resources_ts : 导入依赖
 N_src_bridge_contracts_ipc_call_ts ..> N_src_bridge_contracts_ipc_workspace_ts : 导入依赖
 N_src_bridge_contracts_ipc_call_ts ..> N_src_bridge_contracts_ipc_desktop_ts : 导入依赖
-N_src_bridge_contracts_ipc_chat_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
+N_src_bridge_contracts_ipc_call_ts ..> N_src_bridge_contracts_automation_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_ipc_chat_ts["ipc-chat.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_ipc_shapes_ts["ipc-shapes.ts"] {
   <<module>>
 }
 class N_src_bridge_contracts_chat_ts["chat.ts"] {
@@ -1204,20 +1289,20 @@ class N_src_bridge_contracts_chat_ts["chat.ts"] {
 class N_src_bridge_contracts_ipc_desktop_ts["ipc-desktop.ts"] {
   <<module>>
 }
-class N_src_bridge_contracts_ipc_shapes_ts["ipc-shapes.ts"] {
+N_src_bridge_contracts_ipc_chat_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
+N_src_bridge_contracts_ipc_chat_ts ..> N_src_bridge_contracts_chat_ts : 导入依赖
+N_src_bridge_contracts_ipc_desktop_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
+N_src_bridge_contracts_ipc_desktop_ts ..> N_src_bridge_contracts_chat_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_ipc_desktop_ts["ipc-desktop.ts"] {
   <<module>>
 }
 class N_src_bridge_contracts_desktop_updates_ts["desktop-updates.ts"] {
   <<module>>
 }
-N_src_bridge_contracts_ipc_chat_ts ..> N_src_bridge_contracts_chat_ts : 导入依赖
-N_src_bridge_contracts_ipc_desktop_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
-N_src_bridge_contracts_ipc_desktop_ts ..> N_src_bridge_contracts_chat_ts : 导入依赖
-N_src_bridge_contracts_ipc_desktop_ts ..> N_src_bridge_contracts_desktop_updates_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_bridge_contracts_ipc_dispatch_ts["ipc-dispatch.ts"] {
   <<module>>
 }
@@ -1230,27 +1315,50 @@ class N_src_bridge_contracts_ipc_loop_ts["ipc-loop.ts"] {
 class N_src_bridge_contracts_ipc_resources_ts["ipc-resources.ts"] {
   <<module>>
 }
-class N_src_bridge_contracts_resources_ts["resources.ts"] {
-  <<module>>
-}
+N_src_bridge_contracts_ipc_desktop_ts ..> N_src_bridge_contracts_desktop_updates_ts : 导入依赖
 N_src_bridge_contracts_ipc_dispatch_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
 N_src_bridge_contracts_ipc_loop_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
 N_src_bridge_contracts_ipc_resources_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
-N_src_bridge_contracts_ipc_resources_ts ..> N_src_bridge_contracts_resources_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_bridge_contracts_ipc_resources_ts["ipc-resources.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_resources_ts["resources.ts"] {
+  <<module>>
+}
 class N_src_bridge_contracts_ipc_settings_ts["ipc-settings.ts"] {
   <<module>>
 }
 class N_src_bridge_contracts_ipc_shapes_ts["ipc-shapes.ts"] {
   <<module>>
 }
+class N_src_bridge_contracts_model_actions_ts["model-actions.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_ipc_workspace_ts["ipc-workspace.ts"] {
+  <<module>>
+}
+N_src_bridge_contracts_ipc_resources_ts ..> N_src_bridge_contracts_resources_ts : 导入依赖
+N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
+N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_model_actions_ts : 导入依赖
+N_src_bridge_contracts_ipc_workspace_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_bridge_contracts_ipc_workspace_ts["ipc-workspace.ts"] {
   <<module>>
 }
 class N_src_bridge_contracts_workspace_view_ts["workspace-view.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_model_actions_ts["model-actions.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_models_ts["models.ts"] {
   <<module>>
 }
 class N_src_bridge_contracts_workspace_ts["workspace.ts"] {
@@ -1259,10 +1367,10 @@ class N_src_bridge_contracts_workspace_ts["workspace.ts"] {
 class N_src_bridge_contracts_ipc_call_ts["ipc-call.ts"] {
   <<module>>
 }
-N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
-N_src_bridge_contracts_ipc_workspace_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
 N_src_bridge_contracts_ipc_workspace_ts ..> N_src_bridge_contracts_workspace_view_ts : 导入依赖
+N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_models_ts : 导入依赖
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_ipc_call_ts : 导入依赖
+N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_workspace_view_ts : 导入依赖
 ```
 
 ```mermaid
@@ -1270,13 +1378,9 @@ classDiagram
 class N_src_bridge_contracts_workspace_ts["workspace.ts"] {
   <<module>>
 }
-class N_src_bridge_contracts_workspace_view_ts["workspace-view.ts"] {
-  <<module>>
-}
 class N_src_bridge_contracts_chat_ts["chat.ts"] {
   <<module>>
 }
-N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_workspace_view_ts : 导入依赖
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入依赖
 ```
 
@@ -1616,7 +1720,7 @@ architecture.ts 另重导纯 moduleBodyTemplate，供编辑器复用模块协议
 
 ### 引擎与模型菜单
 
-models 公开重导出 LoopEngine、AgentModelSelection、engineLabel、configuredEngines；只传公开模型身份。具体引擎、SDK、环境与凭据不进入渲染进程。
+models 公开重导出 LoopEngine、AgentModelSelection、engineLabel、loopEngineSchema、engineSupportsApi；只传公开模型身份。具体引擎、SDK、环境与凭据不进入渲染进程。
 
 ### 引擎协议选型
 
@@ -1624,7 +1728,7 @@ models 仅重导出 engineApi 等纯规则，设置页用它约束 Codex/Claude 
 
 ## 分组关联 IPC 契约
 
-`ipc-call.ts` 将全部 164 项既有操作关联为请求 Schema、响应类型及调用元组；其中 1 项 `loop.start` 已退役，类型为 never，运行时仍明确拒绝。原剩余 160 项完成迁移，旧通配清单退出；没有任意 string/any 响应重载。操作名不是权限或执行凭证。
+`ipc-call.ts` 将全部 172 项操作（包含 0.1.7 的六项自动化与两项主 Agent 设置）关联为请求 Schema、响应类型及调用元组；其中 1 项 `loop.start` 已退役，类型为 never，运行时仍明确拒绝。原通配清单退出，新增操作沿用同一完整类型映射；没有任意 string/any 响应重载。操作名不是权限或执行凭证。
 
 | 组 | 契约文件 | 数量 |
 | --- | --- | --- |
@@ -1632,14 +1736,15 @@ models 仅重导出 engineApi 等纯规则，设置页用它约束 Codex/Claude 
 | 岗位与模块责任 | ipc-people.ts | 11 |
 | 模块治理 | ipc-governance.ts | 8 |
 | 派发与运行核实 | ipc-dispatch.ts | 39 |
-| 设置 | ipc-settings.ts | 19 |
+| 设置 | ipc-settings.ts（复用 model-actions.ts） | 21 |
+| 自动化 | automation.ts | 6 |
 | 会话与队列 | ipc-loop.ts | 30 |
 | 附件 | ipc-chat.ts | 7 |
 | 资源仓库 | ipc-resources.ts | 20 |
 | 工作区与知识编辑 | ipc-workspace.ts | 15 |
 | 原生桌面 | ipc-desktop.ts | 11 |
 
-Main 的 153 项应用处理器受 `IpcHandlers` 映射约束；11 项桌面操作在 main.ts 使用对应解析和 `ipcSuccess`。输入在传输边界为 unknown，查找服务前解析。已有领域错误码、关闭门禁、身份与权限、CAS、回执核实继续有效；解析异常不捕获或改写已进入服务后的错误。动态表单使用 `checkedIpcCall` 按指定 Schema 验证后形成关联元组，不能自行声明响应泛型。
+Main 的 161 项应用处理器受 `IpcHandlers` 映射约束；11 项桌面操作在 main.ts 使用对应解析和 `ipcSuccess`。输入在传输边界为 unknown，查找服务前解析。已有领域错误码、关闭门禁、身份与权限、CAS、回执核实继续有效；解析异常不捕获或改写已进入服务后的错误。动态表单使用 `checkedIpcCall` 按指定 Schema 验证后形成关联元组，不能自行声明响应泛型。
 
 `dispatch.task.scopeId` 为兼容历史原命令查询保留可缺省。服务先查询原回执，再拒绝缺少周期的新派发（`DISPATCH_SCOPE_REQUIRED`）；桥层不补造周期，也不以提前结构拒绝覆盖这段幂等与错误语义。
 

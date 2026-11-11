@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-知识快照、校验、领域查询、对象变更和可移植静态包规划。私有v2计划冻结有序操作与整包替换范围，公共变更不能提供来源证明；物理事务与缓存经端口注入。团队能力可独立复用，业务模板必须完整，不携带动态成员或任务。 KnowledgeQueries 只接收 snapshot；KnowledgeRefresh 独立持有身份核实、原回执查询与提交。 read-models.ts 是固定快照读取的公开入口，snapshot 与 Team/BusinessWorkspace 模型属于同一私有实现边界；查询编排不反向进入纯快照契约。 产品反馈 Skill 只读发布两套上下文格式，不包含 GitHub 创建接口。 SourceSnapshotReader 只提供知识队列外层的同版快照，调用方不得在任务事务内反向获取。 原知识工具和事务观察共用实际输入解析，纯摘要区分未查到、持久阶段及不可核实，不返回正文或私有路径。
+知识快照、校验、领域查询、对象变更和可移植静态包规划。私有v2计划冻结有序操作与整包替换范围，公共变更不能提供来源证明；物理事务与缓存经端口注入。团队能力可独立复用，业务模板必须完整，不携带动态成员或任务。 KnowledgeQueries 只接收 snapshot；KnowledgeRefresh 独立持有身份核实、原回执查询与提交。 read-models.ts 是固定快照读取的公开入口，snapshot 与 Team/BusinessWorkspace 模型属于同一私有实现边界；查询编排不反向进入纯快照契约。 产品反馈 Skill 只读发布两套上下文格式，不包含 GitHub 创建接口。 快照数据与只读访问是独立公共边界；索引刷新通过收窄端口调用原知识事务，不导入团队或模块查询视图。 SourceSnapshotReader 只提供知识队列外层的同版快照，调用方不得在任务事务内反向获取。 原知识工具和事务观察共用实际输入解析，纯摘要区分未查到、持久阶段及不可核实，不返回正文或私有路径。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,7 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [builtins.ts](builtins.ts) | Builtins：白名单发布内置 Skill、规范和 Schema，包括只需简述、补充自愿的 BUG 反馈与需求许愿流程。 |
+| [builtins.ts](builtins.ts) | Builtins：白名单发布内置 Skill、规范和 Schema，包括团队/业务架构治理及只需简述、补充自愿的反馈流程。 |
 | [knowledge-queries.ts](knowledge-queries.ts) | 只读知识查询门面，取得快照并组合团队与业务模块读取模型。 |
 | [knowledge-refresh.ts](knowledge-refresh.ts) | 按原身份、版本与请求 ID 刷新派生知识索引，独立于只读领域查询。 |
 | [knowledge-write-input.ts](knowledge-write-input.ts) | 知识提交工具与后端原事务核实共用的输入解析和原引用构造。 |
@@ -205,7 +205,7 @@ class N_src_backend_core_knowledge_object_contract_ts_external_KnowledgeCommit["
 N_src_backend_core_knowledge_object_contract_ts_external_KnowledgeCommit <|-- N_src_backend_core_knowledge_object_contract_ts_ObjectCommit
 ```
 
-直接依赖：[../brain/llm/engine.ts](../brain/llm/engine.ts)、[types.ts](types.ts)。
+直接依赖：[../workspace/module-outline.ts](../workspace/module-outline.ts)、[../brain/llm/engine.ts](../brain/llm/engine.ts)、[types.ts](types.ts)。
 
 ### object-crud.ts
 
@@ -936,3 +936,9 @@ ObjectOperation 使用 kind 判别的严格 data Schema，objectDataSchemas 同�
 ### Agent 本机运行默认值
 
 对象 CRUD 只允许 Agent 数据声明可选 runtime（engine/profileId/modelId，或 null）。它是新岗位登记的默认选择，不修改已采纳岗位。导出 Team/Agent 静态资源时剔除该本机引用，目标机器重新选型；业务原则与 Skill 继续可复用。
+
+## 对象预览的调用约束
+
+objectOperation 的发现 Schema 说明摘要 100–250 非空白字符、保留 slug、Module 五章原文、直属内容虚拟节点和 parentId 根语义。约束说明不替代 Rules 的完整候选校验。ObjectCrud 按序应用 operations 到同一候选 Map，后序子对象可引用前序新父对象；预览只保存计划，完整结构诊断保留在 validation.issues。
+
+Builtins 增加 team-architecture-governance 和 business-architecture-governance 两个产品工作流，仍是白名单只读 Skill；读取不执行，实际执行由明确启动的主会话完成。正文随 design/runtime 打包。

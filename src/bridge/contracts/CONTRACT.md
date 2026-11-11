@@ -321,7 +321,7 @@ architecture.ts 另重导纯 moduleBodyTemplate，供编辑器复用模块协议
 
 ### 引擎与模型菜单
 
-models 公开重导出 LoopEngine、AgentModelSelection、engineLabel、configuredEngines；只传公开模型身份。具体引擎、SDK、环境与凭据不进入渲染进程。
+models 公开重导出 LoopEngine、AgentModelSelection、engineLabel、loopEngineSchema、engineSupportsApi；只传公开模型身份。具体引擎、SDK、环境与凭据不进入渲染进程。
 
 ### 引擎协议选型
 
@@ -329,7 +329,7 @@ models 仅重导出 engineApi 等纯规则，设置页用它约束 Codex/Claude 
 
 ## 分组关联 IPC 契约
 
-`ipc-call.ts` 将全部 164 项既有操作关联为请求 Schema、响应类型及调用元组；其中 1 项 `loop.start` 已退役，类型为 never，运行时仍明确拒绝。原剩余 160 项完成迁移，旧通配清单退出；没有任意 string/any 响应重载。操作名不是权限或执行凭证。
+`ipc-call.ts` 将全部 172 项操作（包含 0.1.7 的六项自动化与两项主 Agent 设置）关联为请求 Schema、响应类型及调用元组；其中 1 项 `loop.start` 已退役，类型为 never，运行时仍明确拒绝。原通配清单退出，新增操作沿用同一完整类型映射；没有任意 string/any 响应重载。操作名不是权限或执行凭证。
 
 | 组 | 契约文件 | 数量 |
 | --- | --- | --- |
@@ -337,14 +337,15 @@ models 仅重导出 engineApi 等纯规则，设置页用它约束 Codex/Claude 
 | 岗位与模块责任 | ipc-people.ts | 11 |
 | 模块治理 | ipc-governance.ts | 8 |
 | 派发与运行核实 | ipc-dispatch.ts | 39 |
-| 设置 | ipc-settings.ts | 19 |
+| 设置 | ipc-settings.ts（复用 model-actions.ts） | 21 |
+| 自动化 | automation.ts | 6 |
 | 会话与队列 | ipc-loop.ts | 30 |
 | 附件 | ipc-chat.ts | 7 |
 | 资源仓库 | ipc-resources.ts | 20 |
 | 工作区与知识编辑 | ipc-workspace.ts | 15 |
 | 原生桌面 | ipc-desktop.ts | 11 |
 
-Main 的 153 项应用处理器受 `IpcHandlers` 映射约束；11 项桌面操作在 main.ts 使用对应解析和 `ipcSuccess`。输入在传输边界为 unknown，查找服务前解析。已有领域错误码、关闭门禁、身份与权限、CAS、回执核实继续有效；解析异常不捕获或改写已进入服务后的错误。动态表单使用 `checkedIpcCall` 按指定 Schema 验证后形成关联元组，不能自行声明响应泛型。
+Main 的 161 项应用处理器受 `IpcHandlers` 映射约束；11 项桌面操作在 main.ts 使用对应解析和 `ipcSuccess`。输入在传输边界为 unknown，查找服务前解析。已有领域错误码、关闭门禁、身份与权限、CAS、回执核实继续有效；解析异常不捕获或改写已进入服务后的错误。动态表单使用 `checkedIpcCall` 按指定 Schema 验证后形成关联元组，不能自行声明响应泛型。
 
 `dispatch.task.scopeId` 为兼容历史原命令查询保留可缺省。服务先查询原回执，再拒绝缺少周期的新派发（`DISPATCH_SCOPE_REQUIRED`）；桥层不补造周期，也不以提前结构拒绝覆盖这段幂等与错误语义。
 

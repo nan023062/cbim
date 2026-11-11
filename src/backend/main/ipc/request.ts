@@ -7,6 +7,7 @@ import {ZodError} from 'zod';
 import {parseIpcRequest,type ApplicationIpcAction} from '../../../bridge/contracts/ipc-call';
 import {fail} from '../../core/foundation/errors';
 const shutdownMessages:Partial<Record<ApplicationIpcAction,string>>={
+  'agent.configureMain':'CBIM 正在退出',
   'dispatch.effectDisposition':'CBIM 正在退出，未保存新处置',
   'dispatch.humanDecide':'CBIM 正在退出，未保存新的人工决定',
   'governance.register':'CBIM 正在退出，未登记保护',

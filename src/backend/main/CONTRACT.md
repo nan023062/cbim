@@ -8,7 +8,7 @@ Main 为 `DesktopUpdates` 注入唯一的业务关闭回调，停止终端、等
 
 ## 产品标识与原生窗口
 
-`main.ts` 只装配窗口品牌资源：开发态从工程 `branding/cbim.png` 读取，打包态从固定 `resources/branding/cbim.png` 读取。Forge 的应用图标及独立安装器均使用同一矢量源生成的 ICO；运行时不生成或下载品牌资源。显示名称为 CBIM Assistant，原应用 ID、可执行文件名称、卸载器探测与用户数据目录保持兼容。
+`main.ts` 只装配窗口品牌资源：开发态从工程 `branding/cbim.png` 读取，打包态从固定 `resources/branding/cbim.png` 读取。Forge 的应用图标及独立安装器均使用同一矢量源生成的 ICO；运行时不生成或下载品牌资源。窗口标题为 CBIM，原应用 ID、可执行文件名称、卸载器探测与用户数据目录保持兼容。
 
 ```mermaid
 classDiagram

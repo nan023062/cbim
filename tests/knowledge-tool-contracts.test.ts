@@ -7,7 +7,7 @@ it('真实知识目录只发现已注册能力，自描述有限且不执行领�
   const f=await fixture();try{
     const entry=await f.app.dispatch('add',{path:f.a}),ws=f.app.workspace(entry.id),{service,call}=internalKnowledge(ws),before=await ws.snapshot();
     const catalog=await call('cbim_knowledge_tool_catalog');
-    expect(knowledgeToolCatalogOutputSchema.parse(catalog)).toEqual(catalog);expect(catalog.family).toBe('knowledge');expect(catalog.tools).toHaveLength(29);
+    expect(knowledgeToolCatalogOutputSchema.parse(catalog)).toEqual(catalog);expect(catalog.family).toBe('knowledge');expect(catalog.tools).toHaveLength(31);
     expect(catalog.tools.map((item:any)=>item.name)).toEqual(service.list().map(item=>item.name));
     for(const item of catalog.tools){expect(Object.keys(item).sort()).toEqual(item.description===undefined?['effects','name','version']:['description','effects','name','version']);expect(item.name).not.toMatch(/^cbim_dispatch_/)}
     for(const item of catalog.tools){

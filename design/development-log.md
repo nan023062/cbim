@@ -1,3 +1,57 @@
+## 2026-11-11：0.1.7 发布准备（#27 / #28 / #29 与架构切片）
+
+- 当前公开桌面版 0.1.6；默认 develop 与 master 同为 7fad631e8692ff2b5845e899ed49915c72d0faa4，仓库 nan023062/cbim、发布账号 nan023062；旧 Python latest ID 327801733/tag v1.0.2 保持独立。用户已授权完成、PR、合并和发布，沿用先未签名、日后更高版本切换签名的个人开发决定。
+- 独立工单提交：#27 21d46da2、#28 db961c97、#29 642dd350；架构切片保留原独立提交。此前三个引擎与主 Agent 共用设置已在 0.1.6 发布，本次保持其行为。未把架构试点写成全部宽接口/运行时职责已经治理完毕。
+- package 0.1.7 与内置说明已准备，官网仍指向公开 0.1.6。比较 desktop-v0.1.5..desktop-v0.1.6 的 updater 与更新界面无差异，验收输入新增实际旧版 0.1.6 automatic 流程，25 用例通过（test-results/desktop-017-inputs.json）；未来未知旧版仍拒绝。三宿主发布入口/引用同步。
+- 类型检查、品牌摘要、官网构建通过；本次实际产品代码的架构检查复用 #29 已通过结果。新增 automation-ui-smoke.mts，计划在准确候选 EXE 和独立用户目录核实三引擎、固定自动化表单/实际运行、文件树与自动校验；尚未执行，不将脚本存在当作验收证据。候选构建、完整 PR 四片、隔离安装/在线升级与公开待本次后续流程。
+
+## 2026-11-11：#29 当前工作区自动化与窗口标题
+
+- Issue：https://github.com/nan023062/cbim/issues/29。对话新增固定自动化页签，任务列表、设置与运行历史参考 [Cindy scheduler](https://github.com/makecindy/cindy/blob/main/apps/desktop/help-knowledge/scheduler.md) 和 [运行生命周期](https://github.com/makecindy/cindy/blob/main/packages/maker-scheduler/src/engine/attemptLifecycle.ts)，独立实现当前工作区绑定，不提供自选路径。支持默认主 Agent/已采纳启用岗位、模块、自身 Workflow、有效 Skill、提示、权限及手动/间隔/每天/一次日程。窗口标题为 CBIM，EXE、应用 ID、用户数据和更新通道未改变。
+- 分层：Core automation 只含纯协议/日程；Scheduler 只依赖存储/执行端口；Main 装配私有原子记录、当前知识/模型和真实协作；六项 IPC 强类型映射，前端无后端实现依赖。默认主 Agent 直接执行，岗位首任务经真实 scope/plan/dispatch 后由原协作批次领取，未绕过权限/预算/岗位门禁。临时岗位选择不写模块责任，显式/继承责任冲突拒绝。
+- 生命周期：意图先保存，模型前 bind 真实 taskId/runId；同项不重叠，未知不重放。暂停/删除先冻结未来并取消准备，再停原任务；历史保留。重开跳过过去时刻并只观察原任务，关闭取消准备后排空。运行冻结定义，编辑只影响未来；执行完成与业务验收区分，历史经外壳打开原会话并保留原草稿。
+- 影响测试依据：新日程/版本/持久化/取消、实际 Application 的实例拒绝及重开、真实 Pi 主与岗位配置；受影响消费者为原主运行/协作及对话入口。新增两文件 9 用例最终全部通过（分次验证）。初次真实 Pi 失败因未选 Workflow 传空数组违反原非空显式选择契约，改为缺省后通过；同时保留启动错误，不被后续无说明状态覆盖。失败证据 issue-29-new/start-diagnostic/start-error.json，修复证据 test-results/issue-29-workflow-fix.json（真实 Pi 1 用例通过，选择器排除已通过的存储用例）。
+- 回归命令：pnpm exec vitest run tests/automation-scheduler.test.ts tests/auto-collaboration.test.ts tests/application-runtime.test.ts tests/application-collaboration-pi.test.ts tests/conversation.test.ts tests/chat-chrome.test.ts tests/main-agent-settings.test.ts --reporter=default --reporter=json --outputFile.json=test-results/issue-29-related.json：7 文件 63 用例通过，20.54s。加新增 Application 两用例，共 8 文件 65 个独立用例通过。真实进程使用本地确定性 HTTP 响应，仅证明路由、生命周期和模型身份，不代表在线业务质量。
+- pnpm check:architecture 通过：58 目录/630 代码样式、1227 文件/6278 含类型依赖，0 循环、0 文档差异。源码注释、相关 CONTRACT 与 13 份类图同步。pnpm typecheck 通过（先修正测试诊断中的 DispatchState 字段引用）。全仓四片 CI、实际桌面交互和安装升级留在本次后续集成/发布阶段。
+
+## 2026-11-11：主 Agent 与模型设置 IPC 契约试点（架构审计 A07）
+
+- 公开 model-actions 定义九个动作的请求 Schema 与返回值，Main 独立 handler 表委托原服务；Bridge/preload 共用 IpcCall。已迁移动作不落回旧重载，错误请求和未知新动作均有编译期反例；未知字节仍在 Main 校验，未把类型当授权。
+- LegacyAction 枚举当前真实旧操作，禁止任意字符串；旧返回保留兼容形状，尚未完成其余 IPC 类型迁移，不宣称全部路由已消除 any。主 Frame、退出、工作区实例、主配置 revision、引擎兼容和凭据存储归属不变。
+- 类型检查发现通用操作字符串与轮询闭包未固定的 instanceId，改为对应能力的动作联合、模板字面量和固定身份；InlineOwnerCall 同时包含测试装配复用的真实提交/回执动作。最终 pnpm typecheck 通过，新增 @ts-expect-error 反例全部生效。
+- 验证依据：实际 Application 请求拒绝、主设置共享/重开、模型保存、岗位调用消费者及资料适配。命令 pnpm exec vitest run tests/model-actions.test.ts tests/main-agent-settings.test.ts tests/llm.test.ts tests/inline-module-ownership.test.ts tests/continuation-source-view.test.ts --reporter=default --reporter=json --outputFile=test-results/model-ipc-contract.json：5 文件、27 用例通过（12.87s）。
+- pnpm check:architecture 通过：56 目录/614 代码及样式、1208 文件/6207 含类型边，0 循环、0 文档差异。同步 bridge/contracts、preload、main/ipc 和相关前端目录契约、注释及十份类图；全仓集成和发布检查未运行。
+
+## 2026-11-11：共享执行展示与页面控制单向依赖（架构审计 A08）
+
+- 建立 execution-view：公开消息投影、Markdown、工具轨道/状态、提问、附件和队列由真实主对话、成员任务、团队履历消费者共享；任务域保留原命令核实、影响观察和恢复控制器。WorkStatus/ToolTimeline 只接运行投影及可选展示插槽，不接 ExecutionRecoveryContext。
+- tasks 不再依赖 conversation；team 的履历及 Markdown 不再加载主对话模块。静态规则阻止共享展示反向引用页面/任务状态，阻止任务模块反向导入主对话或外壳。首次检查发现 FlowView 经纯状态标签依赖 shell，已将标签移到 components 后通过，未放宽规则。
+- 保留原消息/回执顺序、失败提示、显式查询、复制/受控链接、附件快照和队列回调。成员默认轨道不装配主来源操作；主对话及任务历史通过 ToolActivity 插槽保留原查询入口。原恢复草稿和控制器归属不变。
+- 按共享渲染和直接界面消费者选择：pnpm exec vitest run tests/agent-history-view.test.ts tests/chat-chrome.test.ts tests/command-verification-view.test.ts tests/conversation-progress.test.ts tests/conversation-waiting.test.ts tests/conversation.test.ts tests/dependencies.test.ts tests/human-continuation-view.test.ts tests/inline-conversation.test.ts tests/markdown.test.ts tests/member-event-state.test.ts tests/repository-tools-view.test.ts -t '^(?!all maintained code)' --reporter=default --reporter=json --outputFile=test-results/shared-execution-view.json：12 文件、74 用例通过（6.46s）；重复静态用例由 check:architecture 覆盖。pnpm typecheck 通过。最终 pnpm check:architecture：56 目录/611 代码及样式、1204 文件/6193 含类型边，0 循环、0 文档差异。
+- 同步共享展示、任务、主对话、团队、公共组件契约及受影响类图和边界注释。未运行全量后端回归、桌面打包和发布验收；仅因改动导入路径的在线/引擎消费者由类型与依赖检查覆盖，最终 PR 集成再覆盖原完整用例。
+
+## 2026-11-11：三个引擎改用通用运行工具目录（架构审计 A06 / G06）
+
+- EngineContext 的九个具体业务类槽位改为 RuntimeToolsPort 目录；独立稳定文件定义目录/调用契约，引擎只枚举并路由。真实 toolCallId、停止信号、重名/非法名拒绝、未知工具拒绝保留。nativeTools=disabled 独立禁用全部原生文件/命令；求助、停泊和产物验证指引由业务装配产生。
+- brain/index 不再重导出 PiEngine，生产装配及真正使用 Pi 的测试直接导入适配器；新增静态约束防止公共入口和目录重回具体工具依赖。未移动三家 SDK 实现或更改原门闩/日志/停止排空顺序。Runtime 的成员生命周期仍为下一步治理边界，此片只完成引擎能力输入与公共入口解耦。
+- 既有运行回归通过仅测试用窄视图访问真实装配对象，保留坏回包注入、并发和停止断言。测试选择覆盖所有修改的业务工具消费者、主/成员调度和真实 Pi 受限执行，未重复跑无关业务或发布测试。
+- 实际命令：pnpm exec vitest run tests/artifact-runtime.test.ts tests/artifact-transition-runtime.test.ts tests/complete-output-runtime.test.ts tests/controlled-file-runtime.test.ts tests/csv-validation-runtime.test.ts tests/dependencies.test.ts tests/engine-tools.test.ts tests/human-decision-service.test.ts tests/json-validation-runtime.test.ts tests/loop-engine.test.ts tests/member-checkpoint-runtime.test.ts tests/member-checkpoint-service.test.ts tests/member-execution.test.ts tests/member-help-runtime.test.ts tests/member-help.test.ts tests/output-manifest-runtime.test.ts tests/pi-loop.test.ts tests/png-validation-runtime.test.ts tests/queued-dependency-replacement-service.test.ts tests/scope-goal.test.ts tests/scope-replan.test.ts tests/scoped-execution-pi.test.ts tests/scoped-execution-runtime.test.ts tests/workflow-runtime.test.ts -t '^(?!all maintained code)' --reporter=default --reporter=json --outputFile=test-results/engine-capabilities.json。24 文件、208 用例通过（114.58s），重复全仓静态用例由架构检查覆盖。真实 Electron/Pi 使用本地确定性供应商；Claude/Codex 本片验证目录禁用，不代表真实在线服务验收。
+- 初次类型检查仅新增测试的联合数组推断失败，显式标注目录类型后 pnpm typecheck 通过；生产类型无错误。pnpm check:architecture 通过：55 目录/610 代码及样式、1203 文件/6191 含类型依赖，0 循环、0 文档差异。同步能力/运行装配注释、四份契约和五份类图；未运行全仓产品回归或发布验收。
+
+## 2026-11-11：预算业务改用专用事务端口（架构审计 A05）
+
+- ModelRequestBudgetService 不再依赖 DispatchStore/DispatchState；Core 新增 ModelRequestBudgetStore/视图/阶段回执契约，Main 适配器显式投影隔离副本，只能写单条预算变化。ScopeBudgetService 的请求预检仅接预算附录；运行级准入的原职责保留。
+- 同一原 Store 的事务中读取余额、决定并保存预留/拒绝，不拆事务、不建第二个账本、不迁移旧日志。原命令指纹、重放、未知消耗、发送前核实和关停所有权保持。其他业务仍待按真实变化点迁移，不宣称整库已完全拆分。
+- 验证依据：预算服务和阶段适配、运行级准入、实际 Main/Pi 请求与成员共享额度、新逻辑边界。执行 pnpm exec vitest run tests/model-request-budget.test.ts tests/scope-budget-service.test.ts tests/model-request-budget-pi.test.ts tests/dependencies.test.ts -t '^(?!all maintained code)' --reporter=default --reporter=json --outputFile=test-results/budget-port.json：4 文件、38 用例通过（29.65s）；重复全仓静态用例由架构检查覆盖。实际 Pi 使用本地确定性供应商，不代表在线模型质量。
+- pnpm typecheck、pnpm check:architecture 通过：55 目录/608 代码及样式、1199 文件/6154 含类型依赖，0 循环、0 文档差异。同步新增端口及适配器文件头、三个目录契约、四份类图。未运行全量回归、全套桌面或发布验收。
+
+## 2026-11-11：历史索引存储与工作区装配分离（架构审计 A09）
+
+- 范围：FileAgentHistoryStore 只依赖 Core 存储契约和 Foundation；createAgentHistory 移入 workspace，通过窄 AgentHistoryOwner 组合运行日志与调度查询服务。Application 为唯一生产装配入口，持锁启动、只读身份检查、观察与排空顺序均保持。
+- 保护稳定能力：索引文件布局、原子写入、损坏诊断、原日志身份和符号链接防护不变；之后调整工作区装配不再修改文件存储模块。新增静态边界拒绝存储反向引用 Workspace 或调度服务（含类型）。
+- 验证选择：历史服务、文件存储、持锁启动三个直接消费者和修改的依赖检查器。实际运行 pnpm exec vitest run tests/agent-history-store.test.ts tests/agent-history.test.ts tests/workspace-history-startup.test.ts tests/dependencies.test.ts -t '^(?!all maintained code)' --reporter=default --reporter=json --outputFile=test-results/history-boundary.json：4 文件、27 用例通过（12.24s），重复全仓静态用例跳过，由 check:architecture 覆盖。
+- pnpm typecheck、pnpm check:architecture 通过：55 目录/606 代码及样式，1197 文件/6145 含类型边，0 循环、0 文档差异。同步 main、persistence/tasks、workspace 三份类图与相关文件头、契约。未运行全量产品回归、桌面构建和发布验收，留待最终集成。
+
 # CBIM 开发记录
 
 ## 2026-11-11：两份旧桌面脚本修复与同制品补测
@@ -74,6 +128,38 @@
 - 设计理由与边界：稳定设计约束和治理执行过程分别维护，Skill 引用同一正文。保留既有硬约束；影响判断不限于依赖图；只读巡检可归档报告；已授权迁移不逐状态审批；规则候选需明确批准才生效。普通开发不机械启动全套治理，只读评估不自动实施，日常仍按真实影响验证。
 - 本次验证选择：改动仅为文档与 Skill，核对新规范及被改入口的引用、格式和多宿主一致性。执行 `python -X utf8 -` 内联文档校验：15 份变更 Markdown 的 203 个本地链接目标、14 个标题锚点有效；9 个 Skill 入口的元数据与强制引用检查通过，三组入口逐字节一致；12 条原则、7 个流程阶段、9 项整改及 P0／P1／P2 对应关系完整；无残留草稿引用或占位符，`docs/` 仍为四份概念设计。此统计在追加本条记录之前产生；追加后另行核对本条 2 个新链接和两份新规范的行尾空白，并扫描维护文本中的原合并草稿引用，均通过。`git -c core.safecrlf=false diff --check` 通过。
 - Review 入口：完整变更相对 `a5938170`；先读文档 1，再读文档 2 的通用流程和 CBIM 附录，最后核对各 Skill 顶部强制引用及项目入口。实现验证、人工接受和后续治理效果分别记录；未运行产品单元／全量测试、类型检查、依赖／架构检查、构建、桌面或发布验收，不将文案校验视为模型执行效果验证。
+
+## 2026-11-11：统一主会话直接执行与独立成员边界（审计 A03）
+
+- 用户授权继续完成全部，本片先消除审计确认的运行指引冲突。集成分支基于 `2af774c5`，已保留原作者移植文档清理提交 `a5938170` 为 `d5af4cd4`；冲突仅涉及历史记录、旧 roadmap 和已退役 docs，保留新旧验证事实，docs 回到四份概念设计。主工作区未提交规范仍保留，不随本片擅自提交。
+- Team/Auto 指引统一为主会话可按权限直接执行，`cbim:main` 不能作为独立成员 assignee；主目标可用 main-execution 引用真实业务回执，知识、成员 Workflow 和人工验收保持独立。同步 README、Team 与 Conversation 契约和主指引文件头；没有修改运行权限、目标审阅实现或旧历史。
+- 选择提示组装、默认执行者、目标工具、统一工具权限四文件验证声明的边界；同时因移植提交改变内置资源路径，运行 builtins、knowledge-tool-output、knowledge-tool-contracts。命令：`pnpm exec vitest run tests/agent-role-instructions.test.ts tests/default-executor.test.ts tests/goal-tools.test.ts tests/unified-tool-policy.test.ts tests/builtins.test.ts tests/knowledge-tool-output.test.ts tests/knowledge-tool-contracts.test.ts --reporter=default --reporter=json --outputFile=test-results/main-role-and-resources.json`；7 文件、35 项通过，18.69 秒。真实 Pi 测试使用确定性本机响应，不声称在线模型质量验收。
+- 原权限、实例身份、版本与独立成员拒绝是稳定边界，变动只在当前指引和现行说明；以后职责提示从 main-agent.ts 与两个最终模式入口修改。未新增通用规则候选，尚未人工接受；未运行全仓回归、类型检查、打包或安装升级。已同步 Team、Conversation 两份类图；pnpm check:architecture 和 git diff --check 通过，55 目录/605 代码及样式、1196 文件/6145 含类型边、0 循环及文档差异。
+
+## 2026-11-11：知识查询单向边界与局部测试隔离
+
+- 来源为用户直接指定的架构优先开发。查询 `nan023062/cbim` 开放 Issues 得 #27、#28、#29 共 3 项；本片是知识/团队/工作区查询边界的前置治理，没有新建架构工单，也不把这三个业务需求标为完成。
+- 基于已发布 0.1.6 的 `7fad631e` 在 `refactor/query-boundaries` 独立工作树实施；主工作区的并行规范与 `a5938170` 保留。C3 有限切片、L2 认知交付，不宣称全仓治理完成。
+- 查询组合移到 Scheduler Context，Core 只保留快照契约、固定领域视图与独立刷新用例；查询端口只暴露 snapshot，刷新端口只暴露原身份/版本/回执/提交所需能力，状态和原子事务仍归原 Workspace/KnowledgeStore。两处直接消费者迁移，旧入口退出。检测器新增已迁移模块的单向出边约束，含类型和重导出。
+- 纯数据与 Rules 领域环境从完整 Application fixture 分离；迁移 core-domains、rules，保留源目录真实校验和原断言。旧应用测试继续使用兼容重导出，没有批量改动所有测试或放宽验证。
+- 验证按查询、规则、刷新、工具输出、任务准备与检测器实际影响选择 7 文件。首轮 35 通过、3 个新增样本 UUID 错误失败、1 个重复扫描用例未选择；修正样本后仅重测这 3 项并通过，累计 38 个不同用例通过。原报告和重测报告分开保留。实际命令、选择依据和完整 review 导读见[专项记录](verification/architecture-query-boundaries-20261111.md)。
+- `pnpm typecheck`、`pnpm check:architecture`、`git diff --check` 通过：55 目录/605 代码及样式、1196 文件/6145 含类型边、0 循环、0 类图差异。同步涉及文件头、端口说明、5 份 CONTRACT 和 8 份 ARCHITECTURE；四问与剩余范围见专项记录。
+- 未运行全量行为回归、桌面全套、真实供应商、打包、安装升级或发布；尚未人工 review、合并或发布。未改变现有 CI/发布检查。其他逻辑模块、完整测试辅助迁移以及 #27–#29 的业务验收仍各按实际需求推进。
+
+## 2026-11-10：三引擎与主 Agent 配置修复随 0.1.6 公开
+
+- 用户 BUG，未关联新 Issue：三引擎内置，供应商只管理统一模型；对话栏与 Agent 页等效，前者配置工作区主 Agent。
+- 完成范围：协议兼容筛选和运行前校验；主 Agent 唯一配置、两处入口与多主对话同步；岗位独立引擎及旧快照兼容。复用既有权限、预算、审计和原生执行，不修改正在运行或已受理队列的快照。
+- 验证按真实消费者选择：配置/菜单、岗位登记与派发、主配置持久化和原生运行。累计 99 项不同受影响用例、9 项真实浏览器交互、类型与架构检查通过。具体命令与边界见[修复验证](verification/engine-model-separation-20261110.md)；同步源码注释、契约与 16 份架构资料。
+- 发布：修复提交 ca31e017，经 [PR #32](https://github.com/nan023062/cbim/pull/32) 正常合并；完整 Windows 四片 376 文件/2599 项，2597 通过、0 失败、2 原有历史 EXE 前置缺失跳过。同一 EXE 六轮引擎执行与六项隔离检查通过。Release 440090082 / desktop-v0.1.6 已公开，四附件匿名下载摘要一致，未签名与旧 Python latest 不变。
+- 真实候选安装 42780830205、0.1.5→0.1.6 在线升级 42782241422 通过；普通退出取消、六项保留、1 次确定性模型请求和 0 页面错误均核实。官网与 README 按公开回执修正引擎/模型说明；品牌、正式域名构建与 14 个界面/离线场景通过，0 页面错误。收尾 CI、master 部署和远端同步回执统一附在 PR #32。完整依据见[发布验收](verification/desktop-release-0.1.6-20261110.md)。本机 develop 的并行文档/资源整理 a5938170 保留，不混入发布。
+
+## 2026-11-10：0.1.5 公开与真实在线升级，官网收尾
+
+- 主 Agent 默认执行与 Pi / Claude Code / Codex 三引擎随 0.1.5 公开。PR #30 正常合并，准确 head 完整四片 375 文件/2587 项：2585 通过、0 失败、2 原有真实历史 EXE 前置缺失跳过；独立失败/修正及冻结制品证据保留。
+- Release 439994358 / desktop-v0.1.5 公开，保持未签名与旧 Python latest；候选全新安装 42764972516、真实 0.1.4 在线升级 42768158030 通过，普通退出取消、下载摘要、自动重启与六项保留均核实，模型请求 1、页面错误 0。使用确定性模型响应，不等于在线模型质量验证。
+- 官网版本快照来自公开回执，同步三引擎、独立岗位配置和主 Agent 执行说明；README、引擎维护说明、发布指南与路线图同步实际交付状态。按用户明确选择一并合入 812bec16 开发规范文档，保留其作者和提交。
+- 实际 pnpm check:brand、正式域名 pnpm build:website、node scripts/website-smoke.mjs 均通过：14 个手机/桌面/深浅色/离线场景，页面错误 0；11 份 Markdown 的 404 个本地链接、围栏与 Skill 三入口一致性通过，四附件匿名下载摘要一致。没有源码变化，不重复本机产品单元、类型/架构或安装构建。收尾 PR 仍经完整 Windows 四片，master 部署与匿名六文件回执随后附于 PR。完整证据、源码导读和维护清单见[发布验收](verification/desktop-release-0.1.5-20261110.md)。
 
 ## 2026-11-10：从 Issues 获取开发清单，清理 docs 与全局引用
 

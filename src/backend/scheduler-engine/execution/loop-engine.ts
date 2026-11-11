@@ -1,4 +1,5 @@
 /**
+ * 引擎装配：直接依赖 Pi/Claude Code/Codex 的具体入口，公共 brain 入口仅提供引擎无关运行契约。
  * 实际派发工具提供可信周期模式指引；恢复缺少界面选项时也不把原 auto 周期误讲成 team。
  * 范围模式注册须具备冻结声明和实际端口；旧native被拒绝，原文件写在审批前核范围，所有操作仍沿原read/ask/execute。
  * 检查点剩余额度只接可信成员服务；主会话和公开运行选项不能补造或覆盖额度。
@@ -29,7 +30,8 @@ import type {ChatPermission} from '../../core/brain/types';
 import {ClaudeCodeEngine} from '../../core/brain/claude/engine';
 import {CodexEngine} from '../../core/brain/codex/engine';
 import type {LoopEngine} from '../../core/brain/llm/engine';
-import {LoopRuntime,PiEngine,type TaskSpec,type StoredEvent,type ToolCall,type ToolDecision,type ConversationAgentBinding} from '../../core/brain';
+import {LoopRuntime,type TaskSpec,type StoredEvent,type ToolCall,type ToolDecision,type ConversationAgentBinding} from '../../core/brain';
+import {PiEngine} from '../../core/brain/pi/engine';
 import type {PiCommand} from '../../core/brain/pi/rpc';
 import type {ResolvedLlm} from '../../core/brain/llm/ports';
 import {authorizeRunTool,type RunToolDescriptor} from '../../core/policy/tool-policy';

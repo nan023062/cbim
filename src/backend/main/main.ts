@@ -1,4 +1,5 @@
 /**
+ * 原生窗口及页面标题显示 CBIM，原 productName/EXE/用户目录和更新通道保留兼容。
  * 文件工人边界：app.ready 后装配独立打包 utility 入口，不复用窗口主入口作为工人；退出等待所有原文件操作排空。
  * 作用定位：本机后端的 Electron 装配入口，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。
  * 设计原因：把 Electron 窗口与 IPC 留在唯一桌面入口，服务层可以脱离窗口验证；模型凭据加密通过系统 safeStorage 注入；手动终端固定工作区目录，退出时释放子进程。
@@ -40,7 +41,7 @@ app.whenReady().then(async()=>{
   if(installed&&!app.requestSingleInstanceLock()){app.quit();return}
   updates=new DesktopUpdates(app.getVersion(),typeof release.notes==='string'?release.notes:'',installed,latestDesktopRelease,new NsisUpdateInstaller(),async()=>{terminals.closeAll();await application.shutdown();quitting=true});
   application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install),path.join(install,'design'),systemSecretCipher,{controlledFiles:createControlledFileTransport()});await application.init();
-  window=new BrowserWindow({width:1320,height:860,minWidth:760,minHeight:520,title:'CBIM Assistant',icon:path.join(install,'branding','cbim.png'),webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  window=new BrowserWindow({width:1320,height:860,minWidth:760,minHeight:520,title:'CBIM',icon:path.join(install,'branding','cbim.png'),webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   window.webContents.setWindowOpenHandler(()=>({action:'deny'}));window.webContents.on('will-navigate',(event)=>event.preventDefault());
   app.on('second-instance',()=>{if(window.isMinimized())window.restore();window.focus()});
   // 拖放走独立 IPC；与原生选择器共用快照和 .cbim 边界检查。
@@ -112,7 +113,7 @@ app.whenReady().then(async()=>{
     await fs.writeFile(path.join(userRoot,'smoke-result.json'),json({packaged:app.isPackaged,workspaceId:entry.id,files:snap.files.length,internalKnowledge:true,builtins:true,objectCrud:true,workspaceState:ws.state,structural:snap.validation?.structural}));
     await application.shutdown();app.quit();
   }
-}).catch(e=>{dialog.showErrorBox('CBIM Assistant 启动失败',e.message+'\n请检查用户数据目录权限及程序资源。');app.exit(1)});
+}).catch(e=>{dialog.showErrorBox('CBIM 启动失败',e.message+'\n请检查用户数据目录权限及程序资源。');app.exit(1)});
 // 普通退出先取消更新流程，不能等排空完成后的 will-quit，避免排空期间自动安装继续推进。
 app.on('before-quit',event=>{if(!quitting&&application){event.preventDefault();quitting=true;updates?.close();terminals.closeAll();void application.shutdown().then(()=>app.quit()).catch(e=>{quitting=false;dialog.showErrorBox('工作区关闭失败',e.message+'\n请保留运行窗口并重试。')})}});
 app.on('window-all-closed',()=>app.quit());

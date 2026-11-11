@@ -9,6 +9,8 @@ import type {SettingsIpcResponses} from '../../../bridge/contracts/ipc-settings'
 /** 仅装配本业务组；每项实际实现都受对应请求／响应约束。 */
 export function settingsIpcHandlers(app:ApplicationServices):IpcHandlers<keyof SettingsIpcResponses>{
   return {
+    'agent.mainSettings':args=>app.mainAgentSettings.read(args),
+    'agent.configureMain':args=>app.mainAgentSettings.configure(args),
     'runtime.snapshot':async args=>{return app.runtime.snapshot();},
     'runtime.read':async args=>{return app.runtime.read(args?.cursor);},
     'admission.read':async args=>{return app.admission.read(args?.cursor);},

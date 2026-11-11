@@ -1,12 +1,11 @@
 import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {transcript} from '../src/frontend/run-view/transcript';
+import {transcript} from '../src/frontend/execution-view/transcript';
 import {inlineDependencies,inlineDispatchedTask,inlineHandoffTasks} from '../src/frontend/conversation/inline-task-state';
-import {RunToolDetails} from '../src/frontend/conversation/RunToolDetails';
-import {ToolActivity} from '../src/frontend/run-view/ToolActivity';
+import {ToolActivity} from '../src/frontend/tasks/ToolActivity';
 import {MemberActivityCard} from '../src/frontend/tasks/MemberActivity';
-import {WorkStatus} from '../src/frontend/run-view/WorkStatus';
+import {WorkStatus} from '../src/frontend/execution-view/WorkStatus';
 import {inlineMainRuns} from './inline-conversation-fixture';
 import {progressFixture} from './conversation-progress-fixture';
 
@@ -67,7 +66,7 @@ it('系统交接只导航原任务，不合成用户消息或新的工具执行'
   expect(transcript(run).map(i=>i.kind)).toEqual(['system','assistant']);run.source=undefined;delete run.events[0].data.source;expect(inlineHandoffTasks(run,graph)).toEqual([]);
 });
 it('单工具模式保留失败证据与原核实入口，状态尾行不重复调用',()=>{
-  const run=inlineMainRuns(2)[0],html=renderToStaticMarkup(createElement(ToolActivity,{run,toolCallId:'dispatch-member-1',renderDetails:selection=>createElement(RunToolDetails,selection)}));
+  const run=inlineMainRuns(2)[0],html=renderToStaticMarkup(createElement(ToolActivity,{run,toolCallId:'dispatch-member-1'}));
   expect(html).toContain('data-tool-call-id="dispatch-member-1"');expect(html).not.toContain('data-tool-call-id="dispatch-member-2"');expect(html).toContain('原命令');
   const footer=renderToStaticMarkup(createElement(WorkStatus,{run,now:0,inline:true}));expect(footer).toContain('本轮结束');expect(footer).not.toContain('<details');expect(footer).not.toContain('data-tool-call-id');
 });

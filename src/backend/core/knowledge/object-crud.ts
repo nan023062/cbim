@@ -4,7 +4,7 @@
  * 模块、岗位和执行权限分别治理；对象预览不再登记真人或生成旧维护确认，已有历史字段只随原对象保留。
  * 静态 Agent 可保存本机默认 runtime 选型，模型身份来自设置；这不改变已登记岗位的采纳或运行权限。
  */
-import {objectDataSchemas,type ObjectOperation,type ObjectPreview,type ObjectCommit} from './object-contract';
+import {reservedObjectSlugs,objectDataSchemas,type ObjectOperation,type ObjectPreview,type ObjectCommit} from './object-contract';
 // 保留原消费入口；浏览器边界直接导入不含事务实现的 object-contract。
 export {objectDataSchemas,objectOperation,type ObjectOperation,type ObjectPreview,type ObjectCommit} from './object-contract';
 import path from 'node:path';
@@ -21,7 +21,7 @@ import {knowledgePlanHash,type ResolvedObjectOperation} from './planned-commit';
 const pp=path.posix;
 export class ObjectCrud {
   constructor(private w:KnowledgeWorkspace){}
-  /** 根据语义操作生成完整事务并持久化预览计划；不会自动编造原则或模块正文。提交仍由调用边界检查当前写授权。 */
+  /** 按输入顺序在同一候选快照创建父子对象，再校验完整事务并持久化预览计划；不会自动编造原则或模块正文。提交仍由调用边界检查当前写授权。 */
   async preview(revision:string,operations:ObjectOperation[]):Promise<ObjectPreview>{
     const s=await this.w.snapshot();if(s.revision!==revision)fail('CONFLICT','知识版本已变化，请重新查询');
     const map=new Map(s.files.map(f=>[f.path,f.text])),objects:string[]=[],deletedRoots:string[]=[],resolvedOperations:ResolvedObjectOperation[]=[];
@@ -34,7 +34,7 @@ export class ObjectCrud {
       const allowed=Object.keys(objectDataSchemas[op.kind].shape);
       for(const key of Object.keys(data))if(!allowed.includes(key))fail('FIELD',`${op.kind} 不支持修改字段 ${key}；目录与清单由 CBIM 维护`);
       if(op.action==='create'){
-        if(op.id||!op.parentId||!op.slug||!/^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$/.test(op.slug)||['skills','workflows','references','scripts','assets','archive','node_modules'].includes(op.slug))fail('OBJECT_ID','创建需有效 parentId 和 slug，不接受自定 id');
+        if(op.id||!op.parentId||!op.slug||!/^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$/.test(op.slug)||reservedObjectSlugs.includes(op.slug))fail('OBJECT_ID','创建需有效 parentId 和 slug，不接受自定 id');
         owner=op.parentId;
         if(op.kind==='agent'){if(!group(owner)||map.has(owner+'/agent.json'))fail('OWNER','Agent 父节点必须是已知 Team/小组');id=owner+'/'+op.slug}
         else if(op.kind==='module'){if(owner!=='.cbim/workspace')get(owner+'/module.json');if(!owner.startsWith('.cbim/workspace')||op.slug.includes('-'))fail('OWNER','模块必须在 workspace 下并使用 snake_case');id=owner+'/'+op.slug}

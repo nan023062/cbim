@@ -11,6 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [agent-history.ts](agent-history.ts) | 把静态 Agent 的 Session 派生索引保存到应用用户目录，只负责索引读写和目录校验。 |
+| [automations.ts](automations.ts) | 在工作区私有用户目录保存自动化定义与有界运行历史。 |
 | [chat-inputs.ts](chat-inputs.ts) | 将用户明确添加的文件、文件夹、链接、网页与链接器定义保存为本机对话输入快照。 |
 | [chat-material-imports.ts](chat-material-imports.ts) | 应用内显式资料导入的取消、工作区归属及真实资源仓库读取入口。 |
 | [chat-source-readers.ts](chat-source-readers.ts) | 桌面明确导入目录、URL 指针和网页时，生成有界文本及真实来源事实。 |
@@ -46,6 +47,28 @@ N_src_backend_main_persistence_tasks_agent_history_ts_external_AgentHistoryStore
 ```
 
 直接依赖：[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/files.ts](../../../core/foundation/files.ts)、[../../../core/team/session-history-storage.ts](../../../core/team/session-history-storage.ts)。
+
+### automations.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_persistence_tasks_automations_ts["automations.ts"] {
+  <<module>>
+}
+class N_src_backend_main_persistence_tasks_automations_ts_FileAutomations["FileAutomations"] {
+  +read()
+  +write()
+  -file
+  -workspaceId
+}
+N_src_backend_main_persistence_tasks_automations_ts ..> N_src_backend_main_persistence_tasks_automations_ts_FileAutomations : 声明
+class N_src_backend_main_persistence_tasks_automations_ts_external_AutomationStorage["AutomationStorage (外部契约)"] {
+  <<external>>
+}
+N_src_backend_main_persistence_tasks_automations_ts_external_AutomationStorage <|.. N_src_backend_main_persistence_tasks_automations_ts_FileAutomations
+```
+
+直接依赖：[../../../core/foundation/files.ts](../../../core/foundation/files.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/automation/contracts.ts](../../../core/automation/contracts.ts)。
 
 ### chat-inputs.ts
 

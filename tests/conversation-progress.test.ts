@@ -2,7 +2,7 @@ import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {MemberProgressSummary} from '../src/frontend/tasks/MemberProgressSummary';
-import {WorkStatus} from '../src/frontend/run-view/WorkStatus';
+import {WorkStatus} from '../src/frontend/execution-view/WorkStatus';
 import {validateGraph} from '../src/bridge/contracts/dispatch';
 import {publicDispatchScopeSchema} from '../src/backend/core/tasks/scope-public';
 import {progressFixture,progressMemberRun} from './conversation-progress-fixture';

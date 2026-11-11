@@ -9,6 +9,25 @@ import {requestBudgetCommand,requestBudgetReceipt,requestBudgetReservation,reque
 import type {ModelRequestBudgetChange} from '../src/backend/core/tasks/model-request-budget';
 import {hash} from '../src/backend/core/foundation/serialization';
 
+it('预算端口只暴露隔离的预算视图，阶段提交保留唯一事务及原命令重放',async()=>{
+  const f=await requestBudgetFixture();try{
+    const port=requestBudgetStore(f.store),view=await port.readBudget();
+    expect(Object.keys(port).sort()).toEqual(['readBudget','transactBudget']);
+    // 尚无原请求记录时保持缺省；已有记录后的事务视图在下方继续核对两项字段。
+    expect(Object.keys(view).sort()).toEqual(['scopes']);
+    view.scopes!.splice(0);expect((await f.store.read()).scopes).toHaveLength(1);
+    const ticket=await f.port.reserve(budgetAttempt),initial=(await f.store.read()).modelRequestBudgetChanges![0];
+    const replay=vi.fn();expect(await port.transactBudget(requestBudgetCommand(initial),replay)).toEqual(requestBudgetReceipt(initial));expect(replay).not.toHaveBeenCalled();
+    const change={requestId:ticket.requestId,revision:2,recordedAt:new Date().toISOString(),phase:'issuing' as const};
+    await port.transactBudget(requestBudgetCommand(change),async state=>{
+      expect(Object.keys(state).sort()).toEqual(['modelRequestBudgetChanges','scopes']);
+      state.scopes!.splice(0);state.modelRequestBudgetChanges!.splice(0);return {modelRequestBudgetChanges:[change],receipt:requestBudgetReceipt(change)};
+    });
+    const actual=await f.store.read();expect(actual.scopes).toHaveLength(1);expect(actual.modelRequestBudgetChanges).toHaveLength(2);
+    expect(actual.modelRequestBudgetChanges!.at(-1)?.phase).toBe('issuing');
+  }finally{await f.cleanup()}
+});
+
 it('串行可靠预留共同扣余额，明确结算后释放；重放原命令不重新预留或修改正文',async()=>{
   const f=await requestBudgetFixture({tokens:69632});try{
     const results=await Promise.allSettled([f.port.reserve(budgetAttempt),f.port.reserve(budgetAttempt)]);expect(results.map(r=>r.status).sort()).toEqual(['fulfilled','rejected']);

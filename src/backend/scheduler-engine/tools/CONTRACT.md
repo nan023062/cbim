@@ -1,3 +1,7 @@
+### 知识查询与刷新分别装配
+
+`KnowledgeTools` 将只读注册表/详情交给 Core 的 `KnowledgeQueries`，将索引刷新交给 独立的 `KnowledgeRefresh.refresh`。查询门面不再拥有刷新能力；调用前的 Schema、实例身份、写授权、取消检查及调用后的唯一输出快照校验保持在原工具边界。公开工具名称、版本与恢复协议不变，不因为重构重放提交。具体依赖与事务所有者见 [知识契约](../../core/knowledge/CONTRACT.md#固定快照读取的逻辑边界与公共入口)。
+
 ### 项目根模块查询 v2
 
 `cbim_module_registry` v2 始终返回独立的 `projectRoot`，搜索只筛选真实模块；`cbim_module_get` v2 可读取 `cbim:project` 的 builtin 定义及内联说明，不伪造 definitionFile。创建子模块不会令根范围消失；工具身份/版本、严格输出核验和知识路径保护不变。根查询不是正式委派资格，仍由派发服务核真实配置。
@@ -195,3 +199,7 @@ KnowledgeTools 与知识协议目录同步移除 cbim_people_list，不再公开
 ### 对象预览 v2
 
 cbim_object_preview 的 data 按 kind 判别，模块中文名必须写在 body 的 H1，结构化 name 来自 slug。工具发现与实际入口使用同一 Schema，既有实例、版本、事务和逐次写权限不变。
+
+对象预览的工具描述和字段 Schema 共同公开根 ID、顺序父子创建及正文约束；structural:false 返回全部校验问题，不冒充执行异常。知识提交回执与业务目标验收分别解释。
+
+模块负责人 inspect 公开四级优先级及 matches 输入：LLM 分析由当前主 Agent 完成，返回的选择才用于新目标和派发；静态 Agent、岗位与运行身份不互换。

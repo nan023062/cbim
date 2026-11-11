@@ -431,4 +431,4 @@ MemberActivityCard 的 inline 形式默认只显示图上的状态、任务和�
 
 ### 运行展示的公共边界
 
-MemberRunTranscript、SessionTaskView 从 run-view 复用消息、投影与状态。业务面板通过 conversation/RunToolDetails 显式组合，SessionTaskView 传递原 recovery 上下文，成员正文保留原可信主来源判定；选择、刷新和恢复控制不下沉到公共展示。MemberTaskDetail 的操作端口只列执行停止、批准及回答问题；资料准备端口只列导入/取消/来源读取，运行时语义不变。
+MemberRunTranscript、SessionTaskView 从 execution-view 复用消息、投影与状态。业务面板通过 本目录 ToolActivity 显式组合，SessionTaskView 传递原 recovery 上下文，成员正文保留原可信主来源判定；选择、刷新和恢复控制不下沉到公共展示。MemberTaskDetail 的操作端口只列执行停止、批准及回答问题；资料准备端口只列导入/取消/来源读取，运行时语义不变。

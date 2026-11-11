@@ -17,3 +17,13 @@ ArchitectureEditor 的模块模板从 Bridge 的纯正文契约读取，与后�
 ### Agent 默认选型
 
 ArchitectureEditor 读取 models.list 提供引擎/模型选择，提交预览前核查仍可用。runtime 只用于新登记默认值，已有岗位独立配置；删除 Agent 不依赖其模型配置继续存在。
+
+### Agent 引擎与模型
+
+ArchitectureEditor 使用与主 Agent 相同的 AgentModelSelection 和 engineSupportsApi，三引擎固定存在，模型来自统一启用目录。兼容性不再比较供应商 engine；自定义 Agent 的能力与 runtime 仍一次知识事务提交。
+
+## 共用文件树与编辑
+
+KnowledgeFileTree 从当前工作区快照构建真实目录/文件树，折叠只影响查看。KnowledgeFilePreview 显示实际正文与快照格式诊断；编辑器固定打开版本，350ms 延迟完整事务预览，新输入立即作废旧预览，迟到响应丢弃，只有结构通过可提交。发送后的原请求锁定，未知结果不能换 ID 自动重发。派生 registry 只读。原高级 KnowledgeTools 页面已删除。
+
+GovernanceLaunch 明确点击后通过 loop.chat 启动对应团队/业务架构治理工作流，使用主 Agent 保存选型和 ask 权限；真实 taskId 回交 Shell，未知启动不自动重试。

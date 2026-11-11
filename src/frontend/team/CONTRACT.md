@@ -50,4 +50,4 @@ team-model 解析 Agent runtime 并随图节点交给登记表单；新登记可
 
 ### 历史查询的关联类型
 
-useHistorySessions/useHistoryRuns 固定各自操作与身份，公共分页实现只接收类型匹配的读取函数。角色和事件查询直接获得声明的响应，不再通过 as 或 any 指定结果。原请求代次、迟到丢弃、串行分页、手动刷新与公开事件核验保持；静态类型不替代回包身份检查。消息 Markdown 复用 run-view，不依赖任务控制。
+useHistorySessions/useHistoryRuns 固定各自操作与身份，公共分页实现只接收类型匹配的读取函数。角色和事件查询直接获得声明的响应，不再通过 as 或 any 指定结果。原请求代次、迟到丢弃、串行分页、手动刷新与公开事件核验保持；静态类型不替代回包身份检查。消息 Markdown 复用 execution-view，不依赖任务控制。

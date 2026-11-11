@@ -12,6 +12,7 @@ Electron 入口与应用装配。显式资料导入共用应用级取消表，�
 | --- | --- |
 | [agent-history.ts](agent-history.ts) | 在已持锁的工作区中组合角色历史服务、文件索引及 canonical 日志读取端口。 |
 | [application.ts](application.ts) | 单次运行授权、版本化队列增量和结构化问题按工作区路由；排队时冻结附件内容与模型身份。Application：登记及重命名工作区、装配模型供应商与服务，并统一派发主 Agent 对话、附件快照、工具审批和历史操作。 |
+| [automation.ts](automation.ts) | 将工作区知识、已采纳岗位和真实协作接入自动化端口，提供桌面目录与实例校验。 |
 | [execution-admission.ts](execution-admission.ts) | 把应用级并发准入与本工作区文件/实例租约组合为主轮和成员轮共用的同步领取入口。 |
 | [execution.ts](execution.ts) | 主进程执行装配，将工作区、已解析模型、原生锁与平台访问策略注入调度引擎。 |
 | [main.ts](main.ts) | 本机后端的 Electron 装配入口，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。 |
@@ -62,26 +63,30 @@ class N_src_backend_main_agent_history_ts["agent-history.ts"] {
 class N_src_backend_main_application_ts["application.ts"] {
   <<module>>
 }
+class N_src_backend_main_automation_ts["automation.ts"] {
+  <<module>>
+}
 class N_src_backend_main_execution_admission_ts["execution-admission.ts"] {
   <<module>>
 }
 class N_src_backend_main_execution_ts["execution.ts"] {
   <<module>>
 }
-class N_src_backend_main_main_ts["main.ts"] {
-  <<module>>
-}
+N_src_backend_main_application_ts ..> N_src_backend_main_automation_ts : 导入依赖
 N_src_backend_main_application_ts ..> N_src_backend_main_workspace : 导入依赖
 N_src_backend_main_application_ts ..> N_src_backend_main_execution_ts : 导入依赖
 N_src_backend_main_application_ts ..> N_src_backend_main_execution_admission_ts : 导入依赖
 N_src_backend_main_application_ts ..> N_src_backend_main_agent_history_ts : 导入依赖
+N_src_backend_main_automation_ts ..> N_src_backend_main_workspace : 导入依赖
 N_src_backend_main_execution_ts ..> N_src_backend_main_workspace : 导入依赖
 N_src_backend_main_execution_ts ..> N_src_backend_main_execution_admission_ts : 导入依赖
-N_src_backend_main_main_ts ..> N_src_backend_main_application_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_main_main_ts["main.ts"] {
+  <<module>>
+}
 class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
   <<module>>
 }
@@ -93,6 +98,7 @@ class N_src_backend_main_runtime_monitor_ts["runtime-monitor.ts"] {
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
 - `agent-history.ts` → `persistence`：导入。
+- `application.ts` → `automation.ts`：导入。
 - `application.ts` → `platform`：导入。
 - `application.ts` → `workspace`：导入。
 - `application.ts` → `ipc`：导入。
@@ -103,6 +109,8 @@ class N_src_backend_main_runtime_monitor_ts["runtime-monitor.ts"] {
 - `application.ts` → `execution-admission.ts`：导入。
 - `application.ts` → `runtime-monitor.ts`：导入。
 - `application.ts` → `agent-history.ts`：导入。
+- `automation.ts` → `workspace`：导入。
+- `automation.ts` → `persistence`：导入。
 - `commands` → `platform`：导入。
 - `commands` → `application.ts`：导入。
 - `execution.ts` → `persistence`：导入。
@@ -115,6 +123,7 @@ class N_src_backend_main_runtime_monitor_ts["runtime-monitor.ts"] {
 - `governance` → `persistence`：导入。
 - `ipc` → `persistence`：导入。
 - `ipc` → `resources`：导入。
+- `ipc` → `automation.ts`：导入。
 - `ipc` → `workspace`：导入。
 - `ipc` → `platform`：导入。
 - `ipc` → `governance`：导入。
@@ -184,7 +193,7 @@ class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
 
 - [commands/](commands/ARCHITECTURE.md)：CLI 入口，复用应用和调度，不拥有第二套领域规则。
 - [governance/](governance/ARCHITECTURE.md)：工作区模块知识治理服务、可信桌面操作与独立主运行端口。登记保护、决定及实施只属桌面；模型仅可读取、观察、提案和核查回执；反馈来源在批准与实施前串行复核，未知不重放。
-- [ipc/](ipc/ARCHITECTURE.md)：应用 action 路由；等待资料独立导入/目录/取消入口不启动模型，受理只读保存快照。队列插入传递原expectedRunId，由调度拒绝缺失、过期及停止。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。 153项应用操作按业务组装配，request统一保留关闭/受理前错误码后解析，实际处理器受响应映射约束。 dispatch.ownerInspect 只读核原任务并返回当前观察；正式派发必须显式绑定主周期。 dispatch.commandReport 固定原工作区、主根、运行和调用，桌面与模型共用同一只读服务。 五项影响观察／处置／原回执／历史／关联入口相互分开，查询不启动新任务；保存只接受本机显式决定。 四个文件报告/补偿入口固定原调用或原命令；actor 由桌面入口注入，查询不启动文件操作，补偿不得改变目标路径或内容。
+- [ipc/](ipc/ARCHITECTURE.md)：应用 action 路由；等待资料独立导入/目录/取消入口不启动模型，受理只读保存快照。队列插入传递原expectedRunId，由调度拒绝缺失、过期及停止。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。 161项应用操作按业务组装配，request统一保留关闭/受理前错误码后解析，实际处理器受响应映射约束。 dispatch.ownerInspect 只读核原任务并返回当前观察；正式派发必须显式绑定主周期。 dispatch.commandReport 固定原工作区、主根、运行和调用，桌面与模型共用同一只读服务。 五项影响观察／处置／原回执／历史／关联入口相互分开，查询不启动新任务；保存只接受本机显式决定。 四个文件报告/补偿入口固定原调用或原命令；actor 由桌面入口注入，查询不启动文件操作，补偿不得改变目标路径或内容。
 - [persistence/](persistence/ARCHITECTURE.md)：本机持久化适配：知识事务、运行日志、对话附件、模型配置。保留原数据路径与格式，目录调整不迁移用户数据。
 - [platform/](platform/ARCHITECTURE.md)：本机路径、系统锁、凭据加密、终端与工具访问检查。固定根有界读取并核前后句柄/路径，拒绝链接、越界和Windows备用数据流；JSON验证由同一Buffer计算指纹和结构结论，正文不出端口。原生历史不完整拒绝恢复，不承诺外部原子隔离。 原生指纹固定 Pi/Claude/Codex 格式及受管目录，Codex 另核 metadata 和 rollout 文件名。 范围模式用Win32读取/枚举句柄与LPAC私有快照，原工程不扩ACL。 ArtifactFileService 只观察明确原调用的有界文件，独立返回缺失、不可信和当前字节；路径与链接检查不宣称操作系统隔离。 独立 utility 持有 Win32 目录与文件句柄，执行单次有界替换、flush 与读回；私有 blob 保留真实 before，进程退出不表示内容回滚。另有独立 LPAC/Job Node 平台端口，私有快照与输出分权、真实进程树收束；尚未装配为模型命令或任务授权。
 - [resources/](resources/ARCHITECTURE.md)：链接器、人才和完整业务模板共用的本地/远端资源仓库。静态资料单次HTTP捕获前后核授权与共享代际，正文快照不安装执行。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。 GitHub 反馈采用独立直连服务，设备授权和原提交账本由本机管理；固定目标、跨会话去重、未知只核实，成功不回传 Issue 链接或开发进度。
@@ -208,7 +217,7 @@ Main 为 `DesktopUpdates` 注入唯一的业务关闭回调，停止终端、等
 
 ## 产品标识与原生窗口
 
-`main.ts` 只装配窗口品牌资源：开发态从工程 `branding/cbim.png` 读取，打包态从固定 `resources/branding/cbim.png` 读取。Forge 的应用图标及独立安装器均使用同一矢量源生成的 ICO；运行时不生成或下载品牌资源。显示名称为 CBIM Assistant，原应用 ID、可执行文件名称、卸载器探测与用户数据目录保持兼容。
+`main.ts` 只装配窗口品牌资源：开发态从工程 `branding/cbim.png` 读取，打包态从固定 `resources/branding/cbim.png` 读取。Forge 的应用图标及独立安装器均使用同一矢量源生成的 ICO；运行时不生成或下载品牌资源。窗口标题为 CBIM，原应用 ID、可执行文件名称、卸载器探测与用户数据目录保持兼容。
 
 ```mermaid
 classDiagram

@@ -1,5 +1,4 @@
 /**
- * 展示边界：正文和状态由 run-view 的无任务控制组件呈现，恢复与成员选择由本会话层组合。
  * 作用定位：按真实事件顺序组合一轮主对话的来源、流式文字与内联工具，系统交接不冒充用户或模型调用。
  * 设计原因：长历史的正文排版与逐键更新的草稿变化频率不同；以完整 props 比较隔离两者，避免重算 Markdown 和消息时间。
  * 更新边界：运行快照不可原地修改；日志替换、恢复上下文或运行计时变化仍更新。终态用时由日志决定，不订阅墙钟。
@@ -8,10 +7,10 @@ import {memo,useMemo} from 'react';
 import type {RunSummary} from '../../bridge/contracts/execution';
 import type {ExecutionRecoveryContext} from '../tasks/useExecutionRecovery';
 import {Icon} from '../components/Icon';
-import {transcript} from '../run-view/transcript';
-import {MarkdownMessage} from '../run-view/MarkdownMessage';
+import {transcript} from '../execution-view/transcript';
+import {MarkdownMessage} from '../execution-view/MarkdownMessage';
 import {MessageCard} from './MessageCard';
-import {WorkStatus} from '../run-view/WorkStatus';
+import {WorkStatus} from '../execution-view/WorkStatus';
 import {ConversationToolCall} from './ConversationToolCall';
 import {inlineHandoffTasks} from './inline-task-state';
 import './inline-conversation.css';

@@ -1,3 +1,7 @@
+### 静态知识视图的单向边界
+
+`model.ts` 中的 Team 只依赖知识快照公开类型、只读解析辅助和 Foundation，不依赖 BusinessWorkspace、知识写入端口或调度编排。跨域查询由 `scheduler-engine/context/knowledge-queries.ts` 组合；每个 Team 绑定一个固定快照，刷新后创建新视图。依赖检查器覆盖类型和重导出，具体矩阵见 [知识契约](../knowledge/CONTRACT.md#快照契约领域视图与查询编排)。此约束不把其他岗位、成员和执行绑定文件误称为同一只读模型。
+
 ### 根标识与正式兜底
 
 `automatic-execution.ts` 复用 workspace 的 `projectRootModuleId` 作为历史 `implicitProjectModuleId`。根始终可查询，但正式 no_modules 兜底仍只适用于真实模块为空的项目；有模块时不以根绕过负责人或 Workflow。Auto 主会话直接工作与成员兜底是不同执行路径，不制造岗位或成员绑定。
@@ -172,3 +176,11 @@ workspaceMemberModelSnapshotSchema 接受可选 engine，明确值参与 configu
 ### 引擎协议校验
 
 岗位快照与供应商共用 engineApi：Codex 必须使用 OpenAI Responses，Claude Code 必须使用 Anthropic Messages；原 Pi 缺省和既有快照字节不变。下拉选型不能绕过保存及领取时的协议核对。
+
+## Agent 执行配置归属
+
+主 Agent 对话栏和团队配置页共享 agent-runtime.ts 契约，配置属于工作区 cbim:main。岗位 modelRef 新增可选 engine；新 UI 始终显式提交，schema 校验其与快照一致。workspaceMemberEngine 读取新引用或旧 snapshot.engine，不补写缺省字段。只改引擎属于选型编辑；同引擎同模型的参数刷新仍需明确采纳。旧审计、binding 及 hash 形状不改写。
+
+## 隐式模块执行者
+
+implicitModuleOwner 按本模块、最近祖先的非空责任记录解析；空责任不创建新登记。失效的显式/祖先关系仍由门禁报告，不自动匹配其他人。ExpectedModuleOwner 向后兼容原直接关系，并允许 inheritedFrom 或 match 两种互斥依据：继承冻结实际父关系和子模块来源；匹配冻结主模型理由、知识版本和来源，无伪造 bindingId。岗位、能力采纳和模型门禁保持一致；matches:null 回到主会话，不创建内置执行员。

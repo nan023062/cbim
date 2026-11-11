@@ -91,9 +91,23 @@ try {
   }
   await setup(old, previousVersion); let page = await launch(); assert.equal((await status(page)).currentVersion, previousVersion);
   const profile = {name: 'Release acceptance', api: 'openai-completions', baseUrl: `http://127.0.0.1:${server.address().port}/v1`, auth: 'none', defaultModel: 'acceptance', models: [{id: 'acceptance', name: 'Acceptance', enabled: true, contextWindow: 32768, maxTokens: 1024, reasoning: false, pricing: {input: 0, output: 0, cacheRead: 0, cacheWrite: 0}}]};
-  await page.evaluate(profile => window.cbim.call('models.save', {profile}), profile);
+  const savedModels = await page.evaluate(profile => window.cbim.call('models.save', {profile}), profile);
   const workspace = path.join(root, 'project'); await fs.mkdir(workspace);
   const entry = await page.evaluate(path => window.cbim.call('add', {path}), workspace);
+  // 0.1.7 的新增持久数据也必须沿真实旧版 IPC 创建；不能只证明旧聊天没有丢失。
+  let priorMainSettings, priorAutomation;
+  if (previousVersion === '0.1.7') {
+    const opened = (await page.evaluate(() => window.cbim.call('list'))).entries.find(item => item.id === entry.id);
+    assert.ok(opened?.instanceId);
+    const identity = {workspaceId: entry.id, instanceId: opened.instanceId};
+    const initial = await page.evaluate(args => window.cbim.call('agent.mainSettings', args), identity);
+    priorMainSettings = await page.evaluate(args => window.cbim.call('agent.configureMain', args), {...initial, selection: {engine: 'pi', profileId: savedModels.selectedId, modelId: 'acceptance'}});
+    priorAutomation = await page.evaluate(args => window.cbim.call('automation.save', args), {...identity, expectedRevision: 0, definition: {name: 'Retained manual automation', enabled: true, executor: {kind: 'main'}, moduleIds: [], workflowSelections: [], skillIds: [], prompt: 'Preserve this task without running it during upgrade.', permission: 'read', schedule: {kind: 'manual'}}});
+    assert.equal(requests, 0);
+  }
+  const priorKnowledge = await page.evaluate(id => window.cbim.call('snapshot', {id}), entry.id);
+  const businessFile = path.join(workspace, 'retained-business.txt'), businessText = 'Business data preserved from '+previousVersion;
+  await fs.writeFile(businessFile, businessText);
   const run = await page.evaluate(id => window.cbim.call('loop.chat', {id, message: 'Record release acceptance.', options: {permission: 'ask', turnTimeoutMs: 60000}}), entry.id);
   let summary;
   for (let n = 0; n < 120; n++) {
@@ -144,8 +158,20 @@ try {
   assert.equal(native.version, version); assert.equal(native.packaged, true); assert.equal(native.userData, path.join(userRoot, 'desktop'));
   assert.equal(await page.evaluate(() => localStorage.getItem('cbim.release-retention')), marker);
   assert.equal(await fs.readFile(path.join(userRoot, 'acceptance-marker.txt'), 'utf8'), marker);
-  const models = await page.evaluate(() => window.cbim.call('models.list')); assert.ok(models.profiles.some(p => p.name === profile.name));
+  const models = await page.evaluate(() => window.cbim.call('models.list')); assert.deepEqual(models, savedModels);
   const catalog = await page.evaluate(() => window.cbim.call('list')); assert.ok(catalog.entries.some(e => e.id === entry.id));
+  const afterKnowledge = await page.evaluate(id => window.cbim.call('snapshot', {id}), entry.id);
+  assert.equal(afterKnowledge.revision, priorKnowledge.revision); assert.deepEqual(afterKnowledge.files, priorKnowledge.files);
+  assert.equal(await fs.readFile(businessFile, 'utf8'), businessText);
+  if (priorMainSettings) {
+    const reopened = catalog.entries.find(item => item.id === entry.id); assert.ok(reopened?.instanceId);
+    const identity = {workspaceId: entry.id, instanceId: reopened.instanceId};
+    const settings = await page.evaluate(args => window.cbim.call('agent.mainSettings', args), identity);
+    assert.equal(settings.revision, priorMainSettings.revision); assert.deepEqual(settings.selection, priorMainSettings.selection);
+    const automation = await page.evaluate(args => window.cbim.call('automation.list', args), identity);
+    assert.deepEqual(automation.jobs, [priorAutomation]); assert.deepEqual(automation.runs, []);
+    await save('retained-017-features', {mainAgent: {revision: settings.revision, selection: settings.selection}, automation: {id: priorAutomation.id, revision: priorAutomation.revision, unchanged: true, runs: 0}, knowledgeRevision: afterKnowledge.revision, knowledgeFileCount: afterKnowledge.files.length, businessFileSha256: await sha(businessFile)});
+  }
   const history = await page.evaluate(id => window.cbim.call('loop.list', {id}), entry.id); assert.equal(history.length, 1); assert.equal(history[0].task.taskId, run.taskId); assert.equal(history[0].runId, run.runId);
   summary = await page.evaluate(args => window.cbim.call('loop.inspect', args), {id: entry.id, taskId: run.taskId, runId: run.runId}); assert.equal(summary.status, 'completed'); assert.equal(requests, 1);
   await notes(page); assert.deepEqual(errors, []);
@@ -153,7 +179,7 @@ try {
   assert.equal((await status(page)).enabled, true);
   if (mode === 'online') { const current = await page.evaluate(() => window.cbim.call('desktop.updates.check')); assert.equal(current.phase, 'current'); }
   await close();
-  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, freshInstall: mode === 'candidate', onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, noReplay: true}, modelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
+  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, freshInstall: mode === 'candidate', onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
   console.log(JSON.stringify({success: true, mode, version, sha256: expected, retained: true}));
 } catch (error) {
   let updateState;

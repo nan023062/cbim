@@ -7,7 +7,7 @@ import {applyMemberEvents,emptyMemberEvents,memberEventKey,memberPollDelay} from
 import {MemberRunTranscript} from '../src/frontend/tasks/MemberRunTranscript';
 import {MemberActivity} from '../src/frontend/tasks/MemberActivity';
 import {MemberTaskDetail} from '../src/frontend/tasks/MemberTaskDetail';
-import {transcript} from '../src/frontend/conversation/transcript';
+import {transcript} from '../src/frontend/execution-view/transcript';
 
 const scope={workspaceId:'workspace',rootSessionId:'root',taskId:'task',runId:'run'};
 const view:MemberRunView={task:{workspaceId:scope.workspaceId,taskId:scope.taskId,root:'',goal:'核实真实产物',agentId:'developer',moduleIds:['module'],acceptance:['证据有效']},runId:scope.runId,status:'running',acceptance:'not_evaluated',unresolvedTools:[]};

@@ -38,7 +38,7 @@
 
 ### 执行成员的一次性求助门闩
 
-`EngineContext.memberHelpTools` 只在 `startMember` 的可信绑定下存在。Pi 透传一次性 gate 的真实 `toolCallId`；主 Agent 伪造工具名仍会被拒绝。运行时在任何异步策略前为求助预占门闩；正在审批或已放行未结束的其它调用都阻止求助。预占之后的新工具仅写入拒绝事实，不进入可能执行集合，也不能反过来干扰已批准的求助。
+`EngineContext.tools 中的求助端口` 只在 `startMember` 的可信绑定下存在。Pi 透传一次性 gate 的真实 `toolCallId`；主 Agent 伪造工具名仍会被拒绝。运行时在任何异步策略前为求助预占门闩；正在审批或已放行未结束的其它调用都阻止求助。预占之后的新工具仅写入拒绝事实，不进入可能执行集合，也不能反过来干扰已批准的求助。
 
 `cbim_task_help` 执行前再次检查停止、授权、所有在途操作和被引用工具确实属于本轮；先记录 `task.help_requested {help}`，再返回标准 `{state:'staged',help}` 正文，最后由统一 `tool.finished` 签发回执。请求使用固定 MemberRunBinding，没有模型提供的收件人或提权参数。落盘失败不在同轮重放；成功后任何工具仍被拒绝，成员应结束本轮。
 
@@ -48,7 +48,7 @@ staged 不是派发图交接。外层在引擎关闭和 canonical 日志核实�
 classDiagram
 class LoopRuntime { +startMember() }
 class MemberHelpTools { +guard() +denied() +call() }
-class EngineContext { +memberHelpTools }
+class EngineContext { +tools }
 class RunJournal { <<port>> +append() }
 LoopRuntime --> MemberHelpTools : 每轮可信绑定与门闩
 LoopRuntime --> RunJournal : 先持久化请求与回执
@@ -381,3 +381,9 @@ checkedMemberRunBinding 同时核独立 fallbackBinding 的工作区、角色及
 LoopRuntime 保留唯一权限、任务进度、证据与日志生命周期。engine-tools.ts 捕获真实工具目录和路由，engine-instructions.ts 统一角色及冻结上下文；Pi、Claude Code 与 Codex 只负责原生协议适配，各引擎不各自实现一套调度、知识事务或验收。native-tools.ts 复用固定 Pi SDK 的文件/命令实现供 Codex 宿主动态工具调用，不创建 Pi Loop 或共享账号。
 
 主会话切换时，engine-session.ts 沿 run.started.resumeFrom 最多核实 512 段同任务历史；恢复目标引擎最近一次原生文件及其实际 session.bound ID，并将其后另一引擎的公开消息/工具结果作为资料转交。首次使用目标引擎建立独立原生文件。资料最多 1 MiB，损坏、未决工具或循环链明确拒绝，不截断、不重放工具。成员检查点仍固定原岗位引擎，不做跨引擎移植。Claude Code/Codex 没有实现可靠的运行内插入确认，保留排队及下一轮发送。
+
+### 引擎能力目录
+
+EngineContext 通过通用 RuntimeToolsPort 目录传入已装配工具；不再引用任务、求助、产物、验证和文件工具的具体类。runtimeEngineTools 按实际目录捕获路由，拒绝非法或重复工具名，保留原调用 ID、停止信号和未知工具拒绝。nativeTools=disabled 独立控制全部原生文件/命令禁用，不由工具名称或模型文本推断权限；能力指引来自可信运行装配。原 beforeTool 持久化授权、业务门闩、停止和在途副作用排空均保持原顺序。
+
+brain/index.ts 仅公开引擎无关契约和运行时；Pi、Claude Code、Codex 实现由实际装配点直接导入。Runtime 仍拥有现有成员业务门闩，尚未把全部业务生命周期迁出，此片不宣称运行时完全解耦。

@@ -1,3 +1,4 @@
+import {runtimeTools} from './runtime-tools-fixture';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {it,expect} from 'vitest';
@@ -21,7 +22,7 @@ it.each(['before','after','wire','prepared','executing','applied'] as const)('�
     const manifestId=await prepareTransition(c),input=transitionInput(manifestId);if(mode==='before')await fs.writeFile(path.join(c.task.root,'outputs/new.txt'),'changed');
     expect((await c.beforeTool({name:transitionTool,id:'transition',input})).allow).toBe(true);
     let result:any;
-    if(mode==='wire'){result=await c.artifactTransitionTools!.call(transitionTool,input,'transition');const value=JSON.parse(result.content[0].text);value.operation.beforeManifestId='forged';result.content[0].text=JSON.stringify(value)}else await expect(c.artifactTransitionTools!.call(transitionTool,input,'transition')).rejects.toThrow();
+    if(mode==='wire'){result=await runtimeTools(c).artifactTransitionTools!.call(transitionTool,input,'transition');const value=JSON.parse(result.content[0].text);value.operation.beforeManifestId='forged';result.content[0].text=JSON.stringify(value)}else await expect(runtimeTools(c).artifactTransitionTools!.call(transitionTool,input,'transition')).rejects.toThrow();
     await c.emit({type:'tool.finished',data:{name:transitionTool,id:'transition',isError:mode!=='wire',...(result?{result}:{})}});
     for(const name of [transitionTool,'write','cbim_delivery_prepare','cbim_task_manifest_capture','cbim_member_checkpoint'])expect((await c.beforeTool({name,id:'denied-'+name,input:name===transitionTool?input:{}})).allow).toBe(false);
     await invoke(c,'read','still-readable',{path:'File.txt'});
@@ -37,17 +38,17 @@ it.each(['source-returned','target-changed','extra-entry','ordinary-write','repl
   });try{const summary=await(await f.start()).done;expect(f.apply).toHaveBeenCalledTimes(2);expect(()=>completeOutputProof(f.verify(summary.events).records.at(-1)!)).toThrow()}finally{await f.cleanup()}
 });
 it('仅模型伪造阶段、缺真实端口或完整出口声明均不能取得执行资格',async()=>{
-  const f=await transitionFixture(async c=>{await expect(c.emit({type:'artifact.transition_applied',data:{}})).rejects.toThrow('可信端口');await expect(c.emit({type:'tool.allowed',data:{id:'forged',name:transitionTool}})).rejects.toThrow();await expect(c.artifactTransitionTools!.call(transitionTool,transitionInput('made-up'),'forged')).rejects.toMatchObject({code:'ARTIFACT_TRANSITION_AUTHORIZATION'})});try{expect((await(await f.start()).done).status).toBe('completed');expect(f.apply).not.toHaveBeenCalled()}finally{await f.cleanup()}
+  const f=await transitionFixture(async c=>{await expect(c.emit({type:'artifact.transition_applied',data:{}})).rejects.toThrow('可信端口');await expect(c.emit({type:'tool.allowed',data:{id:'forged',name:transitionTool}})).rejects.toThrow();await expect(runtimeTools(c).artifactTransitionTools!.call(transitionTool,transitionInput('made-up'),'forged')).rejects.toMatchObject({code:'ARTIFACT_TRANSITION_AUTHORIZATION'})});try{expect((await(await f.start()).done).status).toBe('completed');expect(f.apply).not.toHaveBeenCalled()}finally{await f.cleanup()}
   const missing=await transitionFixture(async()=>{}, {transitionPort:undefined});try{await expect(missing.start()).rejects.toMatchObject({code:'ARTIFACT_TRANSITION_UNAVAILABLE'})}finally{await missing.cleanup()}
   const contract=transitionContracts()[0].contract;delete contract.delivery;expect(workflowContractSchema.safeParse(contract).success).toBe(false);
 });
 it('执行阶段已保存后停止，等待真实句柄退出，原文件不删除也不重新发出',async()=>{
   const entered=deferred(),release=deferred();
-  const f=await transitionFixture(async c=>{const input=transitionInput(await prepareTransition(c));expect((await c.beforeTool({name:transitionTool,id:'stopped',input})).allow).toBe(true);await expect(c.artifactTransitionTools!.call(transitionTool,input,'stopped')).rejects.toThrow();await c.emit({type:'tool.finished',data:{id:'stopped',name:transitionTool,isError:true}})},{beforeApply:async()=>{entered.resolve();await release.promise}});
+  const f=await transitionFixture(async c=>{const input=transitionInput(await prepareTransition(c));expect((await c.beforeTool({name:transitionTool,id:'stopped',input})).allow).toBe(true);await expect(runtimeTools(c).artifactTransitionTools!.call(transitionTool,input,'stopped')).rejects.toThrow();await c.emit({type:'tool.finished',data:{id:'stopped',name:transitionTool,isError:true}})},{beforeApply:async()=>{entered.resolve();await release.promise}});
   try{const run=await f.start();await entered.promise;await f.runtime.stop(f.task.taskId);release.resolve();const summary=await run.done;expect(summary.status).toBe('interrupted');expect(summary.events.filter(e=>e.type.startsWith('artifact.transition_')).map(e=>e.type)).toEqual(['artifact.transition_prepared','artifact.transition_executing']);expect(f.apply).not.toHaveBeenCalled();expect(await fs.readFile(path.join(f.directory,'outputs/old.txt'),'utf8')).toBe('remove this');expect(f.drain).toHaveBeenCalled()}finally{release.resolve();await f.cleanup()}
 });
 it('实际 IO 和 finished 均完成前阻止并发，提前伪成功结束不能释放屏障',async()=>{
   const entered=deferred(),release=deferred();
-  const f=await transitionFixture(async c=>{const input=transitionInput(await prepareTransition(c));expect((await c.beforeTool({name:transitionTool,id:'early',input})).allow).toBe(true);const pending=c.artifactTransitionTools!.call(transitionTool,input,'early');await entered.promise;await c.emit({type:'tool.finished',data:{name:transitionTool,id:'early',result:{content:[{type:'text',text:'{}'}]}}});expect((await c.beforeTool({name:'read',id:'concurrent',input:{path:'File.txt'}})).allow).toBe(false);release.resolve();await expect(pending).rejects.toThrow();expect((await c.beforeTool({name:'write',id:'later',input:{path:'File.txt'}})).allow).toBe(false);await invoke(c,'read','after-ended',{path:'File.txt'})},{afterOpen:async()=>{entered.resolve();await release.promise}});
+  const f=await transitionFixture(async c=>{const input=transitionInput(await prepareTransition(c));expect((await c.beforeTool({name:transitionTool,id:'early',input})).allow).toBe(true);const pending=runtimeTools(c).artifactTransitionTools!.call(transitionTool,input,'early');await entered.promise;await c.emit({type:'tool.finished',data:{name:transitionTool,id:'early',result:{content:[{type:'text',text:'{}'}]}}});expect((await c.beforeTool({name:'read',id:'concurrent',input:{path:'File.txt'}})).allow).toBe(false);release.resolve();await expect(pending).rejects.toThrow();expect((await c.beforeTool({name:'write',id:'later',input:{path:'File.txt'}})).allow).toBe(false);await invoke(c,'read','after-ended',{path:'File.txt'})},{afterOpen:async()=>{entered.resolve();await release.promise}});
   try{expect((await(await f.start()).done).status).toBe('interrupted');expect(f.apply).not.toHaveBeenCalled()}finally{release.resolve();await f.cleanup()}
 });

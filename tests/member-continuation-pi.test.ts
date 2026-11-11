@@ -4,7 +4,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
-import {LoopRuntime,PiEngine,type TaskSpec,type RunInputSource} from '../src/backend/core/brain';
+import {LoopRuntime,type TaskSpec,type RunInputSource} from '../src/backend/core/brain';
+import {PiEngine} from '../src/backend/core/brain/pi/engine';
 import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
 
 it('real Pi resumes member results as custom data, then preserves ordinary user follow-ups',async()=>{

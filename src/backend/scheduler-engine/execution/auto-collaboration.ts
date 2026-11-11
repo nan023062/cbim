@@ -1,4 +1,5 @@
 /**
+ * 可信首轮准备可登记明确岗位待办，按真实 run 交给首个批次，仍由原调度结算和权限门禁执行。
  * 首轮冻结用户协作模式，回注与等待恢复从原周期继承；自动兜底只改变路由，不改变成员权限和准入。
  * 续跑选择只看最新段预约和真实未消费状态，历史预约只回传作审计。
  * 已持久保留的原成员只在用户明确继续并通过预检后接回 Cycle，仍须新计划和显式预约，不扫描历史信封自动执行。
@@ -12,6 +13,7 @@
  * 新核实/修复：启动信号透传受理服务，事务外 IO 后停止不得保存新意图；已受理意图仍按原命令查询，不清原 unknown。
  * 自动接续保留本周期的引擎选型，不从当前设置重新选择主引擎；成员仍使用各自冻结配置。
  */
+import type {GoalPlanInput} from '../../core/tasks/scope-goal';
 import {hash,json} from '../../core/foundation/serialization';
 import {randomUUID} from 'node:crypto';
 import {currentMemberResumeRequest} from '../../core/tasks/member-checkpoint-chain';
@@ -56,6 +58,8 @@ type Batch={cycle:Cycle;task:TaskSpec;runId:string;options:Options;tasks:string[
 /** 应用按工作区装配一个；关闭必须早于主/成员执行管理器与派发存储。 */
 export class AutoCollaboration {
   private batches=new Map<string,Batch>();
+  /** 可信首轮准备产生的待办，只交给同一真实 run 的首个批次；重开不恢复此启动能力。 */
+  private preparedTasks=new Map<string,string[]>();
   private cycles=new Map<string,Cycle>();
   /** 无计算占用的持久等待；独立于 Cycle，恢复不需要伪造 TaskSpec 或重启历史模型。 */
   private waitingSlots=new Map<string,DispatchScope>();
@@ -245,6 +249,7 @@ export class AutoCollaboration {
     if(this.closed){await this.finishCycle(cycle,'cancelled');fail('COLLABORATION_STOPPED','协作调度已关闭')}
   }
   private async startFailed(task:TaskSpec,source:RunInputSource|undefined,error:unknown){
+    for(const [id,ids] of this.preparedTasks)if(ids.some(value=>this.cycles.get(task.taskId)?.tasks.has(value)))this.preparedTasks.delete(id);
     const code=(error as {code?:string})?.code;
     // 回注的预算结果由 advance 在启动串行锁外处理，避免暂停队列重入锁；等待不关闭周期。
     if(source&&code?.startsWith('SCOPE_BUDGET_'))return;
@@ -265,6 +270,20 @@ export class AutoCollaboration {
     },track:operation=>this.track(batch.cycle,Promise.resolve().then(operation))};
   }
 
+  /** 在真实周期已登记、工具批次创建前规划一个明确岗位任务；沿原派发与结算规则，不另启成员引擎。 */
+  async prepareAssignment(task:TaskSpec,runId:string,plan:GoalPlanInput,input:DispatchTaskInput['task'],signal:AbortSignal){
+    const cycle=this.cycles.get(task.taskId);
+    const alive=()=>{signal.throwIfAborted();this.owner.assert();if(this.closed||!cycle||cycle.stopped||this.cycles.get(task.taskId)!==cycle||this.batches.has(runId))fail('COLLABORATION_STOPPED','首轮任务准备已停止或运行已开始')};
+    alive();if(!cycle)fail('COLLABORATION_STOPPED','首轮周期不存在');cycle.workRequested=true;
+    return this.track(cycle,(async()=>{
+      const identity=this.identity(cycle);
+      await this.dispatch.goals.plan(identity,cycle.scopeId,runId,'startup-plan-'+runId,plan,alive);alive();
+      const graph=await this.dispatch.snapshot(identity);alive();
+      const receipt=await this.dispatch.dispatchTask({...identity,commandId:'startup-task-'+runId,expectedParentRevision:graph.root.revision,task:input},cycle.scopeId,alive);
+      // 回执后保存批次关联，即使随后取消也让原周期处理既有待办，不能重发。
+      this.preparedTasks.set(runId,[receipt.taskId]);cycle.tasks.add(receipt.taskId);return receipt;
+    })());
+  }
   /** 工具仅装入真实主聊天运行；身份来自运行时，CLI 或成员不会得到派发入口。 */
   tools(task:TaskSpec,runId:string,options:WorkspaceLoopOptions):DispatchTools|undefined{
     if(this.closed||task.mode!=='chat'||task.agentId!=='cbim:main'||!options.profileId)return undefined;
@@ -275,8 +294,8 @@ export class AutoCollaboration {
     // 按实际创建的主 run 计数，暂时占用导致的启动重试不扣额度；模型不能调大限制。
     if(!cycle.mainRuns.has(runId)&&cycle.mainRuns.size>=32)fail('GOAL_CYCLE_LIMIT','本次目标已达到 32 次主调度运行，已停止自动续跑');
     cycle.mainRuns.add(runId);
-    const batch:Batch={cycle,task:structuredClone(task),runId,options:{engine:options.engine,collaborationMode:cycle.collaborationMode,provider:options.provider,model:options.model,profileId:options.profileId,permission,allowNativeExecution:permission!=='read',turnTimeoutMs:options.turnTimeoutMs},tasks:[],calls:new Set(),stopped:false,failures:new Map(),watched:new Set(),admissions:new Map()};
-    this.batches.set(runId,batch);
+    const batch:Batch={cycle,task:structuredClone(task),runId,options:{engine:options.engine,collaborationMode:cycle.collaborationMode,provider:options.provider,model:options.model,profileId:options.profileId,permission,allowNativeExecution:permission!=='read',turnTimeoutMs:options.turnTimeoutMs},tasks:this.preparedTasks.get(runId)??[],calls:new Set(),stopped:false,failures:new Map(),watched:new Set(),admissions:new Map()};
+    this.preparedTasks.delete(runId);this.batches.set(runId,batch);
     const binding=this.toolBinding(batch);
     const goals=new GoalTools({binding,collaborationMode:cycle.collaborationMode,
       inspect:async()=>{const value=await this.dispatch.goals.inspectWithGraph(this.identity(batch),cycle.scopeId);if(!value||typeof value!=='object'||Array.isArray(value))return value;return {scope:projectMainScope(value.scope),graph:value.graph}},

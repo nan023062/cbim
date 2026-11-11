@@ -7,10 +7,10 @@ import {memo,useMemo} from 'react';
 import type {RunSummary} from '../../bridge/contracts/execution';
 import type {ExecutionRecoveryContext} from '../tasks/useExecutionRecovery';
 import {Icon} from '../components/Icon';
-import {transcript} from './transcript';
-import {MarkdownMessage} from './MarkdownMessage';
+import {transcript} from '../execution-view/transcript';
+import {MarkdownMessage} from '../execution-view/MarkdownMessage';
 import {MessageCard} from './MessageCard';
-import {WorkStatus} from './WorkStatus';
+import {WorkStatus} from '../execution-view/WorkStatus';
 import {ConversationToolCall} from './ConversationToolCall';
 import {inlineHandoffTasks} from './inline-task-state';
 import './inline-conversation.css';
@@ -25,6 +25,6 @@ export const ConversationTurn=memo(function ConversationTurn({run,workspaceId,no
       if(item.kind==='system')return <details key={item.id} className="chat-tool inline-handoff" data-source-kind="system"><summary><b>{handoffs.length?handoffs.map(t=>t.assignee.name).join('、')+' → 主 Agent':'系统接续'}</b><span>已接收</span></summary><p className="chat-model-notice">{item.text}</p>{handoffs.map(task=><p key={task.taskId}>{task.goal}<button onClick={()=>onSelectTask(task.taskId)}>查看任务详情</button></p>)}</details>;
       return <MessageCard key={item.id} speaker={item.kind==='user'?'user':item.kind==='assistant'?'assistant':'error'} text={item.text} time={item.time??run.events.at(-1)?.time}>{item.kind==='user'?<><div className="chat-text">{item.text}</div>{item.attachments&&<div className="chat-attachments">{item.attachments.map((a,i)=><span key={i} title={a.source}><Icon name="knowledge" size={13}/>{a.name}</span>)}</div>}</>:<MarkdownMessage text={item.text} streaming={item.pending} workspaceId={workspaceId}/>}</MessageCard>;
     })}
-    <WorkStatus run={run} now={now} recovery={recovery} inline/>
+    <WorkStatus run={run} now={now} inline/>
   </section>;
 });

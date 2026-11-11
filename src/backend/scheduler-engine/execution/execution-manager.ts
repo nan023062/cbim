@@ -1,4 +1,5 @@
 /**
+ * 内部 MainStartup 在真实周期建立后、模型启动前绑定身份和准备首任务；取消贯穿准备，不是公开运行选项。
  * IPC 单独校验 collaborationMode；协作选项不参与 read/ask/execute 权限推导。
  * 作用定位：工作区主对话管理，负责普通 chat、目标周期接续、多轮历史和消息队列；旧直接团队业务入口拒绝新执行，业务成员统一经岗位派发领取。
  * 设计原因：原命令先查回执；等待补充的附件一次准备，图片仅留本轮。容量准入先于意图，beforeRun 核额度、停止与清单后登记运行；人工决定仍走独立系统来源，当前坏历史不能回退旧头。
@@ -40,6 +41,8 @@ import {humanContinuationRequestSchema,type HumanContinuationRequest,type HumanC
 /** IPC 允许的模型运行配置；不接受任意子进程命令或环境变量。 */
 export const executionOptions=z.object({engine:loopEngineSchema.optional(),provider:z.string().trim().min(1),model:z.string().trim().min(1),profileId:z.string().uuid().optional(),attachmentIds:z.array(z.string().uuid()).max(12).optional(),allowNativeExecution:z.boolean().default(false),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),turnTimeoutMs:z.number().int().min(1000).max(3600000).optional()}).strict();
 type Options=z.infer<typeof executionOptions>;
+/** Main 装配方在真实周期建立后、模型启动前持久绑定或准备首个任务；不接受 IPC/模型提供的回调。 */
+export interface MainStartup {signal:AbortSignal;prepare(input:{task:TaskSpec;runId:string;signal:AbortSignal}):Promise<void>}
 /** 由可信工作区装配一次；回调只登记或唤醒协调器，不在 settled 内等待成员执行。 */
 export interface ExecutionCollaboration {
   /** 原插入结果先查，不依赖队列仍存在；未知结果不得再次获取发送权。 */
@@ -267,12 +270,12 @@ export class WorkspaceExecutionManager {
   /** 新任务重新准备上下文，不接收调用方伪造的知识正文或任务身份。 */
   start(_input:TeamTaskInput,_options:Options):Promise<{workspaceId:string;taskId:string;runId:string}>{return Promise.reject(new Fault('OWNER_DISPATCH_REQUIRED','新业务必须由主调度按模块负责人正式派发；旧任务和历史记录保持可读'))}
   /** 普通对话由内置主 Agent 接待，不依赖团队注册表或知识结构通过校验。 */
-  chat(message:string,options:Options){return this.serial(async()=>{
+  chat(message:string,options:Options,startup?:MainStartup){return this.serial(async()=>{
     const goal=z.string().trim().min(1).parse(message);
-    return this.launch({mode:'chat',taskId:randomUUID(),workspaceId:this.workspace.entry.id,root:this.workspace.entry.path,goal,agentId:mainAgentId,moduleIds:[],acceptance:[]},executionOptions.parse(options),message);
+    return this.launch({mode:'chat',taskId:randomUUID(),workspaceId:this.workspace.entry.id,root:this.workspace.entry.path,goal,agentId:mainAgentId,moduleIds:[],acceptance:[]},executionOptions.parse(options),message,undefined,undefined,false,undefined,undefined,undefined,undefined,undefined,startup);
   })}
   /** 自动队列与结果回注在工厂等待前后都复核停止屏障，防止停止协作期间重新唤起旧消息。 */
-  private async launch(task:TaskSpec,options:Options,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,automaticQueue=false,continuation?:GoalContinuationRequest,recovery?:RecoveryRequest,replan?:ReplanRequest,admissionWait?:ExecutionAdmissionWait,human?:HumanContinuationRequest){
+  private async launch(task:TaskSpec,options:Options,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,automaticQueue=false,continuation?:GoalContinuationRequest,recovery?:RecoveryRequest,replan?:ReplanRequest,admissionWait?:ExecutionAdmissionWait,human?:HumanContinuationRequest,startup?:MainStartup){
     if(task.mode!=='chat')fail('OWNER_DISPATCH_REQUIRED','旧直接业务入口不能创建新执行轮，请由主调度重新规划派发');
     if(recovery&&replan)fail('FRESH_MAIN_CONFLICT','同一启动不能混合只读核实和业务重规划');
     const fresh=Boolean(recovery||replan);
@@ -280,6 +283,7 @@ export class WorkspaceExecutionManager {
     if((source?.kind==='member-results'||automaticQueue)&&this.resultContinuationStopped.has(task.taskId))fail('COLLABORATION_STOPPED','本会话已停止自动协作，请显式继续对话');
     const stopVersion=this.stopVersions.get(task.taskId)??0;
     const controller=new AbortController();this.pendingLaunches.set(task.taskId,controller);
+    const cancelStartup=()=>controller.abort(startup?.signal.reason);startup?.signal.addEventListener('abort',cancelStartup,{once:true});if(startup?.signal.aborted)cancelStartup();
     let loop:Awaited<ReturnType<typeof createWorkspaceLoop>>|undefined;
     let accepted=false,preparingScope=false,releaseBudget:(()=>void)|undefined;
     try{
@@ -320,6 +324,7 @@ export class WorkspaceExecutionManager {
         releaseBudget=this.collaboration?.holdMain?.(runId);
         preparingScope=true;
         await this.collaboration?.starting?.(task,options,source,message,runId);
+        if(startup){controller.signal.throwIfAborted();await startup.prepare({task:structuredClone(task),runId,signal:controller.signal});controller.signal.throwIfAborted()}
         if(human){
           controller.signal.throwIfAborted();if(!this.collaboration?.acceptHumanContinuation)fail('HUMAN_CONTINUATION_UNAVAILABLE','当前工作区未装配人工决定接续');
           await this.collaboration.acceptHumanContinuation(human,task,runId,controller.signal);accepted=true;controller.signal.throwIfAborted();
@@ -349,7 +354,7 @@ export class WorkspaceExecutionManager {
       }).catch(()=>{});
       return {workspaceId:task.workspaceId,taskId:task.taskId,runId:run.runId};
     }catch(error){try{await loop?.runtime.close()}finally{releaseBudget?.();releaseBudget=undefined}const code=(error as {code?:string})?.code;if(((!continuation&&!human&&!fresh)||accepted)&&(accepted||preparingScope||code!=='CAPACITY_WAITING'&&code!=='CAPACITY_BUSY'))await this.collaboration?.startFailed?.(task,source,error);throw error}
-    finally{if(this.pendingLaunches.get(task.taskId)===controller)this.pendingLaunches.delete(task.taskId)}
+    finally{startup?.signal.removeEventListener('abort',cancelStartup);if(this.pendingLaunches.get(task.taskId)===controller)this.pendingLaunches.delete(task.taskId)}
   }
   /** 用户明确提交一个新只读核实目标；旧源记录不恢复，观察只是用户陈述，稳定请求先查已提交事实。 */
   async recoverExecution(raw:unknown){

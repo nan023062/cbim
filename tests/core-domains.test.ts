@@ -4,18 +4,17 @@ import path from 'node:path';
 import {ConnectorRegistry} from '../src/backend/core/connectors/registry';
 import {Team} from '../src/backend/core/team/model';
 import {BusinessWorkspace} from '../src/backend/core/workspace/model';
-import {fixture} from './helpers';
-import {seedTeam} from './team-fixture';
+import {knowledgeFixture,teamKnowledgeFiles,teamIds} from './knowledge-fixture';
 
 it('核心领域在固定快照上解析团队 Skill 和本模块 Workflow，无需 main 实例',async()=>{
-  const f=await fixture();try{
-    const e=await f.app.dispatch('add',{path:f.a}),w=f.app.workspace(e.id),seed=await seedTeam(w),snapshot=await w.snapshot();
+  const f=await knowledgeFixture();try{
+    const snapshot=await f.snapshot(teamKnowledgeFiles());
+    expect(snapshot.validation!.issues).toEqual([]);
     const hr=new Team(snapshot),business=new BusinessWorkspace(snapshot);
-    await f.app.stop(e.id);
-    const agent=await hr.agent(seed.input.agentId);
-    expect(agent.skills.map(s=>s.id)).toEqual([seed.own,seed.shared]);
-    expect((await business.module(seed.input.moduleId)).workflows[0].id).toBe(seed.input.workflowId);
-    expect((await business.module(seed.child)).workflows).toEqual([]);
+    const agent=await hr.agent(teamIds.agent);
+    expect(agent.skills.map(s=>s.id)).toEqual([teamIds.own,teamIds.shared]);
+    expect((await business.module(teamIds.module)).workflows[0].id).toBe(teamIds.workflow);
+    expect((await business.module(teamIds.child)).workflows).toEqual([]);
   }finally{await f.cleanup()}
 });
 it('链接器封装查询和唯一身份规则，不启动外部工具',()=>{

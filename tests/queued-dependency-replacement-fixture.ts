@@ -18,8 +18,8 @@ export async function dependencyRuns(user:string,workspaceId:string){
   for(const line of raw.slice(0,raw.lastIndexOf('\n')).split('\n').filter(Boolean)){const {body}=JSON.parse(line) as {body:{workspaceId:string;mutation:DispatchMutation}};assert.equal(body.workspaceId,workspaceId);for(const run of body.mutation.runs??[])runs.set(run.binding.runId,run)}
   return [...runs.values()];
 }
-export async function seedDependencyReplacement(app:Application,project:string,provider:{url:string;bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>void}){
-  await app.models.save({profile:{name:'Dependency replacement fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:'dependency-replacement-fixture',models:[{id:'dependency-replacement-fixture',name:'Dependency replacement fixture',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+export async function seedDependencyReplacement(app:Application,project:string,provider:{url:string;bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>void},contextWindow=65536){
+  await app.models.save({profile:{name:'Dependency replacement fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:'dependency-replacement-fixture',models:[{id:'dependency-replacement-fixture',name:'Dependency replacement fixture',enabled:true,contextWindow,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
   const entry=await app.dispatch('add',{path:project}),workspace=app.workspace(entry.id),team=await seedTeam(workspace);
   const snapshot=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'dependency-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'dependency-review',source:'local_user',confirmedAt:new Date().toISOString()}};

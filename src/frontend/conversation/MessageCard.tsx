@@ -1,7 +1,7 @@
 /**
  * 作用定位：复用 Cindy ChatBubble 的用户气泡/助手裸正文布局，承载消息时间和复制操作。
  * 设计原因：普通助手答复不做卡片底色；操作栏只在悬停或键盘聚焦时显现，避免干扰阅读。
- * 来源：Cindy ChatBubble.tsx / chatChrome.ts，Apache-2.0；许可见 docs/legal。
+ * 来源：Cindy ChatBubble.tsx / chatChrome.ts，Apache-2.0；许可见 legal。
  */
 import {useState,type ReactNode} from 'react';
 export function MessageCard({speaker,text,time,children}:{speaker:'user'|'assistant'|'error';text:string;time?:string;children:ReactNode}){

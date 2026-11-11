@@ -4,9 +4,9 @@
  */
 import type {RunSummary} from '../../bridge/contracts/execution';
 import {useEffect,useState} from 'react';
-import {transcript} from '../conversation/transcript';
-import {MarkdownMessage} from '../conversation/MarkdownMessage';
-import {WorkStatus} from '../conversation/WorkStatus';
+import {transcript} from '../execution-view/transcript';
+import {MarkdownMessage} from '../execution-view/MarkdownMessage';
+import {WorkStatus} from '../execution-view/WorkStatus';
 import {MemberProgressSummary} from './MemberProgressSummary';
 
 /**

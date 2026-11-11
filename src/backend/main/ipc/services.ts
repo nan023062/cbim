@@ -1,4 +1,5 @@
 /**
+ * 自动化只向当前工作区实例提供唯一服务，不通过路由创建额外调度器。
  * 隔离资源服务由当前工作区唯一装配，桌面公开协议不提供程序重放接口。
  * 受控文件边界：只向已打开工作区提供查询和显式补偿，查询不初始化 Store 或启动 utility 工人。
  * 作用定位：定义 IPC 路由需要的执行审批、静态角色履历、岗位与模块责任、全局监管、配额、桌面资源导入、模块治理和工作区生命周期入口。
@@ -6,6 +7,7 @@
  * 职责边界：这里只声明内部调用能力，不代表渲染进程可以直接访问这些服务。
  * 请求预算只公开只读摘要；预留和终态仅由真实运行装配端口持有。
  */
+import type {WorkspaceAutomations} from '../automation';
 import type {Catalog} from '../workspace/catalog';
 import type {Workspace} from '../workspace/workspace';
 import type {Paths} from '../platform/paths';
@@ -69,6 +71,7 @@ export interface ApplicationServices {
   isolatedExecutions(id:string):IsolatedExecutions;
   requestBudgets(id:string):Pick<ModelRequestBudgetService,'report'>;
   execution(id: string): WorkspaceExecutionManager;
+  automations(id:string):WorkspaceAutomations;
   /** 取得已装配的工作区成员图及人工决定服务；未就绪则拒绝，人工记录不隐式启动大脑或改变权限。 */
   memberDispatch(id:string):WorkspaceDispatchService;
   /** 只接收已派发任务的可信执行命令，成员会话与模型快照由后端绑定。 */

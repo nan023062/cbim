@@ -11,6 +11,8 @@ it('实际发现的对象 Schema 按 kind 限制字段，和运行时接受的�
     const e=await f.app.dispatch('add',{path:f.a}),w=f.app.workspace(e.id),{call,identity}=internalKnowledge(w),snapshot=await w.snapshot();
     const described=await call('cbim_knowledge_tool_describe',{name:'cbim_object_preview'});
     expect(described.tool.version).toBe(2);
+    const schemaText=JSON.stringify(described.tool.inputSchema);
+    for(const constraint of ['100–250','cbim:project','保留名称','子模块和 source 节点','CbimDirectContent','前序创建'])expect(schemaText).toContain(constraint);
     const validate=new Ajv({strict:false}).compile(described.tool.inputSchema);
     for(const [kind,data,valid] of [
       ['module',{name:'中国象棋'},false],['agent',{purpose:'写代码'},false],
@@ -29,6 +31,23 @@ it('实际发现的对象 Schema 按 kind 限制字段，和运行时接受的�
     }
     expect((await w.snapshot()).revision).toBe(snapshot.revision);
   }finally{await f.cleanup()}
+});
+
+it('同一真实预览按序创建父、子及其 Workflow，完整校验后一次提交',async()=>{
+ const f=await fixture();try{
+  const entry=await f.app.dispatch('add',{path:f.a}),{call}=internalKnowledge(f.app.workspace(entry.id)),snapshot=await call('cbim_knowledge_snapshot');
+  const parent='.cbim/workspace/game',child=parent+'/child';
+  const preview=await call('cbim_object_preview',{revision:snapshot.revision,operations:[
+   {kind:'module',action:'create',parentId:'.cbim/workspace',slug:'game',data:{summary},body:moduleFiles('game')[1].text},
+   {kind:'module',action:'create',parentId:parent,slug:'child',data:{summary},body:moduleFiles('game/child')[1].text},
+   {kind:'workflow',action:'create',parentId:child,slug:'build',data:{name:'构建'},body:'# 构建\n实际验证。'},
+  ]});
+  expect(preview.validation.issues.filter((v:any)=>v.severity==='error')).toEqual([]);
+  await expect(fs.access(path.join(f.a,parent))).rejects.toThrow();
+  expect((await call('cbim_object_commit',{planId:preview.planId},true)).state).toBe('committed');
+  expect((await call('cbim_module_get',{id:parent})).definition.children).toEqual([child]);
+  expect((await call('cbim_module_get',{id:child})).workflows[0].id).toBe(child+'/workflows/build');
+ }finally{await f.cleanup()}
 });
 
 it('内部知识服务真实对象 CRUD、父子模块、Skill 继承与仅本模块 Workflow，重复提交幂等',async()=>{

@@ -9,9 +9,9 @@ description: "发布或恢复 CBIM Windows 桌面版本：核实签名模式，�
 
 ## 先确定本次从哪里继续
 
-1. 应用 [cbim-development](../cbim-development/SKILL.md)，读取实际工作树、[roadmap](../../../design/tool-architecture-roadmap.md) 和最近的 [开发记录](../../../design/development-log.md)。保留已有成果；只分析方案时不进入实施。
-2. 核实仓库、登录账号、分支、候选回执、标签、Release、Actions 和已启动进程。以实际状态为准，不按聊天中的“成功”或“失败”重复写入。开始／结束每一步时更新开发接续与证据。
-3. 从用户当前及既有授权确定版本范围、签名模式、是否发布／合并／同步官网。已有明确选择继续有效，不逐步重复求批准；缺少会改变交付结果的信息才澄清。Skill、路线图或一次历史发布本身不授予新的外部权限。
+1. 应用 [cbim-development](../cbim-development/SKILL.md)，读取实际工作树、本次发布范围内的 Issues／PR 及对应 [开发记录](../../../design/development-log.md)。保留已有成果；只分析方案时不进入实施。
+2. 核实仓库、登录账号、分支、候选回执、标签、Release、Actions 和已启动进程。以实际状态为准，不按聊天中的“成功”或“失败”重复写入。开始／结束每一步时记录发布证据，并按已有授权回填关联 Issue／PR。
+3. 从用户当前及既有授权确定版本范围、签名模式、是否发布／合并／同步官网。已有明确选择继续有效，不逐步重复求批准；缺少会改变交付结果的信息才澄清。Skill、Issue 内容或一次历史发布本身不授予新的外部权限。
 4. 正常发行阅读 [发布步骤](references/release-runbook.md)；中断或报错先按 [故障与恢复](references/failure-recovery.md) 的对应现象核实；开始记录及最后交付使用 [证据与完成条件](references/evidence.md)。不用为一个明确故障重跑整条发布链。
 
 ## 本仓库的固定边界
@@ -22,7 +22,7 @@ description: "发布或恢复 CBIM Windows 桌面版本：核实签名模式，�
 - 不询问或输出私钥、PIN、密码、token；仅核实公开签名身份及凭据是否具备必要权限。摘要证明文件一致性，不替代签名；不建议关闭 Windows 保护，不保证签名立刻消除 SmartScreen 提示。
 - 保持应用 ID、EXE 名、数据目录和更新通道。后续签名使用更高版本并实际验证迁移；不修改已公开同版本的附件或移动旧标签。`--replace` 是单独授权的历史替换流程，不是失败重试开关。
 - 安装测试必须使用没有 CBIM 用户安装的隔离 Windows runner。NSIS `/D` 仍可能先卸载注册表中的现有安装，独立目录不能替代隔离机器。禁止操作开发者正在使用的客户端来完成验收。
-- 发布修复仍保持每个 Issue 独立开发、测试、提交和回填。发布任务不自动吸收新 Issue 或恢复旧路线图；保留各提交，不为合并方便 squash 掉追溯记录。
+- 发布修复仍保持每个 Issue 独立开发、测试、提交和回填。发布任务不自动吸收新 Issue 或扩大已确定范围；保留各提交，不为合并方便 squash 掉追溯记录。
 
 ## 各阶段的完成门槛
 
@@ -42,7 +42,7 @@ description: "发布或恢复 CBIM Windows 桌面版本：核实签名模式，�
 
 - [make-desktop.mjs](../../../scripts/make-desktop.mjs)、[verify-desktop.mjs](../../../scripts/verify-desktop.mjs) 负责候选及校验；不另造打包或验签逻辑。
 - [publish-desktop.mjs](../../../scripts/publish-desktop.mjs) 是“建草稿 → 上传 → 校验 → 公开”的一体命令，**没有 `--draft-only`、`--resume` 或安装／CI 门禁**。需要先验收草稿时按发布步骤分阶段操作；已有草稿或日志时先恢复核实，不能直接重跑，也不能删除日志后重跑。
-- [desktop-acceptance.yml](../../../.github/workflows/desktop-acceptance.yml) 的 `mode=candidate` / `online` 区分草稿安装和公开升级，不是签名模式。`previous_version` 必须填写实际上一公开桌面版；[输入校验](../../../scripts/desktop-acceptance-inputs.mjs) 当前支持 `0.1.1`／`0.1.2` 的两步界面与 `0.1.3`／`0.1.4`／`0.1.5` 的自动安装界面，目标为更高的 `0.x.y` 未签名版，实际 [验收脚本](../../../scripts/desktop-release-acceptance.mjs) 仍断言未签名说明和 `NotSigned`。未列出的旧版交互、签名迁移或 1.x 时先适配并验证脚本，不能仅换输入就宣称覆盖。
+- [desktop-acceptance.yml](../../../.github/workflows/desktop-acceptance.yml) 的 `mode=candidate` / `online` 区分草稿安装和公开升级，不是签名模式。`previous_version` 必须填写实际上一公开桌面版；[输入校验](../../../scripts/desktop-acceptance-inputs.mjs) 当前支持 `0.1.1`／`0.1.2` 的两步界面与 `0.1.3`／`0.1.4`／`0.1.5`／`0.1.6` 的自动安装界面，目标为更高的 `0.x.y` 未签名版，实际 [验收脚本](../../../scripts/desktop-release-acceptance.mjs) 仍断言未签名说明和 `NotSigned`。未列出的旧版交互、签名迁移或 1.x 时先适配并验证脚本，不能仅换输入就宣称覆盖。
 - [validate.yml](../../../.github/workflows/validate.yml) 的诊断入口与完整四片使用不同 job 名。定向、本机或旧 head 的绿色结果不代替本次完整 PR 检查。
 - 修改产品源码时同步注释、契约和类图；仅维护发布 Skill／文档时检查格式、引用和三入口一致性，不为此安装客户端或重新发布。
 
@@ -50,4 +50,4 @@ description: "发布或恢复 CBIM Windows 桌面版本：核实签名模式，�
 
 按 [证据清单](references/evidence.md) 给出版本、下载／PR／检查链接、签名状态、实际升级范围及剩余问题。区分“已公开”“更新通道可用”“隔离环境升级通过”和“所有用户已升级”；最后一项没有逐用户证据不能声称。
 
-本 Skill 及其 `references/` 在 `.agents/skills/cbim-release/`、`.claude/skills/cbim-release/`、`.codex/skills/cbim-release/` 保持逐文件一致，属于项目开发入口，不加入 APP 内置业务 Skill。当前版本和进度由 roadmap／回执维护，不写死在操作模板中。历史依据是 [0.1.2 发布报告](../../../design/verification/desktop-release-0.1.2-20261109.md)，不得把其中提交、哈希和 run ID 复用为新版本证据。
+本 Skill 及其 `references/` 在 `.agents/skills/cbim-release/`、`.claude/skills/cbim-release/`、`.codex/skills/cbim-release/` 保持逐文件一致，属于项目开发入口，不加入 APP 内置业务 Skill。开发进度由 Issues 记录，发布版本与结果以本次真实回执、版本报告及 PR 为准，不写死在操作模板中。历史依据是 [0.1.2 发布报告](../../../design/verification/desktop-release-0.1.2-20261109.md)，不得把其中提交、哈希和 run ID 复用为新版本证据。

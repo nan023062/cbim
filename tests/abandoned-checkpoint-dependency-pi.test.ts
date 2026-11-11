@@ -10,7 +10,9 @@ import {seedAbandonedDependency,assertAbandonedDependency,abandonedRecords,aband
 it.each(['complete','bad-output','submitted-stop','restart-held']as const)('真实Pi显式放弃检查点并保留后继换边：%s',async mode=>{
   const f=await fixture(),provider=await abandonedDependencyProvider({badOutput:mode==='bad-output'});let app=f.app,receipt:ReplaceQueuedDependencyReceipt|undefined,restore=()=>{},invocations=0;
   try{
-    const {entry}=await seedAbandonedDependency(app,f.a,provider),service=app.memberDispatch(entry.id),original=service.replaceQueuedDependency.bind(service);let originalArgs:Parameters<typeof original>|undefined;
+    // 本例核实长链事务与坏回包恢复，保留全部调用证据；64K 会触发原生摘要并超出此确定性供应商协议。
+    // 仅本 fixture 使用 128K，真实摘要仍由 pi-runtime-config/model-request-budget-pi 独立覆盖。
+    const {entry}=await seedAbandonedDependency(app,f.a,provider,131072),service=app.memberDispatch(entry.id),original=service.replaceQueuedDependency.bind(service);let originalArgs:Parameters<typeof original>|undefined;
     const spy=vi.spyOn(service,'replaceQueuedDependency').mockImplementation(async(...args)=>{invocations++;originalArgs=args;receipt=await original(...args);return mode==='bad-output'?{...receipt,taskId:'wrong-task'}:receipt});restore=()=>spy.mockRestore();
     const start=await app.dispatch('loop.chat',{id:entry.id,message:data.goal,options:{permission:'read',turnTimeoutMs:60000}}),identity={workspaceId:entry.id,rootSessionId:start.taskId},records=()=>abandonedRecords(f.user,entry.id),graph=()=>app.memberDispatch(entry.id).snapshot(identity);
     await abandonedWait(async()=>{expect(provider.errors).toEqual([]);return provider.main.length===provider.heldTurn+1&&!!receipt},'检查点放弃和替换均已实际保存');expect(provider.member).toHaveLength(10);

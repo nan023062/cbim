@@ -14,17 +14,19 @@ import {json} from '../foundation/serialization';
 import {INDEXES} from './knowledge';
 import {parseJson} from '../foundation/json';
 import type {ChangeRequest,Preview} from './types';
+import {moduleSections} from '../workspace/module-outline';
 import {parseWorkflowContract} from '../workspace/workflow-contract';
 import {knowledgePlanHash,type ResolvedObjectOperation} from './planned-commit';
 
-const fields={name:z.string().min(1).optional(),summary:z.string().optional(),authors:z.array(z.string()).optional(),capabilities:z.array(z.string()).optional(),limitations:z.array(z.string()).optional(),connectors:z.array(z.string()).optional(),sources:z.array(z.object({location:z.string(),scope:z.string()}).strict()).optional(),purpose:z.string().optional()};
+const reservedObjectSlugs=['skills','workflows','references','scripts','assets','archive','node_modules'];
+const fields={name:z.string().min(1).optional(),summary:z.string().describe('须为 100–250 个非空白字符的单行文本，无首尾空白；预览会返回全部结构问题。').optional(),authors:z.array(z.string()).optional(),capabilities:z.array(z.string()).optional(),limitations:z.array(z.string()).optional(),connectors:z.array(z.string()).optional(),sources:z.array(z.object({location:z.string(),scope:z.string()}).strict()).optional(),purpose:z.string().optional()};
 /** Schema 与实际写字段共用定义；模块 name 来自目录 slug，中文显示名写在正文 H1。 */
 export const objectDataSchemas={
   agent:z.object({runtime:agentModelSelectionSchema.nullable().optional(),name:fields.name,summary:fields.summary,authors:fields.authors,capabilities:fields.capabilities,limitations:fields.limitations,connectors:fields.connectors}).strict(),
   module:z.object({summary:fields.summary,authors:fields.authors,sources:fields.sources,connectors:fields.connectors}).strict().describe('name 固定为目录 slug，不可在 data 修改；中文模块名写在 body 的一级标题（# 中文名称）。'),
   skill:z.object({name:fields.name,purpose:fields.purpose}).strict(),workflow:z.object({name:fields.name}).strict(),
 };
-const operationFields={action:z.enum(['create','update','delete']),id:z.string().optional(),parentId:z.string().optional(),slug:z.string().optional(),body:z.string().max(2*1024*1024).optional(),cascade:z.boolean().optional()};
+const operationFields={action:z.enum(['create','update','delete']),id:z.string().optional(),parentId:z.string().describe('创建 Module 时为 .cbim/workspace 或模块完整 ID，不是工程物理路径或 cbim:project；Agent 为已知 Team，Skill 为 Team/Agent，Workflow 为 Module。可引用本 operations 中前序创建的对象。').optional(),slug:z.string().describe('小写字母开头；Module/Workflow 使用 snake_case。保留名称：'+reservedObjectSlugs.join('、')).optional(),body:z.string().max(2*1024*1024).describe('创建必须填写正文。Module 恰有以下五个二级标题，逐字依序匹配：'+moduleSections.map(s=>'## '+s).join('；')+'。结构章节须含唯一非空 Mermaid classDiagram；sources 非空须含 class CbimDirectContent["直属内容（虚拟子模块）"] 与 <<virtual>> CbimDirectContent。中文显示名写 H1。').optional(),cascade:z.boolean().optional()};
 export const objectOperation=z.discriminatedUnion('kind',[
   z.object({...operationFields,kind:z.literal('agent'),data:objectDataSchemas.agent.optional()}).strict(),
   z.object({...operationFields,kind:z.literal('module'),data:objectDataSchemas.module.optional()}).strict(),
@@ -40,7 +42,7 @@ export interface ObjectCommit extends KnowledgeCommit {cleanupWarnings:string[]}
 const pp=path.posix;
 export class ObjectCrud {
   constructor(private w:KnowledgeWorkspace){}
-  /** 根据语义操作生成完整事务并持久化预览计划；不会自动编造原则或模块正文。提交仍由调用边界检查当前写授权。 */
+  /** 按输入顺序在同一候选快照创建父子对象，再校验完整事务并持久化预览计划；不会自动编造原则或模块正文。提交仍由调用边界检查当前写授权。 */
   async preview(revision:string,operations:ObjectOperation[]):Promise<ObjectPreview>{
     const s=await this.w.snapshot();if(s.revision!==revision)fail('CONFLICT','知识版本已变化，请重新查询');
     const map=new Map(s.files.map(f=>[f.path,f.text])),objects:string[]=[],deletedRoots:string[]=[],resolvedOperations:ResolvedObjectOperation[]=[];
@@ -53,7 +55,7 @@ export class ObjectCrud {
       const allowed=Object.keys(objectDataSchemas[op.kind].shape);
       for(const key of Object.keys(data))if(!allowed.includes(key))fail('FIELD',`${op.kind} 不支持修改字段 ${key}；目录与清单由 CBIM 维护`);
       if(op.action==='create'){
-        if(op.id||!op.parentId||!op.slug||!/^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$/.test(op.slug)||['skills','workflows','references','scripts','assets','archive','node_modules'].includes(op.slug))fail('OBJECT_ID','创建需有效 parentId 和 slug，不接受自定 id');
+        if(op.id||!op.parentId||!op.slug||!/^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$/.test(op.slug)||reservedObjectSlugs.includes(op.slug))fail('OBJECT_ID','创建需有效 parentId 和 slug，不接受自定 id');
         owner=op.parentId;
         if(op.kind==='agent'){if(!group(owner)||map.has(owner+'/agent.json'))fail('OWNER','Agent 父节点必须是已知 Team/小组');id=owner+'/'+op.slug}
         else if(op.kind==='module'){if(owner!=='.cbim/workspace')get(owner+'/module.json');if(!owner.startsWith('.cbim/workspace')||op.slug.includes('-'))fail('OWNER','模块必须在 workspace 下并使用 snake_case');id=owner+'/'+op.slug}

@@ -15,7 +15,6 @@
 | [extensions.css](extensions.css) | 中央对话与右侧扩展区的分栏、空页签及各扩展面板布局。 |
 | [runtime-navigation.ts](runtime-navigation.ts) | 把全局运行页的定位目标核对为现有主会话，并只更新本机页签与任务图选择。 |
 | [shell.css](shell.css) | 工作区外壳、侧栏、页签、菜单和主题布局样式。 |
-| [state-labels.ts](state-labels.ts) | 界面工作区与工具任务状态的中文标签。 |
 | [tabs.ts](tabs.ts) | 页签种类、默认布局、排序与本机布局恢复。 |
 | [UserMenu.tsx](UserMenu.tsx) | 本地账号菜单、主题与设置入口，以及合并的版本与更新入口、上次检查时间和新版绿点。 |
 | [useSidebarWidth.ts](useSidebarWidth.ts) | 管理侧边栏宽度、拖动与键盘调整，并在本地保留布局。 |
@@ -34,7 +33,7 @@ class N_src_frontend_shell_App_tsx["App.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[../updates/SoftwareUpdates.tsx](../updates/SoftwareUpdates.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[../conversation/conversation-activity.ts](../conversation/conversation-activity.ts)、[WorkspaceList.tsx](WorkspaceList.tsx)、[ExtensionArea.tsx](ExtensionArea.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[UserMenu.tsx](UserMenu.tsx)、[useSidebarWidth.ts](useSidebarWidth.ts)、[state-labels.ts](state-labels.ts)、[../runtime/RuntimeOverview.tsx](../runtime/RuntimeOverview.tsx)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[runtime-navigation.ts](runtime-navigation.ts)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[../updates/SoftwareUpdates.tsx](../updates/SoftwareUpdates.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[../conversation/conversation-activity.ts](../conversation/conversation-activity.ts)、[WorkspaceList.tsx](WorkspaceList.tsx)、[ExtensionArea.tsx](ExtensionArea.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[UserMenu.tsx](UserMenu.tsx)、[useSidebarWidth.ts](useSidebarWidth.ts)、[../runtime/RuntimeOverview.tsx](../runtime/RuntimeOverview.tsx)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[runtime-navigation.ts](runtime-navigation.ts)。
 
 ### ExtensionArea.tsx
 
@@ -147,15 +146,6 @@ class N_src_frontend_shell_shell_css["shell.css"] {
 }
 ```
 
-### state-labels.ts
-
-```mermaid
-classDiagram
-class N_src_frontend_shell_state_labels_ts["state-labels.ts"] {
-  <<module>>
-}
-```
-
 ### tabs.ts
 
 ```mermaid
@@ -251,7 +241,7 @@ class N_src_frontend_shell_WorkspaceList_tsx["WorkspaceList.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../conversation/ConversationEntries.tsx](../conversation/ConversationEntries.tsx)、[state-labels.ts](state-labels.ts)、[workspace-list.css](workspace-list.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../conversation/ConversationEntries.tsx](../conversation/ConversationEntries.tsx)、[../components/state-labels.ts](../components/state-labels.ts)、[workspace-list.css](workspace-list.css)。
 
 ### 本目录调用边界
 
@@ -286,9 +276,6 @@ class N_src_frontend_shell_App_tsx["App.tsx"] {
 class N_src_frontend_shell_useSidebarWidth_ts["useSidebarWidth.ts"] {
   <<module>>
 }
-class N_src_frontend_shell_state_labels_ts["state-labels.ts"] {
-  <<module>>
-}
 class N_src_frontend_shell_runtime_navigation_ts["runtime-navigation.ts"] {
   <<module>>
 }
@@ -298,32 +285,27 @@ class N_src_frontend_shell_ExtensionArea_tsx["ExtensionArea.tsx"] {
 class N_src_frontend_shell_extensions_css["extensions.css"] {
   <<stylesheet>>
 }
+class N_src_frontend_shell_tabs_ts["tabs.ts"] {
+  <<module>>
+}
 N_src_frontend_shell_App_tsx ..> N_src_frontend_shell_useSidebarWidth_ts : 导入依赖
-N_src_frontend_shell_App_tsx ..> N_src_frontend_shell_state_labels_ts : 导入依赖
 N_src_frontend_shell_App_tsx ..> N_src_frontend_shell_runtime_navigation_ts : 导入依赖
 N_src_frontend_shell_ExtensionArea_tsx ..> N_src_frontend_shell_extensions_css : 导入依赖
+N_src_frontend_shell_runtime_navigation_ts ..> N_src_frontend_shell_tabs_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_frontend_shell_runtime_navigation_ts["runtime-navigation.ts"] {
-  <<module>>
-}
-class N_src_frontend_shell_tabs_ts["tabs.ts"] {
-  <<module>>
-}
 class N_src_frontend_shell_WorkspaceList_tsx["WorkspaceList.tsx"] {
   <<component>>
 }
-class N_src_frontend_shell_state_labels_ts["state-labels.ts"] {
+class N_src_frontend_shell_tabs_ts["tabs.ts"] {
   <<module>>
 }
 class N_src_frontend_shell_workspace_list_css["workspace-list.css"] {
   <<stylesheet>>
 }
-N_src_frontend_shell_runtime_navigation_ts ..> N_src_frontend_shell_tabs_ts : 导入依赖
 N_src_frontend_shell_WorkspaceList_tsx ..> N_src_frontend_shell_tabs_ts : 导入依赖
-N_src_frontend_shell_WorkspaceList_tsx ..> N_src_frontend_shell_state_labels_ts : 导入依赖
 N_src_frontend_shell_WorkspaceList_tsx ..> N_src_frontend_shell_workspace_list_css : 导入依赖
 ```
 
@@ -373,3 +355,9 @@ note for SoftwareUpdates "../updates/SoftwareUpdates.tsx：只消费更新状态
 导航只复用已绑定该根的聊天页签；本机没有页签时，新增绑定真实历史的页签，不挪用未发送草稿页签，不改原标题、草稿或附件。两次点击不会建立重复绑定。切屏、新导航和卸载使旧请求失效，迟到失败也不覆盖新页面。工作区实例变化重新挂载会话投影，原本机草稿保持。
 
 一次性 `RuntimeNavigationRequest` 交给 `Conversation`；任务图与周期加载完成后再次核对原身份并消费。选中旧周期仅影响展示，不改变实际开放目标。消费后请求清除，后续轮询或返回对话不会重复重置用户选择；不存在节点和周期不回退为最新目标。
+
+扩展区将真实治理启动回执交给 Shell，按原工作区绑定新会话，不覆盖其他草稿。右上运行绿点与展开工作区详情入口已移除；工作区管理在左侧更多菜单中保留，不删除后台状态或既有任务。团队文件编辑与业务编辑共用页签离开保护。
+
+## 自动化会话定位
+
+App 将自动化历史的真实 taskId 交给 showStartedTask，复用已有会话或新建条目，保留原草稿和附件；不重新运行任务。右侧旧自动化条目复用同一工作区视图，不建立第二份配置或调度服务。

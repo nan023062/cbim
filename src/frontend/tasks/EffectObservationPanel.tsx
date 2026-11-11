@@ -26,7 +26,7 @@ export function EffectObservationPanel({identity,anchor,context}:{identity:Effec
   const eligible=context?effectRecoveryTarget(identity,report,fresh,selected,context.state):{reason:'当前视图没有主会话恢复上下文。'};
   const creation=useRecoverySource(identity.workspaceId,identity.rootSessionId,identity.subject,eligible,context?.state.openScope?'当前目标尚未结束。':'',!!selected,context);
   return <section className="effect-observation" data-testid="effect-observation-panel" data-run-id={identity.subject.runId} data-source-kind={identity.subject.kind} data-call-ids={identity.subject.toolCallIds.join(',')}>
-    <header><strong>核实原调用影响</strong><button data-testid="effect-observe" disabled={read?.loading} onClick={()=>void controller.observe(identity)}>{read?.loading?'正在读取…':report?'重新核实影响':'核实当前影响'}</button></header>
+    <header><strong>核实原调用影响</strong><button title="只读、不重跑、不写库" data-testid="effect-observe" disabled={read?.loading} onClick={()=>void controller.observe(identity)}>{read?.loading?'正在读取…':report?'重新核实影响（只读）':'核实当前影响（只读）'}</button></header>
     <p>只读核对原记录和明确文件；不重发旧操作，也不更改原结果。</p>
     {(read?.error||snapshot.error)&&<p role="alert">{read?.error||snapshot.error}{report?'；上次报告保留。':''}</p>}
     {report&&<>
@@ -71,7 +71,7 @@ export function EffectObservationPanel({identity,anchor,context}:{identity:Effec
         {attempt&&<><p role="status">{attempt.phase==='accepted'?'本机处置已保存':attempt.phase==='submitting'?'正在保存处置…':attempt.phase==='rejected'?'本次请求尚未受理，可重新核实并修改草稿。':'保存结果尚未确认，仅查询原命令。'}</p>{attempt.error&&<p role="alert">{attempt.error}</p>}<button data-testid="effect-query" disabled={pending} onClick={()=>void controller.query(identity,attempt.request.commandId)}>查询原处置命令</button>{attempt.phase==='accepted'&&<button data-testid="effect-prepare" disabled={pending} onClick={()=>controller.prepare(identity)}>记录新的处置</button>}</>}
       </div>
     </>}
-    <div className="effect-actions"><button data-testid="effect-history-load" disabled={read?.loading} onClick={()=>void controller.list(identity)}>读取处置历史</button>{selected&&<button data-testid="effect-relations-load" disabled={read?.loading} onClick={()=>void controller.relations(identity)}>查看后续任务状态</button>}</div>
+    <div className="effect-actions"><button title="只读、不重跑、不写库" data-testid="effect-history-load" disabled={read?.loading} onClick={()=>void controller.list(identity)}>读取处置历史（只读）</button>{selected&&<button data-testid="effect-relations-load" disabled={read?.loading} onClick={()=>void controller.relations(identity)}>查看后续任务状态</button>}</div>
     {read?.list&&<div data-testid="effect-history">{read.list.records.length?read.list.records.map(item=><button key={item.dispositionId} data-disposition-id={item.dispositionId} disabled={controller.isPending(item.dispositionId)} onClick={()=>void controller.query(identity,item.dispositionId)}>{decisions[item.decision]} · {new Date(item.recordedAt).toLocaleString()} · 第{item.revision}次</button>):<p>此来源尚无已保存处置。</p>}</div>}
     {selected&&<EffectDispositionSummary record={selected}/>}
     {selected&&<ExecutionRecoveryForm state={creation}/>}

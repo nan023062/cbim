@@ -51,3 +51,11 @@ team-model 解析 Agent runtime 并随图节点交给登记表单；新登记可
 ### 对话栏与主 Agent 配置等效
 
 TeamView 工具栏提供 MainAgentEditor，复用 EngineModelPicker 与 useMainAgentSettings。主 Agent 配置和对话栏读写后端同一份角色设置，所有主会话同步；表单固定打开时 revision，不能自动覆盖另一入口的更改。内置能力仍只读。自定义 Agent 仍经原知识预览提交保存 runtime，新岗位明确采纳引擎与模型；历史运行保持原快照。
+
+### 团队履历展示边界
+
+AgentSessionHistory 与 TeamView 直接复用 execution-view 的公开日志投影和 Markdown；不加载 conversation 页面或任务恢复控制器。履历仍只读，不产生新运行或更改历史归属。
+
+主 Agent 配置轮询在进入异步闭包前固定已验证的 workspaceId/instanceId，按公开模型动作请求调用；轮询、版本同步和迟到响应隔离语义保持。
+
+团队架构复用 KnowledgeFileTree 和 KnowledgeFilePreview，Agent 文件夹下可选择定义、原则与 Skill 文件，目录选择仍显示能力和继承方法。文件草稿加入当前扩展页签 dirty 集合。新增一键团队治理，回执交 Shell 绑定真实会话；浏览树不登记岗位或启动任务。

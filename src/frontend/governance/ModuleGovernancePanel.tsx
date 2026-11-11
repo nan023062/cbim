@@ -81,7 +81,7 @@ export function ModuleGovernancePanel({identity,moduleId,onClose,onApplied}:Prop
       store.save(original);setPending(original);
       // 只处理首次 RPC 明确预受理拒绝；接收回执/刷新发生错误时不能借相同错误码清除记录。
       let result:unknown;
-      try{result=await window.cbim.call('governance.'+action,request)}catch(cause){if(alive.current&&isFirstGovernanceRejection(cause)){store.remove(original);setPending(undefined)}throw cause}
+      try{result=await window.cbim.call(`governance.${action}` as const,request)}catch(cause){if(alive.current&&isFirstGovernanceRejection(cause)){store.remove(original);setPending(undefined)}throw cause}
       await accept(result,original);
     });
   }

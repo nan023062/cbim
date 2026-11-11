@@ -1,3 +1,4 @@
+import {runtimeTools} from './runtime-tools-fixture';
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -33,7 +34,7 @@ async function setup(mode:'help'|'hold'|'failed'|'close-error'|'write-first'|'po
       if(mode==='write-first'){expect((await context.beforeTool({id:'write-1',name:'write',input:{path:'marker.txt',content:'once'}})).allow).toBe(true);await fs.writeFile(path.join(f.a,'marker.txt'),'once');await context.emit({type:'tool.finished',data:{id:'write-1',name:'write',result:jsonToolResult('write',{written:true}),isError:false}})}
       const read={id:'read-1',name:'read',input:{path:'src/app.ts'}};expect((await context.beforeTool(read)).allow).toBe(true);await context.emit({type:'tool.finished',data:{id:read.id,name:read.name,result:jsonToolResult('read',{verified:true}),isError:false}});
       const call={id:'help-1',name:'cbim_task_help',input:{kind:'missing_input',reason:' 缺少输出格式 ',question:' 输出格式是什么？ ',attemptedToolCallIds:[read.id]}};
-      expect((await context.beforeTool(call)).allow).toBe(true);const result=await context.memberHelpTools!.call(call.name,call.input,call.id);await context.emit({type:'tool.finished',data:{id:call.id,name:call.name,result,isError:false}});stagedResolve();
+      expect((await context.beforeTool(call)).allow).toBe(true);const result=await runtimeTools(context).memberHelpTools!.call(call.name,call.input,call.id);await context.emit({type:'tool.finished',data:{id:call.id,name:call.name,result,isError:false}});stagedResolve();
       if(mode==='post-denial')expect((await context.beforeTool({id:'after-help',name:'write',input:{path:'forbidden.txt',content:'not executed'}})).allow).toBe(false);
       if(mode==='hold'){await new Promise<void>(resolve=>{wake=resolve});return {status:'cancelled'}}
       return {status:mode==='failed'?'failed':'completed'};

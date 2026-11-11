@@ -19,6 +19,12 @@ const detail=(value:DispatchScope,seq=1):ScopeDetailRead=>({mode:'updated',stamp
 function reset(value=scope(),seq=1):DispatchSessionRead{const scopes=snapshot([value],seq);return {graph:{mode:'reset',reason:'initial',snapshot:graph,cursor:graph.cursor},scopes:{mode:'reset',reason:'initial',snapshot:scopes,cursor:scopes.cursor},detail:detail(value,seq)}}
 function planned(){const value=scope();value.goal!.revision=2;value.goal!.plan={revision:2,runId:'main-run',recordedAt:time,knowledgeRevision:'knowledge',graphCursor:{streamId:'graph',seq:1},objective:'当前周期的治理目标',constraints:['仅管理知识'],criteria:[{id:'c1',kind:'evidence',text:'提供真实提交证据'}],assignments:[{agentId:'cbim:main',agentName:'主 Agent',teamId:'.cbim/team',moduleIds:[],moduleNames:[],criterionIds:['c1'],reason:'治理知识'}],reason:'按真实目标安排'};return value}
 function reviewed(){const value=planned();value.goal!.revision=3;value.goal!.review={revision:3,planRevision:2,runId:'main-run',recordedAt:time,knowledgeRevision:'knowledge',graphCursor:{streamId:'graph',seq:1},observedSeq:10,lastEffectSeq:4,decision:'complete',checks:[{criterionId:'c1',outcome:'satisfied',reason:'有真实证据',evidence:[{kind:'main-knowledge',toolCallIds:['commit-one']}]}],superseded:[],gaps:[],reason:'程序尚需复核'};return value}
+it('未建立业务计划的结束状态不把独立知识写入显示成目标未完成',()=>{
+ const unplanned=scope();unplanned.status='closed';unplanned.outcome='failed';
+ expect(scopeGoalView(summarizeScope(unplanned,streamId,1))).toMatchObject({label:'业务目标未建立',tone:'warning'});
+ const business=planned();business.status='closed';business.outcome='failed';
+ expect(scopeGoalView(summarizeScope(business,streamId,1)).label).toBe('目标未完成');
+});
 function view(value:DispatchScope):ScopeGoalState{const summary=summarizeScope(value,streamId,1),goalView=scopeGoalView(summary,graph);return {scopes:[summary],selectedScopeId:value.scopeId,selectedScope:value,openScope:value.status!=='closed'?summary:undefined,activeScope:value.status==='active'?summary:undefined,waitingScope:value.status==='waiting'?summary:undefined,selectedGoalView:goalView,currentGoalView:goalView,graph,loading:false,detailLoading:false,error:'',selectScope:()=>{}}}
 
 it('替代审阅只导航已同步的本周期节点，旧节点与新成果各自保留原身份',()=>{

@@ -1,3 +1,4 @@
+import {modelRequestBudgetStore} from '../src/backend/main/persistence/tasks/model-request-budget-store';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -7,6 +8,24 @@ import {ModelRequestBudgetService} from '../src/backend/scheduler-engine/executi
 import {requestBudgetCommand,requestBudgetReceipt,requestBudgetReservation,requestBudgetReport,requestBudgetRecords,requestBudgetDecision,requestBudgetCost} from '../src/backend/core/tasks/model-request-budget-rules';
 import type {ModelRequestBudgetChange} from '../src/backend/core/tasks/model-request-budget';
 import {hash} from '../src/backend/core/foundation/serialization';
+
+it('预算端口只暴露隔离的预算视图，阶段提交保留唯一事务及原命令重放',async()=>{
+  const f=await requestBudgetFixture();try{
+    const port=modelRequestBudgetStore(f.store),view=await port.read();
+    expect(Object.keys(port).sort()).toEqual(['read','transact']);
+    expect(Object.keys(view).sort()).toEqual(['modelRequestBudgetChanges','scopes']);
+    view.scopes.splice(0);expect((await f.store.read()).scopes).toHaveLength(1);
+    const ticket=await f.port.reserve(budgetAttempt),initial=(await f.store.read()).modelRequestBudgetChanges![0];
+    const replay=vi.fn();expect(await port.transact(initial,replay)).toEqual(requestBudgetReceipt(initial));expect(replay).not.toHaveBeenCalled();
+    const change={requestId:ticket.requestId,revision:2,recordedAt:new Date().toISOString(),phase:'issuing' as const};
+    await port.transact(change,async state=>{
+      expect(Object.keys(state).sort()).toEqual(['modelRequestBudgetChanges','scopes']);
+      state.scopes.splice(0);state.modelRequestBudgetChanges!.splice(0);return change;
+    });
+    const actual=await f.store.read();expect(actual.scopes).toHaveLength(1);expect(actual.modelRequestBudgetChanges).toHaveLength(2);
+    expect(actual.modelRequestBudgetChanges!.at(-1)?.phase).toBe('issuing');
+  }finally{await f.cleanup()}
+});
 
 it('串行可靠预留共同扣余额，明确结算后释放；重放原命令不重新预留或修改正文',async()=>{
   const f=await requestBudgetFixture({tokens:69632});try{
@@ -25,7 +44,7 @@ it('串行可靠预留共同扣余额，明确结算后释放；重放原命令�
 it('重新打开只读未决事实，换工作区实例不能释放；旧主运行占位失效后不能发送',async()=>{
   const f=await requestBudgetFixture();let reader:FileDispatchStore|undefined;try{
     const ticket=await f.port.reserve(budgetAttempt);await ticket.issue();const before=await fs.readFile(path.join(f.directory,'dispatch.jsonl'));
-    await f.store.close();reader=new FileDispatchStore(f.directory,f.entry.id);const next=new ModelRequestBudgetService({entry:f.owner.entry,instanceId:'next-instance',assert:()=>f.owner.assert()},reader,f.dispatch.budgets);
+    await f.store.close();reader=new FileDispatchStore(f.directory,f.entry.id);const next=new ModelRequestBudgetService({entry:f.owner.entry,instanceId:'next-instance',assert:()=>f.owner.assert()},modelRequestBudgetStore(reader),f.dispatch.budgets);
     expect(await next.report(f.query)).toMatchObject({unknown:1,inFlight:0,reservedTokens:69632});expect(await fs.readFile(path.join(f.directory,'dispatch.jsonl'))).toEqual(before);
     const port=(await next.forRun(f.binding,f.llm))!;await expect(port.reserve(budgetAttempt)).rejects.toMatchObject({code:'MODEL_REQUEST_BUDGET_DENIED'});expect(await next.report(f.query)).toMatchObject({unknown:1,denied:1,reservedTokens:69632});
     f.release();await expect(port.reserve(budgetAttempt)).rejects.toMatchObject({code:'MODEL_REQUEST_RUN_STALE'});

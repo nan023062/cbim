@@ -1,3 +1,7 @@
+### 静态知识视图的单向边界
+
+`model.ts` 中的 Team 只依赖知识快照公开类型、只读解析辅助和 Foundation，不依赖 BusinessWorkspace、知识写入端口或调度编排。跨域查询由 `scheduler-engine/context/knowledge-queries.ts` 组合；每个 Team 绑定一个固定快照，刷新后创建新视图。依赖检查器覆盖类型和重导出，具体矩阵见 [知识契约](../knowledge/CONTRACT.md#快照契约领域视图与查询编排)。此约束不把其他岗位、成员和执行绑定文件误称为同一只读模型。
+
 ### 根标识与正式兜底
 
 `automatic-execution.ts` 复用 workspace 的 `projectRootModuleId` 作为历史 `implicitProjectModuleId`。根始终可查询，但正式 no_modules 兜底仍只适用于真实模块为空的项目；有模块时不以根绕过负责人或 Workflow。Auto 主会话直接工作与成员兜底是不同执行路径，不制造岗位或成员绑定。
@@ -21,7 +25,7 @@
 - Team.agents() 和 Team.agent() 提供组织、角色定义及有效 Skill；Team.people() 与 cbim_people_list 已删除，authorPeople 固定为空数组以兼容旧响应。角色不包含运行进程或可变会话状态。
 - Team 根与小组是组织节点，只有叶子是 Agent。成员继承自身与所有祖先的 Skill，角色解析仍服从现有冲突校验。
 - 默认主 Agent 是内置角色 `cbim:main`，与自定义成员使用同一大脑、工具策略和执行内核。主 Agent 的调度职责只在其主会话开放，不享有隐含的业务工具权限提升，也不是其它成员的父执行进程。
-- 主 Agent 负责调度与团队/业务知识管理，可经受控知识服务 CRUD；不能承接正式业务执行。内置静态 `cbim:executor` 可以显式登记成岗位并分配模块责任后执行，不是缺少负责人时的自动回退。执行者保留自己的状态、Session、模型思考与环境探索，按目标模块工作并返回证据或缺口，不获得派发权。
+- 主 Agent 负责调度与团队/业务知识管理，也可在原会话按本轮权限直接实现与验证未配置自定义负责岗位的模块；正式目标可用 `main-execution` 引用本轮真实业务工具回执。主角色不能被派成独立成员。内置静态 `cbim:executor` 已退役，不接受新登记/派发；历史只读保留。自定义执行者保留自己的状态、Session、模型思考与环境探索，按有效岗位与目标模块工作并返回证据或缺口，不获得派发权。
 - 本目录持有成员身份、配置快照、状态投影的领域契约。实例注册、邮箱排队、工作交接和生命周期由调度层实现；持久化与平台资源由 `main` 注入。
 
 #### 身份、配置和通道
@@ -176,3 +180,7 @@ workspaceMemberModelSnapshotSchema 接受可选 engine，明确值参与 configu
 ## Agent 执行配置归属
 
 主 Agent 对话栏和团队配置页共享 agent-runtime.ts 契约，配置属于工作区 cbim:main。岗位 modelRef 新增可选 engine；新 UI 始终显式提交，schema 校验其与快照一致。workspaceMemberEngine 读取新引用或旧 snapshot.engine，不补写缺省字段。只改引擎属于选型编辑；同引擎同模型的参数刷新仍需明确采纳。旧审计、binding 及 hash 形状不改写。
+
+## 隐式模块执行者
+
+implicitModuleOwner 按本模块、最近祖先的非空责任记录解析；空责任不创建新登记。失效的显式/祖先关系仍由门禁报告，不自动匹配其他人。ExpectedModuleOwner 向后兼容原直接关系，并允许 inheritedFrom 或 match 两种互斥依据：继承冻结实际父关系和子模块来源；匹配冻结主模型理由、知识版本和来源，无伪造 bindingId。岗位、能力采纳和模型门禁保持一致；matches:null 回到主会话，不创建内置执行员。

@@ -1,4 +1,5 @@
 /**
+ * 能力边界：成员工具在本运行装配为通用目录和使用说明；引擎只接 list/call，原生工具禁用独立于业务工具名称。
  * 冻结executionScope必须有真实端口；范围工具只消费自身可靠allowed，一切原生文件/命令被拒绝，物理资源未收束不释放租约。
  * 完整出口将原清单选择/重核端口注入任务与JSON工具；实际交付授权必须唯一，门闩覆盖候选保存和回包之间。
  * 删除/移动只交给冻结约定的专用端口；原阶段由可信 append 保存，失败屏障与实际进程排空同样参与终态。
@@ -17,6 +18,7 @@ import {randomUUID} from 'node:crypto';
 import {safeId} from '../foundation/identity';
 import type {RunStorage} from './storage';
 import {toolReceipt} from '../tools/receipts';
+import {runCapabilityInstructions} from './run-capability-instructions';
 import {TaskProgressTools} from '../tasks/progress-tools';
 import {MemberHelpTools} from '../tasks/member-help-tools';
 import {artifactCaptureToolName} from '../tasks/artifact-tools';
@@ -372,7 +374,7 @@ export class LoopRuntime {
         let failure:unknown;
         try{
           if(control?.signal.aborted)await stop();
-          if(!stopping)await engine.start({task,runId,directory,sessionFile:engineSession.sessionFile,engineHandoff:engineSession.handoff,nativeSessionId:previous&&!member?engineSession.nativeSessionId:nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,manifestTools:manifestCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,controlledFileTools:controlledFile,artifactTransitionTools:artifactTransition,scopedExecutionTools:scopedExecution,assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
+          if(!stopping)await engine.start({task,runId,directory,sessionFile:engineSession.sessionFile,engineHandoff:engineSession.handoff,nativeSessionId:previous&&!member?engineSession.nativeSessionId:nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,tools:{taskTools,...(memberHelpTools?{memberHelpTools}:{}),...(artifactCapture?{artifactTools:artifactCapture.tools}:{}),...(manifestCapture?{manifestTools:manifestCapture.tools}:{}),...(checkpointTools?{memberCheckpointTools:checkpointTools.tools}:{}),...(validation?{validationTools:validation.tools}:{}),...(controlledFile?{controlledFileTools:controlledFile}:{}),...(artifactTransition?{artifactTransitionTools:artifactTransition}:{}),...(scopedExecution?{scopedExecutionTools:scopedExecution}:{})},nativeTools:scopedExecution?'disabled':undefined,capabilityInstructions:runCapabilityInstructions({help:!!memberHelpTools,checkpoint:!!checkpointTools,validation:!!validation}),assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
             call=structuredClone(call);
             if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
             // 验证、采集与停泊先同步预占，再进入策略；短读锁不会绕过求助/检查点的本轮结束门闩。

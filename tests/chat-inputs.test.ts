@@ -4,7 +4,7 @@ import path from 'node:path';
 import http from 'node:http';
 import {fixture} from './helpers';
 import {ChatInputs} from '../src/backend/main/persistence/tasks/chat-inputs';
-import {transcript} from '../src/frontend/conversation/transcript';
+import {transcript} from '../src/frontend/execution-view/transcript';
 it('attachment preview uses the saved snapshot and rejects another workspace or path traversal',async()=>{
  const f=await fixture();try{const a=await f.app.dispatch('add',{path:f.a}),b=await f.app.dispatch('add',{path:f.b});const inputs=new ChatInputs(f.app.workspace(a.id));const file=path.join(f.a,'preview.txt');await fs.writeFile(file,'ORIGINAL');const attachment=await inputs.path('file',file);await fs.writeFile(file,'CHANGED');expect(await f.app.dispatch('chat.preview',{id:a.id,attachmentId:attachment.id})).toMatchObject({name:'preview.txt',text:'ORIGINAL'});await expect(f.app.dispatch('chat.preview',{id:b.id,attachmentId:attachment.id})).rejects.toThrow();await expect(inputs.preview('../credentials')).rejects.toThrow();}finally{await f.cleanup()}
 });

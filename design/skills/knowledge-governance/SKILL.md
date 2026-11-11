@@ -1,4 +1,4 @@
-> 2026-11-05 迁移说明：本文保留的 Python 命令属于历史实现，新助手不调用它们。现行运行入口为桌面应用与 `pnpm cli --root "<工程根>"`；迁移范围见工程 `docs/rule-migration.md`。
+> 历史实现说明：本文保留的 Python 命令不由新助手调用。现行产品入口为桌面应用与内部 Loop，开发调用及边界见[工程运行说明](../../../README.md#运行)；旧迁移说明可通过 Git 历史查阅。
 
 ---
 name: knowledge-governance

@@ -6,7 +6,7 @@ import {useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
 import {Icon} from '../components/Icon';
 import {Empty} from '../components/Empty';
-import {stateLabels} from '../shell/state-labels';
+import {stateLabels} from '../components/state-labels';
 export function FlowView({workspace,run,cancel}:{workspace:WorkspaceView;run:(name:string)=>void;cancel:(id:string)=>void}){
   const [chosen,setChosen]=useState('');const task=workspace.tasks.find(t=>t.id===chosen)||[...workspace.tasks].reverse()[0];
   const finished=task?.state==='completed';

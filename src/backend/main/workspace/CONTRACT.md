@@ -123,3 +123,9 @@ Workspace.assert 保留 STALE_INSTANCE 协议，分别指出工程选错与运�
 ### 岗位独立引擎
 
 WorkspaceMembers 按岗位引用及已采纳快照解析 engine，同一供应商/模型可只改引擎。明确采纳、差异观察与复核均沿岗位原选型读取，不从供应商恢复引擎；旧字段缺省不回写，历史审计继续严格重放。
+
+### 历史记录装配边界
+
+`agent-history.ts` 的 `createAgentHistory` 通过 `AgentHistoryOwner` 只读取工作区身份、固定应用目录和运行态断言，装配 FileAgentHistoryStore、FileRunStorage 与 AgentHistoryService。构造不读盘，Application 仍在持锁且路径核验后初始化索引，并在排空索引后释放锁。详情保留逐级符号链接、真实路径及原 task/run/workspace 身份核验；不新增存储、不复制日志、不扩大写入能力。文件存储实现不得反向引用该装配或 Workspace。
+
+主模块负责人 inspect 端口传递本轮 matches 给执行发现，并继续复核责任页与执行发现的知识/登记/来源游标一致；匹配不调用责任写入接口。

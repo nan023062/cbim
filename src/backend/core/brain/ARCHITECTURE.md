@@ -14,8 +14,9 @@
 | [conversation-binding.ts](conversation-binding.ts) | 定义主对话与已登记 Agent 实例、逻辑会话之间的可信绑定，供运行时和日志恢复共用。 |
 | [engine-instructions.ts](engine-instructions.ts) | 为主 Agent 和成员生成各引擎共用的运行职责、冻结身份与工具边界说明。 |
 | [engine-session.ts](engine-session.ts) | 主对话更换引擎时，沿已核实的日志链选择目标引擎历史并转交缺失的公开上下文。 |
+| [engine-tool-port.ts](engine-tool-port.ts) | 定义引擎传输与运行能力共同使用的工具目录契约，不认识任何业务工具实现。 |
 | [engine-tools.ts](engine-tools.ts) | 将运行时注入的任务、知识和成员工具组装成引擎无关的目录与调用端口。 |
-| [index.ts](index.ts) | 大脑执行层：对外重导出 Loop 契约、主对话实例绑定、成员执行绑定、可信回注来源、存储端口、运行时与 Pi 适配器。 |
+| [index.ts](index.ts) | 大脑执行层：对外重导出 Loop 契约、主对话实例绑定、成员执行绑定、可信回注来源、存储端口与运行时。 |
 | [input-source.ts](input-source.ts) | 定义可信入口提交的成员结果、真实用户补充与人工决定系统转交来源。 |
 | [member-checkpoint.ts](member-checkpoint.ts) | 成员单次合作式停泊的运行时门闩，沿真实工具授权保存非终结检查点请求。 |
 | [member-run.ts](member-run.ts) | 定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。 |
@@ -23,6 +24,7 @@
 | [native-tools.ts](native-tools.ts) | 向宿主托管引擎提供已有文件/命令工具操作，复用 Pi SDK 的独立工具实现而不创建 Pi Loop。 |
 | [output-manifest-capture.ts](output-manifest-capture.ts) | 成员本轮完整产物采集的短期门闩，冻结 Workflow 范围并将真实观察可靠写入 canonical。 |
 | [run-artifact-transition.ts](run-artifact-transition.ts) | 正式成员删除/移动工具的唯一授权、写前核实和可靠阶段记录，平台副作用只通过此运行端口。 |
+| [run-capability-instructions.ts](run-capability-instructions.ts) | 由可信运行装配生成成员求助、停泊和产物验证的使用指引。 |
 | [run-controlled-file.ts](run-controlled-file.ts) | 正式成员受控文件工具的单次授权与短门闩，平台写入只经过此可信运行端口。 |
 | [run-scoped-execution.ts](run-scoped-execution.ts) | 冻结范围工具的 Runtime 一次授权、短门闩和实际退出屏障。 |
 | [run-validation.ts](run-validation.ts) | 正式成员的 JSON/CSV/PNG 验证短门闩，连接冻结要求、原文件或完整集合身份及平台同字节读取。 |
@@ -67,6 +69,9 @@ class N_src_backend_core_brain_engine_instructions_ts["engine-instructions.ts"] 
 class N_src_backend_core_brain_engine_session_ts["engine-session.ts"] {
   <<module>>
 }
+class N_src_backend_core_brain_engine_tool_port_ts["engine-tool-port.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_engine_tools_ts["engine-tools.ts"] {
   <<module>>
 }
@@ -76,14 +81,15 @@ class N_src_backend_core_brain_index_ts["index.ts"] {
 class N_src_backend_core_brain_input_source_ts["input-source.ts"] {
   <<module>>
 }
-class N_src_backend_core_brain_member_checkpoint_ts["member-checkpoint.ts"] {
-  <<module>>
-}
+N_src_backend_core_brain_engine_tools_ts ..> N_src_backend_core_brain_engine_tool_port_ts : 导入依赖
 N_src_backend_core_brain_index_ts ..> N_src_backend_core_brain_input_source_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_brain_member_checkpoint_ts["member-checkpoint.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_member_run_ts["member-run.ts"] {
   <<module>>
 }
@@ -99,9 +105,7 @@ class N_src_backend_core_brain_output_manifest_capture_ts["output-manifest-captu
 class N_src_backend_core_brain_run_artifact_transition_ts["run-artifact-transition.ts"] {
   <<module>>
 }
-class N_src_backend_core_brain_run_controlled_file_ts["run-controlled-file.ts"] {
-  <<module>>
-}
+N_src_backend_core_brain_member_checkpoint_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
 N_src_backend_core_brain_output_manifest_capture_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
 N_src_backend_core_brain_run_artifact_transition_ts ..> N_src_backend_core_brain_output_manifest_capture_ts : 导入依赖
 N_src_backend_core_brain_run_artifact_transition_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
@@ -109,6 +113,12 @@ N_src_backend_core_brain_run_artifact_transition_ts ..> N_src_backend_core_brain
 
 ```mermaid
 classDiagram
+class N_src_backend_core_brain_run_capability_instructions_ts["run-capability-instructions.ts"] {
+  <<module>>
+}
+class N_src_backend_core_brain_run_controlled_file_ts["run-controlled-file.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_run_scoped_execution_ts["run-scoped-execution.ts"] {
   <<module>>
 }
@@ -121,27 +131,25 @@ class N_src_backend_core_brain_runtime_ts["runtime.ts"] {
 class N_src_backend_core_brain_scope_usage_ts["scope-usage.ts"] {
   <<module>>
 }
+N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_capability_instructions_ts : 导入依赖
+N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_validation_ts : 导入依赖
+N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_scoped_execution_ts : 导入依赖
+N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_controlled_file_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_backend_core_brain_storage_ts["storage.ts"] {
   <<module>>
 }
 class N_src_backend_core_brain_types_ts["types.ts"] {
   <<module>>
 }
-N_src_backend_core_brain_run_validation_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
-N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_storage_ts : 导入依赖
-N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_validation_ts : 导入依赖
-N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_scoped_execution_ts : 导入依赖
-N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
-N_src_backend_core_brain_scope_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
-N_src_backend_core_brain_storage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
-N_src_backend_core_brain_types_ts ..> N_src_backend_core_brain_run_scoped_execution_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_backend_core_brain_usage_ts["usage.ts"] {
   <<module>>
 }
+N_src_backend_core_brain_storage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
+N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
@@ -160,13 +168,13 @@ class N_src_backend_core_brain_usage_ts["usage.ts"] {
 - `engine-instructions.ts` → `types.ts`：导入。
 - `engine-session.ts` → `types.ts`：导入。
 - `engine-tools.ts` → `types.ts`：导入。
+- `engine-tools.ts` → `engine-tool-port.ts`：导入。
 - `index.ts` → `types.ts`：导入。
 - `index.ts` → `storage.ts`：导入。
 - `index.ts` → `runtime.ts`：导入。
 - `index.ts` → `member-run.ts`：导入。
 - `index.ts` → `input-source.ts`：导入。
 - `index.ts` → `conversation-binding.ts`：导入。
-- `index.ts` → `pi`：导入。
 - `member-checkpoint.ts` → `member-run.ts`：导入。
 - `member-checkpoint.ts` → `types.ts`：导入。
 - `member-checkpoint.ts` → `artifact-capture.ts`：导入。
@@ -187,6 +195,7 @@ class N_src_backend_core_brain_usage_ts["usage.ts"] {
 - `run-validation.ts` → `types.ts`：导入。
 - `runtime.ts` → `engine-session.ts`：导入。
 - `runtime.ts` → `storage.ts`：导入。
+- `runtime.ts` → `run-capability-instructions.ts`：导入。
 - `runtime.ts` → `member-checkpoint.ts`：导入。
 - `runtime.ts` → `artifact-capture.ts`：导入。
 - `runtime.ts` → `output-manifest-capture.ts`：导入。
@@ -203,8 +212,7 @@ class N_src_backend_core_brain_usage_ts["usage.ts"] {
 - `types.ts` → `member-run.ts`：导入。
 - `types.ts` → `input-source.ts`：导入。
 - `types.ts` → `conversation-binding.ts`：导入。
-- `types.ts` → `run-controlled-file.ts`：导入。
-- `types.ts` → `run-scoped-execution.ts`：导入。
+- `types.ts` → `engine-tool-port.ts`：导入。
 - `usage.ts` → `types.ts`：导入。
 
 ### conversation-binding.ts 公开入口
@@ -296,6 +304,17 @@ class N_src_backend_core_brain_native_tools_ts["native-tools.ts"] {
 ```
 
 
+### run-capability-instructions.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_backend_core_brain_run_capability_instructions_ts["run-capability-instructions.ts"] {
+  <<module>>
+  +runCapabilityInstructions()
+}
+```
+
+
 ### scope-usage.ts 公开入口
 
 ```mermaid
@@ -379,7 +398,7 @@ class N_src_backend_core_brain_usage_ts["usage.ts"] {
 
 ### 执行成员的一次性求助门闩
 
-`EngineContext.memberHelpTools` 只在 `startMember` 的可信绑定下存在。Pi 透传一次性 gate 的真实 `toolCallId`；主 Agent 伪造工具名仍会被拒绝。运行时在任何异步策略前为求助预占门闩；正在审批或已放行未结束的其它调用都阻止求助。预占之后的新工具仅写入拒绝事实，不进入可能执行集合，也不能反过来干扰已批准的求助。
+`EngineContext.tools 中的求助端口` 只在 `startMember` 的可信绑定下存在。Pi 透传一次性 gate 的真实 `toolCallId`；主 Agent 伪造工具名仍会被拒绝。运行时在任何异步策略前为求助预占门闩；正在审批或已放行未结束的其它调用都阻止求助。预占之后的新工具仅写入拒绝事实，不进入可能执行集合，也不能反过来干扰已批准的求助。
 
 `cbim_task_help` 执行前再次检查停止、授权、所有在途操作和被引用工具确实属于本轮；先记录 `task.help_requested {help}`，再返回标准 `{state:'staged',help}` 正文，最后由统一 `tool.finished` 签发回执。请求使用固定 MemberRunBinding，没有模型提供的收件人或提权参数。落盘失败不在同轮重放；成功后任何工具仍被拒绝，成员应结束本轮。
 
@@ -389,7 +408,7 @@ staged 不是派发图交接。外层在引擎关闭和 canonical 日志核实�
 classDiagram
 class LoopRuntime { +startMember() }
 class MemberHelpTools { +guard() +denied() +call() }
-class EngineContext { +memberHelpTools }
+class EngineContext { +tools }
 class RunJournal { <<port>> +append() }
 LoopRuntime --> MemberHelpTools : 每轮可信绑定与门闩
 LoopRuntime --> RunJournal : 先持久化请求与回执
@@ -722,3 +741,9 @@ checkedMemberRunBinding 同时核独立 fallbackBinding 的工作区、角色及
 LoopRuntime 保留唯一权限、任务进度、证据与日志生命周期。engine-tools.ts 捕获真实工具目录和路由，engine-instructions.ts 统一角色及冻结上下文；Pi、Claude Code 与 Codex 只负责原生协议适配，各引擎不各自实现一套调度、知识事务或验收。native-tools.ts 复用固定 Pi SDK 的文件/命令实现供 Codex 宿主动态工具调用，不创建 Pi Loop 或共享账号。
 
 主会话切换时，engine-session.ts 沿 run.started.resumeFrom 最多核实 512 段同任务历史；恢复目标引擎最近一次原生文件及其实际 session.bound ID，并将其后另一引擎的公开消息/工具结果作为资料转交。首次使用目标引擎建立独立原生文件。资料最多 1 MiB，损坏、未决工具或循环链明确拒绝，不截断、不重放工具。成员检查点仍固定原岗位引擎，不做跨引擎移植。Claude Code/Codex 没有实现可靠的运行内插入确认，保留排队及下一轮发送。
+
+### 引擎能力目录
+
+EngineContext 通过通用 RuntimeToolsPort 目录传入已装配工具；不再引用任务、求助、产物、验证和文件工具的具体类。runtimeEngineTools 按实际目录捕获路由，拒绝非法或重复工具名，保留原调用 ID、停止信号和未知工具拒绝。nativeTools=disabled 独立控制全部原生文件/命令禁用，不由工具名称或模型文本推断权限；能力指引来自可信运行装配。原 beforeTool 持久化授权、业务门闩、停止和在途副作用排空均保持原顺序。
+
+brain/index.ts 仅公开引擎无关契约和运行时；Pi、Claude Code、Codex 实现由实际装配点直接导入。Runtime 仍拥有现有成员业务门闩，尚未把全部业务生命周期迁出，此片不宣称运行时完全解耦。

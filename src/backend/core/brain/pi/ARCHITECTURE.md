@@ -200,6 +200,10 @@ N_src_backend_core_brain_pi_engine_ts ..> N_src_backend_core_brain_pi_request_bu
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 第三方来源与许可
+
+`runtime-config.ts` 保留 Cindy 来源说明；Apache-2.0 许可位于根目录 [legal/cindy-LICENSE](../../../../../legal/cindy-LICENSE)，由 Forge 的 `legal` 资源目录随包分发。迁移许可位置不改变 Pi 启动配置或运行权限。
+
 ### 公开文字与工具的因果关联
 
 `message_end` 的 assistant 正文仅保存公开 text、原计量和该原生消息内的 `toolCallIds`，不保存 thinking 或参数。HTTP `/gate` 与 stdout 事件是独立到达通道，门禁可能先于已生成文字写入 canonical；日志继续保留真实收到的顺序，界面用明确 ID 还原本段正文与调用的关系。旧日志不补造关联；这份元数据不改变工具批准、执行或回执核实。
@@ -324,3 +328,7 @@ EngineContext.scopedExecutionTools 存在时 --tools 仅含 cbim_*，全部原�
 ### 共享业务能力
 
 工具路由与业务提示分别由上层 engine-tools.ts、engine-instructions.ts 提供。KnowledgeBridge/KnowledgeToolSchema 仅保留兼容别名；Pi 的 RPC、HTTP 一次性许可和 bootstrap 仍留在本目录。请求预算代理及 SSE 用量解析归 ../llm/，另一引擎不依赖 Pi 实现。
+
+### 通用能力注入
+
+工具从 EngineContext.tools 的通用目录注册；nativeTools=disabled 时关闭全部原生文件和命令，不依赖某个业务工具槽位。业务指引作为可信装配说明传入，授权、原调用身份、结果保存与停止顺序保持原协议。

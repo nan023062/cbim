@@ -1,0 +1,18 @@
+.workspace-automation{overflow:auto;min-height:0}
+.automation-layout{display:grid;grid-template-columns:minmax(140px,220px) minmax(0,1fr);gap:20px}
+.automation-list{display:flex;flex-direction:column;gap:8px;align-self:start}
+.automation-list button{display:flex;flex-direction:column;gap:6px;align-items:flex-start;text-align:left;white-space:normal;overflow-wrap:anywhere}
+.automation-list small,.automation-run p,.automation-editor p{opacity:.72}
+.automation-detail{min-width:0}.automation-detail section{margin-bottom:24px}
+.automation-editor{display:flex;flex-direction:column;gap:12px}
+.automation-editor fieldset{border:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:12px}
+.automation-editor fieldset fieldset{padding-block:12px;border-top:1px solid var(--line)}
+.automation-editor label{display:flex;flex-direction:column;gap:6px}
+.automation-editor input:not([type=checkbox]),.automation-editor select,.automation-editor textarea{width:100%;box-sizing:border-box}
+.automation-editor .automation-check{flex-direction:row;align-items:center;gap:8px}
+.automation-check small{display:block;opacity:.6;overflow-wrap:anywhere}.automation-module{padding-block:6px}
+.automation-actions{display:flex;flex-wrap:wrap;gap:8px;margin-block:12px}
+.automation-prompt{white-space:pre-wrap;overflow-wrap:anywhere}
+.automation-run{border-top:1px solid var(--line);padding-block:12px;overflow-wrap:anywhere}
+.automation-run>div{display:flex;gap:12px;flex-wrap:wrap}
+@media(max-width:900px){.automation-layout{grid-template-columns:minmax(0,1fr)}.automation-list{max-height:220px;overflow:auto}}

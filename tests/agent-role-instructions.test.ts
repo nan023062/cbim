@@ -20,6 +20,9 @@ test('团队与技术管理者把工程架构职责转为可核实的任务和�
 
 test.each(['auto','team'] as const)('两种模式都提示主 Agent 默认执行且不虚构成员任务 (%s)',mode=>{
   const text=mainInstructions(mode)+collaborationInstructions(mode);expect(text).toContain('当前会话直接执行');expect(text).toContain('不存在内置默认执行员');expect(text).toContain('read/ask/execute');expect(text).not.toContain('主 Agent 永远只调度');
+  expect(text).toContain('独立成员 assignee');expect(text).toContain('main-execution');
+  expect(text).not.toContain('禁止把 cbim:main 作为业务执行角色');
+  expect(text).not.toContain('不能自行完成正式业务任务');
 });
 
 test('原单模块入口同样自主执行但不调度，状态和协作能力依赖真实事件与工具',()=>{

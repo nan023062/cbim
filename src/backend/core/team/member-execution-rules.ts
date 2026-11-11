@@ -8,6 +8,7 @@ import {workspaceMemberHash,workspaceMemberCapabilityHash,workspaceMemberModelHa
 import type {ModuleOwnership} from '../workspace/module-ownership';
 import {currentKnowledgeSource,knowledgeSourcePending,knowledgeSourceRef,type KnowledgeSourceRegistry} from '../workspace/knowledge-source-rules';
 import {ownerExecutionBindingSchema,ownerExecutionSelectionSchema,ownerExecutionSelectionFor,type OwnerExecutionSelection,type OwnerExecutionBinding} from './member-execution-binding';
+import {implicitModuleOwner} from './implicit-module-owner';
 
 export interface OwnerExecutionRegistry extends KnowledgeSourceRegistry {workspaceMembers?:readonly WorkspaceMember[];moduleOwnerships?:readonly ModuleOwnership[]}
 function check(value:unknown,code:string,message:string):asserts value{if(!value)fail(code,message)}
@@ -25,11 +26,18 @@ export function resolveOwnerExecutionSelection(state:OwnerExecutionRegistry,raw:
   if('kind' in ref)check(ref.id==='cbim:executor'&&ref.contentHash===member.adoption.capabilityHash,'OWNER_SOURCE_STALE','内置能力来源不一致');
   else {const current=currentKnowledgeSource(state,{kind:'agent',sourceId:member.adoption.configuration.agentId});check(current&&equal(knowledgeSourceRef(current),ref),'OWNER_SOURCE_STALE','岗位能力来源已失效或被替换');}
   const owners=moduleIds.map(moduleId=>{
-    const expected=selection.expectedOwners.find(owner=>owner.moduleId===moduleId)!,owner=state.moduleOwnerships?.find(value=>value.moduleId===moduleId);
+    const expected=selection.expectedOwners.find(owner=>owner.moduleId===moduleId)!,owner=implicitModuleOwner(state.moduleOwnerships,moduleId);
+    const current=currentKnowledgeSource(state,{kind:'module',sourceId:moduleId});
+    if(expected.match){
+      check(!owner,'OWNER_SELECTION_STALE','模块已有显式或父级负责人，不能沿用模型匹配');
+      check(current&&equal(knowledgeSourceRef(current),expected.match.sourceRef),'OWNER_SOURCE_STALE','模型匹配的模块来源已变化，请重新读取分析');
+      return {...expected,sourceRef:structuredClone(expected.match.sourceRef)};
+    }
     check(owner&&owner.workspaceId===state.workspaceId&&owner.ownerMemberId===member.memberId,'OWNER_UNASSIGNED','模块没有所选岗位的明确负责人');
+    check((owner.moduleId===moduleId?undefined:owner.moduleId)===expected.inheritedFrom,'OWNER_SELECTION_STALE','最近父级负责人已变化，请重新查询并规划');
     check(owner.bindingId===expected.bindingId&&owner.revision===expected.revision&&owner.ownerMemberId===expected.ownerMemberId,'OWNER_SELECTION_STALE','模块责任已变化，请重新查询并规划');
-    const current=currentKnowledgeSource(state,{kind:'module',sourceId:moduleId});check(owner.sourceRef&&current&&equal(knowledgeSourceRef(current),owner.sourceRef),'OWNER_SOURCE_STALE','模块责任尚未采纳当前来源');
-    return {...expected,sourceRef:structuredClone(owner.sourceRef)};
+    const ownerSource=currentKnowledgeSource(state,{kind:'module',sourceId:owner.moduleId});check(owner.sourceRef&&ownerSource&&equal(knowledgeSourceRef(ownerSource),owner.sourceRef)&&current,'OWNER_SOURCE_STALE','模块或父级责任尚未采纳当前来源');
+    return {...expected,sourceRef:structuredClone(knowledgeSourceRef(current))};
   });
   return ownerExecutionBindingSchema.parse({version:1,workspaceId:state.workspaceId,memberId:member.memberId,memberRevision:member.revision,memberHash:workspaceMemberHash(member),capability:{agentId:member.adoption.configuration.agentId,teamId:member.adoption.configuration.teamId,captureId:member.adoption.captureId,capabilityHash:member.adoption.capabilityHash,sourceRef:structuredClone(ref)},model:{profileId:member.runtimePolicy.profileId,modelId:member.runtimePolicy.modelId,configurationHash:member.runtimePolicy.configurationHash},owners});
 }

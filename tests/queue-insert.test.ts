@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import http from 'node:http';
 import {fixture} from './helpers';
-import {transcript} from '../src/frontend/conversation/transcript';
+import {transcript} from '../src/frontend/execution-view/transcript';
 import {PiRpc} from '../src/backend/core/brain/pi/rpc';
 import {usageScopes} from './scope-usage-fixture';
 

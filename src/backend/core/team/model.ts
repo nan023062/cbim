@@ -1,6 +1,6 @@
 /**
  * 作用定位：团队：Team/小组/Agent 与 Agent 自身和祖先 Skill的核心封装。
- * 设计原因：在同一校验快照上提供领域语义，不依赖工作区进程或桌面页面。
+ * 设计原因：在同一校验快照上提供领域语义，只依赖快照公开契约与 Foundation；跨域查询由调度层组合，不依赖工作区进程、写入服务或桌面页面。
  */
 import path from 'node:path';
 import {context,data,content} from '../knowledge/snapshot';

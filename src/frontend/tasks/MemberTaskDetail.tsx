@@ -7,7 +7,7 @@ import {useEffect,useRef,useState} from 'react';
 import type {GraphCursor,ScopeSummary,TaskNode} from '../../bridge/contracts/dispatch';
 import type {PendingQuestion} from '../../bridge/contracts/execution';
 import type {ChatApproval} from '../../bridge/contracts/chat';
-import {QuestionCard} from '../conversation/QuestionCard';
+import {QuestionCard} from '../execution-view/QuestionCard';
 import {useMemberRun} from './useMemberRun';
 import {MemberRunTranscript} from './MemberRunTranscript';
 import {MemberExecutionReport} from './MemberExecutionReport';
@@ -80,7 +80,7 @@ function MemberRunDetail({workspaceId,rootSessionId,task,runId,active}:{workspac
   },[workspaceId,rootSessionId,task.taskId,runId,current]);
   useEffect(()=>{if(active)void refreshInteractions.current()},[active]);
   /** 串行提交本成员操作并刷新观察；失败继续抛给问题卡，卸载不会撤销已提交的后端操作。 */
-  async function operate(action:string,args:Record<string,unknown>){
+  async function operate(action:'dispatch.executionStop'|'dispatch.approve'|'dispatch.answerQuestion',args:Record<string,unknown>){
     if(lock.current)throw Error('正在处理另一项成员操作，请稍后重试');lock.current=true;setBusy(true);setOperationError('');
     try{await window.cbim.call(action,{...identity,...args});await refreshInteractions.current();await refresh()}
     catch(cause){if(alive.current)setOperationError(cause instanceof Error?cause.message:'成员操作失败，请重试');throw cause}

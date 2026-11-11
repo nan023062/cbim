@@ -49,7 +49,7 @@ export function scopeGoalView(scope:ScopeSummary|undefined,graph?:GraphSnapshot)
     if(scope.outcome==='completed')return scope.hasPlan?(scope.reviewDecision==='complete'&&!scope.needsReplan?{phase:'completed',label:'目标已完成',tone:'success'}:{phase:'completion_unverified',label:'周期已结束 · 完成依据不完整',tone:'warning'}):{phase:'conversation_finished',label:'本轮对话结束',tone:'neutral'};
     if(scope.outcome==='cancelled')return {phase:'cancelled',label:'本轮已停止',tone:'neutral'};
     if(scope.outcome==='interrupted')return {phase:'interrupted',label:'目标执行中断',tone:'warning'};
-    return {phase:scope.blockedReason?'blocked':'failed',label:'目标未完成',tone:'warning'};
+    return {phase:scope.blockedReason?'blocked':'failed',label:scope.hasPlan?'目标未完成':'业务目标未建立',tone:'warning'};
   }
   if(scope.activeInputStatus==='unknown')return {phase:'input_unknown',label:'补充接收结果待核实',tone:'warning'};
   if(scope.activeInputStatus==='pending')return {phase:'input_pending',label:'正在确认补充接收',tone:'running'};

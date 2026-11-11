@@ -17,7 +17,7 @@
 | [ModuleOwnershipDetail.tsx](ModuleOwnershipDetail.tsx) | 显示模块当前负责人、来源观察与有界审计，供责任面板单独审阅。 |
 | [ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx) | 业务架构和项目岗位共用的模块责任控制面，提供岗位选择、登记入口、预览、明确提交和原命令核实。 |
 | [workspace-view.css](workspace-view.css) | 对应界面的布局与视觉样式。 |
-| [WorkspaceView.tsx](WorkspaceView.tsx) | 工作区唯一的静态业务架构，维护模块和 Workflow，模块卡片一级选择 Agent，复用真实岗位与责任提交；局部图标控制位于图内，避免重复全局入口。 |
+| [WorkspaceView.tsx](WorkspaceView.tsx) | 业务模块和真实知识文件的目录树、预览编辑与治理入口。 |
 
 ## 架构类图
 
@@ -273,7 +273,7 @@ class N_src_frontend_workspace_WorkspaceView_tsx["WorkspaceView.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/GraphViewControls.tsx](../components/GraphViewControls.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../knowledge/KnowledgeTools.tsx](../knowledge/KnowledgeTools.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[../governance/ModuleGovernancePanel.tsx](../governance/ModuleGovernancePanel.tsx)、[ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx)、[../team/WorkspaceMembers.tsx](../team/WorkspaceMembers.tsx)、[../team/team-model.ts](../team/team-model.ts)、[InlineModuleOwner.tsx](InlineModuleOwner.tsx)、[workspace-view.css](workspace-view.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../knowledge/KnowledgeFileTree.tsx](../knowledge/KnowledgeFileTree.tsx)、[../knowledge/KnowledgeFilePreview.tsx](../knowledge/KnowledgeFilePreview.tsx)、[../knowledge/GovernanceLaunch.tsx](../knowledge/GovernanceLaunch.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[../governance/ModuleGovernancePanel.tsx](../governance/ModuleGovernancePanel.tsx)、[ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx)、[../team/WorkspaceMembers.tsx](../team/WorkspaceMembers.tsx)、[../team/team-model.ts](../team/team-model.ts)、[InlineModuleOwner.tsx](InlineModuleOwner.tsx)、[workspace-view.css](workspace-view.css)。
 
 ### 本目录调用边界
 
@@ -399,3 +399,7 @@ WorkspaceView 传递 Agent 本机 runtime。inline-module-ownership 新登记优
 ### 模块新岗位的引擎引用
 
 inline-module-ownership 在新登记时同时传递 Agent runtime 的 engine、profileId、modelId，并按协议核兼容性；未指定 runtime 时采用 Pi 与默认模型。已有岗位保留原采纳，不跟随静态 Agent 或主 Agent 的设置变更。
+
+模块卡片岗位编排的 IPC action 限定为真实使用的模型列表及岗位/责任读取、预览和原命令操作；models.list 不转发任意参数，原两阶段提交和未知回执处理不变。
+
+业务架构按实际知识目录/文件显示，可选择模块详情或文件预览编辑；移除高级知识管理和直属内容开关。未显式配置显示自动解析（父级、模型匹配、主 Agent），不伪装成已保存的主 Agent 责任；原显式预览/保存、岗位登记和历史入口仍保留。一键治理通过共享启动器发起真实工作流会话。

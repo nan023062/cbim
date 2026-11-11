@@ -3,7 +3,7 @@
  * 新对话默认 Auto，旧无模式偏好的历史对话保持 Team；当前目标期间禁用模式切换，下一目标仍可在同一对话改选。
  * 历史菜单与侧栏共用本机条目和运行观察，改名／移除由外壳负责，不改原任务目标或日志。
  * 文件补偿：向成员详情传递当前工作区实例，历史运行身份不替代新操作的当前实例校验。
- * 作用定位：会话双页签入口（对话/本会话任务），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。
+ * 作用定位：会话固定页签入口（对话/本会话任务/当前工作区自动化），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。
  * 设计原因：主运行、开放周期和准入等待分开。配额不足保留首轮草稿，已受理协作使用只读票据提示；无实际占用时停止工作动画和等待期间计时。目标补充、核实与业务重规划仍使用各自可靠意图，不因容量等待重放旧任务。 人工决定草稿和未知请求在两处目标卡共享，记录与任务恢复分离。 人工决定接续与文本补充分开，共享意图但不共享自动启动权。
  * 导航边界：全局运行页传一次性原会话定位请求，目标审阅也可定位本周期原任务/替代成果；均只选择真实节点，不修改输入、附件或运行状态。
  * 异常边界：unknown 不凭勾选调用标识续接旧 native；显式影响核实和新周期共用真实主会话上下文。
@@ -21,13 +21,14 @@ import type {LlmSettings,LoopEngine} from '../../bridge/contracts/models';
 import type {ViewTab,TabKind} from '../shell/tabs';
 import {runtimeTaskSelection,type RuntimeNavigationRequest} from '../shell/runtime-navigation';
 import {ConversationTurn} from './ConversationTurn';
+import {AutomationView} from '../automation/AutomationView';
 import {SessionTaskView} from '../tasks/SessionTaskView';
 import {useSessionGraph} from '../tasks/useSessionGraph';
 import {ScopeGoalPanel} from '../tasks/ScopeGoalPanel';
 import './session-tabs.css';
-import {MessageQueue} from './MessageQueue';
+import {MessageQueue} from '../execution-view/MessageQueue';
 import {useMessageQueue} from './useMessageQueue';
-import {QuestionCard} from './QuestionCard';
+import {QuestionCard} from '../execution-view/QuestionCard';
 import type {PendingQuestion} from '../../bridge/contracts/execution';
 import {UsageStatus} from './UsageStatus';
 import {Icon} from '../components/Icon';
@@ -38,7 +39,7 @@ import {ComposerCard,COMPOSER_CONTENT_CLASS} from './ComposerCard';
 import {SendButton} from './SendButton';
 import {AttachmentMenu,type FeedbackSkillTitle} from './AttachmentMenu';
 import {ComposerPicker} from './ComposerPicker';
-import {ComposerAttachments} from './ComposerAttachments';
+import {ComposerAttachments} from '../execution-view/ComposerAttachments';
 import type {ChatAttachment,ChatApproval,ChatPermission} from '../../bridge/contracts/chat';
 import {conversationExecutionState} from './conversation-state';
 import {captureQueueInsertTarget,enqueueConversationMessage,insertQueuedMessage} from './queue-insertion';
@@ -56,15 +57,15 @@ const api=window.cbim;
 interface HistoryItem {status:string}
 
 /** 请求使用本组件工作区身份；请求锁阻止双击，轮询只在当前组件存活时写入状态。 */
-export function Conversation({conversations,runningTaskIds,onSelectConversation,onRenameConversation,onRemoveConversation,tab,workspace,onDraft,openView,onBind,openSettings,onAttachments,active=true,navigation,onNavigationHandled}:{conversations:ViewTab[];runningTaskIds:string[];onSelectConversation:(id:string)=>void;onRenameConversation:(id:string,title:string)=>void;onRemoveConversation:(id:string)=>void;tab:ViewTab;workspace:WorkspaceView;onDraft:(draft:string)=>void;openView:(kind:TabKind)=>void;onBind:(taskId?:string)=>void;openSettings:()=>void;onAttachments:(items:ChatAttachment[])=>void;active?:boolean;navigation?:RuntimeNavigationRequest;onNavigationHandled?:(requestId:number)=>void}){
-  const [section,setSection]=useState<'chat'|'tasks'>('chat');
+export function Conversation({conversations,runningTaskIds,onSelectConversation,onRenameConversation,onRemoveConversation,tab,workspace,onDraft,openView,onBind,openSettings,onAttachments,onOpenAutomationRun,active=true,navigation,onNavigationHandled}:{conversations:ViewTab[];runningTaskIds:string[];onSelectConversation:(id:string)=>void;onRenameConversation:(id:string,title:string)=>void;onRemoveConversation:(id:string)=>void;tab:ViewTab;workspace:WorkspaceView;onDraft:(draft:string)=>void;openView:(kind:TabKind)=>void;onBind:(taskId?:string)=>void;openSettings:()=>void;onAttachments:(items:ChatAttachment[])=>void;onOpenAutomationRun?:(taskId:string,title:string)=>void;active?:boolean;navigation?:RuntimeNavigationRequest;onNavigationHandled?:(requestId:number)=>void}){
+  const [section,setSection]=useState<'chat'|'tasks'|'automation'>('chat');
   const graph=useSessionGraph(workspace.id,tab.taskId,active);
   const admission=useAdmission(active),admissionState=sessionAdmission(admission.error?undefined:admission.data,workspace.id,tab.taskId);
   const [selectedTaskId,setSelectedTaskId]=useState<string>();
   const [navigationError,setNavigationError]=useState('');
   const handledNavigation=useRef<number|undefined>(undefined);
   function consumeNavigation(){if(navigation){handledNavigation.current=navigation.requestId;onNavigationHandled?.(navigation.requestId)}}
-  function selectSection(value:'chat'|'tasks'){consumeNavigation();setSection(value)}
+  function selectSection(value:'chat'|'tasks'|'automation'){consumeNavigation();setSection(value)}
   function selectTask(id?:string){consumeNavigation();setSelectedTaskId(id)}
   useEffect(()=>{setSelectedTaskId(undefined)},[workspace.id,tab.taskId]);
   // 历史条目使用稳定导航回调，点击时再读取当前定位请求，避免逐键草稿使所有轮次失效。
@@ -202,10 +203,11 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   const canSend=canSendRequest&&(!!tab.draft?.trim()||attachments.length>0);
   // 标题只展示用户首行目标，避免把附加参考资料和内部标记放进导航。
 
-  const queueOperation=async(action:string,args:Record<string,unknown>)=>{const stopPending=!!tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId});const insertion=action==='loop.queueInsert'?captureQueueInsertTarget(workspace.id,tab.taskId,currentRun,canInsert&&!stopPending):undefined;if(action==='loop.queueInsert'&&!insertion)return false;let saved=false;await operate(async()=>{if(insertion)await insertQueuedMessage(insertion,args.queueId as string,request=>api.call('loop.queueInsert',request));else await api.call(action,{id:workspace.id,taskId:tab.taskId,...args});saved=true});return saved};
+  const queueOperation=async(action:'loop.queueChange'|'loop.queueInsert'|'loop.queueEdit'|'loop.queueMove',args:Record<string,unknown>)=>{const stopPending=!!tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId});const insertion=action==='loop.queueInsert'?captureQueueInsertTarget(workspace.id,tab.taskId,currentRun,canInsert&&!stopPending):undefined;if(action==='loop.queueInsert'&&!insertion)return false;let saved=false;await operate(async()=>{if(insertion)await insertQueuedMessage(insertion,args.queueId as string,request=>api.call('loop.queueInsert',request));else await api.call(action,{id:workspace.id,taskId:tab.taskId,...args});saved=true});return saved};
   const queueChange=(queueId:string,action:string)=>void queueOperation('loop.queueChange',{queueId,action});
   const queueContinue=()=>{if(canContinueQueue&&!graph.loading&&tab.taskId&&!stopGate.current.pending({id:workspace.id,taskId:tab.taskId}))void operate(async()=>{await api.call('loop.queueContinue',{id:workspace.id,taskId:tab.taskId})})};
-  return <div className="chat-page"><nav className="session-tabs" role="tablist" aria-label="会话内容"><button id={'session-chat-'+tab.id} role="tab" aria-selected={section==='chat'} aria-controls={'session-dialog-'+tab.id} onClick={()=>selectSection('chat')}>对话</button><button id={'session-tasks-'+tab.id} role="tab" aria-selected={section==='tasks'} aria-controls={'session-task-panel-'+tab.id} onClick={()=>selectSection('tasks')}>任务视图</button></nav>
+  return <div className="chat-page"><nav className="session-tabs" role="tablist" aria-label="会话内容"><button id={'session-chat-'+tab.id} role="tab" aria-selected={section==='chat'} aria-controls={'session-dialog-'+tab.id} onClick={()=>selectSection('chat')}>对话</button><button id={'session-tasks-'+tab.id} role="tab" aria-selected={section==='tasks'} aria-controls={'session-task-panel-'+tab.id} onClick={()=>selectSection('tasks')}>任务视图</button><button id={'session-automation-'+tab.id} role="tab" aria-selected={section==='automation'} aria-controls={'session-automation-panel-'+tab.id} onClick={()=>selectSection('automation')}>自动化</button></nav>
+    <section className="session-task-panel" role="tabpanel" id={'session-automation-panel-'+tab.id} aria-labelledby={'session-automation-'+tab.id} hidden={section!=='automation'}><AutomationView key={workspace.id+':'+workspace.instanceId} workspace={workspace} active={active&&section==='automation'} onOpenRun={onOpenAutomationRun}/></section>
     <>{navigationError&&<p role="alert" className="shell-alert" data-testid="runtime-navigation-error">{navigationError}</p>}</><AdmissionNotice tickets={admissionState.waiting} error={tab.taskId?admission.error:undefined}/>
     {section==='tasks'&&<section className="session-task-panel" role="tabpanel" id={'session-task-panel-'+tab.id} aria-labelledby={'session-tasks-'+tab.id}><SessionTaskView active={active} workspaceId={workspace.id} workspaceInstanceId={workspace.instanceId} taskId={tab.taskId} runs={runs} historyIssueCount={threadIssues.length} queued={queued} now={now} busy={busy} stopping={stopping} graph={graph.graph} scopeState={graph} continuation={continuation} replan={replan} humanDecisions={humanDecisions} humanContinuation={humanContinuation} recovery={recovery} graphLoading={graph.loading} graphError={graph.error} onRefreshGraph={graph.refresh} selectedTaskId={selectedTaskId} onSelectTask={selectTask} onQueueChange={queueChange} onQueueContinue={queueContinue} onChat={()=>selectSection('chat')} onStop={()=>void stopCurrent()}/><ThreadHistoryNotice issues={threadIssues}/>{pollError&&<p role="alert">{pollError}</p>}</section>}
     <div className="conversation-dialog" hidden={section!=='chat'} role="tabpanel" id={'session-dialog-'+tab.id} aria-labelledby={'session-chat-'+tab.id}>

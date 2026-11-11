@@ -13,6 +13,7 @@
 | [admission.ts](admission.ts) | 向界面公开全局并发策略、当前占用及准入等待的可序列化契约。 |
 | [agent-history.ts](agent-history.ts) | 向团队静态节点公开只读的角色 Session 历史协议。 |
 | [architecture.ts](architecture.ts) | 团队/业务架构编辑的桌面 IPC 契约，只公开对象操作、预览差异和提交回执。 |
+| [automation.ts](automation.ts) | 自动化桌面的固定请求、运行时校验与公开返回映射。 |
 | [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
 | [command-verification.ts](command-verification.ts) | 向桌面视图导出原主命令的只读核实协议和固定支持矩阵。 |
 | [controlled-files.ts](controlled-files.ts) | 向桌面公开受控文件原操作查询和显式补偿的纯协议。 |
@@ -24,8 +25,11 @@
 | [governance.ts](governance.ts) | 向业务架构界面公开模块知识治理的纯数据与严格校验协议。 |
 | [human-continue.ts](human-continue.ts) | 公开按已保存人工决定继续原目标的严格请求与回执，连接桌面和调度入口。 |
 | [human-decisions.ts](human-decisions.ts) | 向桌面公开人工决定的序列化请求、依据预览与不可变记录。 |
+| [ipc-actions.ts](ipc-actions.ts) | 渲染进程固定操作目录及已迁移 action 的请求/返回映射。 |
 | [isolated-executions.ts](isolated-executions.ts) | 向桌面导出原隔离执行核实与清理的公开 DTO。 |
 | [knowledge-source.ts](knowledge-source.ts) | 向桌面公开知识来源身份、采纳预览和当前核实状态的纯数据协议。 |
+| [knowledge-transactions.ts](knowledge-transactions.ts) | 向只读执行视图公开知识预览和提交的严格返回协议。 |
+| [model-actions.ts](model-actions.ts) | 声明主 Agent 选型和供应商设置的桌面请求、运行时校验及返回值映射。 |
 | [models.ts](models.ts) | 模型配置界面消费的公开模型信息与停止原因格式化。 |
 | [module-ownership.ts](module-ownership.ts) | 公开模块负责人控制面的纯数据协议，供业务架构、项目岗位与 Main IPC 使用。 |
 | [output-manifest.ts](output-manifest.ts) | 桌面完整产物面板使用的纯 DTO 与严格结构校验，不导出后端文件或日志读取实现。 |
@@ -96,6 +100,45 @@ N_src_bridge_contracts_architecture_ts ..> N_src_bridge_contracts_architecture_t
 ```
 
 直接依赖：[../../backend/core/knowledge/object-crud.ts](../../backend/core/knowledge/object-crud.ts)、[../../backend/core/workspace/module-outline.ts](../../backend/core/workspace/module-outline.ts)。
+
+### automation.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_automation_ts["automation.ts"] {
+  <<module>>
+  +isAutomationAction()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_automation_ts["automation.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_automation_ts_AutomationAction["AutomationAction"] {
+  <<type>>
+
+}
+N_src_bridge_contracts_automation_ts ..> N_src_bridge_contracts_automation_ts_AutomationAction : 声明
+class N_src_bridge_contracts_automation_ts_AutomationActionInput["AutomationActionInput"] {
+  <<type>>
+
+}
+N_src_bridge_contracts_automation_ts ..> N_src_bridge_contracts_automation_ts_AutomationActionInput : 声明
+class N_src_bridge_contracts_automation_ts_AutomationActionResults["AutomationActionResults"] {
+  <<interface>>
+  +'automation.list'
+  +'automation.catalog'
+  +'automation.save'
+  +'automation.run'
+  +'automation.toggle'
+  +'automation.remove'
+}
+N_src_bridge_contracts_automation_ts ..> N_src_bridge_contracts_automation_ts_AutomationActionResults : 声明
+```
+
+直接依赖：[../../backend/core/automation/contracts.ts](../../backend/core/automation/contracts.ts)。
 
 ### chat.ts
 
@@ -256,6 +299,32 @@ class N_src_bridge_contracts_human_decisions_ts["human-decisions.ts"] {
 ```
 直接依赖：[../../backend/core/tasks/human-decisions.ts](../../backend/core/tasks/human-decisions.ts)。
 
+### ipc-actions.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_ipc_actions_ts["ipc-actions.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_ipc_actions_ts_LegacyAction["LegacyAction"] {
+  <<type>>
+
+}
+N_src_bridge_contracts_ipc_actions_ts ..> N_src_bridge_contracts_ipc_actions_ts_LegacyAction : 声明
+class N_src_bridge_contracts_ipc_actions_ts_IpcAction["IpcAction"] {
+  <<type>>
+
+}
+N_src_bridge_contracts_ipc_actions_ts ..> N_src_bridge_contracts_ipc_actions_ts_IpcAction : 声明
+class N_src_bridge_contracts_ipc_actions_ts_IpcCall["IpcCall"] {
+  <<interface>>
+
+}
+N_src_bridge_contracts_ipc_actions_ts ..> N_src_bridge_contracts_ipc_actions_ts_IpcCall : 声明
+```
+
+直接依赖：[automation.ts](automation.ts)、[model-actions.ts](model-actions.ts)。
+
 ### isolated-executions.ts
 
 ```mermaid
@@ -275,6 +344,58 @@ class N_src_bridge_contracts_knowledge_source_ts["knowledge-source.ts"] {
 }
 ```
 直接依赖：[../../backend/core/workspace/knowledge-source.ts](../../backend/core/workspace/knowledge-source.ts)。
+
+### knowledge-transactions.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_knowledge_transactions_ts["knowledge-transactions.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../backend/core/knowledge/tool-output-transactions.ts](../../backend/core/knowledge/tool-output-transactions.ts)。
+
+### model-actions.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_model_actions_ts["model-actions.ts"] {
+  <<module>>
+  +isModelAction()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_model_actions_ts["model-actions.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_model_actions_ts_ModelAction["ModelAction"] {
+  <<type>>
+
+}
+N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_model_actions_ts_ModelAction : 声明
+class N_src_bridge_contracts_model_actions_ts_ModelActionInput["ModelActionInput"] {
+  <<type>>
+
+}
+N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_model_actions_ts_ModelActionInput : 声明
+class N_src_bridge_contracts_model_actions_ts_ModelActionResults["ModelActionResults"] {
+  <<interface>>
+  +'agent.mainSettings'
+  +'agent.configureMain'
+  +'models.list'
+  +'models.save'
+  +'models.select'
+  +'models.remove'
+  +'models.test'
+  +'models.discover'
+  +'models.discoverDetails'
+}
+N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_model_actions_ts_ModelActionResults : 声明
+```
+
+直接依赖：[../../backend/core/brain/llm/config.ts](../../backend/core/brain/llm/config.ts)、[../../backend/core/team/agent-runtime.ts](../../backend/core/team/agent-runtime.ts)、[models.ts](models.ts)。
 
 ### models.ts
 
@@ -536,15 +657,38 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_workspace_ts_Work
 N_src_bridge_contracts_workspace_ts_WorkspaceEntry <|-- N_src_bridge_contracts_workspace_ts_WorkspaceView
 class N_src_bridge_contracts_workspace_ts_Bridge["Bridge"] {
   <<interface>>
-  +call()
+  +call
   +importFiles()
 }
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_workspace_ts_Bridge : 声明
 ```
 
-直接依赖：[../../backend/core/knowledge/types.ts](../../backend/core/knowledge/types.ts)、[../../backend/core/workspace/project-root.ts](../../backend/core/workspace/project-root.ts)、[chat.ts](chat.ts)。
+直接依赖：[../../backend/core/knowledge/types.ts](../../backend/core/knowledge/types.ts)、[../../backend/core/workspace/project-root.ts](../../backend/core/workspace/project-root.ts)、[ipc-actions.ts](ipc-actions.ts)、[chat.ts](chat.ts)。
 
 ### 本目录调用边界
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_ipc_actions_ts["ipc-actions.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_automation_ts["automation.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_model_actions_ts["model-actions.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_models_ts["models.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_workspace_ts["workspace.ts"] {
+  <<module>>
+}
+N_src_bridge_contracts_ipc_actions_ts ..> N_src_bridge_contracts_automation_ts : 导入依赖
+N_src_bridge_contracts_ipc_actions_ts ..> N_src_bridge_contracts_model_actions_ts : 导入依赖
+N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_models_ts : 导入依赖
+N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_ipc_actions_ts : 导入依赖
+```
 
 ```mermaid
 classDiagram
@@ -898,3 +1042,13 @@ models 公开重导出 LoopEngine、AgentModelSelection、engineLabel、loopEngi
 ### 引擎协议选型
 
 models 仅重导出 engineApi/engineSupportsApi 等纯规则，用于 Agent 选型与运行前兼容校验，供应商不持有执行引擎。mainAgentSettingsSchema 公开工作区、实例、角色、revision 与 selection，两个主 Agent 设置入口共用该契约；不会把原生二进制、账号目录、凭据或进程参数作为公开 IPC。
+
+### 固定操作目录及模型请求映射
+
+ipc-actions.ts 的 IpcCall 将主 Agent 配置和模型的九个动作映射到具体请求/返回值；缺参数、错误字段或未知动作在编译时拒绝，不能回落旧重载。model-actions.ts 同时公开原始请求的严格校验，Main 再按 action 解析 unknown。旧动作显式保留在 LegacyAction 清单中，返回仍兼容旧协议，未宣称全部 IPC 已类型化；新增动作必须显式登记具体契约。凭据只允许在已有明确配置请求中输入，读取返回 LlmSettings 不含密钥。
+
+knowledge-transactions 仅公开知识预览与提交的纯返回 Schema，供只读展示核对原输出，不导入知识事务服务。
+
+## 自动化动作映射
+
+automation.ts 公开六个精确请求及返回，IpcCall 使用独立泛型重载，不能落入 LegacyAction。Core 纯定义/日程契约供前端类型和 Main 运行时共同校验；不引用执行/存储实现。

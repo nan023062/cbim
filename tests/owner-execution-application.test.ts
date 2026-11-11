@@ -27,9 +27,9 @@ it('explicitly configures two positions of the same Agent with distinct models/a
     expect((await moduleOwnershipDetail(f.app,seeded.entry.id,seeded.extraModule)).view.binding?.ownerMemberId).toBe(a.memberId);
     expect((await moduleOwnershipDetail(f.app,seeded.entry.id,seeded.team.child)).view.binding).toBeNull();
     const discovery=ownerExecutionDiscoverySchema.parse(await f.app.memberDispatch(seeded.entry.id).owners.discover([...seeded.modules,seeded.extraModule,seeded.team.child]));
-    expect(discovery.groups).toHaveLength(3);
-    expect(discovery.groups.find(group=>group.memberId===a.memberId)?.selection?.expectedOwners.map(owner=>owner.moduleId)).toEqual([seeded.modules[0],seeded.extraModule]);
-    expect(discovery.groups.find(group=>group.moduleIds.includes(seeded.team.child))).toMatchObject({moduleIds:[seeded.team.child],execution:'main',agentId:'cbim:main',issues:[]});
+    expect(discovery.groups).toHaveLength(2);
+    expect(discovery.groups.find(group=>group.memberId===a.memberId)?.selection?.expectedOwners.map(owner=>owner.moduleId)).toEqual([seeded.modules[0],seeded.extraModule,seeded.team.child]);
+    expect(discovery.groups.find(group=>group.moduleIds.includes(seeded.team.child))?.selection?.expectedOwners.find(owner=>owner.moduleId===seeded.team.child)).toMatchObject({inheritedFrom:seeded.modules[0],ownerMemberId:a.memberId});
     const runtime=await workspaceMemberRuntimeEvidence(f.app,[seeded.entry.id]);
     expect(runtime[0].runs).toEqual([]);expect(runtime[0].scopes).toEqual([]);expect(runtime[0].mainSessions).toEqual([]);
     expect(probe.requests).toEqual([]);

@@ -11,11 +11,12 @@ export function useMainAgentSettings(workspaceId:string,instanceId?:string,activ
   useEffect(()=>{
     const ticket=++generation.current;setValue(undefined);setError('');setBusy(false);
     if(!instanceId||!active)return;
+    const identity={workspaceId,instanceId};
     let timer:ReturnType<typeof setTimeout>,cancelled=false;
     async function poll(){
       try{
         if(saving.current)return;
-        const result=mainAgentSettingsSchema.parse(await window.cbim.call('agent.mainSettings',{workspaceId,instanceId}));
+        const result=mainAgentSettingsSchema.parse(await window.cbim.call('agent.mainSettings',identity));
         if(result.workspaceId!==workspaceId||result.instanceId!==instanceId)throw Error('主 Agent 配置属于其他工作区实例');
         if(!cancelled&&generation.current===ticket&&!saving.current){setValue(old=>old&&old.revision>=result.revision?old:result);setError('')}
       }catch(cause){if(!cancelled&&generation.current===ticket)setError(cause instanceof Error?cause.message:String(cause))}

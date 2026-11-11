@@ -12,5 +12,5 @@ export interface Catalog {version:1; entries:WorkspaceEntry[]; recent:string[];}
 /** 提供界面的内部工作区运行快照；knowledgeErrors 是知识规则检查结果，与运行状态独立。 */
 export interface WorkspaceView extends WorkspaceEntry {state:string; error?:string; tasks:TaskView[]; revision?:string; changed?:boolean;instanceId?:string;knowledgeErrors?:number}
 /** 渲染进程唯一服务调用边界；主进程 dispatch 决定实际允许的 action。 */
-export interface Bridge {call(action:string,args?:unknown):Promise<any>;/** 原生拖入或粘贴的 File 经 preload 解析路径；不接受字符串路径。 */importFiles(id:string,files:File[]):Promise<import('./chat').ChatAttachment[]>}
+export interface Bridge {call:import('./ipc-actions').IpcCall;/** 原生拖入或粘贴的 File 经 preload 解析路径；不接受字符串路径。 */importFiles(id:string,files:File[]):Promise<import('./chat').ChatAttachment[]>}
 declare global {interface Window {cbim:Bridge}}

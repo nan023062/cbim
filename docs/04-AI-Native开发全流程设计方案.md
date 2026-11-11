@@ -1,6 +1,6 @@
 # AI Native 游戏开发全流程设计方案
 
-> 人类阅读材料：本文解释设计思想与历史方案，不作为 AI 执行输入或授权依据。当前执行规则与迁移归属见 [规范对应表](README.md)。
+> 人类阅读材料：本文解释设计思想与历史方案，不作为 AI 执行输入或授权依据。当前执行规则与迁移归属见 [运行规范与资产](../design/README.md#规范与运行资产)。
 
 > author：linan
 
@@ -93,7 +93,7 @@ CBIM 由内部大脑与调度引擎承载执行，Lead/Worker 表达任务中的
 
 ### 2.3 Agent Skill 与业务 Workflow
 
-team/ 保存 C 的 Agent 定义、Skill 与真人花名册；workspace/ 保存 B 的 Module 定义、DNA 与 Workflow。Agent 加入具体工作区后形成有岗位适配的长期成员；模块通过工作区责任登记标记负责人成员，主 Agent 按模块索引派发，再按需将 Workflow 步骤匹配到适用 Skill。责任登记不反向耦合通用能力定义，静态模块注册表也不重复保存另一份负责人。core 是共享规则，不是独立运行的调度服务。节点对偶见 [CBIM 设计理论](02-CBIM架构设计理论.md)，待实施协议见[模块负责人索引](module-owner-index.md)。
+team/ 保存 C 的 Agent 定义、Skill 与真人花名册；workspace/ 保存 B 的 Module 定义、DNA 与 Workflow。Agent 加入具体工作区后形成有岗位适配的长期成员；模块通过工作区责任登记标记负责人成员，主 Agent 按模块索引派发，再按需将 Workflow 步骤匹配到适用 Skill。责任登记不反向耦合通用能力定义，静态模块注册表也不重复保存另一份负责人。core 是共享规则，不是独立运行的调度服务。节点对偶见 [CBIM 设计理论](02-CBIM架构设计理论.md)，关联方案见[模块负责人索引](../design/task/module-owner-index.md)。
 
 | 维度 | Agent Skill | 业务 Workflow |
 |---|---|---|
@@ -138,7 +138,7 @@ Lead 先判断任务属于具体业务交付还是结构演进，再根据产物
 
 同一人可以兼任角色，但任务中必须明确每项责任由谁承担。审批绑定具体方案版本和范围，不能用笼统“同意继续”覆盖后续所有变化。
 
-本节涉及的真人 Owner、Reviewer 与审批责任，不能和 AI 模块负责人混为一谈。authors 记录真人作者，maintenance 记录显式真人维护声明；工作区另以 ModuleOwnership 持久记录模块的 AI 主责成员，模块领域视图显示 ownerMemberId。该关系不在 module.json 重复保存，按[负责人索引设计](module-owner-index.md)派生展示并用于调度。作者只提供追溯及岗位配置线索，不自动取得执行或审批权；多位作者仍须引用花名册中同组人员。负责人索引是新设计，实施状态以路线图为准。
+本节涉及的真人 Owner、Reviewer 与审批责任，不能和 AI 模块负责人混为一谈。authors 记录真人作者，maintenance 记录显式真人维护声明；工作区另以 ModuleOwnership 持久记录模块的 AI 主责成员，模块领域视图显示 ownerMemberId。该关系不在 module.json 重复保存，按[负责人索引设计](../design/task/module-owner-index.md)派生展示并用于调度。作者只提供追溯及岗位配置线索，不自动取得执行或审批权；多位作者仍须引用花名册中同组人员。负责人索引是新设计，当前开发进度以 [Issues](https://github.com/nan023062/cbim/issues) 为准，实现须结合源码核实。
 
 ---
 

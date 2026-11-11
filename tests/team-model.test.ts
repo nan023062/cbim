@@ -49,7 +49,7 @@ test('malformed definitions and escaping references are reported without loading
 test('team root cannot be edited or deleted and a different workspace snapshot is never displayed',()=>{
   const workspace={id:'w',path:'project',name:'Project',state:'running',tasks:[]};
   const html=renderToStaticMarkup(createElement(TeamView,{workspace,snapshot:fixture()}));
-  expect(html).toContain('静态团队架构');expect(html).toContain('发布整个团队');expect(html).toContain('历史角色');
+  expect(html).toContain('团队架构知识文件树');expect(html).toContain('发布整个团队');expect(html).toContain('历史角色');
   expect(html).not.toContain('CBIM 主 Agent');expect(html).not.toContain('CBIM 默认执行 Agent');expect(html).not.toContain('data-agent-id="cbim:main"');expect(html).not.toContain('data-agent-id="cbim:executor"');
   expect(html).not.toContain('删除 Agent');expect(html).not.toContain('编辑 Agent');
   const isolated=renderToStaticMarkup(createElement(TeamView,{workspace:{...workspace,id:'other'},snapshot:fixture()}));

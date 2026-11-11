@@ -1,6 +1,7 @@
 /**
- * 作用定位：Builtins：白名单发布内置 Skill、规范和 Schema，包括只需简述、补充自愿的 BUG 反馈与需求许愿流程。
+ * 作用定位：Builtins：白名单发布内置 Skill、规范和 Schema，包括团队/业务架构治理及只需简述、补充自愿的反馈流程。
  * 设计原因：只允许白名单资料 ID，返回正文、版本和引用；读取反馈 Skill 不会创建 GitHub Issue，也不扩大文件或网络权限。
+ * 资源边界：运行规范随 design/ 打包；docs/ 只保留概念设计，不再作为内置资料的读取来源。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -15,6 +16,8 @@ export const builtinSkills=[
   {id:'business-execution',title:'需求实现',description:'定位模块和 Agent，组织实现、验证与交付'},
   {id:'knowledge-governance',title:'知识治理',description:'检查事实、结构和引用，在授权内通过内部知识工具预览、提交和复核'},
   {id:'architecture-governance',title:'架构治理',description:'模式观察、架构评估、人工决定与渐进演进'},
+  {id:'team-architecture-governance',title:'团队架构治理',description:'核实团队职责、能力与继承 Skill，在当前权限内预览、提交和复核团队知识'},
+  {id:'business-architecture-governance',title:'业务架构治理',description:'按真实模块、代码和单向依赖渐进治理，校验知识结构并保留业务验收边界'},
   {id:'create-agent-skill',title:'创建 Agent/Team Skill',description:'为已有组织节点创建专业 Skill，维护清单并检查继承'},
   {id:'create-workflow',title:'创建模块 Workflow',description:'为已有模块创建独立流程并维护本模块清单'},
   {id:'core-check',title:'Core 检查',description:'仅在用户明确要求时检查分层、文档职责与继承'},
@@ -30,7 +33,7 @@ const entries=[
   ['task-spec','standard','Task 定义','design/task/task-spec.md'],
   ['task-loop','standard','Task Loop','design/task/task-loop.md'],
   ['base-task','standard','Task 基础抽象','design/task/base-task.md'],
-  ['shared-skills-workflows','standard','团队 Skill 与模块 Workflow 结构','docs/shared-skills-workflows.md'],
+  ['shared-skills-workflows','standard','团队 Skill 与模块 Workflow 结构','design/runtime/shared-skills-workflows.md'],
   ['module-schema','schema','Module Schema','design/business/module.schema.json'],
   ['agent-schema','schema','Agent Schema','design/capability/agent.schema.json'],
   ['team-skills-schema','schema','Team Skill Schema','design/capability/team-skills.schema.json'],

@@ -143,6 +143,10 @@ N_src_backend_scheduler_engine_conversation_questions_ts ..> N_src_backend_sched
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 主会话直接执行与独立成员边界
+
+Auto/Team 最终组装指引都允许主 Agent 在当前会话实现未配置自定义负责岗位的模块，权限仍由 read/ask/execute 和实际工具门禁决定。`cbim:main` 可以出现在主目标 assignments，通过 `main-execution` 引用本轮真实业务工具证据；不能作为独立成员 assignee，也不接受成员的 workflowSelections。显式自定义岗位仍按有效绑定派发，配置无效不绕过。知识提交、业务工具执行、成员候选和人工验收分别核实，任何一种回执都不自动替代其他证明。
+
 ### 产品反馈与需求许愿
 
 主 Agent 将两项菜单请求分别路由到 `cbim_skill_bug_feedback` 与 `cbim_skill_feature_wish`：先读流程，只有菜单而没有正文时提示一句描述即可。有用户愿意提交的简述就调用已装配的 `cbim_feedback_submit`，不追问复现/结果/环境/场景/例子，也不增草稿确认；缺项省略或标“用户未提供”，不自动采集资料。submitted 后结束，不追加成功消息、链接、编号或进度。缺连接、只读拒绝或明确错误时简短说明；未知只核实原提交，不能重发。GitHub 连接须由桌面设置明确建立，不把 BUG 报告解释成修复授权，不把愿望解释成已采纳开发任务。
@@ -224,3 +228,5 @@ note for mainAgentInstructions "BUG／需求分别读对应 Skill；缺操作工
 ### 自动与团队协作模式
 
 `mainInstructions(mode)` 按可信周期选择 Auto 或 Team 全套角色指引，反馈流程共用同一正文。Auto 默认直接实现与验证，根范围始终存在，里程碑后按事实审视业务架构、团队与共享方法，不按计时器自动造模块；显式委派仍核原岗位/兜底和正式目标。Team 及历史缺省保留调度职责。工具目录与知识目录不同，模型不能自行切模式、伪造维护人或人工批准。
+
+主 Agent 对无显式/父级负责人的模块，读取模块正文与已启用岗位的 Agent 能力后作匹配，通过 inspect.matches 核验；无合适岗位明确 null 后直接执行。匹配不形成永久责任或跨版本缓存；坏的显式配置不能被兜底掩盖。

@@ -408,3 +408,6 @@ canonical 读取仅按可信索引 source/task/run 定位；safeId、逐层符�
 ## 全量 IPC 契约衔接
 
 应用内部 dispatch 对已知操作推导响应，对原始动态字符串只返回 unknown；所有原始请求交给 IPC 契约解析。Electron 入口在 Schema 前核实主 Frame 与安装期间门禁，原生操作成功值按操作配对，未知输入不触发系统副作用。
+## 主岗位控制面
+
+execution 装配工作区已有 WorkspaceMembers 与真实 MainToolContext；新增主工具只复用本机岗位服务和同一 Store，不管理第二份登记。静态 Agent 的模型引用由用户预先配置，主工具无凭据端口、无批准或安装能力。

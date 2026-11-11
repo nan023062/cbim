@@ -698,3 +698,6 @@ ModelRequestBudgetService 仅接收 RequestBudgetStore 和 RequestBudgetAdmissio
 ## 全量 IPC 契约衔接
 
 会话历史列表的损坏项明确标注 status=unreadable，error 始终为字符串，不能当作含 task 的完整运行摘要；IPC 会话选择器只返回已校验的公开标识与名称。
+## 主岗位装配
+
+loop-engine 仅在主 coordinator 的 createEngine 中取得 memberTools；发现、权限分类、调用共用同一适配器，不向成员或 CLI 静默装配。写入仍经过既有 knowledge-write 门禁，不借主角色绕过 read/ask/execute。

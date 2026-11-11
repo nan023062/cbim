@@ -1,5 +1,13 @@
 ## 2026-11-12：#41 对话最终反馈
 
+## 2026-11-12：#36 主 Agent 岗位治理与能力重新采纳
+
+- [Issue #36](https://github.com/nan023062/cbim/issues/36)，基线 `396acf5c`。S1–S4 核实原 WorkspaceMembers 已有登记事务，但主工具未接入；本片 C1/L2，新增窄工具协议和可信运行装配，保留唯一 DispatchStore、预览依据、版本门禁与桌面旧指纹。OWNER_CAPABILITY_CHANGED 通过岗位能力采纳修复，owner adopt_source 仍只负责模块来源。
+- S5 新增 inspect/preview/commit/receipt 四项岗位工具，支持登记、名称/职责/适配编辑、能力采纳、停用和退役。登记继承静态 Agent 已有模型，拒绝模型选择/模型采纳和自报 actor；主身份由运行闭包及原日志核实。读权限可预览，写权限沿统一知识门禁。提交一次，坏回包、取消或未知保留稳定命令，只读核实原回执；跨根会话拒绝，重启不重放。
+- S6 按调用链选择岗位纯规则、服务、Application、真实 Pi 和统一权限消费者。首次 31 项中原有 28 项及新协议 1 项通过，2 项真实 Pi 暴露工具权限范围分类遗漏；补齐固定分类后 `tests/workspace-member-tools-pi.test.ts tests/unified-tool-policy.test.ts` 共 10 项通过。新增 `tests/workspace-member-tools.test.ts` 2 项通过；加强回包身份/版本核对后再跑 Pi 3 项通过。去重共 6 文件 40 项通过。完整命令均为 `pnpm exec vitest run <上述明确文件> --reporter=default --reporter=json --outputFile=...`，对应证据 `test-results/issue-batch-20261112/36-{tests,tools-policy,wire-tests,final-pi}.json`；原失败另存 `36-initial-failure.json`。
+- 实际选择器依次为 `pnpm exec vitest run tests/workspace-member-service.test.ts tests/workspace-member-application.test.ts tests/workspace-member-core.test.ts tests/workspace-member-tools-pi.test.ts`、`pnpm exec vitest run tests/workspace-member-tools-pi.test.ts tests/unified-tool-policy.test.ts`、`pnpm exec vitest run tests/workspace-member-tools.test.ts`、`pnpm exec vitest run tests/workspace-member-tools-pi.test.ts`，均附前述 JSON reporter 参数。`pnpm typecheck` 与 `pnpm check:architecture` 通过，0 循环/违规；同步 Core team/tasks/policy、Main workspace/装配、Scheduler tools/execution 的注释、契约和类图，以及团队治理流程第 4 步。未运行全仓 CI、打包/安装或人工交互验收。
+- S7 四问：保护原岗位事务与权限规则；岗位能力变化限制在独立协议和适配器；验证覆盖真实消费者与未知恢复；下次从 workspace-member-tools → main-workspace-member-tools → WorkspaceMembers → workspace-member-invariants 阅读。Q5 候选：无。代码与证据可 review，尚未人工接受、合并或发布。
+
 - [Issue #41](https://github.com/nan023062/cbim/issues/41)，修复空完整消息擦除流式正文，保留反馈提交后的真实最终答复。主提示与两项反馈流程同步为正文简短收尾，提交不等于开发完成，未知操作不重放。
 - ConversationTurn 通过共享纯投影读取本轮交付声明及限制；没有声明也没有最终正文时，在流中明确显示缺失事实、工具数量和核实建议。提示标为运行记录，不冒充 Agent 消息，不读旧轮继承交付，不修改持久日志、不额外调用模型；运行中不提前总结。
 - 因实际消费者涉及对话、反馈工具和主提示，执行 `pnpm exec vitest run tests/conversation.test.ts tests/inline-conversation.test.ts tests/github-feedback-tools.test.ts tests/github-feedback-pi.test.ts tests/agent-role-instructions.test.ts --reporter=default --reporter=json --outputFile=test-results/issue-batch-20261112/41-tests.json`：5 文件 36 项通过，含真实 Pi、本机确定性反馈服务及渲染验证。`pnpm typecheck`、`pnpm check:architecture` 通过，0 循环/违规。

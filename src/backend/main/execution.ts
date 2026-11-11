@@ -3,6 +3,7 @@
  * 设计原因：主会话与图根共享实例，在创建 run 前取得全局名额；主会话在两种模式下均按真实权限占用；ask/execute 独占工作区，知识治理仍由独立事务和用户权限保护。
  * 仓库边界：仅桌面主运行工厂捕获已有授权连接，不在准备时联网；CLI/成员和未就绪连接不装配仓库工具。
  * 治理边界：四个观察/提案端口在真实 run 创建时绑定主身份，不共享给成员，不包含桌面批准或实施。
+ * 岗位边界：主运行另装配登记/能力采纳端口，共用 Store 与知识写权限；模型选型沿用户已配置的静态 Agent，成员没有此控制面。
  * 责任边界：负责人四工具在 beforeRun 后从真实主周期捕获身份，查询提供实际岗位选择，提交加入周期在途屏障；主模型选型不覆盖执行成员岗位配置。
  * 附件边界：目标补充直接使用一次准备的图片，模型配置视觉预检在意图前；不重读附件或把图片放入后续协作配置。
  * 请求预算：每个真实主 run 在 beforeRun 后取得冻结账本端口，凭据仅由父进程代理使用。
@@ -27,6 +28,7 @@ import {admissionRequestId,acquireExecutionLease,type WorkspaceAdmission} from '
 import type {GitHubFeedback} from './resources/github-feedback';
 import type {RepositoryConnections} from './resources/repository-connections';
 import {mainGovernanceTools} from './governance/main-governance-tools';
+import {mainWorkspaceMemberTools} from './workspace/main-workspace-member-tools';
 import {mainModuleOwnershipTools} from './workspace/main-module-ownership-tools';
 import type {ModuleOwnerships} from './workspace/module-ownerships';
 import type {WorkspaceMembers} from './workspace/workspace-members';
@@ -63,6 +65,7 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles,le
     feedbackStatus:task.mode==='chat'&&feedback?scope=>{workspace.assert();return feedback.auth.checkConnection(scope)}:undefined,
     governanceTools:conversationBinding?({task,runId})=>mainGovernanceTools(workspace,task,runId,conversationBinding):undefined,
     ownershipTools:conversationBinding&&ownerships?({task,runId})=>{const context=collaboration?.()?.mainToolContext(task,runId);return context?{port:mainModuleOwnershipTools(workspace,ownerships.service,ownerships.members,task,runId,conversationBinding,context,dispatch?.owners),binding:{...context.binding,instanceId:workspace.instanceId,agentInstanceId:conversationBinding.agentInstanceId,agentSessionId:conversationBinding.agentSessionId}}:undefined}:undefined,
+    memberTools:conversationBinding&&ownerships?({task,runId})=>{const context=collaboration?.()?.mainToolContext(task,runId);return context?{port:mainWorkspaceMemberTools(workspace,ownerships.members,task,runId,conversationBinding,context),binding:{...context.binding,instanceId:workspace.instanceId,agentInstanceId:conversationBinding.agentInstanceId,agentSessionId:conversationBinding.agentSessionId}}:undefined}:undefined,
     dispatchTools:({task,runId})=>collaboration?.()?.tools(task,runId,options),
     acquireLease:async task=>{
       workspace.assert();

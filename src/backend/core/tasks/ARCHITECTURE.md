@@ -7120,3 +7120,6 @@ dispatch-receipt 承载主工具和界面共用的严格派发输出结构；mai
 ### 请求预算的领域端口
 
 model-request-budget-storage.ts 定义 RequestBudgetState/Store/Admission。读视图只含周期身份、冻结策略、主运行 ID 与请求记录，不依赖 DispatchScope/DispatchState；提交只允许请求记录和原回执，不提供工作区岗位、任务图、邮箱写入口。模型预算的预留、发送、结算与未知结果规则仍由原请求账本负责。此为请求预算的真实迁移试点，其他跨域原子操作继续由原协调者使用共享事务，未宣称全量 DispatchStore 已拆分。
+## 主岗位审计
+
+workspace-member-invariants 在提交与重放当时的前缀上核实主 actor 的活动周期、最新主运行、图根实例及 conversation 通道；不能只因 actor 格式正确而放行。登记仍只追加一条岗位审计及允许的来源捕获，禁止夹带派发或业务变更，退休前仍须解除模块责任。

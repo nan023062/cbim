@@ -3,13 +3,15 @@
  * 设计原因：稳定 memberId 与运行实例分离；登记只保存实际原则、有效 Skill 和无凭据模型快照，不派工、不修改知识或默认执行角色。
  * 事务边界：能力采纳固定知识串行快照后进入同一 Store，未追踪来源捕获与岗位事件同事务；模型配置仍前后复验，不宣称拥有跨存储原子锁。原命令先查回执，重开不能重做已提交动作。
  */
+import {data} from '../../core/knowledge/read-models';
+import {agentModelSelectionSchema} from '../../core/brain/llm/engine';
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
 import type {DispatchState,DispatchStore} from '../../core/tasks/dispatch-storage';
 import {
-  workspaceMemberCapabilitySchema,workspaceMemberCommitInputSchema,workspaceMemberDetailSchema,
+  workspaceMemberActorSchema,type WorkspaceMemberActor,workspaceMemberCapabilitySchema,workspaceMemberCommitInputSchema,workspaceMemberDetailSchema,
   workspaceMemberGetInputSchema,workspaceMemberListInputSchema,workspaceMemberListSchema,
   workspaceMemberLookupSchema,workspaceMemberModelSnapshotSchema,workspaceMemberPreviewInputSchema,
   workspaceMemberPreviewSchema,workspaceMemberReceiptSchema,summarizeWorkspaceMember,
@@ -19,7 +21,7 @@ import {
   workspaceMemberEngine,type WorkspaceMemberPreviewInput,type WorkspaceMemberReceipt,type WorkspaceMemberRuntimePolicy,
 } from '../../core/team/workspace-member';
 import {
-  workspaceMemberCapabilityHash,workspaceMemberChangedFields,workspaceMemberCommand,
+  workspaceMemberMainCommandId,workspaceMemberCapabilityHash,workspaceMemberChangedFields,workspaceMemberCommand,
   workspaceMemberHash,workspaceMemberModelHash,workspaceMemberPreviewBasis,
   workspaceMemberProposed,workspaceMemberReceipt,
 } from '../../core/team/workspace-member-rules';
@@ -94,20 +96,38 @@ export class WorkspaceMembers {
     return parsed.data;
   }
 
-  /** 仅可信桌面入口可调用。先核原命令，再在 Store 串行事务内复验版本和来源；已落盘后的回包失败不撤回或重做。 */
-  async commit(raw:unknown,actor:{kind:'local_desktop';interaction:'explicit_submit'}):Promise<WorkspaceMemberReceipt>{
-    const request=input(workspaceMemberCommitInputSchema,raw),command=workspaceMemberCommand(request);this.sameWorkspace(request.workspaceId);
+  /** 主工具只读取同根会话的原审计；查询不依赖当前能力可用性，不重放提交。 */
+  async mainReceipt(workspaceId:string,commandId:string,rootSessionId:string){
+    this.sameWorkspace(workspaceId);
+    const event=(await this.store.read()).workspaceMemberChanges?.find(item=>item.request.commandId===commandId);
+    if(!event)return undefined;
+    if(event.actor.kind!=='main_agent'||event.actor.rootSessionId!==rootSessionId)fail('MEMBER_ACTOR','只能查询本根会话主工具的岗位回执');
+    return this.receipt({workspaceId,commandId});
+  }
+
+  /** 可信桌面或受控主工具可调用；主工具不能选择模型，取消在写入前复核。先核原命令，再在 Store 串行事务内复验版本和来源；已落盘后的回包失败不撤回或重做。 */
+  async commit(raw:unknown,actor:WorkspaceMemberActor,assertCurrent?:()=>void):Promise<WorkspaceMemberReceipt>{
+    const request=input(workspaceMemberCommitInputSchema,raw);const source=workspaceMemberActorSchema.safeParse(actor);if(!source.success)fail('MEMBER_ACTOR','岗位登记需要可信桌面或主运行来源');actor=source.data;const command=workspaceMemberCommand(request,actor);this.sameWorkspace(request.workspaceId);
+    if(actor.kind==='main_agent'&&(!assertCurrent||request.commandId!==workspaceMemberMainCommandId(request.workspaceId,actor)))fail('MEMBER_ACTOR','岗位工具缺少真实运行来源');
     const existing=await this.store.commandReceipt(command.commandId);
     if(existing){if(existing.fingerprint!==command.fingerprint)fail('MEMBER_COMMAND_CONFLICT','原命令已用于另一份请求，请查询原回执');return this.checkedReceipt(existing.receipt,request.workspaceId,request.commandId)}
-    if(!actor||actor.kind!=='local_desktop'||actor.interaction!=='explicit_submit')fail('MEMBER_ACTOR','岗位登记需要明确的本机提交');
+    assertCurrent?.();
     this.assert(request);
     const adopting=request.change.kind==='register'||request.change.kind==='adopt'&&request.change.target==='capability';
     const execute=(snapshot?:Snapshot)=>this.store.transact(command,async state=>{
-      this.assert(request);
+      assertCurrent?.();this.assert(request);
+      if(actor.kind==='main_agent'){
+        const change=request.change;
+        if(change.kind==='adopt'&&change.target==='model'||change.kind==='update'&&change.patch.runtimePolicy)fail('MEMBER_MODEL_MANUAL','模型选型和参数采纳仍需用户明确配置');
+        if(change.kind==='register'){
+          const selected=agentModelSelectionSchema.safeParse(data(snapshot!,change.agentId+'/agent.json').runtime);
+          if(!selected.success||!isDeepStrictEqual(selected.data,change.runtimePolicy))fail('MEMBER_MODEL_MANUAL','请先由用户为静态 Agent 配置模型，岗位只能继承该选型');
+        }
+      }
       if(!isDeepStrictEqual(this.cursor(state),request.expectedRegistryCursor))fail('MEMBER_REGISTRY_STALE','岗位登记版本已变化，请重新预览');
       const prepared=await this.prepare(state,request,snapshot),preview=prepared.preview;
       if(preview.basis!==request.expectedBasis)fail('MEMBER_BASIS_STALE','岗位或来源内容已变化，请重新预览');
-      await this.verifySources(prepared,request);this.assert(request);
+      await this.verifySources(prepared,request);assertCurrent?.();this.assert(request);
       const time=new Date().toISOString(),old=preview.previousMember,p=preview.proposed,changeId=randomUUID();
       const adopt=!old||request.change.kind==='adopt'&&request.change.target==='capability';
       const capture=adopt&&preview.sourceSelection?this.owner.sources!.capture(state,preview.sourceSelection,{kind:'workspace_member',changeId},time):undefined;
@@ -115,7 +135,7 @@ export class WorkspaceMembers {
         name:p.name,position:p.position,adaptation:p.adaptation,state:p.state,
         adoption:adopt?{captureId:randomUUID(),capturedAt:time,knowledgeRevision:p.capability.configuration.knowledgeRevision,capabilityHash:p.capability.capabilityHash,configuration:p.capability.configuration,...(capture?{sourceRef:capture.ref}:{})}:old!.adoption,
         runtimePolicy:p.runtimePolicy,createdAt:old?.createdAt??time,updatedAt:time};
-      const cursor=this.cursor(state),change:WorkspaceMemberChange={version:1,request,changeId,registryCursor:{kind:'workspace_registry',workspaceId:request.workspaceId,streamId:cursor?.streamId??randomUUID(),seq:(cursor?.seq??0)+1},previousRevision:old?.revision??0,previousMemberHash:old?workspaceMemberHash(old):null,...(preview.sourceSelection?{sourceSelection:preview.sourceSelection}:{}),next:member,actor:{kind:'local_desktop',interaction:'explicit_submit'},committedAt:time};
+      const cursor=this.cursor(state),change:WorkspaceMemberChange={version:1,request,changeId,registryCursor:{kind:'workspace_registry',workspaceId:request.workspaceId,streamId:cursor?.streamId??randomUUID(),seq:(cursor?.seq??0)+1},previousRevision:old?.revision??0,previousMemberHash:old?workspaceMemberHash(old):null,...(preview.sourceSelection?{sourceSelection:preview.sourceSelection}:{}),next:member,actor:structuredClone(actor),committedAt:time};
       return {workspaceMemberChanges:[change],...(capture?.event?{knowledgeSourceChanges:[capture.event]}:{}),receipt:workspaceMemberReceipt(change)};
     });
     return adopting?this.owner.withSourceSnapshot(execute):execute();

@@ -22,6 +22,7 @@
 | [module-ownership-tools.ts](module-ownership-tools.ts) | 把本轮真实主运行的模块责任端口转换为发现、分类和执行一致的四工具。 |
 | [question-tools.ts](question-tools.ts) | 为已装配用户交互端口的主/成员运行提供结构化提问工具及严格答案回包。 |
 | [repository-tools.ts](repository-tools.ts) | 把主进程捕获的资源仓库只读端口装配为主调度可调用的两个工具。 |
+| [workspace-member-tools.ts](workspace-member-tools.ts) | 将主运行岗位端口注册为查询、预览、提交与原回执四项工具。 |
 
 ## 架构类图
 
@@ -325,6 +326,26 @@ N_src_backend_scheduler_engine_tools_repository_tools_ts ..> N_src_backend_sched
 
 直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/connectors/repository-tools.ts](../../core/connectors/repository-tools.ts)。
 
+### workspace-member-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_tools_workspace_member_tools_ts["workspace-member-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_tools_workspace_member_tools_ts_WorkspaceMemberTools["WorkspaceMemberTools"] {
+  +has()
+  +list()
+  +describe()
+  +call()
+  -port
+  -binding
+}
+N_src_backend_scheduler_engine_tools_workspace_member_tools_ts ..> N_src_backend_scheduler_engine_tools_workspace_member_tools_ts_WorkspaceMemberTools : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)、[../../core/team/workspace-member-tools.ts](../../core/team/workspace-member-tools.ts)。
+
 ### 本目录调用边界
 
 ```mermaid
@@ -576,3 +597,6 @@ cbim_object_preview 的 data 按 kind 判别，模块中文名必须写在 body 
 对象预览的工具描述和字段 Schema 共同公开根 ID、顺序父子创建及正文约束；structural:false 返回全部校验问题，不冒充执行异常。知识提交回执与业务目标验收分别解释。
 
 模块负责人 inspect 公开四级优先级及 matches 输入：LLM 分析由当前主 Agent 完成，返回的选择才用于新目标和派发；静态 Agent、岗位与运行身份不互换。
+## 岗位治理工具
+
+WorkspaceMemberTools 注册 cbim_member_inspect/change_preview/change_commit/receipt，输入拒绝身份、凭据及模型选型，输出严格核对工作区、原选择、命令与预览依据，128 KiB 上限。提交错误携带原 commandId，回包丢失或停止不能自动重放；能力采纳与模块来源 adopt_source 不是同一操作。

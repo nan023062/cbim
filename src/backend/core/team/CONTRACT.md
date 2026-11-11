@@ -184,3 +184,8 @@ workspaceMemberModelSnapshotSchema 接受可选 engine，明确值参与 configu
 ## 隐式模块执行者
 
 implicitModuleOwner 按本模块、最近祖先的非空责任记录解析；空责任不创建新登记。失效的显式/祖先关系仍由门禁报告，不自动匹配其他人。ExpectedModuleOwner 向后兼容原直接关系，并允许 inheritedFrom 或 match 两种互斥依据：继承冻结实际父关系和子模块来源；匹配冻结主模型理由、知识版本和来源，无伪造 bindingId。岗位、能力采纳和模型门禁保持一致；matches:null 回到主会话，不创建内置执行员。
+## 主 Agent 岗位治理
+
+workspace-member-tools 提供窄查询/预览/提交/原回执协议。主工具不接受 actor、工作区身份、命令或模型选型；登记继承静态 Agent 已配置模型，更新只能改元信息，adopt 仅采纳能力，模型参数采纳仍走桌面。查询差异即使失配也保留 current/adopted hash 和修复建议。
+
+workspaceMemberMainCommandId 从真实主调用稳定派生；主来源进入命令指纹和审计，旧桌面指纹保持原样。共用一个岗位头、来源捕获及版本事务，历史任务/运行快照不随新采纳改变。

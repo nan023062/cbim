@@ -6,7 +6,7 @@
 import {hash} from '../foundation/serialization';
 import {fail} from '../foundation/errors';
 import type {SourceSelection} from '../workspace/knowledge-source';
-import {workspaceMemberEngine,workspaceMemberChangeSchema,workspaceMemberSchema,workspaceMemberLimits,type WorkspaceMember,type WorkspaceMemberChange,type WorkspaceMemberCapability,type WorkspaceMemberModelSnapshot,type WorkspaceMemberProposed,type WorkspaceMemberChangeInput,type WorkspaceMemberCommitInput,type WorkspaceMemberReceipt,type WorkspaceRegistryCursor,type WorkspaceMemberField} from './workspace-member';
+import {workspaceMemberActorSchema,workspaceMemberMainActorSchema,type WorkspaceMemberActor,workspaceMemberEngine,workspaceMemberChangeSchema,workspaceMemberSchema,workspaceMemberLimits,type WorkspaceMember,type WorkspaceMemberChange,type WorkspaceMemberCapability,type WorkspaceMemberModelSnapshot,type WorkspaceMemberProposed,type WorkspaceMemberChangeInput,type WorkspaceMemberCommitInput,type WorkspaceMemberReceipt,type WorkspaceRegistryCursor,type WorkspaceMemberField} from './workspace-member';
 
 /** 对象键排序、数组保序；只用于已经过 strict schema 的 JSON 领域值。 */
 export function workspaceMemberCanonical(value:unknown):string{
@@ -20,7 +20,12 @@ export const workspaceMemberModelHash=(snapshot:WorkspaceMemberModelSnapshot)=>h
 export function workspaceMemberCapabilityHash(configuration:WorkspaceMemberCapability){const {knowledgeRevision:_,...content}=configuration;return hash(workspaceMemberCanonical(content))}
 export const workspaceMemberHash=(member:WorkspaceMember)=>hash(workspaceMemberCanonical(member));
 /** 全工作区幂等命令命名空间；fingerprint 包含原 instance、完整变更和预览/CAS 依据。 */
-export function workspaceMemberCommand(request:WorkspaceMemberCommitInput){return {commandId:'workspace-member-'+request.commandId,fingerprint:hash(workspaceMemberCanonical({domain:'workspace-member-v1',request}))}}
+export function workspaceMemberCommand(request:WorkspaceMemberCommitInput,actor?:WorkspaceMemberActor){return {commandId:'workspace-member-'+request.commandId,fingerprint:hash(workspaceMemberCanonical({domain:'workspace-member-v1',request,...(actor?.kind==='main_agent'?{actor}:{} )}))}}
+/** 主写命令由真实运行与调用身份稳定派生；桌面旧命令和旧指纹保持兼容。 */
+export function workspaceMemberMainCommandId(workspaceId:string,actor:WorkspaceMemberActor){
+ const source=workspaceMemberMainActorSchema.parse(actor),h=hash(workspaceMemberCanonical({domain:'workspace-member-main-v1',workspaceId,source}));
+ return `${h.slice(0,8)}-${h.slice(8,12)}-5${h.slice(13,16)}-a${h.slice(17,20)}-${h.slice(20,32)}`;
+}
 
 /** 只去掉新登记时尚不存在的身份、采纳时间和版本；未选中的配置保持原保存事实。 */
 export function workspaceMemberProposed(member:WorkspaceMember):WorkspaceMemberProposed{
@@ -97,7 +102,7 @@ function validateTransition(previous:WorkspaceMember|undefined,event:WorkspaceMe
 /** 仅追加一条严格审计并派生 head；不接收可绕过审计的成员 upsert，也不启动实例。 */
 export function applyWorkspaceMemberChange(state:WorkspaceMemberRegistry,raw:WorkspaceMemberChange):{workspaceMembers:WorkspaceMember[];workspaceMemberChanges:WorkspaceMemberChange[];registryCursor:WorkspaceRegistryCursor}{
   const parsed=workspaceMemberChangeSchema.safeParse(raw);valid(parsed.success,'岗位登记审计结构无效');
-  const event=raw,members=state.workspaceMembers??[],history=state.workspaceMemberChanges??[],cursor=state.registryCursor??null;
+  const event=raw;if(event.actor.kind==='main_agent')valid(event.request.commandId===workspaceMemberMainCommandId(state.workspaceId,event.actor),'主岗位命令来源不一致','MEMBER_ACTOR');const members=state.workspaceMembers??[],history=state.workspaceMemberChanges??[],cursor=state.registryCursor??null;
   valid(Array.isArray(members)&&Array.isArray(history)&&new Set(members.map(item=>item.memberId)).size===members.length,'岗位登记投影无效');
   valid(event.request.workspaceId===state.workspaceId&&event.next.workspaceId===state.workspaceId,'岗位不属于当前工作区','MEMBER_IDENTITY');
   valid(equal(event.request.expectedRegistryCursor,cursor),'登记游标已变化','MEMBER_REGISTRY_STALE');

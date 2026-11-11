@@ -13,3 +13,26 @@ test('manual terminal captures output and exit status without sharing sessions',
  expect(terminals.read('one')).toMatchObject({exitCode:0});expect(terminals.read('one').output).toContain('TERMINAL_OK');expect(terminals.read('other').output).toBe('');terminals.close('one');expect(terminals.read('one').output).toBe('');
  }finally{clearTimeout(slowTimer);const evidence={elapsedMs:performance.now()-started,slowSnapshot,completionSnapshot,finalSnapshot:terminals.read('one')};console.log('TERMINAL_COMPLETION',JSON.stringify(evidence));try{await fs.mkdir('test-results',{recursive:true});await fs.writeFile('test-results/terminal-state.json',JSON.stringify(evidence,null,2))}finally{terminals.closeAll()}}
 },45000);
+
+test('manual terminal keeps a failing Unicode command readable with its nonzero exit',async()=>{
+ const terminals=new TerminalSessions();
+ try{
+  terminals.start('failure',process.cwd(),process.platform==='win32'?"throw '失败中文'":"printf '失败中文' >&2; exit 1");
+  await expect.poll(()=>terminals.read('failure'),{timeout:30000}).toMatchObject({running:false,exitCode:1});
+  expect(terminals.read('failure').output).toContain('失败中文');expect(terminals.read('failure').output).not.toContain('CLIXML');
+ }finally{terminals.closeAll()}
+},45000);
+
+test('manual terminal preserves Unicode command text, native split UTF-8 and stderr',async()=>{
+ const terminals=new TerminalSessions(),quote=(s:string)=>"'"+s.replace(/'/g,process.platform==='win32'?"''":"'\\''")+"'";
+ const text='中文输出🙂',bytes=[...Buffer.from(text)],code=`const b=Buffer.from([${bytes.join(',')}]);process.stdout.write(b.subarray(0,1));setTimeout(()=>{process.stdout.write(b.subarray(1));process.stderr.write(Buffer.from([${[...Buffer.from('错误信息')].join(',')}]));},50)`;
+ const native=`${process.platform==='win32'?'& ':''}${quote(process.execPath)} -e ${quote(code)}`;
+ const command=process.platform==='win32'?`Write-Output '命令含中文';${native};[Console]::Error.WriteLine('标准错误中文')`:`printf '命令含中文\\n';${native};printf '标准错误中文\\n' >&2`;
+ try{
+  terminals.start('unicode',process.cwd(),command);
+  await expect.poll(()=>terminals.read('unicode'),{timeout:30000}).toMatchObject({running:false,exitCode:0});
+  const output=terminals.read('unicode').output;
+  for(const expected of ['命令含中文',text,'错误信息','标准错误中文'])expect(output).toContain(expected);
+  expect(output).not.toContain('\uFFFD');expect(output).not.toContain('CLIXML');expect(output).not.toContain('<Objs');
+ }finally{terminals.closeAll()}
+},45000);

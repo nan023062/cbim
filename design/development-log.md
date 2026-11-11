@@ -1,3 +1,9 @@
+## 2026-11-12：#38 手动终端中文编码
+
+- [Issue #38](https://github.com/nan023062/cbim/issues/38)，仅修改 Main 平台终端适配器：子 PowerShell 的 Console 输入/输出与 OutputEncoding 统一 UTF-8，stdout/stderr 独立持续解码，保持工作区、页签和进程所有权。未改变机器全局编码或 Agent 执行策略。
+- 实际进程验证 `pnpm exec vitest run tests/terminal.test.ts --reporter=default --reporter=json --outputFile=test-results/issue-batch-20261112/38-tests.json`：3 项通过，涵盖中文命令、emoji、原生命令分块输出、stderr、非零退出和会话隔离。初次补测发现 EncodedCommand 会输出 CLIXML，已保留 -Command 文本错误语义，失败记录在同目录 `38-clixml-failure.json`。
+- `pnpm check:architecture` 通过，0 循环/违规；平台注释、契约与类图同步。公共接口/依赖未变，不扩大类型和全量测试。明确指定其他编码的旧程序需自行配置 UTF-8；尚未打包、安装或合并发布。
+
 ## 2026-11-12：#44 Claude Code 模型选择与连接诊断
 
 - [Issue #44](https://github.com/nan023062/cbim/issues/44)，基线 `86e82164`。当前已按协议而非品牌筛选；补齐未配置/协议不兼容/未启用三类空态，明确非 Claude 模型可用但端点必须兼容 Anthropic Messages。

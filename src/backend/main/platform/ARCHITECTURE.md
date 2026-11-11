@@ -851,6 +851,10 @@ N_src_backend_main_platform_scoped_execution_files_ts ..> N_src_backend_main_pla
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+## 手动终端编码
+
+TerminalSessions 在固定工作区执行单条命令，Windows 进程内 Console 输入/输出及 PowerShell OutputEncoding 统一 UTF-8；stdout/stderr 分别持续解码，分块不截断字符。保留 -Command 的文本错误流、页签隔离、输出上限与关闭终止进程行为；不改变机器全局代码页，不模拟 PTY。显式输出其他编码的旧原生程序仍需在命令中指定 UTF-8。
+
 ## Windows 隔离 Node 平台端口（R12-A）
 
 `runIsolatedNode` 是可信宿主的平台端口，正式成员经冻结范围与可靠生命周期装配后调用。它不从业务请求取得宿主路径或环境变量：最多64份、总8 MiB的明确字节快照复制到本次 input；当前宿主可执行器及 Electron 必需数据复制到 runtime 并记录实际哈希；程序只向私有 output 写入，不修改原工程 ACL 或自动回写。

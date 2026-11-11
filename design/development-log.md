@@ -1,3 +1,10 @@
+## 2026-11-12：#44 Claude Code 模型选择与连接诊断
+
+- [Issue #44](https://github.com/nan023062/cbim/issues/44)，基线 `86e82164`。当前已按协议而非品牌筛选；补齐未配置/协议不兼容/未启用三类空态，明确非 Claude 模型可用但端点必须兼容 Anthropic Messages。
+- 模型设置显式探测返回安全端点、HTTP 状态及鉴权/权限/端点/限流建议，不回传供应商正文，不修改目录。状态仍归 LlmProfiles，选择器只消费公开配置，没有引入跨协议转换或自动联网。
+- 按配置→选择器→引擎消费者执行 `pnpm exec vitest run tests/engine-configuration.test.ts tests/llm.test.ts tests/claude-engine.test.ts --reporter=default --reporter=json --outputFile=test-results/issue-batch-20261112/44-tests.json`：3 文件 28 项通过。真实 Claude SDK 对本机确定性服务透传 `vendor/qwen-custom-2026`，会话恢复及取消通过；不代表第三方在线供应商已验证。
+- `pnpm typecheck`、`pnpm check:architecture` 通过，0 循环/违规；同步组件、设置存储注释/契约/类图。阅读顺序：EngineModelPicker → LlmProfiles.request → claude-engine 测试。全量 CI、打包与安装升级本步未运行，尚未合并或发布。
+
 ## 2026-11-12：0.1.8 公开发布与真实在线升级
 
 - 用户直接授权核对草稿并发布，沿用已确认的未签名模式；安装器/应用均实际 NotSigned、0.1.8，四附件重新核验一致。补齐准确 EXE 的六项进程隔离，零网络请求，自有资源全部回收。

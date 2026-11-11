@@ -20,12 +20,12 @@ test('real Claude stop cancels an in-flight provider request and does not claim 
   }finally{await engine.close();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
 },30000);
 afterEach(async()=>{for(const root of roots.splice(0)){if(path.dirname(root)!==path.resolve(os.tmpdir())||!path.basename(root).startsWith('cbim-cc-'))throw Error('unexpected test directory');await fs.rm(root,{recursive:true,force:true})}});
-function model(baseUrl:string):ResolvedLlm{return {apiKey:'test-only-api-key',profile:{id:randomUUID(),engine:'claude-code',name:'test',api:'anthropic-messages',baseUrl,auth:'api-key',model:'claude-test',contextWindow:200000,maxTokens:4096,reasoning:false}}}
+function model(baseUrl:string):ResolvedLlm{return {apiKey:'test-only-api-key',profile:{id:randomUUID(),engine:'claude-code',name:'test',api:'anthropic-messages',baseUrl,auth:'api-key',model:'vendor/qwen-custom-2026',contextWindow:200000,maxTokens:4096,reasoning:false}}}
 test('Claude environment freezes the selected endpoint/model and removes inherited auth',()=>{
   const old=process.env.CLAUDE_CODE_OAUTH_TOKEN;process.env.CLAUDE_CODE_OAUTH_TOKEN='must-not-inherit';
-  try{const env=claudeEnvironment('home',model('https://example.com/v1'));expect(env.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined();expect(env.ANTHROPIC_BASE_URL).toBe('https://example.com');expect(env.ANTHROPIC_MODEL).toBe('claude-test');expect(env.ANTHROPIC_API_KEY).toBe('test-only-api-key')}finally{if(old===undefined)delete process.env.CLAUDE_CODE_OAUTH_TOKEN;else process.env.CLAUDE_CODE_OAUTH_TOKEN=old}
+  try{const env=claudeEnvironment('home',model('https://example.com/v1'));expect(env.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined();expect(env.ANTHROPIC_BASE_URL).toBe('https://example.com');expect(env.ANTHROPIC_MODEL).toBe('vendor/qwen-custom-2026');expect(env.ANTHROPIC_API_KEY).toBe('test-only-api-key')}finally{if(old===undefined)delete process.env.CLAUDE_CODE_OAUTH_TOKEN;else process.env.CLAUDE_CODE_OAUTH_TOKEN=old}
 });
-test('real Claude Code streams text, persists its bound session and resumes the same context',async()=>{
+test('real Claude Code passes a non-Claude model ID unchanged, streams and resumes its bound session',async()=>{
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-cc-'));roots.push(root);const home=path.join(root,'engine'),cwd=path.join(root,'project');await fs.mkdir(cwd);
   const requests:any[]=[];
   const server=http.createServer(async(req,res)=>{
@@ -34,7 +34,7 @@ test('real Claude Code streams text, persists its bound session and resumes the 
     requests.push({path:req.url,body});
     res.writeHead(200,{'content-type':'text/event-stream'});
     const write=(event:any)=>res.write('event: '+event.type+'\ndata: '+JSON.stringify(event)+'\n\n');
-    write({type:'message_start',message:{id:'msg_'+randomUUID(),type:'message',role:'assistant',model:'claude-test',content:[],stop_reason:null,stop_sequence:null,usage:{input_tokens:100,output_tokens:0}}});
+    write({type:'message_start',message:{id:'msg_'+randomUUID(),type:'message',role:'assistant',model:'vendor/qwen-custom-2026',content:[],stop_reason:null,stop_sequence:null,usage:{input_tokens:100,output_tokens:0}}});
     write({type:'content_block_start',index:0,content_block:{type:'text',text:''}});
     write({type:'content_block_delta',index:0,delta:{type:'text_delta',text:'CBIM Claude OK'}});
     write({type:'content_block_stop',index:0});write({type:'message_delta',delta:{stop_reason:'end_turn',stop_sequence:null},usage:{output_tokens:5}});write({type:'message_stop'});res.end();
@@ -49,7 +49,7 @@ test('real Claude Code streams text, persists its bound session and resumes the 
     const binding=events.find(e=>e.type==='session.bound')!.data;expect(binding.sessionId).toBe(taskId);expect(await fs.readFile(String(binding.sessionFile),'utf8')).toContain('CBIM Claude OK');
     expect(events.some(e=>e.type==='message'&&e.data.text==='CBIM Claude OK')).toBe(true);
     engine=new ClaudeCodeEngine(options);await engine.start({...context,runId:randomUUID(),nativeSessionId:taskId,sessionFile:String(binding.sessionFile)});expect(await engine.run('Continue')).toEqual({status:'completed'});
-    expect(requests.every(r=>r.body.model==='claude-test')).toBe(true);expect(requests.at(-1).body.messages.some((m:any)=>JSON.stringify(m).includes('Say OK'))).toBe(true);
+    expect(requests.every(r=>r.body.model==='vendor/qwen-custom-2026')).toBe(true);expect(requests.at(-1).body.messages.some((m:any)=>JSON.stringify(m).includes('Say OK'))).toBe(true);
     expect(JSON.stringify(events)).not.toContain(llm.apiKey);
   }finally{await engine.close();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
 },60000);

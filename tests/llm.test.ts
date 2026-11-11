@@ -64,3 +64,17 @@ test('upstream secret error bodies and redirects are not returned to renderer',a
   try{const {service}=await fixture();const p=profile(`http://127.0.0.1:${(server.address() as any).port}/v1`);const s=await service.save({profile:p});await expect(service.test(s.selectedId!)).rejects.toThrow('HTTP 401');await expect(service.discover({connection:{name:p.name,api:p.api,baseUrl:p.baseUrl,auth:p.auth}})).rejects.toThrow('连接失败');}
   finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
 });
+
+test.each([401,403,404,429,500])('模型诊断保留端点与 HTTP %s，错误不隐藏目录或泄露供应商正文',async status=>{
+  const server=http.createServer((_req,res)=>res.writeHead(status).end('private-upstream-key'));
+  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
+  try{
+    const {service}=await fixture(),p={...profile(`http://127.0.0.1:${(server.address() as any).port}/v1`),api:'anthropic-messages' as const};
+    const saved=await service.save({profile:p});
+    const error=await service.test(saved.selectedId!).then(()=>{throw Error('expected failure')},error=>error);
+    expect(error.code).toBe('LLM_HTTP');expect(error.message).toContain(p.baseUrl+'/messages');expect(error.message).toContain('HTTP '+status);
+    if(status===401)expect(error.message).toContain('鉴权失败');
+    if(status===403)expect(error.message).toContain('访问被拒绝');
+    expect(error.message).not.toContain('private-upstream-key');expect(await service.list()).toEqual(saved);
+  }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
+});

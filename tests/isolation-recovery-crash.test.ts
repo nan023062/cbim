@@ -9,7 +9,7 @@ test('真实宿主崩溃后原可靠日志仍可核对，Job收束主程序和�
   const tree=platform.lockTree(head.record.resource,true);try{platform.deleteProfile(head.record.resource);tree.remove()}finally{tree.close()}await expect(fs.access(root!)).rejects.toBeDefined();expect((await records.list('run-one'))[0].head).toEqual(head);
  }catch(error){
   // 原目录必须保留供核实，但后续清理失败不能覆盖触发保留的原始断言或平台错误。
-  failure=error;const diagnostic={directory,root,stderr,hostExitCode:child.exitCode,hostSignalCode:child.signalCode,error:error instanceof Error?{name:error.name,message:error.message,stack:error.stack}:String(error),records:await records.list('run-one').catch(readError=>({readError:String(readError)}))};
+  failure=error;const diagnostic={directory,root,stderr,hostExitCode:child.exitCode,hostSignalCode:child.signalCode,error:error instanceof Error?{...error,name:error.name,message:error.message,stack:error.stack}:String(error),records:await records.list('run-one').catch(readError=>({readError:String(readError)}))};
   console.error('Isolation crash recovery primary failure',diagnostic);
   await fs.mkdir('test-results',{recursive:true}).then(()=>fs.writeFile('test-results/isolation-recovery-crash-failure.json',JSON.stringify(diagnostic,null,2))).catch(writeError=>console.error('Could not preserve crash diagnostic',writeError));
   throw error;

@@ -65,7 +65,7 @@ export async function abandonedDependencyProvider(options:{badOutput?:boolean}={
       else if(turn===2){assert.ok(JSON.stringify(body.messages).includes(d.facts[0]));tool('abandoned-capture','cbim_task_artifact_capture',{expectedTaskProgressVersion:1,sourceToolCallIds:['abandoned-original-read']})}
       else if(turn===3){const b=value(body,'abandoned-capture');assert.equal(b.state,'captured');tool('abandoned-checkpoint','cbim_task_checkpoint',{expectedTaskProgressVersion:1,baselineId:b.baseline.baselineId,reason:'交回可靠首段，由主调度明确选择后续'})}
       else if(turn===4){assert.equal(value(body,'abandoned-checkpoint').state,'staged');reply('原检查点段结束，没有交付候选。')}
-      else{const index=Math.floor((turn-5)/5),step=(turn-5)%5,prefix='abandoned-worker-'+index,goal=d.goals[index===0?3:index];assert.ok(index>=0&&index<3);
+      else{const index=Math.floor((turn-5)/5),step=(turn-5)%5,prefix='abandoned-worker-'+index,goal=d.goals[index===0?3:index];assert.ok(index>=0&&index<3,'Unexpected member turn '+turn);
         if(step===0){assert.ok(JSON.stringify(body.messages).includes(goal));tool(prefix+'-plan','cbim_task_plan',{expectedVersion:0,goal,acceptance:d.acceptance,reason:'使用实际前置首次执行',steps:[{id:'read',title:'读取本项材料',owner:'执行者'}]})}
         else if(step===1)tool(prefix+'-read','read',{path:d.files[index]});
         else if(step===2){assert.ok(JSON.stringify(body.messages).includes(d.facts[index]));tool(prefix+'-step','cbim_task_step',{expectedVersion:1,id:'read',state:'reported_done',evidenceIds:[prefix+'-read']})}
@@ -73,7 +73,7 @@ export async function abandonedDependencyProvider(options:{badOutput?:boolean}={
       }
     }
     res.end('data: [DONE]\n\n');
-  }catch(e){errors.push(String(e));if(!res.headersSent)res.writeHead(500);res.end('Abandoned checkpoint fixture failed')}});
+  }catch(e){errors.push(e instanceof Error?e.stack??String(e):String(e));if(!res.headersSent)res.writeHead(500);res.end('Abandoned checkpoint fixture failed')}});
   await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));const address=server.address();assert.ok(address&&typeof address!=='string');
   return {url:`http://127.0.0.1:${address.port}/v1`,main,member,sequence,errors,state,heldTurn,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection},releaseMain:()=>release(),close:async()=>{release();server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()))}};
 }

@@ -6,6 +6,20 @@
 - 0.1.8 未签名安装包来自干净提交 `23faa8bf`，SHA-256 `170d53bd03122efb5684dade60217c6290497e082c222ed84335f2fc92154883`。后续仅修正当前文件树/负责人文案的验收定位与性能夹具，不改产品输入，重新核验同一包通过。候选安装升级新增主 Agent/自动化/知识/业务文件保留断言；不能把直接启动 EXE 当 NSIS 升级。
 - 同步相关源码注释、契约和 28 份类图，三宿主入口一致。维护入口：`ipc-call.ts` 的完整映射、`automation-actions.ts` 的身份投影、`knowledge/read-models.ts` 公共读取、`engine-tools.ts` 稳定能力和 `execution-view` 展示边界。
 
+## 2026-11-11：0.1.7 公开、在线升级与官网
+
+- PR #34 正常 merge 为 ef84d1b1bd1e475ee220f91814858349e9537e71，parents 是 7fad631e 与 12ac487f；没有 squash。冻结源码 f18c2fe9 仍是祖先。相对验证 head 只有测试和本记录，未重建候选。
+- Release 440782281 于 2026-11-11T01:50:02Z 公开。tag desktop-v0.1.7 的注解对象 835bf6c1，peeled commit 为 f18c2fe9。make_latest=false；旧 Python latest 仍是 327801733 / v1.0.2。四附件 ID/摘要未变。匿名 latest.yml 与 SHA256SUMS 一致，安装地址总长度 391247521；未整包重下。
+- 在线验收 run 42941852527，workflow SHA ef84d1b1，mode=online，previous_version=0.1.6。旧版自动发现后经真实按钮下载，缓存摘要匹配；普通退出取消后仍是 0.1.6；再次下载自动安装。新进程带 --updated 与原用户目录。六项保留、1 次模型请求、0 页面错误、NotSigned。
+- 官网按该公开回执更新。pnpm check:brand 通过；CBIM_WEBSITE_URL=https://nan023062.github.io/cbim/ 时 pnpm build:website 通过；node scripts/website-smoke.mjs 为 14 场景、0 错误。Pages 部署和双分支同步留在官网 PR 回执，不为此连续提交。报告：design/verification/desktop-release-0.1.7-20261111.md。
+
+## 2026-11-11：0.1.7 完整 CI 的测试前置修正
+
+- 原四片 run 42880217010 保留：384 文件、2633 用例，2626 通过、5 失败、2 原有历史 EXE 跳过。四个失败共享 knowledge-contract-provider 的旧目录数量 29；#28 增加两个治理 Skill 后实际为 31，现断言准确数量及两个真实名称，原版本、副作用、审批、幂等和坏输出检查均保留。
+- 剩余 abandoned-checkpoint-dependency-pi 的 bad-output 本机复现：真实请求 system 明确为 context summarization assistant，64K 模型在完整检查点/回执长链后触发原生摘要，确定性测试供应商误归类为额外成员。仅本用例组配置 128K，并保留错误堆栈；共享 seed 默认 64K，产品摘要开关、重试、预算、超时和调度均未修改。真实摘要另由 pi-runtime-config/model-request-budget-pi 覆盖。
+- 依据失败范围执行 pnpm exec vitest run tests/knowledge-contract-pi.test.ts tests/knowledge-effect-pi.test.ts tests/abandoned-checkpoint-dependency-pi.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-017-ci-diagnosis.json：知识两文件六用例通过，长链坏输出仍失败；进一步诊断报告 desktop-017-bad-output-diagnosis.json 保留。修正后 pnpm exec vitest run tests/abandoned-checkpoint-dependency-pi.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-017-bad-output-fixed.json：四用例通过（36.92s）。pnpm typecheck 通过。无源码/导入变更，不重复架构检查；完整新 head CI 继续由 PR 执行。
+- 候选 source f18c2fe9b2a189c1dc31f63d60de83a7b6d6833f 不变：打包 EXE UI 与六项隔离通过；candidate 安装 run 42881228441 成功，全新安装及真实 0.1.6→0.1.7、六项数据保留/一次模型请求/零页面错误。此次仅测试与维护记录变化；包内 design/development-log 保留冻结副本，运行白名单资料、源码、依赖和构建配置未变。草稿 Release 440782281 尚未公开。
+
 ## 2026-11-11：0.1.7 发布准备（#27 / #28 / #29 与架构切片）
 
 - 当前公开桌面版 0.1.6；默认 develop 与 master 同为 7fad631e8692ff2b5845e899ed49915c72d0faa4，仓库 nan023062/cbim、发布账号 nan023062；旧 Python latest ID 327801733/tag v1.0.2 保持独立。用户已授权完成、PR、合并和发布，沿用先未签名、日后更高版本切换签名的个人开发决定。

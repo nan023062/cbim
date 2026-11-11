@@ -1,3 +1,4 @@
+import {clickKnowledgeTreeAction,clickArchitectureAction} from './knowledge-tree-actions.mjs';
 import {_electron as electron,type ElectronApplication,type Locator,type Page} from 'playwright-core';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -68,7 +69,7 @@ try{
   }
   async function save(dialog:Locator){await preview(dialog);await dialog.getByRole('button',{name:'确认提交到工作区',exact:true}).click();await dialog.waitFor({state:'hidden'})}
   async function createAgent(slug:string,name:string,commit=true){
-    await currentView().getByRole('button',{name:'新建 Agent',exact:true}).click();const dialog=editor('新建Agent');
+    await clickArchitectureAction(currentView(),'新建 Agent');const dialog=editor('新建Agent');
     await dialog.getByRole('textbox',{name:'目录标识',exact:true}).fill(slug);
     await dialog.getByRole('textbox',{name:'对象名称',exact:true}).fill(name);
     await dialog.getByRole('textbox',{name:'职责摘要',exact:true}).fill(summary);
@@ -80,7 +81,7 @@ try{
   }
   async function teamRoot(){await knowledgePath('.cbim/team').click()}
   async function publish(trigger:string,name:string){
-    await currentView().getByRole('button',{name:trigger,exact:true}).click();const dialog=editor('发布静态资源');
+    await clickArchitectureAction(currentView(),trigger);const dialog=editor('发布静态资源');
     await dialog.getByRole('textbox',{name:'发布资源名称',exact:true}).fill(name);
     await dialog.getByRole('textbox',{name:'发布资源说明',exact:true}).fill('真实打包界面的静态定义跨项目复用验证。');
     await dialog.getByRole('button',{name:'确认发布到当前仓库',exact:true}).click();
@@ -89,7 +90,7 @@ try{
     await dialog.getByRole('button',{name:'完成',exact:true}).click();await dialog.waitFor({state:'hidden'});
   }
   async function importResource(trigger:string,name:string,slug?:string,commit=true){
-    await currentView().getByRole('button',{name:trigger,exact:true}).click();const dialog=editor('使用仓库资源');
+    await clickArchitectureAction(currentView(),trigger);const dialog=editor('使用仓库资源');
     await dialog.getByRole('list',{name:'可用静态资源',exact:true}).getByRole('button').filter({hasText:name}).click();
     if(slug)await dialog.getByRole('textbox',{name:'资源目录标识',exact:true}).fill(slug);
     await dialog.getByRole('button',{name:'预览应用到工作区',exact:true}).click();
@@ -106,7 +107,7 @@ try{
   assert.equal((await snapshot(sourceEntry.id)).revision,initial);
   await createAgent('developer','架构测试开发者');
   await poll(()=>snapshot(sourceEntry.id),s=>s.files.some(file=>file.path==='.cbim/team/developer/agent.json'),'UI 新建 Agent 没有落盘');
-  await teamRoot();await currentView().getByRole('button',{name:'新增 Skill',exact:true}).click();
+  await teamRoot();await clickArchitectureAction(currentView(),'新增 Skill');
   const skill=editor('新建Skill');await skill.getByRole('textbox',{name:'目录标识',exact:true}).fill('shared_review');
   await skill.getByRole('textbox',{name:'对象名称',exact:true}).fill('架构审阅能力');
   await skill.getByRole('textbox',{name:'适用目的',exact:true}).fill('审查职责、依赖与真实证据');
@@ -126,7 +127,7 @@ try{
   completed.push('团队 UI 新建 Agent、根共享 Skill 和继承；取消预览不写入');
 
   checkpoint('通过业务表单创建静态模块和 Workflow');
-  await extension('业务架构');await currentView().getByRole('button',{name:'新建工程模块',exact:true}).click();
+  await extension('业务架构');await clickArchitectureAction(currentView(),'新建工程模块');
   const module=editor('新建模块');await module.getByRole('textbox',{name:'目录标识',exact:true}).fill('game');
   await module.getByRole('textbox',{name:'职责摘要',exact:true}).fill(summary);
   await module.getByRole('button',{name:'添加源目录',exact:true}).click();
@@ -139,7 +140,7 @@ try{
   assert.ok(!(await snapshot(sourceEntry.id)).files.some(file=>file.path==='.cbim/workspace/game/module.json'));
   await module.getByRole('button',{name:'确认提交到工作区',exact:true}).click();await module.waitFor({state:'hidden'});
   await knowledgePath('.cbim/workspace/game').click();
-  await currentView().getByRole('button',{name:'新建 Workflow',exact:true}).click();const workflow=editor('新建Workflow');
+  await clickArchitectureAction(currentView(),'新建 Workflow');const workflow=editor('新建Workflow');
   await workflow.getByRole('textbox',{name:'目录标识',exact:true}).fill('implement');await workflow.getByRole('textbox',{name:'对象名称',exact:true}).fill('实现与验证');
   await workflow.getByRole('textbox',{name:'知识正文',exact:true}).fill('# 实现与验证\n实现业务目标，运行针对性验证，留下可审阅证据。');await save(workflow);
   await currentView().getByText('实现与验证',{exact:true}).waitFor();

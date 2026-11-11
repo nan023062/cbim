@@ -1,3 +1,11 @@
+## 2026-11-12：#37 业务/团队树行尾操作
+
+- [Issue #37](https://github.com/nan023062/cbim/issues/37)，基线 `ab4ffff7`。C1/L1，复用 KnowledgeFileTree，名称后紧跟独立展开箭头，目录行末竖向更多菜单。动作由业务/团队宿主按真实路径注入，模块/Agent/Skill 的编辑、删除、传输与历史仍调用原入口；普通文件不获得对象操作，内置角色不伪装节点。图标有 title/aria-label，Escape 关闭回焦点，点击外部关闭；未提交草稿先保护。
+- 主 Agent 配置/历史角色/项目岗位与 Skill/Workflow 详情操作统一图标。保留原负责人选择和知识预览/删除确认；树本身不写知识。同步6份受菜单移动影响的桌面脚本入口及共享 knowledge-tree-actions.mjs，脚本语法转换通过，未以语法通过代替整包验收。
+- 根据共用树、真实团队消费者及负责人入口选择 `pnpm exec vitest run tests/knowledge-file-tree.test.ts tests/team-model.test.ts tests/inline-module-ownership.test.ts --reporter=json --outputFile=test-results/issue-batch-20261112/37-tests.json`：3文件18项通过。更新旧“整个DOM没有Agent编辑”断言为根行没有编辑/删除，真实Agent行拥有动作，未放宽根保护。
+- `node test-results/issue-batch-20261112/tree-ui-check.mjs 37` 在隔离无头Chrome渲染实际组件/样式，320px验证箭头位置、行末菜单目标、不改变选择、Escape回焦点、折叠、无横向溢出；报告37-tree-ui.json和截图37-tree-320.png。此为组件交互验收，未冒称真实整包知识事务验收。
+- `pnpm typecheck`、`pnpm check:architecture` 通过，1294文件/6678边、0循环/违规。三处契约/类图和源码注释同步，删除已失效GraphViewControls说明。下一次按 KnowledgeFileTree/RowActions → TeamView/BusinessArchitecture → 原编辑器阅读；保护既有事务，视图变化限制在前端，Q5候选无。全量CI、打包安装与人工review未运行，未合并发布。
+
 ## 2026-11-12：#43 剪贴板图片与本地路径附件
 
 - [Issue #43](https://github.com/nan023062/cbim/issues/43)，基线 `93bac767`。原 preload importFiles 只解析系统磁盘路径，截图因此失败；保留其拖放行为，新增输入框图片字节导入与严格路径入口。Core 视觉/等待契约不改，快照仍由 ChatInputs 拥有。C1/L1。

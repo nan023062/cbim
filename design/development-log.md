@@ -1,3 +1,9 @@
+## 2026-11-12：#45 单一树根与右上角视图图标
+
+- [Issue #45](https://github.com/nan023062/cbim/issues/45)，基线 `ab1ce70e`。移除业务树上方重复的工作区“项目根”按钮，以“业务模块”为唯一树根；团队已有单一“团队架构”根，不额外改动层级。根行菜单保留新建/传输入口，内置projectRootModuleId语义不变。共用树右上角改为展开/折叠图标，title/aria-label和键盘可达保持；只修改本地查看状态。
+- 受影响树和团队消费者：`pnpm exec vitest run tests/knowledge-file-tree.test.ts tests/team-model.test.ts --reporter=json --outputFile=test-results/issue-batch-20261112/45-tests.json`，2文件10项通过。`node test-results/issue-batch-20261112/tree-ui-check.mjs 45` 在隔离Chrome的320px实际组件中验证右上角两个纯图标、展开折叠、菜单/键盘与无溢出，证据45-tree-ui.json/45-tree-320.png。
+- `pnpm check:architecture` 通过，0循环/违规；两处契约/类图、组件/样式注释同步。未改变类型/公共接口，不重复类型或全量检查；未打包安装、合并发布或人审。下次从 KnowledgeFileTree 的局部closed状态、knowledge-files.css与BusinessArchitecture根入口修改；稳定数据/事务保持，Q5候选无。
+
 ## 2026-11-12：#37 业务/团队树行尾操作
 
 - [Issue #37](https://github.com/nan023062/cbim/issues/37)，基线 `ab4ffff7`。C1/L1，复用 KnowledgeFileTree，名称后紧跟独立展开箭头，目录行末竖向更多菜单。动作由业务/团队宿主按真实路径注入，模块/Agent/Skill 的编辑、删除、传输与历史仍调用原入口；普通文件不获得对象操作，内置角色不伪装节点。图标有 title/aria-label，Escape 关闭回焦点，点击外部关闭；未提交草稿先保护。

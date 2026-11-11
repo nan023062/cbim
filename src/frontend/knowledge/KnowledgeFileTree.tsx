@@ -2,6 +2,7 @@
  * 作用定位：业务/团队共用的可展开知识目录与文件导航。
  * 设计原因：折叠是局部查看状态，选择只通知宿主；树本身不查询、编辑或登记负责人。
  * 节点动作由宿主按真实路径绑定，更多菜单不改变当前选择；名称后的箭头与行尾动作各自可键盘操作。
+ * 每棵树只渲染一个根；右上角展开/折叠图标只管理本地 closed 集合，不提交知识或运行。
  */
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {Snapshot} from '../../bridge/contracts/workspace';
@@ -27,5 +28,5 @@ export function KnowledgeFileTree({snapshot,root,label,selected,onSelect,query='
    {!!items.length&&<RowActions name={name} actions={items}/>}
   </div>{node.kind==='folder'&&open&&<ul>{node.children.map(branch)}</ul>}</li>;
  };
- return <nav className="knowledge-file-tree" aria-label={label+'知识文件树'}><div className="knowledge-file-actions"><button onClick={()=>setClosed(new Set())}>展开全部</button><button onClick={()=>setClosed(new Set(folders(tree)))}>折叠全部</button></div><ul>{branch(tree)}</ul>{!tree.children.length&&<p>没有匹配的知识文件。</p>}</nav>;
+ return <nav className="knowledge-file-tree" aria-label={label+'知识文件树'}><div className="knowledge-file-actions" role="group" aria-label={label+'视图操作'}><button type="button" title="展开全部" aria-label="展开全部" onClick={()=>setClosed(new Set())}><Icon name="expand" size={17}/></button><button type="button" title="折叠全部" aria-label="折叠全部" onClick={()=>setClosed(new Set(folders(tree)))}><Icon name="collapse" size={17}/></button></div><ul>{branch(tree)}</ul>{!tree.children.length&&<p>没有匹配的知识文件。</p>}</nav>;
 }

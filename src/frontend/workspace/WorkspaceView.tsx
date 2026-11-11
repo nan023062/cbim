@@ -1,4 +1,5 @@
 /**
+ * 业务模块是唯一可见树根，移除重复项目根按钮；根操作仍由文件树提供。
  * 文件树行尾动作捕获本行真实对象，图标配 title/aria-label；原编辑、删除、传输和草稿保护保持。
  * 作用定位：业务模块和真实知识文件的目录树、预览编辑与治理入口。
  * 设计原因：模块选择展示业务职责，文件选择复用知识事务；负责人默认隐式解析，显式设置留在详情。旧岗位、责任及会话证据不随目录浏览改变。
@@ -56,7 +57,7 @@ export function BusinessArchitecture({workspace,tabId,dirty,snapshot,refresh,onS
  return <div className="knowledge-tools business-management"><div className="view-heading"><div><p className="overline">工作区 / 业务架构</p><h1>业务架构</h1><p>按文件夹浏览模块，选择知识文件即可预览、编辑和校验。</p></div><GovernanceLaunch workspaceId={id} kind="business" disabled={!current} onStarted={onStarted}/></div>
   {message&&<p role="status">{message}</p>}{error&&<p role="alert">{error}</p>}
   <div className="inline-search"><Icon name="search"/><input aria-label="搜索项目模块" placeholder="搜索模块或知识文件…" value={query} onChange={e=>setQuery(e.target.value)}/></div>
-  {!current?<Empty icon="knowledge" title="正在读取项目知识"/>:<div className="org-layout"><div className="module-canvas"><button data-testid="project-root-module" onClick={()=>select('.cbim/workspace','folder')}>{workspace.name} · 项目根</button><KnowledgeFileTree snapshot={current} root=".cbim/workspace" label="业务模块" selected={file||chosen} query={query} onSelect={select} actions={item=>nodeActions(item.path)} labels={Object.fromEntries(Object.values(tree?.nodes??{}).map(item=>[item.id,item.name]))}/></div>
+  {!current?<Empty icon="knowledge" title="正在读取项目知识"/>:<div className="org-layout"><div className="module-canvas"><KnowledgeFileTree snapshot={current} root=".cbim/workspace" label="业务模块" selected={file||chosen} query={query} onSelect={select} actions={item=>nodeActions(item.path)} labels={Object.fromEntries(Object.values(tree?.nodes??{}).map(item=>[item.id,item.name]))}/></div>
    <section className="inspector">{file?<KnowledgeFilePreview key={file} snapshot={current} path={file} onSaved={refresh} onDirtyChange={onDirtyChange}/>:node?<>
     <h2>{node.name}</h2><code>{node.id}</code><p>{node.summary}</p><p>执行时依次采用显式负责人、最近父级负责人、模型匹配团队岗位；无匹配由主 Agent 执行。</p>
     <InlineModuleOwner moduleId={node.id} name={node.name} owners={owners}/>{owners.error&&<p role="alert">{owners.error}</p>}{owners.message&&<p role="status">{owners.message}</p>}{(owners.error||owners.blocked)&&<button onClick={()=>void owners.refresh()}>核实原操作并刷新</button>}

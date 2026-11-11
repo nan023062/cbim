@@ -1,3 +1,9 @@
+## 2026-11-12：#42 侧栏标题去除重复品牌
+
+- [Issue #42](https://github.com/nan023062/cbim/issues/42)，基线 `c002b57a`。展开侧栏只保留收起按钮与“团队空间”文字，移除其前的 CBIM/BrandMark 和无消费者的标题样式；窄宽度也不再隐藏标题。欢迎页品牌资源、侧栏伸缩与工作区导航保持原实现。C1/L0。
+- 这是可逆的局部展示修改，不新增镜像单元测试，也不跑无关产品测试。`node test-results/issue-batch-20261112/sidebar-title-check.mjs` 从实际 App 提取标题 JSX 并加载实际样式，在隔离Chrome的320px核对纯文字、无重复品牌、收起回调和无标题溢出；报告42-title-ui.json、截图42-sidebar-320.png。核对过程中清理样式时发现选择器残留，已按原规则精确删除并复查差异，导航样式未被误改。
+- `pnpm check:architecture` 通过，0循环/违规；最终样式修正后 `node scripts/source-architecture.mjs --check` 与 `git diff --check` 通过。外壳注释/契约/类图同步。类型/公共接口无变化，不重复类型检查；此为标题局部渲染核对，整包交互、安装、全量CI、人审、合并发布未执行。下次修改入口为 App.sidebar-top 与 shell.css.sidebar-title，Q5候选无。
+
 ## 2026-11-12：#45 单一树根与右上角视图图标
 
 - [Issue #45](https://github.com/nan023062/cbim/issues/45)，基线 `ab1ce70e`。移除业务树上方重复的工作区“项目根”按钮，以“业务模块”为唯一树根；团队已有单一“团队架构”根，不额外改动层级。根行菜单保留新建/传输入口，内置projectRootModuleId语义不变。共用树右上角改为展开/折叠图标，title/aria-label和键盘可达保持；只修改本地查看状态。

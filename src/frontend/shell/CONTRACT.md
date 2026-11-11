@@ -6,7 +6,7 @@
 
 `App` 保存工作区页签、草稿与附件，界面选择不代表后端运行。全局“运行管理”挂载独立只读 `RuntimeOverview`；离开该页卸载其读取，不创建或恢复任务。
 
-侧栏使用大写简称 CBIM 和 `components/BrandMark`，欢迎页展示完整名称 CBIM Assistant。BrandMark 直接引用品牌 SVG，外壳样式只约束尺寸和排版；用户头像与产品标识保持各自语义，不改变账号或工作区状态。
+展开侧栏仅显示“团队空间”文字及收起按钮，不重复展示 CBIM/BrandMark；窄侧栏也保留文字。欢迎页仍展示完整名称 CBIM Assistant 与 BrandMark。标题变化不改变账号、工作区、侧栏伸缩或品牌资源。
 
 账号菜单只有一个“版本与更新”，同时展示最近检查时间，未登录也可使用。有新版时按同一公开状态高亮菜单并在用户栏显示带可访问名称的主题绿点；关闭横幅不移除这两个提醒。`App` 挂载唯一 `useSoftwareUpdates`，同一快照交给菜单、提醒和弹窗；菜单不自行请求更新服务。打开入口只叠加原生模态框，不切换 screen、不卸载原会话或设置表单；Escape／关闭回到原按钮。弹窗可手动检查，点击下载后由后端继续校验、排空及自动安装重启；窗口不追加 install 调用，失败后才提供明确重试。
 
@@ -19,7 +19,7 @@ class UserMenu { <<component>> }
 class SoftwareUpdates { <<external component>> }
 class useSoftwareUpdates { <<external module>> }
 class BrandMark { <<external component>> }
-App ..> BrandMark : 侧栏与欢迎页共用产品标识
+App ..> BrandMark : 欢迎页产品标识
 App ..> UserMenu : 提供版本与入口回调
 App ..> useSoftwareUpdates : 持有窗口级状态
 App ..> SoftwareUpdates : 叠加弹窗，保留原页面

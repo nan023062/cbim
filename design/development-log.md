@@ -3,6 +3,7 @@
 - 纳入 #36–#45 十项独立提交，PR #48 合入 develop，再经 PR #49 的准确 head 完整 Windows 四片验证正常合入 master。保留原始 37 项集成失败及其根因，修复测试对旧回执/隐藏回复/固定 IPC 数量的依赖、原生摘要误分类及分块中文解码；产品冻结输入没有改变。
 - 制品核验、真实打包六项隔离、架构 UI、隔离全新安装和 0.1.8→0.1.9 候选升级通过；公开后真实 UI 下载/校验/自动安装、普通退出取消、十项数据保留及无重放通过。官网按公开回执同步并经 14 场景验证，详情与准确提交、摘要和 Actions 见 [0.1.9 发布报告](verification/desktop-release-0.1.9-20261112.md)。
 - 发行继续为未签名个人开发版。真实 Brave 账号联调未运行；确定性模型不代表在线模型质量。原本机用户安装未被操作，无关分支保留。
+- 官网收尾 CI 出现一次隔离崩溃恢复单元失败，旧 finally 覆盖了原始原因。补齐原始错误和资源记录归档，保留原断言及失败目录；仅定向运行 `pnpm exec vitest run tests/isolation-recovery-crash.test.ts --reporter=default --reporter=json --outputFile=test-results/desktop-release-019-20261112/crash-diagnostic-local.json`，1 项通过。类型检查通过；未重复本地全仓回归或安装验收，最终收尾 CI 见 PR #50，原始偶发根因尚未复现。
 
 ## 2026-11-12：#42 侧栏标题去除重复品牌
 

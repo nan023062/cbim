@@ -56,6 +56,8 @@
 
 ## 官网与交付边界
 
+官网收尾 PR [#50](https://github.com/nan023062/cbim/pull/50) 的首次完整 CI [run 43110968497](https://github.com/nan023062/cbim/actions/runs/43110968497) 有一项 `isolation-recovery-crash.test.ts` 失败，其余三片通过。原测试的 finally 用“保留未完成核实的原隔离目录”覆盖了触发清理的原始错误，因此不能凭该消息断定产品根因。已补充原始错误链、隔离记录与宿主退出信息的失败归档，并纳入 CI artifact；进程退出、Job 收束、原对象删除等断言未改变。该单元本机定向复测通过，不能据此声称原始偶发问题已修复；收尾最终 CI 与部署结果关联在该 PR。发布前完整 CI、候选和公开在线升级的证据仍对应原冻结制品。
+
 官网 release.json 的版本、标签、时间、文件名、大小、摘要、signed=false 均取公开回执；首页、下载页和 README 同步本版实际功能与 0.1.8 升级范围。品牌检查、官网构建及 14 场景浏览器检查通过，覆盖 320/390/1280 px、深浅色和两份独立离线页面，零溢出/页面错误。保留 Search Console、canonical、robots 与 sitemap。
 
 官网和本报告随收尾 PR 进入 master 的既有 Pages 部署；该 PR 的准确 head、正常 merge 与部署回执关联最终交付，再将 master 快进同步 develop，不删除无关工作分支。发布后关闭本批已完成 Issues 并回填链接；线上部署匿名六文件摘要记录在本次原始证据目录。

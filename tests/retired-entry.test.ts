@@ -1,7 +1,9 @@
 import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {fixture,request,internalKnowledge} from './helpers';
+import {fixture} from './helpers';
+import {request} from './data/knowledge';
+import {internalKnowledge} from './knowledge-tool-fixture';
 import {exists} from '../src/backend/core/foundation/files';
 import {Application} from '../src/backend/main/application';
 

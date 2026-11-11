@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {Application} from '../src/backend/main/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {seedTeam} from '../tests/team-fixture';
-import {summary} from '../tests/helpers';
+import {summary} from '../tests/data/knowledge';
 import {latestExecutable} from './build-artifact.mjs';
 
 // 真实便携 Electron + IPC；仅用独立 Application 准备静态知识和无网络模型配置。

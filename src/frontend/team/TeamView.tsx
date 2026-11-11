@@ -7,7 +7,7 @@ import React,{useEffect,useMemo,useState,type ReactNode} from 'react';
 import type {Snapshot,WorkspaceView} from '../../bridge/contracts/workspace';
 import {Icon} from '../components/Icon';
 import {GraphViewControls} from '../components/GraphViewControls';
-import {MarkdownMessage} from '../conversation/MarkdownMessage';
+import {MarkdownMessage} from '../run-view/MarkdownMessage';
 import {ArchitectureEditor} from '../knowledge/ArchitectureEditor';
 import {WorkspaceResourceTransfer} from '../resources/WorkspaceResourceTransfer';
 import {AgentSessionHistory} from './AgentSessionHistory';

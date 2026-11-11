@@ -2,7 +2,9 @@
  * 作用定位：团队与业务架构共用的语义对象编辑器，负责表单、删除影响预览和显式事务提交。
  * 设计原因：界面填写领域字段，不让用户手工拼目录/索引；固定打开时的知识版本，后端校验并保存计划，避免后台刷新覆盖草稿或跨版本误提交。
  * Agent 编辑读取本机目录选择引擎/模型，失效选型不能提交；删除不依赖模型配置仍然存在。
+ * IPC 边界：动态架构表单先按对应IPC Schema核实；本地数据选择为封闭类别。
  */
+import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useEffect,useRef,useState} from 'react';
 import {EngineModelPicker} from '../components/EngineModelPicker';
 import type {LlmSettings,AgentModelSelection} from '../../bridge/contracts/models';
@@ -58,7 +60,7 @@ export function ArchitectureEditor({workspaceId,snapshot,kind,id,parentId,mode='
       const data=kind==='agent'?{name,summary,capabilities:lines(capabilities),limitations:lines(limitations),runtime}:kind==='module'?{summary,sources}:kind==='skill'?{name,purpose}:{name};
       const operation=removing?{kind,action:'delete',id,cascade}:{kind,action:id?'update':'create',...(id?{id}:{parentId:owner,slug}),data,body};
       const request={workspaceId,instanceId:base.instanceId,revision:base.revision,operations:[operation]};
-      setPreview(await window.cbim.call('architecture.preview',request));
+      setPreview(await window.cbim.call(...checkedIpcCall('architecture.preview',request)));
     }catch(cause){setError(cause instanceof Error?cause.message:String(cause))}finally{lock.current=false;setBusy(false)}
   }
   async function commit(){

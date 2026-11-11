@@ -1,6 +1,6 @@
 import {knowledgeTools} from '../src/backend/scheduler-engine/tools/knowledge-tools';
 import type {Workspace} from '../src/backend/main/workspace/workspace';
-import {summary,moduleFiles} from './helpers';
+import {summary,moduleFiles} from './data/knowledge';
 export async function seedTeam(w:Workspace){
   const service=knowledgeTools(w),identity={workspaceId:w.entry.id,instanceId:w.instanceId};
   const call=async(name:string,args:any={},write=false)=>JSON.parse((await service.callFromRun(name,{...identity,...args},write)).content[0].text);

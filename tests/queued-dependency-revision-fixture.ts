@@ -1,4 +1,5 @@
-import {fixture,request} from './helpers';
+import {fixture} from './helpers';
+import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import type {ReviseQueuedDependenciesInput} from '../src/backend/core/tasks/queued-dependency-revision';

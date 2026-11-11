@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {expect,it,vi} from 'vitest';
-import {fixture,request,moduleFiles} from './helpers';
+import {fixture} from './helpers';
+import {request,moduleFiles} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import {buildWorkspacePackage,parseWorkspacePackage,workspacePackageFingerprint,type WorkspacePackage} from '../src/backend/core/knowledge/portable-package';

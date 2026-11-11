@@ -189,3 +189,13 @@ Application按当前工作区装配唯一IsolatedExecutions，共享DispatchStor
 Application 发送时固定公开 engine，执行工厂核对它与所选供应商一致；配置被改到另一引擎时拒绝旧排队请求。成员使用自己采纳的模型及引擎，主选型不覆盖。member-dispatch 按真实引擎提供能力预检，并按受管目录把原生指纹读取交给对应格式适配。
 
 业务重规划 accept 的原影响核证也按已核主身份调用 EffectObservationService.observeFromMain，派生本运行读占用，避免把自身占用冲突误记为文件不可观察而改变 basis。预览、preflight、公开 observe 和人工处置仍使用独立读占用；不改变原失败回执、证据指纹和权限。
+
+## 角色历史的独立装配
+
+`agent-history.ts:createAgentHistory` 接收最小工作区身份、project 路径定位和 assert，组合 AgentHistoryService、FileAgentHistoryStore 与 FileRunStorage。文件索引适配不再引用 Workspace 或实例化调度服务。构造不读盘；Application 继续在工作区持锁、Store 恢复后初始化历史，在释放工作区前关闭并排空历史写入。
+
+canonical 读取仅按可信索引 source/task/run 定位；safeId、逐层符号链接拒绝、realpath 包含关系和工作区/root/task/run 身份校验保持原实现。既有事务、日志格式、锁和队列不拆分，索引不是正文或执行事实的替代来源。
+
+## 全量 IPC 契约衔接
+
+应用内部 dispatch 对已知操作推导响应，对原始动态字符串只返回 unknown；所有原始请求交给 IPC 契约解析。Electron 入口在 Schema 前核实主 Frame 与安装期间门禁，原生操作成功值按操作配对，未知输入不触发系统副作用。

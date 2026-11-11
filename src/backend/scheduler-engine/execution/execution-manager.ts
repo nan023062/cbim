@@ -4,6 +4,7 @@
  * 设计原因：原命令先查回执；等待补充的附件一次准备，图片仅留本轮。容量准入先于意图，beforeRun 核额度、停止与清单后登记运行；人工决定仍走独立系统来源，当前坏历史不能回退旧头。
  * 插入边界：先查原 scope/run/queue 回执再领取和读附件；绑定明确的原主 run，停止信号先于串行清理。周期输入接收落盘后才移除队列，未知结果同时阻止内存自动推进。
  * 执行选项接受明确引擎并随本轮准备、排队与后续调用传递；具体适配器仍由可信工厂选择。
+ * 读取边界：团队与模块查询统一经 knowledge/read-models 公开入口，主对话生命周期与写操作仍由现有调度服务管理。
  */
 import {MessageQueue,type QueueCounts} from '../conversation/message-queue';
 import {ApprovalQueue} from '../conversation/approvals';
@@ -22,8 +23,8 @@ import type {RunInputSource,RunSummary,ConversationThreadView} from '../../core/
 import {checkedRunInputSource} from '../../core/brain/input-source';
 import type {createWorkspaceLoop,WorkspaceLoopOptions} from './loop-engine';
 import {prepareTeamTask,type TeamTaskInput} from '../context/team-workflow';
-import {Team} from '../../core/team/model';
-import {BusinessWorkspace} from '../../core/workspace/model';
+import {Team,BusinessWorkspace} from '../../core/knowledge/read-models';
+
 import {goalContinuationRequestSchema,type GoalContinuationRequest,type GoalContinuationReceipt} from '../../core/tasks/scope-continuation';
 import type {DispatchScopeWait} from '../../core/tasks/dispatch-scope';
 import type {ScopeActiveInput,ScopeActiveInputPayload,ScopeActiveInputToken,ScopeActiveInputSendReceipt} from '../../core/tasks/scope-active-input';
@@ -518,7 +519,7 @@ export class WorkspaceExecutionManager {
     const records=[];
     for(const taskId of tasks)for(const runId of await this.storage.list(path.join(this.directory(),safeId(taskId)))){
       try{const {events,...summary}=await this.inspect(taskId,runId);records.push({...summary,eventCount:events.length})}
-      catch(e:any){records.push({taskId,runId,status:'unreadable',error:e.message})}
+      catch(e:any){records.push({taskId,runId,status:'unreadable' as const,error:e instanceof Error?e.message:String(e)})}
     }
     return records;
   }

@@ -22,7 +22,7 @@ test('真实主会话切换 Pi → Claude → Pi，各用原生文件并经请�
       prior=await f.app.dispatch(index?'loop.resume':'loop.chat',{id:entry.id,...(prior?{taskId:prior.taskId,runId:prior.runId}:{}),message:'Turn '+index+' preserve this context.',options});
       await vi.waitFor(async()=>{const scopes=await budgetScopes(f.user,entry.id);expect(scopes).toHaveLength(index+1);expect(scopes.at(-1)?.status).toBe('closed')},{timeout:30000});
       await vi.waitFor(()=>expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0));
-      const summary=await f.app.dispatch('loop.inspect',{id:entry.id,...prior});summaries.push(summary);expect(summary.status,JSON.stringify({engine,index,events:summary.events.filter((e:any)=>e.type.startsWith('run.')).slice(-1)})).toBe('completed');expect(summary.events[0].data.engine).toBe(engine);expect(summary.sessionFile).toBeTruthy();
+      const summary=await f.app.dispatch('loop.inspect',{id:entry.id,taskId:prior.taskId,runId:prior.runId});summaries.push(summary);expect(summary.status,JSON.stringify({engine,index,events:summary.events.filter((e:any)=>e.type.startsWith('run.')).slice(-1)})).toBe('completed');expect(summary.events[0].data.engine).toBe(engine);expect(summary.sessionFile).toBeTruthy();
       expect(summary.events.find((e:any)=>e.type==='engine.status'&&e.data.metric==='tool-catalog'&&e.data.stage==='active')?.data.missing).toEqual([]);
       const scope=(await budgetScopes(f.user,entry.id)).at(-1)!,report=requestBudgetReportSchema.parse(await f.app.dispatch('dispatch.requestBudget',{workspaceId:entry.id,rootSessionId:prior.taskId,scopeId:scope.scopeId}));
       expect(report).toMatchObject({requests:1,reported:1,tokens:120,reservedTokens:0,unknown:0});

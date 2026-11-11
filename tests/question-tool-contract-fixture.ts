@@ -6,7 +6,7 @@ import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
 import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
 import {seedTeam} from './team-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {questionContractData as data} from './question-tool-contract-provider';
 import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';

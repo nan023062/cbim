@@ -5,7 +5,7 @@ import type {Application} from '../src/backend/main/application';
 import type {LlmDefinition} from '../src/backend/core/brain/llm/config';
 import {workspaceMemberDetailSchema,type WorkspaceMemberAdaptation} from '../src/backend/core/team/workspace-member';
 import {seedTeam} from './team-fixture';
-import {moduleFiles,request,summary} from './helpers';
+import {moduleFiles,request,summary} from './data/knowledge';
 import {commitWorkspaceMember} from './workspace-member-fixture';
 import {commitModuleOwnership,moduleOwnershipChange,moduleOwnershipDetail} from './module-ownership-fixture';
 export {workflowConditionRecords as ownerExecutionRecords,workflowConditionLogBytes as ownerExecutionLogBytes} from './workflow-condition-fixture';

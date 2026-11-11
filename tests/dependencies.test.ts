@@ -15,8 +15,88 @@ function audit(files:Record<string,string>){
 test('all maintained code has no cycles including type dependencies and no unreviewed loads',()=>{
   const result=auditDependencies();
   expect(result.files).toBeGreaterThan(150);
-  expect({cycles:result.cycles,unresolved:result.unresolved,dynamic:result.dynamic,violations:result.violations}).toEqual({cycles:[],unresolved:[],dynamic:[],violations:[]});
+  expect({cycles:result.cycles,unresolved:result.unresolved,dynamic:result.dynamic,violations:result.violations,logical:result.logicalViolations}).toEqual({cycles:[],unresolved:[],dynamic:[],violations:[],logical:[]});
   expect(result.ok).toBe(true);
+  const reachable=(start:string)=>{
+    const seen=new Set([start]),queue=[start];
+    for(let i=0;i<queue.length;i++)for(const edge of result.edges.filter(e=>e.from===queue[i]))if(!seen.has(edge.to)){seen.add(edge.to);queue.push(edge.to)}
+    return [...seen];
+  };
+  for(const file of result.edges.map(edge=>edge.from).filter(file=>file.startsWith('src/frontend/run-view/'))){
+    expect(reachable(file).filter(value=>value.startsWith('src/frontend/tasks/')||value.startsWith('src/frontend/conversation/')||value.startsWith('src/frontend/team/')),file).toEqual([]);
+  }
+  for(const file of ['tests/data/knowledge.ts','tests/data/domain-snapshot.ts','tests/core-domains.test.ts']){
+    expect(reachable(file).filter(value=>value.startsWith('src/backend/main/')||value.startsWith('src/backend/scheduler-engine/')||value==='tests/helpers.ts'),file).toEqual([]);
+  }
+});
+
+test('read models are accessible through their public entry, not private implementations',()=>{
+  const files={
+    'src/backend/core/knowledge/read-models.ts':"export {Team} from '../team/model';",
+    'src/backend/core/team/model.ts':'export class Team {}',
+  };
+  expect(audit({...files,'src/backend/scheduler-engine/a.ts':"import {Team} from '../core/knowledge/read-models';"}).ok).toBe(true);
+  const result=audit({...files,'src/backend/scheduler-engine/a.ts':"import type {Team} from '../core/team/model';"});
+  expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'knowledge-read-models',kind:'type'}));
+  expect(result.cycles).toEqual([]);expect(result.ok).toBe(false);
+});
+test('alias reexports and literal dynamic imports cannot bypass a private entry',()=>{
+  const files={
+    'tsconfig.json':JSON.stringify({compilerOptions:{baseUrl:'.',paths:{'@core/*':['src/backend/core/*']}}}),
+    'src/backend/core/team/model.ts':'export class Team {}',
+  };
+  for(const source of ["export type {Team} from '@core/team/model';","export type T=import('@core/team/model').Team;","import('../core/team/model');"]){
+    const result=audit({...files,'src/backend/scheduler-engine/a.ts':source});
+    expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry'}));expect(result.ok).toBe(false);
+  }
+});
+test('snapshot data and read models reject reverse dependencies on orchestration without needing a file cycle',()=>{
+  for(const file of ['src/backend/core/knowledge/types.ts','src/backend/core/knowledge/snapshot.ts']){
+    const result=audit({[file]:"import type {Query} from './knowledge-queries';",'src/backend/core/knowledge/knowledge-queries.ts':'export interface Query {}'});
+    expect(result.cycles).toEqual([]);expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'logical-direction'}));expect(result.ok).toBe(false);
+  }
+});
+
+test('P1 narrow boundaries reject restored write access, shared stores and business tool registration',()=>{
+  const cases=[
+    ['src/backend/core/knowledge/knowledge-queries.ts','./ports','src/backend/core/knowledge/ports.ts','knowledge-query-orchestration'],
+    ['src/backend/core/knowledge/knowledge-queries.ts','./knowledge-refresh','src/backend/core/knowledge/knowledge-refresh.ts','knowledge-query-orchestration'],
+    ['src/backend/core/tasks/model-request-budget-storage.ts','./dispatch-storage','src/backend/core/tasks/dispatch-storage.ts','request-budget-port'],
+    ['src/backend/scheduler-engine/execution/model-request-budget-service.ts','../../core/tasks/dispatch-storage','src/backend/core/tasks/dispatch-storage.ts','request-budget-service'],
+    ['src/backend/scheduler-engine/execution/model-request-budget-service.ts','./scope-budget-service','src/backend/scheduler-engine/execution/scope-budget-service.ts','request-budget-service'],
+    ['src/backend/core/brain/engine-tools.ts','./member-tool-capabilities','src/backend/core/brain/member-tool-capabilities.ts','engine-tool-registry'],
+  ];
+  for(const [file,spec,target,boundary] of cases){
+    const result=audit({[file]:`import type {T} from '${spec}';`,[target]:'export interface T {}'});
+    expect(result.cycles).toEqual([]);expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'logical-direction',boundary}));expect(result.ok).toBe(false);
+  }
+});
+test('test data rejects Application imports and private helper reexports',()=>{
+  const direct=audit({'tests/data/knowledge.ts':"import type {App} from '../../src/backend/main/application';",'src/backend/main/application.ts':'export class App {}'});
+  expect(direct.logicalViolations).toContainEqual(expect.objectContaining({rule:'logical-direction',boundary:'test-data'}));expect(direct.ok).toBe(false);
+  const privateEntry=audit({'tests/data/private.ts':'export const value=1;','tests/sample.ts':"export {value} from './data/private';"});
+  expect(privateEntry.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'test-data'}));expect(privateEntry.ok).toBe(false);
+});
+test('a shared pure helper cannot hide an indirect filesystem or SDK dependency',()=>{
+  const indirect=audit({
+    'tests/data/knowledge.ts':"import {hash} from '../../src/backend/core/foundation/serialization';",
+    'src/backend/core/foundation/serialization.ts':"import {write} from './files'; export const hash=write;",
+    'src/backend/core/foundation/files.ts':'export const write=()=>{};',
+  });
+  expect(indirect.logicalViolations).toContainEqual(expect.objectContaining({rule:'logical-direction',boundary:'pure-foundation'}));expect(indirect.ok).toBe(false);
+  for(const spec of ['node:fs/promises','@anthropic-ai/claude-agent-sdk']){
+    const result=audit({'src/backend/core/knowledge/snapshot.ts':`import type * as External from '${spec}';`});
+    expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'knowledge-read-models'}));expect(result.ok).toBe(false);
+  }
+});
+test('relative paths into node_modules cannot hide an external dependency',()=>{
+  const result=audit({
+    'src/backend/core/knowledge/snapshot.ts':"import type {Sdk} from '../../../../node_modules/private-sdk/index';",
+    'node_modules/private-sdk/index.ts':'export interface Sdk {}',
+  });
+  expect(result.unresolved).toEqual([]);
+  expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'knowledge-read-models',spec:'../../../../node_modules/private-sdk/index'}));
+  expect(result.ok).toBe(false);
 });
 test('detects the Application to dispatcher reverse type dependency',()=>{
   const result=audit({'src/backend/core/application.ts':"import {dispatch} from './dispatch'; export class App {}",'src/backend/core/dispatch.ts':"import type {App} from './application'; export const dispatch=(app:App)=>app;"});
@@ -70,4 +150,21 @@ test('frontend and backend can only meet through the public bridge contracts',()
   ];
   for(const files of fixtures)expect(audit(files).violations).toHaveLength(1);
   expect(audit({'src/frontend/a.ts':"import type {T} from '../bridge/contracts/b';",'src/bridge/contracts/b.ts':"export type {T} from '../../backend/core/c';",'src/backend/core/c.ts':'export type T=string;'}).ok).toBe(true);
+});
+
+
+test('P2 shared rendering, IPC contracts and history storage reject business control dependencies',()=>{
+  const cases=[
+    ['src/frontend/run-view/WorkStatus.tsx','../tasks/useExecutionRecovery','src/frontend/tasks/useExecutionRecovery.ts','run-view'],
+    ['src/frontend/run-view/ToolActivity.tsx','../conversation/RunToolDetails','src/frontend/conversation/RunToolDetails.tsx','run-view'],
+    ['src/backend/main/persistence/tasks/agent-history.ts','../../workspace/workspace','src/backend/main/workspace/workspace.ts','agent-history-file-store'],
+    ['src/backend/main/persistence/tasks/agent-history.ts','../../../scheduler-engine/runtime/agent-history','src/backend/scheduler-engine/runtime/agent-history.ts','agent-history-file-store'],
+    ['src/bridge/contracts/agent-history-ipc.ts','../../backend/main/application','src/backend/main/application.ts','ipc-contract'],
+    ['src/bridge/contracts/ipc-loop.ts','../../backend/scheduler-engine/execution/execution-manager','src/backend/scheduler-engine/execution/execution-manager.ts','ipc-contract'],
+    ['src/bridge/contracts/ipc-desktop.ts','../../backend/main/main','src/backend/main/main.ts','ipc-contract'],
+  ];
+  for(const [file,spec,target,boundary] of cases){
+    const result=audit({[file]:`import type {T} from '${spec}';`,[target]:'export interface T {}'});
+    expect(result.cycles).toEqual([]);expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'logical-direction',boundary}));expect(result.ok).toBe(false);
+  }
 });

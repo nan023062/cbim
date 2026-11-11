@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import ts from 'typescript';
+import {checkLogicalBoundaries} from './architecture-boundaries.mjs';
 
 // 检查维护中的代码，而非编译后的 JS；类型边和 re-export 同样构成架构依赖。
 // .agents 是宿主提供的 Skill 符号链接入口，实际文件归 .claude 扫描，避免重复遍历。
@@ -85,7 +86,7 @@ export function auditDependencies(root = process.cwd(), options = {}) {
     if (errors.length) throw new Error(errors.map(e => ts.flattenDiagnosticMessageText(e.messageText,'\n')).join('\n'));
     compilerOptions = {...compilerOptions, ...parsed.options};
   }
-  const edges = [], unresolved = [], dynamic = [], external = [];
+  const edges = [], unresolved = [], dynamic = [], external = [], externalReferences = [];
   for (const file of unique) {
     const ast = ts.createSourceFile(file, fs.readFileSync(file,'utf8'), ts.ScriptTarget.Latest, true);
     if (ast.parseDiagnostics.length) throw new Error(`无法解析 ${relative(file)}：${ast.parseDiagnostics.map(e => ts.flattenDiagnosticMessageText(e.messageText,'\n')).join('\n')}`);
@@ -115,6 +116,8 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       if (target && known.has(key(target))) edges.push({from:info.file, to:known.get(key(target)), line:info.line, kind, spec});
       else if (target && !slash(target).includes('/node_modules/') && code.test(target)) unresolved.push({...info, spec, reason:'目标代码在扫描范围之外'});
       else if (!target && (spec.startsWith('.') || path.isAbsolute(spec) || Object.keys(compilerOptions.paths ?? {}).some(pattern => spec.startsWith(pattern.split('*')[0])))) unresolved.push({...info, spec, reason:'本地引用无法解析'});
+      // 相对或绝对路径直达 node_modules 也属于外部依赖，不能靠改写导入拼法绕过逻辑边界。
+      if (target && slash(target).includes('/node_modules/') || !target && !spec.startsWith('.') && !path.isAbsolute(spec)) externalReferences.push({...info,spec});
       if (actual && known.has(key(actual)) && (!target || key(target) !== key(actual))) edges.push({from:info.file,to:known.get(key(actual)),line:info.line,kind,spec});
     }
     function visit(node) {
@@ -136,7 +139,8 @@ export function auditDependencies(root = process.cwd(), options = {}) {
     return !layers[a] || !layers[a].includes(b);
   });
   const circular = cycles([...known.values()],edges);
-  return {ok:!circular.length && !unresolved.length && !dynamic.length && !violations.length, files:unique.length, edges, cycles:circular, unresolved, dynamic, external, violations};
+  const logical = checkLogicalBoundaries([...known.values()],edges,externalReferences);
+  return {ok:!circular.length && !unresolved.length && !dynamic.length && !violations.length && !logical.violations.length, files:unique.length, edges, cycles:circular, unresolved, dynamic, external, violations, logicalViolations:logical.violations, logicalCoverage:logical.coverage};
 }
 
 if (process.argv[1] && key(fileURLToPath(import.meta.url)) === key(process.argv[1])) {
@@ -144,7 +148,8 @@ if (process.argv[1] && key(fileURLToPath(import.meta.url)) === key(process.argv[
     const report = auditDependencies();
     console.log(`依赖检查：${report.files} 个文件，${report.edges.length} 条依赖（包含类型），${report.cycles.length} 个循环。`);
     for (const cycle of report.cycles) for (const edge of cycle.edges) console.error(`${edge.from}:${edge.line} -> ${edge.to} [${edge.kind}]`);
-    for (const field of ['unresolved','dynamic','violations']) if (report[field].length) console.error(field,JSON.stringify(report[field],null,2));
+    for (const field of ['unresolved','dynamic','violations','logicalViolations']) if (report[field].length) console.error(field,JSON.stringify(report[field],null,2));
+    console.log(`逻辑边界：${report.logicalCoverage.map(item=>`${item.id}=${item.files}`).join('，')}；违规 ${report.logicalViolations.length}。`);
     console.log(`已审核外部动态加载：${report.external.length} 处；不将其视为项目内部依赖。`);
     if (!report.ok) process.exitCode = 1;
   } catch (error) {console.error(error); process.exitCode = 1;}

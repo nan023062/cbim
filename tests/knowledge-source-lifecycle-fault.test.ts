@@ -1,16 +1,18 @@
+import type {IpcAction} from '../src/bridge/contracts/ipc-call';
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {Application} from '../src/backend/main/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {knowledgeSourceChangeSchema,type KnowledgeSourceChange} from '../src/backend/core/workspace/knowledge-source';
-import {fixture,summary} from './helpers';
+import {fixture} from './helpers';
+import {summary} from './data/knowledge';
 import {seedKnowledgeSource,knowledgeSourceFixture as data,knowledgeSourceDiskEvidence,knowledgeSourceHttpProbe,knowledgeSourceMemberChange} from './knowledge-source-lifecycle-fixture';
 
 it.each(['prepare-reply-lost','final-not-saved','final-reply-lost'] as const)('actual Application recovers only the original knowledge/source handshake after %s',async mode=>{
   const f=await fixture(),probe=await knowledgeSourceHttpProbe();let app=f.app;
   try{
-    const call=(action:string,input?:unknown)=>app.dispatch(action,input),seeded=await seedKnowledgeSource(call,f.temp,probe.url),id=seeded.entry.id,workspace=app.workspace(id),coordinator=workspace.sources;
+    const call=<A extends IpcAction>(action:A,input?:unknown)=>app.dispatch(action,input),seeded=await seedKnowledgeSource(call,f.temp,probe.url),id=seeded.entry.id,workspace=app.workspace(id),coordinator=workspace.sources;
     if(!coordinator)throw Error('Actual Application did not attach its unique source coordinator');
     const snapshot=await workspace.snapshot(),input={workspaceId:id,instanceId:workspace.instanceId,revision:snapshot.revision,operations:[{kind:'agent',action:'create',parentId:'.cbim/team',slug:'fault_worker',data:{name:'原事务故障验证',summary,capabilities:['核实']},body:'# 真实持久写入\n\n只核实原事务，不自动重做。'}]};
     const preview=await call('architecture.preview',input);expect(preview.validation.structural).toBe(true);const commitInput={workspaceId:id,instanceId:workspace.instanceId,planId:preview.planId};
@@ -49,7 +51,7 @@ it.each(['prepare-reply-lost','final-not-saved','final-reply-lost'] as const)('a
 it.each([false,true])('a genuine prepared journal without DS admission never overwrites an external after-image on reopen (external change=%s)',async externalChange=>{
   const f=await fixture(),probe=await knowledgeSourceHttpProbe();let app=f.app;
   try{
-    const call=(action:string,input?:unknown)=>app.dispatch(action,input),seeded=await seedKnowledgeSource(call,f.temp,probe.url),id=seeded.entry.id,workspace=app.workspace(id),coordinator=workspace.sources;
+    const call=<A extends IpcAction>(action:A,input?:unknown)=>app.dispatch(action,input),seeded=await seedKnowledgeSource(call,f.temp,probe.url),id=seeded.entry.id,workspace=app.workspace(id),coordinator=workspace.sources;
     if(!coordinator)throw Error('Actual source coordinator absent');
     const snapshot=await workspace.snapshot(),relative=data.agentId+'/principles.md',file=path.join(seeded.project,...relative.split('/'));
     const preview=await call('architecture.preview',{workspaceId:id,instanceId:workspace.instanceId,revision:snapshot.revision,operations:[{kind:'agent',action:'update',id:data.agentId,body:data.changedPrinciples}]});expect(preview.validation.structural).toBe(true);

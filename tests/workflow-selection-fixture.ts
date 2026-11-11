@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import type {Application} from '../src/backend/main/application';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {seedJsonValidation,jsonValidationRecords} from './json-validation-fixture';
 import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';

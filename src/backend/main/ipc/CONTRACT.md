@@ -108,3 +108,12 @@ dispatch.manifestReport 必须明确 workspace/root/task/run；省略 manifestId
 ## 原隔离执行核实与清理
 
 dispatch.isolatedExecutionReport显式读取原运行，dispatch.isolatedExecutionCleanup显式提交当前instanceId及原执行/basis/commandId；不允许renderer传入路径、PID、profile或运行脚本。
+## 全量关联 IPC 分派
+
+`dispatch.ts` 仅识别和组合已登记操作，153 项应用入口分为历史及八个业务处理器组；其它 11 项原生操作留在 Electron main.ts。`request.ts` 先执行既有关闭门禁，再按共享 Schema 解析，保留受理前领域错误码。服务调用后的异常不经解析错误转换；失败不自动重试。退役 loop.start 在取服务及选模型前继续拒绝，未知或原型属性名称返回 ACTION。
+
+队列插入仅缺少或无效的 `expectedRunId` 时，结构拒绝仍返回 `QUEUE_INSERT_STALE`；不取得执行服务、不补成当前运行，原队列项保留。历史派发的缺省 `scopeId` 则交给服务先查原回执，新派发继续以 `DISPATCH_SCOPE_REQUIRED` 拒绝。
+
+每个处理器实际参数和返回受对应 `IpcHandlers` 约束。登记、责任、治理与处置只由本机闭包提供 actor，客户端不能发送授权来源。查询只取得当前工作区原服务，不隐式打开工作区或恢复执行。governance 命令按实际 action 核实回执；通用 receipt 仍是不同种类或 undefined，消费者必须分别判断。
+
+角色历史由 `agent-history.ts` 的最小端口装配，与其它组共用统一解析；端口没有索引写入、运行、恢复或生命周期能力。领域身份/路径/游标核验不被桥类型取代，查询失败不折算为空历史。

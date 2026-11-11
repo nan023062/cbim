@@ -24,8 +24,8 @@ window.cbim={call:async(action,args)=>{const f=window.fixture;f.calls.push({acti
 const {App}=await import('/src/frontend/shell/App.tsx');createRoot(document.getElementById('root')).render(<Profiler id="app" onRender={(_,phase,duration)=>{if(window.fixture.bench&&phase==='update')window.fixture.commits.push(duration)}}><App/></Profiler>);
 `);
 const probes={
- '/src/frontend/conversation/MarkdownMessage.tsx': ['  const [error,setError]=useState','  (window as any).fixture.stats.markdown++;\n  const [error,setError]=useState'],
- '/src/frontend/conversation/transcript.ts':['  const source=run.source','  (window as any).fixture.stats.transcript++;\n  const source=run.source'],
+ '/src/frontend/run-view/MarkdownMessage.tsx': ['  const [error,setError]=useState','  (window as any).fixture.stats.markdown++;\n  const [error,setError]=useState'],
+ '/src/frontend/run-view/transcript.ts':['  const source=run.source','  (window as any).fixture.stats.transcript++;\n  const source=run.source'],
  '/src/frontend/conversation/usage.ts':['  const data=taskUsage','  (window as any).fixture.stats.usage++;\n  const data=taskUsage'],
 };
 const server=await createServer({root,configFile:false,esbuild:{jsx:'automatic'},plugins:[{name:'input-readonly-probes',enforce:'pre',transform(code,id){const probe=Object.entries(probes).find(([file])=>id.replaceAll('\\','/').endsWith(file));if(!probe)return;assert.ok(code.includes(probe[1][0]),'probe source changed');return code.replace(...probe[1])}}],server:{host:'127.0.0.1',port:0},logLevel:'error'});let browser,page;const checks=[],errors=[];

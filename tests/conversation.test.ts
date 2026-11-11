@@ -1,5 +1,5 @@
 import {expect,test} from 'vitest';
-import {transcript} from '../src/frontend/conversation/transcript';
+import {transcript} from '../src/frontend/run-view/transcript';
 import {readLayouts} from '../src/frontend/shell/tabs';
 import type {RunSummary,EngineEvent} from '../src/backend/core/brain/types';
 function run(events:EngineEvent[]):RunSummary{return {task:{taskId:'task',workspaceId:'workspace',root:'root',goal:'目标',moduleIds:[],acceptance:['验证']},runId:'run',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:events.map((e,i)=>({...e,version:1,seq:i+1,taskId:'task',workspaceId:'workspace',runId:'run',time:'2026-11-06T00:00:00Z'}))}}

@@ -1,4 +1,5 @@
 /**
+ * 装配边界：启动前检查冻结验证要求和真实平台支持，验证器扩展不再修改通用运行核心。
  * 作用定位：正式成员的 JSON/CSV/PNG 验证短门闩，连接冻结要求、原文件或完整集合身份及平台同字节读取。
  * 设计原因：模型不能指定路径、规则或结论；完整模式保留原操作证明，在专业检查两侧重核全集合，共用15秒期限；知识、进度与代次须稳定，暂存须有真实成功回执。
  * 职责边界：rejected只表示实际检查不符合；交付另重核同一完整集合，旧模式复核选定文件，不执行命令或授予恢复权限。
@@ -34,15 +35,8 @@ export interface ValidationFilePort {
   validateImage?(expected:ArtifactFileFact,schema:PngImageSchema,signal:AbortSignal):Promise<PngValidationOutcome&{artifact:ArtifactFileFact}>;
   checkFiles(files:readonly ArtifactFileFact[],signal:AbortSignal):Promise<ArtifactFileCheck[]>;
 }
-/** 一轮一实例；真实 validation 调用结束释放其锁，交付复核拥有独立 finally 生命周期。 */
-export class RunValidation {
-  readonly tools:ValidationTools;
-  private events:StoredEvent[]=[];
-  private reserved?:{id:string;input:ValidationInput;consumed:boolean};
-  private deliveryReading=false;
-  private generations=new Map<string,number>();
-  private controller=new AbortController();
-  constructor(private readonly binding:MemberRunBinding,private readonly bindings:readonly WorkflowContractBinding[],private readonly artifacts:ArtifactCapturePort,private readonly files:ValidationFilePort,private readonly context:{
+/** 运行时仅提供可信身份、当前进度、授权核实与可靠事件保存，不定义各验证器规则。 */
+export interface RunValidationContext {
     current():TaskProgress|undefined;
     generation():number;
     assertReady(toolCallId:string):void;
@@ -51,7 +45,25 @@ export class RunValidation {
     /** 完整模式下在同字节专业检查两侧重读全部范围，共用一次读取时限。 */
     verifyManifest?(record:OutputManifestRecord,signal:AbortSignal):Promise<void>;
     save(value:ValidationResult):Promise<void>;
-  }){
+  }
+/** 在获取运行资源前核实冻结要求；无要求时不创建能力，失败不启动引擎。 */
+export function prepareRunValidation(workflows:readonly WorkflowContractBinding[],member:MemberRunBinding|undefined,artifacts:ArtifactCapturePort|undefined,files:ValidationFilePort|undefined):{required:boolean;create(context:RunValidationContext):RunValidation|undefined} {
+    const validationCount=workflows.reduce((count,item)=>count+(item.contract.delivery?.requiredValidations?.length??0),0),validationRequired=validationCount>0;
+    if(validationCount>jsonValidationLimits.records)fail('WORKFLOW_VALIDATION_LIMIT','冻结的产物验证要求超过本轮 16 条记录上限，不能启动执行');
+    if(validationRequired&&(!member||!artifacts||!files))fail('VALIDATION_UNAVAILABLE','冻结的产物验证要求缺少正式成员文件验证端口');
+    if(workflows.some(item=>item.contract.delivery?.requiredValidations?.some(rule=>rule.validator==='csv-table-v1'))&&!files?.validateTable)fail('VALIDATION_UNAVAILABLE','冻结的CSV要求缺少真实表格验证端口，不能启动执行');
+    if(workflows.some(item=>item.contract.delivery?.requiredValidations?.some(rule=>rule.validator==='png-raster-v1'))&&!files?.validateImage)fail('VALIDATION_UNAVAILABLE','冻结的PNG要求缺少真实图片解码端口，不能启动执行');
+  return {required:validationRequired,create:context=>validationRequired?new RunValidation(member!,workflows,artifacts!,files!,context):undefined};
+}
+/** 一轮一实例；真实 validation 调用结束释放其锁，交付复核拥有独立 finally 生命周期。 */
+export class RunValidation {
+  readonly tools:ValidationTools;
+  private events:StoredEvent[]=[];
+  private reserved?:{id:string;input:ValidationInput;consumed:boolean};
+  private deliveryReading=false;
+  private generations=new Map<string,number>();
+  private controller=new AbortController();
+  constructor(private readonly binding:MemberRunBinding,private readonly bindings:readonly WorkflowContractBinding[],private readonly artifacts:ArtifactCapturePort,private readonly files:ValidationFilePort,private readonly context:RunValidationContext){
     this.binding=Object.freeze(structuredClone(binding));this.bindings=structuredClone(bindings);
     this.tools=new ValidationTools(this.binding,{knowledgeRevision:artifacts.knowledgeRevision,bindings:this.bindings,manifestIdentity:input=>{const manifest=this.selected(input).manifest;return manifest?outputManifestIdentity(manifest.manifest):undefined},run:(input,id)=>this.run(input,id)});
   }

@@ -4,7 +4,8 @@ import path from 'node:path';
 import {Application} from '../src/backend/main/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {DesktopUpdates,type DesktopUpdateInstaller} from '../src/backend/updater/desktop-updates';
-import {fixture,moduleFiles,request} from './helpers';
+import {fixture} from './helpers';
+import {moduleFiles,request} from './data/knowledge';
 
 it('one download waits for real Application shutdown and preserves the workspace on reopen',async()=>{
   const f=await fixture();let reopened:Application|undefined,updates:DesktopUpdates|undefined;

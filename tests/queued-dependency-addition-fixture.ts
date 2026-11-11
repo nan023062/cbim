@@ -14,7 +14,7 @@ import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
 import type {AgentInstance} from '../src/backend/core/team/agent-types';
 import {seedTeam} from './team-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {dependencyAdditionData as data} from './queued-dependency-addition-provider';
 
 export async function seedDependencyAddition(app:Application,project:string,provider:{url:string;bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>void}){

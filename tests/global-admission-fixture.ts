@@ -6,7 +6,7 @@ import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import type {DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import {seedTeam} from './team-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {globalAdmissionFixture as data,type AdmissionProject} from './global-admission-provider';
 
 /** Both projects share the actual Application and model catalog, while knowledge and business files stay isolated. */

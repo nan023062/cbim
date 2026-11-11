@@ -326,3 +326,28 @@ models 公开重导出 LoopEngine、AgentModelSelection、engineLabel、configur
 ### 引擎协议选型
 
 models 仅重导出 engineApi 等纯规则，设置页用它约束 Codex/Claude 的协议选择；不会把原生二进制、账号目录或进程参数作为公开 IPC。
+
+## 分组关联 IPC 契约
+
+`ipc-call.ts` 将全部 164 项既有操作关联为请求 Schema、响应类型及调用元组；其中 1 项 `loop.start` 已退役，类型为 never，运行时仍明确拒绝。原剩余 160 项完成迁移，旧通配清单退出；没有任意 string/any 响应重载。操作名不是权限或执行凭证。
+
+| 组 | 契约文件 | 数量 |
+| --- | --- | --- |
+| 角色历史 | agent-history-ipc.ts | 4 |
+| 岗位与模块责任 | ipc-people.ts | 11 |
+| 模块治理 | ipc-governance.ts | 8 |
+| 派发与运行核实 | ipc-dispatch.ts | 39 |
+| 设置 | ipc-settings.ts | 19 |
+| 会话与队列 | ipc-loop.ts | 30 |
+| 附件 | ipc-chat.ts | 7 |
+| 资源仓库 | ipc-resources.ts | 20 |
+| 工作区与知识编辑 | ipc-workspace.ts | 15 |
+| 原生桌面 | ipc-desktop.ts | 11 |
+
+Main 的 153 项应用处理器受 `IpcHandlers` 映射约束；11 项桌面操作在 main.ts 使用对应解析和 `ipcSuccess`。输入在传输边界为 unknown，查找服务前解析。已有领域错误码、关闭门禁、身份与权限、CAS、回执核实继续有效；解析异常不捕获或改写已进入服务后的错误。动态表单使用 `checkedIpcCall` 按指定 Schema 验证后形成关联元组，不能自行声明响应泛型。
+
+`dispatch.task.scopeId` 为兼容历史原命令查询保留可缺省。服务先查询原回执，再拒绝缺少周期的新派发（`DISPATCH_SCOPE_REQUIRED`）；桥层不补造周期，也不以提前结构拒绝覆盖这段幂等与错误语义。
+
+`workspace-view.ts` 只定义数据；workspace.ts 组合 Bridge 和重导出，避免响应类型反向引用调用桥形成类型循环。对象编辑 Schema 直接来自纯 `object-contract.ts`，不经由包含 Node.js 事务实现的 `object-crud.ts`；浏览器构建测试禁止 IPC Schema 的传递依赖加载 Node.js 或 Electron。服务已有公开 DTO 继续作为数据契约；任意日志数据/知识 JSON 的内容仍按其领域协议表达，本次不是递归重写所有 JSON。治理命令进一步核实实际回执种类，附件列表/预览与会话选择器在 JSON 投影处校验公开形状。
+
+预加载层保留 cbim:call 和 ok/value、error.code/message 信封，不自动重试、补齐原运行身份或将缺失回执解释为未受理。请求/响应映射与真实 Main 入口的集合测试防止漂移；并未增加所有响应的运行时 Schema 或改动持久化格式。

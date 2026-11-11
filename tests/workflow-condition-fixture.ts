@@ -6,7 +6,7 @@ import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {AgentInstance} from '../src/backend/core/team/agent-types';
 import {seedTeam} from './team-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {workflowConditionFixture as data,type WorkflowConditionMode} from './workflow-condition-provider';
 import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';

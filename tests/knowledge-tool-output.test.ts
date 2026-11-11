@@ -3,10 +3,12 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {expect,it} from 'vitest';
 import {z} from 'zod';
-import {fixture,internalKnowledge,summary} from './helpers';
+import {fixture} from './helpers';
+import {internalKnowledge} from './knowledge-tool-fixture';
+import {summary} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {builtinSkills} from '../src/backend/core/knowledge/builtins';
-import {content} from '../src/backend/core/knowledge/snapshot';
+import {content} from '../src/backend/core/knowledge/read-models';
 import {
   jsonValueSchema,knowledgeSnapshotOutputSchema,knowledgeSearchOutputSchema,workspaceIdentityOutputSchema,
 } from '../src/backend/core/knowledge/tool-output-base';

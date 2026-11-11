@@ -1,7 +1,9 @@
 /**
  * 作用定位：在主会话层装配唯一补充控制器，向对话卡和任务根提供同一份草稿、提交锁及回执状态。
  * 设计原因：请求绑定原等待身份和会话可见代次；外壳保留隐藏会话时也撤销在途资料准备，迟到结果不能进入旧/新草稿。核实周期保持只读，挂载只查询未知命令，不自动续跑。
+ * IPC 边界：任务详情与续接动态端口按操作解析后进入关联桥，状态所有权不变。
  */
+import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {GoalContinuationRequest} from '../../bridge/contracts/dispatch';
 import type {ChatAttachment} from '../../bridge/contracts/chat';
@@ -50,7 +52,7 @@ export function useScopeContinuation(workspaceId:string,rootSessionId:string|und
     storage:{getItem:name=>window.localStorage.getItem(name),setItem:(name,value)=>window.localStorage.setItem(name,value)},
     submit:request=>window.cbim.call('loop.goalContinue',request),lookup:request=>window.cbim.call('loop.goalContinuation',request),uuid:()=>crypto.randomUUID(),
     pickFiles:()=>window.cbim.call('chat.pick',{id:workspaceId,kind:'file'}),
-    ...continuationSourcePorts(workspaceId,(action,args)=>window.cbim.call(action,args),()=>crypto.randomUUID()),
+    ...continuationSourcePorts(workspaceId,(action,args)=>window.cbim.call(...checkedIpcCall(action,args)),()=>crypto.randomUUID()),
   }):undefined,[workspaceId,rootSessionId]);
   const [,changed]=useState(0);
   const mounted=useRef(false);

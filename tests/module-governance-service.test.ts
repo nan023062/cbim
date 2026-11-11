@@ -1,8 +1,11 @@
+import {governanceCommandReceipts} from '../src/bridge/contracts/ipc-governance';
+import {required} from './helpers';
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {fixture,request,moduleFiles} from './helpers';
+import {fixture} from './helpers';
+import {request,moduleFiles} from './data/knowledge';
 import {seedModuleGovernance,moduleGovernanceFixture as data} from './module-governance-fixture';
 import {WorkspacePackages} from '../src/backend/main/resources/workspace-packages';
 import {ArchitectureService} from '../src/backend/main/workspace/architecture-service';
@@ -48,9 +51,9 @@ it('apply意图写失败不开始知识事务；原意图持久但未提交在�
     const approved=await f.approve(),input=f.applyInput(approved.record.decisionId),append=vi.spyOn(f.ws.governance.store,'append').mockRejectedValueOnce(Object.assign(Error('disk'),{code:'EIO'}));
     await expect(f.app.dispatch('governance.apply',input)).rejects.toMatchObject({code:'EIO'});append.mockRestore();expect(await f.app.dispatch('governance.receipt',{workspaceId:f.entry.id,commandId:input.commandId})).toBeUndefined();await expect(fs.stat(path.join(f.user,f.entry.id,'transactions',input.commandId+'.json'))).rejects.toMatchObject({code:'ENOENT'});
     const blocked=vi.spyOn(f.ws.governance,'request').mockRejectedValueOnce(Error('crash after durable intent'));
-    await expect(f.app.dispatch('governance.apply',input)).rejects.toMatchObject({code:'GOVERNANCE_APPLY_UNKNOWN'});blocked.mockRestore();expect((await f.app.dispatch('governance.receipt',{workspaceId:f.entry.id,commandId:input.commandId})).record.state).toBe('pending');
-    await f.app.open(f.entry.id,true);const current=f.app.workspace(f.entry.id),receipt=await f.app.dispatch('governance.receipt',{workspaceId:f.entry.id,commandId:input.commandId});expect(receipt.record.state).toBe('not_applied');expect(await fs.readFile(path.join(f.a,f.overviewPath),'utf8')).toBe(f.original);
-    const newInput={...input,instanceId:current.instanceId,commandId:randomUUID()},completed=await f.app.dispatch('governance.apply',newInput);expect(completed.record.state).toBe('committed');expect((await f.app.dispatch('governance.receipt',{workspaceId:f.entry.id,commandId:input.commandId})).record.state).toBe('not_applied');
+    await expect(f.app.dispatch('governance.apply',input)).rejects.toMatchObject({code:'GOVERNANCE_APPLY_UNKNOWN'});blocked.mockRestore();expect(governanceCommandReceipts.apply.parse((await f.app.dispatch('governance.receipt',{workspaceId:f.entry.id,commandId:input.commandId}))).record.state).toBe('pending');
+    await f.app.open(f.entry.id,true);const current=f.app.workspace(f.entry.id),receipt=await f.app.dispatch('governance.receipt',{workspaceId:f.entry.id,commandId:input.commandId});expect(governanceCommandReceipts.apply.parse(receipt).record.state).toBe('not_applied');expect(await fs.readFile(path.join(f.a,f.overviewPath),'utf8')).toBe(f.original);
+    const newInput={...input,instanceId:current.instanceId,commandId:randomUUID()},completed=await f.app.dispatch('governance.apply',newInput);expect(completed.record.state).toBe('committed');expect(governanceCommandReceipts.apply.parse((await f.app.dispatch('governance.receipt',{workspaceId:f.entry.id,commandId:input.commandId}))).record.state).toBe('not_applied');
   }finally{vi.restoreAllMocks();await f.cleanup()}
 });
 
@@ -85,7 +88,7 @@ it('账本已写而完整性锚确认失败时本实例拒绝继续，重开只�
     const rename=vi.spyOn(fs,'rename').mockImplementation(async(from,to)=>{if(String(to)===f.ledger+'.anchor'&&++count===2)throw Object.assign(Error('anchor confirmation failed'),{code:'EIO'});return original(from,to)});
     await expect(f.call('observe',{commandId,protectionId:f.protection.protectionId,expectedProtectionRevision:1,expectedKnowledgeRevision:before,statement:'保存后失联的原观察'})).rejects.toMatchObject({code:'EIO'});rename.mockRestore();
     await expect(f.ws.commit(request(await f.ws.snapshot(),[{path:f.overviewPath,text:f.proposed}]))).rejects.toMatchObject({code:'GOVERNANCE_DATA'});
-    await f.app.open(f.entry.id,true);const receipt=await f.app.dispatch('governance.receipt',{workspaceId:f.entry.id,commandId});expect(receipt.action).toBe('observe');expect(receipt.record.statement).toBe('保存后失联的原观察');expect((await f.app.workspace(f.entry.id).snapshot()).revision).toBe(before);
+    await f.app.open(f.entry.id,true);const receipt=await f.app.dispatch('governance.receipt',{workspaceId:f.entry.id,commandId});expect(required(receipt).action).toBe('observe');expect(governanceCommandReceipts.observe.parse(receipt).record.statement).toBe('保存后失联的原观察');expect((await f.app.workspace(f.entry.id).snapshot()).revision).toBe(before);
     const anchor=JSON.parse(await fs.readFile(f.ledger+'.anchor','utf8'));expect(anchor.pending).toBeUndefined();expect(anchor.head.revision).toBe(JSON.parse(await fs.readFile(f.ledger,'utf8')).commands.length);
   }finally{vi.restoreAllMocks();await f.cleanup()}
 });

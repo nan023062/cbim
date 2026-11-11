@@ -3,6 +3,7 @@
  * 检查点提示跟随当前运行实际注册的工具和剩余额度，不把续执行固定限制为只能交付。
  * 受控文件边界：仅转发正式成员的写入及冻结删除/移动工具与原 callId/取消信号；平台操作证明和补偿不会在 Pi 原生 write/edit 上自动附加。
  * 作用定位：Pi 引擎适配器，负责隔离配置、主对话与成员原生会话校验、工具桥与公开执行事件转换。
+ * 能力边界：是否关闭原生工具由可信能力策略决定，不依赖具体业务工具名称。
  * 设计原因：每轮冻结模型、权限和上下文；原生注册与能力预检共用 Core 工具表。成员求助/基线/检查点及按冻结要求提供的产物验证沿真实调用 ID 入日志，结构拒绝不冒称通过；成员回传与人工决定用系统 custom 接续，结束只认 agent_settled。
  * 职责边界：不保存私有推理正文；记录实际用量与生成耗时，未知计价保持未知。工具清单日志区分宿主准备与 Pi 实际活动清单，只保存名称和缺失项。明确停止后的标准取消文本才归为取消，其他错误及未知工具副作用交由运行时保留。
  * 插入边界：原生状态查询后再次核停止；只有 queued 回复表示已接收，发送后的失败不推断未执行或自动重发。
@@ -11,7 +12,7 @@
  * 请求预算：可信端口启用时，启动前安装父进程代理；终态与工具授权都受可靠结算屏障约束，停止先结束实际请求。
  */
 import fs from 'node:fs/promises';
-import {runtimeEngineTools} from '../engine-tools';
+import {runtimeEngineTools,nativeToolsDisabled} from '../engine-tools';
 import {engineInstructions} from '../engine-instructions';
 import path from 'node:path';
 import type {AgentEngine,EngineContext,EngineEvent} from '../types';
@@ -105,7 +106,7 @@ export class PiEngine implements AgentEngine {
       this.events=this.events.then(()=>this.consume(event));
       void this.events.catch(error=>{this.fatal=error;this.settlement?.reject(error);void this.rpc?.close()});
     },error=>{if(!this.closing){this.fatal=error;this.settlement?.reject(error)}},message=>this.redact(message));
-    const allowed=[...(context.scopedExecutionTools?[]:nativeToolNames(!!this.options.allowNativeExecution)),'cbim_*'].join(',');
+    const allowed=[...(nativeToolsDisabled(context)?[]:nativeToolNames(!!this.options.allowNativeExecution)),'cbim_*'].join(',');
     // 禁止 Pi 自动加载用户机器上的外部连接；内部工具只由本次受控扩展注册。
     let command=this.options.process;
     if(this.budgetTransport){

@@ -10,7 +10,7 @@ import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
 import {seedTeam} from '../tests/team-fixture';
 import {registerExplicitFixtureOwner} from '../tests/explicit-owner-fixture';
-import {request} from '../tests/helpers';
+import {request} from '../tests/data/knowledge';
 import {scopeContinuationProvider,continuationFixture as data} from '../tests/scope-continuation-provider';
 import {latestExecutable} from './build-artifact.mjs';
 

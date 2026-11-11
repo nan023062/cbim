@@ -4,7 +4,7 @@ import {randomUUID} from 'node:crypto';
 import type {Application} from '../src/backend/main/application';
 import {moduleGovernanceReceiptSchema,moduleGovernanceListSchema} from '../src/backend/core/governance/module-governance';
 import {seedModuleGovernance} from './module-governance-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {moduleGovernanceToolsFixture as data} from './module-governance-tools-provider';
 export {workflowConditionRecords as moduleGovernanceToolsRecords,workflowConditionLogBytes as moduleGovernanceToolsLogBytes} from './workflow-condition-fixture';
 

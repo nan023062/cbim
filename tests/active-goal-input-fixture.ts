@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {Application} from '../src/backend/main/application';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {usageScopes} from './scope-usage-fixture';
 import {activeInputData as data} from './active-goal-input-provider';

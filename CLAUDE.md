@@ -2,6 +2,8 @@
 
 开始修改前，阅读并遵循 [AGENTS.md](AGENTS.md) 中的项目协作规范。代码注释和目录类图的同步维护要求仅适用于 `src/`。
 
+开发 Skill 必须读取并遵守 [文档 1：通用项目架构设计规范与原则](design/project-architecture-standard.md)；项目架构治理入口 `architecture-evolution` 必须同时读取文档 1 和 [文档 2：架构治理规范与治理流程](design/architecture-governance-process.md)，按文档 2 的标准流程执行。架构资料维护遵守文档 1，并衔接文档 2 的验证与认知交付；普通开发不机械启动完整治理。
+
 ## 持续开发 Skill
 
 开发清单从 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取，关联方案与记录见 [design/](design/README.md)，四份概念设计见 [设计文档](README.md#设计文档)。继续开发或处理 Issue 时，使用 `cbim-development`：

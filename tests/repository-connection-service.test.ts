@@ -2,7 +2,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {expect,it,vi} from 'vitest';
-import {fixture,request} from './helpers';
+import {fixture} from './helpers';
+import {request} from './data/knowledge';
 import {RemoteRepository} from '../src/backend/main/resources/resource-http';
 import {RepositoryConnectionStore} from '../src/backend/main/resources/repository-connection-store';
 

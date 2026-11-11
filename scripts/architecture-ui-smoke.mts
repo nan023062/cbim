@@ -7,9 +7,11 @@ import {randomUUID} from 'node:crypto';
 import type {Snapshot} from '../src/bridge/contracts/workspace';
 import type {ResourceLibrarySnapshot,WorkspacePackage} from '../src/bridge/contracts/resources';
 import {latestExecutable} from './build-artifact.mjs';
+import {desktopDispatchFixture,pollDesktop} from './desktop-dispatch-fixture.mjs';
 
 // Exercise the packaged UI, not a browser mock: only setup/observations use IPC.
-// No model profile is configured and no execution is started. All files/repository are isolated.
+// Two real main runs establish scoped queued tasks through a deterministic localhost provider.
+// The provider holds those main turns; static editing/import/export must not execute members or change runtime facts.
 const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-architecture-ui-'));
 const source=path.join(temp,'source-project'),target=path.join(temp,'target-project'),repository=path.join(temp,'repository'),user=path.join(temp,'user');
 await Promise.all([source,target,repository,user].map(folder=>fs.mkdir(folder)));
@@ -22,6 +24,8 @@ const moduleBody='# 游戏工程\n\n## 定位\n实现当前项目的游戏业务
 const resourceNames={team:'UI 整体团队',agent:'UI 独立成员',skill:'UI 共享能力',architecture:'UI 完整业务架构'};
 const pageErrors:string[]=[],unexpectedDialogs:string[]=[];
 let desktop:ElectronApplication|undefined,page:Page|undefined,step='启动打包程序';
+let fixture:Awaited<ReturnType<typeof desktopDispatchFixture>>|undefined;
+const startedAt=new Date().toISOString();
 const completed:string[]=[];
 function checkpoint(value:string){step=value;console.log('ARCHITECTURE_UI '+value)}
 async function poll<T>(read:()=>Promise<T>,accept:(value:T)=>boolean,label:string){
@@ -33,6 +37,8 @@ async function poll<T>(read:()=>Promise<T>,accept:(value:T)=>boolean,label:strin
 try{
   const exe=await latestExecutable();
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});
+  assert.equal(await desktop.evaluate(({app})=>app.isPackaged),true);
+  assert.equal(path.resolve(await desktop.evaluate(({app})=>app.getPath('exe'))),path.resolve(exe));
   assert.equal(path.resolve(await desktop.evaluate(({app})=>app.getPath('userData'))),path.resolve(user,'desktop'));
   page=await desktop.firstWindow();page.setDefaultTimeout(25000);
   await page.setViewportSize({width:1500,height:1000});
@@ -117,16 +123,15 @@ try{
   await page.getByRole('button',{name:'切换深色模式',exact:true}).click();await page.setViewportSize({width:1500,height:1000});
   completed.push('团队 UI 新建 Agent、根共享 Skill 和继承；取消预览不写入');
 
-  checkpoint('通过业务表单创建带真人维护责任的模块和 Workflow');
+  checkpoint('通过业务表单创建静态模块和 Workflow');
   await extension('业务架构');await currentView().getByRole('button',{name:'新建工程模块',exact:true}).click();
   const module=editor('新建模块');await module.getByRole('textbox',{name:'目录标识',exact:true}).fill('game');
   await module.getByRole('textbox',{name:'职责摘要',exact:true}).fill(summary);
   await module.getByRole('button',{name:'添加源目录',exact:true}).click();
   await module.getByRole('textbox',{name:'源目录 1',exact:true}).fill('business-src');
   await module.getByRole('textbox',{name:'目录职责 1',exact:true}).fill('游戏业务源码与验证入口');
-  await module.getByRole('textbox',{name:'维护人 ID',exact:true}).fill('source_owner');
-  await module.getByRole('textbox',{name:'维护人姓名',exact:true}).fill('源项目维护人');
-  await module.getByRole('checkbox',{name:'确认维护责任',exact:true}).check();
+  assert.equal(await module.getByRole('textbox',{name:'维护人 ID',exact:true}).count(),0);
+  assert.equal(await module.getByRole('checkbox',{name:'确认维护责任',exact:true}).count(),0);
   await module.getByRole('textbox',{name:'知识正文',exact:true}).fill(moduleBody);
   await preview(module);await page.screenshot({path:'test-results/architecture-module-preview.png'});
   assert.ok(!(await snapshot(sourceEntry.id)).files.some(file=>file.path==='.cbim/workspace/game/module.json'));
@@ -141,22 +146,30 @@ try{
   await editFlow.getByRole('button',{name:'关闭',exact:true}).click();await editFlow.waitFor({state:'hidden'});
   assert.equal((await snapshot(sourceEntry.id)).revision,beforeEdit);
   await page.screenshot({path:'test-results/architecture-business-created.png'});
-  completed.push('业务 UI 新建模块、真人维护人和 Workflow；编辑预览取消保留原知识');
+  completed.push('业务 UI 新建静态模块和 Workflow；岗位责任独立登记；编辑预览取消保留原知识');
 
   checkpoint('设置项目绑定与两张独立运行图，作为导出隔离对照');
   const beforeBindings=await snapshot(sourceEntry.id),agentDefinition=JSON.parse(beforeBindings.files.find(file=>file.path==='.cbim/team/developer/agent.json')!.text),moduleDefinition=JSON.parse(beforeBindings.files.find(file=>file.path==='.cbim/workspace/game/module.json')!.text);
   for(const definition of [agentDefinition,moduleDefinition]){definition.authors=['source_owner'];definition.connectors=['.cbim/connectors/source_tool']}
   const request={workspaceId:sourceEntry.id,instanceId:beforeBindings.instanceId,revision:beforeBindings.revision,requestId:randomUUID(),changes:[{path:'.cbim/team/developer/agent.json',text:JSON.stringify(agentDefinition)},{path:'.cbim/workspace/game/module.json',text:JSON.stringify(moduleDefinition)},{path:'.cbim/connectors/registry.json',text:JSON.stringify({connectors:[{id:'.cbim/connectors/source_tool',name:'源项目工具',summary:'仅用于测试绑定移除',plugin:{ghost_id:'source-only-fixture',namespace:null}}]})}]};
   assert.equal((await call('preview',request)).validation.structural,true);await call('commit',request);
+  fixture=await desktopDispatchFixture(call);
+  const owner=await fixture.register(sourceEntry.id,'.cbim/team/developer',['.cbim/workspace/game']);
   const sourceBaseline=await snapshot(sourceEntry.id);
-  assert.equal(JSON.parse(sourceBaseline.files.find(file=>file.path==='.cbim/workspace/game/module.json')!.text).maintenance.confirmation.source,'local_user');
-  const graphIdentities=['source-root-one','source-root-two'].map(rootSessionId=>({workspaceId:sourceEntry.id,rootSessionId}));
-  for(const [index,identity] of graphIdentities.entries()){
-    await call('dispatch.open',{...identity,commandId:'open-'+index});
-    await call('dispatch.task',{...identity,commandId:'assign-'+index,expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/developer',moduleIds:['.cbim/workspace/game'],goal:'DO_NOT_EXPORT_RUNTIME_'+index,acceptance:[{id:'review',text:'仅创建调度记录，不启动模型'}]}});
+  assert.equal(JSON.parse(sourceBaseline.files.find(file=>file.path==='.cbim/workspace/game/module.json')!.text).maintenance,undefined);
+  const sourceOwner=await call('workspace.ownerships.get',{workspaceId:sourceEntry.id,instanceId:sourceBaseline.instanceId,moduleId:'.cbim/workspace/game'});
+  assert.equal(sourceOwner.view.binding.ownerMemberId,owner.memberId);
+  const planned=[];
+  for(let index=0;index<2;index++){
+    const plan=await fixture.plan(owner,'DO_NOT_EXPORT_RUNTIME_'+index);planned.push(plan);
+    const sent=await call('dispatch.task',{...plan.identity,scopeId:plan.scopeId,commandId:'assign-'+index,expectedParentRevision:1,task:{assigneeAgentId:owner.agentId,moduleIds:owner.moduleIds,ownerSelection:plan.ownerSelection,goal:'DO_NOT_EXPORT_RUNTIME_'+index,acceptance:[{id:'verify',text:'仅创建待办，不启动成员执行'}]}});
+    assert.equal(sent.disposition,'queued');
   }
+  const graphIdentities=planned.map(plan=>plan.identity);
   const graphs=await Promise.all(graphIdentities.map(identity=>call('dispatch.graphSnapshot',{identity})));
-  assert.ok(graphs.every(graph=>graph.tasks.length===1));
+  assert.ok(graphs.every(graph=>graph.tasks.length===1&&graph.tasks[0].status==='queued'&&graph.tasks[0].runIds.length===0));
+  const providerBefore=fixture.evidence();assert.equal(providerBefore.modelCalls,6);
+  const runtimeBefore=await call('runtime.snapshot');
   await page.reload();await selectWorkspace('source-project');await extension('团队架构');
 
   checkpoint('通过团队/业务界面发布四类静态资源');
@@ -169,6 +182,7 @@ try{
   for(const pack of packs){
     assert.equal(pack.format,'cbim-workspace-package');assert.ok(!JSON.stringify(pack).includes('DO_NOT_EXPORT_RUNTIME_'));
     assert.ok(!JSON.stringify(pack).includes(sourceEntry.id));assert.ok(!JSON.stringify(pack).includes('source_owner'));
+    for(const value of [owner.memberId,sourceOwner.view.binding.bindingId,...planned.flatMap(plan=>[plan.scopeId,plan.run.runId,plan.run.taskId])])assert.ok(!JSON.stringify(pack).includes(value),'静态包泄露运行或岗位身份：'+value);
     for(const file of pack.files){
       assert.ok(!/(^|\/)(people\.json|registry\.json|sessions?|logs|tasks|dispatch|credentials)(\/|$)/i.test(file.path),file.path);
       if(file.path.endsWith('/agent.json')||file.path.endsWith('/module.json')){const definition=JSON.parse(file.text);assert.deepEqual(definition.authors,[]);assert.deepEqual(definition.connectors,[]);assert.equal(definition.maintenance,undefined);if(file.path.endsWith('/module.json'))assert.deepEqual(definition.sources,[])}
@@ -206,8 +220,18 @@ try{
   const imported=await poll(()=>snapshot(targetEntry.id),s=>s.files.some(file=>file.path==='.cbim/workspace/game/module.json'),'完整业务架构没有导入目标项目');
   const importedModule=JSON.parse(imported.files.find(file=>file.path==='.cbim/workspace/game/module.json')!.text);
   assert.equal(importedModule.maintenance,undefined);assert.deepEqual(importedModule.sources,[]);assert.deepEqual(importedModule.connectors,[]);assert.deepEqual(importedModule.authors,[]);
-  assert.equal(importedModule.workflows[0].name,'实现与验证');assert.deepEqual(JSON.parse(imported.files.find(file=>file.path==='.cbim/team/people.json')!.text).people,[]);
-  await currentView().locator('.module-card-content').filter({hasText:'game'}).click();await currentView().getByText('尚未确认维护人；派发任务前请编辑模块补齐。',{exact:true}).waitFor();
+  assert.equal(importedModule.workflows[0].name,'实现与验证');
+  const people=imported.files.find(file=>file.path==='.cbim/team/people.json');
+  assert.deepEqual(people?JSON.parse(people.text).people:[],[]);
+  const targetIdentity={workspaceId:targetEntry.id,instanceId:imported.instanceId};
+  const targetOwner=await call('workspace.ownerships.get',{...targetIdentity,moduleId:'.cbim/workspace/game'});
+  assert.equal(targetOwner.view.status,'unassigned');assert.ok(!targetOwner.view.binding?.ownerMemberId);
+  assert.deepEqual((await call('workspace.members.list',targetIdentity)).items,[]);
+  await currentView().locator('.module-card-content').filter({hasText:'game'}).click();
+  const ownerSelect=currentView().getByRole('combobox',{name:'game 负责人',exact:true});
+  await poll(()=>ownerSelect.isEnabled(),Boolean,'导入模块负责人未完成读取');
+  assert.equal(await ownerSelect.inputValue(),'');
+  assert.equal(await ownerSelect.locator('option:checked').innerText(),'主 Agent（默认）');
   await page.screenshot({path:'test-results/architecture-business-imported.png'});
   await page.getByRole('button',{name:'切换浅色模式',exact:true}).click();await page.screenshot({path:'test-results/architecture-business-light.png'});
   await page.getByRole('button',{name:'切换深色模式',exact:true}).click();
@@ -237,12 +261,19 @@ try{
   const runtime=await call('runtime.snapshot');
   assert.equal(runtime.members.filter((item:any)=>item.workspaceId===targetEntry.id).length,0);
   assert.equal(runtime.tasks.filter((item:any)=>item.workspaceId===targetEntry.id).length,0);
-  assert.equal(runtime.runs.length,0);assert.deepEqual(await call('loop.list',{id:targetEntry.id}),[]);
+  assert.equal(runtime.runs.filter((item:any)=>item.workspaceId===targetEntry.id).length,0);
+  assert.deepEqual(runtime.runs.map((item:any)=>item.runId).sort(),planned.map(plan=>plan.run.runId).sort());
+  assert.deepEqual(runtime.pressure,runtimeBefore.pressure);assert.deepEqual(runtime.tasks,runtimeBefore.tasks);
+  assert.deepEqual(fixture.evidence(),providerBefore);assert.deepEqual(await call('loop.list',{id:targetEntry.id}),[]);
+  assert.deepEqual((await call('workspace.ownerships.get',{workspaceId:sourceEntry.id,instanceId:sourceBaseline.instanceId,moduleId:'.cbim/workspace/game'})).view.binding,sourceOwner.view.binding);
   assert.deepEqual(pageErrors,[]);assert.deepEqual(unexpectedDialogs,[]);
   completed.push('完整业务架构应用后无旧项目绑定；两个源会话图不变；目标没有动态成员/任务/运行');
-  const evidence={packagedExe:exe,temporaryFixture:temp,realDesktop:true,realProvider:false,modelCalls:0,sourceWorkspaceId:sourceEntry.id,targetWorkspaceId:targetEntry.id,resourceKinds:packs.map(pack=>pack.kind),completed,pageErrors};
+  for(const plan of planned)await call('loop.stop',{id:sourceEntry.id,taskId:plan.run.taskId});
+  await pollDesktop(()=>call('runtime.snapshot'),value=>value.pressure.activeRuns===0,'清理本地测试主运行');
+  assert.deepEqual(fixture.evidence(),providerBefore);
+  const evidence={passed:true,startedAt,completedAt:new Date().toISOString(),packagedExe:exe,temporaryFixture:temp,realDesktop:true,...providerBefore,sourceWorkspaceId:sourceEntry.id,targetWorkspaceId:targetEntry.id,resourceKinds:packs.map(pack=>pack.kind),completed,pageErrors,unexpectedDialogs};
   await fs.writeFile('test-results/architecture-ui-smoke.json',JSON.stringify(evidence,null,2));console.log(JSON.stringify(evidence));
 }catch(error){
   await page?.screenshot({path:'test-results/architecture-ui-failed.png'}).catch(()=>{});
   await fs.writeFile('test-results/architecture-ui-smoke.json',JSON.stringify({success:false,step,completed,temporaryFixture:temp,error:String(error),pageErrors,unexpectedDialogs},null,2));throw error;
-}finally{await desktop?.close()}
+}finally{try{await desktop?.close()}finally{await fixture?.close()}}

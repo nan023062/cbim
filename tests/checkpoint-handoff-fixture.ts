@@ -1,3 +1,4 @@
+import {required} from './helpers';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -6,7 +7,7 @@ import type {Application} from '../src/backend/main/application';
 import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
 import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
 import {seedTeam} from './team-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {commitWorkspaceMember} from './workspace-member-fixture';
 import {moduleOwnershipChange,commitModuleOwnership} from './module-ownership-fixture';
 import {workflowConditionRecords} from './workflow-condition-fixture';
@@ -26,7 +27,7 @@ export async function seedCheckpointHandoff(app:Application,project:string,urls:
   const positions=[];
   for(const index of [0,1]){
     const result=await commitWorkspaceMember(app,entry.id,{kind:'register',agentId:team.input.agentId,name:data.names[index],position:'按当前主目标和模块责任处理真实文件，保留原任务与原运行身份。',adaptation:{instructions:data.adaptations[index],references:[moduleId,team.shared]},runtimePolicy:{profileId:profiles[index+1].id,modelId:index===0?data.models.a:data.models.b},reason:'隔离测试中明确登记交接前后的两份岗位配置。'});
-    const detail=await app.dispatch('workspace.members.get',{workspaceId:entry.id,instanceId:workspace.instanceId,memberId:result.receipt.memberId});assert.equal(detail.sourceStatus.status,'current');positions.push({registration:result,member:detail.member});
+    const detail=await app.dispatch('workspace.members.get',{workspaceId:entry.id,instanceId:workspace.instanceId,memberId:result.receipt.memberId});assert.equal(required(detail.sourceStatus).status,'current');positions.push({registration:result,member:detail.member});
   }
   assert.notEqual(positions[0].member.memberId,positions[1].member.memberId);assert.equal(positions[0].member.adoption.capabilityHash,positions[1].member.adoption.capabilityHash);
   const ownership=await commitModuleOwnership(app,entry.id,await moduleOwnershipChange(app,entry.id,moduleId,{memberId:positions[0].member.memberId,expectedRevision:positions[0].member.revision},'原岗位 A 负责本模块，后续更换须另行明确提交。'));

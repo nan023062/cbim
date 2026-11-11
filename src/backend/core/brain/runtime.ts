@@ -5,6 +5,7 @@
  * 每个正式成员运行最多暂存一次检查点，可信剩余额度允许后续运行再次停泊，零额度仍保留正常交付。
  * 受控文件边界：自身 beforeTool 可靠保存 allowed 才签发一次许可；写入及冻结删除/移动未确认后整轮限制为读取/求助并按 interrupted 封存，原失败回执不改写。停止等待文件 child 退出，失败保留原占用。
  * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
+ * 能力边界：验证准备交给所属能力，工具集合由显式装配提供；本层继续持有授权、日志、在途操作及停止排空时序。
  * 设计原因：工具先分类与计划门禁再审批；每轮进度绑定真实 workspace/task/run，成员专属工具另绑定完整实例。完整集合观察、产物验证及交付复核各持短锁，异步读取前后核知识、计划与停止；坏回包保留事实，求助/检查点不解锁，采集/验证只随真实结束释放。
  * 插入边界：核对原 run、可信周期令牌和发送前停止信号；原生接受后返回真实日志序号，适配器不能伪造该令牌。终态等待在途记录排空，接受后的保存失败仍属未知，不自动重放。
  * 核实边界：历史 reconciledToolIds 仅保留可读；新请求不能据裸调用 ID 续接 unknown。授权记录中的契约版本只取可信工具描述，旧记录不补造版本。
@@ -31,7 +32,8 @@ import {RunOutputManifestCapture,type OutputManifestCapturePort} from './output-
 import {preparedArtifactScopes,preparedArtifactTransitions} from '../workspace/artifact-scope';
 import {outputManifestToolName,outputManifestInspectToolName} from '../tasks/output-manifest';
 import {completeOutputRequired} from '../tasks/complete-output-evidence';
-import {RunValidation,type ValidationFilePort} from './run-validation';
+import {prepareRunValidation,type RunValidation,type ValidationFilePort} from './run-validation';
+import {memberToolCapabilities} from './member-tool-capabilities';
 import {RunScopedExecution,type ScopedExecutionPort} from './run-scoped-execution';
 import {preparedExecutionScope} from '../workspace/execution-scope';
 import {scopedReadToolName,scopedNodeToolName} from '../tasks/scoped-execution';
@@ -41,7 +43,6 @@ import {controlledFileWriteToolName} from '../tasks/controlled-file-operation';
 import {RunArtifactTransition,type ArtifactTransitionRunPort} from './run-artifact-transition';
 import {artifactTransitionToolName} from '../tasks/artifact-transition';
 import {validationToolName} from '../tasks/validation';
-import {jsonValidationLimits} from '../workspace/json-validation-schema';
 import {checkedMemberRunLaunch,type MemberRunLaunch} from './member-run';
 import {checkedRunInputSource,type RunInputSource} from './input-source';
 import {checkedConversationAgentBinding,type ConversationAgentBinding} from './conversation-binding';
@@ -156,11 +157,7 @@ export class LoopRuntime {
     task=structuredClone(task);
     const workflows=structuredClone(this.options.workflowContracts??[]);
     if(workflows.length&&(!member||!this.options.describeTool))fail('WORKFLOW_GATE_UNAVAILABLE','带执行约定的 Workflow 必须通过正式成员及可信工具分类门禁');
-    const validationCount=workflows.reduce((count,item)=>count+(item.contract.delivery?.requiredValidations?.length??0),0),validationRequired=validationCount>0;
-    if(validationCount>jsonValidationLimits.records)fail('WORKFLOW_VALIDATION_LIMIT','冻结的产物验证要求超过本轮 16 条记录上限，不能启动执行');
-    if(validationRequired&&(!member||!this.options.artifacts||!this.options.validations))fail('VALIDATION_UNAVAILABLE','冻结的产物验证要求缺少正式成员文件验证端口');
-    if(workflows.some(item=>item.contract.delivery?.requiredValidations?.some(rule=>rule.validator==='csv-table-v1'))&&!this.options.validations?.validateTable)fail('VALIDATION_UNAVAILABLE','冻结的CSV要求缺少真实表格验证端口，不能启动执行');
-    if(workflows.some(item=>item.contract.delivery?.requiredValidations?.some(rule=>rule.validator==='png-raster-v1'))&&!this.options.validations?.validateImage)fail('VALIDATION_UNAVAILABLE','冻结的PNG要求缺少真实图片解码端口，不能启动执行');
+    const preparedValidation=prepareRunValidation(workflows,member?.binding,this.options.artifacts,this.options.validations),validationRequired=preparedValidation.required;
     const executionScope=preparedExecutionScope(workflows);
     if(executionScope&&(!member||!this.options.scopedExecution||task.moduleIds.some(id=>!workflows.some(binding=>binding.moduleId===id))))fail('EXECUTION_SCOPE_UNAVAILABLE','范围任务缺少完整模块声明或实际平台端口');
     const manifestScopes=preparedArtifactScopes(workflows);
@@ -312,7 +309,7 @@ export class LoopRuntime {
           if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))throw Error('检查点调用已停止、未获准或仍有其他在途操作');
         },save:async checkpoint=>{await emit({type:'task.checkpoint_requested',data:{checkpoint}},true)},
       });
-      if(member&&validationRequired&&this.options.artifacts&&this.options.validations)validation=new RunValidation(member.binding,workflows,this.options.artifacts,this.options.validations,{
+      validation=preparedValidation.create({
         current:()=>taskTools.current(),generation:()=>taskTools.generation,
         assertReady:id=>{if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))fail('VALIDATION_CALL','产物验证已停止、未获准或仍有其他在途操作')},
         assertDeliveryReady:()=>{if(stopping||[...activeCalls].some(id=>calls.get(id)?.call.name!=='cbim_delivery_prepare')||[...pendingTools].some(id=>calls.get(id)?.call.name!=='cbim_delivery_prepare')||activeCalls.size>1)fail('VALIDATION_BUSY','仍有其他工具或审批未结束，不能读取 JSON 交付证据');assertDeliveryReady()},
@@ -372,7 +369,7 @@ export class LoopRuntime {
         let failure:unknown;
         try{
           if(control?.signal.aborted)await stop();
-          if(!stopping)await engine.start({task,runId,directory,sessionFile:engineSession.sessionFile,engineHandoff:engineSession.handoff,nativeSessionId:previous&&!member?engineSession.nativeSessionId:nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,manifestTools:manifestCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,controlledFileTools:controlledFile,artifactTransitionTools:artifactTransition,scopedExecutionTools:scopedExecution,assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
+          if(!stopping)await engine.start({task,runId,directory,sessionFile:engineSession.sessionFile,engineHandoff:engineSession.handoff,nativeSessionId:previous&&!member?engineSession.nativeSessionId:nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,capabilities:memberToolCapabilities({taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,manifestTools:manifestCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,controlledFileTools:controlledFile,artifactTransitionTools:artifactTransition,scopedExecutionTools:scopedExecution}),assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
             call=structuredClone(call);
             if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
             // 验证、采集与停泊先同步预占，再进入策略；短读锁不会绕过求助/检查点的本轮结束门闩。

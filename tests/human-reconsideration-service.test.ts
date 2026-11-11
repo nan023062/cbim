@@ -5,7 +5,7 @@ import {expect,it} from 'vitest';
 import {secondHumanWait,saveHumanOpinion,reconsiderContinuation} from './human-reconsideration-fixture';
 import {latch} from './human-decision-service-fixture';
 import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
-import {request as knowledgeRequest} from './helpers';
+import {request as knowledgeRequest} from './data/knowledge';
 
 it.each([false,true])('跨等待 %s 模式仅明确选择才读成果，保存新关联不消费等待；原命令与重放保持两份依据',async complete=>{
   const f=await secondHumanWait({complete});try{

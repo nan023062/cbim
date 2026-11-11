@@ -3,7 +3,8 @@ import {randomUUID} from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {Snapshot} from '../src/backend/core/knowledge/types';
-import {fixture,request} from './helpers';
+import {fixture} from './helpers';
+import {request} from './data/knowledge';
 import {seedWorkspaceMembers,commitWorkspaceMember,changeWorkspaceMemberCapability} from './workspace-member-fixture';
 import type {WorkspaceMemberChangeInput,WorkspaceMemberCommitInput,WorkspaceMemberPreview} from '../src/backend/core/team/workspace-member';
 

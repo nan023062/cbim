@@ -1,5 +1,7 @@
 import {expect,it} from 'vitest';
-import {fixture,internalKnowledge,moduleFiles,request,summary} from './helpers';
+import {fixture} from './helpers';
+import {internalKnowledge} from './knowledge-tool-fixture';
+import {moduleFiles,request,summary} from './data/knowledge';
 import {parseJson} from '../src/backend/core/foundation/json';
 
 it('真实 ObjectCRUD 可连续创建两个 Workflow，uniqueItems 仍拒绝重复且不改已存知识',async()=>{

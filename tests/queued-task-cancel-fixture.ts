@@ -7,7 +7,7 @@ import type {DispatchMutation,DispatchMessage} from '../src/backend/core/tasks/d
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {AgentInstance} from '../src/backend/core/team/agent-types';
 import {seedTeam} from './team-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {queuedTaskCancelFixture as data} from './queued-task-cancel-provider';
 
 /** Explicit local team and maintained business module; never reuse account settings or user projects. */

@@ -1,6 +1,7 @@
 /**
  * 作用定位：团队：Team/小组/Agent 与 Agent 自身和祖先 Skill的核心封装。
  * 设计原因：在同一校验快照上提供领域语义，不依赖工作区进程或桌面页面。
+ * 读取边界：本类属于 knowledge-read-models 的私有实现，跨模块经 knowledge/read-models 入口访问；团队岗位和执行状态不归此视图维护。
  */
 import path from 'node:path';
 import {context,data,content} from '../knowledge/snapshot';

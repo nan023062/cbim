@@ -8,12 +8,13 @@ const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-sidebar-')),root=path.jo
 try{
  app=await electron.launch({executablePath:await latestExecutable(),env:{...process.env,CBIM_USER_DATA_ROOT:path.join(temp,'user')},timeout:60000});const page=await app.firstWindow();
  const entry=await page.evaluate(async root=>window.cbim.call('add',{path:root}),root);
- const create=page.getByRole('button',{name:'新对话 project',exact:true});await create.waitFor();await create.click();await page.waitForFunction(()=>document.querySelectorAll('.workspace-conversations button').length===1);
- await create.click();await page.waitForFunction(()=>document.querySelectorAll('.workspace-conversations button').length===2);
+ // 每个会话还包含重命名/删除按钮；只统计真正选择会话的按钮，保持验证新增两个会话。
+ const create=page.getByRole('button',{name:'新对话 project',exact:true});await create.waitFor();await create.click();await page.waitForFunction(()=>document.querySelectorAll('.workspace-conversations .conversation-entry-select').length===1);
+ await create.click();await page.waitForFunction(()=>document.querySelectorAll('.workspace-conversations .conversation-entry-select').length===2);
  // 侧栏条目先更新，中央会话仍需等待工作区快照和布局恢复；以可见页签作为就绪条件。
  await page.getByRole('tab',{name:'对话',exact:true}).waitFor({state:'visible',timeout:15000});
  assert.equal(await page.getByRole('tab',{name:'对话',exact:true}).count(),1);
- assert.equal(await page.locator('.workspace-conversations button').first().evaluate(e=>getComputedStyle(e).justifyContent),'flex-start');
+ assert.equal(await page.locator('.workspace-conversations .conversation-entry-select').first().evaluate(e=>getComputedStyle(e).justifyContent),'flex-start');
  await page.getByRole('button',{name:'更多操作 project',exact:true}).click();
  assert.equal(await page.getByRole('menuitem',{name:/重启|MCP/}).count(),0);
  await page.getByRole('menuitem',{name:'关闭菜单',exact:true}).click();

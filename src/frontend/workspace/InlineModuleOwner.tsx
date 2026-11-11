@@ -1,7 +1,10 @@
 /**
  * 作用定位：业务架构共享一次岗位/责任读取，每张模块卡片只呈现一级选择器。
  * 设计原因：将列表、真实提交与错误集中在工作区视图；选择只调用既有岗位/责任命令，切换或重开不续做未完成绑定，未决操作可原地核实。
+ * 读取/预览端口沿 InlineOwnerCall 的有限操作名，提交仍独立交给原命令控制器。
+ * IPC 边界：模块责任按是否给定memberId选择明确入口，内联岗位表单经过Schema配对。
  */
+import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {ModuleOwnershipIdentity} from '../../bridge/contracts/module-ownership';
 import {workspaceMemberCommands} from '../team/workspace-member-state';
@@ -17,7 +20,7 @@ export function useInlineModuleOwners(identity:ModuleOwnershipIdentity|undefined
     members:workspaceMemberCommands.get(identity.workspaceId,{storage:window.localStorage,uuid:()=>crypto.randomUUID(),commit:input=>window.cbim.call('workspace.members.commit',input),lookup:input=>window.cbim.call('workspace.members.receipt',input)}),
     ownerships:moduleOwnershipCommands.get(identity.workspaceId,{storage:window.localStorage,uuid:()=>crypto.randomUUID(),commit:input=>window.cbim.call('workspace.ownerships.commit',input),lookup:input=>window.cbim.call('workspace.ownerships.receipt',input)}),
   }:undefined,[identity?.workspaceId]);
-  const call=(action:string,args?:unknown)=>window.cbim.call(action,args);
+  const call:import('./inline-module-ownership').InlineOwnerCall=(action,args)=>window.cbim.call(...checkedIpcCall(action,args));
   async function load(token:number){if(!identity)return;try{const value=await readInlineOwners(identity,call);if(epoch.current===token)setData(value)}catch(cause){if(epoch.current===token){setData(undefined);setError(String(cause))}}}
   useEffect(()=>{
     const token=++epoch.current;setData(undefined);setError('');setMessage('');

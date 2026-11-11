@@ -8,7 +8,7 @@ import {humanContinuationReceiptSchema,type HumanContinuationRequest,type HumanC
 import {humanDecisionCoverageLimitation,type HumanDecisionRecord} from '../src/bridge/contracts/human-decisions';
 import type {DispatchScope,ScopeSummary} from '../src/bridge/contracts/dispatch';
 import type {ScopeGoalState} from '../src/frontend/tasks/scope-state';
-import {transcript} from '../src/frontend/conversation/transcript';
+import {transcript} from '../src/frontend/run-view/transcript';
 import type {RunSummary,RunInputSource} from '../src/backend/core/brain/types';
 
 const id=(value:number)=>`11111111-1111-4111-8111-${String(value).padStart(12,'0')}`,time='2026-11-07T00:00:00.000Z',hash='a'.repeat(64);

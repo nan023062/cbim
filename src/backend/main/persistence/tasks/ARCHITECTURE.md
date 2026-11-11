@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-执行日志、附件快照、派发事务与角色履历。目录首层、URL指针、真实有界网页及授权仓库资料快照分别保存，导入取消与等待受理分离；来源变化不改历史。日志只读完整前缀并报告未完整尾行，损坏不透传原始片段、不截断修复。图/目标/详情同屏障读取，未知操作不自动重放。同日志追加岗位审计并派生独立registry游标，原命令可只读核实，不将长期岗位计为运行实例。 新事务标记由Store生成，旧日志前缀可读而不能在新协议后降级；新任务/准备与历史岗位审计严格对应。 原命令证据索引从真实已保存事务前态派生，保留原根修订与日志协议；不重写历史或按当前图补造依据。 明确处置在同一 DispatchStore 有界追加并按稳定命令核实；旧任务与原异常不可改写，关联仅从真实后续周期派生。 受控文件附录在同一账本单条追加，prepared/executing/终态各有回执与空间预留，旧日志缺省不补造，重放不继续文件 IO。
+执行日志、附件快照、派发事务与角色履历。目录首层、URL指针、真实有界网页及授权仓库资料快照分别保存，导入取消与等待受理分离；来源变化不改历史。日志只读完整前缀并报告未完整尾行，损坏不透传原始片段、不截断修复。图/目标/详情同屏障读取，未知操作不自动重放。同日志追加岗位审计并派生独立registry游标，原命令可只读核实，不将长期岗位计为运行实例。 request-budget-store 在唯一 DispatchStore 的原事务内投影预算视图，保留可靠提交与恢复。 agent-history 只负责文件索引，不再引用Workspace或实例化调度服务。 新事务标记由Store生成，旧日志前缀可读而不能在新协议后降级；新任务/准备与历史岗位审计严格对应。 原命令证据索引从真实已保存事务前态派生，保留原根修订与日志协议；不重写历史或按当前图补造依据。 明确处置在同一 DispatchStore 有界追加并按稳定命令核实；旧任务与原异常不可改写，关联仅从真实后续周期派生。 受控文件附录在同一账本单条追加，prepared/executing/终态各有回执与空间预留，旧日志缺省不补造，重放不继续文件 IO。 附件JSON的公开连接器/预览形状先校验再返回。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,26 +10,19 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [agent-history.ts](agent-history.ts) | 把静态 Agent 的 Session 归档索引保存到应用用户目录，并为只读详情定位原运行日志。 |
+| [agent-history.ts](agent-history.ts) | 把静态 Agent 的 Session 派生索引保存到应用用户目录，只负责索引读写和目录校验。 |
 | [chat-inputs.ts](chat-inputs.ts) | 将用户明确添加的文件、文件夹、链接、网页与链接器定义保存为本机对话输入快照。 |
 | [chat-material-imports.ts](chat-material-imports.ts) | 应用内显式资料导入的取消、工作区归属及真实资源仓库读取入口。 |
 | [chat-source-readers.ts](chat-source-readers.ts) | 桌面明确导入目录、URL 指针和网页时，生成有界文本及真实来源事实。 |
 | [dispatch-store.ts](dispatch-store.ts) | 将岗位、模块责任、来源代次和受控文件阶段，以及执行实例、会话、任务图和信封可靠保存到同一工作区日志。 |
 | [isolation-records.ts](isolation-records.ts) | 原隔离执行的私有追加记录，保存启动前来源与资源清理阶段。 |
+| [request-budget-store.ts](request-budget-store.ts) | 将工作区唯一 DispatchStore 适配为请求预算专用的两项读写能力。 |
 | [run-journal.ts](run-journal.ts) | 本机执行事件日志，顺序追加并 fsync，从记录恢复摘要和未确认工具。 |
 | [run-storage.ts](run-storage.ts) | 将本机运行目录和 RunJournal 装配为大脑及调度共享的存储端口。 |
 
 ## 架构类图
 
 ### agent-history.ts
-
-```mermaid
-classDiagram
-class N_src_backend_main_persistence_tasks_agent_history_ts["agent-history.ts"] {
-  <<module>>
-  +createAgentHistory()
-}
-```
 
 ```mermaid
 classDiagram
@@ -52,7 +45,7 @@ class N_src_backend_main_persistence_tasks_agent_history_ts_external_AgentHistor
 N_src_backend_main_persistence_tasks_agent_history_ts_external_AgentHistoryStore <|.. N_src_backend_main_persistence_tasks_agent_history_ts_FileAgentHistoryStore
 ```
 
-直接依赖：[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/files.ts](../../../core/foundation/files.ts)、[../../../core/foundation/identity.ts](../../../core/foundation/identity.ts)、[../../../core/team/session-history-storage.ts](../../../core/team/session-history-storage.ts)、[../../../scheduler-engine/runtime/agent-history.ts](../../../scheduler-engine/runtime/agent-history.ts)、[../../workspace/workspace.ts](../../workspace/workspace.ts)、[run-storage.ts](run-storage.ts)。
+直接依赖：[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/files.ts](../../../core/foundation/files.ts)、[../../../core/team/session-history-storage.ts](../../../core/team/session-history-storage.ts)。
 
 ### chat-inputs.ts
 
@@ -310,6 +303,18 @@ N_src_backend_main_persistence_tasks_isolation_records_ts ..> N_src_backend_main
 
 直接依赖：[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/identity.ts](../../../core/foundation/identity.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../platform/isolation-record.ts](../../platform/isolation-record.ts)。
 
+### request-budget-store.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_persistence_tasks_request_budget_store_ts["request-budget-store.ts"] {
+  <<module>>
+  +requestBudgetStore()
+}
+```
+
+直接依赖：[../../../core/tasks/dispatch-storage.ts](../../../core/tasks/dispatch-storage.ts)、[../../../core/tasks/model-request-budget-storage.ts](../../../core/tasks/model-request-budget-storage.ts)。
+
 ### run-journal.ts
 
 ```mermaid
@@ -359,12 +364,6 @@ N_src_backend_main_persistence_tasks_run_storage_ts_external_RunStorage <|.. N_s
 
 ```mermaid
 classDiagram
-class N_src_backend_main_persistence_tasks_agent_history_ts["agent-history.ts"] {
-  <<module>>
-}
-class N_src_backend_main_persistence_tasks_run_storage_ts["run-storage.ts"] {
-  <<module>>
-}
 class N_src_backend_main_persistence_tasks_chat_inputs_ts["chat-inputs.ts"] {
   <<module>>
 }
@@ -374,20 +373,15 @@ class N_src_backend_main_persistence_tasks_chat_source_readers_ts["chat-source-r
 class N_src_backend_main_persistence_tasks_chat_material_imports_ts["chat-material-imports.ts"] {
   <<module>>
 }
-N_src_backend_main_persistence_tasks_agent_history_ts ..> N_src_backend_main_persistence_tasks_run_storage_ts : 导入依赖
-N_src_backend_main_persistence_tasks_chat_inputs_ts ..> N_src_backend_main_persistence_tasks_chat_source_readers_ts : 导入依赖
-N_src_backend_main_persistence_tasks_chat_material_imports_ts ..> N_src_backend_main_persistence_tasks_chat_inputs_ts : 导入依赖
-N_src_backend_main_persistence_tasks_chat_material_imports_ts ..> N_src_backend_main_persistence_tasks_chat_source_readers_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_backend_main_persistence_tasks_run_storage_ts["run-storage.ts"] {
   <<module>>
 }
 class N_src_backend_main_persistence_tasks_run_journal_ts["run-journal.ts"] {
   <<module>>
 }
+N_src_backend_main_persistence_tasks_chat_inputs_ts ..> N_src_backend_main_persistence_tasks_chat_source_readers_ts : 导入依赖
+N_src_backend_main_persistence_tasks_chat_material_imports_ts ..> N_src_backend_main_persistence_tasks_chat_inputs_ts : 导入依赖
+N_src_backend_main_persistence_tasks_chat_material_imports_ts ..> N_src_backend_main_persistence_tasks_chat_source_readers_ts : 导入依赖
 N_src_backend_main_persistence_tasks_run_storage_ts ..> N_src_backend_main_persistence_tasks_run_journal_ts : 导入依赖
 ```
 
@@ -428,7 +422,7 @@ FileDispatchStore 在自身 transaction body 写入 `executionProtocol:module_ow
 
 归档文件只保存公开任务摘要、明确身份、生命周期状态和后端日志来源；不复制消息、工具正文、workflowContext 或原生会话文件。完整执行事实继续保存在原 `loop-engine/tasks` 和 `dispatch/runs/tasks`，不迁移、不合并、不写入可共享 `.cbim` 知识。执行实例释放、静态角色定义删除、正常工作区关闭都不删除归档。
 
-`createAgentHistory` 将固定运行根及 `FileRunStorage` 注入查询服务。详情仅根据已核验索引的 source/task/run 定位，检查真实目录边界、符号链接及日志身份；首次读取后由已落盘观察维护增量。模型启动前已持久化但尚未创建 canonical 的派发意图也可归档，详情只呈现真实空前缀与失败状态。
+装配入口位于 `../../agent-history.ts:createAgentHistory`，将固定运行根及 `FileRunStorage` 注入查询服务；本目录 `agent-history.ts` 只导出 `FileAgentHistoryStore`，不导入具体 Workspace 或调度服务。详情仅根据已核验索引的 source/task/run 定位，检查真实目录边界、符号链接及日志身份；首次读取后由已落盘观察维护增量。模型启动前已持久化但尚未创建 canonical 的派发意图也可归档，详情只呈现真实空前缀与失败状态。
 
 启动时先核工作区路径、持有工程锁，再通过可信 `beforeDispatchLoad` 阶段加载历史索引；完成后唯一 Store 才首次读取，loaded 与来源恢复的 committed 都不会抢在历史装载之前。`WorkspaceRuntimeMonitor` 随后在原有两套日志扫描中幂等回补，并同时消费派发 loaded/committed 与主/成员事件；没有第二套定时全量扫描，也不为启动顺序放宽持久索引重复检测。列表只查轻量索引。异步索引错误进入服务及全局诊断，不阻断已提交的执行；关闭顺序为执行收尾、撤销观察、排空索引写入、释放工作区。
 
@@ -595,3 +589,12 @@ FileDispatchStore 在原 journal 的完整校验与 durable publish 中投影 ef
 ## 原隔离执行核实与清理
 
 FileIsolationRecords是独立私有fsync追加链，绑定原run/call、完整运行身份、原scope/input摘要和平台资源；只追加合法prepared/started/settled/cleaned或cleanup_requested/cleanup_complete阶段。读取不建目录、不修尾、不重放；每条链256KiB/32帧，每run256调用；损坏拒绝，写入未知封闭实例。目录受工作区独占锁及当前本地用户信任边界保护，不防同用户恶意重写整个私有数据库。
+
+
+### 请求预算的窄视图适配
+
+request-budget-store.ts 把唯一 DispatchStore 的 read/transact 适配为 RequestBudgetStore。字段投影和隔离副本在原 transact 的 prepare 回调内产生，不能先读余额再另起扣减事务；预算回调不能夹带 scopes 等其它 mutation 键。适配器不创建文件、队列或锁，不修改存储格式。幂等原回执、原子不变量、可靠 fsync、失败封闭及重开恢复继续由 FileDispatchStore 负责，跨领域事务不拆成多次写入。
+
+## 全量 IPC 契约衔接
+
+ChatInputs 的公开连接器列表与附件预览在 JSON 投影处核实字段；损坏数据拒绝返回，不把 any 当作可靠响应。保存快照、取消、文件读取和续接附件证明不改变。

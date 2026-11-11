@@ -94,7 +94,7 @@ export interface WorkspaceLoopOptions {
 export interface ExecutionServices {
   /** 真实 run 已登记后解析；没有逐请求策略时返回 undefined，不给旧目标补新语义。 */
   requestBudget?(input:{task:TaskSpec;runId:string}):Promise<RequestBudgetPort|undefined>;
-  /** 主 session 的已登记调度与知识管理实例；与其图根一致，只由主进程解析，不能作为业务执行者。 */
+  /** 主 session 的已登记实例；与图根一致，可在原会话直接工作，但不得冒充独立成员；仅由主进程解析。 */
   conversationBinding?:ConversationAgentBinding;
   /** 仅桌面主运行工厂捕获已有只读授权；未装配、无就绪连接和执行成员都没有仓库工具。 */
   repositoryTools?:RepositoryToolsPort;

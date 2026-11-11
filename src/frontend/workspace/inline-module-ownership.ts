@@ -10,7 +10,8 @@ import type {LlmSettings,AgentModelSelection} from '../../bridge/contracts/model
 import {checkedWorkspaceMemberList,checkedWorkspaceMemberPreview,type WorkspaceMemberCommands} from '../team/workspace-member-state';
 import {checkedModuleOwnershipPage,checkedModuleOwnershipDetail,checkedModuleOwnershipPreview,type ModuleOwnershipCommands} from './module-ownership-state';
 
-export type InlineOwnerCall=(action:string,args?:unknown)=>Promise<any>;
+/** 本编排的读取和预览操作；提交仍通过各自的原命令控制器。 */
+export type InlineOwnerCall=(action:'workspace.members.list'|'workspace.ownerships.list'|'workspace.ownerships.get'|'models.list'|'workspace.members.preview'|'workspace.ownerships.preview',args?:unknown)=>Promise<any>;
 export interface InlineOwnerAgent {id:string;name:string;runtime?:AgentModelSelection}
 export interface InlineOwnerChoice {value:string;label:string;disabled?:boolean}
 export interface InlineOwnerData {members:WorkspaceMemberList['items'];views:ModuleOwnershipView[]}

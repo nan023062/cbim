@@ -2,7 +2,7 @@ import type {OwnerExecutionSelection} from '../src/backend/core/team/member-exec
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {reportFixture} from './execution-report-provider';
 import type {Application} from '../src/backend/main/application';

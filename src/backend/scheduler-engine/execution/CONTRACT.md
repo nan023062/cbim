@@ -689,3 +689,12 @@ createWorkspaceLoop 按冻结模型创建 PiEngine/ClaudeCodeEngine/CodexEngine�
 WorkspaceExecutionLease.acquireReadWithin 只由装配端为已核实主会话身份的内部核证调用；不是客户端可选的权限。人工接续 accept 在 beforeRun 已持有主执行占用时、目标审阅/完成核证时可派生独立读占用，父占用先释放仍由子读阻止其他写入。原主占用不存在则按普通读规则领取；其他运行的独占仍拒绝。桌面人工预览、决定、preflight 不使用派生入口，未知身份不能绕过占用。
 
 业务重规划 accept 的原影响核证也按已核主身份调用 EffectObservationService.observeFromMain，派生本运行读占用，避免把自身占用冲突误记为文件不可观察而改变 basis。预览、preflight、公开 observe 和人工处置仍使用独立读占用；不改变原失败回执、证据指纹和权限。
+
+
+### 请求预算服务的最小依赖
+
+ModelRequestBudgetService 仅接收 RequestBudgetStore 和 RequestBudgetAdmission。Main 的 member-dispatch 通过 requestBudgetStore 适配唯一 DispatchStore；服务只能读预算视图、追加请求预算变化和核实原主运行，独立测试不需要构造 Application 或声明无关领域字段。ScopeBudgetService.preflightRequest 同样只读该视图，其跨域运行准入仍使用原完整事务与明确协调者。预算耗尽、并发预留、停止、未知结果及重开判断不改写。
+
+## 全量 IPC 契约衔接
+
+会话历史列表的损坏项明确标注 status=unreadable，error 始终为字符串，不能当作含 task 的完整运行摘要；IPC 会话选择器只返回已校验的公开标识与名称。

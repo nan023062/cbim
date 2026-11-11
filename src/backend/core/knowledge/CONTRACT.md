@@ -1,3 +1,15 @@
+### 固定快照读取的逻辑边界与公共入口
+
+跨模块查询统一导入 [read-models.ts](read-models.ts) 的 `Team`、`BusinessWorkspace`、`context`、`data`、`content`；[snapshot.ts](snapshot.ts)、[team/model.ts](../team/model.ts)、[workspace/model.ts](../workspace/model.ts) 是同一个逻辑读取模块的私有实现。逻辑归属按职责声明，不要求把既有文件搬到同一目录。
+
+读取模块依赖纯快照 [types.ts](types.ts)、Foundation 的错误／JSON／序列化能力及内置项目根定义，不依赖知识写入端口、查询编排、Application、存储或引擎 SDK。读取只消费给定快照，不主动修改它、不重新读取磁盘；快照有效性与版本仍由调用方负责，接口不承诺把调用者持有的对象自动冻结。
+
+`KnowledgeQueries` 只依赖 `KnowledgeSnapshotReader.snapshot`，经公开入口装配领域读取；调用方显式转发读取能力，不传完整工作区。`KnowledgeRefresh` 独立接收 assert、snapshot、committedReceipt、commit 四项端口，保留原请求解析、版本、幂等和当前快照语义。知识工具仍先检查写权限；查询不能提交或调用刷新。`KnowledgeCommit` 数据契约归 types，ports 保留同类型重导出兼容。
+
+[逻辑规则](../../../../scripts/architecture-boundaries.mjs) 声明知识相关边界：纯基础、知识数据、项目根定义、知识读取模型、只读查询、事务刷新及测试数据；[检查器](../../../../scripts/check-dependencies.mjs) 同时检查允许方向、私有入口与允许的外部库，包含类型、重导出、别名和字面量动态导入。新实现或依赖必须先核实职责再登记，不能将整个 core 放入豁免。其他源码仍受既有物理层和全文件无环检查，不能把已登记的试点边界视为全仓逻辑治理已经结束。
+
+测试分为三类：`tests/data/` 仅构造数据并受相同稳定依赖约束；`tests/knowledge-tool-fixture.ts` 适配调用方提供的知识端口；`tests/helpers.ts` 仅提供会初始化并关闭完整 Application 的集成夹具。`core-domains.test.ts` 使用固定快照验证读取规则，原真实事务生成快照、关闭工作区后继续读取的场景保留在 `core-domains-integration.test.ts`。
+
 ### 项目根查询协议
 
 模块 registry/get 的工具协议升为 v2：registry 必须提供 `projectRoot`；详情为真实文件模块与 builtin 根的严格判别联合。内置根没有 definitionFile，以内联正文表达来源；原真实模块字段保持。输出校验不授予写入或正式委派资格。
@@ -70,9 +82,11 @@ knowledge-write-input.ts 让真实知识工具与后端历史观察复用同一�
 
 ### 刷新原事务与契约版本
 
-knowledgeRefreshInputSchema 要求 workspace/instance、revision 和 requestId，knowledgeRefreshRequest 固定顺序构造空 changes。KnowledgeQueries.refresh 先查精确原成功 journal，再按原版本校验/提交；重复不再写，但返回校验来自当前快照。原 v1 不从今日状态推断请求。originalKnowledgeWrite 仅在可信 contractVersion=2 时适配 refresh，查询不初始化或推进事务。
+knowledgeRefreshInputSchema 要求 workspace/instance、revision 和 requestId，knowledgeRefreshRequest 固定顺序构造空 changes。KnowledgeRefresh.refresh 先查精确原成功 journal，再按原版本校验/提交；重复不再写，但返回校验来自当前快照。原 v1 不从今日状态推断请求。originalKnowledgeWrite 仅在可信 contractVersion=2 时适配 refresh，查询不初始化或推进事务。
 
 ### 对象输入与模块正文诊断
+
+`object-contract.ts` 拥有对象输入 Schema 和预览/提交 DTO，可被浏览器边界直接加载。`object-crud.ts` 保留原重导出入口及事务实现；公共契约不通过该实现加载 Node.js 路径、哈希或知识事务。浏览器构建回归覆盖 IPC 的传递依赖。
 
 ObjectOperation 使用 kind 判别的严格 data Schema，objectDataSchemas 同时提供运行时可写字段，不再给 Agent 暴露 purpose 或给模块暴露 name。模块标识名从 slug 派生，中文名属于正文 H1。Rules 使用 workspace/module-outline 的同一固定章节；章节、空正文或图错误返回精确标题和一份可复制模板，不自动写入专业内容。
 

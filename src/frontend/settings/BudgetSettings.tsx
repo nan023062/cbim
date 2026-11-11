@@ -1,14 +1,16 @@
 /**
  * 作用定位：展示用户显式配置的新目标 Token/费用软限额，与全局并发设置相邻但独立保存。
  * 设计原因：保留原软限额且显式选择逐请求预留；说明模型容量预留、未知消耗与本地估价边界，读取失败不显示成已关闭。
+ * IPC 边界：预算和反馈的动态入口验证操作请求；开启/停止共享各自使用确定签名。
  */
+import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useEffect,useMemo,useSyncExternalStore} from 'react';
 import {BudgetSettingsController,budgetSettingsInput} from './budget-settings-state';
 import './budget-settings.css';
 
 /** 无自动保存；复用单一控制器隔离读取/保存与草稿，页面卸载后不发布旧响应。 */
 export function BudgetSettings(){
-  const controller=useMemo(()=>new BudgetSettingsController((action,input)=>window.cbim.call(action,input)),[]);
+  const controller=useMemo(()=>new BudgetSettingsController((action,input)=>window.cbim.call(...checkedIpcCall(action,input))),[]);
   const state=useSyncExternalStore(controller.subscribe,controller.snapshot,controller.snapshot);
   useEffect(()=>{void controller.load();return()=>controller.cancel()},[controller]);
   let valid=false;try{budgetSettingsInput(state,state.policy?.revision??1);valid=true}catch{}

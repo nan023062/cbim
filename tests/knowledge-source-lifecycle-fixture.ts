@@ -1,3 +1,4 @@
+import type {IpcAction,IpcResponse} from '../src/bridge/contracts/ipc-call';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
@@ -8,10 +9,10 @@ import type {Snapshot} from '../src/backend/core/knowledge/types';
 import type {WorkspaceMemberChangeInput} from '../src/backend/core/team/workspace-member';
 import type {ModuleOwnershipChangeInput} from '../src/backend/core/workspace/module-ownership';
 import {WorkspacePackages} from '../src/backend/main/resources/workspace-packages';
-import {moduleFiles,summary} from './helpers';
+import {moduleFiles,summary} from './data/knowledge';
 export {workspaceMemberHttpProbe as knowledgeSourceHttpProbe,workspaceMemberRuntimeEvidence as knowledgeSourceRuntimeEvidence} from './workspace-member-fixture';
 
-export type KnowledgeSourceCall=(action:string,input?:any)=>Promise<any>;
+export type KnowledgeSourceCall=<A extends IpcAction>(action:A,input?:unknown)=>Promise<IpcResponse<A>>;
 export const knowledgeSourceFixture={
   agentId:'.cbim/team/source_worker',moduleId:'.cbim/workspace/source_module',siblingId:'.cbim/workspace/source_sibling',
   agentName:'受控来源执行能力',memberName:'来源采纳验证岗位',model:'source-fixture',

@@ -11,7 +11,7 @@ import {knowledgeSourceRefSchema,knowledgeSourceChangeSchema,type KnowledgeSourc
 import type {Snapshot} from '../src/bridge/contracts/workspace';
 import {seedKnowledgeSource,knowledgeSourceFixture as data,knowledgeSourceDiskEvidence,knowledgeSourceHttpProbe} from '../tests/knowledge-source-lifecycle-fixture';
 import {createKnowledgeSourceLegacyFixture} from '../tests/knowledge-source-legacy-fixture';
-import {summary,moduleFiles} from '../tests/helpers';
+import {summary,moduleFiles} from '../tests/data/knowledge';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Product controls perform every lifecycle mutation after setup. --legacy first creates actual old records using the fixed pre-source EXE, never synthetic journals.

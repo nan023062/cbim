@@ -3,7 +3,8 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {CommandVerificationController,applyCommandVerification,commandVerificationStale,mainCommandSelection,type CommandVerificationSelection} from '../src/frontend/conversation/command-verification-state';
 import {CommandVerificationPanel} from '../src/frontend/conversation/CommandVerificationPanel';
-import {ToolActivity} from '../src/frontend/conversation/ToolActivity';
+import {RunToolDetails} from '../src/frontend/conversation/RunToolDetails';
+import {ToolActivity} from '../src/frontend/run-view/ToolActivity';
 import {commandVerificationToolNames,type CommandVerificationReport,type CommandResultSummary} from '../src/bridge/contracts/command-verification';
 import type {RunSummary} from '../src/bridge/contracts/execution';
 
@@ -65,15 +66,15 @@ it('新日志仅提示报告时效，原提交仍展示；序号相同不凭时�
 });
 
 it('只给已支持的真实主实例调用显示入口，不为成员、旧无绑定或只读工具创建入口',()=>{
-  for(const name of commandVerificationToolNames){const value=run(name),before=JSON.stringify(value),html=renderToStaticMarkup(createElement(ToolActivity,{run:value}));expect(html).toContain('command-verification-panel');expect(html).toContain('BAD_RETURN');expect(html).toContain('执行失败');expect(JSON.stringify(value)).toBe(before)}
-  for(const name of ['read','cbim_dispatch_command_report','cbim_goal_inspect','cbim_knowledge_commit'])expect(renderToStaticMarkup(createElement(ToolActivity,{run:run(name)}))).not.toContain('command-verification-panel');
-  for(const modify of [(value:RunSummary)=>{delete value.conversationBinding},(value:RunSummary)=>{value.task.mode=undefined},(value:RunSummary)=>{value.task.agentId='executor'},(value:RunSummary)=>{value.conversationBinding!.rootSessionId='other'},(value:RunSummary)=>{value.conversationBinding!.workspaceId='other'}]){const value=run();modify(value);expect(mainCommandSelection(value,'original-call','cbim_goal_plan')).toBeUndefined();expect(renderToStaticMarkup(createElement(ToolActivity,{run:value}))).not.toContain('command-verification-panel')}
+  for(const name of commandVerificationToolNames){const value=run(name),before=JSON.stringify(value),html=renderToStaticMarkup(createElement(ToolActivity,{run:value,renderDetails:selection=>createElement(RunToolDetails,selection)}));expect(html).toContain('command-verification-panel');expect(html).toContain('BAD_RETURN');expect(html).toContain('执行失败');expect(JSON.stringify(value)).toBe(before)}
+  for(const name of ['read','cbim_dispatch_command_report','cbim_goal_inspect','cbim_knowledge_commit'])expect(renderToStaticMarkup(createElement(ToolActivity,{run:run(name),renderDetails:selection=>createElement(RunToolDetails,selection)}))).not.toContain('command-verification-panel');
+  for(const modify of [(value:RunSummary)=>{delete value.conversationBinding},(value:RunSummary)=>{value.task.mode=undefined},(value:RunSummary)=>{value.task.agentId='executor'},(value:RunSummary)=>{value.conversationBinding!.rootSessionId='other'},(value:RunSummary)=>{value.conversationBinding!.workspaceId='other'}]){const value=run();modify(value);expect(mainCommandSelection(value,'original-call','cbim_goal_plan')).toBeUndefined();expect(renderToStaticMarkup(createElement(ToolActivity,{run:value,renderDetails:selection=>createElement(RunToolDetails,selection)}))).not.toContain('command-verification-panel')}
 });
 
 it('缺少任务身份的旧工具轨道仍能展示错误，不生成主命令或影响观察入口',()=>{
   const complete=run(),{task:_task,...old}=complete,value=old as RunSummary;
   expect(mainCommandSelection(value,'original-call','cbim_goal_plan')).toBeUndefined();
-  const html=renderToStaticMarkup(createElement(ToolActivity,{run:value}));expect(html).toContain('BAD_RETURN');expect(html).not.toContain('command-verification-panel');expect(html).not.toContain('effect-observation-panel');
+  const html=renderToStaticMarkup(createElement(ToolActivity,{run:value,renderDetails:selection=>createElement(RunToolDetails,selection)}));expect(html).toContain('BAD_RETURN');expect(html).not.toContain('command-verification-panel');expect(html).not.toContain('effect-observation-panel');
 });
 
 it('八种保存结果均使用控制面事实文案，预约不等于启动，放弃不等于回滚',()=>{

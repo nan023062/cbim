@@ -1,3 +1,4 @@
+import {runtimeToolGroup} from './runtime-tool-group';
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';import path from 'node:path';import os from 'node:os';
 import {LoopRuntime} from '../src/backend/core/brain/runtime';
@@ -24,9 +25,9 @@ it('正式Runtime拒绝伪造原生调用、越界读取/写入和allowed；原�
   expect((await c.beforeTool({id:'outside',name:'cbim_scoped_read',input:{path:'private.txt'}})).allow).toBe(false);
   expect((await c.beforeTool({id:'outside-write',name:'cbim_file_write_controlled',input:{path:'src/no.txt',content:'x',expectedBefore:{byteLength:0,sha256:hash('')}}})).allow).toBe(false);
   await expect(c.emit({type:'tool.allowed',data:{id:'fake',name:'cbim_scoped_node',input:nodeInput}})).rejects.toBeDefined();
-  await expect(c.scopedExecutionTools!.call('cbim_scoped_node',nodeInput,'fake')).rejects.toMatchObject({code:'EXECUTION_SCOPE_AUTHORIZATION'});
-  expect((await c.beforeTool({id:'valid',name:'cbim_scoped_read',input:{path:'src/main.cjs'}})).allow).toBe(true);const result=await c.scopedExecutionTools!.call('cbim_scoped_read',{path:'src/main.cjs'},'valid');
-  await expect(c.scopedExecutionTools!.call('cbim_scoped_read',{path:'src/main.cjs'},'valid')).rejects.toMatchObject({code:'EXECUTION_SCOPE_AUTHORIZATION'});await c.emit({type:'tool.finished',data:{id:'valid',name:'cbim_scoped_read',result}});
+  await expect(runtimeToolGroup(c,'scoped-execution')!.call('cbim_scoped_node',nodeInput,'fake')).rejects.toMatchObject({code:'EXECUTION_SCOPE_AUTHORIZATION'});
+  expect((await c.beforeTool({id:'valid',name:'cbim_scoped_read',input:{path:'src/main.cjs'}})).allow).toBe(true);const result=await runtimeToolGroup(c,'scoped-execution')!.call('cbim_scoped_read',{path:'src/main.cjs'},'valid');
+  await expect(runtimeToolGroup(c,'scoped-execution')!.call('cbim_scoped_read',{path:'src/main.cjs'},'valid')).rejects.toMatchObject({code:'EXECUTION_SCOPE_AUTHORIZATION'});await c.emit({type:'tool.finished',data:{id:'valid',name:'cbim_scoped_read',result}});
  });try{expect((await(await f.start()).done).status).toBe('completed');expect(f.read).toHaveBeenCalledTimes(1);expect(f.node).not.toHaveBeenCalled()}finally{await f.close()}
 });
 it.each(['read','ask'] as const)('%s 不允许未批准命令，审批前拒绝越界',async permission=>{
@@ -37,7 +38,7 @@ it('审批期间停止拒绝迟到批准；物理drain失败保留原占用，�
  try{const start=await f.start();await entered.promise;await f.runtime.stop(binding.taskId);approve.resolve();await expect(start.done).rejects.toMatchObject({code:'EXECUTION_SCOPE_DRAIN_PENDING'});expect(f.release).not.toHaveBeenCalled();expect(f.node).not.toHaveBeenCalled();blocked=false;await f.runtime.close();expect(f.release).toHaveBeenCalledTimes(1)}finally{blocked=false;approve.resolve();await f.close()}
 });
 it('未知受控写后阻止换ID的隔离命令，范围内只读核实仍保留',async()=>{
- const f=await fixture(async c=>{const input={path:'src/result.txt',content:'x',expectedBefore:{byteLength:0,sha256:hash('')}};expect((await c.beforeTool({id:'write',name:'cbim_file_write_controlled',input})).allow).toBe(true);await expect(c.controlledFileTools!.call('cbim_file_write_controlled',input,'write')).rejects.toThrow('unknown');await c.emit({type:'tool.finished',data:{id:'write',name:'cbim_file_write_controlled',isError:true,result:'unknown'}});expect((await c.beforeTool({id:'node',name:'cbim_scoped_node',input:nodeInput})).allow).toBe(false);expect((await c.beforeTool({id:'read',name:'cbim_scoped_read',input:{path:'src/main.cjs'}})).allow).toBe(true);const result=await c.scopedExecutionTools!.call('cbim_scoped_read',{path:'src/main.cjs'},'read');await c.emit({type:'tool.finished',data:{id:'read',name:'cbim_scoped_read',result}})},{controlled:true});try{expect((await(await f.start()).done).status).toBe('interrupted');expect(f.node).not.toHaveBeenCalled();expect(f.read).toHaveBeenCalledTimes(1)}finally{await f.close()}
+ const f=await fixture(async c=>{const input={path:'src/result.txt',content:'x',expectedBefore:{byteLength:0,sha256:hash('')}};expect((await c.beforeTool({id:'write',name:'cbim_file_write_controlled',input})).allow).toBe(true);await expect(runtimeToolGroup(c,'controlled-files')!.call('cbim_file_write_controlled',input,'write')).rejects.toThrow('unknown');await c.emit({type:'tool.finished',data:{id:'write',name:'cbim_file_write_controlled',isError:true,result:'unknown'}});expect((await c.beforeTool({id:'node',name:'cbim_scoped_node',input:nodeInput})).allow).toBe(false);expect((await c.beforeTool({id:'read',name:'cbim_scoped_read',input:{path:'src/main.cjs'}})).allow).toBe(true);const result=await runtimeToolGroup(c,'scoped-execution')!.call('cbim_scoped_read',{path:'src/main.cjs'},'read');await c.emit({type:'tool.finished',data:{id:'read',name:'cbim_scoped_read',result}})},{controlled:true});try{expect((await(await f.start()).done).status).toBe('interrupted');expect(f.node).not.toHaveBeenCalled();expect(f.read).toHaveBeenCalledTimes(1)}finally{await f.close()}
 });
 it('非零退出返回原事实并标记工具失败；坏字节回包不重复执行',async()=>{
  const node=vi.fn(async()=>({...nodeResult,exitCode:7})),port:ScopedExecutionPort={scope,read:async()=>({...readResult,content:'wrong'}),node,drain:async()=>{}};

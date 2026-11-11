@@ -2,7 +2,10 @@
  * 作用定位：展示任务图选中成员的公开正文、工具、计划与候选；独立报告核实执行事实，独立表单显式创建新的只读核实周期。
  * 文件补偿：独立报告只接当前实例与原调用，旧 native 没有 before 时不显示恢复入口。
  * 设计原因：按工作区/主会话/任务/轮次隔离观察；岗位与模型展示原冻结绑定，旧记录不猜负责人。流程、求助、检查点、撤销与结构验证独立展示，不把旧候选或通过结论借给新轮次。
+ * 成员交互端口仅接受停止、批准和回答问题，身份与刷新仍归当前任务详情。
+ * IPC 边界：任务详情与续接动态端口按操作解析后进入关联桥，状态所有权不变。
  */
+import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useEffect,useRef,useState} from 'react';
 import type {GraphCursor,ScopeSummary,TaskNode} from '../../bridge/contracts/dispatch';
 import type {PendingQuestion} from '../../bridge/contracts/execution';
@@ -80,9 +83,9 @@ function MemberRunDetail({workspaceId,rootSessionId,task,runId,active}:{workspac
   },[workspaceId,rootSessionId,task.taskId,runId,current]);
   useEffect(()=>{if(active)void refreshInteractions.current()},[active]);
   /** 串行提交本成员操作并刷新观察；失败继续抛给问题卡，卸载不会撤销已提交的后端操作。 */
-  async function operate(action:string,args:Record<string,unknown>){
+  async function operate(action:'dispatch.executionStop'|'dispatch.approve'|'dispatch.answerQuestion',args:Record<string,unknown>){
     if(lock.current)throw Error('正在处理另一项成员操作，请稍后重试');lock.current=true;setBusy(true);setOperationError('');
-    try{await window.cbim.call(action,{...identity,...args});await refreshInteractions.current();await refresh()}
+    try{await window.cbim.call(...checkedIpcCall(action,{...identity,...args}));await refreshInteractions.current();await refresh()}
     catch(cause){if(alive.current)setOperationError(cause instanceof Error?cause.message:'成员操作失败，请重试');throw cause}
     finally{lock.current=false;if(alive.current)setBusy(false)}
   }

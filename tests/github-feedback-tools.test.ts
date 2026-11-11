@@ -5,7 +5,7 @@ import {FeedbackTools} from '../src/backend/scheduler-engine/tools/feedback-tool
 import {authorizeRunTool,type RunToolDescriptor} from '../src/backend/core/policy/tool-policy';
 import {toolReceiptSchema} from '../src/backend/core/tools/receipt-schema';
 import {projectRunEvent} from '../src/backend/scheduler-engine/execution/public-run-events';
-import {transcript} from '../src/frontend/conversation/transcript';
+import {transcript} from '../src/frontend/run-view/transcript';
 import type {FeedbackToolsPort,FeedbackScope} from '../src/backend/core/connectors/github-feedback';
 import type {RunSummary,EngineEvent,StoredEvent} from '../src/backend/core/brain/types';
 

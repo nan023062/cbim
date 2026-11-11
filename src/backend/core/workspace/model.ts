@@ -1,6 +1,7 @@
 /**
  * 作用定位：业务工作区：领域工程与模块注册表、模块知识和仅本模块 Workflow的核心封装。
  * 设计原因：在同一校验快照上提供领域语义；内置项目根范围始终可查询，与真实文件注册表分开，不依赖桌面页面或写入伪造模块。
+ * 读取边界：本类属于 knowledge-read-models 的私有实现，跨模块经 knowledge/read-models 入口访问；模块责任与知识提交仍归各自服务。
  */
 import path from 'node:path';
 import {context,data,content} from '../knowledge/snapshot';

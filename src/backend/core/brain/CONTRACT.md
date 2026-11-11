@@ -38,7 +38,7 @@
 
 ### 执行成员的一次性求助门闩
 
-`EngineContext.memberHelpTools` 只在 `startMember` 的可信绑定下存在。Pi 透传一次性 gate 的真实 `toolCallId`；主 Agent 伪造工具名仍会被拒绝。运行时在任何异步策略前为求助预占门闩；正在审批或已放行未结束的其它调用都阻止求助。预占之后的新工具仅写入拒绝事实，不进入可能执行集合，也不能反过来干扰已批准的求助。
+`EngineContext.capabilities` 中的 `member-help` 能力 只在 `startMember` 的可信绑定下存在。Pi 透传一次性 gate 的真实 `toolCallId`；主 Agent 伪造工具名仍会被拒绝。运行时在任何异步策略前为求助预占门闩；正在审批或已放行未结束的其它调用都阻止求助。预占之后的新工具仅写入拒绝事实，不进入可能执行集合，也不能反过来干扰已批准的求助。
 
 `cbim_task_help` 执行前再次检查停止、授权、所有在途操作和被引用工具确实属于本轮；先记录 `task.help_requested {help}`，再返回标准 `{state:'staged',help}` 正文，最后由统一 `tool.finished` 签发回执。请求使用固定 MemberRunBinding，没有模型提供的收件人或提权参数。落盘失败不在同轮重放；成功后任何工具仍被拒绝，成员应结束本轮。
 
@@ -48,12 +48,16 @@ staged 不是派发图交接。外层在引擎关闭和 canonical 日志核实�
 classDiagram
 class LoopRuntime { +startMember() }
 class MemberHelpTools { +guard() +denied() +call() }
-class EngineContext { +memberHelpTools }
+class EngineContext { +capabilities }
 class RunJournal { <<port>> +append() }
 LoopRuntime --> MemberHelpTools : 每轮可信绑定与门闩
 LoopRuntime --> RunJournal : 先持久化请求与回执
 LoopRuntime --> EngineContext : 注入可用端口
-EngineContext --> MemberHelpTools : 仅正式成员
+class EngineCapability { +tools +instructions }
+class MemberToolCapabilities { <<module>> }
+EngineContext --> EngineCapability : 通用目录与调用
+MemberToolCapabilities --> MemberHelpTools : 仅正式成员
+MemberToolCapabilities --> EngineCapability : 适配
 ```
 
 ### 显式新主上下文
@@ -381,3 +385,12 @@ checkedMemberRunBinding 同时核独立 fallbackBinding 的工作区、角色及
 LoopRuntime 保留唯一权限、任务进度、证据与日志生命周期。engine-tools.ts 捕获真实工具目录和路由，engine-instructions.ts 统一角色及冻结上下文；Pi、Claude Code 与 Codex 只负责原生协议适配，各引擎不各自实现一套调度、知识事务或验收。native-tools.ts 复用固定 Pi SDK 的文件/命令实现供 Codex 宿主动态工具调用，不创建 Pi Loop 或共享账号。
 
 主会话切换时，engine-session.ts 沿 run.started.resumeFrom 最多核实 512 段同任务历史；恢复目标引擎最近一次原生文件及其实际 session.bound ID，并将其后另一引擎的公开消息/工具结果作为资料转交。首次使用目标引擎建立独立原生文件。资料最多 1 MiB，损坏、未决工具或循环链明确拒绝，不截断、不重放工具。成员检查点仍固定原岗位引擎，不做跨引擎移植。Claude Code/Codex 没有实现可靠的运行内插入确认，保留排队及下一轮发送。
+
+
+### 可信能力装配与验证准备
+
+`EngineContext.capabilities` 只包含能力 ID、统一 `EngineToolsPort`、业务指引和可选的原生工具关闭策略；不暴露具体业务实例或平台原始端口。`engine-tools.ts` 在启动时读取各端口一次，拒绝非法或重复工具名、未注册调用，并隔离工具目录副本；它不导入具体业务工具或运行上下文。`member-tool-capabilities.ts` 是现有九类工具的显式装配点，适配原调用 ID 与取消参数顺序、携带原业务指引；知识工具仍由引擎自己的可信选项注入。新增同类业务工具修改其实现和装配，不给通用上下文或注册器增加专用字段。
+
+Pi、Claude Code、Codex 共同消费 `disableNativeTools`，范围能力开启此策略时不注册原生文件或命令；元数据仅来自可信装配，模型正文不能修改。工具暴露不代替授权：每次调用仍先经 `beforeTool` 持久化决定，再执行并保存回执。未决副作用、停止、close/drain 和租约释放顺序仍归 Runtime 及具体能力负责。
+
+`prepareRunValidation` 在取得租约、创建日志和引擎之前检查要求数量、正式成员身份及 JSON/CSV/PNG 实际支持，并返回本轮工厂。`RunValidationContext` 只接收当前进度、代次、授权/在途校验、清单复核和可靠保存；具体规则与验证器选择在 run-validation 内。Runtime 仍协调各类业务证据，不宣称所有运行时职责都已独立；下一次扩展验证器从验证模块及平台接口进入，增加独立工具从 member-tool-capabilities 装配进入。

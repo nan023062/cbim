@@ -1,3 +1,6 @@
+import {governanceCommandReceipts} from '../src/bridge/contracts/ipc-governance';
+import {required} from './helpers';
+import type {GovernanceIpcResponses} from '../src/bridge/contracts/ipc-governance';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -10,7 +13,7 @@ const feedback={kind:'evidence_request',focus:'invariant',expectedResponse:'说�
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}};
 async function setup(){const f=await fixture();try{
   const seeded=await seedModuleGovernance(f.app,f.a),ws=f.app.workspace(seeded.entry.id),identity=seeded.identity;
-  const call=(action:string,input:object)=>f.app.dispatch('governance.'+action,{...identity,...input});
+  const call=<A extends "list"|"receipt"|"register"|"observe"|"propose"|"decide"|"apply">(action:A,input:object)=>f.app.dispatch(`governance.${action}`,{...identity,...input});
   const protection=(await call('register',{commandId:randomUUID(),moduleId:data.moduleId,expectedKnowledgeRevision:seeded.snapshot.revision})).record;
   const propose=async(respondsToDecisionIds?:string[],text=seeded.proposed)=>{
     const observation=(await call('observe',{commandId:randomUUID(),protectionId:protection.protectionId,expectedProtectionRevision:1,expectedKnowledgeRevision:seeded.snapshot.revision,statement:'当前真实模块说明需要补充职责与风险依据'})).record;
@@ -28,11 +31,11 @@ it('回应冻结精确决定并入basis；批准不造评价，已提交后来�
   const f=await setup();try{
     const revised=(await f.propose([f.source.decisionId])).record;
     expect(revised.respondsTo).toEqual([{decisionId:f.source.decisionId,proposalId:f.proposal.proposalId,basis:f.proposal.basis,decisionRevision:1}]);expect(revised.basis).toBe(moduleGovernanceProposalBasis(revised));
-    expect((await f.selected(revised.proposalId)).selected.responseStates).toEqual([{reference:revised.respondsTo[0],state:'current',latestDecisionId:f.source.decisionId,latestDecisionRevision:1,feedback,comment:f.source.comment}]);
+    expect(required((await f.selected(revised.proposalId)).selected).responseStates).toEqual([{reference:required(revised.respondsTo)[0],state:'current',latestDecisionId:f.source.decisionId,latestDecisionRevision:1,feedback,comment:f.source.comment}]);
     const approved=(await f.decide(revised,0,{decision:'approve',comment:'仅批准精确正文，未评价回应'})).record;expect(approved.assessments).toBeUndefined();
     const input=f.applyInput(revised,approved),applied=await f.app.dispatch('governance.apply',input);expect(applied.record.state).toBe('committed');
     const latest=(await f.decide(f.proposal,1,{feedback:{...feedback,expectedResponse:'新的核对问题'}})).record;
-    const view=await f.selected(revised.proposalId);expect(view.selected.responseStates[0]).toMatchObject({state:'superseded',latestDecisionId:latest.decisionId,latestDecisionRevision:2});expect(view.selected.decisions[0]).toEqual(approved);expect(view.selected.proposal).toEqual(revised);
+    const view=await f.selected(revised.proposalId);expect(required(required(view.selected).responseStates)[0]).toMatchObject({state:'superseded',latestDecisionId:latest.decisionId,latestDecisionRevision:2});expect(required(view.selected).decisions[0]).toEqual(approved);expect(required(view.selected).proposal).toEqual(revised);
     expect(await f.app.dispatch('governance.apply',input)).toEqual(applied);expect(await fs.readFile(path.join(f.a,f.overviewPath),'utf8')).toBe(f.proposed);
     const bytes=await fs.readFile(f.ledger);await f.app.open(f.entry.id,true);expect(await f.app.dispatch('governance.receipt',{workspaceId:f.entry.id,commandId:input.commandId})).toEqual(applied);expect(await fs.readFile(f.ledger)).toEqual(bytes);
   }finally{await f.cleanup()}
@@ -55,7 +58,7 @@ it('源意见被替代后新提案、批准和评价拒绝；不评价旧源的�
     await expect(f.decide(revised,0,{decision:'approve'})).rejects.toMatchObject({code:'GOVERNANCE_FEEDBACK_STALE'});
     await expect(f.decide(revised,0,{decision:'reject',assessments:[{decisionId:f.source.decisionId,outcome:'disputed',explanation:'不能用否定标签评价过期来源'}]})).rejects.toMatchObject({code:'GOVERNANCE_FEEDBACK_STALE'});
     const rejected=(await f.decide(revised,0,{decision:'reject',comment:'停止审阅这份基于旧意见的方案'})).record;expect(rejected.assessments).toBeUndefined();expect(rejected.feedback).toBeUndefined();
-    const view=await f.selected(revised.proposalId);expect(view.selected.proposal).toEqual(revised);expect(view.selected.responseStates[0].state).toBe('superseded');expect((await f.ws.snapshot()).revision).toBe(f.snapshot.revision);
+    const view=await f.selected(revised.proposalId);expect(required(view.selected).proposal).toEqual(revised);expect(required(required(view.selected).responseStates)[0].state).toBe('superseded');expect((await f.ws.snapshot()).revision).toBe(f.snapshot.revision);
   }finally{await f.cleanup()}
 });
 
@@ -76,7 +79,7 @@ it('最终知识事务门禁也复核待实施意图的来源，不能凭旧批�
     await f.decide(f.proposal,1,{feedback:{...feedback,expectedResponse:'旧意图保存后新的意见'}});
     await expect(f.ws.governed(tx=>tx.apply(input.commandId))).rejects.toMatchObject({code:'GOVERNANCE_FEEDBACK_STALE'});expect((await f.ws.snapshot()).revision).toBe(f.snapshot.revision);
     await expect(fs.stat(path.join(f.user,f.entry.id,'transactions',input.commandId+'.json'))).rejects.toMatchObject({code:'ENOENT'});await f.app.open(f.entry.id,true);
-    expect((await f.app.dispatch('governance.receipt',{workspaceId:f.entry.id,commandId:input.commandId})).record.state).toBe('not_applied');
+    expect(governanceCommandReceipts.apply.parse((await f.app.dispatch('governance.receipt',{workspaceId:f.entry.id,commandId:input.commandId}))).record.state).toBe('not_applied');
   }finally{vi.restoreAllMocks();await f.cleanup()}
 });
 
@@ -85,7 +88,7 @@ it('同串行队列的实施先进入后反馈等待，合法历史不被后来�
     const revised=(await f.propose([f.source.decisionId])).record,approved=(await f.decide(revised,0,{decision:'approve'})).record,input=f.applyInput(revised,approved),store=(f.ws as any).knowledge,draft=store.draft.bind(store);let first=true;
     const spy=vi.spyOn(store,'draft').mockImplementation(async(...args:any[])=>{const value=await draft(...args);if(first){first=false;entered.resolve();await release.promise}return value});
     const applying=f.app.dispatch('governance.apply',input);await entered.promise;const replacing=f.decide(f.proposal,1,{feedback:{...feedback,expectedResponse:'排在原实施后面的意见'}});release.resolve();
-    expect((await applying).record.state).toBe('committed');await replacing;spy.mockRestore();expect((await f.selected(revised.proposalId)).selected.responseStates[0].state).toBe('superseded');
-    await f.app.open(f.entry.id,true);expect((await f.app.dispatch('governance.receipt',{workspaceId:f.entry.id,commandId:input.commandId})).record.state).toBe('committed');
+    expect((await applying).record.state).toBe('committed');await replacing;spy.mockRestore();expect(required(required((await f.selected(revised.proposalId)).selected).responseStates)[0].state).toBe('superseded');
+    await f.app.open(f.entry.id,true);expect(governanceCommandReceipts.apply.parse((await f.app.dispatch('governance.receipt',{workspaceId:f.entry.id,commandId:input.commandId}))).record.state).toBe('committed');
   }finally{release.resolve();vi.restoreAllMocks();await f.cleanup()}
 });

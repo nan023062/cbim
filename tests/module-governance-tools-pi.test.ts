@@ -1,7 +1,8 @@
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {fixture,request,summary as agentSummary} from './helpers';
+import {fixture} from './helpers';
+import {request,summary as agentSummary} from './data/knowledge';
 import {Application} from '../src/backend/main/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';

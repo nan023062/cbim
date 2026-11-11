@@ -5,11 +5,13 @@
  * 文件补偿：当前工作区实例沿真实会话传给成员详情；图身份不签发新的文件操作许可。
  * 异常核实：根与成员详情共享真实会话的显式观察/新核实入口，不用根节点伪造业务任务来源。
  * 停止入口：使用会话独立的停止在途状态，消息插入或附件准备忙碌时仍可停止。
+ * 共享运行展示不持有恢复上下文；本页用 RunToolDetails 插槽显式组合原控制面板。
  */
 import {useEffect,useState} from 'react';
 import type {RunSummary,QueuedMessage} from '../../bridge/contracts/execution';
 import type {GraphSnapshot} from '../../bridge/contracts/dispatch';
-import {WorkStatus} from '../conversation/WorkStatus';
+import {RunToolDetails} from '../conversation/RunToolDetails';
+import {WorkStatus} from '../run-view/WorkStatus';
 import {MessageQueue} from '../conversation/MessageQueue';
 import {DispatchGraph,type DispatchRootView} from './DispatchGraph';
 import {MemberTaskDetail} from './MemberTaskDetail';
@@ -91,7 +93,7 @@ function RootTaskDetail({history,pending,now,busy,stopping,onQueueChange,onQueue
     {progress&&<article className="session-run" aria-label="执行计划"><h3>{progress.goal}</h3><p>计划版本 {progress.version} · {progress.state==='awaiting_review'?'交付待审阅':'执行与验证中'} · 尚未业务验收</p><p>{progress.reason}</p><ol>{progress.steps.map(step=><li key={step.id}><strong>{step.title}</strong> · {step.owner} · {{pending:'待处理',working:'进行中',reported_done:'已报告完成，待核验'}[step.state]}{step.evidence.length>0&&<details><summary>{step.evidence.length} 条工具回执</summary>{step.evidence.map(id=><p key={id}><code>{id}</code></p>)}</details>}</li>)}</ol><h4>验收要求</h4><ul>{progress.acceptance.map((item,index)=><li key={index}>{item}</li>)}</ul>{progress.delivery&&<><h4>交付候选</h4><p>{progress.delivery.summary}</p><ul>{progress.delivery.limitations.map((item,index)=><li key={index}>{item}</li>)}</ul></>}<details><summary>计划修订记录</summary>{history.flatMap(run=>run.events.filter(event=>event.type==='task.updated').map(event=><p key={run.runId+':'+event.seq}>{event.time} · {String((event.data.progress as {reason?:string})?.reason??'计划更新')}</p>))}</details></article>}
     <MessageQueue items={pending} busy={busy} continueDisabled={stopping||waiting||scopeState?.loading} onChange={onQueueChange} onContinue={onQueueContinue}/>
     {scopeState?.selectedScopeId&&history.length>0&&<h4>可读的主会话记录</h4>}
-    {[...history].reverse().map((run,index)=><article className="session-run" key={run.runId}><h3>{run.source?.kind==='human_decisions'?'按已保存人工决定继续':String(run.events.find(event=>event.type==='run.started')?.data.message||run.task.goal).split('\n')[0]}</h3><small>已读记录 {history.length-index} · {run.events[0]?.time?new Date(run.events[0].time).toLocaleString():''}</small><WorkStatus run={run} now={now} recovery={recovery}/>{run.status==='running'&&<button disabled={stopping} onClick={onStop}>停止本次执行</button>}{run.unresolvedTools.length>0&&<p role="alert">有 {run.unresolvedTools.length} 项操作尚需在对话中核实。</p>}<details><summary>执行标识</summary><code>{run.runId}</code></details></article>)}
+    {[...history].reverse().map((run,index)=><article className="session-run" key={run.runId}><h3>{run.source?.kind==='human_decisions'?'按已保存人工决定继续':String(run.events.find(event=>event.type==='run.started')?.data.message||run.task.goal).split('\n')[0]}</h3><small>已读记录 {history.length-index} · {run.events[0]?.time?new Date(run.events[0].time).toLocaleString():''}</small><WorkStatus run={run} now={now} renderToolDetails={selection=><RunToolDetails {...selection} recovery={recovery}/>}/>{run.status==='running'&&<button disabled={stopping} onClick={onStop}>停止本次执行</button>}{run.unresolvedTools.length>0&&<p role="alert">有 {run.unresolvedTools.length} 项操作尚需在对话中核实。</p>}<details><summary>执行标识</summary><code>{run.runId}</code></details></article>)}
     {!history.length&&<p>{historyIssueCount?'当前没有可读的主会话记录；待核实轮次与已有任务节点仍保留，不能据此判定未执行。':'当前尚无可读的主会话记录。'}</p>}
   </div>;
 }

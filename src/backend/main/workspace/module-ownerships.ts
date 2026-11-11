@@ -2,6 +2,7 @@
  * 作用定位：桌面与真实主工具共用的模块负责人服务，关系和岗位在唯一 DispatchStore 内裁决。
  * 设计原因：责任登记与业务派发分离；来源引用只消费真实来源日志，旧记录不按路径或相同指纹补造代次。采纳固定知识串行快照后进入 Store；列表依据包含来源游标，防同字节重建混页。
  * 恢复边界：原命令先查不可变回执，未找到才核当前实例和来源；保存后不重新执行、不撤回，解除允许来源缺失。
+ * 读取边界：模块读取经 knowledge/read-models 的公开入口，责任裁决和提交仍由本服务及原 Store 事务拥有。
  */
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
@@ -9,7 +10,7 @@ import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
 import {hash} from '../../core/foundation/serialization';
 import type {Snapshot} from '../../core/knowledge/types';
-import {BusinessWorkspace} from '../../core/workspace/model';
+import {BusinessWorkspace} from '../../core/knowledge/read-models';
 import type {DispatchState,DispatchStore} from '../../core/tasks/dispatch-storage';
 import {summarizeWorkspaceMember} from '../../core/team/workspace-member';
 import {

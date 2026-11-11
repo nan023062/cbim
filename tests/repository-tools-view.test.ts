@@ -2,7 +2,7 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {expect,it} from 'vitest';
 import {RepositoryScopeDetails} from '../src/frontend/components/RepositoryScopeDetails';
-import {ToolActivity} from '../src/frontend/conversation/ToolActivity';
+import {ToolActivity} from '../src/frontend/run-view/ToolActivity';
 import {brainStatus} from '../src/frontend/conversation/brain-status';
 import type {RunSummary,StoredEvent} from '../src/bridge/contracts/execution';
 

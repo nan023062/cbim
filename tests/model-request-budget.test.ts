@@ -4,6 +4,7 @@ import path from 'node:path';
 import {requestBudgetFixture,budgetAttempt,budgetUsage,budgetTestModel} from './model-request-budget-fixture';
 import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
 import {ModelRequestBudgetService} from '../src/backend/scheduler-engine/execution/model-request-budget-service';
+import {requestBudgetStore} from '../src/backend/main/persistence/tasks/request-budget-store';
 import {requestBudgetCommand,requestBudgetReceipt,requestBudgetReservation,requestBudgetReport,requestBudgetRecords,requestBudgetDecision,requestBudgetCost} from '../src/backend/core/tasks/model-request-budget-rules';
 import type {ModelRequestBudgetChange} from '../src/backend/core/tasks/model-request-budget';
 import {hash} from '../src/backend/core/foundation/serialization';
@@ -25,7 +26,7 @@ it('串行可靠预留共同扣余额，明确结算后释放；重放原命令�
 it('重新打开只读未决事实，换工作区实例不能释放；旧主运行占位失效后不能发送',async()=>{
   const f=await requestBudgetFixture();let reader:FileDispatchStore|undefined;try{
     const ticket=await f.port.reserve(budgetAttempt);await ticket.issue();const before=await fs.readFile(path.join(f.directory,'dispatch.jsonl'));
-    await f.store.close();reader=new FileDispatchStore(f.directory,f.entry.id);const next=new ModelRequestBudgetService({entry:f.owner.entry,instanceId:'next-instance',assert:()=>f.owner.assert()},reader,f.dispatch.budgets);
+    await f.store.close();reader=new FileDispatchStore(f.directory,f.entry.id);const next=new ModelRequestBudgetService({entry:f.owner.entry,instanceId:'next-instance',assert:()=>f.owner.assert()},requestBudgetStore(reader),f.dispatch.budgets);
     expect(await next.report(f.query)).toMatchObject({unknown:1,inFlight:0,reservedTokens:69632});expect(await fs.readFile(path.join(f.directory,'dispatch.jsonl'))).toEqual(before);
     const port=(await next.forRun(f.binding,f.llm))!;await expect(port.reserve(budgetAttempt)).rejects.toMatchObject({code:'MODEL_REQUEST_BUDGET_DENIED'});expect(await next.report(f.query)).toMatchObject({unknown:1,denied:1,reservedTokens:69632});
     f.release();await expect(port.reserve(budgetAttempt)).rejects.toMatchObject({code:'MODEL_REQUEST_RUN_STALE'});

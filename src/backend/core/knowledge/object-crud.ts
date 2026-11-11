@@ -1,42 +1,23 @@
 /**
  * 作用定位：Core 对象治理：规划 Agent/Module/Skill/Workflow 变更，按计划提交受控事务。
- * 设计原因：领域语义归 Core，事务通过 KnowledgeWorkspace 契约执行，维护路径、清单及父子引用；Workflow 显式条件在预览前严格解析，提交仍重新走完整知识校验。
+ * 设计原因：静态操作契约由 object-contract 提供，事务通过 KnowledgeWorkspace 契约执行，维护路径、清单及父子引用；Workflow 显式条件在预览前严格解析，提交仍重新走完整知识校验。
  * 模块、岗位和执行权限分别治理；对象预览不再登记真人或生成旧维护确认，已有历史字段只随原对象保留。
  * 静态 Agent 可保存本机默认 runtime 选型，模型身份来自设置；这不改变已登记岗位的采纳或运行权限。
  */
+import {objectDataSchemas,type ObjectOperation,type ObjectPreview,type ObjectCommit} from './object-contract';
+// 保留原消费入口；浏览器边界直接导入不含事务实现的 object-contract。
+export {objectDataSchemas,objectOperation,type ObjectOperation,type ObjectPreview,type ObjectCommit} from './object-contract';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {z} from 'zod';
-import {agentModelSelectionSchema} from '../brain/llm/engine';
-import type {KnowledgeWorkspace,KnowledgeCommit} from './ports';
+import type {KnowledgeWorkspace} from './ports';
 import {fail} from '../foundation/errors';
 import {json} from '../foundation/serialization';
 import {INDEXES} from './knowledge';
 import {parseJson} from '../foundation/json';
-import type {ChangeRequest,Preview} from './types';
+import type {ChangeRequest} from './types';
 import {parseWorkflowContract} from '../workspace/workflow-contract';
 import {knowledgePlanHash,type ResolvedObjectOperation} from './planned-commit';
 
-const fields={name:z.string().min(1).optional(),summary:z.string().optional(),authors:z.array(z.string()).optional(),capabilities:z.array(z.string()).optional(),limitations:z.array(z.string()).optional(),connectors:z.array(z.string()).optional(),sources:z.array(z.object({location:z.string(),scope:z.string()}).strict()).optional(),purpose:z.string().optional()};
-/** Schema 与实际写字段共用定义；模块 name 来自目录 slug，中文显示名写在正文 H1。 */
-export const objectDataSchemas={
-  agent:z.object({runtime:agentModelSelectionSchema.nullable().optional(),name:fields.name,summary:fields.summary,authors:fields.authors,capabilities:fields.capabilities,limitations:fields.limitations,connectors:fields.connectors}).strict(),
-  module:z.object({summary:fields.summary,authors:fields.authors,sources:fields.sources,connectors:fields.connectors}).strict().describe('name 固定为目录 slug，不可在 data 修改；中文模块名写在 body 的一级标题（# 中文名称）。'),
-  skill:z.object({name:fields.name,purpose:fields.purpose}).strict(),workflow:z.object({name:fields.name}).strict(),
-};
-const operationFields={action:z.enum(['create','update','delete']),id:z.string().optional(),parentId:z.string().optional(),slug:z.string().optional(),body:z.string().max(2*1024*1024).optional(),cascade:z.boolean().optional()};
-export const objectOperation=z.discriminatedUnion('kind',[
-  z.object({...operationFields,kind:z.literal('agent'),data:objectDataSchemas.agent.optional()}).strict(),
-  z.object({...operationFields,kind:z.literal('module'),data:objectDataSchemas.module.optional()}).strict(),
-  z.object({...operationFields,kind:z.literal('skill'),data:objectDataSchemas.skill.optional()}).strict(),
-  z.object({...operationFields,kind:z.literal('workflow'),data:objectDataSchemas.workflow.optional()}).strict(),
-]);
-/** 对象操作只描述静态知识；不接受已废弃的真人登记或维护确认字段。 */
-export type ObjectOperation=z.infer<typeof objectOperation>;
-/** 完整事务预览及可提交标识；objects 与输入操作按顺序对应。 */
-export interface ObjectPreview extends Preview {planId:string;objects:string[];notice:string}
-/** 知识事务回执；空目录清理警告不改变已提交的知识结果。 */
-export interface ObjectCommit extends KnowledgeCommit {cleanupWarnings:string[]}
 const pp=path.posix;
 export class ObjectCrud {
   constructor(private w:KnowledgeWorkspace){}

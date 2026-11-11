@@ -2,21 +2,25 @@ import {it,expect} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import {ConnectorRegistry} from '../src/backend/core/connectors/registry';
-import {Team} from '../src/backend/core/team/model';
-import {BusinessWorkspace} from '../src/backend/core/workspace/model';
-import {fixture} from './helpers';
-import {seedTeam} from './team-fixture';
+import {Team,BusinessWorkspace,content} from '../src/backend/core/knowledge/read-models';
+import {domainSnapshot} from './data/domain-snapshot';
 
 it('核心领域在固定快照上解析团队 Skill 和本模块 Workflow，无需 main 实例',async()=>{
-  const f=await fixture();try{
-    const e=await f.app.dispatch('add',{path:f.a}),w=f.app.workspace(e.id),seed=await seedTeam(w),snapshot=await w.snapshot();
-    const hr=new Team(snapshot),business=new BusinessWorkspace(snapshot);
-    await f.app.stop(e.id);
-    const agent=await hr.agent(seed.input.agentId);
-    expect(agent.skills.map(s=>s.id)).toEqual([seed.own,seed.shared]);
-    expect((await business.module(seed.input.moduleId)).workflows[0].id).toBe(seed.input.workflowId);
-    expect((await business.module(seed.child)).workflows).toEqual([]);
-  }finally{await f.cleanup()}
+  const seed=domainSnapshot(),before=structuredClone(seed.snapshot);
+  const hr=new Team(seed.snapshot),business=new BusinessWorkspace(seed.snapshot);
+  const agent=await hr.agent(seed.agentId);
+  expect(agent.skills.map(s=>s.id)).toEqual([seed.own,seed.shared]);
+  expect(agent.skills.map(s=>s.inherited)).toEqual([false,true]);
+  expect((await business.module(seed.moduleId)).workflows[0].id).toBe(seed.workflowId);
+  expect((await business.module(seed.child)).workflows).toEqual([]);
+  expect(seed.snapshot).toEqual(before);
+});
+it('固定快照缺对象或正文时明确报告，不从磁盘补造资料',async()=>{
+  const {snapshot,agentId}=domainSnapshot();
+  await expect(new Team(snapshot).agent('.cbim/team/missing')).rejects.toMatchObject({code:'OBJECT_NOT_FOUND'});
+  await expect(new BusinessWorkspace(snapshot).module('.cbim/workspace/missing')).rejects.toMatchObject({code:'OBJECT_NOT_FOUND'});
+  expect(content(snapshot,agentId,'missing.md')).toMatchObject({available:false});
+  expect(content(snapshot,agentId,'../../../secret.md')).toMatchObject({available:false,reason:'引用越界'});
 });
 it('链接器封装查询和唯一身份规则，不启动外部工具',()=>{
   const connector={id:'.cbim/connectors/docs',name:'文档桥',summary:'团队文档',plugin:{ghost_id:'docs',namespace:null}};

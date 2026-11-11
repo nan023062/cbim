@@ -2,7 +2,7 @@ import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {checkpointServiceFixture,gate} from './member-checkpoint-service-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {commitWorkspaceMember} from './workspace-member-fixture';
 import {DispatchTools} from '../src/backend/scheduler-engine/tools/dispatch-tools';
 import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';

@@ -62,7 +62,7 @@ pnpm start
 
 开发清单与实时进度统一从 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取。读取选定 Issue、[相关开发记录](design/development-log.md) 和实际代码，核实范围、依赖与验收后实施，每个 Issue 独立验证、提交并在已有授权内回填。`design/` 保存[关联方案、规范与记录](design/README.md)，`docs/` 仅保留下方四份概念设计。
 
-开发流程 `cbim-development` 提供 [Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md) 和 [通用项目](.agents/skills/cbim-development/SKILL.md) 三个同步入口；仅服务本工程开发，不是产品内置业务 Skill。
+开发流程 `cbim-development` 提供 [Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md) 和 [通用项目](.agents/skills/cbim-development/SKILL.md) 三个同步入口；必须遵守 [文档 1：通用项目架构设计规范与原则](design/project-architecture-standard.md)。项目架构治理入口 `architecture-evolution` 必须遵守文档 1 并按 [文档 2：架构治理规范与治理流程](design/architecture-governance-process.md) 执行。上述入口仅服务本工程开发，不是产品内置业务 Skill。
 
 桌面发版使用 `cbim-release`：[通用项目](.agents/skills/cbim-release/SKILL.md)、[Claude Code](.claude/skills/cbim-release/SKILL.md)、[Codex](.codex/skills/cbim-release/SKILL.md)。流程覆盖签名／明确选择的未签名发行、CI、草稿恢复、隔离安装与线上升级、官网及双分支收尾；具体分工见 [开发者 Skill 说明](design/README.md#开发入口)。
 
@@ -111,9 +111,9 @@ pnpm start
 
 团队架构和业务架构是每个工作区各一份的静态定义图，支持自定义 Agent、模块及各自方法的增删改查，变更先预览再提交。人才市场支持整个 Team、单 Agent、单 Skill 的跨项目复用；业务模板始终整套发布和应用，导入后重新确认目标项目的维护人与源码范围。静态定义不携带成员实例或任务记录；同时存在的多个主会话各自拥有调度器生成的动态任务节点图。
 
-已实现多工作区、模型配置、主 Agent 对话、知识查询与受控事务、任务内进度、成员实例登记、任务派发及增量事件。主 Agent 是具备工程、架构和结构化思维的团队与技术管理者：理解目标与约束、治理团队和业务知识、组织责任与模块边界、派发任务并审阅证据。它可按 read/ask/execute 权限通过内部服务增删改查 `.cbim/`，但永不直接修改业务文件或执行命令，业务实现与验证交给独立执行 Agent。
+已实现多工作区、模型配置、主 Agent 对话、知识查询与受控事务、任务内进度、成员实例登记、任务派发及增量事件。主 Agent 理解目标与约束、治理团队和业务知识、组织责任与模块边界，并默认在当前主会话实现业务和验证。read 只读，ask 的写入与命令须实际审批，execute 仍遵守工作区保护；`.cbim/` 只能经受控知识服务修改，业务文件和命令使用本轮实际提供的执行工具。
 
-每个主会话与任务图根共用一个持久主实例，主会话之间独立。主 Agent 按模块查询负责岗位，将真实 `ownerSelection` 保存到目标计划和派发；实际领取再次核对责任、来源及配置，执行使用岗位自己的模型、Skill 和项目适配。没有合适专业角色时，可将内置静态 `cbim:executor` 明确登记为项目岗位并设置模块责任；无负责人或配置失效不会隐式回退。默认角色不写入项目定义。
+每个主会话与任务图根共用一个持久主实例，主会话之间独立。未配置自定义负责岗位的模块由主 Agent 直接执行；明确配置岗位时，将真实 `ownerSelection` 保存到目标计划和派发，实际领取再次核对责任、来源及配置，使用岗位自己的模型、Skill 和项目适配。已配置岗位失效应报告真实缺口；主角色不能被派成独立成员，已退役的 `cbim:executor` 不得重新登记或派发，旧记录仅保留历史。
 
 每个用户任务开启一个调度周期，跨主模型调用、成员执行和结果回注持续；执行实例随派发任务创建，周期结束后释放，主实例、图和历史证据保留。同一静态 Agent 的不同项目岗位可使用不同模型，每个任务仍有独立实例和 Pi 会话。主角色与自定义角色共用大脑内核，只有主角色有派发工具。显式 IPC 同样要求实际周期、目标计划和责任绑定；旧直接业务 `loop.start` 已拒绝，历史仍可查询。岗位配置变化不改写旧记录；同活动周期可明确撤销旧未领取闭包，或放弃尚未消费的检查点，再按新负责人创建独立任务并以真实新候选审阅，见[存量交接](design/task/module-owner-handoff.md)。
 

@@ -2,6 +2,7 @@
  * 作用定位：调度引擎：将明确选择的模块、叶子 Agent 和本模块 Workflow 装配为执行任务。
  * 设计原因：只通过 Core 契约准备版本一致的 Skill 与 Workflow；旧单模块入口及续聊遇程序约定明确拒绝，避免绕过正式成员门禁。无约定旧任务保留计划与证据行为，知识正文不赋予无限改写权。
  * 旧 responsiblePerson 仅作历史说明，不查询花名册、不承担授权或派发门禁。
+ * 读取边界：领域查询只收到 snapshot 端口，准备任务不借查询对象写入或刷新知识。
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
@@ -21,7 +22,7 @@ export function assertLegacyWorkflowCompatible(task:TaskSpec):void{
 }
 /** 只读准备；所有正文必须来自同一知识版本，缺失和继承冲突拒绝启动。 */
 export async function prepareTeamTask(workspace:KnowledgeWorkspace,input:TeamTaskInput):Promise<TaskSpec>{
-  const selection=teamTaskInput.parse(input),queries=new KnowledgeQueries(workspace);
+  const selection=teamTaskInput.parse(input),queries=new KnowledgeQueries({snapshot:()=>workspace.snapshot()});
   const module=await queries.module(selection.moduleId),agent=await queries.agent(selection.agentId);
   if(!module.structural||!agent.structural)fail('VALIDATION','知识结构存在错误，请先完成知识治理');
   if(!agent.skillSelectionValid)fail('SKILL_CONFLICT','Agent 可用 Skill 存在继承冲突');

@@ -6,7 +6,7 @@ import {memberPauseServiceFixture} from './member-pause-service-fixture';
 import {memberPauseSelection} from '../src/backend/core/tasks/member-pause-rules';
 import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
 import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {commitWorkspaceMember} from './workspace-member-fixture';
 import {hash} from '../src/backend/core/foundation/serialization';
 import {checkedMainToolResult} from '../src/backend/scheduler-engine/tools/main-tool-contracts';

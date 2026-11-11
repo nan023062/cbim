@@ -15,7 +15,8 @@ try{
   for(const [name,text] of Object.entries(hostFiles))await fs.writeFile(path.join(root,name),text);
   const env={...process.env,PATH:path.join(process.env.SystemRoot||'C:\\Windows','System32'),CBIM_USER_DATA_ROOT:user,CBIM_SMOKE_ROOT:root};
   delete env.NODE_PATH;delete env.PYTHONHOME;delete env.PYTHONPATH;delete env.ELECTRON_RUN_AS_NODE;
-  const child=spawn(path.join(install,'CBIM.exe'),[],{cwd:install,env,windowsHide:true,stdio:'pipe'});
+  // 开发包与正式候选的 EXE 名不同，运行明确选定制品的原文件名，不重命名或借用别的构建。
+  const child=spawn(path.join(install,path.basename(sourceExecutable)),[],{cwd:install,env,windowsHide:true,stdio:'pipe'});
   let stderr='';child.stderr.on('data',x=>stderr+=x);
   const code=await new Promise((resolve,reject)=>{
     const timer=setTimeout(()=>{child.kill();reject(Error('便携程序启动超时：'+stderr))},45000);
@@ -30,7 +31,7 @@ try{
   for(const relative of ['.mcp.json','.codex','.claude','.rgignore','.cursorignore','AGENTS.override.md','.cbim/entry.md'])await assert.rejects(fs.access(path.join(root,relative)),{code:'ENOENT'});
   for(const name of ['discovery.json','credentials.json'])await assert.rejects(fs.access(path.join(user,result.workspaceId,name)),{code:'ENOENT'});
   await fs.mkdir('test-results',{recursive:true});
-  const evidence={...result,hostFilesUnchanged:true,noHostInstallation:true,noExternalCredentials:true,copiedOutsideCheckout:true,pythonAndNodeAbsentFromPath:true,cleanMachine:false};
+  const evidence={...result,sourceExecutable,hostFilesUnchanged:true,noHostInstallation:true,noExternalCredentials:true,copiedOutsideCheckout:true,pythonAndNodeAbsentFromPath:true,cleanMachine:false};
   await fs.writeFile('test-results/portable.json',JSON.stringify(evidence,null,2));console.log(JSON.stringify(evidence));
 }finally{
   const resolved=path.resolve(temp);

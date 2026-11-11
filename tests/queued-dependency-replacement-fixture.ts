@@ -9,7 +9,7 @@ import type {ReplaceQueuedDependencyReceipt} from '../src/backend/core/tasks/que
 import type {DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
 import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
 import {seedTeam} from './team-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {dependencyReplacementFixture as data} from './queued-dependency-replacement-provider';
 
 export {queuedTaskCancelRecords as dependencyRecords} from './queued-task-cancel-fixture';

@@ -1,10 +1,11 @@
+import {workspaceMemberPreviewSchema} from '../src/bridge/contracts/workspace-members';
 import {it,expect} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {seedTeam} from './team-fixture';
 import {WorkspaceMemberCommands} from '../src/frontend/team/workspace-member-state';
 import {ModuleOwnershipCommands} from '../src/frontend/workspace/module-ownership-state';
-import {assignInlineOwner,readInlineOwners,inlineOwnerChoices,type InlineOwnerCall} from '../src/frontend/workspace/inline-module-ownership';
+import {assignInlineOwner,readInlineOwners,inlineOwnerChoices} from '../src/frontend/workspace/inline-module-ownership';
 
 it('新岗位采纳 Agent 自选引擎和模型；失效选择不回落到本机默认',async()=>{
   const f=await setup();try{
@@ -25,7 +26,7 @@ async function setup(model=true){
   const identity={workspaceId:entry.id,instanceId:ws.instanceId},agents=[{id:team.input.agentId,name:'开发者'},{id:'cbim:executor',name:'默认执行者'},{id:'cbim:main',name:'主 Agent'}];
   const saved=new Map<string,string>(),storage={getItem:(key:string)=>saved.get(key)??null,setItem:(key:string,value:string)=>{saved.set(key,value)}};
   const calls:string[]=[];let after:(action:string,result:any)=>unknown=()=>{},alive=true;
-  const call:InlineOwnerCall=async(action,args)=>{calls.push(action);try{const value=await f.app.dispatch(action,args);after(action,value);return value}catch(error:any){throw Error(error.code?error.code+': '+error.message:String(error))}};
+  const call=async(action:string,args?:unknown)=>{calls.push(action);try{const value=await f.app.dispatch(action,args);after(action,value);return value}catch(error:any){throw Error(error.code?error.code+': '+error.message:String(error))}};
   const controllers=()=>({members:new WorkspaceMemberCommands(entry.id,{storage,uuid:randomUUID,commit:args=>call('workspace.members.commit',args),lookup:args=>call('workspace.members.receipt',args)}),ownerships:new ModuleOwnershipCommands(entry.id,{storage,uuid:randomUUID,commit:args=>call('workspace.ownerships.commit',args),lookup:args=>call('workspace.ownerships.receipt',args)}),call,isCurrent:()=>alive});
   const ports=controllers();
   return {...f,entry,ws,team,identity,agents,calls,ports,controllers,after:(fn:typeof after)=>{after=fn},leave:()=>{alive=false},assign:(value:string,moduleId=team.input.moduleId)=>assignInlineOwner(identity,moduleId,value,agents,ports)};
@@ -82,7 +83,7 @@ it('停用岗位不隐式重建，同 Agent 多个岗位在同级区分；非法
     await expect(f.assign('agent:cbim:main')).rejects.toThrow('不存在');
     await f.assign('agent:'+f.team.input.agentId);await f.assign('');let data=await readInlineOwners(f.identity,f.ports.call);const member=data.members[0];
     const input={...f.identity,change:{kind:'state',memberId:member.memberId,expectedRevision:member.revision,nextState:'suspended',reason:'测试停用'}};
-    const preview=await f.ports.call('workspace.members.preview',input);await f.ports.members.submit(input as any,preview);
+    const preview=workspaceMemberPreviewSchema.parse(await f.ports.call('workspace.members.preview',input));await f.ports.members.submit(input as any,preview);
     await expect(f.assign('agent:'+f.team.input.agentId)).rejects.toThrow('不可用');data=await readInlineOwners(f.identity,f.ports.call);
     expect(inlineOwnerChoices(f.agents,data.members).find(item=>item.value==='member:'+member.memberId)?.disabled).toBe(true);
     const count=f.calls.filter(action=>action.endsWith('.commit')).length;

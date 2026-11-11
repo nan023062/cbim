@@ -1,5 +1,6 @@
 import {expect,test} from 'vitest';
-import {fixture,internalKnowledge} from './helpers';
+import {fixture} from './helpers';
+import {internalKnowledge} from './knowledge-tool-fixture';
 import {seedTeam} from './team-fixture';
 import {moduleGetOutputSchema,moduleRegistryOutputSchema} from '../src/backend/core/knowledge/tool-output-queries';
 

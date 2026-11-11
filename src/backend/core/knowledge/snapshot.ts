@@ -1,6 +1,7 @@
 /**
  * 作用定位：已校验知识快照的版本信息、定义读取和受限正文引用解析。
  * 设计原因：团队与业务领域共用只读快照辅助；严格 JSON 解析来自 Foundation，不经知识查询门面反向调用领域模型。
+ * 读取边界：本文件属于读取模型内部实现；跨边界正文查询统一从 read-models 导入，不能据此读取或提交磁盘知识。
  */
 import path from 'node:path';
 import {fail} from '../foundation/errors';

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-工作区唯一的工程/模块图及自身Workflow。负责人面板展示来源和有界历史，支持同负责人明确采纳当前来源；原回执必须匹配同一关系、版本及owner，未知不换命令。知识编辑和整架构复用委托knowledge/resources；登记不移交旧任务。 关联任务包含新旧协议节点，负责人变更不移交旧任务；实际领取重核原版本。
+工作区唯一的工程/模块图及自身Workflow。负责人面板展示来源和有界历史，支持同负责人明确采纳当前来源；原回执必须匹配同一关系、版本及owner，未知不换命令。知识编辑和整架构复用委托knowledge/resources；登记不移交旧任务。 一级负责人读取/预览只使用有限 InlineOwnerCall 操作，写入仍由独立命令控制器持有。 关联任务包含新旧协议节点，负责人变更不移交旧任务；实际领取重核原版本。 模块责任按是否给定memberId选择明确入口，内联岗位表单经过Schema配对。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -106,7 +106,7 @@ class N_src_frontend_workspace_InlineModuleOwner_tsx_InlineModuleOwners["InlineM
 N_src_frontend_workspace_InlineModuleOwner_tsx ..> N_src_frontend_workspace_InlineModuleOwner_tsx_InlineModuleOwners : 声明
 ```
 
-直接依赖：[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[module-ownership-state.ts](module-ownership-state.ts)、[inline-module-ownership.ts](inline-module-ownership.ts)、[../components/Icon.tsx](../components/Icon.tsx)。
+直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[module-ownership-state.ts](module-ownership-state.ts)、[inline-module-ownership.ts](inline-module-ownership.ts)、[../components/Icon.tsx](../components/Icon.tsx)。
 
 ### module-ownership-state.ts
 

@@ -7,7 +7,7 @@ import type {Application} from '../src/backend/main/application';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import type {ReviseQueuedDependenciesReceipt} from '../src/backend/core/tasks/queued-dependency-revision';
 import {seedTeam} from './team-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {dependencyRevisionData as data} from './queued-dependency-revision-provider';
 export {additionRecords as revisionRecords,additionWait as revisionWait,additionRunBytes as revisionRunBytes,additionRunByteEvidence as revisionRunByteEvidence} from './queued-dependency-addition-fixture';
 export async function seedDependencyRevision(app:Application,project:string,provider:{url:string;bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>void}){

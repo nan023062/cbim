@@ -1,6 +1,7 @@
 /**
  * 作用定位：模型供应商、运行并发、新目标软限额、GitHub 反馈连接、仓库与共享服务设置；版本与更新由账号菜单独立打开。
  * 设计原因：模型、并发、周期软限额在固定位置独立加载和保存；仓库读取不重挂载表单或丢失草稿，新额度不改写正在执行的目标。
+ * IPC 边界：预算和反馈的动态入口验证操作请求；开启/停止共享各自使用确定签名。
  */
 import {useEffect,useState} from 'react';
 import type {RepositoryStatus} from '../../bridge/contracts/resources';
@@ -16,7 +17,7 @@ export function SettingsView(){
 
   useEffect(()=>{void (async()=>{try{const s:RepositoryStatus=await api.call('resources.status');setStatus(s);setError(s.error||'');if(s.config?.mode==='local')setLocalPath(s.config.location)}catch(e:any){setError(e.message)}finally{setBusy(false)}})()},[]);
   async function configure(){setBusy(true);setError('');setNotice('');try{const s=await api.call('resources.configure',{mode:'local',location:localPath});setStatus(s);setConnection(undefined);setNotice('已更新：链接器、人才市场、业务模板统一使用此仓库。')}catch(e:any){setError(e.message)}finally{setBusy(false)}}
-  async function sharing(start:boolean){setBusy(true);setError('');try{setStatus(await api.call(start?'resources.share':'resources.stopSharing',start?{lan,port}:{}));setConnection(undefined)}catch(e:any){setError(e.message)}finally{setBusy(false)}}
+  async function sharing(start:boolean){setBusy(true);setError('');try{setStatus(start?await api.call('resources.share',{lan,port}):await api.call('resources.stopSharing'));setConnection(undefined)}catch(e:any){setError(e.message)}finally{setBusy(false)}}
   async function showConnection(){setError('');try{setConnection(await api.call('resources.connection'))}catch(e:any){setError(e.message)}}
 
   return <div className="view-page resource-library"><div className="view-heading"><div><p className="overline">CBIM / 设置</p><h1>设置</h1><p>仓库来源跟随登录状态：未登录使用本地目录，登录后自动连接服务器仓库。</p></div></div>

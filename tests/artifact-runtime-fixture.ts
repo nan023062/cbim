@@ -1,3 +1,4 @@
+import {runtimeToolGroup} from './runtime-tool-group';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -18,7 +19,7 @@ export const captureInput={expectedTaskProgressVersion:1,sourceToolCallIds:['sou
 export function deferred(){let resolve!:()=>void;const promise=new Promise<void>(r=>{resolve=r});return {promise,resolve}}
 export async function invoke(c:EngineContext,name:string,id:string,input:Record<string,unknown>){
   const decision=await c.beforeTool({name,id,input});if(!decision.allow)throw Error(decision.reason??'拒绝');
-  const result=name==='cbim_artifact_transition'?await c.artifactTransitionTools!.call(name,input,id):name.startsWith('cbim_task_manifest_')?await c.manifestTools!.call(name,input,id):name==='cbim_validation_run'?await c.validationTools!.call(name,input,id):name==='cbim_task_artifact_capture'?await c.artifactTools!.call(name,input,id):name==='read'?jsonToolResult('read',{text:await fs.readFile(path.join(c.task.root,String(input.path)),'utf8')}):await c.taskTools!.call(name,input);
+  const result=name==='cbim_artifact_transition'?await runtimeToolGroup(c,'artifact-transitions')!.call(name,input,id):name.startsWith('cbim_task_manifest_')?await runtimeToolGroup(c,'manifests')!.call(name,input,id):name==='cbim_validation_run'?await runtimeToolGroup(c,'validation')!.call(name,input,id):name==='cbim_task_artifact_capture'?await runtimeToolGroup(c,'artifacts')!.call(name,input,id):name==='read'?jsonToolResult('read',{text:await fs.readFile(path.join(c.task.root,String(input.path)),'utf8')}):await runtimeToolGroup(c,'task-progress')!.call(name,input);
   await c.emit({type:'tool.finished',data:{name,id,result,isError:false}});return JSON.parse(result.content[0].text);
 }
 export async function seedProgress(c:EngineContext){

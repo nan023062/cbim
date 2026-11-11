@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-固定 Electron IPC 桥；不向页面暴露 Node、凭据或任意磁盘 API。
+固定 Electron IPC 桥；不向页面暴露 Node、凭据或任意磁盘 API。 实现关联调用签名并沿原信封转发，不重试错误或改变主Frame授权。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -22,6 +22,7 @@ class N_src_bridge_preload_preload_ts["preload.ts"] {
   <<module>>
 }
 ```
+直接依赖：[../contracts/workspace.ts](../contracts/workspace.ts)。
 
 
 ## 子目录导航

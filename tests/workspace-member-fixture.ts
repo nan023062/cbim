@@ -7,7 +7,7 @@ import type {LlmDefinition} from '../src/backend/core/brain/llm/config';
 import type {WorkspaceMemberChangeInput} from '../src/backend/core/team/workspace-member';
 import type {DispatchStore} from '../src/backend/core/tasks/dispatch-storage';
 import {seedTeam} from './team-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 export {repositoryConnectionRunFiles as workspaceMemberRunFiles} from './repository-connection-fixture';
 
 export const workspaceMemberFixture={

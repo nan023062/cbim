@@ -97,7 +97,7 @@ try {
   const run = await page.evaluate(id => window.cbim.call('loop.chat', {id, message: 'Record release acceptance.', options: {permission: 'ask', turnTimeoutMs: 60000}}), entry.id);
   let summary;
   for (let n = 0; n < 120; n++) {
-    summary = await page.evaluate(args => window.cbim.call('loop.inspect', args), {id: entry.id, ...run});
+    summary = await page.evaluate(args => window.cbim.call('loop.inspect', args), {id: entry.id, taskId: run.taskId, runId: run.runId});
     if (summary.status === 'completed') break; if (['failed', 'interrupted', 'cancelled'].includes(summary.status)) throw Error(JSON.stringify(summary)); await pause(500);
   }
   assert.equal(summary.status, 'completed'); assert.equal(requests, 1);
@@ -147,7 +147,7 @@ try {
   const models = await page.evaluate(() => window.cbim.call('models.list')); assert.ok(models.profiles.some(p => p.name === profile.name));
   const catalog = await page.evaluate(() => window.cbim.call('list')); assert.ok(catalog.entries.some(e => e.id === entry.id));
   const history = await page.evaluate(id => window.cbim.call('loop.list', {id}), entry.id); assert.equal(history.length, 1); assert.equal(history[0].task.taskId, run.taskId); assert.equal(history[0].runId, run.runId);
-  summary = await page.evaluate(args => window.cbim.call('loop.inspect', args), {id: entry.id, ...run}); assert.equal(summary.status, 'completed'); assert.equal(requests, 1);
+  summary = await page.evaluate(args => window.cbim.call('loop.inspect', args), {id: entry.id, taskId: run.taskId, runId: run.runId}); assert.equal(summary.status, 'completed'); assert.equal(requests, 1);
   await notes(page); assert.deepEqual(errors, []);
   const signature = ps(`(Get-AuthenticodeSignature -LiteralPath '${exe.replaceAll("'", "''")}').Status.ToString()`); assert.equal(signature, 'NotSigned');
   assert.equal((await status(page)).enabled, true);

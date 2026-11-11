@@ -2,6 +2,8 @@
 
 适用日期：2026-11-08。适用版本：CBIM Assistant Windows x64 桌面 `0.1.0`。这是一份操作指南；实际执行结果单独记在[线上验收记录](../verification/github-feedback-online-20261108.md)，不能把下列步骤当成已通过的证据。
 
+**0.1.9 行为更新（#41）：** 反馈成功后保留 Agent 的最终回复，以一句话反馈真实提交事实，可引用原回执链接；提交不代表开发完成。当前行为见 [BUG 反馈](../runtime/bug-feedback.md) 与 [需求许愿](../runtime/feature-wish.md)。下文 0.1.0 测试样例及其“成功静默”条件保留为历史，不用于要求当前版本隐藏最终回复。
+
 本次目标是：维护者注册一次 OAuth App → CBIM 用户完成一次 Device Flow 授权 → 在对话“+”调用反馈 Skill → 按格式提供上下文 → 软件直接创建 GitHub Issue。用户无需反馈服务器、手动网页填单或提供 Token；创建成功后，CBIM 不追加结果消息。设置中的「软件更新」展示当前版本日志和可用新版日志，修复／功能变化通过版本日志统一发布。
 
 **当前已注册应用：** `CBIM Feedback`，所有者 `nan023062`，公开 Client ID **`Ov23liSMDZneBd3gSyTo`**。[维护者设置页](https://github.com/settings/applications/4002869)。使用现有应用时直接从第 2 节开始，不重复注册；此标识不是 Client Secret。

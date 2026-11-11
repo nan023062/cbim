@@ -22,11 +22,11 @@
 
 ## 运行
 
-Windows x64 当前公开桌面版为 [desktop-v0.1.8](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.8)，默认提供 Pi、Claude Code、Codex 三种执行引擎。供应商只管理统一模型列表，模型菜单按接口兼容性筛选；对话栏与团队页面设置同一份主 Agent 配置，项目岗位保留独立配置。0.1.8 对齐 0.1.7 正式基线与架构整改，保留当前工作区自动化、隐式模块负责人、知识文件树与治理入口，统一全部 172 项 IPC 契约。自动化仅在应用和工作区打开时触发。安装后从左下角「版本与更新」查看版本、日志与新版提醒。此包尚未签名，Windows 可能显示未知发布者或安全提示；核对发布页的 `SHA256SUMS.txt` 不能替代可信签名。后续取得证书后将通过更高版本切换到签名发行。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
+Windows x64 当前公开桌面版为 [desktop-v0.1.9](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.9)，默认提供 Pi、Claude Code、Codex 三种执行引擎。供应商只管理统一模型列表，模型菜单按接口兼容性筛选；对话栏与团队页面设置同一份主 Agent 配置，项目岗位保留独立配置。0.1.9 新增主 Agent 受治理的成员与状态工具、公开网页读取和需自配密钥的 Brave 搜索；支持粘贴图片与本地路径、文件树行菜单，并修复中文终端与会话/模型诊断。自动化仅在应用和工作区打开时触发。安装后从左下角「版本与更新」查看版本、日志与新版提醒。此包尚未签名，Windows 可能显示未知发布者或安全提示；核对发布页的 `SHA256SUMS.txt` 不能替代可信签名。后续取得证书后将通过更高版本切换到签名发行。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
 
-当前版本每分钟检查，新版高亮菜单并显示用户栏绿点；点击下载后自动校验、停止任务、安装并重启，失败保留显式重试。真实 0.1.7 → 0.1.8 在线自动升级、安装前普通退出取消、十项数据/无重放检查已通过，见 [发布验收](design/verification/desktop-release-0.1.8-20261112.md)。0.1.2 及更早版本仍按旧界面下载后再次确认重启；关闭或离线的客户端需启动并联网后检查更新。
+当前版本每分钟检查，新版高亮菜单并显示用户栏绿点；点击下载后自动校验、停止任务、安装并重启，失败保留显式重试。真实 0.1.8 → 0.1.9 在线自动升级、安装前普通退出取消、十项数据/无重放检查已通过，见 [发布验收](design/verification/desktop-release-0.1.9-20261112.md)。0.1.2 及更早版本仍按旧界面下载后再次确认重启；关闭或离线的客户端需启动并联网后检查更新。
 
-BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill。一句问题或愿望即可提交，其余信息自愿，缺项标“用户未提供”。首次在设置连接自己的 GitHub；成功后不追加结果消息。详见 [OAuth 与反馈指南](design/task/github-feedback-setup.md)。更新程序独立位于 `src/backend/updater/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](design/task/desktop-release.md)。
+BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill。一句问题或愿望即可提交，其余信息自愿，缺项标“用户未提供”。首次在设置连接自己的 GitHub；成功后由 Agent 简短反馈真实提交结果，不代表开发完成。详见 [OAuth 与反馈指南](design/task/github-feedback-setup.md)。更新程序独立位于 `src/backend/updater/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](design/task/desktop-release.md)。
 
 构建目录按北京时间命名：`build/YYYYMMDD-HHmmss/`。Windows 便携程序在其中的 `CBIM Assistant-win32-x64/CBIM.exe`，请保留完整目录。分发包为 `make/zip/win32/x64/CBIM-Assistant-YYYYMMDD-HHmmss-win32-x64-版本.zip`，可按名称排序查找最新构建。
 

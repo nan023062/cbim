@@ -799,3 +799,7 @@ model-request-budget-storage.ts 定义 RequestBudgetState/Store/Admission。读�
 ## 主岗位审计
 
 workspace-member-invariants 在提交与重放当时的前缀上核实主 actor 的活动周期、最新主运行、图根实例及 conversation 通道；不能只因 actor 格式正确而放行。登记仍只追加一条岗位审计及允许的来源捕获，禁止夹带派发或业务变更，退休前仍须解除模块责任。
+
+### 同次版本读取与闭包预览
+
+`coordination-preview.ts` 只从一份 Store 快照生成公开版本/候选和撤销或等待清单。撤销遍历启用依赖（穿过已取消节点），再用 `queuedCancellationSelection` 核领取、成员、信封与范围；等待用 `memberPauseSelection` 核完整检查点和后继。错误返回 issues，不给可提交 draft。预览不写入、不证明外部日志或文件合格，正式 CAS/停泊仍重核；候选证据不等于验收。

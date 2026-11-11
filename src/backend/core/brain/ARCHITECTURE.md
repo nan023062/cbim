@@ -23,6 +23,7 @@
 | [model-errors.ts](model-errors.ts) | 把模型结束原因转换为用户可理解的执行错误，供实时引擎和历史回放共用。 |
 | [native-tools.ts](native-tools.ts) | 向宿主托管引擎提供已有文件/命令工具操作，复用 Pi SDK 的独立工具实现而不创建 Pi Loop。 |
 | [output-manifest-capture.ts](output-manifest-capture.ts) | 成员本轮完整产物采集的短期门闩，冻结 Workflow 范围并将真实观察可靠写入 canonical。 |
+| [repeated-tool-failures.ts](repeated-tool-failures.ts) | 按本轮真实调用顺序识别同工具同参数的连续三次失败。 |
 | [run-artifact-transition.ts](run-artifact-transition.ts) | 正式成员删除/移动工具的唯一授权、写前核实和可靠阶段记录，平台副作用只通过此运行端口。 |
 | [run-controlled-file.ts](run-controlled-file.ts) | 正式成员受控文件工具的单次授权与短门闩，平台写入只经过此可信运行端口。 |
 | [run-scoped-execution.ts](run-scoped-execution.ts) | 冻结范围工具的 Runtime 一次授权、短门闩和实际退出屏障。 |
@@ -101,16 +102,17 @@ class N_src_backend_core_brain_native_tools_ts["native-tools.ts"] {
 class N_src_backend_core_brain_output_manifest_capture_ts["output-manifest-capture.ts"] {
   <<module>>
 }
-class N_src_backend_core_brain_run_artifact_transition_ts["run-artifact-transition.ts"] {
+class N_src_backend_core_brain_repeated_tool_failures_ts["repeated-tool-failures.ts"] {
   <<module>>
 }
 N_src_backend_core_brain_output_manifest_capture_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
-N_src_backend_core_brain_run_artifact_transition_ts ..> N_src_backend_core_brain_output_manifest_capture_ts : 导入依赖
-N_src_backend_core_brain_run_artifact_transition_ts ..> N_src_backend_core_brain_member_run_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_brain_run_artifact_transition_ts["run-artifact-transition.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_run_controlled_file_ts["run-controlled-file.ts"] {
   <<module>>
 }
@@ -126,23 +128,24 @@ class N_src_backend_core_brain_runtime_ts["runtime.ts"] {
 class N_src_backend_core_brain_scope_usage_ts["scope-usage.ts"] {
   <<module>>
 }
-class N_src_backend_core_brain_storage_ts["storage.ts"] {
-  <<module>>
-}
-N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_storage_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_validation_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_scoped_execution_ts : 导入依赖
 N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_controlled_file_ts : 导入依赖
+N_src_backend_core_brain_runtime_ts ..> N_src_backend_core_brain_run_artifact_transition_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_brain_storage_ts["storage.ts"] {
+  <<module>>
+}
 class N_src_backend_core_brain_types_ts["types.ts"] {
   <<module>>
 }
 class N_src_backend_core_brain_usage_ts["usage.ts"] {
   <<module>>
 }
+N_src_backend_core_brain_storage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入依赖
 ```
 
@@ -197,6 +200,7 @@ N_src_backend_core_brain_usage_ts ..> N_src_backend_core_brain_types_ts : 导入
 - `runtime.ts` → `run-validation.ts`：导入。
 - `runtime.ts` → `member-tool-capabilities.ts`：导入。
 - `runtime.ts` → `run-scoped-execution.ts`：导入。
+- `runtime.ts` → `repeated-tool-failures.ts`：导入。
 - `runtime.ts` → `run-controlled-file.ts`：导入。
 - `runtime.ts` → `run-artifact-transition.ts`：导入。
 - `runtime.ts` → `member-run.ts`：导入。
@@ -762,3 +766,9 @@ LoopRuntime 保留唯一权限、任务进度、证据与日志生命周期。en
 Pi、Claude Code、Codex 共同消费 `disableNativeTools`，范围能力开启此策略时不注册原生文件或命令；元数据仅来自可信装配，模型正文不能修改。工具暴露不代替授权：每次调用仍先经 `beforeTool` 持久化决定，再执行并保存回执。未决副作用、停止、close/drain 和租约释放顺序仍归 Runtime 及具体能力负责。
 
 `prepareRunValidation` 在取得租约、创建日志和引擎之前检查要求数量、正式成员身份及 JSON/CSV/PNG 实际支持，并返回本轮工厂。`RunValidationContext` 只接收当前进度、代次、授权/在途校验、清单复核和可靠保存；具体规则与验证器选择在 run-validation 内。Runtime 仍协调各类业务证据，不宣称所有运行时职责都已独立；下一次扩展验证器从验证模块及平台接口进入，增加独立工具从 member-tool-capabilities 装配进入。
+
+### 同参失败熔断
+
+`RepeatedToolFailures` 以工具名及递归键排序的参数哈希判断连续失败，按 proposed 顺序收束并发结果，重复 finished/denied 只计一次，成功或不同参数重置计数。第三次失败持久保存 engine.status state=blocked，立即停止并排空；第四次调用不执行。安全收尾的 RunStatus 保持既有 failed，并带 TOOL_REPEAT_BLOCKED；未决副作用仍优先 interrupted。没有自动恢复或自动重试，不能把引擎 completed 覆盖为业务成功。
+
+内部能力目录仅注册和路由；各引擎传输适配层只调用原端口一次，输出/异常用统一 ToolOutcome 包装，原领域正文不改写；各引擎收到相同失败含义。门禁拒绝以 rejected 返回，结果异常保守为 unknown。界面展示原记录和下一步，不直接执行核实工具。

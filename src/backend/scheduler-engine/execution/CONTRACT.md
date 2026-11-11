@@ -701,3 +701,7 @@ ModelRequestBudgetService 仅接收 RequestBudgetStore 和 RequestBudgetAdmissio
 ## 主岗位装配
 
 loop-engine 仅在主 coordinator 的 createEngine 中取得 memberTools；发现、权限分类、调用共用同一适配器，不向成员或 CLI 静默装配。写入仍经过既有 knowledge-write 门禁，不借主角色绕过 read/ask/execute。
+
+### 版本和闭包读取
+
+ScopeGoalService 的 inspectWithGraph/previewClosure 各读取一次 DispatchStore；预览直接复用 Core 领域校验，返回待撤销/待保留清单和阻塞原因，不设置周期 workRequested。AutoCollaboration 仅装配当前根/周期的端口，最终写入仍走原 CAS、完整闭包、canonical 和人工验收约束。

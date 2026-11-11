@@ -27,6 +27,7 @@
 | [controlled-file-invariants.ts](controlled-file-invariants.ts) | 唯一派发 Store 在提交及重放时校验受控文件附录的身份、阶段、回执和容量。 |
 | [controlled-file-operation.ts](controlled-file-operation.ts) | 受控单文件写入、原操作报告和本机补偿的公共纯协议，供运行时与 Bridge 共用。 |
 | [controlled-file-rules.ts](controlled-file-rules.ts) | 统一受控写与补偿的稳定身份、指纹、阶段回执及公共摘要投影。 |
+| [coordination-preview.ts](coordination-preview.ts) | 从一次派发存储读取投影目标版本、可引用候选和撤销/等待清单。 |
 | [dispatch-commands.ts](dispatch-commands.ts) | 第一阶段成员注册与主会话派发的命令及回执契约。 |
 | [dispatch-execution.ts](dispatch-execution.ts) | 声明成员任务执行的后端持久化记录，连接已派发任务与同一大脑内核的运行身份。 |
 | [dispatch-invariants.ts](dispatch-invariants.ts) | 在派发事务提交和日志恢复时校验成员执行、任务图和邮箱的联合约束。 |
@@ -792,6 +793,31 @@ N_src_backend_core_tasks_controlled_file_rules_ts ..> N_src_backend_core_tasks_c
 ```
 
 直接依赖：[../team/automatic-execution.ts](../team/automatic-execution.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../team/member-execution-binding.ts](../team/member-execution-binding.ts)、[controlled-file-operation.ts](controlled-file-operation.ts)、[controlled-file-event.ts](controlled-file-event.ts)。
+
+### coordination-preview.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_coordination_preview_ts["coordination-preview.ts"] {
+  <<module>>
+  +coordinationVersions()
+  +coordinationPreview()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_coordination_preview_ts["coordination-preview.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_coordination_preview_ts_CoordinationPreview["CoordinationPreview"] {
+  <<type>>
+
+}
+N_src_backend_core_tasks_coordination_preview_ts ..> N_src_backend_core_tasks_coordination_preview_ts_CoordinationPreview : 声明
+```
+
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[dispatch-storage.ts](dispatch-storage.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[graph-types.ts](graph-types.ts)、[queued-task-cancel.ts](queued-task-cancel.ts)、[queued-task-cancel-rules.ts](queued-task-cancel-rules.ts)、[member-pause.ts](member-pause.ts)、[member-pause-rules.ts](member-pause-rules.ts)、[main-tool-scope.ts](main-tool-scope.ts)。
 
 ### dispatch-commands.ts
 
@@ -4311,6 +4337,55 @@ class N_src_backend_core_tasks_controlled_file_rules_ts["controlled-file-rules.t
 class N_src_backend_core_tasks_controlled_file_event_ts["controlled-file-event.ts"] {
   <<module>>
 }
+class N_src_backend_core_tasks_coordination_preview_ts["coordination-preview.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_dispatch_storage_ts["dispatch-storage.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_graph_types_ts["graph-types.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_controlled_file_rules_ts ..> N_src_backend_core_tasks_controlled_file_event_ts : 导入依赖
+N_src_backend_core_tasks_coordination_preview_ts ..> N_src_backend_core_tasks_dispatch_storage_ts : 导入依赖
+N_src_backend_core_tasks_coordination_preview_ts ..> N_src_backend_core_tasks_dispatch_scope_ts : 导入依赖
+N_src_backend_core_tasks_coordination_preview_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_coordination_preview_ts["coordination-preview.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_queued_task_cancel_ts["queued-task-cancel.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_queued_task_cancel_rules_ts["queued-task-cancel-rules.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_member_pause_ts["member-pause.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_member_pause_rules_ts["member-pause-rules.ts"] {
+  <<module>>
+}
+N_src_backend_core_tasks_coordination_preview_ts ..> N_src_backend_core_tasks_queued_task_cancel_ts : 导入依赖
+N_src_backend_core_tasks_coordination_preview_ts ..> N_src_backend_core_tasks_queued_task_cancel_rules_ts : 导入依赖
+N_src_backend_core_tasks_coordination_preview_ts ..> N_src_backend_core_tasks_member_pause_ts : 导入依赖
+N_src_backend_core_tasks_coordination_preview_ts ..> N_src_backend_core_tasks_member_pause_rules_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_coordination_preview_ts["coordination-preview.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_main_tool_scope_ts["main-tool-scope.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tasks_dispatch_commands_ts["dispatch-commands.ts"] {
   <<module>>
 }
@@ -4326,7 +4401,7 @@ class N_src_backend_core_tasks_dispatch_execution_ts["dispatch-execution.ts"] {
 class N_src_backend_core_tasks_execution_context_ts["execution-context.ts"] {
   <<module>>
 }
-N_src_backend_core_tasks_controlled_file_rules_ts ..> N_src_backend_core_tasks_controlled_file_event_ts : 导入依赖
+N_src_backend_core_tasks_coordination_preview_ts ..> N_src_backend_core_tasks_main_tool_scope_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_commands_ts ..> N_src_backend_core_tasks_graph_types_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_commands_ts ..> N_src_backend_core_tasks_workflow_selection_ts : 导入依赖
 N_src_backend_core_tasks_dispatch_execution_ts ..> N_src_backend_core_tasks_execution_context_ts : 导入依赖
@@ -7123,3 +7198,7 @@ model-request-budget-storage.ts 定义 RequestBudgetState/Store/Admission。读�
 ## 主岗位审计
 
 workspace-member-invariants 在提交与重放当时的前缀上核实主 actor 的活动周期、最新主运行、图根实例及 conversation 通道；不能只因 actor 格式正确而放行。登记仍只追加一条岗位审计及允许的来源捕获，禁止夹带派发或业务变更，退休前仍须解除模块责任。
+
+### 同次版本读取与闭包预览
+
+`coordination-preview.ts` 只从一份 Store 快照生成公开版本/候选和撤销或等待清单。撤销遍历启用依赖（穿过已取消节点），再用 `queuedCancellationSelection` 核领取、成员、信封与范围；等待用 `memberPauseSelection` 核完整检查点和后继。错误返回 issues，不给可提交 draft。预览不写入、不证明外部日志或文件合格，正式 CAS/停泊仍重核；候选证据不等于验收。

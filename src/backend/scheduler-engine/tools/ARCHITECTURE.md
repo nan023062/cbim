@@ -11,6 +11,8 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [command-report-contract.ts](command-report-contract.ts) | 声明主调度原命令核实工具的只读元数据及唯一 wire 归属校验。 |
+| [coordination-contracts.ts](coordination-contracts.ts) | 校验只读闭包预览的原运行归属和提交依据。 |
+| [coordination-tools.ts](coordination-tools.ts) | 主运行的统一状态与原回执读取入口，保留各领域实际校验和恢复语义。 |
 | [dispatch-tools.ts](dispatch-tools.ts) | 把主调度的派发、查询、未启动撤销、依赖修订及检查点预约/明确放弃转换为内部工具，并组合目标工具。 |
 | [feedback-status-tool.ts](feedback-status-tool.ts) | 主会话的反馈可用性只读诊断，区分本轮装配事实与当前本机连接事实。 |
 | [feedback-tools.ts](feedback-tools.ts) | 主会话的 GitHub 反馈提交与原提交核实工具，承接两项内置 Skill 的格式字段。 |
@@ -39,6 +41,53 @@ class N_src_backend_scheduler_engine_tools_command_report_contract_ts["command-r
 
 直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/command-verification.ts](../../core/tasks/command-verification.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/contracts.ts](../../core/tools/contracts.ts)。
 
+### coordination-contracts.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_tools_coordination_contracts_ts["coordination-contracts.ts"] {
+  <<module>>
+  +checkedClosurePreview()
+}
+```
+
+直接依赖：[../../core/tasks/coordination-preview.ts](../../core/tasks/coordination-preview.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[../../core/tasks/queued-task-cancel.ts](../../core/tasks/queued-task-cancel.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)。
+
+### coordination-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_tools_coordination_tools_ts["coordination-tools.ts"] {
+  <<module>>
+  +coordinationCompatibility()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_tools_coordination_tools_ts["coordination-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_tools_coordination_tools_ts_ReadPort["ReadPort"] {
+  <<interface>>
+  +list()
+  +describe()
+  +call()
+}
+N_src_backend_scheduler_engine_tools_coordination_tools_ts ..> N_src_backend_scheduler_engine_tools_coordination_tools_ts_ReadPort : 声明
+class N_src_backend_scheduler_engine_tools_coordination_tools_ts_CoordinationTools["CoordinationTools"] {
+  +has()
+  +list()
+  +describe()
+  +call()
+  -routes
+  -resolve()
+}
+N_src_backend_scheduler_engine_tools_coordination_tools_ts ..> N_src_backend_scheduler_engine_tools_coordination_tools_ts_CoordinationTools : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/coordination-preview.ts](../../core/tasks/coordination-preview.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/brain/engine-tools.ts](../../core/brain/engine-tools.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)。
+
 ### dispatch-tools.ts
 
 ```mermaid
@@ -64,6 +113,7 @@ class N_src_backend_scheduler_engine_tools_dispatch_tools_ts_DispatchToolsPort["
   +dispatch()
   +inspect()
   +commandReport()
+  +previewCancel()
   +cancel()
   +replaceDependency()
   +addDependency()
@@ -88,7 +138,7 @@ class N_src_backend_scheduler_engine_tools_dispatch_tools_ts_DispatchTools["Disp
 N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_dispatch_tools_ts_DispatchTools : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[../../core/tasks/queued-task-cancel.ts](../../core/tasks/queued-task-cancel.ts)、[../../core/tasks/queued-dependency-replacement.ts](../../core/tasks/queued-dependency-replacement.ts)、[../../core/tasks/queued-dependency-addition.ts](../../core/tasks/queued-dependency-addition.ts)、[../../core/tasks/queued-dependency-revision.ts](../../core/tasks/queued-dependency-revision.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)、[command-report-contract.ts](command-report-contract.ts)、[../../core/tasks/command-verification.ts](../../core/tasks/command-verification.ts)、[goal-tools.ts](goal-tools.ts)、[../../core/tasks/queued-member-resume.ts](../../core/tasks/queued-member-resume.ts)、[../../core/tasks/checkpoint-handoff.ts](../../core/tasks/checkpoint-handoff.ts)。
+直接依赖：[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[coordination-contracts.ts](coordination-contracts.ts)、[../../core/tasks/coordination-preview.ts](../../core/tasks/coordination-preview.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[../../core/tasks/queued-task-cancel.ts](../../core/tasks/queued-task-cancel.ts)、[../../core/tasks/queued-dependency-replacement.ts](../../core/tasks/queued-dependency-replacement.ts)、[../../core/tasks/queued-dependency-addition.ts](../../core/tasks/queued-dependency-addition.ts)、[../../core/tasks/queued-dependency-revision.ts](../../core/tasks/queued-dependency-revision.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)、[command-report-contract.ts](command-report-contract.ts)、[../../core/tasks/command-verification.ts](../../core/tasks/command-verification.ts)、[goal-tools.ts](goal-tools.ts)、[../../core/tasks/queued-member-resume.ts](../../core/tasks/queued-member-resume.ts)、[../../core/tasks/checkpoint-handoff.ts](../../core/tasks/checkpoint-handoff.ts)。
 
 ### feedback-status-tool.ts
 
@@ -157,6 +207,7 @@ class N_src_backend_scheduler_engine_tools_goal_tools_ts_GoalToolsPort["GoalTool
   +binding
   +collaborationMode
   +inspect()
+  +previewPause()
   +plan()
   +review()
 }
@@ -174,7 +225,7 @@ class N_src_backend_scheduler_engine_tools_goal_tools_ts_GoalTools["GoalTools"] 
 N_src_backend_scheduler_engine_tools_goal_tools_ts ..> N_src_backend_scheduler_engine_tools_goal_tools_ts_GoalTools : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)。
+直接依赖：[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[coordination-contracts.ts](coordination-contracts.ts)、[../../core/tasks/coordination-preview.ts](../../core/tasks/coordination-preview.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)。
 
 ### governance-tools.ts
 
@@ -205,7 +256,7 @@ class N_src_backend_scheduler_engine_tools_governance_tools_ts_GovernanceTools["
 N_src_backend_scheduler_engine_tools_governance_tools_ts ..> N_src_backend_scheduler_engine_tools_governance_tools_ts_GovernanceTools : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/governance/module-governance-rules.ts](../../core/governance/module-governance-rules.ts)、[../../core/governance/module-governance-tools.ts](../../core/governance/module-governance-tools.ts)。
+直接依赖：[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/governance/module-governance-rules.ts](../../core/governance/module-governance-rules.ts)、[../../core/governance/module-governance-tools.ts](../../core/governance/module-governance-tools.ts)。
 
 ### knowledge-contracts.ts
 
@@ -281,7 +332,7 @@ class N_src_backend_scheduler_engine_tools_module_ownership_tools_ts_ModuleOwner
 N_src_backend_scheduler_engine_tools_module_ownership_tools_ts ..> N_src_backend_scheduler_engine_tools_module_ownership_tools_ts_ModuleOwnershipTools : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/workspace/module-ownership-rules.ts](../../core/workspace/module-ownership-rules.ts)、[../../core/workspace/module-ownership.ts](../../core/workspace/module-ownership.ts)、[../../core/workspace/module-ownership-tool-policy.ts](../../core/workspace/module-ownership-tool-policy.ts)、[../../core/workspace/module-ownership-tools.ts](../../core/workspace/module-ownership-tools.ts)。
+直接依赖：[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/workspace/module-ownership-rules.ts](../../core/workspace/module-ownership-rules.ts)、[../../core/workspace/module-ownership.ts](../../core/workspace/module-ownership.ts)、[../../core/workspace/module-ownership-tool-policy.ts](../../core/workspace/module-ownership-tool-policy.ts)、[../../core/workspace/module-ownership-tools.ts](../../core/workspace/module-ownership-tools.ts)。
 
 ### question-tools.ts
 
@@ -344,13 +395,16 @@ class N_src_backend_scheduler_engine_tools_workspace_member_tools_ts_WorkspaceMe
 N_src_backend_scheduler_engine_tools_workspace_member_tools_ts ..> N_src_backend_scheduler_engine_tools_workspace_member_tools_ts_WorkspaceMemberTools : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)、[../../core/team/workspace-member-tools.ts](../../core/team/workspace-member-tools.ts)。
+直接依赖：[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/policy/tool-policy.ts](../../core/policy/tool-policy.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)、[../../core/team/workspace-member-tools.ts](../../core/team/workspace-member-tools.ts)。
 
 ### 本目录调用边界
 
 ```mermaid
 classDiagram
 class N_src_backend_scheduler_engine_tools_dispatch_tools_ts["dispatch-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_tools_coordination_contracts_ts["coordination-contracts.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_tools_main_tool_contracts_ts["main-tool-contracts.ts"] {
@@ -362,20 +416,31 @@ class N_src_backend_scheduler_engine_tools_command_report_contract_ts["command-r
 class N_src_backend_scheduler_engine_tools_goal_tools_ts["goal-tools.ts"] {
   <<module>>
 }
+N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_coordination_contracts_ts : 导入依赖
 N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_main_tool_contracts_ts : 导入依赖
 N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_command_report_contract_ts : 导入依赖
 N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_goal_tools_ts : 导入依赖
-N_src_backend_scheduler_engine_tools_goal_tools_ts ..> N_src_backend_scheduler_engine_tools_main_tool_contracts_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_scheduler_engine_tools_goal_tools_ts["goal-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_tools_coordination_contracts_ts["coordination-contracts.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_tools_main_tool_contracts_ts["main-tool-contracts.ts"] {
+  <<module>>
+}
 class N_src_backend_scheduler_engine_tools_knowledge_tools_ts["knowledge-tools.ts"] {
   <<module>>
 }
 class N_src_backend_scheduler_engine_tools_knowledge_contracts_ts["knowledge-contracts.ts"] {
   <<module>>
 }
+N_src_backend_scheduler_engine_tools_goal_tools_ts ..> N_src_backend_scheduler_engine_tools_coordination_contracts_ts : 导入依赖
+N_src_backend_scheduler_engine_tools_goal_tools_ts ..> N_src_backend_scheduler_engine_tools_main_tool_contracts_ts : 导入依赖
 N_src_backend_scheduler_engine_tools_knowledge_tools_ts ..> N_src_backend_scheduler_engine_tools_knowledge_contracts_ts : 导入依赖
 ```
 
@@ -600,3 +665,11 @@ cbim_object_preview 的 data 按 kind 判别，模块中文名必须写在 body 
 ## 岗位治理工具
 
 WorkspaceMemberTools 注册 cbim_member_inspect/change_preview/change_commit/receipt，输入拒绝身份、凭据及模型选型，输出严格核对工作区、原选择、命令与预览依据，128 KiB 上限。提交错误携带原 commandId，回包丢失或停止不能自动重放；能力采纳与模块来源 adopt_source 不是同一操作。
+
+### 主运行规范入口与只读预览
+
+`CoordinationTools` 仅组合实际装配的只读工具：cbim_state_inspect 的 state 一次返回 scope/graph 和 versions（goalRevision、planRevision、graphCursor、所有任务 revision、当前周期候选证据）；task/owner/member/governance 分别委托原端口，不伪称跨知识、模型和 Store 的原子快照。cbim_receipt_inspect 按 dispatch/owner/member/governance 选择原回执，保留原身份约束和 unknown/absent。没有任意工具名路由；旧族目录标为兼容，不更改历史指纹。
+
+cbim_dispatch_cancel 增加 includeClosure:true；cbim_goal_review 的 {decision:awaiting_user,memberPause:{includeClosure:true}} 只读预览。两者返回需确认的完整清单和 issues，不提交/启动；去掉预览参数后按原完整写协议提交，版本竞争继续拒绝。只有真实端口装配才公开该 Schema 分支；预览输出核对本轮归属。
+
+调度/目标、岗位、责任、治理的未知写错误附统一回执地址与原命令/调用，供只读核实，不自动重做。普通对象维护规范入口为 object_preview/commit，底层 knowledge_preview/commit 标为文件事务兼容；goal_plan/review 是主周期目标，task_plan/step 是运行内步骤，不能互代。

@@ -1,5 +1,20 @@
 ## 2026-11-12：#41 对话最终反馈
 
+## 2026-11-12：#40 统一状态读取、闭包预览与失败停止
+
+- [Issue #40](https://github.com/nan023062/cbim/issues/40)，基线 `8c92d7f9`。S1–S4 按真实主运行链核实目标/图已有同次 Store 读取、撤销/等待已有严格规则，缺口是可用投影和失败指引；C1/L2，保护原 Store、CAS、领域校验、引擎目录与停止排空。#36 的能力重新采纳直接复用。
+- S5 `cbim_state_inspect` 汇总 goalRevision/planRevision/graphCursor、全部任务版本和当前周期候选；其他 target 分别读任务/负责人/岗位/治理，未宣称跨知识存储原子性。`cbim_receipt_inspect` 路由四类原回执，旧族标兼容，不改历史命令。撤销 includeClosure、awaiting_user 的 memberPause.includeClosure 仅生成完整清单及 issues，确认后仍走原完整提交，版本和已领取任务继续拒绝。
+- 所有引擎的调用结果共用 outcome（status/retryable/terminal/reconcileTool/reconcileArgs/nextStep）；成功元数据在 details，原领域正文保持；错误 JSON 进入模型文本。unknown/FORBIDDEN 禁止相同请求盲重试，无领域账本明确 null。主写错误附可信原命令查询地址。按调用提出顺序对同工具同参数连续三次失败熔断，记录 state=blocked 并停止排空；安全收尾 RunStatus=failed，有未决副作用仍 interrupted，不覆盖 completed 为业务成功。界面显示核实建议与熔断原因。
+- 主周期规划与运行内步骤明确职责；对象知识优先 object_preview/commit，底层文件事务标兼容。产品业务执行正文列明六项条件能力及其它成员工具的实际注册前提；未注册不自动补权限或绕过。
+- S6 基于实际 diff 选择领域规则/Store、工具适配、三引擎真实调用和界面投影，去重 18 文件 92 项通过。各命令共同附 `--reporter=default --reporter=json --outputFile=test-results/issue-batch-20261112/40-<名称>.json`：
+  - `pnpm exec vitest run tests/coordination-tools.test.ts tests/queued-task-cancel.test.ts tests/queued-task-cancel-tools.test.ts tests/goal-tools.test.ts`：read-tests，25 项。
+  - `pnpm exec vitest run tests/tool-failure-control.test.ts tests/loop-engine.test.ts tests/engine-tools.test.ts tests/claude-tools.test.ts tests/codex-tools.test.ts tests/pi-loop.test.ts`：failure-tests，30 项。
+  - `pnpm exec vitest run tests/coordination-pi.test.ts tests/workspace-member-tools-pi.test.ts tests/inline-conversation.test.ts`：integration-tests，14 项。
+  - `pnpm exec vitest run tests/tool-failure-control.test.ts tests/module-ownership-tools.test.ts tests/main-governance-tools.test.ts tests/workspace-member-tools.test.ts`：recovery-tests，20 项。
+  - 依赖检查发现目录层不应依赖结果协议，未放宽规则，将包装归还引擎适配层后执行 `pnpm exec vitest run tests/coordination-pi.test.ts tests/tool-failure-control.test.ts tests/tool-results.test.ts tests/tool-result-pi.test.ts tests/claude-tools.test.ts`：boundary-retest，17 项。熔断通知改为实际事件分发后 `pnpm exec vitest run tests/loop-engine.test.ts`：event-retest，8 项。首次类型检查的测试文本联合缩窄已修正。
+- `pnpm typecheck`、`pnpm check:architecture` 最终通过：1281 文件/6636 依赖，0 循环/违规。相关注释、九处契约/类图及运行正文同步。未运行全仓 CI、打包/安装和人工交互验收，未合并发布。
+- S7 四问：保留原事务/停止机制；变化限制在纯预览、只读组合与传输适配；测试由实际调用链及失败证据选择；下次从 CoordinationTools → ScopeGoalService/coordination-preview，或 outcome → 三引擎 → RepeatedToolFailures/LoopRuntime 阅读。Q5 候选：无。材料可 review，不宣称人审接受。
+
 ## 2026-11-12：#36 主 Agent 岗位治理与能力重新采纳
 
 - [Issue #36](https://github.com/nan023062/cbim/issues/36)，基线 `396acf5c`。S1–S4 核实原 WorkspaceMembers 已有登记事务，但主工具未接入；本片 C1/L2，新增窄工具协议和可信运行装配，保留唯一 DispatchStore、预览依据、版本门禁与桌面旧指纹。OWNER_CAPABILITY_CHANGED 通过岗位能力采纳修复，owner adopt_source 仍只负责模块来源。

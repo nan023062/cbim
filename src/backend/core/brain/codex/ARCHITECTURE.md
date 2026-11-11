@@ -202,7 +202,7 @@ class N_src_backend_core_brain_codex_tools_ts_CodexToolSpec["CodexToolSpec"] {
 N_src_backend_core_brain_codex_tools_ts ..> N_src_backend_core_brain_codex_tools_ts_CodexToolSpec : 声明
 ```
 
-直接依赖：[../types.ts](../types.ts)、[../engine-tools.ts](../engine-tools.ts)、[../../tools/native-tools.ts](../../tools/native-tools.ts)、[../../tools/results.ts](../../tools/results.ts)。
+直接依赖：[../../tools/outcome.ts](../../tools/outcome.ts)、[../types.ts](../types.ts)、[../engine-tools.ts](../engine-tools.ts)、[../../tools/native-tools.ts](../../tools/native-tools.ts)、[../../tools/results.ts](../../tools/results.ts)。
 
 ### 本目录调用边界
 
@@ -289,3 +289,7 @@ N_src_backend_core_brain_codex_model_proxy_ts ..> N_src_backend_core_brain_codex
 ### 通用能力注入
 
 工具从 EngineContext.capabilities 的通用工具目录注册；可信能力 disableNativeTools=true 时关闭全部原生文件和命令，不依赖某个业务工具槽位。业务指引作为可信装配说明传入，授权、原调用身份、结果保存与停止顺序保持原协议。
+
+### 失败后的核实
+
+动态内部工具与宿主原生工具均保留原调用身份；异常转换为统一 outcome JSON，success=false，未知不允许自动重试。成功元数据与原文本并存，不替代业务验收。关闭仍排空原在途调用。

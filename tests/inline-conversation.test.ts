@@ -9,6 +9,16 @@ import {WorkStatus} from '../src/frontend/execution-view/WorkStatus';
 import {ConversationTurn} from '../src/frontend/conversation/ConversationTurn';
 import {inlineMainRuns} from './inline-conversation-fixture';
 import {progressFixture} from './conversation-progress-fixture';
+import {ToolTimeline} from '../src/frontend/execution-view/ToolTimeline';
+
+it('失败轨道显示核实建议，熔断提示不输出 undefined，也不提供重试动作',()=>{
+ const run=structuredClone(inlineMainRuns(2)[0]);
+ const tool=run.events.find(event=>event.type==='tool.finished')!;
+ tool.data.isError=true;tool.data.outcome={status:'unknown',nextStep:'先核实原结果，不自动重试。'};
+ run.events.push({...tool,seq:999,type:'engine.status',data:{state:'blocked',message:'同一工具连续失败三次，已停止本轮'}});
+ const html=renderToStaticMarkup(createElement(ToolTimeline,{run}));
+ expect(html).toContain('先核实原结果，不自动重试');expect(html).toContain('同一工具连续失败三次');expect(html).not.toContain('undefined');expect(html).not.toContain('button');
+});
 
 it('文字、单次工具生命周期和后续文字按首次出现顺序保留，重读幂等',()=>{
   const run=inlineMainRuns(2)[0],before=JSON.stringify(run),items=transcript(run);

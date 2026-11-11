@@ -206,3 +206,11 @@ cbim_object_preview 的 data 按 kind 判别，模块中文名必须写在 body 
 ## 岗位治理工具
 
 WorkspaceMemberTools 注册 cbim_member_inspect/change_preview/change_commit/receipt，输入拒绝身份、凭据及模型选型，输出严格核对工作区、原选择、命令与预览依据，128 KiB 上限。提交错误携带原 commandId，回包丢失或停止不能自动重放；能力采纳与模块来源 adopt_source 不是同一操作。
+
+### 主运行规范入口与只读预览
+
+`CoordinationTools` 仅组合实际装配的只读工具：cbim_state_inspect 的 state 一次返回 scope/graph 和 versions（goalRevision、planRevision、graphCursor、所有任务 revision、当前周期候选证据）；task/owner/member/governance 分别委托原端口，不伪称跨知识、模型和 Store 的原子快照。cbim_receipt_inspect 按 dispatch/owner/member/governance 选择原回执，保留原身份约束和 unknown/absent。没有任意工具名路由；旧族目录标为兼容，不更改历史指纹。
+
+cbim_dispatch_cancel 增加 includeClosure:true；cbim_goal_review 的 {decision:awaiting_user,memberPause:{includeClosure:true}} 只读预览。两者返回需确认的完整清单和 issues，不提交/启动；去掉预览参数后按原完整写协议提交，版本竞争继续拒绝。只有真实端口装配才公开该 Schema 分支；预览输出核对本轮归属。
+
+调度/目标、岗位、责任、治理的未知写错误附统一回执地址与原命令/调用，供只读核实，不自动重做。普通对象维护规范入口为 object_preview/commit，底层 knowledge_preview/commit 标为文件事务兼容；goal_plan/review 是主周期目标，task_plan/step 是运行内步骤，不能互代。

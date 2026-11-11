@@ -21,6 +21,27 @@ class StubEngine implements AgentEngine {
   async close(){}
 }
 
+it('同一工具同参数连续失败三次停止本轮，第四次不执行，熔断不能伪装 completed',async()=>{
+ let effects=0,stops=0;
+ class Engine extends StubEngine {
+  async run(){
+   for(let index=0;index<4;index++){
+    const call={id:'attempt-'+index,name:'write',input:{path:'same.txt',content:'same'}};
+    const decision=await this.context.beforeTool(call);
+    if(decision.allow){effects++;await this.context.emit({type:'tool.finished',data:{id:call.id,isError:true,result:'failed'}})}
+   }
+   return {status:'completed' as const};
+  }
+  async stop(){stops++}
+ }
+ const f=await setup(()=>new Engine());try{
+  const result=await(await f.runtime.start(f.task)).done;
+  expect(effects).toBe(3);expect(stops).toBe(1);expect(result.status).toBe('failed');expect(result.unresolvedTools).toEqual([]);
+  expect(result.events.find(event=>event.type==='engine.status'&&event.data.state==='blocked')?.data).toMatchObject({code:'TOOL_REPEAT_BLOCKED',consecutive:3});
+  expect(result.events.at(-1)?.data).toMatchObject({status:'failed',blocked:{code:'TOOL_REPEAT_BLOCKED'}});
+ }finally{await f.cleanup()}
+});
+
 it('shutdown fences new starts and waits for a start already acquiring its lease',async()=>{
   const f=await setup(()=>new StubEngine());try{
     const starting=f.runtime.start(f.task);const closing=f.runtime.close();

@@ -1,8 +1,10 @@
 /**
+ * 未知提交附统一回执入口和可信 commandId，供模型只读核实，不换命令重做。
  * 作用定位：将主运行岗位端口注册为查询、预览、提交与原回执四项工具。
  * 设计原因：工具分类与调用使用同一严格协议；主写入只执行一次，回包异常保留稳定命令供核实，不能冒充桌面选型。
  */
 import {z} from 'zod';
+import {withToolReconciliation} from '../../core/tools/outcome';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {isDeepStrictEqual} from 'node:util';
 import {fail,Fault} from '../../core/foundation/errors';
@@ -50,7 +52,7 @@ export class WorkspaceMemberTools {
    const result=checkedJsonToolResult(name,output,schema);
    if(Buffer.byteLength(result.content[0].text,'utf8')>128*1024)fail('TOOL_OUTPUT_INVALID','岗位工具输出过大，请缩小查询范围');return result;
   }catch(error){
-   if(commandId)fail(error instanceof Fault?error.code:'MEMBER_UNKNOWN',`岗位提交结果未能交付；原 commandId=${commandId}。请用 cbim_member_receipt 核实，不能自动重试。`);
+   if(commandId)throw withToolReconciliation(new Fault(error instanceof Fault?error.code:'MEMBER_UNKNOWN',`岗位提交结果未能交付；原 commandId=${commandId}。请用 cbim_member_receipt 核实，不能自动重试。`),{tool:'cbim_receipt_inspect',args:{target:'member',input:{commandId}}});
    throw error;
   }
  }

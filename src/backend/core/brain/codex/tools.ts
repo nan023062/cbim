@@ -1,8 +1,10 @@
 /**
+ * 原生和内部失败均返回统一结果与核实建议；成功元数据不替代原领域正文或验收。
  * 作用定位：把 Codex dynamic tool 请求路由到 CBIM 知识/执行工具及已有宿主文件操作。
  * 能力边界：是否关闭原生工具由可信能力策略决定，不依赖具体业务工具名称。
  * 设计原因：原生内置工具关闭，每次调用均以 thread/turn/call 身份核对、先结算预算、再授权、保存结果后回包。
  */
+import {toolFailureResult,toolReturnedResult} from '../../tools/outcome';
 import type {EngineContext} from '../types';
 import {nativeToolsDisabled} from '../engine-tools';
 import type {EngineToolsPort,EngineToolSchema} from '../engine-tools';
@@ -31,7 +33,8 @@ export async function codexTools(context:EngineContext,port:EngineToolsPort,nati
     await context.emit({type:'tool.started',data:{id:input.callId,name:entry.name}});
     let result:ToolResult;
     try{result=validateToolResult(entry.name,await entry.port.call(entry.name,args,controller.signal,input.callId)) as ToolResult}
-    catch(error){result={content:[{type:'text',text:error instanceof Error?error.message:String(error)}],isError:true}}
+    catch(error){result=toolFailureResult(error)}
+    result=toolReturnedResult(result);
     await context.emit({type:'tool.finished',data:{id:input.callId,name:entry.name,isError:result.isError===true,result}});
     return {success:result.isError!==true,contentItems:result.content.map(block=>block.type==='text'?{type:'inputText',text:block.text}:{type:'inputImage',imageUrl:'data:'+block.mimeType+';base64,'+block.data})};
   }

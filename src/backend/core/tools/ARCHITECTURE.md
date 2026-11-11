@@ -12,6 +12,7 @@
 | --- | --- |
 | [contracts.ts](contracts.ts) | 工具取消、恢复说明及按需契约发现的纯协议，不导入具体领域或执行服务。 |
 | [native-tools.ts](native-tools.ts) | 定义当前引擎真实装配的原生工具及可信副作用分类。 |
+| [outcome.ts](outcome.ts) | 引擎工具回包的统一结果与下一步说明；独立于具体业务账本。 |
 | [questions.ts](questions.ts) | 结构化提问的严格输入、桌面答案、排他结果与待答快照，供队列、工具包装和证据边界共用。 |
 | [receipt-schema.ts](receipt-schema.ts) | 执行报告与任务工具共用的真实工具回执字段协议。 |
 | [receipts.ts](receipts.ts) | 把已核实的工具调用、授权和终态整理为可追溯回执。 |
@@ -64,6 +65,45 @@ class N_src_backend_core_tools_native_tools_ts["native-tools.ts"] {
 ```
 
 直接依赖：[../policy/tool-policy.ts](../policy/tool-policy.ts)、[../brain/llm/engine.ts](../brain/llm/engine.ts)。
+
+### outcome.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_tools_outcome_ts["outcome.ts"] {
+  <<module>>
+  +withToolReconciliation()
+  +toolOutcome()
+  +toolFailureResult()
+  +toolReturnedResult()
+  +runToolResult()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_tools_outcome_ts["outcome.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tools_outcome_ts_ToolReconciliation["ToolReconciliation"] {
+  <<interface>>
+  +tool
+  +args
+}
+N_src_backend_core_tools_outcome_ts ..> N_src_backend_core_tools_outcome_ts_ToolReconciliation : 声明
+class N_src_backend_core_tools_outcome_ts_ToolOutcome["ToolOutcome"] {
+  <<interface>>
+  +status
+  +retryable
+  +terminal
+  +reconcileTool
+  +reconcileArgs
+  +nextStep
+}
+N_src_backend_core_tools_outcome_ts ..> N_src_backend_core_tools_outcome_ts_ToolOutcome : 声明
+```
+
+直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[results.ts](results.ts)。
 
 ### questions.ts
 
@@ -264,6 +304,12 @@ N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_types_ts_ToolRece
 
 ```mermaid
 classDiagram
+class N_src_backend_core_tools_outcome_ts["outcome.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tools_results_ts["results.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tools_receipt_schema_ts["receipt-schema.ts"] {
   <<module>>
 }
@@ -279,18 +325,18 @@ class N_src_backend_core_tools_types_ts["types.ts"] {
 class N_src_backend_core_tools_registry_ts["registry.ts"] {
   <<module>>
 }
-class N_src_backend_core_tools_results_ts["results.ts"] {
-  <<module>>
-}
+N_src_backend_core_tools_outcome_ts ..> N_src_backend_core_tools_results_ts : 导入依赖
 N_src_backend_core_tools_receipt_schema_ts ..> N_src_backend_core_tools_scope_schema_ts : 导入依赖
 N_src_backend_core_tools_receipts_ts ..> N_src_backend_core_tools_types_ts : 导入依赖
 N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_types_ts : 导入依赖
-N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_results_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_backend_core_tools_registry_ts["registry.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tools_results_ts["results.ts"] {
   <<module>>
 }
 class N_src_backend_core_tools_contracts_ts["contracts.ts"] {
@@ -302,6 +348,7 @@ class N_src_backend_core_tools_types_ts["types.ts"] {
 class N_src_backend_core_tools_scope_schema_ts["scope-schema.ts"] {
   <<module>>
 }
+N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_results_ts : 导入依赖
 N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_contracts_ts : 导入依赖
 N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_scope_schema_ts : 导入依赖
 ```
@@ -393,3 +440,7 @@ PiBridge ..> ResultsModule : 进入会话前校验
 ### 原生能力预检
 
 nativeToolNames 按引擎提供真实规范名：Pi 保持既有清单，Codex 通过宿主工具提供同一规范名，Claude Code 排除不存在的独立 ls。该清单供岗位 Workflow 准备预检，不是逐调用许可；真实路径、效果、授权仍由运行时核实。
+
+### 统一调用结果
+
+`outcome.ts` 定义 status（returned/rejected/unknown）、retryable=false、terminal=true、reconcileTool/reconcileArgs 和 nextStep。terminal 表示本次请求已返回且不能自动重复，不表示业务目标终态。成功放在 ToolResult.details.outcome，保留原领域正文；异常同时用 JSON 文本交给模型。无可靠只读核实入口时两个 reconcile 字段明确 null，原生文件/命令须查原日志和实际副作用。只有可信适配器可附原命令地址，不从错误正文解析或补造身份。

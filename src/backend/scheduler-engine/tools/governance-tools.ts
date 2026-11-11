@@ -1,10 +1,12 @@
 /**
+ * 未知提交附统一回执入口和可信 commandId，供模型只读核实，不换命令重做。
  * 作用定位：将每个真实主运行的治理窄端口装配成发现、分类与调用一致的四项工具。
  * 设计原因：模型参数先严格校验，可信知识范围独立注入；唯一 JSON 输出快照通过业务 Schema 和 128 KiB 字节限制后才发送。
  * 职责边界：不登记保护、不批准或实施，不把私有观察/提案当产物证据；输出失败可能已保存，必须保留原命令供查询。
  * 反馈边界：模型只能引用真实意见准备修订，不能填写本机评价，也不能把回应引用等同已解决或已理解。
  */
 import {z} from 'zod';
+import {withToolReconciliation} from '../../core/tools/outcome';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {fail,Fault} from '../../core/foundation/errors';
 import {checkedJsonToolResult} from '../../core/tools/results';
@@ -60,6 +62,6 @@ export class GovernanceTools {
       }
       signal.throwIfAborted();const result=checkedJsonToolResult(name,output,schema);
       if(Buffer.byteLength(result.content[0].text,'utf8')>governanceToolOutputLimit)fail('TOOL_OUTPUT_INVALID','治理业务输出超过128KiB，未向模型发送正文；请核实原记录，不自动重试');return result;
-    }catch(error){if(commandId)fail(error instanceof Fault?error.code:signal.aborted?'GOVERNANCE_CANCELLED':'GOVERNANCE_UNKNOWN',`治理工具未交付可核实结果；原 commandId=${commandId}。操作可能已保存，请只查询原回执，不自动重试或另建命令。`);throw error}
+    }catch(error){if(commandId)throw withToolReconciliation(new Fault(error instanceof Fault?error.code:signal.aborted?'GOVERNANCE_CANCELLED':'GOVERNANCE_UNKNOWN',`治理工具未交付可核实结果；原 commandId=${commandId}。操作可能已保存，请只查询原回执，不自动重试或另建命令。`),{tool:'cbim_receipt_inspect',args:{target:'governance',input:{commandId}}});throw error}
   }
 }

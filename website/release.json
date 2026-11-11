@@ -1,10 +1,10 @@
 {
-  "version": "0.1.6",
-  "tag": "desktop-v0.1.6",
-  "publishedAt": "2026-11-10T08:22:54Z",
+  "version": "0.1.7",
+  "tag": "desktop-v0.1.7",
+  "publishedAt": "2026-11-11T01:50:02Z",
   "repository": "nan023062/cbim",
-  "filename": "CBIM-Setup-0.1.6-x64.exe",
-  "bytes": 391369030,
-  "sha256": "de23dfaafa0cb2c18129496e10b556cdea3153a3cb8b1ee2d563f1eed3911d20",
+  "filename": "CBIM-Setup-0.1.7-x64.exe",
+  "bytes": 391247521,
+  "sha256": "bad2f872f3c9dd5bbc3f4979feebd906656c5af340bc89592c29d53757d0ff86",
   "signed": false
 }

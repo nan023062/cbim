@@ -1,3 +1,10 @@
+## 2026-11-11：0.1.7 公开、在线升级与官网
+
+- PR #34 正常 merge 为 ef84d1b1bd1e475ee220f91814858349e9537e71，parents 是 7fad631e 与 12ac487f；没有 squash。冻结源码 f18c2fe9 仍是祖先。相对验证 head 只有测试和本记录，未重建候选。
+- Release 440782281 于 2026-11-11T01:50:02Z 公开。tag desktop-v0.1.7 的注解对象 835bf6c1，peeled commit 为 f18c2fe9。make_latest=false；旧 Python latest 仍是 327801733 / v1.0.2。四附件 ID/摘要未变。匿名 latest.yml 与 SHA256SUMS 一致，安装地址总长度 391247521；未整包重下。
+- 在线验收 run 42941852527，workflow SHA ef84d1b1，mode=online，previous_version=0.1.6。旧版自动发现后经真实按钮下载，缓存摘要匹配；普通退出取消后仍是 0.1.6；再次下载自动安装。新进程带 --updated 与原用户目录。六项保留、1 次模型请求、0 页面错误、NotSigned。
+- 官网按该公开回执更新。pnpm check:brand 通过；CBIM_WEBSITE_URL=https://nan023062.github.io/cbim/ 时 pnpm build:website 通过；node scripts/website-smoke.mjs 为 14 场景、0 错误。Pages 部署和双分支同步留在官网 PR 回执，不为此连续提交。报告：design/verification/desktop-release-0.1.7-20261111.md。
+
 ## 2026-11-11：0.1.7 完整 CI 的测试前置修正
 
 - 原四片 run 42880217010 保留：384 文件、2633 用例，2626 通过、5 失败、2 原有历史 EXE 跳过。四个失败共享 knowledge-contract-provider 的旧目录数量 29；#28 增加两个治理 Skill 后实际为 31，现断言准确数量及两个真实名称，原版本、副作用、审批、幂等和坏输出检查均保留。

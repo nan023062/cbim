@@ -258,6 +258,10 @@ N_src_frontend_execution_view_WorkStatus_tsx ..> N_src_frontend_execution_view_T
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 图片附件预览
+
+ComposerAttachments 对已保存图片读取 chat.preview，卡片显示40px缩略图，弹窗展示原图、来源和采集说明；移除仅改变待发送选择，不删除源文件。图片使用固定MIME的data URI，不加载原路径/外部URL，字节不写入草稿持久化。异步预览在卸载或换工作区后失效；坏快照显示失败，不伪造图片。
+
 # 共享执行展示边界
 
 公开助手正文包含反馈提交后的最终答复，不再被成功工具回执隐藏；空完整消息不能擦除已流出的文字。completionFeedback 供主对话只读兜底：本轮无结束正文时显示当前轮交付声明及限制，否则明确未记录最终反馈、操作数量与核实建议；不复用旧轮 taskProgress，不改日志、不追加模型调用或将结束视为验收。

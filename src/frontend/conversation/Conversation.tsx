@@ -1,4 +1,5 @@
 /**
+ * 粘贴仅作用输入框：图片保存有界原字节，纯绝对路径列表先校验并变为引用，失败保留原文字；不自动发送。
  * 主对话按事件顺序展示文字与工具，成员状态关联原派发，展开才观察公开过程；目标控制和完整图保留原入口。
  * 新对话默认 Auto，旧无模式偏好的历史对话保持 Team；当前目标期间禁用模式切换，下一目标仍可在同一对话改选。
  * 历史菜单与侧栏共用本机条目和运行观察，改名／移除由外壳负责，不改原任务目标或日志。
@@ -43,7 +44,8 @@ import {SendButton} from './SendButton';
 import {AttachmentMenu,type FeedbackSkillTitle} from './AttachmentMenu';
 import {ComposerPicker} from './ComposerPicker';
 import {ComposerAttachments} from '../execution-view/ComposerAttachments';
-import type {ChatAttachment,ChatApproval,ChatPermission} from '../../bridge/contracts/chat';
+import {pastedLocalPaths,type ChatAttachment,type ChatApproval,type ChatPermission} from '../../bridge/contracts/chat';
+import {pastedImage} from './pasted-images';
 import {conversationExecutionState} from './conversation-state';
 import {captureQueueInsertTarget,enqueueConversationMessage,insertQueuedMessage} from './queue-insertion';
 import {ConversationStopGate} from './conversation-stop';
@@ -114,6 +116,25 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   const attachmentRef=useRef(attachments);attachmentRef.current=attachments;
   function addAttachments(items:ChatAttachment[]){const combined=[...attachmentRef.current];for(const item of items)if(!combined.some(a=>a.kind===item.kind&&a.source===item.source))combined.push(item);if(combined.length>12){setError('最多可添加 12 项附件，请移除部分附件后重试');return}onAttachments(combined);if(taskOpen)setNextTip(Date.now())}
   async function importFiles(files:File[]){if(importing.current||attachmentBusy||busy)return;if(files.length+attachmentRef.current.length>12){setError('最多可添加 12 项附件');return}importing.current=true;setAttachmentBusy(true);setError('');try{addAttachments(await api.importFiles(workspace.id,files))}catch(e:any){setError(e.message)}finally{importing.current=false;setAttachmentBusy(false)}}
+  /** 粘贴图片无需磁盘路径；只消费本次事件，失败不发送消息或清空既有草稿。 */
+  async function importPaste(files:File[],paths?:string[],original=''){
+    if(importing.current||attachmentBusy||busy)return;
+    if((paths?.length??files.length)+attachmentRef.current.length>12){setError('最多可添加 12 项附件');if(original)onDraft((input.current?.value||'')+'\n'+original);return}
+    importing.current=true;setAttachmentBusy(true);setError('');
+    try{
+      let items:ChatAttachment[];
+      if(paths)items=await api.call('chat.paths',{id:workspace.id,paths});
+      else{
+        const images=files.filter(file=>file.type.startsWith('image/')),others=files.filter(file=>!file.type.startsWith('image/'));
+        if(images.reduce((sum,file)=>sum+file.size,0)>20*1024*1024)throw Error('图片合计超过 20 MiB，请分批粘贴');
+        const prepared=await Promise.all(images.map(pastedImage));items=[];
+        for(const image of prepared)items.push(await api.call('chat.image',{id:workspace.id,...image}));
+        if(others.length)items.push(...await api.importFiles(workspace.id,others));
+      }
+      if(alive.current)addAttachments(items);
+    }catch(e:any){if(alive.current){setError(e.message+(original?'；原路径已保留在草稿。':''));if(original)onDraft((input.current?.value||'')+'\n'+original)}}
+    finally{importing.current=false;if(alive.current)setAttachmentBusy(false)}
+  }
   const input=useRef<HTMLTextAreaElement>(null);
   const lock=useRef(false),alive=useRef(true),scroll=useRef<HTMLDivElement>(null),follow=useRef(true),historyContent=useRef<HTMLDivElement>(null);
   const stopGate=useRef(new ConversationStopGate()),[,renderStop]=useState(0);
@@ -248,7 +269,7 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
         onDragOver={e=>{if(e.dataTransfer.types.includes('Files')){e.preventDefault();e.dataTransfer.dropEffect=busy||attachmentBusy?'none':'copy'}}}
         onDragLeave={()=>{dragDepth.current=Math.max(0,dragDepth.current-1);if(!dragDepth.current)setDragActive(false)}}
         onDrop={e=>{e.preventDefault();dragDepth.current=0;setDragActive(false);if(e.dataTransfer.files.length)void importFiles(Array.from(e.dataTransfer.files))}}
-        onPaste={e=>{if(e.clipboardData.files.length){e.preventDefault();void importFiles(Array.from(e.clipboardData.files))}}}>
+        onPaste={e=>{if(e.target!==input.current||busy||attachmentBusy||importing.current)return;if(e.clipboardData.files.length){e.preventDefault();void importPaste(Array.from(e.clipboardData.files));return}const text=e.clipboardData.getData('text/plain'),paths=pastedLocalPaths(text);if(paths){e.preventDefault();void importPaste([],paths,text)}}}>
         <MessageQueue embedded items={queued} busy={busy} continueDisabled={stopping||waiting||graph.loading} onChange={queueChange} onContinue={queueContinue}
           onEdit={(queueId,message,expected)=>queueOperation('loop.queueEdit',{queueId,message,expected})}
           onMove={(queueId,beforeId)=>void queueOperation('loop.queueMove',{queueId,beforeId})}

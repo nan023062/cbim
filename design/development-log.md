@@ -1,3 +1,11 @@
+## 2026-11-12：#43 剪贴板图片与本地路径附件
+
+- [Issue #43](https://github.com/nan023062/cbim/issues/43)，基线 `93bac767`。原 preload importFiles 只解析系统磁盘路径，截图因此失败；保留其拖放行为，新增输入框图片字节导入与严格路径入口。Core 视觉/等待契约不改，快照仍由 ChatInputs 拥有。C1/L1。
+- 纯绝对路径列表变为引用，Main 先核全选路径存在、文件/目录、禁止UNC/设备/.cbim，再保存原文本/首层目录快照；失败保留原粘贴文字。截图保存5 MiB内原字节与原名称、唯一clipboard来源、采集时间；12项与单批20 MiB限制，模型视觉预检保持。图片卡片自动显示快照缩略图，点击预览原图/来源，发送前可移除，不自动发消息或改源文件。预览在工作区切换/卸载后丢弃迟到回包。
+- 按受影响输入/快照/预览/等待消费者运行 `pnpm exec vitest run tests/chat-clipboard.test.ts tests/chat-inputs.test.ts tests/continuation-chat-inputs.test.ts tests/chat-chrome.test.ts --reporter=json --outputFile=test-results/issue-batch-20261112/43-tests.json`：4文件15项通过。涵盖真实图片File编码、真实Application IPC、原字节视觉与等待清单、文件源变化、跨工作区、全选存在性、坏格式/大小拒绝，以及预览/移除可访问入口。
+- `pnpm typecheck` 与 `pnpm check:architecture` 通过：1293文件/6672边，0循环/违规。五处源码契约/类图、输入组件/样式及协议注释同步。未执行系统剪贴板实际快捷键、完整桌面/安装、全量CI、合并或发布；不把SSR/IPC测试冒称整包交互验收。
+- 四问：保护原视觉输入和快照隔离；剪贴板字节适配在前端、路径/签名校验在Main；实际证据覆盖已保存字节的消费；下次从 Conversation/pasted-images → ipc-chat → ChatInputs → ComposerAttachments 阅读。Q5候选：无。完整diff按本Issue独立提交review，未宣称人审接受。
+
 ## 2026-11-12：#39 公开网页正文与可配置搜索
 
 - [Issue #39](https://github.com/nan023062/cbim/issues/39)，基线 `02ee67af`。C1/L2，读取 Main/IPC/配置/主 Loop 与已有聊天来源导入，保留原来源证据和引擎工具目录；新增 Core 小协议 → Scheduler 只读工具 → Main 网络与设置。Application 共用缓存/限速，密钥沿既有 SecretCipher，只在主进程固定 Brave API 请求使用。

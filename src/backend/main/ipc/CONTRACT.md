@@ -1,3 +1,7 @@
+### 粘贴入口
+
+chat.image 严格图片类型/名称/base64上限；chat.paths 为最多12个明确本地绝对路径，Main 核存在/类型/.cbim后保存快照。两者在退出期间拒绝，发送窗口/Main Frame仍沿桌面入口校验。chat.preview 可返回已验证图片字节；没有通过图片名任意写源文件或按预览字符串读磁盘的入口。
+
 ### 搜索设置 IPC
 
 web.settings 返回无密钥摘要；web.configure 用 revision/开关/可选新密钥或 clearKey 显式保存，退出期间拒绝写。没有任意 URL 抓取 IPC，网络仅从可信主 Agent 工具端口进入。

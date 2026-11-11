@@ -1,4 +1,5 @@
 /**
+ * 粘贴导入在应用退出期间拒绝，已保存的附件不会自动发送。
  * 网页搜索设置只管理 Brave 开关和加密密钥摘要，不向页面提供任意抓取代理。
  * 作用定位：主进程 IPC 的运行时请求解析与受理前拒绝，保留旧队列插入的失效运行错误码。
  * 设计原因：统一 Schema 后仍保留关闭门禁和领域错误码，避免客户端把已拒绝请求误当成待核实事务。
@@ -8,6 +9,8 @@ import {ZodError} from 'zod';
 import {parseIpcRequest,type ApplicationIpcAction} from '../../../bridge/contracts/ipc-call';
 import {fail} from '../../core/foundation/errors';
 const shutdownMessages:Partial<Record<ApplicationIpcAction,string>>={
+  'chat.paths':'CBIM 正在退出，未导入路径',
+  'chat.image':'CBIM 正在退出，未导入图片',
   'agent.configureMain':'CBIM 正在退出',
   'dispatch.effectDisposition':'CBIM 正在退出，未保存新处置',
   'dispatch.humanDecide':'CBIM 正在退出，未保存新的人工决定',

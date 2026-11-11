@@ -50,6 +50,8 @@ try{
   await call('resources.configure',{mode:'local',location:repository});
   const snapshot=(id:string)=>call<Snapshot>('snapshot',{id});
   const currentView=()=>page!.locator('.extension-area:not([hidden]) .extension-content:not([hidden])');
+  // 0.1.7 起使用知识文件树；按真实对象路径定位，文件按钮与同名对象不能混为一项。
+  const knowledgePath=(objectPath:string)=>currentView().locator(`[data-knowledge-path="${objectPath}"]`);
   async function selectWorkspace(name:string){await page!.getByRole('button',{name:name+' · 运行中',exact:true}).click()}
   async function extension(name:'团队架构'|'业务架构'){
     const open=page!.getByRole('button',{name:'展开右侧扩展',exact:true});if(await open.isVisible())await open.click();
@@ -73,10 +75,10 @@ try{
     await dialog.getByRole('textbox',{name:'专业能力',exact:true}).fill('实现业务需求\n核实成果');
     await dialog.getByRole('textbox',{name:'能力限制',exact:true}).fill('尊重模块责任与本次授权');
     await dialog.getByRole('textbox',{name:'知识正文',exact:true}).fill('# 工作原则\n按实际目标实现，记录验证证据，不将执行结束视为业务验收。');
-    if(commit){await save(dialog);await currentView().locator('.team-node-select').filter({hasText:name}).waitFor()}
+    if(commit){await save(dialog);await knowledgePath('.cbim/team/'+slug).waitFor()}
     else{await preview(dialog);await dialog.getByRole('button',{name:'关闭',exact:true}).click();await dialog.waitFor({state:'hidden'})}
   }
-  async function teamRoot(){await currentView().locator('.team-node-select').filter({hasText:'Team 根'}).click()}
+  async function teamRoot(){await knowledgePath('.cbim/team').click()}
   async function publish(trigger:string,name:string){
     await currentView().getByRole('button',{name:trigger,exact:true}).click();const dialog=editor('发布静态资源');
     await dialog.getByRole('textbox',{name:'发布资源名称',exact:true}).fill(name);
@@ -109,7 +111,7 @@ try{
   await skill.getByRole('textbox',{name:'对象名称',exact:true}).fill('架构审阅能力');
   await skill.getByRole('textbox',{name:'适用目的',exact:true}).fill('审查职责、依赖与真实证据');
   await skill.getByRole('textbox',{name:'知识正文',exact:true}).fill('# 静态审阅方法\n核实职责边界、单向依赖及成果证据。');await save(skill);
-  await currentView().locator('.team-node-select').filter({hasText:'架构测试开发者'}).click();
+  await knowledgePath('.cbim/team/developer').click();
   await currentView().locator('.team-skill-list').getByText('架构审阅能力',{exact:true}).waitFor();
   assert.ok((await currentView().locator('.team-skill-list').innerText()).includes('继承'));
   await page.screenshot({path:'test-results/architecture-team-created.png'});
@@ -136,6 +138,7 @@ try{
   await preview(module);await page.screenshot({path:'test-results/architecture-module-preview.png'});
   assert.ok(!(await snapshot(sourceEntry.id)).files.some(file=>file.path==='.cbim/workspace/game/module.json'));
   await module.getByRole('button',{name:'确认提交到工作区',exact:true}).click();await module.waitFor({state:'hidden'});
+  await knowledgePath('.cbim/workspace/game').click();
   await currentView().getByRole('button',{name:'新建 Workflow',exact:true}).click();const workflow=editor('新建Workflow');
   await workflow.getByRole('textbox',{name:'目录标识',exact:true}).fill('implement');await workflow.getByRole('textbox',{name:'对象名称',exact:true}).fill('实现与验证');
   await workflow.getByRole('textbox',{name:'知识正文',exact:true}).fill('# 实现与验证\n实现业务目标，运行针对性验证，留下可审阅证据。');await save(workflow);
@@ -174,9 +177,9 @@ try{
 
   checkpoint('通过团队/业务界面发布四类静态资源');
   await teamRoot();await publish('发布整个团队',resourceNames.team);
-  await currentView().locator('.team-node-select').filter({hasText:'架构测试开发者'}).click();await publish('发布 Agent 到人才市场',resourceNames.agent);
+  await knowledgePath('.cbim/team/developer').click();await publish('发布 Agent 到人才市场',resourceNames.agent);
   await teamRoot();await currentView().locator('.team-skill-list').getByRole('button').filter({hasText:'架构审阅能力'}).click();await publish('发布 Skill 到人才市场',resourceNames.skill);
-  await extension('业务架构');await publish('发布完整业务架构',resourceNames.architecture);
+  await extension('业务架构');await publish('发布架构',resourceNames.architecture);
   const library=await call<ResourceLibrarySnapshot>('resources.list');assert.equal(library.items.length,4);
   const packs=library.items.map(item=>JSON.parse(item.content) as WorkspacePackage);
   for(const pack of packs){
@@ -199,10 +202,10 @@ try{
   assert.equal((await snapshot(targetEntry.id)).revision,beforeImport);
   await importResource('从人才市场下载',resourceNames.team,'copied_team');
   await poll(()=>snapshot(targetEntry.id),s=>s.files.some(file=>file.path==='.cbim/team/copied_team/developer/agent.json'),'完整团队没有导入目标项目');
-  await currentView().locator('.team-node-select').filter({hasText:'copied_team'}).waitFor();
+  await knowledgePath('.cbim/team/copied_team').waitFor();
   await teamRoot();await importResource('从人才市场下载',resourceNames.agent,'copied_developer');
-  await poll(()=>currentView().locator('.team-node-select').filter({hasText:'架构测试开发者'}).count(),count=>count===2,'独立 Agent 导入后团队 UI 未刷新');
-  await currentView().locator('.team-node-select').filter({hasText:'独立技能接收者'}).click();
+  await knowledgePath('.cbim/team/copied_developer').waitFor();await knowledgePath('.cbim/team/copied_team/developer').waitFor();
+  await knowledgePath('.cbim/team/skill_receiver').click();
   await importResource('从人才市场下载',resourceNames.skill,'imported_review');
   await currentView().locator('.team-skill-list').getByText('架构审阅能力',{exact:true}).waitFor();
   await page.screenshot({path:'test-results/architecture-team-imported.png'});
@@ -214,9 +217,9 @@ try{
 
   checkpoint('通过目标项目业务界面应用完整架构并核实重新绑定要求');
   await extension('业务架构');const targetBeforeArchitecture=(await snapshot(targetEntry.id)).revision;
-  await importResource('使用业务模板',resourceNames.architecture,undefined,false);
+  await importResource('使用模板',resourceNames.architecture,undefined,false);
   assert.equal((await snapshot(targetEntry.id)).revision,targetBeforeArchitecture);
-  await importResource('使用业务模板',resourceNames.architecture);
+  await importResource('使用模板',resourceNames.architecture);
   const imported=await poll(()=>snapshot(targetEntry.id),s=>s.files.some(file=>file.path==='.cbim/workspace/game/module.json'),'完整业务架构没有导入目标项目');
   const importedModule=JSON.parse(imported.files.find(file=>file.path==='.cbim/workspace/game/module.json')!.text);
   assert.equal(importedModule.maintenance,undefined);assert.deepEqual(importedModule.sources,[]);assert.deepEqual(importedModule.connectors,[]);assert.deepEqual(importedModule.authors,[]);
@@ -227,11 +230,12 @@ try{
   const targetOwner=await call('workspace.ownerships.get',{...targetIdentity,moduleId:'.cbim/workspace/game'});
   assert.equal(targetOwner.view.status,'unassigned');assert.ok(!targetOwner.view.binding?.ownerMemberId);
   assert.deepEqual((await call('workspace.members.list',targetIdentity)).items,[]);
-  await currentView().locator('.module-card-content').filter({hasText:'game'}).click();
+  await knowledgePath('.cbim/workspace/game').click();
   const ownerSelect=currentView().getByRole('combobox',{name:'game 负责人',exact:true});
   await poll(()=>ownerSelect.isEnabled(),Boolean,'导入模块负责人未完成读取');
   assert.equal(await ownerSelect.inputValue(),'');
-  assert.equal(await ownerSelect.locator('option:checked').innerText(),'主 Agent（默认）');
+  // 0.1.7 未显式绑定时先解析父级/匹配岗位，再回退主 Agent；静态导入不建立负责人记录。
+  assert.equal(await ownerSelect.locator('option:checked').innerText(),'自动解析（未显式设置）');
   await page.screenshot({path:'test-results/architecture-business-imported.png'});
   await page.getByRole('button',{name:'切换浅色模式',exact:true}).click();await page.screenshot({path:'test-results/architecture-business-light.png'});
   await page.getByRole('button',{name:'切换深色模式',exact:true}).click();

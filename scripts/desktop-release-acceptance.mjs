@@ -103,6 +103,14 @@ try {
     const initial = await page.evaluate(args => window.cbim.call('agent.mainSettings', args), identity);
     priorMainSettings = await page.evaluate(args => window.cbim.call('agent.configureMain', args), {...initial, selection: {engine: 'pi', profileId: savedModels.selectedId, modelId: 'acceptance'}});
     priorAutomation = await page.evaluate(args => window.cbim.call('automation.save', args), {...identity, expectedRevision: 0, definition: {name: 'Retained manual automation', enabled: true, executor: {kind: 'main'}, moduleIds: [], workflowSelections: [], skillIds: [], prompt: 'Preserve this task without running it during upgrade.', permission: 'read', schedule: {kind: 'manual'}}});
+    // save 返回内存对象，手动任务的 nextRunAt:undefined 不属于 JSON 持久格式。
+    // 升级基线取旧版真实持久读取；先完整核对保存结果，再与新版逐字段比较，不忽略有效字段。
+    const persistedAutomation = await page.evaluate(args => window.cbim.call('automation.list', args), identity);
+    assert.deepEqual(persistedAutomation.jobs, [JSON.parse(JSON.stringify(priorAutomation))]);
+    assert.deepEqual(persistedAutomation.runs, []);
+    priorAutomation = persistedAutomation.jobs[0];
+    assert.equal(priorAutomation.nextRunAt, undefined);
+    await save('baseline-017-features', {mainAgent: priorMainSettings, automation: persistedAutomation});
     assert.equal(requests, 0);
   }
   const priorKnowledge = await page.evaluate(id => window.cbim.call('snapshot', {id}), entry.id);

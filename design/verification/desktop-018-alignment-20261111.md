@@ -1,6 +1,6 @@
 # 0.1.7 基线对齐与 0.1.8 候选验收
 
-日期：2026-11-11（Asia/Shanghai）。状态：源码对齐与本地制品专项通过；全量回归运行中，真实安装升级尚未执行。
+日期：2026-11-11～12（Asia/Shanghai）。状态：源码对齐、本地制品专项及全量回归失败项补测通过；隔离安装首次在测试数据比较处失败，正在使用同一制品复测。
 
 ## 输入与变更范围
 
@@ -9,7 +9,8 @@
 - 原工作区完整快照：`ae7798404d8b9c059da586ac6211b8db56807c55`；以此为第一父提交合并正式 0.1.7，保留两条历史，不以改版本号代替发布基线合并。
 - 隔离候选分支：`acceptance/desktop-018-20261111`；候选目录 `test-results/desktop-018-20261111/candidate`。没有覆盖开发者安装的 0.1.7。
 - 冻结构建提交：`23faa8bf73235793482cb615e4ef95de2a84c867`，父提交分别为上述整改快照与正式 0.1.7；已确认 `desktop-v0.1.7` 是其祖先。
-- 用户直接维护请求，无对应新 Issue；不改写无关工单进度。发行模式沿用已授权的未签名本地验收，不代表已授权公开发布。
+- 用户直接维护请求，无对应新 Issue；不改写无关工单进度。沿用未签名模式；用户随后明确授权临时验收分支、草稿四附件与隔离 Windows 升级验收，不包含公开发布、远端主分支合并或官网部署。
+- `874295382c55e12058b033f21a5afeadac8c564a` 继续合入 0.1.7 发布后收尾 `0c752c52c61c3a507be346560ff3e7addc93eb79`：发布资料、官网现有 0.1.7 元数据及四份测试/夹具。相对冻结候选没有产品、依赖或构建输入变化。
 
 ## 合并决策与维护入口
 
@@ -32,7 +33,9 @@
 - 类型检查：`pnpm typecheck` 通过。
 - 架构检查：58 个目录、652 个源码/样式文件；1,268 个维护代码文件、6,550 条含类型依赖；资料漂移、循环、物理分层及逻辑违规均为 0。
 - 主 Agent 配置 UI：真实 React + Application/IPC、隔离浏览器上下文的 9 项检查通过；包含多会话同步、引擎兼容过滤、草稿保留和重载持久。此项不冒充打包 EXE 或安装验收。
-- 全量回归正在执行：`pnpm exec vitest run tests --reporter=default --reporter=json --outputFile=../regression-018-1.json`。最终结果另行回填，旧 0.1.5 测试不计为本候选通过。
+- 全量回归：`pnpm exec vitest run tests --reporter=default --reporter=json --outputFile=../regression-018-1.json`，396 个文件、2,686 项，首次 2,674 通过、10 失败、2 跳过。跳过项依赖缺失的 2026-11-07 冻结历史 EXE，不以当前包伪装旧版。
+- 修正与复测：合入 0.1.7 已有的知识目录 31 项及长链 128K 测试夹具；IPC 扫描补入自动化处理器并精确核对 172 项；主会话用例检查实际发给模型的现行“禁止把 cbim:main 作为独立成员 assignee”约束。未放宽产品权限、重放、超时或成员规则。
+- 补测命令：`pnpm exec vitest run tests/abandoned-checkpoint-dependency-pi.test.ts tests/agent-history-ipc.test.ts tests/direct-main-execution-pi.test.ts tests/knowledge-contract-pi.test.ts tests/knowledge-effect-pi.test.ts tests/queued-dependency-replacement-pi.test.ts --reporter=default --reporter=json --outputFile=../regression-018-recheck.json`。6 文件 25 项通过（72.10s），覆盖原 5 个失败文件及共享夹具消费者。与全量结果去重后为 **2,684 通过、0 未解决失败、2 跳过**；不是修正后又跑了一轮全仓。
 
 ## 0.1.8 制品与桌面专项
 
@@ -60,4 +63,8 @@
 
 脚本支持实际 0.1.7→0.1.8，并保留全新安装、同路径 NSIS 升级、版本与未签名状态核验。数据断言包括完整模型目录、工作区身份、原已完成会话、localStorage、标记文件、知识文件及版本、业务文件、主 Agent 选型及修订、手动自动化定义与零重放。
 
-本机已有用户 0.1.7，没有可用隔离 Windows；指定其他安装目录不能隔离 NSIS 注册表卸载行为。用户此前选择只做本地验收。实际隔离安装须另有可用环境或授权使用现有 GitHub Windows 验收入口；没有执行前不得写“安装升级与数据保留通过”。公开更新发现/下载/重启属于 `mode=online`，与候选安装升级分开记录。
+本机已有用户 0.1.7，未执行本机 NSIS。用户随后明确允许现有 GitHub Windows 隔离验收：临时分支 `acceptance/desktop-018-20261111`，草稿 Release `441899473`，四附件按字节数与 GitHub digest 核对一致，未公开。
+
+首次运行 [43053266990](https://github.com/nan023062/cbim/actions/runs/43053266990) 的实际 head 为 `bc0c39ab950b24b70c8c112d7a60ef96f29b2e0e`。全新安装及真实 0.1.7→0.1.8 已执行，新进程为 0.1.8；脚本在自动化完整对象比较处失败：旧版 save 的内存回执带 `nextRunAt: undefined`，JSON 持久记录不含这个空属性。其他字段一致，失败前模型、工作区、知识、业务文件、主配置检查均已通过；最终会话/签名等后续检查尚未完成，不能据此判定整体验收通过。
+
+修正仅取旧版 `automation.list` 的实际持久读取作为升级基线，先与保存回执的 JSON 形式完整核对，再逐字段比较新旧持久记录；保留定义、版本、身份、时间及零运行检查。原失败 JSON、截图和日志保存在 `upgrade-run-43053266990-attempt1/` 与同名日志；同一候选附件继续用于独立隔离复测。公开更新发现/下载/重启属于 `mode=online`，本次没有执行或宣称通过。

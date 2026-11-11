@@ -79,7 +79,8 @@ it.each(cases)('main direct work keeps permission and knowledge boundaries ($mod
     expect(instructions).not.toContain('禁止把 cbim:main 作为业务执行角色');
     expect(instructions).toContain('未配置自定义');
     expect(instructions).toContain('直接');
-    if(mode==='team')expect(instructions).toContain('禁止把主角色派成独立成员任务');
+    // 0.1.7 明确区分主会话直接执行与独立成员 assignee；检查真实发送给模型的现行约束。
+    if(mode==='team')expect(instructions).toContain('禁止把 cbim:main 作为独立成员 assignee');
     expect(approved.size).toBe(permission==='ask'?2:0);
     const advertised=requests[0].tools.map((tool:any)=>tool.function.name);
     expect(advertised.includes('write')).toBe(canWrite);expect(JSON.stringify(requests[0].messages)).not.toContain('主 Agent 不提供业务写入或命令执行');expect(advertised.includes('bash')).toBe(canWrite);

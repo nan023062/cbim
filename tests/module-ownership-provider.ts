@@ -37,9 +37,9 @@ export async function moduleOwnershipProvider(mode:ModuleOwnershipMode){
       tool('owner-commit','cbim_module_owner_change_commit',{change:state.change,expectedOwnershipCursor:state.preview.preview.ownershipCursor,expectedBasis:state.preview.preview.basis});
     }else if(turn===4){
       state.commitReply=result(body,'owner-commit');
-      if(mode==='read'||mode==='ask-deny'){assert.equal(typeof state.commitReply.error,'string');done()}
+      if(mode==='read'||mode==='ask-deny'){assert.equal(typeof state.commitReply.message,'string');assert.equal(state.commitReply.retryable,false);assert.equal(state.commitReply.status,'rejected');done()}
       else{
-        if(mode==='bad-wire'){assert.match(String(state.commitReply.error),/TOOL_OUTPUT_INVALID/);const match=String(state.commitReply.error).match(/commandId=([a-f0-9-]{36})/);assert.ok(match,'Bad output must retain the actual command ID');state.commandId=match[1]}
+        if(mode==='bad-wire'){assert.equal(state.commitReply.code,'TOOL_OUTPUT_INVALID');assert.equal(state.commitReply.retryable,false);const match=String(state.commitReply.error).match(/commandId=([a-f0-9-]{36})/);assert.ok(match,'Bad output must retain the actual command ID');state.commandId=match[1]}
         else{state.recorded=moduleOwnerRecordedOutputSchema.parse(state.commitReply);state.commandId=state.recorded.commandId;assert.equal(state.recorded.receipt.actor.kind,'main_agent');assert.equal(state.recorded.receipt.ownerMemberId,state.selected.memberId)}
         tool('owner-receipt','cbim_module_owner_receipt',{commandId:state.commandId});
       }

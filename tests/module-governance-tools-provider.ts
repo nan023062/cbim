@@ -38,7 +38,7 @@ export async function moduleGovernanceToolsProvider(mode:ModuleGovernanceToolsMo
         if(mode==='invalid'){state.invalidIdentity=governanceToolsResult(body,'governance-invalid-identity');assert.equal(typeof state.invalidIdentity.error,'string')}
         tool('governance-observe','cbim_governance_observe',{protectionId:state.get.protection.protectionId,expectedProtectionRevision:state.get.protection.revision,expectedKnowledgeRevision:state.get.knowledgeRevision,statement:data.statement});
       }else if(step==='observation-recovery'){
-        state.observedReply=governanceToolsResult(body,'governance-observe');assert.match(String(state.observedReply.error),/GOVERNANCE_UNKNOWN/);assert.match(String(state.observedReply.error),/commandId=[a-f0-9-]{36}/);assert.ok(!String(state.observedReply.error).includes('TEST_RESPONSE_LOST'));
+        state.observedReply=governanceToolsResult(body,'governance-observe');assert.equal(state.observedReply.code,'GOVERNANCE_UNKNOWN');assert.equal(state.observedReply.retryable,false);assert.match(String(state.observedReply.error),/commandId=[a-f0-9-]{36}/);assert.ok(!String(state.observedReply.error).includes('TEST_RESPONSE_LOST'));
         tool('governance-observe-recovery','cbim_governance_receipt',{action:'observe',toolCallId:'governance-observe'});
       }else if(step==='observation'){
         state.observed=governanceRecordedReceiptSchema.parse(governanceToolsResult(body,mode==='lost-observation'?'governance-observe-recovery':'governance-observe'));assert.equal(state.observed.action,'observe');assert.equal(state.observed.record.origin.toolCallId,'governance-observe');
@@ -52,12 +52,12 @@ export async function moduleGovernanceToolsProvider(mode:ModuleGovernanceToolsMo
         tool('governance-oversized','cbim_governance_propose',{...proposalArguments(),newOverviewText:'界'.repeat(6000)});
       }else if(step==='propose'){
         state.observedReceipt=governanceReceiptOutputSchema.parse(governanceToolsResult(body,'governance-observe-receipt'));assert.deepEqual(state.observedReceipt,state.observed);
-        if(mode==='invalid'){state.oversized=governanceToolsResult(body,'governance-oversized');assert.equal(typeof state.oversized.error,'string')}
+        if(mode==='invalid'){state.oversized=governanceToolsResult(body,'governance-oversized');assert.equal(typeof state.oversized.message,'string');assert.equal(state.oversized.retryable,false);assert.equal(state.oversized.terminal,true)}
         state.readyToPropose=true;if(mode==='stop'||holdBeforeProposal)await held;
         tool('governance-propose','cbim_governance_propose',proposalArguments());
       }else if(step==='proposal-receipt'){
         state.proposedReply=governanceToolsResult(body,'governance-propose');
-        if(mode==='lost-reply'){assert.match(String(state.proposedReply.error),/GOVERNANCE_UNKNOWN/);assert.match(String(state.proposedReply.error),/commandId=[a-f0-9-]{36}/);assert.ok(!String(state.proposedReply.error).includes('TEST_RESPONSE_LOST'),'公开未知结果不泄露底层注入错误')}else{state.proposed=governanceRecordedReceiptSchema.parse(state.proposedReply);assert.equal(state.proposed.action,'propose')}
+        if(mode==='lost-reply'){assert.equal(state.proposedReply.code,'GOVERNANCE_UNKNOWN');assert.equal(state.proposedReply.retryable,false);assert.match(String(state.proposedReply.error),/commandId=[a-f0-9-]{36}/);assert.ok(!String(state.proposedReply.error).includes('TEST_RESPONSE_LOST'),'公开未知结果不泄露底层注入错误')}else{state.proposed=governanceRecordedReceiptSchema.parse(state.proposedReply);assert.equal(state.proposed.action,'propose')}
         tool('governance-propose-receipt','cbim_governance_receipt',{action:'propose',toolCallId:'governance-propose'});
       }else if(step==='proposal'){
         state.proposalReceipt=governanceRecordedReceiptSchema.parse(governanceToolsResult(body,'governance-propose-receipt'));assert.equal(state.proposalReceipt.action,'propose');assert.equal(state.proposalReceipt.record.origin.toolCallId,'governance-propose');if(state.proposed)assert.deepEqual(state.proposalReceipt,state.proposed);if(mode==='lost-reply')assert.ok(String(state.proposedReply.error).includes(state.proposalReceipt.commandId),'必须恢复错误提示中的同一原命令');

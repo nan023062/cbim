@@ -1,3 +1,4 @@
+import {required} from './helpers';
 import {expect,it,vi} from 'vitest';
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -46,7 +47,7 @@ it.each(['ask','read','unconnected'] as const)('real Pi main invokes feedback Sk
   try{
     if(mode!=='unconnected'){
       const started=await app.dispatch('github.feedback.begin',{clientId:'fixture_client',owner:'owner',repo:'repo',visibility:'public',autoSubmit:true});
-      await vi.waitFor(async()=>expect((await app.dispatch('github.feedback.poll',{flowId:started.flow.id})).connected?.login).toBe('tester'),{timeout:4000,interval:100});
+      await vi.waitFor(async()=>expect((await app.dispatch('github.feedback.poll',{flowId:required(started.flow).id})).connected?.login).toBe('tester'),{timeout:4000,interval:100});
     }
     const address=server.address();assert.ok(address&&typeof address!=='string');
     await app.models.save({profile:{name:'Feedback fixture',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'feedback-fixture',models:[{id:'feedback-fixture',name:'Feedback fixture',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});

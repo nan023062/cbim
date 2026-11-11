@@ -8,7 +8,7 @@ import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
 import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
 import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
 import {humanServiceFixture,latch} from './human-decision-service-fixture';
-import {request as knowledgeRequest} from './helpers';
+import {request as knowledgeRequest} from './data/knowledge';
 
 type Fixture=Awaited<ReturnType<typeof humanServiceFixture>>;
 async function decision(f:Fixture,kind:'accept'|'reject'|'request_evidence'='accept'){

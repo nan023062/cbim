@@ -6,7 +6,7 @@ import type {Application} from '../src/backend/main/application';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
 import {seedTeam} from './team-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {additionRecords} from './queued-dependency-addition-fixture';
 import {globalRuntimeLogBytes} from './global-runtime-fixture';

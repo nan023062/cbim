@@ -8,7 +8,7 @@ import type {DispatchMutation} from '../src/backend/core/tasks/dispatch-storage'
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import {scopeUsageReportSchema,type ScopeUsageReport} from '../src/backend/core/tasks/scope-usage';
 import {seedTeam} from './team-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {scopeUsageFixture as data} from './scope-usage-provider';
 
 export async function seedScopeUsage(app:Application,project:string,provider:{url:string;bind:(agentId:string,moduleId:string,selection?:OwnerExecutionSelection)=>void}){

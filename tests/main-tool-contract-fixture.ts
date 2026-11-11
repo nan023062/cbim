@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {Application} from '../src/backend/main/application';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {mainToolContractFixture as data} from './main-tool-contract-provider';
 import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';

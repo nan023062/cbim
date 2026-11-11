@@ -1,3 +1,4 @@
+import {required} from './helpers';
 import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
 import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
@@ -36,19 +37,19 @@ it('内部知识服务保留身份、写授权与 Schema 校验，团队准备�
     const e=await f.app.dispatch('add',{path:f.a}),w=f.app.workspace(e.id),service=knowledgeTools(w);
     await expect(fs.access(path.join(f.app.paths.project(e.id),'discovery.json'))).rejects.toThrow();
     const seeded=await seedTeam(w),task=await f.app.dispatch('loop.prepare',{id:e.id,task:seeded.input});
-    expect(task.workflowContext.agent.skills.map((x:any)=>x.id)).toEqual([seeded.own,seeded.shared]);
-    expect(task.workflowContext.workflow.owner).toBe(seeded.input.moduleId);
-    expect(task.workflowContext.standards).toHaveLength(2);
+    expect(task.workflowContext).toMatchObject({agent:{skills:[{id:seeded.own},{id:seeded.shared}]}});
+    expect(task.workflowContext).toMatchObject({workflow:{owner:seeded.input.moduleId}});
+    expect(required(task.workflowContext).standards).toHaveLength(2);
     const choices=await f.app.dispatch('loop.choices',{id:e.id});
-    expect(choices.modules.find((m:any)=>m.id===seeded.input.moduleId).workflows.some((w:any)=>w.id===seeded.input.workflowId)).toBe(true);
-    expect(choices.modules.find((m:any)=>m.id===seeded.child).workflows).toEqual([]);
+    expect(required(choices.modules.find((m:any)=>m.id===seeded.input.moduleId)).workflows.some((w:any)=>w.id===seeded.input.workflowId)).toBe(true);
+    expect(required(choices.modules.find((m:any)=>m.id===seeded.child)).workflows).toEqual([]);
     expect(choices.agents.some((a:any)=>a.id===seeded.input.agentId)).toBe(true);
     await expect(prepareTeamTask(w,{...seeded.input,moduleId:seeded.child})).rejects.toMatchObject({code:'WORKFLOW_SCOPE'});
     // 已退役的真人标识仅保留为旧任务说明，不查花名册、不代替正式岗位派发门禁。
-    await expect(prepareTeamTask(w,{...seeded.input,responsiblePerson:'unknown'})).resolves.toMatchObject({responsiblePerson:'unknown',workflowContext:{revision:task.workflowContext.revision}});
+    await expect(prepareTeamTask(w,{...seeded.input,responsiblePerson:'unknown'})).resolves.toMatchObject({responsiblePerson:'unknown',workflowContext:{revision:required(task.workflowContext).revision}});
     await expect(fs.access(path.join(f.a,'.cbim/team/people.json'))).rejects.toThrow();
     await expect(service.callFromRun('cbim_agent_get',{workspaceId:e.id,instanceId:'stale',id:seeded.input.agentId},false)).rejects.toMatchObject({code:'STALE_INSTANCE'});
-    await expect(seeded.call('cbim_knowledge_commit',{revision:task.workflowContext.revision,requestId:'no-permission',changes:[]})).rejects.toMatchObject({code:'FORBIDDEN'});
+    await expect(seeded.call('cbim_knowledge_commit',{revision:required(task.workflowContext).revision,requestId:'no-permission',changes:[]})).rejects.toMatchObject({code:'FORBIDDEN'});
     await expect(service.callFromRun('cbim_agent_get',{},false)).rejects.toThrow();
     expect(service.list().every(t=>t.inputSchema.type==='object')).toBe(true);
   }finally{await f.cleanup()}

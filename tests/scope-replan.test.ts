@@ -1,10 +1,11 @@
-import {runtimeTools} from './runtime-tools-fixture';
+import {runtimeToolGroup} from './runtime-tool-group';
 import {registerServiceOwner} from './owner-service-fixture';
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {fixture,request} from './helpers';
+import {fixture} from './helpers';
+import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import {jsonToolResult} from '../src/backend/core/tools/results';
@@ -36,7 +37,7 @@ async function setup(human=false,legacy=false,multi=false,splitMain=false){
   const oldTask=await assign('source');await service.closeScope(identity,'source','failed');
   const prepare:()=>Awaited<ReturnType<MemberExecutionPorts['prepare']>>=()=>({model,create:async(_run,_task,hooks)=>{
     let context:EngineContext;return new LoopRuntime({storage,directory:path.join(directory,'runs'),acquireLease:async()=>()=>{},onEngineReady:hooks.onEngineReady,onEvent:hooks.onEvent,toolPolicy:async call=>({allow:true,effects:[call.name==='read'?'read':'maintenance'],scope:{kind:'workspace',workspaceId:entry.id}}),createEngine:()=>({kind:'replan-fixture',start:async value=>{context=value;await context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:path.join(directory,'native-'+context.nativeSessionId+'.jsonl')}})},stop:async()=>{},close:async()=>{},run:async()=>{
-      let index=0;const invoke=async(name:string,input:Record<string,unknown>)=>{const id='tool-'+(++index);await context.beforeTool({id,name,input});const result=name==='read'?jsonToolResult('read',{verified:true}):await runtimeTools(context).taskTools!.call(name,input);await context.emit({type:'tool.finished',data:{id,name,result,isError:false}});return id};
+      let index=0;const invoke=async(name:string,input:Record<string,unknown>)=>{const id='tool-'+(++index);await context.beforeTool({id,name,input});const result=name==='read'?jsonToolResult('read',{verified:true}):await runtimeToolGroup(context,'task-progress')!.call(name,input);await context.emit({type:'tool.finished',data:{id,name,result,isError:false}});return id};
       await invoke('cbim_task_plan',{expectedVersion:0,goal:context.task.goal,acceptance:context.task.acceptance,reason:'核实实际状态',steps:[{id:'read',title:'读取',owner:'当前成员'}]});const evidence=await invoke('read',{path:'src/app.ts'});await invoke('cbim_task_step',{expectedVersion:1,id:'read',state:'reported_done',evidenceIds:[evidence]});await invoke('cbim_delivery_prepare',{expectedVersion:2,summary:'已读取实际状态',limitations:[]});return {status:'completed'};
     }})});
   }});

@@ -39,7 +39,7 @@ it('真实 Pi：主 Agent 使用主配置，团队任务已正式派发且成员
   const history=await f.app.dispatch('automation.list',identity),stored=history.runs.find((item:AutomationRun)=>item.id===run.id) as AutomationRun;expect(stored.taskId).toBeTruthy();expect(stored.runId).toBeTruthy();
   const graph=await f.app.memberDispatch(id).snapshot({workspaceId:id,rootSessionId:stored.taskId!});expect(graph.tasks).toHaveLength(1);expect(graph.tasks[0].ownerBinding?.memberId).toBe(seed.positions[0].member.memberId);expect(graph.tasks[0].ownerBinding?.model.modelId).toBe(ownerExecutionData.models[0]);
   expect(p.calls[0].model).toBe(ownerExecutionData.mainModel);expect(p.calls.some(c=>c.model===ownerExecutionData.models[1])).toBe(false);expect((await f.app.execution(id).threadView(stored.taskId!)).runs[0].runId).toBe(stored.runId);
-  await f.app.dispatch('automation.toggle',{...identity,id:saved.id,expectedRevision:saved.revision,enabled:false});expect((await f.app.dispatch('automation.list',identity)).runs.find((item:AutomationRun)=>item.id===run.id).status).toBe('cancelled');
+  await f.app.dispatch('automation.toggle',{...identity,id:saved.id,expectedRevision:saved.revision,enabled:false});expect((await f.app.dispatch('automation.list',identity)).runs.find((item:AutomationRun)=>item.id===run.id)).toMatchObject({status:'cancelled'});
   await expect(f.app.dispatch('automation.save',{...identity,expectedRevision:0,definition:{...definition,executor:{kind:'member',memberId:seed.positions[1].member.memberId},moduleIds:[seed.modules[0]]}})).rejects.toMatchObject({code:'AUTOMATION_OWNER'});
  }finally{await f.cleanup();await p.close()}
 },90000);

@@ -5,6 +5,15 @@ import http from 'node:http';
 import {fixture} from './helpers';
 import {ChatInputs} from '../src/backend/main/persistence/tasks/chat-inputs';
 import {transcript} from '../src/frontend/execution-view/transcript';
+it('损坏附件 JSON 不能经公开预览返回伪造的字符串字段',async()=>{
+ const f=await fixture();try{
+  const entry=await f.app.dispatch('add',{path:f.a}),inputs=new ChatInputs(f.app.workspace(entry.id));
+  const file=path.join(f.a,'contract.txt');await fs.writeFile(file,'saved');const item=await inputs.path('file',file);
+  const saved=path.join(f.app.paths.project(entry.id),'chat-inputs',item.id+'.json');
+  await fs.writeFile(saved,JSON.stringify({...item,text:{secret:'not preview text'}}));
+  await expect(f.app.dispatch('chat.preview',{id:entry.id,attachmentId:item.id})).rejects.toThrow();
+ }finally{await f.cleanup()}
+});
 it('attachment preview uses the saved snapshot and rejects another workspace or path traversal',async()=>{
  const f=await fixture();try{const a=await f.app.dispatch('add',{path:f.a}),b=await f.app.dispatch('add',{path:f.b});const inputs=new ChatInputs(f.app.workspace(a.id));const file=path.join(f.a,'preview.txt');await fs.writeFile(file,'ORIGINAL');const attachment=await inputs.path('file',file);await fs.writeFile(file,'CHANGED');expect(await f.app.dispatch('chat.preview',{id:a.id,attachmentId:attachment.id})).toMatchObject({name:'preview.txt',text:'ORIGINAL'});await expect(f.app.dispatch('chat.preview',{id:b.id,attachmentId:attachment.id})).rejects.toThrow();await expect(inputs.preview('../credentials')).rejects.toThrow();}finally{await f.cleanup()}
 });

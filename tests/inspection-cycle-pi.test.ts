@@ -1,3 +1,4 @@
+import {required} from './helpers';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -38,7 +39,7 @@ it.each(['complete-restart','stop','again'] as const)('starts a new read-only Pi
     expect(duplicate.recovery).toEqual(receipt.recovery);expect(receipt).toMatchObject({...identity,scopeId:req.commandId,scopeStatus:'active',recovery:{recoveryId:req.commandId,input:req.input,observation:req.observation,options:req.options,source:{...req.source,logState:'invalid',reportExecution:'unknown'}}});expect(JSON.stringify(receipt)).not.toContain('excludedRunIds');
     await vi.waitFor(()=>expect(provider.mainRequests).toHaveLength(7),{timeout:20000,interval:30});
     expect((await scopes())[0]).toEqual(oldScope);const fresh=(await scopes())[1];expect(fresh.goal?.input).toEqual({message:data.newGoal,attachmentIds:[]});expect(fresh.recovery?.context.excludedRunIds.sort()).toEqual(corrupt.oldIds.sort());expect((await graph()).root.agent).toEqual(originalGraph.root.agent);
-    expect((await app.dispatch('loop.recoveryStart',req)).recovery).toEqual(receipt.recovery);expect((await app.dispatch('loop.recoveryReceipt',lookup)).recovery).toEqual(receipt.recovery);
+    expect((await app.dispatch('loop.recoveryStart',req)).recovery).toEqual(receipt.recovery);expect(required((await app.dispatch('loop.recoveryReceipt',lookup))).recovery).toEqual(receipt.recovery);
     await expect(app.dispatch('loop.recoveryStart',{...req,input:{message:'changed'}})).rejects.toMatchObject({code:'RECOVERY_COMMAND_CONFLICT'});
     await expect(app.dispatch('loop.recoveryStart',{...req,commandId:randomUUID()})).rejects.toMatchObject({code:'RECOVERY_BUSY'});
     if(mode==='stop'||mode==='again'){
@@ -56,7 +57,7 @@ it.each(['complete-restart','stop','again'] as const)('starts a new read-only Pi
         const second=(await scopes())[2],after=await graph(),newTask=after.tasks.find(task=>task.scopeId===second.scopeId)!;
         expect((await scopes()).slice(0,2)).toEqual([oldScope,firstClosed]);expect(await fs.readFile(firstLog,'utf8')).toBe(firstBytes);expect(after.root.agent).toEqual(originalGraph.root.agent);
         expect(second.recovery!.context.nativeSessionId).not.toBe(fresh.recovery!.context.nativeSessionId);expect(second.recovery!.context.excludedRunIds.sort()).toEqual([...corrupt.oldIds,receipt.recovery.runId].sort());expect(newTask.assignee.agentInstanceId).not.toBe(oldTask.assignee.agentInstanceId);
-        expect((await app.dispatch('loop.recoveryStart',req)).recovery).toEqual(receipt.recovery);expect((await app.dispatch('loop.recoveryStart',next)).recovery).toEqual(nextReceipt.recovery);expect((await app.dispatch('loop.recoveryReceipt',{...identity,commandId:next.commandId})).recovery).toEqual(nextReceipt.recovery);
+        expect((await app.dispatch('loop.recoveryStart',req)).recovery).toEqual(receipt.recovery);expect((await app.dispatch('loop.recoveryStart',next)).recovery).toEqual(nextReceipt.recovery);expect(required((await app.dispatch('loop.recoveryReceipt',{...identity,commandId:next.commandId}))).recovery).toEqual(nextReceipt.recovery);
         expect(provider.mainRequests).toHaveLength(13);expect(provider.memberRequests).toHaveLength(8);
         const view=await app.dispatch('loop.threadView',{id:entry.id,taskId:started.taskId}) as ConversationThreadView;expect(view.runs).toHaveLength(3);expect(view.issues).toHaveLength(corrupt.oldIds.length);expect(view.runs.filter(run=>run.events[0].data.freshMain)).toHaveLength(2);
       }
@@ -77,7 +78,7 @@ it.each(['complete-restart','stop','again'] as const)('starts a new read-only Pi
     }
     const finalScopes=await scopes(),counts=[provider.mainRequests.length,provider.memberRequests.length];await corrupt.unchanged();expect(await fs.readFile(marker,'utf8')).toBe(data.markerLine);expect((await fs.stat(marker)).mtimeMs).toBe(markerStat.mtimeMs);expect(provider.errors).toEqual([]);expect((await queue())[0]).toMatchObject({id:queued[0].id,message:queued[0].message,status:'paused'});
     await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
-    expect(await scopes()).toEqual(finalScopes);expect((await app.dispatch('loop.recoveryReceipt',lookup)).scopeStatus).toBe('closed');expect((await app.dispatch('loop.recoveryStart',req)).recovery).toEqual(receipt.recovery);expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts);expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);await corrupt.unchanged();
-    if(repeated){expect((await app.dispatch('loop.recoveryReceipt',{...identity,commandId:repeated.request.commandId})).recovery).toEqual(repeated.receipt.recovery);expect((await app.dispatch('loop.recoveryStart',repeated.request)).recovery).toEqual(repeated.receipt.recovery);expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts)}
+    expect(await scopes()).toEqual(finalScopes);expect(required((await app.dispatch('loop.recoveryReceipt',lookup))).scopeStatus).toBe('closed');expect((await app.dispatch('loop.recoveryStart',req)).recovery).toEqual(receipt.recovery);expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts);expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);await corrupt.unchanged();
+    if(repeated){expect(required((await app.dispatch('loop.recoveryReceipt',{...identity,commandId:repeated.request.commandId}))).recovery).toEqual(repeated.receipt.recovery);expect((await app.dispatch('loop.recoveryStart',repeated.request)).recovery).toEqual(repeated.receipt.recovery);expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts)}
   }finally{provider.releaseOld();provider.releaseFresh();await app.shutdown();await f.cleanup();await provider.close()}
 },120000);

@@ -1,7 +1,8 @@
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {fixture,request} from './helpers';
+import {fixture} from './helpers';
+import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {registerServiceOwner} from './owner-service-fixture';
 import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';

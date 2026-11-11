@@ -42,7 +42,7 @@ description: "发布或恢复 CBIM Windows 桌面版本：核实签名模式，�
 
 - [make-desktop.mjs](../../../scripts/make-desktop.mjs)、[verify-desktop.mjs](../../../scripts/verify-desktop.mjs) 负责候选及校验；不另造打包或验签逻辑。
 - [publish-desktop.mjs](../../../scripts/publish-desktop.mjs) 是“建草稿 → 上传 → 校验 → 公开”的一体命令，**没有 `--draft-only`、`--resume` 或安装／CI 门禁**。需要先验收草稿时按发布步骤分阶段操作；已有草稿或日志时先恢复核实，不能直接重跑，也不能删除日志后重跑。
-- [desktop-acceptance.yml](../../../.github/workflows/desktop-acceptance.yml) 的 `mode=candidate` / `online` 区分草稿安装和公开升级，不是签名模式。`previous_version` 必须填写实际上一公开桌面版；[输入校验](../../../scripts/desktop-acceptance-inputs.mjs) 当前支持 `0.1.1`／`0.1.2` 的两步界面与 `0.1.3`／`0.1.4`／`0.1.5`／`0.1.6` 的自动安装界面，目标为更高的 `0.x.y` 未签名版，实际 [验收脚本](../../../scripts/desktop-release-acceptance.mjs) 仍断言未签名说明和 `NotSigned`。未列出的旧版交互、签名迁移或 1.x 时先适配并验证脚本，不能仅换输入就宣称覆盖。
+- [desktop-acceptance.yml](../../../.github/workflows/desktop-acceptance.yml) 的 `mode=candidate` / `online` 区分草稿安装和公开升级，不是签名模式。`previous_version` 必须填写实际上一公开桌面版；[输入校验](../../../scripts/desktop-acceptance-inputs.mjs) 当前支持 `0.1.1`／`0.1.2` 的两步界面与 `0.1.3`／`0.1.4`／`0.1.5`／`0.1.6`／`0.1.7` 的自动安装界面，目标为更高的 `0.x.y` 未签名版，实际 [验收脚本](../../../scripts/desktop-release-acceptance.mjs) 仍断言未签名说明和 `NotSigned`。未列出的旧版交互、签名迁移或 1.x 时先适配并验证脚本，不能仅换输入就宣称覆盖。
 - [validate.yml](../../../.github/workflows/validate.yml) 的诊断入口与完整四片使用不同 job 名。定向、本机或旧 head 的绿色结果不代替本次完整 PR 检查。
 - 修改产品源码时同步注释、契约和类图；仅维护发布 Skill／文档时检查格式、引用和三入口一致性，不为此安装客户端或重新发布。
 

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-模型、资源仓库、GitHub 反馈连接、并发及新目标软限额配置。GitHub 采用 Device Flow，页面仅持公开 Client ID 与短期授权码；资源服务器账号仍为占位。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。 反馈预置公开产品连接；版本更新迁到账号菜单的独立弹窗，设置表单不因查看日志而卸载。
+模型、资源仓库、GitHub 反馈连接、并发及新目标软限额配置。GitHub 采用 Device Flow，页面仅持公开 Client ID 与短期授权码；资源服务器账号仍为占位。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。 反馈预置公开产品连接；版本更新迁到账号菜单的独立弹窗，设置表单不因查看日志而卸载。 预算和反馈的动态入口验证操作请求；开启/停止共享各自使用确定签名。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -107,7 +107,7 @@ class N_src_frontend_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
 }
 ```
 
-直接依赖：[budget-settings-state.ts](budget-settings-state.ts)、[budget-settings.css](budget-settings.css)。
+直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[budget-settings-state.ts](budget-settings-state.ts)、[budget-settings.css](budget-settings.css)。
 
 ### GitHubFeedbackSettings.tsx
 
@@ -119,7 +119,7 @@ class N_src_frontend_settings_GitHubFeedbackSettings_tsx["GitHubFeedbackSettings
 }
 ```
 
-直接依赖：[../../bridge/contracts/github-feedback.ts](../../bridge/contracts/github-feedback.ts)。
+直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/github-feedback.ts](../../bridge/contracts/github-feedback.ts)。
 
 ### models.css
 

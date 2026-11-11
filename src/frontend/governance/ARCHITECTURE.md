@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-静态业务模块的知识治理面板。展示真实来源、精确差异、补证/异议与回应评价。审阅绑定来源版本，未评价不补造理解，人工决定与实施分开；原命令先保存再发送，未知只查询。
+静态业务模块的知识治理面板。展示真实来源、精确差异、补证/异议与回应评价。审阅绑定来源版本，未评价不补造理解，人工决定与实施分开；原命令先保存再发送，未知只查询。 IPC 名称从冻结的治理动作形成有限联合，保留原命令未知查询。 操作联合与表单请求经对应Schema配对，原命令回执控制器不变。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -143,7 +143,7 @@ class N_src_frontend_governance_ModuleGovernancePanel_tsx_Props["Props"] {
 N_src_frontend_governance_ModuleGovernancePanel_tsx ..> N_src_frontend_governance_ModuleGovernancePanel_tsx_Props : 声明
 ```
 
-直接依赖：[../../bridge/contracts/governance.ts](../../bridge/contracts/governance.ts)、[governance-pending.ts](governance-pending.ts)、[GovernanceOrigin.tsx](GovernanceOrigin.tsx)、[GovernanceFeedback.tsx](GovernanceFeedback.tsx)、[governance-feedback.ts](governance-feedback.ts)、[module-governance.css](module-governance.css)。
+直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/governance.ts](../../bridge/contracts/governance.ts)、[governance-pending.ts](governance-pending.ts)、[GovernanceOrigin.tsx](GovernanceOrigin.tsx)、[GovernanceFeedback.tsx](GovernanceFeedback.tsx)、[governance-feedback.ts](governance-feedback.ts)、[module-governance.css](module-governance.css)。
 
 ### 本目录调用边界
 

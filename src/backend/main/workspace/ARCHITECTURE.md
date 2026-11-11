@@ -10,7 +10,6 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [agent-history.ts](agent-history.ts) | 工作区装配层组合历史索引存储、运行日志读取与查询服务，供 Application 按持锁生命周期创建。 |
 | [architecture-service.ts](architecture-service.ts) | 将团队/业务架构表单接到受控知识事务，作为可信桌面的预览与手动提交入口。 |
 | [artifact-transitions.ts](artifact-transitions.ts) | 把已打开工作区的真实文件 utility 能力装配为成员删除/移动端口，不暴露平台句柄到 Core。 |
 | [catalog.ts](catalog.ts) | Catalog：维护本机工作区清单、显示名称、路径身份、并发更新和重新定位。 |
@@ -25,32 +24,6 @@
 | [workspace.ts](workspace.ts) | 管理本机工作区的身份、独占锁、知识监听和维护任务。 |
 
 ## 架构类图
-
-### agent-history.ts
-
-```mermaid
-classDiagram
-class N_src_backend_main_workspace_agent_history_ts["agent-history.ts"] {
-  <<module>>
-  +createAgentHistory()
-}
-```
-
-```mermaid
-classDiagram
-class N_src_backend_main_workspace_agent_history_ts["agent-history.ts"] {
-  <<module>>
-}
-class N_src_backend_main_workspace_agent_history_ts_AgentHistoryOwner["AgentHistoryOwner"] {
-  <<interface>>
-  +entry
-  +paths
-  +assert()
-}
-N_src_backend_main_workspace_agent_history_ts ..> N_src_backend_main_workspace_agent_history_ts_AgentHistoryOwner : 声明
-```
-
-直接依赖：[../../core/foundation/identity.ts](../../core/foundation/identity.ts)、[../../scheduler-engine/runtime/agent-history.ts](../../scheduler-engine/runtime/agent-history.ts)、[../persistence/tasks/agent-history.ts](../persistence/tasks/agent-history.ts)、[../persistence/tasks/run-storage.ts](../persistence/tasks/run-storage.ts)。
 
 ### architecture-service.ts
 
@@ -349,7 +322,7 @@ class N_src_backend_main_workspace_module_ownerships_ts_ModuleOwnerships["Module
 N_src_backend_main_workspace_module_ownerships_ts ..> N_src_backend_main_workspace_module_ownerships_ts_ModuleOwnerships : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/workspace/module-ownership.ts](../../core/workspace/module-ownership.ts)、[../../core/workspace/module-ownership-rules.ts](../../core/workspace/module-ownership-rules.ts)、[../../core/tasks/module-ownership-invariants.ts](../../core/tasks/module-ownership-invariants.ts)、[knowledge-sources.ts](knowledge-sources.ts)、[../../core/workspace/knowledge-source-rules.ts](../../core/workspace/knowledge-source-rules.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/knowledge/read-models.ts](../../core/knowledge/read-models.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/workspace/module-ownership.ts](../../core/workspace/module-ownership.ts)、[../../core/workspace/module-ownership-rules.ts](../../core/workspace/module-ownership-rules.ts)、[../../core/tasks/module-ownership-invariants.ts](../../core/tasks/module-ownership-invariants.ts)、[knowledge-sources.ts](knowledge-sources.ts)、[../../core/workspace/knowledge-source-rules.ts](../../core/workspace/knowledge-source-rules.ts)。
 
 ### persistent-effect-reader.ts
 

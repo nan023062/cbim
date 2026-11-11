@@ -3,6 +3,7 @@
  * 隔离资源服务随工作区实例创建；成员排空后等待原清理日志，未确认隔离退出时应用可再次尝试原关闭。
  * 受控文件边界：Electron 显式注入 utility 传输，普通 Node 不直接写；关闭先确认原文件 child 退出，随后才关闭共享 Store 和工作区锁。
  * 请求预算在工作区实例内共用唯一账本服务；先关闭主/成员代理并结算，再释放 Store，查询本身不会启动或恢复请求。
+ * 历史装配：本层组合只读角色服务与索引／日志端口，持锁初始化和关闭排空仍由本生命周期管理。
  * 作用定位：单次运行授权、版本化队列增量和结构化问题按工作区路由；排队时冻结附件内容与模型身份。Application：登记及重命名工作区、装配模型供应商与服务，并统一派发主 Agent 对话、附件快照、工具审批和历史操作。
  * 设计原因：主会话绑定独立主实例；应用共享并发准入，软限额设置在新周期创建时冻结。工作区代际隔离等待票据；关闭先撤票再停运行和排空历史，不通过删除观察记录假释放名额。
  * 资源连接：独立本机授权先恢复但不启动共享；主工具及桌面显式资料导入复用真实只读连接。工作区退役先取消导入和读取，退出排空后关闭 HTTP 服务。
@@ -10,7 +11,9 @@
  * 模块治理：仅已就绪 Workspace 提供桌面保护与人工决定服务；实际知识实施仍排入原事务队列，重开不执行保存的意图。
  * 岗位责任：恢复前注入唯一派发存储；持锁核实路径后先初始化历史索引，再加载该存储并恢复来源事务。来源、岗位与模块负责人共用原命令查询；关闭先排空知识结算再关闭该存储。登记与来源采纳不创建运行实例，不改变任务派发或模型策略。
  * 主 Agent 配置归工作区角色，两处界面共用；发送时读取并冻结引擎与模型引用，按接口协议校验，已受理的执行不会随设置热切换。
+ * IPC 边界：已知操作返回关联响应，原始输入保持 unknown 至共享请求解析，应用不提供 any 通配响应。
  */
+import type {IpcAction,IpcResponse} from '../../bridge/contracts/ipc-call';
 import path from 'node:path';
 import {WorkspaceAutomations} from './automation';
 import type {ControlledFileTransport} from './platform/controlled-file-protocol';
@@ -37,7 +40,7 @@ import type {WorkspaceAdmission} from './execution-admission';
 import {WorkspaceRuntimeMonitor} from './runtime-monitor';
 import {ChatInputs} from './persistence/tasks/chat-inputs';
 import {ChatMaterialImports} from './persistence/tasks/chat-material-imports';
-import {createAgentHistory} from './workspace/agent-history';
+import {createAgentHistory} from './agent-history';
 import type {AgentHistoryService} from '../scheduler-engine/runtime/agent-history';
 import type {WorkspaceExecutionManager} from '../scheduler-engine/execution/execution-manager';
 import {Catalog} from './workspace/catalog';
@@ -183,6 +186,8 @@ export class Application implements ApplicationServices {
     return {...options,attachmentIds:attachments??[]};
   }
   /** 所有 IPC 操作通过独立路由，调用方仍需显式传入工作区身份。 */
-  dispatch(action:string,args:any={}){return dispatchApplication(this,action,args)}
+  dispatch<A extends IpcAction>(action:A,args?:unknown):Promise<IpcResponse<A>>;
+  dispatch(action:string,args?:unknown):Promise<unknown>;
+  dispatch(action:string,args:unknown={}){return dispatchApplication(this,action,args)}
 
 }

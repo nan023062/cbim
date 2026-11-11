@@ -16,4 +16,4 @@ SDK 0.3.322 的实际 schema 运行依赖是 zod/v4 与 zod/v4/core。工程保�
 
 ### 通用能力注入
 
-工具从 EngineContext.tools 的通用目录注册；nativeTools=disabled 时关闭全部原生文件和命令，不依赖某个业务工具槽位。业务指引作为可信装配说明传入，授权、原调用身份、结果保存与停止顺序保持原协议。
+工具从 EngineContext.capabilities 的通用工具目录注册；可信能力 disableNativeTools=true 时关闭全部原生文件和命令，不依赖某个业务工具槽位。业务指引作为可信装配说明传入，授权、原调用身份、结果保存与停止顺序保持原协议。

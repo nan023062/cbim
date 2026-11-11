@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import ts from 'typescript';
+import {checkLogicalBoundaries} from './architecture-boundaries.mjs';
 
 // 检查维护中的代码，而非编译后的 JS；类型边和 re-export 同样构成架构依赖。
 // .agents 是宿主提供的 Skill 符号链接入口，实际文件归 .claude 扫描，避免重复遍历。
@@ -38,12 +39,11 @@ const moduleBoundaries=[
   {sources:[teamView],allow:[knowledgeTypes,knowledgeSnapshot,foundation]},
   {sources:[projectRoot],allow:[]},
   {sources:[businessView],allow:[knowledgeTypes,knowledgeSnapshot,projectRoot,foundation]},
-  {sources:['src/backend/scheduler-engine/context/knowledge-queries.ts'],allow:[knowledgeSnapshot,teamView,businessView]},
+  {sources:['src/backend/core/knowledge/knowledge-queries.ts'],allow:['src/backend/core/knowledge/read-models.ts',knowledgeTypes,foundation]},
   // 文件索引只实现稳定存储契约；工作区身份、服务和日志读取由 workspace 装配。
   {sources:['src/backend/main/persistence/tasks/agent-history.ts'],allow:[foundation,'src/backend/core/team/session-history-storage.ts']},
-  {sources:['src/backend/core/tasks/model-request-budget-storage.ts'],allow:['src/backend/core/tasks/dispatch-scope.ts','src/backend/core/tasks/model-request-budget.ts']},
-  {sources:['src/backend/core/brain/engine-tool-port.ts'],allow:[]},
-  {sources:['src/backend/core/brain/engine-tools.ts'],allow:['src/backend/core/brain/types.ts','src/backend/core/brain/engine-tool-port.ts']},
+  {sources:['src/backend/core/tasks/model-request-budget-storage.ts'],allow:['src/backend/core/tasks/scope-budget.ts','src/backend/core/tasks/model-request-budget.ts']},
+  {sources:['src/backend/core/brain/engine-tools.ts'],allow:[]},
   {sources:['src/backend/core/brain/index.ts'],allow:['src/backend/core/brain/types.ts','src/backend/core/brain/storage.ts','src/backend/core/brain/runtime.ts','src/backend/core/brain/member-run.ts','src/backend/core/brain/input-source.ts','src/backend/core/brain/conversation-binding.ts']},
   {sources:['src/backend/scheduler-engine/execution/model-request-budget-service.ts'],allow:[foundation,'src/backend/core/tasks/model-request-budget-storage.ts','src/backend/core/tasks/model-request-budget.ts','src/backend/core/tasks/model-request-budget-rules.ts','src/backend/core/brain/llm/ports.ts','src/backend/core/brain/llm/request-budget.ts','src/backend/core/team/workspace-member-rules.ts','src/backend/scheduler-engine/execution/scope-budget-service.ts']},
   // 领域样本不能通过 helpers 或其他中间文件重新加载完整应用。
@@ -116,7 +116,7 @@ export function auditDependencies(root = process.cwd(), options = {}) {
     if (errors.length) throw new Error(errors.map(e => ts.flattenDiagnosticMessageText(e.messageText,'\n')).join('\n'));
     compilerOptions = {...compilerOptions, ...parsed.options};
   }
-  const edges = [], unresolved = [], dynamic = [], external = [];
+  const edges = [], unresolved = [], dynamic = [], external = [], externalReferences = [];
   for (const file of unique) {
     const ast = ts.createSourceFile(file, fs.readFileSync(file,'utf8'), ts.ScriptTarget.Latest, true);
     if (ast.parseDiagnostics.length) throw new Error(`无法解析 ${relative(file)}：${ast.parseDiagnostics.map(e => ts.flattenDiagnosticMessageText(e.messageText,'\n')).join('\n')}`);
@@ -146,6 +146,8 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       if (target && known.has(key(target))) edges.push({from:info.file, to:known.get(key(target)), line:info.line, kind, spec});
       else if (target && !slash(target).includes('/node_modules/') && code.test(target)) unresolved.push({...info, spec, reason:'目标代码在扫描范围之外'});
       else if (!target && (spec.startsWith('.') || path.isAbsolute(spec) || Object.keys(compilerOptions.paths ?? {}).some(pattern => spec.startsWith(pattern.split('*')[0])))) unresolved.push({...info, spec, reason:'本地引用无法解析'});
+      // 相对或绝对路径直达 node_modules 也属于外部依赖，不能靠改写导入拼法绕过逻辑边界。
+      if (target && slash(target).includes('/node_modules/') || !target && !spec.startsWith('.') && !path.isAbsolute(spec)) externalReferences.push({...info,spec});
       if (actual && known.has(key(actual)) && (!target || key(target) !== key(actual))) edges.push({from:info.file,to:known.get(key(actual)),line:info.line,kind,spec});
     }
     function visit(node) {
@@ -170,7 +172,8 @@ export function auditDependencies(root = process.cwd(), options = {}) {
     return !!boundary&&!boundary.allow.some(target=>matchesBoundary(e.to,target));
   });
   const circular = cycles([...known.values()],edges);
-  return {ok:!circular.length && !unresolved.length && !dynamic.length && !violations.length, files:unique.length, edges, cycles:circular, unresolved, dynamic, external, violations};
+  const logical = checkLogicalBoundaries([...known.values()],edges,externalReferences);
+  return {ok:!circular.length && !unresolved.length && !dynamic.length && !violations.length && !logical.violations.length, files:unique.length, edges, cycles:circular, unresolved, dynamic, external, violations, logicalViolations:logical.violations, logicalCoverage:logical.coverage};
 }
 
 if (process.argv[1] && key(fileURLToPath(import.meta.url)) === key(process.argv[1])) {
@@ -178,7 +181,8 @@ if (process.argv[1] && key(fileURLToPath(import.meta.url)) === key(process.argv[
     const report = auditDependencies();
     console.log(`依赖检查：${report.files} 个文件，${report.edges.length} 条依赖（包含类型），${report.cycles.length} 个循环。`);
     for (const cycle of report.cycles) for (const edge of cycle.edges) console.error(`${edge.from}:${edge.line} -> ${edge.to} [${edge.kind}]`);
-    for (const field of ['unresolved','dynamic','violations']) if (report[field].length) console.error(field,JSON.stringify(report[field],null,2));
+    for (const field of ['unresolved','dynamic','violations','logicalViolations']) if (report[field].length) console.error(field,JSON.stringify(report[field],null,2));
+    console.log(`逻辑边界：${report.logicalCoverage.map(item=>`${item.id}=${item.files}`).join('，')}；违规 ${report.logicalViolations.length}。`);
     console.log(`已审核外部动态加载：${report.external.length} 处；不将其视为项目内部依赖。`);
     if (!report.ok) process.exitCode = 1;
   } catch (error) {console.error(error); process.exitCode = 1;}

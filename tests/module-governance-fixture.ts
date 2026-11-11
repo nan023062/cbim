@@ -1,5 +1,6 @@
 import type {Application} from '../src/backend/main/application';
-import {internalKnowledge,moduleFiles,summary,request} from './helpers';
+import {internalKnowledge} from './knowledge-tool-fixture';
+import {moduleFiles,summary,request} from './data/knowledge';
 export {repositoryConnectionRunFiles as moduleGovernanceRunFiles} from './repository-connection-fixture';
 
 export const moduleGovernanceFixture={slug:'governed',moduleId:'.cbim/workspace/governed',unprotectedId:'.cbim/workspace/free',marker:'MODULE_GOVERNANCE_EXACT_APPROVED_18a_57d3',observation:'现有模块说明没有明确读取与写入职责，需要在不改变模块边界的前提下补充说明。',reason:'将已确认的模块职责和操作约束写入模块说明，保持定义及正文绑定不变。',alternative:'保留原说明，由人工临时解释；这会继续产生理解差异。',invariant:'模块身份、父子关系、源目录、维护人和 Workflow 均保持原样。',recovery:'如后续发现说明不准确，重新记录观察并提出新的精确正文方案，不直接回滚或修改受保护文件。',comment:'已核对原文、差异、理由和不变量；本次仅批准所示正文方案，不批准业务实现。',draft:'治理面板操作期间保留的普通主会话草稿。'};

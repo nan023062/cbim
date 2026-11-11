@@ -62,7 +62,7 @@ pnpm start
 
 开发清单与实时进度统一从 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取。读取选定 Issue、[相关开发记录](design/development-log.md) 和实际代码，核实范围、依赖与验收后实施，每个 Issue 独立验证、提交并在已有授权内回填。`design/` 保存[关联方案、规范与记录](design/README.md)，`docs/` 仅保留下方四份概念设计。
 
-开发流程 `cbim-development` 提供 [Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md) 和 [通用项目](.agents/skills/cbim-development/SKILL.md) 三个同步入口；仅服务本工程开发，不是产品内置业务 Skill。
+开发流程 `cbim-development` 提供 [Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md) 和 [通用项目](.agents/skills/cbim-development/SKILL.md) 三个同步入口；必须遵守 [文档 1：通用项目架构设计规范与原则](design/project-architecture-standard.md)。项目架构治理入口 `architecture-evolution` 必须遵守文档 1 并按 [文档 2：架构治理规范与治理流程](design/architecture-governance-process.md) 执行。上述入口仅服务本工程开发，不是产品内置业务 Skill。
 
 桌面发版使用 `cbim-release`：[通用项目](.agents/skills/cbim-release/SKILL.md)、[Claude Code](.claude/skills/cbim-release/SKILL.md)、[Codex](.codex/skills/cbim-release/SKILL.md)。流程覆盖签名／明确选择的未签名发行、CI、草稿恢复、隔离安装与线上升级、官网及双分支收尾；具体分工见 [开发者 Skill 说明](design/README.md#开发入口)。
 

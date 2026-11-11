@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
-import {KnowledgeQueries} from '../src/backend/scheduler-engine/context/knowledge-queries';
-import {refreshKnowledgeIndexes} from '../src/backend/core/knowledge/knowledge-refresh';
-import type {KnowledgeRefreshWorkspace} from '../src/backend/core/knowledge/ports';
+import {KnowledgeQueries} from '../src/backend/core/knowledge/knowledge-queries';
+import {KnowledgeRefresh,type KnowledgeRefreshPort as KnowledgeRefreshWorkspace} from '../src/backend/core/knowledge/knowledge-refresh';
+const refreshKnowledgeIndexes=(workspace:KnowledgeRefreshWorkspace,input:Parameters<KnowledgeRefresh['refresh']>[0])=>new KnowledgeRefresh(workspace).refresh(input);
 import type {Snapshot} from '../src/backend/core/knowledge/types';
 import {knowledgeFixture,teamKnowledgeFiles,teamIds} from './knowledge-fixture';
 

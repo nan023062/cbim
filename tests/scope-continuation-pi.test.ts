@@ -1,9 +1,11 @@
+import {required} from './helpers';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {fixture,request} from './helpers';
+import {fixture} from './helpers';
+import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {scopeContinuationProvider,continuationFixture} from './scope-continuation-provider';
 import {Application} from '../src/backend/main/application';
@@ -58,7 +60,7 @@ it.each(['complete-restart','wait-again','stop-race'] as const)('resumes only ex
     await vi.waitFor(()=>expect(provider.mainRequests).toHaveLength(7),{timeout:20000,interval:30});
     const accepted=(await scopes())[0];expect(accepted.scopeId).toBe(original.scopeId);expect(accepted.status).toBe('active');expect(accepted.goal?.input).toEqual(original.goal?.input);expect(accepted.goal?.inputRevision).toBe(2);expect(accepted.goal?.revision).toBe(original.goal!.revision+1);expect(accepted.goal?.review).toBeUndefined();expect(accepted.continuations).toEqual([receipt.continuation]);
     expect((await graph()).root.agent).toEqual(originalGraph.root.agent);expect((await graph()).tasks).toEqual(originalGraph.tasks);
-    expect((await app.dispatch('loop.goalContinue',req)).continuation).toEqual(receipt.continuation);expect((await app.dispatch('loop.goalContinuation',lookup)).continuation).toEqual(receipt.continuation);expect(provider.mainRequests).toHaveLength(7);
+    expect((await app.dispatch('loop.goalContinue',req)).continuation).toEqual(receipt.continuation);expect(required((await app.dispatch('loop.goalContinuation',lookup))).continuation).toEqual(receipt.continuation);expect(provider.mainRequests).toHaveLength(7);
     await expect(app.dispatch('loop.goalContinue',{...req,input:{message:'changed input'}})).rejects.toThrow();
     await expect(app.dispatch('loop.goalContinue',{...req,commandId:randomUUID()})).rejects.toThrow();
     await expect(app.dispatch('loop.goalContinuation',{...lookup,rootSessionId:'wrong-root'})).rejects.toThrow();
@@ -78,7 +80,7 @@ it.each(['complete-restart','wait-again','stop-race'] as const)('resumes only ex
       expect(resolved).toMatchObject({status:'closed',outcome:'completed',goal:{review:{decision:'complete'}}});
       await expect(app.dispatch('loop.goalContinue',{...req,commandId:randomUUID()})).rejects.toThrow();
       expect((await app.dispatch('loop.goalContinue',req)).continuation).toEqual(receipt.continuation);expect(provider.mainRequests).toHaveLength(12);
-      await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();expect(await scopes()).toEqual([resolved]);expect((await app.dispatch('loop.goalContinuation',lookup)).continuation).toEqual(receipt.continuation);expect(provider.mainRequests).toHaveLength(12);
+      await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();expect(await scopes()).toEqual([resolved]);expect(required((await app.dispatch('loop.goalContinuation',lookup))).continuation).toEqual(receipt.continuation);expect(provider.mainRequests).toHaveLength(12);
       await app.dispatch('loop.queueContinue',{id:entry.id,taskId:started.taskId});await vi.waitFor(async()=>{const all=await scopes();expect(all).toHaveLength(2);expect(all[1]).toMatchObject({status:'closed',outcome:'completed',goal:{input:{message:continuationFixture.queuedGoal}}})},{timeout:20000,interval:30});expect(await queue()).toEqual([]);expect(provider.mainRequests).toHaveLength(13);
     }
     expect(provider.errors).toEqual([]);

@@ -18,5 +18,9 @@ export interface Validation {issues:Issue[]; indexes:Record<string,string>; tree
 export interface ModuleNode {id:string;name:string;summary:string;sources:{location:string;scope:string}[];children:string[];virtual?:boolean}
 /** 同一知识版本的正文快照；revision 由所有文件内容共同决定。 */
 export interface Snapshot {workspaceId:string;instanceId:string;revision:string;files:KnowledgeFile[];validation?:Validation}
+/** 领域查询唯一所需能力；不暴露提交、维护任务、路径或实例生命周期。 */
+export interface KnowledgeSnapshotReader {snapshot():Promise<Snapshot>}
+/** 提交完成的持久化回执；结构校验通过不等于业务验收通过。 */
+export interface KnowledgeCommit {state:string;workspaceId:string;instanceId:string;requestId:string;revision:string;changed:string[]}
 /** 尚未提交的计划与差异；确认提交仍会重新检查版本与规则。 */
 export interface Preview {request:ChangeRequest;changes:Change[];validation:Validation;affected:string[];diff:string;fingerprint:string}

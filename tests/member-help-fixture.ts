@@ -4,7 +4,7 @@ import type {Application} from '../src/backend/main/application';
 import type {DispatchMutation,DispatchMessage} from '../src/backend/core/tasks/dispatch-storage';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import {seedTeam} from './team-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {memberHelpFixture as data} from './member-help-provider';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';

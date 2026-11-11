@@ -1,5 +1,6 @@
 import {it,expect} from 'vitest';
-import {fixture,internalKnowledge} from './helpers';
+import {fixture} from './helpers';
+import {internalKnowledge} from './knowledge-tool-fixture';
 import {hash} from '../src/backend/core/foundation/serialization';
 
 it('内部知识工具发现并读取治理流程、规范及解析引用，校验版本与身份',async()=>{

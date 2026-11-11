@@ -6,16 +6,17 @@ const mode=process.argv[2]||'after';assert.ok(['before','after'].includes(mode))
 await fs.writeFile(path.join(out,'issue20.html'),'<div id="root"></div><script type="module" src="/test-results/issue20.tsx"></script>');
 await fs.writeFile(path.join(out,'issue20.tsx'),String.raw`
 import React,{Profiler} from 'react';import {createRoot} from 'react-dom/client';import '/src/frontend/shell/shell.css';
-const id='a'.repeat(64),time='2026-11-09T10:00:00.000Z',entry={id,name:'long-conversation',path:'C:/fixture',state:'running',instanceId:'instance',tasks:[]};
+const id='a'.repeat(64),instanceId='11111111-1111-4111-8111-111111111111',time='2026-11-09T10:00:00.000Z',entry={id,name:'long-conversation',path:'C:/fixture',state:'running',instanceId,tasks:[]};
 const task={taskId:'root',workspaceId:id,root:'C:/fixture',goal:'长对话输入验证',moduleIds:[],acceptance:[],mode:'chat'};
 let runs=Array.from({length:100},(_,n)=>{const runId='run-'+n;return {task,runId,status:'completed',sessionFile:'test-session',acceptance:'not_evaluated',unresolvedTools:[],events:Array.from({length:6},(_,index)=>({version:1,seq:index+1,workspaceId:id,taskId:'root',runId,time,type:index===0?'run.started':index===5?'run.settled':'message',data:index===0?{message:'用户问题 '+n}:index===5?{}:{text:'# 历史回答 '+n+' / '+index+'\n\n说明项目的实际实现与验证。\n\n- 状态与执行分开\n- 保留文件与来源\n\n| 项目 | 状态 |\n| --- | --- |\n| 输入 | 已验证 |\n\n'+String.fromCharCode(96).repeat(3)+'ts\nconst value = '+n+';\n'+String.fromCharCode(96).repeat(3)}}))}});
 window.fixture={calls:[],sent:[],unexpected:[],stats:{markdown:0,transcript:0,usage:0},commits:[],latency:[],bench:false,failSend:false,stream(){const last=runs.at(-1);runs=[...runs.slice(0,-1),{...last,events:[...last.events,{...last.events.at(-1),seq:7,type:'message',data:{text:'增量新增回复已经显示'}}]}]}};
 window.cbim={call:async(action,args)=>{const f=window.fixture;f.calls.push({action,args});
- if(action==='list')return {entries:[entry]};if(action==='open')return entry;if(action==='snapshot')return {workspaceId:id,instanceId:'instance',revision:'revision',files:[]};
+ if(action==='list')return {entries:[entry]};if(action==='open')return entry;if(action==='snapshot')return {workspaceId:id,instanceId,revision:'revision',files:[]};
+ if(action==='agent.mainSettings')return {workspaceId:id,instanceId,agentId:'cbim:main',revision:0,selection:null};
  if(action==='loop.list')return [{task,runId:runs.at(-1).runId,status:'completed'}];if(action==='loop.threadView')return {runs:structuredClone(runs),issues:[],resumeRunId:runs.at(-1).runId};
  if(action==='runtime.snapshot')return {workspaces:[{workspaceId:id,availability:'ready'}],runs:[]};if(action==='loop.approvals'||action==='loop.questions')return [];
  if(action==='loop.queueDelta')return {epoch:'queue',revision:1,reset:true,order:[],upserts:[]};if(action==='dispatch.sessionRead')throw Error('GRAPH_NOT_FOUND');
- if(action==='models.list')return {selectedId:'profile',profiles:[{id:'profile',name:'Test',defaultModel:'test',models:[{id:'test',name:'Test',enabled:true,contextWindow:32768}]}],secureStorage:true};
+ if(action==='models.list')return {selectedId:'profile',profiles:[{id:'profile',name:'Test',api:'openai-completions',defaultModel:'test',models:[{id:'test',name:'Test',enabled:true,contextWindow:32768}]}],secureStorage:true};
  if(action==='resources.status')return {source:'local',session:{state:'signedOut'}};if(action==='desktop.updates.status')return {currentVersion:'0.1.2',enabled:false,phase:'disabled'};
  if(action==='admission.read')return {kind:'snapshot',snapshot:{cursor:{streamId:'fixture',revision:1},policy:{revision:1,maxConcurrentRuns:4},occupied:[],waiting:[]}};
  if(action==='loop.resume'){if(f.failSend)throw Error('测试发送失败');f.sent.push(args);return {taskId:'root'}};
@@ -24,8 +25,8 @@ window.cbim={call:async(action,args)=>{const f=window.fixture;f.calls.push({acti
 const {App}=await import('/src/frontend/shell/App.tsx');createRoot(document.getElementById('root')).render(<Profiler id="app" onRender={(_,phase,duration)=>{if(window.fixture.bench&&phase==='update')window.fixture.commits.push(duration)}}><App/></Profiler>);
 `);
 const probes={
- '/src/frontend/conversation/MarkdownMessage.tsx': ['  const [error,setError]=useState','  (window as any).fixture.stats.markdown++;\n  const [error,setError]=useState'],
- '/src/frontend/conversation/transcript.ts':['  const source=run.source','  (window as any).fixture.stats.transcript++;\n  const source=run.source'],
+ '/src/frontend/execution-view/MarkdownMessage.tsx': ['  const [error,setError]=useState','  (window as any).fixture.stats.markdown++;\n  const [error,setError]=useState'],
+ '/src/frontend/execution-view/transcript.ts':['  const source=run.source','  (window as any).fixture.stats.transcript++;\n  const source=run.source'],
  '/src/frontend/conversation/usage.ts':['  const data=taskUsage','  (window as any).fixture.stats.usage++;\n  const data=taskUsage'],
 };
 const server=await createServer({root,configFile:false,esbuild:{jsx:'automatic'},plugins:[{name:'input-readonly-probes',enforce:'pre',transform(code,id){const probe=Object.entries(probes).find(([file])=>id.replaceAll('\\','/').endsWith(file));if(!probe)return;assert.ok(code.includes(probe[1][0]),'probe source changed');return code.replace(...probe[1])}}],server:{host:'127.0.0.1',port:0},logLevel:'error'});let browser,page;const checks=[],errors=[];

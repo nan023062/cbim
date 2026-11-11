@@ -10,7 +10,8 @@ import {
   repositoryConnectionReceiptSchema,repositoryConnectionLookupSchema,repositoryConnectionListSchema,
   repositoryConnectionCheckInputSchema,repositoryConnectionCheckSchema,
 } from '../src/backend/core/connectors/repository-connection';
-import {fixture,internalKnowledge} from './helpers';
+import {fixture} from './helpers';
+import {internalKnowledge} from './knowledge-tool-fixture';
 import {seedTeam} from './team-fixture';
 
 const repositoryId='0ab132f1-c678-409b-b0b6-99ee5a8d2263';

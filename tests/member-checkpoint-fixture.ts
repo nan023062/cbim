@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import type {Application} from '../src/backend/main/application';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {memberCheckpointFixture as data} from './member-checkpoint-provider';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';

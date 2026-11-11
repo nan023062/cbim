@@ -65,9 +65,10 @@ export class ChatInputs {
     let text='';try{if(buffer.includes(0))throw Error('binary');text=new TextDecoder('utf-8',{fatal:true}).decode(buffer)}catch{return this.save(kind,path.basename(file),file,`二进制文件引用：${file}。未解析正文；如需理解图片等内容，请使用支持该格式的工具读取，不得假装已读。`,'仅引用路径，尚未解析此格式',undefined,signal)}
     return this.save(kind,path.basename(file),file,text,stat.size>64000?'保存的文本快照，可能截取':undefined,undefined,signal);
   }
-  async connectors(){const snapshot=await this.workspace.snapshot();const file=snapshot.files.find(f=>f.path==='.cbim/connectors/registry.json');const entries=file?JSON.parse(file.text).connectors:[];return entries.map((x:any)=>({id:x.id,name:x.name,summary:x.summary}))}
+  /** 仅公开登记项的显示字段；损坏注册表明确拒绝，不透传任意 JSON。 */
+  async connectors(){const snapshot=await this.workspace.snapshot();const file=snapshot.files.find(f=>f.path==='.cbim/connectors/registry.json');const entries=file?z.object({connectors:z.array(z.object({id:z.string(),name:z.string(),summary:z.string()}))}).parse(JSON.parse(file.text)).connectors:[];return entries}
   /** 预览已登记快照，不接受 renderer 指定的任意磁盘路径。 */
-  async preview(id:unknown){this.workspace.assert();const key=z.string().uuid().parse(id);const item=JSON.parse(await fs.readFile(path.join(this.directory(),key+'.json'),'utf8'));return {name:item.name,source:item.source,note:item.note,text:item.text}}
+  async preview(id:unknown){this.workspace.assert();const key=z.string().uuid().parse(id);return z.object({name:z.string(),source:z.string(),note:z.string().optional(),text:z.string()}).parse(JSON.parse(await fs.readFile(path.join(this.directory(),key+'.json'),'utf8')))}
   /** 从当前工作区快照恢复图片，排队与续聊均不重读源文件；每条消息最多 20 MiB。 */
   async images(ids:unknown=[]){
     this.workspace.assert();const selection=z.array(z.string().uuid()).max(12).parse(ids),images:z.infer<typeof imageSchema>[]=[];let total=0;

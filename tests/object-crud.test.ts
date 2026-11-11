@@ -4,7 +4,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import Ajv from 'ajv';
 import {objectOperation} from '../src/backend/core/knowledge/object-crud';
-import {fixture,summary,moduleFiles,internalKnowledge} from './helpers';
+import {fixture} from './helpers';
+import {summary,moduleFiles} from './data/knowledge';
+import {internalKnowledge} from './knowledge-tool-fixture';
 
 it('实际发现的对象 Schema 按 kind 限制字段，和运行时接受的字段一致',async()=>{
   const f=await fixture();try{

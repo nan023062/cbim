@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主会话任务图、目标与准入状态；依赖追加/替换只读历史核对身份和节点修订，摘要按实际版本选择最新，图沿真实启用边排列，不补造结果。运行内补充按真实接收记录显示，未知优先旧审阅，同版摘要/详情核对后增量呈现。根停止使用独立在途标记，插入等待不锁住停止按钮。等待补充共享多来源草稿与导入锁，原等待选择代次阻止迟到导入；明确目录/链接/网页/授权仓库来源，普通聊天草稿独立。流程、验证、检查点、基线、人工决定与用量保留各自冻结身份和证据，不把历史当当前验收。 成员卡片、节点详情和目标分配展示原岗位及模型；手动核实当前配置独立显示差异，迟到响应按原任务/修订隔离。 主对话、图和详情区分显式交接放弃与普通封存，保留原岗位和运行；审阅中的原/新任务仅按同周期真实节点导航。 成员详情可选择原调用并显式观察；处置先保存本机稳定请求，丢回包只查原命令。历史选择与后续关系按同一处置展示，迟到读取不覆盖其他来源；各面板共享根会话时效，PublicDispatchScope 真实提供新核实和修复来源，沿既有资格创建。 同一影响面板分别显示原工具失败和原知识事务阶段，明确处置继续绑定原观察，查询不取得写权限。 原调用卡分别显示工具/文件操作/补偿结果；显式预览读取当前文件，提交前保存固定本机请求，丢回复只查原命令；查询错误保留已知拒绝/终态，预览过期不能提交。
+主会话任务图、目标与准入状态；依赖追加/替换只读历史核对身份和节点修订，摘要按实际版本选择最新，图沿真实启用边排列，不补造结果。运行内补充按真实接收记录显示，未知优先旧审阅，同版摘要/详情核对后增量呈现。根停止使用独立在途标记，插入等待不锁住停止按钮。等待补充共享多来源草稿与导入锁，原等待选择代次阻止迟到导入；明确目录/链接/网页/授权仓库来源，普通聊天草稿独立。流程、验证、检查点、基线、人工决定与用量保留各自冻结身份和证据，不把历史当当前验收。 任务根和成员正文显式注入业务详情插槽，共用 execution-view 展示；资料准备与成员交互端口只列实际 IPC 操作。 成员卡片、节点详情和目标分配展示原岗位及模型；手动核实当前配置独立显示差异，迟到响应按原任务/修订隔离。 主对话、图和详情区分显式交接放弃与普通封存，保留原岗位和运行；审阅中的原/新任务仅按同周期真实节点导航。 成员详情可选择原调用并显式观察；处置先保存本机稳定请求，丢回包只查原命令。历史选择与后续关系按同一处置展示，迟到读取不覆盖其他来源；各面板共享根会话时效，PublicDispatchScope 真实提供新核实和修复来源，沿既有资格创建。 同一影响面板分别显示原工具失败和原知识事务阶段，明确处置继续绑定原观察，查询不取得写权限。 原调用卡分别显示工具/文件操作/补偿结果；显式预览读取当前文件，提交前保存固定本机请求，丢回复只查原命令；查询错误保留已知拒绝/终态，预览过期不能提交。 任务详情与续接动态端口按操作解析后进入关联桥，状态所有权不变。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -1785,7 +1785,7 @@ class N_src_frontend_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../execution-view/QuestionCard.tsx](../execution-view/QuestionCard.tsx)、[useMemberRun.ts](useMemberRun.ts)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[MemberExecutionReport.tsx](MemberExecutionReport.tsx)、[MemberHelpNotice.tsx](MemberHelpNotice.tsx)、[MemberCancellationNotice.tsx](MemberCancellationNotice.tsx)、[MemberDependencyNotice.tsx](MemberDependencyNotice.tsx)、[MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx)、[MemberValidationPanel.tsx](MemberValidationPanel.tsx)、[OwnerExecutionDetails.tsx](OwnerExecutionDetails.tsx)、[OwnerExecutionInspection.tsx](OwnerExecutionInspection.tsx)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[MemberActivity.tsx](MemberActivity.tsx)、[member-activity.css](member-activity.css)。
+直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../execution-view/QuestionCard.tsx](../execution-view/QuestionCard.tsx)、[useMemberRun.ts](useMemberRun.ts)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[MemberExecutionReport.tsx](MemberExecutionReport.tsx)、[MemberHelpNotice.tsx](MemberHelpNotice.tsx)、[MemberCancellationNotice.tsx](MemberCancellationNotice.tsx)、[MemberDependencyNotice.tsx](MemberDependencyNotice.tsx)、[MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx)、[MemberValidationPanel.tsx](MemberValidationPanel.tsx)、[OwnerExecutionDetails.tsx](OwnerExecutionDetails.tsx)、[OwnerExecutionInspection.tsx](OwnerExecutionInspection.tsx)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[MemberActivity.tsx](MemberActivity.tsx)、[member-activity.css](member-activity.css)。
 
 ### MemberValidationPanel.tsx
 
@@ -2881,7 +2881,7 @@ class N_src_frontend_tasks_useScopeContinuation_ts_ScopeContinuationView["ScopeC
 N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_useScopeContinuation_ts_ScopeContinuationView : 声明
 ```
 
-直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../../bridge/contracts/repository-connections.ts](../../bridge/contracts/repository-connections.ts)、[scope-state.ts](scope-state.ts)、[continuation-state.ts](continuation-state.ts)、[continuation-source-io.ts](continuation-source-io.ts)。
+直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../../bridge/contracts/repository-connections.ts](../../bridge/contracts/repository-connections.ts)、[scope-state.ts](scope-state.ts)、[continuation-state.ts](continuation-state.ts)、[continuation-source-io.ts](continuation-source-io.ts)。
 
 ### useScopeReplan.ts
 
@@ -4322,14 +4322,6 @@ AutomaticExecutionDetails 供目标责任分配及任务详情共用，显示兜
 
 MemberActivityCard 的 inline 形式默认只显示图上的状态、任务和候选摘要，展开才启用 useMemberRun；折叠清理在途观察并忽略迟到回包，不停止任务。原帮助、负责人、撤销、依赖修订和检查点通知共用同一正文；旧列表形式保留供独立消费者使用，主对话不再另挂列表。
 
-### 共享执行展示与领域控制分离
+### 运行展示的公共边界
 
-本目录单向消费 execution-view，不再导入 conversation 页面组件。ToolActivity 在共享 ToolTimeline 的插槽装配原主命令核实及影响处置；SessionTaskView 将该轨道传给 WorkStatus，MemberRunTranscript 仅显示共享只读轨道。CommandVerificationPanel/状态机归任务域，仍仅通过明确点击查询原命令，不随渲染自动重试。恢复上下文和本地草稿所有权保持 useExecutionRecovery。
-
-成员操作及资料准备适配器只接受自身真实使用的固定 IPC 动作；页面继续传原任务、导入和取消身份，不借任意 action 字符串扩展调用范围。
-
-## 知识写入与业务目标区分
-
-未建立业务计划的失败关闭周期显示“业务目标未建立”，不改写真实 outcome；知识事务的完成由原工具回执独立显示。ToolActivity 默认折叠正常操作的影响观察，异常保持可见。核实影响和读取处置历史按钮说明“只读、不重跑、不写库”；面板内明确保存处置仍是独立写操作，不改其原授权和幂等语义。
-
-OwnerExecutionDetails 按原绑定区分显式责任、继承父级和模型匹配理由；匹配不显示不存在的责任版本，历史仍独立于当前岗位查询。
+MemberRunTranscript、SessionTaskView 从 execution-view 复用消息、投影与状态。业务面板通过 本目录 ToolActivity 显式组合，SessionTaskView 传递原 recovery 上下文，成员正文保留原可信主来源判定；选择、刷新和恢复控制不下沉到公共展示。MemberTaskDetail 的操作端口只列执行停止、批准及回答问题；资料准备端口只列导入/取消/来源读取，运行时语义不变。

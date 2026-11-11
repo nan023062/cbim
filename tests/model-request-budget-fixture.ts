@@ -1,9 +1,9 @@
-import {modelRequestBudgetStore} from '../src/backend/main/persistence/tasks/model-request-budget-store';
 import path from 'node:path';
 import {fixture} from './helpers';
 import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
 import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
 import {ModelRequestBudgetService} from '../src/backend/scheduler-engine/execution/model-request-budget-service';
+import {requestBudgetStore} from '../src/backend/main/persistence/tasks/request-budget-store';
 import type {ResolvedLlm} from '../src/backend/core/brain/llm/ports';
 import type {ScopeBudgetPolicy} from '../src/backend/core/tasks/scope-budget';
 
@@ -11,7 +11,7 @@ export const budgetTestModel:ResolvedLlm={profile:{id:'budget-model',name:'Budge
 export async function requestBudgetFixture(limits:ScopeBudgetPolicy['limits']={tokens:100000},llm:ResolvedLlm=structuredClone(budgetTestModel)){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),owner=f.app.workspace(entry.id),directory=path.join(f.user,'request-budget-test'),store=new FileDispatchStore(directory,entry.id);
   const policy:ScopeBudgetPolicy={revision:1,enabled:true,enforcement:'request',limits},dispatch=new WorkspaceDispatchService(owner,store,undefined,()=>policy),identity={workspaceId:entry.id,rootSessionId:'budget-root'},scopeId='budget-scope',runId='budget-run';
-  await dispatch.openScope(identity,scopeId,{message:'Request budget fixture'},runId);const release=dispatch.budgets.holdMain(runId),service=new ModelRequestBudgetService(owner,modelRequestBudgetStore(store),dispatch.budgets),binding={rootSessionId:identity.rootSessionId,taskId:identity.rootSessionId,runId,kind:'main' as const};
+  await dispatch.openScope(identity,scopeId,{message:'Request budget fixture'},runId);const release=dispatch.budgets.holdMain(runId),service=new ModelRequestBudgetService(owner,requestBudgetStore(store),dispatch.budgets),binding={rootSessionId:identity.rootSessionId,taskId:identity.rootSessionId,runId,kind:'main' as const};
   const port=(await service.forRun(binding,llm))!;
   return {...f,entry,owner,directory,store,dispatch,policy,service,port,llm,binding,identity,query:{...identity,scopeId},release,cleanup:async()=>{release();await store.close();await f.cleanup()}};
 }

@@ -1,23 +1,14 @@
-### 快照契约、领域视图与查询编排
+### 固定快照读取的逻辑边界与公共入口
 
-知识快照属于 Core 的公开数据，跨域查询属于调度层编排。当前保护的是下表中的查询链，不代表整个 `team/`、`workspace/` 或其他 Core 子模块已经完成逻辑分层治理。
+跨模块查询统一导入 [read-models.ts](read-models.ts) 的 `Team`、`BusinessWorkspace`、`context`、`data`、`content`；[snapshot.ts](snapshot.ts)、[team/model.ts](../team/model.ts)、[workspace/model.ts](../workspace/model.ts) 是同一个逻辑读取模块的私有实现。逻辑归属按职责声明，不要求把既有文件搬到同一目录。
 
-| 边界及公共入口 | 允许的项目内依赖 | 状态与副作用 |
-| --- | --- | --- |
-| `types.ts`：Snapshot/Validation 等传输数据 | 无 | 数据形状，不持有服务实例 |
-| `snapshot.ts`：KnowledgeSnapshotReader、context/data/content | types、Foundation | 读取/解析一个完整版本，不暴露写入或生命周期 |
-| `team/model.ts`：Team | 快照契约、Foundation | 固定快照上的 Agent/Skill 视图，不读取新版本 |
-| `workspace/model.ts`：BusinessWorkspace | 快照契约、Foundation、project-root | 固定快照上的模块/本模块 Workflow 视图 |
-| `scheduler-engine/context/knowledge-queries.ts`：KnowledgeQueries | 快照读取端口、两个领域视图 | 每次查询取新快照，跨查询同版要求由组合用例核对 |
-| `knowledge-refresh.ts`：refreshKnowledgeIndexes | 知识刷新端口、原请求解析、快照契约、Foundation | 复用原 journal，委托同一知识事务刷新索引 |
+读取模块依赖纯快照 [types.ts](types.ts)、Foundation 的错误／JSON／序列化能力及内置项目根定义，不依赖知识写入端口、查询编排、Application、存储或引擎 SDK。读取只消费给定快照，不主动修改它、不重新读取磁盘；快照有效性与版本仍由调用方负责，接口不承诺把调用者持有的对象自动冻结。
 
-`scripts/check-dependencies.mjs` 对快照、领域视图、查询编排和 Foundation 的出边执行严格约束，包含类型导入与重导出；视图不能取得完整 `KnowledgeWorkspace` 或反向依赖另一领域视图。Foundation 不依赖业务。旧 Core `knowledge-queries.ts` 无静态或动态注册消费者，已移除，不保留反向重导出。
+`KnowledgeQueries` 只依赖 `KnowledgeSnapshotReader.snapshot`，经公开入口装配领域读取；调用方显式转发读取能力，不传完整工作区。`KnowledgeRefresh` 独立接收 assert、snapshot、committedReceipt、commit 四项端口，保留原请求解析、版本、幂等和当前快照语义。知识工具仍先检查写权限；查询不能提交或调用刷新。`KnowledgeCommit` 数据契约归 types，ports 保留同类型重导出兼容。
 
-读取能力与写入能力分开：`KnowledgeSnapshotReader` 仅含 `snapshot()`；`KnowledgeRefreshWorkspace` 只增加 assert、原回执读取与 commit；完整 `KnowledgeWorkspace` 继续由 Main 的 Workspace 实现，拥有实例、锁、监听、任务、存储及恢复。端口收窄没有移动权威状态或拆开原子事务。Tools 仍逐调用校验身份、写授权、取消和输出，不由查询服务授予权限。
+[逻辑规则](../../../../scripts/architecture-boundaries.mjs) 声明知识相关边界：纯基础、知识数据、项目根定义、知识读取模型、只读查询、事务刷新及测试数据；[检查器](../../../../scripts/check-dependencies.mjs) 同时检查允许方向、私有入口与允许的外部库，包含类型、重导出、别名和字面量动态导入。新实现或依赖必须先核实职责再登记，不能将整个 core 放入豁免。其他源码仍受既有物理层和全文件无环检查，不能把已登记的试点边界视为全仓逻辑治理已经结束。
 
-本片保持外部工具版本/输入输出、Skill 继承、本模块 Workflow、内置根、刷新错误和幂等语义。查询实现与刷新实现分开后，未来增加只读字段主要修改所属视图及公开输出协议；改变刷新策略才修改 `knowledge-refresh.ts`。这些边界是当前约束和稳定候选，不宣称一次重构已证明长期稳定。
-
-领域测试从 `tests/knowledge-data.ts` 取得纯数据，从 `tests/knowledge-fixture.ts` 取得真实 Rules 与临时源目录；两者有独立依赖约束。`core-domains`、`rules` 不加载 Application。完整事务、权限及任务准备仍由 `knowledge-refresh`、`knowledge-tool-output`、`team-workflow` 的真实应用测试覆盖；其余旧测试暂保留 `tests/helpers.ts` 的兼容重导出。
+测试分为三类：`tests/data/` 仅构造数据并受相同稳定依赖约束；`tests/knowledge-tool-fixture.ts` 适配调用方提供的知识端口；`tests/helpers.ts` 仅提供会初始化并关闭完整 Application 的集成夹具。`core-domains.test.ts` 使用固定快照验证读取规则，原真实事务生成快照、关闭工作区后继续读取的场景保留在 `core-domains-integration.test.ts`。
 
 ### 项目根查询协议
 
@@ -91,9 +82,11 @@ knowledge-write-input.ts 让真实知识工具与后端历史观察复用同一�
 
 ### 刷新原事务与契约版本
 
-knowledgeRefreshInputSchema 要求 workspace/instance、revision 和 requestId，knowledgeRefreshRequest 固定顺序构造空 changes。refreshKnowledgeIndexes 先查精确原成功 journal，再按原版本校验/提交；重复不再写，但返回校验来自当前快照。原 v1 不从今日状态推断请求。originalKnowledgeWrite 仅在可信 contractVersion=2 时适配 refresh，查询不初始化或推进事务。
+knowledgeRefreshInputSchema 要求 workspace/instance、revision 和 requestId，knowledgeRefreshRequest 固定顺序构造空 changes。KnowledgeRefresh.refresh 先查精确原成功 journal，再按原版本校验/提交；重复不再写，但返回校验来自当前快照。原 v1 不从今日状态推断请求。originalKnowledgeWrite 仅在可信 contractVersion=2 时适配 refresh，查询不初始化或推进事务。
 
 ### 对象输入与模块正文诊断
+
+`object-contract.ts` 拥有对象输入 Schema 和预览/提交 DTO，可被浏览器边界直接加载。`object-crud.ts` 保留原重导出入口及事务实现；公共契约不通过该实现加载 Node.js 路径、哈希或知识事务。浏览器构建回归覆盖 IPC 的传递依赖。
 
 ObjectOperation 使用 kind 判别的严格 data Schema，objectDataSchemas 同时提供运行时可写字段，不再给 Agent 暴露 purpose 或给模块暴露 name。模块标识名从 slug 派生，中文名属于正文 H1。Rules 使用 workspace/module-outline 的同一固定章节；章节、空正文或图错误返回精确标题和一份可复制模板，不自动写入专业内容。
 

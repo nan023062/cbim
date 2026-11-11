@@ -4,7 +4,7 @@ import path from 'node:path';
 import type {Application} from '../src/backend/main/application';
 import type {RunSummary} from '../src/backend/core/brain/types';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {originalCommandData as data,originalFaultCall,type OriginalCommandMode,type originalCommandProvider} from './original-command-provider';

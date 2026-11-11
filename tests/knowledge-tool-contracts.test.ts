@@ -1,5 +1,6 @@
 import {expect,it} from 'vitest';
-import {fixture,internalKnowledge} from './helpers';
+import {fixture} from './helpers';
+import {internalKnowledge} from './knowledge-tool-fixture';
 import {knowledgeToolCatalogOutputSchema,knowledgeToolDescribeOutputSchema} from '../src/backend/core/tools/contracts';
 
 it('真实知识目录只发现已注册能力，自描述有限且不执行领域写入或启动维护任务',async()=>{

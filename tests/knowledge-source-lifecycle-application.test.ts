@@ -1,3 +1,4 @@
+import type {IpcAction} from '../src/bridge/contracts/ipc-call';
 import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import {existsSync} from 'node:fs';
@@ -7,7 +8,8 @@ import {Paths} from '../src/backend/main/platform/paths';
 import {knowledgeSourceRefSchema,knowledgeSourceChangeSchema,type KnowledgeSourceChange} from '../src/backend/core/workspace/knowledge-source';
 import {workspaceMemberDetailSchema} from '../src/backend/core/team/workspace-member';
 import {moduleOwnershipDetailSchema} from '../src/backend/core/workspace/module-ownership';
-import {fixture,request} from './helpers';
+import {fixture} from './helpers';
+import {request} from './data/knowledge';
 import {seedKnowledgeSource,knowledgeSourceFixture as data,knowledgeSourceObjectChange,knowledgeSourceMemberChange,knowledgeSourceOwnershipChange,knowledgeSourceDiskEvidence,knowledgeSourceHttpProbe,knowledgeSourceRuntimeEvidence,knowledgeSourceArchitecturePackage} from './knowledge-source-lifecycle-fixture';
 import {createKnowledgeSourceLegacyFixture,knowledgeSourceLegacyExecutable} from './knowledge-source-legacy-fixture';
 
@@ -20,7 +22,7 @@ const expectedBinding=(binding:NonNullable<ReturnType<typeof moduleOwnershipDeta
 it('actual ObjectCrud preserves an edited Agent generation but same-path same-byte recreation requires explicit capability adoption',async()=>{
   const f=await fixture(),probe=await knowledgeSourceHttpProbe();let app=f.app;
   try{
-    const call=(action:string,input?:unknown)=>app.dispatch(action,input),seeded=await seedKnowledgeSource(call,f.temp,probe.url),id=seeded.entry.id,memberId=seeded.registered.receipt.memberId;
+    const call=<A extends IpcAction>(action:A,input?:unknown)=>app.dispatch(action,input),seeded=await seedKnowledgeSource(call,f.temp,probe.url),id=seeded.entry.id,memberId=seeded.registered.receipt.memberId;
     const original=await member(app,id,memberId),originalRef=knowledgeSourceRefSchema.parse(original.member.adoption.sourceRef),originalOwner=await ownership(app,id),runtime=await knowledgeSourceRuntimeEvidence(app,[id,seeded.other.id]);
     expect(original.sourceStatus).toEqual({status:'current',ref:originalRef});
     await knowledgeSourceObjectChange(call,id,[{kind:'agent',action:'update',id:data.agentId,body:data.changedPrinciples}]);
@@ -47,7 +49,7 @@ it('actual ObjectCrud preserves an edited Agent generation but same-path same-by
 it('actual architecture replace resets a same-byte target generation while a changed sibling supplies a genuine nonempty package transaction',async()=>{
   const f=await fixture(),probe=await knowledgeSourceHttpProbe();
   try{
-    const app=f.app,call=(action:string,input?:unknown)=>app.dispatch(action,input),seeded=await seedKnowledgeSource(call,f.temp,probe.url),id=seeded.entry.id;
+    const app=f.app,call=<A extends IpcAction>(action:A,input?:unknown)=>app.dispatch(action,input),seeded=await seedKnowledgeSource(call,f.temp,probe.url),id=seeded.entry.id;
     // 当前应用不再创建真人维护字段，模块定义可以直接发布；仍以真实兄弟正文变化触发替换事务。
     const initial=await app.workspace(id).snapshot();
     for(const file of initial.files.filter(file=>[data.moduleId+'/module.json',data.siblingId+'/module.json'].includes(file.path)))expect(JSON.parse(file.text)).not.toHaveProperty('maintenance');
@@ -72,7 +74,7 @@ it.skipIf(!existsSync(knowledgeSourceLegacyExecutable()))('actual fixed pre-sour
   const legacy=await createKnowledgeSourceLegacyFixture();let app:Application|undefined,passed=false;
   try{
     app=new Application(new Paths(legacy.user,path.resolve('.')),path.resolve('design'));await app.init();const current=app,id=legacy.seeded.entry.id,memberId=legacy.seeded.registered.receipt.memberId;
-    const call=(action:string,input?:unknown)=>current.dispatch(action,input),old=await member(current,id,memberId),owner=await ownership(current,id);
+    const call=<A extends IpcAction>(action:A,input?:unknown)=>current.dispatch(action,input),old=await member(current,id,memberId),owner=await ownership(current,id);
     expect(old.member).toEqual(legacy.evidence.member.member);expect(owner.view.binding).toEqual(legacy.evidence.ownership.view.binding);expect(old.member.adoption.sourceRef).toBeUndefined();expect(owner.view.binding!.sourceRef).toBeUndefined();expect(old.sourceStatus?.status).toBe('untracked');expect(owner.view.sourceStatus?.status).toBe('untracked');
     expect((await knowledgeSourceDiskEvidence(legacy.user,id)).dispatchBytes).toEqual(legacy.disk.dispatchBytes);expect(journals(await knowledgeSourceDiskEvidence(legacy.user,id))).toEqual(journals(legacy.disk));
     await knowledgeSourceMemberChange(call,id,{kind:'update',memberId,expectedRevision:old.member.revision,patch:{name:old.member.name+'（只改名称）'},reason:'旧岗位改名不补造来源'});

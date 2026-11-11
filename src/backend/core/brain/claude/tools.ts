@@ -1,5 +1,6 @@
 /**
  * 作用定位：Claude 原生工具和内部 SDK 工具适配为 CBIM 授权与回执协议。
+ * 能力边界：是否关闭原生工具由可信能力策略决定，不依赖具体业务工具名称。
  * 设计原因：PreToolUse 先等模型请求结算再持久化授权；内部调用用一次性原调用 ID 绑定精确参数，禁止依名称放行。
  * 职责边界：SDK MCP 仅为当前进程内传输，不监听端口或提供对外 MCP 服务。未注册工具一律拒绝。
  */
@@ -8,6 +9,7 @@ import {McpServer} from '@modelcontextprotocol/sdk/server/mcp.js';
 import {ListToolsRequestSchema,CallToolRequestSchema} from '@modelcontextprotocol/sdk/types.js';
 import type {HookCallback,McpSdkServerConfigWithInstance} from '@anthropic-ai/claude-agent-sdk';
 import type {EngineContext} from '../types';
+import {nativeToolsDisabled} from '../engine-tools';
 import type {EngineToolsPort} from '../engine-tools';
 import {validateToolResult,type ToolResult} from '../../tools/results';
 
@@ -32,7 +34,7 @@ export function claudeToolCall(name:string,input:Record<string,unknown>){
 /** 一个实例只服务一个 run；stop 取消未完成端口，已执行但未落盘的结果保持未知。 */
 export async function claudeTools(context:EngineContext,port:EngineToolsPort,allowExecution:boolean,blocked:()=>string|undefined,settle:()=>Promise<void>=async()=>{}){
   const catalog=await port.list(),names=new Set(catalog.map(t=>t.name)),controller=new AbortController();
-  const native=context.nativeTools==='disabled'?[]:allowExecution?Object.keys(nativeNames):['Read','Glob','Grep'];
+  const native=nativeToolsDisabled(context)?[]:allowExecution?Object.keys(nativeNames):['Read','Glob','Grep'];
   const active=new Map<string,{name:string;input:Record<string,unknown>;original:Record<string,unknown>;internal:boolean}>();
   const grants=new Set<string>();
   const server=new McpServer({name:'cbim',version:'1.0.0'},{capabilities:{tools:{}}});

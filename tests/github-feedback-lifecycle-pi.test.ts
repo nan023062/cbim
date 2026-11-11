@@ -1,3 +1,4 @@
+import {required} from './helpers';
 import {expect,it,vi} from 'vitest';
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -57,7 +58,7 @@ it.each(['bug','wish'] as const)('refreshes both feedback tools after login when
     await app.models.save({profile:{name:'Feedback lifecycle',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'feedback-lifecycle',models:[{id:'feedback-lifecycle',name:'Feedback lifecycle',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
     const options={permission:'ask',turnTimeoutMs:60000};
     const wait=async(run:{taskId:string;runId:string})=>{let summary!:RunSummary;await vi.waitFor(async()=>{
-      expect(errors).toEqual([]);summary=await app.dispatch('loop.inspect',{id:entry.id,...run});expect(summary.status).toBe('completed');
+      expect(errors).toEqual([]);summary=await app.dispatch('loop.inspect',{id:entry.id,taskId:run.taskId,runId:run.runId});expect(summary.status).toBe('completed');
       expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);
     },{timeout:30000,interval:50});return summary};
     const first=await app.dispatch('loop.chat',{id:entry.id,message:'I want to submit feedback but have not connected GitHub yet.',options});await wait(first);
@@ -65,7 +66,7 @@ it.each(['bug','wish'] as const)('refreshes both feedback tools after login when
     phase='pending';step=0;
     const pending=await app.dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:first.runId,message:'Check the local authorization status before the settings page receives the token.',options});await wait(pending);
     expect(issues).toHaveLength(0);expect((await app.dispatch('github.feedback.status')).connected).toBeUndefined();
-    await vi.waitFor(async()=>expect((await app.dispatch('github.feedback.poll',{flowId:auth.flow.id})).connected?.login).toBe('tester'),{timeout:4000,interval:100});
+    await vi.waitFor(async()=>expect((await app.dispatch('github.feedback.poll',{flowId:required(auth.flow).id})).connected?.login).toBe('tester'),{timeout:4000,interval:100});
     phase='connected';step=0;
     const second=await app.dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:pending.runId,message:'GitHub is now connected; submit this feedback: '+JSON.stringify(input),options});
     const submitted=await wait(second);

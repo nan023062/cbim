@@ -12,7 +12,10 @@
  * Skill 入口：加号菜单发送只需一句描述、补充自愿的独立引导请求，沿用当前模型、权限和排队规则；不发送或清空已有草稿与附件。
  * 输入边界：草稿仍即时上交外壳；历史轮次按运行、恢复上下文及实际计时变化更新，键入不重复解析未变正文。
  * 三个引擎始终存在，对话栏读写工作区主 Agent 配置，模型菜单按协议筛选统一启用目录；修改只影响下一轮，Claude Code/Codex 运行期间只支持排队而不承诺原轮插入。协作提示与主 Agent 默认执行规则保持一致。
+ * 队列 IPC 入口只接收实际支持的操作名，状态、停止和回执仍由原控制器管理。
+ * IPC 边界：发送前冻结原任务和运行，审批绑定审批自身任务；动态队列输入逐操作核实。
  */
+import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
 import type {RunSummary,ConversationThreadView} from '../../bridge/contracts/execution';
@@ -159,8 +162,13 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
       if(tab.taskId&&!shouldQueue&&!resumeRunId)throw Error('当前执行记录不可安全续接，请先核实任务记录。');
       // 即使离开页面，旧回调也只更新原工作区页签；历史可找回已启动任务。
       const accepted=(result:{taskId:string})=>{onBind(result.taskId);if(!skill){onDraft('');onAttachments([])}};
-      const queued=!!tab.taskId&&shouldQueue;
-      const result=queued?await enqueueConversationMessage({enqueue:()=>api.call('loop.enqueue',{id:workspace.id,taskId:tab.taskId,message,attachments:sentAttachments.map(a=>a.id),options}),accepted,insert:request=>api.call('loop.queueInsert',request)},insertion):tab.taskId?await api.call('loop.resume',{id:workspace.id,taskId:tab.taskId,runId:resumeRunId,message,attachments:sentAttachments.map(a=>a.id),options}):await api.call('loop.chat',{id:workspace.id,message,attachments:sentAttachments.map(a=>a.id),options});
+      const taskId=tab.taskId,runId=resumeRunId;
+      const queued=!!taskId&&shouldQueue;
+      if(taskId&&!queued&&!runId)throw Error('当前执行记录不可安全续接，请先核实任务记录。');
+      let result:{taskId:string};
+      if(taskId&&shouldQueue)result=await enqueueConversationMessage({enqueue:()=>api.call('loop.enqueue',{id:workspace.id,taskId,message,attachments:sentAttachments.map(a=>a.id),options}),accepted,insert:request=>api.call('loop.queueInsert',request)},insertion);
+      else if(taskId&&runId)result=await api.call('loop.resume',{id:workspace.id,taskId,runId,message,attachments:sentAttachments.map(a=>a.id),options});
+      else result=await api.call('loop.chat',{id:workspace.id,message,attachments:sentAttachments.map(a=>a.id),options});
       if(!queued)accepted(result);
       if(alive.current){const view:ConversationThreadView=await api.call('loop.threadView',{id:workspace.id,taskId:result.taskId});if(alive.current){setRuns(view.runs);setThreadIssues(view.issues);setResumeRunId(view.resumeRunId);setLoaded(true);follow.current=true}}
     });
@@ -203,9 +211,9 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   const canSend=canSendRequest&&(!!tab.draft?.trim()||attachments.length>0);
   // 标题只展示用户首行目标，避免把附加参考资料和内部标记放进导航。
 
-  const queueOperation=async(action:'loop.queueChange'|'loop.queueInsert'|'loop.queueEdit'|'loop.queueMove',args:Record<string,unknown>)=>{const stopPending=!!tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId});const insertion=action==='loop.queueInsert'?captureQueueInsertTarget(workspace.id,tab.taskId,currentRun,canInsert&&!stopPending):undefined;if(action==='loop.queueInsert'&&!insertion)return false;let saved=false;await operate(async()=>{if(insertion)await insertQueuedMessage(insertion,args.queueId as string,request=>api.call('loop.queueInsert',request));else await api.call(action,{id:workspace.id,taskId:tab.taskId,...args});saved=true});return saved};
+  const queueOperation=async(action:'loop.queueChange'|'loop.queueEdit'|'loop.queueMove'|'loop.queueInsert',args:Record<string,unknown>)=>{const stopPending=!!tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId});const insertion=action==='loop.queueInsert'?captureQueueInsertTarget(workspace.id,tab.taskId,currentRun,canInsert&&!stopPending):undefined;if(action==='loop.queueInsert'&&!insertion)return false;let saved=false;await operate(async()=>{if(insertion)await insertQueuedMessage(insertion,args.queueId as string,request=>api.call('loop.queueInsert',request));else await api.call(...checkedIpcCall(action,{id:workspace.id,taskId:tab.taskId,...args}));saved=true});return saved};
   const queueChange=(queueId:string,action:string)=>void queueOperation('loop.queueChange',{queueId,action});
-  const queueContinue=()=>{if(canContinueQueue&&!graph.loading&&tab.taskId&&!stopGate.current.pending({id:workspace.id,taskId:tab.taskId}))void operate(async()=>{await api.call('loop.queueContinue',{id:workspace.id,taskId:tab.taskId})})};
+  const queueContinue=()=>{const taskId=tab.taskId;if(canContinueQueue&&!graph.loading&&taskId&&!stopGate.current.pending({id:workspace.id,taskId}))void operate(async()=>{await api.call('loop.queueContinue',{id:workspace.id,taskId})})};
   return <div className="chat-page"><nav className="session-tabs" role="tablist" aria-label="会话内容"><button id={'session-chat-'+tab.id} role="tab" aria-selected={section==='chat'} aria-controls={'session-dialog-'+tab.id} onClick={()=>selectSection('chat')}>对话</button><button id={'session-tasks-'+tab.id} role="tab" aria-selected={section==='tasks'} aria-controls={'session-task-panel-'+tab.id} onClick={()=>selectSection('tasks')}>任务视图</button><button id={'session-automation-'+tab.id} role="tab" aria-selected={section==='automation'} aria-controls={'session-automation-panel-'+tab.id} onClick={()=>selectSection('automation')}>自动化</button></nav>
     <section className="session-task-panel" role="tabpanel" id={'session-automation-panel-'+tab.id} aria-labelledby={'session-automation-'+tab.id} hidden={section!=='automation'}><AutomationView key={workspace.id+':'+workspace.instanceId} workspace={workspace} active={active&&section==='automation'} onOpenRun={onOpenAutomationRun}/></section>
     <>{navigationError&&<p role="alert" className="shell-alert" data-testid="runtime-navigation-error">{navigationError}</p>}</><AdmissionNotice tickets={admissionState.waiting} error={tab.taskId?admission.error:undefined}/>
@@ -229,7 +237,7 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
     <div className="chat-composer">
       {taskOpen&&!!nextTip&&<p className="composer-next-tip" role="status">附件随下次发送；引擎、模型和权限修改在下一轮执行生效。{canInsert?'插入当前任务仍沿用当前运行设置。':''}</p>}
       {waiting&&<p className="composer-next-tip" role="status" data-testid="conversation-waiting">当前目标等待补充；新消息会排队为下个任务。</p>}
-      {approvals.map(a=><div className="chat-approval" key={a.id}><b>允许本次 {a.name} 操作？</b><pre>{JSON.stringify(a.input,null,2)}</pre><button disabled={busy} onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:tab.taskId,approvalId:a.id,allow:true})})}>允许一次</button><button disabled={busy} title="仅允许当前这次执行中的后续操作；结束或停止后自动恢复确认，知识库保护不变" onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:tab.taskId,approvalId:a.id,allow:true,allowAll:true})})}>本次任务全部通过</button><button disabled={busy} onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:tab.taskId,approvalId:a.id,allow:false})})}>拒绝</button></div>)}
+      {approvals.map(a=><div className="chat-approval" key={a.id}><b>允许本次 {a.name} 操作？</b><pre>{JSON.stringify(a.input,null,2)}</pre><button disabled={busy} onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:a.taskId,approvalId:a.id,allow:true})})}>允许一次</button><button disabled={busy} title="仅允许当前这次执行中的后续操作；结束或停止后自动恢复确认，知识库保护不变" onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:a.taskId,approvalId:a.id,allow:true,allowAll:true})})}>本次任务全部通过</button><button disabled={busy} onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:a.taskId,approvalId:a.id,allow:false})})}>拒绝</button></div>)}
 
       <UsageStatus runs={runs} currentRun={currentRun??null} historyIncomplete={threadIssues.length>0} now={now} placement="above" waitingApproval={approvals.length>0||questions.length>0} activity={admissionState.waitingOnly?{label:'正在等待执行资格',active:false,tone:'neutral',waitingSince:admissionState.waitingSince}:graph.currentGoalView.phase!=='none'?{...graph.currentGoalView,active:executing,waitingSince:graph.waitingScope?.wait?.createdAt}:undefined}/>
       {mainAgent.error&&<p role="alert">{mainAgent.error}</p>}

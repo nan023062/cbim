@@ -2,16 +2,17 @@
  * 作用定位：解析主会话内置身份，以及正式派发所需的角色知识与多模块绑定。
  * 设计原因：诊断主实例不依赖业务知识完好；正式派发严格解析执行角色与各模块 Workflow，主会话不能冒充独立成员。两种协作模式的直接业务均由主会话运行策略处理，不走此成员解析入口。
  * 职责边界：只读并冻结输入，不创建实例、不派发消息、不读取历史真人花名册或维护声明，执行资格由岗位责任与运行授权核实。
+ * 读取边界：角色、模块与正文读取只经 knowledge/read-models 公开入口，成员派发的身份和授权仍在本层核实。
  */
 import {fail} from '../../core/foundation/errors';
 import {hash} from '../../core/foundation/serialization';
-import {content} from '../../core/knowledge/snapshot';
+import {content,Team,BusinessWorkspace} from '../../core/knowledge/read-models';
 import type {Snapshot} from '../../core/knowledge/types';
-import {Team} from '../../core/team/model';
+
 import type {AgentConfigurationSnapshot} from '../../core/team/agent-types';
 import type {ModuleBinding} from '../../core/tasks/graph-types';
 import {validateWorkflowSelections,type WorkflowSelection} from '../../core/tasks/workflow-selection';
-import {BusinessWorkspace} from '../../core/workspace/model';
+
 import {mainAgentId,mainAgentInstructions} from '../conversation/main-agent';
 
 /** 派发只使用结构完整的固定版本；普通问答仍可通过原查询入口查看缺口。 */

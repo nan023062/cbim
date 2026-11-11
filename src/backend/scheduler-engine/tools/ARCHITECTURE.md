@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-把知识、主调度及实际装配的用户交互注册为 cbim_ 工具。新增前置追加与已有主调度工具共用固定运行身份、原命令映射和严格单次编码输出，回执只证明保存；坏回包先核实原记录。QuestionTools冻结原题，严格核验答案或取消，坏回包不重问；维护和问答回执不算业务证据，执行者不获得调度权。 负责人发现和计划/派发选择共享严格协议，固定主运行身份，历史回执不签发新领取许可。 主工具显式放弃原检查点/预约，绑定原 run/call 命令，坏回包只核实原事实，不取得业务完成资格。 主 Agent 可按明确原 run/call 查询控制面事务；可信闭包固定工作区和根，读取本身无写命令且不触发成员执行。 知识提交和对象提交的执行参数与历史核实使用同一解析定义，权限及当前实例核验仍在实际执行入口。 FeedbackTools 只在桌面主会话实际连接后注册；严格解析反馈字段，未知只核实原提交，不能让模型改投目标或提供凭据。
+把知识、主调度及实际装配的用户交互注册为 cbim_ 工具。新增前置追加与已有主调度工具共用固定运行身份、原命令映射和严格单次编码输出，回执只证明保存；坏回包先核实原记录。QuestionTools冻结原题，严格核验答案或取消，坏回包不重问；维护和问答回执不算业务证据，执行者不获得调度权。 知识查询和事务刷新分别注入最小读/写端口，写权限及原请求版本检查保持。 负责人发现和计划/派发选择共享严格协议，固定主运行身份，历史回执不签发新领取许可。 主工具显式放弃原检查点/预约，绑定原 run/call 命令，坏回包只核实原事实，不取得业务完成资格。 主 Agent 可按明确原 run/call 查询控制面事务；可信闭包固定工作区和根，读取本身无写命令且不触发成员执行。 知识提交和对象提交的执行参数与历史核实使用同一解析定义，权限及当前实例核验仍在实际执行入口。 FeedbackTools 只在桌面主会话实际连接后注册；严格解析反馈字段，未知只核实原提交，不能让模型改投目标或提供凭据。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -245,7 +245,7 @@ class N_src_backend_scheduler_engine_tools_knowledge_tools_ts_KnowledgeTools["Kn
 N_src_backend_scheduler_engine_tools_knowledge_tools_ts ..> N_src_backend_scheduler_engine_tools_knowledge_tools_ts_KnowledgeTools : 声明
 ```
 
-直接依赖：[../../core/tools/registry.ts](../../core/tools/registry.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../context/knowledge-queries.ts](../context/knowledge-queries.ts)、[../../core/knowledge/knowledge-refresh.ts](../../core/knowledge/knowledge-refresh.ts)、[../../core/knowledge/object-crud.ts](../../core/knowledge/object-crud.ts)、[../../core/tools/types.ts](../../core/tools/types.ts)、[knowledge-contracts.ts](knowledge-contracts.ts)、[../../core/knowledge/knowledge-write-input.ts](../../core/knowledge/knowledge-write-input.ts)。
+直接依赖：[../../core/tools/registry.ts](../../core/tools/registry.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/knowledge/knowledge-queries.ts](../../core/knowledge/knowledge-queries.ts)、[../../core/knowledge/knowledge-refresh.ts](../../core/knowledge/knowledge-refresh.ts)、[../../core/knowledge/object-crud.ts](../../core/knowledge/object-crud.ts)、[../../core/tools/types.ts](../../core/tools/types.ts)、[knowledge-contracts.ts](knowledge-contracts.ts)、[../../core/knowledge/knowledge-write-input.ts](../../core/knowledge/knowledge-write-input.ts)。
 
 ### main-tool-contracts.ts
 
@@ -373,7 +373,7 @@ N_src_backend_scheduler_engine_tools_knowledge_tools_ts ..> N_src_backend_schedu
 
 ### 知识查询与刷新分别装配
 
-`KnowledgeTools` 将只读注册表/详情交给 Context 的 `KnowledgeQueries`，将索引刷新交给 Core 的 `refreshKnowledgeIndexes`。查询门面不再拥有刷新能力；调用前的 Schema、实例身份、写授权、取消检查及调用后的唯一输出快照校验保持在原工具边界。公开工具名称、版本与恢复协议不变，不因为重构重放提交。具体依赖与事务所有者见 [知识契约](../../core/knowledge/CONTRACT.md#快照契约领域视图与查询编排)。
+`KnowledgeTools` 将只读注册表/详情交给 Core 的 `KnowledgeQueries`，将索引刷新交给 独立的 `KnowledgeRefresh.refresh`。查询门面不再拥有刷新能力；调用前的 Schema、实例身份、写授权、取消检查及调用后的唯一输出快照校验保持在原工具边界。公开工具名称、版本与恢复协议不变，不因为重构重放提交。具体依赖与事务所有者见 [知识契约](../../core/knowledge/CONTRACT.md#固定快照读取的逻辑边界与公共入口)。
 
 ### 项目根模块查询 v2
 

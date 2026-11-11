@@ -12,7 +12,7 @@ import type {RunSummary} from '../src/backend/core/brain/types';
 import {knowledgeContractProvider,knowledgeContractFixture as data} from '../tests/knowledge-contract-provider';
 import {knowledgeEffectObjectProvider} from '../tests/knowledge-effect-object-provider';
 import {seedKnowledgeContract,knowledgeContractRecords,knowledgeContractLogBytes} from '../tests/knowledge-contract-fixture';
-import {moduleFiles,request} from '../tests/helpers';
+import {moduleFiles,request} from '../tests/data/knowledge';
 import {latestExecutable} from './build-artifact.mjs';
 
 // 只在隔离源码 Application 中破坏一次实际提交后的返回；最终 EXE 通过真实点击查询/处置，产品没有测试入口。

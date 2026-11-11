@@ -1,8 +1,10 @@
 /**
  * 作用定位：把 Codex dynamic tool 请求路由到 CBIM 知识/执行工具及已有宿主文件操作。
+ * 能力边界：是否关闭原生工具由可信能力策略决定，不依赖具体业务工具名称。
  * 设计原因：原生内置工具关闭，每次调用均以 thread/turn/call 身份核对、先结算预算、再授权、保存结果后回包。
  */
 import type {EngineContext} from '../types';
+import {nativeToolsDisabled} from '../engine-tools';
 import type {EngineToolsPort,EngineToolSchema} from '../engine-tools';
 import {nativeToolNames} from '../../tools/native-tools';
 import {validateToolResult,type ToolResult} from '../../tools/results';
@@ -11,7 +13,7 @@ export interface CodexToolSpec {type:'function';name:string;description:string;i
 /** 一个 run 只持有自己的调用身份及取消信号；重复 callId 不执行第二次。 */
 export async function codexTools(context:EngineContext,port:EngineToolsPort,native:EngineToolsPort,allowExecution:boolean,settle:()=>Promise<void>){
   const controller=new AbortController(),seen=new Set<string>(),active=new Set<Promise<unknown>>();
-  const internal=await port.list(),nativeCatalog=context.nativeTools==='disabled'?[]:await native.list();
+  const internal=await port.list(),nativeCatalog=nativeToolsDisabled(context)?[]:await native.list();
   const mapping=new Map<string,{name:string;port:EngineToolsPort;schema:EngineToolSchema}>();
   for(const schema of internal)mapping.set(schema.name,{name:schema.name,port,schema});
   for(const schema of nativeCatalog)mapping.set('cbim_native_'+schema.name,{name:schema.name,port:native,schema});

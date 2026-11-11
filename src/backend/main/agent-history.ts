@@ -1,24 +1,24 @@
 /**
- * 作用定位：工作区装配层组合历史索引存储、运行日志读取与查询服务，供 Application 按持锁生命周期创建。
- * 设计原因：日志路径和工作区身份属于装配策略；稳定的文件索引存储不应反向依赖 Workspace 或调度服务。
- * 职责边界：不获取或释放工程锁，不主动加载索引；原启动、关闭和日志事实核验顺序由 Application 保持。
+ * 作用定位：在已持锁的工作区中组合角色历史服务、文件索引及 canonical 日志读取端口。
+ * 设计原因：生命周期和可信路径归应用装配所有，文件索引可独立复用；只接收身份、目录定位和可用性断言，不依赖完整 Workspace 类型。
+ * 职责边界：构造不读盘，初始化与排空顺序由 Application 持有；查询不创建模型或恢复旧运行。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {safeId} from '../../core/foundation/identity';
-import {AgentHistoryService} from '../../scheduler-engine/runtime/agent-history';
-import {FileAgentHistoryStore} from '../persistence/tasks/agent-history';
-import {FileRunStorage} from '../persistence/tasks/run-storage';
+import {safeId} from '../core/foundation/identity';
+import {AgentHistoryService} from '../scheduler-engine/runtime/agent-history';
+import {FileAgentHistoryStore} from './persistence/tasks/agent-history';
+import {FileRunStorage} from './persistence/tasks/run-storage';
 
-/** 仅使用工作区身份、固定应用目录和运行态断言；不向历史服务暴露知识或调度写入能力。 */
-export interface AgentHistoryOwner {
+/** 主进程已核实并持锁的工作区；assert 在每次原日志读取前重新核实存活，不授予执行能力。 */
+export interface AgentHistoryWorkspace {
   entry:{id:string;path:string};
-  paths:{project(workspaceId:string):string};
+  paths:{project(id:string):string};
   assert():void;
 }
 
 /** 构造不读盘；工作区持锁并核实路径后、Store 观察器接收投影前初始化索引。详情定位只能由固定 source/task/run 决定，服务关闭前不释放工作区。 */
-export function createAgentHistory(workspace:AgentHistoryOwner,diagnostic?:(message:string)=>void){
+export function createAgentHistory(workspace:AgentHistoryWorkspace,diagnostic?:(message:string)=>void){
   const project=workspace.paths.project(workspace.entry.id),storage=new FileRunStorage();
   return new AgentHistoryService(workspace.entry.id,workspace.entry.path,{
     store:new FileAgentHistoryStore(path.join(project,'agent-history'),workspace.entry.id,workspace.entry.path),diagnostic,

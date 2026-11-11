@@ -2,7 +2,9 @@ import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {spawn} from 'node:child_process';
-import {fixture,request,internalKnowledge} from './helpers';
+import {fixture} from './helpers';
+import {request} from './data/knowledge';
+import {internalKnowledge} from './knowledge-tool-fixture';
 import {exists} from '../src/backend/core/foundation/files';
 function child(mode:string,root:string,user:string){return new Promise<{code:number|null;output:string}>((resolve,reject)=>{const p=spawn(process.execPath,['--import','tsx','tests/process-child.ts',mode,root,user],{windowsHide:true});let output='';p.stdout.on('data',x=>output+=x);p.stderr.on('data',x=>output+=x);p.on('error',reject);p.on('exit',code=>resolve({code,output}))})}
 

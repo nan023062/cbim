@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {Application} from '../src/backend/main/application';
 import {seedTeam} from './team-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {controlledFileFixture as data} from './controlled-file-provider';
 

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-工作区唯一的静态Team/组/Agent图、继承与人才复用，节点按Session查看只读履历。岗位面板独立登记、明确采纳和暂停退休；改名和模型更新保留原能力来源。来源屏障首次拒绝可重新编辑，未知仍查原命令；反查责任委托workspace，不启动模型。 岗位登记支持默认或明确引擎/模型，详情展示冻结引擎。 当前岗位启用不是运行许可，真正执行还核模块责任和原计划；编辑不会搬运历史。
+工作区唯一的静态Team/组/Agent图、继承与人才复用，节点按Session查看只读履历。岗位面板独立登记、明确采纳和暂停退休；改名和模型更新保留原能力来源。来源屏障首次拒绝可重新编辑，未知仍查原命令；反查责任委托workspace，不启动模型。 岗位登记支持默认或明确引擎/模型，详情展示冻结引擎。 历史查询按操作关联请求和响应，分页状态与原迟到隔离保持；Markdown 复用 execution-view。 当前岗位启用不是运行许可，真正执行还核模块责任和原计划；编辑不会搬运历史。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -213,7 +213,8 @@ N_src_frontend_team_TeamView_tsx ..> N_src_frontend_team_TeamView_tsx_Transfer :
 classDiagram
 class N_src_frontend_team_useAgentHistory_ts["useAgentHistory.ts"] {
   <<module>>
-  +useHistoryPage()
+  +useHistorySessions()
+  +useHistoryRuns()
   +useHistoryEvents()
 }
 ```
@@ -588,14 +589,6 @@ N_src_frontend_team_WorkspaceMembers_tsx ..> N_src_frontend_team_workspace_membe
 
 team-model 解析 Agent runtime 并随图节点交给登记表单；新登记可预选，编辑旧岗位默认保留原采纳。EngineModelPicker 管理两级菜单，切换 Agent 重置旧选择；预览及详情展示实际快照的引擎和模型。
 
-### 对话栏与主 Agent 配置等效
+### 历史查询的关联类型
 
-TeamView 工具栏提供 MainAgentEditor，复用 EngineModelPicker 与 useMainAgentSettings。主 Agent 配置和对话栏读写后端同一份角色设置，所有主会话同步；表单固定打开时 revision，不能自动覆盖另一入口的更改。内置能力仍只读。自定义 Agent 仍经原知识预览提交保存 runtime，新岗位明确采纳引擎与模型；历史运行保持原快照。
-
-### 团队履历展示边界
-
-AgentSessionHistory 与 TeamView 直接复用 execution-view 的公开日志投影和 Markdown；不加载 conversation 页面或任务恢复控制器。履历仍只读，不产生新运行或更改历史归属。
-
-主 Agent 配置轮询在进入异步闭包前固定已验证的 workspaceId/instanceId，按公开模型动作请求调用；轮询、版本同步和迟到响应隔离语义保持。
-
-团队架构复用 KnowledgeFileTree 和 KnowledgeFilePreview，Agent 文件夹下可选择定义、原则与 Skill 文件，目录选择仍显示能力和继承方法。文件草稿加入当前扩展页签 dirty 集合。新增一键团队治理，回执交 Shell 绑定真实会话；浏览树不登记岗位或启动任务。
+useHistorySessions/useHistoryRuns 固定各自操作与身份，公共分页实现只接收类型匹配的读取函数。角色和事件查询直接获得声明的响应，不再通过 as 或 any 指定结果。原请求代次、迟到丢弃、串行分页、手动刷新与公开事件核验保持；静态类型不替代回包身份检查。消息 Markdown 复用 execution-view，不依赖任务控制。

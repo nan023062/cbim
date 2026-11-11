@@ -1,5 +1,7 @@
-import {runtimeTools} from './runtime-tools-fixture';
-import {it,expect,vi} from 'vitest';
+import {RunValidation} from '../src/backend/core/brain/run-validation';
+import type {ValidationInput,ValidationResult} from '../src/backend/core/tasks/validation';
+import {runtimeToolGroup} from './runtime-tool-group';
+import {afterEach,it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {completeFixture,completeContracts,prepareComplete,completeStep,rejected,delivery} from './complete-output-fixture';
@@ -43,7 +45,7 @@ it('缺失输出根不能满足正常完整交付；纯完整模式仍必须重�
 });
 it('交付门闩覆盖审批、全集合读取及候选落盘后的全部窗口，真正结束才释放',async()=>{
   const entered=deferred(),release=deferred(),f=await completeFixture(async c=>{
-    const id=await prepareComplete(c,false);await completeStep(c,false);const args=delivery(id);expect((await c.beforeTool({name:'cbim_delivery_prepare',id:'delivery',input:args})).allow).toBe(true);const pending=runtimeTools(c).taskTools!.call('cbim_delivery_prepare',args);await entered.promise;
+    const id=await prepareComplete(c,false);await completeStep(c,false);const args=delivery(id);expect((await c.beforeTool({name:'cbim_delivery_prepare',id:'delivery',input:args})).allow).toBe(true);const pending=runtimeToolGroup(c,'task-progress')!.call('cbim_delivery_prepare',args);await entered.promise;
     for(const name of ['read','write','cbim_task_manifest_capture','cbim_task_help'])expect((await c.beforeTool({name,id:'racing-'+name,input:{}})).allow).toBe(false);
     release.resolve();const result=await pending;expect((await c.beforeTool({name:'read',id:'before-finish',input:{path:'File.txt'}})).allow).toBe(false);await c.emit({type:'tool.finished',data:{name:'cbim_delivery_prepare',id:'delivery',result}});await invoke(c,'read','after',{path:'File.txt'});
   },{afterAppend:async event=>{if(event.type==='task.updated'&&(event.data.progress as {state?:string}).state==='awaiting_review'){entered.resolve();await release.promise}}},false);
@@ -55,6 +57,8 @@ it('交付读取中停止保留原采集及验证，不能保存新候选',async
   try{const handle=await f.start();await entered.promise;await f.runtime.stop(f.task.taskId);release.resolve();const summary=await handle.done;expect(summary.status).toBe('cancelled');expect(summary.taskProgress?.delivery).toBeUndefined();expect(verifyManifests(summary.events).records).toHaveLength(1)}finally{release.resolve();await f.cleanup()}
 });
 it('JSON真实检查已保存后坏wire不能换绑完整哈希，也不重新执行检查',async()=>{
-  const f=await completeFixture(async c=>{const id=await prepareComplete(c,false),port=(runtimeTools(c).validationTools as any).port,run=port.run;port.run=vi.fn(async(input:any,call:string)=>{const value=await run(input,call);return {...value,manifest:{...value.manifest,manifestHash:'f'.repeat(64)}}});await rejected(c,'cbim_validation_run','validation',{moduleId:manifestContracts[0].moduleId,requirementId:'json',manifestId:id,expectedTaskProgressVersion:1},'TOOL_OUTPUT_INVALID');expect(port.run).toHaveBeenCalledTimes(1);await invoke(c,'read','after-failure',{path:'File.txt'})});
+  const f=await completeFixture(async c=>{const id=await prepareComplete(c,false),port=RunValidation.prototype as unknown as {run(input:ValidationInput,id:string):Promise<ValidationResult>},run=port.run;const changed=vi.spyOn(port,'run').mockImplementationOnce(async function(this:typeof port,input,call){const value=await run.call(this,input,call);return {...value,manifest:{...value.manifest!,manifestHash:'f'.repeat(64)}}});await rejected(c,'cbim_validation_run','validation',{moduleId:manifestContracts[0].moduleId,requirementId:'json',manifestId:id,expectedTaskProgressVersion:1},'TOOL_OUTPUT_INVALID');expect(changed).toHaveBeenCalledTimes(1);await invoke(c,'read','after-failure',{path:'File.txt'})});
   try{const summary=await(await f.start()).done;expect(summary.events.filter(e=>e.type==='validation.checked')).toHaveLength(1);expect(verifyValidationRecords(summary.events,artifactBinding,'knowledge-one',completeContracts(),f.port.normalizePath)).toEqual([]);expect(f.validateFile).toHaveBeenCalledTimes(1);expect(summary.taskProgress?.delivery).toBeUndefined()}finally{await f.cleanup()}
 });
+
+afterEach(()=>vi.restoreAllMocks());

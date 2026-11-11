@@ -1,3 +1,4 @@
+import {required} from './helpers';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -56,7 +57,7 @@ for(const mode of ['snapshot','preaccept','response-lost','budget-stop'] as cons
     if(mode==='response-lost'){
       // 只在真实服务完成后丢弃回包；不伪造受理、receipt 或历史。原请求查询是唯一恢复来源。
       await expect((async()=>{await app.dispatch('loop.goalContinue',request);throw Error('TEST_RESPONSE_LOST_AFTER_REAL_ACCEPT')})()).rejects.toThrow('TEST_RESPONSE_LOST_AFTER_REAL_ACCEPT');
-      receipt=await app.dispatch('loop.goalContinuation',lookup);
+      receipt=required(await app.dispatch('loop.goalContinuation',lookup));
     }else{
       const results=await Promise.all([app.dispatch('loop.goalContinue',request),app.dispatch('loop.goalContinue',request)]) as GoalContinuationReceipt[];
       receipt=results[0];expect(results[1].continuation).toEqual(receipt.continuation);
@@ -84,7 +85,7 @@ for(const mode of ['snapshot','preaccept','response-lost','budget-stop'] as cons
     expect(finalGraph.tasks).toHaveLength(2);expect(finalGraph.tasks[0].assignee.agentInstanceId).not.toBe(finalGraph.tasks[1].assignee.agentInstanceId);expect(finalGraph.tasks.every(task=>task.status==='result_ready')).toBe(true);
     const before=JSON.stringify(thread),nativeHash=attachmentHash(native);await app.shutdown();app=seed.reopen(f.user);await app.init();
     expect(await seed.scopes()).toEqual([completed]);expect(await graph()).toEqual(finalGraph);expect(JSON.stringify(await app.execution(seed.entry.id).thread(started.taskId))).toBe(before);expect(attachmentHash(await fs.readFile(thread[2].sessionFile!))).toBe(nativeHash);
-    expect((await app.dispatch('loop.goalContinuation',lookup)).continuation).toEqual(receipt.continuation);expect((await app.dispatch('loop.goalContinue',request)).continuation).toEqual(receipt.continuation);expect(provider.mainRequests).toHaveLength(13);expect(provider.memberRequests).toHaveLength(10);expect(provider.errors).toEqual([]);
+    expect(required((await app.dispatch('loop.goalContinuation',lookup))).continuation).toEqual(receipt.continuation);expect((await app.dispatch('loop.goalContinue',request)).continuation).toEqual(receipt.continuation);expect(provider.mainRequests).toHaveLength(13);expect(provider.memberRequests).toHaveLength(10);expect(provider.errors).toEqual([]);
   }catch(error){await fs.mkdir('test-results',{recursive:true});await fs.writeFile(`test-results/waiting-attachments-${mode}-pi-failure.json`,JSON.stringify({error:String(error),mainRequests:provider.mainRequests,memberRequests:provider.memberRequests,transportErrors:provider.errors},null,2));throw error}
   finally{releaseBudget();provider.release();await app.shutdown();await provider.close();await f.cleanup()}
 },120000);

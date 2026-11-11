@@ -1,7 +1,8 @@
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {fixture,request} from './helpers';
+import {fixture} from './helpers';
+import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import type {Application} from '../src/backend/main/application';

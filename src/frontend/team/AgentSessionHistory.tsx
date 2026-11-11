@@ -1,5 +1,6 @@
 /**
  * 作用定位：在静态 Agent 下浏览长期 Session 履历，按独立会话和运行展示公开消息、工具过程与计划证据。
+ * 契约边界：角色、Session、轮次及事件从各自 IPC 操作推导输入输出，正文和状态复用共享运行展示。
  * 设计原因：角色可被复用、改名或删除，历史必须保留原身份与配置版本；此页面只读归档，不把多实例历史拼成模型上下文，不提供恢复、审批或执行按钮。
  */
 import {useEffect,useRef,useState} from 'react';
@@ -9,7 +10,7 @@ import {MemberRunTranscript} from '../tasks/MemberRunTranscript';
 import {transcript} from '../execution-view/transcript';
 import {MarkdownMessage} from '../execution-view/MarkdownMessage';
 import {historyRunKey} from './agent-history-state';
-import {useHistoryEvents,useHistoryPage} from './useAgentHistory';
+import {useHistoryEvents,useHistorySessions,useHistoryRuns} from './useAgentHistory';
 import './agent-history.css';
 import '../tasks/member-activity.css';
 
@@ -27,7 +28,7 @@ export function AgentSessionHistory({workspaceId,initialAgentId,currentDefinitio
   const [filter,setFilter]=useState(''),[revision,setRevision]=useState(0),request=useRef(0);
   useEffect(()=>{
     const token=++request.current;let stopped=false;setLoading(true);setError('');
-    void window.cbim.call('agentHistory.roles',{workspaceId}).then((reply:AgentHistoryRoles)=>{
+    void window.cbim.call('agentHistory.roles',{workspaceId}).then(reply=>{
       if(stopped||request.current!==token)return;
       if(reply.roles.some(role=>role.workspaceId!==workspaceId))throw Error('历史角色工作区不一致，请重新读取');
       setRoles(reply.roles);setDiagnostics(reply.diagnostics);
@@ -53,7 +54,7 @@ export function AgentSessionHistory({workspaceId,initialAgentId,currentDefinitio
 
 /** Session 与运行选择分层保存；切换角色/会话由 key 重建下层，不能沿用另一角色的日志游标。 */
 function AgentSessions({workspaceId,agentId}:{workspaceId:string;agentId:string}){
-  const sessions=useHistoryPage<AgentHistorySession>('agentHistory.sessions',{workspaceId,agentId},true),[chosen,setChosen]=useState('');
+  const sessions=useHistorySessions({workspaceId,agentId},true),[chosen,setChosen]=useState('');
   const selected=sessions.page?.items.find(session=>session.sessionId===chosen);
   return <><div className="agent-history-toolbar"><h3>Session 记录</h3><button disabled={sessions.loading} onClick={()=>void sessions.refresh()}>刷新 Session</button></div>
     {sessions.error&&<p role="alert">{sessions.error}</p>}<Diagnostics items={sessions.page?.diagnostics??[]}/>
@@ -66,7 +67,7 @@ function AgentSessions({workspaceId,agentId}:{workspaceId:string;agentId:string}
 }
 
 function SessionRuns({session}:{session:AgentHistorySession}){
-  const runs=useHistoryPage<AgentHistoryRun>('agentHistory.runs',{workspaceId:session.workspaceId,agentId:session.agentId,sessionId:session.sessionId},true),[chosen,setChosen]=useState('');
+  const runs=useHistoryRuns({workspaceId:session.workspaceId,agentId:session.agentId,sessionId:session.sessionId},true),[chosen,setChosen]=useState('');
   const selected=runs.page?.items.find(run=>historyRunKey(run)===chosen);
   return <section aria-label="Session 执行轮次"><h3>{session.title}</h3><p className="agent-history-note">记录时角色：{session.agentName} · {time(session.startedAt)} 起</p>
     <details className="agent-history-identity"><summary>Session 归属</summary><dl><dt>历史分组 ID</dt><dd><code>{session.sessionId}</code></dd><dt>实例 ID</dt><dd>{session.agentInstanceId??'未绑定'}</dd><dt>运行通道 ID</dt><dd>{session.agentSessionId??'未绑定；旧记录分组不是运行通道'}</dd><dt>所属主会话</dt><dd>{session.rootSessionId??'未记录'}</dd></dl></details>

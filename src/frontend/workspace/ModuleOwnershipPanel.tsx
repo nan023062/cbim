@@ -1,6 +1,7 @@
 /**
  * 作用定位：业务架构和项目岗位共用的模块责任控制面，提供岗位选择、登记入口、预览、明确提交和原命令核实。
  * 设计原因：新项目可从静态 Agent 进入独立岗位登记；返回后只选用重新核实的 active memberId，静态定义不冒充岗位，负责人保存与来源采纳仍各自预览。
+ * IPC 边界：模块责任按是否给定memberId选择明确入口，内联岗位表单经过Schema配对。
  */
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {ModuleOwnershipIdentity,ModuleOwnershipPage,ModuleOwnershipDetail,ModuleOwnershipPreview,ModuleOwnershipChangeInput,ModuleOwnershipPreviewInput} from '../../bridge/contracts/module-ownership';
@@ -24,7 +25,7 @@ export function ModuleOwnershipPanel({identity,initialModuleId,initialMemberId,m
   useEffect(()=>{alive.current=true;const unsubscribe=controller.subscribe(()=>setTick(value=>value+1));void controller.restore().then(async()=>{if(!alive.current)return;await list();if(alive.current&&initialModuleId)await select(initialModuleId,initialMemberId)});return()=>{alive.current=false;generation.current++;selection.current++;unsubscribe()}},[controller,identity.instanceId,memberId]);
   async function list(offset=0){
     if(lock.current)return;lock.current=true;const token=++generation.current;setLoading(true);setError('');
-    try{const input={...identity,...(memberId?{memberId}:{}),offset,limit:20,...(offset&&page?{expectedReadBasis:page.basis}:{})};const value=checkedModuleOwnershipPage(await window.cbim.call(memberId?'workspace.ownerships.byMember':'workspace.ownerships.list',input),input);if(alive.current&&generation.current===token)setPage(value)}
+    try{const input={...identity,offset,limit:20,...(offset&&page?{expectedReadBasis:page.basis}:{})};const value=memberId?checkedModuleOwnershipPage(await window.cbim.call('workspace.ownerships.byMember',{...input,memberId}),{...input,memberId}):checkedModuleOwnershipPage(await window.cbim.call('workspace.ownerships.list',input),input);if(alive.current&&generation.current===token)setPage(value)}
     catch(cause){if(alive.current&&generation.current===token)setError('责任列表读取失败：'+failure(cause))}
     finally{lock.current=false;if(alive.current&&generation.current===token)setLoading(false)}
   }

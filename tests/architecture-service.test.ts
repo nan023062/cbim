@@ -6,7 +6,9 @@ import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
 import {resolveDispatchModules} from '../src/backend/scheduler-engine/context/dispatch-context';
 import {prepareDispatchExecutionContext} from '../src/backend/scheduler-engine/context/execution-context';
 import type {ObjectOperation} from '../src/bridge/contracts/architecture';
-import {fixture,summary,moduleFiles,internalKnowledge} from './helpers';
+import {fixture} from './helpers';
+import {summary,moduleFiles} from './data/knowledge';
+import {internalKnowledge} from './knowledge-tool-fixture';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 
 const moduleCreate: ObjectOperation={kind:'module',action:'create',parentId:'.cbim/workspace',slug:'game',data:{summary},body:moduleFiles()[1].text};

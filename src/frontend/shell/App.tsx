@@ -5,7 +5,9 @@
  * 账号菜单与新版提醒打开独立更新弹窗，不卸载当前页面或丢弃草稿；共享一份本机更新状态；只有用户点击下载后才进入后台校验和自动安装重启。
  * 对话标题和移除标记只归本机布局，后台证据保留；运行灯读取当前监管快照，失去观察时清除。
  * 产品名称统一使用 CBIM Assistant，窄侧栏保留 CBIM 简称；品牌标识由无状态组件引用同一矢量源。
+ * IPC 边界：导航的操作桥按明确请求Schema解析，坏历史记录不能当完整运行。
  */
+import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useEffect,useRef,useState} from 'react';
 import type {Snapshot,WorkspaceView} from '../../bridge/contracts/workspace';
 import {ResourceRepositoryView} from '../resources/ResourceRepositoryView';
@@ -39,7 +41,7 @@ export function App(){
   /** 合并入口只叠加版本、日志和检查操作，不卸载当前页面或隐式下载。 */
   function openUpdates(){setUpdateView(true)}
   const [catalog,setCatalog]=useState<any>({entries:[]}),[selected,setSelected]=useState(''),[screen,setScreen]=useState<'workspace'|'settings'|'runtime'|ResourceCategory>('workspace');
-  const runtimeResolver=useRef(new RuntimeNavigationResolver((action,args)=>api.call(action,args)));
+  const runtimeResolver=useRef(new RuntimeNavigationResolver((action,args)=>api.call(...checkedIpcCall(action,args))));
   const runtimeSequence=useRef(0);
   const [runtimeNavigation,setRuntimeNavigation]=useState<RuntimeNavigationRequest>();
   const [runtimeNavigationError,setRuntimeNavigationError]=useState('');

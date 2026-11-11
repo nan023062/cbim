@@ -6,7 +6,7 @@ import type {HumanDecisionPreview,HumanDecisionRequest} from '../src/backend/cor
 import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
 import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
 import {humanServiceFixture,latch} from './human-decision-service-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 
 function submit(f:Awaited<ReturnType<typeof humanServiceFixture>>,preview:HumanDecisionPreview,decision:HumanDecisionRequest['decision']='accept',comment='明确意见'):HumanDecisionRequest{return {...f.input,commandId:randomUUID(),expectedBasis:preview.basis!,expectedDecisionRevision:preview.decisionRevision,decision,comment}}
 

@@ -1,5 +1,6 @@
 import {expect,test,vi} from 'vitest';
-import {fixture,request} from './helpers';
+import {fixture} from './helpers';
+import {request} from './data/knowledge';
 import {seedOwnerExecution} from './owner-execution-fixture';
 import type {GoalPlanInput} from '../src/backend/core/tasks/scope-goal';
 import {ownerExecutionSelectionFor} from '../src/backend/core/team/member-execution-binding';

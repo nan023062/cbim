@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-任务计划、派发图、目标与等待。资料清单保留旧文件v1，新增严格v2来源并核同序与字节；快照不等于当前来源或业务验收。依赖追加核实两端及后继未领取、当前计划与真实图，完整审计验证后才放行精确新边；保留原任务/实例，领取时绑定真实结果。运行内补充以pending/accepted/rejected/unknown分开，接受与waiting共享连续输入版本，未知阻止完成。流程选择共用叶子契约，缺省与显式分开匹配，已派发选择不可改写；严格输出区分保存与交付，历史不补造授权或证据。 正式协议将目标分配、任务、准备、模型和历史审计相互核对；岗位绑定不可重写，旧在途仅按原事实收束。 检查点显式放弃有独立严格协议与精确联合变更校验；原任务和检查点证据不可重写，纯 ACK 与后续周期释放保持可用。 原主命令核实定义八工具的有界报告；原工具结果、事务保存和业务验收分开，查询回执不能成为交付证据。 主／成员影响来源使用严格联合；观察、不可变处置和新核实／修复引用分别表达，当前文件不补造成功基线或业务验收。纯 scope-public 白名单供主工具与会话详情共用，保留安全恢复来源并隐藏原生上下文。 影响报告的可选知识事务摘要保留原工具状态并参与观察依据；旧处置缺省不补字段。 单文件操作公开协议不含正文备份；私有意图与阶段严格绑定原成员运行和原授权，补偿引用可靠 applied 与真实 before，终态不可改写。 保守产物时序包含外部写，GitHub 回执不能充当文件基线来源。
+任务计划、派发图、目标与等待。资料清单保留旧文件v1，新增严格v2来源并核同序与字节；快照不等于当前来源或业务验收。依赖追加核实两端及后继未领取、当前计划与真实图，完整审计验证后才放行精确新边；保留原任务/实例，领取时绑定真实结果。运行内补充以pending/accepted/rejected/unknown分开，接受与waiting共享连续输入版本，未知阻止完成。流程选择共用叶子契约，缺省与显式分开匹配，已派发选择不可改写；严格输出区分保存与交付，历史不补造授权或证据。 model-request-budget-storage 只公开请求预算状态、追加命令及准入能力，不授予其它领域写入。 正式协议将目标分配、任务、准备、模型和历史审计相互核对；岗位绑定不可重写，旧在途仅按原事实收束。 检查点显式放弃有独立严格协议与精确联合变更校验；原任务和检查点证据不可重写，纯 ACK 与后续周期释放保持可用。 原主命令核实定义八工具的有界报告；原工具结果、事务保存和业务验收分开，查询回执不能成为交付证据。 主／成员影响来源使用严格联合；观察、不可变处置和新核实／修复引用分别表达，当前文件不补造成功基线或业务验收。纯 scope-public 白名单供主工具与会话详情共用，保留安全恢复来源并隐藏原生上下文。 影响报告的可选知识事务摘要保留原工具状态并参与观察依据；旧处置缺省不补字段。 单文件操作公开协议不含正文备份；私有意图与阶段严格绑定原成员运行和原授权，补偿引用可靠 applied 与真实 before，终态不可改写。 保守产物时序包含外部写，GitHub 回执不能充当文件基线来源。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -69,7 +69,7 @@
 | [member-tool-output.ts](member-tool-output.ts) | 执行进度四工具及正式成员三工具的严格输出、真实归属和公开恢复说明。 |
 | [model-request-budget-invariants.ts](model-request-budget-invariants.ts) | 在唯一工作区 Store 提交与重放时核实请求身份、预算预留和不可改写的阶段链。 |
 | [model-request-budget-rules.ts](model-request-budget-rules.ts) | 从不可变请求阶段计算预留、真实用量和后续请求的准入，供服务及 Store 独立核对。 |
-| [model-request-budget-storage.ts](model-request-budget-storage.ts) | 定义逐请求预算专用的读取和原子阶段提交端口，供预算服务与持久化适配器协作。 |
+| [model-request-budget-storage.ts](model-request-budget-storage.ts) | 模型请求账本独有的读视图、提交单元与准入端口。 |
 | [model-request-budget.ts](model-request-budget.ts) | 定义逐模型请求预留、发送意图和结算的不可变事实，以及只读预算摘要。 |
 | [module-ownership-invariants.ts](module-ownership-invariants.ts) | 将负责人控制面接到同一派发事务，重算关联任务影响并核实真实主运行来源。 |
 | [output-manifest-evidence.ts](output-manifest-evidence.ts) | 计算完整产物清单身份，并从原 canonical 核实采集、授权和真实成功回执的对应关系。 |
@@ -2421,31 +2421,49 @@ classDiagram
 class N_src_backend_core_tasks_model_request_budget_storage_ts["model-request-budget-storage.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_model_request_budget_storage_ts_ModelRequestBudgetLedger["ModelRequestBudgetLedger"] {
+class N_src_backend_core_tasks_model_request_budget_storage_ts_RequestBudgetScope["RequestBudgetScope"] {
   <<interface>>
-  +modelRequestBudgetChanges
+  +workspaceId
+  +rootSessionId
+  +scopeId
+  +budget
+  +runTracking
 }
-N_src_backend_core_tasks_model_request_budget_storage_ts ..> N_src_backend_core_tasks_model_request_budget_storage_ts_ModelRequestBudgetLedger : 声明
-class N_src_backend_core_tasks_model_request_budget_storage_ts_ModelRequestBudgetView["ModelRequestBudgetView"] {
+N_src_backend_core_tasks_model_request_budget_storage_ts ..> N_src_backend_core_tasks_model_request_budget_storage_ts_RequestBudgetScope : 声明
+class N_src_backend_core_tasks_model_request_budget_storage_ts_RequestBudgetState["RequestBudgetState"] {
   <<interface>>
   +scopes
+  +modelRequestBudgetChanges
 }
-N_src_backend_core_tasks_model_request_budget_storage_ts ..> N_src_backend_core_tasks_model_request_budget_storage_ts_ModelRequestBudgetView : 声明
-N_src_backend_core_tasks_model_request_budget_storage_ts_ModelRequestBudgetLedger <|-- N_src_backend_core_tasks_model_request_budget_storage_ts_ModelRequestBudgetView
-class N_src_backend_core_tasks_model_request_budget_storage_ts_ModelRequestBudgetReceipt["ModelRequestBudgetReceipt"] {
-  <<type>>
-
-}
-N_src_backend_core_tasks_model_request_budget_storage_ts ..> N_src_backend_core_tasks_model_request_budget_storage_ts_ModelRequestBudgetReceipt : 声明
-class N_src_backend_core_tasks_model_request_budget_storage_ts_ModelRequestBudgetStore["ModelRequestBudgetStore"] {
+N_src_backend_core_tasks_model_request_budget_storage_ts ..> N_src_backend_core_tasks_model_request_budget_storage_ts_RequestBudgetState : 声明
+class N_src_backend_core_tasks_model_request_budget_storage_ts_RequestBudgetMutation["RequestBudgetMutation"] {
   <<interface>>
-  +read()
-  +transact()
+  +modelRequestBudgetChanges
+  +receipt
 }
-N_src_backend_core_tasks_model_request_budget_storage_ts ..> N_src_backend_core_tasks_model_request_budget_storage_ts_ModelRequestBudgetStore : 声明
+N_src_backend_core_tasks_model_request_budget_storage_ts ..> N_src_backend_core_tasks_model_request_budget_storage_ts_RequestBudgetMutation : 声明
+class N_src_backend_core_tasks_model_request_budget_storage_ts_RequestBudgetStore["RequestBudgetStore"] {
+  <<interface>>
+  +readBudget()
+  +transactBudget()
+}
+N_src_backend_core_tasks_model_request_budget_storage_ts ..> N_src_backend_core_tasks_model_request_budget_storage_ts_RequestBudgetStore : 声明
 ```
 
-直接依赖：[dispatch-scope.ts](dispatch-scope.ts)、[model-request-budget.ts](model-request-budget.ts)。
+```mermaid
+classDiagram
+class N_src_backend_core_tasks_model_request_budget_storage_ts["model-request-budget-storage.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tasks_model_request_budget_storage_ts_RequestBudgetAdmission["RequestBudgetAdmission"] {
+  <<interface>>
+  +isMainLive()
+  +preflightRequest()
+}
+N_src_backend_core_tasks_model_request_budget_storage_ts ..> N_src_backend_core_tasks_model_request_budget_storage_ts_RequestBudgetAdmission : 声明
+```
+
+直接依赖：[scope-budget.ts](scope-budget.ts)、[model-request-budget.ts](model-request-budget.ts)。
 
 ### model-request-budget.ts
 
@@ -5409,13 +5427,10 @@ class N_src_backend_core_tasks_model_request_budget_ts["model-request-budget.ts"
 class N_src_backend_core_tasks_model_request_budget_storage_ts["model-request-budget-storage.ts"] {
   <<module>>
 }
-class N_src_backend_core_tasks_dispatch_scope_ts["dispatch-scope.ts"] {
-  <<module>>
-}
 N_src_backend_core_tasks_model_request_budget_invariants_ts ..> N_src_backend_core_tasks_model_request_budget_rules_ts : 导入依赖
 N_src_backend_core_tasks_model_request_budget_rules_ts ..> N_src_backend_core_tasks_scope_budget_ts : 导入依赖
 N_src_backend_core_tasks_model_request_budget_rules_ts ..> N_src_backend_core_tasks_model_request_budget_ts : 导入依赖
-N_src_backend_core_tasks_model_request_budget_storage_ts ..> N_src_backend_core_tasks_dispatch_scope_ts : 导入依赖
+N_src_backend_core_tasks_model_request_budget_storage_ts ..> N_src_backend_core_tasks_scope_budget_ts : 导入依赖
 ```
 
 ```mermaid
@@ -7101,8 +7116,7 @@ dispatch-receipt 承载主工具和界面共用的严格派发输出结构；mai
 
 成员启动意图仍以逻辑 agentSessionId 占位；仅 Codex 首次 starting→running 且没有原生文件/检查点恢复时允许采纳真实线程 ID，与 session 记录同事务提交。新 ID 不得已属于其他成员通道；之后固定输入和原文件不可改绑。fresh-context 的 nativeSessionId 是新链启动意图，Codex 实际身份由独立 session.bound 回执确认，不能将意图当作已存在原生文件。
 
-### 请求预算的独立持久化端口
 
-`ModelRequestBudgetStore` 仅公开周期与请求账本视图，以及单条预算阶段提交。Main 的 modelRequestBudgetStore 适配器在唯一 DispatchStore 串行事务内投影隔离副本、执行准入决定并构造白名单 mutation；原命令幂等、整库不变量、可靠落盘及关闭生命周期仍归 DispatchStore。预算服务不再取得任务图、成员、邮箱或任意 mutation 权限。旧记录不迁移，未知请求不补结算。
+### 请求预算的领域端口
 
-隐式执行绑定沿用原岗位审计。历史继承核父责任审计和原子模块来源代次；历史模型匹配核原知识来源，且匹配版本必须属于原计划。新计划/派发/领取仍核当前关系；旧任务身份与结算不可因当前变化改写。
+model-request-budget-storage.ts 定义 RequestBudgetState/Store/Admission。读视图只含周期身份、冻结策略、主运行 ID 与请求记录，不依赖 DispatchScope/DispatchState；提交只允许请求记录和原回执，不提供工作区岗位、任务图、邮箱写入口。模型预算的预留、发送、结算与未知结果规则仍由原请求账本负责。此为请求预算的真实迁移试点，其他跨域原子操作继续由原协调者使用共享事务，未宣称全量 DispatchStore 已拆分。

@@ -4,6 +4,7 @@
  */
 import type {ContinuationPorts} from './continuation-state';
 
+/** 仅允许资料准备所需操作；动作名不能扩展到任意桌面 IPC。 */
 type Call=(action:'chat.importCancel'|'chat.pick'|'chat.import'|'chat.materialTargets'|'chat.materialList',args:unknown)=>Promise<any>;
 /** 每个操作新建身份；取消只停止准备资料，不撤销既有受理事实或普通聊天运行。 */
 export function continuationSourcePorts(workspaceId:string,call:Call,uuid:()=>string):Pick<ContinuationPorts,'importSource'|'materialTargets'|'materialList'>{

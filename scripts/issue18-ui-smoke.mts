@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {Application} from '../src/backend/main/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {seedTeam} from '../tests/team-fixture';
-import {request,summary} from '../tests/helpers';
+import {request,summary} from '../tests/data/knowledge';
 import {latestExecutable} from './build-artifact.mjs';
 
 const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-issue18-')),root=path.join(temp,'issue18-project'),user=path.join(temp,'user');

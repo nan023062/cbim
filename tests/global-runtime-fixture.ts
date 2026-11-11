@@ -6,7 +6,7 @@ import {scopeWaitProvider,waitFixture} from './scope-wait-provider';
 import {globalAdmissionProvider,globalAdmissionFixture} from './global-admission-provider';
 import {seedGlobalAdmission,admissionScopes} from './global-admission-fixture';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
-import {moduleFiles,request,summary} from './helpers';
+import {moduleFiles,request,summary} from './data/knowledge';
 export {waitFixture,globalAdmissionFixture,admissionScopes};
 
 export const globalRuntimeFixture={waitingModel:'runtime-waiting',waitingModelLabel:'Runtime waiting',drafts:{waiting:'等待目标的草稿必须保留。',a:'A 活动成员会话的草稿必须保留。',b:'B 准入等待会话的草稿必须保留。'}};

@@ -1,7 +1,9 @@
 /**
  * 作用定位：设置页的 GitHub 反馈连接入口，展示设备授权码及固定目标仓库。
  * 设计原因：预置公开产品连接并折叠维护者配置；页面提示保持打开，直到本机接收授权并显示已连接。页面只轮询授权状态，不展示反馈结果或处理进度。
+ * IPC 边界：预算和反馈的动态入口验证操作请求；开启/停止共享各自使用确定签名。
  */
+import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useEffect,useState} from 'react';
 import type {GitHubFeedbackStatus} from '../../bridge/contracts/github-feedback';
 const api=window.cbim;
@@ -16,7 +18,7 @@ export function GitHubFeedbackSettings(){
     return()=>{live=false;clearTimeout(timer)};
   },[status,busy]);
   async function change(action:'begin'|'cancel'|'disconnect'){
-    setBusy(true);setError('');try{setStatus(await api.call(`github.feedback.${action}`,action==='begin'?{clientId:clientId.trim(),owner:owner.trim(),repo:repo.trim(),visibility,autoSubmit:true}:{}))}catch(e:any){setError(e.message)}finally{setBusy(false)}
+    setBusy(true);setError('');try{setStatus(await api.call(...checkedIpcCall(`github.feedback.${action}`,action==='begin'?{clientId:clientId.trim(),owner:owner.trim(),repo:repo.trim(),visibility,autoSubmit:true}:{})))}catch(e:any){setError(e.message)}finally{setBusy(false)}
   }
   const locked=busy||!!status?.flow||!!status?.connected;
   return <section className="repository-settings" aria-label="GitHub 反馈连接"><h2>GitHub 反馈</h2>

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-应用 action 路由；等待资料独立导入/目录/取消入口不启动模型，受理只读保存快照。队列插入传递原expectedRunId，由调度拒绝缺失、过期及停止。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。 dispatch.ownerInspect 只读核原任务并返回当前观察；正式派发必须显式绑定主周期。 dispatch.commandReport 固定原工作区、主根、运行和调用，桌面与模型共用同一只读服务。 五项影响观察／处置／原回执／历史／关联入口相互分开，查询不启动新任务；保存只接受本机显式决定。 四个文件报告/补偿入口固定原调用或原命令；actor 由桌面入口注入，查询不启动文件操作，补偿不得改变目标路径或内容。
+应用 action 路由；等待资料独立导入/目录/取消入口不启动模型，受理只读保存快照。队列插入传递原expectedRunId，由调度拒绝缺失、过期及停止。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。 161项应用操作按业务组装配，request统一保留关闭/受理前错误码后解析，实际处理器受响应映射约束。 dispatch.ownerInspect 只读核原任务并返回当前观察；正式派发必须显式绑定主周期。 dispatch.commandReport 固定原工作区、主根、运行和调用，桌面与模型共用同一只读服务。 五项影响观察／处置／原回执／历史／关联入口相互分开，查询不启动新任务；保存只接受本机显式决定。 四个文件报告/补偿入口固定原调用或原命令；actor 由桌面入口注入，查询不启动文件操作，补偿不得改变目标路径或内容。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,12 +10,53 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [agent-history.ts](agent-history.ts) | 将角色历史 IPC 请求解析后交给已打开工作区的只读查询端口。 |
 | [automation-actions.ts](automation-actions.ts) | 将自动化桌面请求路由到当前工作区唯一调度器。 |
+| [chat-handlers.ts](chat-handlers.ts) | 显式附件导入与快照预览的主进程处理器。 |
+| [dispatch-handlers.ts](dispatch-handlers.ts) | 成员派发、运行核实与人工处置的主进程处理器。 |
 | [dispatch.ts](dispatch.ts) | 将经过主进程接入的 action 路由到明确的工作区和应用服务；主 Agent 两处设置入口共用同一配置服务。 |
-| [model-actions.ts](model-actions.ts) | 实现模型及主 Agent 配置的有类型桌面路由，委托已有配置服务处理状态与持久化。 |
+| [governance-handlers.ts](governance-handlers.ts) | 模块治理观察、提案、决定与实施的主进程处理器。 |
+| [loop-handlers.ts](loop-handlers.ts) | 会话、排队、历史与安全续接的主进程处理器。 |
+| [people-handlers.ts](people-handlers.ts) | 岗位登记与模块责任的主进程处理器。 |
+| [request.ts](request.ts) | 主进程 IPC 的运行时请求解析与受理前拒绝，保留旧队列插入的失效运行错误码。 |
+| [resources-handlers.ts](resources-handlers.ts) | 资源仓库、共享连接与架构包的主进程处理器。 |
 | [services.ts](services.ts) | 定义 IPC 路由需要的执行审批、静态角色履历、岗位与模块责任、全局监管、配额、桌面资源导入、模块治理和工作区生命周期入口。 |
+| [settings-handlers.ts](settings-handlers.ts) | 模型、准入、预算与反馈账号设置的主进程处理器。 |
+| [workspace-handlers.ts](workspace-handlers.ts) | 工作区生命周期与知识编辑的主进程处理器。 |
 
 ## 架构类图
+
+### agent-history.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_agent_history_ts["agent-history.ts"] {
+  <<module>>
+  +agentHistoryIpcHandlers()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_agent_history_ts["agent-history.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_agent_history_ts_AgentHistoryQueryPort["AgentHistoryQueryPort"] {
+  <<interface>>
+  +roles()
+  +sessions()
+  +runs()
+  +events()
+}
+N_src_backend_main_ipc_agent_history_ts ..> N_src_backend_main_ipc_agent_history_ts_AgentHistoryQueryPort : 声明
+class N_src_backend_main_ipc_agent_history_ts_AgentHistoryIpcServices["AgentHistoryIpcServices"] {
+  <<interface>>
+  +agentHistory()
+}
+N_src_backend_main_ipc_agent_history_ts ..> N_src_backend_main_ipc_agent_history_ts_AgentHistoryIpcServices : 声明
+```
+
+直接依赖：[../../../bridge/contracts/agent-history-ipc.ts](../../../bridge/contracts/agent-history-ipc.ts)、[../../../bridge/contracts/ipc-call.ts](../../../bridge/contracts/ipc-call.ts)。
 
 ### automation-actions.ts
 
@@ -23,23 +64,35 @@
 classDiagram
 class N_src_backend_main_ipc_automation_actions_ts["automation-actions.ts"] {
   <<module>>
-  +dispatchAutomationAction()
+  +automationIpcHandlers()
 }
 ```
+
+直接依赖：[../../../bridge/contracts/automation.ts](../../../bridge/contracts/automation.ts)、[../../../bridge/contracts/ipc-call.ts](../../../bridge/contracts/ipc-call.ts)、[services.ts](services.ts)。
+
+### chat-handlers.ts
 
 ```mermaid
 classDiagram
-class N_src_backend_main_ipc_automation_actions_ts["automation-actions.ts"] {
+class N_src_backend_main_ipc_chat_handlers_ts["chat-handlers.ts"] {
   <<module>>
+  +chatIpcHandlers()
 }
-class N_src_backend_main_ipc_automation_actions_ts_Handlers["Handlers"] {
-  <<type>>
-
-}
-N_src_backend_main_ipc_automation_actions_ts ..> N_src_backend_main_ipc_automation_actions_ts_Handlers : 声明
 ```
 
-直接依赖：[../../../bridge/contracts/automation.ts](../../../bridge/contracts/automation.ts)、[services.ts](services.ts)。
+直接依赖：[services.ts](services.ts)、[../../../bridge/contracts/ipc-call.ts](../../../bridge/contracts/ipc-call.ts)、[../../../bridge/contracts/ipc-chat.ts](../../../bridge/contracts/ipc-chat.ts)、[../persistence/tasks/chat-inputs.ts](../persistence/tasks/chat-inputs.ts)。
+
+### dispatch-handlers.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_dispatch_handlers_ts["dispatch-handlers.ts"] {
+  <<module>>
+  +dispatchIpcHandlers()
+}
+```
+
+直接依赖：[services.ts](services.ts)、[../../../bridge/contracts/ipc-call.ts](../../../bridge/contracts/ipc-call.ts)、[../../../bridge/contracts/ipc-dispatch.ts](../../../bridge/contracts/ipc-dispatch.ts)。
 
 ### dispatch.ts
 
@@ -51,31 +104,67 @@ class N_src_backend_main_ipc_dispatch_ts["dispatch.ts"] {
 }
 ```
 
-直接依赖：[../../../bridge/contracts/automation.ts](../../../bridge/contracts/automation.ts)、[automation-actions.ts](automation-actions.ts)、[../../../bridge/contracts/model-actions.ts](../../../bridge/contracts/model-actions.ts)、[model-actions.ts](model-actions.ts)、[services.ts](services.ts)、[../persistence/tasks/chat-inputs.ts](../persistence/tasks/chat-inputs.ts)、[../workspace/architecture-service.ts](../workspace/architecture-service.ts)、[../resources/workspace-packages.ts](../resources/workspace-packages.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
+直接依赖：[request.ts](request.ts)、[services.ts](services.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../../bridge/contracts/ipc-call.ts](../../../bridge/contracts/ipc-call.ts)、[../../../bridge/contracts/ipc-desktop.ts](../../../bridge/contracts/ipc-desktop.ts)、[agent-history.ts](agent-history.ts)、[people-handlers.ts](people-handlers.ts)、[governance-handlers.ts](governance-handlers.ts)、[dispatch-handlers.ts](dispatch-handlers.ts)、[settings-handlers.ts](settings-handlers.ts)、[loop-handlers.ts](loop-handlers.ts)、[chat-handlers.ts](chat-handlers.ts)、[resources-handlers.ts](resources-handlers.ts)、[workspace-handlers.ts](workspace-handlers.ts)、[automation-actions.ts](automation-actions.ts)。
 
-### model-actions.ts
-
-```mermaid
-classDiagram
-class N_src_backend_main_ipc_model_actions_ts["model-actions.ts"] {
-  <<module>>
-  +dispatchModelAction()
-}
-```
+### governance-handlers.ts
 
 ```mermaid
 classDiagram
-class N_src_backend_main_ipc_model_actions_ts["model-actions.ts"] {
+class N_src_backend_main_ipc_governance_handlers_ts["governance-handlers.ts"] {
   <<module>>
+  +governanceIpcHandlers()
 }
-class N_src_backend_main_ipc_model_actions_ts_Handlers["Handlers"] {
-  <<type>>
-
-}
-N_src_backend_main_ipc_model_actions_ts ..> N_src_backend_main_ipc_model_actions_ts_Handlers : 声明
 ```
 
-直接依赖：[../../../bridge/contracts/model-actions.ts](../../../bridge/contracts/model-actions.ts)、[services.ts](services.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
+直接依赖：[services.ts](services.ts)、[../../../bridge/contracts/ipc-call.ts](../../../bridge/contracts/ipc-call.ts)、[../../../bridge/contracts/ipc-governance.ts](../../../bridge/contracts/ipc-governance.ts)。
+
+### loop-handlers.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_loop_handlers_ts["loop-handlers.ts"] {
+  <<module>>
+  +loopIpcHandlers()
+}
+```
+
+直接依赖：[services.ts](services.ts)、[../../../bridge/contracts/ipc-call.ts](../../../bridge/contracts/ipc-call.ts)、[../../../bridge/contracts/ipc-loop.ts](../../../bridge/contracts/ipc-loop.ts)、[../persistence/tasks/chat-inputs.ts](../persistence/tasks/chat-inputs.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
+
+### people-handlers.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_people_handlers_ts["people-handlers.ts"] {
+  <<module>>
+  +peopleIpcHandlers()
+}
+```
+
+直接依赖：[services.ts](services.ts)、[../../../bridge/contracts/ipc-call.ts](../../../bridge/contracts/ipc-call.ts)、[../../../bridge/contracts/ipc-people.ts](../../../bridge/contracts/ipc-people.ts)。
+
+### request.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_request_ts["request.ts"] {
+  <<module>>
+  +parseApplicationRequest()
+}
+```
+
+直接依赖：[../../../bridge/contracts/ipc-call.ts](../../../bridge/contracts/ipc-call.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
+
+### resources-handlers.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_resources_handlers_ts["resources-handlers.ts"] {
+  <<module>>
+  +resourcesIpcHandlers()
+}
+```
+
+直接依赖：[services.ts](services.ts)、[../../../bridge/contracts/ipc-call.ts](../../../bridge/contracts/ipc-call.ts)、[../../../bridge/contracts/ipc-resources.ts](../../../bridge/contracts/ipc-resources.ts)、[../resources/workspace-packages.ts](../resources/workspace-packages.ts)。
 
 ### services.ts
 
@@ -139,6 +228,30 @@ N_src_backend_main_ipc_services_ts ..> N_src_backend_main_ipc_services_ts_Applic
 
 直接依赖：[../automation.ts](../automation.ts)、[../workspace/catalog.ts](../workspace/catalog.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../platform/paths.ts](../platform/paths.ts)、[../persistence/settings/main-agent-settings.ts](../persistence/settings/main-agent-settings.ts)、[../persistence/settings/llm-profiles.ts](../persistence/settings/llm-profiles.ts)、[../resources/resource-repository.ts](../resources/resource-repository.ts)、[../resources/repository-connections.ts](../resources/repository-connections.ts)、[../resources/github-feedback.ts](../resources/github-feedback.ts)、[../governance/module-governance.ts](../governance/module-governance.ts)、[../../scheduler-engine/execution/execution-manager.ts](../../scheduler-engine/execution/execution-manager.ts)、[../../scheduler-engine/execution/dispatch-service.ts](../../scheduler-engine/execution/dispatch-service.ts)、[../../scheduler-engine/execution/member-execution.ts](../../scheduler-engine/execution/member-execution.ts)、[../../scheduler-engine/runtime/agent-history.ts](../../scheduler-engine/runtime/agent-history.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)、[../persistence/settings/admission-settings.ts](../persistence/settings/admission-settings.ts)、[../persistence/settings/budget-settings.ts](../persistence/settings/budget-settings.ts)、[../workspace/workspace-members.ts](../workspace/workspace-members.ts)、[../workspace/module-ownerships.ts](../workspace/module-ownerships.ts)、[../workspace/controlled-files.ts](../workspace/controlled-files.ts)、[../workspace/isolated-executions.ts](../workspace/isolated-executions.ts)、[../persistence/tasks/chat-material-imports.ts](../persistence/tasks/chat-material-imports.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)、[../../scheduler-engine/execution/model-request-budget-service.ts](../../scheduler-engine/execution/model-request-budget-service.ts)。
 
+### settings-handlers.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_settings_handlers_ts["settings-handlers.ts"] {
+  <<module>>
+  +settingsIpcHandlers()
+}
+```
+
+直接依赖：[services.ts](services.ts)、[../../../bridge/contracts/ipc-call.ts](../../../bridge/contracts/ipc-call.ts)、[../../../bridge/contracts/ipc-settings.ts](../../../bridge/contracts/ipc-settings.ts)。
+
+### workspace-handlers.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_workspace_handlers_ts["workspace-handlers.ts"] {
+  <<module>>
+  +workspaceIpcHandlers()
+}
+```
+
+直接依赖：[services.ts](services.ts)、[../../../bridge/contracts/ipc-call.ts](../../../bridge/contracts/ipc-call.ts)、[../../../bridge/contracts/ipc-workspace.ts](../../../bridge/contracts/ipc-workspace.ts)、[../workspace/architecture-service.ts](../workspace/architecture-service.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
+
 ### 本目录调用边界
 
 ```mermaid
@@ -149,27 +262,128 @@ class N_src_backend_main_ipc_automation_actions_ts["automation-actions.ts"] {
 class N_src_backend_main_ipc_services_ts["services.ts"] {
   <<module>>
 }
+class N_src_backend_main_ipc_chat_handlers_ts["chat-handlers.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_dispatch_handlers_ts["dispatch-handlers.ts"] {
+  <<module>>
+}
 class N_src_backend_main_ipc_dispatch_ts["dispatch.ts"] {
   <<module>>
 }
-class N_src_backend_main_ipc_model_actions_ts["model-actions.ts"] {
+class N_src_backend_main_ipc_request_ts["request.ts"] {
   <<module>>
 }
 N_src_backend_main_ipc_automation_actions_ts ..> N_src_backend_main_ipc_services_ts : 导入依赖
-N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_automation_actions_ts : 导入依赖
-N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_model_actions_ts : 导入依赖
-N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_services_ts : 导入依赖
+N_src_backend_main_ipc_chat_handlers_ts ..> N_src_backend_main_ipc_services_ts : 导入依赖
+N_src_backend_main_ipc_dispatch_handlers_ts ..> N_src_backend_main_ipc_services_ts : 导入依赖
+N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_request_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_main_ipc_model_actions_ts["model-actions.ts"] {
+class N_src_backend_main_ipc_dispatch_ts["dispatch.ts"] {
   <<module>>
 }
 class N_src_backend_main_ipc_services_ts["services.ts"] {
   <<module>>
 }
-N_src_backend_main_ipc_model_actions_ts ..> N_src_backend_main_ipc_services_ts : 导入依赖
+class N_src_backend_main_ipc_agent_history_ts["agent-history.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_people_handlers_ts["people-handlers.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_governance_handlers_ts["governance-handlers.ts"] {
+  <<module>>
+}
+N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_services_ts : 导入依赖
+N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_agent_history_ts : 导入依赖
+N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_people_handlers_ts : 导入依赖
+N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_governance_handlers_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_dispatch_ts["dispatch.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_dispatch_handlers_ts["dispatch-handlers.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_settings_handlers_ts["settings-handlers.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_loop_handlers_ts["loop-handlers.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_chat_handlers_ts["chat-handlers.ts"] {
+  <<module>>
+}
+N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_dispatch_handlers_ts : 导入依赖
+N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_settings_handlers_ts : 导入依赖
+N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_loop_handlers_ts : 导入依赖
+N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_chat_handlers_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_dispatch_ts["dispatch.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_resources_handlers_ts["resources-handlers.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_workspace_handlers_ts["workspace-handlers.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_automation_actions_ts["automation-actions.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_governance_handlers_ts["governance-handlers.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_services_ts["services.ts"] {
+  <<module>>
+}
+N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_resources_handlers_ts : 导入依赖
+N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_workspace_handlers_ts : 导入依赖
+N_src_backend_main_ipc_dispatch_ts ..> N_src_backend_main_ipc_automation_actions_ts : 导入依赖
+N_src_backend_main_ipc_governance_handlers_ts ..> N_src_backend_main_ipc_services_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_loop_handlers_ts["loop-handlers.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_services_ts["services.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_people_handlers_ts["people-handlers.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_resources_handlers_ts["resources-handlers.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_settings_handlers_ts["settings-handlers.ts"] {
+  <<module>>
+}
+N_src_backend_main_ipc_loop_handlers_ts ..> N_src_backend_main_ipc_services_ts : 导入依赖
+N_src_backend_main_ipc_people_handlers_ts ..> N_src_backend_main_ipc_services_ts : 导入依赖
+N_src_backend_main_ipc_resources_handlers_ts ..> N_src_backend_main_ipc_services_ts : 导入依赖
+N_src_backend_main_ipc_settings_handlers_ts ..> N_src_backend_main_ipc_services_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_ipc_workspace_handlers_ts["workspace-handlers.ts"] {
+  <<module>>
+}
+class N_src_backend_main_ipc_services_ts["services.ts"] {
+  <<module>>
+}
+N_src_backend_main_ipc_workspace_handlers_ts ..> N_src_backend_main_ipc_services_ts : 导入依赖
 ```
 
 
@@ -295,15 +509,17 @@ dispatch.manifestReport 必须明确 workspace/root/task/run；省略 manifestId
 ## 原隔离执行核实与清理
 
 dispatch.isolatedExecutionReport显式读取原运行，dispatch.isolatedExecutionCleanup显式提交当前instanceId及原执行/basis/commandId；不允许renderer传入路径、PID、profile或运行脚本。
+## 全量关联 IPC 分派
 
-### 主 Agent 设置入口
+`dispatch.ts` 仅识别和组合已登记操作，161 项应用入口按历史、设置、自动化及既有业务分组；其它 11 项原生操作留在 Electron main.ts。`request.ts` 先执行既有关闭门禁，再按共享 Schema 解析，保留受理前领域错误码。服务调用后的异常不经解析错误转换；失败不自动重试。退役 loop.start 在取服务及选模型前继续拒绝，未知或原型属性名称返回 ACTION。
 
-agent.mainSettings 与 agent.configureMain 接受当前工作区和实例，后者携带已读 revision 与完整 AgentModelSelection。配置保存只改变工作区 cbim:main 的后续选型，不启动运行、派发岗位或修改已受理队列；服务拒绝失效身份、旧版本及不兼容模型。
+队列插入仅缺少或无效的 `expectedRunId` 时，结构拒绝仍返回 `QUEUE_INSERT_STALE`；不取得执行服务、不补成当前运行，原队列项保留。历史派发的缺省 `scopeId` 则交给服务先查原回执，新派发继续以 `DISPATCH_SCOPE_REQUIRED` 拒绝。
 
-### 模型动作的独立路由
+每个处理器实际参数和返回受对应 `IpcHandlers` 约束。登记、责任、治理与处置只由本机闭包提供 actor，客户端不能发送授权来源。查询只取得当前工作区原服务，不隐式打开工作区或恢复执行。governance 命令按实际 action 核实回执；通用 receipt 仍是不同种类或 undefined，消费者必须分别判断。
 
-model-actions.ts 按公开请求 Schema 解析原始输入，有类型 handler 表约束结果，委托唯一模型存储及主 Agent 设置服务。通用 dispatcher 只识别这一组精确动作；停止、主 Frame、工作区实例、revision 和配置兼容校验保留。旧动作继续原路由，不新增执行或凭据读取入口。
+角色历史由 `agent-history.ts` 的最小端口装配，与其它组共用统一解析；端口没有索引写入、运行、恢复或生命周期能力。领域身份/路径/游标核验不被桥类型取代，查询失败不折算为空历史。
 
-## 自动化固定协议
 
-六项 automation 动作独立类型映射，Main 先严格 Schema、当前 workspaceId/instanceId，再检查定义 revision。list/catalog 只读，save 仅保存未来配置，run 显式运行；toggle/remove 停未来计划及当前执行。请求不接任务身份、路径、凭据或内部启动回调；应用停止/实例退役不接受新请求。
+### 0.1.7 功能接入完整映射
+
+自动化六项请求先由共享严格 Schema 解析，再只投影 workspaceId/instanceId 交给原服务核实代际；定义、修订和命令仍由同一调度器校验。agent.mainSettings/configureMain 使用 model-actions.ts 的唯一协议；修改主配置沿既有关闭门禁，不增加旁路路由。

@@ -1,9 +1,10 @@
-import {runtimeTools} from './runtime-tools-fixture';
+import {runtimeToolGroup} from './runtime-tool-group';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {expect,vi} from 'vitest';
-import {fixture,request} from './helpers';
+import {fixture} from './helpers';
+import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import {jsonToolResult} from '../src/backend/core/tools/results';
@@ -49,7 +50,7 @@ export async function humanServiceFixture(options:{candidates?:number;command?:b
   const model=await f.app.models.configuration(profileId,'fixture');
   const prepare=():PreparedEngine=>({model,availableTools:['read'],availableValidators:['json-schema-v1'],create:async(run,_task,hooks)=>{
     let context!:EngineContext;const engine:AgentEngine={kind:'human-service-fixture',start:async c=>{starts++;context=c;await c.emit({type:'session.bound',data:{sessionId:c.nativeSessionId,sessionFile:path.join(memberLogs,'native-'+c.nativeSessionId+'.jsonl')}})},stop:async()=>{},close:async()=>{},run:async()=>{
-      let sequence=0;const invoke=async(name:string,input:Record<string,unknown>)=>{const id='tool-'+(++sequence),decision=await context.beforeTool({id,name,input});expect(decision.allow).toBe(true);const result=name==='read'?jsonToolResult('read',{text:await fs.readFile(path.join(f.a,String(input.path)),'utf8')}):name==='bash'?jsonToolResult('bash',{exitCode:0,text:'确定性单元命令回执'}):name==='cbim_task_manifest_capture'?await runtimeTools(context).manifestTools!.call(name,input,id):name==='cbim_task_artifact_capture'?await runtimeTools(context).artifactTools!.call(name,input,id):name==='cbim_validation_run'?await runtimeTools(context).validationTools!.call(name,input,id):await runtimeTools(context).taskTools!.call(name,input);await context.emit({type:'tool.finished',data:{id,name,result,isError:false}});return {id,body:JSON.parse(result.content[0].text)}};
+      let sequence=0;const invoke=async(name:string,input:Record<string,unknown>)=>{const id='tool-'+(++sequence),decision=await context.beforeTool({id,name,input});expect(decision.allow).toBe(true);const result=name==='read'?jsonToolResult('read',{text:await fs.readFile(path.join(f.a,String(input.path)),'utf8')}):name==='bash'?jsonToolResult('bash',{exitCode:0,text:'确定性单元命令回执'}):name==='cbim_task_manifest_capture'?await runtimeToolGroup(context,'manifests')!.call(name,input,id):name==='cbim_task_artifact_capture'?await runtimeToolGroup(context,'artifacts')!.call(name,input,id):name==='cbim_validation_run'?await runtimeToolGroup(context,'validation')!.call(name,input,id):await runtimeToolGroup(context,'task-progress')!.call(name,input);await context.emit({type:'tool.finished',data:{id,name,result,isError:false}});return {id,body:JSON.parse(result.content[0].text)}};
       await invoke('cbim_task_plan',{expectedVersion:0,goal:context.task.goal,acceptance:context.task.acceptance,reason:'真实读取',steps:[{id:'verify',title:'核实文件',owner:'当前成员'}]});if(options.command)await invoke('bash',{command:'unit-fixture-success'});
       const version=options.command?2:1,source=await invoke('read',{path:context.task.goal}),sourceIds=[source.id];
       if(options.jsonValidation)for(const file of validationPaths.slice(1))sourceIds.push((await invoke('read',{path:file})).id);

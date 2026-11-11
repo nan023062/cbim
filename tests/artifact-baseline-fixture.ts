@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {artifactBaselineFixture as data} from './artifact-baseline-provider';
 import type {Application} from '../src/backend/main/application';

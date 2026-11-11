@@ -8,6 +8,7 @@
  * 桌面更新只装配在正式 NSIS 包中；检查不下载。用户下载后由后端自动校验、展示重启进度、拒绝新请求并等待正常业务排空，再安装重启。
  * 窗口图标从固定品牌资源读取，Forge 同源写入 EXE；保留原应用身份与卸载器名称以兼容更新。
  */
+import {parseIpcRequest,ipcSuccess} from '../../bridge/contracts/ipc-call';
 import {app,BrowserWindow,ipcMain,dialog,shell} from 'electron';
 import {createControlledFileTransport} from './platform/controlled-file-transport';
 import path from 'node:path';
@@ -52,21 +53,25 @@ app.whenReady().then(async()=>{
       for(const file of request.paths){const stat=await fs.stat(file);items.push(await inputs.path(stat.isDirectory()?'folder':'file',file))}return {ok:true,value:items};
     }catch(e:any){return {ok:false,error:{message:e.message}}}
   });
-  ipcMain.handle('cbim:call',async(event,action:string,args:unknown)=>{if(event.sender!==window.webContents||event.senderFrame!==window.webContents.mainFrame)throw Error('UNAUTHORIZED');
+  ipcMain.handle('cbim:call',async(event,action:unknown,args:unknown)=>{if(event.sender!==window.webContents||event.senderFrame!==window.webContents.mainFrame)throw Error('UNAUTHORIZED');
+    if(typeof action!=='string')return {ok:false,error:{code:'ACTION',message:'未知操作'}};
     if(action.startsWith('desktop.updates.'))try{
-      if(args!==undefined&&args!==null&&(!(typeof args==='object')||Array.isArray(args)||Object.keys(args).length))throw Error('更新操作不接受地址、路径或命令');
+      if(action!=='desktop.updates.status'&&action!=='desktop.updates.check'&&action!=='desktop.updates.download'&&action!=='desktop.updates.install')throw Error('未知更新操作');
+      parseIpcRequest(action,args);
       const value=action==='desktop.updates.status'?updates!.status():action==='desktop.updates.check'?await updates!.check():action==='desktop.updates.download'?await updates!.download():action==='desktop.updates.install'?await updates!.install():(()=>{throw Error('未知更新操作')})();
-      return {ok:true,value};
+      return ipcSuccess(action,value);
     }catch{return {ok:false,error:{code:'DESKTOP_UPDATE',message:'更新操作未能完成，请检查当前状态后重试。'}}}
     if(updates?.status().phase==='installing')return {ok:false,error:{code:'UPDATING',message:'正在关闭任务并安装更新，请稍后重新打开。'}};
     if(action.startsWith('terminal.'))try{
-      const request=args as {id:string;tabId:string;command:string};if(!/^[a-zA-Z0-9-]{1,100}$/.test(request.tabId))throw Error('无效终端页签');const key=request.id+':'+request.tabId;if(action==='terminal.close'){terminals.close(key);return {ok:true,value:undefined}}const ws=application.workspace(request.id);ws.assert();
-      const value=action==='terminal.start'?terminals.start(key,ws.entry.path,request.command):action==='terminal.read'?terminals.read(key):action==='terminal.close'?terminals.close(key):(()=>{throw Error('未知终端操作')})();return {ok:true,value};
+      if(action==='terminal.close'){const request=parseIpcRequest(action,args);terminals.close(request.id+':'+request.tabId);return ipcSuccess(action,undefined)}
+      if(action==='terminal.start'){const request=parseIpcRequest(action,args),ws=application.workspace(request.id);ws.assert();return ipcSuccess(action,terminals.start(request.id+':'+request.tabId,ws.entry.path,request.command))}
+      if(action==='terminal.read'){const request=parseIpcRequest(action,args),ws=application.workspace(request.id);ws.assert();return ipcSuccess(action,terminals.read(request.id+':'+request.tabId))}
+      throw Error('未知终端操作');
     }catch(e:any){return {ok:false,error:{message:e.message}}}
-    if(action==='github.feedback.openLogin')try{await shell.openExternal('https://github.com/login/device');return {ok:true,value:true}}catch{return {ok:false,error:{code:'GITHUB_LOGIN_PAGE',message:'GitHub 登录页未能打开，请在浏览器访问 https://github.com/login/device'}}}
+    if(action==='github.feedback.openLogin')try{parseIpcRequest(action,args);await shell.openExternal('https://github.com/login/device');return ipcSuccess(action,true)}catch{return {ok:false,error:{code:'GITHUB_LOGIN_PAGE',message:'GitHub 登录页未能打开，请在浏览器访问 https://github.com/login/device'}}}
     if(action==='chat.openLink')try{
       // 只有用户点击才打开链接；业务产物必须属于当前工作区且不是可执行程序。
-      const request=args as {id:string;target:string};const owner=application.workspace(request.id);
+      const request=parseIpcRequest(action,args);const owner=application.workspace(request.id);
       if(typeof request.target!=='string')throw Error('无效链接');
       if(/^https?:\/\//i.test(request.target)){const url=new URL(request.target);if(url.username||url.password)throw Error('不支持包含凭据的链接');await shell.openExternal(url.href)}
       else{
@@ -75,17 +80,17 @@ app.whenReady().then(async()=>{
         if(!relative||relative.startsWith('..')||path.isAbsolute(relative)||relative.split(/[\\/]/).some(p=>p.toLowerCase()==='.cbim'))throw Error('只能打开当前工作区的业务产物');
         if(!/\.(html?|txt|md|pdf|png|jpe?g|gif|webp|svg)$/i.test(file))throw Error('该文件类型暂不支持直接打开');
         const error=await shell.openPath(file);if(error)throw Error(error);
-      }return {ok:true,value:true};
+      }return ipcSuccess(action,true);
     }catch(e:any){return {ok:false,error:{code:'OPEN_LINK',message:e.message}}}
     if(action==='chat.pick')try{
-      const request=args as {id:string;kind:string;importId?:string};if(!['file','folder'].includes(request.kind))throw Error('未知附件类型');
-      if(request.importId!==undefined){const value=await application.chatMaterials.pick(request,async()=>{const result=await dialog.showOpenDialog(window,{properties:request.kind==='folder'?['openDirectory']:['openFile','multiSelections']});return result.canceled?[]:result.filePaths});return {ok:true,value}}
+      const request=parseIpcRequest(action,args);if(!['file','folder'].includes(request.kind))throw Error('未知附件类型');
+      if(request.importId!==undefined){const value=await application.chatMaterials.pick(request,async()=>{const result=await dialog.showOpenDialog(window,{properties:request.kind==='folder'?['openDirectory']:['openFile','multiSelections']});return result.canceled?[]:result.filePaths});return ipcSuccess(action,value)}
       const inputs=new ChatInputs(application.workspace(request.id));const result=await dialog.showOpenDialog(window,{properties:request.kind==='folder'?['openDirectory']:['openFile','multiSelections']});
       // 在导入第一份快照前拒绝超量选择，不能静默裁剪用户明确选中的资料。
       if(!result.canceled&&result.filePaths.length>12)throw Error('最多选择12个附件，请减少选择后重试');
-      const items=[];if(!result.canceled)for(const file of result.filePaths)items.push(await inputs.path(request.kind as 'file'|'folder',file));return {ok:true,value:items};
+      const items=[];if(!result.canceled)for(const file of result.filePaths)items.push(await inputs.path(request.kind,file));return ipcSuccess(action,items);
     }catch(e:any){return {ok:false,error:{code:e.code||'ATTACHMENT',message:e.message}}}
-    try{if(action==='chooseFolder'){const result=await dialog.showOpenDialog(window,{properties:['openDirectory']});return {ok:true,value:result.canceled?null:result.filePaths[0]}}return {ok:true,value:await application.dispatch(action,args)}}catch(e:any){return {ok:false,error:{code:e.code||'ERROR',message:e.message}}}});
+    try{if(action==='chooseFolder'){parseIpcRequest(action,args);const result=await dialog.showOpenDialog(window,{properties:['openDirectory']});return ipcSuccess(action,result.canceled?null:result.filePaths[0])}return {ok:true,value:await application.dispatch(action,args)}}catch(e:any){return {ok:false,error:{code:e.code||'ERROR',message:e.message}}}});
   if(MAIN_WINDOW_VITE_DEV_SERVER_URL)await window.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);else await window.loadFile(path.join(__dirname,`../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   updates.start();
   // 仅隔离数据目录下的显式打包测试可写入样本；正常启动走运行授权策略。

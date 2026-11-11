@@ -1,20 +1,21 @@
 /**
- * 作用定位：定义逐请求预算专用的读取和原子阶段提交端口，供预算服务与持久化适配器协作。
- * 设计原因：预算决策只需周期及预算账本，不应获得成员、任务图、邮箱或权限的整库读写能力。
- * 职责边界：实现仍须借用工作区唯一串行事务；不能另建账本、拆开预留判断和提交或释放未决消耗。
+ * 作用定位：模型请求账本独有的读视图、提交单元与准入端口。
+ * 设计原因：请求预留只需要冻结周期预算和原请求记录，不应获得岗位、任务图、邮箱或其它领域的写权限；实现仍在原串行事务内投影视图和提交。
  */
-import type {DispatchScope} from './dispatch-scope';
-import type {ModelRequestBudgetChange} from './model-request-budget';
+import type {ScopeBudgetPolicy} from './scope-budget';
+import type {ModelRequestBudgetChange,RequestBudgetModel} from './model-request-budget';
 
-/** 旧存储缺省的预算附录按空历史读取，不补造任何请求结算。 */
-export interface ModelRequestBudgetLedger {modelRequestBudgetChanges?:ModelRequestBudgetChange[]}
-/** 事务内隔离副本；只公开预算决策所需的周期与请求阶段，不泄露整库状态。 */
-export interface ModelRequestBudgetView extends ModelRequestBudgetLedger {scopes:DispatchScope[]}
-export type ModelRequestBudgetReceipt=Pick<ModelRequestBudgetChange,'requestId'|'phase'|'revision'>;
-
-/** 阶段提交只产生一条预算事实；原命令重放返回原回执，不再次执行 prepare。 */
-export interface ModelRequestBudgetStore {
-  read():Promise<ModelRequestBudgetView>;
-  /** initial 固定幂等键和指纹；prepare 在原 Store 的同一串行屏障读取并决定 reserved/denied 或后续阶段。 */
-  transact(initial:ModelRequestBudgetChange,prepare:(state:ModelRequestBudgetView)=>Promise<ModelRequestBudgetChange>):Promise<ModelRequestBudgetReceipt>;
+/** 只观察周期身份、预算和真实主运行绑定，不暴露目标、等待、成员或交付状态。 */
+export interface RequestBudgetScope {workspaceId:string;rootSessionId:string;scopeId:string;budget?:{policy:ScopeBudgetPolicy};runTracking?:{mainRunIds:string[]}}
+export interface RequestBudgetState {scopes?:RequestBudgetScope[];modelRequestBudgetChanges?:ModelRequestBudgetChange[]}
+export interface RequestBudgetMutation<T> {modelRequestBudgetChanges:ModelRequestBudgetChange[];receipt:T}
+/** 命令身份与幂等摘要由调用方按原请求产生；同一键重放须返回原回执而不再次执行 prepare。 */
+export interface RequestBudgetStore {
+  readBudget():Promise<RequestBudgetState>;
+  transactBudget<T>(command:{commandId:string;fingerprint:string},prepare:(state:RequestBudgetState)=>Promise<RequestBudgetMutation<T>>):Promise<T>;
+}
+/** 只核实可信主运行占位与请求额度，不授予启动、改写周期或补造历史的能力。 */
+export interface RequestBudgetAdmission {
+  isMainLive(runId:string):boolean;
+  preflightRequest(state:RequestBudgetState,scope:RequestBudgetScope,model:Pick<RequestBudgetModel,'contextWindow'|'maxTokens'|'pricing'>):void;
 }

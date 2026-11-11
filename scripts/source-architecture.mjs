@@ -62,15 +62,25 @@ const scope={
  'src/frontend/team':'工作区唯一的静态Team/组/Agent图、继承与人才复用，节点按Session查看只读履历。岗位面板独立登记、明确采纳和暂停退休；改名和模型更新保留原能力来源。来源屏障首次拒绝可重新编辑，未知仍查原命令；反查责任委托workspace，不启动模型。',
  'src/frontend/workspace':'工作区唯一的工程/模块图及自身Workflow。负责人面板展示来源和有界历史，支持同负责人明确采纳当前来源；原回执必须匹配同一关系、版本及owner，未知不换命令。知识编辑和整架构复用委托knowledge/resources；登记不移交旧任务。',
 };
-scope['src/backend/core/brain/claude']='Claude Agent SDK 适配、内部工具门禁与真实原生会话生命周期；环境和账号归 CBIM，工具复用上层契约，不提供对外 MCP。';
-scope['src/backend/core/brain/codex']='Codex App Server 的受管进程、双向 RPC、真实 thread/turn、Responses 代理与动态工具；固定 CLI 和私有账号目录，内置执行关闭，工具经宿主授权、预算结算及同一回执。';
-scope["src/backend/core/brain"]+=" engine-tools 与 engine-instructions 共用业务路由/指引；engine-session 按已核日志选择目标引擎原生 ID/文件并转交公开资料；native-tools 复用固定 Pi SDK 独立操作供宿主动态工具。";
+scope['src/backend/core/brain/claude']='Claude Agent SDK 适配、内部工具门禁与真实原生会话生命周期；环境和账号归 CBIM，工具复用上层契约，不提供对外 MCP。原生工具开关只读可信能力的 disableNativeTools 策略，不认识具体业务工具槽位。';
+scope['src/backend/core/brain/codex']='Codex App Server 的受管进程、双向 RPC、真实 thread/turn、Responses 代理与动态工具；固定 CLI 和私有账号目录，内置执行关闭，工具经宿主授权、预算结算及同一回执；宿主原生工具目录按可信能力的 disableNativeTools 策略收窄。';
+scope["src/backend/core/brain"]+=" engine-tools 注册统一能力，engine-instructions 合成角色与能力指引；member-tool-capabilities 显式装配业务工具，run-validation 自行准备验证能力；engine-session 按已核日志选择目标引擎原生 ID/文件并转交公开资料；native-tools 复用固定 Pi SDK 独立操作供宿主动态工具。";
 scope["src/backend/core/brain/llm"]+=" engine 定义公开引擎/选型；共享 request-budget-transport 和 SSE 用量解析服务 Pi、Claude Code 与 Codex。";
 scope["src/backend/core/tools"]+=" 原生能力按 Pi/Claude Code/Codex 提供真实预检清单，Codex 由宿主执行既有文件操作，Claude 不宣称独立 ls。";
 scope["src/frontend/components"]+=" EngineModelPicker 固定三引擎目录，按协议筛选统一模型，空目录仍可选择引擎。";
 scope["src/frontend/conversation"]+=" 主对话栏读写工作区主 Agent 的统一执行配置，与团队配置页双向同步；模型按协议映射，Claude Code/Codex 只保留排队。";
 scope["src/frontend/knowledge"]+=" Agent 编辑可保存本机默认引擎/模型，已有岗位不自动采纳。";
 scope["src/frontend/team"]+=" 岗位登记支持默认或明确引擎/模型，详情展示冻结引擎。";
+scope['src/backend/core/tasks']+=' model-request-budget-storage 只公开请求预算状态、追加命令及准入能力，不授予其它领域写入。';
+scope['src/backend/main/persistence/tasks']+=' request-budget-store 在唯一 DispatchStore 的原事务内投影预算视图，保留可靠提交与恢复。';
+scope['src/backend/main']+=' member-dispatch 为请求预算注入窄 Store，底层跨领域事务继续统一持有。';
+scope['src/backend/scheduler-engine/execution']+=' 请求预算服务仅依赖预算读写及准入端口，ScopeBudgetService 的请求预检同样只读预算视图。';
+scope['src/backend/scheduler-engine/context']+=' team-workflow 只向知识查询转发 snapshot，查询不取得工作区写能力。';
+scope['src/backend/scheduler-engine/tools']+=' 知识查询和事务刷新分别注入最小读/写端口，写权限及原请求版本检查保持。';
+scope['src/backend/core/knowledge']+=' KnowledgeQueries 只接收 snapshot；KnowledgeRefresh 独立持有身份核实、原回执查询与提交。';
+scope['src/backend/core/knowledge']+=' read-models.ts 是固定快照读取的公开入口，snapshot 与 Team/BusinessWorkspace 模型属于同一私有实现边界；查询编排不反向进入纯快照契约。';
+scope['src/backend/core/team']+=' model.ts 是知识读取模块的私有实现，外部通过 knowledge/read-models 访问；岗位与执行状态契约不归读取视图所有。';
+scope['src/backend/core/workspace']+=' model.ts 是知识读取模块的私有实现，外部通过 knowledge/read-models 访问；项目根定义仍为独立纯公开契约。';
 scope["src/backend/scheduler-engine/execution"]+=" 可信工厂选择 PiEngine/ClaudeCodeEngine/CodexEngine；Claude/Codex 新成员首轮可延迟绑定原生文件，Codex 在启动确认时原子采纳实际线程 ID。";
 scope["src/backend/main/platform"]+=" 原生指纹固定 Pi/Claude/Codex 格式及受管目录，Codex 另核 metadata 和 rollout 文件名。";
 scope["src/backend/main/platform"]+=" 范围模式用Win32读取/枚举句柄与LPAC私有快照，原工程不扩ACL。";
@@ -84,9 +94,21 @@ scope['src/frontend/settings']+=' 反馈预置公开产品连接；版本更新�
 scope['src/frontend/shell']+=' 账号菜单和新版提醒打开独立更新弹窗，当前页面及草稿保持挂载，不隐式下载或重启。';
 scope['src/backend/core/knowledge']+=' 产品反馈 Skill 只读发布两套上下文格式，不包含 GitHub 创建接口。';
 scope['src/backend/core/knowledge']+=' 快照数据与只读访问是独立公共边界；索引刷新通过收窄端口调用原知识事务，不导入团队或模块查询视图。';
-scope['src/backend/scheduler-engine/context']+=' KnowledgeQueries 只取快照读取端口，组合 Team/BusinessWorkspace；跨查询一致性由准备用例核版本，索引写入留在知识领域。';
+scope['src/backend/scheduler-engine/context']+=' team-workflow 调用 Core KnowledgeQueries，后者只取快照读取端口并组合 Team/BusinessWorkspace；跨查询一致性由准备用例核版本，索引写入留在知识领域。';
 scope['src/backend/scheduler-engine/conversation']+=' 两项反馈入口先读取对应内置 Skill 再引导填写；收集反馈不启动业务派工。';
 // 负责人进入实际执行后，各层增加的职责仍分别归属原边界；不把登记回执描述成运行许可。
+scope['src/frontend/execution-view']+='主对话、成员与历史共用的消息、工具轨道及运行状态；只消费公开快照和最小展示插槽，不依赖任务或会话控制器。原核实与恢复由页面显式组合，Markdown 的用户链接点击继续通过固定 Bridge。';
+scope['src/frontend/conversation']+=' tasks/ToolActivity 在业务装配层组合原命令核实、影响观察及恢复；公共消息/状态已迁到 execution-view，队列操作名限制为实际四项。';
+scope['src/frontend/tasks']+=' 任务根和成员正文显式注入业务详情插槽，共用 execution-view 展示；资料准备与成员交互端口只列实际 IPC 操作。';
+scope['src/frontend/team']+=' 历史查询按操作关联请求和响应，分页状态与原迟到隔离保持；Markdown 复用 execution-view。';
+scope['src/frontend/governance']+=' IPC 名称从冻结的治理动作形成有限联合，保留原命令未知查询。';
+scope['src/frontend/resources']+=' 连接操作名使用持久命令的动作联合，提交、未知与核实流程保持。';
+scope['src/frontend/workspace']+=' 一级负责人读取/预览只使用有限 InlineOwnerCall 操作，写入仍由独立命令控制器持有。';
+scope['src/bridge/contracts']+=' ipc-call 用联合元组关联全部172项操作（含1项退役拒绝）；分组契约共享请求Schema与响应，纯workspace-view避免类型循环。';
+scope['src/bridge/preload']+=' 实现关联调用签名并沿原信封转发，不重试错误或改变主Frame授权。';
+scope['src/backend/main/ipc']+=' 161项应用操作按业务组装配，request统一保留关闭/受理前错误码后解析，实际处理器受响应映射约束。';
+scope['src/backend/main']+=' agent-history 独立组合历史服务与canonical读取，只接收工作区身份、目录和存活断言；工作区持锁初始化及排空关闭顺序保持。';
+scope['src/backend/main/persistence/tasks']+=' agent-history 只负责文件索引，不再引用Workspace或实例化调度服务。';
 const ownerExecutionScopes={
  'src/backend/core/brain':'成员的公开任务和原生运行共用冻结岗位绑定，历史缺省可读但不授权应用新领取。',
  'src/backend/core/knowledge':'SourceSnapshotReader 只提供知识队列外层的同版快照，调用方不得在任务事务内反向获取。',
@@ -186,6 +208,17 @@ const githubFeedbackScopes={
  'src/frontend/conversation':'可信 GitHub submitted 工具回执之后隐藏追加结果文字；失败、未知及后续普通用户输入仍正常显示。',
 };
 for(const [directory,description] of Object.entries(githubFeedbackScopes))scope[directory]+=' '+description;
+scope['src/backend/main']+=' 11项原生操作按契约解析并配对成功值，主Frame和安装门禁先行。';
+scope['src/backend/main/persistence/tasks']+=' 附件JSON的公开连接器/预览形状先校验再返回。';
+scope['src/backend/scheduler-engine/execution']+=' 历史坏记录明确返回unreadable及字符串原因，不当作完整task摘要。';
+scope['src/frontend/conversation']+=' 发送捕获原任务/运行，审批使用原审批任务；动态队列按操作解析。';
+scope['src/frontend/knowledge']+=' 动态架构表单先按对应IPC Schema核实；本地数据选择为封闭类别。';
+scope['src/frontend/governance']+=' 操作联合与表单请求经对应Schema配对，原命令回执控制器不变。';
+scope['src/frontend/resources']+=' 连接提交与回执查询按具体Schema形成操作元组。';
+scope['src/frontend/settings']+=' 预算和反馈的动态入口验证操作请求；开启/停止共享各自使用确定签名。';
+scope['src/frontend/shell']+=' 导航的操作桥按明确请求Schema解析，坏历史记录不能当完整运行。';
+scope['src/frontend/tasks']+=' 任务详情与续接动态端口按操作解析后进入关联桥，状态所有权不变。';
+scope['src/frontend/workspace']+=' 模块责任按是否给定memberId选择明确入口，内联岗位表单经过Schema配对。';
 const norm=p=>p.replaceAll('\\','/');
 const walk=p=>fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(p+'/'+e.name):[p+'/'+e.name]);
 const files=walk('src').filter(f=>/\.(tsx?|jsx?|mjs|cjs|css)$/.test(f));

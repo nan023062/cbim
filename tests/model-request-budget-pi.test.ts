@@ -22,7 +22,7 @@ it.each(['openai-completions','openai-responses','anthropic-messages'] as Resolv
     await vi.waitFor(async()=>expect((await budgetScopes(f.user,entry.id))[0]?.status).toBe('closed'),{timeout:30000});
     const scope=(await budgetScopes(f.user,entry.id))[0],query={workspaceId:entry.id,rootSessionId:start.taskId,scopeId:scope.scopeId};
     expect(scope.outcome).toBe('completed');expect(provider.errors).toEqual([]);expect(provider.requests).toHaveLength(1);
-    const inspected:RunSummary=await app.dispatch('loop.inspect',{id:entry.id,...start});
+    const inspected:RunSummary=await app.dispatch('loop.inspect',{id:entry.id,taskId:start.taskId,runId:start.runId});
     expect(inspected.events.find(event=>event.type==='engine.status'&&event.data.metric==='tool-catalog'&&event.data.stage==='active')?.data.missing).toEqual([]);
     const report=requestBudgetReportSchema.parse(await app.dispatch('dispatch.requestBudget',query));expect(report).toMatchObject({requests:1,reported:1,tokens:120,reservedTokens:0,unknown:0,estimatedCostUsd:0.000125});
     const journal=path.join(app.paths.project(entry.id),'dispatch','dispatch.jsonl'),bytes=await fs.readFile(journal);expect(bytes.toString()).not.toContain('Request budget verified.');

@@ -1,5 +1,6 @@
 import {expect,it} from 'vitest';
-import {fixture,request} from './helpers';
+import {fixture} from './helpers';
+import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import {resolveConversationAgent,resolveDispatchAgent,resolveDispatchModules} from '../src/backend/scheduler-engine/context/dispatch-context';

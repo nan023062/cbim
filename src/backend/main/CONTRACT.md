@@ -190,12 +190,12 @@ Application 发送时固定公开 engine，执行工厂核对它与所选供应�
 
 业务重规划 accept 的原影响核证也按已核主身份调用 EffectObservationService.observeFromMain，派生本运行读占用，避免把自身占用冲突误记为文件不可观察而改变 basis。预览、preflight、公开 observe 和人工处置仍使用独立读占用；不改变原失败回执、证据指纹和权限。
 
-### 主 Agent 配置
+## 角色历史的独立装配
 
-Application 装配唯一 MainAgentSettings；对话栏与团队页面通过 agent.mainSettings / agent.configureMain 读写同一工作区角色配置，均不启动模型。chatOptions 未收到显式运行选型时读取该配置，然后调用模型协议校验并冻结。本机默认供应商不再拥有执行引擎；显式旧运行和队列继续使用原选型。
+`agent-history.ts:createAgentHistory` 接收最小工作区身份、project 路径定位和 assert，组合 AgentHistoryService、FileAgentHistoryStore 与 FileRunStorage。文件索引适配不再引用 Workspace 或实例化调度服务。构造不读盘；Application 继续在工作区持锁、Store 恢复后初始化历史，在释放工作区前关闭并排空历史写入。
 
-## 工作区自动化装配
+canonical 读取仅按可信索引 source/task/run 定位；safeId、逐层符号链接拒绝、realpath 包含关系和工作区/root/task/run 身份校验保持原实现。既有事务、日志格式、锁和队列不拆分，索引不是正文或执行事实的替代来源。
 
-Application 在协作服务就绪后创建唯一 WorkspaceAutomations；关闭先停调度再关闭协作和存储。私有 automations.json 位于用户工作区目录，不进入 .cbim。Main 每次启动解析当前主配置；成员必须通过真实岗位的能力/模型门禁，显式或最近父级负责人冲突不会改派。无负责人时用户所选岗位生成当前知识版本的临时选择，不写模块责任。
+## 全量 IPC 契约衔接
 
-主周期建立后 MainStartup 先持久绑定实际 taskId/runId，再调用可信首任务准备。默认主 Agent 直接执行；选择岗位的任务先建立正式计划/派发，再由原协作批次在主轮结算后领取。Skill 正文和模块说明只作为当前用户选定上下文，不能扩大权限。历史状态来自原 scope，执行结束不代替验收。
+应用内部 dispatch 对已知操作推导响应，对原始动态字符串只返回 unknown；所有原始请求交给 IPC 契约解析。Electron 入口在 Schema 前核实主 Frame 与安装期间门禁，原生操作成功值按操作配对，未知输入不触发系统副作用。

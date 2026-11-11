@@ -9,7 +9,7 @@ import {ChatInputs} from '../src/backend/main/persistence/tasks/chat-inputs';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
 import {seedTeam} from './team-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {attachmentFixture,waitingAttachmentsProvider} from './waiting-attachments-provider';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 

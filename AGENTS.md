@@ -6,6 +6,12 @@
 
 固定架构维护流程见 [通用项目 Skill](.agents/skills/architecture-maintenance/SKILL.md)、[Claude Code Skill](.claude/skills/architecture-maintenance/SKILL.md) 和 [Codex Skill](.codex/skills/architecture-maintenance/SKILL.md)，三个入口内容保持同步。文件模块之间禁止循环依赖，包含类型引用；依赖或架构变更时按下方验证范围选择 `pnpm check:dependencies` 或同时检查类图的 `pnpm check:architecture`。
 
+## 架构规范与强制关系
+
+设计与开发必须遵守 [文档 1：通用项目架构设计规范与原则](design/project-architecture-standard.md)。`cbim-development` 必须在设计和实施前读取并应用文档 1；项目架构治理入口 `architecture-evolution` 必须同时读取文档 1 和 [文档 2：架构治理规范与治理流程](design/architecture-governance-process.md)，按文档 2 的 S1–S7 执行。`architecture-maintenance` 遵守文档 1，并在治理中衔接文档 2 的验证、资料与认知交付。
+
+已核实且未变化的上下文可复用，普通开发不机械启动全套治理，已有授权不逐步重复确认；三个宿主入口及引用同步维护。两份规范服务本仓库开发，不自动改写产品内置业务 Skill。
+
 ## 日常验证范围
 
 - **只测受影响单元。** 每个 Issue 仍独立开发、测试和提交。依据实际 diff、调用方和契约选取受影响的单元测试文件或用例，包含因本次行为变化受影响的消费者；执行前简要说明选择依据。缺少相关回归用例时按实际缺陷补齐，不为凑数量添加测试。

@@ -103,8 +103,10 @@ try{
   assert.equal(result.taskProgress?.goal,'核实工作区并记录计划');
   await page.getByRole('tab',{name:'任务视图',exact:true}).click();
   await page.getByTestId('dispatch-root-node').click();
-  await page.getByRole('article',{name:'执行计划',exact:true}).getByText('读取并核实',{exact:true}).waitFor();
-  assert.ok((await page.getByRole('article',{name:'执行计划',exact:true}).innerText()).includes('尚未业务验收'));
+  // 局部计划仍存在于原运行，但不得冒充当前 scope 的业务目标计划。
+  assert.ok(result.taskProgress.steps.some(step=>step.title==='读取并核实'));
+  await page.getByTestId('dispatch-root-goal').getByText('本轮没有登记业务目标计划；普通问答无需派发任务。',{exact:true}).waitFor();
+  assert.equal(await page.getByRole('article',{name:'执行计划',exact:true}).count(),0);
   await page.screenshot({path:'test-results/task-progress.png'});
   await page.getByRole('tab',{name:'对话',exact:true}).click();
   assert.equal(result.acceptance,'not_evaluated');assert.equal(result.task.mode,'chat');assert.equal(result.task.agentId,'cbim:main');assert.deepEqual(result.task.moduleIds,[]);assert.equal(result.task.workflowContext,undefined);
@@ -114,11 +116,11 @@ try{
   assert.ok(result.events.some(e=>e.type==='message.delta'));
   await page.getByRole('textbox',{name:'对话草稿',exact:true}).fill('继续核实');
   await page.getByRole('button',{name:'发送消息',exact:true}).click();
-  await page.getByText('继续核实',{exact:true}).waitFor();
+  await page.locator('.chat-message.user').getByText('继续核实',{exact:true}).waitFor();
   await page.waitForFunction(()=>document.querySelectorAll('.chat-turn').length===2&&[...document.querySelectorAll('.chat-run-status')].every(x=>x.textContent.includes('本轮结束')));
   await page.reload();await page.getByRole('button',{name:'project · 运行中',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('[aria-label="对话模型"]')?.textContent.includes('test-model'));
-  await page.getByText('继续核实',{exact:true}).waitFor();
+  await page.locator('.chat-message.user').getByText('继续核实',{exact:true}).waitFor();
   await page.getByRole('textbox',{name:'对话草稿',exact:true}).fill('等待中断');
   await page.getByRole('button',{name:'发送消息',exact:true}).click();
   await page.getByText('等待停止测试',{exact:true}).waitFor();
@@ -202,7 +204,7 @@ try{
   await page.getByRole('textbox',{name:'项目名称',exact:true}).fill('renamed-project');await page.getByRole('button',{name:'保存名称',exact:true}).click();
   await page.getByRole('button',{name:'renamed-project · 运行中',exact:true}).waitFor();
   const historyButton=page.locator('.workspace-conversations button').filter({hasText:'核实工作区'}).first();await historyButton.click();
-  await page.locator('.workspace-panel:not([hidden])').getByText('随后执行队列A',{exact:true}).waitFor();
+  await page.locator('.workspace-panel:not([hidden]) .chat-message.user').getByText('随后执行队列A',{exact:true}).waitFor();
   await page.screenshot({path:'test-results/workspace-conversations.png'});
   await page.getByRole('button',{name:'更多操作 renamed-project',exact:true}).click();await page.getByRole('menuitem',{name:'移除项目',exact:true}).click();await page.getByRole('button',{name:'确认移除',exact:true}).click();
   await page.waitForFunction(()=>!document.querySelector('.workspace-group'));await fs.access(path.join(root,'game/index.html'));

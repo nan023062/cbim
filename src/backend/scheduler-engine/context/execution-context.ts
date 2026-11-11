@@ -3,16 +3,17 @@
  * 作用定位：为已派发成员任务冻结完整执行知识和各模块可选 Workflow 程序约定，并在启动、恢复或未启动依赖替换前复核基线。
  * 设计原因：任务图引用不足以恢复执行知识；从同一快照按原 Workflow 与岗位绑定冻结原则、有效 Skill、岗位职责和适应内容，不能改选或刷新旧任务。引用文字不自动读取，权限和模型由可信领取入口处理。
  * 职责边界：只读知识与应用内置规范，不运行成员、不写任务图；旧真人维护字段只兼容历史，岗位责任和指引正文不能扩大工具权限。
+ * 读取边界：冻结模块与正文时只消费 knowledge/read-models 的公开读取能力，不依赖领域模型的私有文件。
  */
 import {resolveExecutionModules} from './automatic-context';
 import {hash} from '../../core/foundation/serialization';
 import {fail} from '../../core/foundation/errors';
-import {data} from '../../core/knowledge/snapshot';
+import {data,BusinessWorkspace} from '../../core/knowledge/read-models';
 import {Builtins} from '../../core/knowledge/builtins';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {Snapshot} from '../../core/knowledge/types';
 import type {WorkspaceMember} from '../../core/team/workspace-member';
-import {BusinessWorkspace} from '../../core/workspace/model';
+
 import type {TaskNode} from '../../core/tasks/graph-types';
 import {dispatchKnowledgeFingerprint,validatePreparedDispatchKnowledge,type PreparedDispatchKnowledge} from '../../core/tasks/execution-context';
 import {resolveDispatchAgent,resolveDispatchModules} from './dispatch-context';

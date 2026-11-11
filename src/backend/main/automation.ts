@@ -10,8 +10,7 @@ import type {WorkspaceDispatchService} from '../scheduler-engine/execution/dispa
 import {AutomationScheduler} from '../scheduler-engine/automation/scheduler';
 import {FileAutomations} from './persistence/tasks/automations';
 import {automationIdentitySchema,type AutomationDefinition,type AutomationRunner,type AutomationCatalog} from '../core/automation/contracts';
-import {Team} from '../core/team/model';
-import {BusinessWorkspace} from '../core/workspace/model';
+import {Team,BusinessWorkspace} from '../core/knowledge/read-models';
 import {builtinSkills,Builtins} from '../core/knowledge/builtins';
 import {fail} from '../core/foundation/errors';
 import type {OwnerExecutionSelection} from '../core/team/member-execution-binding';

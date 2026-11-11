@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {Application} from '../src/backend/main/application';
 import {seedTeam} from './team-fixture';
-import {request} from './helpers';
+import {request} from './data/knowledge';
 import {scopeBudgetFixture as data,type BudgetFixtureMode} from './scope-budget-provider';
 
 export {usageScopes as budgetScopes} from './scope-usage-fixture';

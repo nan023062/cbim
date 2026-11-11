@@ -1,15 +1,21 @@
 /**
  * 作用定位：为只读角色历史面板提供按需分页与单轮公开事件读取。
+ * 契约边界：角色历史操作通过关联 IPC 类型返回真实分页类型，事件同样不使用 any 或响应断言。
  * 设计原因：不轮询全量历史；每次手动刷新/加载更多串行执行，切换身份或卸载丢弃迟到响应，事件只补齐连续分页而不触发任何执行操作。
  */
 import {useCallback,useEffect,useRef,useState} from 'react';
-import type {AgentHistoryIdentity,AgentHistorySessionIdentity,AgentHistoryRun,AgentHistorySession,AgentHistoryPage,AgentHistoryEventsRead} from '../../bridge/contracts/agent-history';
+import type {AgentHistoryIdentity,AgentHistorySessionIdentity,AgentHistoryRun,AgentHistorySession,AgentHistoryPage,AgentHistorySessionsInput,AgentHistoryRunsInput} from '../../bridge/contracts/agent-history';
 import {applyMemberEvents,emptyMemberEvents,type MemberEventState} from '../tasks/member-event-state';
 import {historyEventScope,historyRunKey,historyScopeKey,mergeHistoryPage} from './agent-history-state';
 
 type Item=AgentHistorySession|AgentHistoryRun;
+const readSessions=(input:AgentHistorySessionsInput)=>window.cbim.call('agentHistory.sessions',input);
+const readRuns=(input:AgentHistoryRunsInput)=>window.cbim.call('agentHistory.runs',input);
+/** 分页操作与身份／响应固定配对，调用方不再用类型断言自行指定响应。 */
+export function useHistorySessions(identity:AgentHistoryIdentity,enabled:boolean){return useHistoryPage(identity,readSessions,enabled)}
+export function useHistoryRuns(identity:AgentHistorySessionIdentity,enabled:boolean){return useHistoryPage(identity,readRuns,enabled)}
 /** 调用方固定只读动作及身份；disabled 不读取，返回内容始终先核对当前作用域。 */
-export function useHistoryPage<T extends Item>(action:'agentHistory.sessions'|'agentHistory.runs',identity:AgentHistoryIdentity|AgentHistorySessionIdentity,enabled:boolean){
+function useHistoryPage<I extends AgentHistoryIdentity,T extends Item>(identity:I,readPage:(input:I&{cursor?:string;limit:number})=>Promise<AgentHistoryPage<T>>,enabled:boolean){
   const key=historyScopeKey(identity);
   const [state,setState]=useState<{key:string;page?:AgentHistoryPage<T>;loading:boolean;error:string}>({key,loading:false,error:''});
   const controller=useRef<{key:string;pull:(append:boolean)=>Promise<void>}|undefined>(undefined);
@@ -21,7 +27,7 @@ export function useHistoryPage<T extends Item>(action:'agentHistory.sessions'|'a
       setState(old=>old.key===key?{...old,loading:true,error:''}:old);
       inFlight=(async()=>{try{
         const requestedCursor=append?page?.nextCursor:undefined;
-        const result=await window.cbim.call(action,{...identity,cursor:requestedCursor,limit:30}) as AgentHistoryPage<T>;
+        const result=await readPage({...identity,cursor:requestedCursor,limit:30});
         if(stopped||controller.current!==current)return;
         if(requestedCursor&&result.nextCursor===requestedCursor)throw Error('执行历史分页未前进，请刷新后重试');
         page=mergeHistoryPage(page,result,identity,append);setState({key,page,loading:false,error:''});
@@ -30,7 +36,7 @@ export function useHistoryPage<T extends Item>(action:'agentHistory.sessions'|'a
     }
     if(enabled)void pull();
     return()=>{stopped=true;if(controller.current===current)controller.current=undefined};
-  },[key,action,enabled]);
+  },[key,readPage,enabled]);
   const refresh=useCallback(async()=>{if(controller.current?.key===key)await controller.current.pull(false)},[key]);
   const more=useCallback(async()=>{if(controller.current?.key===key)await controller.current.pull(true)},[key]);
   return {...(state.key===key?state:{key,loading:enabled,error:''}),refresh,more};
@@ -50,7 +56,7 @@ export function useHistoryEvents(record:AgentHistoryRun){
       inFlight=(async()=>{try{
         let pages=0;
         do{
-          const result=await window.cbim.call('agentHistory.events',{workspaceId:record.workspaceId,agentId:record.agentId,sessionId:record.sessionId,taskId:record.taskId,runId:record.runId,cursor:projection.cursor,limit:200}) as AgentHistoryEventsRead;
+          const result=await window.cbim.call('agentHistory.events',{workspaceId:record.workspaceId,agentId:record.agentId,sessionId:record.sessionId,taskId:record.taskId,runId:record.runId,cursor:projection.cursor,limit:200});
           if(stopped||controller.current!==current)return;
           const previous=projection.cursor?.seq??0;
           let next:MemberEventState;

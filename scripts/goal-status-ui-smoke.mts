@@ -9,7 +9,7 @@ import {Application} from '../src/backend/main/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import {seedTeam} from '../tests/team-fixture';
-import {request} from '../tests/helpers';
+import {request} from '../tests/data/knowledge';
 import {goalCompleteArguments,goalPlanArguments,type GoalFixtureRequest} from '../tests/goal-provider-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 

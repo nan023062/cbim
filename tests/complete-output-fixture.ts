@@ -1,4 +1,4 @@
-import {runtimeTools} from './runtime-tools-fixture';
+import {runtimeToolGroup} from './runtime-tool-group';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {EngineContext} from '../src/backend/core/brain/types';
@@ -13,5 +13,5 @@ export async function completeFixture(work:Parameters<typeof manifestFixture>[0]
 }
 export async function prepareComplete(c:EngineContext,json=true){await seedProgress(c);const captured=await invoke(c,'cbim_task_manifest_capture','capture',{expectedTaskProgressVersion:1}),manifestId=captured.manifest.manifestId as string;if(json)await invoke(c,'cbim_validation_run','validation',{moduleId:manifestContracts[0].moduleId,requirementId:'json',manifestId,expectedTaskProgressVersion:1});return manifestId}
 export async function completeStep(c:EngineContext,json=true){await invoke(c,'cbim_task_step','step',{expectedVersion:1,id:'verify',state:'reported_done',evidenceIds:[json?'validation':'source-read']})}
-export async function rejected(c:EngineContext,name:string,id:string,input:Record<string,unknown>,code?:string){const decision=await c.beforeTool({name,id,input});if(!decision.allow)throw Error('Unexpected denied: '+decision.reason);const result=await (name==='cbim_validation_run'?runtimeTools(c).validationTools!.call(name,input,id):runtimeTools(c).taskTools!.call(name,input)).then(()=>{throw Error('Unexpected success')},error=>error);if(code&&result.code!==code)throw Error('Expected '+code+', got '+result.code+': '+result.message);await c.emit({type:'tool.finished',data:{name,id,isError:true,result:{content:[{type:'text',text:String(result.message)}]}}});return result}
+export async function rejected(c:EngineContext,name:string,id:string,input:Record<string,unknown>,code?:string){const decision=await c.beforeTool({name,id,input});if(!decision.allow)throw Error('Unexpected denied: '+decision.reason);const result=await (name==='cbim_validation_run'?runtimeToolGroup(c,'validation')!.call(name,input,id):runtimeToolGroup(c,'task-progress')!.call(name,input)).then(()=>{throw Error('Unexpected success')},error=>error);if(code&&result.code!==code)throw Error('Expected '+code+', got '+result.code+': '+result.message);await c.emit({type:'tool.finished',data:{name,id,isError:true,result:{content:[{type:'text',text:String(result.message)}]}}});return result}
 export const delivery=(manifestId:string)=>({expectedVersion:2,manifestId,summary:'完整范围当前匹配',limitations:[]});

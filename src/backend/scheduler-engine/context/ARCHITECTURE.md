@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/岗位责任、Workflow与规范。显式流程只从本模块挂载清单解析，准备按任务原选择重核，不回退默认或刷新旧绑定；前置替换保留原实例和流程；两种模式的主会话都可直接执行未配置自定义岗位的模块，不把主 Agent 派成独立成员。 KnowledgeQueries 只取快照读取端口，组合 Team/BusinessWorkspace；跨查询一致性由准备用例核版本，索引写入留在知识领域。 执行上下文同时冻结负责岗位、项目适配、采纳能力与模型身份，主模型不会替换成员配置。
+内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/岗位责任、Workflow与规范。显式流程只从本模块挂载清单解析，准备按任务原选择重核，不回退默认或刷新旧绑定；前置替换保留原实例和流程；两种模式的主会话都可直接执行未配置自定义岗位的模块，不把主 Agent 派成独立成员。 team-workflow 只向知识查询转发 snapshot，查询不取得工作区写能力。 team-workflow 调用 Core KnowledgeQueries，后者只取快照读取端口并组合 Team/BusinessWorkspace；跨查询一致性由准备用例核版本，索引写入留在知识领域。 执行上下文同时冻结负责岗位、项目适配、采纳能力与模型身份，主模型不会替换成员配置。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -13,7 +13,6 @@
 | [automatic-context.ts](automatic-context.ts) | 解析自动模式的隐式全项目范围，复用真实模块的 Workflow 与知识边界。 |
 | [dispatch-context.ts](dispatch-context.ts) | 解析主会话内置身份，以及正式派发所需的角色知识与多模块绑定。 |
 | [execution-context.ts](execution-context.ts) | 为已派发成员任务冻结完整执行知识和各模块可选 Workflow 程序约定，并在启动、恢复或未启动依赖替换前复核基线。 |
-| [knowledge-queries.ts](knowledge-queries.ts) | 调度层知识查询编排，为内部工具与任务准备组合团队和业务工作区领域视图。 |
 | [team-workflow.ts](team-workflow.ts) | 调度引擎：将明确选择的模块、叶子 Agent 和本模块 Workflow 装配为执行任务。 |
 
 ## 架构类图
@@ -42,7 +41,7 @@ class N_src_backend_scheduler_engine_context_dispatch_context_ts["dispatch-conte
 }
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/snapshot.ts](../../core/knowledge/snapshot.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/team/model.ts](../../core/team/model.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/read-models.ts](../../core/knowledge/read-models.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)。
 
 ### execution-context.ts
 
@@ -68,26 +67,7 @@ class N_src_backend_scheduler_engine_context_execution_context_ts_DispatchKnowle
 N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_scheduler_engine_context_execution_context_ts_DispatchKnowledgeWorkspace : 声明
 ```
 
-直接依赖：[automatic-context.ts](automatic-context.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/snapshot.ts](../../core/knowledge/snapshot.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[dispatch-context.ts](dispatch-context.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)。
-
-### knowledge-queries.ts
-
-```mermaid
-classDiagram
-class N_src_backend_scheduler_engine_context_knowledge_queries_ts["knowledge-queries.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_context_knowledge_queries_ts_KnowledgeQueries["KnowledgeQueries"] {
-  +modules()
-  +module()
-  +agents()
-  +agent()
-  -workspace
-}
-N_src_backend_scheduler_engine_context_knowledge_queries_ts ..> N_src_backend_scheduler_engine_context_knowledge_queries_ts_KnowledgeQueries : 声明
-```
-
-直接依赖：[../../core/knowledge/snapshot.ts](../../core/knowledge/snapshot.ts)、[../../core/team/model.ts](../../core/team/model.ts)、[../../core/workspace/model.ts](../../core/workspace/model.ts)。
+直接依赖：[automatic-context.ts](automatic-context.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/read-models.ts](../../core/knowledge/read-models.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[dispatch-context.ts](dispatch-context.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)。
 
 ### team-workflow.ts
 
@@ -112,7 +92,7 @@ class N_src_backend_scheduler_engine_context_team_workflow_ts_TeamTaskInput["Tea
 N_src_backend_scheduler_engine_context_team_workflow_ts ..> N_src_backend_scheduler_engine_context_team_workflow_ts_TeamTaskInput : 声明
 ```
 
-直接依赖：[knowledge-queries.ts](knowledge-queries.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/brain/index.ts](../../core/brain/index.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)。
+直接依赖：[../../core/knowledge/knowledge-queries.ts](../../core/knowledge/knowledge-queries.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/brain/index.ts](../../core/brain/index.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)。
 
 ### 本目录调用边界
 
@@ -127,16 +107,9 @@ class N_src_backend_scheduler_engine_context_dispatch_context_ts["dispatch-conte
 class N_src_backend_scheduler_engine_context_execution_context_ts["execution-context.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_context_team_workflow_ts["team-workflow.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_context_knowledge_queries_ts["knowledge-queries.ts"] {
-  <<module>>
-}
 N_src_backend_scheduler_engine_context_automatic_context_ts ..> N_src_backend_scheduler_engine_context_dispatch_context_ts : 导入依赖
 N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_scheduler_engine_context_automatic_context_ts : 导入依赖
 N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_scheduler_engine_context_dispatch_context_ts : 导入依赖
-N_src_backend_scheduler_engine_context_team_workflow_ts ..> N_src_backend_scheduler_engine_context_knowledge_queries_ts : 导入依赖
 ```
 
 

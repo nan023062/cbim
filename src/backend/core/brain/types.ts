@@ -52,12 +52,8 @@ export interface EngineContext {
   conversationBinding?:ConversationAgentBinding;
   /** 仅可信接续入口存在；成员结果是资料，显式用户补充保持用户消息，不混淆授权。 */
   source?:RunInputSource;
-  /** 由可信运行时装配的能力目录；键只供装配定位，适配器统一枚举 list/call，不认识具体业务类。 */
-  tools?:Readonly<Record<string,import('./engine-tool-port').RuntimeToolsPort>>;
-  /** 冻结范围执行禁用全部原生文件/命令工具；不能因未注册某个业务工具而回退放行。 */
-  nativeTools?:'disabled';
-  /** 已装配能力的可信使用说明；正文不授予权限，调用仍经 beforeTool 与原日志。 */
-  capabilityInstructions?:readonly string[];
+  /** 可信装配提供的工具能力；引擎只消费目录、调用与通用策略，不认识具体业务类。 */
+  capabilities?:readonly import('./engine-tools').EngineCapability[];
   /** 可信续执行的完整冻结证明复核，Pi 在载入前及载入后配置前调用；同时核实文件、知识、日志和原生指纹。 */
   assertMemberResume?():Promise<void>;
   /** 返回前完成持久化；失败必须停止依赖这份证据的操作。 */

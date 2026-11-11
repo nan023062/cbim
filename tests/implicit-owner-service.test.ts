@@ -1,5 +1,6 @@
 import {expect,it} from 'vitest';
-import {fixture,moduleFiles,summary,request} from './helpers';
+import {fixture} from './helpers';
+import {moduleFiles,summary,request} from './data/knowledge';
 import {seedOwnerExecution} from './owner-execution-fixture';
 import {commitModuleOwnership,moduleOwnershipChange} from './module-ownership-fixture';
 import {ownerExecutionSelectionFor} from '../src/backend/core/team/member-execution-binding';

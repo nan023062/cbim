@@ -12,7 +12,7 @@ import {seedTeam} from '../tests/team-fixture';
 import {registerExplicitFixtureOwner} from '../tests/explicit-owner-fixture';
 import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import {goalCompleteArguments,goalPlanArguments} from '../tests/goal-provider-fixture';
-import {request} from '../tests/helpers';
+import {request} from '../tests/data/knowledge';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Real packaged Electron and native Pi; only provider responses are deterministic localhost SSE.

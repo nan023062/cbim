@@ -11,7 +11,7 @@ describe('desktop upgrade acceptance inputs', () => {
   });
   it('preserves the earlier two-step flow and rejects unsupported future previous versions', () => {
     expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.1'}).previousUpdateFlow).toBe('two-step');
-    expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.8',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.7'})).toThrow();
+    expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.9',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.8'})).toThrow();
   });
   it.each(['candidate', 'online'])('uses the unchanged automatic updater from the actual 0.1.4 release in %s mode', mode => {
     expect(acceptanceInputs({...env, CBIM_ACCEPTANCE_VERSION:'0.1.5', CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.4', CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({version:'0.1.5',previousVersion:'0.1.4',previousUpdateFlow:'automatic',mode});
@@ -32,3 +32,4 @@ describe('desktop upgrade acceptance inputs', () => {
 });
 
 it.each(['candidate','online'])('supports actual 0.1.6 automatic updater in %s mode',mode=>{expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.7',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.6',CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({previousVersion:'0.1.6',previousUpdateFlow:'automatic',mode})});
+it.each(['candidate','online'])('supports the unchanged 0.1.7 updater for the aligned 0.1.8 candidate in %s mode',mode=>{expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.8',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.7',CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({version:'0.1.8',previousVersion:'0.1.7',previousUpdateFlow:'automatic',mode})});

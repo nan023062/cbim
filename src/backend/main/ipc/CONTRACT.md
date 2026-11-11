@@ -108,15 +108,17 @@ dispatch.manifestReport 必须明确 workspace/root/task/run；省略 manifestId
 ## 原隔离执行核实与清理
 
 dispatch.isolatedExecutionReport显式读取原运行，dispatch.isolatedExecutionCleanup显式提交当前instanceId及原执行/basis/commandId；不允许renderer传入路径、PID、profile或运行脚本。
+## 全量关联 IPC 分派
 
-### 主 Agent 设置入口
+`dispatch.ts` 仅识别和组合已登记操作，161 项应用入口按历史、设置、自动化及既有业务分组；其它 11 项原生操作留在 Electron main.ts。`request.ts` 先执行既有关闭门禁，再按共享 Schema 解析，保留受理前领域错误码。服务调用后的异常不经解析错误转换；失败不自动重试。退役 loop.start 在取服务及选模型前继续拒绝，未知或原型属性名称返回 ACTION。
 
-agent.mainSettings 与 agent.configureMain 接受当前工作区和实例，后者携带已读 revision 与完整 AgentModelSelection。配置保存只改变工作区 cbim:main 的后续选型，不启动运行、派发岗位或修改已受理队列；服务拒绝失效身份、旧版本及不兼容模型。
+队列插入仅缺少或无效的 `expectedRunId` 时，结构拒绝仍返回 `QUEUE_INSERT_STALE`；不取得执行服务、不补成当前运行，原队列项保留。历史派发的缺省 `scopeId` 则交给服务先查原回执，新派发继续以 `DISPATCH_SCOPE_REQUIRED` 拒绝。
 
-### 模型动作的独立路由
+每个处理器实际参数和返回受对应 `IpcHandlers` 约束。登记、责任、治理与处置只由本机闭包提供 actor，客户端不能发送授权来源。查询只取得当前工作区原服务，不隐式打开工作区或恢复执行。governance 命令按实际 action 核实回执；通用 receipt 仍是不同种类或 undefined，消费者必须分别判断。
 
-model-actions.ts 按公开请求 Schema 解析原始输入，有类型 handler 表约束结果，委托唯一模型存储及主 Agent 设置服务。通用 dispatcher 只识别这一组精确动作；停止、主 Frame、工作区实例、revision 和配置兼容校验保留。旧动作继续原路由，不新增执行或凭据读取入口。
+角色历史由 `agent-history.ts` 的最小端口装配，与其它组共用统一解析；端口没有索引写入、运行、恢复或生命周期能力。领域身份/路径/游标核验不被桥类型取代，查询失败不折算为空历史。
 
-## 自动化固定协议
 
-六项 automation 动作独立类型映射，Main 先严格 Schema、当前 workspaceId/instanceId，再检查定义 revision。list/catalog 只读，save 仅保存未来配置，run 显式运行；toggle/remove 停未来计划及当前执行。请求不接任务身份、路径、凭据或内部启动回调；应用停止/实例退役不接受新请求。
+### 0.1.7 功能接入完整映射
+
+自动化六项请求先由共享严格 Schema 解析，再只投影 workspaceId/instanceId 交给原服务核实代际；定义、修订和命令仍由同一调度器校验。agent.mainSettings/configureMain 使用 model-actions.ts 的唯一协议；修改主配置沿既有关闭门禁，不增加旁路路由。

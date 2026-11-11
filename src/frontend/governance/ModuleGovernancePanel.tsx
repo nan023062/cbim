@@ -2,7 +2,10 @@
  * 作用定位：业务架构节点的模块知识治理面板，展示真实观察、精确提案与反馈来源、独立人工决定及实施结果。
  * 设计原因：观察基线固定到正文和知识版本；批准与写入分开，面板刷新不覆盖草稿，未知请求只能查原回执，避免将旧批准用于新内容。
  * 职责边界：只经可信 IPC 操作知识治理，不启动模型或业务任务；本机点击不冒充认证身份，结构验证不等于架构语义和业务验收。
+ * IPC 操作名从已冻结的治理动作联合形成，不扩展为任意字符串；未知结果继续查询原命令。
+ * IPC 边界：操作联合与表单请求经对应Schema配对，原命令回执控制器不变。
  */
+import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {
@@ -81,7 +84,7 @@ export function ModuleGovernancePanel({identity,moduleId,onClose,onApplied}:Prop
       store.save(original);setPending(original);
       // 只处理首次 RPC 明确预受理拒绝；接收回执/刷新发生错误时不能借相同错误码清除记录。
       let result:unknown;
-      try{result=await window.cbim.call(`governance.${action}` as const,request)}catch(cause){if(alive.current&&isFirstGovernanceRejection(cause)){store.remove(original);setPending(undefined)}throw cause}
+      try{result=await window.cbim.call(...checkedIpcCall(`governance.${action}`,request))}catch(cause){if(alive.current&&isFirstGovernanceRejection(cause)){store.remove(original);setPending(undefined)}throw cause}
       await accept(result,original);
     });
   }

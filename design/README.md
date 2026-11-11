@@ -8,11 +8,8 @@
 | --- | --- |
 | [GitHub Issues](https://github.com/nan023062/cbim/issues) | 当前开发清单；读取正文、最新讨论、依赖、负责人及关联 PR，按用户范围选择工作 |
 | [开发记录](development-log.md) | 已实施步骤的范围、验证证据、限制和交接；历史“下一步”不自动成为新任务 |
-| [收尾快照（2026-11-08）](development-closeout-20261108.md) | 截至 Step55 的交付与验证边界，不代表当前待办 |
-| [Cindy + Git 岗位开发管线](cindy-development-pipeline.md) | 产品反馈、工单交接、CI、人工合并与软件更新日志的设计 |
-| [GitHub OAuth 配置与线上验收](task/github-feedback-setup.md) | OAuth、固定反馈仓库与实际验收方法 |
-| [正式桌面发布与更新](task/desktop-release.md) | updater、Windows 安装包与真实升级验收 |
-| [验证报告](verification/) | 历次执行证据；历史通过不等于本次重跑 |
+| [文档 1：通用项目架构设计规范与原则](project-architecture-standard.md) | 设计与开发的强制约束：十二条原则、依赖、契约及维护交付 |
+| [文档 2：架构治理规范与治理流程](architecture-governance-process.md) | 治理的标准流程、分级、迁移与验收；附 CBIM G01–G09 方案基线，不维护实时进度 |
 | [四份概念设计](../README.md#设计文档) | `docs/` 仅保留 01–04，说明理念与目标流程 |
 | [源码整体架构](../src/ARCHITECTURE.md) | 当前模块边界、依赖与数据流，须结合实际源码核实 |
 
@@ -27,11 +24,15 @@
 | 源码注释、类图与维护者认知交接 | [architecture-maintenance](../.agents/skills/architecture-maintenance/SKILL.md) | [入口](../.claude/skills/architecture-maintenance/SKILL.md) | [入口](../.codex/skills/architecture-maintenance/SKILL.md) |
 | 冻结制品、CI、签名与真实安装升级验收 | [cbim-release](../.agents/skills/cbim-release/SKILL.md) | [入口](../.claude/skills/cbim-release/SKILL.md) | [入口](../.codex/skills/cbim-release/SKILL.md) |
 
+强制关系：`cbim-development` 必须读取并遵守文档 1；项目架构治理入口 `architecture-evolution` 必须读取并遵守文档 1，并按文档 2 的 S1–S7 流程执行；`architecture-maintenance` 遵守文档 1，并在治理中承接文档 2 的资料与认知交付。两份规范只维护一份正文，Skill 引用同一来源，不属于产品内置业务 Skill 的自动改写。
+
 每项的三个入口及引用资料保持一致。只读评估不自动重构；已授权开发不重复请求逐步批准。源码改动同步维护受影响注释、`CONTRACT.md` 和目录类图，并提供完整 diff、调用链阅读顺序与下次修改入口，功能验收不能替代代码 review。
 
 日常按 [受影响单元验证规则](../AGENTS.md#日常验证范围) 选择测试，通过后记录并收尾；全量回归由后续 PR 自动化执行，制品验收留给集成／发布阶段。记录选取理由、实际命令与结果以及未运行范围，历史全量／桌面报告不是下一步必跑清单。纯文档与 Skill 修改只核对事实、格式、引用与多入口一致性。
 
 ## 状态与历史证据
+
+本轮维护记录：[0.1.7 基线对齐与 0.1.8 候选验收](verification/desktop-018-alignment-20261111.md)。此前 [0.1.5 全量回归与本地制品报告](verification/full-acceptance-20261111.md) 保留为历史，不代表当前候选或 0.1.7 升级已通过。
 
 当前工作在 Issues 中表达待开发、开发中、部分完成、待验证、完成或受阻，使用仓库实际支持的字段、标签或评论，不假定已有某套状态机。结果未知、验证失败或外部回填未成功时明确说明，不能标成完成。没有关联 Issue 的用户直接维护请求如实记录，不虚构编号或擅自创建工单。
 

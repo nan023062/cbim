@@ -232,11 +232,11 @@ Pi 主角色提示与上层真实工具保持一致：未配置自定义负责�
 
 ### 冻结 JSON/CSV/PNG 验证工具接入
 
-`cbim_validation_run` 仅在本轮实际 `EngineContext.validationTools` 存在时注册，经同一 `/gate` 与一次性 `/call` 传递真实调用 ID。主运行、无验证要求或缺平台能力的运行不会得到此工具；不存在按名字临时创建能力的分支。提示明确路径和 Schema 来自冻结要求，`rejected` 与工具调用失败不同，工具成功也不等于结构通过，更不构成业务或人工验收。
+`cbim_validation_run` 仅在本轮实际 `EngineContext.capabilities` 中的 `validation` 能力 存在时注册，经同一 `/gate` 与一次性 `/call` 传递真实调用 ID。主运行、无验证要求或缺平台能力的运行不会得到此工具；不存在按名字临时创建能力的分支。提示明确路径和 Schema 来自冻结要求，`rejected` 与工具调用失败不同，工具成功也不等于结构通过，更不构成业务或人工验收。
 
 ### 成员文件基线工具接入
 
-Pi 仅在可信 `EngineContext.artifactTools` 存在时注册采集工具，并经既有 `/gate`、一次性 `/call` 许可透传原生 toolCallId。采集结果沿标准工具完成事件进入 canonical 日志，不能由工具名、模型正文或独立桥接事件自行签发基线。主调度没有此端口；没有新增路径、命令或恢复权限。
+Pi 仅在可信 `EngineContext.capabilities` 中的 `artifacts` 能力 存在时注册采集工具，并经既有 `/gate`、一次性 `/call` 许可透传原生 toolCallId。采集结果沿标准工具完成事件进入 canonical 日志，不能由工具名、模型正文或独立桥接事件自行签发基线。主调度没有此端口；没有新增路径、命令或恢复权限。
 
 `memberCheckpointTools` 同样只按实际端口注册，透传可信调用 ID；指引明确一次 checkpoint/一次 resume，以及命令、动态目录、额外知识查询或未知操作不属于当前可恢复白名单。暂存后正常结束而非发送 abort；引擎不自行发布 checkpointed 或释放调度占用。
 
@@ -273,7 +273,7 @@ class EngineContext {
   <<core interface>>
   +nativeSessionId
   +memberBinding
-  +memberHelpTools
+  +capabilities
   +sessionFile
   +emit(event)
   +beforeTool(call)
@@ -288,7 +288,7 @@ PiEngine ..> PiRpc : 启动和停止子进程
 
 ### 成员求助工具接入
 
-Pi 的工具桥合并知识、执行进度及当前成员专属求助工具；后者仅在 `EngineContext.memberHelpTools` 存在时注册。调用透传真实 `toolCallId`，复用 `/gate` 与 `/call` 一次性授权，不创建第二套权限通道。成员指引要求先核实已结束的操作，求助暂存后立即结束本轮；不允许继续调用工具或把求助当成成功交付。主调度仍通过可信 custom 回传接收求助数据，正文不升格为用户授权。
+Pi 的工具桥合并知识、执行进度及当前成员专属求助工具；后者仅在 `EngineContext.capabilities` 中的 `member-help` 能力 存在时注册。调用透传真实 `toolCallId`，复用 `/gate` 与 `/call` 一次性授权，不创建第二套权限通道。成员指引要求先核实已结束的操作，求助暂存后立即结束本轮；不允许继续调用工具或把求助当成成功交付。主调度仍通过可信 custom 回传接收求助数据，正文不升格为用户授权。
 ### 原生工具能力与执行约定
 
 Pi 的 `--tools` 参数使用 `core/tools/native-tools.ts` 的同一注册表。只读模式仅提供 read/grep/find/ls，ask/execute 才提供 write/edit/bash；可提供不等于某次调用已批准。成员启动前的 Workflow 能力检查读取相同清单，不能从模型提示词或声明推断能力。
@@ -311,11 +311,11 @@ Pi 仅发现正式成员实际装配的受控写工具，桥保留原 toolCallId
 
 ## R07-A 完整产物清单运行与复核
 
-Pi 只从 EngineContext.manifestTools 注册完整采集及本轮查询，与旧选定文件工具独立；真实 toolCallId 透传，仍经过逐请求预算及 beforeTool。主会话、无冻结范围或缺真实端口不获得清单工具。
+Pi 只从 EngineContext.capabilities 的 manifests 能力 注册完整采集及本轮查询，与旧选定文件工具独立；真实 toolCallId 透传，仍经过逐请求预算及 beforeTool。主会话、无冻结范围或缺真实端口不获得清单工具。
 
 ## R07-B2 原删除与移动证明
 
-EngineContext.artifactTransitionTools 只在冻结要求和真实端口齐备时注册。Pi 沿现有 gate/call 将原 toolCallId、参数和取消信号转入可信运行；不发 shell 替代，不把原生 write/edit 或模型正文升级为操作证明。工具失败后允许范围由 Runtime 屏障控制。
+EngineContext.capabilities 的 artifact-transitions 能力 只在冻结要求和真实端口齐备时注册。Pi 沿现有 gate/call 将原 toolCallId、参数和取消信号转入可信运行；不发 shell 替代，不把原生 write/edit 或模型正文升级为操作证明。工具失败后允许范围由 Runtime 屏障控制。
 
 引擎提示同一工具可检查 JSON 结构或 CSV 表头、类型、行数与唯一键，实际种类取自冻结要求。模型只明确选择 baselineId 或 manifestId，不传表格正文、列规则或通过结论；CSV 复用原 gate/call 身份与取消边界。
 
@@ -323,7 +323,7 @@ PNG继续复用cbim_validation_run及同一gate/call身份。提示明确实际�
 
 ## 冻结范围成员执行
 
-EngineContext.scopedExecutionTools 存在时 --tools 仅含 cbim_*，全部原生文件与命令未注册；即使伪造名称也不能通过Runtime。范围工具携原callId与AbortSignal，不通过自定义shell执行。
+可信 capabilities 中存在 disableNativeTools 策略时 --tools 仅含 cbim_*，全部原生文件与命令未注册；即使伪造名称也不能通过Runtime。范围工具携原callId与AbortSignal，不通过自定义shell执行。
 
 ### 共享业务能力
 
@@ -331,4 +331,4 @@ EngineContext.scopedExecutionTools 存在时 --tools 仅含 cbim_*，全部原�
 
 ### 通用能力注入
 
-工具从 EngineContext.tools 的通用目录注册；nativeTools=disabled 时关闭全部原生文件和命令，不依赖某个业务工具槽位。业务指引作为可信装配说明传入，授权、原调用身份、结果保存与停止顺序保持原协议。
+工具从 EngineContext.capabilities 的通用工具目录注册；可信能力 disableNativeTools=true 时关闭全部原生文件和命令，不依赖某个业务工具槽位。业务指引作为可信装配说明传入，授权、原调用身份、结果保存与停止顺序保持原协议。

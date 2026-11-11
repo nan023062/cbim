@@ -2,7 +2,10 @@
  * 作用定位：在链接器页按明确工作区登记仓库身份、独立授予主 Agent 只读连接并查看真实 HTTP 核验摘要。
  * 设计原因：知识声明不能代替运行授权；每次操作固定目标与版本，异步结果仅交回原视图。写命令未知时保留原请求核实，不自动重试或换目标。
  * 职责边界：不启动共享、不展示密钥、不执行资源内容，也不把桌面核验宣称为 Agent 已调用。
+ * 提交操作名由已保存的连接动作形成，失败与未知仍沿原回执流程处理。
+ * IPC 边界：连接提交与回执查询按具体Schema形成操作元组。
  */
+import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useEffect,useRef,useState} from 'react';
 import type {WorkspaceView,Snapshot} from '../../bridge/contracts/workspace';
 import type {RepositoryStatus} from '../../bridge/contracts/resources';
@@ -82,7 +85,7 @@ export function RepositoryConnections({onSettings}:{onSettings:()=>void}){
     await perform(async token=>{
       const existed=store.read(request.input.workspaceId);store.save(request);setChecks({});setPending(request);setNotice('');
       let receipt:unknown;
-      try{receipt=await window.cbim.call(`resources.connection.${request.action}` as const,request.input)}
+      try{receipt=await window.cbim.call(...checkedIpcCall(`resources.connection.${request.action}`,request.input))}
       catch(cause){if(!existed&&isRepositoryConnectionPreflightRejection(request.action,cause)){store.remove(request);if(current(token)){setPending(undefined);if(request.action==='commit')setPreview(undefined)}}throw cause}
       await accepted(receipt,request,token);
     });
@@ -95,7 +98,7 @@ export function RepositoryConnections({onSettings}:{onSettings:()=>void}){
   async function inspectPending(){
     if(!pending)return;const frozen=pending;
     await perform(async token=>{
-      const receipt:unknown=await window.cbim.call(frozen.action==='commit'?'resources.connection.commitReceipt':'resources.connection.receipt',frozen.action==='commit'?{workspaceId:frozen.input.workspaceId,planId:frozen.input.planId}:{workspaceId:frozen.input.workspaceId,commandId:frozen.input.commandId});
+      const receipt:unknown=await window.cbim.call(...checkedIpcCall(frozen.action==='commit'?'resources.connection.commitReceipt':'resources.connection.receipt',frozen.action==='commit'?{workspaceId:frozen.input.workspaceId,planId:frozen.input.planId}:{workspaceId:frozen.input.workspaceId,commandId:frozen.input.commandId}));
       if(receipt)await accepted(receipt,frozen,token);
       else if(current(token))setError('尚未查到原命令回执。可重试原请求；不会创建新的授权命令。');
     });

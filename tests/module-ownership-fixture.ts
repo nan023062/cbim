@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import type {Application} from '../src/backend/main/application';
 import type {RunSummary} from '../src/backend/core/brain/types';
 import {seedWorkspaceMembers,commitWorkspaceMember,workspaceMemberFixture} from './workspace-member-fixture';
-import {moduleFiles,summary} from './helpers';
+import {moduleFiles,summary} from './data/knowledge';
 import {moduleOwnershipDetailSchema,moduleOwnershipPreviewSchema,moduleOwnershipReceiptSchema,type ModuleOwnershipChangeInput} from '../src/backend/core/workspace/module-ownership';
 export {workspaceMemberHttpProbe as moduleOwnershipHttpProbe,workspaceMemberKnowledgeEvidence as moduleOwnershipKnowledgeEvidence,workspaceMemberRuntimeEvidence as moduleOwnershipRuntimeEvidence,workspaceMemberRunFiles as moduleOwnershipRunFiles} from './workspace-member-fixture';
 export {workflowConditionRecords as moduleOwnershipRunRecords,workflowConditionLogBytes as moduleOwnershipLogBytes} from './workflow-condition-fixture';

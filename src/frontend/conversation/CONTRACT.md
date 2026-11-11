@@ -143,3 +143,6 @@ unknown 提示不再提供勾选ID解锁旧native的入口。普通无未决工�
 ## 全量 IPC 契约衔接
 
 会话发送捕获原 taskId/runId，缺少续接身份明确拒绝；审批使用审批快照自身 taskId。动态队列输入按对应操作 Schema 解析，不能借宽操作联合混用字段或补猜 expectedRunId。
+## 每轮最终反馈
+
+ConversationTurn 保留真实助手正文，在终态缺少正文时用独立的“本轮反馈（运行记录）”区域展示 completionFeedback；它明确区分 Agent 的交付声明与程序生成的缺失提示，不伪装成模型消息。状态栏继续只作辅助，正在运行不提前总结。

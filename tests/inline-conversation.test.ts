@@ -6,6 +6,7 @@ import {inlineDependencies,inlineDispatchedTask,inlineHandoffTasks} from '../src
 import {ToolActivity} from '../src/frontend/tasks/ToolActivity';
 import {MemberActivityCard} from '../src/frontend/tasks/MemberActivity';
 import {WorkStatus} from '../src/frontend/execution-view/WorkStatus';
+import {ConversationTurn} from '../src/frontend/conversation/ConversationTurn';
 import {inlineMainRuns} from './inline-conversation-fixture';
 import {progressFixture} from './conversation-progress-fixture';
 
@@ -69,4 +70,11 @@ it('单工具模式保留失败证据与原核实入口，状态尾行不重复�
   const run=inlineMainRuns(2)[0],html=renderToStaticMarkup(createElement(ToolActivity,{run,toolCallId:'dispatch-member-1'}));
   expect(html).toContain('data-tool-call-id="dispatch-member-1"');expect(html).not.toContain('data-tool-call-id="dispatch-member-2"');expect(html).toContain('原命令');
   const footer=renderToStaticMarkup(createElement(WorkStatus,{run,now:0,inline:true}));expect(footer).toContain('本轮结束');expect(footer).not.toContain('<details');expect(footer).not.toContain('data-tool-call-id');
+});
+
+it('没有最终正文的已结束主对话在流中显示记录反馈，运行中不提前展示',()=>{
+  const run=inlineMainRuns(0)[0];run.events=[run.events[0]];run.status='completed';
+  const render=()=>renderToStaticMarkup(createElement(ConversationTurn,{run,workspaceId:run.task.workspaceId,now:0,recovery:{state:{}} as any,active:false,onSelectTask:()=>{}}));
+  expect(render()).toContain('aria-label="本轮反馈（运行记录）"');expect(render()).toContain('未记录 Agent 的最终反馈');
+  run.status='running';expect(render()).not.toContain('aria-label="本轮反馈（运行记录）"');
 });

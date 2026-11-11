@@ -1,3 +1,10 @@
+## 2026-11-12：#41 对话最终反馈
+
+- [Issue #41](https://github.com/nan023062/cbim/issues/41)，修复空完整消息擦除流式正文，保留反馈提交后的真实最终答复。主提示与两项反馈流程同步为正文简短收尾，提交不等于开发完成，未知操作不重放。
+- ConversationTurn 通过共享纯投影读取本轮交付声明及限制；没有声明也没有最终正文时，在流中明确显示缺失事实、工具数量和核实建议。提示标为运行记录，不冒充 Agent 消息，不读旧轮继承交付，不修改持久日志、不额外调用模型；运行中不提前总结。
+- 因实际消费者涉及对话、反馈工具和主提示，执行 `pnpm exec vitest run tests/conversation.test.ts tests/inline-conversation.test.ts tests/github-feedback-tools.test.ts tests/github-feedback-pi.test.ts tests/agent-role-instructions.test.ts --reporter=default --reporter=json --outputFile=test-results/issue-batch-20261112/41-tests.json`：5 文件 36 项通过，含真实 Pi、本机确定性反馈服务及渲染验证。`pnpm typecheck`、`pnpm check:architecture` 通过，0 循环/违规。
+- 同步三处源码注释/契约/类图及两项产品运行文档。阅读入口：mainInstructions → transcript/completionFeedback → ConversationTurn；后续完整 CI 与打包界面验收未运行，未合并发布，未宣称人审通过。
+
 ## 2026-11-12：#38 手动终端中文编码
 
 - [Issue #38](https://github.com/nan023062/cbim/issues/38)，仅修改 Main 平台终端适配器：子 PowerShell 的 Console 输入/输出与 OutputEncoding 统一 UTF-8，stdout/stderr 独立持续解码，保持工作区、页签和进程所有权。未改变机器全局编码或 Agent 执行策略。

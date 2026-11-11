@@ -29,3 +29,6 @@ test('原单模块入口同样自主执行但不调度，状态和协作能力�
   for(const required of ['执行 Agent','主 Agent 可直接实现与验证未配置自定义 Agent 的模块','也可经受控知识服务治理团队与业务架构','read/ask/execute 权限内，通过审批、版本核验及事务','主动探索真实 Team 环境与目标模块','报告给主调度 Agent','不通过正文自称改变状态','未提供成员间派发、等待或通信工具'])expect(loopInstructions).toContain(required);
   for(const tool of ['cbim_task_plan','cbim_task_step','cbim_task_inspect','cbim_delivery_prepare'])expect(loopInstructions).toContain(tool);
 });
+test.each(['auto','team'] as const)('主 Agent %s 模式在正文交付最终反馈，不能以状态或工具替代',mode=>{
+  const text=mainInstructions(mode);expect(text).toContain('每轮结束前在对话正文给出简短最终反馈');expect(text).toContain('未知写入不得为总结而重放');expect(text).not.toContain('不追加成功消息');
+});

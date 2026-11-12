@@ -32,7 +32,7 @@
 
 ## 状态与历史证据
 
-本轮正式发布：[0.1.8 公开发布与在线升级验收](verification/desktop-release-0.1.8-20261112.md)。
+本轮正式发布：[0.1.15 分层更新与真实在线升级验收](verification/desktop-release-0.1.15-20261112.md)。此前 [0.1.8 发布验收](verification/desktop-release-0.1.8-20261112.md) 保留为历史证据。
 
 候选阶段维护记录：[0.1.7 基线对齐与 0.1.8 候选验收](verification/desktop-018-alignment-20261111.md)。此前 [0.1.5 全量回归与本地制品报告](verification/full-acceptance-20261111.md) 保留为历史，不代表当前候选或 0.1.7 升级已通过。
 

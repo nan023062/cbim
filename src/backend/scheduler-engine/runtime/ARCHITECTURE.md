@@ -12,7 +12,7 @@
 | --- | --- |
 | [global-runtime.ts](global-runtime.ts) | 维护整个应用的成员、派发任务、目标周期与实际 Loop 消耗索引，接收 main 的可靠提交；周期结算独立于模型轮次，成员运行不重复生成任务。 |
 | [member-events.ts](member-events.ts) | 将成员运行日志投影为可公开的连续事件流，并按 run 缓存首次恢复及后续已落盘增量。 |
-| [public-run-events.ts](public-run-events.ts) | 把主会话和成员运行事件转换为可展示的公开消息、工具状态、计划与证据摘要。 |
+| [public-run-events.ts](public-run-events.ts) | 将主/成员事件投影为公开消息和证据摘要；成员结果、人工决定与验收返工明确保留系统来源。 |
 
 ## 架构类图
 

@@ -10,8 +10,10 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [auto-collaboration.ts](auto-collaboration.ts) | 管理一次用户任务的调度周期，串接主 Agent 调度、执行成员和结果回传，周期结束后释放执行实例。 |
-| [dispatch-service.ts](dispatch-service.ts) | 工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。 |
+| [auto-collaboration.ts](auto-collaboration.ts) | 管理用户任务周期，串接主调度、成员回传、重启后可靠成果接收及最多三轮验收返工；未知事实或额度耗尽停止，可靠关闭后释放实例。 |
+| [automatic-return-service.ts](automatic-return-service.ts) | 持久保存主轮待回传批次，重启时核实可自动接收的已完成成员结果。 |
+| [dispatch-service.ts](dispatch-service.ts) | 工作区的成员注册、主对话实例绑定、主会话派发及任务图查询；重启仅保留通过完整核实的待回传周期，其余中断封存。 |
+| [goal-repair.ts](goal-repair.ts) | 调度层最终验收返工的分类、限次与系统反馈，复用原目标及主运行入口。 |
 | [owner-execution-service.ts](owner-execution-service.ts) | 在既有知识、模型和派发存储之间核实岗位执行绑定，为计划、派发、领取和依赖维护提供同一入口。 |
 
 ## 架构类图
@@ -57,6 +59,8 @@ class N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts_Cycle["Cycle
   +ending
   +closing
   +completionSummary
+  +options
+  +repairs
 }
 N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts ..> N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts_Cycle : 声明
 class N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts_Batch["Batch"] {
@@ -72,6 +76,9 @@ class N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts_Batch["Batch
   +failures
   +watched
   +admissions
+  +recorded
+  +restored
+  +repair
 }
 N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts ..> N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts_Batch : 声明
 ```
@@ -158,7 +165,30 @@ class N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts_AutoCollabor
 N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts ..> N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts_AutoCollaboration : 声明
 ```
 
-直接依赖：[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/tasks/member-checkpoint-chain.ts](../../core/tasks/member-checkpoint-chain.ts)、[../../core/tasks/member-checkpoint.ts](../../core/tasks/member-checkpoint.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/scope-continuation.ts](../../core/tasks/scope-continuation.ts)、[../../core/tasks/scope-continuation-attachments.ts](../../core/tasks/scope-continuation-attachments.ts)、[../../core/tasks/scope-active-input.ts](../../core/tasks/scope-active-input.ts)、[../../core/tasks/human-continue.ts](../../core/tasks/human-continue.ts)、[../../core/tasks/scope-recovery.ts](../../core/tasks/scope-recovery.ts)、[../../core/tasks/scope-replan.ts](../../core/tasks/scope-replan.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../tools/dispatch-tools.ts](../tools/dispatch-tools.ts)、[../tools/goal-tools.ts](../tools/goal-tools.ts)、[../tools/main-tool-contracts.ts](../tools/main-tool-contracts.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[dispatch-service.ts](dispatch-service.ts)、[../members/member-execution.ts](../members/member-execution.ts)、[../conversation/execution-manager.ts](../conversation/execution-manager.ts)、[../assembly/loop-engine.ts](../assembly/loop-engine.ts)、[../admission/workspace-lease.ts](../admission/workspace-lease.ts)、[../admission/admission-wait.ts](../admission/admission-wait.ts)、[../../core/tasks/checkpoint-handoff.ts](../../core/tasks/checkpoint-handoff.ts)、[../../core/models/engine.ts](../../core/models/engine.ts)。
+直接依赖：[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/tasks/member-checkpoint-chain.ts](../../core/tasks/member-checkpoint-chain.ts)、[../../core/tasks/member-checkpoint.ts](../../core/tasks/member-checkpoint.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/scope-continuation.ts](../../core/tasks/scope-continuation.ts)、[../../core/tasks/scope-continuation-attachments.ts](../../core/tasks/scope-continuation-attachments.ts)、[../../core/tasks/scope-active-input.ts](../../core/tasks/scope-active-input.ts)、[../../core/tasks/human-continue.ts](../../core/tasks/human-continue.ts)、[../../core/tasks/scope-recovery.ts](../../core/tasks/scope-recovery.ts)、[../../core/tasks/scope-replan.ts](../../core/tasks/scope-replan.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../tools/dispatch-tools.ts](../tools/dispatch-tools.ts)、[../tools/goal-tools.ts](../tools/goal-tools.ts)、[../tools/main-tool-contracts.ts](../tools/main-tool-contracts.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[dispatch-service.ts](dispatch-service.ts)、[../members/member-execution.ts](../members/member-execution.ts)、[../conversation/execution-manager.ts](../conversation/execution-manager.ts)、[../assembly/loop-engine.ts](../assembly/loop-engine.ts)、[../admission/workspace-lease.ts](../admission/workspace-lease.ts)、[../admission/admission-wait.ts](../admission/admission-wait.ts)、[../../core/tasks/checkpoint-handoff.ts](../../core/tasks/checkpoint-handoff.ts)、[../../core/execution/input-source.ts](../../core/execution/input-source.ts)、[goal-repair.ts](goal-repair.ts)、[../../core/models/engine.ts](../../core/models/engine.ts)。
+
+### automatic-return-service.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_dispatch_automatic_return_service_ts["automatic-return-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_dispatch_automatic_return_service_ts_AutomaticReturnService["AutomaticReturnService"] {
+  +record()
+  +inspect()
+  +scopes()
+  -owner
+  -store
+  -goals
+  -logs
+  -models
+  -modelHash()
+}
+N_src_backend_scheduler_engine_dispatch_automatic_return_service_ts ..> N_src_backend_scheduler_engine_dispatch_automatic_return_service_ts_AutomaticReturnService : 声明
+```
+
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/tasks/automatic-return.ts](../../core/tasks/automatic-return.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/dispatch/dispatch-storage.ts](../../core/dispatch/dispatch-storage.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../goals/scope-goal-service.ts](../goals/scope-goal-service.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)、[owner-execution-service.ts](owner-execution-service.ts)。
 
 ### dispatch-service.ts
 
@@ -176,6 +206,7 @@ class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts_DispatchWorksp
 N_src_backend_scheduler_engine_dispatch_dispatch_service_ts ..> N_src_backend_scheduler_engine_dispatch_dispatch_service_ts_DispatchWorkspace : 声明
 class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts_WorkspaceDispatchService["WorkspaceDispatchService"] {
   +goals
+  +automaticReturns
   +owners
   +continuations
   +activeInputs
@@ -190,7 +221,6 @@ class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts_WorkspaceDispa
   +ownerInspect()
   +commandReport()
   +cancelQueued()
-  +replaceQueuedDependency()
 }
 N_src_backend_scheduler_engine_dispatch_dispatch_service_ts ..> N_src_backend_scheduler_engine_dispatch_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
@@ -203,6 +233,7 @@ class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts["dispatch-serv
   <<module>>
 }
 class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts_WorkspaceDispatchService["WorkspaceDispatchService"] {
+  +replaceQueuedDependency()
   +addQueuedDependency()
   +reviseQueuedDependencies()
   +abandonCheckpoint()
@@ -218,7 +249,6 @@ class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts_WorkspaceDispa
   +conversationBinding()
   +createMember()
   +dispatchTask()
-  +snapshot()
 }
 N_src_backend_scheduler_engine_dispatch_dispatch_service_ts ..> N_src_backend_scheduler_engine_dispatch_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
@@ -231,6 +261,7 @@ class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts["dispatch-serv
   <<module>>
 }
 class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts_WorkspaceDispatchService["WorkspaceDispatchService"] {
+  +snapshot()
   +delta()
   +sessionRead()
   +close()
@@ -246,7 +277,6 @@ class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts_WorkspaceDispa
   -check()
   -parse()
   -graph()
-  -command()
 }
 N_src_backend_scheduler_engine_dispatch_dispatch_service_ts ..> N_src_backend_scheduler_engine_dispatch_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
@@ -259,6 +289,7 @@ class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts["dispatch-serv
   <<module>>
 }
 class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts_WorkspaceDispatchService["WorkspaceDispatchService"] {
+  -command()
   -batch()
   -cursor()
   -recheck()
@@ -266,7 +297,19 @@ class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts_WorkspaceDispa
 N_src_backend_scheduler_engine_dispatch_dispatch_service_ts ..> N_src_backend_scheduler_engine_dispatch_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
 
-直接依赖：[../context/automatic-context.ts](../context/automatic-context.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../goals/main-command-request.ts](../goals/main-command-request.ts)、[../evidence/command-verification-service.ts](../evidence/command-verification-service.ts)、[../evidence/effect-observation-service.ts](../evidence/effect-observation-service.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/execution/conversation-binding.ts](../../core/execution/conversation-binding.ts)、[../../core/dispatch/dispatch-storage.ts](../../core/dispatch/dispatch-storage.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/tasks/types.ts](../../core/tasks/types.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../goals/scope-goal-service.ts](../goals/scope-goal-service.ts)、[../goals/scope-continuation-service.ts](../goals/scope-continuation-service.ts)、[../goals/scope-active-input-service.ts](../goals/scope-active-input-service.ts)、[../goals/scope-recovery-service.ts](../goals/scope-recovery-service.ts)、[../goals/scope-replan-service.ts](../goals/scope-replan-service.ts)、[../goals/scope-human-decision-service.ts](../goals/scope-human-decision-service.ts)、[../goals/scope-human-continuation-service.ts](../goals/scope-human-continuation-service.ts)、[../goals/queued-task-cancel-service.ts](../goals/queued-task-cancel-service.ts)、[../goals/queued-dependency-replacement-service.ts](../goals/queued-dependency-replacement-service.ts)、[../goals/queued-dependency-addition-service.ts](../goals/queued-dependency-addition-service.ts)、[../goals/queued-dependency-revision-service.ts](../goals/queued-dependency-revision-service.ts)、[../../core/tasks/queued-dependency-revision.ts](../../core/tasks/queued-dependency-revision.ts)、[../members/checkpoint-abandonment-service.ts](../members/checkpoint-abandonment-service.ts)、[../members/member-checkpoint-verifier.ts](../members/member-checkpoint-verifier.ts)、[../members/member-pause-service.ts](../members/member-pause-service.ts)、[../../core/tasks/checkpoint-handoff.ts](../../core/tasks/checkpoint-handoff.ts)、[../../core/tasks/queued-dependency-addition.ts](../../core/tasks/queued-dependency-addition.ts)、[../../core/tasks/queued-dependency-replacement.ts](../../core/tasks/queued-dependency-replacement.ts)、[../../core/tasks/member-checkpoint.ts](../../core/tasks/member-checkpoint.ts)、[../budget/scope-usage-service.ts](../budget/scope-usage-service.ts)、[../budget/scope-budget-service.ts](../budget/scope-budget-service.ts)、[../../core/budget/scope-budget.ts](../../core/budget/scope-budget.ts)、[../../core/tasks/queued-task-cancel.ts](../../core/tasks/queued-task-cancel.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../context/dispatch-context.ts](../context/dispatch-context.ts)、[../members/agent-manager.ts](../members/agent-manager.ts)、[../../core/tasks/scope-view.ts](../../core/tasks/scope-view.ts)、[../../core/tasks/scope-run-tracking.ts](../../core/tasks/scope-run-tracking.ts)、[owner-execution-service.ts](owner-execution-service.ts)。
+直接依赖：[../context/automatic-context.ts](../context/automatic-context.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../goals/main-command-request.ts](../goals/main-command-request.ts)、[../evidence/command-verification-service.ts](../evidence/command-verification-service.ts)、[../evidence/effect-observation-service.ts](../evidence/effect-observation-service.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/execution/conversation-binding.ts](../../core/execution/conversation-binding.ts)、[../../core/dispatch/dispatch-storage.ts](../../core/dispatch/dispatch-storage.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/tasks/types.ts](../../core/tasks/types.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../goals/scope-goal-service.ts](../goals/scope-goal-service.ts)、[../goals/scope-continuation-service.ts](../goals/scope-continuation-service.ts)、[../goals/scope-active-input-service.ts](../goals/scope-active-input-service.ts)、[../goals/scope-recovery-service.ts](../goals/scope-recovery-service.ts)、[../goals/scope-replan-service.ts](../goals/scope-replan-service.ts)、[../goals/scope-human-decision-service.ts](../goals/scope-human-decision-service.ts)、[../goals/scope-human-continuation-service.ts](../goals/scope-human-continuation-service.ts)、[../goals/queued-task-cancel-service.ts](../goals/queued-task-cancel-service.ts)、[../goals/queued-dependency-replacement-service.ts](../goals/queued-dependency-replacement-service.ts)、[../goals/queued-dependency-addition-service.ts](../goals/queued-dependency-addition-service.ts)、[../goals/queued-dependency-revision-service.ts](../goals/queued-dependency-revision-service.ts)、[../../core/tasks/queued-dependency-revision.ts](../../core/tasks/queued-dependency-revision.ts)、[../members/checkpoint-abandonment-service.ts](../members/checkpoint-abandonment-service.ts)、[../members/member-checkpoint-verifier.ts](../members/member-checkpoint-verifier.ts)、[../members/member-pause-service.ts](../members/member-pause-service.ts)、[../../core/tasks/checkpoint-handoff.ts](../../core/tasks/checkpoint-handoff.ts)、[../../core/tasks/queued-dependency-addition.ts](../../core/tasks/queued-dependency-addition.ts)、[../../core/tasks/queued-dependency-replacement.ts](../../core/tasks/queued-dependency-replacement.ts)、[../../core/tasks/member-checkpoint.ts](../../core/tasks/member-checkpoint.ts)、[../budget/scope-usage-service.ts](../budget/scope-usage-service.ts)、[../budget/scope-budget-service.ts](../budget/scope-budget-service.ts)、[../../core/budget/scope-budget.ts](../../core/budget/scope-budget.ts)、[../../core/tasks/queued-task-cancel.ts](../../core/tasks/queued-task-cancel.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../context/dispatch-context.ts](../context/dispatch-context.ts)、[../members/agent-manager.ts](../members/agent-manager.ts)、[../../core/tasks/scope-view.ts](../../core/tasks/scope-view.ts)、[../../core/tasks/scope-run-tracking.ts](../../core/tasks/scope-run-tracking.ts)、[owner-execution-service.ts](owner-execution-service.ts)、[automatic-return-service.ts](automatic-return-service.ts)。
+
+### goal-repair.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_dispatch_goal_repair_ts["goal-repair.ts"] {
+  <<module>>
+  +goalRepairFeedback()
+}
+```
+
+直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/execution/input-source.ts](../../core/execution/input-source.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)。
 
 ### owner-execution-service.ts
 
@@ -336,11 +379,30 @@ class N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts["auto-collab
 class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts["dispatch-service.ts"] {
   <<module>>
 }
+class N_src_backend_scheduler_engine_dispatch_goal_repair_ts["goal-repair.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_dispatch_automatic_return_service_ts["automatic-return-service.ts"] {
+  <<module>>
+}
 class N_src_backend_scheduler_engine_dispatch_owner_execution_service_ts["owner-execution-service.ts"] {
   <<module>>
 }
 N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts ..> N_src_backend_scheduler_engine_dispatch_dispatch_service_ts : 导入依赖
+N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts ..> N_src_backend_scheduler_engine_dispatch_goal_repair_ts : 导入依赖
+N_src_backend_scheduler_engine_dispatch_automatic_return_service_ts ..> N_src_backend_scheduler_engine_dispatch_owner_execution_service_ts : 导入依赖
 N_src_backend_scheduler_engine_dispatch_dispatch_service_ts ..> N_src_backend_scheduler_engine_dispatch_owner_execution_service_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts["dispatch-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_dispatch_automatic_return_service_ts["automatic-return-service.ts"] {
+  <<module>>
+}
+N_src_backend_scheduler_engine_dispatch_dispatch_service_ts ..> N_src_backend_scheduler_engine_dispatch_automatic_return_service_ts : 导入依赖
 ```
 
 

@@ -19,7 +19,8 @@ export type {ToolCall,ToolDecision} from '../tools/types';
 /** 引擎无关的运行状态；completed 只表示本轮结束，interrupted 表示终态或工具结果仍需核实。 */
 export type RunStatus = 'running' | 'completed' | 'cancelled' | 'failed' | 'interrupted';
 export interface EngineEvent {
-  type: 'run.started' | 'session.bound' | 'message' | 'message.delta' | 'tool.started' | 'tool.finished' |
+  /** 代码检查事件仅由授权后的可信执行端口写入。 */
+  type: 'code.validation_checked' | 'run.started' | 'session.bound' | 'message' | 'message.delta' | 'tool.started' | 'tool.finished' |
      'tool.proposed' | 'tool.allowed' | 'tool.denied' | 'tool.updated' | 'task.updated' | 'task.help_requested' | 'task.checkpoint_requested' | 'artifact.baseline_captured' | 'artifact.manifest_captured' | 'artifact.transition_prepared' | 'artifact.transition_executing' | 'artifact.transition_applied' | 'validation.checked' | 'engine.status' | 'run.stop_requested' | 'run.settled' | 'run.interrupted';
   data: Record<string, unknown>;
 }

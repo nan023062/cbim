@@ -1,6 +1,6 @@
 /**
  * executionPolicy 保存首轮真实协作选择；后续回注和等待延续原规则，不能通过模型请求改变。
- * 作用定位：定义一次用户任务的调度周期，与长期主会话和单次模型运行区分。
+ * 作用定位：定义一次用户任务的调度周期及不可变待回传批次，与长期主会话和单次模型运行区分。
  * 设计原因：一次目标可以经历多轮调度、执行和结果回注；冻结原始输入与软限额。运行中补充先记录发送尝试，仅真实接收后与 waiting 续接共用输入版本；人工决定保存不自动续接，旧损坏链不复活。
  */
 import {type CollaborationPolicy} from '../team/automatic-execution';
@@ -13,6 +13,7 @@ import type {ScopeRunTracking} from './scope-run-tracking';
 import type {ScopeBudget} from '../budget/scope-budget';
 import type {ScopeHumanDecisions} from './human-decisions';
 import type {ScopeActiveInput} from './scope-active-input';
+import type {AutomaticReturn} from './automatic-return';
 export {dispatchScopeWaitSchema} from './scope-continuation';
 export type {DispatchScopeWait} from './scope-continuation';
 export {dispatchScopeGoalSchema,dispatchScopeInputSchema} from './scope-goal';
@@ -32,6 +33,8 @@ export interface DispatchScope {
   executionPolicy?:CollaborationPolicy;
   /** 新周期自创建起登记的主运行启动意图；旧周期缺省，不以日志时间或计划内容补造归属。 */
   runTracking?:ScopeRunTracking;
+  /** 已结算主轮的只追加批次；仅完整未消费结果可自动接回，缺省的旧周期不补造恢复资格。 */
+  automaticReturns?:AutomaticReturn[];
   /** 创建时冻结运行间软限额；legacy 缺省不补造，拒绝记录不替代目标阻塞或人工验收。 */
   budget?:ScopeBudget;
   /** 本机显式选择的有界追加历史；不改变 goal/review，不消费等待，不代表整个目标已验收。 */

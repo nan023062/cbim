@@ -18,6 +18,7 @@ import {memberHelpResultSchema,type MemberHelpStaged} from './member-help';
 import {artifactCaptureResultSchema,type ArtifactCaptureInput} from '../evidence/artifact-baseline';
 import {memberCheckpointResultSchema} from './member-checkpoint';
 import {sameGoalValue} from './scope-goal';
+import type {CodeCheckRecord} from '../evidence/code-check';
 import {evaluateWorkflowDelivery,type WorkflowProgressContext} from '../evidence/workflow-evidence';
 import type {OutputManifestProof} from '../evidence/output-manifest';
 import type {ValidationRecord} from '../evidence/validation';
@@ -40,7 +41,7 @@ export const memberToolOutputSchemas={
 export type MemberToolName=keyof typeof memberToolOutputSchemas;
 export type MemberToolOutput<N extends MemberToolName>=z.infer<(typeof memberToolOutputSchemas)[N]>;
 /** 保存前独立冻结；expected 不是 save 返回的同一可变对象，previous 和 evidence 用于重新核对请求语义。 */
-export interface ProgressOutputBasis {previous?:TaskProgress;expected:unknown;evidence:readonly ToolReceipt[];workflow?:WorkflowProgressContext;artifactsAvailable?:boolean;validations?:readonly ValidationRecord[];manifest?:OutputManifestProof}
+export interface ProgressOutputBasis {codeChecks?:readonly CodeCheckRecord[];previous?:TaskProgress;expected:unknown;evidence:readonly ToolReceipt[];workflow?:WorkflowProgressContext;artifactsAvailable?:boolean;validations?:readonly ValidationRecord[];manifest?:OutputManifestProof}
 export interface MemberToolOutputExpectation {
   binding:ProgressToolIdentity|MemberToolOutputBinding;
   /** 已通过对应输入 Schema，且在调用端口之前独立冻结。 */
@@ -116,7 +117,7 @@ export function memberToolOutputSchema(name:MemberToolName,expected:MemberToolOu
       if(basis.workflow?.bindings.length){
         if(!sameGoalValue(basis.workflow.identity,expected.binding)||next.goal!==basis.workflow.task.goal||!sameGoalValue(next.acceptance,basis.workflow.task.acceptance))issue('Workflow 不属于本轮任务责任');
         if(input.manifestId!==basis.manifest?.manifestId)issue('交付完整清单与原明确选择不一致');
-        try{const ids=new Set(next.steps.flatMap(step=>step.evidence));next.delivery.workflow=evaluateWorkflowDelivery(basis.workflow.bindings,basis.evidence.filter(receipt=>ids.has(receipt.toolCallId)),expected.binding,basis.validations,basis.manifest)}catch{issue('Workflow 交付证明无法由本轮真实引用重算')}
+        try{const ids=new Set(next.steps.flatMap(step=>step.evidence));next.delivery.workflow=evaluateWorkflowDelivery(basis.workflow.bindings,basis.evidence.filter(receipt=>ids.has(receipt.toolCallId)),expected.binding,basis.validations,basis.manifest,basis.codeChecks)}catch{issue('Workflow 交付证明无法由本轮真实引用重算')}
       }
     }
     if(!sameGoalValue(progress,next))issue('步骤、交付或 Workflow 证明与前态和请求不一致');

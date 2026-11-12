@@ -4,9 +4,9 @@ import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import {resolveConversationAgent,resolveDispatchAgent,resolveDispatchModules} from '../src/backend/scheduler-engine/context/dispatch-context';
-import type {ModuleMaintenanceDefinition} from '../src/backend/core/workspace/maintenance';
+// 故意保留旧维护关系输入，验证历史数据不参与当前派发；不再依赖已退出的生产类型。
 
-const maintenance=(bindingId:string):ModuleMaintenanceDefinition=>({
+const maintenance=(bindingId:string)=>({
   bindingId,maintainerPersonIds:['alice'],revision:1,state:'active',
   confirmation:{recordId:'local-review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'},
 });

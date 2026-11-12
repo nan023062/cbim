@@ -11,6 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [artifact-files.ts](artifact-files.ts) | 在固定工作区根内安全读取业务文件，供指纹采集、复核、无基线观察及冻结 JSON/CSV/PNG 验证共用。 |
+| [code-check-runner.ts](code-check-runner.ts) | 在已打开的本地工作区执行冻结代码检查，复用完整目录枚举核实前后源码集合。 |
 | [controlled-file-blobs.ts](controlled-file-blobs.ts) | 保存受控写入的私有 before/intended-after 字节，公开回执只引用 UUID 与哈希。 |
 | [controlled-file-child.ts](controlled-file-child.ts) | 独立 Electron utility 文件工人入口，只接收固定私有消息，不启动 Application 或模型。 |
 | [controlled-file-protocol.ts](controlled-file-protocol.ts) | Main 与专用文件 utility 子进程之间的严格私有消息及不透明会话端口。 |
@@ -55,6 +56,30 @@ N_src_backend_main_platform_files_artifact_files_ts ..> N_src_backend_main_platf
 ```
 
 直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/evidence/artifact-baseline.ts](../../../core/evidence/artifact-baseline.ts)、[../../../core/workspace/json-validation-schema.ts](../../../core/workspace/json-validation-schema.ts)、[../../../core/workspace/csv-validation-schema.ts](../../../core/workspace/csv-validation-schema.ts)、[../../../core/workspace/png-validation-schema.ts](../../../core/workspace/png-validation-schema.ts)、[png-validator.ts](png-validator.ts)、[../../../core/tasks/effect-observation.ts](../../../core/tasks/effect-observation.ts)。
+
+### code-check-runner.ts
+
+```mermaid
+classDiagram
+class N_src_backend_main_platform_files_code_check_runner_ts["code-check-runner.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_files_code_check_runner_ts_CodeCheckRunner["CodeCheckRunner"] {
+  +run()
+  -root
+  -assertCurrent
+  -manifests
+  -directory()
+  -command()
+}
+N_src_backend_main_platform_files_code_check_runner_ts ..> N_src_backend_main_platform_files_code_check_runner_ts_CodeCheckRunner : 声明
+class N_src_backend_main_platform_files_code_check_runner_ts_external_CodeCheckPort["CodeCheckPort (外部契约)"] {
+  <<external>>
+}
+N_src_backend_main_platform_files_code_check_runner_ts_external_CodeCheckPort <|.. N_src_backend_main_platform_files_code_check_runner_ts_CodeCheckRunner
+```
+
+直接依赖：[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/workspace/code-check.ts](../../../core/workspace/code-check.ts)、[../../../core/evidence/code-check.ts](../../../core/evidence/code-check.ts)、[../../../core/evidence/output-manifest-evidence.ts](../../../core/evidence/output-manifest-evidence.ts)、[output-manifest-files.ts](output-manifest-files.ts)。
 
 ### controlled-file-blobs.ts
 
@@ -394,6 +419,12 @@ class N_src_backend_main_platform_files_artifact_files_ts["artifact-files.ts"] {
 class N_src_backend_main_platform_files_png_validator_ts["png-validator.ts"] {
   <<module>>
 }
+class N_src_backend_main_platform_files_code_check_runner_ts["code-check-runner.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_files_output_manifest_files_ts["output-manifest-files.ts"] {
+  <<module>>
+}
 class N_src_backend_main_platform_files_controlled_file_child_ts["controlled-file-child.ts"] {
   <<module>>
 }
@@ -403,21 +434,21 @@ class N_src_backend_main_platform_files_controlled_file_protocol_ts["controlled-
 class N_src_backend_main_platform_files_controlled_file_win32_ts["controlled-file-win32.ts"] {
   <<module>>
 }
-class N_src_backend_main_platform_files_controlled_file_transport_ts["controlled-file-transport.ts"] {
-  <<module>>
-}
 N_src_backend_main_platform_files_artifact_files_ts ..> N_src_backend_main_platform_files_png_validator_ts : 导入依赖
+N_src_backend_main_platform_files_code_check_runner_ts ..> N_src_backend_main_platform_files_output_manifest_files_ts : 导入依赖
 N_src_backend_main_platform_files_controlled_file_child_ts ..> N_src_backend_main_platform_files_controlled_file_protocol_ts : 导入依赖
 N_src_backend_main_platform_files_controlled_file_child_ts ..> N_src_backend_main_platform_files_controlled_file_win32_ts : 导入依赖
-N_src_backend_main_platform_files_controlled_file_transport_ts ..> N_src_backend_main_platform_files_controlled_file_protocol_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_main_platform_files_controlled_file_win32_ts["controlled-file-win32.ts"] {
+class N_src_backend_main_platform_files_controlled_file_transport_ts["controlled-file-transport.ts"] {
   <<module>>
 }
 class N_src_backend_main_platform_files_controlled_file_protocol_ts["controlled-file-protocol.ts"] {
+  <<module>>
+}
+class N_src_backend_main_platform_files_controlled_file_win32_ts["controlled-file-win32.ts"] {
   <<module>>
 }
 class N_src_backend_main_platform_files_output_manifest_files_ts["output-manifest-files.ts"] {
@@ -429,6 +460,7 @@ class N_src_backend_main_platform_files_artifact_files_ts["artifact-files.ts"] {
 class N_src_backend_main_platform_files_scoped_execution_files_ts["scoped-execution-files.ts"] {
   <<module>>
 }
+N_src_backend_main_platform_files_controlled_file_transport_ts ..> N_src_backend_main_platform_files_controlled_file_protocol_ts : 导入依赖
 N_src_backend_main_platform_files_controlled_file_win32_ts ..> N_src_backend_main_platform_files_controlled_file_protocol_ts : 导入依赖
 N_src_backend_main_platform_files_output_manifest_files_ts ..> N_src_backend_main_platform_files_artifact_files_ts : 导入依赖
 N_src_backend_main_platform_files_scoped_execution_files_ts ..> N_src_backend_main_platform_files_controlled_file_win32_ts : 导入依赖

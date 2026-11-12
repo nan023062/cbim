@@ -108,6 +108,8 @@ export interface WorkspaceLoopOptions {
 }
 /** 装配方注入的运行保障；无默认放行策略，缺少实现不能启动执行。 */
 export interface ExecutionServices {
+  /** 成员冻结命令的真实执行端口，沿用运行时 command 授权。 */
+  codeChecks?:import('../../core/evidence/code-check').CodeCheckPort;
   /** 真实 run 已登记后解析；没有逐请求策略时返回 undefined，不给旧目标补新语义。 */
   requestBudget?(input:{task:TaskSpec;runId:string}):Promise<RequestBudgetPort|undefined>;
   /** 主 session 的已登记实例；与图根一致，可在原会话直接工作，但不得冒充独立成员；仅由主进程解析。 */
@@ -235,6 +237,7 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
     artifacts:services.member?services.artifacts:undefined,
     manifests:services.member?services.manifests:undefined,
     validations:services.member?services.validations:undefined,
+    codeChecks:services.member?services.codeChecks:undefined,
     controlledFiles:services.member?services.controlledFiles:undefined,
     scopedExecution:services.member?services.scopedExecution:undefined,
     artifactTransitions:services.member?services.artifactTransitions:undefined,

@@ -10,8 +10,8 @@ Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取�
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [bridge.ts](bridge.ts) | 大脑 执行层：内部知识 Schema/调用的本机临时桥及 Pi 扩展，工具授权先落盘再放行。 |
-| [engine.ts](engine.ts) | Pi 引擎适配器，负责隔离配置、主对话与成员原生会话校验、工具桥与公开执行事件转换。 |
+| [bridge.ts](bridge.ts) | 内部工具的本机临时桥及 Pi 扩展，授权先落盘；目标返工使用独立 custom 消息，不冒充用户输入。 |
+| [engine.ts](engine.ts) | Pi 引擎适配器，负责隔离配置、原生会话校验及事件转换；成员回传、人工决定和目标返工均走可信系统输入。 |
 | [request-budget-bootstrap.ts](request-budget-bootstrap.ts) | 生成早于 Pi 及其 undici 初始化执行的请求转发入口。 |
 | [rpc.ts](rpc.ts) | 大脑 执行层：PiRpc：JSONL 拆包、命令关联、超时与进程结束处理。 |
 | [runtime-config.ts](runtime-config.ts) | 将模型容量和工作预算转换为 Pi 原生运行设置，供每轮隔离进程使用。 |

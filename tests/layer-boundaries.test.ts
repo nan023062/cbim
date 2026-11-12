@@ -11,7 +11,8 @@ it('所有跨层依赖（含重导出和 import 类型）遵循单向边界',()=
   for(const file of files){
     const layerOf=(file:string)=>{const parts=path.relative(root,file).split(path.sep);return parts[0]==='frontend'?'frontend':parts.slice(0,2).join('/')};
     const layer=layerOf(file);
-    const allowed:Record<string,string[]>={'backend/core':['backend/core'],'backend/engines':['backend/engines','backend/core'],'backend/scheduler-engine':['backend/scheduler-engine','backend/engines','backend/core'],'backend/main':['backend/main','backend/scheduler-engine','backend/core','backend/updater','bridge/contracts'],'backend/updater':['backend/updater','bridge/contracts'],'bridge/contracts':['bridge/contracts','backend/core'],'bridge/preload':['bridge/preload','bridge/contracts'],frontend:['frontend','bridge/contracts']};
+    // 冷壳负责资源选择与业务入口装载；与正式依赖检查器保持同一组允许边界，不放宽其他层。
+    const allowed:Record<string,string[]>={'backend/bootstrap':['backend/bootstrap','backend/updater','backend/main'],'backend/core':['backend/core'],'backend/engines':['backend/engines','backend/core'],'backend/scheduler-engine':['backend/scheduler-engine','backend/engines','backend/core'],'backend/main':['backend/main','backend/scheduler-engine','backend/core','backend/updater','bridge/contracts'],'backend/updater':['backend/updater','bridge/contracts'],'bridge/contracts':['bridge/contracts','backend/core'],'bridge/preload':['bridge/preload','bridge/contracts'],frontend:['frontend','bridge/contracts']};
     expect(allowed[layer],`未知源码边界：${file}`).toBeDefined();
     const source=ts.createSourceFile(file,fs.readFileSync(file,'utf8'),ts.ScriptTarget.Latest,true);
     const visit=(node:ts.Node)=>{

@@ -31,6 +31,8 @@ import {verifyMemberCheckpoint} from '../../tasks/member-checkpoint-evidence';
 import {hash,json} from '../../foundation/serialization';
 import {isDeepStrictEqual} from 'node:util';
 import {RunArtifactCapture,type ArtifactCapturePort} from '../capabilities/artifact-capture';
+import {RunCodeCheck,prepareCodeChecks} from '../capabilities/run-code-check';
+import {codeCheckToolName,type CodeCheckPort} from '../../evidence/code-check';
 import {RunOutputManifestCapture,type OutputManifestCapturePort} from '../capabilities/output-manifest-capture';
 import {preparedArtifactScopes,preparedArtifactTransitions} from '../../workspace/artifact-scope';
 import {outputManifestToolName,outputManifestInspectToolName} from '../../evidence/output-manifest';
@@ -73,6 +75,7 @@ export interface RuntimeOptions {
   manifests?:OutputManifestCapturePort;
   /** 仅成员冻结 Workflow 含 JSON 要求时使用；平台同字节验证与交付前当前文件复核。 */
   validations?:ValidationFilePort;
+  codeChecks?:CodeCheckPort;
   /** 仅已领取成员的实际桌面写入端口；缺省绝不注册工具。 */
   controlledFiles?:ControlledFileRunPort;
   /** 正式成员固定范围端口；缺失能力拒绝启动，不能回退原生工具。 */
@@ -165,6 +168,7 @@ export class LoopRuntime {
     const preparedValidation=prepareRunValidation(workflows,member?.binding,this.options.artifacts,this.options.validations),validationRequired=preparedValidation.required;
     const executionScope=preparedExecutionScope(workflows);
     if(executionScope&&(!member||!this.options.scopedExecution||task.moduleIds.some(id=>!workflows.some(binding=>binding.moduleId===id))))fail('EXECUTION_SCOPE_UNAVAILABLE','范围任务缺少完整模块声明或实际平台端口');
+    const codeChecksRequired=prepareCodeChecks(workflows,this.options.codeChecks);
     const manifestScopes=preparedArtifactScopes(workflows);
     if(manifestScopes.length&&(!member||!this.options.manifests))fail('MANIFEST_UNAVAILABLE','声明的完整产物范围缺少正式成员枚举端口');
     if(preparedArtifactTransitions(manifestScopes).length&&(!member||!this.options.artifactTransitions))fail('ARTIFACT_TRANSITION_UNAVAILABLE','冻结的删除/移动要求缺少真实受控平台端口');
@@ -232,16 +236,17 @@ export class LoopRuntime {
       let manifestCapture:RunOutputManifestCapture|undefined;
       let checkpointTools:RunMemberCheckpoint|undefined;
       let validation:RunValidation|undefined;
+      let codeChecks:RunCodeCheck|undefined;
       let controlledFile:RunControlledFile|undefined;
       let artifactTransition:RunArtifactTransition|undefined;
       let scopedExecution:RunScopedExecution|undefined;
-      const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{identity,assertDeliveryReady,artifacts:()=>artifactCapture?.refs()??[],...(completeOutputRequired(workflows)?{manifests:{select:(id,version)=>{if(!manifestCapture)fail('MANIFEST_UNAVAILABLE','本轮完整产物端口尚未就绪');return manifestCapture.select(id,version)},verifyCurrent:async record=>{if(!manifestCapture)fail('MANIFEST_UNAVAILABLE','本轮完整产物端口尚未就绪');await manifestCapture.verifyCurrent(record,'cbim_delivery_prepare')}}}:{}),...(validationRequired?{validations:{records:()=>validation?.records()??[],verifyCurrent:async records=>{if(!validation)fail('VALIDATION_UNAVAILABLE','本轮验证端口尚未就绪');await validation.verifyCurrent(records)}}}:{}),...(workflows.length?{workflow:{bindings:workflows,task:{goal:task.goal,acceptance:task.acceptance},identity}}:{})});
+      const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{identity,assertDeliveryReady,codeChecks:{records:()=>codeChecks?.records()??[]},artifacts:()=>artifactCapture?.refs()??[],...(completeOutputRequired(workflows)?{manifests:{select:(id,version)=>{if(!manifestCapture)fail('MANIFEST_UNAVAILABLE','本轮完整产物端口尚未就绪');return manifestCapture.select(id,version)},verifyCurrent:async record=>{if(!manifestCapture)fail('MANIFEST_UNAVAILABLE','本轮完整产物端口尚未就绪');await manifestCapture.verifyCurrent(record,'cbim_delivery_prepare')}}}:{}),...(validationRequired?{validations:{records:()=>validation?.records()??[],verifyCurrent:async records=>{if(!validation)fail('VALIDATION_UNAVAILABLE','本轮验证端口尚未就绪');await validation.verifyCurrent(records)}}}:{}),...(workflows.length?{workflow:{bindings:workflows,task:{goal:task.goal,acceptance:task.acceptance},identity}}:{})});
       const emit=async(event:EngineEvent,trustedArtifact=false)=>{
         // 契约版本来自真实描述和授权；模型/引擎事件不能给旧调用补造新协议来源。
         if(!trustedArtifact&&event.data.contractVersion!==undefined){const {contractVersion:_,...data}=event.data;event={...event,data}}
         if(event.type==='tool.allowed'&&[controlledFileWriteToolName,artifactTransitionToolName,scopedReadToolName,scopedNodeToolName].includes(String(event.data.name))&&!trustedArtifact)fail('CONTROLLED_FILE_AUTHORIZATION','受控文件授权只能由本轮策略可靠保存');
         if(event.type==='engine.status'&&event.data.activeInput!==undefined&&!trustedArtifact)throw Error('目标补充身份只能由可信插入端口保存');
-        if((['artifact.baseline_captured','artifact.manifest_captured','task.checkpoint_requested','validation.checked'].includes(event.type)||event.type.startsWith('artifact.transition_'))&&!trustedArtifact)throw Error('产物、原操作、产物验证与检查点只能由本轮可信端口保存');
+        if((['artifact.baseline_captured','artifact.manifest_captured','task.checkpoint_requested','validation.checked','code.validation_checked'].includes(event.type)||event.type.startsWith('artifact.transition_'))&&!trustedArtifact)throw Error('产物、原操作、产物验证与检查点只能由本轮可信端口保存');
         if(event.type==='tool.finished'){
           const known=calls.get(String(event.data.id));
           const {receipt:_untrustedReceipt,...data}=event.data;
@@ -259,7 +264,7 @@ export class LoopRuntime {
         artifactCapture?.observed(saved);
         manifestCapture?.observed(saved);
         checkpointTools?.observed(saved);
-        validation?.observed(saved);
+        validation?.observed(saved);codeChecks?.observed(saved);
         controlledFile?.observed(saved.type,saved.data.id,saved.data.isError===true);
         artifactTransition?.observed(saved);
         scopedExecution?.observed(saved.type,saved.data.id);
@@ -321,6 +326,12 @@ export class LoopRuntime {
           if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))throw Error('检查点调用已停止、未获准或仍有其他在途操作');
         },save:async checkpoint=>{await emit({type:'task.checkpoint_requested',data:{checkpoint}},true)},
       });
+      if(codeChecksRequired&&member&&this.options.codeChecks&&this.options.manifests)codeChecks=new RunCodeCheck(workflows,identity,this.options.manifests.knowledgeRevision,this.options.codeChecks,{
+        currentVersion:()=>taskTools.current()?.version,generation:()=>taskTools.generation,
+        assertReady:id=>{if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))fail('CODE_CHECK_CALL','检查未授权或有其它在途工具')},
+        assertKnowledge:()=>this.options.manifests!.assertCurrentKnowledge(),
+        save:async codeCheck=>{await emit({type:'code.validation_checked',data:{codeCheck}},true)},
+      });
       validation=preparedValidation.create({
         current:()=>taskTools.current(),generation:()=>taskTools.generation,
         assertReady:id=>{if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))fail('VALIDATION_CALL','产物验证已停止、未获准或仍有其他在途操作')},
@@ -368,7 +379,7 @@ export class LoopRuntime {
       await emit({type:'run.started',data:{task,message,engine:engine.kind,resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[],...(workflows.length?{workflowContracts:workflows}:{}),...(memberResume?{memberResume:{checkpointId:memberResume.checkpointId,runId:memberResume.runId}}:{}),...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),...(member?{memberBinding:member.binding,nativeSessionId:member.session.nativeSessionId}:{}),...(fresh?{freshMain:{nativeSessionId,excludedRunIds}}:{})}});
       await taskTools.invalidate('新一轮执行需要重新核实产物与证据');
       const stop=async()=>{
-        if(stopping)return;stopping=true;artifactCapture?.stop();manifestCapture?.stop();checkpointTools?.stop();validation?.stop();controlledFile?.stop();artifactTransition?.stop();scopedExecution?.stop();
+        if(stopping)return;stopping=true;artifactCapture?.stop();manifestCapture?.stop();checkpointTools?.stop();validation?.stop();codeChecks?.stop();controlledFile?.stop();artifactTransition?.stop();scopedExecution?.stop();
         try{await emit({type:'run.stop_requested',data:{}})}catch(error){stopFailure=error}
         // 记录失败不能阻止实际 abort；失败事实在收尾按 interrupted 保留，不把无日志停止写成正常求助。
         try{await engine.stop()}catch(error){stopFailure??=error}
@@ -381,7 +392,7 @@ export class LoopRuntime {
         let failure:unknown;
         try{
           if(control?.signal.aborted)await stop();
-          if(!stopping)await engine.start({task,runId,directory,sessionFile:engineSession.sessionFile,engineHandoff:engineSession.handoff,nativeSessionId:previous&&!member?engineSession.nativeSessionId:nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,capabilities:memberToolCapabilities({taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,manifestTools:manifestCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,controlledFileTools:controlledFile,artifactTransitionTools:artifactTransition,scopedExecutionTools:scopedExecution}),assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
+          if(!stopping)await engine.start({task,runId,directory,sessionFile:engineSession.sessionFile,engineHandoff:engineSession.handoff,nativeSessionId:previous&&!member?engineSession.nativeSessionId:nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,capabilities:memberToolCapabilities({codeCheckTools:codeChecks,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,manifestTools:manifestCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,controlledFileTools:controlledFile,artifactTransitionTools:artifactTransition,scopedExecutionTools:scopedExecution}),assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
             call=structuredClone(call);
             if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
             repeatedFailures.proposed(call);
@@ -389,7 +400,7 @@ export class LoopRuntime {
             const scopedReason=executionScope&&nativeToolDescriptor(call.name)?'EXECUTION_SCOPE_NATIVE: 冻结范围任务禁止原生文件与命令工具':scopedExecution?.guard(call.name,call.id,call.input,[...activeCalls])??(!scopedExecution&&call.name.startsWith('cbim_scoped_')?'本轮未提供范围执行能力':undefined);
             const transitionReason=scopedReason??artifactTransition?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactTransition&&call.name===artifactTransitionToolName?'本轮未提供冻结删除/移动能力':undefined);
             const controlledReason=transitionReason??controlledFile?.guard(call.name,call.id,call.input,[...activeCalls])??(!controlledFile&&call.name===controlledFileWriteToolName?'本轮未提供受控文件工具':undefined);
-            const validationReason=controlledReason??validation?.guard(call.name,call.id,call.input,[...activeCalls])??(!validation&&call.name===validationToolName?'本轮未提供冻结要求的 JSON/CSV/PNG 产物验证工具':undefined);
+            const validationReason=controlledReason??codeChecks?.guard(call.name,call.id,call.input,[...activeCalls])??(!codeChecks&&call.name===codeCheckToolName?'本轮未装配代码检查':undefined)??validation?.guard(call.name,call.id,call.input,[...activeCalls])??(!validation&&call.name===validationToolName?'本轮未提供冻结要求的 JSON/CSV/PNG 产物验证工具':undefined);
             const checkpointReason=validationReason??checkpointTools?.guard(call.name,call.id,call.input,[...activeCalls])??(!checkpointTools&&call.name===memberCheckpointToolName?'本轮没有剩余检查点额度或未装配可信检查点能力':undefined);
             const artifactReason=checkpointReason??artifactCapture?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactCapture&&call.name===artifactCaptureToolName?'本轮未提供成员文件基线采集能力':undefined);
             const manifestReason=artifactReason??manifestCapture?.guard(call.name,call.id,call.input,[...activeCalls])??(!manifestCapture&&[outputManifestToolName,outputManifestInspectToolName].includes(call.name)?'本轮未提供冻结完整范围的枚举能力':undefined);

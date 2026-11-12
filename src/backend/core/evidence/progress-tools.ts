@@ -3,6 +3,7 @@
  * 作用定位：内部 Loop 的任务计划、步骤证据和交付工具，状态通过注入的持久化回调保存。
  * 设计原因：普通问答不创建计划；真实身份和代次限定证据。完整出口固定模型明确选择的原清单，并要求JSON同身份；交付前重核全集合，保存前冻结依据，坏输出不回滚版本。
  */
+import type {CodeCheckRecord} from './code-check';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import type {TaskProgress} from './progress';
 import type {ToolReceipt} from '../tools/types';
@@ -46,7 +47,7 @@ export class TaskProgressTools {
   private readonly workflow?:WorkflowProgressContext;
   private readonly identity:ProgressToolIdentity;
   /** save 成功才替换内存状态；恢复保留计划，但不沿用上轮尚未重新核实的证据。 */
-  constructor(previous:TaskProgress|undefined,private save:(state:TaskProgress)=>Promise<void>,private readonly ports:{identity:ProgressToolIdentity;artifacts?():ArtifactBaselineRef[];workflow?:WorkflowProgressContext;validations?:ProgressValidationPort;manifests?:ProgressManifestPort;
+  constructor(previous:TaskProgress|undefined,private save:(state:TaskProgress)=>Promise<void>,private readonly ports:{identity:ProgressToolIdentity;artifacts?():ArtifactBaselineRef[];workflow?:WorkflowProgressContext;validations?:ProgressValidationPort;manifests?:ProgressManifestPort;codeChecks?:{records():CodeCheckRecord[]};
     /** 真正执行交付时再同步核在途副作用，防止已获 gate 后才出现写入；不请求权限或执行 I/O。 */
     assertDeliveryReady?():void;
   }){this.state=previous?structuredClone(previous):undefined;this.workflow=ports.workflow?structuredClone(ports.workflow):undefined;this.identity=structuredClone(ports.identity);if(!progressToolIdentitySchema.safeParse(this.identity).success)fail('TASK_PROGRESS_IDENTITY','执行进度必须绑定真实工作区、任务与运行')}
@@ -73,7 +74,7 @@ export class TaskProgressTools {
   call(name:string,input:unknown){return this.serial(async()=>{
     const parsed=progressTool(name,input);if(!parsed)throw Error('未知任务工具');
     const args=structuredClone(parsed.args) as ProgressPlanInput|ProgressStepInput|ProgressDeliveryInput;
-    const basis:ProgressOutputBasis={previous:this.current(),expected:undefined,evidence:structuredClone([...this.evidence.values()]),...(this.workflow?{workflow:structuredClone(this.workflow)}:{}),...(this.ports.validations?{validations:structuredClone(this.ports.validations.records())}:{})};
+    const basis:ProgressOutputBasis={codeChecks:this.ports.codeChecks?.records(),previous:this.current(),expected:undefined,evidence:structuredClone([...this.evidence.values()]),...(this.workflow?{workflow:structuredClone(this.workflow)}:{}),...(this.ports.validations?{validations:structuredClone(this.ports.validations.records())}:{})};
     const expectedInput=structuredClone(args);
     let result:unknown;
     if(name==='cbim_task_inspect'){
@@ -113,7 +114,7 @@ export class TaskProgressTools {
             const manifest=complete?this.ports.manifests!.select(draft.manifestId!,draft.expectedVersion):undefined;
             if(manifest)basis.manifest=completeOutputProof(manifest);
             // 先核所有引用是否同一集合，再做文件读取；不能验证后自动换绑另一清单。
-            next.delivery.workflow=evaluateWorkflowDelivery(this.workflow.bindings,selected,this.workflow.identity,basis.validations,basis.manifest);
+            next.delivery.workflow=evaluateWorkflowDelivery(this.workflow.bindings,selected,this.workflow.identity,basis.validations,basis.manifest,basis.codeChecks);
             if(validations.length){if(!this.ports.validations)fail('WORKFLOW_VALIDATION_UNAVAILABLE','本轮没有可信文件验证端口');await this.ports.validations.verifyCurrent(validations);this.ports.assertDeliveryReady?.()}
             if(manifest){await this.ports.manifests!.verifyCurrent(manifest);this.ports.assertDeliveryReady?.()}
           }

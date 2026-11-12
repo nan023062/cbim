@@ -11,7 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [approvals.ts](approvals.ts) | 任务内操作确认及本次运行全部放行的生命周期。 |
-| [execution-manager.ts](execution-manager.ts) | 工作区主对话管理，负责普通 chat、目标周期接续、多轮历史和消息队列；旧直接团队业务入口拒绝新执行，业务成员统一经岗位派发领取。 |
+| [execution-manager.ts](execution-manager.ts) | 管理工作区主对话、可信结果与目标返工接续、多轮历史及队列；系统接续共用去重与停止屏障，业务成员经岗位派发领取。 |
 | [main-agent.ts](main-agent.ts) | 定义内置主 Agent 的固定身份、业务调度与团队/业务知识管理指引，区分原始目标、已接收补充及未核实插入。 |
 | [message-queue.ts](message-queue.ts) | 保存工作区各对话的待执行消息与发送时的模型/权限快照。 |
 | [questions.ts](questions.ts) | 管理工作区内等待用户回答的结构化问题，供 Loop 工具与对话界面共享。 |
@@ -40,7 +40,7 @@ N_src_backend_scheduler_engine_conversation_approvals_ts ..> N_src_backend_sched
 
 ### execution-manager.ts
 
-成员 1/4（同名节点为同一声明，跨图合并阅读）。
+成员 1/5（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -99,7 +99,7 @@ class N_src_backend_scheduler_engine_conversation_execution_manager_ts_Workspace
 N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager : 声明
 ```
 
-成员 2/4（同名节点为同一声明，跨图合并阅读）。
+成员 2/5（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -132,13 +132,13 @@ class N_src_backend_scheduler_engine_conversation_execution_manager_ts_Workspace
   +continueFromHumanDecisions()
   +resume()
   +continueFromResults()
+  +continueGoalRepair()
   +collaborationReady()
-  +pauseCollaboration()
 }
 N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager : 声明
 ```
 
-成员 3/4（同名节点为同一声明，跨图合并阅读）。
+成员 3/5（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -146,6 +146,7 @@ class N_src_backend_scheduler_engine_conversation_execution_manager_ts["executio
   <<module>>
 }
 class N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
+  +pauseCollaboration()
   +stop()
   +inspect()
   +list()
@@ -161,12 +162,11 @@ class N_src_backend_scheduler_engine_conversation_execution_manager_ts_Workspace
   -pendingLaunches
   -pendingInsertions
   -insertionsClosed
-  -cancelInsertions()
 }
 N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager : 声明
 ```
 
-成员 4/4（同名节点为同一声明，跨图合并阅读）。
+成员 4/5（同名节点为同一声明，跨图合并阅读）。
 
 ```mermaid
 classDiagram
@@ -174,6 +174,7 @@ class N_src_backend_scheduler_engine_conversation_execution_manager_ts["executio
   <<module>>
 }
 class N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
+  -cancelInsertions()
   -messageQueue
   -queueSubscriptions
   -queueSource()
@@ -189,6 +190,19 @@ class N_src_backend_scheduler_engine_conversation_execution_manager_ts_Workspace
   -serial()
   -checkedCurrentHistory()
   -launch()
+}
+N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager : 声明
+```
+
+成员 5/5（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_conversation_execution_manager_ts["execution-manager.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
+  -continueSystem()
   -directory()
 }
 N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager : 声明

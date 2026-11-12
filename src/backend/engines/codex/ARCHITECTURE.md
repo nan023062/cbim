@@ -11,7 +11,7 @@ Codex App Server 的受管进程、双向 RPC、真实 thread/turn、Responses �
 | 文件 | 当前职责 |
 | --- | --- |
 | [binary.ts](binary.ts) | 解析 CBIM 随包的固定 Codex 原生 App Server，不启动用户 PATH 中的客户端。 |
-| [engine.ts](engine.ts) | 通过 Codex App Server 驱动 AgentEngine，管理进程、线程、轮次和 CBIM 动态工具。 |
+| [engine.ts](engine.ts) | 通过 Codex App Server 管理进程、线程、轮次和动态工具；目标返工明确为系统反馈，不携带用户图片或新授权。 |
 | [model-proxy.ts](model-proxy.ts) | 将 Codex 的 Responses 请求约束为本轮冻结模型、输出上限和已注册工具目录。 |
 | [rpc.ts](rpc.ts) | Codex App Server 的双向 JSONL 通信，分别关联宿主请求、原生请求和通知。 |
 | [session.ts](session.ts) | 核实 Codex 实际 rollout 的路径、原生身份、工作区与持久化动态工具目录。 |

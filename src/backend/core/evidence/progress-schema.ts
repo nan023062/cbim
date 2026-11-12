@@ -5,6 +5,7 @@
  * 设计原因：TaskProgress 自身没有运行身份；JSON 检查事实和精确出口为可选结构，旧流程不补空证明，也不将 rejected 的执行事实改成通过。
  * 职责边界：这里只核字段和局部状态，可信运行归属、当前证据及请求匹配由工具输出边界核对。
  */
+import {codeCheckProofSchema} from './code-check';
 import {z} from 'zod';
 import {workflowContractSchema,workflowToolNameSchema} from '../workspace/workflow-contract';
 import {toolReceiptSchema} from '../tools/receipt-schema';
@@ -27,7 +28,7 @@ export type ProgressPlanInput=z.infer<typeof progressToolInputSchemas.cbim_task_
 export type ProgressStepInput=z.infer<typeof progressToolInputSchemas.cbim_task_step>;
 export type ProgressDeliveryInput=z.infer<typeof progressToolInputSchemas.cbim_delivery_prepare>;
 /** 命中仅指本轮真实指定工具回执，不能解释为专业验证或完整模块覆盖。 */
-export const workflowEvidenceProofSchema=z.object({version:z.literal(1),bindingsHash:z.string().regex(/^[a-f0-9]{64}$/),checks:z.array(z.object({moduleId:id,workflowId:id,workflowVersion:id,requirementId:z.string().regex(/^[A-Za-z0-9_-]{1,80}$/),toolName:workflowToolNameSchema,toolCallIds:z.array(z.string().min(1).max(128)).min(1).max(1500).refine(unique)}).strict()).max(1600),validationChecks:z.array(workflowValidationCheckSchema).min(1).max(jsonValidationLimits.records).optional(),manifest:outputManifestProofSchema.optional()}).strict().refine(value=>unique([...value.checks,...value.validationChecks??[]].map(item=>JSON.stringify([item.moduleId,item.requirementId]))),'Workflow 条件不得重复');
+export const workflowEvidenceProofSchema=z.object({version:z.literal(1),bindingsHash:z.string().regex(/^[a-f0-9]{64}$/),checks:z.array(z.object({moduleId:id,workflowId:id,workflowVersion:id,requirementId:z.string().regex(/^[A-Za-z0-9_-]{1,80}$/),toolName:workflowToolNameSchema,toolCallIds:z.array(z.string().min(1).max(128)).min(1).max(1500).refine(unique)}).strict()).max(1600),validationChecks:z.array(workflowValidationCheckSchema).min(1).max(jsonValidationLimits.records).optional(),codeCheck:codeCheckProofSchema.optional(),manifest:outputManifestProofSchema.optional()}).strict().refine(value=>unique([...value.checks,...value.validationChecks??[]].map(item=>JSON.stringify([item.moduleId,item.requirementId]))),'Workflow 条件不得重复');
 export const workflowContractBindingSchema=z.object({moduleId:id,workflowId:id,workflowVersion:id,contract:workflowContractSchema}).strict();
 const step=z.object({id:z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/),title:text,owner:text,state:z.enum(['pending','working','reported_done']),evidence:z.array(text).max(30)}).strict();
 export const taskProgressSchema=z.object({version:z.number().int().positive().safe(),goal:planText,acceptance:z.array(planText).min(1).max(50),steps:z.array(step).min(1).max(50),state:z.enum(['executing','awaiting_review']),reason:text,delivery:z.object({summary:text,limitations:z.array(text).max(30),workflow:workflowEvidenceProofSchema.optional()}).strict().optional()}).strict().superRefine((value,context)=>{

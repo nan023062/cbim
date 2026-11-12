@@ -6,6 +6,7 @@
  */
 import type {EngineCapability} from '../engine-tools';
 export interface MemberToolPorts {
+  codeCheckTools?:Pick<import('./run-code-check').RunCodeCheck,'list'|'call'>;
   taskTools?:Pick<import('../../evidence/progress-tools').TaskProgressTools,'list'|'call'>;
   memberHelpTools?:Pick<import('../../tasks/member-help-tools').MemberHelpTools,'list'|'call'>;
   artifactTools?:Pick<import('../../evidence/artifact-tools').ArtifactTools,'list'|'call'>;
@@ -19,6 +20,7 @@ export interface MemberToolPorts {
 /** 只注册本轮已装配的能力；保留原调用 ID 和取消信号，不提供原始平台端口。 */
 export function memberToolCapabilities(ports:MemberToolPorts):EngineCapability[] {
   const capabilities:EngineCapability[]=[];
+  if(ports.codeCheckTools){const port=ports.codeCheckTools;capabilities.push({id:'code-check',tools:{list:()=>port.list(),call:(name,args,_signal,id)=>port.call(name,args,id!)}})}
   if(ports.taskTools){const port=ports.taskTools;capabilities.push({id:'task-progress',tools:{list:()=>port.list(),call:(name,args)=>port.call(name,args)}})}
   if(ports.memberHelpTools){const port=ports.memberHelpTools;capabilities.push({id:'member-help',tools:{list:()=>port.list(),call:(name,args,_signal,id)=>port.call(name,args,id!)},instructions:['\n作为执行成员，你不能再派发其它成员。遇到缺少信息、依赖、权限、能力或模块范围问题，先核实已有工具结果，再调用 cbim_task_help 向主调度提交结构化问题；可引用本轮已结束调用 ID。不要自己升级权限或请求恢复旧任务。求助成功只表示暂存，立即结束本轮，不能再调用工具、生成交付候选或声称完成；主调度会在本轮安全结束后重新安排新任务。']})}
   if(ports.artifactTools){const port=ports.artifactTools;capabilities.push({id:'artifacts',tools:{list:()=>port.list(),call:(name,args,_signal,id)=>port.call(name,args,id!)}})}

@@ -28,6 +28,7 @@ import {createWorkspaceLoop} from '../../scheduler-engine/assembly/loop-engine';
 import type {EngineRuntimeResolver} from '../../core/execution/engine-runtime';
 import {memberExecutionPrompt,recheckDispatchExecutionContext} from '../../scheduler-engine/context/execution-context';
 import {ArtifactFiles,normalizeArtifactPath} from '../platform/files/artifact-files';
+import {CodeCheckRunner} from '../platform/files/code-check-runner';
 import {OutputManifestFiles} from '../platform/files/output-manifest-files';
 import {NativeSessionFiles} from '../platform/native-session-files';
 import {memberCheckpointLimit} from '../../core/tasks/member-checkpoint';
@@ -125,6 +126,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
           storage,member:{directory:runsDirectory,prompt:memberExecutionPrompt(run.prepared,task,run.prerequisites),workflowContracts:preparedWorkflowContracts(run.prepared)},onEngineReady:hooks.onEngineReady,
           artifacts:{knowledgeRevision:run.prepared.knowledgeRevision,normalizePath:normalizeArtifact,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},captureFiles:(paths,signal)=>runFiles.captureFiles(paths,signal)},
           manifests:{knowledgeRevision:run.prepared.knowledgeRevision,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},capture:(scopes,signal)=>runManifests.capture(scopes,signal)},
+          codeChecks:new CodeCheckRunner(workspace.entry.path,()=>workspace.assert()),
           validations:{validateFile:(file,schema,signal)=>runFiles.validateFile(file,schema,signal),validateTable:(file,schema,signal)=>runFiles.validateTable(file,schema,signal),validateImage:(file,schema,signal)=>runFiles.validateImage(file,schema,signal),checkFiles:(files,signal)=>runFiles.checkFiles(files,signal)},
           scopedExecution,
           controlledFiles:controlled?{scopeId:controlled.scopeId,write:(input,authorization,signal,assertCurrent)=>{scopeWrite([input.path]);return controlled.write(input,authorization,signal,assertCurrent)},confirmNotApplied:controlled.confirmNotApplied?.bind(controlled),drain:controlled.drain.bind(controlled)}:undefined,

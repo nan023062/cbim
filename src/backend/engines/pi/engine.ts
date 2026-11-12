@@ -4,7 +4,7 @@
  * 冻结范围工具由Runtime提供；该模式原生文件/命令清单为空，未知原生调用仍由Runtime拒绝，范围工具沿原调用ID与停止信号转发。
  * 检查点提示跟随当前运行实际注册的工具和剩余额度，不把续执行固定限制为只能交付。
  * 受控文件边界：仅转发正式成员的写入及冻结删除/移动工具与原 callId/取消信号；平台操作证明和补偿不会在 Pi 原生 write/edit 上自动附加。
- * 作用定位：Pi 引擎适配器，负责隔离配置、主对话与成员原生会话校验、工具桥与公开执行事件转换。
+ * 作用定位：Pi 引擎适配器，负责隔离配置、原生会话校验及事件转换；成员回传、人工决定和目标返工均走可信系统输入。
  * 能力边界：是否关闭原生工具由可信能力策略决定，不依赖具体业务工具名称。
  * 设计原因：每轮冻结模型、权限和上下文；原生注册与能力预检共用 Core 工具表。成员求助/基线/检查点及按冻结要求提供的产物验证沿真实调用 ID 入日志，结构拒绝不冒称通过；成员回传与人工决定用系统 custom 接续，结束只认 agent_settled。
  * 职责边界：不保存私有推理正文；记录实际用量与生成耗时，未知计价保持未知。工具清单日志区分宿主准备与 Pi 实际活动清单，只保存名称和缺失项。明确停止后的标准取消文本才归为取消，其他错误及未知工具副作用交由运行时保留。
@@ -155,7 +155,7 @@ export class PiEngine implements AgentEngine {
     });void settled.catch(()=>{});
     try{
       // 内部回传通过本轮扩展写成 custom 消息，不作为原生 user 记录；加前缀避免正文被解析为斜杠命令。
-      const continuation=this.context.source?.kind==='member-results'||this.context.source?.kind==='human_decisions';
+      const continuation=this.context.source?.kind==='member-results'||this.context.source?.kind==='human_decisions'||this.context.source?.kind==='goal-repair';
       const label=this.context.source?.kind==='human_decisions'?'CBIM 人工决定系统转交\n':'CBIM 成员执行回传\n';
       const accepted=await this.rpc.request('prompt',{message:continuation?label+message:message,...(!continuation&&this.options.images?.length?{images:this.options.images}:{})});
       if(accepted?.disposition!==(continuation?'handled':'started'))throw Error('Pi 没有按本轮输入来源启动任务，不能记为执行完成');

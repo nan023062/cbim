@@ -18,7 +18,7 @@
 | [scope-active-input-evidence.ts](scope-active-input-evidence.ts) | 把目标补充的持久接收记录与原主运行的可信插入日志逐项核对。 |
 | [scope-active-input-service.ts](scope-active-input-service.ts) | 在派发事务中登记运行中插入的准备、真实接收和不确定事实。 |
 | [scope-continuation-service.ts](scope-continuation-service.ts) | 原子消费安全等待，保存用户原始补充、可选附件快照清单和一次性主运行意图。 |
-| [scope-goal-service.ts](scope-goal-service.ts) | 保存本轮目标计划与审阅，为门禁、依赖修订和人工决定核验真实候选；已放弃检查点换边仍核原冻结日志，不复活旧任务。 |
+| [scope-goal-service.ts](scope-goal-service.ts) | 保存目标计划与审阅，核验返工前的原始日志及精确拒绝候选；替代仍须真实新成果，人工项不因业务拒绝而降级。 |
 | [scope-human-continuation-service.ts](scope-human-continuation-service.ts) | 将当前等待中的最新人工决定全集转换成一次可信主运行接续意图。 |
 | [scope-human-decision-service.ts](scope-human-decision-service.ts) | 核实安全等待中的人工验收项和明确选定文件，保存本机显式决定及不可变依据。 |
 | [scope-recovery-service.ts](scope-recovery-service.ts) | 为已关闭周期的异常执行创建独立只读核实周期，持久化用户观察和一次性全新上下文意图。 |
@@ -238,6 +238,7 @@ class N_src_backend_scheduler_engine_goals_scope_goal_service_ts_ScopeGoalServic
   +plan()
   +validateDispatch()
   +validateActiveInputs()
+  +repairContext()
   +validateMemberCandidate()
   +validateHistoricalMemberCandidate()
   +validateHumanCandidates()
@@ -247,7 +248,6 @@ class N_src_backend_scheduler_engine_goals_scope_goal_service_ts_ScopeGoalServic
   +validateCompletedInspection()
   +validateWaiting()
   +block()
-  -owner
 }
 N_src_backend_scheduler_engine_goals_scope_goal_service_ts ..> N_src_backend_scheduler_engine_goals_scope_goal_service_ts_ScopeGoalService : 声明
 ```
@@ -260,6 +260,7 @@ class N_src_backend_scheduler_engine_goals_scope_goal_service_ts["scope-goal-ser
   <<module>>
 }
 class N_src_backend_scheduler_engine_goals_scope_goal_service_ts_ScopeGoalService["ScopeGoalService"] {
+  -owner
   -store
   -ports
   -humanPorts
@@ -275,7 +276,6 @@ class N_src_backend_scheduler_engine_goals_scope_goal_service_ts_ScopeGoalServic
   -receipt()
   -member()
   -memberTerminal()
-  -evidence()
 }
 N_src_backend_scheduler_engine_goals_scope_goal_service_ts ..> N_src_backend_scheduler_engine_goals_scope_goal_service_ts_ScopeGoalService : 声明
 ```
@@ -288,6 +288,7 @@ class N_src_backend_scheduler_engine_goals_scope_goal_service_ts["scope-goal-ser
   <<module>>
 }
 class N_src_backend_scheduler_engine_goals_scope_goal_service_ts_ScopeGoalService["ScopeGoalService"] {
+  -evidence()
   -supersessions()
 }
 N_src_backend_scheduler_engine_goals_scope_goal_service_ts ..> N_src_backend_scheduler_engine_goals_scope_goal_service_ts_ScopeGoalService : 声明

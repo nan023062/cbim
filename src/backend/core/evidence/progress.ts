@@ -17,6 +17,8 @@ export interface TaskStep {
 }
 /** 程序按真实回执产生的 Workflow 条件结果；产物条件另绑定准确文件字节，二者都不代表人工验收。 */
 export interface WorkflowEvidenceProof {
+  /** 冻结代码检查与最终完整源码集合的对应证明。 */
+  codeCheck?:import('./code-check').CodeCheckProof;
   version:1;
   /** 当前所有模块约定的稳定指纹，禁止借另一流程的命中结果交付。 */
   bindingsHash:string;

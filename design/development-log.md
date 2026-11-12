@@ -1,3 +1,14 @@
+## 2026-11-12：中断会话登记与界面恢复入口
+
+- 来源：用户本机 0.1.14 在工具交互后收到“请求未完整完成”，原生文件存在，但 `session.bound` 仅记录线程 ID，空闲会话发送按钮持续禁用。用户明确授权补齐登记、增加恢复入口并推送 develop，本步不发布。开放 Issues 查询为空，按直接需求实施，未创建或回填工单。基线 `05920e81`，使用独立工作树，保留主工作区正在进行的更新功能改动。
+- 实现：CodexEngine 在 close 关闭代理、等待原生进程和回调排空后，对回执指定且真实存在的文件补做身份校验与登记；Runtime 仍在引擎关闭后封存终态。成功绑定和关闭屏障去重，异常保留原原因，不重放工具、不回写旧日志。修正同一校验器的目录后代判断，包含 Windows 分隔符，拒绝目录外同名文件。
+- 界面：发送资格与 `threadRecoveryReason` 共用阻断判断，解释缺运行头、缺原生文件、部分日志及未决工具；输入区提供“查看原运行”和“新建对话继续”。前者只定位主 Agent 详情中的既有核实入口，后者创建空对话，原历史、草稿和附件保留，不自动转交上下文或启动原操作。旧已封存记录不会自动补写，不能将此入口描述成旧 native 修复。
+- 验证选择：引擎生命周期和路径校验、主会话真实运行/停止/重发、跨引擎和成员身份直接受影响；前端检查实际 App 的发送资格与恢复操作。`pnpm exec vitest run tests/codex-interruption.test.ts tests/thread-recovery-notice.test.ts tests/conversation-retry.test.ts tests/codex-lifecycle.test.ts tests/codex-engine.test.ts --reporter=dot` 首轮发现新夹具漏填模型名称及旧断言仍要求缺失路径；修正后运行 `pnpm exec vitest run tests/codex-interruption.test.ts tests/conversation-retry.test.ts tests/runtime-failed-retry.test.ts tests/engine-session.test.ts --reporter=dot`，23 项通过；增加真实应用主动停止用例后仅运行 `pnpm exec vitest run tests/codex-interruption.test.ts -t '真实应用' --reporter=dot`，选中 2 项通过，另 3 项未选中；正常跨引擎及成员消费者 `pnpm exec vitest run tests/codex-application.test.ts --reporter=dot`，2 项通过。合计 8 文件、35 项唯一相关用例通过，不累加重复执行。
+- 实际结果：工具执行后响应不完整和主动停止均能在封存前登记，续接同一原生文件与主会话实例，旧 CBIM 日志事件不变、工具未重放；首次 HTTP 400 后继续 Codex 或切换 Pi 均通过。身份不符、目录外文件和尾行不完整仍拒绝。模型服务为确定性本地 HTTP，Codex/Pi/Claude 为真实引擎，不代表用户供应商在线验收。
+- `node scripts/interrupted-chat-ui-smoke.mjs`：真实 React App/Conversation 与隔离 IPC 夹具，5 组检查通过、0 页面错误、0 发送/恢复启动请求；验证可继续的中断、三类不可靠历史阻断、查看原运行、新建可发送对话、原草稿保留。夹具最初对禁用发送时 Enter 的换行预期错误，已按既有编辑行为修正。证据保存在本工作树 `test-results/interrupted-chat-ui-report.json` 和 `interrupted-chat-recovery.png`。
+- `pnpm typecheck`、`pnpm check:architecture` 通过：86 目录/668 源码样式，1308 维护文件/6703 依赖，0 循环/边界违规。同步 codex 与 conversation 的文件头、关键接口说明、CONTRACT 和 ARCHITECTURE；依赖方向不变。阅读顺序：CodexEngine.close → readCodexSession → ThreadHistoryNotice → Conversation；完整 diff 为本条对应独立提交相对 `05920e81`。
+- 边界：未修改用户安装目录或会话数据；未运行全仓回归、PR 四片 CI、打包、安装升级验收或公开发布，等待其他功能统一集成。代码自查和上述验证已完成，人工 review 与后续正式发布验收仍独立。
+
 ## 2026-11-12：0.1.14 发布与真实增量更新通过
 
 - 用户授权推送 develop 并发布测试增量；两项对话修复随 0.1.14 公开，冻结 source 216a15e225dd646420afcd3e3cc618ef10f0391b，Release 442699257，PR #57 合并 bf283752f9f79d9a2bdd193e40729f5ac833688b。未扩大发布范围、未修改既有附件。

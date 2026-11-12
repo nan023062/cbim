@@ -2,7 +2,7 @@
  * 目录归属：backend/engines/codex；Codex 引擎适配。
  * 作用定位：通过 Codex App Server 驱动 AgentEngine，管理进程、线程、轮次和 CBIM 动态工具。
  * 设计原因：参考 Cindy 的双向 RPC 接法；关闭内置执行/外部工具，用既有授权、预算和事件服务持有副作用。
- * 职责边界：原生线程 ID 来自服务端实际回执，首次绑定后固定；公开事件不包含推理，故障与取消不重放操作。
+ * 职责边界：原生线程 ID 来自服务端实际回执，首次绑定后固定；异常和取消也在进程排空后补登记真实文件，故障不重放操作。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -29,6 +29,8 @@ function toml(value:any):string{if(Array.isArray(value))return '['+value.map(tom
 export class CodexEngine implements AgentEngine {
   readonly kind='codex';private context?:EngineContext;private rpc?:CodexRpc;private tools?:Awaited<ReturnType<typeof codexTools>>;private proxy?:Awaited<ReturnType<typeof openCodexModelProxy>>;
   private threadId='';private sessionFile?:string;private turnId?:string;private startingTurn?:Promise<any>;private stopped=false;private fatal?:Error;
+  /** 文件绑定只在校验并持久化成功后成立；close 共用同一屏障，避免终态之后重复登记。 */
+  private sessionBound=false;private closing?:Promise<void>;
   private done?:{resolve:(result:{status:'completed'|'cancelled'|'failed';error?:string})=>void;reject:(error:Error)=>void};
   constructor(private options:CodexOptions){}
   private redact(text:string){const key=this.options.llm?.apiKey;return key?text.split(key).join('[REDACTED]'):text}
@@ -77,7 +79,13 @@ export class CodexEngine implements AgentEngine {
     else await this.emit({type:'session.bound',data:{sessionId:this.threadId,provider:'cbim-'+llm.profile.id,model:llm.profile.model}});
     await this.emit({type:'engine.status',data:{label:'Codex 已就绪',metric:'tool-catalog',stage:'prepared',expected:this.tools.catalog.map(t=>t.name)}});
   }
-  private async bind(){if(!this.sessionFile)throw Error('Codex 未提供实际原生文件');await readCodexSession(this.options.agentHome,this.sessionFile,this.threadId,this.context!.task.root);await this.emit({type:'session.bound',data:{sessionId:this.threadId,sessionFile:this.sessionFile,provider:'cbim-'+this.options.llm!.profile.id,model:this.options.llm!.profile.model}})}
+  private async bind(){
+    if(this.sessionBound)return;
+    if(!this.sessionFile)throw Error('Codex 未提供实际原生文件');
+    await readCodexSession(this.options.agentHome,this.sessionFile,this.threadId,this.context!.task.root);
+    await this.emit({type:'session.bound',data:{sessionId:this.threadId,sessionFile:this.sessionFile,provider:'cbim-'+this.options.llm!.profile.id,model:this.options.llm!.profile.model}});
+    this.sessionBound=true;
+  }
   async run(message:string){
     if(!this.rpc||!this.context)throw Error('Codex 尚未准备');if(this.fatal)throw this.fatal;if(this.stopped)return {status:'cancelled' as const};
     const result=new Promise<{status:'completed'|'cancelled'|'failed';error?:string}>((resolve,reject)=>{this.done={resolve,reject}});
@@ -108,5 +116,18 @@ export class CodexEngine implements AgentEngine {
     }
   }
   async stop(){this.stopped=true;this.tools?.stop();await this.proxy?.close();if(this.turnId)try{await this.rpc?.request('turn/interrupt',{threadId:this.threadId,turnId:this.turnId},3000)}catch{}this.done?.resolve({status:'cancelled'})}
-  async close(){this.tools?.stop();await this.proxy?.close();await this.rpc?.close();await this.tools?.close()}
+  /**
+   * 所有终态都先关闭原生进程、排空回调，再补登记延迟落盘的文件；运行时随后才封存日志。
+   * 只使用 thread 回执中的路径，不扫描/猜测其他文件。尚未落盘保持缺省；无效文件拒绝绑定。
+   * 绑定失败不撤销原异常，运行时保留首个故障；重复 close 不追加事件或重放工具。
+   */
+  close():Promise<void>{
+    return this.closing??=(async()=>{
+      this.tools?.stop();
+      try{await this.proxy?.close()}finally{try{await this.rpc?.close()}finally{await this.tools?.close()}}
+      if(!this.threadId||!this.sessionFile||this.sessionBound)return;
+      const exists=await fs.stat(this.sessionFile).then(()=>true,error=>{if(error.code==='ENOENT')return false;throw error});
+      if(exists)await this.bind();
+    })();
+  }
 }

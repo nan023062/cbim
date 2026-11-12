@@ -1,7 +1,7 @@
 /**
  * 目录归属：backend/main/run-storage；运行日志与历史索引。
- * 作用定位：本机执行事件日志，顺序追加并 fsync，从记录恢复摘要和未确认工具。
- * 设计原因：先持久化后发布；核验运行绑定、回执和来源，读取完整前缀时保留尾行未完整写入的事实。损坏仅返回稳定错误码，不把 JSON 片段带到界面；读取不截断、不修复历史。
+ * 作用定位：本机事件日志顺序追加并 fsync，按真实可选的原生路径重建摘要和未确认工具。
+ * 设计原因：先持久化后发布；线程 ID 与尚未落盘的原生文件分开处理，不将缺失路径字符串化。读取保留尾行完整性；损坏仅返回稳定错误码，不截断或修复历史。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -53,7 +53,11 @@ export class RunJournal {
     for(let i=0;i<events.length;i++)if(events[i].version!==1||events[i].seq!==i+1||events[i].runId!==first.runId||events[i].taskId!==task.taskId||events[i].workspaceId!==task.workspaceId)throw Error('运行记录身份或顺序错误');
     const pending=new Set<string>();let sessionFile:string|undefined;let status:RunSummary['status']='interrupted';
     for(const event of events){
-      if(event.type==='session.bound')sessionFile=String(event.data.sessionFile);
+      if(event.type==='session.bound'&&event.data.sessionFile!==undefined){
+        // Codex 首次准备可只确认线程 ID；只有真实文件回执才能成为恢复路径。
+        if(typeof event.data.sessionFile!=='string'||!event.data.sessionFile.trim())throw Error('原生会话文件记录无效');
+        sessionFile=event.data.sessionFile;
+      }
       if(event.type==='tool.allowed')pending.add(String(event.data.id));
       if(event.type==='tool.finished')pending.delete(String(event.data.id));
       if(event.type==='tool.denied')pending.delete(String(event.data.id));

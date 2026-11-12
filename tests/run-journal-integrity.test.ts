@@ -28,6 +28,20 @@ test('a malformed complete line returns a stable error without source content an
 test('missing journal retains its IO code and is not treated as an empty execution',async()=>{
   const f=await fixture();await expect(RunJournal.read(path.join(f.directory,'missing'))).rejects.toMatchObject({code:'ENOENT'});
 });
+
+test('仅登记线程 ID 的历史保持缺少路径，读取不生成字符串 undefined 或改写日志',async()=>{
+  const f=await fixture(),lines=(await fs.readFile(f.file,'utf8')).trimEnd().split('\n').map(line=>JSON.parse(line));
+  lines.splice(1,0,{...lines[0],seq:2,type:'session.bound',data:{sessionId:'actual-thread'}});lines[2].seq=3;
+  const before=lines.map(line=>JSON.stringify(line)).join('\n')+'\n';await fs.writeFile(f.file,before);
+  expect((await RunJournal.read(f.directory)).sessionFile).toBeUndefined();expect(await fs.readFile(f.file,'utf8')).toBe(before);
+});
+
+test.each([null,42,{},''])('已记录但非法的原生路径不作为缺失路径降级：%j',async sessionFile=>{
+  const f=await fixture(),lines=(await fs.readFile(f.file,'utf8')).trimEnd().split('\n').map(line=>JSON.parse(line));
+  lines.splice(1,0,{...lines[0],seq:2,type:'session.bound',data:{sessionId:'actual-thread',sessionFile}});lines[2].seq=3;
+  await fs.writeFile(f.file,lines.map(line=>JSON.stringify(line)).join('\n')+'\n');
+  await expect(RunJournal.read(f.directory)).rejects.toMatchObject({code:'RUN_LOG_INVALID'});
+});
 test('only zero bytes has a fresh-log code; an incomplete first event is invalid and never silently repaired',async()=>{
   const f=await fixture();await fs.writeFile(f.file,'');await expect(RunJournal.read(f.directory)).rejects.toMatchObject({code:'RUN_LOG_EMPTY'});
   await fs.writeFile(f.file,'{"version":');await expect(RunJournal.read(f.directory)).rejects.toMatchObject({code:'RUN_LOG_INVALID'});expect(await fs.readFile(f.file,'utf8')).toBe('{"version":');

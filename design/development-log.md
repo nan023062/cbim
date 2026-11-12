@@ -1,3 +1,26 @@
+## 2026-11-12：准备 0.1.14 对话修复版与增量发布
+
+- 用户明确要求推送 develop 并发布测试增量更新；已推送两项独立修复 `dc3d21b8`、`92189dd6`，开放 Issues 为空，未创建新工单。当前公开最高桌面版为 0.1.13，本轮采用 0.1.14，沿用已确认的未签名个人开发发行、原应用身份与通道。
+- 保留前两步 54 个相关单元及类型/架构检查证据，产品源码未再修改。按实际上一版补齐验收器的 0.1.13 输入、准确旧包缓存摘要和十项持久状态保留；验收输入消费者 `pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs --reporter=dot` 40 项通过，品牌检查与保留公开 0.1.13 快照的官网构建通过。
+- 发布入口与步骤的三个宿主副本同步；版本说明如实描述两项修复及严格恢复边界。完整 Windows 四片、唯一候选打包隔离、全新/覆盖安装和真实 0.1.13 → 0.1.14 在线增量将在本轮取得独立证据，当前尚不宣称通过。保持旧 Python latest，不覆盖任何旧附件。
+
+## 2026-11-12：修复首次请求失败后的对话重发
+
+- 用户截图同时报告 Codex 供应商失败后，再次发送出现“原生会话身份记录与恢复文件不一致”。开放 Issues 仍为空，本步基于 `dc3d21b8` 修复第二个独立原因。真实 Codex + 本地 HTTP 400 复现：首次 `session.bound` 只有线程 ID，RunJournal 把缺失路径转成字符串 `"undefined"`；运行时随后把它当恢复文件检查。首次新增运行时夹具有括号错误，修正夹具后才确认真实失败，未将语法错误计作产品复现。
+- 日志读取保持可选原生路径，非法已记录路径拒绝且旧日志不回写。会话选择器持有文件/ID 校验与跨引擎历史选择；只对完整封存、没有回复/工具调用的普通主聊天失败，允许用户显式重发时转交原输入并寻找可靠旧文件，否则新建原生上下文。保留逻辑对话、旧失败和权限；未决工具、坏身份、不完整日志、已发生交互、成员/系统回注/正式新上下文事务仍不走该降级。统一历史说明准确标明失败输入，不称其已执行完成。
+- UI `Conversation.operate` 已在每次发送前清空操作错误；重复 tips 来自真实恢复拒绝，本步不隐藏历史错误或放宽恢复保护。应用级测试同时核对前端调用的 `loop.threadView` 能返回正确续聊头、没有历史问题。
+- 按真实影响选取日志完整性、会话选择、失败重发、运行时授权/取消和引擎消费者。实际命令：`pnpm exec vitest run tests/runtime-failed-retry.test.ts tests/run-journal-integrity.test.ts tests/conversation-retry.test.ts tests/engine-session.test.ts --reporter=dot`（21 项）；历史提示及保护条件补齐后运行 `pnpm exec vitest run tests/engine-session.test.ts tests/conversation-retry.test.ts tests/loop-engine.test.ts tests/runtime-continuation.test.ts tests/codex-application.test.ts --reporter=dot`（30 项）；新增正式上下文拒绝及 threadView 断言后只复跑前两文件（15 项）。`pnpm exec vitest run tests/main-session-instance-pi.test.ts -t 'rejects unsafe main conversation native recovery' --reporter=dot` 选中 2 项通过，另 2 项未选中。合计 8 文件/47 项唯一相关用例通过，与前一步共 54 项；没有以重复执行累加数量。
+- 真实 Codex 首次请求失败后，继续 Codex 或切换 Pi 均完成下一轮，保持原 task/主实例绑定、转交原输入且旧日志字节不变。已有 Pi → Codex → Claude → Codex → Pi 链、成员 Codex、外来原生文件与缺 ID 拒绝、停止与租约释放均通过。模型服务为确定性本地 HTTP，不代表用户供应商在线验收；未操作用户现有安装/数据。
+- `pnpm typecheck`、`pnpm check:architecture` 通过：86 目录/668 源码样式、1305 维护文件/6697 依赖，0 循环/违规。同步 execution、execution/runtime、main/run-storage 的文件头、契约和架构说明；未新增反向依赖。阅读顺序：RunJournal 可选路径 → selectEngineSession 恢复决策 → LoopRuntime 调用 → engineInstructions 历史资料边界。
+- 两项修复分别提交到本地 develop，尚未 push、全量 CI、打包、安装升级或发布。当前公开 0.1.13 附件未改变；人工 review 与后续发布验收仍独立，完整 diff 从 `98e08760` 查看。
+
+## 2026-11-12：修复统一查询工具的嵌套 Schema 引用
+
+- 用户直接报告发送对话时 `cbim_state_inspect` 返回 400；开放 Issues 查询为空，按截图修复，未新建工单。基线 `98e08760`。实际负责人 Schema 单独有效，嵌入统一查询的 oneOf/input 后仍保留原根引用，复现与截图相同的 `expectedReadBasis/memberRegistryCursor` 悬空路径。
+- 在 CoordinationTools 组合目录处按实际已装配分支重定位本地 JSON Pointer，保留原工具目录及原参数/权限校验；不是供应商特例。同步工具文件头、契约和所在目录类图。
+- 选择 `tests/coordination-schema.test.ts tests/coordination-tools.test.ts tests/coordination-pi.test.ts`，分别覆盖真实 Schema 编译与参数约束、统一读取语义、真实 Pi HTTP 请求目录。新增三项在修改前失败；修复后 `pnpm exec vitest run ... --reporter=dot` 为 3 文件/7 项通过。`pnpm typecheck`、`pnpm check:architecture` 通过，1303 文件/6691 依赖、0 循环/违规。
+- 本步只修复发送前工具定义错误，失败后重发的会话文件问题另行处理。未运行全仓回归、打包、安装升级或发布；未把确定性本地 HTTP 供应商当作用户在线服务验收。完整变更在本步独立提交，阅读顺序为组合目录 → 原负责人工具 Schema → Pi 出站目录回归。
+
 ## 2026-11-12：0.1.13 公开与真实增量升级通过
 
 - 用户要求直接发布新分支并测试增量；0.1.13 同一冻结制品完成正式 CI、真实打包隔离及候选安装后公开。source 9195e3a2c9cc9a8340c12e50b1375a9743d6de81，validation 02eb66c5f6a0bea4bc0ea45417a9ddcc7569691e，Release 442619832。原架构整理提交保留；未修复或承诺范围外问题。

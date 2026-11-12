@@ -7,12 +7,15 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {spawn, execFileSync} from 'node:child_process';
 import {_electron as electron} from 'playwright-core';
-import {acceptanceInputs} from './desktop-acceptance-inputs.mjs';
+import {acceptanceInputs, acceptanceTransferExpectation} from './desktop-acceptance-inputs.mjs';
+import {observeUpdaterNetwork, readUpdaterNetwork, summarizeUpdaterNetwork} from './desktop-update-network-evidence.mjs';
+import {parse} from 'yaml';
 
 assert.equal(process.platform, 'win32');
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Only run on an isolated GitHub Actions runner');
 assert.equal(process.env.GITHUB_REPOSITORY, 'nan023062/cbim');
 const {version, previousVersion, previousUpdateFlow, commit, expected, mode} = acceptanceInputs(process.env);
+const transferExpectation = acceptanceTransferExpectation(process.env, {mode, previousUpdateFlow});
 const repo = 'nan023062/cbim', root = path.resolve('test-results/desktop-acceptance');
 const install = path.join(root, 'app'), exe = path.join(install, 'CBIM Desktop.exe'), userRoot = path.join(root, 'user');
 await fs.mkdir(root, {recursive: true});
@@ -51,7 +54,20 @@ async function setup(file, target) {
   });
   assert.equal(JSON.parse(await fs.readFile(path.join(install, 'resources/desktop-release.json'), 'utf8')).version, target);
 }
-let app, requests = 0; const errors = [], phases = [];
+// 只读 NSIS 实际落盘的缓存，不从测试下载目录复制/补造旧包；配置路径缺失必须留下明确证据。
+async function recordInstallerCache(stage) {
+  const config = parse(await fs.readFile(path.join(install, 'resources/app-update.yml'), 'utf8'));
+  assert.match(config.updaterCacheDirName, /^[a-z0-9-]+$/);
+  const entries = [];
+  for (const name of new Set([config.updaterCacheDirName, 'cbim-assistant-updater'])) {
+    const file = path.join(process.env.LOCALAPPDATA, name, 'installer.exe');
+    const stat = await fs.stat(file).catch(error => { if (error.code === 'ENOENT') return undefined; throw error; });
+    entries.push({directory: name, configured: name === config.updaterCacheDirName, exists: !!stat, ...(stat ? {bytes: stat.size, sha256: await sha(file)} : {})});
+  }
+  const result = {configuredDirectory: config.updaterCacheDirName, entries};
+  await save(`installer-cache-${stage}`, result); return result;
+}
+let app, requests = 0, differential; const errors = [], phases = [];
 const server = http.createServer(async (req, res) => {
   for await (const _ of req) { /* consume the deterministic model request */ }
   requests++;
@@ -64,6 +80,7 @@ await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const status = page => page.evaluate(() => window.cbim.call('desktop.updates.status'));
 async function launch(profile = userRoot) {
   app = await electron.launch({executablePath: exe, env: {...env, CBIM_USER_DATA_ROOT: profile}, timeout: 60000});
+  if (mode === 'online' && previousUpdateFlow === 'prefetch') await observeUpdaterNetwork(app);
   const page = await app.firstWindow(); page.setDefaultTimeout(30000); page.on('pageerror', error => errors.push(error.message));
   await page.getByRole('button', {name: '用户菜单', exact: true}).waitFor(); return page;
 }
@@ -86,17 +103,21 @@ async function notes(page) {
 }
 try {
   if (mode === 'candidate') {
-    await setup(candidate, version); let page = await launch(path.join(root, 'fresh-user'));
+    await setup(candidate, version);
+    const cachedInstaller = (await recordInstallerCache('fresh')).entries.find(item => item.configured);
+    assert.equal(cachedInstaller.sha256, expected, 'NSIS must populate the cache configured for differential updates');
+    let page = await launch(path.join(root, 'fresh-user'));
     assert.equal((await status(page)).currentVersion, version); assert.equal((await status(page)).enabled, true); await notes(page); await close();
   }
-  await setup(old, previousVersion); let page = await launch(); assert.equal((await status(page)).currentVersion, previousVersion);
+  await setup(old, previousVersion); const previousCache = await recordInstallerCache('previous');
+  let page = await launch(); assert.equal((await status(page)).currentVersion, previousVersion);
   const profile = {name: 'Release acceptance', api: 'openai-completions', baseUrl: `http://127.0.0.1:${server.address().port}/v1`, auth: 'none', defaultModel: 'acceptance', models: [{id: 'acceptance', name: 'Acceptance', enabled: true, contextWindow: 32768, maxTokens: 1024, reasoning: false, pricing: {input: 0, output: 0, cacheRead: 0, cacheWrite: 0}}]};
   const savedModels = await page.evaluate(profile => window.cbim.call('models.save', {profile}), profile);
   const workspace = path.join(root, 'project'); await fs.mkdir(workspace);
   const entry = await page.evaluate(path => window.cbim.call('add', {path}), workspace);
   // 0.1.7 的新增持久数据也必须沿真实旧版 IPC 创建；不能只证明旧聊天没有丢失。
   let priorMainSettings, priorAutomation;
-  if (['0.1.7', '0.1.8'].includes(previousVersion)) {
+  if (['0.1.7', '0.1.8', '0.1.9', '0.1.10', '0.1.11'].includes(previousVersion)) {
     const opened = (await page.evaluate(() => window.cbim.call('list'))).entries.find(item => item.id === entry.id);
     assert.ok(opened?.instanceId);
     const identity = {workspaceId: entry.id, instanceId: opened.instanceId};
@@ -129,6 +150,43 @@ try {
   let restarted;
   if (mode === 'candidate') { await close(); await setup(candidate, version); }
   else {
+    const cache = path.join(process.env.LOCALAPPDATA, previousCache.configuredDirectory, 'pending', path.basename(candidate));
+    if (previousUpdateFlow === 'prefetch') {
+      // 不点检查或下载，也不替换网络：由已安装 A 的原定时器发现并下载公开 B。
+      const ready = await waitPhase(page, 'ready'); assert.equal(ready.release.version, version);
+      await page.getByRole('button', {name: '查看更新', exact: true}).click();
+      const dialog = page.getByRole('dialog', {name: '版本与更新', exact: true});
+      await dialog.getByRole('button', {name: '重启安装', exact: true}).waitFor();
+      await page.screenshot({path: path.join(root, 'prefetch-ready.png')});
+      await page.keyboard.press('Escape');
+      await pause(3500); assert.equal((await status(page)).phase, 'ready');
+      assert.equal(await app.evaluate(({app}) => app.getVersion()), previousVersion);
+      const firstNetwork = await readUpdaterNetwork(app);
+      differential = summarizeUpdaterNetwork(firstNetwork, path.basename(candidate));
+      await save('online-differential', {summary: differential, records: firstNetwork, fullBytes: (await fs.stat(candidate)).size, installerSha256: await sha(cache)});
+      if (transferExpectation === 'differential') {
+        assert.ok(differential.ranges > 0); assert.equal(differential.fullDownloads, 0);
+        assert.ok(differential.completedPayloadBytes > 0 && differential.completedPayloadBytes < (await fs.stat(candidate)).size);
+      } else {
+        assert.equal(differential.ranges, 0); assert.equal(differential.fullDownloads, 1);
+        assert.equal(differential.completedPayloadBytes, (await fs.stat(candidate)).size);
+      }
+      assert.equal(await sha(cache), expected);
+      await close(); await pause(3000);
+      assert.equal(JSON.parse(await fs.readFile(path.join(install, 'resources/desktop-release.json'), 'utf8')).version, previousVersion);
+      await save('normal-quit-cancelled', {previousVersion, previousUpdateFlow, cachedSha256: expected, at: new Date().toISOString()});
+      page = await launch(); assert.equal((await status(page)).currentVersion, previousVersion);
+      const cachedReady = await waitPhase(page, 'ready'); assert.equal(cachedReady.release.version, version);
+      assert.equal(await sha(cache), expected);
+      const cachedNetwork = await readUpdaterNetwork(app);
+      const cachedSummary = summarizeUpdaterNetwork(cachedNetwork, path.basename(candidate));
+      await save('online-cache-reuse', {summary: cachedSummary, records: cachedNetwork});
+      assert.equal(cachedSummary.requests, 0);
+      await save('online-install-intent', {from: previousVersion, to: version, previousUpdateFlow, sha256: expected, install, userRoot});
+      await page.getByRole('button', {name: '查看更新', exact: true}).click();
+      await page.getByRole('dialog', {name: '版本与更新', exact: true}).getByRole('button', {name: '重启安装', exact: true}).click();
+      await waitPhase(page, 'installing', 100);
+    } else {
     const available = await waitPhase(page, 'available'); assert.equal(available.release.version, version);
     const download = async () => {
       await page.getByRole('button', {name: '查看更新', exact: true}).click();
@@ -140,7 +198,7 @@ try {
     await download();
     // 独立取消场景：自动安装的两秒窗口内正常退出，不能先等待安装或改变产品计时器。
     await close(); await pause(3000);
-    const cache = path.join(process.env.LOCALAPPDATA, 'cbim-desktop-updater/pending', path.basename(candidate)); assert.equal(await sha(cache), expected);
+    assert.equal(await sha(cache), expected);
     assert.equal(JSON.parse(await fs.readFile(path.join(install, 'resources/desktop-release.json'), 'utf8')).version, previousVersion);
     await save('normal-quit-cancelled', {previousVersion, previousUpdateFlow, cachedSha256: expected, at: new Date().toISOString()});
     page = await launch(); assert.equal((await status(page)).currentVersion, previousVersion);
@@ -149,6 +207,7 @@ try {
     await download();
     assert.equal(await sha(cache), expected);
     if (previousUpdateFlow === 'two-step') await page.getByRole('button', {name: '停止任务并重启安装', exact: true}).click();
+    }
     app = undefined;
     const quoted = exe.replaceAll("'", "''");
     for (let n = 0; n < 120; n++) {
@@ -186,8 +245,9 @@ try {
   const signature = ps(`(Get-AuthenticodeSignature -LiteralPath '${exe.replaceAll("'", "''")}').Status.ToString()`); assert.equal(signature, 'NotSigned');
   assert.equal((await status(page)).enabled, true);
   if (mode === 'online') { const current = await page.evaluate(() => window.cbim.call('desktop.updates.check')); assert.equal(current.phase, 'current'); }
+  const installedCache = await recordInstallerCache('final');
   await close();
-  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, freshInstall: mode === 'candidate', onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
+  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, transferExpectation, installedCache, freshInstall: mode === 'candidate', onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', backgroundPrefetchAndExplicitInstall: mode === 'online' && previousUpdateFlow === 'prefetch', differentialDownload: mode === 'online' && previousUpdateFlow === 'prefetch' && transferExpectation === 'differential', differential, retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
   console.log(JSON.stringify({success: true, mode, version, sha256: expected, retained: true}));
 } catch (error) {
   let updateState;

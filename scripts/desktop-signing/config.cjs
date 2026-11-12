@@ -1,4 +1,8 @@
 const path = require('node:path');
+const {AppInfo} = require('electron-builder');
+
+// NSIS 从 package.name 派生 installer.exe 的缓存目录；更新配置和制品校验复用同一生产者，避免与 EXE/展示名混用。
+const updaterCacheDirName = new AppInfo({metadata: require('../../package.json'), config: {}}).updaterCacheDirName;
 
 // Only public certificate selectors belong in build configuration. The private key stays in the Windows provider.
 function signingConfig(env = process.env) {
@@ -27,7 +31,7 @@ function desktopSigningMode(env = process.env) {
 
 function updaterConfigYaml(version, publisherName, mode = 'signed') {
   if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version) || !['signed', 'unsigned'].includes(mode) || (mode === 'signed' ? !publisherName?.trim() : publisherName !== undefined)) throw Error('SIGNING_UPDATE_CONFIG_INVALID');
-  return `provider: generic\nurl: https://github.com/nan023062/cbim/releases/download/desktop-v${version}/\nupdaterCacheDirName: cbim-desktop-updater\n` + (mode === 'signed' ? `publisherName:\n  - ${JSON.stringify(publisherName)}\n` : '');
+  return `provider: generic\nurl: https://github.com/nan023062/cbim/releases/download/desktop-v${version}/\nupdaterCacheDirName: ${updaterCacheDirName}\n` + (mode === 'signed' ? `publisherName:\n  - ${JSON.stringify(publisherName)}\n` : '');
 }
 
-module.exports = {signingConfig, desktopSigningMode, updaterConfigYaml};
+module.exports = {signingConfig, desktopSigningMode, updaterConfigYaml, updaterCacheDirName};

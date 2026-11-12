@@ -46,8 +46,17 @@ description: "发布或恢复 CBIM Windows 桌面版本：核实签名模式，�
 - [validate.yml](../../../.github/workflows/validate.yml) 的诊断入口与完整四片使用不同 job 名。定向、本机或旧 head 的绿色结果不代替本次完整 PR 检查。
 - 修改产品源码时同步注释、契约和类图；仅维护发布 Skill／文档时检查格式、引用和三入口一致性，不为此安装客户端或重新发布。
 
+## 0.1.10 起的预下载验收
+
+当前验收器已补充 `previous_version=0.1.9` 的原自动安装流程，以及 `previous_version=0.1.10` 的后台预下载/显式安装流程。后者由真实已安装 A 的原定时器发现并下载公开 B，不点下载、不替换网络；先验证已就绪后保持运行、普通退出仍为 A、重新启动复用缓存，再通过界面点击“重启安装”验证 B 和数据保留。被动记录完成的安装包 Range 响应和全量回退，不保存签名 URL 查询参数。该补充优先于上文历史版本清单；未列出的未来旧版本仍需核实后适配。
+
 ## 交付与维护
 
 按 [证据清单](references/evidence.md) 给出版本、下载／PR／检查链接、签名状态、实际升级范围及剩余问题。区分“已公开”“更新通道可用”“隔离环境升级通过”和“所有用户已升级”；最后一项没有逐用户证据不能声称。
 
 本 Skill 及其 `references/` 在 `.agents/skills/cbim-release/`、`.claude/skills/cbim-release/`、`.codex/skills/cbim-release/` 保持逐文件一致，属于项目开发入口，不加入 APP 内置业务 Skill。开发进度由 Issues 记录，发布版本与结果以本次真实回执、版本报告及 PR 为准，不写死在操作模板中。历史依据是 [0.1.2 发布报告](../../../design/verification/desktop-release-0.1.2-20261109.md)，不得把其中提交、哈希和 run ID 复用为新版本证据。
+
+
+## 安装器缓存衔接与回退诊断
+
+验收器也支持 0.1.11 的同一预下载界面。新候选全新安装后必须只读核对 app-update.yml 指向目录中的 installer.exe，摘要须等于刚安装的真实附件；不得在验收中手动复制旧包补足前提。默认在线验收仍要求真实 Range 和无全量回退。transfer_expectation=full-fallback 仅为明确命名的在线诊断，结果必须标注回退，不能计为差分通过。A/B 的已知缓存目录衔接问题见 design/verification/desktop-update-cache-diagnosis-20261112.md；已公开附件不覆盖，修复用更高版本候选。

@@ -30,7 +30,8 @@ async function main(){
   const asset=coldRelease.assets.find((a:any)=>a.name==='CBIM-Setup-0.1.15-x64.exe');assert.ok(asset);
   gh(['release','download','desktop-v0.1.15','--repo','nan023062/cbim','--pattern',asset.name,'--dir',root]);
   const installer=path.join(root,asset.name);assert.equal('sha256:'+await hash(installer),asset.digest);
-  const draft=JSON.parse(gh(['api','repos/nan023062/cbim/releases/tags/'+tag]));assert.equal(draft.draft,true);assert.equal(draft.target_commitish,source);
+  // 草稿不能依赖公开 tags 路由，按有权限的分页列表核实唯一对象，不把 404 当作未创建。
+  const drafts=JSON.parse(gh(['api','--paginate','--slurp','repos/nan023062/cbim/releases?per_page=100'])).flat().filter((item:any)=>item.tag_name===tag);assert.equal(drafts.length,1);const draft=drafts[0];assert.equal(draft.draft,true);assert.equal(draft.target_commitish,source);
   gh(['release','download',tag,'--repo','nan023062/cbim','--dir',downloads]);
   const env:Record<string,string>={...Object.fromEntries(Object.entries(process.env).filter((entry):entry is [string,string]=>entry[1]!==undefined)),CBIM_USER_DATA_ROOT:user};for(const key of ['GH_TOKEN','GITHUB_TOKEN','ELECTRON_RUN_AS_NODE','CBIM_GITHUB_CLIENT_ID'])delete env[key];
   await save('install-intent',{coldRelease:coldRelease.id,installerSha256:await hash(installer),source,expected,mode});

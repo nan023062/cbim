@@ -2,6 +2,7 @@
  * 网页搜索设置只管理 Brave 开关和加密密钥摘要，不向页面提供任意抓取代理。
  * 作用定位：模型、准入、预算与反馈账号设置的主进程处理器。
  * 设计原因：设置仅改变配置或未来周期默认值，不向页面暴露运行许可或保存凭据。请求已在总分派中解析。
+ * 模型测试将显式引擎交给配置服务，使用与实际运行相同的兼容接口解析。
  */
 import type {ApplicationServices} from './services';
 import type {IpcHandlers} from '../../../bridge/contracts/ipc-call';
@@ -33,7 +34,7 @@ return app.githubFeedback.auth.begin(args);},
     'models.save':async args=>{return app.models.save(args);},
     'models.select':async args=>{return app.models.select(args.id);},
     'models.remove':async args=>{return app.models.remove(args.id);},
-    'models.test':async args=>{return app.models.test(args.id,args.modelId);},
+    'models.test':async args=>{return app.models.test(args.id,args.modelId,args.engine);},
     'models.discover':async args=>{return app.models.discover(args);},
     'models.discoverDetails':async args=>{return app.models.discoverDetails(args);},
   };

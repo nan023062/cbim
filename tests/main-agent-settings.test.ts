@@ -5,6 +5,19 @@ import {fixture} from './helpers';
 
 const profile={name:'Shared models',api:'anthropic-messages',baseUrl:'http://127.0.0.1:9',auth:'none',defaultModel:'shared',models:[{id:'shared',name:'Shared',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false}]};
 
+test('一个 DeepSeek 供应商可在主会话保存三个引擎，启动选项沿原型号且不复制供应商',async()=>{
+  const f=await fixture();try{
+    const saved=await f.app.models.save({profile:{...profile,api:'openai-completions',baseUrl:'https://api.deepseek.com'}}),profileId=saved.selectedId!;
+    const entry=await f.app.dispatch('add',{path:f.a}),identity={workspaceId:entry.id,instanceId:f.app.workspace(entry.id).instanceId};
+    let settings=await f.app.dispatch('agent.mainSettings',identity);
+    for(const engine of ['pi','claude-code','codex'] as const){
+      settings=await f.app.dispatch('agent.configureMain',{...settings,selection:{engine,profileId,modelId:'shared'}});
+      expect(await f.app.chatOptions(entry.id,{permission:'read'},[])).toMatchObject({engine,profileId,model:'shared'});
+    }
+    expect(await f.app.models.list()).toEqual(saved);expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0);
+  }finally{await f.cleanup()}
+});
+
 test('对话与团队入口读写同一主 Agent 配置，新对话读取角色选型，重开保留且不启动模型',async()=>{
   const f=await fixture();try{
     const models=await f.app.models.save({profile}),profileId=models.selectedId!;

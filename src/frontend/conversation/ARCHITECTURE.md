@@ -635,6 +635,10 @@ N_src_frontend_conversation_useMessageQueue_ts ..> N_src_frontend_conversation_q
 
 # 会话执行与持久等待交互
 
+## 供应商兼容接口选型
+
+主对话模型菜单按 providerSupportsEngine、启用状态和适用型号筛选，供应商的主接口、官方预设与自定义兼容接口和后端启动保持一致。切换引擎优先保留原供应商及原型号；不兼容时再选兼容默认/首项，没有可用模型时保留待选引擎并阻止发送。配置变化仅作用下一轮，旧日志和排队消息不改写。
+
 ## 第三方来源与许可
 
 源自 Cindy 的会话组件在各文件头保留来源与改动说明；许可正文和 NOTICE 随应用资源分发，统一位于仓库根目录 [legal/cindy-LICENSE](../../../legal/cindy-LICENSE) 和 [legal/cindy-NOTICE](../../../legal/cindy-NOTICE)。它们不属于 `docs/` 的概念设计，也不参与界面运行时读取。

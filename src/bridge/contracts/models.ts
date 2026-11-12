@@ -2,8 +2,12 @@
  * 作用定位：模型配置界面消费的公开模型信息与停止原因格式化。
  * 设计原因：仅重导出无凭据公开契约和纯函数，不向渲染进程暴露配置存储或密钥端口。
  * 公开内置引擎目录、显示名、协议兼容规则和独立 Agent 选型契约，渲染层不导入具体引擎或凭据。
+ * 供应商预设和单接口解析为纯配置投影，与后端启动共用；不暴露凭据解析或联网能力。
  */
-export type {LlmDefinition,LlmModel,LlmProfile,LlmSettings} from '../../backend/core/models/config';
+export type {LlmDefinition,LlmModel,LlmProfile,LlmSettings,LlmApi,AlternateConnection} from '../../backend/core/models/config';
+export {llmApiSchema} from '../../backend/core/models/config';
+export {providerPresets,identifyProvider} from '../../backend/core/models/provider-presets';
+export {connectionForEngine,providerSupportsEngine} from '../../backend/core/models/provider-connections';
 export {mainAgentSettingsSchema} from '../../backend/core/team/agent-runtime';
 export type {MainAgentSettingsView} from '../../backend/core/team/agent-runtime';
 export type {DiscoveredModel} from '../../backend/core/models/catalog';

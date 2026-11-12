@@ -3,11 +3,17 @@
  * 作用定位：定义自定义供应商及其模型目录的持久化与界面契约。
  * 设计原因：视觉能力可选，旧配置保持纯文本；供应商共享接口和凭据，目录输出能力上限与请求预算分离，模型分别管理能力、容量、思考意图、工作预算和可选计价；运行时只取选定模型的快照。
  * 供应商只定义接口和模型；旧 engine 字段仅兼容读取，不限制供应商协议，也不决定运行引擎。
+ * 兼容接口共用本供应商凭据；自动识别只补官方预设，实际运行快照只保留选中的单一接口。
  */
 import {z} from 'zod';
 import {loopEngineSchema} from './engine';
 const endpoint=z.string().trim().url().refine(value=>{const u=new URL(value);return !u.username&&!u.password&&!u.search&&!u.hash&&(u.protocol==='https:'||u.protocol==='http:'&&['localhost','127.0.0.1','[::1]'].includes(u.hostname))},'接口地址须为 HTTPS，或本机 HTTP；不能包含凭据、查询参数或片段');
-export const connectionSchema=z.object({name:z.string().trim().min(1).max(80),api:z.enum(['openai-completions','openai-responses','anthropic-messages']),baseUrl:endpoint,auth:z.enum(['api-key','none'])});
+export const llmApiSchema=z.enum(['openai-completions','openai-responses','anthropic-messages']);
+export type LlmApi=z.infer<typeof llmApiSchema>;
+export const connectionSchema=z.object({name:z.string().trim().min(1).max(80),api:llmApiSchema,baseUrl:endpoint,auth:z.enum(['api-key','none'])});
+/** 用户明确提供的同凭据接口；modelIds 缺省表示共用全部模型 ID，不做型号转换。 */
+export const alternateConnectionSchema=z.object({api:llmApiSchema,baseUrl:endpoint,modelIds:z.array(z.string().trim().min(1).max(160)).min(1,'兼容接口至少选择一个适用型号，或取消型号限制').max(200).optional()}).strict();
+export type AlternateConnection=z.infer<typeof alternateConnectionSchema>;
 export const modelSchema=z.object({id:z.string().trim().min(1).max(160),name:z.string().trim().max(160),enabled:z.boolean(),contextWindow:z.number().int().min(1024).max(2000000),maxTokens:z.number().int().min(64).max(2000000),reasoning:z.boolean(),
   /** 仅供应商声明或用户明确确认后开启；旧配置缺省为纯文本，不按型号猜测。 */
   vision:z.boolean().optional(),
@@ -21,7 +27,11 @@ export const modelSchema=z.object({id:z.string().trim().min(1).max(160),name:z.s
   /** USD / 百万 token；缺失表示未知价格，显式全零才表示免费。 */
   pricing:z.object({input:z.number().finite().min(0),output:z.number().finite().min(0),cacheRead:z.number().finite().min(0),cacheWrite:z.number().finite().min(0)}).strict().optional()}).strict().refine(p=>p.maxTokens<=p.contextWindow,'最大输出不能超过上下文窗口').refine(p=>!p.outputLimit||p.maxTokens<=p.outputLimit,'请求输出不能超过供应商声明上限').refine(p=>!p.workingContextWindow||p.workingContextWindow<=p.contextWindow,'工作上下文预算不能超过模型容量');
 /** engine 仅为 0.1.5 文件兼容保留，新设置表单不生成，执行选择不得从此字段推断。 */
-export const definition=connectionSchema.extend({engine:loopEngineSchema.optional(),models:z.array(modelSchema).min(1).max(200),defaultModel:z.string().min(1)}).strict().superRefine((p,c)=>{
+export const definition=connectionSchema.extend({engine:loopEngineSchema.optional(),autoDetect:z.boolean().optional(),alternateConnections:z.array(alternateConnectionSchema).max(2).optional(),models:z.array(modelSchema).min(1).max(200),defaultModel:z.string().min(1)}).strict().superRefine((p,c)=>{
+
+  const apis=[p.api,...(p.alternateConnections??[]).map(connection=>connection.api)];
+  if(new Set(apis).size!==apis.length)c.addIssue({code:'custom',message:'每种接口协议只能配置一个地址'});
+  if(p.alternateConnections?.some(connection=>connection.modelIds?.some(id=>!p.models.some(model=>model.id===id))))c.addIssue({code:'custom',message:'兼容接口的适用模型必须来自当前模型目录'});
 
   if(new Set(p.models.map(m=>m.id)).size!==p.models.length)c.addIssue({code:'custom',message:'模型 ID 不能重复'});
   if(!p.models.some(m=>m.id===p.defaultModel&&m.enabled))c.addIssue({code:'custom',message:'请选择一个已启用的默认模型'});

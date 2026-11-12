@@ -45,6 +45,18 @@ it('一级下拉只包含自定义 Agent，默认主 Agent 不需要登记，选
   }finally{await f.cleanup()}
 });
 
+it('模块卡片沿自定义 Agent 的 Claude 选型采纳同一供应商的 Anthropic 接口',async()=>{
+  const f=await setup(false);try{
+    const settings=await f.app.models.save({profile:{name:'DeepSeek',api:'openai-completions',baseUrl:'https://api.deepseek.com/v1',auth:'none',defaultModel:'deepseek-flash',models:[{id:'deepseek-flash',name:'Flash',enabled:true,contextWindow:1048576,maxTokens:4096,reasoning:true}]}});
+    const runtime={engine:'claude-code' as const,profileId:settings.selectedId!,modelId:'deepseek-flash'};
+    await assignInlineOwner(f.identity,f.team.input.moduleId,'agent:'+f.team.input.agentId,[{...f.agents[0],runtime}],f.ports);
+    const state=await f.ws.dispatchStore.read();
+    expect(state.workspaceMembers).toHaveLength(1);
+    expect(state.workspaceMembers![0].runtimePolicy.snapshot).toMatchObject({engine:'claude-code',api:'anthropic-messages',baseUrl:'https://api.deepseek.com/anthropic',model:'deepseek-flash'});
+    expect(state.runs??[]).toHaveLength(0);expect(await f.app.models.list()).toEqual(settings);
+  }finally{await f.cleanup()}
+});
+
 it('没有默认模型时不造岗位；已存在岗位不会随默认模型改变而重新采纳',async()=>{
   const f=await setup(false);try{
     await expect(f.assign('agent:'+f.team.input.agentId)).rejects.toThrow('默认模型');expect(f.calls.filter(action=>action.endsWith('.commit'))).toHaveLength(0);

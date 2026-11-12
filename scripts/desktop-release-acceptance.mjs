@@ -8,6 +8,7 @@ import {createHash} from 'node:crypto';
 import {spawn, execFileSync} from 'node:child_process';
 import {_electron as electron} from 'playwright-core';
 import {acceptanceInputs} from './desktop-acceptance-inputs.mjs';
+import {observeUpdaterNetwork, readUpdaterNetwork, summarizeUpdaterNetwork} from './desktop-update-network-evidence.mjs';
 
 assert.equal(process.platform, 'win32');
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Only run on an isolated GitHub Actions runner');
@@ -51,7 +52,7 @@ async function setup(file, target) {
   });
   assert.equal(JSON.parse(await fs.readFile(path.join(install, 'resources/desktop-release.json'), 'utf8')).version, target);
 }
-let app, requests = 0; const errors = [], phases = [];
+let app, requests = 0, differential; const errors = [], phases = [];
 const server = http.createServer(async (req, res) => {
   for await (const _ of req) { /* consume the deterministic model request */ }
   requests++;
@@ -64,6 +65,7 @@ await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const status = page => page.evaluate(() => window.cbim.call('desktop.updates.status'));
 async function launch(profile = userRoot) {
   app = await electron.launch({executablePath: exe, env: {...env, CBIM_USER_DATA_ROOT: profile}, timeout: 60000});
+  if (mode === 'online' && previousUpdateFlow === 'prefetch') await observeUpdaterNetwork(app);
   const page = await app.firstWindow(); page.setDefaultTimeout(30000); page.on('pageerror', error => errors.push(error.message));
   await page.getByRole('button', {name: '用户菜单', exact: true}).waitFor(); return page;
 }
@@ -96,7 +98,7 @@ try {
   const entry = await page.evaluate(path => window.cbim.call('add', {path}), workspace);
   // 0.1.7 的新增持久数据也必须沿真实旧版 IPC 创建；不能只证明旧聊天没有丢失。
   let priorMainSettings, priorAutomation;
-  if (['0.1.7', '0.1.8'].includes(previousVersion)) {
+  if (['0.1.7', '0.1.8', '0.1.9', '0.1.10'].includes(previousVersion)) {
     const opened = (await page.evaluate(() => window.cbim.call('list'))).entries.find(item => item.id === entry.id);
     assert.ok(opened?.instanceId);
     const identity = {workspaceId: entry.id, instanceId: opened.instanceId};
@@ -129,6 +131,38 @@ try {
   let restarted;
   if (mode === 'candidate') { await close(); await setup(candidate, version); }
   else {
+    const cache = path.join(process.env.LOCALAPPDATA, 'cbim-desktop-updater/pending', path.basename(candidate));
+    if (previousUpdateFlow === 'prefetch') {
+      // 不点检查或下载，也不替换网络：由已安装 A 的原定时器发现并下载公开 B。
+      const ready = await waitPhase(page, 'ready'); assert.equal(ready.release.version, version);
+      await page.getByRole('button', {name: '查看更新', exact: true}).click();
+      const dialog = page.getByRole('dialog', {name: '版本与更新', exact: true});
+      await dialog.getByRole('button', {name: '重启安装', exact: true}).waitFor();
+      await page.screenshot({path: path.join(root, 'prefetch-ready.png')});
+      await page.keyboard.press('Escape');
+      await pause(3500); assert.equal((await status(page)).phase, 'ready');
+      assert.equal(await app.evaluate(({app}) => app.getVersion()), previousVersion);
+      const firstNetwork = await readUpdaterNetwork(app);
+      differential = summarizeUpdaterNetwork(firstNetwork, path.basename(candidate));
+      await save('online-differential', {summary: differential, records: firstNetwork, fullBytes: (await fs.stat(candidate)).size, installerSha256: await sha(cache)});
+      assert.ok(differential.ranges > 0); assert.equal(differential.fullDownloads, 0);
+      assert.ok(differential.completedPayloadBytes > 0 && differential.completedPayloadBytes < (await fs.stat(candidate)).size);
+      assert.equal(await sha(cache), expected);
+      await close(); await pause(3000);
+      assert.equal(JSON.parse(await fs.readFile(path.join(install, 'resources/desktop-release.json'), 'utf8')).version, previousVersion);
+      await save('normal-quit-cancelled', {previousVersion, previousUpdateFlow, cachedSha256: expected, at: new Date().toISOString()});
+      page = await launch(); assert.equal((await status(page)).currentVersion, previousVersion);
+      const cachedReady = await waitPhase(page, 'ready'); assert.equal(cachedReady.release.version, version);
+      assert.equal(await sha(cache), expected);
+      const cachedNetwork = await readUpdaterNetwork(app);
+      const cachedSummary = summarizeUpdaterNetwork(cachedNetwork, path.basename(candidate));
+      await save('online-cache-reuse', {summary: cachedSummary, records: cachedNetwork});
+      assert.equal(cachedSummary.requests, 0);
+      await save('online-install-intent', {from: previousVersion, to: version, previousUpdateFlow, sha256: expected, install, userRoot});
+      await page.getByRole('button', {name: '查看更新', exact: true}).click();
+      await page.getByRole('dialog', {name: '版本与更新', exact: true}).getByRole('button', {name: '重启安装', exact: true}).click();
+      await waitPhase(page, 'installing', 100);
+    } else {
     const available = await waitPhase(page, 'available'); assert.equal(available.release.version, version);
     const download = async () => {
       await page.getByRole('button', {name: '查看更新', exact: true}).click();
@@ -140,7 +174,7 @@ try {
     await download();
     // 独立取消场景：自动安装的两秒窗口内正常退出，不能先等待安装或改变产品计时器。
     await close(); await pause(3000);
-    const cache = path.join(process.env.LOCALAPPDATA, 'cbim-desktop-updater/pending', path.basename(candidate)); assert.equal(await sha(cache), expected);
+    assert.equal(await sha(cache), expected);
     assert.equal(JSON.parse(await fs.readFile(path.join(install, 'resources/desktop-release.json'), 'utf8')).version, previousVersion);
     await save('normal-quit-cancelled', {previousVersion, previousUpdateFlow, cachedSha256: expected, at: new Date().toISOString()});
     page = await launch(); assert.equal((await status(page)).currentVersion, previousVersion);
@@ -149,6 +183,7 @@ try {
     await download();
     assert.equal(await sha(cache), expected);
     if (previousUpdateFlow === 'two-step') await page.getByRole('button', {name: '停止任务并重启安装', exact: true}).click();
+    }
     app = undefined;
     const quoted = exe.replaceAll("'", "''");
     for (let n = 0; n < 120; n++) {
@@ -187,7 +222,7 @@ try {
   assert.equal((await status(page)).enabled, true);
   if (mode === 'online') { const current = await page.evaluate(() => window.cbim.call('desktop.updates.check')); assert.equal(current.phase, 'current'); }
   await close();
-  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, freshInstall: mode === 'candidate', onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
+  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, freshInstall: mode === 'candidate', onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', backgroundPrefetchAndExplicitInstall: mode === 'online' && previousUpdateFlow === 'prefetch', differential, retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
   console.log(JSON.stringify({success: true, mode, version, sha256: expected, retained: true}));
 } catch (error) {
   let updateState;

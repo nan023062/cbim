@@ -215,6 +215,8 @@ WorkspaceMemberTools 注册 cbim_member_inspect/change_preview/change_commit/rec
 
 `CoordinationTools` 仅组合实际装配的只读工具：cbim_state_inspect 的 state 一次返回 scope/graph 和 versions（goalRevision、planRevision、graphCursor、所有任务 revision、当前周期候选证据）；task/owner/member/governance 分别委托原端口，不伪称跨知识、模型和 Store 的原子快照。cbim_receipt_inspect 按 dispatch/owner/member/governance 选择原回执，保留原身份约束和 unknown/absent。没有任意工具名路由；旧族目录标为兼容，不更改历史指纹。
 
+组合目录将每份独立 input Schema 的本地 `#` / `#/…` 引用重定位到实际 `oneOf/<index>/properties/input`，索引按本轮已装配路由计算。原兼容工具目录保持独立且不被改写；真实调用继续由原端口做严格输入和只读权限校验。目录回归编译实际负责人 Schema，并校验真实 Pi 请求中的组合目录，防止模型供应商在首次请求时因悬空引用返回 400。
+
 cbim_dispatch_cancel 增加 includeClosure:true；cbim_goal_review 的 {decision:awaiting_user,memberPause:{includeClosure:true}} 只读预览。两者返回需确认的完整清单和 issues，不提交/启动；去掉预览参数后按原完整写协议提交，版本竞争继续拒绝。只有真实端口装配才公开该 Schema 分支；预览输出核对本轮归属。
 
 调度/目标、岗位、责任、治理的未知写错误附统一回执地址与原命令/调用，供只读核实，不自动重做。普通对象维护规范入口为 object_preview/commit，底层 knowledge_preview/commit 标为文件事务兼容；goal_plan/review 是主周期目标，task_plan/step 是运行内步骤，不能互代。

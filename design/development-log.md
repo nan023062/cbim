@@ -1,3 +1,10 @@
+## 2026-11-12：修复统一查询工具的嵌套 Schema 引用
+
+- 用户直接报告发送对话时 `cbim_state_inspect` 返回 400；开放 Issues 查询为空，按截图修复，未新建工单。基线 `98e08760`。实际负责人 Schema 单独有效，嵌入统一查询的 oneOf/input 后仍保留原根引用，复现与截图相同的 `expectedReadBasis/memberRegistryCursor` 悬空路径。
+- 在 CoordinationTools 组合目录处按实际已装配分支重定位本地 JSON Pointer，保留原工具目录及原参数/权限校验；不是供应商特例。同步工具文件头、契约和所在目录类图。
+- 选择 `tests/coordination-schema.test.ts tests/coordination-tools.test.ts tests/coordination-pi.test.ts`，分别覆盖真实 Schema 编译与参数约束、统一读取语义、真实 Pi HTTP 请求目录。新增三项在修改前失败；修复后 `pnpm exec vitest run ... --reporter=dot` 为 3 文件/7 项通过。`pnpm typecheck`、`pnpm check:architecture` 通过，1303 文件/6691 依赖、0 循环/违规。
+- 本步只修复发送前工具定义错误，失败后重发的会话文件问题另行处理。未运行全仓回归、打包、安装升级或发布；未把确定性本地 HTTP 供应商当作用户在线服务验收。完整变更在本步独立提交，阅读顺序为组合目录 → 原负责人工具 Schema → Pi 出站目录回归。
+
 ## 2026-11-12：0.1.13 公开与真实增量升级通过
 
 - 用户要求直接发布新分支并测试增量；0.1.13 同一冻结制品完成正式 CI、真实打包隔离及候选安装后公开。source 9195e3a2c9cc9a8340c12e50b1375a9743d6de81，validation 02eb66c5f6a0bea4bc0ea45417a9ddcc7569691e，Release 442619832。原架构整理提交保留；未修复或承诺范围外问题。

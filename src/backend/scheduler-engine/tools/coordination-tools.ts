@@ -1,6 +1,6 @@
 /**
  * 作用定位：主运行的统一状态与原回执读取入口，保留各领域实际校验和恢复语义。
- * 设计原因：只组合已装配的只读能力；目标/图来自原服务的同次读取，负责人和知识另查，不伪称跨存储原子快照。
+ * 设计原因：只组合已装配的只读能力，嵌入参数时同步其本地引用根；领域校验和各自快照边界仍由原服务持有。
  */
 import {fail} from '../../core/foundation/errors';
 import {coordinationVersions} from '../../core/tasks/coordination-preview';
@@ -16,6 +16,12 @@ interface ReadPort {
 }
 const inspectRoutes={state:'cbim_goal_inspect',task:'cbim_dispatch_inspect',owner:'cbim_module_owner_inspect',member:'cbim_member_inspect',governance:'cbim_governance_get'};
 const receiptRoutes={dispatch:'cbim_dispatch_command_report',owner:'cbim_module_owner_receipt',member:'cbim_member_receipt',governance:'cbim_governance_receipt'};
+
+/** Zod 目录的 #/ 引用以独立 input 为根；嵌套后定位到真实分支，不修改原兼容工具的 Schema。 */
+function nestedInputSchema(schema:Record<string,unknown>,index:number):Record<string,unknown> {
+  const prefix=`#/oneOf/${index}/properties/input`;
+  return JSON.parse(JSON.stringify(schema,(key,value)=>key==='$ref'&&typeof value==='string'&&(value==='#'||value.startsWith('#/'))?prefix+value.slice(1):value));
+}
 
 /** 旧族保留兼容，目录明确规范入口；不改变历史调用名、指纹或事务。 */
 export function coordinationCompatibility(tool:EngineToolSchema):EngineToolSchema {
@@ -34,9 +40,10 @@ export class CoordinationTools {
   has(name:string){return name==='cbim_state_inspect'||name==='cbim_receipt_inspect'}
   list(){return (['cbim_state_inspect','cbim_receipt_inspect'] as const).flatMap(name=>{
     const definitions=name==='cbim_state_inspect'?inspectRoutes:receiptRoutes;
-    const variants=Object.entries(definitions).flatMap(([target,original])=>{
+    const available=Object.entries(definitions).filter(([,original])=>this.routes.has(original));
+    const variants=available.map(([target,original],index)=>{
       const route=this.routes.get(original);
-      return route?[{type:'object',properties:{target:{const:target},input:route.tool.inputSchema},required:['target','input'],additionalProperties:false}]:[];
+      return {type:'object',properties:{target:{const:target},input:nestedInputSchema(route!.tool.inputSchema,index)},required:['target','input'],additionalProperties:false};
     });
     return variants.length?[{name,effects:['read'] as const,description:name==='cbim_state_inspect'
       ?'统一只读入口。target=state,input={} 一次返回当前目标/计划/图游标、所有任务版本与可引用候选；task 读指定任务；owner 查模块负责人和修复信息；member 查岗位差异；governance 查治理记录。各目标分别读取，只有 state 内版本来自同一存储快照。'

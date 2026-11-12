@@ -1,4 +1,5 @@
 import {expect,it,vi} from 'vitest';
+import Ajv from 'ajv';
 import http from 'node:http';
 import {fixture} from './helpers';
 import {seedWorkspaceMembers} from './workspace-member-fixture';
@@ -11,6 +12,8 @@ it('真实 Pi 统一快照和原回执可达，版本冲突不给重试许可，
   let raw='';for await(const chunk of req)raw+=chunk;
   const body=JSON.parse(raw),turn=requests.length;requests.push(body);
   expect(body.tools.map((tool:any)=>tool.function.name)).toEqual(expect.arrayContaining(['cbim_state_inspect','cbim_receipt_inspect']));
+  // 校验真实 Pi 发给供应商的组合目录，避免只跑工具调用却遗漏发送前的 Schema 400。
+  if(turn===0)for(const tool of body.tools.filter((item:any)=>['cbim_state_inspect','cbim_receipt_inspect'].includes(item.function.name)))new Ajv({strict:false,validateFormats:false}).compile(tool.function.parameters);
   const previous=turn?knowledgeContractResult(body,'call-'+(turn-1)):undefined;
   let name='cbim_goal_plan',args:unknown=plan;
   if(turn===0){name='cbim_state_inspect';args={target:'state',input:{}}}

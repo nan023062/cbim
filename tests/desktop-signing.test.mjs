@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {parse, stringify} from 'yaml';
+import {AppInfo} from 'electron-builder';
 import {signingConfig, desktopSigningMode, updaterConfigYaml} from '../scripts/desktop-signing/config.cjs';
 import {createWindowsSigner} from '../scripts/desktop-signing/windows.mjs';
 import {digest, signPayload, windowsPayloads} from '../scripts/desktop-signing/payload.mjs';
@@ -23,6 +24,11 @@ const env = {CBIM_SIGN_CERT_SHA1: config.thumbprint, CBIM_SIGN_PUBLISHER: config
 const pe = () => { const bytes = Buffer.alloc(72); bytes.write('MZ'); bytes.writeUInt32LE(64, 60); bytes.write('PE\0\0', 64); return bytes; };
 
 describe('signing policy and Windows adapter', () => {
+  it('uses the cache directory produced by the locked NSIS builder for this package identity', async () => {
+    const metadata = JSON.parse(await fs.readFile(new URL('../package.json', import.meta.url), 'utf8'));
+    const installer = new AppInfo({metadata, config: {productName: 'Unrelated display name'}});
+    expect(parse(updaterConfigYaml('0.1.12', undefined, 'unsigned')).updaterCacheDirName).toBe(installer.updaterCacheDirName);
+  });
   it('requires an explicit unsigned mode and refuses ambiguous identities', () => {
     expect(desktopSigningMode({})).toBe('signed');
     expect(desktopSigningMode({CBIM_DESKTOP_SIGNING_MODE: 'unsigned'})).toBe('unsigned');
@@ -32,7 +38,7 @@ describe('signing policy and Windows adapter', () => {
   });
   it('omits publisher pinning only for explicitly unsigned releases', () => {
     const update = parse(updaterConfigYaml('0.1.2', undefined, 'unsigned'));
-    expect(update).toEqual({provider: 'generic', url: 'https://github.com/nan023062/cbim/releases/download/desktop-v0.1.2/', updaterCacheDirName: 'cbim-desktop-updater'});
+    expect(update).toEqual({provider: 'generic', url: 'https://github.com/nan023062/cbim/releases/download/desktop-v0.1.2/', updaterCacheDirName: 'cbim-assistant-updater'});
     expect(() => updaterConfigYaml('0.1.2')).toThrow('SIGNING_UPDATE_CONFIG_INVALID');
     expect(() => updaterConfigYaml('0.1.2', config.publisherName, 'unsigned')).toThrow('SIGNING_UPDATE_CONFIG_INVALID');
   });

@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {parse} from 'yaml';
 import {digest, windowsPayloads} from './payload.mjs';
+import {updaterCacheDirName} from './config.cjs';
 
 export function releaseNames(version) {
   if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) throw Error('RELEASE_VERSION_INVALID');
@@ -47,7 +48,7 @@ export async function verifyCandidate(directory, config, signer, {unsigned = fal
   }
   const updateConfig = parse(await fs.readFile(path.join(packagedDirectory, 'resources/app-update.yml'), 'utf8'));
   const publisherValid = unsigned ? updateConfig.publisherName === undefined : JSON.stringify(updateConfig.publisherName) === JSON.stringify([config.publisherName]);
-  if (!publisherValid || updateConfig.provider !== 'generic' || updateConfig.updaterCacheDirName !== 'cbim-desktop-updater' || updateConfig.url !== `https://github.com/nan023062/cbim/releases/download/desktop-v${receipt.version}/`) throw Error('RELEASE_PUBLISHER_CONFIG_INVALID');
+  if (!publisherValid || updateConfig.provider !== 'generic' || updateConfig.updaterCacheDirName !== updaterCacheDirName || updateConfig.url !== `https://github.com/nan023062/cbim/releases/download/desktop-v${receipt.version}/`) throw Error('RELEASE_PUBLISHER_CONFIG_INVALID');
   const metadata = JSON.parse(await fs.readFile(path.join(packagedDirectory, 'resources/desktop-release.json'), 'utf8'));
   if (metadata.version !== receipt.version || metadata.channel !== 'desktop-stable' || typeof metadata.notes !== 'string' || !metadata.notes.trim()) throw Error('RELEASE_METADATA_INVALID');
   if (unsigned ? metadata.signingMode !== 'unsigned' : metadata.signingMode === 'unsigned') throw Error('RELEASE_SIGNING_MODE_MISMATCH');

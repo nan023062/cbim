@@ -19,3 +19,11 @@
 受影响验证：`pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs tests/desktop-update-network-evidence.test.mjs`，2 文件 37 项通过；覆盖默认严格要求、显式诊断、非法模式拒绝及真实流量汇总。`pnpm check:dependencies`：1302 文件、6687 依赖、0 循环/违规。没有修改 src、发布附件、原断言或原失败报告；线上诊断结果另记。
 
 原始证据：`test-results/release-ab-20261112/b-online-43155757174-attempt1/`。
+
+## 构建配置修复
+
+`scripts/desktop-signing/config.cjs` 改为调用已锁定 electron-builder 的 `AppInfo.updaterCacheDirName`，与 NSIS 使用同一生产者派生目录；`artifacts.mjs` 也复用该值进行制品校验。当前 package.name 得到 `cbim-assistant-updater`。应用身份、安装器、运行时差分算法、更新源及用户数据目录均不变；改变的是下一候选的 app-update.yml，因此必须使用更高版本重新构建，不修改 A/B 公开附件。
+
+新增回归用例使用真实 AppInfo，先在原代码复现 `cbim-desktop-updater` 与 `cbim-assistant-updater` 不一致，再修正生产配置。`pnpm exec vitest run tests/desktop-signing.test.mjs` 37 项通过，覆盖签名模式、制品摘要/资源与发布边界；`pnpm check:dependencies` 1302 文件、6689 依赖、0 循环/违规。该验证尚不代替新 NSIS 的实际缓存落盘验收；下一步准备未公开的修复候选。
+
+本次改动均在构建/验收脚本与其测试中，没有修改 src 或需要更新的源码类图。下一次排查应先对照 NSIS 写入和 app-update.yml 读取的同一缓存目录，再观察 Range/回退；不能通过测试手动准备缓存推断真实安装已满足前置条件。

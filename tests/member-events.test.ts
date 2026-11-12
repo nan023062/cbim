@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
-import {MemberEventStreams} from '../src/backend/scheduler-engine/execution/member-events';
+import {MemberEventStreams} from '../src/backend/scheduler-engine/runtime/member-events';
 import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
-import type {RunSummary,StoredEvent,TaskSpec} from '../src/backend/core/brain/types';
+import type {RunSummary,StoredEvent,TaskSpec} from '../src/backend/core/execution/types';
 import {toolReceipt} from '../src/backend/core/tools/receipts';
 import path from 'node:path';
 

@@ -9,7 +9,7 @@ import {zodToJsonSchema} from 'zod-to-json-schema';
 import {isDeepStrictEqual} from 'node:util';
 import {fail,Fault} from '../../core/foundation/errors';
 import {checkedJsonToolResult} from '../../core/tools/results';
-import type {RunToolDescriptor} from '../../core/policy/tool-policy';
+import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
 import {workspaceMemberMainCommandId} from '../../core/team/workspace-member-rules';
 import {memberToolEffects,memberToolInputs,memberToolOutputs,memberToolCommitSchema,memberToolPreviewSchema,memberToolReceiptSchema,type MemberToolName,type MemberToolBinding,type WorkspaceMemberToolsPort} from '../../core/team/workspace-member-tools';
 

@@ -2,9 +2,9 @@ import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {LoopRuntime,type AgentEngine,type EngineContext,type TaskSpec,type RuntimeOptions,type MemberRunLaunch} from '../src/backend/core/brain';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
-import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
+import {LoopRuntime,type AgentEngine,type EngineContext,type TaskSpec,type RuntimeOptions,type MemberRunLaunch} from '../src/backend/core/execution';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {RunJournal} from '../src/backend/main/run-storage/run-journal';
 
 class Engine implements AgentEngine {
   readonly kind='pi';context!:EngineContext;ran=false;closed=false;

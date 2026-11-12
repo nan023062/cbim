@@ -1,11 +1,11 @@
 import {runtimeToolGroup} from './runtime-tool-group';
-import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
+import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {LoopRuntime,type AgentEngine,type EngineContext,type TaskSpec} from '../src/backend/core/brain';
+import {LoopRuntime,type AgentEngine,type EngineContext,type TaskSpec} from '../src/backend/core/execution';
 
 async function setup(factory:()=>AgentEngine){
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-loop-unit-'));let locked=false;

@@ -7,7 +7,7 @@ import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import {buildWorkspacePackage,parseWorkspacePackage,workspacePackageFingerprint,type WorkspacePackage} from '../src/backend/core/knowledge/portable-package';
 import {WorkspacePackages} from '../src/backend/main/resources/workspace-packages';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 
 async function setup(){

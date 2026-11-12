@@ -69,7 +69,7 @@ workspace 根不承载全局 Workflow，不新增 workspace/workflows.json，也
 
 内部 Agent 按“受理目标 → 分类与定位 → 组装能力和模块上下文 → 制定步骤 → 执行 → 验证 → 交付与治理反馈”开展工作。调度引擎准备指引、知识版本和运行权限；大脑使用配置的模型与内部工具执行。主 Agent 和定制成员共用大脑内核，静态 Agent 定义与动态 AgentInstance 分离，读取定义不等于启动成员执行。
 
-初始化模板由 `src/backend/main/persistence/knowledge/knowledge-store.ts` 维护。内置 Skill 与通用规范由知识工具按 ID 返回，不复制进每个工作区。初始化只创建知识骨架，不改写项目的 AI 工具启动文件、忽略规则或 Hook 配置。
+初始化模板由 `src/backend/main/knowledge/knowledge-store.ts` 维护。内置 Skill 与通用规范由知识工具按 ID 返回，不复制进每个工作区。初始化只创建知识骨架，不改写项目的 AI 工具启动文件、忽略规则或 Hook 配置。
 
 索引、定义、Skill/Workflow 正文与版本通过当前运行的内部知识工具查询。知识不可用时报告实际问题，不用直接文件读取、旧脚本或过期缓存冒充服务结果。业务产物使用运行的原生工具，受当前作用域与 read/ask/execute 权限约束。
 

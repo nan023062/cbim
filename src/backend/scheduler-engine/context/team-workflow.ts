@@ -10,7 +10,7 @@ import {KnowledgeQueries} from '../../core/knowledge/knowledge-queries';
 import {Builtins} from '../../core/knowledge/builtins';
 import {fail} from '../../core/foundation/errors';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {TaskSpec} from '../../core/brain';
+import type {TaskSpec} from '../../core/execution';
 import {parseWorkflowContract} from '../../core/workspace/workflow-contract';
 
 export const teamTaskInput=z.object({goal:z.string().trim().min(1),moduleId:z.string().min(1),agentId:z.string().min(1),workflowId:z.string().min(1),responsiblePerson:z.string().optional(),acceptance:z.array(z.string().trim().min(1)).min(1)});

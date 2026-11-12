@@ -2,11 +2,11 @@ import {expect,test} from 'vitest';
 import {commandVerificationInputSchema,commandReportToolInputSchema,commandVerificationReportSchema,commandVerificationReportForInput,commandVerificationToolNames,commandReportToolName,isVerifiableMainToolName,type CommandVerificationReport,type VerifiableMainToolName} from '../src/backend/core/tasks/command-verification';
 import {projectCommandReceipt} from '../src/backend/core/tasks/command-verification-output';
 import {isProgressEvidence} from '../src/backend/core/tasks/member-tool-output';
-import {evaluateWorkflowDelivery} from '../src/backend/core/tasks/workflow-evidence';
+import {evaluateWorkflowDelivery} from '../src/backend/core/evidence/workflow-evidence';
 import {toolReceipt} from '../src/backend/core/tools/receipts';
 import {jsonToolResult} from '../src/backend/core/tools/results';
-import {memberCandidate} from '../src/backend/scheduler-engine/execution/member-state';
-import type {RunSummary} from '../src/backend/core/brain/types';
+import {memberCandidate} from '../src/backend/scheduler-engine/members/member-state';
+import type {RunSummary} from '../src/backend/core/execution/types';
 import type {TaskNode} from '../src/backend/core/tasks/graph-types';
 import {mainToolOutputSchema,projectMainScope} from '../src/backend/core/tasks/main-tool-output';
 

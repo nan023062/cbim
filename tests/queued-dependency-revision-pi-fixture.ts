@@ -3,7 +3,7 @@ import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {Application} from '../src/backend/main/application';
+import type {Application} from '../src/backend/main/assembly/application';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import type {ReviseQueuedDependenciesReceipt} from '../src/backend/core/tasks/queued-dependency-revision';
 import {seedTeam} from './team-fixture';

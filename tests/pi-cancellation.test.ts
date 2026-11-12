@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
-import {PiEngine} from '../src/backend/core/brain/pi/engine';
-import type {EngineEvent} from '../src/backend/core/brain/types';
+import {PiEngine} from '../src/backend/engines/pi/engine';
+import type {EngineEvent} from '../src/backend/core/execution/types';
 
 it.each([
   {stopped:true,error:'This operation was aborted',status:'cancelled',stopReason:'aborted'},

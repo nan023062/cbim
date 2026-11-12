@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {workspaceMemberDetailSchema} from '../src/backend/core/team/workspace-member';
 import {moduleOwnershipDetailSchema} from '../src/backend/core/workspace/module-ownership';

@@ -5,7 +5,7 @@
  */
 import {fail} from '../foundation/errors';
 import {automaticExecutionBindingMatches,type AutomaticExecutionBinding} from '../team/automatic-execution';
-import type {DispatchState} from './dispatch-storage';
+import type {DispatchState} from '../dispatch/dispatch-storage';
 
 /** current 仅用于新计划、派发、领取与恢复；结算保留原事实，不受后来登记影响。 */
 export function assertAutomaticExecution(state:DispatchState,binding:AutomaticExecutionBinding,rootSessionId:string,current=false):void{

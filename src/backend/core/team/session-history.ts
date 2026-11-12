@@ -3,7 +3,7 @@
  * 设计原因：执行实例会释放而角色履历须长期保留；历史按真实通道分组，不合并模型上下文，不把旧无绑定日志追认为新实例。正文仍由原运行日志提供，归档只保存可核验引用和摘要。
  */
 import {z} from 'zod';
-import type {RunStatus} from '../brain/types';
+import type {RunStatus} from '../execution/types';
 import type {MemberEventsRead} from '../tasks/member-events';
 
 /** 身份显式包含工作区与静态角色；agentId 可能是内置角色或已删除定义，查询不依赖当前知识有效。 */

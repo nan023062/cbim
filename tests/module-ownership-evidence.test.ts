@@ -1,13 +1,13 @@
 import {expect,it} from 'vitest';
 import {toolReceipt} from '../src/backend/core/tools/receipts';
 import {jsonToolResult} from '../src/backend/core/tools/results';
-import {TaskProgressTools} from '../src/backend/core/tasks/progress-tools';
+import {TaskProgressTools} from '../src/backend/core/evidence/progress-tools';
 import {isProgressEvidence} from '../src/backend/core/tasks/member-tool-output';
-import {evaluateWorkflowDelivery} from '../src/backend/core/tasks/workflow-evidence';
-import {memberCandidate} from '../src/backend/scheduler-engine/execution/member-state';
+import {evaluateWorkflowDelivery} from '../src/backend/core/evidence/workflow-evidence';
+import {memberCandidate} from '../src/backend/scheduler-engine/members/member-state';
 import {moduleOwnershipToolEffects} from '../src/backend/core/workspace/module-ownership-tool-policy';
 import type {TaskNode} from '../src/backend/core/tasks/graph-types';
-import type {RunSummary} from '../src/backend/core/brain/types';
+import type {RunSummary} from '../src/backend/core/execution/types';
 import {humanServiceFixture} from './human-decision-service-fixture';
 
 it.each(Object.entries(moduleOwnershipToolEffects))('%s remains a tool fact but cannot become progress, legacy candidate or Workflow evidence',async(name,effect)=>{

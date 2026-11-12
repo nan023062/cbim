@@ -6,9 +6,9 @@ import {randomUUID} from 'node:crypto';
 import {workspaceMemberSchema,workspaceMemberModelSnapshotSchema,workspaceMemberChangeInputSchema,workspaceMemberCommitInputSchema,workspaceMemberReceiptSchema,workspaceMemberListInputSchema,workspaceMemberListSchema,workspaceMemberCurrentDiffSchema,workspaceMemberCapabilitySchema,workspaceMemberChangeSchema,workspaceMemberLimits,type WorkspaceMember,type WorkspaceMemberChange,type WorkspaceMemberChangeInput,type WorkspaceMemberProposed,type WorkspaceMemberModelSnapshot} from '../src/backend/core/team/workspace-member';
 import {workspaceMemberModelHash,workspaceMemberCapabilityHash,workspaceMemberHash,workspaceMemberCommand,workspaceMemberPreviewBasis,workspaceMemberProposed,workspaceMemberReceipt,workspaceMemberChangedFields,applyWorkspaceMemberChange} from '../src/backend/core/team/workspace-member-rules';
 import {projectWorkspaceMemberMutation} from '../src/backend/core/tasks/workspace-member-invariants';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {hash} from '../src/backend/core/foundation/serialization';
-import type {DispatchState,DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchState,DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
 
 const workspaceId='_workspace',instanceId=randomUUID(),time='2026-11-07T12:00:00.000Z';
 const model:WorkspaceMemberModelSnapshot={id:randomUUID(),name:'本地模型',api:'openai-completions',baseUrl:'http://127.0.0.1:12345/v1',auth:'none',model:'configured',contextWindow:32000,maxTokens:2000,reasoning:false};

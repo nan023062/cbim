@@ -4,7 +4,7 @@
  * 职责边界：只检查持久结构和基线，不读取 canonical 证据或知识正文；调度服务仍须在提交前复核这些事实。
  */
 import {fail} from '../foundation/errors';
-import type {DispatchState} from './dispatch-storage';
+import type {DispatchState} from '../dispatch/dispatch-storage';
 import type {GraphIdentity,TaskNode} from './graph-types';
 import type {ReplaceQueuedDependencyInput} from './queued-dependency-replacement';
 import {goalNeedsReplan} from './scope-goal';

@@ -1,12 +1,12 @@
 import {vi} from 'vitest';
-import type {DispatchState,DispatchCommandEvidence} from '../src/backend/core/tasks/dispatch-storage';
-import type {RunSummary,StoredEvent} from '../src/backend/core/brain/types';
+import type {DispatchState,DispatchCommandEvidence} from '../src/backend/core/dispatch/dispatch-storage';
+import type {RunSummary,StoredEvent} from '../src/backend/core/execution/types';
 import type {GoalPlanInput,GoalReviewInput} from '../src/backend/core/tasks/scope-goal';
 import type {VerifiableMainToolName} from '../src/backend/core/tasks/command-verification';
 import {hash,json} from '../src/backend/core/foundation/serialization';
 import {toolReceipt} from '../src/backend/core/tools/receipts';
 import {jsonToolResult} from '../src/backend/core/tools/results';
-import {CommandVerificationService} from '../src/backend/scheduler-engine/execution/command-verification-service';
+import {CommandVerificationService} from '../src/backend/scheduler-engine/evidence/command-verification-service';
 import {mainToolBinding,mainToolGraph,mainToolScope,mainToolReplacement,mainToolTime,mainToolTask} from './main-tool-output-fixture';
 
 export const reportBinding={...mainToolBinding,runId:'main-run'},reportIdentity={workspaceId:reportBinding.workspaceId,rootSessionId:reportBinding.rootSessionId,runId:reportBinding.runId,toolCallId:'original-call'};

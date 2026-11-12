@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {hash} from '../src/backend/core/foundation/serialization';
 import {summarizeWorkspaceMember,type WorkspaceMember,type WorkspaceMemberChange,type WorkspaceMemberChangeInput,type WorkspaceMemberModelSnapshot} from '../src/backend/core/team/workspace-member';
 import {workspaceMemberCapabilityHash,workspaceMemberCommand,workspaceMemberHash,workspaceMemberModelHash,workspaceMemberPreviewBasis,workspaceMemberProposed,workspaceMemberReceipt} from '../src/backend/core/team/workspace-member-rules';
@@ -12,7 +12,7 @@ import {moduleOwnershipBasis,moduleOwnershipCanonical,moduleOwnershipCommand,mod
 import {moduleOwnershipImpact,projectModuleOwnershipMutation,checkModuleOwnershipActor} from '../src/backend/core/tasks/module-ownership-invariants';
 import {projectWorkspaceMemberMutation} from '../src/backend/core/tasks/workspace-member-invariants';
 import {applyGraphBatch} from '../src/backend/core/tasks/graph-reducer';
-import type {DispatchState,DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchState,DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
 import type {TaskNode,GraphEventBatch,AgentRef} from '../src/backend/core/tasks/graph-types';
 
 const workspaceId='ownership-workspace',instanceId=randomUUID(),at='2026-11-08T01:00:00.000Z',moduleId='.cbim/workspace/game';

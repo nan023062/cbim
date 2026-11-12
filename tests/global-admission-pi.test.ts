@@ -4,7 +4,7 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {globalAdmissionProvider,globalAdmissionFixture as data} from './global-admission-provider';
 import {seedGlobalAdmission,admissionScopes} from './global-admission-fixture';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import {admissionReadSchema} from '../src/backend/core/runtime/admission';

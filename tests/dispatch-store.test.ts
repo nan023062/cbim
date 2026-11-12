@@ -2,12 +2,12 @@ import {afterEach, expect, test, vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {hash} from '../src/backend/core/foundation/serialization';
-import type {DispatchMutation,DispatchState} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchMutation,DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
 import type {AgentInstance, AgentSessionBinding} from '../src/backend/core/team/agent-types';
 import type {AgentRef, GraphEventBatch, GraphIdentity, TaskNode} from '../src/backend/core/tasks/graph-types';
-import {prepareMember} from '../src/backend/scheduler-engine/execution/agent-manager';
+import {prepareMember} from '../src/backend/scheduler-engine/members/agent-manager';
 import {seedExecutionOwner} from './owner-execution-store-support';
 import {bindingFor} from './owner-execution-core-fixture';
 

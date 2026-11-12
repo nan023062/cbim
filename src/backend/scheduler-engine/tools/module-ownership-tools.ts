@@ -10,7 +10,7 @@ import {isDeepStrictEqual} from 'node:util';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {fail,Fault} from '../../core/foundation/errors';
 import {checkedJsonToolResult} from '../../core/tools/results';
-import type {RunToolDescriptor} from '../../core/policy/tool-policy';
+import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
 import {moduleOwnershipMainCommandId} from '../../core/workspace/module-ownership-rules';
 import {isModuleOwnershipSourceAdoption} from '../../core/workspace/module-ownership';
 import {moduleOwnershipToolEffects,isModuleOwnershipToolName,type ModuleOwnershipToolName} from '../../core/workspace/module-ownership-tool-policy';

@@ -1,4 +1,4 @@
-import type {Application} from '../src/backend/main/application';
+import type {Application} from '../src/backend/main/assembly/application';
 import type {RepositoryConnectionPreview,RepositoryConnectionReceipt} from '../src/backend/core/connectors/repository-connection';
 import {randomUUID} from 'node:crypto';
 import {seedRepositoryConnection} from './repository-connection-fixture';

@@ -6,17 +6,17 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
-import {MemberExecutionManager} from '../src/backend/scheduler-engine/execution/member-execution';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/execution/workspace-lease';
-import {LoopRuntime} from '../src/backend/core/brain/runtime';
-import type {AgentEngine,EngineContext} from '../src/backend/core/brain/types';
-import type {MemberExecutionPorts} from '../src/backend/scheduler-engine/execution/member-execution';
-import {GlobalRunAdmission} from '../src/backend/scheduler-engine/runtime/run-admission';
-import {admissionRequestId,acquireExecutionLease} from '../src/backend/main/execution-admission';
-import type {ExecutionAdmissionWait} from '../src/backend/scheduler-engine/execution/admission-wait';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {MemberExecutionManager} from '../src/backend/scheduler-engine/members/member-execution';
+import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
+import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
+import type {AgentEngine,EngineContext} from '../src/backend/core/execution/types';
+import type {MemberExecutionPorts} from '../src/backend/scheduler-engine/members/member-execution';
+import {GlobalRunAdmission} from '../src/backend/scheduler-engine/admission/run-admission';
+import {admissionRequestId,acquireExecutionLease} from '../src/backend/main/assembly/execution-admission';
+import type {ExecutionAdmissionWait} from '../src/backend/scheduler-engine/admission/admission-wait';
 import {registerServiceOwner} from './owner-service-fixture';
 
 async function until<T>(get:()=>Promise<T>,ready:(value:T)=>boolean){for(let i=0;i<500;i++){const value=await get();if(ready(value))return value;await new Promise(r=>setTimeout(r,10))}throw Error('timed out')}

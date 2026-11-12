@@ -5,7 +5,7 @@
  * 引擎与模型一起冻结到排队项；启动时不能按当前界面选型切换另一引擎。
  */
 import {z} from 'zod';
-import {loopEngineSchema} from '../brain/llm/engine';
+import {loopEngineSchema} from '../models/engine';
 const options=z.object({engine:loopEngineSchema.optional(),provider:z.string(),model:z.string(),profileId:z.string().optional(),attachmentIds:z.array(z.string().uuid()).max(12).optional(),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),allowNativeExecution:z.boolean().optional(),turnTimeoutMs:z.number().optional()});
 export const queuedMessageSchema= z.object({id:z.string(),taskId:z.string(),message:z.string(),options,status:z.enum(['pending','starting','paused']),reason:z.string().optional()});
 export type QueuedMessage=z.infer<typeof queuedMessageSchema>;

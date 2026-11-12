@@ -4,12 +4,12 @@
  * 职责边界：不读取文件、不启动引擎、不调度跨工作区任务；待消费负载只计 pending 信封，任何快照都不包含消息、知识或工具正文。
  */
 import {randomUUID} from 'node:crypto';
-import type {RunSummary,StoredEvent,TaskSpec} from '../../core/brain/types';
-import {checkedMemberRunBinding} from '../../core/brain/member-run';
-import {checkedConversationAgentBinding} from '../../core/brain/conversation-binding';
-import {runUsage} from '../../core/brain/usage';
+import type {RunSummary,StoredEvent,TaskSpec} from '../../core/execution/types';
+import {checkedMemberRunBinding} from '../../core/execution/member-run';
+import {checkedConversationAgentBinding} from '../../core/execution/conversation-binding';
+import {runUsage} from '../../core/execution/usage';
 import {projectRuntimeScope} from '../../core/runtime/runtime-scope';
-import type {DispatchMutation,DispatchState} from '../../core/tasks/dispatch-storage';
+import type {DispatchMutation,DispatchState} from '../../core/dispatch/dispatch-storage';
 import type {TaskNode} from '../../core/tasks/graph-types';
 import type {AgentInstance} from '../../core/team/agent-types';
 import type {RuntimeCursor,RuntimeDispatchTask,RuntimeLoopTask,RuntimeMember,RuntimePressure,RuntimeQueueCounts,RuntimeRead,RuntimeRun,RuntimeScope,RuntimeSnapshot,RuntimeUsage,RuntimeWorkspace} from '../../core/runtime/types';

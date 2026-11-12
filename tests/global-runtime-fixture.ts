@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import type {Application} from '../src/backend/main/application';
+import type {Application} from '../src/backend/main/assembly/application';
 import {scopeWaitProvider,waitFixture} from './scope-wait-provider';
 import {globalAdmissionProvider,globalAdmissionFixture} from './global-admission-provider';
 import {seedGlobalAdmission,admissionScopes} from './global-admission-fixture';

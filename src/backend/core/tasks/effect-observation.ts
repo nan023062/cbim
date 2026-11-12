@@ -4,13 +4,13 @@
  * 职责边界：不含原参数/正文、凭据或 native 路径；知识刷新只有可信原v2授权可适配，旧 recovery 协议不在这里默认化。
  */
 import {z} from 'zod';
-import {artifactFileCheckSchema,artifactRelativePathSchema} from './artifact-baseline';
+import {artifactFileCheckSchema,artifactRelativePathSchema} from '../evidence/artifact-baseline';
 import {commandRecordSchema} from './command-verification';
 import {toolScopeSchema} from '../tools/scope-schema';
 import {toolReceiptEffectSchema} from '../tools/receipt-schema';
 import {knowledgeTransactionObservationSchema} from '../knowledge/knowledge-write-observation';
 import {persistentWriteObservationSchema,persistentWriteEffects} from './persistent-write-observation';
-import {controlledFileLedgerSchema,controlledFileWriteToolName} from './controlled-file-operation';
+import {controlledFileLedgerSchema,controlledFileWriteToolName} from '../file-operations/controlled-file-operation';
 
 const id=z.string().min(1).max(512).refine(v=>v.trim()===v&&!/[\x00-\x1f]/.test(v));
 const digest=z.string().regex(/^[a-f0-9]{64}$/),seq=z.number().int().nonnegative().safe(),positive=seq.min(1),time=z.string().datetime();

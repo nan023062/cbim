@@ -1,11 +1,11 @@
 import {expect,test} from 'vitest';
 import {GlobalRuntimeManager} from '../src/backend/scheduler-engine/runtime/global-runtime';
-import type {RunSummary,StoredEvent,TaskSpec} from '../src/backend/core/brain/types';
+import type {RunSummary,StoredEvent,TaskSpec} from '../src/backend/core/execution/types';
 import type {AgentInstance} from '../src/backend/core/team/agent-types';
-import type {DispatchState,DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchState,DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
 import type {GraphSnapshot,TaskNode} from '../src/backend/core/tasks/graph-types';
-import type {MemberRunBinding} from '../src/backend/core/brain/member-run';
-import type {ConversationAgentBinding} from '../src/backend/core/brain/conversation-binding';
+import type {MemberRunBinding} from '../src/backend/core/execution/member-run';
+import type {ConversationAgentBinding} from '../src/backend/core/execution/conversation-binding';
 
 const stamp='2026-11-06T12:00:00.000Z';
 function task(workspaceId='a'):TaskSpec{return {workspaceId,taskId:'conversation',root:'C:/private/project',goal:'PRIVATE PROMPT',moduleIds:['game'],agentId:'cbim:main',acceptance:[],mode:'chat'}}

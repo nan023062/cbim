@@ -5,7 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {queuedTaskCancelProvider,queuedTaskCancelFixture as data} from './queued-task-cancel-provider';
 import {seedQueuedTaskCancel,queuedTaskCancelRecords} from './queued-task-cancel-fixture';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';

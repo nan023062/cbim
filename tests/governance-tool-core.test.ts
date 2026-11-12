@@ -10,11 +10,11 @@ import {
   governanceGetInputSchema,governanceObserveInputSchema,governanceProposeInputSchema,governanceReceiptInputSchema,governanceGetOutputSchema,governanceReceiptOutputSchema,
   governanceToolBodyLimit,governanceToolOutputLimit,governanceToolEffects,projectGovernanceGet,projectGovernanceBody,projectGovernanceReceipt,
 } from '../src/backend/core/governance/module-governance-tools';
-import {authorizeRunTool,type RunToolDescriptor} from '../src/backend/core/policy/tool-policy';
+import {authorizeRunTool,type RunToolDescriptor} from '../src/backend/core/tools/policy/tool-policy';
 import type {ToolReceipt} from '../src/backend/core/tools/types';
-import {TaskProgressTools} from '../src/backend/core/tasks/progress-tools';
-import {evaluateWorkflowDelivery} from '../src/backend/core/tasks/workflow-evidence';
-import {artifactSources,type ArtifactEvidenceEvent} from '../src/backend/core/tasks/artifact-evidence';
+import {TaskProgressTools} from '../src/backend/core/evidence/progress-tools';
+import {evaluateWorkflowDelivery} from '../src/backend/core/evidence/workflow-evidence';
+import {artifactSources,type ArtifactEvidenceEvent} from '../src/backend/core/evidence/artifact-evidence';
 
 const workspaceId='workspace',rootSessionId='main-root',identity={workspaceId,rootSessionId},now='2026-11-07T08:00:00.000Z',moduleId='.cbim/workspace/module';
 const source:ModuleGovernanceMainOrigin={kind:'main_agent',rootSessionId,agentInstanceId:'main-instance',agentSessionId:'main-channel',runId:'main-run',toolCallId:'observe-call',toolName:'cbim_governance_observe'};

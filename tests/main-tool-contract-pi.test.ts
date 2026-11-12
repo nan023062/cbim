@@ -2,9 +2,9 @@ import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import type {RunSummary} from '../src/backend/core/brain/types';
+import type {RunSummary} from '../src/backend/core/execution/types';
 import {mainToolContractProvider,mainToolContractFixture as data,type MainToolContractMode} from './main-tool-contract-provider';
 import {seedMainToolContract,mainToolContractRecords,mainToolContractLogBytes} from './main-tool-contract-fixture';
 

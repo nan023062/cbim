@@ -11,7 +11,7 @@ import {fail} from '../foundation/errors';
 import {ownerExecutionBindingMatches,ownerExecutionSelectionMatches,sameOwnerExecutionForModules,type OwnerExecutionBinding} from '../team/member-execution-binding';
 import {assertCurrentOwnerExecutionBinding} from '../team/member-execution-rules';
 import {workspaceMemberHash,workspaceMemberModelHash,workspaceMemberCanonical} from '../team/workspace-member-rules';
-import type {DispatchState,DispatchMutation} from './dispatch-storage';
+import type {DispatchState,DispatchMutation} from '../dispatch/dispatch-storage';
 import type {TaskNode} from './graph-types';
 import {goalNeedsReplan} from './scope-goal';
 import {sameWorkflowSelectionsForModules} from './workflow-selection';

@@ -3,12 +3,12 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {hash} from '../src/backend/core/foundation/serialization';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {applyGraphBatch} from '../src/backend/core/tasks/graph-reducer';
-import type {DispatchState,DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
-import type {ControlledFileChange,ControlledWritePrepared,FileCompensationPrepared} from '../src/backend/core/tasks/controlled-file-event';
-import {controlledFileOperationId,controlledFileOwnerBindingHash,controlledFileRequestFingerprint,controlledFileIntentHash,controlledFileChangeHash,controlledFilePhaseCommand,controlledFilePhaseReceipt,controlledFileOperation,fileCompensationId,fileCompensationRequestFingerprint,fileCompensationBasis,fileCompensationRevision} from '../src/backend/core/tasks/controlled-file-rules';
-import {projectControlledFileMutation} from '../src/backend/core/tasks/controlled-file-invariants';
+import type {DispatchState,DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
+import type {ControlledFileChange,ControlledWritePrepared,FileCompensationPrepared} from '../src/backend/core/file-operations/controlled-file-event';
+import {controlledFileOperationId,controlledFileOwnerBindingHash,controlledFileRequestFingerprint,controlledFileIntentHash,controlledFileChangeHash,controlledFilePhaseCommand,controlledFilePhaseReceipt,controlledFileOperation,fileCompensationId,fileCompensationRequestFingerprint,fileCompensationBasis,fileCompensationRevision} from '../src/backend/core/file-operations/controlled-file-rules';
+import {projectControlledFileMutation} from '../src/backend/core/file-operations/controlled-file-invariants';
 import {registry,memberEvent,ownershipEvent,bindingFor,ws,instanceId,at,scopeId,command,rootMutation,taskMutation,plannedScope,initialScope,claimMutation,cancelClaimMutation,batch} from './owner-execution-core-fixture';
 export const fact=(s:string)=>({byteLength:Buffer.byteLength(s),sha256:hash(s)});
 export function runningMutation(state:DispatchState):DispatchMutation{

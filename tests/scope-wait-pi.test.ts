@@ -6,9 +6,9 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {scopeWaitProvider,waitFixture} from './scope-wait-provider';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/execution/workspace-lease';
+import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 

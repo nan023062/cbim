@@ -4,7 +4,7 @@
  * 职责边界：纯状态校验不执行 IO；许可仅在同一提交校验内传递，不来自模型或持久回执。
  */
 import {fail} from '../foundation/errors';
-import type {DispatchState,DispatchMutation,DispatchCommand} from './dispatch-storage';
+import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 import type {TaskNode,GraphChange} from './graph-types';
 import {sameGoalValue as equal} from './scope-goal';
 import {dependencyRevisionSchema,reviseQueuedDependenciesReceiptSchema,type DependencyRevision} from './queued-dependency-revision';

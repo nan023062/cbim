@@ -4,10 +4,10 @@ import path from 'node:path';
 import os from 'node:os';
 import http from 'node:http';
 import {randomUUID} from 'node:crypto';
-import {ClaudeCodeEngine} from '../src/backend/core/brain/claude/engine';
-import type {EngineEvent,ToolCall} from '../src/backend/core/brain/types';
-import type {EngineToolsPort} from '../src/backend/core/brain/engine-tools';
-import type {ResolvedLlm} from '../src/backend/core/brain/llm/ports';
+import {ClaudeCodeEngine} from '../src/backend/engines/claude/engine';
+import type {EngineEvent,ToolCall} from '../src/backend/core/execution/types';
+import type {EngineToolsPort} from '../src/backend/core/execution/engine-tools';
+import type {ResolvedLlm} from '../src/backend/core/models/ports';
 import {requestBudgetFixture} from './model-request-budget-fixture';
 
 function reply(res:http.ServerResponse,call?:{id:string;name:string;input:unknown}){

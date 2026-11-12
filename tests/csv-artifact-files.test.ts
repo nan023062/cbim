@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {createHash} from 'node:crypto';
-import {ArtifactFiles} from '../src/backend/main/platform/artifact-files';
+import {ArtifactFiles} from '../src/backend/main/platform/files/artifact-files';
 import {csvValidationLimits} from '../src/backend/core/workspace/csv-validation-schema';
 import {csvValidationData as d} from './csv-validation-data';
 const fact=(bytes:Buffer,relativePath=d.file)=>({relativePath,byteLength:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')});

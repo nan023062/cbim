@@ -12,15 +12,15 @@ import type {ToolCancellation,ToolRecovery} from '../tools/contracts';
 import {toolReceiptSchema} from '../tools/receipt-schema';
 import {questionToolName} from '../tools/questions';
 import type {ToolReceipt} from '../tools/types';
-import {taskProgressSchema,taskProgressInspectSchema,type ProgressPlanInput,type ProgressStepInput,type ProgressDeliveryInput} from './progress-schema';
-import type {TaskProgress} from './progress';
+import {taskProgressSchema,taskProgressInspectSchema,type ProgressPlanInput,type ProgressStepInput,type ProgressDeliveryInput} from '../evidence/progress-schema';
+import type {TaskProgress} from '../evidence/progress';
 import {memberHelpResultSchema,type MemberHelpStaged} from './member-help';
-import {artifactCaptureResultSchema,type ArtifactCaptureInput} from './artifact-baseline';
+import {artifactCaptureResultSchema,type ArtifactCaptureInput} from '../evidence/artifact-baseline';
 import {memberCheckpointResultSchema} from './member-checkpoint';
 import {sameGoalValue} from './scope-goal';
-import {evaluateWorkflowDelivery,type WorkflowProgressContext} from './workflow-evidence';
-import type {OutputManifestProof} from './output-manifest';
-import type {ValidationRecord} from './validation';
+import {evaluateWorkflowDelivery,type WorkflowProgressContext} from '../evidence/workflow-evidence';
+import type {OutputManifestProof} from '../evidence/output-manifest';
+import type {ValidationRecord} from '../evidence/validation';
 
 /** 所有普通、主和成员运行均有这三个真实身份；不把它们添加进 TaskProgress 正文。 */
 export interface ProgressToolIdentity {workspaceId:string;taskId:string;runId:string}

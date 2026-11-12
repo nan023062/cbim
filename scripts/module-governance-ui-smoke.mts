@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import assert from 'node:assert/strict';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {moduleGovernanceListSchema,moduleGovernanceReceiptSchema} from '../src/backend/core/governance/module-governance';
 import {seedModuleGovernance,moduleGovernanceFixture as data,moduleGovernanceRunFiles} from '../tests/module-governance-fixture';

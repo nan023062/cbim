@@ -4,10 +4,10 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {scopeUsageProvider,scopeUsageFixture as data} from './scope-usage-provider';
 import {seedScopeUsage,usageScopes,assertScopeUsage,stableScopeUsage} from './scope-usage-fixture';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import {scopeUsageReportSchema} from '../src/backend/core/tasks/scope-usage';
+import {scopeUsageReportSchema} from '../src/backend/core/budget/scope-usage';
 
 it('counts real Pi main/member runs once per trusted scope, isolates later goals and preserves metering after a complete restart',async()=>{
   const f=await fixture(),provider=await scopeUsageProvider();let app=f.app,failed=false;

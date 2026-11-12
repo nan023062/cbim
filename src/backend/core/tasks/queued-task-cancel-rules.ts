@@ -3,7 +3,7 @@
  * 设计原因：服务提交与持久重放共用同一规则，防止领取竞争、跨周期改写、漏掉下游或把已经执行的任务伪装为未执行。
  */
 import {fail} from '../foundation/errors';
-import type {DispatchState,DispatchMutation,DispatchCommand} from './dispatch-storage';
+import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 import type {GraphIdentity,TaskNode} from './graph-types';
 import type {CancelQueuedTasksInput} from './queued-task-cancel';
 import {queuedTaskCancellationSchema} from './queued-task-cancel';

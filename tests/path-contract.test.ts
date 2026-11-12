@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {exists} from '../src/backend/core/foundation/files';
 it('拒绝安装根、资源子目录和安装目录别名，允许同级业务工程',async()=>{const f=await fixture();try{const install=path.join(f.temp,'install'),resources=path.join(install,'resources'),alias=path.join(f.temp,'install-alias');await fs.mkdir(resources,{recursive:true});await fs.symlink(install,alias,process.platform==='win32'?'junction':'dir');const paths=new Paths(f.user,install);for(const target of [install,resources,alias,path.join(alias,'resources')])await expect(paths.identity(target)).rejects.toMatchObject({code:'INSTALL_ROOT'});expect((await paths.identity(f.a)).path).toBe(await fs.realpath(f.a))}finally{await f.cleanup()}});

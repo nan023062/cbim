@@ -10,14 +10,14 @@ import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import {jsonToolResult} from '../src/backend/core/tools/results';
 import {replanRequestSchema,replanReceiptSchema,type ReplanRequest} from '../src/backend/core/tasks/scope-replan';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
-import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
-import {MemberExecutionManager,type MemberExecutionPorts} from '../src/backend/scheduler-engine/execution/member-execution';
-import {LoopRuntime} from '../src/backend/core/brain/runtime';
-import type {EngineContext,TaskSpec,RunSummary} from '../src/backend/core/brain/types';
-import type {ScopeGoalPorts} from '../src/backend/scheduler-engine/execution/scope-goal-service';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {MemberExecutionManager,type MemberExecutionPorts} from '../src/backend/scheduler-engine/members/member-execution';
+import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
+import type {EngineContext,TaskSpec,RunSummary} from '../src/backend/core/execution/types';
+import type {ScopeGoalPorts} from '../src/backend/scheduler-engine/goals/scope-goal-service';
 
 async function setup(human=false,legacy=false,multi=false,splitMain=false){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),team=await seedTeam(workspace),snapshot=await workspace.snapshot(),moduleId=team.input.moduleId;

@@ -1,7 +1,7 @@
 import {runtimeToolGroup} from './runtime-tool-group';
 import {expect,it,vi} from 'vitest';
 import path from 'node:path';
-import type {EngineContext,RunSummary} from '../src/backend/core/brain';
+import type {EngineContext,RunSummary} from '../src/backend/core/execution';
 import {verifyMemberCheckpoint} from '../src/backend/core/tasks/member-checkpoint-evidence';
 import {artifactRuntimeFixture,artifactBinding,seedProgress,invoke,captureInput,deferred} from './artifact-runtime-fixture';
 

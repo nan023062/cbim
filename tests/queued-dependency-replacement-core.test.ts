@@ -5,7 +5,7 @@ import {validateDispatchExecution} from '../src/backend/core/tasks/dispatch-inva
 import {queuedDependencyReplacementSelection} from '../src/backend/core/tasks/queued-dependency-replacement-rules';
 import {validateQueuedDependencyReplacement} from '../src/backend/core/tasks/queued-dependency-replacement-invariants';
 import {dependencyReplacementSchema,replaceQueuedDependencyInputSchema,type DependencyReplacement,type ReplaceQueuedDependencyInput} from '../src/backend/core/tasks/queued-dependency-replacement';
-import type {DispatchMutation,DispatchState} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchMutation,DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
 import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
 import type {AgentRef,GraphEdge,GraphEventBatch,TaskNode} from '../src/backend/core/tasks/graph-types';
 

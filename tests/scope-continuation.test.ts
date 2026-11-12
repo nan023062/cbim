@@ -4,13 +4,13 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {hash} from '../src/backend/core/foundation/serialization';
-import type {TaskSpec} from '../src/backend/core/brain/types';
+import type {TaskSpec} from '../src/backend/core/execution/types';
 import type {GoalPlanInput,GoalReviewInput} from '../src/backend/core/tasks/scope-goal';
 import {goalInputRevision,goalNeedsReplan} from '../src/backend/core/tasks/scope-goal';
 import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
-import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
+import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
 
 const plan:GoalPlanInput={expectedRevision:1,objective:'先核实目标再交付',constraints:[],criteria:[{id:'human',text:'保留真正人工验收',kind:'human'}],assignments:[{agentId:'cbim:main',moduleIds:[],criterionIds:['human'],reason:'管理目标'}],reason:'先等待补充'};
 const review:GoalReviewInput={expectedRevision:2,decision:'awaiting_user',checks:[{criterionId:'human',outcome:'needs_human',reason:'等待用户补充，不等于人工签署',evidence:[]}],superseded:[],gaps:['需补充'],reason:'等待补充输出形式'};

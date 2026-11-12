@@ -5,7 +5,7 @@
 import {fail} from '../foundation/errors';
 import {applyWorkspaceMemberChange,workspaceMemberCanonical,workspaceMemberCommand,workspaceMemberReceipt} from '../team/workspace-member-rules';
 import type {WorkspaceMember,WorkspaceMemberChange,WorkspaceRegistryCursor} from '../team/workspace-member';
-import type {DispatchState,DispatchMutation,DispatchCommand} from './dispatch-storage';
+import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 import type {KnowledgeSourceCapturePermit} from './knowledge-source-invariants';
 
 /** 返回登记候选投影；调用方仍须先验证全部事务、可靠落盘后再发布。 */

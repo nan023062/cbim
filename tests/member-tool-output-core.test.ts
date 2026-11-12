@@ -1,10 +1,10 @@
 import {describe,it,expect,vi} from 'vitest';
-import {TaskProgressTools,progressTool,progressToolSchemas} from '../src/backend/core/tasks/progress-tools';
+import {TaskProgressTools,progressTool,progressToolSchemas} from '../src/backend/core/evidence/progress-tools';
 import {memberToolOutputSchema,memberToolOutputSchemas,memberToolContract,isProgressEvidence,progressToolIdentitySchema,type MemberToolName,type MemberToolOutputBinding} from '../src/backend/core/tasks/member-tool-output';
-import {taskProgressSchema} from '../src/backend/core/tasks/progress-schema';
+import {taskProgressSchema} from '../src/backend/core/evidence/progress-schema';
 import {toolReceiptSchema} from '../src/backend/core/tools/receipt-schema';
 import {checkedJsonToolResult} from '../src/backend/core/tools/results';
-import type {TaskProgress} from '../src/backend/core/tasks/progress';
+import type {TaskProgress} from '../src/backend/core/evidence/progress';
 import type {ToolReceipt} from '../src/backend/core/tools/types';
 import type {WorkflowContractBinding} from '../src/backend/core/tasks/execution-context';
 

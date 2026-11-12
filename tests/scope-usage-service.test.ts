@@ -1,8 +1,8 @@
 import {expect,it,vi} from 'vitest';
-import {ScopeUsageService} from '../src/backend/scheduler-engine/execution/scope-usage-service';
-import type {DispatchState} from '../src/backend/core/tasks/dispatch-storage';
+import {ScopeUsageService} from '../src/backend/scheduler-engine/budget/scope-usage-service';
+import type {DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
 import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
-import type {RunSummary,TaskSpec,EngineEvent} from '../src/backend/core/brain/types';
+import type {RunSummary,TaskSpec,EngineEvent} from '../src/backend/core/execution/types';
 import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
 
 const identity={workspaceId:'workspace',rootSessionId:'root',scopeId:'scope'},rootPath='C:/project';

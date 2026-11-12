@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest';
 import {executionScopeSchema,executionScopeCovers,preparedExecutionScope,type ExecutionScope} from '../src/backend/core/workspace/execution-scope';
 import {workflowContractSchema} from '../src/backend/core/workspace/workflow-contract';
-import {scopedNodeInputSchema} from '../src/backend/core/tasks/scoped-execution';
+import {scopedNodeInputSchema} from '../src/backend/core/file-operations/scoped-execution';
 export const scopeFixture:ExecutionScope={version:1,profile:'windows-lpac-node-v1',read:[{path:'src',kind:'directory'},{path:'result.txt',kind:'file'}],write:[{path:'result.txt',kind:'file'}],node:{timeoutMs:3000,memoryMiB:512,processLimit:2}};
 it('范围只有明确相对文件/目录；写必须是读的子集，拒绝私有目录、跳转、设备和别名',()=>{
  expect(executionScopeSchema.parse(scopeFixture)).toEqual(scopeFixture);

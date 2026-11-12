@@ -11,7 +11,7 @@ import type {GraphIdentity,GraphDelta} from './graph-types';
 import {assertGraphIdentity} from './graph-rules';
 import {sameGoalValue,goalInputRevision,goalNeedsReplan} from './scope-goal';
 import {scopeActiveInputStatus} from './scope-active-input';
-import {scopeBudgetSummarySchema} from './scope-budget';
+import {scopeBudgetSummarySchema} from '../budget/scope-budget';
 import {publicDispatchScopeSchema,projectMainScope,type PublicDispatchScope} from './scope-public';
 
 const id=z.string().min(1).max(512);

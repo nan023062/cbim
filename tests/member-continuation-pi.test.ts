@@ -4,9 +4,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
-import {LoopRuntime,type TaskSpec,type RunInputSource} from '../src/backend/core/brain';
-import {PiEngine} from '../src/backend/core/brain/pi/engine';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
+import {LoopRuntime,type TaskSpec,type RunInputSource} from '../src/backend/core/execution';
+import {PiEngine} from '../src/backend/engines/pi/engine';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 
 it('real Pi resumes member results as custom data, then preserves ordinary user follow-ups',async()=>{
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-continuation-pi-')),root=path.join(directory,'workspace'),agentHome=path.join(directory,'pi');

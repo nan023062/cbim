@@ -2,9 +2,9 @@ import {afterEach,expect,test,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {hash} from '../src/backend/core/foundation/serialization';
-import type {DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
 import type {GraphEventBatch,GraphIdentity} from '../src/backend/core/tasks/graph-types';
 
 const identity={workspaceId:'_workspace',rootSessionId:'-root'},time='2026-11-08T10:00:00.000Z';

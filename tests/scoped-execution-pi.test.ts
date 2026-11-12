@@ -3,7 +3,7 @@ import {createRequire} from 'node:module';
 import {createControlledHost} from './controlled-file-electron-fixture';
 import {scopedData,scopedProvider} from './scoped-execution-provider';
 import {scopedRecords} from './scoped-execution-fixture';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 async function runtimeFacts(){const executable=await fs.realpath(createRequire(import.meta.url)('electron') as string),stat=await fs.lstat(executable);return {executable,isFile:stat.isFile(),nlink:stat.nlink,size:stat.size}}
 it('真实Electron/Pi按冻结范围完成隔离执行、受控写、读取基线和目标审阅',async()=>{
  const provider=await scopedProvider(),host=await createControlledHost(),initialRuntime=await runtimeFacts();console.log('SCOPED_RUNTIME_INITIAL',JSON.stringify(initialRuntime));let keep=false;try{

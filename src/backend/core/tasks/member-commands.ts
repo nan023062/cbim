@@ -6,7 +6,7 @@ import {z} from 'zod';
 import {graphIdentityInput} from './dispatch-commands';
 import type {GraphCursor,TaskNode} from './graph-types';
 import type {DispatchRunStatus} from './dispatch-execution';
-import type {MemberRunBinding} from '../brain/member-run';
+import type {MemberRunBinding} from '../execution/member-run';
 
 const id=z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 /** 以工作区、主会话和业务 taskId 精确定位；后端仍须核对已派发任务，不能只凭格式授权。 */

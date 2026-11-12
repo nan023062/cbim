@@ -4,7 +4,7 @@
  * 职责边界：纯快照规则不读取知识或启动成员，当前岗位和知识由服务在固定锁序内复核。
  */
 import {fail} from '../foundation/errors';
-import type {DispatchState} from './dispatch-storage';
+import type {DispatchState} from '../dispatch/dispatch-storage';
 import type {GraphIdentity,GraphEdge} from './graph-types';
 import {reviseQueuedDependenciesInputSchema,type ReviseQueuedDependenciesInput} from './queued-dependency-revision';
 import {goalNeedsReplan} from './scope-goal';

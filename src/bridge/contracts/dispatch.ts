@@ -34,8 +34,8 @@ export type {GoalContinuationRequest,GoalContinuationReceipt} from '../../backen
 export {goalContinuationRequestSchema,goalContinuationReceiptSchema} from '../../backend/core/tasks/scope-continuation';
 export type {ExecutionReportInput,ExecutionReport} from '../../backend/core/tasks/execution-report';
 export {executionReportInputSchema,executionReportSchema} from '../../backend/core/tasks/execution-report';
-export type {ArtifactReportInput,ArtifactReport,ArtifactBaselineRef,ArtifactFileCheck} from '../../backend/core/tasks/artifact-baseline';
-export {artifactReportInputSchema,artifactReportSchema} from '../../backend/core/tasks/artifact-baseline';
+export type {ArtifactReportInput,ArtifactReport,ArtifactBaselineRef,ArtifactFileCheck} from '../../backend/core/evidence/artifact-baseline';
+export {artifactReportInputSchema,artifactReportSchema} from '../../backend/core/evidence/artifact-baseline';
 export type {RecoveryRequest,RecoveryLookup,RecoveryReceipt,RecoverySourceSelection} from '../../backend/core/tasks/scope-recovery';
 export {recoveryRequestSchema,recoveryLookupSchema,recoveryReceiptSchema,recoverySourceSelectionSchema,recoverySourceSelection,recoverySourceKey,recoveryRequestSource,isMainRecoverySource} from '../../backend/core/tasks/scope-recovery';
 export type {ReplanPreviewInput,ReplanPreview,ReplanRequest,ReplanLookup,ReplanReceipt} from '../../backend/core/tasks/scope-replan';

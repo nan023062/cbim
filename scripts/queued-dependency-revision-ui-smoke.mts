@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {dependencyRevisionProvider,dependencyRevisionData as data} from '../tests/queued-dependency-revision-provider';
 import {seedDependencyRevision,assertDependencyRevision,revisionRecords,revisionWait,revisionRunBytes,revisionRunByteEvidence} from '../tests/queued-dependency-revision-pi-fixture';

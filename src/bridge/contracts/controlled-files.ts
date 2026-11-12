@@ -7,8 +7,8 @@ export {
   controlledFileReportInputSchema,controlledFileReportSchema,controlledFileOperationSummarySchema,
   fileCompensationPreviewInputSchema,fileCompensationPreviewSchema,fileCompensationInputSchema,
   fileCompensationLookupSchema,fileCompensationReceiptSchema,
-} from '../../backend/core/tasks/controlled-file-operation';
+} from '../../backend/core/file-operations/controlled-file-operation';
 export type {
   ControlledFileReportInput,ControlledFileReport,ControlledFileOperationSummary,ControlledFilePhase,
   FileCompensationPreviewInput,FileCompensationPreview,FileCompensationInput,FileCompensationLookup,FileCompensationReceipt,FileCompensationSummary,
-} from '../../backend/core/tasks/controlled-file-operation';
+} from '../../backend/core/file-operations/controlled-file-operation';

@@ -3,12 +3,12 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {modelRequestBudgetProvider} from '../tests/model-request-budget-provider';
 import {scopeBudgetProvider,scopeBudgetFixture} from '../tests/scope-budget-provider';
 import {seedScopeBudget,budgetScopes} from '../tests/scope-budget-fixture';
-import {requestBudgetReportSchema} from '../src/backend/core/tasks/model-request-budget';
+import {requestBudgetReportSchema} from '../src/backend/core/budget/model-request-budget';
 import {latestExecutable} from './build-artifact.mjs';
 
 const mode=process.argv.includes('--block')?'block':process.argv.includes('--unknown')?'unknown':'complete',name='request-budget-'+mode,exe=await latestExecutable();

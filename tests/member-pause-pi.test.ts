@@ -5,7 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {memberPauseProvider,memberPauseData as data} from './member-pause-provider';
 import {seedMemberCheckpoint,checkpointRecords,checkpointRuns,checkpointLogBytes,assertCheckpointGraph} from './member-checkpoint-fixture';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
 

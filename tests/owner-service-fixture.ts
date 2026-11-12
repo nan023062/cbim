@@ -1,4 +1,4 @@
-import type {Application} from '../src/backend/main/application';
+import type {Application} from '../src/backend/main/assembly/application';
 import type {Workspace} from '../src/backend/main/workspace/workspace';
 import {registerFixtureOwner} from './owner-execution-fixture';
 

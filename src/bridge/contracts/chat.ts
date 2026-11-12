@@ -3,7 +3,7 @@
  * 作用定位：对话附件、执行权限和待审批请求的跨进程契约。
  * 设计原因：附件正文和来源证明由主进程快照保存，界面只传身份；资源资料仅为只读参考，不授予安装或执行权限。
  */
-export type {ChatPermission,ChatApproval} from '../../backend/core/brain/types';
+export type {ChatPermission,ChatApproval} from '../../backend/core/execution/types';
 export interface ChatAttachment {id:string;kind:'file'|'folder'|'link'|'web'|'connector'|'repository_resource';name:string;source:string;note?:string}
 /** 图片仅来自当前工作区已保存快照；禁止 SVG/HTML 与任意预览 URL。 */
 export interface ChatAttachmentPreview {name:string;source:string;note?:string;text:string;image?:{mimeType:'image/png'|'image/jpeg'|'image/gif'|'image/webp';data:string}}

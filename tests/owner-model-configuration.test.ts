@@ -2,8 +2,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {afterEach,expect,test} from 'vitest';
-import {LlmProfiles,type LockedModelConfiguration,type SecretCipher} from '../src/backend/main/persistence/settings/llm-profiles';
-import type {LlmDefinition} from '../src/backend/core/brain/llm/config';
+import {LlmProfiles,type LockedModelConfiguration,type SecretCipher} from '../src/backend/main/models/llm-profiles';
+import type {LlmDefinition} from '../src/backend/core/models/config';
 
 const roots:string[]=[];
 afterEach(async()=>{for(const root of roots.splice(0))await fs.rm(root,{recursive:true,force:true})});

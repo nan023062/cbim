@@ -2,8 +2,8 @@ import {afterEach,describe,expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {GitHubFeedback} from '../src/backend/main/resources/github-feedback';
-import {githubRequest,type GitHubRequest} from '../src/backend/main/resources/github-api';
+import {GitHubFeedback} from '../src/backend/main/feedback/github-feedback';
+import {githubRequest,type GitHubRequest} from '../src/backend/main/feedback/github-api';
 import {feedbackIssue,type FeedbackInput,type GitHubFeedbackConfig} from '../src/backend/core/connectors/github-feedback';
 
 const roots:string[]=[],services:GitHubFeedback[]=[];

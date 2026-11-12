@@ -7,15 +7,15 @@ import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import {cancelQueuedTasksInputSchema} from '../src/backend/core/tasks/queued-task-cancel';
 import {queuedCancellationSelection} from '../src/backend/core/tasks/queued-task-cancel-rules';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
-import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
-import {MemberExecutionManager,type PreparedEngine} from '../src/backend/scheduler-engine/execution/member-execution';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {MemberExecutionManager,type PreparedEngine} from '../src/backend/scheduler-engine/members/member-execution';
 import {registerFixtureOwner} from './owner-execution-fixture';
-import {LoopRuntime} from '../src/backend/core/brain/runtime';
-import type {TaskSpec} from '../src/backend/core/brain/types';
-import type {DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
+import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
+import type {TaskSpec} from '../src/backend/core/execution/types';
+import type {DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
 
 async function setup(){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),owner=f.app.workspace(entry.id),team=await seedTeam(owner),snapshot=await owner.snapshot(),moduleId=team.input.moduleId;

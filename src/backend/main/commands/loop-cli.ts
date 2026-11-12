@@ -5,7 +5,7 @@
 import {parseArgs} from 'node:util';
 import path from 'node:path';
 import {Paths} from '../platform/paths';
-import {Application} from '../application';
+import {Application} from '../assembly/application';
 
 async function main(){
   const {values}=parseArgs({options:{root:{type:'string'},'user-data':{type:'string'},provider:{type:'string'},model:{type:'string'},goal:{type:'string'},module:{type:'string'},agent:{type:'string'},workflow:{type:'string'},person:{type:'string'},acceptance:{type:'string',multiple:true},'allow-execution':{type:'boolean'},task:{type:'string'},resume:{type:'string'},message:{type:'string'},'reconciled-tool':{type:'string',multiple:true}}});

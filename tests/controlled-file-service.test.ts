@@ -1,11 +1,11 @@
 import {it,expect,vi} from 'vitest';import fs from 'node:fs/promises';import path from 'node:path';import {randomUUID} from 'node:crypto';
-import {ControlledFiles} from '../src/backend/main/workspace/controlled-files';
-import {ControlledFileBlobs} from '../src/backend/main/platform/controlled-file-blobs';
-import type {ControlledFileTransport,ExclusiveControlledFile} from '../src/backend/main/platform/controlled-file-protocol';
+import {ControlledFiles} from '../src/backend/main/file-operations/controlled-files';
+import {ControlledFileBlobs} from '../src/backend/main/platform/files/controlled-file-blobs';
+import type {ControlledFileTransport,ExclusiveControlledFile} from '../src/backend/main/platform/files/controlled-file-protocol';
 import type {Workspace} from '../src/backend/main/workspace/workspace';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/execution/workspace-lease';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
-import {controlledFileOperation,controlledFileOperationId} from '../src/backend/core/tasks/controlled-file-rules';
+import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {controlledFileOperation,controlledFileOperationId} from '../src/backend/core/file-operations/controlled-file-rules';
 import {hash} from '../src/backend/core/foundation/serialization';
 import {storeFixture,fact} from './controlled-file-core-fixture';
 import {instanceId} from './owner-execution-core-fixture';

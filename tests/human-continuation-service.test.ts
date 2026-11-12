@@ -4,9 +4,9 @@ import {randomUUID} from 'node:crypto';
 import {expect,it} from 'vitest';
 import type {HumanContinuationRequest} from '../src/backend/core/tasks/human-continue';
 import type {GoalReviewInput} from '../src/backend/core/tasks/scope-goal';
-import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
+import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
 import {humanServiceFixture,latch} from './human-decision-service-fixture';
 import {request as knowledgeRequest} from './data/knowledge';
 

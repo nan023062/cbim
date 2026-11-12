@@ -10,195 +10,175 @@ Electron 入口与应用装配。显式资料导入共用应用级取消表，�
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [agent-history.ts](agent-history.ts) | 在已持锁的工作区中组合角色历史服务、文件索引及 canonical 日志读取端口。 |
-| [application.ts](application.ts) | 单次运行授权、版本化队列增量和结构化问题按工作区路由；排队时冻结附件内容与模型身份。Application：登记及重命名工作区、装配模型供应商与服务，并统一派发主 Agent 对话、附件快照、工具审批和历史操作。 |
-| [automation.ts](automation.ts) | 将工作区知识、已采纳岗位和真实协作接入自动化端口，提供桌面目录与实例校验。 |
-| [execution-admission.ts](execution-admission.ts) | 把应用级并发准入与本工作区文件/实例租约组合为主轮和成员轮共用的同步领取入口。 |
-| [execution.ts](execution.ts) | 主进程执行装配，将工作区、已解析模型、原生锁与平台访问策略注入调度引擎。 |
 | [main.ts](main.ts) | 本机后端的 Electron 装配入口，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。 |
-| [member-dispatch.ts](member-dispatch.ts) | 为已运行工作区装配成员派发、大脑执行、目标审阅、岗位及模块负责人服务；复用工作区恢复前创建的唯一 DispatchStore，来源、责任、岗位与执行保持独立审计投影。 |
-| [runtime-monitor.ts](runtime-monitor.ts) | 把工作区派发/周期事务、两套运行日志和对话队列接入全局监管，同时维护静态 Agent 的持久化历史归档。 |
 
 ## 架构类图
 
 ```mermaid
 classDiagram
+class N_src_backend_main_assembly["assembly/"] {
+  <<directory>>
+}
+class N_src_backend_main_automation["automation/"] {
+  <<directory>>
+}
 class N_src_backend_main_commands["commands/"] {
+  <<directory>>
+}
+class N_src_backend_main_dispatch_storage["dispatch-storage/"] {
+  <<directory>>
+}
+class N_src_backend_main_evidence["evidence/"] {
+  <<directory>>
+}
+class N_src_backend_main_feedback["feedback/"] {
+  <<directory>>
+}
+N_src_backend_main_assembly ..> N_src_backend_main_automation : 导入依赖
+N_src_backend_main_assembly ..> N_src_backend_main_feedback : 导入依赖
+N_src_backend_main_assembly ..> N_src_backend_main_dispatch_storage : 导入依赖
+N_src_backend_main_assembly ..> N_src_backend_main_evidence : 导入依赖
+N_src_backend_main_commands ..> N_src_backend_main_assembly : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_file_operations["file-operations/"] {
   <<directory>>
 }
 class N_src_backend_main_governance["governance/"] {
   <<directory>>
 }
+class N_src_backend_main_history["history/"] {
+  <<directory>>
+}
 class N_src_backend_main_ipc["ipc/"] {
   <<directory>>
 }
-class N_src_backend_main_persistence["persistence/"] {
+class N_src_backend_main_knowledge["knowledge/"] {
+  <<directory>>
+}
+class N_src_backend_main_materials["materials/"] {
+  <<directory>>
+}
+N_src_backend_main_governance ..> N_src_backend_main_knowledge : 导入依赖
+N_src_backend_main_ipc ..> N_src_backend_main_materials : 导入依赖
+N_src_backend_main_ipc ..> N_src_backend_main_governance : 导入依赖
+N_src_backend_main_ipc ..> N_src_backend_main_file_operations : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_main_models["models/"] {
   <<directory>>
 }
 class N_src_backend_main_platform["platform/"] {
   <<directory>>
 }
+class N_src_backend_main_registry["registry/"] {
+  <<directory>>
+}
 class N_src_backend_main_resources["resources/"] {
   <<directory>>
 }
-N_src_backend_main_commands ..> N_src_backend_main_platform : 导入依赖
-N_src_backend_main_governance ..> N_src_backend_main_persistence : 导入依赖
-N_src_backend_main_ipc ..> N_src_backend_main_persistence : 导入依赖
-N_src_backend_main_ipc ..> N_src_backend_main_resources : 导入依赖
-N_src_backend_main_ipc ..> N_src_backend_main_platform : 导入依赖
-N_src_backend_main_ipc ..> N_src_backend_main_governance : 导入依赖
-N_src_backend_main_persistence ..> N_src_backend_main_resources : 导入依赖
-N_src_backend_main_persistence ..> N_src_backend_main_platform : 导入依赖
+class N_src_backend_main_run_storage["run-storage/"] {
+  <<directory>>
+}
+class N_src_backend_main_settings["settings/"] {
+  <<directory>>
+}
 N_src_backend_main_resources ..> N_src_backend_main_platform : 导入依赖
-N_src_backend_main_resources ..> N_src_backend_main_persistence : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_main_web["web/"] {
+  <<directory>>
+}
 class N_src_backend_main_workspace["workspace/"] {
   <<directory>>
 }
-class N_src_backend_main_agent_history_ts["agent-history.ts"] {
-  <<module>>
-}
-class N_src_backend_main_application_ts["application.ts"] {
-  <<module>>
-}
-class N_src_backend_main_automation_ts["automation.ts"] {
-  <<module>>
-}
-class N_src_backend_main_execution_admission_ts["execution-admission.ts"] {
-  <<module>>
-}
-class N_src_backend_main_execution_ts["execution.ts"] {
-  <<module>>
-}
-N_src_backend_main_application_ts ..> N_src_backend_main_automation_ts : 导入依赖
-N_src_backend_main_application_ts ..> N_src_backend_main_workspace : 导入依赖
-N_src_backend_main_application_ts ..> N_src_backend_main_execution_ts : 导入依赖
-N_src_backend_main_application_ts ..> N_src_backend_main_execution_admission_ts : 导入依赖
-N_src_backend_main_application_ts ..> N_src_backend_main_agent_history_ts : 导入依赖
-N_src_backend_main_automation_ts ..> N_src_backend_main_workspace : 导入依赖
-N_src_backend_main_execution_ts ..> N_src_backend_main_workspace : 导入依赖
-N_src_backend_main_execution_ts ..> N_src_backend_main_execution_admission_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_backend_main_main_ts["main.ts"] {
-  <<module>>
-}
-class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
-  <<module>>
-}
-class N_src_backend_main_runtime_monitor_ts["runtime-monitor.ts"] {
   <<module>>
 }
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-- `agent-history.ts` → `persistence`：导入。
-- `application.ts` → `persistence`：导入。
-- `application.ts` → `resources`：导入。
-- `application.ts` → `automation.ts`：导入。
-- `application.ts` → `platform`：导入。
-- `application.ts` → `workspace`：导入。
-- `application.ts` → `ipc`：导入。
-- `application.ts` → `execution.ts`：导入。
-- `application.ts` → `member-dispatch.ts`：导入。
-- `application.ts` → `execution-admission.ts`：导入。
-- `application.ts` → `runtime-monitor.ts`：导入。
-- `application.ts` → `agent-history.ts`：导入。
-- `automation.ts` → `workspace`：导入。
-- `automation.ts` → `persistence`：导入。
+- `assembly` → `settings`：导入。
+- `assembly` → `web`：导入。
+- `assembly` → `automation`：导入。
+- `assembly` → `platform`：导入。
+- `assembly` → `file-operations`：导入。
+- `assembly` → `ipc`：导入。
+- `assembly` → `models`：导入。
+- `assembly` → `feedback`：导入。
+- `assembly` → `dispatch-storage`：导入。
+- `assembly` → `materials`：导入。
+- `assembly` → `history`：导入。
+- `assembly` → `workspace`：导入。
+- `assembly` → `resources`：导入。
+- `assembly` → `registry`：导入。
+- `assembly` → `run-storage`：导入。
+- `assembly` → `governance`：导入。
+- `assembly` → `evidence`：导入。
+- `automation` → `workspace`：导入。
 - `commands` → `platform`：导入。
-- `commands` → `application.ts`：导入。
-- `execution.ts` → `persistence`：导入。
-- `execution.ts` → `workspace`：导入。
-- `execution.ts` → `platform`：导入。
-- `execution.ts` → `execution-admission.ts`：导入。
-- `execution.ts` → `resources`：导入。
-- `execution.ts` → `governance`：导入。
+- `commands` → `assembly`：导入。
+- `evidence` → `knowledge`：导入。
+- `evidence` → `governance`：导入。
+- `feedback` → `platform`：导入。
+- `file-operations` → `platform`：导入。
+- `file-operations` → `workspace`：导入。
 - `governance` → `workspace`：导入。
-- `governance` → `persistence`：导入。
-- `ipc` → `persistence`：导入。
+- `governance` → `knowledge`：导入。
+- `history` → `run-storage`：导入。
+- `ipc` → `materials`：导入。
 - `ipc` → `resources`：导入。
-- `ipc` → `automation.ts`：导入。
+- `ipc` → `settings`：导入。
+- `ipc` → `automation`：导入。
 - `ipc` → `workspace`：导入。
 - `ipc` → `platform`：导入。
+- `ipc` → `models`：导入。
+- `ipc` → `feedback`：导入。
 - `ipc` → `governance`：导入。
+- `ipc` → `registry`：导入。
+- `ipc` → `file-operations`：导入。
 - `main.ts` → `platform`：导入。
-- `main.ts` → `application.ts`：导入。
-- `main.ts` → `persistence`：导入。
-- `member-dispatch.ts` → `workspace`：导入。
-- `member-dispatch.ts` → `persistence`：导入。
-- `member-dispatch.ts` → `platform`：导入。
-- `member-dispatch.ts` → `execution-admission.ts`：导入。
-- `persistence` → `resources`：导入。
-- `persistence` → `platform`：导入。
+- `main.ts` → `assembly`：导入。
+- `main.ts` → `materials`：导入。
+- `materials` → `resources`：导入。
+- `registry` → `knowledge`：导入。
 - `resources` → `platform`：导入。
-- `resources` → `persistence`：导入。
-- `runtime-monitor.ts` → `workspace`：导入。
-- `runtime-monitor.ts` → `persistence`：导入。
+- `web` → `resources`：导入。
+- `web` → `settings`：导入。
 - `workspace` → `platform`：导入。
-- `workspace` → `persistence`：导入。
+- `workspace` → `knowledge`：导入。
 - `workspace` → `governance`：导入。
-
-### agent-history.ts 公开入口
-
-```mermaid
-classDiagram
-class N_src_backend_main_agent_history_ts["agent-history.ts"] {
-  <<module>>
-  +createAgentHistory()
-}
-```
-
-
-### execution-admission.ts 公开入口
-
-```mermaid
-classDiagram
-class N_src_backend_main_execution_admission_ts["execution-admission.ts"] {
-  <<module>>
-  +admissionRequestId()
-  +acquireExecutionLease()
-}
-```
-
-
-### execution.ts 公开入口
-
-```mermaid
-classDiagram
-class N_src_backend_main_execution_ts["execution.ts"] {
-  <<module>>
-  +createExecutionManager()
-}
-```
-
-
-### member-dispatch.ts 公开入口
-
-```mermaid
-classDiagram
-class N_src_backend_main_member_dispatch_ts["member-dispatch.ts"] {
-  <<module>>
-  +createMemberDispatch()
-  +createMemberServices()
-}
-```
-
+- `workspace` → `dispatch-storage`：导入。
+- `workspace` → `registry`：导入。
 
 ## 子目录导航
 
+- [assembly/](assembly/ARCHITECTURE.md)：应用装配：连接 IPC、调度、运行与平台服务并管理应用生命周期。准入和工具能力在这里注入；不把装配目录当新的领域模型。
+- [automation/](automation/ARCHITECTURE.md)：自动化应用服务及文件存储：计划、执行请求与持久化属于同一应用职责，领域调度契约仍在 Core。
 - [commands/](commands/ARCHITECTURE.md)：CLI 入口，复用应用和调度，不拥有第二套领域规则。
+- [dispatch-storage/](dispatch-storage/ARCHITECTURE.md)：当前派发图、命令、领取及任务状态的文件存储实现。保留共享事务与 DispatchStore，未按目录拆开一致性边界；这仍是依赖密集的共享实现。
+- [evidence/](evidence/ARCHITECTURE.md)：真实工程效果读取适配：在明确范围和版本下采集观察供证据服务使用。
+- [feedback/](feedback/ARCHITECTURE.md)：GitHub 反馈的登录、请求和持久化服务，公开字段与端口在 Core/connectors。
+- [file-operations/](file-operations/ARCHITECTURE.md)：受控文件操作与隔离执行的应用服务，连接冻结授权、工作区身份与 platform 实现；不把底层完成当业务验收。
 - [governance/](governance/ARCHITECTURE.md)：工作区模块知识治理服务、可信桌面操作与独立主运行端口。登记保护、决定及实施只属桌面；模型仅可读取、观察、提案和核查回执；反馈来源在批准与实施前串行复核，未知不重放。
+- [history/](history/ARCHITECTURE.md)：履历应用装配与文件索引。assembly.ts 连接角色/运行来源，file-store.ts 只实现 SessionHistoryStorage；文件存储不得反向依赖装配或工作区服务。
 - [ipc/](ipc/ARCHITECTURE.md)：应用 action 路由；等待资料独立导入/目录/取消入口不启动模型，受理只读保存快照。队列插入传递原expectedRunId，由调度拒绝缺失、过期及停止。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。 161项应用操作按业务组装配，request统一保留关闭/受理前错误码后解析，实际处理器受响应映射约束。 dispatch.ownerInspect 只读核原任务并返回当前观察；正式派发必须显式绑定主周期。 dispatch.commandReport 固定原工作区、主根、运行和调用，桌面与模型共用同一只读服务。 五项影响观察／处置／原回执／历史／关联入口相互分开，查询不启动新任务；保存只接受本机显式决定。 四个文件报告/补偿入口固定原调用或原命令；actor 由桌面入口注入，查询不启动文件操作，补偿不得改变目标路径或内容。
-- [persistence/](persistence/ARCHITECTURE.md)：本机持久化适配：知识事务、运行日志、对话附件、模型配置。保留原数据路径与格式，目录调整不迁移用户数据。
-- [platform/](platform/ARCHITECTURE.md)：本机路径、系统锁、凭据加密、终端与工具访问检查。固定根有界读取并核前后句柄/路径，拒绝链接、越界和Windows备用数据流；JSON验证由同一Buffer计算指纹和结构结论，正文不出端口。原生历史不完整拒绝恢复，不承诺外部原子隔离。 原生指纹固定 Pi/Claude/Codex 格式及受管目录，Codex 另核 metadata 和 rollout 文件名。 范围模式用Win32读取/枚举句柄与LPAC私有快照，原工程不扩ACL。 ArtifactFileService 只观察明确原调用的有界文件，独立返回缺失、不可信和当前字节；路径与链接检查不宣称操作系统隔离。 独立 utility 持有 Win32 目录与文件句柄，执行单次有界替换、flush 与读回；私有 blob 保留真实 before，进程退出不表示内容回滚。另有独立 LPAC/Job Node 平台端口，私有快照与输出分权、真实进程树收束；尚未装配为模型命令或任务授权。
+- [knowledge/](knowledge/ARCHITECTURE.md)：知识仓库文件、事务、缓存及对象写入实现。与 Core 的规则/存储端口单向连接，物理写入和授权语义不因目录迁移变化。
+- [materials/](materials/ARCHITECTURE.md)：聊天输入、附件与引用材料的本机采集/持久化；保存的快照不自动证明当前来源有效。
+- [models/](models/ARCHITECTURE.md)：模型配置、密钥保护、认证与参数迁移。持有本机配置和凭据，公开能力契约位于 Core/models。
+- [platform/](platform/ARCHITECTURE.md)：平台实现按职责分区：isolation 处理受限进程及恢复，files 处理受控文件操作；锁、网络等其他平台能力仍在本层。不是一个业务领域。
+- [registry/](registry/ARCHITECTURE.md)：岗位、来源与责任登记的应用服务；协调知识、文件实现和 Core 的规则，不拥有正式运行准入。
 - [resources/](resources/ARCHITECTURE.md)：链接器、人才和完整业务模板共用的本地/远端资源仓库。静态资料单次HTTP捕获前后核授权与共享代际，正文快照不安装执行。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。 GitHub 反馈采用独立直连服务，设备授权和原提交账本由本机管理；固定目标、跨会话去重、未知只核实，成功不回传 Issue 链接或开发进度。
+- [run-storage/](run-storage/ARCHITECTURE.md)：运行日志、运行内输入和游标文件实现；按 RunStorage 等 Core 端口提供持久化，保留追加、未知和恢复语义。
+- [settings/](settings/ARCHITECTURE.md)：应用设置及命名文件存储；与模型配置、派发、运行及知识持久化分开定位。
+- [web/](web/ARCHITECTURE.md)：网页请求应用服务，封装访问与返回结果；上层通过端口调用。
 - [workspace/](workspace/ARCHITECTURE.md)：本机工作区、静态编辑与受控来源协调。获取工作区锁后在唯一DispatchStore核身份、恢复知识和来源，再发布服务。岗位和负责人以同知识快照明确采纳；首次真实观察与消费者同事务保存。来源、能力、模型分别展示，不以登记回执启动实例或改写旧任务。 负责岗位和模块责任只读发现供实际主工具调用；当前配置观察与历史执行事实分开。 原知识事务适配复用现有串行 journal 核验，固定计划与旧实例只读；不提交、刷新、恢复或修剪目录。 ControlledFiles 连接原成员授权、唯一 Store、文件平台与私有备份；原not_applied与真实退出才解除运行屏障，显式补偿重新核文件身份/摘要/关闭周期，未知不重试。
 
 [返回上层](../ARCHITECTURE.md)。

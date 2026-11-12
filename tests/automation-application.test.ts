@@ -5,7 +5,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {seedOwnerExecution,ownerExecutionData} from './owner-execution-fixture';
-import {FileAutomations} from '../src/backend/main/persistence/tasks/automations';
+import {FileAutomations} from '../src/backend/main/automation/storage';
 import {automationActionSchemas} from '../src/bridge/contracts/automation';
 import type {AutomationDefinition,AutomationRun,AutomationJob} from '../src/backend/core/automation/contracts';
 

@@ -6,7 +6,7 @@ import {isDeepStrictEqual} from 'node:util';
 import {fail} from '../foundation/errors';
 import {effectDispositionRecordSchema,effectObservationLimits,sameEffectSubject,type EffectSubject,type EffectDispositionRecord} from './effect-observation';
 import {effectDispositionCommand,effectDispositionReceipt,effectDispositionRevision,effectObservationBasis} from './effect-observation-rules';
-import type {DispatchState,DispatchMutation,DispatchCommand} from './dispatch-storage';
+import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 import type {DispatchScope} from './dispatch-scope';
 import {isMainRecoverySource} from './scope-recovery';
 

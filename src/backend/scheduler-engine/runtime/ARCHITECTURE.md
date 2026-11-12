@@ -10,107 +10,11 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [agent-history.ts](agent-history.ts) | 按工作区静态角色归档 Session 与运行摘要，向团队节点提供分页历史和受限事件详情。 |
 | [global-runtime.ts](global-runtime.ts) | 维护整个应用的成员、派发任务、目标周期与实际 Loop 消耗索引，接收 main 的可靠提交；周期结算独立于模型轮次，成员运行不重复生成任务。 |
-| [run-admission.ts](run-admission.ts) | 为应用内主轮和成员轮统一提供同步执行准入、FIFO 等待及独立只读投影。 |
+| [member-events.ts](member-events.ts) | 将成员运行日志投影为可公开的连续事件流，并按 run 缓存首次恢复及后续已落盘增量。 |
+| [public-run-events.ts](public-run-events.ts) | 把主会话和成员运行事件转换为可展示的公开消息、工具状态、计划与证据摘要。 |
 
 ## 架构类图
-
-### agent-history.ts
-
-成员 1/3（同名节点为同一声明，跨图合并阅读）。
-
-```mermaid
-classDiagram
-class N_src_backend_scheduler_engine_runtime_agent_history_ts["agent-history.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_runtime_agent_history_ts_Source["Source"] {
-  <<type>>
-
-}
-N_src_backend_scheduler_engine_runtime_agent_history_ts ..> N_src_backend_scheduler_engine_runtime_agent_history_ts_Source : 声明
-class N_src_backend_scheduler_engine_runtime_agent_history_ts_EventStream["EventStream"] {
-  <<interface>>
-  +events
-  +pending
-  +unresolved
-  +progress
-  +loading
-  +loaded
-  +failure
-}
-N_src_backend_scheduler_engine_runtime_agent_history_ts ..> N_src_backend_scheduler_engine_runtime_agent_history_ts_EventStream : 声明
-class N_src_backend_scheduler_engine_runtime_agent_history_ts_AgentHistoryPorts["AgentHistoryPorts"] {
-  <<interface>>
-  +store
-  +read()
-  +diagnostic()
-}
-N_src_backend_scheduler_engine_runtime_agent_history_ts ..> N_src_backend_scheduler_engine_runtime_agent_history_ts_AgentHistoryPorts : 声明
-class N_src_backend_scheduler_engine_runtime_agent_history_ts_AgentHistoryService["AgentHistoryService"] {
-  +workspaceId
-  +initialize()
-  +issue()
-  +restoreRun()
-  +observeRun()
-  +restoreDispatch()
-  +dispatchCommitted()
-  +roles()
-  +sessions()
-  +runs()
-  +events()
-  +close()
-  +flush()
-  -root
-  -ports
-  -records
-}
-N_src_backend_scheduler_engine_runtime_agent_history_ts ..> N_src_backend_scheduler_engine_runtime_agent_history_ts_AgentHistoryService : 声明
-```
-
-成员 2/3（同名节点为同一声明，跨图合并阅读）。
-
-```mermaid
-classDiagram
-class N_src_backend_scheduler_engine_runtime_agent_history_ts["agent-history.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_runtime_agent_history_ts_AgentHistoryService["AgentHistoryService"] {
-  -tasks
-  -streams
-  -brokenStreams
-  -diagnostics
-  -pending
-  -initialized
-  -closed
-  -live
-  -check()
-  -notices()
-  -persist()
-  -put()
-  -fromStart()
-  -recordIntent()
-  -page()
-  -accept()
-}
-N_src_backend_scheduler_engine_runtime_agent_history_ts ..> N_src_backend_scheduler_engine_runtime_agent_history_ts_AgentHistoryService : 声明
-```
-
-成员 3/3（同名节点为同一声明，跨图合并阅读）。
-
-```mermaid
-classDiagram
-class N_src_backend_scheduler_engine_runtime_agent_history_ts["agent-history.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_runtime_agent_history_ts_AgentHistoryService["AgentHistoryService"] {
-  -loadStream()
-}
-N_src_backend_scheduler_engine_runtime_agent_history_ts ..> N_src_backend_scheduler_engine_runtime_agent_history_ts_AgentHistoryService : 声明
-```
-
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/brain/conversation-binding.ts](../../core/brain/conversation-binding.ts)、[../../core/brain/member-run.ts](../../core/brain/member-run.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/dispatch-execution.ts](../../core/tasks/dispatch-execution.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/member-events.ts](../../core/tasks/member-events.ts)、[../../core/team/session-history.ts](../../core/team/session-history.ts)、[../../core/team/session-history-storage.ts](../../core/team/session-history-storage.ts)、[../execution/public-run-events.ts](../execution/public-run-events.ts)。
 
 ### global-runtime.ts
 
@@ -185,98 +89,90 @@ class N_src_backend_scheduler_engine_runtime_global_runtime_ts_GlobalRuntimeMana
 N_src_backend_scheduler_engine_runtime_global_runtime_ts ..> N_src_backend_scheduler_engine_runtime_global_runtime_ts_GlobalRuntimeManager : 声明
 ```
 
-直接依赖：[../../core/brain/types.ts](../../core/brain/types.ts)、[../../core/brain/member-run.ts](../../core/brain/member-run.ts)、[../../core/brain/conversation-binding.ts](../../core/brain/conversation-binding.ts)、[../../core/brain/usage.ts](../../core/brain/usage.ts)、[../../core/runtime/runtime-scope.ts](../../core/runtime/runtime-scope.ts)、[../../core/tasks/dispatch-storage.ts](../../core/tasks/dispatch-storage.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)。
+直接依赖：[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/execution/member-run.ts](../../core/execution/member-run.ts)、[../../core/execution/conversation-binding.ts](../../core/execution/conversation-binding.ts)、[../../core/execution/usage.ts](../../core/execution/usage.ts)、[../../core/runtime/runtime-scope.ts](../../core/runtime/runtime-scope.ts)、[../../core/dispatch/dispatch-storage.ts](../../core/dispatch/dispatch-storage.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)。
 
-### run-admission.ts
+### member-events.ts
 
 ```mermaid
 classDiagram
-class N_src_backend_scheduler_engine_runtime_run_admission_ts["run-admission.ts"] {
+class N_src_backend_scheduler_engine_runtime_member_events_ts["member-events.ts"] {
+  <<module>>
+  +memberPublicTask()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_runtime_member_events_ts["member-events.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_runtime_run_admission_ts_LocalAdmissionPort["LocalAdmissionPort"] {
+class N_src_backend_scheduler_engine_runtime_member_events_ts_Stream["Stream"] {
   <<interface>>
-  +canAcquire()
-  +acquire()
-  +isCurrent()
-  +onReady()
+  +run
+  +task
+  +live
+  +load
+  +failure
+  +ordered
+  +pending
+  +unresolved
+  +progress
 }
-N_src_backend_scheduler_engine_runtime_run_admission_ts ..> N_src_backend_scheduler_engine_runtime_run_admission_ts_LocalAdmissionPort : 声明
-class N_src_backend_scheduler_engine_runtime_run_admission_ts_AdmissionAttempt["AdmissionAttempt"] {
-  <<type>>
-
-}
-N_src_backend_scheduler_engine_runtime_run_admission_ts ..> N_src_backend_scheduler_engine_runtime_run_admission_ts_AdmissionAttempt : 声明
-class N_src_backend_scheduler_engine_runtime_run_admission_ts_Waiting["Waiting"] {
-  <<type>>
-  +request
-  +ticket
-  +port
-}
-N_src_backend_scheduler_engine_runtime_run_admission_ts ..> N_src_backend_scheduler_engine_runtime_run_admission_ts_Waiting : 声明
-class N_src_backend_scheduler_engine_runtime_run_admission_ts_Occupied["Occupied"] {
-  <<type>>
-  +request
-  +view
-}
-N_src_backend_scheduler_engine_runtime_run_admission_ts ..> N_src_backend_scheduler_engine_runtime_run_admission_ts_Occupied : 声明
-```
-
-成员 1/2（同名节点为同一声明，跨图合并阅读）。
-
-```mermaid
-classDiagram
-class N_src_backend_scheduler_engine_runtime_run_admission_ts["run-admission.ts"] {
-  <<module>>
-}
-class N_src_backend_scheduler_engine_runtime_run_admission_ts_GlobalRunAdmission["GlobalRunAdmission"] {
-  +observeChange()
-  +attempt()
-  +withdraw()
-  +retireOwner()
-  +wake()
-  +restorePolicy()
-  +configure()
-  +snapshot()
+N_src_backend_scheduler_engine_runtime_member_events_ts ..> N_src_backend_scheduler_engine_runtime_member_events_ts_Stream : 声明
+class N_src_backend_scheduler_engine_runtime_member_events_ts_MemberEventStreams["MemberEventStreams"] {
+  +begin()
+  +append()
   +read()
-  -streamId
-  -revision
-  -policy
-  -attempted
-  -policyRestored
-  -configured
-  -inAttempt
+  +clear()
+  -inspect
+  -streams
+  -stream()
+  -accept()
+  -restore()
 }
-N_src_backend_scheduler_engine_runtime_run_admission_ts ..> N_src_backend_scheduler_engine_runtime_run_admission_ts_GlobalRunAdmission : 声明
+N_src_backend_scheduler_engine_runtime_member_events_ts ..> N_src_backend_scheduler_engine_runtime_member_events_ts_MemberEventStreams : 声明
 ```
 
-成员 2/2（同名节点为同一声明，跨图合并阅读）。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/tasks/dispatch-execution.ts](../../core/tasks/dispatch-execution.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/evidence/progress.ts](../../core/evidence/progress.ts)、[../../core/tasks/member-events.ts](../../core/tasks/member-events.ts)、[public-run-events.ts](public-run-events.ts)。
+
+### public-run-events.ts
 
 ```mermaid
 classDiagram
-class N_src_backend_scheduler_engine_runtime_run_admission_ts["run-admission.ts"] {
+class N_src_backend_scheduler_engine_runtime_public_run_events_ts["public-run-events.ts"] {
   <<module>>
+  +projectRunEvent()
 }
-class N_src_backend_scheduler_engine_runtime_run_admission_ts_GlobalRunAdmission["GlobalRunAdmission"] {
-  -order
-  -occupied
-  -waiting
-  -retired
-  -listeners
-  -changeScheduled
-  -wakeScheduled
-  -changed()
-  -current()
-  -local()
-  -prune()
-  -evaluate()
-  -updateReasons()
-  -waitOrDeny()
-}
-N_src_backend_scheduler_engine_runtime_run_admission_ts ..> N_src_backend_scheduler_engine_runtime_run_admission_ts_GlobalRunAdmission : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)。
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_runtime_public_run_events_ts["public-run-events.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_runtime_public_run_events_ts_PublicRunIdentity["PublicRunIdentity"] {
+  <<interface>>
+  +workspaceId
+  +taskId
+  +runId
+}
+N_src_backend_scheduler_engine_runtime_public_run_events_ts ..> N_src_backend_scheduler_engine_runtime_public_run_events_ts_PublicRunIdentity : 声明
+```
+
+直接依赖：[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/evidence/progress.ts](../../core/evidence/progress.ts)、[../../core/tools/types.ts](../../core/tools/types.ts)、[../../core/tools/scope-schema.ts](../../core/tools/scope-schema.ts)、[../../core/evidence/validation.ts](../../core/evidence/validation.ts)。
+
+### 本目录调用边界
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_runtime_member_events_ts["member-events.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_runtime_public_run_events_ts["public-run-events.ts"] {
+  <<module>>
+}
+N_src_backend_scheduler_engine_runtime_member_events_ts ..> N_src_backend_scheduler_engine_runtime_public_run_events_ts : 导入依赖
+```
 
 
 ## 子目录导航
@@ -365,7 +261,7 @@ class RuntimeScope {
 class RuntimeSnapshot {
   <<core-contract>>
 }
-class BrainUsage["core/brain/usage.ts"] {
+class BrainUsage["core/execution/usage.ts"] {
   <<module>>
   +runUsage(events)
 }

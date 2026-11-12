@@ -3,14 +3,14 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import {fixture} from './helpers';
 import {GlobalRuntimeManager} from '../src/backend/scheduler-engine/runtime/global-runtime';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
+import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {projectRuntimeScope} from '../src/backend/core/runtime/runtime-scope';
 import {runtimeCursorSchema,runtimeScopeSchema,runtimeReadSchema,runtimeSnapshotSchema} from '../src/backend/core/runtime/runtime-validation';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {DispatchState,DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchState,DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
 import type {TaskNode} from '../src/backend/core/tasks/graph-types';
-import type {RunSummary,StoredEvent,TaskSpec} from '../src/backend/core/brain/types';
+import type {RunSummary,StoredEvent,TaskSpec} from '../src/backend/core/execution/types';
 import type {RuntimeSnapshot} from '../src/backend/core/runtime/types';
 
 const time='2026-11-07T10:00:00.000Z',later='2026-11-07T10:01:00.000Z';

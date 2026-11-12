@@ -8,7 +8,7 @@ import {isMemberCheckpointPending} from './member-checkpoint';
 import {hash} from '../foundation/serialization';
 import {applyModuleOwnershipChange,moduleOwnershipCanonical,moduleOwnershipCommand,moduleOwnershipReceipt} from '../workspace/module-ownership-rules';
 import {moduleOwnershipActorSchema,type ModuleOwnership,type ModuleOwnershipActor,type ModuleOwnershipChange,type ModuleOwnershipCursor,type ModuleOwnershipImpact} from '../workspace/module-ownership';
-import type {DispatchState,DispatchMutation,DispatchCommand} from './dispatch-storage';
+import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 import type {KnowledgeSourceCapturePermit} from './knowledge-source-invariants';
 
 /** 本地 actor 由 IPC 注入；主 actor 还须属于当前活动周期最后登记的主运行与原 conversation 通道。 */

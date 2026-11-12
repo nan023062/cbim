@@ -31,7 +31,8 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 当前允许方向以 `scripts/check-dependencies.mjs` 的 layers 和源码为准：
 
 - backend/core → backend/core。
-- backend/scheduler-engine → 自身、backend/core。
+- backend/engines → 自身、backend/core；具体 SDK 与 HTTP 传输不得被 Core 反向引用。
+- backend/scheduler-engine → 自身、backend/core；assembly 中的引擎装配可以依赖 backend/engines。
 - backend/main → 自身、backend/scheduler-engine、backend/core、backend/updater、bridge/contracts。
 - backend/updater → 自身、bridge/contracts；更新程序不得反向依赖 Main、调度或业务运行时。
 - bridge/contracts → 自身、backend/core 的公开契约和纯函数。

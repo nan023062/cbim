@@ -147,7 +147,7 @@ MemberScheduler ..> MemberContracts : 持有实例并投影状态
 MemberScheduler ..> BrainPort : 绑定成员通道并执行
 ```
 
-本图表达跨目录契约边界，具体文件类图见各目录 `ARCHITECTURE.md`。Team 不导入调度器、大脑实现或平台存储；成员共享类型放在独立契约文件，避免 `model.ts` 与运行管理器相互依赖。任务节点与增量事件见 [任务契约](../tasks/CONTRACT.md)，执行通道边界见 [大脑契约](../brain/CONTRACT.md)。
+本图表达跨目录契约边界，具体文件类图见各目录 `ARCHITECTURE.md`。Team 不导入调度器、大脑实现或平台存储；成员共享类型放在独立契约文件，避免 `model.ts` 与运行管理器相互依赖。任务节点与增量事件见 [任务契约](../tasks/CONTRACT.md)，执行通道边界见 [大脑契约](../execution/CONTRACT.md)。
 
 ### 项目岗位登记与明确采纳
 

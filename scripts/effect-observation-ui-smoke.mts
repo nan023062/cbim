@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import {effectObservationReportSchema,effectDispositionReceiptSchema,effectRelationsSchema} from '../src/backend/core/tasks/effect-observation';

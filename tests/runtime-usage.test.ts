@@ -1,6 +1,6 @@
 import {expect,test} from 'vitest';
-import type {EngineEvent,StoredEvent} from '../src/backend/core/brain/types';
-import {runUsage} from '../src/backend/core/brain/usage';
+import type {EngineEvent,StoredEvent} from '../src/backend/core/execution/types';
+import {runUsage} from '../src/backend/core/execution/usage';
 
 const events=(...items:EngineEvent[]):StoredEvent[]=>items.map((item,index)=>({
   version:1,workspaceId:'workspace',taskId:'task',runId:'run',seq:index+1,time:new Date(index*1000).toISOString(),...item

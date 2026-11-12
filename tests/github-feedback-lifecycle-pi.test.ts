@@ -4,11 +4,11 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {knowledgeContractResult} from './knowledge-contract-provider';
 import {transcript} from '../src/frontend/execution-view/transcript';
-import type {RunSummary} from '../src/backend/core/brain/types';
+import type {RunSummary} from '../src/backend/core/execution/types';
 
 it.each(['bug','wish'] as const)('refreshes both feedback tools after login when resuming an empty-project conversation (%s)',async kind=>{
   const f=await fixture();await f.app.shutdown();

@@ -9,9 +9,9 @@ import {fixture} from './helpers';
 import {request,summary} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
-import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
-import type {TaskSpec,StoredEvent} from '../src/backend/core/brain/types';
+import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import type {TaskSpec,StoredEvent} from '../src/backend/core/execution/types';
 import type {AgentHistoryRoles,AgentHistoryPage,AgentHistorySession,AgentHistoryRun,AgentHistoryEventsRead} from '../src/backend/core/team/session-history';
 
 /** Real Application + pinned Pi, with a deterministic local provider. History queries never call this provider. */

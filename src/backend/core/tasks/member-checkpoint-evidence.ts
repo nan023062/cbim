@@ -8,7 +8,7 @@ import {fail} from '../foundation/errors';
 import {hash,json} from '../foundation/serialization';
 import {toolReceipt} from '../tools/receipts';
 import type {ToolReceipt} from '../tools/types';
-import {artifactSources,artifactSucceededCall,verifyArtifactBaselines,type ArtifactEvidenceEvent} from './artifact-evidence';
+import {artifactSources,artifactSucceededCall,verifyArtifactBaselines,type ArtifactEvidenceEvent} from '../evidence/artifact-evidence';
 import {memberCheckpointInputSchema,memberCheckpointStagedSchema,memberCheckpointRecordSchema,memberCheckpointResultSchema,type MemberCheckpointInput,type MemberCheckpointStaged,type MemberCheckpointRecord} from './member-checkpoint';
 const name='cbim_task_checkpoint',eventName='task.checkpoint_requested';
 const maintenance=new Set(['cbim_task_plan','cbim_task_step','cbim_task_inspect','cbim_task_artifact_capture']);

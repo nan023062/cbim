@@ -1,8 +1,8 @@
 import {it,expect,beforeAll,afterAll} from 'vitest';
 import {manifestFixture,manifestInput,verifyManifests} from './output-manifest-fixture';
 import {seedProgress,invoke} from './artifact-runtime-fixture';
-import {outputManifestToolName as capture,type OutputManifestStaged} from '../src/backend/core/tasks/output-manifest';
-import type {StoredEvent} from '../src/backend/core/brain/types';
+import {outputManifestToolName as capture,type OutputManifestStaged} from '../src/backend/core/evidence/output-manifest';
+import type {StoredEvent} from '../src/backend/core/execution/types';
 
 let f:Awaited<ReturnType<typeof manifestFixture>>,events:StoredEvent[];
 beforeAll(async()=>{f=await manifestFixture(async c=>{await seedProgress(c);await invoke(c,capture,'capture',manifestInput)});const summary=await (await f.start()).done;expect(summary.status).toBe('completed');events=summary.events});

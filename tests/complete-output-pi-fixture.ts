@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import type {Application} from '../src/backend/main/application';
+import type {Application} from '../src/backend/main/assembly/application';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';

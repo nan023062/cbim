@@ -4,7 +4,7 @@
  * 职责边界：只读查询或追加私有待办，不批准、不实施、不换实例重放；失败只返回可查询的原命令身份，不泄露底层正文。
  */
 import type {TaskSpec} from '../../core/tasks/types';
-import {checkedConversationAgentBinding,type ConversationAgentBinding} from '../../core/brain/conversation-binding';
+import {checkedConversationAgentBinding,type ConversationAgentBinding} from '../../core/execution/conversation-binding';
 import {safeId} from '../../core/foundation/identity';
 import {fail,Fault} from '../../core/foundation/errors';
 import {moduleGovernanceMainOriginSchema} from '../../core/governance/module-governance';

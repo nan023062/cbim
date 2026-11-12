@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';import path from 'node:path';import os from 'node:os';import {randomUUID,randomBytes} from 'node:crypto';import {createRequire} from 'node:module';
-import {Win32IsolationRecovery} from '../src/backend/main/platform/isolation-recovery-win32';
-import type {IsolationRecord,IsolationResource} from '../src/backend/main/platform/isolation-record';
+import {Win32IsolationRecovery} from '../src/backend/main/platform/isolation/isolation-recovery-win32';
+import type {IsolationRecord,IsolationResource} from '../src/backend/main/platform/isolation/isolation-record';
 import {artifactBinding} from './artifact-runtime-fixture';import {hash} from '../src/backend/core/foundation/serialization';
 export const isolationPlatform=()=>new Win32IsolationRecovery(createRequire(import.meta.url).resolve('koffi'));
 export async function isolationFixture(){

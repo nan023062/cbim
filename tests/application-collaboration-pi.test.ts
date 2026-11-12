@@ -10,10 +10,10 @@ import {seedTeam} from './team-fixture';
 import {goalCompleteArguments,goalPlanArguments} from './goal-provider-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {RunSummary} from '../src/backend/core/brain/types';
+import type {RunSummary} from '../src/backend/core/execution/types';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import type {MemberExecutionView} from '../src/backend/core/tasks/member-commands';
-import type {ChatApproval} from '../src/backend/core/policy/types';
+import type {ChatApproval} from '../src/backend/core/tools/policy/types';
 
 type ProviderRequest={
   model:string;

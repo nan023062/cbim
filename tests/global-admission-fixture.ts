@@ -1,9 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {Application} from '../src/backend/main/application';
+import type {Application} from '../src/backend/main/assembly/application';
 import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
-import type {DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import {seedTeam} from './team-fixture';
 import {request} from './data/knowledge';

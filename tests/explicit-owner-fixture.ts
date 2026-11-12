@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import type {Application} from '../src/backend/main/application';
+import type {Application} from '../src/backend/main/assembly/application';
 import {workspaceMemberDetailSchema,workspaceMemberPreviewSchema,workspaceMemberReceiptSchema} from '../src/backend/core/team/workspace-member';
 import {moduleOwnershipDetailSchema,moduleOwnershipPreviewSchema,moduleOwnershipReceiptSchema} from '../src/backend/core/workspace/module-ownership';
 import {ownerExecutionDiscoverySchema} from '../src/backend/core/team/owner-execution-discovery';

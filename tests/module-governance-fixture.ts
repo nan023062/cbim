@@ -1,4 +1,4 @@
-import type {Application} from '../src/backend/main/application';
+import type {Application} from '../src/backend/main/assembly/application';
 import {internalKnowledge} from './knowledge-tool-fixture';
 import {moduleFiles,summary,request} from './data/knowledge';
 export {repositoryConnectionRunFiles as moduleGovernanceRunFiles} from './repository-connection-fixture';

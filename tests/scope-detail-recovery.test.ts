@@ -5,7 +5,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {effectDispositionCommand,effectDispositionReceipt} from '../src/backend/core/tasks/effect-observation-rules';
 import {effectIdentity,effectRootMutation,effectScope,effectRecord,effectTime,effectState} from './effect-core-fixture';
 import {emptyScopeSnapshot,readScopeDetail,summarizeScope,type DispatchSessionRead} from '../src/backend/core/tasks/scope-view';

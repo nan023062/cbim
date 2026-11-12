@@ -11,7 +11,7 @@ it('所有跨层依赖（含重导出和 import 类型）遵循单向边界',()=
   for(const file of files){
     const layerOf=(file:string)=>{const parts=path.relative(root,file).split(path.sep);return parts[0]==='frontend'?'frontend':parts.slice(0,2).join('/')};
     const layer=layerOf(file);
-    const allowed:Record<string,string[]>={'backend/core':['backend/core'],'backend/scheduler-engine':['backend/scheduler-engine','backend/core'],'backend/main':['backend/main','backend/scheduler-engine','backend/core','backend/updater','bridge/contracts'],'backend/updater':['backend/updater','bridge/contracts'],'bridge/contracts':['bridge/contracts','backend/core'],'bridge/preload':['bridge/preload','bridge/contracts'],frontend:['frontend','bridge/contracts']};
+    const allowed:Record<string,string[]>={'backend/core':['backend/core'],'backend/engines':['backend/engines','backend/core'],'backend/scheduler-engine':['backend/scheduler-engine','backend/engines','backend/core'],'backend/main':['backend/main','backend/scheduler-engine','backend/core','backend/updater','bridge/contracts'],'backend/updater':['backend/updater','bridge/contracts'],'bridge/contracts':['bridge/contracts','backend/core'],'bridge/preload':['bridge/preload','bridge/contracts'],frontend:['frontend','bridge/contracts']};
     expect(allowed[layer],`未知源码边界：${file}`).toBeDefined();
     const source=ts.createSourceFile(file,fs.readFileSync(file,'utf8'),ts.ScriptTarget.Latest,true);
     const visit=(node:ts.Node)=>{
@@ -22,6 +22,7 @@ it('所有跨层依赖（含重导出和 import 类型）遵循单向边界',()=
           const target=path.resolve(path.dirname(file),node.text),targetLayer=layerOf(target);
           // 与依赖检查器一致：已存在的 SVG/CSS 等非代码资源没有代码层归属；无扩展名模块仍须检查。
           const asset=fs.existsSync(target)&&fs.statSync(target).isFile()&&!/\.[cm]?[jt]sx?$/.test(target);
+          if(!asset&&layer==='backend/scheduler-engine'&&targetLayer==='backend/engines')expect(path.relative(root,file).replaceAll('\\','/')).toMatch(/^backend\/scheduler-engine\/assembly\//);
           if(!asset&&allowed[layer])expect(allowed[layer],`${path.relative(root,file)} → ${node.text}`).toContain(targetLayer);
         }
       }

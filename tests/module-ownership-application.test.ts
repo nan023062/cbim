@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest';
 import path from 'node:path';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {moduleOwnershipPageSchema} from '../src/backend/core/workspace/module-ownership';
 import {workspaceMemberDetailSchema} from '../src/backend/core/team/workspace-member';

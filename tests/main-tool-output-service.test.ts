@@ -9,8 +9,8 @@ import type {OwnerExecutionSelection} from '../src/backend/core/team/member-exec
 import {json} from '../src/backend/core/foundation/serialization';
 import {projectMainScope} from '../src/backend/core/tasks/main-tool-output';
 import type {GoalPlanInput} from '../src/backend/core/tasks/scope-goal';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
 import {GoalTools} from '../src/backend/scheduler-engine/tools/goal-tools';
 import {DispatchTools,type DispatchToolsPort} from '../src/backend/scheduler-engine/tools/dispatch-tools';
 import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';

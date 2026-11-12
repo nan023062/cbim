@@ -3,9 +3,9 @@
  * 设计原因：领取意图必须先于模型副作用落盘；角色正文、模型参数和权限按轮次冻结，不能在恢复时隐式改用当前设置。
  * 职责边界：这里只持有无密钥的执行快照和原生会话定位，不进入公开任务图，也不把 completed 视为业务验收。
  */
-import type {MemberRunBinding} from '../brain/member-run';
-import type {ResolvedLlm} from '../brain/llm/ports';
-import type {ChatPermission} from '../policy/types';
+import type {MemberRunBinding} from '../execution/member-run';
+import type {ResolvedLlm} from '../models/ports';
+import type {ChatPermission} from '../tools/policy/types';
 import type {PreparedDispatchKnowledge} from './execution-context';
 import type {TaskNode} from './graph-types';
 import type {MemberCheckpointProof,MemberResumeFrom} from './member-checkpoint';

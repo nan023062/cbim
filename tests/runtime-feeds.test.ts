@@ -2,11 +2,11 @@ import {afterEach,expect,test,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {MessageQueue} from '../src/backend/scheduler-engine/conversation/message-queue';
-import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/execution/execution-manager';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
-import type {DispatchObserver} from '../src/backend/core/tasks/dispatch-storage';
+import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import type {DispatchObserver} from '../src/backend/core/dispatch/dispatch-storage';
 import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
 
 const directories:string[]=[];

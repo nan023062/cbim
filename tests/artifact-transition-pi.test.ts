@@ -6,8 +6,8 @@ import {createControlledHost} from './controlled-file-electron-fixture';
 import {completeOutputProvider,completeOutputData as d} from './complete-output-provider';
 import {completeOutputRecords,completeOutputSourceBytes} from './complete-output-pi-fixture';
 import {humanDecisionPreviewSchema,humanDecisionReceiptSchema} from '../src/backend/core/tasks/human-decisions';
-import {outputManifestReportSchema} from '../src/backend/core/tasks/output-manifest';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
+import {outputManifestReportSchema} from '../src/backend/core/evidence/output-manifest';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 
 it.each(['automatic','changed','human'] as const)('真实 Pi + Electron utility 删除移动证明和原清单接受（%s）',async mode=>{
   const provider=await completeOutputProvider(mode,true);let host=await createControlledHost(),keep=false;

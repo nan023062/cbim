@@ -3,9 +3,9 @@
  * 设计原因：图状态与执行日志分别保留权威序号；只公开目标、执行状态和受限工具摘要，不暴露冻结知识、原生会话或凭据。
  */
 import {z} from 'zod';
-import type {RunStatus,StoredEvent} from '../brain/types';
+import type {RunStatus,StoredEvent} from '../execution/types';
 import type {TaskSpec} from './types';
-import type {TaskProgress} from './progress';
+import type {TaskProgress} from '../evidence/progress';
 import {memberTaskInput} from './member-commands';
 
 /** 序号是单个 run 已读到的连续日志前缀；0 表示尚未读事件，与任务图批次 seq 无关。 */

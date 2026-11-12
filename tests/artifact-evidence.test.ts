@@ -2,10 +2,10 @@ import {expect,it,vi} from 'vitest';
 import {hash} from '../src/backend/core/foundation/serialization';
 import {jsonToolResult} from '../src/backend/core/tools/results';
 import type {ToolReceipt} from '../src/backend/core/tools/types';
-import {artifactSources,verifyArtifactBaselines,type ArtifactEvidenceEvent} from '../src/backend/core/tasks/artifact-evidence';
-import {artifactCaptureInputSchema,artifactBaselineStagedSchema,artifactReportSchema,artifactReportInputSchema,artifactLimits,type ArtifactBaselineStaged} from '../src/backend/core/tasks/artifact-baseline';
-import {ArtifactTools,artifactCaptureToolName} from '../src/backend/core/tasks/artifact-tools';
-import {TaskProgressTools} from '../src/backend/core/tasks/progress-tools';
+import {artifactSources,verifyArtifactBaselines,type ArtifactEvidenceEvent} from '../src/backend/core/evidence/artifact-evidence';
+import {artifactCaptureInputSchema,artifactBaselineStagedSchema,artifactReportSchema,artifactReportInputSchema,artifactLimits,type ArtifactBaselineStaged} from '../src/backend/core/evidence/artifact-baseline';
+import {ArtifactTools,artifactCaptureToolName} from '../src/backend/core/evidence/artifact-tools';
+import {TaskProgressTools} from '../src/backend/core/evidence/progress-tools';
 
 const binding={workspaceId:'workspace',teamId:'team',agentId:'agent',agentInstanceId:'instance',agentSessionId:'session',rootSessionId:'root',taskId:'task',runId:'run',leaseEpoch:1,planRevision:1},stamp='2026-11-07T00:00:00.000Z';
 const normalize=(path:string)=>path.replace(/^\/workspace\//,'');

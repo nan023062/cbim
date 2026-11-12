@@ -4,7 +4,7 @@
  */
 import {randomUUID} from 'node:crypto';
 import {fail} from '../../core/foundation/errors';
-import type {ChatApproval} from '../../core/policy/types';
+import type {ChatApproval} from '../../core/tools/policy/types';
 import type {ToolCall,ToolDecision} from '../../core/tools/types';
 export class ApprovalQueue {
  private approvedRuns=new Set<string>();

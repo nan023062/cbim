@@ -9,8 +9,8 @@ import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {goalCompleteArguments,goalPlanArguments} from './goal-provider-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
-import type {RunSummary} from '../src/backend/core/brain/types';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import type {RunSummary} from '../src/backend/core/execution/types';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import type {MemberExecutionView} from '../src/backend/core/tasks/member-commands';
 

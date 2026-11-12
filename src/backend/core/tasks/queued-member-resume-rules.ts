@@ -6,7 +6,7 @@
 import {sameAutomaticExecutionForModules} from '../team/automatic-execution';
 import {fail} from '../foundation/errors';
 import {completedCheckpointLedger} from './member-checkpoint-ledger';
-import type {DispatchState} from './dispatch-storage';
+import type {DispatchState} from '../dispatch/dispatch-storage';
 import type {GraphIdentity} from './graph-types';
 import type {ResumeMemberInput} from './queued-member-resume';
 import {goalNeedsReplan} from './scope-goal';

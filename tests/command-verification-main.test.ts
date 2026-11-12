@@ -5,7 +5,7 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {registerServiceOwner} from './owner-service-fixture';
-import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
+import {RunJournal} from '../src/backend/main/run-storage/run-journal';
 import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
 import {toolReceipt} from '../src/backend/core/tools/receipts';
 import {jsonToolResult} from '../src/backend/core/tools/results';
@@ -13,7 +13,7 @@ import type {GoalPlanInput} from '../src/backend/core/tasks/scope-goal';
 import type {TaskSpec} from '../src/backend/core/tasks/types';
 import type {VerifiableMainToolName,CommandVerificationReport} from '../src/backend/core/tasks/command-verification';
 import {reportFixture,reportInputs,reportIdentity,reportBinding,evidenceFor} from './command-verification-fixture';
-import {restoreMainCommand} from '../src/backend/scheduler-engine/execution/main-command-request';
+import {restoreMainCommand} from '../src/backend/scheduler-engine/goals/main-command-request';
 
 test('实际Application三种已提交命令经原canonical只读查询；cancel无伪goal版本，unknown不清除且重开不重放',async()=>{
   const f=await fixture();try{

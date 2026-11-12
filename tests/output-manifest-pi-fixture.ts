@@ -1,13 +1,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import type {Application} from '../src/backend/main/application';
+import type {Application} from '../src/backend/main/assembly/application';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {outputManifestData as d,type outputManifestProvider} from './output-manifest-provider';
-import {outputManifestReportSchema} from '../src/backend/core/tasks/output-manifest';
-import {outputManifestHash} from '../src/backend/core/tasks/output-manifest-evidence';
+import {outputManifestReportSchema} from '../src/backend/core/evidence/output-manifest';
+import {outputManifestHash} from '../src/backend/core/evidence/output-manifest-evidence';
 import {hash} from '../src/backend/core/foundation/serialization';
 export {workflowConditionRecords as manifestRecords} from './workflow-condition-fixture';
 export {reportFiles as manifestLogFiles} from './execution-report-fixture';

@@ -4,7 +4,7 @@
  * 职责边界：许可只在 Core 提交校验调用链内使用，不持久化、不来自模型，也不替代服务的知识/停止复核。
  */
 import {fail} from '../foundation/errors';
-import type {DispatchState,DispatchMutation,DispatchCommand} from './dispatch-storage';
+import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 import type {TaskNode} from './graph-types';
 import {sameGoalValue} from './scope-goal';
 import {dependencyAdditionSchema,type DependencyAddition} from './queued-dependency-addition';

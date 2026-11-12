@@ -1,4 +1,4 @@
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import type {GraphIdentity} from '../src/backend/core/tasks/graph-types';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {WorkspaceMemberModelSnapshot} from '../src/backend/core/team/workspace-member';

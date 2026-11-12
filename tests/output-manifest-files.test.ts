@@ -3,10 +3,10 @@ import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
-import {OutputManifestFiles} from '../src/backend/main/platform/output-manifest-files';
+import {OutputManifestFiles} from '../src/backend/main/platform/files/output-manifest-files';
 import {artifactScopeSchema,preparedArtifactScopes,type ArtifactScopeBinding} from '../src/backend/core/workspace/artifact-scope';
-import {outputManifestSnapshotSchema} from '../src/backend/core/tasks/output-manifest';
-import {outputManifestHash} from '../src/backend/core/tasks/output-manifest-evidence';
+import {outputManifestSnapshotSchema} from '../src/backend/core/evidence/output-manifest';
+import {outputManifestHash} from '../src/backend/core/evidence/output-manifest-evidence';
 
 let root:string,port:OutputManifestFiles;const signal=()=>new AbortController().signal;
 const scopes:ArtifactScopeBinding[]=[{moduleId:'module',workflowId:'module/workflow',workflowVersion:'original',scope:{version:1,roots:[{path:'out',kind:'directory'}]}}];

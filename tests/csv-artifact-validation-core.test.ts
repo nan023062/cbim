@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest';
 import {csvTableSchema,validateCsvArtifact,csvValidationLimits,type CsvTableSchema} from '../src/backend/core/workspace/csv-validation-schema';
 import {workflowContractSchema,parseWorkflowContract} from '../src/backend/core/workspace/workflow-contract';
-import {validationRequirement} from '../src/backend/core/tasks/validation-evidence';
+import {validationRequirement} from '../src/backend/core/evidence/validation-evidence';
 import {hash} from '../src/backend/core/foundation/serialization';
 
 export const inventorySchema:CsvTableSchema={columns:[{name:'sku',type:'string',minLength:1,maxLength:32},{name:'quantity',type:'integer',minimum:0,maximum:100000},{name:'location',type:'string',minLength:1,maxLength:100}],minRows:1,maxRows:100,uniqueBy:['sku']};

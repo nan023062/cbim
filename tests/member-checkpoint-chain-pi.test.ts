@@ -5,7 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {memberCheckpointChainProvider,memberChainData as data} from './member-checkpoint-chain-provider';
 import {seedMemberCheckpoint,checkpointRecords,checkpointRuns,checkpointLogBytes} from './member-checkpoint-fixture';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';

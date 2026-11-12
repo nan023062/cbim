@@ -1,5 +1,5 @@
 import {randomUUID} from 'node:crypto';
-import type {Application} from '../src/backend/main/application';
+import type {Application} from '../src/backend/main/assembly/application';
 import {moduleGovernanceReceiptSchema,moduleGovernanceListSchema} from '../src/backend/core/governance/module-governance';
 import {seedModuleGovernance} from './module-governance-fixture';
 import {governanceFeedbackFixture as data} from './module-governance-feedback-provider';

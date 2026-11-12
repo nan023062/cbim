@@ -41,7 +41,7 @@ class N_src_backend_scheduler_engine_context_dispatch_context_ts["dispatch-conte
 }
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/read-models.ts](../../core/knowledge/read-models.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/read-models/index.ts](../../core/knowledge/read-models/index.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)。
 
 ### execution-context.ts
 
@@ -67,7 +67,7 @@ class N_src_backend_scheduler_engine_context_execution_context_ts_DispatchKnowle
 N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_scheduler_engine_context_execution_context_ts_DispatchKnowledgeWorkspace : 声明
 ```
 
-直接依赖：[automatic-context.ts](automatic-context.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/read-models.ts](../../core/knowledge/read-models.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[dispatch-context.ts](dispatch-context.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)。
+直接依赖：[automatic-context.ts](automatic-context.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/read-models/index.ts](../../core/knowledge/read-models/index.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[dispatch-context.ts](dispatch-context.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)。
 
 ### team-workflow.ts
 
@@ -92,7 +92,7 @@ class N_src_backend_scheduler_engine_context_team_workflow_ts_TeamTaskInput["Tea
 N_src_backend_scheduler_engine_context_team_workflow_ts ..> N_src_backend_scheduler_engine_context_team_workflow_ts_TeamTaskInput : 声明
 ```
 
-直接依赖：[../../core/knowledge/knowledge-queries.ts](../../core/knowledge/knowledge-queries.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/brain/index.ts](../../core/brain/index.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)。
+直接依赖：[../../core/knowledge/knowledge-queries.ts](../../core/knowledge/knowledge-queries.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/execution/index.ts](../../core/execution/index.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)。
 
 ### 本目录调用边界
 

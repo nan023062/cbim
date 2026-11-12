@@ -4,7 +4,7 @@
  * 设计原因：完整清单、原信封、成员代际和任务版本共同防止遗漏待办或复活旧终态；跨重启读取本规则不启动执行或刷新证明。
  */
 import {fail} from '../foundation/errors';
-import type {DispatchState} from './dispatch-storage';
+import type {DispatchState} from '../dispatch/dispatch-storage';
 import type {DispatchScope} from './dispatch-scope';
 import type {DispatchRun} from './dispatch-execution';
 import {memberPauseSchema,type MemberPause} from './member-pause';

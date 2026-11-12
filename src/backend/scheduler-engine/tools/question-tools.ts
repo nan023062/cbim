@@ -7,7 +7,7 @@ import {zodToJsonSchema} from 'zod-to-json-schema';
 import {questionInput,questionResultSchema,questionResultForInput,questionToolName,type QuestionInput} from '../../core/tools/questions';
 import {checkedJsonToolResult} from '../../core/tools/results';
 import type {ToolCancellation,ToolRecovery} from '../../core/tools/contracts';
-import type {RunToolDescriptor} from '../../core/policy/tool-policy';
+import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
 import {fail} from '../../core/foundation/errors';
 
 /** 仅描述现有交互；等待可取消，已消费的答案及既有运行记录不会回滚。 */

@@ -5,7 +5,7 @@
  * 设计原因：不能只在工具入口防重；存储重放和普通事务须保留原负责人及流程选择，活动周期取消检查点只接受完整交接放弃校验产生的窄许可。
  */
 import {fail} from '../foundation/errors';
-import type {DispatchState,DispatchMutation,DispatchCommand} from './dispatch-storage';
+import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 import type {TaskNode} from './graph-types';
 import {memberCheckpointProofSchema,memberCheckpointRecordSchema} from './member-checkpoint';
 import {memberResumeRequestSchema} from './queued-member-resume';

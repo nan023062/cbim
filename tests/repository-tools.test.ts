@@ -8,9 +8,9 @@ import {RepositoryTools} from '../src/backend/scheduler-engine/tools/repository-
 import {repositoryGetOutputSchema,repositoryListOutputSchema} from '../src/backend/core/connectors/repository-tools';
 import {hash} from '../src/backend/core/foundation/serialization';
 import {toolReceipt} from '../src/backend/core/tools/receipts';
-import {executionToolFacts} from '../src/backend/scheduler-engine/execution/execution-report-facts';
-import {projectRunEvent} from '../src/backend/scheduler-engine/execution/public-run-events';
-import type {RunSummary,StoredEvent,TaskSpec} from '../src/backend/core/brain/types';
+import {executionToolFacts} from '../src/backend/scheduler-engine/evidence/execution-report-facts';
+import {projectRunEvent} from '../src/backend/scheduler-engine/runtime/public-run-events';
+import type {RunSummary,StoredEvent,TaskSpec} from '../src/backend/core/execution/types';
 
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>resolve=done);return {promise,resolve}};
 async function connected(){

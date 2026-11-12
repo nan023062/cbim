@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import {hash,json} from '../src/backend/core/foundation/serialization';
-import type {DispatchState} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import {dispatchScopeGoalSchema,type DispatchScopeGoal} from '../src/backend/core/tasks/scope-goal';
 import {validateDispatchScopes} from '../src/backend/core/tasks/dispatch-scope-invariants';

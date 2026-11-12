@@ -2,7 +2,7 @@ import {it,expect,vi} from 'vitest';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {moduleGovernanceReceiptSchema} from '../src/backend/core/governance/module-governance';
 import {governanceFeedbackProvider,governanceFeedbackFixture as data} from './module-governance-feedback-provider';

@@ -5,7 +5,7 @@ import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {registerServiceOwner} from './owner-service-fixture';
 import {hash,json} from '../src/backend/core/foundation/serialization';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
+import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
 import {prepareDispatchExecutionContext} from '../src/backend/scheduler-engine/context/execution-context';
 import {applyGraphBatch} from '../src/backend/core/tasks/graph-reducer';
 import {validateGraph} from '../src/backend/core/tasks/graph-rules';
@@ -13,7 +13,7 @@ import {validateDispatchExecution} from '../src/backend/core/tasks/dispatch-inva
 import {validateDispatchScopes} from '../src/backend/core/tasks/dispatch-scope-invariants';
 import {memberResumeSelection} from '../src/backend/core/tasks/queued-member-resume-rules';
 import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
-import type {DispatchState,DispatchMutation,AssignmentMessage,CheckpointMessage} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchState,DispatchMutation,AssignmentMessage,CheckpointMessage} from '../src/backend/core/dispatch/dispatch-storage';
 import type {TaskNode,GraphEventBatch,AgentGraphView} from '../src/backend/core/tasks/graph-types';
 import type {MemberCheckpointRecord} from '../src/backend/core/tasks/member-checkpoint';
 import type {MemberResumeRequest} from '../src/backend/core/tasks/queued-member-resume';

@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
-import {TaskProgressTools,progressTool} from '../src/backend/core/tasks/progress-tools';
-import type {TaskProgress} from '../src/backend/core/tasks/progress';
+import {TaskProgressTools,progressTool} from '../src/backend/core/evidence/progress-tools';
+import type {TaskProgress} from '../src/backend/core/evidence/progress';
 import {dispatchTaskInput} from '../src/backend/core/tasks/dispatch-commands';
 
 it('preserves the full goal and all acceptance criteria allowed by a dispatched task, while short review fields remain bounded',async()=>{

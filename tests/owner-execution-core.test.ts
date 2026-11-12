@@ -8,13 +8,13 @@ import {goalPlanInputSchema,dispatchScopeGoalSchema} from '../src/backend/core/t
 import {dispatchKnowledgeFingerprint,validatePreparedDispatchKnowledge} from '../src/backend/core/tasks/execution-context';
 import {humanContinuationSubject} from '../src/backend/core/tasks/human-continue';
 import {applyGraphBatch} from '../src/backend/core/tasks/graph-reducer';
-import {validateWorkflowEvidence} from '../src/backend/core/tasks/workflow-evidence';
-import {TaskProgressTools} from '../src/backend/core/tasks/progress-tools';
+import {validateWorkflowEvidence} from '../src/backend/core/evidence/workflow-evidence';
+import {TaskProgressTools} from '../src/backend/core/evidence/progress-tools';
 import {toolReceipt} from '../src/backend/core/tools/receipts';
-import type {ArtifactEvidenceEvent} from '../src/backend/core/tasks/artifact-evidence';
+import type {ArtifactEvidenceEvent} from '../src/backend/core/evidence/artifact-evidence';
 import type {ToolDecision} from '../src/backend/core/tools/types';
 import type {WorkflowContractBinding} from '../src/backend/core/tasks/execution-context';
-import type {DispatchState,DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchState,DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
 import {registry,registryApply,memberEvent,ownershipEvent,bindingFor,ws,identity,moduleId,agentId,model,task,rootMutation,taskMutation,plannedScope,prepared,claimMutation} from './owner-execution-core-fixture';
 
 const graphState=(state:DispatchState,bound=true):DispatchState=>{

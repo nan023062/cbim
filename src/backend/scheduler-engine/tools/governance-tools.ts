@@ -10,7 +10,7 @@ import {withToolReconciliation} from '../../core/tools/outcome';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {fail,Fault} from '../../core/foundation/errors';
 import {checkedJsonToolResult} from '../../core/tools/results';
-import type {RunToolDescriptor} from '../../core/policy/tool-policy';
+import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
 import {moduleGovernanceMainCommandId} from '../../core/governance/module-governance-rules';
 import {
   governanceGetInputSchema,governanceObserveInputSchema,governanceProposeInputSchema,governanceReceiptInputSchema,

@@ -3,8 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {createRequire} from 'node:module';
-import {Win32ControlledFile} from '../src/backend/main/platform/controlled-file-win32';
-import type {ControlledNamespaceChange} from '../src/backend/main/platform/controlled-file-protocol';
+import {Win32ControlledFile} from '../src/backend/main/platform/files/controlled-file-win32';
+import type {ControlledNamespaceChange} from '../src/backend/main/platform/files/controlled-file-protocol';
 
 const native=createRequire(import.meta.url),test=process.platform==='win32'&&process.arch==='x64'?it:it.skip;
 async function fixture(){

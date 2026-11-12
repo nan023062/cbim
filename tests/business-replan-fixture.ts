@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {Application} from '../src/backend/main/application';
+import type {Application} from '../src/backend/main/assembly/application';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import {seedExecutionReport} from './execution-report-fixture';
 import {inspectionScopes,corruptInspectionHistory} from './inspection-cycle-fixture';

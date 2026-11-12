@@ -3,8 +3,8 @@ import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {LoopRuntime,type AgentEngine,type EngineContext,type EngineEvent,type TaskSpec,type MemberRunLaunch,type ToolDecision} from '../src/backend/core/brain';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
+import {LoopRuntime,type AgentEngine,type EngineContext,type EngineEvent,type TaskSpec,type MemberRunLaunch,type ToolDecision} from '../src/backend/core/execution';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {MemberHelpTools} from '../src/backend/core/tasks/member-help-tools';
 import {memberHelpStagedSchema} from '../src/backend/core/tasks/member-help';
 

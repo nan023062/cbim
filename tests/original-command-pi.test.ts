@@ -2,7 +2,7 @@ import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {commandVerificationReportSchema} from '../src/backend/core/tasks/command-verification';
 import {originalCommandProvider,originalCommandData as data,type OriginalCommandMode} from './original-command-provider';

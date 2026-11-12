@@ -2,13 +2,13 @@ import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/execution/execution-manager';
-import {LoopRuntime} from '../src/backend/core/brain/runtime';
-import {PiEngine} from '../src/backend/core/brain/pi/engine';
-import type {AgentEngine,EngineEvent,InputImage} from '../src/backend/core/brain/types';
+import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
+import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
+import {PiEngine} from '../src/backend/engines/pi/engine';
+import type {AgentEngine,EngineEvent,InputImage} from '../src/backend/core/execution/types';
 import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
 import type {MessageQueue} from '../src/backend/scheduler-engine/conversation/message-queue';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 
 const gate=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}};
 const options={provider:'test',model:'original',permission:'read' as const,allowNativeExecution:false};

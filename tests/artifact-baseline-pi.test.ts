@@ -2,9 +2,9 @@ import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {artifactCaptureResultSchema,artifactReportSchema} from '../src/backend/core/tasks/artifact-baseline';
+import {artifactCaptureResultSchema,artifactReportSchema} from '../src/backend/core/evidence/artifact-baseline';
 import {artifactBaselineProvider,artifactBaselineFixture as data} from './artifact-baseline-provider';
 import {seedArtifactBaseline,artifactBaselineRecords,artifactBaselineFiles,assertArtifactVerification} from './artifact-baseline-fixture';
 

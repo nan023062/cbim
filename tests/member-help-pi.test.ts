@@ -4,9 +4,9 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {memberHelpProvider,memberHelpFixture as data} from './member-help-provider';
 import {seedMemberHelp,memberHelpRecords} from './member-help-fixture';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/execution/workspace-lease';
+import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import type {MemberExecutionView} from '../src/backend/core/tasks/member-commands';
 

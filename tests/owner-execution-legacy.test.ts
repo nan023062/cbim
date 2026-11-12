@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import {existsSync} from 'node:fs';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {createOwnerExecutionLegacyFixture,ownerExecutionLegacyExecutable} from './owner-execution-legacy-fixture';
 import {ownerExecutionRecords} from './owner-execution-fixture';

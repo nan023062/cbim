@@ -4,12 +4,12 @@ import {createRequire} from 'node:module';
 import {vi} from 'vitest';
 import {manifestFixture,manifestContracts} from './output-manifest-fixture';
 import {artifactBinding,invoke,seedProgress} from './artifact-runtime-fixture';
-import {Win32ControlledFile} from '../src/backend/main/platform/controlled-file-win32';
-import type {ArtifactTransitionRunPort} from '../src/backend/core/brain/run-artifact-transition';
+import {Win32ControlledFile} from '../src/backend/main/platform/files/controlled-file-win32';
+import type {ArtifactTransitionRunPort} from '../src/backend/core/execution/capabilities/run-artifact-transition';
 import type {ArtifactTransitionDefinition} from '../src/backend/core/workspace/artifact-scope';
 import {preparedArtifactScopes} from '../src/backend/core/workspace/artifact-scope';
-import {verifyOutputManifests} from '../src/backend/core/tasks/output-manifest-evidence';
-import type {EngineContext} from '../src/backend/core/brain/types';
+import {verifyOutputManifests} from '../src/backend/core/evidence/output-manifest-evidence';
+import type {EngineContext} from '../src/backend/core/execution/types';
 
 const native=createRequire(import.meta.url);
 export const transitionTool='cbim_artifact_transition',transitionModule=manifestContracts[0].moduleId;

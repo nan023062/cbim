@@ -3,8 +3,8 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {expect,it} from 'vitest';
 import type {HumanDecisionPreview,HumanDecisionRequest} from '../src/backend/core/tasks/human-decisions';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
 import {humanServiceFixture,latch} from './human-decision-service-fixture';
 import {request} from './data/knowledge';
 

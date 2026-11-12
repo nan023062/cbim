@@ -6,7 +6,7 @@ import {fixture} from './helpers';
 import {summary,request} from './data/knowledge';
 import {ObjectCrud,type ObjectOperation} from '../src/backend/core/knowledge/object-crud';
 import {hash,json} from '../src/backend/core/foundation/serialization';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {Workspace} from '../src/backend/main/workspace/workspace';
 

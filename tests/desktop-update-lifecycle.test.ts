@@ -1,7 +1,7 @@
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {DesktopUpdates,type DesktopUpdateInstaller} from '../src/backend/updater/desktop-updates';
 import {fixture} from './helpers';

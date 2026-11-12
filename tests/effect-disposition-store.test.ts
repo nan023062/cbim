@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {effectDispositionCommand,effectDispositionReceipt} from '../src/backend/core/tasks/effect-observation-rules';
 import {hash} from '../src/backend/core/foundation/serialization';
 import {effectIdentity,effectRootMutation,effectScope,effectRecord,effectTime} from './effect-core-fixture';

@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest';
-import type {RunSummary,EngineEvent} from '../src/backend/core/brain/types';
-import type {ScopeUsageRun} from '../src/backend/core/tasks/scope-usage';
-import {scopeRunUsageSchema,scopeUsageReportSchema} from '../src/backend/core/tasks/scope-usage';
-import {measureScopeRunUsage,emptyScopeRunUsage,summarizeScopeUsage} from '../src/backend/core/brain/scope-usage';
+import type {RunSummary,EngineEvent} from '../src/backend/core/execution/types';
+import type {ScopeUsageRun} from '../src/backend/core/budget/scope-usage';
+import {scopeRunUsageSchema,scopeUsageReportSchema} from '../src/backend/core/budget/scope-usage';
+import {measureScopeRunUsage,emptyScopeRunUsage,summarizeScopeUsage} from '../src/backend/core/execution/scope-usage';
 
 const tokens={input:100,output:30,cacheRead:20,cacheWrite:5,reasoning:10};
 const message=(usage:unknown={...tokens,cost:{total:0.2}},pricingKnown=true):EngineEvent=>({type:'message',data:{role:'assistant',usage,pricingKnown}});

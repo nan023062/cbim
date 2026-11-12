@@ -2,9 +2,9 @@ import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {outputManifestResultSchema,outputManifestReportSchema} from '../src/backend/core/tasks/output-manifest';
+import {outputManifestResultSchema,outputManifestReportSchema} from '../src/backend/core/evidence/output-manifest';
 import {outputManifestProvider,outputManifestData as d} from './output-manifest-provider';
 import {seedOutputManifest,manifestRecords,manifestLogFiles,assertManifestReport} from './output-manifest-pi-fixture';
 

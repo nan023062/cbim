@@ -2,11 +2,11 @@ import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {checkedRunInputSource,type HumanDecisionsSource} from '../src/backend/core/brain/input-source';
-import {bridgeExtensionForSource} from '../src/backend/core/brain/pi/bridge';
-import {LoopRuntime} from '../src/backend/core/brain/runtime';
-import type {AgentEngine,EngineContext,TaskSpec} from '../src/backend/core/brain/types';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
+import {checkedRunInputSource,type HumanDecisionsSource} from '../src/backend/core/execution/input-source';
+import {bridgeExtensionForSource} from '../src/backend/engines/pi/bridge';
+import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
+import type {AgentEngine,EngineContext,TaskSpec} from '../src/backend/core/execution/types';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 
 const source=():HumanDecisionsSource=>({kind:'human_decisions',continuationId:'continuation',scopeId:'scope',waitId:'wait',inputRevision:2,decisionRevision:3,decisionIds:['decision-a','decision-b']});
 it('严格人工来源只含固定身份并复制集合，不接受模型权限/正文/actor或畸形版本',()=>{

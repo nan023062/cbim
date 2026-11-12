@@ -134,6 +134,6 @@ WebSettings 使用 revision 校验并串行原子保存开关与系统加密密�
 
 显式连接测试失败返回安全端点（不含用户信息、查询串、片段）、HTTP 状态及鉴权/权限/端点/限流建议，不返回供应商错误正文；失败不写模型目录。模型 ID 不按品牌枚举转换，Claude Code 仅要求 Anthropic Messages 协议。
 
-LlmProfiles 忽略旧供应商 engine，由调用方传入独立引擎，先核协议兼容性再生成公开快照；未传引擎不补 Pi 字段。岗位读取沿已经采纳的 snapshot.engine，保证旧原生岗位和缺省 Pi 的配置哈希可核实。无效、禁用或不兼容的选择明确拒绝。
+LlmProfiles 忽略旧供应商 engine，由调用方传入独立引擎，通过 connectionForEngine 选择主接口、明确的兼容接口或精确官方预设，再生成单一地址的公开快照；未传引擎不补 Pi 字段。配置细则见 [模型服务契约](../models/CONTRACT.md)。岗位读取沿已经采纳的 snapshot.engine，保证旧原生岗位和缺省 Pi 的配置哈希可核实。无效、禁用或不兼容的选择明确拒绝。
 
 MainAgentSettings 为每个工作区的 cbim:main 保存唯一选型，复用自定义 Agent 的 AgentModelSelection 契约。对话栏和团队页面共享 read/configure，不再把选型存入会话 localStorage；内置主 Agent 的能力文件不因此可编辑。文件保存 version、revision、selection，null 采用 Pi 与本机默认模型。configure 在当前实例和 revision 校验后持有模型短锁原子写盘；读写失败保留原文件，版本冲突不得自动覆盖。配置本身不触发执行，新发送冻结配置，已受理队列和运行保持原快照。

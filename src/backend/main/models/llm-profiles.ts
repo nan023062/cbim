@@ -3,11 +3,13 @@
  * 作用定位：本机供应商配置持久化、默认模型选择和连接检测。
  * 设计原因：运行与岗位登记共用实际模型选型；岗位领取在同一配置队列中固定公开参数并延迟解密，与设置修改形成明确先后，凭据不进入登记或任务日志。
  * 运行引擎由调用方独立传入；连接错误保留安全端点与状态诊断，不泄露密钥、查询参数或供应商响应正文，不清空已保存模型目录。
+ * 运行、岗位和显式测试在解密前共用接口选择；候选地址不进入运行快照，列表读取不会探测网络。
  */
 import fs from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {engineSupportsApi,engineLabel,loopEngineSchema,type LoopEngine} from '../../core/models/engine';
+import {engineLabel,loopEngineSchema,type LoopEngine} from '../../core/models/engine';
+import {connectionForEngine} from '../../core/models/provider-connections';
 import {parseModelCatalog} from '../../core/models/catalog';
 import {atomic} from '../../core/foundation/files';
 import {fail} from '../../core/foundation/errors';
@@ -26,11 +28,12 @@ const fileSchema=z.object({version:z.literal(1),selectedId:z.string().uuid().opt
 function selectConfiguration(data:ModelFile,id?:string,modelId?:string,engine?:LoopEngine){
   const definition=data.profiles.find(profile=>profile.id===(id??data.selectedId));if(!definition)fail('LLM_REQUIRED','请先在设置中配置默认大模型');
   const model=definition.models.find(item=>item.id===(modelId??definition.defaultModel)&&item.enabled);if(!model)fail('LLM_MODEL','模型不存在或已禁用');
-  const profile:ResolvedLlm['profile']={id:definition.id,name:definition.name,api:definition.api,baseUrl:definition.baseUrl,auth:definition.auth,model:model.id,contextWindow:model.contextWindow,maxTokens:model.maxTokens,reasoning:model.reasoning,
-    ...(model.vision===undefined?{}:{vision:model.vision}),...(model.outputLimit===undefined?{}:{outputLimit:model.outputLimit}),...(model.thinkingLevel===undefined?{}:{thinkingLevel:model.thinkingLevel}),...(model.workingContextWindow===undefined?{}:{workingContextWindow:model.workingContextWindow}),...(model.compactionPercent===undefined?{}:{compactionPercent:model.compactionPercent}),...(model.pricing===undefined?{}:{pricing:structuredClone(model.pricing)})};
-  // 独立选型先验证协议，再生成运行快照；不修改供应商或历史记录。
   if(engine!==undefined)loopEngineSchema.parse(engine);
-  if(!engineSupportsApi(engine??'pi',profile.api))fail('LLM_ENGINE_API',engineLabel(engine??'pi')+' 不支持该模型接口协议，请选择兼容模型');
+  const connection=connectionForEngine(definition,engine??'pi',model.id);
+  if(!connection)fail('LLM_ENGINE_API',engineLabel(engine??'pi')+' 没有可用的兼容接口，请在模型设置中配置该供应商的兼容接口');
+  const profile:ResolvedLlm['profile']={id:definition.id,name:definition.name,api:connection.api,baseUrl:connection.baseUrl,auth:definition.auth,model:model.id,contextWindow:model.contextWindow,maxTokens:model.maxTokens,reasoning:model.reasoning,
+    ...(model.vision===undefined?{}:{vision:model.vision}),...(model.outputLimit===undefined?{}:{outputLimit:model.outputLimit}),...(model.thinkingLevel===undefined?{}:{thinkingLevel:model.thinkingLevel}),...(model.workingContextWindow===undefined?{}:{workingContextWindow:model.workingContextWindow}),...(model.compactionPercent===undefined?{}:{compactionPercent:model.compactionPercent}),...(model.pricing===undefined?{}:{pricing:structuredClone(model.pricing)})};
+  // 单次运行只冻结实际接口；不改写供应商主接口或历史快照。
   if(engine!==undefined)profile.engine=engine;
   return {definition,profile};
 }
@@ -46,14 +49,18 @@ export class LlmProfiles {
   private view(data:ModelFile):LlmSettings{return {selectedId:data.selectedId,secureStorage:this.cipher?.available()===true,profiles:data.profiles.map(({encryptedKey,...p})=>({...p,hasKey:!!encryptedKey}))}}
   async list(){return this.view(await this.read())}
   private change<T>(operation:()=>Promise<T>){const result=this.queue.then(operation);this.queue=result.catch(()=>{});return result}
-  /** 空密钥保留原值；修改接口地址或协议后必须重新输入凭据。 */
+  /** 空密钥保留原值；主接口变更或新增自定义凭据目标必须重新输入，纯改名、模型范围调整和移除兼容接口不需要。 */
   save(input:unknown){return this.change(async()=>{
     const r=z.object({id:z.string().uuid().optional(),profile:definition,apiKey:z.string().max(16000).optional()}).strict().parse(input);
     const data=await this.read(),previous=data.profiles.find(p=>p.id===r.id);if(r.id&&!previous)fail('LLM_NOT_FOUND','供应商不存在');
     let encryptedKey:string|undefined;
     if(r.profile.auth==='api-key'){
       if(r.apiKey){if(!this.cipher?.available())fail('SECRET_STORAGE','系统加密不可用，无法保存 API Key');encryptedKey=this.cipher.encrypt(r.apiKey)}
-      else {if(previous&&(previous.baseUrl!==r.profile.baseUrl||previous.api!==r.profile.api))fail('KEY_REQUIRED','更换接口地址或协议后请重新输入 API Key');encryptedKey=previous?.encryptedKey}
+      else {
+        const addedTarget=r.profile.alternateConnections?.some(connection=>!previous?.alternateConnections?.some(old=>old.api===connection.api&&old.baseUrl===connection.baseUrl));
+        if(previous&&(previous.baseUrl!==r.profile.baseUrl||previous.api!==r.profile.api||addedTarget))fail('KEY_REQUIRED','更换接口地址、协议或新增兼容接口后请重新输入 API Key');
+        encryptedKey=previous?.encryptedKey;
+      }
       if(!encryptedKey)fail('KEY_REQUIRED','请输入 API Key');
     }
     const profile={...r.profile,id:previous?.id??randomUUID(),encryptedKey};
@@ -127,14 +134,14 @@ export class LlmProfiles {
       return JSON.parse(text);
     }catch(e:any){if(['LLM_HTTP','LLM_RESPONSE'].includes(e.code))throw e;fail('LLM_CONNECTION',`模型端点 ${endpoint.href} 连接失败或超时，请检查网络与接口配置`)}
   }
-  /** 显式测试已保存模型，发送最小文本请求；不发送项目知识，不代表工具调用能力已验证。 */
-  async test(id:string,modelId?:string){
-    const {profile:p,apiKey}=await this.resolve(id,modelId),started=Date.now(),anthropic=p.api==='anthropic-messages',responses=p.api==='openai-responses';
+  /** 按明确引擎测试已保存模型的实际接口；不写兼容状态或改目录，短文本成功不代表工具/流式完整验收。 */
+  async test(id:string,modelId?:string,engine?:LoopEngine){
+    const {profile:p,apiKey}=await this.resolve(id,modelId,engine),started=Date.now(),anthropic=p.api==='anthropic-messages',responses=p.api==='openai-responses';
     const base=p.baseUrl.replace(/\/$/,''),url=base+(anthropic?(base.endsWith('/v1')?'/messages':'/v1/messages'):responses?'/responses':'/chat/completions');
     const payload=responses?{model:p.model,max_output_tokens:64,stream:false,input:'Reply with OK.'}:{model:p.model,max_tokens:64,stream:false,messages:[{role:'user',content:'Reply with OK.'}]};
     const body=await this.request(url,{method:'POST',headers:this.headers(p.api,p.auth,apiKey),body:JSON.stringify(payload)});
     const valid=anthropic?body.content?.some((x:any)=>x.type==='text'&&typeof x.text==='string'):responses?body.output?.some((x:any)=>x.type==='message'&&x.content?.some((c:any)=>c.type==='output_text'&&typeof c.text==='string')):typeof body.choices?.[0]?.message?.content==='string';
     if(!valid)fail('LLM_RESPONSE','接口没有返回有效文本，请核对接口协议');
-    return {ok:true,model:p.model,latencyMs:Date.now()-started};
+    return {ok:true,model:p.model,latencyMs:Date.now()-started,engine:engine??'pi',api:p.api,baseUrl:p.baseUrl};
   }
 }

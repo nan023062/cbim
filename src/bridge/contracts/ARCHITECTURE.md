@@ -966,7 +966,7 @@ class N_src_bridge_contracts_models_ts["models.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/models/config.ts](../../backend/core/models/config.ts)、[../../backend/core/team/agent-runtime.ts](../../backend/core/team/agent-runtime.ts)、[../../backend/core/models/catalog.ts](../../backend/core/models/catalog.ts)、[../../backend/core/execution/model-errors.ts](../../backend/core/execution/model-errors.ts)、[../../backend/core/models/engine.ts](../../backend/core/models/engine.ts)。
+直接依赖：[../../backend/core/models/config.ts](../../backend/core/models/config.ts)、[../../backend/core/models/provider-presets.ts](../../backend/core/models/provider-presets.ts)、[../../backend/core/models/provider-connections.ts](../../backend/core/models/provider-connections.ts)、[../../backend/core/team/agent-runtime.ts](../../backend/core/team/agent-runtime.ts)、[../../backend/core/models/catalog.ts](../../backend/core/models/catalog.ts)、[../../backend/core/execution/model-errors.ts](../../backend/core/execution/model-errors.ts)、[../../backend/core/models/engine.ts](../../backend/core/models/engine.ts)。
 
 ### module-ownership.ts
 
@@ -1433,6 +1433,10 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 ### 图片与路径粘贴
 
 chat.paths/chat.image 是桌面明确粘贴的窄协议；路径不等于授予执行权限，图片上限5 MiB、单批最多12项。ChatAttachmentPreview 可带固定MIME图片字节，ChatAttachment 标签元数据仍无正文。pastedLocalPaths 只把整个剪贴板为绝对本地路径列表视为引用；普通句子、相对路径、网页URL保留文本。Main 再校验，前端识别不是授权。
+
+### 供应商兼容接口
+
+models 公开纯供应商预设和 connectionForEngine/providerSupportsEngine；配置可带 autoDetect 与 alternateConnections，不包含密钥。model-actions 的 models.test 可显式带 engine，返回实际 api/baseUrl/engine；测试只接受已保存配置身份与型号，不接受临时转发地址。未传 engine 保持主接口行为。
 
 ### 网页搜索设置
 

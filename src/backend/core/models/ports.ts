@@ -7,5 +7,5 @@ import type {LlmDefinition,LlmModel} from './config';
 import type {LoopEngine} from './engine';
 /** 平台加密端口；不可用时拒绝保存密钥，不回退到明文。 */
 export interface SecretCipher {available():boolean;encrypt(value:string):string;decrypt(value:string):string}
-/** 单次运行的模型快照；engine 来自独立执行选型，旧缺省 Pi 保持原字节。只有主进程装配和测试可以取得凭据。 */
-export interface ResolvedLlm {profile:Omit<LlmDefinition,'models'|'defaultModel'|'engine'>&Omit<LlmModel,'id'|'name'|'enabled'>&{id:string;model:string;engine?:LoopEngine};apiKey:string}
+/** 单次运行的模型快照；仅冻结选中的接口，不携带候选地址或自动识别策略，旧缺省 Pi 保持原字节。只有主进程装配和测试可以取得凭据。 */
+export interface ResolvedLlm {profile:Omit<LlmDefinition,'models'|'defaultModel'|'engine'|'autoDetect'|'alternateConnections'>&Omit<LlmModel,'id'|'name'|'enabled'>&{id:string;model:string;engine?:LoopEngine};apiKey:string}

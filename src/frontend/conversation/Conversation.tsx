@@ -16,12 +16,13 @@
  * 队列 IPC 入口只接收实际支持的操作名，状态、停止和回执仍由原控制器管理。
  * IPC 边界：发送前冻结原任务和运行，审批绑定审批自身任务；动态队列输入逐操作核实。
  * 中断恢复：空闲会话缺少原生文件或执行事实待核实时，在输入区解释阻断并导航恢复选项，保留旧草稿和附件。
+ * 模型切换沿供应商兼容接口解析；同一型号可跨引擎保留选择，限制型号的接口不会放行目录中其他模型。
  */
 import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
 import type {RunSummary,ConversationThreadView} from '../../bridge/contracts/execution';
-import {engineSupportsApi,engineLabel,loopEngineSchema} from '../../bridge/contracts/models';
+import {providerSupportsEngine,engineLabel,loopEngineSchema} from '../../bridge/contracts/models';
 import type {LlmSettings,LoopEngine} from '../../bridge/contracts/models';
 import type {ViewTab,TabKind} from '../shell/tabs';
 import {runtimeTaskSelection,type RuntimeNavigationRequest} from '../shell/runtime-navigation';
@@ -199,15 +200,16 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   const selectedProfile=models?.profiles.find(p=>p.id===(selectedPair[0]||models?.selectedId));
   const selectedModel=selectedProfile?.models.find(m=>m.id===(selectedPair[1]||selectedProfile.defaultModel));
   const chosenEngine=pendingEngine??selectedRuntime?.engine??'pi';
-  const compatibleProfiles=models?.profiles.filter(p=>engineSupportsApi(chosenEngine,p.api))??[];
+  const compatibleProfiles=models?.profiles.map(p=>({...p,models:p.models.filter(m=>providerSupportsEngine(chosenEngine,p,m.id))})).filter(p=>p.models.length)??[];
   const defaultProfile=compatibleProfiles.find(p=>p.id===models?.selectedId);
   const defaultModel=defaultProfile?.models.find(m=>m.id===defaultProfile.defaultModel&&m.enabled);
   /** 切换优先保留兼容模型；否则选兼容默认/首项，没有模型时保留新引擎并禁止发送。 */
   async function chooseEngine(value:string){
     const next=loopEngineSchema.parse(value);
-    const profiles=models?.profiles.filter(p=>engineSupportsApi(next,p.api)&&p.models.some(m=>m.enabled))??[];
-    const profile=selectedModel?.enabled&&profiles.includes(selectedProfile!)?selectedProfile:profiles.find(p=>p.id===models?.selectedId)??profiles[0];
-    const model=profile===selectedProfile&&selectedModel?.enabled?selectedModel:profile?.models.find(m=>m.id===profile.defaultModel&&m.enabled)??profile?.models.find(m=>m.enabled);
+    const profiles=models?.profiles.filter(p=>p.models.some(m=>m.enabled&&providerSupportsEngine(next,p,m.id)))??[];
+    const profile=selectedProfile&&selectedModel?.enabled&&providerSupportsEngine(next,selectedProfile,selectedModel.id)?selectedProfile:profiles.find(p=>p.id===models?.selectedId)??profiles[0];
+    const candidates=profile?.models.filter(m=>m.enabled&&providerSupportsEngine(next,profile,m.id));
+    const model=profile===selectedProfile&&selectedModel?.enabled&&candidates?.includes(selectedModel)?selectedModel:candidates?.find(m=>m.id===profile?.defaultModel)??candidates?.[0];
     if(!profile||!model){setPendingEngine(next);return}
     if(await mainAgent.save({engine:next,profileId:profile.id,modelId:model.id})){setPendingEngine(undefined);if(taskOpen)setNextTip(Date.now())}
   }
@@ -215,7 +217,7 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
     const [profileId,modelId]=value?JSON.parse(value):[defaultProfile?.id,defaultModel?.id];
     if(profileId&&modelId&&await mainAgent.save({engine:chosenEngine,profileId,modelId})){setPendingEngine(undefined);if(taskOpen)setNextTip(Date.now())}
   }
-  const modelAvailable=!!mainAgent.value&&!mainAgent.busy&&!mainAgent.error&&!pendingEngine&&!!selectedProfile&&!!selectedModel?.enabled&&engineSupportsApi(chosenEngine,selectedProfile.api);
+  const modelAvailable=!!mainAgent.value&&!mainAgent.busy&&!mainAgent.error&&!pendingEngine&&!!selectedProfile&&!!selectedModel?.enabled&&providerSupportsEngine(chosenEngine,selectedProfile,selectedModel.id);
   // 两处目标卡共享同一控制器。明确冻结实际模型与权限，补充不引用、不清空聊天草稿和附件。
   const continuationConfig=modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id,permission},label:(selectedModel.name||selectedModel.id)+' · '+{read:'只读访问',ask:'默认权限',execute:'完全访问'}[permission]}:undefined;
   const continuation=useScopeContinuation(workspace.id,tab.taskId,graph,continuationConfig,graph.refresh,active);

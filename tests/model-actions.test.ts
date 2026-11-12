@@ -22,6 +22,20 @@ test('请求目录只承认精确 action，列表与身份读取不接额外私�
   expect(isModelAction('models.list')).toBe(true);expect(isModelAction('constructor')).toBe(false);expect(isModelAction('models.arbitraryCommand')).toBe(false);
   expect(modelActionSchemas['models.list'].safeParse({apiKey:'unwanted'}).success).toBe(false);
   expect(modelActionSchemas['agent.mainSettings'].safeParse({workspaceId:'a'.repeat(64),instanceId:'bad'}).success).toBe(false);
+  const id='11111111-1111-4111-8111-111111111111';
+  expect(modelActionSchemas['models.test'].parse({id,engine:'claude-code'})).toEqual({id,engine:'claude-code'});
+  expect(modelActionSchemas['models.test'].safeParse({id,engine:'other'}).success).toBe(false);
+  expect(modelActionSchemas['models.test'].safeParse({id,baseUrl:'https://unexpected.example'}).success).toBe(false);
+});
+
+test('实际 IPC 将测试引擎和型号交给同一配置服务',async()=>{
+  const f=await fixture(),id='11111111-1111-4111-8111-111111111111';
+  const receipt={ok:true,model:'test',engine:'claude-code' as const,api:'anthropic-messages' as const,baseUrl:'https://example.com',latencyMs:1};
+  const probe=vi.spyOn(f.app.models,'test').mockResolvedValue(receipt);
+  try{
+    expect(await f.app.dispatch('models.test',{id,modelId:'test',engine:'claude-code'})).toEqual(receipt);
+    expect(probe).toHaveBeenCalledExactlyOnceWith(id,'test','claude-code');
+  }finally{probe.mockRestore();await f.cleanup()}
 });
 
 test('实际 Application 先校验模型请求，失败不调用配置写入服务',async()=>{

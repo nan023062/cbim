@@ -17,6 +17,7 @@
 | [GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx) | 设置页的 GitHub 反馈连接入口，展示设备授权码及固定目标仓库。 |
 | [models.css](models.css) | 供应商列表和模型表单布局。 |
 | [ModelSettings.tsx](ModelSettings.tsx) | 设置页的自定义供应商、连接表单与模型目录编辑器。 |
+| [ProviderConnections.tsx](ProviderConnections.tsx) | 供应商表单的接口预设、自动识别和高级兼容地址编辑，以及已保存配置的按引擎连接测试。 |
 | [SettingsView.tsx](SettingsView.tsx) | 模型供应商、运行并发、新目标软限额、GitHub 反馈连接、仓库与共享服务设置；版本与更新由账号菜单独立打开。 |
 | [WebSettings.tsx](WebSettings.tsx) | 桌面网页搜索配置，保存 Brave 开关与密钥。 |
 
@@ -141,7 +142,21 @@ class N_src_frontend_settings_ModelSettings_tsx["ModelSettings.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[models.css](models.css)。
+直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[models.css](models.css)、[ProviderConnections.tsx](ProviderConnections.tsx)。
+
+### ProviderConnections.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_settings_ProviderConnections_tsx["ProviderConnections.tsx"] {
+  <<component>>
+  +ProviderConnections()
+  +ProviderConnectionTest()
+  +connectionTestNotice()
+}
+```
+
+直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/model-actions.ts](../../bridge/contracts/model-actions.ts)。
 
 ### SettingsView.tsx
 
@@ -186,21 +201,21 @@ class N_src_frontend_settings_ModelSettings_tsx["ModelSettings.tsx"] {
 class N_src_frontend_settings_models_css["models.css"] {
   <<stylesheet>>
 }
-class N_src_frontend_settings_SettingsView_tsx["SettingsView.tsx"] {
-  <<component>>
-}
-class N_src_frontend_settings_WebSettings_tsx["WebSettings.tsx"] {
+class N_src_frontend_settings_ProviderConnections_tsx["ProviderConnections.tsx"] {
   <<component>>
 }
 N_src_frontend_settings_BudgetSettings_tsx ..> N_src_frontend_settings_budget_settings_state_ts : 导入依赖
 N_src_frontend_settings_BudgetSettings_tsx ..> N_src_frontend_settings_budget_settings_css : 导入依赖
 N_src_frontend_settings_ModelSettings_tsx ..> N_src_frontend_settings_models_css : 导入依赖
-N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_WebSettings_tsx : 导入依赖
+N_src_frontend_settings_ModelSettings_tsx ..> N_src_frontend_settings_ProviderConnections_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_settings_SettingsView_tsx["SettingsView.tsx"] {
+  <<component>>
+}
+class N_src_frontend_settings_WebSettings_tsx["WebSettings.tsx"] {
   <<component>>
 }
 class N_src_frontend_settings_ModelSettings_tsx["ModelSettings.tsx"] {
@@ -212,12 +227,20 @@ class N_src_frontend_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
 class N_src_frontend_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
   <<component>>
 }
-class N_src_frontend_settings_GitHubFeedbackSettings_tsx["GitHubFeedbackSettings.tsx"] {
-  <<component>>
-}
+N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_WebSettings_tsx : 导入依赖
 N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_ModelSettings_tsx : 导入依赖
 N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_AdmissionSettings_tsx : 导入依赖
 N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_BudgetSettings_tsx : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_settings_SettingsView_tsx["SettingsView.tsx"] {
+  <<component>>
+}
+class N_src_frontend_settings_GitHubFeedbackSettings_tsx["GitHubFeedbackSettings.tsx"] {
+  <<component>>
+}
 N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_GitHubFeedbackSettings_tsx : 导入依赖
 ```
 
@@ -268,4 +291,6 @@ note for GitHubFeedbackSettings "GitHubFeedbackSettings.tsx：等待授权时说
 
 ### 统一供应商模型目录
 
-供应商表单只保存连接、协议、凭据与模型目录，不显示引擎选项，不为每个引擎复制供应商。Agent 配置使用内置三引擎菜单，模型按真实协议兼容性筛选；更新供应商不会改变 Agent 选择的引擎，也不热替换已启动运行。旧 engine 字段只为读取旧文件保留，编辑保存时移除。
+供应商表单保存主连接、一份凭据、模型目录与可选兼容接口，不为每个引擎复制供应商。ProviderConnections 提供官方预设、精确地址识别开关、自定义兼容地址和适用型号编辑；预览只显示默认模型的推导地址，不联网。主协议/地址或兼容接口草稿变更清空当前输入凭据及已发现目录，已保存目录保持不变；旧 engine 字段编辑保存时移除。
+
+ProviderConnectionTest 在供应商卡片中明确选择已保存型号和测试引擎，展示实际协议与目标地址；仅点击测试才发送一次短文本请求，成功显示实际接口及“仅文本请求”，失败保留目录与选择。编辑、取消和切换测试菜单不探测网络。Agent 选型不因测试改变，更新供应商不热替换已启动运行。

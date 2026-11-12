@@ -40,6 +40,9 @@ try{
  assert.equal(await icon.getAttribute('aria-disabled'),'true');await icon.click({force:true});await icon.focus();await page.keyboard.press('Enter');
  for(const action of ['install','download','check'])assert.equal(await count('desktop.updates.'+action),0);
  assert.equal(await page.getByRole('dialog').count(),0);checks.push('idle-hover-focus-no-side-effects');
+ await page.evaluate(()=>window.fixture.set({enginePreparations:[{engine:'pi',version:'1.5.0',progress:45}]}));await tooltip.getByText('pi 1.5.0：正在准备运行包 45%',{exact:true}).waitFor();
+ assert.equal(await icon.getByRole('progressbar').getAttribute('aria-valuenow'),'45');assert.equal(await icon.getAttribute('aria-disabled'),'true');await icon.click({force:true});assert.equal(await count('desktop.updates.install'),0);
+ await page.evaluate(()=>window.fixture.set({enginePreparations:[]}));checks.push('first-engine-download-is-visible-without-install-permission');
  await page.keyboard.press('Escape');await tooltip.waitFor({state:'hidden'});
  await openMenu();assert.equal(await page.getByRole('menuitem',{name:'版本与更新',exact:true}).count(),0);
  assert.equal(await page.getByRole('button',{name:'切换浅色模式',exact:true}).count(),0);

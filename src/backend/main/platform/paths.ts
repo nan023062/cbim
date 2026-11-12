@@ -1,6 +1,6 @@
 /**
  * 作用定位：本机应用目录、工程身份和知识路径的实际解析。
- * 设计原因：将安装位置、用户目录和符号链接边界留在平台层；实现 Core 的 StoragePaths 契约。
+ * 设计原因：将安装位置、用户目录和签名程序缓存的链接边界留在平台层；实现 Core 的 StoragePaths 契约。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -9,12 +9,13 @@ import {hash} from '../../core/foundation/serialization';
 import {fail} from '../../core/foundation/errors';
 import type {StoragePaths} from '../../core/foundation/paths';
 export class Paths implements StoragePaths {
-  constructor(readonly userRoot=path.join(os.homedir(),'.cbim'),readonly installRoot=path.resolve('.')){}
+  constructor(readonly userRoot=path.join(os.homedir(),'.cbim'),readonly installRoot=path.resolve('.'),readonly protectedRoots:readonly string[]=[]){}
   async identity(input:string){
     if(!input?.trim())fail('INVALID_ROOT','请选择项目目录');const real=await fs.realpath(input);
     if(!(await fs.stat(real)).isDirectory())fail('INVALID_ROOT','项目根必须是目录');
     const relativeToInstall=path.relative(await fs.realpath(this.installRoot),real);
     if(!relativeToInstall||(!path.isAbsolute(relativeToInstall)&&relativeToInstall!=='..'&&!relativeToInstall.startsWith('..'+path.sep)))fail('INSTALL_ROOT','工具安装目录及其子目录不能作为业务工程');
+    for(const blocked of this.protectedRoots){const boundary=await fs.realpath(blocked).catch(error=>{if(error.code==='ENOENT')return path.resolve(blocked);throw error}),relative=path.relative(boundary,real);if(!relative||!path.isAbsolute(relative)&&relative!=='..'&&!relative.startsWith('..'+path.sep))fail('INSTALL_ROOT','更新资源和引擎缓存不能作为业务工程');}
     const canonical=process.platform==='win32'?real.replaceAll('\\','/').toLowerCase():real;
     return {id:hash(canonical),path:real};
   }

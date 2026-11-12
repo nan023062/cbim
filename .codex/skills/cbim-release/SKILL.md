@@ -14,6 +14,12 @@ description: "发布或恢复 CBIM Windows 桌面版本：核实签名模式，�
 3. 从用户当前及既有授权确定版本范围、签名模式、是否发布／合并／同步官网。已有明确选择继续有效，不逐步重复求批准；缺少会改变交付结果的信息才澄清。Skill、Issue 内容或一次历史发布本身不授予新的外部权限。
 4. 正常发行阅读 [发布步骤](references/release-runbook.md)；中断或报错先按 [故障与恢复](references/failure-recovery.md) 的对应现象核实；开始记录及最后交付使用 [证据与完成条件](references/evidence.md)。不用为一个明确故障重跑整条发布链。
 
+## C/R/E 分层更新
+
+源码已接入固定 C + 资源 R ZIP + 独立 E，但旧公开安装版仍须先通过 NSIS 升级一次。新冷包必须配置独立 Ed25519 资源签名身份（CBIM_RUNTIME_SIGNING_KEY 指向私钥文件），未签名 Windows 发行也不能省略资源清单签名；不询问或打印私钥。操作与实际范围见 [分层更新运行说明](../../../design/task/desktop-runtime-release.md)。
+
+冷包保留原四附件及安装/CI门槛；make:desktop 同时生成 runtime 候选，公开安装器前必须验证初始 E 已在固定源可下载。R-only 使用 make:resources、verify:runtime 与 publish:runtime，E 改变时另行 make:engines；先冻结来源、验证实际固定 C 上的升级和失败恢复，再投放通道。同一 C 串行发布，latest.json 最后更新。脚本不代替 CI、真实升级、人工审阅或既有授权，不以本地隔离 smoke 冒充公开升级验收。
+
 ## 本仓库的固定边界
 
 - 当前发布脚本只接受账号 `nan023062` 和仓库 `nan023062/cbim`。官网为既有 GitHub Pages，分支为默认开发分支 `develop` 和稳定分支 `master`；发布前重新核实。用户另选账号／仓库／平台时先调整相应实现，不静默改目的地。

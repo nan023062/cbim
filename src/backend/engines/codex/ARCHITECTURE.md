@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Codex App Server 的受管进程、双向 RPC、真实 thread/turn、Responses 代理与动态工具；固定 CLI 和私有账号目录，内置执行关闭，工具经宿主授权、预算结算及同一回执；宿主原生工具目录按可信能力的 disableNativeTools 策略收窄。
+Codex App Server 的受管进程、双向 RPC、真实 thread/turn、Responses 代理与动态工具；固定 CLI 和私有账号目录，内置执行关闭，工具经宿主授权、预算结算及同一回执；宿主原生工具目录按可信能力的 disableNativeTools 策略收窄。 原生 EXE 与 Pi 宿主工具库分别使用可信受管包，不重新编译或借用外部客户端。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -29,6 +29,7 @@ class N_src_backend_engines_codex_binary_ts["binary.ts"] {
 }
 ```
 
+直接依赖：[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)。
 
 ### engine.ts
 
@@ -49,6 +50,8 @@ class N_src_backend_engines_codex_engine_ts["engine.ts"] {
 }
 class N_src_backend_engines_codex_engine_ts_CodexOptions["CodexOptions"] {
   <<interface>>
+  +runtime
+  +nativeToolsRuntime
   +agentHome
   +prompt
   +knowledge
@@ -106,7 +109,7 @@ class N_src_backend_engines_codex_engine_ts_external_AgentEngine["AgentEngine (�
 N_src_backend_engines_codex_engine_ts_external_AgentEngine <|.. N_src_backend_engines_codex_engine_ts_CodexEngine
 ```
 
-直接依赖：[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../native-tools.ts](../native-tools.ts)、[binary.ts](binary.ts)、[rpc.ts](rpc.ts)、[tools.ts](tools.ts)、[model-proxy.ts](model-proxy.ts)、[session.ts](session.ts)。
+直接依赖：[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../native-tools.ts](../native-tools.ts)、[binary.ts](binary.ts)、[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[rpc.ts](rpc.ts)、[tools.ts](tools.ts)、[model-proxy.ts](model-proxy.ts)、[session.ts](session.ts)。
 
 ### model-proxy.ts
 

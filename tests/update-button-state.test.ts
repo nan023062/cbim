@@ -3,6 +3,10 @@ import {updateButtonState} from '../src/frontend/updates/update-button-state';
 import type {DesktopUpdateStatus} from '../src/bridge/contracts/desktop-updates';
 const base:DesktopUpdateStatus={currentVersion:'0.1.14',currentNotes:'notes',enabled:true,phase:'idle',release:{version:'0.1.15',tag:'desktop-v0.1.15',notes:'next',publishedAt:'2026-11-12T00:00:00Z'}};
 describe('sidebar update control',()=>{
+  it('shows on-demand engine preparation without granting application installation',()=>{
+    const view=updateButtonState({...base,phase:'current',enginePreparations:[{engine:'pi',version:'1.5.0',progress:45}]});expect(view).toMatchObject({ready:false,active:true,progress:45,canInstall:false});expect(view.engines[0]).toContain('pi 1.5.0');
+    expect(updateButtonState({...base,phase:'current',enginePreparations:[{engine:'codex',version:'0.167.0',error:'下载失败'}]})).toMatchObject({active:false,canInstall:false});
+  });
   it('only a verified ready candidate accepts install',()=>{
     for(const phase of ['disabled','idle','checking','current','available','downloading','installing'] as const)expect(updateButtonState({...base,phase,progress:100}).canInstall).toBe(false);
     expect(updateButtonState({...base,phase:'ready'}).canInstall).toBe(true);

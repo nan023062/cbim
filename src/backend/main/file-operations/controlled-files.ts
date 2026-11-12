@@ -3,6 +3,7 @@
  * 自动兜底运行使用自身冻结身份计算受控写指纹，仍经原授权、文件事务与审计端口。
  * 作用定位：已打开工作区的受控写入与桌面补偿服务，连接运行许可、私有备份、独占子进程和唯一 DispatchStore。
  * 设计原因：文件 IO 永不进入 Store 回调；prepared/executing 的可靠保存先于写入，保存未知不重做。运行解除待核实屏障只接受原 not_applied 与进程退出，不凭错误码或查无推断。
+ * 受控文件平台的禁止边界包含独立 R/E 缓存，避免业务文件工具修改下一次将执行的签名程序。
  */
 import path from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
@@ -34,7 +35,7 @@ export class ControlledFiles {
   constructor(private readonly owner:Workspace,private readonly store:DispatchStore,private readonly lease:WorkspaceExecutionLease,private readonly transport:ControlledFileTransport|undefined,private readonly inspect:(run:DispatchRun)=>Promise<RunSummary>,private readonly isCurrent:()=>boolean){this.blobs=new ControlledFileBlobs(path.join(owner.paths.project(owner.entry.id),'controlled-files','blobs'))}
   private assert(identity?:{workspaceId:string;instanceId:string}){this.owner.assert(identity);if(this.closed||!this.isCurrent())fail('CONTROLLED_UNAVAILABLE','工作区正在关闭，不能开始文件操作')}
   private platform(){if(!this.transport)fail('CONTROLLED_PLATFORM_UNSUPPORTED','当前宿主没有受控文件 utility 传输');return this.transport}
-  private protectedRoots(){return [this.owner.paths.userRoot,this.owner.paths.installRoot]}
+  private protectedRoots(){return [this.owner.paths.userRoot,this.owner.paths.installRoot,...(this.owner.paths.protectedRoots??[])]}
   private tracked<T>(signal:AbortSignal|undefined,use:(signal:AbortSignal)=>Promise<T>):Promise<T>{const controller=new AbortController();this.controllers.add(controller);const combined=signal?AbortSignal.any([signal,controller.signal]):controller.signal;const result=use(combined);this.operations.add(result);void result.finally(()=>{this.operations.delete(result);this.controllers.delete(controller)}).catch(()=>{});return result}
   /** 工厂冻结真实已领取上下文；以后岗位变化不替换原运行配置，写前仍核原 run/lease 和停止。 */
   forRun(run:DispatchRun,scopeId:string):ControlledFileRunPort|undefined{

@@ -4,11 +4,19 @@ Application 持有一份 WebSettings/WebService，启动恢复加密搜索配置
 
 # 主进程运行装配契约
 
+## 资源入口与窗口优先启动
+
+固定 bootstrap 验证签名 R 后调用 startDesktop(runtime)。Main 只持有应用/窗口生命周期，调用私有宿主端口取得更新服务与受管引擎；自身不改活动版本指针。R 的 preload、worker、renderer 都相对同一资源目录解析，koffi 和 EXE 品牌仍来自 C。
+
+桌面使用 Application.init({restore:false}) 初始化目录/配置，窗口加载后再 background restore；CLI/其它消费者默认 init 仍等待恢复。停止标记阻止恢复继续打开下一工作区。启动确认需要页面加载成功与 React 的 list IPC 成功，不用单纯进程存活作为更新成功证据。
+
+Paths 的 protectedRoots 包括整个安装/用户身份的程序缓存；主/成员受控读写、删除/移动及资源仓库配置都继承该边界。引擎下载与账号历史分开，createExecutionManager/createMemberServices 只注入固定 EngineRuntimeResolver。
+
 ## 后台预下载与用户确认安装
 
 Main 为 `DesktopUpdates` 注入唯一的业务关闭回调，停止终端、等待 `Application.shutdown` 后才标记安装退出。后台检查自动预下载，固定 `desktop.updates.download` 只手动重试下载/校验，不接受地址或命令；`desktop.updates.install` 在包已就绪后明确确认重启或重试安装。预下载不调用业务关闭回调；installing 期间才拒绝普通业务 IPC 与拖入附件，状态查询仍可用来展示进度。
 
-普通 before-quit 先 close 更新服务再排空，避免用户主动退出时迟到的下载或两秒提示继续触发安装。安装器触发的退出已由成功排空设置 quitting，走原正常退出路径。安装失败没有升级成功保证，必须在新进程核实版本；不更改应用身份、用户目录或 NSIS 校验规则。
+普通 before-quit 先 close 更新服务再排空，避免用户主动退出时迟到的下载或安装让出继续触发安装。安装器触发的退出已由成功排空设置 quitting，走原正常退出路径。安装失败没有升级成功保证，必须在新进程核实版本；不更改应用身份、用户目录或 NSIS 校验规则。
 
 ## 产品标识与原生窗口
 

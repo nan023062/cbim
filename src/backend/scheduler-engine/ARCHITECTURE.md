@@ -126,7 +126,7 @@ class N_src_backend_scheduler_engine_tools["tools/"] {
 ## 子目录导航
 
 - [admission/](admission/ARCHITECTURE.md)：运行准入的票据与运行注册，保持可信入口、占用与释放语义；与业务验收分离。
-- [assembly/](assembly/ARCHITECTURE.md)：引擎装配：loop-engine 将实际 Pi/Claude/Codex、模型预算及工具能力接入 Core 运行循环。这里有意认识具体实现；高密度装配依赖仍需独立评审。
+- [assembly/](assembly/ARCHITECTURE.md)：引擎装配：loop-engine 将实际 Pi/Claude/Codex、模型预算及工具能力接入 Core 运行循环。这里有意认识具体实现；高密度装配依赖仍需独立评审。 主/成员运行按可信端口准备 E，并用 pinRuntimeEngine 固定历史兼容边界；可执行路径不来自公开运行选项。
 - [automation/](automation/ARCHITECTURE.md)：串行版本配置、持久启动意图与定时调度；同项不重叠，重开跳过过期，不重放未知运行。
 - [budget/](budget/ARCHITECTURE.md)：预算应用服务：协调请求和目标预算预占/结算，通过明确存储端口保存结果；不直接访问共享派发 Store。
 - [context/](context/ARCHITECTURE.md)：内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/岗位责任、Workflow与规范。显式流程只从本模块挂载清单解析，准备按任务原选择重核，不回退默认或刷新旧绑定；前置替换保留原实例和流程；两种模式的主会话都可直接执行未配置自定义岗位的模块，不把主 Agent 派成独立成员。 team-workflow 只向知识查询转发 snapshot，查询不取得工作区写能力。 team-workflow 调用 Core KnowledgeQueries，后者只取快照读取端口并组合 Team/BusinessWorkspace；跨查询一致性由准备用例核版本，索引写入留在知识领域。 执行上下文同时冻结负责岗位、项目适配、采纳能力与模型身份，主模型不会替换成员配置。

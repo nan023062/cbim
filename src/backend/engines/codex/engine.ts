@@ -3,6 +3,7 @@
  * 作用定位：通过 Codex App Server 驱动 AgentEngine，管理进程、线程、轮次和 CBIM 动态工具。
  * 设计原因：参考 Cindy 的双向 RPC 接法；关闭内置执行/外部工具，用既有授权、预算和事件服务持有副作用。
  * 职责边界：原生线程 ID 来自服务端实际回执，首次绑定后固定；公开事件不包含推理，故障与取消不重放操作。
+ * Codex EXE 与宿主 Pi 工具库分别接收固定包，保持账号/原生历史目录及原 RPC 进程收尾。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -13,12 +14,13 @@ import {runtimeEngineTools,type EngineToolsPort} from '../../core/execution/engi
 import {engineInstructions} from '../../core/execution/engine-instructions';
 import {managedNativeTools} from '../native-tools';
 import {codexBinary} from './binary';
+import type {EngineRuntimePackage} from '../../core/execution/engine-runtime';
 import {CodexRpc} from './rpc';
 import {codexTools} from './tools';
 import {openCodexModelProxy} from './model-proxy';
 import {readCodexSession,codexPath} from './session';
 
-export interface CodexOptions {agentHome:string;prompt:string;knowledge:EngineToolsPort;allowNativeExecution?:boolean;llm?:ResolvedLlm;images?:import('../../core/execution/types').InputImage[];turnTimeoutMs?:number;requestBudget?():Promise<RequestBudgetPort|undefined>}
+export interface CodexOptions {/** 本次执行固定的独立 Codex 包与 Pi 工具包，由可信宿主注入。 */ runtime?:EngineRuntimePackage;nativeToolsRuntime?:EngineRuntimePackage;agentHome:string;prompt:string;knowledge:EngineToolsPort;allowNativeExecution?:boolean;llm?:ResolvedLlm;images?:import('../../core/execution/types').InputImage[];turnTimeoutMs?:number;requestBudget?():Promise<RequestBudgetPort|undefined>}
 /** 删除宿主 Codex/OpenAI 身份及启动注入；只把本轮代理令牌交给原生进程。 */
 export function codexEnvironment(home:string,token:string):NodeJS.ProcessEnv{
   const env={...process.env};for(const key of Object.keys(env))if(/^(CODEX|OPENAI_|ANTHROPIC_|CLAUDE|CBIM_|NODE_OPTIONS$|NODE_PATH$|ELECTRON_RUN_AS_NODE$)/i.test(key))delete env[key];
@@ -37,7 +39,7 @@ export class CodexEngine implements AgentEngine {
   async start(context:EngineContext){
     this.context=context;const llm=this.options.llm;if(!llm||llm.profile.api!=='openai-responses'||llm.profile.engine&&llm.profile.engine!=='codex')throw Error('Codex 需要已配置的 OpenAI Responses 模型');
     await fs.mkdir(this.options.agentHome,{recursive:true});await context.assertMemberResume?.();
-    const port=await runtimeEngineTools(context,this.options.knowledge),native=await managedNativeTools(context.task.root);
+    const port=await runtimeEngineTools(context,this.options.knowledge),native=await managedNativeTools(context.task.root,this.options.nativeToolsRuntime);
     this.tools=await codexTools({...context,emit:event=>this.emit(event)},port,native,!!this.options.allowNativeExecution,async()=>{await this.proxy!.assertSettled();if(this.fatal)throw this.fatal});
     this.proxy=await openCodexModelProxy(llm,this.tools.registered,this.tools.catalog,await this.options.requestBudget?.(),async()=>{
       const names=this.tools!.catalog.map(tool=>tool.name);await this.emit({type:'engine.status',data:{metric:'tool-catalog',stage:'active',expected:names,active:names,missing:[]}});
@@ -52,7 +54,7 @@ export class CodexEngine implements AgentEngine {
       await this.startingTurn;if(params.threadId!==this.threadId||params.turnId!==this.turnId||params.namespace)throw Error('Codex 工具请求不属于当前线程/轮次');
       return this.tools!.call(params);
     },error=>this.fail(error));
-    this.rpc.start(await codexBinary(),this.options.agentHome,codexEnvironment(this.options.agentHome,this.proxy.token),Object.entries(config).flatMap(([key,value])=>['-c',key+'='+toml(value)]));
+    this.rpc.start(await codexBinary(this.options.runtime),this.options.agentHome,codexEnvironment(this.options.agentHome,this.proxy.token),Object.entries(config).flatMap(([key,value])=>['-c',key+'='+toml(value)]));
     await this.rpc.request('initialize',{clientInfo:{name:'cbim',version:'1.0.0'},capabilities:{experimentalApi:true}});this.rpc.send({method:'initialized',params:{}});
     // 参考宿主托管模式：逐页读取本版本真实功能表，关闭额外执行入口，不按已知少数工具猜测整个能力集合。
     let cursor:string|undefined;for(let page=0;page<8;page++){

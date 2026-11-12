@@ -6,6 +6,7 @@
  * 附件边界：原生多选超过12项时在任何快照导入前拒绝；安全等待的 importId 贯穿选择器，取消后迟到路径不读取、不返回给另一目标。
  * GitHub 登录只在桌面点击后打开固定官方 Device Flow 页面，不接收重定向地址或令牌。
  * 桌面更新只装配在正式 NSIS 包中；后台检查、预下载并校验，等待用户确认重启后才拒绝新请求、排空业务并安装。
+ * 资源入口：由固定冷壳调用 startDesktop；所有业务入口来自同一 R，先显示窗口再按原策略恢复工作区。
  * 窗口图标从固定品牌资源读取，Forge 同源写入 EXE；保留原应用身份与卸载器名称以兼容更新。
  */
 import {parseIpcRequest,ipcSuccess} from '../../bridge/contracts/ipc-call';
@@ -24,10 +25,16 @@ import {DesktopUpdates} from '../updater/desktop-updates';
 import {latestDesktopRelease} from '../updater/desktop-releases';
 import {NsisUpdateInstaller} from '../updater/nsis-updater';
 import {updateUserRoot} from '../updater/restart-profile';
+import type {DesktopRuntimeHost} from '../updater/runtime-host';
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL:string;
 declare const MAIN_WINDOW_VITE_NAME:string;
+/** 只由可信启动器调用；runtime 是私有端口，不来自 renderer、模型或工作区配置。 */
+export function startDesktop(runtime?:DesktopRuntimeHost){
 const terminals=new TerminalSessions();
 let application:Application;let quitting=false;let window:BrowserWindow;let updates:DesktopUpdates|undefined;
+let windowLoaded=false,rendererResponded=false,confirmed=false;
+// loadFile 成功还不足以证明 React 运行；同时等待挂载后的目录请求成功。
+const confirmStartup=()=>{if(windowLoaded&&rendererResponded&&!confirmed){runtime?.confirm();confirmed=true}};
 // 安装器通过显式参数保留自定义目录；重新设置环境供下一次更新继续传递，不读取或传递任何凭据。
 const userRoot=updateUserRoot(process.argv,process.env.CBIM_USER_DATA_ROOT);
 if(userRoot)process.env.CBIM_USER_DATA_ROOT=userRoot;
@@ -35,12 +42,14 @@ if(userRoot){app.setPath('userData',path.join(userRoot,'desktop'));app.setPath('
 else {const root=path.join(app.getPath('home'),'.cbim');app.setPath('userData',path.join(root,'desktop'));app.setPath('sessionData',path.join(root,'desktop'))}
 app.whenReady().then(async()=>{
   const install=app.isPackaged?process.resourcesPath:app.getAppPath();
+  const resources=runtime?.assetsRoot??install;
   app.setAppUserModelId('com.cbim.assistant.desktop');
   let release:{channel?:string;version?:string;notes?:string}={};try{release=JSON.parse(await fs.readFile(path.join(install,'desktop-release.json'),'utf8'))}catch{}
   const installed=app.isPackaged&&process.platform==='win32'&&process.arch==='x64'&&release.channel==='desktop-stable'&&release.version===app.getVersion()&&await fs.access(path.join(path.dirname(app.getPath('exe')),'Uninstall CBIM Desktop.exe')).then(()=>true,()=>false);
-  if(installed&&!app.requestSingleInstanceLock()){app.quit();return}
-  updates=new DesktopUpdates(app.getVersion(),typeof release.notes==='string'?release.notes:'',installed,latestDesktopRelease,new NsisUpdateInstaller(),async()=>{terminals.closeAll();await application.shutdown();quitting=true});
-  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install),path.join(install,'design'),systemSecretCipher,{controlledFiles:createControlledFileTransport()});await application.init();
+  if(installed&&!runtime&&!app.requestSingleInstanceLock()){app.quit();return}
+  const beforeInstall=async()=>{runtime?.stopPreparingEngines();terminals.closeAll();await application.shutdown();quitting=true};
+  updates=runtime?runtime.updates(beforeInstall,installed):new DesktopUpdates(app.getVersion(),typeof release.notes==='string'?release.notes:'',installed,latestDesktopRelease,new NsisUpdateInstaller(),beforeInstall);
+  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install,runtime?[runtime.cacheRoot]:[]),path.join(resources,'design'),systemSecretCipher,{controlledFiles:createControlledFileTransport(),engineRuntimes:runtime});await application.init({restore:false});
   window=new BrowserWindow({width:1320,height:860,minWidth:760,minHeight:520,title:'CBIM',icon:path.join(install,'branding','cbim.png'),webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   window.webContents.setWindowOpenHandler(()=>({action:'deny'}));window.webContents.on('will-navigate',(event)=>event.preventDefault());
   app.on('second-instance',()=>{if(window.isMinimized())window.restore();window.focus()});
@@ -90,9 +99,11 @@ app.whenReady().then(async()=>{
       if(!result.canceled&&result.filePaths.length>12)throw Error('最多选择12个附件，请减少选择后重试');
       const items=[];if(!result.canceled)for(const file of result.filePaths)items.push(await inputs.path(request.kind,file));return ipcSuccess(action,items);
     }catch(e:any){return {ok:false,error:{code:e.code||'ATTACHMENT',message:e.message}}}
-    try{if(action==='chooseFolder'){parseIpcRequest(action,args);const result=await dialog.showOpenDialog(window,{properties:['openDirectory']});return ipcSuccess(action,result.canceled?null:result.filePaths[0])}return {ok:true,value:await application.dispatch(action,args)}}catch(e:any){return {ok:false,error:{code:e.code||'ERROR',message:e.message}}}});
+    try{if(action==='chooseFolder'){parseIpcRequest(action,args);const result=await dialog.showOpenDialog(window,{properties:['openDirectory']});return ipcSuccess(action,result.canceled?null:result.filePaths[0])}const value=await application.dispatch(action,args);if(action==='list'){rendererResponded=true;confirmStartup()}return {ok:true,value}}catch(e:any){return {ok:false,error:{code:e.code||'ERROR',message:e.message}}}});
   if(MAIN_WINDOW_VITE_DEV_SERVER_URL)await window.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);else await window.loadFile(path.join(__dirname,`../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+  windowLoaded=true;confirmStartup();
   updates.start();
+  void application.restore().catch(error=>{dialog.showErrorBox('工作区恢复失败',String(error)+'\n程序窗口已打开，可在工作区中重试。')});
   // 仅隔离数据目录下的显式打包测试可写入样本；正常启动走运行授权策略。
   if(process.env.CBIM_SMOKE_ROOT&&userRoot){
     const entry=await application.catalog.add(process.env.CBIM_SMOKE_ROOT),ws=await application.open(entry.id),snap=await ws.snapshot();
@@ -115,6 +126,7 @@ app.whenReady().then(async()=>{
   }
 }).catch(e=>{dialog.showErrorBox('CBIM 启动失败',e.message+'\n请检查用户数据目录权限及程序资源。');app.exit(1)});
 // 普通退出先取消更新流程，不能等排空完成后的 will-quit，避免排空期间自动安装继续推进。
-app.on('before-quit',event=>{if(!quitting&&application){event.preventDefault();quitting=true;updates?.close();terminals.closeAll();void application.shutdown().then(()=>app.quit()).catch(e=>{quitting=false;dialog.showErrorBox('工作区关闭失败',e.message+'\n请保留运行窗口并重试。')})}});
+app.on('before-quit',event=>{if(!quitting&&application){event.preventDefault();quitting=true;updates?.close();runtime?.stopPreparingEngines();terminals.closeAll();void application.shutdown().then(()=>app.quit()).catch(e=>{quitting=false;dialog.showErrorBox('工作区关闭失败',e.message+'\n请保留运行窗口并重试。')})}});
 app.on('window-all-closed',()=>app.quit());
 app.on('will-quit',()=>updates?.close());
+}

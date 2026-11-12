@@ -15,6 +15,7 @@
  * 影响观察另提供安全文件读取、短只读占用、原知识/治理/责任及受控阶段查询；端口复用唯一存储及已有受控报告，不启动模型、文件子进程或旧提交，明确处置、新只读核实与业务修复各走独立门禁。
  * 岗位引擎来自采纳快照；原生能力预检与会话指纹按 Pi/Claude Code/Codex 分开装配，主模型不能覆盖它。
  * 请求账本只注入预算专用 Store 适配，预留仍在工作区唯一串行事务中裁决。
+ * 成员与主会话共用受管引擎解析；受控文件能力同时保护安装目录、用户目录与独立更新缓存。
  */
 import path from 'node:path';
 import type {Workspace} from '../workspace/workspace';
@@ -24,6 +25,7 @@ import type {LlmProfiles} from '../models/llm-profiles';
 import type {WorkspaceExecutionLease} from '../../scheduler-engine/admission/workspace-lease';
 import {MemberExecutionManager,type PreparedEngine} from '../../scheduler-engine/members/member-execution';
 import {createWorkspaceLoop} from '../../scheduler-engine/assembly/loop-engine';
+import type {EngineRuntimeResolver} from '../../core/execution/engine-runtime';
 import {memberExecutionPrompt,recheckDispatchExecutionContext} from '../../scheduler-engine/context/execution-context';
 import {ArtifactFiles,normalizeArtifactPath} from '../platform/files/artifact-files';
 import {OutputManifestFiles} from '../platform/files/output-manifest-files';
@@ -67,7 +69,7 @@ export function createMemberDispatch(workspace:Workspace,observer?:DispatchObser
  * prepare 固定公开模型参数和凭据，create 不重新读取默认设置；没有已保存模型时拒绝启动。
  * workspaceMembers 复用此 store 保存独立岗位审计；只调用 configuration 读取公开配置，不进入 prepare/create 或影响派发选择。
  */
-export function createMemberServices(workspace:Workspace,models:LlmProfiles,lease:WorkspaceExecutionLease,observer?:DispatchObserver,admission?:WorkspaceAdmission,budgetPolicy?:()=>ScopeBudgetPolicy,controlledTransport?:ControlledFileTransport){
+export function createMemberServices(workspace:Workspace,models:LlmProfiles,lease:WorkspaceExecutionLease,observer?:DispatchObserver,admission?:WorkspaceAdmission,budgetPolicy?:()=>ScopeBudgetPolicy,controlledTransport?:ControlledFileTransport,engineRuntimes?:EngineRuntimeResolver){
   workspace.assert();
   const directory=path.join(workspace.paths.project(workspace.entry.id),'dispatch');
   const store=workspace.dispatchStore,storage=new FileRunStorage();
@@ -108,14 +110,14 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
         const checkpointState=await store.read(),previous=run.resumeFrom?checkpointState.runs?.find(old=>old.binding.runId===run.resumeFrom!.runId):undefined;
         if(run.resumeFrom&&(!previous?.checkpointProof||previous.checkpointProof.checkpoint.checkpointId!==run.resumeFrom.checkpointId))fail('MEMBER_CHECKPOINT_INVALID','续执行缺少原检查点证明');
         const executionScope=preparedExecutionScope(run.prepared.modules.map(module=>({contract:module.workflowContract})));
-        const scopedExecution=executionScope?new ScopedExecutionFiles(workspace.entry.path,executionScope,()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('EXECUTION_SCOPE_STOPPED','工作区正在停止')},[workspace.paths.userRoot,workspace.paths.installRoot],isolatedExecutions.forRun(run,task.scopeId!,executionScope)):undefined;
+        const scopedExecution=executionScope?new ScopedExecutionFiles(workspace.entry.path,executionScope,()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('EXECUTION_SCOPE_STOPPED','工作区正在停止')},[workspace.paths.userRoot,workspace.paths.installRoot,...(workspace.paths.protectedRoots??[])],isolatedExecutions.forRun(run,task.scopeId!,executionScope)):undefined;
         const runFiles=scopedExecution?new ArtifactFiles(workspace.entry.path,()=>workspace.assert(),(file,signal)=>scopedExecution.snapshot(file,signal)):artifactFiles;
         const runManifests=scopedExecution?new OutputManifestFiles(workspace.entry.path,()=>workspace.assert(),{files:runFiles,lockDirectory:file=>scopedExecution.lockDirectory(file)}):manifestFiles;
         const controlled=task.scopeId?controlledFiles.forRun(run,task.scopeId):undefined;
         const transitions=createArtifactTransitionPort(workspace,controlledTransport,()=>admission?.isCurrent()??true);
         const scopeWrite=(paths:string[])=>{if(executionScope&&paths.some(file=>!executionScopeCovers(executionScope.write,file)))fail('EXECUTION_SCOPE_DENIED','写入超出原任务冻结范围')};
         const runCheckpointPorts={...checkpointPorts,checkFiles:runFiles.checkFiles.bind(runFiles)};
-        const loop=await createWorkspaceLoop(workspace.paths,workspace,{provider:'cbim-'+llm.profile.id,model:llm.profile.model,profileId:llm.profile.id,llm,
+        const loop=await createWorkspaceLoop(workspace.paths,workspace,{provider:'cbim-'+llm.profile.id,model:llm.profile.model,profileId:llm.profile.id,llm,engineRuntimes,
           permission:run.permission,turnTimeoutMs:run.turnTimeoutMs,onEvent:hooks.onEvent,requestApproval:hooks.requestApproval,requestQuestion:hooks.requestQuestion,
         },{
           memberCheckpointAllowance:memberCheckpointLimit-(task.checkpoints?.length??0),

@@ -7,6 +7,16 @@ import {DesktopUpdates,type DesktopUpdateInstaller} from '../src/backend/updater
 import {fixture} from './helpers';
 import {moduleFiles,request} from './data/knowledge';
 
+it('catalog startup can precede workspace restore, and shutdown cancels later background restore',async()=>{
+  const f=await fixture();let early:Application|undefined;
+  try{
+    const entry=await f.app.dispatch('add',{path:f.a});await f.app.shutdown();
+    early=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await early.init({restore:false});
+    expect((await early.dispatch('list')).entries.map((entry:any)=>entry.id)).toContain(entry.id);expect(()=>early!.workspace(entry.id)).toThrow();
+    await early.restore();expect(early.workspace(entry.id).entry.id).toBe(entry.id);await early.shutdown();await early.restore();expect(()=>early!.workspace(entry.id)).toThrow();
+  }finally{await early?.shutdown();await f.cleanup()}
+},15000);
+
 it('prefetch leaves the workspace open; explicit install drains and preserves it on reopen',async()=>{
   const f=await fixture();let reopened:Application|undefined,updates:DesktopUpdates|undefined;
   try{

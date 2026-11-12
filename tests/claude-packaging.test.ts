@@ -12,6 +12,8 @@ test('Claude runtime copy includes the SDK, current platform binary and resolvab
     await packageClaudeRuntime(runtime);const require=createRequire(path.join(runtime,'package.json')),entry=require.resolve('@anthropic-ai/claude-agent-sdk');
     (process as any).resourcesPath=root;
     expect(entry.startsWith(runtime+path.sep)).toBe(true);expect(typeof (await loadClaudeSdk()).query).toBe('function');
+    expect(typeof(await loadClaudeSdk({root:runtime,entry,version:'0.3.322',identity:'a'.repeat(64)})).query).toBe('function');
+    await expect(loadClaudeSdk({root:runtime,entry,version:'0.3.323',identity:'b'.repeat(64)})).rejects.toThrow(/版本/);
     const manifest=JSON.parse(await fs.readFile(path.join(runtime,'manifest.json'),'utf8')),versions=manifest.packages.map((p:any)=>p.version);
     expect(versions).toContain('@anthropic-ai/claude-agent-sdk@0.3.322');expect(versions.some((s:string)=>s.startsWith('@anthropic-ai/claude-agent-sdk-'+process.platform+'-'+process.arch+'@'))).toBe(true);
     expect(require.resolve('zod/v4').startsWith(root+path.sep)).toBe(true);expect(require.resolve('@modelcontextprotocol/sdk/server/mcp.js').startsWith(root+path.sep)).toBe(true);

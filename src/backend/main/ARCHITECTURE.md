@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Electron 入口与应用装配。显式资料导入共用应用级取消表，关闭撤销在途读取，原生选择迟到不落新会话。应用单例持有全局准入和持久策略，主/成员共享许可；工作区代际退役撤销等待，已有运行真实退出才释放。注入可信身份及证据，重启不执行历史票据或等待周期。 可信桌面提交注入本机明确操作来源，选定文件核实共用只读租约与平台端口。 member-dispatch 为请求预算注入窄 Store，底层跨领域事务继续统一持有。 正式安装版调用独立updater，主Frame固定IPC与正常排空后显式安装；启动前恢复更新重启的用户目录，开发和便携包不自动联网。 agent-history 独立组合历史服务与canonical读取，只接收工作区身份、目录和存活断言；工作区持锁初始化及排空关闭顺序保持。 工作区唯一账本装配岗位模型端口；明确拒绝旧直接业务启动，原聊天和知识治理保持独立。 原 canonical 历史端口独立装配给交接处置，不开新的模型或原生运行入口。 原命令核实只装配已打开工作区的 canonical 和唯一账本，不隐式启动、初始化或恢复。 影响服务装配已打开工作区端口，真实本机处置身份不由模型或 IPC 参数指定。 影响观察注入原知识事务窄读取端口，不向调度层开放写入或恢复方法。 装配独立文件 utility 及唯一工作区服务；原运行释放前确认物理操作排空，缺少平台能力时不装配可写工具。 11项原生操作按契约解析并配对成功值，主Frame和安装门禁先行。
+Electron 入口与应用装配。显式资料导入共用应用级取消表，关闭撤销在途读取，原生选择迟到不落新会话。应用单例持有全局准入和持久策略，主/成员共享许可；工作区代际退役撤销等待，已有运行真实退出才释放。注入可信身份及证据，重启不执行历史票据或等待周期。 可信桌面提交注入本机明确操作来源，选定文件核实共用只读租约与平台端口。 member-dispatch 为请求预算注入窄 Store，底层跨领域事务继续统一持有。 正式安装版调用独立updater，主Frame固定IPC与正常排空后显式安装；启动前恢复更新重启的用户目录，开发和便携包不自动联网。 agent-history 独立组合历史服务与canonical读取，只接收工作区身份、目录和存活断言；工作区持锁初始化及排空关闭顺序保持。 工作区唯一账本装配岗位模型端口；明确拒绝旧直接业务启动，原聊天和知识治理保持独立。 原 canonical 历史端口独立装配给交接处置，不开新的模型或原生运行入口。 原命令核实只装配已打开工作区的 canonical 和唯一账本，不隐式启动、初始化或恢复。 影响服务装配已打开工作区端口，真实本机处置身份不由模型或 IPC 参数指定。 影响观察注入原知识事务窄读取端口，不向调度层开放写入或恢复方法。 装配独立文件 utility 及唯一工作区服务；原运行释放前确认物理操作排空，缺少平台能力时不装配可写工具。 11项原生操作按契约解析并配对成功值，主Frame和安装门禁先行。 startDesktop 由固定 bootstrap 调用；初始化应用目录后先加载窗口，再恢复工作区。R 启动确认同时需要页面加载完成和 React 的目录 IPC 成功。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -158,24 +158,35 @@ class N_src_backend_main_main_ts["main.ts"] {
 - `workspace` → `dispatch-storage`：导入。
 - `workspace` → `registry`：导入。
 
+### main.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_backend_main_main_ts["main.ts"] {
+  <<module>>
+  +startDesktop()
+}
+```
+
+
 ## 子目录导航
 
-- [assembly/](assembly/ARCHITECTURE.md)：应用装配：连接 IPC、调度、运行与平台服务并管理应用生命周期。准入和工具能力在这里注入；不把装配目录当新的领域模型。
+- [assembly/](assembly/ARCHITECTURE.md)：应用装配：连接 IPC、调度、运行与平台服务并管理应用生命周期。准入和工具能力在这里注入；不把装配目录当新的领域模型。 Application 可拆开初始化与恢复；主/成员工厂共用宿主的 EngineRuntimeResolver，界面与模型不能指定 E 路径。
 - [automation/](automation/ARCHITECTURE.md)：自动化应用服务及文件存储：计划、执行请求与持久化属于同一应用职责，领域调度契约仍在 Core。
 - [commands/](commands/ARCHITECTURE.md)：CLI 入口，复用应用和调度，不拥有第二套领域规则。
 - [dispatch-storage/](dispatch-storage/ARCHITECTURE.md)：当前派发图、命令、领取及任务状态的文件存储实现。保留共享事务与 DispatchStore，未按目录拆开一致性边界；这仍是依赖密集的共享实现。
 - [evidence/](evidence/ARCHITECTURE.md)：真实工程效果读取适配：在明确范围和版本下采集观察供证据服务使用。
 - [feedback/](feedback/ARCHITECTURE.md)：GitHub 反馈的登录、请求和持久化服务，公开字段与端口在 Core/connectors。
-- [file-operations/](file-operations/ARCHITECTURE.md)：受控文件操作与隔离执行的应用服务，连接冻结授权、工作区身份与 platform 实现；不把底层完成当业务验收。
+- [file-operations/](file-operations/ARCHITECTURE.md)：受控文件操作与隔离执行的应用服务，连接冻结授权、工作区身份与 platform 实现；不把底层完成当业务验收。 所有受控文件与删除/移动操作继续拒绝安装、用户及独立 R/E 缓存根。
 - [governance/](governance/ARCHITECTURE.md)：工作区模块知识治理服务、可信桌面操作与独立主运行端口。登记保护、决定及实施只属桌面；模型仅可读取、观察、提案和核查回执；反馈来源在批准与实施前串行复核，未知不重放。
 - [history/](history/ARCHITECTURE.md)：履历应用装配与文件索引。assembly.ts 连接角色/运行来源，file-store.ts 只实现 SessionHistoryStorage；文件存储不得反向依赖装配或工作区服务。
 - [ipc/](ipc/ARCHITECTURE.md)：应用 action 路由；等待资料独立导入/目录/取消入口不启动模型，受理只读保存快照。队列插入传递原expectedRunId，由调度拒绝缺失、过期及停止。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。 161项应用操作按业务组装配，request统一保留关闭/受理前错误码后解析，实际处理器受响应映射约束。 dispatch.ownerInspect 只读核原任务并返回当前观察；正式派发必须显式绑定主周期。 dispatch.commandReport 固定原工作区、主根、运行和调用，桌面与模型共用同一只读服务。 五项影响观察／处置／原回执／历史／关联入口相互分开，查询不启动新任务；保存只接受本机显式决定。 四个文件报告/补偿入口固定原调用或原命令；actor 由桌面入口注入，查询不启动文件操作，补偿不得改变目标路径或内容。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识仓库文件、事务、缓存及对象写入实现。与 Core 的规则/存储端口单向连接，物理写入和授权语义不因目录迁移变化。
 - [materials/](materials/ARCHITECTURE.md)：聊天输入、附件与引用材料的本机采集/持久化；保存的快照不自动证明当前来源有效。
 - [models/](models/ARCHITECTURE.md)：模型配置、密钥保护、认证与参数迁移。持有本机配置和凭据，公开能力契约位于 Core/models。
-- [platform/](platform/ARCHITECTURE.md)：平台实现按职责分区：isolation 处理受限进程及恢复，files 处理受控文件操作；锁、网络等其他平台能力仍在本层。不是一个业务领域。
+- [platform/](platform/ARCHITECTURE.md)：平台实现按职责分区：isolation 处理受限进程及恢复，files 处理受控文件操作；锁、网络等其他平台能力仍在本层。不是一个业务领域。 Paths 拒绝更新资源/引擎缓存及其别名作为业务工程。
 - [registry/](registry/ARCHITECTURE.md)：岗位、来源与责任登记的应用服务；协调知识、文件实现和 Core 的规则，不拥有正式运行准入。
-- [resources/](resources/ARCHITECTURE.md)：链接器、人才和完整业务模板共用的本地/远端资源仓库。静态资料单次HTTP捕获前后核授权与共享代际，正文快照不安装执行。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。 GitHub 反馈采用独立直连服务，设备授权和原提交账本由本机管理；固定目标、跨会话去重、未知只核实，成功不回传 Issue 链接或开发进度。
+- [resources/](resources/ARCHITECTURE.md)：链接器、人才和完整业务模板共用的本地/远端资源仓库。静态资料单次HTTP捕获前后核授权与共享代际，正文快照不安装执行。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。 GitHub 反馈采用独立直连服务，设备授权和原提交账本由本机管理；固定目标、跨会话去重、未知只核实，成功不回传 Issue 链接或开发进度。 本地资源库不能指向签名程序缓存，避免数据编辑入口改变受管代码。
 - [run-storage/](run-storage/ARCHITECTURE.md)：运行日志、运行内输入和游标文件实现；按 RunStorage 等 Core 端口提供持久化，保留追加、未知和恢复语义。
 - [settings/](settings/ARCHITECTURE.md)：应用设置及命名文件存储；与模型配置、派发、运行及知识持久化分开定位。
 - [web/](web/ARCHITECTURE.md)：网页请求应用服务，封装访问与返回结果；上层通过端口调用。
@@ -195,11 +206,19 @@ Application 持有一份 WebSettings/WebService，启动恢复加密搜索配置
 
 # 主进程运行装配契约
 
+## 资源入口与窗口优先启动
+
+固定 bootstrap 验证签名 R 后调用 startDesktop(runtime)。Main 只持有应用/窗口生命周期，调用私有宿主端口取得更新服务与受管引擎；自身不改活动版本指针。R 的 preload、worker、renderer 都相对同一资源目录解析，koffi 和 EXE 品牌仍来自 C。
+
+桌面使用 Application.init({restore:false}) 初始化目录/配置，窗口加载后再 background restore；CLI/其它消费者默认 init 仍等待恢复。停止标记阻止恢复继续打开下一工作区。启动确认需要页面加载成功与 React 的 list IPC 成功，不用单纯进程存活作为更新成功证据。
+
+Paths 的 protectedRoots 包括整个安装/用户身份的程序缓存；主/成员受控读写、删除/移动及资源仓库配置都继承该边界。引擎下载与账号历史分开，createExecutionManager/createMemberServices 只注入固定 EngineRuntimeResolver。
+
 ## 后台预下载与用户确认安装
 
 Main 为 `DesktopUpdates` 注入唯一的业务关闭回调，停止终端、等待 `Application.shutdown` 后才标记安装退出。后台检查自动预下载，固定 `desktop.updates.download` 只手动重试下载/校验，不接受地址或命令；`desktop.updates.install` 在包已就绪后明确确认重启或重试安装。预下载不调用业务关闭回调；installing 期间才拒绝普通业务 IPC 与拖入附件，状态查询仍可用来展示进度。
 
-普通 before-quit 先 close 更新服务再排空，避免用户主动退出时迟到的下载或两秒提示继续触发安装。安装器触发的退出已由成功排空设置 quitting，走原正常退出路径。安装失败没有升级成功保证，必须在新进程核实版本；不更改应用身份、用户目录或 NSIS 校验规则。
+普通 before-quit 先 close 更新服务再排空，避免用户主动退出时迟到的下载或安装让出继续触发安装。安装器触发的退出已由成功排空设置 quitting，走原正常退出路径。安装失败没有升级成功保证，必须在新进程核实版本；不更改应用身份、用户目录或 NSIS 校验规则。
 
 ## 产品标识与原生窗口
 

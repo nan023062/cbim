@@ -287,6 +287,7 @@ class N_src_bridge_contracts_desktop_updates_ts_DesktopUpdateStatus["DesktopUpda
   +currentNotes
   +enabled
   +currentResourceVersion
+  +enginePreparations
   +phase
   +release
   +progress

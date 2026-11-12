@@ -30,7 +30,7 @@ describe('desktop stable release selection',()=>{
 describe('background downloads and user-confirmed installation',()=>{
   beforeEach(()=>vi.useFakeTimers());
   afterEach(()=>{for(const service of services)service.close();services.length=0;vi.useRealTimers()});
-  async function settle<T>(job:Promise<T>){await vi.advanceTimersByTimeAsync(2000);return job}
+  async function settle<T>(job:Promise<T>){await vi.advanceTimersByTimeAsync(0);return job}
   it('retries offline checks at the next minute, prefetches and never installs on a timer',async()=>{
     const f=fixture();f.latest.mockRejectedValueOnce(Error('offline'));f.service.start();f.service.start();
     await vi.advanceTimersByTimeAsync(9999);expect(f.latest).not.toHaveBeenCalled();
@@ -41,12 +41,12 @@ describe('background downloads and user-confirmed installation',()=>{
     expect(f.shutdown).not.toHaveBeenCalled();expect(f.port.install).not.toHaveBeenCalled();
   });
   it('does no work for development/portable builds',async()=>{const f=fixture(undefined,false);f.service.start();await f.service.check();await f.service.download();await f.service.install();await vi.advanceTimersByTimeAsync(120000);expect(f.latest).not.toHaveBeenCalled();expect(f.port.prepare).not.toHaveBeenCalled();expect(f.service.status().phase).toBe('disabled')});
-  it('prefetch only stages a package; an explicit install waits two seconds and drains',async()=>{
+  it('prefetch only stages a package; an explicit install yields once and awaits actual drain',async()=>{
     const f=fixture();await f.service.check();expect(f.service.status()).toMatchObject({phase:'ready',progress:100});
     await f.service.download();await vi.advanceTimersByTimeAsync(120000);expect(f.shutdown).not.toHaveBeenCalled();expect(f.port.install).not.toHaveBeenCalled();
     const job=f.service.install();expect(f.service.status().phase).toBe('installing');
-    await vi.advanceTimersByTimeAsync(1999);expect(f.shutdown).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(1);await job;expect(f.shutdown).toHaveBeenCalledOnce();expect(f.port.install).toHaveBeenCalledOnce();
+    expect(f.shutdown).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(0);await job;expect(f.shutdown).toHaveBeenCalledOnce();expect(f.port.install).toHaveBeenCalledOnce();
   });
   it('rejects downgrade and same-version installation',async()=>{for(const version of ['0.0.9','0.1.0']){const f=fixture(vi.fn(async()=>({...release,version})));await f.service.check();await f.service.download();expect(f.service.status().phase).toBe('current');expect(f.port.prepare).not.toHaveBeenCalled()}});
   it('keeps an advertised candidate and records the failed check time',async()=>{const f=fixture();f.port.download.mockRejectedValueOnce(Error('network'));await f.service.check();const time=f.service.status().checkedAt;await vi.advanceTimersByTimeAsync(1000);f.latest.mockRejectedValueOnce(Error('network'));await f.service.check();expect(f.service.status()).toMatchObject({phase:'available',release,error:expect.any(String)});expect(f.service.status().checkedAt).not.toBe(time)});
@@ -80,7 +80,7 @@ describe('background downloads and user-confirmed installation',()=>{
   it('closing during preparation prevents late download and installation',async()=>{const f=fixture(),wait=deferred<void>();f.port.prepare.mockImplementationOnce(()=>wait.promise);const job=f.service.check();await vi.advanceTimersByTimeAsync(0);f.service.close();wait.resolve();await job;expect(f.port.download).not.toHaveBeenCalled();expect(f.shutdown).not.toHaveBeenCalled();expect(f.port.install).not.toHaveBeenCalled()});
   it('closing during a download cannot turn its late result into an installation',async()=>{const f=fixture(),wait=deferred<void>();f.port.download.mockImplementationOnce(()=>wait.promise);const job=f.service.check();await vi.advanceTimersByTimeAsync(0);f.service.close();wait.resolve();await job;expect(f.service.status().phase).toBe('disabled');expect(f.shutdown).not.toHaveBeenCalled();expect(f.port.install).not.toHaveBeenCalled()});
   it('closing after prefetch does not install a ready package',async()=>{const f=fixture();await f.service.check();f.service.close();await f.service.install();await vi.advanceTimersByTimeAsync(120000);expect(f.port.install).not.toHaveBeenCalled();expect(f.shutdown).not.toHaveBeenCalled()});
-  it('normal exit during the visible restart interval cancels the pending upgrade',async()=>{const f=fixture();await f.service.check();const job=f.service.install();await vi.advanceTimersByTimeAsync(0);f.service.close();await job;await vi.advanceTimersByTimeAsync(120000);expect(f.shutdown).not.toHaveBeenCalled();expect(f.port.install).not.toHaveBeenCalled();f.service.start();await vi.advanceTimersByTimeAsync(120000);expect(f.latest).toHaveBeenCalledOnce()});
+  it('normal exit before the restart yield cancels the pending upgrade',async()=>{const f=fixture();await f.service.check();const job=f.service.install();f.service.close();await vi.advanceTimersByTimeAsync(0);await job;await vi.advanceTimersByTimeAsync(120000);expect(f.shutdown).not.toHaveBeenCalled();expect(f.port.install).not.toHaveBeenCalled();f.service.start();await vi.advanceTimersByTimeAsync(120000);expect(f.latest).toHaveBeenCalledOnce()});
   it('normal exit during shutdown prevents a late installer call',async()=>{const f=fixture(),shutdown=deferred<void>();f.shutdown.mockImplementationOnce(()=>shutdown.promise);await f.service.check();const job=f.service.install();await vi.advanceTimersByTimeAsync(2000);f.service.close();shutdown.resolve();await job;expect(f.port.install).not.toHaveBeenCalled()});
   it('installer rejection requires a new explicit retry and does not redownload',async()=>{const f=fixture();f.port.install.mockImplementationOnce(()=>{throw Error('installer unavailable')});await f.service.check();await settle(f.service.install());expect(f.service.status().phase).toBe('ready');await settle(f.service.install());expect(f.port.install).toHaveBeenCalledTimes(2);expect(f.port.download).toHaveBeenCalledOnce()});
 });

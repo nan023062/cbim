@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取消，发送后只凭queued回复确认，不自动重试。工具经一次性gate授权并校验结果；结构验证仅在正式成员有冻结要求及真实端口时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为custom数据，不冒充用户授权。 范围模式只注册cbim工具，转发受限读取与隔离Node的原调用身份。 主角色提示要求未配置自定义岗位时自己执行；内置默认执行角色已退役，不能登记后绕过主会话。 受控文件工具仅在真实端口存在时安装，维持桥接容量及调用授权，工具结果和实际文件操作终态分别校验。
+Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取消，发送后只凭queued回复确认，不自动重试。工具经一次性gate授权并校验结果；结构验证仅在正式成员有冻结要求及真实端口时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为custom数据，不冒充用户授权。 范围模式只注册cbim工具，转发受限读取与隔离Node的原调用身份。 主角色提示要求未配置自定义岗位时自己执行；内置默认执行角色已退役，不能登记后绕过主会话。 受控文件工具仅在真实端口存在时安装，维持桥接容量及调用授权，工具结果和实际文件操作终态分别校验。 CLI 入口由宿主固定包解析；进程、工具门禁与会话验证保持原协议。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -42,6 +42,8 @@ class N_src_backend_engines_pi_engine_ts["engine.ts"] {
 }
 class N_src_backend_engines_pi_engine_ts_PiOptions["PiOptions"] {
   <<interface>>
+  +runtime
+  +nativeToolsRuntime
   +process
   +provider
   +model
@@ -103,7 +105,7 @@ class N_src_backend_engines_pi_engine_ts_external_AgentEngine["AgentEngine (外�
 N_src_backend_engines_pi_engine_ts_external_AgentEngine <|.. N_src_backend_engines_pi_engine_ts_PiEngine
 ```
 
-直接依赖：[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/execution/model-errors.ts](../../core/execution/model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)。
+直接依赖：[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/execution/model-errors.ts](../../core/execution/model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)。
 
 ### request-budget-bootstrap.ts
 

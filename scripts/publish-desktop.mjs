@@ -14,7 +14,8 @@ const directory = path.resolve(args[0]), config = unsigned ? undefined : signing
 const signer = unsigned ? undefined : createWindowsSigner(config), repo = 'nan023062/cbim';
 const verify = () => verifyCandidate(directory, config, signer, {unsigned});
 // 先核对本次显式发行模式和实际制品，再访问 GitHub；不从未签名回执自动推断发布许可。
-await verify();
+const frozenReceipt=await verify();
+if(frozenReceipt.runtimeDirectory)runCommand(process.execPath,['node_modules/tsx/dist/cli.mjs','scripts/verify-cold-payload.ts',frozenReceipt.packagedDirectory,frozenReceipt.runtimeDirectory,'--published-engines']);
 const gh = args => runCommand('gh', args, {timeout: 20 * 60_000});
 const api = endpoint => JSON.parse(gh(['api', endpoint]));
 const actor = api('user').login;

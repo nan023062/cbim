@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-引擎无关的运行契约与执行入口。runtime、capabilities 是同一执行模块的内部职责分区，不声明为已经独立解耦的子系统；状态、日志和授权语义保持原有契约。具体引擎由上层装配。
+引擎无关的运行契约与执行入口。runtime、capabilities 是同一执行模块的内部职责分区，不声明为已经独立解耦的子系统；状态、日志和授权语义保持原有契约。具体引擎由上层装配。 EngineRuntimeResolver 是受管引擎已验证包的窄契约；不包含下载实现、活动指针或用户凭据。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -12,6 +12,7 @@
 | --- | --- |
 | [conversation-binding.ts](conversation-binding.ts) | 定义主对话与已登记 Agent 实例、逻辑会话之间的可信绑定，供运行时和日志恢复共用。 |
 | [engine-instructions.ts](engine-instructions.ts) | 为主 Agent 和成员生成共用的运行职责、历史资料、冻结身份与工具边界说明。 |
+| [engine-runtime.ts](engine-runtime.ts) | 执行装配向引擎适配器传递的已解析运行包契约，不包含下载、签名或安装实现。 |
 | [engine-session.ts](engine-session.ts) | 主对话续聊或更换引擎时选择可靠原生历史，对无交互启动失败只转交已记录的公开输入。 |
 | [engine-tools.ts](engine-tools.ts) | 将可信装配注入的能力组装成引擎无关的目录与调用端口。 |
 | [index.ts](index.ts) | 大脑执行层：对外重导出 Loop 契约、主对话实例绑定、成员执行绑定、可信回注来源、存储端口与运行时。 |
@@ -40,14 +41,12 @@ class N_src_backend_core_execution_conversation_binding_ts["conversation-binding
 class N_src_backend_core_execution_engine_instructions_ts["engine-instructions.ts"] {
   <<module>>
 }
+class N_src_backend_core_execution_engine_runtime_ts["engine-runtime.ts"] {
+  <<module>>
+}
 class N_src_backend_core_execution_engine_session_ts["engine-session.ts"] {
   <<module>>
 }
-class N_src_backend_core_execution_engine_tools_ts["engine-tools.ts"] {
-  <<module>>
-}
-N_src_backend_core_execution_capabilities ..> N_src_backend_core_execution_engine_tools_ts : 导入依赖
-N_src_backend_core_execution_engine_instructions_ts ..> N_src_backend_core_execution_engine_tools_ts : 导入依赖
 N_src_backend_core_execution_runtime ..> N_src_backend_core_execution_engine_session_ts : 导入依赖
 N_src_backend_core_execution_runtime ..> N_src_backend_core_execution_capabilities : 导入依赖
 N_src_backend_core_execution_runtime ..> N_src_backend_core_execution_conversation_binding_ts : 导入依赖
@@ -55,6 +54,9 @@ N_src_backend_core_execution_runtime ..> N_src_backend_core_execution_conversati
 
 ```mermaid
 classDiagram
+class N_src_backend_core_execution_engine_tools_ts["engine-tools.ts"] {
+  <<module>>
+}
 class N_src_backend_core_execution_index_ts["index.ts"] {
   <<module>>
 }
@@ -70,15 +72,15 @@ class N_src_backend_core_execution_model_errors_ts["model-errors.ts"] {
 class N_src_backend_core_execution_repeated_tool_failures_ts["repeated-tool-failures.ts"] {
   <<module>>
 }
-class N_src_backend_core_execution_scope_usage_ts["scope-usage.ts"] {
-  <<module>>
-}
 N_src_backend_core_execution_index_ts ..> N_src_backend_core_execution_member_run_ts : 导入依赖
 N_src_backend_core_execution_index_ts ..> N_src_backend_core_execution_input_source_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_execution_scope_usage_ts["scope-usage.ts"] {
+  <<module>>
+}
 class N_src_backend_core_execution_storage_ts["storage.ts"] {
   <<module>>
 }
@@ -88,6 +90,7 @@ class N_src_backend_core_execution_types_ts["types.ts"] {
 class N_src_backend_core_execution_usage_ts["usage.ts"] {
   <<module>>
 }
+N_src_backend_core_execution_scope_usage_ts ..> N_src_backend_core_execution_types_ts : 导入依赖
 N_src_backend_core_execution_storage_ts ..> N_src_backend_core_execution_types_ts : 导入依赖
 N_src_backend_core_execution_usage_ts ..> N_src_backend_core_execution_types_ts : 导入依赖
 ```

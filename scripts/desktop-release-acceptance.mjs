@@ -237,8 +237,11 @@ try {
     const available = await waitPhase(page, 'available'); assert.equal(available.release.version, version);
     const download = async () => {
       await page.getByRole('button', {name: '查看更新', exact: true}).click();
-      // 0.1.1 起使用“版本与更新”原生弹窗；“软件更新”只是内部标题，不是区域名称。
-      await page.getByRole('dialog', {name: '版本与更新', exact: true}).getByRole('button', {name: '下载更新', exact: true}).click();
+      // 0.1.0 的真实入口位于设置页 region；0.1.1 起改为独立 dialog，不把新界面套到历史安装包。
+      const updateSurface = previousVersion === '0.1.0'
+        ? page.getByRole('region', {name: '软件更新', exact: true})
+        : page.getByRole('dialog', {name: '版本与更新', exact: true});
+      await updateSurface.getByRole('button', {name: '下载更新', exact: true}).click();
       // 0.1.3 的 ready 立即进入 installing；观察真实自动安装进度，不寻找已移除的第二次点击。
       await waitPhase(page, previousUpdateFlow === 'automatic' ? 'installing' : 'ready', 100);
     };

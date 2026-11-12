@@ -1,6 +1,6 @@
 # 后台预下载与增量下载：验证与测试方法
 
-日期：2026-11-12。范围是用户明确要求的两项更新优化，未拆分引擎、改更新源或替换 NSIS 安装方式。本次完成源码及受影响验证，尚未打包、合并或发布新版本；现有已安装客户端不会因此立即改变。
+日期：2026-11-12。范围是用户明确要求的两项更新优化，未拆分引擎、改更新源或替换 NSIS 安装方式。下文记录源码交付及复验时的结果；后续已按用户要求生成本地版本 A（0.1.10），安装包、打包验证与具体 A → B 步骤见[版本 A 测试说明](desktop-update-a-0.1.10-20261112.md)。尚未合并或发布新版本，现有已安装客户端不会因此立即改变。
 
 ## 已实现的行为
 
@@ -50,3 +50,14 @@ node scripts/desktop-updates-ui-smoke.mjs
 - 差分、固定源与最终完整性校验适配在 `src/backend/updater/nsis-updater.ts`；复用 `electron-updater@6.8.11`，单元测试锁定其旧/新 blockmap URL 与回退行为。升级该依赖时重测这些用例。
 - 公开状态说明在 `src/bridge/contracts/desktop-updates.ts`，用户入口在 `src/frontend/updates/SoftwareUpdates.tsx`，安装状态由后端拥有，界面不自行推断并派发安装。
 - 注释、相关 `CONTRACT.md` 与 `ARCHITECTURE.md` 已同步。没有执行完整 CI、打包、真实 NSIS 安装、GitHub 在线升级、用户网络测速或人工代码验收；这些不能由单元与模拟 IPC 结果替代。
+
+## 2026-11-12 10:57 源码复验
+
+用户明确要求按本说明重新执行。基线 `3f249cf8`，产品源码和测试没有修改；本轮新证据目录为 `test-results/update-source-validation-20261112-105726/`，此前界面报告另存为 `previous-ui-report.json`。
+
+- `pnpm exec vitest run tests/desktop-updates.test.ts tests/desktop-update-lifecycle.test.ts tests/ipc-desktop.test.ts tests/nsis-updater.test.ts tests/nsis-differential-download.test.ts --reporter=default --reporter=json --outputFile=test-results/update-source-validation-20261112-105726/unit.json`：5 文件、41 项全部通过，0 失败、0 跳过，耗时 8.44 秒；控制台记录 `unit.log`。
+- `node scripts/desktop-updates-ui-smoke.mjs`：22 项通过，零页面错误；本轮报告 `ui.json`，控制台记录 `ui.log`。真实 React + 模拟 IPC，独立无头 Edge；不代表真实安装器验证。
+- `pnpm typecheck`：通过；`typecheck.log`。
+- `pnpm check:architecture`：58 个目录的架构说明一致，1296 文件/6682 依赖、0 循环/违规；`architecture.log`。
+- 后台下载不安装、显式安装排空、退出取消、缓存复用、Range 传输与整包 SHA-512、缺缓存/坏数据等全量回退均由上述用例覆盖。样例 65,536 字节中传输 16,384 字节的断言通过，仍不代表真实公开包节省比例。
+- 未运行全仓回归、打包、真实 NSIS 安装或公开在线升级；未操作已安装客户端。现有隔离诊断与历史发布记录的未提交修改保留。

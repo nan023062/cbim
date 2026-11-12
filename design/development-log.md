@@ -1,3 +1,16 @@
+## 2026-11-12：生成更新体验版本 A（0.1.10）
+
+- 用户直接要求打包 A 并交付 A → B 安装体验测试方法；开放 Issues 为空。以 `3f249cf8` 为产品基线，在独立 `build/a10/` 工作树冻结版本/日志提交 `09b63afb970a0a656504c1d1e18a647e56e5288d`，保留主工作区原有未提交资料，未改产品源码和依赖。
+- `pnpm check:brand`、`pnpm build:website`、`pnpm make:desktop --unsigned`、`pnpm verify:desktop <候选> --unsigned` 通过；指定本次打包 EXE 的 `pnpm exec tsx scripts/isolated-node-smoke.mts` 六项通过，自有资源全部回收。沿用已有同源码 41 项单元、22 项界面及类型/架构检查证据，未重复运行。
+- 安装包 391,408,787 字节，四附件及回执复制到 `build/update-experience/A-0.1.10/` 后摘要逐项一致。实际回执、校验值、A → B 前置条件与用户步骤见 [版本 A 测试说明](verification/desktop-update-a-0.1.10-20261112.md)；原始证据 `test-results/update-a-0110-20261112/`。
+- 本次未安装本机客户端、生成 B、公开 Release、推送提交、触发 CI 或部署官网。B 仍需更高公开稳定版；A 的准确旧安装包缓存/blockmap 是差分前提，现有正式通道不支持仅本地测试，NSIS 安装耗时未优化。打包与隔离 EXE 验证不代表 A → B 已通过真实安装/网络验收。
+
+## 2026-11-12：按测试说明复验预下载与增量下载
+
+- 用户直接要求重新运行源码验证，基线 `3f249cf8`；沿已确认范围复验，不选择新工单或修改产品源码/测试。
+- 执行测试说明中的 5 个明确测试文件，共 41 项全部通过；真实 React + 模拟 IPC 的界面脚本 22 项通过、零页面错误。`pnpm typecheck` 与 `pnpm check:architecture` 通过：58 目录说明一致、1296 文件/6682 依赖、0 循环/违规。
+- 实际命令、结果与边界追加于 [测试说明的本轮复验记录](verification/desktop-update-prefetch-differential-20261112.md#2026-11-12-1057-源码复验)；本轮原始证据独立保存于 `test-results/update-source-validation-20261112-105726/`，保留此前界面报告。未执行全仓回归、打包、安装、公开升级或外部写入。
+
 ## 2026-11-12：启用安装包增量下载与回退验证
 
 - 用户直接授权的第二项更新优化，前一步预下载提交 `4621d3b4`；开放 Issues 为空，未新建或回填工单。`NsisUpdateInstaller` 启用锁定的 `electron-updater@6.8.11` 差分下载，固定 GitHub generic 源使用单段 Range，保留清单版本/文件名、SHA-512、缓存、全量回退及显式安装边界。未增加更新服务、依赖或网络源。

@@ -44,7 +44,7 @@ async function main(){
   const status=()=>page.evaluate(()=>window.cbim.call('desktop.updates.status'));
   try{
     await launch();assert.equal((await status()).currentResourceVersion,1);
-    const native=await app!.evaluate(({app})=>({version:app.getVersion(),packaged:app.isPackaged,exe:app.getPath('exe'),appData:app.getPath('appData'),cold:JSON.parse(require('node:fs').readFileSync(require('node:path').join(app.getAppPath(),'runtime-cold.json'),'utf8'))}));
+    const native=await app!.evaluate(({app})=>({version:app.getVersion(),packaged:app.isPackaged,exe:app.getPath('exe'),appData:app.getPath('appData'),cold:JSON.parse(process.getBuiltinModule('fs').readFileSync(process.getBuiltinModule('path').join(app.getAppPath(),'runtime-cold.json'),'utf8'))}));
     assert.equal(native.packaged,true);assert.equal(native.version,'0.1.15');assert.equal(native.exe,exe);
     const cold=native.cold as ColdRuntime,envelope=JSON.parse(await fs.readFile(path.join(downloads,'latest.json'),'utf8')),checked=verifyRuntimeManifest(envelope,cold);
     assert.equal(checked.digest,expected);assert.equal(checked.manifest.sourceCommit,source);assert.equal(checked.manifest.codeVersion,'0.1.15');

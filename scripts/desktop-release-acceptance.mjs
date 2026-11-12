@@ -111,7 +111,7 @@ try {
   }
   await setup(old, previousVersion); const previousCache = await recordInstallerCache('previous');
   // 0.1.12 已修正 NSIS 缓存归属；先证明真实安装产生了准确旧包，不能手动补足差分前提。
-  if (previousVersion === '0.1.12') assert.equal(previousCache.entries.find(item => item.configured)?.sha256, await sha(old));
+  if (['0.1.12', '0.1.13'].includes(previousVersion)) assert.equal(previousCache.entries.find(item => item.configured)?.sha256, await sha(old));
   let page = await launch(); assert.equal((await status(page)).currentVersion, previousVersion);
   const profile = {name: 'Release acceptance', api: 'openai-completions', baseUrl: `http://127.0.0.1:${server.address().port}/v1`, auth: 'none', defaultModel: 'acceptance', models: [{id: 'acceptance', name: 'Acceptance', enabled: true, contextWindow: 32768, maxTokens: 1024, reasoning: false, pricing: {input: 0, output: 0, cacheRead: 0, cacheWrite: 0}}]};
   const savedModels = await page.evaluate(profile => window.cbim.call('models.save', {profile}), profile);
@@ -119,7 +119,7 @@ try {
   const entry = await page.evaluate(path => window.cbim.call('add', {path}), workspace);
   // 0.1.7 的新增持久数据也必须沿真实旧版 IPC 创建；不能只证明旧聊天没有丢失。
   let priorMainSettings, priorAutomation;
-  if (['0.1.7', '0.1.8', '0.1.9', '0.1.10', '0.1.11', '0.1.12'].includes(previousVersion)) {
+  if (['0.1.7', '0.1.8', '0.1.9', '0.1.10', '0.1.11', '0.1.12', '0.1.13'].includes(previousVersion)) {
     const opened = (await page.evaluate(() => window.cbim.call('list'))).entries.find(item => item.id === entry.id);
     assert.ok(opened?.instanceId);
     const identity = {workspaceId: entry.id, instanceId: opened.instanceId};

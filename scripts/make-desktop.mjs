@@ -14,6 +14,7 @@ process.env.CBIM_DESKTOP_SIGNING_MODE = args[0] === '--unsigned' ? 'unsigned' : 
 const mode = desktopSigningMode(), unsigned = mode === 'unsigned';
 const signing = unsigned ? undefined : signingConfig(), signer = unsigned ? undefined : createWindowsSigner(signing);
 const certificate = signer?.preflight();
+if(!process.env.CBIM_RUNTIME_SIGNING_KEY)throw Error('缺少 CBIM_RUNTIME_SIGNING_KEY：新的冷包必须固定资源签名身份');
 const pkg = JSON.parse(await fs.readFile('package.json', 'utf8'));
 const version = process.env.CBIM_DESKTOP_VERSION || pkg.version;
 if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) throw Error('桌面版本格式无效');
@@ -37,7 +38,8 @@ try {
   const run = (entry, args) => runCommand(process.execPath, [entry, ...args], {env, stdio: 'inherit', timeout: 30 * 60_000});
   run('node_modules/@electron-forge/cli/dist/electron-forge.js', ['package']);
   const info = JSON.parse(await fs.readFile(path.join(buildOut, 'build-info.json'), 'utf8'));
-  const packagedDirectory = info.packageDirectories[0];
+  const packagedDirectory = info.packageDirectories[0], runtimeDirectory=path.join(buildOut,'runtime');
+  run('node_modules/tsx/dist/cli.mjs',['scripts/verify-runtime.ts',runtimeDirectory]);
   // --prepackaged skips electron-builder's signApp; sign Forge's exact payload first.
   const payload = unsigned
     ? await Promise.all((await windowsPayloads(packagedDirectory)).map(async file => ({file: path.relative(packagedDirectory, file).replaceAll('\\', '/'), sha256: await digest(file)})))
@@ -45,9 +47,9 @@ try {
   run('node_modules/electron-builder/out/cli/cli.js', ['--win', 'nsis', '--x64', '--prepackaged', packagedDirectory, '--config', 'electron-builder.config.cjs', '--publish', 'never']);
   if (git(['rev-parse', 'HEAD']) !== sourceCommit || git(['status', '--porcelain'])) throw Error('RELEASE_SOURCE_CHANGED：构建期间源码改变，请保留本次产物并重新冻结');
   const artifacts = await artifactHashes(destination, version), resources = {};
-  for (const name of ['app.asar', 'app-update.yml', 'desktop-release.json']) resources[name] = await digest(path.join(packagedDirectory, 'resources', name));
+  for (const name of ['app.asar', 'app-update.yml', 'desktop-release.json','runtime-initial.json']) resources[name] = await digest(path.join(packagedDirectory, 'resources', name));
   await fs.writeFile(path.join(destination, 'SHA256SUMS.txt'), artifacts.map(a => `${a.sha256}  ${a.name}`).join('\n') + '\n', {flag: 'wx'});
-  const receipt = {schema: 1, version, sourceCommit, buildStamp, buildStampTimeZone: 'Asia/Shanghai', packagedDirectory, signing: unsigned ? {mode} : {mode, thumbprint: signing.thumbprint, publisherName: signing.publisherName, timestampUrl: signing.timestampUrl, certificate}, payload, resources, artifacts, completedAt: new Date().toISOString()};
+  const receipt = {schema: 1, version, sourceCommit, buildStamp, buildStampTimeZone: 'Asia/Shanghai', packagedDirectory, runtimeDirectory, signing: unsigned ? {mode} : {mode, thumbprint: signing.thumbprint, publisherName: signing.publisherName, timestampUrl: signing.timestampUrl, certificate}, payload, resources, artifacts, completedAt: new Date().toISOString()};
   await fs.writeFile(path.join(destination, 'build-receipt.json'), JSON.stringify(receipt, null, 2) + '\n', {flag: 'wx'});
   await verifyCandidate(destination, signing, signer, {unsigned});
   console.log(JSON.stringify({version, destination, sourceCommit, signingMode: mode, payloads: payload.length, artifacts}));

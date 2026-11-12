@@ -1,6 +1,7 @@
 /**
  * 作用定位：ResourceRepositories：统一三类资源的仓库选择、账号占位与共享生命周期。
  * 设计原因：链接器、人才市场和模板共用当前身份的仓库；显式共享生成短期读写/只读凭据，代际退役会取消旧读取，登录占位不被当成账号连接。
+ * 程序更新缓存与安装/用户数据一并排除在可配置资源仓库之外；发布代码不能成为可编辑业务资料库。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -63,7 +64,7 @@ export class ResourceRepositories{
   })}
   private async applyConfig(request:z.infer<typeof configureSchema>){let config:Config;
     if(request.mode==='local'){const root=await fs.realpath(request.location);if(!(await fs.stat(root)).isDirectory())fail('PATH','请选择已有文件夹');
-      const install=await fs.realpath(this.paths.installRoot),user=await fs.realpath(this.paths.userRoot);for(const blocked of [install,user]){const rel=path.relative(blocked,root);if(!rel||(!path.isAbsolute(rel)&&rel!=='..'&&!rel.startsWith('..'+path.sep)))fail('PATH','请将资源仓库放在程序安装目录和用户运行数据目录之外')}
+      const install=await fs.realpath(this.paths.installRoot),user=await fs.realpath(this.paths.userRoot);for(const blocked of [install,user,...await Promise.all((this.paths.protectedRoots??[]).map(root=>fs.realpath(root).catch(error=>{if(error.code==='ENOENT')return path.resolve(root);throw error})))]){const rel=path.relative(blocked,root);if(!rel||(!path.isAbsolute(rel)&&rel!=='..'&&!rel.startsWith('..'+path.sep)))fail('PATH','请将资源仓库放在程序安装、更新缓存和用户运行数据目录之外')}
       if(root.split(/[\\/]/).some(part=>part.toLowerCase()==='.cbim'))fail('PATH','资源仓库不能放在项目 .cbim 正式知识目录中');
       const repo=new LocalRepository(root),snapshot=await repo.initialize();config={mode:'local',location:root,repositoryId:snapshot.repositoryId};
     }else{const url=repositoryUrl(request.location),target=new URL(url),ownHosts=new Set(['localhost','127.0.0.1','[::1]',...Object.values(networkInterfaces()).flatMap(list=>list?.map(n=>n.address)||[])]);if(this.sharing&&Number(target.port)===this.sharing.port&&ownHosts.has(target.hostname))fail('SELF_CONNECTION','此地址属于本窗口正在共享的仓库，请继续使用本地模式；可用另一个客户端连接');const snapshot=await new RemoteRepository(url,request.token).read();config={mode:'remote',location:url,repositoryId:snapshot.repositoryId,token:request.token}}

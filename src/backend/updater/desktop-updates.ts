@@ -1,6 +1,6 @@
 /**
  * 作用定位：桌面更新的单实例状态机，后台检查并预下载，用户确认后才排空业务和重启安装。
- * 设计原因：把联网等待移到后台，同时将下载和安装授权分开；已校验候选冻结，普通退出和迟到回包都不能触发安装。
+ * 设计原因：把联网等待移到后台，同时将下载和安装授权分开；已校验候选冻结，普通退出和迟到回包都不能触发安装；按需 E 进度来自只读端口，不改变应用候选和安装资格。
  */
 import type {DesktopRelease,DesktopUpdateStatus} from '../../bridge/contracts/desktop-updates';
 import {compareDesktopVersions} from './desktop-releases';
@@ -8,7 +8,7 @@ import {compareDesktopVersions} from './desktop-releases';
 export interface DesktopUpdateInstaller {
   prepare(release:DesktopRelease):Promise<void>;
   download(progress:(percent:number)=>void):Promise<void>;
-  install():void;
+  install():void|Promise<void>;
   close():void;
 }
 export class DesktopUpdates {
@@ -16,11 +16,11 @@ export class DesktopUpdates {
   /** 下载失败后五分钟内只检查版本；手动重试或发现另一版本不受此冷却限制。 */
   private retryDownloadAfter=0;
   private controller=new AbortController();private timer?:ReturnType<typeof setInterval>;private initial?:ReturnType<typeof setTimeout>;
-  constructor(version:string,notes:string,enabled:boolean,private readonly latest:(signal:AbortSignal)=>Promise<DesktopRelease|undefined>,private readonly installer:DesktopUpdateInstaller,private readonly beforeInstall:()=>Promise<void>){
-    this.state={currentVersion:version,currentNotes:notes,enabled,phase:enabled?'idle':'disabled'};
+  constructor(version:string,notes:string,enabled:boolean,private readonly latest:(signal:AbortSignal)=>Promise<DesktopRelease|undefined>,private readonly installer:DesktopUpdateInstaller,private readonly beforeInstall:()=>Promise<void>,resourceVersion?:number,private readonly enginePreparations?:()=>DesktopUpdateStatus['enginePreparations']){
+    this.state={currentVersion:version,currentNotes:notes,enabled,phase:enabled?'idle':'disabled',...(resourceVersion===undefined?{}:{currentResourceVersion:resourceVersion})};
   }
   /** 复制公开数据，读取不触发联网或下载。 */
-  status():DesktopUpdateStatus{return structuredClone(this.state)}
+  status():DesktopUpdateStatus{return structuredClone({...this.state,...(this.enginePreparations?{enginePreparations:this.enginePreparations()}:{} )})}
   /** 只有正式安装版启动检查与预下载；下载完成不排空业务，也不自动安装。 */
   start(){if(!this.state.enabled||this.controller.signal.aborted||this.initial||this.timer)return;this.initial=setTimeout(()=>{void this.check()},10000);this.initial.unref();this.timer=setInterval(()=>{void this.check()},60*1000);this.timer.unref()}
   private run(action:()=>Promise<void>){
@@ -36,8 +36,9 @@ export class DesktopUpdates {
       try{
         const latest=await this.latest(this.controller.signal);
         if(this.controller.signal.aborted)return;
-        const release=latest&&compareDesktopVersions(latest.version,this.state.currentVersion)>0?latest:undefined;
-        if(release?.version!==previous.release?.version)this.retryDownloadAfter=0;
+        const newer=latest?.delivery==='resources'?latest.version===this.state.currentVersion&&Number.isSafeInteger(latest.resourceVersion)&&latest.resourceVersion!>(this.state.currentResourceVersion??0):latest&&compareDesktopVersions(latest.version,this.state.currentVersion)>0;
+        const release=newer?latest:undefined;
+        if(release?.version!==previous.release?.version||release?.resourceVersion!==previous.release?.resourceVersion)this.retryDownloadAfter=0;
         this.state={...this.state,checkedAt:new Date().toISOString(),release,phase:release?'available':'current',progress:undefined};
         if(release){
           if(Date.now()>=this.retryDownloadAfter)await this.downloadCandidate(release);
@@ -81,14 +82,14 @@ export class DesktopUpdates {
     if(this.state.phase!=='ready')return Promise.resolve(this.status());
     return this.run(()=>this.installReady());
   }
-  /** installing 先公开两秒供窗口呈现进度；这段期间普通退出会取消，随后必须等待真实业务排空。 */
+  /** installing 先让出事件循环供 IPC/窗口呈现；取消固定两秒等待，仍必须等待真实业务排空。 */
   private async installReady(){
     this.state={...this.state,phase:'installing',error:undefined};
     try{
-      await new Promise<void>(resolve=>{const signal=this.controller.signal;const done=()=>{clearTimeout(timer);signal.removeEventListener('abort',done);resolve()};const timer=setTimeout(done,2000);signal.addEventListener('abort',done,{once:true});if(signal.aborted)done()});
+      await new Promise<void>(resolve=>setImmediate(resolve));
       if(this.controller.signal.aborted)return;
       await this.beforeInstall();if(this.controller.signal.aborted)return;
-      this.installer.install();
+      await this.installer.install();
     }catch{if(!this.controller.signal.aborted)this.state={...this.state,phase:'ready',error:'重启安装未能完成。请保留当前窗口，处理关闭错误后再试。'}}
   }
   /** 退出取消读取／下载并移除计时器；从不在退出时隐式安装。 */

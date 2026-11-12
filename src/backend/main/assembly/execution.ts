@@ -12,6 +12,7 @@
  * 请求预算：每个真实主 run 在 beforeRun 后取得冻结账本端口，凭据仅由父进程代理使用。
  * GitHub 反馈：仅桌面主会话捕获已连接目标；端口绑定原 task，会话继续仍核实同一提交账本，成员不继承。连接诊断独立于提交端口，未登录时仍能核实缺失原因。
  * 运行工厂用冻结 engine 独立解析当前模型并复核协议，供应商不再拥有引擎，排队运行不会静默改投另一引擎；ready 透传实际原生身份，不以任务 ID 代替。
+ * 执行工厂把宿主的固定引擎解析端口传给调度装配；公开聊天选项不能替换该端口或传入下载路径。
  */
 import path from 'node:path';
 import type {WebToolsPort} from '../../core/connectors/web-tools';
@@ -25,6 +26,7 @@ import {hash} from '../../core/foundation/serialization';
 import {fail} from '../../core/foundation/errors';
 import {WorkspaceExecutionManager} from '../../scheduler-engine/conversation/execution-manager';
 import {createWorkspaceLoop} from '../../scheduler-engine/assembly/loop-engine';
+import type {EngineRuntimeResolver} from '../../core/execution/engine-runtime';
 import {WorkspaceExecutionLease} from '../../scheduler-engine/admission/workspace-lease';
 import type {AutoCollaboration} from '../../scheduler-engine/dispatch/auto-collaboration';
 import type {WorkspaceDispatchService} from '../../scheduler-engine/dispatch/dispatch-service';
@@ -44,7 +46,7 @@ import type {ModelRequestBudgetService} from '../../scheduler-engine/budget/mode
  * 独立 CLI/测试未装配 dispatch 时保留旧只按会话执行的边界，不编造已登记的成员身份。
  * repositories 是可选可信服务，不接受运行选项提供地址或授权；每次工厂调用固定自己的连接代际。
  */
-export function createExecutionManager(workspace:Workspace,models:LlmProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService,feedback?:GitHubFeedback,web?:WebToolsPort){
+export function createExecutionManager(workspace:Workspace,models:LlmProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService,feedback?:GitHubFeedback,web?:WebToolsPort,engineRuntimes?:EngineRuntimeResolver){
   const storage=new FileRunStorage();
   return new WorkspaceExecutionManager(workspace,storage,async(options,task,launch)=>{
     const llm=options.profileId?await models.resolve(options.profileId,options.model,options.engine):undefined;
@@ -60,7 +62,7 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles,le
     }
     const conversationBinding=task.mode==='chat'?await dispatch?.conversationBinding(task):undefined;
     const repositoryTools=task.mode==='chat'?await repositories?.prepareTools({workspaceId:workspace.entry.id,instanceId:workspace.instanceId}):undefined;
-    return createWorkspaceLoop(workspace.paths,workspace,{...options,llm,images},{
+    return createWorkspaceLoop(workspace.paths,workspace,{...options,llm,images,engineRuntimes},{
     storage,
     requestBudget:requestBudgets?({task,runId})=>requestBudgets.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId,kind:'main'},llm):undefined,
     conversationBinding,

@@ -262,6 +262,14 @@ class N_src_bridge_contracts_controlled_files_ts["controlled-files.ts"] {
 classDiagram
 class N_src_bridge_contracts_desktop_updates_ts["desktop-updates.ts"] {
   <<module>>
+  +desktopVersionLabel()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_desktop_updates_ts["desktop-updates.ts"] {
+  <<module>>
 }
 class N_src_bridge_contracts_desktop_updates_ts_DesktopRelease["DesktopRelease"] {
   <<interface>>
@@ -269,6 +277,8 @@ class N_src_bridge_contracts_desktop_updates_ts_DesktopRelease["DesktopRelease"]
   +tag
   +notes
   +publishedAt
+  +delivery
+  +resourceVersion
 }
 N_src_bridge_contracts_desktop_updates_ts ..> N_src_bridge_contracts_desktop_updates_ts_DesktopRelease : 声明
 class N_src_bridge_contracts_desktop_updates_ts_DesktopUpdateStatus["DesktopUpdateStatus"] {
@@ -276,6 +286,8 @@ class N_src_bridge_contracts_desktop_updates_ts_DesktopUpdateStatus["DesktopUpda
   +currentVersion
   +currentNotes
   +enabled
+  +currentResourceVersion
+  +enginePreparations
   +phase
   +release
   +progress

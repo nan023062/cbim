@@ -1,3 +1,44 @@
+## 2026-11-12：准备 0.1.15 冷壳迁移发布
+
+- 用户要求发布后重新验证在线升级。核实当前公开最高桌面版为 0.1.14、Python latest 为 `v1.0.2`，账号与仓库为 `nan023062/cbim`；历史 0.1.0→0.1.1 不再是当前通道自然选择的跨度，已单独澄清测试意图，没有改写历史附件或标签。
+- 使用独立冻结工作树，保留主目录未提交文档；合并 UI `95458460`、C/R/E `2187842f` 及已在远端 develop 的中断恢复 `34afe7c7`，保留各提交。两个冲突仅为说明/记录，保留双方业务行为及历史记录。合并后针对 Codex 生命周期、E 绑定和前端恢复运行 5 文件/13 项，全部通过。
+- 准备 C 0.1.15 / R 1，沿用此前明确的 Windows 未签名发行。首次建立长期 Ed25519 资源签名身份，保存在本机仓库外、仅当前 Windows 用户及 SYSTEM 可访问的目录；构建引用该已有身份，不生成临时生产密钥。公开 SPKI SHA-256 为 `378c827bf38efb6724466bbb39d3e39ee4ef2dc1de2576fa1fde760443145c49`，私钥未进入源码、日志、制品或远端。
+- 验收器补齐 0.1.14 的旧界面、缓存与新增持久数据；目标 C/R 图标、后台工程恢复、首次真实 E 下载与调用分别核验。`pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs --reporter=dot` 最终 42 项通过；首次发现“未支持未来版”断言仍以 0.1.14 为例，更新为尚未支持的 0.1.15 后复跑通过。
+- `pnpm typecheck`、`pnpm check:architecture`、`pnpm check:brand`、`pnpm build:website` 通过；架构 87 目录/681 源码样式、1343 文件/6805 依赖、0 循环/违规。官网仍保留公开 0.1.14，未提前改为候选版。新验收脚本通过 Node 语法检查；脚本本身待隔离安装运行，未把适配完成当作安装或线上升级通过。
+- 本条仅记录候选准备；完整 PR 四片、真实打包/隔离安装、公开附件及在线升级均须取得本次证据后另行回填。资源签名不替代 Authenticode；初始 E 先核验、独立投放，正式冷包仍经安装与 CI 门槛。
+
+## 2026-11-12：接通 C/R/E 分层桌面更新
+
+- 来源与基线：用户明确要求先完成侧栏优化，再按桌面更新设计重构；在 UI 独立提交 `95458460` 后继续。开放 Issues 查询为空，按直接需求实施，没有创建或回填工单。旧 0.1.14 公开更新保持原状，本次不发布、不安装用户客户端。
+- 完成：固定 bootstrap 负责 C 身份、资源验签、选择日志与恢复；R 包含编译后的 TS 业务、preload/worker/renderer 与资源，后台下载、解压并完整校验，ready 后由用户点击排空业务、授权、短重启。同 C 按 R 递增，C 改变继续复用 NSIS；普通退出不激活。移除固定两秒等待，窗口先显示再恢复工作区，只有真实页面与 IPC 就绪才确认新 R。
+- E 从整包拆为三个预编译闭包，第一次使用按固定清单下载/校验，不在用户机器编译或安装 npm 依赖；窗口启动不等 E。保留已验证版本、原权限和会话约束，Codex 显式准备 Pi 工具依赖。原生会话旁路记录 E 摘要，跨 E 不静默续写旧历史。侧栏补充 E 准备进度/错误但不授予应用安装资格。
+- 可信边界：Ed25519 公钥随 C 固定；清单绑定 C/指纹/平台、有效期和完整文件表；固定 GitHub 附件源、路径/链接/大小校验、内容寻址不可变目录。激活日志与下载缓存分离；坏候选只有在明确未访问数据时可回退，接触数据或状态不明时进入独立恢复界面。缓存根纳入工程、资源仓库及受控文件边界。
+- 构建工具：新增 R/E 制作、验证及手动投放入口；普通 R 只编译 JS，不打 Electron/NSIS，不复制引擎。冷指纹拒绝原生/固定入口变化冒充 R。新 C 继续原发布流程并检查初始 E 已公开；资源投放先不可变附件回读、最后清单。没有内置完整发布 CI/人工门禁，正式发布仍走原验收授权。
+- 验证按清单/缓存/激活、真实引擎、更新生命周期、路径消费者、UI 与依赖检测分批指定受影响文件，最终通过；命令、选择依据、修正和范围见[专项记录](verification/desktop-runtime-20261112.md)。最终 E 装载/打包补测 4 文件 5 项通过。真实 App 浏览器 11 组通过；真实 Electron 隔离 R1→R2 10 项通过、0 页面错误，证明后台准备、普通退出不安装、显式重启切换和用户数据标记保留。样本 R ZIP 约 3.82 MiB，不作为生产耗时/下载量承诺。
+- `pnpm typecheck`、新增 CLI 专项类型检查、`pnpm check:architecture` 通过；后者 87 目录/681 源码样式、1340 文件/6799 依赖，0 循环/违规。同步全部受影响源码注释、契约、类图和父层导航，以及架构维护/发布三入口。新增冷壳动态装载也纳入源依赖审计。没有运行全仓回归、正式冷包、安装升级、合并、推送或公开投放。
+- 交接：从 [bootstrap 契约](../src/backend/bootstrap/CONTRACT.md)、[更新契约](../src/backend/updater/CONTRACT.md)、[引擎契约](../src/backend/engines/CONTRACT.md) 到[构建/发布运行说明](task/desktop-runtime-release.md) review。保护低频 C 及原数据，将日常需求/BUGFix 限制到 R、外部引擎变化限制到 E。旧用户仍需一次冷更迁移；生产资源签名身份需发布者配置。首版不含文件级增量、主进程 HMR、旧 E 自动选择/跨 E 会话迁移和缓存自动回收，不把目标设计中的扩展写成已实现。
+
+## 2026-11-12：侧栏更新图标与就绪安装交互
+
+- 来源：用户截图指示将菜单“版本与更新”移到用户栏右侧原主题按钮位置，要求版本/进度 tooltip、仅就绪点击安装、满环呼吸；随后明确先完成此优化，再按桌面更新设计重构后端。基线 `d8d965b2`，完整开放 Issues 查询为空，按直接需求实施，未创建或回填工单。
+- 完成：新增 `SoftwareUpdateButton` 与纯派生 `updateButtonState`，复用标准箭头图标和唯一窗口更新 controller。主题仍在菜单内；移除重复菜单更新项和头像绿点。未知进度转动、下载最多 99、已验证 ready 满环呼吸；请求提交后立即进入忙碌态，鼠标与键盘都只在 ready 时发一次 install。tooltip 包含当前/目标版本、进度及错误，支持键盘、Escape、视口避让与减少动态效果。
+- 为后续架构预留可选 C/R 展示字段，旧版本仍显示原单版本；提醒的隐藏身份同时包含 C/R，避免同一冷包的下一次资源更新被错误隐藏。详情继续从新版提醒打开，原设置/会话保持挂载；后端下载、安装和数据所有权本步不变。
+- 验证选取：状态规则直接决定安装资格，运行 `pnpm exec vitest run tests/update-button-state.test.ts`，4/4 通过；实际 App 的图标、菜单、controller、详情和草稿均受影响，运行 `node scripts/desktop-updates-ui-smoke.mjs`，最终 10 组浏览器检查、0 页面错误。中间发现请求提交到后端回执之间仍短暂呼吸，修正 pending 呈现后补跑相关单元和浏览器，通过。
+- `pnpm typecheck`、`pnpm check:architecture` 通过，依赖含类型无环且无边界违规。同步更新 shell / updates 注释、契约、类图和父层导航、settings 入口说明、bridge 更新契约类图；生成器只修改目录描述。源码阅读顺序：更新契约 → update-button-state → SoftwareUpdateButton → UserMenu/App；完整变更以本条对应独立提交为准。
+- 界面证据：`test-results/desktop-updates-ui-report.json`、`update-icon-ready-light.png`、`update-icon-ready-dark.png`、`update-icon-narrow.png`。浏览器使用隔离 IPC fixture，没有执行真实安装。更新旧的打包验收脚本选择器但未运行制品验收；未运行全仓回归、构建、安装、合并、推送或发布。
+- 交付边界：此步只完成 UI；后端冷壳/资源/独立引擎重构仍按用户已授权的[桌面更新设计](task/desktop-hot-update-design.md)继续，不能将基础草稿或此处通过结果当作热更链路已实现。
+
+## 2026-11-12：中断会话登记与界面恢复入口
+
+- 来源：用户本机 0.1.14 在工具交互后收到“请求未完整完成”，原生文件存在，但 `session.bound` 仅记录线程 ID，空闲会话发送按钮持续禁用。用户明确授权补齐登记、增加恢复入口并推送 develop，本步不发布。开放 Issues 查询为空，按直接需求实施，未创建或回填工单。基线 `05920e81`，使用独立工作树，保留主工作区正在进行的更新功能改动。
+- 实现：CodexEngine 在 close 关闭代理、等待原生进程和回调排空后，对回执指定且真实存在的文件补做身份校验与登记；Runtime 仍在引擎关闭后封存终态。成功绑定和关闭屏障去重，异常保留原原因，不重放工具、不回写旧日志。修正同一校验器的目录后代判断，包含 Windows 分隔符，拒绝目录外同名文件。
+- 界面：发送资格与 `threadRecoveryReason` 共用阻断判断，解释缺运行头、缺原生文件、部分日志及未决工具；输入区提供“查看原运行”和“新建对话继续”。前者只定位主 Agent 详情中的既有核实入口，后者创建空对话，原历史、草稿和附件保留，不自动转交上下文或启动原操作。旧已封存记录不会自动补写，不能将此入口描述成旧 native 修复。
+- 验证选择：引擎生命周期和路径校验、主会话真实运行/停止/重发、跨引擎和成员身份直接受影响；前端检查实际 App 的发送资格与恢复操作。`pnpm exec vitest run tests/codex-interruption.test.ts tests/thread-recovery-notice.test.ts tests/conversation-retry.test.ts tests/codex-lifecycle.test.ts tests/codex-engine.test.ts --reporter=dot` 首轮发现新夹具漏填模型名称及旧断言仍要求缺失路径；修正后运行 `pnpm exec vitest run tests/codex-interruption.test.ts tests/conversation-retry.test.ts tests/runtime-failed-retry.test.ts tests/engine-session.test.ts --reporter=dot`，23 项通过；增加真实应用主动停止用例后仅运行 `pnpm exec vitest run tests/codex-interruption.test.ts -t '真实应用' --reporter=dot`，选中 2 项通过，另 3 项未选中；正常跨引擎及成员消费者 `pnpm exec vitest run tests/codex-application.test.ts --reporter=dot`，2 项通过。合计 8 文件、35 项唯一相关用例通过，不累加重复执行。
+- 实际结果：工具执行后响应不完整和主动停止均能在封存前登记，续接同一原生文件与主会话实例，旧 CBIM 日志事件不变、工具未重放；首次 HTTP 400 后继续 Codex 或切换 Pi 均通过。身份不符、目录外文件和尾行不完整仍拒绝。模型服务为确定性本地 HTTP，Codex/Pi/Claude 为真实引擎，不代表用户供应商在线验收。
+- `node scripts/interrupted-chat-ui-smoke.mjs`：真实 React App/Conversation 与隔离 IPC 夹具，5 组检查通过、0 页面错误、0 发送/恢复启动请求；验证可继续的中断、三类不可靠历史阻断、查看原运行、新建可发送对话、原草稿保留。夹具最初对禁用发送时 Enter 的换行预期错误，已按既有编辑行为修正。证据保存在本工作树 `test-results/interrupted-chat-ui-report.json` 和 `interrupted-chat-recovery.png`。
+- `pnpm typecheck`、`pnpm check:architecture` 通过：86 目录/668 源码样式，1308 维护文件/6703 依赖，0 循环/边界违规。同步 codex 与 conversation 的文件头、关键接口说明、CONTRACT 和 ARCHITECTURE；依赖方向不变。阅读顺序：CodexEngine.close → readCodexSession → ThreadHistoryNotice → Conversation；完整 diff 为本条对应独立提交相对 `05920e81`。
+- 边界：未修改用户安装目录或会话数据；未运行全仓回归、PR 四片 CI、打包、安装升级验收或公开发布，等待其他功能统一集成。代码自查和上述验证已完成，人工 review 与后续正式发布验收仍独立。
+
 ## 2026-11-12：0.1.14 发布与真实增量更新通过
 
 - 用户授权推送 develop 并发布测试增量；两项对话修复随 0.1.14 公开，冻结 source 216a15e225dd646420afcd3e3cc618ef10f0391b，Release 442699257，PR #57 合并 bf283752f9f79d9a2bdd193e40729f5ac833688b。未扩大发布范围、未修改既有附件。

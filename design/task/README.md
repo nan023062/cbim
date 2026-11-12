@@ -9,6 +9,8 @@
 - [模块负责人索引实施计划](module-owner-index.md)：工作区成员、责任查询、按负责人派发与更换交接的开发切片；不是运行时 Skill，功能待实施。
 - [反馈／许愿 Skill 与软件更新日志](user-feedback-intake.md)：对话加号菜单调用两项产品 Skill，按格式收集并直接提交 GitHub Issue；版本日志已接入，实际线上结果另记。
 - [正式桌面发布与手动更新](desktop-release.md)：Windows 安装包、独立 updater 目录、GitHub 桌面通道、更新提醒与用户主动下载安装。
+- [桌面分层更新设计](desktop-hot-update-design.md)：C/R 双版本、完整资源 ZIP、独立 Agent 引擎及新旧流程取舍；首版已实现，本地验证不等于公开升级验收。
+- [分层更新构建与发布](desktop-runtime-release.md)：C/R/E 候选、资源签名、发布顺序、首次冷更迁移和实际恢复边界。
 - [GitHub OAuth 配置与线上验收](github-feedback-setup.md)：OAuth App 注册字段、Device Flow 登录与单条真实测试 Issue 的操作指南。
 
 本目录保存抽象，具体任务由 CBIM 内部调度与持久化服务承载；可靠入队不代表成员已自动执行。

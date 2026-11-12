@@ -12,7 +12,9 @@
  * 展示顺序：完整公开回复只附带本消息内的 toolCallIds，供 UI 处理工具 HTTP 门禁与 stdout 文字的到达竞态，不重写日志顺序或授予执行权。
  * 主角色指引：与 Claude Code 共用 engine-instructions；未配置自定义岗位的模块由主 Agent 直接执行，默认执行角色已退役。
  * 请求预算：可信端口启用时，启动前安装父进程代理；终态与工具授权都受可靠结算屏障约束，停止先结束实际请求。
+ * 受管包的 CLI 路径在上层冻结到 process 参数；会话包身份由外层包装器核对，本适配器继续只负责 Pi 协议。
  */
+import type {EngineRuntimePackage} from '../../core/execution/engine-runtime';
 import fs from 'node:fs/promises';
 import {runtimeEngineTools,nativeToolsDisabled} from '../../core/execution/engine-tools';
 import {engineInstructions} from '../../core/execution/engine-instructions';
@@ -32,6 +34,8 @@ import {requestBudgetBootstrap} from './request-budget-bootstrap';
 
 /** 单次 Pi 适配器配置；agentHome 只属于 CBIM 工作区，turnTimeoutMs 为回合等待上限毫秒。 */
 export interface PiOptions {
+  /** 共用引擎装配携带的包身份；Pi 实际启动入口已由 process 固定。 */
+  runtime?:EngineRuntimePackage;nativeToolsRuntime?:EngineRuntimePackage;
   process:PiCommand;
   provider:string;
   model:string;

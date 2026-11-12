@@ -225,6 +225,7 @@
 | --- | --- |
 | `backend/core` | 自身 |
 | `backend/scheduler-engine` | 自身、`backend/core` |
+| `backend/bootstrap` | 自身、`backend/updater`、`backend/main`；计算式固定入口映射真实源码边 |
 | `backend/main` | 自身、`backend/scheduler-engine`、`backend/core`、`backend/updater`、`bridge/contracts` |
 | `backend/updater` | 自身、`bridge/contracts` |
 | `bridge/contracts` | 自身、`backend/core` |

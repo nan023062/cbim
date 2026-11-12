@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-账号入口的版本与更新弹窗、最近发布说明及新版提醒。共享窗口级本机更新快照；查看日志保留原页面与草稿，检查、下载和重启安装分别显式操作。只依赖公开 IPC，不导入后端更新实现。
+侧栏更新图标、C/R 版本 tooltip、应用及独立引擎准备进度与更新详情。共享窗口级本机更新快照；仅 C/R 就绪时点击安装，E 下载不授予安装资格，详情保留原页面与草稿。只依赖公开 IPC，不导入后端更新实现。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,9 +10,11 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [software-updates.css](software-updates.css) | 更新弹窗与提醒；原生 dialog 的顶层显示不受侧栏或工作区裁切。 |
-| [SoftwareUpdates.tsx](SoftwareUpdates.tsx) | 账号菜单的版本与更新弹窗，展示后台预下载并提供明确的重启安装入口。 |
-| [useSoftwareUpdates.ts](useSoftwareUpdates.ts) | 由桌面外壳持有的一份更新状态，供账号菜单、提醒与更新弹窗共同消费。 |
+| [software-updates.css](software-updates.css) | 更新图标、悬浮状态、进度环及更新详情；浮层不受侧栏或工作区裁切。 |
+| [SoftwareUpdateButton.tsx](SoftwareUpdateButton.tsx) | 侧栏用户栏右侧的更新图标，提供版本 tooltip、真实准备进度和显式安装操作。 |
+| [SoftwareUpdates.tsx](SoftwareUpdates.tsx) | 新版提醒的更新详情，展示发布日志、后台准备及显式重启安装入口；侧栏图标独立常驻。 |
+| [update-button-state.ts](update-button-state.ts) | 把后端更新快照转换为侧栏图标的版本、进度和点击语义，不持有下载状态。 |
+| [useSoftwareUpdates.ts](useSoftwareUpdates.ts) | 由桌面外壳持有的一份更新状态，供侧栏图标、提醒与更新详情共同消费。 |
 
 ## 架构类图
 
@@ -24,6 +26,18 @@ class N_src_frontend_updates_software_updates_css["software-updates.css"] {
   <<stylesheet>>
 }
 ```
+
+### SoftwareUpdateButton.tsx
+
+```mermaid
+classDiagram
+class N_src_frontend_updates_SoftwareUpdateButton_tsx["SoftwareUpdateButton.tsx"] {
+  <<component>>
+  +SoftwareUpdateButton()
+}
+```
+
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[useSoftwareUpdates.ts](useSoftwareUpdates.ts)、[update-button-state.ts](update-button-state.ts)、[software-updates.css](software-updates.css)。
 
 ### SoftwareUpdates.tsx
 
@@ -37,6 +51,18 @@ class N_src_frontend_updates_SoftwareUpdates_tsx["SoftwareUpdates.tsx"] {
 ```
 
 直接依赖：[../../bridge/contracts/desktop-updates.ts](../../bridge/contracts/desktop-updates.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[useSoftwareUpdates.ts](useSoftwareUpdates.ts)、[software-updates.css](software-updates.css)。
+
+### update-button-state.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_updates_update_button_state_ts["update-button-state.ts"] {
+  <<module>>
+  +updateButtonState()
+}
+```
+
+直接依赖：[../../bridge/contracts/desktop-updates.ts](../../bridge/contracts/desktop-updates.ts)。
 
 ### useSoftwareUpdates.ts
 
@@ -75,16 +101,35 @@ N_src_frontend_updates_useSoftwareUpdates_ts ..> N_src_frontend_updates_useSoftw
 
 ```mermaid
 classDiagram
-class N_src_frontend_updates_SoftwareUpdates_tsx["SoftwareUpdates.tsx"] {
+class N_src_frontend_updates_SoftwareUpdateButton_tsx["SoftwareUpdateButton.tsx"] {
   <<component>>
 }
 class N_src_frontend_updates_useSoftwareUpdates_ts["useSoftwareUpdates.ts"] {
   <<module>>
 }
+class N_src_frontend_updates_update_button_state_ts["update-button-state.ts"] {
+  <<module>>
+}
 class N_src_frontend_updates_software_updates_css["software-updates.css"] {
   <<stylesheet>>
 }
+class N_src_frontend_updates_SoftwareUpdates_tsx["SoftwareUpdates.tsx"] {
+  <<component>>
+}
+N_src_frontend_updates_SoftwareUpdateButton_tsx ..> N_src_frontend_updates_useSoftwareUpdates_ts : 导入依赖
+N_src_frontend_updates_SoftwareUpdateButton_tsx ..> N_src_frontend_updates_update_button_state_ts : 导入依赖
+N_src_frontend_updates_SoftwareUpdateButton_tsx ..> N_src_frontend_updates_software_updates_css : 导入依赖
 N_src_frontend_updates_SoftwareUpdates_tsx ..> N_src_frontend_updates_useSoftwareUpdates_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_updates_SoftwareUpdates_tsx["SoftwareUpdates.tsx"] {
+  <<component>>
+}
+class N_src_frontend_updates_software_updates_css["software-updates.css"] {
+  <<stylesheet>>
+}
 N_src_frontend_updates_SoftwareUpdates_tsx ..> N_src_frontend_updates_software_updates_css : 导入依赖
 ```
 
@@ -101,16 +146,24 @@ N_src_frontend_updates_SoftwareUpdates_tsx ..> N_src_frontend_updates_software_u
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
-# 账号入口的版本与更新
+# 侧栏版本图标与更新详情
 
-本目录拥有版本入口后的展示和窗口级 IPC 读取，后端状态机仍在独立 `backend/updater`。`shell/App` 每个窗口只挂载一次 `useSoftwareUpdates`，账号菜单、新版提醒和弹窗共享同一快照；账户登录不是查看版本／日志的前提。`settings` 不再装配更新 UI。
+本目录拥有侧栏更新图标、tooltip、详情与窗口级 IPC 读取，后端状态机仍在独立 `backend/updater`。`shell/App` 每个窗口只挂载一次 `useSoftwareUpdates`，用户栏右侧图标、新版提醒和弹窗共享同一快照；账户登录不是查看版本的前提。原主题按钮的位置用于更新图标，主题切换保留在账号菜单中；菜单不再重复版本与更新项。
+
+`SoftwareUpdateButton` 用向上箭头表示升级，悬停或键盘聚焦通过视口内的 portal 显示当前版本、目标版本、准备进度和错误，不执行检查、下载或安装。`updateButtonState` 只派生展示和操作资格：enabled、有候选、phase=ready 且无在途操作才允许安装。按钮使用 aria-disabled 保留键盘查看状态的能力，点击与 Enter/Space 都经过同一 ready 判断，不将提前点击排队到下载结束。点击就绪图标直接提交一次 install，不额外打开确认弹窗；tooltip 说明会结束任务和重启，并提醒保存编辑。
+
+下载的环形进度最多显示 99，只有后端已验证 ready 才显示完整环和呼吸动画；百分比未知时显示不定进度弧线。检查和应用期间无安装资格；应用失败返回 ready 后必须再次显式点击。减少动态效果设置下关闭转动和呼吸，仍保留满环及文字状态。tooltip 支持 Escape 关闭、边界避让和动态进度更新。
+
+版本使用公开的 desktopVersionLabel：旧安装包显示 vX.Y.Z；提供资源版本时显示 C X.Y.Z / R N，当前与目标分别取后端快照，不因发现候选就提前改变当前版本。
+
+首次使用独立 E 包时，tooltip 同时展示引擎名称、固定版本、下载/校验进度或失败信息。没有 C/R 下载时，进度环显示仍在准备的 E；多个 E 只用于聚合展示，不生成应用更新候选。E 下载完成后移除准备项，不呼吸、不授权安装。C/R 已就绪时保留满环及显式安装资格，E 状态继续列在 tooltip；引擎失败由下一次真实使用重试，图标不会提前排队执行。
 
 `SoftwareUpdateController` 只公开状态、错误、在途标志和固定 check／download／install 动作。每秒轮询的 status 仅为本机读取；后台定时 GitHub 检查继续属于后端。操作前后推进读取代际，丢弃较旧的在途快照；同一窗口不重复派发操作，下载期间仍读取进度。读取失败有可见提示和重读入口，关闭弹窗不取消后端下载，卸载 App 后不更新 React 状态。
 
 `SoftwareUpdates` 使用原生 dialog 的焦点约束，Escape／关闭后返回原入口。查看日志只打开弹窗，不切换外壳页面，不丢弃聊天、附件、知识或设置草稿。没有已知新版时直接展示当前安装版内置日志；有新版时明确区分可用版本的发布说明与当前版本日志。远端正文按纯文本渲染，不执行 HTML、链接或脚本；没有日志显示明确空态。
 
-统一“版本与更新”弹窗展示日志、状态和手动检查；后台每分钟检查及预下载归后端。下载不停止任务，关闭弹窗不取消下载。ready 表示包已校验并等待用户确认；正常就绪显示“重启安装”，上次安装失败时显示“重试安装并重启”。点击安装前提醒保存未提交编辑，并说明会停止任务和重启。前端不根据 ready 自动派发 install；仅用户明确点击时发出。下载失败提供“重试下载”，仍只准备包。只有重启后的真实 currentVersion 才证明升级成功。
+统一“版本与更新”弹窗展示日志、状态和手动检查；后台每分钟检查及预下载归后端。下载不停止任务，关闭弹窗不取消下载。ready 表示包已校验并等待用户确认；正常就绪显示“重启安装”，上次安装失败时显示“重试安装并重启”。点击安装前提醒保存未提交编辑，并说明会停止任务和重启。前端不根据 ready 自动派发 install；仅用户明确点击时发出。下载失败提供“重试下载”，仍只准备包。只有重启后的真实 currentVersion / currentResourceVersion 才证明相应 C/R 升级成功。
 
-离线等检查错误只在弹窗内显示，未打开弹窗时不主动弹窗或显示全局错误。横幅“稍后”仅隐藏当前版本提醒，不取消检查或移除菜单高亮和绿点；已授权流程进入 installing 时重新显示进度且没有“稍后”，避免应用退出看起来像崩溃。普通退出取消仍由 Main/backend 处理。
+离线等检查错误在 tooltip 与详情显示，不主动弹出模态框或全局错误。横幅“稍后”只隐藏该版本提醒，不取消检查或移除常驻图标的就绪提示；已授权流程进入 installing 时重新显示进度且没有“稍后”。普通退出取消仍由 Main/backend 处理。详情继续从新版提醒打开，关闭后返回真实原按钮；图标未就绪时只显示状态。
 
 菜单与弹窗呈现受用户交互需求驱动；后台预下载和显式安装策略归 backend/updater 的状态机，界面只提交一次用户意图并读取进度。没有足够历史数据量化变化频率；后续调整日志排版修改此目录，调整账号菜单只改 shell，安装策略修改 updater 和契约。固定源、制品校验及业务排空机制继续复用，不引入跨功能全局状态或通用基类。

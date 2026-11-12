@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。
+少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。 StoragePaths 的可选 protectedRoots 标明安装目录之外的程序缓存，实际路径核验仍归平台。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -92,6 +92,7 @@ class N_src_backend_core_foundation_paths_ts_StoragePaths["StoragePaths"] {
   <<interface>>
   +userRoot
   +installRoot
+  +protectedRoots
   +identity()
   +project()
   +local()

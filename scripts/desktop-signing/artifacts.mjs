@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {parse} from 'yaml';
 import {digest, windowsPayloads} from './payload.mjs';
+import {runCommand} from './windows.mjs';
 import {updaterCacheDirName} from './config.cjs';
 
 export function releaseNames(version) {
@@ -43,7 +44,8 @@ export async function verifyCandidate(directory, config, signer, {unsigned = fal
     if (await digest(payloads[i]) !== receipt.payload[i].sha256) throw Error('RELEASE_PAYLOAD_CHANGED');
     if (!unsigned) await signer.verify(payloads[i]);
   }
-  for (const name of ['app.asar', 'app-update.yml', 'desktop-release.json']) {
+  if(receipt.runtimeDirectory)runCommand(process.execPath,['node_modules/tsx/dist/cli.mjs','scripts/verify-cold-payload.ts',packagedDirectory,receipt.runtimeDirectory]);
+  for (const name of ['app.asar', 'app-update.yml', 'desktop-release.json',...(receipt.runtimeDirectory?['runtime-initial.json']:[])]) {
     if (await digest(path.join(packagedDirectory, 'resources', name)) !== receipt.resources?.[name]) throw Error('RELEASE_RESOURCE_CHANGED');
   }
   const updateConfig = parse(await fs.readFile(path.join(packagedDirectory, 'resources/app-update.yml'), 'utf8'));

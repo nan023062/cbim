@@ -2,7 +2,8 @@
  * 目录归属：backend/engines/codex；Codex 引擎适配。
  * 作用定位：通过 Codex App Server 驱动 AgentEngine，管理进程、线程、轮次和 CBIM 动态工具。
  * 设计原因：参考 Cindy 的双向 RPC 接法；关闭内置执行/外部工具，用既有授权、预算和事件服务持有副作用。
- * 职责边界：原生线程 ID 来自服务端实际回执，首次绑定后固定；公开事件不包含推理，故障与取消不重放操作。
+ * 职责边界：原生线程 ID 来自服务端实际回执，首次绑定后固定；异常和取消也在进程排空后补登记真实文件，故障不重放操作。
+ * Codex EXE 与宿主 Pi 工具库分别接收固定包，保持账号/原生历史目录及原 RPC 进程收尾。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -13,12 +14,13 @@ import {runtimeEngineTools,type EngineToolsPort} from '../../core/execution/engi
 import {engineInstructions} from '../../core/execution/engine-instructions';
 import {managedNativeTools} from '../native-tools';
 import {codexBinary} from './binary';
+import type {EngineRuntimePackage} from '../../core/execution/engine-runtime';
 import {CodexRpc} from './rpc';
 import {codexTools} from './tools';
 import {openCodexModelProxy} from './model-proxy';
 import {readCodexSession,codexPath} from './session';
 
-export interface CodexOptions {agentHome:string;prompt:string;knowledge:EngineToolsPort;allowNativeExecution?:boolean;llm?:ResolvedLlm;images?:import('../../core/execution/types').InputImage[];turnTimeoutMs?:number;requestBudget?():Promise<RequestBudgetPort|undefined>}
+export interface CodexOptions {/** 本次执行固定的独立 Codex 包与 Pi 工具包，由可信宿主注入。 */ runtime?:EngineRuntimePackage;nativeToolsRuntime?:EngineRuntimePackage;agentHome:string;prompt:string;knowledge:EngineToolsPort;allowNativeExecution?:boolean;llm?:ResolvedLlm;images?:import('../../core/execution/types').InputImage[];turnTimeoutMs?:number;requestBudget?():Promise<RequestBudgetPort|undefined>}
 /** 删除宿主 Codex/OpenAI 身份及启动注入；只把本轮代理令牌交给原生进程。 */
 export function codexEnvironment(home:string,token:string):NodeJS.ProcessEnv{
   const env={...process.env};for(const key of Object.keys(env))if(/^(CODEX|OPENAI_|ANTHROPIC_|CLAUDE|CBIM_|NODE_OPTIONS$|NODE_PATH$|ELECTRON_RUN_AS_NODE$)/i.test(key))delete env[key];
@@ -29,6 +31,8 @@ function toml(value:any):string{if(Array.isArray(value))return '['+value.map(tom
 export class CodexEngine implements AgentEngine {
   readonly kind='codex';private context?:EngineContext;private rpc?:CodexRpc;private tools?:Awaited<ReturnType<typeof codexTools>>;private proxy?:Awaited<ReturnType<typeof openCodexModelProxy>>;
   private threadId='';private sessionFile?:string;private turnId?:string;private startingTurn?:Promise<any>;private stopped=false;private fatal?:Error;
+  /** 文件绑定只在校验并持久化成功后成立；close 共用同一屏障，避免终态之后重复登记。 */
+  private sessionBound=false;private closing?:Promise<void>;
   private done?:{resolve:(result:{status:'completed'|'cancelled'|'failed';error?:string})=>void;reject:(error:Error)=>void};
   constructor(private options:CodexOptions){}
   private redact(text:string){const key=this.options.llm?.apiKey;return key?text.split(key).join('[REDACTED]'):text}
@@ -37,7 +41,7 @@ export class CodexEngine implements AgentEngine {
   async start(context:EngineContext){
     this.context=context;const llm=this.options.llm;if(!llm||llm.profile.api!=='openai-responses'||llm.profile.engine&&llm.profile.engine!=='codex')throw Error('Codex 需要已配置的 OpenAI Responses 模型');
     await fs.mkdir(this.options.agentHome,{recursive:true});await context.assertMemberResume?.();
-    const port=await runtimeEngineTools(context,this.options.knowledge),native=await managedNativeTools(context.task.root);
+    const port=await runtimeEngineTools(context,this.options.knowledge),native=await managedNativeTools(context.task.root,this.options.nativeToolsRuntime);
     this.tools=await codexTools({...context,emit:event=>this.emit(event)},port,native,!!this.options.allowNativeExecution,async()=>{await this.proxy!.assertSettled();if(this.fatal)throw this.fatal});
     this.proxy=await openCodexModelProxy(llm,this.tools.registered,this.tools.catalog,await this.options.requestBudget?.(),async()=>{
       const names=this.tools!.catalog.map(tool=>tool.name);await this.emit({type:'engine.status',data:{metric:'tool-catalog',stage:'active',expected:names,active:names,missing:[]}});
@@ -52,7 +56,7 @@ export class CodexEngine implements AgentEngine {
       await this.startingTurn;if(params.threadId!==this.threadId||params.turnId!==this.turnId||params.namespace)throw Error('Codex 工具请求不属于当前线程/轮次');
       return this.tools!.call(params);
     },error=>this.fail(error));
-    this.rpc.start(await codexBinary(),this.options.agentHome,codexEnvironment(this.options.agentHome,this.proxy.token),Object.entries(config).flatMap(([key,value])=>['-c',key+'='+toml(value)]));
+    this.rpc.start(await codexBinary(this.options.runtime),this.options.agentHome,codexEnvironment(this.options.agentHome,this.proxy.token),Object.entries(config).flatMap(([key,value])=>['-c',key+'='+toml(value)]));
     await this.rpc.request('initialize',{clientInfo:{name:'cbim',version:'1.0.0'},capabilities:{experimentalApi:true}});this.rpc.send({method:'initialized',params:{}});
     // 参考宿主托管模式：逐页读取本版本真实功能表，关闭额外执行入口，不按已知少数工具猜测整个能力集合。
     let cursor:string|undefined;for(let page=0;page<8;page++){
@@ -77,7 +81,13 @@ export class CodexEngine implements AgentEngine {
     else await this.emit({type:'session.bound',data:{sessionId:this.threadId,provider:'cbim-'+llm.profile.id,model:llm.profile.model}});
     await this.emit({type:'engine.status',data:{label:'Codex 已就绪',metric:'tool-catalog',stage:'prepared',expected:this.tools.catalog.map(t=>t.name)}});
   }
-  private async bind(){if(!this.sessionFile)throw Error('Codex 未提供实际原生文件');await readCodexSession(this.options.agentHome,this.sessionFile,this.threadId,this.context!.task.root);await this.emit({type:'session.bound',data:{sessionId:this.threadId,sessionFile:this.sessionFile,provider:'cbim-'+this.options.llm!.profile.id,model:this.options.llm!.profile.model}})}
+  private async bind(){
+    if(this.sessionBound)return;
+    if(!this.sessionFile)throw Error('Codex 未提供实际原生文件');
+    await readCodexSession(this.options.agentHome,this.sessionFile,this.threadId,this.context!.task.root);
+    await this.emit({type:'session.bound',data:{sessionId:this.threadId,sessionFile:this.sessionFile,provider:'cbim-'+this.options.llm!.profile.id,model:this.options.llm!.profile.model}});
+    this.sessionBound=true;
+  }
   async run(message:string){
     if(!this.rpc||!this.context)throw Error('Codex 尚未准备');if(this.fatal)throw this.fatal;if(this.stopped)return {status:'cancelled' as const};
     const result=new Promise<{status:'completed'|'cancelled'|'failed';error?:string}>((resolve,reject)=>{this.done={resolve,reject}});
@@ -108,5 +118,18 @@ export class CodexEngine implements AgentEngine {
     }
   }
   async stop(){this.stopped=true;this.tools?.stop();await this.proxy?.close();if(this.turnId)try{await this.rpc?.request('turn/interrupt',{threadId:this.threadId,turnId:this.turnId},3000)}catch{}this.done?.resolve({status:'cancelled'})}
-  async close(){this.tools?.stop();await this.proxy?.close();await this.rpc?.close();await this.tools?.close()}
+  /**
+   * 所有终态都先关闭原生进程、排空回调，再补登记延迟落盘的文件；运行时随后才封存日志。
+   * 只使用 thread 回执中的路径，不扫描/猜测其他文件。尚未落盘保持缺省；无效文件拒绝绑定。
+   * 绑定失败不撤销原异常，运行时保留首个故障；重复 close 不追加事件或重放工具。
+   */
+  close():Promise<void>{
+    return this.closing??=(async()=>{
+      this.tools?.stop();
+      try{await this.proxy?.close()}finally{try{await this.rpc?.close()}finally{await this.tools?.close()}}
+      if(!this.threadId||!this.sessionFile||this.sessionBound)return;
+      const exists=await fs.stat(this.sessionFile).then(()=>true,error=>{if(error.code==='ENOENT')return false;throw error});
+      if(exists)await this.bind();
+    })();
+  }
 }

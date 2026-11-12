@@ -12,6 +12,7 @@ const slash = value => value.replaceAll('\\', '/');
 const key = value => process.platform === 'win32' ? slash(path.resolve(value)).toLowerCase() : path.resolve(value);
 // 前后端分组不能掩盖后端内部边界；类型重导出只允许通过通信契约访问 Core。
 const layers = {
+  'backend/bootstrap':['backend/bootstrap','backend/updater','backend/main'],
   'backend/core':['backend/core'],'backend/engines':['backend/engines','backend/core'],
   'backend/scheduler-engine':['backend/scheduler-engine','backend/engines','backend/core'],
   'backend/main':['backend/main','backend/scheduler-engine','backend/core','backend/updater','bridge/contracts'],
@@ -54,13 +55,18 @@ const matchesBoundary=(file,entry)=>file===entry||(entry.endsWith('/')&&file.sta
 
 // 非字面量加载不能静态证明目标，只允许逐项核实的外部依赖；表达式变化必须重新审核。
 export const externalLoads = [
-  {file:'src/backend/engines/native-tools.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从固定 pi-runtime 或开发依赖加载 1.5.0 的独立文件/命令操作，不接受模型或工作区给定的模块路径'},
+  {file:'scripts/runtime-build.ts',expression:"require(path.join(plugin,'ViteConfig.js'))",reason:'只从锁定的 @electron-forge/plugin-vite 包路径读取生产配置生成器；与冷包共用构建参数，无运行时用户输入'},
+  {file:'src/backend/engines/native-tools.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从冷壳验签固定的 E 目录、旧 pi-runtime 或开发依赖加载 1.5.0 的独立文件/命令操作，不接受模型或工作区给定的模块路径'},
   {file:'src/backend/engines/claude/sdk.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从固定 CBIM claude-runtime 或开发依赖解析官方 Claude Agent SDK，不接受外部路径'},
   {file:'src/backend/main/platform/locking.ts', expression:"requireNative(packagedNative&&fs.existsSync(packagedNative)?packagedNative:'koffi')", reason:'仅从安装包或 node_modules 加载第三方 koffi 原生库'},
   {file:'src/backend/main/platform/files/controlled-file-win32.ts', expression:'requireNative(koffiPath)', reason:'专用 utility 的私有参数仅由 Main 固定 resources/koffi 或 require.resolve(koffi) 注入；独立 Electron 测试宿主同样使用真实第三方库，不来自模型或桌面 IPC'},
   {file:'src/backend/main/platform/isolation/isolation-recovery-win32.ts', expression:'requireNative(koffiPath)', reason:'只接受Main私有装配的resources/koffi或require.resolve(koffi)，用于实际原进程/Job/目录核实，不接模型或桌面路径'},
   {file:'src/backend/main/platform/isolation/isolated-node-win32.ts', expression:'requireNative(koffiPath)', reason:'隔离平台装配固定 resources/koffi 或 require.resolve(koffi)；仅加载第三方原生库，业务请求不能提供该私有参数'},
   {file:'tests/model-catalog.test.ts', expression:"import(pathToFileURL(path.resolve('node_modules/@earendil-works/pi-ai/dist/api/simple-options.js')).href)", reason:'测试固定版本的第三方 Pi 内部容量函数'},
+];
+// 冷壳从已验证的构建目录加载固定业务入口；仍把源码边纳入分层与循环检查，不作为外部豁免。
+export const generatedLoads = [
+  {file:'src/backend/bootstrap/desktop.ts',expression:'loadApplication(entry)',source:'src/backend/main/main.ts'},
 ];
 
 /** 返回强连通分量及其中全部依赖边，不遗漏类型环、长环或自引用。 */
@@ -131,6 +137,12 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       const info = {file:relative(file), line:ast.getLineAndCharacterOfPosition(node.getStart(ast)).line+1, kind};
       if (!literal || !ts.isStringLiteralLike(literal)) {
         const expression = node.getText(ast);
+        const generated=(options.generatedLoads??generatedLoads).find(item=>item.file===info.file&&item.expression===expression);
+        if(generated){
+          if(!known.has(key(path.join(root,generated.source))))unresolved.push({...info,spec:generated.source});
+          else edges.push({from:info.file,to:generated.source,line:info.line,kind:'generated-'+kind,spec:expression});
+          return;
+        }
         const approved = (options.externalLoads ?? externalLoads).find(e => e.file === info.file && e.expression === expression);
         (approved ? external : dynamic).push({...info, expression, ...(approved ? {reason:approved.reason} : {})});
         return;

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Claude Agent SDK 适配、内部工具门禁与真实原生会话生命周期；环境和账号归 CBIM，工具复用上层契约，不提供对外 MCP。原生工具开关只读可信能力的 disableNativeTools 策略，不认识具体业务工具槽位。
+Claude Agent SDK 适配、内部工具门禁与真实原生会话生命周期；环境和账号归 CBIM，工具复用上层契约，不提供对外 MCP。原生工具开关只读可信能力的 disableNativeTools 策略，不认识具体业务工具槽位。 SDK 入口可由签名 E 包提供，仍限制适配器支持的版本，账号/历史目录不随缓存迁移。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -35,6 +35,8 @@ class N_src_backend_engines_claude_engine_ts["engine.ts"] {
 }
 class N_src_backend_engines_claude_engine_ts_ClaudeOptions["ClaudeOptions"] {
   <<interface>>
+  +runtime
+  +nativeToolsRuntime
   +agentHome
   +prompt
   +knowledge
@@ -94,7 +96,7 @@ class N_src_backend_engines_claude_engine_ts_external_AgentEngine["AgentEngine (
 N_src_backend_engines_claude_engine_ts_external_AgentEngine <|.. N_src_backend_engines_claude_engine_ts_ClaudeCodeEngine
 ```
 
-直接依赖：[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[sdk.ts](sdk.ts)、[tools.ts](tools.ts)。
+直接依赖：[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[sdk.ts](sdk.ts)、[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[tools.ts](tools.ts)。
 
 ### sdk.ts
 
@@ -106,6 +108,7 @@ class N_src_backend_engines_claude_sdk_ts["sdk.ts"] {
 }
 ```
 
+直接依赖：[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)。
 
 ### tools.ts
 

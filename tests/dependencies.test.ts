@@ -12,6 +12,15 @@ function audit(files:Record<string,string>){
   return auditDependencies(root,{externalLoads:[]});
 }
 
+test('fixed bootstrap generated loading remains a real source edge and cannot hide cycles or missing code',()=>{
+  const load="import {createRequire} from 'node:module'; const loadApplication=createRequire(import.meta.url); loadApplication(entry);";
+  const valid=audit({'src/backend/bootstrap/desktop.ts':load,'src/backend/main/main.ts':'export function startDesktop(){}'});
+  expect(valid.ok).toBe(true);expect(valid.edges).toContainEqual(expect.objectContaining({from:'src/backend/bootstrap/desktop.ts',to:'src/backend/main/main.ts',kind:'generated-dynamic/require'}));
+  expect(audit({'src/backend/bootstrap/desktop.ts':load}).unresolved).not.toEqual([]);
+  const reverse=audit({'src/backend/bootstrap/desktop.ts':load,'src/backend/main/main.ts':"import '../bootstrap/desktop';"});expect(reverse.cycles).toHaveLength(1);expect(reverse.ok).toBe(false);
+  expect(audit({'src/backend/bootstrap/desktop.ts':load.replace('loadApplication(entry)','loadApplication(other)'),'src/backend/main/main.ts':''}).dynamic).not.toEqual([]);
+});
+
 test('all maintained code has no cycles including type dependencies and no unreviewed loads',()=>{
   const result=auditDependencies();
   expect(result.files).toBeGreaterThan(150);

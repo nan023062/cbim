@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Codex App Server 的受管进程、双向 RPC、真实 thread/turn、Responses 代理与动态工具；固定 CLI 和私有账号目录，内置执行关闭，工具经宿主授权、预算结算及同一回执；宿主原生工具目录按可信能力的 disableNativeTools 策略收窄。
+Codex App Server 的受管进程、双向 RPC、真实 thread/turn、Responses 代理与动态工具；固定 CLI 和私有账号目录，内置执行关闭，工具经宿主授权、预算结算及同一回执；宿主原生工具目录按可信能力的 disableNativeTools 策略收窄。 原生 EXE 与 Pi 宿主工具库分别使用可信受管包，不重新编译或借用外部客户端。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -29,6 +29,7 @@ class N_src_backend_engines_codex_binary_ts["binary.ts"] {
 }
 ```
 
+直接依赖：[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)。
 
 ### engine.ts
 
@@ -49,6 +50,8 @@ class N_src_backend_engines_codex_engine_ts["engine.ts"] {
 }
 class N_src_backend_engines_codex_engine_ts_CodexOptions["CodexOptions"] {
   <<interface>>
+  +runtime
+  +nativeToolsRuntime
   +agentHome
   +prompt
   +knowledge
@@ -92,6 +95,8 @@ class N_src_backend_engines_codex_engine_ts["engine.ts"] {
   <<module>>
 }
 class N_src_backend_engines_codex_engine_ts_CodexEngine["CodexEngine"] {
+  -sessionBound
+  -closing
   -done
   -redact()
   -fail()
@@ -106,7 +111,7 @@ class N_src_backend_engines_codex_engine_ts_external_AgentEngine["AgentEngine (�
 N_src_backend_engines_codex_engine_ts_external_AgentEngine <|.. N_src_backend_engines_codex_engine_ts_CodexEngine
 ```
 
-直接依赖：[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../native-tools.ts](../native-tools.ts)、[binary.ts](binary.ts)、[rpc.ts](rpc.ts)、[tools.ts](tools.ts)、[model-proxy.ts](model-proxy.ts)、[session.ts](session.ts)。
+直接依赖：[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../native-tools.ts](../native-tools.ts)、[binary.ts](binary.ts)、[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[rpc.ts](rpc.ts)、[tools.ts](tools.ts)、[model-proxy.ts](model-proxy.ts)、[session.ts](session.ts)。
 
 ### model-proxy.ts
 
@@ -269,6 +274,10 @@ N_src_backend_engines_codex_model_proxy_ts ..> N_src_backend_engines_codex_tools
 `CodexRpc` 区分宿主请求、服务端工具请求和顺序通知，响应关联不等待工具授权。协议失败/超时终止原进程，不能重发操作；close 等待进程及已收到处理排空。主会话和成员分别持有自己的 Codex HOME。
 
 新建 thread 由服务端分配 ID，实际回执经 `session.bound` 落盘。成员只在首次 starting→running 采纳该 ID，不能用逻辑 agentSessionId 伪造原生线程。恢复必须核对私有 sessions 目录、完整 JSONL、metadata.id/cwd、文件名及当前工具是否已注册；在 thread/resume 前再次核实完整成员恢复证明。恢复会追加 thread_settings_applied，因此动作后核对实际线程/文件身份，不再将原生自己的追加误当作旧证明损坏。跨引擎主会话恢复目标引擎自己的 ID/文件，并只转交公开历史资料。
+
+thread/start 回执可能先给出 ID/路径，再延迟写入原生文件。正常完成仍及时绑定；失败、取消或超时统一经 `CodexEngine.close`：停止工具、关闭代理、等待 RPC 进程退出与回调排空，再按原回执路径校验并补登记。Runtime 在 close 之后才封存本轮日志，因而不会向旧终态追加登记。成功文件绑定和 close 屏障均去重，重复关闭不追加事件。
+
+只对真实存在且通过上述身份/路径校验的文件登记；不扫描其他 rollout、不伪造路径、不修改原生内容。路径必须是私有 sessions 的真实后代（包含 Windows 分隔符校验）。未落盘保持缺省，无效文件拒绝绑定；运行时仍保留首个执行故障，不用登记成功把中断解释成任务完成。旧已封存日志缺少登记时不会被自动回写；界面提供原运行核实和新对话入口。
 
 ## 工具与权限
 

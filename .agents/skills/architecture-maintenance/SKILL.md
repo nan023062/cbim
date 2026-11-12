@@ -33,6 +33,7 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 - backend/core → backend/core。
 - backend/engines → 自身、backend/core；具体 SDK 与 HTTP 传输不得被 Core 反向引用。
 - backend/scheduler-engine → 自身、backend/core；assembly 中的引擎装配可以依赖 backend/engines。
+- backend/bootstrap → 自身、backend/updater、backend/main；固定加载器的计算式入口仍纳入真实源码依赖检查，不作为外部加载豁免。
 - backend/main → 自身、backend/scheduler-engine、backend/core、backend/updater、bridge/contracts。
 - backend/updater → 自身、bridge/contracts；更新程序不得反向依赖 Main、调度或业务运行时。
 - bridge/contracts → 自身、backend/core 的公开契约和纯函数。

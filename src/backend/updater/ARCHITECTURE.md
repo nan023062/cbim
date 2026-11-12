@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-独立桌面更新子系统：公开 Release 读取、稳定版本筛选、后台预下载与用户确认重启的状态机和 NSIS 适配均在此目录。只依赖公开更新契约及系统/第三方库，不导入 main、scheduler-engine 或 core/runtime；仅明确安装时通过关闭回调等待主程序排空。安装包缓存独立于运行数据。
+独立桌面更新子系统：公开 Release 读取、稳定版本筛选、后台预下载与用户确认重启的状态机和 NSIS 适配均在此目录。只依赖公开更新契约及系统/第三方库，不导入 main、scheduler-engine 或 core/runtime；仅明确安装时通过关闭回调等待主程序排空。安装包缓存独立于运行数据。 C/R 复用一个准备和显式应用状态机；Ed25519 清单、完整 ZIP 文件集合、不可变包缓存和激活日志属于冷壳可信机制。候选一旦接触数据，失败只能恢复，不能自动降级。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -15,6 +15,13 @@
 | [nsis-updater.ts](nsis-updater.ts) | electron-updater 的 Windows NSIS 适配，固定发布源并优先差分下载、校验安装包。 |
 | [release-http.ts](release-http.ts) | 更新子系统读取公开 Release 列表的独立 HTTP 边界。 |
 | [restart-profile.ts](restart-profile.ts) | 恢复安装器显式传回的本机用户目录，供 Main 在初始化任何业务数据之前调用。 |
+| [runtime-archive.ts](runtime-archive.ts) | 把已校验 ZIP 展开到新建候选目录，并核对签名清单定义的完整文件集合。 |
+| [runtime-download.ts](runtime-download.ts) | 公开资源 / 引擎附件的有界下载；下载只写独立候选，不改变活动版本。 |
+| [runtime-host.ts](runtime-host.ts) | 稳定桌面冷壳向业务入口提供的私有启动契约；不经过渲染 IPC。 |
+| [runtime-journal.ts](runtime-journal.ts) | 冷壳拥有的资源激活日志；区分准备缓存、用户授权、原数据访问和已确认启动。 |
+| [runtime-manifest.ts](runtime-manifest.ts) | 冷壳与资源更新器共用的签名清单、制品身份和路径约束。 |
+| [runtime-store.ts](runtime-store.ts) | 管理资源 / 引擎不可变版本目录及其签名清单；后台准备不修改活动选择。 |
+| [runtime-updates.ts](runtime-updates.ts) | 连接 C 安装通道与同 C 的 R 资源通道，准备候选并在业务排空后记录显式切换。 |
 
 ## 架构类图
 
@@ -61,13 +68,13 @@ class N_src_backend_updater_desktop_updates_ts_DesktopUpdates["DesktopUpdates"] 
   -latest
   -installer
   -beforeInstall
+  -enginePreparations
   -state
   -busy
   -retryDownloadAfter
   -controller
   -timer
   -initial
-  -run()
 }
 N_src_backend_updater_desktop_updates_ts ..> N_src_backend_updater_desktop_updates_ts_DesktopUpdates : 声明
 ```
@@ -80,6 +87,7 @@ class N_src_backend_updater_desktop_updates_ts["desktop-updates.ts"] {
   <<module>>
 }
 class N_src_backend_updater_desktop_updates_ts_DesktopUpdates["DesktopUpdates"] {
+  -run()
   -downloadCandidate()
   -installReady()
 }
@@ -149,6 +157,242 @@ class N_src_backend_updater_restart_profile_ts["restart-profile.ts"] {
 ```
 
 
+### runtime-archive.ts
+
+```mermaid
+classDiagram
+class N_src_backend_updater_runtime_archive_ts["runtime-archive.ts"] {
+  <<module>>
+  +extractRuntimeArchive()
+  +verifyRuntimeDirectory()
+}
+```
+
+直接依赖：[runtime-manifest.ts](runtime-manifest.ts)。
+
+### runtime-download.ts
+
+```mermaid
+classDiagram
+class N_src_backend_updater_runtime_download_ts["runtime-download.ts"] {
+  <<module>>
+  +runtimeAssetResponse()
+  +downloadRuntimePackage()
+  +downloadRuntimeManifest()
+}
+```
+
+直接依赖：[runtime-manifest.ts](runtime-manifest.ts)。
+
+### runtime-host.ts
+
+```mermaid
+classDiagram
+class N_src_backend_updater_runtime_host_ts["runtime-host.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_host_ts_DesktopRuntimeHost["DesktopRuntimeHost"] {
+  <<interface>>
+  +assetsRoot
+  +cacheRoot
+  +codeVersion
+  +resourceVersion
+  +resolveEngine()
+  +stopPreparingEngines()
+  +updates()
+  +confirm()
+}
+N_src_backend_updater_runtime_host_ts ..> N_src_backend_updater_runtime_host_ts_DesktopRuntimeHost : 声明
+```
+
+直接依赖：[desktop-updates.ts](desktop-updates.ts)。
+
+### runtime-journal.ts
+
+```mermaid
+classDiagram
+class N_src_backend_updater_runtime_journal_ts["runtime-journal.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_journal_ts_RuntimeState["RuntimeState"] {
+  <<type>>
+
+}
+N_src_backend_updater_runtime_journal_ts ..> N_src_backend_updater_runtime_journal_ts_RuntimeState : 声明
+class N_src_backend_updater_runtime_journal_ts_RuntimeJournal["RuntimeJournal"] {
+  +read()
+  +authorize()
+  +accessData()
+  +confirm()
+  +rejectBeforeData()
+  +retryPending()
+  -directory
+  -initial
+  -write()
+}
+N_src_backend_updater_runtime_journal_ts ..> N_src_backend_updater_runtime_journal_ts_RuntimeJournal : 声明
+```
+
+
+### runtime-manifest.ts
+
+```mermaid
+classDiagram
+class N_src_backend_updater_runtime_manifest_ts["runtime-manifest.ts"] {
+  <<module>>
+  +runtimeRelativePath()
+  +validateRuntimeFiles()
+  +runtimePackageUrl()
+  +runtimeManifestDigest()
+  +verifyRuntimeManifest()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_updater_runtime_manifest_ts["runtime-manifest.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_manifest_ts_RuntimeManifest["RuntimeManifest"] {
+  <<type>>
+
+}
+N_src_backend_updater_runtime_manifest_ts ..> N_src_backend_updater_runtime_manifest_ts_RuntimeManifest : 声明
+class N_src_backend_updater_runtime_manifest_ts_RuntimePackage["RuntimePackage"] {
+  <<type>>
+
+}
+N_src_backend_updater_runtime_manifest_ts ..> N_src_backend_updater_runtime_manifest_ts_RuntimePackage : 声明
+class N_src_backend_updater_runtime_manifest_ts_RuntimeFile["RuntimeFile"] {
+  <<type>>
+
+}
+N_src_backend_updater_runtime_manifest_ts ..> N_src_backend_updater_runtime_manifest_ts_RuntimeFile : 声明
+class N_src_backend_updater_runtime_manifest_ts_EnginePackage["EnginePackage"] {
+  <<type>>
+
+}
+N_src_backend_updater_runtime_manifest_ts ..> N_src_backend_updater_runtime_manifest_ts_EnginePackage : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_backend_updater_runtime_manifest_ts["runtime-manifest.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_manifest_ts_ColdRuntime["ColdRuntime"] {
+  <<interface>>
+  +schema
+  +codeVersion
+  +coldFingerprint
+  +platform
+  +publicKey
+}
+N_src_backend_updater_runtime_manifest_ts ..> N_src_backend_updater_runtime_manifest_ts_ColdRuntime : 声明
+class N_src_backend_updater_runtime_manifest_ts_SignedRuntimeManifest["SignedRuntimeManifest"] {
+  <<interface>>
+  +payload
+  +signature
+}
+N_src_backend_updater_runtime_manifest_ts ..> N_src_backend_updater_runtime_manifest_ts_SignedRuntimeManifest : 声明
+```
+
+
+### runtime-store.ts
+
+```mermaid
+classDiagram
+class N_src_backend_updater_runtime_store_ts["runtime-store.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_store_ts_RuntimePackageDownloader["RuntimePackageDownloader"] {
+  <<type>>
+
+}
+N_src_backend_updater_runtime_store_ts ..> N_src_backend_updater_runtime_store_ts_RuntimePackageDownloader : 声明
+class N_src_backend_updater_runtime_store_ts_RuntimeStore["RuntimeStore"] {
+  +root
+  +cold
+  +packageRoot()
+  +manifestPath()
+  +saveManifest()
+  +readManifest()
+  +prepare()
+  -download
+  -preparing
+  -preparePackage()
+}
+N_src_backend_updater_runtime_store_ts ..> N_src_backend_updater_runtime_store_ts_RuntimeStore : 声明
+```
+
+直接依赖：[runtime-archive.ts](runtime-archive.ts)、[runtime-download.ts](runtime-download.ts)、[runtime-manifest.ts](runtime-manifest.ts)。
+
+### runtime-updates.ts
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_updater_runtime_updates_ts["runtime-updates.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_updates_ts_Candidate["Candidate"] {
+  <<type>>
+  +manifest
+  +envelope
+  +digest
+}
+N_src_backend_updater_runtime_updates_ts ..> N_src_backend_updater_runtime_updates_ts_Candidate : 声明
+class N_src_backend_updater_runtime_updates_ts_RuntimeUpdateSources["RuntimeUpdateSources"] {
+  <<interface>>
+  +cold()
+  +resources()
+}
+N_src_backend_updater_runtime_updates_ts ..> N_src_backend_updater_runtime_updates_ts_RuntimeUpdateSources : 声明
+class N_src_backend_updater_runtime_updates_ts_RuntimeUpdates["RuntimeUpdates"] {
+  +latest()
+  +prepare()
+  +download()
+  +install()
+  +close()
+  -store
+  -journal
+  -current
+  -installer
+  -restart
+  -sources
+  -usedEngines
+  -candidate
+  -selected
+  -prepared
+  -ready
+}
+N_src_backend_updater_runtime_updates_ts ..> N_src_backend_updater_runtime_updates_ts_RuntimeUpdates : 声明
+class N_src_backend_updater_runtime_updates_ts_external_DesktopUpdateInstaller["DesktopUpdateInstaller (外部契约)"] {
+  <<external>>
+}
+N_src_backend_updater_runtime_updates_ts_external_DesktopUpdateInstaller <|.. N_src_backend_updater_runtime_updates_ts_RuntimeUpdates
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_updater_runtime_updates_ts["runtime-updates.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_updates_ts_RuntimeUpdates["RuntimeUpdates"] {
+  -controller
+}
+N_src_backend_updater_runtime_updates_ts ..> N_src_backend_updater_runtime_updates_ts_RuntimeUpdates : 声明
+class N_src_backend_updater_runtime_updates_ts_external_DesktopUpdateInstaller["DesktopUpdateInstaller (外部契约)"] {
+  <<external>>
+}
+N_src_backend_updater_runtime_updates_ts_external_DesktopUpdateInstaller <|.. N_src_backend_updater_runtime_updates_ts_RuntimeUpdates
+```
+
+直接依赖：[../../bridge/contracts/desktop-updates.ts](../../bridge/contracts/desktop-updates.ts)、[desktop-updates.ts](desktop-updates.ts)、[desktop-releases.ts](desktop-releases.ts)、[runtime-download.ts](runtime-download.ts)、[runtime-manifest.ts](runtime-manifest.ts)、[runtime-store.ts](runtime-store.ts)、[runtime-journal.ts](runtime-journal.ts)。
+
 ### 本目录调用边界
 
 ```mermaid
@@ -171,6 +415,81 @@ N_src_backend_updater_nsis_updater_ts ..> N_src_backend_updater_desktop_updates_
 N_src_backend_updater_nsis_updater_ts ..> N_src_backend_updater_desktop_releases_ts : 导入依赖
 ```
 
+```mermaid
+classDiagram
+class N_src_backend_updater_runtime_archive_ts["runtime-archive.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_manifest_ts["runtime-manifest.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_download_ts["runtime-download.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_host_ts["runtime-host.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_desktop_updates_ts["desktop-updates.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_store_ts["runtime-store.ts"] {
+  <<module>>
+}
+N_src_backend_updater_runtime_archive_ts ..> N_src_backend_updater_runtime_manifest_ts : 导入依赖
+N_src_backend_updater_runtime_download_ts ..> N_src_backend_updater_runtime_manifest_ts : 导入依赖
+N_src_backend_updater_runtime_host_ts ..> N_src_backend_updater_desktop_updates_ts : 导入依赖
+N_src_backend_updater_runtime_store_ts ..> N_src_backend_updater_runtime_archive_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_updater_runtime_store_ts["runtime-store.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_download_ts["runtime-download.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_manifest_ts["runtime-manifest.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_updates_ts["runtime-updates.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_desktop_updates_ts["desktop-updates.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_desktop_releases_ts["desktop-releases.ts"] {
+  <<module>>
+}
+N_src_backend_updater_runtime_store_ts ..> N_src_backend_updater_runtime_download_ts : 导入依赖
+N_src_backend_updater_runtime_store_ts ..> N_src_backend_updater_runtime_manifest_ts : 导入依赖
+N_src_backend_updater_runtime_updates_ts ..> N_src_backend_updater_desktop_updates_ts : 导入依赖
+N_src_backend_updater_runtime_updates_ts ..> N_src_backend_updater_desktop_releases_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_backend_updater_runtime_updates_ts["runtime-updates.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_download_ts["runtime-download.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_manifest_ts["runtime-manifest.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_store_ts["runtime-store.ts"] {
+  <<module>>
+}
+class N_src_backend_updater_runtime_journal_ts["runtime-journal.ts"] {
+  <<module>>
+}
+N_src_backend_updater_runtime_updates_ts ..> N_src_backend_updater_runtime_download_ts : 导入依赖
+N_src_backend_updater_runtime_updates_ts ..> N_src_backend_updater_runtime_manifest_ts : 导入依赖
+N_src_backend_updater_runtime_updates_ts ..> N_src_backend_updater_runtime_store_ts : 导入依赖
+N_src_backend_updater_runtime_updates_ts ..> N_src_backend_updater_runtime_journal_ts : 导入依赖
+```
+
 
 ## 子目录导航
 
@@ -186,15 +505,23 @@ N_src_backend_updater_nsis_updater_ts ..> N_src_backend_updater_desktop_releases
 
 # 桌面更新子系统
 
+C 为冷基础三段版本，R 为同 C 内递增资源号；E 是签名清单中固定的三个外部引擎。RuntimeUpdates 优先选择当前 C 的新 R，没有兼容 R 时才提示更高 C。公开 UI 只有一个状态机，下载阶段包含解压和校验，只有 ready 允许点击安装图标。
+
+RuntimeManifest 使用冷壳固定 Ed25519 公钥验证准确 payload 字节，声明 C/R、能力指纹、Windows x64、有效期、源提交及完整 R/E 文件集合。首次发现验证有效期；已安装包允许过期后离线启动。资源通道固定 runtime-c<C>/latest.json，E 附件固定 runtime-engines；都只访问 nan023062/cbim 的 HTTPS 附件及受限对象存储跳转，不发送凭据。最高已授权 R 防止自动降级/重放。
+
+RuntimeStore 下载 SHA-256 完整 ZIP，拒绝不符的长度、文件集合、路径、链接、设备与摘要。先写新 staging 目录，完整验证后改名到 packages/<摘要>，从不覆盖活动目录；准备同一包的并发调用合并。失败只清理自己创建的临时目录，旧版本不自动回收。R 下载也准备当前进程已使用引擎在候选中的新包；其它引擎保持首次使用准备。
+
+R 安装只在业务排空后授权 RuntimeJournal 并短重启，不运行 NSIS。日志将 authorized、data-access 与 confirmed 分开，记录最高 R、上一确认版本和隔离摘要；读取异常和已访问数据的失败只进入冷壳恢复。状态在用户身份目录，代码缓存独立；清缓存不重置版本。具体加载边界见 [bootstrap](../bootstrap/CONTRACT.md)。
+
 更新程序集中于本目录，与 main 的业务资源、scheduler-engine 及 core/runtime 分离。只依赖公开 `DesktopUpdateStatus` / `DesktopRelease` 契约、系统和第三方库；Main 负责启动、固定 IPC 和业务关闭回调，不向本模块暴露工作区、模型或反馈 Token。
 
 `release-http` 只读固定公开 GitHub Release 列表，不附凭据、不重定向，单请求 20 秒、响应 2 MiB。`desktop-releases` 只接受 `nan023062/cbim` 的 `desktop-vX.Y.Z` 稳定版本、匹配的 Windows x64 安装包及清单；不消费旧 Python 内核 v1.x。检查失败明确报告，不以空列表冒充当前已是最新版。
 
 `DesktopUpdates` 在正式安装版启动后 10 秒检查，定时器每 60 秒触发；发现新版后自动准备、下载并校验，成功停在 ready，不排空业务或安装。在途操作合并；已就绪候选冻结到用户安装或进程退出，不因后续检查替换。检查失败保留已知新版与本次完成时间，下一分钟重新检查。下载失败后五分钟内只检查版本；五分钟后重试下载，发现不同版本或用户手动重试时无需等待。错误仅在更新页显示，不弹全局错误。checkedAt 是最近完成检查的时间，失败也记录，不能据此声称已联网成功。
 
-download 只手动重试准备安装包；后台预下载与手动下载都不授权重启。用户在 ready 明确点击 install 后，公开 installing 两秒让窗口展示进度，随后调用 Main 注入的正常关闭回调；只在排空成功后调用安装器。下载尚未完成时的 install 不排队授权，须就绪后再次确认。弹窗关闭或 IPC 回包丢失不触发第二次安装。下载失败回到 available；排空／安装失败停在 ready，保留缓存，只能明确重试 install，不由计时器或普通退出重放。
+download 只手动重试准备对应的 C 或 R 包；后台预下载与手动下载都不授权重启。用户在 ready 明确点击 install 后，公开 installing 后让出一次事件循环，随后调用 Main 注入的正常关闭回调；只在排空成功后调用安装器。下载尚未完成时的 install 不排队授权，须就绪后再次确认。弹窗关闭或 IPC 回包丢失不触发第二次安装。下载失败回到 available；排空／安装失败停在 ready，保留缓存，只能明确重试 install，不由计时器或普通退出重放。
 
-Main 的普通退出在开始排空前 close 更新服务；提示阶段、下载中或排空中迟到的结果不能继续安装。close 清除计时器并禁用本进程的更新动作；如果普通关闭失败保留窗口，明确提示需重新启动以恢复检查。已授权安装由成功排空后的 quitting 标识与普通退出区分；缓存不会在新进程启动时自动安装。
+Main 的普通退出在开始排空前 close 更新服务；事件循环让出、下载中或排空中迟到的结果不能继续安装。close 清除计时器并禁用本进程的更新动作；如果普通关闭失败保留窗口，明确提示需重新启动以恢复检查。已授权安装由成功排空后的 quitting 标识与普通退出区分；仅缓存不会在新进程启动时安装；显式点击且排空后已持久授权的 R 由下次冷壳启动选择。
 
 `NsisUpdateInstaller` 重新核对 `latest.yml` 的准确版本、唯一安装文件名及 SHA-512，关闭自动下载、退出自动安装、预发布、降级和网络安装器。首版未配置发布者证书，不宣称通过签名校验。固定 HTTPS 发布及清单负责来源与完整性，下载完成不代表升级完成。
 

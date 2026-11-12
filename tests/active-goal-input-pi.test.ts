@@ -63,7 +63,12 @@ it.each(modes)('binds actual active input to goal versions and final review (%s)
     if(['stale-complete','stale-waiting','ack-unknown','ack-save-failure'].includes(mode)){expect(final).toMatchObject({status:'closed',outcome:'failed'});expect(final.wait).toBeUndefined();expect(final.goal?.blocked).toBeDefined()}
     else if(mode==='before-send-stop'||mode==='ack-stop')expect(final).toMatchObject({status:'closed',outcome:'cancelled'});
     else{expect(final).toMatchObject({status:'closed',outcome:'completed'});expect(final.goal?.review?.inputRevision).toBe(final.goal?.inputRevision);expect(final.goal?.plan?.inputRevision).toBe(final.goal?.inputRevision)}
-    const summaries=await app.execution(seed.entry.id).thread(start.taskId),mainNative=new Set(summaries.map(run=>run.events.find(event=>event.type==='session.bound')?.data.sessionId));expect(mainNative.size).toBe(1);expect([...mainNative][0]).toEqual(expect.any(String));expect(summaries).toHaveLength(mode==='waiting'||mode==='twice-waiting'?3:2);
+    const stale=mode==='stale-complete'||mode==='stale-waiting';
+    const summaries=await app.execution(seed.entry.id).thread(start.taskId),mainNative=new Set(summaries.map(run=>run.events.find(event=>event.type==='session.bound')?.data.sessionId));expect(mainNative.size).toBe(1);expect([...mainNative][0]).toEqual(expect.any(String));expect(summaries).toHaveLength(mode==='waiting'||mode==='twice-waiting'?3:stale?4:2);
+    if(stale){
+      expect(provider.main).toHaveLength(9);expect(final.goal?.inputRevision).toBe(2);expect(final.goal?.review).toBeUndefined();expect(final.activeInputs).toEqual(afterAccepted.activeInputs);
+      expect(summaries.slice(2).map(run=>run.source)).toEqual([1,2].map(attempt=>expect.objectContaining({kind:'goal-repair',scopeId:final.scopeId,attempt,failureCode:'GOAL_REVIEW_REQUIRED'})));
+    }
     expect(provider.member).toHaveLength(5);expect(provider.errors).toEqual([]);expect(provider.main.every(body=>!body.tools?.some(tool=>['write','edit','bash'].includes(tool.function.name)))).toBe(true);
     const graph=await app.dispatch('dispatch.graphSnapshot',{identity}),queue=await app.dispatch('loop.queue',{id:seed.entry.id,taskId:start.taskId}),nativeFile=summaries.at(-1)?.sessionFile,native=nativeFile?await fs.readFile(nativeFile,'utf8'):'';
     const requests={main:provider.main.length,member:provider.member.length};await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();

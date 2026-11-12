@@ -99,8 +99,8 @@ class N_src_backend_scheduler_engine_tools["tools/"] {
 - `dispatch` → `conversation`：导入。
 - `dispatch` → `assembly`：导入。
 - `dispatch` → `admission`：导入。
-- `dispatch` → `context`：导入。
 - `dispatch` → `goals`：导入。
+- `dispatch` → `context`：导入。
 - `dispatch` → `evidence`：导入。
 - `dispatch` → `budget`：导入。
 - `evidence` → `runtime`：导入。

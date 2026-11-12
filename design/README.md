@@ -11,6 +11,7 @@
 | [文档 1：通用项目架构设计规范与原则](project-architecture-standard.md) | 设计与开发的强制约束：十二条原则、依赖、契约及维护交付 |
 | [文档 2：架构治理规范与治理流程](architecture-governance-process.md) | 治理的标准流程、分级、迁移与验收；附 CBIM G01–G09 方案基线，不维护实时进度 |
 | [四份概念设计](../README.md#设计文档) | `docs/` 仅保留 01–04，说明理念与目标流程 |
+| [本地 AI 团队开发：核心模型与运行规则](team-workspace-network.md) | 面向单人/少数人的自动开发闭环及完成判据；当前不建设 Cindy 接入、联网协作或大型团队能力；目标不等于已实现 |
 | [源码整体架构](../src/ARCHITECTURE.md) | 当前模块边界、依赖与数据流，须结合实际源码核实 |
 
 先核实仓库与查询范围，拉取 Issues 并处理分页，再读取选定工单、相关记录和实际代码。查询失败不从历史 roadmap 重建清单。每个 Issue 独立开发、验证、提交；完成、暂停或受阻时，在已有授权内回填该 Issue，并在开发记录保存实际结果。单元通过不等于合并或发布通过，部分完成不提前关闭工单。
@@ -32,6 +33,10 @@
 
 ## 状态与历史证据
 
+[本地自动开发闭环审计与清理记录](verification/local-ai-workflow-audit-20261112.md) 区分已有能力、缺口和已删除的旧资产；开发优先级仍以 Issues 为准。
+
+当前公开版本与运行方式统一见 [项目说明](../README.md#运行)。[0.1.8 发布验收](verification/desktop-release-0.1.8-20261112.md) 等带日期报告只记录当时事实，不表示当前版本。
+
 本轮正式发布：[0.1.15 分层更新与真实在线升级验收](verification/desktop-release-0.1.15-20261112.md)。此前 [0.1.8 发布验收](verification/desktop-release-0.1.8-20261112.md) 保留为历史证据。
 
 候选阶段维护记录：[0.1.7 基线对齐与 0.1.8 候选验收](verification/desktop-018-alignment-20261111.md)。此前 [0.1.5 全量回归与本地制品报告](verification/full-acceptance-20261111.md) 保留为历史，不代表当前候选或 0.1.7 升级已通过。
@@ -51,8 +56,6 @@
 | [task/](task/README.md) | 任务、执行和架构评估规范及关联方案 |
 | [connector/](connector/README.md) | 链接器定义与引用边界 |
 | [memory/](memory/memory-spec.md) | 产品记忆机制说明 |
-| [skills/](skills/business-execution/SKILL.md) | 早期方法源文件，历史 Python 命令不是现行产品入口 |
 | [runtime/](runtime/common-rules.md) | 内部 Loop 使用的规则、Skill 正文与 [Skill／Workflow 结构规范](runtime/shared-skills-workflows.md) |
-| [scripts/](scripts/README.md) | 历史规则与迁移对照工具；当前开发验证按 package.json 和实际影响选择 |
 
 概念设计只维护 [01–04](../README.md#设计文档)，当前实现说明在 `src/` 的契约与架构文档中更新。

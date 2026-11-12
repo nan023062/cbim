@@ -1,5 +1,5 @@
 /**
- * 作用定位：在提交和重放中保护人工意见的一次等待消费、主体冻结及完成/返工引用。
+ * 作用定位：保护人工意见的一次消费、主体冻结及返工引用；独立业务拒绝仅绑定精确旧候选，不能替代人工接受。
  * 设计原因：有 accept 历史不等于当前输入已获批准；普通补充不能伪造人工接续，返工必须创建受理后新任务。
  * 职责边界：这里只核实持久关系；canonical、知识与文件时效仍由调度服务在审阅和结束时分别核实。
  */
@@ -44,7 +44,14 @@ export function validateHumanContinuations(previous:DispatchState,next:DispatchS
     }
     for(const replacement of review.superseded){
       const sourceTask=graph?.tasks.find(item=>item.taskId===replacement.taskId),sourceRun=next.runs?.find(item=>item.binding.runId===sourceTask?.result?.runId);
-      if(sourceTask?.status==='result_ready'&&sourceRun?.prepared.knowledgeRevision===review.knowledgeRevision)valid(replacement.humanDecision,'当前知识下的成功候选只能凭显式消费的拒绝/补证安排替代');
+      if(sourceTask?.status==='result_ready'&&sourceRun?.prepared.knowledgeRevision===review.knowledgeRevision)valid(replacement.humanDecision||replacement.rejectedCandidate,'当前成功候选须有人工决定或精确业务拒绝才能替代');
+      if(replacement.rejectedCandidate){
+        const rejected=replacement.rejectedCandidate;
+        valid(!replacement.humanDecision&&sourceTask?.scopeId===scope.scopeId&&sourceTask.status==='result_ready'&&!sourceTask.activeRunId&&sourceTask.result?.runId===rejected.runId&&sourceTask.result.resultId===rejected.resultId&&sourceTask.planRevision===rejected.planRevision,'业务拒绝不能改绑旧候选或混入人工决定');
+        const covered=new Set<string>();
+        for(const id of replacement.replacementTaskIds){const task=graph!.tasks.find(item=>item.taskId===id);valid(task&&task.scopeId===scope.scopeId&&graph!.tasks.indexOf(task)>graph!.tasks.indexOf(sourceTask)&&task.status==='result_ready'&&task.result&&!task.activeRunId,'业务返工须引用同周期后续任务的有效新候选');task.modules.forEach(module=>covered.add(module.moduleId))}
+        valid(sourceTask.modules.every(module=>covered.has(module.moduleId)),'业务返工必须覆盖原候选模块');
+      }
       if(!replacement.humanDecision)continue;
       const record=referencedHumanDecision(scope,replacement.humanDecision),source=graph?.tasks.find(item=>item.taskId===replacement.taskId),candidate=record?.proof.candidates.find(item=>item.taskId===source?.taskId);
       valid(intent&&record&&record.decision!=='accept'&&source?.scopeId===scope.scopeId&&source.status==='result_ready'&&candidate&&source.revision===candidate.taskRevision&&source.result?.runId===candidate.runId&&source.result.resultId===candidate.resultId&&source.planRevision===candidate.planRevision&&candidate.evidenceToolCallIds.every(id=>source.result!.evidenceRefs.includes(id)),'人工返工替代必须引用本输入已消费的拒绝/补证及其精确原候选');

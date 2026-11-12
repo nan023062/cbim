@@ -39,7 +39,12 @@ it.each(['accept','reject','request_evidence','subject-changed','review-file-cha
     for(const [file,bytes] of Object.entries(c.bytes))expect((await humanContinuationSourceBytes(c.f.user,c.entry.id))[file]).toBe(bytes);
     if(rework){expect(graph.tasks).toHaveLength(2);const next=graph.tasks.find((task:TaskNode)=>task.goal===data.reworkGoal);expect(next?.result).toBeTruthy();expect(next?.assignee.agentInstanceId).not.toBe(old?.assignee.agentInstanceId);expect(scope.wait?.waitId).not.toBe(c.saved.scopes[0].wait?.waitId);expect(scope.goal?.review?.checks.find(value=>value.criterionId===data.humanId)?.outcome).toBe('needs_human');expect(await fs.readFile(path.join(c.f.a,data.file),'utf8')).toBe(data.reworked)}
     else{expect(graph.tasks).toEqual(c.graph.tasks);expect(scope.outcome).toBe(mode==='accept'?'completed':mode==='stop'?'cancelled':'failed');if(mode==='accept'){const check=scope.goal?.review?.checks.find(value=>value.criterionId===data.humanId);expect(check?.outcome).toBe('satisfied');expect(check?.evidence).toContainEqual({kind:'human-decision',decisionId:c.decision.record.decisionId,continuationId:c.request.commandId})}}
-    expect(c.provider.main).toHaveLength(rework?13:mode==='stop'?7:11);expect(c.provider.member).toHaveLength(rework?14:7);expect((await app.dispatch('loop.queue',{id:c.entry.id,taskId:c.request.rootSessionId}))[0].status).toBe('paused');
+    if(mode==='subject-changed'){
+      expect(c.provider.state.finalReview.error).toBeTruthy();expect(scope.goal?.review).toBeUndefined();
+      const thread=await app.execution(c.entry.id).thread(c.request.rootSessionId);
+      expect(thread).toHaveLength(5);expect(thread.slice(3).map(run=>run.source)).toEqual([1,2].map(attempt=>expect.objectContaining({kind:'goal-repair',scopeId:scope.scopeId,attempt,failureCode:'GOAL_REVIEW_REQUIRED'})));
+    }
+    expect(c.provider.main).toHaveLength(rework||mode==='subject-changed'?13:mode==='stop'?7:11);expect(c.provider.member).toHaveLength(rework?14:7);expect((await app.dispatch('loop.queue',{id:c.entry.id,taskId:c.request.rootSessionId}))[0].status).toBe('paused');
     const sequence=[...c.provider.sequence],bytes=await humanContinuationSourceBytes(c.f.user,c.entry.id);await app.shutdown();app=new Application(new Paths(c.f.user,path.resolve('.')),path.resolve('design'));await app.init();expect(await c.records()).toEqual(saved);expect(await humanContinuationSourceBytes(c.f.user,c.entry.id)).toEqual(bytes);expect(humanContinuationReceiptSchema.parse(await app.dispatch('loop.humanContinue',c.request)).continuation).toEqual(receipt.continuation);expect(c.provider.sequence).toEqual(sequence);
   }finally{await app.shutdown();await c.cleanup()}
 },150000);

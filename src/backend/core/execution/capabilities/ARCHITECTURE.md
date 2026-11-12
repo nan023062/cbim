@@ -15,6 +15,7 @@
 | [member-tool-capabilities.ts](member-tool-capabilities.ts) | 把本轮真实任务、产物、验证及受控执行能力适配为引擎统一端口。 |
 | [output-manifest-capture.ts](output-manifest-capture.ts) | 成员本轮完整产物采集的短期门闩，冻结 Workflow 范围并将真实观察可靠写入 canonical。 |
 | [run-artifact-transition.ts](run-artifact-transition.ts) | 正式成员删除/移动工具的唯一授权、写前核实和可靠阶段记录，平台副作用只通过此运行端口。 |
+| [run-code-check.ts](run-code-check.ts) | 单轮成员的代码检查门闩，连接冻结命令、权限完成后的真实平台与可信日志。 |
 | [run-controlled-file.ts](run-controlled-file.ts) | 正式成员受控文件工具的单次授权与短门闩，平台写入只经过此可信运行端口。 |
 | [run-scoped-execution.ts](run-scoped-execution.ts) | 冻结范围工具的 Runtime 一次授权、短门闩和实际退出屏障。 |
 | [run-validation.ts](run-validation.ts) | 正式成员的 JSON/CSV/PNG 验证短门闩，连接冻结要求、原文件或完整集合身份及平台同字节读取。 |
@@ -98,6 +99,7 @@ class N_src_backend_core_execution_capabilities_member_tool_capabilities_ts["mem
 }
 class N_src_backend_core_execution_capabilities_member_tool_capabilities_ts_MemberToolPorts["MemberToolPorts"] {
   <<interface>>
+  +codeCheckTools
   +taskTools
   +memberHelpTools
   +artifactTools
@@ -111,7 +113,7 @@ class N_src_backend_core_execution_capabilities_member_tool_capabilities_ts_Memb
 N_src_backend_core_execution_capabilities_member_tool_capabilities_ts ..> N_src_backend_core_execution_capabilities_member_tool_capabilities_ts_MemberToolPorts : 声明
 ```
 
-直接依赖：[../engine-tools.ts](../engine-tools.ts)、[../../evidence/progress-tools.ts](../../evidence/progress-tools.ts)、[../../tasks/member-help-tools.ts](../../tasks/member-help-tools.ts)、[../../evidence/artifact-tools.ts](../../evidence/artifact-tools.ts)、[../../evidence/output-manifest-tools.ts](../../evidence/output-manifest-tools.ts)、[../../tasks/member-checkpoint-tools.ts](../../tasks/member-checkpoint-tools.ts)、[../../evidence/validation-tools.ts](../../evidence/validation-tools.ts)、[run-controlled-file.ts](run-controlled-file.ts)、[../../file-operations/artifact-transition.ts](../../file-operations/artifact-transition.ts)、[run-scoped-execution.ts](run-scoped-execution.ts)。
+直接依赖：[../engine-tools.ts](../engine-tools.ts)、[run-code-check.ts](run-code-check.ts)、[../../evidence/progress-tools.ts](../../evidence/progress-tools.ts)、[../../tasks/member-help-tools.ts](../../tasks/member-help-tools.ts)、[../../evidence/artifact-tools.ts](../../evidence/artifact-tools.ts)、[../../evidence/output-manifest-tools.ts](../../evidence/output-manifest-tools.ts)、[../../tasks/member-checkpoint-tools.ts](../../tasks/member-checkpoint-tools.ts)、[../../evidence/validation-tools.ts](../../evidence/validation-tools.ts)、[run-controlled-file.ts](run-controlled-file.ts)、[../../file-operations/artifact-transition.ts](../../file-operations/artifact-transition.ts)、[run-scoped-execution.ts](run-scoped-execution.ts)。
 
 ### output-manifest-capture.ts
 
@@ -233,6 +235,52 @@ N_src_backend_core_execution_capabilities_run_artifact_transition_ts_external_Ar
 ```
 
 直接依赖：[../../foundation/serialization.ts](../../foundation/serialization.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../workspace/artifact-scope.ts](../../workspace/artifact-scope.ts)、[../../file-operations/artifact-transition.ts](../../file-operations/artifact-transition.ts)、[../../file-operations/artifact-transition-evidence.ts](../../file-operations/artifact-transition-evidence.ts)、[../../evidence/output-manifest-evidence.ts](../../evidence/output-manifest-evidence.ts)、[../../evidence/output-manifest.ts](../../evidence/output-manifest.ts)、[output-manifest-capture.ts](output-manifest-capture.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)。
+
+### run-code-check.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_execution_capabilities_run_code_check_ts["run-code-check.ts"] {
+  <<module>>
+  +prepareCodeChecks()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_backend_core_execution_capabilities_run_code_check_ts["run-code-check.ts"] {
+  <<module>>
+}
+class N_src_backend_core_execution_capabilities_run_code_check_ts_CodeCheckContext["CodeCheckContext"] {
+  <<interface>>
+  +currentVersion()
+  +generation()
+  +assertReady()
+  +assertKnowledge()
+  +save()
+}
+N_src_backend_core_execution_capabilities_run_code_check_ts ..> N_src_backend_core_execution_capabilities_run_code_check_ts_CodeCheckContext : 声明
+class N_src_backend_core_execution_capabilities_run_code_check_ts_RunCodeCheck["RunCodeCheck"] {
+  +list()
+  +guard()
+  +observed()
+  +stop()
+  +records()
+  +call()
+  -bindings
+  -identity
+  -knowledgeRevision
+  -port
+  -context
+  -controller
+  -events
+  -reserved
+  -generations
+}
+N_src_backend_core_execution_capabilities_run_code_check_ts ..> N_src_backend_core_execution_capabilities_run_code_check_ts_RunCodeCheck : 声明
+```
+
+直接依赖：[../../foundation/errors.ts](../../foundation/errors.ts)、[../../workspace/code-check.ts](../../workspace/code-check.ts)、[../../workspace/artifact-scope.ts](../../workspace/artifact-scope.ts)、[../../evidence/output-manifest-evidence.ts](../../evidence/output-manifest-evidence.ts)、[../../evidence/code-check.ts](../../evidence/code-check.ts)、[../types.ts](../types.ts)。
 
 ### run-controlled-file.ts
 
@@ -411,32 +459,36 @@ class N_src_backend_core_execution_capabilities_artifact_capture_ts["artifact-ca
 class N_src_backend_core_execution_capabilities_member_tool_capabilities_ts["member-tool-capabilities.ts"] {
   <<module>>
 }
+class N_src_backend_core_execution_capabilities_run_code_check_ts["run-code-check.ts"] {
+  <<module>>
+}
 class N_src_backend_core_execution_capabilities_run_controlled_file_ts["run-controlled-file.ts"] {
   <<module>>
 }
 class N_src_backend_core_execution_capabilities_run_scoped_execution_ts["run-scoped-execution.ts"] {
   <<module>>
 }
+N_src_backend_core_execution_capabilities_member_checkpoint_ts ..> N_src_backend_core_execution_capabilities_artifact_capture_ts : 导入依赖
+N_src_backend_core_execution_capabilities_member_tool_capabilities_ts ..> N_src_backend_core_execution_capabilities_run_code_check_ts : 导入依赖
+N_src_backend_core_execution_capabilities_member_tool_capabilities_ts ..> N_src_backend_core_execution_capabilities_run_controlled_file_ts : 导入依赖
+N_src_backend_core_execution_capabilities_member_tool_capabilities_ts ..> N_src_backend_core_execution_capabilities_run_scoped_execution_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_backend_core_execution_capabilities_run_artifact_transition_ts["run-artifact-transition.ts"] {
   <<module>>
 }
 class N_src_backend_core_execution_capabilities_output_manifest_capture_ts["output-manifest-capture.ts"] {
   <<module>>
 }
-N_src_backend_core_execution_capabilities_member_checkpoint_ts ..> N_src_backend_core_execution_capabilities_artifact_capture_ts : 导入依赖
-N_src_backend_core_execution_capabilities_member_tool_capabilities_ts ..> N_src_backend_core_execution_capabilities_run_controlled_file_ts : 导入依赖
-N_src_backend_core_execution_capabilities_member_tool_capabilities_ts ..> N_src_backend_core_execution_capabilities_run_scoped_execution_ts : 导入依赖
-N_src_backend_core_execution_capabilities_run_artifact_transition_ts ..> N_src_backend_core_execution_capabilities_output_manifest_capture_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_backend_core_execution_capabilities_run_validation_ts["run-validation.ts"] {
   <<module>>
 }
 class N_src_backend_core_execution_capabilities_artifact_capture_ts["artifact-capture.ts"] {
   <<module>>
 }
+N_src_backend_core_execution_capabilities_run_artifact_transition_ts ..> N_src_backend_core_execution_capabilities_output_manifest_capture_ts : 导入依赖
 N_src_backend_core_execution_capabilities_run_validation_ts ..> N_src_backend_core_execution_capabilities_artifact_capture_ts : 导入依赖
 ```
 

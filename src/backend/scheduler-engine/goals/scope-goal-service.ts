@@ -7,7 +7,7 @@
  * 已放弃的多段检查点作为换边来源时核全部原日志，不只信任最新段的摘要。
  * 持久成员等待通过独立只读核验精确保留原检查点和后继，主轮安全结算才停泊；未知和在途仍拒绝。
  * 问答边界：当前与历史候选共用真实业务回执校验，普通回答及取消不能替代目标完成或人工验收依据。
- * 作用定位：保存本轮目标计划与审阅，为门禁、依赖修订和人工决定核验真实候选；已放弃检查点换边仍核原冻结日志，不复活旧任务。
+ * 作用定位：保存目标计划与审阅，核验返工前的原始日志及精确拒绝候选；替代仍须真实新成果，人工项不因业务拒绝而降级。
  * 设计原因：业务计划重核岗位、来源和模型后冻结绑定；候选按原岗位及 Workflow 比较，不用当前登记覆盖历史。模型只能申请完成或等待，结算再核证据、任务压力与副作用；明确返工不把旧文件再次放行。
  * 职责边界：人工项仅引用当前实际消费的接受；审阅和完成均复核原业务主体、精确候选与选定字节，负面意见只能明确安排新任务返工。不关闭周期或签署，外部文件核实不构成原子快照。
  * 证据边界：治理待办与模块负责人查询、变更都不能被主知识引用或成员候选包装成业务完成证据；负责人提交仍属于真实知识写时序，旧业务审阅不能跨过它。
@@ -202,6 +202,28 @@ export class ScopeGoalService {
     }catch(error){fail('GOAL_WORKFLOW_UNMET',error instanceof Error?error.message:'成员 Workflow 程序条件无法核实')}
     return summary;
   }
+  /** 返工只接完整已结算主轮；逐条核原主链和成员日志，未知或未授权操作不变为重试许可。 */
+  async repairContext(identity:GraphIdentity,scopeId:string,expected:RunSummary){
+    const state=await this.store.read(),scope=this.scope(state,identity,scopeId),graph=this.graph(state,scope);
+    check(scope.status==='active'&&!scope.goal?.blocked&&scope.runTracking?.mainRunIds.at(-1)===expected.runId,'GOAL_REPAIR_UNSAFE','原周期或最新主运行已经变化');
+    for(const runId of scope.runTracking.mainRunIds){
+      const summary=await this.logs().inspectMain(scope.rootSessionId,runId);this.main(state,summary,scope,graph,runId);
+      const facts=executionToolFacts(summary,{binding:{workspaceId:scope.workspaceId,taskId:scope.rootSessionId,runId}});
+      check(summary.status==='completed'&&summary.logIntegrity?.partialTail===false&&!summary.unresolvedTools.length&&summary.events.at(-1)?.type==='run.settled'&&!facts.invalid&&!facts.counts.unknown&&!facts.counts.not_authorized,'GOAL_REPAIR_UNSAFE','主运行含未知、不完整或未授权事实，不能自动返工');
+      if(runId===expected.runId)check(sameGoalValue(summary.events,expected.events),'GOAL_REPAIR_UNSAFE','主运行结算后日志已变化');
+    }
+    const tasks=graph.tasks.filter(task=>task.scopeId===scopeId);
+    check(!tasks.some(task=>task.activeRunId||['planned','queued','running','waiting','checkpointed'].includes(task.status)),'GOAL_REPAIR_UNSAFE','当前周期仍有未结束工作');
+    for(const task of tasks){
+      if(task.result){const run=state.runs?.find(value=>value.binding.runId===task.result!.runId);check(run,'GOAL_REPAIR_UNSAFE','成员运行缺失');await this.validateHistoricalMemberCandidate(state,scope,graph,task,run.prepared.knowledgeRevision)}
+      for(const run of (state.runs??[]).filter(value=>value.binding.taskId===task.taskId)){
+        const summary=await this.logs().inspectMember(run),facts=executionToolFacts(summary,{binding:{workspaceId:scope.workspaceId,taskId:task.taskId,runId:run.binding.runId}});
+        check(['completed','failed','cancelled'].includes(summary.status)&&summary.logIntegrity?.partialTail===false&&!summary.unresolvedTools.length&&!facts.invalid&&!facts.counts.unknown&&!facts.counts.not_authorized,'GOAL_REPAIR_UNSAFE','成员运行或副作用未可靠结算');
+      }
+    }
+    check(sameGoalValue(await this.store.read(),state),'GOAL_REPAIR_UNSAFE','返工取证期间调度状态已变化');
+    return {scope,graph};
+  }
   /** 调度修订复用交付证据规则，并要求 canonical 头、连续事件及实际终态完整；不把候选视为验收。 */
   async validateMemberCandidate(state:DispatchState,scope:DispatchScope,graph:GraphSnapshot,task:TaskNode,knowledgeRevision:string):Promise<RunSummary>{
     const summary=await this.member(state,scope,graph,task,knowledgeRevision),run=state.runs!.find(item=>item.binding.runId===task.result!.runId&&item.binding.taskId===task.taskId)!;
@@ -347,6 +369,13 @@ export class ScopeGoalService {
       const source=graph.tasks.find(task=>task.taskId===item.taskId);
       const stale=source?.status==='result_ready'&&state.runs?.some(run=>run.binding.runId===source.result?.runId&&run.prepared.knowledgeRevision!==knowledgeRevision);
       const human=item.humanDecision?consumedHumanDecision(scope,item.humanDecision):undefined;
+      const rejected=item.rejectedCandidate;
+      if(rejected){
+        check(!human&&source?.status==='result_ready'&&source.result?.runId===rejected.runId&&source.result.resultId===rejected.resultId&&source.planRevision===rejected.planRevision,'GOAL_SUPERSESSION_INVALID','业务拒绝必须精确引用原候选，不能混合人工决定');
+        const run=state.runs?.find(value=>value.binding.taskId===source.taskId&&value.binding.runId===rejected.runId);
+        check(run,'GOAL_SUPERSESSION_INVALID','业务拒绝的原运行不可核实');
+        await this.validateHistoricalMemberCandidate(state,scope,graph,source,run.prepared.knowledgeRevision);
+      }
       if(human){
         const candidate=human.record.proof.candidates.find(candidate=>candidate.taskId===source?.taskId);
         check(human.record.decision!=='accept'&&source?.status==='result_ready'&&candidate&&candidate.taskRevision===source.revision&&candidate.planRevision===source.planRevision&&candidate.resultId===source.result?.resultId&&candidate.runId===source.result?.runId,'GOAL_SUPERSESSION_INVALID','返工引用必须是本次消费的拒绝或补证及其精确旧候选');
@@ -355,7 +384,7 @@ export class ScopeGoalService {
         this.memberTerminal(scope,source,historicalRun,summary);
         check(hash(json(summary.events))===candidate.logHash&&candidate.evidenceToolCallIds.every(id=>source.result!.evidenceRefs.includes(id)),'GOAL_SUPERSESSION_INVALID','被拒候选的原始日志或证据已经变化，不能用旧决定替代');
       }
-      check(source&&source.scopeId===scope.scopeId&&(['failed','blocked','cancelled','interrupted'].includes(source.status)||stale||human),'GOAL_SUPERSESSION_INVALID','只能替代失败、基线过期或本次人工决定明确要求返工的候选');
+      check(source&&source.scopeId===scope.scopeId&&(['failed','blocked','cancelled','interrupted'].includes(source.status)||stale||human||rejected),'GOAL_SUPERSESSION_INVALID','只能替代失败、基线过期或明确拒绝的精确候选');
       const covered=new Set<string>();
       for(const id of item.replacementTaskIds){
         const replacement=graph.tasks.find(task=>task.taskId===id);

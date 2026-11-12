@@ -1,3 +1,6 @@
+import {spawn,type ChildProcess} from 'node:child_process';
+import {Application} from '../src/backend/main/assembly/application';
+import {Paths} from '../src/backend/main/platform/paths';
 import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {expect,it,vi} from 'vitest';
@@ -22,8 +25,8 @@ type ProviderRequest={
 };
 
 /** Real Application, native Pi, dispatch persistence and continuation; only the provider uses deterministic localhost responses. */
-it('automatically executes a model dispatch and returns its candidate to the same main conversation without replay after reopening',async()=>{
-  const f=await fixture();
+it.each(['normal','repair','restart','restart-corrupt','restart-pending','restart-stopped','restart-model'] as const)('automatically executes a model dispatch, handles final review and never replays on reopen (%s)',async(mode)=>{
+  const f=await fixture();let child:ChildProcess|undefined;
   const mainGoal='COLLAB_MAIN: 请让团队成员核实模块内的实际文件，并将结果告诉我';
   const memberGoal='COLLAB_MEMBER: 读取协作输入文件并报告实际内容';
   const businessFact='COLLAB_FILE_FACT_7c4d52';
@@ -46,12 +49,14 @@ it('automatically executes a model dispatch and returns its candidate to the sam
         if(turn===0)tool('main-goal-plan','cbim_goal_plan',goalPlanArguments({objective:mainGoal,agentId,ownerSelection,moduleIds:[moduleId],acceptance}));
         else if(turn===1)tool('main-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,i)=>({id:'criterion-'+i,text})),prerequisites:[]});
         else if(turn===2)reply('已登记成员任务，等待返回，尚未宣称完成。');
-        else if(turn===3)tool('main-goal-inspect','cbim_goal_inspect',{});
-        else if(turn===4)tool('main-goal-review','cbim_goal_review',goalCompleteArguments(body,'main-goal-inspect'));
+        else if(turn===3||mode==='repair'&&turn===5)tool('main-goal-inspect','cbim_goal_inspect',{});
+        else if(mode!=='repair'&&turn===4||mode==='repair'&&turn===6)tool('main-goal-review','cbim_goal_review',goalCompleteArguments(body,'main-goal-inspect'));
         else reply(JSON.stringify(body.messages).includes(candidate)?'主 Agent 已收到成员结果：'+businessFact+'；候选尚未验收。':'主会话没有收到成员事实。');
       }else{
         // A model may hallucinate an unavailable native tool; readonly scope must still prevent the real write.
-        if(turn===0)tool('member-forbidden-write','write',{path:'collaboration-forbidden.txt',content:'must-not-be-written'});
+        if(turn===0&&mode.startsWith('restart'))tool('member-write','write',{path:'collaboration-output.txt',content:businessFact});
+        else if(turn===0&&mode==='repair')tool('member-pre-read','read',{path:'collaboration-input.txt'});
+        else if(turn===0)tool('member-forbidden-write','write',{path:'collaboration-forbidden.txt',content:'must-not-be-written'});
         else if(turn===1)tool('member-plan','cbim_task_plan',{expectedVersion:0,goal:memberGoal,reason:'处理主会话可靠派发的目标',acceptance,steps:[{id:'verify',title:'读取实际文件并核实内容',owner:'开发者'}]});
         else if(turn===2)tool('member-read','read',{path:'collaboration-input.txt'});
         else if(turn===3)tool('member-step','cbim_task_step',{expectedVersion:1,id:'verify',state:'reported_done',evidenceIds:['member-read']});
@@ -74,14 +79,35 @@ it('automatically executes a model dispatch and returns its candidate to the sam
     ownerSelection=(await registerExplicitFixtureOwner(f.app,entry.id,{agentId,moduleIds:[moduleId],profileId:(await f.app.models.list()).selectedId!,modelId:'collaboration-fixture'})).selection;
     await fs.writeFile(path.join(f.a,'collaboration-input.txt'),businessFact);
 
-    const started=await f.app.dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'read',turnTimeoutMs:15000}}) as {taskId:string;runId:string};
-    const identity={workspaceId:entry.id,rootSessionId:started.taskId};
+    let started!:{taskId:string;runId:string};
+    if(mode.startsWith('restart')){
+      await f.app.shutdown();const marker=path.join(f.temp,'ready.json');
+      child=spawn(process.execPath,['--import','tsx','tests/automatic-return-crash-host.ts',f.user,entry.id,mainGoal,marker,mode],{windowsHide:true,stdio:['ignore','ignore','pipe']});
+      let stderr='';child.stderr!.on('data',chunk=>{stderr+=chunk});const exited=new Promise(resolve=>child!.once('exit',resolve));
+      await vi.waitFor(async()=>{if(child!.exitCode!==null)throw Error(stderr);started=JSON.parse(await fs.readFile(marker,'utf8'))},{timeout:30000,interval:50});
+      child.kill();await exited;
+      if(mode==='restart-corrupt')await fs.appendFile(path.join(new Paths(f.user,path.resolve('.')).project(entry.id),'loop-engine','tasks',started.taskId,started.runId,'events.jsonl'),'{');
+      f.app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));
+      if(mode==='restart-model'){
+        await f.app.init({restore:false});const {id,hasKey,...profile}=(await f.app.models.list()).profiles[0];
+        await f.app.models.save({id,profile:{...profile,models:profile.models.map(model=>({...model,maxTokens:2048}))}});
+      }else await f.app.init();
+      await f.app.open(entry.id);
+    }else started=await f.app.dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'read',turnTimeoutMs:15000}}) as {taskId:string;runId:string};
+    const identity={workspaceId:entry.id,rootSessionId:started!.taskId};
+    if(mode.startsWith('restart-')){
+      const scope=(await f.app.memberDispatch(entry.id).automaticReturns.scopes()).find(value=>value.rootSessionId===started.taskId)!;
+      expect(scope).toMatchObject({status:'closed',outcome:mode==='restart-stopped'?'cancelled':'interrupted'});
+      expect(mainRequests).toHaveLength(3);expect(memberRequests).toHaveLength(6);
+      expect(await fs.readFile(path.join(f.a,'collaboration-output.txt'),'utf8')).toBe(businessFact);
+      await f.app.open(entry.id,true);expect(mainRequests).toHaveLength(3);expect(memberRequests).toHaveLength(6);return;
+    }
     const graph=()=>f.app.dispatch('dispatch.graphSnapshot',{identity}) as Promise<GraphSnapshot>;
     const thread=()=>f.app.execution(entry.id).thread(started.taskId);
     let history:RunSummary[]=[];
     await vi.waitFor(async()=>{
       history=await thread();
-      expect(history).toHaveLength(2);
+      expect(history).toHaveLength(mode==='repair'?3:2);
       expect(history.every(run=>run.status==='completed')).toBe(true);
     },{timeout:30000,interval:50});
 
@@ -91,8 +117,8 @@ it('automatically executes a model dispatch and returns its candidate to the sam
     await vi.waitFor(async()=>expect(await f.app.memberDispatch(entry.id).goals.inspect(identity,task.scopeId!)).toMatchObject({status:'closed',outcome:'completed',goal:{revision:3,review:{decision:'complete'}}}),{timeout:5000,interval:30});
     expect(task).toMatchObject({goal:memberGoal,status:'result_ready',requester:snapshotGraph.root.agent,assignee:{agentId},modules:[{moduleId}],result:{summary:candidate,evidenceRefs:['member-read'],acceptance:'not_evaluated'}});
     expect(snapshotGraph.edges.filter(edge=>edge.kind==='dispatch')).toEqual([expect.objectContaining({fromNodeId:snapshotGraph.root.nodeId,toNodeId:task.nodeId})]);
-    expect(history.map(run=>run.task.taskId)).toEqual([started.taskId,started.taskId]);
-    expect(new Set(history.map(run=>run.runId)).size).toBe(2);
+    expect(history.map(run=>run.task.taskId)).toEqual(Array(mode==='repair'?3:2).fill(started.taskId));
+    expect(new Set(history.map(run=>run.runId)).size).toBe(mode==='repair'?3:2);
     expect(history[1].sessionFile).toBe(history[0].sessionFile);
     const resumed=history[1].events.find(event=>event.type==='run.started');
     expect(resumed?.data.source).toMatchObject({kind:'member-results',continuationId:expect.any(String)});
@@ -100,13 +126,15 @@ it('automatically executes a model dispatch and returns its candidate to the sam
     expect(history.every(run=>run.acceptance==='not_evaluated')).toBe(true);
     const member=await f.app.dispatch('dispatch.executionInspect',{...identity,taskId:task.taskId}) as MemberExecutionView;
     expect(member.runs).toHaveLength(1);
-    expect(member.runs[0]).toMatchObject({permission:'read',status:'completed',binding:{rootSessionId:started.taskId}});
+    expect(member.runs[0]).toMatchObject({permission:mode.startsWith('restart')?'execute':'read',status:'completed',binding:{rootSessionId:started!.taskId}});
     expect(await f.app.dispatch('dispatch.messages',{...identity,agentSessionId:snapshotGraph.root.agent.agentSessionId})).toEqual([]);
     await expect(fs.readFile(path.join(f.a,'collaboration-forbidden.txt'),'utf8')).rejects.toMatchObject({code:'ENOENT'});
     expect(await fs.readFile(path.join(f.a,'collaboration-input.txt'),'utf8')).toBe(businessFact);
-    expect(mainRequests).toHaveLength(6);
+    expect(mainRequests).toHaveLength(mode==='repair'?8:6);
+    if(mode==='repair'){expect(history[2].source).toMatchObject({kind:'goal-repair',attempt:1,sourceRunId:history[1].runId});expect(history[2].sessionFile).toBe(history[0].sessionFile)}
     expect(memberRequests).toHaveLength(6);
-    expect(memberRequests.every(body=>body.tools?.every(tool=>!tool.function.name.startsWith('cbim_dispatch_')&&tool.function.name!=='write'))).toBe(true);
+    expect(memberRequests.every(body=>body.tools?.every(tool=>!tool.function.name.startsWith('cbim_dispatch_')&&(mode.startsWith('restart')||tool.function.name!=='write')))).toBe(true);
+    if(mode.startsWith('restart'))expect(await fs.readFile(path.join(f.a,'collaboration-output.txt'),'utf8')).toBe(businessFact);
     expect(JSON.stringify(mainRequests[3].messages)).toContain(candidate);
     expect(JSON.stringify(memberRequests[3].messages)).toContain(businessFact);
     expect(transportErrors).toEqual([]);
@@ -115,11 +143,11 @@ it('automatically executes a model dispatch and returns its candidate to the sam
     const count=requests.length;
     await f.app.dispatch('loop.stop',{id:entry.id,taskId:started.taskId});
     await f.app.open(entry.id,true);
-    expect(await thread()).toHaveLength(2);
+    expect(await thread()).toHaveLength(mode==='repair'?3:2);
     expect((await graph()).tasks).toEqual(snapshotGraph.tasks);
     expect(await f.app.dispatch('dispatch.messages',{...identity,agentSessionId:snapshotGraph.root.agent.agentSessionId})).toEqual([]);
     expect(requests).toHaveLength(count);
-  }finally{await f.cleanup();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
+  }finally{child?.kill();await f.app.shutdown();await f.cleanup();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
 },90000);
 
 it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input independent during automatic collaboration (%s)',async(outcome)=>{

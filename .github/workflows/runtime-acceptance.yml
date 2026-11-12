@@ -1,0 +1,53 @@
+name: Verify runtime resource upgrade
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_tag:
+        description: Unique draft containing frozen R candidate
+        required: true
+        type: string
+      source_commit:
+        description: Frozen resource source commit
+        required: true
+        type: string
+      manifest_digest:
+        description: SHA256 of signed manifest payload
+        required: true
+        type: string
+      mode:
+        description: Candidate staging or actual public update
+        required: true
+        type: choice
+        options: [candidate, online]
+permissions:
+  contents: read
+jobs:
+  acceptance:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.19.0'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify fixed installed C and exact signed R
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CBIM_R_CANDIDATE: ${{ inputs.candidate_tag }}
+          CBIM_R_SOURCE: ${{ inputs.source_commit }}
+          CBIM_R_DIGEST: ${{ inputs.manifest_digest }}
+          CBIM_R_MODE: ${{ inputs.mode }}
+        run: pnpm exec tsx scripts/runtime-release-acceptance.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: runtime-${{ inputs.mode }}-${{ github.run_id }}
+          path: |
+            test-results/runtime-acceptance/*.json
+            test-results/runtime-acceptance/*.png
+          if-no-files-found: ignore

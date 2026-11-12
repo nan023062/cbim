@@ -1,7 +1,7 @@
 /**
  * 协作模式及兜底模型自周期建立后不可更换；旧周期缺省不追溯获得 auto 资格。
  * 显式 memberPause 可保留无租约的检查点和后继；Store 独立核全量清单，等待取消仅开放精确封存变更。
- * 作用定位：校验调度周期、等待检查点、运行中补充和显式接续的持久状态及原子变更，供派发存储提交与重放共用。
+ * 作用定位：校验调度周期、不可变回传批次、等待检查点、运行中补充和显式接续的持久状态及原子变更，供派发存储提交与重放共用。
  * 设计原因：旧目标和已消费意图必须保持不可变；实际接收与等待接续合并输入版本，未核实发送不能沿旧计划完成，主运行及预算仍独立累积。
  * 职责边界：只校验已记录事实，不读取附件、不启动模型，不将用户补充当作业务验收或工具提权。
  */
@@ -21,6 +21,7 @@ import {validateEffectDispositionLink} from './effect-observation-invariants';
 import {scopeReplanSchema} from './scope-replan';
 import {scopeFreshContext} from './fresh-context';
 import {scopeRunTrackingSchema} from './scope-run-tracking';
+import {automaticReturnSchema,validateAutomaticReturns} from './automatic-return';
 import {validateScopeRunTracking} from './scope-run-invariants';
 import {scopeBudgetSchema} from '../budget/scope-budget';
 import {validateScopeBudgets} from '../budget/scope-budget-invariants';
@@ -31,7 +32,7 @@ import {validateHumanContinuations} from './human-continuation-invariants';
 import {memberPauseSelection,assertMemberPausePermission} from './member-pause-rules';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
-const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),executionPolicy:collaborationPolicySchema.optional(),runTracking:scopeRunTrackingSchema.optional(),budget:scopeBudgetSchema.optional(),humanDecisions:scopeHumanDecisionsSchema.optional(),wait:dispatchScopeWaitSchema.optional(),continuations:z.array(scopeContinuationRecordSchema).max(31).optional(),activeInputs:z.array(scopeActiveInputSchema).min(1).max(64).optional(),recovery:scopeRecoverySchema.optional(),replan:scopeReplanSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
+const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),executionPolicy:collaborationPolicySchema.optional(),runTracking:scopeRunTrackingSchema.optional(),automaticReturns:z.array(automaticReturnSchema).max(32).optional(),budget:scopeBudgetSchema.optional(),humanDecisions:scopeHumanDecisionsSchema.optional(),wait:dispatchScopeWaitSchema.optional(),continuations:z.array(scopeContinuationRecordSchema).max(31).optional(),activeInputs:z.array(scopeActiveInputSchema).min(1).max(64).optional(),recovery:scopeRecoverySchema.optional(),replan:scopeReplanSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
 function valid(condition:unknown,message:string):asserts condition {if(!condition)fail('GRAPH_INPUT_INVALID',message)}
 function ordered(value:unknown):unknown {return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,ordered(item)])):value}
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
@@ -48,6 +49,7 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
     valid(graph,'调度周期缺少对应主会话根');
     valid(graph.tasks.filter(task=>task.scopeId===scope.scopeId).length<=500,'调度周期超过原子关闭可容纳的 500 个任务');
     const old=previous.scopes?.find(item=>item.scopeId===scope.scopeId);
+    validateAutomaticReturns(old,scope,graph);
     const recovery=scope.recovery;
     const replan=scope.replan,fresh=scopeFreshContext(scope),intent=recovery??replan;
     validateEffectDispositionLink(next,scope);

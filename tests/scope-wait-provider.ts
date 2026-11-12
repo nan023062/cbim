@@ -37,7 +37,12 @@ export async function scopeWaitProvider(options:{missingReview?:boolean;holdFina
           tool('wait-goal-plan','cbim_goal_plan',{...plan,criteria:[...plan.criteria,{id:waitFixture.humanId,text:waitFixture.humanCriterion,kind:'human'}],assignments:plan.assignments.map(item=>({...item,criterionIds:[...item.criterionIds,waitFixture.humanId]}))});
         }else if(turn===1)tool('wait-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:waitFixture.memberGoal,acceptance:waitFixture.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
         else if(turn===2)reply('成员已派发，等待读取结果。');
-        else if(options.missingReview){assert.equal(turn,3);reply('没有结构化审阅，但文字声称已完成。')}
+        else if(options.missingReview){
+          // 缺少审阅会触发两次无进展返工；继续给出无效文字，不能把模型回合结束当作验收。
+          assert.ok(turn>=3&&turn<=5,'无进展反馈必须有界');
+          if(turn>3)assert.ok(JSON.stringify(body.messages.at(-1)?.content).includes('CBIM 最终验收未通过'));
+          reply('没有结构化审阅，但文字声称已完成。');
+        }
         else if(turn===3)tool('wait-goal-inspect','cbim_goal_inspect',{});
         else if(turn===4){
           const {scope,graph}=goalInspection(body,'wait-goal-inspect'),task=graph.tasks.find(item=>item.scopeId===scope.scopeId)!;

@@ -1,6 +1,6 @@
 /**
  * 目录归属：backend/core/execution；运行协议与计量。
- * 作用定位：定义可信入口提交的成员结果、真实用户补充与人工决定系统转交来源。
+ * 作用定位：定义可信入口提交的成员结果、目标返工反馈、真实用户补充与人工决定系统转交来源。
  * 设计原因：接续须持久化身份防止重复启动；真实附件补充只引用可信清单指纹，人工决定按固定记录转交，不伪造自由正文或扩大批准范围。
  */
 import {safeId} from '../foundation/identity';
@@ -31,12 +31,21 @@ export interface HumanDecisionsSource {
   kind:'human_decisions';continuationId:string;scopeId:string;waitId:string;
   inputRevision:number;decisionRevision:number;decisionIds:string[];
 }
-export type RunInputSource=MemberResultSource|UserContinuationSource|HumanDecisionsSource;
+/** 最终验收拒绝的系统反馈；不是用户授权，原主轮与失败指纹用于去重和有界返工。 */
+export interface GoalRepairSource {
+  kind:'goal-repair';continuationId:string;scopeId:string;sourceRunId:string;
+  attempt:number;failureCode:string;fingerprint:string;
+}
+export type RunInputSource=MemberResultSource|UserContinuationSource|HumanDecisionsSource|GoalRepairSource;
 
 /** 校验并复制可信输入或历史日志中的来源；拒绝空任务、重复标识和额外身份/权限字段。 */
 export function checkedRunInputSource(value:unknown):RunInputSource {
   if(!value||typeof value!=='object'||Array.isArray(value))throw Error('无效成员接续来源');
   const source=value as Record<string,unknown>;
+  if(source.kind==='goal-repair'){
+    if(Object.keys(source).some(key=>!['kind','continuationId','scopeId','sourceRunId','attempt','failureCode','fingerprint'].includes(key))||!['continuationId','scopeId','sourceRunId','failureCode','fingerprint'].every(key=>typeof source[key]==='string')||!Number.isSafeInteger(source.attempt)||(source.attempt as number)<1||(source.attempt as number)>3||!/^GOAL_[A-Z_]+$/.test(source.failureCode as string)||!/^[a-f0-9]{64}$/.test(source.fingerprint as string))throw Error('无效目标返工来源');
+    return {kind:'goal-repair',continuationId:safeId(source.continuationId as string),scopeId:safeId(source.scopeId as string),sourceRunId:safeId(source.sourceRunId as string),attempt:source.attempt as number,failureCode:source.failureCode as string,fingerprint:source.fingerprint as string};
+  }
   if(source.kind==='human_decisions'){
     if(Object.keys(source).some(key=>!['kind','continuationId','scopeId','waitId','inputRevision','decisionRevision','decisionIds'].includes(key))||!['continuationId','scopeId','waitId'].every(key=>typeof source[key]==='string')||!Number.isSafeInteger(source.inputRevision)||(source.inputRevision as number)<2||(source.inputRevision as number)>32||!Number.isSafeInteger(source.decisionRevision)||(source.decisionRevision as number)<1||(source.decisionRevision as number)>64||!Array.isArray(source.decisionIds)||!source.decisionIds.length||source.decisionIds.length>50||source.decisionIds.some(id=>typeof id!=='string')||new Set(source.decisionIds).size!==source.decisionIds.length)throw Error('无效人工决定接续来源');
     return {kind:'human_decisions',continuationId:safeId(source.continuationId as string),scopeId:safeId(source.scopeId as string),waitId:safeId(source.waitId as string),inputRevision:source.inputRevision as number,decisionRevision:source.decisionRevision as number,decisionIds:(source.decisionIds as string[]).map(safeId)};

@@ -225,7 +225,7 @@ it('superseded环在查询成员前拒绝；稠密无环关系可有限时间失
   }finally{await f.cleanup()}
 });
 
-it('真实成员失败必须由后续成功候选替代，知识变更后旧候选必须重新执行而非重盖版本',async()=>{
+it.each(['stale','rejected'] as const)('真实成员失败必须由后续成功候选替代，知识变更后旧候选必须重新执行而非重盖版本 (%s)',async(mode)=>{
   const f=await setup();let members:MemberExecutionManager|undefined;
   try{
     const team=await seedTeam(f.workspace),snapshot=await f.workspace.snapshot(),moduleId=team.input.moduleId,definition=JSON.parse(snapshot.files.find(file=>file.path===moduleId+'/module.json')!.text);
@@ -266,9 +266,15 @@ it('真实成员失败必须由后续成功候选替代，知识变更后旧候�
     const complete=candidate(passed,2);complete.superseded=[{taskId:failed.taskId,replacementTaskIds:[passed.taskId],reason:'成功重做原模块任务'}];
     await f.service.goals.review(f.identity,f.scope.scopeId,f.runId,'replaced',complete);
     // 新知识基线不能靠 replan 把旧成果自动变成当前证据，必须真实重做。
-    await f.commit();await f.service.goals.plan(f.identity,f.scope.scopeId,f.runId,'new-baseline',{...draft,expectedRevision:3});
-    await expect(f.service.goals.review(f.identity,f.scope.scopeId,f.runId,'old-evidence',{...complete,expectedRevision:4})).rejects.toMatchObject({code:'GOAL_EVIDENCE_STALE'});
+    if(mode==='stale')await f.commit();await f.service.goals.plan(f.identity,f.scope.scopeId,f.runId,'new-baseline',{...draft,expectedRevision:3});
+    if(mode==='stale')await expect(f.service.goals.review(f.identity,f.scope.scopeId,f.runId,'old-evidence',{...complete,expectedRevision:4})).rejects.toMatchObject({code:'GOAL_EVIDENCE_STALE'});
     const latest=await execute('member-current'),final=candidate(latest,4);final.superseded=[failed,passed].map(task=>({taskId:task.taskId,replacementTaskIds:[latest.taskId],reason:'当前知识基线重新验证'}));
+    if(mode==='rejected'){
+      const entry=final.superseded.find(item=>item.taskId===passed.taskId)!;
+      entry.rejectedCandidate={runId:passed.result!.runId,resultId:'wrong-candidate',planRevision:passed.planRevision};
+      await expect(f.service.goals.review(f.identity,f.scope.scopeId,f.runId,'wrong-rejected',final)).rejects.toMatchObject({code:'GOAL_SUPERSESSION_INVALID'});
+      entry.rejectedCandidate.resultId=passed.result!.resultId;
+    }
     const reviewed=await f.service.goals.review(f.identity,f.scope.scopeId,f.runId,'current-evidence',final);
     await f.journal.append({type:'run.settled',data:{status:'completed'}});
     expect((await f.service.closeScope(f.identity,f.scope.scopeId,'completed',await RunJournal.read(f.journal.directory))).goal).toEqual(reviewed.goal);

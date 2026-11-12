@@ -42,7 +42,11 @@ export async function humanContinuationProvider(mode:HumanContinuationMode='acce
       }else if(turn===8)tool('human-final-inspect','cbim_goal_inspect',{});
       else if(turn===9){const {scope,graph}=result(body,'human-final-inspect'),task=graph.tasks.find((value:any)=>value.goal===d.memberGoal);tool('human-final-review','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'complete',checks:scope.goal.plan.criteria.map((item:any)=>({criterionId:item.id,outcome:'satisfied',reason:item.kind==='human'?'引用本次显式继续消费的精确人工接受':'重新核实原候选仍有效',evidence:item.kind==='human'?[{kind:'human-decision',decisionId:state.continuation.decisionIds[0],continuationId:state.continuation.continuationId}]:[evidence(task)]})),superseded:[],gaps:[],reason:'对照原目标、当前结果及本次消费的人工意见重新审阅'})}
       else if(turn===10){state.finalReview=result(body,'human-final-review');if(mode==='subject-changed')assert.ok(state.finalReview.error);else assert.equal(state.finalReview.goal?.review?.decision,'complete');if(mode==='review-file-changed'){emit({role:'assistant',content:'已提交完成审阅候选，最终关闭前仍须复核文件。'});await final.promise}reply(d.final)}
-      else throw Error('Explicit human continuation unexpectedly replayed main '+turn);
+      else if(mode==='subject-changed'&&turn>=11&&turn<=12){
+        // 无完成审阅允许有限反馈，但旧人工接受始终不能授权已经改变的业务主体。
+        assert.ok(state.finalReview.error);assert.ok(JSON.stringify(body.messages.at(-1)?.content).includes('CBIM 最终验收未通过'));
+        reply('原人工批准不能用于已改变的业务主体，仍未取得合法完成审阅。');
+      }else throw Error('Explicit human continuation unexpectedly replayed main '+turn);
     }else{
       const rework=turn>=7,stage=turn%7,prefix=rework?'human-rework':'human-first',goal=rework?d.reworkGoal:d.memberGoal,fact=rework?d.reworked:d.fact;assert.ok(turn<14);
       if(stage===0)tool(prefix+'-plan','cbim_task_plan',{expectedVersion:0,goal,acceptance:d.acceptance,reason:rework?'按人工意见派发的新实例':'生成真实成果',steps:[{id:'verify',title:'生成并核实成果',owner:'开发者'}]});

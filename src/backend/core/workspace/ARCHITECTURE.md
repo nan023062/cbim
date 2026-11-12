@@ -11,12 +11,12 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [artifact-scope.ts](artifact-scope.ts) | Workflow 可选完整产物观察范围的叶子契约，供知识冻结、运行采集和公开报告共用。 |
+| [code-check.ts](code-check.ts) | 代码 Workflow 的冻结命令与成功判据，供知识校验、执行和证据重算共用。 |
 | [csv-validation-schema.ts](csv-validation-schema.ts) | 定义冻结 CSV 表格要求并直接检查有界 UTF-8 字节，供知识声明与可信文件端口共用。 |
 | [execution-scope.ts](execution-scope.ts) | 模块 Workflow 的可冻结执行范围及任务合并规则，供知识准备、运行门禁与平台装配共用。 |
 | [json-validation-schema.ts](json-validation-schema.ts) | JSON 产物验证的有界声明和纯结构校验，供冻结 Workflow、运行时及知识入口共用。 |
 | [knowledge-source-rules.ts](knowledge-source-rules.ts) | 来源代次日志的纯投影、游标、依据和幂等命令规则，供知识协调器与 DispatchStore 共同使用。 |
 | [knowledge-source.ts](knowledge-source.ts) | 受控知识来源代次、读取状态和原日志握手的纯协议，供岗位、责任、Store 与桌面共用。 |
-| [maintenance.ts](maintenance.ts) | 旧版模块真人维护声明的兼容类型，保留历史解码所需字段。 |
 | [module-outline.ts](module-outline.ts) | 模块正文的固定章节和可复制模板，供知识校验与桌面编辑共同使用。 |
 | [module-ownership-rules.ts](module-ownership-rules.ts) | 负责人登记的规范依据、命令指纹、不可变审计与关系头投影，供 Main 与 Store 重放共同调用。 |
 | [module-ownership-tool-policy.ts](module-ownership-tool-policy.ts) | 模块责任控制面四项工具的纯名称、效果及业务工作分类，供授权与周期收口共用。 |
@@ -68,6 +68,22 @@ class N_src_backend_core_workspace_artifact_scope_ts_ArtifactScopeBinding["Artif
 N_src_backend_core_workspace_artifact_scope_ts ..> N_src_backend_core_workspace_artifact_scope_ts_ArtifactScopeBinding : 声明
 ```
 
+
+### code-check.ts
+
+```mermaid
+classDiagram
+class N_src_backend_core_workspace_code_check_ts["code-check.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_code_check_ts_CodeCheckRequirement["CodeCheckRequirement"] {
+  <<type>>
+
+}
+N_src_backend_core_workspace_code_check_ts ..> N_src_backend_core_workspace_code_check_ts_CodeCheckRequirement : 声明
+```
+
+直接依赖：[artifact-scope.ts](artifact-scope.ts)。
 
 ### csv-validation-schema.ts
 
@@ -351,32 +367,6 @@ class N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceReceipt["K
 
 }
 N_src_backend_core_workspace_knowledge_source_ts ..> N_src_backend_core_workspace_knowledge_source_ts_KnowledgeSourceReceipt : 声明
-```
-
-
-### maintenance.ts
-
-```mermaid
-classDiagram
-class N_src_backend_core_workspace_maintenance_ts["maintenance.ts"] {
-  <<module>>
-}
-class N_src_backend_core_workspace_maintenance_ts_ModuleMaintenanceDefinition["ModuleMaintenanceDefinition"] {
-  <<interface>>
-  +bindingId
-  +maintainerPersonIds
-  +revision
-  +state
-  +confirmation
-}
-N_src_backend_core_workspace_maintenance_ts ..> N_src_backend_core_workspace_maintenance_ts_ModuleMaintenanceDefinition : 声明
-class N_src_backend_core_workspace_maintenance_ts_ModuleMaintenanceBinding["ModuleMaintenanceBinding"] {
-  <<interface>>
-  +workspaceId
-  +moduleId
-}
-N_src_backend_core_workspace_maintenance_ts ..> N_src_backend_core_workspace_maintenance_ts_ModuleMaintenanceBinding : 声明
-N_src_backend_core_workspace_maintenance_ts_ModuleMaintenanceDefinition <|-- N_src_backend_core_workspace_maintenance_ts_ModuleMaintenanceBinding
 ```
 
 
@@ -767,16 +757,19 @@ class N_src_backend_core_workspace_workflow_contract_ts_WorkflowContract["Workfl
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_workflow_contract_ts_WorkflowContract : 声明
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/json.ts](../foundation/json.ts)、[json-validation-schema.ts](json-validation-schema.ts)、[csv-validation-schema.ts](csv-validation-schema.ts)、[png-validation-schema.ts](png-validation-schema.ts)、[artifact-scope.ts](artifact-scope.ts)、[execution-scope.ts](execution-scope.ts)。
+直接依赖：[code-check.ts](code-check.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/json.ts](../foundation/json.ts)、[json-validation-schema.ts](json-validation-schema.ts)、[csv-validation-schema.ts](csv-validation-schema.ts)、[png-validation-schema.ts](png-validation-schema.ts)、[artifact-scope.ts](artifact-scope.ts)、[execution-scope.ts](execution-scope.ts)。
 
 ### 本目录调用边界
 
 ```mermaid
 classDiagram
-class N_src_backend_core_workspace_execution_scope_ts["execution-scope.ts"] {
+class N_src_backend_core_workspace_code_check_ts["code-check.ts"] {
   <<module>>
 }
 class N_src_backend_core_workspace_artifact_scope_ts["artifact-scope.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_execution_scope_ts["execution-scope.ts"] {
   <<module>>
 }
 class N_src_backend_core_workspace_knowledge_source_rules_ts["knowledge-source-rules.ts"] {
@@ -791,23 +784,40 @@ class N_src_backend_core_workspace_module_ownership_rules_ts["module-ownership-r
 class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
   <<module>>
 }
+N_src_backend_core_workspace_code_check_ts ..> N_src_backend_core_workspace_artifact_scope_ts : 导入依赖
 N_src_backend_core_workspace_execution_scope_ts ..> N_src_backend_core_workspace_artifact_scope_ts : 导入依赖
 N_src_backend_core_workspace_knowledge_source_rules_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
 N_src_backend_core_workspace_module_ownership_rules_ts ..> N_src_backend_core_workspace_module_ownership_ts : 导入依赖
-N_src_backend_core_workspace_module_ownership_rules_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_workspace_module_ownership_rules_ts["module-ownership-rules.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_knowledge_source_ts["knowledge-source.ts"] {
+  <<module>>
+}
 class N_src_backend_core_workspace_module_ownership_tools_ts["module-ownership-tools.ts"] {
   <<module>>
 }
 class N_src_backend_core_workspace_module_ownership_ts["module-ownership.ts"] {
   <<module>>
 }
-class N_src_backend_core_workspace_knowledge_source_ts["knowledge-source.ts"] {
+class N_src_backend_core_workspace_workflow_contract_ts["workflow-contract.ts"] {
   <<module>>
 }
+class N_src_backend_core_workspace_code_check_ts["code-check.ts"] {
+  <<module>>
+}
+N_src_backend_core_workspace_module_ownership_rules_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
+N_src_backend_core_workspace_module_ownership_tools_ts ..> N_src_backend_core_workspace_module_ownership_ts : 导入依赖
+N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
+N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_code_check_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_backend_core_workspace_workflow_contract_ts["workflow-contract.ts"] {
   <<module>>
 }
@@ -817,10 +827,16 @@ class N_src_backend_core_workspace_json_validation_schema_ts["json-validation-sc
 class N_src_backend_core_workspace_csv_validation_schema_ts["csv-validation-schema.ts"] {
   <<module>>
 }
-N_src_backend_core_workspace_module_ownership_tools_ts ..> N_src_backend_core_workspace_module_ownership_ts : 导入依赖
-N_src_backend_core_workspace_module_ownership_ts ..> N_src_backend_core_workspace_knowledge_source_ts : 导入依赖
+class N_src_backend_core_workspace_png_validation_schema_ts["png-validation-schema.ts"] {
+  <<module>>
+}
+class N_src_backend_core_workspace_artifact_scope_ts["artifact-scope.ts"] {
+  <<module>>
+}
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_json_validation_schema_ts : 导入依赖
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_csv_validation_schema_ts : 导入依赖
+N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_png_validation_schema_ts : 导入依赖
+N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_artifact_scope_ts : 导入依赖
 ```
 
 ```mermaid
@@ -828,17 +844,9 @@ classDiagram
 class N_src_backend_core_workspace_workflow_contract_ts["workflow-contract.ts"] {
   <<module>>
 }
-class N_src_backend_core_workspace_png_validation_schema_ts["png-validation-schema.ts"] {
-  <<module>>
-}
-class N_src_backend_core_workspace_artifact_scope_ts["artifact-scope.ts"] {
-  <<module>>
-}
 class N_src_backend_core_workspace_execution_scope_ts["execution-scope.ts"] {
   <<module>>
 }
-N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_png_validation_schema_ts : 导入依赖
-N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_artifact_scope_ts : 导入依赖
 N_src_backend_core_workspace_workflow_contract_ts ..> N_src_backend_core_workspace_execution_scope_ts : 导入依赖
 ```
 

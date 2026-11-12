@@ -3,7 +3,7 @@
 
  * 新周期可冻结用户 auto 选择；缺 ownerSelection 时由统一执行身份解析核兜底，计划和派发回执保留原因。
  * 持久成员等待沿原 wait 冻结清单；重启不恢复执行，用户继续须通过 memberPauses 的当前资格核验。
- * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图增量查询服务。
+ * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图查询；重启仅保留通过完整核实的待回传周期，其余中断封存。
  * 设计原因：新派发按知识→模型→Store 锁序核当前岗位、能力及责任，保存原 Workflow 选择与不可变执行绑定，同命令不能改选。周期冻结输入及软限额，关闭封存待办；旧回执不能重开周期。
  * 职责边界：负责可靠入队、未启动撤销及受审计的前置追加/替换/多边修订，由独立 MemberExecutionManager 执行；调度维护不停止活动运行或复活旧实例。
  * 关闭边界：Auto 无计划的直接工作与知识治理、普通聊天和纯负责人控制面不强造团队计划；仍核活动输入和真实工具终态。已有计划或派发必须审阅，未知输入只可失败或取消封存。
@@ -58,6 +58,7 @@ import {prepareMember} from '../members/agent-manager';
 import {dispatchSessionReadInput} from '../../core/tasks/scope-view';
 import {createScopeRunTracking,appendScopeMainRun} from '../../core/tasks/scope-run-tracking';
 import {OwnerExecutionService,type OwnerExecutionModelPorts,type OwnerExecutionWorkspace} from './owner-execution-service';
+import {AutomaticReturnService} from './automatic-return-service';
 
 /** 只需工作区状态与知识快照，不依赖桌面或具体文件存储。 */
 type DispatchWorkspace=OwnerExecutionWorkspace;
@@ -67,6 +68,8 @@ export class WorkspaceDispatchService {
   private closed=false;
   /** 目标计划与审阅复用派发事务；日志证据由应用只读端口注入，不从模型参数接受。 */
   readonly goals:ScopeGoalService;
+  /** 只恢复有持久原批次和完整未消费结果的周期；不领取历史成员任务。 */
+  readonly automaticReturns:AutomaticReturnService;
   /** 岗位执行发现与短事务门禁，复用唯一知识、模型和 Store，不另建登记。 */
   readonly owners:OwnerExecutionService;
   /** 可信用户补充的消费与只读回执；启动和停止屏障仍由运行管理器掌管。 */
@@ -99,6 +102,7 @@ export class WorkspaceDispatchService {
     this.owners=new OwnerExecutionService(owner,store,modelPorts);
     this.memberPauses=new MemberPauseService(owner,store,this.owners,memberPausePorts);
     this.goals=new ScopeGoalService(owner,store,goalPorts,humanPorts,this.owners,this.memberPauses);
+    this.automaticReturns=new AutomaticReturnService(owner,store,this.goals,goalPorts,modelPorts);
     this.usage=new ScopeUsageService(owner,store,goalPorts);
     this.budgets=new ScopeBudgetService(this.usage,budgetPolicy);
     this.continuations=new ScopeContinuationService(owner,store,this.budgets,this.memberPauses);
@@ -260,10 +264,14 @@ export class WorkspaceDispatchService {
   /** 应用恢复时只登记已保存的等待槽；不读取模型上下文、重放消息或自动续跑。 */
   async waitingScopes():Promise<DispatchScope[]>{this.check(this.owner.entry.id);return (await this.store.read()).scopes?.filter(scope=>scope.status==='waiting')??[]}
 
-  /** 应用重启先结算旧 starting/running，再中断 active 周期；安全 waiting 原样保留，不重放模型或任务。 */
+  /** 重启先结算旧运行；仅保留可核实的已完成待回传批次，其他 active 封存，waiting 不自动消费。 */
   async recoverScopes():Promise<void>{
     this.check(this.owner.entry.id);const state=await this.store.read();
-    for(const scope of state.scopes??[])if(scope.status==='active')await this.closeScope({workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId},scope.scopeId,'interrupted');
+    for(const scope of state.scopes??[])if(scope.status==='active'){
+      try{if(await this.automaticReturns.inspect(scope))continue}
+      catch(error){if(scope.automaticReturns?.length)await this.goals.block({workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId},scope.scopeId,'自动接收暂停：'+(error instanceof Error?error.message:String(error)))}
+      await this.closeScope({workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId},scope.scopeId,'interrupted');
+    }
   }
 
   private check(workspaceId:string){

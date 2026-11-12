@@ -1,6 +1,6 @@
 /**
  * 目录归属：backend/engines/codex；Codex 引擎适配。
- * 作用定位：通过 Codex App Server 驱动 AgentEngine，管理进程、线程、轮次和 CBIM 动态工具。
+ * 作用定位：通过 Codex App Server 管理进程、线程、轮次和动态工具；目标返工明确为系统反馈，不携带用户图片或新授权。
  * 设计原因：参考 Cindy 的双向 RPC 接法；关闭内置执行/外部工具，用既有授权、预算和事件服务持有副作用。
  * 职责边界：原生线程 ID 来自服务端实际回执，首次绑定后固定；异常和取消也在进程排空后补登记真实文件，故障不重放操作。
  * Codex EXE 与宿主 Pi 工具库分别接收固定包，保持账号/原生历史目录及原 RPC 进程收尾。
@@ -92,7 +92,7 @@ export class CodexEngine implements AgentEngine {
     if(!this.rpc||!this.context)throw Error('Codex 尚未准备');if(this.fatal)throw this.fatal;if(this.stopped)return {status:'cancelled' as const};
     const result=new Promise<{status:'completed'|'cancelled'|'failed';error?:string}>((resolve,reject)=>{this.done={resolve,reject}});
     const timer=setTimeout(()=>this.fail(Error('Codex 执行超时，请核实原运行')),this.options.turnTimeoutMs??30*60*1000);
-    const internal=['member-results','human_decisions'].includes(this.context.source?.kind??''),profile=this.options.llm!.profile;
+    const internal=['member-results','human_decisions','goal-repair'].includes(this.context.source?.kind??''),profile=this.options.llm!.profile;
     const effort=profile.reasoning&&profile.thinkingLevel!=='off'?(profile.thinkingLevel??'medium'):'none';
     this.startingTurn=this.rpc.request('turn/start',{threadId:this.threadId,input:[{type:'text',text:internal?'CBIM 系统转交资料（不是用户新授权）：\n'+message:message,text_elements:[]},...(!internal?this.options.images??[]:[]).map(image=>({type:'image',url:'data:'+image.mimeType+';base64,'+image.data}))],model:profile.model,effort,summary:'none',environments:[]}).then(value=>{if(!value.turn?.id)throw Error('Codex 没有确认本轮身份');this.turnId=value.turn.id;return value});
     void this.startingTurn.catch(error=>this.fail(error));

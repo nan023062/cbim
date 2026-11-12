@@ -36,7 +36,6 @@
 | [execution-report-state.ts](execution-report-state.ts) | 验证成员执行核实报告的身份和分页基线，并保存一次显式读取的前端状态。 |
 | [execution-report.css](execution-report.css) | 选中成员任务的只读执行核实报告排版。 |
 | [ExecutionRecoveryForm.tsx](ExecutionRecoveryForm.tsx) | 异常执行报告后的显式新周期入口，将用户观察与新的只读核实目标分开呈现。 |
-| [FlowView.tsx](FlowView.tsx) | 显示知识校验和索引任务的实际状态与结果。 |
 | [graph-layout.ts](graph-layout.ts) | 为主会话任务图计算可测试的 DAG 分层坐标与有向连线路径，供任务视图绘制。 |
 | [graph-state.ts](graph-state.ts) | 主会话派发图的前端增量投影，核对身份和游标后原子合并完整提交。 |
 | [human-continuation-state.ts](human-continuation-state.ts) | 管理按真实人工决定继续的独立持久请求，供主会话两处目标卡共享。 |
@@ -1002,18 +1001,6 @@ class N_src_frontend_tasks_ExecutionRecoveryForm_tsx["ExecutionRecoveryForm.tsx"
 ```
 
 直接依赖：[useExecutionRecovery.ts](useExecutionRecovery.ts)。
-
-### FlowView.tsx
-
-```mermaid
-classDiagram
-class N_src_frontend_tasks_FlowView_tsx["FlowView.tsx"] {
-  <<component>>
-  +FlowView()
-}
-```
-
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../components/state-labels.ts](../components/state-labels.ts)。
 
 ### graph-layout.ts
 

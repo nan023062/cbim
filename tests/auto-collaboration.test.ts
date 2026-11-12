@@ -24,10 +24,10 @@ async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'c
   const graph:GraphSnapshot={version:1,identity,cursor:{...identity,streamId:'stream',seq:1},root:{kind:'session-root',identity,nodeId:'root',agent:{...agent,agentId:'cbim:main',agentSessionId:'root-channel'},revision:1,createdAt:'2026-11-06'},tasks:[],edges:[],agents:[]};
   const lease=new WorkspaceExecutionLease(),done=deferred<void>();let release=()=>{},hooks!:ExecutionCollaboration;
   const options={...(engine?{engine}:{}),provider:'provider',model:'model',profileId:'00000000-0000-4000-8000-000000000001',permission:'ask' as const,allowNativeExecution:true};
-  const dispatch={
+  const dispatch={automaticReturns:{record:vi.fn(async()=>{}),scopes:vi.fn(async()=>[]),inspect:vi.fn()},
     abandonCheckpoint:vi.fn<(...args:unknown[])=>Promise<AbandonCheckpointReceipt>>(),
     checkpointAbandonmentReceipt:vi.fn<(...args:unknown[])=>Promise<AbandonCheckpointReceipt|undefined>>(async()=>undefined),
-    goals:{inspect:vi.fn(async()=>({goal:{plan:{}}})),inspectWithGraph:vi.fn<()=>Promise<unknown>>(),plan:vi.fn(async()=>({})),review:vi.fn(async()=>({})),block:vi.fn(async()=>({}))},
+    goals:{repairContext:vi.fn<(...args:any[])=>Promise<any>>(async()=>{throw Error('No canonical evidence in this fixture')}),inspect:vi.fn(async()=>({goal:{plan:{}}})),inspectWithGraph:vi.fn<()=>Promise<unknown>>(),plan:vi.fn(async()=>({})),review:vi.fn(async()=>({})),block:vi.fn(async()=>({}))},
     openScope:vi.fn(async(_identity:any,scopeId:string)=>({...identity,scopeId,status:'active',createdAt:'2026-11-07'})),
     registerMainRun:vi.fn(async()=>({})),
     waitingScopes:vi.fn<()=>Promise<any[]>>(async()=>[]),
@@ -58,7 +58,7 @@ async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'c
     messages:vi.fn(async()=>graph.tasks[0].result?[{kind:'result',taskId:'assigned-1',messageId:'message-1',resultId:'result-1'}]:[]),
     acknowledge:vi.fn(async()=>({delivery:'processed'})),
   };
-  const execution={attachCollaboration:(value:ExecutionCollaboration)=>{hooks=value},continueFromResults:vi.fn(async(..._args:unknown[])=>({workspaceId:task.workspaceId,taskId:task.taskId,runId:'continued'})),collaborationReady:vi.fn(async()=>{}),pauseCollaboration:vi.fn(async()=>{}),cancelPendingLaunches:vi.fn()};
+  const execution={continueGoalRepair:vi.fn<(...args:any[])=>Promise<any>>(),attachCollaboration:(value:ExecutionCollaboration)=>{hooks=value},continueFromResults:vi.fn(async(..._args:unknown[])=>({workspaceId:task.workspaceId,taskId:task.taskId,runId:'continued'})),collaborationReady:vi.fn(async()=>{}),pauseCollaboration:vi.fn(async()=>{}),cancelPendingLaunches:vi.fn()};
   const issues=vi.fn();
   const coordinator=new AutoCollaboration({entry:{id:task.workspaceId,path:task.root},assert:()=>{}} as KnowledgeWorkspace,dispatch as unknown as WorkspaceDispatchService,members as unknown as MemberExecutionManager,execution as unknown as WorkspaceExecutionManager,lease,issues);
   await hooks.starting?.(task,options,undefined,'本轮实际输入','parent-run');
@@ -91,6 +91,32 @@ function addedDependency(binding:MainToolOutputBinding,commandId:string,input:Ad
   const {runId,...identity}=binding,trackedTaskIds=[input.target.taskId,input.source.taskId];
   return {...identity,mainRunId:runId,commandId,taskId:input.target.taskId,status:'waiting',trackedTaskIds,graphCursor:{streamId:input.expectedGraphCursor.streamId,seq:input.expectedGraphCursor.seq+1},addition:{commandId,scopeId:binding.scopeId,mainRunId:runId,addedAt:'2026-11-07T00:00:00.000Z',reason:input.reason,graphCursor:input.expectedGraphCursor,goalRevision:input.expectedGoalRevision,goalPlanRevision:input.expectedGoalRevision,knowledgeRevision:'knowledge-one',previousTaskRevision:input.target.expectedRevision,targetPlanRevision:input.target.expectedPlanRevision,dependency:{edgeId:'new-A-B',sourceTaskId:input.source.taskId,sourceTaskRevision:input.source.expectedRevision,sourcePlanRevision:input.source.expectedPlanRevision},trackedTaskIds}};
 }
+
+it.each(['repeat','budget','unknown','stop'] as const)('最终验收返工保留停止和限次边界：%s',async mode=>{
+  const f=await setup();try{
+    const scopeId=f.dispatch.openScope.mock.calls[0][1];
+    f.dispatch.closeScope.mockImplementation(async(identity,id,outcome)=>{if(outcome==='completed')throw Object.assign(Error('需要重新审阅'),{code:'GOAL_REVIEW_REQUIRED'});return {...identity,scopeId:id,status:'closed',outcome}});
+    f.dispatch.goals.repairContext.mockImplementation(async()=>{
+      if(mode==='unknown')throw Object.assign(Error('原写入结果未知'),{code:'GOAL_REPAIR_UNSAFE'});
+      if(mode==='stop')await f.coordinator.stop(f.task.taskId);
+      return {scope:{scopeId,status:'active',goal:{revision:2,input:{message:'原目标',attachmentIds:[]}}},graph:f.graph};
+    });
+    // stop 分支使用取证窗口中的停止标志，避免测试自身等待 finishCycle 形成互等。
+    if(mode==='stop')f.dispatch.goals.repairContext.mockImplementation(async()=>{void f.coordinator.stop(f.task.taskId);await Promise.resolve();return {scope:{scopeId,status:'active',goal:{revision:2}},graph:f.graph}});
+    f.execution.continueGoalRepair.mockImplementation(async(_id,message,options,source)=>{
+      if(mode==='budget')throw Object.assign(Error('预算耗尽'),{code:'SCOPE_BUDGET_EXCEEDED'});
+      const runId='repair-'+source.attempt;
+      await f.hooks().starting!(f.task,options,source,message,runId);f.coordinator.tools(f.task,runId,options);
+      queueMicrotask(()=>f.hooks().settled(f.task,options,{task:f.task,runId,status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[]}));
+      return {runId};
+    });
+    f.settleParent();
+    await vi.waitFor(()=>expect(f.coordinator.busy(f.task.taskId)).toBe(false));
+    expect(f.execution.continueGoalRepair).toHaveBeenCalledTimes(mode==='repeat'?2:mode==='budget'?1:0);
+    expect(f.members.start).not.toHaveBeenCalled();
+    if(mode==='repeat')expect(f.dispatch.goals.block).toHaveBeenCalled();
+  }finally{await f.coordinator.close()}
+});
 
 it('权威联合查询返回空值时由业务输出契约拒绝，不崩溃或降级拼接别的读取',async()=>{
   const f=await setup();try{

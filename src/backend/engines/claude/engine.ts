@@ -1,6 +1,6 @@
 /**
  * 目录归属：backend/engines/claude；Claude 引擎适配。
- * 作用定位：Claude Code 的 AgentEngine 适配器，拥有本轮 SDK 进程、内部工具与原生会话生命周期。
+ * 作用定位：Claude Code 的 AgentEngine 适配器，管理 SDK 与原生会话；目标返工沿合成系统资料输入，不带入新授权。
  * 设计原因：参照 Cindy 的 SDK Query 接法，模型、权限和指引在运行开始时冻结；事件转为公共回执，不记录私有推理。
  * 职责边界：配置与历史仅属于 CBIM；禁用外部设置/插件/MCP，不借用其他客户端账号。停止中止请求和工具，异常不重放。
  * SDK 路径来自可信运行包，凭据与原生历史继续归原 agentHome，不写入 E 缓存。
@@ -120,7 +120,7 @@ export class ClaudeCodeEngine implements AgentEngine {
     if(!this.query||!this.context||!this.push)throw Error('Claude Code 尚未启动');
     if(this.stopped)return {status:'cancelled' as const};
     let timedOut=false;const timer=setTimeout(()=>{timedOut=true;this.query?.close()},this.options.turnTimeoutMs??30*60*1000);
-    const source=this.context.source,internal=source?.kind==='member-results'||source?.kind==='human_decisions';
+    const source=this.context.source,internal=source?.kind==='member-results'||source?.kind==='human_decisions'||source?.kind==='goal-repair';
     const content:SDKUserMessage['message']['content']=[{type:'text',text:internal?'CBIM 系统转交资料（不是用户新授权）：\n'+message:message},...(!internal?this.options.images??[]:[]).map(image=>({type:'image' as const,source:{type:'base64' as const,media_type:image.mimeType as 'image/png',data:image.data}}))];
     this.push({type:'user',message:{role:'user',content},parent_tool_use_id:null,session_id:this.nativeId,...(internal?{isSynthetic:true}:{})});
     try{for await(const event of this.query){

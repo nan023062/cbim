@@ -131,8 +131,8 @@ N_src_backend_core_workspace ..> N_src_backend_core_tools : 导入依赖
 - `tasks` → `foundation`：导入。
 - `tasks` → `team`：导入。
 - `tasks` → `dispatch`：导入。
-- `tasks` → `execution`：导入。
 - `tasks` → `models`：导入。
+- `tasks` → `execution`：导入。
 - `tasks` → `tools`：导入。
 - `tasks` → `budget`：导入。
 - `tasks` → `evidence`：导入。

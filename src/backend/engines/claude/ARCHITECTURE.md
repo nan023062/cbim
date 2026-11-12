@@ -10,7 +10,7 @@ Claude Agent SDK 适配、内部工具门禁与真实原生会话生命周期；
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [engine.ts](engine.ts) | Claude Code 的 AgentEngine 适配器，拥有本轮 SDK 进程、内部工具与原生会话生命周期。 |
+| [engine.ts](engine.ts) | Claude Code 的 AgentEngine 适配器，管理 SDK 与原生会话；目标返工沿合成系统资料输入，不带入新授权。 |
 | [sdk.ts](sdk.ts) | 从 CBIM 自带资源或开发依赖加载固定版本的 Claude Agent SDK。 |
 | [tools.ts](tools.ts) | Claude 原生工具和内部 SDK 工具适配为 CBIM 授权与回执协议。 |
 

@@ -8,6 +8,7 @@
  * 设计原因：工具调用事实必须与固定模块约定、当前运行及最后副作用的真实结束边界一致；并发早读不能替代写入后的验证，不能相信模型自报 pass 或只检查内存状态。
  * 职责边界：仅作确定性记录校验；选定 必验文件的当前字节另由平台端口复核，不执行脚本、不签发权限或宣称覆盖整个模块。
  */
+import {selectCodeCheck,verifyCodeChecks,type CodeCheckRecord} from './code-check';
 import {fail} from '../foundation/errors';
 import {hash} from '../foundation/serialization';
 import {workflowContractSchema} from '../workspace/workflow-contract';
@@ -49,7 +50,7 @@ export function assertWorkflowPlan(bindings:readonly WorkflowContractBinding[],p
   return plan.version;
 }
 /** 只评价调用方已核实且实际列入步骤的当前代次回执，不自动挑选未引用的其他工具。 */
-export function evaluateWorkflowDelivery(bindings:readonly WorkflowContractBinding[],receipts:readonly ToolReceipt[],identity:WorkflowRunIdentity,validations:readonly ValidationRecord[]=[],manifest?:OutputManifestProof):WorkflowEvidenceProof{
+export function evaluateWorkflowDelivery(bindings:readonly WorkflowContractBinding[],receipts:readonly ToolReceipt[],identity:WorkflowRunIdentity,validations:readonly ValidationRecord[]=[],manifest?:OutputManifestProof,codeChecks:readonly CodeCheckRecord[]=[]):WorkflowEvidenceProof{
   const values=checkedBindings(bindings),unique=new Map<string,ToolReceipt>();
   for(const receipt of receipts){
     valid(receipt.toolName!==questionToolName,'WORKFLOW_EVIDENCE_INVALID','问题回答与取消只表示交互事实，不能作为 Workflow 交付证据');
@@ -68,7 +69,8 @@ export function evaluateWorkflowDelivery(bindings:readonly WorkflowContractBindi
     valid(manifest&&outputManifestProofSchema.safeParse(manifest).success&&same(manifest.scopes,preparedArtifactScopes(values))&&manifest.scopeHash===outputManifestScopeHash(manifest.scopes),'MANIFEST_REQUIRED','完整交付缺少原冻结范围的唯一清单证明');
     valid(selected.every(record=>same(record.result.manifest,outputManifestIdentity(manifest))),'MANIFEST_VALIDATION_MISMATCH','产物验证与交付必须引用同一完整清单，不能混用旧文件基线或其它集合');
   }else valid(!manifest&&selected.every(record=>!record.result.manifest),'MANIFEST_UNDECLARED','本轮未声明完整交付要求，不能补造完整出口证明');
-  return {version:1,bindingsHash:hash(JSON.stringify(ordered(values))),checks,...(validationChecks.length?{validationChecks}:{}),...(manifest?{manifest:structuredClone(manifest)}:{})};
+  const codeCheck=selectCodeCheck(values,receipts,identity,codeChecks,manifest);
+  return {...(codeCheck?{codeCheck}:{}),version:1,bindingsHash:hash(JSON.stringify(ordered(values))),checks,...(validationChecks.length?{validationChecks}:{}),...(manifest?{manifest:structuredClone(manifest)}:{})};
 }
 /** 从步骤实际引用中选唯一 passed 记录；rejected 的成功回执只证明执行过检查，不能满足此出口。 */
 export function selectWorkflowValidations(bindings:readonly WorkflowContractBinding[],receipts:readonly ToolReceipt[],identity:WorkflowRunIdentity,records:readonly ValidationRecord[]):ValidationRecord[]{
@@ -135,5 +137,5 @@ export function validateWorkflowEvidence(events:readonly ArtifactEvidenceEvent[]
   const ids=[...new Set(candidate.steps.flatMap(step=>step.evidence))],receipts=ids.map(id=>{
     const call=artifactSucceededCall(events,identity,id),ownEffect=effectEnds.some(effect=>effect.allowed.data.id===id);valid(call.allowed.seq>plan.savedSeq&&call.allowed.seq>=lastEffect&&call.finished.seq<delivery.allowed.seq&&(ownEffect||call.allowed.seq>lastEffectEnd),'WORKFLOW_EVIDENCE_INVALID','Workflow 证据必须在当前计划内，读取验证不得与尚未结束的副作用重叠');return call.receipt;
   });
-  const proof=evaluateWorkflowDelivery(bindings,receipts,identity,validations,manifest);valid(same(proof,candidate.delivery.workflow),'WORKFLOW_EVIDENCE_INVALID','Workflow 交付条件与真实日志重算结果不一致');return proof;
+  const proof=evaluateWorkflowDelivery(bindings,receipts,identity,validations,manifest,verifyCodeChecks(events,bindings,identity));valid(same(proof,candidate.delivery.workflow),'WORKFLOW_EVIDENCE_INVALID','Workflow 交付条件与真实日志重算结果不一致');return proof;
 }

@@ -3,7 +3,7 @@
 
  * 内部 MainStartup 在真实周期建立后、模型启动前绑定身份和准备首任务；取消贯穿准备，不是公开运行选项。
  * IPC 单独校验 collaborationMode；协作选项不参与 read/ask/execute 权限推导。
- * 作用定位：工作区主对话管理，负责普通 chat、目标周期接续、多轮历史和消息队列；旧直接团队业务入口拒绝新执行，业务成员统一经岗位派发领取。
+ * 作用定位：管理工作区主对话、可信结果与目标返工接续、多轮历史及队列；系统接续共用去重与停止屏障，业务成员经岗位派发领取。
  * 设计原因：原命令先查回执；等待补充的附件一次准备，图片仅留本轮。容量准入先于意图，beforeRun 核额度、停止与清单后登记运行；人工决定仍走独立系统来源，当前坏历史不能回退旧头。
  * 插入边界：先查原 scope/run/queue 回执再领取和读附件；绑定明确的原主 run，停止信号先于串行清理。周期输入接收落盘后才移除队列，未知结果同时阻止内存自动推进。
  * 执行选项接受明确引擎并随本轮准备、排队与后续调用传递；具体适配器仍由可信工厂选择。
@@ -283,7 +283,7 @@ export class WorkspaceExecutionManager {
     if(recovery&&replan)fail('FRESH_MAIN_CONFLICT','同一启动不能混合只读核实和业务重规划');
     const fresh=Boolean(recovery||replan);
     if(this.active.has(task.taskId))fail('TASK_RUNNING','任务正在执行');
-    if((source?.kind==='member-results'||automaticQueue)&&this.resultContinuationStopped.has(task.taskId))fail('COLLABORATION_STOPPED','本会话已停止自动协作，请显式继续对话');
+    if(((source?.kind==='member-results'||source?.kind==='goal-repair')||automaticQueue)&&this.resultContinuationStopped.has(task.taskId))fail('COLLABORATION_STOPPED','本会话已停止自动协作，请显式继续对话');
     const stopVersion=this.stopVersions.get(task.taskId)??0;
     const controller=new AbortController();this.pendingLaunches.set(task.taskId,controller);
     const cancelStartup=()=>controller.abort(startup?.signal.reason);startup?.signal.addEventListener('abort',cancelStartup,{once:true});if(startup?.signal.aborted)cancelStartup();
@@ -300,10 +300,10 @@ export class WorkspaceExecutionManager {
       }
       controller.signal.throwIfAborted();
       if((this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','附件准备期间已收到停止请求');
-      loop=await this.factory({...options,allowNativeExecution:options.permission?options.permission!=='read':options.allowNativeExecution,mode:task.mode,requestQuestion:(args,signal)=>this.questions.ask(task.taskId,args,signal),requestApproval:call=>this.approvalQueue.request(task.taskId,call),onEvent:event=>{for(const listener of this.listeners)try{listener(event)}catch{/* observers are not transactions */}}},structuredClone(task),{requestId:source?.kind==='member-results'?source.continuationId:randomUUID(),scopeId:admissionWait?.scopeId??human?.scopeId??continuation?.scopeId??recovery?.commandId??replan?.commandId,wait:admissionWait,signal:controller.signal,...(preparedInput?{preparedInputImages:preparedInput.images}:{})});
+      loop=await this.factory({...options,allowNativeExecution:options.permission?options.permission!=='read':options.allowNativeExecution,mode:task.mode,requestQuestion:(args,signal)=>this.questions.ask(task.taskId,args,signal),requestApproval:call=>this.approvalQueue.request(task.taskId,call),onEvent:event=>{for(const listener of this.listeners)try{listener(event)}catch{/* observers are not transactions */}}},structuredClone(task),{requestId:source?.kind==='member-results'||source?.kind==='goal-repair'?source.continuationId:randomUUID(),scopeId:admissionWait?.scopeId??human?.scopeId??continuation?.scopeId??recovery?.commandId??replan?.commandId,wait:admissionWait,signal:controller.signal,...(preparedInput?{preparedInputImages:preparedInput.images}:{})});
       controller.signal.throwIfAborted();
       if((this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
-      if((source?.kind==='member-results'||automaticQueue)&&this.resultContinuationStopped.has(task.taskId))fail('COLLABORATION_STOPPED','本会话已停止自动协作，请显式继续对话');
+      if(((source?.kind==='member-results'||source?.kind==='goal-repair')||automaticQueue)&&this.resultContinuationStopped.has(task.taskId))fail('COLLABORATION_STOPPED','本会话已停止自动协作，请显式继续对话');
       if(automaticQueue&&this.queueAdvanceStopped.has(task.taskId))fail('QUEUE_INSERT_UNKNOWN','旧队列插入或保存结果未确认，请先核实原运行记录，勿自动重发');
       if(!source&&!automaticQueue&&!fresh)this.resultContinuationStopped.delete(task.taskId);
       if(this.closing||(this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
@@ -478,19 +478,24 @@ export class WorkspaceExecutionManager {
     return this.launch(prior.task,parsed,message,{runId,reconciledToolIds});
   })}
   /** 可信协调器回注已核实的成员终态；来源只允许在同线程消费一次，不经过可编辑的用户队列。 */
-  continueFromResults(taskId:string,message:string,options:Options,rawSource:RunInputSource,wait?:ExecutionAdmissionWait){return this.serial(async()=>{
+  continueFromResults(taskId:string,message:string,options:Options,rawSource:RunInputSource,wait?:ExecutionAdmissionWait){return this.continueSystem(taskId,message,options,rawSource,'member-results',wait)}
+  /** 最终验收反馈使用独立系统来源；同样受停止、原生会话完整性、容量和周期预算约束。 */
+  continueGoalRepair(taskId:string,message:string,options:Options,rawSource:RunInputSource,wait?:ExecutionAdmissionWait){return this.continueSystem(taskId,message,options,rawSource,'goal-repair',wait)}
+  private continueSystem(taskId:string,message:string,options:Options,rawSource:RunInputSource,kind:'member-results'|'goal-repair',wait?:ExecutionAdmissionWait){return this.serial(async()=>{
     safeId(taskId);const source=checkedRunInputSource(rawSource);
-    if(source.kind!=='member-results')fail('CONTINUATION_SOURCE','成员回注不能提交用户补充来源');
+    if(source.kind!==kind)fail('CONTINUATION_SOURCE','系统接续来源与入口不一致');
     if(!message.trim())fail('MESSAGE','成员结果内容不能为空');
     const history=await this.thread(taskId);
     const same=history.find(run=>run.source?.continuationId===source.continuationId);
     if(same){
       const equalSet=(a:string[],b:string[])=>a.length===b.length&&a.every(id=>b.includes(id));
-      if(same.source?.kind!=='member-results'||!equalSet(same.source.messageIds,source.messageIds)||!equalSet(same.source.taskIds,source.taskIds)||same.events[0]?.data.message!==message)fail('CONTINUATION_CONFLICT','同一回传标识已经绑定其他成员结果或内容');
+      const matched=source.kind==='member-results'?same.source?.kind==='member-results'&&equalSet(same.source.messageIds,source.messageIds)&&equalSet(same.source.taskIds,source.taskIds):JSON.stringify(same.source)===JSON.stringify(source);
+      if(!matched||same.events[0]?.data.message!==message)fail('CONTINUATION_CONFLICT','同一回传标识已经绑定其他成员结果或内容');
       return {workspaceId:same.task.workspaceId,taskId,runId:same.runId};
     }
-    if(history.some(run=>run.source?.kind==='member-results'&&run.source.messageIds.some(id=>source.messageIds.includes(id))))fail('RESULT_ALREADY_CONSUMED','部分成员结果已进入本会话，不能换回传标识重复续跑');
+    if(source.kind==='member-results'&&history.some(run=>run.source?.kind==='member-results'&&run.source.messageIds.some(id=>source.messageIds.includes(id))))fail('RESULT_ALREADY_CONSUMED','部分成员结果已进入本会话，不能换回传标识重复续跑');
     const prior=history.at(-1);
+    if(source.kind==='goal-repair'&&prior?.runId!==source.sourceRunId)fail('CONTINUATION_NOT_READY','验收反馈不属于最近一个已完成主运行');
     if(!prior||prior.task.mode!=='chat'||prior.status!=='completed'||prior.unresolvedTools.length||!prior.sessionFile)fail('CONTINUATION_NOT_READY','主会话上轮未安全完成，请先核实后继续对话');
     return this.launch(prior.task,executionOptions.parse(options),message,{runId:prior.runId},source,false,undefined,undefined,undefined,wait);
   })}

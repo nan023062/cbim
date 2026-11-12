@@ -1,7 +1,7 @@
 /**
  * 解析后的业务分配可以持有独立 fallbackBinding；输入不能直接提供兜底证明，且与 ownerSelection/ownerBinding 互斥。
  * 成员等待仅在 awaiting_user 明确保留完整清单；普通审阅、完成和人工决定不授予成员恢复许可。
- * 作用定位：定义调度周期目标的原始输入、版本化计划、审阅证据和持久化转换规则。
+ * 作用定位：定义目标输入、版本化计划、审阅证据及转换规则；业务拒绝精确绑定旧候选，新候选仍须独立验收。
  * 设计原因：计划与模型回合分离，原始需求不可改写；业务分配保留负责人选择及可信绑定、可选 Workflow，显式补充使旧计划过期，历史缺省不伪造新身份。
  * 职责边界：主角色可直接执行并引用本轮业务工具证据，成员专属 Workflow 仍只绑定成员任务；人工满足项须引用真实决定及显式接续，complete 仅是申请。
  */
@@ -38,7 +38,8 @@ const humanDecisionReference=z.object({decisionId:z.string().uuid(),continuation
 const humanEvidence=humanDecisionReference.extend({kind:z.literal('human-decision')}).strict();
 const evidence=z.discriminatedUnion('kind',[memberEvidence,knowledgeEvidence,mainExecutionEvidence,humanEvidence]);
 const check=z.object({criterionId:id,outcome:z.enum(['satisfied','unmet','needs_human']),reason:text,evidence:z.array(evidence).max(100)}).strict();
-const superseded=z.object({taskId:id,replacementTaskIds:z.array(id).min(1).max(100).refine(unique),reason:text,humanDecision:humanDecisionReference.optional()}).strict();
+/** 业务返工明确指向原有效候选；只是拒绝旧成果，不签发新成果或人工验收。 */
+const superseded=z.object({taskId:id,replacementTaskIds:z.array(id).min(1).max(100).refine(unique),reason:text,humanDecision:humanDecisionReference.optional(),rejectedCandidate:z.object({runId:id,resultId:id,planRevision:revision}).strict().optional()}).strict();
 /** memberPause 仅用于 awaiting_user：明确保留可靠检查点和未领取后继，不授权恢复或签署验收。 */
 export const goalReviewInputSchema=z.object({expectedRevision:revision,decision:z.enum(['complete','replan','blocked','awaiting_user']),checks:z.array(check).max(50),superseded:z.array(superseded).max(100),gaps:z.array(text).max(100),reason:text,memberPause:memberPauseSchema.optional()}).strict();
 export type GoalPlanInput=z.infer<typeof goalPlanInputSchema>;

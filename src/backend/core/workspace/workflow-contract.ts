@@ -4,6 +4,7 @@
  * 设计原因：自然语言方法仍由模型运用，只有显式声明的少量稳定条件才交程序检查；坏声明不能静默退回无约束流程。
  * 职责边界：纯解析，JSON/CSV/PNG要求固定产物与受限结构；普通artifactScope只声明观察，删除/移动约定须启用requireCompleteManifest并核原操作。不读取工程或签发权限。
  */
+import {codeCheckRequirementSchema} from './code-check';
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
 import {parseJson} from '../foundation/json';
@@ -36,13 +37,14 @@ export const workflowContractSchema=z.object({
   /** 原任务权限之内的显式限制；旧 Workflow 缺省不升级为隔离模式。 */
   executionScope:executionScopeSchema.optional(),
   beforeEffects:z.object({requirePlan:z.literal(true)}).strict().optional(),
-  delivery:z.object({requiredToolEvidence:z.array(requirement).min(1).max(workflowContractLimits.requirements).optional(),requiredValidations:z.array(artifactValidationRequirementSchema).min(1).max(workflowContractLimits.requirements).optional(),requireCompleteManifest:z.literal(true).optional()}).strict().refine(value=>!!value.requiredToolEvidence||!!value.requiredValidations||value.requireCompleteManifest===true,'交付至少声明一种非空条件').optional(),
+  delivery:z.object({requiredCodeChecks:z.array(codeCheckRequirementSchema).min(1).max(8).optional(),requiredToolEvidence:z.array(requirement).min(1).max(workflowContractLimits.requirements).optional(),requiredValidations:z.array(artifactValidationRequirementSchema).min(1).max(workflowContractLimits.requirements).optional(),requireCompleteManifest:z.literal(true).optional()}).strict().refine(value=>!!value.requiredCodeChecks||!!value.requiredToolEvidence||!!value.requiredValidations||value.requireCompleteManifest===true,'交付至少声明一种非空条件').optional(),
 }).strict().superRefine((value,context)=>{
   if(!value.beforeEffects&&!value.delivery&&!value.artifactScope&&!value.executionScope)context.addIssue({code:z.ZodIssueCode.custom,message:'至少声明一项执行条件或产物观察范围'});
   try{preparedExecutionScope([{contract:value}])}catch(error){context.addIssue({code:'custom',message:String(error)})}
   if(value.delivery?.requireCompleteManifest&&!value.artifactScope)context.addIssue({code:z.ZodIssueCode.custom,message:'完整交付要求必须同时声明本模块 artifactScope'});
   if(value.artifactScope?.transitions&&!value.delivery?.requireCompleteManifest)context.addIssue({code:z.ZodIssueCode.custom,message:'删除/移动要求必须显式启用完整清单验收'});
-  const ids=[...value.delivery?.requiredToolEvidence??[],...value.delivery?.requiredValidations??[]].map(item=>item.id);
+  if(value.delivery?.requiredCodeChecks&&(!value.delivery.requireCompleteManifest||!value.artifactScope||value.executionScope))context.addIssue({code:"custom",message:"代码检查要求完整源码清单且不能使用隔离执行模式"});
+  const ids=[...value.delivery?.requiredCodeChecks??[],...value.delivery?.requiredToolEvidence??[],...value.delivery?.requiredValidations??[]].map(item=>item.id);
   if(new Set(ids).size!==ids.length)context.addIssue({code:z.ZodIssueCode.custom,path:['delivery','requiredToolEvidence'],message:'证据要求 ID 不能重复'});
 });
 export type WorkflowContract=z.infer<typeof workflowContractSchema>;

@@ -1,6 +1,6 @@
 /**
  * 目录归属：backend/scheduler-engine/runtime；监管投影与角色履历。
- * 作用定位：把主会话和成员运行事件转换为可展示的公开消息、工具状态、计划与证据摘要。
+ * 作用定位：将主/成员事件投影为公开消息和证据摘要；成员结果、人工决定与验收返工明确保留系统来源。
  * 设计原因：任务详情与静态 Agent 历史使用同一字段白名单，排除原生会话路径、冻结知识、工具输入正文及私有推理；公开正文限长，但不声称识别正文中的全部敏感信息。
  * 职责边界：这里只做纯投影，读取方须先核验完整归属；人工决定的系统转交仅公开来源种类和固定摘要，不当用户原话或透传意见正文，不把运行结束当作验收。
  * 仓库范围：保留真实链接器、仓库、共享代际与操作，正文/地址/凭据不经公开投影透传。
@@ -60,8 +60,8 @@ export function projectRunEvent(event:StoredEvent,identity:PublicRunIdentity,tas
   switch(type){
     case 'run.started':{
       // 成员启动 message 可能包含冻结提示词，只展示正式任务目标；主对话保留本轮用户原话，回注正文不冒充用户输入。
-      const kind=task.mode==='chat'?record(source.source).kind:undefined,returned=kind==='member-results'||kind==='human_decisions';
-      const message=kind==='human_decisions'?'按已保存的人工决定继续（系统转交）':returned?'成员任务结果回注（系统数据）':task.mode==='chat'?text(source.message,16000)??task.goal:task.goal;
+      const kind=task.mode==='chat'?record(source.source).kind:undefined,returned=kind==='member-results'||kind==='human_decisions'||kind==='goal-repair';
+      const message=kind==='goal-repair'?'最终验收失败，正在有界返工（系统反馈）':kind==='human_decisions'?'按已保存的人工决定继续（系统转交）':returned?'成员任务结果回注（系统数据）':task.mode==='chat'?text(source.message,16000)??task.goal:task.goal;
       data={task:structuredClone(task),message,...(returned?{source:{kind}}:{}),...(source.engine==='pi'?{engine:'pi'}:{})};break;
     }
     case 'session.bound':type='engine.status';data={label:'成员会话已连接'};break;

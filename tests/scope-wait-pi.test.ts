@@ -45,10 +45,13 @@ it.each(['parked-restart','shutdown-before-park','missing-review'] as const)('ke
     }
     await vi.waitFor(async()=>{expect((await scopes())[0].status).toBe(mode==='parked-restart'?'waiting':'closed');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);expect(leases.size).toBe(0)},{timeout:30000,interval:30});
     const saved=(await scopes())[0],beforeGraph=await graph(),thread=await app.execution(entry.id).thread(started.taskId),count=provider.mainRequests.length+provider.memberRequests.length;
-    expect(thread).toHaveLength(2);expect(thread.every(run=>run.status==='completed')).toBe(true);
+    expect(thread).toHaveLength(mode==='missing-review'?4:2);expect(thread.every(run=>run.status==='completed')).toBe(true);
     expect(saved.goal?.input).toEqual({message:waitFixture.mainGoal,attachmentIds:[]});
     expect(beforeGraph.tasks).toHaveLength(1);expect(beforeGraph.tasks[0]).toMatchObject({status:'result_ready',result:{acceptance:'not_evaluated'}});
     if(mode==='missing-review'){
+      expect(provider.mainRequests).toHaveLength(6);expect(provider.memberRequests).toHaveLength(5);expect(provider.errors).toEqual([]);
+      expect(thread.slice(2).map(run=>run.source)).toEqual([1,2].map(attempt=>expect.objectContaining({kind:'goal-repair',scopeId:saved.scopeId,attempt,failureCode:'GOAL_REVIEW_REQUIRED'})));
+      expect(saved.goal?.plan?.criteria.find(item=>item.id===waitFixture.humanId)).toMatchObject({kind:'human',text:waitFixture.humanCriterion});
       expect(saved).toMatchObject({status:'closed',outcome:'failed',goal:{blocked:{reason:expect.any(String)}}});expect(saved.wait).toBeUndefined();
       await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
       expect(await scopes()).toEqual([saved]);expect(provider.mainRequests.length+provider.memberRequests.length).toBe(count);

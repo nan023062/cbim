@@ -39,6 +39,11 @@ export async function activeInputProvider(mode:ActiveInputMode='replan'){
       else if(turn===4){const review=goalCompleteArguments(body,'active-before-input');tool('active-old-review','cbim_goal_review',mode==='stale-waiting'?{...review,decision:'awaiting_user',gaps:[d.waitReason],reason:d.waitReason}:review)}
       else if(turn===5){emit({role:'assistant',content:'旧审阅已保存，测试窗口保持本轮进行。'});await gate(5).promise;reply('旧审阅对应的回复结束。')}
       else if(turn===6){assert.ok(JSON.stringify(body.messages).includes(d.insert));if(mode.startsWith('stale-'))reply('收到了新增要求，但本地供应商故意不重新规划或审阅。');else tool('active-after-input','cbim_goal_inspect',{})}
+      else if(mode.startsWith('stale-')&&turn>=7){
+        // 保持旧版本的故意错误行为，验证有界反馈不能自行恢复过期审阅或再次执行成员。
+        assert.ok(turn<=8);assert.ok(JSON.stringify(body.messages.at(-1)?.content).includes('CBIM 最终验收未通过'));
+        reply('仍未按新增要求重新规划或审阅，不能沿用旧完成或等待结论。');
+      }
       else if(turn===7)tool('active-stale-review','cbim_goal_review',goalCompleteArguments(body,'active-after-input'));
       else if(turn===8){const result=body.messages.find(item=>item.tool_call_id==='active-stale-review');assert.ok(JSON.stringify(result).includes('GOAL_REPLAN_REQUIRED'));const {scope}=goalInspection(body,'active-after-input');tool('active-replan','cbim_goal_plan',{...plan(scope.goal.revision),constraints:['只汇报真实文件事实','按新输入改成两条短句'],reason:'根据已接收的新输入重新规划，不沿用旧审阅'})}
       else if(turn===9)tool('active-after-replan','cbim_goal_inspect',{});

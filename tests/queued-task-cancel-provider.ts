@@ -52,7 +52,11 @@ export async function queuedTaskCancelProvider(options:{holdContinuation?:boolea
       else if(turn===10){const {scope,graph}=goalInspection(body,'cancel-after');assert.ok(graph.tasks.filter(task=>d.oldGoals.slice(1).includes(task.goal)).every(task=>task.status==='cancelled'&&task.runIds.length===0&&!task.result));tool('cancel-not-success','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'complete',checks:scope.goal.plan.criteria.map(criterion=>({criterionId:criterion.id,outcome:'satisfied',reason:'故意尝试把撤销当作完成，应该被拒绝',evidence:[]})),superseded:[],gaps:[],reason:'测试无真实候选时撤销不能完成目标'})}
       else if(turn===11){assert.ok(toolText(body,'cancel-not-success').includes('GOAL_'),'撤销不构成目标完成证据');tool('cancel-wait-inspect','cbim_goal_inspect',{})}
       else if(turn===12){if(options.invalidComplete)reply('仅文字声称目标完成，没有合法完成审阅。');else{const {scope}=goalInspection(body,'cancel-wait-inspect');tool('cancel-wait-review','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'awaiting_user',checks:scope.goal.plan.criteria.map(criterion=>({criterionId:criterion.id,outcome:'unmet',reason:d.waitReason,evidence:[]})),superseded:[],gaps:[d.waitReason],reason:d.waitReason})}}
-      else if(turn===13&&!options.invalidComplete)reply(d.waitReason);
+      else if(options.invalidComplete&&turn>=13){
+        // 系统返工不是用户补充；不能滑入下面仅属于显式接续的新任务分支。
+        assert.ok(turn<=14,'无进展反馈必须有界');assert.ok(JSON.stringify(body.messages.at(-1)?.content).includes('CBIM 最终验收未通过'));
+        reply('仍只有撤销记录，没有真实完成证据。');
+      }else if(turn===13)reply(d.waitReason);
       else if(turn===14){assert.ok(JSON.stringify(body.messages.filter(message=>message.role==='user').at(-1)?.content).includes(d.supplement));if(options.holdContinuation){emit({role:'assistant',content:d.continuationLive});await continuationGate}tool('cancel-resume-inspect','cbim_goal_inspect',{})}
       else if(turn===15){const {scope}=goalInspection(body,'cancel-resume-inspect');tool('cancel-replan','cbim_goal_plan',{...goalPlanArguments({objective:d.mainGoal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance},scope.goal.revision),reason:'按用户补充新建三项任务与依赖，旧求助/撤销历史不可复活'})}
       else if(turn===16)dispatch('cancel-new-a',d.newGoals[0]);

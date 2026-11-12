@@ -44,10 +44,16 @@ it.each(['missing-review','failed-member','forged-evidence','replan'] as const)(
             const review=goalCompleteArguments(body,'goal-inspect-forgery');
             review.checks[0].evidence[0].resultId='invented-result-must-not-be-trusted';
             tool('goal-review-forged','cbim_goal_review',review);
-          }else{expect(turn).toBe(5);expect(JSON.stringify(body.messages.filter(message=>message.role==='tool'&&message.tool_call_id==='goal-review-forged'))).toContain('GOAL_EVIDENCE_INVALID');reply('忽略证据失败，仍声明全部完成。')}
+          }else{
+            expect(turn).toBeGreaterThanOrEqual(5);expect(turn).toBeLessThanOrEqual(7);
+            expect(JSON.stringify(body.messages.filter(message=>message.role==='tool'&&message.tool_call_id==='goal-review-forged'))).toContain('GOAL_EVIDENCE_INVALID');
+            if(turn>5)expect(JSON.stringify(body.messages.at(-1)?.content)).toContain('CBIM 最终验收未通过');
+            reply('忽略证据失败，仍声明全部完成。');
+          }
         }else if(mode!=='replan'){
-          expect(turn).toBe(3);
-          // Even a confident final answer cannot replace the explicit evidence review.
+          expect(turn).toBeGreaterThanOrEqual(3);expect(turn).toBeLessThanOrEqual(5);
+          if(turn>3)expect(JSON.stringify(body.messages.at(-1)?.content)).toContain('CBIM 最终验收未通过');
+          // 两次有界反馈仍不补证，必须失败；不能让测试供应商异常代替真实验收拒绝。
           reply('已经全部完成，可以处理排队要求。');
         }else if(turn===3)tool('goal-inspect-first','cbim_goal_inspect',{});
         else if(turn===4){
@@ -123,9 +129,11 @@ it.each(['missing-review','failed-member','forged-evidence','replan'] as const)(
       expect(first).toMatchObject({outcome:'failed',goal:{revision:2,blocked:{reason:expect.any(String)}}});
       expect(first.goal?.review).toBeUndefined();expect(snapshotGraph.tasks).toHaveLength(1);
       expect(snapshotGraph.tasks[0].status).toBe(mode==='failed-member'?'failed':'result_ready');
-      expect(thread).toHaveLength(2);expect(thread[1].source?.kind).toBe('member-results');
+      expect(thread).toHaveLength(4);expect(thread[1].source?.kind).toBe('member-results');
+      expect(thread.slice(2).map(run=>run.source)).toEqual([1,2].map(attempt=>expect.objectContaining({kind:'goal-repair',scopeId:first.scopeId,attempt,failureCode:'GOAL_REVIEW_REQUIRED'})));
+      expect(thread.every(run=>run.status==='completed')).toBe(true);
       expect(await f.app.dispatch('loop.queue',{id:entry.id,taskId:started.taskId})).toEqual([expect.objectContaining({message:queuedGoal,status:'paused'})]);
-      expect(mainRequests).toHaveLength(mode==='forged-evidence'?6:4);expect(memberRequests).toHaveLength(mode==='failed-member'?2:5);
+      expect(mainRequests).toHaveLength(mode==='forged-evidence'?8:6);expect(memberRequests).toHaveLength(mode==='failed-member'?2:5);
     }
     const monitored=f.app.runtime.snapshot().members;
     expect(snapshotGraph.tasks.every(task=>monitored.find(agent=>agent.agentInstanceId===task.assignee.agentInstanceId)?.lifecycle==='released')).toBe(true);

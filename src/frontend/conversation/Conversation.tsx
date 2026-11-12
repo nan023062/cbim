@@ -15,6 +15,7 @@
  * 三个引擎始终存在，对话栏读写工作区主 Agent 配置，模型菜单按协议筛选统一启用目录；修改只影响下一轮，Claude Code/Codex 运行期间只支持排队而不承诺原轮插入。协作提示与主 Agent 默认执行规则保持一致。
  * 队列 IPC 入口只接收实际支持的操作名，状态、停止和回执仍由原控制器管理。
  * IPC 边界：发送前冻结原任务和运行，审批绑定审批自身任务；动态队列输入逐操作核实。
+ * 中断恢复：空闲会话缺少原生文件或执行事实待核实时，在输入区解释阻断并导航恢复选项，保留旧草稿和附件。
  */
 import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
@@ -54,7 +55,7 @@ import type {ExecutionRecoveryContext} from '../tasks/useExecutionRecovery';
 import {useScopeReplan} from '../tasks/useScopeReplan';
 import {useHumanDecisions} from '../tasks/useHumanDecisions';
 import {useHumanContinuation} from '../tasks/useHumanContinuation';
-import {ThreadHistoryNotice,threadResumeRun} from './ThreadHistoryNotice';
+import {ThreadHistoryNotice,ThreadRecoveryNotice,threadRecoveryReason,threadResumeRun} from './ThreadHistoryNotice';
 import {useAdmission} from '../tasks/useAdmission';
 import {sessionAdmission} from '../tasks/admission-state';
 import {AdmissionNotice} from '../tasks/AdmissionNotice';
@@ -227,8 +228,8 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   // 人工决定只有一份本机会话控制器，保存不改普通草稿、权限或当前等待状态。
   const humanDecisions=useHumanDecisions(workspace.id,tab.taskId,graph,graph.refresh);
   // 初次周期读取尚未完成时不能凭运行日志猜测 resume；等待信息就绪后再决定发送或排队。
-  const resumeRun=currentRun;
-  const canSendRequest=active&&loaded&&!pollError&&!graph.loading&&!busy&&!stopping&&!attachmentBusy&&modelAvailable&&(tab.taskId?taskOpen||!!resumeRun?.sessionFile&&resumeRun.unresolvedTools.length===0:true);
+  const recoveryReason=tab.taskId&&!taskOpen?threadRecoveryReason(currentRun):undefined;
+  const canSendRequest=active&&loaded&&!pollError&&!graph.loading&&!busy&&!stopping&&!attachmentBusy&&modelAvailable&&!recoveryReason;
   const canSend=canSendRequest&&(!!tab.draft?.trim()||attachments.length>0);
   // 标题只展示用户首行目标，避免把附加参考资料和内部标记放进导航。
 
@@ -253,9 +254,9 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
       {graph.error&&<p role="alert">{graph.error} <button onClick={graph.refresh}>重新同步成员动态</button></p>}
       {questions.map(q=><QuestionCard key={q.id} request={q} onAnswer={async answers=>{await api.call('loop.answerQuestion',{id:workspace.id,taskId:q.taskId,questionId:q.id,answers})}}/>)}
       {currentRun&&!mainRunning&&currentRun.unresolvedTools.length>0&&<div className="chat-reconcile" data-testid="unresolved-tools-notice"><h3>原操作结果尚未确认</h3><p>展开原工具记录，明确核实当前影响并保存处置。需要继续调查时创建独立只读核实任务；原记录保留，勾选调用标识不能恢复原运行。</p><ul>{currentRun.unresolvedTools.map(id=><li key={id}><code>{id}</code></li>)}</ul></div>}
-      {tab.taskId&&loaded&&!taskOpen&&!resumeRunId&&<p role="alert" data-testid="thread-resume-unavailable">当前会话没有可安全续接的执行记录；请先在任务视图核实，或新建对话。原记录已保留。</p>}
     </div>
     <div className="chat-composer">
+      {loaded&&!pollError&&!graph.loading&&recoveryReason&&<ThreadRecoveryNotice reason={recoveryReason} disabled={!active||busy||stopping||attachmentBusy} onInspect={()=>{graph.selectScope(undefined);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}} onNewConversation={()=>onBind(undefined)}/>}
       {taskOpen&&!!nextTip&&<p className="composer-next-tip" role="status">附件随下次发送；引擎、模型和权限修改在下一轮执行生效。{canInsert?'插入当前任务仍沿用当前运行设置。':''}</p>}
       {waiting&&<p className="composer-next-tip" role="status" data-testid="conversation-waiting">当前目标等待补充；新消息会排队为下个任务。</p>}
       {approvals.map(a=><div className="chat-approval" key={a.id}><b>允许本次 {a.name} 操作？</b><pre>{JSON.stringify(a.input,null,2)}</pre><button disabled={busy} onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:a.taskId,approvalId:a.id,allow:true})})}>允许一次</button><button disabled={busy} title="仅允许当前这次执行中的后续操作；结束或停止后自动恢复确认，知识库保护不变" onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:a.taskId,approvalId:a.id,allow:true,allowAll:true})})}>本次任务全部通过</button><button disabled={busy} onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:a.taskId,approvalId:a.id,allow:false})})}>拒绝</button></div>)}

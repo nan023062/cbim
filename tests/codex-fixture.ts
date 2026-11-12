@@ -17,12 +17,19 @@ export function codexResponse(res:http.ServerResponse,call?:{id:string;name:stri
   send({type:'response.output_item.done',output_index:0,item});
   send({type:'response.completed',response:{id:responseId,status:'completed',output:[item],usage:{input_tokens:100,output_tokens:20,total_tokens:120,input_tokens_details:{cached_tokens:0},output_tokens_details:{reasoning_tokens:0}}}});res.end();
 }
-export async function codexFixture(options:{tool?:'internal'|'read'|'write'|'bash';allow?:boolean|'throw';hold?:boolean;failFirst?:boolean}={}){
+export async function codexFixture(options:{tool?:'internal'|'read'|'write'|'bash';allow?:boolean|'throw';hold?:boolean;failFirst?:boolean;afterTool?:'incomplete'|'hold'}={}){
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-codex-')),cwd=path.join(root,'project'),home=path.join(root,'engine');await fs.mkdir(cwd);await fs.writeFile(path.join(cwd,'sample.txt'),'sample content');
   const calls:ToolCall[]=[],events:EngineEvent[]=[],invocations:unknown[]=[],requests:any[]=[],errors:string[]=[];
   const callId='tool_'+randomUUID(),tool=options.tool,input=tool==='write'?{path:path.join(cwd,'written.txt'),content:'Codex wrote this'}:tool==='read'?{path:path.join(cwd,'sample.txt')}:tool==='bash'?{command:'echo cbim-codex-command'}:{value:'test'},name=tool==='internal'?'cbim_test_read':'cbim_native_'+tool;
   let arrived!:()=>void;const received=new Promise<void>(resolve=>{arrived=resolve});
-  const server=http.createServer(async(req,res)=>{try{let text='';for await(const chunk of req)text+=chunk;const body=JSON.parse(text);requests.push({url:req.url,body});arrived();if(options.hold)return;if(options.failFirst&&requests.length===1){res.writeHead(400,{'content-type':'application/json'});res.end(JSON.stringify({error:{message:'Invalid test tool schema',type:'invalid_request_error'}}));return}codexResponse(res,tool&&requests.length===1?{id:callId,name,input}:undefined)}catch(error){errors.push(String(error));res.destroy()}});
+  const server=http.createServer(async(req,res)=>{try{let text='';for await(const chunk of req)text+=chunk;const body=JSON.parse(text);requests.push({url:req.url,body});arrived();if(options.hold)return;if(options.failFirst&&requests.length===1){res.writeHead(400,{'content-type':'application/json'});res.end(JSON.stringify({error:{message:'Invalid test tool schema',type:'invalid_request_error'}}));return}
+    if(requests.length===2&&options.afterTool){
+      if(options.afterTool==='hold')return;
+      res.writeHead(200,{'content-type':'text/event-stream'});
+      res.end('event: response.incomplete\ndata: '+JSON.stringify({type:'response.incomplete',response:{id:'resp_incomplete',status:'incomplete',output:[],incomplete_details:{reason:'max_output_tokens'}}})+'\n\n');return;
+    }
+    codexResponse(res,tool&&requests.length===1?{id:callId,name,input}:undefined)
+  }catch(error){errors.push(String(error));res.destroy()}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
   const llm:ResolvedLlm={apiKey:'test-codex-key',profile:{engine:'codex',id:randomUUID(),name:'Codex test',api:'openai-responses',auth:'api-key',baseUrl:'http://127.0.0.1:'+(server.address() as any).port+'/v1',model:'codex-test-model',contextWindow:200000,maxTokens:4096,reasoning:false}};
   const engineOptions={agentHome:home,prompt:'Use only the CBIM tools.',llm,allowNativeExecution:true,turnTimeoutMs:15000,knowledge:{list:async()=>[{name:'cbim_test_read',description:'Read test data',inputSchema:{type:'object',properties:{value:{type:'string'}},required:['value'],additionalProperties:false}}],call:async(name:string,args:unknown,signal:AbortSignal,id?:string)=>{signal.throwIfAborted();invocations.push({name,args,id});return {content:[{type:'text',text:'test result'}]}}}};

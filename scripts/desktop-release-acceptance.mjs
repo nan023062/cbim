@@ -67,7 +67,7 @@ async function recordInstallerCache(stage) {
   const result = {configuredDirectory: config.updaterCacheDirName, entries};
   await save(`installer-cache-${stage}`, result); return result;
 }
-let app, requests = 0, differential; const errors = [], phases = [];
+let app, requests = 0, differential, freshEngine; const errors = [], phases = [];
 const server = http.createServer(async (req, res) => {
   for await (const _ of req) { /* consume the deterministic model request */ }
   requests++;
@@ -93,6 +93,15 @@ async function waitPhase(page, phase, interval = 1000) {
   } throw Error(`Update timeout: ${phase}`);
 }
 async function notes(page) {
+  const snapshot = await status(page);
+  if (snapshot.currentResourceVersion !== undefined) {
+    assert.equal(snapshot.currentVersion, version); assert.equal(snapshot.currentResourceVersion, 1);
+    assert.match(snapshot.currentNotes, /未签名/);
+    const icon = page.getByRole('button', {name: '版本与更新', exact: true}); await icon.hover();
+    const tooltip = page.getByRole('tooltip'); await tooltip.waitFor();
+    assert.ok((await tooltip.innerText()).includes(`C ${version} · R 1`));
+    await page.screenshot({path: path.join(root, `${mode}-notes.png`)}); await page.keyboard.press('Escape'); return;
+  }
   await page.getByRole('button', {name: '用户菜单', exact: true}).click();
   const combined = page.getByRole('menuitem', {name: '版本与更新', exact: true});
   const title = await combined.count() ? '版本与更新' : '最近一次更新';
@@ -101,17 +110,53 @@ async function notes(page) {
   assert.ok((await dialog.innerText()).includes(`当前版本 ${version}`)); assert.match(await dialog.innerText(), /未签名/);
   await page.screenshot({path: path.join(root, `${mode}-notes.png`)}); await page.keyboard.press('Escape');
 }
+// 新版先显示窗口再恢复工程；等待真实生命周期就绪，不用测试主动打开来掩盖恢复失败。
+async function restoredCatalog(page, id) {
+  for (let attempt = 0; attempt < 120; attempt++) {
+    const catalog = await page.evaluate(() => window.cbim.call('list'));
+    if (catalog.entries.some(item => item.id === id && item.state === 'running' && item.instanceId)) return catalog;
+    await pause(500);
+  }
+  throw Error('Original workspace did not restore after the update');
+}
+// 首次冷包必须从真实固定公开源取得 E；不写缓存、不改下载地址、不向客户端传入 GitHub 凭据。
+async function verifyFreshEngine(page, profileRoot) {
+  const initial = JSON.parse(JSON.parse(await fs.readFile(path.join(install, 'resources/runtime-initial.json'), 'utf8')).payload);
+  const before = requests;
+  const profile = {name:'Fresh engine acceptance',api:'openai-completions',baseUrl:`http://127.0.0.1:${server.address().port}/v1`,auth:'none',defaultModel:'acceptance',models:[{id:'acceptance',name:'Acceptance',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false}]};
+  await page.evaluate(profile => window.cbim.call('models.save',{profile}), profile);
+  const workspace = path.join(root,'fresh-project'); await fs.mkdir(workspace);
+  const entry = await page.evaluate(path => window.cbim.call('add',{path}), workspace);
+  const run = await page.evaluate(id => window.cbim.call('loop.chat',{id,message:'Verify the downloaded engine.',options:{permission:'read',turnTimeoutMs:60000}}), entry.id);
+  let summary;
+  for (let attempt=0;attempt<360;attempt++) {
+    summary=await page.evaluate(args=>window.cbim.call('loop.inspect',args),{id:entry.id,taskId:run.taskId,runId:run.runId});
+    if(summary.status==='completed')break;
+    if(['failed','interrupted','cancelled'].includes(summary.status))throw Error(JSON.stringify(summary));
+    await pause(500);
+  }
+  assert.equal(summary.status,'completed');assert.equal(requests-before,1);
+  const appData=await app.evaluate(({app})=>app.getPath('appData'));
+  const identity=createHash('sha256').update(path.resolve(exe).toLowerCase()+'\n'+path.resolve(profileRoot).toLowerCase()).digest('hex').slice(0,24);
+  const descriptor=initial.engines.find(engine=>engine.kind==='pi');assert.ok(descriptor);
+  const directory=path.join(appData,'CBIM-runtime',identity,version,'packages',descriptor.package.sha256);
+  for(const file of descriptor.package.files){const target=path.join(directory,file.path);assert.equal((await fs.stat(target)).size,file.bytes);assert.equal(await sha(target),file.sha256)}
+  const result={engine:'pi',version:descriptor.version,packageSha256:descriptor.package.sha256,filesVerified:descriptor.package.files.length,modelRequests:requests-before,taskId:run.taskId,runId:run.runId};
+  await save('fresh-engine',result);return result;
+}
 try {
   if (mode === 'candidate') {
     await setup(candidate, version);
     const cachedInstaller = (await recordInstallerCache('fresh')).entries.find(item => item.configured);
     assert.equal(cachedInstaller.sha256, expected, 'NSIS must populate the cache configured for differential updates');
     let page = await launch(path.join(root, 'fresh-user'));
-    assert.equal((await status(page)).currentVersion, version); assert.equal((await status(page)).enabled, true); await notes(page); await close();
+    assert.equal((await status(page)).currentVersion, version); assert.equal((await status(page)).enabled, true); await notes(page);
+    if((await status(page)).currentResourceVersion!==undefined)freshEngine=await verifyFreshEngine(page,path.join(root,'fresh-user'));
+    await close();requests=0; // 全新安装与旧版迁移是两个独立 profile，分别记录模型请求计数。
   }
   await setup(old, previousVersion); const previousCache = await recordInstallerCache('previous');
   // 0.1.12 已修正 NSIS 缓存归属；先证明真实安装产生了准确旧包，不能手动补足差分前提。
-  if (['0.1.12', '0.1.13'].includes(previousVersion)) assert.equal(previousCache.entries.find(item => item.configured)?.sha256, await sha(old));
+  if (['0.1.12', '0.1.13', '0.1.14'].includes(previousVersion)) assert.equal(previousCache.entries.find(item => item.configured)?.sha256, await sha(old));
   let page = await launch(); assert.equal((await status(page)).currentVersion, previousVersion);
   const profile = {name: 'Release acceptance', api: 'openai-completions', baseUrl: `http://127.0.0.1:${server.address().port}/v1`, auth: 'none', defaultModel: 'acceptance', models: [{id: 'acceptance', name: 'Acceptance', enabled: true, contextWindow: 32768, maxTokens: 1024, reasoning: false, pricing: {input: 0, output: 0, cacheRead: 0, cacheWrite: 0}}]};
   const savedModels = await page.evaluate(profile => window.cbim.call('models.save', {profile}), profile);
@@ -119,7 +164,7 @@ try {
   const entry = await page.evaluate(path => window.cbim.call('add', {path}), workspace);
   // 0.1.7 的新增持久数据也必须沿真实旧版 IPC 创建；不能只证明旧聊天没有丢失。
   let priorMainSettings, priorAutomation;
-  if (['0.1.7', '0.1.8', '0.1.9', '0.1.10', '0.1.11', '0.1.12', '0.1.13'].includes(previousVersion)) {
+  if (['0.1.7', '0.1.8', '0.1.9', '0.1.10', '0.1.11', '0.1.12', '0.1.13', '0.1.14'].includes(previousVersion)) {
     const opened = (await page.evaluate(() => window.cbim.call('list'))).entries.find(item => item.id === entry.id);
     assert.ok(opened?.instanceId);
     const identity = {workspaceId: entry.id, instanceId: opened.instanceId};
@@ -228,7 +273,7 @@ try {
   assert.equal(await page.evaluate(() => localStorage.getItem('cbim.release-retention')), marker);
   assert.equal(await fs.readFile(path.join(userRoot, 'acceptance-marker.txt'), 'utf8'), marker);
   const models = await page.evaluate(() => window.cbim.call('models.list')); assert.deepEqual(models, savedModels);
-  const catalog = await page.evaluate(() => window.cbim.call('list')); assert.ok(catalog.entries.some(e => e.id === entry.id));
+  const catalog = await restoredCatalog(page,entry.id); assert.ok(catalog.entries.some(e => e.id === entry.id));
   const afterKnowledge = await page.evaluate(id => window.cbim.call('snapshot', {id}), entry.id);
   assert.equal(afterKnowledge.revision, priorKnowledge.revision); assert.deepEqual(afterKnowledge.files, priorKnowledge.files);
   assert.equal(await fs.readFile(businessFile, 'utf8'), businessText);
@@ -249,7 +294,7 @@ try {
   if (mode === 'online') { const current = await page.evaluate(() => window.cbim.call('desktop.updates.check')); assert.equal(current.phase, 'current'); }
   const installedCache = await recordInstallerCache('final');
   await close();
-  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, transferExpectation, installedCache, freshInstall: mode === 'candidate', onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', backgroundPrefetchAndExplicitInstall: mode === 'online' && previousUpdateFlow === 'prefetch', differentialDownload: mode === 'online' && previousUpdateFlow === 'prefetch' && transferExpectation === 'differential', differential, retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
+  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, transferExpectation, installedCache, freshInstall: mode === 'candidate', freshEngine, onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', backgroundPrefetchAndExplicitInstall: mode === 'online' && previousUpdateFlow === 'prefetch', differentialDownload: mode === 'online' && previousUpdateFlow === 'prefetch' && transferExpectation === 'differential', differential, retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests+(freshEngine?.modelRequests??0), migrationModelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
   console.log(JSON.stringify({success: true, mode, version, sha256: expected, retained: true}));
 } catch (error) {
   let updateState;

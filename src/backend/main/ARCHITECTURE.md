@@ -215,9 +215,9 @@ Application 持有一份 WebSettings/WebService，启动恢复加密搜索配置
 
 # 主进程运行装配契约
 
-## 用户发起的自动更新流程
+## 后台预下载与用户确认安装
 
-Main 为 `DesktopUpdates` 注入唯一的业务关闭回调，停止终端、等待 `Application.shutdown` 后才标记安装退出。固定 `desktop.updates.download` 负责整段下载/校验/安装，不接受地址或命令；install 仅作失败后的显式重试。installing 期间拒绝普通业务 IPC 与拖入附件；状态查询仍可用来展示进度。
+Main 为 `DesktopUpdates` 注入唯一的业务关闭回调，停止终端、等待 `Application.shutdown` 后才标记安装退出。后台检查自动预下载，固定 `desktop.updates.download` 只手动重试下载/校验，不接受地址或命令；`desktop.updates.install` 在包已就绪后明确确认重启或重试安装。预下载不调用业务关闭回调；installing 期间才拒绝普通业务 IPC 与拖入附件，状态查询仍可用来展示进度。
 
 普通 before-quit 先 close 更新服务再排空，避免用户主动退出时迟到的下载或两秒提示继续触发安装。安装器触发的退出已由成功排空设置 quitting，走原正常退出路径。安装失败没有升级成功保证，必须在新进程核实版本；不更改应用身份、用户目录或 NSIS 校验规则。
 

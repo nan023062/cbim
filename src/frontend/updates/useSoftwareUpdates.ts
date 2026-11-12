@@ -6,7 +6,7 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import type {DesktopUpdateStatus} from '../../bridge/contracts/desktop-updates';
 
 type UpdateAction='check'|'download'|'install';
-/** 状态属于当前窗口；点击 download 已授权校验后的安装重启，关闭弹窗只改变显示，不重复派发安装。 */
+/** 状态属于当前窗口；download 只准备包，install 才确认重启。关闭弹窗只改变显示，不重复派发安装。 */
 export interface SoftwareUpdateController {
   status?:DesktopUpdateStatus;
   error:string;

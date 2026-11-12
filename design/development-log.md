@@ -1,3 +1,13 @@
+## 2026-11-12：后台预下载与显式重启安装
+
+- 用户直接授权“先做后台预下载和增量下载”，本步完成预下载；基线 `c46ea7e7`。已查询 `nan023062/cbim` 开放 Issues，清单为空；未虚构或新建工单，不合并、不发布。
+- `DesktopUpdates` 在原定时检查后自动下载并校验，成功停在 ready。下载与安装授权分开：手动 download 同样只准备包，只有 ready 后的明确 install 才排空业务并重启。在途合并、关闭取消、就绪候选冻结及数据保留保持；下载失败五分钟后自动重试，手动重试／发现另一版本无需等待。
+- 更新弹窗、横幅区分“已就绪”和“安装未完成”；同步 updater、Main、bridge/contracts、frontend/updates、shell 的注释、契约和类图，以及架构生成器的更新器定位。修改入口依次为公开状态契约 → DesktopUpdates → SoftwareUpdates，NSIS 校验/业务排空端口保持。
+- 按真实状态机、Main 关闭和 IPC 消费者选择 `pnpm exec vitest run tests/desktop-updates.test.ts tests/desktop-update-lifecycle.test.ts tests/ipc-desktop.test.ts --reporter=default --reporter=json --outputFile=test-results/update-prefetch-unit.json`：3 文件 28 项通过。`pnpm typecheck`、`pnpm check:architecture` 通过；后续仅注释／契约同步后 `node scripts/source-architecture.mjs --check` 与 `git diff --check` 通过。
+- `node scripts/desktop-updates-ui-smoke.mjs`：真实 App React + 模拟 IPC 的 22 项界面检查通过，含后台预下载无安装授权、用户重启、关闭弹窗保留下载、未提交草稿、深浅色和 320px；报告 `test-results/issue19-ui-report.json`。修复测试入口别名目录重复 React、横幅入口焦点断言与新增 web.settings 夹具，保留原业务断言；此前失败报告保留。
+- 未运行全仓测试、打包、真实 NSIS 安装或公开升级；本步验证不代表已发布或用户已升级。完整 diff 由本步独立提交 review；工作区原有隔离诊断与发布记录未纳入。
+
+
 ## 2026-11-12：0.1.9 集成发布与 0.1.8 在线升级
 
 - 纳入 #36–#45 十项独立提交，PR #48 合入 develop，再经 PR #49 的准确 head 完整 Windows 四片验证正常合入 master。保留原始 37 项集成失败及其根因，修复测试对旧回执/隐藏回复/固定 IPC 数量的依赖、原生摘要误分类及分块中文解码；产品冻结输入没有改变。

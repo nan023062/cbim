@@ -18,7 +18,7 @@
 | [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
 | [command-verification.ts](command-verification.ts) | 向桌面视图导出原主命令的只读核实协议和固定支持矩阵。 |
 | [controlled-files.ts](controlled-files.ts) | 向桌面公开受控文件原操作查询和显式补偿的纯协议。 |
-| [desktop-updates.ts](desktop-updates.ts) | 正式桌面版本、更新日志与用户启动的自动安装流程的公开 IPC 数据。 |
+| [desktop-updates.ts](desktop-updates.ts) | 正式桌面版本、后台预下载进度与用户确认重启安装的公开 IPC 数据。 |
 | [dispatch.ts](dispatch.ts) | 向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。 |
 | [effect-observation.ts](effect-observation.ts) | 向桌面公开原调用影响观察、明确处置与后续周期关系的纯契约。 |
 | [execution.ts](execution.ts) | 对话、运行和排队在 IPC 中传递的可序列化类型。 |
@@ -1428,7 +1428,7 @@ ipc-settings 声明 web.settings/web.configure 的严格请求及 WebSettingsVie
 
 ### 桌面更新状态
 
-`DesktopUpdateStatus.checkedAt` 是最近完成的检查时间，包括失败尝试；`error` 区分离线或失败，不能把有时间误作已是最新版。`installing` 包含可见重启提示与业务排空；`ready` 表示已经校验但安装未完成，等待明确重试。只有新进程的 currentVersion 证明升级。公开协议不包含安装路径、命令、凭据或可修改的更新源。
+`DesktopUpdateStatus.checkedAt` 是最近完成的检查时间，包括失败尝试；`error` 区分离线或失败，不能把有时间误作已是最新版。后台预下载成功停在 `ready`，等待用户确认重启；有错误时表示上次安装未完成、等待显式重试。`download` 不授权安装，`installing` 只由明确的 `install` 动作进入，包含可见重启提示与业务排空。只有新进程的 currentVersion 证明升级。公开协议不包含安装路径、命令、凭据或可修改的更新源。
 
 ### 项目根显示契约
 

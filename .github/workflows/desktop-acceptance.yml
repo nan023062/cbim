@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       previous_version:
-        description: Actual previous public version (0.1.1-2 two-step, 0.1.3-9 automatic, 0.1.10 prefetch)
+        description: Actual previous public version (0.1.1-2 two-step, 0.1.3-9 automatic, 0.1.10-11 prefetch)
         required: true
         type: string
       source_commit:
@@ -25,6 +25,12 @@ on:
         default: candidate
         type: choice
         options: [candidate, online]
+      transfer_expectation:
+        description: Differential required by default; full-fallback is a separately reported diagnostic scenario
+        required: true
+        default: differential
+        type: choice
+        options: [differential, full-fallback]
 
 permissions:
   contents: read
@@ -53,6 +59,7 @@ jobs:
           CBIM_ACCEPTANCE_COMMIT: ${{ inputs.source_commit }}
           CBIM_ACCEPTANCE_SHA256: ${{ inputs.installer_sha256 }}
           CBIM_ACCEPTANCE_MODE: ${{ inputs.mode }}
+          CBIM_ACCEPTANCE_TRANSFER: ${{ inputs.transfer_expectation }}
           TEMP: ${{ runner.temp }}
           TMP: ${{ runner.temp }}
         run: node scripts/desktop-release-acceptance.mjs

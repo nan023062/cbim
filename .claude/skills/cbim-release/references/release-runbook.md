@@ -109,3 +109,8 @@ pnpm make:desktop --unsigned
 - 官网及收尾变更经 develop → master PR 检查、正常合并；[website.yml](../../../../.github/workflows/website.yml) 在 master 部署到既有 Pages。默认 develop 不改变部署分支，不放宽环境保护。核实 Actions 实际 head、目标 URL 与成功回执，再匿名逐文件对照 `index.html`、`download.html`、`404.html`、`robots.txt`、`sitemap.xml`、`cbim.png` 和本地构建字节／摘要。CDN 尚未更新时先只读复核。
 - 将 master 的合并结果以 fast-forward 同步回 develop，核实本地／远端 SHA、默认 develop、远端仅 master／develop 和干净工作树。存在分叉或额外分支时先查差异与授权，不硬重置、不强推或自动删除未知工作；双分支收尾不是新的批量删除许可。
 - 按已有授权回填本次关联 Issues／PR，并更新 [开发记录](../../../../design/development-log.md) 与版本报告；报告 [证据清单](evidence.md) 中的最终事实及尚未同步的外部记录，不再维护 roadmap。必须按实际安装版本报告更新节奏：0.1.2 是启动约 10 秒后及每 30 分钟检查、下载后再点击重启；从 0.1.3 开始采用每分钟检查、点击下载后自动安装重启。新源码行为必须已有对应公开版本，不能套在尚未升级的旧客户端上。关闭／离线用户不会即时收到，仍需用户主动开始下载。
+
+
+## 安装器缓存衔接与回退诊断
+
+验收器也支持 0.1.11 的同一预下载界面。新候选全新安装后必须只读核对 app-update.yml 指向目录中的 installer.exe，摘要须等于刚安装的真实附件；不得在验收中手动复制旧包补足前提。默认在线验收仍要求真实 Range 和无全量回退。transfer_expectation=full-fallback 仅为明确命名的在线诊断，结果必须标注回退，不能计为差分通过。A/B 的已知缓存目录衔接问题见 design/verification/desktop-update-cache-diagnosis-20261112.md；已公开附件不覆盖，修复用更高版本候选。

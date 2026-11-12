@@ -24,7 +24,10 @@ await fs.access(path.join(path.dirname(executable), 'Uninstall CBIM Desktop.exe'
 const running = execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', "@(Get-Process -Name 'CBIM Desktop' -ErrorAction SilentlyContinue).Count"], {encoding: 'utf8', windowsHide: true}).trim();
 assert.equal(running, '0', '请先退出测试机上的 CBIM，再用本工具启动 A');
 const cache = path.join(process.env.LOCALAPPDATA, 'cbim-desktop-updater');
-const cacheHash = await fileDigest(path.join(cache, 'installer.exe'));
+const cacheHash = await fileDigest(path.join(cache, 'installer.exe')).catch(error => {
+  if (error.code === 'ENOENT') throw Error('A/B 已知缓存目录不一致：重新安装同一 A 不能修复。请查看缓存衔接调查与修复候选；本工具不会补造旧包缓存。');
+  throw error;
+});
 assert.ok([a.receipt.artifacts[0].sha256, b.receipt.artifacts[0].sha256].includes(cacheHash), '更新缓存不是本次 A/B，换用干净测试机重新安装 A；本工具不会覆盖现有缓存');
 const marker = path.join(profile, '.cbim-local-update-test.json');
 const identity = {kind: 'cbim-local-update-test', executable, from: a.version, to: b.version};

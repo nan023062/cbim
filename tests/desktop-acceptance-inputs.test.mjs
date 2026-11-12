@@ -11,7 +11,7 @@ describe('desktop upgrade acceptance inputs', () => {
   });
   it('preserves the earlier two-step flow and rejects unsupported future previous versions', () => {
     expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.1'}).previousUpdateFlow).toBe('two-step');
-    expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.10',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.9'})).toThrow();
+    expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.12',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.11'})).toThrow();
   });
   it.each(['candidate', 'online'])('uses the unchanged automatic updater from the actual 0.1.4 release in %s mode', mode => {
     expect(acceptanceInputs({...env, CBIM_ACCEPTANCE_VERSION:'0.1.5', CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.4', CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({version:'0.1.5',previousVersion:'0.1.4',previousUpdateFlow:'automatic',mode});
@@ -37,4 +37,11 @@ it.each(['candidate','online'])('supports the unchanged 0.1.7 updater for the al
 it.each(['candidate','online'])('supports the released 0.1.8 automatic updater in %s mode', mode => {
   expect(acceptanceInputs({...env, CBIM_ACCEPTANCE_VERSION:'0.1.9', CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.8', CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({version:'0.1.9', previousVersion:'0.1.8', previousUpdateFlow:'automatic', mode});
   expect(() => acceptanceInputs({...env, CBIM_ACCEPTANCE_VERSION:'0.1.8', CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.8'})).toThrow();
+});
+
+it.each(['candidate','online'])('accepts 0.1.9 to A with the original automatic installation flow in %s mode', mode => {
+  expect(acceptanceInputs({...env, CBIM_ACCEPTANCE_VERSION:'0.1.10', CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.9', CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({previousUpdateFlow:'automatic', mode});
+});
+it.each(['candidate','online'])('accepts A to B as background prefetch with explicit installation in %s mode', mode => {
+  expect(acceptanceInputs({...env, CBIM_ACCEPTANCE_VERSION:'0.1.11', CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.10', CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({previousUpdateFlow:'prefetch', mode});
 });

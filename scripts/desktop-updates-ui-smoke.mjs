@@ -3,7 +3,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {createServer} from 'vite';
 import {chromium} from 'playwright-core';
-const root=process.cwd(),out=path.join(root,'test-results');await fs.mkdir(out,{recursive:true});
+const root=await fs.realpath(process.cwd()),out=path.join(root,'test-results');await fs.mkdir(out,{recursive:true});
 await fs.writeFile(path.join(out,'desktop-updates-ui.html'),'<div id="root"></div><script type="module" src="/test-results/desktop-updates-ui.mjs"></script>');
 const fixture=String.raw`
 import React from 'react';import {createRoot} from 'react-dom/client';import '/src/frontend/shell/shell.css';
@@ -12,7 +12,7 @@ window.fixture={calls:[],unexpected:[],hasUpdate:false,failDownload:false,failSt
 window.cbim={call:async(action,args)=>{const f=window.fixture;f.calls.push({action,args});
  if(action==='desktop.updates.status'){if(f.failStatus)throw Error('read failed');const snapshot=structuredClone(status);if(f.holdRead){f.holdRead=false;return new Promise(resolve=>f.releaseRead=()=>resolve(snapshot))}return snapshot}
  if(action==='desktop.updates.check'){status={...status,phase:f.hasUpdate?'available':'current',checkedAt:'2026-11-09T01:00:00Z',release:f.hasUpdate?{version:'0.2.0',notes:'修复 BUG\n<img src=x onerror=alert(1)>',tag:'desktop-v0.2.0',publishedAt:'2026-11-09T00:00:00Z'}:undefined};return structuredClone(status)}
- if(action==='desktop.updates.download'){if(f.failDownload)throw Error('offline');status={...status,phase:'downloading',progress:25};return new Promise(resolve=>f.finishDownload=()=>{status={...status,phase:'installing',progress:100};resolve(structuredClone(status))})}
+ if(action==='desktop.updates.download'){if(f.failDownload)throw Error('offline');status={...status,phase:'downloading',progress:25};return new Promise(resolve=>f.finishDownload=()=>{status={...status,phase:'ready',progress:100};resolve(structuredClone(status))})}
  if(action==='desktop.updates.install'){status={...status,phase:'installing'};return structuredClone(status)}
  if(action==='runtime.snapshot')return {workspaces:[]};
  if(action==='list')return {entries:[]};
@@ -21,13 +21,14 @@ window.cbim={call:async(action,args)=>{const f=window.fixture;f.calls.push({acti
  if(action==='admission.settings')return {revision:1,maxConcurrentRuns:4};
  if(action==='admission.read')return {kind:'snapshot',snapshot:{cursor:{streamId:'update-ui',revision:1},policy:{revision:1,maxConcurrentRuns:4},occupied:[],waiting:[]}};
  if(action==='budget.settings')return {revision:1,enabled:false,limits:{}};
+ if(action==='web.settings')return {revision:1,enabled:false,hasKey:false,secureStorage:true};
  if(action==='github.feedback.status')return {config:{clientId:'public-test-client',owner:'nan023062',repo:'cbim',visibility:'public'},secureStorage:true};
  f.unexpected.push(action);throw Error('Unexpected IPC '+action);
 }};
 const {App}=await import('/src/frontend/shell/App.tsx');createRoot(document.getElementById('root')).render(React.createElement(App));
 `;
 await fs.writeFile(path.join(out,'desktop-updates-ui.mjs'),fixture);
-const server=await createServer({root,configFile:false,esbuild:{jsx:'automatic'},server:{host:'127.0.0.1',port:0},logLevel:'error'});let browser;
+const server=await createServer({root,configFile:false,resolve:{dedupe:['react','react-dom']},esbuild:{jsx:'automatic'},server:{host:'127.0.0.1',port:0},logLevel:'error'});let browser;
 const checks=[],errors=[];
 try{
  await server.listen();browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage({viewport:{width:1100,height:850}});page.on('pageerror',e=>errors.push(e.message));
@@ -60,23 +61,33 @@ try{
  await openMenu();await page.getByRole('menuitem',{name:'版本与更新',exact:true}).click();await dialog.getByRole('button',{name:'检查更新',exact:true}).click();await dialog.getByText('当前没有更高版本的桌面正式发布。',{exact:true}).waitFor();
  assert.match(await dialog.locator('.software-release-notes').innerText(),/修复反馈工具诊断/);assert.equal(await count('desktop.updates.check'),1);checks.push('current-version-still-shows-notes');
  await page.evaluate(()=>{window.fixture.hasUpdate=true;window.fixture.holdRead=true});await page.waitForFunction(()=>typeof window.fixture.releaseRead==='function');
- await dialog.getByRole('button',{name:'检查更新',exact:true}).click();await dialog.getByRole('button',{name:'下载更新',exact:true}).waitFor();
+ await dialog.getByRole('button',{name:'检查更新',exact:true}).click();await dialog.getByRole('button',{name:'重试下载',exact:true}).waitFor();
  await page.evaluate(()=>window.fixture.releaseRead());await dialog.getByRole('heading',{name:'可用版本 0.2.0',exact:true}).waitFor();
- assert.equal(await dialog.locator('img').count(),0);assert.equal(await count('desktop.updates.download'),0);checks.push('old-status-does-not-replace-action-result','new-release-without-implicit-download');
+ assert.equal(await dialog.locator('img').count(),0);assert.equal(await count('desktop.updates.download'),0);checks.push('old-status-does-not-replace-action-result','renderer-does-not-start-a-second-download');
 
- await page.evaluate(()=>window.fixture.failDownload=true);await dialog.getByRole('button',{name:'下载更新',exact:true}).click();await dialog.getByRole('alert').waitFor();
- assert.equal(await dialog.getByRole('button',{name:'下载更新',exact:true}).isEnabled(),true);
- await page.evaluate(()=>window.fixture.failDownload=false);await dialog.getByRole('button',{name:'下载更新',exact:true}).click();await dialog.getByText('正在下载并校验… 25%',{exact:true}).waitFor();
- await page.evaluate(()=>window.fixture.set({progress:60}));await dialog.getByText('正在下载并校验… 60%',{exact:true}).waitFor();await close();
+ // 后端自行预下载时，前端只读进度；ready 不得被显示为安装失败或自行派发 install。
+ await page.evaluate(()=>window.fixture.set({phase:'downloading',progress:45}));await dialog.getByText('正在后台下载并校验… 45%',{exact:true}).waitFor();
+ await page.evaluate(()=>window.fixture.set({phase:'ready',progress:100}));await dialog.getByRole('button',{name:'重启安装',exact:true}).waitFor();
+ assert.equal(await count('desktop.updates.download'),0);assert.equal(await count('desktop.updates.install'),0);assert.ok(!(await dialog.innerText()).includes('上次安装未完成'));
+ checks.push('background-prefetch-ready-without-install-authority');
+ await page.evaluate(()=>window.fixture.set({phase:'available',progress:undefined}));await dialog.getByRole('button',{name:'重试下载',exact:true}).waitFor();
+
+ await page.evaluate(()=>window.fixture.failDownload=true);await dialog.getByRole('button',{name:'重试下载',exact:true}).click();await dialog.getByRole('alert').waitFor();
+ assert.equal(await dialog.getByRole('button',{name:'重试下载',exact:true}).isEnabled(),true);
+ await page.evaluate(()=>window.fixture.failDownload=false);await dialog.getByRole('button',{name:'重试下载',exact:true}).click();await dialog.getByText('正在后台下载并校验… 25%',{exact:true}).waitFor();
+ await page.evaluate(()=>window.fixture.set({progress:60}));await dialog.getByText('正在后台下载并校验… 60%',{exact:true}).waitFor();await close();
  assert.equal(await draft.inputValue(),'尚未保存的供应商草稿');await page.evaluate(()=>window.fixture.finishDownload());
- await page.locator('.software-update-notice').filter({hasText:'正在准备自动安装重启'}).waitFor();assert.equal(await count('desktop.updates.install'),0);
- checks.push('download-continues-to-automatic-install-without-second-action');
+ await page.locator('.software-update-notice').filter({hasText:'更新已就绪'}).waitFor();assert.equal(await count('desktop.updates.install'),0);
+ await page.getByRole('button',{name:'查看更新',exact:true}).click();await dialog.getByRole('button',{name:'重启安装',exact:true}).click();
+ await dialog.getByText('下载已校验，正在保存任务并启动安装，应用将自动重启…',{exact:true}).waitFor();assert.equal(await count('desktop.updates.install'),1);
+ await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});assert.equal(await page.getByRole('button',{name:'查看更新',exact:true}).evaluate(e=>e===document.activeElement),true);
+ checks.push('download-keeps-working-until-explicit-restart');
  await page.evaluate(()=>window.fixture.set({phase:'ready',error:'重启安装未能完成。请保留当前窗口，处理关闭错误后再试。'}));
  await page.locator('.software-update-notice').filter({hasText:'安装未完成'}).waitFor();
  checks.push('download-error-retry','download-progress-keeps-polling','dialog-close-keeps-download');
 
  const checksBeforeNotice=await count('desktop.updates.check');await page.getByRole('button',{name:'查看更新',exact:true}).click();await dialog.getByRole('button',{name:'重试安装并重启',exact:true}).waitFor();
- assert.equal(await count('desktop.updates.check'),checksBeforeNotice);assert.equal(await count('desktop.updates.install'),0);
+ assert.equal(await count('desktop.updates.check'),checksBeforeNotice);assert.equal(await count('desktop.updates.install'),1);
  await page.screenshot({path:path.join(out,'issue19-account-dark.png')});await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});
  await page.getByRole('button',{name:'稍后提醒',exact:true}).click();await page.locator('.software-update-notice').waitFor({state:'hidden'});
  await openMenu();await page.getByRole('menuitem',{name:'切换浅色模式',exact:true}).click();await openMenu();await page.screenshot({path:path.join(out,'issue19-account-menu.png')});
@@ -88,7 +99,7 @@ try{
 
  await page.evaluate(()=>window.fixture.failStatus=true);await dialog.getByRole('alert').filter({hasText:'无法读取更新状态'}).waitFor();
  await page.evaluate(()=>{window.fixture.failStatus=false;window.fixture.set({error:undefined})});await dialog.getByRole('button',{name:'重试读取状态',exact:true}).click();await dialog.getByRole('alert').waitFor({state:'hidden'});checks.push('status-read-error-recovery');
- await dialog.getByRole('button',{name:'重试安装并重启',exact:true}).click();await dialog.getByText('下载已校验，正在保存任务并启动安装，应用将自动重启…',{exact:true}).waitFor();assert.equal(await count('desktop.updates.install'),1);checks.push('failed-install-retries-only-after-explicit-action');
+ await dialog.getByRole('button',{name:'重启安装',exact:true}).click();await dialog.getByText('下载已校验，正在保存任务并启动安装，应用将自动重启…',{exact:true}).waitFor();assert.equal(await count('desktop.updates.install'),2);checks.push('install-retries-only-after-explicit-action');
  await close();await page.evaluate(()=>window.fixture.set({enabled:false,phase:'disabled',release:undefined,currentNotes:''}));await openMenu();await page.getByRole('menuitem',{name:'版本与更新',exact:true}).click();
  await dialog.getByText('此构建未附带正式更新日志。',{exact:true}).waitFor();assert.equal(await dialog.getByRole('button',{name:'检查更新',exact:true}).count(),0);checks.push('portable-empty-notes-without-update-action');
  await close();await page.evaluate(()=>window.fixture.set({enabled:true,phase:'idle',release:undefined,checkedAt:'2026-11-09T01:01:00Z',error:'暂时无法检查更新，将在下一分钟自动重试，也可手动检查。'}));await openMenu();await page.getByRole('menuitem',{name:'版本与更新',exact:true}).getByText(/最近检查/).waitFor();assert.equal(await dialog.count(),0);assert.equal(await page.getByRole('alert').count(),0);assert.equal(await page.getByRole('img',{name:'有新版本可更新',exact:true}).count(),0);checks.push('offline-status-remains-silent-outside-updates');

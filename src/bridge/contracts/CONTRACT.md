@@ -8,7 +8,7 @@ ipc-settings 声明 web.settings/web.configure 的严格请求及 WebSettingsVie
 
 ### 桌面更新状态
 
-`DesktopUpdateStatus.checkedAt` 是最近完成的检查时间，包括失败尝试；`error` 区分离线或失败，不能把有时间误作已是最新版。`installing` 包含可见重启提示与业务排空；`ready` 表示已经校验但安装未完成，等待明确重试。只有新进程的 currentVersion 证明升级。公开协议不包含安装路径、命令、凭据或可修改的更新源。
+`DesktopUpdateStatus.checkedAt` 是最近完成的检查时间，包括失败尝试；`error` 区分离线或失败，不能把有时间误作已是最新版。后台预下载成功停在 `ready`，等待用户确认重启；有错误时表示上次安装未完成、等待显式重试。`download` 不授权安装，`installing` 只由明确的 `install` 动作进入，包含可见重启提示与业务排空。只有新进程的 currentVersion 证明升级。公开协议不包含安装路径、命令、凭据或可修改的更新源。
 
 ### 项目根显示契约
 

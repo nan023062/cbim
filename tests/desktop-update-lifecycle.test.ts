@@ -7,7 +7,7 @@ import {DesktopUpdates,type DesktopUpdateInstaller} from '../src/backend/updater
 import {fixture} from './helpers';
 import {moduleFiles,request} from './data/knowledge';
 
-it('one download waits for real Application shutdown and preserves the workspace on reopen',async()=>{
+it('prefetch leaves the workspace open; explicit install drains and preserves it on reopen',async()=>{
   const f=await fixture();let reopened:Application|undefined,updates:DesktopUpdates|undefined;
   try{
     const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id);
@@ -16,7 +16,10 @@ it('one download waits for real Application shutdown and preserves the workspace
     const calls:string[]=[],port:DesktopUpdateInstaller={prepare:async()=>{calls.push('prepare')},download:async progress=>{calls.push('download');progress(100)},install:()=>{expect(()=>f.app.workspace(entry.id)).toThrow();calls.push('install')},close:()=>{}};
     const stop=vi.fn(async()=>{calls.push('drain');await f.app.shutdown();calls.push('drained')});
     updates=new DesktopUpdates('0.1.2','notes',true,async()=>({version:'0.2.0',tag:'desktop-v0.2.0',notes:'next',publishedAt:'2026-11-09T00:00:00Z'}),port,stop);
-    await updates.check();await updates.download();
+    await updates.check();
+    expect(stop).not.toHaveBeenCalled();expect(calls).toEqual(['prepare','download']);
+    expect((await f.app.workspace(entry.id).snapshot()).files).toEqual(before.files);
+    await updates.install();
     expect(stop).toHaveBeenCalledOnce();expect(calls).toEqual(['prepare','download','drain','drained','install']);expect(updates.status().phase).toBe('installing');
     reopened=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await reopened.init();
     const after=await reopened.workspace(entry.id).snapshot();expect(after.files).toEqual(before.files);expect(after.workspaceId).toBe(before.workspaceId);

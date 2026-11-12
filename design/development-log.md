@@ -1,3 +1,43 @@
+## 2026-11-12：版本 B（0.1.11）与不改公开通道的本地升级测试
+
+- 用户直接要求制作 B 并提供不改公开通道的 A → B 测试方法；开放 Issues 为空。本地冻结 `3197b0e6978d1b005bd963ad1bdc0eb7e059b122`，相对 A 只改版本和日志。原公开 0.1.9、A 制品及主工作区已有审阅/诊断资料保持原样。
+- B 的 `pnpm make:desktop --unsigned`、`pnpm verify:desktop <候选> --unsigned` 通过；指定准确 B EXE 的隔离验证六项通过，交付五文件副本摘要一致。已有同产品源码验证复用，未运行全仓/CI/本机安装或推送发布。
+- 新增外部本地测试网络夹具、已安装 A 的人工启动器、真实制品下载联调脚本及便携工具打包。仅在测试启动的进程中转接 Release fetch 和附件 net.request；默认阻止安装器，独立机器上显式参数放行后仍需用户点击安装。测试资料专用、服务仅 loopback、附件白名单/摘要校验，不改产品源、hosts、代理或 TLS。
+- 受影响验证为真实 A/B 字节 + Electron 网络 + 锁定下载器：8 个 Range 响应传输 1,723,719 字节，零全量回退，重建哈希等于 B（391,409,091 字节），HTTP 越界/非白名单拒绝通过。首次测试 executor 初始化失败保留，修复夹具后通过。便携工具由 A 自带 Node 加载通过，未安装目录门禁拒绝通过；`pnpm check:dependencies` 1300 文件/6685 引用、0 循环/违规。
+- [B 制品、操作命令与验收边界](verification/desktop-update-b-local-20261112.md)；证据 `test-results/update-b-0111-20261112/`。真实 NSIS 安装、安装版 UI/数据保留仍需独立 Windows 机器按说明执行；下载器联调没有伪造已安装态，不代表公开 GitHub 分发通过。外部工具不涉及 src 注释或类图变更。
+
+## 2026-11-12：生成更新体验版本 A（0.1.10）
+
+- 用户直接要求打包 A 并交付 A → B 安装体验测试方法；开放 Issues 为空。以 `3f249cf8` 为产品基线，在独立 `build/a10/` 工作树冻结版本/日志提交 `09b63afb970a0a656504c1d1e18a647e56e5288d`，保留主工作区原有未提交资料，未改产品源码和依赖。
+- `pnpm check:brand`、`pnpm build:website`、`pnpm make:desktop --unsigned`、`pnpm verify:desktop <候选> --unsigned` 通过；指定本次打包 EXE 的 `pnpm exec tsx scripts/isolated-node-smoke.mts` 六项通过，自有资源全部回收。沿用已有同源码 41 项单元、22 项界面及类型/架构检查证据，未重复运行。
+- 安装包 391,408,787 字节，四附件及回执复制到 `build/update-experience/A-0.1.10/` 后摘要逐项一致。实际回执、校验值、A → B 前置条件与用户步骤见 [版本 A 测试说明](verification/desktop-update-a-0.1.10-20261112.md)；原始证据 `test-results/update-a-0110-20261112/`。
+- 本次未安装本机客户端、生成 B、公开 Release、推送提交、触发 CI 或部署官网。B 仍需更高公开稳定版；A 的准确旧安装包缓存/blockmap 是差分前提，现有正式通道不支持仅本地测试，NSIS 安装耗时未优化。打包与隔离 EXE 验证不代表 A → B 已通过真实安装/网络验收。
+
+## 2026-11-12：按测试说明复验预下载与增量下载
+
+- 用户直接要求重新运行源码验证，基线 `3f249cf8`；沿已确认范围复验，不选择新工单或修改产品源码/测试。
+- 执行测试说明中的 5 个明确测试文件，共 41 项全部通过；真实 React + 模拟 IPC 的界面脚本 22 项通过、零页面错误。`pnpm typecheck` 与 `pnpm check:architecture` 通过：58 目录说明一致、1296 文件/6682 依赖、0 循环/违规。
+- 实际命令、结果与边界追加于 [测试说明的本轮复验记录](verification/desktop-update-prefetch-differential-20261112.md#2026-11-12-1057-源码复验)；本轮原始证据独立保存于 `test-results/update-source-validation-20261112-105726/`，保留此前界面报告。未执行全仓回归、打包、安装、公开升级或外部写入。
+
+## 2026-11-12：启用安装包增量下载与回退验证
+
+- 用户直接授权的第二项更新优化，前一步预下载提交 `4621d3b4`；开放 Issues 为空，未新建或回填工单。`NsisUpdateInstaller` 启用锁定的 `electron-updater@6.8.11` 差分下载，固定 GitHub generic 源使用单段 Range，保留清单版本/文件名、SHA-512、缓存、全量回退及显式安装边界。未增加更新服务、依赖或网络源。
+- 新增 `tests/nsis-differential-download.test.ts`：只替换宿主和 HTTP 传输目的地，真实下载器执行差分、缓存和校验。64 KiB 样例只传输两段共 16 KiB，最终内容逐字节匹配；另覆盖旧标签、旧索引缓存、重开复用、缺缓存/索引、坏旧包/Range、无 Range 支持、损坏全量拒绝及缓存篡改重验。该比例仅是确定性夹具，不是公开安装包实测。
+- 按适配器变化选取 `pnpm exec vitest run tests/nsis-updater.test.ts tests/nsis-differential-download.test.ts --reporter=default --reporter=json --outputFile=test-results/update-differential-unit.json`：其中 NSIS 配置/门禁 3 项通过，HTTP 夹具首次初始化失败保留为历史。修复测试导出展开触发 autoUpdater getter、transport 注入晚于 Provider 创建，以及 Node 测试传输共享 socket 后，仅复跑受影响新文件 `pnpm exec vitest run tests/nsis-differential-download.test.ts --reporter=default --reporter=json --outputFile=test-results/update-differential-http-final.json`，10 项通过且无监听器警告。本步共 13 项唯一测试通过；与前一步合计 5 文件 41 项。
+- `pnpm typecheck`、`pnpm check:architecture` 通过，1296 文件/6682 依赖、0 循环/违规。同步 NSIS 文件头/关键行为注释和 updater 契约/类图；未重跑已通过且不受影响的界面和预下载状态机。
+- [测试方法与验证边界](verification/desktop-update-prefetch-differential-20261112.md) 包含可立即运行的受影响单元/界面命令，以及含改动版本 A → 更高版本 B 的安装版验收。旧客户端升级到 A 仍走旧逻辑；增量不改变缓存完整包大小或 NSIS 安装方式。未打包、发布、全量回归、真实在线升级或人审，现有安装客户端未被操作。
+
+
+## 2026-11-12：后台预下载与显式重启安装
+
+- 用户直接授权“先做后台预下载和增量下载”，本步完成预下载；基线 `c46ea7e7`。已查询 `nan023062/cbim` 开放 Issues，清单为空；未虚构或新建工单，不合并、不发布。
+- `DesktopUpdates` 在原定时检查后自动下载并校验，成功停在 ready。下载与安装授权分开：手动 download 同样只准备包，只有 ready 后的明确 install 才排空业务并重启。在途合并、关闭取消、就绪候选冻结及数据保留保持；下载失败五分钟后自动重试，手动重试／发现另一版本无需等待。
+- 更新弹窗、横幅区分“已就绪”和“安装未完成”；同步 updater、Main、bridge/contracts、frontend/updates、shell 的注释、契约和类图，以及架构生成器的更新器定位。修改入口依次为公开状态契约 → DesktopUpdates → SoftwareUpdates，NSIS 校验/业务排空端口保持。
+- 按真实状态机、Main 关闭和 IPC 消费者选择 `pnpm exec vitest run tests/desktop-updates.test.ts tests/desktop-update-lifecycle.test.ts tests/ipc-desktop.test.ts --reporter=default --reporter=json --outputFile=test-results/update-prefetch-unit.json`：3 文件 28 项通过。`pnpm typecheck`、`pnpm check:architecture` 通过；后续仅注释／契约同步后 `node scripts/source-architecture.mjs --check` 与 `git diff --check` 通过。
+- `node scripts/desktop-updates-ui-smoke.mjs`：真实 App React + 模拟 IPC 的 22 项界面检查通过，含后台预下载无安装授权、用户重启、关闭弹窗保留下载、未提交草稿、深浅色和 320px；报告 `test-results/issue19-ui-report.json`。修复测试入口别名目录重复 React、横幅入口焦点断言与新增 web.settings 夹具，保留原业务断言；此前失败报告保留。
+- 未运行全仓测试、打包、真实 NSIS 安装或公开升级；本步验证不代表已发布或用户已升级。完整 diff 由本步独立提交 review；工作区原有隔离诊断与发布记录未纳入。
+
+
 ## 2026-11-12：0.1.9 集成发布与 0.1.8 在线升级
 
 - 纳入 #36–#45 十项独立提交，PR #48 合入 develop，再经 PR #49 的准确 head 完整 Windows 四片验证正常合入 master。保留原始 37 项集成失败及其根因，修复测试对旧回执/隐藏回复/固定 IPC 数量的依赖、原生摘要误分类及分块中文解码；产品冻结输入没有改变。

@@ -1,6 +1,6 @@
 /**
- * 作用定位：桌面更新的单实例状态机，每分钟检查，用户下载后串联校验、业务排空和重启安装。
- * 设计原因：一次点击由后端持有完整流程，关闭弹窗或丢失回包不重复提交；失败只允许显式重试，已选候选不会被后台检查替换。
+ * 作用定位：桌面更新的单实例状态机，后台检查并预下载，用户确认后才排空业务和重启安装。
+ * 设计原因：把联网等待移到后台，同时将下载和安装授权分开；已校验候选冻结，普通退出和迟到回包都不能触发安装。
  */
 import type {DesktopRelease,DesktopUpdateStatus} from '../../bridge/contracts/desktop-updates';
 import {compareDesktopVersions} from './desktop-releases';
@@ -13,13 +13,15 @@ export interface DesktopUpdateInstaller {
 }
 export class DesktopUpdates {
   private state:DesktopUpdateStatus;private busy?:Promise<DesktopUpdateStatus>;
+  /** 下载失败后五分钟内只检查版本；手动重试或发现另一版本不受此冷却限制。 */
+  private retryDownloadAfter=0;
   private controller=new AbortController();private timer?:ReturnType<typeof setInterval>;private initial?:ReturnType<typeof setTimeout>;
   constructor(version:string,notes:string,enabled:boolean,private readonly latest:(signal:AbortSignal)=>Promise<DesktopRelease|undefined>,private readonly installer:DesktopUpdateInstaller,private readonly beforeInstall:()=>Promise<void>){
     this.state={currentVersion:version,currentNotes:notes,enabled,phase:enabled?'idle':'disabled'};
   }
   /** 复制公开数据，读取不触发联网或下载。 */
   status():DesktopUpdateStatus{return structuredClone(this.state)}
-  /** 只有正式安装版启动定时检查；后台失败只保留在设置，不强制中断当前任务。 */
+  /** 只有正式安装版启动检查与预下载；下载完成不排空业务，也不自动安装。 */
   start(){if(!this.state.enabled||this.controller.signal.aborted||this.initial||this.timer)return;this.initial=setTimeout(()=>{void this.check()},10000);this.initial.unref();this.timer=setInterval(()=>{void this.check()},60*1000);this.timer.unref()}
   private run(action:()=>Promise<void>){
     if(this.controller.signal.aborted)return Promise.resolve(this.status());
@@ -28,25 +30,52 @@ export class DesktopUpdates {
   }
   check(){
     if(!this.state.enabled||['downloading','ready','installing'].includes(this.state.phase))return Promise.resolve(this.status());
-    return this.run(async()=>{const previous=this.state.release;this.state={...this.state,phase:'checking',error:undefined};
-      try{const release=await this.latest(this.controller.signal);if(this.controller.signal.aborted)return;
-        this.state={...this.state,checkedAt:new Date().toISOString(),release:release&&compareDesktopVersions(release.version,this.state.currentVersion)>0?release:undefined,phase:release&&compareDesktopVersions(release.version,this.state.currentVersion)>0?'available':'current'};
-      }catch{if(!this.controller.signal.aborted)this.state={...this.state,checkedAt:new Date().toISOString(),release:previous,phase:previous?'available':'idle',error:'暂时无法检查更新，将在下一分钟自动重试，也可手动检查。'};}
+    return this.run(async()=>{
+      const previous=this.state;
+      this.state={...this.state,phase:'checking',error:undefined};
+      try{
+        const latest=await this.latest(this.controller.signal);
+        if(this.controller.signal.aborted)return;
+        const release=latest&&compareDesktopVersions(latest.version,this.state.currentVersion)>0?latest:undefined;
+        if(release?.version!==previous.release?.version)this.retryDownloadAfter=0;
+        this.state={...this.state,checkedAt:new Date().toISOString(),release,phase:release?'available':'current',progress:undefined};
+        if(release){
+          if(Date.now()>=this.retryDownloadAfter)await this.downloadCandidate(release);
+          else this.state={...this.state,error:previous.error};
+        }
+      }catch{
+        if(!this.controller.signal.aborted)this.state={...this.state,checkedAt:new Date().toISOString(),release:previous.release,phase:previous.release?'available':'idle',error:'暂时无法检查更新，将在下一分钟自动重试，也可手动检查。'};
+      }
     });
   }
-  /** 一次明确下载授权包含随后的安装重启；下载失败不排空，成功后只安装该冻结候选。 */
+  /** 手动重试只准备安装包，与后台预下载共用同一在途操作；不授权停止任务或重启。 */
   download(){
     if(this.busy)return this.busy;
     if(this.state.phase!=='available'||!this.state.release)return Promise.resolve(this.status());
-    return this.run(async()=>{const release=this.state.release!;this.state={...this.state,phase:'downloading',progress:0,error:undefined};
-      try{await this.installer.prepare(release);if(this.controller.signal.aborted)return;
-        await this.installer.download(percent=>{if(!this.controller.signal.aborted&&Number.isFinite(percent))this.state={...this.state,progress:Math.min(100,Math.max(0,Math.round(percent)))};});
-        if(!this.controller.signal.aborted)this.state={...this.state,phase:'ready',progress:100};
-      }catch{if(!this.controller.signal.aborted)this.state={...this.state,phase:'available',progress:undefined,error:'下载或校验失败，请检查网络后重新下载。'};return;}
-      if(!this.controller.signal.aborted)await this.installReady();
-    });
+    const release=this.state.release;
+    return this.run(()=>this.downloadCandidate(release));
   }
-  /** 仅用于上次排空/安装失败后的明确重试；不会重新下载或由计时器调用。 */
+  /** 候选在准备和下载期间冻结；完整校验成功才公开 ready，失败有限频后台重试。 */
+  private async downloadCandidate(release:DesktopRelease){
+    this.state={...this.state,phase:'downloading',progress:0,error:undefined};
+    try{
+      await this.installer.prepare(release);
+      if(this.controller.signal.aborted)return;
+      await this.installer.download(percent=>{
+        if(!this.controller.signal.aborted&&Number.isFinite(percent))this.state={...this.state,progress:Math.min(100,Math.max(0,Math.round(percent)))};
+      });
+      if(!this.controller.signal.aborted){
+        this.retryDownloadAfter=0;
+        this.state={...this.state,phase:'ready',progress:100};
+      }
+    }catch{
+      if(!this.controller.signal.aborted){
+        this.retryDownloadAfter=Date.now()+5*60*1000;
+        this.state={...this.state,phase:'available',progress:undefined,error:'下载或校验失败，五分钟后自动重试，也可手动重试下载。'};
+      }
+    }
+  }
+  /** 用户明确确认重启时安装已校验候选；在途下载不排队安装，须就绪后再次确认。 */
   install(){
     if(this.busy)return this.busy;
     if(this.state.phase!=='ready')return Promise.resolve(this.status());

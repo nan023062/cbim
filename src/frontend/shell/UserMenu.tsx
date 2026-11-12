@@ -5,7 +5,7 @@
 import {useState,useRef,useEffect} from 'react';
 import {Icon} from '../components/Icon';
 import type {DesktopUpdateStatus} from '../../bridge/contracts/desktop-updates';
-/** 合并入口只打开弹窗，检查/下载由弹窗明确触发；提醒取同一更新快照，不随菜单关闭而清除。 */
+/** 合并入口只打开弹窗；预下载由后端负责，安装须在弹窗明确确认，提醒取同一更新快照。 */
 export function UserMenu({theme,toggleTheme,openSettings,updateStatus,openUpdates}:{theme:string;toggleTheme:()=>void;openSettings:()=>void;updateStatus?:DesktopUpdateStatus;openUpdates:()=>void}){
   const [open,setOpen]=useState(false),root=useRef<HTMLDivElement>(null),trigger=useRef<HTMLButtonElement>(null),first=useRef<HTMLButtonElement>(null);
   const available=!!updateStatus?.release&&updateStatus.enabled;

@@ -12,7 +12,9 @@ test.each(['incomplete','hold'] as const)('工具完成后 %s：关闭前补登�
   try{
     await f.engine.start(f.context);
     const running=f.engine.run('Read once, then wait').catch((error:Error)=>({status:'failed',error:error.message}));
-    await vi.waitFor(()=>expect(f.requests).toHaveLength(2));
+    // 这里等待真实 Codex 进程完成启动和工具往返，不能套用 vi.waitFor 默认的 1 秒同步断言窗口。
+    // 上限与本 fixture 的回合时限一致；请求次数、恢复身份和无重放断言保持不变。
+    await vi.waitFor(()=>expect(f.requests).toHaveLength(2),{timeout:f.engineOptions.turnTimeoutMs});
     if(afterTool==='hold')await f.engine.stop();
     const result=await running;
     expect(result).toEqual(afterTool==='hold'?{status:'cancelled'}:{status:'failed',error:'请求未完整完成'});
@@ -39,7 +41,7 @@ test.each(['incomplete','hold'] as const)('真实应用 %s：登记早于日志�
     const first=await f.app.dispatch('loop.chat',{id:entry.id,message:'Read the sample, then respond',options});
     const read=(runId:string)=>f.app.dispatch('loop.inspect',{id:entry.id,taskId:first.taskId,runId});
     if(afterTool==='hold'){
-      await vi.waitFor(()=>expect(provider.requests).toHaveLength(2));
+      await vi.waitFor(()=>expect(provider.requests).toHaveLength(2),{timeout:options.turnTimeoutMs});
       await f.app.dispatch('loop.stop',{id:entry.id,taskId:first.taskId});
     }
     await vi.waitFor(async()=>{expect((await read(first.runId)).status).toBe(afterTool==='hold'?'cancelled':'interrupted');expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:30000});

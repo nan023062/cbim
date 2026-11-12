@@ -22,9 +22,9 @@
 
 ## 运行
 
-Windows x64 当前公开桌面版为 [desktop-v0.1.11](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.11)，默认提供 Pi、Claude Code、Codex 三种执行引擎。供应商只管理统一模型列表，模型菜单按接口兼容性筛选；对话栏与团队页面设置同一份主 Agent 配置，项目岗位保留独立配置。0.1.11 保留后台预下载和明确点击“重启安装”，真实 A → B 安装升级已通过。但 A/B 的旧包缓存目录不一致，实测回退完整下载，不能宣称安装版差分节流通过。0.1.12 修复候选尚未公开。自动化仅在应用和工作区打开时触发。安装后从左下角「版本与更新」查看版本、日志与新版提醒。此包尚未签名，Windows 可能显示未知发布者或安全提示；核对发布页的 `SHA256SUMS.txt` 不能替代可信签名。后续取得证书后将通过更高版本切换到签名发行。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
+Windows x64 当前公开桌面版为 [desktop-v0.1.12](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.12)，默认提供 Pi、Claude Code、Codex 三种执行引擎。供应商只管理统一模型列表，模型菜单按接口兼容性筛选；对话栏与团队页面设置同一份主 Agent 配置，项目岗位保留独立配置。0.1.12 修复安装器与更新器的旧包缓存目录衔接，保留后台预下载和明确点击“重启安装”。旧版升级到本版仍需完整下载一次；安装后的后续更新具备正确缓存前提，真实增量传输仍待后续版本验证。自动化仅在应用和工作区打开时触发。安装后从左下角「版本与更新」查看版本、日志与新版提醒。此包尚未签名，Windows 可能显示未知发布者或安全提示；核对发布页的 `SHA256SUMS.txt` 不能替代可信签名。后续取得证书后将通过更高版本切换到签名发行。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
 
-当前版本每分钟检查并后台下载新版，完成后提示“重启安装”；关闭弹窗可继续工作，普通退出不会自动安装，有效完整缓存可复用。0.1.9 升级到 A（0.1.10）仍由旧客户端执行下载后自动安装；A → 更高版本才能体验新流程。正式 CI、隔离安装、公开升级及差分失败证据见 [A 发布验收](design/verification/desktop-release-0.1.10-20261112.md)、[B 发布验收](design/verification/desktop-release-0.1.11-20261112.md) 和 [缓存问题调查](design/verification/desktop-update-cache-diagnosis-20261112.md)。关闭或离线的客户端需启动并联网后检查更新。
+当前版本每分钟检查并后台下载新版，完成后提示“重启安装”；关闭弹窗可继续工作，普通退出不会自动安装，有效完整缓存可复用。0.1.9 升级到 A（0.1.10）仍由旧客户端执行下载后自动安装；A → 更高版本才能体验新流程。本次正式 CI、隔离安装与在线升级证据见 [0.1.12 发布验收](design/verification/desktop-release-0.1.12-20261112.md)。历史差分失败与根因见 [B 发布验收](design/verification/desktop-release-0.1.11-20261112.md) 和 [缓存问题调查](design/verification/desktop-update-cache-diagnosis-20261112.md)。关闭或离线的客户端需启动并联网后检查更新。
 
 BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill。一句问题或愿望即可提交，其余信息自愿，缺项标“用户未提供”。首次在设置连接自己的 GitHub；成功后由 Agent 简短反馈真实提交结果，不代表开发完成。详见 [OAuth 与反馈指南](design/task/github-feedback-setup.md)。更新程序独立位于 `src/backend/updater/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](design/task/desktop-release.md)。
 

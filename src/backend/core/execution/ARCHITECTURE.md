@@ -11,8 +11,8 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [conversation-binding.ts](conversation-binding.ts) | 定义主对话与已登记 Agent 实例、逻辑会话之间的可信绑定，供运行时和日志恢复共用。 |
-| [engine-instructions.ts](engine-instructions.ts) | 为主 Agent 和成员生成各引擎共用的运行职责、冻结身份与工具边界说明。 |
-| [engine-session.ts](engine-session.ts) | 主对话更换引擎时，沿已核实的日志链选择目标引擎历史并转交缺失的公开上下文。 |
+| [engine-instructions.ts](engine-instructions.ts) | 为主 Agent 和成员生成共用的运行职责、历史资料、冻结身份与工具边界说明。 |
+| [engine-session.ts](engine-session.ts) | 主对话续聊或更换引擎时选择可靠原生历史，对无交互启动失败只转交已记录的公开输入。 |
 | [engine-tools.ts](engine-tools.ts) | 将可信装配注入的能力组装成引擎无关的目录与调用端口。 |
 | [index.ts](index.ts) | 大脑执行层：对外重导出 Loop 契约、主对话实例绑定、成员执行绑定、可信回注来源、存储端口与运行时。 |
 | [input-source.ts](input-source.ts) | 定义可信入口提交的成员结果、真实用户补充与人工决定系统转交来源。 |
@@ -633,6 +633,8 @@ checkedMemberRunBinding 同时核独立 fallbackBinding 的工作区、角色及
 LoopRuntime 保留唯一权限、任务进度、证据与日志生命周期。engine-tools.ts 捕获真实工具目录和路由，engine-instructions.ts 统一角色及冻结上下文；Pi、Claude Code 与 Codex 只负责原生协议适配，各引擎不各自实现一套调度、知识事务或验收。native-tools.ts 复用固定 Pi SDK 的文件/命令实现供 Codex 宿主动态工具调用，不创建 Pi Loop 或共享账号。
 
 主会话切换时，engine-session.ts 沿 run.started.resumeFrom 最多核实 512 段同任务历史；恢复目标引擎最近一次原生文件及其实际 session.bound ID，并将其后另一引擎的公开消息/工具结果作为资料转交。首次使用目标引擎建立独立原生文件。资料最多 1 MiB，损坏、未决工具或循环链明确拒绝，不截断、不重放工具。成员检查点仍固定原岗位引擎，不做跨引擎移植。Claude Code/Codex 没有实现可靠的运行内插入确认，保留排队及下一轮发送。
+
+主聊天显式重发时，已完整封存为失败/中断/取消、没有消息输出或任何工具调用记录、且不属于成员、系统回注或显式新上下文事务的轮次，可以尚无原生文件（如 Codex 首次模型请求 HTTP 400）。选择器沿原日志链寻找目标引擎可靠文件；找不到时由适配器新建原生上下文，只转交原输入及失败状态作为资料。保留同一逻辑对话与旧日志，不猜路径、不沿用只有 ID 的半绑定、不自动重试请求。存在输出/工具、未决结果、坏身份或尾行不完整时仍拒绝此降级；已有文件缺少原生 ID 仍由各引擎原恢复校验拒绝。统一历史提示不再把失败轮次称为“另一引擎已完成”的工作。
 
 
 ### 可信能力装配与验证准备

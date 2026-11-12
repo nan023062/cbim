@@ -7,13 +7,13 @@
  * 删除/移动只交给冻结约定的专用端口；原阶段由可信 append 保存，失败屏障与实际进程排空同样参与终态。
  * 每个正式成员运行最多暂存一次检查点，可信剩余额度允许后续运行再次停泊，零额度仍保留正常交付。
  * 受控文件边界：自身 beforeTool 可靠保存 allowed 才签发一次许可；写入及冻结删除/移动未确认后整轮限制为读取/求助并按 interrupted 封存，原失败回执不改写。停止等待文件 child 退出，失败保留原占用。
- * 作用定位：大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。
+ * 作用定位：LoopRuntime 持有任务租约、工具授权与终态；显式续聊由会话选择器核实原生恢复或无交互失败重试。
  * 能力边界：验证准备交给所属能力，工具集合由显式装配提供；本层继续持有授权、日志、在途操作及停止排空时序。
  * 设计原因：工具先分类与计划门禁再审批；每轮进度绑定真实 workspace/task/run，成员专属工具另绑定完整实例。完整集合观察、产物验证及交付复核各持短锁，异步读取前后核知识、计划与停止；坏回包保留事实，求助/检查点不解锁，采集/验证只随真实结束释放。
  * 插入边界：核对原 run、可信周期令牌和发送前停止信号；原生接受后返回真实日志序号，适配器不能伪造该令牌。终态等待在途记录排空，接受后的保存失败仍属未知，不自动重放。
  * 核实边界：历史 reconciledToolIds 仅保留可读；新请求不能据裸调用 ID 续接 unknown。授权记录中的契约版本只取可信工具描述，旧记录不补造版本。
  * 外部写同样受原未知文件影响屏障约束，不因写入 GitHub 而绕过运行内写入禁令。
- * 引擎切换：主会话沿可靠日志链选择目标引擎自己的原生文件，其他引擎期间的公开记录仅作为资料转交；原生 ID 取目标引擎绑定回执，成员恢复保持冻结引擎。
+ * 引擎切换：主会话由会话选择器核对原生绑定；无交互启动失败只转交公开输入，未决工具与损坏记录仍拒绝，成员恢复保持冻结引擎。
  */
 import path from 'node:path';
 import {selectEngineSession,type EngineSessionSelection} from '../engine-session';
@@ -204,14 +204,8 @@ export class LoopRuntime {
         if(previous.conversationBinding&&(!conversationBinding||Object.entries(previous.conversationBinding).some(([key,value])=>conversationBinding[key as keyof ConversationAgentBinding]!==value)))throw Error('恢复必须使用原主对话实例与通道身份');
         if(previous.task.workspaceId!==task.workspaceId||previous.task.root!==task.root||JSON.stringify(previous.task)!==JSON.stringify(task))throw Error('恢复必须使用原任务定义与工作区');
         if(previous.unresolvedTools.length)fail('RECOVERY_INSPECTION_REQUIRED','原运行存在未确认工具结果，请显式创建新的只读核实；勾选调用 ID 不能续接原生上下文');
-        if(!previous.sessionFile)throw Error('缺少原生会话记录，不能伪装成恢复');
-        // 文件位置与原生身份必须来自同一次可靠绑定；不能以逻辑 agentSessionId 或聊天 taskId 猜测旧原生 ID。
-        const bound=[...previous.events].reverse().find(event=>event.type==='session.bound');
-        if(bound?.data.sessionId!==undefined){
-          if(typeof bound.data.sessionId!=='string'||bound.data.sessionFile!==previous.sessionFile)throw Error('原生会话身份记录与恢复文件不一致');
-          nativeSessionId=safeId(bound.data.sessionId);
-        }
-        // 旧日志缺少原生 ID 时不补造；适配器决定是否支持无身份的历史，Pi 明确拒绝这种恢复。
+        // 目标引擎文件及 ID 由 selectEngineSession 一起核实；只有完整无交互的启动失败可转交输入后新建。
+        // 成功历史缺少文件、损坏身份和未决工具不会因此降级；旧 Pi 文件缺少原生 ID 仍由适配器拒绝。
       }else{
         await this.options.storage.reserveTask(this.options.directory,task.taskId); // 已存在任务只能经显式恢复入口继续。
       }

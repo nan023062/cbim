@@ -10,7 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [runtime.ts](runtime.ts) | 大脑 执行层：LoopRuntime：任务租约、前置工具策略、运行终态与显式恢复。 |
+| [runtime.ts](runtime.ts) | LoopRuntime 持有任务租约、工具授权与终态；显式续聊由会话选择器核实原生恢复或无交互失败重试。 |
 
 ## 架构类图
 

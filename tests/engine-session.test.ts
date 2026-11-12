@@ -16,3 +16,21 @@ test('corrupt, unresolved and cyclic histories are rejected, not silently trunca
   await expect(selectEngineSession('claude-code',{...old,unresolvedTools:['pending']},async()=>old)).rejects.toThrow('核实');
   await expect(selectEngineSession('claude-code',{...old,logIntegrity:{partialTail:true}},async()=>old)).rejects.toThrow('核实');
 });
+
+test.each(['completed','partial-tail','assistant-output','tool-call','not-settled','fresh-context'] as const)('缺少原生文件不能对 %s 的运行降级新建上下文',async mode=>{
+  const old=summary('one','codex');old.sessionFile=undefined;old.task={...old.task,mode:'chat',agentId:'cbim:main'};old.status='interrupted';old.logIntegrity={partialTail:false};
+  old.events.push({...old.events[0],seq:2,type:'run.interrupted',data:{error:'provider failed'}});
+  if(mode==='completed'){old.status='completed';old.events[1]={...old.events[1],type:'run.settled',data:{status:'completed'}}}
+  else if(mode==='partial-tail')old.logIntegrity.partialTail=true;
+  else if(mode==='not-settled')old.events.pop();
+  else if(mode==='fresh-context')old.events[0].data.freshMain={nativeSessionId:'registered',excludedRunIds:[]};
+  else old.events.splice(1,0,{...old.events[0],seq:2,type:mode==='tool-call'?'tool.proposed':'message.delta',data:{text:'partial output'}});
+  await expect(selectEngineSession('pi',old,async()=>{throw Error('Unexpected history read')})).rejects.toThrow();
+});
+
+test.each(['pi','codex'])('最新绑定与文件不一致时不能靠更早匹配记录恢复或切换到 %s',async engine=>{
+  const old=summary('one','pi');
+  old.events.push({...old.events[0],seq:2,type:'session.bound',data:{sessionId:'thread-one',sessionFile:old.sessionFile}});
+  old.events.push({...old.events[0],seq:3,type:'session.bound',data:{sessionId:'thread-foreign',sessionFile:'foreign/file'}});
+  await expect(selectEngineSession(engine,old,async()=>{throw Error('Unexpected history read')})).rejects.toThrow('身份记录与恢复文件不一致');
+});

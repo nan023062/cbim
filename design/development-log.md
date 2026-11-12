@@ -1,3 +1,13 @@
+## 2026-11-12：修复首次请求失败后的对话重发
+
+- 用户截图同时报告 Codex 供应商失败后，再次发送出现“原生会话身份记录与恢复文件不一致”。开放 Issues 仍为空，本步基于 `dc3d21b8` 修复第二个独立原因。真实 Codex + 本地 HTTP 400 复现：首次 `session.bound` 只有线程 ID，RunJournal 把缺失路径转成字符串 `"undefined"`；运行时随后把它当恢复文件检查。首次新增运行时夹具有括号错误，修正夹具后才确认真实失败，未将语法错误计作产品复现。
+- 日志读取保持可选原生路径，非法已记录路径拒绝且旧日志不回写。会话选择器持有文件/ID 校验与跨引擎历史选择；只对完整封存、没有回复/工具调用的普通主聊天失败，允许用户显式重发时转交原输入并寻找可靠旧文件，否则新建原生上下文。保留逻辑对话、旧失败和权限；未决工具、坏身份、不完整日志、已发生交互、成员/系统回注/正式新上下文事务仍不走该降级。统一历史说明准确标明失败输入，不称其已执行完成。
+- UI `Conversation.operate` 已在每次发送前清空操作错误；重复 tips 来自真实恢复拒绝，本步不隐藏历史错误或放宽恢复保护。应用级测试同时核对前端调用的 `loop.threadView` 能返回正确续聊头、没有历史问题。
+- 按真实影响选取日志完整性、会话选择、失败重发、运行时授权/取消和引擎消费者。实际命令：`pnpm exec vitest run tests/runtime-failed-retry.test.ts tests/run-journal-integrity.test.ts tests/conversation-retry.test.ts tests/engine-session.test.ts --reporter=dot`（21 项）；历史提示及保护条件补齐后运行 `pnpm exec vitest run tests/engine-session.test.ts tests/conversation-retry.test.ts tests/loop-engine.test.ts tests/runtime-continuation.test.ts tests/codex-application.test.ts --reporter=dot`（30 项）；新增正式上下文拒绝及 threadView 断言后只复跑前两文件（15 项）。`pnpm exec vitest run tests/main-session-instance-pi.test.ts -t 'rejects unsafe main conversation native recovery' --reporter=dot` 选中 2 项通过，另 2 项未选中。合计 8 文件/47 项唯一相关用例通过，与前一步共 54 项；没有以重复执行累加数量。
+- 真实 Codex 首次请求失败后，继续 Codex 或切换 Pi 均完成下一轮，保持原 task/主实例绑定、转交原输入且旧日志字节不变。已有 Pi → Codex → Claude → Codex → Pi 链、成员 Codex、外来原生文件与缺 ID 拒绝、停止与租约释放均通过。模型服务为确定性本地 HTTP，不代表用户供应商在线验收；未操作用户现有安装/数据。
+- `pnpm typecheck`、`pnpm check:architecture` 通过：86 目录/668 源码样式、1305 维护文件/6697 依赖，0 循环/违规。同步 execution、execution/runtime、main/run-storage 的文件头、契约和架构说明；未新增反向依赖。阅读顺序：RunJournal 可选路径 → selectEngineSession 恢复决策 → LoopRuntime 调用 → engineInstructions 历史资料边界。
+- 两项修复分别提交到本地 develop，尚未 push、全量 CI、打包、安装升级或发布。当前公开 0.1.13 附件未改变；人工 review 与后续发布验收仍独立，完整 diff 从 `98e08760` 查看。
+
 ## 2026-11-12：修复统一查询工具的嵌套 Schema 引用
 
 - 用户直接报告发送对话时 `cbim_state_inspect` 返回 400；开放 Issues 查询为空，按截图修复，未新建工单。基线 `98e08760`。实际负责人 Schema 单独有效，嵌入统一查询的 oneOf/input 后仍保留原根引用，复现与截图相同的 `expectedReadBasis/memberRegistryCursor` 悬空路径。

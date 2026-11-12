@@ -15,7 +15,7 @@
 
 ## 隔离安装与正式检查的可追溯入口
 
-[候选安装 43157953215](https://github.com/nan023062/cbim/actions/runs/43157953215)，workflow `54bc29fb9508ee419f0ff414c76d0313595c09b9`，previous_version=0.1.11，source_commit 与摘要同上；实际结果见该 run 的 `report.json`、`installer-cache-fresh.json` 和 `installer-cache-final.json`，并在收尾 PR 汇总。
+[首轮候选安装 43157953215](https://github.com/nan023062/cbim/actions/runs/43157953215)，workflow `54bc29fb9508ee419f0ff414c76d0313595c09b9`，previous_version=0.1.11，source_commit 与摘要同上。全新安装及 B→候选覆盖安装、真实缓存目录/摘要、已有八项数据保留通过；复核报告发现验收器的旧版本列表未将 B 纳入主 Agent/自动化保留分支，这两项被错误标为不适用。已补齐该分支，新一轮完整验收与该原始报告分别保留，最终 run 结果在收尾 PR 汇总。
 
 此轮在干净 Windows runner 检查全新安装、真实 B → 修复候选覆盖安装及原数据；新加门槛要求配置的缓存目录中 installer.exe 已由 NSIS 实际创建，且摘要与该安装器相同，不手动补缓存。正式四片 CI 通过与后续正常合并由收尾 PR 关联；仅本机通过不能代替这些门槛。
 

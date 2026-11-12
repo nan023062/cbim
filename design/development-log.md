@@ -1,3 +1,12 @@
+## 2026-11-12：启用安装包增量下载与回退验证
+
+- 用户直接授权的第二项更新优化，前一步预下载提交 `4621d3b4`；开放 Issues 为空，未新建或回填工单。`NsisUpdateInstaller` 启用锁定的 `electron-updater@6.8.11` 差分下载，固定 GitHub generic 源使用单段 Range，保留清单版本/文件名、SHA-512、缓存、全量回退及显式安装边界。未增加更新服务、依赖或网络源。
+- 新增 `tests/nsis-differential-download.test.ts`：只替换宿主和 HTTP 传输目的地，真实下载器执行差分、缓存和校验。64 KiB 样例只传输两段共 16 KiB，最终内容逐字节匹配；另覆盖旧标签、旧索引缓存、重开复用、缺缓存/索引、坏旧包/Range、无 Range 支持、损坏全量拒绝及缓存篡改重验。该比例仅是确定性夹具，不是公开安装包实测。
+- 按适配器变化选取 `pnpm exec vitest run tests/nsis-updater.test.ts tests/nsis-differential-download.test.ts --reporter=default --reporter=json --outputFile=test-results/update-differential-unit.json`：其中 NSIS 配置/门禁 3 项通过，HTTP 夹具首次初始化失败保留为历史。修复测试导出展开触发 autoUpdater getter、transport 注入晚于 Provider 创建，以及 Node 测试传输共享 socket 后，仅复跑受影响新文件 `pnpm exec vitest run tests/nsis-differential-download.test.ts --reporter=default --reporter=json --outputFile=test-results/update-differential-http-final.json`，10 项通过且无监听器警告。本步共 13 项唯一测试通过；与前一步合计 5 文件 41 项。
+- `pnpm typecheck`、`pnpm check:architecture` 通过，1296 文件/6682 依赖、0 循环/违规。同步 NSIS 文件头/关键行为注释和 updater 契约/类图；未重跑已通过且不受影响的界面和预下载状态机。
+- [测试方法与验证边界](verification/desktop-update-prefetch-differential-20261112.md) 包含可立即运行的受影响单元/界面命令，以及含改动版本 A → 更高版本 B 的安装版验收。旧客户端升级到 A 仍走旧逻辑；增量不改变缓存完整包大小或 NSIS 安装方式。未打包、发布、全量回归、真实在线升级或人审，现有安装客户端未被操作。
+
+
 ## 2026-11-12：后台预下载与显式重启安装
 
 - 用户直接授权“先做后台预下载和增量下载”，本步完成预下载；基线 `c46ea7e7`。已查询 `nan023062/cbim` 开放 Issues，清单为空；未虚构或新建工单，不合并、不发布。

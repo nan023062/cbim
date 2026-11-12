@@ -1,6 +1,6 @@
 /**
- * 作用定位：electron-updater 的 Windows NSIS 适配，只消费已选择的固定桌面发布。
- * 设计原因：沿用成熟安装包校验与缓存；关闭自动下载、退出安装和降级，显式业务排空后才重启安装。
+ * 作用定位：electron-updater 的 Windows NSIS 适配，固定发布源并优先差分下载、校验安装包。
+ * 设计原因：复用旧安装包与 blockmap 降低传输量，差分失败交由原下载器完整下载并校验；安装仍须显式业务排空。
  */
 import {NsisUpdater,type UpdateCheckResult} from 'electron-updater';
 import type {DesktopRelease} from '../../bridge/contracts/desktop-updates';
@@ -12,9 +12,11 @@ export class NsisUpdateInstaller implements DesktopUpdateInstaller {
   async prepare(release:DesktopRelease){
     this.pending?.cancellationToken?.cancel();this.updater?.removeAllListeners();this.error=undefined;this.downloaded=false;
     if(this.closed)throw Error('更新已关闭');
-    const updater=new NsisUpdater({provider:'generic',url:desktopReleaseBase(release.version)});this.updater=updater;
+    // GitHub 附件重定向后的对象存储不要求支持 multipart Range，逐段下载可保持兼容。
+    // 当前锁定的 Provider 会同时替换目录与文件名中的版本，从原 desktop-v 标签读取旧 blockmap。
+    const updater=new NsisUpdater({provider:'generic',url:desktopReleaseBase(release.version),useMultipleRangeRequest:false});this.updater=updater;
     updater.autoDownload=false;updater.autoInstallOnAppQuit=false;updater.allowDowngrade=false;updater.allowPrerelease=false;updater.disableWebInstaller=true;
-    updater.disableDifferentialDownload=true;updater.logger=null;
+    updater.disableDifferentialDownload=false;updater.logger=null;
     updater.on('error',error=>{this.error=error});
     const result=await updater.checkForUpdates();if(this.closed){result?.cancellationToken?.cancel();throw Error('更新已关闭')}
     const info=result?.updateInfo,name=desktopInstallerName(release.version);

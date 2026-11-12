@@ -4,7 +4,7 @@ WebSettings 显示 Brave Search API 开关与密码输入；明确查询词发�
 
 # 设置界面
 
-版本与更新已迁到左下角账号菜单，由独立 [updates](../updates/ARCHITECTURE.md) 视图展示；设置页不再重复装配更新组件。打开更新弹窗不会卸载设置页，模型、预算与 GitHub 反馈连接草稿继续由各表单持有。
+版本与更新由用户栏右侧的常驻图标和独立 [updates](../updates/ARCHITECTURE.md) 详情展示；设置页不重复装配更新组件。悬停图标或打开详情不会卸载设置页，模型、预算与 GitHub 反馈连接草稿继续由各表单持有。
 
 GitHub 连接已预置公开产品配置；普通用户直接连接，高级字段保留在折叠区，不要求复制 Client ID。
 

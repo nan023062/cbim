@@ -8,7 +8,7 @@
 
 展开侧栏仅显示“团队空间”文字及收起按钮，不重复展示 CBIM/BrandMark；窄侧栏也保留文字。欢迎页仍展示完整名称 CBIM Assistant 与 BrandMark。标题变化不改变账号、工作区、侧栏伸缩或品牌资源。
 
-账号菜单只有一个“版本与更新”，同时展示最近检查时间，未登录也可使用。有新版时按同一公开状态高亮菜单并在用户栏显示带可访问名称的主题绿点；关闭横幅不移除这两个提醒。`App` 挂载唯一 `useSoftwareUpdates`，同一快照交给菜单、提醒和弹窗；菜单不自行请求更新服务。打开入口只叠加原生模态框，不切换 screen、不卸载原会话或设置表单；Escape／关闭回到原按钮。后台发现新版后预下载，弹窗可手动检查或重试下载；包校验完成后须由用户点击重启安装，窗口不自动追加 install 调用。
+用户栏右侧原主题按钮改为常驻更新图标；账号菜单只保留设置、主题和账号项，不重复更新入口或绿点。`App` 持有唯一 `useSoftwareUpdates`，把同一个 controller 交给 `UserMenu` 内的 `SoftwareUpdateButton`、新版提醒和详情。图标悬停或聚焦只读版本和进度；仅 ready 时点击安装，未就绪不打开弹窗、不下载、不排队安装。具体进度环、呼吸与错误语义归 updates。主题切换仍由 UserMenu 的菜单项调用原回调。详情从新版提醒打开，不切换 screen 或卸载原会话和设置草稿。
 
 更新呈现独立归入 [updates](../updates/ARCHITECTURE.md)，通过固定 IPC 依赖公开更新契约，不将账号登录、菜单展示或弹窗状态放进 backend/updater。菜单位置是本次已确认的变化点；检查、下载与排空安装的规则保持原后端归属，变化频率没有统计结论。
 
@@ -17,10 +17,12 @@ classDiagram
 class App { <<component>> }
 class UserMenu { <<component>> }
 class SoftwareUpdates { <<external component>> }
+class SoftwareUpdateButton { <<external component>> }
 class useSoftwareUpdates { <<external module>> }
 class BrandMark { <<external component>> }
 App ..> BrandMark : 欢迎页产品标识
-App ..> UserMenu : 提供版本与入口回调
+App ..> UserMenu : 提供唯一更新 controller
+UserMenu ..> SoftwareUpdateButton : 用户栏右侧常驻入口
 App ..> useSoftwareUpdates : 持有窗口级状态
 App ..> SoftwareUpdates : 叠加弹窗，保留原页面
 note for SoftwareUpdates "../updates/SoftwareUpdates.tsx：只消费更新状态与显式操作"

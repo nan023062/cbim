@@ -13,7 +13,7 @@ window.cbim={call:async(action,args)=>{const f=window.fixture;f.calls.push({acti
  if(action==='desktop.updates.status'){if(f.failStatus)throw Error('read failed');const snapshot=structuredClone(status);if(f.holdRead){f.holdRead=false;return new Promise(resolve=>f.releaseRead=()=>resolve(snapshot))}return snapshot}
  if(action==='desktop.updates.check'){status={...status,phase:f.hasUpdate?'available':'current',checkedAt:'2026-11-09T01:00:00Z',release:f.hasUpdate?{version:'0.2.0',notes:'修复 BUG\n<img src=x onerror=alert(1)>',tag:'desktop-v0.2.0',publishedAt:'2026-11-09T00:00:00Z'}:undefined};return structuredClone(status)}
  if(action==='desktop.updates.download'){if(f.failDownload)throw Error('offline');status={...status,phase:'downloading',progress:25};return new Promise(resolve=>f.finishDownload=()=>{status={...status,phase:'ready',progress:100};resolve(structuredClone(status))})}
- if(action==='desktop.updates.install'){status={...status,phase:'installing'};return structuredClone(status)}
+ if(action==='desktop.updates.install'){status={...status,phase:'installing'};return new Promise(resolve=>f.finishInstall=()=>resolve(structuredClone(status)))}
  if(action==='runtime.snapshot')return {workspaces:[]};
  if(action==='list')return {entries:[]};
  if(action==='models.list')return {profiles:[],secureStorage:true};
@@ -29,82 +29,66 @@ const {App}=await import('/src/frontend/shell/App.tsx');createRoot(document.getE
 `;
 await fs.writeFile(path.join(out,'desktop-updates-ui.mjs'),fixture);
 const server=await createServer({root,configFile:false,resolve:{dedupe:['react','react-dom']},esbuild:{jsx:'automatic'},server:{host:'127.0.0.1',port:0},logLevel:'error'});let browser;
-const checks=[],errors=[];
+const checks=[],errors=[];let page;
 try{
- await server.listen();browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage({viewport:{width:1100,height:850}});page.on('pageerror',e=>errors.push(e.message));
+ await server.listen();browser=await chromium.launch({channel:'msedge',headless:true});page=await browser.newPage({viewport:{width:1100,height:850}});page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/test-results/desktop-updates-ui.html');
- const profile=page.getByRole('button',{name:'用户菜单',exact:true}),dialog=page.getByRole('dialog');
+ const profile=page.getByRole('button',{name:'用户菜单',exact:true}),icon=page.getByRole('button',{name:'版本与更新',exact:true}),tooltip=page.getByRole('tooltip');
  const openMenu=async()=>{await profile.click();await page.getByRole('menu',{name:'用户菜单',exact:true}).waitFor()};
- const close=async()=>{await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});assert.equal(await profile.evaluate(e=>e===document.activeElement),true)};
  const count=async action=>(await page.evaluate(()=>window.fixture.calls)).filter(x=>x.action===action).length;
- await openMenu();await page.getByLabel('当前版本',{exact:true}).filter({hasText:'0.1.0'}).waitFor();
- assert.equal(await page.getByRole('menuitem',{name:'版本与更新',exact:true}).count(),1);assert.equal(await page.getByRole('menuitem',{name:'最近一次更新',exact:true}).count(),0);assert.equal(await page.getByRole('menuitem',{name:'检查更新',exact:true}).count(),0);checks.push('merged-single-update-menu');
- assert.equal(await page.getByRole('menuitem',{name:'设置',exact:true}).evaluate(e=>e===document.activeElement),true);
- await page.keyboard.press('End');assert.equal(await page.getByRole('menuitem',{name:'版本与更新',exact:true}).evaluate(e=>e===document.activeElement),true);
- await page.keyboard.press('Enter');await page.getByRole('dialog',{name:'版本与更新',exact:true}).waitFor();
- assert.match(await dialog.innerText(),/修复反馈工具诊断/);assert.equal(await dialog.locator('img').count(),0);
- assert.equal(await count('desktop.updates.check'),0);assert.equal(await count('desktop.updates.download'),0);
- // 原生 dialog 允许 Tab 到浏览器 chrome（activeElement 为 body）；应核对背景控件不可聚焦及框内导航。
- assert.equal(await dialog.evaluate(e=>e.matches(':modal')),true);await profile.evaluate(e=>e.focus());assert.equal(await profile.evaluate(e=>e===document.activeElement),false);
- await dialog.getByRole('button',{name:'关闭版本与更新',exact:true}).focus();await page.keyboard.press('Tab');assert.equal(await dialog.getByRole('button',{name:'检查更新',exact:true}).evaluate(e=>e===document.activeElement),true);
- await page.keyboard.press('Shift+Tab');assert.equal(await dialog.getByRole('button',{name:'关闭版本与更新',exact:true}).evaluate(e=>e===document.activeElement),true);
- await close();checks.push('account-menu-keyboard-focus-return','installed-notes-without-check','release-notes-plain-text');
-
- // 真实 App 的设置表单用于验证弹窗不会切屏或重挂载，避免只测试孤立展示组件。
+ await icon.hover();await tooltip.getByText('当前版本 v0.1.0',{exact:true}).waitFor();await tooltip.getByText('暂无可更新版本',{exact:true}).waitFor();
+ assert.equal(await icon.getAttribute('aria-disabled'),'true');await icon.click({force:true});await icon.focus();await page.keyboard.press('Enter');
+ for(const action of ['install','download','check'])assert.equal(await count('desktop.updates.'+action),0);
+ assert.equal(await page.getByRole('dialog').count(),0);checks.push('idle-hover-focus-no-side-effects');
+ await page.keyboard.press('Escape');await tooltip.waitFor({state:'hidden'});
+ await openMenu();assert.equal(await page.getByRole('menuitem',{name:'版本与更新',exact:true}).count(),0);
+ assert.equal(await page.getByRole('button',{name:'切换浅色模式',exact:true}).count(),0);
+ await page.getByRole('menuitem',{name:'切换浅色模式',exact:true}).click();checks.push('theme-kept-in-menu-and-update-entry-moved');
+ await page.evaluate(()=>window.fixture.set({release:{version:'0.2.0',notes:'修复 <img src=x onerror=alert(1)>',tag:'desktop-v0.2.0',publishedAt:'2026-11-12T00:00:00Z'},phase:'downloading',progress:45}));
+ await icon.hover();await tooltip.getByText('正在下载并校验 45%',{exact:true}).waitFor();await tooltip.getByText('可更新版本 v0.2.0',{exact:true}).waitFor();
+ assert.equal(await icon.getByRole('progressbar').getAttribute('aria-valuenow'),'45');await icon.click({force:true});assert.equal(await count('desktop.updates.install'),0);
+ await page.evaluate(()=>window.fixture.set({progress:100}));await tooltip.getByText('正在下载并校验 99%',{exact:true}).waitFor();
+ assert.ok(!(await icon.getAttribute('class')).includes('is-ready'));checks.push('transfer-completion-is-not-install-permission');
+ await page.evaluate(()=>window.fixture.set({phase:'ready',progress:100}));await page.waitForFunction(()=>document.querySelector('.software-update-button.is-ready'));
+ assert.equal(await icon.getAttribute('aria-disabled'),'false');assert.equal(await icon.getByRole('progressbar').getAttribute('aria-valuenow'),'100');
+ assert.equal(await icon.locator('.software-update-ring').evaluate(node=>getComputedStyle(node).animationName),'software-update-breathe');
+ await tooltip.getByText('已准备完成 · 点击安装并重启',{exact:true}).waitFor();assert.equal(await count('desktop.updates.install'),0);
+ await page.screenshot({path:path.join(out,'update-icon-ready-light.png')});
+ await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await icon.locator('.software-update-ring').evaluate(node=>getComputedStyle(node).animationName),'none');
+ await page.emulateMedia({reducedMotion:'no-preference'});checks.push('ready-full-ring-breathing-and-reduced-motion');
  await openMenu();await page.getByRole('menuitem',{name:'设置',exact:true}).click();await page.getByRole('button',{name:'添加供应商',exact:true}).click();
- const draft=page.getByPlaceholder('我的模型服务');await draft.fill('尚未保存的供应商草稿');await draft.evaluate(e=>window.fixture.draftNode=e);
- assert.equal(await page.getByRole('heading',{name:'版本与更新',exact:true}).count(),0);
- await openMenu();await page.getByRole('menuitem',{name:'版本与更新',exact:true}).click();await dialog.waitFor();await close();
- assert.equal(await draft.inputValue(),'尚未保存的供应商草稿');assert.equal(await draft.evaluate(e=>e===window.fixture.draftNode),true);
- checks.push('settings-entry-removed','original-page-and-unsaved-draft-retained');
-
- await openMenu();await page.getByRole('menuitem',{name:'版本与更新',exact:true}).click();await dialog.getByRole('button',{name:'检查更新',exact:true}).click();await dialog.getByText('当前没有更高版本的桌面正式发布。',{exact:true}).waitFor();
- assert.match(await dialog.locator('.software-release-notes').innerText(),/修复反馈工具诊断/);assert.equal(await count('desktop.updates.check'),1);checks.push('current-version-still-shows-notes');
- await page.evaluate(()=>{window.fixture.hasUpdate=true;window.fixture.holdRead=true});await page.waitForFunction(()=>typeof window.fixture.releaseRead==='function');
- await dialog.getByRole('button',{name:'检查更新',exact:true}).click();await dialog.getByRole('button',{name:'重试下载',exact:true}).waitFor();
- await page.evaluate(()=>window.fixture.releaseRead());await dialog.getByRole('heading',{name:'可用版本 0.2.0',exact:true}).waitFor();
- assert.equal(await dialog.locator('img').count(),0);assert.equal(await count('desktop.updates.download'),0);checks.push('old-status-does-not-replace-action-result','renderer-does-not-start-a-second-download');
-
- // 后端自行预下载时，前端只读进度；ready 不得被显示为安装失败或自行派发 install。
- await page.evaluate(()=>window.fixture.set({phase:'downloading',progress:45}));await dialog.getByText('正在后台下载并校验… 45%',{exact:true}).waitFor();
- await page.evaluate(()=>window.fixture.set({phase:'ready',progress:100}));await dialog.getByRole('button',{name:'重启安装',exact:true}).waitFor();
- assert.equal(await count('desktop.updates.download'),0);assert.equal(await count('desktop.updates.install'),0);assert.ok(!(await dialog.innerText()).includes('上次安装未完成'));
- checks.push('background-prefetch-ready-without-install-authority');
- await page.evaluate(()=>window.fixture.set({phase:'available',progress:undefined}));await dialog.getByRole('button',{name:'重试下载',exact:true}).waitFor();
-
- await page.evaluate(()=>window.fixture.failDownload=true);await dialog.getByRole('button',{name:'重试下载',exact:true}).click();await dialog.getByRole('alert').waitFor();
- assert.equal(await dialog.getByRole('button',{name:'重试下载',exact:true}).isEnabled(),true);
- await page.evaluate(()=>window.fixture.failDownload=false);await dialog.getByRole('button',{name:'重试下载',exact:true}).click();await dialog.getByText('正在后台下载并校验… 25%',{exact:true}).waitFor();
- await page.evaluate(()=>window.fixture.set({progress:60}));await dialog.getByText('正在后台下载并校验… 60%',{exact:true}).waitFor();await close();
- assert.equal(await draft.inputValue(),'尚未保存的供应商草稿');await page.evaluate(()=>window.fixture.finishDownload());
- await page.locator('.software-update-notice').filter({hasText:'更新已就绪'}).waitFor();assert.equal(await count('desktop.updates.install'),0);
- await page.getByRole('button',{name:'查看更新',exact:true}).click();await dialog.getByRole('button',{name:'重启安装',exact:true}).click();
- await dialog.getByText('下载已校验，正在保存任务并启动安装，应用将自动重启…',{exact:true}).waitFor();assert.equal(await count('desktop.updates.install'),1);
- await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});assert.equal(await page.getByRole('button',{name:'查看更新',exact:true}).evaluate(e=>e===document.activeElement),true);
- checks.push('download-keeps-working-until-explicit-restart');
- await page.evaluate(()=>window.fixture.set({phase:'ready',error:'重启安装未能完成。请保留当前窗口，处理关闭错误后再试。'}));
- await page.locator('.software-update-notice').filter({hasText:'安装未完成'}).waitFor();
- checks.push('download-error-retry','download-progress-keeps-polling','dialog-close-keeps-download');
-
- const checksBeforeNotice=await count('desktop.updates.check');await page.getByRole('button',{name:'查看更新',exact:true}).click();await dialog.getByRole('button',{name:'重试安装并重启',exact:true}).waitFor();
- assert.equal(await count('desktop.updates.check'),checksBeforeNotice);assert.equal(await count('desktop.updates.install'),1);
- await page.screenshot({path:path.join(out,'issue19-account-dark.png')});await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});
- await page.getByRole('button',{name:'稍后提醒',exact:true}).click();await page.locator('.software-update-notice').waitFor({state:'hidden'});
- await openMenu();await page.getByRole('menuitem',{name:'切换浅色模式',exact:true}).click();await openMenu();await page.screenshot({path:path.join(out,'issue19-account-menu.png')});
- const updateEntry=page.getByRole('menuitem',{name:'版本与更新',exact:true});assert.ok((await updateEntry.getAttribute('class')).includes('available'));assert.match(await updateEntry.innerText(),/最近检查/);assert.equal(await page.getByRole('img',{name:'有新版本可更新',exact:true}).count(),1);checks.push('highlight-last-check-and-green-dot-survive-notice-dismissal');await updateEntry.click();await dialog.getByRole('button',{name:'重试安装并重启',exact:true}).waitFor();
- await page.screenshot({path:path.join(out,'issue19-account-light.png')});
- await page.setViewportSize({width:320,height:720});assert.equal(await dialog.evaluate(e=>e.scrollWidth<=e.clientWidth),true);const box=await dialog.boundingBox();assert.ok(box.x>=0&&box.x+box.width<=320);
- await page.screenshot({path:path.join(out,'issue19-account-narrow.png')});checks.push('notice-opens-same-dialog','dismiss-keeps-account-entry','light-dark-and-320px-dialog');
- await page.setViewportSize({width:1100,height:850});
-
- await page.evaluate(()=>window.fixture.failStatus=true);await dialog.getByRole('alert').filter({hasText:'无法读取更新状态'}).waitFor();
- await page.evaluate(()=>{window.fixture.failStatus=false;window.fixture.set({error:undefined})});await dialog.getByRole('button',{name:'重试读取状态',exact:true}).click();await dialog.getByRole('alert').waitFor({state:'hidden'});checks.push('status-read-error-recovery');
- await dialog.getByRole('button',{name:'重启安装',exact:true}).click();await dialog.getByText('下载已校验，正在保存任务并启动安装，应用将自动重启…',{exact:true}).waitFor();assert.equal(await count('desktop.updates.install'),2);checks.push('install-retries-only-after-explicit-action');
- await close();await page.evaluate(()=>window.fixture.set({enabled:false,phase:'disabled',release:undefined,currentNotes:''}));await openMenu();await page.getByRole('menuitem',{name:'版本与更新',exact:true}).click();
- await dialog.getByText('此构建未附带正式更新日志。',{exact:true}).waitFor();assert.equal(await dialog.getByRole('button',{name:'检查更新',exact:true}).count(),0);checks.push('portable-empty-notes-without-update-action');
- await close();await page.evaluate(()=>window.fixture.set({enabled:true,phase:'idle',release:undefined,checkedAt:'2026-11-09T01:01:00Z',error:'暂时无法检查更新，将在下一分钟自动重试，也可手动检查。'}));await openMenu();await page.getByRole('menuitem',{name:'版本与更新',exact:true}).getByText(/最近检查/).waitFor();assert.equal(await dialog.count(),0);assert.equal(await page.getByRole('alert').count(),0);assert.equal(await page.getByRole('img',{name:'有新版本可更新',exact:true}).count(),0);checks.push('offline-status-remains-silent-outside-updates');
- assert.deepEqual(await page.evaluate(()=>window.fixture.unexpected),[]);assert.deepEqual(errors,[]);
- await fs.writeFile(path.join(out,'issue19-ui-report.json'),JSON.stringify({success:true,kind:'real-app-react-with-mocked-ipc',checks,pageErrors:errors},null,2));
- console.log('Account update UI checks passed: '+checks.length+' (real App, mocked IPC).');
-}catch(error){await fs.writeFile(path.join(out,'issue19-ui-failure-'+Date.now()+'.json'),JSON.stringify({success:false,kind:'real-app-react-with-mocked-ipc',checks,pageErrors:errors,error:String(error)},null,2));throw error}
+ const draft=page.getByPlaceholder('我的模型服务');await draft.fill('尚未保存的供应商草稿');await draft.evaluate(node=>window.fixture.draftNode=node);
+ await icon.hover();assert.equal(await draft.inputValue(),'尚未保存的供应商草稿');
+ await page.getByRole('button',{name:'查看更新',exact:true}).click();const dialog=page.getByRole('dialog',{name:'版本与更新',exact:true});await dialog.waitFor();
+ assert.equal(await dialog.locator('img').count(),0);assert.match(await dialog.innerText(),/<img src=x/);
+ assert.equal(await dialog.evaluate(node=>node.matches(':modal')),true);await profile.evaluate(node=>node.focus());assert.equal(await profile.evaluate(node=>node===document.activeElement),false);
+ await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});assert.equal(await page.getByRole('button',{name:'查看更新',exact:true}).evaluate(node=>node===document.activeElement),true);
+ assert.equal(await draft.evaluate(node=>node===window.fixture.draftNode),true);checks.push('details-plain-text-modal-focus-and-unsaved-form-preserved');
+ await page.getByRole('button',{name:'稍后提醒',exact:true}).click();assert.ok((await icon.getAttribute('class')).includes('is-ready'));
+ await openMenu();await page.getByRole('menuitem',{name:'切换深色模式',exact:true}).click();await icon.hover();
+ await page.screenshot({path:path.join(out,'update-icon-ready-dark.png')});
+ const buttonBox=await icon.boundingBox(),footerBox=await page.locator('.sidebar-footer').boundingBox();assert.ok(buttonBox.x+buttonBox.width<=footerBox.x+footerBox.width+1);
+ await page.setViewportSize({width:320,height:700});await icon.hover();const tipBox=await tooltip.boundingBox();assert.ok(tipBox.x>=0&&tipBox.x+tipBox.width<=320);
+ await page.screenshot({path:path.join(out,'update-icon-narrow.png')});await page.setViewportSize({width:1100,height:850});
+ checks.push('notice-dismissal-preserves-ready-icon-and-tooltip-fits-narrow-screen');
+ await icon.focus();await page.keyboard.press('Enter');await page.waitForFunction(()=>typeof window.fixture.finishInstall==='function');await icon.click({force:true});
+ assert.equal(await count('desktop.updates.install'),1);await page.evaluate(()=>window.fixture.finishInstall());
+ await page.waitForFunction(()=>document.querySelector('.software-update-button')?.getAttribute('aria-disabled')==='true');
+ assert.ok(!(await icon.getAttribute('class')).includes('is-ready'));checks.push('explicit-install-no-duplicate-or-automatic-install');
+ await page.evaluate(()=>window.fixture.set({phase:'ready',error:'任务排空失败，请重试'}));await icon.hover();await tooltip.getByText('任务排空失败，请重试',{exact:true}).waitFor();
+ await page.waitForFunction(()=>document.querySelector('.software-update-button')?.getAttribute('aria-disabled')==='false');assert.equal(await count('desktop.updates.install'),1);
+ await icon.click();await page.waitForFunction(()=>window.fixture.calls.filter(call=>call.action==='desktop.updates.install').length===2);await page.evaluate(()=>window.fixture.finishInstall());
+ checks.push('failed-install-needs-another-explicit-click');
+ await page.evaluate(()=>window.fixture.set({phase:'current',error:undefined,release:undefined,currentResourceVersion:2}));await icon.hover();
+ await tooltip.getByText('当前版本 C 0.1.0 · R 2',{exact:true}).waitFor();
+ await page.evaluate(()=>window.fixture.set({phase:'downloading',progress:undefined,release:{version:'0.1.0',resourceVersion:3,delivery:'resources',tag:'runtime-c0.1.0',notes:'热更',publishedAt:'2026-11-12T00:00:00Z'}}));
+ await tooltip.getByText('可更新版本 C 0.1.0 · R 3',{exact:true}).waitFor();assert.equal(await icon.getByRole('progressbar').getAttribute('aria-valuenow'),null);
+ await page.getByRole('button',{name:'稍后提醒',exact:true}).click();await page.evaluate(()=>window.fixture.set({release:{version:'0.1.0',resourceVersion:4,delivery:'resources',tag:'runtime-c0.1.0',notes:'下一热更',publishedAt:'2026-11-12T00:00:00Z'}}));
+ await page.locator('.software-update-notice').filter({hasText:'R 4'}).waitFor();checks.push('notice-dismissal-is-scoped-to-code-and-resource-version');await icon.hover();
+ await page.evaluate(()=>window.fixture.failStatus=true);await tooltip.getByText('无法读取更新状态，请重试。',{exact:true}).waitFor();
+ checks.push('cold-resource-versions-unknown-progress-and-read-error');
+ assert.deepEqual(errors,[]);assert.deepEqual(await page.evaluate(()=>window.fixture.unexpected),[]);
+ const report={checks,pageErrors:errors,source:'真实 App 与浏览器；隔离 IPC fixture，未启动真实安装器'};
+ await fs.writeFile(path.join(out,'desktop-updates-ui-report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+}catch(error){await page?.screenshot({path:path.join(out,'desktop-updates-ui-failure.png')});throw error}
 finally{await browser?.close();await server.close()}

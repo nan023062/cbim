@@ -1,3 +1,13 @@
+## 2026-11-12：侧栏更新图标与就绪安装交互
+
+- 来源：用户截图指示将菜单“版本与更新”移到用户栏右侧原主题按钮位置，要求版本/进度 tooltip、仅就绪点击安装、满环呼吸；随后明确先完成此优化，再按桌面更新设计重构后端。基线 `d8d965b2`，完整开放 Issues 查询为空，按直接需求实施，未创建或回填工单。
+- 完成：新增 `SoftwareUpdateButton` 与纯派生 `updateButtonState`，复用标准箭头图标和唯一窗口更新 controller。主题仍在菜单内；移除重复菜单更新项和头像绿点。未知进度转动、下载最多 99、已验证 ready 满环呼吸；请求提交后立即进入忙碌态，鼠标与键盘都只在 ready 时发一次 install。tooltip 包含当前/目标版本、进度及错误，支持键盘、Escape、视口避让与减少动态效果。
+- 为后续架构预留可选 C/R 展示字段，旧版本仍显示原单版本；提醒的隐藏身份同时包含 C/R，避免同一冷包的下一次资源更新被错误隐藏。详情继续从新版提醒打开，原设置/会话保持挂载；后端下载、安装和数据所有权本步不变。
+- 验证选取：状态规则直接决定安装资格，运行 `pnpm exec vitest run tests/update-button-state.test.ts`，4/4 通过；实际 App 的图标、菜单、controller、详情和草稿均受影响，运行 `node scripts/desktop-updates-ui-smoke.mjs`，最终 10 组浏览器检查、0 页面错误。中间发现请求提交到后端回执之间仍短暂呼吸，修正 pending 呈现后补跑相关单元和浏览器，通过。
+- `pnpm typecheck`、`pnpm check:architecture` 通过，依赖含类型无环且无边界违规。同步更新 shell / updates 注释、契约、类图和父层导航、settings 入口说明、bridge 更新契约类图；生成器只修改目录描述。源码阅读顺序：更新契约 → update-button-state → SoftwareUpdateButton → UserMenu/App；完整变更以本条对应独立提交为准。
+- 界面证据：`test-results/desktop-updates-ui-report.json`、`update-icon-ready-light.png`、`update-icon-ready-dark.png`、`update-icon-narrow.png`。浏览器使用隔离 IPC fixture，没有执行真实安装。更新旧的打包验收脚本选择器但未运行制品验收；未运行全仓回归、构建、安装、合并、推送或发布。
+- 交付边界：此步只完成 UI；后端冷壳/资源/独立引擎重构仍按用户已授权的[桌面更新设计](task/desktop-hot-update-design.md)继续，不能将基础草稿或此处通过结果当作热更链路已实现。
+
 ## 2026-11-12：0.1.14 发布与真实增量更新通过
 
 - 用户授权推送 develop 并发布测试增量；两项对话修复随 0.1.14 公开，冻结 source 216a15e225dd646420afcd3e3cc618ef10f0391b，Release 442699257，PR #57 合并 bf283752f9f79d9a2bdd193e40729f5ac833688b。未扩大发布范围、未修改既有附件。

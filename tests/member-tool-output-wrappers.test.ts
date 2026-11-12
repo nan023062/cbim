@@ -1,9 +1,9 @@
 import {expect,it,vi} from 'vitest';
 import {MemberHelpTools} from '../src/backend/core/tasks/member-help-tools';
-import {ArtifactTools,artifactCaptureToolName} from '../src/backend/core/tasks/artifact-tools';
+import {ArtifactTools,artifactCaptureToolName} from '../src/backend/core/evidence/artifact-tools';
 import {MemberCheckpointTools,memberCheckpointToolName} from '../src/backend/core/tasks/member-checkpoint-tools';
 import type {MemberHelpStaged} from '../src/backend/core/tasks/member-help';
-import type {ArtifactBaselineStaged} from '../src/backend/core/tasks/artifact-baseline';
+import type {ArtifactBaselineStaged} from '../src/backend/core/evidence/artifact-baseline';
 import type {MemberCheckpointStaged} from '../src/backend/core/tasks/member-checkpoint';
 
 const binding={workspaceId:'workspace',teamId:'team',agentId:'executor',agentInstanceId:'instance',agentSessionId:'session',rootSessionId:'root',taskId:'task',runId:'run',leaseEpoch:1,planRevision:1};

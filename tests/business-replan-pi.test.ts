@@ -6,10 +6,10 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {businessReplanProvider,businessReplanFixture as data} from './business-replan-provider';
 import {prepareBusinessReplan} from './business-replan-fixture';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {ReplanRequest,ReplanReceipt,ReplanPreview} from '../src/backend/core/tasks/scope-replan';
-import type {ConversationThreadView} from '../src/backend/core/brain/types';
+import type {ConversationThreadView} from '../src/backend/core/execution/types';
 
 it.each(['execute','ask','stop'] as const)('creates explicit independent business work after real read-only evidence (%s)',async mode=>{
   const f=await fixture(),provider=await businessReplanProvider({holdBusiness:true,holdOld:true});let app=f.app;

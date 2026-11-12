@@ -6,7 +6,7 @@ import {humanServiceFixture} from './human-decision-service-fixture';
 import type {HumanDecisionPreview,HumanDecisionKind} from '../src/backend/core/tasks/human-decisions';
 import type {HumanContinuationRequest} from '../src/backend/core/tasks/human-continue';
 import type {GoalReviewInput} from '../src/backend/core/tasks/scope-goal';
-import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
+import {RunJournal} from '../src/backend/main/run-storage/run-journal';
 type Fixture=Awaited<ReturnType<typeof humanServiceFixture>>;
 const create=()=>humanServiceFixture({completeManifest:true,jsonValidation:true});
 const request=(f:Fixture,preview:HumanDecisionPreview,decision:HumanDecisionKind='accept')=>({...f.input,commandId:randomUUID(),expectedBasis:preview.basis!,expectedDecisionRevision:preview.decisionRevision,decision,comment:'明确核实完整声明集合'});

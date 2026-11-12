@@ -6,8 +6,8 @@ import {fail} from '../../core/foundation/errors';
 import {coordinationVersions} from '../../core/tasks/coordination-preview';
 import {mainToolOutputSchemas} from '../../core/tasks/main-tool-output';
 import {jsonToolResult,validateToolResult,type ToolResult} from '../../core/tools/results';
-import type {EngineToolSchema} from '../../core/brain/engine-tools';
-import type {RunToolDescriptor} from '../../core/policy/tool-policy';
+import type {EngineToolSchema} from '../../core/execution/engine-tools';
+import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
 
 interface ReadPort {
   list():EngineToolSchema[];

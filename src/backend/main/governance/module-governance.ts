@@ -12,8 +12,8 @@ import * as protocol from '../../core/governance/module-governance';
 import {projectGovernanceBody,governanceOversizedOutputSchema,governanceToolBodyLimit} from '../../core/governance/module-governance-tools';
 import {moduleGovernanceBinding,moduleGovernanceProposalBasis,validateModuleGovernanceWrite,advanceModuleGovernanceProtection,validateModuleGovernanceMainObservation,moduleGovernanceMainCommandId} from '../../core/governance/module-governance-rules';
 import {resolveModuleGovernanceResponses,validateModuleGovernanceResponseSources,validateModuleGovernanceAssessments} from '../../core/governance/module-governance-feedback';
-import {ModuleGovernanceStore,governanceCommandFingerprint,type GovernanceCommand} from '../persistence/governance/module-governance-store';
-import type {KnowledgeGovernanceAuthority,KnowledgeGovernanceBinding,KnowledgeGovernanceTransaction,KnowledgeJournalStatus} from '../persistence/knowledge/governance-port';
+import {ModuleGovernanceStore,governanceCommandFingerprint,type GovernanceCommand} from './storage/module-governance-store';
+import type {KnowledgeGovernanceAuthority,KnowledgeGovernanceBinding,KnowledgeGovernanceTransaction,KnowledgeJournalStatus} from '../knowledge/governance-port';
 
 interface Owner {entry:{id:string};instanceId:string;assert(identity?:protocol.ModuleGovernanceIdentity):void;governed<T>(operation:(tx:KnowledgeGovernanceTransaction)=>Promise<T>):Promise<T>}
 type JournalReader=(request:ChangeRequest)=>Promise<KnowledgeJournalStatus|undefined>;

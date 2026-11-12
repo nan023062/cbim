@@ -4,7 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {createRequire} from 'node:module';
 import {packageClaudeRuntime} from '../scripts/package-pi-runtime.mjs';
-import {loadClaudeSdk} from '../src/backend/core/brain/claude/sdk';
+import {loadClaudeSdk} from '../src/backend/engines/claude/sdk';
 
 test('Claude runtime copy includes the SDK, current platform binary and resolvable peer dependencies',async()=>{
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-cc-package-')),runtime=path.join(root,'claude-runtime'),original=(process as any).resourcesPath;

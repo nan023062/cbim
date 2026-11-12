@@ -1,6 +1,6 @@
 import http from 'node:http';
 import assert from 'node:assert/strict';
-import type {ResolvedLlm} from '../src/backend/core/brain/llm/ports';
+import type {ResolvedLlm} from '../src/backend/core/models/ports';
 export type RequestBudgetMode='plain'|'two-requests'|'unknown'|'retry'|'compaction';
 /** Only the model response is deterministic; requests still traverse actual Pi, bootstrap, proxy and durable ledger. */
 export async function modelRequestBudgetProvider(api:ResolvedLlm['profile']['api']='openai-completions',mode:RequestBudgetMode='plain'){

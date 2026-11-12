@@ -1,8 +1,8 @@
 import {expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import {hash,json} from '../src/backend/core/foundation/serialization';
-import type {DispatchStore} from '../src/backend/core/tasks/dispatch-storage';
-import {EffectObservationService} from '../src/backend/scheduler-engine/execution/effect-observation-service';
+import type {DispatchStore} from '../src/backend/core/dispatch/dispatch-storage';
+import {EffectObservationService} from '../src/backend/scheduler-engine/evidence/effect-observation-service';
 import type {KnowledgeTransactionObservation} from '../src/backend/core/knowledge/knowledge-write-observation';
 import {originalKnowledgeWrite,originalKnowledgeIdentity,type KnowledgeWriteReference} from '../src/backend/core/knowledge/knowledge-write-input';
 import {reportFixture,reportIdentity} from './command-verification-fixture';

@@ -7,10 +7,10 @@
  */
 import {z} from 'zod';
 import {fail} from '../foundation/errors';
-import {connectionSchema,modelSchema} from '../brain/llm/config';
-import {loopEngineSchema} from '../brain/llm/engine';
+import {connectionSchema,modelSchema} from '../models/config';
+import {loopEngineSchema} from '../models/engine';
 import {validatePreparedDispatchKnowledge} from './execution-context';
-import type {DispatchCommand,DispatchMutation,DispatchState,DispatchMessage} from './dispatch-storage';
+import type {DispatchCommand,DispatchMutation,DispatchState,DispatchMessage} from '../dispatch/dispatch-storage';
 import type {DispatchRun} from './dispatch-execution';
 import type {AgentRef,GraphIdentity} from './graph-types';
 import {validateQueuedTaskCancellation} from './queued-task-cancel-rules';

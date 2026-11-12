@@ -8,7 +8,7 @@ import {validateDispatchScopes} from '../src/backend/core/tasks/dispatch-scope-i
 import {dispatchScopeGoalSchema} from '../src/backend/core/tasks/scope-goal';
 import {emptyScopeSnapshot,summarizeScope,applyScopeBatch,validateScopeSnapshot,readScopeDetail} from '../src/backend/core/tasks/scope-view';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {DispatchState,DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchState,DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
 import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
 import type {TaskNode} from '../src/backend/core/tasks/graph-types';
 

@@ -10,7 +10,7 @@ import {GovernanceTools} from '../src/backend/scheduler-engine/tools/governance-
 import {governanceGetOutputSchema,governanceWriteOutputSchema,governanceReceiptOutputSchema,type GovernanceToolsPort} from '../src/backend/core/governance/module-governance-tools';
 import type {TaskSpec} from '../src/backend/core/tasks/types';
 import {moduleGovernanceMainCommandId} from '../src/backend/core/governance/module-governance-rules';
-import {authorizeRunTool} from '../src/backend/core/policy/tool-policy';
+import {authorizeRunTool} from '../src/backend/core/tools/policy/tool-policy';
 
 const signal=()=>new AbortController().signal;
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}};

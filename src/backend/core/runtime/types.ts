@@ -3,12 +3,12 @@
  * 设计原因：全局观察不能混淆静态角色、持久化成员、派发任务、目标周期与旧对话轮次；只公开身份、状态和有界原因，不传播完整正文或凭据。
  * 职责边界：监管快照不签发任务、租约、权限或验收；未知用量和工作区不可用必须明确呈现。
  */
-import type {RunStatus} from '../brain/types';
-import type {RunUsage} from '../brain/usage';
+import type {RunStatus} from '../execution/types';
+import type {RunUsage} from '../execution/usage';
 import type {TaskStatus} from '../tasks/graph-types';
 import type {AgentActivity} from '../team/agent-types';
-import type {MemberRunBinding} from '../brain/member-run';
-import type {ConversationAgentBinding} from '../brain/conversation-binding';
+import type {MemberRunBinding} from '../execution/member-run';
+import type {ConversationAgentBinding} from '../execution/conversation-binding';
 
 /** epoch 由应用级管理器生成；关闭并重新接入工作区后，旧回调不能写入新投影。 */
 export type RuntimeAvailability='loading'|'ready'|'closed'|'unavailable';

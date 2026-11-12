@@ -5,7 +5,7 @@ import http from 'node:http';
 import {fixture} from './helpers';
 import {internalKnowledge} from './knowledge-tool-fixture';
 import {seedTeam} from './team-fixture';
-import type {RunSummary} from '../src/backend/core/brain/types';
+import type {RunSummary} from '../src/backend/core/execution/types';
 
 const cases=[
   {mode:'auto',permission:'read',modules:false},

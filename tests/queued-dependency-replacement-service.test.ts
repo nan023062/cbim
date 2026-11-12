@@ -7,14 +7,14 @@ import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import {jsonToolResult} from '../src/backend/core/tools/results';
-import type {RunSummary,AgentEngine,EngineContext} from '../src/backend/core/brain/types';
+import type {RunSummary,AgentEngine,EngineContext} from '../src/backend/core/execution/types';
 import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
 import type {ReplaceQueuedDependencyInput} from '../src/backend/core/tasks/queued-dependency-replacement';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
-import {LoopRuntime} from '../src/backend/core/brain/runtime';
-import {MemberExecutionManager,type PreparedEngine} from '../src/backend/scheduler-engine/execution/member-execution';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
+import {MemberExecutionManager,type PreparedEngine} from '../src/backend/scheduler-engine/members/member-execution';
+import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
 import {registerServiceOwner} from './owner-service-fixture';
 
 function deferred<T>(){let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>{resolve=r});return {promise,resolve}}

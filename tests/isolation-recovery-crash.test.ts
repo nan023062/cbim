@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest';import fs from 'node:fs/promises';import path from 'node:path';import os from 'node:os';import {spawn} from 'node:child_process';
-import {FileIsolationRecords} from '../src/backend/main/persistence/tasks/isolation-records';import {isolationPlatform} from './isolation-recovery-fixture';
+import {FileIsolationRecords} from '../src/backend/main/platform/isolation/isolation-records';import {isolationPlatform} from './isolation-recovery-fixture';
 const test=process.platform==='win32'?it:it.skip,alive=(pid:number)=>{try{process.kill(pid,0);return true}catch{return false}},pause=()=>new Promise(resolve=>setTimeout(resolve,20));
 test('真实宿主崩溃后原可靠日志仍可核对，Job收束主程序和后代，按原对象显式清理',async()=>{
  const temp=await fs.realpath(os.tmpdir()),directory=await fs.mkdtemp(path.join(temp,'cbim-isolation-records-')),platform=isolationPlatform(),records=new FileIsolationRecords(path.join(directory,'records'));

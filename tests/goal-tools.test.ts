@@ -1,7 +1,7 @@
 import {test,expect,vi} from 'vitest';
 import {GoalTools,type GoalToolsPort} from '../src/backend/scheduler-engine/tools/goal-tools';
 import {DispatchTools,type DispatchToolsPort} from '../src/backend/scheduler-engine/tools/dispatch-tools';
-import {authorizeRunTool} from '../src/backend/core/policy/tool-policy';
+import {authorizeRunTool} from '../src/backend/core/tools/policy/tool-policy';
 import type {GoalPlanInput,GoalReviewInput} from '../src/backend/core/tasks/scope-goal';
 import {mainToolBinding,mainToolGraph,mainToolTask,mainToolScope,mainToolOwnerSelection} from './main-tool-output-fixture';
 

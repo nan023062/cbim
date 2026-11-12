@@ -16,7 +16,6 @@ Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履
 | [implicit-module-owner.ts](implicit-module-owner.ts) | 从模块责任登记解析显式或最近祖先负责人，供发现、派发和 Store 不变量共同核对。 |
 | [member-execution-binding.ts](member-execution-binding.ts) | 岗位负责人派发的纯选择与冻结身份契约，供目标、任务、运行和公开视图共用。 |
 | [member-execution-rules.ts](member-execution-rules.ts) | 从同一岗位、责任与来源登记快照核实执行选择，供调度和存储共用。 |
-| [model.ts](model.ts) | 团队：Team/小组/Agent 与 Agent 自身和祖先 Skill的核心封装。 |
 | [owner-execution-discovery.ts](owner-execution-discovery.ts) | 岗位执行选择的有界只读发现协议，供主工具和任务详情共用。 |
 | [session-history-storage.ts](session-history-storage.ts) | 静态 Agent 会话历史的持久化索引契约，连接调度查询服务与本机磁盘适配。 |
 | [session-history.ts](session-history.ts) | 定义按静态 Agent 归档的独立 Session、任务轮次及公开事件查询协议。 |
@@ -40,7 +39,7 @@ class N_src_backend_core_team_agent_runtime_ts_MainAgentSettingsView["MainAgentS
 N_src_backend_core_team_agent_runtime_ts ..> N_src_backend_core_team_agent_runtime_ts_MainAgentSettingsView : 声明
 ```
 
-直接依赖：[../brain/llm/engine.ts](../brain/llm/engine.ts)。
+直接依赖：[../models/engine.ts](../models/engine.ts)。
 
 ### agent-types.ts
 
@@ -148,7 +147,7 @@ class N_src_backend_core_team_automatic_execution_ts_AutomaticExecutionBinding["
 N_src_backend_core_team_automatic_execution_ts ..> N_src_backend_core_team_automatic_execution_ts_AutomaticExecutionBinding : 声明
 ```
 
-直接依赖：[../brain/llm/engine.ts](../brain/llm/engine.ts)、[../workspace/project-root.ts](../workspace/project-root.ts)。
+直接依赖：[../models/engine.ts](../models/engine.ts)、[../workspace/project-root.ts](../workspace/project-root.ts)。
 
 ### implicit-module-owner.ts
 
@@ -228,23 +227,6 @@ N_src_backend_core_team_member_execution_rules_ts_external_KnowledgeSourceRegist
 ```
 
 直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[workspace-member.ts](workspace-member.ts)、[workspace-member-rules.ts](workspace-member-rules.ts)、[../workspace/module-ownership.ts](../workspace/module-ownership.ts)、[../workspace/knowledge-source-rules.ts](../workspace/knowledge-source-rules.ts)、[member-execution-binding.ts](member-execution-binding.ts)、[implicit-module-owner.ts](implicit-module-owner.ts)。
-
-### model.ts
-
-```mermaid
-classDiagram
-class N_src_backend_core_team_model_ts["model.ts"] {
-  <<module>>
-}
-class N_src_backend_core_team_model_ts_Team["Team"] {
-  +agents()
-  +agent()
-  -snapshot
-}
-N_src_backend_core_team_model_ts ..> N_src_backend_core_team_model_ts_Team : 声明
-```
-
-直接依赖：[../knowledge/snapshot.ts](../knowledge/snapshot.ts)、[../foundation/json.ts](../foundation/json.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../knowledge/types.ts](../knowledge/types.ts)。
 
 ### owner-execution-discovery.ts
 
@@ -451,7 +433,7 @@ class N_src_backend_core_team_session_history_ts_AgentHistoryEventsInput["AgentH
 N_src_backend_core_team_session_history_ts ..> N_src_backend_core_team_session_history_ts_AgentHistoryEventsInput : 声明
 ```
 
-直接依赖：[../brain/types.ts](../brain/types.ts)、[../tasks/member-events.ts](../tasks/member-events.ts)。
+直接依赖：[../execution/types.ts](../execution/types.ts)、[../tasks/member-events.ts](../tasks/member-events.ts)。
 
 ### workspace-member-rules.ts
 
@@ -718,7 +700,7 @@ class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberDetail["Workspa
 N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberDetail : 声明
 ```
 
-直接依赖：[../brain/llm/engine.ts](../brain/llm/engine.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)。
+直接依赖：[../models/engine.ts](../models/engine.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)。
 
 ### 本目录调用边界
 
@@ -944,7 +926,7 @@ MemberScheduler ..> MemberContracts : 持有实例并投影状态
 MemberScheduler ..> BrainPort : 绑定成员通道并执行
 ```
 
-本图表达跨目录契约边界，具体文件类图见各目录 `ARCHITECTURE.md`。Team 不导入调度器、大脑实现或平台存储；成员共享类型放在独立契约文件，避免 `model.ts` 与运行管理器相互依赖。任务节点与增量事件见 [任务契约](../tasks/CONTRACT.md)，执行通道边界见 [大脑契约](../brain/CONTRACT.md)。
+本图表达跨目录契约边界，具体文件类图见各目录 `ARCHITECTURE.md`。Team 不导入调度器、大脑实现或平台存储；成员共享类型放在独立契约文件，避免 `model.ts` 与运行管理器相互依赖。任务节点与增量事件见 [任务契约](../tasks/CONTRACT.md)，执行通道边界见 [大脑契约](../execution/CONTRACT.md)。
 
 ### 项目岗位登记与明确采纳
 

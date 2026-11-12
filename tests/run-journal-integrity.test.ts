@@ -2,10 +2,10 @@ import {afterEach,expect,test} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
-import type {TaskSpec} from '../src/backend/core/brain/types';
-import {LoopRuntime} from '../src/backend/core/brain/runtime';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
+import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import type {TaskSpec} from '../src/backend/core/execution/types';
+import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 
 const directories:string[]=[];
 afterEach(async()=>{for(const directory of directories.splice(0)){const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-log-integrity-'))throw Error('Unexpected cleanup path');await fs.rm(target,{recursive:true,force:true})}});

@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest';import fs from 'node:fs/promises';import path from 'node:path';import os from 'node:os';import {createRequire} from 'node:module';
-import {Win32ControlledFile} from '../src/backend/main/platform/controlled-file-win32';
-import {ControlledFileBlobs} from '../src/backend/main/platform/controlled-file-blobs';
+import {Win32ControlledFile} from '../src/backend/main/platform/files/controlled-file-win32';
+import {ControlledFileBlobs} from '../src/backend/main/platform/files/controlled-file-blobs';
 const native=createRequire(import.meta.url),test=process.platform==='win32'?it:it.skip;
 async function fixture(){const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-controlled-platform-'));const target=path.join(root,'file.txt');await fs.writeFile(target,'\uFEFFold\r\n');return {root,target,open:(relative='file.txt',protectedRoots:string[]=[])=>new Win32ControlledFile(root,relative,protectedRoots,native.resolve('koffi')),async cleanup(){if(path.dirname(root)!==os.tmpdir()||!path.basename(root).startsWith('cbim-controlled-platform-'))throw Error('cleanup');await fs.rm(root,{recursive:true,force:true})}}}
 test('真实Win32同句柄UTF8读写/flush保持身份；第二次写拒绝，关闭后才可外部打开',async()=>{const f=await fixture();let file:Win32ControlledFile|undefined;try{file=f.open();const before=file.read();expect(before.bytes).toEqual(Buffer.from('\uFEFFold\r\n'));await expect(fs.readFile(f.target)).rejects.toBeDefined();const after=file.replace(Buffer.from('new\r\n'));expect(after.identity).toEqual(before.identity);expect(after.bytes.toString()).toBe('new\r\n');expect(()=>file!.replace(Buffer.from('again'))).toThrow();file.close();file=undefined;expect(await fs.readFile(f.target,'utf8')).toBe('new\r\n')}finally{file?.close();await f.cleanup()}});

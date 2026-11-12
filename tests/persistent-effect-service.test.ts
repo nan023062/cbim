@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import type {DispatchStore} from '../src/backend/core/tasks/dispatch-storage';
-import {EffectObservationService} from '../src/backend/scheduler-engine/execution/effect-observation-service';
+import type {DispatchStore} from '../src/backend/core/dispatch/dispatch-storage';
+import {EffectObservationService} from '../src/backend/scheduler-engine/evidence/effect-observation-service';
 import {persistentWriteEffects,persistentWriteObservationSchema,type PersistentWriteObservation,type PersistentWriteName} from '../src/backend/core/tasks/persistent-write-observation';
 import {originalPersistentWrite,persistentWriteIdentity,persistentWriteSourceHash,type PersistentWriteReference} from '../src/backend/core/tasks/persistent-write-input';
 import {reportFixture,reportIdentity} from './command-verification-fixture';

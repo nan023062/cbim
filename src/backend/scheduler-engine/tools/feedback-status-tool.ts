@@ -5,7 +5,7 @@
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {fail} from '../../core/foundation/errors';
 import {checkedJsonToolResult} from '../../core/tools/results';
-import type {RunToolDescriptor} from '../../core/policy/tool-policy';
+import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
 import {feedbackAvailabilitySchema,feedbackConnectionCheckSchema,feedbackReceiptInputSchema,type FeedbackAvailability,type FeedbackConnectionCheck} from '../../core/connectors/github-feedback';
 
 const messages:Record<FeedbackAvailability['code'],string>={

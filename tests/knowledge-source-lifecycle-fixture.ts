@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {randomUUID,createHash} from 'node:crypto';
-import type {Application} from '../src/backend/main/application';
+import type {Application} from '../src/backend/main/assembly/application';
 import type {ObjectOperation} from '../src/backend/core/knowledge/object-crud';
 import type {Snapshot} from '../src/backend/core/knowledge/types';
 import type {WorkspaceMemberChangeInput} from '../src/backend/core/team/workspace-member';

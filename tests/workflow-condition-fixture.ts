@@ -1,7 +1,7 @@
-import type {Application} from '../src/backend/main/application';
+import type {Application} from '../src/backend/main/assembly/application';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {DispatchMutation,DispatchMessage} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchMutation,DispatchMessage} from '../src/backend/core/dispatch/dispatch-storage';
 import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {AgentInstance} from '../src/backend/core/team/agent-types';

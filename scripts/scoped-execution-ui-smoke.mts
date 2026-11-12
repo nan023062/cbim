@@ -1,9 +1,9 @@
 import {_electron as electron,type ElectronApplication} from 'playwright-core';
 import fs from 'node:fs/promises';import path from 'node:path';import os from 'node:os';import assert from 'node:assert/strict';
-import {Application} from '../src/backend/main/application';import {Paths} from '../src/backend/main/platform/paths';
+import {Application} from '../src/backend/main/assembly/application';import {Paths} from '../src/backend/main/platform/paths';
 import {scopedData,scopedProvider} from '../tests/scoped-execution-provider';
 import {seedScopedExecution,scopedRecords,scopedLogBytes} from '../tests/scoped-execution-fixture';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {latestExecutable} from './build-artifact.mjs';
 const mode=process.argv.includes('--stop')?'stop':process.argv.includes('--ask')?'ask':'complete',tag=process.env.CBIM_SCOPED_REPORT_PREFIX??'scoped-'+mode;
 assert.match(tag,/^scoped-[a-z0-9-]+$/);const report='test-results/'+tag+'-desktop.json';

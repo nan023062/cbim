@@ -6,7 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {attachmentFixture as data,waitingAttachmentsProvider,requestImages} from './waiting-attachments-provider';
 import {attachmentHash,attachmentWait,seedWaitingAttachments} from './waiting-attachments-fixture';
-import {ChatInputs} from '../src/backend/main/persistence/tasks/chat-inputs';
+import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
 import {hash,json} from '../src/backend/core/foundation/serialization';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import type {GoalContinuationReceipt} from '../src/backend/core/tasks/scope-continuation';

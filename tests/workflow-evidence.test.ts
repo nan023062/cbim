@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest';
-import {TaskProgressTools} from '../src/backend/core/tasks/progress-tools';
-import {evaluateWorkflowDelivery,validateWorkflowEvidence} from '../src/backend/core/tasks/workflow-evidence';
+import {TaskProgressTools} from '../src/backend/core/evidence/progress-tools';
+import {evaluateWorkflowDelivery,validateWorkflowEvidence} from '../src/backend/core/evidence/workflow-evidence';
 import type {WorkflowContractBinding} from '../src/backend/core/tasks/execution-context';
-import type {TaskProgress} from '../src/backend/core/tasks/progress';
-import type {ArtifactEvidenceEvent} from '../src/backend/core/tasks/artifact-evidence';
+import type {TaskProgress} from '../src/backend/core/evidence/progress';
+import type {ArtifactEvidenceEvent} from '../src/backend/core/evidence/artifact-evidence';
 import {toolReceipt} from '../src/backend/core/tools/receipts';
 import type {ToolCall,ToolDecision,ToolReceipt} from '../src/backend/core/tools/types';
 

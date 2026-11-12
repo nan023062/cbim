@@ -3,14 +3,14 @@ import {randomUUID} from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {AutoCollaboration} from '../src/backend/scheduler-engine/execution/auto-collaboration';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/execution/workspace-lease';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
-import type {ExecutionCollaboration,WorkspaceExecutionManager} from '../src/backend/scheduler-engine/execution/execution-manager';
-import type {MemberExecutionManager} from '../src/backend/scheduler-engine/execution/member-execution';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
-import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
-import type {TaskSpec} from '../src/backend/core/brain/types';
+import {AutoCollaboration} from '../src/backend/scheduler-engine/dispatch/auto-collaboration';
+import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
+import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import type {ExecutionCollaboration,WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
+import type {MemberExecutionManager} from '../src/backend/scheduler-engine/members/member-execution';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import type {TaskSpec} from '../src/backend/core/execution/types';
 import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
 
 async function setup(){

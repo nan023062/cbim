@@ -7,32 +7,32 @@
  * 职责边界：这里只声明内部调用能力，不代表渲染进程可以直接访问这些服务。
  * 请求预算只公开只读摘要；预留和终态仅由真实运行装配端口持有。
  */
-import type {WebSettings} from '../persistence/settings/web-settings';
-import type {WorkspaceAutomations} from '../automation';
+import type {WebSettings} from '../settings/web-settings';
+import type {WorkspaceAutomations} from '../automation/service';
 import type {Catalog} from '../workspace/catalog';
 import type {Workspace} from '../workspace/workspace';
 import type {Paths} from '../platform/paths';
-import type {MainAgentSettings} from '../persistence/settings/main-agent-settings';
-import type {LlmProfiles} from '../persistence/settings/llm-profiles';
+import type {MainAgentSettings} from '../models/main-agent-settings';
+import type {LlmProfiles} from '../models/llm-profiles';
 import type {ResourceRepositories} from '../resources/resource-repository';
 import type {RepositoryConnections} from '../resources/repository-connections';
-import type {GitHubFeedback} from '../resources/github-feedback';
+import type {GitHubFeedback} from '../feedback/github-feedback';
 import type {ModuleGovernanceService} from '../governance/module-governance';
-import type {WorkspaceExecutionManager} from '../../scheduler-engine/execution/execution-manager';
-import type {WorkspaceDispatchService} from '../../scheduler-engine/execution/dispatch-service';
-import type {MemberExecutionManager} from '../../scheduler-engine/execution/member-execution';
-import type {AgentHistoryService} from '../../scheduler-engine/runtime/agent-history';
+import type {WorkspaceExecutionManager} from '../../scheduler-engine/conversation/execution-manager';
+import type {WorkspaceDispatchService} from '../../scheduler-engine/dispatch/dispatch-service';
+import type {MemberExecutionManager} from '../../scheduler-engine/members/member-execution';
+import type {AgentHistoryService} from '../../scheduler-engine/history/agent-history';
 import type {RuntimeCursor,RuntimeRead,RuntimeSnapshot} from '../../core/runtime/types';
 import type {Catalog as CatalogData, WorkspaceView} from '../../../bridge/contracts/workspace';
-import type {AdmissionSettings} from '../persistence/settings/admission-settings';
-import type {BudgetSettings} from '../persistence/settings/budget-settings';
-import type {WorkspaceMembers} from '../workspace/workspace-members';
-import type {ModuleOwnerships} from '../workspace/module-ownerships';
-import type {ControlledFiles} from '../workspace/controlled-files';
-import type {IsolatedExecutions} from '../workspace/isolated-executions';
-import type {ChatMaterialImports} from '../persistence/tasks/chat-material-imports';
+import type {AdmissionSettings} from '../settings/admission-settings';
+import type {BudgetSettings} from '../settings/budget-settings';
+import type {WorkspaceMembers} from '../registry/workspace-members';
+import type {ModuleOwnerships} from '../registry/module-ownerships';
+import type {ControlledFiles} from '../file-operations/controlled-files';
+import type {IsolatedExecutions} from '../file-operations/isolated-executions';
+import type {ChatMaterialImports} from '../materials/chat-material-imports';
 import type {AdmissionCursor,AdmissionRead} from '../../core/runtime/admission';
-import type {ModelRequestBudgetService} from '../../scheduler-engine/execution/model-request-budget-service';
+import type {ModelRequestBudgetService} from '../../scheduler-engine/budget/model-request-budget-service';
 
 /** 应用向路由提供的内部服务；工作区调用始终携带身份，生命周期仍由应用实现管理。 */
 export interface ApplicationServices {

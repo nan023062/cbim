@@ -3,7 +3,7 @@ import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import {existsSync} from 'node:fs';
 import path from 'node:path';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {knowledgeSourceRefSchema,knowledgeSourceChangeSchema,type KnowledgeSourceChange} from '../src/backend/core/workspace/knowledge-source';
 import {workspaceMemberDetailSchema} from '../src/backend/core/team/workspace-member';

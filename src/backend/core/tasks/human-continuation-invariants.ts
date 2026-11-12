@@ -4,7 +4,7 @@
  * 职责边界：这里只核实持久关系；canonical、知识与文件时效仍由调度服务在审阅和结束时分别核实。
  */
 import {fail} from '../foundation/errors';
-import type {DispatchState,DispatchMutation,DispatchCommand} from './dispatch-storage';
+import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 import {isHumanContinuation} from './scope-continuation-record';
 import {humanContinuationSubject} from './human-continue';
 import {waitingHumanDecisions,currentHumanContinuation,referencedHumanDecision,humanContinuationSubjectMatches} from './human-continuation-rules';

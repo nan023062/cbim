@@ -6,7 +6,7 @@
 
 [产品官网](https://nan023062.github.io/cbim/) · [Windows 下载与更新日志](https://nan023062.github.io/cbim/download.html)
 
-[Loop Engine（Pi）](src/backend/core/brain/ARCHITECTURE.md)：`src/backend/core/brain/` 通过注入的存储端口管理执行事件、中断与显式恢复，桌面主对话经调度引擎派发正式业务任务。执行结束不等于业务验收通过。开发运行要求 Node.js 22.19+。
+[引擎无关执行内核](src/backend/core/execution/ARCHITECTURE.md)通过注入的存储端口管理执行事件、中断与显式恢复；[具体引擎](src/backend/engines/ARCHITECTURE.md)由调度装配接入。桌面主对话经调度引擎派发正式业务任务，执行结束不等于业务验收通过。开发运行要求 Node.js 22.19+。
 
 界面采用工作区侧栏与主会话区：中间切换对话和任务视图，右侧扩展区承载团队架构、业务架构、浏览器与终端。详见 [工作区界面](src/frontend/ARCHITECTURE.md)。
 
@@ -83,7 +83,9 @@ pnpm start
 
 | 位置 | 内容 |
 |---|---|
-| `src/backend/core/brain/` | 大脑执行层：引擎无关生命周期、存储端口与 Pi / Claude Code / Codex 适配器 |
+| `src/backend/core/execution/` | 引擎无关生命周期、存储端口和成员能力 |
+| `src/backend/core/models/` | 模型参数、能力元数据与请求预算端口 |
+| `src/backend/engines/` | Pi / Claude Code / Codex 适配器及共享传输 |
 | `src/backend/core/connectors/` | 链接器定义、身份与插件映射 |
 | `src/backend/core/team/` | Team、Agent、项目岗位与 Skill 领域视图 |
 | `src/backend/core/workspace/` | 业务 Workspace、Module 与 Workflow 领域视图 |
@@ -100,7 +102,8 @@ pnpm start
 
 实现说明随源码维护，可从以下入口逐层阅读：
 
-- [执行引擎与生命周期](src/backend/core/brain/ARCHITECTURE.md)
+- [后端模块、源码映射与修改入口](src/backend/CONTRACT.md)
+- [执行引擎与生命周期](src/backend/core/execution/ARCHITECTURE.md)
 - [任务身份与派发契约](src/backend/core/tasks/CONTRACT.md)
 - [调度与成员执行](src/backend/scheduler-engine/ARCHITECTURE.md)
 - [运行统计与准入](src/backend/core/runtime/CONTRACT.md)

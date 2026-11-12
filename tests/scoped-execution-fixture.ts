@@ -1,5 +1,5 @@
 import fs from 'node:fs/promises';import path from 'node:path';
-import type {Application} from '../src/backend/main/application';
+import type {Application} from '../src/backend/main/assembly/application';
 import type {ExecutionScope} from '../src/backend/core/workspace/execution-scope';
 import {seedTeam} from './team-fixture';import {request} from './data/knowledge';import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {scopedData} from './scoped-execution-provider';

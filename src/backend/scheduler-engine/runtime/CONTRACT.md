@@ -72,7 +72,7 @@ class RuntimeScope {
 class RuntimeSnapshot {
   <<core-contract>>
 }
-class BrainUsage["core/brain/usage.ts"] {
+class BrainUsage["core/execution/usage.ts"] {
   <<module>>
   +runUsage(events)
 }

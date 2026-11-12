@@ -2,13 +2,13 @@ import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import type {TaskNode} from '../src/backend/core/tasks/graph-types';
-import type {ChatApproval} from '../src/backend/core/policy/types';
-import type {RunSummary} from '../src/backend/core/brain/types';
-import {validateMemberWorkflow} from '../src/backend/scheduler-engine/execution/member-workflow';
+import type {ChatApproval} from '../src/backend/core/tools/policy/types';
+import type {RunSummary} from '../src/backend/core/execution/types';
+import {validateMemberWorkflow} from '../src/backend/scheduler-engine/members/member-workflow';
 import {workflowConditionProvider,workflowConditionFixture as data,type WorkflowConditionMode} from './workflow-condition-provider';
 import {seedWorkflowCondition,workflowConditionRecords,workflowConditionLogBytes} from './workflow-condition-fixture';
 

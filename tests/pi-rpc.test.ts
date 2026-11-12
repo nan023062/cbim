@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest';
 import path from 'node:path';
-import {PiRpc} from '../src/backend/core/brain/pi/rpc';
+import {PiRpc} from '../src/backend/engines/pi/rpc';
 
 it('RPC preserves split JSON records and Unicode separators; correlates concurrent responses',async()=>{
   const events:any[]=[];const rpc=new PiRpc(event=>events.push(event),()=>{});

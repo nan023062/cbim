@@ -5,15 +5,15 @@
  * 职责边界：校验持久关系及证明内容指纹，真实日志与文件须由可信服务复核；actor 只表示本机提交来源。
  */
 import {fail} from '../foundation/errors';
-import type {DispatchState,DispatchMutation,DispatchCommand} from './dispatch-storage';
+import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 import {scopeHumanDecisionsSchema,type HumanDecisionRecord} from './human-decisions';
 import {humanDecisionBasis} from './human-decision-proof';
 import {goalInputRevision,sameGoalValue,goalNeedsReplan} from './scope-goal';
 import {sameWorkflowSelectionsForModules} from './workflow-selection';
-import {completeOutputRequired} from './complete-output-evidence';
+import {completeOutputRequired} from '../evidence/complete-output-evidence';
 import {preparedWorkflowContracts} from './execution-context';
 import {preparedArtifactScopes} from '../workspace/artifact-scope';
-import {outputManifestScopeHash} from './output-manifest-evidence';
+import {outputManifestScopeHash} from '../evidence/output-manifest-evidence';
 
 function valid(value:unknown,message:string):asserts value{if(!value)fail('GRAPH_INPUT_INVALID',message)}
 const equal=sameGoalValue;

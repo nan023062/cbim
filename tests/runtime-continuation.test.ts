@@ -2,10 +2,10 @@ import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {LoopRuntime} from '../src/backend/core/brain/runtime';
-import type {AgentEngine,EngineContext,TaskSpec} from '../src/backend/core/brain/types';
-import type {UserContinuationSource} from '../src/backend/core/brain/input-source';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
+import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
+import type {AgentEngine,EngineContext,TaskSpec} from '../src/backend/core/execution/types';
+import type {UserContinuationSource} from '../src/backend/core/execution/input-source';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}};
 const source:UserContinuationSource={kind:'user-continuation',continuationId:'input-command',scopeId:'scope-one',waitId:'wait-one',inputRevision:2};

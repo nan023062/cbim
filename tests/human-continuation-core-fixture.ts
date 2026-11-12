@@ -1,6 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {DispatchState} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
 import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
 import type {TaskNode} from '../src/backend/core/tasks/graph-types';
 import {humanDecisionBasis} from '../src/backend/core/tasks/human-decision-proof';

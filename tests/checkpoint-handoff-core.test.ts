@@ -10,7 +10,7 @@ import {mainToolOutputSchema} from '../src/backend/core/tasks/main-tool-output';
 import {isProgressEvidence} from '../src/backend/core/tasks/member-tool-output';
 import {checkedJsonToolResult} from '../src/backend/core/tools/results';
 import {toolReceipt} from '../src/backend/core/tools/receipts';
-import type {DispatchState,DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchState,DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
 import type {TaskNode} from '../src/backend/core/tasks/graph-types';
 import type {ScopeActiveInput} from '../src/backend/core/tasks/scope-active-input';
 import {fixture,input,abandon,resume,resumeClaim,checked,mainRunId,later} from './checkpoint-handoff-core-fixture';

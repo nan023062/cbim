@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
-import {runtimeEngineTools,nativeToolsDisabled,type EngineCapability,type EngineToolsPort} from '../src/backend/core/brain/engine-tools';
-import {memberToolCapabilities} from '../src/backend/core/brain/member-tool-capabilities';
-import {RunScopedExecution} from '../src/backend/core/brain/run-scoped-execution';
+import {runtimeEngineTools,nativeToolsDisabled,type EngineCapability,type EngineToolsPort} from '../src/backend/core/execution/engine-tools';
+import {memberToolCapabilities} from '../src/backend/core/execution/capabilities/member-tool-capabilities';
+import {RunScopedExecution} from '../src/backend/core/execution/capabilities/run-scoped-execution';
 import type {ExecutionScope} from '../src/backend/core/workspace/execution-scope';
 
 const empty:EngineToolsPort={list:async()=>[],call:async()=>{throw Error('not registered')}};

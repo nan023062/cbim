@@ -22,7 +22,7 @@ class N_src_backend_main_commands_loop_cli_ts["loop-cli.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../platform/paths.ts](../platform/paths.ts)、[../application.ts](../application.ts)。
+直接依赖：[../platform/paths.ts](../platform/paths.ts)、[../assembly/application.ts](../assembly/application.ts)。
 
 
 ## 子目录导航

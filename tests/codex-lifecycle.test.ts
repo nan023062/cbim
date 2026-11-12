@@ -1,7 +1,7 @@
 import {expect,test} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {CodexEngine} from '../src/backend/core/brain/codex/engine';
+import {CodexEngine} from '../src/backend/engines/codex/engine';
 import {codexFixture} from './codex-fixture';
 import {requestBudgetFixture} from './model-request-budget-fixture';
 

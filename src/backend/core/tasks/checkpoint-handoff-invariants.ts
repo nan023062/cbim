@@ -4,7 +4,7 @@
  * 设计原因：事件名、取消状态或自报审计均不授权处置；原运行/原生通道及 checkpoint 信封不变，后续纯 ACK 和周期释放仍须合法。
  */
 import {fail} from '../foundation/errors';
-import type {DispatchState,DispatchMutation,DispatchCommand} from './dispatch-storage';
+import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 import type {TaskNode} from './graph-types';
 import {checkpointAbandonmentSchema,abandonCheckpointReceiptSchema,type CheckpointAbandonment} from './checkpoint-handoff';
 import {checkpointAbandonmentSelection} from './checkpoint-handoff-rules';

@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';

@@ -1,10 +1,10 @@
 import {expect,it,vi} from 'vitest';
-import {runtimeEngineTools} from '../src/backend/core/brain/engine-tools';
-import {claudeTools} from '../src/backend/core/brain/claude/tools';
-import {codexTools} from '../src/backend/core/brain/codex/tools';
-import {engineInstructions} from '../src/backend/core/brain/engine-instructions';
-import {memberToolCapabilities} from '../src/backend/core/brain/member-tool-capabilities';
-import type {EngineContext} from '../src/backend/core/brain/types';
+import {runtimeEngineTools} from '../src/backend/core/execution/engine-tools';
+import {claudeTools} from '../src/backend/engines/claude/tools';
+import {codexTools} from '../src/backend/engines/codex/tools';
+import {engineInstructions} from '../src/backend/core/execution/engine-instructions';
+import {memberToolCapabilities} from '../src/backend/core/execution/capabilities/member-tool-capabilities';
+import type {EngineContext} from '../src/backend/core/execution/types';
 
 const context=():EngineContext=>({task:{taskId:'task',workspaceId:'workspace',root:'.',mode:'chat',agentId:'cbim:main',goal:'test',moduleIds:[],acceptance:[]},runId:'run',directory:'.',emit:async()=>{},beforeTool:async()=>({allow:true})});
 const empty={list:async()=>[],call:vi.fn(async()=>({content:[]}))};

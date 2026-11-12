@@ -2,7 +2,7 @@ import {it,expect,beforeAll,afterAll} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {transitionFixture,runTransitions,transitionContracts} from './artifact-transition-fixture';
-import type {StoredEvent} from '../src/backend/core/brain/types';
+import type {StoredEvent} from '../src/backend/core/execution/types';
 import {artifactScopeSchema} from '../src/backend/core/workspace/artifact-scope';
 import {ArtifactTransitionProofs} from '../src/frontend/tasks/ArtifactTransitionProofs';
 

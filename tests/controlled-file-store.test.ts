@@ -1,8 +1,8 @@
 import {expect,it,vi,afterEach} from 'vitest';
 import fs from 'node:fs/promises';
 import {hash} from '../src/backend/core/foundation/serialization';
-import {controlledFileOperation,controlledFilePhaseCommand,controlledFilePhaseReceipt,controlledFileIntentHash,fileCompensationReceipt} from '../src/backend/core/tasks/controlled-file-rules';
-import type {ControlledFileChange} from '../src/backend/core/tasks/controlled-file-event';
+import {controlledFileOperation,controlledFilePhaseCommand,controlledFilePhaseReceipt,controlledFileIntentHash,fileCompensationReceipt} from '../src/backend/core/file-operations/controlled-file-rules';
+import type {ControlledFileChange} from '../src/backend/core/file-operations/controlled-file-event';
 import {storeFixture,writeIntent,phases,mutation,compensationIntent} from './controlled-file-core-fixture';
 const commit=(store:Awaited<ReturnType<typeof storeFixture>>['store'],change:ControlledFileChange)=>store.transact(controlledFilePhaseCommand(change),async()=>mutation(change));
 afterEach(()=>vi.restoreAllMocks());

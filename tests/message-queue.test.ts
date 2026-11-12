@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {MessageQueue} from '../src/backend/scheduler-engine/conversation/message-queue';
 import {brainStatus} from '../src/frontend/conversation/brain-status';
-import type {RunSummary} from '../src/backend/core/brain/types';
+import type {RunSummary} from '../src/backend/core/execution/types';
 test('queue ordering, task isolation and interrupted starting receipts survive restart without replay',async()=>{
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-queue-'));try{
  const file=path.join(dir,'queue.json'),q=new MessageQueue(file);await q.load();

@@ -4,9 +4,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
-import {LoopRuntime,type TaskSpec,type MemberRunLaunch} from '../src/backend/core/brain';
-import {PiEngine} from '../src/backend/core/brain/pi/engine';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
+import {LoopRuntime,type TaskSpec,type MemberRunLaunch} from '../src/backend/core/execution';
+import {PiEngine} from '../src/backend/engines/pi/engine';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 
 /** Real pinned Pi; the deterministic localhost provider proves native session behavior without external model calls. */
 it('reuses one member native session across distinct tasks, isolates another member, and rejects a mismatched session file',async()=>{

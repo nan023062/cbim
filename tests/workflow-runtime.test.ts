@@ -3,10 +3,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {expect,it,vi} from 'vitest';
 import type {WorkflowContractBinding} from '../src/backend/core/tasks/execution-context';
-import type {EngineContext,ToolCall} from '../src/backend/core/brain/types';
+import type {EngineContext,ToolCall} from '../src/backend/core/execution/types';
 import {nativeToolDescriptor} from '../src/backend/core/tools/native-tools';
-import {progressTool} from '../src/backend/core/tasks/progress-tools';
-import {validateWorkflowEvidence} from '../src/backend/core/tasks/workflow-evidence';
+import {progressTool} from '../src/backend/core/evidence/progress-tools';
+import {validateWorkflowEvidence} from '../src/backend/core/evidence/workflow-evidence';
 import {jsonToolResult} from '../src/backend/core/tools/results';
 import {artifactRuntimeFixture,artifactBinding,deferred,invoke} from './artifact-runtime-fixture';
 

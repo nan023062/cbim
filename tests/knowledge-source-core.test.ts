@@ -12,8 +12,8 @@ import {moduleOwnershipChangeInputSchema,moduleOwnershipReceiptSchema,moduleOwne
 import {moduleOwnershipBasis,moduleOwnershipCommand,moduleOwnershipHash,moduleOwnershipReceipt} from '../src/backend/core/workspace/module-ownership-rules';
 import {moduleOwnershipImpact} from '../src/backend/core/tasks/module-ownership-invariants';
 import {projectKnowledgeSourceMutation} from '../src/backend/core/tasks/knowledge-source-invariants';
-import type {DispatchState,DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
+import type {DispatchState,DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 
 const workspaceId='source-workspace',instanceId=randomUUID(),at='2026-11-08T06:00:00.000Z',later='2026-11-08T06:00:01.000Z';
 const agent:KnowledgeSourceKey={kind:'agent',sourceId:'.cbim/team/dev'},moduleKey:KnowledgeSourceKey={kind:'module',sourceId:'.cbim/workspace/game'};

@@ -3,8 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
-import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/execution/execution-manager';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
+import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
 import type {RecoveryRequest} from '../src/backend/core/tasks/scope-recovery';
 

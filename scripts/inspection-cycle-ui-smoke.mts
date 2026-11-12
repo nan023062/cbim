@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {inspectionCycleProvider,inspectionFixture as data} from '../tests/inspection-cycle-provider';
 import {seedExecutionReport} from '../tests/execution-report-fixture';

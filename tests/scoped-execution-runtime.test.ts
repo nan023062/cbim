@@ -1,11 +1,11 @@
 import {runtimeToolGroup} from './runtime-tool-group';
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';import path from 'node:path';import os from 'node:os';
-import {LoopRuntime} from '../src/backend/core/brain/runtime';
-import {RunScopedExecution,type ScopedExecutionPort} from '../src/backend/core/brain/run-scoped-execution';
-import type {EngineContext,AgentEngine} from '../src/backend/core/brain/types';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
-import {authorizeRunTool} from '../src/backend/core/policy/tool-policy';
+import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
+import {RunScopedExecution,type ScopedExecutionPort} from '../src/backend/core/execution/capabilities/run-scoped-execution';
+import type {EngineContext,AgentEngine} from '../src/backend/core/execution/types';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {authorizeRunTool} from '../src/backend/core/tools/policy/tool-policy';
 import {hash} from '../src/backend/core/foundation/serialization';
 import {artifactBinding as binding,deferred} from './artifact-runtime-fixture';
 import type {ExecutionScope} from '../src/backend/core/workspace/execution-scope';

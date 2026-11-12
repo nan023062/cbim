@@ -1,8 +1,8 @@
 import {expect,it,vi} from 'vitest';
 import http from 'node:http';
 import {requestBudgetFixture,budgetTestModel} from './model-request-budget-fixture';
-import {openRequestBudgetTransport,requestBudgetEndpoint} from '../src/backend/core/brain/llm/request-budget-transport';
-import type {RequestBudgetPort} from '../src/backend/core/brain/llm/request-budget';
+import {openRequestBudgetTransport,requestBudgetEndpoint} from '../src/backend/engines/transport/request-budget-transport';
+import type {RequestBudgetPort} from '../src/backend/core/models/request-budget';
 
 async function upstream(reply:(res:http.ServerResponse,body:any,req:http.IncomingMessage)=>void|Promise<void>){let calls=0;const errors:unknown[]=[];const server=http.createServer(async(req,res)=>{try{let text='';for await(const part of req)text+=part;calls++;await reply(res,JSON.parse(text),req)}catch(e){errors.push(e);res.destroy()}});await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));return {url:'http://127.0.0.1:'+(server.address() as import('node:net').AddressInfo).port,get calls(){return calls},errors,close:async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}}}
 const good=(res:http.ServerResponse)=>{res.writeHead(200,{'content-type':'text/event-stream'});res.end('data: '+JSON.stringify({choices:[{index:0,delta:{content:'ok'},finish_reason:'stop'}],usage:{prompt_tokens:100,completion_tokens:20,total_tokens:120}})+'\n\ndata: [DONE]\n\n')};

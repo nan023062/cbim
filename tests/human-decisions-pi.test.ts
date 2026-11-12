@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import {humanDecisionPreviewSchema,humanDecisionReceiptSchema,humanDecisionHistorySchema,type HumanDecisionKind,type HumanDecisionRequest} from '../src/backend/core/tasks/human-decisions';

@@ -4,9 +4,9 @@ import path from 'node:path';
 import os from 'node:os';
 import http from 'node:http';
 import {randomUUID} from 'node:crypto';
-import {ClaudeCodeEngine,claudeEnvironment} from '../src/backend/core/brain/claude/engine';
-import type {EngineContext,EngineEvent} from '../src/backend/core/brain/types';
-import type {ResolvedLlm} from '../src/backend/core/brain/llm/ports';
+import {ClaudeCodeEngine,claudeEnvironment} from '../src/backend/engines/claude/engine';
+import type {EngineContext,EngineEvent} from '../src/backend/core/execution/types';
+import type {ResolvedLlm} from '../src/backend/core/models/ports';
 
 const roots:string[]=[];
 test('real Claude stop cancels an in-flight provider request and does not claim completion',async()=>{

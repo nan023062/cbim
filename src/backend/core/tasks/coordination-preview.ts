@@ -4,7 +4,7 @@
  */
 import {z} from 'zod';
 import {fail,Fault} from '../foundation/errors';
-import type {DispatchState} from './dispatch-storage';
+import type {DispatchState} from '../dispatch/dispatch-storage';
 import type {DispatchScope} from './dispatch-scope';
 import type {GraphSnapshot} from './graph-types';
 import {cancelQueuedTasksInputSchema,type CancelQueuedTasksInput} from './queued-task-cancel';

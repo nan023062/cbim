@@ -1,5 +1,5 @@
 import {randomUUID} from 'node:crypto';
-import type {DispatchMutation,DispatchState} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchMutation,DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {EffectObservationReport,EffectDispositionRecord} from '../src/backend/core/tasks/effect-observation';
 import {effectObservationBasis} from '../src/backend/core/tasks/effect-observation-rules';

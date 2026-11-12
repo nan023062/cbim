@@ -1,10 +1,10 @@
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {checkpointServiceFixture} from './member-checkpoint-service-fixture';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
-import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
-import {normalizeArtifactPath} from '../src/backend/main/platform/artifact-files';
-import type {TaskSpec} from '../src/backend/core/brain/types';
+import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import {normalizeArtifactPath} from '../src/backend/main/platform/files/artifact-files';
+import type {TaskSpec} from '../src/backend/core/execution/types';
 import type {MemberPause} from '../src/backend/core/tasks/member-pause';
 import type {GoalReviewInput} from '../src/backend/core/tasks/scope-goal';
 import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';

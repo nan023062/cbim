@@ -2,18 +2,18 @@ import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {revisionFixture} from './queued-dependency-revision-fixture';
-import type {DispatchMutation,DispatchCommand} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchMutation,DispatchCommand} from '../src/backend/core/dispatch/dispatch-storage';
 import type {ReviseQueuedDependenciesInput} from '../src/backend/core/tasks/queued-dependency-revision';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {DispatchTools} from '../src/backend/scheduler-engine/tools/dispatch-tools';
 import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
-import {restoreMainCommand} from '../src/backend/scheduler-engine/execution/main-command-request';
+import {restoreMainCommand} from '../src/backend/scheduler-engine/goals/main-command-request';
 import {projectCommandReceipt} from '../src/backend/core/tasks/command-verification-output';
 import {memberDependencyRevisionHistory} from '../src/frontend/tasks/member-dependency-state';
-import {MemberExecutionManager,type PreparedEngine} from '../src/backend/scheduler-engine/execution/member-execution';
-import {LoopRuntime} from '../src/backend/core/brain/runtime';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
-import type {AgentEngine,EngineContext} from '../src/backend/core/brain/types';
+import {MemberExecutionManager,type PreparedEngine} from '../src/backend/scheduler-engine/members/member-execution';
+import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import type {AgentEngine,EngineContext} from '../src/backend/core/execution/types';
 
 function deferred(){let resolve!:()=>void;const promise=new Promise<void>(r=>{resolve=r});return {promise,resolve}}
 const taskChange=(m:DispatchMutation)=>{const c=m.batch!.changes.find(c=>c.type==='task.upserted');if(c?.type!=='task.upserted')throw Error('missing task');return c.task};

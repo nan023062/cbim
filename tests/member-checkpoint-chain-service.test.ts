@@ -2,7 +2,7 @@ import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {checkpointServiceFixture} from './member-checkpoint-service-fixture';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {memberResumeRequests,currentMemberResumeRequest} from '../src/backend/core/tasks/member-checkpoint-chain';
 import {memberCheckpointView} from '../src/frontend/tasks/member-checkpoint-state';
 import {validateDispatchExecution} from '../src/backend/core/tasks/dispatch-invariants';

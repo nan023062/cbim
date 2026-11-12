@@ -6,7 +6,7 @@
  * 审计兼容：保留旧桌面来源，主工具另保存原根会话、周期、实例和调用身份，不伪装为本机点击。
  */
 import {z} from 'zod';
-import {loopEngineSchema,engineApi,engineLabel} from '../brain/llm/engine';
+import {loopEngineSchema,engineApi,engineLabel} from '../models/engine';
 import {capabilitySourceRefSchema,sourceSelectionSchema,knowledgeSourceReadStateSchema,sourceRefMatches,sourceSelectionMatches,sourceReadStateMatches} from '../workspace/knowledge-source';
 
 /** 累计容量包括退休岗位和全部审计；超限拒绝新写入，不删除历史或截断采纳正文。 */

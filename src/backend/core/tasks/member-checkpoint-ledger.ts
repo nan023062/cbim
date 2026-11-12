@@ -3,7 +3,7 @@
  * 设计原因：仅检查最后一段会遗漏旧运行、权限或信封篡改；这里核全链原事实，不读取当前文件或签发执行许可。
  */
 import {fail} from '../foundation/errors';
-import type {DispatchState} from './dispatch-storage';
+import type {DispatchState} from '../dispatch/dispatch-storage';
 import type {TaskNode} from './graph-types';
 import {memberCheckpointProofSchema} from './member-checkpoint';
 import {memberResumeRequests,currentMemberResumeRequest,validMemberCheckpointChain} from './member-checkpoint-chain';

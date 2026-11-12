@@ -10,12 +10,12 @@
  */
 import {parseIpcRequest,ipcSuccess} from '../../bridge/contracts/ipc-call';
 import {app,BrowserWindow,ipcMain,dialog,shell} from 'electron';
-import {createControlledFileTransport} from './platform/controlled-file-transport';
+import {createControlledFileTransport} from './platform/files/controlled-file-transport';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import {TerminalSessions} from './platform/terminal';
-import {Application} from './application';
-import {ChatInputs} from './persistence/tasks/chat-inputs';
+import {Application} from './assembly/application';
+import {ChatInputs} from './materials/chat-inputs';
 import {systemSecretCipher} from './platform/secrets';
 import {Paths} from './platform/paths';
 import {json} from '../core/foundation/serialization';

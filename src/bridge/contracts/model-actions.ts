@@ -4,7 +4,7 @@
  * 职责边界：类型不是授权，Main 仍核实发送窗口、工作区实例、版本和保存条件；密钥仅在显式写入请求中出现。
  */
 import {z} from 'zod';
-import {connectionSchema,definition,type LlmSettings} from '../../backend/core/brain/llm/config';
+import {connectionSchema,definition,type LlmSettings} from '../../backend/core/models/config';
 import {mainAgentIdentitySchema,mainAgentSettingsSchema,type MainAgentSettingsView} from '../../backend/core/team/agent-runtime';
 import type {DiscoveredModel} from './models';
 

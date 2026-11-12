@@ -2,11 +2,11 @@ import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {GraphSnapshot,GraphDelta} from '../src/backend/core/tasks/graph-types';
 import type {AddQueuedDependencyReceipt} from '../src/backend/core/tasks/queued-dependency-addition';
-import type {DispatchMessage} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchMessage} from '../src/backend/core/dispatch/dispatch-storage';
 import {dependencyAdditionProvider,dependencyAdditionData as data} from './queued-dependency-addition-provider';
 import {seedDependencyAddition,additionRecords,additionWait,assertDependencyAddition,additionRunBytes,additionRunByteEvidence} from './queued-dependency-addition-fixture';
 

@@ -4,8 +4,8 @@ import path from 'node:path';
 import os from 'node:os';
 import {hash} from '../src/backend/core/foundation/serialization';
 import {randomUUID} from 'node:crypto';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
-import type {DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import type {DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
 import {memberEvent,ownershipEvent,bindingFor,ws,model,moduleId,command,rootMutation,taskMutation,initialScope,plannedScope,claimMutation,cancelClaimMutation} from './owner-execution-core-fixture';
 
 async function fixture(){const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-owner-protocol-'));let store=new FileDispatchStore(directory,ws);return {directory,file:path.join(directory,'dispatch.jsonl'),get store(){return store},async reopen(){await store.close();store=new FileDispatchStore(directory,ws);return store},async cleanup(){await store.close();if(!path.resolve(directory).startsWith(path.join(os.tmpdir(),'cbim-owner-protocol-')))throw Error('Invalid fixture directory');await fs.rm(directory,{recursive:true,force:true})}}}

@@ -284,7 +284,7 @@ P0 为治理前置，P1 为核心整改，P2 为外围完善与收口；它们�
 - **交付物：** 职责明确的辅助模块及已迁移测试；说明哪些是纯规则、契约协作或完整应用测试。
 - **验收标准：** 纯规则测试引用辅助函数不再传递加载完整应用；事务、恢复和引擎集成仍保留真实协作验证。现有测试断言及覆盖意图不因拆分被弱化。
 - **验证方式：** 只运行迁移测试及实际受影响消费者，核对纯辅助模块导入关系；选择器必须选中目标用例，零用例不能当通过。
-- **阅读入口：** [现有测试辅助](../tests/helpers.ts)、[应用装配](../src/backend/main/application.ts)。
+- **阅读入口：** [现有测试辅助](../tests/helpers.ts)、[应用装配](../src/backend/main/assembly/application.ts)。
 
 #### G03：拆清知识、团队、工作区之间的契约与查询编排
 
@@ -292,7 +292,7 @@ P0 为治理前置，P1 为核心整改，P2 为外围完善与收口；它们�
 - **交付物：** 契约归属、查询组合入口、迁移消费者和严格边界规则。这是建议的第一个源码治理切片。
 - **验收标准：** 三组逻辑模块依赖单向；查询结果、刷新幂等和错误语义保持；反向引用能被检查拒绝，不仅是现有文件恰好无环。
 - **验证方式：** 团队模型、知识查询／刷新及实际受影响的工具调用方；新增边界规则对应的检测器回归。
-- **阅读入口：** [KnowledgeQueries](../src/backend/core/knowledge/knowledge-queries.ts)、[团队模型](../src/backend/core/team/model.ts)、[工作区模型](../src/backend/core/workspace/model.ts)。
+- **阅读入口：** [KnowledgeQueries](../src/backend/core/knowledge/knowledge-queries.ts)、[团队模型](../src/backend/core/knowledge/read-models/team.ts)、[工作区模型](../src/backend/core/knowledge/read-models/workspace.ts)。
 
 #### G04：收窄共享调度状态与存储接口
 
@@ -300,7 +300,7 @@ P0 为治理前置，P1 为核心整改，P2 为外围完善与收口；它们�
 - **交付物：** 各领域最小端口、状态／事务归属和真实消费者迁移；底层可以继续共享日志或存储。
 - **验收标准：** 迁移后的业务服务不再取得无关状态和修改能力；原事务内读取、原子提交、并发冲突、幂等与回执语义保留。跨域原子命令不得被拆成缺乏一致性保护的多次写入。
 - **验证方式：** 被迁移领域、事务投影、重放、冲突和实际参与的跨域命令；按真实影响选择消费者。
-- **阅读入口：** [持久化边界](../src/backend/main/persistence/ARCHITECTURE.md)、[执行服务边界](../src/backend/scheduler-engine/execution/CONTRACT.md)。
+- **阅读入口：** [持久化边界](../src/backend/main/ARCHITECTURE.md)、[执行服务边界](../src/backend/scheduler-engine/CONTRACT.md)。
 
 #### G05：分离运行循环与具体业务能力
 
@@ -308,7 +308,7 @@ P0 为治理前置，P1 为核心整改，P2 为外围完善与收口；它们�
 - **交付物：** 一次只迁移一种能力，说明运行机制、业务策略与装配各自负责什么。
 - **验收标准：** 在既有契约范围内新增同类能力主要修改业务实现与装配；通用循环不新增对应业务分支。授权、日志先落盘、取消、结算和资源释放的语义保持，责任不能在提取过程中丢失。
 - **验证方式：** 本次能力、相关运行机制及实际受影响引擎入口，重点覆盖失败、停止顺序与资源释放。
-- **阅读入口：** [运行循环](../src/backend/scheduler-engine/execution/loop-engine.ts)、[引擎契约](../src/backend/core/brain/types.ts)、[工具边界](../src/backend/scheduler-engine/tools/CONTRACT.md)。
+- **阅读入口：** [运行循环](../src/backend/scheduler-engine/assembly/loop-engine.ts)、[引擎契约](../src/backend/core/execution/types.ts)、[工具边界](../src/backend/scheduler-engine/tools/CONTRACT.md)。
 
 #### G06：隔离引擎 SDK、进程与平台适配
 
@@ -316,7 +316,7 @@ P0 为治理前置，P1 为核心整改，P2 为外围完善与收口；它们�
 - **交付物：** 稳定执行契约、具体适配边界、装配迁移及兼容说明；契约演进与目录调整分别解释。
 - **验收标准：** 核心规则和执行机制不导入具体适配器，类型引用也符合约束；供应商差异局限于实现。各实现满足共同生命周期要求，合法的供应商差异显式保留，不伪造一致能力。
 - **验证方式：** 每次迁移引擎的契约、启动／停止／恢复及加载入口；真实打包和安装验收留给集成／发布阶段。
-- **阅读入口：** [引擎契约与实现边界](../src/backend/core/brain/CONTRACT.md)、[应用装配](../src/backend/main/application.ts)。
+- **阅读入口：** [引擎契约与实现边界](../src/backend/core/execution/CONTRACT.md)、[应用装配](../src/backend/main/assembly/application.ts)。
 
 #### G07：建立有类型约束的 IPC 操作契约
 

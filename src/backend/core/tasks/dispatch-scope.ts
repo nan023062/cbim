@@ -10,7 +10,7 @@ import type {ScopeContinuationRecord} from './scope-continuation-record';
 import type {ScopeRecovery} from './scope-recovery';
 import type {ScopeReplan} from './scope-replan';
 import type {ScopeRunTracking} from './scope-run-tracking';
-import type {ScopeBudget} from './scope-budget';
+import type {ScopeBudget} from '../budget/scope-budget';
 import type {ScopeHumanDecisions} from './human-decisions';
 import type {ScopeActiveInput} from './scope-active-input';
 export {dispatchScopeWaitSchema} from './scope-continuation';

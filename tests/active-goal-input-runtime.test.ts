@@ -2,9 +2,9 @@ import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {LoopRuntime} from '../src/backend/core/brain/runtime';
-import type {AgentEngine,EngineContext,EngineEvent} from '../src/backend/core/brain/types';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
+import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
+import type {AgentEngine,EngineContext,EngineEvent} from '../src/backend/core/execution/types';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {hash,json} from '../src/backend/core/foundation/serialization';
 import {scopedActiveInputHash} from '../src/backend/core/tasks/scope-active-input-rules';
 

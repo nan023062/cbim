@@ -5,7 +5,7 @@
  */
 import {z} from 'zod';
 import {moduleSections} from '../workspace/module-outline';
-import {agentModelSelectionSchema} from '../brain/llm/engine';
+import {agentModelSelectionSchema} from '../models/engine';
 import type {KnowledgeCommit,Preview} from './types';
 
 export const reservedObjectSlugs=['skills','workflows','references','scripts','assets','archive','node_modules'];

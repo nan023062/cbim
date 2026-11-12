@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest';import fs from 'node:fs/promises';import path from 'node:path';
-import {FileIsolationRecords,isolationOperationId} from '../src/backend/main/persistence/tasks/isolation-records';import {isolationFixture} from './isolation-recovery-fixture';
+import {FileIsolationRecords,isolationOperationId} from '../src/backend/main/platform/isolation/isolation-records';import {isolationFixture} from './isolation-recovery-fixture';
 const test=process.platform==='win32'?it:it.skip;
 test('新记录只读不建目录；可靠来源与单调阶段拒绝重复调用、乱序和损坏尾部',async()=>{
  const f=await isolationFixture();try{const directory=path.join(f.data,'missing'),store=new FileIsolationRecords(directory),run=f.record.origin.binding.runId,id=isolationOperationId(run,'node');expect(await store.list(run)).toEqual([]);await expect(fs.access(directory)).rejects.toBeDefined();

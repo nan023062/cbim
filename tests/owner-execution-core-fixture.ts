@@ -1,6 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {hash} from '../src/backend/core/foundation/serialization';
-import type {DispatchState,DispatchMutation,DispatchCommand,AssignmentMessage} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchState,DispatchMutation,DispatchCommand,AssignmentMessage} from '../src/backend/core/dispatch/dispatch-storage';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
 import type {TaskNode,AgentRef,GraphEventBatch} from '../src/backend/core/tasks/graph-types';

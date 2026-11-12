@@ -2,7 +2,7 @@ import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {WebSettings} from '../src/backend/main/persistence/settings/web-settings';
+import {WebSettings} from '../src/backend/main/settings/web-settings';
 const cipher={available:()=>true,encrypt:(value:string)=>Buffer.from(value).toString('base64'),decrypt:(value:string)=>Buffer.from(value,'base64').toString()};
 it('搜索密钥加密落盘、并发版本冲突、重启读取及移除立即禁用',async()=>{
   const f=await fixture();try{

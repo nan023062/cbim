@@ -5,8 +5,8 @@
  * 职责边界：保持纯序列化叶子契约；不读取文件、不认证账号、不批准运行或将目标标为完成。
  */
 import {z} from 'zod';
-import {artifactFileCheckSchema,artifactLimits} from './artifact-baseline';
-import {outputManifestProofSchema} from './output-manifest';
+import {artifactFileCheckSchema,artifactLimits} from '../evidence/artifact-baseline';
+import {outputManifestProofSchema} from '../evidence/output-manifest';
 import {artifactScopeLimits} from '../workspace/artifact-scope';
 
 const id=z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);

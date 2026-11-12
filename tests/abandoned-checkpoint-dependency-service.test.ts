@@ -2,10 +2,10 @@ import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {checkpointServiceFixture,gate} from './member-checkpoint-service-fixture';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {queuedDependencyReplacementSelection} from '../src/backend/core/tasks/queued-dependency-replacement-rules';
-import type {DispatchState} from '../src/backend/core/tasks/dispatch-storage';
-import type {RunSummary} from '../src/backend/core/brain/types';
+import type {DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
+import type {RunSummary} from '../src/backend/core/execution/types';
 import type {ReplaceQueuedDependencyInput} from '../src/backend/core/tasks/queued-dependency-replacement';
 import {currentMemberResumeRequest} from '../src/backend/core/tasks/member-checkpoint-chain';
 

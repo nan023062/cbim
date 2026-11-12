@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {Application} from '../src/backend/main/application';
-import type {RunSummary} from '../src/backend/core/brain/types';
+import type {Application} from '../src/backend/main/assembly/application';
+import type {RunSummary} from '../src/backend/core/execution/types';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';

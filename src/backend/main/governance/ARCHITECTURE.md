@@ -15,7 +15,25 @@
 
 ## 架构类图
 
-### main-governance-tools.ts
+```mermaid
+classDiagram
+class N_src_backend_main_governance_storage["storage/"] {
+  <<directory>>
+}
+class N_src_backend_main_governance_main_governance_tools_ts["main-governance-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_main_governance_module_governance_ts["module-governance.ts"] {
+  <<module>>
+}
+N_src_backend_main_governance_module_governance_ts ..> N_src_backend_main_governance_storage : 导入依赖
+```
+
+各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
+
+- `module-governance.ts` → `storage`：导入。
+
+### main-governance-tools.ts 公开入口
 
 ```mermaid
 classDiagram
@@ -25,98 +43,10 @@ class N_src_backend_main_governance_main_governance_tools_ts["main-governance-to
 }
 ```
 
-直接依赖：[../../core/tasks/types.ts](../../core/tasks/types.ts)、[../../core/brain/conversation-binding.ts](../../core/brain/conversation-binding.ts)、[../../core/foundation/identity.ts](../../core/foundation/identity.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/governance/module-governance.ts](../../core/governance/module-governance.ts)、[../../core/governance/module-governance-rules.ts](../../core/governance/module-governance-rules.ts)、[../../core/governance/module-governance-tools.ts](../../core/governance/module-governance-tools.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)。
-
-### module-governance.ts
-
-成员 1/2（同名节点为同一声明，跨图合并阅读）。
-
-```mermaid
-classDiagram
-class N_src_backend_main_governance_module_governance_ts["module-governance.ts"] {
-  <<module>>
-}
-class N_src_backend_main_governance_module_governance_ts_Owner["Owner"] {
-  <<interface>>
-  +entry
-  +instanceId
-  +assert()
-  +governed()
-}
-N_src_backend_main_governance_module_governance_ts ..> N_src_backend_main_governance_module_governance_ts_Owner : 声明
-class N_src_backend_main_governance_module_governance_ts_JournalReader["JournalReader"] {
-  <<type>>
-
-}
-N_src_backend_main_governance_module_governance_ts ..> N_src_backend_main_governance_module_governance_ts_JournalReader : 声明
-class N_src_backend_main_governance_module_governance_ts_Derived["Derived"] {
-  <<type>>
-  +protections
-  +applications
-}
-N_src_backend_main_governance_module_governance_ts ..> N_src_backend_main_governance_module_governance_ts_Derived : 声明
-class N_src_backend_main_governance_module_governance_ts_ModuleGovernanceService["ModuleGovernanceService"] {
-  +store
-  +init()
-  +validatePersisted()
-  +request()
-  +hasIntent()
-  +verifyJournal()
-  +verify()
-  +register()
-  +observe()
-  +observeFromMain()
-  +propose()
-  +proposeFromMain()
-  +decide()
-  +apply()
-  +lookup()
-  +unaccepted()
-}
-N_src_backend_main_governance_module_governance_ts ..> N_src_backend_main_governance_module_governance_ts_ModuleGovernanceService : 声明
-class N_src_backend_main_governance_module_governance_ts_external_KnowledgeGovernanceAuthority["KnowledgeGovernanceAuthority (外部契约)"] {
-  <<external>>
-}
-N_src_backend_main_governance_module_governance_ts_external_KnowledgeGovernanceAuthority <|.. N_src_backend_main_governance_module_governance_ts_ModuleGovernanceService
-```
-
-成员 2/2（同名节点为同一声明，跨图合并阅读）。
-
-```mermaid
-classDiagram
-class N_src_backend_main_governance_module_governance_ts["module-governance.ts"] {
-  <<module>>
-}
-class N_src_backend_main_governance_module_governance_ts_ModuleGovernanceService["ModuleGovernanceService"] {
-  +list()
-  +readForMain()
-  -owner
-  -proposal()
-  -decisions()
-  -responseSources()
-  -derive()
-  -protection()
-  -baseline()
-  -receipt()
-  -known()
-  -save()
-  -observeWithOrigin()
-  -proposeWithOrigin()
-  -readList()
-}
-N_src_backend_main_governance_module_governance_ts ..> N_src_backend_main_governance_module_governance_ts_ModuleGovernanceService : 声明
-class N_src_backend_main_governance_module_governance_ts_external_KnowledgeGovernanceAuthority["KnowledgeGovernanceAuthority (外部契约)"] {
-  <<external>>
-}
-N_src_backend_main_governance_module_governance_ts_external_KnowledgeGovernanceAuthority <|.. N_src_backend_main_governance_module_governance_ts_ModuleGovernanceService
-```
-
-直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/governance/module-governance.ts](../../core/governance/module-governance.ts)、[../../core/governance/module-governance-tools.ts](../../core/governance/module-governance-tools.ts)、[../../core/governance/module-governance-rules.ts](../../core/governance/module-governance-rules.ts)、[../../core/governance/module-governance-feedback.ts](../../core/governance/module-governance-feedback.ts)、[../persistence/governance/module-governance-store.ts](../persistence/governance/module-governance-store.ts)、[../persistence/knowledge/governance-port.ts](../persistence/knowledge/governance-port.ts)。
-
 
 ## 子目录导航
 
-无子目录。
+- [storage/](storage/ARCHITECTURE.md)：知识治理记录的物理持久化；业务规则和不可变意见契约在 Core，应用治理服务在父目录。
 
 [返回上层](../ARCHITECTURE.md)。
 

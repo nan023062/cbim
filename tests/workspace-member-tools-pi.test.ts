@@ -5,7 +5,7 @@ import {fixture} from './helpers';
 import {seedWorkspaceMembers,changeWorkspaceMemberCapability} from './workspace-member-fixture';
 import {request} from './data/knowledge';
 import {knowledgeContractResult} from './knowledge-contract-provider';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {memberToolChangeSchema} from '../src/backend/core/team/workspace-member-tools';
 

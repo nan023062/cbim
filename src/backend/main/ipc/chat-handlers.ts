@@ -6,7 +6,7 @@
 import type {ApplicationServices} from './services';
 import type {IpcHandlers} from '../../../bridge/contracts/ipc-call';
 import type {ChatIpcResponses} from '../../../bridge/contracts/ipc-chat';
-import {ChatInputs} from '../persistence/tasks/chat-inputs';
+import {ChatInputs} from '../materials/chat-inputs';
 
 /** 仅装配本业务组；每项实际实现都受对应请求／响应约束。 */
 export function chatIpcHandlers(app:ApplicationServices):IpcHandlers<keyof ChatIpcResponses>{

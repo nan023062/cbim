@@ -5,7 +5,7 @@
  */
 import {fail} from '../foundation/errors';
 import {hash,json} from '../foundation/serialization';
-import type {DispatchState,DispatchMutation} from './dispatch-storage';
+import type {DispatchState,DispatchMutation} from '../dispatch/dispatch-storage';
 import {goalInputRevision,goalNeedsReplan,sameGoalValue} from './scope-goal';
 import {scopeContinuationTotalTextLimit} from './scope-continuation';
 import {isHumanContinuation} from './scope-continuation-record';

@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest';
-import {controlledFileWriteInputSchema,controlledFileWriteOutputSchema,controlledFileReportSchema,fileCompensationInputSchema,fileCompensationReceiptSchema,controlledFileLimits} from '../src/backend/core/tasks/controlled-file-operation';
-import {controlledFileChangeSchema,type ControlledFileChange} from '../src/backend/core/tasks/controlled-file-event';
-import {controlledFileOperation,controlledFileIntentHash,controlledFilePhaseCommand,controlledFilePhaseReceipt,controlledFileWriteApplied,summarizeControlledFileOperation,fileCompensationReceipt,fileCompensationRevision,controlledFileRequestFingerprint} from '../src/backend/core/tasks/controlled-file-rules';
-import {projectControlledFileMutation} from '../src/backend/core/tasks/controlled-file-invariants';
+import {controlledFileWriteInputSchema,controlledFileWriteOutputSchema,controlledFileReportSchema,fileCompensationInputSchema,fileCompensationReceiptSchema,controlledFileLimits} from '../src/backend/core/file-operations/controlled-file-operation';
+import {controlledFileChangeSchema,type ControlledFileChange} from '../src/backend/core/file-operations/controlled-file-event';
+import {controlledFileOperation,controlledFileIntentHash,controlledFilePhaseCommand,controlledFilePhaseReceipt,controlledFileWriteApplied,summarizeControlledFileOperation,fileCompensationReceipt,fileCompensationRevision,controlledFileRequestFingerprint} from '../src/backend/core/file-operations/controlled-file-rules';
+import {projectControlledFileMutation} from '../src/backend/core/file-operations/controlled-file-invariants';
 import {baseState,writeIntent,phases,append,closedState,compensationIntent,fact,mutation} from './controlled-file-core-fixture';
 
 it('输入保持 BOM/CRLF/空正文，拒绝伪来源、越界路径、坏Unicode及独立wire超限',()=>{

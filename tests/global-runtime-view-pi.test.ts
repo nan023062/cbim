@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
 import type {RuntimeSnapshot} from '../src/backend/core/runtime/types';

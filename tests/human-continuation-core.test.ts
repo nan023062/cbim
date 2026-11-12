@@ -7,7 +7,7 @@ import {currentHumanContinuation,waitingHumanDecisions,referencedHumanDecision,h
 import {validateHumanContinuations,validateHumanContinuationCommand} from '../src/backend/core/tasks/human-continuation-invariants';
 import {validateDispatchScopes} from '../src/backend/core/tasks/dispatch-scope-invariants';
 import {dispatchScopeGoalSchema} from '../src/backend/core/tasks/scope-goal';
-import type {DispatchState} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
 import {humanDecisionBasis} from '../src/backend/core/tasks/human-decision-proof';
 import {at,identity,options,humanFixture,continued,planned,reviewed} from './human-continuation-core-fixture';
 

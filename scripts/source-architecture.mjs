@@ -5,220 +5,93 @@ import path from 'node:path';
 import ts from 'typescript';
 
 const scope={
- 'src':'应用按前端视图层 frontend 与本机后端逻辑层 backend 分组，bridge 是连接两层的通信边界，不是第三个业务层。目录聚合中的 backend 与 bridge 双向箭头分别来自 main 消费契约、契约重导出 Core 公开类型，不代表文件循环。',
- 'src/backend':'本机后端逻辑层：main 装配平台与服务，scheduler-engine 协调执行，core 提供领域与大脑能力。updater 是独立更新子系统，不依赖运行时、调度或反馈服务；主程序只调用它。后端不导入前端界面。',
- 'src/backend/updater':'独立桌面更新子系统：公开 Release 读取、稳定版本筛选、后台预下载与用户确认重启的状态机和 NSIS 适配均在此目录。只依赖公开更新契约及系统/第三方库，不导入 main、scheduler-engine 或 core/runtime；仅明确安装时通过关闭回调等待主程序排空。安装包缓存独立于运行数据。',
- 'src/bridge':'前后端通信边界：contracts 声明公开数据，preload 提供 Electron 安全桥。契约可重导出 Core 公开类型和纯函数，不暴露后端服务、凭据和存储实现。',
- 'src/backend/core':'核心领域与通用执行契约。大脑、团队、业务模块、知识和工具各自维护语义；不导入 main、调度、IPC 或界面。知识快照与固定领域视图保持单向依赖，跨域知识查询编排归 scheduler-engine/context；其他目录聚合双向箭头仍须按真实契约区分，不代表文件级循环或全模块已解耦。',
- 'src/backend/core/foundation':'少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。',
- 'src/backend/core/governance':'模块知识治理的纯协议、保护规则与有界主工具投影。可信来源、冻结意见引用与本机评价独立于正式实施，旧意见替代不改历史，不把治理记录当业务验收。',
- 'src/backend/core/brain':'引擎无关的执行循环、事件与计量；运行内补充只由可信入口写绑定scope/run/queue的接收日志，返回真实序号；queued后日志失败保持未知。插入绑定原run和停止信号，原生确认与未知分别记录，结算先排空插入日志。正式成员按冻结Workflow验证JSON指定字节，验证与交付复核各持短锁，前后核版本/知识/停止；checked暂存不等于passed有效证明。求助/检查点保存后结束本轮，文件采集随真实工具结束释放短锁；续执行不借旧证据。',
- 'src/backend/core/brain/llm':'公开模型参数、能力元数据及运行快照端口。实际配置文件和加密凭据由 main/persistence/settings 持有。',
- 'src/backend/core/brain/pi':'Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取消，发送后只凭queued回复确认，不自动重试。工具经一次性gate授权并校验结果；结构验证仅在正式成员有冻结要求及真实端口时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为custom数据，不冒充用户授权。',
- 'src/backend/core/connectors':'链接器定义、查询与唯一身份检查；另定义 GitHub 反馈字段、公开登录状态与可信端口，纯协议不发网络请求或授予权限。',
- 'src/backend/core/knowledge':'知识快照、校验、领域查询、对象变更和可移植静态包规划。私有v2计划冻结有序操作与整包替换范围，公共变更不能提供来源证明；物理事务与缓存经端口注入。团队能力可独立复用，业务模板必须完整，不携带动态成员或任务。',
- 'src/backend/core/policy':'内部运行的统一授权：业务与知识写入共用 read/ask/execute，平台边界不可豁免；不声称操作系统隔离。',
- 'src/backend/core/tasks':"任务计划、派发图、目标与等待。资料清单保留旧文件v1，新增严格v2来源并核同序与字节；快照不等于当前来源或业务验收。依赖追加核实两端及后继未领取、当前计划与真实图，完整审计验证后才放行精确新边；保留原任务/实例，领取时绑定真实结果。运行内补充以pending/accepted/rejected/unknown分开，接受与waiting共享连续输入版本，未知阻止完成。流程选择共用叶子契约，缺省与显式分开匹配，已派发选择不可改写；严格输出区分保存与交付，历史不补造授权或证据。",
- 'src/backend/core/team':"Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履历契约。主实例归主会话，业务实例归周期与任务；履历按角色聚合真实通道，释放或删定义后保留，旧记录不补造实例。另含稳定工作区岗位的严格DTO、采纳快照与不可变登记规则；岗位启用不等于执行许可。",
- 'src/backend/core/runtime':'应用级只读监管、真实周期白名单与独立准入契约。周期等待/结算和模型轮次分开，严格传输不补造缺失计量；游标、票据和占用不签发恢复权。',
- 'src/backend/core/tools':'工具 Schema、版本、副作用、调用决策、严格提问/答案及回执。提问按原题同序核验，取消与答案排他；during_wait只承诺结束未完成交互。结果只核唯一 JSON 快照，不用解析改写制造成功；历史可读不等于当前业务证据有效。注册、发现及用户回答不授予权限。',
- 'src/backend/core/workspace':'领域工程、Module、Workflow与稳定岗位责任协议。来源代次和写前屏障由纯规则投影；内容指纹、来源身份、负责人关系分别核实。同负责人明确采纳递增关系版本，不迁移任务；旧缺省记录不补造来源。Workflow验证不自行读文件或签发业务验收。',
- 'src/bridge/contracts':'可序列化 IPC 与展示契约；多来源附件只传选择身份，公开旧v1/新v2清单与真实仓库目录，不暴露凭据。图增量公开前置追加/替换审计而非执行许可，目标摘要公开运行内补充计数与未核实状态，详情保留已接收快照，纯协议不携IO。排队插入必须传用户点击时的原主run，缺失不推测当前轮次。检查点私有恢复证明留在后端；结构验证公开当时文件/规则指纹及无原值诊断，人工决定与文件观察保留真实依据。岗位IPC只传明确选择与公开采纳/回执，类型不带凭据或后端哈希IO。',
- 'src/backend/scheduler-engine':'工作区调度。装配团队上下文与模型工具，协调会话、运行、用户问题和队列；只依赖自身及 Core。',
- 'src/backend/scheduler-engine/context':"内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/岗位责任、Workflow与规范。显式流程只从本模块挂载清单解析，准备按任务原选择重核，不回退默认或刷新旧绑定；前置替换保留原实例和流程；两种模式的主会话都可直接执行未配置自定义岗位的模块，不把主 Agent 派成独立成员。",
- 'src/backend/scheduler-engine/conversation':'主 Agent 的规划、审阅与团队管理指引，以及提问、审批和队列。原题与选项独立保存，公开待答列表返回副本，答案与取消只有一次消费；坏回包不重弹。主调度可安排求助补做、替换未启动前置或撤销待办；旧失败不改写，问答不替代人工决定或恢复。',
- 'src/backend/scheduler-engine/execution':"主实例与图根共享身份；依赖追加在同事务重验两端及后继的知识/流程/停止状态，成功后重纳当前周期跟踪，仍待主轮结束并按原领取链执行。补充发送前预留、ACK后登记新输入，与cycle在途操作一起结算；停止先作用引擎，旧计划不再领取，最终门禁核对接收日志。目标分工、派发及人工来源核对原流程选择；交付/审阅从canonical复核真实证据与当前文件。检查点与前置调整不改选；额度/准入等待不消费，停止和重启封存不重放。",
- 'src/backend/scheduler-engine/runtime':'监管、履历与全局并发准入职责分离。可靠提交同步周期白名单，scope-only 更新独立游标，未变投影不重复发布；检查点计待办而不占活动名额，报告用量不授予额度或恢复权。',
- 'src/backend/scheduler-engine/tools':'把知识、主调度及实际装配的用户交互注册为 cbim_ 工具。新增前置追加与已有主调度工具共用固定运行身份、原命令映射和严格单次编码输出，回执只证明保存；坏回包先核实原记录。QuestionTools冻结原题，严格核验答案或取消，坏回包不重问；维护和问答回执不算业务证据，执行者不获得调度权。',
- 'src/backend/main':"Electron 入口与应用装配。显式资料导入共用应用级取消表，关闭撤销在途读取，原生选择迟到不落新会话。应用单例持有全局准入和持久策略，主/成员共享许可；工作区代际退役撤销等待，已有运行真实退出才释放。注入可信身份及证据，重启不执行历史票据或等待周期。 可信桌面提交注入本机明确操作来源，选定文件核实共用只读租约与平台端口。",
- 'src/backend/main/commands':'CLI 入口，复用应用和调度，不拥有第二套领域规则。',
- 'src/backend/main/ipc':'应用 action 路由；等待资料独立导入/目录/取消入口不启动模型，受理只读保存快照。队列插入传递原expectedRunId，由调度拒绝缺失、过期及停止。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。',
- 'src/backend/main/platform':'本机路径、系统锁、凭据加密、终端与工具访问检查。固定根有界读取并核前后句柄/路径，拒绝链接、越界和Windows备用数据流；JSON验证由同一Buffer计算指纹和结构结论，正文不出端口。原生历史不完整拒绝恢复，不承诺外部原子隔离。',
- 'src/backend/main/persistence':'本机持久化适配：知识事务、运行日志、对话附件、模型配置。保留原数据路径与格式，目录调整不迁移用户数据。',
- 'src/backend/main/governance':'工作区模块知识治理服务、可信桌面操作与独立主运行端口。登记保护、决定及实施只属桌面；模型仅可读取、观察、提案和核查回执；反馈来源在批准与实施前串行复核，未知不重放。',
- 'src/backend/main/persistence/governance':'私有治理记录的有界严格持久化，核对真实来源、原命令指纹与不可变提案；旧数据不补造来源，不反向调用知识事务或创建第二条提交队列。',
- 'src/backend/main/persistence/knowledge':'正式知识文件、事务恢复与私有计划缓存。完整原journal先于来源pending，获准后才写知识；成功后仅补来源结算，不因回包失败回滚。未获准prepared只核before而不覆盖外部文件；来源历史缺日志保持故障。Knowledge队列在Dispatch事务之前，清理仅删除空目录。',
- 'src/backend/main/persistence/settings':'应用级模型、并发与新目标软限额存储。密钥系统加密；策略串行版本校验与原子保存，缺文件才使用默认值。软限额只冻结新周期，设置恢复不重放模型或改变既有目标。',
- 'src/backend/main/persistence/tasks':'执行日志、附件快照、派发事务与角色履历。目录首层、URL指针、真实有界网页及授权仓库资料快照分别保存，导入取消与等待受理分离；来源变化不改历史。日志只读完整前缀并报告未完整尾行，损坏不透传原始片段、不截断修复。图/目标/详情同屏障读取，未知操作不自动重放。同日志追加岗位审计并派生独立registry游标，原命令可只读核实，不将长期岗位计为运行实例。',
- 'src/backend/main/resources':'链接器、人才和完整业务模板共用的本地/远端资源仓库。静态资料单次HTTP捕获前后核授权与共享代际，正文快照不安装执行。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。',
- 'src/backend/main/workspace':'本机工作区、静态编辑与受控来源协调。获取工作区锁后在唯一DispatchStore核身份、恢复知识和来源，再发布服务。岗位和负责人以同知识快照明确采纳；首次真实观察与消费者同事务保存。来源、能力、模型分别展示，不以登记回执启动实例或改写旧任务。',
- 'src/bridge/preload':'固定 Electron IPC 桥；不向页面暴露 Node、凭据或任意磁盘 API。',
- 'src/frontend':'React 桌面界面。只消费 contracts 和自身组件，不导入调度或主进程实现。',
- 'src/frontend/automation':'当前工作区自动化列表、配置和运行历史；固定页签不接自选工作目录，真实运行通过原会话定位。',
- 'src/backend/core/automation':'自动化定义、运行与执行/存储端口及纯时区日程计算，不依赖调度和桌面实现。',
- 'src/backend/scheduler-engine/automation':'串行版本配置、持久启动意图与定时调度；同项不重叠，重开跳过过期，不重放未知运行。',
- 'src/frontend/components':'通用展示组件，不持有领域服务与运行状态。',
- 'src/frontend/execution-view':'主对话、成员任务和团队履历共用的消息、工具轨道、状态、问答及输入展示。只依赖公开通信契约和通用组件；查询、恢复和处置控制器由页面组合，不反向依赖 conversation、tasks 或 team。',
- 'src/frontend/conversation':"中央主对话、目标摘要、输入、附件及队列；附件区明确显示目录清单、URL指针、网页摘录与仓库静态资料。两处插入口冻结原run，入队成功保留事实，停止锁独立于插入等待。进程准入等待与持久用户等待分别展示，纯等待不累计工作时长；未受理保留草稿。核实与重规划权限分离，可续聊头由后端核实。 双视图共享人工决定控制器，保存意见不清除聊天草稿或消费等待。",
- 'src/frontend/diagnostics':'只读展示工作区运行状态和知识校验问题，不把工作区就绪视为知识校验通过。',
- 'src/frontend/runtime':'全局只读运行管理。分别呈现目标周期、人员、任务、准入等待和已报告消耗；单次在途游标读取保留未变行，隐藏时退订，按真实身份定位既有会话而不执行任务。',
- 'src/frontend/knowledge':'知识问题、预览提交、静态表单与共用来源说明。展示当前、退役、待采纳及待核实状态，不从路径或正文相同猜来源连续；来源组件无提交副作用。固定编辑基线，不要求真人维护声明，业务架构展示位于workspace。',
- 'src/frontend/governance':'静态业务模块的知识治理面板。展示真实来源、精确差异、补证/异议与回应评价。审阅绑定来源版本，未评价不补造理解，人工决定与实施分开；原命令先保存再发送，未知只查询。',
- 'src/frontend/resources':'统一资源仓库的查看、编辑、静态包发布与下载应用。人才按团队/Agent/Skill复用，业务按整套架构应用；工作区身份及预览版本固定。设置通过统一入口打开。',
- 'src/frontend/settings':'模型、资源仓库、GitHub 反馈连接、并发及新目标软限额配置。GitHub 采用 Device Flow，页面仅持公开 Client ID 与短期授权码；资源服务器账号仍为占位。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。',
- 'src/frontend/updates':'账号入口的版本与更新弹窗、最近发布说明及新版提醒。共享窗口级本机更新快照；查看日志保留原页面与草稿，检查、下载和重启安装分别显式操作。只依赖公开 IPC，不导入后端更新实现。',
- 'src/frontend/shell':'工作区侧栏、会话选择、用户栏与右侧扩展页签；会话区与项目级视图区分开。向会话传递活动页签状态，隐藏页签保留草稿/节点选择并降低成员与任务图同步频率。',
- 'src/frontend/tasks':"主会话任务图、目标与准入状态；依赖追加/替换只读历史核对身份和节点修订，摘要按实际版本选择最新，图沿真实启用边排列，不补造结果。运行内补充按真实接收记录显示，未知优先旧审阅，同版摘要/详情核对后增量呈现。根停止使用独立在途标记，插入等待不锁住停止按钮。等待补充共享多来源草稿与导入锁，原等待选择代次阻止迟到导入；明确目录/链接/网页/授权仓库来源，普通聊天草稿独立。流程、验证、检查点、基线、人工决定与用量保留各自冻结身份和证据，不把历史当当前验收。",
- 'src/frontend/team':'工作区唯一的静态Team/组/Agent图、继承与人才复用，节点按Session查看只读履历。岗位面板独立登记、明确采纳和暂停退休；改名和模型更新保留原能力来源。来源屏障首次拒绝可重新编辑，未知仍查原命令；反查责任委托workspace，不启动模型。',
- 'src/frontend/workspace':'工作区唯一的工程/模块图及自身Workflow。负责人面板展示来源和有界历史，支持同负责人明确采纳当前来源；原回执必须匹配同一关系、版本及owner，未知不换命令。知识编辑和整架构复用委托knowledge/resources；登记不移交旧任务。',
+  "src": "应用按前端视图层 frontend 与本机后端逻辑层 backend 分组，bridge 是连接两层的通信边界，不是第三个业务层。目录聚合中的 backend 与 bridge 双向箭头分别来自 main 消费契约、契约重导出 Core 公开类型，不代表文件循环。",
+  "src/backend": "本机后端：core 持有领域规则和执行契约；engines 实现具体模型引擎；scheduler-engine 编排任务与装配引擎；main 管理平台、存储和应用入口；updater 独立更新。Core 不导入具体引擎或上层；目录聚合图的双向关系不等于文件循环。",
+  "src/backend/core": "领域规则、存储端口和引擎无关执行机制。按预算、证据、任务、派发、知识、模型及工具职责聚合；execution/runtime 仍是执行模块内部实现，尚未解决该运行内核的依赖密度。禁止反向依赖 engines、scheduler-engine、main 或前端。",
+  "src/backend/core/automation": "自动化定义、运行与执行/存储端口及纯时区日程计算，不依赖调度和桌面实现。",
+  "src/backend/core/budget": "预算领域：Scope 使用量、预占/结算、模型请求规则和存储端口。规则不访问应用文件与具体传输，业务服务在 scheduler-engine/budget。",
+  "src/backend/core/connectors": "链接器定义、查询与唯一身份检查；另定义 GitHub 反馈字段、公开登录状态与可信端口，纯协议不发网络请求或授予权限。",
+  "src/backend/core/dispatch": "派发存储及命令端口：保持当前宽存储接口和原子性边界。只是明确接口目录，尚未拆分共享 DispatchStore；任务规则仍在 tasks，编排在 scheduler-engine/dispatch。",
+  "src/backend/core/evidence": "证据领域：输出清单、产物、命令/人工/效果观察与完成报告规则。记录、有效性和业务验收分别核实；平台读取在 main/evidence，编排在 scheduler-engine/evidence。",
+  "src/backend/core/execution": "引擎无关的运行契约与执行入口。runtime、capabilities 是同一执行模块的内部职责分区，不声明为已经独立解耦的子系统；状态、日志和授权语义保持原有契约。具体引擎由上层装配。",
+  "src/backend/core/execution/capabilities": "执行模块内部的成员能力组合与受控工具门面。把冻结 Workflow、身份、证据和平台端口投影为可调用能力；不把工具发现或模型完成当作授权与业务验收。",
+  "src/backend/core/execution/runtime": "执行模块内部运行机制：回合驱动、事件、工具协调、输出验证与计量。继续依赖领域规则与能力，迁移不拆分运行状态所有权；依赖过密仍是独立治理项。",
+  "src/backend/core/file-operations": "受控文件操作和隔离执行的冻结协议、规则与恢复状态。平台副作用经端口实现，不因物理目录聚合改变授权、路径校验或证据效力。",
+  "src/backend/core/foundation": "少量跨领域基础：错误、序列化、严格 JSON、标识及路径端口。files.ts 是 Node 文件原语，不管理应用目录、事务或账户。",
+  "src/backend/core/governance": "模块知识治理的纯协议、保护规则与有界主工具投影。可信来源、冻结意见引用与本机评价独立于正式实施，旧意见替代不改历史，不把治理记录当业务验收。",
+  "src/backend/core/knowledge": "知识快照、校验、领域查询、对象变更和可移植静态包规划。私有v2计划冻结有序操作与整包替换范围，公共变更不能提供来源证明；物理事务与缓存经端口注入。团队能力可独立复用，业务模板必须完整，不携带动态成员或任务。 KnowledgeQueries 只接收 snapshot；KnowledgeRefresh 独立持有身份核实、原回执查询与提交。 read-models.ts 是固定快照读取的公开入口，snapshot 与 Team/BusinessWorkspace 模型属于同一私有实现边界；查询编排不反向进入纯快照契约。 产品反馈 Skill 只读发布两套上下文格式，不包含 GitHub 创建接口。 快照数据与只读访问是独立公共边界；索引刷新通过收窄端口调用原知识事务，不导入团队或模块查询视图。 SourceSnapshotReader 只提供知识队列外层的同版快照，调用方不得在任务事务内反向获取。 原知识工具和事务观察共用实际输入解析，纯摘要区分未查到、持久阶段及不可核实，不返回正文或私有路径。",
+  "src/backend/core/knowledge/read-models": "知识只读模型边界：snapshot、team、workspace 是私有实现，只通过 index.ts 提供公开查询。类型、领域工程定义与纯基础构成允许依赖；不加载查询编排、文件存储或 SDK。",
+  "src/backend/core/models": "公开模型参数、能力元数据、计量与请求预算端口；实际 HTTP 传输在 backend/engines/transport，配置和加密凭据在 main/models。Core 不认识具体 SDK。",
+  "src/backend/core/runtime": "应用级只读监管、真实周期白名单与独立准入契约。周期等待/结算和模型轮次分开，严格传输不补造缺失计量；游标、票据和占用不签发恢复权。",
+  "src/backend/core/tasks": "任务计划、派发图、目标与等待。资料清单保留旧文件v1，新增严格v2来源并核同序与字节；快照不等于当前来源或业务验收。依赖追加核实两端及后继未领取、当前计划与真实图，完整审计验证后才放行精确新边；保留原任务/实例，领取时绑定真实结果。运行内补充以pending/accepted/rejected/unknown分开，接受与waiting共享连续输入版本，未知阻止完成。流程选择共用叶子契约，缺省与显式分开匹配，已派发选择不可改写；严格输出区分保存与交付，历史不补造授权或证据。 model-request-budget-storage 只公开请求预算状态、追加命令及准入能力，不授予其它领域写入。 正式协议将目标分配、任务、准备、模型和历史审计相互核对；岗位绑定不可重写，旧在途仅按原事实收束。 检查点显式放弃有独立严格协议与精确联合变更校验；原任务和检查点证据不可重写，纯 ACK 与后续周期释放保持可用。 原主命令核实定义八工具的有界报告；原工具结果、事务保存和业务验收分开，查询回执不能成为交付证据。 主／成员影响来源使用严格联合；观察、不可变处置和新核实／修复引用分别表达，当前文件不补造成功基线或业务验收。纯 scope-public 白名单供主工具与会话详情共用，保留安全恢复来源并隐藏原生上下文。 影响报告的可选知识事务摘要保留原工具状态并参与观察依据；旧处置缺省不补字段。 单文件操作公开协议不含正文备份；私有意图与阶段严格绑定原成员运行和原授权，补偿引用可靠 applied 与真实 before，终态不可改写。 保守产物时序包含外部写，GitHub 回执不能充当文件基线来源。",
+  "src/backend/core/team": "Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履历契约。主实例归主会话，业务实例归周期与任务；履历按角色聚合真实通道，释放或删定义后保留，旧记录不补造实例。另含稳定工作区岗位的严格DTO、采纳快照与不可变登记规则；岗位启用不等于执行许可。 model.ts 是知识读取模块的私有实现，外部通过 knowledge/read-models 访问；岗位与执行状态契约不归读取视图所有。 负责岗位选择、冻结执行绑定、当前来源/能力/模型判定及只读分组发现均为纯契约；同角色多岗位独立。",
+  "src/backend/core/tools": "工具 Schema、版本、副作用、调用决策、严格提问/答案及回执。提问按原题同序核验，取消与答案排他；during_wait只承诺结束未完成交互。结果只核唯一 JSON 快照，不用解析改写制造成功；历史可读不等于当前业务证据有效。注册、发现及用户回答不授予权限。 原生能力按 Pi/Claude Code/Codex 提供真实预检清单，Codex 由宿主执行既有文件操作，Claude 不宣称独立 ls。 GitHub 反馈使用独立 scope 和 external-write 效果；不把外部提交回执当作业务文件或知识成果。",
+  "src/backend/core/tools/policy": "工具统一授权策略：read/ask/execute 决策及协议；业务写入和知识写入共用策略，不能豁免平台边界，也不等于操作系统隔离。",
+  "src/backend/core/workspace": "领域工程、Module、Workflow与稳定岗位责任协议。来源代次和写前屏障由纯规则投影；内容指纹、来源身份、负责人关系分别核实。同负责人明确采纳递增关系版本，不迁移任务；旧缺省记录不补造来源。Workflow验证不自行读文件或签发业务验收。 model.ts 是知识读取模块的私有实现，外部通过 knowledge/read-models 访问；项目根定义仍为独立纯公开契约。 executionScope只收窄原权限，全模块一致冻结，预算合并取小。 主调度的负责人发现按所选模块真实分组，缺口不推测继承或默认负责者。",
+  "src/backend/engines": "具体引擎适配边界：Pi、Claude、Codex 及其共享 HTTP 预算传输和原生工具加载。依赖 Core 的引擎/模型契约，由 scheduler-engine/assembly 选择并注入；不持有任务派发与应用存储。",
+  "src/backend/engines/claude": "Claude Agent SDK 适配、内部工具门禁与真实原生会话生命周期；环境和账号归 CBIM，工具复用上层契约，不提供对外 MCP。原生工具开关只读可信能力的 disableNativeTools 策略，不认识具体业务工具槽位。",
+  "src/backend/engines/codex": "Codex App Server 的受管进程、双向 RPC、真实 thread/turn、Responses 代理与动态工具；固定 CLI 和私有账号目录，内置执行关闭，工具经宿主授权、预算结算及同一回执；宿主原生工具目录按可信能力的 disableNativeTools 策略收窄。",
+  "src/backend/engines/pi": "Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取消，发送后只凭queued回复确认，不自动重试。工具经一次性gate授权并校验结果；结构验证仅在正式成员有冻结要求及真实端口时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为custom数据，不冒充用户授权。 范围模式只注册cbim工具，转发受限读取与隔离Node的原调用身份。 主角色提示要求未配置自定义岗位时自己执行；内置默认执行角色已退役，不能登记后绕过主会话。 受控文件工具仅在真实端口存在时安装，维持桥接容量及调用授权，工具结果和实际文件操作终态分别校验。",
+  "src/backend/engines/transport": "引擎 HTTP 请求预算与计量适配。通过 Core 的 ModelRequestBudgetPort 预占、结算或记录未知结果；网络实现与稳定模型端口分离，保留各引擎错误和取消语义。",
+  "src/backend/main": "Electron 入口与应用装配。显式资料导入共用应用级取消表，关闭撤销在途读取，原生选择迟到不落新会话。应用单例持有全局准入和持久策略，主/成员共享许可；工作区代际退役撤销等待，已有运行真实退出才释放。注入可信身份及证据，重启不执行历史票据或等待周期。 可信桌面提交注入本机明确操作来源，选定文件核实共用只读租约与平台端口。 member-dispatch 为请求预算注入窄 Store，底层跨领域事务继续统一持有。 正式安装版调用独立updater，主Frame固定IPC与正常排空后显式安装；启动前恢复更新重启的用户目录，开发和便携包不自动联网。 agent-history 独立组合历史服务与canonical读取，只接收工作区身份、目录和存活断言；工作区持锁初始化及排空关闭顺序保持。 工作区唯一账本装配岗位模型端口；明确拒绝旧直接业务启动，原聊天和知识治理保持独立。 原 canonical 历史端口独立装配给交接处置，不开新的模型或原生运行入口。 原命令核实只装配已打开工作区的 canonical 和唯一账本，不隐式启动、初始化或恢复。 影响服务装配已打开工作区端口，真实本机处置身份不由模型或 IPC 参数指定。 影响观察注入原知识事务窄读取端口，不向调度层开放写入或恢复方法。 装配独立文件 utility 及唯一工作区服务；原运行释放前确认物理操作排空，缺少平台能力时不装配可写工具。 11项原生操作按契约解析并配对成功值，主Frame和安装门禁先行。",
+  "src/backend/main/assembly": "应用装配：连接 IPC、调度、运行与平台服务并管理应用生命周期。准入和工具能力在这里注入；不把装配目录当新的领域模型。",
+  "src/backend/main/automation": "自动化应用服务及文件存储：计划、执行请求与持久化属于同一应用职责，领域调度契约仍在 Core。",
+  "src/backend/main/commands": "CLI 入口，复用应用和调度，不拥有第二套领域规则。",
+  "src/backend/main/dispatch-storage": "当前派发图、命令、领取及任务状态的文件存储实现。保留共享事务与 DispatchStore，未按目录拆开一致性边界；这仍是依赖密集的共享实现。",
+  "src/backend/main/evidence": "真实工程效果读取适配：在明确范围和版本下采集观察供证据服务使用。",
+  "src/backend/main/feedback": "GitHub 反馈的登录、请求和持久化服务，公开字段与端口在 Core/connectors。",
+  "src/backend/main/file-operations": "受控文件操作与隔离执行的应用服务，连接冻结授权、工作区身份与 platform 实现；不把底层完成当业务验收。",
+  "src/backend/main/governance": "工作区模块知识治理服务、可信桌面操作与独立主运行端口。登记保护、决定及实施只属桌面；模型仅可读取、观察、提案和核查回执；反馈来源在批准与实施前串行复核，未知不重放。",
+  "src/backend/main/governance/storage": "知识治理记录的物理持久化；业务规则和不可变意见契约在 Core，应用治理服务在父目录。",
+  "src/backend/main/history": "履历应用装配与文件索引。assembly.ts 连接角色/运行来源，file-store.ts 只实现 SessionHistoryStorage；文件存储不得反向依赖装配或工作区服务。",
+  "src/backend/main/ipc": "应用 action 路由；等待资料独立导入/目录/取消入口不启动模型，受理只读保存快照。队列插入传递原expectedRunId，由调度拒绝缺失、过期及停止。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。 161项应用操作按业务组装配，request统一保留关闭/受理前错误码后解析，实际处理器受响应映射约束。 dispatch.ownerInspect 只读核原任务并返回当前观察；正式派发必须显式绑定主周期。 dispatch.commandReport 固定原工作区、主根、运行和调用，桌面与模型共用同一只读服务。 五项影响观察／处置／原回执／历史／关联入口相互分开，查询不启动新任务；保存只接受本机显式决定。 四个文件报告/补偿入口固定原调用或原命令；actor 由桌面入口注入，查询不启动文件操作，补偿不得改变目标路径或内容。",
+  "src/backend/main/knowledge": "知识仓库文件、事务、缓存及对象写入实现。与 Core 的规则/存储端口单向连接，物理写入和授权语义不因目录迁移变化。",
+  "src/backend/main/materials": "聊天输入、附件与引用材料的本机采集/持久化；保存的快照不自动证明当前来源有效。",
+  "src/backend/main/models": "模型配置、密钥保护、认证与参数迁移。持有本机配置和凭据，公开能力契约位于 Core/models。",
+  "src/backend/main/platform": "平台实现按职责分区：isolation 处理受限进程及恢复，files 处理受控文件操作；锁、网络等其他平台能力仍在本层。不是一个业务领域。",
+  "src/backend/main/platform/files": "受控文件平台：主进程传输、utility 子进程、Win32 文件实现及结果协议。打包产物仍在原输出位置，__dirname 相邻子进程入口约定不变。",
+  "src/backend/main/platform/isolation": "隔离执行平台：Win32/Job/LPAC、冻结输入、执行结果和恢复核实。权限和资源释放语义保持原有实现；目录整理不声称修复历史隔离恢复竞争。",
+  "src/backend/main/registry": "岗位、来源与责任登记的应用服务；协调知识、文件实现和 Core 的规则，不拥有正式运行准入。",
+  "src/backend/main/resources": "链接器、人才和完整业务模板共用的本地/远端资源仓库。静态资料单次HTTP捕获前后核授权与共享代际，正文快照不安装执行。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。 GitHub 反馈采用独立直连服务，设备授权和原提交账本由本机管理；固定目标、跨会话去重、未知只核实，成功不回传 Issue 链接或开发进度。",
+  "src/backend/main/run-storage": "运行日志、运行内输入和游标文件实现；按 RunStorage 等 Core 端口提供持久化，保留追加、未知和恢复语义。",
+  "src/backend/main/settings": "应用设置及命名文件存储；与模型配置、派发、运行及知识持久化分开定位。",
+  "src/backend/main/web": "网页请求应用服务，封装访问与返回结果；上层通过端口调用。",
+  "src/backend/main/workspace": "本机工作区、静态编辑与受控来源协调。获取工作区锁后在唯一DispatchStore核身份、恢复知识和来源，再发布服务。岗位和负责人以同知识快照明确采纳；首次真实观察与消费者同事务保存。来源、能力、模型分别展示，不以登记回执启动实例或改写旧任务。 负责岗位和模块责任只读发现供实际主工具调用；当前配置观察与历史执行事实分开。 原知识事务适配复用现有串行 journal 核验，固定计划与旧实例只读；不提交、刷新、恢复或修剪目录。 ControlledFiles 连接原成员授权、唯一 Store、文件平台与私有备份；原not_applied与真实退出才解除运行屏障，显式补偿重新核文件身份/摘要/关闭周期，未知不重试。",
+  "src/backend/scheduler-engine": "工作区调度。装配团队上下文与模型工具，协调会话、运行、用户问题和队列；只依赖自身及 Core。",
+  "src/backend/scheduler-engine/admission": "运行准入的票据与运行注册，保持可信入口、占用与释放语义；与业务验收分离。",
+  "src/backend/scheduler-engine/assembly": "引擎装配：loop-engine 将实际 Pi/Claude/Codex、模型预算及工具能力接入 Core 运行循环。这里有意认识具体实现；高密度装配依赖仍需独立评审。",
+  "src/backend/scheduler-engine/automation": "串行版本配置、持久启动意图与定时调度；同项不重叠，重开跳过过期，不重放未知运行。",
+  "src/backend/scheduler-engine/budget": "预算应用服务：协调请求和目标预算预占/结算，通过明确存储端口保存结果；不直接访问共享派发 Store。",
+  "src/backend/scheduler-engine/context": "内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/岗位责任、Workflow与规范。显式流程只从本模块挂载清单解析，准备按任务原选择重核，不回退默认或刷新旧绑定；前置替换保留原实例和流程；两种模式的主会话都可直接执行未配置自定义岗位的模块，不把主 Agent 派成独立成员。 team-workflow 只向知识查询转发 snapshot，查询不取得工作区写能力。 team-workflow 调用 Core KnowledgeQueries，后者只取快照读取端口并组合 Team/BusinessWorkspace；跨查询一致性由准备用例核版本，索引写入留在知识领域。 执行上下文同时冻结负责岗位、项目适配、采纳能力与模型身份，主模型不会替换成员配置。",
+  "src/backend/scheduler-engine/conversation": "主会话执行管理，连接执行循环、输入和运行视图；正式成员调度在 members。",
+  "src/backend/scheduler-engine/dispatch": "派发编排：任务状态、领取、图依赖与应用命令通过 Core 的派发端口写入；共享 Store 尚未拆分。",
+  "src/backend/scheduler-engine/evidence": "证据编排：收集、核实和提交产物/输出/效果/人工证据，消费 Core 的证据规则及存储端口。",
+  "src/backend/scheduler-engine/goals": "目标周期、等待、续执行、恢复与重计划编排。ScopeGoalService 的跨域依赖仍在，目录迁移不冒充职责重构。",
+  "src/backend/scheduler-engine/history": "会话履历查询编排，依赖 Core 履历契约，实际文件索引在 main/history。",
+  "src/backend/scheduler-engine/members": "正式成员执行、自动协作与检查点服务；按冻结任务/Workflow 建立真实运行，保留取消、等待与证据绑定。",
+  "src/backend/scheduler-engine/runtime": "监管、履历与全局并发准入职责分离。可靠提交同步周期白名单，scope-only 更新独立游标，未变投影不重复发布；检查点计待办而不占活动名额，报告用量不授予额度或恢复权。",
+  "src/backend/scheduler-engine/tools": "把知识、主调度及实际装配的用户交互注册为 cbim_ 工具。新增前置追加与已有主调度工具共用固定运行身份、原命令映射和严格单次编码输出，回执只证明保存；坏回包先核实原记录。QuestionTools冻结原题，严格核验答案或取消，坏回包不重问；维护和问答回执不算业务证据，执行者不获得调度权。 知识查询和事务刷新分别注入最小读/写端口，写权限及原请求版本检查保持。 负责人发现和计划/派发选择共享严格协议，固定主运行身份，历史回执不签发新领取许可。 主工具显式放弃原检查点/预约，绑定原 run/call 命令，坏回包只核实原事实，不取得业务完成资格。 主 Agent 可按明确原 run/call 查询控制面事务；可信闭包固定工作区和根，读取本身无写命令且不触发成员执行。 知识提交和对象提交的执行参数与历史核实使用同一解析定义，权限及当前实例核验仍在实际执行入口。 FeedbackTools 只在桌面主会话实际连接后注册；严格解析反馈字段，未知只核实原提交，不能让模型改投目标或提供凭据。",
+  "src/backend/updater": "独立桌面更新子系统：公开 Release 读取、稳定版本筛选、后台预下载与用户确认重启的状态机和 NSIS 适配均在此目录。只依赖公开更新契约及系统/第三方库，不导入 main、scheduler-engine 或 core/runtime；仅明确安装时通过关闭回调等待主程序排空。安装包缓存独立于运行数据。",
+  "src/bridge": "前后端通信边界：contracts 声明公开数据，preload 提供 Electron 安全桥。契约可重导出 Core 公开类型和纯函数，不暴露后端服务、凭据和存储实现。",
+  "src/bridge/contracts": "可序列化 IPC 与展示契约；多来源附件只传选择身份，公开旧v1/新v2清单与真实仓库目录，不暴露凭据。图增量公开前置追加/替换审计而非执行许可，目标摘要公开运行内补充计数与未核实状态，详情保留已接收快照，纯协议不携IO。排队插入必须传用户点击时的原主run，缺失不推测当前轮次。检查点私有恢复证明留在后端；结构验证公开当时文件/规则指纹及无原值诊断，人工决定与文件观察保留真实依据。岗位IPC只传明确选择与公开采纳/回执，类型不带凭据或后端哈希IO。 桌面更新只公开版本、日志、阶段和进度，不传安装路径或任意命令。 ipc-call 用联合元组关联全部172项操作（含1项退役拒绝）；分组契约共享请求Schema与响应，纯workspace-view避免类型循环。 owner-execution 公开原岗位绑定与显式当前观察；按任务修订核对身份，不公开解密配置。 公开检查点放弃审计和请求/回执纯契约，不向渲染进程授予主调度处置身份。 command-verification 只导出严格公共报告和八工具支持矩阵，隐藏原事务和执行准备信息。 effect-observation 只公开来源联合及严格公共 DTO，恢复／重规划保留旧协议并显式绑定新处置，不暴露正文备份或原生上下文。 controlled-files 仅导出公开纯协议与限制，隐藏 blob、原生文件身份、句柄和后端规则。",
+  "src/bridge/preload": "固定 Electron IPC 桥；不向页面暴露 Node、凭据或任意磁盘 API。 实现关联调用签名并沿原信封转发，不重试错误或改变主Frame授权。",
+  "src/frontend": "React 桌面界面。只消费 contracts 和自身组件，不导入调度或主进程实现。",
+  "src/frontend/automation": "当前工作区自动化列表、配置和运行历史；固定页签不接自选工作目录，真实运行通过原会话定位。",
+  "src/frontend/components": "通用展示组件，不持有领域服务与运行状态。 EngineModelPicker 固定三引擎目录，按协议筛选统一模型，空目录仍可选择引擎。",
+  "src/frontend/conversation": "中央主对话、目标摘要、输入、附件及队列；附件区明确显示目录清单、URL指针、网页摘录与仓库静态资料。两处插入口冻结原run，入队成功保留事实，停止锁独立于插入等待。进程准入等待与持久用户等待分别展示，纯等待不累计工作时长；未受理保留草稿。核实与重规划权限分离，可续聊头由后端核实。 双视图共享人工决定控制器，保存意见不清除聊天草稿或消费等待。 主对话栏读写工作区主 Agent 的统一执行配置，与团队配置页双向同步；模型按协议映射，Claude Code/Codex 只保留排队。 加号菜单分别请求 BUG 反馈和需求许愿 Skill，按原会话发送或排队，保留已有草稿及附件。 tasks/ToolActivity 在业务装配层组合原命令核实、影响观察及恢复；公共消息/状态已迁到 execution-view，队列操作名限制为实际四项。 目标摘要可跳转本周期原任务或替代成果，沿已有任务详情导航，不改草稿、附件或执行状态。 原工具记录显式核实保存事实，保留原失败；控制器按四重身份隔离迟到响应，轮询不重复读取，失败保留旧报告并提示时效。 主调用提供显式影响观察；未知不再凭勾选调用 ID 直接续跑，进入独立只读核实，普通草稿不受影响。 当前工作区实例传入成员详情用于补偿预览时效，主聊天草稿不受补偿控制器影响，挂载不触发文件读取或写入。 可信 GitHub submitted 工具回执之后隐藏追加结果文字；失败、未知及后续普通用户输入仍正常显示。 发送捕获原任务/运行，审批使用原审批任务；动态队列按操作解析。",
+  "src/frontend/diagnostics": "只读展示工作区运行状态和知识校验问题，不把工作区就绪视为知识校验通过。",
+  "src/frontend/execution-view": "主对话、成员任务和团队履历共用的消息、工具轨道、状态、问答及输入展示。只依赖公开通信契约和通用组件；查询、恢复和处置控制器由页面组合，不反向依赖 conversation、tasks 或 team。主对话、成员与历史共用的消息、工具轨道及运行状态；只消费公开快照和最小展示插槽，不依赖任务或会话控制器。原核实与恢复由页面显式组合，Markdown 的用户链接点击继续通过固定 Bridge。",
+  "src/frontend/governance": "静态业务模块的知识治理面板。展示真实来源、精确差异、补证/异议与回应评价。审阅绑定来源版本，未评价不补造理解，人工决定与实施分开；原命令先保存再发送，未知只查询。 IPC 名称从冻结的治理动作形成有限联合，保留原命令未知查询。 操作联合与表单请求经对应Schema配对，原命令回执控制器不变。",
+  "src/frontend/knowledge": "知识问题、预览提交、静态表单与共用来源说明。展示当前、退役、待采纳及待核实状态，不从路径或正文相同猜来源连续；来源组件无提交副作用。固定编辑基线，不要求真人维护声明，业务架构展示位于workspace。 Agent 编辑可保存本机默认引擎/模型，已有岗位不自动采纳。 动态架构表单先按对应IPC Schema核实；本地数据选择为封闭类别。",
+  "src/frontend/resources": "统一资源仓库的查看、编辑、静态包发布与下载应用。人才按团队/Agent/Skill复用，业务按整套架构应用；工作区身份及预览版本固定。设置通过统一入口打开。 连接操作名使用持久命令的动作联合，提交、未知与核实流程保持。 连接提交与回执查询按具体Schema形成操作元组。",
+  "src/frontend/runtime": "全局只读运行管理。分别呈现目标周期、人员、任务、准入等待和已报告消耗；单次在途游标读取保留未变行，隐藏时退订，按真实身份定位既有会话而不执行任务。",
+  "src/frontend/settings": "模型、资源仓库、GitHub 反馈连接、并发及新目标软限额配置。GitHub 采用 Device Flow，页面仅持公开 Client ID 与短期授权码；资源服务器账号仍为占位。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。 反馈预置公开产品连接；版本更新迁到账号菜单的独立弹窗，设置表单不因查看日志而卸载。 预算和反馈的动态入口验证操作请求；开启/停止共享各自使用确定签名。",
+  "src/frontend/shell": "工作区侧栏、会话选择、用户栏与右侧扩展页签；会话区与项目级视图区分开。向会话传递活动页签状态，隐藏页签保留草稿/节点选择并降低成员与任务图同步频率。 账号菜单和新版提醒打开独立更新弹窗，当前页面及草稿保持挂载，不隐式下载或重启。 导航的操作桥按明确请求Schema解析，坏历史记录不能当完整运行。",
+  "src/frontend/tasks": "主会话任务图、目标与准入状态；依赖追加/替换只读历史核对身份和节点修订，摘要按实际版本选择最新，图沿真实启用边排列，不补造结果。运行内补充按真实接收记录显示，未知优先旧审阅，同版摘要/详情核对后增量呈现。根停止使用独立在途标记，插入等待不锁住停止按钮。等待补充共享多来源草稿与导入锁，原等待选择代次阻止迟到导入；明确目录/链接/网页/授权仓库来源，普通聊天草稿独立。流程、验证、检查点、基线、人工决定与用量保留各自冻结身份和证据，不把历史当当前验收。 任务根和成员正文显式注入业务详情插槽，共用 execution-view 展示；资料准备与成员交互端口只列实际 IPC 操作。 成员卡片、节点详情和目标分配展示原岗位及模型；手动核实当前配置独立显示差异，迟到响应按原任务/修订隔离。 主对话、图和详情区分显式交接放弃与普通封存，保留原岗位和运行；审阅中的原/新任务仅按同周期真实节点导航。 成员详情可选择原调用并显式观察；处置先保存本机稳定请求，丢回包只查原命令。历史选择与后续关系按同一处置展示，迟到读取不覆盖其他来源；各面板共享根会话时效，PublicDispatchScope 真实提供新核实和修复来源，沿既有资格创建。 同一影响面板分别显示原工具失败和原知识事务阶段，明确处置继续绑定原观察，查询不取得写权限。 原调用卡分别显示工具/文件操作/补偿结果；显式预览读取当前文件，提交前保存固定本机请求，丢回复只查原命令；查询错误保留已知拒绝/终态，预览过期不能提交。 任务详情与续接动态端口按操作解析后进入关联桥，状态所有权不变。",
+  "src/frontend/team": "工作区唯一的静态Team/组/Agent图、继承与人才复用，节点按Session查看只读履历。岗位面板独立登记、明确采纳和暂停退休；改名和模型更新保留原能力来源。来源屏障首次拒绝可重新编辑，未知仍查原命令；反查责任委托workspace，不启动模型。 岗位登记支持默认或明确引擎/模型，详情展示冻结引擎。 历史查询按操作关联请求和响应，分页状态与原迟到隔离保持；Markdown 复用 execution-view。 当前岗位启用不是运行许可，真正执行还核模块责任和原计划；编辑不会搬运历史。",
+  "src/frontend/updates": "账号入口的版本与更新弹窗、最近发布说明及新版提醒。共享窗口级本机更新快照；查看日志保留原页面与草稿，检查、下载和重启安装分别显式操作。只依赖公开 IPC，不导入后端更新实现。",
+  "src/frontend/workspace": "工作区唯一的工程/模块图及自身Workflow。负责人面板展示来源和有界历史，支持同负责人明确采纳当前来源；原回执必须匹配同一关系、版本及owner，未知不换命令。知识编辑和整架构复用委托knowledge/resources；登记不移交旧任务。 一级负责人读取/预览只使用有限 InlineOwnerCall 操作，写入仍由独立命令控制器持有。 关联任务包含新旧协议节点，负责人变更不移交旧任务；实际领取重核原版本。 模块责任按是否给定memberId选择明确入口，内联岗位表单经过Schema配对。"
 };
-scope['src/backend/core/brain/claude']='Claude Agent SDK 适配、内部工具门禁与真实原生会话生命周期；环境和账号归 CBIM，工具复用上层契约，不提供对外 MCP。原生工具开关只读可信能力的 disableNativeTools 策略，不认识具体业务工具槽位。';
-scope['src/backend/core/brain/codex']='Codex App Server 的受管进程、双向 RPC、真实 thread/turn、Responses 代理与动态工具；固定 CLI 和私有账号目录，内置执行关闭，工具经宿主授权、预算结算及同一回执；宿主原生工具目录按可信能力的 disableNativeTools 策略收窄。';
-scope["src/backend/core/brain"]+=" engine-tools 注册统一能力，engine-instructions 合成角色与能力指引；member-tool-capabilities 显式装配业务工具，run-validation 自行准备验证能力；engine-session 按已核日志选择目标引擎原生 ID/文件并转交公开资料；native-tools 复用固定 Pi SDK 独立操作供宿主动态工具。";
-scope["src/backend/core/brain/llm"]+=" engine 定义公开引擎/选型；共享 request-budget-transport 和 SSE 用量解析服务 Pi、Claude Code 与 Codex。";
-scope["src/backend/core/tools"]+=" 原生能力按 Pi/Claude Code/Codex 提供真实预检清单，Codex 由宿主执行既有文件操作，Claude 不宣称独立 ls。";
-scope["src/frontend/components"]+=" EngineModelPicker 固定三引擎目录，按协议筛选统一模型，空目录仍可选择引擎。";
-scope["src/frontend/conversation"]+=" 主对话栏读写工作区主 Agent 的统一执行配置，与团队配置页双向同步；模型按协议映射，Claude Code/Codex 只保留排队。";
-scope["src/frontend/knowledge"]+=" Agent 编辑可保存本机默认引擎/模型，已有岗位不自动采纳。";
-scope["src/frontend/team"]+=" 岗位登记支持默认或明确引擎/模型，详情展示冻结引擎。";
-scope['src/backend/core/tasks']+=' model-request-budget-storage 只公开请求预算状态、追加命令及准入能力，不授予其它领域写入。';
-scope['src/backend/main/persistence/tasks']+=' request-budget-store 在唯一 DispatchStore 的原事务内投影预算视图，保留可靠提交与恢复。';
-scope['src/backend/main']+=' member-dispatch 为请求预算注入窄 Store，底层跨领域事务继续统一持有。';
-scope['src/backend/scheduler-engine/execution']+=' 请求预算服务仅依赖预算读写及准入端口，ScopeBudgetService 的请求预检同样只读预算视图。';
-scope['src/backend/scheduler-engine/context']+=' team-workflow 只向知识查询转发 snapshot，查询不取得工作区写能力。';
-scope['src/backend/scheduler-engine/tools']+=' 知识查询和事务刷新分别注入最小读/写端口，写权限及原请求版本检查保持。';
-scope['src/backend/core/knowledge']+=' KnowledgeQueries 只接收 snapshot；KnowledgeRefresh 独立持有身份核实、原回执查询与提交。';
-scope['src/backend/core/knowledge']+=' read-models.ts 是固定快照读取的公开入口，snapshot 与 Team/BusinessWorkspace 模型属于同一私有实现边界；查询编排不反向进入纯快照契约。';
-scope['src/backend/core/team']+=' model.ts 是知识读取模块的私有实现，外部通过 knowledge/read-models 访问；岗位与执行状态契约不归读取视图所有。';
-scope['src/backend/core/workspace']+=' model.ts 是知识读取模块的私有实现，外部通过 knowledge/read-models 访问；项目根定义仍为独立纯公开契约。';
-scope["src/backend/scheduler-engine/execution"]+=" 可信工厂选择 PiEngine/ClaudeCodeEngine/CodexEngine；Claude/Codex 新成员首轮可延迟绑定原生文件，Codex 在启动确认时原子采纳实际线程 ID。";
-scope["src/backend/main/platform"]+=" 原生指纹固定 Pi/Claude/Codex 格式及受管目录，Codex 另核 metadata 和 rollout 文件名。";
-scope["src/backend/main/platform"]+=" 范围模式用Win32读取/枚举句柄与LPAC私有快照，原工程不扩ACL。";
-scope["src/backend/core/workspace"]+=" executionScope只收窄原权限，全模块一致冻结，预算合并取小。";
-scope["src/backend/core/brain/pi"]+=" 范围模式只注册cbim工具，转发受限读取与隔离Node的原调用身份。";
-scope["src/backend/core/brain"]+=" 冻结范围工具由Runtime一次授权，原生文件/命令禁用，结算等实际资源退出。";
-scope['src/frontend/conversation']+=' 加号菜单分别请求 BUG 反馈和需求许愿 Skill，按原会话发送或排队，保留已有草稿及附件。';
-scope['src/backend/main']+=' 正式安装版调用独立updater，主Frame固定IPC与正常排空后显式安装；启动前恢复更新重启的用户目录，开发和便携包不自动联网。';
-scope['src/bridge/contracts']+=' 桌面更新只公开版本、日志、阶段和进度，不传安装路径或任意命令。';
-scope['src/frontend/settings']+=' 反馈预置公开产品连接；版本更新迁到账号菜单的独立弹窗，设置表单不因查看日志而卸载。';
-scope['src/frontend/shell']+=' 账号菜单和新版提醒打开独立更新弹窗，当前页面及草稿保持挂载，不隐式下载或重启。';
-scope['src/backend/core/knowledge']+=' 产品反馈 Skill 只读发布两套上下文格式，不包含 GitHub 创建接口。';
-scope['src/backend/core/knowledge']+=' 快照数据与只读访问是独立公共边界；索引刷新通过收窄端口调用原知识事务，不导入团队或模块查询视图。';
-scope['src/backend/scheduler-engine/context']+=' team-workflow 调用 Core KnowledgeQueries，后者只取快照读取端口并组合 Team/BusinessWorkspace；跨查询一致性由准备用例核版本，索引写入留在知识领域。';
-scope['src/backend/scheduler-engine/conversation']+=' 两项反馈入口先读取对应内置 Skill 再引导填写；收集反馈不启动业务派工。';
-// 负责人进入实际执行后，各层增加的职责仍分别归属原边界；不把登记回执描述成运行许可。
-scope['src/frontend/execution-view']+='主对话、成员与历史共用的消息、工具轨道及运行状态；只消费公开快照和最小展示插槽，不依赖任务或会话控制器。原核实与恢复由页面显式组合，Markdown 的用户链接点击继续通过固定 Bridge。';
-scope['src/frontend/conversation']+=' tasks/ToolActivity 在业务装配层组合原命令核实、影响观察及恢复；公共消息/状态已迁到 execution-view，队列操作名限制为实际四项。';
-scope['src/frontend/tasks']+=' 任务根和成员正文显式注入业务详情插槽，共用 execution-view 展示；资料准备与成员交互端口只列实际 IPC 操作。';
-scope['src/frontend/team']+=' 历史查询按操作关联请求和响应，分页状态与原迟到隔离保持；Markdown 复用 execution-view。';
-scope['src/frontend/governance']+=' IPC 名称从冻结的治理动作形成有限联合，保留原命令未知查询。';
-scope['src/frontend/resources']+=' 连接操作名使用持久命令的动作联合，提交、未知与核实流程保持。';
-scope['src/frontend/workspace']+=' 一级负责人读取/预览只使用有限 InlineOwnerCall 操作，写入仍由独立命令控制器持有。';
-scope['src/bridge/contracts']+=' ipc-call 用联合元组关联全部172项操作（含1项退役拒绝）；分组契约共享请求Schema与响应，纯workspace-view避免类型循环。';
-scope['src/bridge/preload']+=' 实现关联调用签名并沿原信封转发，不重试错误或改变主Frame授权。';
-scope['src/backend/main/ipc']+=' 161项应用操作按业务组装配，request统一保留关闭/受理前错误码后解析，实际处理器受响应映射约束。';
-scope['src/backend/main']+=' agent-history 独立组合历史服务与canonical读取，只接收工作区身份、目录和存活断言；工作区持锁初始化及排空关闭顺序保持。';
-scope['src/backend/main/persistence/tasks']+=' agent-history 只负责文件索引，不再引用Workspace或实例化调度服务。';
-const ownerExecutionScopes={
- 'src/backend/core/brain':'成员的公开任务和原生运行共用冻结岗位绑定，历史缺省可读但不授权应用新领取。',
- 'src/backend/core/knowledge':'SourceSnapshotReader 只提供知识队列外层的同版快照，调用方不得在任务事务内反向获取。',
- 'src/backend/core/tasks':'正式协议将目标分配、任务、准备、模型和历史审计相互核对；岗位绑定不可重写，旧在途仅按原事实收束。',
- 'src/backend/core/team':'负责岗位选择、冻结执行绑定、当前来源/能力/模型判定及只读分组发现均为纯契约；同角色多岗位独立。',
- 'src/backend/core/workspace':'主调度的负责人发现按所选模块真实分组，缺口不推测继承或默认负责者。',
- 'src/bridge/contracts':'owner-execution 公开原岗位绑定与显式当前观察；按任务修订核对身份，不公开解密配置。',
- 'src/backend/scheduler-engine/context':'执行上下文同时冻结负责岗位、项目适配、采纳能力与模型身份，主模型不会替换成员配置。',
- 'src/backend/scheduler-engine/conversation':'主提示在两种模式下都直接实现未配置模块，并只把已配置自定义岗位派发出去；完成里程碑后按事实沉淀团队与业务架构。',
- 'src/backend/scheduler-engine/execution':'OwnerExecutionService 按知识→模型→任务事务核新派发及实际领取；原命令先查，锁释放后才启动。人工证据外部观察与最终知识快照/CAS 分离，避免反向串行等待。',
- 'src/backend/scheduler-engine/tools':'负责人发现和计划/派发选择共享严格协议，固定主运行身份，历史回执不签发新领取许可。',
- 'src/backend/main':'工作区唯一账本装配岗位模型端口；明确拒绝旧直接业务启动，原聊天和知识治理保持独立。',
- 'src/backend/main/ipc':'dispatch.ownerInspect 只读核原任务并返回当前观察；正式派发必须显式绑定主周期。',
- 'src/backend/main/persistence/settings':'公开配置批量短锁与运行配置捕获使用同一设置队列；解密只在领取准入成功后，捕获后编辑不热替换本段。',
- 'src/backend/main/persistence/tasks':'新事务标记由Store生成，旧日志前缀可读而不能在新协议后降级；新任务/准备与历史岗位审计严格对应。',
- 'src/backend/main/workspace':'负责岗位和模块责任只读发现供实际主工具调用；当前配置观察与历史执行事实分开。',
- 'src/frontend/tasks':'成员卡片、节点详情和目标分配展示原岗位及模型；手动核实当前配置独立显示差异，迟到响应按原任务/修订隔离。',
- 'src/frontend/team':'当前岗位启用不是运行许可，真正执行还核模块责任和原计划；编辑不会搬运历史。',
- 'src/frontend/workspace':'关联任务包含新旧协议节点，负责人变更不移交旧任务；实际领取重核原版本。',
-};
-for(const [directory,description] of Object.entries(ownerExecutionScopes))scope[directory]+=' '+description;
-// 显式交接只终止旧待办；历史核验、严格联合事务与只读展示各自留在既有层次。
-const checkpointHandoffScopes={
- 'src/backend/core/brain/pi':'主角色提示要求未配置自定义岗位时自己执行；内置默认执行角色已退役，不能登记后绕过主会话。',
- 'src/backend/core/tasks':'检查点显式放弃有独立严格协议与精确联合变更校验；原任务和检查点证据不可重写，纯 ACK 与后续周期释放保持可用。',
- 'src/backend/scheduler-engine/execution':'CheckpointAbandonmentService 先读原命令，再核历史 canonical 与冻结证明，最后短事务裁决；不重读当前 native 或恢复旧模型，Auto 同步撤销旧恢复准入并等待处置收口。',
- 'src/backend/scheduler-engine/tools':'主工具显式放弃原检查点/预约，绑定原 run/call 命令，坏回包只核实原事实，不取得业务完成资格。',
- 'src/backend/scheduler-engine/conversation':'主调度将原检查点放弃、旧后继撤销和新负责岗位重新派发分开决策，真实新成果才可替代审阅。',
- 'src/backend/main':'原 canonical 历史端口独立装配给交接处置，不开新的模型或原生运行入口。',
- 'src/bridge/contracts':'公开检查点放弃审计和请求/回执纯契约，不向渲染进程授予主调度处置身份。',
- 'src/frontend/tasks':'主对话、图和详情区分显式交接放弃与普通封存，保留原岗位和运行；审阅中的原/新任务仅按同周期真实节点导航。',
- 'src/frontend/conversation':'目标摘要可跳转本周期原任务或替代成果，沿已有任务详情导航，不改草稿、附件或执行状态。',
-};
-for(const [directory,description] of Object.entries(checkpointHandoffScopes))scope[directory]+=' '+description;
-// 原命令核实共享原日志与账本；公共报告、历史指纹适配及视图时效分层，不形成新的执行入口。
-const commandVerificationScopes={
- 'src/backend/core/tasks':'原主命令核实定义八工具的有界报告；原工具结果、事务保存和业务验收分开，查询回执不能成为交付证据。',
- 'src/backend/main/persistence/tasks':'原命令证据索引从真实已保存事务前态派生，保留原根修订与日志协议；不重写历史或按当前图补造依据。',
- 'src/backend/scheduler-engine/execution':'原命令核实从固定主运行的 canonical 复原历史解析与指纹，比较读取前后依据；只返回严格公共摘要，不重发原命令或签发恢复资格。',
- 'src/backend/scheduler-engine/tools':'主 Agent 可按明确原 run/call 查询控制面事务；可信闭包固定工作区和根，读取本身无写命令且不触发成员执行。',
- 'src/backend/scheduler-engine/conversation':'收到坏回包可先核实原命令保存事实，查无回执不等于未执行，原业务仍沿实际任务和验收流程决策。',
- 'src/backend/main':'原命令核实只装配已打开工作区的 canonical 和唯一账本，不隐式启动、初始化或恢复。',
- 'src/backend/main/ipc':'dispatch.commandReport 固定原工作区、主根、运行和调用，桌面与模型共用同一只读服务。',
- 'src/bridge/contracts':'command-verification 只导出严格公共报告和八工具支持矩阵，隐藏原事务和执行准备信息。',
- 'src/frontend/conversation':'原工具记录显式核实保存事实，保留原失败；控制器按四重身份隔离迟到响应，轮询不重复读取，失败保留旧报告并提示时效。',
-};
-for(const [directory,description] of Object.entries(commandVerificationScopes))scope[directory]+=' '+description;
-// 影响核实只关联新的明确处置及独立周期，不把当前文件或原回执转换成原执行成功。
-const effectObservationScopes={
- 'src/backend/core/brain':'新的未知工具不能仅凭 reconciledToolIds 恢复旧原生上下文，保留历史字段可读；正常无未决工具的续聊不受影响。',
- 'src/backend/core/tasks':'主／成员影响来源使用严格联合；观察、不可变处置和新核实／修复引用分别表达，当前文件不补造成功基线或业务验收。纯 scope-public 白名单供主工具与会话详情共用，保留安全恢复来源并隐藏原生上下文。',
- 'src/backend/main/persistence/tasks':'明确处置在同一 DispatchStore 有界追加并按稳定命令核实；旧任务与原异常不可改写，关联仅从真实后续周期派生。',
- 'src/backend/scheduler-engine/execution':'EffectObservationService 复用原 canonical、控制面证据及平台单文件观察；恢复和重规划先在事务外取证，最终版本 CAS 后才建立独立周期，不自动重放原调用。',
- 'src/backend/main/platform':'ArtifactFileService 只观察明确原调用的有界文件，独立返回缺失、不可信和当前字节；路径与链接检查不宣称操作系统隔离。',
- 'src/backend/main':'影响服务装配已打开工作区端口，真实本机处置身份不由模型或 IPC 参数指定。',
- 'src/backend/main/ipc':'五项影响观察／处置／原回执／历史／关联入口相互分开，查询不启动新任务；保存只接受本机显式决定。',
- 'src/bridge/contracts':'effect-observation 只公开来源联合及严格公共 DTO，恢复／重规划保留旧协议并显式绑定新处置，不暴露正文备份或原生上下文。',
- 'src/frontend/conversation':'主调用提供显式影响观察；未知不再凭勾选调用 ID 直接续跑，进入独立只读核实，普通草稿不受影响。',
- 'src/frontend/tasks':'成员详情可选择原调用并显式观察；处置先保存本机稳定请求，丢回包只查原命令。历史选择与后续关系按同一处置展示，迟到读取不覆盖其他来源；各面板共享根会话时效，PublicDispatchScope 真实提供新核实和修复来源，沿既有资格创建。',
-};
-for(const [directory,description] of Object.entries(effectObservationScopes))scope[directory]+=' '+description;
-const knowledgeEffectScopes={
- 'src/backend/core/knowledge':'原知识工具和事务观察共用实际输入解析，纯摘要区分未查到、持久阶段及不可核实，不返回正文或私有路径。',
- 'src/backend/core/tasks':'影响报告的可选知识事务摘要保留原工具状态并参与观察依据；旧处置缺省不补字段。',
- 'src/backend/main/workspace':'原知识事务适配复用现有串行 journal 核验，固定计划与旧实例只读；不提交、刷新、恢复或修剪目录。',
- 'src/backend/main':'影响观察注入原知识事务窄读取端口，不向调度层开放写入或恢复方法。',
- 'src/backend/scheduler-engine/execution':'真实主调用原知识授权与请求先核实，再两次读取原事务阶段；变化使处置依据失效，未知不重放。',
- 'src/backend/scheduler-engine/tools':'知识提交和对象提交的执行参数与历史核实使用同一解析定义，权限及当前实例核验仍在实际执行入口。',
- 'src/frontend/tasks':'同一影响面板分别显示原工具失败和原知识事务阶段，明确处置继续绑定原观察，查询不取得写权限。',
-};
-for(const [directory,description] of Object.entries(knowledgeEffectScopes))scope[directory]+=' '+description;
-// 真实文件写入由成员授权和平台句柄共同约束；补偿另存事实，不改变原工具或验收结果。
-const controlledFileScopes={
- 'src/backend/core/policy':'受控文件工具必须是本轮实际内部注册、唯一 business-write 效果及固定工作区范围；只读拒写，本轮免询不绕过平台检查。',
- 'src/backend/core/brain':'正式成员受控文件工具使用 Runtime 单次授权；未知写入后整轮只准读取/求助，新ID不能绕过，交付独立复核并以interrupted封存；停止和结算等待实际文件进程退出。',
- 'src/backend/core/brain/pi':'受控文件工具仅在真实端口存在时安装，维持桥接容量及调用授权，工具结果和实际文件操作终态分别校验。',
- 'src/backend/core/tasks':'单文件操作公开协议不含正文备份；私有意图与阶段严格绑定原成员运行和原授权，补偿引用可靠 applied 与真实 before，终态不可改写。',
- 'src/backend/main':'装配独立文件 utility 及唯一工作区服务；原运行释放前确认物理操作排空，缺少平台能力时不装配可写工具。',
- 'src/backend/main/ipc':'四个文件报告/补偿入口固定原调用或原命令；actor 由桌面入口注入，查询不启动文件操作，补偿不得改变目标路径或内容。',
- 'src/backend/main/platform':'独立 utility 持有 Win32 目录与文件句柄，执行单次有界替换、flush 与读回；私有 blob 保留真实 before，进程退出不表示内容回滚。另有独立 LPAC/Job Node 平台端口，私有快照与输出分权、真实进程树收束；尚未装配为模型命令或任务授权。',
- 'src/backend/main/persistence/tasks':'受控文件附录在同一账本单条追加，prepared/executing/终态各有回执与空间预留，旧日志缺省不补造，重放不继续文件 IO。',
- 'src/backend/main/workspace':'ControlledFiles 连接原成员授权、唯一 Store、文件平台与私有备份；原not_applied与真实退出才解除运行屏障，显式补偿重新核文件身份/摘要/关闭周期，未知不重试。',
- 'src/backend/scheduler-engine/execution':'实际成员注入固定运行的受控文件端口；两种模式的主会话都按权限使用原生工具，不取得成员专属端口，租约保持到物理操作排空。',
- 'src/bridge/contracts':'controlled-files 仅导出公开纯协议与限制，隐藏 blob、原生文件身份、句柄和后端规则。',
- 'src/frontend/tasks':'原调用卡分别显示工具/文件操作/补偿结果；显式预览读取当前文件，提交前保存固定本机请求，丢回复只查原命令；查询错误保留已知拒绝/终态，预览过期不能提交。',
- 'src/frontend/conversation':'当前工作区实例传入成员详情用于补偿预览时效，主聊天草稿不受补偿控制器影响，挂载不触发文件读取或写入。',
-};
-for(const [directory,description] of Object.entries(controlledFileScopes))scope[directory]+=' '+description;
-const githubFeedbackScopes={
- 'src/backend/core/brain':'外部写也进入未知影响屏障和验证副作用时序；不能借 GitHub 提交绕过运行内写入限制或沿用旧验证。',
- 'src/backend/main/resources':'GitHub 反馈采用独立直连服务，设备授权和原提交账本由本机管理；固定目标、跨会话去重、未知只核实，成功不回传 Issue 链接或开发进度。',
- 'src/backend/core/policy':'GitHub external-write 仅在本机明确自动提交许可与精确本轮目标相等时免逐条 ask；read 仍拒绝，未知外部写无通行权。',
- 'src/backend/core/tools':'GitHub 反馈使用独立 scope 和 external-write 效果；不把外部提交回执当作业务文件或知识成果。',
- 'src/backend/core/tasks':'保守产物时序包含外部写，GitHub 回执不能充当文件基线来源。',
- 'src/backend/scheduler-engine/tools':'FeedbackTools 只在桌面主会话实际连接后注册；严格解析反馈字段，未知只核实原提交，不能让模型改投目标或提供凭据。',
- 'src/backend/scheduler-engine/execution':'桌面捕获固定 GitHub 端口和授权交统一策略；成员不继承，公开投影无正文或凭据。',
- 'src/frontend/conversation':'可信 GitHub submitted 工具回执之后隐藏追加结果文字；失败、未知及后续普通用户输入仍正常显示。',
-};
-for(const [directory,description] of Object.entries(githubFeedbackScopes))scope[directory]+=' '+description;
-scope['src/backend/main']+=' 11项原生操作按契约解析并配对成功值，主Frame和安装门禁先行。';
-scope['src/backend/main/persistence/tasks']+=' 附件JSON的公开连接器/预览形状先校验再返回。';
-scope['src/backend/scheduler-engine/execution']+=' 历史坏记录明确返回unreadable及字符串原因，不当作完整task摘要。';
-scope['src/frontend/conversation']+=' 发送捕获原任务/运行，审批使用原审批任务；动态队列按操作解析。';
-scope['src/frontend/knowledge']+=' 动态架构表单先按对应IPC Schema核实；本地数据选择为封闭类别。';
-scope['src/frontend/governance']+=' 操作联合与表单请求经对应Schema配对，原命令回执控制器不变。';
-scope['src/frontend/resources']+=' 连接提交与回执查询按具体Schema形成操作元组。';
-scope['src/frontend/settings']+=' 预算和反馈的动态入口验证操作请求；开启/停止共享各自使用确定签名。';
-scope['src/frontend/shell']+=' 导航的操作桥按明确请求Schema解析，坏历史记录不能当完整运行。';
-scope['src/frontend/tasks']+=' 任务详情与续接动态端口按操作解析后进入关联桥，状态所有权不变。';
-scope['src/frontend/workspace']+=' 模块责任按是否给定memberId选择明确入口，内联岗位表单经过Schema配对。';
 const norm=p=>p.replaceAll('\\','/');
 const walk=p=>fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(p+'/'+e.name):[p+'/'+e.name]);
 const files=walk('src').filter(f=>/\.(tsx?|jsx?|mjs|cjs|css)$/.test(f));

@@ -8,7 +8,7 @@ import {zodToJsonSchema} from 'zod-to-json-schema';
 import {isDeepStrictEqual} from 'node:util';
 import {fail} from '../../core/foundation/errors';
 import {checkedJsonToolResult} from '../../core/tools/results';
-import type {RunToolDescriptor} from '../../core/policy/tool-policy';
+import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
 import {
   repositoryListInputSchema,repositoryGetInputSchema,repositoryListOutputSchema,repositoryGetOutputSchema,repositoryToolTargetSchema,
   type RepositoryToolsPort,type RepositoryToolTarget,

@@ -5,7 +5,7 @@
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {webFetchInput,webFetchOutput,webSearchInput,webSearchOutput,type WebToolsPort} from '../../core/connectors/web-tools';
 import {checkedJsonToolResult} from '../../core/tools/results';
-import type {RunToolDescriptor} from '../../core/policy/tool-policy';
+import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
 const fetchName='cbim_web_fetch',searchName='cbim_web_search';
 export class WebTools {
   constructor(private readonly port:WebToolsPort,private readonly workspaceId:string){}

@@ -11,7 +11,7 @@ import {dispatchScopeGoalSchema} from './scope-goal';
 import {dispatchScopeWaitSchema} from './scope-continuation';
 import {scopeContinuationRecordSchema} from './scope-continuation-record';
 import {scopeRunTrackingSchema} from './scope-run-tracking';
-import {scopeBudgetSchema} from './scope-budget';
+import {scopeBudgetSchema} from '../budget/scope-budget';
 import {scopeHumanDecisionsSchema} from './human-decisions';
 import {scopeRecoverySchema} from './scope-recovery';
 import {scopeReplanSchema} from './scope-replan';

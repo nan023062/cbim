@@ -4,7 +4,7 @@
  * 职责边界：纯状态约束不读取模型日志；canonical 证据与当前知识由提交服务在同一存储屏障内核实。
  */
 import {fail} from '../foundation/errors';
-import type {DispatchState,DispatchMutation,DispatchCommand} from './dispatch-storage';
+import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 import type {TaskNode} from './graph-types';
 import {dependencyReplacementSchema,type DependencyReplacement} from './queued-dependency-replacement';
 import {queuedDependencyReplacementSelection} from './queued-dependency-replacement-rules';

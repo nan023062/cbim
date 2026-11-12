@@ -3,7 +3,7 @@
  * 设计原因：处置和换边不授予旧任务执行资格，不读取今日知识、模型或产物；完整历史日志由服务核实，这里裁决身份、版本、原信封和领取竞争。
  */
 import {fail} from '../foundation/errors';
-import type {DispatchState} from './dispatch-storage';
+import type {DispatchState} from '../dispatch/dispatch-storage';
 import type {GraphIdentity,TaskNode} from './graph-types';
 import {abandonCheckpointInputSchema,checkpointAbandonmentSchema,type AbandonCheckpointInput} from './checkpoint-handoff';
 import {completedCheckpointLedger} from './member-checkpoint-ledger';

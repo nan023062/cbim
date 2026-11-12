@@ -5,9 +5,9 @@ import {continuationSourceProofSchema,continuationSourceSnapshotSchema,continuat
 import {continuationAttachmentManifestSchema,continuationAttachmentManifestV1Schema,continuationAttachmentManifestV2Schema,continuationSourceItemFromSnapshot,continuationSourceItemSchema,assertContinuationAttachmentManifest,type ContinuationAttachmentManifest,type ContinuationAttachmentManifestV1,type ContinuationAttachmentManifestV2} from '../src/backend/core/tasks/scope-continuation-attachments';
 import {scopeContinuationSchema,goalContinuationRequestSchema,goalContinuationReceiptSchema,type GoalContinuationRequest,type ScopeContinuation} from '../src/backend/core/tasks/scope-continuation';
 import {validateDispatchScopes} from '../src/backend/core/tasks/dispatch-scope-invariants';
-import {checkedRunInputSource} from '../src/backend/core/brain/input-source';
+import {checkedRunInputSource} from '../src/backend/core/execution/input-source';
 import {checkedJsonToolResult} from '../src/backend/core/tools/results';
-import type {DispatchState} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
 
 const at='2026-11-07T10:00:00.000Z',acceptedAt='2026-11-07T10:00:01.000Z',digest=hash('captured');
 const url='http://127.0.0.1:12345/reference';

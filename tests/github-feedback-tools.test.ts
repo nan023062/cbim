@@ -2,12 +2,12 @@ import {describe,expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import Ajv from 'ajv';
 import {FeedbackTools} from '../src/backend/scheduler-engine/tools/feedback-tools';
-import {authorizeRunTool,type RunToolDescriptor} from '../src/backend/core/policy/tool-policy';
+import {authorizeRunTool,type RunToolDescriptor} from '../src/backend/core/tools/policy/tool-policy';
 import {toolReceiptSchema} from '../src/backend/core/tools/receipt-schema';
-import {projectRunEvent} from '../src/backend/scheduler-engine/execution/public-run-events';
+import {projectRunEvent} from '../src/backend/scheduler-engine/runtime/public-run-events';
 import {transcript} from '../src/frontend/execution-view/transcript';
 import type {FeedbackToolsPort,FeedbackScope} from '../src/backend/core/connectors/github-feedback';
-import type {RunSummary,EngineEvent,StoredEvent} from '../src/backend/core/brain/types';
+import type {RunSummary,EngineEvent,StoredEvent} from '../src/backend/core/execution/types';
 
 const scope:FeedbackScope={kind:'github-feedback',workspaceId:'workspace',connectionId:randomUUID(),repositoryId:42,owner:'owner',repo:'repo'};
 const bug={kind:'bug',summary:'bug',steps:'steps',actual:'actual',expected:'expected',environment:'unknown'};

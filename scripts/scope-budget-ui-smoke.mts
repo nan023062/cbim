@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {scopeBudgetProvider,scopeBudgetFixture as data,type BudgetFixtureMode} from '../tests/scope-budget-provider';
 import {seedScopeBudget,budgetScopes,budgetLimits,budgetDenies} from '../tests/scope-budget-fixture';

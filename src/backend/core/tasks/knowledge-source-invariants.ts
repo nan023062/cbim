@@ -9,7 +9,7 @@ import {workspaceMemberCapabilityHash} from '../team/workspace-member-rules';
 import {moduleOwnershipChangeSchema,isModuleOwnershipSourceAdoption} from '../workspace/module-ownership';
 import {sourceRefMatches,sourceSelectionMatches,type KnowledgeSourceCapture,type CapabilitySourceRef,type SourceSelection} from '../workspace/knowledge-source';
 import {applyKnowledgeSourceChange,knowledgeSourceCanonical,knowledgeSourceCommand,knowledgeSourceReceipt,knowledgeSourceRef,knowledgeSourcePending,validateKnowledgeSourceSelection,type KnowledgeSourceRegistry} from '../workspace/knowledge-source-rules';
-import type {DispatchState,DispatchMutation,DispatchCommand} from './dispatch-storage';
+import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 
 /** 只由本模块完整核验后返回；消费者仍须核全部原审计、actor、basis 与回执。 */
 export interface KnowledgeSourceCapturePermit {kind:'workspace_member'|'module_ownership';changeId:string;captureChangeId:string}

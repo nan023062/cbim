@@ -4,7 +4,7 @@
  * 职责边界：纯规则不读知识或模型日志；服务在同一派发事务内另行准备并复核知识和停止状态。
  */
 import {fail} from '../foundation/errors';
-import type {DispatchState} from './dispatch-storage';
+import type {DispatchState} from '../dispatch/dispatch-storage';
 import type {GraphIdentity} from './graph-types';
 import {addQueuedDependencyInputSchema,type AddQueuedDependencyInput} from './queued-dependency-addition';
 import {goalNeedsReplan} from './scope-goal';

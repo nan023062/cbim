@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest';
-import {RepeatedToolFailures} from '../src/backend/core/brain/repeated-tool-failures';
+import {RepeatedToolFailures} from '../src/backend/core/execution/repeated-tool-failures';
 import {toolFailureResult,toolReturnedResult,runToolResult,withToolReconciliation} from '../src/backend/core/tools/outcome';
 import {Fault} from '../src/backend/core/foundation/errors';
 

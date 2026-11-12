@@ -4,7 +4,7 @@
  * 回执边界：当前实例可只读核实旧请求的原 journal；同一 DispatchStore 在持工程锁、核路径并完成可信历史初始化阶段后加载，再核来源 journal 与治理。关闭先排空知识和来源结算再关闭 Store，不恢复旧实施意图。
  */
 import fs from 'node:fs/promises';
-import {FileObjectStorage} from '../persistence/knowledge/object-storage';
+import {FileObjectStorage} from '../knowledge/object-storage';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -14,12 +14,12 @@ import {json} from '../../core/foundation/serialization';
 import {fail} from '../../core/foundation/errors';
 import {KernelLock} from '../platform/locking';
 import {Rules} from '../../core/knowledge/knowledge';
-import {KnowledgeStore} from '../persistence/knowledge/knowledge-store';
+import {KnowledgeStore} from '../knowledge/knowledge-store';
 import {ModuleGovernanceService} from '../governance/module-governance';
-import {FileDispatchStore} from '../persistence/tasks/dispatch-store';
-import {KnowledgeSources} from './knowledge-sources';
+import {FileDispatchStore} from '../dispatch-storage/dispatch-store';
+import {KnowledgeSources} from '../registry/knowledge-sources';
 import type {KnowledgePlanRef} from '../../core/knowledge/planned-commit';
-import type {KnowledgeGovernanceTransaction} from '../persistence/knowledge/governance-port';
+import type {KnowledgeGovernanceTransaction} from '../knowledge/governance-port';
 import type {WorkspaceEntry,WorkspaceView,Snapshot,ChangeRequest,TaskView} from '../../../bridge/contracts/workspace';
 export class Workspace implements KnowledgeWorkspace {
   readonly objects:FileObjectStorage;

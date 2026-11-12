@@ -2,8 +2,8 @@ import type {OwnerExecutionSelection} from '../src/backend/core/team/member-exec
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {Application} from '../src/backend/main/application';
-import type {DispatchMutation,DispatchMessage} from '../src/backend/core/tasks/dispatch-storage';
+import type {Application} from '../src/backend/main/assembly/application';
+import type {DispatchMutation,DispatchMessage} from '../src/backend/core/dispatch/dispatch-storage';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import type {AgentInstance} from '../src/backend/core/team/agent-types';
 import {seedTeam} from './team-fixture';

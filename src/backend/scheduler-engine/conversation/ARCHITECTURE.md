@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-主 Agent 的规划、审阅与团队管理指引，以及提问、审批和队列。原题与选项独立保存，公开待答列表返回副本，答案与取消只有一次消费；坏回包不重弹。主调度可安排求助补做、替换未启动前置或撤销待办；旧失败不改写，问答不替代人工决定或恢复。 两项反馈入口先读取对应内置 Skill 再引导填写；收集反馈不启动业务派工。 主提示在两种模式下都直接实现未配置模块，并只把已配置自定义岗位派发出去；完成里程碑后按事实沉淀团队与业务架构。 主调度将原检查点放弃、旧后继撤销和新负责岗位重新派发分开决策，真实新成果才可替代审阅。 收到坏回包可先核实原命令保存事实，查无回执不等于未执行，原业务仍沿实际任务和验收流程决策。
+主会话执行管理，连接执行循环、输入和运行视图；正式成员调度在 members。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -11,6 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [approvals.ts](approvals.ts) | 任务内操作确认及本次运行全部放行的生命周期。 |
+| [execution-manager.ts](execution-manager.ts) | 工作区主对话管理，负责普通 chat、目标周期接续、多轮历史和消息队列；旧直接团队业务入口拒绝新执行，业务成员统一经岗位派发领取。 |
 | [main-agent.ts](main-agent.ts) | 定义内置主 Agent 的固定身份、业务调度与团队/业务知识管理指引，区分原始目标、已接收补充及未核实插入。 |
 | [message-queue.ts](message-queue.ts) | 保存工作区各对话的待执行消息与发送时的模型/权限快照。 |
 | [questions.ts](questions.ts) | 管理工作区内等待用户回答的结构化问题，供 Loop 工具与对话界面共享。 |
@@ -35,7 +36,165 @@ class N_src_backend_scheduler_engine_conversation_approvals_ts_ApprovalQueue["Ap
 N_src_backend_scheduler_engine_conversation_approvals_ts ..> N_src_backend_scheduler_engine_conversation_approvals_ts_ApprovalQueue : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/policy/types.ts](../../core/policy/types.ts)、[../../core/tools/types.ts](../../core/tools/types.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/policy/types.ts](../../core/tools/policy/types.ts)、[../../core/tools/types.ts](../../core/tools/types.ts)。
+
+### execution-manager.ts
+
+成员 1/4（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_conversation_execution_manager_ts["execution-manager.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_conversation_execution_manager_ts_Options["Options"] {
+  <<type>>
+
+}
+N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_execution_manager_ts_Options : 声明
+class N_src_backend_scheduler_engine_conversation_execution_manager_ts_MainStartup["MainStartup"] {
+  <<interface>>
+  +signal
+  +prepare()
+}
+N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_execution_manager_ts_MainStartup : 声明
+class N_src_backend_scheduler_engine_conversation_execution_manager_ts_ExecutionCollaboration["ExecutionCollaboration"] {
+  <<interface>>
+  +activeInputReceipt()
+  +insertActiveInput()
+  +humanContinuationReceipt()
+  +humanContinuationPreflight()
+  +acceptHumanContinuation()
+  +replanReceipt()
+  +replanPreflight()
+  +acceptReplan()
+  +recoveryReceipt()
+  +recoveryPreflight()
+  +acceptRecovery()
+  +recoveryContext()
+  +recoveryRunIds()
+  +continuationReceipt()
+  +continuationCheckpoint()
+  +acceptContinuation()
+}
+N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_execution_manager_ts_ExecutionCollaboration : 声明
+class N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
+  +workspace
+  +cancelPendingLaunches()
+  +attachCollaboration()
+  +observeQueue()
+  +initializeQueueMonitoring()
+  +queued()
+  +queueDelta()
+  +enqueue()
+  +changeQueued()
+  +editQueued()
+  +moveQueued()
+  +insertQueued()
+  +continueQueue()
+  +pendingQuestions()
+  +answerQuestion()
+  +pendingApprovals()
+}
+N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager : 声明
+```
+
+成员 2/4（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_conversation_execution_manager_ts["execution-manager.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_conversation_execution_manager_ts_ExecutionCollaboration["ExecutionCollaboration"] {
+  <<interface>>
+  +starting()
+  +holdMain()
+  +startFailed()
+  +busy()
+  +waiting()
+  +settled()
+  +stop()
+}
+N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_execution_manager_ts_ExecutionCollaboration : 声明
+class N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
+  +answerApproval()
+  +subscribe()
+  +prepare()
+  +choices()
+  +thread()
+  +threadView()
+  +start()
+  +chat()
+  +recoverExecution()
+  +replanExecution()
+  +continueGoal()
+  +continueFromHumanDecisions()
+  +resume()
+  +continueFromResults()
+  +collaborationReady()
+  +pauseCollaboration()
+}
+N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager : 声明
+```
+
+成员 3/4（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_conversation_execution_manager_ts["execution-manager.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
+  +stop()
+  +inspect()
+  +list()
+  +close()
+  -storage
+  -factory
+  -inputImages
+  -prepareContinuationInput
+  -collaboration
+  -resultContinuationStopped
+  -queueAdvanceStopped
+  -stopVersions
+  -pendingLaunches
+  -pendingInsertions
+  -insertionsClosed
+  -cancelInsertions()
+}
+N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager : 声明
+```
+
+成员 4/4（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_conversation_execution_manager_ts["execution-manager.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
+  -messageQueue
+  -queueSubscriptions
+  -queueSource()
+  -queue()
+  -pump()
+  -active
+  -pending
+  -closing
+  -listeners
+  -questions
+  -approvalQueue
+  -cancelApprovals()
+  -serial()
+  -checkedCurrentHistory()
+  -launch()
+  -directory()
+}
+N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager : 声明
+```
+
+直接依赖：[message-queue.ts](message-queue.ts)、[approvals.ts](approvals.ts)、[questions.ts](questions.ts)、[main-agent.ts](main-agent.ts)、[../../core/models/engine.ts](../../core/models/engine.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/identity.ts](../../core/foundation/identity.ts)、[../../core/execution/storage.ts](../../core/execution/storage.ts)、[../../core/execution/index.ts](../../core/execution/index.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/execution/input-source.ts](../../core/execution/input-source.ts)、[../assembly/loop-engine.ts](../assembly/loop-engine.ts)、[../context/team-workflow.ts](../context/team-workflow.ts)、[../../core/knowledge/read-models/index.ts](../../core/knowledge/read-models/index.ts)、[../../core/tasks/scope-continuation.ts](../../core/tasks/scope-continuation.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/scope-active-input.ts](../../core/tasks/scope-active-input.ts)、[../../core/tasks/scope-active-input-rules.ts](../../core/tasks/scope-active-input-rules.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/tasks/scope-continuation-attachments.ts](../../core/tasks/scope-continuation-attachments.ts)、[../../core/tasks/scope-recovery.ts](../../core/tasks/scope-recovery.ts)、[../../core/tasks/fresh-context.ts](../../core/tasks/fresh-context.ts)、[../admission/admission-wait.ts](../admission/admission-wait.ts)、[../../core/tasks/scope-replan.ts](../../core/tasks/scope-replan.ts)、[../../core/tasks/human-continue.ts](../../core/tasks/human-continue.ts)。
 
 ### main-agent.ts
 
@@ -129,6 +288,31 @@ N_src_backend_scheduler_engine_conversation_questions_ts ..> N_src_backend_sched
 ```
 
 直接依赖：[../../core/tools/questions.ts](../../core/tools/questions.ts)。
+
+### 本目录调用边界
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_conversation_execution_manager_ts["execution-manager.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_conversation_message_queue_ts["message-queue.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_conversation_approvals_ts["approvals.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_conversation_questions_ts["questions.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_conversation_main_agent_ts["main-agent.ts"] {
+  <<module>>
+}
+N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_message_queue_ts : 导入依赖
+N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_approvals_ts : 导入依赖
+N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_questions_ts : 导入依赖
+N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_main_agent_ts : 导入依赖
+```
 
 
 ## 子目录导航

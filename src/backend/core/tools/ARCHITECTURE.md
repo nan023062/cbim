@@ -23,37 +23,66 @@
 
 ## 架构类图
 
-### contracts.ts
-
 ```mermaid
 classDiagram
+class N_src_backend_core_tools_policy["policy/"] {
+  <<directory>>
+}
 class N_src_backend_core_tools_contracts_ts["contracts.ts"] {
   <<module>>
 }
-class N_src_backend_core_tools_contracts_ts_ToolCancellation["ToolCancellation"] {
-  <<type>>
-
+class N_src_backend_core_tools_native_tools_ts["native-tools.ts"] {
+  <<module>>
 }
-N_src_backend_core_tools_contracts_ts ..> N_src_backend_core_tools_contracts_ts_ToolCancellation : 声明
-class N_src_backend_core_tools_contracts_ts_ToolRecovery["ToolRecovery"] {
-  <<type>>
-
+class N_src_backend_core_tools_outcome_ts["outcome.ts"] {
+  <<module>>
 }
-N_src_backend_core_tools_contracts_ts ..> N_src_backend_core_tools_contracts_ts_ToolRecovery : 声明
-class N_src_backend_core_tools_contracts_ts_KnowledgeToolCatalog["KnowledgeToolCatalog"] {
-  <<type>>
-
+class N_src_backend_core_tools_questions_ts["questions.ts"] {
+  <<module>>
 }
-N_src_backend_core_tools_contracts_ts ..> N_src_backend_core_tools_contracts_ts_KnowledgeToolCatalog : 声明
-class N_src_backend_core_tools_contracts_ts_KnowledgeToolDescription["KnowledgeToolDescription"] {
-  <<type>>
-
+class N_src_backend_core_tools_receipt_schema_ts["receipt-schema.ts"] {
+  <<module>>
 }
-N_src_backend_core_tools_contracts_ts ..> N_src_backend_core_tools_contracts_ts_KnowledgeToolDescription : 声明
+N_src_backend_core_tools_native_tools_ts ..> N_src_backend_core_tools_policy : 导入依赖
 ```
 
+```mermaid
+classDiagram
+class N_src_backend_core_tools_receipts_ts["receipts.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tools_registry_ts["registry.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tools_results_ts["results.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tools_scope_schema_ts["scope-schema.ts"] {
+  <<module>>
+}
+class N_src_backend_core_tools_types_ts["types.ts"] {
+  <<module>>
+}
+N_src_backend_core_tools_receipts_ts ..> N_src_backend_core_tools_types_ts : 导入依赖
+N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_types_ts : 导入依赖
+N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_results_ts : 导入依赖
+N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_scope_schema_ts : 导入依赖
+```
 
-### native-tools.ts
+各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
+
+- `native-tools.ts` → `policy`：导入。
+- `outcome.ts` → `results.ts`：导入。
+- `policy` → `types.ts`：导入。
+- `policy` → `scope-schema.ts`：导入。
+- `receipt-schema.ts` → `scope-schema.ts`：导入。
+- `receipts.ts` → `types.ts`：导入。
+- `registry.ts` → `types.ts`：导入。
+- `registry.ts` → `results.ts`：导入。
+- `registry.ts` → `contracts.ts`：导入。
+- `types.ts` → `scope-schema.ts`：导入。
+
+### native-tools.ts 公开入口
 
 ```mermaid
 classDiagram
@@ -64,9 +93,8 @@ class N_src_backend_core_tools_native_tools_ts["native-tools.ts"] {
 }
 ```
 
-直接依赖：[../policy/tool-policy.ts](../policy/tool-policy.ts)、[../brain/llm/engine.ts](../brain/llm/engine.ts)。
 
-### outcome.ts
+### outcome.ts 公开入口
 
 ```mermaid
 classDiagram
@@ -80,32 +108,8 @@ class N_src_backend_core_tools_outcome_ts["outcome.ts"] {
 }
 ```
 
-```mermaid
-classDiagram
-class N_src_backend_core_tools_outcome_ts["outcome.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tools_outcome_ts_ToolReconciliation["ToolReconciliation"] {
-  <<interface>>
-  +tool
-  +args
-}
-N_src_backend_core_tools_outcome_ts ..> N_src_backend_core_tools_outcome_ts_ToolReconciliation : 声明
-class N_src_backend_core_tools_outcome_ts_ToolOutcome["ToolOutcome"] {
-  <<interface>>
-  +status
-  +retryable
-  +terminal
-  +reconcileTool
-  +reconcileArgs
-  +nextStep
-}
-N_src_backend_core_tools_outcome_ts ..> N_src_backend_core_tools_outcome_ts_ToolOutcome : 声明
-```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[results.ts](results.ts)。
-
-### questions.ts
+### questions.ts 公开入口
 
 ```mermaid
 classDiagram
@@ -115,42 +119,8 @@ class N_src_backend_core_tools_questions_ts["questions.ts"] {
 }
 ```
 
-```mermaid
-classDiagram
-class N_src_backend_core_tools_questions_ts["questions.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tools_questions_ts_QuestionInput["QuestionInput"] {
-  <<type>>
 
-}
-N_src_backend_core_tools_questions_ts ..> N_src_backend_core_tools_questions_ts_QuestionInput : 声明
-class N_src_backend_core_tools_questions_ts_PendingQuestion["PendingQuestion"] {
-  <<interface>>
-  +id
-  +taskId
-}
-N_src_backend_core_tools_questions_ts ..> N_src_backend_core_tools_questions_ts_PendingQuestion : 声明
-N_src_backend_core_tools_questions_ts_QuestionInput <|-- N_src_backend_core_tools_questions_ts_PendingQuestion
-class N_src_backend_core_tools_questions_ts_QuestionResult["QuestionResult"] {
-  <<type>>
-
-}
-N_src_backend_core_tools_questions_ts ..> N_src_backend_core_tools_questions_ts_QuestionResult : 声明
-```
-
-
-### receipt-schema.ts
-
-```mermaid
-classDiagram
-class N_src_backend_core_tools_receipt_schema_ts["receipt-schema.ts"] {
-  <<module>>
-}
-```
-直接依赖：[scope-schema.ts](scope-schema.ts)。
-
-### receipts.ts
+### receipts.ts 公开入口
 
 ```mermaid
 classDiagram
@@ -160,46 +130,8 @@ class N_src_backend_core_tools_receipts_ts["receipts.ts"] {
 }
 ```
 
-直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[types.ts](types.ts)。
 
-### registry.ts
-
-```mermaid
-classDiagram
-class N_src_backend_core_tools_registry_ts["registry.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tools_registry_ts_ToolDefinition["ToolDefinition"] {
-  <<interface>>
-  +name
-  +description
-  +inputSchema
-  +outputSchema
-  +version
-  +effects
-  +cancellation
-  +recovery
-  +execute
-}
-N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_registry_ts_ToolDefinition : 声明
-class N_src_backend_core_tools_registry_ts_ToolRegistry["ToolRegistry"] {
-  +tools
-  +register()
-  +list()
-  +catalog()
-  +describe()
-  +resolve()
-  +invokeResolved()
-  -entries
-  -summary()
-  -entry()
-}
-N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_registry_ts_ToolRegistry : 声明
-```
-
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[types.ts](types.ts)、[results.ts](results.ts)、[contracts.ts](contracts.ts)。
-
-### results.ts
+### results.ts 公开入口
 
 ```mermaid
 classDiagram
@@ -211,152 +143,10 @@ class N_src_backend_core_tools_results_ts["results.ts"] {
 }
 ```
 
-```mermaid
-classDiagram
-class N_src_backend_core_tools_results_ts["results.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tools_results_ts_ToolResultContent["ToolResultContent"] {
-  <<type>>
-
-}
-N_src_backend_core_tools_results_ts ..> N_src_backend_core_tools_results_ts_ToolResultContent : 声明
-class N_src_backend_core_tools_results_ts_ToolResult["ToolResult"] {
-  <<interface>>
-  +content
-  +isError
-  +details
-}
-N_src_backend_core_tools_results_ts ..> N_src_backend_core_tools_results_ts_ToolResult : 声明
-```
-
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)。
-
-### scope-schema.ts
-
-```mermaid
-classDiagram
-class N_src_backend_core_tools_scope_schema_ts["scope-schema.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tools_scope_schema_ts_RepositoryToolScope["RepositoryToolScope"] {
-  <<type>>
-
-}
-N_src_backend_core_tools_scope_schema_ts ..> N_src_backend_core_tools_scope_schema_ts_RepositoryToolScope : 声明
-class N_src_backend_core_tools_scope_schema_ts_ToolScope["ToolScope"] {
-  <<type>>
-
-}
-N_src_backend_core_tools_scope_schema_ts ..> N_src_backend_core_tools_scope_schema_ts_ToolScope : 声明
-```
-
-直接依赖：[../connectors/definition.ts](../connectors/definition.ts)。
-
-### types.ts
-
-```mermaid
-classDiagram
-class N_src_backend_core_tools_types_ts["types.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tools_types_ts_ToolCall["ToolCall"] {
-  <<interface>>
-  +id
-  +name
-  +input
-}
-N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_types_ts_ToolCall : 声明
-class N_src_backend_core_tools_types_ts_ToolEffect["ToolEffect"] {
-  <<type>>
-
-}
-N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_types_ts_ToolEffect : 声明
-class N_src_backend_core_tools_types_ts_ToolDecision["ToolDecision"] {
-  <<interface>>
-  +allow
-  +reason
-  +effects
-  +scope
-}
-N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_types_ts_ToolDecision : 声明
-class N_src_backend_core_tools_types_ts_ToolReceipt["ToolReceipt"] {
-  <<interface>>
-  +version
-  +toolCallId
-  +toolName
-  +workspaceId
-  +taskId
-  +runId
-  +outcome
-  +inputHash
-  +resultHash
-  +effects
-  +scope
-  +recordedAt
-}
-N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_types_ts_ToolReceipt : 声明
-```
-
-直接依赖：[scope-schema.ts](scope-schema.ts)。
-
-### 本目录调用边界
-
-```mermaid
-classDiagram
-class N_src_backend_core_tools_outcome_ts["outcome.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tools_results_ts["results.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tools_receipt_schema_ts["receipt-schema.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tools_scope_schema_ts["scope-schema.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tools_receipts_ts["receipts.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tools_types_ts["types.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tools_registry_ts["registry.ts"] {
-  <<module>>
-}
-N_src_backend_core_tools_outcome_ts ..> N_src_backend_core_tools_results_ts : 导入依赖
-N_src_backend_core_tools_receipt_schema_ts ..> N_src_backend_core_tools_scope_schema_ts : 导入依赖
-N_src_backend_core_tools_receipts_ts ..> N_src_backend_core_tools_types_ts : 导入依赖
-N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_types_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_tools_registry_ts["registry.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tools_results_ts["results.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tools_contracts_ts["contracts.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tools_types_ts["types.ts"] {
-  <<module>>
-}
-class N_src_backend_core_tools_scope_schema_ts["scope-schema.ts"] {
-  <<module>>
-}
-N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_results_ts : 导入依赖
-N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_contracts_ts : 导入依赖
-N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_scope_schema_ts : 导入依赖
-```
-
 
 ## 子目录导航
 
-无子目录。
+- [policy/](policy/ARCHITECTURE.md)：工具统一授权策略：read/ask/execute 决策及协议；业务写入和知识写入共用策略，不能豁免平台边界，也不等于操作系统隔离。
 
 [返回上层](../ARCHITECTURE.md)。
 

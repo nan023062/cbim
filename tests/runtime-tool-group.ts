@@ -1,4 +1,4 @@
-import type {EngineContext} from '../src/backend/core/brain/types';
+import type {EngineContext} from '../src/backend/core/execution/types';
 import {validateToolResult,type ToolResult} from '../src/backend/core/tools/results';
 
 /** 测试引擎按可信能力 ID 查找端口，保持原调用身份与取消信号；不暴露业务实例或平台内部字段。 */

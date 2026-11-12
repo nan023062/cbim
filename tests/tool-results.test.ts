@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest';
 import {jsonToolResult,validateToolResult} from '../src/backend/core/tools/results';
-import {openBridge} from '../src/backend/core/brain/pi/bridge';
+import {openBridge} from '../src/backend/engines/pi/bridge';
 
 it('显式空值可表达，未定义、循环或无法序列化的返回值不能伪装为成功文本',()=>{
   for(const value of [undefined,()=>1,Symbol('invalid'),BigInt(1)])expect(()=>jsonToolResult('cbim_test',value)).toThrowError(expect.objectContaining({code:'TOOL_RESULT_INVALID'}));

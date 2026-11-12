@@ -1,13 +1,13 @@
 import {it,expect,vi} from 'vitest';
 import {toolScopeSchema,repositoryToolScopeSchema,type RepositoryToolScope} from '../src/backend/core/tools/scope-schema';
 import {repositoryListInputSchema,repositoryGetInputSchema,repositoryListOutputSchema,repositoryGetOutputSchema,repositoryToolTargetSchema} from '../src/backend/core/connectors/repository-tools';
-import {authorizeRunTool,type RunToolDescriptor} from '../src/backend/core/policy/tool-policy';
+import {authorizeRunTool,type RunToolDescriptor} from '../src/backend/core/tools/policy/tool-policy';
 import {toolReceipt} from '../src/backend/core/tools/receipts';
 import type {ToolReceipt} from '../src/backend/core/tools/types';
 import {executionReportSchema} from '../src/backend/core/tasks/execution-report';
-import {TaskProgressTools} from '../src/backend/core/tasks/progress-tools';
-import {evaluateWorkflowDelivery} from '../src/backend/core/tasks/workflow-evidence';
-import {artifactSucceededCall,artifactSources,verifyArtifactBaselines,type ArtifactEvidenceEvent} from '../src/backend/core/tasks/artifact-evidence';
+import {TaskProgressTools} from '../src/backend/core/evidence/progress-tools';
+import {evaluateWorkflowDelivery} from '../src/backend/core/evidence/workflow-evidence';
+import {artifactSucceededCall,artifactSources,verifyArtifactBaselines,type ArtifactEvidenceEvent} from '../src/backend/core/evidence/artifact-evidence';
 import type {WorkflowContractBinding} from '../src/backend/core/tasks/execution-context';
 import {hash} from '../src/backend/core/foundation/serialization';
 

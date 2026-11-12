@@ -5,7 +5,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {once} from 'node:events';
 import {execFileSync} from 'node:child_process';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
 import {seedTeam} from '../tests/team-fixture';

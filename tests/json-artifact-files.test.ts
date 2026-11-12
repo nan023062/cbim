@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {createHash} from 'node:crypto';
-import {ArtifactFiles} from '../src/backend/main/platform/artifact-files';
+import {ArtifactFiles} from '../src/backend/main/platform/files/artifact-files';
 import {jsonValidationLimits,type BoundedJsonSchema} from '../src/backend/core/workspace/json-validation-schema';
 
 const schema:BoundedJsonSchema={type:'object',properties:{count:{type:'integer',minimum:1}},required:['count'],additionalProperties:false};

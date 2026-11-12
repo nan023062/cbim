@@ -1,5 +1,5 @@
-import {RunValidation} from '../src/backend/core/brain/run-validation';
-import type {ValidationInput,ValidationResult} from '../src/backend/core/tasks/validation';
+import {RunValidation} from '../src/backend/core/execution/capabilities/run-validation';
+import type {ValidationInput,ValidationResult} from '../src/backend/core/evidence/validation';
 import {runtimeToolGroup} from './runtime-tool-group';
 import {afterEach,it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
@@ -7,9 +7,9 @@ import path from 'node:path';
 import {completeFixture,completeContracts,prepareComplete,completeStep,rejected,delivery} from './complete-output-fixture';
 import {artifactBinding,invoke,deferred,seedProgress,captureInput} from './artifact-runtime-fixture';
 import {verifyManifests,manifestContracts} from './output-manifest-fixture';
-import {completeOutputProof} from '../src/backend/core/tasks/complete-output-evidence';
-import {verifyValidationRecords} from '../src/backend/core/tasks/validation-evidence';
-import {validateWorkflowEvidence} from '../src/backend/core/tasks/workflow-evidence';
+import {completeOutputProof} from '../src/backend/core/evidence/complete-output-evidence';
+import {verifyValidationRecords} from '../src/backend/core/evidence/validation-evidence';
+import {validateWorkflowEvidence} from '../src/backend/core/evidence/workflow-evidence';
 import {workflowContractSchema} from '../src/backend/core/workspace/workflow-contract';
 
 it('完整出口必须声明范围，显式选择原清单并让 JSON/候选/历史重算共享身份',async()=>{

@@ -1,8 +1,8 @@
 import {expect,it,vi} from 'vitest';
-import {claudeTools} from '../src/backend/core/brain/claude/tools';
-import {codexTools} from '../src/backend/core/brain/codex/tools';
-import type {EngineContext} from '../src/backend/core/brain/types';
-import type {EngineToolsPort} from '../src/backend/core/brain/engine-tools';
+import {claudeTools} from '../src/backend/engines/claude/tools';
+import {codexTools} from '../src/backend/engines/codex/tools';
+import type {EngineContext} from '../src/backend/core/execution/types';
+import type {EngineToolsPort} from '../src/backend/core/execution/engine-tools';
 
 it.each([true,false])('Claude/Codex 按可信能力策略收窄实际目录，关闭原生工具=%s',async disabled=>{
   const internal:EngineToolsPort={list:async()=>[{name:'cbim_business',inputSchema:{type:'object'}}],call:async()=>({content:[{type:'text',text:'{}'}]})};

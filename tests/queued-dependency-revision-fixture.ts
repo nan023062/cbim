@@ -3,7 +3,7 @@ import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import type {ReviseQueuedDependenciesInput} from '../src/backend/core/tasks/queued-dependency-revision';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
+import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
 import {registerServiceOwner} from './owner-service-fixture';
 
 export async function revisionFixture(){

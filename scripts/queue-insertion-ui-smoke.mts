@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import {Application} from '../src/backend/main/application';
+import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {insertionData as data,insertionProvider} from '../tests/queue-insertion-provider';
 import {insertionWait,seedInsertion} from '../tests/queue-insertion-fixture';

@@ -6,12 +6,12 @@
 import {z} from 'zod';
 import {webConfigureInput,type WebSettingsView} from '../../backend/core/connectors/web-tools';
 import {ipcId,noIpcArgs} from './ipc-shapes';
-import {type DiscoveredModel} from '../../backend/core/brain/llm/catalog';
-import {type LlmSettings,connectionSchema,definition} from '../../backend/core/brain/llm/config';
+import {type DiscoveredModel} from '../../backend/core/models/catalog';
+import {type LlmSettings,connectionSchema,definition} from '../../backend/core/models/config';
 import {type GitHubFeedbackStatus,githubFeedbackConfigSchema} from '../../backend/core/connectors/github-feedback';
 import {type AdmissionPolicy,type AdmissionRead,admissionConfigureSchema,admissionCursorSchema} from '../../backend/core/runtime/admission';
 import {type RuntimeRead,type RuntimeSnapshot} from '../../backend/core/runtime/types';
-import {type ScopeBudgetPolicy,scopeBudgetPolicySchema} from '../../backend/core/tasks/scope-budget';
+import {type ScopeBudgetPolicy,scopeBudgetPolicySchema} from '../../backend/core/budget/scope-budget';
 import {modelActionSchemas,type ModelActionResults} from './model-actions';
 
 export const settingsIpcRequests={

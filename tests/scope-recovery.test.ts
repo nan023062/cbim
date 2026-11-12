@@ -8,14 +8,14 @@ import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import {recoveryRequestSchema,recoveryReceiptSchema,type RecoveryRequest} from '../src/backend/core/tasks/scope-recovery';
-import {FileDispatchStore} from '../src/backend/main/persistence/tasks/dispatch-store';
-import {FileRunStorage} from '../src/backend/main/persistence/tasks/run-storage';
-import {RunJournal} from '../src/backend/main/persistence/tasks/run-journal';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/execution/dispatch-service';
-import {MemberExecutionManager,type MemberExecutionPorts} from '../src/backend/scheduler-engine/execution/member-execution';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/execution/workspace-lease';
-import {LoopRuntime} from '../src/backend/core/brain/runtime';
-import type {EngineContext,TaskSpec} from '../src/backend/core/brain/types';
+import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {MemberExecutionManager,type MemberExecutionPorts} from '../src/backend/scheduler-engine/members/member-execution';
+import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
+import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
+import type {EngineContext,TaskSpec} from '../src/backend/core/execution/types';
 
 async function setup(withRun=true){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),team=await seedTeam(workspace),snapshot=await workspace.snapshot();

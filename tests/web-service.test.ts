@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
 import http from 'node:http';
-import {PublicHttp,publicUrl,publicAddress,type PublicHttpTransport} from '../src/backend/main/platform/public-http';
-import {WebService} from '../src/backend/main/resources/web-service';
+import {PublicHttp,publicUrl,publicAddress,type PublicHttpTransport} from '../src/backend/main/web/public-http';
+import {WebService} from '../src/backend/main/web/web-service';
 import {htmlMarkdown,truncateParagraphs} from '../src/backend/main/resources/web-content';
 import {WebTools} from '../src/backend/scheduler-engine/tools/web-tools';
 

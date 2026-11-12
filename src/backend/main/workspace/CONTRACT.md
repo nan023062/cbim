@@ -42,7 +42,7 @@ Workspace *-- KernelLock : 打开时持有，关闭时释放
 - `close()` 停止监听、取消维护任务、排空知识事务，最后释放锁。应用先排空执行及成员调度，才关闭工作区。
 - 工作区诊断只读展示状态与问题，不提供重启操作。打开流程不修改项目的其他开发工具配置。
 
-知识存储与平台边界分别见 [persistence/knowledge](../persistence/knowledge/ARCHITECTURE.md)、[platform](../platform/ARCHITECTURE.md)。
+知识存储与平台边界分别见 [knowledge](../knowledge/ARCHITECTURE.md)、[platform](../platform/ARCHITECTURE.md)。
 
 ### 长期岗位登记
 

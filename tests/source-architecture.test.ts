@@ -66,15 +66,15 @@ test('长类和多入口模块分段展示，保留全部公开生命周期接�
 
 test('非叶子目录保持子目录边界，并列出本层模块公开入口',()=>{
   const project=fixture({
-    'src/backend/core/brain/member-run.ts':'export interface Binding {runId:string}; export function checkedBinding(value:Binding){return value}',
-    'src/backend/core/brain/llm/types.ts':'export interface Model {id:string}',
+    'src/backend/core/execution/member-run.ts':'export interface Binding {runId:string}; export function checkedBinding(value:Binding){return value}',
+    'src/backend/core/execution/runtime/types.ts':'export interface Model {id:string}',
   });
   const result=project.run();expect(result.status,result.stderr).toBe(0);
-  const document=project.read('src/backend/core/brain/ARCHITECTURE.md');
-  expect(document).toContain('["llm/"] {\n  <<directory>>');
+  const document=project.read('src/backend/core/execution/ARCHITECTURE.md');
+  expect(document).toContain('["runtime/"] {\n  <<directory>>');
   expect(document).toContain('+checkedBinding()');
   expect(document).not.toContain('["Model"]');
-  expect(document).toContain('[llm/](llm/ARCHITECTURE.md)');
+  expect(document).toContain('[runtime/](runtime/ARCHITECTURE.md)');
 });
 
 test('--check 检测源码及契约漂移但不写文档，再生成时保留独立契约',()=>{

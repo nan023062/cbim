@@ -4,8 +4,8 @@
  */
 import {z} from 'zod';
 import {ipcId,workspaceIdArgs,taskIdArgs,runIdArgs,questionAnswers} from './ipc-shapes';
-import {type ConversationThreadView,type RunSummary} from '../../backend/core/brain/types';
-import {type ChatApproval} from '../../backend/core/policy/types';
+import {type ConversationThreadView,type RunSummary} from '../../backend/core/execution/types';
+import {type ChatApproval} from '../../backend/core/tools/policy/types';
 import {type HumanContinuationReceipt,humanContinuationLookupSchema,humanContinuationRequestSchema} from '../../backend/core/tasks/human-continue';
 import {type QueueDelta,type QueuedMessage} from '../../backend/core/tasks/queue';
 import {type GoalContinuationReceipt,goalContinuationRequestSchema,scopeContinuationLookupSchema} from '../../backend/core/tasks/scope-continuation';

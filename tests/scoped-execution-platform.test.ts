@@ -1,8 +1,8 @@
 import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';import path from 'node:path';import os from 'node:os';
-import {ScopedExecutionFiles} from '../src/backend/main/platform/scoped-execution-files';
-import {ArtifactFiles} from '../src/backend/main/platform/artifact-files';
-import {OutputManifestFiles} from '../src/backend/main/platform/output-manifest-files';
+import {ScopedExecutionFiles} from '../src/backend/main/platform/files/scoped-execution-files';
+import {ArtifactFiles} from '../src/backend/main/platform/files/artifact-files';
+import {OutputManifestFiles} from '../src/backend/main/platform/files/output-manifest-files';
 import type {ExecutionScope} from '../src/backend/core/workspace/execution-scope';
 async function fixture(){const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'cbim-scoped-platform-')));await fs.mkdir(path.join(root,'src'));await fs.writeFile(path.join(root,'src','data.txt'),'actual');await fs.writeFile(path.join(root,'private.txt'),'PRIVATE_SENTINEL');const scope:ExecutionScope={version:1,profile:'windows-lpac-node-v1',read:[{path:'src',kind:'directory'}],write:[],node:{timeoutMs:1500,memoryMiB:512,processLimit:2}},port=new ScopedExecutionFiles(root,scope,()=>{});return {root,port,scope,close:async()=>{await port.drain();if(path.dirname(root)!==await fs.realpath(os.tmpdir())||!/^cbim-scoped-platform-/.test(path.basename(root)))throw Error('cleanup');await fs.rm(root,{recursive:true,force:true,maxRetries:5})}}}
 it('实际Win32只读文件可读；范围外和目录联接拒绝，枚举锁期间父目录不能被替换',async()=>{

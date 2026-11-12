@@ -5,7 +5,7 @@ import os from 'node:os';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {packageCodexRuntime} from '../scripts/package-pi-runtime.mjs';
-import {codexBinary} from '../src/backend/core/brain/codex/binary';
+import {codexBinary} from '../src/backend/engines/codex/binary';
 
 test('Codex 独立资源保留平台包别名，并从打包目录运行固定版本原生进程',async()=>{
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-codex-package-')),runtime=path.join(root,'codex-runtime'),original=(process as any).resourcesPath;

@@ -9,7 +9,7 @@ import {queuedDependencyAdditionSelection} from '../src/backend/core/tasks/queue
 import {addQueuedDependencyInputSchema,dependencyAdditionSchema,type AddQueuedDependencyInput,type DependencyAddition,type AddQueuedDependencyReceipt} from '../src/backend/core/tasks/queued-dependency-addition';
 import {mainToolOutputSchema} from '../src/backend/core/tasks/main-tool-output';
 import {checkedJsonToolResult} from '../src/backend/core/tools/results';
-import type {DispatchState,DispatchMutation} from '../src/backend/core/tasks/dispatch-storage';
+import type {DispatchState,DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
 import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
 import type {AgentRef,TaskNode,GraphEdge,GraphEventBatch} from '../src/backend/core/tasks/graph-types';
 

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import ts from 'typescript';
 import {type AgentHistoryQueryPort} from '../src/backend/main/ipc/agent-history';
 import {dispatchApplication} from '../src/backend/main/ipc/dispatch';
-import type {Application} from '../src/backend/main/application';
+import type {Application} from '../src/backend/main/assembly/application';
 import {agentHistoryRequests,isAgentHistoryAction} from '../src/bridge/contracts/agent-history-ipc';
 import {ipcRequests} from '../src/bridge/contracts/ipc-call';
 

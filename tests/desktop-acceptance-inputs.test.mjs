@@ -1,7 +1,15 @@
 import {describe, expect, it} from 'vitest';
-import {acceptanceInputs} from '../scripts/desktop-acceptance-inputs.mjs';
+import {acceptanceInputs, acceptanceTransferExpectation} from '../scripts/desktop-acceptance-inputs.mjs';
 
 const env = {CBIM_ACCEPTANCE_VERSION: '0.1.3', CBIM_ACCEPTANCE_PREVIOUS_VERSION: '0.1.2', CBIM_ACCEPTANCE_COMMIT: 'a'.repeat(40), CBIM_ACCEPTANCE_SHA256: 'b'.repeat(64), CBIM_ACCEPTANCE_MODE: 'candidate'};
+
+it('keeps differential mandatory unless the separate online fallback diagnosis is explicitly selected', () => {
+  expect(acceptanceTransferExpectation({}, {mode:'online', previousUpdateFlow:'prefetch'})).toBe('differential');
+  expect(acceptanceTransferExpectation({CBIM_ACCEPTANCE_TRANSFER:'full-fallback'}, {mode:'online', previousUpdateFlow:'prefetch'})).toBe('full-fallback');
+  expect(() => acceptanceTransferExpectation({CBIM_ACCEPTANCE_TRANSFER:'any'}, {mode:'online', previousUpdateFlow:'prefetch'})).toThrow();
+  expect(() => acceptanceTransferExpectation({CBIM_ACCEPTANCE_TRANSFER:'full-fallback'}, {mode:'candidate', previousUpdateFlow:'prefetch'})).toThrow();
+  expect(() => acceptanceTransferExpectation({CBIM_ACCEPTANCE_TRANSFER:'full-fallback'}, {mode:'online', previousUpdateFlow:'automatic'})).toThrow();
+});
 describe('desktop upgrade acceptance inputs', () => {
   it.each(['candidate', 'online'])('pins the actual previous release in %s mode', mode => {
     expect(acceptanceInputs({...env, CBIM_ACCEPTANCE_MODE: mode})).toEqual({version: '0.1.3', previousVersion: '0.1.2', previousUpdateFlow: 'two-step', commit: env.CBIM_ACCEPTANCE_COMMIT, expected: env.CBIM_ACCEPTANCE_SHA256, mode});

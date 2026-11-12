@@ -14,3 +14,11 @@ export function acceptanceInputs(env) {
   assert.ok(['candidate', 'online'].includes(mode));
   return {version, previousVersion, previousUpdateFlow, commit, expected, mode};
 }
+
+// 全量回退只能作为明确命名的诊断场景；默认仍严格要求差分，不能用此入口把回退报告成差分通过。
+export function acceptanceTransferExpectation(env, {mode, previousUpdateFlow}) {
+  const value = env.CBIM_ACCEPTANCE_TRANSFER || 'differential';
+  assert.ok(['differential', 'full-fallback'].includes(value), 'Unsupported transfer expectation');
+  if (value === 'full-fallback') assert.ok(mode === 'online' && previousUpdateFlow === 'prefetch', 'Fallback diagnosis requires an online prefetch client');
+  return value;
+}

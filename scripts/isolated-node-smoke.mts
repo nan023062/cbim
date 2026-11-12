@@ -6,7 +6,11 @@ import type {IsolatedNodeResult} from '../src/backend/main/platform/isolation/is
 const executable=await latestExecutable(),root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-isolation-exe-')),report=path.join(root,'result.json'),host=path.join(root,'host.cjs'),outside=path.join(root,'private.txt');
 const evidencePath=process.env.CBIM_ISOLATION_REPORT??'test-results/isolation-packaged-smoke.json';
 await fs.access(evidencePath).then(()=>{throw Error('拒绝覆盖已有验收报告')},error=>{if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error});
-const runtimeModule=path.join(path.dirname(executable),'resources','app.asar','.vite','build','isolated-node.js'),koffiPath=path.join(path.dirname(executable),'resources','koffi');
+// 新冷包的业务 worker 随同一 R1 落在 bundled-resources；旧包仍在 app.asar。
+// 只从本次明确 EXE 的相邻安装资源选取，不接受外部模块路径或回退到开发源码。
+const resources=path.join(path.dirname(executable),'resources');
+const layered=await fs.stat(path.join(resources,'runtime-initial.json')).then(()=>true,error=>{if(error.code==='ENOENT')return false;throw error});
+const runtimeModule=path.join(resources,layered?'bundled-resources':'app.asar','.vite','build','isolated-node.js'),koffiPath=path.join(resources,'koffi');
 await fs.writeFile(outside,'private');
 const source=`const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),net=require('node:net'),os=require('node:os');
 const {runIsolatedNode}=require(${JSON.stringify(runtimeModule)}),koffiPath=${JSON.stringify(koffiPath)},outside=${JSON.stringify(outside)},report=${JSON.stringify(report)};
@@ -32,5 +36,5 @@ try{
  const child=spawn(executable,[host],{env,cwd:path.dirname(executable),windowsHide:true,stdio:['ignore','pipe','pipe']});let output='';child.stdout.on('data',bytes=>{output=(output+bytes).slice(-16384)});child.stderr.on('data',bytes=>{output=(output+bytes).slice(-16384)});
  const code=await new Promise<number|null>((resolve,reject)=>{const timer=setTimeout(()=>{child.kill();reject(Error('隔离EXE验收超时：'+output))},60000);child.once('error',error=>{clearTimeout(timer);reject(error)});child.once('exit',code=>{clearTimeout(timer);resolve(code)})});assert.equal(code,0,output);
  const result=JSON.parse(await fs.readFile(report,'utf8'))as {success:boolean;scenarios:{mode:string;result:IsolatedNodeResult}[]};assert.equal(result.success,true);assert.equal(result.scenarios.length,6);for(const scenario of result.scenarios){assert.equal(scenario.result.cleanup,'complete');assert.equal(scenario.result.allProcessesExited,true)}
- const evidence={...result,executableSha256:createHash('sha256').update(await fs.readFile(executable)).digest('hex'),completedAt:new Date().toISOString()};await fs.writeFile(evidencePath,JSON.stringify(evidence,null,2),{flag:'wx'});console.log(JSON.stringify({success:true,scenarios:result.scenarios.map(s=>({mode:s.mode,status:s.result.status,exitCode:s.result.exitCode})),report:evidencePath}));successful=true;
+ const evidence={...result,executableSha256:createHash('sha256').update(await fs.readFile(executable)).digest('hex'),runtimeLayout:layered?'bundled-resources':'app.asar',runtimeModule,...(layered?{runtimeModuleSha256:createHash('sha256').update(await fs.readFile(runtimeModule)).digest('hex')}:{}),completedAt:new Date().toISOString()};await fs.writeFile(evidencePath,JSON.stringify(evidence,null,2),{flag:'wx'});console.log(JSON.stringify({success:true,scenarios:result.scenarios.map(s=>({mode:s.mode,status:s.result.status,exitCode:s.result.exitCode})),report:evidencePath}));successful=true;
 }finally{if(successful){assert.equal(path.dirname(root),os.tmpdir());assert.match(path.basename(root),/^cbim-isolation-exe-/);await fs.rm(root,{recursive:true,force:true})}else console.error('验收未完成，保留现场：'+root)}

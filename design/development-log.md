@@ -36,6 +36,24 @@
 - Cindy 承载分析（已停止路线，分析草案于本轮清理删除） 标为当前不采用的历史讨论，从当前 design 导航移除；同步概念文档 01/02。联网协作、跨设备、大型组织及分布式基础设施均移出当前范围，不据此删除既有功能或声称已有完整离线运行能力。
 - 本次只调整方向、方案与验收基准，核对文档引用、锚点和差异格式；未修改产品源码、运行测试或实施新的开发闭环，不宣称自动开发已经打通。开发清单仍以 Issues 为准，不在方案中维护实时待办。
 
+## 2026-11-12：0.1.15 公开升级验收与官网收尾
+
+- 用户明确要求完成官网 0.1.15、发布记录和双分支同步；账号/仓库仍为 `nan023062` / `nan023062/cbim`，开放 Issues 为空，按直接需求收尾，未创建工单。使用现有独立工作树，保留主工作区未提交的概念/边界文档。
+- 公开版为 C 0.1.15 / R 1，冻结 source `ca0f75992b17b918302a8c066af9afcd8e547e96`，Release `442863050` 于 `2026-11-12T12:30:19Z` 公开；产品 PR #59 已合并。完整四片 CI `43214483203` 为 2839 通过、0 失败、2 个既有固定历史 EXE 场景跳过，候选全新/覆盖安装 `43212888739` 通过。初始 R 清单匿名验签及三个独立 E 的公开字节核验通过；Windows 安装包仍为未签名发行。
+- 0.1.14 首次在线 `43218619687` 在读取列表阶段失败，未开始下载，具体网络原因未知，原现场保留。相同制品和验收条件的独立复验 `43219727847` 通过：安装包有效传输 2.68 MiB，相对完整 106.65 MiB 减少 97.48%，13 次 Range、零全量回退；缓存复用阶段零安装包请求，普通退出不安装，显式重启后原工作区、模型、主 Agent 配置、自动化、知识、业务文件及会话保留，无重放，1 次模型请求、0 页面错误。统计不含元数据、协议开销和 E 下载。
+- 历史 0.1.0 原设置页在线升级 `43218707122` 通过，实际自然选择最高稳定版 0.1.15；没有把它写成 0.1.0 → 0.1.1 或差分下载验收。该旧版没有主 Agent 配置/自动化，相关项明确不适用。详细来源、失败与限制见 [0.1.15 发布报告](verification/desktop-release-0.1.15-20261112.md)。
+- 官网首页、下载页、`website/release.json` 和 README 直接采用公开回执；已有 `pnpm check:brand`、`pnpm build:website`、`node scripts/website-smoke.mjs` 的 14 个页面场景通过，网页输入未变化，沿用已有结果。本轮只补报告、记录和导航，核对事实、链接及已验证字节；未重复执行产品单元、类型/架构检查、打包或安装。完整 PR 自动化仍按现有流程执行，官网部署与远端分支最终回执在收尾 PR 中记录，不以本地页面或旧 CI 替代。
+- 冻结 Builtins 复核已通过：24 个白名单条目、正文与运行入口保持一致；发布后验证文档不追补进旧安装包。未改产品源码、运行契约或类图，也未覆盖公开附件、移动标签或改变旧 Python latest。
+
+## 2026-11-12：准备 0.1.15 冷壳迁移发布
+
+- 用户要求发布后重新验证在线升级。核实当前公开最高桌面版为 0.1.14、Python latest 为 `v1.0.2`，账号与仓库为 `nan023062/cbim`；历史 0.1.0→0.1.1 不再是当前通道自然选择的跨度，已单独澄清测试意图，没有改写历史附件或标签。
+- 使用独立冻结工作树，保留主目录未提交文档；合并 UI `95458460`、C/R/E `2187842f` 及已在远端 develop 的中断恢复 `34afe7c7`，保留各提交。两个冲突仅为说明/记录，保留双方业务行为及历史记录。合并后针对 Codex 生命周期、E 绑定和前端恢复运行 5 文件/13 项，全部通过。
+- 准备 C 0.1.15 / R 1，沿用此前明确的 Windows 未签名发行。首次建立长期 Ed25519 资源签名身份，保存在本机仓库外、仅当前 Windows 用户及 SYSTEM 可访问的目录；构建引用该已有身份，不生成临时生产密钥。公开 SPKI SHA-256 为 `378c827bf38efb6724466bbb39d3e39ee4ef2dc1de2576fa1fde760443145c49`，私钥未进入源码、日志、制品或远端。
+- 验收器补齐 0.1.14 的旧界面、缓存与新增持久数据；目标 C/R 图标、后台工程恢复、首次真实 E 下载与调用分别核验。`pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs --reporter=dot` 最终 42 项通过；首次发现“未支持未来版”断言仍以 0.1.14 为例，更新为尚未支持的 0.1.15 后复跑通过。
+- `pnpm typecheck`、`pnpm check:architecture`、`pnpm check:brand`、`pnpm build:website` 通过；架构 87 目录/681 源码样式、1343 文件/6805 依赖、0 循环/违规。官网仍保留公开 0.1.14，未提前改为候选版。新验收脚本通过 Node 语法检查；脚本本身待隔离安装运行，未把适配完成当作安装或线上升级通过。
+- 本条仅记录候选准备；完整 PR 四片、真实打包/隔离安装、公开附件及在线升级均须取得本次证据后另行回填。资源签名不替代 Authenticode；初始 E 先核验、独立投放，正式冷包仍经安装与 CI 门槛。
+
 ## 2026-11-12：接通 C/R/E 分层桌面更新
 
 - 来源与基线：用户明确要求先完成侧栏优化，再按桌面更新设计重构；在 UI 独立提交 `95458460` 后继续。开放 Issues 查询为空，按直接需求实施，没有创建或回填工单。旧 0.1.14 公开更新保持原状，本次不发布、不安装用户客户端。
@@ -64,6 +82,17 @@
 - `pnpm typecheck`、`pnpm check:architecture` 通过，依赖含类型无环且无边界违规。同步更新 shell / updates 注释、契约、类图和父层导航、settings 入口说明、bridge 更新契约类图；生成器只修改目录描述。源码阅读顺序：更新契约 → update-button-state → SoftwareUpdateButton → UserMenu/App；完整变更以本条对应独立提交为准。
 - 界面证据：`test-results/desktop-updates-ui-report.json`、`update-icon-ready-light.png`、`update-icon-ready-dark.png`、`update-icon-narrow.png`。浏览器使用隔离 IPC fixture，没有执行真实安装。更新旧的打包验收脚本选择器但未运行制品验收；未运行全仓回归、构建、安装、合并、推送或发布。
 - 交付边界：此步只完成 UI；后端冷壳/资源/独立引擎重构仍按用户已授权的[桌面更新设计](task/desktop-hot-update-design.md)继续，不能将基础草稿或此处通过结果当作热更链路已实现。
+
+## 2026-11-12：中断会话登记与界面恢复入口
+
+- 来源：用户本机 0.1.14 在工具交互后收到“请求未完整完成”，原生文件存在，但 `session.bound` 仅记录线程 ID，空闲会话发送按钮持续禁用。用户明确授权补齐登记、增加恢复入口并推送 develop，本步不发布。开放 Issues 查询为空，按直接需求实施，未创建或回填工单。基线 `05920e81`，使用独立工作树，保留主工作区正在进行的更新功能改动。
+- 实现：CodexEngine 在 close 关闭代理、等待原生进程和回调排空后，对回执指定且真实存在的文件补做身份校验与登记；Runtime 仍在引擎关闭后封存终态。成功绑定和关闭屏障去重，异常保留原原因，不重放工具、不回写旧日志。修正同一校验器的目录后代判断，包含 Windows 分隔符，拒绝目录外同名文件。
+- 界面：发送资格与 `threadRecoveryReason` 共用阻断判断，解释缺运行头、缺原生文件、部分日志及未决工具；输入区提供“查看原运行”和“新建对话继续”。前者只定位主 Agent 详情中的既有核实入口，后者创建空对话，原历史、草稿和附件保留，不自动转交上下文或启动原操作。旧已封存记录不会自动补写，不能将此入口描述成旧 native 修复。
+- 验证选择：引擎生命周期和路径校验、主会话真实运行/停止/重发、跨引擎和成员身份直接受影响；前端检查实际 App 的发送资格与恢复操作。`pnpm exec vitest run tests/codex-interruption.test.ts tests/thread-recovery-notice.test.ts tests/conversation-retry.test.ts tests/codex-lifecycle.test.ts tests/codex-engine.test.ts --reporter=dot` 首轮发现新夹具漏填模型名称及旧断言仍要求缺失路径；修正后运行 `pnpm exec vitest run tests/codex-interruption.test.ts tests/conversation-retry.test.ts tests/runtime-failed-retry.test.ts tests/engine-session.test.ts --reporter=dot`，23 项通过；增加真实应用主动停止用例后仅运行 `pnpm exec vitest run tests/codex-interruption.test.ts -t '真实应用' --reporter=dot`，选中 2 项通过，另 3 项未选中；正常跨引擎及成员消费者 `pnpm exec vitest run tests/codex-application.test.ts --reporter=dot`，2 项通过。合计 8 文件、35 项唯一相关用例通过，不累加重复执行。
+- 实际结果：工具执行后响应不完整和主动停止均能在封存前登记，续接同一原生文件与主会话实例，旧 CBIM 日志事件不变、工具未重放；首次 HTTP 400 后继续 Codex 或切换 Pi 均通过。身份不符、目录外文件和尾行不完整仍拒绝。模型服务为确定性本地 HTTP，Codex/Pi/Claude 为真实引擎，不代表用户供应商在线验收。
+- `node scripts/interrupted-chat-ui-smoke.mjs`：真实 React App/Conversation 与隔离 IPC 夹具，5 组检查通过、0 页面错误、0 发送/恢复启动请求；验证可继续的中断、三类不可靠历史阻断、查看原运行、新建可发送对话、原草稿保留。夹具最初对禁用发送时 Enter 的换行预期错误，已按既有编辑行为修正。证据保存在本工作树 `test-results/interrupted-chat-ui-report.json` 和 `interrupted-chat-recovery.png`。
+- `pnpm typecheck`、`pnpm check:architecture` 通过：86 目录/668 源码样式，1308 维护文件/6703 依赖，0 循环/边界违规。同步 codex 与 conversation 的文件头、关键接口说明、CONTRACT 和 ARCHITECTURE；依赖方向不变。阅读顺序：CodexEngine.close → readCodexSession → ThreadHistoryNotice → Conversation；完整 diff 为本条对应独立提交相对 `05920e81`。
+- 边界：未修改用户安装目录或会话数据；未运行全仓回归、PR 四片 CI、打包、安装升级验收或公开发布，等待其他功能统一集成。代码自查和上述验证已完成，人工 review 与后续正式发布验收仍独立。
 
 ## 2026-11-12：0.1.14 发布与真实增量更新通过
 

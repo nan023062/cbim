@@ -394,6 +394,8 @@ classDiagram
 class N_src_frontend_conversation_ThreadHistoryNotice_tsx["ThreadHistoryNotice.tsx"] {
   <<component>>
   +threadResumeRun()
+  +threadRecoveryReason()
+  +ThreadRecoveryNotice()
   +ThreadHistoryNotice()
 }
 ```
@@ -779,3 +781,9 @@ unknown 提示不再提供勾选ID解锁旧native的入口。普通无未决工�
 ## 每轮最终反馈
 
 ConversationTurn 保留真实助手正文，在终态缺少正文时用独立的“本轮反馈（运行记录）”区域展示 completionFeedback；它明确区分 Agent 的交付声明与程序生成的缺失提示，不伪装成模型消息。状态栏继续只作辅助，正在运行不提前总结。
+
+## 中断后的续聊与恢复入口
+
+空闲会话的发送资格与解释共用 `threadRecoveryReason`：后端未提供可信运行头、原生日志路径未登记、日志尾部不完整或仍有未决工具时，输入区显示原因及 `ThreadRecoveryNotice`。不能从较早的可读轮次回退，也不能仅切换引擎绕过原执行事实校验。已登记真实文件且没有上述阻断的中断轮次仍可按普通发送继续；最终准入和原生身份验证由后端持有。
+
+“查看原运行”定位当前/最新周期的主 Agent 详情，复用已有核实和新周期入口，不调用模型或重放操作。“新建对话继续”调用外壳现有创建入口，旧页签、历史、草稿和附件保留；新页签是空白上下文，不自动继承或发送旧请求。恢复提示随真实运行状态读取更新，初次读取、活动目标及后台隐藏页不提前提供可点击操作；忙碌/停止/附件导入期间禁用入口。模型、权限和任务准入仍按原规则处理。

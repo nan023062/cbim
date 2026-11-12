@@ -1,7 +1,7 @@
 /**
  * 目录归属：backend/engines/codex；Codex 引擎适配。
  * 作用定位：核实 Codex 实际 rollout 的路径、原生身份、工作区与持久化动态工具目录。
- * 设计原因：App Server 自己分配 UUID；CBIM 必须读取真实 metadata，不能伪造与任务同名的原生历史。
+ * 设计原因：App Server 自己分配 UUID；正常恢复和异常收尾共用路径边界与真实 metadata 校验，不能接纳私有目录外的原生历史。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -12,7 +12,7 @@ export function codexPath(file:string){return path.resolve(process.platform==='w
 /** 只读取私有目录内完整、有界、非链接原生文件；返回元数据供恢复前核对工具。 */
 export async function readCodexSession(home:string,file:string,id:string,cwd:string){
   const root=await fs.realpath(path.join(home,'sessions')),absolute=codexPath(file),relative=path.relative(root,absolute);
-  if(!relative||relative.startsWith('../../core/execution')||path.isAbsolute(relative)||!path.basename(file).endsWith('-'+id+'.jsonl'))throw Error('Codex 会话不属于本机受管目录');
+  if(!relative||relative==='..'||relative.startsWith('..'+path.sep)||path.isAbsolute(relative)||!path.basename(file).endsWith('-'+id+'.jsonl'))throw Error('Codex 会话不属于本机受管目录');
   if(await fs.realpath(file)!==absolute)throw Error('Codex 会话路径包含链接');
   const stat=await fs.lstat(file);if(!stat.isFile()||stat.isSymbolicLink()||stat.nlink!==1||stat.size>64*1024*1024)throw Error('Codex 会话文件不能可靠核实');
   const text=new TextDecoder('utf-8',{fatal:true}).decode(await fs.readFile(file));if(!text.endsWith('\n'))throw Error('Codex 会话尾行不完整');

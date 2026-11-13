@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-React 桌面界面。只消费 contracts 和自身组件，不导入调度或主进程实现。
+React 桌面界面。业务消费通信 contracts、自身组件及前端 foundations 的公开入口；前端基础库不反向引用页面或通信契约，不依赖后端公共库、调度或主进程实现。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -31,7 +31,7 @@ class N_src_frontend_diagnostics["diagnostics/"] {
 class N_src_frontend_execution_view["execution-view/"] {
   <<directory>>
 }
-class N_src_frontend_governance["governance/"] {
+class N_src_frontend_foundations["foundations/"] {
   <<directory>>
 }
 N_src_frontend_conversation ..> N_src_frontend_components : 导入依赖
@@ -42,6 +42,9 @@ N_src_frontend_execution_view ..> N_src_frontend_components : 导入依赖
 
 ```mermaid
 classDiagram
+class N_src_frontend_governance["governance/"] {
+  <<directory>>
+}
 class N_src_frontend_knowledge["knowledge/"] {
   <<directory>>
 }
@@ -57,12 +60,7 @@ class N_src_frontend_settings["settings/"] {
 class N_src_frontend_shell["shell/"] {
   <<directory>>
 }
-class N_src_frontend_tasks["tasks/"] {
-  <<directory>>
-}
 N_src_frontend_resources ..> N_src_frontend_knowledge : 导入依赖
-N_src_frontend_runtime ..> N_src_frontend_tasks : 导入依赖
-N_src_frontend_settings ..> N_src_frontend_tasks : 导入依赖
 N_src_frontend_shell ..> N_src_frontend_resources : 导入依赖
 N_src_frontend_shell ..> N_src_frontend_settings : 导入依赖
 N_src_frontend_shell ..> N_src_frontend_runtime : 导入依赖
@@ -70,6 +68,9 @@ N_src_frontend_shell ..> N_src_frontend_runtime : 导入依赖
 
 ```mermaid
 classDiagram
+class N_src_frontend_tasks["tasks/"] {
+  <<directory>>
+}
 class N_src_frontend_team["team/"] {
   <<directory>>
 }
@@ -82,6 +83,7 @@ class N_src_frontend_workspace["workspace/"] {
 class N_src_frontend_main_tsx["main.tsx"] {
   <<component>>
 }
+N_src_frontend_team ..> N_src_frontend_tasks : 导入依赖
 N_src_frontend_team ..> N_src_frontend_workspace : 导入依赖
 N_src_frontend_workspace ..> N_src_frontend_team : 导入依赖
 ```
@@ -111,6 +113,7 @@ N_src_frontend_workspace ..> N_src_frontend_team : 导入依赖
 - `shell` → `workspace`：导入。
 - `shell` → `automation`：导入。
 - `shell` → `diagnostics`：导入。
+- `tasks` → `foundations`：导入。
 - `tasks` → `components`：导入。
 - `tasks` → `execution-view`：导入。
 - `team` → `tasks`：导入。
@@ -118,10 +121,12 @@ N_src_frontend_workspace ..> N_src_frontend_team : 导入依赖
 - `team` → `components`：导入。
 - `team` → `knowledge`：导入。
 - `team` → `resources`：导入。
+- `team` → `foundations`：导入。
 - `team` → `workspace`：导入。
 - `updates` → `components`：导入。
 - `workspace` → `team`：导入。
 - `workspace` → `components`：导入。
+- `workspace` → `foundations`：导入。
 - `workspace` → `knowledge`：导入。
 - `workspace` → `resources`：导入。
 - `workspace` → `governance`：导入。
@@ -133,6 +138,7 @@ N_src_frontend_workspace ..> N_src_frontend_team : 导入依赖
 - [conversation/](conversation/ARCHITECTURE.md)：中央主对话、目标摘要、输入、附件及队列；附件区明确显示目录清单、URL指针、网页摘录与仓库静态资料。两处插入口冻结原run，入队成功保留事实，停止锁独立于插入等待。进程准入等待与持久用户等待分别展示，纯等待不累计工作时长；未受理保留草稿。核实与重规划权限分离，可续聊头由后端核实。 双视图共享人工决定控制器，保存意见不清除聊天草稿或消费等待。 主对话栏读写工作区主 Agent 的统一执行配置，与团队配置页双向同步；模型按协议映射，Claude Code/Codex 只保留排队。 加号菜单分别请求 BUG 反馈和需求许愿 Skill，按原会话发送或排队，保留已有草稿及附件。 tasks/ToolActivity 在业务装配层组合原命令核实、影响观察及恢复；公共消息/状态已迁到 execution-view，队列操作名限制为实际四项。 目标摘要可跳转本周期原任务或替代成果，沿已有任务详情导航，不改草稿、附件或执行状态。 原工具记录显式核实保存事实，保留原失败；控制器按四重身份隔离迟到响应，轮询不重复读取，失败保留旧报告并提示时效。 主调用提供显式影响观察；未知不再凭勾选调用 ID 直接续跑，进入独立只读核实，普通草稿不受影响。 当前工作区实例传入成员详情用于补偿预览时效，主聊天草稿不受补偿控制器影响，挂载不触发文件读取或写入。 可信 GitHub submitted 工具回执之后隐藏追加结果文字；失败、未知及后续普通用户输入仍正常显示。 发送捕获原任务/运行，审批使用原审批任务；动态队列按操作解析。
 - [diagnostics/](diagnostics/ARCHITECTURE.md)：只读展示工作区运行状态和知识校验问题，不把工作区就绪视为知识校验通过。
 - [execution-view/](execution-view/ARCHITECTURE.md)：主对话、成员任务和团队履历共用的消息、工具轨道、状态、问答及输入展示。只依赖公开通信契约和通用组件；查询、恢复和处置控制器由页面组合，不反向依赖 conversation、tasks 或 team。主对话、成员与历史共用的消息、工具轨道及运行状态；只消费公开快照和最小展示插槽，不依赖任务或会话控制器。原核实与恢复由页面显式组合，Markdown 的用户链接点击继续通过固定 Bridge。
+- [foundations/](foundations/ARCHITECTURE.md)：前端域的独立基础类库；前端业务单向组合其公开能力，不依赖页面、bridge 或后端基础库，不持有业务状态与通信权限。
 - [governance/](governance/ARCHITECTURE.md)：静态业务模块的知识治理面板。展示真实来源、精确差异、补证/异议与回应评价。审阅绑定来源版本，未评价不补造理解，人工决定与实施分开；原命令先保存再发送，未知只查询。 IPC 名称从冻结的治理动作形成有限联合，保留原命令未知查询。 操作联合与表单请求经对应Schema配对，原命令回执控制器不变。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识问题、预览提交、静态表单与共用来源说明。展示当前、退役、待采纳及待核实状态，不从路径或正文相同猜来源连续；来源组件无提交副作用。固定编辑基线，不要求真人维护声明，业务架构展示位于workspace。 Agent 编辑可保存本机默认引擎/模型，已有岗位不自动采纳。 动态架构表单先按对应IPC Schema核实；本地数据选择为封闭类别。
 - [resources/](resources/ARCHITECTURE.md)：统一资源仓库的查看、编辑、静态包发布与下载应用。人才按团队/Agent/Skill复用，业务按整套架构应用；工作区身份及预览版本固定。设置通过统一入口打开。 连接操作名使用持久命令的动作联合，提交、未知与核实流程保持。 连接提交与回执查询按具体Schema形成操作元组。

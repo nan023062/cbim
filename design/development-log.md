@@ -1,3 +1,12 @@
+## 2026-11-13：前端域独立提取 JSON 比较
+
+- 来源与基线：用户明确要求从前端公共库的 JSON 比较开始，基线 `90da0806`；开放 Issues 仅 #65，与此切片无关，未推进该工单。沿用已核实的全局分层，再精读前端比较、五个控制器及消费者测试。前端和后端属于不同域，本步不开放跨域公共工具依赖；治理范围 C3、认知 L2，涉及前端公共入口与依赖边界，不改变业务契约。
+- 已实现：新增 `src/frontend/foundations/utility`，以 `index.ts` 公开 `json.ts` 的 equalJson。岗位登记、模块责任、目标接续、人工决定、人工继续五处原排序比较改为消费前端入口；保留 localeCompare、对象 undefined 省略、数组顺序及原异常传播，不修改身份、版本、回执接受条件、持久化或恢复策略。原样 JSON.stringify 比较及负责人视图的特殊字典序/递归序列化保留原实现，未强行统一。
+- 边界与维护：前端 utility 无项目或第三方依赖，类别实现私有；前端基础库不反向依赖页面、bridge 或后端，后端也不能消费此前端库。同步两份新 CONTRACT、两个新目录类图，以及 src、后端 foundations、frontend、tasks、team、workspace 六份相关架构文档；更新五个消费者文件头和新入口说明。三个开发/架构 Skill 的 9 个宿主入口保持一致，明确两域独立沉淀、按类别组织及本次比较的迁移限制。
+- 测试选择：新比较模块自身单元覆盖嵌套键、数组、空值、冻结输入、自有危险名称键、Unicode 同序键及错误传播；选择五个控制器的直接使用套件，覆盖预览、回执、资料接续、准入及未知结果恢复。实际命令：`pnpm exec vitest run tests/unit/frontend/foundations/utility/json.test.ts tests/workspace-member-view.test.ts tests/module-ownership-view.test.ts tests/scope-continuation-view.test.ts tests/human-decision-view.test.ts tests/human-continuation-view.test.ts tests/inline-module-ownership.test.ts tests/knowledge-source-view.test.ts tests/continuation-source-view.test.ts tests/admission-view.test.ts --reporter=dot`：10 文件/112 项通过，其中公共比较单元 8 项、消费者 104 项。测试登记到独立 frontend/foundations/utility 模块，未引入完整应用夹具或跨套件依赖。
+- 因变更依赖规则，运行 `pnpm exec vitest run tests/dependencies.test.ts tests/layer-boundaries.test.ts --reporter=dot`：2 文件/34 项通过，包含公开入口、私有实现、类型反向、跨域、React 越界拒绝。`pnpm typecheck`、`pnpm check:architecture`（93 目录/711 源码样式，1433 扫描文件/7108 含类型依赖，0 环/违规）、`pnpm check:test-modules`（463 文件：124 unit、152 contract、187 integration）与 diff 空白检查通过；三宿主引用与一致性核对通过。
+- 维护交接：稳定候选是已有五处完全同义的前端值比较，业务接受规则仍局限在各控制器；新增同类比较先读前端 utility CONTRACT，再使用公开入口，语义变化须核对这些消费者。Q1 保护原比较契约；Q2 业务规则保留原控制器；Q3 使用公共单元、真实消费者与边界回归；Q4 修改入口为前端 json.ts 与相应业务控制器；Q5 无新增候选规则，两域分离落实用户已明确要求。未运行全仓回归、桌面、打包或发布验收，未宣称人工 review 已接受。本步独立本地提交，未推送。
+
 ## 2026-11-13：utility 按数据与问题类别合并文件
 
 - 用户直接指定本轮整理：工具函数与数据结构按类别内聚，不采用一函数一文件；开放 Issue #65 与本步无关，未推进其状态。核对基线 `9cccc94e` 的 utility 全部实现、公开出口、依赖白名单、消费者契约测试和现行 AI 工作流，范围为文件组织，不扩展业务行为。

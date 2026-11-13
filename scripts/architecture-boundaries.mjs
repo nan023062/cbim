@@ -2,6 +2,10 @@
 // files 是成员归属，public 是允许跨边界读取的入口；新增私有实现必须登记，不能靠换目录绕过。
 export const logicalBoundaries = [
   {
+    id:'frontend-utility',prefix:'src/frontend/foundations/utility/',public:['src/frontend/foundations/utility/index.ts'],
+    dependencies:[],external:[],
+  },
+  {
     id:'file-foundations',prefix:'src/foundations/files/',public:['src/foundations/files/index.ts'],
     dependencies:[],external:['node:fs/promises','node:path','node:crypto'],
   },

@@ -35,13 +35,15 @@ const projectRoot='src/backend/core/workspace/project-root.ts';
 // utility 通用入口只能组合环境无关实现，Node 算法必须显式选用独立入口。
 const utilityPortable=['src/foundations/utility/index.ts','src/foundations/utility/json.ts','src/foundations/utility/async.ts','src/foundations/utility/strings.ts','src/foundations/utility/bytes.ts'];
 const moduleBoundaries=[
+  // 前端基础库仅在前端域内沉淀，不反向依赖页面、通信契约或后端基础库。
+  {sources:['src/frontend/foundations/'],allow:['src/frontend/foundations/']},
   {sources:utilityPortable,allow:utilityPortable},
   // 引擎只组合可移植算法，不借此接入 files/web、平台适配或 Node 私有实现。
   {sources:['src/backend/engines/'],allow:['src/backend/engines/','src/backend/core/','src/foundations/utility/index.ts']},
   // 更新子系统仅复用环境无关的数据消费入口，不因此取得 Main 服务或其他基础方案的依赖权。
   {sources:['src/backend/updater/'],allow:['src/backend/updater/','src/bridge/contracts/','src/foundations/utility/index.ts']},
   {sources:['src/frontend/execution-view/'],allow:['src/frontend/execution-view/','src/frontend/components/','src/bridge/contracts/']},
-  {sources:['src/frontend/tasks/'],allow:['src/frontend/tasks/','src/frontend/execution-view/','src/frontend/components/','src/bridge/contracts/']},
+  {sources:['src/frontend/tasks/'],allow:['src/frontend/tasks/','src/frontend/execution-view/','src/frontend/components/','src/frontend/foundations/utility/index.ts','src/bridge/contracts/']},
   {sources:[foundation],allow:[foundation,'src/foundations/utility/index.ts','src/foundations/utility/node.ts']},
   {sources:[knowledgeTypes],allow:[]},
   {sources:[knowledgeSnapshot],allow:[knowledgeTypes,foundation]},

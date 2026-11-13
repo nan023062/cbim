@@ -39,6 +39,7 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 - backend/updater → 自身、bridge/contracts、foundations/utility 通用公开入口；更新程序不得反向依赖 Main、调度或业务运行时，不能跨入 utility Node 入口或其他基础方案。
 - bridge/contracts → 自身、backend/core 的公开契约和纯函数。
 - frontend → 自身、bridge/contracts。
+- 前端基础库 `frontend/foundations` → 自身；业务只用各能力公开入口。后端公共库继续独立位于 `src/foundations`，两域工具库不互相依赖，bridge 不转发工具。当前前端 utility 不引用 React、业务控制器或通信契约；新增第三方依赖须按具体能力核实。
 - bridge/preload → 自身、bridge/contracts。
 - frontend 是视图层，backend 是本机后端逻辑层；bridge 是通信边界。禁止前端直接导入后端实现，也禁止后端导入前端。
 
@@ -75,6 +76,8 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 ## 5. 验证后再报告
 
 utility 的类图按实际类别文件表达 JSON、字符串、字节、异步协调等工具模块，展示各具名算法、独立实例数据结构与通用/Node 公开入口；不按函数数量机械拆文件，也不因合并文件而虚构算法间依赖或共享状态。当前 SerialQueue 归 `src/foundations/utility`，旧 concurrency 目录已退役；同步消费者导入、测试归属和依赖规则，不能残留两份队列实现。Core 的 hash/json 兼容出口仍保留，注明算法只在 utility 实现。
+
+前端 utility 单独维护类图与契约，当前 `json.ts` 提供 equalJson。迁移同类比较须保留 localeCompare、对象 undefined、数组次序及错误语义；类图展示控制器到前端公开入口的依赖，不画成后端算法复用。单元归属前端基础模块，业务回执与恢复用原消费者测试验证。
 
 严格解析归 JSON 类别、字节流消费归字节类别，标明 Core 的错误适配和 Main/Updater 的业务策略。reader 释放与网络/进程退出不能画成同一个完成保证；取消、不完整输入和大小限制的回归随实际消费者同步。
 

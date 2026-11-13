@@ -5,12 +5,14 @@ import path from 'node:path';
 import ts from 'typescript';
 
 const scope={
+  "src/frontend/foundations": "前端域的独立基础类库；前端业务单向组合其公开能力，不依赖页面、bridge 或后端基础库，不持有业务状态与通信权限。",
+  "src/frontend/foundations/utility": "前端通用工具按类别内聚：json.ts 提供保留现有 localeCompare、undefined 与数组规则的 JSON 比较，index.ts 是公开入口。请求、预览与回执的业务判断留在消费者；与后端 utility 分别实现、测试和演进。",
   "src/foundations/files": "Node 单文件 I/O 基础方案：存在探测、JSON 读取、同步后原子替换；路径授权、跨进程锁和业务事务由消费者拥有。",
   "src/foundations/utility": "通用工具函数与数据结构按类别内聚组织：json.ts 提供 JSON 格式化、严格解析和键排序；async.ts 提供独立实例的串行队列及在途集合；strings.ts 提供文本分帧；bytes.ts 提供有界字节流收集。index.ts 是通用公开入口，node.ts 独立承载 SHA-256。不按函数数量拆文件，不发起文件/网络访问，不拥有业务身份、事务或权限。排序比较器与字段规则由消费者指定；Promise 快照不代表物理退出，文本帧不代表协议校验，生命周期和业务策略留在适配器。",
-  "src/foundations": "独立基础类库，承载高内聚技术解决方案；只依赖本层、标准库和必要第三方库，不依赖 Core 或任何业务模块。能力按独立契约和生命周期组织。",
+  "src/foundations": "后端域的独立基础类库，承载高内聚技术解决方案；只依赖本层、标准库和必要第三方库，不依赖 Core 或任何业务模块。前端公共能力在 frontend/foundations 独立沉淀，两域工具库不互相引用。能力按独立契约和生命周期组织。",
   "src/foundations/web": "独立网页读取方案：安全公网 HTTP、正文提取、robots/缓存/限速与可注入浏览器兜底；Node 公共入口不加载 Electron，具体 Chromium 适配有独立入口。",
   "src/backend/bootstrap": "固定冷壳入口：先验证同 C 的签名资源集合，再放行候选访问原 profile；独立选择日志、单实例、失败恢复及按需引擎下载由冷壳持有。计算式 main.js 装载保留可审计的源码依赖边。",
-  "src": "应用按前端视图层 frontend 与本机后端逻辑层 backend 分组，bridge 是通信边界；foundations 是不依赖其他项目模块的独立基础类库，由消费者单向使用。backend 与 bridge 双向箭头分别来自 main 消费契约、契约重导出 Core 公开类型，不代表文件循环。",
+  "src": "应用按前端视图层 frontend 与本机后端逻辑层 backend 分组，bridge 是通信边界；后端公共库 foundations 与前端公共库 frontend/foundations 各自在域内独立沉淀，不建立跨域工具依赖。backend 与 bridge 双向箭头分别来自 main 消费契约、契约重导出 Core 公开类型，不代表文件循环。",
   "src/backend": "本机后端：core 持有领域规则和执行契约；engines 实现具体模型引擎；scheduler-engine 编排任务与装配引擎；main 管理平台、存储和应用入口；updater 独立更新。Core 不导入具体引擎或上层；目录聚合图的双向关系不等于文件循环。",
   "src/backend/core": "领域规则、存储端口和引擎无关执行机制。按预算、证据、任务、派发、知识、模型及工具职责聚合；execution/runtime 仍是执行模块内部实现，尚未解决该运行内核的依赖密度。禁止反向依赖 engines、scheduler-engine、main 或前端。",
   "src/backend/core/automation": "自动化定义、运行与执行/存储端口及纯时区日程计算，不依赖调度和桌面实现。",
@@ -80,7 +82,7 @@ const scope={
   "src/bridge": "前后端通信边界：contracts 声明公开数据，preload 提供 Electron 安全桥。契约可重导出 Core 公开类型和纯函数，不暴露后端服务、凭据和存储实现。",
   "src/bridge/contracts": "可序列化 IPC 与展示契约；多来源附件只传选择身份，公开旧v1/新v2清单与真实仓库目录，不暴露凭据。图增量公开前置追加/替换审计而非执行许可，目标摘要公开运行内补充计数与未核实状态，详情保留已接收快照，纯协议不携IO。排队插入必须传用户点击时的原主run，缺失不推测当前轮次。检查点私有恢复证明留在后端；结构验证公开当时文件/规则指纹及无原值诊断，人工决定与文件观察保留真实依据。岗位IPC只传明确选择与公开采纳/回执，类型不带凭据或后端哈希IO。 桌面更新只公开版本、日志、阶段和进度，不传安装路径或任意命令。 ipc-call 用联合元组关联全部172项操作（含1项退役拒绝）；分组契约共享请求Schema与响应，纯workspace-view避免类型循环。 owner-execution 公开原岗位绑定与显式当前观察；按任务修订核对身份，不公开解密配置。 公开检查点放弃审计和请求/回执纯契约，不向渲染进程授予主调度处置身份。 command-verification 只导出严格公共报告和八工具支持矩阵，隐藏原事务和执行准备信息。 effect-observation 只公开来源联合及严格公共 DTO，恢复／重规划保留旧协议并显式绑定新处置，不暴露正文备份或原生上下文。 controlled-files 仅导出公开纯协议与限制，隐藏 blob、原生文件身份、句柄和后端规则。",
   "src/bridge/preload": "固定 Electron IPC 桥；不向页面暴露 Node、凭据或任意磁盘 API。 实现关联调用签名并沿原信封转发，不重试错误或改变主Frame授权。",
-  "src/frontend": "React 桌面界面。只消费 contracts 和自身组件，不导入调度或主进程实现。",
+  "src/frontend": "React 桌面界面。业务消费通信 contracts、自身组件及前端 foundations 的公开入口；前端基础库不反向引用页面或通信契约，不依赖后端公共库、调度或主进程实现。",
   "src/frontend/automation": "当前工作区自动化列表、配置和运行历史；固定页签不接自选工作目录，真实运行通过原会话定位。",
   "src/frontend/components": "通用展示组件，不持有领域服务与运行状态。 EngineModelPicker 固定三引擎目录，按协议筛选统一模型，空目录仍可选择引擎。",
   "src/frontend/conversation": "中央主对话、目标摘要、输入、附件及队列；附件区明确显示目录清单、URL指针、网页摘录与仓库静态资料。两处插入口冻结原run，入队成功保留事实，停止锁独立于插入等待。进程准入等待与持久用户等待分别展示，纯等待不累计工作时长；未受理保留草稿。核实与重规划权限分离，可续聊头由后端核实。 双视图共享人工决定控制器，保存意见不清除聊天草稿或消费等待。 主对话栏读写工作区主 Agent 的统一执行配置，与团队配置页双向同步；模型按协议映射，Claude Code/Codex 只保留排队。 加号菜单分别请求 BUG 反馈和需求许愿 Skill，按原会话发送或排队，保留已有草稿及附件。 tasks/ToolActivity 在业务装配层组合原命令核实、影响观察及恢复；公共消息/状态已迁到 execution-view，队列操作名限制为实际四项。 目标摘要可跳转本周期原任务或替代成果，沿已有任务详情导航，不改草稿、附件或执行状态。 原工具记录显式核实保存事实，保留原失败；控制器按四重身份隔离迟到响应，轮询不重复读取，失败保留旧报告并提示时效。 主调用提供显式影响观察；未知不再凭勾选调用 ID 直接续跑，进入独立只读核实，普通草稿不受影响。 当前工作区实例传入成员详情用于补偿预览时效，主聊天草稿不受补偿控制器影响，挂载不触发文件读取或写入。 可信 GitHub submitted 工具回执之后隐藏追加结果文字；失败、未知及后续普通用户输入仍正常显示。 发送捕获原任务/运行，审批使用原审批任务；动态队列按操作解析。",

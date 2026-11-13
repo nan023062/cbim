@@ -3,7 +3,9 @@
  * 设计原因：请求连同有序附件身份先保存再发送；首次明确预受理拒绝可编辑，通信未知仍冻结。两处目标卡共享草稿和选择器锁，迟到导入不得污染新等待，普通聊天草稿仅在等待时显式发送后转交，先保存再由外壳清空。
  * 回执边界：首次受理后仅周期状态可更新；矛盾运行或附件清单保留旧回执并显示查询错误。
  * 成员等待：已核实的检查点/岗位/权限预受理拒绝保留可编辑草稿；曾通信未知的原请求仍冻结。
+ * 公共比较：通过前端 utility 保持原键排序与空值语义；身份、版本、回执和恢复决策仍由本控制器负责。
  */
+import {equalJson as equal} from '../foundations/utility';
 import {goalContinuationRequestSchema,goalContinuationReceiptSchema} from '../../bridge/contracts/dispatch';
 import type {GoalContinuationRequest,GoalContinuationReceipt} from '../../bridge/contracts/dispatch';
 import type {ChatAttachment,ChatMaterialImport} from '../../bridge/contracts/chat';
@@ -38,7 +40,6 @@ export interface ContinuationPorts {
   materialTargets?:(signal:AbortSignal)=>Promise<unknown>;
   materialList?:(selection:ContinuationMaterialPage,signal:AbortSignal)=>Promise<unknown>;
 }
-const equal=(a:unknown,b:unknown):boolean=>{const order=(value:unknown):unknown=>Array.isArray(value)?value.map(order):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,order(v)])):value;return JSON.stringify(order(a))===JSON.stringify(order(b))};
 const textError=(error:unknown)=>error instanceof Error?error.message:String(error);
 /** 成员核验仅在消费等待之前抛出这些确定拒绝；显式枚举，不把未来未知错误默认视为未提交。 */
 const memberPauseRejections=new Set(['GOAL_MEMBER_PAUSE_INVALID','GOAL_MEMBER_PAUSE_PERMISSION','GOAL_MEMBER_PAUSE_UNAVAILABLE','GOAL_KNOWLEDGE_CHANGED','MEMBER_CHECKPOINT_ARTIFACT_CHANGED','MEMBER_CHECKPOINT_NATIVE_CHANGED','MEMBER_CHECKPOINT_INVALID','MEMBER_CHECKPOINT_PROGRESS','MEMBER_CHECKPOINT_MISSING','MEMBER_CHECKPOINT_CHANGED','OWNER_MEMBER_UNAVAILABLE','OWNER_MODEL_CHANGED','OWNER_CAPABILITY_CHANGED','OWNER_BINDING_REQUIRED','OWNER_BINDING_STALE','OWNER_KNOWLEDGE_CHANGED']);

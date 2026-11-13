@@ -1,14 +1,14 @@
 /**
  * 作用定位：模块负责人面板的回包核对和持久原命令状态，跨业务架构与项目岗位视图共享。
  * 设计原因：模块卡片与完整责任页共用命令池，更换负责人和同负责人采纳来源分别核对；未知不代表未保存，重开只查原命令，不补造来源。
+ * 公共比较：通过前端 utility 保持原键排序与空值语义；身份、版本、回执和恢复决策仍由本控制器负责。
  */
+import {equalJson as same} from '../foundations/utility';
 import {moduleOwnershipCommitInputSchema,moduleOwnershipPreviewSchema,moduleOwnershipReceiptSchema,moduleOwnershipPageSchema,moduleOwnershipDetailSchema,isModuleOwnershipSourceAdoption} from '../../bridge/contracts/module-ownership';
 import {sourceReadStateMatches} from '../../bridge/contracts/knowledge-source';
 import type {ModuleOwnershipIdentity,ModuleOwnershipPreviewInput,ModuleOwnershipPreview,ModuleOwnershipCommitInput,ModuleOwnershipReceipt,ModuleOwnershipListInput,ModuleOwnershipByMemberInput,ModuleOwnershipPage,ModuleOwnershipGetInput,ModuleOwnershipDetail,ModuleOwnershipLookup,ModuleOwnershipView} from '../../bridge/contracts/module-ownership';
 
 const message=(error:unknown)=>error instanceof Error?error.message:String(error);
-function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,ordered(item)])):value}
-const same=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 const identity=(value:ModuleOwnershipIdentity,input:ModuleOwnershipIdentity)=>same(value,{workspaceId:input.workspaceId,instanceId:input.instanceId});
 function checkView(view:ModuleOwnershipView,workspaceId:string){
   if(view.binding&&(view.binding.workspaceId!==workspaceId||view.binding.moduleId!==view.moduleId)||view.owner&&(!view.binding||view.owner.memberId!==view.binding.ownerMemberId))throw Error('模块责任与岗位身份不一致');

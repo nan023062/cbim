@@ -536,7 +536,7 @@ class N_src_frontend_tasks_continuation_state_ts_ScopeContinuationController["Sc
 N_src_frontend_tasks_continuation_state_ts ..> N_src_frontend_tasks_continuation_state_ts_ScopeContinuationController : 声明
 ```
 
-直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../../bridge/contracts/repository-connections.ts](../../bridge/contracts/repository-connections.ts)、[continuation-attachments.ts](continuation-attachments.ts)、[continuation-source-state.ts](continuation-source-state.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../../bridge/contracts/repository-connections.ts](../../bridge/contracts/repository-connections.ts)、[continuation-attachments.ts](continuation-attachments.ts)、[continuation-source-state.ts](continuation-source-state.ts)。
 
 ### ContinuationAttachmentHistory.tsx
 
@@ -1178,7 +1178,7 @@ class N_src_frontend_tasks_human_continuation_state_ts_HumanContinuationControll
 N_src_frontend_tasks_human_continuation_state_ts ..> N_src_frontend_tasks_human_continuation_state_ts_HumanContinuationController : 声明
 ```
 
-直接依赖：[../../bridge/contracts/human-continue.ts](../../bridge/contracts/human-continue.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/human-continue.ts](../../bridge/contracts/human-continue.ts)。
 
 ### human-continuation.css
 
@@ -1321,7 +1321,7 @@ class N_src_frontend_tasks_human_decision_state_ts_HumanDecisionController["Huma
 N_src_frontend_tasks_human_decision_state_ts ..> N_src_frontend_tasks_human_decision_state_ts_HumanDecisionController : 声明
 ```
 
-直接依赖：[../../bridge/contracts/human-decisions.ts](../../bridge/contracts/human-decisions.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/human-decisions.ts](../../bridge/contracts/human-decisions.ts)。
 
 ### human-decisions.css
 

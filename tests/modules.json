@@ -1285,6 +1285,18 @@
         "contract": [],
         "integration": []
       }
+    },
+    "frontend/foundations/utility": {
+      "roots": [
+        "src/frontend/foundations/utility/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/unit/frontend/foundations/utility/json.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
     }
   }
 }

@@ -338,7 +338,7 @@ class N_src_frontend_team_workspace_member_state_ts_WorkspaceMemberCommandPool["
 N_src_frontend_team_workspace_member_state_ts ..> N_src_frontend_team_workspace_member_state_ts_WorkspaceMemberCommandPool : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)。
 
 ### workspace-members.css
 

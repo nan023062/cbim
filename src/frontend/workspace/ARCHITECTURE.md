@@ -201,7 +201,7 @@ class N_src_frontend_workspace_module_ownership_state_ts_ModuleOwnershipCommandP
 N_src_frontend_workspace_module_ownership_state_ts ..> N_src_frontend_workspace_module_ownership_state_ts_ModuleOwnershipCommandPool : 声明
 ```
 
-直接依赖：[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../../bridge/contracts/knowledge-source.ts](../../bridge/contracts/knowledge-source.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../../bridge/contracts/knowledge-source.ts](../../bridge/contracts/knowledge-source.ts)。
 
 ### module-ownership.css
 

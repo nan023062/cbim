@@ -1,5 +1,7 @@
 # 基础类库边界
 
+本目录承载后端域公共能力。前端公共库位于 `src/frontend/foundations`，独立实现、验证和演进；两域工具库不互相引用，也不经 bridge 转发公共算法。
+
 `foundations` 承载高内聚、可独立复用的技术解决方案，不依赖 Core、Main、Scheduler、Bridge、Frontend 或任何其他项目模块，包含类型依赖。仅允许本层内部、标准库及必要第三方库；各能力拥有自己的契约、状态和资源生命周期，不建立万能工具容器。
 
 当前能力为 [utility](utility/CONTRACT.md)、[files](files/CONTRACT.md) 与 [web](web/CONTRACT.md)。utility 收纳领域无关算法与数据结构，SerialQueue 已从原 concurrency 目录迁入；各能力按明确契约独立组织，不把业务辅助代码机械归并。调用者通过公开入口单向使用；utility 通用入口不加载 Node，Node 摘要算法使用独立入口，网页平台实现也单独加载。

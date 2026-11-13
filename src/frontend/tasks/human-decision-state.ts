@@ -2,7 +2,9 @@
  * 跨等待原意见引用随选择和命令冻结；显式对照清空选择及决定，迟到回包不能串用，重开只查原命令。
  * 作用定位：维护当前主会话人工决定的草稿、手动预览、冻结命令及回执，供两处目标卡共享。
  * 设计原因：保存意见与执行分离；先持久化再发送，通信未知只能核实原命令。返工后须显式清除旧候选再核实，预览迟到或切换选择不能使过期依据变为可提交。
+ * 公共比较：通过前端 utility 保持原键排序与空值语义；身份、版本、回执和恢复决策仍由本控制器负责。
  */
+import {equalJson as equal} from '../foundations/utility';
 import {humanDecisionPreviewInputSchema,humanDecisionPreviewSchema,humanDecisionRequestSchema,humanDecisionReceiptSchema} from '../../bridge/contracts/human-decisions';
 import type {HumanDecisionKind,HumanDecisionBaselineSelection,HumanDecisionManifestSelection,HumanDecisionPreviewInput,HumanDecisionPreview,HumanDecisionRequest,HumanDecisionLookup,HumanDecisionReceipt} from '../../bridge/contracts/human-decisions';
 
@@ -22,8 +24,6 @@ export interface HumanDecisionPorts {
 }
 const identityKey=(scopeId:string,criterionId:string)=>JSON.stringify([scopeId,criterionId]);
 const textError=(error:unknown)=>error instanceof Error?error.message:String(error);
-function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,ordered(v)])):value}
-const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 const selected=<T extends {taskId:string;runId:string}>(values:T[])=>[...values].sort((a,b)=>a.taskId.localeCompare(b.taskId)||a.runId.localeCompare(b.runId));
 /** 只有首次明确的未提交领域拒绝可编辑；未知、IO 和命令冲突不自动换 ID。 */
 export function humanDecisionRejected(error:unknown){return /^(?:HUMAN_(?:INPUT_INVALID|IDENTITY|NOT_WAITING|SOURCE_INVALID|KNOWLEDGE_CHANGED|UNAVAILABLE|EVIDENCE_INVALID|STALE|LIMIT|REVISION_CONFLICT|DECISION_UNAVAILABLE|RECONSIDERATION_INVALID)|WORKSPACE_EXECUTION_BUSY):/.test(textError(error))}

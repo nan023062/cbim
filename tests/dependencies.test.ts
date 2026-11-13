@@ -16,6 +16,26 @@ test('foundations is independent even for type dependencies; Main consumes only 
   expect(privateEntry.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'web-foundations'}));
 });
 afterEach(()=>{for(const root of temporary.splice(0))fs.rmSync(root,{recursive:true,force:true})});
+test('前端工具库仅向前端公开，私有实现与跨域依赖被拒绝',()=>{
+  const entry='src/frontend/foundations/utility/index.ts',inner='src/frontend/foundations/utility/json.ts';
+  expect(audit({[entry]:"export {equalJson} from './json';",[inner]:'export const equalJson=()=>true;','src/frontend/tasks/a.ts':"import {equalJson} from '../foundations/utility';"}).ok).toBe(true);
+  const privateImport=audit({[inner]:'export const equalJson=()=>true;','src/frontend/team/a.ts':"import {equalJson} from '../foundations/utility/json';"});
+  expect(privateImport.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'frontend-utility'}));
+  for(const from of ['src/backend/core/a.ts','src/foundations/utility/index.ts','src/bridge/contracts/a.ts']){
+    const relative=path.posix.relative(path.posix.dirname(from),entry);
+    expect(audit({[entry]:'export type Value=string;',[from]:`import type {Value} from '${relative}';`}).ok).toBe(false);
+  }
+});
+test('前端工具库不能反向引用页面、通信契约或后端工具，包含类型与第三方依赖',()=>{
+  const inner='src/frontend/foundations/utility/json.ts';
+  for(const target of ['src/frontend/team/a.ts','src/bridge/contracts/a.ts','src/foundations/utility/index.ts']){
+    const relative=path.posix.relative(path.posix.dirname(inner),target);
+    expect(audit({[inner]:`import type {Value} from '${relative}';`,[target]:'export type Value=string;'}).ok).toBe(false);
+  }
+  const external=audit({[inner]:"import {useState} from 'react';"});
+  expect(external.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'frontend-utility'}));
+  expect(audit({'src/frontend/tasks/a.ts':"export {value} from '../../foundations/utility';",'src/foundations/utility/index.ts':'export const value=1;'}).ok).toBe(false);
+});
 test.each([['files','text-files','file-foundations'],['utility','async','utility-foundations']])('Core 可组合 %s 公开入口，基础库不能反向引用业务或暴露私有实现',(capability,implementation,boundary)=>{
   const entry=`src/foundations/${capability}/index.ts`,inner=`src/foundations/${capability}/${implementation}.ts`;
   expect(audit({[entry]:'export const value=1;','src/backend/core/example.ts':`import {value} from '../../foundations/${capability}';`}).ok).toBe(true);

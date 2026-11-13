@@ -1,13 +1,13 @@
 /**
  * 作用定位：项目岗位页面的严格回包核对与持久提交控制器；跨同工作区页面共享未决命令。
  * 设计原因：完整岗位页与模块卡片共用同一命令池，登记不因超时重复创建。来源只随明确能力采纳改变；先保存完整原请求再发送，未知只查询或明确重送。
+ * 公共比较：通过前端 utility 保持原键排序与空值语义；身份、版本、回执和恢复决策仍由本控制器负责。
  */
+import {equalJson as same} from '../foundations/utility';
 import {workspaceMemberCommitInputSchema,workspaceMemberPreviewSchema,workspaceMemberReceiptSchema,workspaceMemberListSchema,workspaceMemberDetailSchema} from '../../bridge/contracts/workspace-members';
 import type {WorkspaceMemberIdentity,WorkspaceMemberPreviewInput,WorkspaceMemberPreview,WorkspaceMemberCommitInput,WorkspaceMemberReceipt,WorkspaceMemberListInput,WorkspaceMemberList,WorkspaceMemberGetInput,WorkspaceMemberDetail,WorkspaceMemberLookup} from '../../bridge/contracts/workspace-members';
 
 const message=(error:unknown)=>error instanceof Error?error.message:String(error);
-function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,ordered(item)])):value}
-const same=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 const identity=(value:WorkspaceMemberIdentity,input:WorkspaceMemberIdentity)=>same(value,{workspaceId:input.workspaceId,instanceId:input.instanceId});
 
 /** 分页固定登记游标，不能把另一个实例或变更后的第二页拼到原列表。 */

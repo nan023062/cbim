@@ -2,7 +2,9 @@
  * 作用定位：管理按真实人工决定继续的独立持久请求，供主会话两处目标卡共享。
  * 设计原因：继续会产生新运行，必须先保存固定决定与配置再发送；通信未知不能借新意见或新模型换命令重播。
  * 职责边界：不生成批准、不改原始输入、不自动发起工作；重开只查询未确认的原命令。
+ * 公共比较：通过前端 utility 保持原键排序与空值语义；身份、版本、回执和恢复决策仍由本控制器负责。
  */
+import {equalJson as equal} from '../foundations/utility';
 import {humanContinuationRequestSchema,humanContinuationReceiptSchema} from '../../bridge/contracts/human-continue';
 import type {HumanContinuationRequest,HumanContinuationReceipt,HumanContinuationLookup} from '../../bridge/contracts/human-continue';
 
@@ -15,8 +17,6 @@ export interface HumanContinuationState {records:readonly HumanContinuationDraft
 /** submit 可能已在后端受理后丢失响应，lookup 为空也不能证明未受理；storage 失败必须先阻止发送。 */
 export interface HumanContinuationPorts {storage:Pick<Storage,'getItem'|'setItem'>;submit:(request:HumanContinuationRequest)=>Promise<unknown>;lookup:(input:HumanContinuationLookup)=>Promise<unknown>;uuid:()=>string}
 const textError=(error:unknown)=>error instanceof Error?error.message:String(error);
-function normalized(value:unknown):unknown{return Array.isArray(value)?value.map(normalized):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,normalized(v)])):value}
-const equal=(a:unknown,b:unknown)=>JSON.stringify(normalized(a))===JSON.stringify(normalized(b));
 const sameIds=(a:string[],b:string[])=>equal([...a].sort(),[...b].sort());
 /** 仅明确尚未受理的领域拒绝可重新提交；命令冲突、运行失败和未知 IO 始终冻结。 */
 export function humanContinuationRejected(error:unknown){return /^(?:CAPACITY_BUSY|SCOPE_BUDGET_EXCEEDED|SCOPE_BUDGET_UNVERIFIABLE|SCOPE_BUDGET_WAITING|HUMAN_CONTINUATION_INPUT|HUMAN_CONTINUATION_IDENTITY|HUMAN_CONTINUATION_NOT_WAITING|HUMAN_CONTINUATION_UNAVAILABLE|HUMAN_CONTINUATION_NOT_READY|HUMAN_CONTINUATION_LIMIT|HUMAN_CONTINUATION_STALE|HUMAN_NOT_WAITING|HUMAN_IDENTITY|HUMAN_SOURCE_INVALID|HUMAN_KNOWLEDGE_CHANGED|HUMAN_EVIDENCE_INVALID|HUMAN_STALE|HUMAN_REVISION_CONFLICT|GOAL_IDENTITY|GOAL_NOT_WAITING|GOAL_WAIT_CONFLICT|GOAL_REVISION_CONFLICT|GOAL_CYCLE_LIMIT|GOAL_DECISION_LIMIT|GOAL_RUN_CONFLICT|GOAL_INPUT_LIMIT|GOAL_WORK_PENDING|IDENTITY|CONTINUATION_NOT_READY):/.test(textError(error))}

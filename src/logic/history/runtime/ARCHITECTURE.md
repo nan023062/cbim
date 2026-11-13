@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-会话履历查询编排，依赖 Core 履历契约，实际文件索引在 main/history。
+会话履历查询编排，依赖 logic/history/rules 履历契约，实际文件索引在 logic/history/service。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 

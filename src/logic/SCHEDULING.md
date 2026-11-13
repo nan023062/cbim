@@ -12,7 +12,7 @@ loop-engine 只在 coordinator 且 Main 提供 WebToolsPort 时注册两个网�
 
 ### 主会话反馈连接与本轮装配
 
-`ExecutionServices.feedbackTools` 由桌面为每次主运行捕获固定连接；`feedbackStatus` 单独提供只读本机连接检查，调度只依赖 Core 纯协议，不导入桌面认证实现。`loop-engine` 根据实际端口一次性成对装配 submit／receipt；独立 `FeedbackStatusTool` 在未连接时仍存在，执行成员不继承。没有桌面端口的主会话报告组件未装配，不因此获得外部写权限。
+`ExecutionServices.feedbackTools` 由桌面为每次主运行捕获固定连接；`feedbackStatus` 单独提供只读本机连接检查，调度只依赖 Logic 领域契约 纯协议，不导入桌面认证实现。`loop-engine` 根据实际端口一次性成对装配 submit／receipt；独立 `FeedbackStatusTool` 在未连接时仍存在，执行成员不继承。没有桌面端口的主会话报告组件未装配，不因此获得外部写权限。
 
 普通对话新一轮及继续原会话都会重新创建运行并捕获当前连接；同一活动运行中途登录不替换原端口或权限，诊断明确要求新一轮。已连接只表示本机保存了连接，不承诺网络可达或提交成功；未知提交的原目标与防重屏障继续由反馈服务负责。诊断变化不进入派发、业务验收或更新子系统。
 
@@ -132,13 +132,13 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 ### 成员派发与执行调度契约
 
-已实现可信桌面入口和主会话模型工具的成员执行闭环：`prepareMember` 注册稳定成员/独立逻辑通道，`WorkspaceDispatchService` 核实成员、多模块关系并原子派发，`MemberExecutionManager` 领取信封后使用同一 LoopRuntime 与岗位选择的 PiEngine/ClaudeCodeEngine/CodexEngine 执行、提交候选和返回结果信封。`AutoCollaboration` 在主轮结束并释放占用后推进本轮派发，再把可靠结果回注原主会话。支持 Snapshot/Delta、命令幂等与持久化记录恢复；执行者可恢复求助/等待和重启自动续跑仍未开放。节点规则见 [core/tasks](tasks/rules/CONTRACT.md)，成员身份见 [core/team](team/rules/CONTRACT.md)。
+已实现可信桌面入口和主会话模型工具的成员执行闭环：`prepareMember` 注册稳定成员/独立逻辑通道，`WorkspaceDispatchService` 核实成员、多模块关系并原子派发，`MemberExecutionManager` 领取信封后使用同一 LoopRuntime 与岗位选择的 PiEngine/ClaudeCodeEngine/CodexEngine 执行、提交候选和返回结果信封。`AutoCollaboration` 在主轮结束并释放占用后推进本轮派发，再把可靠结果回注原主会话。支持 Snapshot/Delta、命令幂等与持久化记录恢复；普通求助本身不授予续跑资格；安全检查点续执行和已完成结果的重启回传由下文专门协议约束，不自动重放未知旧运行。节点规则见 [tasks/rules](tasks/rules/CONTRACT.md)，成员身份见 [team/rules](team/rules/CONTRACT.md)。
 
 ### 当前成员执行边界
 
 主 session 默认通过 `conversationBinding(task)` 可靠登记图根和主实例，`mainRootSessionId` 将新主实例固定到所属根；主实例负责对话、直接执行未配置模块、调度与知识管理，但不能被派发为独立成员任务。`conversation` 承载普通聊天，图根原通道承载结果邮箱；正式自定义岗位任务使用独立执行实例。没有自定义负责岗位时不登记 `cbim:executor`。两种模式都不能把 `cbim:main` 派为执行者；已配置但失效的自定义岗位按真实缺口拒绝，不降级。旧共享根保留历史引用，新根不复用遗留共享实例。知识结构错误不阻断内置主对话身份登记，但不放宽正式任务的配置/模块/维护关系校验。
 
-`createWorkspaceLoop` 为主 Agent 保留内部知识查询、预览、对象 CRUD 与知识提交工具，以及派发工具。知识写入走同一日志门禁和用户 `read / ask / execute` 权限：read 拒绝；ask 等待本轮批准；execute 允许进入知识服务的实例、版本和事务校验。`knowledge-write` 不等于业务执行权，主 Agent 的任何 `business-write / command` 描述在审批前独立拒绝，包括未来内部工具；原生 `write / edit / bash` 不注册，即使收到幻觉调用或用户选择完全访问也不放行。知识服务只在 gate 通过后接收运行装配提供的写入能力，不接受模型自行授予权限；`.cbim` 内容仍禁止经原生文件工具直接修改。
+`createWorkspaceLoop` 为主 Agent 保留内部知识查询、预览、对象 CRUD 与知识提交工具，以及派发工具。知识写入走同一日志门禁和用户 `read / ask / execute` 权限：read 拒绝；ask 等待本轮批准；execute 允许进入知识服务的实例、版本和事务校验。`knowledge-write` 不等于业务执行权，主 Agent 的原生业务工具按本轮 read/ask/execute 权限及工具策略核实；两种模式都允许在当前主会话处理未配置自定义岗位的模块，不以模式本身签发写权限。Team 模式的内部工具列表另过滤业务写/命令描述，不能据此误称所有原生业务执行均被禁用。知识服务只在 gate 通过后接收运行装配提供的写入能力，不接受模型自行授予权限；`.cbim` 内容仍禁止经原生文件工具直接修改。
 
 - `start` 接收 `workspaceId/rootSessionId/taskId/commandId/expectedRevision/options`。options 只含公开模型标识、read/ask/execute 权限和毫秒超时，默认 read；不能指定成员身份、会话路径、提示词或状态。返回的是已持久化领取回执，不承诺此时已开始生成；相同命令返回原回执，不重复解析模型或执行。
 - 领取前拒绝主 Agent、released 执行实例和已关闭调度周期；同主会话有 waiting 周期时返回 GOAL_WAITING，包括旧无 scope 的任务入口，不能通过历史成员运行绕过等待。然后核实依赖、成员占用及工作区写占用，冻结角色/Skill、模块/Workflow、规范全文、前置候选和公开模型参数。密钥仅在主进程闭包中。领取事务同时写 starting、成员 communicating、task queued+activeRunId、assignment claimed。
@@ -302,16 +302,16 @@ MemberExecutionManager ..> MemberEventStreams : 公开执行增量
 
 #### 职责和端口
 
-调度器接收主 Agent 分析后的任务请求，核验岗位、来源、多模块岗位责任、依赖与权限，再持久化派发。主 Agent 模型提出分工，也可按本轮权限通过内部知识服务维护团队和业务定义，程序负责边界与事实；执行 Agent 自主探索真实团队与目标模块、选择实现和验证方法，再返回事实或缺口。组织的父子关系不授予派发权；主实例不直接执行业务，没有可用岗位时明确登记和分配责任，不能默认创建执行者绕过岗位模型与来源门禁。
+调度器接收主 Agent 分析后的任务请求，核验岗位、来源、多模块岗位责任、依赖与权限，再持久化派发。主 Agent 模型提出分工，也可按本轮权限通过内部知识服务维护团队和业务定义，程序负责边界与事实；执行 Agent 自主探索真实团队与目标模块、选择实现和验证方法，再返回事实或缺口。组织的父子关系不授予派发权；未配置自定义负责岗位的模块由主实例在本轮权限内直接处理；已配置但失效的岗位明确报缺口，不能默认创建执行者绕过岗位模型与来源门禁。
 
-`dispatch-service.ts` 负责建图、注册、派发及读取；`agent-manager.ts` 分配身份；`member-execution.ts` 管理领取、执行、结果和恢复，`member-state.ts` 核实交付并组装图事实，`workspace-lease.ts` 管理跨运行占用。存储端口在 Core `dispatch-storage.ts`。下面 `AgentDispatchService` 是后续模型命令契约，不是当前同名实现。
+`dispatch-service.ts` 负责建图、注册、派发及读取；`agent-manager.ts` 分配身份；`member-execution.ts` 管理领取、执行、结果和恢复，`member-state.ts` 核实交付并组装图事实，`workspace-lease.ts` 管理跨运行占用。存储端口在 Logic 领域契约 `dispatch-storage.ts`。下面 `AgentDispatchService` 是后续模型命令契约，不是当前同名实现。
 
 派发服务方法为 `initialize / openGraph / conversationBinding / openScope / closeScope / recoverScopes / createMember / dispatchTask / snapshot / delta / close`，拒绝任意 requester、parentTaskId 或运行状态，请求人固定来自主会话根。`openScope` 开启用户任务级周期；`closeScope` 在在途运行结算后原子释放执行实例并保留历史；`recoverScopes` 将重启前 active 周期结算为 interrupted，保留安全 waiting 且不重放执行。执行管理器另提供 `start / stop / inspect / messages / acknowledge` 与审批/问题接口；启动时冻结正文并复核基线，不符合则拒绝运行。
 
 应用级动态索引位于相邻的 `runtime/`：main 注入已提交派发观察和 Loop 事件订阅，WorkspaceExecutionManager 另提供 `observeQueue / initializeQueueMonitoring` 报告保存后的队列负载。业务服务不反向依赖全局管理器；全局索引不接管知识或执行权限。
 
 ```ts
-// 以下为服务边界示意；GraphIdentity / ModuleBinding 等复用 Core 契约。
+// 以下为服务边界示意；GraphIdentity / ModuleBinding 等复用 Logic 领域契约 契约。
 type DispatchCaller = {
   identity: GraphIdentity;
   agent: AgentRef;
@@ -370,11 +370,11 @@ interface AgentDispatchService {
 5. 依赖未满足则节点为 waiting；可执行时 queued。取得成员执行槽、会话租约及写冲突资源后，先记录 runId 和执行意图，再启动大脑，实际启动事实推进 running。
 6. 工具回执和终态由大脑事实接入。交付候选可靠保存后，以结果消息唤醒等待方；等待方核实结果版本后继续自己的任务。
 
-图批次、邮箱与幂等索引必须在同一调度事务中提交。`DispatchGraphStore` 等存储端口契约放 Core 的无实现契约文件，main 实现并注入；调度器不得导入 main 的文件存储或 Electron。
+图批次、邮箱与幂等索引必须在同一调度事务中提交。`DispatchGraphStore` 等示意端口不作为已实现类型；当前 DispatchStore 归 logic/dispatch/rules，FileDispatchStore 归 logic/dispatch/storage，由 Logic 应用装配注入；运行编排不得反向导入应用装配或 Electron。
 
 #### 消息、等待与防死锁
 
-内部消息协议放在 Core 的独立契约文件，由调度实现投递；形状如下，AgentRef 来自可信绑定，正文与结果证据单独保存，不进入公开图增量：
+内部消息协议放在 Logic 领域契约的独立契约文件，由调度实现投递；形状如下，AgentRef 来自可信绑定，正文与结果证据单独保存，不进入公开图增量：
 
 ```ts
 type AgentMessage = {
@@ -393,7 +393,7 @@ replyTo 引用原始 assignment/question 的 messageId；接收方核对原发�
 
 消息由可靠 outbox/inbox 投递，`messageId` 去重后只入队一次；领取、处理完成与业务结果分别记录。通信状态只在真实交付/消费期间出现，不能用动画或网络轮询推断。
 
-主调度等待已经派发的任务时，目标方案用 `awaitedChildren` 持久化 taskId + planRevision，不添加返回方向的执行边。等待必须在安全片段边界让出大脑槽和工作区占用，收到有效结果后再排队。执行 Agent 若遇到协作缺口则返回主调度，不自行派生子任务或持槽等待未提供的工具。已受理成员与结果回注已接应用级公平准入；原执行成员的持久停泊和恢复仍待实现。
+主调度等待已经派发的任务时，目标方案用 `awaitedChildren` 持久化 taskId + planRevision，不添加返回方向的执行边。等待必须在安全片段边界让出大脑槽和工作区占用，收到有效结果后再排队。执行 Agent 若遇到协作缺口则返回主调度，不自行派生子任务或持槽等待未提供的工具。已受理成员与结果回注已接应用级公平准入；任意工具现场的通用持久停泊仍是目标设计；已实现的安全检查点与显式续执行按专门协议核实，不因此开放未知现场恢复。
 
 前置依赖只连接任务节点；结果必须来自指定 planRevision 的有效候选。失败/取消的依赖不会因收到一条回复而满足。结果变旧时阻塞尚未执行的依赖任务；已经执行的下游进入基线复核，不自动重放。除了可视化 DAG，调度器还检查实际等待图：当前任务 → 未满足的前置任务，以及父任务 → awaitedChildren。任一新增派发、等待或修订使其成环均拒绝，防止“A 派 B，B 以 A 的结果为前置，A 又等 B”。问答消息本身不添加执行依赖，也不自动挂起整个任务；如需等待必须登记可检查的任务关系。
 
@@ -472,11 +472,11 @@ canonical 日志和知识在核验末尾重读，派发预览前后也比较状�
 
 `MemberExecutionManager` 在实际引擎关闭后、结算事务内重读日志；核实失败保留 blocked 诊断而不发布 help/result。停止入口先核实可信活动绑定，再同步设置停止标记，避免被 canonical 重读事务挡住；提交准备末端再次检查停止，防止迟到安全交接。正常求助则原子提交 run completed、task blocked + help、assignment processed、反向 help 信封和成员 idle，并在提交之后释放执行租约。成员显示“本轮执行结束，待主调度新安排”，不是可恢复停泊。
 
-已暂存求助的运行不能同时生成交付候选。确认 result/help 收件均不启动模型。主调度须依据问题重新规划，创建新任务和新执行实例；原求助任务保持不可变。旧 starting/running 的重启接管只标记 interrupted，不重放日志中的求助。已有未启动依赖仍按原 DAG 与等待门禁处理，可使用下述明确撤销协议；任务改线或旧成员恢复尚未开放。
+已暂存求助的运行不能同时生成交付候选。确认 result/help 收件均不启动模型。主调度须依据问题重新规划，创建新任务和新执行实例；原求助任务保持不可变。旧 starting/running 的重启接管只标记 interrupted，不重放日志中的求助。已有未启动依赖仍按原 DAG 与等待门禁处理，可使用下述明确撤销协议；任务改线与检查点续执行须使用后续专门协议及其资格校验，不能凭求助回执直接恢复旧成员。
 
 ### 主调度撤销未启动任务
 
-`WorkspaceDispatchService.cancelQueued` 委托 `QueuedTaskCancelService`。服务在派发存储事务内调用 Core 的 `queuedCancellationSelection`，准确核对图游标、任务版本、原周期和 never-run/never-claimed 事实；不读取模型、不发送停止、不复制旧工具参数。只有显式提供完整的启用依赖后继集合才能提交，任何一项不满足则全部不变。成员实例仅从空闲/等待转 idle，租约和通道保留至原周期关闭。
+`WorkspaceDispatchService.cancelQueued` 委托 `QueuedTaskCancelService`。服务在派发存储事务内调用 Logic 领域契约的 `queuedCancellationSelection`，准确核对图游标、任务版本、原周期和 never-run/never-claimed 事实；不读取模型、不发送停止、不复制旧工具参数。只有显式提供完整的启用依赖后继集合才能提交，任何一项不满足则全部不变。成员实例仅从空闲/等待转 idle，租约和通道保留至原周期关闭。
 
 返回回执包含明确 cancelledTaskIds 与提交后 graphCursor；记录保存提交前基线与原节点版本。幂等同命令在当前状态检查前返回旧结果，变参拒绝；读取或重启不会重新撤销或启动工具。领取和撤销竞争由同一个 store.tail 串行屏障决定，已经登记 run 的任务不能换名为未启动撤销。
 
@@ -712,4 +712,4 @@ loop-engine 仅在主 coordinator 的 createEngine 中取得 memberTools；发�
 
 ### 版本和闭包读取
 
-ScopeGoalService 的 inspectWithGraph/previewClosure 各读取一次 DispatchStore；预览直接复用 Core 领域校验，返回待撤销/待保留清单和阻塞原因，不设置周期 workRequested。AutoCollaboration 仅装配当前根/周期的端口，最终写入仍走原 CAS、完整闭包、canonical 和人工验收约束。
+ScopeGoalService 的 inspectWithGraph/previewClosure 各读取一次 DispatchStore；预览直接复用 Logic 领域契约 领域校验，返回待撤销/待保留清单和阻塞原因，不设置周期 workRequested。AutoCollaboration 仅装配当前根/周期的端口，最终写入仍走原 CAS、完整闭包、canonical 和人工验收约束。

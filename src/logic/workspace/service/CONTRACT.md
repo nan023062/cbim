@@ -114,7 +114,7 @@ IsolatedExecutions复核原冻结run/scope和唯一canonical proposed/allowed。
 
 ControlledFileService 接收岗位或自动兜底的冻结身份，按同一授权、原调用指纹和文件事务保存真实审计。fallback 不修改 read/ask/execute，不发明批准、不略过退出及补偿核实。
 
-ModuleOwnerships 复用 Core 责任预期诊断，区分无需重设、已有记录和真实并发修改；不会把重复设置提示为盲目重新预览，诊断不修改责任历史。
+ModuleOwnerships 复用 Logic 领域规则 责任预期诊断，区分无需重设、已有记录和真实并发修改；不会把重复设置提示为盲目重新预览，诊断不修改责任历史。
 
 ### 实例变化的恢复指引
 

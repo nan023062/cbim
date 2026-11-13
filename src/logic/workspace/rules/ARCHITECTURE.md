@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-领域工程、Module、Workflow与稳定岗位责任协议。来源代次和写前屏障由纯规则投影；内容指纹、来源身份、负责人关系分别核实。同负责人明确采纳递增关系版本，不迁移任务；旧缺省记录不补造来源。Workflow验证不自行读文件或签发业务验收。 model.ts 是知识读取模块的私有实现，外部通过 knowledge/read-models 访问；项目根定义仍为独立纯公开契约。 executionScope只收窄原权限，全模块一致冻结，预算合并取小。 主调度的负责人发现按所选模块真实分组，缺口不推测继承或默认负责者。
+领域工程、Module、Workflow与稳定岗位责任协议。来源代次和写前屏障由纯规则投影；内容指纹、来源身份、负责人关系分别核实。同负责人明确采纳递增关系版本，不迁移任务；旧缺省记录不补造来源。Workflow验证不自行读文件或签发业务验收。 只读视图归 logic/knowledge/rules/read-models，外部通过其 index.ts 访问；项目根定义仍为独立纯公开契约。 executionScope只收窄原权限，全模块一致冻结，预算合并取小。 主调度的负责人发现按所选模块真实分组，缺口不推测继承或默认负责者。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -865,7 +865,7 @@ N_src_logic_workspace_rules_workflow_contract_ts ..> N_src_logic_workspace_rules
 
 ### 静态模块视图的单向边界
 
-`model.ts` 中的 BusinessWorkspace 只依赖知识快照公开类型、只读解析辅助、Foundation 与 `project-root.ts`，不依赖 Team 视图、知识写入端口或调度编排。跨域组合在 Scheduler，固定快照视图不缓存后续版本，也不取得实际工程的生命周期。依赖矩阵和状态归属见 [知识契约](../../knowledge/rules/CONTRACT.md#快照契约领域视图与查询编排)；Workflow 协议、责任与来源登记各有原领域契约，不因目录同名合并职责。
+`logic/knowledge/rules/read-models/workspace.ts` 中的 BusinessWorkspace 只依赖知识快照公开类型、只读解析辅助、共享 Core 与 `project-root.ts`，不依赖 Team 视图、知识写入端口或调度编排。跨域查询由 logic/knowledge/rules/knowledge-queries.ts 组合，执行准备在 logic/execution/context 调用查询端口，固定快照视图不缓存后续版本，也不取得实际工程的生命周期。依赖矩阵和状态归属见 [知识契约](../../knowledge/rules/CONTRACT.md#固定快照读取的逻辑边界与公共入口)；Workflow 协议、责任与来源登记各有原领域契约，不因目录同名合并职责。
 
 ### 始终存在的项目根范围
 
@@ -913,7 +913,7 @@ Team 派工仍由岗位 memberId、模块负责人、能力与模型来源、权
 
 责任 `sourceRef` 是明确采纳，`sourceSelection` 是服务重建的预览依据，不是请求可自报的证明。首次捕获 UUID/时钟不进入 basis；原关系指纹、实际来源选择及观察、当前岗位版本和任务影响仍进入。新增 `adopt_source` 请求不带 nextOwner，只能沿原非空 owner/binding 明确采纳不同来源；当前 owner 须 active。原普通同 owner 变更仍拒绝，解除保留原观察和引用，允许来源已经缺失。每次采纳推进原责任 revision，旧记录不改写。
 
-公开 sourceStatus 区分 untracked、needs_adoption、current、retired、pending 及 missing/invalid/unverifiable；current 必须精确匹配已采纳引用，所有 ref 与逻辑对象/工作区绑定。来源 current 和岗位 active 都不等于实际派发许可；本片尚未把执行任务切换为负责人岗位。
+公开 sourceStatus 区分 untracked、needs_adoption、current、retired、pending 及 missing/invalid/unverifiable；current 必须精确匹配已采纳引用，所有 ref 与逻辑对象/工作区绑定。来源 current 和岗位 active 都不等于实际派发许可；新任务派发还需通过独立负责人执行门禁；来源跟踪本身不改绑已有任务。
 
 责任读取依据增加可选 sourceCursor，新查询固定来源流，旧缺省只保持原读取格式、不补默认字段。翻页须比较完整依据，防止定义字节与知识 hash 恰好恢复相同时，把旧 current 与新 retired 混在一页链中。
 

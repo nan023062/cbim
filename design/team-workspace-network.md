@@ -210,10 +210,10 @@ flowchart TB
 
 | 目标概念 | 已有可复用基础 | 尚不能据此宣称的能力 |
 | --- | --- | --- |
-| Agent 与岗位分离 | [workspace-member.ts](../src/backend/core/team/workspace-member.ts) 有岗位身份、采纳快照及暂停/退休语义 | 全网统一身份、跨工作区团队组织与自主协商 |
-| 业务架构与责任 | [workspace 契约](../src/backend/core/workspace/CONTRACT.md)、[根业务范围](../src/backend/core/workspace/project-root.ts) | 工作区网络关系、跨工作区交付协议已经成立 |
-| 执行身份与事件 | [member-run.ts](../src/backend/core/execution/member-run.ts)、[执行类型](../src/backend/core/execution/types.ts) 区分任务、运行、租约及原生会话 | 所有宿主均提供等价身份、事件重放和停止保证 |
-| 任务、证据与预算 | [后端模块导航](../src/backend/CONTRACT.md) 指向现有规则、编排及存储 | 跨工作区预算原子预留、分布式结算或全球事务 |
+| Agent 与岗位分离 | [workspace-member.ts](../src/logic/team/rules/workspace-member.ts) 有岗位身份、采纳快照及暂停/退休语义 | 全网统一身份、跨工作区团队组织与自主协商 |
+| 业务架构与责任 | [workspace 契约](../src/logic/workspace/rules/CONTRACT.md)、[根业务范围](../src/logic/workspace/rules/project-root.ts) | 工作区网络关系、跨工作区交付协议已经成立 |
+| 执行身份与事件 | [member-run.ts](../src/logic/execution/rules/member-run.ts)、[执行类型](../src/logic/execution/rules/types.ts) 区分任务、运行、租约及原生会话 | 所有宿主均提供等价身份、事件重放和停止保证 |
+| 任务、证据与预算 | [后端模块导航](../src/logic/BOUNDARIES.md) 指向现有规则、编排及存储 | 跨工作区预算原子预留、分布式结算或全球事务 |
 | 能力组织 | [能力侧现状](capability/README.md) 以分组和 Agent 定义检索，主协调者组织工作 | 已有嵌套 Team、团队自治或联邦调度运行模型 |
 | 成长与共享 | [现有 CBIM 理论](../docs/02-CBIM架构设计理论.md) 区分能力、业务和个人记忆 | 已有完整的观察→验证→版本发布→采纳闭环 |
 

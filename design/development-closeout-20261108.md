@@ -79,7 +79,7 @@ Step55 将原任务授权、运行与调用身份、宿主创建时间及目录�
 
 - 功能代码：本地提交 **`0e2a2ff`**，未推送。
 - Windows x64 便携包历史路径：`build/20261108-172018/make/zip/win32/x64/CBIM-Assistant-20261108-172018-win32-x64-0.1.0.zip`（构建产物未随 Git 保存）。当时记录的 ZIP 大小为 180457754 字节，使用时须解压完整目录。
-- 程序入口：[CBIM.exe](<../build/20261108-172018/CBIM Assistant-win32-x64/CBIM.exe>)，需保留同目录运行资源。
+- 程序入口：CBIM.exe（历史本机路径：`build/20261108-172018/CBIM Assistant-win32-x64/CBIM.exe`；当前工作区未留存，不是可下载链接），需保留同目录运行资源。
 - 构建身份：[latest-build.json](../build/latest-build.json)；完整源码／成品指纹与本机证据位置见[最终验收报告](verification/isolated-execution-recovery-20261108.md)。构建和过程证据保留在本机，未发布到外部。
 
 本轮验收保留了用户原有应用进程；收尾整理保留工作区内独立的“模块负责人索引”设计改动，未将其计作本轮实现或合并提交。

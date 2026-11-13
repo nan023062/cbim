@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-证据领域：输出清单、产物、命令/人工/效果观察与完成报告规则。记录、有效性和业务验收分别核实；平台读取在 main/evidence，编排在 scheduler-engine/evidence。
+证据领域：输出清单、产物、命令/人工/效果观察与完成报告规则。记录、有效性和业务验收分别核实；业务读取适配在 logic/evidence/service，编排在 logic/evidence/runtime。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -1042,4 +1042,4 @@ Workflow 的 `delivery.requiredCodeChecks` 冻结检查 ID、目的、program、
 
 范围必须显式包含相关源码、测试、构建配置和锁文件；未声明的依赖、环境和外部服务不在证明范围。沿用完整清单上限：16 个根、512 条目、单文件 8 MiB、总计 32 MiB。构建输出应放在输入范围之外。每组最多 8 项，每项最长 5 分钟，输出最多 256 KiB。平台执行是宿主进程，不提供沙箱隔离。
 
-阅读顺序：workspace/code-check.ts 定义要求，evidence/code-check.ts 核验事实，execution/capabilities/run-code-check.ts 管理生命周期，main/platform/files/code-check-runner.ts 执行真实进程。新增项目检查优先修改 Workflow 和项目适配脚本；新增成功判据才修改契约与平台解析，并补充失败回归。
+阅读顺序：logic/workspace/rules/code-check.ts 定义要求，logic/evidence/rules/code-check.ts 核验事实，logic/execution/rules/capabilities/run-code-check.ts 管理生命周期，logic/file-operations/platform/files/code-check-runner.ts 执行真实进程。新增项目检查优先修改 Workflow 和项目适配脚本；新增成功判据才修改契约与平台解析，并补充失败回归。

@@ -1,5 +1,7 @@
 # Step51 / R09-A：真实 CSV 产物验证记录
 
+> 历史快照：正文中的目录、完成状态与验证数字保留记录日期的事实，不是当前实现清单。四层迁移后的现状请看 [源码契约](../../src/CONTRACT.md) 和 [Logic 边界](../../src/logic/BOUNDARIES.md)。
+
 日期：2026-11-08。承接 Step50 本地提交 26ac724；本片按[计划](../task/csv-artifact-validation.md)完成库存 CSV 代表任务，[R09 支持矩阵](../task/professional-validation-support.md)继续保留 PNG、程序及外部专业输出的独立验收。
 
 ## 已完成行为

@@ -4282,7 +4282,7 @@ N_src_logic_tasks_rules_workspace_member_invariants_ts ..> N_src_logic_tasks_rul
 
 回传沿用原 continuationId、权限、预算及累计主轮，启动意图先登记，实际启动后才确认信封。若崩溃发生在意图登记后，即使缺少启动日志，也不再次发送；未知、损坏、过期、模型变化及旧未登记批次中断封存，保留理由和原成果。此范围不覆盖执行中恢复、网络重试或任意命令重放；文件有效性只覆盖原交付声明的验证范围。
 
-恢复策略留在调度服务，Core 只负责不可变协议，执行管理器继续拥有去重、停止与原生会话。后续扩展可恢复场景应改 `AutomaticReturnService.inspect` 并增加真实崩溃用例，不能放宽 Store、权限或未知事实约束。返工策略与恢复策略分别变化，复用同一可信日志核验和启动入口；变化频率尚无统计证据。
+恢复策略留在调度服务，Logic 领域规则 只负责不可变协议，执行管理器继续拥有去重、停止与原生会话。后续扩展可恢复场景应改 `AutomaticReturnService.inspect` 并增加真实崩溃用例，不能放宽 Store、权限或未知事实约束。返工策略与恢复策略分别变化，复用同一可信日志核验和启动入口；变化频率尚无统计证据。
 
 ### 最终验收的有界自动返工
 
@@ -4352,7 +4352,7 @@ Store 自己标记新事务协议并按历史前缀选择校验，控制面与�
 
 补充前至少剩余三个目标版本（接收本次输入、随后 plan 和 review），既有 64 次总版本变更与 32 次主运行预算均不重置。新 runId 不得已在旧检查点出现，每个后续 wait.mainRunIds 必须包含此前所有检查点预算和补充运行。已消费 wait 和补充原文不可改写；closed/goal.blocked 不能恢复。新作用只发布 scope 摘要增量，不推进 graph cursor。
 
-首次创建、审阅事实核验、关闭和恢复均由调度服务负责；Core 只约束目标结构和合法演进，不推断业务语义，也不停止运行。旧无周期显式入口仍兼容原记录，新自动流程必须提供可信 scope。
+首次创建、审阅事实核验、关闭和恢复均由调度服务负责；Logic 领域规则 只约束目标结构和合法演进，不推断业务语义，也不停止运行。旧无周期显式入口仍兼容原记录，新自动流程必须提供可信 scope。
 
 ### 主会话目标周期的独立公开投影
 
@@ -4847,7 +4847,7 @@ Progress 保存前独立冻结验证记录，原 wire 证明必须能由这些�
 
 主 Agent actor 必须属于当前 active scope 最后登记的主 run、该根真实主实例和 conversation 通道；本机 actor 由可信桌面入口注入。重放在当时前缀核验，之后关闭周期不否定合法旧事件。`moduleOwnershipImpact` 只统计 TaskNode 显式模块关联，digest 包含任务、真实运行及 assignment 领取状态以令过期预览失效，不从旧 assignee 猜测岗位负责人或转移结果。
 
-责任指派与岗位退休在同一 DispatchStore 队列裁决。`workspace-member-invariants.ts` 遇仍被任一当前关系引用的 retired 变更返回 `MEMBER_OWNERSHIP_ACTIVE`；先解除/更换后才可退休。暂停不清责任，恢复 active 也不表示具备执行条件。本片不接入来源代次或实际派发身份切换。
+责任指派与岗位退休在同一 DispatchStore 队列裁决。`workspace-member-invariants.ts` 遇仍被任一当前关系引用的 retired 变更返回 `MEMBER_OWNERSHIP_ACTIVE`；先解除/更换后才可退休。暂停不清责任，恢复 active 也不表示具备执行条件。责任登记本身不变更来源代次或已有任务的执行身份；新任务由负责人执行协议核验当前绑定。
 
 `cbim_module_owner_*` 回执保留在真实执行日志，但从 `isProgressEvidence`、成员候选、Workflow 交付和目标/人工候选的业务证据入口排除。查询或责任提交不能证明业务文件、知识正文或人工条件已经验收。提交的 knowledge-write 效果仍使旧进度失效并参与审阅后的副作用检查，控制面例外不会绕过已有业务目标。
 ### 来源日志与登记的精确组合许可
@@ -4875,7 +4875,7 @@ Store 继续用同一串行提交、原命令回执和原协议裁决，不增�
 
 `command-verification-output.ts` 仅供后端：原回执先按既有主输出 Schema 核输入/身份/版本，并拒绝解析产生的 trim/默认化，再生成八支紧凑摘要。任务列表最多 20 项，明确 total/truncated，完整原集合不能先裁剪再核；公开报告最多 20 条 issue、128 KiB wire，业务验收固定 not_evaluated。Bridge 仅导 `command-verification.ts` 叶子，不能把后端回执读取或原私有上下文导入浏览器。
 
-## 影响观察与处置附录（Step36 Core 协议）
+## 影响观察与处置附录（Step36 Logic 领域规则 协议）
 
 `effect-observation.ts` 分开原主/成员调用、当前文件观察、原提交事实及本机处置；所有公开对象 strict，不接受客户端 scope、参数、文件 hash 或 actor 作为证明。新 source/proof 的 kind 明确区分主与成员；旧无 kind 分支原样读取，不默认升级、不重新编码原 journal。主来源不能借成员任务版本，缺原可信计划只允许只读核实，不签发业务重规划资格。
 
@@ -4885,7 +4885,7 @@ Store 继续用同一串行提交、原命令回执和原协议裁决，不增�
 
 `scope-public.ts` 是主工具与 `dispatch.sessionRead` 选中详情共用的纯公开白名单；`PublicDispatchScope` 明确区别于私有持久 `DispatchScope`。公开详情保留原 `recovery.source`、`replan.source.proof`、权限、人工约束与可选 `dispositionId`，剔除两类 `context` 及其原生身份/旧运行排除集合，旧未配置字段继续缺省。`readScopeDetail` 在真实同一 Store 读取屏障上校验公开 Schema，再独立复制；stamp 相同仍返回 noop。主工具复用同一基础 Schema，另加后端身份/哈希语义核验，浏览器不引入 Node 哈希实现。前端只持有公开类型，不能据来源投影推断新的恢复许可或业务验收。
 
-## 受控单文件操作（Step37 Core/Store 协议）
+## 受控单文件操作（Step37 Logic 领域规则/Store 协议）
 
 `controlled-file-operation.ts` 是纯公共叶子：工具仅输入 path、expectedBefore、content；applied 输出只含原调用/绑定及字节摘要，acceptance 固定 not_evaluated。补偿只接原 operationId、原命令、预期版本、basis 和明确理由，不接 actor、文件身份、正文或备份。公开报告区分不存在/不可核实与已存阶段，不把查无记录当作未执行。正文各 1 MiB UTF-8、参数 JSON 3 MiB、公共 wire 128 KiB；路径只做纯相对结构检查，Windows 平台必须另核文件系统、保留目录和普通单链接身份。
 
@@ -4893,7 +4893,7 @@ Store 继续用同一串行提交、原命令回执和原协议裁决，不增�
 
 `controlled-file-invariants.ts` 每次只接受一条阶段与精确回执，不允许空集合或未知字段伪装独立操作。prepared→executing→applied/unknown，或确认 write_not_issued 的 not_applied；终态不可变。新原写需同一真实 running 成员及 active 非只读周期，首次 leaseEpoch=0 合法；executing 前仍复核，终态只核原意图和实际结果，不因运行停止或今日岗位变化丢弃事实。相同授权序号不能转借另一调用，原写 blob 不能重新绑定到新操作。
 
-补偿另建意图及阶段，只能引用原可靠 applied、关闭周期和已结算运行；同文件身份、当前 after 摘要与原两个 blob 必须精确对应，不能对补偿再补偿。原调用记录和所有业务证据不改。每原 run 8 写、root 64 操作、工作区 256 操作、每原写 8 次明确补偿；16 MiB 附录在 prepared 时预留余下阶段空间，超限不删历史。真实 blob 64 MiB 与平台 IO/占用/停止由 Main 执行，Core 不把结构校验冒称物理证明。未结算或未知只能查原记录，重开不自动续写；Workflow、artifact 与 checkpoint 的现有白名单不扩大。
+补偿另建意图及阶段，只能引用原可靠 applied、关闭周期和已结算运行；同文件身份、当前 after 摘要与原两个 blob 必须精确对应，不能对补偿再补偿。原调用记录和所有业务证据不改。每原 run 8 写、root 64 操作、工作区 256 操作、每原写 8 次明确补偿；16 MiB 附录在 prepared 时预留余下阶段空间，超限不删历史。真实 blob 64 MiB 与平台 IO/占用/停止由 Main 执行，Logic 领域规则 不把结构校验冒称物理证明。未结算或未知只能查原记录，重开不自动续写；Workflow、artifact 与 checkpoint 的现有白名单不扩大。
 
 
 ### 原知识事务观察扩展

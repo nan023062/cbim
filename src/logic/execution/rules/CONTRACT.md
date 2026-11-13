@@ -4,7 +4,7 @@
 
 `publicRunFailure` 为成员任务卡和执行详情提供同一套无副作用诊断转换。已知无进展超时、旧整轮超时、事件过大、进程退出、输出长度限制、认证/限流/网络错误重建具体说明；任意供应商错误、原生路径、凭据和工具正文不直接公开，无法识别的原始原因保留在 canonical 日志。数值仅从有限的错误形态提取，转换不修改历史、不认定副作用已撤销、不触发重试。
 
-当前实现位于本目录的公开契约、`runtime/` 与 `capabilities/`；具体引擎位于 [backend/engines](../engines/ARCHITECTURE.md)，由 [调度装配](../assembly/ARCHITECTURE.md) 选择。下文标明“设计”“待实现”的历史端口草案仍非已实现保证；当前结构以本目录类图和源码为准。
+当前实现位于本目录的公开契约、`runtime/` 与 `capabilities/`；具体引擎位于 [execution/engines](../engines/ARCHITECTURE.md)，由 [调度装配](../assembly/ARCHITECTURE.md) 选择。下文标明“设计”“待实现”的历史端口草案仍非已实现保证；当前结构以本目录类图和源码为准。
 
 ### 原主轮插入与停止边界
 
@@ -178,7 +178,7 @@ interface PreparedTurnInput {
   session: NativeSessionBinding;
 }
 
-// ModuleBinding 使用 core/tasks 契约的类型；此处只补充固定知识正文。
+// ModuleBinding 使用 logic/tasks/rules 契约的类型；此处只补充固定知识正文。
 type PreparedModuleBinding = ModuleBinding & { context: string };
 type PreparedAgentTurn = PreparedTurnInput & (
   | { binding: ConversationRunBinding; moduleBindings?: [] }
@@ -216,7 +216,7 @@ interface AgentRunPorts {
   beforeTool(call: ToolCall): Promise<ToolDecision>;
 }
 
-/** 由调度层调用、装配层提供实现；Core 不反向引用调度或 Electron。 */
+/** 由调度层调用、装配层提供实现；Logic 领域规则 不反向引用调度或 Electron。 */
 interface AgentRunPort {
   execute(turn: PreparedAgentTurn, ports: AgentRunPorts): Promise<AgentRunOutcome>;
   stop(binding: AgentRunBinding): Promise<void>;
@@ -229,7 +229,7 @@ interface AgentRunPort {
 
 `ModuleBinding` 复用 [任务图契约](../../tasks/rules/CONTRACT.md) 的设计类型，保留维护关系、版本和 `workflow` 的 `module / general` 联合类型，不再定义另一套 Workflow 数组。模块流程只能来自自身定义；通用流程仅按该联合类型记录明确来源、版本与采用原因。`context` 是该绑定对应的固定知识正文，不能把几个模块拼成无来源的共享流程。
 
-`InputImage`、`AgentEngine`、`EngineEvent`、`ToolCall` 和 `ToolDecision` 引用现有 Core 契约；`ModuleBinding`、快照引用与 `AgentRunPorts` 是待实现类型。三个快照引用不能由模型构造，失效或跨工作区引用必须拒绝，不回退成“当前默认设置”。装配层在执行开始前解析并固定模型能力/参数与凭据、权限策略及本轮可用工具清单：模型凭据只进入现有后端 `ResolvedLlm` 快照与受控引擎，绝不进入图事件、角色配置或公开 DTO。权限引用包含本次任务范围及审批有效期，工具引用固定发现清单，但发现某工具不等于授权执行。
+`InputImage`、`AgentEngine`、`EngineEvent`、`ToolCall` 和 `ToolDecision` 引用现有 Logic 领域规则 契约；`ModuleBinding`、快照引用与 `AgentRunPorts` 是待实现类型。三个快照引用不能由模型构造，失效或跨工作区引用必须拒绝，不回退成“当前默认设置”。装配层在执行开始前解析并固定模型能力/参数与凭据、权限策略及本轮可用工具清单：模型凭据只进入现有后端 `ResolvedLlm` 快照与受控引擎，绝不进入图事件、角色配置或公开 DTO。权限引用包含本次任务范围及审批有效期，工具引用固定发现清单，但发现某工具不等于授权执行。
 
 `createEngine` 只装配该快照允许的工具集合；`beforeTool` 绑定相同策略与完整运行身份，调用成功也必须持久化决策后才能放行副作用。`emit` 绑定本次持久化日志，失败时不得继续无记录执行。引擎实现不得保留一个绕过这些端口的工具执行入口。运行中设置修改留给下一次执行，当前快照不随全局设置漂移。
 
@@ -307,7 +307,7 @@ LoopRuntime ..> AgentEngine : 通过既有契约驱动
 
 #### 一次成员检查点与原通道续执行
 
-`RunMemberCheckpoint` 仅为具备可信文件端口及正数 memberCheckpointAllowance 的成员运行装配 `cbim_task_checkpoint`。策略 await 之前同步预占门闩，拒绝未结束工具或审批；完整白名单文件来源、当前进度和知识、全部文件字节核实后保存 `task.checkpoint_requested`。成功只表示暂存，随后所有工具被封住，模型须正常结束。停止、超时、关闭失败或未决工具不能成为安全检查点；Core verifier 与外层调度才负责结算。
+`RunMemberCheckpoint` 仅为具备可信文件端口及正数 memberCheckpointAllowance 的成员运行装配 `cbim_task_checkpoint`。策略 await 之前同步预占门闩，拒绝未结束工具或审批；完整白名单文件来源、当前进度和知识、全部文件字节核实后保存 `task.checkpoint_requested`。成功只表示暂存，随后所有工具被封住，模型须正常结束。停止、超时、关闭失败或未决工具不能成为安全检查点；Logic 领域规则 verifier 与外层调度才负责结算。
 
 `resumeMember` 是可信调度专用入口，要求原 canonical 完整正常终态、冻结 logHash、原 TaskSpec/成员/通道相同及 `leaseEpoch = old + 1`，仅 runId 改变。它不放宽普通 start/resume，不能沿 help/失败/取消日志继续。原进度复制后立即失效旧证据和 delivery；续轮不再提供检查点工具，必须用新运行的实际证据交付。
 

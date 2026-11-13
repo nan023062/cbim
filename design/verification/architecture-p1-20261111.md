@@ -1,5 +1,7 @@
 # P1 架构整改与复扫记录
 
+> 导航维护说明（2026-11-14）：正文保留当时的路径、结论与验证边界；可点击源码链接已更新到当前归属，仅供导航，不作为历史版本证据。未留存的阶段入口另行注明，不伪造源码或制品归档。
+
 日期：2026-11-11。依据：[架构设计规范](../project-architecture-standard.md)、[治理流程](../architecture-governance-process.md)、[原扫描报告](architecture-audit-20261111.md)。
 
 ## 1. 结论、基线与范围（S1–S3）
@@ -17,23 +19,23 @@
 
 ### A03 / P1：统一主 Agent 实际职责
 
-修正 [main-agent.ts](../../src/backend/scheduler-engine/conversation/main-agent.ts) 的 Team 指引，与 Auto 及已实现行为一致：未配置自定义负责岗位时，主 Agent 在当前主会话直接实现和验证；显式岗位按原计划和可信绑定派发。保留“主角色不得派成独立成员”的限制。同步 [团队契约](../../src/backend/core/team/CONTRACT.md)、[会话契约](../../src/backend/scheduler-engine/conversation/CONTRACT.md)、README 和执行身份注释。
+修正 [main-agent.ts](../../src/logic/conversation/runtime/main-agent.ts) 的 Team 指引，与 Auto 及已实现行为一致：未配置自定义负责岗位时，主 Agent 在当前主会话直接实现和验证；显式岗位按原计划和可信绑定派发。保留“主角色不得派成独立成员”的限制。同步 [团队契约](../../src/logic/team/rules/CONTRACT.md)、[会话契约](../../src/logic/conversation/runtime/CONTRACT.md)、README 和执行身份注释。
 
 验收：真实 Pi 加本地确定性模型服务的 8 种场景覆盖 Team/Auto、read/ask/execute、存在业务模块等组合；检查实际发送的提示不再包含相互冲突的禁止语句，同时保留审批、工作区知识保护与不生成伪成员任务的断言。默认执行角色退役、正式目标及统一工具策略用例通过。现行源码、运行资料和 README 未再检出旧禁止语句。
 
 ### A04 / P1：分离知识读取与事务刷新
 
-- [KnowledgeQueries](../../src/backend/core/knowledge/knowledge-queries.ts) 只接收 `KnowledgeSnapshotReader.snapshot`，保留四个查询方法；知识工具和 Workflow 上下文显式转发读取能力。
-- [KnowledgeRefresh](../../src/backend/core/knowledge/knowledge-refresh.ts) 独立接收 `assert / snapshot / committedReceipt / commit`。`KnowledgeCommit` 放入纯数据契约，旧 ports 只重导出同一类型。
-- [知识工具](../../src/backend/scheduler-engine/tools/knowledge-tools.ts) 保留原刷新 v2 Schema、写权限与调用包装；逻辑规则不再允许查询导入完整工作区写端口或刷新服务。
+- [KnowledgeQueries](../../src/logic/knowledge/rules/knowledge-queries.ts) 只接收 `KnowledgeSnapshotReader.snapshot`，保留四个查询方法；知识工具和 Workflow 上下文显式转发读取能力。
+- [KnowledgeRefresh](../../src/logic/knowledge/rules/knowledge-refresh.ts) 独立接收 `assert / snapshot / committedReceipt / commit`。`KnowledgeCommit` 放入纯数据契约，旧 ports 只重导出同一类型。
+- [知识工具](../../src/logic/tools/runtime/knowledge-tools.ts) 保留原刷新 v2 Schema、写权限与调用包装；逻辑规则不再允许查询导入完整工作区写端口或刷新服务。
 
 验收：仅提供快照的替身即可调用真实团队／模块查询，无 Application、任务表或物理路径。刷新覆盖结构无效不提交、旧版本拒绝、原成功回执优先、重复不再提交但返回当前校验；完整工作区测试继续核实原 journal 字节、取消、同键异参以及可信契约版本。查询、输出协议、刷新及 Workflow 消费者均通过。
 
 ### A05 / P1：请求预算只依赖所属领域端口
 
-[model-request-budget-storage.ts](../../src/backend/core/tasks/model-request-budget-storage.ts) 定义窄读视图、追加命令及准入端口：周期身份、冻结预算策略、主运行 ID、请求预算记录。它不导入 `DispatchState` 或 `DispatchScope`，不声明岗位、任务图、邮箱等无关字段。
+[model-request-budget-storage.ts](../../src/logic/budget/rules/model-request-budget-storage.ts) 定义窄读视图、追加命令及准入端口：周期身份、冻结预算策略、主运行 ID、请求预算记录。它不导入 `DispatchState` 或 `DispatchScope`，不声明岗位、任务图、邮箱等无关字段。
 
-[ModelRequestBudgetService](../../src/backend/scheduler-engine/execution/model-request-budget-service.ts) 已迁移；[request-budget-store.ts](../../src/backend/main/persistence/tasks/request-budget-store.ts) 在唯一 `DispatchStore.transact` 的原回调内投影并复制视图，只返回预算变化和回执，拒绝夹带其他 mutation 键。Main 负责装配。`ScopeBudgetService.preflightRequest` 同样只读预算视图；跨域准入仍使用原协调者与事务。
+[ModelRequestBudgetService](../../src/logic/budget/runtime/model-request-budget-service.ts) 已迁移；[request-budget-store.ts](../../src/logic/dispatch/storage/request-budget-store.ts) 在唯一 `DispatchStore.transact` 的原回调内投影并复制视图，只返回预算变化和回执，拒绝夹带其他 mutation 键。Main 负责装配。`ScopeBudgetService.preflightRequest` 同样只读预算视图；跨域准入仍使用原协调者与事务。
 
 验收：服务可用最小领域状态替身独立预留、发送及结算；适配验证读取发生在原事务内、嵌套数据隔离、原命令及回执透传、无法提交 scopes 等其他领域变化。真实 FileDispatchStore 覆盖并发竞争、原命令重放、异参拒绝、可靠保存失败、重开未知账本、旧运行失效与停止。真实请求传输、预算启动及周期预检消费者通过。
 
@@ -41,9 +43,9 @@
 
 ### A06 / P1：通用运行上下文不再枚举业务工具
 
-- [EngineContext](../../src/backend/core/brain/types.ts) 的九类专用工具字段替换为统一 `capabilities`；[engine-tools.ts](../../src/backend/core/brain/engine-tools.ts) 只消费统一目录／调用端口，没有具体业务或 EngineContext 导入。
-- [member-tool-capabilities.ts](../../src/backend/core/brain/member-tool-capabilities.ts) 显式装配原九类能力，保留调用 ID、取消信号及业务指引。Pi/Claude/Codex 按可信 `disableNativeTools` 策略关闭原生工具，不判断特定业务字段。知识工具继续由各引擎的可信选项注入。
-- [run-validation.ts](../../src/backend/core/brain/run-validation.ts) 持有启动前准备及工厂：数量上限、正式身份、JSON/CSV/PNG 实际支持。Runtime 保留原调用位置，只注入进度、代次、授权／在途检查、清单复核与可靠保存；不再判断具体验证器名称或容量常量。
+- [EngineContext](../../src/logic/execution/rules/types.ts) 的九类专用工具字段替换为统一 `capabilities`；[engine-tools.ts](../../src/logic/execution/rules/engine-tools.ts) 只消费统一目录／调用端口，没有具体业务或 EngineContext 导入。
+- [member-tool-capabilities.ts](../../src/logic/execution/rules/capabilities/member-tool-capabilities.ts) 显式装配原九类能力，保留调用 ID、取消信号及业务指引。Pi/Claude/Codex 按可信 `disableNativeTools` 策略关闭原生工具，不判断特定业务字段。知识工具继续由各引擎的可信选项注入。
+- [run-validation.ts](../../src/logic/execution/rules/capabilities/run-validation.ts) 持有启动前准备及工厂：数量上限、正式身份、JSON/CSV/PNG 实际支持。Runtime 保留原调用位置，只注入进度、代次、授权／在途检查、清单复核与可靠保存；不再判断具体验证器名称或容量常量。
 - 迁移 22 个既有测试／夹具中的旧上下文访问。六处坏回包注入移到能力实现、工具输出校验之前，保留真实保存、原失败、门闩及有效证明断言，不重新暴露业务实例给引擎。
 
 验收：新增任意具名能力无需改通用上下文／注册器；非法或重复工具名、未注册调用均拒绝，目录不受外部修改污染。工具原身份和取消信号保持，Claude/Codex 的能力策略实际限制目录和执行；真实 Pi 范围执行通过。三个真实引擎桥使用本地确定性模型服务验证授权、拒绝、回执、预算及原生执行。产物、完整清单、JSON/CSV/PNG、受控写、删除／移动、检查点、求助及其审阅消费者均通过，覆盖保存后坏回包、在途并发、取消、未知副作用和 drain。

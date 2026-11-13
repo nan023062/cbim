@@ -1,5 +1,7 @@
 # 剩余 160 项 IPC 类型化整改与复扫
 
+> 导航维护说明（2026-11-14）：正文保留当时的路径、结论与验证边界；可点击源码链接已更新到当前归属，仅供导航，不作为历史版本证据。未留存的阶段入口另行注明，不伪造源码或制品归档。
+
 日期：2026-11-11。依据：[架构设计规范](../project-architecture-standard.md)、[治理流程](../architecture-governance-process.md)、[P2 验证基线](architecture-p2-20261111.md)。
 
 ## 结论
@@ -58,7 +60,7 @@
 - Q1 稳定能力：服务的权限、事务、CAS、原回执与未知结果边界受保护；类型检查不能替代这些运行约束。
 - Q2 变化位置：新增操作在对应 `ipc-*.ts` 声明请求和响应，在对应业务 handler 或桌面原生入口实现；同组变化不要求编辑巨型 switch。
 - Q3 验证依据：实际入口集合、调用元组和返回类型、畸形请求前置拒绝、真实服务/事务测试、跨运行续接证据共同确定范围；不以依赖图为空推断行为未变。
-- Q4 阅读入口：先读 [公开契约说明](../../src/bridge/contracts/CONTRACT.md)，再读 [总分派](../../src/backend/main/ipc/dispatch.ts)、[受理前解析](../../src/backend/main/ipc/request.ts)、目标业务 handler 和调用方。原生入口在 [main.ts](../../src/backend/main/main.ts)，其门禁先于副作用。
+- Q4 阅读入口：先读 [公开契约说明](../../src/bridge/contracts/CONTRACT.md)，再读 [总分派](../../src/bridge/server/ipc/dispatch.ts)、[受理前解析](../../src/bridge/server/ipc/request.ts)、目标业务 handler 和调用方。原生入口在 [main.ts](../../src/bridge/server/main.ts)，其门禁先于副作用。
 - Q5 候选：无新增正式规则。入口集合一致、反例类型检查和受理前错误码回归已经是本轮具体实现证据，不另自动晋升为通用治理政策。
 
 旧 `legacy-ipc-actions.ts` 已从当前源码退出；服务、页面、测试和规则不再引用。历史报告中的旧文件路径仅为当时证据。回退需要将本轮契约、处理器和调用方一起恢复到字节基线，不能使用仓库 reset 破坏此前未提交的 P0/P1/P2；没有数据迁移需要逆转。完整本轮差异在 `test-results/ipc-typing-20261111/changes.patch`，修改清单和基线分别为 `changes.json`、`baseline.json`／`baseline.zip`。

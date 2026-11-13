@@ -127,8 +127,12 @@ Web 已迁入 src/logic/web：纯工具契约 index.ts 与 service/index.ts 分�
 
 反馈已迁入 src/logic/feedback：index.ts 拥有输入、正文和可信范围；service/index.ts 提供授权与提交，不能反向导入旧后端或模型业务。旧工具范围仅组合并兼容重导出本域 Schema，Bridge 仅具名公开配置 Schema/状态。Core Node locking.ts 持有唯一原生锁实现，旧锁出口已移除，消费者直接使用同一 Core 构造器；保留锁身份、发送前持久化、未知结果不重发、凭据和退出语义。授权单元、HTTP 单元、提交协作契约与平台/真实 Pi 集成分别登记。
 
-资源仓库已迁入 logic/resources：纯分类/状态与 service 分开，ResourceRepositoryPaths 只注入目录边界，不依赖 Main Paths 或 Bridge。保留仓库 CAS、只读授权、共享退役取消及未知写结果；知识包位于 logic/resources/packages，授权连接位于 logic/connectors/service。
+资源仓库已迁入 logic/resources：纯分类/状态与 service 分开，ResourceRepositoryPaths 只注入目录边界，不依赖具体工作区 Paths 实现或 Bridge。保留仓库 CAS、只读授权、共享退役取消及未知写结果；知识包位于 logic/resources/packages，授权连接位于 logic/connectors/service。
 
 四层迁移现状：具体引擎与编排已归 Logic；execution/assembly 是具体引擎选择点，规则不能依赖 runtime 服务。继续使用已登记的细粒度公开入口，不能用聚合导出引入类型环。
 
 有状态服务与启动迁移已落地：Logic/Application 持有唯一业务生命周期，Bridge/server 只做通信与可信宿主适配；业务不得反向依赖 IPC/Electron。附件、工作区、资源包和更新类型由 Logic 拥有。构建入口改动须核固定输出名，不能改变用户数据或原恢复语义。
+
+## 当前文档与历史证据
+
+目录迁移后同时核对 CONTRACT 的职责归属、实际消费入口、生成器目录说明、README/设计导航及三宿主引用。ARCHITECTURE 的契约附录从同目录 CONTRACT 生成，不直接修改附录；生成结果一致仅证明同步，不代替语义核对。旧层名称不得继续充当当前职责，已退出的兼容入口不能仍写成在用。保留真实存在的具名重导出及尚未实现的保证；历史验证正文保留当时事实，更新导航时注明链接不是历史版本证据。产品 builtin: 引用按知识白名单核实，不能当作本地文件失效后删除。

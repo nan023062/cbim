@@ -34,7 +34,7 @@ N_src_logic_budget_settings ..> N_src_logic_budget_rules : 导入依赖
 
 ## 子目录导航
 
-- [rules/](rules/ARCHITECTURE.md)：预算领域：Scope 使用量、预占/结算、模型请求规则和存储端口。规则不访问应用文件与具体传输，业务服务在 scheduler-engine/budget。
+- [rules/](rules/ARCHITECTURE.md)：预算领域：Scope 使用量、预占/结算、模型请求规则和存储端口。规则不访问应用文件与具体传输，业务编排在 logic/budget/runtime。
 - [runtime/](runtime/ARCHITECTURE.md)：预算应用服务：协调请求和目标预算预占/结算，通过明确存储端口保存结果；不直接访问共享派发 Store。
 - [settings/](settings/ARCHITECTURE.md)：保存作用域预算默认值；运行周期在创建时冻结，设置变化不追改活动周期。
 

@@ -77,7 +77,7 @@ class N_src_core_json_ts["json.ts"] {
 ## 子目录导航
 
 - [contracts/](contracts/ARCHITECTURE.md)：通用技术端口；当前 SecretCipher 由模型、Web 与反馈共同使用，具体平台实现由宿主注入。
-- [platform/](platform/ARCHITECTURE.md)：按运行环境隔离基础实现；Node 提供摘要、原生锁、文件和网页，Electron 提供匿名网页适配。便携 Core 不依赖平台。
+- [platform/](platform/ARCHITECTURE.md)：按运行环境隔离基础实现；Node 提供摘要、原生锁、文件和网页，Electron 提供匿名网页适配与系统加密。便携 Core 不依赖平台。
 - [utility/](utility/ARCHITECTURE.md)：前后端共享通用算法与数据结构，按 JSON、字符串、字节、异步协调和图类别内聚。index.ts 是便携公开入口；Node 摘要归 ../platform/node/digest.ts。无业务、Node、Electron 或页面依赖；排序比较器、字段规则、生命周期和业务策略由消费者持有。
 - [web/](web/ARCHITECTURE.md)：纯网页输入/浏览器契约与 HTML 正文算法；公开 index.ts，不加载 Node、Electron 或业务。
 
@@ -93,7 +93,7 @@ class N_src_core_json_ts["json.ts"] {
 
 Core 是四层架构的基础公共层，不含业务规则、通信操作、页面状态或应用装配。前端和后端可以组合相同公开能力；运行环境是独立约束，Node 能力不经便携入口加载。
 
-当前真实入口为 [utility](utility/CONTRACT.md) 、[Node 摘要与文件](platform/node/CONTRACT.md) 和 errors.ts 的 Fault/fail。utility 仅使用语言/Web Streams 原语及 jsonc-parser；platform/node/digest.ts 仅使用 node:crypto。它们都不依赖 logic、bridge、view 或旧 backend/frontend，包含类型引用。跨模块仅使用已登记公开入口；新 Core 模块必须登记职责、入口及第三方依赖，否则检查失败。
+当前公开能力包括 [utility](utility/CONTRACT.md)、errors.ts 的 Fault/fail、json.ts 的严格解析适配、[纯网页契约与算法](web/CONTRACT.md)、contracts/secrets.ts 的加密端口、[Node 实现](platform/node/CONTRACT.md) 及 [Electron 适配](platform/electron/CONTRACT.md)。utility 仅使用语言/Web Streams 原语及 jsonc-parser；platform/node/digest.ts 仅使用 node:crypto。它们都不依赖 logic、bridge、view 或旧 backend/frontend，包含类型引用。跨模块仅使用已登记公开入口；新 Core 模块必须登记职责、入口及第三方依赖，否则检查失败。
 
 前端 equalJson 是第一条双端复用路径：控制器 → 前端比较适配 → Core orderJsonValue；后端历史指纹适配也调用同一算法。比较器、字段选择、错误映射和业务接受条件仍由消费者拥有。共享实现不要求不同策略产生相同字节。
 

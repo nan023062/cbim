@@ -29,7 +29,7 @@ N_src_logic_history_service ..> N_src_logic_history_runtime : 导入依赖
 
 ## 子目录导航
 
-- [runtime/](runtime/ARCHITECTURE.md)：会话履历查询编排，依赖 Core 履历契约，实际文件索引在 main/history。
+- [runtime/](runtime/ARCHITECTURE.md)：会话履历查询编排，依赖 logic/history/rules 履历契约，实际文件索引在 logic/history/service。
 - [service/](service/ARCHITECTURE.md)：履历应用装配与文件索引。assembly.ts 连接角色/运行来源，file-store.ts 只实现 SessionHistoryStorage；文件存储不得反向依赖装配或工作区服务。
 
 [返回上层](../ARCHITECTURE.md)。

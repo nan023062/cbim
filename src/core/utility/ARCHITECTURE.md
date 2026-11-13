@@ -230,10 +230,10 @@ N_src_core_utility_index_ts ..> N_src_core_utility_graphs_ts : 导入依赖
 - `async.ts`：SerialQueue、InFlightOperations 和 PendingRequests，按异步协调类别合并；各类、各实例独立持有状态，执行队列与在途跟踪不互相替代。
 - `strings.ts`：字符串处理，当前承载 LF 增量分帧及精确文本脱敏；`bytes.ts`：字节处理，当前承载有界流收集。文本与原始字节的计量和生命周期不同，保持分别归属。
 - `graphs.ts` 提供有向图无环判断。上述五个类别文件是私有实现，消费者只导入公开入口。
-- 前端 frontend/foundations/utility/json.ts 的 equalJson 组合 orderJsonValue，显式保留 localeCompare 和省略 undefined；后端各历史协议继续选择自己的策略。前端交互状态与后端指纹字段均不进入算法。
+- 前端 view/foundations/utility/json.ts 的 equalJson 组合 orderJsonValue，显式保留 localeCompare 和省略 undefined；后端各历史协议继续选择自己的策略。前端交互状态与后端指纹字段均不进入算法。
 - WebSettings、BudgetSettings、AdmissionSettings、MainAgentSettings、LlmProfiles 直接组合 SerialQueue。旧 `foundations/concurrency` 目录及入口已移除。
-- Core `foundation/serialization.ts` 保留 `hash/json` 名称兼容，直接重导出 utility 的算法；实现只有一份。现有知识版本、证据及配置消费者保持原调用和输出字节。该适配出口尚未退役，后续迁移须核对其真实消费者及逻辑边界，不机械批量改路径。
-- Core `foundation/json.ts` 只将 StrictJsonError 转回原 JSON Fault；知识与产物验证保留原提示、字段和限制。Main 的资源仓库、GitHub 请求、网页资料，以及 Updater 的 Release 列表和小清单组合有界字节消费；URL、凭据、期限、编码、JSON 协议和错误脱敏仍由消费者负责。
+- Core `platform/node/serialization.ts` 保留 `hash/json` 名称兼容，分别重导出 Node digest 的 sha256 和 utility 的 formatJson；两种算法各有唯一实现。现有知识版本、证据及配置消费者保持原调用和输出字节。该适配出口尚未退役，后续迁移须核对其真实消费者及逻辑边界，不机械批量改路径。
+- Core `json.ts` 只将 StrictJsonError 转回原 JSON Fault；知识与产物验证保留原提示、字段和限制。Logic 的资源仓库、GitHub 请求、网页资料，以及更新服务的 Release 列表和小清单组合有界字节消费；URL、凭据、期限、编码、JSON 协议和错误脱敏仍由消费者负责。
 
 ## SerialQueue
 
@@ -265,7 +265,7 @@ N_src_core_utility_index_ts ..> N_src_core_utility_graphs_ts : 导入依赖
 
 `orderJsonValue(value, policy)` 只递归复制并排序自身可枚举字符串键，比较器必须显式传入；`omitUndefinedProperties` 只决定对象 undefined 属性是否省略。数组顺序、空位和元素保持原义，整数键仍按 JS 对象枚举规则输出。只处理既有 JSON 形状快照，不验证 Schema、危险键、循环或深度，不承担序列化、摘要、身份和业务验收。
 
-15 个 Core 适配保留四种历史组合：artifact-evidence、预算/周期运行、检查点和依赖替换/任务取消沿用 localeCompare 并省略 undefined；portable-package、dispatch-invariants 沿用 localeCompare 并保留属性；workflow-evidence、validation-evidence、scope-goal 沿用字符序并省略；output-manifest-identity、execution-context 沿用字符序并保留。最终 JSON 字节与历史指纹不升级，localeCompare 不保证跨语言环境统一。图重放/治理的手写字符串 canonical、工具失败参数及调度内部比较未整体替换；它们须另核序列化和边界，不能仅凭函数名相同统一。
+既有 Logic 领域适配保留四种历史组合：artifact-evidence、预算/周期运行、检查点和依赖替换/任务取消沿用 localeCompare 并省略 undefined；portable-package、dispatch-invariants 沿用 localeCompare 并保留属性；workflow-evidence、validation-evidence、scope-goal 沿用字符序并省略；output-manifest-identity、execution-context 沿用字符序并保留。最终 JSON 字节与历史指纹不升级，localeCompare 不保证跨语言环境统一。图重放/治理的手写字符串 canonical、工具失败参数及调度内部比较未整体替换；它们须另核序列化和边界，不能仅凭函数名相同统一。
 
 ### 在途操作集合
 
@@ -303,4 +303,4 @@ async.ts 的 PendingRequests 保存实例 ID→结算回调/定时器。register
 
 ### 后端有向图校验
 
-graphs.ts 的 isDirectedAcyclic 对唯一节点、完整端点执行无环判断；重复节点或缺端点抛错，自环返回 false，平行边逐条处理，空图为 true。Core 图规则已先校验节点和端点，用它分别核验派发/依赖图与等待图，领域边选择及 GRAPH_CYCLE/GRAPH_WAIT_CYCLE 保留。此实现不依赖前端，也不提供授权或任务可执行保证。
+graphs.ts 的 isDirectedAcyclic 对唯一节点、完整端点执行无环判断；重复节点或缺端点抛错，自环返回 false，平行边逐条处理，空图为 true。Logic 任务图规则已先校验节点和端点，用它分别核验派发/依赖图与等待图，领域边选择及 GRAPH_CYCLE/GRAPH_WAIT_CYCLE 保留。此实现不依赖前端，也不提供授权或任务可执行保证。

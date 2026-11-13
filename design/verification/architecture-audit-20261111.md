@@ -1,5 +1,7 @@
 # 架构规范全工程扫描报告
 
+> 导航维护说明（2026-11-14）：正文保留当时的路径、结论与验证边界；可点击源码链接已更新到当前归属，仅供导航，不作为历史版本证据。未留存的阶段入口另行注明，不伪造源码或制品归档。
+
 报告日期：2026-11-11；扫描开始于 2026-11-10。
 
 依据：[文档 1：通用项目架构设计规范与原则](../project-architecture-standard.md)、[文档 2：架构治理规范与治理流程](../architecture-governance-process.md)。
@@ -95,9 +97,9 @@ P0 表示后续治理的前置能力，P1 表示优先处理的行为一致性�
 
 ### A03：主 Agent 运行指引存在互相冲突的职责规则
 
-**事实。** [main-agent.ts](../../src/backend/scheduler-engine/conversation/main-agent.ts)第 19、25、31 行允许未配置自定义岗位时由主 Agent 在原会话实现并验证；第 27 行却仍禁止 `cbim:main` 作为业务执行角色，并要求其不能自行完成正式业务任务。[loop-engine.ts](../../src/backend/scheduler-engine/execution/loop-engine.ts)第 228 行实际将 `mainInstructions(activeMode)` 注入主会话，后续拼接说明又允许 Auto 与 Team 主 Agent 直接执行。这不是未使用的历史字符串。
+**事实。** [main-agent.ts](../../src/logic/conversation/runtime/main-agent.ts)第 19、25、31 行允许未配置自定义岗位时由主 Agent 在原会话实现并验证；第 27 行却仍禁止 `cbim:main` 作为业务执行角色，并要求其不能自行完成正式业务任务。[loop-engine.ts](../../src/logic/execution/assembly/loop-engine.ts)第 228 行实际将 `mainInstructions(activeMode)` 注入主会话，后续拼接说明又允许 Auto 与 Team 主 Agent 直接执行。这不是未使用的历史字符串。
 
-[README](../../README.md)第 114 行仍称主 Agent 永不修改业务文件或执行命令，第 116 行仍建议使用已经退役的 `cbim:executor`。对照 [scope-goal.ts](../../src/backend/core/tasks/scope-goal.ts)的 `mainExecutionEvidence`、[default-executor.test.ts](../../tests/default-executor.test.ts)第 6–17 行，可确认现有实现区分“主会话直接工作”和“把主角色派成独立成员”：后者仍被拒绝。测试源码是语义依据，本轮未运行这些测试。
+[README](../../README.md)第 114 行仍称主 Agent 永不修改业务文件或执行命令，第 116 行仍建议使用已经退役的 `cbim:executor`。对照 [scope-goal.ts](../../src/logic/tasks/rules/scope-goal.ts)的 `mainExecutionEvidence`、[default-executor.test.ts](../../tests/default-executor.test.ts)第 6–17 行，可确认现有实现区分“主会话直接工作”和“把主角色派成独立成员”：后者仍被拒绝。测试源码是语义依据，本轮未运行这些测试。
 
 **影响。** 主会话收到矛盾职责指令，维护者也可能按旧说明设计新功能。指令冲突已静态确认；是否造成某次模型拒绝、错误派工或执行偏差，尚未通过真实运行核实。
 
@@ -107,7 +109,7 @@ P0 表示后续治理的前置能力，P1 表示优先处理的行为一致性�
 
 ### A04：知识查询边界同时承担跨域编排与刷新写入
 
-**事实。** [knowledge-queries.ts](../../src/backend/core/knowledge/knowledge-queries.ts)第 9–16 行导入并实例化 `Team`、`BusinessWorkspace`，第 18–27 行又通过完整 `KnowledgeWorkspace` 执行刷新与提交；[team/model.ts](../../src/backend/core/team/model.ts)和 [workspace/model.ts](../../src/backend/core/workspace/model.ts)反过来依赖知识快照数据及辅助函数。
+**事实。** [knowledge-queries.ts](../../src/logic/knowledge/rules/knowledge-queries.ts)第 9–16 行导入并实例化 `Team`、`BusinessWorkspace`，第 18–27 行又通过完整 `KnowledgeWorkspace` 执行刷新与提交；[team/model.ts](../../src/logic/knowledge/rules/read-models/team.ts)和 [workspace/model.ts](../../src/logic/knowledge/rules/read-models/workspace.ts)反过来依赖知识快照数据及辅助函数。
 
 **影响。** 作为数据底座的知识快照与面向不同业务的查询编排混在同一逻辑边界，增加任一业务查询可能牵动底座；只读查询消费者也获得了比所需更宽的工作区契约。这是职责与能力范围问题，不是已发现文件循环。
 
@@ -117,9 +119,9 @@ P0 表示后续治理的前置能力，P1 表示优先处理的行为一致性�
 
 ### A05：共享调度存储暴露了过多领域状态与写入能力
 
-**事实。** [dispatch-storage.ts](../../src/backend/core/tasks/dispatch-storage.ts)第 40 行的 `DispatchState` 有 20 个字段，涉及运行、任务图、消息、周期、岗位、模块责任、知识来源、文件副作用及模型请求账本；第 95 行的 `DispatchMutation` 有 13 个字段；第 128 行的 `DispatchStore` 提供整态读取和接收整态的事务回调。该文件有 **70 个源码直接消费者**。
+**事实。** [dispatch-storage.ts](../../src/logic/dispatch/rules/dispatch-storage.ts)第 40 行的 `DispatchState` 有 20 个字段，涉及运行、任务图、消息、周期、岗位、模块责任、知识来源、文件副作用及模型请求账本；第 95 行的 `DispatchMutation` 有 13 个字段；第 128 行的 `DispatchStore` 提供整态读取和接收整态的事务回调。该文件有 **70 个源码直接消费者**。
 
-[workspace-members.ts](../../src/backend/main/workspace/workspace-members.ts)第 44、57、105 行和 [model-request-budget-service.ts](../../src/backend/scheduler-engine/execution/model-request-budget-service.ts)第 21、24、42 行分别处理岗位与请求预算，却都依赖完整 `DispatchStore`／`DispatchState`。
+[workspace-members.ts](../../src/logic/team/service/workspace-members.ts)第 44、57、105 行和 [model-request-budget-service.ts](../../src/logic/budget/runtime/model-request-budget-service.ts)第 21、24、42 行分别处理岗位与请求预算，却都依赖完整 `DispatchStore`／`DispatchState`。
 
 **影响。** 领域服务必须知道共享整态结构，测试替身容易随无关字段演化；类型暴露的读写面大于各自职责。字段数和消费者数只是影响范围证据，不意味着每个调用点都越权，也不证明当前事务错误。
 
@@ -129,7 +131,7 @@ P0 表示后续治理的前置能力，P1 表示优先处理的行为一致性�
 
 ### A06：运行核心随具体业务工具扩张
 
-**事实。** [brain/types.ts](../../src/backend/core/brain/types.ts)第 38、56–72 行的 `EngineContext` 枚举九类具体业务工具槽位，若干类型直接取自具体工具类。[engine-tools.ts](../../src/backend/core/brain/engine-tools.ts)第 14–17 行已有统一 `EngineToolsPort`，但注册仍手工枚举这些槽位。[runtime.ts](../../src/backend/core/brain/runtime.ts)的 `RuntimeOptions`、`TaskProgressTools` 构造与业务证据装配也知道产物、清单、检查点、验证等具体能力。
+**事实。** [brain/types.ts](../../src/logic/execution/rules/types.ts)第 38、56–72 行的 `EngineContext` 枚举九类具体业务工具槽位，若干类型直接取自具体工具类。[engine-tools.ts](../../src/logic/execution/rules/engine-tools.ts)第 14–17 行已有统一 `EngineToolsPort`，但注册仍手工枚举这些槽位。[runtime.ts](../../src/logic/execution/rules/runtime/runtime.ts)的 `RuntimeOptions`、`TaskProgressTools` 构造与业务证据装配也知道产物、清单、检查点、验证等具体能力。
 
 **影响。** 新增同类业务能力通常需要同时扩展核心上下文、运行装配及公共注册表，而不只是增加一个实现。这里判断的是当前变化路径，不以运行文件大小或装配点依赖多单独定性。
 
@@ -139,7 +141,7 @@ P0 表示后续治理的前置能力，P1 表示优先处理的行为一致性�
 
 ### A07：IPC 操作与数据之间没有静态契约关联
 
-**事实。** [bridge/contracts/workspace.ts](../../src/bridge/contracts/workspace.ts)第 15 行定义 `call(action:string,args?:unknown):Promise<any>`；[preload.ts](../../src/bridge/preload/preload.ts)第 12 行转发任意字符串；[ipc/dispatch.ts](../../src/backend/main/ipc/dispatch.ts)第 22 行使用 `action:string,args:any`，其 switch 有 153 个操作分支。此数仅为该 dispatcher，不包括 Main 的其他路由。
+**事实。** [bridge/contracts/workspace.ts](../../src/bridge/contracts/workspace.ts)第 15 行定义 `call(action:string,args?:unknown):Promise<any>`；[preload.ts](../../src/bridge/preload/preload.ts)第 12 行转发任意字符串；[ipc/dispatch.ts](../../src/bridge/server/ipc/dispatch.ts)第 22 行使用 `action:string,args:any`，其 switch 有 153 个操作分支。此数仅为该 dispatcher，不包括 Main 的其他路由。
 
 **影响。** 调用端无法由操作名自动约束参数与返回值，接口演进更依赖人工搜索和运行时覆盖。发送方检查和各服务的运行时 Schema 仍应保留，类型系统不能替代它们。
 
@@ -149,7 +151,7 @@ P0 表示后续治理的前置能力，P1 表示优先处理的行为一致性�
 
 ### A08：前端共享展示仍依赖任务控制层内部类型
 
-**事实。** [Conversation.tsx](../../src/frontend/conversation/Conversation.tsx)第 24–26、45–53 行直接接入多个任务视图与控制 hook；[MemberRunTranscript.tsx](../../src/frontend/tasks/MemberRunTranscript.tsx)又复用 conversation 中的消息、轨迹与状态展示。[WorkStatus.tsx](../../src/frontend/conversation/WorkStatus.tsx)第 10、13 行使用 `tasks/useExecutionRecovery` 导出的 `ExecutionRecoveryContext` 作为展示属性契约。
+**事实。** [Conversation.tsx](../../src/view/conversation/Conversation.tsx)第 24–26、45–53 行直接接入多个任务视图与控制 hook；[MemberRunTranscript.tsx](../../src/view/tasks/MemberRunTranscript.tsx)又复用 conversation 中的消息、轨迹与状态展示。[WorkStatus.tsx](../../src/view/execution-view/WorkStatus.tsx)第 10、13 行使用 `tasks/useExecutionRecovery` 导出的 `ExecutionRecoveryContext` 作为展示属性契约。
 
 **影响。** 会话页面承担装配本身合理，但公共状态展示绑定任务控制实现的契约，使展示复用和恢复行为变化难以独立评估。目录双向引用只能提示问题，真正需要整改的是这一具体契约归属。
 
@@ -159,7 +161,7 @@ P0 表示后续治理的前置能力，P1 表示优先处理的行为一致性�
 
 ### A09：文件历史存储与工作区服务装配混在一个模块
 
-**事实。** [persistence/tasks/agent-history.ts](../../src/backend/main/persistence/tasks/agent-history.ts)同时定义 `FileAgentHistoryStore`，并在第 58–73 行通过具体 `Workspace` 构造 `AgentHistoryService` 和运行日志读取能力；第 11、12 行分别导入调度服务与工作区类型。[application.ts](../../src/backend/main/application.ts)第 37、136 行从该存储文件获取这一工厂。
+**事实。** [persistence/tasks/agent-history.ts](../../src/logic/history/service/file-store.ts)同时定义 `FileAgentHistoryStore`，并在第 58–73 行通过具体 `Workspace` 构造 `AgentHistoryService` 和运行日志读取能力；第 11、12 行分别导入调度服务与工作区类型。[application.ts](../../src/logic/application/application.ts)第 37、136 行从该存储文件获取这一工厂。
 
 **影响。** 文件持久化与应用装配的变化原因混合；存储适配的导出入口反向了解完整工作区。Main 作为外层本来可以装配这些服务，问题是这一职责没有从可复用的存储适配文件分开。
 
@@ -169,9 +171,9 @@ P0 表示后续治理的前置能力，P1 表示优先处理的行为一致性�
 
 ## 5. G06 的复核：已有隔离基础，不能按“尚未建立”重做
 
-[AgentEngine](../../src/backend/core/brain/types.ts)第 81 行起已有共同生命周期契约；[runtime.ts](../../src/backend/core/brain/runtime.ts)第 89、222 行通过工厂获取引擎；[loop-engine.ts](../../src/backend/scheduler-engine/execution/loop-engine.ts)第 167 行选择具体引擎，属于已有装配行为。
+[AgentEngine](../../src/logic/execution/rules/types.ts)第 81 行起已有共同生命周期契约；[runtime.ts](../../src/logic/execution/rules/runtime/runtime.ts)第 89、222 行通过工厂获取引擎；[loop-engine.ts](../../src/logic/execution/assembly/loop-engine.ts)第 167 行选择具体引擎，属于已有装配行为。
 
-仍值得复核的是 [brain/index.ts](../../src/backend/core/brain/index.ts)第 11 行将 Pi 实现与公共运行入口一起导出，以及 SDK／进程／原生工具适配的职责和公开出口是否应进一步区分。[native-tools.ts](../../src/backend/core/brain/native-tools.ts)明确是复用 Pi SDK 工具的适配实现，不应仅因文件在 core 目录就判定领域规则已经被 SDK 污染。
+仍值得复核的是 [brain/index.ts](../../src/logic/execution/rules/index.ts)第 11 行将 Pi 实现与公共运行入口一起导出，以及 SDK／进程／原生工具适配的职责和公开出口是否应进一步区分。[native-tools.ts](../../src/logic/execution/engines/native-tools.ts)明确是复用 Pi SDK 工具的适配实现，不应仅因文件在 core 目录就判定领域规则已经被 SDK 污染。
 
 本轮将此列为后续 G05／G06 的边界复核点，不计入九项已确认问题。实施前应确认真实消费者及替换场景；验收以运行核心不需要具体实现、适配器满足同一权限与生命周期契约为准，不能只以移动 SDK 文件完成。
 

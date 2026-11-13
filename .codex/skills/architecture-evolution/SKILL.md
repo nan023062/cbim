@@ -51,7 +51,7 @@ description: "项目架构治理入口：遵守通用架构设计规范，按标
 
 Core、Logic、Bridge、View 四层源码迁移已完成，见 [四层设计](../../../design/four-layer-architecture.md)。src/core 仅持有独立技术机制；任务、知识、预算、运行和存储归 Logic，通信与可信宿主归 Bridge，页面及交互归 View。旧目录已退出，但原共享事务与依赖密集模块仍需按真实变化点渐进治理，不能把目录迁移等同于全部语义解耦。
 
-前后端使用相同契约的机制可共享 Core；语言相同不证明语义相同，必须核对排序、空值、错误和生命周期后再统一。业务/视图策略保持原归属，旧前端 foundations 可组合 Core 但不引用后端实现。Core 不依赖 Logic/Bridge/View 或旧 backend/frontend；平台专用实现有独立入口。Bridge 只负责通信，Logic 不依赖 Bridge；View 仅依赖 Bridge 客户端/契约与适用 Core。每项能力有自己的公开入口、实例状态和资源所有者，不建立万能容器。
+前后端使用相同契约的机制可共享 Core；语言相同不证明语义相同，必须核对排序、空值、错误和生命周期后再统一。业务/视图策略保持原归属，view/foundations 可组合 Core 但不引用后端实现。Core 不依赖 Logic/Bridge/View 或旧 backend/frontend；平台专用实现有独立入口。Bridge 只负责通信，Logic 不依赖 Bridge；View 仅依赖 Bridge 客户端/契约与适用 Core。每项能力有自己的公开入口、实例状态和资源所有者，不建立万能容器。
 
 后端的通用算法、数据结构与实例级串行执行归 `core/utility`，按数据类别和问题种类组织内聚文件、具名导出，例如 JSON、字符串、字节和异步协调。优先并入已有类别，不采用一函数一文件；只在变化原因、环境或契约边界明确不同时拆分，不为文件数量合并无关职责。文件合并不合并实例状态或不同算法的语义。通用入口与 Node 入口分离，不把 I/O、领域身份或日志失败屏障混入工具库。迁入序列化/摘要算法时固定现有字节与错误语义；不同 canonical 排序不能直接统一。数据结构须有真实用途，不为凑目录添加未使用的容器。
 
@@ -123,8 +123,12 @@ Web 已迁入 src/logic/web：纯工具契约 index.ts 与 service/index.ts 分�
 
 反馈已迁入 src/logic/feedback：index.ts 拥有输入、正文和可信范围；service/index.ts 提供授权与提交，不能反向导入旧后端或模型业务。旧工具范围仅组合并兼容重导出本域 Schema，Bridge 仅具名公开配置 Schema/状态。Core Node locking.ts 持有唯一原生锁实现，旧锁出口已移除，消费者直接使用同一 Core 构造器；保留锁身份、发送前持久化、未知结果不重发、凭据和退出语义。授权单元、HTTP 单元、提交协作契约与平台/真实 Pi 集成分别登记。
 
-资源仓库已迁入 logic/resources：纯分类/状态与 service 分开，ResourceRepositoryPaths 只注入目录边界，不依赖 Main Paths 或 Bridge。保留仓库 CAS、只读授权、共享退役取消及未知写结果；知识包位于 logic/resources/packages，授权连接位于 logic/connectors/service。
+资源仓库已迁入 logic/resources：纯分类/状态与 service 分开，ResourceRepositoryPaths 只注入目录边界，不依赖具体工作区 Paths 实现或 Bridge。保留仓库 CAS、只读授权、共享退役取消及未知写结果；知识包位于 logic/resources/packages，授权连接位于 logic/connectors/service。
 
 四层迁移现状：具体引擎与编排已归 Logic；execution/assembly 是具体引擎选择点，规则不能依赖 runtime 服务。继续使用已登记的细粒度公开入口，不能用聚合导出引入类型环。
 
 有状态服务与启动迁移已落地：Logic/Application 持有唯一业务生命周期，Bridge/server 只做通信与可信宿主适配；业务不得反向依赖 IPC/Electron。附件、工作区、资源包和更新类型由 Logic 拥有。构建入口改动须核固定输出名，不能改变用户数据或原恢复语义。
+
+## 当前文档与历史证据
+
+目录迁移后同时核对 CONTRACT 的职责归属、实际消费入口、生成器目录说明、README/设计导航及三宿主引用。ARCHITECTURE 的契约附录从同目录 CONTRACT 生成，不直接修改附录；生成结果一致仅证明同步，不代替语义核对。旧层名称不得继续充当当前职责，已退出的兼容入口不能仍写成在用。保留真实存在的具名重导出及尚未实现的保证；历史验证正文保留当时事实，更新导航时注明链接不是历史版本证据。产品 builtin: 引用按知识白名单核实，不能当作本地文件失效后删除。

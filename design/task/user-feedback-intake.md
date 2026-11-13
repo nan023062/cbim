@@ -45,7 +45,7 @@
 
 ## 4. 更新日志作为统一结果出口
 
-实际日志来源为 `design/releases/desktop-v<版本>.md`：构建时打包进 `desktop-release.json`，账号菜单「最近一次更新」离线展示当前版本日志，新版日志从对应 GitHub Release 读取。更新弹窗与菜单共享本机快照，不切换原会话或丢弃草稿。桌面采用独立的 `desktop-v` 通道；更新检查、下载、安装集中在 `src/backend/updater/`，与运行时代码及反馈凭据分离。
+实际日志来源为 `design/releases/desktop-v<版本>.md`：构建时打包进 `desktop-release.json`，侧栏更新入口与详情离线展示当前版本日志，新版日志从对应 GitHub Release 读取。更新详情与侧栏入口共享本机快照，不切换原会话或丢弃草稿。桌面采用独立的 `desktop-v` 通道；更新检查、下载、安装集中在 `src/logic/updates/service/`，与运行时代码及反馈凭据分离。
 
 每个已发布版本显示版本号、发布日期及以下栏目：
 

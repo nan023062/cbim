@@ -1,5 +1,7 @@
 # Issue #14：Auto 直接工作与项目根范围
 
+> 历史快照：正文中的目录、完成状态与验证数字保留记录日期的事实，不是当前实现清单。四层迁移后的现状请看 [源码契约](../../src/CONTRACT.md) 和 [Logic 边界](../../src/logic/BOUNDARIES.md)。
+
 日期：2026-11-09。范围：[Issue #14](https://github.com/nan023062/cbim/issues/14)。
 
 ## 实现与边界

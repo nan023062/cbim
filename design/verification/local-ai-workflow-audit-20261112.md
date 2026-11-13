@@ -1,5 +1,7 @@
 # 本地 AI 团队开发闭环：现状审计与清理
 
+> 导航维护说明（2026-11-14）：正文保留当时的路径、结论与验证边界；可点击源码链接已更新到当前归属，仅供导航，不作为历史版本证据。未留存的阶段入口另行注明，不伪造源码或制品归档。
+
 日期：2026-11-12。代码基线：`2187842f`（0.1.14 开发树）。用户直接授权分析现状、删除失效资产和对齐文档；本轮不实现新调度功能。查询时仓库无开放 Issue，本文是带日期的审计证据，不另建实时开发清单。
 
 ## 结论与范围
@@ -14,12 +16,12 @@
 
 | 模块 | 当前职责与源码入口 | 保留的边界 |
 | --- | --- | --- |
-| 知识与工作区 | [core/workspace](../../src/backend/core/workspace/ARCHITECTURE.md)、[main/knowledge](../../src/backend/main/knowledge/ARCHITECTURE.md) | 模块、来源、Skill/Workflow 与知识事务；作者来源不是执行许可 |
-| 目标与任务 | [scope-goal-service](../../src/backend/scheduler-engine/goals/scope-goal-service.ts)、[任务契约](../../src/backend/core/tasks/CONTRACT.md) | 目标计划、任务分配、版本化 review 与交付核验；执行完成不等于验收完成 |
-| 调度与成员 | [auto-collaboration](../../src/backend/scheduler-engine/dispatch/auto-collaboration.ts)、[member-execution](../../src/backend/scheduler-engine/members/member-execution.ts) | 领取、占用、结果回流、主运行接续与成员求助 |
-| 执行与引擎 | [执行内核](../../src/backend/core/execution/ARCHITECTURE.md)、[引擎适配](../../src/backend/engines/ARCHITECTURE.md) | 运行事件、权限、取消与协议转换；不由引擎裁决业务完成 |
-| 证据与恢复 | [core/evidence](../../src/backend/core/evidence/ARCHITECTURE.md)、[scope-recovery-service](../../src/backend/scheduler-engine/goals/scope-recovery-service.ts) | 核实真实日志、知识版本和副作用；未知结果不重放 |
-| 界面与装配 | [frontend](../../src/frontend/ARCHITECTURE.md)、[main/assembly](../../src/backend/main/assembly/ARCHITECTURE.md) | 提供操作入口、装配存储与平台服务，不成为第二套领域状态机 |
+| 知识与工作区 | [core/workspace](../../src/logic/workspace/rules/ARCHITECTURE.md)、[main/knowledge](../../src/logic/knowledge/storage/ARCHITECTURE.md) | 模块、来源、Skill/Workflow 与知识事务；作者来源不是执行许可 |
+| 目标与任务 | [scope-goal-service](../../src/logic/tasks/runtime/scope-goal-service.ts)、[任务契约](../../src/logic/tasks/rules/CONTRACT.md) | 目标计划、任务分配、版本化 review 与交付核验；执行完成不等于验收完成 |
+| 调度与成员 | [auto-collaboration](../../src/logic/dispatch/runtime/auto-collaboration.ts)、[member-execution](../../src/logic/team/runtime/member-execution.ts) | 领取、占用、结果回流、主运行接续与成员求助 |
+| 执行与引擎 | [执行内核](../../src/logic/execution/rules/ARCHITECTURE.md)、[引擎适配](../../src/logic/execution/engines/ARCHITECTURE.md) | 运行事件、权限、取消与协议转换；不由引擎裁决业务完成 |
+| 证据与恢复 | [core/evidence](../../src/logic/evidence/rules/ARCHITECTURE.md)、[scope-recovery-service](../../src/logic/tasks/runtime/scope-recovery-service.ts) | 核实真实日志、知识版本和副作用；未知结果不重放 |
+| 界面与装配 | [frontend](../../src/view/ARCHITECTURE.md)、[main/assembly](../../src/logic/application/assembly/ARCHITECTURE.md) | 提供操作入口、装配存储与平台服务，不成为第二套领域状态机 |
 
 真实协作链是：主运行建立目标/计划 → 派发服务持久任务 → 成员执行并形成结果 → 自动协作将真实结果交回主运行 → 主运行审阅 → 目标服务核验后关闭。已经存在自动回流、重规划和替代失败任务的机制，不能把系统描述为只有聊天或全部依赖人工派发。
 
@@ -29,11 +31,11 @@
 
 | 优先级 | 现有基础与具体缺口 | 建议的最小演进与验收 |
 | --- | --- | --- |
-| P0：代码验证证据 | [workflow-contract](../../src/backend/core/workspace/workflow-contract.ts) 的 `requiredValidations` 只有 JSON、CSV、PNG；原生命令和工具证据已存在，但工具调用成功不等于构建/测试及业务断言通过 | 增加代码开发使用的验证契约与真实执行结果适配，绑定命令、工作目录、源码/产物版本、退出状态和检查范围；用真实失败测试证明不能误判通过。保留现有确定性证据接口，不另建平行日志 |
-| P0：最终验收失败后的有界自动返工 | [auto-collaboration.finishCycle](../../src/backend/scheduler-engine/dispatch/auto-collaboration.ts) 捕获 `GOAL_*` 后记录阻塞并暂停；[goal review](../../src/backend/core/tasks/scope-goal.ts) 已有 `replan`，但最终关闭失败没有自动修复接续。`superseded` 对失败/过期/人工拒绝有严格身份核验 | 将可修复失败分类并交回主调度，在现有周期预算与运行上限内生成新候选、再验收；保留旧候选及证据。未知副作用、权限问题与耗尽预算仍停止，不能把所有失败盲目重试 |
-| P1：无人值守恢复 | [scope-recovery-service](../../src/backend/scheduler-engine/goals/scope-recovery-service.ts) 提供只读核实；[member-resume-service](../../src/backend/scheduler-engine/members/member-resume-service.ts) 与等待目标接续核验当前身份、检查点和版本。安全停放、人工补充和显式恢复已存在 | 区分可证明安全的自动接续与必须介入的未知结果；先做单进程重启后的一个受控任务恢复用例，不把“自动恢复”实现成重放旧命令 |
+| P0：代码验证证据 | [workflow-contract](../../src/logic/workspace/rules/workflow-contract.ts) 的 `requiredValidations` 只有 JSON、CSV、PNG；原生命令和工具证据已存在，但工具调用成功不等于构建/测试及业务断言通过 | 增加代码开发使用的验证契约与真实执行结果适配，绑定命令、工作目录、源码/产物版本、退出状态和检查范围；用真实失败测试证明不能误判通过。保留现有确定性证据接口，不另建平行日志 |
+| P0：最终验收失败后的有界自动返工 | [auto-collaboration.finishCycle](../../src/logic/dispatch/runtime/auto-collaboration.ts) 捕获 `GOAL_*` 后记录阻塞并暂停；[goal review](../../src/logic/tasks/rules/scope-goal.ts) 已有 `replan`，但最终关闭失败没有自动修复接续。`superseded` 对失败/过期/人工拒绝有严格身份核验 | 将可修复失败分类并交回主调度，在现有周期预算与运行上限内生成新候选、再验收；保留旧候选及证据。未知副作用、权限问题与耗尽预算仍停止，不能把所有失败盲目重试 |
+| P1：无人值守恢复 | [scope-recovery-service](../../src/logic/tasks/runtime/scope-recovery-service.ts) 提供只读核实；[member-resume-service](../../src/logic/team/runtime/member-resume-service.ts) 与等待目标接续核验当前身份、检查点和版本。安全停放、人工补充和显式恢复已存在 | 区分可证明安全的自动接续与必须介入的未知结果；先做单进程重启后的一个受控任务恢复用例，不把“自动恢复”实现成重放旧命令 |
 | P1：从开发结果到整合交付的产品约定 | 已有产物清单、受控文件变更、工作范围与结果核验；本轮源码搜索未找到产品自有的 Git worktree/合并/提交闭环。模型仍可经命令做 Git 操作，不能据此声称产品提供了独立集成保证 | 先明确本地交付是工作区变更还是指定提交，再为并行写入、集成冲突及最终版本建立可核实流程。不要为单人场景先建设远程 PR 平台 |
-| P1：经验沉淀的验收 | 知识预览/提交与 [knowledge-effect-reader](../../src/backend/main/evidence/knowledge-effect-reader.ts) 能记录和核实变更；后者是事务事实读取，不是经验质量评价。尚缺本轮核实过的“交付 → 提炼 → 后续任务复用”端到端证据 | 先用一个真实缺陷任务沉淀一条方法，在第二个任务验证召回和用途；避免每次任务全自动生成大量没人消费的文档 |
+| P1：经验沉淀的验收 | 知识预览/提交与 [knowledge-effect-reader](../../src/logic/evidence/service/knowledge-effect-reader.ts) 能记录和核实变更；后者是事务事实读取，不是经验质量评价。尚缺本轮核实过的“交付 → 提炼 → 后续任务复用”端到端证据 | 先用一个真实缺陷任务沉淀一条方法，在第二个任务验证召回和用途；避免每次任务全自动生成大量没人消费的文档 |
 
 这些缺口不能通过删除权限、版本和完成核验来解决。本轮没有改动上述运行行为。
 

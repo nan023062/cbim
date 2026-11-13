@@ -46,7 +46,7 @@ class N_src_logic_governance_service_main_governance_tools_ts["main-governance-t
 
 ## 子目录导航
 
-- [storage/](storage/ARCHITECTURE.md)：知识治理记录的物理持久化；业务规则和不可变意见契约在 Core，应用治理服务在父目录。
+- [storage/](storage/ARCHITECTURE.md)：知识治理记录的物理持久化；业务规则和不可变意见契约在 logic/governance/rules，应用治理服务在父目录。
 
 [返回上层](../ARCHITECTURE.md)。
 

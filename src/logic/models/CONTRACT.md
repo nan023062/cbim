@@ -1,6 +1,6 @@
 # 模型目录与选型
 
-`index.ts` 是不加载 Node、Electron 或服务的纯公共入口。目录解析、配置 Schema、引擎标识、供应商预设和接口选择归本模块；配置持久化、联网与凭据解析归 [service](service/CONTRACT.md)。请求预算归 logic/budget/rules/request-budget.ts，主 Agent 设置仍归旧 main/models，未随目录整体迁入。
+`index.ts` 是不加载 Node、Electron 或服务的纯公共入口。目录解析、配置 Schema、引擎标识、供应商预设和接口选择归本模块；配置持久化、联网与凭据解析归 [service](service/CONTRACT.md)。请求预算端口归 [budget/rules](../budget/rules/CONTRACT.md)，主 Agent 设置归 [team/settings](../team/settings/CONTRACT.md)，两者不由模型目录持有。
 
 ## 不变量
 
@@ -9,10 +9,10 @@
 - 目录解析保留供应商真实容量；未知能力不填造默认容量。公开配置不包含密文或明文凭据；ResolvedLlm 是仅供可信执行侧使用的类型，桥接出口不重导出它。
 - 运行快照只冻结选中的 api/baseUrl，不携带候选接口；历史字段缺省及 Pi 快照字节保持原语义。
 
-## 迁移期消费与退出
+## 公共入口与消费边界
 
-旧 backend 的规则、引擎、调度与宿主只能通过 index.ts 使用模型规则。只有 backend/main 与 Bridge server 可通过 service/index.ts 使用服务，禁止跨边界直达实现。
+Logic 的规则、引擎、编排与 Bridge 消费模型规则时使用 index.ts。配置服务通过 service/index.ts 向已登记的 Logic 服务、应用装配及 Bridge 服务端公开；规则入口不得反向加载服务，调用方不得跨边界直达实现。
 
-`bridge/contracts/models.ts` 暂时保留既有纯规则的具名重导出，前端仍通过该契约使用相同选型规则；没有开放其他 Bridge 文件直接导入 Logic，也没有把业务规则归入 Core。这是保留现有同步草稿预览的迁移兼容边界，不代表 Bridge DTO 解耦已经完成。后续桥接迁移必须一起替换预览与公开数据消费者，才能删除该精确许可。
+`bridge/contracts/models.ts` 暂时保留既有纯规则的具名重导出，前端仍通过该契约使用相同选型规则；没有开放其他 Bridge 文件任意导入 Logic 模型实现，也没有把业务规则归入 Core。这是保留现有同步草稿预览的迁移兼容边界，不代表 Bridge DTO 解耦已经完成。若后续移除该重导出，必须一起替换预览与公开数据消费者，才能删除该精确许可。
 
 修改供应商地址从 provider-presets.ts 入手，修改接口优先级从 provider-connections.ts 入手，修改能力解析从 catalog.ts 入手。规则与服务分开测试，前后端共同选型及历史快照用契约测试保留。

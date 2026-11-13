@@ -6,7 +6,7 @@
 
 `index.ts` 是 Node 公开入口，提供 `WebPageReader`、`PublicHttp`、`openBrowserProxy`、正文转换及输入/浏览器契约；`../../electron/web-reader.ts` 是宿主可选的 Electron 入口。内部文件不可被业务层直接引用。Node 类库只依赖 Core 纯网页入口及获准第三方，不认识 CBIM 工作区、Agent、工具名、Brave 设置或用户凭据。
 
-WebPageReader → 静态 PublicHttp + HTML 提取 → 必要时调用注入的 BrowserReader。Logic/WebService 只负责业务输入校验、来源不可信标记与 Brave 查询；旧 Main 桌面装配入口在 ready 后注入 ElectronBrowserReader。Node/CLI 未注入时保留原静态读取与错误，不假装提供浏览器能力。
+WebPageReader → 静态 PublicHttp + HTML 提取 → 必要时调用注入的 BrowserReader。Logic/WebService 只负责业务输入校验、来源不可信标记与 Brave 查询；bridge/server/main.ts 桌面装配入口在 ready 后注入 ElectronBrowserReader。Node/CLI 未注入时保留原静态读取与错误，不假装提供浏览器能力。
 
 ## 读取与状态
 

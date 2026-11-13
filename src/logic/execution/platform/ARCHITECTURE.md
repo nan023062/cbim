@@ -157,4 +157,4 @@ IsolationLifecycle在创建profile前保存私有来源，在恢复挂起线程�
 
 NativeSessionFiles 由工厂固定 Pi、Claude Code 或 Codex 格式及受管根。通用的链接、完整字节、尾行、容量和读取竞争检查不变；Claude 另核实文件名等于 nativeSessionId.jsonl，所有带 sessionId 的记录同属该身份。Codex 另核 session_meta.payload.id、rollout 文件名与唯一 metadata；原生长路径由适配器归一后保存。只返回长度/摘要，不公开私有路径或正文。
 
-KernelLock 实现已迁到共享 Core 的 platform/node/locking.ts；本目录 locking.ts 保留仍有消费者的同构造器兼容出口，不持有第二套进程内锁状态。
+KernelLock 实现已迁到共享 Core 的 platform/node/locking.ts；本目录消费者直接使用该唯一构造器；旧 locking.ts 转发入口已移除，不持有第二套进程内锁状态。

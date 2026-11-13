@@ -18,10 +18,10 @@ Progress 新增可选验证端口 `records()` 与 `verifyCurrent(records)`；保
 
 ## 模块边界
 
-- Core/workspace：冻结要求及受限 Schema；Core/tasks：验证 DTO、工具、纯事实核验、Workflow/Progress 出口。
-- Core/brain：本轮短门闩、可信持久事件、停止与当前版本检查。
-- Main/platform：实际同字节有界读取；Main 与 Scheduler 以端口装配，保持单向依赖。
-- Scheduler：实际能力预检、canonical 候选与主目标复核；Frontend 只展示真实验证事实及其范围，不新增自动执行入口。
+- logic/workspace/rules：冻结要求及受限 Schema；logic/evidence/rules 与 logic/tasks/rules：验证 DTO、工具、纯事实核验、Workflow/Progress 出口。
+- logic/execution/rules/runtime：本轮短门闩、可信持久事件、停止与当前版本检查。
+- logic/file-operations/platform：实际同字节有界读取；应用装配与业务编排 以端口装配，保持单向依赖。
+- Logic 编排：实际能力预检、canonical 候选与主目标复核；View 只展示真实验证事实及其范围，不新增自动执行入口。
 
 每个源码改动同步中文注释和受影响 CONTRACT/ARCHITECTURE，最终统一生成类图。方案不扩展成员检查点恢复白名单，也不接远端验证服务、任意脚本、全工作区原子快照或认证人工验收。
 

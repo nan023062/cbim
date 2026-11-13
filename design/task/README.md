@@ -6,7 +6,7 @@
 - [BaseTask 与执行接口](base-task.md)：结构图、派发与执行边界。
 - [Task Loop](task-loop.md)：CBIM AI 助理的任务构建与结果反馈。
 - [知识基线与恢复](task-baseline.md)：版本绑定与恢复证据。
-- [模块负责人索引历史方案](module-owner-index.md)：工作区成员、责任查询、按负责人派发与更换交接的开发切片；不是运行时 Skill，当前实现见 [任务契约](../../src/backend/core/tasks/CONTRACT.md)，方案不是实时进度。
+- [模块负责人索引历史方案](module-owner-index.md)：工作区成员、责任查询、按负责人派发与更换交接的开发切片；不是运行时 Skill，当前实现见 [任务契约](../../src/logic/tasks/rules/CONTRACT.md)，方案不是实时进度。
 - [反馈／许愿 Skill 与软件更新日志](user-feedback-intake.md)：对话加号菜单调用两项产品 Skill，一句问题或愿望即可提交，参考字段自愿填写，经真实 GitHub 授权提交 Issue；版本日志已接入，实际线上结果另记。
 - [正式桌面发布与更新](desktop-release.md)：Windows 安装包、独立 updater 目录、GitHub 桌面通道、后台检查和下载、用户明确点击重启安装。
 - [桌面分层更新设计](desktop-hot-update-design.md)：C/R 双版本、完整资源 ZIP、独立 Agent 引擎及新旧流程取舍；首版已实现，本地验证不等于公开升级验收。

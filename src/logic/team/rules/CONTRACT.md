@@ -1,6 +1,6 @@
 ### 静态知识视图的单向边界
 
-`model.ts` 中的 Team 只依赖知识快照公开类型、只读解析辅助和 Foundation，不依赖 BusinessWorkspace、知识写入端口或调度编排。跨域查询由 `scheduler-engine/context/knowledge-queries.ts` 组合；每个 Team 绑定一个固定快照，刷新后创建新视图。依赖检查器覆盖类型和重导出，具体矩阵见 [知识契约](../../knowledge/rules/CONTRACT.md#快照契约领域视图与查询编排)。此约束不把其他岗位、成员和执行绑定文件误称为同一只读模型。
+`logic/knowledge/rules/read-models/team.ts` 中的 Team 只依赖知识快照公开类型、只读解析辅助和共享 Core，不依赖 BusinessWorkspace、知识写入端口或调度编排。跨域查询由 `logic/knowledge/rules/knowledge-queries.ts` 组合；每个 Team 绑定一个固定快照，刷新后创建新视图。依赖检查器覆盖类型和重导出，具体矩阵见 [知识契约](../../knowledge/rules/CONTRACT.md#固定快照读取的逻辑边界与公共入口)。此约束不把其他岗位、成员和执行绑定文件误称为同一只读模型。
 
 ### 根标识与正式兜底
 
@@ -20,7 +20,7 @@
 
 #### 职责与已有入口
 
-静态 Agent 与动态 AgentInstance 分开：应用级索引由 `scheduler-engine/runtime/GlobalRuntimeManager` 统一观察，Team 不反向引用它。成员权威登记仍来自工作区派发事务。全局监管 epoch 仅隔离观察回调，不替代未来执行租约的 leaseEpoch；恢复出的历史活动不代表当前执行活跃。
+静态 Agent 与动态 AgentInstance 分开：应用级索引由 `logic/runtime/monitoring/global-runtime.ts 的 GlobalRuntimeManager` 统一观察，Team 不反向引用它。成员权威登记仍来自工作区派发事务。全局监管 epoch 仅隔离观察回调，不替代未来执行租约的 leaseEpoch；恢复出的历史活动不代表当前执行活跃。
 
 - Team.agents() 和 Team.agent() 提供组织、角色定义及有效 Skill；Team.people() 与 cbim_people_list 已删除，authorPeople 固定为空数组以兼容旧响应。角色不包含运行进程或可变会话状态。
 - Team 根与小组是组织节点，只有叶子是 Agent。成员继承自身与所有祖先的 Skill，角色解析仍服从现有冲突校验。
@@ -151,7 +151,7 @@ MemberScheduler ..> BrainPort : 绑定成员通道并执行
 
 ### 项目岗位登记与明确采纳
 
-`workspace-member.ts` 定义独立的稳定 `memberId`、岗位元信息、状态及采纳快照，与既有 `AgentInstance`/执行通道分开。相同静态执行能力可以登记多个岗位，主调度角色不能登记为业务岗位。本片只登记，不创建任务或运行，也不切换现有派发身份。`active` 仅表示登记启用；暂停可恢复，退休不可改写或复活，均不删除历史。
+`workspace-member.ts` 定义独立的稳定 `memberId`、岗位元信息、状态及采纳快照，与既有 `AgentInstance`/执行通道分开。相同静态执行能力可以登记多个岗位，主调度角色不能登记为业务岗位。登记操作本身不创建任务或运行，也不切换已有任务的派发身份；新任务由独立负责人执行门禁核实当前岗位绑定。`active` 仅表示登记启用；暂停可恢复，退休不可改写或复活，均不删除历史。
 
 采纳保存真实原则及有效继承 Skill。`captureId` 是一次采纳身份，不是静态来源删除重建的代次。能力指纹覆盖完整能力内容但排除整库知识 revision；模型指纹覆盖明确选择的完整公开配置，包括名称、能力和价格，不含密钥、默认选择或凭据可用性。公共 DTO 不导入大脑或后端哈希实现，严格 schema 不裁剪、变换或补默认字段。
 

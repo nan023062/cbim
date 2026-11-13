@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/岗位责任、Workflow与规范。显式流程只从本模块挂载清单解析，准备按任务原选择重核，不回退默认或刷新旧绑定；前置替换保留原实例和流程；两种模式的主会话都可直接执行未配置自定义岗位的模块，不把主 Agent 派成独立成员。 team-workflow 只向知识查询转发 snapshot，查询不取得工作区写能力。 team-workflow 调用 Core KnowledgeQueries，后者只取快照读取端口并组合 Team/BusinessWorkspace；跨查询一致性由准备用例核版本，索引写入留在知识领域。 执行上下文同时冻结负责岗位、项目适配、采纳能力与模型身份，主模型不会替换成员配置。
+内置主角色诊断和治理知识，执行者冻结角色/Skill、模块/岗位责任、Workflow与规范。显式流程只从本模块挂载清单解析，准备按任务原选择重核，不回退默认或刷新旧绑定；前置替换保留原实例和流程；两种模式的主会话都可直接执行未配置自定义岗位的模块，不把主 Agent 派成独立成员。 team-workflow 只向知识查询转发 snapshot，查询不取得工作区写能力。 team-workflow 调用 logic/knowledge/rules 的 KnowledgeQueries，后者只取快照读取端口并组合 Team/BusinessWorkspace；跨查询一致性由准备用例核版本，索引写入留在知识领域。 执行上下文同时冻结负责岗位、项目适配、采纳能力与模型身份，主模型不会替换成员配置。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -127,9 +127,9 @@ N_src_logic_execution_context_execution_context_ts ..> N_src_logic_execution_con
 
 ### 只读知识查询编排
 
-`knowledge-queries.ts` 组合 Core 的 Team 与 BusinessWorkspace 视图，只接收 `KnowledgeSnapshotReader`，不持有完整工作区或写入端口。内部知识工具和 `prepareTeamTask` 使用同一个编排入口。每次方法调用读取一个完整快照；跨查询可能版本变化，`prepareTeamTask` 继续在返回前比较模块、Agent 和当前 revision，冲突时拒绝，不自动重试或换成最新正文。
+`logic/knowledge/rules/knowledge-queries.ts` 组合该域 read-models 中的 Team 与 BusinessWorkspace 视图，只接收 `KnowledgeSnapshotReader`，不持有完整工作区或写入端口。本目录的执行上下文和内部知识工具使用同一个查询入口。每次方法调用读取一个完整快照；跨查询可能版本变化，`prepareTeamTask` 继续在返回前比较模块、Agent 和当前 revision，冲突时拒绝，不自动重试或换成最新正文。
 
-索引刷新由 Core 的 `refreshKnowledgeIndexes` 单独处理，工具注册层装配读/写两条路径；旧查询类的 refresh 方法已退出。职责、状态归属和允许依赖见 [知识契约](../../knowledge/rules/CONTRACT.md#快照契约领域视图与查询编排)。新增查询通常修改所属领域视图与本层组合，不要求修改刷新事务或运行引擎。
+索引刷新由 `logic/knowledge/rules/knowledge-refresh.ts` 的 `KnowledgeRefresh.refresh` 单独处理，工具注册层装配读/写两条路径；查询类没有 refresh 方法。职责、状态归属和允许依赖见 [知识契约](../../knowledge/rules/CONTRACT.md#固定快照读取的逻辑边界与公共入口)。新增查询通常修改知识域读取视图与查询组合，本层只维护执行准备，不要求修改刷新事务或运行引擎。
 
 ### 多成员、多模块任务上下文契约
 
@@ -145,7 +145,7 @@ N_src_logic_execution_context_execution_context_ts ..> N_src_logic_execution_con
 
 主会话在 Auto 与 Team 中都可按本轮权限直接实现未配置自定义负责岗位的模块，同时通过受控知识服务治理架构。治理遵守 read/ask/execute、审批、版本和事务，不能原生读写 `.cbim/` 或借知识管理绕过业务权限。正式成员上下文不改为主实例，也不以项目根存在放宽派发范围。已配置自定义岗位时派给该岗位；没有自定义岗位时不创建 `cbim:executor`。被调度成员拥有自身会话、状态和模型思考能力，可自主探索真实 Team 环境，在目标模块内实现和验证。本目录确定性核验知识与装配输入，不把认知职责当作权限。普通问答、目标澄清及候选查找可继续，尚未定位模块时不产生假派发节点。
 
-实际冻结契约位于 `core/tasks/execution-context.ts`，由调度与存储共同引用。权限和模型配置由可信运行入口单独准备，不混入知识快照：
+实际冻结契约位于 `logic/tasks/rules/execution-context.ts`，由调度与存储共同引用。权限和模型配置由可信运行入口单独准备，不混入知识快照：
 
 ```ts
 interface PreparedDispatchKnowledge {
@@ -180,7 +180,7 @@ interface PreparedDispatchKnowledge {
 | Workflow | 每模块从自身清单选择本次 Workflow；不继承父模块或其他模块的 Workflow |
 | 通用流程 | 模块无专属流程且策略允许时，明确记录 general 的版本和 reason；不伪装成模块挂载流程 |
 | 权限 | 本目录不签发或继承权限；可信入口独立决定本轮工具门禁，内容文字及岗位负责人关系不能签发权限 |
-| 恢复 | 本目录比较知识与内置规范版本，失效时拒绝沿用；当前成员入口只续接已核实正常结束的通道，尚未实现产物文件基线比对或异常通道自动恢复 |
+| 恢复 | 本目录比较知识与内置规范版本，失效时拒绝沿用；产物/文件基线核实由 evidence/runtime 和真实文件端口承担，安全检查点续执行由 team/runtime 的预约协议控制；本目录不自动恢复异常通道 |
 
 ModuleSchema 的 authors 只记录来源，旧 maintenance 仅兼容读取。resolveDispatchModules 不再返回 MAINTAINER_UNCONFIRMED 或生成维护字段；有效模块和 Workflow、岗位来源、模型与权限仍分别由原入口核实。
 

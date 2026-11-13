@@ -1,117 +1,78 @@
-# 四层架构与渐进迁移设计
+# 四层架构与迁移落地
 
-来源：2026-11-13 用户明确选择 Core、逻辑层、桥接层、视图层，并要求先建立 Core 与依赖规则。本文是目标设计与迁移规格，不是实时待办；当前事实由 src 契约、实际代码及开发记录维护。
+来源：2026-11-13 用户明确选择 Core、逻辑层、桥接层、视图层，并授权分批迁移。本文维护分层设计、当前落地和保留的边界，不作为实时待办。实际模块以 [源码契约](../src/CONTRACT.md)、[源码架构](../src/ARCHITECTURE.md) 和依赖检查器为准；历史分片及验证见 [开发记录](development-log.md)。
 
-## 当前落地结果
+## 当前目录与职责
 
-2026-11-13：Core、Logic、Bridge、View 源码迁移已完成。业务生命周期归 logic/application，桌面主入口与冷启动归 bridge/server，旧 backend/frontend 已退出。纯契约和服务按实际使用保留 index.ts 或登记的细粒度入口；未创建无消费者的 browser/client 目录。以下目标设计保留原迁移依据，阶段记录按发生时状态阅读，最终结构以 src/CONTRACT.md 与类图为准。
+Core、Logic、Bridge、View 的源码迁移已完成。下列目录均对应实际代码，不列尚未使用的 browser/client 占位目录。
 
-## 目标目录
-
-```text
+~~~text
 src/
   core/
-    utility/                通用算法、数据结构；按数据/问题类别组织
-    contracts/              按真实需要沉淀通用技术端口，不放业务 DTO
-    platform/
-      node/                 Node 文件、摘要等机制
-      browser/              浏览器环境基础实现
-      electron/             Electron 专属基础实现
+    utility/                 便携算法和实例数据结构
+    contracts/               通用技术端口，如 SecretCipher
+    web/                     网页纯契约与 HTML 算法
+    platform/node/           摘要、文件、锁与网页读取机制
+    platform/electron/       匿名浏览器读取与系统加密
   logic/
-    workspace/              工作区身份与生命周期
-    knowledge/              知识规则、查询与事务
-    tasks/                  任务、目标与调度
-    team/                   岗位、成员与归属
-    models/                 模型目录、供应商连接、选型与配置服务
-    execution/              运行循环及引擎适配
-    resources/              资源与资料业务
-    updates/                更新策略、状态与安装流程
+    application/             唯一业务应用生命周期与服务装配
+    models/                  模型目录、供应商选型与配置
+    budget/                  请求/目标预算规则、设置与编排
+    execution/               运行规则、引擎、准入、装配及存储
+    knowledge/               知识规则、查询、事务、存储与服务
+    workspace/               工作区、模块责任与生命周期
+    team/                    岗位、成员、主 Agent 设置及执行编排
+    tasks/                   目标、任务、依赖及恢复编排
+    dispatch/                派发契约、事务存储与调度
+    resources/               仓库、共享与静态知识包
+    connectors/              显式连接、授权与资料读取端口
+    web/、feedback/          Web 工具业务与 GitHub 反馈业务
+    updates/                 更新策略、准备、安装与恢复
+    ...                      其余业务域见 Logic 导航
   bridge/
-    contracts/              通信操作、请求/响应 DTO 与事件
-    client/                 视图调用入口
-    server/                 Logic 公开服务的传输适配
-    preload/                Electron 固定安全桥
-  view/
-    components/             共享界面组件
-    conversation/           对话界面与交互状态
-    tasks/                  任务界面与交互状态
-    settings/               设置界面与交互状态
-    ...                     其余业务视图
-  main.ts                   薄装配入口，不作为第五个业务层
-```
+    contracts/               IPC 操作、公开数据及已登记纯规则
+    server/                  桌面主入口、冷壳、IPC、CLI 与平台传输
+    preload/                 Electron 固定安全桥及真实客户端
+  view/                      React 页面、控制器、hooks 与视图适配
+~~~
 
-目录随真实代码迁移创建，不预建空模块。逻辑业务模块以 index.ts 或登记的细粒度文件暴露最小服务/契约，内部按职责维护规则、服务和存储；不建立全业务共用的 services/data 大目录。Core 不持有业务身份、权限或事务。Main 的生命周期装配必须与可复用逻辑分开；迁移入口时逐项保留构建与冷壳路径，不能提前开放任意计算式加载。
+主入口是 bridge/server/main.ts；业务生命周期由 logic/application/application.ts 持有。Bridge Application 只增加 dispatch，复用原实例状态及关闭顺序，没有再建业务容器。构建继续产生原固定输出名，运行数据目录和原生会话协议未随源码目录变化。
 
 ## 依赖规则
 
-| 使用方 | 目标许可 |
+| 使用方 | 实际允许方向及限制 |
 | --- | --- |
-| Core 便携能力 | 自身公开技术能力、获准语言/第三方库；不得引用平台专用实现或其余三层 |
-| Core Node/Browser/Electron | 同环境内部与便携 Core；Electron 可组合获准 Node 能力；均不得反向引用业务 |
-| Logic | 自身模块公开入口及适用的 Core；不引用 Bridge/View |
-| Bridge contracts | 纯通信契约与便携 Core；目标结构不引用 Logic 私有模型 |
-| Bridge client | contracts 与便携/浏览器 Core；不引用 server 或 Logic |
-| Bridge server | contracts、Logic 明确公开入口、便携/Node/Electron Core |
-| View | 自身、Bridge client/contracts、便携/浏览器 Core |
+| Core 便携能力 | 自身公开技术入口和获准第三方；不加载 Node/Electron 或三层业务 |
+| Core 平台实现 | 同环境与便携 Core；Electron 可组合获准 Node 能力，不反向依赖业务 |
+| Logic | Logic 公开入口及适用 Core；不依赖 Bridge/View/Electron |
+| Bridge contracts | 纯协议与便携 Core；精确登记的 Logic 纯数据/规则可具名重导出，不加载服务或凭据 |
+| Bridge server | contracts、Logic 公共入口和适用 Core；冷壳及更新继续受窄边界约束 |
+| Bridge preload/client | contracts 与允许的便携能力；preload 是现有客户端实现 |
+| View | 自身、Bridge 通信入口与便携 Core；不导入 Logic 服务或平台实现 |
 
-类型、重导出、字面量动态加载与普通导入同样检查。新 Core 模块未登记则失败；私有实现不能从业务侧直达。旧目录限制已经迁入对应新职责边界，旧层级本身已退出，不能借新 Core 放宽引擎、调度、更新子系统的 Node/files/web 访问。
+类型、重导出和可识别动态加载同样纳入依赖图。旧源码层级已经退出；检查器仍保留 browser/client 的环境规则，但没有为规则完整而创建空目录。Logic 的同层许可不代表任意访问：规则不得依赖运行服务，普通服务不得反向依赖 Application，具体引擎只由 execution/assembly 选择，私有读模型和文件实现仍通过明确公开入口消费。
 
-Bridge 是通信边界，不是业务服务定位器。Logic 定义自己的服务和状态；Bridge server 将外部 DTO 转为服务参数、订阅业务事件再转发。Logic 不反向依赖 IPC。主入口创建 Logic 实例并连接 Bridge，业务模块不导入主入口。
+模型、Web、反馈和资源服务以纯 index.ts 与 service/index.ts 分开。其余域按真实消费者登记细粒度入口，未建立全域聚合导出以掩盖类型环。Core 不持有业务身份、授权、事务或全局业务状态；队列和集合由调用方逐实例持有。
 
-## 状态与兼容
+## 业务与平台边界
 
-业务事实、授权、事务和恢复归 Logic；输入框、展开、选择、加载等交互状态归 View；请求关联与传输订阅归 Bridge。Core 的队列/集合是调用方拥有的实例，不构成全局事件总线或共享业务状态。
+- 模型目录和供应商接口选择归 models；主 Agent 设置归 team/settings；请求预算端口及账本规则归 budget/rules，预算编排归 budget/runtime，传输适配归 execution/engines/transport。
+- 网页机制拆为 Core 纯契约、Node 读取器及 Electron 匿名渲染；Bridge 桌面在 ready 后注入读取器，Logic 不导入 Electron。WebService 负责业务校验、Brave 搜索及不可信来源标记。
+- 反馈服务持有授权与提交账本，先保存发送意图再发网，未知结果只核实；共享锁只有 Core 的 KernelLock 一份实现，旧锁/错误转发入口已经删除。
+- 资源仓库归 resources/service；静态包发布导入归 resources/packages；工作区连接授权归 connectors/service。三者通过明确契约协作，不能因相同 IO 而合成一个服务。
+- 业务 DTO 由各 Logic 域定义；Bridge 持有通信操作、受限输入与传输。现有具名数据/纯规则重导出仍是实际兼容边界，四层目录完成不等于所有通信 DTO 已与领域模型完全分离。若移除，须同步替换同步预览和数据消费者。
+- 更新服务与普通应用/调度分离，仅使用本域契约、获准便携 utility 及系统/第三方能力；Bridge 执行启动与安装意图，Application 提供业务排空回调。
 
-旧 backend/core 的领域协议不整体搬入 Core。相同语言不证明 JSON、错误或生命周期契约相同；合并实现前保留排序、空值、字段、取消和错误语义。IPC 名称、运行数据、原子提交和冷壳加载在相应迁移片中分别验证，不顺带改协议。
+## 状态与不变量
 
-## 分片规格
+业务事实、授权、事务和恢复归 Logic；输入、展开、选择与加载状态归 View；请求关联和传输归 Bridge。跨进程公开数据不包含服务实例、原生句柄、私有路径或凭据。
 
-1. **共享 Core 与规则。** 将原 utility 的便携实现放入 core/utility，Node 摘要独立放入 platform/node；前端 equalJson 组合共享排序且保留原策略。建立目标层、运行环境、公开入口及反向依赖回归，保留旧业务位置和规则。
-2. **其余基础方案。** 核实 files/web 的平台契约，逐项迁移；Electron 适配与普通 Node 入口分别处理。前端订阅、异步代次、图算法和注入式存储按语义核实后共享，不能机械合并不同图算法或生命周期。
-3. **Logic 业务边界。** 按工作区/知识/任务等实际事务与服务端口迁移规则、编排及存储，保留原原子账本和运行所有者；每片交付真实消费者与公开 index.ts，不只批量改路径。
-4. **Bridge 与 View。** 将 IPC 分发与客户端从装配/页面剥离，通信 DTO 与领域模型分开；迁移视图及交互控制器，消除旧契约对 backend/core 的过渡重导出。
-5. **装配与旧入口退出。** 核实构建、冷壳、运行时加载和测试夹具后迁移薄入口，清除实际零消费者的旧目录与过渡规则；完整制品验收归后续集成/发布。
+目录迁移保留模型选型、字段、错误、持久化字节、取消/排空及未知写入不自动重放的语义。相同语言不证明 JSON 排序、空值或生命周期契约相同；共享算法通过显式策略组合。原知识及派发跨领域原子事务没有被目录迁移拆开，密集装配和业务内聚仍需后续按真实变化治理。
 
-每片独立测试、注释/类图/工作流同步并提交，失败时整体回退该片的路径、调用方和规则。本文的后续规格不表示已经实施；是否继续以当前用户授权及 Issues 为准。
+## 已完成分片与验证入口
 
-## 第一步验证与 review 入口
+按顺序完成：基础库整合与 Core 规则；模型、Web、反馈及资源仓库；领域规则/端口；具体引擎与编排；有状态服务及 Bridge；View 与旧层退出。各片模块测试、路径/类型核对及注释/类图维护的实际结果见开发记录，不将早期“待迁移”说明作为当前事实。
 
-独立 Core 单元、Node 摘要单元、前端 JSON 比较及直接控制器消费者、后端字节/排序/指纹/RPC 适配契约；类型检查、架构检查、测试模块检查与依赖检查器回归。无行为变化的其他业务不自动全量测试。
+2026-11-14 针对 eaa85d9d 的 [全量 CI](https://github.com/nan023062/cbim/actions/runs/43458901536) 已通过：482 测试文件、3283 通过、0 失败、2 项依赖历史 EXE 的条件跳过；类型、架构、模块边界和官网浏览器检查通过。该结果不包含桌面打包、安装升级或发布验收，也不证明两项跳过用例通过。
 
-先读 src/core/CONTRACT.md，再读 utility 与 platform/node 契约、前端 equalJson 适配及 scripts/check-dependencies.mjs。实际命令、失败及最终结果写开发记录。当前迁移期仍保留 backend/frontend，旧 Bridge contracts 对 backend/core 的受限引用尚未退出，不能把目标四层宣称为已完成的物理结构。
-
-
-## 模型首批迁移边界
-
-按用户要求，Logic 模型首批先于其余基础方案迁移。模型规则归 logic/models/index.ts，配置存储和凭据解析归 logic/models/service/index.ts。后者是明确登记的宿主入口，旧 Main 可以装配，旧引擎/调度不能加载；规则不得反向引用 service。随本批迁移 Node files 和通用 Fault，以避免 Logic 依赖旧 backend。主 Agent 设置和请求预算暂留原位。
-
-迁移期仅 bridge/contracts/models.ts 可具名重导出模型纯入口，其他 Bridge 文件通过该契约访问；不放宽成整个 Bridge 可引用 Logic，也不将业务规则塞进 Core。这个兼容出口保留现有同步草稿预览，后续 Bridge DTO/预览迁移需同时处理其真实消费者后退出。它是过渡事实，不是四层目标已经实现。
-
-
-## Web 迁移切片
-
-WebService、WebSettings 和工具协议归 logic/web；基础网页机制分为 Core 纯契约/正文算法、Node 抓取和 Electron 适配。SecretCipher 提升为 Core 技术端口，系统加密实现仍由宿主注入。只有旧桌面 main.ts 可引用 Electron 读取入口；旧调度器只使用 Logic 纯工具契约。bridge/contracts/web.ts 仅保留 webConfigureInput/WebSettingsView 的具名兼容导出，未来 DTO 迁移后退出。保留现有 robots、缓存、错误、取消和凭据语义；反馈与资源服务不在本片范围。
-
-## 反馈迁移切片
-
-反馈协议、范围、GitHub 授权与提交服务归 logic/feedback；纯 index.ts 与宿主 service/index.ts 分开。原 scope-schema 组合并重导出本域范围，避免 Logic 反向依赖工具体系。KernelLock 实现进入 core/platform/node/locking.ts，旧出口共享同一构造器以兼容工作区/资源消费者。bridge/contracts/github-feedback.ts 仅转接配置 Schema 与公开状态；旧 Main 通过服务公开入口装配，工具只能读纯契约。凭据、发送屏障、原目标核实与持久化字节保持；资源业务不在本片范围。
-
-## 资源仓库迁移切片
-
-边界已闭合的本地仓库、HTTP 和共享生命周期迁入 logic/resources/service；资源定义与状态归纯入口。目录通过结构端口注入。知识包与仓库授权连接需随知识业务继续迁移，当前不将未完成部分画成已迁移。
-
-## 领域规则迁移落地
-
-旧 backend/core 的领域规则与端口已迁入 Logic 各业务 rules/ports；JSON 错误适配与摘要兼容函数归共享 Core。按真实消费者保留细粒度公开入口，并继续执行私有读模型、规则到服务和运行环境边界检查。没有新增全域 barrel，也没有更改业务状态、事务与恢复行为。宿主服务、调度、Bridge 与 View 仍按后续分片迁移。
-
-## 引擎与编排迁移落地
-
-95 个具体引擎和编排文件已迁入 Logic。引擎归 execution/engines；admission、assembly、context 归 execution，conversation、dispatch、tasks、evidence、budget、team、history、tools、automation 的编排归各自 runtime，全局只读监管归 runtime/monitoring。保留实际细粒度入口、规则到运行服务的禁向依赖及只有引擎装配选择具体适配器的限制。打包输出名、用户数据目录和原生协议未改变。
-
-## 有状态服务与 Bridge 落地
-
-旧 Main/Updater 的业务服务、数据和状态已迁至 Logic 各域。业务 Application 只保留生命周期，Bridge Application 是仅增加 dispatch 的可替换适配器，未复制状态或更改关闭顺序。IPC、CLI、Electron utility 传输及桌面冷启动归 bridge/server；更新服务独立于普通业务应用，业务 DTO 归 Logic。系统加密机制归 Core Electron 独立入口。旧 backend 已无源码；View 将在最后一片迁移。
-
-## View 与最终规则收尾
-
-视图源码、样式、入口和测试归属迁入 src/view。正式依赖矩阵仅保留四层及运行环境子边界；旧源码层即使无导入也会被拒绝。浏览器协议、preload 和桌面 IPC 验证保留，模块单元与协作覆盖分开。本次完成目录与依赖迁移，不声称已解决原共享事务和依赖密集类的全部内聚问题。
+后续阅读从 [Core](../src/core/CONTRACT.md)、[Logic 边界](../src/logic/BOUNDARIES.md)、[Bridge](../src/bridge/CONTRACT.md)、[View](../src/view/CONTRACT.md) 下钻。改业务应按实际影响选择模块与契约测试；纯文档核事实、引用及生成同步，不重复产品回归。

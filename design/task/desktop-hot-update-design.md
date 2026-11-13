@@ -59,7 +59,7 @@ flowchart TD
 
 | 内容 | 拟归属 | 条件与实例 |
 | --- | --- | --- |
-| `backend/core`、`scheduler-engine`、Main 业务服务的 TS | R | 发布构建后的 JS；原生接口、冷壳契约仍兼容 |
+| `src/logic/` 业务规则、编排与服务的 TS | R | 发布构建后的 JS；原生接口、冷壳契约仍兼容 |
 | React/TSX、CSS、HTML、界面图标 | R | 与配套 preload、后端和渲染资源作为同一版本发布 |
 | preload、隔离工人和受控文件工人的 JS | R | 冷壳允许的入口契约保持；全部固定到同一个 R，不能混用新旧脚本 |
 | 提示词、产品内置 Skill、规则 Schema、内置说明 | R | 仅更新程序自有资源；不覆盖用户工作区、用户 Skill 或知识数据 |
@@ -285,9 +285,9 @@ flowchart TD
 
 | 当前模块 | 可复用内容 | 需要改变 |
 | --- | --- | --- |
-| `backend/updater/desktop-updates.ts` | 后台检查、候选冻结、显式应用、失败重试的用户语义 | C/R 候选及 preparing/ready/switching/confirmed/recovery 状态；具体验证 / 激活权收敛到冷壳 |
-| `backend/updater/nsis-updater.ts` | 既有冷更下载与安装、NSIS 差分 | 保留为 C 通道，不让所有 R 经过它 |
-| `backend/updater/desktop-releases.ts` | 固定公开来源、过滤发行通道 | 区分冷包 / 资源包；同 C 选择 R，避免旧客户端误读热包 |
+| `logic/updates/service/desktop-updates.ts` | 后台检查、候选冻结、显式应用、失败重试的用户语义 | C/R 候选及 preparing/ready/switching/confirmed/recovery 状态；具体验证 / 激活权收敛到冷壳 |
+| `logic/updates/service/nsis-updater.ts` | 既有冷更下载与安装、NSIS 差分 | 保留为 C 通道，不让所有 R 经过它 |
+| `logic/updates/service/desktop-releases.ts` | 固定公开来源、过滤发行通道 | 区分冷包 / 资源包；同 C 选择 R，避免旧客户端误读热包 |
 | `bridge/contracts/desktop-updates.ts` | 前后端只读展示契约 | 同时返回 C/R、准备 / 切换 / 失败阶段，不暴露任意执行命令 |
 | `main.ts` / `assembly/application.ts` | 真实业务排空、用户路径和工作区恢复语义 | 稳定 bootstrap 与可更新业务入口分开；先显示基础窗口，再恢复工作区 |
 | `platform/paths.ts` 及原生解析 | 用户数据与安装路径已分开 | 明确 coldRoot/resourceRoot/userRoot；更新缓存排除在业务工程之外 |
@@ -353,10 +353,10 @@ Cindy 为什么没有采用这套双版本方案：**公开源码不能证明作
 
 阅读入口：
 
-- 现状：[更新契约](../../src/backend/updater/CONTRACT.md)、[状态机](../../src/backend/updater/desktop-updates.ts)、[NSIS 适配](../../src/backend/updater/nsis-updater.ts)。
-- 启动与数据：[Main](../../src/backend/main/main.ts)、[Application](../../src/backend/main/assembly/application.ts)、[Paths](../../src/backend/main/platform/paths.ts)。
+- 现状：[更新契约](../../src/logic/updates/service/CONTRACT.md)、[状态机](../../src/logic/updates/service/desktop-updates.ts)、[NSIS 适配](../../src/logic/updates/service/nsis-updater.ts)。
+- 启动与数据：[Main](../../src/bridge/server/main.ts)、[Application](../../src/logic/application/application.ts)、[Paths](../../src/logic/workspace/service/paths.ts)。
 - 构建：[Forge](../../forge.config.ts)、[主进程 Vite](../../vite.main.config.ts)、[引擎依赖打包](../../scripts/package-pi-runtime.mjs)、[正式构建](../../scripts/make-desktop.mjs)。
-- 引擎：[Pi 装配](../../src/backend/scheduler-engine/assembly/loop-engine.ts)、[Pi RPC 子进程](../../src/backend/engines/pi/rpc.ts)、[Claude SDK 加载](../../src/backend/engines/claude/sdk.ts)、[Codex 二进制解析](../../src/backend/engines/codex/binary.ts)、[宿主 Pi 工具库](../../src/backend/engines/native-tools.ts)。
+- 引擎：[Pi 装配](../../src/logic/execution/assembly/loop-engine.ts)、[Pi RPC 子进程](../../src/logic/execution/engines/pi/rpc.ts)、[Claude SDK 加载](../../src/logic/execution/engines/claude/sdk.ts)、[Codex 二进制解析](../../src/logic/execution/engines/codex/binary.ts)、[宿主 Pi 工具库](../../src/logic/execution/engines/native-tools.ts)。
 - 历史流量：[0.1.13 实测报告](../verification/desktop-release-0.1.13-20261112.md)。
 - Electron：[原生模块 ABI](https://www.electronjs.org/docs/latest/tutorial/using-native-node-modules)、[ASAR 完整性与 EXE 摘要绑定](https://www.electronjs.org/docs/latest/tutorial/asar-integrity)。
 - Windows：[ReplaceFileW 及失败语义](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-replacefilew)、[FlushFileBuffers](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-flushfilebuffers)。

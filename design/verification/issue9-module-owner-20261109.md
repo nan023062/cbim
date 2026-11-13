@@ -1,5 +1,7 @@
 # Issue #9：新项目的负责人下拉列表
 
+> 导航维护说明（2026-11-14）：正文保留当时的路径、结论与验证边界；可点击源码链接已更新到当前归属，仅供导航，不作为历史版本证据。未留存的阶段入口另行注明，不伪造源码或制品归档。
+
 日期：2026-11-09。范围：[Issue #9](https://github.com/nan023062/cbim/issues/9)；源码修复及本地 Windows 桌面验收完成，正式版本尚未发布。当前进度见[开发路线图](../tool-architecture-roadmap.md)，完成事实见[开发记录](../development-log.md)。
 
 ## 根因与实际行为
@@ -18,16 +20,16 @@
 
 | 入口 | 本次职责与状态归属 |
 | --- | --- |
-| [WorkspaceView.tsx](../../src/frontend/workspace/WorkspaceView.tsx) | `BusinessArchitecture` 保存原模块、所选 Agent 和返回后的岗位提示，组合责任面板与现有登记面板 |
-| [ModuleOwnershipPanel.tsx](../../src/frontend/workspace/ModuleOwnershipPanel.tsx) | 核实岗位列表、区分空列表与读取失败、调用注入的登记回调；不导入登记组件 |
-| [WorkspaceMembers.tsx](../../src/frontend/team/WorkspaceMembers.tsx)、[WorkspaceMemberForm.tsx](../../src/frontend/team/WorkspaceMemberForm.tsx) | 共用登记及原命令记录，只对本次受理的登记回调 memberId；表单不默认选择模型 |
-| [ExtensionArea.tsx](../../src/frontend/shell/ExtensionArea.tsx) | 传递完整 `WorkspaceView`，使复用表单使用真实运行状态与实例 |
+| [WorkspaceView.tsx](../../src/view/workspace/WorkspaceView.tsx) | `BusinessArchitecture` 保存原模块、所选 Agent 和返回后的岗位提示，组合责任面板与现有登记面板 |
+| [ModuleOwnershipPanel.tsx](../../src/view/workspace/ModuleOwnershipPanel.tsx) | 核实岗位列表、区分空列表与读取失败、调用注入的登记回调；不导入登记组件 |
+| [WorkspaceMembers.tsx](../../src/view/team/WorkspaceMembers.tsx)、[WorkspaceMemberForm.tsx](../../src/view/team/WorkspaceMemberForm.tsx) | 共用登记及原命令记录，只对本次受理的登记回调 memberId；表单不默认选择模型 |
+| [ExtensionArea.tsx](../../src/view/shell/ExtensionArea.tsx) | 传递完整 `WorkspaceView`，使复用表单使用真实运行状态与实例 |
 
 静态依赖为 `WorkspaceView → WorkspaceMembers → ModuleOwnershipPanel`；责任面板通过上层回调进入登记，没有反向导入形成文件环。运行时经 preload／公开 IPC 到原岗位和责任服务，仍由后端事务核实版本、来源和原命令。前端不导入后端实现，没有增加后端协议或持久化结构。
 
 本次变化点是“从业务架构进入登记并返回”的界面组合，实际变化频率未统计；岗位身份、原命令幂等和责任事务继续由已有服务负责。以后增加同类入口应组合登记组件及受理回调，而不复制登记协议或把页面导航写进后端核心。本次仅核实这些真实调用链及消费者，未做全仓架构重构。
 
-五个变更源码文件均同步了文件头、相关参数或回调说明；同步的目录契约与类图为 [workspace](../../src/frontend/workspace/ARCHITECTURE.md)、[team](../../src/frontend/team/ARCHITECTURE.md)、[shell](../../src/frontend/shell/ARCHITECTURE.md)，其 `CONTRACT.md` 同步维护。
+五个变更源码文件均同步了文件头、相关参数或回调说明；同步的目录契约与类图为 [workspace](../../src/view/workspace/ARCHITECTURE.md)、[team](../../src/view/team/ARCHITECTURE.md)、[shell](../../src/view/shell/ARCHITECTURE.md)，其 `CONTRACT.md` 同步维护。
 
 ## 实际验证
 

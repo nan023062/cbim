@@ -14,8 +14,8 @@
 
 ```sh
 pnpm test:module --list
-pnpm test:module --module foundations/files
-pnpm test:module --module backend/main/settings
+pnpm test:module --module core/platform/node/files
+pnpm test:module --module logic/web/service
 pnpm test:module --module logic/web/service --kind contract --list
 pnpm check:test-modules
 ```

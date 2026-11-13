@@ -168,49 +168,9 @@ N_src_logic_connectors_service_repository_connections_ts ..> N_src_logic_connect
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
-### 仓库响应体消费
+# 工作区资源仓库授权连接
 
-RemoteRepository 组合 utility.readBoundedBytes，按 `MAX_BYTES + 65536` 限制原字节，显式取消挂起 reader 并释放锁/监听；保留 #70 已修复的 Node 22 信号转发缺口。取消或超时不交付半截 JSON。8 秒期限、CANCELLED/TIMEOUT/SIZE/CONNECTION/PROTOCOL 分类、令牌、仓库身份和不重试语义仍由 request 决定；基础流不接触 URL 或凭据。
-
-### 公开网页与搜索
-
-网页正文转换已迁移至独立 [core/platform/node/web](../../../core/platform/node/web/CONTRACT.md)，本目录不再持有 `web-content.ts`。基础读取器管理静态抓取、robots、限速、缓存和可注入浏览器兜底；业务适配见 [Main/web](../../web/service/CONTRACT.md)。桌面可在静态失败、正文为空或动态外壳时匿名渲染一次，不把失败直接解释为需要登录。
-
-搜索仅固定 Brave API GET，密钥用 X-Subscription-Token；不自动跳转、不把密钥或服务原错误正文放入返回。每次读取当前已保存设置，关闭阻止下一次请求，已经发出的请求仍由运行取消管理。搜索结果不自动抓正文。既有聊天材料导入仍使用原协议，本工具不改写来源证据。
-
-# 资源仓库与工作区架构传输
-
-桌面更新独立位于 [updater](../../updates/service/ARCHITECTURE.md)，不复用本目录的反馈 HTTP、授权或运行时资源服务。
-
-反馈默认预置公开 Client ID `Ov23liSMDZneBd3gSyTo` 与 `nan023062/cbim`；没有内置用户令牌，用户仍须亲自完成 Device Flow。已有保存配置优先于默认值。
-
-## GitHub 反馈直连
-
-`GitHubFeedbackAuth` 使用公开 OAuth Client ID 和 Device Flow，固定连接 github.com / api.github.com；桌面按钮明确授予选定仓库的自动反馈提交。公开仓库请求 public_repo，私有仓库只有明确选择后才请求 repo；不内置公用 token。用户与不可变 repositoryId 经真实 GET 核验，令牌只经 `SecretCipher` 加密保存。设备码与 token 不进入模型／IPC，授权状态只返回短期 userCode。interval、slow_down、过期及 flowId 代际由后端检查；内核锁和队列防止其它窗口将旧登录换投新目标。取消、断开和关闭不自动创建 Issue。
-
-`checkConnection` 沿同一设置队列与锁只读公开连接事实，不解密、不请求 GitHub、不查询提交历史。有效本机 flow 但未保存 connection 返回 `GITHUB_AUTH_PENDING`；这不证明网页上是否已经授权。网页授权、设置页轮询核验并保存连接、下一轮捕获反馈端口是不同步骤。设置读取错误保留 `GITHUB_SETTINGS`，不伪装成未登录；旧 scope 与当前连接不符时只报告变化，不改投新目标。实际提交仍在原端口中独立复验账号和仓库。
-
-`GitHubFeedback` 向桌面主会话捕获固定目标端口，每次提交复验账号、仓库、工作区存活和当前连接。模型只填严格 BUG／需求字段；正文由纯函数排版，不遍历会话、工程或附件。先可靠保存 sending 意图再 POST；同工作区相同账号／仓库／规范化正文跨会话复用原 submitted，不因新调用 ID 重发。账本保留原 rootSessionId、内容指纹和 Issue 编号，不存正文或凭据；最多 1000 条，不静默丢弃旧记录。
-
-只提供类型和一句简述也可走同一提交链。缺失主栏目的规范化在指纹前完成，省略、空白与“用户未提供”占位等价，完整旧输入正文不变；没有迁移账本、重新生成原提交或放宽未知写屏障。实际补充了新内容时仍是不同正文，不能绕过另一个待核实请求。
-
-明确 HTTP 4xx 拒绝记 rejected；传输中断、5xx、坏 201 或回执落盘失败保持 sending。整个工作区的新提交受未知屏障约束，不同正文返回 GITHUB_PENDING_OTHER，不能用其它原回执宣称本条成功。只读核实最多读取原作者最近 500 条 Issue，严格比较原账号、不可变仓库、标记、标题／正文哈希及官方 URL；未找到、已改写或越界仍保持未知，不提供自动重发／清除。硬中断后可用新主会话核实原未知，不复活旧运行。
-
-`github-api.ts` 固定 HTTPS 主机、拒绝重定向，单请求 20 秒、回包 2 MiB，无自动重试。成功工具只返回 submitted 和私有操作 UUID，不返回 Issue 链接或开发进度。连接授权失效需重新连接；不实现后台轮询、反馈历史页、附件上传、开发结果回访或 token 自动刷新。
-
-链接器、人才市场和业务模板共用 `ResourceRepositories` 的当前仓库。未登录使用本机目录；已连接服务器仓库沿用现有账号会话抽象。界面尚未实现的账户服务不会被本模块冒充为云上传。仓库快照绑定 `repositoryId` 与 `revision`，资源整体 JSON 最多 8 MiB、单项正文最多 2 MiB。
-
-`WorkspacePackages` 只处理静态架构定义。`publish` 从工作区校验快照构建完整包，在用户明确发布操作后保存到当前仓库；源工作区、仓库身份或版本改变则拒绝。相同类型、名称、摘要和完整正文已存在时返回原资源，避免丢失回执后重复发布；不会按名称覆盖其他定义。
-
-`preview` 同时固定工作区实例/版本与源仓库版本/资源哈希，调用原知识校验并将计划保存到工作区的应用缓存 `resource-imports`。预览只显示增删改清单、完整校验和清除绑定提示，不写正式知识。旧普通文本资源、单模块与单 Workflow 资源可继续浏览，不能作为整包应用。
-
-`commit` 必须显式提供同工作区实例的 `planId`。首次写入前复核两端版本、源内容、目标目录冲突及未知资源；正式写入复用 `KnowledgeWorkspace.commit` 的事务、索引和请求幂等日志。跨 IPC 创建的多个门面共用按工作区排队的提交队列。同一计划成功后返回持久化回执；如果正式知识已写入但缓存回执失败，重试只能查询原请求的已提交回执，不能以新版本重放包内容。
-
-整体替换后仅清理已经空的目录，不递归删除任何文件。旧小组物理目录清理后再次通过独立知识事务刷新派生索引；主提交回执和索引请求分别持久化。若并发治理导致索引版本冲突，主包不再执行，显式重试只重新准备索引。未知事务失败保留现场并沿用原恢复要求，不自动重放副作用。实例重启后旧计划不能复用，用户须基于当前知识重新预览。
-
-主知识提交成功后的目录、索引或回执失败以 `RESOURCE_IMPORT_APPLIED` 明确报告“静态定义已应用，后续整理未完成”，附同一个计划 ID；不把部分完成描述成尚未写入或完全成功。完整 Team 替换保留旧 people.json，不再校验历史人员的小组引用；当前静态定义与导入映射仍须完整验证。
-
-共享内容不绑定主会话：一个工作区的静态 Team/业务架构与多个主会话分别拥有的成员调度任务图相互独立。导入不启动 Agent、不派任务、不连接工具、不恢复会话、不继承来源项目的人员或维护授权。
+本目录持有显式连接登记、本机授权、原命令回执及运行资料读取端口。仓库与共享生命周期归 [resources/service](../../resources/service/CONTRACT.md)，静态包发布导入归 [resources/packages](../../resources/packages/CONTRACT.md)，GitHub 反馈归 [feedback/service](../../feedback/service/CONTRACT.md)，网页业务归 [web/service](../../web/service/CONTRACT.md)。连接服务组合各自公开能力，不持有其状态机。
 
 ## 显式资源仓库只读连接
 
@@ -236,12 +196,4 @@ RemoteRepository 组合 utility.readBoundedBytes，按 `MAX_BYTES + 65536` 限�
 
 每次调用仍经过生产 Resource Repository v1 HTTP GET 和原 8 MiB 响应边界。模型目录最多返回 50 项摘要，续页固定 expectedRevision；正文最多 4096 个 Unicode codepoint，按明确 resourceId/revision/offset 读取。结果提供完整原文 SHA-256、总字符数、实际分块和 nextOffset，只有 offset=0 且包含全文才 complete=true。目录或正文版本变化拒绝原请求，不自动刷新版本重读。仓库资料不作为文件基线、成员交付或检查点证据。
 
-桌面 `prepareMaterials(identity)` 与主运行共用同一授权捕获器，但提供独立的单次正文快照读取：用户指定原 connectionId、expectedRevision 和 resourceId，实际 HTTP 返回整份有界仓库后选出原资源。不能循环模型 get 分页拼出不同版本，也不开放 URL、token 或新授权。该端口额外给 Main 保存真实 definitionHash/grantRevision，并在快照落盘后再次核实原捕获；信息只作为当时来源，不成为可复用权限。支持 connector/team/agent/skill/architecture/module/workflow 七种正文，全部是静态资料，不安装、不执行、不导入正式知识。已保存本机快照后撤权不删除历史资料，续跑不再次调用仓库。
-
-## 整包导入来源意图
-
-`WorkspacePackages` 新预览保存 v2 完整不可变计划，源资源指纹、目标域和 add/replace 语义由真实包规划生成；原样 wire 指纹不经 Schema 键序重排。提交仅把计划引用交给固定知识加载器，不能用可变 committed/result 缓存证明来源结算或知识成功。
-
-缓存回执必须与原知识 journal（含需要时的索引 journal）一致。重开后已提交旧计划仅查询并返回原真实回执，不续办旧实例清理、索引或替换；没有原成功日志的旧实例计划拒绝。全包净差异为空继续拒绝，实际整体 replace 中未变字节的对象仍按明确替换域轮换代次。
-
-资源仓库实现已迁到 src/logic/resources/service，纯定义归 src/logic/resources；旧 Main/resources 暂留与知识事务相关的连接授权和发布导入。宿主目录通过 ResourceRepositoryPaths 注入，Logic 不依赖 Main Paths 或 Bridge。
+桌面 `prepareMaterials(identity)` 与主运行共用同一授权捕获器，但提供独立的单次正文快照读取：用户指定原 connectionId、expectedRevision 和 resourceId，实际 HTTP 返回整份有界仓库后选出原资源。不能循环模型 get 分页拼出不同版本，也不开放 URL、token 或新授权。该端口额外供 Logic 资料服务保存真实 definitionHash/grantRevision，并在快照落盘后再次核实原捕获；信息只作为当时来源，不成为可复用权限。支持 connector/team/agent/skill/architecture/module/workflow 七种正文，全部是静态资料，不安装、不执行、不导入正式知识。已保存本机快照后撤权不删除历史资料，续跑不再次调用仓库。

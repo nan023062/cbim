@@ -1,5 +1,7 @@
 # CBIM · V&B 第一轮架构 review
 
+> 历史快照：正文中的目录、完成状态与验证数字保留记录日期的事实，不是当前实现清单。四层迁移后的现状请看 [源码契约](../../src/CONTRACT.md) 和 [Logic 边界](../../src/logic/BOUNDARIES.md)。
+
 日期：2026-11-12。源码基线：`3f249cf88523ced1fa764e82d1e264be7d5473e7`，产品版本 0.1.9。
 
 [打开交互模块图与完整源码映射](cbim-vb-architecture-review-20261112.html)。HTML 内嵌全部映射、静态边、证据和源码快照，可离线查看，无 CDN 依赖。

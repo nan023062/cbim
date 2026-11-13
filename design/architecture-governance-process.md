@@ -223,22 +223,19 @@
 
 ### A.2 CBIM 当前基线与目标差距
 
-当前 [依赖检查器](../scripts/check-dependencies.mjs) 以物理层约束如下；表内允许同层引用不代表同层内部已经形成清晰的逻辑模块。
+当前 [依赖检查器](../scripts/check-dependencies.mjs) 已采用四层及运行环境子边界。表内是层级概览，具体逻辑模块、纯数据和私有入口仍按精确许可约束。
 
-| 当前层 | 检查器允许的依赖 |
+| 当前层 | 允许依赖概览 |
 | --- | --- |
-| `backend/core` | 自身 |
-| `backend/scheduler-engine` | 自身、`backend/core` |
-| `backend/bootstrap` | 自身、`backend/updater`、`backend/main`；计算式固定入口映射真实源码边 |
-| `backend/main` | 自身、`backend/scheduler-engine`、`backend/core`、`backend/updater`、`bridge/contracts` |
-| `backend/updater` | 自身、`bridge/contracts` |
-| `bridge/contracts` | 自身、`backend/core` |
-| `bridge/preload` | 自身、`bridge/contracts` |
-| `frontend` | 自身、`bridge/contracts` |
+| Core 便携能力 | 自身公开技术能力及获准第三方，不依赖业务或平台专用实现 |
+| Core 平台入口 | 同环境与便携 Core；Electron 可组合获准 Node 能力 |
+| Logic | Logic 公开契约、服务及适用 Core；规则不得反向依赖运行服务，业务不导入 Bridge/View/Electron |
+| Bridge server | 通信契约、Logic 公开入口及适用 Core；冷壳和更新装配另受窄边界限制 |
+| Bridge contracts | 纯协议、便携 Core，另有精确登记的 Logic 纯数据/规则重导出，不加载业务服务 |
+| Bridge preload/client | 通信契约及允许的便携能力；preload 是现有客户端，未创建空 client 目录 |
+| View | 视图自身、Bridge 公开通信入口及便携 Core，不加载 Node/Electron 或 Logic 服务 |
 
-源码约定进一步要求 Bridge 只暴露 Core 的公开契约与纯函数。当前层规则对同层模块、Core 内纯规则与 SDK 适配的区分仍较粗，因此 G01 需要补充逻辑边界与公共入口检查。已有文件循环检测继续保留，不用新规则放宽既有约束。
-
-上述 G01–G09 基线制定时，`core/brain` 同时存在引擎契约及 Pi、Claude、Codex 实现；该段是历史问题背景，不是当前目录清单。当前边界以 [源码架构](../src/ARCHITECTURE.md) 与依赖规则为准。共享 src/core 已建立：utility 与 Node 摘要已迁入，files/web 暂留 backend/core/foundation。旧 backend/core 的领域规则与执行机制属于待迁移 Logic，不等于共享 Core。
+G01–G09 基线制定时的 core/brain、backend/core、Main 和 scheduler-engine 是历史背景。当前共享 Core 与 Logic 领域规则已经分开，具体引擎由 execution/assembly 选择；files/web、锁和系统加密分别归 Core 平台入口。目录迁移不证明共享事务、密集装配或全部业务抽象问题已经解决，仍按真实消费者和状态权威渐进治理。历史验收项按原基线阅读，当前入口见 [源码架构](../src/ARCHITECTURE.md) 与 [四层设计](four-layer-architecture.md)。
 
 本次核对范围为现行协作规范、整体架构、依赖脚本、验证入口及代表性源码入口；复用同一基线上的既有分析，没有重新完成全仓逐行审计或运行依赖检查。目录聚合中的双向箭头也不能直接当作文件循环证据。
 
@@ -290,7 +287,7 @@ P0 为治理前置，P1 为核心整改，P2 为外围完善与收口；它们�
 - **交付物：** 职责明确的辅助模块及已迁移测试；说明哪些是纯规则、契约协作或完整应用测试。
 - **验收标准：** 纯规则测试引用辅助函数不再传递加载完整应用；事务、恢复和引擎集成仍保留真实协作验证。现有测试断言及覆盖意图不因拆分被弱化。
 - **验证方式：** 只运行迁移测试及实际受影响消费者，核对纯辅助模块导入关系；选择器必须选中目标用例，零用例不能当通过。
-- **阅读入口：** [现有测试辅助](../tests/helpers.ts)、[应用装配](../src/backend/main/assembly/application.ts)。
+- **阅读入口：** [现有测试辅助](../tests/helpers.ts)、[应用装配](../src/logic/application/application.ts)。
 
 #### G03：拆清知识、团队、工作区之间的契约与查询编排
 
@@ -298,7 +295,7 @@ P0 为治理前置，P1 为核心整改，P2 为外围完善与收口；它们�
 - **交付物：** 契约归属、查询组合入口、迁移消费者和严格边界规则。这是建议的第一个源码治理切片。
 - **验收标准：** 三组逻辑模块依赖单向；查询结果、刷新幂等和错误语义保持；反向引用能被检查拒绝，不仅是现有文件恰好无环。
 - **验证方式：** 团队模型、知识查询／刷新及实际受影响的工具调用方；新增边界规则对应的检测器回归。
-- **阅读入口：** [KnowledgeQueries](../src/backend/core/knowledge/knowledge-queries.ts)、[团队模型](../src/backend/core/knowledge/read-models/team.ts)、[工作区模型](../src/backend/core/knowledge/read-models/workspace.ts)。
+- **阅读入口：** [KnowledgeQueries](../src/logic/knowledge/rules/knowledge-queries.ts)、[团队模型](../src/logic/knowledge/rules/read-models/team.ts)、[工作区模型](../src/logic/knowledge/rules/read-models/workspace.ts)。
 
 #### G04：收窄共享调度状态与存储接口
 
@@ -306,7 +303,7 @@ P0 为治理前置，P1 为核心整改，P2 为外围完善与收口；它们�
 - **交付物：** 各领域最小端口、状态／事务归属和真实消费者迁移；底层可以继续共享日志或存储。
 - **验收标准：** 迁移后的业务服务不再取得无关状态和修改能力；原事务内读取、原子提交、并发冲突、幂等与回执语义保留。跨域原子命令不得被拆成缺乏一致性保护的多次写入。
 - **验证方式：** 被迁移领域、事务投影、重放、冲突和实际参与的跨域命令；按真实影响选择消费者。
-- **阅读入口：** [持久化边界](../src/backend/main/ARCHITECTURE.md)、[执行服务边界](../src/backend/scheduler-engine/CONTRACT.md)。
+- **阅读入口：** [持久化边界](../src/logic/application/ARCHITECTURE.md)、[执行服务边界](../src/logic/SCHEDULING.md)。
 
 #### G05：分离运行循环与具体业务能力
 
@@ -314,7 +311,7 @@ P0 为治理前置，P1 为核心整改，P2 为外围完善与收口；它们�
 - **交付物：** 一次只迁移一种能力，说明运行机制、业务策略与装配各自负责什么。
 - **验收标准：** 在既有契约范围内新增同类能力主要修改业务实现与装配；通用循环不新增对应业务分支。授权、日志先落盘、取消、结算和资源释放的语义保持，责任不能在提取过程中丢失。
 - **验证方式：** 本次能力、相关运行机制及实际受影响引擎入口，重点覆盖失败、停止顺序与资源释放。
-- **阅读入口：** [运行循环](../src/backend/scheduler-engine/assembly/loop-engine.ts)、[引擎契约](../src/backend/core/execution/types.ts)、[工具边界](../src/backend/scheduler-engine/tools/CONTRACT.md)。
+- **阅读入口：** [运行循环](../src/logic/execution/assembly/loop-engine.ts)、[引擎契约](../src/logic/execution/rules/types.ts)、[工具边界](../src/logic/tools/runtime/CONTRACT.md)。
 
 #### G06：隔离引擎 SDK、进程与平台适配
 
@@ -322,7 +319,7 @@ P0 为治理前置，P1 为核心整改，P2 为外围完善与收口；它们�
 - **交付物：** 稳定执行契约、具体适配边界、装配迁移及兼容说明；契约演进与目录调整分别解释。
 - **验收标准：** 核心规则和执行机制不导入具体适配器，类型引用也符合约束；供应商差异局限于实现。各实现满足共同生命周期要求，合法的供应商差异显式保留，不伪造一致能力。
 - **验证方式：** 每次迁移引擎的契约、启动／停止／恢复及加载入口；真实打包和安装验收留给集成／发布阶段。
-- **阅读入口：** [引擎契约与实现边界](../src/backend/core/execution/CONTRACT.md)、[应用装配](../src/backend/main/assembly/application.ts)。
+- **阅读入口：** [引擎契约与实现边界](../src/logic/execution/rules/CONTRACT.md)、[应用装配](../src/logic/application/application.ts)。
 
 #### G07：建立有类型约束的 IPC 操作契约
 
@@ -338,7 +335,7 @@ P0 为治理前置，P1 为核心整改，P2 为外围完善与收口；它们�
 - **交付物：** 公共展示入口、业务控制边界、消费者迁移及各状态的所有者说明。
 - **验收标准：** 会话、任务通过明确入口协作，不互相导入内部实现；公共展示不反向依赖页面或业务控制器。原交互和状态同步语义保持，不以共享可变状态隐藏耦合。
 - **验证方式：** 迁移组件和相关会话／任务交互用例；涉及通信语义时协调 G07 的相关验证。
-- **阅读入口：** [会话边界](../src/frontend/conversation/CONTRACT.md)、[任务边界](../src/frontend/tasks/CONTRACT.md)。
+- **阅读入口：** [会话边界](../src/view/conversation/CONTRACT.md)、[任务边界](../src/view/tasks/CONTRACT.md)。
 
 #### G09：完成剩余依赖治理与检查覆盖
 

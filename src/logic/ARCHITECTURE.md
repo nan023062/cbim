@@ -299,7 +299,7 @@ N_src_logic_workspace ..> N_src_logic_tools : 导入依赖
 - [history/](history/ARCHITECTURE.md)：按主会话与角色读取运行履历的业务服务；日志事实与文件索引通过端口提供。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识数据、只读视图、查询和写入端口；服务与规则分开归属，实际依赖通过明确入口验证。
 - [materials/](materials/ARCHITECTURE.md)：聊天资料的身份、预览契约与采集保存服务；来源证明由业务持有，桥接仅传输受限数据。
-- [models/](models/ARCHITECTURE.md)：模型目录、公开配置 Schema、供应商预设与引擎接口选择；index.ts 是纯公共入口，不加载 Node 或服务。配置服务位于 service，旧预算端口和主 Agent 设置不属于本片。
+- [models/](models/ARCHITECTURE.md)：模型目录、公开配置 Schema、供应商预设与引擎接口选择；index.ts 是纯公共入口，不加载 Node 或服务。配置服务位于 service，请求预算归 logic/budget，主 Agent 设置归 logic/team/settings。
 - [resources/](resources/ARCHITECTURE.md)：资源定义、分类、仓库快照与公开状态的纯业务契约；仓库存储和共享由 service 负责。
 - [runtime/](runtime/ARCHITECTURE.md)：运行状态及终态事实规则；服务与规则分开归属，实际依赖通过明确入口验证。
 - [tasks/](tasks/ARCHITECTURE.md)：目标、任务依赖、人工决策及协作状态规则；服务与规则分开归属，实际依赖通过明确入口验证。

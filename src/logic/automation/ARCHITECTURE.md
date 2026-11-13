@@ -38,7 +38,7 @@ N_src_logic_automation_service ..> N_src_logic_automation_rules : 导入依赖
 
 - [rules/](rules/ARCHITECTURE.md)：自动化定义、运行与执行/存储端口及纯时区日程计算，不依赖调度和桌面实现。
 - [runtime/](runtime/ARCHITECTURE.md)：串行版本配置、持久启动意图与定时调度；同项不重叠，重开跳过过期，不重放未知运行。
-- [service/](service/ARCHITECTURE.md)：自动化应用服务及文件存储：计划、执行请求与持久化属于同一应用职责，领域调度契约仍在 Core。
+- [service/](service/ARCHITECTURE.md)：自动化应用服务及文件存储：计划、执行请求与持久化属于同一应用职责，领域调度契约归 logic/automation/rules。
 
 [返回上层](../ARCHITECTURE.md)。
 

@@ -1,5 +1,7 @@
 # Step52 / R09-B：静态PNG真实解码验证
 
+> 历史快照：正文中的目录、完成状态与验证数字保留记录日期的事实，不是当前实现清单。四层迁移后的现状请看 [源码契约](../../src/CONTRACT.md) 和 [Logic 边界](../../src/logic/BOUNDARIES.md)。
+
 日期：2026-11-08。承接CSV本地提交a7ba217，按[本片计划](../task/png-artifact-validation.md)实现32×32 RGBA界面资源代表任务；[支持矩阵](../task/professional-validation-support.md)仍保留程序与外部专业输出的独立验收。
 
 ## 实际交付

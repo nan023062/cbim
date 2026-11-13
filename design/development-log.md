@@ -1,3 +1,11 @@
+## 2026-11-14：办公室改版第 5 步——普通输入排队与话题身份衔接
+
+- 基线 `3d126a9e`。普通输入在开放/等待话题期间均入队，不再自动转为等待目标的补充；补充保留目标内的明确独立表单。移除界面 Ctrl+Enter/队列项的单轮原生 steer，避免把它误认为整话题暂停；底层旧协议及回归覆盖保留，整话题插入另行实施。
+- 排队项 ID 经可信管理器启动钩子作为实际 scopeId，编辑和排序不更换身份；主列表展示排队话题，实际话题出现后去掉过渡重复项。新主题在原主 Session 延续，结果回注仍归原周期；空主列表不再展示最近已关闭目标的展开控制。
+- Q1 保护原队列、停止、未知输入和重启暂停门禁；Q2 View 只决定明确入口，Logic 维持可信身份与启动；Q3 选择等待输入、话题投影、真实管理器/原插入边界、协调器、独立补充表单消费者；Q4 阅读 `conversationExecutionState` → `Conversation.send` → `pump/launch` → `AutoCollaboration.starting`；Q5 无新增通用规范。
+- `pnpm exec vitest run tests/conversation-waiting.test.ts tests/conversation-topics.test.ts tests/queue-insertion-boundary.test.ts tests/auto-collaboration.test.ts tests/scope-continuation-view.test.ts`：115/115 通过；`pnpm typecheck`、`pnpm check:architecture`（739 代码/样式、0 文档差异/循环/违规）通过。`git diff --check` 初次发现空行尾空格，清理后通过。同步 3 个目录 CONTRACT、类图与源码说明。
+- 当前持久等待/异常/重启仍保留原队列暂停规则；本片未宣称整话题暂停、后续自动排队恢复或场景完成。未跑全仓回归、真实桌面/模型联调、构建/发布；独立本地保存。
+
 ## 2026-11-14：办公室改版第 4 步——子 Session 导航与成员对话
 
 - 基线 `402369d3`，延续全部需求实施授权。Bridge 公开纯逻辑对话身份；View 联合投影验证办公室、唯一角色/Session 和不可改绑，全部分页追齐后发布。外壳按工作区实例/主根缓存成员导航，主会话保持可见，子角色按名称折叠，只提供查看入口。

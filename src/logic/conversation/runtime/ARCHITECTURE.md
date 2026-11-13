@@ -341,6 +341,10 @@ N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversati
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 排队话题身份
+
+`pump` 将持久队列项 ID 传入可信启动钩子作为新周期身份，编辑、排序和运行登记不换 ID。原记录已受理但队列移除失败时，不能靠随机新周期把同项自动重复执行。等待、异常、停止与重启的原暂停屏障保留；普通发送不消费等待检查点。
+
 ### 主会话直接执行与独立成员边界
 
 Auto/Team 最终组装指引都允许主 Agent 在当前会话实现未配置自定义负责岗位的模块，权限仍由 read/ask/execute 和实际工具门禁决定。`cbim:main` 可以出现在主目标 assignments，通过 `main-execution` 引用本轮真实业务工具证据；不能作为独立成员 assignee，也不接受成员的 workflowSelections。显式自定义岗位仍按有效绑定派发，配置无效不绕过。知识提交、业务工具执行、成员候选和人工验收分别核实，任何一种回执都不自动替代其他证明。

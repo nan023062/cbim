@@ -27,16 +27,28 @@ async function fixture(hook?:(event:EngineEvent)=>Promise<void>){
     const runtime=new LoopRuntime({directory:path.join(directory,'loop-engine','tasks'),storage,createEngine:()=>engine,acquireLease:async()=>()=>{},toolPolicy:async()=>({allow:false}),onEvent:config.onEvent});
     runs.push({runtime,engine,steer,stop,close,finish:status=>finish({status})});return {runtime} as never;
   },images);
-  const stop=vi.fn(async()=>{busy=false});manager.attachCollaboration({busy:()=>busy,settled,stop});
+  const stop=vi.fn(async()=>{busy=false}),starting=vi.fn(async()=>{});manager.attachCollaboration({busy:()=>busy,settled,stop,starting});
   const start=await manager.chat('原任务',options);
   const item=await manager.enqueue(start.taskId,'原队列消息',{...options,permission:'execute'});
   const queue=await (manager as unknown as {queue():Promise<MessageQueue>}).queue();
-  return {directory,manager,runs,start,item,queue,images,stop,settled,setBusy:(value:boolean)=>{busy=value},
+  return {directory,manager,runs,start,item,queue,images,stop,settled,starting,setBusy:(value:boolean)=>{busy=value},
     insert:()=>manager.insertQueued(start.taskId,item.id,start.runId),
     async finish(index=0){const count=settled.mock.calls.length;runs[index].finish('completed');await vi.waitFor(()=>expect(settled.mock.calls.length).toBeGreaterThan(count))},
     async cleanup(){for(const run of runs)run.finish('cancelled');await manager.close();const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-insertion-fence-'))throw Error('Unexpected cleanup');await fs.rm(target,{recursive:true,force:true})},
   };
 }
+
+it('队列启动把已保存的队列身份交给话题建立，编辑消息不改变归属',async()=>{
+  const f=await fixture();try{
+    f.setBusy(true);await f.finish();await f.manager.editQueued(f.start.taskId,f.item.id,'更新后的新任务','原队列消息');
+    f.setBusy(false);await f.manager.continueQueue(f.start.taskId);
+    expect(f.starting.mock.calls).toHaveLength(2);
+    expect((f.starting.mock.calls[0] as unknown[])[5]).toBeUndefined();
+    expect((f.starting.mock.calls[1] as unknown[])[5]).toBe(f.item.id);
+    expect((f.starting.mock.calls[1] as unknown[])[3]).toBe('更新后的新任务');
+    expect(await f.manager.queued(f.start.taskId)).toEqual([]);
+  }finally{await f.cleanup()}
+});
 
 it.each([undefined,'','../escape','other-run'])('缺失或不匹配的原 run %s 在领取前拒绝，不选择当前轮代收',async expected=>{
   const f=await fixture();try{

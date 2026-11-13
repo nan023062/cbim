@@ -40,3 +40,10 @@ it('主列表不渲染话题正文，历史默认折叠；选中只渲染该话�
   const thread=renderToStaticMarkup(createElement(ConversationTopics,{...props,selectedId:'one'}));
   expect(thread).toContain('正文-a');expect(thread).not.toContain('正文-b');expect(thread).toContain('全部话题');
 });
+
+it('排队任务以将来的话题身份展示，读取已出现同身份话题时不重复展示',()=>{
+  const queued=[{id:'queued-topic',taskId:'root',message:'稍后执行',status:'pending' as const,options:{provider:'p',model:'m'}}];
+  const render=(scopes:ScopeSummary[])=>renderToStaticMarkup(createElement(ConversationTopics,{...conversationTopics(identity,scopes,[]),queued,onSelect:()=>{},onSelectTask:()=>{},renderRun:()=>null}));
+  expect(render([])).toContain('排队话题 1');expect(render([])).toContain('data-topic-id="queued-topic"');
+  expect(render([scope('queued-topic')])).not.toContain('排队话题 1');
+});

@@ -17,7 +17,12 @@ import type {MainToolOutputBinding} from '../src/logic/tasks/rules/main-tool-out
 import type {AbandonCheckpointInput,AbandonCheckpointReceipt} from '../src/logic/tasks/rules/checkpoint-handoff';
 
 function deferred<T>(){let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>{resolve=r});return {promise,resolve}}
-async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'codex'){
+it('排队用户任务沿已保存身份建立新话题，主运行登记仍使用真实 runId',async()=>{
+  const f=await setup(undefined,undefined,'queued-topic');try{
+    expect(f.dispatch.openScope).toHaveBeenCalledWith(f.graph.identity,'queued-topic',{message:'本轮实际输入',attachmentIds:undefined},'parent-run',f.options);
+  }finally{await f.coordinator.close()}
+});
+async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'codex',queuedTopicId?:string){
   const task:TaskSpec={taskId:'conversation-1',workspaceId:'workspace-1',root:'C:/project',mode:'chat',goal:'原任务',agentId:'cbim:main',moduleIds:[],acceptance:[]};
   const identity={workspaceId:task.workspaceId,rootSessionId:task.taskId};
   const agent={agentId:'member',agentInstanceId:'instance',agentSessionId:'session',name:'成员'};
@@ -61,7 +66,7 @@ async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'c
   const execution={continueGoalRepair:vi.fn<(...args:any[])=>Promise<any>>(),attachCollaboration:(value:ExecutionCollaboration)=>{hooks=value},continueFromResults:vi.fn(async(..._args:unknown[])=>({workspaceId:task.workspaceId,taskId:task.taskId,runId:'continued'})),collaborationReady:vi.fn(async()=>{}),pauseCollaboration:vi.fn(async()=>{}),cancelPendingLaunches:vi.fn()};
   const issues=vi.fn();
   const coordinator=new AutoCollaboration({entry:{id:task.workspaceId,path:task.root},assert:()=>{}} as KnowledgeWorkspace,dispatch as unknown as WorkspaceDispatchService,members as unknown as MemberExecutionManager,execution as unknown as WorkspaceExecutionManager,lease,issues);
-  await hooks.starting?.(task,options,undefined,'本轮实际输入','parent-run');
+  await hooks.starting?.(task,options,undefined,'本轮实际输入','parent-run',queuedTopicId);
   execution.continueFromResults.mockImplementation(async(...args:unknown[])=>{
     const wait=args[4] as ExecutionAdmissionWait|undefined;
     const releaseMain=admission?acquireExecutionLease(lease,'main-return',{workspaceId:task.workspaceId,rootSessionId:task.taskId,requestId:admissionRequestId('main',(args[3] as {continuationId:string}).continuationId),workspacePermission:'read',source:'main-result',scopeId:wait?.scopeId},{manager:admission,ownerEpoch:1,isCurrent:()=>true},wait):()=>{};

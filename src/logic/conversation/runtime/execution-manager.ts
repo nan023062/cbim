@@ -4,7 +4,7 @@
  * 内部 MainStartup 在真实周期建立后、模型启动前绑定身份和准备首任务；取消贯穿准备，不是公开运行选项。
  * IPC 单独校验 collaborationMode；协作选项不参与 read/ask/execute 权限推导。
  * 作用定位：管理工作区主对话、可信结果与目标返工接续、多轮历史及队列；系统接续共用去重与停止屏障，业务成员经岗位派发领取。
- * 设计原因：原命令先查回执；等待补充的附件一次准备，图片仅留本轮。容量准入先于意图，beforeRun 核额度、停止与清单后登记运行；人工决定仍走独立系统来源，当前坏历史不能回退旧头。
+ * 设计原因：排队项沿已保存 ID 建立话题，普通接续与原目标补充分开；容量准入先于意图，beforeRun 核额度、停止与清单后登记运行，坏历史不能回退旧头。
  * 插入边界：先查原 scope/run/queue 回执再领取和读附件；绑定明确的原主 run，停止信号先于串行清理。周期输入接收落盘后才移除队列，未知结果同时阻止内存自动推进。
  * 执行选项接受明确引擎并随本轮准备、排队与后续调用传递；具体适配器仍由可信工厂选择。
  * 读取边界：团队与模块查询统一经 knowledge/read-models 公开入口，主对话生命周期与写操作仍由现有调度服务管理。
@@ -79,8 +79,8 @@ export interface ExecutionCollaboration {
   /** 取得真实 runId 后原子消费等待；只有新提交可转入本进程的活动周期。 */
   acceptContinuation?(request:GoalContinuationRequest,task:TaskSpec,runId:string,trusted?:TrustedContinuationInput):Promise<void>;
   /** 工厂准备完成、启动模型之前打开或续接周期；message 是本轮原文而非首次 goal，source 表示可信结果回注，不创建新目标。 */
-  /** Runtime在日志/引擎之前给出真实runId；缺省仅供旧独立装配兼容，不能补造完整归属。 */
-  starting?(task:TaskSpec,options:Options,source:RunInputSource|undefined,message:string,runId?:string):Promise<void>;
+  /** Runtime 在日志/引擎之前给出真实 runId；queuedTopicId 只来自管理器持久队列，前端不能指定旧话题来绕过准入。 */
+  starting?(task:TaskSpec,options:Options,source:RunInputSource|undefined,message:string,runId?:string,queuedTopicId?:string):Promise<void>;
   /** 覆盖持久登记至日志/引擎关闭的真实主运行窗口；仅可信装配使用，不从历史推测在途。 */
   holdMain?(runId:string):()=>void;
   /** 启动未成功时清理已经打开的周期；成员结果遇到暂时占用可保留原周期等待。 */
@@ -187,7 +187,7 @@ export class WorkspaceExecutionManager {
     const prior=(await this.thread(taskId)).at(-1);if(!prior?.sessionFile||prior.unresolvedTools.length||prior.status==='interrupted'||prior.status==='running'){await q.pause(taskId,'请先核实上一轮执行状态');return}
     if(prior.task.mode!=='chat'){await q.pause(taskId,'队列仅支持普通对话');return}
     const next=await q.take(taskId);if(!next)return;
-    try{await this.launch(prior.task,executionOptions.parse(next.options),next.message,{runId:prior.runId},undefined,true);await q.complete(next.id)}catch(e:any){await q.pause(taskId,e.message)}
+    try{await this.launch(prior.task,executionOptions.parse(next.options),next.message,{runId:prior.runId},undefined,next.id);await q.complete(next.id)}catch(e:any){await q.pause(taskId,e.message)}
   }
   private active=new Map<string,{runId:string;isMain:boolean;loop:Awaited<ReturnType<typeof createWorkspaceLoop>>}>();
   private pending:Promise<unknown>=Promise.resolve();
@@ -277,8 +277,8 @@ export class WorkspaceExecutionManager {
     const goal=z.string().trim().min(1).parse(message);
     return this.launch({mode:'chat',taskId:randomUUID(),workspaceId:this.workspace.entry.id,root:this.workspace.entry.path,goal,agentId:mainAgentId,moduleIds:[],acceptance:[]},executionOptions.parse(options),message,undefined,undefined,false,undefined,undefined,undefined,undefined,undefined,startup);
   })}
-  /** 自动队列与结果回注在工厂等待前后都复核停止屏障，防止停止协作期间重新唤起旧消息。 */
-  private async launch(task:TaskSpec,options:Options,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,automaticQueue=false,continuation?:GoalContinuationRequest,recovery?:RecoveryRequest,replan?:ReplanRequest,admissionWait?:ExecutionAdmissionWait,human?:HumanContinuationRequest,startup?:MainStartup){
+  /** automaticQueue 为持久队列 ID 或 false；沿原身份建立话题，自动启动前后仍复核停止屏障。 */
+  private async launch(task:TaskSpec,options:Options,message=task.goal,resume?:{runId:string;reconciledToolIds?:string[]},source?:RunInputSource,automaticQueue:string|false=false,continuation?:GoalContinuationRequest,recovery?:RecoveryRequest,replan?:ReplanRequest,admissionWait?:ExecutionAdmissionWait,human?:HumanContinuationRequest,startup?:MainStartup){
     if(task.mode!=='chat')fail('OWNER_DISPATCH_REQUIRED','旧直接业务入口不能创建新执行轮，请由主调度重新规划派发');
     if(recovery&&replan)fail('FRESH_MAIN_CONFLICT','同一启动不能混合只读核实和业务重规划');
     const fresh=Boolean(recovery||replan);
@@ -326,7 +326,7 @@ export class WorkspaceExecutionManager {
         controller.signal.throwIfAborted();
         releaseBudget=this.collaboration?.holdMain?.(runId);
         preparingScope=true;
-        await this.collaboration?.starting?.(task,options,source,message,runId);
+        await this.collaboration?.starting?.(task,options,source,message,runId,automaticQueue||undefined);
         if(startup){controller.signal.throwIfAborted();await startup.prepare({task:structuredClone(task),runId,signal:controller.signal});controller.signal.throwIfAborted()}
         if(human){
           controller.signal.throwIfAborted();if(!this.collaboration?.acceptHumanContinuation)fail('HUMAN_CONTINUATION_UNAVAILABLE','当前工作区未装配人工决定接续');

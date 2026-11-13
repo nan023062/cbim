@@ -10,9 +10,9 @@ import type {RunSummary,QueuedMessage} from '../src/bridge/contracts/execution';
 
 const since='2026-11-07T01:00:10.000Z';
 const waiting:ScopeSummary={scopeId:'scope',status:'waiting',createdAt:'2026-11-07T01:00:00.000Z',hasGoal:true,goalRevision:3,hasPlan:true,reviewDecision:'awaiting_user',stamp:{scopeId:'scope',streamId:'scopes:graph',seq:3},wait:{waitId:'wait',reason:'需要补充',goalRevision:3,createdAt:since}};
-it('持久等待的普通输入走补充，已有队列或迟到running日志不能改回入队；取消入口保留',()=>{
+it('持久等待的普通输入仍是新任务队列，迟到running日志不能恢复插入或越过等待',()=>{
   const state=conversationExecutionState({status:'completed'},waiting);
-  expect(state).toMatchObject({waiting:true,mainRunning:false,executing:false,taskOpen:true,canInsert:false,canContinueQueue:false,shouldQueue:false});
+  expect(state).toMatchObject({waiting:true,mainRunning:false,executing:false,taskOpen:true,canInsert:false,canContinueQueue:false,shouldQueue:true});
   expect(conversationExecutionState({status:'running'},waiting)).toEqual(state);
   expect(conversationExecutionState({status:'running'},waiting,2)).toEqual(state);
   expect(conversationExecutionState({status:'completed'},undefined)).toMatchObject({taskOpen:false,shouldQueue:false,canContinueQueue:true});
@@ -29,6 +29,6 @@ it('等待期间只禁止继续队列，仍可编辑删除排序，并明确取�
   const html=renderToStaticMarkup(createElement(MessageQueue,{items:[item],busy:false,continueDisabled:true,onChange:()=>{},onContinue:()=>{},onEdit:async()=>true,onMove:()=>{}}));
   expect(html).toMatch(/<button disabled=""[^>]*>继续队列<\/button>/);expect(html).toContain('编辑第 1 条消息');expect(html).toContain('删除第 1 条消息');expect(html).toContain('draggable="true"');expect(html).not.toContain('插入第 1 条到当前任务');
   expect(renderToStaticMarkup(createElement(SendButton,{disabled:false,isStreaming:true,stopLabel:'取消当前任务',onClick:()=>{}}))).toContain('aria-label="取消当前任务"');
-  const send=renderToStaticMarkup(createElement(SendButton,{disabled:false,continuing:true,onClick:()=>{}}));
-  expect(send).toContain('aria-label="补充并继续"');expect(send).not.toContain('加入队列');
+  const send=renderToStaticMarkup(createElement(SendButton,{disabled:false,queued:true,onClick:()=>{}}));
+  expect(send).toContain('加入队列');expect(send).not.toContain('补充并继续');
 });

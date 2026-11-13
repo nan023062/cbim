@@ -104,7 +104,7 @@ export class AutoCollaboration {
   }
   constructor(private owner:KnowledgeWorkspace,private dispatch:WorkspaceDispatchService,private members:MemberExecutionManager,private execution:WorkspaceExecutionManager,lease:WorkspaceExecutionLease,private reportIssue:(rootSessionId:string,error:unknown)=>void=()=>{}){
     this.releaseListener=lease.observeRelease(()=>this.schedule());
-    execution.attachCollaboration({activeInputReceipt:(rootSessionId,runId,queueId)=>dispatch.activeInputs.inspect({workspaceId:owner.entry.id,rootSessionId},runId,queueId),insertActiveInput:(rootSessionId,runId,queueId,input,signal,send)=>this.insertActiveInput(rootSessionId,runId,queueId,input,signal,send),holdMain:runId=>dispatch.budgets.holdMain(runId),busy:id=>this.busy(id),waiting:id=>this.waitingSlots.has(id),humanContinuationReceipt:query=>dispatch.humanContinuations.inspect(query),humanContinuationPreflight:request=>this.humanContinuationPreflight(request),acceptHumanContinuation:(request,task,runId,signal)=>this.acceptHumanContinuation(request,task,runId,signal),replanReceipt:query=>dispatch.replans.inspect(query),replanPreflight:request=>this.replanPreflight(request),acceptReplan:(request,task,context)=>this.acceptReplan(request,task,context),recoveryReceipt:query=>dispatch.recoveries.inspect(query),recoveryPreflight:request=>this.recoveryPreflight(request),acceptRecovery:(request,task,context)=>this.acceptRecovery(request,task,context),recoveryContext:rootSessionId=>dispatch.recoveries.latestContext({workspaceId:owner.entry.id,rootSessionId}),recoveryRunIds:rootSessionId=>dispatch.recoveries.priorRunIds({workspaceId:owner.entry.id,rootSessionId}),continuationReceipt:query=>dispatch.continuations.inspect(query),continuationCheckpoint:request=>this.continuationCheckpoint(request),acceptContinuation:(request,task,runId,trusted)=>this.acceptContinuation(request,task,runId,trusted),starting:(task,options,source,message,runId)=>this.starting(task,source,options,message,options.attachmentIds,runId),startFailed:(task,source,error)=>this.startFailed(task,source,error),settled:(task,_options,summary)=>this.settled(task,summary),stop:id=>this.stop(id)});
+    execution.attachCollaboration({activeInputReceipt:(rootSessionId,runId,queueId)=>dispatch.activeInputs.inspect({workspaceId:owner.entry.id,rootSessionId},runId,queueId),insertActiveInput:(rootSessionId,runId,queueId,input,signal,send)=>this.insertActiveInput(rootSessionId,runId,queueId,input,signal,send),holdMain:runId=>dispatch.budgets.holdMain(runId),busy:id=>this.busy(id),waiting:id=>this.waitingSlots.has(id),humanContinuationReceipt:query=>dispatch.humanContinuations.inspect(query),humanContinuationPreflight:request=>this.humanContinuationPreflight(request),acceptHumanContinuation:(request,task,runId,signal)=>this.acceptHumanContinuation(request,task,runId,signal),replanReceipt:query=>dispatch.replans.inspect(query),replanPreflight:request=>this.replanPreflight(request),acceptReplan:(request,task,context)=>this.acceptReplan(request,task,context),recoveryReceipt:query=>dispatch.recoveries.inspect(query),recoveryPreflight:request=>this.recoveryPreflight(request),acceptRecovery:(request,task,context)=>this.acceptRecovery(request,task,context),recoveryContext:rootSessionId=>dispatch.recoveries.latestContext({workspaceId:owner.entry.id,rootSessionId}),recoveryRunIds:rootSessionId=>dispatch.recoveries.priorRunIds({workspaceId:owner.entry.id,rootSessionId}),continuationReceipt:query=>dispatch.continuations.inspect(query),continuationCheckpoint:request=>this.continuationCheckpoint(request),acceptContinuation:(request,task,runId,trusted)=>this.acceptContinuation(request,task,runId,trusted),starting:(task,options,source,message,runId,queuedTopicId)=>this.starting(task,source,options,message,options.attachmentIds,runId,queuedTopicId),startFailed:(task,source,error)=>this.startFailed(task,source,error),settled:(task,_options,summary)=>this.settled(task,summary),stop:id=>this.stop(id)});
   }
 
   /** 人工意见沿专用入口预检；普通补充和队列消息不能选择或消费决定。 */
@@ -259,8 +259,8 @@ export class AutoCollaboration {
     this.schedule();
   }
 
-  /** 普通用户轮次原子打开周期并登记首个真实runId；结果回注追加原周期，补充由accept事务登记。 */
-  private async starting(task:TaskSpec,source:RunInputSource|undefined,options:WorkspaceLoopOptions,message:string,attachmentIds?:string[],runId?:string){
+  /** 普通用户轮次原子打开周期并登记真实 runId；排队轮沿管理器固定队列身份，结果回注追加原周期，补充由 accept 事务登记。 */
+  private async starting(task:TaskSpec,source:RunInputSource|undefined,options:WorkspaceLoopOptions,message:string,attachmentIds?:string[],runId?:string,queuedTopicId?:string){
     if(task.mode!=='chat'||task.agentId!=='cbim:main'||!options.profileId)return;
     if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭');
     if(source?.kind==='user-continuation'||source?.kind==='human_decisions'){
@@ -283,7 +283,7 @@ export class AutoCollaboration {
       return;
     }
     if(existing)fail('COLLABORATION_BUSY','当前用户任务尚未可靠关闭，请将新消息加入队列');
-    const cycle:Cycle={task:structuredClone(task),scopeId:randomUUID(),collaborationMode:options.collaborationMode??'team',tasks:new Set(),operations:new Set(),mainRuns:new Set(),workRequested:false,stopped:false};
+    const cycle:Cycle={task:structuredClone(task),scopeId:queuedTopicId??randomUUID(),collaborationMode:options.collaborationMode??'team',tasks:new Set(),operations:new Set(),mainRuns:new Set(),workRequested:false,stopped:false};
     await this.dispatch.openScope(this.identity(cycle),cycle.scopeId,{message,attachmentIds},runId,options);this.cycles.set(task.taskId,cycle);
     if(this.closed){await this.finishCycle(cycle,'cancelled');fail('COLLABORATION_STOPPED','协作调度已关闭')}
   }

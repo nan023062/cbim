@@ -115,6 +115,7 @@ N_src_frontend_workspace ..> N_src_frontend_team : 导入依赖
 - `shell` → `workspace`：导入。
 - `shell` → `automation`：导入。
 - `shell` → `diagnostics`：导入。
+- `shell` → `foundations`：导入。
 - `tasks` → `foundations`：导入。
 - `tasks` → `components`：导入。
 - `tasks` → `execution-view`：导入。

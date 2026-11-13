@@ -2,8 +2,9 @@
  * 作用定位：成员文件基线列表和显式复核的只读界面状态，校验报告身份及单次观察结果。
  * 设计原因：列表不默认选择或读取文件；切换基线、节点、轮次时作废迟到响应，不把旧复核拼入新报告，也不触发模型或任务恢复。
  * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
+ * 失效边界：新读取、选择变化和 cancel 推进代次；基线身份与 sourceVersion 仍按原规则核验。
  */
-import {SubscriptionSet} from '../foundations/utility';
+import {AsyncGeneration,SubscriptionSet} from '../foundations/utility';
 import {artifactReportSchema,type ArtifactReport,type ArtifactReportInput} from '../../bridge/contracts/dispatch';
 
 export type ArtifactSelection=Omit<ArtifactReportInput,'baselineId'>;
@@ -44,19 +45,19 @@ export function checkedArtifactReport(raw:unknown,request:ArtifactReportInput):A
 /** 一个控制器只属于一个真实 run；订阅、选择与取消均不访问 IPC。 */
 export class ArtifactReportController {
   private value:ArtifactReportState={selectedId:'',loading:false,error:''};
-  private generation=0;
+  private readonly generation=new AsyncGeneration();
   private listeners=new SubscriptionSet();
   constructor(readonly identity:ArtifactSelection,private read:(input:ArtifactReportInput)=>Promise<unknown>,private version:()=>string=()=> ''){}
   get snapshot(){return this.value}
   subscribe=(listener:()=>void)=>{return this.listeners.subscribe(listener)};
   private publish(next:ArtifactReportState){this.value=next;this.listeners.notify()}
   /** 卸载只忽略读取结果；后端只读调用不产生可重放操作。 */
-  cancel(){this.generation++;this.value={...this.value,loading:false}}
+  cancel(){this.generation.advance();this.value={...this.value,loading:false}}
   /** 用户选择不读取文件；更换选项清除旧观察，防止旧基线结果留在新选项下面。 */
   select(id:string){
     if(id&&!this.value.report?.baselines.some(item=>item.baselineId===id))throw Error('所选文件基线不在已核实列表中');
     if(id===this.value.selectedId)return;
-    this.generation++;
+    this.generation.advance();
     const report=this.value.report?{...this.value.report,verification:undefined}:undefined;
     this.publish({...this.value,report,selectedId:id,loading:false,error:''});
   }
@@ -66,12 +67,12 @@ export class ArtifactReportController {
   async inspect(){if(this.value.selectedId)await this.pull(this.value.selectedId)}
   private async pull(baselineId?:string){
     if(this.value.loading)return;
-    const token=++this.generation,sourceVersion=this.version(),request={...this.identity,...(baselineId?{baselineId}:{})};
+    const token=this.generation.advance(),sourceVersion=this.version(),request={...this.identity,...(baselineId?{baselineId}:{})};
     this.publish({...this.value,loading:true,error:''});
     try{
-      const raw=await this.read(request);if(token!==this.generation)return;
+      const raw=await this.read(request);if(!this.generation.isCurrent(token))return;
       const report=checkedArtifactReport(raw,request),selectedId=report.baselines.some(item=>item.baselineId===this.value.selectedId)?this.value.selectedId:'';
       this.publish({report,selectedId,loading:false,error:'',sourceVersion});
-    }catch(error){if(token===this.generation)this.publish({...this.value,loading:false,error:error instanceof Error?error.message:'文件复核失败，请重新读取'})}
+    }catch(error){if(this.generation.isCurrent(token))this.publish({...this.value,loading:false,error:error instanceof Error?error.message:'文件复核失败，请重新读取'})}
   }
 }

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-前端通用工具按类别内聚：json.ts 提供保留现有排序与空值规则的 JSON 比较，events.ts 提供实例级同步订阅集合，index.ts 是公开入口。订阅按函数身份去重、通知遍历当前集合且异常原样传播；业务状态、轮询与销毁留在控制器。与后端 utility 分别实现、测试和演进。
+前端通用工具按类别内聚：json.ts 提供保留现有排序与空值规则的 JSON 比较，events.ts 提供实例级同步订阅集合，async.ts 提供实例异步代次标记，index.ts 是公开入口。订阅按函数身份去重、通知遍历当前集合且异常原样传播；代次只判断迟到资格，业务状态、失效时机、轮询与销毁留在控制器。与后端 utility 分别实现、测试和演进。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,11 +10,29 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [async.ts](async.ts) | 提供前端异步协作的实例级代次标记，供控制器判断迟到结果是否仍可使用。 |
 | [events.ts](events.ts) | 前端事件订阅工具，提供实例级、无参数的同步通知集合。 |
-| [index.ts](index.ts) | 前端域通用工具函数与数据结构的公开入口，当前提供 JSON 比较和实例订阅集合。 |
+| [index.ts](index.ts) | 前端域通用工具函数与数据结构的公开入口，提供 JSON 比较、实例订阅集合和异步代次标记。 |
 | [json.ts](json.ts) | 前端域的 JSON 比较工具，供页面控制器核对请求、预览和回执中的值。 |
 
 ## 架构类图
+
+### async.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_foundations_utility_async_ts["async.ts"] {
+  <<module>>
+}
+class N_src_frontend_foundations_utility_async_ts_AsyncGeneration["AsyncGeneration"] {
+  +capture()
+  +advance()
+  +isCurrent()
+  -current
+}
+N_src_frontend_foundations_utility_async_ts ..> N_src_frontend_foundations_utility_async_ts_AsyncGeneration : 声明
+```
+
 
 ### events.ts
 
@@ -42,7 +60,7 @@ class N_src_frontend_foundations_utility_index_ts["index.ts"] {
   <<module>>
 }
 ```
-直接依赖：[json.ts](json.ts)、[events.ts](events.ts)。
+直接依赖：[json.ts](json.ts)、[events.ts](events.ts)、[async.ts](async.ts)。
 
 ### json.ts
 
@@ -68,8 +86,12 @@ class N_src_frontend_foundations_utility_json_ts["json.ts"] {
 class N_src_frontend_foundations_utility_events_ts["events.ts"] {
   <<module>>
 }
+class N_src_frontend_foundations_utility_async_ts["async.ts"] {
+  <<module>>
+}
 N_src_frontend_foundations_utility_index_ts ..> N_src_frontend_foundations_utility_json_ts : 导入依赖
 N_src_frontend_foundations_utility_index_ts ..> N_src_frontend_foundations_utility_events_ts : 导入依赖
+N_src_frontend_foundations_utility_index_ts ..> N_src_frontend_foundations_utility_async_ts : 导入依赖
 ```
 
 
@@ -87,7 +109,7 @@ N_src_frontend_foundations_utility_index_ts ..> N_src_frontend_foundations_utili
 
 # 前端通用工具库
 
-本库仅服务前端域，按数据或问题类别组织工具函数和数据结构，不采用一函数一文件。公开入口为 `index.ts`，`json.ts` 与 `events.ts` 是私有类别实现。当前仅依赖 JavaScript 标准能力，不依赖 React、页面、通信契约、Node 或后端 `src/foundations`，没有全局可变状态。
+本库仅服务前端域，按数据或问题类别组织工具函数和数据结构，不采用一函数一文件。公开入口为 `index.ts`，`json.ts`、`events.ts` 与 `async.ts` 是私有类别实现。当前仅依赖 JavaScript 标准能力，不依赖 React、页面、通信契约、Node 或后端 `src/foundations`，没有全局可变状态。
 
 ## JSON 比较
 
@@ -111,8 +133,18 @@ N_src_frontend_foundations_utility_index_ts ..> N_src_frontend_foundations_utili
 
 19 个真实消费者包括岗位、模块责任、预算设置、运行监管、准入以及 tasks 中报告、接续、决定、恢复、重规划和用量控制器。状态先更新再通知的顺序保持；size 用于原 canRelease 判断，clear 仅清监听器。RuntimeFeed 和 AdmissionFeed 的首订阅读取、末退订停止计时、代次失效与单次在途读取仍由原控制器负责，不由集合创建或释放请求、定时器或业务资源。
 
+## 实例异步代次
+
+async.ts 的 AsyncGeneration 提供 capture、advance、isCurrent。每实例持有一个 Symbol 标记：capture 不推进，advance 作废所有旧标记并返回新标记，isCurrent 只接纳本实例当前标记。标记不序列化、不比较大小、不作为业务身份；不同实例标记不会相互命中，没有全局计数器或共享状态。
+
+12 个真实消费者分别为预算设置、运行监管、准入、命令核实、文件报告、执行报告、产物清单、负责人核实、请求额度、周期用量、运行定位及重规划预览。消费者决定推进与捕获时机，成功、失败、finally 中的检查保留在原位置；响应校验先于或后于标记检查的既有顺序不变。RuntimeFeed/AdmissionFeed 只在订阅生命周期推进，读取仍单次在途；重规划只作废预览，不影响冻结业务命令的迟到回执。
+
+本机制不发送或取消请求，不吞掉错误，不管理忙碌状态、Promise 或定时器，不替代后端身份、版本或授权校验。React Hook 中混合生命周期的 ref、按业务键维护的代次 Map、用于业务键或公开令牌的数字序号没有迁移，不能把所有 generation 字段机械替换。
+
+稳定候选是实例标记及相等判断；变化点是各页面的失效时机、响应校验和状态发布，继续局限在控制器。判断依据为上述消费者共同机制及不同生命周期，未统计历史变化频率。新增同类页面组合本类并定义自己的推进点，无需给基础库添加业务分支；若需要物理取消或按键排空，应另核实契约。
+
 ## 依赖与验证
 
 前端业务单向导入公开入口；基础库不能反向引用页面、bridge 或后端。后端独立沉淀自己的公共库，二者不建立共享工具依赖。增加同类 JSON 算法优先放入 `json.ts`，实际语义不同时保留明确契约，不预设配置开关。
 
-单元测试归属 `frontend/foundations/utility`，JSON 比较与订阅集合分套件验证各自行为。消费者测试验证回执、提交、恢复、先更新后通知、轮询退订与迟到结果隔离；基础库不加载应用或消费者夹具。源码注释、类图和三宿主 AI 工作流随实现同步。
+单元测试归属 `frontend/foundations/utility`，JSON 比较、订阅集合与异步代次分套件验证各自行为。消费者测试验证回执、提交、恢复、先更新后通知、轮询退订与迟到结果隔离；基础库不加载应用或消费者夹具。源码注释、类图和三宿主 AI 工作流随实现同步。

@@ -14,3 +14,8 @@ RuntimeFeed 持有窗口唯一在途读取与独立游标，noop 保持快照引
 ### 运行监管订阅边界
 
 RuntimeFeed 的 listeners 使用前端 SubscriptionSet，通知保持同步实时遍历、按身份去重和异常原样传播。首订阅触发 refresh、末退订停止计时、generation 隔离迟到结果以及 pending 合并读取仍由 RuntimeFeed 负责。集合清空或退订不代表后端请求已取消。
+
+
+### 异步结果失效边界
+
+RuntimeFeed 组合前端 AsyncGeneration；首订阅和末退订推进代次，refresh 只捕获当前标记。旧结果丢弃，pending 仍按 Promise 身份清理；当前仍有订阅时，旧代完成立即安排补读，新代完成按原间隔轮询。响应校验顺序、游标和行引用规则保持，代次推进不取消后端读取。

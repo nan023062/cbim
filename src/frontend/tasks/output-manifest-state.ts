@@ -2,8 +2,9 @@
  * 作用定位：完整产物清单的显式列表、选择和复核状态；仅消费 Bridge 公开 DTO。
  * 设计原因：范围与集合身份不可拆分，跨节点、轮次及选择的迟到响应必须隔离；旧观察和本次错误分别保留。
  * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
+ * 失效边界：新读取、清单切换及 cancel 推进代次；清单身份与版本不以代次标记替代。
  */
-import {SubscriptionSet} from '../foundations/utility';
+import {AsyncGeneration,SubscriptionSet} from '../foundations/utility';
 import {outputManifestReportSchema,type OutputManifestReport,type OutputManifestQuery} from '../../bridge/contracts/output-manifest';
 
 export type ManifestSelection=Omit<OutputManifestQuery,'manifestId'>;
@@ -36,24 +37,24 @@ export function checkedManifestReport(raw:unknown,request:OutputManifestQuery):O
 /** 实例只绑定一个 run；构造、订阅、换选择和销毁均不触发文件读取。 */
 export class ManifestReportController {
   private value:ManifestReportState={selectedId:'',loading:false,error:''};
-  private generation=0;
+  private readonly generation=new AsyncGeneration();
   private listeners=new SubscriptionSet();
   constructor(readonly identity:ManifestSelection,private read:(input:OutputManifestQuery)=>Promise<unknown>,private version:()=>string=()=> ''){}
   get snapshot(){return this.value}
   subscribe=(listener:()=>void)=>{return this.listeners.subscribe(listener)};
   private publish(value:ManifestReportState){this.value=value;this.listeners.notify()}
-  cancel(){this.generation++;this.value={...this.value,loading:false}}
+  cancel(){this.generation.advance();this.value={...this.value,loading:false}}
   /** 选择本身不扫描；清掉上一个选项的观察，未选择时不默认最新。 */
   select(id:string){
     if(id&&!this.value.report?.manifests.some(item=>item.manifestId===id))throw Error('所选清单不在已核实列表中');
-    if(id===this.value.selectedId)return;this.generation++;const report=this.value.report?{...this.value.report,verification:undefined}:undefined;
+    if(id===this.value.selectedId)return;this.generation.advance();const report=this.value.report?{...this.value.report,verification:undefined}:undefined;
     this.publish({...this.value,report,selectedId:id,loading:false,error:''});
   }
   async list(){await this.pull()}
   async inspect(){if(this.value.selectedId)await this.pull(this.value.selectedId)}
   private async pull(manifestId?:string){
-    if(this.value.loading)return;const generation=++this.generation,sourceVersion=this.version(),request={...this.identity,...(manifestId?{manifestId}:{})};this.publish({...this.value,loading:true,error:''});
-    try{const raw=await this.read(request);if(generation!==this.generation)return;const report=checkedManifestReport(raw,request),selectedId=report.manifests.some(item=>item.manifestId===this.value.selectedId)?this.value.selectedId:'';this.publish({report,selectedId,loading:false,error:'',sourceVersion})}
-    catch(error){if(generation===this.generation)this.publish({...this.value,loading:false,error:error instanceof Error?error.message:'完整产物读取失败，请重试'})}
+    if(this.value.loading)return;const generation=this.generation.advance(),sourceVersion=this.version(),request={...this.identity,...(manifestId?{manifestId}:{})};this.publish({...this.value,loading:true,error:''});
+    try{const raw=await this.read(request);if(!this.generation.isCurrent(generation))return;const report=checkedManifestReport(raw,request),selectedId=report.manifests.some(item=>item.manifestId===this.value.selectedId)?this.value.selectedId:'';this.publish({report,selectedId,loading:false,error:'',sourceVersion})}
+    catch(error){if(this.generation.isCurrent(generation))this.publish({...this.value,loading:false,error:error instanceof Error?error.message:'完整产物读取失败，请重试'})}
   }
 }

@@ -4433,3 +4433,8 @@ member-review-state 只从 TaskNode 的精确候选及审阅绑定派生等待�
 准入、报告、接续、人工决定、恢复、重规划及用量等 15 个控制器各自组合前端 SubscriptionSet；原 subscribe 方法/绑定函数形式保留，先更新状态再同步通知。集合按身份去重并遍历当前监听集合，异常原样传播，不增加快照遍历、引用计数、自动轮询或吞错。
 
 AdmissionFeed 仍拥有首订阅读取、末退订停轮询与代次失效；各 canRelease 仍组合监听器数量及原在途/预览条件。OwnerInspectionController 与 RequestBudgetController 的 dispose 仍先失效原读取再清监听器。其他控制器只退订、不封闭持久命令，也不取消后端操作；业务恢复与发布策略未下沉。
+
+
+### 异步结果失效边界
+
+九个控制器组合前端 AsyncGeneration：AdmissionFeed、CommandVerificationController、ArtifactReportController、ExecutionReportController、ManifestReportController、OwnerInspectionController、RequestBudgetController、ScopeUsageController、ScopeReplanController。捕获与推进分别保留原语义：准入读取只捕获订阅生命周期，报告控制器按原选择/取消/新请求推进，负责人旧 finally 不清新 inFlight；重规划只作废预览，冻结提交与迟到受理回执继续处理。身份、版本、来源与草稿比较、错误策略和清理留在控制器。按业务键的影响核实代次 Map 及 Hook 中带业务键的序号未迁移。

@@ -3,6 +3,22 @@ import {BudgetSettingsController,budgetSettingsInput} from '../src/frontend/sett
 
 const deferred=<T,>()=>{let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>resolve=r);return {promise,resolve}};
 describe('scope budget settings draft',()=>{
+  it.each(['success','failure'] as const)('旧读取的 %s 和 finally 不覆盖重新读取中的页面',async outcome=>{
+    let resolveOld!:(value:unknown)=>void,rejectOld!:(reason:Error)=>void;
+    const old=new Promise<unknown>((resolve,reject)=>{resolveOld=resolve;rejectOld=reject});
+    const next=deferred<unknown>();let calls=0;
+    const controller=new BudgetSettingsController(()=>++calls===1?old:next.promise);
+    const oldLoad=controller.load();controller.cancel();
+    const newLoad=controller.load();
+    if(outcome==='success')resolveOld({revision:1,enabled:true,limits:{tokens:100}});
+    else rejectOld(Error('old failure'));
+    await oldLoad;
+    expect(controller.snapshot()).toMatchObject({busy:true,error:''});
+    expect(controller.snapshot().policy).toBeUndefined();
+    await controller.load();expect(calls).toBe(2);
+    next.resolve({revision:2,enabled:true,limits:{tokens:200}});await newLoad;
+    expect(controller.snapshot()).toMatchObject({busy:false,error:'',tokens:'200',policy:{revision:2}});
+  });
   it('发布状态后同步通知，退订后只更新状态而不通知旧页面',()=>{
     let reads=0;const controller=new BudgetSettingsController(async()=>{reads++;return undefined});
     const values:string[]=[];

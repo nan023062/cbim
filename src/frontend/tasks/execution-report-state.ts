@@ -2,8 +2,9 @@
  * 作用定位：验证成员执行核实报告的身份和分页基线，并保存一次显式读取的前端状态。
  * 设计原因：核实不等于恢复；读失败保留已有报告，跨节点迟到响应与不同基线的工具页不能混用。准备再次核实时主动清缓存并作废在途读取，必须重新显式核实。
  * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
+ * 失效边界：读取捕获代次，invalidate/cancel 作废旧读取；增量合并及报告身份校验仍在本模块。
  */
-import {SubscriptionSet} from '../foundations/utility';
+import {AsyncGeneration,SubscriptionSet} from '../foundations/utility';
 import {executionReportSchema} from '../../bridge/contracts/dispatch';
 import type {ExecutionReport,ExecutionReportInput,GraphCursor,ScopeSummary,TaskNode} from '../../bridge/contracts/dispatch';
 
@@ -44,23 +45,23 @@ export function executionReportStale(report:ExecutionReport|undefined,task:TaskN
 /** 实例只属于一个选中身份；创建、订阅和取消观察均不会请求后端，只有 inspect/more 显式读取。 */
 export class ExecutionReportController {
   private value:ExecutionReportState={loading:false,error:''};
-  private generation=0;
+  private readonly generation=new AsyncGeneration();
   private listeners=new SubscriptionSet();
   constructor(readonly selection:ExecutionReportSelection,private read:(request:ExecutionReportInput)=>Promise<unknown>,private limit=50){}
   get snapshot(){return this.value}
   subscribe=(listener:()=>void)=>{return this.listeners.subscribe(listener)};
   private publish(value:ExecutionReportState){this.value=value;this.listeners.notify()}
   /** 切换/卸载只忽略迟到读取；不停止后端任务或改变日志。 */
-  cancel(){this.generation++;this.value={...this.value,loading:false}}
+  cancel(){this.generation.advance();this.value={...this.value,loading:false}}
   /** 新草稿必须重新显式核实；清除旧缓存并作废已发出的读取，绝不自动回读或恢复运行。 */
-  invalidate(){this.generation++;this.publish({loading:false,error:''})}
+  invalidate(){this.generation.advance();this.publish({loading:false,error:''})}
   async inspect(){await this.pull()}
   async more(){const report=this.value.report;if(!report?.tools.nextCursor||report.consistency!=='stable')return;await this.pull(report.tools.nextCursor)}
   private async pull(cursor?:NonNullable<ExecutionReportInput['cursor']>){
     if(this.value.loading)return;
     const {workspaceId,rootSessionId,taskId,runId}=this.selection,request:ExecutionReportInput={workspaceId,rootSessionId,taskId,...(runId?{runId}:{}),limit:this.limit,...(cursor?{cursor}: {})};
-    const generation=this.generation,previous=this.value.report;this.publish({...this.value,loading:true,error:''});
-    try{const response=await this.read(request);if(generation!==this.generation)return;const report=applyExecutionReport(previous,response,request,this.selection);this.publish({report,loading:false,error:''})}
-    catch(cause){if(generation===this.generation)this.publish({...this.value,loading:false,error:cause instanceof Error?cause.message:'执行记录核实失败，请重新读取'})}
+    const generation=this.generation.capture(),previous=this.value.report;this.publish({...this.value,loading:true,error:''});
+    try{const response=await this.read(request);if(!this.generation.isCurrent(generation))return;const report=applyExecutionReport(previous,response,request,this.selection);this.publish({report,loading:false,error:''})}
+    catch(cause){if(this.generation.isCurrent(generation))this.publish({...this.value,loading:false,error:cause instanceof Error?cause.message:'执行记录核实失败，请重新读取'})}
   }
 }

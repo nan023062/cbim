@@ -4,8 +4,9 @@
  * 职责边界：本模块不复活旧任务、不批准人工验收；来源与知识是否仍有效由后端在受理时再次核验。
  * 新影响来源：dispositionId 纳入目标键、预览和稳定命令；回执必须匹配原选择，不为历史请求补造关联。
  * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
+ * 失效边界：代次只隔离条件预览；来源/草稿变化作废预览，不作废冻结提交、查询及其迟到回执。
  */
-import {SubscriptionSet} from '../foundations/utility';
+import {AsyncGeneration,SubscriptionSet} from '../foundations/utility';
 import {replanPreviewSchema,replanRequestSchema,replanReceiptSchema} from '../../bridge/contracts/dispatch';
 import type {ReplanPreviewInput,ReplanPreview,ReplanRequest,ReplanLookup,ReplanReceipt} from '../../bridge/contracts/dispatch';
 
@@ -59,7 +60,7 @@ export class ScopeReplanController {
   private value:ReplanState={records:[],error:''};
   private unavailable=false;
   private target?:ReplanTarget;
-  private previewGeneration=0;
+  private readonly previewGeneration=new AsyncGeneration();
   private pending=new Set<string>();
   private listeners=new SubscriptionSet();
   readonly storageKey:string;
@@ -103,7 +104,7 @@ export class ScopeReplanController {
   observeTarget(target:ReplanTarget|undefined){
     if(target&&(target.workspaceId!==this.workspaceId||target.rootSessionId!==this.rootSessionId))target=undefined;
     if(key(target)===key(this.target))return;
-    this.target=target;this.previewGeneration++;this.value={...this.value,preview:undefined};this.emit();
+    this.target=target;this.previewGeneration.advance();this.value={...this.value,preview:undefined};this.emit();
   }
   private save(record:ReplanDraft,clearPreview=false):boolean{
     const records=[...this.value.records],index=records.findIndex(item=>item.inspectionScopeId===record.inspectionScopeId);
@@ -117,7 +118,7 @@ export class ScopeReplanController {
       if(bytes(saved)+reserved>REPLAN_INDEX_BYTE_LIMIT)throw Error('本机业务请求及未决回执预留超过 2 MiB，原记录保持不变');
       this.ports.storage.setItem(this.storageKey,JSON.stringify(saved));
     }catch(error){this.value={...this.value,error:'业务请求未能保存：'+textError(error)};this.emit();return false}
-    if(clearPreview)this.previewGeneration++;
+    if(clearPreview)this.previewGeneration.advance();
     this.value={records,preview:clearPreview?undefined:this.value.preview,error:''};this.emit();return true;
   }
   /** 独立保存新业务目标及明确权限；写入失败不发布更改，不影响聊天草稿或只读核实权限。 */
@@ -131,14 +132,14 @@ export class ScopeReplanController {
   async preview(target:ReplanTarget){
     const record=this.record(target.inspectionScopeId);
     if(this.unavailable||key(target)!==key(this.target)||this.value.preview?.loading||record?.attempt&&record.attempt.phase!=='rejected'||this.isPending(record))return;
-    const generation=++this.previewGeneration,fields=draftKey(record);
+    const generation=this.previewGeneration.advance(),fields=draftKey(record);
     this.value={...this.value,preview:{target,draftKey:fields,loading:true,error:''}};this.emit();
     try{
       const result=checkedReplanPreview(await this.ports.preview({workspaceId:this.workspaceId,rootSessionId:this.rootSessionId,inspectionScopeId:target.inspectionScopeId}),target);
-      if(generation!==this.previewGeneration||key(target)!==key(this.target)||fields!==draftKey(this.record(target.inspectionScopeId)))return;
+      if(!this.previewGeneration.isCurrent(generation)||key(target)!==key(this.target)||fields!==draftKey(this.record(target.inspectionScopeId)))return;
       if(result.eligible&&(result.graphCursor?.streamId!==target.graphCursor.streamId||result.graphCursor.seq!==target.graphCursor.seq||result.inspectionGoalRevision!==target.inspectionGoalRevision))throw Error('来源或任务图已变化，请同步后重新核验条件');
       this.value={...this.value,preview:{target,draftKey:fields,loading:false,result,error:''}};this.emit();
-    }catch(error){if(generation===this.previewGeneration){this.value={...this.value,preview:{target,draftKey:fields,loading:false,error:'条件核验失败：'+textError(error)}};this.emit()}}
+    }catch(error){if(this.previewGeneration.isCurrent(generation)){this.value={...this.value,preview:{target,draftKey:fields,loading:false,error:'条件核验失败：'+textError(error)}};this.emit()}}
   }
   ready(target:ReplanTarget|undefined):ReplanPreview|undefined{
     const preview=this.value.preview;

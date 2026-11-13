@@ -2,8 +2,9 @@
  * 作用定位：将任务内冻结的负责人绑定投影为只读展示状态，供对话卡片、任务节点与详情共用。
  * 设计原因：缺省旧记录不能从静态 Agent 猜岗位；局部校验只证明记录自身对应，不把历史快照当作当前领取许可。
  * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
+ * 失效边界：节点变化、新核实及 dispose 推进代次；旧 finally 不清除新 inFlight，底层读取不因此取消。
  */
-import {SubscriptionSet} from '../foundations/utility';
+import {AsyncGeneration,SubscriptionSet} from '../foundations/utility';
 import type {TaskNode} from '../../bridge/contracts/dispatch';
 import {ownerExecutionBindingMatches,taskOwnerInspectOutputSchema,type OwnerExecutionBinding,type TaskOwnerInspectInput,type TaskOwnerInspectOutput} from '../../bridge/contracts/owner-execution';
 
@@ -41,7 +42,7 @@ export interface OwnerInspectionState {key:string;loading:boolean;view?:OwnerIns
 /** 一次显式核实的内存控制器；切换或新版本作废迟到结果，不取消后端已完成的只读观察。 */
 export class OwnerInspectionController {
   private task:TaskNode;
-  private serial=0;
+  private readonly serial=new AsyncGeneration();
   private inFlight?:Promise<void>;
   private listeners=new SubscriptionSet();
   private value:OwnerInspectionState;
@@ -50,15 +51,15 @@ export class OwnerInspectionController {
   subscribe(listener:()=>void){return this.listeners.subscribe(listener)}
   private publish(value:OwnerInspectionState){this.value=value;this.listeners.notify()}
   /** 仅同步观察对象，不自动读取；新节点/版本不会沿用旧报告或进行中的操作状态。 */
-  observe(task:TaskNode){const key=ownerInspectionKey(task);if(key===this.value.key)return;this.serial++;this.inFlight=undefined;this.task=structuredClone(task);this.publish({key,loading:false})}
+  observe(task:TaskNode){const key=ownerInspectionKey(task);if(key===this.value.key)return;this.serial.advance();this.inFlight=undefined;this.task=structuredClone(task);this.publish({key,loading:false})}
   /** 同一版本双击合并；无轮询，网络失败保留同版本旧报告并明确显示过期读取错误。 */
   inspect():Promise<void>{
     if(this.inFlight)return this.inFlight;
-    const task=this.task,key=this.value.key,serial=++this.serial;
+    const task=this.task,key=this.value.key,serial=this.serial.advance();
     this.publish({...this.value,loading:true,error:undefined});
-    const work=Promise.resolve().then(()=>this.read({...task.identity,taskId:task.taskId})).then(raw=>{const view=checkedOwnerInspection(raw,task);if(this.serial===serial)this.publish({key,loading:false,view})}).catch(cause=>{if(this.serial===serial)this.publish({...this.value,loading:false,error:cause instanceof Error?cause.message:'负责人核实失败，请重试读取'})}).finally(()=>{if(this.serial===serial)this.inFlight=undefined});
+    const work=Promise.resolve().then(()=>this.read({...task.identity,taskId:task.taskId})).then(raw=>{const view=checkedOwnerInspection(raw,task);if(this.serial.isCurrent(serial))this.publish({key,loading:false,view})}).catch(cause=>{if(this.serial.isCurrent(serial))this.publish({...this.value,loading:false,error:cause instanceof Error?cause.message:'负责人核实失败，请重试读取'})}).finally(()=>{if(this.serial.isCurrent(serial))this.inFlight=undefined});
     this.inFlight=work;return work;
   }
   /** 卸载只阻止本地迟到发布，不声称取消了服务端读取。 */
-  dispose(){this.serial++;this.inFlight=undefined;this.listeners.clear()}
+  dispose(){this.serial.advance();this.inFlight=undefined;this.listeners.clear()}
 }

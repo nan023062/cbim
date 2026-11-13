@@ -3,8 +3,9 @@
  * 设计原因：工具失败与事务已保存可能同时成立；查询不得自动重试执行、清除未确认项或随轮询反复回读。读取失败保留旧报告并提示其时效。
  * 来源边界：旧或不完整轨道缺少 task 时只保留原展示，不创建核实入口，也不把角色名当成完整主会话身份。
  * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
+ * 失效边界：核实请求捕获当前代次，cancel 使它失效；命令身份及报告校验仍在本模块。
  */
-import {SubscriptionSet} from '../foundations/utility';
+import {AsyncGeneration,SubscriptionSet} from '../foundations/utility';
 import {commandVerificationInputSchema,commandVerificationReportSchema} from '../../bridge/contracts/command-verification';
 import type {CommandVerificationInput,CommandVerificationReport} from '../../bridge/contracts/command-verification';
 import type {RunSummary} from '../../bridge/contracts/execution';
@@ -38,7 +39,7 @@ export function commandVerificationStale(report:CommandVerificationReport|undefi
 /** 控制器只拥有一组原身份；构造和订阅不读取，inspect 是唯一请求入口。 */
 export class CommandVerificationController {
   private value:CommandVerificationState={loading:false,error:''};
-  private generation=0;
+  private readonly generation=new AsyncGeneration();
   private listeners=new SubscriptionSet();
   readonly selection:CommandVerificationSelection;
   constructor(selection:CommandVerificationSelection,private read:(request:CommandVerificationInput)=>Promise<unknown>){this.selection={...selection}}
@@ -46,13 +47,13 @@ export class CommandVerificationController {
   subscribe=(listener:()=>void)=>{return this.listeners.subscribe(listener)};
   private publish(value:CommandVerificationState){this.value=value;this.listeners.notify()}
   /** 卸载只取消观察，忽略迟到回包；不停止原任务、不修改服务端日志。 */
-  cancel(){this.generation++;this.value={...this.value,loading:false}}
+  cancel(){this.generation.advance();this.value={...this.value,loading:false}}
   /** 同一实例在途时合并重复点击；失败保留旧报告，绝不转调原工具或自动重读。 */
   async inspect(){
     if(this.value.loading)return;
-    const {workspaceId,rootSessionId,runId,toolCallId}=this.selection,generation=this.generation;
+    const {workspaceId,rootSessionId,runId,toolCallId}=this.selection,generation=this.generation.capture();
     this.publish({...this.value,loading:true,error:''});
-    try{const raw=await this.read({workspaceId,rootSessionId,runId,toolCallId});if(generation!==this.generation)return;this.publish({report:applyCommandVerification(raw,this.selection),loading:false,error:''})}
-    catch(cause){if(generation===this.generation)this.publish({...this.value,loading:false,error:cause instanceof Error?cause.message:'原命令核实失败，请重新读取'})}
+    try{const raw=await this.read({workspaceId,rootSessionId,runId,toolCallId});if(!this.generation.isCurrent(generation))return;this.publish({report:applyCommandVerification(raw,this.selection),loading:false,error:''})}
+    catch(cause){if(this.generation.isCurrent(generation))this.publish({...this.value,loading:false,error:cause instanceof Error?cause.message:'原命令核实失败，请重新读取'})}
   }
 }

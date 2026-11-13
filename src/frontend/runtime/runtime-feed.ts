@@ -3,8 +3,9 @@
  * 设计原因：单次在途查询避免每秒堆积回读；noop 和未变化行保留引用，离页后的迟到结果不能污染新订阅。
  * 生命周期：最后一个订阅退出即停止轮询，已确认快照可保留；重开只读，不触发任务恢复。
  * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
+ * 失效边界：订阅生命周期推进代次，refresh 只捕获；旧读取退出后是否继续轮询仍由当前监听器决定。
  */
-import {SubscriptionSet} from '../foundations/utility';
+import {AsyncGeneration,SubscriptionSet} from '../foundations/utility';
 import {runtimeReadSchema,type RuntimeCursor,type RuntimeSnapshot} from '../../bridge/contracts/runtime';
 import {runtimeTaskKey,runtimeRunKey} from './runtime-view-state';
 export interface RuntimeFeedState {data?:RuntimeSnapshot;error:string}
@@ -17,18 +18,18 @@ export function reconcileRuntime(previous:RuntimeSnapshot|undefined,next:Runtime
 }
 /** 一份页面事实流；transport 校验失败保留旧数据并明确过期，不解释成零负载。 */
 export class RuntimeFeed {
-  private value:RuntimeFeedState={error:''};private listeners=new SubscriptionSet();private timer?:ReturnType<typeof setTimeout>;private generation=0;private pending?:Promise<void>;
+  private value:RuntimeFeedState={error:''};private listeners=new SubscriptionSet();private timer?:ReturnType<typeof setTimeout>;private readonly generation=new AsyncGeneration();private pending?:Promise<void>;
   constructor(private readonly read:(cursor?:RuntimeCursor)=>Promise<unknown>,private readonly intervalMs=1000){}
   get snapshot(){return this.value}
   private emit(){this.listeners.notify()}
-  subscribe(listener:()=>void){const unsubscribe=this.listeners.subscribe(listener);if(this.listeners.size===1){this.generation++;void this.refresh()}return()=>{unsubscribe();if(!this.listeners.size){this.generation++;clearTimeout(this.timer)}}}
+  subscribe(listener:()=>void){const unsubscribe=this.listeners.subscribe(listener);if(this.listeners.size===1){this.generation.advance();void this.refresh()}return()=>{unsubscribe();if(!this.listeners.size){this.generation.advance();clearTimeout(this.timer)}}}
   /** 在途读取复用，完成后再计时；手动刷新也不会发起并行请求。 */
   refresh():Promise<void>{
     if(this.pending)return this.pending;
-    clearTimeout(this.timer);const generation=this.generation;
+    clearTimeout(this.timer);const generation=this.generation.capture();
     const pending=(async()=>{try{
       const parsed=runtimeReadSchema.safeParse(await this.read(this.value.data?.cursor));
-      if(generation!==this.generation)return;
+      if(!this.generation.isCurrent(generation))return;
       if(!parsed.success)throw Error('运行监管数据格式异常，请刷新核实');
       const response=parsed.data,old=this.value.data?.cursor,next=response.cursor;
       if(response.mode==='snapshot'){
@@ -41,7 +42,7 @@ export class RuntimeFeed {
         if(!old||old.streamId!==next.streamId||old.revision!==next.revision)throw Error('运行监管游标不一致，请刷新核实');
         if(this.value.error){this.value={...this.value,error:''};this.emit()}
       }
-    }catch(error){if(generation===this.generation){const message=error instanceof Error?error.message:'运行监管读取失败，请刷新';if(message!==this.value.error){this.value={...this.value,error:message};this.emit()}}}})();
-    this.pending=pending;void pending.finally(()=>{if(this.pending===pending)this.pending=undefined;if(this.listeners.size)this.timer=setTimeout(()=>void this.refresh(),generation===this.generation?this.intervalMs:0)});return pending;
+    }catch(error){if(this.generation.isCurrent(generation)){const message=error instanceof Error?error.message:'运行监管读取失败，请刷新';if(message!==this.value.error){this.value={...this.value,error:message};this.emit()}}}})();
+    this.pending=pending;void pending.finally(()=>{if(this.pending===pending)this.pending=undefined;if(this.listeners.size)this.timer=setTimeout(()=>void this.refresh(),this.generation.isCurrent(generation)?this.intervalMs:0)});return pending;
   }
 }

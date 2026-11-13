@@ -2,8 +2,9 @@
  * 作用定位：管理额度及显式逐请求模式草稿、版本化保存，隔离页面卸载后的异步响应；缺省仍是运行间软限额。
  * 设计原因：空白额度不是零预算，未知保存结果不能盲目覆盖；失败保留用户草稿，重新读取才取得最新版本，无自动重试或轮询。
  * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
+ * 失效边界：预算读取/保存开始及 cancel 时推进代次；旧结果与 finally 不能覆盖新页面，IPC 不因此取消。
  */
-import {SubscriptionSet} from '../foundations/utility';
+import {AsyncGeneration,SubscriptionSet} from '../foundations/utility';
 import {scopeBudgetPolicySchema,type ScopeBudgetPolicy} from '../../bridge/contracts/scope-budget';
 
 export interface BudgetSettingsDraft {enabled:boolean;tokens:string;estimatedCostUsd:string;enforcement?:'request'}
@@ -23,27 +24,27 @@ const fields=(policy:ScopeBudgetPolicy):BudgetSettingsDraft=>({enabled:policy.en
 /** 构造和订阅不读写配置；只有 load/save 会发 IPC。busy 时拒绝重复提交，cancel 仅使迟到响应失效。 */
 export class BudgetSettingsController {
   private state:BudgetSettingsState={enabled:false,tokens:'',estimatedCostUsd:'',busy:false,error:'',notice:''};
-  private generation=0;
+  private readonly generation=new AsyncGeneration();
   private readonly listeners=new SubscriptionSet();
   constructor(private readonly call:Call){}
   snapshot=()=>this.state;
   subscribe=(listener:()=>void)=>{return this.listeners.subscribe(listener)};
   private publish(value:Partial<BudgetSettingsState>){this.state={...this.state,...value};this.listeners.notify()}
   edit(value:Partial<BudgetSettingsDraft>){if(!this.state.busy)this.publish({...value,error:'',notice:''})}
-  cancel(){this.generation++;this.state={...this.state,busy:false}}
+  cancel(){this.generation.advance();this.state={...this.state,busy:false}}
   async load(){
-    if(this.state.busy)return;const ticket=++this.generation;this.publish({busy:true,error:'',notice:''});
-    try{const policy=scopeBudgetPolicySchema.parse(await this.call('budget.settings'));if(ticket===this.generation)this.publish({policy,...fields(policy)})}
-    catch(error){if(ticket===this.generation)this.publish({error:error instanceof Error?error.message:String(error)})}
-    finally{if(ticket===this.generation)this.publish({busy:false})}
+    if(this.state.busy)return;const ticket=this.generation.advance();this.publish({busy:true,error:'',notice:''});
+    try{const policy=scopeBudgetPolicySchema.parse(await this.call('budget.settings'));if(this.generation.isCurrent(ticket))this.publish({policy,...fields(policy)})}
+    catch(error){if(this.generation.isCurrent(ticket))this.publish({error:error instanceof Error?error.message:String(error)})}
+    finally{if(this.generation.isCurrent(ticket))this.publish({busy:false})}
   }
   async save(){
     if(this.state.busy||!this.state.policy)return;
     let input:ScopeBudgetPolicy;
     try{input=budgetSettingsInput(this.state,this.state.policy.revision)}catch(error){this.publish({error:error instanceof Error?error.message:String(error)});return}
-    const ticket=++this.generation;this.publish({busy:true,error:'',notice:''});
-    try{const policy=scopeBudgetPolicySchema.parse(await this.call('budget.configure',input));if(ticket===this.generation)this.publish({policy,...fields(policy),notice:'已保存，仅对之后创建的新目标生效。当前目标继续使用原来的额度。'})}
-    catch(error){if(ticket===this.generation)this.publish({error:(error instanceof Error?error.message:String(error))+'；草稿已保留。若保存结果未知，请刷新设置核实后再提交。'})}
-    finally{if(ticket===this.generation)this.publish({busy:false})}
+    const ticket=this.generation.advance();this.publish({busy:true,error:'',notice:''});
+    try{const policy=scopeBudgetPolicySchema.parse(await this.call('budget.configure',input));if(this.generation.isCurrent(ticket))this.publish({policy,...fields(policy),notice:'已保存，仅对之后创建的新目标生效。当前目标继续使用原来的额度。'})}
+    catch(error){if(this.generation.isCurrent(ticket))this.publish({error:(error instanceof Error?error.message:String(error))+'；草稿已保留。若保存结果未知，请刷新设置核实后再提交。'})}
+    finally{if(this.generation.isCurrent(ticket))this.publish({busy:false})}
   }
 }

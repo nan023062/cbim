@@ -1292,6 +1292,7 @@
       ],
       "tests": {
         "unit": [
+          "tests/unit/frontend/foundations/utility/async.test.ts",
           "tests/unit/frontend/foundations/utility/events.test.ts",
           "tests/unit/frontend/foundations/utility/json.test.ts"
         ],

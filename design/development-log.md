@@ -1,3 +1,14 @@
+## 2026-11-13：前端实例异步代次提取
+
+- 来源与基线：用户要求继续前端公共库下一个候选，按已核实清单推进异步响应失效控制，基线 f014d032（前两项已本地提交，未推送）。开放工单仅 #65，与此切片无关，未更改工单状态。治理 C3、认知 L2；复用分层和规范上下文，核对前端代次字段、真实请求/选择/销毁路径及直接消费者测试。
+- 机制与迁移：在前端 utility 的 async.ts 提供 AsyncGeneration，经 index.ts 导出 capture、advance、isCurrent。每实例使用 Symbol 标记，捕获不作废旧标记，推进后全部旧标记失效，不复用数字版本、不跨实例命中。12 个消费者迁移：runtime 1、settings 1、shell 1、tasks 9；分别保留每请求推进、只捕获生命周期和选择/取消时推进的原规则。成功、失败及 finally 检查位置、响应验证次序、单次在途与轮询调度保持；不取消请求、不吞错、不统一 Promise 包装。
+- 共同机制与合法差异：标记相等判断是稳定候选；失效时机、业务身份/版本、来源与草稿校验、状态发布和资源释放留在控制器。RuntimeFeed/AdmissionFeed 读取只捕获订阅代次，旧读取完成仍为当前订阅安排补读；负责人旧 finally 不清新 inFlight；重规划只隔离预览，冻结命令及其迟到回执仍处理。历史变化频率未统计，以实际消费者差异划界。带业务键的代次 Map、Hook 中混合生命周期的 ref、公开令牌/业务键中的数字序号暂未迁移，不能机械替换。
+- 兼容自查：逆向还原本次代次调用、字段和导入后，12 个消费者的 TypeScript AST 与基线一致（去注释并规范化纯标记相等表达式左右顺序）。这证明迁移未夹带其他源码流程改写，不替代运行验证或人工 review；数值内部计数改成不透明标记是本步明确的内部表示变化。
+- 注释与资料：实现、公开入口、12 个消费者文件头同步；utility/foundations 和 runtime/settings/tasks/shell 契约补齐边界，维护上述目录及 frontend 的 7 份类图。三套开发/架构工作流的 9 个入口同步且 57 处本地引用有效；未修改产品内置业务 Skill 或分层规则。
+- 测试选择：新基础模块单元 4 项验证同代捕获、推进失效、实例隔离和不取消底层工作；预算设置补 2 项旧成功/失败及 finally 不覆盖新请求 busy 的回归。其余 14 个直接消费者套件覆盖原报告、轮询、导航、选择、取消和重规划行为，继续保留既有 unit/contract/integration 归属。实际命令：`pnpm exec vitest run tests/unit/frontend/foundations/utility/async.test.ts tests/admission-view.test.ts tests/artifact-report-view.test.ts tests/budget-settings-view.test.ts tests/command-verification-view.test.ts tests/execution-recovery-view.test.ts tests/execution-report-view.test.ts tests/model-request-budget-view.test.ts tests/output-manifest-view.test.ts tests/owner-execution-view.test.ts tests/runtime-feed.test.ts tests/runtime-navigation.test.ts tests/scope-replan-view.test.ts tests/scope-usage-view.test.ts tests/tabs.test.ts --reporter=dot`：15 文件、113 项通过。新单元只依赖前端 utility，不加载应用或消费者夹具。
+- 静态验证：`pnpm typecheck`、`pnpm check:architecture`（93 目录/713 源码样式，1437 扫描文件/7127 含类型依赖，0 环/违规）、`pnpm check:test-modules`（465 文件：126 unit、152 contract、187 integration）及 diff 空白检查通过。未改检测器或分层规则，不重复其测试；未运行全量回归、桌面、打包、安装或发布验收，留后续自动化阶段。
+- 维护交接：先读前端 utility/CONTRACT.md 与 async.ts，再读预算设置的成功/失败/finally 和 RuntimeFeed 的订阅生命周期。新增同类页面组合 AsyncGeneration，推进时机只改对应控制器，无需给基础类添加业务条件。Q1 保持迟到结果隔离及原校验次序；Q2 生命周期变化局限各消费者；Q3 独立单元、消费者回归与 AST 自查；Q4 async.ts/各控制器契约；Q5 无新增候选规则。本步独立本地提交，未推送，验证不代替人工 review。
+
 ## 2026-11-13：前端实例订阅集合提取
 
 - 来源与基线：用户指定继续前端公共库订阅集合，基线 `b24348bb`（JSON 提取已本地提交、未推送）。开放工单仅 #65，与本步无关，未推进其状态；复用已核实的分层及治理约束，核对前端全部监听集合、订阅/通知/清理入口和直接消费者测试。范围 C3、认知 L2，只提取监听机制，不引入状态管理或跨域工具依赖。

@@ -2,8 +2,9 @@
  * 作用定位：管理任务周期用量的一次显式读取，并验证返回身份、计量来源与汇总一致性。
  * 设计原因：大日志不按秒重复读取；控制器绑定唯一周期，切换后忽略迟到结果。读取失败保留上次快照并标记问题，不把缺失数据解释为零消费。
  * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
+ * 失效边界：读取捕获当前代次，cancel 作废旧结果；周期身份和报告合法性仍在本模块核验。
  */
-import {SubscriptionSet} from '../foundations/utility';
+import {AsyncGeneration,SubscriptionSet} from '../foundations/utility';
 import {scopeUsageInputSchema,scopeUsageReportSchema,type ScopeUsageInput,type ScopeUsageReport,type ScopeUsageRun} from '../../bridge/contracts/scope-usage';
 
 export interface ScopeUsageState {report?:ScopeUsageReport;loading:boolean;error:string}
@@ -38,17 +39,17 @@ export function checkedScopeUsage(raw:unknown,identity:ScopeUsageInput):ScopeUsa
 /** 构造/订阅不读取；只有 read 明确查询，重复点击合并，取消只作废观察而不改变执行。 */
 export class ScopeUsageController {
   private value:ScopeUsageState={loading:false,error:''};
-  private generation=0;
+  private readonly generation=new AsyncGeneration();
   private listeners=new SubscriptionSet();
   readonly identity:ScopeUsageInput;
   constructor(identity:ScopeUsageInput,private request:(identity:ScopeUsageInput)=>Promise<unknown>){this.identity=scopeUsageInputSchema.parse(identity)}
   get snapshot(){return this.value}
   subscribe=(listener:()=>void)=>{return this.listeners.subscribe(listener)};
   private publish(value:ScopeUsageState){this.value=value;this.listeners.notify()}
-  cancel(){this.generation++;this.value={...this.value,loading:false}}
+  cancel(){this.generation.advance();this.value={...this.value,loading:false}}
   async read(){
-    if(this.value.loading)return;const generation=this.generation;this.publish({...this.value,loading:true,error:''});
-    try{const raw=await this.request({...this.identity});if(generation!==this.generation)return;this.publish({report:checkedScopeUsage(raw,this.identity),loading:false,error:''})}
-    catch(error){if(generation===this.generation)this.publish({...this.value,loading:false,error:error instanceof Error?error.message:'周期用量读取失败，请重新读取'})}
+    if(this.value.loading)return;const generation=this.generation.capture();this.publish({...this.value,loading:true,error:''});
+    try{const raw=await this.request({...this.identity});if(!this.generation.isCurrent(generation))return;this.publish({report:checkedScopeUsage(raw,this.identity),loading:false,error:''})}
+    catch(error){if(this.generation.isCurrent(generation))this.publish({...this.value,loading:false,error:error instanceof Error?error.message:'周期用量读取失败，请重新读取'})}
   }
 }

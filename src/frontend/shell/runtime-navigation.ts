@@ -1,7 +1,9 @@
 /**
  * 作用定位：把全局运行页的定位目标核对为现有主会话，并只更新本机页签与任务图选择。
  * 设计原因：全局摘要不是启动许可。导航前后复核同一工作区实例，异步结果按请求代次隔离；不通过名称猜会话、不占用未发送草稿页签。
+ * 失效边界：新定位/cancel 推进代次，各次 await 后校验；工作区运行实例和会话身份仍逐步核实。
  */
+import {AsyncGeneration} from '../foundations/utility';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
 import type {GraphSnapshot,ScopeSummary} from '../../bridge/contracts/dispatch';
 import type {RuntimeNavigationTarget} from '../runtime/runtime-view-state';
@@ -24,12 +26,12 @@ function runningWorkspace(raw:unknown,id:string):WorkspaceView{
 
 /** 只读核实；cancel 或更新请求后，迟到成功和失败都不再影响当前页面。 */
 export class RuntimeNavigationResolver {
-  private generation=0;
+  private readonly generation=new AsyncGeneration();
   constructor(private readonly read:NavigationReader){}
-  cancel(){this.generation++}
+  cancel(){this.generation.advance()}
   async resolve(raw:RuntimeNavigationTarget):Promise<VerifiedRuntimeNavigation|undefined>{
-    const generation=++this.generation;
-    const current=()=>generation===this.generation;
+    const generation=this.generation.advance();
+    const current=()=>this.generation.isCurrent(generation);
     const target:RuntimeNavigationTarget={workspaceId:raw.workspaceId,rootSessionId:raw.rootSessionId,...(raw.taskId?{taskId:raw.taskId}:{}),...(raw.scopeId?{scopeId:raw.scopeId}:{})};
     try{
       if(!target.workspaceId||!target.rootSessionId)throw Error('运行记录缺少原会话身份，无法定位。');

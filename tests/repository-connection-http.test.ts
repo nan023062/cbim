@@ -27,7 +27,10 @@ it('RemoteRepository取消覆盖已收到响应头的正文流，不等待8秒�
 });
 
 it('真实8秒超时覆盖挂起正文；超时没有自动重试且不泄露凭据',async()=>{
-  const {stdout,stderr}=await promisify(execFile)(process.execPath,['--import','tsx','tests/repository-connection-http-child.ts'],{windowsHide:true,timeout:15_000,maxBuffer:4096});
+  const {stdout,stderr}=await promisify(execFile)(process.execPath,['--import','tsx','tests/repository-connection-http-child.ts'],{windowsHide:true,timeout:15_000,maxBuffer:4096}).catch((error:any)=>{
+    // Vitest 的普通 Error 输出不展示 execFile 附带的 stdout/stderr；保留业务结果以区分请求未返回与进程未退出。
+    throw Error('HTTP timeout fixture did not exit: '+JSON.stringify({code:error.code,signal:error.signal,killed:error.killed,stdout:error.stdout,stderr:error.stderr}));
+  });
   const result=JSON.parse(stdout);expect(stderr).toBe('');expect(result).toMatchObject({cancellation:'CANCELLED',code:'TIMEOUT',calls:2,leaked:false});expect(result.elapsedMs).toBeGreaterThanOrEqual(7900);expect(result.elapsedMs).toBeLessThan(12_000);
 },18_000);
 

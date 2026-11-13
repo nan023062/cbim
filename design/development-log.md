@@ -7,6 +7,7 @@
 - 本地验证：`pnpm exec vitest run tests/ci-validation.test.mjs --reporter=dot` 最终 34 用例通过；同文件 `--shard=1/1` 通过，证明真实 Vitest 分片入口接入。`pnpm typecheck` 通过；`CBIM_WEBSITE_URL=https://nan023062.github.io/cbim/ node scripts/ci-website-smoke.mjs` 14 场景通过、0 页面错误。两份 YAML 解析、git diff --check 及三个宿主入口/引用的一致性检查通过。没有 src 变化，不生成源码类图；原架构检查仍在真实 CI 执行。
 - 补充核实：Vitest list --filesOnly 枚举 436 文件，但该入口不调用分片；最初尝试读分片清单得到 ENOENT，未把枚举误计为执行证据，改用真实 `run --shard=1/1` 与 CI 产物校验。仅验证相关控制逻辑，本地不运行产品全量；真实完整 CI 的精确提交、全部用例覆盖与前后耗时追加到 #68/对应 PR，避免为结果回填再跑同一全量。
 - 维护范围：同步 AGENTS 验证范围、开发/发布说明三入口及发布 runbook。后续调整从 ci-scope.mjs 白名单、ci-test-shards.ts 分配策略、ci-test-coverage.mjs 覆盖核对入手；状态汇总与实际执行均不因优化而放宽。
+- 首轮真实 CI：run 43398193028 用时 13 分 10 秒，436 文件实际执行，2999 通过、1 失败、2 个既有跳过；不能报告验证成功。失败为 repository-connection-http 独立夹具被原有 15 秒外层期限终止，原始日志未展示 execFile 附带输出；本地定向运行同文件 4 用例通过（超时用例约 8.3 秒），未复现，尚不能确认卡在启动、请求还是清理。补充退出码、信号、子进程输出诊断，不改变 8 秒业务期限、15 秒进程期限、18 秒用例期限、断言、重试或跳过；修订后再次验证，不把本地通过当成远端失败已修复。
 
 ## 2026-11-13：C 0.1.15 / R4 公开升级通过与官网收尾
 

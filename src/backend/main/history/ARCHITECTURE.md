@@ -64,7 +64,7 @@ class N_src_backend_main_history_file_store_ts_external_AgentHistoryStore["Agent
 N_src_backend_main_history_file_store_ts_external_AgentHistoryStore <|.. N_src_backend_main_history_file_store_ts_FileAgentHistoryStore
 ```
 
-直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../../foundations/files/index.ts](../../../foundations/files/index.ts)、[../../core/team/session-history-storage.ts](../../core/team/session-history-storage.ts)。
+直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/files/index.ts](../../core/foundation/files/index.ts)、[../../core/team/session-history-storage.ts](../../core/team/session-history-storage.ts)。
 
 ### 本目录调用边界
 

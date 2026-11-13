@@ -16,7 +16,7 @@
  * 受管包的 CLI 路径在上层冻结到 process 参数；会话包身份由外层包装器核对，本适配器继续只负责 Pi 协议。
  * 超时窗口按模型增量及工具实际进展续期；重试通知不续期，停止和关闭释放本轮计时器。
  */
-import {redactLiteral} from '../../../foundations/utility';
+import {redactLiteral} from '../../core/foundation/utility';
 import type {EngineRuntimePackage} from '../../core/execution/engine-runtime';
 import fs from 'node:fs/promises';
 import {runtimeEngineTools,nativeToolsDisabled} from '../../core/execution/engine-tools';

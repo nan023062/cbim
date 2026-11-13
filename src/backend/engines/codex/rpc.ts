@@ -6,7 +6,7 @@
  * 职责边界：超时/坏协议终止原进程，不自动重发；close 等待真实退出和已接收处理排空。
  */
 import {spawn,type ChildProcessWithoutNullStreams} from 'node:child_process';
-import {PendingRequests,LineFramer,InFlightOperations} from '../../../foundations/utility';
+import {PendingRequests,LineFramer,InFlightOperations} from '../../core/foundation/utility';
 
 export class CodexRpc {
   private child?:ChildProcessWithoutNullStreams;private exit?:Promise<void>;private closing=false;private failure?:Error;private sequence=0;

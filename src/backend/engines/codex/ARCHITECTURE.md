@@ -112,7 +112,7 @@ class N_src_backend_engines_codex_engine_ts_external_AgentEngine["AgentEngine (�
 N_src_backend_engines_codex_engine_ts_external_AgentEngine <|.. N_src_backend_engines_codex_engine_ts_CodexEngine
 ```
 
-直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../native-tools.ts](../native-tools.ts)、[binary.ts](binary.ts)、[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[rpc.ts](rpc.ts)、[tools.ts](tools.ts)、[model-proxy.ts](model-proxy.ts)、[session.ts](session.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
+直接依赖：[../../core/foundation/utility/index.ts](../../core/foundation/utility/index.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../native-tools.ts](../native-tools.ts)、[binary.ts](binary.ts)、[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[rpc.ts](rpc.ts)、[tools.ts](tools.ts)、[model-proxy.ts](model-proxy.ts)、[session.ts](session.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
 
 ### model-proxy.ts
 
@@ -170,7 +170,7 @@ class N_src_backend_engines_codex_rpc_ts_CodexRpc["CodexRpc"] {
 N_src_backend_engines_codex_rpc_ts ..> N_src_backend_engines_codex_rpc_ts_CodexRpc : 声明
 ```
 
-直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)。
+直接依赖：[../../core/foundation/utility/index.ts](../../core/foundation/utility/index.ts)。
 
 ### session.ts
 
@@ -209,7 +209,7 @@ class N_src_backend_engines_codex_tools_ts_CodexToolSpec["CodexToolSpec"] {
 N_src_backend_engines_codex_tools_ts ..> N_src_backend_engines_codex_tools_ts_CodexToolSpec : 声明
 ```
 
-直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)。
+直接依赖：[../../core/foundation/utility/index.ts](../../core/foundation/utility/index.ts)、[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)。
 
 ### 本目录调用边界
 

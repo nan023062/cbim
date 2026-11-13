@@ -1,3 +1,13 @@
+## 2026-11-13：后端公共库统一归入 Core/foundation
+
+- 来源：用户明确要求将顶层 foundations 合并到 backend/core/foundation；基线 de333bf0，工作区初始干净，C3/L3。已查询当前开放 Issues，仅 #65 与本目录迁移无关，本项按用户直接授权实施，不改写无关工单。目的为统一后端公共库位置，不宣称目录移动带来新的业务解耦或性能收益。
+- 将 utility/files/web 三个能力子目录及契约整体迁入，保留根层 Fault、safeId、StoragePaths 与 JSON/摘要兼容适配。原顶层目录退出，真实消费者、测试与桌面浏览器 fixture 直接使用新入口，无旧路径转发。前端公共库保持独立，仅更新其文档中的后端位置。测试模块 ID 及 tests/unit/foundations 测试路径保持兼容，modules.json 的源码归属同步迁移。
+- 依赖保持单向：根层适配 → utility；子库不得依赖根层约定、Core 业务或上层。检查器以独立逻辑层识别新物理位置，Core 的宽路径许可不覆盖技术子库，根层约定许可不递归包含子库；Engines/Scheduler/Updater 仍仅使用 utility 通用入口，Bridge 不取得技术子库权限。公开入口、Node/可移植/Electron 隔离及原测试支持边界保留。
+- 验证选取迁移的独立库、直接组合契约及被修改的检查器：`pnpm exec vitest run tests/unit/foundations tests/web-foundations.test.ts tests/web-browser-fallback.test.ts tests/web-browser-proxy.test.ts tests/web-service.test.ts tests/utility-json-contract.test.ts tests/utility-json-order-contract.test.ts tests/utility-serialization-contract.test.ts tests/utility-body-consumers.test.ts tests/utility-redaction-contract.test.ts tests/utility-rpc-framing-contract.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts tests/test-modules.test.ts --reporter=dot`。初轮 178 通过、2 条边界回归失败，证实原 Core 宽路径规则扩大了访问权；修正后仅重跑 `pnpm exec vitest run tests/dependencies.test.ts tests/test-modules.test.ts --reporter=default`，47/47 通过。合计 25 文件、180 项最终通过，新增父层反向依赖及 Updater/Bridge 权限回归，拒绝用无法解析的路径代替真实越界验证。
+- `pnpm typecheck`、`pnpm check:architecture`、`pnpm check:test-modules` 通过：92 目录、716 源码/样式文件；1446 扫描文件、7150 含类型依赖、0 环/违规；471 测试文件（131 unit、153 contract、187 integration）。按旧新路径映射比较 81 个受影响源码的去注释语法，导入外逻辑无差异；比较前统一工作树 CRLF 与 Git LF，避免模板字符串换行产生假阳性。三宿主 9 份工作流同内容，57 处本地引用有效；59 份受影响文档的本地链接有效。
+- 同步源码边界注释、能力契约、受影响目录及父层类图、架构生成器、依赖检查、AGENTS 与三宿主工作流。Q1 保持原算法、错误、I/O 和资源生命周期；Q2 此次只统一物理归属，业务策略仍留原消费者；Q3 路径迁移以类型/依赖/语法对照及入口回归验证；Q4 从 core/foundation/CONTRACT.md 下钻各子库，业务入口仍在 Main/Core/Engines；Q5 无新治理规则，沿用既有独立边界。回退应整体还原本提交的目录、消费者及规则，不单独恢复旧目录。
+- 未运行全仓、真实网站/Electron 冒烟、打包或发布验收，目录迁移未改变运行数据或产物入口；局部验证不代表这些阶段通过。代码与资料供人工 review，本步独立本地提交，未 push、合并或发布。
+
 ## 2026-11-13：候选清单收尾六／后端图校验与本轮交付
 
 - 用户批量授权内最后一片，基线 7b009ac9，C3/L2。后端 graphs.ts 提供 isDirectedAcyclic，Core graph-rules 分别组合它检查派发/依赖图与等待图。节点/端点/父子身份、启用边选择及 GRAPH_CYCLE/GRAPH_WAIT_CYCLE 原错误仍留在 Core；公共层不认识业务或前端。无环判断不是授权，重复节点/缺端点由领域先校验，公共入口也拒绝无效结构。

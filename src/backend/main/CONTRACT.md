@@ -2,7 +2,7 @@
 
 Application 持有一份 WebSettings/WebService，启动恢复加密搜索配置；createExecutionManager 仅对桌面主会话绑定公开网页端口。缓存与每域限速为应用级，搜索每次读取当前配置；密钥不传入调度引擎。配置操作与网络执行分开。
 
-网页方案位于独立 `foundations/web`，不依赖本模块或 Core。WebService 组合其公开入口；Main 在 Electron ready 后通过平台参数注入 ElectronBrowserReader。Node/CLI 不加载 Electron；后台网页窗口使用独立匿名会话，运行取消负责释放，不共享主界面登录态。详见 [基础网页契约](../../foundations/web/CONTRACT.md)。
+网页方案位于独立 `backend/core/foundation/web`，不依赖本模块或 Core。WebService 组合其公开入口；Main 在 Electron ready 后通过平台参数注入 ElectronBrowserReader。Node/CLI 不加载 Electron；后台网页窗口使用独立匿名会话，运行取消负责释放，不共享主界面登录态。详见 [基础网页契约](../core/foundation/web/CONTRACT.md)。
 
 关闭主窗口主动走现有 before-quit 取消与排空，不等待隐藏网页窗口自然完成才触发 window-all-closed；排空失败保留主窗口供用户重试。基础浏览器适配不自行决定应用退出。
 

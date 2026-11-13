@@ -6,13 +6,13 @@
  * 运行、岗位和显式测试在解密前共用接口选择；候选地址不进入运行快照，列表读取不会探测网络。
  */
 import fs from 'node:fs/promises';
-import {SerialQueue} from '../../../foundations/utility';
+import {SerialQueue} from '../../core/foundation/utility';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {engineLabel,loopEngineSchema,type LoopEngine} from '../../core/models/engine';
 import {connectionForEngine} from '../../core/models/provider-connections';
 import {parseModelCatalog} from '../../core/models/catalog';
-import {atomic} from '../../../foundations/files';
+import {atomic} from '../../core/foundation/files';
 import {fail} from '../../core/foundation/errors';
 import {connectionSchema,definition,type LlmDefinition,type LlmSettings} from '../../core/models/config';
 export type {LlmDefinition,LlmProfile,LlmSettings} from '../../core/models/config';

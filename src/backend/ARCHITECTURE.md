@@ -34,22 +34,24 @@ class N_src_backend_updater["updater/"] {
 }
 N_src_backend_bootstrap ..> N_src_backend_updater : 导入依赖
 N_src_backend_engines ..> N_src_backend_core : 导入依赖
-N_src_backend_main ..> N_src_backend_scheduler_engine : 导入依赖
 N_src_backend_main ..> N_src_backend_core : 导入依赖
+N_src_backend_main ..> N_src_backend_scheduler_engine : 导入依赖
 N_src_backend_main ..> N_src_backend_updater : 导入依赖
 N_src_backend_scheduler_engine ..> N_src_backend_core : 导入依赖
 N_src_backend_scheduler_engine ..> N_src_backend_engines : 导入依赖
+N_src_backend_updater ..> N_src_backend_core : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
 - `bootstrap` → `updater`：导入。
 - `engines` → `core`：导入。
-- `main` → `scheduler-engine`：导入。
 - `main` → `core`：导入。
+- `main` → `scheduler-engine`：导入。
 - `main` → `updater`：导入。
 - `scheduler-engine` → `core`：导入。
 - `scheduler-engine` → `engines`：导入。
+- `updater` → `core`：导入。
 
 ## 子目录导航
 
@@ -77,10 +79,11 @@ flowchart TB
   Main[main · 应用与平台装配] --> Scheduler[scheduler-engine · 业务编排]
   Main --> Core[core · 领域规则与执行契约]
   Main --> Updater[updater · 独立更新]
-  Main --> Foundations[foundations · 独立基础类库]
+  Main --> Foundations[core/foundation 子库 · 独立技术机制]
   Core --> Foundations
   Updater --> Foundations
   Scheduler --> Core
+  Scheduler --> Foundations
   Assembly[scheduler-engine/assembly · 引擎装配] --> Engines[engines · 具体引擎适配]
   Assembly --> Core
   Engines --> Core
@@ -93,7 +96,7 @@ Updater 对 foundations 的依赖限于 utility 通用公开入口，用于已�
 
 Engines 同样只消费 utility 通用入口：Pi/Codex 组合 LF 拆帧，Codex 组合在途集合。协议、授权、超时、取消与真实进程退出仍由适配器拥有；不能借此依赖其他基础方案或应用服务。
 
-`foundations` 位于 `src/foundations`，不是 Core 的子模块，不依赖任何其他项目模块；只使用本层、标准库及必要第三方库。Core 知识探测使用文件公开入口；Main 组合网页读取、原子文件和实例串行队列。业务设置、工具注册、锁和事务决策仍留在所属模块。见 [基础类库边界](../foundations/CONTRACT.md)。
+后端公共库统一位于 `src/backend/core/foundation`。图中的 Core 表示领域规则与契约，Foundations 表示其中的 utility/files/web 独立子库；这是逻辑依赖图，不把目录包含关系当作调用。子库不依赖父目录的领域约定或其他业务，只使用自身、标准库及必要第三方库。根层 json/serialization 适配单向使用 utility。Core 知识探测使用文件公开入口；Main 组合网页读取、原子文件和实例串行队列。业务设置、工具注册、锁和事务决策仍留在所属模块。见 [公共库边界](core/foundation/CONTRACT.md)。
 
 ## 按职责定位
 

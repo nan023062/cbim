@@ -176,7 +176,7 @@ N_src_frontend_foundations_utility_index_ts ..> N_src_frontend_foundations_utili
 
 # 前端通用工具库
 
-本库仅服务前端域，按数据或问题类别组织工具函数和数据结构，不采用一函数一文件。公开入口为 `index.ts`，`json.ts`、`events.ts`、`async.ts`、`graphs.ts` 与 `storage.ts` 是私有类别实现。当前仅依赖 JavaScript 标准能力，不依赖 React、页面、通信契约、Node 或后端 `src/foundations`，没有全局可变状态。
+本库仅服务前端域，按数据或问题类别组织工具函数和数据结构，不采用一函数一文件。公开入口为 `index.ts`，`json.ts`、`events.ts`、`async.ts`、`graphs.ts` 与 `storage.ts` 是私有类别实现。当前仅依赖 JavaScript 标准能力，不依赖 React、页面、通信契约、Node 或后端 `src/backend/core/foundation`，没有全局可变状态。
 
 ## JSON 比较
 

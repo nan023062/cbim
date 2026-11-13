@@ -9,7 +9,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {atomic} from '../../../foundations/files';
+import {atomic} from '../../core/foundation/files';
 import {hash} from '../../core/foundation/serialization';
 import {fail} from '../../core/foundation/errors';
 import type {SecretCipher} from '../../core/models/ports';

@@ -3,7 +3,7 @@
  * 设计原因：服务提交与持久重放共用同一规则，防止领取竞争、跨周期改写、漏掉下游或把已经执行的任务伪装为未执行。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
-import {orderJsonValue} from '../../../foundations/utility';
+import {orderJsonValue} from '../foundation/utility';
 import {fail} from '../foundation/errors';
 import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 import type {GraphIdentity,TaskNode} from './graph-types';

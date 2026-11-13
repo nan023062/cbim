@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest';
 import {hash,json} from '../src/backend/core/foundation/serialization';
-import {formatJson} from '../src/foundations/utility';
-import {sha256} from '../src/foundations/utility/node';
+import {formatJson} from '../src/backend/core/foundation/utility';
+import {sha256} from '../src/backend/core/foundation/utility/node';
 
 it('Core 兼容出口复用唯一算法，原文本与 Buffer 指纹不变',()=>{
   expect(hash).toBe(sha256);expect(json).toBe(formatJson);

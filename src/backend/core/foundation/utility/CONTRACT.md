@@ -1,5 +1,7 @@
 # 通用算法与数据结构
 
+本目录归档于后端 core/foundation，但保持独立逻辑基础库：不导入父目录的 errors、identity、paths、json 或 serialization；业务适配单向组合本库。目录位置不赋予任何业务依赖权。
+
 本模块提供领域无关的数据处理算法、传入字节流的有界消费及实例内执行结构，不依赖 Core、Main、Scheduler、Bridge、Frontend 或其他 foundations 能力。工具函数与数据结构按数据类别和问题种类内聚组织，具名导出，不采用一函数一文件，也不建立万能 Utility 类、全局实例或服务定位器。不发起文件/网络访问，不拥有平台进程、权限和业务事务；流消费者只接管调用者传入流的 reader。
 
 ## 入口与真实消费者

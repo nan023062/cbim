@@ -5,7 +5,7 @@
  * 职责边界：只重算结构及摘要，不访问文件，也不将合法结构等同真实采集。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
-import {orderJsonValue} from '../../../foundations/utility';
+import {orderJsonValue} from '../foundation/utility';
 import {isDeepStrictEqual as equal} from 'node:util';
 import {hash} from '../foundation/serialization';
 import {artifactScopeBindingsSchema,type ArtifactScopeBinding} from '../workspace/artifact-scope';

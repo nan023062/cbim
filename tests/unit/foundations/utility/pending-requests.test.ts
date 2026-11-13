@@ -1,5 +1,5 @@
 import {afterEach,beforeEach,describe,it,expect,vi} from 'vitest';
-import {PendingRequests} from '../../../../src/foundations/utility';
+import {PendingRequests} from '../../../../src/backend/core/foundation/utility';
 beforeEach(()=>vi.useFakeTimers());
 afterEach(()=>vi.useRealTimers());
 describe('PendingRequests',()=>{

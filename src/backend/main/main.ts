@@ -17,7 +17,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import {TerminalSessions} from './platform/terminal';
 import {Application} from './assembly/application';
-import {ElectronBrowserReader} from '../../foundations/web/electron-browser-reader';
+import {ElectronBrowserReader} from '../core/foundation/web/electron-browser-reader';
 import {ChatInputs} from './materials/chat-inputs';
 import {systemSecretCipher} from './platform/secrets';
 import {Paths} from './platform/paths';

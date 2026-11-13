@@ -1,8 +1,12 @@
-# 基础类库边界
+# 后端公共库边界
 
 本目录承载后端域公共能力。前端公共库位于 `src/frontend/foundations`，独立实现、验证和演进；两域工具库不互相引用，也不经 bridge 转发公共算法。
 
-`foundations` 承载高内聚、可独立复用的技术解决方案，不依赖 Core、Main、Scheduler、Bridge、Frontend 或任何其他项目模块，包含类型依赖。仅允许本层内部、标准库及必要第三方库；各能力拥有自己的契约、状态和资源生命周期，不建立万能工具容器。
+`src/backend/core/foundation` 统一后端公共能力的目录入口，但保留两类单向边界：本层的错误协议、标识约束、路径端口及兼容适配，以及子目录中可独立复用的技术基础库。目录合并不合并状态、资源生命周期或业务策略，不建立统一万能导出或容器。
+
+`utility`、`files`、`web` 仍是独立的逻辑基础层：不依赖父目录中的领域约定，也不依赖 Core 其他业务、Main、Scheduler、Bridge 或 Frontend，包含类型依赖。只使用自身、标准库及已核实第三方库；跨能力依赖必须由契约与检查器明确允许。检查器中的 `foundations` 是这一逻辑层的标识，不是仍存在的根目录。
+
+本层 `errors.ts` 定义 Fault 协议，`identity.ts` 定义运行标识约束，`paths.ts` 声明 StoragePaths 端口；`json.ts` 将严格解析错误适配为 JSON Fault，`serialization.ts` 保留 hash/json 兼容名称。适配单向引用 utility，utility 不知道这些领域语义。原顶层基础库入口已迁移到本目录，调用者直接使用各子库公开入口。
 
 当前能力为 [utility](utility/CONTRACT.md)、[files](files/CONTRACT.md) 与 [web](web/CONTRACT.md)。utility 收纳领域无关算法与数据结构，SerialQueue 已从原 concurrency 目录迁入；各能力按明确契约独立组织，不把业务辅助代码机械归并。调用者通过公开入口单向使用；utility 通用入口不加载 Node，Node 摘要算法使用独立入口，网页平台实现也单独加载。
 

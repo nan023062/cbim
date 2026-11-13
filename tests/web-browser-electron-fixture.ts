@@ -5,8 +5,8 @@ import os from 'node:os';
 import http from 'node:http';
 import {connect} from 'node:net';
 import assert from 'node:assert/strict';
-import {ElectronBrowserReader} from '../src/foundations/web/electron-browser-reader';
-import {WebPageReader} from '../src/foundations/web';
+import {ElectronBrowserReader} from '../src/backend/core/foundation/web/electron-browser-reader';
+import {WebPageReader} from '../src/backend/core/foundation/web';
 import {WebService} from '../src/backend/main/web/web-service';
 import {WebSettings} from '../src/backend/main/settings/web-settings';
 

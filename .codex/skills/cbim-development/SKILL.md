@@ -46,7 +46,9 @@ description: "遵守通用项目架构设计规范，从 GitHub Issues 拉取清
 
 ## 3. 实施与验证
 
-前端与后端属于不同域，各自沉淀公共库。前端先核对 `src/frontend/foundations/utility/CONTRACT.md`，后端先核对 `src/foundations/utility/CONTRACT.md`；通过本域公开入口使用，不为去重开放跨域工具依赖，也不经 bridge 转发工具。前端 JSON 比较已有 equalJson，迁移前核对 localeCompare、undefined、数组及异常语义，原样文本比较和特殊序列化不能直接替换。
+后端公共能力统一归 `src/backend/core/foundation`；utility/files/web 仍独立受依赖检查，不能反向引用根层领域约定。目录迁移须同时核对全部真实导入、测试归属、架构生成器和三宿主工作流，不保留无人使用的旧路径转发。
+
+前端与后端属于不同域，各自沉淀公共库。前端先核对 `src/frontend/foundations/utility/CONTRACT.md`，后端先核对 `src/backend/core/foundation/utility/CONTRACT.md`；通过本域公开入口使用，不为去重开放跨域工具依赖，也不经 bridge 转发工具。前端 JSON 比较已有 equalJson，迁移前核对 localeCompare、undefined、数组及异常语义，原样文本比较和特殊序列化不能直接替换。
 
 工具函数和数据结构按 JSON、字符串、字节、异步协调等类别内聚组织，优先合入已有类别，不采用一函数一文件。明确的变化原因、环境或契约边界才驱动拆分，后端 Node 能力使用独立入口。各算法契约和实例状态保持独立，测试仍按行为职责拆分，不随源文件合并成混合套件。业务字段、权限、事务与恢复策略留在消费者；迁移保持原字节和失败语义，兼容出口明确说明是否仍在使用。
 
@@ -111,7 +113,7 @@ description: "遵守通用项目架构设计规范，从 GitHub Issues 拉取清
 
 前端本地记录存储已有 utility/storage.ts 的 JsonRecordStorage；仅复用注入式有界 JSON 读写。迁移核对空串/缺失规则、UTF-8 上限、序列化字节、写失败前后的内存状态；schema、条数、坏数据禁写、回执及原请求恢复保留业务控制器，不能扩成统一命令状态机。
 
-后端 JSON 补齐优先复用 orderJsonValue，迁移显式固定比较器与 undefined 策略，业务身份与哈希字段留在原模块。调度器仅可导入 foundations/utility 的通用公开入口，禁止私有实现及 Node/files/web；手工拼接字符串、排序后读取属性的协议须单独核对，不直接统一。
+后端 JSON 补齐优先复用 orderJsonValue，迁移显式固定比较器与 undefined 策略，业务身份与哈希字段留在原模块。调度器仅可导入 backend/core/foundation/utility 的通用公开入口，禁止私有实现及 Node/files/web；手工拼接字符串、排序后读取属性的协议须单独核对，不直接统一。
 
 后端字符串精确脱敏统一组合 strings.ts 的 redactLiteral；凭据来源、认证模式、事件序列化和错误屏障留在引擎。保留空凭据、大小写、非重叠及编码语义，不以字符串函数宣称覆盖所有泄露途径；独立算法与真实引擎适配分别测试。
 

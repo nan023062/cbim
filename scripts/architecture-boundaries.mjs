@@ -6,21 +6,21 @@ export const logicalBoundaries = [
     dependencies:[],external:[],
   },
   {
-    id:'file-foundations',prefix:'src/foundations/files/',public:['src/foundations/files/index.ts'],
+    id:'file-foundations',prefix:'src/backend/core/foundation/files/',public:['src/backend/core/foundation/files/index.ts'],
     dependencies:[],external:['node:fs/promises','node:path','node:crypto'],
   },
   {
-    id:'utility-foundations',files:['src/foundations/utility/index.ts','src/foundations/utility/json.ts','src/foundations/utility/async.ts','src/foundations/utility/strings.ts','src/foundations/utility/bytes.ts','src/foundations/utility/graphs.ts'],public:['src/foundations/utility/index.ts'],
+    id:'utility-foundations',files:['src/backend/core/foundation/utility/index.ts','src/backend/core/foundation/utility/json.ts','src/backend/core/foundation/utility/async.ts','src/backend/core/foundation/utility/strings.ts','src/backend/core/foundation/utility/bytes.ts','src/backend/core/foundation/utility/graphs.ts'],public:['src/backend/core/foundation/utility/index.ts'],
     dependencies:[],external:['jsonc-parser'],
   },
   {
-    id:'utility-node-foundations',files:['src/foundations/utility/node.ts'],public:['src/foundations/utility/node.ts'],
+    id:'utility-node-foundations',files:['src/backend/core/foundation/utility/node.ts'],public:['src/backend/core/foundation/utility/node.ts'],
     dependencies:[],external:['node:crypto'],
   },
   {
     id:'web-foundations',
-    files:['src/foundations/web/index.ts','src/foundations/web/contracts.ts','src/foundations/web/browser-reader.ts','src/foundations/web/page-reader.ts','src/foundations/web/public-http.ts','src/foundations/web/browser-proxy.ts','src/foundations/web/web-content.ts','src/foundations/web/electron-browser-reader.ts'],
-    public:['src/foundations/web/index.ts','src/foundations/web/electron-browser-reader.ts'],
+    files:['src/backend/core/foundation/web/index.ts','src/backend/core/foundation/web/contracts.ts','src/backend/core/foundation/web/browser-reader.ts','src/backend/core/foundation/web/page-reader.ts','src/backend/core/foundation/web/public-http.ts','src/backend/core/foundation/web/browser-proxy.ts','src/backend/core/foundation/web/web-content.ts','src/backend/core/foundation/web/electron-browser-reader.ts'],
+    public:['src/backend/core/foundation/web/index.ts','src/backend/core/foundation/web/electron-browser-reader.ts'],
     dependencies:[],external:['zod','parse5','robots-parser','ipaddr.js','electron','node:http','node:https','node:dns/promises','node:net','node:zlib','node:timers/promises','node:crypto'],
   },
   {

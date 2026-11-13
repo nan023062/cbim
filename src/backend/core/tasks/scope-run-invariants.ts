@@ -3,7 +3,7 @@
  * 设计原因：登记不能依赖当前进程集合；文本补充和人工接续共用旧等待前缀与主轮计数，防止重复归属、补造旧统计或丢失无日志意图。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
-import {orderJsonValue} from '../../../foundations/utility';
+import {orderJsonValue} from '../foundation/utility';
 import {fail} from '../foundation/errors';
 import type {DispatchState,DispatchMutation} from '../dispatch/dispatch-storage';
 import type {DispatchScope} from './dispatch-scope';

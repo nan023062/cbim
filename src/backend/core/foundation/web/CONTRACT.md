@@ -1,5 +1,7 @@
 # 网页基础能力
 
+本目录归档于后端 core/foundation，仍是独立逻辑基础库；父目录领域约定、Core 业务和上层服务都不能成为它的依赖。物理合并不改变 HTTP、浏览器及入口隔离。
+
 ## 边界与入口
 
 `index.ts` 是 Node 公开入口，提供 `WebPageReader`、`PublicHttp`、`openBrowserProxy`、正文转换及输入/浏览器契约；`electron-browser-reader.ts` 是宿主可选的 Electron 入口。内部文件不可被业务层直接引用。类库不依赖任何其他项目模块，不认识 CBIM 工作区、Agent、工具名、Brave 设置或用户凭据。

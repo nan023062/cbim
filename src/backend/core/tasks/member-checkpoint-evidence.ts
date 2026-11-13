@@ -5,7 +5,7 @@
  * 职责边界：本模块不读文件或原生会话，调用方仍须复核当前字节、知识、受管原生历史及磁盘完整性。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
-import {orderJsonValue} from '../../../foundations/utility';
+import {orderJsonValue} from '../foundation/utility';
 import {fail} from '../foundation/errors';
 import {hash,json} from '../foundation/serialization';
 import {toolReceipt} from '../tools/receipts';

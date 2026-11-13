@@ -1,10 +1,10 @@
-# src/foundations/files 架构
+# src/backend/core/foundation/files 架构
 
 ## 目录定位
 
 Node 单文件 I/O 基础方案：存在探测、JSON 读取、同步后原子替换；路径授权、跨进程锁和业务事务由消费者拥有。
 
-本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
+本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
 ## 代码清单
 
@@ -19,7 +19,7 @@ Node 单文件 I/O 基础方案：存在探测、JSON 读取、同步后原子�
 
 ```mermaid
 classDiagram
-class N_src_foundations_files_index_ts["index.ts"] {
+class N_src_backend_core_foundation_files_index_ts["index.ts"] {
   <<module>>
 }
 ```
@@ -29,7 +29,7 @@ class N_src_foundations_files_index_ts["index.ts"] {
 
 ```mermaid
 classDiagram
-class N_src_foundations_files_text_files_ts["text-files.ts"] {
+class N_src_backend_core_foundation_files_text_files_ts["text-files.ts"] {
   <<module>>
   +exists()
   +atomic()
@@ -42,13 +42,13 @@ class N_src_foundations_files_text_files_ts["text-files.ts"] {
 
 ```mermaid
 classDiagram
-class N_src_foundations_files_index_ts["index.ts"] {
+class N_src_backend_core_foundation_files_index_ts["index.ts"] {
   <<module>>
 }
-class N_src_foundations_files_text_files_ts["text-files.ts"] {
+class N_src_backend_core_foundation_files_text_files_ts["text-files.ts"] {
   <<module>>
 }
-N_src_foundations_files_index_ts ..> N_src_foundations_files_text_files_ts : 导入依赖
+N_src_backend_core_foundation_files_index_ts ..> N_src_backend_core_foundation_files_text_files_ts : 导入依赖
 ```
 
 
@@ -66,7 +66,7 @@ N_src_foundations_files_index_ts ..> N_src_foundations_files_text_files_ts : 导
 
 # 单文件存储原语
 
-公开入口为 index.ts；只依赖 Node 标准库，不依赖 Core 或其他能力。`exists`、`readJson` 和 `atomic` 从原 Core/foundation/files 迁入，旧路径已移除，实际消费者直接引用能力入口。
+公开入口为 index.ts；只依赖 Node 标准库，不依赖 Core 业务、父目录约定或其他能力。`exists`、`readJson` 和 `atomic` 的实现位于 text-files.ts；消费者直接引用本目录公开入口，不能穿透私有实现。
 
 - `atomic` 创建父目录，用同目录独占 0600 临时文件写 UTF-8 文本，fsync 内容并关闭后 rename。写入或替换失败均清理本次临时文件。返回成功不承诺目录 fsync、断电恢复或多文件原子事务。
 - `exists` 保持 access 失败即 false 的原语义，不能区分缺失与无权限；不得据此授予访问。`readJson<T>` 不验证 T 对应的业务 Schema，解析/读取错误由调用方处理。

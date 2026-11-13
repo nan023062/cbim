@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {SerialQueue} from '../../../../src/foundations/utility';
+import {SerialQueue} from '../../../../src/backend/core/foundation/utility';
 
 it('同实例严格顺序并返回每次结果；异步失败和同步抛错都不污染下一次',async()=>{
   const queue=new SerialQueue(),events:string[]=[];let release!:()=>void;

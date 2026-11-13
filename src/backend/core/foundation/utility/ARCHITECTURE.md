@@ -1,10 +1,10 @@
-# src/foundations/utility 架构
+# src/backend/core/foundation/utility 架构
 
 ## 目录定位
 
 通用工具函数与数据结构按类别内聚组织：json.ts 提供 JSON 格式化、严格解析和键排序；async.ts 提供独立实例的串行队列、在途集合及请求关联表；strings.ts 提供文本分帧与精确脱敏；bytes.ts 提供有界字节流收集；graphs.ts 提供后端无环判断。index.ts 是通用公开入口，node.ts 独立承载 SHA-256。不按函数数量拆文件，不发起文件/网络访问，不拥有业务身份、事务或权限。排序比较器与字段规则由消费者指定；Promise 快照不代表物理退出，文本帧不代表协议校验，生命周期和业务策略留在适配器。
 
-本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
+本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
 ## 代码清单
 
@@ -24,35 +24,35 @@
 
 ```mermaid
 classDiagram
-class N_src_foundations_utility_async_ts["async.ts"] {
+class N_src_backend_core_foundation_utility_async_ts["async.ts"] {
   <<module>>
 }
-class N_src_foundations_utility_async_ts_SerialQueue["SerialQueue"] {
+class N_src_backend_core_foundation_utility_async_ts_SerialQueue["SerialQueue"] {
   +run()
   +drain()
   -tail
 }
-N_src_foundations_utility_async_ts ..> N_src_foundations_utility_async_ts_SerialQueue : 声明
-class N_src_foundations_utility_async_ts_PendingReply["PendingReply"] {
+N_src_backend_core_foundation_utility_async_ts ..> N_src_backend_core_foundation_utility_async_ts_SerialQueue : 声明
+class N_src_backend_core_foundation_utility_async_ts_PendingReply["PendingReply"] {
   <<interface>>
   +resolve
   +reject
 }
-N_src_foundations_utility_async_ts ..> N_src_foundations_utility_async_ts_PendingReply : 声明
-class N_src_foundations_utility_async_ts_PendingRequests["PendingRequests"] {
+N_src_backend_core_foundation_utility_async_ts ..> N_src_backend_core_foundation_utility_async_ts_PendingReply : 声明
+class N_src_backend_core_foundation_utility_async_ts_PendingRequests["PendingRequests"] {
   +register()
   +take()
   +rejectAll()
   -entries
 }
-N_src_foundations_utility_async_ts ..> N_src_foundations_utility_async_ts_PendingRequests : 声明
-class N_src_foundations_utility_async_ts_InFlightOperations["InFlightOperations"] {
+N_src_backend_core_foundation_utility_async_ts ..> N_src_backend_core_foundation_utility_async_ts_PendingRequests : 声明
+class N_src_backend_core_foundation_utility_async_ts_InFlightOperations["InFlightOperations"] {
   +track()
   +size
   +drain()
   -pending
 }
-N_src_foundations_utility_async_ts ..> N_src_foundations_utility_async_ts_InFlightOperations : 声明
+N_src_backend_core_foundation_utility_async_ts ..> N_src_backend_core_foundation_utility_async_ts_InFlightOperations : 声明
 ```
 
 
@@ -60,7 +60,7 @@ N_src_foundations_utility_async_ts ..> N_src_foundations_utility_async_ts_InFlig
 
 ```mermaid
 classDiagram
-class N_src_foundations_utility_bytes_ts["bytes.ts"] {
+class N_src_backend_core_foundation_utility_bytes_ts["bytes.ts"] {
   <<module>>
   +readBoundedBytes()
 }
@@ -68,17 +68,17 @@ class N_src_foundations_utility_bytes_ts["bytes.ts"] {
 
 ```mermaid
 classDiagram
-class N_src_foundations_utility_bytes_ts["bytes.ts"] {
+class N_src_backend_core_foundation_utility_bytes_ts["bytes.ts"] {
   <<module>>
 }
-class N_src_foundations_utility_bytes_ts_ByteLimitError["ByteLimitError"] {
+class N_src_backend_core_foundation_utility_bytes_ts_ByteLimitError["ByteLimitError"] {
   +maxBytes
 }
-N_src_foundations_utility_bytes_ts ..> N_src_foundations_utility_bytes_ts_ByteLimitError : 声明
-class N_src_foundations_utility_bytes_ts_external_RangeError["RangeError (外部契约)"] {
+N_src_backend_core_foundation_utility_bytes_ts ..> N_src_backend_core_foundation_utility_bytes_ts_ByteLimitError : 声明
+class N_src_backend_core_foundation_utility_bytes_ts_external_RangeError["RangeError (外部契约)"] {
   <<external>>
 }
-N_src_foundations_utility_bytes_ts_external_RangeError <|-- N_src_foundations_utility_bytes_ts_ByteLimitError
+N_src_backend_core_foundation_utility_bytes_ts_external_RangeError <|-- N_src_backend_core_foundation_utility_bytes_ts_ByteLimitError
 ```
 
 
@@ -86,7 +86,7 @@ N_src_foundations_utility_bytes_ts_external_RangeError <|-- N_src_foundations_ut
 
 ```mermaid
 classDiagram
-class N_src_foundations_utility_graphs_ts["graphs.ts"] {
+class N_src_backend_core_foundation_utility_graphs_ts["graphs.ts"] {
   <<module>>
   +isDirectedAcyclic()
 }
@@ -97,7 +97,7 @@ class N_src_foundations_utility_graphs_ts["graphs.ts"] {
 
 ```mermaid
 classDiagram
-class N_src_foundations_utility_index_ts["index.ts"] {
+class N_src_backend_core_foundation_utility_index_ts["index.ts"] {
   <<module>>
 }
 ```
@@ -107,7 +107,7 @@ class N_src_foundations_utility_index_ts["index.ts"] {
 
 ```mermaid
 classDiagram
-class N_src_foundations_utility_json_ts["json.ts"] {
+class N_src_backend_core_foundation_utility_json_ts["json.ts"] {
   <<module>>
   +parseStrictJson()
   +formatJson()
@@ -117,24 +117,24 @@ class N_src_foundations_utility_json_ts["json.ts"] {
 
 ```mermaid
 classDiagram
-class N_src_foundations_utility_json_ts["json.ts"] {
+class N_src_backend_core_foundation_utility_json_ts["json.ts"] {
   <<module>>
 }
-class N_src_foundations_utility_json_ts_StrictJsonError["StrictJsonError"] {
+class N_src_backend_core_foundation_utility_json_ts_StrictJsonError["StrictJsonError"] {
   +reason
   +key
 }
-N_src_foundations_utility_json_ts ..> N_src_foundations_utility_json_ts_StrictJsonError : 声明
-class N_src_foundations_utility_json_ts_external_SyntaxError["SyntaxError (外部契约)"] {
+N_src_backend_core_foundation_utility_json_ts ..> N_src_backend_core_foundation_utility_json_ts_StrictJsonError : 声明
+class N_src_backend_core_foundation_utility_json_ts_external_SyntaxError["SyntaxError (外部契约)"] {
   <<external>>
 }
-N_src_foundations_utility_json_ts_external_SyntaxError <|-- N_src_foundations_utility_json_ts_StrictJsonError
-class N_src_foundations_utility_json_ts_JsonKeyOrder["JsonKeyOrder"] {
+N_src_backend_core_foundation_utility_json_ts_external_SyntaxError <|-- N_src_backend_core_foundation_utility_json_ts_StrictJsonError
+class N_src_backend_core_foundation_utility_json_ts_JsonKeyOrder["JsonKeyOrder"] {
   <<interface>>
   +compareKeys
   +omitUndefinedProperties
 }
-N_src_foundations_utility_json_ts ..> N_src_foundations_utility_json_ts_JsonKeyOrder : 声明
+N_src_backend_core_foundation_utility_json_ts ..> N_src_backend_core_foundation_utility_json_ts_JsonKeyOrder : 声明
 ```
 
 
@@ -142,7 +142,7 @@ N_src_foundations_utility_json_ts ..> N_src_foundations_utility_json_ts_JsonKeyO
 
 ```mermaid
 classDiagram
-class N_src_foundations_utility_node_ts["node.ts"] {
+class N_src_backend_core_foundation_utility_node_ts["node.ts"] {
   <<module>>
   +sha256()
 }
@@ -153,7 +153,7 @@ class N_src_foundations_utility_node_ts["node.ts"] {
 
 ```mermaid
 classDiagram
-class N_src_foundations_utility_strings_ts["strings.ts"] {
+class N_src_backend_core_foundation_utility_strings_ts["strings.ts"] {
   <<module>>
   +redactLiteral()
 }
@@ -161,21 +161,21 @@ class N_src_foundations_utility_strings_ts["strings.ts"] {
 
 ```mermaid
 classDiagram
-class N_src_foundations_utility_strings_ts["strings.ts"] {
+class N_src_backend_core_foundation_utility_strings_ts["strings.ts"] {
   <<module>>
 }
-class N_src_foundations_utility_strings_ts_LineFramePolicy["LineFramePolicy"] {
+class N_src_backend_core_foundation_utility_strings_ts_LineFramePolicy["LineFramePolicy"] {
   <<interface>>
   +checkLine
   +checkRemainder
 }
-N_src_foundations_utility_strings_ts ..> N_src_foundations_utility_strings_ts_LineFramePolicy : 声明
-class N_src_foundations_utility_strings_ts_LineFramer["LineFramer"] {
+N_src_backend_core_foundation_utility_strings_ts ..> N_src_backend_core_foundation_utility_strings_ts_LineFramePolicy : 声明
+class N_src_backend_core_foundation_utility_strings_ts_LineFramer["LineFramer"] {
   +push()
   -policy
   -remainder
 }
-N_src_foundations_utility_strings_ts ..> N_src_foundations_utility_strings_ts_LineFramer : 声明
+N_src_backend_core_foundation_utility_strings_ts ..> N_src_backend_core_foundation_utility_strings_ts_LineFramer : 声明
 ```
 
 
@@ -183,36 +183,36 @@ N_src_foundations_utility_strings_ts ..> N_src_foundations_utility_strings_ts_Li
 
 ```mermaid
 classDiagram
-class N_src_foundations_utility_index_ts["index.ts"] {
+class N_src_backend_core_foundation_utility_index_ts["index.ts"] {
   <<module>>
 }
-class N_src_foundations_utility_json_ts["json.ts"] {
+class N_src_backend_core_foundation_utility_json_ts["json.ts"] {
   <<module>>
 }
-class N_src_foundations_utility_async_ts["async.ts"] {
+class N_src_backend_core_foundation_utility_async_ts["async.ts"] {
   <<module>>
 }
-class N_src_foundations_utility_bytes_ts["bytes.ts"] {
+class N_src_backend_core_foundation_utility_bytes_ts["bytes.ts"] {
   <<module>>
 }
-class N_src_foundations_utility_strings_ts["strings.ts"] {
+class N_src_backend_core_foundation_utility_strings_ts["strings.ts"] {
   <<module>>
 }
-N_src_foundations_utility_index_ts ..> N_src_foundations_utility_json_ts : 导入依赖
-N_src_foundations_utility_index_ts ..> N_src_foundations_utility_async_ts : 导入依赖
-N_src_foundations_utility_index_ts ..> N_src_foundations_utility_bytes_ts : 导入依赖
-N_src_foundations_utility_index_ts ..> N_src_foundations_utility_strings_ts : 导入依赖
+N_src_backend_core_foundation_utility_index_ts ..> N_src_backend_core_foundation_utility_json_ts : 导入依赖
+N_src_backend_core_foundation_utility_index_ts ..> N_src_backend_core_foundation_utility_async_ts : 导入依赖
+N_src_backend_core_foundation_utility_index_ts ..> N_src_backend_core_foundation_utility_bytes_ts : 导入依赖
+N_src_backend_core_foundation_utility_index_ts ..> N_src_backend_core_foundation_utility_strings_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_foundations_utility_index_ts["index.ts"] {
+class N_src_backend_core_foundation_utility_index_ts["index.ts"] {
   <<module>>
 }
-class N_src_foundations_utility_graphs_ts["graphs.ts"] {
+class N_src_backend_core_foundation_utility_graphs_ts["graphs.ts"] {
   <<module>>
 }
-N_src_foundations_utility_index_ts ..> N_src_foundations_utility_graphs_ts : 导入依赖
+N_src_backend_core_foundation_utility_index_ts ..> N_src_backend_core_foundation_utility_graphs_ts : 导入依赖
 ```
 
 
@@ -229,6 +229,8 @@ N_src_foundations_utility_index_ts ..> N_src_foundations_utility_graphs_ts : 导
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 通用算法与数据结构
+
+本目录归档于后端 core/foundation，但保持独立逻辑基础库：不导入父目录的 errors、identity、paths、json 或 serialization；业务适配单向组合本库。目录位置不赋予任何业务依赖权。
 
 本模块提供领域无关的数据处理算法、传入字节流的有界消费及实例内执行结构，不依赖 Core、Main、Scheduler、Bridge、Frontend 或其他 foundations 能力。工具函数与数据结构按数据类别和问题种类内聚组织，具名导出，不采用一函数一文件，也不建立万能 Utility 类、全局实例或服务定位器。不发起文件/网络访问，不拥有平台进程、权限和业务事务；流消费者只接管调用者传入流的 reader。
 

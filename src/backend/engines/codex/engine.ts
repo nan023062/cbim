@@ -7,7 +7,7 @@
  * 职责边界：原生线程 ID 来自服务端实际回执，首次绑定后固定；异常和取消也在进程排空后补登记真实文件，故障不重放操作。
  * Codex EXE 与宿主 Pi 工具库分别接收固定包，保持账号/原生历史目录及原 RPC 进程收尾。
  */
-import {redactLiteral} from '../../../foundations/utility';
+import {redactLiteral} from '../../core/foundation/utility';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {AgentEngine,EngineContext,EngineEvent} from '../../core/execution/types';

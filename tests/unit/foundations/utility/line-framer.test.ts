@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {LineFramer} from '../../../../src/foundations/utility';
+import {LineFramer} from '../../../../src/backend/core/foundation/utility';
 
 it('任意分块仅按 LF 交付，保留 CR、空白和 Unicode 分隔符，不交付 EOF 尾部',()=>{
   const lines:string[]=[],tails:string[]=[],frames=new LineFramer({checkLine:()=>{},checkRemainder:text=>{tails.push(text)}});

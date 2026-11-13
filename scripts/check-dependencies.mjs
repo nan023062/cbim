@@ -22,7 +22,8 @@ const layers = {
   'bridge/preload':['bridge/preload','bridge/contracts'],
   frontend:['frontend','bridge/contracts'],
 };
-const layerOf = file => file.startsWith('src/foundations/') ? 'foundations' : file.startsWith('src/frontend/') ? 'frontend' : file.split('/').slice(1,3).join('/');
+// foundations 是逻辑基础层；物理合并进 Core 不授予其业务依赖，也不扩大 Updater/引擎的访问权。
+const layerOf = file => /^src\/backend\/core\/foundation\/(utility|files|web)\//.test(file) ? 'foundations' : file.startsWith('src/frontend/') ? 'frontend' : file.split('/').slice(1,3).join('/');
 
 // 已迁移的查询边界按真实职责约束，而非把整个 core 的同层引用视为自由访问。
 // 精确文件是公开入口；以 / 结尾的路径表示已核实的完整边界（Foundation 不认识业务）。
@@ -33,18 +34,18 @@ const teamView='src/backend/core/knowledge/read-models/team.ts';
 const businessView='src/backend/core/knowledge/read-models/workspace.ts';
 const projectRoot='src/backend/core/workspace/project-root.ts';
 // utility 通用入口只能组合环境无关实现，Node 算法必须显式选用独立入口。
-const utilityPortable=['src/foundations/utility/index.ts','src/foundations/utility/json.ts','src/foundations/utility/async.ts','src/foundations/utility/strings.ts','src/foundations/utility/bytes.ts','src/foundations/utility/graphs.ts'];
+const utilityPortable=['src/backend/core/foundation/utility/index.ts','src/backend/core/foundation/utility/json.ts','src/backend/core/foundation/utility/async.ts','src/backend/core/foundation/utility/strings.ts','src/backend/core/foundation/utility/bytes.ts','src/backend/core/foundation/utility/graphs.ts'];
 const moduleBoundaries=[
   // 前端基础库仅在前端域内沉淀，不反向依赖页面、通信契约或后端基础库。
   {sources:['src/frontend/foundations/'],allow:['src/frontend/foundations/']},
   {sources:utilityPortable,allow:utilityPortable},
   // 引擎只组合可移植算法，不借此接入 files/web、平台适配或 Node 私有实现。
-  {sources:['src/backend/engines/'],allow:['src/backend/engines/','src/backend/core/','src/foundations/utility/index.ts']},
+  {sources:['src/backend/engines/'],allow:['src/backend/engines/','src/backend/core/','src/backend/core/foundation/utility/index.ts']},
   // 更新子系统仅复用环境无关的数据消费入口，不因此取得 Main 服务或其他基础方案的依赖权。
-  {sources:['src/backend/updater/'],allow:['src/backend/updater/','src/bridge/contracts/','src/foundations/utility/index.ts']},
+  {sources:['src/backend/updater/'],allow:['src/backend/updater/','src/bridge/contracts/','src/backend/core/foundation/utility/index.ts']},
   {sources:['src/frontend/execution-view/'],allow:['src/frontend/execution-view/','src/frontend/components/','src/bridge/contracts/']},
   {sources:['src/frontend/tasks/'],allow:['src/frontend/tasks/','src/frontend/execution-view/','src/frontend/components/','src/frontend/foundations/utility/index.ts','src/bridge/contracts/']},
-  {sources:[foundation],allow:[foundation,'src/foundations/utility/index.ts','src/foundations/utility/node.ts']},
+  {sources:[foundation],allow:[foundation,'src/backend/core/foundation/utility/index.ts','src/backend/core/foundation/utility/node.ts']},
   {sources:[knowledgeTypes],allow:[]},
   {sources:[knowledgeSnapshot],allow:[knowledgeTypes,foundation]},
   {sources:[teamView],allow:[knowledgeTypes,knowledgeSnapshot,foundation]},
@@ -52,7 +53,7 @@ const moduleBoundaries=[
   {sources:[businessView],allow:[knowledgeTypes,knowledgeSnapshot,projectRoot,foundation]},
   {sources:['src/backend/core/knowledge/knowledge-queries.ts'],allow:['src/backend/core/knowledge/read-models/index.ts',knowledgeTypes,foundation]},
   // 文件索引只实现稳定存储契约；工作区身份、服务和日志读取由 workspace 装配。
-  {sources:['src/backend/main/history/file-store.ts'],allow:[foundation,'src/foundations/files/index.ts','src/backend/core/team/session-history-storage.ts']},
+  {sources:['src/backend/main/history/file-store.ts'],allow:[foundation,'src/backend/core/foundation/files/index.ts','src/backend/core/team/session-history-storage.ts']},
   {sources:['src/backend/core/budget/model-request-budget-storage.ts'],allow:['src/backend/core/budget/scope-budget.ts','src/backend/core/budget/model-request-budget.ts']},
   {sources:['src/backend/core/execution/engine-tools.ts'],allow:[]},
   {sources:['src/backend/core/execution/index.ts'],allow:['src/backend/core/execution/types.ts','src/backend/core/execution/storage.ts','src/backend/core/execution/runtime/runtime.ts','src/backend/core/execution/member-run.ts','src/backend/core/execution/input-source.ts','src/backend/core/execution/conversation-binding.ts']},
@@ -61,9 +62,17 @@ const moduleBoundaries=[
   {sources:['tests/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
   {sources:['tests/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/backend/core/knowledge/knowledge.ts','tests/knowledge-data.ts']},
   // 调度器只组合可移植公开算法，不取得 Node、files 或 web 的访问权。
-  {sources:['src/backend/scheduler-engine/'],allow:['src/backend/scheduler-engine/','src/backend/engines/','src/backend/core/','src/foundations/utility/index.ts']},
+  {sources:['src/backend/scheduler-engine/'],allow:['src/backend/scheduler-engine/','src/backend/engines/','src/backend/core/','src/backend/core/foundation/utility/index.ts']},
 ];
-const matchesBoundary=(file,entry)=>file===entry||(entry.endsWith('/')&&file.startsWith(entry));
+const matchesBoundary=(file,entry)=>{
+  if(file===entry)return true;
+  if(!entry.endsWith('/')||!file.startsWith(entry))return false;
+  // Core 的宽入口不包含独立逻辑基础层；根层领域约定也不包含技术子库。
+  // 保留原消费者许可，防止目录合并使引擎/调度或只读契约取得 files/web/Node 能力。
+  if(entry==='src/backend/core/'&&layerOf(file)==='foundations')return false;
+  if(entry===foundation&&file.slice(entry.length).includes('/'))return false;
+  return true;
+};
 
 // 非字面量加载不能静态证明目标，只允许逐项核实的外部依赖；表达式变化必须重新审核。
 export const externalLoads = [

@@ -6,7 +6,7 @@
  */
 import {spawn,type ChildProcessWithoutNullStreams} from 'node:child_process';
 import {randomUUID} from 'node:crypto';
-import {PendingRequests,LineFramer} from '../../../foundations/utility';
+import {PendingRequests,LineFramer} from '../../core/foundation/utility';
 
 /** 要启动的程序、前置参数和环境覆盖；以 shell:false 隐藏启动并用管道通信。 */
 export interface PiCommand {command:string;args:string[];env?:NodeJS.ProcessEnv}

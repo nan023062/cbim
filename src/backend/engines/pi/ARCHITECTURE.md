@@ -106,7 +106,7 @@ class N_src_backend_engines_pi_engine_ts_external_AgentEngine["AgentEngine (外�
 N_src_backend_engines_pi_engine_ts_external_AgentEngine <|.. N_src_backend_engines_pi_engine_ts_PiEngine
 ```
 
-直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/execution/model-errors.ts](../../core/execution/model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
+直接依赖：[../../core/foundation/utility/index.ts](../../core/foundation/utility/index.ts)、[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/execution/model-errors.ts](../../core/execution/model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
 
 ### request-budget-bootstrap.ts
 
@@ -151,7 +151,7 @@ class N_src_backend_engines_pi_rpc_ts_PiRpc["PiRpc"] {
 N_src_backend_engines_pi_rpc_ts ..> N_src_backend_engines_pi_rpc_ts_PiRpc : 声明
 ```
 
-直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)。
+直接依赖：[../../core/foundation/utility/index.ts](../../core/foundation/utility/index.ts)。
 
 ### runtime-config.ts
 

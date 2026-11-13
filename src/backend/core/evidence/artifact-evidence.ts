@@ -7,7 +7,7 @@
  * 外部写按保守副作用时序使旧基线失效；GitHub 回执仍不能充当文件采集来源。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
-import {orderJsonValue} from '../../../foundations/utility';
+import {orderJsonValue} from '../foundation/utility';
 import {z} from 'zod';
 import {scopedReadInputSchema} from '../file-operations/scoped-execution';
 import {fail} from '../foundation/errors';

@@ -6,7 +6,7 @@
  * 职责边界：主角色可直接执行并引用本轮业务工具证据，成员专属 Workflow 仍只绑定成员任务；人工满足项须引用真实决定及显式接续，complete 仅是申请。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
-import {orderJsonValue} from '../../../foundations/utility';
+import {orderJsonValue} from '../foundation/utility';
 import {automaticExecutionBindingSchema,automaticExecutionBindingMatches} from '../team/automatic-execution';
 import {z} from 'zod';
 import {workflowSelectionsSchema,validateWorkflowSelections,type WorkflowSelection} from './workflow-selection';

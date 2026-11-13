@@ -21,7 +21,7 @@ import type {IpcAction,IpcResponse} from '../../../bridge/contracts/ipc-call';
 import path from 'node:path';
 import {WebSettings} from '../settings/web-settings';
 import {WebService} from '../web/web-service';
-import type {BrowserReader} from '../../../foundations/web';
+import type {BrowserReader} from '../../core/foundation/web';
 import {WorkspaceAutomations} from '../automation/service';
 import type {ControlledFileTransport} from '../platform/files/controlled-file-protocol';
 import type {ModelRequestBudgetService} from '../../scheduler-engine/budget/model-request-budget-service';
@@ -53,7 +53,7 @@ import type {AgentHistoryService} from '../../scheduler-engine/history/agent-his
 import type {WorkspaceExecutionManager} from '../../scheduler-engine/conversation/execution-manager';
 import {Catalog} from '../workspace/catalog';
 import {Paths} from '../platform/paths';
-import {exists} from '../../../foundations/files';
+import {exists} from '../../core/foundation/files';
 import {fail} from '../../core/foundation/errors';
 import {Rules} from '../../core/knowledge/knowledge';
 import {Workspace} from '../workspace/workspace';

@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {atomic,exists,readJson} from '../../../src/foundations/files';
+import {atomic,exists,readJson} from '../../../src/backend/core/foundation/files';
 import {tempDirectory} from '../../support/temp-directory';
 
 it('创建父目录，替换完整 UTF-8 JSON；读取不暗中验证业务 Schema',async()=>{

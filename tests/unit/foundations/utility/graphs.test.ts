@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {isDirectedAcyclic} from '../../../../src/foundations/utility';
+import {isDirectedAcyclic} from '../../../../src/backend/core/foundation/utility';
 describe('backend directed graph validation',()=>{
   it('空图、孤立节点、分支汇合与平行边无环',()=>{
     expect(isDirectedAcyclic([],[])).toBe(true);

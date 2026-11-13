@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
 import http from 'node:http';
 import {connect,createServer,type Socket} from 'node:net';
-import {openBrowserProxy} from '../src/foundations/web';
+import {openBrowserProxy} from '../src/backend/core/foundation/web';
 
 const publicAnswers=[{address:'93.184.216.34',family:4}];
 function get(port:number,url:string,method='GET'){

@@ -1,11 +1,11 @@
 /**
  * 作用定位：将基础网页读取方案适配到 CBIM 工具协议，并连接用户配置的 Brave 搜索。
- * 设计原因：网页抓取与渲染在 foundations 内闭合；本层只处理业务配置和不可信资料标记。
+ * 设计原因：网页抓取与渲染在 core/foundation/web 内闭合；本层只处理业务配置和不可信资料标记。
  */
 import {setTimeout as delay} from 'node:timers/promises';
 import {z} from 'zod';
 import {webFetchInput,webSearchInput,type WebToolsPort} from '../../core/connectors/web-tools';
-import {WebPageReader,PublicHttp,publicUrl,type BrowserReader} from '../../../foundations/web';
+import {WebPageReader,PublicHttp,publicUrl,type BrowserReader} from '../../core/foundation/web';
 import type {WebSettings} from '../settings/web-settings';
 const resultsSchema=z.object({web:z.object({results:z.array(z.object({title:z.string(),url:z.string(),description:z.string().optional()}))}).optional()});
 /** 应用级配置适配；页面缓存属于 WebPageReader，搜索节流只针对固定 Brave API。 */

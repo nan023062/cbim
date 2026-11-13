@@ -895,7 +895,7 @@
     },
     "foundations/files": {
       "roots": [
-        "src/foundations/files/"
+        "src/backend/core/foundation/files/"
       ],
       "tests": {
         "unit": [
@@ -907,7 +907,7 @@
     },
     "foundations/web": {
       "roots": [
-        "src/foundations/web/"
+        "src/backend/core/foundation/web/"
       ],
       "tests": {
         "unit": [
@@ -1247,7 +1247,7 @@
     },
     "foundations/utility": {
       "roots": [
-        "src/foundations/utility/"
+        "src/backend/core/foundation/utility/"
       ],
       "tests": {
         "unit": [

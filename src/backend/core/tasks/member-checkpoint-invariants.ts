@@ -5,7 +5,7 @@
  * 设计原因：不能只在工具入口防重；存储重放和普通事务须保留原负责人及流程选择，活动周期取消检查点只接受完整交接放弃校验产生的窄许可。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
-import {orderJsonValue} from '../../../foundations/utility';
+import {orderJsonValue} from '../foundation/utility';
 import {fail} from '../foundation/errors';
 import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 import type {TaskNode} from './graph-types';

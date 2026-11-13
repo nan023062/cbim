@@ -4,7 +4,7 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {internalKnowledge} from './knowledge-tool-fixture';
-import {exists} from '../src/foundations/files';
+import {exists} from '../src/backend/core/foundation/files';
 import {Application} from '../src/backend/main/assembly/application';
 
 it('初始化、应用启动与工作区重启不生成废弃入口或宿主指引',async()=>{

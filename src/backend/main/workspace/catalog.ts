@@ -8,7 +8,7 @@ import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {KernelLock} from '../platform/locking';
 import {Paths} from '../platform/paths';
-import {atomic,exists,readJson} from '../../../foundations/files';
+import {atomic,exists,readJson} from '../../core/foundation/files';
 import {hash,json} from '../../core/foundation/serialization';
 import {fail} from '../../core/foundation/errors';
 import type {Catalog as Data,WorkspaceEntry} from '../../../bridge/contracts/workspace';

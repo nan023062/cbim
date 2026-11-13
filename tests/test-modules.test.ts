@@ -8,9 +8,9 @@ const roots:string[]=[];
 afterEach(()=>{for(const root of roots.splice(0))fs.rmSync(root,{recursive:true,force:true})});
 function sample(extra:Record<string,string>={},kind='unit'){
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'cbim-test-modules-'));roots.push(root);
-  const files={'src/foundations/example/index.ts':'export const value=1;','tests/example.test.ts':"import {value} from '../src/foundations/example';",...extra};
+  const files={'src/backend/core/foundation/example/index.ts':'export const value=1;','tests/example.test.ts':"import {value} from '../src/backend/core/foundation/example';",...extra};
   for(const [file,body] of Object.entries(files)){fs.mkdirSync(path.dirname(path.join(root,file)),{recursive:true});fs.writeFileSync(path.join(root,file),body)}
-  const catalog={version:1,modules:{'foundations/example':{roots:['src/foundations/example/'],tests:{[kind]:['tests/example.test.ts']}}}};
+  const catalog={version:1,modules:{'foundations/example':{roots:['src/backend/core/foundation/example/'],tests:{[kind]:['tests/example.test.ts']}}}};
   return {root,catalog,run:()=>checkTestModules(root,{catalog,files:['tests/example.test.ts']})};
 }
 it('合法单模块单元可选中，空模块及非法测试类型不会降级为全仓执行',()=>{
@@ -26,7 +26,7 @@ it('不允许单元通过辅助文件间接加载完整应用，也禁止类型�
   }
 });
 it('拒绝跨模块单元和未登记的新测试；契约测试显式保留跨模块协作',()=>{
-  const extra={'tests/example.test.ts':"import {value} from '../src/foundations/example';import {other} from '../src/foundations/other';",'src/foundations/other/index.ts':'export const other=2;'};
+  const extra={'tests/example.test.ts':"import {value} from '../src/backend/core/foundation/example';import {other} from '../src/backend/core/foundation/other';",'src/backend/core/foundation/other/index.ts':'export const other=2;'};
   expect(sample(extra).run().errors.some(error=>error.includes('Unit crosses module'))).toBe(true);
   expect(sample(extra,'contract').run().ok).toBe(true);
   const f=sample();expect(checkTestModules(f.root,{catalog:f.catalog,files:['tests/new.test.ts']}).errors).toContain('Unregistered test: tests/new.test.ts');
@@ -36,17 +36,17 @@ it('任何测试类型都禁止直接或通过辅助模块导入其它测试套�
   expect(f.run().errors.some(error=>error.includes('Test imports another suite'))).toBe(true);
 });
 it.each([
-  "import {} from '../src/foundations/other';",
-  "import * as other from '../src/foundations/other';",
-  "import {type Other,other} from '../src/foundations/other';",
-  "import {type Other} from '../src/foundations/other';import {other} from '../src/foundations/other';",
-  "import {type Other} from '../src/foundations/other';void import('../src/foundations/other');",
+  "import {} from '../src/backend/core/foundation/other';",
+  "import * as other from '../src/backend/core/foundation/other';",
+  "import {type Other,other} from '../src/backend/core/foundation/other';",
+  "import {type Other} from '../src/backend/core/foundation/other';import {other} from '../src/backend/core/foundation/other';",
+  "import {type Other} from '../src/backend/core/foundation/other';void import('../src/backend/core/foundation/other');",
 ])('空导入、混合导入和同源同一行动态导入仍算运行时依赖：%s',declaration=>{
-  const f=sample({'tests/example.test.ts':declaration,'src/foundations/other/index.ts':'export interface Other {} export const other=1;'});
+  const f=sample({'tests/example.test.ts':declaration,'src/backend/core/foundation/other/index.ts':'export interface Other {} export const other=1;'});
   expect(f.run().errors.some(error=>error.includes('Unit crosses module'))).toBe(true);
 });
 it('删除、重复登记和未知类型均失败；类型数据不会被误判为跨模块运行实现',()=>{
-  const f=sample({'tests/example.test.ts':"import {value} from '../src/foundations/example';import {type Other} from '../src/foundations/other';",'src/foundations/other/index.ts':'export interface Other {}'});
+  const f=sample({'tests/example.test.ts':"import {value} from '../src/backend/core/foundation/example';import {type Other} from '../src/backend/core/foundation/other';",'src/backend/core/foundation/other/index.ts':'export interface Other {}'});
   expect(f.run().ok).toBe(true);
   f.catalog.modules['foundations/example'].tests.unit.push('tests/example.test.ts');expect(f.run().errors.some(error=>error.includes('Duplicate owner'))).toBe(true);
   fs.unlinkSync(path.join(f.root,'tests/example.test.ts'));expect(f.run().errors.some(error=>error.includes('Missing/invalid test'))).toBe(true);

@@ -45,7 +45,7 @@ class N_src_backend_main_resources_repository_connection_store_ts_RepositoryConn
 N_src_backend_main_resources_repository_connection_store_ts ..> N_src_backend_main_resources_repository_connection_store_ts_RepositoryConnectionStore : 声明
 ```
 
-直接依赖：[../../../foundations/files/index.ts](../../../foundations/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/connectors/repository-connection.ts](../../core/connectors/repository-connection.ts)。
+直接依赖：[../../core/foundation/files/index.ts](../../core/foundation/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/connectors/repository-connection.ts](../../core/connectors/repository-connection.ts)。
 
 ### repository-connections.ts
 
@@ -144,7 +144,7 @@ class N_src_backend_main_resources_repository_connections_ts_RepositoryConnectio
 N_src_backend_main_resources_repository_connections_ts ..> N_src_backend_main_resources_repository_connections_ts_RepositoryConnections : 声明
 ```
 
-直接依赖：[../../../foundations/files/index.ts](../../../foundations/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/connectors/definition.ts](../../core/connectors/definition.ts)、[../../core/connectors/repository-connection.ts](../../core/connectors/repository-connection.ts)、[repository-connection-store.ts](repository-connection-store.ts)、[resource-repository.ts](resource-repository.ts)、[../../core/connectors/repository-tools.ts](../../core/connectors/repository-tools.ts)。
+直接依赖：[../../core/foundation/files/index.ts](../../core/foundation/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/connectors/definition.ts](../../core/connectors/definition.ts)、[../../core/connectors/repository-connection.ts](../../core/connectors/repository-connection.ts)、[repository-connection-store.ts](repository-connection-store.ts)、[resource-repository.ts](resource-repository.ts)、[../../core/connectors/repository-tools.ts](../../core/connectors/repository-tools.ts)。
 
 ### resource-http.ts
 
@@ -178,7 +178,7 @@ class N_src_backend_main_resources_resource_http_ts_external_RepositoryStore["Re
 N_src_backend_main_resources_resource_http_ts_external_RepositoryStore <|.. N_src_backend_main_resources_resource_http_ts_RemoteRepository
 ```
 
-直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[resource-store.ts](resource-store.ts)。
+直接依赖：[../../core/foundation/utility/index.ts](../../core/foundation/utility/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[resource-store.ts](resource-store.ts)。
 
 ### resource-repository.ts
 
@@ -247,7 +247,7 @@ class N_src_backend_main_resources_resource_repository_ts_ResourceRepositories["
 N_src_backend_main_resources_resource_repository_ts ..> N_src_backend_main_resources_resource_repository_ts_ResourceRepositories : 声明
 ```
 
-直接依赖：[../platform/paths.ts](../platform/paths.ts)、[../../../foundations/files/index.ts](../../../foundations/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[resource-store.ts](resource-store.ts)、[resource-http.ts](resource-http.ts)、[../../../bridge/contracts/resources.ts](../../../bridge/contracts/resources.ts)。
+直接依赖：[../platform/paths.ts](../platform/paths.ts)、[../../core/foundation/files/index.ts](../../core/foundation/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[resource-store.ts](resource-store.ts)、[resource-http.ts](resource-http.ts)、[../../../bridge/contracts/resources.ts](../../../bridge/contracts/resources.ts)。
 
 ### resource-store.ts
 
@@ -278,7 +278,7 @@ N_src_backend_main_resources_resource_store_ts ..> N_src_backend_main_resources_
 N_src_backend_main_resources_resource_store_ts_RepositoryStore <|.. N_src_backend_main_resources_resource_store_ts_LocalRepository
 ```
 
-直接依赖：[../platform/locking.ts](../platform/locking.ts)、[../../../foundations/files/index.ts](../../../foundations/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../../bridge/contracts/resources.ts](../../../bridge/contracts/resources.ts)。
+直接依赖：[../platform/locking.ts](../platform/locking.ts)、[../../core/foundation/files/index.ts](../../core/foundation/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../../bridge/contracts/resources.ts](../../../bridge/contracts/resources.ts)。
 
 ### workspace-packages.ts
 
@@ -319,7 +319,7 @@ class N_src_backend_main_resources_workspace_packages_ts_WorkspacePackages["Work
 N_src_backend_main_resources_workspace_packages_ts ..> N_src_backend_main_resources_workspace_packages_ts_WorkspacePackages : 声明
 ```
 
-直接依赖：[../../../foundations/files/index.ts](../../../foundations/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/portable-package.ts](../../core/knowledge/portable-package.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/knowledge/planned-commit.ts](../../core/knowledge/planned-commit.ts)、[../../../bridge/contracts/resources.ts](../../../bridge/contracts/resources.ts)、[resource-repository.ts](resource-repository.ts)。
+直接依赖：[../../core/foundation/files/index.ts](../../core/foundation/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/portable-package.ts](../../core/knowledge/portable-package.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/knowledge/planned-commit.ts](../../core/knowledge/planned-commit.ts)、[../../../bridge/contracts/resources.ts](../../../bridge/contracts/resources.ts)、[resource-repository.ts](resource-repository.ts)。
 
 ### 本目录调用边界
 
@@ -380,7 +380,7 @@ RemoteRepository 组合 utility.readBoundedBytes，按 `MAX_BYTES + 65536` 限�
 
 ### 公开网页与搜索
 
-网页正文转换已迁移至独立 [foundations/web](../../../foundations/web/CONTRACT.md)，本目录不再持有 `web-content.ts`。基础读取器管理静态抓取、robots、限速、缓存和可注入浏览器兜底；业务适配见 [Main/web](../web/CONTRACT.md)。桌面可在静态失败、正文为空或动态外壳时匿名渲染一次，不把失败直接解释为需要登录。
+网页正文转换已迁移至独立 [backend/core/foundation/web](../../core/foundation/web/CONTRACT.md)，本目录不再持有 `web-content.ts`。基础读取器管理静态抓取、robots、限速、缓存和可注入浏览器兜底；业务适配见 [Main/web](../web/CONTRACT.md)。桌面可在静态失败、正文为空或动态外壳时匿名渲染一次，不把失败直接解释为需要登录。
 
 搜索仅固定 Brave API GET，密钥用 X-Subscription-Token；不自动跳转、不把密钥或服务原错误正文放入返回。每次读取当前已保存设置，关闭阻止下一次请求，已经发出的请求仍由运行取消管理。搜索结果不自动抓正文。既有聊天材料导入仍使用原协议，本工具不改写来源证据。
 

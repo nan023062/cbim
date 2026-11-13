@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest';
-import {WebPageReader,type BrowserReader,type BrowserPage,type PublicHttpResponse} from '../src/foundations/web';
+import {WebPageReader,type BrowserReader,type BrowserPage,type PublicHttpResponse} from '../src/backend/core/foundation/web';
 import {WebService} from '../src/backend/main/web/web-service';
 
 const signal=()=>new AbortController().signal;

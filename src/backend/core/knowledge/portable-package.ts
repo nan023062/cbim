@@ -5,7 +5,7 @@
  * 可复用 Team/Agent 包剔除本机 runtime 引用，避免把无效供应商身份带到另一台机器。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
-import {orderJsonValue} from '../../../foundations/utility';
+import {orderJsonValue} from '../foundation/utility';
 import path from 'node:path';
 import {z} from 'zod';
 import {hash,json} from '../foundation/serialization';

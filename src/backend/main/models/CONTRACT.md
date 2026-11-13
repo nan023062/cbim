@@ -2,7 +2,7 @@
 
 ## 通用机制与模型决策
 
-`LlmProfiles` 与 `MainAgentSettings` 分别拥有 `foundations/utility` 的 `SerialQueue`，组合 `foundations/files` 进行文件替换。串行执行与临时文件清理是基础机制；选型校验、历史快照兼容、密钥、revision 和锁内解析仍由模型服务持有。调用者能观察本次失败，后续任务继续排队；不改变现有回调期间持锁范围，不引入跨实例互斥或自动重试。
+`LlmProfiles` 与 `MainAgentSettings` 分别拥有 `backend/core/foundation/utility` 的 `SerialQueue`，组合 `backend/core/foundation/files` 进行文件替换。串行执行与临时文件清理是基础机制；选型校验、历史快照兼容、密钥、revision 和锁内解析仍由模型服务持有。调用者能观察本次失败，后续任务继续排队；不改变现有回调期间持锁范围，不引入跨实例互斥或自动重试。
 
 LlmProfiles 持有供应商目录与唯一 encryptedKey；Core 的 connectionForEngine 只做公开接口投影。configuration、withConfigurations、withRuntimeConfiguration 与 resolve 在同一选型入口核实型号、启用状态和目标引擎接口，再形成不带候选地址的单次运行快照。只有 resolve 或受控锁内 resolve 解密，选择模型或读取目录不联网。
 

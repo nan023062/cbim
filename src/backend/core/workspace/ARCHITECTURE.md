@@ -245,7 +245,7 @@ class N_src_backend_core_workspace_knowledge_source_rules_ts_KnowledgeSourceRegi
 N_src_backend_core_workspace_knowledge_source_rules_ts ..> N_src_backend_core_workspace_knowledge_source_rules_ts_KnowledgeSourceRegistry : 声明
 ```
 
-直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[knowledge-source.ts](knowledge-source.ts)。
+直接依赖：[../foundation/utility/index.ts](../foundation/utility/index.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[knowledge-source.ts](knowledge-source.ts)。
 
 ### knowledge-source.ts
 

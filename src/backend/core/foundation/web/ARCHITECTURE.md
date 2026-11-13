@@ -1,10 +1,10 @@
-# src/foundations/web 架构
+# src/backend/core/foundation/web 架构
 
 ## 目录定位
 
 独立网页读取方案：安全公网 HTTP、正文提取、robots/缓存/限速与可注入浏览器兜底；Node 公共入口不加载 Electron，具体 Chromium 适配有独立入口。
 
-本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
+本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
 ## 代码清单
 
@@ -25,7 +25,7 @@
 
 ```mermaid
 classDiagram
-class N_src_foundations_web_browser_proxy_ts["browser-proxy.ts"] {
+class N_src_backend_core_foundation_web_browser_proxy_ts["browser-proxy.ts"] {
   <<module>>
   +openBrowserProxy()
 }
@@ -33,15 +33,15 @@ class N_src_foundations_web_browser_proxy_ts["browser-proxy.ts"] {
 
 ```mermaid
 classDiagram
-class N_src_foundations_web_browser_proxy_ts["browser-proxy.ts"] {
+class N_src_backend_core_foundation_web_browser_proxy_ts["browser-proxy.ts"] {
   <<module>>
 }
-class N_src_foundations_web_browser_proxy_ts_BrowserProxyTransport["BrowserProxyTransport"] {
+class N_src_backend_core_foundation_web_browser_proxy_ts_BrowserProxyTransport["BrowserProxyTransport"] {
   <<interface>>
   +lookup()
   +connect()
 }
-N_src_foundations_web_browser_proxy_ts ..> N_src_foundations_web_browser_proxy_ts_BrowserProxyTransport : 声明
+N_src_backend_core_foundation_web_browser_proxy_ts ..> N_src_backend_core_foundation_web_browser_proxy_ts_BrowserProxyTransport : 声明
 ```
 
 直接依赖：[public-http.ts](public-http.ts)。
@@ -50,22 +50,22 @@ N_src_foundations_web_browser_proxy_ts ..> N_src_foundations_web_browser_proxy_t
 
 ```mermaid
 classDiagram
-class N_src_foundations_web_browser_reader_ts["browser-reader.ts"] {
+class N_src_backend_core_foundation_web_browser_reader_ts["browser-reader.ts"] {
   <<module>>
 }
-class N_src_foundations_web_browser_reader_ts_BrowserPage["BrowserPage"] {
+class N_src_backend_core_foundation_web_browser_reader_ts_BrowserPage["BrowserPage"] {
   <<interface>>
   +url
   +title
   +markdown
   +truncated
 }
-N_src_foundations_web_browser_reader_ts ..> N_src_foundations_web_browser_reader_ts_BrowserPage : 声明
-class N_src_foundations_web_browser_reader_ts_BrowserReader["BrowserReader"] {
+N_src_backend_core_foundation_web_browser_reader_ts ..> N_src_backend_core_foundation_web_browser_reader_ts_BrowserPage : 声明
+class N_src_backend_core_foundation_web_browser_reader_ts_BrowserReader["BrowserReader"] {
   <<interface>>
   +read()
 }
-N_src_foundations_web_browser_reader_ts ..> N_src_foundations_web_browser_reader_ts_BrowserReader : 声明
+N_src_backend_core_foundation_web_browser_reader_ts ..> N_src_backend_core_foundation_web_browser_reader_ts_BrowserReader : 声明
 ```
 
 
@@ -73,19 +73,19 @@ N_src_foundations_web_browser_reader_ts ..> N_src_foundations_web_browser_reader
 
 ```mermaid
 classDiagram
-class N_src_foundations_web_contracts_ts["contracts.ts"] {
+class N_src_backend_core_foundation_web_contracts_ts["contracts.ts"] {
   <<module>>
 }
-class N_src_foundations_web_contracts_ts_PageReadInput["PageReadInput"] {
+class N_src_backend_core_foundation_web_contracts_ts_PageReadInput["PageReadInput"] {
   <<type>>
 
 }
-N_src_foundations_web_contracts_ts ..> N_src_foundations_web_contracts_ts_PageReadInput : 声明
-class N_src_foundations_web_contracts_ts_BrowserRobotsPolicy["BrowserRobotsPolicy"] {
+N_src_backend_core_foundation_web_contracts_ts ..> N_src_backend_core_foundation_web_contracts_ts_PageReadInput : 声明
+class N_src_backend_core_foundation_web_contracts_ts_BrowserRobotsPolicy["BrowserRobotsPolicy"] {
   <<type>>
 
 }
-N_src_foundations_web_contracts_ts ..> N_src_foundations_web_contracts_ts_BrowserRobotsPolicy : 声明
+N_src_backend_core_foundation_web_contracts_ts ..> N_src_backend_core_foundation_web_contracts_ts_BrowserRobotsPolicy : 声明
 ```
 
 
@@ -93,20 +93,20 @@ N_src_foundations_web_contracts_ts ..> N_src_foundations_web_contracts_ts_Browse
 
 ```mermaid
 classDiagram
-class N_src_foundations_web_electron_browser_reader_ts["electron-browser-reader.ts"] {
+class N_src_backend_core_foundation_web_electron_browser_reader_ts["electron-browser-reader.ts"] {
   <<module>>
 }
-class N_src_foundations_web_electron_browser_reader_ts_ElectronBrowserReader["ElectronBrowserReader"] {
+class N_src_backend_core_foundation_web_electron_browser_reader_ts_ElectronBrowserReader["ElectronBrowserReader"] {
   +read()
   -transport
   -prefix
   -busy
 }
-N_src_foundations_web_electron_browser_reader_ts ..> N_src_foundations_web_electron_browser_reader_ts_ElectronBrowserReader : 声明
-class N_src_foundations_web_electron_browser_reader_ts_external_BrowserReader["BrowserReader (外部契约)"] {
+N_src_backend_core_foundation_web_electron_browser_reader_ts ..> N_src_backend_core_foundation_web_electron_browser_reader_ts_ElectronBrowserReader : 声明
+class N_src_backend_core_foundation_web_electron_browser_reader_ts_external_BrowserReader["BrowserReader (外部契约)"] {
   <<external>>
 }
-N_src_foundations_web_electron_browser_reader_ts_external_BrowserReader <|.. N_src_foundations_web_electron_browser_reader_ts_ElectronBrowserReader
+N_src_backend_core_foundation_web_electron_browser_reader_ts_external_BrowserReader <|.. N_src_backend_core_foundation_web_electron_browser_reader_ts_ElectronBrowserReader
 ```
 
 直接依赖：[public-http.ts](public-http.ts)、[browser-proxy.ts](browser-proxy.ts)、[browser-reader.ts](browser-reader.ts)。
@@ -115,7 +115,7 @@ N_src_foundations_web_electron_browser_reader_ts_external_BrowserReader <|.. N_s
 
 ```mermaid
 classDiagram
-class N_src_foundations_web_index_ts["index.ts"] {
+class N_src_backend_core_foundation_web_index_ts["index.ts"] {
   <<module>>
 }
 ```
@@ -125,10 +125,10 @@ class N_src_foundations_web_index_ts["index.ts"] {
 
 ```mermaid
 classDiagram
-class N_src_foundations_web_page_reader_ts["page-reader.ts"] {
+class N_src_backend_core_foundation_web_page_reader_ts["page-reader.ts"] {
   <<module>>
 }
-class N_src_foundations_web_page_reader_ts_WebPageReader["WebPageReader"] {
+class N_src_backend_core_foundation_web_page_reader_ts_WebPageReader["WebPageReader"] {
   +fetch()
   -client
   -timing
@@ -142,7 +142,7 @@ class N_src_foundations_web_page_reader_ts_WebPageReader["WebPageReader"] {
   -allowed()
   -fetchStatic()
 }
-N_src_foundations_web_page_reader_ts ..> N_src_foundations_web_page_reader_ts_WebPageReader : 声明
+N_src_backend_core_foundation_web_page_reader_ts ..> N_src_backend_core_foundation_web_page_reader_ts_WebPageReader : 声明
 ```
 
 直接依赖：[contracts.ts](contracts.ts)、[public-http.ts](public-http.ts)、[web-content.ts](web-content.ts)、[browser-reader.ts](browser-reader.ts)。
@@ -151,7 +151,7 @@ N_src_foundations_web_page_reader_ts ..> N_src_foundations_web_page_reader_ts_We
 
 ```mermaid
 classDiagram
-class N_src_foundations_web_public_http_ts["public-http.ts"] {
+class N_src_backend_core_foundation_web_public_http_ts["public-http.ts"] {
   <<module>>
   +publicAddress()
   +publicUrl()
@@ -160,36 +160,36 @@ class N_src_foundations_web_public_http_ts["public-http.ts"] {
 
 ```mermaid
 classDiagram
-class N_src_foundations_web_public_http_ts["public-http.ts"] {
+class N_src_backend_core_foundation_web_public_http_ts["public-http.ts"] {
   <<module>>
 }
-class N_src_foundations_web_public_http_ts_PublicHttpResponse["PublicHttpResponse"] {
+class N_src_backend_core_foundation_web_public_http_ts_PublicHttpResponse["PublicHttpResponse"] {
   <<interface>>
   +status
   +headers
   +body
 }
-N_src_foundations_web_public_http_ts ..> N_src_foundations_web_public_http_ts_PublicHttpResponse : 声明
-class N_src_foundations_web_public_http_ts_PublicHttpBytes["PublicHttpBytes"] {
+N_src_backend_core_foundation_web_public_http_ts ..> N_src_backend_core_foundation_web_public_http_ts_PublicHttpResponse : 声明
+class N_src_backend_core_foundation_web_public_http_ts_PublicHttpBytes["PublicHttpBytes"] {
   <<interface>>
   +status
   +headers
   +body
 }
-N_src_foundations_web_public_http_ts ..> N_src_foundations_web_public_http_ts_PublicHttpBytes : 声明
-class N_src_foundations_web_public_http_ts_PublicHttpTransport["PublicHttpTransport"] {
+N_src_backend_core_foundation_web_public_http_ts ..> N_src_backend_core_foundation_web_public_http_ts_PublicHttpBytes : 声明
+class N_src_backend_core_foundation_web_public_http_ts_PublicHttpTransport["PublicHttpTransport"] {
   <<interface>>
   +lookup()
   +request
 }
-N_src_foundations_web_public_http_ts ..> N_src_foundations_web_public_http_ts_PublicHttpTransport : 声明
-class N_src_foundations_web_public_http_ts_PublicHttp["PublicHttp"] {
+N_src_backend_core_foundation_web_public_http_ts ..> N_src_backend_core_foundation_web_public_http_ts_PublicHttpTransport : 声明
+class N_src_backend_core_foundation_web_public_http_ts_PublicHttp["PublicHttp"] {
   +read()
   +readBytes()
   -transport
   -userAgent
 }
-N_src_foundations_web_public_http_ts ..> N_src_foundations_web_public_http_ts_PublicHttp : 声明
+N_src_backend_core_foundation_web_public_http_ts ..> N_src_backend_core_foundation_web_public_http_ts_PublicHttp : 声明
 ```
 
 
@@ -197,7 +197,7 @@ N_src_foundations_web_public_http_ts ..> N_src_foundations_web_public_http_ts_Pu
 
 ```mermaid
 classDiagram
-class N_src_foundations_web_web_content_ts["web-content.ts"] {
+class N_src_backend_core_foundation_web_web_content_ts["web-content.ts"] {
   <<module>>
   +htmlMarkdown()
   +truncateParagraphs()
@@ -206,14 +206,14 @@ class N_src_foundations_web_web_content_ts["web-content.ts"] {
 
 ```mermaid
 classDiagram
-class N_src_foundations_web_web_content_ts["web-content.ts"] {
+class N_src_backend_core_foundation_web_web_content_ts["web-content.ts"] {
   <<module>>
 }
-class N_src_foundations_web_web_content_ts_Node["Node"] {
+class N_src_backend_core_foundation_web_web_content_ts_Node["Node"] {
   <<type>>
 
 }
-N_src_foundations_web_web_content_ts ..> N_src_foundations_web_web_content_ts_Node : 声明
+N_src_backend_core_foundation_web_web_content_ts ..> N_src_backend_core_foundation_web_web_content_ts_Node : 声明
 ```
 
 
@@ -221,83 +221,83 @@ N_src_foundations_web_web_content_ts ..> N_src_foundations_web_web_content_ts_No
 
 ```mermaid
 classDiagram
-class N_src_foundations_web_browser_proxy_ts["browser-proxy.ts"] {
+class N_src_backend_core_foundation_web_browser_proxy_ts["browser-proxy.ts"] {
   <<module>>
 }
-class N_src_foundations_web_public_http_ts["public-http.ts"] {
+class N_src_backend_core_foundation_web_public_http_ts["public-http.ts"] {
   <<module>>
 }
-class N_src_foundations_web_electron_browser_reader_ts["electron-browser-reader.ts"] {
+class N_src_backend_core_foundation_web_electron_browser_reader_ts["electron-browser-reader.ts"] {
   <<module>>
 }
-class N_src_foundations_web_browser_reader_ts["browser-reader.ts"] {
+class N_src_backend_core_foundation_web_browser_reader_ts["browser-reader.ts"] {
   <<module>>
 }
-N_src_foundations_web_browser_proxy_ts ..> N_src_foundations_web_public_http_ts : 导入依赖
-N_src_foundations_web_electron_browser_reader_ts ..> N_src_foundations_web_public_http_ts : 导入依赖
-N_src_foundations_web_electron_browser_reader_ts ..> N_src_foundations_web_browser_proxy_ts : 导入依赖
-N_src_foundations_web_electron_browser_reader_ts ..> N_src_foundations_web_browser_reader_ts : 导入依赖
+N_src_backend_core_foundation_web_browser_proxy_ts ..> N_src_backend_core_foundation_web_public_http_ts : 导入依赖
+N_src_backend_core_foundation_web_electron_browser_reader_ts ..> N_src_backend_core_foundation_web_public_http_ts : 导入依赖
+N_src_backend_core_foundation_web_electron_browser_reader_ts ..> N_src_backend_core_foundation_web_browser_proxy_ts : 导入依赖
+N_src_backend_core_foundation_web_electron_browser_reader_ts ..> N_src_backend_core_foundation_web_browser_reader_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_foundations_web_index_ts["index.ts"] {
+class N_src_backend_core_foundation_web_index_ts["index.ts"] {
   <<module>>
 }
-class N_src_foundations_web_page_reader_ts["page-reader.ts"] {
+class N_src_backend_core_foundation_web_page_reader_ts["page-reader.ts"] {
   <<module>>
 }
-class N_src_foundations_web_public_http_ts["public-http.ts"] {
+class N_src_backend_core_foundation_web_public_http_ts["public-http.ts"] {
   <<module>>
 }
-class N_src_foundations_web_browser_proxy_ts["browser-proxy.ts"] {
+class N_src_backend_core_foundation_web_browser_proxy_ts["browser-proxy.ts"] {
   <<module>>
 }
-class N_src_foundations_web_web_content_ts["web-content.ts"] {
+class N_src_backend_core_foundation_web_web_content_ts["web-content.ts"] {
   <<module>>
 }
-N_src_foundations_web_index_ts ..> N_src_foundations_web_page_reader_ts : 导入依赖
-N_src_foundations_web_index_ts ..> N_src_foundations_web_public_http_ts : 导入依赖
-N_src_foundations_web_index_ts ..> N_src_foundations_web_browser_proxy_ts : 导入依赖
-N_src_foundations_web_index_ts ..> N_src_foundations_web_web_content_ts : 导入依赖
+N_src_backend_core_foundation_web_index_ts ..> N_src_backend_core_foundation_web_page_reader_ts : 导入依赖
+N_src_backend_core_foundation_web_index_ts ..> N_src_backend_core_foundation_web_public_http_ts : 导入依赖
+N_src_backend_core_foundation_web_index_ts ..> N_src_backend_core_foundation_web_browser_proxy_ts : 导入依赖
+N_src_backend_core_foundation_web_index_ts ..> N_src_backend_core_foundation_web_web_content_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_foundations_web_index_ts["index.ts"] {
+class N_src_backend_core_foundation_web_index_ts["index.ts"] {
   <<module>>
 }
-class N_src_foundations_web_browser_reader_ts["browser-reader.ts"] {
+class N_src_backend_core_foundation_web_browser_reader_ts["browser-reader.ts"] {
   <<module>>
 }
-class N_src_foundations_web_contracts_ts["contracts.ts"] {
+class N_src_backend_core_foundation_web_contracts_ts["contracts.ts"] {
   <<module>>
 }
-class N_src_foundations_web_page_reader_ts["page-reader.ts"] {
+class N_src_backend_core_foundation_web_page_reader_ts["page-reader.ts"] {
   <<module>>
 }
-class N_src_foundations_web_public_http_ts["public-http.ts"] {
+class N_src_backend_core_foundation_web_public_http_ts["public-http.ts"] {
   <<module>>
 }
-N_src_foundations_web_index_ts ..> N_src_foundations_web_browser_reader_ts : 导入依赖
-N_src_foundations_web_index_ts ..> N_src_foundations_web_contracts_ts : 导入依赖
-N_src_foundations_web_page_reader_ts ..> N_src_foundations_web_contracts_ts : 导入依赖
-N_src_foundations_web_page_reader_ts ..> N_src_foundations_web_public_http_ts : 导入依赖
+N_src_backend_core_foundation_web_index_ts ..> N_src_backend_core_foundation_web_browser_reader_ts : 导入依赖
+N_src_backend_core_foundation_web_index_ts ..> N_src_backend_core_foundation_web_contracts_ts : 导入依赖
+N_src_backend_core_foundation_web_page_reader_ts ..> N_src_backend_core_foundation_web_contracts_ts : 导入依赖
+N_src_backend_core_foundation_web_page_reader_ts ..> N_src_backend_core_foundation_web_public_http_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_foundations_web_page_reader_ts["page-reader.ts"] {
+class N_src_backend_core_foundation_web_page_reader_ts["page-reader.ts"] {
   <<module>>
 }
-class N_src_foundations_web_web_content_ts["web-content.ts"] {
+class N_src_backend_core_foundation_web_web_content_ts["web-content.ts"] {
   <<module>>
 }
-class N_src_foundations_web_browser_reader_ts["browser-reader.ts"] {
+class N_src_backend_core_foundation_web_browser_reader_ts["browser-reader.ts"] {
   <<module>>
 }
-N_src_foundations_web_page_reader_ts ..> N_src_foundations_web_web_content_ts : 导入依赖
-N_src_foundations_web_page_reader_ts ..> N_src_foundations_web_browser_reader_ts : 导入依赖
+N_src_backend_core_foundation_web_page_reader_ts ..> N_src_backend_core_foundation_web_web_content_ts : 导入依赖
+N_src_backend_core_foundation_web_page_reader_ts ..> N_src_backend_core_foundation_web_browser_reader_ts : 导入依赖
 ```
 
 
@@ -314,6 +314,8 @@ N_src_foundations_web_page_reader_ts ..> N_src_foundations_web_browser_reader_ts
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 网页基础能力
+
+本目录归档于后端 core/foundation，仍是独立逻辑基础库；父目录领域约定、Core 业务和上层服务都不能成为它的依赖。物理合并不改变 HTTP、浏览器及入口隔离。
 
 ## 边界与入口
 

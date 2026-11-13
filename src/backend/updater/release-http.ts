@@ -2,7 +2,7 @@
  * 作用定位：更新子系统读取公开 Release 列表的独立 HTTP 边界。
  * 设计原因：不复用运行时反馈服务或凭据；地址、GET、期限及字节上限由更新模块决定，仅组合 utility 的流消费机制。
  */
-import {readBoundedBytes,ByteLimitError} from '../../foundations/utility';
+import {readBoundedBytes,ByteLimitError} from '../core/foundation/utility';
 export type ReleaseRequest=(endpoint:string,options:{method:'GET';signal:AbortSignal})=>Promise<{status:number;data:unknown}>;
 /** 只接受本产品的公开 Release 列表；不会发送 OAuth Token、请求正文或跟随重定向。 */
 export const releaseRequest:ReleaseRequest=async(endpoint,options)=>{

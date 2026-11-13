@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest';
 import http from 'node:http';
-import {PublicHttp,publicUrl,publicAddress,htmlMarkdown,truncateParagraphs,type PublicHttpTransport} from '../src/foundations/web';
+import {PublicHttp,publicUrl,publicAddress,htmlMarkdown,truncateParagraphs,type PublicHttpTransport} from '../src/backend/core/foundation/web';
 const signal=()=>new AbortController().signal;
 
 it.each(['http://127.0.0.1','http://2130706433','http://0x7f000001','http://[::1]','http://[::ffff:127.0.0.1]','http://169.254.169.254/latest','http://10.0.0.1','http://100.64.0.1','http://192.168.1.1','http://172.31.1.1','http://[fc00::1]','http://localhost','file:///C:/secret','https://user:pass@example.com','http://example.com:8080'])('禁止 SSRF 地址 %s',value=>expect(()=>publicUrl(value)).toThrow());

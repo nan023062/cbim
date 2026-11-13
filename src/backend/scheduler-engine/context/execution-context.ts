@@ -6,7 +6,7 @@
  * 职责边界：只读知识与应用内置规范，不运行成员、不写任务图；旧真人维护字段只兼容历史，岗位责任和指引正文不能扩大工具权限。
  * 读取边界：冻结模块与正文时只消费 knowledge/read-models 的公开读取能力，不依赖领域模型的私有文件。
  */
-import {orderJsonValue} from '../../../foundations/utility';
+import {orderJsonValue} from '../../core/foundation/utility';
 import {resolveExecutionModules} from './automatic-context';
 import {hash} from '../../core/foundation/serialization';
 import {fail} from '../../core/foundation/errors';

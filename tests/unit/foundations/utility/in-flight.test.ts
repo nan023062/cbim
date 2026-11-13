@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {InFlightOperations} from '../../../../src/foundations/utility';
+import {InFlightOperations} from '../../../../src/backend/core/foundation/utility';
 
 function deferred<T>(){let resolve!:(value:T)=>void,reject!:(reason:unknown)=>void;const promise=new Promise<T>((yes,no)=>{resolve=yes;reject=no});return {promise,resolve,reject}}
 it('按 Promise 身份去重，成功/失败保持原值并自动移除，实例相互隔离',async()=>{

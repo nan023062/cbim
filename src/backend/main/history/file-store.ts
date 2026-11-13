@@ -7,7 +7,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {hash} from '../../core/foundation/serialization';
-import {atomic} from '../../../foundations/files';
+import {atomic} from '../../core/foundation/files';
 import {checkedAgentHistoryRecord,type AgentHistoryRecord,type AgentHistoryStore} from '../../core/team/session-history-storage';
 
 /** 文件只包含派生摘要；canonical 日志才是执行事实来源，损坏条目单独报告并等待回补。 */

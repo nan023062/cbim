@@ -7,7 +7,7 @@
  * 设计原因：原生内置工具关闭，每次调用均以 thread/turn/call 身份核对、先结算预算、再授权、保存结果后回包。
  * 机制边界：utility 仅跟踪在途 Promise；停止接单、取消、物理退出核实与占用释放仍由本模块决定。
  */
-import {InFlightOperations} from '../../../foundations/utility';
+import {InFlightOperations} from '../../core/foundation/utility';
 import {toolFailureResult,toolReturnedResult} from '../../core/tools/outcome';
 import type {EngineContext} from '../../core/execution/types';
 import {nativeToolsDisabled} from '../../core/execution/engine-tools';

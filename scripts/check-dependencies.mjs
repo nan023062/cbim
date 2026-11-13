@@ -12,16 +12,17 @@ const slash = value => value.replaceAll('\\', '/');
 const key = value => process.platform === 'win32' ? slash(path.resolve(value)).toLowerCase() : path.resolve(value);
 // 前后端分组不能掩盖后端内部边界；类型重导出只允许通过通信契约访问 Core。
 const layers = {
+  foundations:['foundations'],
   'backend/bootstrap':['backend/bootstrap','backend/updater','backend/main'],
   'backend/core':['backend/core'],'backend/engines':['backend/engines','backend/core'],
   'backend/scheduler-engine':['backend/scheduler-engine','backend/engines','backend/core'],
-  'backend/main':['backend/main','backend/scheduler-engine','backend/core','backend/updater','bridge/contracts'],
+  'backend/main':['backend/main','backend/scheduler-engine','backend/core','backend/updater','bridge/contracts','foundations'],
   'backend/updater':['backend/updater','bridge/contracts'],
   'bridge/contracts':['bridge/contracts','backend/core'],
   'bridge/preload':['bridge/preload','bridge/contracts'],
   frontend:['frontend','bridge/contracts'],
 };
-const layerOf = file => file.startsWith('src/frontend/') ? 'frontend' : file.split('/').slice(1,3).join('/');
+const layerOf = file => file.startsWith('src/foundations/') ? 'foundations' : file.startsWith('src/frontend/') ? 'frontend' : file.split('/').slice(1,3).join('/');
 
 // 已迁移的查询边界按真实职责约束，而非把整个 core 的同层引用视为自由访问。
 // 精确文件是公开入口；以 / 结尾的路径表示已核实的完整边界（Foundation 不认识业务）。

@@ -1,7 +1,7 @@
 /**
  * 目录归属：backend/main/assembly；应用与执行服务装配。
 
- * 公开网页服务由应用共用缓存与限速；搜索配置仅桌面保存，加密凭据不进入工具输入。
+ * 公开网页服务由应用共用缓存与限速；桌面注入匿名浏览器兜底，Node 消费者仍可独立使用静态服务。
  * 自动化随当前工作区唯一装配；退役先取消调度准备，再排空协作/执行，持久定义不恢复历史模型。
  * 隔离资源服务随工作区实例创建；成员排空后等待原清理日志，未确认隔离退出时应用可再次尝试原关闭。
  * 受控文件边界：Electron 显式注入 utility 传输，普通 Node 不直接写；关闭先确认原文件 child 退出，随后才关闭共享 Store 和工作区锁。
@@ -21,6 +21,7 @@ import type {IpcAction,IpcResponse} from '../../../bridge/contracts/ipc-call';
 import path from 'node:path';
 import {WebSettings} from '../settings/web-settings';
 import {WebService} from '../web/web-service';
+import type {BrowserReader} from '../../../foundations/web';
 import {WorkspaceAutomations} from '../automation/service';
 import type {ControlledFileTransport} from '../platform/files/controlled-file-protocol';
 import type {ModelRequestBudgetService} from '../../scheduler-engine/budget/model-request-budget-service';
@@ -134,7 +135,7 @@ export class Application implements ApplicationServices {
   private stopping=false;private shutdownPromise?:Promise<void>;
   /** IPC 新增工作区前检查关停状态；只暴露读取，不允许路由修改生命周期。 */
   get isStopping(){return this.stopping}
-  constructor(readonly paths:Paths,designRoot:string,secretCipher?:SecretCipher,private readonly platform:{controlledFiles?:ControlledFileTransport;engineRuntimes?:EngineRuntimeResolver}={}) {this.webSettings=new WebSettings(path.join(paths.userRoot,'web-search.json'),secretCipher);this.web=new WebService(this.webSettings);this.models=new LlmProfiles(path.join(paths.userRoot,'llm.json'),secretCipher);this.mainAgentSettings=new MainAgentSettings(id=>path.join(paths.project(id),'main-agent.json'),identity=>{this.assertServiceAvailable(identity.workspaceId);this.workspace(identity.workspaceId).assert(identity)},this.models);this.githubFeedback=new GitHubFeedback(path.join(paths.userRoot,'github-feedback'),secretCipher);this.admissionSettings=new AdmissionSettings(path.join(paths.userRoot,'run-admission.json'),this.admission);this.budgetSettings=new BudgetSettings(path.join(paths.userRoot,'scope-budget.json'));this.catalog=new Catalog(paths);this.rules=new Rules(designRoot);this.resources=new ResourceRepositories(paths);this.repositoryConnections=new RepositoryConnections(path.join(paths.userRoot,'repository-connections.json'),this.resources,id=>{this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();return ws});this.chatMaterials=new ChatMaterialImports(id=>{this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();return ws},this.repositoryConnections)}
+  constructor(readonly paths:Paths,designRoot:string,secretCipher?:SecretCipher,private readonly platform:{controlledFiles?:ControlledFileTransport;engineRuntimes?:EngineRuntimeResolver;webBrowser?:BrowserReader}={}) {this.webSettings=new WebSettings(path.join(paths.userRoot,'web-search.json'),secretCipher);this.web=new WebService(this.webSettings,undefined,undefined,platform.webBrowser);this.models=new LlmProfiles(path.join(paths.userRoot,'llm.json'),secretCipher);this.mainAgentSettings=new MainAgentSettings(id=>path.join(paths.project(id),'main-agent.json'),identity=>{this.assertServiceAvailable(identity.workspaceId);this.workspace(identity.workspaceId).assert(identity)},this.models);this.githubFeedback=new GitHubFeedback(path.join(paths.userRoot,'github-feedback'),secretCipher);this.admissionSettings=new AdmissionSettings(path.join(paths.userRoot,'run-admission.json'),this.admission);this.budgetSettings=new BudgetSettings(path.join(paths.userRoot,'scope-budget.json'));this.catalog=new Catalog(paths);this.rules=new Rules(designRoot);this.resources=new ResourceRepositories(paths);this.repositoryConnections=new RepositoryConnections(path.join(paths.userRoot,'repository-connections.json'),this.resources,id=>{this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();return ws});this.chatMaterials=new ChatMaterialImports(id=>{this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();return ws},this.repositoryConnections)}
   /** 桌面可先初始化基础配置并显示窗口；默认仍恢复全部工作区，CLI/现有消费者行为不变。 */
   async init(options:{restore?:boolean}={}){await this.webSettings.init();await this.catalog.init();await this.rules.init();await this.resources.init();await this.repositoryConnections.init();await this.admissionSettings.init();await this.budgetSettings.init();if(options.restore!==false)await this.restore()}
   async list(){const data=await this.catalog.read();return {...data,warning:this.catalog.warning,entries:await Promise.all(data.entries.map(async e=>this.running.get(e.id)?.view()||{...e,state:await exists(e.path)?'registered':'missing',tasks:[]}))}}

@@ -2,6 +2,12 @@
 // files 是成员归属，public 是允许跨边界读取的入口；新增私有实现必须登记，不能靠换目录绕过。
 export const logicalBoundaries = [
   {
+    id:'web-foundations',
+    files:['src/foundations/web/index.ts','src/foundations/web/contracts.ts','src/foundations/web/browser-reader.ts','src/foundations/web/page-reader.ts','src/foundations/web/public-http.ts','src/foundations/web/web-content.ts','src/foundations/web/electron-browser-reader.ts'],
+    public:['src/foundations/web/index.ts','src/foundations/web/electron-browser-reader.ts'],
+    dependencies:[],external:['zod','parse5','robots-parser','ipaddr.js','electron','node:http','node:https','node:dns/promises','node:net','node:zlib','node:timers/promises','node:crypto'],
+  },
+  {
     id:'pure-foundation',
     files:['src/backend/core/foundation/errors.ts','src/backend/core/foundation/json.ts','src/backend/core/foundation/serialization.ts'],
     public:['src/backend/core/foundation/errors.ts','src/backend/core/foundation/json.ts','src/backend/core/foundation/serialization.ts'],

@@ -1,3 +1,16 @@
+## 2026-11-13：网页浏览器兜底与独立 foundations 基础类库
+
+- 来源：用户明确要求静态抓取失败/正文为空时改用真实浏览器，并补充 foundations 不依赖 Core 或任何其他项目模块。已查询开放 Issues（当时仅 #65），回读已关闭 [#39](https://github.com/nan023062/cbim/issues/39) 的原网页能力与讨论；本步是用户直接授权的增量，不重开旧工单、不创建或回填新 Issue。分析起点 `ae6deee9`，期间独立发布工作合并至 `bff94f9b`；既有任务历史折叠前端改动保留，不纳入本提交。
+- S1–S4 / C3 / L3：问题是 Main/web 同时持有通用读取、产品配置和新增浏览器实现。按已确认边界将网页方案迁入 `src/foundations/web`，通过 Node 公共入口和独立 Electron 入口消费；其项目内依赖仅限自身。没有批量迁移其他工具或 Core/foundation，具体变化频率仍未知，不以目录位置证明所有能力已稳定。
+- S5：WebPageReader 拥有静态读取、robots/域名节流、5 分钟缓存与一次兜底决策；PublicHttp 复用 DNS 固定传输并支持有界二进制资源；ElectronBrowserReader 使用匿名内存会话及真实 Chromium，读取脚本生成 DOM 和跨域 iframe。WebService 保留 Core 协议、来源不可信标记和 Brave 设置/查询；桌面 Application 注入 BrowserReader，Node 消费者不加载 Electron。静态成功优先返回，空正文、可恢复失败、iframe/短脚本外壳最多渲染一次；取消、SSRF、robots、限流、挑战及体积/跳转上限不绕过。主窗口关闭仍走 before-quit 排空，不因隐藏读取窗口而延迟退出。
+- 安全/生命周期：所有 HTTP 资源在协议传输入口核 robots，文档额外节流；浏览器原生网络设不可达代理，真实出网只经校验全部 DNS 并固定地址的 PublicHttp。禁止写请求、透传 Cookie/认证头、下载、弹窗和权限请求；有并发、时间、框架、请求数量及字节上限。取消关闭窗口并清理匿名会话，缓存不接受迟到结果。不存在系统浏览器登录态接入或人工登录能力。
+- S6 选取依据：读取/搜索消费者与 HTML/HTTP 迁移由 web-service 覆盖；新增兜底失败、取消、缓存、robots 等由 web-browser-fallback 覆盖；真实 Pi 主工具回传由 web-tools-pi 覆盖；新增基础层和公开入口约束由 dependencies/layer-boundaries 覆盖。实际命令 `pnpm exec vitest run tests/web-service.test.ts tests/web-browser-fallback.test.ts tests/web-tools-pi.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts`：5 文件、78 项通过。`pnpm typecheck` 与 `pnpm check:architecture` 通过：89 目录、701 源码/样式、1385 扫描文件、7013 依赖、0 环/违规。
+- 真实验证：`node scripts/web-browser-smoke.mjs --live` 的 9 项 Chromium 夹具检查通过，覆盖动态跨域 iframe、登录/404 区分、iframe robots 在传输前拒绝、禁止写请求/凭据/弹窗、隐藏密码框、取消、私网拒绝、槽位清理复用以及静态空正文→真实浏览器完整链路。证据在 `test-results/web-browser-smoke/report.json`。初轮发现 Electron protocol.handle 不经过预期的 webRequest 回调，已把授权迁到真实协议传输前；之后发现拒绝原因被合成 502 覆盖，已保留首个真实原因，并加真实回归。类型检查发现测试类型声明不完整，已修正，未降低断言。
+- 实站边界：Saltline 链接 `https://claude.ai/artifact/BGY1SztrAYcJQHSsnHHGmp` 在新路径下仍被资源 robots 规则拒绝。再以 `node scripts/web-browser-smoke.mjs --live-only` 沿生产 WebService 配置核实，拒绝发生在 `/api/frame/...` 与 `/api/account`，记录于 `test-results/web-browser-smoke/live.json`；未报告已解决该站点、未解释成未公开/必须登录。浏览器读取可见文字，不识别 canvas 像素，也不保证任意延迟脚本全部执行。Brave 付费账号、全量回归、完整桌面退出/打包、安装升级、合并和发布本轮未运行。
+- 资料/边界：同步相关文件头、基础类库契约和类图、Main/assembly/resources/web、Scheduler 工具契约及上层导航；三份 architecture-maintenance 入口同步 foundations 单向依赖。依赖检查新增基础层与能力私有入口限制，并用包括类型引用的反向依赖样本验证，不增加循环豁免。旧 public-http/web-content 路径已清理，仓库源码和测试消费者已迁移；不涉及持久化格式或工具 schema 变化。
+- S7 / 四问：Q1 保留公开工具协议、Brave 凭据边界及公网/取消不变量；Q2 将网页机制和浏览器平台变化限制在基础网页模块，业务配置留在 Main；Q3 上述定向用例覆盖本次实际消费者和新增网络边界，不重复全仓回归；Q4 从 foundations/web/contracts、browser-reader、page-reader 到 electron-browser-reader，再看 Main/web 与桌面装配。Q5 无新增候选规则，foundations 的独立性为用户本轮明确要求。完整 review 以本提交 diff 为准，尚无人工作代码 review、推送、合并或发布回执。
+- 平台依据：[Electron protocol](https://www.electronjs.org/docs/latest/api/protocol)、[WebFrameMain](https://www.electronjs.org/docs/latest/api/web-frame-main)、[Session](https://www.electronjs.org/docs/latest/api/session)；以上平台说明与本次真实 Chromium 证据分别记录，不以文档代替执行验证。
+
 ## 2026-11-13：C 0.1.15 / R4 公开升级通过与官网收尾
 
 - 来源：用户明确要求提交 PR 并发布；[产品 PR #66](https://github.com/nan023062/cbim/pull/66) 已正常合并为 `b00f6928c7e110ec204326d9cceaaf228d6ec74f`，完整树等同冻结 source `ae6deee959cec22db2daff8abc75aa90439e7825`。完整四片 CI [43386158632](https://github.com/nan023062/cbim/actions/runs/43386158632) 为 435 文件 / 2966 通过 / 0 失败 / 2 跳过；跳过均因 runner 缺真实历史 EXE，未新增 skip。

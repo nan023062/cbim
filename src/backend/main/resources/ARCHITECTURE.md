@@ -15,7 +15,6 @@
 | [resource-http.ts](resource-http.ts) | RemoteRepository 与 serveRepository：HTTP 客户端和本机仓库共享服务。 |
 | [resource-repository.ts](resource-repository.ts) | ResourceRepositories：统一三类资源的仓库选择、账号占位与共享生命周期。 |
 | [resource-store.ts](resource-store.ts) | RepositoryStore 与 LocalRepository：本地资源仓库校验、版本检查及原子更新。 |
-| [web-content.ts](web-content.ts) | 不执行脚本的 HTML 正文提取和按段落截断。 |
 | [workspace-packages.ts](workspace-packages.ts) | 把当前工作区的静态团队/业务架构发布到统一资源仓库，并提供持久化导入预览与显式提交。 |
 
 ## 架构类图
@@ -281,30 +280,6 @@ N_src_backend_main_resources_resource_store_ts_RepositoryStore <|.. N_src_backen
 
 直接依赖：[../platform/locking.ts](../platform/locking.ts)、[../../core/foundation/files.ts](../../core/foundation/files.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../../bridge/contracts/resources.ts](../../../bridge/contracts/resources.ts)。
 
-### web-content.ts
-
-```mermaid
-classDiagram
-class N_src_backend_main_resources_web_content_ts["web-content.ts"] {
-  <<module>>
-  +htmlMarkdown()
-  +truncateParagraphs()
-}
-```
-
-```mermaid
-classDiagram
-class N_src_backend_main_resources_web_content_ts["web-content.ts"] {
-  <<module>>
-}
-class N_src_backend_main_resources_web_content_ts_Node["Node"] {
-  <<type>>
-
-}
-N_src_backend_main_resources_web_content_ts ..> N_src_backend_main_resources_web_content_ts_Node : 声明
-```
-
-
 ### workspace-packages.ts
 
 ```mermaid
@@ -401,9 +376,7 @@ N_src_backend_main_resources_workspace_packages_ts ..> N_src_backend_main_resour
 
 ### 公开网页与搜索
 
-`WebService` 用 PublicHttp 抓 robots，再按 CBIMBot/0.1 逐跳核规则，最多5次跳转；robots 404/410视为无规则，其它非成功（含跳转）保守拒绝。每域默认至少1秒，遵守 crawl-delay，超过5秒等待明确限流；单次抓取整体30秒。页面缓存5分钟最多30项，robots/限速表最多1000域。缓存返回原采集时间。
-
-`web-content.ts` 通过 parse5 解析（不执行脚本），优先 article/main，去导航、脚本和表单，保留 Markdown 段落/标题/列表/链接；按段落截断，超长单段按 Unicode 截取。HTML与文本支持UTF-8；无正文、登录、挑战、4xx、5xx、网络及限流分别报告。robots跳转、非UTF-8、需要登录/脚本/验证码的网站不在本次支持范围。
+网页正文转换已迁移至独立 [foundations/web](../../../foundations/web/CONTRACT.md)，本目录不再持有 `web-content.ts`。基础读取器管理静态抓取、robots、限速、缓存和可注入浏览器兜底；业务适配见 [Main/web](../web/CONTRACT.md)。桌面可在静态失败、正文为空或动态外壳时匿名渲染一次，不把失败直接解释为需要登录。
 
 搜索仅固定 Brave API GET，密钥用 X-Subscription-Token；不自动跳转、不把密钥或服务原错误正文放入返回。每次读取当前已保存设置，关闭阻止下一次请求，已经发出的请求仍由运行取消管理。搜索结果不自动抓正文。既有聊天材料导入仍使用原协议，本工具不改写来源证据。
 

@@ -5,6 +5,16 @@ import {afterEach, expect, test} from 'vitest';
 import {auditDependencies} from '../scripts/check-dependencies.mjs';
 
 const temporary:string[]=[];
+test('foundations is independent even for type dependencies; Main consumes only public web entries',()=>{
+  const foundation='src/foundations/web/index.ts';
+  expect(audit({[foundation]:'export const value=1;', 'src/backend/main/a.ts':"import {value} from '../../foundations/web';"}).ok).toBe(true);
+  for(const target of ['backend/core','backend/main','backend/scheduler-engine','frontend','bridge/contracts']){
+    const result=audit({[foundation]:`import type {Value} from '../../${target}/a';`,[`src/${target}/a.ts`]:'export interface Value {}'});
+    expect(result.ok).toBe(false);expect(result.violations).not.toEqual([]);
+  }
+  const privateEntry=audit({'src/foundations/web/page-reader.ts':'export class WebPageReader {}','src/backend/main/a.ts':"import {WebPageReader} from '../../foundations/web/page-reader';"});
+  expect(privateEntry.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'web-foundations'}));
+});
 afterEach(()=>{for(const root of temporary.splice(0))fs.rmSync(root,{recursive:true,force:true})});
 function audit(files:Record<string,string>){
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'cbim-dependencies-'));temporary.push(root);

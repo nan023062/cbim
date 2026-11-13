@@ -510,6 +510,8 @@ N_src_backend_scheduler_engine_tools_knowledge_tools_ts ..> N_src_backend_schedu
 
 WebTools 将可信主进程端口装为 cbim_web_fetch 与 cbim_web_search，分类为 read/workspace，严格解析输入并核对输出长度、查询与条数；单次调用无自动重试。仅桌面主会话装配，未配置 Brave 时搜索返回设置提示；读取网页不需要搜索密钥。资料不提升权限。
 
+工具层仍只调用一次端口；端口内部由独立 foundations 网页方案在静态失败或内容不足时最多尝试一次已注入的匿名浏览器。取消、SSRF、robots 和限流拒绝不通过兜底绕过；失败保留两阶段原因。正文可能为浏览器可见文字，不保证获得 canvas 像素或全部异步内容。
+
 ### 知识查询与刷新分别装配
 
 `KnowledgeTools` 将只读注册表/详情交给 Core 的 `KnowledgeQueries`，将索引刷新交给 独立的 `KnowledgeRefresh.refresh`。查询门面不再拥有刷新能力；调用前的 Schema、实例身份、写授权、取消检查及调用后的唯一输出快照校验保持在原工具边界。公开工具名称、版本与恢复协议不变，不因为重构重放提交。具体依赖与事务所有者见 [知识契约](../../core/knowledge/CONTRACT.md#固定快照读取的逻辑边界与公共入口)。

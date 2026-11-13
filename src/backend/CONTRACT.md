@@ -7,6 +7,7 @@ flowchart TB
   Main[main · 应用与平台装配] --> Scheduler[scheduler-engine · 业务编排]
   Main --> Core[core · 领域规则与执行契约]
   Main --> Updater[updater · 独立更新]
+  Main --> Foundations[foundations · 独立基础类库]
   Scheduler --> Core
   Assembly[scheduler-engine/assembly · 引擎装配] --> Engines[engines · 具体引擎适配]
   Assembly --> Core
@@ -14,6 +15,8 @@ flowchart TB
 ```
 
 `Assembly` 是 `Scheduler` 的内部目录。普通编排目录和 Main 不直接引用具体引擎，Main 通过调度装配接入运行能力。Main 和 Updater 还消费 `bridge/contracts`；Bridge 只公开 Core 的契约/纯函数，前端不直接引用后端。
+
+`foundations` 位于 `src/foundations`，不是 Core 的子模块，不依赖任何其他项目模块；只使用本层、标准库及必要第三方库。当前 Main 通过网页能力公开入口消费，业务设置、工具注册和装配不下沉。见 [基础类库边界](../foundations/CONTRACT.md)。
 
 ## 按职责定位
 

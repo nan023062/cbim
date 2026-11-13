@@ -5,8 +5,10 @@ import path from 'node:path';
 import ts from 'typescript';
 
 const scope={
+  "src/foundations": "独立基础类库，承载高内聚技术解决方案；只依赖本层、标准库和必要第三方库，不依赖 Core 或任何业务模块。能力按独立契约和生命周期组织。",
+  "src/foundations/web": "独立网页读取方案：安全公网 HTTP、正文提取、robots/缓存/限速与可注入浏览器兜底；Node 公共入口不加载 Electron，具体 Chromium 适配有独立入口。",
   "src/backend/bootstrap": "固定冷壳入口：先验证同 C 的签名资源集合，再放行候选访问原 profile；独立选择日志、单实例、失败恢复及按需引擎下载由冷壳持有。计算式 main.js 装载保留可审计的源码依赖边。",
-  "src": "应用按前端视图层 frontend 与本机后端逻辑层 backend 分组，bridge 是连接两层的通信边界，不是第三个业务层。目录聚合中的 backend 与 bridge 双向箭头分别来自 main 消费契约、契约重导出 Core 公开类型，不代表文件循环。",
+  "src": "应用按前端视图层 frontend 与本机后端逻辑层 backend 分组，bridge 是通信边界；foundations 是不依赖其他项目模块的独立基础类库，由消费者单向使用。backend 与 bridge 双向箭头分别来自 main 消费契约、契约重导出 Core 公开类型，不代表文件循环。",
   "src/backend": "本机后端：core 持有领域规则和执行契约；engines 实现具体模型引擎；scheduler-engine 编排任务与装配引擎；main 管理平台、存储和应用入口；updater 独立更新。Core 不导入具体引擎或上层；目录聚合图的双向关系不等于文件循环。",
   "src/backend/core": "领域规则、存储端口和引擎无关执行机制。按预算、证据、任务、派发、知识、模型及工具职责聚合；execution/runtime 仍是执行模块内部实现，尚未解决该运行内核的依赖密度。禁止反向依赖 engines、scheduler-engine、main 或前端。",
   "src/backend/core/automation": "自动化定义、运行与执行/存储端口及纯时区日程计算，不依赖调度和桌面实现。",
@@ -56,7 +58,7 @@ const scope={
   "src/backend/main/resources": "链接器、人才和完整业务模板共用的本地/远端资源仓库。静态资料单次HTTP捕获前后核授权与共享代际，正文快照不安装执行。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。 GitHub 反馈采用独立直连服务，设备授权和原提交账本由本机管理；固定目标、跨会话去重、未知只核实，成功不回传 Issue 链接或开发进度。 本地资源库不能指向签名程序缓存，避免数据编辑入口改变受管代码。",
   "src/backend/main/run-storage": "运行日志、运行内输入和游标文件实现；按 RunStorage 等 Core 端口提供持久化，保留追加、未知和恢复语义。",
   "src/backend/main/settings": "应用设置及命名文件存储；与模型配置、派发、运行及知识持久化分开定位。",
-  "src/backend/main/web": "网页请求应用服务，封装访问与返回结果；上层通过端口调用。",
+  "src/backend/main/web": "CBIM 网页工具的业务适配，组合 foundations/web 并添加来源不可信标记；独立处理 Brave 搜索配置与节流，不持有浏览器或 HTTP 实现。",
   "src/backend/main/workspace": "本机工作区、静态编辑与受控来源协调。获取工作区锁后在唯一DispatchStore核身份、恢复知识和来源，再发布服务。岗位和负责人以同知识快照明确采纳；首次真实观察与消费者同事务保存。来源、能力、模型分别展示，不以登记回执启动实例或改写旧任务。 负责岗位和模块责任只读发现供实际主工具调用；当前配置观察与历史执行事实分开。 原知识事务适配复用现有串行 journal 核验，固定计划与旧实例只读；不提交、刷新、恢复或修剪目录。 ControlledFiles 连接原成员授权、唯一 Store、文件平台与私有备份；原not_applied与真实退出才解除运行屏障，显式补偿重新核文件身份/摘要/关闭周期，未知不重试。",
   "src/backend/scheduler-engine": "工作区调度。装配团队上下文与模型工具，协调会话、运行、用户问题和队列；只依赖自身及 Core。",
   "src/backend/scheduler-engine/admission": "运行准入的票据与运行注册，保持可信入口、占用与释放语义；与业务验收分离。",

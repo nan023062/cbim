@@ -1,5 +1,5 @@
 /**
- * 目录归属：backend/main/web；公开网页与搜索。
+ * 目录归属：foundations/web；公开网页与搜索。
  * 作用定位：仅公开 HTTP/HTTPS 的有界传输，供网页工具使用。
  * 设计原因：校验全部 DNS 结果并固定本次连接地址，阻止重绑定；调用者逐跳重新授权，传输不自动跳转或携带 Cookie。
  */
@@ -9,7 +9,8 @@ import {lookup} from 'node:dns/promises';
 import {isIP} from 'node:net';
 import {gunzipSync,inflateSync,brotliDecompressSync} from 'node:zlib';
 import ipaddr from 'ipaddr.js';
-import {fail} from '../../core/foundation/errors';
+/** 基础类库自有错误，不依赖业务层；保留 code 供调用者识别拒绝边界。 */
+function fail(code:string,message:string):never {throw Object.assign(new Error(`${code}: ${message}`),{code})}
 
 const limit=1024*1024;
 export function publicAddress(address:string):boolean {
@@ -23,15 +24,26 @@ export function publicUrl(value:string):URL {
   url.hash='';return url;
 }
 export interface PublicHttpResponse {status:number;headers:http.IncomingHttpHeaders;body:string}
+/** 浏览器资源保留二进制；仍经过同一 DNS 固定与体积边界，不把图片或脚本当 UTF-8 正文解码。 */
+export interface PublicHttpBytes {status:number;headers:http.IncomingHttpHeaders;body:Buffer}
 /** 测试端口只由可信装配提供，不属于 IPC 或模型参数。lookup 返回全部地址，request 必须遵守传入 lookup。 */
 export interface PublicHttpTransport {
   lookup(host:string):Promise<Array<{address:string;family:number}>>;
   request:typeof http.request;
 }
-/** 每个请求独立销毁连接，最多 1 MiB（压缩前后）和 15 秒；从不自动重试。 */
+/** 请求独立销毁连接，默认 1 MiB（压缩前后）和 15 秒；二进制可信入口至多 8 MiB，不自动重试。 */
 export class PublicHttp {
-  constructor(private readonly transport?:PublicHttpTransport){}
+  constructor(private readonly transport?:PublicHttpTransport,private readonly userAgent='PublicWebReader/1.0'){}
+  /** 静态网页入口保留原 1 MiB 与严格 UTF-8 语义。 */
   async read(raw:string,signal:AbortSignal,options:{headers?:Record<string,string>}={}):Promise<PublicHttpResponse>{
+    const response=await this.readBytes(raw,signal,options);
+    try{return {...response,body:new TextDecoder('utf-8',{fatal:true}).decode(response.body)}}
+    catch{throw Error('WEB_CONTENT: 响应编码无效或不受支持')}
+  }
+  /** 可信浏览器适配可提高单资源上限至 8 MiB；不接收页面的 Cookie、Authorization 或写请求。 */
+  async readBytes(raw:string,signal:AbortSignal,options:{headers?:Record<string,string>;maxBytes?:number}={}):Promise<PublicHttpBytes>{
+    if(options.maxBytes!==undefined&&(!Number.isSafeInteger(options.maxBytes)||options.maxBytes<1))throw Error('WEB_SIZE: 资源字节上限必须为正整数');
+    const byteLimit=Math.min(8*limit,Math.max(1,options.maxBytes??limit));
     const url=publicUrl(raw),host=url.hostname.replace(/^\[|\]$/g,''),deadline=AbortSignal.any([signal,AbortSignal.timeout(15000)]);
     deadline.throwIfAborted();
     const addresses=await new Promise<Array<{address:string;family:number}>>((resolve,reject)=>{
@@ -43,20 +55,20 @@ export class PublicHttp {
     if(!addresses.length||addresses.some(item=>!publicAddress(item.address)))fail('WEB_SSRF','域名解析包含非公开地址，未建立连接');
     const address=addresses[0],request=this.transport?.request??(url.protocol==='https:'?https.request:http.request);
     return new Promise((resolve,reject)=>{
-      const req=request(url,{agent:false,family:address.family,signal:deadline,headers:{'User-Agent':'CBIMBot/0.1','Accept':'text/html,text/plain,application/json','Accept-Encoding':'identity',...options.headers},lookup:(_host,_options,callback)=>callback(null,address.address,address.family)},response=>{
+      const req=request(url,{agent:false,family:address.family,signal:deadline,headers:{'User-Agent':this.userAgent,'Accept':'text/html,text/plain,application/json','Accept-Encoding':'identity',...options.headers},lookup:(_host,_options,callback)=>callback(null,address.address,address.family)},response=>{
         const chunks:Buffer[]=[];let size=0;
         response.on('error',()=>reject(Error('WEB_NETWORK: 网页响应中断')));
-        response.on('data',(chunk:Buffer)=>{size+=chunk.length;if(size>limit){req.destroy();reject(Error('WEB_SIZE: 响应超过 1 MiB'))}else chunks.push(chunk)});
+        response.on('data',(chunk:Buffer)=>{size+=chunk.length;if(size>byteLimit){req.destroy();reject(Error('WEB_SIZE: 响应超过读取上限'))}else chunks.push(chunk)});
         response.on('end',()=>{
           try{
             if(deadline.aborted)throw deadline.reason;
             let bytes=Buffer.concat(chunks);const encoding=response.headers['content-encoding'];
-            if(encoding==='gzip')bytes=gunzipSync(bytes,{maxOutputLength:limit});
-            else if(encoding==='deflate')bytes=inflateSync(bytes,{maxOutputLength:limit});
-            else if(encoding==='br')bytes=brotliDecompressSync(bytes,{maxOutputLength:limit});
+            if(encoding==='gzip')bytes=gunzipSync(bytes,{maxOutputLength:byteLimit});
+            else if(encoding==='deflate')bytes=inflateSync(bytes,{maxOutputLength:byteLimit});
+            else if(encoding==='br')bytes=brotliDecompressSync(bytes,{maxOutputLength:byteLimit});
             else if(encoding&&encoding!=='identity')throw Error('WEB_ENCODING: 不支持的内容压缩');
-            if(bytes.length>limit)throw Error('WEB_SIZE: 解压后响应超过 1 MiB');
-            resolve({status:response.statusCode??0,headers:response.headers,body:new TextDecoder('utf-8',{fatal:true}).decode(bytes)});
+            if(bytes.length>byteLimit)throw Error('WEB_SIZE: 解压后响应超过读取上限');
+            resolve({status:response.statusCode??0,headers:response.headers,body:bytes});
           }catch{reject(Error('WEB_CONTENT: 响应过大、编码无效或不受支持'))}
         });
       });

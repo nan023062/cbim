@@ -1,8 +1,8 @@
 import {expect,it,vi} from 'vitest';
 import http from 'node:http';
-import {PublicHttp,publicUrl,publicAddress,type PublicHttpTransport} from '../src/backend/main/web/public-http';
+import {PublicHttp,publicUrl,publicAddress,type PublicHttpTransport} from '../src/foundations/web';
 import {WebService} from '../src/backend/main/web/web-service';
-import {htmlMarkdown,truncateParagraphs} from '../src/backend/main/resources/web-content';
+import {htmlMarkdown,truncateParagraphs} from '../src/foundations/web';
 import {WebTools} from '../src/backend/scheduler-engine/tools/web-tools';
 
 const signal=()=>new AbortController().signal;

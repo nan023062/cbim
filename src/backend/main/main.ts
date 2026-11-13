@@ -8,6 +8,7 @@
  * 桌面更新只装配在正式 NSIS 包中；后台检查、预下载并校验，等待用户确认重启后才拒绝新请求、排空业务并安装。
  * 资源入口：由固定冷壳调用 startDesktop；所有业务入口来自同一 R，先显示窗口再按原策略恢复工作区。
  * 窗口图标从固定品牌资源读取，Forge 同源写入 EXE；保留原应用身份与卸载器名称以兼容更新。
+ * 网页读取：ready 后注入独立匿名 Chromium 适配，仅静态读取不足时创建有界后台窗口，不共享应用登录态。
  */
 import {parseIpcRequest,ipcSuccess} from '../../bridge/contracts/ipc-call';
 import {app,BrowserWindow,ipcMain,dialog,shell} from 'electron';
@@ -16,6 +17,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import {TerminalSessions} from './platform/terminal';
 import {Application} from './assembly/application';
+import {ElectronBrowserReader} from '../../foundations/web/electron-browser-reader';
 import {ChatInputs} from './materials/chat-inputs';
 import {systemSecretCipher} from './platform/secrets';
 import {Paths} from './platform/paths';
@@ -49,8 +51,10 @@ app.whenReady().then(async()=>{
   if(installed&&!runtime&&!app.requestSingleInstanceLock()){app.quit();return}
   const beforeInstall=async()=>{runtime?.stopPreparingEngines();terminals.closeAll();await application.shutdown();quitting=true};
   updates=runtime?runtime.updates(beforeInstall,installed):new DesktopUpdates(app.getVersion(),typeof release.notes==='string'?release.notes:'',installed,latestDesktopRelease,new NsisUpdateInstaller(),beforeInstall);
-  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install,runtime?[runtime.cacheRoot]:[]),path.join(resources,'design'),systemSecretCipher,{controlledFiles:createControlledFileTransport(),engineRuntimes:runtime});await application.init({restore:false});
+  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install,runtime?[runtime.cacheRoot]:[]),path.join(resources,'design'),systemSecretCipher,{controlledFiles:createControlledFileTransport(),engineRuntimes:runtime,webBrowser:new ElectronBrowserReader()});await application.init({restore:false});
   window=new BrowserWindow({width:1320,height:860,minWidth:760,minHeight:520,title:'CBIM',icon:path.join(install,'branding','cbim.png'),webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  // 后台网页窗口不应延迟主窗口退出；统一走 before-quit 的取消与排空，失败时仍保留主窗口。
+  window.on('close',event=>{if(!quitting){event.preventDefault();app.quit()}});
   window.webContents.setWindowOpenHandler(()=>({action:'deny'}));window.webContents.on('will-navigate',(event)=>event.preventDefault());
   app.on('second-instance',()=>{if(window.isMinimized())window.restore();window.focus()});
   // 拖放走独立 IPC；与原生选择器共用快照和 .cbim 边界检查。

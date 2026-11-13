@@ -1,0 +1,16 @@
+/**
+ * 作用定位：话题摘要与阅读区域的响应式排版。
+ * 设计原因：用留白、边线和文字层级表达群聊主题，复用应用主题变量，窄屏不依赖横向表格。
+ */
+.conversation-topics{width:100%;min-width:0;margin:12px 0 24px}
+.conversation-topic-heading,.conversation-topic-thread>header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.conversation-topic-heading>span,.conversation-topic-meta,.conversation-topic-people,.conversation-topic-empty{font-size:12px;color:var(--muted)}
+.conversation-topic-card{display:flex;flex-direction:column;align-items:flex-start;gap:8px;width:100%;min-width:0;text-align:left;padding:16px;margin:10px 0;border:1px solid var(--line);border-radius:12px;background:transparent;white-space:normal;overflow-wrap:anywhere}
+.conversation-topic-card:hover,.conversation-topic-card:focus-visible{background:var(--hover)}
+.conversation-topic-title{font-size:15px;font-weight:600;line-height:1.55}
+.conversation-topic-people{line-height:1.5}
+.conversation-topic-history,.conversation-topic-legacy,.conversation-topic-tasks{margin-top:20px}
+.conversation-topics summary{cursor:pointer;font-size:13px;padding:10px 0}
+.conversation-topic-thread h3{font-size:18px;line-height:1.5;overflow-wrap:anywhere;margin:16px 0 24px}
+.conversation-topic-tasks>button{display:block;text-align:left;white-space:normal;overflow-wrap:anywhere;width:100%;margin-top:8px}
+@media(max-width:520px){.conversation-topic-card{padding:12px}.conversation-topic-title{font-size:14px}}

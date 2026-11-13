@@ -144,6 +144,11 @@ it('纯周期投影保持未变摘要引用，校验断序/串会话；complete�
     plan:{...decisionStamp,revision:2,objective:'保存知识',constraints:[],criteria:[{id:'saved',text:'知识有提交证据',kind:'evidence'}],assignments:[{agentId:'cbim:main',teamId:'.cbim/team',agentName:'主 Agent',moduleIds:[],moduleNames:[],criterionIds:['saved'],reason:'维护知识'}],reason:'按用户目标规划'},
     review:{...decisionStamp,revision:3,planRevision:2,decision:'complete',checks:[{criterionId:'saved',outcome:'satisfied',reason:'已引用候选证据',evidence:[{kind:'main-knowledge',toolCallIds:['commit-1']}]}],superseded:[],gaps:[],reason:'申请结算复核',observedSeq:2,lastEffectSeq:2}});
   const pending=summarizeScope({...scope,goal},base.cursor.streamId,3);
+  expect(pending).not.toHaveProperty('mainRunIds');
+  const tracked={...scope,runTracking:{version:1 as const,mainRunIds:['first','feedback']}};
+  const trackedSummary=summarizeScope(tracked,base.cursor.streamId,3);
+  expect(trackedSummary.mainRunIds).toEqual(['first','feedback']);
+  trackedSummary.mainRunIds!.push('local-only');expect(tracked.runTracking.mainRunIds).toEqual(['first','feedback']);
   expect(pending).toMatchObject({status:'active',reviewDecision:'complete'});expect(pending).not.toHaveProperty('outcome');
   expect(readScopeDelta(two,[],{...two.cursor} as ScopeCursor)).toMatchObject({mode:'noop'});
 });

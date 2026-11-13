@@ -1,6 +1,6 @@
 /**
  * 粘贴仅作用输入框：图片保存有界原字节，纯绝对路径列表先校验并变为引用，失败保留原文字；不自动发送。
- * 主对话按事件顺序展示文字与工具，成员状态关联原派发，展开才观察公开过程；目标控制和完整图保留原入口。
+ * 主对话按持久归属分话题展示文字与工具，成员状态关联原派发；主列表只展示摘要，完成及撤销归入折叠历史，打开话题不改变执行。
  * 新对话默认 Auto，旧无模式偏好的历史对话保持 Team；当前目标期间禁用模式切换，下一目标仍可在同一对话改选。
  * 历史菜单与侧栏共用本机条目和运行观察，改名／移除由外壳负责，不改原任务目标或日志。
  * 文件补偿：向成员详情传递当前工作区实例，历史运行身份不替代新操作的当前实例校验。
@@ -28,6 +28,8 @@ import type {LlmSettings,LoopEngine} from '../../bridge/contracts/models';
 import type {ViewTab,TabKind} from '../shell/tabs';
 import {runtimeTaskSelection,type RuntimeNavigationRequest} from '../shell/runtime-navigation';
 import {ConversationTurn} from './ConversationTurn';
+import {ConversationTopics} from './ConversationTopics';
+import {conversationTopics} from './conversation-topics';
 import {AutomationView} from '../automation/AutomationView';
 import {SessionTaskView} from '../tasks/SessionTaskView';
 import {useSessionGraph} from '../tasks/useSessionGraph';
@@ -71,12 +73,13 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   const graph=useSessionGraph(workspace.id,tab.taskId,active);
   const admission=useAdmission(active),admissionState=sessionAdmission(admission.error?undefined:admission.data,workspace.id,tab.taskId);
   const [selectedTaskId,setSelectedTaskId]=useState<string>();
+  const [selectedTopicId,setSelectedTopicId]=useState<string>();
   const [navigationError,setNavigationError]=useState('');
   const handledNavigation=useRef<number|undefined>(undefined);
   function consumeNavigation(){if(navigation){handledNavigation.current=navigation.requestId;onNavigationHandled?.(navigation.requestId)}}
   function selectSection(value:'chat'|'tasks'|'automation'){consumeNavigation();setSection(value)}
   function selectTask(id?:string){consumeNavigation();setSelectedTaskId(id)}
-  useEffect(()=>{setSelectedTaskId(undefined)},[workspace.id,tab.taskId]);
+  useEffect(()=>{setSelectedTaskId(undefined);setSelectedTopicId(undefined)},[workspace.id,tab.taskId]);
   // 历史条目使用稳定导航回调，点击时再读取当前定位请求，避免逐键草稿使所有轮次失效。
   const navigationRef=useRef({navigation,onNavigationHandled});navigationRef.current={navigation,onNavigationHandled};
   const viewMember=useCallback((taskId:string)=>{const current=navigationRef.current;if(current.navigation){handledNavigation.current=current.navigation.requestId;current.onNavigationHandled?.(current.navigation.requestId)}setSelectedTaskId(taskId);setSection('tasks')},[]);
@@ -94,6 +97,8 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
     handledNavigation.current=navigation.requestId;onNavigationHandled?.(navigation.requestId);
   },[active,navigation,workspace.id,workspace.instanceId,tab.taskId,graph.loading,graph.error,graph.graph,graph.scopes,graph.selectScope,onNavigationHandled]);
   const [models,setModels]=useState<LlmSettings>(),[runs,setRuns]=useState<RunSummary[]>([]),[history,setHistory]=useState<HistoryItem[]>([]);
+  const topics=useMemo(()=>conversationTopics({workspaceId:workspace.id,rootSessionId:tab.taskId??''},graph.scopes,runs,graph.graph),[workspace.id,tab.taskId,graph.scopes,runs,graph.graph]);
+  function selectTopic(id?:string){setSelectedTopicId(id);graph.selectScope(id)}
   // 坏旧日志只作为只读问题占位；可续接头由后端确认，不能从过滤后的 runs 猜测。
   const [threadIssues,setThreadIssues]=useState<ConversationThreadView['issues']>([]),[resumeRunId,setResumeRunId]=useState<string>();
   // 默认权限以手掌标识，业务文件与知识提交共用本轮审批；模式变化仅作用于下次发送。
@@ -261,7 +266,7 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
       <ThreadHistoryNotice issues={threadIssues}/>
       {tab.taskId&&<ScopeGoalPanel state={graph} compact testId="conversation-goal-summary" onSelectTask={viewMember} continuation={continuation} replan={replan} humanDecisions={humanDecisions} humanContinuation={humanContinuation}/>}
       {latest?.task.workflowContext&&<details className="chat-context"><summary>任务上下文 · {latest.task.goal.slice(0,80)}</summary><p>模块：{latest.task.moduleIds.join('、')}<br/>Agent：{latest.task.agentId}<br/>Workflow：{latest.task.workflowContext?.workflowId}<br/>责任人：{latest.task.responsiblePerson||'未指定'}</p><ul>{latest.task.acceptance.map((a,i)=><li key={i}>{a}</li>)}</ul></details>}
-      <div ref={historyContent}>{runs.map(run=><ConversationTurn key={run.runId} run={run} workspaceId={workspace.id} now={run.status==='running'?now:0} recovery={recovery} active={active&&section==='chat'} onSelectTask={viewMember}/>)}</div>
+      <div ref={historyContent}>{tab.taskId&&<ConversationTopics {...topics} selectedId={selectedTopicId} onSelect={selectTopic} onSelectTask={viewMember} renderRun={run=><ConversationTurn key={run.runId} run={run} workspaceId={workspace.id} now={run.status==='running'?now:0} recovery={recovery} active={active&&section==='chat'} onSelectTask={viewMember}/>}/>}</div>
       {graph.error&&<p role="alert">{graph.error} <button onClick={graph.refresh}>重新同步成员动态</button></p>}
       {questions.map(q=><QuestionCard key={q.id} request={q} onAnswer={async answers=>{await api.call('loop.answerQuestion',{id:workspace.id,taskId:q.taskId,questionId:q.id,answers})}}/>)}
       {currentRun&&!mainRunning&&currentRun.unresolvedTools.length>0&&<div className="chat-reconcile" data-testid="unresolved-tools-notice"><h3>原操作结果尚未确认</h3><p>展开原工具记录，明确核实当前影响并保存处置。需要继续调查时创建独立只读核实任务；原记录保留，勾选调用标识不能恢复原运行。</p><ul>{currentRun.unresolvedTools.map(id=><li key={id}><code>{id}</code></li>)}</ul></div>}

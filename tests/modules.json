@@ -873,6 +873,7 @@
         "unit": [
           "tests/brain-status.test.ts",
           "tests/conversation-activity.test.ts",
+          "tests/conversation-topics.test.ts",
           "tests/thread-recovery-notice.test.ts",
           "tests/usage.test.ts"
         ],

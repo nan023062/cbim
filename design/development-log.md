@@ -1,3 +1,10 @@
+## 2026-11-14：办公室改版第 3 步——主会话话题列表
+
+- 延续完整设计的分步实施授权，基线 `9f07dc86`。周期摘要提供有界持久主运行身份；主对话按原周期归类，列表展示摘要，打开后展示原正文和工具；完成/撤销折叠到历史，失败/中断保留可见。旧无明确身份及冲突归属进入未分类，不按时间推测。
+- Q1 保留原日志、工具证据、目标控制与任务定位；Q2 展示归类归 View，身份由原 Logic 周期投影提供，不新增正文存储；Q3 选择话题纯投影/SSR、联合读取和原目标视图消费者；Q4 阅读 `scope-view.summarizeScope` → `conversationTopics` → `ConversationTopics` → `Conversation`；Q5 无新增通用规范。这里只交付话题阅读，输入排队/整话题打断、子对话及办公室场景未在本片完成。
+- `pnpm exec vitest run tests/conversation-topics.test.ts tests/dispatch-session-read.test.ts tests/scope-goal-view.test.ts`：29/29 通过，覆盖迟到反馈、跨办公室隔离、混合来源拒绝、历史折叠和正文范围。`pnpm typecheck`、`pnpm check:architecture`（737 代码/样式、0 文档差异、0 循环/违规）、`pnpm check:test-modules`（484 文件）及 `git diff --check` 通过。
+- 同步 tasks/rules 和 view/conversation 的源码说明、CONTRACT 与类图。未运行全仓回归、真实桌面/引擎联调、构建或发布；此为独立本地提交，不代表全部需求完成。
+
 ## 2026-11-14：办公室改版第 2 步——同一 Agent 串行、不同 Agent 继续调度
 
 - 延续同一用户授权，基线 `5a77d57c`。先将 [设计第 2 片](task/team-office-topics.md) 的执行槽独立交付，话题队列身份和上下文组装仍是后续切片，未冒充一起完成。

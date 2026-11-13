@@ -2635,7 +2635,7 @@ class N_src_logic_tasks_rules_scope_view_ts_DispatchSessionRead["DispatchSession
 N_src_logic_tasks_rules_scope_view_ts ..> N_src_logic_tasks_rules_scope_view_ts_DispatchSessionRead : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[dispatch-commands.ts](dispatch-commands.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[graph-types.ts](graph-types.ts)、[../../team/rules/team-session.ts](../../team/rules/team-session.ts)、[graph-rules.ts](graph-rules.ts)、[scope-goal.ts](scope-goal.ts)、[scope-active-input.ts](scope-active-input.ts)、[../../budget/rules/scope-budget.ts](../../budget/rules/scope-budget.ts)、[scope-public.ts](scope-public.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[dispatch-commands.ts](dispatch-commands.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[graph-types.ts](graph-types.ts)、[../../team/rules/team-session.ts](../../team/rules/team-session.ts)、[scope-run-tracking.ts](scope-run-tracking.ts)、[graph-rules.ts](graph-rules.ts)、[scope-goal.ts](scope-goal.ts)、[scope-active-input.ts](scope-active-input.ts)、[../../budget/rules/scope-budget.ts](../../budget/rules/scope-budget.ts)、[scope-public.ts](scope-public.ts)。
 
 ### types.ts
 
@@ -4225,24 +4225,27 @@ class N_src_logic_tasks_rules_scope_view_ts["scope-view.ts"] {
 class N_src_logic_tasks_rules_graph_types_ts["graph-types.ts"] {
   <<module>>
 }
+class N_src_logic_tasks_rules_scope_run_tracking_ts["scope-run-tracking.ts"] {
+  <<module>>
+}
 class N_src_logic_tasks_rules_graph_rules_ts["graph-rules.ts"] {
   <<module>>
 }
 class N_src_logic_tasks_rules_scope_goal_ts["scope-goal.ts"] {
   <<module>>
 }
-class N_src_logic_tasks_rules_scope_active_input_ts["scope-active-input.ts"] {
-  <<module>>
-}
 N_src_logic_tasks_rules_scope_view_ts ..> N_src_logic_tasks_rules_graph_types_ts : 导入依赖
+N_src_logic_tasks_rules_scope_view_ts ..> N_src_logic_tasks_rules_scope_run_tracking_ts : 导入依赖
 N_src_logic_tasks_rules_scope_view_ts ..> N_src_logic_tasks_rules_graph_rules_ts : 导入依赖
 N_src_logic_tasks_rules_scope_view_ts ..> N_src_logic_tasks_rules_scope_goal_ts : 导入依赖
-N_src_logic_tasks_rules_scope_view_ts ..> N_src_logic_tasks_rules_scope_active_input_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_logic_tasks_rules_scope_view_ts["scope-view.ts"] {
+  <<module>>
+}
+class N_src_logic_tasks_rules_scope_active_input_ts["scope-active-input.ts"] {
   <<module>>
 }
 class N_src_logic_tasks_rules_scope_public_ts["scope-public.ts"] {
@@ -4254,6 +4257,7 @@ class N_src_logic_tasks_rules_workspace_member_invariants_ts["workspace-member-i
 class N_src_logic_tasks_rules_knowledge_source_invariants_ts["knowledge-source-invariants.ts"] {
   <<module>>
 }
+N_src_logic_tasks_rules_scope_view_ts ..> N_src_logic_tasks_rules_scope_active_input_ts : 导入依赖
 N_src_logic_tasks_rules_scope_view_ts ..> N_src_logic_tasks_rules_scope_public_ts : 导入依赖
 N_src_logic_tasks_rules_workspace_member_invariants_ts ..> N_src_logic_tasks_rules_knowledge_source_invariants_ts : 导入依赖
 ```
@@ -4270,6 +4274,10 @@ N_src_logic_tasks_rules_workspace_member_invariants_ts ..> N_src_logic_tasks_rul
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 话题主运行身份投影
+
+周期摘要可选携带 `mainRunIds`，只从原 `runTracking` 复制最多 32 个已登记身份，供对话准确归类；不携带正文或原生路径、不按时间补齐旧周期。克隆列表不允许读取端修改持久记录，沿原周期增量及游标传播。
 
 ### 同屏办公室身份查询
 

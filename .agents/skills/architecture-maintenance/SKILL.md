@@ -30,16 +30,18 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 
 当前允许方向以 `scripts/check-dependencies.mjs` 的 layers 和源码为准：
 
-- foundations 逻辑层 → 各自内部、标准库和必要第三方库；物理位于 backend/core/foundation 的 utility/files/web 子目录，不依赖父层约定或 Core 业务。目录合并不扩大调用权，业务只通过能力公开入口使用，平台适配独立入口加载。
-- backend/core → backend/core、foundations 的能力公开入口；不反向认识应用装配或具体引擎。
-- backend/engines → 自身、backend/core、backend/core/foundation/utility 通用公开入口；不借此访问其他基础方案、Node 入口或私有实现，具体 SDK 与 HTTP 传输不得被 Core 反向引用。
-- backend/scheduler-engine → 自身、backend/core、backend/core/foundation/utility 的通用公开入口；assembly 中的引擎装配可以依赖 backend/engines。
+新四层以 [四层设计](../../../design/four-layer-architecture.md) 为目标：Core 不依赖业务，Logic 依赖适用 Core，Bridge 服务端依赖 Logic 公开入口，View 只使用 Bridge 客户端/契约与便携 Core。当前 src/core 已建立，旧 backend/frontend 和 Bridge 的旧领域契约重导出仍按现有规则受限；不得把目标画成全部已迁移。
+
+- 共享 Core → 自身获准入口与第三方库；utility 不依赖平台，platform/node 与前端/Bridge 客户端隔离。旧 foundations 逻辑层当前仅含 backend/core/foundation/files、web，不反向依赖业务。
+- 旧 backend/core → 自身、旧 files/web 获准入口、共享 core/utility 与独立 Node 摘要；不反向认识应用装配或具体引擎。
+- backend/engines → 自身、backend/core、core/utility 通用公开入口；不借此访问其他基础方案、Node 入口或私有实现，具体 SDK 与 HTTP 传输不得被 Core 反向引用。
+- backend/scheduler-engine → 自身、backend/core、core/utility 的通用公开入口；assembly 中的引擎装配可以依赖 backend/engines。
 - backend/bootstrap → 自身、backend/updater、backend/main；固定加载器的计算式入口仍纳入真实源码依赖检查，不作为外部加载豁免。
-- backend/main → 自身、backend/scheduler-engine、backend/core、backend/updater、bridge/contracts、foundations 的能力公开入口。
-- backend/updater → 自身、bridge/contracts、backend/core/foundation/utility 通用公开入口；更新程序不得反向依赖 Main、调度或业务运行时，不能跨入 utility Node 入口或其他基础方案。
+- backend/main → 自身、backend/scheduler-engine、旧 backend/core、backend/updater、bridge/contracts、旧 files/web 及共享 Core 获准入口。
+- backend/updater → 自身、bridge/contracts、core/utility 通用公开入口；更新程序不得反向依赖 Main、调度或业务运行时，不能跨入 utility Node 入口或其他基础方案。
 - bridge/contracts → 自身、backend/core 的公开契约和纯函数。
-- frontend → 自身、bridge/contracts。
-- 前端基础库 `frontend/foundations` → 自身；业务只用各能力公开入口。后端公共库统一位于 `src/backend/core/foundation`，根层领域约定与独立技术子库保留单向依赖；两域工具库不互相依赖，bridge 不转发工具。当前前端 utility 不引用 React、业务控制器或通信契约；新增第三方依赖须按具体能力核实。
+- frontend → 自身、bridge/contracts、共享 core/utility 公开入口；具体模块的窄依赖规则仍生效。
+- 前端适配库 frontend/foundations → 自身与共享 Core 的便携公开入口；不引用 React、页面或通信契约。equalJson 已组合共享排序，其余能力按真实语义逐项评估；不能为共享引入 Node 或后端业务。Bridge 不转发工具。
 - bridge/preload → 自身、bridge/contracts。
 - frontend 是视图层，backend 是本机后端逻辑层；bridge 是通信边界。禁止前端直接导入后端实现，也禁止后端导入前端。
 
@@ -75,7 +77,7 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 
 ## 5. 验证后再报告
 
-utility 的类图按实际类别文件表达 JSON、字符串、字节、异步协调等工具模块，展示各具名算法、独立实例数据结构与通用/Node 公开入口；不按函数数量机械拆文件，也不因合并文件而虚构算法间依赖或共享状态。当前 SerialQueue 归 `src/backend/core/foundation/utility`，旧 concurrency 目录已退役；同步消费者导入、测试归属和依赖规则，不能残留两份队列实现。Core 的 hash/json 兼容出口仍保留，注明算法只在 utility 实现。
+utility 的类图按实际类别文件表达 JSON、字符串、字节、异步协调等工具模块，展示各具名算法、独立实例数据结构与通用/Node 公开入口；不按函数数量机械拆文件，也不因合并文件而虚构算法间依赖或共享状态。当前 SerialQueue 归 `src/core/utility`，旧 concurrency 目录已退役；同步消费者导入、测试归属和依赖规则，不能残留两份队列实现。Core 的 hash/json 兼容出口仍保留，注明算法只在 utility 实现。
 
 前端 utility 单独维护类图与契约，当前 `json.ts` 提供 equalJson。迁移同类比较须保留 localeCompare、对象 undefined、数组次序及错误语义；类图展示控制器到前端公开入口的依赖，不画成后端算法复用。单元归属前端基础模块，业务回执与恢复用原消费者测试验证。
 
@@ -114,11 +116,11 @@ utility 的类图按实际类别文件表达 JSON、字符串、字节、异步�
 
 本流程同时存放在 .agents/skills/architecture-maintenance/SKILL.md、.claude/skills/architecture-maintenance/SKILL.md 和 .codex/skills/architecture-maintenance/SKILL.md。修改任一份时同步其余入口，保持内容一致。
 
-前端图布局通过 utility/graphs.ts 的 rankDirectedGraph 组合；只沉淀 ID/边与层级，业务边筛选、错误文案、坐标和路径保留原适配。后端图规则独立演进，不开放跨域依赖；拓扑单元与任务布局消费者分别验证。
+前端图布局通过 utility/graphs.ts 的 rankDirectedGraph 组合；只沉淀 ID/边与层级，业务边筛选、错误文案、坐标和路径保留原适配。分层与无环判断是不同契约，暂保留各自实现；共享须核实语义，不开放业务互引；拓扑单元与任务布局消费者分别验证。
 
 前端本地记录存储已有 utility/storage.ts 的 JsonRecordStorage；仅复用注入式有界 JSON 读写。迁移核对空串/缺失规则、UTF-8 上限、序列化字节、写失败前后的内存状态；schema、条数、坏数据禁写、回执及原请求恢复保留业务控制器，不能扩成统一命令状态机。
 
-后端 JSON 补齐优先复用 orderJsonValue，迁移显式固定比较器与 undefined 策略，业务身份与哈希字段留在原模块。调度器仅可导入 backend/core/foundation/utility 的通用公开入口，禁止私有实现及 Node/files/web；手工拼接字符串、排序后读取属性的协议须单独核对，不直接统一。
+后端 JSON 补齐优先复用 orderJsonValue，迁移显式固定比较器与 undefined 策略，业务身份与哈希字段留在原模块。调度器仅可导入 core/utility 的通用公开入口，禁止私有实现及 Node/files/web；手工拼接字符串、排序后读取属性的协议须单独核对，不直接统一。
 
 后端字符串精确脱敏统一组合 strings.ts 的 redactLiteral；凭据来源、认证模式、事件序列化和错误屏障留在引擎。保留空凭据、大小写、非重叠及编码语义，不以字符串函数宣称覆盖所有泄露途径；独立算法与真实引擎适配分别测试。
 

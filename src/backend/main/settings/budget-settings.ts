@@ -4,7 +4,7 @@
  * 设计原因：默认关闭且仅接受用户显式设置；版本化原子写盘避免多个窗口覆盖，运行中的周期不随设置改变，失败保留原策略。
  */
 import fs from 'node:fs/promises';
-import {SerialQueue} from '../../core/foundation/utility';
+import {SerialQueue} from '../../../core/utility';
 import {z} from 'zod';
 import {atomic} from '../../core/foundation/files';
 import {fail} from '../../core/foundation/errors';

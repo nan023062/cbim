@@ -7,7 +7,7 @@
  * 职责边界：结构通过不等于任务已获授权，调度层仍需核实来源。
  * 历史维护字段仅兼容原记录；新执行资格不再依赖真人，岗位责任和冻结身份校验继续生效。
  */
-import {isDirectedAcyclic} from '../foundation/utility';
+import {isDirectedAcyclic} from '../../../core/utility';
 import {automaticExecutionBindingSchema,automaticExecutionBindingMatches} from '../team/automatic-execution';
 import {z} from 'zod';
 import {candidateReviewSchema} from './candidate-review';

@@ -4,7 +4,7 @@
  * 设计原因：只有原日志决定当前代次；prepare 不改变头，原 journal 证明的 committed 才退休/创建，rollback 不伪造新来源。
  * 职责边界：不读取文件或知识队列，不能自行证明 journal；调用者须在知识串行区提供真实事实。
  */
-import {orderJsonValue} from '../foundation/utility';
+import {orderJsonValue} from '../../../core/utility';
 import {hash} from '../foundation/serialization';
 import {fail} from '../foundation/errors';
 import {knowledgeSourceChangeSchema,knowledgeSourceLimits,knowledgeSourceKey,sameKnowledgeSourceKey,type KnowledgeSourceKey,type KnowledgeSourceRef,type KnowledgeSourceGeneration,type KnowledgeSourceChange,type KnowledgeSourceTransition,type KnowledgeSourceCursor,type KnowledgeSourceObservation,type SourceSelection,type KnowledgeSourceReceipt,type KnowledgeSourceCapture,type KnowledgeSourceReadState,type CapabilitySourceRef} from './knowledge-source';

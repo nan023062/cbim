@@ -4,7 +4,7 @@
  * 设计原因：导入不启动模型；每个 importId 只执行一次，取消先到也保留墓碑。慢网络和原生选择器不能跨实例返回，仓库授权仍由原连接闭包核实。
  * 机制边界：utility 仅跟踪在途 Promise；停止接单、取消、物理退出核实与占用释放仍由本模块决定。
  */
-import {InFlightOperations} from '../../core/foundation/utility';
+import {InFlightOperations} from '../../../core/utility';
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
 import {hash} from '../../core/foundation/serialization';

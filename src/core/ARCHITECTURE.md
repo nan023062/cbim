@@ -1,0 +1,52 @@
+# src/core 架构
+
+## 目录定位
+
+四层架构的共享基础公共层：utility 提供便携算法与数据结构，platform 隔离运行环境；不依赖业务、桥接或视图。前端比较和后端指纹适配组合相同排序实现，业务策略留在消费者。
+
+本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
+
+## 代码清单
+
+本层无直接代码文件。
+
+## 架构类图
+
+```mermaid
+classDiagram
+class N_src_core_platform["platform/"] {
+  <<directory>>
+}
+class N_src_core_utility["utility/"] {
+  <<directory>>
+}
+```
+
+各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
+
+本层无目录间直接导入关系。
+
+## 子目录导航
+
+- [platform/](platform/ARCHITECTURE.md)：按运行环境隔离基础实现；当前只有 Node 摘要，不预建无实现的能力。共享 utility 不依赖平台实现。
+- [utility/](utility/ARCHITECTURE.md)：前后端共享通用算法与数据结构，按 JSON、字符串、字节、异步协调和图类别内聚。index.ts 是便携公开入口；Node 摘要归 ../platform/node/digest.ts。无业务、Node、Electron 或页面依赖；排序比较器、字段规则、生命周期和业务策略由消费者持有。
+
+[返回上层](../ARCHITECTURE.md)。
+
+每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+## 设计契约 v1 与落地范围
+
+以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+# 共享 Core
+
+Core 是四层架构的基础公共层，不含业务规则、通信操作、页面状态或应用装配。前端和后端可以组合相同公开能力；运行环境是独立约束，Node 能力不经便携入口加载。
+
+当前真实入口为 [utility](utility/CONTRACT.md) 和 [Node 摘要](platform/node/CONTRACT.md)。utility 仅使用语言/Web Streams 原语及 jsonc-parser；platform/node/digest.ts 仅使用 node:crypto。二者都不依赖 logic、bridge、view 或旧 backend/frontend，包含类型引用。跨模块仅使用已登记公开入口；新 Core 模块必须登记职责、入口及第三方依赖，否则检查失败。
+
+前端 equalJson 是第一条双端复用路径：控制器 → 前端比较适配 → Core orderJsonValue；后端历史指纹适配也调用同一算法。比较器、字段选择、错误映射和业务接受条件仍由消费者拥有。共享实现不要求不同策略产生相同字节。
+
+旧 backend/core 是待迁移的业务层，不属于本目录；backend/core/foundation 的 Fault、safeId、StoragePaths 和兼容适配保留原归属，files/web 尚未迁移。当前源码不宣称完成 Logic/Bridge/View 的物理迁移；目标结构与分片方式见 [四层设计](../../design/four-layer-architecture.md)。
+
+没有全局 Core 容器或统一大导出。公共函数不持有业务状态，队列/集合由调用方逐实例创建并负责关闭策略。通用入口不能经重导出或间接依赖加载 Node/Electron；业务数据、路径权限、事务和进程生命周期不因使用基础库而转移。

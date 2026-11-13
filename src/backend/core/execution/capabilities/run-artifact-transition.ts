@@ -6,7 +6,7 @@
  * 职责边界：不自动回滚或重发，保存成功仍须真实工具结束后才能形成证明；停止排空实际文件工人。
  * 机制边界：utility 仅跟踪在途 Promise；停止接单、取消、物理退出核实与占用释放仍由本模块决定。
  */
-import {InFlightOperations} from '../../foundation/utility';
+import {InFlightOperations} from '../../../../core/utility';
 import {isDeepStrictEqual as equal} from 'node:util';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {hash} from '../../foundation/serialization';

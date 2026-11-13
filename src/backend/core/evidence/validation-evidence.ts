@@ -6,7 +6,7 @@
  * 职责边界：不读文件，不判断当前字节；外层完整 canonical 身份/终态与异步文件重核仍不可省略。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
-import {orderJsonValue} from '../foundation/utility';
+import {orderJsonValue} from '../../../core/utility';
 import {fail} from '../foundation/errors';
 import {hash} from '../foundation/serialization';
 import {workflowContractSchema,type WorkflowContract} from '../workspace/workflow-contract';

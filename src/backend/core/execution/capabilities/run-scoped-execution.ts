@@ -6,7 +6,7 @@
  * 职责边界：平台读取与隔离执行注入为端口；私有输出不回写工程，清理未确认时保留运行占用。
  * 机制边界：utility 仅跟踪在途 Promise；停止接单、取消、物理退出核实与占用释放仍由本模块决定。
  */
-import {InFlightOperations} from '../../foundation/utility';
+import {InFlightOperations} from '../../../../core/utility';
 import {isDeepStrictEqual as equal} from 'node:util';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {hash} from '../../foundation/serialization';

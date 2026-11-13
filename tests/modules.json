@@ -1245,35 +1245,6 @@
         "integration": []
       }
     },
-    "foundations/utility": {
-      "roots": [
-        "src/backend/core/foundation/utility/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/unit/foundations/utility/bounded-bytes.test.ts",
-          "tests/unit/foundations/utility/digest.test.ts",
-          "tests/unit/foundations/utility/graphs.test.ts",
-          "tests/unit/foundations/utility/in-flight.test.ts",
-          "tests/unit/foundations/utility/json-order.test.ts",
-          "tests/unit/foundations/utility/json-text.test.ts",
-          "tests/unit/foundations/utility/line-framer.test.ts",
-          "tests/unit/foundations/utility/pending-requests.test.ts",
-          "tests/unit/foundations/utility/redaction.test.ts",
-          "tests/unit/foundations/utility/serial-queue.test.ts",
-          "tests/unit/foundations/utility/strict-json.test.ts"
-        ],
-        "contract": [
-          "tests/utility-body-consumers.test.ts",
-          "tests/utility-json-contract.test.ts",
-          "tests/utility-json-order-contract.test.ts",
-          "tests/utility-redaction-contract.test.ts",
-          "tests/utility-rpc-framing-contract.test.ts",
-          "tests/utility-serialization-contract.test.ts"
-        ],
-        "integration": []
-      }
-    },
     "tooling/ci-validation": {
       "roots": [
         "scripts/ci-scope.mjs",
@@ -1301,6 +1272,46 @@
           "tests/unit/frontend/foundations/utility/graphs.test.ts",
           "tests/unit/frontend/foundations/utility/json.test.ts",
           "tests/unit/frontend/foundations/utility/storage.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "core/utility": {
+      "roots": [
+        "src/core/utility/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/unit/foundations/utility/bounded-bytes.test.ts",
+          "tests/unit/foundations/utility/graphs.test.ts",
+          "tests/unit/foundations/utility/in-flight.test.ts",
+          "tests/unit/foundations/utility/json-order.test.ts",
+          "tests/unit/foundations/utility/json-text.test.ts",
+          "tests/unit/foundations/utility/line-framer.test.ts",
+          "tests/unit/foundations/utility/pending-requests.test.ts",
+          "tests/unit/foundations/utility/redaction.test.ts",
+          "tests/unit/foundations/utility/serial-queue.test.ts",
+          "tests/unit/foundations/utility/strict-json.test.ts"
+        ],
+        "contract": [
+          "tests/utility-body-consumers.test.ts",
+          "tests/utility-json-contract.test.ts",
+          "tests/utility-json-order-contract.test.ts",
+          "tests/utility-redaction-contract.test.ts",
+          "tests/utility-rpc-framing-contract.test.ts",
+          "tests/utility-serialization-contract.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "core/platform/node": {
+      "roots": [
+        "src/core/platform/node/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/unit/foundations/utility/digest.test.ts"
         ],
         "contract": [],
         "integration": []

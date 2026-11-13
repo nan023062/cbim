@@ -1,17 +1,236 @@
+# src/core/utility 架构
+
+## 目录定位
+
+前后端共享通用算法与数据结构，按 JSON、字符串、字节、异步协调和图类别内聚。index.ts 是便携公开入口；Node 摘要归 ../platform/node/digest.ts。无业务、Node、Electron 或页面依赖；排序比较器、字段规则、生命周期和业务策略由消费者持有。
+
+本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
+
+## 代码清单
+
+| 文件 | 当前职责 |
+| --- | --- |
+| [async.ts](async.ts) | 异步执行工具，提供实例内串行队列、在途 Promise 集合与有时限的请求关联表。 |
+| [bytes.ts](bytes.ts) | 字节处理工具，当前提供传入 Web ReadableStream 的有界收集。 |
+| [graphs.ts](graphs.ts) | 后端有向图的纯结构算法，不认识任务、权限、等待状态或前端布局。 |
+| [index.ts](index.ts) | 通用数据处理算法与实例内数据结构的公开入口，无 Node 或业务依赖。 |
+| [json.ts](json.ts) | JSON 数据处理工具，集中提供格式化、严格解析和递归键排序。 |
+| [strings.ts](strings.ts) | 字符串处理工具，提供精确文本脱敏与已解码文本的 LF 增量分帧。 |
+
+## 架构类图
+
+### async.ts
+
+```mermaid
+classDiagram
+class N_src_core_utility_async_ts["async.ts"] {
+  <<module>>
+}
+class N_src_core_utility_async_ts_SerialQueue["SerialQueue"] {
+  +run()
+  +drain()
+  -tail
+}
+N_src_core_utility_async_ts ..> N_src_core_utility_async_ts_SerialQueue : 声明
+class N_src_core_utility_async_ts_PendingReply["PendingReply"] {
+  <<interface>>
+  +resolve
+  +reject
+}
+N_src_core_utility_async_ts ..> N_src_core_utility_async_ts_PendingReply : 声明
+class N_src_core_utility_async_ts_PendingRequests["PendingRequests"] {
+  +register()
+  +take()
+  +rejectAll()
+  -entries
+}
+N_src_core_utility_async_ts ..> N_src_core_utility_async_ts_PendingRequests : 声明
+class N_src_core_utility_async_ts_InFlightOperations["InFlightOperations"] {
+  +track()
+  +size
+  +drain()
+  -pending
+}
+N_src_core_utility_async_ts ..> N_src_core_utility_async_ts_InFlightOperations : 声明
+```
+
+
+### bytes.ts
+
+```mermaid
+classDiagram
+class N_src_core_utility_bytes_ts["bytes.ts"] {
+  <<module>>
+  +readBoundedBytes()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_core_utility_bytes_ts["bytes.ts"] {
+  <<module>>
+}
+class N_src_core_utility_bytes_ts_ByteLimitError["ByteLimitError"] {
+  +maxBytes
+}
+N_src_core_utility_bytes_ts ..> N_src_core_utility_bytes_ts_ByteLimitError : 声明
+class N_src_core_utility_bytes_ts_external_RangeError["RangeError (外部契约)"] {
+  <<external>>
+}
+N_src_core_utility_bytes_ts_external_RangeError <|-- N_src_core_utility_bytes_ts_ByteLimitError
+```
+
+
+### graphs.ts
+
+```mermaid
+classDiagram
+class N_src_core_utility_graphs_ts["graphs.ts"] {
+  <<module>>
+  +isDirectedAcyclic()
+}
+```
+
+
+### index.ts
+
+```mermaid
+classDiagram
+class N_src_core_utility_index_ts["index.ts"] {
+  <<module>>
+}
+```
+直接依赖：[json.ts](json.ts)、[async.ts](async.ts)、[bytes.ts](bytes.ts)、[strings.ts](strings.ts)、[graphs.ts](graphs.ts)。
+
+### json.ts
+
+```mermaid
+classDiagram
+class N_src_core_utility_json_ts["json.ts"] {
+  <<module>>
+  +parseStrictJson()
+  +formatJson()
+  +orderJsonValue()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_core_utility_json_ts["json.ts"] {
+  <<module>>
+}
+class N_src_core_utility_json_ts_StrictJsonError["StrictJsonError"] {
+  +reason
+  +key
+}
+N_src_core_utility_json_ts ..> N_src_core_utility_json_ts_StrictJsonError : 声明
+class N_src_core_utility_json_ts_external_SyntaxError["SyntaxError (外部契约)"] {
+  <<external>>
+}
+N_src_core_utility_json_ts_external_SyntaxError <|-- N_src_core_utility_json_ts_StrictJsonError
+class N_src_core_utility_json_ts_JsonKeyOrder["JsonKeyOrder"] {
+  <<interface>>
+  +compareKeys
+  +omitUndefinedProperties
+}
+N_src_core_utility_json_ts ..> N_src_core_utility_json_ts_JsonKeyOrder : 声明
+```
+
+
+### strings.ts
+
+```mermaid
+classDiagram
+class N_src_core_utility_strings_ts["strings.ts"] {
+  <<module>>
+  +redactLiteral()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_core_utility_strings_ts["strings.ts"] {
+  <<module>>
+}
+class N_src_core_utility_strings_ts_LineFramePolicy["LineFramePolicy"] {
+  <<interface>>
+  +checkLine
+  +checkRemainder
+}
+N_src_core_utility_strings_ts ..> N_src_core_utility_strings_ts_LineFramePolicy : 声明
+class N_src_core_utility_strings_ts_LineFramer["LineFramer"] {
+  +push()
+  -policy
+  -remainder
+}
+N_src_core_utility_strings_ts ..> N_src_core_utility_strings_ts_LineFramer : 声明
+```
+
+
+### 本目录调用边界
+
+```mermaid
+classDiagram
+class N_src_core_utility_index_ts["index.ts"] {
+  <<module>>
+}
+class N_src_core_utility_json_ts["json.ts"] {
+  <<module>>
+}
+class N_src_core_utility_async_ts["async.ts"] {
+  <<module>>
+}
+class N_src_core_utility_bytes_ts["bytes.ts"] {
+  <<module>>
+}
+class N_src_core_utility_strings_ts["strings.ts"] {
+  <<module>>
+}
+N_src_core_utility_index_ts ..> N_src_core_utility_json_ts : 导入依赖
+N_src_core_utility_index_ts ..> N_src_core_utility_async_ts : 导入依赖
+N_src_core_utility_index_ts ..> N_src_core_utility_bytes_ts : 导入依赖
+N_src_core_utility_index_ts ..> N_src_core_utility_strings_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_core_utility_index_ts["index.ts"] {
+  <<module>>
+}
+class N_src_core_utility_graphs_ts["graphs.ts"] {
+  <<module>>
+}
+N_src_core_utility_index_ts ..> N_src_core_utility_graphs_ts : 导入依赖
+```
+
+
+## 子目录导航
+
+无子目录。
+
+[返回上层](../ARCHITECTURE.md)。
+
+每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+## 设计契约 v1 与落地范围
+
+以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
 # 通用算法与数据结构
 
-本目录归档于后端 core/foundation，但保持独立逻辑基础库：不导入父目录的 errors、identity、paths、json 或 serialization；业务适配单向组合本库。目录位置不赋予任何业务依赖权。
+本目录是前后端共享的便携基础库，不导入 logic、bridge、view 或旧 backend/frontend；业务与界面适配单向组合本库。
 
-本模块提供领域无关的数据处理算法、传入字节流的有界消费及实例内执行结构，不依赖 Core、Main、Scheduler、Bridge、Frontend 或其他 foundations 能力。工具函数与数据结构按数据类别和问题种类内聚组织，具名导出，不采用一函数一文件，也不建立万能 Utility 类、全局实例或服务定位器。不发起文件/网络访问，不拥有平台进程、权限和业务事务；流消费者只接管调用者传入流的 reader。
+本模块提供领域无关的数据处理算法、传入字节流的有界消费及实例内执行结构，不依赖业务、通信、界面或平台专用实现。工具函数与数据结构按数据类别和问题种类内聚组织，具名导出，不采用一函数一文件，也不建立万能 Utility 类、全局实例或服务定位器。不发起文件/网络访问，不拥有平台进程、权限和业务事务；流消费者只接管调用者传入流的 reader。
 
 ## 入口与真实消费者
 
 - `index.ts`：公开 `SerialQueue`、`InFlightOperations`、`PendingRequests`、`isDirectedAcyclic`、`redactLiteral`、`LineFramer`、`orderJsonValue`、`formatJson`、`readBoundedBytes`/`ByteLimitError`、`parseStrictJson`/`StrictJsonError`；使用语言/Web Streams 原语和 jsonc-parser，没有 Node 加载。
-- `node.ts`：公开 `sha256`，仅依赖 `node:crypto`；调用者明确选择运行环境。
+- [../platform/node/digest.ts](../platform/node/digest.ts)：独立 Node 入口公开 sha256，不属于本模块，不经本模块重导出。
 - `json.ts`：JSON 格式化、严格解析及键排序，按 JSON 数据类别合并；各算法保留自己的输入输出和失败契约，不隐式串联。
 - `async.ts`：SerialQueue、InFlightOperations 和 PendingRequests，按异步协调类别合并；各类、各实例独立持有状态，执行队列与在途跟踪不互相替代。
 - `strings.ts`：字符串处理，当前承载 LF 增量分帧及精确文本脱敏；`bytes.ts`：字节处理，当前承载有界流收集。文本与原始字节的计量和生命周期不同，保持分别归属。
-- `graphs.ts` 提供后端有向图无环判断。上述五个类别文件是私有实现，消费者只导入公开入口。`node.ts` 直接实现 SHA-256，保持 Node 依赖隔离，不额外建立只有一项算法的转发层。
+- `graphs.ts` 提供有向图无环判断。上述五个类别文件是私有实现，消费者只导入公开入口。
+- 前端 frontend/foundations/utility/json.ts 的 equalJson 组合 orderJsonValue，显式保留 localeCompare 和省略 undefined；后端各历史协议继续选择自己的策略。前端交互状态与后端指纹字段均不进入算法。
 - WebSettings、BudgetSettings、AdmissionSettings、MainAgentSettings、LlmProfiles 直接组合 SerialQueue。旧 `foundations/concurrency` 目录及入口已移除。
 - Core `foundation/serialization.ts` 保留 `hash/json` 名称兼容，直接重导出 utility 的算法；实现只有一份。现有知识版本、证据及配置消费者保持原调用和输出字节。该适配出口尚未退役，后续迁移须核对其真实消费者及逻辑边界，不机械批量改路径。
 - Core `foundation/json.ts` 只将 StrictJsonError 转回原 JSON Fault；知识与产物验证保留原提示、字段和限制。Main 的资源仓库、GitHub 请求、网页资料，以及 Updater 的 Release 列表和小清单组合有界字节消费；URL、凭据、期限、编码、JSON 协议和错误脱敏仍由消费者负责。

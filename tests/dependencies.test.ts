@@ -5,10 +5,54 @@ import {afterEach, expect, test} from 'vitest';
 import {auditDependencies} from '../scripts/check-dependencies.mjs';
 
 const temporary:string[]=[];
+const foundationFile=(target:string)=>target==='utility/node.ts'?'src/core/platform/node/digest.ts':target.startsWith('utility/')?'src/core/'+target:'src/backend/core/foundation/'+target;
+test.each([
+  ['src/view/tasks/model.ts','src/core/utility/index.ts',true],
+  ['src/frontend/foundations/utility/json.ts','src/core/utility/index.ts',true],
+  ['src/logic/tasks/service.ts','src/core/utility/index.ts',true],
+  ['src/logic/tasks/service.ts','src/core/platform/node/digest.ts',true],
+  ['src/bridge/contracts/example.ts','src/core/utility/index.ts',true],
+  ['src/bridge/client/call.ts','src/bridge/contracts/example.ts',true],
+  ['src/view/tasks/model.ts','src/bridge/client/call.ts',true],
+  ['src/bridge/server/dispatch.ts','src/logic/tasks/index.ts',true],
+  ['src/logic/tasks/service.ts','src/logic/knowledge/index.ts',true],
+  ['src/core/utility/index.ts','src/logic/tasks/index.ts',false],
+  ['src/core/utility/index.ts','src/bridge/contracts/example.ts',false],
+  ['src/core/utility/index.ts','src/view/tasks/model.ts',false],
+  ['src/core/utility/index.ts','src/backend/core/foundation/errors.ts',false],
+  ['src/view/tasks/model.ts','src/core/platform/node/digest.ts',false],
+  ['src/bridge/client/call.ts','src/core/platform/node/digest.ts',false],
+  ['src/logic/tasks/service.ts','src/bridge/contracts/example.ts',false],
+  ['src/logic/tasks/service.ts','src/view/tasks/model.ts',false],
+  ['src/view/tasks/model.ts','src/logic/tasks/index.ts',false],
+  ['src/view/tasks/model.ts','src/bridge/server/dispatch.ts',false],
+  ['src/bridge/client/call.ts','src/logic/tasks/index.ts',false],
+  ['src/bridge/server/dispatch.ts','src/logic/tasks/storage.ts',false],
+  ['src/logic/tasks/service.ts','src/logic/knowledge/storage.ts',false],
+  ['src/view/tasks/model.ts','src/core/utility/json.ts',false],
+  ['src/logic/tasks/service.ts','src/core/utility/json.ts',false],
+] as const)('四层依赖 %s → %s 许可为 %s',(from,to,allowed)=>{
+  let relative=path.posix.relative(path.posix.dirname(from),to);if(!relative.startsWith('.'))relative='./'+relative;
+  const result=audit({[from]:`import type {Value} from '${relative}';`,[to]:'export type Value=string;'});
+  expect(result.unresolved).toEqual([]);expect(result.ok).toBe(allowed);
+});
+test('新 Core 未登记模块与便携模块中的 Node 导入都被拒绝',()=>{
+  const unknown=audit({'src/core/hidden.ts':"import fs from 'node:fs';"});
+  expect(unknown.logicalViolations).toContainEqual(expect.objectContaining({rule:'unregistered-core-module'}));
+  const hiddenNode=audit({'src/core/utility/extra.ts':"import fs from 'node:fs';"});
+  expect(hiddenNode.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'utility-foundations'}));
+});
+test.each(['src/view/tasks/model.ts','src/frontend/tasks/model.ts','src/bridge/client/call.ts','src/bridge/contracts/example.ts'])('浏览器或纯通信文件 %s 不得直接导入 Node/Electron',from=>{
+  for(const spec of ['node:fs','fs/promises','electron','electron/main']){
+    const result=audit({[from]:`import '${spec}';`});
+    expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'runtime-environment',file:from}));
+    expect(result.ok).toBe(false);
+  }
+});
 test('调度器仅可组合 portable utility 公开入口',()=>{
   const from='src/backend/scheduler-engine/context/a.ts';
   for(const target of ['utility/index.ts','utility/node.ts','utility/json.ts','utility/graphs.ts','files/index.ts','web/index.ts']){
-    const to='src/backend/core/foundation/'+target,relative=path.posix.relative(path.posix.dirname(from),to).replace(/\.ts$/,'');
+    const to=foundationFile(target),relative=path.posix.relative(path.posix.dirname(from),to).replace(/\.ts$/,'');
     expect(audit({[from]:`import type {T} from '${relative}';`,[to]:'export type T=string;'}).ok).toBe(target==='utility/index.ts');
   }
 });
@@ -26,7 +70,7 @@ test('foundations is independent even for type dependencies; Main consumes only 
 });
 afterEach(()=>{for(const root of temporary.splice(0))fs.rmSync(root,{recursive:true,force:true})});
 test.each(['utility','files','web'])('合并后的 %s 子库仍不能反向依赖父层约定或业务',(capability)=>{
-  const from=`src/backend/core/foundation/${capability}/index.ts`;
+  const from=foundationFile(`${capability}/index.ts`);
   for(const to of ['src/backend/core/foundation/errors.ts','src/backend/core/foundation/identity.ts','src/backend/core/foundation/paths.ts','src/backend/core/tasks/example.ts']){
     const relative=path.posix.relative(path.posix.dirname(from),to);
     const result=audit({[from]:`export type {Value} from '${relative}';`,[to]:'export type Value=string;'});
@@ -34,7 +78,7 @@ test.each(['utility','files','web'])('合并后的 %s 子库仍不能反向依�
   }
 });
 test('Updater 与 Bridge 不因目录合并取得额外 Core 或基础库访问权',()=>{
-  for(const [from,to] of [['src/backend/updater/example.ts','src/backend/core/foundation/errors.ts'],['src/bridge/contracts/example.ts','src/backend/core/foundation/utility/index.ts']]){
+  for(const [from,to] of [['src/backend/updater/example.ts','src/backend/core/foundation/errors.ts'],['src/bridge/contracts/example.ts','src/core/platform/node/digest.ts']]){
     const relative=path.posix.relative(path.posix.dirname(from),to);
     const result=audit({[from]:`import type {Value} from '${relative}';`,[to]:'export type Value=string;'});
     expect(result.unresolved).toEqual([]);expect(result.violations).not.toEqual([]);
@@ -45,29 +89,30 @@ test('前端工具库仅向前端公开，私有实现与跨域依赖被拒绝',
   expect(audit({[entry]:"export {equalJson} from './json';",[inner]:'export const equalJson=()=>true;','src/frontend/tasks/a.ts':"import {equalJson} from '../foundations/utility';"}).ok).toBe(true);
   const privateImport=audit({[inner]:'export const equalJson=()=>true;','src/frontend/team/a.ts':"import {equalJson} from '../foundations/utility/json';"});
   expect(privateImport.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'frontend-utility'}));
-  for(const from of ['src/backend/core/a.ts','src/backend/core/foundation/utility/index.ts','src/bridge/contracts/a.ts']){
+  for(const from of ['src/backend/core/a.ts','src/core/utility/index.ts','src/bridge/contracts/a.ts']){
     const relative=path.posix.relative(path.posix.dirname(from),entry);
     expect(audit({[entry]:'export type Value=string;',[from]:`import type {Value} from '${relative}';`}).ok).toBe(false);
   }
 });
 test('前端工具库不能反向引用页面、通信契约或后端工具，包含类型与第三方依赖',()=>{
   const inner='src/frontend/foundations/utility/json.ts';
-  for(const target of ['src/frontend/team/a.ts','src/bridge/contracts/a.ts','src/backend/core/foundation/utility/index.ts']){
+  for(const target of ['src/frontend/team/a.ts','src/bridge/contracts/a.ts','src/core/platform/node/digest.ts']){
     const relative=path.posix.relative(path.posix.dirname(inner),target);
     expect(audit({[inner]:`import type {Value} from '${relative}';`,[target]:'export type Value=string;'}).ok).toBe(false);
   }
   const external=audit({[inner]:"import {useState} from 'react';"});
   expect(external.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'frontend-utility'}));
-  const crossDomain=audit({'src/frontend/tasks/a.ts':"export {value} from '../../backend/core/foundation/utility';",'src/backend/core/foundation/utility/index.ts':'export const value=1;'});
+  const crossDomain=audit({'src/frontend/tasks/a.ts':"export {value} from '../../core/platform/node/digest';",'src/core/platform/node/digest.ts':'export const value=1;'});
   expect(crossDomain.unresolved).toEqual([]);expect(crossDomain.ok).toBe(false);
 });
 test.each([['files','text-files','file-foundations'],['utility','async','utility-foundations']])('Core 可组合 %s 公开入口，基础库不能反向引用业务或暴露私有实现',(capability,implementation,boundary)=>{
-  const entry=`src/backend/core/foundation/${capability}/index.ts`,inner=`src/backend/core/foundation/${capability}/${implementation}.ts`;
-  expect(audit({[entry]:'export const value=1;','src/backend/core/example.ts':`import {value} from './foundation/${capability}';`}).ok).toBe(true);
-  const reverse=audit({[entry]:"import type {Value} from '../../example';",'src/backend/core/example.ts':'export interface Value {}'});
+  const entry=foundationFile(`${capability}/index.ts`),inner=foundationFile(`${capability}/${implementation}.ts`);
+  const from='src/backend/core/example.ts',main='src/backend/main/example.ts';
+  expect(audit({[entry]:'export const value=1;',[from]:`import {value} from '${path.posix.relative(path.posix.dirname(from),entry)}';`}).ok).toBe(true);
+  const reverse=audit({[entry]:`import type {Value} from '${path.posix.relative(path.posix.dirname(entry),from)}';`,[from]:'export interface Value {}'});
   expect(reverse.unresolved).toEqual([]);
   expect(reverse.violations).not.toEqual([]);
-  const privateEntry=audit({[inner]:'export const value=1;','src/backend/main/example.ts':`import {value} from '../core/foundation/${capability}/${implementation}';`});
+  const privateEntry=audit({[inner]:'export const value=1;',[main]:`import {value} from '${path.posix.relative(path.posix.dirname(main),inner)}';`});
   expect(privateEntry.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary}));
 });
 function audit(files:Record<string,string>){
@@ -77,16 +122,17 @@ function audit(files:Record<string,string>){
 }
 
 test('utility 通用入口禁止通过重导出连带装载 Node 入口',()=>{
-  const result=audit({'src/backend/core/foundation/utility/index.ts':"export {sha256} from './node';",'src/backend/core/foundation/utility/node.ts':"export const sha256=()=>'';"});
+  const result=audit({'src/core/utility/index.ts':"export {sha256} from '../platform/node/digest';",'src/core/platform/node/digest.ts':"export const sha256=()=>'';"});
+  expect(result.unresolved).toEqual([]);
   expect(result.violations).not.toEqual([]);
-  const direct=audit({'src/backend/core/foundation/utility/json.ts':"import {createHash} from 'node:crypto';"});
+  const direct=audit({'src/core/utility/json.ts':"import {createHash} from 'node:crypto';"});
   expect(direct.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'utility-foundations'}));
 });
 test('Updater 只组合 utility 通用入口，不能借基础层依赖其他方案或 Node 入口',()=>{
-  expect(audit({'src/backend/updater/a.ts':"import {value} from '../core/foundation/utility';",'src/backend/core/foundation/utility/index.ts':'export const value=1;'}).ok).toBe(true);
+  expect(audit({'src/backend/updater/a.ts':"import {value} from '../../core/utility';",'src/core/utility/index.ts':'export const value=1;'}).ok).toBe(true);
   for(const target of ['utility/node','files','web']){
-    const file=target==='utility/node'?`src/backend/core/foundation/${target}.ts`:`src/backend/core/foundation/${target}/index.ts`;
-    const result=audit({'src/backend/updater/a.ts':`import {value} from '../core/foundation/${target}';`,[file]:'export const value=1;'});
+    const file=foundationFile(target==='utility/node'?target+'.ts':target+'/index.ts');
+    const result=audit({'src/backend/updater/a.ts':`import {value} from '${path.posix.relative('src/backend/updater',file)}';`,[file]:'export const value=1;'});
     expect(result.unresolved).toEqual([]);expect(result.violations).not.toEqual([]);
   }
 });
@@ -306,7 +352,7 @@ test('P2 shared rendering, IPC contracts and history storage reject business con
 test('engines may use portable utility but not other foundation capabilities',()=>{
   const from='src/backend/engines/pi/rpc.ts';
   for(const target of ['utility/index.ts','utility/node.ts','utility/strings.ts','utility/graphs.ts','files/index.ts','web/index.ts']){
-    const to='src/backend/core/foundation/'+target,relative=path.posix.relative(path.posix.dirname(from),to);
+    const to=foundationFile(target),relative=path.posix.relative(path.posix.dirname(from),to);
     expect(audit({[from]:`import type {T} from '${relative}';`,[to]:'export type T=string;'}).ok).toBe(target==='utility/index.ts');
   }
 });

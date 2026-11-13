@@ -5,7 +5,7 @@
  * 设计原因：授权来自 Runtime 自身可靠 allowed 追加返回值，不信任引擎 emit；调用失败后整轮只保留读取与求助，只有可信未写证明才能解除屏障。停止须排空实际文件进程。
  * 机制边界：utility 仅跟踪在途 Promise；停止接单、取消、物理退出核实与占用释放仍由本模块决定。
  */
-import {InFlightOperations} from '../../foundation/utility';
+import {InFlightOperations} from '../../../../core/utility';
 import {isDeepStrictEqual as equal} from 'node:util';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {hash} from '../../foundation/serialization';

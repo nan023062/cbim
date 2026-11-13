@@ -7,7 +7,7 @@
  * SDK 路径来自可信运行包，凭据与原生历史继续归原 agentHome，不写入 E 缓存。
  * 超时按 SDK 模型增量及工具 Hook 的进展续期；连续静默才关闭 Query，取消仍按显式停止处理。
  */
-import {redactLiteral} from '../../core/foundation/utility';
+import {redactLiteral} from '../../../core/utility';
 import fs from 'node:fs/promises';
 import {RunInactivityTimer} from '../run-inactivity';
 import path from 'node:path';

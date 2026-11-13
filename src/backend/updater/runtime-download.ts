@@ -5,7 +5,7 @@
  */
 import fs from 'node:fs/promises';
 import {createHash} from 'node:crypto';
-import {readBoundedBytes,ByteLimitError} from '../core/foundation/utility';
+import {readBoundedBytes,ByteLimitError} from '../../core/utility';
 import {runtimePackageUrl,type RuntimePackage} from './runtime-manifest';
 
 /** 仅跟随 GitHub 公开附件存储的 HTTPS 跳转，不传账号或授权头。 */

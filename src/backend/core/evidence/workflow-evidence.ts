@@ -9,7 +9,7 @@
  * 职责边界：仅作确定性记录校验；选定 必验文件的当前字节另由平台端口复核，不执行脚本、不签发权限或宣称覆盖整个模块。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
-import {orderJsonValue} from '../foundation/utility';
+import {orderJsonValue} from '../../../core/utility';
 import {selectCodeCheck,verifyCodeChecks,type CodeCheckRecord} from './code-check';
 import {fail} from '../foundation/errors';
 import {hash} from '../foundation/serialization';

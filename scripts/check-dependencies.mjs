@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {builtinModules} from 'node:module';
 import ts from 'typescript';
 import {checkLogicalBoundaries} from './architecture-boundaries.mjs';
 
@@ -12,18 +13,32 @@ const slash = value => value.replaceAll('\\', '/');
 const key = value => process.platform === 'win32' ? slash(path.resolve(value)).toLowerCase() : path.resolve(value);
 // 前后端分组不能掩盖后端内部边界；类型重导出只允许通过通信契约访问 Core。
 const layers = {
+  core:['core'],
+  'core/platform/node':['core/platform/node','core'],
+  'core/platform/browser':['core/platform/browser','core'],
+  'core/platform/electron':['core/platform/electron','core/platform/node','core'],
+  logic:['logic','core','core/platform/node','core/platform/electron'],
+  view:['view','bridge/client','bridge/contracts','core','core/platform/browser'],
+  'bridge/client':['bridge/client','bridge/contracts','core','core/platform/browser'],
+  'bridge/server':['bridge/server','bridge/contracts','logic','core','core/platform/node'],
   foundations:['foundations'],
   'backend/bootstrap':['backend/bootstrap','backend/updater','backend/main'],
-  'backend/core':['backend/core','foundations'],'backend/engines':['backend/engines','backend/core','foundations'],
-  'backend/scheduler-engine':['backend/scheduler-engine','backend/engines','backend/core','foundations'],
-  'backend/main':['backend/main','backend/scheduler-engine','backend/core','backend/updater','bridge/contracts','foundations'],
-  'backend/updater':['backend/updater','bridge/contracts','foundations'],
-  'bridge/contracts':['bridge/contracts','backend/core'],
-  'bridge/preload':['bridge/preload','bridge/contracts'],
-  frontend:['frontend','bridge/contracts'],
+  'backend/core':['backend/core','foundations','core','core/platform/node'],'backend/engines':['backend/engines','backend/core','foundations','core'],
+  'backend/scheduler-engine':['backend/scheduler-engine','backend/engines','backend/core','foundations','core'],
+  'backend/main':['backend/main','backend/scheduler-engine','backend/core','backend/updater','bridge/contracts','foundations','core','core/platform/node'],
+  'backend/updater':['backend/updater','bridge/contracts','foundations','core'],
+  // 旧 Bridge 的 backend/core 纯契约重导出仍由逻辑边界逐项约束，随 DTO 迁移退出。
+  'bridge/contracts':['bridge/contracts','backend/core','core'],
+  'bridge/preload':['bridge/preload','bridge/contracts','core'],
+  frontend:['frontend','bridge/contracts','core'],
 };
-// foundations 是逻辑基础层；物理合并进 Core 不授予其业务依赖，也不扩大 Updater/引擎的访问权。
-const layerOf = file => /^src\/backend\/core\/foundation\/(utility|files|web)\//.test(file) ? 'foundations' : file.startsWith('src/frontend/') ? 'frontend' : file.split('/').slice(1,3).join('/');
+// 新四层与旧目录并存；旧 backend/core 是业务，不属于共享 Core。
+const layerOf = file => {
+  if(file.startsWith('src/core/platform/'))return file.split('/').slice(1,4).join('/');
+  for(const layer of ['core','logic','view','frontend'])if(file.startsWith(`src/${layer}/`))return layer;
+  if(/^src\/backend\/core\/foundation\/(files|web)\//.test(file))return 'foundations';
+  return file.split('/').slice(1,3).join('/');
+};
 
 // 已迁移的查询边界按真实职责约束，而非把整个 core 的同层引用视为自由访问。
 // 精确文件是公开入口；以 / 结尾的路径表示已核实的完整边界（Foundation 不认识业务）。
@@ -34,18 +49,18 @@ const teamView='src/backend/core/knowledge/read-models/team.ts';
 const businessView='src/backend/core/knowledge/read-models/workspace.ts';
 const projectRoot='src/backend/core/workspace/project-root.ts';
 // utility 通用入口只能组合环境无关实现，Node 算法必须显式选用独立入口。
-const utilityPortable=['src/backend/core/foundation/utility/index.ts','src/backend/core/foundation/utility/json.ts','src/backend/core/foundation/utility/async.ts','src/backend/core/foundation/utility/strings.ts','src/backend/core/foundation/utility/bytes.ts','src/backend/core/foundation/utility/graphs.ts'];
+const utilityPortable=['src/core/utility/index.ts','src/core/utility/json.ts','src/core/utility/async.ts','src/core/utility/strings.ts','src/core/utility/bytes.ts','src/core/utility/graphs.ts'];
 const moduleBoundaries=[
-  // 前端基础库仅在前端域内沉淀，不反向依赖页面、通信契约或后端基础库。
-  {sources:['src/frontend/foundations/'],allow:['src/frontend/foundations/']},
+  // 视图专属适配可以组合共享 Core，但不反向依赖页面、通信契约或后端实现。
+  {sources:['src/frontend/foundations/'],allow:['src/frontend/foundations/','src/core/utility/index.ts']},
   {sources:utilityPortable,allow:utilityPortable},
   // 引擎只组合可移植算法，不借此接入 files/web、平台适配或 Node 私有实现。
-  {sources:['src/backend/engines/'],allow:['src/backend/engines/','src/backend/core/','src/backend/core/foundation/utility/index.ts']},
+  {sources:['src/backend/engines/'],allow:['src/backend/engines/','src/backend/core/','src/core/utility/index.ts']},
   // 更新子系统仅复用环境无关的数据消费入口，不因此取得 Main 服务或其他基础方案的依赖权。
-  {sources:['src/backend/updater/'],allow:['src/backend/updater/','src/bridge/contracts/','src/backend/core/foundation/utility/index.ts']},
+  {sources:['src/backend/updater/'],allow:['src/backend/updater/','src/bridge/contracts/','src/core/utility/index.ts']},
   {sources:['src/frontend/execution-view/'],allow:['src/frontend/execution-view/','src/frontend/components/','src/bridge/contracts/']},
   {sources:['src/frontend/tasks/'],allow:['src/frontend/tasks/','src/frontend/execution-view/','src/frontend/components/','src/frontend/foundations/utility/index.ts','src/bridge/contracts/']},
-  {sources:[foundation],allow:[foundation,'src/backend/core/foundation/utility/index.ts','src/backend/core/foundation/utility/node.ts']},
+  {sources:[foundation],allow:[foundation,'src/core/utility/index.ts','src/core/platform/node/digest.ts']},
   {sources:[knowledgeTypes],allow:[]},
   {sources:[knowledgeSnapshot],allow:[knowledgeTypes,foundation]},
   {sources:[teamView],allow:[knowledgeTypes,knowledgeSnapshot,foundation]},
@@ -62,7 +77,7 @@ const moduleBoundaries=[
   {sources:['tests/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
   {sources:['tests/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/backend/core/knowledge/knowledge.ts','tests/knowledge-data.ts']},
   // 调度器只组合可移植公开算法，不取得 Node、files 或 web 的访问权。
-  {sources:['src/backend/scheduler-engine/'],allow:['src/backend/scheduler-engine/','src/backend/engines/','src/backend/core/','src/backend/core/foundation/utility/index.ts']},
+  {sources:['src/backend/scheduler-engine/'],allow:['src/backend/scheduler-engine/','src/backend/engines/','src/backend/core/','src/core/utility/index.ts']},
 ];
 const matchesBoundary=(file,entry)=>{
   if(file===entry)return true;
@@ -200,6 +215,8 @@ export function auditDependencies(root = process.cwd(), options = {}) {
     if(e.from.startsWith('src/')&&e.to.startsWith('src/')){
       const a=layerOf(e.from),b=layerOf(e.to);
       if(!layers[a]||!layers[a].includes(b))return true;
+      // 新逻辑业务模块只通过各自 index.ts 对外；桥服务不得穿透存储和规则实现。
+      if(b==='logic'&&(!e.from.startsWith('src/logic/')||e.from.split('/')[2]!==e.to.split('/')[2])&&!/^src\/logic\/[^/]+\/index\.ts$/.test(e.to))return true;
       // 具体引擎选择仅属于调度装配，普通业务编排仍面向 Core 的契约。
       if(a==='backend/scheduler-engine'&&b==='backend/engines'&&!e.from.startsWith('src/backend/scheduler-engine/assembly/'))return true;
     }
@@ -208,6 +225,14 @@ export function auditDependencies(root = process.cwd(), options = {}) {
   });
   const circular = cycles([...known.values()],edges);
   const logical = checkLogicalBoundaries([...known.values()],edges,externalReferences);
+  // 运行环境限制同时覆盖 npm/内置模块导入，避免绕过 Core 平台入口直接取得 Node/Electron。
+  for(const reference of externalReferences){
+    const layer=layerOf(reference.file);
+    if(['view','frontend','bridge/client','bridge/contracts','core/platform/browser'].includes(layer)
+      &&(reference.spec.startsWith('node:')||builtinModules.includes(reference.spec)||reference.spec==='electron'||reference.spec.startsWith('electron/'))){
+      logical.violations.push({...reference,rule:'runtime-environment',boundary:layer});
+    }
+  }
   return {ok:!circular.length && !unresolved.length && !dynamic.length && !violations.length && !logical.violations.length, files:unique.length, edges, cycles:circular, unresolved, dynamic, external, violations, logicalViolations:logical.violations, logicalCoverage:logical.coverage};
 }
 

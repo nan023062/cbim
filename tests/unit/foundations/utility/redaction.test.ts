@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {redactLiteral} from '../../../../src/backend/core/foundation/utility';
+import {redactLiteral} from '../../../../src/core/utility';
 describe('literal redaction',()=>{
   it('替换每次精确出现，不解释正则字符或大小写',()=>{
     expect(redactLiteral('a.* a.* A.*','a.*')).toBe('[REDACTED] [REDACTED] A.*');

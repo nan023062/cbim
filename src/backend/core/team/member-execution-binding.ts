@@ -4,7 +4,7 @@
  * 设计原因：请求只提交预期，实际绑定由登记重建；稳定岗位、静态角色与每次执行实例不能互相代替。
  * 职责边界：不读文件、模型或凭据，不声明来源当前有效；旧缺省仅用于历史读取，新许可由领域规则核实。
  */
-import {orderJsonValue} from '../foundation/utility';
+import {orderJsonValue} from '../../../core/utility';
 import {z} from 'zod';
 import {capabilitySourceRefSchema,knowledgeSourceRefSchema,sourceRefMatches} from '../workspace/knowledge-source';
 

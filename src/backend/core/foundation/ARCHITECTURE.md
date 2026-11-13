@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-后端公共库聚合入口：根层持有领域错误、标识和路径端口及 hash/json 兼容适配；utility、files、web 子库各自独立，只依赖自身与获准外部库，不反向认识根层约定或业务。适配单向引用 utility 唯一算法，parseJson 保留 JSON Fault；StoragePaths 声明路径保护范围，核验归平台。物理归档不扩大调用权，公开入口及可移植/Node/桌面边界仍单独受检。
+迁移期后端领域约定与适配：错误、标识、路径端口、JSON Fault 和 hash/json 兼容名称保留；算法已单向引用共享 src/core。files/web 暂留原独立边界，不反向认识领域约定。此旧业务 Core 不等于新共享 Core，后续按业务归属迁移。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -14,16 +14,13 @@
 | [identity.ts](identity.ts) | 运行记录路径中任务和执行标识的格式检查。 |
 | [json.ts](json.ts) | 将 utility 的严格 JSON 解析事实适配为 Core 原有 JSON 错误协议。 |
 | [paths.ts](paths.ts) | 工作区身份与受控路径解析端口。 |
-| [serialization.ts](serialization.ts) | Core 既有 hash/json 名称的兼容适配，算法实现归本目录独立 utility 子库。 |
+| [serialization.ts](serialization.ts) | 后端既有 hash/json 名称的兼容适配，格式化来自共享 Core utility，摘要来自独立 Node 入口。 |
 
 ## 架构类图
 
 ```mermaid
 classDiagram
 class N_src_backend_core_foundation_files["files/"] {
-  <<directory>>
-}
-class N_src_backend_core_foundation_utility["utility/"] {
   <<directory>>
 }
 class N_src_backend_core_foundation_web["web/"] {
@@ -38,15 +35,14 @@ class N_src_backend_core_foundation_identity_ts["identity.ts"] {
 class N_src_backend_core_foundation_json_ts["json.ts"] {
   <<module>>
 }
-N_src_backend_core_foundation_json_ts ..> N_src_backend_core_foundation_utility : 导入依赖
+class N_src_backend_core_foundation_paths_ts["paths.ts"] {
+  <<module>>
+}
 N_src_backend_core_foundation_json_ts ..> N_src_backend_core_foundation_errors_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_core_foundation_paths_ts["paths.ts"] {
-  <<module>>
-}
 class N_src_backend_core_foundation_serialization_ts["serialization.ts"] {
   <<module>>
 }
@@ -54,9 +50,7 @@ class N_src_backend_core_foundation_serialization_ts["serialization.ts"] {
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-- `json.ts` → `utility`：导入。
 - `json.ts` → `errors.ts`：导入。
-- `serialization.ts` → `utility`：导入。
 
 ### errors.ts 公开入口
 
@@ -94,7 +88,6 @@ class N_src_backend_core_foundation_json_ts["json.ts"] {
 ## 子目录导航
 
 - [files/](files/ARCHITECTURE.md)：Node 单文件 I/O 基础方案：存在探测、JSON 读取、同步后原子替换；路径授权、跨进程锁和业务事务由消费者拥有。
-- [utility/](utility/ARCHITECTURE.md)：通用工具函数与数据结构按类别内聚组织：json.ts 提供 JSON 格式化、严格解析和键排序；async.ts 提供独立实例的串行队列、在途集合及请求关联表；strings.ts 提供文本分帧与精确脱敏；bytes.ts 提供有界字节流收集；graphs.ts 提供后端无环判断。index.ts 是通用公开入口，node.ts 独立承载 SHA-256。不按函数数量拆文件，不发起文件/网络访问，不拥有业务身份、事务或权限。排序比较器与字段规则由消费者指定；Promise 快照不代表物理退出，文本帧不代表协议校验，生命周期和业务策略留在适配器。
 - [web/](web/ARCHITECTURE.md)：独立网页读取方案：安全公网 HTTP、正文提取、robots/缓存/限速与可注入浏览器兜底；Node 公共入口不加载 Electron，具体 Chromium 适配有独立入口。
 
 [返回上层](../ARCHITECTURE.md)。
@@ -107,15 +100,15 @@ class N_src_backend_core_foundation_json_ts["json.ts"] {
 
 # 后端公共库边界
 
-本目录承载后端域公共能力。前端公共库位于 `src/frontend/foundations`，独立实现、验证和演进；两域工具库不互相引用，也不经 bridge 转发公共算法。
+本目录暂保留后端领域约定与适配，前后端通用机制已开始归入共享 src/core。前端可组合共享 Core，不直接引用本目录业务约定，也不经 Bridge 转发工具。
 
-`src/backend/core/foundation` 统一后端公共能力的目录入口，但保留两类单向边界：本层的错误协议、标识约束、路径端口及兼容适配，以及子目录中可独立复用的技术基础库。目录合并不合并状态、资源生命周期或业务策略，不建立统一万能导出或容器。
+本层的错误协议、标识约束、路径端口及兼容适配仍按原行为服务业务；files/web 子目录尚未迁移。原 utility 已整体移出，Node 摘要归 src/core/platform/node/digest.ts，不保留旧路径转发。
 
-`utility`、`files`、`web` 仍是独立的逻辑基础层：不依赖父目录中的领域约定，也不依赖 Core 其他业务、Main、Scheduler、Bridge 或 Frontend，包含类型依赖。只使用自身、标准库及已核实第三方库；跨能力依赖必须由契约与检查器明确允许。检查器中的 `foundations` 是这一逻辑层的标识，不是仍存在的根目录。
+files/web 仍是独立逻辑基础层：不依赖父目录领域约定、旧 Core 业务或上层，包含类型依赖。只使用自身及获准外部库；检查器中的 foundations 现仅标识这两个待迁移子库。
 
 本层 `errors.ts` 定义 Fault 协议，`identity.ts` 定义运行标识约束，`paths.ts` 声明 StoragePaths 端口；`json.ts` 将严格解析错误适配为 JSON Fault，`serialization.ts` 保留 hash/json 兼容名称。适配单向引用 utility，utility 不知道这些领域语义。原顶层基础库入口已迁移到本目录，调用者直接使用各子库公开入口。
 
-当前能力为 [utility](utility/CONTRACT.md)、[files](files/CONTRACT.md) 与 [web](web/CONTRACT.md)。utility 收纳领域无关算法与数据结构，SerialQueue 已从原 concurrency 目录迁入；各能力按明确契约独立组织，不把业务辅助代码机械归并。调用者通过公开入口单向使用；utility 通用入口不加载 Node，Node 摘要算法使用独立入口，网页平台实现也单独加载。
+当前能力为 [utility](../../../core/utility/CONTRACT.md)、[files](files/CONTRACT.md) 与 [web](web/CONTRACT.md)。utility 收纳领域无关算法与数据结构，SerialQueue 已从原 concurrency 目录迁入；各能力按明确契约独立组织，不把业务辅助代码机械归并。调用者通过公开入口单向使用；utility 通用入口不加载 Node，Node 摘要算法使用独立入口，网页平台实现也单独加载。
 
 utility 同时提供严格 JSON 与传入 Web 字节流的有界消费。接管 reader 不等于负责建立网络连接：地址、授权、期限、编码和业务错误仍属于消费者。Updater 仅获准组合 utility 通用入口，不能借基础层依赖权引用其他方案、Main 或业务运行时。
 

@@ -5,7 +5,7 @@
  * 机制边界：utility 只消费有界响应字节并释放 reader，GitHub 授权与错误脱敏仍由本模块负责。
  */
 import {fail} from '../../core/foundation/errors';
-import {readBoundedBytes} from '../../core/foundation/utility';
+import {readBoundedBytes} from '../../../core/utility';
 
 export interface GitHubReply {status:number;data:unknown}
 /** 测试可注入本地替身；生产实现只允许 GitHub 官方两个固定主机。 */

@@ -5,7 +5,7 @@
  * 职责边界：这里核对已有证明及跨对象关系，不重新读取日志或判断模型账单；可信观察由调度层在同一事务内取得。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
-import {orderJsonValue} from '../foundation/utility';
+import {orderJsonValue} from '../../../core/utility';
 import {fail} from '../foundation/errors';
 import type {DispatchMutation,DispatchState} from '../dispatch/dispatch-storage';
 import type {DispatchScope} from '../tasks/dispatch-scope';

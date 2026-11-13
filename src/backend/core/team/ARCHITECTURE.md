@@ -196,7 +196,7 @@ class N_src_backend_core_team_member_execution_binding_ts_OwnerExecutionBinding[
 N_src_backend_core_team_member_execution_binding_ts ..> N_src_backend_core_team_member_execution_binding_ts_OwnerExecutionBinding : 声明
 ```
 
-直接依赖：[../foundation/utility/index.ts](../foundation/utility/index.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)。
 
 ### member-execution-rules.ts
 
@@ -471,7 +471,7 @@ class N_src_backend_core_team_workspace_member_rules_ts_WorkspaceMemberRegistry[
 N_src_backend_core_team_workspace_member_rules_ts ..> N_src_backend_core_team_workspace_member_rules_ts_WorkspaceMemberRegistry : 声明
 ```
 
-直接依赖：[../foundation/utility/index.ts](../foundation/utility/index.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)、[workspace-member.ts](workspace-member.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)、[workspace-member.ts](workspace-member.ts)。
 
 ### workspace-member-tools.ts
 

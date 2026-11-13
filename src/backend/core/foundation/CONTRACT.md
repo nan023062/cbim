@@ -1,14 +1,14 @@
 # 后端公共库边界
 
-本目录承载后端域公共能力。前端公共库位于 `src/frontend/foundations`，独立实现、验证和演进；两域工具库不互相引用，也不经 bridge 转发公共算法。
+本目录暂保留后端领域约定与适配，前后端通用机制已开始归入共享 src/core。前端可组合共享 Core，不直接引用本目录业务约定，也不经 Bridge 转发工具。
 
-`src/backend/core/foundation` 统一后端公共能力的目录入口，但保留两类单向边界：本层的错误协议、标识约束、路径端口及兼容适配，以及子目录中可独立复用的技术基础库。目录合并不合并状态、资源生命周期或业务策略，不建立统一万能导出或容器。
+本层的错误协议、标识约束、路径端口及兼容适配仍按原行为服务业务；files/web 子目录尚未迁移。原 utility 已整体移出，Node 摘要归 src/core/platform/node/digest.ts，不保留旧路径转发。
 
-`utility`、`files`、`web` 仍是独立的逻辑基础层：不依赖父目录中的领域约定，也不依赖 Core 其他业务、Main、Scheduler、Bridge 或 Frontend，包含类型依赖。只使用自身、标准库及已核实第三方库；跨能力依赖必须由契约与检查器明确允许。检查器中的 `foundations` 是这一逻辑层的标识，不是仍存在的根目录。
+files/web 仍是独立逻辑基础层：不依赖父目录领域约定、旧 Core 业务或上层，包含类型依赖。只使用自身及获准外部库；检查器中的 foundations 现仅标识这两个待迁移子库。
 
 本层 `errors.ts` 定义 Fault 协议，`identity.ts` 定义运行标识约束，`paths.ts` 声明 StoragePaths 端口；`json.ts` 将严格解析错误适配为 JSON Fault，`serialization.ts` 保留 hash/json 兼容名称。适配单向引用 utility，utility 不知道这些领域语义。原顶层基础库入口已迁移到本目录，调用者直接使用各子库公开入口。
 
-当前能力为 [utility](utility/CONTRACT.md)、[files](files/CONTRACT.md) 与 [web](web/CONTRACT.md)。utility 收纳领域无关算法与数据结构，SerialQueue 已从原 concurrency 目录迁入；各能力按明确契约独立组织，不把业务辅助代码机械归并。调用者通过公开入口单向使用；utility 通用入口不加载 Node，Node 摘要算法使用独立入口，网页平台实现也单独加载。
+当前能力为 [utility](../../../core/utility/CONTRACT.md)、[files](files/CONTRACT.md) 与 [web](web/CONTRACT.md)。utility 收纳领域无关算法与数据结构，SerialQueue 已从原 concurrency 目录迁入；各能力按明确契约独立组织，不把业务辅助代码机械归并。调用者通过公开入口单向使用；utility 通用入口不加载 Node，Node 摘要算法使用独立入口，网页平台实现也单独加载。
 
 utility 同时提供严格 JSON 与传入 Web 字节流的有界消费。接管 reader 不等于负责建立网络连接：地址、授权、期限、编码和业务错误仍属于消费者。Updater 仅获准组合 utility 通用入口，不能借基础层依赖权引用其他方案、Main 或业务运行时。
 

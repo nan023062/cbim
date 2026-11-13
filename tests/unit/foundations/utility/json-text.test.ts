@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {formatJson} from '../../../../src/backend/core/foundation/utility';
+import {formatJson} from '../../../../src/core/utility';
 
 it('保持键顺序、两空格缩进和末尾 LF；不改变原数据',()=>{
   const input={z:'正文😀',a:[1,null],missing:undefined};

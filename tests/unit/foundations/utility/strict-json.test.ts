@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {parseStrictJson,StrictJsonError} from '../../../../src/backend/core/foundation/utility';
+import {parseStrictJson,StrictJsonError} from '../../../../src/core/utility';
 
 it('保留数组、标量、对象键和原数值，不加入业务 schema 或危险键裁剪',()=>{
   const value=parseStrictJson('{"__proto__":{"kept":true},"constructor":1,"items":[0,false,null,"正文"]}');

@@ -11,7 +11,7 @@ const kinds=['unit','contract','integration'];
 const testFile=/^tests\/.*\.test\.(?:ts|mjs)$/;
 const belongs=(file,root)=>file===root||root.endsWith('/')&&path.posix.dirname(file)+'/'===root;
 // 这些是数据/契约支持，不是允许导入其它领域实现的豁免；完整应用和跨套件依赖仍独立检查。
-const supportRoots=['src/backend/core/foundation/','src/bridge/contracts/','src/backend/core/foundation/files/','src/backend/core/foundation/utility/index.ts','src/backend/core/foundation/utility/node.ts'];
+const supportRoots=['src/backend/core/foundation/','src/bridge/contracts/','src/backend/core/foundation/files/','src/core/utility/index.ts','src/core/platform/node/digest.ts'];
 
 /** 包含类型边的可达性用于拒绝隐藏的应用装配；不能仅检查测试文件的直接 import。 */
 function reachable(start,graph){

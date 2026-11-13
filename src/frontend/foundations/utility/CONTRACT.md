@@ -1,10 +1,10 @@
 # 前端通用工具库
 
-本库仅服务前端域，按数据或问题类别组织工具函数和数据结构，不采用一函数一文件。公开入口为 `index.ts`，`json.ts`、`events.ts`、`async.ts`、`graphs.ts` 与 `storage.ts` 是私有类别实现。当前仅依赖 JavaScript 标准能力，不依赖 React、页面、通信契约、Node 或后端 `src/backend/core/foundation`，没有全局可变状态。
+本库保留视图侧适配，按数据或问题类别组织，不采用一函数一文件。公开入口为 index.ts，类别文件为私有实现。JSON 比较已组合共享 src/core/utility；其余能力暂留原实现。只依赖语言能力及共享 Core 公开入口，不依赖 React、页面、通信契约、Node 或后端业务，没有全局可变状态。
 
 ## JSON 比较
 
-`equalJson(left, right)` 递归复制对象并用 `localeCompare` 排列键，省略对象中的 undefined 属性，数组保序，然后比较 `JSON.stringify` 输出。不修改输入，不生成身份、授权、哈希或持久化记录，不校验字段有效性。
+`equalJson(left, right)` 调用共享 orderJsonValue，显式用 localeCompare 排列键、略去对象 undefined、保持数组顺序，再比较 JSON.stringify 输出。不修改输入，不生成身份、授权、哈希或持久化记录，不校验字段有效性。比较策略保留在视图适配，算法与后端共享。
 
 真实消费者为岗位登记、模块责任、目标接续、人工决定、人工继续五个控制器。它们原有的同类本地算法收敛到此入口；身份、版本、原请求匹配、回执合法性及未知结果处理仍归各控制器。
 

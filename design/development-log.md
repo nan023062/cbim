@@ -1,3 +1,14 @@
+## 2026-11-13：四层架构第一片／共享 Core 与依赖规则
+
+- 来源：用户确认 Core、Logic、Bridge、View 四层，要求先建立 Core 和规则、再逐步迁移，并提供具体目录与第一步清单。基线 8b1dfd4e，初始工作区干净；C3/L3。当前开放 #65 与本片无关，按用户直接授权实施，不更改无关工单。目标及分片规格在 design/four-layer-architecture.md，当前实现契约在 src；不建立另一份实时待办。
+- 第一片迁移原 backend/core/foundation/utility 的六个便携文件到 src/core/utility，Node SHA-256 单独迁入 src/core/platform/node/digest.ts。保留旧 hash/json/JSON Fault 业务适配，全部真实导入与测试同步，无旧路径转发。files/web、业务规则与存储暂留原位；旧 backend/core 不等同于新共享 Core，未将 Logic/View 的目标画成已全部迁移。Node 与便携测试分别归 core/platform/node、core/utility，原测试文件位置保持。
+- 第一条双端消费者：前端 equalJson 删除本地排序递归，组合共享 orderJsonValue，显式保留 localeCompare、undefined、数组/整数键/Unicode 同序及异常行为；后端原各类指纹策略保持。队列、请求关联、流与运行生命周期不变。对照 52 个受影响源码，导入与注释外仅前端这一适配变化，其余算法语法一致。
+- 依赖规则同时覆盖新目标层与旧迁移期边界：Core 不反向依赖业务、桥或视图；便携入口不引用平台；View 只使用桥客户端/契约及适用 Core；Bridge server 只能使用 Logic 各业务 index.ts，Logic 模块间同样不能穿透私有文件；旧引擎/调度/更新子系统不获得 Node/files/web 权限。Core 未登记模块拒绝，便携模块新文件也受第三方限制；View/前端/Bridge client/contracts 直接导入 node:、Node 内置或 Electron 同样拒绝。新增 29 条参数化/独立回归，包含类型依赖、公开/私有入口及运行环境；旧循环、别名、动态加载与模块测试边界回归保留。
+- 首轮命令：`pnpm exec vitest run tests/unit/foundations/utility tests/unit/frontend/foundations/utility/json.test.ts tests/workspace-member-view.test.ts tests/module-ownership-view.test.ts tests/scope-continuation-view.test.ts tests/human-decision-view.test.ts tests/human-continuation-view.test.ts tests/utility-json-contract.test.ts tests/utility-json-order-contract.test.ts tests/utility-serialization-contract.test.ts tests/utility-body-consumers.test.ts tests/utility-redaction-contract.test.ts tests/utility-rpc-framing-contract.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts tests/test-modules.test.ts --reporter=default`，26 文件/231 项通过。选取依据为迁移库、前端比较与五个直接控制器、后端共享机制契约及规则检查器。随后补齐新层的独立矩阵检查，单跑 layer-boundaries 两项通过；增加直接 Node/Electron 绕过回归后仅重跑 dependencies 与 test-modules，76 项通过，最终共 26 文件/235 项通过。
+- `pnpm typecheck`、`pnpm check:architecture`、`pnpm check:test-modules` 通过：95 目录/716 源码样式；1446 扫描文件/7151 依赖/0 环与违规；471 测试文件（131 unit、153 contract、187 integration）。通过 Vite 自带 esbuild 对 src/frontend/foundations/utility/json.ts 做 `bundle:true, platform:'browser', format:'esm', write:false, metafile:true` 的浏览器目标验证：9779 字节、13 输入，无 Node/Electron/平台输入。不是完整桌面构建。
+- 同步 Core/平台/前端适配及调用方注释、相关契约和类图、测试模块归属、AGENTS 与三宿主 AI 工作流。9 份工作流内容一致、66 处本地引用有效；首轮 48 份受影响/新增文档本地链接有效。Q1 原算法和消费者字节/失败语义；Q2 排序机制共享，业务/视图策略留本地；Q3 独立机制、实际消费者、层规则及浏览器目标验证；Q4 Core 契约→utility/index.ts 或 platform/node/digest.ts→equalJson/后端适配；Q5 无新增候选规则，四层及共享许可来自用户明确决策。
+- 回退单位是本片目录、调用方、测试与规则的完整提交。未运行全仓、完整桌面、在线供应商、网站读取或发布验收；不声称后续 Logic/Bridge/View 物理迁移已完成。该片独立本地提交，未 push、合并或发布，保留完整 diff 供人工 review。
+
 ## 2026-11-13：后端公共库统一归入 Core/foundation
 
 - 来源：用户明确要求将顶层 foundations 合并到 backend/core/foundation；基线 de333bf0，工作区初始干净，C3/L3。已查询当前开放 Issues，仅 #65 与本目录迁移无关，本项按用户直接授权实施，不改写无关工单。目的为统一后端公共库位置，不宣称目录移动带来新的业务解耦或性能收益。

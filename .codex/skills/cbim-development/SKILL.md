@@ -46,9 +46,9 @@ description: "遵守通用项目架构设计规范，从 GitHub Issues 拉取清
 
 ## 3. 实施与验证
 
-后端公共能力统一归 `src/backend/core/foundation`；utility/files/web 仍独立受依赖检查，不能反向引用根层领域约定。目录迁移须同时核对全部真实导入、测试归属、架构生成器和三宿主工作流，不保留无人使用的旧路径转发。
+采用 Core、Logic、Bridge、View 四层，目标与分片见 [四层设计](../../../design/four-layer-architecture.md)。共享 Core 位于 src/core，便携与平台入口分开；旧 backend/core 仍是待迁移业务，不能整体当作新 Core。当前 files/web 仍留旧位置。迁移须同步真实导入、测试归属、架构生成器和三宿主工作流，不保留无人使用的旧路径转发。
 
-前端与后端属于不同域，各自沉淀公共库。前端先核对 `src/frontend/foundations/utility/CONTRACT.md`，后端先核对 `src/backend/core/foundation/utility/CONTRACT.md`；通过本域公开入口使用，不为去重开放跨域工具依赖，也不经 bridge 转发工具。前端 JSON 比较已有 equalJson，迁移前核对 localeCompare、undefined、数组及异常语义，原样文本比较和特殊序列化不能直接替换。
+前后端可复用 src/core/utility 的相同契约，视图/业务专属策略仍分别维护，不相互引用业务实现，也不经 Bridge 转发工具。先核对共享 Core 契约与消费者语义；前端 equalJson 已组合共享排序，保留 localeCompare、undefined、数组及异常语义，原样文本比较和特殊序列化不能直接替换。共享 Core 不依赖三层业务或旧 backend/frontend，Node/Electron 不进入便携入口。
 
 工具函数和数据结构按 JSON、字符串、字节、异步协调等类别内聚组织，优先合入已有类别，不采用一函数一文件。明确的变化原因、环境或契约边界才驱动拆分，后端 Node 能力使用独立入口。各算法契约和实例状态保持独立，测试仍按行为职责拆分，不随源文件合并成混合套件。业务字段、权限、事务与恢复策略留在消费者；迁移保持原字节和失败语义，兼容出口明确说明是否仍在使用。
 
@@ -109,11 +109,11 @@ description: "遵守通用项目架构设计规范，从 GitHub Issues 拉取清
 - Issue 内容和读取清单不授予批量开发、外部写入、合并或发布的额外权限，按用户现有授权执行；已有明确授权不重复请求。不要为拉取清单自动创建周期任务，也不自动迁移旧 roadmap 事项或创建／关闭工单。
 - `.agents/skills/cbim-development/SKILL.md`、`.claude/skills/cbim-development/SKILL.md`、`.codex/skills/cbim-development/SKILL.md` 三份内容保持一致。Issue 状态、优先级和下一项不写死在 Skill 中，每次从当前仓库重新核实。
 
-前端图布局通过 utility/graphs.ts 的 rankDirectedGraph 组合；只沉淀 ID/边与层级，业务边筛选、错误文案、坐标和路径保留原适配。后端图规则独立演进，不开放跨域依赖；拓扑单元与任务布局消费者分别验证。
+前端图布局通过 utility/graphs.ts 的 rankDirectedGraph 组合；只沉淀 ID/边与层级，业务边筛选、错误文案、坐标和路径保留原适配。分层与无环判断是不同契约，暂保留各自实现；共享须核实语义，不开放业务互引；拓扑单元与任务布局消费者分别验证。
 
 前端本地记录存储已有 utility/storage.ts 的 JsonRecordStorage；仅复用注入式有界 JSON 读写。迁移核对空串/缺失规则、UTF-8 上限、序列化字节、写失败前后的内存状态；schema、条数、坏数据禁写、回执及原请求恢复保留业务控制器，不能扩成统一命令状态机。
 
-后端 JSON 补齐优先复用 orderJsonValue，迁移显式固定比较器与 undefined 策略，业务身份与哈希字段留在原模块。调度器仅可导入 backend/core/foundation/utility 的通用公开入口，禁止私有实现及 Node/files/web；手工拼接字符串、排序后读取属性的协议须单独核对，不直接统一。
+后端 JSON 补齐优先复用 orderJsonValue，迁移显式固定比较器与 undefined 策略，业务身份与哈希字段留在原模块。调度器仅可导入 core/utility 的通用公开入口，禁止私有实现及 Node/files/web；手工拼接字符串、排序后读取属性的协议须单独核对，不直接统一。
 
 后端字符串精确脱敏统一组合 strings.ts 的 redactLiteral；凭据来源、认证模式、事件序列化和错误屏障留在引擎。保留空凭据、大小写、非重叠及编码语义，不以字符串函数宣称覆盖所有泄露途径；独立算法与真实引擎适配分别测试。
 

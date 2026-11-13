@@ -4,7 +4,7 @@
  * 设计原因：内置主 Agent 没有可编辑的知识定义文件，采用本机工作区设置；选型契约与自定义 Agent 相同，配置保存不启动执行、不修改任何任务快照。
  */
 import fs from 'node:fs/promises';
-import {SerialQueue} from '../../core/foundation/utility';
+import {SerialQueue} from '../../../core/utility';
 import {z} from 'zod';
 import {atomic} from '../../core/foundation/files';
 import {fail} from '../../core/foundation/errors';

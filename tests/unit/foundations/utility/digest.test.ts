@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {sha256} from '../../../../src/backend/core/foundation/utility/node';
+import {sha256} from '../../../../src/core/platform/node/digest';
 
 it('标准向量固定为 SHA-256 小写十六进制，字符串与 UTF-8 字节一致',()=>{
   expect(sha256('')).toBe('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');

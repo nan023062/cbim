@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest';
-import {ByteLimitError,readBoundedBytes} from '../../../../src/backend/core/foundation/utility';
+import {ByteLimitError,readBoundedBytes} from '../../../../src/core/utility';
 
 it('按字节合并视图，允许精确上限并释放 reader 与监听',async()=>{
   const source=Uint8Array.from([9,97,98,9]),stop=new AbortController();

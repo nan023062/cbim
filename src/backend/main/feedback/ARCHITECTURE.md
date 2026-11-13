@@ -44,7 +44,7 @@ class N_src_backend_main_feedback_github_api_ts_GitHubRequest["GitHubRequest"] {
 N_src_backend_main_feedback_github_api_ts ..> N_src_backend_main_feedback_github_api_ts_GitHubRequest : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/utility/index.ts](../../core/foundation/utility/index.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)。
 
 ### github-feedback-auth.ts
 

@@ -6,7 +6,7 @@
  * 受控文件平台的禁止边界包含独立 R/E 缓存，避免业务文件工具修改下一次将执行的签名程序。
  * 机制边界：utility 仅跟踪在途 Promise；停止接单、取消、物理退出核实与占用释放仍由本模块决定。
  */
-import {InFlightOperations} from '../../core/foundation/utility';
+import {InFlightOperations} from '../../../core/utility';
 import path from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {isDeepStrictEqual as equal} from 'node:util';

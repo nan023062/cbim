@@ -4,7 +4,7 @@
  * 设计原因：只有可靠保存的设置才影响新运行；串行版本校验防止多个窗口相互覆盖，降低上限不结束已经获准的运行。
  */
 import fs from 'node:fs/promises';
-import {SerialQueue} from '../../core/foundation/utility';
+import {SerialQueue} from '../../../core/utility';
 import {z} from 'zod';
 import {atomic} from '../../core/foundation/files';
 import {fail} from '../../core/foundation/errors';

@@ -39,7 +39,6 @@ N_src_backend_main ..> N_src_backend_scheduler_engine : 导入依赖
 N_src_backend_main ..> N_src_backend_updater : 导入依赖
 N_src_backend_scheduler_engine ..> N_src_backend_core : 导入依赖
 N_src_backend_scheduler_engine ..> N_src_backend_engines : 导入依赖
-N_src_backend_updater ..> N_src_backend_core : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
@@ -51,7 +50,6 @@ N_src_backend_updater ..> N_src_backend_core : 导入依赖
 - `main` → `updater`：导入。
 - `scheduler-engine` → `core`：导入。
 - `scheduler-engine` → `engines`：导入。
-- `updater` → `core`：导入。
 
 ## 子目录导航
 
@@ -81,22 +79,24 @@ flowchart TB
   Main --> Updater[updater · 独立更新]
   Main --> Foundations[core/foundation 子库 · 独立技术机制]
   Core --> Foundations
-  Updater --> Foundations
+  Main --> Shared[src/core shared utilities]
+  Core --> Shared
+  Engines --> Shared
+  Scheduler --> Shared
+  Updater --> Shared
   Scheduler --> Core
-  Scheduler --> Foundations
   Assembly[scheduler-engine/assembly · 引擎装配] --> Engines[engines · 具体引擎适配]
   Assembly --> Core
   Engines --> Core
-  Engines --> Foundations
 ```
 
 `Assembly` 是 `Scheduler` 的内部目录。普通编排目录和 Main 不直接引用具体引擎，Main 通过调度装配接入运行能力。Main 和 Updater 还消费 `bridge/contracts`；Bridge 只公开 Core 的契约/纯函数，前端不直接引用后端。
 
-Updater 对 foundations 的依赖限于 utility 通用公开入口，用于已获准响应的有界字节消费；更新源、GET/跳转、期限、签名和安装状态仍由更新子系统决定，不引入 Main 凭据或服务。
+Updater 对共享 Core 的依赖限于 utility 通用公开入口，用于已获准响应的有界字节消费；更新源、GET/跳转、期限、签名和安装状态仍由更新子系统决定，不引入 Main 凭据或服务，也不能使用旧 files/web。
 
 Engines 同样只消费 utility 通用入口：Pi/Codex 组合 LF 拆帧，Codex 组合在途集合。协议、授权、超时、取消与真实进程退出仍由适配器拥有；不能借此依赖其他基础方案或应用服务。
 
-后端公共库统一位于 `src/backend/core/foundation`。图中的 Core 表示领域规则与契约，Foundations 表示其中的 utility/files/web 独立子库；这是逻辑依赖图，不把目录包含关系当作调用。子库不依赖父目录的领域约定或其他业务，只使用自身、标准库及必要第三方库。根层 json/serialization 适配单向使用 utility。Core 知识探测使用文件公开入口；Main 组合网页读取、原子文件和实例串行队列。业务设置、工具注册、锁和事务决策仍留在所属模块。见 [公共库边界](core/foundation/CONTRACT.md)。
+共享 src/core 已建立：utility 与 Node 摘要已迁入，files/web 暂留 backend/core/foundation。旧 backend/core 的领域规则与执行机制属于待迁移 Logic，不等于共享 Core。
 
 ## 按职责定位
 

@@ -3,18 +3,18 @@
 export const logicalBoundaries = [
   {
     id:'frontend-utility',prefix:'src/frontend/foundations/utility/',public:['src/frontend/foundations/utility/index.ts'],
-    dependencies:[],external:[],
+    dependencies:['utility-foundations'],external:[],
   },
   {
     id:'file-foundations',prefix:'src/backend/core/foundation/files/',public:['src/backend/core/foundation/files/index.ts'],
     dependencies:[],external:['node:fs/promises','node:path','node:crypto'],
   },
   {
-    id:'utility-foundations',files:['src/backend/core/foundation/utility/index.ts','src/backend/core/foundation/utility/json.ts','src/backend/core/foundation/utility/async.ts','src/backend/core/foundation/utility/strings.ts','src/backend/core/foundation/utility/bytes.ts','src/backend/core/foundation/utility/graphs.ts'],public:['src/backend/core/foundation/utility/index.ts'],
+    id:'utility-foundations',prefix:'src/core/utility/',public:['src/core/utility/index.ts'],
     dependencies:[],external:['jsonc-parser'],
   },
   {
-    id:'utility-node-foundations',files:['src/backend/core/foundation/utility/node.ts'],public:['src/backend/core/foundation/utility/node.ts'],
+    id:'utility-node-foundations',files:['src/core/platform/node/digest.ts'],public:['src/core/platform/node/digest.ts'],
     dependencies:[],external:['node:crypto'],
   },
   {
@@ -184,6 +184,8 @@ export const logicalBoundaries = [
 export function checkLogicalBoundaries(files, edges, externalReferences) {
   const owner = file => logicalBoundaries.find(boundary => boundary.files?.includes(file) || boundary.prefix && file.startsWith(boundary.prefix));
   const violations = [];
+  // 新 Core 必须登记模块、公开入口与外部依赖；不能在未归属文件中偷渡 Node 或业务实现。
+  for(const file of files)if(file.startsWith('src/core/')&&!owner(file))violations.push({file,rule:'unregistered-core-module',boundary:'core'});
   for (const edge of edges) {
     const from = owner(edge.from), to = owner(edge.to);
     if (from?.id === to?.id) continue;

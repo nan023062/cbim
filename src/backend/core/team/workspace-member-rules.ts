@@ -4,7 +4,7 @@
  * 设计原因：正文只保存在审计 next 中，当前岗位由原日志派生；哈希函数留在后端模块，公开 schema 不把 crypto 带入前端。
  * 职责边界：核对固定事实与合法迁移，来源选择进入 basis、新代次属于明确能力采纳；不读取知识/profile，不把启用当执行许可。独立引擎变化属于选型编辑，配置刷新仍须明确采纳；旧快照不补字段。
  */
-import {orderJsonValue} from '../foundation/utility';
+import {orderJsonValue} from '../../../core/utility';
 import {hash} from '../foundation/serialization';
 import {fail} from '../foundation/errors';
 import type {SourceSelection} from '../workspace/knowledge-source';

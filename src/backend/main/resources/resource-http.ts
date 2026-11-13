@@ -5,7 +5,7 @@
 import http from 'node:http';
 import {timingSafeEqual} from 'node:crypto';
 import type {AddressInfo} from 'node:net';
-import {readBoundedBytes,ByteLimitError} from '../../core/foundation/utility';
+import {readBoundedBytes,ByteLimitError} from '../../../core/utility';
 import {fail} from '../../core/foundation/errors';
 import {json} from '../../core/foundation/serialization';
 import {MAX_BYTES,snapshotSchema,type RepositoryStore} from './resource-store';

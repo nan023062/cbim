@@ -234,7 +234,7 @@ class N_src_backend_core_execution_capabilities_run_artifact_transition_ts_exter
 N_src_backend_core_execution_capabilities_run_artifact_transition_ts_external_ArtifactTransitionToolPort <|.. N_src_backend_core_execution_capabilities_run_artifact_transition_ts_RunArtifactTransition
 ```
 
-直接依赖：[../../foundation/utility/index.ts](../../foundation/utility/index.ts)、[../../foundation/serialization.ts](../../foundation/serialization.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../workspace/artifact-scope.ts](../../workspace/artifact-scope.ts)、[../../file-operations/artifact-transition.ts](../../file-operations/artifact-transition.ts)、[../../file-operations/artifact-transition-evidence.ts](../../file-operations/artifact-transition-evidence.ts)、[../../evidence/output-manifest-evidence.ts](../../evidence/output-manifest-evidence.ts)、[../../evidence/output-manifest.ts](../../evidence/output-manifest.ts)、[output-manifest-capture.ts](output-manifest-capture.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)。
+直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../foundation/serialization.ts](../../foundation/serialization.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../workspace/artifact-scope.ts](../../workspace/artifact-scope.ts)、[../../file-operations/artifact-transition.ts](../../file-operations/artifact-transition.ts)、[../../file-operations/artifact-transition-evidence.ts](../../file-operations/artifact-transition-evidence.ts)、[../../evidence/output-manifest-evidence.ts](../../evidence/output-manifest-evidence.ts)、[../../evidence/output-manifest.ts](../../evidence/output-manifest.ts)、[output-manifest-capture.ts](output-manifest-capture.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)。
 
 ### run-code-check.ts
 
@@ -334,7 +334,7 @@ class N_src_backend_core_execution_capabilities_run_controlled_file_ts_RunContro
 N_src_backend_core_execution_capabilities_run_controlled_file_ts ..> N_src_backend_core_execution_capabilities_run_controlled_file_ts_RunControlledFile : 声明
 ```
 
-直接依赖：[../../foundation/utility/index.ts](../../foundation/utility/index.ts)、[../../foundation/serialization.ts](../../foundation/serialization.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../file-operations/controlled-file-operation.ts](../../file-operations/controlled-file-operation.ts)、[../../file-operations/controlled-file-rules.ts](../../file-operations/controlled-file-rules.ts)。
+直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../foundation/serialization.ts](../../foundation/serialization.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../file-operations/controlled-file-operation.ts](../../file-operations/controlled-file-operation.ts)、[../../file-operations/controlled-file-rules.ts](../../file-operations/controlled-file-rules.ts)。
 
 ### run-scoped-execution.ts
 
@@ -371,7 +371,7 @@ class N_src_backend_core_execution_capabilities_run_scoped_execution_ts_RunScope
 N_src_backend_core_execution_capabilities_run_scoped_execution_ts ..> N_src_backend_core_execution_capabilities_run_scoped_execution_ts_RunScopedExecution : 声明
 ```
 
-直接依赖：[../../foundation/utility/index.ts](../../foundation/utility/index.ts)、[../../foundation/serialization.ts](../../foundation/serialization.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../file-operations/scoped-execution.ts](../../file-operations/scoped-execution.ts)、[../../workspace/execution-scope.ts](../../workspace/execution-scope.ts)、[../../file-operations/controlled-file-operation.ts](../../file-operations/controlled-file-operation.ts)、[../../file-operations/isolated-execution-recovery.ts](../../file-operations/isolated-execution-recovery.ts)。
+直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../foundation/serialization.ts](../../foundation/serialization.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../file-operations/scoped-execution.ts](../../file-operations/scoped-execution.ts)、[../../workspace/execution-scope.ts](../../workspace/execution-scope.ts)、[../../file-operations/controlled-file-operation.ts](../../file-operations/controlled-file-operation.ts)、[../../file-operations/isolated-execution-recovery.ts](../../file-operations/isolated-execution-recovery.ts)。
 
 ### run-validation.ts
 

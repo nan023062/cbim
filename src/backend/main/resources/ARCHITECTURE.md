@@ -178,7 +178,7 @@ class N_src_backend_main_resources_resource_http_ts_external_RepositoryStore["Re
 N_src_backend_main_resources_resource_http_ts_external_RepositoryStore <|.. N_src_backend_main_resources_resource_http_ts_RemoteRepository
 ```
 
-直接依赖：[../../core/foundation/utility/index.ts](../../core/foundation/utility/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[resource-store.ts](resource-store.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[resource-store.ts](resource-store.ts)。
 
 ### resource-repository.ts
 

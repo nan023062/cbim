@@ -169,7 +169,7 @@ class N_src_backend_core_budget_scope_budget_invariants_ts["scope-budget-invaria
 }
 ```
 
-直接依赖：[../foundation/utility/index.ts](../foundation/utility/index.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../dispatch/dispatch-storage.ts](../dispatch/dispatch-storage.ts)、[../tasks/dispatch-scope.ts](../tasks/dispatch-scope.ts)、[scope-budget.ts](scope-budget.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../dispatch/dispatch-storage.ts](../dispatch/dispatch-storage.ts)、[../tasks/dispatch-scope.ts](../tasks/dispatch-scope.ts)、[scope-budget.ts](scope-budget.ts)。
 
 ### scope-budget.ts
 

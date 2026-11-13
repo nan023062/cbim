@@ -145,7 +145,7 @@ class N_src_backend_updater_release_http_ts_ReleaseRequest["ReleaseRequest"] {
 N_src_backend_updater_release_http_ts ..> N_src_backend_updater_release_http_ts_ReleaseRequest : 声明
 ```
 
-直接依赖：[../core/foundation/utility/index.ts](../core/foundation/utility/index.ts)。
+直接依赖：[../../core/utility/index.ts](../../core/utility/index.ts)。
 
 ### restart-profile.ts
 
@@ -183,7 +183,7 @@ class N_src_backend_updater_runtime_download_ts["runtime-download.ts"] {
 }
 ```
 
-直接依赖：[../core/foundation/utility/index.ts](../core/foundation/utility/index.ts)、[runtime-manifest.ts](runtime-manifest.ts)。
+直接依赖：[../../core/utility/index.ts](../../core/utility/index.ts)、[runtime-manifest.ts](runtime-manifest.ts)。
 
 ### runtime-host.ts
 

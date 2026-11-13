@@ -4,7 +4,7 @@
  * 设计原因：字节/目录/摘录规则在 Main 决定，utility 负责有界流与 reader 取消；既不执行网页脚本，也不把首层清单称为完整目录。
  */
 import fs from 'node:fs/promises';
-import {readBoundedBytes,ByteLimitError} from '../../core/foundation/utility';
+import {readBoundedBytes,ByteLimitError} from '../../../core/utility';
 import {fail} from '../../core/foundation/errors';
 import {hash} from '../../core/foundation/serialization';
 import {continuationSourceLimits,continuationSourceUrlSchema,type ContinuationSourceProof} from '../../core/tasks/continuation-source-snapshot';

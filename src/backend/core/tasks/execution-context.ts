@@ -7,7 +7,7 @@
  * 历史维护字段仅兼容原记录；新执行资格不再依赖真人，岗位责任和冻结身份校验继续生效。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
-import {orderJsonValue} from '../foundation/utility';
+import {orderJsonValue} from '../../../core/utility';
 import {automaticExecutionBindingSchema,automaticExecutionBindingMatches,type AutomaticExecutionBinding} from '../team/automatic-execution';
 import {z} from 'zod';
 import {hash} from '../foundation/serialization';

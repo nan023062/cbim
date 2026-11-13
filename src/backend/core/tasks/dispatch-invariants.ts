@@ -7,7 +7,7 @@
  * 执行模型允许可选 engine，并核对 Claude Code/Codex 的协议要求；缺省字段不回写旧记录。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
-import {orderJsonValue} from '../foundation/utility';
+import {orderJsonValue} from '../../../core/utility';
 import {z} from 'zod';
 import {candidateAccepted} from './candidate-review';
 import {hash,json} from '../foundation/serialization';

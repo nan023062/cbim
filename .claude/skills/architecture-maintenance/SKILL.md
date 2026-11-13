@@ -113,3 +113,5 @@ utility 的类图按实际类别文件表达 JSON、字符串、字节、异步�
 ## 多宿主同步
 
 本流程同时存放在 .agents/skills/architecture-maintenance/SKILL.md、.claude/skills/architecture-maintenance/SKILL.md 和 .codex/skills/architecture-maintenance/SKILL.md。修改任一份时同步其余入口，保持内容一致。
+
+前端图布局通过 utility/graphs.ts 的 rankDirectedGraph 组合；只沉淀 ID/边与层级，业务边筛选、错误文案、坐标和路径保留原适配。后端图规则独立演进，不开放跨域依赖；拓扑单元与任务布局消费者分别验证。

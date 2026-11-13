@@ -1,8 +1,10 @@
 /**
  * 作用定位：为主会话任务图计算可测试的 DAG 分层坐标与有向连线路径，供任务视图绘制。
  * 设计原因：布局只依赖身份和连线，不依赖不断变化的文字/状态；同层保留上次顺序并在末尾加入新节点，避免实时更新造成跳动。
+ * 算法边界：前端 utility 只计算拓扑层级；任务错误、同层稳定顺序、坐标和路径由本模块维护。
  * 职责边界：只显示后端已提交节点，不推断成员任务、不补造依赖；循环或缺失端点须显式报告。
  */
+import {rankDirectedGraph,GraphTopologyError} from '../foundations/utility';
 import type {GraphSnapshot,GraphEdge} from '../../bridge/contracts/dispatch';
 
 /** 图节点的画布坐标；布局身份与打开任务详情时使用的业务身份分别保存。 */
@@ -34,20 +36,12 @@ export function layoutDispatchGraph(graph:LayoutGraph|undefined,rootNodeId:strin
   const ids=[rootNodeId,...(graph?.tasks.map(task=>task.nodeId)??[])];
   if(new Set(ids).size!==ids.length)throw Error('任务图存在重复节点，无法绘制');
   const enabled=graph?.edges.filter(edge=>edge.enabled)??[];
-  const incoming=new Map(ids.map(id=>[id,0])),outgoing=new Map(ids.map(id=>[id,[] as string[]])),ranks=new Map(ids.map(id=>[id,0]));
-  for(const edge of enabled){
-    if(!incoming.has(edge.fromNodeId)||!incoming.has(edge.toNodeId))throw Error('任务图连线缺少端点，请重新同步');
-    incoming.set(edge.toNodeId,incoming.get(edge.toNodeId)!+1);outgoing.get(edge.fromNodeId)!.push(edge.toNodeId);
+  let ranks:Map<string,number>;
+  try{ranks=rankDirectedGraph(ids,enabled.map(edge=>[edge.fromNodeId,edge.toNodeId] as const))}
+  catch(error){
+    if(!(error instanceof GraphTopologyError))throw error;
+    throw Error(error.code==='missing-endpoint'?'任务图连线缺少端点，请重新同步':error.code==='cycle'?'任务图存在循环，无法绘制有向流程':'任务图存在重复节点，无法绘制');
   }
-  const queue=ids.filter(id=>incoming.get(id)===0);let visited=0;
-  for(let index=0;index<queue.length;index++){
-    const id=queue[index];visited++;
-    for(const target of outgoing.get(id)!){
-      ranks.set(target,Math.max(ranks.get(target)!,ranks.get(id)!+1));
-      incoming.set(target,incoming.get(target)!-1);if(incoming.get(target)===0)queue.push(target);
-    }
-  }
-  if(visited!==ids.length)throw Error('任务图存在循环，无法绘制有向流程');
   const prior=new Map(previous?.nodes.map(node=>[node.nodeId,node])??[]),tasks=new Map(graph?.tasks.map(task=>[task.nodeId,task])??[]);
   const layers=new Map<number,string[]>();
   for(const id of ids){const rank=ranks.get(id)!;layers.set(rank,[...(layers.get(rank)??[]),id])}

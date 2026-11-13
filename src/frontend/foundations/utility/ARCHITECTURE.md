@@ -12,7 +12,8 @@
 | --- | --- |
 | [async.ts](async.ts) | 提供前端异步协作的实例级代次标记，供控制器判断迟到结果是否仍可使用。 |
 | [events.ts](events.ts) | 前端事件订阅工具，提供实例级、无参数的同步通知集合。 |
-| [index.ts](index.ts) | 前端域通用工具函数与数据结构的公开入口，提供 JSON 比较、实例订阅集合和异步代次标记。 |
+| [graphs.ts](graphs.ts) | 前端有向图的纯拓扑算法，不引用任务、画布或通信契约。 |
+| [index.ts](index.ts) | 前端域通用工具函数与数据结构的公开入口，提供按类别组织的纯算法与实例数据结构。 |
 | [json.ts](json.ts) | 前端域的 JSON 比较工具，供页面控制器核对请求、预览和回执中的值。 |
 
 ## 架构类图
@@ -52,6 +53,32 @@ N_src_frontend_foundations_utility_events_ts ..> N_src_frontend_foundations_util
 ```
 
 
+### graphs.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_foundations_utility_graphs_ts["graphs.ts"] {
+  <<module>>
+  +rankDirectedGraph()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_foundations_utility_graphs_ts["graphs.ts"] {
+  <<module>>
+}
+class N_src_frontend_foundations_utility_graphs_ts_GraphTopologyError["GraphTopologyError"] {
+  +code
+}
+N_src_frontend_foundations_utility_graphs_ts ..> N_src_frontend_foundations_utility_graphs_ts_GraphTopologyError : 声明
+class N_src_frontend_foundations_utility_graphs_ts_external_Error["Error (外部契约)"] {
+  <<external>>
+}
+N_src_frontend_foundations_utility_graphs_ts_external_Error <|-- N_src_frontend_foundations_utility_graphs_ts_GraphTopologyError
+```
+
+
 ### index.ts
 
 ```mermaid
@@ -60,7 +87,7 @@ class N_src_frontend_foundations_utility_index_ts["index.ts"] {
   <<module>>
 }
 ```
-直接依赖：[json.ts](json.ts)、[events.ts](events.ts)、[async.ts](async.ts)。
+直接依赖：[json.ts](json.ts)、[events.ts](events.ts)、[async.ts](async.ts)、[graphs.ts](graphs.ts)。
 
 ### json.ts
 
@@ -89,9 +116,13 @@ class N_src_frontend_foundations_utility_events_ts["events.ts"] {
 class N_src_frontend_foundations_utility_async_ts["async.ts"] {
   <<module>>
 }
+class N_src_frontend_foundations_utility_graphs_ts["graphs.ts"] {
+  <<module>>
+}
 N_src_frontend_foundations_utility_index_ts ..> N_src_frontend_foundations_utility_json_ts : 导入依赖
 N_src_frontend_foundations_utility_index_ts ..> N_src_frontend_foundations_utility_events_ts : 导入依赖
 N_src_frontend_foundations_utility_index_ts ..> N_src_frontend_foundations_utility_async_ts : 导入依赖
+N_src_frontend_foundations_utility_index_ts ..> N_src_frontend_foundations_utility_graphs_ts : 导入依赖
 ```
 
 
@@ -148,3 +179,8 @@ async.ts 的 AsyncGeneration 提供 capture、advance、isCurrent。每实例持
 前端业务单向导入公开入口；基础库不能反向引用页面、bridge 或后端。后端独立沉淀自己的公共库，二者不建立共享工具依赖。增加同类 JSON 算法优先放入 `json.ts`，实际语义不同时保留明确契约，不预设配置开关。
 
 单元测试归属 `frontend/foundations/utility`，JSON 比较、订阅集合与异步代次分套件验证各自行为。消费者测试验证回执、提交、恢复、先更新后通知、轮询退订与迟到结果隔离；基础库不加载应用或消费者夹具。源码注释、类图和三宿主 AI 工作流随实现同步。
+
+
+## 有向图分层
+
+私有类别 graphs.ts 的 rankDirectedGraph 接收节点 ID 与边二元组，返回最长前驱层级。输入不修改，孤立节点为 0，平行边逐条计数；GraphTopologyError 区分重复节点、缺端点与环。前端任务布局是实际消费者，边启用条件、任务身份、原错误文案、同层稳定顺序、像素与 SVG 路由仍留在 tasks。与后端图算法独立实现和测试。

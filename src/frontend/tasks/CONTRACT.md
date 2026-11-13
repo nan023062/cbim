@@ -457,3 +457,8 @@ AdmissionFeed 仍拥有首订阅读取、末退订停轮询与代次失效；各
 ### 异步结果失效边界
 
 九个控制器组合前端 AsyncGeneration：AdmissionFeed、CommandVerificationController、ArtifactReportController、ExecutionReportController、ManifestReportController、OwnerInspectionController、RequestBudgetController、ScopeUsageController、ScopeReplanController。捕获与推进分别保留原语义：准入读取只捕获订阅生命周期，报告控制器按原选择/取消/新请求推进，负责人旧 finally 不清新 inFlight；重规划只作废预览，冻结提交与迟到受理回执继续处理。身份、版本、来源与草稿比较、错误策略和清理留在控制器。按业务键的影响核实代次 Map 及 Hook 中带业务键的序号未迁移。
+
+
+### 图布局算法边界
+
+layoutDispatchGraph 组合前端 rankDirectedGraph。重复节点在原位置检查，拓扑错误映射为原任务文案；enabled 边选择、上一帧同层顺序、卡片坐标与跨层侧绕路径不下沉。新增卡片样式只改布局，拓扑层级不认识 GraphSnapshot。

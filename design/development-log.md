@@ -1,3 +1,10 @@
+## 2026-11-13：候选清单收尾一／前端拓扑分层
+
+- 用户授权依次完成原清单；从当前会话核实剩余前端图布局/本地记录及后端 JSON/脱敏/RPC/图校验六项，当前开放 #65 无关，未更改工单。基线 4a1b2858，C3/L2，沿 tasks/graph-layout 精读真实启用边、分层、坐标及三套消费者测试。
+- graphs.ts 提供 rankDirectedGraph 与结构错误；图层级脱离 GraphSnapshot，原重复节点检查、错误文案、边筛选、同层顺序与 SVG 路由保留。公共算法按类别组织，前后端无依赖。
+- 验证：pnpm exec vitest run tests/unit/frontend/foundations/utility/graphs.test.ts tests/task-graph-layout.test.ts tests/member-dependency-view.test.ts tests/member-dependency-addition-view.test.ts --reporter=dot：4 文件/22 项通过。pnpm typecheck、pnpm check:architecture、pnpm check:test-modules 通过；0 环/违规，466 测试已登记。选择依据为纯拓扑及全部直接布局消费者。
+- 注释、utility/tasks 两份类图、契约及三宿主开发/架构工作流已同步。Q1 保持原层级与绘制结果；Q2 几何变化止于任务布局；Q3 拓扑单元与实际视图测试；Q4 graphs.ts→graph-layout.ts；Q5 无新规则。机制稳定性依据真实使用，历史频率未知。未运行全量、桌面或发布验收；独立本地提交未推送，保留人工 review。
+
 ## 2026-11-13：前端实例异步代次提取
 
 - 来源与基线：用户要求继续前端公共库下一个候选，按已核实清单推进异步响应失效控制，基线 f014d032（前两项已本地提交，未推送）。开放工单仅 #65，与此切片无关，未更改工单状态。治理 C3、认知 L2；复用分层和规范上下文，核对前端代次字段、真实请求/选择/销毁路径及直接消费者测试。

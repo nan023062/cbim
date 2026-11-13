@@ -1269,6 +1269,22 @@
         ],
         "integration": []
       }
+    },
+    "tooling/ci-validation": {
+      "roots": [
+        "scripts/ci-scope.mjs",
+        "scripts/ci-result.mjs",
+        "scripts/ci-test-shards.ts",
+        "scripts/ci-test-sequencer.ts",
+        "scripts/ci-test-coverage.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "tests/ci-validation.test.mjs"
+        ],
+        "contract": [],
+        "integration": []
+      }
     }
   }
 }

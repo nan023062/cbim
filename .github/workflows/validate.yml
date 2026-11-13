@@ -20,34 +20,74 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  scope:
+    name: Select checks from changed files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      mode: ${{ steps.scope.outputs.mode }}
+      website: ${{ steps.scope.outputs.website }}
+      base: ${{ steps.scope.outputs.base }}
+      head: ${{ steps.scope.outputs.head }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.19.0'
+      - id: scope
+        env:
+          CBIM_CI_SCOPE: ${{ inputs.scope }}
+        run: node scripts/ci-scope.mjs
+
+  # 公共检查只执行一次，与测试分片并行，不成为每片的重复前置步骤。
+  static:
+    name: Shared static checks
+    needs: scope
+    if: needs.scope.outputs.mode == 'full' || needs.scope.outputs.mode == 'diagnostic'
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-ci
+      - name: Check TypeScript
+        run: pnpm typecheck
+      - name: Check architecture and dependencies
+        run: pnpm check:architecture
+      - name: Check module test ownership and isolation
+        run: pnpm check:test-modules
+      - name: Build website and verify brand once
+        if: needs.scope.outputs.website != 'true'
+        env:
+          CBIM_WEBSITE_URL: https://nan023062.github.io/cbim/
+        run: pnpm build:website
+      - name: Check affected website in a browser
+        if: needs.scope.outputs.website == 'true'
+        env:
+          CBIM_WEBSITE_URL: https://nan023062.github.io/cbim/
+        run: node scripts/ci-website-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always() && needs.scope.outputs.website == 'true'
+        with:
+          name: website-validation
+          path: test-results/branding-website
+          if-no-files-found: error
+
   windows:
-    name: ${{ inputs.scope == 'runtime-diagnostic' && 'Windows runtime diagnosis' || format('Windows validation ({0}/4)', matrix.shard) }}
+    name: ${{ needs.scope.outputs.mode == 'diagnostic' && 'Windows runtime diagnosis' || format('Windows validation ({0}/4)', matrix.shard) }}
+    needs: scope
+    if: needs.scope.outputs.mode == 'full' || needs.scope.outputs.mode == 'diagnostic'
     runs-on: windows-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        # PR 必须执行完整四片；手动诊断使用独立名称，不能冒充合并检查。
-        shard: ${{ fromJSON(inputs.scope == 'runtime-diagnostic' && '[1]' || '[1,2,3,4]') }}
+        # 从 Vitest 实际发现的全集按耗时分配；新增测试不会因缺历史数据被遗漏。
+        shard: ${{ fromJSON(needs.scope.outputs.mode == 'diagnostic' && '[1]' || '[1,2,3,4]') }}
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '22.19.0'
-          cache: pnpm
-      - name: Install locked dependencies
-        # 官方二进制下载偶发 504；有限重试安装，持续失败仍阻止后续验收。
-        # 缓存的 Electron 安装产物默认硬链接到 store；复制导入使真实隔离测试满足单链接身份检查。
-        run: |
-          for ($attempt = 1; $attempt -le 3; $attempt++) {
-            pnpm install --frozen-lockfile --package-import-method=copy
-            $installCode = $LASTEXITCODE
-            if ($installCode -eq 0) { exit 0 }
-            if ($attempt -eq 3) { exit $installCode }
-            Write-Warning "Dependency installation failed ($installCode); retry $attempt/2."
-            Start-Sleep -Seconds (10 * $attempt)
-          }
+      - uses: ./.github/actions/setup-ci
       - name: Check installed Electron file identities
         run: |
           @'
@@ -61,45 +101,86 @@ jobs:
           }
           '@ | node
       - name: Check canonical test temporary directory
-        # runner 上下文在步骤级使用；默认用户 TEMP 可能是 8.3 别名。
         env:
           TEMP: ${{ runner.temp }}
           TMP: ${{ runner.temp }}
         run: |
           node -e "const fs=require('node:fs'),os=require('node:os'); const temp=os.tmpdir(); if(temp!==fs.realpathSync(temp)) throw Error('Test temporary directory is not canonical'); fs.mkdirSync('test-results',{recursive:true}); console.log('Canonical test temporary directory: '+temp);"
-      - name: Check TypeScript
-        run: pnpm typecheck
-      - name: Check architecture and dependencies
-        run: pnpm check:architecture
-      - name: Check module test ownership and isolation
-        run: pnpm check:test-modules
-      - name: Verify brand assets
-        run: pnpm check:brand
-      - name: Build public website
-        env:
-          CBIM_WEBSITE_URL: https://nan023062.github.io/cbim/
-        run: pnpm build:website
       - name: Run full test suite
-        if: inputs.scope != 'runtime-diagnostic'
+        if: needs.scope.outputs.mode == 'full'
         env:
           TEMP: ${{ runner.temp }}
           TMP: ${{ runner.temp }}
         run: pnpm exec vitest run --shard=${{ matrix.shard }}/4 --reporter=default --reporter=json --outputFile=test-results/pr-full-suite.json
       - name: Diagnose Windows runtime without changing assertions
-        if: inputs.scope == 'runtime-diagnostic'
+        if: needs.scope.outputs.mode == 'diagnostic'
         env:
           TEMP: ${{ runner.temp }}
           TMP: ${{ runner.temp }}
         run: pnpm exec vitest run tests/scoped-execution-pi.test.ts tests/terminal.test.ts --reporter=default --reporter=json --outputFile=test-results/runtime-diagnostic.json
-      - name: Preserve test report
+      - name: Preserve test report and discovered coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: windows-validation-${{ matrix.shard }}
           path: |
             test-results/pr-full-suite.json
+            test-results/ci-shard-plan-*.json
             test-results/runtime-diagnostic.json
             test-results/isolation-recovery-pi-failure.json
             test-results/isolation-recovery-crash-failure.json
             test-results/terminal-state.json
-          if-no-files-found: ignore
+          if-no-files-found: error
+
+  light:
+    name: Documentation and website checks
+    needs: scope
+    if: needs.scope.outputs.mode == 'docs' || needs.scope.outputs.mode == 'website'
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.19.0'
+      - name: Check changed text and added local links
+        env:
+          CBIM_CI_BASE: ${{ needs.scope.outputs.base }}
+          CBIM_CI_HEAD: ${{ needs.scope.outputs.head }}
+        run: node scripts/ci-light-check.mjs
+      - uses: ./.github/actions/setup-ci
+        if: needs.scope.outputs.mode == 'website'
+      - name: Build and check 14 website scenes
+        if: needs.scope.outputs.mode == 'website'
+        env:
+          CBIM_WEBSITE_URL: https://nan023062.github.io/cbim/
+        run: node scripts/ci-website-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always() && needs.scope.outputs.mode == 'website'
+        with:
+          name: website-validation
+          path: test-results/branding-website
+          if-no-files-found: error
+
+  result:
+    name: ${{ needs.scope.outputs.mode == 'diagnostic' && 'CBIM diagnostic result' || 'CBIM validation' }}
+    needs: [scope, static, windows, light]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - name: Reject failed or unexpectedly skipped checks
+        env:
+          CBIM_CI_NEEDS: ${{ toJSON(needs) }}
+        run: node scripts/ci-result.mjs
+      - uses: actions/download-artifact@v4
+        if: needs.scope.outputs.mode == 'full'
+        with:
+          pattern: windows-validation-*
+          path: ci-reports
+      - name: Verify complete test coverage across all four shards
+        if: needs.scope.outputs.mode == 'full'
+        run: node scripts/ci-test-coverage.mjs ci-reports

@@ -1,3 +1,11 @@
+## 2026-11-13：合并远端 CI 与取消修复，收齐本地变动
+
+- 用户授权提交/push 全部改动；任务历史视图已独立提交 `d342c05e`。正常合并远端 develop `9e3f4d49`，保留本地网页/基础库/测试模块化成果和远端 CI 分流、分片计时与覆盖核对、#70 取消修复回归；不强推或改写远端历史。
+- 处理三处内容冲突：validate.yml 采用远端共享检查与分片布局，将本地 `check:test-modules` 放回共享静态任务且只运行一次；resource-http 保留已包含显式 reader 取消的 utility 路径，清理远端旧 readBody 的重复实现及过时类图/契约；开发记录保留双方完整新增段落。新增 CI 测试登记 tooling/ci-validation，并断言模块检查的实际工作流接线。
+- 冲突相关验证：`& ./test-results/ci-speed/node22/node.exe ./node_modules/vitest/vitest.mjs run tests/ci-validation.test.mjs tests/repository-connection-http.test.ts tests/utility-body-consumers.test.ts --reporter=dot`，3 文件/50 项通过，包含真实 8 秒 HTTP 超时、未转发取消及 CI 聚合/分片/模块检查。任务历史 16 项结果见下一条记录，不重复运行未受合并影响的前端测试。
+- `pnpm typecheck`、`pnpm check:architecture`（91 目录/713 源码样式，1434 扫描文件/7105 含类型依赖，0 环/违规）、`pnpm check:test-modules`（462 文件：123 unit、152 contract、187 integration）、`git diff --cached --check` 通过；四组 Skill 的三宿主入口一致。相关源码说明与资源目录类图已同步。
+- 本步验证仅覆盖提交与合并实际影响，未运行完整四片 CI、桌面、打包或发布验收；未创建 PR、合并 master 或发布版本。正常推送当前 develop 后，以 Git 远端 SHA 和工作区状态核对结果。
+
 ## 2026-11-13：提交任务历史折叠并准备同步 develop
 
 - 用户要求提交并 push 所有变动。基线 `4f7ba8db`，将此前保留的任务历史视图 7 个文件纳入独立提交；新增测试登记到 frontend/tasks 单元模块。已完成/撤销任务默认折叠、直接定位展开、完整拓扑先校验，均只影响展示，不改变任务状态或调度。
@@ -85,6 +93,31 @@
 - 资料/边界：同步相关文件头、基础类库契约和类图、Main/assembly/resources/web、Scheduler 工具契约及上层导航；三份 architecture-maintenance 入口同步 foundations 单向依赖。依赖检查新增基础层与能力私有入口限制，并用包括类型引用的反向依赖样本验证，不增加循环豁免。旧 public-http/web-content 路径已清理，仓库源码和测试消费者已迁移；不涉及持久化格式或工具 schema 变化。
 - S7 / 四问：Q1 保留公开工具协议、Brave 凭据边界及公网/取消不变量；Q2 将网页机制和浏览器平台变化限制在基础网页模块，业务配置留在 Main；Q3 上述定向用例覆盖本次实际消费者和新增网络边界，不重复全仓回归；Q4 从 foundations/web/contracts、browser-reader、page-reader 到 electron-browser-reader，再看 Main/web 与桌面装配。Q5 无新增候选规则，foundations 的独立性为用户本轮明确要求。完整 review 以本提交 diff 为准，尚无人工作代码 review、推送、合并或发布回执。
 - 平台依据：[Electron protocol](https://www.electronjs.org/docs/latest/api/protocol)、[WebFrameMain](https://www.electronjs.org/docs/latest/api/web-frame-main)、[Session](https://www.electronjs.org/docs/latest/api/session)；以上平台说明与本次真实 Chromium 证据分别记录，不以文档代替执行验证。
+
+## 2026-11-13：CI 优化成功运行与覆盖对照
+
+- #68 / PR #69 完整 CI run 43404271598 通过：436 文件、3001 通过、0 失败、2 个既有跳过；原 2968 个测试名称及出现次数全部保留。
+- 实测从 14 分 49 秒 到 12 分 8 秒，减少 2 分 41 秒（18.1%）。单次 runner 对比，不承诺固定速度；前两轮失败、Node 版本差异及 #70 的定向复现与修复证据均如实保留。
+- 详细分片耗时与回执见 [CI 实测记录](verification/ci-validation-20261113.md)。本次仅回填两个白名单文档，使用 PR 验证轻量路径，不重复产品全量，不改动产品或既有测试结果。
+
+## 2026-11-13：CI 暴露的 Node 22 仓库正文取消缺口
+
+- 来源：[#68](https://github.com/nan023062/cbim/issues/68) 实际 CI 两轮均在同一 HTTP 回归失败，独立缺陷 [#70](https://github.com/nan023062/cbim/issues/70)。补充 execFile 诊断后确认被原有 15 秒期限终止、没有业务结果输出；没有原样无限重跑。
+- 定位：本地原 Node 24.13 通过不代表 CI Node 22.19 通过。下载并核对官方 SHA-256 的便携 Node 22.19 后定向复现；阶段探针记录两次请求均抵达、第一次取消已返回、两个 8 秒信号均已触发，但第二次正文读取仍挂起。因此不更换 CI 版本、不增大期限、不跳过用例。
+- 修复：RemoteRepository 私有 readBody 显式把取消/超时信号传给 reader.cancel，唤醒挂起 read；finally 移除监听并释放锁。请求层仍负责 CANCELLED/TIMEOUT 分类，半截正文不能成为仓库结果。固定 8 秒、大小边界、权限和无自动重试均保持；只修该仓库 HTTP 消费者，不扩展为通用网络重构。
+- 单元选择与结果：在 Node 22.19 下运行 `node node_modules/vitest/vitest.mjs run tests/repository-connection-http.test.ts --reporter=verbose`，5 用例通过，原真实超时约 8.3 秒返回；包含新增的 fetch 不转发取消时显式取消正文并释放锁回归。直接消费者 `repository-connection-service.test.ts`、`repository-tools.test.ts`、`chat-material-imports.test.ts` 同版本定向验证 23 用例通过，覆盖授权/撤销、工具读取和聊天资料捕获。调用 node 为 test-results 中的便携 22.19 可执行文件，不更改全局环境。
+- `pnpm typecheck`、`pnpm check:architecture` 通过（0 类图差异、0 循环、0 边界违规）；同步 resource-http.ts 文件头/私有生命周期注释、资源 CONTRACT.md 及 ARCHITECTURE.md 的 readBody 成员和行为说明。后续完整 CI 使用新的精确提交；未打包、未发布新客户端。
+
+## 2026-11-13：CI 按变更分流、耗时均衡与公共检查去重
+
+- 来源：用户授权三项 CI 优化并要求一次真实 CI 验证效果，独立工单 [#68](https://github.com/nan023062/cbim/issues/68)。基线 `bff94f9bdb2914b26e668ef819d0e0493f571a94`，原工作区网页读取、架构与任务图修改保留，使用独立检出。本步只改开发验证，不修改产品运行逻辑、分支保护或发布新客户端。
+- 分流：PR 依据 base/head 的 merge-base 差异，解析 NUL 分隔状态并同时检查重命名/复制的新旧路径。仅 README、发布记录与官网静态文件白名单可走轻量；业务资料、配置、空/未知差异一律完整。轻量核对空白及新增本地链接，涉及官网运行原 14 场景。新增范围与入口说明见 [CI 验证说明](task/ci-validation.md)。
+- 分片：Vitest 从真实发现全集按历史耗时确定性分配四片，保持 fileParallelism=false 和原超时。权重来自两轮已通过 CI，435 个已有文件均保留；新/改名测试自动以默认耗时纳入。每片输出发现全集和分配清单，汇总 job 对照实际执行报告核验无遗漏、无重复。未知权重不是跳过条件。
+- 去重：公共类型/架构/品牌/官网检查独立一次，与四片并行；各 runner 自身的依赖复制、Electron 身份和临时路径检查仍分别执行。固定汇总严格区分所选路径、预期跳过与异常跳过；手动诊断保留独立名称。网站预览使用随机回环端口及自有子进程 IPC 回执，避免误测其他正在运行的预览实例。
+- 本地验证：`pnpm exec vitest run tests/ci-validation.test.mjs --reporter=dot` 最终 34 用例通过；同文件 `--shard=1/1` 通过，证明真实 Vitest 分片入口接入。`pnpm typecheck` 通过；`CBIM_WEBSITE_URL=https://nan023062.github.io/cbim/ node scripts/ci-website-smoke.mjs` 14 场景通过、0 页面错误。两份 YAML 解析、git diff --check 及三个宿主入口/引用的一致性检查通过。没有 src 变化，不生成源码类图；原架构检查仍在真实 CI 执行。
+- 补充核实：Vitest list --filesOnly 枚举 436 文件，但该入口不调用分片；最初尝试读分片清单得到 ENOENT，未把枚举误计为执行证据，改用真实 `run --shard=1/1` 与 CI 产物校验。仅验证相关控制逻辑，本地不运行产品全量；真实完整 CI 的精确提交、全部用例覆盖与前后耗时追加到 #68/对应 PR，避免为结果回填再跑同一全量。
+- 维护范围：同步 AGENTS 验证范围、开发/发布说明三入口及发布 runbook。后续调整从 ci-scope.mjs 白名单、ci-test-shards.ts 分配策略、ci-test-coverage.mjs 覆盖核对入手；状态汇总与实际执行均不因优化而放宽。
+- 首轮真实 CI：run 43398193028 用时 13 分 10 秒，436 文件实际执行，2999 通过、1 失败、2 个既有跳过；不能报告验证成功。失败为 repository-connection-http 独立夹具被原有 15 秒外层期限终止，原始日志未展示 execFile 附带输出；本地定向运行同文件 4 用例通过（超时用例约 8.3 秒），未复现，尚不能确认卡在启动、请求还是清理。补充退出码、信号、子进程输出诊断，不改变 8 秒业务期限、15 秒进程期限、18 秒用例期限、断言、重试或跳过；修订后再次验证，不把本地通过当成远端失败已修复。
 
 ## 2026-11-13：C 0.1.15 / R4 公开升级通过与官网收尾
 

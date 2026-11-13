@@ -50,6 +50,8 @@ RemoteRepository 组合 utility.readBoundedBytes，按 `MAX_BYTES + 65536` 限�
 
 `ResourceRepositories.readConnection` 捕获当前共享代际和专用只读令牌，只暴露身份与读取闭包。实际 `RemoteRepository` 发起 HTTP GET，服务端拒绝该令牌的 POST/DELETE；页面不接触 URL、令牌或读写客户端。停止、重配或重新共享使旧代际永久失效；读取前后均核对工作区实例、定义、授权和共享身份。取消及 8 秒超时覆盖响应正文，不自动重试、开启共享、换源或回退本机文件。
 
+正文 reader 生命周期由 `utility.readBoundedBytes` 统一管理，保留原 #70 修复的显式取消及锁/监听释放；原 `RemoteRepository.readBody` 已由此机制替代。请求层再次核实取消原因，半截正文不能被当作完整仓库解析；8 秒期限、大小边界和无自动重试语义不变。该防护覆盖 Node 22.19 中已观测到的“信号触发但正文仍挂起”情况，不通过更换 CI 版本或放宽断言掩盖。
+
 `check` 显式读取后只返回最多 20 条目录摘要，无正文；列表和回执查询不发送网络。慢速核验不占授权写队列，撤销和工作区退役可取消在途请求，迟到结果不能通过版本屏障。授权重启后保留，共享服务与临时凭据不自动恢复；用户再次显式共享后使用新的连接代际。
 
 登记计划缓存不是提交证明。`commitReceipt` 使用原 planId 和完整原请求只读核实知识 journal，支持查询旧实例原回执；`commit` 也不能仅凭缓存返回成功。已写正式知识但回执缓存失败报告 `REPOSITORY_CONNECTION_APPLIED`，沿原计划查询，不能用新请求猜测重做。

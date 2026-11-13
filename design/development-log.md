@@ -1,3 +1,12 @@
+## 2026-11-13：C 0.1.15 / R4 公开升级通过与官网收尾
+
+- 来源：用户明确要求提交 PR 并发布；[产品 PR #66](https://github.com/nan023062/cbim/pull/66) 已正常合并为 `b00f6928c7e110ec204326d9cceaaf228d6ec74f`，完整树等同冻结 source `ae6deee959cec22db2daff8abc75aa90439e7825`。完整四片 CI [43386158632](https://github.com/nan023062/cbim/actions/runs/43386158632) 为 435 文件 / 2966 通过 / 0 失败 / 2 跳过；跳过均因 runner 缺真实历史 EXE，未新增 skip。
+- R4 覆盖等待补充续接、按可观察进展续期、具体中断原因、同一目标累计三次成员异常停止自动接续、候选审阅及工具输入诊断；主轮明确阻塞/等待后不再启动继承待办。本机未提交的任务历史折叠工作继续保留，不在本版。
+- 第二候选隔离验收 [43387124145](https://github.com/nan023062/cbim/actions/runs/43387124145) 通过后，`pnpm publish:runtime build/runtime/c0.1.15-r4-B5kpQx` 完成公开写入，最终回读因 CDN 短时缓存 R3 退出 1；未重复发布。按 ID 与匿名地址只读复核，`2026-11-13T07:59:16.251Z` 正常地址已返回原 C 公钥验签通过的 R4。公开 ZIP 3904698 字节，payload digest `0689c8595085967921937d439ef29135defd36e29a353d2134bff2027b1898ec`，原 C/E 与 Python latest 不变。
+- 在线验收 [43389737725](https://github.com/nan023062/cbim/actions/runs/43389737725) 通过：真实 C 0.1.15 / R1 匿名发现、后台准备 R4，普通退出不升级，显式 UI 点击后重启到 R4；六类数据保留、无历史重放、确定性模型请求 1 次、0 页面错误。此证据不冒充 R3 起点或用户在线模型质量测试。
+- 官网与 README 使用真实 R4 清单资产时间，保留原安装包摘要、未签名说明及 SEO；`pnpm check:brand`、`CBIM_WEBSITE_URL=https://nan023062.github.io/cbim/ pnpm build:website`、独立本机预览和 `node scripts/website-smoke.mjs` 均通过，14 场景 / 0 页面错误 / 无横向溢出。仅官网/报告变更，不重复本地产品测试；收尾 PR 依照原流程跑完整 CI、正常合并与 Pages 六文件回读。
+- 详细冻结范围、首轮失败、缓存恢复、源码与后续报告副本差异见 [R4 发布验证](verification/runtime-c0.1.15-r4-20261113.md)。后续部署/双分支实际回执继续记录于收尾 PR 和 #65，不为回填记录改写已公开制品。
+
 ## 2026-11-13：R4 完整 CI 暴露的显式停止与消费者回归修正
 
 - 来源：用户已授权 PR/发布，[#66](https://github.com/nan023062/cbim/pull/66) 首轮完整 CI [43382151440](https://github.com/nan023062/cbim/actions/runs/43382151440) 在四片中失败 37 用例；关联开放 #65。首轮冻结候选留在草稿，未投放。本步修复发版阻塞，不纳入原任务历史折叠未提交改动。

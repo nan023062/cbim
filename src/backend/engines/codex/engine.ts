@@ -2,6 +2,7 @@
  * 目录归属：backend/engines/codex；Codex 引擎适配。
  * 作用定位：通过 Codex App Server 管理进程、线程、轮次和动态工具；目标返工明确为系统反馈，不携带用户图片或新授权。
  * 设计原因：参考 Cindy 的双向 RPC 接法；关闭内置执行/外部工具，用既有授权、预算和事件服务持有副作用。
+ * 超时只统计本轮连续无进展时长；同线程旧轮通知不能续期，工具及模型增量沿共享计时器处理。
  * 职责边界：原生线程 ID 来自服务端实际回执，首次绑定后固定；异常和取消也在进程排空后补登记真实文件，故障不重放操作。
  * Codex EXE 与宿主 Pi 工具库分别接收固定包，保持账号/原生历史目录及原 RPC 进程收尾。
  */
@@ -19,6 +20,7 @@ import {CodexRpc} from './rpc';
 import {codexTools} from './tools';
 import {openCodexModelProxy} from './model-proxy';
 import {readCodexSession,codexPath} from './session';
+import {RunInactivityTimer} from '../run-inactivity';
 
 export interface CodexOptions {/** 本次执行固定的独立 Codex 包与 Pi 工具包，由可信宿主注入。 */ runtime?:EngineRuntimePackage;nativeToolsRuntime?:EngineRuntimePackage;agentHome:string;prompt:string;knowledge:EngineToolsPort;allowNativeExecution?:boolean;llm?:ResolvedLlm;images?:import('../../core/execution/types').InputImage[];turnTimeoutMs?:number;requestBudget?():Promise<RequestBudgetPort|undefined>}
 /** 删除宿主 Codex/OpenAI 身份及启动注入；只把本轮代理令牌交给原生进程。 */
@@ -33,11 +35,13 @@ export class CodexEngine implements AgentEngine {
   private threadId='';private sessionFile?:string;private turnId?:string;private startingTurn?:Promise<any>;private stopped=false;private fatal?:Error;
   /** 文件绑定只在校验并持久化成功后成立；close 共用同一屏障，避免终态之后重复登记。 */
   private sessionBound=false;private closing?:Promise<void>;
+  /** 连续无进展才超时；原生增量和宿主工具进展共用本轮窗口。 */
+  private inactivity?:RunInactivityTimer;
   private done?:{resolve:(result:{status:'completed'|'cancelled'|'failed';error?:string})=>void;reject:(error:Error)=>void};
   constructor(private options:CodexOptions){}
   private redact(text:string){const key=this.options.llm?.apiKey;return key?text.split(key).join('[REDACTED]'):text}
   private fail(error:Error){this.fatal??=Error(this.redact(error.message));this.tools?.stop();if(!this.stopped)this.done?.reject(this.fatal)}
-  private async emit(event:EngineEvent){try{await this.context!.emit(JSON.parse(this.redact(JSON.stringify(event))))}catch(error){this.fail(error instanceof Error?error:Error(String(error)));throw error}}
+  private async emit(event:EngineEvent){this.inactivity?.observe(event);try{await this.context!.emit(JSON.parse(this.redact(JSON.stringify(event))))}catch(error){this.fail(error instanceof Error?error:Error(String(error)));throw error}}
   async start(context:EngineContext){
     this.context=context;const llm=this.options.llm;if(!llm||llm.profile.api!=='openai-responses'||llm.profile.engine&&llm.profile.engine!=='codex')throw Error('Codex 需要已配置的 OpenAI Responses 模型');
     await fs.mkdir(this.options.agentHome,{recursive:true});await context.assertMemberResume?.();
@@ -91,7 +95,7 @@ export class CodexEngine implements AgentEngine {
   async run(message:string){
     if(!this.rpc||!this.context)throw Error('Codex 尚未准备');if(this.fatal)throw this.fatal;if(this.stopped)return {status:'cancelled' as const};
     const result=new Promise<{status:'completed'|'cancelled'|'failed';error?:string}>((resolve,reject)=>{this.done={resolve,reject}});
-    const timer=setTimeout(()=>this.fail(Error('Codex 执行超时，请核实原运行')),this.options.turnTimeoutMs??30*60*1000);
+    this.inactivity=new RunInactivityTimer(this.options.turnTimeoutMs,'Codex',error=>this.fail(error));
     const internal=['member-results','human_decisions','goal-repair'].includes(this.context.source?.kind??''),profile=this.options.llm!.profile;
     const effort=profile.reasoning&&profile.thinkingLevel!=='off'?(profile.thinkingLevel??'medium'):'none';
     this.startingTurn=this.rpc.request('turn/start',{threadId:this.threadId,input:[{type:'text',text:internal?'CBIM 系统转交资料（不是用户新授权）：\n'+message:message,text_elements:[]},...(!internal?this.options.images??[]:[]).map(image=>({type:'image',url:'data:'+image.mimeType+';base64,'+image.data}))],model:profile.model,effort,summary:'none',environments:[]}).then(value=>{if(!value.turn?.id)throw Error('Codex 没有确认本轮身份');this.turnId=value.turn.id;return value});
@@ -104,10 +108,14 @@ export class CodexEngine implements AgentEngine {
         await this.emit({type:'engine.status',data:{label:'本轮用量已汇总',metric:'run-usage',tokens,...(cost!==undefined&&Number.isFinite(cost)?{cost,pricingKnown:true}:{pricingKnown:false})}});
       }
       return settled;
-    }finally{clearTimeout(timer)}
+    }finally{this.inactivity?.dispose()}
   }
   private async notification(method:string,params:any){
     if(params?.threadId!==this.threadId)return;
+    // 只认本轮有内容的增量；旧轮通知、用量和连接状态不能续期。
+    if(params.turnId&&this.startingTurn)await this.startingTurn;
+    if(params.turnId&&params.turnId!==this.turnId)return;
+    if(['item/agentMessage/delta','item/reasoning/textDelta','item/reasoning/summaryTextDelta','item/commandExecution/outputDelta'].includes(method)&&typeof params.delta==='string'&&params.delta.length)this.inactivity?.progress();
     if(method==='item/agentMessage/delta')await this.emit({type:'message.delta',data:{text:params.delta}});
     if(method==='item/completed'&&params.item?.type==='agentMessage')await this.emit({type:'message',data:{role:'assistant',text:params.item.text}});
     if(method==='turn/completed'){
@@ -117,7 +125,7 @@ export class CodexEngine implements AgentEngine {
       this.done?.resolve(this.stopped||turn.status==='interrupted'?{status:'cancelled'}:turn.status==='completed'&&!error?{status:'completed'}:{status:'failed',error:this.redact(error??'Codex 返回未知终态')});
     }
   }
-  async stop(){this.stopped=true;this.tools?.stop();await this.proxy?.close();if(this.turnId)try{await this.rpc?.request('turn/interrupt',{threadId:this.threadId,turnId:this.turnId},3000)}catch{}this.done?.resolve({status:'cancelled'})}
+  async stop(){this.stopped=true;this.inactivity?.dispose();this.tools?.stop();await this.proxy?.close();if(this.turnId)try{await this.rpc?.request('turn/interrupt',{threadId:this.threadId,turnId:this.turnId},3000)}catch{}this.done?.resolve({status:'cancelled'})}
   /**
    * 所有终态都先关闭原生进程、排空回调，再补登记延迟落盘的文件；运行时随后才封存日志。
    * 只使用 thread 回执中的路径，不扫描/猜测其他文件。尚未落盘保持缺省；无效文件拒绝绑定。
@@ -125,6 +133,7 @@ export class CodexEngine implements AgentEngine {
    */
   close():Promise<void>{
     return this.closing??=(async()=>{
+      this.inactivity?.dispose();
       this.tools?.stop();
       try{await this.proxy?.close()}finally{try{await this.rpc?.close()}finally{await this.tools?.close()}}
       if(!this.threadId||!this.sessionFile||this.sessionBound)return;

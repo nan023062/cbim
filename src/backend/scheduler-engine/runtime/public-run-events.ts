@@ -6,6 +6,7 @@
  * 仓库范围：保留真实链接器、仓库、共享代际与操作，正文/地址/凭据不经公开投影透传。
  * GitHub 范围只公开可信目标和连接代际；反馈正文、原 Issue 地址及凭据不经运行投影公开。
  * 验证范围：只公开核验当时的要求、文件指纹、可选完整集合三字段身份及无原值诊断；暂存须结合工具终态，不代表当前文件持续有效。
+ * 终态原因：与任务卡共用 publicRunFailure 重建已识别诊断，未知错误正文不透传，历史日志不改写。
  */
 import path from 'node:path';
 import type {StoredEvent,TaskSpec} from '../../core/execution/types';
@@ -13,6 +14,7 @@ import type {TaskProgress} from '../../core/evidence/progress';
 import type {ToolReceipt} from '../../core/tools/types';
 import {repositoryToolScopeSchema,githubFeedbackScopeSchema} from '../../core/tools/scope-schema';
 import {validationResultSchema} from '../../core/evidence/validation';
+import {publicRunFailure} from '../../core/execution/run-failure';
 
 /** 已核实的运行身份；成员、主对话和旧日志都不能通过投影改变其归属。 */
 export interface PublicRunIdentity {workspaceId:string;taskId:string;runId:string}
@@ -97,8 +99,8 @@ export function projectRunEvent(event:StoredEvent,identity:PublicRunIdentity,tas
       break;
     }
     case 'run.stop_requested':data={};break;
-    case 'run.settled':data={status:['completed','cancelled','failed'].includes(String(source.status))?source.status:'failed',acceptance:'not_evaluated',...(source.error?{error:'本轮执行失败，请核实工具状态与产物'}:{})};break;
-    case 'run.interrupted':data={error:'执行中断，请核实未确认的操作与产物',unresolvedTools:texts(source.unresolvedTools,128),receipts:Array.isArray(source.receipts)?source.receipts.map(item=>receipt(item,identity)).filter(Boolean):[]};break;
+    case 'run.settled':data={status:['completed','cancelled','failed'].includes(String(source.status))?source.status:'failed',acceptance:'not_evaluated',...(source.error?{error:publicRunFailure(source.error)??'本轮执行失败，请核实工具状态与产物'}:{})};break;
+    case 'run.interrupted':data={error:publicRunFailure(source.error)??'执行中断，请核实未确认的操作与产物',unresolvedTools:texts(source.unresolvedTools,128),receipts:Array.isArray(source.receipts)?source.receipts.map(item=>receipt(item,identity)).filter(Boolean):[]};break;
     default:type='engine.status';data={label:'执行记录已更新'};
   }
   return {version:1,seq:event.seq,taskId:task.taskId,runId:identity.runId,workspaceId:task.workspaceId,time:event.time,type,data};

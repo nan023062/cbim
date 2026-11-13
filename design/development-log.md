@@ -1,3 +1,14 @@
+## 2026-11-13：有进展续期与成员任务具体中断原因
+
+- 来源及基线：用户明确要求“只要有进展就续期，并把具体中断原因传到任务卡”；关联开放 [#65](https://github.com/nan023062/cbim/issues/65)，已读取正文及最近讨论。基线 `30d264dc`；开始时任务历史折叠相关前端改动未提交，本步原样保留且不纳入提交。只读核实本机 webfps：E2 在 13:00:24–13:30:24、E2b 在 13:30:44–14:00:44 均触发整轮 30 分钟超时，终止前仍在浏览器验证。另有事件过大及输出限额错误，本步只补公开原因，不修改这两种限制。
+- 边界及方案：C1 变更检查、L2 交付；三种引擎各自的整轮定时器是同一技术机制，改为组合 `engines/run-inactivity.ts`。`turnTimeoutMs` 名称与原持久化结构保留，解释为连续无可观察进展的毫秒数（缺省 30 分钟）。新模型文本/推理/参数增量、工具开始/完成及变化的非空工具输出续期；空输出、重复工具快照、状态刷新、重试通知不续期。Codex 排除旧 thread/turn；推理不存正文。无输出的长命令仍可能静默超时；单次 RPC、工具自身及资源排空期限不被替代。
+- 失败与状态：正常结束、异常、停止及 close 释放计时器，到期后迟到事件不复活。超时继续走原关闭/排空/未决副作用记录，不重放工具。成员结算从本轮原日志末条 `run.interrupted/run.settled(failed)` 取得错误，通过 Core `publicRunFailure` 重建已识别的具体诊断，同事务写入 `task.waitReason/run.error`；公开运行事件也用同一转换。未知原文、凭据、路径不进入任务图，原 canonical 保留；历史任务节点不批量重写，历史详情按读取时投影。候选、租约、权限及用户取消规则不改。
+- 受影响验证：`pnpm exec vitest run tests/engine-inactivity.test.ts tests/run-failure.test.ts tests/member-execution.test.ts tests/member-events.test.ts tests/pi-cancellation.test.ts --reporter=dot` 首次 48 通过、1 失败；失败为新增 Codex 协议夹具漏提供 `proxy.error`，补齐后对应文件随下一组通过。覆盖默认 30 分钟、长时进展、重复/空输出、并发独立、噪声/旧轮、停止释放、终态诊断脱敏、真实派发存储到任务图及原事件分页消费者。
+- 原生验证：`pnpm exec vitest run tests/engine-inactivity.test.ts tests/engine-inactivity-pi.test.ts tests/claude-engine.test.ts tests/codex-engine.test.ts tests/codex-lifecycle.test.ts --reporter=dot`：5 文件 / 24 用例通过。新增真实 Pi 进程 + 本地 HTTP 流跨过 1.5 秒窗口持续约 3 秒后正常完成，静默场景按窗口中断且两种情况各仅发一次请求；保留真实 Claude SDK、Codex EXE 的启动/停止/恢复及预算门禁回归。两组共 61 个不同相关用例最终通过，不累计重跑；没有使用用户模型账号。
+- 静态与资料：首次类型检查指出新增诊断测试夹具缺 `moduleIds/acceptance`，补齐后 `pnpm typecheck` 通过。`pnpm check:architecture` 通过（1374 文件 / 6967 依赖，0 循环/违规；统计包含原有前端未提交文件）。同步 5 个既有源码文件头、2 个新模块说明，以及 Core execution、engines 根/三个适配器、scheduler members/runtime 共 7 处 CONTRACT 和 ARCHITECTURE；无前端生产代码变更。
+- Review 导航及四问：先读 engines/CONTRACT → RunInactivityTimer → 三引擎原生事件映射，再读 publicRunFailure → MemberExecutionManager.settle → projectRunEvent → 既有任务卡 waitReason 显示。Q1 保护原权限、原生身份、未知结果及关闭结算规则；Q2 计时机制独立于原生协议识别，公开错误分类独立于运行状态修改；Q3 验证仅选择这两个变更的真实消费者，未扩展全仓；Q4 新进展类型从对应引擎映射修改，新的公开故障分类从 run-failure 修改；Q5 无新增治理规则候选。共用计时器仍属稳定候选，没有虚构频率统计；完整变更以本步独立提交为 review 入口，未声称人工 review 已接受。
+- 交付边界：未运行全量回归、全套桌面/安装升级或在线供应商验收，留待 PR/发布自动化。未发布、未重启安装版、未修改用户运行数据；当前已在运行的旧进程保持原规则。#65 其它问题保持开放。
+
 ## 2026-11-13：等待用户补充时普通发送续接原目标
 
 - 来源：用户截图反馈“准备好后回复继续”，输入却进入暂停队列且不能插入，形成原目标等待输入、队列等待原目标结束的互等。基线 `465f94a9`，开始时 develop 干净；开放清单仅 [#65](https://github.com/nan023062/cbim/issues/65)，本步补充其对话恢复相关进展，不关闭其它未完成项。

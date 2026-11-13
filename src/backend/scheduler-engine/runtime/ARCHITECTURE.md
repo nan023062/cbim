@@ -159,7 +159,7 @@ class N_src_backend_scheduler_engine_runtime_public_run_events_ts_PublicRunIdent
 N_src_backend_scheduler_engine_runtime_public_run_events_ts ..> N_src_backend_scheduler_engine_runtime_public_run_events_ts_PublicRunIdentity : 声明
 ```
 
-直接依赖：[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/evidence/progress.ts](../../core/evidence/progress.ts)、[../../core/tools/types.ts](../../core/tools/types.ts)、[../../core/tools/scope-schema.ts](../../core/tools/scope-schema.ts)、[../../core/evidence/validation.ts](../../core/evidence/validation.ts)。
+直接依赖：[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/evidence/progress.ts](../../core/evidence/progress.ts)、[../../core/tools/types.ts](../../core/tools/types.ts)、[../../core/tools/scope-schema.ts](../../core/tools/scope-schema.ts)、[../../core/evidence/validation.ts](../../core/evidence/validation.ts)、[../../core/execution/run-failure.ts](../../core/execution/run-failure.ts)。
 
 ### 本目录调用边界
 
@@ -186,6 +186,10 @@ N_src_backend_scheduler_engine_runtime_member_events_ts ..> N_src_backend_schedu
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 终态原因的公开投影
+
+`projectRunEvent` 的 `run.interrupted/run.settled` 与任务卡共用 Core `publicRunFailure`，保留可识别的超时、事件限制、模型输出上限等诊断，不再全部变成统一“执行中断”。任意私密错误正文仍不透传，未决调用 ID 与回执保持原字段。历史详情按读取时投影展示，不迁移原日志或授权任何恢复操作。
 
 ### 静态 Agent 的 Session 历史（已实现）
 

@@ -38,7 +38,7 @@ async function setup(useBuiltin=false){
   await mainJournal.append({type:'run.started',data:{task:mainTask,conversationBinding:await dispatch.conversationBinding(mainTask)}});
   const ownerSelection=(await dispatch.owners.discover([moduleId])).groups[0].selection!;
   await dispatch.goals.plan(identity,scopeId,'main-one','goal-plan',{expectedRevision:1,objective:'核实派发产物',constraints:[],criteria:[{id:'verified',text:'提供真实工具证据',kind:'evidence'}],assignments:[{agentId,moduleIds:[moduleId],ownerSelection,criterionIds:['verified'],reason:'负责岗位'}],reason:'明确业务分配'});
-  let behavior:'candidate'|'text'|'hold'|'rewrite'='candidate',release=()=>{},count=0;
+  let behavior:'candidate'|'text'|'hold'|'rewrite'|'interrupted'|'failed'='candidate',release=()=>{},count=0;
   let beforeRuntimeLease:()=>Promise<void>=async()=>{};
   const contexts:EngineContext[]=[];
   const prepare=vi.fn<()=>Awaited<ReturnType<MemberExecutionPorts['prepare']>>>(()=>({model,create:async(run,_task,hooks)=>{
@@ -48,6 +48,8 @@ async function setup(useBuiltin=false){
         expect((await store.read()).runs!.find(r=>r.binding.runId===run.binding.runId)?.status).toBe('running');
         if(behavior==='hold')return new Promise(resolve=>{release=()=>resolve({status:'cancelled'})});
         if(behavior==='text')return {status:'completed'};
+        if(behavior==='interrupted')throw Error('Pi 连续 30 分钟无执行进展，已中断；请核实未确认的操作与产物。');
+        if(behavior==='failed')return {status:'failed',error:'Pi 事件超过大小限制'};
         const invoke=async(name:string,input:Record<string,unknown>)=>{
           const id='tool-'+(++count),decision=await context.beforeTool({id,name,input});
           if(!decision.allow)throw Error('unexpected denial');
@@ -92,6 +94,16 @@ it('模型只有正文或改写了派发目标时，完成回合保留 completed
   const f=await setup();try{
     for(const behavior of ['text','rewrite'] as const){f.setBehavior(behavior);const task=await f.assign();await f.start(task.taskId);const view=await f.settled(task.taskId);expect(view.runs[0].status).toBe('completed');expect(view.task.status).toBe('blocked');expect(view.task.result).toBeUndefined()}
     expect((await f.store.read()).outbox.filter(m=>m.kind==='result')).toEqual([]);
+  }finally{await f.cleanup()}
+});
+it.each(['interrupted','failed'] as const)('成员%s从真实运行终态保存具体原因，任务图和详情一致且不生成交付',async status=>{
+  const f=await setup();try{
+    f.setBehavior(status);const assigned=await f.assign();await f.start(assigned.taskId);const view=await f.settled(assigned.taskId);
+    expect(view.task.status).toBe(status);expect(view.task.result).toBeUndefined();
+    expect(view.task.waitReason).toContain(status==='interrupted'?'30 分钟无执行进展':'Pi 事件超过大小限制');
+    expect(view.runs[0].error).toBe(view.task.waitReason);
+    const graph=await f.dispatch.snapshot(f.identity);expect(graph.tasks.find(task=>task.taskId===assigned.taskId)?.waitReason).toBe(view.task.waitReason);
+    expect((await f.store.read()).outbox.filter(message=>message.kind==='result')).toEqual([]);
   }finally{await f.cleanup()}
 });
 it('隔离资源未确认收尾时成员保留工作区占用，再次close只封存原运行',async()=>{

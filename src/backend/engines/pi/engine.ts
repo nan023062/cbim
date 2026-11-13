@@ -13,6 +13,7 @@
  * 主角色指引：与 Claude Code 共用 engine-instructions；未配置自定义岗位的模块由主 Agent 直接执行，默认执行角色已退役。
  * 请求预算：可信端口启用时，启动前安装父进程代理；终态与工具授权都受可靠结算屏障约束，停止先结束实际请求。
  * 受管包的 CLI 路径在上层冻结到 process 参数；会话包身份由外层包装器核对，本适配器继续只负责 Pi 协议。
+ * 超时窗口按模型增量及工具实际进展续期；重试通知不续期，停止和关闭释放本轮计时器。
  */
 import type {EngineRuntimePackage} from '../../core/execution/engine-runtime';
 import fs from 'node:fs/promises';
@@ -31,8 +32,9 @@ import {pathToFileURL} from 'node:url';
 import type {RequestBudgetPort} from '../../core/models/request-budget';
 import {openRequestBudgetTransport} from '../transport/request-budget-transport';
 import {requestBudgetBootstrap} from './request-budget-bootstrap';
+import {RunInactivityTimer} from '../run-inactivity';
 
-/** 单次 Pi 适配器配置；agentHome 只属于 CBIM 工作区，turnTimeoutMs 为回合等待上限毫秒。 */
+/** 单次 Pi 适配器配置；agentHome 只属于 CBIM 工作区，turnTimeoutMs 为连续无进展上限毫秒。 */
 export interface PiOptions {
   /** 共用引擎装配携带的包身份；Pi 实际启动入口已由 process 固定。 */
   runtime?:EngineRuntimePackage;nativeToolsRuntime?:EngineRuntimePackage;
@@ -61,6 +63,7 @@ export class PiEngine implements AgentEngine {
   private budgetTransport?:Awaited<ReturnType<typeof openRequestBudgetTransport>>;
   private events:Promise<void>=Promise.resolve();
   private settlement?:{resolve:(value:{status:'completed'|'cancelled'|'failed';error?:string})=>void;reject:(error:Error)=>void};
+  private inactivity?:RunInactivityTimer;
   private assistantError?:string;
   /** 只测模型消息生成区间，排除工具和人工审批；旧记录不补造速度。 */
   private generationStarted?:number;
@@ -146,12 +149,11 @@ export class PiEngine implements AgentEngine {
     this.usageBaseline=await this.rpc.request('get_session_stats').catch(()=>undefined);
     await context.emit({type:'session.bound',data:{sessionId:state.sessionId,sessionFile:state.sessionFile,provider:this.options.provider,model:this.options.model}});
   }
-  /** 发送本轮提示并等待 settled；超时抛错表示结果待核实，不自行重发提示或工具。 */
+  /** 等待 settled；输出和工具进展续期，连续静默才中断，不自行重发提示或工具。 */
   async run(message:string){
     if(!this.rpc||!this.context)throw Error('引擎未启动');if(this.fatal)throw this.fatal;
-    let timer:ReturnType<typeof setTimeout>|undefined;
     const settled=new Promise<{status:'completed'|'cancelled'|'failed';error?:string}>((resolve,reject)=>{
-      this.settlement={resolve,reject};timer=setTimeout(()=>reject(Error('执行超时，结果需核实，不自动重放')),this.options.turnTimeoutMs??30*60*1000);
+      this.settlement={resolve,reject};this.inactivity=new RunInactivityTimer(this.options.turnTimeoutMs,'Pi',reject);
     });void settled.catch(()=>{});
     try{
       // 内部回传通过本轮扩展写成 custom 消息，不作为原生 user 记录；加前缀避免正文被解析为斜杠命令。
@@ -169,10 +171,12 @@ export class PiEngine implements AgentEngine {
           await this.context.emit({type:'engine.status',data:{label:'本轮用量已汇总',metric:'run-usage',tokens,cost,pricingKnown:!!this.options.llm?.profile.pricing}});
       }
       return result;
-    }finally{if(timer)clearTimeout(timer);this.settlement=undefined}
+    }finally{this.inactivity?.dispose();this.settlement=undefined}
   }
   private async consume(event:any){
-    const emit=(e:EngineEvent)=>this.context!.emit(JSON.parse(this.redact(JSON.stringify(e))));
+    // 推理/参数增量只作为活性信号，既不记录正文，也不依赖 UI 状态文字是否变化。
+    if(event.type==='message_update'&&['thinking_delta','text_delta','toolcall_delta'].includes(event.assistantMessageEvent?.type)&&typeof event.assistantMessageEvent.delta==='string'&&event.assistantMessageEvent.delta.length)this.inactivity?.progress();
+    const emit=(e:EngineEvent)=>{this.inactivity?.observe(e);return this.context!.emit(JSON.parse(this.redact(JSON.stringify(e))))};
     switch(event.type){
       case 'message_start':if(event.message?.role==='assistant'){this.generationStarted=performance.now();this.activity='正在思考…';await emit({type:'engine.status',data:{metric:'activity',label:this.activity}})}return;
       case 'message_update':{
@@ -238,10 +242,10 @@ export class PiEngine implements AgentEngine {
     }catch{fail('QUEUE_INSERT_UNKNOWN','插入结果未确认，队列将保持暂停，请先核实原运行记录，勿重复发送')}
   }
   /** 先保留停止意图，再请求原生 abort；请求失败则关闭进程，最终结算由 LoopRuntime 完成。 */
-  async stop(){this.stopped=true;await this.budgetTransport?.close();if(this.rpc)try{await this.rpc.request('abort',{},10000)}catch{await this.rpc.close()}}
+  async stop(){this.stopped=true;this.inactivity?.dispose();await this.budgetTransport?.close();if(this.rpc)try{await this.rpc.request('abort',{},10000)}catch{await this.rpc.close()}}
   /** 关闭进程并排空已收到的事件；即使事件持久化失败也会关闭工具桥。 */
   async close(){
-    this.closing=true;
+    this.closing=true;this.inactivity?.dispose();
     try{await this.budgetTransport?.close();await this.rpc?.close();await this.events}
     finally{await this.bridge?.close()}
   }

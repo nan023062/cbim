@@ -97,6 +97,7 @@ class N_src_backend_engines_codex_engine_ts["engine.ts"] {
 class N_src_backend_engines_codex_engine_ts_CodexEngine["CodexEngine"] {
   -sessionBound
   -closing
+  -inactivity
   -done
   -redact()
   -fail()
@@ -111,7 +112,7 @@ class N_src_backend_engines_codex_engine_ts_external_AgentEngine["AgentEngine (�
 N_src_backend_engines_codex_engine_ts_external_AgentEngine <|.. N_src_backend_engines_codex_engine_ts_CodexEngine
 ```
 
-直接依赖：[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../native-tools.ts](../native-tools.ts)、[binary.ts](binary.ts)、[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[rpc.ts](rpc.ts)、[tools.ts](tools.ts)、[model-proxy.ts](model-proxy.ts)、[session.ts](session.ts)。
+直接依赖：[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../native-tools.ts](../native-tools.ts)、[binary.ts](binary.ts)、[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[rpc.ts](rpc.ts)、[tools.ts](tools.ts)、[model-proxy.ts](model-proxy.ts)、[session.ts](session.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
 
 ### model-proxy.ts
 
@@ -266,6 +267,10 @@ N_src_backend_engines_codex_model_proxy_ts ..> N_src_backend_engines_codex_tools
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # Codex 适配边界
+
+## 无进展超时
+
+`CodexEngine.run` 使用共享 [无进展计时器](../CONTRACT.md#按执行进展续期)。公开消息与宿主工具事件续期，原生正文/推理/命令输出增量先核当前 thread/turn；旧轮迟到输出不能续期。停止和 close 释放计时器，超时沿原失败、工具停止和进程排空路径结算；RPC 请求自己的确认期限保持原义。
 
 `CodexEngine` 实现公共 `AgentEngine`。固定 `@openai/codex@0.167.0` 及平台二进制通过 stdio App Server 运行；不使用 PATH 客户端、外部账号、用户 Codex HOME 或 Cindy 的运行进程。依赖方向为装配 → 引擎 → 公共契约，业务调度不进入 RPC 层。
 

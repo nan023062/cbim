@@ -2,6 +2,10 @@
 
 # Claude Code 适配契约
 
+## 无进展超时
+
+`ClaudeCodeEngine.run` 使用共享 [无进展计时器](../CONTRACT.md#按执行进展续期)。SDK 文本/推理/参数的非空增量（包括子任务）和工具 Hook 的实际开始/完成续期，普通 status 消息不续期。连续静默时关闭 Query 并保存具体原因；迟到 result 不能覆盖已发生的超时，显式停止仍为取消。
+
 engine.ts 使用固定 Claude Agent SDK Query，sdk.ts 只解析 CBIM 自带 claude-runtime 或开发依赖；SDK 与平台二进制独立随包，不访问 Cindy 的安装或账号。settingSources 为空，strictMcpConfig 开启，插件清单为空；继承的 Claude/Anthropic 凭据与启动注入被移除。真实模型、地址及推理开关取冻结快照。Pi 专属工作上下文/压缩阈值不映射成 Claude 保证。
 
 工具经 tools.ts 的 PreToolUse 调用同一 beforeTool，先保存授权及 started，再允许执行。内部 SDK MCP 不监听端口；每次内部调用用真实 tool_use_id 绑定准确原参数并消耗一次性许可，模型不能提供该身份。原生 Read/Write/Edit/Bash/Glob/Grep 映射到现有规范名称。scopedExecutionTools 存在时不提供任何原生文件/命令工具。初始化必须确认 hooks_applied 与 hook_on_failure_supported，失败默认阻断；实际活动目录与准备目录逐名核对。

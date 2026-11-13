@@ -11,6 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [native-tools.ts](native-tools.ts) | 向宿主托管引擎提供已有文件/命令工具操作，复用 Pi SDK 的独立工具实现而不创建 Pi Loop。 |
+| [run-inactivity.ts](run-inactivity.ts) | 三种引擎共用的无进展计时器；适配器识别原生增量，工具事件复用统一协议。 |
 | [runtime-binding.ts](runtime-binding.ts) | 在具体引擎之外固定原生会话使用的受管 E 包身份，保存在原 agentHome 的私有旁路记录。 |
 
 ## 架构类图
@@ -32,21 +33,34 @@ class N_src_backend_engines_transport["transport/"] {
 class N_src_backend_engines_native_tools_ts["native-tools.ts"] {
   <<module>>
 }
+class N_src_backend_engines_run_inactivity_ts["run-inactivity.ts"] {
+  <<module>>
+}
+N_src_backend_engines_claude ..> N_src_backend_engines_run_inactivity_ts : 导入依赖
+N_src_backend_engines_claude ..> N_src_backend_engines_transport : 导入依赖
+N_src_backend_engines_codex ..> N_src_backend_engines_native_tools_ts : 导入依赖
+N_src_backend_engines_codex ..> N_src_backend_engines_run_inactivity_ts : 导入依赖
+N_src_backend_engines_codex ..> N_src_backend_engines_transport : 导入依赖
+N_src_backend_engines_pi ..> N_src_backend_engines_transport : 导入依赖
+N_src_backend_engines_pi ..> N_src_backend_engines_run_inactivity_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_backend_engines_runtime_binding_ts["runtime-binding.ts"] {
   <<module>>
 }
-N_src_backend_engines_claude ..> N_src_backend_engines_transport : 导入依赖
-N_src_backend_engines_codex ..> N_src_backend_engines_native_tools_ts : 导入依赖
-N_src_backend_engines_codex ..> N_src_backend_engines_transport : 导入依赖
-N_src_backend_engines_pi ..> N_src_backend_engines_transport : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
+- `claude` → `run-inactivity.ts`：导入。
 - `claude` → `transport`：导入。
 - `codex` → `native-tools.ts`：导入。
+- `codex` → `run-inactivity.ts`：导入。
 - `codex` → `transport`：导入。
 - `pi` → `transport`：导入。
+- `pi` → `run-inactivity.ts`：导入。
 
 ### native-tools.ts 公开入口
 
@@ -87,6 +101,38 @@ class N_src_backend_engines_runtime_binding_ts["runtime-binding.ts"] {
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 受管引擎包与原生历史
+
+## 按执行进展续期
+
+`turnTimeoutMs` 保留参数名、范围和持久化格式，含义改为连续无可观察进展的毫秒数，缺省 30 分钟；整轮累计时长不再触发此超时。既有数据不迁移，新启动/显式恢复的运行按新规则使用原选项，已经运行的旧进程不会热切换。
+
+`RunInactivityTimer` 是 Pi、Codex、Claude Code 三个真实消费者共用的计时机制，只拥有本轮 timer 和工具快照摘要。适配器自行识别原生文本、推理及参数增量；统一消息与工具开始、完成、新的非空输出续期。空输出、重复工具快照、状态刷新和自动重试通知不续期。没有可观察输出的长命令仍可能达到无进展上限；这里不根据 CPU、模型自述或“进程还在”推断进展。
+
+原生协议识别留在各适配器，共享计时器不认识供应商、不调用工具或重试。推理只触发时间更新，不保存/公开正文。正常结束、失败、停止和关闭释放 timer；过期后迟到事件不能复活窗口。无进展中断沿原关闭、排空、日志结算路径处理，在途操作保持未知，不自动重放。
+
+此边界由本次重复硬超时缺陷提炼，接口及实现仍属稳定候选，变化频率没有统计依据。新增引擎只组合 `progress/observe/dispose` 并映射自身协议；新增进展类型修改其所属协议适配或公共事件判定，不修改任务调度核心。原生 RPC 单请求超时、工具自身超时及资源排空限制不由此计时器代替。
+
+```mermaid
+classDiagram
+class RunInactivityTimer {
+  -timer
+  -closed
+  -toolProgress
+  +progress()
+  +observe(event)
+  +dispose()
+}
+class PiEngine { <<external>> }
+class CodexEngine { <<external>> }
+class ClaudeCodeEngine { <<external>> }
+PiEngine --> RunInactivityTimer : 本轮持有
+CodexEngine --> RunInactivityTimer : 本轮持有
+ClaudeCodeEngine --> RunInactivityTimer : 本轮持有
+note for RunInactivityTimer "run-inactivity.ts：续期/到期/释放；工具快照只保留摘要。"
+note for PiEngine "pi/engine.ts；原生进展识别留在适配器。"
+note for CodexEngine "codex/engine.ts；thread/turn 核实后更新时间。"
+note for ClaudeCodeEngine "claude/engine.ts；SDK 增量及工具 Hook。"
+```
 
 具体适配器仍依赖 Core，调度装配选择适配器。EngineRuntimeResolver 由可信主进程注入，返回完整验证后的 root、entry、version、identity；不接受 renderer、模型或工作区提供下载路径。开发/CLI 未注入时保留原依赖解析方式。
 

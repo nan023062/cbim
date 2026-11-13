@@ -1,5 +1,9 @@
 # Codex 适配边界
 
+## 无进展超时
+
+`CodexEngine.run` 使用共享 [无进展计时器](../CONTRACT.md#按执行进展续期)。公开消息与宿主工具事件续期，原生正文/推理/命令输出增量先核当前 thread/turn；旧轮迟到输出不能续期。停止和 close 释放计时器，超时沿原失败、工具停止和进程排空路径结算；RPC 请求自己的确认期限保持原义。
+
 `CodexEngine` 实现公共 `AgentEngine`。固定 `@openai/codex@0.167.0` 及平台二进制通过 stdio App Server 运行；不使用 PATH 客户端、外部账号、用户 Codex HOME 或 Cindy 的运行进程。依赖方向为装配 → 引擎 → 公共契约，业务调度不进入 RPC 层。
 
 ## 生命周期与原生身份

@@ -1,3 +1,22 @@
+## 2026-11-13：CI 暴露的 Node 22 仓库正文取消缺口
+
+- 来源：[#68](https://github.com/nan023062/cbim/issues/68) 实际 CI 两轮均在同一 HTTP 回归失败，独立缺陷 [#70](https://github.com/nan023062/cbim/issues/70)。补充 execFile 诊断后确认被原有 15 秒期限终止、没有业务结果输出；没有原样无限重跑。
+- 定位：本地原 Node 24.13 通过不代表 CI Node 22.19 通过。下载并核对官方 SHA-256 的便携 Node 22.19 后定向复现；阶段探针记录两次请求均抵达、第一次取消已返回、两个 8 秒信号均已触发，但第二次正文读取仍挂起。因此不更换 CI 版本、不增大期限、不跳过用例。
+- 修复：RemoteRepository 私有 readBody 显式把取消/超时信号传给 reader.cancel，唤醒挂起 read；finally 移除监听并释放锁。请求层仍负责 CANCELLED/TIMEOUT 分类，半截正文不能成为仓库结果。固定 8 秒、大小边界、权限和无自动重试均保持；只修该仓库 HTTP 消费者，不扩展为通用网络重构。
+- 单元选择与结果：在 Node 22.19 下运行 `node node_modules/vitest/vitest.mjs run tests/repository-connection-http.test.ts --reporter=verbose`，5 用例通过，原真实超时约 8.3 秒返回；包含新增的 fetch 不转发取消时显式取消正文并释放锁回归。直接消费者 `repository-connection-service.test.ts`、`repository-tools.test.ts`、`chat-material-imports.test.ts` 同版本定向验证 23 用例通过，覆盖授权/撤销、工具读取和聊天资料捕获。调用 node 为 test-results 中的便携 22.19 可执行文件，不更改全局环境。
+- `pnpm typecheck`、`pnpm check:architecture` 通过（0 类图差异、0 循环、0 边界违规）；同步 resource-http.ts 文件头/私有生命周期注释、资源 CONTRACT.md 及 ARCHITECTURE.md 的 readBody 成员和行为说明。后续完整 CI 使用新的精确提交；未打包、未发布新客户端。
+
+## 2026-11-13：CI 按变更分流、耗时均衡与公共检查去重
+
+- 来源：用户授权三项 CI 优化并要求一次真实 CI 验证效果，独立工单 [#68](https://github.com/nan023062/cbim/issues/68)。基线 `bff94f9bdb2914b26e668ef819d0e0493f571a94`，原工作区网页读取、架构与任务图修改保留，使用独立检出。本步只改开发验证，不修改产品运行逻辑、分支保护或发布新客户端。
+- 分流：PR 依据 base/head 的 merge-base 差异，解析 NUL 分隔状态并同时检查重命名/复制的新旧路径。仅 README、发布记录与官网静态文件白名单可走轻量；业务资料、配置、空/未知差异一律完整。轻量核对空白及新增本地链接，涉及官网运行原 14 场景。新增范围与入口说明见 [CI 验证说明](task/ci-validation.md)。
+- 分片：Vitest 从真实发现全集按历史耗时确定性分配四片，保持 fileParallelism=false 和原超时。权重来自两轮已通过 CI，435 个已有文件均保留；新/改名测试自动以默认耗时纳入。每片输出发现全集和分配清单，汇总 job 对照实际执行报告核验无遗漏、无重复。未知权重不是跳过条件。
+- 去重：公共类型/架构/品牌/官网检查独立一次，与四片并行；各 runner 自身的依赖复制、Electron 身份和临时路径检查仍分别执行。固定汇总严格区分所选路径、预期跳过与异常跳过；手动诊断保留独立名称。网站预览使用随机回环端口及自有子进程 IPC 回执，避免误测其他正在运行的预览实例。
+- 本地验证：`pnpm exec vitest run tests/ci-validation.test.mjs --reporter=dot` 最终 34 用例通过；同文件 `--shard=1/1` 通过，证明真实 Vitest 分片入口接入。`pnpm typecheck` 通过；`CBIM_WEBSITE_URL=https://nan023062.github.io/cbim/ node scripts/ci-website-smoke.mjs` 14 场景通过、0 页面错误。两份 YAML 解析、git diff --check 及三个宿主入口/引用的一致性检查通过。没有 src 变化，不生成源码类图；原架构检查仍在真实 CI 执行。
+- 补充核实：Vitest list --filesOnly 枚举 436 文件，但该入口不调用分片；最初尝试读分片清单得到 ENOENT，未把枚举误计为执行证据，改用真实 `run --shard=1/1` 与 CI 产物校验。仅验证相关控制逻辑，本地不运行产品全量；真实完整 CI 的精确提交、全部用例覆盖与前后耗时追加到 #68/对应 PR，避免为结果回填再跑同一全量。
+- 维护范围：同步 AGENTS 验证范围、开发/发布说明三入口及发布 runbook。后续调整从 ci-scope.mjs 白名单、ci-test-shards.ts 分配策略、ci-test-coverage.mjs 覆盖核对入手；状态汇总与实际执行均不因优化而放宽。
+- 首轮真实 CI：run 43398193028 用时 13 分 10 秒，436 文件实际执行，2999 通过、1 失败、2 个既有跳过；不能报告验证成功。失败为 repository-connection-http 独立夹具被原有 15 秒外层期限终止，原始日志未展示 execFile 附带输出；本地定向运行同文件 4 用例通过（超时用例约 8.3 秒），未复现，尚不能确认卡在启动、请求还是清理。补充退出码、信号、子进程输出诊断，不改变 8 秒业务期限、15 秒进程期限、18 秒用例期限、断言、重试或跳过；修订后再次验证，不把本地通过当成远端失败已修复。
+
 ## 2026-11-13：C 0.1.15 / R4 公开升级通过与官网收尾
 
 - 来源：用户明确要求提交 PR 并发布；[产品 PR #66](https://github.com/nan023062/cbim/pull/66) 已正常合并为 `b00f6928c7e110ec204326d9cceaaf228d6ec74f`，完整树等同冻结 source `ae6deee959cec22db2daff8abc75aa90439e7825`。完整四片 CI [43386158632](https://github.com/nan023062/cbim/actions/runs/43386158632) 为 435 文件 / 2966 通过 / 0 失败 / 2 跳过；跳过均因 runner 缺真实历史 EXE，未新增 skip。

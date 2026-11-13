@@ -106,7 +106,7 @@ pnpm make:desktop --unsigned
 - [website/release.json](../../../../website/release.json) 的 version、tag、publishedAt、repository、filename、bytes、sha256、signed 均来自公开回执／真实签名。不能用开发 package.json 或旧 Python latest 代替。
 - 首页发布卡、下载页日志／FAQ／签名提示、README 和相关发布说明；搜索写死的旧版本和“新版尚未包含图标”等失效文字。签名迁移同时审阅提示文案，不能只把 signed 改为 true。保留 Search Console 验证标记、canonical、robots 和 sitemap；不重复提交收录申请。
 - `pnpm check:brand`、`pnpm build:website`，再用 [website-smoke.mjs](../../../../scripts/website-smoke.mjs) 验证 320／390／1280 px、深浅色和独立离线两页（当前共 14 场景）、无溢出／页面错误、正确链接和摘要。脚本固定输出 `test-results/branding-website`；先保留已有报告，或在隔离检出运行，避免覆盖。只使用独立无头浏览器，不连接用户浏览器资料。
-- 官网及收尾变更经 develop → master PR 检查、正常合并；[website.yml](../../../../.github/workflows/website.yml) 在 master 部署到既有 Pages。默认 develop 不改变部署分支，不放宽环境保护。核实 Actions 实际 head、目标 URL 与成功回执，再匿名逐文件对照 `index.html`、`download.html`、`404.html`、`robots.txt`、`sitemap.xml`、`cbim.png` 和本地构建字节／摘要。CDN 尚未更新时先只读复核。
+- 官网及收尾变更经 develop → master PR 检查、正常合并。仅官网、README 和发布记录白名单走轻量检查并核对统一汇总；不重复产品全量。未知路径、内置业务资料及构建配置仍完整检查；[website.yml](../../../../.github/workflows/website.yml) 在 master 部署到既有 Pages。默认 develop 不改变部署分支，不放宽环境保护。核实 Actions 实际 head、目标 URL 与成功回执，再匿名逐文件对照 `index.html`、`download.html`、`404.html`、`robots.txt`、`sitemap.xml`、`cbim.png` 和本地构建字节／摘要。CDN 尚未更新时先只读复核。
 - 将 master 的合并结果以 fast-forward 同步回 develop，核实本地／远端 SHA、默认 develop、远端仅 master／develop 和干净工作树。存在分叉或额外分支时先查差异与授权，不硬重置、不强推或自动删除未知工作；双分支收尾不是新的批量删除许可。
 - 按已有授权回填本次关联 Issues／PR，并更新 [开发记录](../../../../design/development-log.md) 与版本报告；报告 [证据清单](evidence.md) 中的最终事实及尚未同步的外部记录，不再维护 roadmap。必须按实际安装版本报告更新节奏：0.1.2 是启动约 10 秒后及每 30 分钟检查、下载后再点击重启；从 0.1.3 开始采用每分钟检查、点击下载后自动安装重启。新源码行为必须已有对应公开版本，不能套在尚未升级的旧客户端上。关闭／离线用户不会即时收到，仍需用户主动开始下载。
 

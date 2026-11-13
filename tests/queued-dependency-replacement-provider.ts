@@ -1,3 +1,4 @@
+import {DependencyReviewRounds,serveFixtureCompaction} from './dependency-review-provider-fixture';
 import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -24,13 +25,16 @@ function toolValue(body:Request,id:string){const item=body.messages.find(message
 export async function dependencyReplacementProvider(){
   const main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[],d=dependencyReplacementFixture;
   const state:{initialGraph?:GraphSnapshot;beforeReplacement?:GraphSnapshot;receipt?:ReplaceQueuedDependencyReceipt}={};let ownerSelection:OwnerExecutionSelection;let agentId='',moduleId='',release=()=>{};const gate=new Promise<void>(resolve=>{release=resolve});
+  const reviews=new DependencyReviewRounds();
+  const compactions:GoalFixtureRequest[]=[];
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
-    const body=JSON.parse(raw) as Request,isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
+    const body=JSON.parse(raw) as Request,isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,requests=isMain?main:member,turn=requests.length-(isMain?reviews.offset:0);if(serveFixtureCompaction(body,res,compactions))return;requests.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
     res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'dependency-replacement-'+sequence.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(text:string)=>{emit({role:'assistant',content:text});emit({},'stop')};
     const dispatch=(id:string,goal:string,prior?:string)=>tool(id,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:prior?[{taskId:prior,expectedPlanRevision:1}]:[]});
+    if((isMain)&&reviews.handle(body,'replace-final-inspect',tool,reply)){res.end('data: [DONE]\n\n');return}
     if(isMain){
       assert.ok(body.tools?.some(item=>item.function.name==='cbim_dispatch_replace_dependency'));
       if(turn===0)tool('replace-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance}));
@@ -71,5 +75,5 @@ export async function dependencyReplacementProvider(){
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Queued dependency replacement fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,releaseMain:()=>release(),bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection},close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {compactions,reviews,url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,releaseMain:()=>release(),bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection},close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

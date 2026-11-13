@@ -1,6 +1,7 @@
 /**
  * 审阅关口使候选先回主轮；下一批继承未启动待办，批准后沿原任务身份继续，不重复派发。
  * 同一目标累计三次成员异常即停止自动接续；终态图是额度依据，换任务编号、结果回注或验收返工均不能清零。
+ * 本主轮显式阻塞或等待先进入统一收尾，不让继承待办覆盖该决定；旧主轮审阅不阻止明确恢复的新执行。
  * 目录归属：backend/scheduler-engine/dispatch；任务派发与协作协调。
 
  * 闭包预览复用同一目标服务的只读快照，不设置 workRequested，不撤票或提交等待。
@@ -492,6 +493,13 @@ export class AutoCollaboration {
         if(['SCOPE_BUDGET_EXCEEDED','SCOPE_BUDGET_UNVERIFIABLE'].includes(error.code)){await this.budgetBlocked(batch,error);return}throw error;
       }
       this.retireBatch(batch);return;
+    }
+    // 当前主轮明确阻塞/等待后，继承的待办不能再次启动或制造结果回注。
+    // 只采纳本轮保存的决定；旧审阅不能截断用户已明确恢复的新运行。关闭/停泊仍走统一证据门禁。
+    const scope=await this.dispatch.goals.inspect(this.identity(batch),batch.cycle.scopeId);
+    if(this.closed||batch.stopped||batch.cycle.stopped||batch.cycle.ending)return;
+    if(scope.goal?.review?.runId===batch.runId&&['blocked','awaiting_user'].includes(scope.goal.review.decision)){
+      this.retireBatch(batch);batch.cycle.completionSummary=batch.settled;batch.cycle.ending='completed';return;
     }
     if(!batch.recorded){await this.dispatch.automaticReturns.record(this.identity(batch),batch.cycle.scopeId,batch.settled,batch.tasks,batch.options);batch.recorded=true}
     if(batch.restored){

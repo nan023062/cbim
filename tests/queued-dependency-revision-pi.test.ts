@@ -32,7 +32,7 @@ it.each(['complete','bad-output','prepare-stop','submitted-stop']as const)('çœŸå
   else{
    const nodes=assertDependencyRevision(finished,provider.state.before!,receipt!,complete);
    if(complete){
-    expect(state.scopes[0].outcome).toBe('completed');expect(state.runs).toHaveLength(4);expect(provider.member).toHaveLength(20);expect(provider.main).toHaveLength(provider.heldTurn+4);
+    expect(state.scopes[0].outcome).toBe('completed');expect(state.runs).toHaveLength(4);expect(provider.member).toHaveLength(20);expect(provider.main).toHaveLength(provider.heldTurn+10);
     const run=(id:string)=>state.runs.find(r=>r.binding.taskId===id)!;expect(run(nodes.b.taskId).prerequisites).toEqual([]);expect(run(nodes.a.taskId).prerequisites).toEqual([]);
     expect(run(nodes.d.taskId).prerequisites).toEqual([{taskId:nodes.a.taskId,planRevision:nodes.a.planRevision,result:nodes.a.result}]);expect(run(nodes.c.taskId).prerequisites).toEqual([nodes.a,nodes.d].map(t=>({taskId:t.taskId,planRevision:t.planRevision,result:t.result})));
     for(const r of state.runs){const old=provider.state.before!.tasks.find(t=>t.taskId===r.binding.taskId)!;expect(r.binding.agentInstanceId).toBe(old.assignee.agentInstanceId);expect(r.assignmentMessageId).toBe((originalMessages as any[]).find(m=>m.taskId===old.taskId).messageId)}

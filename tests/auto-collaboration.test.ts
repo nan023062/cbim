@@ -82,6 +82,26 @@ async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'c
 
 const dependencyInput={expectedGraphCursor:{streamId:'stream',seq:5},expectedGoalRevision:3,target:{taskId:'assigned-1',expectedRevision:1,expectedPlanRevision:1},replace:{edgeId:'A-B',expectedRevision:1},with:{taskId:'A2',expectedRevision:4,expectedPlanRevision:1,runId:'A2-run',resultId:'A2-result'},reason:'保留未启动的原下游任务'};
 
+it.each(['blocked','awaiting_user'] as const)('当前主轮明确%s后不再尝试继承的待办',async decision=>{
+  const f=await setup();try{
+    await f.assign();
+    f.dispatch.goals.inspect.mockResolvedValue({goal:{plan:{},review:{runId:'parent-run',decision}}} as never);
+    if(decision==='blocked')f.dispatch.closeScope.mockImplementation(async(_identity,scopeId,outcome)=>{if(outcome==='completed')throw Object.assign(Error('缺少运行能力'),{code:'GOAL_BLOCKED'});return {...f.graph.identity,scopeId,status:'closed',outcome}});
+    f.settleParent();
+    await vi.waitFor(()=>expect(decision==='blocked'?f.dispatch.closeScope:f.dispatch.parkScope).toHaveBeenCalled());
+    expect(f.members.start).not.toHaveBeenCalled();expect(f.execution.continueFromResults).not.toHaveBeenCalled();expect(f.dispatch.automaticReturns.record).not.toHaveBeenCalled();
+    if(decision==='blocked'){await vi.waitFor(()=>expect(f.coordinator.busy(f.task.taskId)).toBe(false));expect(f.dispatch.closeScope).toHaveBeenLastCalledWith(f.graph.identity,expect.any(String),'failed');expect(f.execution.continueGoalRepair).not.toHaveBeenCalled()}
+    else expect(f.coordinator.busy(f.task.taskId)).toBe(true);
+  }finally{await f.coordinator.close()}
+});
+
+it('旧主轮的等待审阅不能拦截明确恢复后的新派发',async()=>{
+  const f=await setup();try{
+    await f.assign();f.dispatch.goals.inspect.mockResolvedValue({goal:{plan:{},review:{runId:'old-run',decision:'awaiting_user'}}} as never);
+    f.settleParent();await vi.waitFor(()=>expect(f.members.start).toHaveBeenCalledTimes(1));expect(f.dispatch.parkScope).not.toHaveBeenCalled();
+  }finally{await f.coordinator.close()}
+});
+
 it.each(['interrupted','failed','mixed'] as const)('成员反复%s后另派新任务，第三次异常停止整条自动接续链',async mode=>{
   const f=await setup();try{
     const original=f.dispatch.dispatchTask.getMockImplementation()!;let assignments=0,returns=0;

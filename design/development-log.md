@@ -1,3 +1,16 @@
+## 2026-11-13：R4 完整 CI 暴露的显式停止与消费者回归修正
+
+- 来源：用户已授权 PR/发布，[#66](https://github.com/nan023062/cbim/pull/66) 首轮完整 CI [43382151440](https://github.com/nan023062/cbim/actions/runs/43382151440) 在四片中失败 37 用例；关联开放 #65。首轮冻结候选留在草稿，未投放。本步修复发版阻塞，不纳入原任务历史折叠未提交改动。
+- C1/L2：协调层 AutoCollaboration.advance 在当前主轮结束后先读取正式目标审阅；只有同 runId 的 blocked/awaiting_user 才退役批次并走原 finishCycle/parkScope 门禁。未启动待办不再重试或再回注，旧审阅不拦截明确恢复的新主轮；异步读取后重新检查取消。状态仍由目标和任务图持有，未新增重试存储或改变执行层终态。
+- 消费者同步：真实 Pi 的九类依赖测试显式调用 cbim_dispatch_review 并核对精确候选回执，每个前置经过 inspect/review/end 后才启动原后继；保留全部 HTTP 请求、原任务/实例/信封及重启不重放断言。服务测试使用真实主运行日志和合法审阅命令；条件断言同步 reviewRequired。Workflow 错误断言读取结构化 code 与人类可读 message，waiting 普通输入按续接语义验证。长对话模型 fixture 单独接收 Pi 原生摘要请求，不再把摘要误报为成员重放，保留独立摘要日志。
+- 验证选择：先运行 auto-collaboration、workflow-condition-pi、owner-execution-pi、active-goal-input-pi、queue-insertion-view，覆盖实际调度及新显式停止边界；85/86 通过，唯一剩余为摘要 fixture。补齐后定向运行 CI 涉及的 12 个消费者文件（abandoned-checkpoint-dependency-pi/service、active-goal-input-pi、checkpoint-handoff-pi、member-checkpoint-chain-pi、member-checkpoint-pi、member-pause-pi/service、queued-dependency-addition/replacement/revision-pi、queued-task-cancel-pi），10 个文件通过；两个服务文件因测试命令未使用 candidate-review- 前缀被持久化不变量正确拒绝，改正原调用身份后单独复验 2 文件 / 16 用例通过。本步共 135 个不同用例最终通过，不累计重复运行。完整命令与 JSON 结果保存在 test-results/release-r4/affected-fixtures.json、service-fixtures-fixed.json；不放宽生产保护、不跳过失败场景。
+- 实际命令：
+  - `pnpm exec vitest run tests/auto-collaboration.test.ts tests/workflow-condition-pi.test.ts tests/owner-execution-pi.test.ts tests/active-goal-input-pi.test.ts tests/queue-insertion-view.test.ts --reporter=dot`
+  - `pnpm exec vitest run tests/queued-dependency-addition-pi.test.ts tests/queued-dependency-replacement-pi.test.ts tests/queued-dependency-revision-pi.test.ts tests/abandoned-checkpoint-dependency-pi.test.ts tests/member-checkpoint-pi.test.ts tests/member-checkpoint-chain-pi.test.ts tests/member-pause-pi.test.ts tests/checkpoint-handoff-pi.test.ts tests/queued-task-cancel-pi.test.ts tests/abandoned-checkpoint-dependency-service.test.ts tests/member-pause-service.test.ts tests/active-goal-input-pi.test.ts --reporter=dot --reporter=json --outputFile=test-results/release-r4/affected-fixtures.json`
+  - `pnpm exec vitest run tests/abandoned-checkpoint-dependency-service.test.ts tests/member-pause-service.test.ts --reporter=dot --reporter=json --outputFile=test-results/release-r4/service-fixtures-fixed.json`
+- 静态：pnpm typecheck、pnpm check:architecture 通过（1377 文件、6996 依赖、0 循环/违规，含保留的前端工作）。同步协调器文件头、分支说明、dispatch/CONTRACT.md 及 ARCHITECTURE.md。类型初检指出 ES 目标不支持 findLast，改为复制后反向查找；未为测试扩大产品编译目标。
+- 发布边界：新源码须重新冻结并构建第二候选；隔离升级验收器增加受约束的数字候选后缀，保持原草稿与附件不覆盖。当前未合并/公开，完整四片及候选/在线升级仍由后续流水线验证。下一次修改从 advance 当前轮审阅与 finishCycle 统一收尾入手，复用已有门禁；未引入治理规则或未验证的稳定性承诺。
+
 ## 2026-11-13：C 0.1.15 / R4 发布准备
 
 - 用户明确要求提交 PR 并发布。以已提交 `10d1f0f9` 为功能基线，纳入 #65 七项独立修复；原任务图折叠未提交改动保留，使用独立干净检出构建。

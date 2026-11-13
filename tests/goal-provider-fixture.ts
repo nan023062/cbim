@@ -13,7 +13,7 @@ export function goalPlanArguments(plan:GoalFixturePlan,expectedRevision=1){
 
 /** The selected call must have a real tool response in Pi's model history; errors or missing results fail the fixture. */
 export function goalInspection(request:GoalFixtureRequest,callId:string){
-  const message=request.messages.find(item=>item.role==='tool'&&item.tool_call_id===callId);
+  const message=[...request.messages].reverse().find(item=>item.role==='tool'&&item.tool_call_id===callId);
   assert.ok(message,'模型上下文缺少目标检查工具的真实响应：'+callId);
   const text=typeof message.content==='string'?message.content:Array.isArray(message.content)?message.content.map(item=>typeof item==='object'&&item&&'text' in item?String(item.text):'').join(''):'';
   let value=JSON.parse(text);

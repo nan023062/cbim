@@ -1,3 +1,4 @@
+import {serveFixtureCompaction} from './dependency-review-provider-fixture';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -22,10 +23,11 @@ export async function activeInputProvider(mode:ActiveInputMode='replan'){
   let agentId='',moduleId='',ownerSelection:OwnerExecutionSelection;const gates=new Map<number,{promise:Promise<void>;release:()=>void}>();
   const gate=(turn:number)=>{let item=gates.get(turn);if(!item){let release!:()=>void;const promise=new Promise<void>(resolve=>release=resolve);item={promise,release};gates.set(turn,item)}return item};
   const twice=mode==='twice'||mode==='twice-waiting';gate(5);if(twice)gate(11);
+  const compactions:GoalFixtureRequest[]=[];
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
     const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true;
-    const requests=isMain?main:member,turn=requests.length;requests.push(body);res.writeHead(200,{'Content-Type':'text/event-stream'});
+    const requests=isMain?main:member,turn=requests.length;if(serveFixtureCompaction(body,res,compactions))return;requests.push(body);res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'active-input-'+(main.length+member.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
@@ -71,5 +73,5 @@ export async function activeInputProvider(mode:ActiveInputMode='replan'){
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Active input fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection},release:(turn=5)=>gate(turn).release(),close:async()=>{for(const item of gates.values())item.release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {compactions,url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection},release:(turn=5)=>gate(turn).release(),close:async()=>{for(const item of gates.values())item.release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

@@ -23,6 +23,8 @@ async function setup(reserved=false,chain=false){
   await fs.writeFile(path.join(f.a,'checkpoint.txt'),'new candidate bytes');
   f.finishNewTasks();const a2=await assign('A2');
   await f.members.start({...f.identity,taskId:a2.taskId,commandId:'start-A2',expectedRevision:1,options:{permission:'read'}});await f.members.waitForSettlement({...f.identity,taskId:a2.taskId});
+  await f.journalMain();const candidate=(await f.service.snapshot(f.identity)).tasks.find(t=>t.taskId===a2.taskId)!;
+  await f.service.goals.reviewCandidate(f.identity,f.scopeId,f.mainRunId,'candidate-review-A2',{taskId:candidate.taskId,expectedRevision:candidate.revision,resultId:candidate.result!.resultId,decision:'accept',reason:'核实接替原检查点的真实候选'},()=>{});
   const before=await f.store.read(),g=before.graphs[0],target=g.tasks.find(t=>t.taskId===b.taskId)!,replacement=g.tasks.find(t=>t.taskId===a2.taskId)!,edge=g.edges.find(e=>e.kind==='dependency'&&e.fromNodeId===source.nodeId&&e.toNodeId===target.nodeId)!;
   const input:ReplaceQueuedDependencyInput={expectedGraphCursor:{streamId:g.cursor.streamId,seq:g.cursor.seq},expectedGoalRevision:2,target:{taskId:b.taskId,expectedRevision:target.revision,expectedPlanRevision:target.planRevision},replace:{edgeId:edge.edgeId,expectedRevision:edge.revision},with:{taskId:a2.taskId,expectedRevision:replacement.revision,expectedPlanRevision:replacement.planRevision,runId:replacement.result!.runId,resultId:replacement.result!.resultId},reason:'新候选接替已放弃检查点来源'};
   return {...f,b,c,a2,before,input,get starts(){return f.starts},replace:(id='replace-abandoned',alive?:()=>void)=>f.service.replaceQueuedDependency(f.identity,f.scopeId,f.mainRunId,id,input,alive)};

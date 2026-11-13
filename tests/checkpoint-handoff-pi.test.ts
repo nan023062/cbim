@@ -44,7 +44,7 @@ it.each(['complete','reserved','prepare-stop','lost-output'] as CheckpointHandof
       provider.releaseAfterAbandon();
     }
     await vi.waitFor(async()=>{expect(provider.errors).toEqual([]);await checkpointHandoffClosed(app,f.user,id)},{timeout:90000,interval:30});restore();restore=()=>{};
-    const saved=await records(),finished=await graph(),scope=saved.scopes[0];expect(scope.outcome).toBe(mode==='prepare-stop'?'cancelled':'completed');expect(provider.a).toHaveLength(7);expect(provider.b).toHaveLength(mode==='prepare-stop'?0:15);expect(provider.main).toHaveLength(mode==='prepare-stop'?9:mode==='reserved'?22:21);
+    const saved=await records(),finished=await graph(),scope=saved.scopes[0];expect(scope.outcome).toBe(mode==='prepare-stop'?'cancelled':'completed');expect(provider.a).toHaveLength(7);expect(provider.b).toHaveLength(mode==='prepare-stop'?0:15);expect(provider.main).toHaveLength(mode==='prepare-stop'?9:mode==='reserved'?28:27);
     expect((await fs.stat(path.join(f.a,data.files[0]))).mtimeMs).toBe(marker.mtimeMs);expect(await checkpointHandoffRunBytes(f.user,id,originalRun)).toEqual(originalBytes);
     for(const item of old){const actual=finished.tasks.find(task=>task.taskId===item.taskId)!;expect(actual.assignee).toEqual(item.assignee);expect(actual.ownerBinding).toEqual(item.ownerBinding);expect(actual.goal).toBe(item.goal);expect(actual.modules).toEqual(item.modules);expect(actual.acceptance).toEqual(item.acceptance);expect(actual.runIds).toEqual(item.runIds);expect(actual.checkpoints).toEqual(item.checkpoints);expect(actual.resumeRequest).toEqual(item.resumeRequest);expect(actual.result).toBeUndefined()}
     expect(finished.edges.filter(edge=>before.edges.some(previous=>previous.edgeId===edge.edgeId))).toEqual(before.edges);

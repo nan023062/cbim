@@ -1,3 +1,4 @@
+import {DependencyReviewRounds,serveFixtureCompaction} from './dependency-review-provider-fixture';
 import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -26,14 +27,17 @@ function toolText(body:Request,id:string){const message=body.messages.find(item=
 export async function queuedTaskCancelProvider(options:{holdContinuation?:boolean;invalidComplete?:boolean}={}){
   const mainRequests:Request[]=[],memberRequests:Request[]=[],errors:string[]=[];let ownerSelection:OwnerExecutionSelection;let agentId='',moduleId='',releaseContinuation=()=>{};
   const continuationGate=new Promise<void>(resolve=>{releaseContinuation=resolve}),d=queuedTaskCancelFixture;
+  const reviews=new DependencyReviewRounds();
+  const compactions:GoalFixtureRequest[]=[];
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
-    const body=JSON.parse(raw) as Request,isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,list=isMain?mainRequests:memberRequests,turn=list.length;list.push(body);
+    const body=JSON.parse(raw) as Request,isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,list=isMain?mainRequests:memberRequests,turn=list.length-(isMain?reviews.offset:0);if(serveFixtureCompaction(body,res,compactions))return;list.push(body);
     res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'queued-cancel-'+(mainRequests.length+memberRequests.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     const dispatch=(id:string,goal:string,prior?:string)=>tool(id,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:prior?[{taskId:prior,expectedPlanRevision:1}]:[]});
+    if((isMain)&&reviews.handle(body,'cancel-final-inspect',tool,reply)){res.end('data: [DONE]\n\n');return}
     if(isMain){
       assert.ok(body.tools?.some(item=>item.function.name==='cbim_dispatch_cancel'),'主调度必须有明确撤销入口');
       if(turn===0)tool('cancel-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.mainGoal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance}));
@@ -88,5 +92,5 @@ export async function queuedTaskCancelProvider(options:{holdContinuation?:boolea
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Queued task cancellation fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,releaseContinuation,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection},close:async()=>{releaseContinuation();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {compactions,reviews,url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,releaseContinuation,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection},close:async()=>{releaseContinuation();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

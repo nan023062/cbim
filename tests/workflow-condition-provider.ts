@@ -26,7 +26,7 @@ export async function workflowConditionProvider(mode:WorkflowConditionMode='comp
       else if(turn===4){
         if(mode==='missing-capability'){const {scope,graph}=goalInspection(body,'workflow-inspect'),task=graph.tasks.find(value=>value.scopeId===scope.scopeId);assert.ok(task);assert.equal(task.result,undefined);assert.notEqual(task.status,'result_ready');state.blockedTask=task;tool('workflow-review','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'blocked',checks:scope.goal.plan.criteria.map(value=>({criterionId:value.id,outcome:'unmet',reason:'当前只读权限不具备模块Workflow要求的write能力',evidence:[]})),superseded:[],gaps:['需具备真实write能力及相应权限，不能凭模型自述完成'],reason:'成员启动前能力核验拒绝，未执行业务'})}
         else tool('workflow-review','cbim_goal_review',goalCompleteArguments(body,'workflow-inspect'));
-      }else if(turn===5)reply(mode==='missing-capability'?'缺少实际执行能力，本目标没有完成。':d.final);
+      }else if(turn===5){const reviewed=result(body,'workflow-review');assert.equal(reviewed.goal?.review?.decision,mode==='missing-capability'?'blocked':'complete','主调度必须得到真实保存的审阅回执');reply(mode==='missing-capability'?'缺少实际执行能力，本目标没有完成。':d.final);}
       else throw Error('Workflow fixture不允许重放主运行 '+turn);
     }else{
       assert.notEqual(mode,'missing-capability','缺实际工具能力时不得启动成员模型');
@@ -43,7 +43,7 @@ export async function workflowConditionProvider(mode:WorkflowConditionMode='comp
         else if(turn===9){state.delivery=result(body,'parallel-final-delivery');assert.equal(state.delivery.state,'awaiting_review');reply('只使用所有副作用结束后的新读取回执提交候选。')}
         else throw Error('Unexpected parallel Workflow replay '+turn);
       }else if(turn===0)tool('workflow-write-without-plan','write',{path:d.file,content:'THIS_MUST_NEVER_BE_WRITTEN'});
-      else if(turn===1){state.earlyWrite=result(body,'workflow-write-without-plan');assert.match(String(state.earlyWrite.message),/WORKFLOW_PLAN_REQUIRED/);assert.equal(state.earlyWrite.status,'rejected');assert.equal(state.earlyWrite.retryable,false);emit({role:'assistant',content:'计划前写入已被Workflow拒绝，尚未申请人工审批。'});await beforePlan.promise;tool('workflow-member-plan','cbim_task_plan',{expectedVersion:0,goal:d.memberGoal,acceptance:d.acceptance,reason:'先建立本轮真实执行计划',steps:[{id:'verify',title:'写入并读取成果',owner:'开发者'}]})}
+      else if(turn===1){state.earlyWrite=result(body,'workflow-write-without-plan');assert.equal(state.earlyWrite.code,'WORKFLOW_PLAN_REQUIRED');assert.match(String(state.earlyWrite.message),/先保存.*执行计划/);assert.equal(state.earlyWrite.status,'rejected');assert.equal(state.earlyWrite.retryable,false);emit({role:'assistant',content:'计划前写入已被Workflow拒绝，尚未申请人工审批。'});await beforePlan.promise;tool('workflow-member-plan','cbim_task_plan',{expectedVersion:0,goal:d.memberGoal,acceptance:d.acceptance,reason:'先建立本轮真实执行计划',steps:[{id:'verify',title:'写入并读取成果',owner:'开发者'}]})}
       else if(turn===2)tool('workflow-member-write','write',{path:d.file,content:d.fact});
       else if(turn===3)tool('workflow-only-write-step','cbim_task_step',{expectedVersion:2,id:'verify',state:'reported_done',evidenceIds:['workflow-member-write']});
       else if(turn===4)tool('workflow-premature-delivery','cbim_delivery_prepare',{expectedVersion:3,summary:'只发生了write，尚未有Workflow要求的read',limitations:[]});

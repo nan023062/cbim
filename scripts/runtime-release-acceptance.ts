@@ -15,7 +15,8 @@ import type {} from '../src/bridge/contracts/workspace';
 async function main(){
   assert.equal(process.env.GITHUB_ACTIONS,'true');assert.equal(process.env.GITHUB_REPOSITORY,'nan023062/cbim');assert.equal(process.platform,'win32');
   const mode=process.env.CBIM_R_MODE!,tag=process.env.CBIM_R_CANDIDATE!,source=process.env.CBIM_R_SOURCE!,expected=process.env.CBIM_R_DIGEST!;
-  assert.ok(['candidate','online'].includes(mode));assert.match(tag,/^runtime-c0\.1\.15-r[2-9][0-9]*-candidate$/);assert.match(source,/^[a-f0-9]{40}$/);assert.match(expected,/^[a-f0-9]{64}$/);
+  // 同一尚未发布的 R 可有多个冻结候选；递增后缀保留旧草稿及失败证据，不覆盖旧附件。
+  assert.ok(['candidate','online'].includes(mode));assert.match(tag,/^runtime-c0\.1\.15-r[2-9][0-9]*-candidate(?:-[2-9][0-9]*)?$/);assert.match(source,/^[a-f0-9]{40}$/);assert.match(expected,/^[a-f0-9]{64}$/);
   const root=path.resolve('test-results/runtime-acceptance'),install=path.join(root,'app'),exe=path.join(install,'CBIM Desktop.exe'),user=path.join(root,'user'),downloads=path.join(root,'candidate');
   await fs.mkdir(downloads,{recursive:true});
   const run=(command:string,args:string[])=>execFileSync(command,args,{encoding:'utf8',windowsHide:true,maxBuffer:16*1024*1024,timeout:180000}).trim();

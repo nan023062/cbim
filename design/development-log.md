@@ -1,3 +1,11 @@
+## 2026-11-14：办公室改版第 4 步——子 Session 导航与成员对话
+
+- 基线 `402369d3`，延续全部需求实施授权。Bridge 公开纯逻辑对话身份；View 联合投影验证办公室、唯一角色/Session 和不可改绑，全部分页追齐后发布。外壳按工作区实例/主根缓存成员导航，主会话保持可见，子角色按名称折叠，只提供查看入口。
+- 成员页面按话题、派发任务、执行轮次读取真实公开事件；同角色多执行实例合为一个入口，显示主 Agent 派发、成员正文、工具与回传候选。只挂载当前轮读取，切换身份丢弃迟到响应。输入仍经外层原主 `taskId`，不会直接发给成员；本片未实现显式整话题暂停，也未增加伪造的旧逻辑 Session。
+- Q1 保留原执行通道、日志与工具事实；Q2 成员导航属于 View，长期身份由 Logic 原事务提供；Q3 选择联合投影、角色聚合、子对话 SSR、原侧栏与页签消费者；Q4 阅读 `SessionReadProjection` → `teamConversations` → `WorkspaceList/ConversationEntries` → `MemberConversation`；Q5 无新增通用规则。
+- `pnpm exec vitest run tests/team-conversations.test.ts tests/team-conversation-view.test.ts tests/scope-goal-view.test.ts tests/chat-chrome.test.ts tests/conversation-tabs.test.ts`：26/26 通过。`pnpm typecheck`、`pnpm check:architecture`（739 代码/样式，0 文档差异/循环/违规）、`pnpm check:test-modules`（486 文件）及 `git diff --check` 通过。同步 bridge/contracts、view/conversation、view/tasks、view/shell 的源码说明、CONTRACT 和类图。
+- 未运行全仓回归、真实桌面/引擎联调、构建或发布；仅本地独立保存。完整需求仍包括排队/话题插入、上下文与办公室可视化后续切片。
+
 ## 2026-11-14：办公室改版第 3 步——主会话话题列表
 
 - 延续完整设计的分步实施授权，基线 `9f07dc86`。周期摘要提供有界持久主运行身份；主对话按原周期归类，列表展示摘要，打开后展示原正文和工具；完成/撤销折叠到历史，失败/中断保留可见。旧无明确身份及冲突归属进入未分类，不按时间推测。

@@ -42,6 +42,14 @@ it('替代审阅只导航已同步的本周期节点，旧节点与新成果各�
   expect(state.graph.edges).toEqual(graph.edges);expect(old.assignee.agentInstanceId).toBe('old-task-instance');
 });
 
+it('联合投影只发布本办公室稳定对话，身份错误或改绑不污染既有状态',()=>{
+  const projection=new SessionReadProjection(identity),response=reset(),session={...identity,sessionId:'main-logical',teamId:'team',agentId:'cbim:main',createdAt:time};
+  projection.apply({...response,teamSessions:[session]});const previous=projection.teamSessions;
+  projection.apply({...response,teamSessions:[{...session}]});expect(projection.teamSessions).toBe(previous);
+  for(const teamSessions of [[{...session,rootSessionId:'other'}],[{...session,sessionId:'rebound'}],[session,session],[]])expect(()=>projection.apply({...response,teamSessions})).toThrow();
+  expect(projection.teamSessions).toBe(previous);expect(completeSessionRead(response,projection)!.teamSessions).toBe(previous);
+});
+
 it('目标与成员只展示各自持久的指定流程，切回无选择历史不补造选择',()=>{
   const moduleId='.cbim/workspace/game',workflowId=moduleId+'/workflows/validate_json',value=planned();
   value.goal!.plan!.assignments[0]={...value.goal!.plan!.assignments[0],agentId:'cbim:executor',agentName:'执行者',moduleIds:[moduleId],moduleNames:['游戏'],workflowSelections:[{moduleId,workflowId}]};

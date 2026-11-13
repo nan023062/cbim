@@ -1,10 +1,11 @@
 /**
  * 作用定位：主会话目标周期的增量投影和展示状态，供对话摘要与任务根详情共用。
- * 设计原因：目标版本独立于任务图；先核对身份和连续游标再合并，完成申请与真正关闭分开显示，历史选择不能覆盖当前任务状态。
+ * 设计原因：目标版本独立于任务图；联合验证图、周期与长期对话身份后再发布，坏身份或改绑不污染已有投影，历史选择不能覆盖当前执行。
  * 职责边界：只投影后端事实；运行内补充优先展示接收中/待核实，已接收也不是完成。摘要与详情须核对同一补充状态，不能用旧审阅盖过未知输入。
  * 详情契约：只持有 PublicDispatchScope 的安全来源和新处置引用，不能将公共投影当作含原生上下文的完整持久周期。
  */
-import {applyScopeBatch,validateScopeSnapshot,scopeActiveInputStatus,scopeActiveInputSchema} from '../../bridge/contracts/dispatch';
+import {applyScopeBatch,validateScopeSnapshot,scopeActiveInputStatus,scopeActiveInputSchema,teamSessionSchema} from '../../bridge/contracts/dispatch';
+import type {TeamSession} from '../../bridge/contracts/dispatch';
 import type {PublicDispatchScope,DispatchSessionRead,GraphIdentity,GraphSnapshot,ScopeCursor,ScopeDelta,ScopeSnapshot,ScopeSummary,ScopeDetailStamp} from '../../bridge/contracts/dispatch';
 import {SessionGraphProjection} from './graph-state';
 
@@ -79,9 +80,11 @@ export class SessionReadProjection {
   private graphs:SessionGraphProjection;
   private goals:SessionScopeProjection;
   private details=new Map<string,{stamp:ScopeDetailStamp;scope:PublicDispatchScope}>();
+  private sessions?:readonly TeamSession[];
   constructor(readonly identity:GraphIdentity){this.graphs=new SessionGraphProjection(identity);this.goals=new SessionScopeProjection(identity)}
   get graph(){return this.graphs.snapshot}
   get scopes(){return this.goals.snapshot?.scopes}
+  get teamSessions(){return this.sessions}
   get graphCursor(){return this.graphs.cursor}
   get scopeCursor(){return this.goals.cursor}
   selected(id?:string){return id?this.scopes?.find(scope=>scope.scopeId===id):currentScope(this.scopes??[])}
@@ -89,6 +92,13 @@ export class SessionReadProjection {
   detail(id?:string){const selected=this.selected(id),cached=selected?this.details.get(selected.scopeId):undefined;return selected&&cached&&sameStamp(selected.stamp,cached.stamp)?cached.scope:undefined}
   apply(response:DispatchSessionRead,requestedScopeId?:string):void{
     const graphs=this.graphs.fork(),goals=this.goals.fork();graphs.apply(response.graph);goals.apply(response.scopes);
+    let sessions=this.sessions;
+    if(response.teamSessions!==undefined){
+      const parsed=response.teamSessions.map(value=>teamSessionSchema.parse(value));
+      if(parsed.some(value=>value.workspaceId!==this.identity.workspaceId||value.rootSessionId!==this.identity.rootSessionId)||new Set(parsed.map(value=>value.sessionId)).size!==parsed.length||new Set(parsed.map(value=>value.agentId)).size!==parsed.length)throw Error('团队对话身份重复或属于其他办公室');
+      if(this.graphCursor?.streamId===graphs.cursor?.streamId&&sessions?.some(old=>!parsed.some(value=>JSON.stringify(value)===JSON.stringify(old))))throw Error('团队对话登记被移除或改绑');
+      if(JSON.stringify(parsed)!==JSON.stringify(sessions))sessions=parsed;
+    }
     if(goals.cursor!.streamId!=='scopes:'+graphs.cursor!.streamId)throw Error('任务图与目标记录来自不同事件流');
     const detail=response.detail,cache=new Map(this.details);
     if(detail.mode!=='empty'){
@@ -115,17 +125,19 @@ export class SessionReadProjection {
       if(Boolean(scope.wait)!==Boolean(summary.wait)||scope.wait?.waitId!==summary.wait?.waitId||scope.wait?.goalRevision!==summary.wait?.goalRevision||scope.wait?.createdAt!==summary.wait?.createdAt)throw Error('目标等待记录与同版本摘要不一致');
       if(scope.goal&&(!scope.goal.input||typeof scope.goal.input.message!=='string'||!Array.isArray(scope.goal.input.attachmentIds)))throw Error('目标详情缺少原始输入');
     }
-    this.graphs=graphs;this.goals=goals;this.details=cache;
+    this.graphs=graphs;this.goals=goals;this.details=cache;this.sessions=sessions;
   }
 }
 /** 两条增量流都追齐同一次读取屏障后才可发布；分页过程只推进内部游标，不能把新目标状态配上旧任务节点。 */
 export function completeSessionRead(response:DispatchSessionRead,projection:SessionReadProjection,selectedScopeId?:string){
   if(response.graph.mode==='delta'&&response.graph.hasMore||response.scopes.mode==='delta'&&response.scopes.hasMore)return undefined;
-  return {graph:projection.graph,scopes:projection.scopes??[],detail:projection.detail(selectedScopeId)};
+  return {graph:projection.graph,scopes:projection.scopes??[],detail:projection.detail(selectedScopeId),teamSessions:projection.teamSessions};
 }
 
 /** 对话摘要和任务根共用的只读状态；当前周期与历史选择刻意分开。 */
 export interface ScopeGoalState {
+  /** 同读取屏障验证的长期对话；旧记录缺省，不从执行实例推造子 Session。 */
+  teamSessions?:readonly TeamSession[];
   scopes:readonly ScopeSummary[];
   selectedScopeId?:string;
   /** undefined 表示自动跟随，区别于 selectedScopeId 已解析出的实际周期 ID。 */

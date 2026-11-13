@@ -1,3 +1,7 @@
+### 长期对话公共身份
+
+`dispatch` 导出纯 `TeamSession` 类型与严格 Schema，供 View 校验联合读取；只有逻辑办公室/角色/Session 标识和创建时间，无原生目录、执行入口或调度权限。
+
 ### 图片与路径粘贴
 
 chat.paths/chat.image 是桌面明确粘贴的窄协议；路径不等于授予执行权限，图片上限5 MiB、单批最多12项。ChatAttachmentPreview 可带固定MIME图片字节，ChatAttachment 标签元数据仍无正文。pastedLocalPaths 只把整个剪贴板为绝对本地路径列表视为引用；普通句子、相对路径、网页URL保留文本。Main 再校验，前端识别不是授权。

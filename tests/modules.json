@@ -874,12 +874,14 @@
           "tests/brain-status.test.ts",
           "tests/conversation-activity.test.ts",
           "tests/conversation-topics.test.ts",
+          "tests/team-conversations.test.ts",
           "tests/thread-recovery-notice.test.ts",
           "tests/usage.test.ts"
         ],
         "contract": [
           "tests/chat-chrome.test.ts",
           "tests/conversation-waiting.test.ts",
+          "tests/team-conversation-view.test.ts",
           "tests/queue-insertion-view.test.ts",
           "tests/queue-sync.test.ts"
         ],

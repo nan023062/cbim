@@ -14,3 +14,4 @@
 .conversation-topic-thread h3{font-size:18px;line-height:1.5;overflow-wrap:anywhere;margin:16px 0 24px}
 .conversation-topic-tasks>button{display:block;text-align:left;white-space:normal;overflow-wrap:anywhere;width:100%;margin-top:8px}
 @media(max-width:520px){.conversation-topic-card{padding:12px}.conversation-topic-title{font-size:14px}}
+.member-conversation{display:grid;gap:14px;min-width:0}.member-conversation header p{color:var(--muted);font-size:12px}.member-conversation label{display:grid;gap:6px;min-width:0}.member-conversation select{width:100%;min-width:0}.member-assignment,.member-result{padding:14px;border:1px solid var(--border);border-radius:10px;overflow-wrap:anywhere}.member-assignment p,.member-result p{white-space:pre-wrap}.member-assignment small{display:block;color:var(--muted);margin-bottom:8px}

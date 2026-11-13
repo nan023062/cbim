@@ -5,6 +5,9 @@
  * 恢复来源：公开严格主／成员联合及兼容历史辅助函数；新的处置引用必须显式提供，不能给旧无 kind 记录补造来源。
  */
 export type {GraphIdentity,GraphCursor,GraphSnapshot,GraphDelta,GraphEventBatch,GraphChange,TaskNode,GraphEdge,AgentGraphView} from '../../logic/tasks/rules/graph-types';
+/** 稳定对话登记与执行实例分离；纯校验不授予派发或模型执行权限。 */
+export {teamSessionSchema} from '../../logic/team/rules/team-session';
+export type {TeamSession} from '../../logic/team/rules/team-session';
 export type {DependencyReplacement} from '../../logic/tasks/rules/queued-dependency-replacement';
 export {dependencyReplacementSchema} from '../../logic/tasks/rules/queued-dependency-replacement';
 export type {DependencyAddition} from '../../logic/tasks/rules/queued-dependency-addition';

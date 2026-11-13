@@ -19,7 +19,7 @@
 | [UserMenu.tsx](UserMenu.tsx) | 本地账号、主题与设置菜单；用户栏右侧装配独立的版本更新图标。 |
 | [useSidebarWidth.ts](useSidebarWidth.ts) | 管理侧边栏宽度、拖动与键盘调整，并在本地保留布局。 |
 | [workspace-list.css](workspace-list.css) | 工作区树、名称旁的折叠按钮及点击位置浮动菜单。 |
-| [WorkspaceList.tsx](WorkspaceList.tsx) | 工作区树、对话条目管理与工作区浮动操作菜单。 |
+| [WorkspaceList.tsx](WorkspaceList.tsx) | 工作区树、主/子会话导航、主条目管理与工作区浮动操作菜单；子成员只提供观察入口。 |
 
 ## 架构类图
 
@@ -33,7 +33,7 @@ class N_src_view_shell_App_tsx["App.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[../updates/SoftwareUpdates.tsx](../updates/SoftwareUpdates.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[../conversation/conversation-activity.ts](../conversation/conversation-activity.ts)、[WorkspaceList.tsx](WorkspaceList.tsx)、[ExtensionArea.tsx](ExtensionArea.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[UserMenu.tsx](UserMenu.tsx)、[useSidebarWidth.ts](useSidebarWidth.ts)、[../runtime/RuntimeOverview.tsx](../runtime/RuntimeOverview.tsx)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[runtime-navigation.ts](runtime-navigation.ts)。
+直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[../updates/SoftwareUpdates.tsx](../updates/SoftwareUpdates.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[../conversation/conversation-activity.ts](../conversation/conversation-activity.ts)、[WorkspaceList.tsx](WorkspaceList.tsx)、[ExtensionArea.tsx](ExtensionArea.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[../conversation/team-conversations.ts](../conversation/team-conversations.ts)、[UserMenu.tsx](UserMenu.tsx)、[useSidebarWidth.ts](useSidebarWidth.ts)、[../runtime/RuntimeOverview.tsx](../runtime/RuntimeOverview.tsx)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[runtime-navigation.ts](runtime-navigation.ts)。
 
 ### ExtensionArea.tsx
 
@@ -241,7 +241,7 @@ class N_src_view_shell_WorkspaceList_tsx["WorkspaceList.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../conversation/ConversationEntries.tsx](../conversation/ConversationEntries.tsx)、[../components/state-labels.ts](../components/state-labels.ts)、[workspace-list.css](workspace-list.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../conversation/ConversationEntries.tsx](../conversation/ConversationEntries.tsx)、[../conversation/team-conversations.ts](../conversation/team-conversations.ts)、[../components/state-labels.ts](../components/state-labels.ts)、[workspace-list.css](workspace-list.css)。
 
 ### 本目录调用边界
 
@@ -323,6 +323,8 @@ N_src_view_shell_WorkspaceList_tsx ..> N_src_view_shell_workspace_list_css : 导
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 工作区外壳与原会话定位
+
+外壳按工作区实例与主 Session 缓存对话页面发布的已验证成员投影。主条目始终可见，成员在其下折叠；点击成员保留主页签/taskId，仅设置本机查看身份，点击主条目回到主话题列表。子会话无创建、重命名和删除操作；工作区重新打开后的实例不复用旧动态缓存。草稿和发送归属仍由原主页签持有。
 
 对话列表与会话历史菜单共用 `ConversationEntries` 和本机 `TabLayout`：自定义标题不覆盖原任务目标，移除条目保存工作区隔离的 `hiddenTaskIds`，轮询和重开不复活；删除最后一项创建空对话，不停止后台运行或删除日志。运行总览的显式定位可以恢复被移除条目。红色运行灯取 `runtime.snapshot` 的 ready 工作区及实际主／成员 running 记录，排队、历史状态和持久等待不点亮，读取失败清除观察。工作区菜单使用 portal 以点击坐标锚定左上角，视口边缘避让，支持键盘与焦点返回；折叠按钮紧邻项目名。
 

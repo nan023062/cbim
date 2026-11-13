@@ -2314,6 +2314,7 @@ class N_src_view_tasks_scope_state_ts_SessionReadProjection["SessionReadProjecti
   +identity
   +graph
   +scopes
+  +teamSessions
   +graphCursor
   +scopeCursor
   +selected()
@@ -2323,10 +2324,12 @@ class N_src_view_tasks_scope_state_ts_SessionReadProjection["SessionReadProjecti
   -graphs
   -goals
   -details
+  -sessions
 }
 N_src_view_tasks_scope_state_ts ..> N_src_view_tasks_scope_state_ts_SessionReadProjection : 声明
 class N_src_view_tasks_scope_state_ts_ScopeGoalState["ScopeGoalState"] {
   <<interface>>
+  +teamSessions
   +scopes
   +selectedScopeId
   +historyScopeId
@@ -3978,6 +3981,10 @@ N_src_view_tasks_useSessionGraph_ts ..> N_src_view_tasks_scope_state_ts : 导入
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 办公室长期对话联合投影
+
+`SessionReadProjection` 同时验证 `teamSessions` Schema、原工作区/主根以及唯一角色和 Session 身份；同流登记不得消失或改绑。任一部分无效保留原组合，未变数组保持引用。`useSessionGraph` 只在图/周期分页追齐后发布成员登记，切换办公室清空旧观察；不从执行实例合成缺失的历史对话。
 
 ### 负责人交接与历史定位
 

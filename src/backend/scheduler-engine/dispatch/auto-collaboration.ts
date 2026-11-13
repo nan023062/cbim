@@ -1,5 +1,6 @@
 /**
  * 审阅关口使候选先回主轮；下一批继承未启动待办，批准后沿原任务身份继续，不重复派发。
+ * 同一目标累计三次成员异常即停止自动接续；终态图是额度依据，换任务编号、结果回注或验收返工均不能清零。
  * 目录归属：backend/scheduler-engine/dispatch；任务派发与协作协调。
 
  * 闭包预览复用同一目标服务的只读快照，不设置 workRequested，不撤票或提交等待。
@@ -49,6 +50,7 @@ import type {ExecutionAdmissionWait} from '../admission/admission-wait';
 import {abandonCheckpointReceiptSchema} from '../../core/tasks/checkpoint-handoff';
 import type {GoalRepairSource} from '../../core/execution/input-source';
 import {goalRepairFeedback} from './goal-repair';
+import {memberFailureStopReason} from './member-failure-limit';
 
 /** 本轮控制面工具的窄生命周期端口；只捕获已登记批次，不创建周期或授予写权。 */
 export interface MainToolContext {
@@ -470,9 +472,20 @@ export class AutoCollaboration {
     this.reportIssue(batch.task.taskId,error);
     await this.execution.pauseCollaboration(batch.task.taskId,'当前目标软限额阻止新的运行，请查看周期额度与用量；原排队消息保留');
   }
+  /** 先退役批次和撤销容量等待，再保存目标阻塞并暂停队列；迟到通知不能重新派发。 */
+  private async memberFailuresBlocked(batch:Batch,graph:GraphSnapshot):Promise<boolean>{
+    const reason=memberFailureStopReason(graph,batch.cycle.scopeId);if(!reason)return false;
+    this.retireBatch(batch);batch.cycle.ending='failed';
+    await this.dispatch.goals.block(this.identity(batch),batch.cycle.scopeId,reason);
+    this.reportIssue(batch.task.taskId,Object.assign(Error(reason),{code:'GOAL_MEMBER_FAILURE_LIMIT'}));
+    await this.execution.pauseCollaboration(batch.task.taskId,reason);
+    return true;
+  }
   private async advance(batch:Batch){
     if(batch.stopped||batch.cycle.stopped||batch.cycle.ending||!batch.settled||this.closed)return;
     if(batch.repair){
+      const graph=await this.dispatch.snapshot(this.identity(batch));
+      if(this.closed||batch.stopped||batch.cycle.ending||await this.memberFailuresBlocked(batch,graph))return;
       try{await this.execution.continueGoalRepair(batch.task.taskId,batch.repair.message,batch.options,batch.repair.source,this.admissionWait(batch))}
       catch(error:any){
         if(['WORKSPACE_EXECUTION_BUSY','MEMBER_BUSY','CAPACITY_WAITING','SCOPE_BUDGET_WAITING'].includes(error.code))return;
@@ -486,6 +499,8 @@ export class AutoCollaboration {
       if(!await this.dispatch.automaticReturns.inspect(scope))fail('AUTO_RETURN_UNSAFE','原待回传批次已变化，不启动恢复');
     }
     const identity=this.identity(batch),graph=await this.dispatch.snapshot(identity);
+    // 对整个目标累计，而非只看本批新编号；达到上限后不再启动待办或回注模型制造替代任务。
+    if(this.closed||batch.stopped||batch.cycle.ending||await this.memberFailuresBlocked(batch,graph))return;
     const tasks=batch.tasks.map(id=>{const task=graph.tasks.find(t=>t.taskId===id);if(!task)fail('TASK_NOT_FOUND','自动委派任务记录缺失');return task});
     for(const task of tasks){
       if(this.closed||batch.stopped)return;
@@ -535,6 +550,8 @@ export class AutoCollaboration {
       if(finalOutcome==='completed'){
         try{
           const scope=await this.dispatch.goals.inspect(this.identity(cycle),cycle.scopeId);
+          // 无成员待回传的主轮同样不能借“完成拒绝→验收返工”绕过异常执行上限。
+          if(cycle.tasks.size){const reason=memberFailureStopReason(await this.dispatch.snapshot(this.identity(cycle)),cycle.scopeId);if(reason&&!cycle.cancelRequested&&!this.closed)fail('GOAL_MEMBER_FAILURE_LIMIT',reason)}
           if(cycle.workRequested&&!scope.goal?.plan)fail('GOAL_REVIEW_REQUIRED','业务规划或派发未能建立有效目标计划，请核实缺口后继续');
           if(cycle.cancelRequested||this.closed)finalOutcome='cancelled';
           else if(scope.goal?.review?.decision==='awaiting_user'){

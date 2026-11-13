@@ -14,6 +14,7 @@
 | [automatic-return-service.ts](automatic-return-service.ts) | 持久保存主轮待回传批次，重启时核实可自动接收的已完成成员结果。 |
 | [dispatch-service.ts](dispatch-service.ts) | 工作区的成员注册、主对话实例绑定、主会话派发及任务图查询；重启仅保留通过完整核实的待回传周期，其余中断封存。 |
 | [goal-repair.ts](goal-repair.ts) | 调度层最终验收返工的分类、限次与系统反馈，复用原目标及主运行入口。 |
+| [member-failure-limit.ts](member-failure-limit.ts) | 从同一目标的持久任务终态判断是否停止自动接续，供实时协调和重启核实共用。 |
 | [owner-execution-service.ts](owner-execution-service.ts) | 在既有知识、模型和派发存储之间核实岗位执行绑定，为计划、派发、领取和依赖维护提供同一入口。 |
 
 ## 架构类图
@@ -159,13 +160,14 @@ class N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts_AutoCollabor
   -schedule()
   -ready()
   -budgetBlocked()
+  -memberFailuresBlocked()
   -advance()
   -finishCycle()
 }
 N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts ..> N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts_AutoCollaboration : 声明
 ```
 
-直接依赖：[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/tasks/member-checkpoint-chain.ts](../../core/tasks/member-checkpoint-chain.ts)、[../../core/tasks/member-checkpoint.ts](../../core/tasks/member-checkpoint.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/scope-continuation.ts](../../core/tasks/scope-continuation.ts)、[../../core/tasks/scope-continuation-attachments.ts](../../core/tasks/scope-continuation-attachments.ts)、[../../core/tasks/scope-active-input.ts](../../core/tasks/scope-active-input.ts)、[../../core/tasks/human-continue.ts](../../core/tasks/human-continue.ts)、[../../core/tasks/scope-recovery.ts](../../core/tasks/scope-recovery.ts)、[../../core/tasks/scope-replan.ts](../../core/tasks/scope-replan.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../tools/dispatch-tools.ts](../tools/dispatch-tools.ts)、[../tools/goal-tools.ts](../tools/goal-tools.ts)、[../tools/candidate-review-tools.ts](../tools/candidate-review-tools.ts)、[../members/member-state.ts](../members/member-state.ts)、[../tools/main-tool-contracts.ts](../tools/main-tool-contracts.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[dispatch-service.ts](dispatch-service.ts)、[../members/member-execution.ts](../members/member-execution.ts)、[../conversation/execution-manager.ts](../conversation/execution-manager.ts)、[../assembly/loop-engine.ts](../assembly/loop-engine.ts)、[../admission/workspace-lease.ts](../admission/workspace-lease.ts)、[../admission/admission-wait.ts](../admission/admission-wait.ts)、[../../core/tasks/checkpoint-handoff.ts](../../core/tasks/checkpoint-handoff.ts)、[../../core/execution/input-source.ts](../../core/execution/input-source.ts)、[goal-repair.ts](goal-repair.ts)、[../../core/models/engine.ts](../../core/models/engine.ts)。
+直接依赖：[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/tasks/member-checkpoint-chain.ts](../../core/tasks/member-checkpoint-chain.ts)、[../../core/tasks/member-checkpoint.ts](../../core/tasks/member-checkpoint.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/scope-continuation.ts](../../core/tasks/scope-continuation.ts)、[../../core/tasks/scope-continuation-attachments.ts](../../core/tasks/scope-continuation-attachments.ts)、[../../core/tasks/scope-active-input.ts](../../core/tasks/scope-active-input.ts)、[../../core/tasks/human-continue.ts](../../core/tasks/human-continue.ts)、[../../core/tasks/scope-recovery.ts](../../core/tasks/scope-recovery.ts)、[../../core/tasks/scope-replan.ts](../../core/tasks/scope-replan.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../tools/dispatch-tools.ts](../tools/dispatch-tools.ts)、[../tools/goal-tools.ts](../tools/goal-tools.ts)、[../tools/candidate-review-tools.ts](../tools/candidate-review-tools.ts)、[../members/member-state.ts](../members/member-state.ts)、[../tools/main-tool-contracts.ts](../tools/main-tool-contracts.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[dispatch-service.ts](dispatch-service.ts)、[../members/member-execution.ts](../members/member-execution.ts)、[../conversation/execution-manager.ts](../conversation/execution-manager.ts)、[../assembly/loop-engine.ts](../assembly/loop-engine.ts)、[../admission/workspace-lease.ts](../admission/workspace-lease.ts)、[../admission/admission-wait.ts](../admission/admission-wait.ts)、[../../core/tasks/checkpoint-handoff.ts](../../core/tasks/checkpoint-handoff.ts)、[../../core/execution/input-source.ts](../../core/execution/input-source.ts)、[goal-repair.ts](goal-repair.ts)、[member-failure-limit.ts](member-failure-limit.ts)、[../../core/models/engine.ts](../../core/models/engine.ts)。
 
 ### automatic-return-service.ts
 
@@ -188,7 +190,7 @@ class N_src_backend_scheduler_engine_dispatch_automatic_return_service_ts_Automa
 N_src_backend_scheduler_engine_dispatch_automatic_return_service_ts ..> N_src_backend_scheduler_engine_dispatch_automatic_return_service_ts_AutomaticReturnService : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/tasks/automatic-return.ts](../../core/tasks/automatic-return.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/dispatch/dispatch-storage.ts](../../core/dispatch/dispatch-storage.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../goals/scope-goal-service.ts](../goals/scope-goal-service.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)、[owner-execution-service.ts](owner-execution-service.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/tasks/automatic-return.ts](../../core/tasks/automatic-return.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/dispatch/dispatch-storage.ts](../../core/dispatch/dispatch-storage.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../goals/scope-goal-service.ts](../goals/scope-goal-service.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)、[owner-execution-service.ts](owner-execution-service.ts)、[member-failure-limit.ts](member-failure-limit.ts)。
 
 ### dispatch-service.ts
 
@@ -311,6 +313,18 @@ class N_src_backend_scheduler_engine_dispatch_goal_repair_ts["goal-repair.ts"] {
 
 直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/execution/input-source.ts](../../core/execution/input-source.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)。
 
+### member-failure-limit.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_dispatch_member_failure_limit_ts["member-failure-limit.ts"] {
+  <<module>>
+  +memberFailureStopReason()
+}
+```
+
+直接依赖：[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)。
+
 ### owner-execution-service.ts
 
 ```mermaid
@@ -382,6 +396,9 @@ class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts["dispatch-serv
 class N_src_backend_scheduler_engine_dispatch_goal_repair_ts["goal-repair.ts"] {
   <<module>>
 }
+class N_src_backend_scheduler_engine_dispatch_member_failure_limit_ts["member-failure-limit.ts"] {
+  <<module>>
+}
 class N_src_backend_scheduler_engine_dispatch_automatic_return_service_ts["automatic-return-service.ts"] {
   <<module>>
 }
@@ -390,18 +407,26 @@ class N_src_backend_scheduler_engine_dispatch_owner_execution_service_ts["owner-
 }
 N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts ..> N_src_backend_scheduler_engine_dispatch_dispatch_service_ts : 导入依赖
 N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts ..> N_src_backend_scheduler_engine_dispatch_goal_repair_ts : 导入依赖
+N_src_backend_scheduler_engine_dispatch_auto_collaboration_ts ..> N_src_backend_scheduler_engine_dispatch_member_failure_limit_ts : 导入依赖
 N_src_backend_scheduler_engine_dispatch_automatic_return_service_ts ..> N_src_backend_scheduler_engine_dispatch_owner_execution_service_ts : 导入依赖
-N_src_backend_scheduler_engine_dispatch_dispatch_service_ts ..> N_src_backend_scheduler_engine_dispatch_owner_execution_service_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts["dispatch-service.ts"] {
-  <<module>>
-}
 class N_src_backend_scheduler_engine_dispatch_automatic_return_service_ts["automatic-return-service.ts"] {
   <<module>>
 }
+class N_src_backend_scheduler_engine_dispatch_member_failure_limit_ts["member-failure-limit.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_dispatch_dispatch_service_ts["dispatch-service.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_dispatch_owner_execution_service_ts["owner-execution-service.ts"] {
+  <<module>>
+}
+N_src_backend_scheduler_engine_dispatch_automatic_return_service_ts ..> N_src_backend_scheduler_engine_dispatch_member_failure_limit_ts : 导入依赖
+N_src_backend_scheduler_engine_dispatch_dispatch_service_ts ..> N_src_backend_scheduler_engine_dispatch_owner_execution_service_ts : 导入依赖
 N_src_backend_scheduler_engine_dispatch_dispatch_service_ts ..> N_src_backend_scheduler_engine_dispatch_automatic_return_service_ts : 导入依赖
 ```
 
@@ -423,3 +448,13 @@ N_src_backend_scheduler_engine_dispatch_dispatch_service_ts ..> N_src_backend_sc
 新派发依赖要求主 Agent 显式接受前置候选；未批准时不启动后继。AutoCollaboration 与成员领取共享 dependenciesReady，当前可执行成员结束后即回注主运行，不等尚被审阅关口阻塞的后继。member-results 主轮从同周期任务图保留尚未启动的 queued/waiting 任务，批准并结束该主轮后继续原待办，不创建替代任务或重放原派发。回注包含 candidateReview 以及显式审阅指引。
 
 候选接受本身是可靠持久事实；主轮失败不会触发后继自动执行。停止、容量、权限、知识和文件门禁保持。重启自动回传仍只支持既有的全部成员可靠交付条件，含未启动后继的周期不因新审阅字段获得自动重启许可；旧日志和活动用户数据不迁移。
+
+## 异常执行后的自动接续上限
+
+`memberFailureStopReason` 是协调层纯策略：同一 scope 累计 3 个已启动且可靠结算为 failed/interrupted 的成员任务后，停止自动接续。不是按任务名称、负责人、原生实例或错误文案分组，也不是连续失败计数；另派任务、成功交付其它任务和文本/工具进展均不清除已发生异常。采用整个目标的保守额度，代价是三项独立异常也会要求用户核实。用户取消、求助、检查点、未启动待办和正常候选不计入异常。阈值当前固定，模型不能调整。
+
+权威状态仍是持久任务图，失败/中断任务不能重新执行、改成其它终态或删除；不新增第二份计数与恢复文件。AutoCollaboration 在启动下一成员、回注结果及验收返工前检查，同样约束没有待回传成员的主轮收尾。触发后先退役批次、撤销容量等待，再将明确理由持久保存到 goal.blocked 并暂停用户队列；既有在途成员沿原停止、关闭、结算及资源排空流程收尾，未确认结果保持原事实，不生成成功候选。各任务原 waitReason 继续展示具体中断原因，目标卡展示自动接续停止原因。
+
+AutomaticReturnService 在恢复取证中使用同一策略，覆盖第三次异常已经落盘但尚未写入 blocked 的退出窗口。已持久 blocked 或关闭的周期本来就不能自动恢复；等待与重规划仍须用户显式操作。旧任务历史不迁移，失败计数不会跨到用户明确创建的新目标。原有每目标 32 次主调度上限、最终验收最多 3 次返工/同指纹最多 2 次以及逐工具重复失败保护继续生效。
+
+变化仅在协调层组合纯策略；运行计时、引擎适配、任务终态和存储协议保持。无进展计时器只在当前运行内续期，到期后的迟到事件不能重新激活；它不负责跨任务重试额度。未来调整异常分类或次数从 member-failure-limit 修改，实时与重启两个消费者共同验证；变化频率尚无统计依据，不预设通用重试框架。

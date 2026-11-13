@@ -19,6 +19,7 @@ import {GlobalRunAdmission} from '../src/backend/scheduler-engine/admission/run-
 import {admissionRequestId,acquireExecutionLease} from '../src/backend/main/assembly/execution-admission';
 import type {ExecutionAdmissionWait} from '../src/backend/scheduler-engine/admission/admission-wait';
 import {registerServiceOwner} from './owner-service-fixture';
+import {memberFailureStopReason} from '../src/backend/scheduler-engine/dispatch/member-failure-limit';
 
 async function until<T>(get:()=>Promise<T>,ready:(value:T)=>boolean){for(let i=0;i<500;i++){const value=await get();if(ready(value))return value;await new Promise(r=>setTimeout(r,10))}throw Error('timed out')}
 async function setup(useBuiltin=false){
@@ -105,6 +106,25 @@ it.each(['interrupted','failed'] as const)('成员%s从真实运行终态保存�
     const graph=await f.dispatch.snapshot(f.identity);expect(graph.tasks.find(task=>task.taskId===assigned.taskId)?.waitReason).toBe(view.task.waitReason);
     expect((await f.store.read()).outbox.filter(message=>message.kind==='result')).toEqual([]);
   }finally{await f.cleanup()}
+});
+it('三次真实成员异常落盘后额度与目标阻塞在重开存储中保留，恢复不再次执行',async()=>{
+  const f=await setup();let restoredStore:FileDispatchStore|undefined,restored:WorkspaceDispatchService|undefined;
+  try{
+    for(const behavior of ['interrupted','failed','interrupted'] as const){
+      f.setBehavior(behavior);const assigned=await f.assign();await f.start(assigned.taskId);await f.members.waitForSettlement(f.input(assigned.taskId));
+    }
+    const reason=memberFailureStopReason(await f.dispatch.snapshot(f.identity),f.scopeId)!;
+    expect(reason).toContain('累计 3 次');
+    await f.dispatch.goals.block(f.identity,f.scopeId,reason);
+    const backup=path.join(f.user,'failure-limit-reopen');await fs.cp(f.directory,backup,{recursive:true});
+    restoredStore=new FileDispatchStore(backup,f.entry.id);restored=new WorkspaceDispatchService(f.workspace,restoredStore);
+    expect(memberFailureStopReason(await restored.snapshot(f.identity),f.scopeId)).toBe(reason);
+    await restored.recoverScopes();await restored.recoverScopes();
+    const view=await restoredStore.sessionRead({identity:f.identity,selectedScopeId:f.scopeId});
+    expect(view.detail).toMatchObject({mode:'updated',scope:{status:'closed',goal:{blocked:{reason}}}});
+    expect(f.prepare).toHaveBeenCalledTimes(3);
+    expect((await restored.snapshot(f.identity)).tasks.every(task=>['failed','interrupted'].includes(task.status))).toBe(true);
+  }finally{await restored?.close();await restoredStore?.close();await f.cleanup()}
 });
 it('隔离资源未确认收尾时成员保留工作区占用，再次close只封存原运行',async()=>{
  const f=await setup();let blocked=true;const close=LoopRuntime.prototype.close,mock=vi.spyOn(LoopRuntime.prototype,'close').mockImplementation(async function(this:LoopRuntime){if(blocked)throw Object.assign(Error('original isolation pending'),{code:'EXECUTION_SCOPE_DRAIN_PENDING'});return close.call(this)});

@@ -1,3 +1,14 @@
+## 2026-11-13：阻止成员异常后反复终止与重新派发
+
+- 来源与基线：用户在超时策略修复后要求“避免无限死循环的任务终止、重启”；关联开放 [#65](https://github.com/nan023062/cbim/issues/65)。基线 `4a87768c`；开始时已有任务历史折叠相关前端修改，本步未改动或纳入提交。现有每目标 32 次主调度、最多 3 次验收返工及单轮重复工具失败保护已有总界限，但成员中断后换新任务继续派发可以长时间消耗这些额度。
+- 方案与状态归属：C1 / L2 范围为协调层。新增纯策略 `memberFailureStopReason`，读取同 scope 已启动且结算为 failed/interrupted 的任务，累计达到 3 次停止自动接续。选择累计而非按名称/错误/连续次数计量，防止换任务、运行、负责人或穿插其它成功任务清零；代价是三项独立异常也会触发人工核实。取消、求助、检查点和未启动任务不扣额度。使用已有持久终态，不新增计数状态或迁移日志。
+- 调用与交付：AutoCollaboration 在成员启动/结果回注、验收返工及无待回传成员的最终收尾前核实；触发后退役批次、撤销容量等待，持久保存 goal.blocked 并暂停用户队列，现有在途按原停止/排空/结算流程收尾。任务卡保留原具体 waitReason，目标卡收到明确的自动接续停止原因。AutomaticReturnService 使用同一策略覆盖异常已落盘而 blocked 尚未保存的退出窗口。用户明确发起新目标才形成新的目标额度；原有 32 轮主调度和验收返工上限继续保留。已并发启动的成员仍须收尾，不宣称所有并发场景总共只会启动 3 个成员。
+- 受影响验证与依据：`pnpm exec vitest run tests/member-failure-limit.test.ts tests/auto-collaboration.test.ts tests/member-execution.test.ts tests/goal-repair.test.ts tests/automatic-return.test.ts --reporter=dot`：5 文件 / 77 用例通过。覆盖纯策略、受控主调度每轮换新任务的连续 interrupted/failed/混合异常（均只启动 3 次、回注 2 次）、迟到通知不复活、未启动后继不领取、最终返工不绕过、既有正常协作，以及真实 MemberExecutionManager/LoopRuntime/FileDispatchStore 三次异常落盘后复制到隔离目录重开、保留公开阻塞且不再执行。
+- 重启窗口补测：新增“第三次异常已保存但尚无 blocked”的 AutomaticReturnService 用例；`pnpm exec vitest run tests/automatic-return.test.ts --reporter=dot`：3 用例通过。首次补测后的类型检查发现 fixture 缺必需的 withConfigurations 模型端口；补齐为禁止意外调用的测试实现，再跑该文件 3 用例通过。自查增加最终收尾读取期间取消优先的保护；`pnpm exec vitest run tests/auto-collaboration.test.ts -t '读取异常历史期间用户取消' --reporter=dot`：选定 1 用例通过。共 79 个不同相关用例，不累计重跑。
+- 静态与资料：最终 `pnpm typecheck` 通过；`pnpm check:architecture` 通过（1376 文件 / 6982 依赖，0 循环/违规；含原有前端未提交文件）。同步新策略及两个消费者的文件头/接口说明、dispatch/CONTRACT 和生成的 ARCHITECTURE，新增模块、方法和依赖方向已核对。完整变更以本步独立提交为 review 入口，未声称人工 review 已接受。
+- Review 导航与四问：先读 dispatch/CONTRACT 的异常接续上限 → member-failure-limit → AutoCollaboration.advance/finishCycle → AutomaticReturnService.inspect，再读受控循环与真实日志重开测试。Q1 保护原任务终态、权限、未知操作和租约排空；Q2 可调异常策略与稳定执行机制分开，两个实际消费者共用一个纯规则；Q3 不用模型文案或全局计数猜测目标，测试只覆盖变更消费者；Q4 后续阈值/分类修改从策略入口进入，存储及引擎无需连带变更；Q5 无新增治理规则候选，变化频率未作无依据承诺。
+- 验证边界：未运行全仓、完整桌面、打包安装或在线模型验收，后续由 PR/发布流程覆盖；未发布、未重启本机安装版、未改用户运行数据，现有运行仍使用旧版本。#65 其余问题保持开放。
+
 ## 2026-11-13：有进展续期与成员任务具体中断原因
 
 - 来源及基线：用户明确要求“只要有进展就续期，并把具体中断原因传到任务卡”；关联开放 [#65](https://github.com/nan023062/cbim/issues/65)，已读取正文及最近讨论。基线 `30d264dc`；开始时任务历史折叠相关前端改动未提交，本步原样保留且不纳入提交。只读核实本机 webfps：E2 在 13:00:24–13:30:24、E2b 在 13:30:44–14:00:44 均触发整轮 30 分钟超时，终止前仍在浏览器验证。另有事件过大及输出限额错误，本步只补公开原因，不修改这两种限制。

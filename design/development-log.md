@@ -1,3 +1,9 @@
+## 2026-11-13：候选清单收尾四／后端字符串脱敏
+
+- 用户批量授权内，基线 7711dead，C3/L2。strings.ts 增加 redactLiteral，Pi/Claude/Codex 的原精确 split/join 替换共用实现；空凭据、非重叠、大小写和 JSON 编码顺序保持。Pi 仍只对 api-key 认证替换，Claude 无凭据保留事件引用。凭据发现与事件失败屏障不下沉。
+- 命令：pnpm exec vitest run tests/unit/foundations/utility/redaction.test.ts tests/utility-redaction-contract.test.ts tests/engine-inactivity.test.ts --reporter=dot：3 文件/17 项通过；独立字符串单元、三引擎适配契约及既有事件/异常生命周期。pnpm typecheck、pnpm check:architecture、pnpm check:test-modules 全通过，0 环/违规。
+- utility/pi/claude/codex 四份类图与契约、源码注释、三宿主工作流同步。Q1 原精确替换；Q2 凭据策略仍在引擎；Q3 算法及适配契约；Q4 strings.ts→各 engine 的 redact/emit；Q5 无新规则。历史频率未知，不声称此函数能识别编码或变形凭据。未运行原生供应商、全仓、桌面或发布验收；本地独立提交未推送。
+
 ## 2026-11-13：候选清单收尾三／后端 JSON 复用
 
 - 用户批量授权内，基线 ffe8c058，C3/L2。五处同义递归排序改为已有 orderJsonValue：岗位、来源、负责人绑定、人工决定依据、调度执行上下文。字符序与各自 undefined 规则显式保留，不改变输入、JSON 字节或领域指纹字段；手工拼接协议和排序后读取属性的不同实现保留。

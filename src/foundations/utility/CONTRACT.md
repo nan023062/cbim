@@ -68,3 +68,8 @@ Pi/Codex 都保留 32×1024×1024 的原限额值，但 Pi 用 UTF-16 code unit 
 ### 后端 JSON 补齐迁移
 
 岗位登记、知识来源、负责人执行绑定、人工决定依据及调度执行上下文复用 orderJsonValue。前两项和人工依据省略对象 undefined，绑定与上下文保留；均使用字符比较器 a<b/-1、a>b/1，其余 0，不改为 localeCompare。手工拼接的 graph-reducer/module-governance 与按 Object.keys 排序后读取属性的 repeated-tool-failures 保留不同语义。调度器仅获通用 index 入口依赖，不开放 Node/files/web。
+
+
+### 精确文本脱敏
+
+strings.ts 的 redactLiteral 使用非重叠 split/join，将非空精确凭据替换为 [REDACTED]，空或 undefined 不改输入；不解释正则、大小写或 JSON 转义。Pi/Claude/Codex 为真实消费者，凭据选择、认证判断和事件编码顺序属于各引擎；不保证识别编码/变形后的凭据。

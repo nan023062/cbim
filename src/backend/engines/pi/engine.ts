@@ -6,6 +6,7 @@
  * 受控文件边界：仅转发正式成员的写入及冻结删除/移动工具与原 callId/取消信号；平台操作证明和补偿不会在 Pi 原生 write/edit 上自动附加。
  * 作用定位：Pi 引擎适配器，负责隔离配置、原生会话校验及事件转换；成员回传、人工决定和目标返工均走可信系统输入。
  * 能力边界：是否关闭原生工具由可信能力策略决定，不依赖具体业务工具名称。
+ * 文本边界：精确凭据替换委托 utility；凭据来源、认证条件及序列化事件路径仍归引擎。
  * 设计原因：每轮冻结模型、权限和上下文；原生注册与能力预检共用 Core 工具表。成员求助/基线/检查点及按冻结要求提供的产物验证沿真实调用 ID 入日志，结构拒绝不冒称通过；成员回传与人工决定用系统 custom 接续，结束只认 agent_settled。
  * 职责边界：不保存私有推理正文；记录实际用量与生成耗时，未知计价保持未知。工具清单日志区分宿主准备与 Pi 实际活动清单，只保存名称和缺失项。明确停止后的标准取消文本才归为取消，其他错误及未知工具副作用交由运行时保留。
  * 插入边界：原生状态查询后再次核停止；只有 queued 回复表示已接收，发送后的失败不推断未执行或自动重发。
@@ -15,6 +16,7 @@
  * 受管包的 CLI 路径在上层冻结到 process 参数；会话包身份由外层包装器核对，本适配器继续只负责 Pi 协议。
  * 超时窗口按模型增量及工具实际进展续期；重试通知不续期，停止和关闭释放本轮计时器。
  */
+import {redactLiteral} from '../../../foundations/utility';
 import type {EngineRuntimePackage} from '../../core/execution/engine-runtime';
 import fs from 'node:fs/promises';
 import {runtimeEngineTools,nativeToolsDisabled} from '../../core/execution/engine-tools';
@@ -224,7 +226,7 @@ export class PiEngine implements AgentEngine {
         else if(['select','input','editor'].includes(event.method))this.rpc?.send({type:'extension_ui_response',id:event.id,cancelled:true});return;
     }
   }
-  private redact(value:string){const key=this.options.llm?.apiKey;return key&&this.options.llm?.profile.auth==='api-key'?value.split(key).join('[REDACTED]'):value}
+  private redact(value:string){const key=this.options.llm?.apiKey;return key&&this.options.llm?.profile.auth==='api-key'?redactLiteral(value,key):value}
   /** 发送前取消可明确拒绝；发送后只认原回复，停止不能把 queued 改写成未接收。 */
   async steer(message:string,images:import('../../core/execution/types').InputImage[],signal:AbortSignal){
     const assertReady=()=>{

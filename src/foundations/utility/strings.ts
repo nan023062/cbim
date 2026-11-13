@@ -1,8 +1,13 @@
 /**
- * 作用定位：字符串处理工具，当前提供已解码文本的 LF 增量分帧。
+ * 作用定位：字符串处理工具，提供精确文本脱敏与已解码文本的 LF 增量分帧。
  * 设计原因：按文本处理类别集中工具函数和数据结构；缓冲机制不承担协议解析或进程处置。
  * 职责边界：完整帧与尾部限制由调用方指定，不隐式 trim、转码或补齐 EOF 消息。
  */
+/** 精确、区分大小写地替换所有凭据文本；空/缺失凭据不改输入，不识别正则、转义或凭据来源。 */
+export function redactLiteral(text:string,secret:string|undefined):string {
+  return secret?text.split(secret).join('[REDACTED]'):text;
+}
+
 /** 消费者定义文本帧限制，字符/字节计量及协议策略保持在调用方。 */
 export interface LineFramePolicy {
   /** 验证完整原始帧（不含 LF）；CR、空白、大小单位及异常由消费者解释。 */

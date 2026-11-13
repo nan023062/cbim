@@ -106,7 +106,7 @@ class N_src_backend_engines_pi_engine_ts_external_AgentEngine["AgentEngine (外�
 N_src_backend_engines_pi_engine_ts_external_AgentEngine <|.. N_src_backend_engines_pi_engine_ts_PiEngine
 ```
 
-直接依赖：[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/execution/model-errors.ts](../../core/execution/model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/execution/model-errors.ts](../../core/execution/model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
 
 ### request-budget-bootstrap.ts
 
@@ -348,3 +348,8 @@ PNG继续复用cbim_validation_run及同一gate/call身份。提示明确实际�
 ### 统一失败文本
 
 内部工具保持原领域文本及 details.outcome；异常由共同端口生成 JSON 错误正文。原生 tool_result 失败在扩展内按同一固定 outcome 模板包装，真实门禁拒绝与执行后未知分开。没有新增网络路由，不扩大逐请求预算的桥白名单；回包不调用原工具或自动查询。
+
+
+### 凭据文本替换
+
+精确字符串替换使用后端 utility 的 redactLiteral，仍由引擎选择凭据及触发路径。Pi 保留 api-key 条件，Claude 无凭据时保留事件引用；JSON 编码后替换与异常路径保持原顺序，不新增凭据搜集、正则或解码规则。

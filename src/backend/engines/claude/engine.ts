@@ -1,11 +1,13 @@
 /**
  * 目录归属：backend/engines/claude；Claude 引擎适配。
  * 作用定位：Claude Code 的 AgentEngine 适配器，管理 SDK 与原生会话；目标返工沿合成系统资料输入，不带入新授权。
+ * 文本边界：精确凭据替换委托 utility；凭据来源、认证条件及序列化事件路径仍归引擎。
  * 设计原因：参照 Cindy 的 SDK Query 接法，模型、权限和指引在运行开始时冻结；事件转为公共回执，不记录私有推理。
  * 职责边界：配置与历史仅属于 CBIM；禁用外部设置/插件/MCP，不借用其他客户端账号。停止中止请求和工具，异常不重放。
  * SDK 路径来自可信运行包，凭据与原生历史继续归原 agentHome，不写入 E 缓存。
  * 超时按 SDK 模型增量及工具 Hook 的进展续期；连续静默才关闭 Query，取消仍按显式停止处理。
  */
+import {redactLiteral} from '../../../foundations/utility';
 import fs from 'node:fs/promises';
 import {RunInactivityTimer} from '../run-inactivity';
 import path from 'node:path';
@@ -114,11 +116,11 @@ export class ClaudeCodeEngine implements AgentEngine {
     if(!identified.length||identified.some(entry=>entry.sessionId!==this.nativeId))throw Error('Claude Code 恢复文件与原会话身份不一致');
     return entries;
   }
-  private redact(text:string){const key=this.options.llm?.apiKey;return key?text.split(key).join('[REDACTED]'):text}
+  private redact(text:string){const key=this.options.llm?.apiKey;return redactLiteral(text,key)}
   private async emit(event:EngineEvent){
     this.inactivity?.observe(event);
     const key=this.options.llm?.apiKey;const encoded=JSON.stringify(event);
-    try{await this.context!.emit(key?JSON.parse(encoded.split(key).join('[REDACTED]')):event)}catch(error){this.fatal=error instanceof Error?error:Error(String(error));this.query?.close();throw error}
+    try{await this.context!.emit(key?JSON.parse(redactLiteral(encoded,key)):event)}catch(error){this.fatal=error instanceof Error?error:Error(String(error));this.query?.close();throw error}
   }
   /** 只认 SDK result 作为本轮终态；进程提前退出、无绑定或超时保持失败/中断，不凭文本猜测成功。 */
   async run(message:string){

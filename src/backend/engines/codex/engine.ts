@@ -1,11 +1,13 @@
 /**
  * 目录归属：backend/engines/codex；Codex 引擎适配。
  * 作用定位：通过 Codex App Server 管理进程、线程、轮次和动态工具；目标返工明确为系统反馈，不携带用户图片或新授权。
+ * 文本边界：精确凭据替换委托 utility；凭据来源、认证条件及序列化事件路径仍归引擎。
  * 设计原因：参考 Cindy 的双向 RPC 接法；关闭内置执行/外部工具，用既有授权、预算和事件服务持有副作用。
  * 超时只统计本轮连续无进展时长；同线程旧轮通知不能续期，工具及模型增量沿共享计时器处理。
  * 职责边界：原生线程 ID 来自服务端实际回执，首次绑定后固定；异常和取消也在进程排空后补登记真实文件，故障不重放操作。
  * Codex EXE 与宿主 Pi 工具库分别接收固定包，保持账号/原生历史目录及原 RPC 进程收尾。
  */
+import {redactLiteral} from '../../../foundations/utility';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {AgentEngine,EngineContext,EngineEvent} from '../../core/execution/types';
@@ -39,7 +41,7 @@ export class CodexEngine implements AgentEngine {
   private inactivity?:RunInactivityTimer;
   private done?:{resolve:(result:{status:'completed'|'cancelled'|'failed';error?:string})=>void;reject:(error:Error)=>void};
   constructor(private options:CodexOptions){}
-  private redact(text:string){const key=this.options.llm?.apiKey;return key?text.split(key).join('[REDACTED]'):text}
+  private redact(text:string){const key=this.options.llm?.apiKey;return redactLiteral(text,key)}
   private fail(error:Error){this.fatal??=Error(this.redact(error.message));this.tools?.stop();if(!this.stopped)this.done?.reject(this.fatal)}
   private async emit(event:EngineEvent){this.inactivity?.observe(event);try{await this.context!.emit(JSON.parse(this.redact(JSON.stringify(event))))}catch(error){this.fail(error instanceof Error?error:Error(String(error)));throw error}}
   async start(context:EngineContext){

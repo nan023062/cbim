@@ -5,4 +5,4 @@
 export {formatJson,StrictJsonError,parseStrictJson,orderJsonValue,type JsonKeyOrder} from './json';
 export {SerialQueue,InFlightOperations} from './async';
 export {ByteLimitError,readBoundedBytes} from './bytes';
-export {LineFramer,type LineFramePolicy} from './strings';
+export {LineFramer,redactLiteral,type LineFramePolicy} from './strings';

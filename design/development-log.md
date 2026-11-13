@@ -1,3 +1,9 @@
+## 2026-11-13：提交任务历史折叠并准备同步 develop
+
+- 用户要求提交并 push 所有变动。基线 `4f7ba8db`，将此前保留的任务历史视图 7 个文件纳入独立提交；新增测试登记到 frontend/tasks 单元模块。已完成/撤销任务默认折叠、直接定位展开、完整拓扑先校验，均只影响展示，不改变任务状态或调度。
+- 核对现有实现、注释、CONTRACT 与类图；执行 `pnpm exec vitest run tests/task-history-view.test.ts tests/session-task-view.test.ts tests/task-graph-layout.test.ts --reporter=dot`，3 文件/16 项通过；`pnpm check:test-modules` 通过（461 文件），`git diff --check` 通过。类型及类图检查沿用本轮之前对相同前端源码的通过结果，未重复运行桌面/全量测试。
+- fetch 后本地 develop 有 7 个独有提交，远端有 6 个（CI 优化与 #70 修复等）。本步先保存完整本地工作；随后正常合并远端并验证冲突涉及的 HTTP/CI 边界，再推送 develop，不强推，不自动合并 master 或发布。
+
 ## 2026-11-13：utility 候选 5–7 与兼容策略组合
 
 - S1 / 来源：用户直接授权继续候选提炼，并确认“完成剩余 5–7 即可”；原名单没有第 8 项。基线 `e6a5dd39`，本次开放 Issues 查询仅 #65，与本片无对应关系，未新建/修改外部工单。保留原任务历史视图的 7 个并行文件，不纳入提交。

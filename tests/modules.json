@@ -1076,7 +1076,8 @@
           "tests/scope-replan-view.test.ts",
           "tests/scope-usage-view.test.ts",
           "tests/session-task-view.test.ts",
-          "tests/task-graph-layout.test.ts"
+          "tests/task-graph-layout.test.ts",
+          "tests/task-history-view.test.ts"
         ],
         "contract": [
           "tests/active-goal-input-view.test.ts",
